@@ -27,6 +27,7 @@ import type { Entity } from '../../types/entities';
 import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
 import { buildUnderfloorConnectors } from './mep-underfloor-geometry';
 import { constrainDeltaToDominantAxis } from '../grips/ortho-delta'; // ORTHO/F8 SSoT
+import { parseGripKindIndex } from '../../systems/grip/grip-kind-index';
 
 // ─── Grip position computation ────────────────────────────────────────────────
 
@@ -94,13 +95,13 @@ export function applyMepUnderfloorGripDrag(
   const delta = input.rectilinear ? constrainDeltaToDominantAxis(input.delta) : input.delta;
 
   if (gripKind.startsWith('mep-underfloor-vertex-')) {
-    const idx = parseInt(gripKind.slice('mep-underfloor-vertex-'.length), 10);
-    if (!Number.isFinite(idx) || idx < 0) return input.originalParams;
+    const idx = parseGripKindIndex(gripKind);
+    if (idx === null) return input.originalParams;
     return moveFootprintVertex(input.originalParams, delta, idx);
   }
   if (gripKind.startsWith('mep-underfloor-edge-midpoint-')) {
-    const idx = parseInt(gripKind.slice('mep-underfloor-edge-midpoint-'.length), 10);
-    if (!Number.isFinite(idx) || idx < 0) return input.originalParams;
+    const idx = parseGripKindIndex(gripKind);
+    if (idx === null) return input.originalParams;
     return insertVertexOnEdge(input.originalParams, delta, idx);
   }
   return input.originalParams;

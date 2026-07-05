@@ -23,8 +23,7 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { ICON_CLICK_COLORS } from '../../config/color-config';
 import type { PreviewGripPoint } from '../../types/entities';
 import type { ApplySettingsFn } from './drawing-preview-generator';
-import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
-import { getLayer } from '../../stores/LayerStore';
+import { getDefaultLayerId } from '../../stores/LayerStore';
 import { LINEWEIGHT_ISO_VALUES } from '../../config/lineweight-iso-catalog';
 
 const LINEWEIGHT_1MM = LINEWEIGHT_ISO_VALUES[17];
@@ -195,7 +194,7 @@ export function createPartialPreview(
 ): ExtendedSceneEntity | null {
   if (points.length === 0) return null;
   // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
-  const defaultLayerId = getLayer(DXF_DEFAULT_LAYER)?.id;
+  const defaultLayerId = getDefaultLayerId();
 
   // ── Pattern A: 3-point tools (dot at 1pt, line at 2pt) ────────────────
   if (THREE_POINT_DOT_LINE_TOOLS.has(tool)) {

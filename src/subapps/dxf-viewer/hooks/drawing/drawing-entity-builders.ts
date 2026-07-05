@@ -40,8 +40,7 @@ import {
   subtractPoints,
 } from '../../rendering/entities/shared';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
-import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
-import { getLayer } from '../../stores/LayerStore';
+import { getDefaultLayerId } from '../../stores/LayerStore';
 import { LINEWEIGHT_ISO_VALUES } from '../../config/lineweight-iso-catalog';
 const LINEWEIGHT_1MM = LINEWEIGHT_ISO_VALUES[17];
 function normalizeDir(dx: number, dy: number): { x: number; y: number } {
@@ -70,7 +69,7 @@ export function createEntityFromTool(
 ): ExtendedSceneEntity | null {
   const id = entityId;
   // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
-  const defaultLayerId = getLayer(DXF_DEFAULT_LAYER)?.id;
+  const defaultLayerId = getDefaultLayerId();
   switch (tool) {
     case 'line':
       if (points.length >= 2) {

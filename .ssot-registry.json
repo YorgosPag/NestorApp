@@ -51,6 +51,40 @@
       ],
       "tier": 3
     },
+    "ortho-delta": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/grips/ortho-delta.ts",
+      "description": "ADR-507 — the ORTHO/F8 dominant-axis delta clamp lives ONCE in bim/grips/ortho-delta.ts as constrainDeltaToDominantAxis() (frame-agnostic pure). It was byte-identical private copies (quantizeToDominantAxis/applyOrtho) across 5+ grip files (floor-finish/slab/slab-opening/rect-grip-engine/hatch). Re-declaring a private quantize*DominantAxis reintroduces the drift — import constrainDeltaToDominantAxis instead.",
+      "forbiddenPatterns": [
+        "quantize\\w*DominantAxis"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/grips/ortho-delta.ts"
+      ],
+      "tier": 3
+    },
+    "inherit-entity-style": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/entity-creation/inherit-entity-style.ts",
+      "description": "ADR-510 Phi5 — style inheritance onto a derived primitive (explode/offset/fillet keep source layer/colour/lineweight/linetype) lives ONCE as inheritEntityStyle() + ENTITY_STYLE_SKIP in systems/entity-creation/inherit-entity-style.ts. It was inlined as a private inheritEntityStyle + ARC_STYLE_SKIP in fillet-curve-geometry.ts. Re-declaring a local skip-set or inheritEntityStyle reintroduces the duplicate — import the SSoT (its skip-set is a superset, safe for line/arc/circle/rect sources).",
+      "forbiddenPatterns": [
+        "ARC_STYLE_SKIP",
+        "function\\s+inheritEntityStyle\\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/entity-creation/inherit-entity-style.ts"
+      ],
+      "tier": 3
+    },
+    "grip-kind-index": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/grip/grip-kind-index.ts",
+      "description": "ADR-510 Phi3c — parsing the trailing numeric index of a `<prefix>-N` grip kind lives ONCE as parseGripKindIndex() in systems/grip/grip-kind-index.ts (lastIndexOf-based, returns null on malformed/negative). It was inline `parseInt(gripKind.slice(prefix.length), 10)` across 7 grip files (slab/roof/floor-finish/slab-opening/mep-underfloor/column/wall) and backed parsePolylineSegIndex. Import parseGripKindIndex; keep any domain-specific lower bound (e.g. wall idx>=1) as an extra check at the call site.",
+      "forbiddenPatterns": [
+        "parseInt\\(gripKind\\.slice"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/grip/grip-kind-index.ts"
+      ],
+      "tier": 3
+    },
     "browser-performance-memory": {
       "ssotFile": "src/lib/platform/browser-performance-memory.ts",
       "description": "ADR-546 — The non-standard Chrome `performance.memory` API must be declared and read ONLY through src/lib/platform/browser-performance-memory.ts. Re-declaring `interface PerformanceWithMemory`/`PerformanceMemory` or casting `as PerformanceWithMemory` anywhere else reintroduces the 4-type + 12-reader cross-subapp duplication with inconsistent units (bytes vs MB) and unsafe non-optional casts. Use readPerformanceMemory() (raw bytes) or readCpuMemoryMb() (MB). Type re-exports via `export type { ... } from` are allowed.",

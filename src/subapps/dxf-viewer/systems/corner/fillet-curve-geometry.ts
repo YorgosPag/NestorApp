@@ -24,7 +24,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { ArcEntity, BaseEntity, CircleEntity, Entity, LineEntity } from '../../types/entities';
+import type { ArcEntity, CircleEntity, Entity, LineEntity } from '../../types/entities';
 import { isLineEntity, isArcEntity, isCircleEntity } from '../../types/entities';
 import {
   getUnitVector,
@@ -40,6 +40,7 @@ import { arcFrom3Points, arcVisibleCcwRange } from '../../rendering/entities/sha
 import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
 import { GeometricCalculations } from '../../snapping/shared/GeometricCalculations';
 import { CORNER_EPSILON, trimLineAtPoint } from './corner-math';
+import { inheritEntityStyle } from '../entity-creation/inherit-entity-style';
 import { solveTangentArc } from './fillet-geometry';
 import type { CornerTrimOp } from '../../core/commands/entity-commands/CornerEntityCommand';
 
@@ -212,21 +213,6 @@ function trimArcAtPoint(arc: ArcEntity, tangent: Point2D, pick: Point2D): Corner
 }
 
 // ── Arc entity build ────────────────────────────────────────────────────────────
-
-const ARC_STYLE_SKIP = new Set([
-  'id', 'type', 'start', 'end', 'center', 'radius', 'startAngle', 'endAngle', 'counterclockwise',
-  'vertices', 'bulges', 'selected', 'preview', 'previewGripPoints', 'showPreviewGrips', 'startWidths', 'endWidths',
-]);
-
-/** Inherit layer/colour/lineweight style from the source entity (AutoCAD inheritance). */
-function inheritEntityStyle(source: Entity): Partial<BaseEntity> {
-  const src = source as unknown as Record<string, unknown>;
-  const out: Record<string, unknown> = {};
-  for (const key of Object.keys(src)) {
-    if (!ARC_STYLE_SKIP.has(key)) out[key] = src[key];
-  }
-  return out as Partial<BaseEntity>;
-}
 
 function buildArc(
   source: FilletCurveEntity,

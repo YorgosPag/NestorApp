@@ -22,6 +22,7 @@ import type { FloorFinishEntity, FloorFinishParams } from '../types/floor-finish
 import type { Entity } from '../../types/entities';
 import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
 import { constrainDeltaToDominantAxis } from '../grips/ortho-delta';
+import { parseGripKindIndex } from '../../systems/grip/grip-kind-index';
 
 // ─── Grip position computation ────────────────────────────────────────────────
 
@@ -88,13 +89,13 @@ export function applyFloorFinishGripDrag(
   const delta = input.rectilinear ? constrainDeltaToDominantAxis(input.delta) : input.delta;
 
   if (gripKind.startsWith('floor-finish-vertex-')) {
-    const idx = parseInt(gripKind.slice('floor-finish-vertex-'.length), 10);
-    if (!Number.isFinite(idx) || idx < 0) return input.originalParams;
+    const idx = parseGripKindIndex(gripKind);
+    if (idx === null) return input.originalParams;
     return moveFootprintVertex(input.originalParams, delta, idx);
   }
   if (gripKind.startsWith('floor-finish-edge-midpoint-')) {
-    const idx = parseInt(gripKind.slice('floor-finish-edge-midpoint-'.length), 10);
-    if (!Number.isFinite(idx) || idx < 0) return input.originalParams;
+    const idx = parseGripKindIndex(gripKind);
+    if (idx === null) return input.originalParams;
     return insertVertexOnEdge(input.originalParams, delta, idx);
   }
   return input.originalParams;

@@ -61,6 +61,7 @@ import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import { ANCHOR_OFFSETS, MIN_COLUMN_DIMENSION_MM } from '../types/column-types';
 import { rotatePoint } from '../../utils/rotation-math';
 import { sweptAngleDegAboutPivot, farEdgeSign } from '../grips/grip-math';
+import { parseGripKindIndex } from '../../systems/grip/grip-kind-index';
 import {
   RAD_TO_DEG,
   depthHandleWorld,
@@ -365,9 +366,8 @@ export function applyColumnGripDrag(
   // και τα δύο materialize σε composite αν το kind είναι παραμετρικό (L-shape).
   if (gripKind.startsWith('column-poly-')) {
     const isEdge = gripKind.startsWith('column-poly-edge-');
-    const prefix = isEdge ? 'column-poly-edge-' : 'column-poly-vertex-';
-    const idx = parseInt(gripKind.slice(prefix.length), 10);
-    if (!Number.isFinite(idx) || idx < 0) return input.originalParams;
+    const idx = parseGripKindIndex(gripKind);
+    if (idx === null) return input.originalParams;
     return isEdge ? moveColumnEdgeFree(input, idx) : reshapeColumnCornerFree(input, idx);
   }
   return input.originalParams;

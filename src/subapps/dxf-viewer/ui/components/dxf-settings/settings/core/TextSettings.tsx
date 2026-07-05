@@ -59,6 +59,8 @@ import { Button } from '@/components/ui/button';
 import { HOVER_BACKGROUND_EFFECTS } from '../../../../../../../components/ui/effects';
 import { PANEL_LAYOUT } from '../../../../../config/panel-tokens';
 import { TEXT_METRICS_RATIOS, UI_TEXT_INPUT_CONSTRAINTS } from '../../../../../config/text-rendering-config';
+// 🏢 Color-Conversion SSoT (ADR-573): hex→{r,g,b} via canonical `config/color-math`.
+import { parseHex } from '../../../../../config/color-math';
 import { useTranslation } from '@/i18n';
 import {
   DocumentTextIcon, PaintbrushIcon, SparklesIcon, EyeIcon,
@@ -115,11 +117,11 @@ export function TextSettings({ contextType }: { contextType?: 'preview' | 'compl
   const handleColorChange = (color: string) => {
     updateTextSettings({ color });
     if (selectedIds.length > 0) {
-      const r = parseInt(color.slice(1, 3), 16);
-      const g = parseInt(color.slice(3, 5), 16);
-      const b = parseInt(color.slice(5, 7), 16);
-      const dxfColor: DxfColor = { kind: 'TrueColor', r, g, b };
-      useTextToolbarStore.getState().setMany({ color: dxfColor });
+      const rgb = parseHex(color);
+      if (rgb) {
+        const dxfColor: DxfColor = { kind: 'TrueColor', ...rgb };
+        useTextToolbarStore.getState().setMany({ color: dxfColor });
+      }
     }
   };
   const handleFontFamilyChange = (fontFamily: string) => {

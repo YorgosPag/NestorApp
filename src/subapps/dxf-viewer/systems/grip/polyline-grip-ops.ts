@@ -21,6 +21,7 @@ import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
 import { PolylineVertexCommand } from '../../core/commands/entity-commands/PolylineVertexCommand';
 import { SetBulgeCommand } from '../../core/commands/entity-commands/SetBulgeCommand';
 import { calculateMidpoint } from '../../rendering/entities/shared/geometry-utils';
+import { parseGripKindIndex } from './grip-kind-index';
 // SSoT polyline shape (same canonical type PolylineVertexCommand uses — no ad-hoc duplicate).
 import type { PolylineEntity, LWPolylineEntity } from '../../types/entities';
 
@@ -47,13 +48,11 @@ type PolyReadView = { readonly type?: string } & Pick<
  * Trailing segment/vertex index of any `polyline-*-N` grip kind. For a vertex
  * grip N is BOTH the vertex index AND its outgoing-segment index (they coincide).
  * Returns null when the kind is absent / malformed.
+ *
+ * Thin polyline-named delegate over the {@link parseGripKindIndex} SSoT.
  */
 export function parsePolylineSegIndex(kind: string | undefined): number | null {
-  if (!kind) return null;
-  const dash = kind.lastIndexOf('-');
-  if (dash < 0) return null;
-  const n = Number.parseInt(kind.slice(dash + 1), 10);
-  return Number.isFinite(n) && n >= 0 ? n : null;
+  return parseGripKindIndex(kind);
 }
 
 /**

@@ -34,6 +34,7 @@ import { applyRectWallGrip } from './wall-rect-adapter';
 // (swept angle from grip-math + canonical rotatePoint, ADR-188) is consumed by
 // both the wall and beam rotation grips. No re-implemented cos/sin here.
 import { rotateAxisPointsAboutPivot } from '../grips/grip-math';
+import { parseGripKindIndex } from '../../systems/grip/grip-kind-index';
 // ADR-565 — arc apex drag ↔ bulge conversion reuses the bulge SSoT (ADR-510).
 import { bulgeApexPoint, bulgeFromApexPoint } from '../../rendering/entities/shared/geometry-bulge-utils';
 
@@ -127,8 +128,8 @@ export function applyWallGripDrag(
   if (gripKind === 'wall-arc-apex') return moveArcApex(input);
   if (gripKind === 'wall-curve') return moveCurveControl(input);
   if (gripKind.startsWith('wall-vertex-')) {
-    const idx = parseInt(gripKind.slice('wall-vertex-'.length), 10);
-    if (Number.isFinite(idx) && idx >= 1) return movePolylineVertex(input, idx);
+    const idx = parseGripKindIndex(gripKind);
+    if (idx !== null && idx >= 1) return movePolylineVertex(input, idx);
   }
   return input.originalParams;
 }

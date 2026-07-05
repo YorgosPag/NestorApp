@@ -29,6 +29,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo, SlabOpeningGripKind } from '../../hooks/useGripMovement';
 import { constrainDeltaToDominantAxis } from '../grips/ortho-delta';
+import { parseGripKindIndex } from '../../systems/grip/grip-kind-index';
 import type { Point3D } from '../types/bim-base';
 import type {
   SlabOpeningEntity,
@@ -113,13 +114,13 @@ export function applySlabOpeningGripDrag(
 ): SlabOpeningParams {
   const delta = input.rectilinear ? constrainDeltaToDominantAxis(input.delta) : input.delta;
   if (gripKind.startsWith('slab-opening-vertex-')) {
-    const idx = parseInt(gripKind.slice('slab-opening-vertex-'.length), 10);
-    if (!Number.isFinite(idx) || idx < 0) return input.originalParams;
+    const idx = parseGripKindIndex(gripKind);
+    if (idx === null) return input.originalParams;
     return moveOutlineVertex(input.originalParams, delta, idx);
   }
   if (gripKind.startsWith('slab-opening-edge-midpoint-')) {
-    const idx = parseInt(gripKind.slice('slab-opening-edge-midpoint-'.length), 10);
-    if (!Number.isFinite(idx) || idx < 0) return input.originalParams;
+    const idx = parseGripKindIndex(gripKind);
+    if (idx === null) return input.originalParams;
     return insertVertexOnEdge(input.originalParams, delta, idx);
   }
   return input.originalParams;

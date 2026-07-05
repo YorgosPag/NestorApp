@@ -16,10 +16,10 @@
 
 import { useState, useCallback, useRef } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import type { LineEntity, PolylineEntity, AnySceneEntity } from '../../types/scene';
+import type { LineEntity, AnySceneEntity } from '../../types/scene';
 import { isLineEntity, isPolylineEntity, generateEntityId } from '../../types/scene';
-// 🏢 ADR-XXX: Centralized geometry utils - pointToLineDistance replaces local pointToLineDistance
-import { createPerpendicularLine, pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
+import { createPerpendicularLine } from '../../rendering/entities/shared/geometry-utils';
+import { nearestPolylineSegment } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { EventBus } from '../../systems/events';
 import { UI_COLORS } from '../../config/color-config';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -158,42 +158,6 @@ export function useLinePerpendicular(options: {
   }, []);
 
   // ============================================================================
-  // POLYLINE SEGMENT DETECTION
-  // ============================================================================
-
-  const findPolylineSegment = useCallback((
-    polyline: PolylineEntity,
-    clickPoint: Point2D
-  ): { start: Point2D; end: Point2D; segmentIndex: number } | null => {
-    const vertices = polyline.vertices;
-    if (!vertices || vertices.length < 2) return null;
-
-    let closestSegment: { start: Point2D; end: Point2D; segmentIndex: number } | null = null;
-    let minDistance = Infinity;
-
-    for (let i = 0; i < vertices.length - 1; i++) {
-      const start = vertices[i];
-      const end = vertices[i + 1];
-      const dist = pointToLineDistance(clickPoint, start, end);
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestSegment = { start, end, segmentIndex: i };
-      }
-    }
-
-    if (polyline.closed && vertices.length > 2) {
-      const start = vertices[vertices.length - 1];
-      const end = vertices[0];
-      const dist = pointToLineDistance(clickPoint, start, end);
-      if (dist < minDistance) {
-        closestSegment = { start, end, segmentIndex: vertices.length - 1 };
-      }
-    }
-
-    return closestSegment;
-  }, []);
-
-  // ============================================================================
   // ENTITY CLICK HANDLER (Step 1: Select reference line)
   // ============================================================================
 
@@ -235,7 +199,7 @@ export function useLinePerpendicular(options: {
           segmentIndex: 0,
         };
       } else {
-        const segment = findPolylineSegment(entity, clickPoint);
+        const segment = nearestPolylineSegment(entity.vertices, entity.closed ?? false, clickPoint);
         if (!segment) {
           setState(prev => ({ ...prev, error: 'Δεν βρέθηκε τμήμα polyline' }));
           return false;
@@ -262,7 +226,7 @@ export function useLinePerpendicular(options: {
     }));
 
     return true;
-  }, [findPolylineSegment]);
+  }, []);
 
   // ============================================================================
   // CANVAS CLICK HANDLER (Step 2: Select through-point)

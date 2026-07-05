@@ -17,10 +17,10 @@
 
 import { useState, useCallback, useRef } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import type { PolylineEntity, AnySceneEntity, CircleEntity } from '../../types/scene';
+import type { AnySceneEntity, CircleEntity } from '../../types/scene';
 import { isLineEntity, isPolylineEntity, generateEntityId } from '../../types/scene';
-// 🏢 ADR-XXX: Centralized geometry utils - pointToLineDistance replaces local pointToLineDistance
-import { circleTangentTo3Lines, pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
+import { circleTangentTo3Lines } from '../../rendering/entities/shared/geometry-utils';
+import { nearestPolylineSegment } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { EventBus } from '../../systems/events';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -136,51 +136,6 @@ export function useCircleTTT(options: {
   }, []);
 
   // ============================================================================
-  // POLYLINE SEGMENT DETECTION
-  // ============================================================================
-
-  /**
-   * Find which segment of a polyline was clicked
-   * Returns the segment (start, end) closest to the click point
-   */
-  const findPolylineSegment = useCallback((
-    polyline: PolylineEntity,
-    clickPoint: Point2D
-  ): { start: Point2D; end: Point2D; segmentIndex: number } | null => {
-    const vertices = polyline.vertices;
-    if (!vertices || vertices.length < 2) return null;
-
-    let closestSegment: { start: Point2D; end: Point2D; segmentIndex: number } | null = null;
-    let minDistance = Infinity;
-
-    // Check each segment
-    for (let i = 0; i < vertices.length - 1; i++) {
-      const start = vertices[i];
-      const end = vertices[i + 1];
-
-      // Calculate distance from click point to segment
-      const dist = pointToLineDistance(clickPoint, start, end);
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestSegment = { start, end, segmentIndex: i };
-      }
-    }
-
-    // Check closing segment for closed polylines
-    if (polyline.closed && vertices.length > 2) {
-      const start = vertices[vertices.length - 1];
-      const end = vertices[0];
-      const dist = pointToLineDistance(clickPoint, start, end);
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestSegment = { start, end, segmentIndex: vertices.length - 1 };
-      }
-    }
-
-    return closestSegment;
-  }, []);
-
-  // ============================================================================
   // ENTITY CLICK HANDLER
   // ============================================================================
 
@@ -225,7 +180,7 @@ export function useCircleTTT(options: {
           segmentIndex: 0,
         };
       } else {
-        const segment = findPolylineSegment(entity, clickPoint);
+        const segment = nearestPolylineSegment(entity.vertices, entity.closed ?? false, clickPoint);
         if (!segment) {
           setState(prev => ({ ...prev, error: 'Δεν βρέθηκε τμήμα polyline' }));
           return false;
@@ -325,7 +280,7 @@ export function useCircleTTT(options: {
     }));
 
     return true;
-  }, [findPolylineSegment, onCircleCreated, currentLevelId]);
+  }, [onCircleCreated, currentLevelId]);
 
   // ============================================================================
   // HELPER FUNCTIONS
