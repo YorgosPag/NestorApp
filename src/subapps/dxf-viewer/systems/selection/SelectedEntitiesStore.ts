@@ -31,6 +31,7 @@
 
 import type { SelectableEntityType, SelectionEntry, SelectionPayload } from './types';
 import { createSelectionEntry, matchesEntityType } from './types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 type Listener = () => void;
 
@@ -72,7 +73,6 @@ function applyAndReturn(mirror: LegacyMirror): LegacyMirror {
 // ─── Internal mutable state ───────────────────────────────────────────────────
 let entities = new Map<string, SelectionEntry>();
 let primaryId: string | null = null;
-let version = 0;
 
 // Derived caches (rebuilt once per mutation → reference-stable snapshots).
 let cachedAllIds: string[] = EMPTY_IDS;
@@ -81,7 +81,10 @@ let cachedDxfIds: string[] = EMPTY_IDS;
 let cachedOverlayRegionIds: string[] = EMPTY_IDS;
 let cachedByType = new Map<string, string[]>();
 
-const listeners = new Set<Listener>();
+// SSoT pub/sub via createExternalStore (WAVE 2.6). The Map + derived caches above
+// stay as plain module `let`s (mutation accelerators); the store carries ONLY the
+// version-signal integer that `useSyncExternalStore` consumers key off.
+const store = createExternalStore<number>(0);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -114,8 +117,7 @@ function rebuildCaches(): void {
 
 function commit(): void {
   rebuildCaches();
-  version += 1;
-  listeners.forEach((l) => l());
+  store.set(store.get() + 1);
 }
 
 /** Legacy mirror for an action that touched overlay/region selection. */
@@ -268,18 +270,19 @@ function countByType(type: SelectableEntityType): number {
   return getIdsByType(type).length;
 }
 
-function getVersion(): number { return version; }
+function getVersion(): number { return store.get(); }
 
 function subscribe(cb: Listener): () => void {
-  listeners.add(cb);
-  return () => { listeners.delete(cb); };
+  return store.subscribe(cb);
 }
 
-/** Test-only: reset to empty (no notify) + drop any registered legacy sink. */
+/** Test-only: reset to empty (soft — does NOT clear listeners, unlike
+ *  `store.reset`, so `renderHook` subscriptions stay valid across resets) +
+ *  drop any registered legacy sink. */
 function _resetForTests(): void {
   entities = new Map();
   primaryId = null;
-  version = 0;
+  store.set(0);
   legacySink = null;
   rebuildCaches();
 }

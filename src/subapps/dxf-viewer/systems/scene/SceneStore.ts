@@ -33,22 +33,25 @@
 
 import type { SceneModel } from '../../types/scene';
 import { countSceneEntities } from '../../utils/scene-entity-count';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 type Listener = () => void;
 
 // ─── Internal mutable state ───────────────────────────────────────────────────
 let record: Record<string, SceneModel> = {};
-let version = 0;
-const listeners = new Set<Listener>();
+
+// SSoT pub/sub via createExternalStore (WAVE 2.6). `record` stays a plain module
+// `let` (mutation accelerator); the store carries ONLY the version-signal integer
+// that `useSyncExternalStore` consumers key off (mirrors SelectedEntitiesStore).
+const store = createExternalStore<number>(0);
 
 function emit(): void {
-  version += 1;
-  listeners.forEach((l) => l());
+  store.set(store.get() + 1);
 }
 
 // ─── Getters (reference-stable record snapshot) ────────────────────────────────
 function getRecord(): Record<string, SceneModel> { return record; }
-function getVersion(): number { return version; }
+function getVersion(): number { return store.get(); }
 function getLevelScene(levelId: string): SceneModel | null { return record[levelId] ?? null; }
 function hasSceneForLevel(levelId: string): boolean { return !!record[levelId]; }
 function getSceneEntityCount(levelId: string): number { return countSceneEntities(record[levelId]); }
@@ -82,15 +85,14 @@ function clearAllScenes(): void {
 
 // ─── Subscription ──────────────────────────────────────────────────────────────
 function subscribe(cb: Listener): () => void {
-  listeners.add(cb);
-  return () => { listeners.delete(cb); };
+  return store.subscribe(cb);
 }
 
 /** Test-only: reset record + version to empty (keeps active listeners, like
  *  SelectedEntitiesStore — renderHook subscriptions stay valid across resets). */
 function _resetForTests(): void {
   record = {};
-  version = 0;
+  store.set(0);
 }
 
 // ─── Facade ────────────────────────────────────────────────────────────────────

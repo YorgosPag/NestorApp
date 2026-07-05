@@ -32,6 +32,7 @@ import { ESC_PRIORITY } from '../escape-bus/escape-priority';
 // ADR-560 / ADR-357 — drag lifecycle SSoT: the body-drag AutoAlign traces end with the drag
 // (commit / ESC / blur), mirror of GripDragStore.clearActiveDragGrip → clearGripAlignmentTracking.
 import { clearGripAlignmentTracking } from '../cursor/GripAlignmentTrackingStore';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export interface EntityBodyDragSession {
   /** World-space base point captured at mousedown (the grabbed point on the body). */
@@ -45,8 +46,10 @@ export interface EntityBodyDragSession {
 type Listener = () => void;
 
 class EntityBodyDragStoreImpl {
-  private session: EntityBodyDragSession | null = null;
-  private listeners = new Set<Listener>();
+  // SSoT pub/sub via createExternalStore (WAVE 2.6). The session IS the store's
+  // single state (no derived caches needed) — no `equals`, so `set` always
+  // notifies, matching the old hand-rolled `emit()` loop byte-for-byte.
+  private readonly store = createExternalStore<EntityBodyDragSession | null>(null);
   private installed = false;
   private unregisterEscape: (() => void) | null = null;
 
@@ -56,49 +59,47 @@ class EntityBodyDragStoreImpl {
    * 60fps cursor follow does NOT go through here (the ghost reads `getAnchor()`
    * inside its draw delegate).
    */
-  subscribe = (listener: Listener): (() => void) => {
-    this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
-  };
+  subscribe = (listener: Listener): (() => void) => this.store.subscribe(listener);
 
   /** Begin a body-drag session. Overwrites any stale session. */
   arm(session: EntityBodyDragSession): void {
-    this.session = session;
-    this.emit();
+    this.store.set(session);
   }
 
   /** Is a body-drag currently in progress? Read by the ghost + commit (cheap getter). */
   getActive(): boolean {
-    return this.session !== null;
+    return this.store.get() !== null;
   }
 
   /** Base point grabbed at mousedown, or null when idle. */
   getAnchor(): Point2D | null {
-    return this.session?.anchor ?? null;
+    return this.store.get()?.anchor ?? null;
   }
 
   /** Entities travelling in the active drag (empty when idle). */
   getEntityIds(): readonly string[] {
-    return this.session?.entityIds ?? [];
+    return this.store.get()?.entityIds ?? [];
   }
 
   /** Whether the active drag is a copy (Ctrl held at press). */
   isCopy(): boolean {
-    return this.session?.copy === true;
+    return this.store.get()?.copy === true;
   }
 
   /** Full snapshot of the active session, or null when idle. */
   getSession(): EntityBodyDragSession | null {
-    return this.session;
+    return this.store.get();
   }
 
   /** End the session (drag commit / cancel / reset). */
   clear(): void {
-    if (this.session === null) return;
-    this.session = null;
+    if (this.store.get() === null) return;
     // ADR-560 — end the AutoAlign traces with the drag so a stale result never lingers.
+    // Run BEFORE the state write (which now notifies synchronously via `store.set`)
+    // so the observable order stays: side-effect, THEN listener notify — same as
+    // the old `session = null; clearGripAlignmentTracking(); this.emit()` sequence.
     clearGripAlignmentTracking();
-    this.emit();
+    this.store.set(null);
   }
 
   /**
@@ -128,10 +129,6 @@ class EntityBodyDragStoreImpl {
   private onBlur = (): void => {
     this.clear();
   };
-
-  private emit(): void {
-    for (const l of this.listeners) l();
-  }
 }
 
 export const EntityBodyDragStore = new EntityBodyDragStoreImpl();
