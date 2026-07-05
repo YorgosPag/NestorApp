@@ -40,10 +40,13 @@ import {
 } from '../global-snap-engine';
 import { getGlobalCommandHistory } from '../../core/commands/CommandHistory';
 import type { Entity } from '../extended-types';
-import { isArrayEntity } from '../../types/entities';
+import { isArrayEntity, isGroupEntity } from '../../types/entities';
 import type { PathParams } from '../../systems/array/types';
 import type { SceneModel } from '../../types/scene';
 import { expandArrayEntity } from '../../systems/array/array-expander';
+// ADR-575 — GROUP «Ομαδοποίηση»: expand members into snap candidates (mirror of array).
+import { expandGroupEntity } from '../../systems/group/group-expander';
+import type { Entity as SceneEntityUnion } from '../../types/entities';
 import type { Overlay } from '../../overlays/types';
 import { overlaysToRegions } from '../../overlays/overlay-adapter';
 import { regionsToSnapEntities } from '../../overlays/snap-adapter';
@@ -105,6 +108,9 @@ export function useGlobalSnapSceneSync({
           ? rawEnts.find(r => r.id === (e.params as PathParams).pathEntityId)
           : undefined;
         for (const item of expandArrayEntity(e, pathEnt as Entity | undefined)) dxfEnts.push(item as Entity);
+      } else if (isGroupEntity(e)) {
+        // ADR-575: a GROUP contributes its members' snap points (tagged with the group id).
+        for (const item of expandGroupEntity(e, rawEnts as unknown as readonly SceneEntityUnion[])) dxfEnts.push(item as unknown as Entity);
       } else {
         dxfEnts.push(e);
       }
