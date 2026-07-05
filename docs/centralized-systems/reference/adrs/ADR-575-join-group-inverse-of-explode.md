@@ -123,12 +123,25 @@ block library — ξεχωριστό, μεγαλύτερο subsystem.
 - Επαλήθευση: **580/580** array + entity-command tests pass (μηδέν regression).
 - **Considered-not-applied**: ο `ExplodeEntityCommand` έχει διαφορετικό 1→N interleaved shape
   (per-source add-primitives) → δεν ταιριάζει καθαρά στο extract helper.
-- **Follow-up (pending-ratchet)**: ο `JoinEntityCommand` και ο `CreateGroupCommand` έχουν ~95%
-  πανομοιότυπη δομή (snapshot→remove→add-container / undo / redo)· μπορούν να ενοποιηθούν σε μια
-  κοινή `ReplaceEntitiesWithContainerCommand` βάση.
+- **DONE (2026-07-05)**: ο `JoinEntityCommand` και ο `CreateGroupCommand` (~95% πανομοιότυπη δομή)
+  ενοποιήθηκαν σε κοινή abstract βάση **`ReplaceEntitiesWithContainerCommand`** (Template Method —
+  GoF Command + Template Method, όπως Autodesk/SAP command hierarchies). Η βάση κατέχει ΜΙΑ φορά τον
+  invariant lifecycle (collect→extract→`buildContainer`(once)→add / undo / redo /
+  `getAffectedEntityIds`) πάνω στο υπάρχον `entity-source-extraction` SSoT. Τα subclasses δίνουν ΜΟΝΟ
+  το διαφορετικό: `name`/`type`, το `buildContainer` hook (JOIN → επιστρέφει έτοιμο merged entity·
+  GROUP → `createGroupEntity(snapshots)`), `getDescription`/`validate`/`serialize` + `minMembers`.
+  **Μηδέν αλλαγή public API/behavior** (callers `useEntityJoin`/`useGroupRibbonAction`, serialize
+  schemas, `getCreatedEntityId()` αμετάβλητα).
+- **Considered-not-applied**: ο `CreateArrayCommand` ΔΕΝ μπήκε στη βάση — διαφορετικό redo (re-extract
+  αντί reuse-snapshot) + parametrized factory (layerId/kind/params/path/basePoint). Ήδη μοιράζεται το
+  ίδιο extract/restore SSoT· αυτό αρκεί (μην over-abstract-άρεις — big-player κρίση).
 
 ## Changelog
 - **2026-07-05** — Αρχική υλοποίηση. JOIN ribbon exposure + GROUP `type:'group'` container
   (engine/command/expander/transforms/ribbon) + UNGROUP=EXPLODE delegation. 26/26 tests.
 - **2026-07-05** — SSoT boy-scout (§7): promote `entity-source-extraction` σε ουδέτερο SSoT·
   reuse από Group+Join· `JoinEntityCommand.test.ts`. 580/580 tests.
+- **2026-07-05** — SSoT βάση (§7): abstract `ReplaceEntitiesWithContainerCommand` (Template Method)·
+  `JoinEntityCommand` + `CreateGroupCommand` → thin subclasses (μηδέν διπλός lifecycle)· νέο
+  `ReplaceEntitiesWithContainerCommand.test.ts`. Public API/behavior αμετάβλητα. 569/569 core/commands
+  tests pass (+185 στο targeted Join/Group/array/group run).
