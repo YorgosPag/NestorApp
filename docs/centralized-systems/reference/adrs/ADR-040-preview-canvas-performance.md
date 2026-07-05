@@ -71,6 +71,9 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-05 — ⌨️ Heads-up direct-distance-entry (Δαχτυλίδι Εντολών) + beam length/angle lock (ADR-513/ADR-363, CHECK 6D touch)
+**Τι:** το `RadialCommandRing` απέκτησε AutoCAD heads-up (πληκτρολόγησε αριθμό → auto-open «Μήκος» → Enter τοποθετεί σημείο) και η δοκός απέκτησε ring parity. **Συμμόρφωση ADR-040:** καμία νέα high-freq subscription — η heads-up είναι window keydown (low-freq, user action)· η τοποθέτηση είναι synthetic `mousedown→mouseup` που περνά από το ΥΠΑΡΧΟΝ click pipeline (`mouse-handler-up`)· μηδέν αλλαγή σε bitmap cache / cache key / preview-leaf pattern. Το `drawing-hover-handler` (preview painter) απέκτησε μόνο `+'beam'` στο υπάρχον length/angle-lock branch (paint-time constraint, no-op χωρίς lock). preview≡commit. Co-staged: ADR-513 + ADR-363. 🟡 UNCOMMITTED.
+
 ### 2026-07-05 — 📐 Κάθετη διάσταση αρχικής↔φαντάσματος + body-drag Q-step στη μετακίνηση γραμμής (ADR-363 §line-move-offset-dim, CHECK 6D)
 **Τι:** στη μετακίνηση γραμμής (σώμα ή κεντρική λαβή, με ΟΡΘΟ) ζωγραφίζεται πλήρης ISO κάθετη διάσταση αρχικής↔φαντάσματος + το F9/Q βήμα δουλεύει πλέον και στο body-drag. **Συμμόρφωση ADR-040:** paint-only overlay μέσα στα υπάρχοντα RAF preview leaves (`useEntityBodyDragPreview`, `useGripGhostPreview`) — reuse του `paintAlignedOverlayDimension` SSoT (ίδιο dim-draw με τις listening/ghost dims)· **καμία** νέα `useSyncExternalStore`/high-freq subscription, μηδέν αλλαγή σε bitmap cache / cache key. Το βήμα διαβάζεται event-time (`applyGripStepSnap`/`isGripStepActive` → getters). ΝΕΟ pure `systems/dimensions/line-parallel-offset-dim.ts` + thin painter `canvas-v2/preview-canvas/line-offset-dim-paint.ts` (ORTHO-gated). Commit parity στο `mouse-handler-up` (`cursor/` — CHECK 6D). preview≡commit. Co-staged: ADR-040 + ADR-363. 🟡 UNCOMMITTED.
 

@@ -182,3 +182,23 @@ wall-specific σε **config-driven**, (β) **κενό commit**: το lock της
   αποκαλύφθηκε από το default-OFF (2026-05-27). FIX (ΙΔΙΟ pattern ortho/polar): `cadToggleState` NEW
   `setDynInput`/`isDynInputOn`· `useCadToggles` διαβάζει μέσω `useSyncExternalStore`, writers push sync +
   Firestore hydration. `cad-toggle-state.ts`, `useCadToggles.ts` (+2 jest, 9/9 GREEN). 🔴 browser-verify.
+- **2026-07-05 (§direct-distance-entry + beam-parity)** — AutoCAD «direct distance entry» (heads-up) +
+  **Enter τοποθετεί σημείο** + **parity δοκού** (orchestrator: 2 παράλληλοι subagents ring/beam, disjoint files).
+  **(1) Heads-up** (`RadialCommandRing`): με το δαχτυλίδι ενεργό & κανένα popup ανοιχτό, ένα ψηφίο/`.`/`,`/`-`
+  ανοίγει **αυτόματα** το «Μήκος» seeded με το πλήκτρο (NEW pure `isHeadsUpNumericKey` + `isEditableTarget`
+  guard) — δεν χρειάζεται πια κλικ στο wedge. Tab: Μήκος→Γωνία (κλειδώνει μήκος χωρίς τοποθέτηση).
+  **(2) Enter → place** (tool-agnostic): numeric-popup Enter → lock + NEW `placeAtCursor` = synthetic
+  `mousedown→mouseup` (button 0) στον καμβά στις client συντεταγμένες κέρσορα → το ενεργό εργαλείο τοποθετεί
+  το endpoint μέσω του ΚΑΝΟΝΙΚΟΥ click pipeline (`mouse-handler-up`), με `applyLengthAngleLock` να περιορίζει
+  (preview≡commit)· `placingRef` bypass στον window interceptor. Το **Μήκος = one-shot** (NEW
+  `RingFieldDef.clearOnPlace` → `unlockLength` μετά την τοποθέτηση· η Γωνία επιμένει, polar-like). ⚠️ behavior
+  change: το wedge-Enter πλέον ΚΑΙ τοποθετεί (πριν μόνο κλείδωνε) — AutoCAD-consistent.
+  **(3) Δοκός parity**: NEW `beam-ring-config.ts` (Μήκος/Γωνία κοινοί builders + Πλάτος/Ύψος overrides μέσω
+  `beamToolBridgeStore.setParamOverrides`)· `isBeamAwaitingEnd` gate (`beam-preview-store`) + mount στο
+  `DynamicInputSubscriber`· `applyLengthAngleLock` σε beam preview (`drawing-hover-handler` +`'beam'`·
+  `beam-preview-helpers` skip face-snap όταν `isLengthAngleLockActive`) & commit (`useBeamTool` awaitingEnd,
+  precedence mirror τοίχου). Κόμμα/τελεία/math = reuse `evalExpr` (μηδέν νέος parser). Γραμμή+Τοίχος (2D+3D)
+  κληρονομούν heads-up αυτόματα (shared component). jest: ring 180/180, beam 30/30 + 504 hooks/beams GREEN.
+  tsc SKIP (N.17). CHECK 6D (preview handler) → co-staged ADR-040/ADR-363. ⚠️ 3D beam ring εκτός scope
+  (`DynamicInput3DLeaf` = wall-only). 🔴 browser-verify (Γραμμή → 1ο κλικ → σταθεροποίηση → `2,5` → Enter →
+  σημείο στα 2,5m κατά κέρσορα· parity τοίχος+δοκός) + commit (Giorgio).
