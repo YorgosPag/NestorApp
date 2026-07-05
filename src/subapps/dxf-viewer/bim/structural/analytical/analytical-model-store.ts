@@ -18,26 +18,24 @@
  */
 
 import { EMPTY_ANALYTICAL_MODEL, type AnalyticalModel } from './analytical-model-types';
+import { createExternalStore } from '../../../stores/createExternalStore';
 
 type Listener = () => void;
 
-let current: AnalyticalModel = EMPTY_ANALYTICAL_MODEL;
-const listeners = new Set<Listener>();
+// SSoT pub/sub via createExternalStore (WAVE 2.6). No `equals` — the
+// hand-rolled store notified unconditionally on every `set`.
+const store = createExternalStore<AnalyticalModel>(EMPTY_ANALYTICAL_MODEL);
 
 export const AnalyticalModelStore = {
   /** Αντικατάστησε το τρέχον μοντέλο + ειδοποίησε subscribers. */
   set(next: AnalyticalModel): void {
-    current = next;
-    listeners.forEach((l) => l());
+    store.set(next);
   },
   /** Το τρέχον DERIVED μοντέλο (stable reference μέχρι το επόμενο set). */
   get(): AnalyticalModel {
-    return current;
+    return store.get();
   },
   subscribe(listener: Listener): () => void {
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
+    return store.subscribe(listener);
   },
 } as const;

@@ -16,35 +16,40 @@
 
 import type { StructuralDiagnostic } from './structural-organism-types';
 import { indexDiagnosticsByEntity } from './diagnostics-index';
+import { createExternalStore } from '../../../stores/createExternalStore';
 
 const EMPTY: readonly StructuralDiagnostic[] = Object.freeze([]);
 
 type Listener = () => void;
 
-let all: readonly StructuralDiagnostic[] = EMPTY;
-let byEntity: ReadonlyMap<string, readonly StructuralDiagnostic[]> = new Map();
-const listeners = new Set<Listener>();
+interface StructuralDiagnosticsSnapshot {
+  readonly all: readonly StructuralDiagnostic[];
+  readonly byEntity: ReadonlyMap<string, readonly StructuralDiagnostic[]>;
+}
+
+const INITIAL_SNAPSHOT: StructuralDiagnosticsSnapshot = { all: EMPTY, byEntity: new Map() };
+
+// SSoT pub/sub via createExternalStore (WAVE 2.6). `all` + `byEntity` are the
+// same derived pair rebuilt together on every `set`, so they now live in ONE
+// snapshot object. No `equals` — the hand-rolled store notified unconditionally.
+const store = createExternalStore<StructuralDiagnosticsSnapshot>(INITIAL_SNAPSHOT);
 
 export const StructuralDiagnosticsStore = {
   /** Αντικατάστησε τα ευρήματα + ειδοποίησε subscribers. */
   set(next: readonly StructuralDiagnostic[]): void {
-    all = next.length === 0 ? EMPTY : next;
-    byEntity = indexDiagnosticsByEntity(all);
-    listeners.forEach((l) => l());
+    const all = next.length === 0 ? EMPTY : next;
+    store.set({ all, byEntity: indexDiagnosticsByEntity(all) });
   },
   /** Όλα τα τρέχοντα ευρήματα (stable reference μέχρι το επόμενο set). */
   getAll(): readonly StructuralDiagnostic[] {
-    return all;
+    return store.get().all;
   },
   /** Ευρήματα που εμπλέκουν το συγκεκριμένο entity (stable reference). */
   getForEntity(entityId: string): readonly StructuralDiagnostic[] {
-    return byEntity.get(entityId) ?? EMPTY;
+    return store.get().byEntity.get(entityId) ?? EMPTY;
   },
   subscribe(listener: Listener): () => void {
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
+    return store.subscribe(listener);
   },
 } as const;
 
