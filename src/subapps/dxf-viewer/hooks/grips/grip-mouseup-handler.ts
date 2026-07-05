@@ -82,6 +82,32 @@ function resolveEndpointReshapeCommitPolar(
   return resolveEndpointReshapePolarLock(entity, grip.gripIndex, grip.lineGripKind, grip.position, worldPos)?.delta ?? null;
 }
 
+/**
+ * ADR-513 §grip-parity — the EXPLICIT-input endpoint reshape displacement: the typed Μήκος/Γωνία
+ * LOCK wins, else the POLAR angle-snap, else `null`. ONE resolver so the press-drag AND the
+ * click-move-click (hot-grip) endpoint commits honour the SAME «ρητή είσοδος = τελική γεωμετρία»
+ * priority (and stay preview ≡ commit). `null` for corner/move/non-endpoint grips → caller falls
+ * through to the ortho/step-constrained commit.
+ */
+function resolveEndpointCommitDelta(
+  grip: UnifiedGripInfo, worldPos: Point2D, deps: DxfCommitDeps,
+): Point2D | null {
+  return resolveLineEndpointCommitLock(grip, worldPos, deps)
+    ?? resolveEndpointReshapeCommitPolar(grip, worldPos, deps);
+}
+
+/**
+ * Commit an endpoint reshape `delta` (lock/polar OR ortho/step constrained) and reset the grip
+ * session. ONE shape shared by every endpoint/corner/move commit short-circuit so they cannot drift.
+ */
+function commitEndpointReshapeDelta(
+  grip: UnifiedGripInfo, delta: Point2D, deps: DxfCommitDeps, resetToIdle: () => void,
+): void {
+  commitDxfGripDragModeAware(grip, delta, deps, GripModeStore.getSnapshot());
+  GripBasePointStore.clear();
+  resetToIdle();
+}
+
 // ============================================================================
 // MOUSE UP
 // ============================================================================
@@ -135,25 +161,13 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       }
       // move / corner / endpoint-stretch — needs an anchor (base point / grip position).
       if (!anchorRef.current) return true;
-      // ADR-513 §grip-parity — πληκτρολογημένο Μήκος/Γωνία (Δαχτυλίδι) lock στην ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ
-      // γραμμής μέσω click-move-click (op 'endpoint-stretch'). Ο ΙΔΙΟΣ `resolveLineEndpointCommitLock`
-      // SSoT που τρέχει και στο press-drag branch (+ στο ghost) → preview ≡ commit. Επιστρέφει null
-      // για corner/move hot-grips (μη-line-endpoint) → no-op, δεν αγγίζει τα υπόλοιπα hot-grips.
-      const endpointHotLockDelta = resolveLineEndpointCommitLock(activeGrip, worldPos, dxfCommitDeps);
-      if (endpointHotLockDelta) {
-        commitDxfGripDragModeAware(activeGrip, endpointHotLockDelta, dxfCommitDeps, GripModeStore.getSnapshot());
-        GripBasePointStore.clear();
-        resetToIdle();
-        return true;
-      }
-      // ADR-357/513 §grip-polar — POLAR angle-snap του ΑΚΡΟΥ και στο click-move-click commit (ΙΔΙΟΣ
-      // resolver + σειρά με το press-drag branch → preview ≡ committed parity). No-op όταν POLAR off /
-      // δεν κούμπωσε / μη-endpoint → πέφτει στα ortho/step constraints παρακάτω.
-      const endpointHotPolarDelta = resolveEndpointReshapeCommitPolar(activeGrip, worldPos, dxfCommitDeps);
-      if (endpointHotPolarDelta) {
-        commitDxfGripDragModeAware(activeGrip, endpointHotPolarDelta, dxfCommitDeps, GripModeStore.getSnapshot());
-        GripBasePointStore.clear();
-        resetToIdle();
+      // ADR-513 §grip-parity-hotgrip — πληκτρολογημένο Μήκος/Γωνία (lock) ή POLAR angle-snap στην
+      // ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ μέσω click-move-click (op 'endpoint-stretch'). ΙΔΙΟΣ SSoT resolver + commit με
+      // το press-drag branch → preview ≡ commit. `null` για corner/move hot-grips (μη-line-endpoint)
+      // → πέφτει στα ortho/step constraints παρακάτω (δεν αγγίζει τα υπόλοιπα hot-grips).
+      const endpointHotDelta = resolveEndpointCommitDelta(activeGrip, worldPos, dxfCommitDeps);
+      if (endpointHotDelta) {
+        commitEndpointReshapeDelta(activeGrip, endpointHotDelta, dxfCommitDeps, resetToIdle);
         return true;
       }
       const effectiveAnchor = GripBasePointStore.getSnapshot().overrideAnchor ?? anchorRef.current;

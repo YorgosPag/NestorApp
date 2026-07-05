@@ -169,8 +169,9 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
     mouseDownInProgressRef, activeGrip, anchorRef, onToolChangeRef, resetToIdle,
     isGripMode, allGrips, phase, effectiveTolerance, hoveredGrip, selectedGrips,
     setSelectedGrips, setActiveGrip, setPhase, setCurrentWorldPos,
-    hotGripOpRef, hotGripStepRef, hotGripAwaitingFirstReleaseRef, hotGripMovedRef, hotGripBaseRef,
-    hotGripRefStartRef, hotGripRefEndRef, hotGripAlignStartRef, hotGripRotateBaseRef,
+    // Only these two hot-grip refs are read directly in this function (Block A's `seedRotateFreeStep`);
+    // the rest of the entry boilerplate is owned by `beginHotGripSession(grip, ctx, …)`.
+    hotGripStepRef, hotGripRotateBaseRef,
     warmTimerRef, universalSelection, setDraggingVertices, setDragPreviewPosition,
     overlayStoreRef, currentOverlays, setDraggingEdgeMidpoint,
     dxfCommitDeps, gripSizePx, markDragFinished,
