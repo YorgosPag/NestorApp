@@ -307,9 +307,15 @@ duplicate, αλλά ελαφρά διπλή-εγγραφή/ανάγνωση — 
 - ❌ **ΟΧΙ `tsc`** από agent (N.17) — τα renames επαληθεύτηκαν με εξαντλητικό grep για residual references.
 - ⚠️ **ADR-040 CHECK 6D:** WI-3/WI-6/WI-7 αγγίζουν canvas/cursor αρχεία → **stage ΑΥΤΟ το ADR** μαζί με τον κώδικα.
 
-### 8.3 Εναπομείναντα (follow-up, ρητά ΕΚΤΟΣ αυτής της παράδοσης)
-- **WI-6 optional πορτοκαλί POLAR γραμμή στο 2-click ROTATE:** το angle-lock (core) έγινε (preview≡commit)·
-  η οπτική POLAR γραμμή ΔΕΝ ζωγραφίστηκε — το rotation preview paint ζει στο ADR-040 micro-leaf pipeline
-  (`PreviewRenderer` / `canvas-layer-stack-tool-preview-mounts` / `CanvasSection`, CHECK 6B/6D BLOCKING),
-  οπότε αξίζει ξεχωριστή εστιασμένη προσπάθεια. Η snapped γωνία ήδη φαίνεται στο angle label.
-- **Browser / verify-skill:** εκκρεμεί (running app· ο Giorgio το εκτελεί) — 2-click ROTATE + F10 → angle-lock.
+### 8.3 Follow-up
+- **WI-6 πορτοκαλί POLAR γραμμή στο 2-click ROTATE — ✅ DONE (2026-07-05).** Το rotation preview paint leaf
+  (`hooks/tools/useRotationPreview.ts` → `draw` callback, μέσα στο `useCanvasGhostPreview` RAF harness — leaf,
+  ΟΧΙ orchestrator) ζωγραφίζει πλέον την πορτοκαλί POLAR ακτίνα pivot→cursor όταν `polarResult?.isSnapped`.
+  Recompute 1:1 από τον live cursor με το ΙΔΙΟ SSoT `resolveOrthoPolarStep` που τρέχει το commit
+  (`handleRotationMouseMove`) → γραμμή ≡ περιστροφή (`applyAlongAxisStepSnap` αλλάζει απόσταση, όχι γωνία →
+  preview≡commit). ΙΔΙΟΣ SSoT painter `paintPolarTrackingLine` με τη σχεδίαση & το hot-grip rotation
+  (`rotation-tracking-overlay`) — **μηδέν διπλότυπη μηχανή**. Polar-only (όχι AutoAlign λευκές γραμμές): το
+  2-click commit κάνει μόνο ORTHO/POLAR, όχι alignment → η λευκή γραμμή θα έσπαγε το preview≡commit. Label
+  distance = `sceneDistanceToMeters(polarResult.distance, units) * 1000` (mm), ίδιο chain με hot-grip.
+  Zero νέα subscription (μόνο `cadToggleState.isX()` getters + pure resolver μέσα στο RAF draw). No-op όταν F10 off.
+- **Browser / verify-skill:** εκκρεμεί (running app· ο Giorgio το εκτελεί) — 2-click ROTATE + F10 → πορτοκαλί γραμμή + angle-lock.

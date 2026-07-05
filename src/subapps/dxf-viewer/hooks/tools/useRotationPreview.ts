@@ -27,6 +27,15 @@ import { calculateBimRotatedGeometry } from '../../bim/transforms/bim-rotate-geo
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { drawRotationPivotMarker } from '../../rendering/ui/rotation-pivot-marker';
 import { degToRad } from '../../rendering/entities/shared/geometry-utils';
+// ADR-397 / ADR-357 / ADR-572 §8.3 — πορτοκαλί POLAR γραμμή κατά το 2-click ROTATE, μέσω ΤΟΥ ΙΔΙΟΥ
+// SSoT chain που χρησιμοποιεί το commit (`useRotationTool.handleRotationMouseMove`) και το hot-grip
+// rotation (`rotation-tracking-overlay`). Zero νέα μηχανή — reuse `resolveOrthoPolarStep` + `paintPolarTrackingLine`.
+import { resolveOrthoPolarStep } from '../drawing/drawing-handler-utils';
+import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
+import { formatPolarLabel } from '../../systems/constraints/polar-utils';
+import { paintPolarTrackingLine } from '../../canvas-v2/preview-canvas/polar-tracking-line-paint';
+import { resolveSceneUnits } from '../../utils/scene-units';
+import { sceneDistanceToMeters } from '../../bim/labels/move-readout';
 // ADR-550 (WYSIWYG) — moving copies render through the REAL entity renderer (full fidelity).
 import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
 import { useBimPreviewRenderer } from './useBimPreviewRenderer';
@@ -166,6 +175,28 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
       ctx.fillStyle = '#FFD700';
       ctx.fillText(angleText, cursorScreen.x + 15, cursorScreen.y - 10);
       ctx.restore();
+
+      // ADR-397 / ADR-357 — πορτοκαλί POLAR tracking γραμμή pivot→cursor όταν το POLAR(F10)/ORTHO(F8)
+      // κουμπώνει τη γωνία. Recompute 1:1 από τον live cursor με το ΙΔΙΟ SSoT `resolveOrthoPolarStep`
+      // που τρέχει το commit (`handleRotationMouseMove`) → η γραμμή ταυτίζεται με την περιστροφή
+      // (preview ≡ commit· το `applyAlongAxisStepSnap` αλλάζει απόσταση, όχι γωνία). ΙΔΙΟΣ painter με
+      // τη σχεδίαση & το hot-grip rotation — μηδέν διπλότυπη μηχανή.
+      const { stepped, polarResult } = resolveOrthoPolarStep(
+        effectiveCursor, basePoint, { ortho: cadToggleState.isOrthoOn(), polar: cadToggleState.isPolarOn() },
+      );
+      if (polarResult?.isSnapped && polarResult.snappedAngle !== null) {
+        const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+        const units = resolveSceneUnits(scene);
+        paintPolarTrackingLine(
+          ctx,
+          basePoint,
+          polarResult.snappedAngle,
+          formatPolarLabel(polarResult.snappedAngle, sceneDistanceToMeters(polarResult.distance, units) * 1000),
+          stepped,
+          t,
+          viewport,
+        );
+      }
     }
 
     // Real WYSIWYG rotated copies (full fidelity) — originals dim to ghosts at their source.
@@ -185,7 +216,7 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
       }
       ctx.restore();
     }
-  }, [phase, basePoint, referencePoint, currentAngle, selectedEntityIds, getEntity, getBimPreview, layersById]);
+  }, [phase, basePoint, referencePoint, currentAngle, selectedEntityIds, getEntity, getBimPreview, layersById, levelManager]);
 
   useCanvasGhostPreview({
     isActive: PREVIEW_PHASES.has(phase),
