@@ -19,9 +19,11 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { perfMark } from '../../debug/perf-line-profile';
 import type { DxfScene, DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { SceneModel, Entity } from '../../types/entities';
-import { isArrayEntity } from '../../types/entities';
+import { isArrayEntity, isGroupEntity } from '../../types/entities';
 import type { PathParams } from '../../systems/array/types';
 import { expandArrayEntity } from '../../systems/array/array-expander';
+// ADR-575 — GROUP «Ομαδοποίηση» expands to its members before conversion (mirror of array).
+import { expandGroupEntity } from '../../systems/group/group-expander';
 // 🏢 ADR-358 Phase 9D-3: hydrate the LayerStore SSoT from the active scene snapshot.
 import { setLayers as setLayerStoreLayers } from '../../stores/LayerStore';
 // ADR-362 Round 5 — seed the runtime DIMSTYLE registry from the active scene
@@ -110,6 +112,22 @@ function convertSceneToDxfWithCache(
       continue;
     }
 
+    // ADR-575: GroupEntity expands 1→N members before conversion (identity container).
+    if (isGroupEntity(entity)) {
+      let items = arrayCache.get(entity);
+      if (!items) {
+        const expanded = expandGroupEntity(entity, entities as Entity[]);
+        items = expanded.reduce<DxfEntityUnion[]>((acc, e) => {
+          const c = convertEntity(e, layers, layersById);
+          if (c) acc.push(c);
+          return acc;
+        }, []);
+        if (items.length > 0) arrayCache.set(entity, items);
+      }
+      for (const item of items) converted.push(item);
+      continue;
+    }
+
     let result = cache.get(entity);
     if (!result) {
       const c = convertEntity(entity, layers, layersById);
@@ -171,6 +189,14 @@ export function convertSceneToDxf(
         ? (entities as Entity[]).find(e => e.id === (entity.params as PathParams).pathEntityId)
         : undefined;
       for (const e of expandArrayEntity(entity, pathEnt)) {
+        const c = convertEntity(e, layers, layersById);
+        if (c) converted.push(c);
+      }
+      continue;
+    }
+    // ADR-575: GroupEntity expands 1→N members before conversion (identity container).
+    if (isGroupEntity(entity)) {
+      for (const e of expandGroupEntity(entity, entities as Entity[])) {
         const c = convertEntity(e, layers, layersById);
         if (c) converted.push(c);
       }
