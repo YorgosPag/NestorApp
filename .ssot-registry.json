@@ -96,6 +96,17 @@
       ],
       "tier": 3
     },
+    "create-tool-bridge-store": {
+      "ssotFile": "src/subapps/dxf-viewer/stores/createToolBridgeStore.ts",
+      "description": "ADR-404 Phi5b/5c — drawing-mode <-> ribbon/3D handle bridge stores (a module-level THandle|null cell a tool hook publishes and a ribbon/3D reader consumes via get()/use()) live on the createToolBridgeStore<THandle>() factory. The `let handle: XToolBridgeHandle | null` + Set<Listener> + emit/subscribe/getSnapshot/getServerSnapshot + set/get/use boilerplate was hand-copied byte-identical across 16 stores (column/foundation/railing/furniture/electrical-panel/floorplan-symbol/wall/slab/beam + 7 mep). Declaring a new module-level `let handle: <X>ToolBridgeHandle` re-implements the bridge cell — call createToolBridgeStore<XHandle>() instead (the factory delegates the pub/sub machinery to createExternalStore and bundles the useSyncExternalStore use() binding).",
+      "forbiddenPatterns": [
+        "let handle: \\w+ToolBridgeHandle"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/stores/createToolBridgeStore.ts"
+      ],
+      "tier": 3
+    },
     "browser-performance-memory": {
       "ssotFile": "src/lib/platform/browser-performance-memory.ts",
       "description": "ADR-546 — The non-standard Chrome `performance.memory` API must be declared and read ONLY through src/lib/platform/browser-performance-memory.ts. Re-declaring `interface PerformanceWithMemory`/`PerformanceMemory` or casting `as PerformanceWithMemory` anywhere else reintroduces the 4-type + 12-reader cross-subapp duplication with inconsistent units (bytes vs MB) and unsafe non-optional casts. Use readPerformanceMemory() (raw bytes) or readCpuMemoryMb() (MB). Type re-exports via `export type { ... } from` are allowed.",
