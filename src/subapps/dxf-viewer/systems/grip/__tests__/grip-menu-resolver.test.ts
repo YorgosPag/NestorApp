@@ -108,8 +108,11 @@ describe('resolveMenuActions — column / BIM / anchors yield no menu', () => {
 // ── Genuine multifunctional actions survive ──────────────────────────────────
 
 describe('resolveMenuActions — multifunctional entries', () => {
-  it('line endpoint → [lengthen]', () => {
-    expect(ids(line, grip({ type: 'vertex', gripIndex: 1 }))).toEqual(['lengthen']);
+  // ADR-513 (Giorgio 2026-07-06) — το άκρο γραμμής ΔΕΝ εμφανίζει πλέον hover-menu «Μήκος»: το hot-grip +
+  // «Δαχτυλίδι Εντολών» δίνει το ΑΚΡΙΒΕΣ μήκος στο σύρσιμο, άρα το entry είναι πλεονάζον (no menu pops).
+  it('line endpoint → [] (lengthen covered by hot-grip + Command Ring)', () => {
+    expect(ids(line, grip({ type: 'vertex', gripIndex: 0 }))).toEqual([]);
+    expect(ids(line, grip({ type: 'vertex', gripIndex: 1 }))).toEqual([]);
   });
 
   it('line midpoint → []', () => {

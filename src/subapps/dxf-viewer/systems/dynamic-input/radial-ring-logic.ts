@@ -136,11 +136,24 @@ export function advanceWheelCenter(
   return pushWheelCenter(center, cursor, rOuter);
 }
 
-/** Επόμενο/προηγούμενο πεδίο στον κύκλο TAB (Shift+TAB = ανάποδα), wrap-around. */
+/**
+ * Επόμενο/προηγούμενο κλειδί σε **οποιαδήποτε** σειρά πεδίων (Shift = ανάποδα), wrap-around.
+ * SSoT του «lock-and-advance» (ADR-513 §multi-field-lock): οδηγείται από τη ΣΕΙΡΑ ΤΟΥ `RingConfig`
+ * (`config.fields.map(f => f.key)`), ώστε να καλύπτει ΚΑΙ πεδία εκτός του σταθερού `RING_TAB_ORDER`
+ * (π.χ. `linetype` της γραμμής, `type` της δοκού). Επιστρέφει `null` όταν το `current` δεν είναι στη
+ * λίστα ή η λίστα είναι κενή (ο caller μένει στο τρέχον πεδίο). Καθαρή συνάρτηση → testable.
+ */
+export function nextFieldKeyInOrder(order: readonly string[], current: string, shift = false): string | null {
+  const i = order.indexOf(current);
+  if (i < 0 || order.length === 0) return null;
+  const len = order.length;
+  return order[(i + (shift ? len - 1 : 1)) % len];
+}
+
+/** Επόμενο/προηγούμενο πεδίο στον σταθερό κύκλο TAB (Shift+TAB = ανάποδα), wrap-around.
+ * Delegates στο γενικό `nextFieldKeyInOrder` με το `RING_TAB_ORDER` (μηδέν διπλότυπο cycle-logic). */
 export function nextRingField(current: RingFieldKey, shift: boolean): RingFieldKey {
-  const i = RING_TAB_ORDER.indexOf(current);
-  const len = RING_TAB_ORDER.length;
-  return RING_TAB_ORDER[(i + (shift ? len - 1 : 1)) % len];
+  return (nextFieldKeyInOrder(RING_TAB_ORDER, current, shift) ?? current) as RingFieldKey;
 }
 
 /**

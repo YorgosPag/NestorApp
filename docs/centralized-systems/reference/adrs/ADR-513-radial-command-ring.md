@@ -240,6 +240,42 @@ NEW `resolveEndpointCommitDelta` (lock ?? polar, ΙΔΙΑ προτεραιότη
 `ring-config.ts` (−`position` από `RingFieldDef`), `wall-/beam-/line-/grip-linear-ring-config.ts` (−`position`,
 σειρά=φέτα), + 5 test αρχεία (radial-ring-logic + 4 config). 182 dynamic-input jest GREEN.
 
+## §multi-field-lock — κλείδωμα ΠΟΛΛΩΝ πεδίων ΠΡΙΝ το commit (2026-07-06, Giorgio)
+Giorgio: «θέλω να κλειδώνω ΠΟΛΛΑ πεδία ταυτόχρονα (Μήκος + Γωνία, ή Μήκος + Πάχος + Ύψος) ΠΡΙΝ οριστικοποιηθεί
+η εντολή· σήμερα μόλις βάλω Μήκος + Enter γίνεται commit αμέσως, κι αν ανοίξω άλλο πεδίο χάνεται η προηγούμενη
+τιμή». **Big-player parity (AutoCAD Dynamic Input / Revit temporary dimensions / Figma / Cinema-4D — συγκλίνουν):
+`Tab` = κλείδωσε το τρέχον πεδίο + πήγαινε στο επόμενο ΧΩΡΙΣ commit· `Enter` = οριστικοποίησε ΟΛΑ μαζί.**
+
+**SSoT audit (grep 2026-07-06):** ο μηχανισμός multi-lock ΥΠΗΡΧΕ ΗΔΗ — `DynamicInputLockStore` (dual
+INDEPENDENT length+angle locks), `applyLengthAngleLock` (εφαρμόζει ΚΑΙ τα δύο, preview≡commit), `nextRingField`
+(σειρά Tab). Το κενό ήταν καθαρά **UX-wiring** στο `RadialCommandRing.tsx`: (α) το Tab ήταν hardcoded μόνο
+`length→angle`, (β) το άνοιγμα άλλης φέτας ΔΕΝ κλείδωνε πρώτα την τρέχουσα → «χανόταν» η τιμή. **Μηδέν νέο store/
+geometry.**
+
+### Decision (§multi-field-lock)
+1. **Γενικός «επόμενο πεδίο» οδηγούμενος από το config** — NEW pure `nextFieldKeyInOrder(order, current, shift)`
+   στο `radial-ring-logic.ts`: cycle σε **οποιαδήποτε** σειρά κλειδιών (καλύπτει `linetype`/`type` που ΔΕΝ είναι
+   στο σταθερό `RING_TAB_ORDER`). Το `nextRingField` κάνει πλέον **delegate** σε αυτό (μηδέν διπλότυπο cycle-logic).
+2. **Ένας shared lock helper** — NEW `lockOpenNumericRaw(raw)` στο component: `evalExpr` + `field.commitNumeric`
+   + `pokeCanvas`, ΧΩΡΙΣ να κλείνει το popup. Τον μοιράζονται **Enter** (commit-all), **Tab** (lock-and-advance)
+   και το **switch φέτας**. Ο `commitNumericOpen` (Enter) τον καλεί (μηδέν διπλότυπη λογική commit).
+3. **Tab = lock-and-advance (γενικό)** — `onPopupKeyDown`: κλείδωσε το draft του τρέχοντος → `nextFieldKeyInOrder
+   (config.fields.map(key), openField, shiftKey)` → άνοιξε το επόμενο (Shift+Tab ανάποδα). **Χωρίς** `placeAtCursor`.
+4. **Lock-before-switch** — `openWedge` (mousedown-intercept): αν υπάρχει ανοιχτό αριθμητικό πεδίο, `lockOpen
+   NumericRaw(inputRef.current.value)` **πριν** ανοίξει το νέο (διαβάζει το DOM ώστε να ΜΗΝ μπει `draft` dep στο
+   window-intercept effect) → δεν χάνεται η τιμή.
+5. **Enter αμετάβλητο** — commit τρέχον + `placeAtCursor`· τα ήδη κλειδωμένα (dual store + overrides) εφαρμόζονται
+   ΟΛΑ μαζί μέσω `applyLengthAngleLock` / bridge overrides.
+6. **Highlight (ήδη)** — `active = hovered || openField===key || field.isLocked()`: μετά από Tab-lock το wedge
+   μένει φωτισμένο (store length/angle, overrides thickness/height, non-ByLayer linetype). Καμία αλλαγή.
+7. **Boy-Scout** — ενοποιήθηκαν `openWedge`+`openNumericField` → ένα `openFieldForKey(key)` (numeric seed+focus /
+   select dropdown), αφαίρεση 2 near-duplicates.
+
+**MOD (§multi-field-lock):** `systems/dynamic-input/radial-ring-logic.ts` (NEW `nextFieldKeyInOrder` +
+`nextRingField` delegate), `systems/dynamic-input/components/RadialCommandRing.tsx` (NEW `openFieldForKey`/
+`lockOpenNumericRaw`· γενικό Tab· lock-before-switch· Enter reuse), `systems/dynamic-input/__tests__/
+radial-ring-logic.test.ts` (+6 cases). 188 dynamic-input jest GREEN. 🔴 ΕΚΚΡΕΜΕΙ browser-verify + commit (Giorgio).
+
 ## Sources (μελέτη AutoCAD NavWheel)
 - About SteeringWheels — https://help.autodesk.com/cloudhelp/2020/ENU/AutoCAD-Core/files/GUID-0345448F-5C16-4566-90A7-A6D33A70F67F.htm
 - SteeringWheels Settings Dialog — https://help.autodesk.com/cloudhelp/2019/ENU/AutoCAD-Core/files/GUID-D613FA7A-160C-475F-A83E-B788720C44D0.htm
@@ -291,6 +327,20 @@ NEW `resolveEndpointCommitDelta` (lock ?? polar, ΙΔΙΑ προτεραιότη
   cardinal (`WEDGE_POSITION_ANGLES`/`wedgePositionAtAngle`/`WEDGE_ANGLES`/`wedgeAtAngle`/`RingWedgePosition`)
   + το `RingFieldDef.position` (η ΣΕΙΡΑ στο config = η φέτα). Τοίχος/δοκός(4)→cardinal (ίδια όψη), γραμμή(3)→
   3×120°, grip endpoint(2)→2 ημικύκλια. 182 dynamic-input jest GREEN. 🔴 ΕΚΚΡΕΜΕΙ: browser-verify + commit.
+- **2026-07-06 (§multi-field-lock)** — Giorgio: «κλείδωμα ΠΟΛΛΩΝ πεδίων (Μήκος+Γωνία, ή Μήκος+Πάχος+Ύψος)
+  ΠΡΙΝ το commit — big-player level». Big-player audit (AutoCAD/Revit/Figma/C4D συγκλίνουν): **Tab = lock-and-
+  advance χωρίς commit· Enter = commit-all**. SSoT audit: ο μηχανισμός (dual store + `applyLengthAngleLock` +
+  σειρά) ΥΠΗΡΧΕ — κενό ήταν UX-wiring. FIX (μηδέν νέο store): NEW pure `nextFieldKeyInOrder` (config-driven cycle·
+  `nextRingField` delegate)· NEW shared `lockOpenNumericRaw` (Enter/Tab/switch)· Tab γενικό μέσω σειράς config·
+  **lock-before-switch** στο `openWedge` (δεν χάνεται η τιμή στο άνοιγμα άλλης φέτας)· Boy-Scout ενοποίηση
+  `openWedge`+`openNumericField`→`openFieldForKey`. +6 jest → 188 dynamic-input GREEN. 🔴 ΕΚΚΡΕΜΕΙ: browser-verify + commit.
+- **2026-07-06 (§multi-field-lock — stale-lock bugfix, Giorgio)** — «απενεργοποίησα τη Δυναμική Εισαγωγή και
+  ξαναπάτησα την εντολή γραμμής, αλλά κράτησε τις τιμές — λάθος». Root: το `applyLengthAngleLock` είναι **ungated**
+  (`useDrawingHandlers`/`useWallTool`/`useBeamTool` το διαβάζουν όποτε υπάρχει lock) ΚΑΙ το `DynamicInputLockStore`
+  δεν καθαριζόταν ΠΟΤΕ όταν έσβηνε το toggle (μόνο grip `onDeactivate` + `clearOnPlace`) → stale length/angle locks
+  «κόλλαγαν» στη νέα γραμμή με τη Δυν. Εισ. **OFF**. FIX (single owner): NEW effect στον `DynamicInputSubscriber`
+  → `if (!dynInput.on) DynamicInputLockStore.unlock()` (idempotent). **MOD:** `components/dxf-layout/DynamicInput
+  Subscriber.tsx`. 🔴 ΕΚΚΡΕΜΕΙ: browser-verify + commit.
 - **2026-06-30 (§line-parity — SSoT audit follow-up, Giorgio)** — Εντοπίστηκε & διορθώθηκε διπλότυπο
   που είχα φτιάξει: η απαρίθμηση «ByLayer + registry linetypes» υπήρχε ΗΔΗ στο ribbon
   (`useRibbonLineToolBridge.buildLinetypeOptions`) και την ξανάγραψα στο `line-ring-config`. **FIX:** NEW

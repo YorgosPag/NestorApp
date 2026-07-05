@@ -6,6 +6,7 @@
 import {
   RING_TAB_ORDER,
   nextRingField,
+  nextFieldKeyInOrder,
   isRingFieldLocked,
   computeLiveLengthAngle,
   lengthDisplayToSceneLock,
@@ -43,6 +44,32 @@ describe('nextRingField', () => {
   it('cycles backward with Shift', () => {
     expect(nextRingField('angle', true)).toBe('length');
     expect(nextRingField('length', true)).toBe('height');
+  });
+});
+
+describe('nextFieldKeyInOrder (config-driven lock-and-advance — ADR-513 §multi-field-lock)', () => {
+  // Σειρά γραμμής: Μήκος → Γωνία → Τύπος (select) — καλύπτει κλειδί ΕΚΤΟΣ RING_TAB_ORDER.
+  const lineOrder = ['length', 'angle', 'linetype'] as const;
+
+  it('advances in the CONFIG order (incl. keys outside RING_TAB_ORDER)', () => {
+    expect(nextFieldKeyInOrder(lineOrder, 'length', false)).toBe('angle');
+    expect(nextFieldKeyInOrder(lineOrder, 'angle', false)).toBe('linetype');
+  });
+  it('wraps forward from the last field', () => {
+    expect(nextFieldKeyInOrder(lineOrder, 'linetype', false)).toBe('length');
+  });
+  it('goes backward with shift (wrap)', () => {
+    expect(nextFieldKeyInOrder(lineOrder, 'length', true)).toBe('linetype');
+    expect(nextFieldKeyInOrder(lineOrder, 'angle', true)).toBe('length');
+  });
+  it('returns null when current key is not in the order', () => {
+    expect(nextFieldKeyInOrder(lineOrder, 'height', false)).toBeNull();
+  });
+  it('returns null for an empty order', () => {
+    expect(nextFieldKeyInOrder([], 'length', false)).toBeNull();
+  });
+  it('nextRingField delegates to it over RING_TAB_ORDER', () => {
+    expect(nextFieldKeyInOrder(RING_TAB_ORDER, 'height', false)).toBe('length');
   });
 });
 

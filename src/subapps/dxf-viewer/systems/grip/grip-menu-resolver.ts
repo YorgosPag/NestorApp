@@ -14,7 +14,8 @@
  *
  * Industry rules (AutoCAD / BricsCAD / progeCAD / GstarCAD / nanoCAD), minus
  * the implicit Stretch:
- *  - LINE endpoint → Lengthen
+ *  - LINE endpoint → (no menu) — ADR-513: hot-grip + «Δαχτυλίδι Εντολών» δίνει το ΑΚΡΙΒΕΣ μήκος
+ *    στο ίδιο το σύρσιμο, οπότε το «Μήκος» hover entry είναι πλεονάζον (Giorgio 2026-07-06).
  *  - ARC endpoint → Lengthen
  *  - ARC midpoint → Radius
  *  - everything else (anchors, midpoints, MOVE glyph) → (no menu)
@@ -48,10 +49,6 @@ const META: Readonly<Record<GripMenuActionId, GripMenuActionMeta>> = {
   radius:   { id: 'radius',   labelKey: 'gripMenu.radius' },
 };
 
-function isLineEndpoint(grip: UnifiedGripInfo): boolean {
-  return grip.type === 'vertex' && (grip.gripIndex === 0 || grip.gripIndex === 1);
-}
-
 function isArcEndpoint(grip: UnifiedGripInfo): boolean {
   return grip.type === 'vertex' && (grip.gripIndex === 1 || grip.gripIndex === 2);
 }
@@ -72,8 +69,11 @@ export function resolveMenuActions(entity: Entity, grip: UnifiedGripInfo): GripM
   if (grip.movesEntity) return [];
 
   switch (entity.type) {
+    // ADR-397 / ADR-513 — το άκρο γραμμής έχει πλέον hot-grip + «Δαχτυλίδι Εντολών»: πληκτρολογείς το
+    // ΑΚΡΙΒΕΣ μήκος μέσα στο ίδιο το σύρσιμο. Άρα το «Μήκος» (lengthen) hover-menu είναι πλεονάζον (η ίδια
+    // Revit-grade λογική «το drag ΕΙΝΑΙ το stretch» → κανένα menu). Giorgio 2026-07-06: «εξαφάνισέ την».
     case 'line':
-      return isLineEndpoint(grip) ? [META.lengthen] : [];
+      return [];
 
     case 'arc':
       if (isArcMidpoint(grip)) return [META.radius];

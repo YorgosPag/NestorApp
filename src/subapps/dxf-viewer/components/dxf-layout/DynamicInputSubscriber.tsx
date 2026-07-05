@@ -13,7 +13,7 @@
 
 'use client';
 
-import React, { useSyncExternalStore } from 'react';
+import React, { useEffect, useSyncExternalStore } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import {
   subscribeToImmediatePosition,
@@ -88,6 +88,14 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
   // we subscribe to a NO-OP store, so this leaf does NOT re-render on every
   // mousemove (it was the #1 per-move re-render before this gate).
   const interactive = dynInput.on && isInteractiveTool(activeTool);
+
+  // ADR-513 §multi-field-lock — μόλις ΣΒΗΣΕΙ η Δυναμική Εισαγωγή, καθάρισε ΟΛΑ τα length/angle locks ώστε
+  // η επόμενη εντολή να ξεκινά ΕΛΕΥΘΕΡΗ. Το `applyLengthAngleLock` είναι UNGATED (useDrawingHandlers/
+  // useWallTool/useBeamTool το διαβάζουν όποτε υπάρχει lock) → χωρίς αυτό, stale τιμές «κολλάνε» σε νέα
+  // γραμμή/τοίχο ακόμη κι με τη Δυναμική Εισαγωγή OFF (bug Giorgio 2026-07-06). Idempotent (no-op αν άδειο).
+  useEffect(() => {
+    if (!dynInput.on) DynamicInputLockStore.unlock();
+  }, [dynInput.on]);
 
   // High-frequency cursor subscriptions — isolated to this leaf, gated by `interactive`.
   const cursorPosition = useSyncExternalStore(

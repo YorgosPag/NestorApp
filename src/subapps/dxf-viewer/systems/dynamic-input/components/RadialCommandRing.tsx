@@ -23,7 +23,6 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { portalComponents } from '@/styles/design-tokens';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { useDisplayUnit } from '../../../hooks/common/useDisplayUnit';
 import type { SceneUnits } from '../../../utils/scene-units';
@@ -43,7 +42,10 @@ import {
   pieSectorPath,
   cursorZone,
   advanceWheelCenter,
+  nextFieldKeyInOrder,
 } from '../radial-ring-logic';
+// File-size SRP split (N.7.1) — pure predicates + inline style builders.
+import { isHeadsUpNumericKey, isEditableTarget, boxStyle, anchorStyle } from './radial-command-ring-helpers';
 
 export interface RadialCommandRingProps {
   /** Διάταξη πεδίων ανά εργαλείο (τοίχος / γραμμή). */
@@ -214,15 +216,40 @@ export function RadialCommandRing({
     }
   }, [getCanvasEl]);
 
-  const openWedge = useCallback((index: number) => {
-    const field = config.fields[index];
-    if (!field) return; // εκτός εύρους → no-op
+  // Άνοιξε πεδίο από το κλειδί του (SSoT: numeric → seed+focus· select → dropdown λίστα). Ενοποιεί
+  // την «άνοιγμα φέτας» (index) ΚΑΙ το Tab-advance (key) — μηδέν διπλότυπη λογική ανοίγματος.
+  const openFieldForKey = useCallback((key: string) => {
+    const field = fieldByKey.get(key);
+    if (!field) return; // άγνωστο κλειδί → no-op
     setOpenField(field.key);
     if (field.kind === 'numeric') {
       setDraft(field.seed(unitCtx));
       setTimeout(() => { inputRef.current?.focus(); inputRef.current?.select(); }, 0);
     }
-  }, [config, unitCtx]);
+  }, [fieldByKey, unitCtx]);
+
+  // ADR-513 §multi-field-lock — SSoT «κλείδωσε το τρέχον αριθμητικό πεδίο» ΧΩΡΙΣ να κλείσει το popup.
+  // Το μοιράζονται Enter (commit-all), Tab (lock-and-advance) και το switch φέτας. `true` μόνο σε
+  // επιτυχές lock (έγκυρη έκφραση). Ο caller δίνει το raw string (React `draft` ή DOM `input.value`).
+  const lockOpenNumericRaw = useCallback((raw: string): boolean => {
+    if (!openField) return false;
+    const field = fieldByKey.get(openField);
+    if (field?.kind !== 'numeric' || !field.commitNumeric) return false;
+    const num = evalExpr(raw.replace(/,/g, '.'));
+    if (num === null) return false;
+    field.commitNumeric(num, unitCtx);
+    pokeCanvas();
+    return true;
+  }, [openField, fieldByKey, unitCtx, pokeCanvas]);
+
+  const openWedge = useCallback((index: number) => {
+    const field = config.fields[index];
+    if (!field) return; // εκτός εύρους → no-op
+    // ADR-513 §multi-field-lock — αν υπάρχει ήδη ανοιχτό αριθμητικό πεδίο, κλείδωσέ το ΠΡΩΤΑ (διάβασε το
+    // draft από το DOM ώστε να ΜΗΝ μπει `draft` dep στο window-intercept effect) → δεν χάνεται η τιμή.
+    lockOpenNumericRaw(inputRef.current?.value ?? '');
+    openFieldForKey(field.key);
+  }, [config, lockOpenNumericRaw, openFieldForKey]);
 
   // Όσο ο κέρσορας είναι ΠΑΝΩ στα wedges (inside) είναι `pointer-events-none` (ώστε ο καμβάς να
   // συνεχίζει να δέχεται mousemove). Άρα το κλικ σε wedge το πιάνουμε εδώ (window capture) ΚΑΙ
@@ -261,20 +288,11 @@ export function RadialCommandRing({
   // Επιστρέφει `true` ΜΟΝΟ όταν όντως κλειδώθηκε αριθμητική τιμή (έγκυρη έκφραση) — ώστε το
   // Enter να τοποθετεί σημείο μόνο σε επιτυχές commit (όχι σε άκυρη/κενή είσοδο).
   const commitNumericOpen = useCallback((): boolean => {
-    if (!openField) return false;
-    const field = fieldByKey.get(openField);
-    if (field?.kind !== 'numeric' || !field.commitNumeric) { setOpenField(null); return false; }
-    // Δέξου ΚΑΙ κόμμα ΚΑΙ τελεία ως δεκαδικό (0,25 ≡ 0.25) — όπως το `DynamicInputField`.
-    const num = evalExpr(draft.replace(/,/g, '.'));
-    let committed = false;
-    if (num !== null) {
-      field.commitNumeric(num, unitCtx);
-      pokeCanvas();
-      committed = true;
-    }
+    // Δέξου ΚΑΙ κόμμα ΚΑΙ τελεία ως δεκαδικό (0,25 ≡ 0.25) — μέσω του κοινού `lockOpenNumericRaw`.
+    const committed = lockOpenNumericRaw(draft);
     setOpenField(null);
     return committed;
-  }, [openField, fieldByKey, draft, unitCtx, pokeCanvas]);
+  }, [lockOpenNumericRaw, draft]);
 
   // ADR-513 §direct-distance-entry — tool-agnostic τοποθέτηση: dispatch πραγματικού click sequence
   // (mousedown→mouseup, button 0) στον καμβά στις τρέχουσες client συντεταγμένες, ώστε το ενεργό
@@ -298,15 +316,6 @@ export function RadialCommandRing({
     placedField?.clearOnPlace?.();
   }, [getCanvasEl]);
 
-  // Άνοιξε αριθμητικό πεδίο με seed την τρέχουσα τιμή (Tab flow: Μήκος → Γωνία).
-  const openNumericField = useCallback((key: string) => {
-    const field = fieldByKey.get(key);
-    if (!field || field.kind !== 'numeric') return;
-    setOpenField(field.key);
-    setDraft(field.seed(unitCtx));
-    setTimeout(() => { inputRef.current?.focus(); inputRef.current?.select(); }, 0);
-  }, [fieldByKey, unitCtx]);
-
   const commitSelectOpen = useCallback((value: string) => {
     if (!openField) return;
     const field = fieldByKey.get(openField);
@@ -328,16 +337,16 @@ export function RadialCommandRing({
       if (commitNumericOpen() && placementMode === 'canvas-click') placeAtCursor(placedField);
       return;
     }
-    // Tab στο «Μήκος» → κλείδωσε το μήκος (χωρίς τοποθέτηση) και άνοιξε τη «Γωνία» (type-len→Tab→type-ang→Enter).
-    if (e.key === 'Tab' && openField === 'length' && fieldByKey.has('angle')) {
+    // ADR-513 §multi-field-lock — Tab = lock-and-advance: κλείδωσε το τρέχον draft (ΧΩΡΙΣ τοποθέτηση) και
+    // άνοιξε το ΕΠΟΜΕΝΟ πεδίο στη σειρά του config (cycle· Shift+Tab ανάποδα). Το commit-all μένει στο Enter.
+    if (e.key === 'Tab' && openField) {
       e.preventDefault();
       e.stopPropagation();
-      const num = evalExpr(draft.replace(/,/g, '.'));
-      const lengthField = fieldByKey.get('length');
-      if (num !== null && lengthField?.commitNumeric) { lengthField.commitNumeric(num, unitCtx); pokeCanvas(); }
-      openNumericField('angle');
+      lockOpenNumericRaw(draft);
+      const nextKey = nextFieldKeyInOrder(config.fields.map((f) => f.key), openField, e.shiftKey);
+      if (nextKey) openFieldForKey(nextKey);
     }
-  }, [openField, fieldByKey, draft, unitCtx, pokeCanvas, commitNumericOpen, placeAtCursor, openNumericField, placementMode]);
+  }, [openField, fieldByKey, draft, placementMode, commitNumericOpen, placeAtCursor, lockOpenNumericRaw, config, openFieldForKey]);
 
   // ADR-364 — Escape μέσω του κεντρικού EscapeCommandBus (SSoT), ίδιο slot DYNAMIC_INPUT (P900).
   useEscapeHandler({
@@ -455,38 +464,6 @@ export function RadialCommandRing({
   );
 }
 
-/**
- * ADR-513 §direct-distance-entry — pure predicate: ένα πλήκτρο ενεργοποιεί το heads-up άνοιγμα του
- * «Μήκος» (AutoCAD direct distance entry). Δεκτά: ψηφία 0-9, δεκαδικό (`.`/`,`), πρόσημο (`-`) —
- * ΧΩΡΙΣ ctrl/alt/meta (ώστε shortcuts όπως Ctrl+1 να μην κλέβονται). Testable χωρίς DOM.
- */
-export function isHeadsUpNumericKey(
-  e: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'altKey' | 'metaKey'>,
-): boolean {
-  if (e.ctrlKey || e.altKey || e.metaKey) return false;
-  return /^[0-9.,-]$/.test(e.key);
-}
-
-/** `true` αν το element δέχεται πληκτρολόγηση (input/textarea/select/contentEditable) → μη το κλέψεις. */
-function isEditableTarget(el: Element | null): boolean {
-  if (!el) return false;
-  const tag = el.tagName;
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
-  return (el as HTMLElement).isContentEditable === true;
-}
-
-/** Inline cursor-follow box (px). Κεντραρισμένο στο δαχτυλίδι. */
-function boxStyle(x: number, y: number, box: number): React.CSSProperties {
-  return {
-    left: `${x}px`,
-    top: `${y}px`,
-    width: `${box}px`,
-    height: `${box}px`,
-    zIndex: portalComponents.overlay.controls.zIndex() + 90,
-  };
-}
-
-/** Θέση popup στο anchor του wedge (px εντός του box). */
-function anchorStyle(x: number, y: number): React.CSSProperties {
-  return { left: `${x}px`, top: `${y}px` };
-}
+// ADR-513 — heads-up predicate re-exported ώστε ο import path των tests (`radial-ring-headsup.test`)
+// να μείνει σταθερός μετά το file-size split (N.7.1, 2026-07-06).
+export { isHeadsUpNumericKey };
