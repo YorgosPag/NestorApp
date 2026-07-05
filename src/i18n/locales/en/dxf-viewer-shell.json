@@ -2225,6 +2225,9 @@
       "chamferAngle": "Angle",
       "array": "Array",
       "explode": "Explode",
+      "join": "Join",
+      "group": "Group",
+      "ungroup": "Ungroup",
       "delete": "Delete",
       "comingSoon": "Coming soon: {label}",
       "circleVariants": {

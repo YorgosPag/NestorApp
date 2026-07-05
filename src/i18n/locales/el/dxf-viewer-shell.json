@@ -2225,6 +2225,9 @@
       "chamferAngle": "Γωνία",
       "array": "Πίνακας",
       "explode": "Διάλυση",
+      "join": "Ένωση",
+      "group": "Ομαδοποίηση",
+      "ungroup": "Κατάργηση Ομαδοποίησης",
       "delete": "Διαγραφή",
       "comingSoon": "Σύντομα διαθέσιμο: {label}",
       "circleVariants": {
