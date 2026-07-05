@@ -17,6 +17,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { DXF_TIMING } from '../../config/dxf-timing';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export interface AcquiredTrackingPoint {
   readonly x: number;
@@ -27,8 +28,6 @@ export interface AcquiredTrackingPoint {
   readonly sourceSnapType: string;
 }
 
-type Listener = () => void;
-
 /** Max simultaneous acquired points before FIFO eviction kicks in. */
 export const MAX_TRACKING_POINTS = 7;
 /** Hover duration (ms) needed on a stable snap candidate before acquisition. */
@@ -37,10 +36,13 @@ export const ACQUISITION_DURATION_MS = DXF_TIMING.gesture.ACQUISITION; // ADR-51
 export const INACTIVITY_TIMEOUT_MS = DXF_TIMING.lifecycle.TRACKING_INACTIVITY; // ADR-516
 
 class TrackingPointStoreClass {
+  /** Mutation accelerator — the authoritative point set (mutated in place, then published). */
   private points: AcquiredTrackingPoint[] = [];
-  private listeners: Set<Listener> = new Set();
-  /** Stable snapshot — only replaced when `points` actually mutates. */
-  private snapshot: readonly AcquiredTrackingPoint[] = [];
+  /**
+   * Pub/sub SSoT (ADR-040 doctrine). The exposed state is the referentially-stable
+   * snapshot array — only replaced when `points` actually mutates, so React bails cheaply.
+   */
+  private readonly store = createExternalStore<readonly AcquiredTrackingPoint[]>([]);
   private inactivityTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
@@ -59,9 +61,8 @@ class TrackingPointStoreClass {
     this.points = withNew.length > MAX_TRACKING_POINTS
       ? withNew.slice(withNew.length - MAX_TRACKING_POINTS)
       : withNew;
-    this.snapshot = this.points.slice();
     this.armInactivityTimer();
-    this.notify();
+    this.store.set(this.points.slice());
   }
 
   /** Bump the inactivity timer without mutating the point set. */
@@ -74,23 +75,19 @@ class TrackingPointStoreClass {
   clearAll(): void {
     if (this.points.length === 0) return;
     this.points = [];
-    this.snapshot = this.points;
     this.cancelInactivityTimer();
-    this.notify();
+    this.store.set(this.points);
   }
 
   /** Read-only mutable view of acquired points (do not mutate). */
   getPoints(): readonly AcquiredTrackingPoint[] {
-    return this.snapshot;
+    return this.store.get();
   }
 
   /** `useSyncExternalStore`-compatible snapshot — referentially stable. */
-  getSnapshot = (): readonly AcquiredTrackingPoint[] => this.snapshot;
+  getSnapshot = (): readonly AcquiredTrackingPoint[] => this.store.get();
 
-  subscribe = (fn: Listener): (() => void) => {
-    this.listeners.add(fn);
-    return () => { this.listeners.delete(fn); };
-  };
+  subscribe = (fn: () => void): (() => void) => this.store.subscribe(fn);
 
   private armInactivityTimer(): void {
     this.cancelInactivityTimer();
@@ -104,12 +101,6 @@ class TrackingPointStoreClass {
       clearTimeout(this.inactivityTimer);
       this.inactivityTimer = null;
     }
-  }
-
-  private notify(): void {
-    this.listeners.forEach(fn => {
-      try { fn(); } catch (err) { console.error('TrackingPointStore listener error:', err); }
-    });
   }
 }
 
