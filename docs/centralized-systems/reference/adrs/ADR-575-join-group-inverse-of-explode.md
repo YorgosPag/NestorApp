@@ -111,6 +111,24 @@ block library — ξεχωριστό, μεγαλύτερο subsystem.
 
 ---
 
+## 7. SSoT centralization (boy-scout, N.0.2 / N.12)
+Ο `CreateGroupCommand` αρχικά ξανάγραφε **inline** το extract/restore (snapshot+remove / restore)
+— διπλότυπο του υπάρχοντος `extractSourcesFromScene`/`restoreSourcesToScene` (που χρησιμοποιεί ήδη
+ο `CreateArrayCommand`). Διόρθωση:
+- **Promote** των δύο helpers σε ουδέτερο SSoT `core/commands/entity-commands/entity-source-extraction.ts`
+  (ήταν κακώς κάτω από `systems/array/` με «array» όνομα, αν και γενικοί). Το παλιό
+  `array-source-extraction.ts` = thin re-export (μηδέν αλλαγή για array consumers).
+- **Reuse** από `CreateGroupCommand` **ΚΑΙ** από τον sibling `JoinEntityCommand` (πρωτο-ϋπάρχον
+  διπλότυπο — κεντρικοποιήθηκε επίσης· προστέθηκε το `JoinEntityCommand.test.ts` που έλειπε).
+- Επαλήθευση: **580/580** array + entity-command tests pass (μηδέν regression).
+- **Considered-not-applied**: ο `ExplodeEntityCommand` έχει διαφορετικό 1→N interleaved shape
+  (per-source add-primitives) → δεν ταιριάζει καθαρά στο extract helper.
+- **Follow-up (pending-ratchet)**: ο `JoinEntityCommand` και ο `CreateGroupCommand` έχουν ~95%
+  πανομοιότυπη δομή (snapshot→remove→add-container / undo / redo)· μπορούν να ενοποιηθούν σε μια
+  κοινή `ReplaceEntitiesWithContainerCommand` βάση.
+
 ## Changelog
 - **2026-07-05** — Αρχική υλοποίηση. JOIN ribbon exposure + GROUP `type:'group'` container
   (engine/command/expander/transforms/ribbon) + UNGROUP=EXPLODE delegation. 26/26 tests.
+- **2026-07-05** — SSoT boy-scout (§7): promote `entity-source-extraction` σε ουδέτερο SSoT·
+  reuse από Group+Join· `JoinEntityCommand.test.ts`. 580/580 tests.
