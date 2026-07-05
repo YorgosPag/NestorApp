@@ -300,8 +300,16 @@ duplicate, αλλά ελαφρά διπλή-εγγραφή/ανάγνωση — 
 | «Polar» (F10 tracking / polar-disk / polar-array) | — (docs μόνο) | Τα symbols ήδη διακριτά (`polarTrackingStore` / `polar-disk-snap` / `polar-transform`)· η σύγχυση ήταν μόνο στη λέξη. |
 
 ### 8.2 Verification
-- **jest:** `registry-golden` (56) + affected quantize/projection suites (74) + `RotationPointSnapEngine` (13) → GREEN. Καμία αλλαγή συμπεριφοράς στα WI-2/4/5 (τα υπάρχοντα tests πέρασαν αυτούσια).
+- **jest:** `registry-golden` (56) + affected quantize/projection suites (74) + `RotationPointSnapEngine` (13) + corner-alignment integration (17) → GREEN. Καμία αλλαγή συμπεριφοράς στα WI-2/4/5 (τα υπάρχοντα tests πέρασαν αυτούσια).
+- **νέα dedicated unit tests (18):** `quantize-to-step.test.ts` (quantizeToStep + projectPointOnLine≡getNearestPointOnLine ισοδυναμία) + `polyline-perpendicular-feet.test.ts` (nearest/perpendicular feet, open & closed).
 - **registry:** `npm run test:registry-golden` (έγκυρο ERE στο νέο pattern) + `npm run ssot:audit` (καμία νέα παραβίαση· ο πυρήνας ζει μόνο στο allowlist).
 - **browser (τοπικά):** 2-click ROTATE + F10 → angle-lock· direction-arc baseline οπτικά ίδιο· grip/body-drag/dim ίχνη + column place-rotate + polar-disk αμετάβλητα.
 - ❌ **ΟΧΙ `tsc`** από agent (N.17) — τα renames επαληθεύτηκαν με εξαντλητικό grep για residual references.
 - ⚠️ **ADR-040 CHECK 6D:** WI-3/WI-6/WI-7 αγγίζουν canvas/cursor αρχεία → **stage ΑΥΤΟ το ADR** μαζί με τον κώδικα.
+
+### 8.3 Εναπομείναντα (follow-up, ρητά ΕΚΤΟΣ αυτής της παράδοσης)
+- **WI-6 optional πορτοκαλί POLAR γραμμή στο 2-click ROTATE:** το angle-lock (core) έγινε (preview≡commit)·
+  η οπτική POLAR γραμμή ΔΕΝ ζωγραφίστηκε — το rotation preview paint ζει στο ADR-040 micro-leaf pipeline
+  (`PreviewRenderer` / `canvas-layer-stack-tool-preview-mounts` / `CanvasSection`, CHECK 6B/6D BLOCKING),
+  οπότε αξίζει ξεχωριστή εστιασμένη προσπάθεια. Η snapped γωνία ήδη φαίνεται στο angle label.
+- **Browser / verify-skill:** εκκρεμεί (running app· ο Giorgio το εκτελεί) — 2-click ROTATE + F10 → angle-lock.
