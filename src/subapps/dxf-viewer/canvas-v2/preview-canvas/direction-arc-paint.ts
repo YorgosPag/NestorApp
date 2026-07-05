@@ -26,6 +26,7 @@ import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Typ
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 import { formatAngleLocale } from '../../rendering/entities/shared/distance-label-utils';
+import { applyReferenceBaselineStyle } from './overlay-line-style';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -45,12 +46,8 @@ const ARC_LINE_WIDTH = 1;
 const ANGLE_LABEL_FONT = 'bold 15px sans-serif';
 /** Δεκαδικά ψηφία της ζωντανής γωνίας (Giorgio: «δύο δεκαδικά»). */
 const ANGLE_LABEL_DECIMALS = 2;
-/** Διακεκομμένη baseline (γραμμή έναρξης μέτρησης γωνιών, 0° άξονας αναφοράς). */
-const BASELINE_DASH: readonly number[] = [5, 4];
-/** Ουδέτερο ημιδιάφανο λευκό για την baseline (ορατό σε μαύρο canvas, χωρίς πρόσημο/χρώμα). */
-const BASELINE_COLOR = 'rgba(255,255,255,0.55)';
-/** Πάχος γραμμής baseline. */
-const BASELINE_LINE_WIDTH = 1;
+// Η όψη της baseline (dash/πάχος/χρώμα) ζει πλέον στο overlay-line-style SSoT ως REFERENCE-BASELINE
+// family (`applyReferenceBaselineStyle`) — σκόπιμα διακριτή από τα ενεργά ίχνη snap (Revit/Figma-grade).
 
 // ── Pure geometry / color ───────────────────────────────────────────────────────
 
@@ -163,9 +160,7 @@ function drawAngleLabel(ctx: CanvasRenderingContext2D, pos: Point2D, sweepDeg: n
 /** Διακεκομμένη baseline 0° (pivot → άξονας αναφοράς) — δείχνει το σημείο έναρξης μέτρησης γωνιών. */
 function drawBaseline(ctx: CanvasRenderingContext2D, from: Point2D, to: Point2D): void {
   ctx.save();
-  ctx.setLineDash([...BASELINE_DASH]);
-  ctx.strokeStyle = BASELINE_COLOR;
-  ctx.lineWidth = BASELINE_LINE_WIDTH;
+  applyReferenceBaselineStyle(ctx);
   ctx.beginPath();
   ctx.moveTo(from.x, from.y);
   ctx.lineTo(to.x, to.y);

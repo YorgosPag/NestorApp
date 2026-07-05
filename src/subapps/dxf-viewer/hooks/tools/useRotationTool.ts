@@ -23,6 +23,8 @@ import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/Preview
 import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { angleBetweenPointsDeg } from '../../utils/rotation-math';
+import { resolveOrthoPolarStep } from '../drawing/drawing-handler-utils';
+import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { useLevels } from '../../systems/levels';
 import type { Overlay, UpdateOverlayData } from '../../overlays/types';
@@ -289,8 +291,17 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
   const handleRotationMouseMove = useCallback((worldPoint: Point2D) => {
     if (phase !== 'awaiting-angle' || !basePoint) return;
 
+    // ORTHO(F8)/POLAR(F10) angle-lock around the pivot — SAME SSoT chain the hot-grip
+    // rotation uses (rotation-tracking-overlay.resolveRotationTracking). No-op when both
+    // toggles are off, so default behaviour is unchanged. The commit path reads
+    // `currentAngle`, so snapping the previewed angle snaps the committed one too
+    // (preview ≡ commit), matching AutoCAD/Revit ROTATE angle-lock.
+    const ortho = cadToggleState.isOrthoOn();
+    const polar = cadToggleState.isPolarOn();
+    const stepped = resolveOrthoPolarStep(worldPoint, basePoint, { ortho, polar }).stepped;
+
     // Reference angle was set explicitly in awaiting-reference phase
-    const rawAngle = angleBetweenPointsDeg(basePoint, worldPoint);
+    const rawAngle = angleBetweenPointsDeg(basePoint, stepped);
     const angle = rawAngle - startAngleRef.current;
     setCurrentAngle(angle);
   }, [phase, basePoint]);

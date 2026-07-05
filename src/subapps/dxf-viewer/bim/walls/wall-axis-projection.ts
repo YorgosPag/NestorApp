@@ -17,8 +17,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { WallEntity } from '../types/wall-types';
-import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
-import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { nearestFootOnPolyline, perpendicularFeetOverPolyline } from '../../snapping/shared/polyline-perpendicular-feet';
 
 /**
  * Κλειστά clamped foot — closest point πάνω στον axis polyline του τοίχου.
@@ -35,22 +34,8 @@ export function projectPointOnWallAxis(
 ): Point2D | null {
   const points = wall.geometry?.axisPolyline?.points;
   if (!points || points.length < 2) return null;
-
-  let closest: Point2D | null = null;
-  let closestDistance = Infinity;
-
-  for (let i = 1; i < points.length; i++) {
-    const a: Point2D = { x: points[i - 1].x, y: points[i - 1].y };
-    const b: Point2D = { x: points[i].x, y: points[i].y };
-    const foot = getNearestPointOnLine(cursor, a, b, true);
-    const d = calculateDistance(cursor, foot);
-    if (d < closestDistance) {
-      closestDistance = d;
-      closest = foot;
-    }
-  }
-
-  return closest;
+  // Wall axis is an OPEN polyline (straight=2, curved=N+1, polyline=user vertices).
+  return nearestFootOnPolyline(points, cursor, false);
 }
 
 /**
@@ -71,17 +56,6 @@ export function getWallAxisPerpendicularFeet(
 ): Array<{ point: Point2D; segmentIndex: number }> {
   const points = wall.geometry?.axisPolyline?.points;
   if (!points || points.length < 2) return [];
-
-  const feet: Array<{ point: Point2D; segmentIndex: number }> = [];
-
-  for (let i = 1; i < points.length; i++) {
-    const a: Point2D = { x: points[i - 1].x, y: points[i - 1].y };
-    const b: Point2D = { x: points[i].x, y: points[i].y };
-    const foot = getNearestPointOnLine(cursor, a, b, false);
-    if (calculateDistance(cursor, foot) <= maxDistance) {
-      feet.push({ point: foot, segmentIndex: i - 1 });
-    }
-  }
-
-  return feet;
+  // OPEN polyline; the shared helper's `segmentIndex` already matches the old `i - 1`.
+  return perpendicularFeetOverPolyline(points, cursor, maxDistance, false);
 }

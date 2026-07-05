@@ -21,8 +21,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { SlabEntity } from '../types/slab-types';
-import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
-import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { nearestFootOnPolyline, perpendicularFeetOverPolyline } from '../../snapping/shared/polyline-perpendicular-feet';
 
 /**
  * Κλειστά clamped foot — closest point πάνω σε οποιαδήποτε ακμή του slab
@@ -38,23 +37,8 @@ export function projectPointOnSlabEdge(
 ): Point2D | null {
   const points = slab.geometry?.polygon?.vertices;
   if (!points || points.length < 3) return null;
-
-  let closest: Point2D | null = null;
-  let closestDistance = Infinity;
-  const n = points.length;
-
-  for (let i = 0; i < n; i++) {
-    const a: Point2D = { x: points[i].x, y: points[i].y };
-    const b: Point2D = { x: points[(i + 1) % n].x, y: points[(i + 1) % n].y };
-    const foot = getNearestPointOnLine(cursor, a, b, true);
-    const d = calculateDistance(cursor, foot);
-    if (d < closestDistance) {
-      closestDistance = d;
-      closest = foot;
-    }
-  }
-
-  return closest;
+  // CLOSED polygon — the closing edge [last→first] is included by the shared helper.
+  return nearestFootOnPolyline(points, cursor, true);
 }
 
 /**
@@ -73,18 +57,7 @@ export function getSlabEdgePerpendicularFeet(
 ): Array<{ point: Point2D; edgeIndex: number }> {
   const points = slab.geometry?.polygon?.vertices;
   if (!points || points.length < 3) return [];
-
-  const feet: Array<{ point: Point2D; edgeIndex: number }> = [];
-  const n = points.length;
-
-  for (let i = 0; i < n; i++) {
-    const a: Point2D = { x: points[i].x, y: points[i].y };
-    const b: Point2D = { x: points[(i + 1) % n].x, y: points[(i + 1) % n].y };
-    const foot = getNearestPointOnLine(cursor, a, b, false);
-    if (calculateDistance(cursor, foot) <= maxDistance) {
-      feet.push({ point: foot, edgeIndex: i });
-    }
-  }
-
-  return feet;
+  // CLOSED polygon; `edgeIndex` = the shared helper's 0-based `segmentIndex`.
+  return perpendicularFeetOverPolyline(points, cursor, maxDistance, true)
+    .map((f) => ({ point: f.point, edgeIndex: f.segmentIndex }));
 }

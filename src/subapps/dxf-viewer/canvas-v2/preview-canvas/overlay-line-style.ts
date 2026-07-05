@@ -32,6 +32,20 @@ export const OVERLAY_LEADER_DASH: readonly number[] = [6, 4];
 export const OVERLAY_LEADER_WIDTH_PX = 1;
 
 /**
+ * REFERENCE-BASELINE family — the 0° angle-measurement axis drawn by the direction-arc (rotation /
+ * wall-drawing facing indicator). Big-player practice (Revit / AutoCAD / Figma): the angle *reference*
+ * axis is DELIBERATELY distinct from the active snap traces — different semantic (a static context line,
+ * not a live inference). So we keep its own dash/width/colour, but the DEFINITION lives here in the same
+ * overlay-style SSoT, never inline in the painter. Colour is fixed (neutral translucent white), so unlike
+ * the guide/leader families this one owns its colour too.
+ */
+/** Dash pattern (CSS px) for the REFERENCE-BASELINE axis. */
+export const OVERLAY_REFERENCE_BASELINE_DASH: readonly number[] = [5, 4];
+
+/** Stroke width (CSS px) for the REFERENCE-BASELINE axis. */
+export const OVERLAY_REFERENCE_BASELINE_WIDTH_PX = 1;
+
+/**
  * SSoT colours per overlay MECHANISM (Giorgio 2026-06-21 — «κάθε μηχανισμός διαφορετικό χρώμα»):
  *   - `alignment`     LIGHT GREY — alignment traces (ίχνη ευθυγράμμισης) + their tooltip; kept
  *                     neutral so they don't clash with the GREEN snap-point labels («ΓΩΝΙΑ ΤΟΙΧΟΥ»)
@@ -43,6 +57,7 @@ export const OVERLAY_LINE_COLORS = {
   alignment: '#CCCCCC',
   drawingGuide: '#FF9800',
   listeningDim: '#29B6F6',
+  referenceBaseline: 'rgba(255,255,255,0.55)',
 } as const;
 
 /**
@@ -76,6 +91,18 @@ export function applyOverlayLineStyle(ctx: CanvasRenderingContext2D, color: stri
  */
 export function applyOverlayLeaderStyle(ctx: CanvasRenderingContext2D, color: string): void {
   applyOverlayStroke(ctx, color, OVERLAY_LEADER_WIDTH_PX, OVERLAY_LEADER_DASH);
+}
+
+/**
+ * Apply the canonical REFERENCE-BASELINE stroke (baseline dash + width + fixed neutral colour + butt cap)
+ * to `ctx` — the SSoT for the direction-arc 0° angle-measurement axis. Distinct look from the guide/leader
+ * families by design (see the family doc above). Takes no colour: the baseline colour is fixed. Call
+ * immediately before `ctx.stroke()`. Does NOT save/restore — the caller owns ctx state.
+ */
+export function applyReferenceBaselineStyle(ctx: CanvasRenderingContext2D): void {
+  applyOverlayStroke(
+    ctx, OVERLAY_LINE_COLORS.referenceBaseline, OVERLAY_REFERENCE_BASELINE_WIDTH_PX, OVERLAY_REFERENCE_BASELINE_DASH,
+  );
 }
 
 /**

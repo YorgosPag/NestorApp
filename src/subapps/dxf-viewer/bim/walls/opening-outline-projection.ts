@@ -24,8 +24,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { OpeningEntity } from '../types/opening-types';
-import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
-import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { nearestFootOnPolyline, perpendicularFeetOverPolyline } from '../../snapping/shared/polyline-perpendicular-feet';
 
 /**
  * NEAREST-semantics: clamped closest foot on the 4-edge opening outline.
@@ -38,20 +37,8 @@ export function projectPointOnOpeningOutline(
 ): Point2D | null {
   const verts = opening.geometry?.outline?.vertices;
   if (!verts || verts.length < 4) return null;
-  let closest: Point2D | null = null;
-  let closestDistance = Infinity;
-  const n = verts.length;
-  for (let i = 0; i < n; i++) {
-    const a: Point2D = { x: verts[i].x, y: verts[i].y };
-    const b: Point2D = { x: verts[(i + 1) % n].x, y: verts[(i + 1) % n].y };
-    const foot = getNearestPointOnLine(cursor, a, b, true);
-    const d = calculateDistance(cursor, foot);
-    if (d < closestDistance) {
-      closestDistance = d;
-      closest = foot;
-    }
-  }
-  return closest;
+  // CLOSED 4-edge outline — closing edge [3→0] included by the shared helper.
+  return nearestFootOnPolyline(verts, cursor, true);
 }
 
 /**
@@ -69,15 +56,7 @@ export function getOpeningOutlinePerpendicularFeet(
 ): Array<{ point: Point2D; edgeIndex: number }> {
   const verts = opening.geometry?.outline?.vertices;
   if (!verts || verts.length < 4) return [];
-  const feet: Array<{ point: Point2D; edgeIndex: number }> = [];
-  const n = verts.length;
-  for (let i = 0; i < n; i++) {
-    const a: Point2D = { x: verts[i].x, y: verts[i].y };
-    const b: Point2D = { x: verts[(i + 1) % n].x, y: verts[(i + 1) % n].y };
-    const foot = getNearestPointOnLine(cursor, a, b, false);
-    if (calculateDistance(cursor, foot) <= maxDistance) {
-      feet.push({ point: foot, edgeIndex: i });
-    }
-  }
-  return feet;
+  // CLOSED 4-edge outline; `edgeIndex` = the shared helper's 0-based `segmentIndex`.
+  return perpendicularFeetOverPolyline(verts, cursor, maxDistance, true)
+    .map((f) => ({ point: f.point, edgeIndex: f.segmentIndex }));
 }
