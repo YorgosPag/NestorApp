@@ -23,6 +23,7 @@
  */
 
 import { useSyncExternalStore } from 'react';
+import { createExternalStore } from '../../../stores/createExternalStore';
 import type { SceneUnits } from '../../../utils/scene-units';
 import type { HeatingNetworkProposal } from './heating-design-types';
 
@@ -36,46 +37,28 @@ export interface HeatingProposalReview {
   readonly sceneUnits: SceneUnits;
 }
 
-type Listener = () => void;
-
-let currentReview: HeatingProposalReview | null = null;
-const listeners = new Set<Listener>();
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): HeatingProposalReview | null {
-  return currentReview;
-}
-
-function getServerSnapshot(): HeatingProposalReview | null {
-  return null;
-}
+// SSoT pub/sub plumbing via createExternalStore (WAVE 2.6). `equals: Object.is`
+// reproduces the two identity guards the hand-rolled store used: `set` bails when
+// the same review reference is re-set, and `reset()` (→ set(null)) bails when
+// already idle. Behaviour byte-identical.
+const store = createExternalStore<HeatingProposalReview | null>(null, { equals: Object.is });
 
 export const heatingProposalStore = {
   /** Writer — called once by the ribbon bridge when the engine produces a proposal. */
   set(next: HeatingProposalReview): void {
-    if (currentReview === next) return;
-    currentReview = next;
-    for (const l of listeners) l();
+    store.set(next);
   },
   /** Clear the proposal (Accept committed it, or Reject discarded it). */
   reset(): void {
-    if (currentReview === null) return;
-    currentReview = null;
-    for (const l of listeners) l();
+    store.set(null);
   },
   /** Non-React reader — for the accept/reject handlers. */
   get(): HeatingProposalReview | null {
-    return currentReview;
+    return store.get();
   },
 };
 
 /** React subscription. Returns the review under way, or `null` when idle. */
 export function useHeatingProposal(): HeatingProposalReview | null {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return useSyncExternalStore(store.subscribe, store.get, () => null);
 }
