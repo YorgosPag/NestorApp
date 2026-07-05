@@ -38,6 +38,9 @@ import type { SceneUnits } from '../../utils/scene-units';
 import { isWallEntity, type Entity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
 import { beamToolBridgeStore } from '../../bim/beams/beam-tool-bridge-store';
+// ADR-513 — «Δαχτυλίδι Εντολών»: το locked μήκος/γωνία πρέπει να σέβεται ΚΑΙ το click-commit της δοκού
+// (ίδιος SSoT περιορισμός με το preview στο drawing-hover-handler). No-op όταν δεν υπάρχει lock.
+import { applyLengthAngleLock, isLengthAngleLockActive } from '../../systems/dynamic-input/length-angle-lock';
 import { EventBus } from '../../systems/events/EventBus';
 import { useSceneSnapTargetSync } from './use-scene-snap-target-sync';
 import { shouldWarnBeamOnFoundation } from '../../systems/levels/storey-creation-defaults';
@@ -230,7 +233,10 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
           return true;
         }
         if (s.phase === 'awaitingEnd') {
-          const endPoint = { x: point.x, y: point.y };
+          // ADR-513 — το «Δαχτυλίδι Εντολών» εμφανίζεται ΚΑΙ στο 1ο σκέλος του curved (start ορισμένο,
+          // end null). Αν ο χρήστης κλείδωσε μήκος/γωνία, ο κόμβος τέλους (χορδή start→end) πρέπει να το
+          // σέβεται όπως το preview (drawing-hover-handler:beam). No-op χωρίς lock → raw cursor ως τώρα.
+          const endPoint = s.startPoint ? applyLengthAngleLock(point, s.startPoint) : { x: point.x, y: point.y };
           beamPreviewStore.set({ startPoint: s.startPoint, endPoint, kind: s.kind, overrides: s.overrides });
           setState({ ...s, phase: 'awaitingCurveControl', endPoint, error: null });
           return true;
@@ -264,15 +270,21 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
         return true;
       }
       if (s.phase === 'awaitingEnd' && s.startPoint) {
-        // ADR-508 — endpoint face-snap (ΙΔΙΟΣ dispatcher με το start & ΙΔΙΟ SSoT με τον τοίχο
-        // `resolveMemberEndpointSnap`): το ΑΚΡΟ κουμπώνει flush σε παρειά μέλους/κολώνας + Shift 1cm
-        // βήμα στο ελεύθερο (face-snap νικά). Το δοκάρι δεν έχει length/angle lock (wall-only ADR-513)
-        // → χωρίς lock branch. ΙΔΙΟ entry/targets με το preview (`generateBeamPreview`) → preview ≡ commit.
-        const sceneUnits = getSceneUnits?.() ?? 'mm';
-        const targets = sceneSnapTargetsStore.get();
-        const widthMm = s.overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
-        const endSnap = resolveMemberEndpointSnap(point, targets.footprints, selectGhostMembers(targets, ['wall', 'beam', 'slab', 'line']), widthMm, sceneUnits);
-        const endPoint = resolveMemberEndpointWithFineStep(endSnap, s.startPoint);
+        // ADR-513/ADR-508 — precedence στο commit (preview ≡ committed), ΙΔΙΟ pattern με τον τοίχο:
+        //  · ενεργό lock (Δαχτυλίδι Εντολών) → ρητή αριθμητική είσοδος μήκους/γωνίας ΝΙΚΑ (applyLengthAngleLock)·
+        //  · αλλιώς → endpoint face-snap (το ΑΚΡΟ κουμπώνει flush σε παρειά μέλους/κολώνας, ΙΔΙΟΣ dispatcher
+        //    με το start & ΙΔΙΟ SSoT `resolveMemberEndpointSnap` + Shift 1cm βήμα στο ελεύθερο· face-snap νικά).
+        //  ΙΔΙΟ entry/targets με το preview (`generateBeamPreview`) → preview ≡ commit.
+        let endPoint: Point2D;
+        if (isLengthAngleLockActive()) {
+          endPoint = applyLengthAngleLock(point, s.startPoint);
+        } else {
+          const sceneUnits = getSceneUnits?.() ?? 'mm';
+          const targets = sceneSnapTargetsStore.get();
+          const widthMm = s.overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
+          const endSnap = resolveMemberEndpointSnap(point, targets.footprints, selectGhostMembers(targets, ['wall', 'beam', 'slab', 'line']), widthMm, sceneUnits);
+          endPoint = resolveMemberEndpointWithFineStep(endSnap, s.startPoint);
+        }
         return commitTwoClickFromState(s, endPoint);
       }
       return false;
@@ -303,10 +315,17 @@ export function useBeamTool(options: UseBeamToolOptions = {}): UseBeamToolResult
   useEffect(() => {
     beamToolBridgeStore.set({
       overrides: state.overrides,
+      // ADR-513 — «Δαχτυλίδι Εντολών» width/height write path (mirror wallToolBridgeStore).
+      setParamOverrides,
       getSceneUnits: () => getSceneUnits?.() ?? 'mm',
     });
-    return () => beamToolBridgeStore.set(null);
-  }, [state.overrides, getSceneUnits]);
+    return () => {
+      // Καθάρισε μόνο αν είμαστε ο τρέχων publisher (μην σβήσεις νεότερο mount).
+      if (beamToolBridgeStore.get()?.setParamOverrides === setParamOverrides) {
+        beamToolBridgeStore.set(null);
+      }
+    };
+  }, [state.overrides, setParamOverrides, getSceneUnits]);
 
   // ── status text (i18n keys returned για caller-resolved translation) ─────
   const getStatusText = useCallback((): string => {

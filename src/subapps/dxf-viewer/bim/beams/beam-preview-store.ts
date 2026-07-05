@@ -95,9 +95,22 @@ export const beamPreviewStore = {
   get(): BeamPreviewState {
     return store.get();
   },
+  /** Non-React subscription (parity με `useBeamPreview`) — για readers εκτός React (ADR-513 ring config). */
+  subscribe: store.subscribe,
 };
 
 /** React subscription. Returns the latest beam-preview state. */
 export function useBeamPreview(): BeamPreviewState {
   return useSyncExternalStore(store.subscribe, store.get, () => EMPTY);
+}
+
+/**
+ * ADR-513 — `true` όταν το εργαλείο δοκού είναι σε `awaitingEnd` (έγινε το 1ο κλικ, εκκρεμεί το 2ο):
+ * ο ΕΝΑΣ gate για το live «Δαχτυλίδι Εντολών» / dynamic-input overlay. Κοινή SSoT πηγή (mirror του
+ * `isWallAwaitingEnd`) ώστε το κριτήριο 2D/3D να μην αποκλίνει ποτέ. Καλύπτει straight/cantilever ΚΑΙ
+ * το 1ο σκέλος του curved (start ορισμένο, end ακόμη null)· από-εξαιρεί awaitingCurveControl (end set)
+ * και το `from-wall` (κενό store).
+ */
+export function isBeamAwaitingEnd(activeTool: string, preview: BeamPreviewState): boolean {
+  return activeTool === 'beam' && preview.startPoint !== null && preview.endPoint === null;
 }

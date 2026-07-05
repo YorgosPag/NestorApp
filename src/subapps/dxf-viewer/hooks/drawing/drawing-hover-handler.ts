@@ -283,9 +283,9 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
 
     // ADR-513 / ADR-357 Phase 13 G14: length/angle lock — constrain preview geometry to
     // the locked value. Runs after all snaps so the lock takes priority (AutoCAD/BricsCAD).
-    // SSoT helper (no-op when nothing locked) — ίδιος περιορισμός με το wall click-commit.
-    // 'line' = γραμμικό Dynamic Input· 'wall' = «Δαχτυλίδι Εντολών» (Radial Command Ring).
-    if (lastRefPt && (activeTool === 'line' || activeTool === 'wall')) {
+    // SSoT helper (no-op when nothing locked) — ίδιος περιορισμός με το wall/beam click-commit.
+    // 'line' = γραμμικό Dynamic Input· 'wall'/'beam' = «Δαχτυλίδι Εντολών» (Radial Command Ring).
+    if (lastRefPt && (activeTool === 'line' || activeTool === 'wall' || activeTool === 'beam')) {
       previewPt = applyLengthAngleLock(previewPt, lastRefPt);
     }
 

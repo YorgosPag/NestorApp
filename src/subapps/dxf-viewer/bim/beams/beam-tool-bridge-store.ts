@@ -27,6 +27,12 @@ import type { BeamParamOverrides, SceneUnits } from '../../hooks/drawing/beam-co
 export interface BeamToolBridgeHandle {
   /** Ribbon overrides (width / depth / topElevation / kind …) — ίδια με το commit. */
   readonly overrides: BeamParamOverrides;
+  /**
+   * ADR-513 — γράψε overrides (π.χ. Πλάτος/Ύψος) από το «Δαχτυλίδι Εντολών» (`beam-ring-config`).
+   * Mirror του `wallToolBridgeStore.setParamOverrides`: ενημερώνει ΚΑΙ το tool FSM (`state.overrides`)
+   * ΚΑΙ το `beamPreviewStore` → preview ≡ commit (η επόμενη rubber-band χτίζεται με τη νέα διατομή).
+   */
+  setParamOverrides(overrides: BeamParamOverrides): void;
   /** Active scene units, ώστε το ghost build να κλιμακώνεται σωστά (mm/m). */
   getSceneUnits(): SceneUnits;
 }

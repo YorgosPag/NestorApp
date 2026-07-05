@@ -36,6 +36,9 @@ import { mmToSceneUnits } from '../../utils/scene-units';
 import { BEAM_GHOST_LEN_MM } from '../../bim/beams/beam-column-face-snap';
 import { resolveBimCursorSnap } from '../../bim/placement/bim-cursor-snap';
 import { resolveMemberEndpointSnap, resolveMemberEndpointWithFineStep } from '../../bim/framing/member-endpoint-snap';
+// ADR-513 — «Δαχτυλίδι Εντολών» precedence: ενεργό length/angle lock ΝΙΚΑ το endpoint face-snap
+// (ίδιο SSoT με τον τοίχο). Ο cursor έρχεται ΗΔΗ locked από το `drawing-hover-handler` → μηδέν override.
+import { isLengthAngleLockActive } from '../../systems/dynamic-input/length-angle-lock';
 import { buildMemberMagnetOptions } from '../../bim/placement/member-magnet-opts';
 import { buildPlacementGridMeta } from '../../bim/placement/placement-grid-meta';
 import { findRectContaining, resolveRectCartesianDims } from '../../bim/columns/rect-cartesian-snap';
@@ -92,13 +95,14 @@ export function generateBeamPreview(
     // ADR-508 — endpoint face-snap (ΙΔΙΟ SSoT με τον τοίχο, `resolveMemberEndpointSnap`): το ΑΚΡΟ
     // κουμπώνει/γλιστρά flush σε παρειά μέλους/κολώνας (συνεχής ολίσθηση, ΙΔΙΟΣ dispatcher με το start
     // → preview ≡ commit) + Shift 1cm βήμα στο ελεύθερο (face-snap νικά). Μόνο straight/cantilever
-    // (curved → raw cursor· το άκρο ορίζεται από το control point). Το δοκάρι δεν έχει length/angle
-    // lock (wall-only ADR-513) → χωρίς lock branch.
+    // (curved → raw cursor· το άκρο ορίζεται από το control point).
+    // ADR-513 — precedence: όταν το «Δαχτυλίδι Εντολών» έχει ενεργό length/angle lock, ο cursor έρχεται
+    // ΗΔΗ locked (drawing-hover-handler:beam) → skip το face-snap ώστε το lock να ΝΙΚΑ (ίδιο με τον τοίχο).
     const widthMm = preview.overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
     const depthMm = preview.overrides.depth ?? DEFAULT_BEAM_DEPTH_MM;
     let endPt = cursorPoint;
     let endFaceFrame: GhostFaceFrame | null = null;
-    if (preview.kind !== 'curved') {
+    if (preview.kind !== 'curved' && !isLengthAngleLockActive()) {
       const endSnap = resolveMemberEndpointSnap(cursorPoint, footprints, snapMembers, widthMm, sceneUnits);
       endPt = resolveMemberEndpointWithFineStep(endSnap, startPt);
       endFaceFrame = endSnap.faceFrame ?? null;
