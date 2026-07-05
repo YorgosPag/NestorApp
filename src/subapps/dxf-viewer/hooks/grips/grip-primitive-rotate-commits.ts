@@ -33,8 +33,23 @@ import { resolveSweptRotationDeg } from './primitive-rotation-drag';
 import { rotatePoint } from '../../utils/rotation-math';
 import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
 import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateEntityCommand';
+import { CreateEntityCommand } from '../../core/commands/entity-commands/CreateEntityCommand';
+import type { SceneEntity } from '../../core/commands/interfaces';
 import { polylineBboxCenter, rectOrPolylineVertices } from '../../systems/polyline/rectangle-detect';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
+// ADR-561 EXT (Ctrl-rotate-copy) — copy intent SSoT, IDENTICAL trigger to the move-copy
+// (`commitDxfGripDragModeAware`): the right-click «Copy» toggle OR live Ctrl/⌘ held.
+import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
+import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
+
+/**
+ * ADR-561 EXT — is the rotation a COPY? Same trigger the move-copy uses (the right-click
+ * «Copy» toggle OR live Ctrl/⌘). When true the rotation clones the source about the pivot
+ * (AutoCAD ROTATE-Copy / Ctrl-endpoint hinge) instead of transforming in place.
+ */
+function isRotateCopy(): boolean {
+  return GripCopyModeStore.getSnapshot().enabled || CtrlKeyTracker.getSnapshot();
+}
 
 /** Minimal structural view of the primitive scene shapes we read here. */
 interface PrimitiveSceneShape {
@@ -88,7 +103,9 @@ export function commitArcGripDrag(
   if (!raw || raw.type !== 'arc' || !raw.center) return;
   const res = resolveRotation(grip, delta, raw.center);
   if (!res) return;
-  const command = new RotateEntityCommand([grip.entityId], res.pivot, res.sweptDeg, sceneManager);
+  // ADR-561 EXT — Ctrl / «Copy» toggle → rotate a CLONE about the pivot (hinge). The
+  // canonical `RotateEntityCommand.copyMode` owns the clone + undo/redo (ADR-357 Φ12).
+  const command = new RotateEntityCommand([grip.entityId], res.pivot, res.sweptDeg, sceneManager, false, isRotateCopy());
   if (command.validate() !== null) return;
   deps.execute(command);
 }
@@ -117,9 +134,25 @@ export function commitPolylineRotationGripDrag(
   const res = resolveRotation(grip, delta, polylineBboxCenter(vertices));
   if (!res) return;
 
+  const copy = isRotateCopy();
+
   if (isRect) {
     // Explode → closed polyline with the rotated corners (rotation baked into geometry).
     const rotated = vertices.map((v) => rotatePoint(v, res.pivot, res.sweptDeg));
+    // ADR-561 EXT — for a COPY the source rect must stay put: create a NEW closed polyline
+    // (inheriting the rect's layer/style) with the rotated corners instead of exploding
+    // in place. `RotateEntityCommand.copyMode` cannot serve here — the scene rect ignores
+    // its `rotation` field, so a clone would render axis-aligned (see file header).
+    if (copy) {
+      const { id: _id, ...style } = raw as unknown as SceneEntity;
+      const command = new CreateEntityCommand(
+        { ...style, type: 'polyline', vertices: rotated, closed: true } as Omit<SceneEntity, 'id'>,
+        sceneManager,
+      );
+      if (command.validate() !== null) return;
+      deps.execute(command);
+      return;
+    }
     const command = new UpdateEntityCommand(
       grip.entityId,
       { type: 'polyline', vertices: rotated, closed: true },
@@ -131,7 +164,7 @@ export function commitPolylineRotationGripDrag(
     return;
   }
 
-  const command = new RotateEntityCommand([grip.entityId], res.pivot, res.sweptDeg, sceneManager);
+  const command = new RotateEntityCommand([grip.entityId], res.pivot, res.sweptDeg, sceneManager, false, copy);
   if (command.validate() !== null) return;
   deps.execute(command);
 }

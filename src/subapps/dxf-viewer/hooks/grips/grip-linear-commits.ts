@@ -22,6 +22,10 @@ import { createSceneManagerAdapter } from './grip-commit-adapters';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { sweptAngleDegAboutPivot } from '../../bim/grips/grip-math';
 import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
+// ADR-561 EXT (Ctrl-rotate-copy) — copy intent SSoT, IDENTICAL trigger to the move-copy
+// (`commitDxfGripDragModeAware`): the right-click «Copy» toggle OR live Ctrl/⌘ held.
+import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
+import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 
 /**
  * ADR-359 Phase 11 — XLine grip commit via `applyXLineGripDrag` + direct scene
@@ -97,7 +101,11 @@ export function commitLineGripDrag(
   const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
   const sweptDeg = sweptAngleDegAboutPivot(pivot, anchor, currentPos);
   if (sweptDeg === null || sweptDeg === 0) return;
-  const command = new RotateEntityCommand([grip.entityId], pivot, sweptDeg, sceneManager);
+  // ADR-561 EXT — Ctrl (or the right-click «Copy» toggle) held → rotate a CLONE about the
+  // pivot (AutoCAD ROTATE-Copy / hinge), leaving the original untouched. Same copy trigger
+  // the move-copy uses; `RotateEntityCommand.copyMode` owns the clone + undo/redo (ADR-357 Φ12).
+  const copy = GripCopyModeStore.getSnapshot().enabled || CtrlKeyTracker.getSnapshot();
+  const command = new RotateEntityCommand([grip.entityId], pivot, sweptDeg, sceneManager, false, copy);
   if (command.validate() !== null) return;
   deps.execute(command);
 }
