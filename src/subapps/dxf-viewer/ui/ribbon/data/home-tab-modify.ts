@@ -280,6 +280,34 @@ export const HOME_MODIFY_PANEL: RibbonPanelDef = {
             comingSoon: false,
           },
         },
+        {
+          type: 'simple',
+          size: 'small',
+          command: {
+            // ADR-575 — «Ομαδοποίηση» (N entities → 1 composite container).
+            id: 'modify.group',
+            labelKey: 'ribbon.commands.group',
+            icon: 'group',
+            commandKey: 'group',
+            action: 'group',
+            shortcut: 'G',
+            comingSoon: false,
+          },
+        },
+        {
+          type: 'simple',
+          size: 'small',
+          command: {
+            // ADR-575 — «Κατάργηση Ομαδοποίησης» (UNGROUP = EXPLODE ενός group).
+            id: 'modify.ungroup',
+            labelKey: 'ribbon.commands.ungroup',
+            icon: 'ungroup',
+            commandKey: 'ungroup',
+            action: 'ungroup',
+            shortcut: 'UG',
+            comingSoon: false,
+          },
+        },
       ],
     },
   ],
@@ -355,6 +383,16 @@ export const HOME_MODIFY_EDIT_PANEL: RibbonPanelDef = {
           type: 'simple',
           size: 'small',
           command: { id: 'edit.join', labelKey: 'ribbon.commands.join', icon: 'join', commandKey: 'join', action: 'join', shortcut: 'J', comingSoon: false },
+        },
+        {
+          type: 'simple',
+          size: 'small',
+          command: { id: 'edit.group', labelKey: 'ribbon.commands.group', icon: 'group', commandKey: 'group', action: 'group', shortcut: 'G', comingSoon: false },
+        },
+        {
+          type: 'simple',
+          size: 'small',
+          command: { id: 'edit.ungroup', labelKey: 'ribbon.commands.ungroup', icon: 'ungroup', commandKey: 'ungroup', action: 'ungroup', shortcut: 'UG', comingSoon: false },
         },
       ],
     },
