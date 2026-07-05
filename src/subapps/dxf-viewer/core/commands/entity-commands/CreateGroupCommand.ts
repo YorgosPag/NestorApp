@@ -23,6 +23,8 @@ import type { Entity } from '../../../types/entities';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
 import { createGroupEntity, GROUP_MIN_MEMBERS } from '../../../systems/group/group-entity';
+// N.12 SSoT — shared container extract/restore lifecycle (also used by CreateArrayCommand).
+import { extractSourcesFromScene, restoreSourcesToScene } from './entity-source-extraction';
 
 export class CreateGroupCommand implements ICommand {
   readonly id: string;
@@ -45,20 +47,18 @@ export class CreateGroupCommand implements ICommand {
   }
 
   execute(): void {
-    this.memberSnapshots = [];
     const members: Entity[] = [];
     for (const entityId of this.memberEntityIds) {
       const entity = this.sceneManager.getEntity(entityId);
-      if (!entity) continue;
-      this.memberSnapshots.push(deepClone(entity));
-      members.push(entity as unknown as Entity);
+      if (entity) members.push(entity as unknown as Entity);
     }
     if (members.length < GROUP_MIN_MEMBERS) return; // nothing to group — no-op
 
-    // Build the container ONCE so redo re-adds the exact same entity (stable id).
-    this.groupEntity = createGroupEntity(members) as unknown as SceneEntity;
-
-    for (const entityId of this.memberEntityIds) this.sceneManager.removeEntity(entityId);
+    // SSoT: deep-clone snapshots (for undo) + remove originals from the scene.
+    this.memberSnapshots = extractSourcesFromScene(members, this.sceneManager) as unknown as SceneEntity[];
+    // Build the container ONCE from the snapshots so redo re-adds the exact same
+    // entity (stable id). Group members are independent clones of the snapshots.
+    this.groupEntity = createGroupEntity(this.memberSnapshots as unknown as Entity[]) as unknown as SceneEntity;
     this.sceneManager.addEntity(deepClone(this.groupEntity));
     this.wasExecuted = true;
   }
@@ -66,9 +66,7 @@ export class CreateGroupCommand implements ICommand {
   undo(): void {
     if (!this.wasExecuted || !this.groupEntity) return;
     this.sceneManager.removeEntity(this.groupEntity.id);
-    for (const snapshot of this.memberSnapshots) {
-      this.sceneManager.addEntity(deepClone(snapshot));
-    }
+    restoreSourcesToScene(this.memberSnapshots as unknown as Entity[], this.sceneManager);
   }
 
   redo(): void {
