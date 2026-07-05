@@ -780,6 +780,14 @@
   "explode": {
     "selectEntities": "Select objects to explode (polyline/rectangle)"
   },
+  "join": {
+    "selectEntities": "Select 2+ objects to join (lines/arcs/polylines)",
+    "cannotJoin": "Cannot join: objects are not connected or not compatible"
+  },
+  "group": {
+    "selectEntities": "Select 2+ objects to group",
+    "selectGroup": "Select a group to ungroup"
+  },
   "trimTool": {
     "promptPick": "Select objects to trim or [Boundary(B) / eRase(R) / Undo(U) / Mode(M) / Edge(E)]:",
     "promptStandardEdges": "Select cutting edges or press ENTER for all:",
