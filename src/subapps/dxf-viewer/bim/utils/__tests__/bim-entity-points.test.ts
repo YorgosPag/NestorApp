@@ -8,9 +8,13 @@
  * (real footprint vertices). This guard locks that so the bbox-anchor duplicate cannot return.
  */
 
-import { getBimEntityKeyPoints2D } from '../bim-entity-points';
+import { getBimEntityKeyPoints2D, getBimEntityEdgeMidpoints2D } from '../bim-entity-points';
 import { getBimCharacteristicPointsOfCategory } from '../bim-characteristic-points';
 import type { ColumnEntity, ColumnParams, ColumnKind } from '../../types/column-types';
+import type { SlabEntity } from '../../types/slab-types';
+import type { WallEntity, WallParams } from '../../types/wall-types';
+import type { BeamEntity, BeamParams } from '../../types/beam-types';
+import type { Polygon3D } from '../../types/bim-base';
 import { buildDefaultColumnParams } from '../../../hooks/drawing/column-completion';
 
 function makeColumn(kind: ColumnKind, overrides: Partial<ColumnParams> = {}): ColumnEntity {
@@ -20,6 +24,40 @@ function makeColumn(kind: ColumnKind, overrides: Partial<ColumnParams> = {}): Co
     params: { ...base, ...overrides },
     geometry: undefined as never, validation: undefined as never, visible: true,
   } as unknown as ColumnEntity;
+}
+
+const L_SLAB = [{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 400 }, { x: 400, y: 400 }, { x: 400, y: 1000 }, { x: 0, y: 1000 }];
+
+function makeSlab(vertices = L_SLAB): SlabEntity {
+  const polygon: Polygon3D = { vertices: vertices.map(v => ({ x: v.x, y: v.y })) };
+  return {
+    id: 'slab_1', type: 'slab', kind: 'floor', layerId: '0',
+    params: { outline: { vertices: vertices.map(v => ({ x: v.x, y: v.y })) } } as never,
+    geometry: { polygon, bbox: undefined as never, area: 0, netArea: 0, volume: 0, perimeter: 0 },
+    validation: undefined as never, visible: true,
+  } as unknown as SlabEntity;
+}
+
+function makeWall(): WallEntity {
+  const params = {
+    category: 'exterior', start: { x: 0, y: 0 }, end: { x: 2000, y: 0 },
+    height: 3000, thickness: 200, flip: false,
+  } as WallParams;
+  return {
+    id: 'wall_1', type: 'wall', kind: 'straight', layerId: '0', params,
+    geometry: undefined as never, validation: undefined as never, visible: true,
+  } as unknown as WallEntity;
+}
+
+function makeBeam(): BeamEntity {
+  const params: BeamParams = {
+    kind: 'straight', startPoint: { x: 0, y: 0 }, endPoint: { x: 2000, y: 0 },
+    width: 250, depth: 500, topElevation: 3000,
+  };
+  return {
+    id: 'beam_1', type: 'beam', kind: 'straight', layerId: '0', params,
+    geometry: undefined as never, validation: undefined as never, visible: true,
+  } as unknown as BeamEntity;
 }
 
 describe('getBimEntityKeyPoints2D — column κεντρικοποίηση (ADR-370)', () => {
@@ -41,5 +79,33 @@ describe('getBimEntityKeyPoints2D — column κεντρικοποίηση (ADR-3
   it('column key points ARE the ONE characteristic-corner SSoT (zero duplication)', () => {
     const col = makeColumn('L-shape');
     expect(getBimEntityKeyPoints2D(col)).toEqual(getBimCharacteristicPointsOfCategory(col, 'corner'));
+  });
+});
+
+describe('bim-entity-points — polygon entities DELEGATE στο ΕΝΑ characteristic SSoT (ADR-370)', () => {
+  it('slab key points = characteristic corners (zero duplicate extraction)', () => {
+    const slab = makeSlab();
+    expect(getBimEntityKeyPoints2D(slab)).toEqual(getBimCharacteristicPointsOfCategory(slab, 'corner'));
+  });
+
+  it('slab edge midpoints = characteristic midpoints', () => {
+    const slab = makeSlab();
+    expect(getBimEntityEdgeMidpoints2D(slab)).toEqual(getBimCharacteristicPointsOfCategory(slab, 'midpoint'));
+  });
+});
+
+describe('bim-entity-points — LINEAR entities keep axis endpoints (Revit «Endpoint» ≠ «Corner»)', () => {
+  it('wall key points = 2 axis endpoints (NOT the 4 face corners)', () => {
+    // Το endpoint snap τοίχου κουμπώνει στα ΑΚΡΑ ΤΟΥ ΑΞΟΝΑ (location line), όχι στις γωνίες
+    // σώματος — όπως Revit. Η κεντρικοποίηση ΔΕΝ πρέπει να το αλλάξει.
+    expect(getBimEntityKeyPoints2D(makeWall())).toEqual([{ x: 0, y: 0 }, { x: 2000, y: 0 }]);
+  });
+
+  it('beam key points = 2 axis endpoints', () => {
+    expect(getBimEntityKeyPoints2D(makeBeam())).toEqual([{ x: 0, y: 0 }, { x: 2000, y: 0 }]);
+  });
+
+  it('beam edge midpoint = single axis midpoint', () => {
+    expect(getBimEntityEdgeMidpoints2D(makeBeam())).toEqual([{ x: 1000, y: 0 }]);
   });
 });

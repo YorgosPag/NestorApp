@@ -1031,6 +1031,29 @@ branch του `getBimEntityKeyPoints2D` πλέον **delegates** στο ΕΝΑ c
 **Google-Level (N.7.2)**: ΕΝΑ SSoT για column points (endpoint+BIM_CORNER)· root-cause· zero
 duplication· regression-guarded. ✅
 
+### 17.10 §κεντρικοποίηση full — ΟΛΑ τα polygon entities → ΕΝΑ SSoT (2026-07-05)
+
+**Απόφαση (Giorgio, Revit-grade)**: το §17.9 ένωσε μόνο το column. Follow-up audit έδειξε ότι
+`bim-entity-points.ts` (ADR-363) & `bim-characteristic-points.ts` (ADR-370) έκαναν **copy-paste
+την ίδια** `outline/footprint.vertices` εξαγωγή για **ΟΛΑ** τα polygon entities. Κεντρικοποίηση:
+
+- **Polygon-footprint** (slab / slab-opening / opening / column / floor-finish / thermal-space /
+  mep-underfloor): `getBimEntityKeyPoints2D` → `getBimCharacteristicPointsOfCategory('corner')`,
+  `getBimEntityEdgeMidpoints2D` → `…('midpoint')`. **Μία** πηγή γεωμετρίας, μηδέν divergence.
+- **Linear** (beam / wall / space-separator): κρατούν **axis endpoints/midpoints**. Απόφαση
+  Revit-grade — το «Endpoint» (άκρα location-line) είναι **διαφορετικός τύπος έλξης** από το
+  «Corner» (γωνίες σώματος)· οι μεγάλοι ΔΕΝ τα ενοποιούν. Ισοδυναμία επιβεβαιωμένη (opening
+  `getOpeningCornerWorldPoints` == `geometry.outline.vertices`) → μηδέν αλλαγή συμπεριφοράς σε
+  snap/grips/dimensions· το σύνολο σημείων ανά function αμετάβλητο.
+
+- **MOD**: `bim/utils/bim-entity-points.ts` — polygon branches → characteristic SSoT (combined),
+  docstrings.
+- **MOD (test)**: `bim/utils/__tests__/bim-entity-points.test.ts` — slab/opening `toEqual` το
+  characteristic SSoT· wall/beam = axis endpoints (regression ότι ΔΕΝ έγιναν face corners). PASS.
+
+**Google-Level (N.7.2)**: ΕΝΑ γεωμετρικό SSoT για όλα τα polygon BIM points· linear = ρητά
+ξεχωριστός τύπος (Revit-standard)· zero duplication· zero behavioural change· regression-guarded. ✅
+
 ---
 
 ## 18. Related Work & References

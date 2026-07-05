@@ -78,6 +78,24 @@ export interface ApplyEntityPreviewContext {
 // ── Public API ───────────────────────────────────────────────────────────────
 
 /**
+ * ADR-186 / ADR-561 — normalize a RAW scene entity's discriminator for the drag-preview
+ * pipeline. An `'lwpolyline'` (e.g. the result of joining two lines at an angle) is
+ * geometrically a STANDARD polyline — same `{ vertices, closed, bulges }` shape — and the
+ * committed canvas already renders it as one (`dxf-scene-entity-converter`: «LWPolyline →
+ * render as standard polyline»). But this preview SSoT + the ghost model builder
+ * (`buildEntityModelFromDxf`) are keyed on `'polyline'`, and preview callers pass the RAW
+ * scene entity (`getEntity`), so a joined lwpolyline would match no branch → the ghost never
+ * appears. Map the discriminator up-front (shallow clone, shape untouched) so it transforms +
+ * renders EXACTLY like a polyline. The ONE place this preview-side mapping lives — shared by
+ * every preview consumer (grip drag / body-drag / Move tool), so they can never diverge.
+ */
+export function normalizePreviewEntity(entity: DxfEntityUnion): DxfEntityUnion {
+  return entity.type === 'lwpolyline'
+    ? ({ ...(entity as object), type: 'polyline' } as DxfEntityUnion)
+    : entity;
+}
+
+/**
  * Apply a drag-preview transform to a DXF entity. Returns a cloned entity
  * with new geometry, or the original entity unchanged when:
  *  - `preview` is undefined / does not target this entity

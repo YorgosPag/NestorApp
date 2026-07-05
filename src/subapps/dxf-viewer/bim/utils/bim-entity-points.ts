@@ -1,14 +1,20 @@
 /**
- * ADR-363 BIM Entity Key Points — 2D SSoT
+ * ADR-363 BIM Entity Key Points — 2D snap/grip/dimension key-point accessor.
  *
- * Single Source of Truth για 2D key-point extraction από BIM entities.
- * Καταναλώνεται από GeometricCalculations (snap engine), grips, move/mirror/
- * rotate geometry helpers. Αποτρέπει inline params.outline.vertices / startPoint
- * scatter σε 20+ αρχεία.
+ * Καταναλώνεται από GeometricCalculations (snap engine), grips, dimensions.
+ *
+ * Δύο κατηγορίες (§κεντρικοποίηση ADR-370, 2026-07-05):
+ *   - **Polygon-footprint** entities (slab/slab-opening/opening/column/floor-finish/thermal/
+ *     mep-underfloor) → DELEGATE στο ΕΝΑ characteristic-point SSoT (`bim-characteristic-points`)
+ *     αντί για inline `outline/footprint.vertices` extraction — ΜΙΑ πηγή γεωμετρίας, μηδέν
+ *     divergence (το column bbox-anchor bug ήταν ακριβώς τέτοιο divergence).
+ *   - **Linear** entities (beam/wall/space-separator) → axis endpoints/midpoints. Ξεχωριστός
+ *     τύπος έλξης (Revit «Endpoint» στο location line ≠ «Corner» του σώματος) — μένει εδώ.
  *
  * Pure module: zero React / DOM / Firestore / canvas deps. Idempotent.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §6
+ * @see bim/utils/bim-characteristic-points.ts (footprint-corner/midpoint SSoT — polygon delegate)
  * @see snapping/shared/GeometricCalculations.ts (primary consumer)
  */
 
@@ -33,13 +39,14 @@ import { getBimCharacteristicPointsOfCategory } from './bim-characteristic-point
 /**
  * Κύρια vertex/endpoint collection για BIM entity (2D projection).
  *
- * - beam      → axis endpoints (startPoint + endPoint)
- * - slab      → outline vertices (closed polygon corners)
- * - slab-opening → outline vertices
- * - opening   → outline vertices (4-vertex cutout rectangle)
- * - wall      → axis endpoints (straight/curved) OR all spine vertices (polyline)
- * - column    → REAL footprint corners (§κεντρικοποίηση ADR-370) — for L/Γ/T/U these are the
- *               actual reentrant vertices, NOT the 9 bbox anchors (which fell in the empty notch).
+ * ΓΡΑΜΜΙΚΑ (axis endpoints — ξεχωριστός τύπος έλξης, Revit-style, ΔΕΝ είναι footprint γωνίες):
+ * - beam           → axis endpoints (startPoint + endPoint)
+ * - wall           → axis endpoints (straight/curved) OR all spine vertices (polyline)
+ * - space-separator → 2 endpoints
+ *
+ * POLYGON-FOOTPRINT (§κεντρικοποίηση ADR-370 — delegate στο ΕΝΑ characteristic-corner SSoT):
+ * - slab / slab-opening / opening / column / floor-finish / thermal-space / mep-underfloor
+ *   → REAL footprint corners (για L/Γ/T/U τα actual reentrant vertices, ΟΧΙ bbox anchors).
  *
  * Returns [] for entity types not in the BIM domain.
  */
@@ -49,18 +56,6 @@ export function getBimEntityKeyPoints2D(entity: Entity): Point2D[] {
       { x: entity.params.startPoint.x, y: entity.params.startPoint.y },
       { x: entity.params.endPoint.x, y: entity.params.endPoint.y },
     ];
-  }
-
-  if (isSlabEntity(entity) || isSlabOpeningEntity(entity)) {
-    const verts = entity.params.outline?.vertices;
-    if (!verts) return [];
-    return verts.map(v => ({ x: v.x, y: v.y }));
-  }
-
-  if (isOpeningEntity(entity)) {
-    const verts = entity.geometry?.outline?.vertices;
-    if (!verts) return [];
-    return verts.map(v => ({ x: v.x, y: v.y }));
   }
 
   if (isWallEntity(entity)) {
@@ -74,41 +69,24 @@ export function getBimEntityKeyPoints2D(entity: Entity): Point2D[] {
     ];
   }
 
-  if (isColumnEntity(entity)) {
-    // §κεντρικοποίηση (Giorgio 2026-07-05): ΠΡΑΓΜΑΤΙΚΕΣ footprint γωνίες μέσω του ΕΝΟΣ
-    // characteristic-point SSoT — ΟΧΙ τα 9 bbox anchors (`getColumnAnchorWorldPoints`), που
-    // για μη-ορθογώνιες κολόνες (L/Γ/T/U) έπεφταν στο κενό/notch → φάντασμα endpoint markers
-    // (■) ΕΞΩ από το σώμα. Τώρα endpoint & BIM_CORNER δείχνουν στα ΙΔΙΑ σωστά σημεία.
-    return getBimCharacteristicPointsOfCategory(entity, 'corner');
-  }
-
-  // ADR-419 — floor-finish footprint vertices (closed polygon, like slab).
-  if (isFloorFinishEntity(entity)) {
-    const verts = entity.params.footprint?.vertices;
-    if (!verts) return [];
-    return verts.map(v => ({ x: v.x, y: v.y }));
-  }
-
-  // ADR-422 — thermal space footprint vertices (closed polygon, mirrors floor-finish).
-  if (isThermalSpaceEntity(entity)) {
-    const verts = entity.params.footprint?.vertices;
-    if (!verts) return [];
-    return verts.map(v => ({ x: v.x, y: v.y }));
-  }
-
-  // ADR-437 — space separator key points = its two endpoints.
+  // ADR-437 — space separator key points = its two endpoints (γραμμικό: axis, όχι footprint).
   if (isSpaceSeparatorEntity(entity)) {
     const { start, end } = entity.params;
     if (!start || !end) return [];
     return [{ x: start.x, y: start.y }, { x: end.x, y: end.y }];
   }
 
-  // ADR-408 Εύρος Β #3 — underfloor heating loop footprint vertices (closed
-  // polygon, mirrors floor-finish).
-  if (isMepUnderfloorEntity(entity)) {
-    const verts = entity.params.footprint?.vertices;
-    if (!verts) return [];
-    return verts.map(v => ({ x: v.x, y: v.y }));
+  // §κεντρικοποίηση (Giorgio 2026-07-05): ΟΛΑ τα polygon-footprint BIM entities (slab / slab-opening
+  // / opening / column / floor-finish / thermal-space / mep-underfloor) διαβάζουν τις γωνίες τους ΑΠΟ
+  // ΤΟ ΕΝΑ characteristic-point SSoT — μηδέν copy-paste `outline/footprint.vertices` extraction, μηδέν
+  // divergence (π.χ. το column bbox-anchor bug που έβγαζε φάντασμα ■ στο κενό της L). Beam/wall/
+  // space-separator είναι ΓΡΑΜΜΙΚΑ (axis endpoints — ξεχωριστός τύπος έλξης, όπως Revit) → μένουν πάνω.
+  if (
+    isSlabEntity(entity) || isSlabOpeningEntity(entity) || isOpeningEntity(entity) ||
+    isColumnEntity(entity) || isFloorFinishEntity(entity) || isThermalSpaceEntity(entity) ||
+    isMepUnderfloorEntity(entity)
+  ) {
+    return getBimCharacteristicPointsOfCategory(entity, 'corner');
   }
 
   return [];
@@ -117,37 +95,16 @@ export function getBimEntityKeyPoints2D(entity: Entity): Point2D[] {
 /**
  * Edge midpoints για BIM entity (2D projection).
  *
- * - beam          → axis midpoint (single point)
- * - slab          → per-edge midpoints of closed polygon
- * - slab-opening  → per-edge midpoints of closed polygon
- * - opening       → per-edge midpoints of 4-edge rectangle
- * - wall (straight) → axis midpoint
- * - wall (polyline) → per-segment midpoints
+ * - beam / wall (straight) → axis midpoint · wall (polyline) → per-segment midpoints (γραμμικά)
+ * - slab / slab-opening / opening → per-edge midpoints via το ΕΝΑ characteristic SSoT
+ *   (§κεντρικοποίηση ADR-370 — ordered per-edge, μηδέν copy-paste loop).
  *
- * Column και άλλα BIM types → [].
+ * Column και άλλα BIM types → [] (τα midpoints τους τα δίνει απευθείας το BimCharacteristicSnapEngine).
  */
 export function getBimEntityEdgeMidpoints2D(entity: Entity): Point2D[] {
   if (isBeamEntity(entity)) {
     const { startPoint: s, endPoint: e } = entity.params;
     return [{ x: (s.x + e.x) / 2, y: (s.y + e.y) / 2 }];
-  }
-
-  if (isSlabEntity(entity) || isSlabOpeningEntity(entity)) {
-    const verts = entity.params.outline?.vertices;
-    if (!verts) return [];
-    return verts.map((v, i) => {
-      const next = verts[(i + 1) % verts.length]!;
-      return { x: (v.x + next.x) / 2, y: (v.y + next.y) / 2 };
-    });
-  }
-
-  if (isOpeningEntity(entity)) {
-    const verts = entity.geometry?.outline?.vertices;
-    if (!verts) return [];
-    return verts.map((v, i) => {
-      const next = verts[(i + 1) % verts.length]!;
-      return { x: (v.x + next.x) / 2, y: (v.y + next.y) / 2 };
-    });
   }
 
   if (isWallEntity(entity)) {
@@ -161,6 +118,14 @@ export function getBimEntityEdgeMidpoints2D(entity: Entity): Point2D[] {
       return midpoints;
     }
     return [{ x: (params.start.x + params.end.x) / 2, y: (params.start.y + params.end.y) / 2 }];
+  }
+
+  // §κεντρικοποίηση (Giorgio 2026-07-05): τα polygon entities (slab / slab-opening / opening)
+  // διαβάζουν per-edge midpoints ΑΠΟ ΤΟ ΕΝΑ characteristic SSoT (`footprintEdgeMidpoints`, ordered)
+  // — μηδέν copy-paste midpoint loop. ΜΟΝΟ αυτά τα 3 (ίδιο σύνολο με πριν) ώστε να ΜΗ μεταβληθεί το
+  // σύνολο midpoint snaps του GeometricCalculations. Beam/wall = axis midpoint (γραμμικά, μένουν πάνω).
+  if (isSlabEntity(entity) || isSlabOpeningEntity(entity) || isOpeningEntity(entity)) {
+    return getBimCharacteristicPointsOfCategory(entity, 'midpoint');
   }
 
   return [];

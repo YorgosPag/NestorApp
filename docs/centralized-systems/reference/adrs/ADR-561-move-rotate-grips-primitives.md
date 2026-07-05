@@ -114,6 +114,20 @@ Circle / arc / polyline / rectangle → επιστρέφουν **WORLD-aligned i
 
 ## Changelog
 
+- **2026-07-05** — 🐛 **Ενωμένες γραμμές (`lwpolyline`) → εμφάνιση φαντάσματος σε ΟΛΑ τα grip gestures (reshape/edge/move/rotation)** (Giorgio:
+  «όταν μετακινώ/περιστρέφω σκέλος ή ολόκληρο το σύστημα των ενωμένων γραμμών, δεν εμφανίζεται το φάντασμα»).
+  **Root cause**: το JOIN σε γωνία δίνει scene `type:'lwpolyline'` (το `JoinEntityCommand` το κρατά ως έχει), αλλά
+  ΟΛΟ το ghost/preview pipeline είναι keyed σε `'polyline'`: (α) `useGripGhostPreview.getEntity` επιστρέφει το **raw
+  scene entity** (`'lwpolyline'`), (β) το `applyEntityPreview` + `applyClassicEntityPreview` έχουν μόνο `'polyline'`
+  branches → `transformed === entity` → **κανένα φάντασμα**, (γ) το `buildEntityModelFromDxf` (ghost renderer) δεν
+  έχει `case 'lwpolyline'`. Το κύριο canvas δούλευε γιατί περνά τον converter (`lwpolyline→polyline`, ADR-186)· το
+  ghost διάβαζε raw. **Fix (ΟΧΙ αλλαγή merge/JoinEntityCommand)**: νέος SSoT helper `normalizePreviewEntity(entity)`
+  (`rendering/ghost/apply-entity-preview.ts`) που κάνει normalize το discriminator `lwpolyline→polyline` (shallow clone,
+  ίδιο shape) — **ίδιος κανόνας ADR-186 με τον committed converter**. Καλείται μία φορά στο preview boundary
+  (`useGripGhostPreview`, μετά το `getEntity`) → ΟΛΟ το downstream (transform + ghost render + τα ίχνη/βέλη γωνίας του
+  προηγούμενου changelog) βλέπει `'polyline'` και πυροδοτείται σωστά. Ένα σημείο, reusable από body-drag/Move-tool όταν
+  χρειαστεί. **Αρχεία**: `rendering/ghost/apply-entity-preview.ts` (+test), `rendering/ghost/index.ts`,
+  `hooks/tools/useGripGhostPreview.ts`.
 - **2026-07-05** — ✨ **Polyline vertex reshape → πλήρη ίχνη ευθυγράμμισης + βέλη γωνίας + κυανές ενδείξεις (parity με τη γραμμή)** (Giorgio:
   «όταν μετακινώ ένα άκρο ενωμένης γραμμής θέλω να εμφανίζονται τα λευκά+κίτρινα+Polar ίχνη, τα πράσινα/κόκκινα βέλη
   γωνίας, ΚΑΙ οι κυανές ενδείξεις — όλα κεντρικοποιημένα»). **Root cause**: το reshape preview δούλευε ήδη, αλλά το
