@@ -56,6 +56,12 @@ export interface RingFieldDef {
   seed(ctx: RingUnitContext): string;
   /** kind==='numeric': καταχώρηση αριθμητικής τιμής (lock ή override). */
   commitNumeric?(value: number, ctx: RingUnitContext): void;
+  /**
+   * ADR-513 §direct-distance-entry — προαιρετικό reset «μιας βολής» μετά την τοποθέτηση σημείου
+   * (Enter → place). AutoCAD direct distance entry: το Μήκος είναι one-shot ανά segment, οπότε
+   * καθαρίζεται ώστε το επόμενο segment να ξεκινά ελεύθερο. Το field κατέχει το δικό του reset (SSoT).
+   */
+  clearOnPlace?(): void;
   /** kind==='select': οι διαθέσιμες επιλογές (live). */
   options?(): readonly RingSelectOption[];
   /** kind==='select': καταχώρηση επιλεγμένης τιμής. */
@@ -109,6 +115,9 @@ export function lengthRingField(labelKey: string): RingFieldDef {
     },
     commitNumeric: (value, ctx) =>
       DynamicInputLockStore.lockLength(lengthDisplayToSceneLock(value, ctx.displayUnit, ctx.sceneUnits)),
+    // ADR-513 §direct-distance-entry — το Μήκος είναι one-shot: μετά την τοποθέτηση ξεκλειδώνει
+    // (η Γωνία μένει, polar-like) ώστε το επόμενο segment να είναι ελεύθερο κατά μήκος.
+    clearOnPlace: () => DynamicInputLockStore.unlockLength(),
   };
 }
 

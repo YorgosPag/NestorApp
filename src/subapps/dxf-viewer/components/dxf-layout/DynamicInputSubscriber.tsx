@@ -29,8 +29,11 @@ import DynamicInputSystem from '../../systems/dynamic-input/DynamicInputSystem';
 import type { AnySceneEntity } from '../../rendering/types/Types';
 // ADR-513 — «Δαχτυλίδι Εντολών»: ραδιακό in-canvas dynamic input στη σχεδίαση τοίχου (awaitingEnd).
 import { useWallPreview, isWallAwaitingEnd } from '../../bim/walls/wall-preview-store';
+// ADR-513 — parity δοκού: μετά το 1ο κλικ (awaitingEnd) το ΙΔΙΟ ραδιακό δαχτυλίδι (Μήκος/Γωνία/Πλάτος/Ύψος).
+import { useBeamPreview, isBeamAwaitingEnd } from '../../bim/beams/beam-preview-store';
 import { RadialCommandRing } from '../../systems/dynamic-input/components/RadialCommandRing';
 import { WALL_RING_CONFIG } from '../../systems/dynamic-input/wall-ring-config';
+import { BEAM_RING_CONFIG } from '../../systems/dynamic-input/beam-ring-config';
 import { LINE_RING_CONFIG } from '../../systems/dynamic-input/line-ring-config';
 import { ringStartKey } from '../../systems/dynamic-input/ring-config';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -93,6 +96,11 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
   const wallPreview = useWallPreview();
   const wallAwaitingEnd = isWallAwaitingEnd(activeTool, wallPreview);
 
+  // ADR-513 — beam awaitingEnd (1ο κλικ έγινε): ΕΝΑΣ SSoT gate (`isBeamAwaitingEnd`), κοινός με τον 3D
+  // leaf ώστε το κριτήριο να μην αποκλίνει· low-freq reactive read (αλλάζει μόνο στα clicks, όχι mousemove).
+  const beamPreview = useBeamPreview();
+  const beamAwaitingEnd = isBeamAwaitingEnd(activeTool, beamPreview);
+
   // Wire keyboard pipeline: maps `dynamic-input-coordinate-submit` events back
   // to the canvas drawing pipeline (`onDrawingPoint`) — see ADR §4 G2.
   useDynamicInputHandler({
@@ -117,6 +125,19 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
       <RadialCommandRing
         config={WALL_RING_CONFIG}
         startKey={ringStartKey(wallPreview.startPoint)}
+        sceneUnits={getSceneUnits()}
+        getCanvasEl={getCanvasEl}
+      />
+    );
+  }
+
+  // ADR-513 — parity δοκού: στη σχεδίαση δοκού μετά το 1ο κλικ δείξε το ραδιακό «Δαχτυλίδι Εντολών»
+  // (Μήκος/Γωνία/Πλάτος/Ύψος) αντί του γραμμικού overlay — ίδιος gate/μηχανισμός με τον τοίχο.
+  if (beamAwaitingEnd && getSceneUnits) {
+    return (
+      <RadialCommandRing
+        config={BEAM_RING_CONFIG}
+        startKey={ringStartKey(beamPreview.startPoint)}
         sceneUnits={getSceneUnits()}
         getCanvasEl={getCanvasEl}
       />

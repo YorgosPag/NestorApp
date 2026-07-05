@@ -91,6 +91,9 @@ export function RadialCommandRing({
   const zoneRef = useRef<CursorZone>('inside');
   const popupRef = useRef<HTMLDivElement>(null);
   const canvasCursorRef = useRef<string | null>(null);
+  // Όσο τοποθετούμε σημείο μέσω synthetic mouse events, ο window interceptor κάνει early-return
+  // ώστε τα synthetic events να περάσουν στον καμβά (αντί να μπλοκαριστούν ως κλικ σε wedge).
+  const placingRef = useRef(false);
   const [cursor, setCursor] = useState<Point2D | null>(null);
   const [center, setCenter] = useState<Point2D | null>(null);
   const [zone, setZone] = useState<CursorZone>('inside');
@@ -110,6 +113,27 @@ export function RadialCommandRing({
     window.addEventListener('mousemove', onMove, { passive: true });
     return () => window.removeEventListener('mousemove', onMove);
   }, []);
+
+  // ADR-513 §direct-distance-entry (AutoCAD heads-up) — με το δαχτυλίδι mounted και ΚΑΝΕΝΑ popup
+  // ανοιχτό, ένα ψηφίο/δεκαδικό/πρόσημο ΑΝΟΙΓΕΙ αυτόματα το «Μήκος» με seed το πλήκτρο (το 1ο ψηφίο
+  // αντικαθιστά). Capture-phase + stopPropagation → κερδίζει τα υπόλοιπα keyboard listeners. Δεν
+  // κλέβει πληκτρολόγηση από άλλο editable element (ribbon combobox κ.λπ.).
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (openField !== null) return; // popup ανοιχτό → το input χειρίζεται την πληκτρολόγηση
+      if (!isHeadsUpNumericKey(e)) return;
+      if (isEditableTarget(typeof document !== 'undefined' ? document.activeElement : null)) return;
+      const lengthField = fieldByKey.get('length');
+      if (!lengthField || lengthField.kind !== 'numeric') return; // δεν υπάρχει «Μήκος» → no-op
+      e.preventDefault();
+      e.stopPropagation();
+      setOpenField('length');
+      setDraft(e.key);
+      setTimeout(() => { inputRef.current?.focus(); }, 0);
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [fieldByKey, openField]);
 
   // Νέο segment → re-init κέντρο δαχτυλιδιού στον τρέχοντα κέρσορα, κλείσε popup.
   useEffect(() => {
@@ -192,6 +216,7 @@ export function RadialCommandRing({
   // μπλοκάρουμε το commit. Κλικ έξω από τα wedges (annulus) → περνά κανονικά = commit.
   useEffect(() => {
     const intercept = (e: MouseEvent) => {
+      if (placingRef.current) return; // synthetic placement events → άφησέ τα να φτάσουν στον καμβά
       if (popupRef.current?.contains(e.target as Node)) return; // popup: άφησέ το
       const c = centerRef.current;
       const cur = cursorRef.current;
@@ -215,18 +240,54 @@ export function RadialCommandRing({
     };
   }, [openWedge]);
 
-  const commitNumericOpen = useCallback(() => {
-    if (!openField) return;
+  // Επιστρέφει `true` ΜΟΝΟ όταν όντως κλειδώθηκε αριθμητική τιμή (έγκυρη έκφραση) — ώστε το
+  // Enter να τοποθετεί σημείο μόνο σε επιτυχές commit (όχι σε άκυρη/κενή είσοδο).
+  const commitNumericOpen = useCallback((): boolean => {
+    if (!openField) return false;
     const field = fieldByKey.get(openField);
-    if (field?.kind !== 'numeric' || !field.commitNumeric) { setOpenField(null); return; }
+    if (field?.kind !== 'numeric' || !field.commitNumeric) { setOpenField(null); return false; }
     // Δέξου ΚΑΙ κόμμα ΚΑΙ τελεία ως δεκαδικό (0,25 ≡ 0.25) — όπως το `DynamicInputField`.
     const num = evalExpr(draft.replace(/,/g, '.'));
+    let committed = false;
     if (num !== null) {
       field.commitNumeric(num, unitCtx);
       pokeCanvas();
+      committed = true;
     }
     setOpenField(null);
+    return committed;
   }, [openField, fieldByKey, draft, unitCtx, pokeCanvas]);
+
+  // ADR-513 §direct-distance-entry — tool-agnostic τοποθέτηση: dispatch πραγματικού click sequence
+  // (mousedown→mouseup, button 0) στον καμβά στις τρέχουσες client συντεταγμένες, ώστε το ενεργό
+  // εργαλείο (γραμμή/τοίχος/δοκός) να τοποθετήσει το endpoint μέσω του ΚΑΝΟΝΙΚΟΥ του click pipeline
+  // (το `applyLengthAngleLock` περιορίζει το σημείο στο κλειδωμένο μήκος → preview ≡ commit). Η
+  // τοποθέτηση συμβαίνει στο mouseup (`mouse-handler-up.ts`). Μετά → one-shot reset του field (Μήκος).
+  const placeAtCursor = useCallback((placedField: RingFieldDef | null) => {
+    const canvasEl = getCanvasEl?.();
+    const cur = cursorRef.current;
+    if (canvasEl && cur) {
+      placingRef.current = true;
+      try {
+        const init: MouseEventInit = { clientX: cur.x, clientY: cur.y, button: 0, bubbles: true };
+        canvasEl.dispatchEvent(new MouseEvent('mousedown', init));
+        canvasEl.dispatchEvent(new MouseEvent('mouseup', init));
+      } finally {
+        placingRef.current = false;
+      }
+    }
+    // AutoCAD: το κλειδωμένο μήκος «μιας βολής» καθαρίζει ΜΕΤΑ την τοποθέτηση (SSoT: field owns reset).
+    placedField?.clearOnPlace?.();
+  }, [getCanvasEl]);
+
+  // Άνοιξε αριθμητικό πεδίο με seed την τρέχουσα τιμή (Tab flow: Μήκος → Γωνία).
+  const openNumericField = useCallback((key: string) => {
+    const field = fieldByKey.get(key);
+    if (!field || field.kind !== 'numeric') return;
+    setOpenField(field.key);
+    setDraft(field.seed(unitCtx));
+    setTimeout(() => { inputRef.current?.focus(); inputRef.current?.select(); }, 0);
+  }, [fieldByKey, unitCtx]);
 
   const commitSelectOpen = useCallback((value: string) => {
     if (!openField) return;
@@ -239,8 +300,24 @@ export function RadialCommandRing({
   }, [openField, fieldByKey, pokeCanvas]);
 
   const onPopupKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); commitNumericOpen(); }
-  }, [commitNumericOpen]);
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      // Κράτα το field ΠΡΙΝ το commit (το commitNumericOpen κλείνει το popup) → σωστό one-shot reset.
+      const placedField = openField ? fieldByKey.get(openField) ?? null : null;
+      if (commitNumericOpen()) placeAtCursor(placedField); // έγκυρη τιμή → lock + τοποθέτηση
+      return;
+    }
+    // Tab στο «Μήκος» → κλείδωσε το μήκος (χωρίς τοποθέτηση) και άνοιξε τη «Γωνία» (type-len→Tab→type-ang→Enter).
+    if (e.key === 'Tab' && openField === 'length' && fieldByKey.has('angle')) {
+      e.preventDefault();
+      e.stopPropagation();
+      const num = evalExpr(draft.replace(/,/g, '.'));
+      const lengthField = fieldByKey.get('length');
+      if (num !== null && lengthField?.commitNumeric) { lengthField.commitNumeric(num, unitCtx); pokeCanvas(); }
+      openNumericField('angle');
+    }
+  }, [openField, fieldByKey, draft, unitCtx, pokeCanvas, commitNumericOpen, placeAtCursor, openNumericField]);
 
   // ADR-364 — Escape μέσω του κεντρικού EscapeCommandBus (SSoT), ίδιο slot DYNAMIC_INPUT (P900).
   useEscapeHandler({
@@ -347,6 +424,26 @@ export function RadialCommandRing({
       )}
     </section>
   );
+}
+
+/**
+ * ADR-513 §direct-distance-entry — pure predicate: ένα πλήκτρο ενεργοποιεί το heads-up άνοιγμα του
+ * «Μήκος» (AutoCAD direct distance entry). Δεκτά: ψηφία 0-9, δεκαδικό (`.`/`,`), πρόσημο (`-`) —
+ * ΧΩΡΙΣ ctrl/alt/meta (ώστε shortcuts όπως Ctrl+1 να μην κλέβονται). Testable χωρίς DOM.
+ */
+export function isHeadsUpNumericKey(
+  e: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'altKey' | 'metaKey'>,
+): boolean {
+  if (e.ctrlKey || e.altKey || e.metaKey) return false;
+  return /^[0-9.,-]$/.test(e.key);
+}
+
+/** `true` αν το element δέχεται πληκτρολόγηση (input/textarea/select/contentEditable) → μη το κλέψεις. */
+function isEditableTarget(el: Element | null): boolean {
+  if (!el) return false;
+  const tag = el.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+  return (el as HTMLElement).isContentEditable === true;
 }
 
 /** Inline cursor-follow box (px). Κεντραρισμένο στο δαχτυλίδι. */
