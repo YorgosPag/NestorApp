@@ -6,6 +6,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { quantizeToStep } from '../../rendering/entities/shared/geometry-utils';
 
 /** CCW μοίρες από `origin` προς `target`. 0 όταν συμπίπτουν (degenerate). */
 export function columnRotationDeg(origin: Readonly<Point2D>, target: Readonly<Point2D>): number {
@@ -37,5 +38,5 @@ export function resolveColumnRotationDeg(
   worldPerPixel: number,
 ): number {
   const step = adaptiveRotationStepDeg(worldPerPixel);
-  return Math.round(columnRotationDeg(origin, target) / step) * step;
+  return quantizeToStep(columnRotationDeg(origin, target), step);
 }

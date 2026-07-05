@@ -31,7 +31,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { adaptiveDistanceStep } from '../../systems/tracking/adaptive-distance-snap';
 import { pointOnCircle, calculateAngle, calculateDistance } from '../../rendering/entities/shared/geometry-vector-utils';
-import { normalizeAngleDeg, degToRad, radToDeg } from '../../rendering/entities/shared/geometry-utils';
+import { normalizeAngleDeg, degToRad, radToDeg, quantizeToStep } from '../../rendering/entities/shared/geometry-utils';
 import { buildCenteredAxisFaceFrame } from './column-face-snap-helpers';
 import type { GhostFaceFrame } from '../framing/linear-member-face-snap';
 
@@ -201,7 +201,7 @@ export function resolvePolarDiskSnap(
 
   const stepDeg = niceAngleStepDeg(ringR, wpp);
   const rawDeg = radToDeg(calculateAngle(center, cursor));
-  const angleDeg = normalizeAngleDeg(Math.round(rawDeg / stepDeg) * stepDeg);
+  const angleDeg = normalizeAngleDeg(quantizeToStep(rawDeg, stepDeg));
   const position = pointOnCircle(center, ringR, degToRad(angleDeg));
   return {
     position,

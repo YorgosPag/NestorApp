@@ -30,6 +30,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { quantizeToStep } from '../../rendering/entities/shared/geometry-utils';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { immediateSceneScale } from '../../systems/cursor/ImmediateSceneScaleStore';
 import { QKeyTracker } from '../../keyboard/QKeyTracker';
@@ -40,11 +41,9 @@ import { quantizePointFromAnchor } from '../../systems/tracking/adaptive-distanc
 /** Default SNAP-MODE increment, in **millimetres** (the unit the user types). */
 export const DEFAULT_GRIP_SNAP_STEP = 50;
 
-/** Round a scalar to the nearest multiple of `step` (no-op when step ≤ 0). */
-export function quantizeValueToStep(value: number, step: number): number {
-  if (!(step > 0) || !Number.isFinite(value)) return value;
-  return Math.round(value / step) * step;
-}
+/** Round a scalar to the nearest multiple of `step` (no-op when step ≤ 0).
+ *  Alias over the shared `quantizeToStep` SSoT (geometry-utils) — kept for the F9 grip-drag call sites. */
+export const quantizeValueToStep = quantizeToStep;
 
 /** Round both components of a displacement to the nearest multiple of `step`. */
 export function quantizeDeltaToStep(delta: Point2D, step: number): Point2D {

@@ -48,6 +48,21 @@ export function pointToCircleDistance(point: Point2D, center: Point2D, radius: n
   return Math.abs(centerDistance - radius);
 }
 
+// ===== SCALAR QUANTIZATION =====
+
+/**
+ * Round a scalar to the nearest multiple of `step` — the ONE hard-snap primitive (no tolerance,
+ * no normalization: the caller owns any range/wrap policy). SSoT for `Math.round(value/step)*step`.
+ *
+ * Callers: angle quantizers (`AngleUtils.snapAngleToStep`, `resolveColumnRotationDeg`,
+ * `polar-disk-snap` ring/angle) and the F9 grip-drag step (`quantizeValueToStep`). No-op (returns
+ * `value` verbatim) when `step ≤ 0` or `value` is non-finite, so degenerate steps never yield NaN.
+ */
+export function quantizeToStep(value: number, step: number): number {
+  if (!(step > 0) || !Number.isFinite(value)) return value;
+  return Math.round(value / step) * step;
+}
+
 // ===== NEAREST POINT CALCULATIONS =====
 
 /**

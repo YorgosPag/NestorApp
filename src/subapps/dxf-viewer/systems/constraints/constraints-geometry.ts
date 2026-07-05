@@ -8,8 +8,8 @@
 import type { PolarCoordinates, CartesianCoordinates } from './config';
 import { CONSTRAINTS_CONFIG } from './config';
 import type { Point2D } from '../../rendering/types/Types';
-import { calculateDistance, vectorMagnitude, calculateAngle, vectorAngle, getUnitVector } from '../../rendering/entities/shared/geometry-rendering-utils';
-import { degToRad, radToDeg, normalizeAngleDeg } from '../../rendering/entities/shared/geometry-utils';
+import { calculateDistance, vectorMagnitude, calculateAngle, vectorAngle } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { degToRad, radToDeg, normalizeAngleDeg, quantizeToStep, getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
 
 // ===== ANGLE UTILITIES =====
 
@@ -28,10 +28,12 @@ export const AngleUtils = {
     return AngleUtils.normalizeAngle(AngleUtils.radiansToDegrees(calculateAngle(point1, point2)));
   },
 
-  /** Snaps angle to nearest step increment within tolerance */
+  /** Snaps angle to nearest step increment within tolerance (magnet — null if outside).
+   *  Delegates the hard round to the shared `quantizeToStep` SSoT; keeps the wrap-aware
+   *  tolerance gate (359°↔0° via the `>= 360 - tolerance` clause). */
   snapAngleToStep: (angle: number, step: number, tolerance: number): number | null => {
     const normalizedAngle = AngleUtils.normalizeAngle(angle);
-    const nearestStep = Math.round(normalizedAngle / step) * step;
+    const nearestStep = quantizeToStep(normalizedAngle, step);
     const difference = Math.abs(normalizedAngle - nearestStep);
 
     if (difference <= tolerance || difference >= (360 - tolerance)) {
@@ -132,19 +134,11 @@ export const CoordinateUtils = {
     };
   },
 
-  /** Projects point onto line defined by two points */
-  projectPointOnLine: (point: Point2D, lineStart: Point2D, lineEnd: Point2D): Point2D => {
-    const length = calculateDistance(lineStart, lineEnd);
-    if (length === 0) return lineStart;
-
-    const unit = getUnitVector(lineStart, lineEnd);
-    const dotProduct = (point.x - lineStart.x) * unit.x + (point.y - lineStart.y) * unit.y;
-
-    return {
-      x: lineStart.x + dotProduct * unit.x,
-      y: lineStart.y + dotProduct * unit.y
-    };
-  },
+  /** Projects point onto the INFINITE line through two points (no segment clamp).
+   *  Thin alias over the shared `getNearestPointOnLine(..., clampToSegment=false)` SSoT
+   *  (geometry-utils) — numerically identical, one projection implementation for the whole app. */
+  projectPointOnLine: (point: Point2D, lineStart: Point2D, lineEnd: Point2D): Point2D =>
+    getNearestPointOnLine(point, lineStart, lineEnd, false),
 
   /** Gets perpendicular point from a point to a line */
   getPerpendicularPoint: (point: Point2D, lineStart: Point2D, lineEnd: Point2D): Point2D => {
