@@ -2,7 +2,7 @@
  * line-offset-dim-paint — overlay painter for the PERPENDICULAR move-offset dimension of a line
  * (body-drag OR centre-grip translate). Composes the existing SSoTs, zero bespoke drawing:
  *   · geometry → `resolveParallelOffsetDim` (pure),
- *   · number   → `formatLengthForDisplay` (display-length SSoT, forced metres),
+ *   · number   → `formatSceneLengthForDisplay` (scene→display SSoT, forced metres),
  *   · draw     → `paintAlignedOverlayDimension` (full ISO dim: arrows + extension lines + label).
  *
  * PRODUCT RULE (Giorgio 2026-07-05): shown ONLY while ORTHO (F8) is armed — a free move has no
@@ -17,8 +17,7 @@ import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { LineEntity } from '../../types/entities';
 import type { SceneUnits } from '../../utils/scene-units';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
-import { canvasToMmScaleFor } from '../../utils/scene-units';
-import { formatLengthForDisplay } from '../../config/display-length-format';
+import { formatSceneLengthForDisplay } from '../../config/display-length-format';
 import { resolveParallelOffsetDim } from '../../systems/dimensions/line-parallel-offset-dim';
 import { paintAlignedOverlayDimension } from './ghost-face-dim-paint';
 import { OVERLAY_LINE_COLORS } from './overlay-line-style';
@@ -38,8 +37,7 @@ export function paintLineParallelOffsetDim(
   if (!cadToggleState.isOrthoOn()) return; // κάθετη διάσταση ΜΟΝΟ με ΟΡΘΟ (Giorgio 2026-07-05)
   const dim = resolveParallelOffsetDim(line.start, line.end, delta);
   if (!dim) return;
-  // scene → mm via the SSoT scale (canvasToMmScaleFor), then the display-length SSoT formats it.
-  const label = formatLengthForDisplay(dim.distanceScene * canvasToMmScaleFor({ sceneUnits }), { unit: 'm' });
+  const label = formatSceneLengthForDisplay(dim.distanceScene, sceneUnits, { unit: 'm' });
   paintAlignedOverlayDimension(
     ctx, dim.p1, dim.p2, dim.dimLineRef, label, transform, viewport, OVERLAY_LINE_COLORS.listeningDim,
   );

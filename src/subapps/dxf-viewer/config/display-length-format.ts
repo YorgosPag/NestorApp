@@ -55,6 +55,7 @@ import {
 } from './units';
 import { displayUnitState } from './display-unit-state';
 import { FormatterRegistry, type Precision } from '../formatting';
+import { canvasToMmScaleFor, type SceneUnits } from '../utils/scene-units';
 
 export interface FormatMeasurementOptions {
   /** Override the display unit (default = the live status-bar selection). */
@@ -98,6 +99,23 @@ export function formatLengthForDisplay(mm: number, opts: FormatMeasurementOption
  */
 export function formatLengthMm(mm: number, opts: FormatLengthOptions = {}): string {
   return formatLengthForDisplay(mm, opts);
+}
+
+/**
+ * Format a **scene-space** LENGTH for display. THE ONE place that bridges the two SSoTs so the
+ * `scene → canonical-mm → display-unit` path is never spelled out inline again: scene units →
+ * mm via `canvasToMmScaleFor`, then {@link formatLengthForDisplay}. Every overlay/HUD/dim label
+ * measured in scene (canvas) units routes through here (Giorgio 2026-07-05 — «FULL SSoT»).
+ *
+ *   formatSceneLengthForDisplay(5, 'm', { unit: 'm' })  → "5,00 m"   (5 scene-metres → 5000 mm → "5,00 m")
+ *   formatSceneLengthForDisplay(250, 'mm')              → live display unit (250 mm)
+ */
+export function formatSceneLengthForDisplay(
+  sceneValue: number,
+  sceneUnits: SceneUnits,
+  opts: FormatMeasurementOptions = {},
+): string {
+  return formatLengthForDisplay(sceneValue * canvasToMmScaleFor({ sceneUnits }), opts);
 }
 
 /**

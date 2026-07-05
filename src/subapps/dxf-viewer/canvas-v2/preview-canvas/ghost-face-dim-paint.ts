@@ -5,7 +5,7 @@
  *     (the shared 0.5px dashed [8,5] `overlay-line-style` SSoT). The dim's own text is
  *     suppressed (`userText: ''`).
  *   - NUMBER                  → `drawOverlayLabel` (`overlay-text-style` SSoT — same font/chip
- *     as the tracking + polar tooltips), value via `formatLengthForDisplay` (forced metres).
+ *     as the tracking + polar tooltips), value via `formatSceneLengthForDisplay` (scene→display SSoT, metres).
  *
  * So the listening dims share line-style, text-style AND number-format code with the alignment
  * traces / polar line — one visual language, one SSoT per concern.
@@ -19,8 +19,8 @@ import type { AlignedDimensionEntity } from '../../types/dimension';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 import { ISO_129_TEMPLATE } from '../../systems/dimensions/dim-style-templates';
-import { canvasToMmScaleFor } from '../../utils/scene-units';
-import { formatLengthForDisplay } from '../../config/display-length-format';
+import type { SceneUnits } from '../../utils/scene-units';
+import { formatSceneLengthForDisplay } from '../../config/display-length-format';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { arcToPolyline } from '../../utils/geometry/GeometryUtils';
 import type { GhostFaceDimension } from '../../bim/framing/ghost-face-dim-references';
@@ -75,11 +75,10 @@ export function paintGhostFaceDimensions(
   project?: OverlayProjector,
 ): void {
   const textColor = OVERLAY_LINE_COLORS.listeningDim; // CYAN — distinct mechanism colour
-  const mmPerScene = canvasToMmScaleFor({ sceneUnits: meta.sceneUnits }); // SSoT scene→mm scale
   const labelMode = meta.labelMode ?? 'length'; // ADR-398 §3.12 — μήκος / γωνία / και τα δύο (arc gaps)
   for (const d of meta.dims) {
-    if (d.arc) paintArcDimension(ctx, d, transform, viewport, mmPerScene, labelMode, textColor, project);
-    else paintStraightDimension(ctx, d, transform, viewport, mmPerScene, textColor, project);
+    if (d.arc) paintArcDimension(ctx, d, transform, viewport, meta.sceneUnits, labelMode, textColor, project);
+    else paintStraightDimension(ctx, d, transform, viewport, meta.sceneUnits, textColor, project);
   }
 }
 
@@ -141,11 +140,11 @@ function paintStraightDimension(
   d: GhostFaceDimension,
   transform: ViewTransform,
   viewport: { readonly width: number; readonly height: number },
-  mmPerScene: number,
+  sceneUnits: SceneUnits,
   textColor: string,
   project: OverlayProjector | undefined,
 ): void {
-  const len = formatLengthForDisplay(d.valueScene * mmPerScene, { unit: 'm' });
+  const len = formatSceneLengthForDisplay(d.valueScene, sceneUnits, { unit: 'm' });
   // ADR-508 §neighbor-clearance — «γωνία μόνο σε λοξές»: όταν ο resolver όρισε `angleDeg` (μη-ορθή
   // ένδειξη), προσάρτησέ την ως `/ γωνία°` μέσω του SSoT `formatAngleLocale` (ADR-082, el/en + °).
   const label = d.angleDeg != null ? `${len} / ${formatAngleLocale(d.angleDeg)}` : len;
@@ -156,8 +155,8 @@ function paintStraightDimension(
 const ARC_DIM_SEGMENTS = 32;
 
 /** Ετικέτα arc gap κατά `labelMode`: μήκος τόξου (μέτρα) / γωνία (μοίρες) / και τα δύο. */
-function formatArcLabel(d: GhostFaceDimension, mmPerScene: number, labelMode: 'length' | 'angle' | 'both'): string {
-  const len = formatLengthForDisplay(d.valueScene * mmPerScene, { unit: 'm' });
+function formatArcLabel(d: GhostFaceDimension, sceneUnits: SceneUnits, labelMode: 'length' | 'angle' | 'both'): string {
+  const len = formatSceneLengthForDisplay(d.valueScene, sceneUnits, { unit: 'm' });
   const ang = formatAngleLocale(d.sweepDeg ?? 0); // SSoT (ADR-082 locale-aware el/en + °) — μηδέν inline format
   if (labelMode === 'angle') return ang;
   if (labelMode === 'both') return `${len} / ${ang}`;
@@ -174,7 +173,7 @@ function paintArcDimension(
   d: GhostFaceDimension,
   transform: ViewTransform,
   viewport: { readonly width: number; readonly height: number },
-  mmPerScene: number,
+  sceneUnits: SceneUnits,
   labelMode: 'length' | 'angle' | 'both',
   textColor: string,
   project: OverlayProjector | undefined,
@@ -201,5 +200,5 @@ function paintArcDimension(
     strokeOverlaySegment(ctx, toScreen(d.p2), toScreen(curve[curve.length - 1])); // στο «to» άκρο
   }
   const sRef = toScreen(d.dimLineRef);
-  drawLabelBeyond(ctx, formatArcLabel(d, mmPerScene, labelMode), sRef, toScreen(arc.center), textColor);
+  drawLabelBeyond(ctx, formatArcLabel(d, sceneUnits, labelMode), sRef, toScreen(arc.center), textColor);
 }

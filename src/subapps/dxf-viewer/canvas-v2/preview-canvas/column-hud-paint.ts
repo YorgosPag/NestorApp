@@ -22,7 +22,7 @@ import { DEFAULT_POLYGON_SIDES } from '../../bim/types/column-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
-import { formatLengthForDisplay } from '../../config/display-length-format';
+import { formatLengthForDisplay, formatSceneLengthForDisplay } from '../../config/display-length-format';
 import { formatAngleLocale } from '../../rendering/entities/shared/distance-label-utils';
 import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 import { paintAlignedOverlayDimension } from './ghost-face-dim-paint';
@@ -76,17 +76,16 @@ function paintRectColumnHud(
   vp: HudViewport,
 ): void {
   const wpp = worldPerPixel(t.scale);
-  const f = mmToSceneUnits(sceneUnits);
   const dimClr = DIM_CLEAR_PX * wpp;
   // (1) πλάτος κατά την παρειά-u, offset προς τα έξω (−v).
   paintAlignedOverlayDimension(
     ctx, rectLocalToWorld(rect, -rect.halfW, -rect.halfV), rectLocalToWorld(rect, rect.halfW, -rect.halfV),
-    rectLocalToWorld(rect, 0, -(rect.halfV + dimClr)), formatLengthForDisplay((rect.halfW * 2) / f), t, vp, HUD_COLOR,
+    rectLocalToWorld(rect, 0, -(rect.halfV + dimClr)), formatSceneLengthForDisplay(rect.halfW * 2, sceneUnits), t, vp, HUD_COLOR,
   );
   // (2) βάθος κατά την παρειά-v, offset προς τα έξω (+u).
   paintAlignedOverlayDimension(
     ctx, rectLocalToWorld(rect, rect.halfW, -rect.halfV), rectLocalToWorld(rect, rect.halfW, rect.halfV),
-    rectLocalToWorld(rect, rect.halfW + dimClr, 0), formatLengthForDisplay((rect.halfV * 2) / f), t, vp, HUD_COLOR,
+    rectLocalToWorld(rect, rect.halfW + dimClr, 0), formatSceneLengthForDisplay(rect.halfV * 2, sceneUnits), t, vp, HUD_COLOR,
   );
   // (3) ∠γωνία (πάνω-αριστερά) + (4) ύψος (πάνω-δεξιά).
   paintFrameAngleHeight(ctx, rect, rotationDeg, heightSpecLabel, wpp, t, vp);
@@ -108,10 +107,9 @@ function paintCircularColumnHud(
   const r = (b.maxX - b.minX) / 2;
   if (!(r > 0)) return;
   const wpp = worldPerPixel(t.scale);
-  const diameterMm = (r * 2) / mmToSceneUnits(sceneUnits);
   paintAlignedOverlayDimension(
     ctx, { x: cx - r, y: cy }, { x: cx + r, y: cy },
-    { x: cx, y: cy - (r + DIM_CLEAR_PX * wpp) }, `Ø ${formatLengthForDisplay(diameterMm)}`, t, vp, HUD_COLOR,
+    { x: cx, y: cy - (r + DIM_CLEAR_PX * wpp) }, `Ø ${formatSceneLengthForDisplay(r * 2, sceneUnits)}`, t, vp, HUD_COLOR,
   );
   labelAt(ctx, heightSpecLabel, { x: cx, y: cy + r + LABEL_CLEAR_PX * wpp }, t, vp);
 }
@@ -160,14 +158,13 @@ function paintProfileColumnHud(
   vp: HudViewport,
 ): void {
   const wpp = worldPerPixel(t.scale);
-  const f = mmToSceneUnits(sceneUnits);
   const dimClr = DIM_CLEAR_PX * wpp;
   for (const e of footprintEdges(footprint)) {
     if (e.lengthScene / wpp < MIN_EDGE_SCREEN_PX) continue; // πολύ μικρή ακμή → skip (anti-clutter)
     const midX = (e.p1.x + e.p2.x) / 2, midY = (e.p1.y + e.p2.y) / 2;
     paintAlignedOverlayDimension(
       ctx, e.p1, e.p2, { x: midX + e.nx * dimClr, y: midY + e.ny * dimClr },
-      formatLengthForDisplay(e.lengthScene / f), t, vp, HUD_COLOR,
+      formatSceneLengthForDisplay(e.lengthScene, sceneUnits), t, vp, HUD_COLOR,
     );
   }
   const frame = orientedRectFrame(footprint, rotationDeg);
