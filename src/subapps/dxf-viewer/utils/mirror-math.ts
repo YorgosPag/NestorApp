@@ -141,6 +141,16 @@ export function mirrorEntity(entity: Entity, axis: MirrorAxis): Partial<Entity> 
         point2: mp(entity.point2),
       };
 
+    case 'group': {
+      // ADR-575 — GROUP container: mirroring the group mirrors every member across
+      // the SAME axis. Recurse the SAME SSoT per member (handles nested groups).
+      const members = (entity as unknown as { members: Entity[] }).members.map((m) => ({
+        ...m,
+        ...mirrorEntity(m, axis),
+      }));
+      return { members } as unknown as Partial<Entity>;
+    }
+
     default:
       return {};
   }

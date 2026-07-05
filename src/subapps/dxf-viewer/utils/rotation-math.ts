@@ -149,6 +149,16 @@ export function rotateEntity(
         controlPoints: entity.controlPoints.map(v => rotatePoint(v, pivot, angleDeg)),
       };
 
+    case 'group': {
+      // ADR-575 — GROUP container: rotating the group rotates every member about
+      // the SAME pivot. Recurse the SAME SSoT per member (handles nested groups).
+      const members = (entity as unknown as { members: Entity[] }).members.map((m) => ({
+        ...m,
+        ...rotateEntity(m, pivot, angleDeg),
+      }));
+      return { members } as unknown as Partial<Entity>;
+    }
+
     default:
       return {};
   }
