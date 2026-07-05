@@ -35,6 +35,7 @@
 
 import { useSyncExternalStore } from 'react';
 import type { LineType } from '../settings-core/types';
+import { createExternalStore } from './createExternalStore';
 
 /**
  * Completion style interface
@@ -69,12 +70,10 @@ const DEFAULT_COMPLETION_STYLE: CompletionStyle = {
   breakAtCenter: false,
 };
 
-// Store state
-let current: CompletionStyle = { ...DEFAULT_COMPLETION_STYLE };
-
-// Subscribers for reactive updates
-type Listener = () => void;
-const listeners = new Set<Listener>();
+// SSoT pub/sub plumbing via createExternalStore (WAVE 2.6). Patch-merge shape; the
+// hand-rolled store always notified on `set`/`reset` (no identity guard) — factory
+// used WITHOUT `equals`, byte-identical always-notify behaviour.
+const store = createExternalStore<CompletionStyle>({ ...DEFAULT_COMPLETION_STYLE });
 
 /**
  * Completion Style Store
@@ -88,7 +87,7 @@ export const completionStyleStore = {
    * @returns Current CompletionStyle object
    */
   get(): CompletionStyle {
-    return current;
+    return store.get();
   },
 
   /**
@@ -98,16 +97,14 @@ export const completionStyleStore = {
    * @param next - Partial style updates
    */
   set(next: Partial<CompletionStyle>) {
-    current = { ...current, ...next };
-    listeners.forEach(listener => listener());
+    store.set({ ...store.get(), ...next });
   },
 
   /**
    * Reset to default completion styles
    */
   reset() {
-    current = { ...DEFAULT_COMPLETION_STYLE };
-    listeners.forEach(listener => listener());
+    store.set({ ...DEFAULT_COMPLETION_STYLE });
   },
 
   /**
@@ -115,9 +112,8 @@ export const completionStyleStore = {
    * @param callback - Function to call on changes
    * @returns Unsubscribe function
    */
-  subscribe(callback: Listener): () => void {
-    listeners.add(callback);
-    return () => listeners.delete(callback);
+  subscribe(callback: () => void): () => void {
+    return store.subscribe(callback);
   },
 };
 

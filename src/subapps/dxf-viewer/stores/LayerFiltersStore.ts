@@ -41,6 +41,7 @@ import {
   subscribeProjectFilters,
   type FilterPersistenceHandle,
 } from '../services/layer-filter-persistence';
+import { createExternalStore } from './createExternalStore';
 
 type Listener = () => void;
 
@@ -76,12 +77,16 @@ let smartFilters: ReadonlyArray<LayerFilter> = [];
 let activeFilters: ReadonlyArray<ActiveLayerFilterEntry> = [];
 let pinnedSmartIds: ReadonlyArray<string> = [];
 let hydrationStatus: HydrationStatus = 'idle';
-let cached: LayerFiltersSnapshot = EMPTY_SNAPSHOT;
 let persistenceHandle: FilterPersistenceHandle | null = null;
 let layerStoreUnsub: (() => void) | null = null;
 let lastLayerStoreVersion = -1;
 
-const subscribers = new Set<Listener>();
+// SSoT pub/sub via createExternalStore (WAVE 2.6). The lets/Map above stay as
+// mutation accelerators; `cached`/`subscribers` collapse into this single
+// composite-snapshot store — `rebuildAndNotify()`/`notifyOnly()` still build
+// the derived object via `buildSnapshot()`, but commit it via `store.set(...)`
+// (always-notify, no `equals`).
+const store = createExternalStore<LayerFiltersSnapshot>(EMPTY_SNAPSHOT);
 
 /** Derived layer-id cache. Key = filterId; value = matching ids set. */
 const matchCache = new Map<string, ReadonlySet<string>>();
@@ -89,14 +94,11 @@ const matchCache = new Map<string, ReadonlySet<string>>();
 // ─── Snapshot getter (useSyncExternalStore-compatible) ───────────────────────
 
 export function getLayerFiltersStoreSnapshot(): LayerFiltersSnapshot {
-  return cached;
+  return store.get();
 }
 
 export function subscribeLayerFiltersStore(cb: Listener): () => void {
-  subscribers.add(cb);
-  return () => {
-    subscribers.delete(cb);
-  };
+  return store.subscribe(cb);
 }
 
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
@@ -279,8 +281,7 @@ function rebuildSmartFilters(): void {
 }
 
 function rebuildAndNotify(): void {
-  cached = buildSnapshot();
-  notifyOnly();
+  store.set(buildSnapshot());
 }
 
 function buildSnapshot(): LayerFiltersSnapshot {
@@ -299,8 +300,7 @@ function buildSnapshot(): LayerFiltersSnapshot {
 }
 
 function notifyOnly(): void {
-  cached = buildSnapshot();
-  subscribers.forEach((cb) => cb());
+  store.set(buildSnapshot());
 }
 
 function appendActive(
@@ -321,7 +321,7 @@ function computeOrGet(
 ): ReadonlySet<string> {
   const cachedSet = matchCache.get(filterId);
   if (cachedSet) return cachedSet;
-  const filter = cached.allFiltersById.get(filterId);
+  const filter = store.get().allFiltersById.get(filterId);
   if (!filter) {
     const empty = new Set<string>();
     matchCache.set(filterId, empty);
@@ -392,6 +392,5 @@ export function __resetLayerFiltersStoreForTesting(): void {
   hydrationStatus = 'idle';
   matchCache.clear();
   lastLayerStoreVersion = -1;
-  cached = EMPTY_SNAPSHOT;
-  subscribers.clear();
+  store.reset(EMPTY_SNAPSHOT);
 }

@@ -24,6 +24,7 @@
  */
 
 import { useSyncExternalStore } from 'react';
+import { createExternalStore } from './createExternalStore';
 
 export type AutoSaveLifecycle = 'idle' | 'saving' | 'success' | 'error';
 
@@ -39,11 +40,6 @@ const INITIAL: AutoSaveStatusSnapshot = {
   saveStatus: 'idle',
 };
 
-let current: AutoSaveStatusSnapshot = INITIAL;
-
-type Listener = () => void;
-const listeners = new Set<Listener>();
-
 function sameSnapshot(a: AutoSaveStatusSnapshot, b: AutoSaveStatusSnapshot): boolean {
   return (
     a.currentFileName === b.currentFileName &&
@@ -52,10 +48,15 @@ function sameSnapshot(a: AutoSaveStatusSnapshot, b: AutoSaveStatusSnapshot): boo
   );
 }
 
+// SSoT pub/sub plumbing via createExternalStore (WAVE 2.6). Field-compare guard kept
+// in the wrapper's `set()` (a fresh snapshot object arrives on every write, so no
+// shared identity to compare) — byte-identical to the hand-rolled `sameSnapshot` bail-out.
+const store = createExternalStore<AutoSaveStatusSnapshot>(INITIAL);
+
 export const autoSaveStatusStore = {
   /** Current snapshot — stable reference between changes (useSyncExternalStore-safe). */
   get(): AutoSaveStatusSnapshot {
-    return current;
+    return store.get();
   },
 
   /**
@@ -64,16 +65,12 @@ export const autoSaveStatusStore = {
    * triggers a spurious subscriber re-render.
    */
   set(next: AutoSaveStatusSnapshot): void {
-    if (sameSnapshot(current, next)) return;
-    current = next;
-    listeners.forEach((cb) => cb());
+    if (sameSnapshot(store.get(), next)) return;
+    store.set(next);
   },
 
-  subscribe(cb: Listener): () => void {
-    listeners.add(cb);
-    return () => {
-      listeners.delete(cb);
-    };
+  subscribe(cb: () => void): () => void {
+    return store.subscribe(cb);
   },
 };
 
@@ -88,6 +85,5 @@ export function useAutoSaveStatus(): AutoSaveStatusSnapshot {
 
 // ─── Test-only hook (singleton state leaks across cases otherwise) ────────────
 export function __resetAutoSaveStatusForTest(): void {
-  current = INITIAL;
-  listeners.clear();
+  store.reset(INITIAL);
 }

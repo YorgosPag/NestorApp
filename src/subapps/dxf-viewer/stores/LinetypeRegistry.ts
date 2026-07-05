@@ -21,6 +21,7 @@ import {
   LINETYPE_ISO_CATALOG,
   type LinetypeDef,
 } from '../config/linetype-iso-catalog';
+import { createExternalStore } from './createExternalStore';
 
 type Listener = () => void;
 
@@ -40,9 +41,12 @@ function buildIsoSeed(): { byName: Map<string, LinetypeDef>; order: string[] } {
 }
 
 let { byName: definitionsByName, order: insertionOrder } = buildIsoSeed();
-let cachedSnapshot: LinetypeRegistrySnapshot = freezeSnapshot();
 
-const subscribers = new Set<Listener>();
+// SSoT pub/sub via createExternalStore (WAVE 2.6). The Map/array above stay as
+// mutation accelerators; `cachedSnapshot`/`subscribers`/`notify()` collapse into
+// this single composite-snapshot store — `rebuildSnapshot()` still builds the
+// derived object, but commits it via `store.set(...)` (always-notify, no `equals`).
+const store = createExternalStore<LinetypeRegistrySnapshot>(freezeSnapshot());
 
 function freezeSnapshot(): LinetypeRegistrySnapshot {
   const list: LinetypeDef[] = [];
@@ -56,26 +60,19 @@ function freezeSnapshot(): LinetypeRegistrySnapshot {
 }
 
 function rebuildSnapshot(): void {
-  cachedSnapshot = freezeSnapshot();
-}
-
-function notify(): void {
-  subscribers.forEach((cb) => cb());
+  store.set(freezeSnapshot());
 }
 
 // ─── Snapshot getter (useSyncExternalStore-compatible) ───────────────────────
 
 export function getLinetypeRegistrySnapshot(): LinetypeRegistrySnapshot {
-  return cachedSnapshot;
+  return store.get();
 }
 
 // ─── Subscriptions ───────────────────────────────────────────────────────────
 
 export function subscribeLinetypeRegistry(cb: Listener): () => void {
-  subscribers.add(cb);
-  return () => {
-    subscribers.delete(cb);
-  };
+  return store.subscribe(cb);
 }
 
 // ─── Reads ───────────────────────────────────────────────────────────────────
@@ -87,7 +84,7 @@ export function resolveLinetype(name: string): LinetypeDef | null {
 
 /** All linetypes in registration order — ISO baseline first. */
 export function listLinetypes(): ReadonlyArray<LinetypeDef> {
-  return cachedSnapshot.linetypes;
+  return store.get().linetypes;
 }
 
 /** ByLayer sentinel — entity inherits its linetype from the active layer (AutoCAD convention). */
@@ -100,7 +97,7 @@ export const BYLAYER_LINETYPE = 'ByLayer';
  * enumeration — consumers map this to their own option shape, never re-derive it.
  */
 export function listSelectableLinetypeNames(): readonly string[] {
-  return [BYLAYER_LINETYPE, ...cachedSnapshot.linetypes.map((d) => d.name)];
+  return [BYLAYER_LINETYPE, ...store.get().linetypes.map((d) => d.name)];
 }
 
 // ─── Mutations ───────────────────────────────────────────────────────────────
@@ -116,7 +113,6 @@ export function registerLinetype(def: LinetypeDef): boolean {
   definitionsByName.set(def.name, def);
   insertionOrder.push(def.name);
   rebuildSnapshot();
-  notify();
   return true;
 }
 
@@ -135,7 +131,6 @@ export function registerLinetypes(defs: ReadonlyArray<LinetypeDef>): number {
   }
   if (added > 0) {
     rebuildSnapshot();
-    notify();
   }
   return added;
 }
@@ -147,6 +142,9 @@ export function __resetLinetypeRegistryForTesting(): void {
   const seed = buildIsoSeed();
   definitionsByName = seed.byName;
   insertionOrder = seed.order;
-  rebuildSnapshot();
-  subscribers.clear();
+  // NOTE: goes through `store.reset()` (no notify, drops all listeners) — NOT
+  // `rebuildSnapshot()`/`store.set()`, which would notify still-attached test
+  // listeners before clearing them (byte-identical to the original silent
+  // `rebuildSnapshot(); subscribers.clear();` pairing).
+  store.reset(freezeSnapshot());
 }

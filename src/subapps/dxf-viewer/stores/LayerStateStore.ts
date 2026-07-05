@@ -43,6 +43,7 @@ import type {
   LayerStateTemplate,
   LayerStateTemplateSummary,
 } from '../types/layer-state-template';
+import { createExternalStore } from './createExternalStore';
 
 type Listener = () => void;
 
@@ -70,23 +71,23 @@ let currentUserId: string = 'anonymous';
 let states: ReadonlyArray<LayerState> = [];
 let currentStateId: string | null = null;
 let hydrationStatus: LayerStateHydrationStatus = 'idle';
-let cached: LayerStateStoreSnapshot = EMPTY_SNAPSHOT;
 let persistenceHandle: LayerStatePersistenceHandle | null = null;
 let templateService: DxfLayerStateTemplateService | null = null;
 
-const subscribers = new Set<Listener>();
+// SSoT pub/sub via createExternalStore (WAVE 2.6). The lets above stay as
+// mutation accelerators; `cached`/`subscribers` collapse into this single
+// composite-snapshot store — `rebuildAndNotify()` still builds the derived
+// object, but commits it via `store.set(...)` (always-notify, no `equals`).
+const store = createExternalStore<LayerStateStoreSnapshot>(EMPTY_SNAPSHOT);
 
 // ─── Snapshot getter (useSyncExternalStore-compatible) ───────────────────────
 
 export function getLayerStateStoreSnapshot(): LayerStateStoreSnapshot {
-  return cached;
+  return store.get();
 }
 
 export function subscribeLayerStateStore(cb: Listener): () => void {
-  subscribers.add(cb);
-  return () => {
-    subscribers.delete(cb);
-  };
+  return store.subscribe(cb);
 }
 
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
@@ -129,11 +130,11 @@ export function clearProject(): void {
 // ─── Reads ───────────────────────────────────────────────────────────────────
 
 export function listLayerStates(): ReadonlyArray<LayerState> {
-  return cached.states;
+  return store.get().states;
 }
 
 export function getLayerState(id: string): LayerState | null {
-  return cached.states.find((s) => s.id === id) ?? null;
+  return store.get().states.find((s) => s.id === id) ?? null;
 }
 
 export function getCurrentStateId(): string | null {
@@ -170,7 +171,7 @@ export function saveCurrentLayerState(input: {
  */
 export function renameLayerState(id: string, newName: string): LayerState | null {
   if (!projectId) return null;
-  const current = cached.states.find((s) => s.id === id);
+  const current = store.get().states.find((s) => s.id === id);
   if (!current) return null;
   const next: LayerState = {
     ...current,
@@ -193,7 +194,7 @@ export function deleteLayerStateById(id: string): void {
 /** Duplicate a saved state with a new name. `nameSuffix` is passed by the UI (localized). */
 export function duplicateLayerState(id: string, nameSuffix: string): LayerState | null {
   if (!projectId) return null;
-  const source = cached.states.find((s) => s.id === id);
+  const source = store.get().states.find((s) => s.id === id);
   if (!source) return null;
   const copy = createLayerState({
     name: `${source.name} ${nameSuffix}`,
@@ -210,7 +211,7 @@ export function duplicateLayerState(id: string, nameSuffix: string): LayerState 
 /** Update the category of a saved state. Bumps `updatedAt`. */
 export function updateLayerStateCategory(id: string, category: string): LayerState | null {
   if (!projectId) return null;
-  const current = cached.states.find((s) => s.id === id);
+  const current = store.get().states.find((s) => s.id === id);
   if (!current) return null;
   const next: LayerState = { ...current, category: category.trim() || undefined, updatedAt: nowISO() };
   persistSave(projectId, next);
@@ -224,7 +225,7 @@ export function updateLayerStateCategory(id: string, category: string): LayerSta
  */
 export function markCurrentLayerState(id: string | null): void {
   if (id === currentStateId) return;
-  if (id !== null && !cached.states.some((s) => s.id === id)) return;
+  if (id !== null && !store.get().states.some((s) => s.id === id)) return;
   currentStateId = id;
   rebuildAndNotify();
 }
@@ -242,7 +243,7 @@ export interface LasImportSummary {
  * empty string when no states match. Pure read — no persistence side effects.
  */
 export function exportLayerStatesAsLas(ids?: ReadonlyArray<string>): string {
-  const all = cached.states;
+  const all = store.get().states;
   const target = ids && ids.length > 0
     ? all.filter((s) => ids.includes(s.id))
     : all;
@@ -258,7 +259,7 @@ export function exportLayerStatesAsLas(ids?: ReadonlyArray<string>): string {
 export function importLayerStatesFromLas(content: string): LasImportSummary {
   if (!projectId) return { added: 0, skipped: 0, errors: ['No project attached'] };
   const result = parseLasContent(content, currentUserId);
-  const existingNames = new Set(cached.states.map((s) => s.name.toLowerCase()));
+  const existingNames = new Set(store.get().states.map((s) => s.name.toLowerCase()));
   let added = 0;
   let skipped = 0;
   const errors = result.errors.map((e) =>
@@ -396,13 +397,12 @@ function detachPersistence(): void {
 }
 
 function rebuildAndNotify(): void {
-  cached = Object.freeze({
+  store.set(Object.freeze({
     projectId,
     states,
     currentStateId,
     hydrationStatus,
-  });
-  subscribers.forEach((cb) => cb());
+  }));
 }
 
 // ─── Test-only reset ─────────────────────────────────────────────────────────
@@ -415,9 +415,8 @@ export function __resetLayerStateStoreForTesting(): void {
   states = [];
   currentStateId = null;
   hydrationStatus = 'idle';
-  cached = EMPTY_SNAPSHOT;
   templateService = null;
-  subscribers.clear();
+  store.reset(EMPTY_SNAPSHOT);
 }
 
 /** @internal Read the injected template service ref. Tests only. */

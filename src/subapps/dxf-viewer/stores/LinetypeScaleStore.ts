@@ -14,13 +14,13 @@
  * mismatch vs drawing size (ADR-510 §2.2); this knob is the fix surface.
  */
 
+import { createExternalStore } from './createExternalStore';
+
 /** Default LTSCALE — AutoCAD convention. */
 export const DEFAULT_LTSCALE = 1.0;
 
 /** localStorage key — session-persisted, user-scoped. */
 const LS_LTSCALE = 'dxf:ltscale';
-
-type Listener = () => void;
 
 function loadInitialScale(): number {
   if (typeof localStorage === 'undefined') return DEFAULT_LTSCALE;
@@ -28,13 +28,6 @@ function loadInitialScale(): number {
   if (raw === null) return DEFAULT_LTSCALE;
   const parsed = parseFloat(raw);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_LTSCALE;
-}
-
-let scale: number = loadInitialScale();
-const subscribers = new Set<Listener>();
-
-function notify(): void {
-  subscribers.forEach((cb) => cb());
 }
 
 function persist(next: number): void {
@@ -46,20 +39,23 @@ function persist(next: number): void {
   }
 }
 
+// SSoT pub/sub plumbing via createExternalStore (WAVE 2.6). `equals: Object.is`
+// reproduces the hand-rolled `if (next === scale) return` identity guard. The
+// wrapper also short-circuits explicitly before persisting, so an unchanged
+// value never touches localStorage — byte-identical to the original.
+const store = createExternalStore<number>(loadInitialScale(), { equals: Object.is });
+
 // ─── Snapshot getter (useSyncExternalStore-compatible) ───────────────────────
 
 /** Current global LTSCALE. Always a finite positive number. */
 export function getLinetypeScale(): number {
-  return scale;
+  return store.get();
 }
 
 // ─── Subscriptions ───────────────────────────────────────────────────────────
 
-export function subscribeLinetypeScale(cb: Listener): () => void {
-  subscribers.add(cb);
-  return () => {
-    subscribers.delete(cb);
-  };
+export function subscribeLinetypeScale(cb: () => void): () => void {
+  return store.subscribe(cb);
 }
 
 // ─── Mutations ───────────────────────────────────────────────────────────────
@@ -70,10 +66,9 @@ export function subscribeLinetypeScale(cb: Listener): () => void {
  */
 export function setLinetypeScale(next: number): void {
   if (!Number.isFinite(next) || next <= 0) return;
-  if (next === scale) return;
-  scale = next;
-  persist(scale);
-  notify();
+  if (Object.is(store.get(), next)) return;
+  store.set(next);
+  persist(next);
 }
 
 /** Reset to the AutoCAD default (1.0). */
@@ -85,6 +80,5 @@ export function resetLinetypeScale(): void {
 
 /** @internal Reset to default + clear subscribers. Tests only. */
 export function __resetLinetypeScaleForTesting(): void {
-  scale = DEFAULT_LTSCALE;
-  subscribers.clear();
+  store.reset(DEFAULT_LTSCALE);
 }

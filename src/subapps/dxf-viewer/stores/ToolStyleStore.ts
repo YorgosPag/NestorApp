@@ -21,9 +21,9 @@ export interface ToolStyle {
 type OverlayCompletionCallback = () => void;
 
 import { useSyncExternalStore } from 'react';
+import { createExternalStore } from './createExternalStore';
 
-type Listener = () => void;
-let current: ToolStyle = {
+const INITIAL: ToolStyle = {
   enabled: true,           // Default: γραμμές ενεργοποιημένες
   strokeColor: UI_COLORS.TEST_PREVIEW_RED,
   fillColor:   UI_COLORS.TRANSPARENT,
@@ -32,26 +32,26 @@ let current: ToolStyle = {
   lineType:    'dashed' as LineType, // Default lineType
 };
 
-// Store for overlay completion callback
+// Store for overlay completion callback — bespoke side-channel, NOT part of the
+// pub/sub store; left untouched by the WAVE 2.6 migration.
 let overlayCompletionCallback: OverlayCompletionCallback | null = null;
 
-const listeners = new Set<Listener>();
+// SSoT pub/sub plumbing via createExternalStore (WAVE 2.6). `set(Partial)` is a
+// patch-merge — always-notify, no `equals`, byte-identical to the hand-rolled store.
+const store = createExternalStore<ToolStyle>(INITIAL);
 
 export const toolStyleStore = {
   get(): ToolStyle {
-    return current;
+    return store.get();
   },
   set(next: Partial<ToolStyle>) {
     // Debug logs commented out for performance
 
     // console.trace('🔴 [toolStyleStore] Call stack:');
-    current = { ...current, ...next };
-
-    listeners.forEach(l => l());
+    store.set({ ...store.get(), ...next });
   },
-  subscribe(cb: Listener) {
-    listeners.add(cb);
-    return () => listeners.delete(cb);
+  subscribe(cb: () => void) {
+    return store.subscribe(cb);
   },
   // Overlay completion callback methods
   setOverlayCompletionCallback(callback: OverlayCompletionCallback | null) {

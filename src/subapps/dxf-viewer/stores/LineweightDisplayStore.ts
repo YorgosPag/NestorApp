@@ -15,26 +15,19 @@
  * (AutoCAD parity) — the resolver forces it on when a print policy is active.
  */
 
+import { createExternalStore } from './createExternalStore';
+
 /** Default — AutoCAD ships LWDISPLAY OFF, but Giorgio wants weights visible by default. */
 export const DEFAULT_SHOW_LINEWEIGHT = true;
 
 /** localStorage key — session-persisted, user-scoped. */
 const LS_SHOW_LINEWEIGHT = 'dxf:showLineweight';
 
-type Listener = () => void;
-
 function loadInitial(): boolean {
   if (typeof localStorage === 'undefined') return DEFAULT_SHOW_LINEWEIGHT;
   const raw = localStorage.getItem(LS_SHOW_LINEWEIGHT);
   if (raw === null) return DEFAULT_SHOW_LINEWEIGHT;
   return raw === '1';
-}
-
-let showLineweight: boolean = loadInitial();
-const subscribers = new Set<Listener>();
-
-function notify(): void {
-  subscribers.forEach((cb) => cb());
 }
 
 function persist(next: boolean): void {
@@ -46,41 +39,42 @@ function persist(next: boolean): void {
   }
 }
 
+// SSoT pub/sub plumbing via createExternalStore (WAVE 2.6). `equals: Object.is`
+// reproduces the hand-rolled `if (next === showLineweight) return` identity guard.
+// The wrapper also short-circuits explicitly before persisting, so an unchanged
+// value never touches localStorage — byte-identical to the original.
+const store = createExternalStore<boolean>(loadInitial(), { equals: Object.is });
+
 // ─── Snapshot getter (useSyncExternalStore-compatible) ───────────────────────
 
 /** Current "Show Lineweight" flag. */
 export function getShowLineweight(): boolean {
-  return showLineweight;
+  return store.get();
 }
 
 // ─── Subscriptions ───────────────────────────────────────────────────────────
 
-export function subscribeLineweightDisplay(cb: Listener): () => void {
-  subscribers.add(cb);
-  return () => {
-    subscribers.delete(cb);
-  };
+export function subscribeLineweightDisplay(cb: () => void): () => void {
+  return store.subscribe(cb);
 }
 
 // ─── Mutations ───────────────────────────────────────────────────────────────
 
 /** Set the flag. No-ops when unchanged (avoids redundant redraws). */
 export function setShowLineweight(next: boolean): void {
-  if (next === showLineweight) return;
-  showLineweight = next;
-  persist(showLineweight);
-  notify();
+  if (Object.is(store.get(), next)) return;
+  store.set(next);
+  persist(next);
 }
 
 /** Flip the flag. */
 export function toggleShowLineweight(): void {
-  setShowLineweight(!showLineweight);
+  setShowLineweight(!store.get());
 }
 
 // ─── Test-only reset ─────────────────────────────────────────────────────────
 
 /** @internal Reset to default + clear subscribers. Tests only. */
 export function __resetLineweightDisplayForTesting(): void {
-  showLineweight = DEFAULT_SHOW_LINEWEIGHT;
-  subscribers.clear();
+  store.reset(DEFAULT_SHOW_LINEWEIGHT);
 }

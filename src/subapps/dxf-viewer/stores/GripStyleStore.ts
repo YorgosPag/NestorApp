@@ -23,9 +23,9 @@ import { useSyncExternalStore } from 'react';
 import { GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR, GRIP_CONTOUR_COLOR, resolveGripColors } from '../config/color-config';
 // 🏢 SSoT base grip size
 import { GRIP_SIZE_DEFAULT } from '../config/grip-size-default';
+import { createExternalStore } from './createExternalStore';
 
-type Listener = () => void;
-let current: GripStyle = {
+const INITIAL: GripStyle = {
   enabled: true,
   colors: {
     cold: GRIP_COLD_COLOR,               // Resolved at init — resolveGripColors() applied on write
@@ -51,13 +51,15 @@ let current: GripStyle = {
   gripObjLimit: 100         // ✅ AutoCAD GRIPOBJLIMIT — hide all grips above 100 selected objects (0 = no limit)
 };
 
-const listeners = new Set<Listener>();
+// SSoT pub/sub plumbing via createExternalStore (WAVE 2.6). Patch-merge (with a colour
+// resolve step in `set`) — always-notify, no `equals`, byte-identical to the hand-rolled store.
+const store = createExternalStore<GripStyle>(INITIAL);
 
 export const gripStyleStore = {
   get(): GripStyle {
     // 🔥 GUARD: Προστασία πρόσβασης στις γενικές grip settings όταν override ενεργό
     guardGlobalAccess('GRIP_STYLE_READ');
-    return current;
+    return store.get();
   },
   set(next: Omit<Partial<GripStyle>, 'colors'> & { colors?: { cold: string | null; warm: string; hot: string; contour: string } }) {
     // 🔥 GUARD: Προστασία ενημέρωσης των γενικών grip settings όταν override ενεργό
@@ -65,12 +67,10 @@ export const gripStyleStore = {
     const resolved: Partial<GripStyle> = next.colors
       ? { ...next, colors: resolveGripColors(next.colors) }
       : (next as Partial<GripStyle>);
-    current = { ...current, ...resolved };
-    listeners.forEach(l => l());
+    store.set({ ...store.get(), ...resolved });
   },
-  subscribe(cb: Listener) {
-    listeners.add(cb);
-    return () => listeners.delete(cb);
+  subscribe(cb: () => void) {
+    return store.subscribe(cb);
   },
 };
 

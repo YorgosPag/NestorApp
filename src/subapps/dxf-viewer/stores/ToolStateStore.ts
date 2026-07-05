@@ -28,6 +28,7 @@ import type { ToolType } from '../ui/toolbar/types';
 import { getToolMetadata } from '../systems/tools/ToolStateManager';
 // 🏢 ADR-098: Centralized Timing Constants
 import { UI_TIMING } from '../config/timing-config';
+import { createExternalStore } from './createExternalStore';
 
 // ============================================================================
 // TYPES
@@ -48,26 +49,22 @@ type Listener = () => void;
 // STORE IMPLEMENTATION
 // ============================================================================
 
-let current: ToolStateSnapshot = {
+const INITIAL_STATE: ToolStateSnapshot = {
   activeTool: 'select',
   previousTool: null,
   isTransitioning: false,
 };
 
-const listeners = new Set<Listener>();
+// SSoT pub/sub via createExternalStore (WAVE 2.6). `current`/`listeners`/
+// `notifyListeners()` collapse into this single store (always-notify, no
+// `equals` — matches the original unconditional `listeners.forEach(...)`).
+const store = createExternalStore<ToolStateSnapshot>(INITIAL_STATE);
 
 // Escape reactivation lock (ADR-362 hotfix): after ESC cancels a tool, block
 // selectTool() for the same tool for ESCAPE_REACTIVATION_LOCK ms.
 // Prevents RibbonSplitDropdown onClick from re-activating the just-escaped tool.
 let escapedTool: ToolType | null = null;
 let escapeExpiresAt = 0;
-
-/**
- * Notify all subscribers of state change
- */
-function notifyListeners(): void {
-  listeners.forEach(listener => listener());
-}
 
 /**
  * Centralized Tool State Store
@@ -92,15 +89,14 @@ export const toolStateStore = {
    * Get current state snapshot
    */
   get(): ToolStateSnapshot {
-    return current;
+    return store.get();
   },
 
   /**
    * Subscribe to state changes
    */
   subscribe(listener: Listener): () => void {
-    listeners.add(listener);
-    return () => listeners.delete(listener);
+    return store.subscribe(listener);
   },
 
   /**
@@ -113,22 +109,20 @@ export const toolStateStore = {
     if (tool === escapedTool && Date.now() < escapeExpiresAt) {
       return;
     }
-    if (current.activeTool === tool) {
+    if (store.get().activeTool === tool) {
       return; // No change needed
     }
 
-    current = {
+    store.set({
       activeTool: tool,
-      previousTool: current.activeTool,
+      previousTool: store.get().activeTool,
       isTransitioning: true,
-    };
-    notifyListeners();
+    });
 
     // Reset transitioning state after brief delay
     // 🏢 ADR-098: Using UI_TIMING.TOOL_TRANSITION_RESET
     setTimeout(() => {
-      current = { ...current, isTransitioning: false };
-      notifyListeners();
+      store.set({ ...store.get(), isTransitioning: false });
     }, UI_TIMING.TOOL_TRANSITION_RESET);
   },
 
@@ -136,16 +130,15 @@ export const toolStateStore = {
    * Deselect current tool (return to 'select')
    */
   deselectTool(): void {
-    if (current.activeTool === 'select') {
+    if (store.get().activeTool === 'select') {
       return; // Already at select
     }
 
-    current = {
+    store.set({
       activeTool: 'select',
-      previousTool: current.activeTool,
+      previousTool: store.get().activeTool,
       isTransitioning: false,
-    };
-    notifyListeners();
+    });
   },
 
   /**
@@ -162,12 +155,11 @@ export const toolStateStore = {
       // Set escape lock to block RibbonSplitDropdown re-activation race
       escapedTool = tool;
       escapeExpiresAt = Date.now() + UI_TIMING.ESCAPE_REACTIVATION_LOCK;
-      current = {
+      store.set({
         activeTool: 'select',
         previousTool: tool,
         isTransitioning: false,
-      };
-      notifyListeners();
+      });
       return;
     }
 
@@ -176,12 +168,11 @@ export const toolStateStore = {
 
     if (!metadata.allowsContinuous) {
       // Non-continuous tool - return to select after completion
-      current = {
+      store.set({
         activeTool: 'select',
         previousTool: tool,
         isTransitioning: false,
-      };
-      notifyListeners();
+      });
     }
     // 🏢 ENTERPRISE: If allowsContinuous=true, tool stays active (no state change)
   },
@@ -190,13 +181,13 @@ export const toolStateStore = {
    * Return to previous tool (if exists)
    */
   returnToPreviousTool(): void {
-    if (current.previousTool && current.previousTool !== current.activeTool) {
-      current = {
-        activeTool: current.previousTool,
-        previousTool: current.activeTool,
+    const snapshot = store.get();
+    if (snapshot.previousTool && snapshot.previousTool !== snapshot.activeTool) {
+      store.set({
+        activeTool: snapshot.previousTool,
+        previousTool: snapshot.activeTool,
         isTransitioning: false,
-      };
-      notifyListeners();
+      });
     } else {
       this.deselectTool();
     }
@@ -208,12 +199,15 @@ export const toolStateStore = {
   reset(): void {
     escapedTool = null;
     escapeExpiresAt = 0;
-    current = {
+    // NOTE: `store.set(...)`, NOT `store.reset(...)` — this is a runtime/public
+    // API reset (called by app code + tests), not a test-lifecycle teardown.
+    // It must notify still-attached subscribers (useToolState-bound components)
+    // and must NOT drop them, matching the original `current = ...; notifyListeners();`.
+    store.set({
       activeTool: 'select',
       previousTool: null,
       isTransitioning: false,
-    };
-    notifyListeners();
+    });
   },
 };
 

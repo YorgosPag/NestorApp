@@ -17,6 +17,7 @@
 
 import type { LineweightMm } from '../types/entities';
 import { LINEWEIGHT_SPECIAL } from '../config/lineweight-iso-catalog';
+import { createExternalStore } from './createExternalStore';
 
 // ─── Public snapshot ─────────────────────────────────────────────────────────
 
@@ -77,17 +78,6 @@ function loadInitialSnapshot(): QuickStyleSnapshot {
   return Object.freeze({ lineweightMm, linetypeName, colorMode, colorAci, colorTrueColor: null, ltscale });
 }
 
-// ─── Mutable state ───────────────────────────────────────────────────────────
-
-type Listener = () => void;
-
-let snapshot: QuickStyleSnapshot = loadInitialSnapshot();
-const subscribers = new Set<Listener>();
-
-function notify(): void {
-  subscribers.forEach((cb) => cb());
-}
-
 function persist(next: QuickStyleSnapshot): void {
   if (typeof localStorage === 'undefined') return;
   if (next.lineweightMm === BYLAYER_LINEWEIGHT) {
@@ -118,31 +108,36 @@ function persist(next: QuickStyleSnapshot): void {
   }
 }
 
+// SSoT pub/sub plumbing via createExternalStore (WAVE 2.6). Each mutator builds a
+// fresh frozen snapshot on write (no shared identity to compare) — factory used
+// WITHOUT `equals`; the per-field unchanged-value guard (`setQuickStyleLtscale`)
+// stays in the mutator, byte-identical to the hand-rolled store.
+const store = createExternalStore<QuickStyleSnapshot>(loadInitialSnapshot());
+
 // ─── Snapshot getter (useSyncExternalStore-compatible) ───────────────────────
 
 export function getQuickStyleSnapshot(): QuickStyleSnapshot {
-  return snapshot;
+  return store.get();
 }
 
 // ─── Subscriptions ───────────────────────────────────────────────────────────
 
-export function subscribeQuickStyle(cb: Listener): () => void {
-  subscribers.add(cb);
-  return () => { subscribers.delete(cb); };
+export function subscribeQuickStyle(cb: () => void): () => void {
+  return store.subscribe(cb);
 }
 
 // ─── Mutations ───────────────────────────────────────────────────────────────
 
 export function setQuickStyleLineweight(lw: LineweightMm): void {
-  snapshot = Object.freeze({ ...snapshot, lineweightMm: lw });
-  persist(snapshot);
-  notify();
+  const next = Object.freeze({ ...store.get(), lineweightMm: lw });
+  persist(next);
+  store.set(next);
 }
 
 export function setQuickStyleLinetype(name: string): void {
-  snapshot = Object.freeze({ ...snapshot, linetypeName: name });
-  persist(snapshot);
-  notify();
+  const next = Object.freeze({ ...store.get(), linetypeName: name });
+  persist(next);
+  store.set(next);
 }
 
 export function setQuickStyleColor(
@@ -150,9 +145,9 @@ export function setQuickStyleColor(
   colorAci: number | null,
   colorTrueColor: number | null = null,
 ): void {
-  snapshot = Object.freeze({ ...snapshot, colorMode, colorAci, colorTrueColor });
-  persist(snapshot);
-  notify();
+  const next = Object.freeze({ ...store.get(), colorMode, colorAci, colorTrueColor });
+  persist(next);
+  store.set(next);
 }
 
 /**
@@ -162,14 +157,14 @@ export function setQuickStyleColor(
  */
 export function setQuickStyleLtscale(ltscale: number): void {
   if (!Number.isFinite(ltscale) || ltscale <= 0) return;
-  if (ltscale === snapshot.ltscale) return;
-  snapshot = Object.freeze({ ...snapshot, ltscale });
-  persist(snapshot);
-  notify();
+  if (ltscale === store.get().ltscale) return;
+  const next = Object.freeze({ ...store.get(), ltscale });
+  persist(next);
+  store.set(next);
 }
 
 export function resetQuickStyle(): void {
-  snapshot = Object.freeze({
+  const next = Object.freeze({
     lineweightMm: BYLAYER_LINEWEIGHT,
     linetypeName: BYLAYER_LINETYPE,
     colorMode: 'ByLayer' as const,
@@ -177,8 +172,8 @@ export function resetQuickStyle(): void {
     colorTrueColor: null,
     ltscale: DEFAULT_LTSCALE,
   });
-  persist(snapshot);
-  notify();
+  persist(next);
+  store.set(next);
 }
 
 // ─── Convenience read ────────────────────────────────────────────────────────
@@ -189,7 +184,7 @@ export function resetQuickStyle(): void {
  * fallback in `CreateEntityCommand.execute()` handle everything.
  */
 export function isQuickStyleAllByLayer(): boolean {
-  const s = snapshot;
+  const s = store.get();
   return (
     s.lineweightMm === BYLAYER_LINEWEIGHT &&
     s.linetypeName === BYLAYER_LINETYPE &&

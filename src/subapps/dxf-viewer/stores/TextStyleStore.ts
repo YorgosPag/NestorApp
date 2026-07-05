@@ -20,9 +20,9 @@ export interface TextStyle {
 
 import { useSyncExternalStore } from 'react';
 import { UI_COLORS } from '../config/color-config';
+import { createExternalStore } from './createExternalStore';
 
-type Listener = () => void;
-let current: TextStyle = {
+const INITIAL: TextStyle = {
   enabled: true,               // Default: κείμενο ενεργοποιημένο
   fontFamily: 'Arial, sans-serif',
   fontSize: 12,
@@ -35,19 +35,19 @@ let current: TextStyle = {
   isSubscript: false,
 };
 
-const listeners = new Set<Listener>();
+// SSoT pub/sub plumbing via createExternalStore (WAVE 2.6). Patch-merge, always-notify,
+// no `equals` — byte-identical to the hand-rolled store.
+const store = createExternalStore<TextStyle>(INITIAL);
 
 export const textStyleStore = {
   get(): TextStyle {
-    return current;
+    return store.get();
   },
   set(next: Partial<TextStyle>) {
-    current = { ...current, ...next };
-    listeners.forEach(l => l());
+    store.set({ ...store.get(), ...next });
   },
-  subscribe(cb: Listener) {
-    listeners.add(cb);
-    return () => listeners.delete(cb);
+  subscribe(cb: () => void) {
+    return store.subscribe(cb);
   },
 };
 

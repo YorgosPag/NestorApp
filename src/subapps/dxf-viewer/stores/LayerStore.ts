@@ -22,6 +22,7 @@ import {
 } from '../systems/isolate/IsolateEffectsStore';
 import { dimOpacityToTransparency } from '../services/layer-isolate-resolver';
 import { DXF_DEFAULT_LAYER } from '../config/layer-config';
+import { createExternalStore } from './createExternalStore';
 
 type Listener = () => void;
 
@@ -78,10 +79,13 @@ let layerOrder: string[] = [];
 let currentLayerId: string | null = null;
 let recentLayerIds: string[] = [];
 let snapshotVersion = 0;
-let cachedSnapshot: LayerStoreSnapshot = EMPTY_SNAPSHOT;
 let unisolateSnapshot: UnisolateSnapshot = null;
 
-const subscribers = new Set<Listener>();
+// SSoT pub/sub via createExternalStore (WAVE 2.6). The Maps/lets above stay as
+// mutation accelerators; `cachedSnapshot`/`subscribers`/`notify()` collapse into
+// this single composite-snapshot store — `rebuildSnapshot()` still builds the
+// derived object, but commits it via `store.set(...)` (always-notify, no `equals`).
+const store = createExternalStore<LayerStoreSnapshot>(EMPTY_SNAPSHOT);
 
 function getLayerKey(layer: SceneLayer): string {
   return layer.id ?? layer.name;
@@ -94,31 +98,24 @@ function rebuildSnapshot(): void {
     if (layer) list.push(layer);
   }
   snapshotVersion += 1;
-  cachedSnapshot = Object.freeze({
+  store.set(Object.freeze({
     layers: Object.freeze(list) as ReadonlyArray<SceneLayer>,
     currentLayerId,
     recentLayerIds: Object.freeze(recentLayerIds.slice()) as ReadonlyArray<string>,
     version: snapshotVersion,
-  });
-}
-
-function notify(): void {
-  subscribers.forEach((cb) => cb());
+  }));
 }
 
 // ─── Snapshot getter (useSyncExternalStore-compatible) ───────────────────────
 
 export function getLayerStoreSnapshot(): LayerStoreSnapshot {
-  return cachedSnapshot;
+  return store.get();
 }
 
 // ─── Subscriptions ───────────────────────────────────────────────────────────
 
 export function subscribeLayerStore(cb: Listener): () => void {
-  subscribers.add(cb);
-  return () => {
-    subscribers.delete(cb);
-  };
+  return store.subscribe(cb);
 }
 
 // ─── Reads ───────────────────────────────────────────────────────────────────
@@ -166,7 +163,7 @@ export function resolveEntityLayerName(
 }
 
 export function getAllLayers(): ReadonlyArray<SceneLayer> {
-  return cachedSnapshot.layers;
+  return store.get().layers;
 }
 
 /**
@@ -177,7 +174,7 @@ export function getAllLayers(): ReadonlyArray<SceneLayer> {
  */
 export function getLayersById(): Record<string, SceneLayer> {
   const map: Record<string, SceneLayer> = {};
-  for (const layer of cachedSnapshot.layers) {
+  for (const layer of store.get().layers) {
     if (layer.id) map[layer.id] = layer;
     if (layer.name) map[layer.name] = layer;
   }
@@ -189,7 +186,7 @@ export function getCurrentLayerId(): string | null {
 }
 
 export function getRecentLayerIds(): ReadonlyArray<string> {
-  return cachedSnapshot.recentLayerIds;
+  return store.get().recentLayerIds;
 }
 
 // ─── Unisolate snapshot (ADR-358 §5.6.bis — single-level, session-only) ──────
@@ -248,7 +245,6 @@ export function setLayers(next: ReadonlyArray<SceneLayer>): void {
   }
   recentLayerIds = recentLayerIds.filter((id) => layersById.has(id));
   rebuildSnapshot();
-  notify();
 }
 
 /** Upsert a single layer. Inserts at end if new; replaces if key matches. */
@@ -257,7 +253,6 @@ export function upsertLayer(layer: SceneLayer): void {
   if (!layersById.has(key)) layerOrder.push(key);
   layersById.set(key, layer);
   rebuildSnapshot();
-  notify();
 }
 
 /** Remove a layer by id-or-name key. No-op if missing. */
@@ -268,7 +263,6 @@ export function removeLayer(idOrName: string): void {
   if (currentLayerId === idOrName) currentLayerId = null;
   recentLayerIds = recentLayerIds.filter((id) => id !== idOrName);
   rebuildSnapshot();
-  notify();
 }
 
 /** Set the current layer id (Q3 unified — single SSoT for new-entity drawing). */
@@ -278,7 +272,6 @@ export function setCurrentLayerId(id: string | null): void {
   currentLayerId = id;
   if (id !== null) pushRecentInternal(id);
   rebuildSnapshot();
-  notify();
 }
 
 /**
@@ -292,7 +285,6 @@ export function pushRecentLayer(id: string): void {
   if (recentLayerIds[0] === id) return;
   pushRecentInternal(id);
   rebuildSnapshot();
-  notify();
 }
 
 /**
@@ -310,7 +302,6 @@ export function setRecentLayerIds(ids: ReadonlyArray<string>): void {
   if (sameOrder(next, recentLayerIds)) return;
   recentLayerIds = next;
   rebuildSnapshot();
-  notify();
 }
 
 /**
@@ -373,7 +364,6 @@ export function applyLayerSnapshotEntries(
   }
   if (applied > 0) {
     rebuildSnapshot();
-    notify();
   }
   return { applied, unmatched };
 }
@@ -413,7 +403,6 @@ export function __resetLayerStoreForTesting(): void {
   currentLayerId = null;
   recentLayerIds = [];
   snapshotVersion = 0;
-  cachedSnapshot = EMPTY_SNAPSHOT;
   unisolateSnapshot = null;
-  subscribers.clear();
+  store.reset(EMPTY_SNAPSHOT);
 }
