@@ -130,9 +130,16 @@ Circle / arc / polyline / rectangle → επιστρέφουν **WORLD-aligned i
   **(3) Copy-ghost** (⚠️ ADR-040 hot files, CHECK 6B/6D): νέο `gripDragIsCopy` στα `DxfRenderOptions`
   (dxf-types.ts) → ο `dxf-canvas-renderer` ΔΕΝ dim-άρει την αρχική όταν copy (μένει solid, ADR-049
   inverted-ghost gate)· `CanvasLayerStack` το υπολογίζει με plain getSnapshot (CHECK 6C-safe).
-  **Tests**: `ctrl-endpoint-rotate-copy.test.ts` (gate/regression) + `RotateEntityCommand.copy.test.ts`
-  (hinge geometry + undo). jest ✅ 17/17 νέα + 40/40 regression. 🔴 εκκρεμεί browser-verify (γραμμή/τόξο/
-  polyline rotate-copy: ghost αντιγράφου + όλα τα ίχνη + hinge στο άκρο + grip-3 Ctrl-copy).
+  **🎯 SSoT κεντρικοποίηση (Boy-Scout N.0.2, κατά ρητή διαταγή Giorgio «μηδέν διπλότυπα»)**: (α) νέο
+  `systems/grip/grip-copy-intent.ts` `isGripCopyIntent()` — ΕΝΑ predicate («Copy» toggle ‖ live Ctrl/⌘)·
+  αντικατέστησε το ΙΔΙΟ inline expression σε **4 σημεία** (το προϋπάρχον move-copy `grip-commit-adapters:219`
+  + τα 3 νέα rotate-copy: line/primitive commits + `CanvasLayerStack`). (β) νέο `seedRotateFreeStep`
+  (`grip-hotgrip-actions.ts`) — ΕΝΑΣ free-rotate seed (major-axis baseline + snap targets), shared από τον
+  κανονικό centre-pick (`advanceHotGripPick`) ΚΑΙ τη νέα Ctrl-endpoint χειρονομία (mouse-down)· εξάλειψε το
+  5-γραμμο inline duplicate. **Tests**: `ctrl-endpoint-rotate-copy.test.ts` (gate/regression) +
+  `RotateEntityCommand.copy.test.ts` (hinge geometry + undo) + `grip-copy-intent.test.ts` (predicate).
+  jest ✅ 20/20 νέα + 25/25 regression. 🔴 εκκρεμεί browser-verify (γραμμή/τόξο/polyline rotate-copy: ghost
+  αντιγράφου + όλα τα ίχνη + hinge στο άκρο + grip-3 Ctrl-copy).
 - **2026-07-05** — ✨ **Άξονας αναφοράς περιστροφής ΟΡΘΟΓΩΝΙΟΥ = ΠΛΗΡΕΣ SSoT του ΤΟΙΧΟΥ, ΕΝΑΣ άξονας**
   (Giorgio: «μελέτησε πώς περιστρέφεται ο τοίχος και βάλε τον ΙΔΙΟ κώδικα στο τετράγωνο· θέλω ΕΝΑΝ άξονα,
   όχι δύο»). ⚠️ Αντικαθιστά μια προηγούμενη λάθος προσπάθεια (σταυρός 2 αξόνων + gating σε 8 λαβές —
