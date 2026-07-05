@@ -97,5 +97,16 @@ export function calculateMovedGeometry(entity: SceneEntity, delta: Point3D): Par
     return { position: applyDelta(e.position, delta) };
   }
 
+  // ADR-575 — GROUP container: moving the group moves every member. Recurse the
+  // SAME geometry SSoT per member (handles nested groups too), so the container
+  // never needs to know each primitive's geometry shape.
+  if (e.type === 'group' && 'members' in e && Array.isArray((e as { members: unknown }).members)) {
+    const members = (e as unknown as { members: Entity[] }).members.map((m) => ({
+      ...m,
+      ...calculateMovedGeometry(m as unknown as SceneEntity, delta),
+    }));
+    return { members } as unknown as Partial<SceneEntity>;
+  }
+
   return {};
 }
