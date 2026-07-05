@@ -16,6 +16,8 @@ export { OffsetEntityCommand } from './OffsetEntityCommand';
 export type { OffsetCommandParams } from './OffsetEntityCommand';
 // ADR-510 Φ5 — generic EXPLODE (polyline/rectangle → primitives, undoable).
 export { ExplodeEntityCommand } from './ExplodeEntityCommand';
+// ADR-575 — GROUP «Ομαδοποίηση» (N entities → 1 block container; UNGROUP = EXPLODE).
+export { CreateGroupCommand } from './CreateGroupCommand';
 export { CornerEntityCommand } from './CornerEntityCommand';
 export type { CornerCommandParams, CornerTrimOp, CornerKind } from './CornerEntityCommand';
 export { WallSplitCommand } from './WallSplitCommand';
