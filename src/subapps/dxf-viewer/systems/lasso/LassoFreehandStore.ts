@@ -10,6 +10,7 @@
  */
 
 import { EventBus } from '../events/EventBus';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 type Listener = () => void;
 
@@ -18,12 +19,17 @@ type Snapshot = { points: Array<[number, number]>; nearClose: boolean };
 let _active = false;
 let _nearClose = false;
 let _points: Array<[number, number]> = [];
-let _snapshot: Snapshot = { points: _points, nearClose: _nearClose };
-const _listeners = new Set<Listener>();
+
+// SSoT pub/sub via createExternalStore (WAVE 2.6). `_active`/`_nearClose`/
+// `_points` above stay as plain module `let`s (mutation accelerators, and
+// `isActive()`/`isNearClose()`/`getPoints()` read them directly like before);
+// the store carries ONLY the composite derived snapshot, rebuilt once per
+// `_notify()` call — mirrors `systems/grip/GripArmedStore.ts`. No `equals`, so
+// `set` always notifies (byte-identical to the old hand-rolled listener loop).
+const store = createExternalStore<Snapshot>({ points: _points, nearClose: _nearClose });
 
 function _notify(): void {
-  _snapshot = { points: _points, nearClose: _nearClose };
-  _listeners.forEach(fn => fn());
+  store.set({ points: _points, nearClose: _nearClose });
 }
 
 export const LassoFreehandStore = {
@@ -40,7 +46,7 @@ export const LassoFreehandStore = {
   },
 
   getSnapshot(): Snapshot {
-    return _snapshot;
+    return store.get();
   },
 
   startAt(x: number, y: number): void {
@@ -83,7 +89,6 @@ export const LassoFreehandStore = {
   },
 
   subscribe(listener: Listener): () => void {
-    _listeners.add(listener);
-    return () => _listeners.delete(listener);
+    return store.subscribe(listener);
   },
 } as const;

@@ -9,45 +9,41 @@
  */
 
 import { EventBus } from '../events/EventBus';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 type Listener = () => void;
 
-let _points: Array<[number, number]> = [];
-const _listeners = new Set<Listener>();
-
-function _notify(): void {
-  _listeners.forEach(fn => fn());
-}
+// SSoT pub/sub via createExternalStore (WAVE 2.6). The points array IS the
+// store's single state — no `equals`, so `set` always notifies (byte-identical
+// to the old hand-rolled `_notify()` loop).
+const store = createExternalStore<Array<[number, number]>>([]);
 
 export const PolygonCropStore = {
   getPoints(): Array<[number, number]> {
-    return _points;
+    return store.get();
   },
 
   addPoint(x: number, y: number): void {
-    _points = [..._points, [x, y]];
-    _notify();
+    store.set([...store.get(), [x, y]]);
   },
 
   /** Emits crop:polygon if ≥ 3 points, then clears. */
   close(): void {
-    if (_points.length >= 3) {
-      EventBus.emit('crop:polygon', { polygon: _points });
+    const points = store.get();
+    if (points.length >= 3) {
+      EventBus.emit('crop:polygon', { polygon: points });
     }
-    _points = [];
-    _notify();
+    store.set([]);
   },
 
   /** Discards current polygon without clipping. */
   cancel(): void {
-    if (_points.length === 0) return;
-    _points = [];
-    _notify();
+    if (store.get().length === 0) return;
+    store.set([]);
   },
 
   subscribe(listener: Listener): () => void {
-    _listeners.add(listener);
-    return () => _listeners.delete(listener);
+    return store.subscribe(listener);
   },
 } as const;
 
