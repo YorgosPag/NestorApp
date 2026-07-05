@@ -9,12 +9,14 @@
 import {
   formatLengthMm,
   formatLengthForDisplay,
+  formatSceneLengthForDisplay,
   formatAreaForDisplay,
   formatCoordinateForDisplay,
   currentDisplayUnitLabel,
 } from '../display-length-format';
 import { displayUnitState } from '../display-unit-state';
 import { DEFAULT_DISPLAY_UNIT } from '../units';
+import { canvasToMmScaleFor } from '../../utils/scene-units';
 
 afterEach(() => displayUnitState.setUnit(DEFAULT_DISPLAY_UNIT));
 
@@ -71,6 +73,32 @@ describe('formatLengthForDisplay', () => {
   it('follows the active store selection by default', () => {
     displayUnitState.setUnit('cm');
     expect(formatLengthForDisplay(5000)).toBe(formatLengthForDisplay(5000, { unit: 'cm' }));
+  });
+});
+
+describe('formatSceneLengthForDisplay (scene→mm→display SSoT bridge)', () => {
+  it('mm scene units: value is already mm (identity with the mm formatter)', () => {
+    expect(formatSceneLengthForDisplay(250, 'mm', { unit: 'mm' })).toBe(formatLengthForDisplay(250, { unit: 'mm' }));
+  });
+
+  it('metre scene units: 5 scene-metres → 5000 mm → "5 m"', () => {
+    expect(numOf(formatSceneLengthForDisplay(5, 'm', { unit: 'm' }))).toBeCloseTo(5, 3);
+  });
+
+  it('cm scene units: 250 scene-cm → 2500 mm → 2,5 m', () => {
+    expect(numOf(formatSceneLengthForDisplay(250, 'cm', { unit: 'm' }))).toBeCloseTo(2.5, 3);
+  });
+
+  it('is exactly formatLengthForDisplay(scene × canvasToMmScaleFor) — the ONE bridge', () => {
+    for (const u of ['mm', 'cm', 'm', 'in', 'ft'] as const) {
+      const scene = 7;
+      expect(formatSceneLengthForDisplay(scene, u, { unit: 'm' }))
+        .toBe(formatLengthForDisplay(scene * canvasToMmScaleFor({ sceneUnits: u }), { unit: 'm' }));
+    }
+  });
+
+  it('forwards opts (withUnit:false drops the label)', () => {
+    expect(labelOf(formatSceneLengthForDisplay(5, 'm', { unit: 'm', withUnit: false }))).toBe('');
   });
 });
 
