@@ -9,6 +9,8 @@ import { guardGlobalAccess } from '../../../utils/overrideGuard';
 import { UI_COLORS } from '../config/color-config';
 // ===== CENTRALIZED PANEL TOKENS =====
 import { PANEL_LAYOUT } from '../config/panel-tokens';
+// ===== ADR-559 §3f: canonical text-settings SHAPE =====
+import type { TextSettingsBase } from '../types/text-settings-schema';
 
 // ===== ΝΕΑ UNIFIED PROVIDERS (για internal use) =====
 // Mock missing ConfigurationProvider
@@ -30,19 +32,22 @@ const useViewerConfig = () => ({
   updateEntityConfig: (category: string, updates: Record<string, unknown>) => {}
 });
 
-// Text Settings Interface
-export interface TextSettings {
-  enabled: boolean;          // ΝΕΟ! Ενεργοποίηση/απενεργοποίηση εμφάνισης κειμένου
-  fontFamily: string;
-  fontSize: number;
-  color: string;
-  isBold: boolean;
-  isItalic: boolean;
-  isUnderline: boolean;
-  isStrikethrough: boolean;
-  isSuperscript: boolean;
-  isSubscript: boolean;
-}
+// Text Settings Interface — ADR-559 §3f: PROJECTION of the canonical `TextSettingsBase` (the
+// "general" text-settings context carries this 10-field subset). Public API shape is unchanged;
+// it is now a projection so a new base field never silently drifts from this context type.
+export type TextSettings = Pick<
+  TextSettingsBase,
+  | 'enabled'
+  | 'fontFamily'
+  | 'fontSize'
+  | 'color'
+  | 'isBold'
+  | 'isItalic'
+  | 'isUnderline'
+  | 'isStrikethrough'
+  | 'isSuperscript'
+  | 'isSubscript'
+>;
 
 export interface TextTemplate {
   name: string;
