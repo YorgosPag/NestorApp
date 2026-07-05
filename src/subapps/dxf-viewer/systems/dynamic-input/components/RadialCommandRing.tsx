@@ -258,7 +258,7 @@ export function RadialCommandRing({
       window.removeEventListener('mouseup', intercept, true);
       window.removeEventListener('click', intercept, true);
     };
-  }, [openWedge]);
+  }, [openWedge, placementMode]);
 
   // Επιστρέφει `true` ΜΟΝΟ όταν όντως κλειδώθηκε αριθμητική τιμή (έγκυρη έκφραση) — ώστε το
   // Enter να τοποθετεί σημείο μόνο σε επιτυχές commit (όχι σε άκυρη/κενή είσοδο).
@@ -325,7 +325,9 @@ export function RadialCommandRing({
       e.stopPropagation();
       // Κράτα το field ΠΡΙΝ το commit (το commitNumericOpen κλείνει το popup) → σωστό one-shot reset.
       const placedField = openField ? fieldByKey.get(openField) ?? null : null;
-      if (commitNumericOpen()) placeAtCursor(placedField); // έγκυρη τιμή → lock + τοποθέτηση
+      // ADR-513 §grip-parity — lock-only (press-drag): Enter → ΜΟΝΟ lock (το ghost ανανεώνεται μέσω
+      // pokeCanvas στο commitNumericOpen)· το commit το κάνει το «άφημα» του ποντικιού, ΟΧΙ synthetic click.
+      if (commitNumericOpen() && placementMode === 'canvas-click') placeAtCursor(placedField);
       return;
     }
     // Tab στο «Μήκος» → κλείδωσε το μήκος (χωρίς τοποθέτηση) και άνοιξε τη «Γωνία» (type-len→Tab→type-ang→Enter).
@@ -337,7 +339,7 @@ export function RadialCommandRing({
       if (num !== null && lengthField?.commitNumeric) { lengthField.commitNumeric(num, unitCtx); pokeCanvas(); }
       openNumericField('angle');
     }
-  }, [openField, fieldByKey, draft, unitCtx, pokeCanvas, commitNumericOpen, placeAtCursor, openNumericField]);
+  }, [openField, fieldByKey, draft, unitCtx, pokeCanvas, commitNumericOpen, placeAtCursor, openNumericField, placementMode]);
 
   // ADR-364 — Escape μέσω του κεντρικού EscapeCommandBus (SSoT), ίδιο slot DYNAMIC_INPUT (P900).
   useEscapeHandler({

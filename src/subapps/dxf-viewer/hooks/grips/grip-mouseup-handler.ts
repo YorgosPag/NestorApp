@@ -12,7 +12,9 @@
  */
 import type { Point2D } from '../../rendering/types/Types';
 import { resolveHotGripMouseUp } from './wall-hot-grip-fsm';
-import { commitDxfGripDragModeAware } from './grip-commit-adapters';
+import { commitDxfGripDragModeAware, createSceneManagerAdapter } from './grip-commit-adapters';
+// ADR-513 §grip-parity — πληκτρολογημένο Μήκος/Γωνία (Δαχτυλίδι) στην ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ γραμμής.
+import { resolveLineEndpointLockedDelta } from '../../systems/dynamic-input/grip-endpoint-lock';
 import { commitHotGripCopy } from './grip-parametric-commits';
 import { applyGripStepSnap } from '../../bim/grips/grip-step-quantize';
 import { applyMoveConstraints, applyResizeConstraints } from '../../bim/grips/grip-move-constraints';
@@ -29,7 +31,7 @@ import { GripModeStore } from '../../systems/grip/GripModeStore';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
 import { isActiveGripAltMove } from '../../systems/cursor/GripDragStore';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
-import type { UnifiedGripInfo } from './unified-grip-types';
+import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
 import { advanceHotGripPick, commitRotateReference, commitFreeRotate } from './grip-hotgrip-actions';
 import type { GripMouseUpCtx } from './grip-mouse-handlers.types';
 
@@ -47,6 +49,21 @@ function applyGripArmClick(grip: UnifiedGripInfo): void {
   const ref = { entityId: grip.entityId, gripIndex: grip.gripIndex };
   if (ShiftKeyTracker.getSnapshot()) GripArmedStore.toggle(ref);
   else GripArmedStore.setOnly(ref);
+}
+
+/**
+ * ADR-513 §grip-parity — the length/angle-locked commit displacement for a plain-LINE
+ * endpoint drag (grip 0/1), or `null` when no lock is active / not a line endpoint. Uses
+ * the SAME `resolveLineEndpointLockedDelta` SSoT the ghost uses, relative to the endpoint's
+ * ORIGINAL position (`grip.position`) — so the committed stretch matches the preview exactly.
+ */
+function resolveLineEndpointCommitLock(
+  grip: UnifiedGripInfo, worldPos: Point2D, deps: DxfCommitDeps,
+): Point2D | null {
+  if (grip.entityId === undefined) return null;
+  const entity = createSceneManagerAdapter(deps)?.getEntity(grip.entityId);
+  if (!entity) return null;
+  return resolveLineEndpointLockedDelta(entity, grip.gripIndex, grip.lineGripKind, grip.position, worldPos);
 }
 
 // ============================================================================
@@ -127,6 +144,16 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       // re-anchored the drag through the right-click menu, the displacement
       // is measured from the user-picked anchor instead of `grip.position`.
       const effectiveAnchor = GripBasePointStore.getSnapshot().overrideAnchor ?? anchorRef.current;
+      // ADR-513 §grip-parity — πληκτρολογημένο Μήκος/Γωνία (Δαχτυλίδι) στην ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ γραμμής.
+      // Ρητή είσοδος χρήστη = τελική γεωμετρία: νικά ΚΑΙ το arm-click shortcut (ώστε ένα κλείδωμα με
+      // ελάχιστη κίνηση να κάνει commit, όχι arm) ΚΑΙ τα ortho/step constraints (όπως στη σχεδίαση).
+      const endpointLockDelta = resolveLineEndpointCommitLock(activeGrip, worldPos, dxfCommitDeps);
+      if (endpointLockDelta) {
+        commitDxfGripDragModeAware(activeGrip, endpointLockDelta, dxfCommitDeps, GripModeStore.getSnapshot());
+        GripBasePointStore.clear();
+        resetToIdle();
+        return true;
+      }
       // ADR-501 — click-vs-drag: a press-release that barely moved the cursor is a
       // CLICK, not a drag → arm the grip (orange) for a multi-grip move instead of
       // committing a (near-)zero-delta stretch. Alt-move (whole-entity base-point

@@ -36,6 +36,14 @@ import { WALL_RING_CONFIG } from '../../systems/dynamic-input/wall-ring-config';
 import { BEAM_RING_CONFIG } from '../../systems/dynamic-input/beam-ring-config';
 import { LINE_RING_CONFIG } from '../../systems/dynamic-input/line-ring-config';
 import { ringStartKey } from '../../systems/dynamic-input/ring-config';
+// ADR-513 §grip-parity — press-drag άκρου γραμμής δείχνει το ΙΔΙΟ δαχτυλίδι (lock-only).
+import { GRIP_LINEAR_RING_CONFIG } from '../../systems/dynamic-input/grip-linear-ring-config';
+import {
+  subscribeActiveDragGrip,
+  getActiveDragGrip,
+  isLineEndpointDragInfo,
+} from '../../systems/cursor/GripDragStore';
+import { DynamicInputLockStore } from '../../systems/dynamic-input/DynamicInputLockStore';
 import type { SceneUnits } from '../../utils/scene-units';
 // ADR-513 (3D parity) — όταν είμαστε σε 3D προβολή, το ΙΔΙΟ overlay mountάρεται στο `BimViewport3D`
 // (`DynamicInput3DLeaf`)· αυτός ο 2D subscriber υποχωρεί ώστε να μην τρέχουν ΔΥΟ radial rings μαζί
@@ -56,6 +64,12 @@ interface DynamicInputSubscriberProps {
 
 const NULL_POINT = (): Point2D | null => null;
 const NOOP_SUBSCRIBE = (): (() => void) => () => {};
+
+// ADR-513 §grip-parity — module-level (stable ref) ώστε το `onDeactivate` να μην αλλάζει ανά render.
+// Στο τέλος του grip drag ξεκλειδώνει length/angle → επόμενο drag ξεκινά ελεύθερο (no-op αν δεν κλείδωσε τίποτα).
+function unlockGripEndpointLocks(): void {
+  DynamicInputLockStore.unlock();
+}
 
 export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber({
   activeTool,
@@ -101,6 +115,11 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
   const beamPreview = useBeamPreview();
   const beamAwaitingEnd = isBeamAwaitingEnd(activeTool, beamPreview);
 
+  // ADR-513 §grip-parity — low-freq reactive read του ενεργού grip drag (fires μία φορά στο
+  // start/end, όχι ανά frame). Οδηγεί το mount/unmount του δαχτυλιδιού στην επέκταση άκρου γραμμής.
+  const activeDrag = useSyncExternalStore(subscribeActiveDragGrip, getActiveDragGrip, () => null);
+  const lineEndpointDrag = isLineEndpointDragInfo(activeDrag);
+
   // Wire keyboard pipeline: maps `dynamic-input-coordinate-submit` events back
   // to the canvas drawing pipeline (`onDrawingPoint`) — see ADR §4 G2.
   useDynamicInputHandler({
@@ -111,6 +130,22 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
     // callback here keeps the handler shape stable until Phase 4 wires them.
     onEntityCreated: noopEntityCreated,
   });
+
+  // ADR-513 §grip-parity — ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ ΓΡΑΜΜΗΣ (press-drag): δείξε το ΙΔΙΟ «Δαχτυλίδι Εντολών»
+  // (Μήκος/Γωνία) σε lock-only mode. Ανεξάρτητο από το `interactive` gate — στο grip-drag το ενεργό
+  // εργαλείο είναι συνήθως 'select', οπότε δεν περνά το `isInteractiveTool`. Ίδιος 3D-yield κανόνας.
+  if (dynInput.on && !is3D && lineEndpointDrag && activeDrag && getSceneUnits) {
+    return (
+      <RadialCommandRing
+        config={GRIP_LINEAR_RING_CONFIG}
+        placementMode="lock-only"
+        startKey={`grip:${activeDrag.entityId}:${activeDrag.gripIndex}`}
+        sceneUnits={getSceneUnits()}
+        getCanvasEl={getCanvasEl}
+        onDeactivate={unlockGripEndpointLocks}
+      />
+    );
+  }
 
   // In 3D the `DynamicInput3DLeaf` (mounted in BimViewport3D) owns this overlay — yield to avoid
   // two RadialCommandRings (double window intercepts). The 2D canvas isn't the drawing surface in 3D.

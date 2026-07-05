@@ -20,6 +20,9 @@ function raft(widthMm = 6000, lengthMm = 4000, thicknessMm = 500): SlabEntity {
         { x: 0, y: 0 }, { x: widthMm, y: 0 }, { x: widthMm, y: lengthMm }, { x: 0, y: lengthMm },
       ] },
     },
+    // ADR-504: section-context-slab reads slab.geometry.maxFreeSpanM (practical span).
+    // Neutral for raft bearing (soil-reaction driven, span-independent).
+    geometry: { maxFreeSpanM: 0 },
   } as unknown as SlabEntity;
 }
 

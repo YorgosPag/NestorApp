@@ -119,6 +119,9 @@ const raftEntity = (id: string, kind: 'foundation' | 'ground', structuralReinfor
       sceneUnits: 'mm',
       ...(structuralReinforcement ? { structuralReinforcement } : {}),
     },
+    // ADR-504: section-context-slab reads slab.geometry.maxFreeSpanM (practical span).
+    // Neutral (0) → min-detailing governs; raft ρ checks stay span-independent.
+    geometry: { maxFreeSpanM: 0 },
   } as unknown as Entity);
 
 const edge = (supportId: string, supportedId: string, kind: StructuralGraph['edges'][number]['kind']) => ({

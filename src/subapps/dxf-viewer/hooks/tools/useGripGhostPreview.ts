@@ -38,6 +38,8 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { useLevels } from '../../systems/levels';
 import type { DxfGripDragPreview } from '../grip-computation';
+// ADR-513 §grip-parity — length/angle lock για την ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ γραμμής (ίδιος SSoT preview≡commit).
+import { resolveLineEndpointLockedDelta } from '../../systems/dynamic-input/grip-endpoint-lock';
 import {
   applyEntityPreview,
   normalizePreviewEntity,
@@ -204,6 +206,15 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // πάντοτε τα φαντάσματα»). Shape is identical, so every downstream read is unaffected.
     const entity = normalizePreviewEntity(rawEntity as unknown as DxfEntityUnion) as unknown as typeof rawEntity;
     if (!entity) return;
+
+    // ADR-513 §grip-parity — length/angle lock στο ghost της ΕΠΕΚΤΑΣΗΣ ΑΚΡΟΥ γραμμής (grip 0/1). Ο
+    // ΙΔΙΟΣ helper τρέχει και στο commit (grip-mouseup) → preview ≡ commit. No-op όταν δεν υπάρχει lock.
+    if (!isRotation && !isHatchDrag && dp.anchorPos && effectiveCursor) {
+      const lockedDelta = resolveLineEndpointLockedDelta(
+        entity, dp.gripIndex, dp.lineGripKind, dp.anchorPos, effectiveCursor,
+      );
+      if (lockedDelta) dp = { ...dp, delta: lockedDelta };
+    }
 
     const vp = viewport;
 

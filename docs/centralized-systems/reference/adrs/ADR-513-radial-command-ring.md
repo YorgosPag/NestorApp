@@ -109,6 +109,33 @@ wall-specific σε **config-driven**, (β) **κενό commit**: το lock της
 → **FULL PARITY**: ίδια μηχανική NavWheel/deadzone/popup· μόνη διαφορά = το πεδίο «Τύπος» είναι drop-down.
 **Μηδέν νέο store/parser/lock/overrides μηχανισμός.** 227 jest GREEN (158 dynamic-input + νέα config + ring).
 
+## §grip-parity — ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ ΓΡΑΜΜΗΣ (grip-drag) — 2026-07-05
+Giorgio: «το ΙΔΙΟ σύστημα, μία και μοναδική πηγή αλήθειας» και όταν **σέρνω το άκρο μιας γραμμής**.
+Χειρονομία = **press-drag (Revit-style)**: πατάς τη λαβή, σέρνεις, πληκτρολογείς Μήκος/Γωνία, **αφήνεις = commit**.
+
+**SSoT audit (grep):** το δαχτυλίδι είναι ήδη tool-agnostic (`RadialCommandRing` + κοινοί builders
+`lengthRingField`/`angleRingField` → `DynamicInputLockStore`) και το lock geometry SSoT
+(`applyLengthAngleLock`) εφαρμόζεται ήδη σε preview+commit της σχεδίασης. Το grip-drag άκρου
+**δεν** χρησιμοποιούσε τίποτα από αυτά. → Reuse, μηδέν fork.
+
+**Δύο decoupled μισά, επικοινωνία ΜΟΝΟ μέσω `DynamicInputLockStore` (όπως η σχεδίαση):**
+1. **Γεωμετρία (preview≡commit):** ΕΝΑΣ pure helper `grip-endpoint-lock.ts`
+   (`resolveLineEndpointLockedDelta`) — σταθερό άκρο από `getLineGripAlignmentAnchors` +
+   `applyLengthAngleLock` → locked delta. Καλείται από **δύο** seams: `useGripGhostPreview` (ghost)
+   & `grip-mouseup-handler` (StretchEntityCommand commit). No-op όταν δεν υπάρχει lock → μηδέν regression.
+   Στο commit νικά ΚΑΙ το ADR-501 arm-click ΚΑΙ τα ortho/step constraints (ρητή είσοδος = τελική γεωμετρία).
+2. **UI (lock-only ring):** νέο thin `grip-linear-ring-config.ts` (Μήκος/Γωνία, ΙΔΙΟΙ builders· ΟΧΙ
+   «Τύπος» — αυτό είναι draw-default `QuickStyleStore`, λάθος για επεξεργασία υπάρχουσας γραμμής).
+   Το `RadialCommandRing` πήρε prop **`placementMode`**: `'canvas-click'` (default, σχεδίαση — synthetic
+   click + mouseup intercept) vs **`'lock-only'`** (grip — ΚΑΝΕΝΑ synthetic click / mouseup intercept·
+   input μόνο μέσω heads-up πληκτρολογίου· `onDeactivate` ξεκλειδώνει στο unmount = τέλος drag).
+   Mount από το ΙΔΙΟ leaf (`DynamicInputSubscriber`) σε νέο branch, οδηγούμενο από reactive
+   `GripDragStore` (νέο low-freq pub/sub `subscribeActiveDragGrip` + predicate `isLineEndpointDragInfo`).
+
+→ **FULL PARITY** στα γεωμετρικά (Μήκος/Γωνία), press-drag Revit-style. Μηδέν νέο store/lock/parser
+(μόνο pub/sub στο υπάρχον `GripDragStore` + prop στο υπάρχον ring). Scope: line endpoint· ο helper
+γενικεύεται εύκολα σε polyline/wall άκρα. 251 jest GREEN (240 dynamic-input+line + 11 νέα).
+
 ## Consequences
 - **+** Η γενίκευση tool-agnostic άνοιξε δρόμο για δοκάρι/κολώνα/πλάκα = απλώς νέο `RingConfig`.
 - **+** Revit/AutoCAD-grade in-canvas editing του τοίχου, μηδέν διπλότυπο (lock/parser/overrides reuse).
@@ -135,6 +162,15 @@ wall-specific σε **config-driven**, (β) **κενό commit**: το lock της
 `systems/constraints/cad-toggle-state.ts` + `hooks/common/useCadToggles.ts` (Dyn shared-store bugfix),
 `i18n/locales/{el,en}/dxf-viewer-shell.json` (`tools.ring.*`).
 
+**§grip-parity (2026-07-05):**
+**NEW:** `systems/dynamic-input/grip-endpoint-lock.ts` (+test), `systems/dynamic-input/grip-linear-ring-config.ts` (+test).
+**MOD:** `systems/dynamic-input/components/RadialCommandRing.tsx` (`placementMode` + `onDeactivate`),
+`components/dxf-layout/DynamicInputSubscriber.tsx` (grip-endpoint branch), `systems/cursor/GripDragStore.ts`
+(low-freq pub/sub `subscribeActiveDragGrip` + `isLineEndpointDragInfo`), `hooks/tools/useGripGhostPreview.ts`
+(ghost lock seam), `hooks/grips/grip-mouseup-handler.ts` (commit lock seam + arm/constraint bypass),
+`i18n/locales/{el,en}/dxf-viewer-shell.json` (`tools.ring.endpointLabel`).
+**STAGE:** ADR-040 (CHECK 6B/6D — DynamicInputSubscriber leaf + cursor store touch).
+
 ## Sources (μελέτη AutoCAD NavWheel)
 - About SteeringWheels — https://help.autodesk.com/cloudhelp/2020/ENU/AutoCAD-Core/files/GUID-0345448F-5C16-4566-90A7-A6D33A70F67F.htm
 - SteeringWheels Settings Dialog — https://help.autodesk.com/cloudhelp/2019/ENU/AutoCAD-Core/files/GUID-D613FA7A-160C-475F-A83E-B788720C44D0.htm
@@ -160,6 +196,13 @@ wall-specific σε **config-driven**, (β) **κενό commit**: το lock της
   `wedgePositionAtAngle` (το wall-keyed `WEDGE_ANGLES` παράγεται από αυτά)· `RadialCommandRing` → config-driven
   + `kind:'select'` popup (drop-down linetype). **Commit lock της γραμμής** στο `onDrawingPoint` (ΠΡΙΝ το flush
   face-snap, mirror preview) → preview≡commit. Τύπος = ΙΔΙΟ `QuickStyleStore` SSoT με το ribbon. 227 jest GREEN.
+- **2026-07-05 (§grip-parity)** — Το ΙΔΙΟ δαχτυλίδι στην **ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ ΓΡΑΜΜΗΣ** (press-drag Revit-style,
+  lock-only). NEW `grip-endpoint-lock.ts` (`resolveLineEndpointLockedDelta` — ΕΝΑΣ SSoT helper preview≡commit
+  πάνω στο `applyLengthAngleLock` + `getLineGripAlignmentAnchors`) + `grip-linear-ring-config.ts` (Μήκος/Γωνία,
+  κοινοί builders, ΟΧΙ «Τύπος»). `RadialCommandRing` NEW prop `placementMode='lock-only'` (μηδέν synthetic
+  click / mouseup intercept) + `onDeactivate` (unlock στο unmount). `GripDragStore` NEW low-freq pub/sub
+  (`subscribeActiveDragGrip`) + predicate `isLineEndpointDragInfo`. Seams: `useGripGhostPreview` (ghost) +
+  `grip-mouseup-handler` (commit· νικά arm-click + ortho/step). Μηδέν νέο store/lock/fork. 251 jest GREEN.
   🔴 ΕΚΚΡΕΜΕΙ: browser-verify + commit (Giorgio). Shared tree με agent ADR-508 §line-hud (μόνο τα δικά μου αρχεία).
 - **2026-06-30 (§line-parity — SSoT audit follow-up, Giorgio)** — Εντοπίστηκε & διορθώθηκε διπλότυπο
   που είχα φτιάξει: η απαρίθμηση «ByLayer + registry linetypes» υπήρχε ΗΔΗ στο ribbon

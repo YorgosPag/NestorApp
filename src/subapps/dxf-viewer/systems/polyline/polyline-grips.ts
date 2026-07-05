@@ -151,14 +151,34 @@ export function getPolylineGripAlignmentAnchors(
   vertices: readonly Point2D[],
   closed: boolean,
 ): Point2D[] | null {
-  const n = vertices.length;
-  if (n < 2 || gripIndex < 0 || gripIndex >= n) return null;
+  const { prev, next } = getPolylineVertexNeighbourIndices(gripIndex, vertices.length, closed);
   const anchors: Point2D[] = [];
-  if (gripIndex - 1 >= 0) anchors.push(vertices[gripIndex - 1]);
-  else if (closed) anchors.push(vertices[n - 1]);
-  if (gripIndex + 1 < n) anchors.push(vertices[gripIndex + 1]);
-  else if (closed) anchors.push(vertices[0]);
+  if (prev !== null) anchors.push(vertices[prev]);
+  if (next !== null) anchors.push(vertices[next]);
   return anchors.length ? projectVerticesTo2D(anchors) : null;
+}
+
+/**
+ * ADR-357/508/561 — the ONE adjacency SSoT for a polyline VERTEX grip: its incoming (`prev`) and
+ * outgoing (`next`) neighbour vertex indices, with wraparound for a closed ring and `null` at an
+ * open ring's boundary. `{ prev: null, next: null }` when `gripIndex` is outside the vertex range
+ * or the ring is degenerate (<2). Shared by EVERY per-vertex consumer so the «which neighbours are
+ * adjacent» rule lives once — the alignment-tracking anchors ({@link getPolylineGripAlignmentAnchors}),
+ * the incident-segment white HUD ({@link getPolylineVertexIncidentSegments}) and (indirectly) the
+ * endpoint reshape/corner arcs all derive from it, never re-implementing the `if (i−1≥0) … else if
+ * (closed) …` selection. Pure — zero deps.
+ */
+export function getPolylineVertexNeighbourIndices(
+  gripIndex: number,
+  vertexCount: number,
+  closed: boolean,
+): { readonly prev: number | null; readonly next: number | null } {
+  const n = vertexCount;
+  if (n < 2 || gripIndex < 0 || gripIndex >= n) return { prev: null, next: null };
+  return {
+    prev: gripIndex - 1 >= 0 ? gripIndex - 1 : closed ? n - 1 : null,
+    next: gripIndex + 1 < n ? gripIndex + 1 : closed ? 0 : null,
+  };
 }
 
 /**
@@ -168,23 +188,18 @@ export function getPolylineGripAlignmentAnchors(
  * wraps (vertex 0 ↔ n−1). Feeds the live white length+angle HUD — one `buildSegmentHudMeta`+
  * `paintWallHud` per returned segment, the SAME painters the plain line/wall use — so EVERY changing
  * leg of a joined system is dimensioned exactly like a lone line (Revit temporary-dimensions parity,
- * Giorgio 2026-07-05). Sibling of {@link getPolylineGripAlignmentAnchors} (same neighbour selection,
- * segments instead of anchor points). Returns [] for a non-vertex index or <2 vertices. Pure.
+ * Giorgio 2026-07-05). Derives from the shared {@link getPolylineVertexNeighbourIndices} adjacency
+ * SSoT (segments instead of anchor points). Returns [] for a non-vertex index or <2 vertices. Pure.
  */
 export function getPolylineVertexIncidentSegments(
   gripIndex: number,
   vertexCount: number,
   closed: boolean,
 ): Array<readonly [number, number]> {
-  const n = vertexCount;
-  if (n < 2 || gripIndex < 0 || gripIndex >= n) return [];
+  const { prev, next } = getPolylineVertexNeighbourIndices(gripIndex, vertexCount, closed);
   const segments: Array<readonly [number, number]> = [];
-  // incoming edge (previous neighbour → dragged vertex)
-  if (gripIndex - 1 >= 0) segments.push([gripIndex - 1, gripIndex]);
-  else if (closed) segments.push([n - 1, gripIndex]);
-  // outgoing edge (dragged vertex → next neighbour)
-  if (gripIndex + 1 < n) segments.push([gripIndex, gripIndex + 1]);
-  else if (closed) segments.push([gripIndex, 0]);
+  if (prev !== null) segments.push([prev, gripIndex]); // incoming edge (prev → dragged vertex)
+  if (next !== null) segments.push([gripIndex, next]); // outgoing edge (dragged vertex → next)
   return segments;
 }
 

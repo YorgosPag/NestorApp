@@ -53,6 +53,8 @@ import { buildSegmentHudMeta, paintWallHud } from '../../canvas-v2/preview-canva
 import { paintColumnHud } from '../../canvas-v2/preview-canvas/column-hud-paint';
 // ADR-508 §line-hud / ADR-561 — polyline vertex-reshape HUD: which incident segment(s) change length.
 import { getPolylineVertexIncidentSegments } from '../../systems/polyline/polyline-grips';
+// SSoT point interpolation (ADR-561 corner-arc nesting) — μηδέν inline lerp.
+import { lerpPoint } from '../../rendering/entities/shared/geometry-utils';
 import { buildWallHudSpecLabel } from '../drawing/wall-hud-spec-label';
 import { buildColumnHudSpecLabel } from '../drawing/column-hud-spec-label';
 
@@ -153,16 +155,25 @@ export function paintGripEndpointReshapeArcs(
       // στο φάντασμα (arrow) — αμετάβλητη υπάρχουσα ένδειξη.
       paintEndpointReshapeArc(ctx, pivotW, oPoly.vertices[i], movedW, t, vp);
       // (2) ΤΟΞΟ ΓΩΝΙΑΣ ΓΩΝΙΑΣ (Giorgio 2026-07-05): δεύτερο 🟢/🔴 ζεύγος στο ΙΔΙΟ σημείο ένωσης που
-      // δείχνει τη ζωντανή γωνία ΑΝΑΜΕΣΑ στο κινούμενο (φάντασμα) σκέλος και το ΣΤΑΘΕΡΟ γειτονικό σκέλος
-      // του ενωμένου συστήματος. ΙΔΙΟ SSoT helper (μηδέν νέα formula): center=σημείο ένωσης,
-      // baseline=φάντασμα σκέλος (pivot→moved), arrow=σταθερό σκέλος (pivot→fixedEnd). Το σταθερό σκέλος
+      // δείχνει τη ζωντανή γωνία ΑΝΑΜΕΣΑ στο ΣΤΑΘΕΡΟ γειτονικό σκέλος και το κινούμενο (φάντασμα) σκέλος.
+      // ΙΔΙΟ SSoT helper (μηδέν νέα formula): center=σημείο ένωσης, baseline=σταθερό σκέλος (pivot→fixedEnd),
+      // ΒΕΛΟΣ→φάντασμα σκέλος (pivot→moved) (Giorgio 2026-07-05: «βέλος προς το φάντασμα»). Το σταθερό σκέλος
       // υπάρχει μόνο όταν το σημείο ένωσης έχει κι άλλον γείτονα πέρα από το κινούμενο (n ≥ 3 — αλλιώς είναι
       // μεμονωμένη γραμμή αποθηκευμένη ως polyline, καμία γωνία γωνίας). Το σταθερό σκέλος διαβάζεται από τα
-      // ΑΡΧΙΚΑ vertices (δεν μετακινείται). Η ακτίνα διαφέρει (μήκος σταθερού σκέλους) → δεν επικαλύπτεται
-      // με το τόξο στροφής.
+      // ΑΡΧΙΚΑ vertices (δεν μετακινείται).
+      //
+      // Επειδή ΚΑΙ το τόξο στροφής ΚΑΙ αυτό τελειώνουν στο φάντασμα σκέλος, θα είχαν ΙΔΙΑ ακτίνα (=μήκος
+      // κινούμενου σκέλους) → στοιβαγμένα βελάκια. Το φωλιάζουμε σε μικρότερη ΟΜΟΚΕΝΤΡΗ ακτίνα δίνοντας ένα
+      // arrow-σημείο πάνω στην ΙΔΙΑ ακτίνα «φαντάσματος» αλλά πιο κοντά στο pivot: ίδια φορά/γωνία/χρώμα
+      // (η κατεύθυνση δεν αλλάζει → το `rotateSweepDegFromDirs` δίνει την ίδια γωνία), απλώς πιο μέσα.
       const fixedIdx = i === 0 ? 2 : n - 3;
       if (fixedIdx >= 0 && fixedIdx < n) {
-        paintEndpointReshapeArc(ctx, pivotW, movedW, oPoly.vertices[fixedIdx], t, vp);
+        // ΟΜΟΚΕΝΤΡΗ ακτίνα: σημείο στο 62% της ακτίνας «φαντάσματος» (κοινό `lerpPoint` SSoT, μηδέν
+        // inline lerp) ώστε το τόξο γωνίας να φωλιάζει μέσα από το τόξο στροφής — ίδια φορά/γωνία/χρώμα,
+        // απλώς πιο κοντά στο pivot. Local const → self-contained για Fast-Refresh safety.
+        const cornerArcRadiusScale = 0.62;
+        const nestedArrowW = lerpPoint(pivotW, movedW, cornerArcRadiusScale);
+        paintEndpointReshapeArc(ctx, pivotW, oPoly.vertices[fixedIdx], nestedArrowW, t, vp);
       }
     }
   }

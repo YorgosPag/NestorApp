@@ -118,12 +118,17 @@ Circle / arc / polyline / rectangle → επιστρέφουν **WORLD-aligned i
   μετακινώ το άκρο ενός σκέλους ενωμένων γραμμών, θέλω και δεύτερο ζεύγος κόκκινου/πράσινου τόξου που να δείχνει τη
   γωνία ανάμεσα στο κινούμενο σκέλος και το σταθερό σκέλος»). Μέχρι τώρα το `paintGripEndpointReshapeArcs` (open
   polyline endpoint) ζωγράφιζε **ΕΝΑ** τόξο = πόσο στράφηκε το κινούμενο σκέλος από την αρχική του θέση. **Προσθήκη**:
-  δεύτερο τόξο στο ΙΔΙΟ σημείο ένωσης (pivot) = ζωντανή γωνία μεταξύ **φαντάσματος σκέλους** (baseline) και **σταθερού
-  γειτονικού σκέλους** (arrow). **ZERO νέα formula** — reuse του ΙΔΙΟΥ `paintEndpointReshapeArc(center, baselineRay,
-  arrowRay)` (κοινό `paintDirectionArc`+`rotateSweepDegFromDirs` SSoT): center=pivot, baseline=`pivot→moved`,
-  arrow=`pivot→fixedEnd`. Guard: σταθερό σκέλος υπάρχει μόνο για n ≥ 3 (`fixedIdx = i===0 ? 2 : n−3`)· διαβάζεται από τα
-  ΑΡΧΙΚΑ vertices (δεν κινείται). Η ακτίνα διαφέρει (μήκος σταθερού σκέλους) → δεν επικαλύπτεται με το τόξο στροφής.
-  Interior/κλειστό/μεμονωμένη-γραμμή-ως-polyline → no-op (καμία γωνία γωνίας). **Αρχείο**:
+  δεύτερο τόξο στο ΙΔΙΟ σημείο ένωσης (pivot) = ζωντανή γωνία μεταξύ **σταθερού γειτονικού σκέλους** (baseline) και
+  **φαντάσματος σκέλους** (ΒΕΛΟΣ). **ZERO νέα formula** — reuse του ΙΔΙΟΥ `paintEndpointReshapeArc(center, baselineRay,
+  arrowRay)` (κοινό `paintDirectionArc`+`rotateSweepDegFromDirs` SSoT): center=pivot, baseline=`pivot→fixedEnd`,
+  arrow=`pivot→moved`. **Φορά (Giorgio AskUserQuestion 2026-07-05, screenshot review)**: βέλος → φάντασμα (η γωνία
+  «ανοίγει» προς το κινούμενο σκέλος). Guard: σταθερό σκέλος υπάρχει μόνο για n ≥ 3 (`fixedIdx = i===0 ? 2 : n−3`)·
+  διαβάζεται από τα ΑΡΧΙΚΑ vertices (δεν κινείται). **Anti-overlap**: επειδή ΚΑΙ το τόξο στροφής ΚΑΙ αυτό τελειώνουν
+  στο φάντασμα → ίδια ακτίνα → στοιβαγμένα βελάκια· το τόξο γωνίας φωλιάζει ΟΜΟΚΕΝΤΡΑ σε `cornerArcRadiusScale`
+  (0.62, **local const** — self-contained για Fast-Refresh safety· ένα νέο module-level const + ταυτόχρονη χρήση του
+  έριξε `ReferenceError: … is not defined` σε HMR) — arrow-σημείο στην ΙΔΙΑ κατεύθυνση φαντάσματος αλλά πιο κοντά στο
+  pivot (ίδια γωνία/χρώμα, το `rotateSweepDegFromDirs` αναλλοίωτο). Interior/κλειστό/μεμονωμένη-γραμμή-ως-polyline →
+  no-op. **Αρχείο**:
   `hooks/tools/grip-ghost-preview-draw-helpers.ts`. CHECK 6D → stage αυτό το ADR. 🟡 UNCOMMITTED (commit: Giorgio).
 - **2026-07-05** — 🐛 **Ενωμένες γραμμές (`lwpolyline`) → εμφάνιση φαντάσματος σε ΟΛΑ τα grip gestures (reshape/edge/move/rotation)** (Giorgio:
   «όταν μετακινώ/περιστρέφω σκέλος ή ολόκληρο το σύστημα των ενωμένων γραμμών, δεν εμφανίζεται το φάντασμα»).
