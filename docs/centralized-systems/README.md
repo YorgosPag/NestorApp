@@ -136,6 +136,11 @@
 ### ⚒️ **TOOLS**
 - **[📋 Overview](tools/index.md)** - Drawing tools, keyboard shortcuts, interactions
 
+### 🎯 **DXF SNAP & ALIGNMENT** (Snapping / POLAR Tracking Traces)
+- **[🧲 Snap System Master (ADR-378)](reference/adrs/ADR-378-snap-system-master-architecture.md)** - One production snap engine (`getGlobalSnapEngine` → `ProSnapEngineV2` → `SnapEngineRegistry` + 26 sub-engines). Registry-enforced (`snap-engine` module).
+- **[🧠 Unified BIM Cursor Snap (ADR-514)](reference/adrs/ADR-514-unified-bim-cursor-snap.md)** - One tool-agnostic BIM placement brain (`resolveBimCursorSnap`, preview≡commit). Registry-enforced (`bim-cursor-snap`).
+- **[📏 Alignment Traces SSoT (ADR-572)](reference/adrs/ADR-572-alignment-traces-ssot-audit.md)** - The dashed POLAR/alignment inference lines: ONE engine (`resolveTrackingSnap` → `composeTrackingSnap`), one store, shared 2D+3D painters, one `overlay-line-style` token file. **Registry-enforced** (`alignment-tracking` module, 2026-07-05) + §8 full-unification map (angle-quantize / perpendicular-foot / line-projection / rotate ORTHO-POLAR / naming).
+
 ### 🏗️ **INFRASTRUCTURE**
 - **[📋 Overview](infrastructure/index.md)** - Performance, logging, auth systems
 - **[💾 Enterprise Backup & Restore](../../adrs/ADR-313-enterprise-backup-restore.md)** - ADR-313: Manifest-driven backup/restore with schema evolution

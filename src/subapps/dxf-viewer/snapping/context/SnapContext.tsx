@@ -29,7 +29,7 @@ const ALL_MODES: ExtendedSnapType[] = [
   ExtendedSnapType.INSERTION,
   ExtendedSnapType.NEAR,
   ExtendedSnapType.PARALLEL,
-  ExtendedSnapType.ORTHO,
+  ExtendedSnapType.ORTHO_TRACK,
   ExtendedSnapType.GRID,
   ExtendedSnapType.GUIDE,               // ADR-189: Construction guide snap
   ExtendedSnapType.CONSTRUCTION_POINT,   // ADR-189: Construction snap points

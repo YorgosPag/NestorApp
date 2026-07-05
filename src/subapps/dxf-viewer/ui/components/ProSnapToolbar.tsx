@@ -35,7 +35,7 @@ const SNAP_MODE_KEYS: Record<ExtendedSnapType, string> = {
   [ExtendedSnapType.NODE]: 'node',
   [ExtendedSnapType.INSERTION]: 'insertion',
   [ExtendedSnapType.NEAR]: 'near',
-  [ExtendedSnapType.ORTHO]: 'ortho',
+  [ExtendedSnapType.ORTHO_TRACK]: 'ortho',
   [ExtendedSnapType.GUIDE]: 'guide',              // ADR-189: Construction guide snap
   [ExtendedSnapType.CONSTRUCTION_POINT]: 'constructionPoint', // ADR-189 §3.7-3.16
   [ExtendedSnapType.DIM_DEF_POINT]: 'dimDefPoint', // ADR-362 I1
@@ -125,7 +125,7 @@ const ADVANCED_MODES = [
   ExtendedSnapType.NODE,
   ExtendedSnapType.INSERTION,
   ExtendedSnapType.NEAR,
-  ExtendedSnapType.ORTHO
+  ExtendedSnapType.ORTHO_TRACK
 ];
 
 // ADR-363 Phase 5.5i + ADR-370: BIM structural snap modes (column/wall/beam/slab/opening corners).

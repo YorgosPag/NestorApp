@@ -56,7 +56,7 @@ export const SNAP_COLORS: Record<ExtendedSnapType, string> = {
   [ExtendedSnapType.NODE]:          SNAP_MARKER_COLORS.NODE,
   [ExtendedSnapType.INSERTION]:     SNAP_MARKER_COLORS.NODE,
   [ExtendedSnapType.PARALLEL]:      SNAP_MARKER_COLORS.PARALLEL,
-  [ExtendedSnapType.ORTHO]:         SNAP_MARKER_COLORS.PERPENDICULAR,
+  [ExtendedSnapType.ORTHO_TRACK]:   SNAP_MARKER_COLORS.PERPENDICULAR,
   [ExtendedSnapType.GRID]:          SNAP_MARKER_COLORS.BASE, // δεν ζωγραφίζεται (silent)
   [ExtendedSnapType.GUIDE]:         SNAP_MARKER_COLORS.BASE, // δεν ζωγραφίζεται (silent)
 

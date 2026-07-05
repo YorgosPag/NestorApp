@@ -35,7 +35,11 @@ export enum ExtendedSnapType {
   INSERTION = 'insertion',
   NEAR = 'near',
   PARALLEL = 'parallel',
-  ORTHO = 'ortho',
+  // OTRACK point-mode (OSNAP tracking-point: offers H/V/45° candidate POINTS near a reference).
+  // Renamed from ORTHO to end the collision with the F8 hard-ortho (`cadToggleState`, drawing lock)
+  // and the 3D orthographic view ('ortho' in canonical-views) — those are unrelated systems. The wire
+  // value is deliberately kept 'ortho' so snap-type comparisons / i18n labels / presets stay stable.
+  ORTHO_TRACK = 'ortho',
   GRID = 'grid',
   GUIDE = 'guide',  // ADR-189: Construction guide snap
   CONSTRUCTION_POINT = 'construction_point',  // ADR-189 §3.7-3.16: Construction snap points

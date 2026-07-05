@@ -1,6 +1,8 @@
 /**
- * Ortho Snap Engine
- * Υπεύθυνο για εύρεση orthogonal snap points (0°, 90°, 180°, 270°)
+ * Ortho-Track Snap Engine (OSNAP OTRACK point-mode)
+ * Offers orthogonal/diagonal tracking-point candidates (0°, 90°, 180°, 270°, 45°…) near a reference.
+ * NOTE: this is the OSNAP tracking-point mode, NOT the F8 hard-ortho drawing lock (`cadToggleState`)
+ * and NOT the 3D orthographic view — see ExtendedSnapType.ORTHO_TRACK for the naming history.
  */
 
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
@@ -14,11 +16,11 @@ import { calculateDistance } from '../../rendering/entities/shared/geometry-rend
 // 🏢 ADR-149: Centralized Snap Engine Priorities
 import { SNAP_SEARCH_RADIUS, SNAP_RADIUS_MULTIPLIERS, SNAP_GEOMETRY, SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
 
-export class OrthoSnapEngine extends BaseSnapEngine {
+export class OrthoTrackSnapEngine extends BaseSnapEngine {
   private lastPoint: Point2D | null = null;
 
   constructor() {
-    super(ExtendedSnapType.ORTHO);
+    super(ExtendedSnapType.ORTHO_TRACK);
   }
 
   initialize(entities: EntityModel[]): void {
@@ -30,7 +32,7 @@ export class OrthoSnapEngine extends BaseSnapEngine {
     // 🏢 ADR-149: Use centralized snap engine priorities
     const priority = SNAP_ENGINE_PRIORITIES.ORTHO;
     
-    const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.ORTHO);
+    const radius = context.worldRadiusForType(cursorPoint, ExtendedSnapType.ORTHO_TRACK);
     
     // Need a reference point for orthogonal snapping
     // Try to find the last drawn point or use nearby endpoints
@@ -76,7 +78,7 @@ export class OrthoSnapEngine extends BaseSnapEngine {
     
     // Guard against non-iterable entities
     if (!Array.isArray(context.entities)) {
-      console.warn('[OrthoSnapEngine] entities is not an array:', typeof context.entities, context.entities);
+      console.warn('[OrthoTrackSnapEngine] entities is not an array:', typeof context.entities, context.entities);
       return null;
     }
     

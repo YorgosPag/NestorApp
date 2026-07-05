@@ -35,7 +35,7 @@ import { NodeSnapEngine } from '../engines/NodeSnapEngine';
 import { InsertionSnapEngine } from '../engines/InsertionSnapEngine';
 import { NearSnapEngine } from '../engines/NearSnapEngine';
 import { PerpendicularSnapEngine } from '../engines/PerpendicularSnapEngine';
-import { OrthoSnapEngine } from '../engines/OrthoSnapEngine';
+import { OrthoTrackSnapEngine } from '../engines/OrthoTrackSnapEngine';
 import { GridSnapEngine } from '../engines/GridSnapEngine';
 import { GuideSnapEngine } from '../engines/GuideSnapEngine';
 import { ConstructionPointSnapEngine } from '../engines/ConstructionPointSnapEngine';
@@ -86,7 +86,7 @@ export class SnapEngineRegistry {
     this.engines.set(ExtendedSnapType.INSERTION, new InsertionSnapEngine());
     this.engines.set(ExtendedSnapType.NEAR, new NearSnapEngine());
     this.engines.set(ExtendedSnapType.PERPENDICULAR, new PerpendicularSnapEngine());
-    this.engines.set(ExtendedSnapType.ORTHO, new OrthoSnapEngine());
+    this.engines.set(ExtendedSnapType.ORTHO_TRACK, new OrthoTrackSnapEngine());
     this.engines.set(ExtendedSnapType.GRID, new GridSnapEngine());
     // ADR-189: Construction guide snap
     this.engines.set(ExtendedSnapType.GUIDE, new GuideSnapEngine());

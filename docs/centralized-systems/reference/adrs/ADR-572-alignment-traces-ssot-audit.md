@@ -231,6 +231,17 @@ duplicate, αλλά ελαφρά διπλή-εγγραφή/ανάγνωση — 
 
 ## 7. Changelog
 
+- **2026-07-05 (IMPLEMENTED — πλήρης ενοποίηση, εντολή Giorgio «ενοποίησε ΠΛΗΡΩΣ σε μία SSoT»)** —
+  5 παράλληλοι Explore agents χαρτογράφησαν ΟΛΑ τα συστήματα ιχνών POLAR/ευθυγράμμισης (stores, angle
+  engines, geometric inference, painters, ADRs). Πόρισμα: **δεν υπάρχουν παράλληλα συστήματα** — ο πυρήνας
+  ήταν ήδη ~90% SSoT (αυτό το ADR). Κλείσιμο των 8 εναπομεινάντων κενών (§8): **WI-1** registry guardrail
+  (νέο module `alignment-tracking` στο `.ssot-registry.json`)· **WI-2** ένα `quantizeToStep` primitive
+  (geometry-utils) → 4 angle/step quantizers· **WI-3** baseline dash → `overlay-line-style` REFERENCE-BASELINE
+  family· **WI-4** perpendicular-foot trio → `polyline-perpendicular-feet` SSoT· **WI-5** `projectPointOnLine`
+  → alias του `getNearestPointOnLine`· **WI-6** 2-click ROTATE ORTHO/POLAR angle-lock (gap fix)· **WI-7**
+  renames (`RotationSnapEngine`→`RotationPointSnapEngine`, `OrthoSnapEngine`/`ExtendedSnapType.ORTHO`→
+  `OrthoTrackSnapEngine`/`ORTHO_TRACK`, wire value 'ortho' αμετάβλητο)· **WI-8** README + αυτό. Verified:
+  registry-golden 56 + affected-suites 74 + rotation-point 13 = GREEN.
 - **2026-07-04 (IMPLEMENTED — Γ2 + Γ1· RESOLVED — Γ3)** —
   - **Γ2** (locale γωνίας): αντικατάσταση inline `` `${angle.toFixed()}°` `` με `formatAngleLocale` σε **8 σημεία**.
     SSoT audit (grep) ΠΡΙΝ την υλοποίηση αποκάλυψε ότι η αρχική λίστα handoff (4 action-family sites) ήταν
@@ -260,3 +271,37 @@ duplicate, αλλά ελαφρά διπλή-εγγραφή/ανάγνωση — 
   κοινοί 2D+3D painters, ΕΝΑΣ formatter). Εντοπίστηκαν 3 μικρο-αποκλίσεις προς ενοποίηση (Γ1 bespoke leaders,
   Γ2 inline `°` locale bug, Γ3 ασύνδετα 3D color tokens) + 2 by-design ξεχωριστά (Γ4 debug, Γ5 axis-cut/guides).
   Σχέδιο κλεισίματος με προτεραιότητα Γ2>Γ1>Γ3. **Καμία υλοποίηση κώδικα** — εκκρεμεί συζήτηση Giorgio.
+
+---
+
+## 8. Πλήρης ενοποίηση — Registry enforcement + κλείσιμο εναπομεινάντων κενών (2026-07-05)
+
+Εντολή Giorgio: «βρες πόσα διάσπαρτα & ενοποιημένα συστήματα ιχνών POLAR έχουμε → ενοποίησέ τα ΠΛΗΡΩΣ σε
+μία SSoT». 5 παράλληλοι Explore agents (stores / angle engines / geometric inference / painters / ADRs)
+επιβεβαίωσαν ότι ο πυρήνας ήταν **ήδη ενοποιημένος** (§1–§2). Τα 8 κενά που έκλεισαν:
+
+| WI | Κενό | SSoT λύση | Αρχεία |
+|----|------|-----------|--------|
+| 1 🔴 | Κανένα registry guardrail για το tracking layer (μόνο prose) | Νέο module `alignment-tracking` (forbid re-decl `resolveTrackingSnap`/`composeTrackingSnap`/`collectAmbientAlignmentAnchors`/`setGripAlignmentTracking` εκτός allowlist) | `.ssot-registry.json` |
+| 2 🟡 | 4 ανεξάρτητα «round angle→step» | Ένα `quantizeToStep(value, step)` primitive· καλείται από `snapAngleToStep`, `resolveColumnRotationDeg`, `polar-disk-snap`, `quantizeValueToStep` | `rendering/entities/shared/geometry-utils.ts` (+4 callers) |
+| 3 🟢 | direction-arc baseline dash inline `[5,4]/1px` | REFERENCE-BASELINE family + `applyReferenceBaselineStyle` (όψη διακριτή by design — Revit/Figma — αλλά ορισμός στο SSoT) | `canvas-v2/preview-canvas/overlay-line-style.ts`, `direction-arc-paint.ts` |
+| 4 🟡 | 3× copy-paste perpendicular-foot (wall/slab/opening) | `nearestFootOnPolyline` + `perpendicularFeetOverPolyline(points, cursor, maxDistance, closed)` | `snapping/shared/polyline-perpendicular-feet.ts` (+3 callers) |
+| 5 🟡 | 2 line-projection APIs | `CoordinateUtils.projectPointOnLine` → alias του `getNearestPointOnLine(...,false)` | `systems/constraints/constraints-geometry.ts` |
+| 6 🟡 | 2-click ROTATE χωρίς ORTHO/POLAR (ασυνέπεια με hot-grip) | `handleRotationMouseMove` περνά τη γωνία από `resolveOrthoPolarStep` (ίδιο SSoT με hot-grip)· commit διαβάζει `currentAngle` → preview≡commit· no-op όταν F8/F10 off | `hooks/tools/useRotationTool.ts` |
+| 7 🟢→🟡 | Naming collisions (βλ. πίνακα κάτω) | Renames (KEY, όχι wire value) | βλ. κάτω |
+| 8 🟢 | Stale README, κανένα enforced module | README snap/alignment ενότητα + αυτό το ADR | `docs/centralized-systems/README.md` |
+
+### 8.1 Naming disambiguation (WI-7)
+
+| Παλιό | Νέο | Γιατί |
+|-------|-----|-------|
+| `RotationSnapEngine.ts` (filename) | `RotationPointSnapEngine.ts` | Κολλάει τον κέρσορα σε **σημείο** (pivot/grip), ΔΕΝ κουμπώνει γωνία. Τα classes (`RotationPivotSnapEngine`/`RotationGripSnapEngine`) ήταν ήδη σαφή. |
+| `OrthoSnapEngine` / `ExtendedSnapType.ORTHO` | `OrthoTrackSnapEngine` / `ExtendedSnapType.ORTHO_TRACK` | OSNAP OTRACK point-mode — άσχετο με το F8 hard-ortho (`cadToggleState`) και το 3D orthographic view. **Wire value `'ortho'` αμετάβλητο** (snap-type comparisons/i18n/presets σταθερά· ΟΧΙ persistence break, ΟΧΙ regression στο ADR-560 λ corner-projection filter). |
+| «Polar» (F10 tracking / polar-disk / polar-array) | — (docs μόνο) | Τα symbols ήδη διακριτά (`polarTrackingStore` / `polar-disk-snap` / `polar-transform`)· η σύγχυση ήταν μόνο στη λέξη. |
+
+### 8.2 Verification
+- **jest:** `registry-golden` (56) + affected quantize/projection suites (74) + `RotationPointSnapEngine` (13) → GREEN. Καμία αλλαγή συμπεριφοράς στα WI-2/4/5 (τα υπάρχοντα tests πέρασαν αυτούσια).
+- **registry:** `npm run test:registry-golden` (έγκυρο ERE στο νέο pattern) + `npm run ssot:audit` (καμία νέα παραβίαση· ο πυρήνας ζει μόνο στο allowlist).
+- **browser (τοπικά):** 2-click ROTATE + F10 → angle-lock· direction-arc baseline οπτικά ίδιο· grip/body-drag/dim ίχνη + column place-rotate + polar-disk αμετάβλητα.
+- ❌ **ΟΧΙ `tsc`** από agent (N.17) — τα renames επαληθεύτηκαν με εξαντλητικό grep για residual references.
+- ⚠️ **ADR-040 CHECK 6D:** WI-3/WI-6/WI-7 αγγίζουν canvas/cursor αρχεία → **stage ΑΥΤΟ το ADR** μαζί με τον κώδικα.

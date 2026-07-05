@@ -288,7 +288,7 @@ export const ADAPTIVE_ARC_TESSELLATION = {
  * const searchRadius = SNAP_SEARCH_RADIUS.REFERENCE_POINT; // 200
  */
 export const SNAP_SEARCH_RADIUS = {
-  /** Reference point search radius (OrthoSnapEngine) — in world units */
+  /** Reference point search radius (OrthoTrackSnapEngine) — in world units */
   REFERENCE_POINT: 100,
 } as const;
 
