@@ -19,7 +19,7 @@ import type { AlignedDimensionEntity } from '../../types/dimension';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 import { ISO_129_TEMPLATE } from '../../systems/dimensions/dim-style-templates';
-import { mmToSceneUnits } from '../../utils/scene-units';
+import { canvasToMmScaleFor } from '../../utils/scene-units';
 import { formatLengthForDisplay } from '../../config/display-length-format';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { arcToPolyline } from '../../utils/geometry/GeometryUtils';
@@ -75,7 +75,7 @@ export function paintGhostFaceDimensions(
   project?: OverlayProjector,
 ): void {
   const textColor = OVERLAY_LINE_COLORS.listeningDim; // CYAN — distinct mechanism colour
-  const mmPerScene = 1 / Math.max(mmToSceneUnits(meta.sceneUnits), 1e-9);
+  const mmPerScene = canvasToMmScaleFor({ sceneUnits: meta.sceneUnits }); // SSoT scene→mm scale
   const labelMode = meta.labelMode ?? 'length'; // ADR-398 §3.12 — μήκος / γωνία / και τα δύο (arc gaps)
   for (const d of meta.dims) {
     if (d.arc) paintArcDimension(ctx, d, transform, viewport, mmPerScene, labelMode, textColor, project);

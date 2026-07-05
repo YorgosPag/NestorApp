@@ -17,7 +17,7 @@ import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { LineEntity } from '../../types/entities';
 import type { SceneUnits } from '../../utils/scene-units';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
-import { mmToSceneUnits } from '../../utils/scene-units';
+import { canvasToMmScaleFor } from '../../utils/scene-units';
 import { formatLengthForDisplay } from '../../config/display-length-format';
 import { resolveParallelOffsetDim } from '../../systems/dimensions/line-parallel-offset-dim';
 import { paintAlignedOverlayDimension } from './ghost-face-dim-paint';
@@ -38,8 +38,8 @@ export function paintLineParallelOffsetDim(
   if (!cadToggleState.isOrthoOn()) return; // κάθετη διάσταση ΜΟΝΟ με ΟΡΘΟ (Giorgio 2026-07-05)
   const dim = resolveParallelOffsetDim(line.start, line.end, delta);
   if (!dim) return;
-  const mmPerScene = 1 / Math.max(mmToSceneUnits(sceneUnits), 1e-9);
-  const label = formatLengthForDisplay(dim.distanceScene * mmPerScene, { unit: 'm' });
+  // scene → mm via the SSoT scale (canvasToMmScaleFor), then the display-length SSoT formats it.
+  const label = formatLengthForDisplay(dim.distanceScene * canvasToMmScaleFor({ sceneUnits }), { unit: 'm' });
   paintAlignedOverlayDimension(
     ctx, dim.p1, dim.p2, dim.dimLineRef, label, transform, viewport, OVERLAY_LINE_COLORS.listeningDim,
   );

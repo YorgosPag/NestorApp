@@ -17,6 +17,9 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+// SSoT geometry primitives — μηδέν hand-rolled normal/dot/midpoint/hypot (ADR-065).
+import { calculateMidpoint, calculateDistance } from '../../rendering/entities/shared/geometry-vector-utils';
+import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
 
 export interface ParallelOffsetDim {
   /** Reference point on the ORIGINAL line (its midpoint). */
@@ -35,24 +38,24 @@ const EPS = 1e-6;
 /**
  * Compute the perpendicular offset dimension of a translated line, or `null` when it does not
  * apply (degenerate line, or a move purely along the axis so the two lines are collinear).
+ *
+ * The perpendicular distance = the distance from the original midpoint to the GHOST axis (the
+ * original translated by `delta`, which stays parallel), via the shared projection SSoT.
  */
 export function resolveParallelOffsetDim(
   start: Point2D,
   end: Point2D,
   delta: Point2D,
 ): ParallelOffsetDim | null {
-  const ax = end.x - start.x;
-  const ay = end.y - start.y;
-  const len = Math.hypot(ax, ay);
-  if (len < EPS) return null; // degenerate line — no axis to measure against
-  // Unit normal n̂ of the line axis.
-  const nx = -ay / len;
-  const ny = ax / len;
-  // Signed perpendicular component of the translation (distance between the two parallel axes).
-  const offset = delta.x * nx + delta.y * ny;
-  if (Math.abs(offset) < EPS) return null; // move is along the axis → lines collinear, no gap
-  const m0: Point2D = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
-  const p2: Point2D = { x: m0.x + nx * offset, y: m0.y + ny * offset };
-  const dimLineRef: Point2D = { x: (m0.x + p2.x) / 2, y: (m0.y + p2.y) / 2 };
-  return { p1: m0, p2, dimLineRef, distanceScene: Math.abs(offset) };
+  if (calculateDistance(start, end) < EPS) return null; // degenerate line — no axis to measure against
+  const p1 = calculateMidpoint(start, end); // μέσο αρχικής
+  // Ghost axis = original translated by delta (stays parallel to the original).
+  const ghostStart: Point2D = { x: start.x + delta.x, y: start.y + delta.y };
+  const ghostEnd: Point2D = { x: end.x + delta.x, y: end.y + delta.y };
+  // Foot of the perpendicular from the original midpoint onto the (infinite) ghost axis.
+  const p2 = getNearestPointOnLine(p1, ghostStart, ghostEnd, false);
+  const distanceScene = calculateDistance(p1, p2);
+  if (distanceScene < EPS) return null; // move is along the axis → lines collinear, no gap
+  const dimLineRef = calculateMidpoint(p1, p2);
+  return { p1, p2, dimLineRef, distanceScene };
 }
