@@ -195,24 +195,13 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
       // re-anchored the drag through the right-click menu, the displacement
       // is measured from the user-picked anchor instead of `grip.position`.
       const effectiveAnchor = GripBasePointStore.getSnapshot().overrideAnchor ?? anchorRef.current;
-      // ADR-513 §grip-parity — πληκτρολογημένο Μήκος/Γωνία (Δαχτυλίδι) στην ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ γραμμής.
-      // Ρητή είσοδος χρήστη = τελική γεωμετρία: νικά ΚΑΙ το arm-click shortcut (ώστε ένα κλείδωμα με
-      // ελάχιστη κίνηση να κάνει commit, όχι arm) ΚΑΙ τα ortho/step constraints (όπως στη σχεδίαση).
-      const endpointLockDelta = resolveLineEndpointCommitLock(activeGrip, worldPos, dxfCommitDeps);
-      if (endpointLockDelta) {
-        commitDxfGripDragModeAware(activeGrip, endpointLockDelta, dxfCommitDeps, GripModeStore.getSnapshot());
-        GripBasePointStore.clear();
-        resetToIdle();
-        return true;
-      }
-      // ADR-357/513 §grip-polar — POLAR angle-snap του ΑΚΡΟΥ στο commit (ΙΔΙΟΣ resolver με το ghost →
-      // preview ≡ committed). Γραμμή grip 0/1 + ανοιχτό polyline/lwpolyline endpoint. No-op όταν POLAR
-      // off / ORTHO on / δεν κούμπωσε — τότε πέφτει στα ortho/step constraints παρακάτω.
-      const endpointPolarDelta = resolveEndpointReshapeCommitPolar(activeGrip, worldPos, dxfCommitDeps);
-      if (endpointPolarDelta) {
-        commitDxfGripDragModeAware(activeGrip, endpointPolarDelta, dxfCommitDeps, GripModeStore.getSnapshot());
-        GripBasePointStore.clear();
-        resetToIdle();
+      // ADR-513 §grip-parity — ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ γραμμής (press-drag): πληκτρολογημένο Μήκος/Γωνία (lock)
+      // ή POLAR angle-snap. Ρητή είσοδος χρήστη = τελική γεωμετρία: νικά ΚΑΙ το arm-click shortcut (ώστε
+      // ένα κλείδωμα με ελάχιστη κίνηση να κάνει commit, όχι arm) ΚΑΙ τα ortho/step constraints. ΙΔΙΟΣ
+      // SSoT resolver + commit με το hot-grip branch → preview ≡ commit· `null` → arm-click/constraints κάτω.
+      const endpointDelta = resolveEndpointCommitDelta(activeGrip, worldPos, dxfCommitDeps);
+      if (endpointDelta) {
+        commitEndpointReshapeDelta(activeGrip, endpointDelta, dxfCommitDeps, resetToIdle);
         return true;
       }
       // ADR-501 — click-vs-drag: a press-release that barely moved the cursor is a

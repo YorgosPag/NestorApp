@@ -220,6 +220,12 @@ parity mirror), `hooks/grips/__tests__/wall-hot-grip-fsm.test.ts` (endpoint-stre
 `components/dxf-layout/DynamicInputSubscriber.tsx` (grip ring → `placementMode='canvas-click'` = ο ΙΔΙΟΣ
 μηχανισμός του τοίχου), `systems/dynamic-input/components/RadialCommandRing.tsx` (🐛 popup `<div>`
 `stopPropagation` — κόβει το bubbling του popup mouseup στους canvas grip handlers).
+**SSoT centralization (Giorgio order — μηδέν διπλότυπα):** `grip-mouse-handlers.ts` NEW `beginHotGripSession(grip,
+ctx, cfg)` = ΕΝΑΣ SSoT για το enter-hot-grip boilerplate (reset refs + phase + warm-clear), αντικαθιστά **3
+πανομοιότυπα inline αντίγραφα** (registry-enter + Ctrl-endpoint + endpoint-stretch)· διόρθωσε ΚΑΙ ένα latent bug
+(το copy-paste του endpoint-stretch είχε ξεχάσει το `BimRotateHotGripStore.clear()`). `grip-mouseup-handler.ts`
+NEW `resolveEndpointCommitDelta` (lock ?? polar, ΙΔΙΑ προτεραιότητα) + `commitEndpointReshapeDelta` =
+αντικαθιστούν **4 πανομοιότυπα** commit-and-reset short-circuits (press-drag + hot-grip × lock/polar).
 **STAGE:** ADR-513 (this doc). 363 jest GREEN.
 
 ## Sources (μελέτη AutoCAD NavWheel)
