@@ -21,7 +21,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
-import { closedRingFromEdges } from '../geometry/shared/polygon-utils';
+import { closedRingFromEdges, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import { rectangleCorners } from '../walls/wall-from-entity';
 import { rectFrameFromCorners, type RectFrame } from './rect-frame';
 import { arcToPolyline } from '../../utils/geometry/GeometryUtils';
@@ -51,10 +51,6 @@ export interface CollectMemberSnapTargetsOptions {
 
 type Pts = readonly { readonly x: number; readonly y: number }[];
 
-function toPoint2D(pts: Pts): Point2D[] {
-  return pts.map((v) => ({ x: v.x, y: v.y }));
-}
-
 /** Beam outline (έτοιμο κλειστό footprint). */
 function beamTarget(e: Entity): LinearMemberSnapTarget | null {
   const g = (e as {
@@ -66,7 +62,7 @@ function beamTarget(e: Entity): LinearMemberSnapTarget | null {
   const axis = g?.axisPolyline?.points;
   const outline = g?.outline?.vertices;
   if (axis && axis.length >= 2 && outline && outline.length >= 3) {
-    return { id: e.id, axis: toPoint2D(axis), outline: toPoint2D(outline) };
+    return { id: e.id, axis: projectVerticesTo2D(axis), outline: projectVerticesTo2D(outline) };
   }
   return null;
 }
@@ -81,7 +77,7 @@ function wallOutlineRing(e: Entity): Point2D[] | null {
   const outer = g?.outerEdge?.points;
   const inner = g?.innerEdge?.points;
   if (!outer || outer.length < 2 || !inner || inner.length < 2) return null;
-  const outline = closedRingFromEdges(toPoint2D(outer), toPoint2D(inner));
+  const outline = closedRingFromEdges(projectVerticesTo2D(outer), projectVerticesTo2D(inner));
   return outline.length < 3 ? null : outline;
 }
 
@@ -91,7 +87,7 @@ function wallTarget(e: Entity): LinearMemberSnapTarget | null {
   if (!axis || axis.length < 2) return null;
   const outline = wallOutlineRing(e);
   if (!outline) return null;
-  return { id: e.id, axis: toPoint2D(axis), outline };
+  return { id: e.id, axis: projectVerticesTo2D(axis), outline };
 }
 
 /**
@@ -145,7 +141,7 @@ function polylineEdgeTargets(
 function slabEdgeTargets(e: Entity): LinearMemberSnapTarget[] {
   const verts = (e as { geometry?: { polygon?: { vertices?: Pts } } }).geometry?.polygon?.vertices;
   if (!verts || verts.length < 3) return [];
-  return polylineEdgeTargets(toPoint2D(verts), true, e.id);
+  return polylineEdgeTargets(projectVerticesTo2D(verts), true, e.id);
 }
 
 /**
@@ -167,7 +163,7 @@ function lineTarget(e: Entity): LinearMemberSnapTarget | null {
 function polylineTargets(e: Entity): LinearMemberSnapTarget[] {
   const pl = e as { vertices?: Pts; closed?: boolean };
   if (!pl.vertices || pl.vertices.length < 2) return [];
-  return polylineEdgeTargets(toPoint2D(pl.vertices), Boolean(pl.closed), e.id);
+  return polylineEdgeTargets(projectVerticesTo2D(pl.vertices), Boolean(pl.closed), e.id);
 }
 
 /**
@@ -240,7 +236,7 @@ export function collectMemberSnapTargets(
 
     if (e.type === 'column') {
       const verts = (e as { geometry?: { footprint?: { vertices?: Pts } } }).geometry?.footprint?.vertices;
-      if (verts && verts.length >= 3) footprints.push(toPoint2D(verts));
+      if (verts && verts.length >= 3) footprints.push(projectVerticesTo2D(verts));
       continue;
     }
     if (wantBeam && e.type === 'beam') {
@@ -284,7 +280,7 @@ export function collectMemberSnapTargets(
 /** geometry.footprint.vertices (world-baked στραμμένο πολύγωνο) → zero-width edges (reuse `polylineEdgeTargets`, closed). */
 function footprintEdges(e: Entity): LinearMemberSnapTarget[] {
   const verts = (e as { geometry?: { footprint?: { vertices?: Pts } } }).geometry?.footprint?.vertices;
-  return verts && verts.length >= 3 ? polylineEdgeTargets(toPoint2D(verts), true, e.id) : [];
+  return verts && verts.length >= 3 ? polylineEdgeTargets(projectVerticesTo2D(verts), true, e.id) : [];
 }
 
 /**
@@ -328,7 +324,7 @@ export function collectCircularColumnFootprints(entities: readonly Entity[]): Po
   for (const e of entities) {
     if (e.type !== 'column' || (e as { kind?: string }).kind !== 'circular') continue;
     const verts = (e as { geometry?: { footprint?: { vertices?: Pts } } }).geometry?.footprint?.vertices;
-    if (verts && verts.length >= 3) out.push(toPoint2D(verts));
+    if (verts && verts.length >= 3) out.push(projectVerticesTo2D(verts));
   }
   return out;
 }
@@ -358,7 +354,7 @@ export function collectDiskTargets(entities: readonly Entity[]): { center: Point
 function closedQuadRectFrame(e: Entity): RectFrame | null {
   const pl = e as { vertices?: Pts; closed?: boolean };
   if (!pl.closed || !pl.vertices || pl.vertices.length !== 4) return null;
-  return rectFrameFromCorners(toPoint2D(pl.vertices));
+  return rectFrameFromCorners(projectVerticesTo2D(pl.vertices));
 }
 
 /**

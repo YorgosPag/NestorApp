@@ -24,6 +24,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { SlabEntity } from '../types/slab-types';
+import { projectPointTo2D } from '../geometry/shared/polygon-utils';
 
 // ─── Tagged result ─────────────────────────────────────────────────────────────
 
@@ -60,11 +61,5 @@ export function getSlabCornerWorldPoints(
   // rather than throwing"). Both absent → `verts` is undefined → the guard below returns [].
   const verts = slab.geometry?.polygon?.vertices ?? slab.params?.outline?.vertices;
   if (!verts || verts.length < 3) return [];
-  return verts.map((v, i) => ({ vertexIndex: i, point: to2D(v) }));
-}
-
-// ─── Internal helper ───────────────────────────────────────────────────────────
-
-function to2D(p: { readonly x: number; readonly y: number }): Point2D {
-  return { x: p.x, y: p.y };
+  return verts.map((v, i) => ({ vertexIndex: i, point: projectPointTo2D(v) }));
 }

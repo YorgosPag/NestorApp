@@ -32,6 +32,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { BeamEntity } from '../types/beam-types';
 import { CURVED_BEAM_SUBDIVISIONS } from '../types/beam-types';
 import { computeBeamGeometry } from '../geometry/beam-geometry';
+import { projectPointTo2D } from '../geometry/shared/polygon-utils';
 
 // ─── Tagged result ─────────────────────────────────────────────────────────────
 
@@ -84,10 +85,10 @@ export function getBeamCornerWorldPoints(
   if (verts.length < 4 || n < 2) return [];
 
   return [
-    { end: 'start', side: 'plus',  point: to2D(verts[0]) },
-    { end: 'end',   side: 'plus',  point: to2D(verts[n - 1]) },
-    { end: 'end',   side: 'minus', point: to2D(verts[n]) },
-    { end: 'start', side: 'minus', point: to2D(verts[2 * n - 1]) },
+    { end: 'start', side: 'plus',  point: projectPointTo2D(verts[0]) },
+    { end: 'end',   side: 'plus',  point: projectPointTo2D(verts[n - 1]) },
+    { end: 'end',   side: 'minus', point: projectPointTo2D(verts[n]) },
+    { end: 'start', side: 'minus', point: projectPointTo2D(verts[2 * n - 1]) },
   ];
 }
 
@@ -103,8 +104,4 @@ function axisVertexCount(beam: Readonly<BeamEntity>): number {
     return CURVED_BEAM_SUBDIVISIONS + 1;
   }
   return 2;
-}
-
-function to2D(p: { readonly x: number; readonly y: number }): Point2D {
-  return { x: p.x, y: p.y };
 }

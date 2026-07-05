@@ -32,6 +32,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { OpeningEntity } from '../types/opening-types';
+import { projectPointTo2D } from '../geometry/shared/polygon-utils';
 
 // ─── Tagged result ─────────────────────────────────────────────────────────────
 
@@ -72,11 +73,5 @@ export function getOpeningCornerWorldPoints(
 ): readonly OpeningCornerWorldPoint[] {
   const verts = opening.geometry.outline.vertices;
   if (verts.length !== 4) return [];
-  return CORNER_ORDER.map((corner, i) => ({ corner, point: to2D(verts[i]) }));
-}
-
-// ─── Internal helper ───────────────────────────────────────────────────────────
-
-function to2D(p: { readonly x: number; readonly y: number }): Point2D {
-  return { x: p.x, y: p.y };
+  return CORNER_ORDER.map((corner, i) => ({ corner, point: projectPointTo2D(verts[i]) }));
 }

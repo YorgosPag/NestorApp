@@ -23,6 +23,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { WallEntity } from '../types/wall-types';
 import { computeWallGeometry } from '../geometry/wall-geometry';
+import { projectPointTo2D } from '../geometry/shared/polygon-utils';
 
 // ─── Tagged result ─────────────────────────────────────────────────────────────
 
@@ -66,15 +67,9 @@ export function getWallCornerWorldPoints(
   const inner = geo.innerEdge.points;
 
   return [
-    { side: 'outer', end: 'start', point: to2D(outer[0]) },
-    { side: 'outer', end: 'end',   point: to2D(outer[outer.length - 1]) },
-    { side: 'inner', end: 'end',   point: to2D(inner[inner.length - 1]) },
-    { side: 'inner', end: 'start', point: to2D(inner[0]) },
+    { side: 'outer', end: 'start', point: projectPointTo2D(outer[0]) },
+    { side: 'outer', end: 'end',   point: projectPointTo2D(outer[outer.length - 1]) },
+    { side: 'inner', end: 'end',   point: projectPointTo2D(inner[inner.length - 1]) },
+    { side: 'inner', end: 'start', point: projectPointTo2D(inner[0]) },
   ];
-}
-
-// ─── Internal helper ───────────────────────────────────────────────────────────
-
-function to2D(p: { readonly x: number; readonly y: number }): Point2D {
-  return { x: p.x, y: p.y };
 }

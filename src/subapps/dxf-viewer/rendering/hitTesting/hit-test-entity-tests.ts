@@ -6,7 +6,7 @@
 
 import type { Point2D } from '../types/Types';
 import type { Entity, DimensionEntity } from '../../types/entities';
-import { closedRingFromEdges } from '../../bim/geometry/shared/polygon-utils';
+import { closedRingFromEdges, projectPointTo2D, projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import {
   isOpeningEntity,
   isSlabOpeningEntity,
@@ -31,14 +31,6 @@ import { pointToRayDistance } from '../utils/point-to-line-distance';
 import { hitTestText, hitTestAngleMeasurement, hitTestDimension } from './hit-test-annotations';
 // ADR-362 Phase I3 hotfix (2026-05-19) — SSoT for dim foot points / text anchor.
 import { HINGE_ARC_SUBDIVISIONS } from '../../bim/geometry/opening-geometry';
-
-/** Project a 3D point (or array) to 2D, dropping z. */
-function to2D(p: { readonly x: number; readonly y: number }): Point2D {
-  return { x: p.x, y: p.y };
-}
-function poly3to2(pts: readonly { readonly x: number; readonly y: number }[]): Point2D[] {
-  return pts.map(to2D);
-}
 
 /** Dispatch hit test to the correct entity-type handler */
 export function performDetailedHitTest(
@@ -92,7 +84,7 @@ function hitTestHatch(entity: Entity, point: Point2D): Partial<HitTestResult> | 
   const paths = (entity.boundaryPaths ?? []).filter((p) => p.length >= 3);
   if (paths.length === 0) return null;
   let inside = 0;
-  for (const path of paths) if (isPointInPolygon(point, poly3to2(path))) inside += 1;
+  for (const path of paths) if (isPointInPolygon(point, projectVerticesTo2D(path))) inside += 1;
   return inside % 2 === 1 ? { hitType: 'entity', hitPoint: point } : null;
 }
 
@@ -105,7 +97,7 @@ function hitTestOpening(entity: Entity, point: Point2D, tolerance: number): Part
 
   // 1. Outline rectangle (cutout inside wall thickness).
   const verts = geom.outline?.vertices;
-  if (verts && verts.length >= 3 && isPointInPolygon(point, poly3to2(verts))) {
+  if (verts && verts.length >= 3 && isPointInPolygon(point, projectVerticesTo2D(verts))) {
     return { hitType: 'entity', hitPoint: point };
   }
 
@@ -114,12 +106,12 @@ function hitTestOpening(entity: Entity, point: Point2D, tolerance: number): Part
 
   // 2. Leaf line(s) — solid door panel at 90°-open position.
   if (hinge && arc && arc.points.length > HINGE_ARC_SUBDIVISIONS) {
-    if (pointToLineDistance(point, to2D(hinge), to2D(arc.points[HINGE_ARC_SUBDIVISIONS])) <= tolerance) {
+    if (pointToLineDistance(point, projectPointTo2D(hinge), projectPointTo2D(arc.points[HINGE_ARC_SUBDIVISIONS])) <= tolerance) {
       return { hitType: 'entity', hitPoint: point };
     }
     const hinge2 = geom.hingeAnchor2;
     if (hinge2 && arc.points.length > HINGE_ARC_SUBDIVISIONS + 1) {
-      if (pointToLineDistance(point, to2D(hinge2), to2D(arc.points[HINGE_ARC_SUBDIVISIONS + 1])) <= tolerance) {
+      if (pointToLineDistance(point, projectPointTo2D(hinge2), projectPointTo2D(arc.points[HINGE_ARC_SUBDIVISIONS + 1])) <= tolerance) {
         return { hitType: 'entity', hitPoint: point };
       }
     }
@@ -128,7 +120,7 @@ function hitTestOpening(entity: Entity, point: Point2D, tolerance: number): Part
   // 3. Swing arc — test each chord segment.
   if (arc && arc.points.length >= 2) {
     for (let i = 0; i < arc.points.length - 1; i++) {
-      if (pointToLineDistance(point, to2D(arc.points[i]), to2D(arc.points[i + 1])) <= tolerance) {
+      if (pointToLineDistance(point, projectPointTo2D(arc.points[i]), projectPointTo2D(arc.points[i + 1])) <= tolerance) {
         return { hitType: 'entity', hitPoint: point };
       }
     }
@@ -141,21 +133,21 @@ function hitTestSlabOpening(entity: Entity, point: Point2D): Partial<HitTestResu
   if (!isSlabOpeningEntity(entity)) return null;
   const verts = entity.params?.outline?.vertices;
   if (!verts || verts.length < 3) return null;
-  return isPointInPolygon(point, poly3to2(verts)) ? { hitType: 'entity', hitPoint: point } : null;
+  return isPointInPolygon(point, projectVerticesTo2D(verts)) ? { hitType: 'entity', hitPoint: point } : null;
 }
 
 function hitTestSlab(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
   if (!isSlabEntity(entity)) return null;
   const verts = entity.params?.outline?.vertices;
   if (!verts || verts.length < 3) return null;
-  return isPointInPolygon(point, poly3to2(verts)) ? { hitType: 'entity', hitPoint: point } : null;
+  return isPointInPolygon(point, projectVerticesTo2D(verts)) ? { hitType: 'entity', hitPoint: point } : null;
 }
 
 function hitTestFloorFinish(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
   if (!isFloorFinishEntity(entity)) return null;
   const verts = entity.params?.footprint?.vertices;
   if (!verts || verts.length < 3) return null;
-  return isPointInPolygon(point, poly3to2(verts)) ? { hitType: 'entity', hitPoint: point } : null;
+  return isPointInPolygon(point, projectVerticesTo2D(verts)) ? { hitType: 'entity', hitPoint: point } : null;
 }
 
 function hitTestWallCovering(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
@@ -164,7 +156,7 @@ function hitTestWallCovering(entity: Entity, point: Point2D): Partial<HitTestRes
   // έλειπε στο build → no precise target (πέφτει σε broad-phase bbox μέσω geometry.bbox).
   const outline = entity.geometry?.outline;
   if (!outline || outline.length < 3) return null;
-  return isPointInPolygon(point, poly3to2(outline)) ? { hitType: 'entity', hitPoint: point } : null;
+  return isPointInPolygon(point, projectVerticesTo2D(outline)) ? { hitType: 'entity', hitPoint: point } : null;
 }
 
 function hitTestSpaceSeparator(
@@ -173,7 +165,7 @@ function hitTestSpaceSeparator(
   if (!isSpaceSeparatorEntity(entity)) return null;
   const { start, end } = entity.params;
   if (!start || !end) return null;
-  return pointToLineDistance(point, to2D(start), to2D(end)) <= tolerance
+  return pointToLineDistance(point, projectPointTo2D(start), projectPointTo2D(end)) <= tolerance
     ? { hitType: 'entity', hitPoint: point }
     : null;
 }
@@ -193,7 +185,7 @@ function hitTestColumn(entity: Entity, point: Point2D): Partial<HitTestResult> |
   if (!isColumnEntity(entity)) return null;
   const verts = entity.geometry?.footprint?.vertices;
   if (!verts || verts.length < 3) return null;
-  return isPointInPolygon(point, poly3to2(verts)) ? { hitType: 'entity', hitPoint: point } : null;
+  return isPointInPolygon(point, projectVerticesTo2D(verts)) ? { hitType: 'entity', hitPoint: point } : null;
 }
 
 // ADR-436 Slice 1b — foundation footprint containment (pad/strip/tie-beam all
@@ -202,14 +194,14 @@ function hitTestFoundation(entity: Entity, point: Point2D): Partial<HitTestResul
   if (!isFoundationEntity(entity)) return null;
   const verts = entity.geometry?.footprint?.vertices;
   if (!verts || verts.length < 3) return null;
-  return isPointInPolygon(point, poly3to2(verts)) ? { hitType: 'entity', hitPoint: point } : null;
+  return isPointInPolygon(point, projectVerticesTo2D(verts)) ? { hitType: 'entity', hitPoint: point } : null;
 }
 
 function hitTestBeam(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
   if (!isBeamEntity(entity)) return null;
   const verts = entity.geometry?.outline?.vertices;
   if (!verts || verts.length < 3) return null;
-  return isPointInPolygon(point, poly3to2(verts)) ? { hitType: 'entity', hitPoint: point } : null;
+  return isPointInPolygon(point, projectVerticesTo2D(verts)) ? { hitType: 'entity', hitPoint: point } : null;
 }
 
 // ===== LINE =====

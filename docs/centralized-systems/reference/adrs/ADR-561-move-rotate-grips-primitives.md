@@ -126,7 +126,12 @@ Circle / arc / polyline / rectangle → επιστρέφουν **WORLD-aligned i
   ίδιο shape) — **ίδιος κανόνας ADR-186 με τον committed converter**. Καλείται μία φορά στο preview boundary
   (`useGripGhostPreview`, μετά το `getEntity`) → ΟΛΟ το downstream (transform + ghost render + τα ίχνη/βέλη γωνίας του
   προηγούμενου changelog) βλέπει `'polyline'` και πυροδοτείται σωστά. Ένα σημείο, reusable από body-drag/Move-tool όταν
-  χρειαστεί. **Αρχεία**: `rendering/ghost/apply-entity-preview.ts` (+test), `rendering/ghost/index.ts`,
+  χρειαστεί. **Αρχιτεκτονική απόφαση (Giorgio 2026-07-05, «πρακτική των μεγάλων»)**: ΑΠΟΡΡΙΦΘΗΚΕ το native
+  `case 'lwpolyline'` στο preview/render — το **Dxf/render layer είναι canonical-polyline ΕΚ ΣΧΕΔΙΑΣΜΟΥ** (`DxfEntityUnion`
+  ΔΕΝ έχει `lwpolyline`· ο scene→Dxf converter το εξαλείφει· AutoCAD/Revit: `lwpolyline` ζει στο **data/scene layer** για
+  DXF round-trip fidelity, canonicalize στο edit/render). Native handling θα μόλυνε το canonical layer.
+  ⛔ **ΜΗΝ προσθέσεις `case 'lwpolyline'` σε `DxfEntityUnion`/`buildEntityModelFromDxf`/`applyEntityPreview`** — normalize
+  στο boundary. **Αρχεία**: `rendering/ghost/apply-entity-preview.ts` (+test), `rendering/ghost/index.ts`,
   `hooks/tools/useGripGhostPreview.ts`.
 - **2026-07-05** — ✨ **Polyline vertex reshape → πλήρη ίχνη ευθυγράμμισης + βέλη γωνίας + κυανές ενδείξεις (parity με τη γραμμή)** (Giorgio:
   «όταν μετακινώ ένα άκρο ενωμένης γραμμής θέλω να εμφανίζονται τα λευκά+κίτρινα+Polar ίχνη, τα πράσινα/κόκκινα βέλη

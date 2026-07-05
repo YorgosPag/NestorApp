@@ -21,7 +21,7 @@
 import type { Entity, LWPolylineEntity } from '../../types/entities';
 import { isBimEntity } from '../../types/entities';
 import type { Point3D } from '../../bim/types/bim-base';
-import { closedRingFromEdges } from '../../bim/geometry/shared/polygon-utils';
+import { closedRingFromEdges, projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import type { Point2D } from '../../rendering/types/Types';
 import type { DxfFlattenResult } from '../types';
 import { resolveDxfBodyLayer } from './dxf-category-layers';
@@ -168,12 +168,8 @@ function makeClosedLwpolyline(
     layerId: resolveDxfBodyLayer(source.type) ?? source.layerId,
     color: source.color,
     visible: source.visible ?? true,
-    vertices: ring.map(to2D),
+    vertices: projectVerticesTo2D(ring),
     closed: true,
     dxfThicknessMm: thicknessMm > 0 ? thicknessMm : undefined,
   };
-}
-
-function to2D(p: Point3D): Point2D {
-  return { x: p.x, y: p.y };
 }
