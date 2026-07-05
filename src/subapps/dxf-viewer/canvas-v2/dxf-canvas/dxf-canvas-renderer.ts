@@ -232,8 +232,11 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
               // the one being move-previewed. The 2-click Move tool dims ALL selected
               // (movePreviewActive); a grip drag dims ONLY the single grabbed entity
               // (gripDraggedEntityId) — its solid moving copy lives on PreviewCanvas.
+              // ADR-561 EXT — but a rotate-COPY keeps the source as a permanent original, so
+              // it stays SOLID (not dimmed); only the rotating clone ghost shows the move.
               movePreviewActive:
-                curRenderOptions.movePreviewActive || selId === curRenderOptions.gripDraggedEntityId,
+                curRenderOptions.movePreviewActive ||
+                (selId === curRenderOptions.gripDraggedEntityId && !curRenderOptions.gripDragIsCopy),
             });
           }
         }

@@ -3704,3 +3704,12 @@ Master view toggle «Σοβατισμένη όψη» (`showFinishSkin`, per-view
 - **`useCanvasKeyboardShortcuts`**(+types) + **`useCanvasEscapeRegistrations`** — offset keydown (digits/backspace/E/U) + `buildModifyHandler('offset',…)` ESC, ίδιο pattern με trim.
 
 **Live ghost = ADR-040-clean:** το `OffsetPreviewMount` (micro-leaf, μοναδικός subscriber του `OffsetToolStore`) τρέχει μέσω του κοινού `useCanvasGhostPreview` RAF harness· το ghost υπολογίζεται κάθε frame από `effectiveCursor` + το picked source — **μηδέν pointer-capture, μηδέν orchestrator re-render**. Bitmap cache άθικτο (το offset commit περνά από `OffsetEntityCommand` → scene ref αλλάζει → κανονικό rebuild, ίδιο με κάθε add). Rules 1-4 τηρούνται. 100 jest GREEN (offset 27 + trim regression). Βλ. **ADR-510 Φ4d**.
+
+## 2026-07-05: ADR-561 EXT — rotate-COPY inverted-ghost gate (`gripDragIsCopy`, CHECK 6B stage)
+
+**Καμία αρχιτεκτονική αλλαγή στο high-freq path — additive flag, μηδέν νέα subscription.** Το Ctrl-rotate-copy (grip drag με Ctrl/⌘ ή right-click «Copy» toggle) κρατά την **πηγή ως μόνιμο original**, οπότε δεν πρέπει να «σβήνει» (dim) ως inverted ghost — μόνο ο περιστρεφόμενος κλώνος είναι το translucent ghost στο PreviewCanvas. Άγγιξα CHECK 6B αρχεία, όλα inert/additive:
+- **`dxf-types.ts`** — νέο optional `gripDragIsCopy?: boolean` στο `DxfRenderOptions` (WYSIWYG flag, όχι state).
+- **`dxf-canvas-renderer.ts`** (6B) — το υπάρχον `movePreviewActive` gate γίνεται `... || (selId === gripDraggedEntityId && !gripDragIsCopy)`: για COPY η πηγή μένει **SOLID** στη θέση της. Καμία αλλαγή στο bitmap cache key (rule 3 — το `gripDragIsCopy` δεν μπαίνει στο key), κανένα νέο store read στον renderer.
+- **`CanvasLayerStack.tsx`** (6B shell) — υπολογίζει `gripDragIsCopy` με **plain `getSnapshot` reads** (`CtrlKeyTracker` + `GripCopyModeStore`), **ΟΧΙ `useSyncExternalStore`** → το Shell μένει inert (CHECK 6C safe), και το περνά prop στο leaf path.
+
+Ο κανονικός `RotateEntityCommand.copyMode` (ADR-357 Φ12) κατέχει τον κλώνο + undo/redo — εκτός preview path. Rules 1-4 τηρούνται. Βλ. **ADR-561**. Staged για CHECK 6B.

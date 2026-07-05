@@ -23,6 +23,10 @@ import { dwarn } from '../../debug';
 import type { Point2D } from '../../rendering/types/Types';
 import { getImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
 import { setHoveredEntity, setHoveredOverlay } from '../../systems/hover/HoverStore';
+// ADR-561 EXT — copy-drag detection for the inverted-ghost gate. Plain getSnapshot reads
+// (NOT useSyncExternalStore) → CHECK 6C compliant; the Shell stays inert per ADR-040.
+import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
+import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import type { DxfRenderOptions } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { CanvasLayerStackProps } from './canvas-layer-stack-types';
@@ -254,6 +258,12 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   // object) keeps the memo stable through the drag — the main canvas re-renders only on
   // drag start/end (id flips), never per-frame, preserving the ADR-040 static-main-canvas.
   const gripDraggedEntityId = dxfGripInteraction.dragPreview?.entityId ?? null;
+  // ADR-561 EXT — a grip drag that is a COPY (Ctrl/⌘ held, or the right-click «Copy» toggle)
+  // keeps its source as a permanent original → it must stay SOLID, not dim as the inverted
+  // ghost. Read once per Shell render (drag start/end); plain getSnapshot (no subscription).
+  const gripDragIsCopy =
+    gripDraggedEntityId != null &&
+    (CtrlKeyTracker.getSnapshot() || GripCopyModeStore.getSnapshot().enabled);
   const dxfRenderOptionsBase = useMemo<Omit<DxfRenderOptions, 'hoveredEntityId' | 'selectedEntityIds'>>(
     () => ({
       showGrid: false,
@@ -266,8 +276,9 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
       movePreviewActive:
         movePreview.phase === 'awaiting-destination' || rotationPreview.phase === 'awaiting-angle',
       gripDraggedEntityId,
+      gripDragIsCopy,
     }),
-    [dxfGripInteraction.gripInteractionState, movePreview.phase, rotationPreview.phase, gripDraggedEntityId],
+    [dxfGripInteraction.gripInteractionState, movePreview.phase, rotationPreview.phase, gripDraggedEntityId, gripDragIsCopy],
   );
   // Guide workflow computed params (passed to DxfCanvasSubscriber)
   const guideComputedParams = useMemo(() => ({

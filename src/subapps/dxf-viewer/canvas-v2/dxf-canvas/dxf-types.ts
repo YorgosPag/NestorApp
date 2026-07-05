@@ -649,6 +649,13 @@ export interface DxfRenderOptions {
    * single grabbed entity — not the rest of the selection.
    */
   gripDraggedEntityId?: string | null;
+  /**
+   * ADR-561 EXT — the active grip drag is a rotate-COPY (Ctrl / «Copy» toggle): the source
+   * entity stays PUT as a permanent original, so it must NOT be dimmed as the inverted
+   * ghost. When true the `gripDraggedEntityId` entity renders SOLID at its origin, while the
+   * rotating clone is the translucent ghost on PreviewCanvas.
+   */
+  gripDragIsCopy?: boolean;
 }
 
 // === DXF SELECTION ===
