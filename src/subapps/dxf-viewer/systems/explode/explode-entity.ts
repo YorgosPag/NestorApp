@@ -20,16 +20,19 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Entity, LineEntity, ArcEntity, RectangleEntity, RectEntity } from '../../types/entities';
+import type { Entity, LineEntity, ArcEntity, RectangleEntity, RectEntity, GroupEntity } from '../../types/entities';
 import { bulgeToArc, isStraightSegment } from '../../rendering/entities/shared/geometry-bulge-utils';
 import { radToDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 import { rotatePoint } from '../../utils/rotation-math';
 import { inheritEntityStyle } from '../entity-creation/inherit-entity-style';
 import { generateEntityId } from '../entity-creation/utils';
 import { createRectangleVertices } from '../selection/shared/selection-duplicate-utils';
+// ADR-575 — UNGROUP «Κατάργηση Ομαδοποίησης»: exploding a GROUP container restores
+// its members. Single SSoT unwrap lives in the group engine.
+import { ungroupGroup } from '../group/group-entity';
 
-/** Entity types that EXPLODE can break apart (Φ5.1). */
-const EXPLODABLE_TYPES: ReadonlySet<string> = new Set(['polyline', 'lwpolyline', 'rectangle', 'rect']);
+/** Entity types that EXPLODE can break apart (Φ5.1 + GROUP UNGROUP). */
+const EXPLODABLE_TYPES: ReadonlySet<string> = new Set(['polyline', 'lwpolyline', 'rectangle', 'rect', 'group']);
 
 /** True when EXPLODE would produce a change for this entity type. */
 export function isExplodable(entity: Entity): boolean {
@@ -151,6 +154,9 @@ export function explodeEntity(entity: Entity): Entity[] | null {
     segs = explodePolyline(entity);
   } else if (entity.type === 'rectangle' || entity.type === 'rect') {
     segs = explodeRectangle(entity as RectangleEntity | RectEntity);
+  } else if (entity.type === 'group') {
+    // UNGROUP: a GROUP container breaks back into its members (ADR-575).
+    segs = ungroupGroup(entity as GroupEntity);
   }
   if (!segs) return null;
   // Belt-and-suspenders: drop any primitive with non-finite geometry so a broken
