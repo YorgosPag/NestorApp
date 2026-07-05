@@ -20,6 +20,7 @@ import {
   MeasurementConfiguration
 } from '../enterprise-types/GeoCanvasTypes';
 import { GEO_CANVAS_ZINDEX } from '../../config';
+import { createExternalStore } from '@/lib/state/createExternalStore';
 
 // ============================================================================
 // 🎯 ENTERPRISE DEFAULT CONFIGURATIONS - SINGLE SOURCE OF TRUTH
@@ -274,7 +275,12 @@ export const DEFAULT_GEO_CANVAS_CONFIG: GeoCanvasConfiguration = {
 
 export class GeoCanvasConfigManager {
   private config: GeoCanvasConfiguration;
-  private listeners: Set<(config: GeoCanvasConfiguration) => void> = new Set();
+  /**
+   * WAVE 3 — `this.config` stays the SSoT; the pub/sub cell is a version-signal store
+   * (createExternalStore<number>), so payload subscribers are re-fired via a wrapper that
+   * reads the current config. Mirrors CanvasSettings (WAVE 2.8).
+   */
+  private readonly changeStore = createExternalStore<number>(0);
 
   constructor(initialConfig?: Partial<GeoCanvasConfiguration>) {
     this.config = this.mergeConfigurations(DEFAULT_GEO_CANVAS_CONFIG, initialConfig || {});
@@ -312,8 +318,7 @@ export class GeoCanvasConfigManager {
    * Subscribe to configuration changes
    */
   subscribe(listener: (config: GeoCanvasConfiguration) => void): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+    return this.changeStore.subscribe(() => listener(this.getConfig()));
   }
 
   /**
@@ -378,13 +383,8 @@ export class GeoCanvasConfigManager {
   }
 
   private notifyListeners(): void {
-    this.listeners.forEach(listener => {
-      try {
-        listener(this.getConfig());
-      } catch (error) {
-        console.error('Configuration listener error:', error);
-      }
-    });
+    // Bump the version signal — each subscriber's wrapper re-reads getConfig() (a fresh copy).
+    this.changeStore.set(this.changeStore.get() + 1);
   }
 }
 
