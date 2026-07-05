@@ -14,8 +14,11 @@
  */
 
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
+import type { Entity } from '../../../types/entities';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
+// N.12 SSoT — shared container extract/restore lifecycle (also used by CreateArrayCommand + CreateGroupCommand).
+import { extractSourcesFromScene, restoreSourcesToScene } from './entity-source-extraction';
 
 export class JoinEntityCommand implements ICommand {
   readonly id: string;
@@ -45,19 +48,13 @@ export class JoinEntityCommand implements ICommand {
    * Execute: Snapshot originals → remove originals → add merged entity
    */
   execute(): void {
-    // Snapshot all source entities before removal
-    this.originalSnapshots = [];
+    // SSoT: snapshot sources (deep-clone, for undo) + remove originals from scene.
+    const sources: Entity[] = [];
     for (const entityId of this.sourceEntityIds) {
       const entity = this.sceneManager.getEntity(entityId);
-      if (entity) {
-        this.originalSnapshots.push(deepClone(entity));
-      }
+      if (entity) sources.push(entity as unknown as Entity);
     }
-
-    // Remove originals
-    for (const entityId of this.sourceEntityIds) {
-      this.sceneManager.removeEntity(entityId);
-    }
+    this.originalSnapshots = extractSourcesFromScene(sources, this.sceneManager) as unknown as SceneEntity[];
 
     // Add merged entity
     this.sceneManager.addEntity(deepClone(this.mergedEntity));
@@ -69,14 +66,8 @@ export class JoinEntityCommand implements ICommand {
    */
   undo(): void {
     if (!this.wasExecuted) return;
-
-    // Remove merged entity
     this.sceneManager.removeEntity(this.mergedEntity.id);
-
-    // Restore originals
-    for (const snapshot of this.originalSnapshots) {
-      this.sceneManager.addEntity(deepClone(snapshot));
-    }
+    restoreSourcesToScene(this.originalSnapshots as unknown as Entity[], this.sceneManager);
   }
 
   /**
