@@ -1,6 +1,9 @@
 import React from 'react';
 import type { LineType } from '../../../../../settings-core/types';
 import type { GripSettingsBase, GripColors } from '../../../../../types/grip-settings-schema';
+// ADR-559 §3e/§3f — local preview prop-types are PROJECTIONS of the canonical schemas.
+import type { LineSettingsBase } from '../../../../../types/line-settings-schema';
+import type { TextSettingsBase } from '../../../../../types/text-settings-schema';
 import { getDashArray } from '../../../../../settings-core/defaults';
 import { layoutUtilities } from '@/styles/design-tokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -15,31 +18,31 @@ const getDashArrayForSvg = (type: LineType | string, scale: number = 1) => {
   return getDashArray(type, scale).join(' ');
 };
 
-interface LineSettings {
-  lineType: LineType;
-  lineWidth: number;
-  color: string;
-  opacity: number;
+// Preview view-model: subset of the canonical line schema (`lineCap`/`lineJoin` widened to
+// optional `string` for the preview). One schema, no re-declaration.
+type LineSettings = Pick<
+  LineSettingsBase,
+  'lineType' | 'lineWidth' | 'color' | 'opacity' | 'breakAtCenter' | 'enabled'
+> & {
   dashScale?: number;
   dashOffset?: number;
   lineCap?: string;
   lineJoin?: string;
-  breakAtCenter: boolean;
-  enabled: boolean; // 🆕 ΠΡΟΣΘΗΚΗ: Flag για εμφάνιση γραμμών
-}
+};
 
-interface TextSettings {
-  enabled: boolean; // 🆕 ΠΡΟΣΘΗΚΗ: Flag για εμφάνιση κειμένου απόστασης
-  color: string;
-  fontSize: number;
-  fontFamily: string;
-  isBold: boolean;
-  isItalic: boolean;
-  isUnderline: boolean;
-  isStrikethrough: boolean;
-  isSuperscript: boolean;
-  isSubscript: boolean;
-}
+type TextSettings = Pick<
+  TextSettingsBase,
+  | 'enabled'
+  | 'color'
+  | 'fontSize'
+  | 'fontFamily'
+  | 'isBold'
+  | 'isItalic'
+  | 'isUnderline'
+  | 'isStrikethrough'
+  | 'isSuperscript'
+  | 'isSubscript'
+>;
 
 // ADR-559 — local preview prop-type is a PROJECTION of the canonical grip schema
 // (the fields this preview reads; omits showGrips/gripObjLimit). One schema, no re-declaration.

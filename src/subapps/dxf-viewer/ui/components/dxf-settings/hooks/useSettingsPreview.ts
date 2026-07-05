@@ -46,7 +46,10 @@ import { useMemo } from 'react';
 // LINE PREVIEW
 // ============================================================================
 
-export interface LineSettings {
+// ADR-559 §3e — NOT the canonical line settings: a tiny CSS-preview input ({color,width,style}
+// with preview-only field names/types). Renamed to de-collide from the SSoT `LineSettings`
+// (mirror the grip `GripCssPreviewInput`).
+export interface LineCssPreviewInput {
   color: string;
   width: number;
   style: 'solid' | 'dashed' | 'dotted' | 'dash-dot';
@@ -63,7 +66,7 @@ export interface UseLinePreviewReturn {
  * @param settings - Current line settings (color, width, style)
  * @returns {UseLinePreviewReturn} - Preview styles και SVG path (αν χρειάζεται)
  */
-export function useLinePreview(settings: LineSettings): UseLinePreviewReturn {
+export function useLinePreview(settings: LineCssPreviewInput): UseLinePreviewReturn {
   const previewStyles = useMemo<React.CSSProperties>(() => {
     // Base styles
     const baseStyles: React.CSSProperties = {
@@ -75,7 +78,7 @@ export function useLinePreview(settings: LineSettings): UseLinePreviewReturn {
 
     // Line style mapping
     const styleMap: Record<
-      LineSettings['style'],
+      LineCssPreviewInput['style'],
       React.CSSProperties['borderTopStyle']
     > = {
       solid: 'solid',
@@ -109,7 +112,10 @@ export function useLinePreview(settings: LineSettings): UseLinePreviewReturn {
 // TEXT PREVIEW
 // ============================================================================
 
-export interface TextSettings {
+// ADR-559 §3f — NOT the canonical text settings: a tiny CSS-preview input. Note `fontWeight`
+// is a CSS string union here, NOT the numeric 100-900 weight of the stored settings. Renamed to
+// de-collide from the SSoT `TextSettings` (mirror `GripCssPreviewInput`).
+export interface TextCssPreviewInput {
   color: string;
   fontSize: number;
   fontFamily: string;
@@ -128,7 +134,7 @@ export interface UseTextPreviewReturn {
  * @param settings - Current text settings (color, font, size)
  * @returns {UseTextPreviewReturn} - Preview styles και sample text
  */
-export function useTextPreview(settings: TextSettings): UseTextPreviewReturn {
+export function useTextPreview(settings: TextCssPreviewInput): UseTextPreviewReturn {
   const previewStyles = useMemo<React.CSSProperties>(() => {
     return {
       color: settings.color,

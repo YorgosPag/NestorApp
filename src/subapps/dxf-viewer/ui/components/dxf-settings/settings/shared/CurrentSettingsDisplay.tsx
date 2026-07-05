@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { useUnifiedTextPreview } from '../../../../hooks/useUnifiedSpecificSettings';
-import type { LineType } from '../../../../../settings-core/types';
+// ADR-559 §3e/§3f — these local prop-types are PROJECTIONS of the canonical schema, not
+// re-declarations. One schema, no drift.
+import type { LineSettingsBase } from '../../../../../types/line-settings-schema';
+import type { TextSettingsBase } from '../../../../../types/text-settings-schema';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -18,27 +21,19 @@ import { useTranslation } from '@/i18n';
 // 🏢 ADR-081: Centralized percentage formatting
 import { formatPercent } from '../../../../../rendering/entities/shared/distance-label-utils';
 
-interface LineSettings {
-  lineType: LineType;
-  color: string;
-  lineWidth: number;
-  opacity: number;
+// Display view-model: a subset of the canonical line schema. `lineCap`/`lineJoin` stay
+// widened to optional `string` for this read-only summary (loosest legitimate view).
+type LineSettings = Pick<LineSettingsBase, 'lineType' | 'color' | 'lineWidth' | 'opacity'> & {
   dashScale?: number;
   dashOffset?: number;
   lineCap?: string;
   lineJoin?: string;
-}
+};
 
-interface TextSettings {
-  color: string;
-  fontSize: number;
-  fontFamily: string;
-  isBold: boolean;
-  isItalic: boolean;
-  isUnderline: boolean;
-  isSuperscript: boolean;
-  isSubscript: boolean;
-}
+type TextSettings = Pick<
+  TextSettingsBase,
+  'color' | 'fontSize' | 'fontFamily' | 'isBold' | 'isItalic' | 'isUnderline' | 'isSuperscript' | 'isSubscript'
+>;
 
 // ADR-559 — NOT the canonical grip settings: a local DISPLAY summary view-model with
 // display-only fields (gripShape / showFill) that do not belong in the settings schema.
