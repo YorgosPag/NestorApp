@@ -8,25 +8,25 @@
  * (event-time) + subscribe για άμεσο re-apply όταν αλλάζει χωρίς κίνηση ποντικιού.
  *
  * Pattern: `HoverStore` / `ImmediateTransformStore` (zero React state). ADR-040-safe.
+ * Notify plumbing delegated to the SSoT `createExternalStore` primitive.
  */
 
-let _suppressed = false;
-const _subs = new Set<() => void>();
+import { createExternalStore } from '../../stores/createExternalStore';
+
+// `equals: Object.is` reproduces the old `if (_suppressed === next) return` no-op.
+const store = createExternalStore<boolean>(false, { equals: Object.is });
 
 /** True όταν κάποιο overlay (π.χ. το NavWheel) απαιτεί να κρυφτεί το σταυρόνημα. */
 export function isCrosshairSuppressed(): boolean {
-  return _suppressed;
+  return store.get();
 }
 
 /** Writer — καλείται από το overlay που «πιάνει» τον κέρσορα. No-op αν δεν αλλάζει. */
 export function setCrosshairSuppressed(next: boolean): void {
-  if (_suppressed === next) return;
-  _suppressed = next;
-  for (const cb of _subs) cb();
+  store.set(next);
 }
 
 /** Subscribe σε αλλαγές (ώστε ο crosshair να ξανα-εφαρμόσει ακόμη κι αν δεν κουνηθεί το ποντίκι). */
 export function subscribeCrosshairSuppression(cb: () => void): () => void {
-  _subs.add(cb);
-  return () => { _subs.delete(cb); };
+  return store.subscribe(cb);
 }

@@ -10,6 +10,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export type LassoMode = 'window' | 'crossing';
 
@@ -24,50 +25,44 @@ const IDLE: LassoState = { isLasso: false, lassoPath: [] };
 const LASSO_POINT_MIN_DIST = 1;
 
 class LassoStoreClass {
-  private state: LassoState = IDLE;
-  private listeners = new Set<() => void>();
-
-  private notify(): void {
-    this.listeners.forEach(l => l());
-  }
+  // SSoT pub/sub primitive· ΧΩΡΙΣ `equals` (always-notify) = byte-identical με το
+  // παλιό hand-rolled `Set` (60fps mousemove hot-path — ADR-040· τα append guards
+  // κόβουν νωρίς πριν το notify, οπότε κάθε set = πραγματική αλλαγή).
+  private readonly store = createExternalStore<LassoState>(IDLE);
 
   startLasso(firstPoint: Point2D): void {
-    this.state = { isLasso: true, lassoPath: [{ x: firstPoint.x, y: firstPoint.y }] };
-    this.notify();
+    this.store.set({ isLasso: true, lassoPath: [{ x: firstPoint.x, y: firstPoint.y }] });
   }
 
   appendPoint(point: Point2D): void {
-    if (!this.state.isLasso) return;
-    const path = this.state.lassoPath;
+    const state = this.store.get();
+    if (!state.isLasso) return;
+    const path = state.lassoPath;
     const last = path[path.length - 1];
     if (last &&
       Math.abs(point.x - last.x) < LASSO_POINT_MIN_DIST &&
       Math.abs(point.y - last.y) < LASSO_POINT_MIN_DIST) return;
-    this.state = { ...this.state, lassoPath: [...path, { x: point.x, y: point.y }] };
-    this.notify();
+    this.store.set({ ...state, lassoPath: [...path, { x: point.x, y: point.y }] });
   }
 
   /** Returns final snapshot for processing, then resets to idle. */
   endLasso(): LassoState {
-    const final = this.state;
-    this.state = IDLE;
-    this.notify();
+    const final = this.store.get();
+    this.store.set(IDLE);
     return final;
   }
 
   cancelLasso(): void {
-    if (!this.state.isLasso) return;
-    this.state = IDLE;
-    this.notify();
+    if (!this.store.get().isLasso) return;
+    this.store.set(IDLE);
   }
 
-  getIsLasso(): boolean { return this.state.isLasso; }
-  getLassoPath(): readonly Point2D[] { return this.state.lassoPath; }
-  getSnapshot(): LassoState { return this.state; }
+  getIsLasso(): boolean { return this.store.get().isLasso; }
+  getLassoPath(): readonly Point2D[] { return this.store.get().lassoPath; }
+  getSnapshot(): LassoState { return this.store.get(); }
 
   subscribe(listener: () => void): () => void {
-    this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
+    return this.store.subscribe(listener);
   }
 }
 

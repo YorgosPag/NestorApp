@@ -8,34 +8,30 @@
  * reads the variant to decide which cursor symbol to draw.
  *
  * @see systems/cursor/config.ts  — user-configurable cursor preferences
+ * @see ../../stores/createExternalStore — SSoT pub/sub primitive (notify plumbing)
  */
+
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export type ToolCursorVariant = 'default' | 'trim-pickbox' | 'extend-arrow' | 'offset-pickbox' | 'fillet-pickbox' | 'chamfer-pickbox';
 
-let _variant: ToolCursorVariant = 'default';
-const _listeners = new Set<() => void>();
-
-function _notify(): void {
-  _listeners.forEach((fn) => fn());
-}
+// `equals: Object.is` reproduces the old `if (_variant === v) return` bail.
+const store = createExternalStore<ToolCursorVariant>('default', { equals: Object.is });
 
 export const ToolCursorStore = {
   get(): ToolCursorVariant {
-    return _variant;
+    return store.get();
   },
 
   set(v: ToolCursorVariant): void {
-    if (_variant === v) return;
-    _variant = v;
-    _notify();
+    store.set(v);
   },
 
   subscribe(fn: () => void): () => void {
-    _listeners.add(fn);
-    return () => _listeners.delete(fn);
+    return store.subscribe(fn);
   },
 
   reset(): void {
-    ToolCursorStore.set('default');
+    store.set('default');
   },
 } as const;

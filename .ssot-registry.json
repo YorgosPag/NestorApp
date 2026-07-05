@@ -107,6 +107,25 @@
       ],
       "tier": 3
     },
+    "create-external-store": {
+      "ssotFile": "src/subapps/dxf-viewer/stores/createExternalStore.ts",
+      "description": "WAVE 2/2.5 (Opus 4.8) — zero-React single-value pub/sub stores (a module-level `let state` + `const listeners = new Set<() => void>()` + notify/get/set/subscribe, consumed via useSyncExternalStore) live on the createExternalStore<T>(initial,{equals?}) factory. The `new Set<() => void>()` listener-set + _notify boilerplate was hand-copied byte-identical across ~22 stores (edit-{opening,wall,roof,slab}-type / AdminLayerManagerDialog / stair-status / SelectionCycling / DynamicInputLock / CommandLine / CommandHistory / ToolCursor / CrosshairSuppression / Lasso / cursor-Selection / {Chamfer,Fillet,Offset,Trim,Stretch,Scale,Extend}ToolStore / ArrayStore). Declaring a new `new Set<() => void>` listener set re-implements the pub/sub cell — call createExternalStore<T>() plus thin domain-named wrappers instead. ALLOWLIST = the 3 sibling store factories (canonical homes: external/confirm/toggle) + the genuine NOT-A-FIT stores that legitimately cannot use a single-value store: async caches (material-thumbnail-resolver / opening-tag-style-service), a per-level Map cache (envelope-spec-store), the ADR-040 multi-cell hot-path stores (ImmediateSnapStore / ImmediateTransformStore), and the per-key signature-cache slice store (RibbonFieldStore, ADR-547). Test files are exempt via exemptPatterns.",
+      "forbiddenPatterns": [
+        "new Set<\\(\\) => void>"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/stores/createExternalStore.ts",
+        "src/subapps/dxf-viewer/stores/createConfirmStore.ts",
+        "src/subapps/dxf-viewer/stores/createToggleStore.ts",
+        "src/subapps/dxf-viewer/bim/materials/material-thumbnail-resolver.ts",
+        "src/subapps/dxf-viewer/bim/services/opening-tag-style-service.ts",
+        "src/subapps/dxf-viewer/bim/stores/envelope-spec-store.ts",
+        "src/subapps/dxf-viewer/systems/cursor/ImmediateSnapStore.ts",
+        "src/subapps/dxf-viewer/systems/cursor/ImmediateTransformStore.ts",
+        "src/subapps/dxf-viewer/ui/ribbon/context/RibbonFieldStore.ts"
+      ],
+      "tier": 3
+    },
     "browser-performance-memory": {
       "ssotFile": "src/lib/platform/browser-performance-memory.ts",
       "description": "ADR-546 — The non-standard Chrome `performance.memory` API must be declared and read ONLY through src/lib/platform/browser-performance-memory.ts. Re-declaring `interface PerformanceWithMemory`/`PerformanceMemory` or casting `as PerformanceWithMemory` anywhere else reintroduces the 4-type + 12-reader cross-subapp duplication with inconsistent units (bytes vs MB) and unsafe non-optional casts. Use readPerformanceMemory() (raw bytes) or readCpuMemoryMb() (MB). Type re-exports via `export type { ... } from` are allowed.",

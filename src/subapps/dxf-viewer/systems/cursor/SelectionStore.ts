@@ -12,6 +12,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { pointsEqual } from '../../rendering/entities/shared/geometry-vector-utils';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export interface SelectionState {
   isSelecting: boolean;
@@ -26,47 +27,40 @@ const IDLE: SelectionState = {
 };
 
 class SelectionStoreClass {
-  private state: SelectionState = IDLE;
-  private listeners = new Set<() => void>();
-
-  private notify(): void {
-    this.listeners.forEach(l => l());
-  }
+  // SSoT pub/sub primitive· ΧΩΡΙΣ `equals` (always-notify) = byte-identical με το
+  // παλιό hand-rolled `Set` (60fps mousemove hot-path — ADR-040· το `pointsEqual`
+  // guard στο updateSelection κόβει νωρίς πριν το notify).
+  private readonly store = createExternalStore<SelectionState>(IDLE);
 
   startSelection(startPoint: Point2D): void {
-    this.state = {
+    this.store.set({
       isSelecting: true,
       selectionStart: { x: startPoint.x, y: startPoint.y },
       selectionCurrent: { x: startPoint.x, y: startPoint.y },
-    };
-    this.notify();
+    });
   }
 
   updateSelection(current: Point2D): void {
-    const prev = this.state.selectionCurrent;
-    if (pointsEqual(prev, current)) return;
-    this.state = { ...this.state, selectionCurrent: { x: current.x, y: current.y } };
-    this.notify();
+    const state = this.store.get();
+    if (pointsEqual(state.selectionCurrent, current)) return;
+    this.store.set({ ...state, selectionCurrent: { x: current.x, y: current.y } });
   }
 
   endSelection(): void {
-    this.state = IDLE;
-    this.notify();
+    this.store.set(IDLE);
   }
 
   cancelSelection(): void {
-    this.state = IDLE;
-    this.notify();
+    this.store.set(IDLE);
   }
 
-  getIsSelecting(): boolean { return this.state.isSelecting; }
-  getSelectionStart(): Point2D | null { return this.state.selectionStart; }
-  getSelectionCurrent(): Point2D | null { return this.state.selectionCurrent; }
-  getSnapshot(): SelectionState { return this.state; }
+  getIsSelecting(): boolean { return this.store.get().isSelecting; }
+  getSelectionStart(): Point2D | null { return this.store.get().selectionStart; }
+  getSelectionCurrent(): Point2D | null { return this.store.get().selectionCurrent; }
+  getSnapshot(): SelectionState { return this.store.get(); }
 
   subscribe(listener: () => void): () => void {
-    this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
+    return this.store.subscribe(listener);
   }
 }
 
