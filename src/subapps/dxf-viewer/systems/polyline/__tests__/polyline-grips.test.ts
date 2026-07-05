@@ -6,6 +6,7 @@ import {
   polylineMoveRotateStartIndex,
   getPolylineGripAlignmentAnchors,
   getPolylineVertexIncidentSegments,
+  getPolylineVertexNeighbourIndices,
   POLYLINE_MOVE_KIND,
   POLYLINE_ROTATION_KIND,
 } from '../polyline-grips';
@@ -92,6 +93,25 @@ describe('getPolylineGripAlignmentAnchors (ADR-561 — vertex reshape tracking a
 
   it('degenerate ring (<2 vertices) → null', () => {
     expect(getPolylineGripAlignmentAnchors(0, [A], false)).toBeNull();
+  });
+});
+
+describe('getPolylineVertexNeighbourIndices (ADR-357/508/561 — shared adjacency SSoT)', () => {
+  it('open ring endpoint (grip 0) → only next', () => {
+    expect(getPolylineVertexNeighbourIndices(0, 3, false)).toEqual({ prev: null, next: 1 });
+  });
+  it('open ring other endpoint (grip n−1) → only prev', () => {
+    expect(getPolylineVertexNeighbourIndices(2, 3, false)).toEqual({ prev: 1, next: null });
+  });
+  it('interior vertex → both', () => {
+    expect(getPolylineVertexNeighbourIndices(1, 3, false)).toEqual({ prev: 0, next: 2 });
+  });
+  it('closed ring endpoint → wraps (prev = n−1, next = 1)', () => {
+    expect(getPolylineVertexNeighbourIndices(0, 4, true)).toEqual({ prev: 3, next: 1 });
+  });
+  it('non-vertex / degenerate → both null', () => {
+    expect(getPolylineVertexNeighbourIndices(3, 3, false)).toEqual({ prev: null, next: null });
+    expect(getPolylineVertexNeighbourIndices(0, 1, false)).toEqual({ prev: null, next: null });
   });
 });
 

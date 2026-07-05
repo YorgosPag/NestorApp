@@ -118,8 +118,11 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
     γωνιακή/εσωτερική κορυφή → 2 σκέλη (**Revit temporary-dimensions parity**).
   - **FIX (ZERO νέα formula)**:
     - NEW pure SSoT `getPolylineVertexIncidentSegments(gripIndex, vertexCount, closed)` (`systems/polyline/polyline-grips.ts`)
-      — τα (≤2) incident edges μιας κορυφής (sibling του `getPolylineGripAlignmentAnchors`, ίδια επιλογή γειτόνων· wrap σε
-      closed ring· `[]` για μη-vertex index). +7 jest.
+      — τα (≤2) incident edges μιας κορυφής (`[]` για μη-vertex index). +7 jest.
+    - **Boy-Scout κεντρικοποίηση (N.0.2, Giorgio SSoT audit 2026-07-05)**: εξήχθη ΚΟΙΝΟ adjacency SSoT
+      `getPolylineVertexNeighbourIndices(gripIndex, n, closed) → {prev,next}` (wraparound/boundary μία φορά)· ΚΑΙ το
+      `getPolylineVertexIncidentSegments` ΚΑΙ το προϋπάρχον `getPolylineGripAlignmentAnchors` παράγονται πλέον από αυτό —
+      έφυγε το copy-pasted `if (i−1≥0)…else if(closed)…` που ζούσε 2 φορές. +5 jest (25/25 σύνολο).
     - `drawMemberGripHud`: NEW branch `type === 'polyline' && !movesEntity && !rotatePivot` → για κάθε incident segment
       `paintWallHud(buildSegmentHudMeta(vA,vB,sceneUnits), '')` — **ΙΔΙΟΙ** painters με τη γραμμή/τοίχο.
   - **⚠️ GOTCHA (1η προσπάθεια απέτυχε — «οι λευκές γραμμές δεν εμφανίζονται», Giorgio)**: το αρχικό guard κλείδωνε σε
