@@ -25,6 +25,7 @@ import {
   DISPLAY_UNIT_STORAGE_KEY,
   isValidDisplayUnit,
 } from './units';
+import { createExternalStore } from '../stores/createExternalStore';
 
 type Listener = () => void;
 
@@ -34,17 +35,16 @@ function readInitialUnit(): DisplayUnit {
   return isValidDisplayUnit(stored) ? stored : DEFAULT_DISPLAY_UNIT;
 }
 
-let currentUnit: DisplayUnit = readInitialUnit();
-const listeners = new Set<Listener>();
-
-function notify(): void {
-  listeners.forEach((fn) => fn());
-}
+// SSoT pub/sub via createExternalStore (WAVE 2.6). `equals: Object.is` mirrors
+// the hand-rolled guard; `setUnit` ALSO keeps its own manual pre-check because
+// the localStorage persist must run ONLY on an actual change (same order as
+// the original: guard → mutate → persist → notify).
+const store = createExternalStore<DisplayUnit>(readInitialUnit(), { equals: Object.is });
 
 export const displayUnitState = {
   /** Live display unit — read synchronously by the canvas render path. */
   getUnit(): DisplayUnit {
-    return currentUnit;
+    return store.get();
   },
 
   /**
@@ -53,19 +53,15 @@ export const displayUnitState = {
    * notify) when unchanged, so redundant pushes never re-render subscribers.
    */
   setUnit(unit: DisplayUnit): void {
-    if (unit === currentUnit) return;
-    currentUnit = unit;
+    if (unit === store.get()) return;
+    store.set(unit);
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(DISPLAY_UNIT_STORAGE_KEY, unit);
     }
-    notify();
   },
 
   /** Subscribe to unit changes (for `useSyncExternalStore`). */
   subscribe(fn: Listener): () => void {
-    listeners.add(fn);
-    return () => {
-      listeners.delete(fn);
-    };
+    return store.subscribe(fn);
   },
 };

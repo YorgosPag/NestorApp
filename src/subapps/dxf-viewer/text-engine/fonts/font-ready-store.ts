@@ -14,29 +14,28 @@
  * @module text-engine/fonts/font-ready-store
  */
 
+import { createExternalStore } from '../../stores/createExternalStore';
+
 type Listener = () => void;
 
-// ─── Internal mutable state ───────────────────────────────────────────────────
-
-let version = 0;
-const subscribers = new Set<Listener>();
+// SSoT pub/sub via createExternalStore (WAVE 2.6). No `equals` — `bumpFontReady`
+// always increments, so every call is a real change anyway.
+const store = createExternalStore<number>(0);
 
 // ─── Mutation API ─────────────────────────────────────────────────────────────
 
 /** Called by the font preloader after a font batch lands in FontCache. */
 export function bumpFontReady(): void {
-  version += 1;
-  subscribers.forEach((cb) => cb());
+  store.set(store.get() + 1);
 }
 
 // ─── useSyncExternalStore / subscription interface ────────────────────────────
 
 export function subscribeFontReady(listener: Listener): () => void {
-  subscribers.add(listener);
-  return () => subscribers.delete(listener);
+  return store.subscribe(listener);
 }
 
 /** Monotonic counter — increments each time a new font batch becomes available. */
 export function getFontReadyVersion(): number {
-  return version;
+  return store.get();
 }

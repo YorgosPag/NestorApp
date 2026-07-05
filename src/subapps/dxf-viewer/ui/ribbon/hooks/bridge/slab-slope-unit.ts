@@ -28,6 +28,7 @@
  */
 
 import { roofSlopeFromRatio, roofSlopeToRatio } from '../../../../bim/geometry/roof-slope-units';
+import { createExternalStore } from '../../../../stores/createExternalStore';
 
 /** Display/input μονάδα της κλίσης. Stored value = ΠΑΝΤΑ %. */
 export type SlabSlopeUnit = 'percent' | 'degrees' | 'ratio';
@@ -89,25 +90,21 @@ export function slopeDisplayToPercent(value: string, unit: SlabSlopeUnit): numbe
 }
 
 // ─── Display-unit preference store (module singleton, subscribable) ───────────
+// SSoT pub/sub via createExternalStore (WAVE 2.6). `equals: Object.is` mirrors
+// the hand-rolled guard (`if (unit === currentUnit) return`).
 
 type Listener = () => void;
 
-let currentUnit: SlabSlopeUnit = SLAB_SLOPE_UNIT_PERCENT;
-const listeners = new Set<Listener>();
+const store = createExternalStore<SlabSlopeUnit>(SLAB_SLOPE_UNIT_PERCENT, { equals: Object.is });
 
 export const slabSlopeUnitStore = {
   get(): SlabSlopeUnit {
-    return currentUnit;
+    return store.get();
   },
   set(unit: SlabSlopeUnit): void {
-    if (unit === currentUnit) return;
-    currentUnit = unit;
-    for (const l of listeners) l();
+    store.set(unit);
   },
   subscribe(listener: Listener): () => void {
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
+    return store.subscribe(listener);
   },
 };

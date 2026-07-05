@@ -19,6 +19,8 @@
  * Keys: dxf:ambient.enabled, dxf:ambient.radiusPx
  */
 
+import { createExternalStore } from '../../stores/createExternalStore';
+
 const KEY_ENABLED = 'dxf:ambient.enabled';
 const KEY_RADIUS = 'dxf:ambient.radiusPx';
 const DEFAULT_ENABLED = true;
@@ -34,66 +36,56 @@ export interface AmbientConfigSnapshot {
   readonly maxMembers: number;
 }
 
-class AmbientAlignmentConfigStore {
-  private _enabled = DEFAULT_ENABLED;
-  private _radiusPx = DEFAULT_RADIUS_PX;
-  private readonly _maxMembers = DEFAULT_MAX_MEMBERS;
-  private readonly listeners = new Set<Listener>();
-  private _cachedSnapshot: AmbientConfigSnapshot | null = null;
-
-  constructor() {
-    if (typeof window === 'undefined') return;
-    const savedEnabled = localStorage.getItem(KEY_ENABLED);
-    if (savedEnabled !== null) this._enabled = savedEnabled === 'true';
-    const savedRadius = localStorage.getItem(KEY_RADIUS);
-    if (savedRadius !== null) {
-      const parsed = parseFloat(savedRadius);
-      if (!isNaN(parsed) && parsed > 0) this._radiusPx = parsed;
-    }
+/** Reads the persisted enabled/radius (SSR-safe) — seeds the store's initial snapshot. */
+function readInitialSnapshot(): AmbientConfigSnapshot {
+  if (typeof window === 'undefined') {
+    return { enabled: DEFAULT_ENABLED, radiusPx: DEFAULT_RADIUS_PX, maxMembers: DEFAULT_MAX_MEMBERS };
   }
+  let enabled = DEFAULT_ENABLED;
+  const savedEnabled = localStorage.getItem(KEY_ENABLED);
+  if (savedEnabled !== null) enabled = savedEnabled === 'true';
 
-  get enabled(): boolean { return this._enabled; }
-  get radiusPx(): number { return this._radiusPx; }
-  get maxMembers(): number { return this._maxMembers; }
+  let radiusPx = DEFAULT_RADIUS_PX;
+  const savedRadius = localStorage.getItem(KEY_RADIUS);
+  if (savedRadius !== null) {
+    const parsed = parseFloat(savedRadius);
+    if (!isNaN(parsed) && parsed > 0) radiusPx = parsed;
+  }
+  return { enabled, radiusPx, maxMembers: DEFAULT_MAX_MEMBERS };
+}
+
+class AmbientAlignmentConfigStore {
+  // SSoT pub/sub via createExternalStore (WAVE 2.6). No `equals` — setEnabled/
+  // setRadiusPx always notified unconditionally in the hand-rolled version, and
+  // the store itself now IS the snapshot (no separate `_cachedSnapshot` /
+  // invalidate-on-notify dance needed — `get()` already returns the live value).
+  private readonly store = createExternalStore<AmbientConfigSnapshot>(readInitialSnapshot());
+
+  get enabled(): boolean { return this.store.get().enabled; }
+  get radiusPx(): number { return this.store.get().radiusPx; }
+  get maxMembers(): number { return this.store.get().maxMembers; }
 
   setEnabled(enabled: boolean): void {
-    this._enabled = enabled;
     if (typeof window !== 'undefined') localStorage.setItem(KEY_ENABLED, String(enabled));
-    this.notify();
+    this.store.set({ ...this.store.get(), enabled });
   }
 
   toggle(): void {
-    this.setEnabled(!this._enabled);
+    this.setEnabled(!this.enabled);
   }
 
   setRadiusPx(radiusPx: number): void {
     if (!(radiusPx > 0)) return;
-    this._radiusPx = radiusPx;
     if (typeof window !== 'undefined') localStorage.setItem(KEY_RADIUS, String(radiusPx));
-    this.notify();
+    this.store.set({ ...this.store.get(), radiusPx });
   }
 
   /** For useSyncExternalStore — stable reference; only replaced on mutation. */
   getSnapshot(): AmbientConfigSnapshot {
-    if (!this._cachedSnapshot) {
-      this._cachedSnapshot = {
-        enabled: this._enabled,
-        radiusPx: this._radiusPx,
-        maxMembers: this._maxMembers,
-      };
-    }
-    return this._cachedSnapshot;
+    return this.store.get();
   }
 
-  subscribe = (fn: Listener): (() => void) => {
-    this.listeners.add(fn);
-    return () => { this.listeners.delete(fn); };
-  };
-
-  private notify(): void {
-    this._cachedSnapshot = null;
-    this.listeners.forEach(fn => fn());
-  }
+  subscribe = (fn: Listener): (() => void) => this.store.subscribe(fn);
 }
 
 export const ambientAlignmentConfigStore = new AmbientAlignmentConfigStore();

@@ -13,6 +13,8 @@
  * @since 2026-02-20
  */
 
+import { createExternalStore } from '../../stores/createExternalStore';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -72,11 +74,10 @@ export class PromptDialogStore {
   private _options: PromptDialogOptions | null = null;
   private _resolve: ((value: string | null) => void) | null = null;
 
-  // ── Snapshot (immutable per change for useSyncExternalStore) ──
-  private _snapshot: PromptDialogSnapshot = { isOpen: false, options: null };
-
-  // ── Observers ──
-  private _listeners = new Set<Listener>();
+  // ── Snapshot (immutable per change for useSyncExternalStore) — SSoT pub/sub via
+  // createExternalStore (WAVE 2.6). No `equals` — the store always publishes a
+  // fresh snapshot object, matching the hand-rolled store's unconditional notify.
+  private readonly _store = createExternalStore<PromptDialogSnapshot>({ isOpen: false, options: null });
 
   // ── Public API ──
 
@@ -129,12 +130,11 @@ export class PromptDialogStore {
   // ── Subscription (useSyncExternalStore compatible) ──
 
   subscribe(listener: Listener): () => void {
-    this._listeners.add(listener);
-    return () => this._listeners.delete(listener);
+    return this._store.subscribe(listener);
   }
 
   getSnapshot(): PromptDialogSnapshot {
-    return this._snapshot;
+    return this._store.get();
   }
 
   // ── Internals ──
@@ -146,13 +146,10 @@ export class PromptDialogStore {
   }
 
   private _publishSnapshot(): void {
-    this._snapshot = {
+    this._store.set({
       isOpen: this._isOpen,
       options: this._options,
-    };
-    for (const listener of this._listeners) {
-      listener();
-    }
+    });
   }
 }
 

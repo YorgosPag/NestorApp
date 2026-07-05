@@ -9,23 +9,22 @@
  * @module text-engine/fonts/missing-font-store
  */
 
+import { createExternalStore } from '../../stores/createExternalStore';
 import type { MissingFontReport } from './font-loader';
 
 export type { MissingFontReport };
 
 type Listener = () => void;
 
-// ─── Internal mutable state ───────────────────────────────────────────────────
-
-let currentReport: MissingFontReport | null = null;
-const subscribers = new Set<Listener>();
+// SSoT pub/sub via createExternalStore (WAVE 2.6). No `equals` — the hand-rolled
+// `setMissingFontReport` had no guard either (always notified unconditionally).
+const store = createExternalStore<MissingFontReport | null>(null);
 
 // ─── Mutation API ─────────────────────────────────────────────────────────────
 
 /** Called by FontLoader after a DXF file opens. Notifies all subscribers. */
 export function setMissingFontReport(report: MissingFontReport | null): void {
-  currentReport = report;
-  subscribers.forEach((cb) => cb());
+  store.set(report);
 }
 
 /** Called when the user dismisses the banner or opens a new file. */
@@ -36,10 +35,9 @@ export function clearMissingFontReport(): void {
 // ─── useSyncExternalStore interface ──────────────────────────────────────────
 
 export function subscribeMissingFontReport(listener: Listener): () => void {
-  subscribers.add(listener);
-  return () => subscribers.delete(listener);
+  return store.subscribe(listener);
 }
 
 export function getMissingFontReport(): MissingFontReport | null {
-  return currentReport;
+  return store.get();
 }

@@ -19,6 +19,7 @@
 
 import { useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 /** Το άγκυρα-μέλος: id (για αποκλεισμό από hover) + 2D footprint (world coords). */
 export interface BeamBetweenAnchor {
@@ -34,27 +35,15 @@ export interface BeamBetweenMembersState {
 const EMPTY: BeamBetweenMembersState = Object.freeze({ anchor: null });
 
 // ── Module state ──────────────────────────────────────────────────────────────
+// SSoT pub/sub via createExternalStore (WAVE 2.6). No `equals` — `setAnchor`
+// keeps its own manual `.id` pre-check (narrower than a whole-object identity
+// compare), matching the hand-rolled store's unconditional notify after each
+// accepted mutation.
 
-type Listener = () => void;
-let current: BeamBetweenMembersState = EMPTY;
-const listeners = new Set<Listener>();
+const store = createExternalStore<BeamBetweenMembersState>(EMPTY);
 
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): BeamBetweenMembersState {
-  return current;
-}
 function getServerSnapshot(): BeamBetweenMembersState {
   return EMPTY;
-}
-
-function notify(): void {
-  for (const l of listeners) l();
 }
 
 // ── Public store API ──────────────────────────────────────────────────────────
@@ -62,25 +51,23 @@ function notify(): void {
 export const BeamBetweenMembersStore = {
   /** Set the anchor member. No-op when the id is unchanged (footprint is stable per id). */
   setAnchor(anchor: BeamBetweenAnchor): void {
-    if (current.anchor?.id === anchor.id) return;
-    current = { anchor };
-    notify();
+    if (store.get().anchor?.id === anchor.id) return;
+    store.set({ anchor });
   },
 
   /** Clear the anchor (chain reset / tool deactivated / Escape). */
   reset(): void {
-    if (current === EMPTY) return;
-    current = EMPTY;
-    notify();
+    if (store.get() === EMPTY) return;
+    store.set(EMPTY);
   },
 
   /** Non-React reader (tests + imperative code). */
   get(): BeamBetweenMembersState {
-    return current;
+    return store.get();
   },
 
-  subscribe,
-  getSnapshot,
+  subscribe: store.subscribe,
+  getSnapshot: store.get,
   getServerSnapshot,
 };
 
@@ -88,5 +75,5 @@ export const BeamBetweenMembersStore = {
 
 /** Returns the current anchor member for the preview leaf consumer. */
 export function useBeamBetweenAnchor(): BeamBetweenAnchor | null {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot).anchor;
+  return useSyncExternalStore(store.subscribe, store.get, getServerSnapshot).anchor;
 }

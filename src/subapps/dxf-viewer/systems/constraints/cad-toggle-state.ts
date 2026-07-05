@@ -30,19 +30,32 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md
  */
 
+import { createExternalStore } from '../../stores/createExternalStore';
+
 type Listener = () => void;
 
-let orthoOn = false;
-let polarOn = false;
-let snapOn = false;
-let snapStep = 0;
-let dynInputOn = false;
-
-const listeners = new Set<Listener>();
-
-function notify(): void {
-  listeners.forEach(fn => fn());
+interface CadToggleSnapshot {
+  readonly orthoOn: boolean;
+  readonly polarOn: boolean;
+  readonly snapOn: boolean;
+  readonly snapStep: number;
+  readonly dynInputOn: boolean;
 }
+
+const INITIAL_TOGGLE_STATE: CadToggleSnapshot = {
+  orthoOn: false,
+  polarOn: false,
+  snapOn: false,
+  snapStep: 0,
+  dynInputOn: false,
+};
+
+// SSoT pub/sub via createExternalStore (WAVE 2.6). The 5 loose module-level
+// `let`s are now one snapshot object; no `equals` on the store itself — each
+// writer below keeps its OWN manual pre-check (comparing only the field-pair it
+// owns), matching the hand-rolled store's unconditional notify after an
+// accepted mutation.
+const store = createExternalStore<CadToggleSnapshot>(INITIAL_TOGGLE_STATE);
 
 export const cadToggleState = {
   /**
@@ -52,10 +65,9 @@ export const cadToggleState = {
    * never spuriously re-render subscribers.
    */
   set(ortho: boolean, polar: boolean): void {
-    if (ortho === orthoOn && polar === polarOn) return;
-    orthoOn = ortho;
-    polarOn = polar;
-    notify();
+    const cur = store.get();
+    if (ortho === cur.orthoOn && polar === cur.polarOn) return;
+    store.set({ ...cur, orthoOn: ortho, polarOn: polar });
   },
   /**
    * Writer — called by `CadStatusBar` (sole writer) on every SNAP-MODE (F9)
@@ -63,10 +75,9 @@ export const cadToggleState = {
    * the grip path converts it to scene units via `immediateSceneScale`.
    */
   setSnap(on: boolean, step: number): void {
-    if (on === snapOn && step === snapStep) return;
-    snapOn = on;
-    snapStep = step;
-    notify();
+    const cur = store.get();
+    if (on === cur.snapOn && step === cur.snapStep) return;
+    store.set({ ...cur, snapOn: on, snapStep: step });
   },
   /**
    * Writer — called by `useCadToggles` synchronously on every DYNAMIC INPUT
@@ -77,29 +88,29 @@ export const cadToggleState = {
    * Firestore echo, which never lands unauthenticated). No-op when unchanged.
    */
   setDynInput(on: boolean): void {
-    if (on === dynInputOn) return;
-    dynInputOn = on;
-    notify();
+    const cur = store.get();
+    if (on === cur.dynInputOn) return;
+    store.set({ ...cur, dynInputOn: on });
   },
   /** F8 ORTHO live state. */
   isOrthoOn(): boolean {
-    return orthoOn;
+    return store.get().orthoOn;
   },
   /** Dynamic Input live state. */
   isDynInputOn(): boolean {
-    return dynInputOn;
+    return store.get().dynInputOn;
   },
   /** F10 POLAR live state. */
   isPolarOn(): boolean {
-    return polarOn;
+    return store.get().polarOn;
   },
   /** F9 SNAP-MODE live state. */
   isSnapOn(): boolean {
-    return snapOn;
+    return store.get().snapOn;
   },
   /** Snap-mode increment step (mm — converted to scene units by the reader). */
   getSnapStep(): number {
-    return snapStep;
+    return store.get().snapStep;
   },
   /**
    * Subscribe to ortho/polar/snap changes (for `useSyncExternalStore`).
@@ -107,7 +118,6 @@ export const cadToggleState = {
    * bails out via `Object.is` when the value did not actually change.
    */
   subscribe(fn: Listener): () => void {
-    listeners.add(fn);
-    return () => { listeners.delete(fn); };
+    return store.subscribe(fn);
   },
 };

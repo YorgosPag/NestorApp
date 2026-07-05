@@ -20,6 +20,7 @@
  */
 
 import { useSyncExternalStore } from 'react';
+import { createExternalStore } from '../../stores/createExternalStore';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { ClashReport } from './clash-types';
 
@@ -33,46 +34,27 @@ export interface ClashReportReview {
   readonly sceneUnits: SceneUnits;
 }
 
-type Listener = () => void;
-
-let currentReview: ClashReportReview | null = null;
-const listeners = new Set<Listener>();
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): ClashReportReview | null {
-  return currentReview;
-}
-
-function getServerSnapshot(): ClashReportReview | null {
-  return null;
-}
+// SSoT pub/sub plumbing via createExternalStore (WAVE 2.6). `equals: Object.is`
+// reproduces the two identity guards the hand-rolled store used: `set` bails when
+// the same review reference is re-set, and `reset()` bails when already idle.
+const store = createExternalStore<ClashReportReview | null>(null, { equals: Object.is });
 
 export const clashReportStore = {
   /** Writer — called once by the ribbon bridge when the engine produces a report. */
   set(next: ClashReportReview): void {
-    if (currentReview === next) return;
-    currentReview = next;
-    for (const l of listeners) l();
+    store.set(next);
   },
   /** Clear the report (Clear pressed, or a fresh Detect supersedes it). */
   reset(): void {
-    if (currentReview === null) return;
-    currentReview = null;
-    for (const l of listeners) l();
+    store.set(null);
   },
   /** Non-React reader — for imperative handlers. */
   get(): ClashReportReview | null {
-    return currentReview;
+    return store.get();
   },
 };
 
 /** React subscription. Returns the report under review, or `null` when idle. */
 export function useClashReport(): ClashReportReview | null {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return useSyncExternalStore(store.subscribe, store.get, () => null);
 }

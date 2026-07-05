@@ -9,6 +9,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -69,25 +70,23 @@ const DEFAULT_STATE: XLineModeState = {
   bisectStart: null,
 };
 
-let state: XLineModeState = { ...DEFAULT_STATE };
-const subscribers = new Set<Listener>();
-
-// ─── Notify ──────────────────────────────────────────────────────────────────
-
-function notify(): void {
-  subscribers.forEach((cb) => cb());
-}
+// SSoT pub/sub plumbing via createExternalStore (WAVE 2.6). No `equals` on the
+// store itself — the guard in `setMode` only compares FOUR of the six fields
+// (bisectVertex/bisectStart are intentionally excluded), which is narrower than
+// a whole-object equality check, so the guard stays a manual pre-check here;
+// `reset()` keeps its original unconditional notify (no guard at all).
+const store = createExternalStore<XLineModeState>({ ...DEFAULT_STATE });
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 /** Get current mode label. */
 export function getMode(): XLineMode {
-  return state.mode;
+  return store.get().mode;
 }
 
 /** Get full state snapshot (for useSyncExternalStore). */
 export function getXLineModeState(): XLineModeState {
-  return state;
+  return store.get();
 }
 
 /**
@@ -95,6 +94,7 @@ export function getXLineModeState(): XLineModeState {
  * Persists new mode to localStorage.
  */
 export function setMode(mode: XLineMode, params: XLineModeParams = {}): void {
+  const state = store.get();
   const next: XLineModeState = {
     mode,
     angleValue: params.angleValue ?? null,
@@ -111,9 +111,8 @@ export function setMode(mode: XLineMode, params: XLineModeParams = {}): void {
   ) {
     return;
   }
-  state = next;
+  store.set(next);
   persistMode(mode);
-  notify();
 }
 
 /**
@@ -121,12 +120,10 @@ export function setMode(mode: XLineMode, params: XLineModeParams = {}): void {
  * Preserves the persisted mode for next session.
  */
 export function reset(): void {
-  state = { ...DEFAULT_STATE, mode: state.mode };
-  notify();
+  store.set({ ...DEFAULT_STATE, mode: store.get().mode });
 }
 
 /** Subscribe to state changes. Returns unsubscribe fn (useSyncExternalStore compatible). */
 export function subscribe(cb: Listener): () => void {
-  subscribers.add(cb);
-  return () => { subscribers.delete(cb); };
+  return store.subscribe(cb);
 }

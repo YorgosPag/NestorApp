@@ -21,6 +21,7 @@
 
 import { useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -32,46 +33,35 @@ export interface WallSplitKnifeState {
 const EMPTY: WallSplitKnifeState = Object.freeze({ firstPoint: null });
 
 // ── Module state ──────────────────────────────────────────────────────────────
+// SSoT pub/sub via createExternalStore (WAVE 2.6). No `equals` — both mutators
+// keep their own manual pre-check, matching the hand-rolled store's
+// unconditional `notify()` after each accepted mutation.
 
-type Listener = () => void;
-let current: WallSplitKnifeState = EMPTY;
-const listeners = new Set<Listener>();
+const store = createExternalStore<WallSplitKnifeState>(EMPTY);
 
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => { listeners.delete(listener); };
-}
-
-function getSnapshot(): WallSplitKnifeState { return current; }
 function getServerSnapshot(): WallSplitKnifeState { return EMPTY; }
-
-function notify(): void {
-  for (const l of listeners) l();
-}
 
 // ── Public store API ──────────────────────────────────────────────────────────
 
 export const WallSplitStore = {
   /** Set the first knife point (world coords). No-op when unchanged. */
   setFirstPoint(point: Point2D): void {
-    const prev = current.firstPoint;
+    const prev = store.get().firstPoint;
     if (prev && prev.x === point.x && prev.y === point.y) return;
-    current = { firstPoint: { x: point.x, y: point.y } };
-    notify();
+    store.set({ firstPoint: { x: point.x, y: point.y } });
   },
 
   /** Clear the first point (second click committed / tool deactivated / Escape). */
   reset(): void {
-    if (current === EMPTY) return;
-    current = EMPTY;
-    notify();
+    if (store.get() === EMPTY) return;
+    store.set(EMPTY);
   },
 
   /** Non-React reader (tests + imperative code). */
-  get(): WallSplitKnifeState { return current; },
+  get(): WallSplitKnifeState { return store.get(); },
 
-  subscribe,
-  getSnapshot,
+  subscribe: store.subscribe,
+  getSnapshot: store.get,
   getServerSnapshot,
 };
 
@@ -79,5 +69,5 @@ export const WallSplitStore = {
 
 /** Returns the current knife first point for the preview leaf consumer. */
 export function useWallSplitFirstPoint(): Point2D | null {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot).firstPoint;
+  return useSyncExternalStore(store.subscribe, store.get, getServerSnapshot).firstPoint;
 }
