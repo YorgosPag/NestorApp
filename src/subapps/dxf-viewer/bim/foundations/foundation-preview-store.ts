@@ -23,6 +23,7 @@ import { useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { FoundationKind } from '../types/foundation-types';
 import type { FoundationParamOverrides } from '../../hooks/drawing/foundation-completion';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export interface FoundationPreviewState {
   readonly startPoint: Point2D | null;
@@ -38,25 +39,7 @@ const EMPTY: FoundationPreviewState = Object.freeze({
   overrides: Object.freeze({}) as FoundationParamOverrides,
 });
 
-type Listener = () => void;
-
-let currentState: FoundationPreviewState = EMPTY;
-const listeners = new Set<Listener>();
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): FoundationPreviewState {
-  return currentState;
-}
-
-function getServerSnapshot(): FoundationPreviewState {
-  return EMPTY;
-}
+const store = createExternalStore<FoundationPreviewState>(EMPTY);
 
 function pointsEqual(a: Point2D | null, b: Point2D | null): boolean {
   if (a === b) return true;
@@ -81,6 +64,7 @@ function overridesEqual(a: FoundationParamOverrides, b: FoundationParamOverrides
 export const foundationPreviewStore = {
   /** Writer — called by `useFoundationTool` on every line-FSM transition. */
   set(next: FoundationPreviewState): void {
+    const currentState = store.get();
     if (
       pointsEqual(currentState.startPoint, next.startPoint) &&
       pointsEqual(currentState.endPoint, next.endPoint) &&
@@ -89,27 +73,26 @@ export const foundationPreviewStore = {
     ) {
       return;
     }
-    currentState = {
+    const nextState: FoundationPreviewState = {
       startPoint: next.startPoint ? { x: next.startPoint.x, y: next.startPoint.y } : null,
       endPoint: next.endPoint ? { x: next.endPoint.x, y: next.endPoint.y } : null,
       kind: next.kind,
       overrides: { ...next.overrides },
     };
-    for (const l of listeners) l();
+    store.set(nextState);
   },
   /** Reset to empty (tool deactivated / committed / idle). */
   reset(): void {
-    if (currentState === EMPTY) return;
-    currentState = EMPTY;
-    for (const l of listeners) l();
+    if (store.get() === EMPTY) return;
+    store.set(EMPTY);
   },
   /** Non-React reader — for `drawing-preview-tool-points` consumer. */
   get(): FoundationPreviewState {
-    return currentState;
+    return store.get();
   },
 };
 
 /** React subscription. Returns the latest foundation-preview state. */
 export function useFoundationPreview(): FoundationPreviewState {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return useSyncExternalStore(store.subscribe, store.get, () => EMPTY);
 }

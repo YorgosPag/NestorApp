@@ -15,6 +15,7 @@
 
 import { useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export interface ColumnPolygonPreviewState {
   /** Polygon vertices so far (user-click order). Empty when idle / awaitingFirstVertex. */
@@ -25,25 +26,7 @@ const EMPTY: ColumnPolygonPreviewState = Object.freeze({
   vertices: Object.freeze([]) as readonly Point2D[],
 });
 
-type Listener = () => void;
-
-let currentState: ColumnPolygonPreviewState = EMPTY;
-const listeners = new Set<Listener>();
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): ColumnPolygonPreviewState {
-  return currentState;
-}
-
-function getServerSnapshot(): ColumnPolygonPreviewState {
-  return EMPTY;
-}
+const store = createExternalStore<ColumnPolygonPreviewState>(EMPTY);
 
 function verticesEqual(a: readonly Point2D[], b: readonly Point2D[]): boolean {
   if (a === b) return true;
@@ -57,23 +40,24 @@ function verticesEqual(a: readonly Point2D[], b: readonly Point2D[]): boolean {
 export const columnPolygonPreviewStore = {
   /** Writer — called by `useColumnTool` on every chain transition. */
   set(next: ColumnPolygonPreviewState): void {
-    if (verticesEqual(currentState.vertices, next.vertices)) return;
-    currentState = { vertices: next.vertices.map((p) => ({ x: p.x, y: p.y })) };
-    for (const l of listeners) l();
+    if (verticesEqual(store.get().vertices, next.vertices)) return;
+    const nextState: ColumnPolygonPreviewState = {
+      vertices: next.vertices.map((p) => ({ x: p.x, y: p.y })),
+    };
+    store.set(nextState);
   },
   /** Reset to empty (tool deactivated / committed / idle). */
   reset(): void {
-    if (currentState === EMPTY) return;
-    currentState = EMPTY;
-    for (const l of listeners) l();
+    if (store.get() === EMPTY) return;
+    store.set(EMPTY);
   },
   /** Non-React reader — for `updatePreview` consumer. */
   get(): ColumnPolygonPreviewState {
-    return currentState;
+    return store.get();
   },
 };
 
 /** React subscription. Returns the latest column-polygon-preview state. */
 export function useColumnPolygonPreview(): ColumnPolygonPreviewState {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return useSyncExternalStore(store.subscribe, store.get, () => EMPTY);
 }

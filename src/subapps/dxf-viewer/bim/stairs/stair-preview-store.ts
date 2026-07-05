@@ -26,6 +26,7 @@
 
 import { useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export interface StairPreviewState {
   /** First click location (basePoint). `null` when stair tool is idle / awaitingBasePoint. */
@@ -36,25 +37,7 @@ export interface StairPreviewState {
 
 const EMPTY: StairPreviewState = Object.freeze({ basePoint: null, direction: null });
 
-type Listener = () => void;
-
-let currentState: StairPreviewState = EMPTY;
-const listeners = new Set<Listener>();
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): StairPreviewState {
-  return currentState;
-}
-
-function getServerSnapshot(): StairPreviewState {
-  return EMPTY;
-}
+const store = createExternalStore<StairPreviewState>(EMPTY);
 
 function pointsEqual(a: Point2D | null, b: Point2D | null): boolean {
   if (a === b) return true;
@@ -65,31 +48,31 @@ function pointsEqual(a: Point2D | null, b: Point2D | null): boolean {
 export const stairPreviewStore = {
   /** Writer — called by `useStairTool` on every relevant state transition. */
   set(next: StairPreviewState): void {
+    const currentState = store.get();
     if (
       pointsEqual(currentState.basePoint, next.basePoint) &&
       currentState.direction === next.direction
     ) {
       return;
     }
-    currentState = {
+    const nextState: StairPreviewState = {
       basePoint: next.basePoint ? { x: next.basePoint.x, y: next.basePoint.y } : null,
       direction: next.direction,
     };
-    for (const l of listeners) l();
+    store.set(nextState);
   },
   /** Reset back to empty (tool deactivated / idle). */
   reset(): void {
-    if (currentState === EMPTY) return;
-    currentState = EMPTY;
-    for (const l of listeners) l();
+    if (store.get() === EMPTY) return;
+    store.set(EMPTY);
   },
   /** Reader (non-React) — escape hatch for tests + non-React consumers (updatePreview). */
   get(): StairPreviewState {
-    return currentState;
+    return store.get();
   },
 };
 
 /** React subscription. Returns the latest stair-preview state. */
 export function useStairPreview(): StairPreviewState {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return useSyncExternalStore(store.subscribe, store.get, () => EMPTY);
 }

@@ -31,6 +31,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { WallParamOverrides } from '../../hooks/drawing/wall-completion';
 import type { StripJustification } from '../types/foundation-types';
 import type { WallArcVariant } from '../types/wall-types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export interface WallPreviewState {
   /** First click location (axis start). `null` when wall tool is idle / awaitingStart. */
@@ -120,25 +121,7 @@ const EMPTY: WallPreviewState = Object.freeze({
   anchoredHostId: null,
 });
 
-type Listener = () => void;
-
-let currentState: WallPreviewState = EMPTY;
-const listeners = new Set<Listener>();
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): WallPreviewState {
-  return currentState;
-}
-
-function getServerSnapshot(): WallPreviewState {
-  return EMPTY;
-}
+const store = createExternalStore<WallPreviewState>(EMPTY);
 
 function pointsEqual(a: Point2D | null, b: Point2D | null): boolean {
   if (a === b) return true;
@@ -185,6 +168,7 @@ export const wallPreviewStore = {
     const nextArcEnd = next.arcEndPoint ?? null;
     const nextArcVariant = next.arcVariant ?? '3-point';
     const nextArcCenter = next.arcCenter ?? null;
+    const currentState = store.get();
     if (
       pointsEqual(currentState.startPoint, next.startPoint) &&
       pointsEqual(currentState.endPoint, next.endPoint) &&
@@ -201,7 +185,7 @@ export const wallPreviewStore = {
     ) {
       return;
     }
-    currentState = {
+    const nextState: WallPreviewState = {
       startPoint: next.startPoint ? { x: next.startPoint.x, y: next.startPoint.y } : null,
       endPoint: next.endPoint ? { x: next.endPoint.x, y: next.endPoint.y } : null,
       curveControl: next.curveControl ? { x: next.curveControl.x, y: next.curveControl.y } : null,
@@ -215,25 +199,24 @@ export const wallPreviewStore = {
       startFaceAngle: nextFaceAngle,
       anchoredHostId: nextHostId,
     };
-    for (const l of listeners) l();
+    store.set(nextState);
   },
   /** Reset back to empty (tool deactivated / idle / commit). */
   reset(): void {
-    if (currentState === EMPTY) return;
-    currentState = EMPTY;
-    for (const l of listeners) l();
+    if (store.get() === EMPTY) return;
+    store.set(EMPTY);
   },
   /** Reader (non-React) — escape hatch for tests + `updatePreview` consumer. */
   get(): WallPreviewState {
-    return currentState;
+    return store.get();
   },
   /** Non-React subscription (parity με `useWallPreview`) — για readers εκτός React (ADR-513 ring config). */
-  subscribe,
+  subscribe: store.subscribe,
 };
 
 /** React subscription. Returns the latest wall-preview state. */
 export function useWallPreview(): WallPreviewState {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return useSyncExternalStore(store.subscribe, store.get, () => EMPTY);
 }
 
 /**

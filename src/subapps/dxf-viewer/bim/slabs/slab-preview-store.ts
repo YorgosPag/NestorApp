@@ -19,6 +19,7 @@
 import { useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SlabParamOverrides } from '../../hooks/drawing/slab-completion';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export interface SlabPreviewState {
   /** Polygon vertices so far (user-click order). Empty when idle / awaitingFirstVertex. */
@@ -32,25 +33,7 @@ const EMPTY: SlabPreviewState = Object.freeze({
   overrides: Object.freeze({}) as SlabParamOverrides,
 });
 
-type Listener = () => void;
-
-let currentState: SlabPreviewState = EMPTY;
-const listeners = new Set<Listener>();
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): SlabPreviewState {
-  return currentState;
-}
-
-function getServerSnapshot(): SlabPreviewState {
-  return EMPTY;
-}
+const store = createExternalStore<SlabPreviewState>(EMPTY);
 
 function polylinesEqual(a: readonly Point2D[], b: readonly Point2D[]): boolean {
   if (a === b) return true;
@@ -69,31 +52,31 @@ function overridesEqual(a: SlabParamOverrides, b: SlabParamOverrides): boolean {
 export const slabPreviewStore = {
   /** Writer — called by `useSlabTool` on every state transition. */
   set(next: SlabPreviewState): void {
+    const currentState = store.get();
     if (
       polylinesEqual(currentState.vertices, next.vertices) &&
       overridesEqual(currentState.overrides, next.overrides)
     ) {
       return;
     }
-    currentState = {
+    const nextState: SlabPreviewState = {
       vertices: next.vertices.map((p) => ({ x: p.x, y: p.y })),
       overrides: { ...next.overrides },
     };
-    for (const l of listeners) l();
+    store.set(nextState);
   },
   /** Reset to empty (tool deactivated / committed / idle). */
   reset(): void {
-    if (currentState === EMPTY) return;
-    currentState = EMPTY;
-    for (const l of listeners) l();
+    if (store.get() === EMPTY) return;
+    store.set(EMPTY);
   },
   /** Non-React reader — for `updatePreview` consumer. */
   get(): SlabPreviewState {
-    return currentState;
+    return store.get();
   },
 };
 
 /** React subscription. Returns the latest slab-preview state. */
 export function useSlabPreview(): SlabPreviewState {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return useSyncExternalStore(store.subscribe, store.get, () => EMPTY);
 }

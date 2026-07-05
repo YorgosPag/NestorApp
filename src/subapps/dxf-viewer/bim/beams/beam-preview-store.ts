@@ -21,6 +21,7 @@ import { useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { BeamKind } from '../../bim/types/beam-types';
 import type { BeamParamOverrides } from '../../hooks/drawing/beam-completion';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export interface BeamPreviewState {
   readonly startPoint: Point2D | null;
@@ -49,25 +50,7 @@ const EMPTY: BeamPreviewState = Object.freeze({
   startAnchored: false,
 });
 
-type Listener = () => void;
-
-let currentState: BeamPreviewState = EMPTY;
-const listeners = new Set<Listener>();
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): BeamPreviewState {
-  return currentState;
-}
-
-function getServerSnapshot(): BeamPreviewState {
-  return EMPTY;
-}
+const store = createExternalStore<BeamPreviewState>(EMPTY);
 
 function pointsEqual(a: Point2D | null, b: Point2D | null): boolean {
   if (a === b) return true;
@@ -84,6 +67,7 @@ export const beamPreviewStore = {
   /** Writer — called by `useBeamTool` on every state transition (FSM state only). */
   set(next: Omit<BeamPreviewState, 'startAnchored'> & { startAnchored?: boolean }): void {
     const nextAnchored = next.startAnchored ?? false;
+    const currentState = store.get();
     if (
       pointsEqual(currentState.startPoint, next.startPoint) &&
       pointsEqual(currentState.endPoint, next.endPoint) &&
@@ -93,28 +77,27 @@ export const beamPreviewStore = {
     ) {
       return;
     }
-    currentState = {
+    const nextState: BeamPreviewState = {
       startPoint: next.startPoint ? { x: next.startPoint.x, y: next.startPoint.y } : null,
       endPoint: next.endPoint ? { x: next.endPoint.x, y: next.endPoint.y } : null,
       kind: next.kind,
       overrides: { ...next.overrides },
       startAnchored: nextAnchored,
     };
-    for (const l of listeners) l();
+    store.set(nextState);
   },
   /** Reset to empty (tool deactivated / committed / idle). */
   reset(): void {
-    if (currentState === EMPTY) return;
-    currentState = EMPTY;
-    for (const l of listeners) l();
+    if (store.get() === EMPTY) return;
+    store.set(EMPTY);
   },
   /** Non-React reader — for `updatePreview` consumer. */
   get(): BeamPreviewState {
-    return currentState;
+    return store.get();
   },
 };
 
 /** React subscription. Returns the latest beam-preview state. */
 export function useBeamPreview(): BeamPreviewState {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return useSyncExternalStore(store.subscribe, store.get, () => EMPTY);
 }

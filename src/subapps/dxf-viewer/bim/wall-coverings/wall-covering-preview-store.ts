@@ -19,6 +19,7 @@ import { useSyncExternalStore } from 'react';
 import type { WallCoveringFaceSide, WallCoveringLayer } from '../types/wall-covering-types';
 import type { WallCoveringHost } from './wall-covering-strip-geometry';
 import type { SceneUnits } from '../../utils/scene-units';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 /** Κλειδωμένο context σχεδίασης μετά το 1ο κλικ (pick τοίχου + παρειάς + spanStart). */
 export interface WallCoveringDrawContext {
@@ -36,46 +37,27 @@ export interface WallCoveringPreviewState {
 
 const EMPTY: WallCoveringPreviewState = Object.freeze({ context: null });
 
-type Listener = () => void;
-
-let currentState: WallCoveringPreviewState = EMPTY;
-const listeners = new Set<Listener>();
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): WallCoveringPreviewState {
-  return currentState;
-}
-
-function getServerSnapshot(): WallCoveringPreviewState {
-  return EMPTY;
-}
+const store = createExternalStore<WallCoveringPreviewState>(EMPTY);
 
 export const wallCoveringPreviewStore = {
   /** Writer — called by `useWallCoveringTool` μετά το pick (lock) ή reset. */
   set(context: WallCoveringDrawContext | null): void {
-    if (currentState.context === context) return;
-    currentState = context ? { context } : EMPTY;
-    for (const l of listeners) l();
+    if (store.get().context === context) return;
+    const nextState: WallCoveringPreviewState = context ? { context } : EMPTY;
+    store.set(nextState);
   },
   /** Reset σε empty (tool deactivated / committed / idle). */
   reset(): void {
-    if (currentState === EMPTY) return;
-    currentState = EMPTY;
-    for (const l of listeners) l();
+    if (store.get() === EMPTY) return;
+    store.set(EMPTY);
   },
   /** Non-React reader — για τον `drawing-preview-generator` consumer. */
   get(): WallCoveringPreviewState {
-    return currentState;
+    return store.get();
   },
 };
 
 /** React subscription. Returns the latest wall-covering-preview state. */
 export function useWallCoveringPreview(): WallCoveringPreviewState {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return useSyncExternalStore(store.subscribe, store.get, () => EMPTY);
 }

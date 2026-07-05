@@ -16,6 +16,7 @@
 
 import { useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export interface FloorFinishPreviewState {
   /** Footprint vertices so far (user-click order). Empty when idle / awaiting first vertex. */
@@ -26,25 +27,7 @@ const EMPTY: FloorFinishPreviewState = Object.freeze({
   vertices: Object.freeze([]) as readonly Point2D[],
 });
 
-type Listener = () => void;
-
-let currentState: FloorFinishPreviewState = EMPTY;
-const listeners = new Set<Listener>();
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): FloorFinishPreviewState {
-  return currentState;
-}
-
-function getServerSnapshot(): FloorFinishPreviewState {
-  return EMPTY;
-}
+const store = createExternalStore<FloorFinishPreviewState>(EMPTY);
 
 function polylinesEqual(a: readonly Point2D[], b: readonly Point2D[]): boolean {
   if (a === b) return true;
@@ -58,23 +41,24 @@ function polylinesEqual(a: readonly Point2D[], b: readonly Point2D[]): boolean {
 export const floorFinishPreviewStore = {
   /** Writer — called by `useFloorFinishTool` on every state transition. */
   set(next: FloorFinishPreviewState): void {
-    if (polylinesEqual(currentState.vertices, next.vertices)) return;
-    currentState = { vertices: next.vertices.map((p) => ({ x: p.x, y: p.y })) };
-    for (const l of listeners) l();
+    if (polylinesEqual(store.get().vertices, next.vertices)) return;
+    const nextState: FloorFinishPreviewState = {
+      vertices: next.vertices.map((p) => ({ x: p.x, y: p.y })),
+    };
+    store.set(nextState);
   },
   /** Reset to empty (tool deactivated / committed / idle). */
   reset(): void {
-    if (currentState === EMPTY) return;
-    currentState = EMPTY;
-    for (const l of listeners) l();
+    if (store.get() === EMPTY) return;
+    store.set(EMPTY);
   },
   /** Non-React reader — for `updatePreview` consumer. */
   get(): FloorFinishPreviewState {
-    return currentState;
+    return store.get();
   },
 };
 
 /** React subscription. Returns the latest floor-finish-preview state. */
 export function useFloorFinishPreview(): FloorFinishPreviewState {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return useSyncExternalStore(store.subscribe, store.get, () => EMPTY);
 }
