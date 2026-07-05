@@ -85,6 +85,17 @@
       ],
       "tier": 3
     },
+    "create-confirm-store": {
+      "ssotFile": "src/subapps/dxf-viewer/stores/createConfirmStore.ts",
+      "description": "ADR-507 Phi3 — Promise-handshake confirm-dialog stores (open dialog with payload then await the user choice as a Promise) live on the createConfirmStore<TState,TAction>() factory. The _state/_pendingResolve/_subs/_notify boilerplate was hand-copied byte-identical across 7 stores (column-perimeter/column-adopt-size/shear-wall-extent/column-becomes-wall/section-relationship/wall-cascade-delete/bim-family-type-delete). Declaring a new `let _pendingResolve` re-implements the handshake — call createConfirmStore(closedState) plus thin named wrappers instead.",
+      "forbiddenPatterns": [
+        "_pendingResolve"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/stores/createConfirmStore.ts"
+      ],
+      "tier": 3
+    },
     "browser-performance-memory": {
       "ssotFile": "src/lib/platform/browser-performance-memory.ts",
       "description": "ADR-546 — The non-standard Chrome `performance.memory` API must be declared and read ONLY through src/lib/platform/browser-performance-memory.ts. Re-declaring `interface PerformanceWithMemory`/`PerformanceMemory` or casting `as PerformanceWithMemory` anywhere else reintroduces the 4-type + 12-reader cross-subapp duplication with inconsistent units (bytes vs MB) and unsafe non-optional casts. Use readPerformanceMemory() (raw bytes) or readCpuMemoryMb() (MB). Type re-exports via `export type { ... } from` are allowed.",
