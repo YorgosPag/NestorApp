@@ -33,6 +33,8 @@ import type { Building } from '@/types/building/contracts';
 import { createModuleLogger } from '@/lib/telemetry';
 // 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
 import { createStaleCache } from '@/lib/stale-cache';
+// SSoT pub/sub primitive (WAVE 3) — replaces the hand-rolled listener Set + emit()
+import { createExternalStore } from '@/lib/state/createExternalStore';
 
 const logger = createModuleLogger('useFirestoreBuildings');
 
@@ -71,24 +73,20 @@ interface BuildingsStoreState {
 }
 
 /** Snapshot reference is replaced wholesale on each change so useSyncExternalStore
- *  can compare by identity (stable between emits → no spurious re-render). */
-let storeState: BuildingsStoreState = {
+ *  can compare by identity (stable between emits → no spurious re-render). The
+ *  content-equality guard lives upstream in firestoreQueryService.subscribe (ADR-361),
+ *  so this store always notifies on set (no `equals`). */
+const buildingsStore = createExternalStore<BuildingsStoreState>({
   buildings: buildingsCache.get() ?? [],
   loading: !buildingsCache.hasLoaded(),
   error: null,
-};
+});
 
-const storeListeners = new Set<() => void>();
 let firestoreUnsubscribe: (() => void) | null = null;
 let refCount = 0;
 
-function emit(): void {
-  for (const listener of storeListeners) listener();
-}
-
 function setStoreState(patch: Partial<BuildingsStoreState>): void {
-  storeState = { ...storeState, ...patch };
-  emit();
+  buildingsStore.set({ ...buildingsStore.get(), ...patch });
 }
 
 function startFirestoreSubscription(): void {
@@ -121,12 +119,12 @@ function startFirestoreSubscription(): void {
 /** useSyncExternalStore subscribe — attaches a React listener AND owns one slot
  *  of the shared Firestore listener's reference count. */
 function subscribe(listener: () => void): () => void {
-  storeListeners.add(listener);
+  const unsubscribe = buildingsStore.subscribe(listener);
   refCount += 1;
   if (refCount === 1) startFirestoreSubscription();
 
   return () => {
-    storeListeners.delete(listener);
+    unsubscribe();
     refCount -= 1;
     if (refCount === 0 && firestoreUnsubscribe) {
       firestoreUnsubscribe();
@@ -136,7 +134,7 @@ function subscribe(listener: () => void): () => void {
 }
 
 function getSnapshot(): BuildingsStoreState {
-  return storeState;
+  return buildingsStore.get();
 }
 
 export function useFirestoreBuildings(): UseFirestoreBuildingsReturn {
