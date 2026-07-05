@@ -179,6 +179,15 @@ export function scaleEntity(
     case 'rectangle':
     case 'rect':
       return scaleRectangle(entity, base, sx, sy) as Partial<SceneEntity>;
+    case 'group': {
+      // ADR-575 — GROUP container: scaling the group scales every member about the
+      // SAME base. Recurse the SAME SSoT per member (handles nested groups).
+      const members = (entity as unknown as { members: Entity[] }).members.map((m) => ({
+        ...m,
+        ...scaleEntity(m, base, sx, sy),
+      }));
+      return { members } as unknown as Partial<SceneEntity>;
+    }
     default:
       return {};
   }
