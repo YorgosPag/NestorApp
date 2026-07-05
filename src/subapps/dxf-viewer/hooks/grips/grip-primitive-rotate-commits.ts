@@ -37,19 +37,9 @@ import { CreateEntityCommand } from '../../core/commands/entity-commands/CreateE
 import type { SceneEntity } from '../../core/commands/interfaces';
 import { polylineBboxCenter, rectOrPolylineVertices } from '../../systems/polyline/rectangle-detect';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
-// ADR-561 EXT (Ctrl-rotate-copy) — copy intent SSoT, IDENTICAL trigger to the move-copy
-// (`commitDxfGripDragModeAware`): the right-click «Copy» toggle OR live Ctrl/⌘ held.
-import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
-import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
-
-/**
- * ADR-561 EXT — is the rotation a COPY? Same trigger the move-copy uses (the right-click
- * «Copy» toggle OR live Ctrl/⌘). When true the rotation clones the source about the pivot
- * (AutoCAD ROTATE-Copy / Ctrl-endpoint hinge) instead of transforming in place.
- */
-function isRotateCopy(): boolean {
-  return GripCopyModeStore.getSnapshot().enabled || CtrlKeyTracker.getSnapshot();
-}
+// ADR-561 EXT (Ctrl-rotate-copy) — copy intent SSoT (the right-click «Copy» toggle OR live
+// Ctrl/⌘), the SAME predicate the move-copy + line rotate-copy commits use.
+import { isGripCopyIntent } from '../../systems/grip/grip-copy-intent';
 
 /** Minimal structural view of the primitive scene shapes we read here. */
 interface PrimitiveSceneShape {
@@ -105,7 +95,7 @@ export function commitArcGripDrag(
   if (!res) return;
   // ADR-561 EXT — Ctrl / «Copy» toggle → rotate a CLONE about the pivot (hinge). The
   // canonical `RotateEntityCommand.copyMode` owns the clone + undo/redo (ADR-357 Φ12).
-  const command = new RotateEntityCommand([grip.entityId], res.pivot, res.sweptDeg, sceneManager, false, isRotateCopy());
+  const command = new RotateEntityCommand([grip.entityId], res.pivot, res.sweptDeg, sceneManager, false, isGripCopyIntent());
   if (command.validate() !== null) return;
   deps.execute(command);
 }
@@ -134,7 +124,7 @@ export function commitPolylineRotationGripDrag(
   const res = resolveRotation(grip, delta, polylineBboxCenter(vertices));
   if (!res) return;
 
-  const copy = isRotateCopy();
+  const copy = isGripCopyIntent();
 
   if (isRect) {
     // Explode → closed polyline with the rotated corners (rotation baked into geometry).

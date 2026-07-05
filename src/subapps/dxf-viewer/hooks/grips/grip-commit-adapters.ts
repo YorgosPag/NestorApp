@@ -25,8 +25,8 @@ import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesS
 import { StretchEntityCommand, type StretchParams } from '../../core/commands/entity-commands/StretchEntityCommand';
 import { CopyEntityCommand, type CopyEntityParams } from '../../core/commands/entity-commands/CopyEntityCommand';
 import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
+import { isGripCopyIntent } from '../../systems/grip/grip-copy-intent';
 import { isActiveGripAltMove } from '../../systems/cursor/GripDragStore';
-import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 import { executeWholeEntityConnectivityMove } from '../../bim/mep-segments/build-whole-entity-connectivity-move';
 import type { Entity } from '../../types/entities';
 export type { DxfCommitDeps, OverlayCommitDeps } from './unified-grip-types';
@@ -216,8 +216,7 @@ export function commitDxfGripDragModeAware(
       commitOpeningAltMove(grip, delta, deps);
       return;
     }
-    const copy = GripCopyModeStore.getSnapshot().enabled || CtrlKeyTracker.getSnapshot();
-    commitWholeEntityMove(grip, delta, deps, copy);
+    commitWholeEntityMove(grip, delta, deps, isGripCopyIntent());
     return;
   }
   // ADR-358 Phase 5b — stair parametric grip path (5 kinds, §5.12).
