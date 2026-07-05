@@ -21,21 +21,18 @@
  */
 
 import { getActiveDragGrip } from '../systems/cursor/GripDragStore';
+import { createExternalStore } from '../stores/createExternalStore';
 
 type Listener = () => void;
 
 class QKeyTrackerImpl {
-  private pressed = false;
-  private listeners = new Set<Listener>();
+  private readonly store = createExternalStore<boolean>(false, { equals: Object.is });
   private installed = false;
 
   /** Live Q state. Cheap read for the grip step-snap consumer. */
-  getSnapshot = (): boolean => this.pressed;
+  getSnapshot = (): boolean => this.store.get();
 
-  subscribe = (listener: Listener): (() => void) => {
-    this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
-  };
+  subscribe = (listener: Listener): (() => void) => this.store.subscribe(listener);
 
   install(): void {
     if (this.installed) return;
@@ -94,9 +91,7 @@ class QKeyTrackerImpl {
   };
 
   private setPressed(next: boolean): void {
-    if (this.pressed === next) return;
-    this.pressed = next;
-    for (const l of this.listeners) l();
+    this.store.set(next);
   }
 }
 

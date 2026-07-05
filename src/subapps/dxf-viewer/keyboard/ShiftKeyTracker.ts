@@ -22,20 +22,18 @@
  * @see bim/slabs/slab-grips.ts — rectilinear quantization consumer
  */
 
+import { createExternalStore } from '../stores/createExternalStore';
+
 type Listener = () => void;
 
 class ShiftKeyTrackerImpl {
-  private pressed = false;
-  private listeners = new Set<Listener>();
+  private readonly store = createExternalStore<boolean>(false, { equals: Object.is });
   private installed = false;
 
   /** Live Shift state. Cheap read for commit-time consumers. */
-  getSnapshot = (): boolean => this.pressed;
+  getSnapshot = (): boolean => this.store.get();
 
-  subscribe = (listener: Listener): (() => void) => {
-    this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
-  };
+  subscribe = (listener: Listener): (() => void) => this.store.subscribe(listener);
 
   /** Idempotent install — safe to call from multiple module loads. */
   install(): void {
@@ -77,9 +75,7 @@ class ShiftKeyTrackerImpl {
   };
 
   private setPressed(next: boolean): void {
-    if (this.pressed === next) return;
-    this.pressed = next;
-    for (const l of this.listeners) l();
+    this.store.set(next);
   }
 }
 
