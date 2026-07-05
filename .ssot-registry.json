@@ -51,6 +51,22 @@
       ],
       "tier": 3
     },
+    "line-settings-schema": {
+      "ssotFile": "src/subapps/dxf-viewer/types/line-settings-schema.ts",
+      "description": "ADR-559 §3e — the line-settings object SHAPE is defined ONCE in types/line-settings-schema.ts (LineSettingsBase + the LineType/LineCapStyle/LineJoinStyle unions). Every other line-settings type (domain LineSettings, the LinePreview/CurrentSettingsDisplay preview view-models) MUST be a PROJECTION (`type X = Pick<LineSettingsBase, ...> & {...}`), not a standalone `interface LineSettings`. Re-declaring one reintroduces the 4-divergent-copies duplication where adding one field meant editing every copy by hand. Add new line fields to LineSettingsBase. The tiny CSS-preview input `{color,width,style}` (different field names/types) must use a distinct name (LineCssPreviewInput), not `LineSettings` — mirror the grip GripCssPreviewInput.",
+      "forbiddenPatterns": [
+        "interface\\s+LineSettings\\b"
+      ],
+      "tier": 3
+    },
+    "text-settings-schema": {
+      "ssotFile": "src/subapps/dxf-viewer/types/text-settings-schema.ts",
+      "description": "ADR-559 §3f — the text-settings object SHAPE is defined ONCE in types/text-settings-schema.ts (TextSettingsBase + the TextAlign/TextBaseline unions). Every other text-settings type (domain TextSettings, the TextSettingsContext public type, the LinePreview/CurrentSettingsDisplay preview view-models) MUST be a PROJECTION (`type X = Pick<TextSettingsBase, ...>`), not a standalone `interface TextSettings`. Re-declaring one reintroduces the 5-divergent-copies duplication. Add new text fields to TextSettingsBase. The tiny CSS-preview input (whose fontWeight is a CSS string union, not the numeric 100-900 weight) must use a distinct name (TextCssPreviewInput), not `TextSettings`.",
+      "forbiddenPatterns": [
+        "interface\\s+TextSettings\\b"
+      ],
+      "tier": 3
+    },
     "ortho-delta": {
       "ssotFile": "src/subapps/dxf-viewer/bim/grips/ortho-delta.ts",
       "description": "ADR-507 — the ORTHO/F8 dominant-axis delta clamp lives ONCE in bim/grips/ortho-delta.ts as constrainDeltaToDominantAxis() (frame-agnostic pure). It was byte-identical private copies (quantizeToDominantAxis/applyOrtho) across 5+ grip files (floor-finish/slab/slab-opening/rect-grip-engine/hatch). Re-declaring a private quantize*DominantAxis reintroduces the drift — import constrainDeltaToDominantAxis instead.",

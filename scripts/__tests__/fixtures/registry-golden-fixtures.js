@@ -215,4 +215,28 @@ function isProperty(role: OverlayRole): boolean { return role === 'property'; }
 const link: OverlayLinked = { propertyId: 'p1' };
 type ExtendedFloorplanOverlay = FloorplanOverlay & { extra: string };`,
   },
+
+  'line-settings-schema': {
+    shouldMatch: `// Scanner must catch a re-declared standalone line-settings interface:
+export interface LineSettings { color: string; lineWidth: number; }
+interface LineSettings { enabled: boolean; }`,
+    shouldSkip: `// Scanner must pass the canonical base + projections + de-collision rename:
+import type { LineSettingsBase } from '../../types/line-settings-schema';
+export interface LineSettingsBase { color: string; lineWidth: number; }
+export type LineSettings = LineSettingsBase;
+type LineSettings = Pick<LineSettingsBase, 'color' | 'lineWidth'> & { lineCap?: string };
+export interface LineCssPreviewInput { color: string; width: number; style: string; }`,
+  },
+
+  'text-settings-schema': {
+    shouldMatch: `// Scanner must catch a re-declared standalone text-settings interface:
+export interface TextSettings { color: string; fontSize: number; }
+interface TextSettings { enabled: boolean; }`,
+    shouldSkip: `// Scanner must pass the canonical base + projections + de-collision rename:
+import type { TextSettingsBase } from '../../types/text-settings-schema';
+export interface TextSettingsBase { color: string; fontSize: number; }
+export type TextSettings = TextSettingsBase;
+export type TextSettings = Pick<TextSettingsBase, 'color' | 'fontSize'>;
+export interface TextCssPreviewInput { color: string; fontWeight?: 'normal' | 'bold'; }`,
+  },
 };
