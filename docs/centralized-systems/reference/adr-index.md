@@ -557,6 +557,7 @@
 | **ADR-572** | Alignment Traces (ίχνη ευθυγράμμισης) SSoT Audit & Centralization (locale γωνίας μέσω `formatAngleLocale` σε 8 σημεία action+creation· leader style SSoT στο overlay-line-style.ts· 3D χρώμα RESOLVED-no-change per-context tuning) | 🟢 IMPLEMENTED (Γ2+Γ1) · 🟦 RESOLVED (Γ3) | 2026-07-04 | DXF Viewer · Alignment Traces SSoT | [📄](./adrs/ADR-572-alignment-traces-ssot-audit.md) |
 | **ADR-573** | Color-Conversion SSoT (big-player single color module — κεντρικοποίηση ~15+ διάσπαρτων hex↔rgb↔int↔ACI↔HSL/HSV converters σε 3 SSoT· αφαίρεση προσεγγιστικού ACI ramp· διόρθωση entity-vs-dimstyle export bug· `color-math` extend 8-digit alpha + HSL/HSV· `ui/color/utils`+`aci-palette` → thin adapters) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-04 | DXF Viewer · Color SSoT · ACI export | [📄](./adrs/ADR-573-color-conversion-ssot.md) |
 | **ADR-574** | Ghost/Preview (φαντάσματα οντοτήτων) SSoT Audit (χαρτογράφηση ΟΛΩΝ των previews σε κάθε κατάσταση —γέννηση/μετακίνηση/επεξεργασία/περιστροφή— 2D+3D· γεωμετρία = ενοποιημένη SSoT `applyEntityPreview`+`compute*Geometry`, preview≡commit· 4 νησίδες paint/routing: primitive-creation-style, MEP/opening placement paint, twin dispatch ladders, line-rotation engine· καμία αλλαγή runtime) | 🟢 RESOLVED-NO-CHANGE (audit) | 2026-07-05 | DXF Viewer · Ghost/Preview SSoT | [📄](./adrs/ADR-574-ghost-preview-ssot-audit.md) |
+| **ADR-575** | JOIN «Ένωση» + GROUP «Ομαδοποίηση» — το αντίστροφο της «Διάλυσης» (Explode)· JOIN reuse `useEntityJoin` + έκθεση Home▸Modify· GROUP νέος `type:'group'` container (καθρέφτης ArrayEntity, expand-before-convert)· UNGROUP≡EXPLODE ενός group· `CreateGroupCommand`· MOVE/ROTATE/SCALE/MIRROR SSoT recursion· 26/26 tests | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-05 | DXF Viewer · Modify · Entity model · Ribbon | [📄](./adrs/ADR-575-join-group-inverse-of-explode.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1093,6 +1094,7 @@
 | **ADR-572** | Alignment Traces SSoT Audit (locale γωνίας + leader style SSoT· 3D no-change) | 🟢 IMPLEMENTED / 🟦 RESOLVED | [View](./adrs/ADR-572-alignment-traces-ssot-audit.md) |
 | **ADR-573** | Color-Conversion SSoT (single color module· 3 SSoT· ACI ramp removed· entity-vs-dimstyle export bug fixed) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-573-color-conversion-ssot.md) |
 | **ADR-574** | Ghost/Preview SSoT Audit (φαντάσματα όλων των οντοτήτων· γεωμετρία=ενοποιημένη SSoT· 4 νησίδες paint/routing· no-change) | 🟢 RESOLVED-NO-CHANGE | [View](./adrs/ADR-574-ghost-preview-ssot-audit.md) |
+| **ADR-575** | JOIN «Ένωση» + GROUP «Ομαδοποίηση» — αντίστροφο της «Διάλυσης»· `type:'group'` container (καθρέφτης ArrayEntity)· UNGROUP≡EXPLODE· 26/26 tests | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-575-join-group-inverse-of-explode.md) |
 | **ADR-569** | Δοκάρι ανάμεσα σε μέλη (beam between two picked structural members) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-569-beam-between-members.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
