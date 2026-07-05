@@ -13,6 +13,8 @@
  * @see ../walls/wall-cascade-delete-store.ts — sibling pattern
  */
 
+import { createConfirmStore } from '../../stores/createConfirmStore';
+
 export type FamilyTypeDeleteAction = 'delete-and-detach' | 'cancel';
 
 export interface FamilyTypeDeleteDialogState {
@@ -22,41 +24,28 @@ export interface FamilyTypeDeleteDialogState {
   readonly affectedCount: number;
 }
 
-let _state: FamilyTypeDeleteDialogState = { open: false, typeId: null, affectedCount: 0 };
-let _pendingResolve: ((action: FamilyTypeDeleteAction) => void) | null = null;
-const _subs = new Set<() => void>();
+const CLOSED: FamilyTypeDeleteDialogState = { open: false, typeId: null, affectedCount: 0 };
 
-function _notify(): void {
-  _subs.forEach((cb) => cb());
-}
+const store = createConfirmStore<FamilyTypeDeleteDialogState, FamilyTypeDeleteAction>(CLOSED);
 
 /** Open the warn dialog and suspend the delete flow until the user responds. */
 export function requestFamilyTypeDelete(
   args: { typeId: string; affectedCount: number },
 ): Promise<FamilyTypeDeleteAction> {
-  return new Promise<FamilyTypeDeleteAction>((resolve) => {
-    _pendingResolve = resolve;
-    _state = { open: true, typeId: args.typeId, affectedCount: args.affectedCount };
-    _notify();
-  });
+  return store.request({ open: true, typeId: args.typeId, affectedCount: args.affectedCount });
 }
 
 /** Called by the dialog buttons — closes + resolves the pending promise. */
 export function resolveFamilyTypeDelete(action: FamilyTypeDeleteAction): void {
-  const resolve = _pendingResolve;
-  _pendingResolve = null;
-  _state = { open: false, typeId: null, affectedCount: 0 };
-  _notify();
-  resolve?.(action);
+  store.resolve(action);
 }
 
 /** useSyncExternalStore-compatible subscribe. */
 export function subscribeFamilyTypeDelete(cb: () => void): () => void {
-  _subs.add(cb);
-  return () => _subs.delete(cb);
+  return store.subscribe(cb);
 }
 
 /** useSyncExternalStore-compatible snapshot getter. Same reference between changes. */
 export function getFamilyTypeDeleteState(): FamilyTypeDeleteDialogState {
-  return _state;
+  return store.getSnapshot();
 }
