@@ -8,6 +8,8 @@
  * Keys: dxf:polar.increment, dxf:polar.additional
  */
 
+import { createExternalStore } from '../../stores/createExternalStore';
+
 const KEY_INCREMENT = 'dxf:polar.increment';
 const KEY_ADDITIONAL = 'dxf:polar.additional';
 // ADR-510 Φ1 (Q2): dense polar tracking — magnet every 15° by default (0/15/30/45…),
@@ -22,79 +24,76 @@ interface PolarSnapshot {
   readonly additionalAngles: readonly number[];
 }
 
-class PolarTrackingStore {
-  private _incrementAngle = DEFAULT_INCREMENT;
-  private _additionalAngles: number[] = [];
-  private readonly listeners = new Set<Listener>();
-  private _cachedSnapshot: PolarSnapshot | null = null;
+/** Hydrate the initial snapshot from localStorage (browser only). */
+function readInitialSnapshot(): PolarSnapshot {
+  let incrementAngle = DEFAULT_INCREMENT;
+  let additionalAngles: number[] = [];
 
-  constructor() {
-    if (typeof window === 'undefined') return;
-    const savedIncrement = localStorage.getItem(KEY_INCREMENT);
-    if (savedIncrement !== null) {
-      const parsed = parseFloat(savedIncrement);
-      if (!isNaN(parsed) && parsed > 0 && parsed <= 360) {
-        this._incrementAngle = parsed;
-      }
-    }
-    const savedAdditional = localStorage.getItem(KEY_ADDITIONAL);
-    if (savedAdditional !== null) {
-      try {
-        const parsed: unknown = JSON.parse(savedAdditional);
-        if (Array.isArray(parsed)) {
-          this._additionalAngles = parsed.filter(
-            (a): a is number => typeof a === 'number' && isFinite(a),
-          );
-        }
-      } catch {
-        // corrupt localStorage — ignore, keep default
-      }
+  if (typeof window === 'undefined') {
+    return { incrementAngle, additionalAngles };
+  }
+
+  const savedIncrement = localStorage.getItem(KEY_INCREMENT);
+  if (savedIncrement !== null) {
+    const parsed = parseFloat(savedIncrement);
+    if (!isNaN(parsed) && parsed > 0 && parsed <= 360) {
+      incrementAngle = parsed;
     }
   }
+  const savedAdditional = localStorage.getItem(KEY_ADDITIONAL);
+  if (savedAdditional !== null) {
+    try {
+      const parsed: unknown = JSON.parse(savedAdditional);
+      if (Array.isArray(parsed)) {
+        additionalAngles = parsed.filter(
+          (a): a is number => typeof a === 'number' && isFinite(a),
+        );
+      }
+    } catch {
+      // corrupt localStorage — ignore, keep default
+    }
+  }
+
+  return { incrementAngle, additionalAngles };
+}
+
+class PolarTrackingStore {
+  // SSoT pub/sub via createExternalStore (WAVE 2.6). `get()` already returns a
+  // stable reference until the next `set`, so the manual `_cachedSnapshot`
+  // invalidation the hand-rolled store used is no longer needed. No `equals` —
+  // every `setIncrementAngle` / `setAdditionalAngles` call notified unconditionally.
+  private readonly store = createExternalStore<PolarSnapshot>(readInitialSnapshot());
 
   get incrementAngle(): number {
-    return this._incrementAngle;
+    return this.store.get().incrementAngle;
   }
 
-  get additionalAngles(): number[] {
-    return this._additionalAngles;
+  get additionalAngles(): readonly number[] {
+    return this.store.get().additionalAngles;
   }
 
   setIncrementAngle(angle: number): void {
-    this._incrementAngle = angle;
     if (typeof window !== 'undefined') {
       localStorage.setItem(KEY_INCREMENT, String(angle));
     }
-    this.notify();
+    this.store.set({ ...this.store.get(), incrementAngle: angle });
   }
 
   setAdditionalAngles(angles: number[]): void {
-    this._additionalAngles = [...angles];
+    const next = [...angles];
     if (typeof window !== 'undefined') {
       localStorage.setItem(KEY_ADDITIONAL, JSON.stringify(angles));
     }
-    this.notify();
+    this.store.set({ ...this.store.get(), additionalAngles: next });
   }
 
   /** For useSyncExternalStore — stable reference; only replaced on mutation. */
   getSnapshot(): PolarSnapshot {
-    if (!this._cachedSnapshot) {
-      this._cachedSnapshot = {
-        incrementAngle: this._incrementAngle,
-        additionalAngles: this._additionalAngles,
-      };
-    }
-    return this._cachedSnapshot;
+    return this.store.get();
   }
 
   subscribe(fn: Listener): () => void {
-    this.listeners.add(fn);
-    return () => { this.listeners.delete(fn); };
-  }
-
-  private notify(): void {
-    this._cachedSnapshot = null;
-    this.listeners.forEach(fn => fn());
+    return this.store.subscribe(fn);
   }
 }
 
