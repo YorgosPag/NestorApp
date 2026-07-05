@@ -14,6 +14,8 @@ import { SNAP_TOLERANCE, RENDERING_ZINDEX } from '../../../config/tolerance-conf
 import { GRID_AXES_DEFAULTS } from '../../../config/grid-axis-defaults';
 // 🏢 ADR-516: Timing & Latency SSoT
 import { DXF_TIMING } from '../../../config/dxf-timing';
+// SSoT pub/sub factory (WAVE 2.8)
+import { createExternalStore } from '../../../stores/createExternalStore';
 
 import type { CrosshairSettings } from '../../ui/crosshair/CrosshairTypes';
 import type { UICursorSettings } from '../../ui/cursor/CursorTypes';
@@ -73,7 +75,11 @@ export class CanvasSettings {
   private settings: CanvasRenderSettings;
   private displayOptions: CanvasDisplayOptions;
   private validators: Map<string, (value: unknown) => boolean> = new Map();
-  private changeListeners: Set<(settings: CanvasRenderSettings) => void> = new Set();
+  // SSoT pub/sub via createExternalStore (WAVE 2.8): version-signal. `this.settings`
+  // stays the single source of truth; this store is a bump counter and the
+  // subscribeToChanges wrapper forwards the current settings payload — preserving
+  // the `(settings: CanvasRenderSettings) => void` listener contract byte-identically.
+  private readonly changeStore = createExternalStore<number>(0);
 
   constructor(initialSettings?: Partial<CanvasRenderSettings>) {
     this.settings = {
@@ -248,17 +254,10 @@ export class CanvasSettings {
     const validation = this.validateSettings(updates);
 
     if (validation.isValid) {
-      const oldSettings = { ...this.settings };
       this.settings = { ...this.settings, ...updates };
 
-      // Notify change listeners
-      this.changeListeners.forEach(listener => {
-        try {
-          listener(this.settings);
-        } catch (error) {
-          console.error('Settings change listener error:', error);
-        }
-      });
+      // Notify change listeners (version-signal bump; wrapper forwards this.settings)
+      this.changeStore.set(this.changeStore.get() + 1);
 
       return validation;
     }
@@ -312,8 +311,7 @@ export class CanvasSettings {
    * Subscribe to settings changes
    */
   subscribeToChanges(listener: (settings: CanvasRenderSettings) => void): () => void {
-    this.changeListeners.add(listener);
-    return () => this.changeListeners.delete(listener);
+    return this.changeStore.subscribe(() => listener(this.settings));
   }
 
   /**
@@ -429,7 +427,7 @@ export class CanvasSettings {
    * Cleanup resources
    */
   cleanup(): void {
-    this.changeListeners.clear();
+    this.changeStore.reset(0);
     this.validators.clear();
   }
 }
