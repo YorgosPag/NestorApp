@@ -48,13 +48,13 @@ import type {
   SelectedGrip,
   DraggingVertexState,
 } from './unified-grip-types';
-import { applyHotGripHint } from './grip-hotgrip-actions';
-// ADR-561 EXT (Ctrl-endpoint rotate-copy) — pure gesture resolver + the SSoT the normal
-// centre-pick uses to seed the rotate-free baseline + arm the rotation snap targets.
+// ADR-561 EXT — `seedRotateFreeStep` is the SHARED free-rotate seed (also used by the normal
+// centre-pick in `advanceHotGripPick`), so the Ctrl-endpoint entry cannot drift from it.
+import { applyHotGripHint, seedRotateFreeStep } from './grip-hotgrip-actions';
+// ADR-561 EXT (Ctrl-endpoint rotate-copy) — pure gesture resolver + the major-axis baseline SSoT.
 import { resolveCtrlEndpointRotateCopy } from './ctrl-endpoint-rotate-copy';
 import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 import { resolveRotateReferenceAnchor } from '../../bim/grips/rotate-reference-axis';
-import { getGlobalRotationSnapStore } from '../../bim/grips/rotation-snap-store';
 import type { GripMouseDownCtx } from './grip-mouse-handlers.types';
 
 // Ctx types live in `grip-mouse-handlers.types.ts` (file-size split). Re-export
@@ -235,26 +235,22 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
         setPhase('hotGrip');
         unlockGripSnapPosition();
         hotGripOpRef.current = 'rotate';
-        hotGripStepRef.current = 'rotate-free';      // pivot pre-picked → skip await-base
         hotGripAwaitingFirstReleaseRef.current = true;
         hotGripMovedRef.current = false;
         hotGripBaseRef.current = pivot;              // rotation centre = the grabbed endpoint
         hotGripRefStartRef.current = null;
         hotGripRefEndRef.current = null;
         hotGripAlignStartRef.current = null;
-        anchorRef.current = null;
-        // Seed the DETERMINISTIC major-axis baseline (preview ≡ commit) — the SAME SSoT the
-        // normal centre-pick seeds (`advanceHotGripPick`). Null (no orientation) → the
-        // first-move baseline (`grip-mouse-move-handler`) takes over.
-        hotGripRotateBaseRef.current = resolveRotateReferenceAnchor(gripEntity, pivot);
         BimRotateHotGripStore.clear();
-        setCurrentWorldPos(null);
-        // Arm the rotation snap targets (pivot ⊙ + this entity's grips → cyan magnetism),
-        // identical to the centre-pick arming in `advanceHotGripPick`.
+        // Transition to the terminal `rotate-free` step via the SHARED SSoT (same seed the
+        // normal centre-pick runs): major-axis baseline + rotation snap targets (pivot ⊙ +
+        // this entity's grips → cyan magnetism). The pivot is pre-picked at the endpoint.
         const entityGrips = allGrips
           .filter((g) => g.source === 'dxf' && g.entityId === nearGrip.entityId)
           .map((g) => ({ entityId: g.entityId!, gripIndex: g.gripIndex, point: g.position }));
-        getGlobalRotationSnapStore().setTargets(pivot, entityGrips);
+        seedRotateFreeStep(pivot, resolveRotateReferenceAnchor(gripEntity, pivot), entityGrips, {
+          hotGripStepRef, hotGripRotateBaseRef, anchorRef, setCurrentWorldPos,
+        });
         applyHotGripHint('rotate', 'rotate-free');
         if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
         setActiveDragGrip({

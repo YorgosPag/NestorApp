@@ -102,6 +102,39 @@ export function applyHotGripHint(op: WallHotGripOp | null, step: HotGripStep): v
   toolHintOverrideStore.setOverride(key ? i18next.t(key) : null);
 }
 
+/** Minimal ref/setter surface for {@link seedRotateFreeStep} (structurally met by both
+ * the hot-grip up-ctx and the mouse-down ctx). */
+export interface RotateFreeSeedRefs {
+  hotGripStepRef: MutableRefObject<HotGripStep>;
+  hotGripRotateBaseRef: MutableRefObject<Point2D | null>;
+  anchorRef: MutableRefObject<Point2D | null>;
+  setCurrentWorldPos: Dispatch<SetStateAction<Point2D | null>>;
+}
+
+/**
+ * ADR-397 / ADR-561 EXT — SSoT that transitions the hot-grip into the terminal `rotate-free`
+ * step about `pivot`. ONE source for the free-rotate seed, shared by:
+ *   - the normal centre-pick (`advanceHotGripPick` rotate `await-base` branch), and
+ *   - the Ctrl-endpoint gesture (`runGripMouseDown`), which pre-picks the pivot at the endpoint.
+ *
+ * Seeds the deterministic major-axis `baselineAnchor` (null → the first-move baseline takes
+ * over) and arms the rotation snap targets (pivot ⊙ + the entity's grips → cyan magnetism).
+ * The caller owns setting `hotGripBaseRef` (= pivot) + any fresh-entry state; this only seeds
+ * the free-rotate step so the two entry points cannot drift.
+ */
+export function seedRotateFreeStep(
+  pivot: Point2D,
+  baselineAnchor: Point2D | null,
+  entityGripsWorld: ReadonlyArray<{ entityId: string; gripIndex: number; point: Point2D }>,
+  refs: RotateFreeSeedRefs,
+): void {
+  refs.anchorRef.current = null;
+  refs.hotGripStepRef.current = 'rotate-free';
+  refs.hotGripRotateBaseRef.current = baselineAnchor;
+  refs.setCurrentWorldPos(null);
+  getGlobalRotationSnapStore().setTargets(pivot, entityGripsWorld);
+}
+
 /**
  * Record the current pick step's point and advance one step. Move: await-base
  * declares the base (→ tracking). Rotate walks centre → reference line (2 pts) →
@@ -129,20 +162,10 @@ export function advanceHotGripPick(worldPos: Point2D, ctx: HotGripActionCtx): vo
     } else {
       // ADR-397 — rotate: the CENTRE is now locked → FREE rotate by default
       // (Revit/AutoCAD). The entity spins live with the cursor; «R» opts into the
-      // 6-click reference flow. `rotate-free` is terminal (next click commits).
-      anchorRef.current = null;
-      hotGripStepRef.current = 'rotate-free';
-      // ADR-363 Slice G.6 — seed the sweep baseline along the entity's MAJOR axis
-      // (toward its body), so the imaginary reference line starts PARALLEL to the
-      // long side and the far end tracks the cursor (Giorgio «παράλληλη στον
-      // μεγαλύτερο άξονα»). Null (no orientation) → legacy first-move baseline
-      // (`grip-mouse-move-handler` sets it on the first cursor move).
-      ctx.hotGripRotateBaseRef.current = ctx.resolveRotateBaselineAnchor?.(p) ?? null;
-      setCurrentWorldPos(null);
-      // Arm the snap targets: the pivot ⊙ and the entity's grips become snap
-      // candidates (cursor magnetism via the existing snap pipeline) AND render cyan
-      // ('snappable'). Cleared on reset.
-      getGlobalRotationSnapStore().setTargets(p, ctx.rotatingEntityGripsWorld?.() ?? []);
+      // 6-click reference flow. `rotate-free` is terminal (next click commits). The
+      // deterministic major-axis baseline + snap-target arming are the shared SSoT
+      // `seedRotateFreeStep` (also used by the Ctrl-endpoint gesture in mouse-down).
+      seedRotateFreeStep(p, ctx.resolveRotateBaselineAnchor?.(p) ?? null, ctx.rotatingEntityGripsWorld?.() ?? [], ctx);
     }
   } else if (step === 'await-ref-start') {
     hotGripRefStartRef.current = p;
