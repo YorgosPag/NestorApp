@@ -1,5 +1,5 @@
 /**
- * ADR-397 — RotationSnapEngine + RotationSnapStore tests.
+ * ADR-397 — RotationPointSnapEngine (pivot/grip point-magnetism) + RotationSnapStore tests.
  *
  * Verifies:
  *   - Empty store → no candidates (zero cost outside a rotation).
@@ -9,7 +9,7 @@
  *   - Candidate types/priorities match the registry wiring.
  */
 
-import { RotationPivotSnapEngine, RotationGripSnapEngine } from '../RotationSnapEngine';
+import { RotationPivotSnapEngine, RotationGripSnapEngine } from '../RotationPointSnapEngine';
 import { getGlobalRotationSnapStore, getActiveRotationGripSnapKey } from '../../../bim/grips/rotation-snap-store';
 import { setImmediateSnap, clearImmediateSnap } from '../../../systems/cursor/ImmediateSnapStore';
 import { ExtendedSnapType } from '../../extended-types';

@@ -1,6 +1,9 @@
 /**
- * @module snapping/engines/RotationSnapEngine
- * @description Snap engines active DURING a BIM rotation operation (ADR-397):
+ * @module snapping/engines/RotationPointSnapEngine
+ * @description POINT-magnetism snap engines active DURING a BIM rotation operation (ADR-397).
+ * NOTE: these snap the CURSOR to a POINT (pivot / grip) — they do NOT quantize the rotation ANGLE
+ * (angle-lock is ORTHO/POLAR via `resolveOrthoPolarStep`). Named `...PointSnapEngine` to end the
+ * long-standing confusion with angle snapping.
  *  - `RotationPivotSnapEngine` → the rotation centre ⊙ (highest precision).
  *  - `RotationGripSnapEngine`  → the rotating entity's grips.
  *

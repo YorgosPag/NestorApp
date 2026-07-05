@@ -52,7 +52,7 @@ import { MepConnectorSnapEngine } from '../engines/MepConnectorSnapEngine';
 // ADR-378 Phase 3: Text snap engine (TEXT/MTEXT 8-point snap — completes ADR-344 Phase 6.C)
 import { TextSnapEngine } from '../engines/TextSnapEngine';
 // ADR-397: rotation snap engines (pivot ⊙ + rotating entity grips — contextual, read RotationSnapStore)
-import { RotationPivotSnapEngine, RotationGripSnapEngine } from '../engines/RotationSnapEngine';
+import { RotationPivotSnapEngine, RotationGripSnapEngine } from '../engines/RotationPointSnapEngine';
 
 interface Viewport {
   worldPerPixelAt(p: Point2D): number;

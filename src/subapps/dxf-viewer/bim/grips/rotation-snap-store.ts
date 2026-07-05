@@ -6,7 +6,7 @@
  * Imperative module-singleton (mirrors `systems/guides/construction-point-store`,
  * zero React). Populated when the rotation centre is picked, cleared when the
  * rotation flow resets. Two consumers:
- *  - `RotationSnapEngine` reads pivot + grips → snap candidates (cursor magnetism).
+ *  - `RotationPointSnapEngine` reads pivot + grips → snap candidates (cursor point-magnetism).
  *  - `BaseEntityRenderer.renderGrips` reads `snappableKeys()` → those grips render
  *    cyan ('snappable') via the grip-temperature SSoT.
  *
