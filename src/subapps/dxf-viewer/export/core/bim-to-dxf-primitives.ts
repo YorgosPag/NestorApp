@@ -22,7 +22,6 @@ import type { Entity, LWPolylineEntity } from '../../types/entities';
 import { isBimEntity } from '../../types/entities';
 import type { Point3D } from '../../bim/types/bim-base';
 import { closedRingFromEdges, projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
-import type { Point2D } from '../../rendering/types/Types';
 import type { DxfFlattenResult } from '../types';
 import { resolveDxfBodyLayer } from './dxf-category-layers';
 

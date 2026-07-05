@@ -1054,33 +1054,43 @@ duplication· regression-guarded. ✅
 **Google-Level (N.7.2)**: ΕΝΑ γεωμετρικό SSoT για όλα τα polygon BIM points· linear = ρητά
 ξεχωριστός τύπος (Revit-standard)· zero duplication· zero behavioural change· regression-guarded. ✅
 
-### 17.11 §projection-ssot — `projectVerticesTo2D` SSoT (2026-07-05)
+### 17.11 §projection-ssot — `projectPointTo2D` / `projectVerticesTo2D` SSoT (2026-07-05)
 
-**Απόφαση (Giorgio, «ΝΑ ΤΟ ΚΕΝΤΡΙΚΟΠΟΙΗΣΟΥΜΕ ΘΕΛΩ», Revit/Maxon/Figma-grade)**: το geometry SSoT
-(`computeColumnGeometry` / `computeFoundationGeometry` / `computeBeamGeometry`) ήταν ήδη κοινό, αλλά
-το τελικό **Point3D → Point2D projection** ενός footprint/outline (`…​.vertices.map((v) => ({ x: v.x,
-y: v.y }))`) ήταν copy-paste σε ≥4 corner-projection call sites. SSoT audit (grep `to2D|verticesOf|
-toPoint2D|footprintCorners`): κανένα canonical export στο `polygon-utils.ts` — μόνο διάσπαρτα *private*
-`to2D`/`verticesOf` ανά module (άλλος σκοπός/null-handling). Δημιουργήθηκε **ΕΝΑ** pure helper.
+**Απόφαση (Giorgio, «ΝΑ ΤΟ ΚΕΝΤΡΙΚΟΠΟΙΗΣΟΥΜΕ ΘΕΛΩ» + «ΑΝ ΒΡΕΙΣ ΠΡΟΫΠΑΡΧΟΝΤΑ ΔΙΠΛΟΤΥΠΑ, ΤΑ
+ΚΕΝΤΡΙΚΟΠΟΙΕΙΣ ΚΑΙ ΑΥΤΑ = ΔΙΑΤΑΓΗ», Revit/Maxon/Figma-grade)**: το geometry SSoT (`computeColumnGeometry`
+/ `computeFoundationGeometry` / `computeBeamGeometry`) ήταν ήδη κοινό, αλλά το τελικό **`{x,y}` projection**
+ενός point/footprint/outline ήταν copy-paste. SSoT audit (grep `to2D|verticesOf|toPoint2D|poly3to2`):
+κανένα canonical export — μόνο διάσπαρτα *private* helpers σε 9 modules, σε **δύο μορφές**: single-point
+`to2D(p)` & array `toPoint2D/verticesOf/poly3to2/.map(to2D)`. Δημιουργήθηκαν **ΔΥΟ** pure helpers (array =
+`verts.map(single)`), zero-dep, winding-preserving.
 
-- **NEW**: `bim/geometry/shared/polygon-utils.ts` → `projectVerticesTo2D(vertices): Point2D[]` — generic
-  επί οποιουδήποτε `{x,y}` source (footprint/outline vertices, grips)· z drop· fresh objects (κανένα
-  aliasing)· winding order διατηρείται (μηδέν αναδιάταξη — κρίσιμο για L/Γ/T/U). Zero-dep, pure.
-- **MOD**: `bim/columns/column-corner-snap.ts` (`projectColumn`) — inline map → helper.
-- **MOD**: `bim/structural/member-grip-corner-snap.ts` (×3: `proposedColumnCorners`, `proposedBeamCorners`
-  σε `.outline`, `proposedFoundationCorners`) — inline map → helper (Boy-Scout: το beam sibling στο ίδιο
-  αρχείο, ίδιο idiom).
-- **MOD**: `bim/utils/bim-characteristic-points.ts` — `columnPoints` inline map + private `verticesOf`
-  (null-safe wrapper) → delegate στο helper.
+- **NEW**: `bim/geometry/shared/polygon-utils.ts` → `projectPointTo2D(p): Point2D` (single) +
+  `projectVerticesTo2D(vertices): Point2D[]` (array mirror). Generic επί `{x,y}` source· z drop· fresh
+  objects (κανένα aliasing)· winding order διατηρείται (μηδέν αναδιάταξη — κρίσιμο για L/Γ/T/U).
+- **Corner-projection snap (αρχικό task)**: `bim/columns/column-corner-snap.ts`,
+  `bim/structural/member-grip-corner-snap.ts` (×3: column/beam-`.outline`/foundation),
+  `bim/utils/bim-characteristic-points.ts` (`columnPoints` + private `verticesOf` delegate).
+- **Προϋπάρχοντα διπλότυπα (ΔΙΑΤΑΓΗ Giorgio — single-point `to2D`)**: `bim/walls/wall-corner-anchors.ts`,
+  `bim/walls/opening-corner-anchors.ts`, `bim/slabs/slab-corner-anchors.ts`, `bim/beams/beam-corner-anchors.ts`,
+  `rendering/hitTesting/hit-test-entity-tests.ts`, `export/core/bim-to-dxf-primitives.ts` — private `to2D`
+  διαγράφηκαν → `projectPointTo2D`/`projectVerticesTo2D`.
+- **Προϋπάρχοντα διπλότυπα (array)**: `bim/framing/member-snap-targets.ts` (`toPoint2D` → deleted),
+  `bim/placement/structural-placement-overlap.ts` (`toPoint2DArray` κρατά null/length guard, projection
+  delegate), `hit-test-entity-tests.ts` (`poly3to2` → deleted).
 - **NEW (test)**: `bim/geometry/shared/__tests__/polygon-utils-vertices2d.test.ts` — z-drop, winding
-  preservation, fresh-object (no alias), empty input. PASS (4 tests).
+  preservation, fresh-object (no alias), empty input. PASS.
 
-**Μη-στόχοι (ρητά ΔΕΝ αγγίχθηκαν)**: τα ~40 νόμιμα `.vertices.map` σε renderers/3D-converters/BOQ/
-hosting/geometry (άλλος σκοπός — Pair tuples, μετατοπίσεις, section slices)· δεν ενώθηκε entity-based
-(`columnPoints`) με params-based (corner-snaps) — διαφορετικές είσοδοι, μόνο το projection είναι κοινό.
+**Εκκρεμεί (application-wide sweep, ΕΚΤΟΣ ασφαλούς scope ενός session — N.8)**: ~80 ακόμα call sites του
+ΙΔΙΟΥ `{x,y}` idiom σε renderers / bim-3d converters / BOQ feeds / preview-stores / reinforcement / hosting.
+Είναι σημασιολογικά το ίδιο (3D→2D projection Ή 2D clone/field-narrow) και μπορούν ΟΛΑ να καλέσουν το SSoT,
+αλλά cross-domain (bim / bim-3d / export / rendering / hooks / systems) → orchestrator-driven ratchet, όχι
+τυφλό μαζικό edit εδώ. Καταγράφηκε ρητά (μηδέν «τελείωσα» ψευδώς).
 
-**Google-Level (N.7.2)**: ΕΝΑ pure projection SSoT· zero behavioural change (ίδιο output Point2D[])·
-zero duplication στο snap corner path· regression-guarded (50 tests PASS). ✅
+**Verification**: 212 tests PASS (23 suites: polygon-utils, characteristic-points, corner-snaps,
+entity-points, wall/opening/slab/beam-corner-anchors, member-snap-targets, placement-overlap, hit-test, bim-to-dxf).
+
+**Google-Level (N.7.2)**: ΔΥΟ pure projection SSoT· zero behavioural change (ίδιο output)· zero duplication
+στο snap/hit-test/export cluster· regression-guarded· εκκρεμές ευρύτερο πεδίο ρητά καταγεγραμμένο. ✅
 
 ---
 

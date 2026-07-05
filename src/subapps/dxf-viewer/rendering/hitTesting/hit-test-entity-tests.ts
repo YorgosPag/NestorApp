@@ -176,7 +176,7 @@ function hitTestWall(entity: Entity, point: Point2D): Partial<HitTestResult> | n
   const inner = entity.geometry?.innerEdge?.points;
   if (!outer || !inner || outer.length < 2 || inner.length < 2) return null;
   // Build closed footprint: outer forward + inner reversed (matches buildWallShape) — SSoT.
-  const ring: Point2D[] = closedRingFromEdges(outer, inner).map(to2D);
+  const ring: Point2D[] = projectVerticesTo2D(closedRingFromEdges(outer, inner));
   if (ring.length < 3) return null;
   return isPointInPolygon(point, ring) ? { hitType: 'entity', hitPoint: point } : null;
 }

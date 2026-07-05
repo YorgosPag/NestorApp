@@ -34,7 +34,7 @@ import {
   type Entity,
 } from '../../types/entities';
 import { safeIntersection } from '../geometry/shared/safe-polygon-boolean';
-import { multiPolygonArea } from '../geometry/shared/polygon-utils';
+import { multiPolygonArea, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import { wallFootprintPolygon } from '../finishes/wall-footprint-union';
 import { resolveMemberFootprintVertices } from '../structural/member-footprint-2d';
 
@@ -178,10 +178,10 @@ function bboxDisjoint(
   return a.maxX < b.minX || b.maxX < a.minX || a.maxY < b.minY || b.maxY < a.minY;
 }
 
-/** `Point3D`/`Pt2` array → `Point2D[]` (κρατά μόνο x/y)· `null` αν <3 κορυφές. */
+/** `Point3D`/`Pt2` array → `Point2D[]` (projection SSoT `projectVerticesTo2D`)· `null` αν <3 κορυφές. */
 function toPoint2DArray(verts: ReadonlyArray<{ x: number; y: number }> | undefined | null): Point2D[] | null {
   if (!verts || verts.length < 3) return null;
-  return verts.map((p) => ({ x: p.x, y: p.y }));
+  return projectVerticesTo2D(verts);
 }
 
 /** `Point2D[]` → κλειστό CCW-agnostic polygon-clipping `Polygon` (ένα ring). */
