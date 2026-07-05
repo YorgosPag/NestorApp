@@ -202,6 +202,33 @@ export function makePolygon3D(vertices: readonly Point3D[]): Polygon3D {
   return { vertices };
 }
 
+/**
+ * Project a single `{x,y[,z]}` point onto the XY plane as a plain {@link Point2D}
+ * (z dropped, fresh object — never aliases the input). SSoT για το ubiquitous idiom
+ * `{ x: p.x, y: p.y }` (πρώην private `to2D` σε wall/opening/slab/beam-corner-anchors,
+ * hit-test-entity-tests, bim-to-dxf-primitives). Generic επί οποιουδήποτε `{x,y}` source
+ * (Point3D geometry vertices, grips), pure & zero-dep (ADR-370 §17.11).
+ */
+export function projectPointTo2D(p: { readonly x: number; readonly y: number }): Point2D {
+  return { x: p.x, y: p.y };
+}
+
+/**
+ * Project a polygon's vertices onto the XY plane as plain {@link Point2D} objects
+ * (z dropped, fresh objects — never aliases the input). SSoT για το idiom
+ * `geometry.footprint.vertices.map((v) => ({ x: v.x, y: v.y }))` που επαναλαμβανόταν
+ * στα corner-projection snap paths (κολόνα/θεμέλιο/δοκός: `column-corner-snap`,
+ * `member-grip-corner-snap`), στα entity characteristic points (`bim-characteristic-points`),
+ * στα snap targets (`member-snap-targets`) & στο placement overlap (`structural-placement-overlap`).
+ * Array mirror του {@link projectPointTo2D}. Generic επί οποιουδήποτε `{x,y}` πηγής,
+ * pure & zero-dep. Winding order διατηρείται — μηδέν αναδιάταξη κορυφών (ADR-370 §17.11).
+ */
+export function projectVerticesTo2D(
+  vertices: readonly { readonly x: number; readonly y: number }[],
+): Point2D[] {
+  return vertices.map(projectPointTo2D);
+}
+
 // ─── Polygon clipping (Sutherland-Hodgman) ───────────────────────────────────
 //
 // Moved to sibling module `polygon-clip-utils.ts` (N.7.1 500-line cap).

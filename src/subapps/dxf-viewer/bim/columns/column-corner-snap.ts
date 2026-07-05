@@ -39,6 +39,7 @@ import type { ColumnGripKind } from '../../hooks/useGripMovement';
 import type { ColumnParamOverrides } from '../../hooks/drawing/column-completion';
 import type { SceneUnits } from '../../utils/scene-units';
 import { computeColumnGeometry } from '../geometry/column-geometry';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import { buildDefaultColumnParams } from '../../hooks/drawing/column-completion';
 import { findMemberGripCornerSnap, isColumnCornerSnapGrip } from '../structural/member-grip-corner-snap';
 import {
@@ -115,6 +116,6 @@ function projectColumn(
   findSnapPoint: FindSnapPoint,
   excludeEntityId: string | null,
 ): CornerProjectionResult | null {
-  const corners = computeColumnGeometry(proposed).footprint.vertices.map((v) => ({ x: v.x, y: v.y }));
+  const corners = projectVerticesTo2D(computeColumnGeometry(proposed).footprint.vertices);
   return findBestCornerProjection(corners, cursorPos, findSnapPoint, excludeEntityId);
 }

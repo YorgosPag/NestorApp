@@ -57,7 +57,7 @@ import { getColumnCornerWorldPoints } from '../columns/column-corner-anchors';
 import { computeColumnGeometry } from '../geometry/column-geometry';
 import { getFoundationGrips } from '../foundations/foundation-grips';
 import { getCentredBoxGrips, type CentredBoxParams } from '../grips/centred-box-grips';
-import { polygon2DCentroid, polygon2DAreaCentroid, footprintEdgeMidpoints } from '../geometry/shared/polygon-utils';
+import { polygon2DCentroid, polygon2DAreaCentroid, footprintEdgeMidpoints, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import { isSegmentVertical } from '../types/mep-segment-types';
 
 // ─── Public types ────────────────────────────────────────────────────────────
@@ -225,7 +225,7 @@ function columnPoints(entity: Entity): BimCharPoints {
   // corners (+ midpoints of ALL real edges + centroid) as snap targets — symmetric with
   // the moving side — not just the 4 bounding-box corners. Rectangular → the 4 real
   // vertices ARE the 4 bbox corners (zero regression).
-  const verts = computeColumnGeometry(entity.params).footprint.vertices.map((v) => ({ x: v.x, y: v.y }));
+  const verts = projectVerticesTo2D(computeColumnGeometry(entity.params).footprint.vertices);
   // ADR-370 §non-convex-fix: το footprint είναι polygon σε winding order → isOrderedPolygon=true
   // ώστε L/Γ/T/U να μη βγάζουν midpoints/κέντρο στο κενό (notch).
   return footprintPoints(verts, labelRoot, true);
@@ -310,7 +310,7 @@ function segmentEndpoints(entity: Entity): Point2D[] {
 }
 
 function verticesOf(verts: ReadonlyArray<{ x: number; y: number }> | undefined): Point2D[] {
-  return verts ? verts.map((v) => ({ x: v.x, y: v.y })) : [];
+  return verts ? projectVerticesTo2D(verts) : [];
 }
 
 const CORNER_GRIP_RE = /corner/;

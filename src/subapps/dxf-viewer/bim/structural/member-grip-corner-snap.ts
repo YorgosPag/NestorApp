@@ -34,6 +34,7 @@ import { applyFoundationGripDrag } from '../foundations/foundation-grips';
 import { computeColumnGeometry } from '../geometry/column-geometry';
 import { computeBeamGeometry } from '../geometry/beam-geometry';
 import { computeFoundationGeometry } from '../geometry/foundation-geometry';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import {
   findBestCornerProjection,
   type CornerProjectionResult,
@@ -80,7 +81,7 @@ function proposedColumnCorners(
   if (!altMove && !isColumnCornerSnapGrip(gripKind)) return null;
   const kind: ColumnGripKind = altMove ? 'column-center' : (gripKind as ColumnGripKind);
   const proposed = applyColumnGripDrag(kind, { originalParams: entity.params, delta, currentPos: cursorPos });
-  return computeColumnGeometry(proposed).footprint.vertices.map((v) => ({ x: v.x, y: v.y }));
+  return projectVerticesTo2D(computeColumnGeometry(proposed).footprint.vertices);
 }
 
 /** Οι προτεινόμενες footprint-γωνίες της δοκού (proposed params → outline SSoT). */
@@ -94,7 +95,7 @@ function proposedBeamCorners(
   if (!altMove && !isBeamCornerSnapGrip(gripKind)) return null;
   const kind: BeamGripKind = altMove ? 'beam-midpoint' : (gripKind as BeamGripKind);
   const proposed = applyBeamGripDrag(kind, { originalParams: entity.params, delta, currentPos: cursorPos });
-  return computeBeamGeometry(proposed).outline.vertices.map((v) => ({ x: v.x, y: v.y }));
+  return projectVerticesTo2D(computeBeamGeometry(proposed).outline.vertices);
 }
 
 /** Οι προτεινόμενες footprint-γωνίες του θεμελίου (proposed params → footprint SSoT). */
@@ -108,7 +109,7 @@ function proposedFoundationCorners(
   if (!altMove && !isFoundationCornerSnapGrip(gripKind)) return null;
   const kind: FoundationGripKind = altMove ? 'foundation-center' : (gripKind as FoundationGripKind);
   const proposed = applyFoundationGripDrag(kind, { originalParams: entity.params, delta, currentPos: cursorPos });
-  return computeFoundationGeometry(proposed).footprint.vertices.map((v) => ({ x: v.x, y: v.y }));
+  return projectVerticesTo2D(computeFoundationGeometry(proposed).footprint.vertices);
 }
 
 /**
