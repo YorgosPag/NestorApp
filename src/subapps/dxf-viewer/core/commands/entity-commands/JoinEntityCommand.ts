@@ -1,94 +1,57 @@
 /**
  * JOIN ENTITY COMMAND
  *
- * Command for joining multiple entities into one with full undo/redo support.
- * Follows AutoCAD JOIN semantics — result type depends on input geometry.
+ * Joins multiple entities into one merged entity with full undo/redo. Follows
+ * AutoCAD JOIN semantics — result type depends on input geometry. The container
+ * (the merged entity) is built UP-FRONT by EntityMergeService and handed in.
  *
- * Pattern:
- * - execute(): Snapshot originals → remove originals → add merged entity
- * - undo(): Remove merged → restore originals
- * - redo(): Remove originals again → add merged
+ * Thin subclass of {@link ReplaceEntitiesWithContainerCommand}: it owns the
+ * snapshot→remove→add→undo→redo lifecycle (shared with GROUP). JOIN's only
+ * specialisation is that `buildContainer` returns the pre-built merged entity.
  *
  * @see ADR-161: Entity Join System
  * @see ADR-032: Command History / Undo-Redo
+ * @see ADR-575 §7: shared container-command base
  */
 
-import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
-import type { Entity } from '../../../types/entities';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
+import type { ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import { deepClone } from '../../../utils/clone-utils';
-// N.12 SSoT — shared container extract/restore lifecycle (also used by CreateArrayCommand + CreateGroupCommand).
-import { extractSourcesFromScene, restoreSourcesToScene } from './entity-source-extraction';
+import { ReplaceEntitiesWithContainerCommand } from './ReplaceEntitiesWithContainerCommand';
 
-export class JoinEntityCommand implements ICommand {
-  readonly id: string;
+export class JoinEntityCommand extends ReplaceEntitiesWithContainerCommand {
   readonly name = 'JoinEntities';
   readonly type = 'join-entities';
-  readonly timestamp: number;
-
-  /** Snapshots of original entities (for undo) */
-  private originalSnapshots: SceneEntity[] = [];
-  /** The merged entity produced by join */
-  private mergedEntity: SceneEntity;
-  private wasExecuted = false;
 
   constructor(
     /** IDs of entities to be joined */
-    private readonly sourceEntityIds: string[],
+    sourceEntityIds: string[],
     /** The pre-built merged entity (built by EntityMergeService) */
     mergedEntity: SceneEntity,
-    private readonly sceneManager: ISceneManager,
+    sceneManager: ISceneManager,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
-    this.mergedEntity = deepClone(mergedEntity);
+    super(sourceEntityIds, sceneManager);
+    // JOIN's container is known from the start — pre-set it so its id is stable
+    // and reported by getAffectedEntityIds() even before execute().
+    this.container = deepClone(mergedEntity) as SceneEntity;
   }
 
-  /**
-   * Execute: Snapshot originals → remove originals → add merged entity
-   */
-  execute(): void {
-    // SSoT: snapshot sources (deep-clone, for undo) + remove originals from scene.
-    const sources: Entity[] = [];
-    for (const entityId of this.sourceEntityIds) {
-      const entity = this.sceneManager.getEntity(entityId);
-      if (entity) sources.push(entity as unknown as Entity);
-    }
-    this.originalSnapshots = extractSourcesFromScene(sources, this.sceneManager) as unknown as SceneEntity[];
-
-    // Add merged entity
-    this.sceneManager.addEntity(deepClone(this.mergedEntity));
-    this.wasExecuted = true;
-  }
-
-  /**
-   * Undo: Remove merged entity → restore originals
-   */
-  undo(): void {
-    if (!this.wasExecuted) return;
-    this.sceneManager.removeEntity(this.mergedEntity.id);
-    restoreSourcesToScene(this.originalSnapshots as unknown as Entity[], this.sceneManager);
-  }
-
-  /**
-   * Redo: Remove originals again → add merged
-   */
-  redo(): void {
-    // Remove originals
-    for (const snapshot of this.originalSnapshots) {
-      this.sceneManager.removeEntity(snapshot.id);
-    }
-
-    // Re-add merged entity
-    this.sceneManager.addEntity(deepClone(this.mergedEntity));
+  /** JOIN hands in a ready container — ignore the snapshots. */
+  protected buildContainer(): SceneEntity | null {
+    return this.container;
   }
 
   getDescription(): string {
-    return `Join ${this.originalSnapshots.length} entities → ${this.mergedEntity.type}`;
+    return `Join ${this.snapshots.length} entities → ${this.container?.type ?? 'entity'}`;
   }
 
-  canMergeWith(): boolean {
-    return false;
+  validate(): string | null {
+    if (!this.sourceEntityIds || this.sourceEntityIds.length < 2) {
+      return 'At least 2 entity IDs are required for join';
+    }
+    if (!this.container) {
+      return 'Merged entity is required';
+    }
+    return null;
   }
 
   serialize(): SerializedCommand {
@@ -98,25 +61,11 @@ export class JoinEntityCommand implements ICommand {
       name: this.name,
       timestamp: this.timestamp,
       data: {
-        sourceEntityIds: this.sourceEntityIds,
-        mergedEntity: this.mergedEntity,
-        originalSnapshots: this.originalSnapshots,
+        sourceEntityIds: [...this.sourceEntityIds],
+        mergedEntity: this.container,
+        originalSnapshots: this.snapshots,
       },
       version: 1,
     };
-  }
-
-  getAffectedEntityIds(): string[] {
-    return [...this.sourceEntityIds, this.mergedEntity.id];
-  }
-
-  validate(): string | null {
-    if (!this.sourceEntityIds || this.sourceEntityIds.length < 2) {
-      return 'At least 2 entity IDs are required for join';
-    }
-    if (!this.mergedEntity) {
-      return 'Merged entity is required';
-    }
-    return null;
   }
 }
