@@ -17,9 +17,8 @@ const CTX: RingUnitContext = { displayUnit: 'mm', sceneUnits: 'mm' };
 describe('lengthRingField', () => {
   afterEach(() => DynamicInputLockStore.unlock());
 
-  it('θέση = top, numeric, key = length', () => {
+  it('numeric, key = length', () => {
     const f = lengthRingField('tools.ring.length');
-    expect(f.position).toBe('top');
     expect(f.kind).toBe('numeric');
     expect(f.key).toBe('length');
     expect(f.labelKey).toBe('tools.ring.length');
@@ -48,9 +47,8 @@ describe('lengthRingField', () => {
 describe('angleRingField', () => {
   afterEach(() => DynamicInputLockStore.unlock());
 
-  it('θέση = right, numeric, key = angle', () => {
+  it('numeric, key = angle', () => {
     const f = angleRingField('tools.ring.angle');
-    expect(f.position).toBe('right');
     expect(f.kind).toBe('numeric');
     expect(f.key).toBe('angle');
   });

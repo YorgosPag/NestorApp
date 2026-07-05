@@ -40,7 +40,6 @@ function setOverride(key: 'width' | 'depth', valueMm: number): void {
 function beamWidthField(): RingFieldDef {
   return {
     key: 'width',
-    position: 'left',
     labelKey: 'tools.beam.ringWidth',
     kind: 'numeric',
     isLocked: () => currentOverrides().width !== undefined,
@@ -52,7 +51,6 @@ function beamWidthField(): RingFieldDef {
 function beamDepthField(): RingFieldDef {
   return {
     key: 'depth',
-    position: 'bottom',
     labelKey: 'tools.beam.ringDepth',
     kind: 'numeric',
     isLocked: () => currentOverrides().depth !== undefined,
@@ -61,14 +59,15 @@ function beamDepthField(): RingFieldDef {
   };
 }
 
-/** Διάταξη δαχτυλιδιού δοκού (4 πεδία, mirror του τοίχου). */
+/** Διάταξη δαχτυλιδιού δοκού (4 πεδία → cardinal, mirror του τοίχου): Μήκος πάνω, Γωνία δεξιά,
+ * Ύψος κάτω, Πλάτος αριστερά (σειρά = φέτα μέσω `computeRingSlices`). */
 export const BEAM_RING_CONFIG: RingConfig = {
   ariaLabelKey: 'tools.beam.ringLabel',
   fields: [
     lengthRingField('tools.beam.ringLength'),
     angleRingField('tools.beam.ringAngle'),
-    beamWidthField(),
     beamDepthField(),
+    beamWidthField(),
   ],
   subscribe: combineSubscribers(
     DynamicInputLockStore.subscribe,

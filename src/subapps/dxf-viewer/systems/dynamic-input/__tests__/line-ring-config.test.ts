@@ -14,16 +14,9 @@ import type { RingUnitContext } from '../ring-config';
 const CTX: RingUnitContext = { displayUnit: 'mm', sceneUnits: 'mm' };
 
 describe('LINE_RING_CONFIG layout', () => {
-  it('έχει 3 πεδία: Μήκος(top) / Γωνία(right) / Τύπος(left)', () => {
-    const byKey = new Map(LINE_RING_CONFIG.fields.map((f) => [f.key, f]));
-    expect(LINE_RING_CONFIG.fields).toHaveLength(3);
-    expect(byKey.get('length')?.position).toBe('top');
-    expect(byKey.get('angle')?.position).toBe('right');
-    expect(byKey.get('linetype')?.position).toBe('left');
-  });
-
-  it('η κάτω θέση μένει κενή (3 πεδία, όχι 4)', () => {
-    expect(LINE_RING_CONFIG.fields.some((f) => f.position === 'bottom')).toBe(false);
+  it('έχει 3 πεδία σε σειρά: Μήκος / Γωνία / Τύπος (→ 3 ίσες φέτες 120°)', () => {
+    // Σειρά = φέτα (computeRingSlices)· 3 πεδία → 3×120°, μηδέν σταθερή cardinal θέση.
+    expect(LINE_RING_CONFIG.fields.map((f) => f.key)).toEqual(['length', 'angle', 'linetype']);
   });
 
   it('aria-label = δαχτυλίδι γραμμής', () => {

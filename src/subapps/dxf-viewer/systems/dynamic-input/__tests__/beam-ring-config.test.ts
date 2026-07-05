@@ -27,13 +27,10 @@ function publishHandle(overrides: BeamParamOverrides, captured?: { value: BeamPa
 describe('BEAM_RING_CONFIG layout', () => {
   afterEach(() => beamToolBridgeStore.set(null));
 
-  it('έχει 4 πεδία: Μήκος(top) / Γωνία(right) / Πλάτος(left) / Ύψος(bottom)', () => {
-    const byKey = new Map(BEAM_RING_CONFIG.fields.map((f) => [f.key, f]));
-    expect(BEAM_RING_CONFIG.fields).toHaveLength(4);
-    expect(byKey.get('length')?.position).toBe('top');
-    expect(byKey.get('angle')?.position).toBe('right');
-    expect(byKey.get('width')?.position).toBe('left');
-    expect(byKey.get('depth')?.position).toBe('bottom');
+  it('έχει 4 πεδία σε σειρά: Μήκος / Γωνία / Ύψος / Πλάτος (→ 4 ίσες φέτες = cardinal)', () => {
+    // Σειρά = φέτα (computeRingSlices): index 0 πάνω, μετά δεξιόστροφα → length top, angle right,
+    // depth bottom, width left (ίδια όψη με τον τοίχο).
+    expect(BEAM_RING_CONFIG.fields.map((f) => f.key)).toEqual(['length', 'angle', 'depth', 'width']);
   });
 
   it('όλα τα πεδία είναι numeric (καμία επιλογή/select στη δοκό)', () => {

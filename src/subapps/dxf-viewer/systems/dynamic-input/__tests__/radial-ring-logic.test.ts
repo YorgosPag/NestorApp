@@ -10,20 +10,19 @@ import {
   computeLiveLengthAngle,
   lengthDisplayToSceneLock,
   normalizeAngleDeg,
-  WEDGE_ANGLES,
   RING_OPACITY,
   RING_HOVER_OPACITY,
   RING_INNER_R,
   RING_OUTER_R,
+  RING_TOP_DEG,
+  computeRingSlices,
+  sliceIndexAtAngle,
   polarPoint,
   pieSectorPath,
-  wedgeAtAngle,
   cursorZone,
   pushWheelCenter,
   advanceWheelCenter,
   RING_INSIDE_FOLLOW_RATIO,
-  WEDGE_POSITION_ANGLES,
-  wedgePositionAtAngle,
 } from '../radial-ring-logic';
 
 describe('RING_TAB_ORDER', () => {
@@ -115,14 +114,6 @@ describe('NavWheel specs', () => {
   });
 });
 
-describe('wedgeAtAngle (cardinal sectors)', () => {
-  it('270° → Μήκος (top)', () => expect(wedgeAtAngle(270)).toBe('length'));
-  it('0° → Γωνία (right)', () => expect(wedgeAtAngle(0)).toBe('angle'));
-  it('180° → Πάχος (left)', () => expect(wedgeAtAngle(180)).toBe('thickness'));
-  it('90° → Ύψος (bottom)', () => expect(wedgeAtAngle(90)).toBe('height'));
-  it('wraps negatives/over-360 (−10° → Γωνία)', () => expect(wedgeAtAngle(-10)).toBe('angle'));
-});
-
 describe('cursorZone (two concentric circles)', () => {
   it('inside the visible circle', () => expect(cursorZone(10, 52, 96)).toBe('inside'));
   it('in the deadzone annulus', () => expect(cursorZone(70, 52, 96)).toBe('annulus'));
@@ -162,45 +153,47 @@ describe('advanceWheelCenter (zone-based, Giorgio: inside = half-speed)', () => 
   });
 });
 
-describe('WEDGE_ANGLES', () => {
-  it('places Μήκος top, Γωνία right, Πάχος left, Ύψος bottom', () => {
-    expect(WEDGE_ANGLES.length.centerDeg).toBe(270);
-    expect(WEDGE_ANGLES.angle.centerDeg).toBe(0);
-    expect(WEDGE_ANGLES.thickness.centerDeg).toBe(180);
-    expect(WEDGE_ANGLES.height.centerDeg).toBe(90);
+describe('computeRingSlices (δυναμικές ίσες φέτες — ADR-513 §equal-slices)', () => {
+  it('count=2 → δύο ημικύκλια (πάνω/κάτω, 180° η καθεμία)', () => {
+    const s = computeRingSlices(2);
+    expect(s).toHaveLength(2);
+    expect(s[0].centerDeg).toBe(RING_TOP_DEG); // 270 = πάνω
+    expect(s[0].a1 - s[0].a0).toBe(180);
+    expect(s[1].centerDeg).toBe(90); // 90 = κάτω
+    expect(s[1].a1 - s[1].a0).toBe(180);
   });
-  it('every wedge spans exactly 90° (4 wedges = full circle, no overlap)', () => {
-    for (const w of Object.values(WEDGE_ANGLES)) expect(w.a1 - w.a0).toBe(90);
+  it('count=3 → 3 ίσες φέτες 120°, η 1η κεντραρισμένη πάνω', () => {
+    const s = computeRingSlices(3);
+    expect(s.map((w) => w.centerDeg)).toEqual([270, 30, 150]);
+    for (const w of s) expect(w.a1 - w.a0).toBe(120);
   });
-  it('derives from WEDGE_POSITION_ANGLES (μηδέν διπλότυπο)', () => {
-    expect(WEDGE_ANGLES.length).toBe(WEDGE_POSITION_ANGLES.top);
-    expect(WEDGE_ANGLES.angle).toBe(WEDGE_POSITION_ANGLES.right);
-    expect(WEDGE_ANGLES.thickness).toBe(WEDGE_POSITION_ANGLES.left);
-    expect(WEDGE_ANGLES.height).toBe(WEDGE_POSITION_ANGLES.bottom);
+  it('count=4 → cardinal (top/right/bottom/left, 90° η καθεμία)', () => {
+    const s = computeRingSlices(4);
+    expect(s.map((w) => w.centerDeg)).toEqual([270, 0, 90, 180]);
+    for (const w of s) expect(w.a1 - w.a0).toBe(90);
   });
-});
-
-describe('WEDGE_POSITION_ANGLES (tool-agnostic γεωμετρία)', () => {
-  it('top=N(270), right=E(0), bottom=S(90), left=W(180)', () => {
-    expect(WEDGE_POSITION_ANGLES.top.centerDeg).toBe(270);
-    expect(WEDGE_POSITION_ANGLES.right.centerDeg).toBe(0);
-    expect(WEDGE_POSITION_ANGLES.bottom.centerDeg).toBe(90);
-    expect(WEDGE_POSITION_ANGLES.left.centerDeg).toBe(180);
-  });
-  it('κάθε θέση καλύπτει 90° (4 = πλήρης κύκλος)', () => {
-    for (const w of Object.values(WEDGE_POSITION_ANGLES)) expect(w.a1 - w.a0).toBe(90);
+  it('count<=0 → κενό (defensive)', () => {
+    expect(computeRingSlices(0)).toEqual([]);
+    expect(computeRingSlices(-1)).toEqual([]);
   });
 });
 
-describe('wedgePositionAtAngle (cardinal θέσεις)', () => {
-  it('270° → top', () => expect(wedgePositionAtAngle(270)).toBe('top'));
-  it('0° → right', () => expect(wedgePositionAtAngle(0)).toBe('right'));
-  it('90° → bottom', () => expect(wedgePositionAtAngle(90)).toBe('bottom'));
-  it('180° → left', () => expect(wedgePositionAtAngle(180)).toBe('left'));
-  it('wraps negatives/over-360 (−10° → right)', () => expect(wedgePositionAtAngle(-10)).toBe('right'));
-  it('συμφωνεί με το wall-keyed wedgeAtAngle ανά θέση', () => {
-    expect(wedgePositionAtAngle(270)).toBe('top'); // length
-    expect(wedgePositionAtAngle(180)).toBe('left'); // thickness
+describe('sliceIndexAtAngle (αντίστροφο του computeRingSlices)', () => {
+  it('count=2: πάνω(270°)→0, κάτω(90°)→1', () => {
+    expect(sliceIndexAtAngle(270, 2)).toBe(0);
+    expect(sliceIndexAtAngle(90, 2)).toBe(1);
+  });
+  it('count=4: κάθε cardinal κέντρο επιστρέφει τη φέτα του', () => {
+    const s = computeRingSlices(4);
+    s.forEach((w, i) => expect(sliceIndexAtAngle(w.centerDeg, 4)).toBe(i));
+  });
+  it('count=3: κάθε κέντρο 120° επιστρέφει τη φέτα του (round-trip)', () => {
+    const s = computeRingSlices(3);
+    s.forEach((w, i) => expect(sliceIndexAtAngle(w.centerDeg, 3)).toBe(i));
+  });
+  it('wraps negatives/over-360 + count<=0 → −1', () => {
+    expect(sliceIndexAtAngle(-90, 2)).toBe(sliceIndexAtAngle(270, 2)); // −90 ≡ 270
+    expect(sliceIndexAtAngle(0, 0)).toBe(-1);
   });
 });
 

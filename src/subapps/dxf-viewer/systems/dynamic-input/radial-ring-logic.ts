@@ -28,42 +28,48 @@ export const RING_OUTER_R = 96;
 export const RING_OPACITY = 0.28;
 export const RING_HOVER_OPACITY = 0.55;
 
-// ── Tool-agnostic wedge geometry (ADR-513 §line parity) ──────────────────────
-// Το δαχτυλίδι έχει 4 cardinal θέσεις (90° η καθεμία). Κάθε εργαλείο (τοίχος/γραμμή)
-// χαρτογραφεί τα πεδία του σε θέσεις μέσω `RingConfig` (ring-config.ts) — η γεωμετρία
-// εδώ είναι **ανεξάρτητη πεδίου**, ώστε ΕΝΑ component να εξυπηρετεί όλα τα εργαλεία.
+// ── Tool-agnostic DYNAMIC wedge geometry (ADR-513 §equal-slices) ──────────────
+// Ο κύκλος χωρίζεται σε **N ΙΣΕΣ φέτες** ανάλογα με το ΠΛΗΘΟΣ των εντολών του εργαλείου
+// (Giorgio: «2 εντολές → 2 ημικύκλια· 3 → 3 ίσες φέτες»). Η φέτα κάθε πεδίου προκύπτει από
+// τη ΘΕΣΗ του στο `RingConfig.fields` (index), ΟΧΙ από σταθερή cardinal θέση — έτσι ΕΝΑ
+// component εξυπηρετεί οποιοδήποτε πλήθος εντολών, κεντρικοποιημένα.
 
-/** Cardinal θέση wedge στο δαχτυλίδι (y-κάτω, οθόνη). */
-export type RingWedgePosition = 'top' | 'right' | 'bottom' | 'left';
+/** Γωνία της ΠΑΝΩ (Βορράς) κατεύθυνσης (μοίρες, y-κάτω οθόνη). Η φέτα 0 κεντράρεται εδώ. */
+export const RING_TOP_DEG = 270;
 
-/** Γωνιακό εύρος ανά θέση (μοίρες, y-κάτω, 0°=Ανατολή): top=N, right=E, bottom=S, left=W. */
-export const WEDGE_POSITION_ANGLES: Record<RingWedgePosition, { centerDeg: number; a0: number; a1: number }> = {
-  top: { centerDeg: 270, a0: 225, a1: 315 }, // N
-  right: { centerDeg: 0, a0: -45, a1: 45 }, // E
-  bottom: { centerDeg: 90, a0: 45, a1: 135 }, // S
-  left: { centerDeg: 180, a0: 135, a1: 225 }, // W
-};
-
-/** Σε ποια cardinal θέση πέφτει μια γωνία (μοίρες, y-κάτω). */
-export function wedgePositionAtAngle(deg: number): RingWedgePosition {
-  const a = ((deg % 360) + 360) % 360;
-  if (a >= 225 && a < 315) return 'top';
-  if (a >= 45 && a < 135) return 'bottom';
-  if (a >= 135 && a < 225) return 'left';
-  return 'right'; // 315..360, 0..45
+/** Μία ίση φέτα του δαχτυλιδιού: index + κεντρική γωνία + γωνιακό εύρος [a0, a1] (μοίρες, y-κάτω). */
+export interface RingSlice {
+  readonly index: number;
+  readonly centerDeg: number;
+  readonly a0: number;
+  readonly a1: number;
 }
 
 /**
- * Γωνιακό εύρος κάθε wedge ΤΟΙΧΟΥ (μοίρες, y-κάτω): Μήκος πάνω, Γωνία δεξιά, Πάχος αριστερά,
- * Ύψος κάτω. Παράγεται από το `WEDGE_POSITION_ANGLES` (μηδέν διπλότυπο) — κρατείται για
- * back-compat με όποιον reader διαβάζει ανά πεδίο τοίχου.
+ * Χώρισε τον πλήρη κύκλο σε `count` ΙΣΕΣ φέτες (360/count η καθεμία). Η φέτα 0 κεντράρεται στην
+ * ΠΑΝΩ κατεύθυνση (`RING_TOP_DEG`) και οι επόμενες πάνε δεξιόστροφα (y-κάτω). Παραδείγματα:
+ * count=2 → δύο ημικύκλια (πάνω/κάτω)· count=3 → 3×120°· count=4 → οι cardinal top/right/bottom/left.
+ * ΕΝΑΣ SSoT για τη γεωμετρία των φετών (κάθε εργαλείο, κάθε πλήθος). Καθαρή συνάρτηση → testable.
  */
-export const WEDGE_ANGLES: Record<RingFieldKey, { centerDeg: number; a0: number; a1: number }> = {
-  length: WEDGE_POSITION_ANGLES.top,
-  angle: WEDGE_POSITION_ANGLES.right,
-  thickness: WEDGE_POSITION_ANGLES.left,
-  height: WEDGE_POSITION_ANGLES.bottom,
-};
+export function computeRingSlices(count: number, firstCenterDeg = RING_TOP_DEG): readonly RingSlice[] {
+  if (count <= 0) return [];
+  const span = 360 / count;
+  return Array.from({ length: count }, (_, index) => {
+    const centerDeg = normalizeAngleDeg(firstCenterDeg + index * span);
+    return { index, centerDeg, a0: centerDeg - span / 2, a1: centerDeg + span / 2 };
+  });
+}
+
+/**
+ * Σε ποια ίση φέτα (index 0..count-1) πέφτει μια γωνία `deg` (μοίρες, y-κάτω) — αντίστροφο του
+ * `computeRingSlices`. Επιστρέφει −1 όταν `count<=0`. ΙΔΙΟ `firstCenterDeg`/`count` με το render.
+ */
+export function sliceIndexAtAngle(deg: number, count: number, firstCenterDeg = RING_TOP_DEG): number {
+  if (count <= 0) return -1;
+  const span = 360 / count;
+  const rel = normalizeAngleDeg(deg - (firstCenterDeg - span / 2));
+  return Math.min(count - 1, Math.floor(rel / span));
+}
 
 /** Σημείο σε πολικές → καρτεσιανές (y-κάτω, οθόνη). */
 export function polarPoint(cx: number, cy: number, r: number, deg: number): Point2D {
@@ -80,15 +86,6 @@ export function pieSectorPath(cx: number, cy: number, r: number, a0: number, a1:
   const p0 = polarPoint(cx, cy, r, a0);
   const p1 = polarPoint(cx, cy, r, a1);
   return `M ${cx} ${cy} L ${p0.x} ${p0.y} A ${r} ${r} 0 ${large} 1 ${p1.x} ${p1.y} Z`;
-}
-
-/** Σε ποιο cardinal wedge πέφτει μια γωνία (μοίρες, y-κάτω). */
-export function wedgeAtAngle(deg: number): RingFieldKey {
-  const a = ((deg % 360) + 360) % 360;
-  if (a >= 225 && a < 315) return 'length'; // top
-  if (a >= 45 && a < 135) return 'height'; // bottom
-  if (a >= 135 && a < 225) return 'thickness'; // left
-  return 'angle'; // right (315..360, 0..45)
 }
 
 export type CursorZone = 'inside' | 'annulus' | 'outside';

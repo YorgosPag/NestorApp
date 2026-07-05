@@ -20,7 +20,6 @@ import { type DisplayUnit, formatDisplayValue } from '../../config/units';
 import { type SceneUnits, mmToSceneUnits } from '../../utils/scene-units';
 import { DynamicInputLockStore } from './DynamicInputLockStore';
 import {
-  type RingWedgePosition,
   lengthDisplayToSceneLock,
   normalizeAngleDeg,
 } from './radial-ring-logic';
@@ -44,8 +43,6 @@ export interface RingSelectOption {
 export interface RingFieldDef {
   /** Σταθερό id πεδίου ('length' | 'angle' | 'thickness' | 'height' | 'linetype'). */
   readonly key: string;
-  /** Cardinal θέση wedge στο δαχτυλίδι. */
-  readonly position: RingWedgePosition;
   /** i18n key της ετικέτας (namespace `dxf-viewer-shell`). */
   readonly labelKey: string;
   /** Τρόπος εισαγωγής. */
@@ -72,7 +69,11 @@ export interface RingFieldDef {
 export interface RingConfig {
   /** i18n key του aria-label του δαχτυλιδιού. */
   readonly ariaLabelKey: string;
-  /** Τα πεδία (1 ανά θέση· θέσεις χωρίς πεδίο μένουν κενές). */
+  /**
+   * Τα πεδία με ΣΕΙΡΑ. Ο κύκλος χωρίζεται σε ΤΟΣΕΣ ΙΣΕΣ φέτες όσα τα πεδία (`computeRingSlices`):
+   * το πεδίο index 0 παίρνει τη φέτα που κεντράρει ΠΑΝΩ, τα υπόλοιπα δεξιόστροφα. 2 πεδία → 2 ημικύκλια·
+   * 3 → 3×120°· 4 → cardinal. (Άρα η σειρά εδώ ορίζει τη διάταξη — μηδέν σταθερή cardinal θέση.)
+   */
   readonly fields: readonly RingFieldDef[];
   /** Συνδρομή στα stores που τρέφουν highlight/seed — ένα re-render σε κάθε αλλαγή. */
   subscribe(cb: () => void): () => void;
@@ -105,7 +106,6 @@ export function combineSubscribers(
 export function lengthRingField(labelKey: string): RingFieldDef {
   return {
     key: 'length',
-    position: 'top',
     labelKey,
     kind: 'numeric',
     isLocked: () => DynamicInputLockStore.getLocked().length !== null,
@@ -128,7 +128,6 @@ export function lengthRingField(labelKey: string): RingFieldDef {
 export function angleRingField(labelKey: string): RingFieldDef {
   return {
     key: 'angle',
-    position: 'right',
     labelKey,
     kind: 'numeric',
     isLocked: () => DynamicInputLockStore.getLocked().angle !== null,

@@ -33,15 +33,14 @@ import { useEscapeHandler, ESC_PRIORITY } from '../../escape-bus';
 import { evalExpr } from '../numeric-expression';
 import type { RingConfig, RingFieldDef, RingUnitContext } from '../ring-config';
 import {
-  type RingWedgePosition,
   type CursorZone,
   RING_INNER_R,
   RING_OPACITY,
   RING_HOVER_OPACITY,
-  WEDGE_POSITION_ANGLES,
+  computeRingSlices,
+  sliceIndexAtAngle,
   polarPoint,
   pieSectorPath,
-  wedgePositionAtAngle,
   cursorZone,
   advanceWheelCenter,
 } from '../radial-ring-logic';
@@ -87,11 +86,9 @@ export function RadialCommandRing({
 
   const unitCtx: RingUnitContext = useMemo(() => ({ displayUnit, sceneUnits }), [displayUnit, sceneUnits]);
 
-  const fieldByPosition = useMemo(() => {
-    const m = new Map<RingWedgePosition, RingFieldDef>();
-    for (const f of config.fields) m.set(f.position, f);
-    return m;
-  }, [config]);
+  // ADR-513 §equal-slices — ο κύκλος χωρίζεται σε ΤΟΣΕΣ ΙΣΕΣ φέτες όσα τα πεδία (2→ημικύκλια, 3→120°,
+  // 4→cardinal). Το πεδίο index i παίρνει τη φέτα `slices[i]` (SSoT `computeRingSlices`).
+  const slices = useMemo(() => computeRingSlices(config.fields.length), [config.fields.length]);
   const fieldByKey = useMemo(() => {
     const m = new Map<string, RingFieldDef>();
     for (const f of config.fields) m.set(f.key, f);
@@ -110,7 +107,7 @@ export function RadialCommandRing({
   const [cursor, setCursor] = useState<Point2D | null>(null);
   const [center, setCenter] = useState<Point2D | null>(null);
   const [zone, setZone] = useState<CursorZone>('inside');
-  const [hovered, setHovered] = useState<RingWedgePosition | null>(null);
+  const [hovered, setHovered] = useState<number | null>(null);
   const [openField, setOpenField] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -178,7 +175,7 @@ export function RadialCommandRing({
     zoneRef.current = z;
     setZone(z);
     setHovered(z === 'inside'
-      ? wedgePositionAtAngle((Math.atan2(cursor.y - c.y, cursor.x - c.x) * 180) / Math.PI)
+      ? sliceIndexAtAngle((Math.atan2(cursor.y - c.y, cursor.x - c.x) * 180) / Math.PI, config.fields.length)
       : null);
     setCrosshairSuppressed(z === 'inside');
     // Πάνω στα wedges: βελάκι. ΑΛΛΟΥ: επανάφερε ΑΚΡΙΒΩΣ το αρχικό cursor (capture-once).
@@ -193,7 +190,7 @@ export function RadialCommandRing({
       }
     }
     prevCursorRef.current = { x: cursor.x, y: cursor.y };
-  }, [cursor, getCanvasEl]);
+  }, [cursor, getCanvasEl, config.fields.length]);
 
   // Καθάρισε crosshair-suppression + επανάφερε το αρχικό cursor όταν φεύγει το δαχτυλίδι.
   // ADR-513 §grip-parity — `onDeactivate` (lock-only) ξεκλειδώνει το length/angle στο unmount
@@ -217,15 +214,15 @@ export function RadialCommandRing({
     }
   }, [getCanvasEl]);
 
-  const openWedge = useCallback((position: RingWedgePosition) => {
-    const field = fieldByPosition.get(position);
-    if (!field) return; // κενή θέση (π.χ. κάτω wedge της γραμμής) → no-op
+  const openWedge = useCallback((index: number) => {
+    const field = config.fields[index];
+    if (!field) return; // εκτός εύρους → no-op
     setOpenField(field.key);
     if (field.kind === 'numeric') {
       setDraft(field.seed(unitCtx));
       setTimeout(() => { inputRef.current?.focus(); inputRef.current?.select(); }, 0);
     }
-  }, [fieldByPosition, unitCtx]);
+  }, [config, unitCtx]);
 
   // Όσο ο κέρσορας είναι ΠΑΝΩ στα wedges (inside) είναι `pointer-events-none` (ώστε ο καμβάς να
   // συνεχίζει να δέχεται mousemove). Άρα το κλικ σε wedge το πιάνουμε εδώ (window capture) ΚΑΙ
@@ -245,7 +242,7 @@ export function RadialCommandRing({
       // (canvas-click) μπλοκάρουμε όλα τα inside events όπως πριν (το synthetic click κάνει το commit).
       if (placementMode === 'lock-only' && e.type !== 'mousedown' && openField === null) return;
       if (e.type === 'mousedown') {
-        openWedge(wedgePositionAtAngle((Math.atan2(cur.y - c.y, cur.x - c.x) * 180) / Math.PI));
+        openWedge(sliceIndexAtAngle((Math.atan2(cur.y - c.y, cur.x - c.x) * 180) / Math.PI, config.fields.length));
       }
       e.preventDefault();
       e.stopPropagation();
@@ -259,7 +256,7 @@ export function RadialCommandRing({
       window.removeEventListener('mouseup', intercept, true);
       window.removeEventListener('click', intercept, true);
     };
-  }, [openWedge, placementMode, openField]);
+  }, [openWedge, placementMode, openField, config.fields.length]);
 
   // Επιστρέφει `true` ΜΟΝΟ όταν όντως κλειδώθηκε αριθμητική τιμή (έγκυρη έκφραση) — ώστε το
   // Enter να τοποθετεί σημείο μόνο σε επιτυχές commit (όχι σε άκυρη/κενή είσοδο).
@@ -356,9 +353,10 @@ export function RadialCommandRing({
   const showWedges = zone === 'inside' || openField !== null;
   const box = 2 * RING_INNER_R;
   const cc = RING_INNER_R; // SVG κέντρο (= κέντρο δαχτυλιδιού)
-  const openFieldDef = openField ? fieldByKey.get(openField) ?? null : null;
+  const openFieldIndex = openField ? config.fields.findIndex((f) => f.key === openField) : -1;
+  const openFieldDef = openFieldIndex >= 0 ? config.fields[openFieldIndex] : null;
   const popupAnchor = openFieldDef
-    ? polarPoint(cc, cc, RING_INNER_R * 0.62, WEDGE_POSITION_ANGLES[openFieldDef.position].centerDeg)
+    ? polarPoint(cc, cc, RING_INNER_R * 0.62, slices[openFieldIndex].centerDeg)
     : null;
 
   return (
@@ -369,9 +367,9 @@ export function RadialCommandRing({
     >
       {showWedges && (
         <svg width={box} height={box} viewBox={`0 0 ${box} ${box}`} className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}>
-          {config.fields.map((field) => {
-            const { a0, a1 } = WEDGE_POSITION_ANGLES[field.position];
-            const active = hovered === field.position || openField === field.key || field.isLocked();
+          {config.fields.map((field, i) => {
+            const { a0, a1 } = slices[i];
+            const active = hovered === i || openField === field.key || field.isLocked();
             return (
               <path
                 key={field.key}
@@ -385,8 +383,8 @@ export function RadialCommandRing({
               />
             );
           })}
-          {config.fields.map((field) => {
-            const a = polarPoint(cc, cc, RING_INNER_R * 0.6, WEDGE_POSITION_ANGLES[field.position].centerDeg);
+          {config.fields.map((field, i) => {
+            const a = polarPoint(cc, cc, RING_INNER_R * 0.6, slices[i].centerDeg);
             return (
               <text
                 key={field.key}

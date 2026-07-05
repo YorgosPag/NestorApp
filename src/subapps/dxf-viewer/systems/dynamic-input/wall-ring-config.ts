@@ -36,7 +36,6 @@ function setOverride(key: 'thickness' | 'height', valueMm: number): void {
 function wallThicknessField(): RingFieldDef {
   return {
     key: 'thickness',
-    position: 'left',
     labelKey: 'tools.wall.ringThickness',
     kind: 'numeric',
     isLocked: () => currentOverrides().thickness !== undefined,
@@ -48,7 +47,6 @@ function wallThicknessField(): RingFieldDef {
 function wallHeightField(): RingFieldDef {
   return {
     key: 'height',
-    position: 'bottom',
     labelKey: 'tools.wall.ringHeight',
     kind: 'numeric',
     isLocked: () => currentOverrides().height !== undefined,
@@ -58,14 +56,17 @@ function wallHeightField(): RingFieldDef {
   };
 }
 
-/** Διάταξη δαχτυλιδιού τοίχου (4 πεδία). */
+/**
+ * Διάταξη δαχτυλιδιού τοίχου (4 πεδία → 4 ίσες φέτες = cardinal). Σειρά = φέτα (`computeRingSlices`):
+ * Μήκος πάνω, Γωνία δεξιά, Ύψος κάτω, Πάχος αριστερά (ίδια όψη με πριν τη δυναμικοποίηση).
+ */
 export const WALL_RING_CONFIG: RingConfig = {
   ariaLabelKey: 'tools.wall.ringLabel',
   fields: [
     lengthRingField('tools.wall.ringLength'),
     angleRingField('tools.wall.ringAngle'),
-    wallThicknessField(),
     wallHeightField(),
+    wallThicknessField(),
   ],
   subscribe: combineSubscribers(
     DynamicInputLockStore.subscribe,

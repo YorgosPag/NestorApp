@@ -228,6 +228,18 @@ NEW `resolveEndpointCommitDelta` (lock ?? polar, ΙΔΙΑ προτεραιότη
 αντικαθιστούν **4 πανομοιότυπα** commit-and-reset short-circuits (press-drag + hot-grip × lock/polar).
 **STAGE:** ADR-513 (this doc). 363 jest GREEN.
 
+**§equal-slices (2026-07-06):** Giorgio: «το δαχτυλίδι να χωρίζεται σε ΤΟΣΕΣ ίσες φέτες όσες οι εντολές —
+2→ημικύκλια, 3→3 ίσες φέτες». Η γεωμετρία των wedges έγινε **δυναμική & count-driven** (μηδέν σταθερή cardinal
+θέση). ΕΝΑΣ SSoT στο `radial-ring-logic.ts`: `computeRingSlices(count)` (N ίσες φέτες, index 0 κεντραρισμένη
+πάνω, δεξιόστροφα) + `sliceIndexAtAngle(deg, count)` (αντίστροφο). Το `RingFieldDef.position` (cardinal)
+**καταργήθηκε** — η ΣΕΙΡΑ στο `RingConfig.fields` ορίζει τη φέτα. Αποτέλεσμα: τοίχος/δοκός (4)→cardinal (ίδια
+όψη), γραμμή (3)→3×120°, grip endpoint (2)→2 ημικύκλια.
+**MOD:** `systems/dynamic-input/radial-ring-logic.ts` (NEW `computeRingSlices`/`sliceIndexAtAngle`/`RING_TOP_DEG`·
+αφαιρέθηκαν `WEDGE_POSITION_ANGLES`/`wedgePositionAtAngle`/`WEDGE_ANGLES`/`wedgeAtAngle`/`RingWedgePosition`),
+`systems/dynamic-input/components/RadialCommandRing.tsx` (slices αντί fieldByPosition· hover/openWedge/anchor by index),
+`ring-config.ts` (−`position` από `RingFieldDef`), `wall-/beam-/line-/grip-linear-ring-config.ts` (−`position`,
+σειρά=φέτα), + 5 test αρχεία (radial-ring-logic + 4 config). 182 dynamic-input jest GREEN.
+
 ## Sources (μελέτη AutoCAD NavWheel)
 - About SteeringWheels — https://help.autodesk.com/cloudhelp/2020/ENU/AutoCAD-Core/files/GUID-0345448F-5C16-4566-90A7-A6D33A70F67F.htm
 - SteeringWheels Settings Dialog — https://help.autodesk.com/cloudhelp/2019/ENU/AutoCAD-Core/files/GUID-D613FA7A-160C-475F-A83E-B788720C44D0.htm
@@ -273,6 +285,12 @@ NEW `resolveEndpointCommitDelta` (lock ?? polar, ΙΔΙΑ προτεραιότη
   `target=popup` → περνούσε τον interceptor αλλά **bubbled** στον `handleContainerMouseUp` → commit → έκλεινε
   το πεδίο στην 1η πληκτρολόγηση («κάτι το κατέπινε»). Fix: `stopPropagation` στο popup `<div>` του
   `RadialCommandRing`. Το lock-only mode έμεινε vestigial. 363 jest GREEN. 🔴 ΕΚΚΡΕΜΕΙ: browser-verify + commit.
+- **2026-07-06 (§equal-slices)** — Giorgio: «το δαχτυλίδι να χωρίζεται σε ΤΟΣΕΣ ίσες φέτες όσες οι εντολές
+  — 2→ημικύκλια, 3→3 ίσες φέτες· ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΟ». Η γεωμετρία wedge έγινε δυναμική & count-driven: ΕΝΑΣ
+  SSoT `computeRingSlices(count)` + `sliceIndexAtAngle` στο `radial-ring-logic.ts`· καταργήθηκε το σταθερό
+  cardinal (`WEDGE_POSITION_ANGLES`/`wedgePositionAtAngle`/`WEDGE_ANGLES`/`wedgeAtAngle`/`RingWedgePosition`)
+  + το `RingFieldDef.position` (η ΣΕΙΡΑ στο config = η φέτα). Τοίχος/δοκός(4)→cardinal (ίδια όψη), γραμμή(3)→
+  3×120°, grip endpoint(2)→2 ημικύκλια. 182 dynamic-input jest GREEN. 🔴 ΕΚΚΡΕΜΕΙ: browser-verify + commit.
 - **2026-06-30 (§line-parity — SSoT audit follow-up, Giorgio)** — Εντοπίστηκε & διορθώθηκε διπλότυπο
   που είχα φτιάξει: η απαρίθμηση «ByLayer + registry linetypes» υπήρχε ΗΔΗ στο ribbon
   (`useRibbonLineToolBridge.buildLinetypeOptions`) και την ξανάγραψα στο `line-ring-config`. **FIX:** NEW

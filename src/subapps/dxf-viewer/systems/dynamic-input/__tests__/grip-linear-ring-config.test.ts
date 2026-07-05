@@ -8,12 +8,9 @@ import { GRIP_LINEAR_RING_CONFIG } from '../grip-linear-ring-config';
 import { DynamicInputLockStore } from '../DynamicInputLockStore';
 
 describe('ADR-513 §grip-parity — GRIP_LINEAR_RING_CONFIG', () => {
-  it('has exactly Length (top) + Angle (right), no linetype', () => {
+  it('has exactly Length + Angle in order (→ 2 ίσες φέτες/ημικύκλια), no linetype', () => {
     const keys = GRIP_LINEAR_RING_CONFIG.fields.map((f) => f.key);
-    expect(keys).toEqual(['length', 'angle']);
-    const byKey = new Map(GRIP_LINEAR_RING_CONFIG.fields.map((f) => [f.key, f]));
-    expect(byKey.get('length')?.position).toBe('top');
-    expect(byKey.get('angle')?.position).toBe('right');
+    expect(keys).toEqual(['length', 'angle']); // σειρά = φέτα (computeRingSlices)
     expect(keys).not.toContain('linetype');
   });
 

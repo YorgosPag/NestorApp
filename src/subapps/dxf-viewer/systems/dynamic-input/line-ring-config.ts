@@ -39,7 +39,6 @@ function linetypeOptions(): readonly RingSelectOption[] {
 function linetypeField(): RingFieldDef {
   return {
     key: 'linetype',
-    position: 'left',
     labelKey: 'tools.ring.linetype',
     kind: 'select',
     // Φωτίζεται όταν έχει οριστεί συγκεκριμένος τύπος (όχι ByLayer) — όπως «κλειδωμένο» wedge.
@@ -50,7 +49,8 @@ function linetypeField(): RingFieldDef {
   };
 }
 
-/** Διάταξη δαχτυλιδιού γραμμής (3 πεδία· η κάτω θέση μένει κενή). */
+/** Διάταξη δαχτυλιδιού γραμμής (3 πεδία → **3 ίσες φέτες 120°**): Μήκος πάνω, Γωνία & Τύπος στις
+ * άλλες δύο (σειρά = φέτα μέσω `computeRingSlices`). */
 export const LINE_RING_CONFIG: RingConfig = {
   ariaLabelKey: 'tools.ring.lineLabel',
   fields: [
