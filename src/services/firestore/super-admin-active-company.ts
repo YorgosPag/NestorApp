@@ -13,19 +13,18 @@
  * is unchanged from before ADR-354.
  */
 
-let activeCompanyId: string | null = null;
-const listeners = new Set<() => void>();
+import { createExternalStore } from '@/lib/state/createExternalStore';
+
+// SSoT pub/sub primitive (WAVE 3) — the `if (id === activeCompanyId) return` identity
+// guard is exactly `equals: Object.is`, so redundant writes stay no-ops.
+const store = createExternalStore<string | null>(null, { equals: Object.is });
 
 export function setSuperAdminActiveCompanyId(id: string | null): void {
-  if (id === activeCompanyId) return;
-  activeCompanyId = id;
-  listeners.forEach((cb) => {
-    try { cb(); } catch { /* listener errors must not break the switcher */ }
-  });
+  store.set(id);
 }
 
 export function getSuperAdminActiveCompanyId(): string | null {
-  return activeCompanyId;
+  return store.get();
 }
 
 /**
@@ -33,6 +32,5 @@ export function getSuperAdminActiveCompanyId(): string | null {
  * to rebuild live Firestore queries with the new company filter (ADR-354).
  */
 export function onSuperAdminActiveCompanyChange(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => { listeners.delete(listener); };
+  return store.subscribe(listener);
 }
