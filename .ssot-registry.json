@@ -2938,6 +2938,22 @@
       "addedByAdr": "ADR-378",
       "tier": 2
     },
+    "alignment-tracking": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/tracking/ambient-tracking-compose.ts",
+      "description": "Alignment/POLAR tracking traces geometry SSoT (ADR-572). The dashed alignment-path / polar-ray inference lines (drawing hover, grip-drag, body-drag, 2-click MOVE, dimension create/grip, rotation) all funnel through ONE engine: resolveTrackingSnap (tracking-resolver.ts) → composeTrackingSnap (ambient-tracking-compose.ts), with ambient anchors from collectAmbientAlignmentAnchors (ambient-alignment-source.ts) and the live grip result held in setGripAlignmentTracking (GripAlignmentTrackingStore.ts). Three thin wrappers (resolveAlignmentTracking / resolveActionAlignmentTracking / resolveRotationTracking) call composeTrackingSnap — none has its own engine. Re-declaring any of these four core functions elsewhere reintroduces a parallel H/V/polar-ray + intersection/projection engine, the exact scatter ADR-572 audited and closed. Import the SSoT wrapper instead of re-implementing.",
+      "forbiddenPatterns": [
+        "function\\s+(resolveTrackingSnap|composeTrackingSnap|collectAmbientAlignmentAnchors|setGripAlignmentTracking)\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/tracking/tracking-resolver.ts",
+        "src/subapps/dxf-viewer/systems/tracking/ambient-tracking-compose.ts",
+        "src/subapps/dxf-viewer/systems/tracking/ambient-alignment-source.ts",
+        "src/subapps/dxf-viewer/systems/cursor/GripAlignmentTrackingStore.ts"
+      ],
+      "addedDate": "2026-07-05",
+      "addedByAdr": "ADR-572",
+      "tier": 3
+    },
     "dxf-viewport-culling": {
       "ssotFile": "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/dxf-viewport-culling.ts",
       "description": "Sole authority for per-entity viewport intersection in the DxfRenderer (ADR-040 Phase IX). Forbids alternate bbox / culling implementations.",
