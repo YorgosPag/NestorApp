@@ -25,6 +25,7 @@ import type { PreviewGripPoint } from '../../types/entities';
 import type { ApplySettingsFn } from './drawing-preview-generator';
 import { getDefaultLayerId } from '../../stores/LayerStore';
 import { LINEWEIGHT_ISO_VALUES } from '../../config/lineweight-iso-catalog';
+import { resolveLineListeningDims } from './line-preview-helpers';
 
 const LINEWEIGHT_1MM = LINEWEIGHT_ISO_VALUES[17];
 
@@ -76,6 +77,10 @@ export function applyPreviewStyling(
     // stub-φάντασμα δείχνει μόνο κυανές, ΟΧΙ HUD (mirror του έξυπνου φαντάσματος τοίχου, wantHud=false).
     if (tool === 'line' && worldPoints.length >= 2) {
       extLine.liveDimHud = buildSegmentHudMeta(extLine.start, extLine.end, 'mm');
+      // ADR-508 §line-cyan — listening dims ΚΑΙ μετά το 1ο κλικ (Revit temp dims), decoupled από το flush:
+      // μόνο οι διαστάσεις, ΚΑΜΙΑ μετακίνηση σημείου → ελεύθερη περιστροφή ανέπαφη.
+      const listeningDims = resolveLineListeningDims(cursorPoint, 'mm');
+      if (listeningDims) extLine.faceDimensions = listeningDims;
     }
   } else if (entity.type === 'circle') {
     const extCircle = entity as ExtendedCircleEntity;

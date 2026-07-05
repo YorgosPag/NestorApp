@@ -27,6 +27,7 @@ import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { getDefaultLayerId } from '../../stores/LayerStore';
 import type { GhostFaceFrame } from '../../bim/framing/linear-member-face-snap';
+import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { resizeSegmentToLength } from '../../rendering/entities/shared/geometry-vector-utils';
 
@@ -88,6 +89,26 @@ function resolveLineFaceSnap(cursor: Readonly<Point2D>, sceneUnits: SceneUnits):
 }
 
 /**
+ * ADR-508 §line-cyan — **ΤΟ ΕΝΑ** σημείο υπολογισμού των κυανών listening dims από `faceFrame`
+ * (gap-left / gap-right / κέντρο-προς-κέντρο). Καλείται από το stub-φάντασμα (State A, πριν το 1ο
+ * κλικ) ΚΑΙ από το `resolveLineListeningDims` (State B, μετά το 1ο κλικ) — μηδέν διπλότυπο.
+ */
+export function resolveLineFaceDims(faceFrame: GhostFaceFrame, sceneUnits: SceneUnits): GhostFaceDimensionsMeta | null {
+  const wpp = worldPerPixel(getImmediateTransform().scale);
+  return resolveGhostFaceDimensionsMeta(faceFrame, false, sceneUnits, wpp);
+}
+
+/**
+ * ADR-508 §line-cyan — listening dims στη ΘΕΣΗ του cursor (State B: μετά το 1ο κλικ), ΧΩΡΙΣ
+ * μετακίνηση σημείου. Επιστρέφει `null` όταν ο cursor δεν είναι κοντά σε παρειά (ελεύθερη κίνηση →
+ * καμία ένδειξη) — η γραμμή παραμένει ελεύθερη να περιστραφεί, μόνο οι διαστάσεις εμφανίζονται.
+ */
+export function resolveLineListeningDims(cursor: Readonly<Point2D>, sceneUnits: SceneUnits): GhostFaceDimensionsMeta | null {
+  const snap = resolveLineFaceSnap(cursor, sceneUnits);
+  return snap ? resolveLineFaceDims(snap.faceFrame, sceneUnits) : null;
+}
+
+/**
  * ADR-508 §line-cyan — **COMMIT** entry: εφαρμόζει το ΙΔΙΟ flush/κάθετο κούμπωμα στο ήδη resolved click
  * σημείο. Όταν υπάρχει παρειά εντός capture → επιστρέφει το flush σημείο (= το άκρο που δείχνει το preview)·
  * αλλιώς το σημείο αυτούσιο. **preview ≡ commit** (ίδιος πυρήνας `resolveLineFaceSnapAt`). Το σημείο εδώ
@@ -106,10 +127,9 @@ function makeLinePreviewEntity(
   faceFrame: GhostFaceFrame,
   sceneUnits: SceneUnits,
 ): ExtendedLineEntity {
-  const wpp = worldPerPixel(getImmediateTransform().scale);
-  // ADR-508 §line-cyan — οι κυανές listening dims μέσω του ΚΟΙΝΟΥ SSoT (isOverlap=false: η γραμμή είναι
-  // οδηγός, ΟΧΙ εμπόδιο → οι διαστάσεις εμφανίζονται πάντα όταν υπάρχει παρειά).
-  const faceDimensions = resolveGhostFaceDimensionsMeta(faceFrame, false, sceneUnits, wpp);
+  // ADR-508 §line-cyan — οι κυανές listening dims μέσω του ΚΟΙΝΟΥ SSoT helper (ίδιο σημείο υπολογισμού
+  // με το State B attach στο `drawing-preview-partial.ts`).
+  const faceDimensions = resolveLineFaceDims(faceFrame, sceneUnits);
   return {
     id,
     type: 'line',

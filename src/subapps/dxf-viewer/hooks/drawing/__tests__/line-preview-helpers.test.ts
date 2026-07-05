@@ -7,7 +7,7 @@
  * Pure — πραγματικά module stores (settable), μηδέν canvas/async scheduler.
  */
 
-import { generateLinePreview, resolveLineCommitPoint } from '../line-preview-helpers';
+import { generateLinePreview, resolveLineCommitPoint, resolveLineListeningDims } from '../line-preview-helpers';
 import { sceneSnapTargetsStore, type SceneSnapTargets } from '../../../bim/framing/scene-snap-targets';
 import type { LinearMemberSnapTarget } from '../../../bim/framing/linear-member-face-snap';
 import { clearImmediateSnap, setImmediateSnap } from '../../../systems/cursor/ImmediateSnapStore';
@@ -112,5 +112,23 @@ describe('line-preview-helpers (ADR-508 §line-cyan)', () => {
     const ghost = generateLinePreview([], { x: -999, y: -999 }, 'mm') as ExtendedLineEntity;
     expect(ghost).not.toBeNull();
     expect(ghost.start.x).toBeCloseTo(400);
+  });
+
+  // ── ΜΕΤΑ το 1ο κλικ: listening dims ΧΩΡΙΣ flush (Revit temp dims, ADR-508 §line-cyan) ──────
+  it('resolveLineListeningDims: κοντά σε παρειά → κυανές διαστάσεις (χωρίς μετακίνηση σημείου)', () => {
+    setTargets({ lineTargets: [horizontalLine] });
+    const dims = resolveLineListeningDims({ x: 300, y: 50 }, 'mm');
+    expect(dims).not.toBeNull();
+    expect((dims?.dims.length ?? 0)).toBeGreaterThanOrEqual(2);
+  });
+
+  it('resolveLineListeningDims: μακριά από παρειά (ελεύθερη κίνηση) → null', () => {
+    setTargets({ lineTargets: [horizontalLine] });
+    expect(resolveLineListeningDims({ x: 0, y: 5000 }, 'mm')).toBeNull();
+  });
+
+  it('resolveLineListeningDims: χωρίς στόχους → null', () => {
+    sceneSnapTargetsStore.reset();
+    expect(resolveLineListeningDims({ x: 0, y: 50 }, 'mm')).toBeNull();
   });
 });
