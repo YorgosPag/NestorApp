@@ -15,6 +15,7 @@
  *
  * ADR-366 §B.2.Q1 follow-up (3D status-bar coordinates, Giorgio 2026-06-29).
  */
+import { createExternalStore } from '../../stores/createExternalStore';
 
 /** Cursor world coordinates in DXF-plan space (mm). z = elevation. */
 export interface Bim3DCursorReadout {
@@ -25,19 +26,24 @@ export interface Bim3DCursorReadout {
 
 type ReadoutListener = (readout: Bim3DCursorReadout | null) => void;
 
+// WAVE 2.7: high-frequency (per-mousemove) channel — the `equals` field-compare below
+// is preserved byte-identical to the hand-rolled dedup guard it replaces (same skip
+// condition: both null, or both non-null with equal x/y/z), so the per-frame call cost
+// is unchanged. Flagged for a browser perf-verify pass over the 3D viewport cursor.
+function readoutEquals(a: Bim3DCursorReadout | null, b: Bim3DCursorReadout | null): boolean {
+  if (a === b) return true;
+  if (a === null || b === null) return false;
+  return a.x === b.x && a.y === b.y && a.z === b.z;
+}
+
 class Bim3DCursorReadoutStoreClass {
-  private readout: Bim3DCursorReadout | null = null;
-  private readonly listeners = new Set<ReadoutListener>();
+  private readonly store = createExternalStore<Bim3DCursorReadout | null>(null, {
+    equals: readoutEquals,
+  });
 
   /** Set the live readout (null = cursor outside the 3D viewport / not in 3D mode). */
   setReadout(readout: Bim3DCursorReadout | null): void {
-    const a = this.readout;
-    if (a && readout && a.x === readout.x && a.y === readout.y && a.z === readout.z) return;
-    if (!a && !readout) return;
-    this.readout = readout;
-    this.listeners.forEach((l) => {
-      try { l(this.readout); } catch (e) { console.error('Bim3DCursorReadout listener error:', e); }
-    });
+    this.store.set(readout);
   }
 
   /** Clear the readout (cursor left the 3D viewport). */
@@ -46,12 +52,11 @@ class Bim3DCursorReadoutStoreClass {
   }
 
   getReadout(): Bim3DCursorReadout | null {
-    return this.readout;
+    return this.store.get();
   }
 
   subscribe(listener: ReadoutListener): () => void {
-    this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
+    return this.store.subscribe(() => listener(this.store.get()));
   }
 }
 
