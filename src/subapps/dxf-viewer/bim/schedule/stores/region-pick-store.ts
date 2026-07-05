@@ -28,6 +28,7 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
+import { createExternalStore } from '../../../stores/createExternalStore';
 
 // ─── FSM phases ───────────────────────────────────────────────────────────────
 
@@ -36,22 +37,35 @@ export type RegionPickPhase =
   | 'awaiting-first-corner'
   | 'awaiting-second-corner';
 
-// ─── Internal mutable state ──────────────────────────────────────────────────
+// ─── SSoT pub/sub via createExternalStore (WAVE 2.6) ─────────────────────────
+//
+// `phase` and `firstCorner` are two INDEPENDENT fields with their own
+// subscribe channel each (leaves subscribe to only the one they need), so this
+// is TWO `createExternalStore` instances rather than one composite snapshot.
+//
+// - `phaseStore`: `equals: Object.is` reproduces `if (next === phase) return`.
+// - `firstCornerStore`: custom `equals` reproduces the structural guard (both
+//   null, OR same reference, OR same x+y) the hand-rolled setter used.
 
-let phase: RegionPickPhase = 'idle';
-let firstCorner: Point2D | null = null;
+const phaseStore = createExternalStore<RegionPickPhase>('idle', { equals: Object.is });
+
+function firstCornerEquals(a: Point2D | null, b: Point2D | null): boolean {
+  if (a === b) return true;
+  if (a === null || b === null) return false;
+  return a.x === b.x && a.y === b.y;
+}
+
+const firstCornerStore = createExternalStore<Point2D | null>(null, {
+  equals: firstCornerEquals,
+});
 
 type Listener = () => void;
-const phaseSubscribers = new Set<Listener>();
-const firstCornerSubscribers = new Set<Listener>();
 
 // ─── Setters (skip-if-unchanged) ─────────────────────────────────────────────
 
 /** Set FSM phase. No-op if unchanged. */
 export function setRegionPickPhase(next: RegionPickPhase): void {
-  if (next === phase) return;
-  phase = next;
-  phaseSubscribers.forEach((cb) => cb());
+  phaseStore.set(next);
 }
 
 /**
@@ -59,17 +73,7 @@ export function setRegionPickPhase(next: RegionPickPhase): void {
  * Skip-if-unchanged compares structural identity (both null OR same x+y).
  */
 export function setRegionPickFirstCorner(next: Point2D | null): void {
-  if (next === firstCorner) return;
-  if (
-    next !== null &&
-    firstCorner !== null &&
-    next.x === firstCorner.x &&
-    next.y === firstCorner.y
-  ) {
-    return;
-  }
-  firstCorner = next;
-  firstCornerSubscribers.forEach((cb) => cb());
+  firstCornerStore.set(next);
 }
 
 /** Atomic reset — clears phase and first corner σε ένα notify cycle. */
@@ -81,25 +85,19 @@ export function resetRegionPickStore(): void {
 // ─── Getters (snapshot-compatible) ───────────────────────────────────────────
 
 export function getRegionPickPhase(): RegionPickPhase {
-  return phase;
+  return phaseStore.get();
 }
 
 export function getRegionPickFirstCorner(): Point2D | null {
-  return firstCorner;
+  return firstCornerStore.get();
 }
 
 // ─── Subscribers (useSyncExternalStore) ──────────────────────────────────────
 
 export function subscribeRegionPickPhase(cb: Listener): () => void {
-  phaseSubscribers.add(cb);
-  return () => {
-    phaseSubscribers.delete(cb);
-  };
+  return phaseStore.subscribe(cb);
 }
 
 export function subscribeRegionPickFirstCorner(cb: Listener): () => void {
-  firstCornerSubscribers.add(cb);
-  return () => {
-    firstCornerSubscribers.delete(cb);
-  };
+  return firstCornerStore.subscribe(cb);
 }
