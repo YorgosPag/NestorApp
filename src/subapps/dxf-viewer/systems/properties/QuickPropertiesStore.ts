@@ -13,6 +13,7 @@
 import { subscribeHoveredEntity, getHoveredEntity } from '../hover/HoverStore';
 import { getImmediatePosition } from '../cursor/ImmediatePositionStore';
 import { DXF_TIMING } from '../../config/dxf-timing';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 /** ms of stable hover required before showing Quick Properties. */
 const HOVER_DELAY_MS = DXF_TIMING.gesture.HOVER_REVEAL; // ADR-516
@@ -32,8 +33,10 @@ const EMPTY_SNAPSHOT: QuickPropertiesSnapshot = {
 type Listener = () => void;
 
 class QuickPropertiesStoreClass {
-  private snapshot: QuickPropertiesSnapshot = EMPTY_SNAPSHOT;
-  private listeners = new Set<Listener>();
+  // SSoT pub/sub via createExternalStore (WAVE 2.6). No `equals` — scheduleAcquire
+  // always builds a brand-new snapshot object (unconditional notify, matching the
+  // original); clearImmediate keeps its own manual `entityId === null` guard.
+  private readonly store = createExternalStore<QuickPropertiesSnapshot>(EMPTY_SNAPSHOT);
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
@@ -52,20 +55,18 @@ class QuickPropertiesStoreClass {
     this.timer = setTimeout(() => {
       this.timer = null;
       const cssPos = getImmediatePosition();
-      this.snapshot = {
+      this.store.set({
         entityId: id,
         position: cssPos ? { x: cssPos.x, y: cssPos.y } : null,
         acquiredAt: Date.now(),
-      };
-      this.notify();
+      });
     }, HOVER_DELAY_MS);
   }
 
   private clearImmediate(): void {
     this.cancelTimer();
-    if (this.snapshot.entityId === null) return;
-    this.snapshot = EMPTY_SNAPSHOT;
-    this.notify();
+    if (this.store.get().entityId === null) return;
+    this.store.set(EMPTY_SNAPSHOT);
   }
 
   private cancelTimer(): void {
@@ -75,18 +76,9 @@ class QuickPropertiesStoreClass {
     }
   }
 
-  private notify(): void {
-    this.listeners.forEach(fn => {
-      try { fn(); } catch (e) { console.error('QuickPropertiesStore listener error:', e); }
-    });
-  }
+  getSnapshot = (): QuickPropertiesSnapshot => this.store.get();
 
-  getSnapshot = (): QuickPropertiesSnapshot => this.snapshot;
-
-  subscribe = (fn: Listener): (() => void) => {
-    this.listeners.add(fn);
-    return () => { this.listeners.delete(fn); };
-  };
+  subscribe = (fn: Listener): (() => void) => this.store.subscribe(fn);
 }
 
 export const QuickPropertiesStore = new QuickPropertiesStoreClass();

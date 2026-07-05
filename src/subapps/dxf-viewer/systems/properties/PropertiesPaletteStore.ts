@@ -5,6 +5,8 @@
  * Toggled by F11 / Ctrl+1. Follows ADR-040 micro-leaf subscriber pattern.
  */
 
+import { createExternalStore } from '../../stores/createExternalStore';
+
 export interface PaletteSnapshot {
   readonly open: boolean;
 }
@@ -15,42 +17,31 @@ const CLOSED: PaletteSnapshot = { open: false };
 const OPEN: PaletteSnapshot = { open: true };
 
 class PropertiesPaletteStoreClass {
-  private snapshot: PaletteSnapshot = CLOSED;
-  private readonly listeners = new Set<Listener>();
+  // SSoT pub/sub via createExternalStore (WAVE 2.6). `equals: Object.is` reproduces
+  // the hand-rolled open()/close() guards: CLOSED/OPEN are shared singleton refs, so
+  // re-setting the same one is a no-op (no notify) — toggle() always flips to the
+  // OTHER singleton, so it always notifies, same as before.
+  private readonly store = createExternalStore<PaletteSnapshot>(CLOSED, { equals: Object.is });
 
   toggle(): void {
-    this.snapshot = this.snapshot.open ? CLOSED : OPEN;
-    this.notify();
+    this.store.set(this.store.get().open ? CLOSED : OPEN);
   }
 
   open(): void {
-    if (this.snapshot.open) return;
-    this.snapshot = OPEN;
-    this.notify();
+    this.store.set(OPEN);
   }
 
   close(): void {
-    if (!this.snapshot.open) return;
-    this.snapshot = CLOSED;
-    this.notify();
+    this.store.set(CLOSED);
   }
 
   isOpen(): boolean {
-    return this.snapshot.open;
+    return this.store.get().open;
   }
 
-  getSnapshot = (): PaletteSnapshot => this.snapshot;
+  getSnapshot = (): PaletteSnapshot => this.store.get();
 
-  subscribe = (fn: Listener): (() => void) => {
-    this.listeners.add(fn);
-    return () => {
-      this.listeners.delete(fn);
-    };
-  };
-
-  private notify(): void {
-    this.listeners.forEach(fn => fn());
-  }
+  subscribe = (fn: Listener): (() => void) => this.store.subscribe(fn);
 }
 
 export const PropertiesPaletteStore = new PropertiesPaletteStoreClass();

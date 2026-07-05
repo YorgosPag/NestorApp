@@ -10,6 +10,8 @@
  * Zero React state — useSyncExternalStore consumers only.
  */
 
+import { createExternalStore } from '../../stores/createExternalStore';
+
 export interface MiniPanelSnapshot {
   readonly entityId: string | null;
   readonly position: { readonly x: number; readonly y: number } | null;
@@ -25,32 +27,24 @@ const CLOSED_SNAPSHOT: MiniPanelSnapshot = {
 type Listener = () => void;
 
 class QuickPropertiesMiniPanelStoreClass {
-  private snapshot: MiniPanelSnapshot = CLOSED_SNAPSHOT;
-  private readonly listeners = new Set<Listener>();
+  // SSoT pub/sub via createExternalStore (WAVE 2.6). `equals: Object.is` reproduces
+  // the hand-rolled close() guard (`if (!open) return`): CLOSED_SNAPSHOT is a shared
+  // singleton ref, so re-setting it is a no-op. open() always builds a brand-new
+  // object literal, so it is never suppressed by the guard — matches the original
+  // (open() had no guard, always notified).
+  private readonly store = createExternalStore<MiniPanelSnapshot>(CLOSED_SNAPSHOT, { equals: Object.is });
 
   open(entityId: string, position: { x: number; y: number }): void {
-    this.snapshot = { entityId, position, open: true };
-    this.notify();
+    this.store.set({ entityId, position, open: true });
   }
 
   close(): void {
-    if (!this.snapshot.open) return;
-    this.snapshot = CLOSED_SNAPSHOT;
-    this.notify();
+    this.store.set(CLOSED_SNAPSHOT);
   }
 
-  getSnapshot = (): MiniPanelSnapshot => this.snapshot;
+  getSnapshot = (): MiniPanelSnapshot => this.store.get();
 
-  subscribe = (fn: Listener): (() => void) => {
-    this.listeners.add(fn);
-    return () => { this.listeners.delete(fn); };
-  };
-
-  private notify(): void {
-    this.listeners.forEach(fn => {
-      try { fn(); } catch (e) { console.error('QuickPropertiesMiniPanelStore listener error:', e); }
-    });
-  }
+  subscribe = (fn: Listener): (() => void) => this.store.subscribe(fn);
 }
 
 export const QuickPropertiesMiniPanelStore = new QuickPropertiesMiniPanelStoreClass();
