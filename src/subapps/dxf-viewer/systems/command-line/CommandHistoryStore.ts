@@ -1,6 +1,9 @@
 // ADR-357 Phase 14-A — Command History Store SSoT.
 // Singleton, zero React. Pattern: DynamicInputLockStore.
 // Persists to localStorage (key: dxf:commandHistory), max 100 entries.
+// Notify plumbing delegated to the SSoT `createExternalStore` primitive.
+
+import { createExternalStore } from '../../stores/createExternalStore';
 
 const LS_KEY = 'dxf:commandHistory';
 const MAX_ENTRIES = 100;
@@ -12,9 +15,9 @@ interface HistoryState {
 
 const INITIAL: HistoryState = { entries: [], navIndex: -1 };
 
-let _state: HistoryState = _loadFromStorage();
-let _snapshot: HistoryState = _state;
-const _subs = new Set<() => void>();
+// `equals: Object.is` → `store.get()` referentially stable between mutations
+// (κάθε mutation παράγει νέο object → πραγματικές αλλαγές notify-άρουν πάντα).
+const store = createExternalStore<HistoryState>(_loadFromStorage(), { equals: Object.is });
 
 function _loadFromStorage(): HistoryState {
   try {
@@ -37,29 +40,22 @@ function _persist(entries: readonly string[]): void {
   }
 }
 
-function _notify(): void {
-  _snapshot = { ..._state };
-  _subs.forEach(cb => cb());
-}
-
 export const CommandHistoryStore = {
   /** Add a command to history (deduplicates consecutive identical entries). */
   push(cmd: string): void {
     const trimmed = cmd.trim().toUpperCase();
     if (!trimmed) return;
 
-    const current = [..._state.entries];
+    const current = [...store.get().entries];
     if (current[0] === trimmed) {
       // Same as most recent — reset nav only
-      _state = { entries: current, navIndex: -1 };
-      _notify();
+      store.set({ entries: current, navIndex: -1 });
       return;
     }
 
     const updated = [trimmed, ...current].slice(0, MAX_ENTRIES);
     _persist(updated);
-    _state = { entries: updated, navIndex: -1 };
-    _notify();
+    store.set({ entries: updated, navIndex: -1 });
   },
 
   /**
@@ -67,11 +63,10 @@ export const CommandHistoryStore = {
    * Returns the entry at the new position, or null if at limit.
    */
   navigateUp(): string | null {
-    const { entries, navIndex } = _state;
+    const { entries, navIndex } = store.get();
     if (entries.length === 0) return null;
     const next = Math.min(navIndex + 1, entries.length - 1);
-    _state = { entries, navIndex: next };
-    _notify();
+    store.set({ entries, navIndex: next });
     return entries[next] ?? null;
   },
 
@@ -80,37 +75,34 @@ export const CommandHistoryStore = {
    * Returns the entry at the new position, or '' when past the newest.
    */
   navigateDown(): string {
-    const { entries, navIndex } = _state;
+    const { entries, navIndex } = store.get();
     if (navIndex <= 0) {
-      _state = { entries, navIndex: -1 };
-      _notify();
+      store.set({ entries, navIndex: -1 });
       return '';
     }
     const next = navIndex - 1;
-    _state = { entries, navIndex: next };
-    _notify();
+    store.set({ entries, navIndex: next });
     return entries[next] ?? '';
   },
 
   /** Reset navigation cursor (call when user starts typing). */
   resetNavigation(): void {
-    if (_state.navIndex === -1) return;
-    _state = { ..._state, navIndex: -1 };
-    _notify();
+    const state = store.get();
+    if (state.navIndex === -1) return;
+    store.set({ ...state, navIndex: -1 });
   },
 
   /** Get all history entries (most recent first). */
   getEntries(): readonly string[] {
-    return _state.entries;
+    return store.get().entries;
   },
 
   /** useSyncExternalStore interface */
   subscribe(cb: () => void): () => void {
-    _subs.add(cb);
-    return () => { _subs.delete(cb); };
+    return store.subscribe(cb);
   },
 
   getSnapshot(): HistoryState {
-    return _snapshot;
+    return store.get();
   },
 };

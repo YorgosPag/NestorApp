@@ -20,6 +20,7 @@
  */
 
 import type { ArrayParams } from './types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -39,26 +40,19 @@ const INITIAL: ArrayStoreState = {
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 
-let _state: ArrayStoreState = INITIAL;
-const _listeners = new Set<() => void>();
-
-function _notify(): void {
-  _listeners.forEach((fn) => fn());
-}
+const store = createExternalStore<ArrayStoreState>(INITIAL, { equals: Object.is });
 
 function _patch(partial: Partial<ArrayStoreState>): void {
-  _state = { ..._state, ...partial };
-  _notify();
+  store.set({ ...store.get(), ...partial });
 }
 
 export const ArrayStore = {
   getState(): ArrayStoreState {
-    return _state;
+    return store.get();
   },
 
   subscribe(listener: () => void): () => void {
-    _listeners.add(listener);
-    return () => _listeners.delete(listener);
+    return store.subscribe(listener);
   },
 
   setInProgressParams(params: ArrayParams): void {
@@ -94,7 +88,6 @@ export const ArrayStore = {
   },
 
   reset(): void {
-    _state = INITIAL;
-    _notify();
+    store.set(INITIAL);
   },
 } as const;

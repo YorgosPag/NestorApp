@@ -14,6 +14,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { pointsEqual } from '../../rendering/entities/shared/geometry-vector-utils';
+import { createExternalStore } from '../../stores/createExternalStore';
 import {
   EMPTY_TRIM_WARNINGS,
   type TrimEdgeMode,
@@ -88,26 +89,19 @@ let _hoverMoveFn: HoverMoveFn | null = null;
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 
-let _state: TrimToolState = INITIAL;
-const _listeners = new Set<() => void>();
-
-function _notify(): void {
-  _listeners.forEach((fn) => fn());
-}
+const store = createExternalStore<TrimToolState>(INITIAL, { equals: Object.is });
 
 function _patch(partial: Partial<TrimToolState>): void {
-  _state = { ..._state, ...partial };
-  _notify();
+  store.set({ ...store.get(), ...partial });
 }
 
 export const TrimToolStore = {
   getState(): TrimToolState {
-    return _state;
+    return store.get();
   },
 
   subscribe(listener: () => void): () => void {
-    _listeners.add(listener);
-    return () => _listeners.delete(listener);
+    return store.subscribe(listener);
   },
 
   setPhase(phase: TrimPhase): void {
@@ -119,7 +113,7 @@ export const TrimToolStore = {
   },
 
   toggleMode(): void {
-    _patch({ mode: _state.mode === 'quick' ? 'standard' : 'quick' });
+    _patch({ mode: store.get().mode === 'quick' ? 'standard' : 'quick' });
   },
 
   setEdgeMode(edgeMode: TrimEdgeMode): void {
@@ -127,7 +121,7 @@ export const TrimToolStore = {
   },
 
   toggleEdgeMode(): void {
-    _patch({ edgeMode: _state.edgeMode === 'noExtend' ? 'extend' : 'noExtend' });
+    _patch({ edgeMode: store.get().edgeMode === 'noExtend' ? 'extend' : 'noExtend' });
   },
 
   setProjectMode(projectMode: TrimProjectMode): void {
@@ -139,7 +133,7 @@ export const TrimToolStore = {
   },
 
   setHoverPoint(pt: Point2D | null): void {
-    if (pointsEqual(_state.hoverPoint, pt)) return;
+    if (pointsEqual(store.get().hoverPoint, pt)) return;
     _patch({ hoverPoint: pt });
   },
 
@@ -152,7 +146,7 @@ export const TrimToolStore = {
   },
 
   setInverseMode(inverse: boolean): void {
-    if (_state.inverseMode === inverse) return;
+    if (store.get().inverseMode === inverse) return;
     _patch({ inverseMode: inverse });
   },
 
@@ -165,7 +159,8 @@ export const TrimToolStore = {
   },
 
   incrementWarning(key: keyof TrimWarningAggregator, by = 1): void {
-    const next: TrimWarningAggregator = { ..._state.warnings, [key]: _state.warnings[key] + by };
+    const state = store.get();
+    const next: TrimWarningAggregator = { ...state.warnings, [key]: state.warnings[key] + by };
     _patch({ warnings: next });
   },
 
@@ -224,7 +219,6 @@ export const TrimToolStore = {
     _fenceFn = null;
     _fencePreviewFn = null;
     _hoverMoveFn = null;
-    _state = INITIAL;
-    _notify();
+    store.set(INITIAL);
   },
 } as const;

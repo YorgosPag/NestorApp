@@ -6,6 +6,8 @@
 // με τους υπάρχοντες readers (γραμμικό Dynamic Input Ctrl+L/Ctrl+A) εκθέτουμε ΚΑΙ τα derived
 // `lockedField`/`lockedValue` (length-priority). Ctrl+L locks length· Ctrl+A locks angle.
 
+import { createExternalStore } from '../../stores/createExternalStore';
+
 export type LockedField = 'length' | 'angle';
 
 export interface LockState {
@@ -18,10 +20,9 @@ export interface LockState {
   readonly lockedValue: number | null;
 }
 
+// Πηγαία (ανεξάρτητα) πεδία· το public snapshot είναι το derived `LockState`.
 let _length: number | null = null;
 let _angle: number | null = null;
-let _snapshot: LockState = derive();
-const _subs = new Set<() => void>();
 
 function derive(): LockState {
   const lockedField: LockedField | null = _length !== null ? 'length' : _angle !== null ? 'angle' : null;
@@ -29,9 +30,12 @@ function derive(): LockState {
   return { length: _length, angle: _angle, lockedField, lockedValue };
 }
 
+// SSoT pub/sub primitive· κάθε `_notify` σπρώχνει φρέσκο derived snapshot
+// (`equals: Object.is` → νέο object κάθε φορά, notify πάντα — όπως πριν).
+const store = createExternalStore<LockState>(derive(), { equals: Object.is });
+
 function _notify(): void {
-  _snapshot = derive();
-  _subs.forEach(cb => cb());
+  store.set(derive());
 }
 
 export const DynamicInputLockStore = {
@@ -78,15 +82,14 @@ export const DynamicInputLockStore = {
   },
 
   getLocked(): LockState {
-    return _snapshot;
+    return store.get();
   },
 
   subscribe(cb: () => void): () => void {
-    _subs.add(cb);
-    return () => { _subs.delete(cb); };
+    return store.subscribe(cb);
   },
 
   getSnapshot(): LockState {
-    return _snapshot;
+    return store.get();
   },
 };

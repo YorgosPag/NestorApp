@@ -21,6 +21,7 @@ import {
   type ChamferPhase,
   type ChamferToolState,
 } from './chamfer-types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 const INITIAL: ChamferToolState = {
   phase: 'picking-first',
@@ -39,27 +40,22 @@ const INITIAL: ChamferToolState = {
 };
 
 // ── Store ──────────────────────────────────────────────────────────────────────
+// Reducer-over-single-object στο SSoT `createExternalStore` primitive
+// (`equals: Object.is` = identity guard· `_patch` παράγει νέο object → notify πάντα).
 
-let _state: ChamferToolState = INITIAL;
-const _listeners = new Set<() => void>();
-
-function _notify(): void {
-  _listeners.forEach((fn) => fn());
-}
+const store = createExternalStore<ChamferToolState>(INITIAL, { equals: Object.is });
 
 function _patch(partial: Partial<ChamferToolState>): void {
-  _state = { ..._state, ...partial };
-  _notify();
+  store.set({ ...store.get(), ...partial });
 }
 
 export const ChamferToolStore = {
   getState(): ChamferToolState {
-    return _state;
+    return store.get();
   },
 
   subscribe(listener: () => void): () => void {
-    _listeners.add(listener);
-    return () => _listeners.delete(listener);
+    return store.subscribe(listener);
   },
 
   setPhase(phase: ChamferPhase): void {
@@ -97,20 +93,21 @@ export const ChamferToolStore = {
 
   /** Append a digit / decimal to the buffer, routed to the active target (distance→d1=d2, angle). */
   appendTypedChar(ch: string): void {
-    if (ch === '.' && _state.typedBuffer.includes('.')) return;
-    const buffer = _state.typedBuffer + ch;
+    const state = store.get();
+    if (ch === '.' && state.typedBuffer.includes('.')) return;
+    const buffer = state.typedBuffer + ch;
     const parsed = parseFloat(buffer);
     if (!(Number.isFinite(parsed) && parsed >= 0)) {
       _patch({ typedBuffer: buffer });
       return;
     }
-    if (_state.typedTarget === 'angle') _patch({ typedBuffer: buffer, angle: parsed, mode: 'angle' });
+    if (state.typedTarget === 'angle') _patch({ typedBuffer: buffer, angle: parsed, mode: 'angle' });
     else _patch({ typedBuffer: buffer, d1: parsed, d2: parsed, mode: 'distance' }); // symmetric quick-entry
   },
 
   /** Backspace one character; empties the buffer → values keep their last state. */
   popTypedChar(): void {
-    _patch({ typedBuffer: _state.typedBuffer.slice(0, -1) });
+    _patch({ typedBuffer: store.get().typedBuffer.slice(0, -1) });
   },
 
   clearTyped(): void {
@@ -122,11 +119,11 @@ export const ChamferToolStore = {
   },
 
   toggleTrim(): void {
-    _patch({ trim: !_state.trim });
+    _patch({ trim: !store.get().trim });
   },
 
   togglePolylineMode(): void {
-    _patch({ polylineMode: !_state.polylineMode, first: null, firstPick: null, phase: 'picking-first' });
+    _patch({ polylineMode: !store.get().polylineMode, first: null, firstPick: null, phase: 'picking-first' });
   },
 
   setLastDistances(d1: number, d2: number): void {
@@ -135,12 +132,12 @@ export const ChamferToolStore = {
 
   reset(): void {
     // Preserve the user's distance/angle/trim/mode preferences across re-activations.
-    _state = {
+    const state = store.get();
+    store.set({
       ...INITIAL,
-      d1: _state.d1, d2: _state.d2, angle: _state.angle, mode: _state.mode,
-      trim: _state.trim, polylineMode: _state.polylineMode,
-      lastD1: _state.lastD1, lastD2: _state.lastD2,
-    };
-    _notify();
+      d1: state.d1, d2: state.d2, angle: state.angle, mode: state.mode,
+      trim: state.trim, polylineMode: state.polylineMode,
+      lastD1: state.lastD1, lastD2: state.lastD2,
+    });
   },
 } as const;

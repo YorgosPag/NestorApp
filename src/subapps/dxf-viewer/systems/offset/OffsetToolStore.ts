@@ -14,6 +14,7 @@
 
 import type { Entity } from '../../types/entities';
 import type { OffsetPhase, OffsetToolState } from './offset-types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 const INITIAL: OffsetToolState = {
   phase: 'picking-source',
@@ -26,26 +27,19 @@ const INITIAL: OffsetToolState = {
 
 // ── Store ──────────────────────────────────────────────────────────────────────
 
-let _state: OffsetToolState = INITIAL;
-const _listeners = new Set<() => void>();
-
-function _notify(): void {
-  _listeners.forEach((fn) => fn());
-}
+const store = createExternalStore<OffsetToolState>(INITIAL, { equals: Object.is });
 
 function _patch(partial: Partial<OffsetToolState>): void {
-  _state = { ..._state, ...partial };
-  _notify();
+  store.set({ ...store.get(), ...partial });
 }
 
 export const OffsetToolStore = {
   getState(): OffsetToolState {
-    return _state;
+    return store.get();
   },
 
   subscribe(listener: () => void): () => void {
-    _listeners.add(listener);
-    return () => _listeners.delete(listener);
+    return store.subscribe(listener);
   },
 
   setPhase(phase: OffsetPhase): void {
@@ -68,15 +62,17 @@ export const OffsetToolStore = {
 
   /** Append a digit / decimal point to the numeric-entry buffer and mirror it live. */
   appendTypedChar(ch: string): void {
-    if (ch === '.' && _state.typedBuffer.includes('.')) return;
-    const buffer = _state.typedBuffer + ch;
+    const state = store.get();
+    if (ch === '.' && state.typedBuffer.includes('.')) return;
+    const buffer = state.typedBuffer + ch;
     const parsed = parseFloat(buffer);
-    _patch({ typedBuffer: buffer, typedDistance: Number.isFinite(parsed) && parsed > 0 ? parsed : _state.typedDistance });
+    _patch({ typedBuffer: buffer, typedDistance: Number.isFinite(parsed) && parsed > 0 ? parsed : state.typedDistance });
   },
 
   /** Backspace one character; empties the buffer → distance falls back to cursor-driven. */
   popTypedChar(): void {
-    const buffer = _state.typedBuffer.slice(0, -1);
+    const state = store.get();
+    const buffer = state.typedBuffer.slice(0, -1);
     const parsed = parseFloat(buffer);
     _patch({ typedBuffer: buffer, typedDistance: buffer.length > 0 && Number.isFinite(parsed) && parsed > 0 ? parsed : null });
   },
@@ -90,7 +86,7 @@ export const OffsetToolStore = {
   },
 
   toggleEraseSource(): void {
-    _patch({ eraseSource: !_state.eraseSource });
+    _patch({ eraseSource: !store.get().eraseSource });
   },
 
   setLastDistance(distance: number): void {
@@ -98,7 +94,6 @@ export const OffsetToolStore = {
   },
 
   reset(): void {
-    _state = INITIAL;
-    _notify();
+    store.set(INITIAL);
   },
 } as const;

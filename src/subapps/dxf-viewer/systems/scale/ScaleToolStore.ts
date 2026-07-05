@@ -9,6 +9,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -57,83 +58,71 @@ const INITIAL: ScaleToolState = {
 
 // ── Store (module-level) ──────────────────────────────────────────────────────
 
-let _state: ScaleToolState = { ...INITIAL };
-const _listeners = new Set<() => void>();
+const store = createExternalStore<ScaleToolState>({ ...INITIAL }, { equals: Object.is });
 
-function _notify(): void {
-  _listeners.forEach(fn => fn());
+function _patch(partial: Partial<ScaleToolState>): void {
+  store.set({ ...store.get(), ...partial });
 }
 
 export const ScaleToolStore = {
   getState(): ScaleToolState {
-    return _state;
+    return store.get();
   },
 
   subscribe(listener: () => void): () => void {
-    _listeners.add(listener);
-    return () => _listeners.delete(listener);
+    return store.subscribe(listener);
   },
 
   setPhase(phase: ScalePhase, subPhase: ScaleSubPhase = 'direct'): void {
-    _state = { ..._state, phase, subPhase, numericBuffer: '' };
-    _notify();
+    _patch({ phase, subPhase, numericBuffer: '' });
   },
 
   setSubPhase(subPhase: ScaleSubPhase): void {
-    _state = { ..._state, subPhase, numericBuffer: '' };
-    _notify();
+    _patch({ subPhase, numericBuffer: '' });
   },
 
   setBasePoint(pt: Point2D | null): void {
-    _state = { ..._state, basePoint: pt };
-    _notify();
+    _patch({ basePoint: pt });
   },
 
   setRefPoint(
     key: 'refP1x' | 'refP2x' | 'refP1y' | 'refP2y',
     pt: Point2D | null,
   ): void {
-    _state = { ..._state, [key]: pt };
-    _notify();
+    // Full-spread with computed key (mirrors the original assignment shape so the
+    // union-typed key stays assignable to ScaleToolState — no index-signature widening).
+    store.set({ ...store.get(), [key]: pt });
   },
 
   setFactors(sx: number, sy: number): void {
-    _state = { ..._state, currentSx: sx, currentSy: sy };
-    _notify();
+    _patch({ currentSx: sx, currentSy: sy });
   },
 
   setCopyMode(on: boolean): void {
-    _state = { ..._state, copyMode: on };
-    _notify();
+    _patch({ copyMode: on });
   },
 
   setNonUniformMode(on: boolean): void {
-    _state = { ..._state, nonUniformMode: on };
-    _notify();
+    _patch({ nonUniformMode: on });
   },
 
   setSelectedEntityIds(ids: string[]): void {
-    _state = { ..._state, selectedEntityIds: ids };
-    _notify();
+    _patch({ selectedEntityIds: ids });
   },
 
   appendBuffer(ch: string): void {
-    _state = { ..._state, numericBuffer: _state.numericBuffer + ch };
-    _notify();
+    _patch({ numericBuffer: store.get().numericBuffer + ch });
   },
 
   backspaceBuffer(): void {
-    _state = { ..._state, numericBuffer: _state.numericBuffer.slice(0, -1) };
-    _notify();
+    _patch({ numericBuffer: store.get().numericBuffer.slice(0, -1) });
   },
 
   clearBuffer(): void {
-    _state = { ..._state, numericBuffer: '' };
-    _notify();
+    _patch({ numericBuffer: '' });
   },
 
   reset(): void {
-    _state = { ...INITIAL };
-    _notify();
+    store.set({ ...INITIAL });
   },
 } as const;

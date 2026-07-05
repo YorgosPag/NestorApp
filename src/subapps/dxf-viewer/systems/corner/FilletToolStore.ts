@@ -14,6 +14,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { FILLET_DEFAULT_RADIUS, type FilletFirstEntity, type FilletPhase, type FilletToolState } from './fillet-types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 const INITIAL: FilletToolState = {
   phase: 'picking-first',
@@ -28,26 +29,19 @@ const INITIAL: FilletToolState = {
 
 // ── Store ──────────────────────────────────────────────────────────────────────
 
-let _state: FilletToolState = INITIAL;
-const _listeners = new Set<() => void>();
-
-function _notify(): void {
-  _listeners.forEach((fn) => fn());
-}
+const store = createExternalStore<FilletToolState>(INITIAL, { equals: Object.is });
 
 function _patch(partial: Partial<FilletToolState>): void {
-  _state = { ..._state, ...partial };
-  _notify();
+  store.set({ ...store.get(), ...partial });
 }
 
 export const FilletToolStore = {
   getState(): FilletToolState {
-    return _state;
+    return store.get();
   },
 
   subscribe(listener: () => void): () => void {
-    _listeners.add(listener);
-    return () => _listeners.delete(listener);
+    return store.subscribe(listener);
   },
 
   setPhase(phase: FilletPhase): void {
@@ -70,17 +64,19 @@ export const FilletToolStore = {
 
   /** Append a digit / decimal to the numeric-radius buffer and mirror it live. */
   appendTypedChar(ch: string): void {
-    if (ch === '.' && _state.typedBuffer.includes('.')) return;
-    const buffer = _state.typedBuffer + ch;
+    const state = store.get();
+    if (ch === '.' && state.typedBuffer.includes('.')) return;
+    const buffer = state.typedBuffer + ch;
     const parsed = parseFloat(buffer);
-    _patch({ typedBuffer: buffer, radius: Number.isFinite(parsed) && parsed >= 0 ? parsed : _state.radius });
+    _patch({ typedBuffer: buffer, radius: Number.isFinite(parsed) && parsed >= 0 ? parsed : state.radius });
   },
 
   /** Backspace one character; empties the buffer → radius keeps its last value. */
   popTypedChar(): void {
-    const buffer = _state.typedBuffer.slice(0, -1);
+    const state = store.get();
+    const buffer = state.typedBuffer.slice(0, -1);
     const parsed = parseFloat(buffer);
-    _patch({ typedBuffer: buffer, radius: buffer.length > 0 && Number.isFinite(parsed) && parsed >= 0 ? parsed : _state.radius });
+    _patch({ typedBuffer: buffer, radius: buffer.length > 0 && Number.isFinite(parsed) && parsed >= 0 ? parsed : state.radius });
   },
 
   clearTyped(): void {
@@ -92,11 +88,11 @@ export const FilletToolStore = {
   },
 
   toggleTrim(): void {
-    _patch({ trim: !_state.trim });
+    _patch({ trim: !store.get().trim });
   },
 
   togglePolylineMode(): void {
-    _patch({ polylineMode: !_state.polylineMode, first: null, firstPick: null, phase: 'picking-first' });
+    _patch({ polylineMode: !store.get().polylineMode, first: null, firstPick: null, phase: 'picking-first' });
   },
 
   setLastRadius(radius: number): void {
@@ -105,7 +101,7 @@ export const FilletToolStore = {
 
   reset(): void {
     // Preserve the user's radius/trim/mode preferences across re-activations.
-    _state = { ...INITIAL, radius: _state.radius, lastRadius: _state.lastRadius, trim: _state.trim, polylineMode: _state.polylineMode };
-    _notify();
+    const state = store.get();
+    store.set({ ...INITIAL, radius: state.radius, lastRadius: state.lastRadius, trim: state.trim, polylineMode: state.polylineMode });
   },
 } as const;

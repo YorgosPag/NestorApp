@@ -15,6 +15,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { VertexRef } from './stretch-vertex-classifier';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -61,75 +62,62 @@ const INITIAL: StretchToolState = {
 
 // ── Store (module-level) ──────────────────────────────────────────────────────
 
-let _state: StretchToolState = { ...INITIAL };
-const _listeners = new Set<() => void>();
+const store = createExternalStore<StretchToolState>({ ...INITIAL }, { equals: Object.is });
 
-function _notify(): void {
-  _listeners.forEach(fn => fn());
+function _patch(partial: Partial<StretchToolState>): void {
+  store.set({ ...store.get(), ...partial });
 }
 
 export const StretchToolStore = {
   getState(): StretchToolState {
-    return _state;
+    return store.get();
   },
 
   subscribe(listener: () => void): () => void {
-    _listeners.add(listener);
-    return () => _listeners.delete(listener);
+    return store.subscribe(listener);
   },
 
   setPhase(phase: StretchPhase): void {
-    _state = { ..._state, phase, numericBuffer: '' };
-    _notify();
+    _patch({ phase, numericBuffer: '' });
   },
 
   setMode(mode: StretchMode): void {
-    _state = { ..._state, mode };
-    _notify();
+    _patch({ mode });
   },
 
   setSelectionMode(selectionMode: StretchSelectionMode): void {
-    _state = { ..._state, selectionMode };
-    _notify();
+    _patch({ selectionMode });
   },
 
   addCrossingWindow(window: CrossingWindow): void {
-    _state = { ..._state, crossingWindows: [..._state.crossingWindows, window] };
-    _notify();
+    _patch({ crossingWindows: [...store.get().crossingWindows, window] });
   },
 
   setCrossingWindows(windows: ReadonlyArray<CrossingWindow>): void {
-    _state = { ..._state, crossingWindows: windows };
-    _notify();
+    _patch({ crossingWindows: windows });
   },
 
   setCaptured(vertices: ReadonlyArray<VertexRef>, entities: ReadonlyArray<string>): void {
-    _state = { ..._state, capturedVertices: vertices, capturedEntities: entities };
-    _notify();
+    _patch({ capturedVertices: vertices, capturedEntities: entities });
   },
 
   setBasePoint(pt: Point2D | null): void {
-    _state = { ..._state, basePoint: pt };
-    _notify();
+    _patch({ basePoint: pt });
   },
 
   appendBuffer(ch: string): void {
-    _state = { ..._state, numericBuffer: _state.numericBuffer + ch };
-    _notify();
+    _patch({ numericBuffer: store.get().numericBuffer + ch });
   },
 
   backspaceBuffer(): void {
-    _state = { ..._state, numericBuffer: _state.numericBuffer.slice(0, -1) };
-    _notify();
+    _patch({ numericBuffer: store.get().numericBuffer.slice(0, -1) });
   },
 
   clearBuffer(): void {
-    _state = { ..._state, numericBuffer: '' };
-    _notify();
+    _patch({ numericBuffer: '' });
   },
 
   reset(): void {
-    _state = { ...INITIAL };
-    _notify();
+    store.set({ ...INITIAL });
   },
 } as const;

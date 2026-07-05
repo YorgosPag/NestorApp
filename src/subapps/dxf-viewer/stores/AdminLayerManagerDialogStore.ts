@@ -1,51 +1,44 @@
 // ADR-391 — AdminLayerManager Dialog visibility store SSoT.
 // Singleton, zero React. Pattern: CommandLineStore.
+// Notify plumbing delegated to the SSoT `createExternalStore` primitive.
+
+import { createExternalStore } from './createExternalStore';
 
 export interface AdminLayerManagerDialogState {
   readonly isOpen: boolean;
 }
 
-const INITIAL: AdminLayerManagerDialogState = { isOpen: false };
+const CLOSED: AdminLayerManagerDialogState = { isOpen: false };
+const OPEN: AdminLayerManagerDialogState = { isOpen: true };
 
-let _state: AdminLayerManagerDialogState = INITIAL;
-let _snapshot: AdminLayerManagerDialogState = INITIAL;
-const _subs = new Set<() => void>();
-
-function _notify(): void {
-  _snapshot = { ..._state };
-  _subs.forEach((cb) => cb());
-}
+// Identity-guarded store (`equals: Object.is`): `store.get()` stays referentially
+// stable between mutations (useSyncExternalStore-safe getSnapshot).
+const store = createExternalStore<AdminLayerManagerDialogState>(CLOSED, { equals: Object.is });
 
 export const AdminLayerManagerDialogStore = {
   open(): void {
-    if (_state.isOpen) return;
-    _state = { isOpen: true };
-    _notify();
+    if (store.get().isOpen) return;
+    store.set(OPEN);
   },
 
   close(): void {
-    if (!_state.isOpen) return;
-    _state = { isOpen: false };
-    _notify();
+    if (!store.get().isOpen) return;
+    store.set(CLOSED);
   },
 
   toggle(): void {
-    _state = { isOpen: !_state.isOpen };
-    _notify();
+    store.set(store.get().isOpen ? CLOSED : OPEN);
   },
 
   isOpen(): boolean {
-    return _state.isOpen;
+    return store.get().isOpen;
   },
 
   subscribe(cb: () => void): () => void {
-    _subs.add(cb);
-    return () => {
-      _subs.delete(cb);
-    };
+    return store.subscribe(cb);
   },
 
   getSnapshot(): AdminLayerManagerDialogState {
-    return _snapshot;
+    return store.get();
   },
 };

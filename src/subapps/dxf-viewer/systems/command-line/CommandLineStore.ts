@@ -1,6 +1,9 @@
 // ADR-357 Phase 14-A — Command Line Store SSoT.
 // Controls visibility and buffer of the command line input widget.
 // Singleton, zero React. Pattern: DynamicInputLockStore.
+// Notify plumbing delegated to the SSoT `createExternalStore` primitive.
+
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export interface CommandLineState {
   readonly visible: boolean;
@@ -10,48 +13,42 @@ export interface CommandLineState {
 
 const INITIAL: CommandLineState = { visible: false, pendingChar: '' };
 
-let _state: CommandLineState = INITIAL;
-let _snapshot: CommandLineState = INITIAL;
-const _subs = new Set<() => void>();
-
-function _notify(): void {
-  _snapshot = { ..._state };
-  _subs.forEach(cb => cb());
-}
+// `equals: Object.is` → `store.get()` referentially stable between mutations
+// (useSyncExternalStore-safe getSnapshot· κάθε mutation παράγει νέο object).
+const store = createExternalStore<CommandLineState>(INITIAL, { equals: Object.is });
 
 export const CommandLineStore = {
   /** Show the command line, optionally seeding it with an initial character. */
   show(pendingChar = ''): void {
-    if (_state.visible && _state.pendingChar === pendingChar) return;
-    _state = { visible: true, pendingChar };
-    _notify();
+    const state = store.get();
+    if (state.visible && state.pendingChar === pendingChar) return;
+    store.set({ visible: true, pendingChar });
   },
 
   /** Hide the command line and clear the buffer. */
   hide(): void {
-    if (!_state.visible && !_state.pendingChar) return;
-    _state = INITIAL;
-    _notify();
+    const state = store.get();
+    if (!state.visible && !state.pendingChar) return;
+    store.set(INITIAL);
   },
 
   /** Called by CommandLineInput once it has consumed the pending char. */
   clearPendingChar(): void {
-    if (!_state.pendingChar) return;
-    _state = { ..._state, pendingChar: '' };
-    _notify();
+    const state = store.get();
+    if (!state.pendingChar) return;
+    store.set({ ...state, pendingChar: '' });
   },
 
   isVisible(): boolean {
-    return _state.visible;
+    return store.get().visible;
   },
 
   /** useSyncExternalStore interface */
   subscribe(cb: () => void): () => void {
-    _subs.add(cb);
-    return () => { _subs.delete(cb); };
+    return store.subscribe(cb);
   },
 
   getSnapshot(): CommandLineState {
-    return _snapshot;
+    return store.get();
   },
 };

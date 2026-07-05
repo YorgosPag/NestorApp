@@ -14,6 +14,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { pointsEqual } from '../../rendering/entities/shared/geometry-vector-utils';
+import { createExternalStore } from '../../stores/createExternalStore';
 import {
   EMPTY_EXTEND_WARNINGS,
   type ExtendEdgeMode,
@@ -85,26 +86,19 @@ let _hoverMoveFn: HoverMoveFn | null = null;
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 
-let _state: ExtendToolState = INITIAL;
-const _listeners = new Set<() => void>();
-
-function _notify(): void {
-  _listeners.forEach((fn) => fn());
-}
+const store = createExternalStore<ExtendToolState>(INITIAL, { equals: Object.is });
 
 function _patch(partial: Partial<ExtendToolState>): void {
-  _state = { ..._state, ...partial };
-  _notify();
+  store.set({ ...store.get(), ...partial });
 }
 
 export const ExtendToolStore = {
   getState(): ExtendToolState {
-    return _state;
+    return store.get();
   },
 
   subscribe(listener: () => void): () => void {
-    _listeners.add(listener);
-    return () => _listeners.delete(listener);
+    return store.subscribe(listener);
   },
 
   setPhase(phase: ExtendPhase): void {
@@ -116,7 +110,7 @@ export const ExtendToolStore = {
   },
 
   toggleMode(): void {
-    _patch({ mode: _state.mode === 'quick' ? 'standard' : 'quick' });
+    _patch({ mode: store.get().mode === 'quick' ? 'standard' : 'quick' });
   },
 
   setEdgeMode(edgeMode: ExtendEdgeMode): void {
@@ -124,7 +118,7 @@ export const ExtendToolStore = {
   },
 
   toggleEdgeMode(): void {
-    _patch({ edgeMode: _state.edgeMode === 'noExtend' ? 'extend' : 'noExtend' });
+    _patch({ edgeMode: store.get().edgeMode === 'noExtend' ? 'extend' : 'noExtend' });
   },
 
   setProjectMode(projectMode: ExtendProjectMode): void {
@@ -136,7 +130,7 @@ export const ExtendToolStore = {
   },
 
   setHoverPoint(pt: Point2D | null): void {
-    if (pointsEqual(_state.hoverPoint, pt)) return;
+    if (pointsEqual(store.get().hoverPoint, pt)) return;
     _patch({ hoverPoint: pt });
   },
 
@@ -149,7 +143,7 @@ export const ExtendToolStore = {
   },
 
   setInverseMode(inverse: boolean): void {
-    if (_state.inverseMode === inverse) return;
+    if (store.get().inverseMode === inverse) return;
     _patch({ inverseMode: inverse });
   },
 
@@ -158,7 +152,8 @@ export const ExtendToolStore = {
   },
 
   incrementWarning(key: keyof ExtendWarningAggregator, by = 1): void {
-    const next: ExtendWarningAggregator = { ..._state.warnings, [key]: _state.warnings[key] + by };
+    const state = store.get();
+    const next: ExtendWarningAggregator = { ...state.warnings, [key]: state.warnings[key] + by };
     _patch({ warnings: next });
   },
 
@@ -211,7 +206,6 @@ export const ExtendToolStore = {
     _fenceFn = null;
     _fencePreviewFn = null;
     _hoverMoveFn = null;
-    _state = INITIAL;
-    _notify();
+    store.set(INITIAL);
   },
 } as const;

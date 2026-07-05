@@ -10,40 +10,39 @@
  * Invariant: one Edit-Type dialog at a time (user-driven, synchronous open).
  *
  * @see ./edit-slab-type-store.ts — the slab sibling
+ * @see ../../stores/createExternalStore — SSoT pub/sub primitive (notify plumbing)
  */
+
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export interface EditRoofTypeDialogState {
   readonly open: boolean;
   readonly typeId: string | null;
 }
 
-let _state: EditRoofTypeDialogState = { open: false, typeId: null };
-const _subs = new Set<() => void>();
+const CLOSED: EditRoofTypeDialogState = { open: false, typeId: null };
 
-function _notify(): void {
-  _subs.forEach((cb) => cb());
-}
+// Identity-guarded store (`equals: Object.is` = «ίδιο ref → μη notify»· κάθε open/close
+// παράγει νέο object, οπότε οι πραγματικές αλλαγές περνούν πάντα).
+const store = createExternalStore<EditRoofTypeDialogState>(CLOSED, { equals: Object.is });
 
 /** Open the Edit-Type dialog for a given family type. */
 export function openEditRoofType(typeId: string): void {
-  _state = { open: true, typeId };
-  _notify();
+  store.set({ open: true, typeId });
 }
 
 /** Close the dialog (Save committed, or Cancel/overlay-dismiss). */
 export function closeEditRoofType(): void {
-  if (!_state.open) return;
-  _state = { open: false, typeId: null };
-  _notify();
+  if (!store.get().open) return;
+  store.set(CLOSED);
 }
 
 /** useSyncExternalStore-compatible subscribe. */
 export function subscribeEditRoofType(cb: () => void): () => void {
-  _subs.add(cb);
-  return () => _subs.delete(cb);
+  return store.subscribe(cb);
 }
 
 /** useSyncExternalStore-compatible snapshot getter. Same reference between changes. */
 export function getEditRoofTypeState(): EditRoofTypeDialogState {
-  return _state;
+  return store.get();
 }

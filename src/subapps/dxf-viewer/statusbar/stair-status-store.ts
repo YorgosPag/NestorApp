@@ -22,37 +22,20 @@
  */
 
 import { useSyncExternalStore } from 'react';
+import { createExternalStore } from '../stores/createExternalStore';
 
-type Listener = () => void;
-
-let currentKey: string | null = null;
-const listeners = new Set<Listener>();
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): string | null {
-  return currentKey;
-}
-
-function getServerSnapshot(): string | null {
-  return null;
-}
+// Single-cell pub/sub delegated to the SSoT primitive. `equals: Object.is`
+// reproduces the old `if (key === currentKey) return` bail (string/null identity).
+const store = createExternalStore<string | null>(null, { equals: Object.is });
 
 export const stairStatusStore = {
   /** Writer — called by `useStairTool` on phase change. */
   set(key: string | null): void {
-    if (key === currentKey) return;
-    currentKey = key;
-    for (const l of listeners) l();
+    store.set(key);
   },
   /** Reader (non-React) — escape hatch for tests. */
   get(): string | null {
-    return currentKey;
+    return store.get();
   },
 };
 
@@ -61,5 +44,5 @@ export const stairStatusStore = {
  * Returns `null` when the stair tool is idle / deactivated.
  */
 export function useStairStatusKey(): string | null {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return useSyncExternalStore(store.subscribe, store.get, () => null);
 }

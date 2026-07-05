@@ -6,6 +6,8 @@
  * Consumed by: use-selection-cycling.ts (keyboard) + SelectionCyclingPopover.tsx (render).
  */
 
+import { createExternalStore } from '../../stores/createExternalStore';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface CyclingCandidate {
@@ -34,12 +36,9 @@ const DEFAULT_STATE: CyclingState = {
   clientY: 0,
 };
 
-let _state: CyclingState = DEFAULT_STATE;
-const _listeners = new Set<() => void>();
-
-function notify(): void {
-  _listeners.forEach((cb) => cb());
-}
+// Reducer-over-single-object on the SSoT primitive (`equals: Object.is` = identity
+// guard· κάθε mutation παράγει νέο object → πραγματικές αλλαγές notify-άρουν πάντα).
+const store = createExternalStore<CyclingState>(DEFAULT_STATE, { equals: Object.is });
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -47,45 +46,43 @@ export const SelectionCyclingStore = {
   // ── React subscription (useSyncExternalStore-compatible) ──
 
   subscribe(cb: () => void): () => void {
-    _listeners.add(cb);
-    return () => { _listeners.delete(cb); };
+    return store.subscribe(cb);
   },
 
   getSnapshot(): CyclingState {
-    return _state;
+    return store.get();
   },
 
   // ── Mutations ──
 
   /** Begin cycling at the given screen anchor with N≥2 candidates. */
   startCycling(candidates: CyclingCandidate[], clientX: number, clientY: number): void {
-    _state = { active: true, candidates, currentIndex: 0, clientX, clientY };
-    notify();
+    store.set({ active: true, candidates, currentIndex: 0, clientX, clientY });
   },
 
   /** Advance the highlighted candidate by one (wraps around). */
   cycleNext(): void {
-    if (!_state.active || _state.candidates.length === 0) return;
-    const next = (_state.currentIndex + 1) % _state.candidates.length;
-    _state = { ..._state, currentIndex: next };
-    notify();
+    const state = store.get();
+    if (!state.active || state.candidates.length === 0) return;
+    const next = (state.currentIndex + 1) % state.candidates.length;
+    store.set({ ...state, currentIndex: next });
   },
 
   /** Return the ID of the currently highlighted candidate, or null. */
   getCurrentId(): string | null {
-    if (!_state.active || _state.candidates.length === 0) return null;
-    return _state.candidates[_state.currentIndex]?.id ?? null;
+    const state = store.get();
+    if (!state.active || state.candidates.length === 0) return null;
+    return state.candidates[state.currentIndex]?.id ?? null;
   },
 
   /** Dismiss cycling without selecting. */
   cancel(): void {
-    if (!_state.active) return;
-    _state = DEFAULT_STATE;
-    notify();
+    if (!store.get().active) return;
+    store.set(DEFAULT_STATE);
   },
 
   /** Lightweight synchronous check — avoids snapshot allocation in hot paths. */
   isActive(): boolean {
-    return _state.active;
+    return store.get().active;
   },
 } as const;
