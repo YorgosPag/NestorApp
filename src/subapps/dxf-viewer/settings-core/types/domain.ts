@@ -34,97 +34,28 @@ import { GRIP_SIZE_DEFAULT } from '../../config/grip-size-default';
 // LINE TYPES & SETTINGS (ISO 128)
 // ============================================================================
 
-export type LineType = 'solid' | 'dashed' | 'dotted' | 'dash-dot' | 'dash-dot-dot';
-export type LineCapStyle = 'butt' | 'round' | 'square';
-export type LineJoinStyle = 'miter' | 'round' | 'bevel';
+// ADR-559 §3e — canonical line-settings SHAPE lives in `types/line-settings-schema.ts`.
+// The primitive unions + `LineSettingsBase` are defined there once; `LineSettings` is a
+// PROJECTION (identity of the base — no domain-only extras) and the unions are re-exported so
+// existing barrel importers (`settings-core/types`) stay unchanged. Add new line fields to
+// `LineSettingsBase` in the schema, not here.
+import type { LineType, LineCapStyle, LineJoinStyle, LineSettingsBase } from '../../types/line-settings-schema';
+export type { LineType, LineCapStyle, LineJoinStyle };
 
-export interface LineSettings {
-  enabled: boolean;
-  lineType: LineType;
-  lineWidth: number;        // 0.25 - 2.0mm (ISO 128)
-  color: string;            // Hex color (used when colorMode !== 'ByLayer')
-  /**
-   * ADR-358 §G7 Phase 6.5 — color resolution mode for entities created by
-   * drawing tools. 'ByLayer' (default) → entity emits sentinel and inherits
-   * from layer cascade at render time. 'Concrete' → entity flattens to the
-   * `color` hex above. Absent treated as 'ByLayer' for forward-compat.
-   */
-  colorMode?: 'ByLayer' | 'Concrete';
-  /**
-   * ADR-358 §G7 Phase 6.5 — lineweight resolution mode mirroring colorMode.
-   * 'ByLayer' (default) → entity emits `lineweightMm: -2` sentinel and
-   * inherits from layer. 'Concrete' → uses `lineWidth` above.
-   */
-  lineweightMode?: 'ByLayer' | 'Concrete';
-  opacity: number;          // 0.0 - 1.0
-  dashScale: number;        // 0.5 - 3.0
-  dashOffset: number;       // 0 - 100
-  lineCap: LineCapStyle;
-  lineJoin: LineJoinStyle;
-  breakAtCenter: boolean;
-
-  // Hover state
-  hoverColor: string;
-  hoverType: LineType;
-  hoverWidth: number;
-  hoverOpacity: number;
-
-  // Final state
-  finalColor: string;
-  finalType: LineType;
-  finalWidth: number;
-  finalOpacity: number;
-
-  activeTemplate: string | null;
-}
+export type LineSettings = LineSettingsBase;
 
 // ============================================================================
 // TEXT TYPES & SETTINGS (ISO 3098)
 // ============================================================================
 
-export type TextAlign = 'left' | 'center' | 'right' | 'justify';
-export type TextBaseline = 'top' | 'middle' | 'bottom' | 'alphabetic';
+// ADR-559 §3f — canonical text-settings SHAPE lives in `types/text-settings-schema.ts`.
+// `TextSettingsBase` + the layout unions are defined there once; `TextSettings` is a PROJECTION
+// (identity of the base) and the unions are re-exported so barrel importers stay unchanged.
+// Add new text fields to `TextSettingsBase` in the schema, not here.
+import type { TextAlign, TextBaseline, TextSettingsBase } from '../../types/text-settings-schema';
+export type { TextAlign, TextBaseline };
 
-export interface TextSettings {
-  enabled: boolean;
-  fontFamily: string;
-  fontSize: number;         // 2.5 - 10mm (ISO 3098)
-  fontWeight: number;       // 100 - 900
-  fontStyle: 'normal' | 'italic' | 'oblique';
-  color: string;
-  opacity: number;
-  letterSpacing: number;    // -5 - 10
-  lineHeight: number;       // 0.8 - 3.0
-  textAlign: TextAlign;
-  textBaseline: TextBaseline;
-
-  // Boolean text styling (backward compatibility)
-  isBold: boolean;
-  isItalic: boolean;
-  isUnderline: boolean;
-  isStrikethrough: boolean;
-  isSuperscript: boolean;
-  isSubscript: boolean;
-
-  // Shadow
-  shadowEnabled: boolean;
-  shadowOffsetX: number;
-  shadowOffsetY: number;
-  shadowBlur: number;
-  shadowColor: string;
-
-  // Outline
-  strokeEnabled: boolean;
-  strokeWidth: number;
-  strokeColor: string;
-
-  // Background
-  backgroundEnabled: boolean;
-  backgroundColor: string;
-  backgroundPadding: number;
-
-  activeTemplate: string | null;
-}
+export type TextSettings = TextSettingsBase;
 
 // ============================================================================
 // GRIP TYPES & SETTINGS (AutoCAD Standards)
