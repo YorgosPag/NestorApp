@@ -17,7 +17,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-404-3d-bim-element-tilt.md §Phase 5b
  */
 
-import { useSyncExternalStore } from 'react';
+import { createToolBridgeStore } from '../../../../stores/createToolBridgeStore';
 import type { WallParamOverrides, SceneUnits } from '../../../../hooks/drawing/wall-completion';
 import type { Entity } from '../../../../types/entities';
 import type { WallArcVariant, WallKind } from '../../../../bim/types/wall-types';
@@ -63,50 +63,4 @@ export interface WallToolBridgeHandle {
   getSceneEntities(): readonly Entity[];
 }
 
-type Listener = () => void;
-
-let handle: WallToolBridgeHandle | null = null;
-const listeners = new Set<Listener>();
-
-function emit(): void {
-  for (const l of listeners) l();
-}
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): WallToolBridgeHandle | null {
-  return handle;
-}
-
-function getServerSnapshot(): WallToolBridgeHandle | null {
-  return null;
-}
-
-export const wallToolBridgeStore = {
-  /**
-   * Writer — καλείται από το `useWallTool` effect σε κάθε render όπου το state ή
-   * ο setter αλλάζει identity. Αντικαθιστά το προηγούμενο published handle.
-   */
-  set(next: WallToolBridgeHandle | null): void {
-    if (next === handle) return;
-    handle = next;
-    emit();
-  },
-  get(): WallToolBridgeHandle | null {
-    return handle;
-  },
-  /** Low-level subscribe (για όποιον reader χρειαστεί reactivity· ο bridge διαβάζει με get). */
-  subscribe,
-  /**
-   * ADR-565 Φ1.x — reactive read για components που πρέπει να re-render όταν αλλάζει ο draw-mode
-   * (η Draw options bar). Mirror του `columnToolBridgeStore.use()`.
-   */
-  use(): WallToolBridgeHandle | null {
-    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  },
-};
+export const wallToolBridgeStore = createToolBridgeStore<WallToolBridgeHandle>();

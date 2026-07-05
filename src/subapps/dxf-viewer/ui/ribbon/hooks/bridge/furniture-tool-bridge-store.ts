@@ -11,7 +11,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-410-cc0-mesh-furniture-import.md
  */
 
-import { useSyncExternalStore } from 'react';
+import { createToolBridgeStore } from '../../../../stores/createToolBridgeStore';
 import type {
   FurnitureParamOverrides,
   SceneUnits,
@@ -30,42 +30,6 @@ export interface FurnitureToolBridgeHandle {
   getSceneUnits(): SceneUnits;
 }
 
-type Listener = () => void;
-
-let handle: FurnitureToolBridgeHandle | null = null;
-const listeners = new Set<Listener>();
-
-function emit(): void {
-  for (const l of listeners) l();
-}
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): FurnitureToolBridgeHandle | null {
-  return handle;
-}
-
-function getServerSnapshot(): FurnitureToolBridgeHandle | null {
-  return null;
-}
-
-export const furnitureToolBridgeStore = {
-  set(next: FurnitureToolBridgeHandle | null): void {
-    if (next === handle) return;
-    handle = next;
-    emit();
-  },
-  get(): FurnitureToolBridgeHandle | null {
-    return handle;
-  },
-  use(): FurnitureToolBridgeHandle | null {
-    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  },
-};
+export const furnitureToolBridgeStore = createToolBridgeStore<FurnitureToolBridgeHandle>();
 
 export type { SceneUnits };

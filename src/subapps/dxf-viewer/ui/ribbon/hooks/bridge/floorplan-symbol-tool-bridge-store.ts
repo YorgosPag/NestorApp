@@ -10,7 +10,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-415-2d-floorplan-symbol-library.md
  */
 
-import { useSyncExternalStore } from 'react';
+import { createToolBridgeStore } from '../../../../stores/createToolBridgeStore';
 import type { FloorplanSymbolParamOverrides } from '../../../../hooks/drawing/floorplan-symbol-completion';
 
 /** Snapshot of the floorplan-symbol tool's user-editable state. */
@@ -22,40 +22,4 @@ export interface FloorplanSymbolToolBridgeHandle {
   setParamOverrides(overrides: FloorplanSymbolParamOverrides): void;
 }
 
-type Listener = () => void;
-
-let handle: FloorplanSymbolToolBridgeHandle | null = null;
-const listeners = new Set<Listener>();
-
-function emit(): void {
-  for (const l of listeners) l();
-}
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): FloorplanSymbolToolBridgeHandle | null {
-  return handle;
-}
-
-function getServerSnapshot(): FloorplanSymbolToolBridgeHandle | null {
-  return null;
-}
-
-export const floorplanSymbolToolBridgeStore = {
-  set(next: FloorplanSymbolToolBridgeHandle | null): void {
-    if (next === handle) return;
-    handle = next;
-    emit();
-  },
-  get(): FloorplanSymbolToolBridgeHandle | null {
-    return handle;
-  },
-  use(): FloorplanSymbolToolBridgeHandle | null {
-    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  },
-};
+export const floorplanSymbolToolBridgeStore = createToolBridgeStore<FloorplanSymbolToolBridgeHandle>();

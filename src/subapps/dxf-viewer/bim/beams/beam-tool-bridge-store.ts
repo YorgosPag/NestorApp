@@ -17,6 +17,7 @@
  * @see ui/ribbon/hooks/bridge/column-tool-bridge-store.ts — mirror pattern
  */
 
+import { createToolBridgeStore } from '../../stores/createToolBridgeStore';
 import type { BeamParamOverrides, SceneUnits } from '../../hooks/drawing/beam-completion';
 
 /**
@@ -30,14 +31,4 @@ export interface BeamToolBridgeHandle {
   getSceneUnits(): SceneUnits;
 }
 
-let handle: BeamToolBridgeHandle | null = null;
-
-export const beamToolBridgeStore = {
-  /** Writer — called by the `useBeamTool` effect on overrides/units change. */
-  set(next: BeamToolBridgeHandle | null): void {
-    handle = next;
-  },
-  get(): BeamToolBridgeHandle | null {
-    return handle;
-  },
-};
+export const beamToolBridgeStore = createToolBridgeStore<BeamToolBridgeHandle>();

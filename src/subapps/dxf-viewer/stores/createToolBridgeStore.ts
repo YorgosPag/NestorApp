@@ -1,23 +1,25 @@
 /**
- * createToolBridgeStore — SSoT factory για τα drawing-mode ↔ ribbon "handle bridge"
+ * createToolBridgeStore — SSoT factory για τα drawing-mode ↔ ribbon/3D "handle bridge"
  * stores (ADR-363/404/408). Zero-React state + bundled `use()` React binding.
  *
- * The 15 `*-tool-bridge-store.ts` cells (column, foundation, railing, furniture,
- * electrical-panel, floorplan-symbol, wall, slab, 7×mep) all repeat the SAME shape:
- * a module-level `THandle | null` cell that a tool hook (living inside `CanvasSection`)
- * publishes, and a ribbon bridge / 3D placement hook (living in a sibling subtree)
- * reads — imperatively via `get()` and reactively via `use()`. Differ ΜΟΝΟ στο shape
- * του `THandle`. This factory is that single source.
+ * The 16 `*-tool-bridge-store.ts` cells (column, foundation, railing, furniture,
+ * electrical-panel, floorplan-symbol, wall, slab, beam, 7×mep) all repeat the SAME
+ * shape: a module-level `THandle | null` cell that a tool hook (living inside
+ * `CanvasSection`) publishes, and a ribbon bridge / 3D placement hook (living in a
+ * sibling subtree) reads — imperatively via `get()` and reactively via `use()`. Differ
+ * ΜΟΝΟ στο shape του `THandle`. This factory is that single source.
  *
  * Big-player layering (Zustand/Redux/Valtio doctrine): the pub/sub machinery is NOT
  * re-implemented here — it delegates to the vanilla `createExternalStore` primitive
- * (`stores/createExternalStore.ts`). `createToolBridgeStore` adds only the tool-bridge
+ * (sibling `createExternalStore.ts`). `createToolBridgeStore` adds only the tool-bridge
  * concerns on top: (1) `null` initial handle, (2) `Object.is` identity-guard on `set`
- * (== το χειροκίνητο `if (next === handle) return`, handles=objects/null), (3) the React
- * `use()` binding via `useSyncExternalStore` with a null server snapshot.
+ * (== το χειροκίνητο `if (next === handle) return`, handles=objects/null· behaviorally
+ * invisible για τα single-reader stores που δεν είχαν guard, αφού same-ref set αφήνει
+ * το state αμετάβλητο), (3) the React `use()` binding via `useSyncExternalStore` with a
+ * null server snapshot.
  *
- * Public API is a SUPERSET of both legacy shapes ({set,get,use} και {set,get,subscribe})
- * → κάθε υπάρχων consumer δουλεύει αμετάβλητος.
+ * Public API is a SUPERSET όλων των legacy shapes ({set,get,use}, {set,get,subscribe},
+ * {set,get}) → κάθε υπάρχων consumer δουλεύει αμετάβλητος.
  *
  * @see stores/createExternalStore.ts — the vanilla pub/sub SSoT this delegates to
  * @see stores/createConfirmStore.ts — sibling domain factory
@@ -25,7 +27,7 @@
  */
 
 import { useSyncExternalStore } from 'react';
-import { createExternalStore } from '../../../../stores/createExternalStore';
+import { createExternalStore } from './createExternalStore';
 
 export interface ToolBridgeStore<THandle> {
   /**

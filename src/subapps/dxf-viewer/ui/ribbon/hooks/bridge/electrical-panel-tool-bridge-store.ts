@@ -12,7 +12,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import { useSyncExternalStore } from 'react';
+import { createToolBridgeStore } from '../../../../stores/createToolBridgeStore';
 import type {
   ElectricalPanelParamOverrides,
   SceneUnits,
@@ -29,42 +29,6 @@ export interface ElectricalPanelToolBridgeHandle {
   getSceneUnits(): SceneUnits;
 }
 
-type Listener = () => void;
-
-let handle: ElectricalPanelToolBridgeHandle | null = null;
-const listeners = new Set<Listener>();
-
-function emit(): void {
-  for (const l of listeners) l();
-}
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): ElectricalPanelToolBridgeHandle | null {
-  return handle;
-}
-
-function getServerSnapshot(): ElectricalPanelToolBridgeHandle | null {
-  return null;
-}
-
-export const electricalPanelToolBridgeStore = {
-  set(next: ElectricalPanelToolBridgeHandle | null): void {
-    if (next === handle) return;
-    handle = next;
-    emit();
-  },
-  get(): ElectricalPanelToolBridgeHandle | null {
-    return handle;
-  },
-  use(): ElectricalPanelToolBridgeHandle | null {
-    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  },
-};
+export const electricalPanelToolBridgeStore = createToolBridgeStore<ElectricalPanelToolBridgeHandle>();
 
 export type { SceneUnits };

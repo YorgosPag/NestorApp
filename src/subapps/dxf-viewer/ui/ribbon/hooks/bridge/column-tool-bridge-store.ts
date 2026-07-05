@@ -18,7 +18,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §6 Phase 8D
  */
 
-import { useSyncExternalStore } from 'react';
+import { createToolBridgeStore } from '../../../../stores/createToolBridgeStore';
 import type {
   ColumnAnchor,
   ColumnKind,
@@ -62,49 +62,7 @@ export interface ColumnToolBridgeHandle {
   getSceneUnits(): SceneUnits;
 }
 
-type Listener = () => void;
-
-let handle: ColumnToolBridgeHandle | null = null;
-const listeners = new Set<Listener>();
-
-function emit(): void {
-  for (const l of listeners) l();
-}
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): ColumnToolBridgeHandle | null {
-  return handle;
-}
-
-function getServerSnapshot(): ColumnToolBridgeHandle | null {
-  return null;
-}
-
-export const columnToolBridgeStore = {
-  /**
-   * Writer — called by `useColumnTool` effect on every render where state or
-   * setter identity changes (useEffect with state deps). Replaces the
-   * previously published handle.
-   */
-  set(next: ColumnToolBridgeHandle | null): void {
-    if (next === handle) return;
-    handle = next;
-    emit();
-  },
-  get(): ColumnToolBridgeHandle | null {
-    return handle;
-  },
-  /** Reactive read for components that need to re-render on state change. */
-  use(): ColumnToolBridgeHandle | null {
-    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  },
-};
+export const columnToolBridgeStore = createToolBridgeStore<ColumnToolBridgeHandle>();
 
 // Re-export the unused SceneUnits type so importers don't need a second path.
 export type { SceneUnits };

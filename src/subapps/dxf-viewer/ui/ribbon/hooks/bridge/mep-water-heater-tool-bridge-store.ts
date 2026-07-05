@@ -11,7 +11,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import { useSyncExternalStore } from 'react';
+import { createToolBridgeStore } from '../../../../stores/createToolBridgeStore';
 import type {
   MepWaterHeaterParamOverrides,
   SceneUnits,
@@ -28,42 +28,6 @@ export interface MepWaterHeaterToolBridgeHandle {
   getSceneUnits(): SceneUnits;
 }
 
-type Listener = () => void;
-
-let handle: MepWaterHeaterToolBridgeHandle | null = null;
-const listeners = new Set<Listener>();
-
-function emit(): void {
-  for (const l of listeners) l();
-}
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): MepWaterHeaterToolBridgeHandle | null {
-  return handle;
-}
-
-function getServerSnapshot(): MepWaterHeaterToolBridgeHandle | null {
-  return null;
-}
-
-export const mepWaterHeaterToolBridgeStore = {
-  set(next: MepWaterHeaterToolBridgeHandle | null): void {
-    if (next === handle) return;
-    handle = next;
-    emit();
-  },
-  get(): MepWaterHeaterToolBridgeHandle | null {
-    return handle;
-  },
-  use(): MepWaterHeaterToolBridgeHandle | null {
-    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  },
-};
+export const mepWaterHeaterToolBridgeStore = createToolBridgeStore<MepWaterHeaterToolBridgeHandle>();
 
 export type { SceneUnits };

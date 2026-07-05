@@ -12,7 +12,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-407-bim-railings.md
  */
 
-import { useSyncExternalStore } from 'react';
+import { createToolBridgeStore } from '../../../../stores/createToolBridgeStore';
 import type {
   RailingParamOverrides,
   SceneUnits,
@@ -27,42 +27,6 @@ export interface RailingToolBridgeHandle {
   getSceneUnits(): SceneUnits;
 }
 
-type Listener = () => void;
-
-let handle: RailingToolBridgeHandle | null = null;
-const listeners = new Set<Listener>();
-
-function emit(): void {
-  for (const l of listeners) l();
-}
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): RailingToolBridgeHandle | null {
-  return handle;
-}
-
-function getServerSnapshot(): RailingToolBridgeHandle | null {
-  return null;
-}
-
-export const railingToolBridgeStore = {
-  set(next: RailingToolBridgeHandle | null): void {
-    if (next === handle) return;
-    handle = next;
-    emit();
-  },
-  get(): RailingToolBridgeHandle | null {
-    return handle;
-  },
-  use(): RailingToolBridgeHandle | null {
-    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  },
-};
+export const railingToolBridgeStore = createToolBridgeStore<RailingToolBridgeHandle>();
 
 export type { SceneUnits };

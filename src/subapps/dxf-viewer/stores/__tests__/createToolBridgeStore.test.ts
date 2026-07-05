@@ -1,5 +1,5 @@
 /**
- * createToolBridgeStore — SSoT factory για τα drawing-mode ↔ ribbon handle bridges.
+ * createToolBridgeStore — SSoT factory για τα drawing-mode ↔ ribbon/3D handle bridges.
  *
  * Locks the behaviour κάθε migrated `*-tool-bridge-store.ts` βασίζεται: null initial
  * handle, set/get round-trip, subscribe/unsubscribe notification, και το identity-guard

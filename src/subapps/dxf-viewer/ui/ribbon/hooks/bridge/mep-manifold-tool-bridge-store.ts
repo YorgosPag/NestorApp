@@ -12,7 +12,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import { useSyncExternalStore } from 'react';
+import { createToolBridgeStore } from '../../../../stores/createToolBridgeStore';
 import type {
   MepManifoldParamOverrides,
   SceneUnits,
@@ -29,42 +29,6 @@ export interface MepManifoldToolBridgeHandle {
   getSceneUnits(): SceneUnits;
 }
 
-type Listener = () => void;
-
-let handle: MepManifoldToolBridgeHandle | null = null;
-const listeners = new Set<Listener>();
-
-function emit(): void {
-  for (const l of listeners) l();
-}
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): MepManifoldToolBridgeHandle | null {
-  return handle;
-}
-
-function getServerSnapshot(): MepManifoldToolBridgeHandle | null {
-  return null;
-}
-
-export const mepManifoldToolBridgeStore = {
-  set(next: MepManifoldToolBridgeHandle | null): void {
-    if (next === handle) return;
-    handle = next;
-    emit();
-  },
-  get(): MepManifoldToolBridgeHandle | null {
-    return handle;
-  },
-  use(): MepManifoldToolBridgeHandle | null {
-    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  },
-};
+export const mepManifoldToolBridgeStore = createToolBridgeStore<MepManifoldToolBridgeHandle>();
 
 export type { SceneUnits };

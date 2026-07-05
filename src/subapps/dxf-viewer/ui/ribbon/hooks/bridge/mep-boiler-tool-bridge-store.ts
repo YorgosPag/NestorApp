@@ -11,7 +11,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import { useSyncExternalStore } from 'react';
+import { createToolBridgeStore } from '../../../../stores/createToolBridgeStore';
 import type {
   MepBoilerParamOverrides,
   SceneUnits,
@@ -28,42 +28,6 @@ export interface MepBoilerToolBridgeHandle {
   getSceneUnits(): SceneUnits;
 }
 
-type Listener = () => void;
-
-let handle: MepBoilerToolBridgeHandle | null = null;
-const listeners = new Set<Listener>();
-
-function emit(): void {
-  for (const l of listeners) l();
-}
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): MepBoilerToolBridgeHandle | null {
-  return handle;
-}
-
-function getServerSnapshot(): MepBoilerToolBridgeHandle | null {
-  return null;
-}
-
-export const mepBoilerToolBridgeStore = {
-  set(next: MepBoilerToolBridgeHandle | null): void {
-    if (next === handle) return;
-    handle = next;
-    emit();
-  },
-  get(): MepBoilerToolBridgeHandle | null {
-    return handle;
-  },
-  use(): MepBoilerToolBridgeHandle | null {
-    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  },
-};
+export const mepBoilerToolBridgeStore = createToolBridgeStore<MepBoilerToolBridgeHandle>();
 
 export type { SceneUnits };

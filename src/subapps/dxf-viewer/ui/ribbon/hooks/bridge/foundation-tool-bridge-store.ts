@@ -12,7 +12,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-436-bim-foundation-discipline.md
  */
 
-import { useSyncExternalStore } from 'react';
+import { createToolBridgeStore } from '../../../../stores/createToolBridgeStore';
 import type {
   FoundationAnchor,
   FoundationKind,
@@ -37,42 +37,6 @@ export interface FoundationToolBridgeHandle {
   getSceneUnits(): SceneUnits;
 }
 
-type Listener = () => void;
-
-let handle: FoundationToolBridgeHandle | null = null;
-const listeners = new Set<Listener>();
-
-function emit(): void {
-  for (const l of listeners) l();
-}
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): FoundationToolBridgeHandle | null {
-  return handle;
-}
-
-function getServerSnapshot(): FoundationToolBridgeHandle | null {
-  return null;
-}
-
-export const foundationToolBridgeStore = {
-  set(next: FoundationToolBridgeHandle | null): void {
-    if (next === handle) return;
-    handle = next;
-    emit();
-  },
-  get(): FoundationToolBridgeHandle | null {
-    return handle;
-  },
-  use(): FoundationToolBridgeHandle | null {
-    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  },
-};
+export const foundationToolBridgeStore = createToolBridgeStore<FoundationToolBridgeHandle>();
 
 export type { SceneUnits };

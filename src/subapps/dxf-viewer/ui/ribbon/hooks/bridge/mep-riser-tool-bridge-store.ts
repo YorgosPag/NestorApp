@@ -9,7 +9,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import { useSyncExternalStore } from 'react';
+import { createToolBridgeStore } from '../../../../stores/createToolBridgeStore';
 
 /** Snapshot of the riser tool's user-editable placement state. */
 export interface MepRiserToolBridgeHandle {
@@ -25,40 +25,4 @@ export interface MepRiserToolBridgeHandle {
   setDiameter(diameterMm: number): void;
 }
 
-type Listener = () => void;
-
-let handle: MepRiserToolBridgeHandle | null = null;
-const listeners = new Set<Listener>();
-
-function emit(): void {
-  for (const l of listeners) l();
-}
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): MepRiserToolBridgeHandle | null {
-  return handle;
-}
-
-function getServerSnapshot(): MepRiserToolBridgeHandle | null {
-  return null;
-}
-
-export const mepRiserToolBridgeStore = {
-  set(next: MepRiserToolBridgeHandle | null): void {
-    if (next === handle) return;
-    handle = next;
-    emit();
-  },
-  get(): MepRiserToolBridgeHandle | null {
-    return handle;
-  },
-  use(): MepRiserToolBridgeHandle | null {
-    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  },
-};
+export const mepRiserToolBridgeStore = createToolBridgeStore<MepRiserToolBridgeHandle>();

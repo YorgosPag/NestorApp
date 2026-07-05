@@ -18,7 +18,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-403-3d-bim-element-placement.md
  */
 
-import { useSyncExternalStore } from 'react';
+import { createToolBridgeStore } from '../../../../stores/createToolBridgeStore';
 import type { Point2D } from '../../../../rendering/types/Types';
 import type { MepSegmentDomain } from '../../../../bim/types/mep-segment-types';
 import type {
@@ -51,42 +51,6 @@ export interface MepSegmentToolBridgeHandle {
   setParamOverrides(overrides: MepSegmentParamOverrides): void;
 }
 
-type Listener = () => void;
-
-let handle: MepSegmentToolBridgeHandle | null = null;
-const listeners = new Set<Listener>();
-
-function emit(): void {
-  for (const l of listeners) l();
-}
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): MepSegmentToolBridgeHandle | null {
-  return handle;
-}
-
-function getServerSnapshot(): MepSegmentToolBridgeHandle | null {
-  return null;
-}
-
-export const mepSegmentToolBridgeStore = {
-  set(next: MepSegmentToolBridgeHandle | null): void {
-    if (next === handle) return;
-    handle = next;
-    emit();
-  },
-  get(): MepSegmentToolBridgeHandle | null {
-    return handle;
-  },
-  use(): MepSegmentToolBridgeHandle | null {
-    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  },
-};
+export const mepSegmentToolBridgeStore = createToolBridgeStore<MepSegmentToolBridgeHandle>();
 
 export type { SceneUnits };

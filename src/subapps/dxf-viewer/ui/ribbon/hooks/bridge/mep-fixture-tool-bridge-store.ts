@@ -12,7 +12,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-406-point-based-mep-fixture.md
  */
 
-import { useSyncExternalStore } from 'react';
+import { createToolBridgeStore } from '../../../../stores/createToolBridgeStore';
 import type {
   MepFixtureParamOverrides,
   SceneUnits,
@@ -38,42 +38,6 @@ export interface MepFixtureToolBridgeHandle {
   getSceneUnits(): SceneUnits;
 }
 
-type Listener = () => void;
-
-let handle: MepFixtureToolBridgeHandle | null = null;
-const listeners = new Set<Listener>();
-
-function emit(): void {
-  for (const l of listeners) l();
-}
-
-function subscribe(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): MepFixtureToolBridgeHandle | null {
-  return handle;
-}
-
-function getServerSnapshot(): MepFixtureToolBridgeHandle | null {
-  return null;
-}
-
-export const mepFixtureToolBridgeStore = {
-  set(next: MepFixtureToolBridgeHandle | null): void {
-    if (next === handle) return;
-    handle = next;
-    emit();
-  },
-  get(): MepFixtureToolBridgeHandle | null {
-    return handle;
-  },
-  use(): MepFixtureToolBridgeHandle | null {
-    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  },
-};
+export const mepFixtureToolBridgeStore = createToolBridgeStore<MepFixtureToolBridgeHandle>();
 
 export type { SceneUnits };

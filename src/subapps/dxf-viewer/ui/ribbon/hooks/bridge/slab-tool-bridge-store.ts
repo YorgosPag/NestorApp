@@ -17,6 +17,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-404-3d-bim-element-tilt.md §Phase 5c
  */
 
+import { createToolBridgeStore } from '../../../../stores/createToolBridgeStore';
 import type { SlabParamOverrides } from '../../../../hooks/drawing/slab-completion';
 
 /** Snapshot του slab tool state που χρειάζεται το ribbon για read/write της κλίσης. */
@@ -26,30 +27,4 @@ export interface SlabToolBridgeHandle {
   setParamOverrides(overrides: SlabParamOverrides): void;
 }
 
-type Listener = () => void;
-
-let handle: SlabToolBridgeHandle | null = null;
-const listeners = new Set<Listener>();
-
-function emit(): void {
-  for (const l of listeners) l();
-}
-
-export const slabToolBridgeStore = {
-  /** Writer — καλείται από το `useSlabTool` effect· αντικαθιστά το published handle. */
-  set(next: SlabToolBridgeHandle | null): void {
-    if (next === handle) return;
-    handle = next;
-    emit();
-  },
-  get(): SlabToolBridgeHandle | null {
-    return handle;
-  },
-  /** Low-level subscribe (για reader που χρειάζεται reactivity· ο bridge διαβάζει με get). */
-  subscribe(listener: Listener): () => void {
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
-  },
-};
+export const slabToolBridgeStore = createToolBridgeStore<SlabToolBridgeHandle>();
