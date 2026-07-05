@@ -18,6 +18,8 @@
  * @see ../../hooks/canvas/use-mep-wire-waypoint-interaction.ts
  */
 
+import { createExternalStore } from '../../stores/createExternalStore';
+
 /** Hover affordance for the wire-waypoint editor (canvas-unit point). */
 export interface WireWaypointHover {
   readonly systemId: string;
@@ -28,30 +30,26 @@ export interface WireWaypointHover {
 
 type HoverListener = () => void;
 
-let hover: WireWaypointHover | null = null;
-const subscribers = new Set<HoverListener>();
-
 function sameHover(a: WireWaypointHover | null, b: WireWaypointHover | null): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
   return a.systemId === b.systemId && a.x === b.x && a.y === b.y && a.kind === b.kind;
 }
 
+// SSoT pub/sub plumbing via createExternalStore (WAVE 2.7). Custom `equals`
+// reproduces the hand-rolled skip-if-unchanged hover-identity guard.
+const store = createExternalStore<WireWaypointHover | null>(null, { equals: sameHover });
+
 /** Set the hover affordance. Skip-if-unchanged keeps the snapshot reference stable. */
 export function setWireWaypointHover(next: WireWaypointHover | null): void {
-  if (sameHover(hover, next)) return;
-  hover = next;
-  subscribers.forEach((cb) => cb());
+  store.set(next);
 }
 
 /** Snapshot for `useSyncExternalStore` (stable ref between identical hovers). */
 export function getWireWaypointHover(): WireWaypointHover | null {
-  return hover;
+  return store.get();
 }
 
 export function subscribeWireWaypointHover(cb: HoverListener): () => void {
-  subscribers.add(cb);
-  return () => {
-    subscribers.delete(cb);
-  };
+  return store.subscribe(cb);
 }

@@ -16,6 +16,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-417-bim-roof-element.md
  */
 
+import { createExternalStore } from '../../stores/createExternalStore';
+
 export interface SelectedRoofEdge {
   readonly roofId: string;
   readonly edgeIndex: number;
@@ -23,9 +25,13 @@ export interface SelectedRoofEdge {
 
 type RoofEdgeListener = () => void;
 
-// ─── Internal mutable state ───────────────────────────────────────────────────
-let selected: SelectedRoofEdge | null = null;
-const subscribers = new Set<RoofEdgeListener>();
+function sameRoofEdge(a: SelectedRoofEdge | null, b: SelectedRoofEdge | null): boolean {
+  return a?.roofId === b?.roofId && a?.edgeIndex === b?.edgeIndex;
+}
+
+// SSoT pub/sub plumbing via createExternalStore (WAVE 2.7). Custom `equals`
+// reproduces the hand-rolled skip-if-unchanged roofId+edgeIndex guard.
+const store = createExternalStore<SelectedRoofEdge | null>(null, { equals: sameRoofEdge });
 
 // ─── Setters ─────────────────────────────────────────────────────────────────
 
@@ -34,9 +40,7 @@ const subscribers = new Set<RoofEdgeListener>();
  * redundant notifications (and redundant canvas redraws).
  */
 export function setSelectedRoofEdge(next: SelectedRoofEdge | null): void {
-  if (next?.roofId === selected?.roofId && next?.edgeIndex === selected?.edgeIndex) return;
-  selected = next;
-  subscribers.forEach((cb) => cb());
+  store.set(next);
 }
 
 /** Clear the edge selection (roof deselected / tool closed). */
@@ -47,12 +51,11 @@ export function clearSelectedRoofEdge(): void {
 // ─── Getter (snapshot-compatible for useSyncExternalStore) ───────────────────
 
 export function getSelectedRoofEdge(): SelectedRoofEdge | null {
-  return selected;
+  return store.get();
 }
 
 // ─── Subscription (for useSyncExternalStore) ─────────────────────────────────
 
 export function subscribeSelectedRoofEdge(cb: RoofEdgeListener): () => void {
-  subscribers.add(cb);
-  return () => { subscribers.delete(cb); };
+  return store.subscribe(cb);
 }
