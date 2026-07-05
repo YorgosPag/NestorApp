@@ -49,6 +49,12 @@ import type {
   DraggingVertexState,
 } from './unified-grip-types';
 import { applyHotGripHint } from './grip-hotgrip-actions';
+// ADR-561 EXT (Ctrl-endpoint rotate-copy) — pure gesture resolver + the SSoT the normal
+// centre-pick uses to seed the rotate-free baseline + arm the rotation snap targets.
+import { resolveCtrlEndpointRotateCopy } from './ctrl-endpoint-rotate-copy';
+import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
+import { resolveRotateReferenceAnchor } from '../../bim/grips/rotate-reference-axis';
+import { getGlobalRotationSnapStore } from '../../bim/grips/rotation-snap-store';
 import type { GripMouseDownCtx } from './grip-mouse-handlers.types';
 
 // Ctx types live in `grip-mouse-handlers.types.ts` (file-size split). Re-export
@@ -211,6 +217,56 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
     // ghost + commit translate the entire entity. Arm the SSoT the live ghost
     // (buildDxfDragPreview) and the commit (commitDxfGripDragModeAware) read.
     const altMove = GripAltMoveStore.wasAltAtMouseDown();
+    // ADR-561 EXT — Ctrl + press on a PLAIN endpoint / vertex (line / arc / polyline) →
+    // ROTATE-COPY hinge about that point. This is the EXISTING free-rotate hot-grip flow
+    // with the pivot pre-picked at the endpoint (skip the «pick centre» click) + the copy
+    // flag (honoured at commit via CtrlKeyTracker). The pure resolver gates strictly on Ctrl
+    // + a kind-less vertex grip, so without Ctrl the endpoint stays a normal stretch, and a
+    // primitive rotation/move handle (grip 3/4) keeps its role. Runs BEFORE the standard
+    // hot-grip enter check so the endpoint gesture wins; Alt (base-point move) takes priority.
+    if (!altMove) {
+      const gripEntity = nearGrip.entityId
+        ? (createSceneManagerAdapter(dxfCommitDeps)?.getEntity(nearGrip.entityId) as unknown as Entity | null | undefined)
+        : null;
+      const rotateCopy = resolveCtrlEndpointRotateCopy(gripEntity, nearGrip, CtrlKeyTracker.getSnapshot());
+      if (rotateCopy && gripEntity) {
+        const { pivot, syntheticGrip } = rotateCopy;
+        setActiveGrip(syntheticGrip);
+        setPhase('hotGrip');
+        unlockGripSnapPosition();
+        hotGripOpRef.current = 'rotate';
+        hotGripStepRef.current = 'rotate-free';      // pivot pre-picked → skip await-base
+        hotGripAwaitingFirstReleaseRef.current = true;
+        hotGripMovedRef.current = false;
+        hotGripBaseRef.current = pivot;              // rotation centre = the grabbed endpoint
+        hotGripRefStartRef.current = null;
+        hotGripRefEndRef.current = null;
+        hotGripAlignStartRef.current = null;
+        anchorRef.current = null;
+        // Seed the DETERMINISTIC major-axis baseline (preview ≡ commit) — the SAME SSoT the
+        // normal centre-pick seeds (`advanceHotGripPick`). Null (no orientation) → the
+        // first-move baseline (`grip-mouse-move-handler`) takes over.
+        hotGripRotateBaseRef.current = resolveRotateReferenceAnchor(gripEntity, pivot);
+        BimRotateHotGripStore.clear();
+        setCurrentWorldPos(null);
+        // Arm the rotation snap targets (pivot ⊙ + this entity's grips → cyan magnetism),
+        // identical to the centre-pick arming in `advanceHotGripPick`.
+        const entityGrips = allGrips
+          .filter((g) => g.source === 'dxf' && g.entityId === nearGrip.entityId)
+          .map((g) => ({ entityId: g.entityId!, gripIndex: g.gripIndex, point: g.position }));
+        getGlobalRotationSnapStore().setTargets(pivot, entityGrips);
+        applyHotGripHint('rotate', 'rotate-free');
+        if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
+        setActiveDragGrip({
+          entityId: nearGrip.entityId!,
+          gripKind: syntheticGrip.lineGripKind ?? syntheticGrip.arcGripKind ?? syntheticGrip.polylineGripKind ?? null,
+          gripIndex: nearGrip.gripIndex,
+          lineGripKind: syntheticGrip.lineGripKind ?? null,
+        });
+        GripSessionUndoStore.markSessionStart(getGlobalCommandHistory().size());
+        return true;
+      }
+    }
     // ADR-363 Phase 1G — wall corner grips use the AutoCAD hot-grip (click-
     // click) flow instead of press-drag-release: 1st click enters `hotGrip`,
     // cursor moves live, 2nd click (mouseup) commits. All other wall grips
