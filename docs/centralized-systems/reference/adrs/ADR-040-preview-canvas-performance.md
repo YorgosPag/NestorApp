@@ -3713,3 +3713,7 @@ Master view toggle «Σοβατισμένη όψη» (`showFinishSkin`, per-view
 - **`CanvasLayerStack.tsx`** (6B shell) — υπολογίζει `gripDragIsCopy` με **plain `getSnapshot` reads** (`CtrlKeyTracker` + `GripCopyModeStore`), **ΟΧΙ `useSyncExternalStore`** → το Shell μένει inert (CHECK 6C safe), και το περνά prop στο leaf path.
 
 Ο κανονικός `RotateEntityCommand.copyMode` (ADR-357 Φ12) κατέχει τον κλώνο + undo/redo — εκτός preview path. Rules 1-4 τηρούνται. Βλ. **ADR-561**. Staged για CHECK 6B.
+
+## 2026-07-05 (b): ADR-561 EXT — `CanvasLayerStack` copy-detection → `isGripCopyIntent` SSoT (CHECK 6B stage)
+
+**Καμία αρχιτεκτονική αλλαγή — καθαρή αντικατάσταση inline logic με SSoT κλήση.** Το `CanvasLayerStack` (6B shell) υπολόγιζε το `gripDragIsCopy` inline (`CtrlKeyTracker` + `GripCopyModeStore` plain reads). Η copy-intent ανίχνευση εξήχθη στο **`systems/grip/grip-copy-intent.ts` (`isGripCopyIntent()`)** — το ΙΔΙΟ SSoT που πλέον χρησιμοποιούν τα grip commits — ώστε shell και commits να μη διπλότυπα-κρίνουν copy intent. Το `CanvasLayerStack` τώρα: `gripDragIsCopy = gripDraggedEntityId != null && isGripCopyIntent()`. Το `isGripCopyIntent()` κάνει **plain `getSnapshot` reads** εσωτερικά (`GripCopyModeStore` + `CtrlKeyTracker`), **ΟΧΙ `useSyncExternalStore`** → το Shell μένει inert (CHECK 6C safe). Μηδέν αλλαγή στο leaf/prop path, μηδέν νέα subscription, bitmap cache άθικτο (rule 3 N/A). Βλ. **ADR-561**. Staged για CHECK 6B.

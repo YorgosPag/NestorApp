@@ -23,10 +23,10 @@ import { dwarn } from '../../debug';
 import type { Point2D } from '../../rendering/types/Types';
 import { getImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
 import { setHoveredEntity, setHoveredOverlay } from '../../systems/hover/HoverStore';
-// ADR-561 EXT — copy-drag detection for the inverted-ghost gate. Plain getSnapshot reads
-// (NOT useSyncExternalStore) → CHECK 6C compliant; the Shell stays inert per ADR-040.
-import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
-import { GripCopyModeStore } from '../../systems/grip/GripCopyModeStore';
+// ADR-561 EXT — copy-drag detection for the inverted-ghost gate, via the SAME copy-intent
+// SSoT the commits use. Plain getSnapshot reads inside it (NOT useSyncExternalStore) →
+// CHECK 6C compliant; the Shell stays inert per ADR-040.
+import { isGripCopyIntent } from '../../systems/grip/grip-copy-intent';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import type { DxfRenderOptions } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { CanvasLayerStackProps } from './canvas-layer-stack-types';
@@ -261,9 +261,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   // ADR-561 EXT — a grip drag that is a COPY (Ctrl/⌘ held, or the right-click «Copy» toggle)
   // keeps its source as a permanent original → it must stay SOLID, not dim as the inverted
   // ghost. Read once per Shell render (drag start/end); plain getSnapshot (no subscription).
-  const gripDragIsCopy =
-    gripDraggedEntityId != null &&
-    (CtrlKeyTracker.getSnapshot() || GripCopyModeStore.getSnapshot().enabled);
+  const gripDragIsCopy = gripDraggedEntityId != null && isGripCopyIntent();
   const dxfRenderOptionsBase = useMemo<Omit<DxfRenderOptions, 'hoveredEntityId' | 'selectedEntityIds'>>(
     () => ({
       showGrid: false,
