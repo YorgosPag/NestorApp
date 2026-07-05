@@ -53,10 +53,12 @@ export function getSlabCornerWorldPoints(
   // `SlabGeometry.polygon` is a re-export of `SlabParams.outline` (identical CCW ring —
   // slab-types.ts §polygon), so prefer the derived geometry cache but fall back to the
   // persisted params outline. Geometry is DERIVED and may be transiently absent (e.g. a
-  // just-loaded slab before `reconcileLoadedSceneBim` recomputes it); params.outline is
-  // the persisted SSoT source and is always present. Mirrors the guarded params reads of
-  // the sibling polygon members (slab-opening / roof / thermal-space) in polygonFootprint.
-  const verts = slab.geometry?.polygon?.vertices ?? slab.params.outline?.vertices;
+  // just-loaded slab before `reconcileLoadedSceneBim` recomputes it). `params` itself is
+  // ALSO optional-chained: an ambient-alignment scan can hit a half-built / preview slab
+  // whose `params` is not yet attached — guard it so we return [] (degenerate) instead of
+  // throwing, honouring this module's stated defensive contract (§docstring "returns []
+  // rather than throwing"). Both absent → `verts` is undefined → the guard below returns [].
+  const verts = slab.geometry?.polygon?.vertices ?? slab.params?.outline?.vertices;
   if (!verts || verts.length < 3) return [];
   return verts.map((v, i) => ({ vertexIndex: i, point: to2D(v) }));
 }
