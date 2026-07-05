@@ -29,6 +29,7 @@ import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import {
   setRegionPerimeterPreview,
+  regionPerimeterPreview,
   clearRegionPerimeterPreview,
   type RegionPerimeterZone,
 } from '../../systems/region-preview/RegionPerimeterPreviewStore';
@@ -115,7 +116,7 @@ export function useRegionPerimeterMouseMove(params: UseRegionPerimeterMouseMoveP
       _lastSig = preview.sig;
       // ADR-567 — μαρκάρισε occupied ζώνες (πάνω σε υπάρχουσα δομική) → κόκκινο. Ίδια live
       // `entities` με τον commit/append guard → preview ≡ commit (ίδιο κατώφλι 25%).
-      setRegionPerimeterPreview({ zones: markOccupiedZones(preview.zones, entities), oversized: false });
+      setRegionPerimeterPreview(regionPerimeterPreview(markOccupiedZones(preview.zones, entities), false));
       _hadPreview = true;
     },
     [],

@@ -347,6 +347,28 @@ compositing — αν big-player πρακτική το διαψεύδει, ακο
 ---
 
 ## Changelog
+- **2026-07-05** — 🐛 **Phase 8 bugfix: crash «useGripContext must be used within a GripProvider» στο read-only 3D preview των Properties (browser-reported Giorgio).**
+  **Συμπτώμα:** `/properties?view=floorplan&…&mediaTab=floorplan-floor` → λευκή οθόνη + error boundary. Stack:
+  `Bim3DReadOnlyOverlay → BimViewport3D → useCrosshairCursor → useGripContext (throw)`.
+  **Root cause (SSoT audit, code = source of truth):** το commit `24dfe4e8` (2026-07-01, «crosshair cursor refine»)
+  πρόσθεσε `useGripContext()` **μέσα** στον `useCrosshairCursor`, ώστε να διαβάζει το `showAperture` (το μόνο grip
+  input του — όλα τα άλλα τα παίρνει από **stores**: `getCursorSettings`, `CrosshairSuppressionStore`, `device-pixel-ratio`).
+  Ο `BimViewport3D` καλεί τον `useCrosshairCursor` **χωρίς όρο**. Στον πλήρη editor υπάρχει `GripProvider` (μέσω
+  `UnifiedProviders`) → OK. Αλλά ο read-only mount των Properties (`Bim3DReadOnlyOverlay`, ADR-371) mount-άρει το
+  `BimViewport3D` **γυμνό** (κανένας provider) → hard throw. Ένα read-only 3D preview **δεν πρέπει ποτέ** να απαιτεί τον
+  grip-**editing** provider.
+  **FIX (big-player + full SSoT, surgical — 1 αρχείο `useCrosshairCursor.ts`):** ο crosshair διαβάζει το `showAperture`
+  από το **context-free `gripStyleStore`** (`gripStyleStore.get().showAperture` + `gripStyleStore.subscribe(apply)` για
+  re-apply στο toggle) **αντί** για `useGripContext()`. Το `gripStyleStore` είναι ο SSoT mirror που γράφει ο **ΕΝΑΣ**
+  canonical writer `syncGripStyleStoreFromSettings` (ίδιο single-source· ο GripProvider απλώς τον τροφοδοτεί) — άρα καμία
+  νέα πηγή αλήθειας/default. Αυτό ταυτίζεται με το ίδιο το design του hook (κάθε άλλο input = store subscription) και με
+  την **big-player doctrine** (Figma/C4D/Revit: cursor/input systems διαβάζουν settings-store/model, όχι React provider tree).
+  Δουλεύει σε **ΚΑΘΕ** mount (editor + read-only preview + test-harness), μηδέν provider wrapping. Bonus: το toggle πλέον
+  κάνει in-place `apply()` (store notify) αντί για teardown+re-attach του effect (λιγότερο churn). **Audit-verified:** μηδέν
+  `useGripContext` σε ολόκληρο το `bim-3d` subtree μετά το fix (`PolygonModeToggle3D`/`CutPlaneSlider3DLeaf`/`AriaLiveRegion`
+  δεν το καλούν). Απορρίφθηκαν: (A) optional-context = band-aid (κρατά το coupling)· (B) wrap σε `GripProvider` = σέρνει
+  editing deps σε read-only preview (λάθος σημασιολογικά). CHECK 6D → stage αυτό το ADR + `useCrosshairCursor.ts`.
+  🔴 browser-verify (Giorgio: reload Properties floorplan tab) + commit. 🟡 UNCOMMITTED.
 - **2026-07-04** — 🐛 **Phase 8 bugfix: hotspot ≠ οπτικό κέντρο σε sub-1 dpr → «ο κέρσορας δείχνει εδώ, ο καμβάς διαβάζει παραδίπλα» (browser-reported Giorgio, 80% zoom).**
   **Συμπτώμα:** σχεδίαση ορθογωνίου με το εργαλείο Γραμμή — η κάτω πλευρά κλείδωνε ~444,86 αντί 450 (η ελεύθερη κάτω-δεξιά κορυφή «γλιστρούσε» ~5cm), ενώ το πεδίο ήταν καθαρό.
   **Root cause (SSoT audit, code = source of truth — `crosshair-cursor-image.ts`):** ο hardware cursor (ADR-549 Phase 8)

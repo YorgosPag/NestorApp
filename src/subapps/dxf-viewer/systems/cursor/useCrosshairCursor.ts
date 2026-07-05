@@ -16,7 +16,7 @@
 
 import { useEffect, type RefObject } from 'react';
 import { getCursorSettings, subscribeToCursorSettings } from './config';
-import { useGripContext } from '../../providers/GripProvider';
+import { gripStyleStore } from '../../stores/GripStyleStore';
 import { isCrosshairSuppressed, subscribeCrosshairSuppression } from './CrosshairSuppressionStore';
 import { buildCrosshairCursorValue } from './crosshair-cursor-image';
 import { subscribeDevicePixelRatio } from './device-pixel-ratio';
@@ -41,7 +41,13 @@ export interface UseCrosshairCursorOptions {
 
 /**
  * Apply the hardware-cursor crosshair to `targetRef`. The crosshair colour / line width / centre
- * gap come from the shared cursor settings; the centre pickbox from the grip context (aperture).
+ * gap come from the shared cursor settings; the centre pickbox VISIBILITY from the context-free
+ * `gripStyleStore` (`showAperture`) — NOT the GripProvider React context. Reading the store (the SSoT
+ * mirror written by the one canonical writer `syncGripStyleStoreFromSettings`) keeps this low-level
+ * cursor hook working in EVERY mount: the full editor, the read-only 3D preview (`Bim3DReadOnlyOverlay`,
+ * which has no GripProvider), and the test harness. Big-player pattern (Figma / C4D / Revit): a cursor
+ * / input system reads a settings store, never a component-tree provider — and a read-only preview
+ * must never require the grip-EDITING provider.
  */
 export function useCrosshairCursor(
   targetRef: RefObject<HTMLElement | null>,
@@ -51,9 +57,6 @@ export function useCrosshairCursor(
   // re-apply on dpr change below so a HiDPI/zoom switch re-rasterises at the right size.
   { enabled = true, size = 32, color, lineWidth }: UseCrosshairCursorOptions = {},
 ): void {
-  const { gripSettings } = useGripContext();
-  const { showAperture } = gripSettings;
-
   useEffect(() => {
     if (!enabled) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -61,6 +64,7 @@ export function useCrosshairCursor(
     let unsubSettings: () => void = () => {};
     let unsubSuppress: () => void = () => {};
     let unsubDpr: () => void = () => {};
+    let unsubGrip: () => void = () => {};
 
     const apply = (): void => {
       if (!el) return;
@@ -76,7 +80,9 @@ export function useCrosshairCursor(
         return;
       }
       // Κεντρικό τετραγωνάκι σταθερά 7×7 px· κρύβεται όταν `showAperture` = false.
-      const pickbox = showAperture ? CURSOR_PICKBOX_PX : 0;
+      // Διαβάζεται fresh από το context-free `gripStyleStore` (SSoT mirror)· ο toggle re-applies
+      // μέσω του `gripStyleStore.subscribe(apply)` παρακάτω.
+      const pickbox = gripStyleStore.get().showAperture ? CURSOR_PICKBOX_PX : 0;
       // Όταν υπάρχει κουτί, οι 4 βραχίονες του σταυρού ΚΟΛΛΑΝΕ στις παρειές του (gap = μισό κουτί):
       // η άκρη κάθε γραμμής πέφτει ακριβώς πάνω στην πλευρά του τετραγώνου, χωρίς κενό (αίτημα Giorgio).
       // Χωρίς κουτί: ισχύει το κενό του χρήστη (center_gap_px) ή προεπιλογή 6.
@@ -108,6 +114,9 @@ export function useCrosshairCursor(
       // Re-rasterise on dpr change (HiDPI monitor switch / OS scaling / browser page-zoom): the
       // device size must stay ≤ cap or the browser drops the cursor and the crosshair vanishes.
       unsubDpr = subscribeDevicePixelRatio(apply);
+      // Re-apply when the aperture toggle (`showAperture`) changes — the SSoT mirror notifies here
+      // whether the write came from the GripProvider (editor) or stayed at the store default (read-only).
+      unsubGrip = gripStyleStore.subscribe(apply);
     };
     attach();
 
@@ -116,7 +125,8 @@ export function useCrosshairCursor(
       unsubSettings();
       unsubSuppress();
       unsubDpr();
+      unsubGrip();
       if (el) el.style.cursor = ''; // restore (class-defined cursor takes over again)
     };
-  }, [targetRef, enabled, size, color, lineWidth, showAperture]);
+  }, [targetRef, enabled, size, color, lineWidth]);
 }

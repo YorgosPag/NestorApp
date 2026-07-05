@@ -4,29 +4,29 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export interface AutoAreaPreview {
   polygon: Point2D[];
   holes: Point2D[][];
 }
 
-let state: AutoAreaPreview | null = null;
-const listeners = new Set<() => void>();
+// SSoT pub/sub machinery via `createExternalStore` (always-notify — no equality guard,
+// matching the previous hand-rolled behaviour). Public API kept identical.
+const store = createExternalStore<AutoAreaPreview | null>(null);
 
 export function setAutoAreaPreview(next: AutoAreaPreview | null): void {
-  state = next;
-  listeners.forEach(fn => fn());
+  store.set(next);
 }
 
 export function getAutoAreaPreview(): AutoAreaPreview | null {
-  return state;
+  return store.get();
 }
 
 export function subscribeAutoAreaPreview(fn: () => void): () => void {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
+  return store.subscribe(fn);
 }
 
 export function clearAutoAreaPreview(): void {
-  setAutoAreaPreview(null);
+  store.set(null);
 }

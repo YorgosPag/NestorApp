@@ -17,25 +17,25 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
-let state: readonly Point2D[] = [];
-const listeners = new Set<() => void>();
+// SSoT pub/sub machinery via `createExternalStore` (always-notify). Public API identical.
+const store = createExternalStore<readonly Point2D[]>([]);
 
 export function setRegionGapMarkers(next: readonly Point2D[]): void {
-  state = next;
-  listeners.forEach((fn) => fn());
+  store.set(next);
 }
 
 export function getRegionGapMarkers(): readonly Point2D[] {
-  return state;
+  return store.get();
 }
 
 export function subscribeRegionGapMarkers(fn: () => void): () => void {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
+  return store.subscribe(fn);
 }
 
 export function clearRegionGapMarkers(): void {
-  if (state.length === 0) return;
-  setRegionGapMarkers([]);
+  // Preserve the original guard: skip the redundant notify when already empty.
+  if (store.get().length === 0) return;
+  store.set([]);
 }

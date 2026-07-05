@@ -32,6 +32,7 @@ import { classifyColumnSectionSize } from '../../bim/validators/column-validator
 import { requestColumnAdoptSizeConfirm } from '../../bim/columns/column-adopt-size-confirm-store';
 import {
   setRegionPerimeterPreview,
+  singleZoneRegionPreview,
   clearRegionPerimeterPreview,
 } from '../../systems/region-preview/RegionPerimeterPreviewStore';
 import { formatLengthForDisplay } from '../../config/display-length-format';
@@ -90,7 +91,10 @@ export function useColumnRectAdopt(params: ColumnRectAdoptParams): ColumnRectAdo
       // Φώτισε το ανιχνευμένο περίγραμμα (ΟΛΟΚΛΗΡΟ το σχήμα — Γ/Τ/Π) όσο είναι ανοιχτό το
       // παράθυρο (reuse RegionPerimeterPreview SSoT). Κόκκινο όταν block, πράσινο αλλιώς.
       const label = `${formatLengthForDisplay(info.widthMm, { withUnit: false })} × ${formatLengthForDisplay(info.depthMm)}`;
-      setRegionPerimeterPreview({ polygon: [...perimeter.polygon], oversized: tier === 'block', label });
+      // ADR-419 §thickness-zones — ΕΝΑ ανιχνευμένο περίγραμμα = μία ζώνη, μέσω του SSoT
+      // smart constructor του store (μηδέν raw literal → μηδέν απόκλιση σχήματος· η
+      // προηγούμενη legacy `{polygon,label}` έσκαγε τον overlay στο `zones.length`).
+      setRegionPerimeterPreview(singleZoneRegionPreview([...perimeter.polygon], label, tier === 'block'));
       void (async () => {
         const action = await requestColumnAdoptSizeConfirm({
           widthMm: info.widthMm,

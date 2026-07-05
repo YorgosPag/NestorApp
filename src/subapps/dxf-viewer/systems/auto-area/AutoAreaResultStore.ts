@@ -3,6 +3,8 @@
  * Holds the last auto-area measurement result. Panel subscribes via useSyncExternalStore.
  */
 
+import { createExternalStore } from '../../stores/createExternalStore';
+
 export type AutoAreaSource = 'dxf-polyline' | 'overlay';
 
 export interface AutoAreaResult {
@@ -26,23 +28,21 @@ export interface AutoAreaEmpty {
 
 export type AutoAreaState = AutoAreaResult | AutoAreaEmpty | null;
 
-let state: AutoAreaState = null;
-const listeners = new Set<() => void>();
+// SSoT pub/sub machinery via `createExternalStore` (always-notify). Public API identical.
+const store = createExternalStore<AutoAreaState>(null);
 
 export function setAutoAreaState(next: AutoAreaState): void {
-  state = next;
-  listeners.forEach(fn => fn());
+  store.set(next);
 }
 
 export function getAutoAreaState(): AutoAreaState {
-  return state;
+  return store.get();
 }
 
 export function subscribeAutoAreaState(fn: () => void): () => void {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
+  return store.subscribe(fn);
 }
 
 export function clearAutoAreaState(): void {
-  setAutoAreaState(null);
+  store.set(null);
 }
