@@ -130,7 +130,7 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'array-path': return inlineSvg(size, ARRAY_PATH_PATH);
     case 'array-polar': return inlineSvg(size, ARRAY_POLAR_PATH);
     case 'explode': return inlineSvg(size, EXPLODE_PATH);
-    // ADR-186 / ADR-570 — JOIN (Ένωση, inverse of Explode) + GROUP/UNGROUP (Ομαδοποίηση).
+    // ADR-186 / ADR-575 — JOIN (Ένωση, inverse of Explode) + GROUP/UNGROUP (Ομαδοποίηση).
     case 'join': return <Merge width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'group': return <Group width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'ungroup': return <Ungroup width={sizePx[size]} height={sizePx[size]} className={className} />;
