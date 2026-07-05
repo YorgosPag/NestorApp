@@ -17,16 +17,17 @@
 import { useSyncExternalStore } from 'react';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
+import { createExternalStore } from '../../../stores/createExternalStore';
 import { meshThumbnailStoragePath, meshAssetKey } from './bim-mesh-url-resolver';
 
+// Async Map cache· η reactivity είναι ΜΟΝΟ ένα monotonic version signal → external-store
+// SSoT (η pub/sub μηχανή). Τα urls/inFlight είναι ασύγχρονο cache, μένουν imperative.
 const urls = new Map<string, string>();
 const inFlight = new Set<string>();
-const listeners = new Set<() => void>();
-let version = 0;
+const versionStore = createExternalStore<number>(0);
 
 function emit(): void {
-  version += 1;
-  for (const l of listeners) l();
+  versionStore.set(versionStore.get() + 1);
 }
 
 /** Resolve one category asset thumbnail (idempotent, fire-and-forget). */
@@ -55,17 +56,12 @@ function get(category: string, assetId: string): string | undefined {
   return urls.get(meshAssetKey(category, assetId));
 }
 
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => { listeners.delete(listener); };
-}
-
 export const bimMeshThumbnailStore = {
   preload,
   preloadMany,
   get,
   /** React subscription — returns a version number that bumps on each resolve. */
   use(): number {
-    return useSyncExternalStore(subscribe, () => version, () => 0);
+    return useSyncExternalStore(versionStore.subscribe, versionStore.get, () => 0);
   },
 };

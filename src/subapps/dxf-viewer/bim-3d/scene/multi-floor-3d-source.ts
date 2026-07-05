@@ -15,6 +15,7 @@
  */
 
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export interface FloorStackEntry {
   /** Linked DXF level id — used to tag meshes for per-floor visibility. */
@@ -27,23 +28,20 @@ export interface FloorStackEntry {
   readonly entities: Bim3DEntities;
 }
 
-let stack: readonly FloorStackEntry[] = [];
-const listeners = new Set<() => void>();
+// Identity-guarded store (`equals: Object.is` = το παλιό `if (next === stack) return`).
+const store = createExternalStore<readonly FloorStackEntry[]>([], { equals: Object.is });
 
 /** Current aggregated floor stack (empty unless scope === 'all'). */
 export function getMultiFloorStack(): readonly FloorStackEntry[] {
-  return stack;
+  return store.get();
 }
 
 /** Replace the stack and notify subscribers (idempotent on identity). */
 export function setMultiFloorStack(next: readonly FloorStackEntry[]): void {
-  if (next === stack) return;
-  stack = next;
-  for (const fn of listeners) fn();
+  store.set(next);
 }
 
 /** Subscribe to stack replacements. Returns an unsubscribe fn. */
 export function subscribeMultiFloorStack(fn: () => void): () => void {
-  listeners.add(fn);
-  return () => { listeners.delete(fn); };
+  return store.subscribe(fn);
 }

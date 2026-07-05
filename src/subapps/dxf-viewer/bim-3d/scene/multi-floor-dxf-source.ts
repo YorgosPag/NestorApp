@@ -14,29 +14,27 @@
  */
 
 import type { DxfOverlayFloorEntry } from '../converters/DxfToThreeConverter';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export interface DxfFloorStackEntry extends DxfOverlayFloorEntry {
   /** Linked DXF level id (provenance / future per-floor gating). */
   readonly levelId: string;
 }
 
-let stack: readonly DxfFloorStackEntry[] = [];
-const listeners = new Set<() => void>();
+// Identity-guarded store (`equals: Object.is` = το παλιό `if (next === stack) return`).
+const store = createExternalStore<readonly DxfFloorStackEntry[]>([], { equals: Object.is });
 
 /** Current aggregated DXF floor stack (empty unless scope === 'all'). */
 export function getMultiFloorDxfStack(): readonly DxfFloorStackEntry[] {
-  return stack;
+  return store.get();
 }
 
 /** Replace the stack and notify subscribers (idempotent on identity). */
 export function setMultiFloorDxfStack(next: readonly DxfFloorStackEntry[]): void {
-  if (next === stack) return;
-  stack = next;
-  for (const fn of listeners) fn();
+  store.set(next);
 }
 
 /** Subscribe to stack replacements. Returns an unsubscribe fn. */
 export function subscribeMultiFloorDxfStack(fn: () => void): () => void {
-  listeners.add(fn);
-  return () => { listeners.delete(fn); };
+  return store.subscribe(fn);
 }
