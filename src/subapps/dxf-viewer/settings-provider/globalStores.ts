@@ -13,13 +13,13 @@
 
 import type { GridSettings, RulerSettings } from '../systems/rulers-grid/config';
 import { DEFAULT_GRID_SETTINGS, DEFAULT_RULER_SETTINGS } from '../systems/rulers-grid/config';
+import { createExternalStore } from '../stores/createExternalStore';
 
 /**
  * Grid settings store interface
  */
 interface GridSettingsStore {
   settings: GridSettings;
-  listeners: Set<(settings: GridSettings) => void>;
   update: (updates: Partial<GridSettings>) => void;
   subscribe: (listener: (settings: GridSettings) => void) => () => void;
 }
@@ -29,29 +29,27 @@ interface GridSettingsStore {
  */
 interface RulerSettingsStore {
   settings: RulerSettings;
-  listeners: Set<(settings: RulerSettings) => void>;
   update: (updates: Partial<RulerSettings>) => void;
   subscribe: (listener: (settings: RulerSettings) => void) => () => void;
 }
 
 /**
  * Create grid settings store
+ *
+ * SSoT pub/sub via createExternalStore (WAVE 2.8): the hand-rolled
+ * `let current` + `new Set<(settings) => void>()` cell now lives on the factory.
+ * The public `subscribe(settings => …)` payload contract is preserved by wrapping
+ * the factory's parameterless listener so it forwards the current snapshot.
  */
 const createGridStore = (): GridSettingsStore => {
-  let current = { ...DEFAULT_GRID_SETTINGS };
-  const listeners = new Set<(settings: GridSettings) => void>();
+  const store = createExternalStore<GridSettings>({ ...DEFAULT_GRID_SETTINGS });
 
   return {
-    get settings() { return current; },
-    listeners,
+    get settings() { return store.get(); },
     update: (updates) => {
-      current = { ...current, ...updates };
-      listeners.forEach(listener => listener(current));
+      store.set({ ...store.get(), ...updates });
     },
-    subscribe: (listener) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    }
+    subscribe: (listener) => store.subscribe(() => listener(store.get())),
   };
 };
 
@@ -59,20 +57,14 @@ const createGridStore = (): GridSettingsStore => {
  * Create ruler settings store
  */
 const createRulerStore = (): RulerSettingsStore => {
-  let current = { ...DEFAULT_RULER_SETTINGS };
-  const listeners = new Set<(settings: RulerSettings) => void>();
+  const store = createExternalStore<RulerSettings>({ ...DEFAULT_RULER_SETTINGS });
 
   return {
-    get settings() { return current; },
-    listeners,
+    get settings() { return store.get(); },
     update: (updates) => {
-      current = { ...current, ...updates };
-      listeners.forEach(listener => listener(current));
+      store.set({ ...store.get(), ...updates });
     },
-    subscribe: (listener) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    }
+    subscribe: (listener) => store.subscribe(() => listener(store.get())),
   };
 };
 
