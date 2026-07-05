@@ -27,6 +27,7 @@ import { buildHorizontalFinishSkin } from '../converters/structural-finish-horiz
 import { buildColumnVerticalExtentLookup, makeColumnHostResolver } from '../../bim/geometry/column-vertical-profile';
 import { buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
 import { buildCeilingSlabHosts, resolveMemberTopClipZmm } from './monolithic-slab-clip';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import type { SceneUnits } from '../../utils/scene-units';
 
 /**
@@ -148,7 +149,7 @@ function buildBeamTopClipById(entities: Bim3DEntities): ReadonlyMap<string, numb
   if (slabHosts.length === 0) return map;
   for (const beam of entities.beams) {
     const beamTopMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
-    const footprint = beam.geometry.outline.vertices.map((v) => ({ x: v.x, y: v.y }));
+    const footprint = projectVerticesTo2D(beam.geometry.outline.vertices);
     const clip = resolveMemberTopClipZmm(footprint, beamTopMm, beamTopMm - beam.params.depth, slabHosts);
     if (clip < beamTopMm) map.set(beam.id, clip);
   }

@@ -1,4 +1,5 @@
 import type { Point2D } from '../rendering/types/Types';
+import { projectVerticesTo2D } from '../bim/geometry/shared/polygon-utils';
 import type { Region, RegionStatus } from '../types/overlay';
 import { calculateRegionArea, calculateRegionPerimeter } from '../types/overlay';
 import { getStatusColors } from '../config/color-mapping';
@@ -119,7 +120,7 @@ export class RegionOperations {
       color: getStatusColors(status)?.fill || UI_COLORS.BUTTON_PRIMARY,
       opacity: OPACITY.MEDIUM_LOW,  // 🏢 ADR-134: Centralized opacity (0.7)
       status,
-      vertices: vertices.map(v => ({ x: v.x, y: v.y })),
+      vertices: projectVerticesTo2D(vertices),
       locked: false,
       visible: true,
       area: calculateRegionArea(vertices),

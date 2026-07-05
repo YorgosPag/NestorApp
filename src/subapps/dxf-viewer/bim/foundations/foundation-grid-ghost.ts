@@ -24,6 +24,7 @@ import { buildStripGridFromGuides, type AxisGuideReader } from './foundation-fro
 import { DEFAULT_GRID_PERIMETER_MODE, type GridPerimeterMode } from './foundation-grid-justification';
 import type { FollowGhostFootprint } from '../hosting/guide-follow-ghost';
 import type { FoundationParamOverrides, SceneUnits } from '../../hooks/drawing/foundation-completion';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 /**
  * Footprints της live target εσχάρας από τα τρέχοντα (ζωντανά) guide offsets. Άδειο
@@ -41,6 +42,6 @@ export function deriveGridFollowGhostFootprints(
   if (!result.ok) return [];
   return result.strips.map((s) => ({
     id: s.id,
-    vertices: s.geometry.footprint.vertices.map((v) => ({ x: v.x, y: v.y })),
+    vertices: projectVerticesTo2D(s.geometry.footprint.vertices),
   }));
 }

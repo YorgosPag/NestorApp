@@ -32,6 +32,7 @@ import { isWindowKind } from '../../types/opening-types';
 import { sceneUnitsToMeters, type SceneUnits } from '../../../utils/scene-units';
 import type { Point3D } from '../../types/bim-base';
 import { nearestEdgeOutwardAzimuthDeg } from '../../geometry/shared/polygon-azimuth-utils';
+import { projectVerticesTo2D } from '../../geometry/shared/polygon-utils';
 import type { OverhangOutline } from './solar-overhang-geometry';
 import type { HorizonObstacle } from './solar-horizon-geometry';
 import {
@@ -377,7 +378,7 @@ export function resolveSpaceBoundaries(
   const verts = space.params.footprint?.vertices ?? [];
   if (verts.length < 3) return { boundaries: [], exposedFacadeCount: 0 };
 
-  const footprint: Vec2[] = verts.map((v) => ({ x: v.x, y: v.y }));
+  const footprint: Vec2[] = projectVerticesTo2D(verts);
   const sceneUnits: SceneUnits = space.params.sceneUnits ?? 'mm';
   const sceneToM = sceneUnitsToMeters(sceneUnits);
   const ceilingHeightMm = space.params.ceilingHeightMm;

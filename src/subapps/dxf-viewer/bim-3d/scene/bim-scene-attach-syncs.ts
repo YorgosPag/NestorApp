@@ -4,6 +4,7 @@ import { wallToMesh, columnToMesh } from '../converters/BimToThreeConverter';
 import { buildWallHostInputs, makeWallTopContext, makeWallBaseContext } from '../../bim/geometry/wall-host-plan-builder';
 // ADR-534 §monolithic-cut — top-clip κολόνας στο soffit καλύπτουσας πλάκας (μηδέν z-fighting).
 import { buildCeilingSlabHosts, resolveMemberTopClipZmm } from './monolithic-slab-clip';
+import { projectPointTo2D, projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import { resolveWallTopProfile, resolveWallNominalTopZmm, resolveWallBaseZmm } from '../../bim/geometry/wall-top-profile';
 import { resolveWallBaseProfile } from '../../bim/geometry/wall-base-profile';
 import { wallTopFaceCrossingBreakpoints, type WallTopClipContext } from '../converters/wall-top-clip';
@@ -68,8 +69,8 @@ export function syncWalls(
     const openingsForWall = filterHostedOpenings(
       entities.openings, 'wallId', wall.id, r.buildingMode, ctx,
     );
-    const start = { x: wall.params.start.x, y: wall.params.start.y };
-    const end = { x: wall.params.end.x, y: wall.params.end.y };
+    const start = projectPointTo2D(wall.params.start);
+    const end = projectPointTo2D(wall.params.end);
     // ADR-448 Phase 1b — storey ceiling feeds the vertical context so a
     // `storey-ceiling` wall (the default) reaches the real next floor.
     const topBase = { floorElevationMm: ctx.floorElevationMm, nextFloorElevationMm: ctx.nextFloorElevationMm };
@@ -133,7 +134,7 @@ export function syncColumns(
     let topProfile, baseProfile;
     const footVerts = column.geometry?.footprint?.vertices;
     if ((topAttached || baseAttached) && footVerts && footVerts.length >= 3) {
-      const footprint = footVerts.map((v) => ({ x: v.x, y: v.y }));
+      const footprint = projectVerticesTo2D(footVerts);
       const colCtx = { ...colVctx, resolveHostInput };
       topProfile = topAttached ? resolveColumnTopProfile(column.params, footprint, colCtx) : undefined;
       baseProfile = baseAttached ? resolveColumnBaseProfile(column.params, footprint, colCtx) : undefined;
@@ -146,7 +147,7 @@ export function syncColumns(
     const nominalHeightMm = Number.isFinite(rawColTop) ? rawColTop : undefined;
     // ADR-534 §monolithic-cut — clip-top στο soffit καλύπτουσας πλάκας (συνδυάζεται min με το topProfile).
     const clipTopZmm = (footVerts && footVerts.length >= 3 && Number.isFinite(colTopMm) && Number.isFinite(colBaseMm))
-      ? resolveMemberTopClipZmm(footVerts.map((v) => ({ x: v.x, y: v.y })), colTopMm, colBaseMm, slabHosts)
+      ? resolveMemberTopClipZmm(projectVerticesTo2D(footVerts), colTopMm, colBaseMm, slabHosts)
       : undefined;
     // ADR-488 §6.1 — DERIVED effective βάση (άνω παρειά στηρίζοντος πεδίλου) ώστε η κολώνα
     // να εδραστεί στο πέδιλο (στατική συνέχεια). ΟΧΙ για ρητά base-attached κολώνες (κρατούν

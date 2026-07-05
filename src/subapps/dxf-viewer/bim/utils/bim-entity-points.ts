@@ -35,6 +35,7 @@ import {
 // ADR-370 §κεντρικοποίηση (2026-07-05): οι column key points διαβάζονται από το ΕΝΑ
 // characteristic-point SSoT (πραγματικές footprint γωνίες), ΟΧΙ από τα 9 bbox anchors.
 import { getBimCharacteristicPointsOfCategory } from './bim-characteristic-points';
+import { projectPointTo2D, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 /**
  * Κύρια vertex/endpoint collection για BIM entity (2D projection).
@@ -53,19 +54,19 @@ import { getBimCharacteristicPointsOfCategory } from './bim-characteristic-point
 export function getBimEntityKeyPoints2D(entity: Entity): Point2D[] {
   if (isBeamEntity(entity)) {
     return [
-      { x: entity.params.startPoint.x, y: entity.params.startPoint.y },
-      { x: entity.params.endPoint.x, y: entity.params.endPoint.y },
+      projectPointTo2D(entity.params.startPoint),
+      projectPointTo2D(entity.params.endPoint),
     ];
   }
 
   if (isWallEntity(entity)) {
     const params = entity.params;
     if (entity.kind === 'polyline' && params.polylineVertices && params.polylineVertices.length >= 2) {
-      return params.polylineVertices.map(v => ({ x: v.x, y: v.y }));
+      return projectVerticesTo2D(params.polylineVertices);
     }
     return [
-      { x: params.start.x, y: params.start.y },
-      { x: params.end.x, y: params.end.y },
+      projectPointTo2D(params.start),
+      projectPointTo2D(params.end),
     ];
   }
 
@@ -73,7 +74,7 @@ export function getBimEntityKeyPoints2D(entity: Entity): Point2D[] {
   if (isSpaceSeparatorEntity(entity)) {
     const { start, end } = entity.params;
     if (!start || !end) return [];
-    return [{ x: start.x, y: start.y }, { x: end.x, y: end.y }];
+    return [projectPointTo2D(start), projectPointTo2D(end)];
   }
 
   // §κεντρικοποίηση (Giorgio 2026-07-05): ΟΛΑ τα polygon-footprint BIM entities (slab / slab-opening

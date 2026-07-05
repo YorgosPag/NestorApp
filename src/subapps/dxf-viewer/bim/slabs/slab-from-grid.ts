@@ -42,6 +42,7 @@ import {
   type SceneUnits,
 } from '../../hooks/drawing/slab-completion';
 import { getDefaultSlabBuildupForKind } from '../types/slab-dna-types';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import {
   computeBuildingFootprint,
   type BeamForFootprint,
@@ -97,7 +98,7 @@ export function buildGroundBearingSlabs(
   const slabs: SlabEntity[] = [];
   let ignoredCount = 0;
   for (const ring of footprint.outerRings) {
-    const vertices: Point2D[] = ring.points.points.map((p) => ({ x: p.x, y: p.y }));
+    const vertices: Point2D[] = projectVerticesTo2D(ring.points.points);
     const result = completeSlabFromPolygonClicks(
       vertices,
       layerId,

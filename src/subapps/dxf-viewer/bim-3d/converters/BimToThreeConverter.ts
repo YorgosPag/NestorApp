@@ -56,6 +56,7 @@ import { scalePoints } from '../../rendering/entities/shared/geometry-vector-uti
 // Shared 3D edge overlay + point-based converters (N.7.1 file-size split, 2026-06-02).
 import { attachEdgesProjection } from './bim-three-edges';
 import { wallFootprintSubcategory } from '../../bim/walls/wall-render-palette';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 
 // ADR-406 / ADR-408 Φ3 — point-based converters re-exported from their own module
 // (file-size SSoT, N.7.1). Importers keep `from '.../BimToThreeConverter'`.
@@ -469,7 +470,7 @@ export function wallToMesh(
   // κολόνες («η κολόνα νικάει») + τοίχοι-νικητές σε διασταύρωση Χ (priority, wall↔wall extension).
   // Τα cross footprints ΔΕΝ μπαίνουν στο `columns` (το pullback είναι column-specific).
   const scaleFootprints = (fps: readonly (readonly Point3D[])[]): { x: number; y: number }[][] =>
-    fps.filter((c) => c.length >= 3).map((c) => scalePoints(c, sceneToM).map((p) => ({ x: p.x, y: p.y })));
+    fps.filter((c) => c.length >= 3).map((c) => projectVerticesTo2D(scalePoints(c, sceneToM)));
   const columnFootprintsM = scaleFootprints(columns);
   const crossFootprintsM = scaleFootprints(wallCrossFootprints);
   const cutterFootprintsM = crossFootprintsM.length > 0

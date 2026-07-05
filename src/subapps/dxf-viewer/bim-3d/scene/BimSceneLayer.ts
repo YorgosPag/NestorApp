@@ -19,6 +19,7 @@ import { beamToMesh, slabToMesh, fixtureToMesh } from '../converters/BimToThreeC
 // ADR-534 §monolithic-cut — top-clip δοκαριών/κολόνων στο soffit καλύπτουσας πλάκας (μηδέν z-fighting).
 import { buildCeilingSlabHosts, resolveMemberTopClipZmm } from './monolithic-slab-clip';
 import { isBeamTilted } from '../../bim/geometry/beam-slope';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import { syncWalls, syncColumns } from './bim-scene-attach-syncs';
 // ADR-449 Slice 7 — scene-level ενιαίος σοβάς (merged structural silhouette).
 import { syncStructuralFinishSkin } from './bim-scene-structural-finish-sync';
@@ -261,7 +262,7 @@ export class BimSceneLayer {
       const r = this.resolveEntity(beam, 'beam', ctx);
       if (!r) continue;
       const beamTopMm = beam.params.topElevation + (beam.params.zOffset ?? 0);
-      const beamFootprint = beam.geometry.outline.vertices.map((v) => ({ x: v.x, y: v.y }));
+      const beamFootprint = projectVerticesTo2D(beam.geometry.outline.vertices);
       const clipTopZmm = resolveMemberTopClipZmm(beamFootprint, beamTopMm, beamTopMm - beam.params.depth, slabHosts);
       // ADR-449 Slice X1 — suppress per-element σοβάς δοκαριού· η scene-level ΕΝΙΑΙΑ
       // silhouette (`syncStructuralFinishSkin`) αναλαμβάνει το συνεχές δέρμα → μηδέν overlap/

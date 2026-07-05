@@ -16,6 +16,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { DetectedRectangle } from './wall-in-region';
+import { projectPointTo2D, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 /** Κατηγορία διατομής περιμέτρου (ευθύ / Γ / Τ / Π / σύνθετο). */
 export type PerimeterShape = 'rectangle' | 'L' | 'T' | 'U' | 'composite';
@@ -43,7 +44,7 @@ function unit(dx: number, dy: number): Point2D {
 
 /** Πετά το διπλό κλείσιμο (πρώτη ≈ τελευταία κορυφή). */
 function dedupeClosing(poly: readonly Point2D[]): Point2D[] {
-  const out = poly.map((p) => ({ x: p.x, y: p.y }));
+  const out = projectVerticesTo2D(poly);
   if (out.length >= 2 && dist(out[0], out[out.length - 1]) < EPS) out.pop();
   return out;
 }
@@ -51,7 +52,7 @@ function dedupeClosing(poly: readonly Point2D[]): Point2D[] {
 /** Διώχνει συγγραμμικές κορυφές (κάθετη απόσταση από prev→next < tol). */
 function removeCollinear(poly: readonly Point2D[], tol: number): Point2D[] {
   const n = poly.length;
-  if (n < 3) return poly.map((p) => ({ x: p.x, y: p.y }));
+  if (n < 3) return projectVerticesTo2D(poly);
   const out: Point2D[] = [];
   for (let i = 0; i < n; i++) {
     const prev = poly[(i - 1 + n) % n];
@@ -59,7 +60,7 @@ function removeCollinear(poly: readonly Point2D[], tol: number): Point2D[] {
     const next = poly[(i + 1) % n];
     const base = dist(prev, next);
     const height = base > EPS ? Math.abs(crossZ(prev, cur, next)) / base : 0;
-    if (height >= tol) out.push({ x: cur.x, y: cur.y });
+    if (height >= tol) out.push(projectPointTo2D(cur));
   }
   return out;
 }
@@ -120,7 +121,7 @@ export function polygonCentroid(poly: readonly Point2D[]): Point2D {
 
 /** Επιστρέφει το πολύγωνο σε CCW φορά (θετικό signed area). */
 function toCCW(poly: readonly Point2D[]): Point2D[] {
-  const p = poly.map((q) => ({ x: q.x, y: q.y }));
+  const p = projectVerticesTo2D(poly);
   return signedArea(p) < 0 ? p.reverse() : p;
 }
 

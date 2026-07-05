@@ -24,6 +24,7 @@ import {
   type ColumnBaseProfile,
 } from '../../bim/geometry/column-vertical-profile';
 import { buildWallHostInputs } from '../../bim/geometry/wall-host-plan-builder';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import type { BimEntityForBoq } from '../../bim/services/BimToBoqBridge';
 import { computeColumnFinishContribution } from '../../bim/finishes/structural-finish-scene';
 
@@ -45,7 +46,7 @@ function resolveAttachedColumnProfiles(
   const resolveHostInput = makeColumnHostResolver(
     buildWallHostInputs(scene.entities.filter(isBeamEntity), scene.entities.filter(isSlabEntity)),
   );
-  const footprint = entity.geometry.footprint.vertices.map((v) => ({ x: v.x, y: v.y }));
+  const footprint = projectVerticesTo2D(entity.geometry.footprint.vertices);
   const ctx = { floorElevationMm: 0, resolveHostInput };
   const top = topAttached ? resolveColumnTopProfile(entity.params, footprint, ctx) : null;
   const base = baseAttached ? resolveColumnBaseProfile(entity.params, footprint, ctx) : null;

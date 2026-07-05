@@ -55,6 +55,7 @@ import { resolveRegionLoopTolerances } from './region-tolerance';
 // junctions βαθμού >2 + αμβλείες γωνίες + κενά μετά explode — ό,τι ΔΕΝ κάνει ο simple-cycle.
 import { findClosedPolygonsFromLines } from '../../systems/auto-area/auto-area-geometry';
 import type { SceneUnits } from '../../utils/scene-units';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import {
   EPS,
   normalize,
@@ -140,7 +141,7 @@ function closedPolylinePolygon(e: Entity): Point2D[] | null {
   if (!(isPolylineEntity(e) || isLWPolylineEntity(e))) return null;
   const verts = e.vertices;
   if (!e.closed || !verts || verts.length < 3) return null;
-  return verts.map((v) => ({ x: v.x, y: v.y }));
+  return projectVerticesTo2D(verts);
 }
 
 /** RECTANGLE/RECT entity → 4 κορυφές, αλλιώς null. */
@@ -248,11 +249,10 @@ function ringToPoints(ring: ReadonlyArray<readonly [number, number]>): Point2D[]
 function unionTouchingPolygons(
   polys: ReadonlyArray<readonly Point2D[]>,
 ): Point2D[][] {
-  const copy = (p: readonly Point2D[]): Point2D[] => p.map((q) => ({ x: q.x, y: q.y }));
-  if (polys.length <= 1) return polys.map(copy);
+  if (polys.length <= 1) return polys.map(projectVerticesTo2D);
   const geoms = polys.map((p) => [p.map((q) => [q.x, q.y] as [number, number])]);
   const merged = safeUnion(geoms[0], ...geoms.slice(1));
-  if (merged.length === 0) return polys.map(copy);
+  if (merged.length === 0) return polys.map(projectVerticesTo2D);
   return merged.map((polygon) => ringToPoints(polygon[0]));
 }
 

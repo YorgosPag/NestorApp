@@ -21,8 +21,9 @@ import { computeBeamGeometry } from '../geometry/beam-geometry';
 import { validateBeamParams } from '../validators/beam-validator';
 import { mmScaleFor } from '../../utils/scene-units';
 import { hasGuideBindings } from './guide-binding-types';
-import { deriveLineSlots, type Vec2 } from './derive-slots';
+import { deriveLineSlots } from './derive-slots';
 import type { HostingStrategy } from './hosting-strategy-types';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 export const beamHostingStrategy: HostingStrategy = {
   reconcile(entity, getOffset) {
@@ -50,8 +51,6 @@ export const beamHostingStrategy: HostingStrategy = {
     const geometry = nextGeometry as BeamGeometry;
     // Plan-view outline = ένα κλειστό ορθογώνιο (width × length) — το ζωγραφίζει
     // ο follow-ghost. Map Point3D vertices → Vec2 (x/y).
-    const ring: Vec2[] = [];
-    for (const v of geometry.outline.vertices) ring.push({ x: v.x, y: v.y });
-    return ring;
+    return projectVerticesTo2D(geometry.outline.vertices);
   },
 };

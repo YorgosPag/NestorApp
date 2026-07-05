@@ -52,9 +52,36 @@ export interface ActiveDragGripInfo {
 
 let activeDragGrip: ActiveDragGripInfo | null = null;
 
+// ADR-513 §grip-parity — low-frequency pub/sub (fires ONCE on drag start/anchor/end,
+// NOT per frame) so React leaves can mount/unmount the «Δαχτυλίδι Εντολών» for a
+// line-endpoint drag. The high-freq cursor stays zero-React (window mousemove).
+const dragListeners = new Set<() => void>();
+function notifyDragListeners(): void {
+  for (const cb of dragListeners) cb();
+}
+
+/** Subscribe to active-grip-drag start/end (low-freq). Pairs with `getActiveDragGrip` snapshot. */
+export function subscribeActiveDragGrip(cb: () => void): () => void {
+  dragListeners.add(cb);
+  return () => {
+    dragListeners.delete(cb);
+  };
+}
+
+/**
+ * ADR-513 §grip-parity — pure predicate: is `info` a plain-LINE endpoint drag
+ * (grip 0=start / 1=end, no `lineGripKind`)? `gripIndex`/`lineGripKind` are set
+ * ONLY for line-entity grips (see field notes), so this uniquely identifies an
+ * endpoint reshape — the drag that shows the length/angle ring.
+ */
+export function isLineEndpointDragInfo(info: ActiveDragGripInfo | null): boolean {
+  return !!info && !info.lineGripKind && (info.gripIndex === 0 || info.gripIndex === 1);
+}
+
 /** Write — called by useUnifiedGripInteraction when DXF grip drag starts */
 export function setActiveDragGrip(info: ActiveDragGripInfo): void {
   activeDragGrip = info;
+  notifyDragListeners();
 }
 
 /**
@@ -65,6 +92,7 @@ export function setActiveDragGrip(info: ActiveDragGripInfo): void {
 export function setActiveDragGripAnchor(anchor: Point2D): void {
   if (activeDragGrip) {
     activeDragGrip = { ...activeDragGrip, dragAnchor: { x: anchor.x, y: anchor.y } };
+    notifyDragListeners();
   }
 }
 
@@ -93,6 +121,7 @@ export function isActiveGripAltMove(): boolean {
 /** Clear — called by resetToIdle in useUnifiedGripInteraction */
 export function clearActiveDragGrip(): void {
   activeDragGrip = null;
+  notifyDragListeners();
   // ADR-357/562/363 — drag lifecycle SSoT: any active grip AutoAlign traces (dim OR line)
   // end with the drag (release / ESC / cancel) so a stale result never bleeds into the next.
   clearGripAlignmentTracking();

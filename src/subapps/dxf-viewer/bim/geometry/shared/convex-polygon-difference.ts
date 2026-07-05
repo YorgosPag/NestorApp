@@ -30,6 +30,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-404-3d-bim-element-tilt.md §Phase 4.3
  */
 
+import { projectPointTo2D } from './polygon-utils';
+
 export interface Pt2 {
   readonly x: number;
   readonly y: number;
@@ -78,7 +80,7 @@ function dedupe(pts: readonly Pt2[]): Pt2[] {
   for (const p of pts) {
     const prev = out[out.length - 1];
     if (prev && Math.abs(prev.x - p.x) < 1e-12 && Math.abs(prev.y - p.y) < 1e-12) continue;
-    out.push({ x: p.x, y: p.y });
+    out.push(projectPointTo2D(p));
   }
   if (out.length > 1) {
     const a = out[0];

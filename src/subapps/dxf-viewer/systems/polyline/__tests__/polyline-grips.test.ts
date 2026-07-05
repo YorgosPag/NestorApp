@@ -5,6 +5,7 @@ import {
   getPolylineMoveRotateGrips,
   polylineMoveRotateStartIndex,
   getPolylineGripAlignmentAnchors,
+  getPolylineVertexIncidentSegments,
   POLYLINE_MOVE_KIND,
   POLYLINE_ROTATION_KIND,
 } from '../polyline-grips';
@@ -91,5 +92,35 @@ describe('getPolylineGripAlignmentAnchors (ADR-561 — vertex reshape tracking a
 
   it('degenerate ring (<2 vertices) → null', () => {
     expect(getPolylineGripAlignmentAnchors(0, [A], false)).toBeNull();
+  });
+});
+
+describe('getPolylineVertexIncidentSegments (ADR-508/561 — white HUD per changing leg)', () => {
+  it('open ring endpoint (grip 0) → the single outgoing segment', () => {
+    expect(getPolylineVertexIncidentSegments(0, 3, false)).toEqual([[0, 1]]);
+  });
+
+  it('open ring other endpoint (grip n−1) → the single incoming segment', () => {
+    expect(getPolylineVertexIncidentSegments(2, 3, false)).toEqual([[1, 2]]);
+  });
+
+  it('interior/corner vertex → BOTH incident segments', () => {
+    expect(getPolylineVertexIncidentSegments(1, 3, false)).toEqual([[0, 1], [1, 2]]);
+  });
+
+  it('closed ring endpoint → incoming wraps (n−1 → 0) + outgoing', () => {
+    expect(getPolylineVertexIncidentSegments(0, 4, true)).toEqual([[3, 0], [0, 1]]);
+  });
+
+  it('closed ring last vertex → incoming + outgoing wraps (n−1 → 0)', () => {
+    expect(getPolylineVertexIncidentSegments(3, 4, true)).toEqual([[2, 3], [3, 0]]);
+  });
+
+  it('non-vertex grip index (edge / move / rotation handle) → []', () => {
+    expect(getPolylineVertexIncidentSegments(3, 3, false)).toEqual([]);
+  });
+
+  it('degenerate ring (<2 vertices) → []', () => {
+    expect(getPolylineVertexIncidentSegments(0, 1, false)).toEqual([]);
   });
 });

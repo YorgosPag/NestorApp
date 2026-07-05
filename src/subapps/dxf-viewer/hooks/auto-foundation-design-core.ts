@@ -44,7 +44,7 @@ import {
 } from '../bim/foundations/footing-element-summary';
 import { collectFoundationFootings } from '../bim/foundations/foundation-footing-candidates';
 import { footingSupportsColumnBase } from '../bim/foundations/footing-column-coverage';
-import { polygonAreaCentroid } from '../bim/geometry/shared/polygon-utils';
+import { polygonAreaCentroid, projectVerticesTo2D } from '../bim/geometry/shared/polygon-utils';
 import { resolveColumnBaseZmm } from '../bim/geometry/column-vertical-profile';
 import { buildDefaultFoundationParams, buildFoundationEntity } from './drawing/foundation-completion';
 import { resolveFoundationTopElevationMm } from '../bim/types/foundation-types';
@@ -148,7 +148,7 @@ function toLayoutColumn(
   return {
     id: column.id,
     centroid,
-    footprint: verts.map((v) => ({ x: v.x, y: v.y })),
+    footprint: projectVerticesTo2D(verts),
     widthMm: column.params.width,
     depthMm: column.params.depth,
     axialServiceKn: serviceAxialKn(column.params.appliedLoad),

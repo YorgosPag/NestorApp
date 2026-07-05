@@ -14,6 +14,7 @@
 
 import type { ColumnEntity } from '../../../../bim/types/column-types';
 import { resolveColumnVerticalExtentMm } from '../../../../bim/geometry/column-vertical-profile';
+import { projectVerticesTo2D } from '../../../../bim/geometry/shared/polygon-utils';
 import { useActiveStoreyStore } from '../../../../systems/levels/active-storey-store';
 
 /** True όταν το ύψος είναι παράγωγο (storey/level-bound) → read-only στο ribbon. */
@@ -30,7 +31,7 @@ export function deriveStoreyBoundHeightMm(column: ColumnEntity): number | null {
   if (column.params.topBinding === 'attached') return null;
   const ctx = useActiveStoreyStore.getState().context;
   if (!ctx) return null;
-  const footprint = (column.geometry?.footprint?.vertices ?? []).map((v) => ({ x: v.x, y: v.y }));
+  const footprint = projectVerticesTo2D(column.geometry?.footprint?.vertices ?? []);
   const ext = resolveColumnVerticalExtentMm(column.params, footprint, {
     floorElevationMm: ctx.floorElevationMm,
     nextFloorElevationMm: ctx.nextFloorElevationMm ?? undefined,

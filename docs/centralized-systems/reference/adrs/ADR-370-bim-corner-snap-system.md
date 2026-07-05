@@ -1080,17 +1080,37 @@ duplication· regression-guarded. ✅
 - **NEW (test)**: `bim/geometry/shared/__tests__/polygon-utils-vertices2d.test.ts` — z-drop, winding
   preservation, fresh-object (no alias), empty input. PASS.
 
-**Εκκρεμεί (application-wide sweep, ΕΚΤΟΣ ασφαλούς scope ενός session — N.8)**: ~80 ακόμα call sites του
-ΙΔΙΟΥ `{x,y}` idiom σε renderers / bim-3d converters / BOQ feeds / preview-stores / reinforcement / hosting.
-Είναι σημασιολογικά το ίδιο (3D→2D projection Ή 2D clone/field-narrow) και μπορούν ΟΛΑ να καλέσουν το SSoT,
-αλλά cross-domain (bim / bim-3d / export / rendering / hooks / systems) → orchestrator-driven ratchet, όχι
-τυφλό μαζικό edit εδώ. Καταγράφηκε ρητά (μηδέν «τελείωσα» ψευδώς).
+**Done (application-wide sweep — orchestrator, 2026-07-05)**: το εκκρεμές ευρύτερο πεδίο ολοκληρώθηκε.
+**86 production αρχεία** (~90 call sites) του ΙΔΙΟΥ `{x,y}` idiom αντικαταστάθηκαν με το SSoT
+(`projectPointTo2D` / `projectVerticesTo2D`) — zero behavioural change, per-site verified (ΟΧΙ τυφλό sed).
+Orchestrator: fan-out σε 6 domain clusters (Sonnet) + 2 independent adversarial-verify agents (83/83 diffs
+CLEAN, 0 flagged) + jest ανά domain.
+- **Domains καλυμμένα**: `bim/geometry` (core+shared: wall-host-plan-builder, roof-*, column-vertical-profile,
+  wall-geometry, straight-skeleton, segment-polygon-coverage, polygon-offset-utils, polygon-dilate,
+  convex-polygon-difference) · `bim/walls` (preview-store, in-region, from-entity, cross-cutback, axis-clip,
+  perimeter-*, filling-walls) · `bim/hosting` (wall/slab/foundation/column/beam) · `bim/structural` +
+  `reinforcement` (slab-rebar-plan, column-bar-distribution, column-rebar-layout, perimeter-layout, cross-ties,
+  circular-layout, beam-flange-context, organism/structural-graph) · `bim/columns` · `bim/beams` · `bim/hatch`
+  (grips, firestore-service, completion) · `bim/ghosts` · `bim/roofs` · `bim/slabs` · `bim/foundations` ·
+  `bim/finishes` · `bim/floor-finishes` · `bim/mep-underfloor` · `bim/mep-systems` (wire-waypoint-hit) ·
+  `bim/renderers` (Wall/Opening/Furniture) · `bim/thermal` (heat-load resolvers) · `bim-3d` (scene syncs,
+  converters, animation) · `hooks` (data/BOQ feeds, canvas cutbacks, drawing, auto-foundation) · `export`
+  (bim-to-tek, overlay-dxf-collector) · `systems` (trim, polyline, offset, mep-routing, auto-area) · `utils`
+  (region-operations) · `overlays` · `snapping` (DimDefPointSnapEngine) · `ui/ribbon` · `ai-assistant`.
+- **GOTCHAS τηρήθηκαν** (per-site verify): reverse chains (`polygon-offset-utils`) → `projectVerticesTo2D(v).reverse()`·
+  scale chains (`scalePoints(f, sceneToM).map(...)` σε bim-3d) → κρατήθηκε το inner call· z-widen (`{x,y,z:0}`),
+  `[v.x,v.y]` tuples, arithmetic (offset/midpoint) → SKIPPED σωστά· local `to2D`/`toPlan`/`toVertex`/`copy`
+  helpers διαγράφηκαν με cleanup των αχρησιμοποίητων imports.
+- **Verification**: όλα τα σχετικά jest domains PASS. Προϋπάρχοντα (άσχετα) failures στο `section-context-slab.ts`
+  (`slab.geometry.maxFreeSpanM` undefined — in-flight ADR-508 linear-member-framing work, ΟΧΙ αυτό το sweep) &
+  σε slab-grips/finish-plan-geometry επιβεβαιώθηκαν ως pre-existing (stash-verified, αρχεία αμετάβλητα).
 
 **Verification**: 212 tests PASS (23 suites: polygon-utils, characteristic-points, corner-snaps,
 entity-points, wall/opening/slab/beam-corner-anchors, member-snap-targets, placement-overlap, hit-test, bim-to-dxf).
 
 **Google-Level (N.7.2)**: ΔΥΟ pure projection SSoT· zero behavioural change (ίδιο output)· zero duplication
-στο snap/hit-test/export cluster· regression-guarded· εκκρεμές ευρύτερο πεδίο ρητά καταγεγραμμένο. ✅
+application-wide (snap/hit-test/export + 86 production αρχεία σε 6 domains)· regression-guarded (jest ανά domain +
+adversarial verify 83/83 CLEAN)· μηδέν εναπομείναν array-form idiom σε production (grep-verified). ✅
 
 ---
 

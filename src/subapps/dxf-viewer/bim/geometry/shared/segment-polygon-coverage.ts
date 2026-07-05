@@ -15,6 +15,8 @@
  * δοκαριού — ποια κομμάτια παρειάς καλύπτονται από τοίχο).
  */
 
+import { projectVerticesTo2D } from './polygon-utils';
+
 /** Ελάχιστο 2D σημείο (plan space). */
 export interface Pt2 {
   readonly x: number;
@@ -79,7 +81,7 @@ function pointInPolygon(pt: Pt2, poly: readonly Pt2[]): boolean {
  */
 export function coveredIntervals(a: Pt2, b: Pt2, poly: readonly Pt2[]): Array<[number, number]> {
   if (poly.length < 3) return [];
-  const polyArr = poly.map((p) => ({ x: p.x, y: p.y }));
+  const polyArr = projectVerticesTo2D(poly);
   const bps = new Set<number>([0, 1]);
   for (const t of axisPolygonCrossings(a, b, polyArr)) bps.add(t);
   const sorted = [...bps].sort((x, y) => x - y);

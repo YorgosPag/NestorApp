@@ -50,6 +50,7 @@ import {
   hostUndersidePlaneMm,
   buildTopFootprintFromBottom,
 } from './wall-top-clip-internal';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 
 const MM_TO_M = 0.001;
 
@@ -341,7 +342,7 @@ function buildTiltTransitionLofts(
       // Σταθερή τοπολογία στο slab → constructive top == true top (exact). Αν η κοπή δεν
       // κινείται σε αυτό το sub-polygon (μακριά από host) → κατακόρυφο loft (top==bottom).
       let top = buildTopFootprintFromBottom(b, hostLo, quad, () => slabDCut, eps);
-      if (!top || top.length !== b.length || ringArea(top) < AREA_EPS) top = b.map((p) => ({ x: p.x, y: p.y }));
+      if (!top || top.length !== b.length || ringArea(top) < AREA_EPS) top = projectVerticesTo2D(b);
       const bottomLocalM = j === 0 ? b.map((p) => huLocalMAt(p)) : b.map(() => zAt(tLo));
       lofts.push({ bottomFootprint: b, topFootprint: top, bottomLocalM, nominalLocalM: zHi });
     }

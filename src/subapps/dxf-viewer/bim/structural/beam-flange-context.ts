@@ -27,7 +27,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { BeamEntity, BeamSupportType } from '../types/beam-types';
 import type { HostFootprintInput, Pt2 } from '../geometry/wall-host-plan-builder';
 import { hostUndersideAt } from '../geometry/host-footprint-eval';
-import { polygon2DCentroid } from '../geometry/shared/polygon-utils';
+import { polygon2DCentroid, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import {
   buildMemberAxisFrame,
   type MemberAxisFrame,
@@ -134,7 +134,7 @@ export function resolveBeamEffectiveFlangeWidthMm(
 ): number | undefined {
   const verts = beam.geometry.outline.vertices;
   if (verts.length < 3 || coveringHosts.length === 0 || beam.params.width <= 0) return undefined;
-  const footprint: Pt2[] = verts.map((v) => ({ x: v.x, y: v.y }));
+  const footprint: Pt2[] = projectVerticesTo2D(verts);
   if (!isFootprintCoveredBySlab(footprint, coveringHosts)) return undefined;
   return computeEffectiveFlangeWidthMm({
     webWidthMm: beam.params.width,

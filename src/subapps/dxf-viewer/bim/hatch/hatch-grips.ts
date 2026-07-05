@@ -18,6 +18,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { HatchGripKind } from '../../hooks/grip-types';
 import { constrainDeltaToDominantAxis } from '../grips/ortho-delta';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 const VERTEX_PREFIX = 'hatch-vertex-';
 
@@ -175,6 +176,6 @@ export function applyHatchGripDrag(
   return original.map((ring, p) =>
     p === pathIdx
       ? ring.map((v, i) => (i === vertexIdx ? { x: v.x + delta.x, y: v.y + delta.y } : { x: v.x, y: v.y }))
-      : ring.map((v) => ({ x: v.x, y: v.y })),
+      : projectVerticesTo2D(ring),
   );
 }

@@ -25,7 +25,7 @@ import type { WallParams, WallGeometry, WallKind } from '../types/wall-types';
 import type { WallTopProfile } from './wall-top-profile';
 import type { WallBaseProfile } from './wall-base-profile';
 import { mmToSceneUnits } from '../../utils/scene-units';
-import { offsetPolyline } from './shared/polygon-utils';
+import { offsetPolyline, projectPointTo2D } from './shared/polygon-utils';
 import { subdivideQuadraticBezier, tessellateArcAxis } from './shared/curve-tessellation';
 import { BULGE_STRAIGHT_EPS } from '../../rendering/entities/shared/geometry-bulge-utils';
 
@@ -187,8 +187,8 @@ export function buildWallFootprintRing(
 ): { x: number; y: number }[] {
   if (outer.length < 2 || inner.length < 2) return [];
   const ring: { x: number; y: number }[] = [];
-  for (const p of outer) ring.push({ x: p.x, y: p.y });
-  for (let i = inner.length - 1; i >= 0; i--) ring.push({ x: inner[i].x, y: inner[i].y });
+  for (const p of outer) ring.push(projectPointTo2D(p));
+  for (let i = inner.length - 1; i >= 0; i--) ring.push(projectPointTo2D(inner[i]));
   return ring;
 }
 

@@ -20,6 +20,7 @@ import type { RebarMesh } from './slab-foundation-reinforcement-types';
 import { mmToSceneUnits } from '../../../utils/scene-units';
 import { resolveActiveSlabReinforcementForEntity } from '../active-reinforcement';
 import { coveredIntervals, type Pt2 } from '../../geometry/shared/segment-polygon-coverage';
+import { projectVerticesTo2D } from '../../geometry/shared/polygon-utils';
 import type { RebarPlanGeometry, RebarPlanPath } from './rebar-plan-geometry-types';
 
 interface Bbox { readonly minX: number; readonly minY: number; readonly maxX: number; readonly maxY: number }
@@ -91,7 +92,7 @@ export function collectSlabRebarPlanGeometry(slab: SlabEntity): RebarPlanGeometr
   const s = mmToSceneUnits(slab.params.sceneUnits ?? 'mm');
   if (s <= 0) return null;
   const cover = r.coverMm * s;
-  const outline: Pt2[] = verts.map((v) => ({ x: v.x, y: v.y }));
+  const outline: Pt2[] = projectVerticesTo2D(verts);
 
   const paths: RebarPlanPath[] = [];
   meshPaths(bbox, cover, r.bottomMeshX, r.bottomMeshY, outline, s, false, paths); // κάτω = συμπαγείς

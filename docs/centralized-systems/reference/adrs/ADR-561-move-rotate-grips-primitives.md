@@ -114,6 +114,17 @@ Circle / arc / polyline / rectangle → επιστρέφουν **WORLD-aligned i
 
 ## Changelog
 
+- **2026-07-05** — ✨ **Ενωμένο σύστημα → ΔΕΥΤΕΡΟ 🟢/🔴 τόξο «γωνίας γωνίας» στο endpoint reshape** (Giorgio: «όταν
+  μετακινώ το άκρο ενός σκέλους ενωμένων γραμμών, θέλω και δεύτερο ζεύγος κόκκινου/πράσινου τόξου που να δείχνει τη
+  γωνία ανάμεσα στο κινούμενο σκέλος και το σταθερό σκέλος»). Μέχρι τώρα το `paintGripEndpointReshapeArcs` (open
+  polyline endpoint) ζωγράφιζε **ΕΝΑ** τόξο = πόσο στράφηκε το κινούμενο σκέλος από την αρχική του θέση. **Προσθήκη**:
+  δεύτερο τόξο στο ΙΔΙΟ σημείο ένωσης (pivot) = ζωντανή γωνία μεταξύ **φαντάσματος σκέλους** (baseline) και **σταθερού
+  γειτονικού σκέλους** (arrow). **ZERO νέα formula** — reuse του ΙΔΙΟΥ `paintEndpointReshapeArc(center, baselineRay,
+  arrowRay)` (κοινό `paintDirectionArc`+`rotateSweepDegFromDirs` SSoT): center=pivot, baseline=`pivot→moved`,
+  arrow=`pivot→fixedEnd`. Guard: σταθερό σκέλος υπάρχει μόνο για n ≥ 3 (`fixedIdx = i===0 ? 2 : n−3`)· διαβάζεται από τα
+  ΑΡΧΙΚΑ vertices (δεν κινείται). Η ακτίνα διαφέρει (μήκος σταθερού σκέλους) → δεν επικαλύπτεται με το τόξο στροφής.
+  Interior/κλειστό/μεμονωμένη-γραμμή-ως-polyline → no-op (καμία γωνία γωνίας). **Αρχείο**:
+  `hooks/tools/grip-ghost-preview-draw-helpers.ts`. CHECK 6D → stage αυτό το ADR. 🟡 UNCOMMITTED (commit: Giorgio).
 - **2026-07-05** — 🐛 **Ενωμένες γραμμές (`lwpolyline`) → εμφάνιση φαντάσματος σε ΟΛΑ τα grip gestures (reshape/edge/move/rotation)** (Giorgio:
   «όταν μετακινώ/περιστρέφω σκέλος ή ολόκληρο το σύστημα των ενωμένων γραμμών, δεν εμφανίζεται το φάντασμα»).
   **Root cause**: το JOIN σε γωνία δίνει scene `type:'lwpolyline'` (το `JoinEntityCommand` το κρατά ως έχει), αλλά

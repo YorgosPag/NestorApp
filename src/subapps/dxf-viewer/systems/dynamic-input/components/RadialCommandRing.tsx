@@ -55,6 +55,17 @@ export interface RadialCommandRingProps {
   readonly startKey: string;
   /** Draw-time getter του canvas element — βελάκι cursor πάνω στα wedges + synthetic mousemove. */
   readonly getCanvasEl?: () => HTMLCanvasElement | null;
+  /**
+   * ADR-513 §grip-parity — τρόπος «commit» του δαχτυλιδιού:
+   *   · `'canvas-click'` (default, ΣΧΕΔΙΑΣΗ): πληκτρολόγηση → lock → synthetic click στον καμβά
+   *     τοποθετεί το σημείο, + window interceptor μπλοκάρει το commit πάνω στα wedges.
+   *   · `'lock-only'` (ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ / press-drag): πληκτρολόγηση → **μόνο** lock· το πραγματικό
+   *     «άφημα» του ποντικιού κάνει το commit (grip mouseup). ΚΑΝΕΝΑ synthetic click, ΚΑΝΕΝΑ
+   *     μπλοκάρισμα του mouseup — αλλιώς θα κοβόταν το commit του grip.
+   */
+  readonly placementMode?: 'canvas-click' | 'lock-only';
+  /** ADR-513 §grip-parity — κλήση στο unmount (lock-only): καθάρισε το lock ώστε το επόμενο drag να ξεκινά ελεύθερο. */
+  readonly onDeactivate?: () => void;
 }
 
 export function RadialCommandRing({
@@ -62,6 +73,8 @@ export function RadialCommandRing({
   sceneUnits,
   startKey,
   getCanvasEl,
+  placementMode = 'canvas-click',
+  onDeactivate,
 }: RadialCommandRingProps): React.ReactElement | null {
   const { t } = useTranslation('dxf-viewer-shell');
   const { displayUnit } = useDisplayUnit();
@@ -183,6 +196,8 @@ export function RadialCommandRing({
   }, [cursor, getCanvasEl]);
 
   // Καθάρισε crosshair-suppression + επανάφερε το αρχικό cursor όταν φεύγει το δαχτυλίδι.
+  // ADR-513 §grip-parity — `onDeactivate` (lock-only) ξεκλειδώνει το length/angle στο unmount
+  // (= τέλος grip drag), ώστε το επόμενο drag να ξεκινά ελεύθερο (μηδέν stale lock).
   useEffect(() => () => {
     setCrosshairSuppressed(false);
     const el = getCanvasEl?.();
@@ -190,7 +205,8 @@ export function RadialCommandRing({
       el.style.cursor = canvasCursorRef.current;
       canvasCursorRef.current = null;
     }
-  }, [getCanvasEl]);
+    onDeactivate?.();
+  }, [getCanvasEl, onDeactivate]);
 
   /** Synthetic mousemove στον καμβά → άμεσο rebuild του ghost μετά από lock/override/τύπο. */
   const pokeCanvas = useCallback(() => {
@@ -215,6 +231,10 @@ export function RadialCommandRing({
   // συνεχίζει να δέχεται mousemove). Άρα το κλικ σε wedge το πιάνουμε εδώ (window capture) ΚΑΙ
   // μπλοκάρουμε το commit. Κλικ έξω από τα wedges (annulus) → περνά κανονικά = commit.
   useEffect(() => {
+    // ADR-513 §grip-parity — lock-only (press-drag άκρου): ΜΗΝ παρεμβαίνεις στα mouse events.
+    // Το commit το κάνει το πραγματικό grip mouseup· μπλοκάρισμα εδώ θα το έκοβε. Η είσοδος γίνεται
+    // αποκλειστικά μέσω heads-up πληκτρολογίου (ψηφίο → «Μήκος», Tab → «Γωνία»).
+    if (placementMode !== 'canvas-click') return;
     const intercept = (e: MouseEvent) => {
       if (placingRef.current) return; // synthetic placement events → άφησέ τα να φτάσουν στον καμβά
       if (popupRef.current?.contains(e.target as Node)) return; // popup: άφησέ το

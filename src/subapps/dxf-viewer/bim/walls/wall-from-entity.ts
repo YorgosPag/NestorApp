@@ -45,6 +45,7 @@ import {
   type WallParamOverrides,
 } from '../../hooks/drawing/wall-completion';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { projectPointTo2D, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 // ─── Picked source ───────────────────────────────────────────────────────────
 
@@ -125,7 +126,7 @@ function nearestSegment(
   for (let i = 0; i < verts.length - 1; i++) {
     const d = pointToLineDistance(point, verts[i], verts[i + 1]);
     if (!best || d < best.dist) {
-      best = { start: { x: verts[i].x, y: verts[i].y }, end: { x: verts[i + 1].x, y: verts[i + 1].y }, dist: d };
+      best = { start: projectPointTo2D(verts[i]), end: projectPointTo2D(verts[i + 1]), dist: d };
     }
   }
   return best;
@@ -149,8 +150,8 @@ export function pickWallSourceFromEntity(
     if (isLineEntity(e)) {
       consider(pointToLineDistance(point, e.start, e.end), {
         kind: 'line',
-        start: { x: e.start.x, y: e.start.y },
-        end: { x: e.end.x, y: e.end.y },
+        start: projectPointTo2D(e.start),
+        end: projectPointTo2D(e.end),
       });
       continue;
     }
@@ -167,7 +168,7 @@ export function pickWallSourceFromEntity(
       if (e.closed && verts.length >= 3) {
         consider(polygonMinEdgeDistance(point, verts, true), {
           kind: 'closed',
-          polygon: verts.map((v) => ({ x: v.x, y: v.y })),
+          polygon: projectVerticesTo2D(verts),
         });
       } else {
         const seg = nearestSegment(point, verts);
@@ -213,7 +214,7 @@ function polygonCentroid(poly: readonly Point2D[]): Point2D {
 
 /** Drop a duplicated closing vertex (first ≈ last) so each edge is built once. */
 function dedupeClosing(poly: readonly Point2D[]): Point2D[] {
-  const out = poly.map((p) => ({ x: p.x, y: p.y }));
+  const out = projectVerticesTo2D(poly);
   if (out.length >= 2) {
     const a = out[0];
     const b = out[out.length - 1];
@@ -288,7 +289,7 @@ export function buildWallsForClosed(
   // Axis vertex i = intersection of edge (i-1)'s and edge i's offset lines.
   const axis: Point2D[] = verts.map((v, i) => {
     const p = intersectLines(lines[(i - 1 + n) % n], lines[i]);
-    return p ?? { x: v.x, y: v.y };
+    return p ?? projectPointTo2D(v);
   });
 
   const walls: WallEntity[] = [];

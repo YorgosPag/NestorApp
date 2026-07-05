@@ -22,6 +22,7 @@ import type { Point2D } from '../../../rendering/types/Types';
 import type { ColumnReinforcement } from './column-reinforcement-types';
 import { MAX_RESTRAINED_BAR_SPACING_MM } from './column-reinforcement-types';
 import { distributeRectBarsBySpacing } from './column-bar-distribution';
+import { projectVerticesTo2D } from '../../geometry/shared/polygon-utils';
 
 // Bar-distribution helpers ζουν στο sibling `column-bar-distribution.ts` (file-size
 // split). Re-export για back-compat — οι εξωτερικοί consumers (column-perimeter-layout,
@@ -139,7 +140,7 @@ export function buildRoundedStirrupPath(
   segPerArc: number,
 ): Point2D[] {
   const n = corners.length;
-  if (n < 3 || rMm <= 0) return corners.map((c) => ({ x: c.x, y: c.y }));
+  if (n < 3 || rMm <= 0) return projectVerticesTo2D(corners);
 
   // Clamp: η ακτίνα δεν μπορεί να ξεπερνά το μισό της κοντύτερης πλευράς (αλλιώς
   // γειτονικά τόξα επικαλύπτονται).
@@ -150,7 +151,7 @@ export function buildRoundedStirrupPath(
     minEdge = Math.min(minEdge, Math.hypot(b.x - a.x, b.y - a.y));
   }
   const r = Math.min(rMm, minEdge / 2);
-  if (r <= 0) return corners.map((c) => ({ x: c.x, y: c.y }));
+  if (r <= 0) return projectVerticesTo2D(corners);
 
   const seg = Math.max(1, Math.floor(segPerArc));
   const out: Point2D[] = [];

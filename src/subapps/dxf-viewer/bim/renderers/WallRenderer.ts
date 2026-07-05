@@ -22,7 +22,7 @@
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions } from '../../rendering/types/Types';
 import type { Point2D } from '../../rendering/types/Types';
-import { closedRingFromEdges } from '../geometry/shared/polygon-utils';
+import { closedRingFromEdges, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import type { Entity } from '../../types/entities';
 import { isWallEntity } from '../../types/entities';
 import type { WallEntity } from '../types/wall-types';
@@ -224,7 +224,7 @@ export class WallRenderer extends BaseEntityRenderer {
     const outer = wall.geometry?.outerEdge?.points;
     const inner = wall.geometry?.innerEdge?.points;
     if (!outer || !inner || outer.length < 2 || inner.length < 2) return false;
-    const ring: Point2D[] = closedRingFromEdges(outer, inner).map((p) => ({ x: p.x, y: p.y }));
+    const ring: Point2D[] = projectVerticesTo2D(closedRingFromEdges(outer, inner));
     if (ring.length < 3) return false;
     return isPointInPolygon(point, ring);
   }

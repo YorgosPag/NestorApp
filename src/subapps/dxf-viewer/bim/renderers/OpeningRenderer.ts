@@ -41,6 +41,7 @@ import { getOpeningGrips } from '../walls/opening-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import { OPENING_KIND_STROKE } from './opening-kind-style';
 import { drawOpeningPlanOverlay } from './opening-overlay-drawing';
 import {
@@ -187,7 +188,7 @@ export class OpeningRenderer extends BaseEntityRenderer {
     // εντός του cutout rectangle.
     const verts = opening.geometry?.outline?.vertices;
     if (!verts || verts.length < 3) return false;
-    return isPointInPolygon(point, verts.map((v) => ({ x: v.x, y: v.y })));
+    return isPointInPolygon(point, projectVerticesTo2D(verts));
   }
 
   private hitTestTagPill(opening: OpeningEntity, worldPoint: Point2D): boolean {

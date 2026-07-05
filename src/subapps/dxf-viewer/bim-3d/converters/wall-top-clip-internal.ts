@@ -14,6 +14,7 @@ import {
   isConvexRing,
 } from '../../bim/geometry/shared/convex-polygon-difference';
 import type { Ring } from 'polygon-clipping';
+import { projectPointTo2D } from '../../bim/geometry/shared/polygon-utils';
 
 /** Όριο εμβαδού (plan units²) κάτω από το οποίο μια περιοχή είναι sliver → skip. */
 export const AREA_EPS = 1e-9;
@@ -170,7 +171,7 @@ export function buildTopFootprintFromBottom(
       const a = host[i], b = host[(i + 1) % host.length];
       if (pointOnSegment(v, a, b, eps)) { hostEdge = [a, b]; break; }
     }
-    if (!hostEdge) { out.push({ x: v.x, y: v.y }); continue; } // εκτός host → quad corner
+    if (!hostEdge) { out.push(projectPointTo2D(v)); continue; } // εκτός host → quad corner
     let quadEdge: readonly [Pt2, Pt2] | null = null;
     for (let i = 0; i < quad.length; i++) {
       const a = quad[i], b = quad[(i + 1) % quad.length];

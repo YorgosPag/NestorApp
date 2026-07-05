@@ -12,6 +12,7 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
+import { projectVerticesTo2D } from '../../geometry/shared/polygon-utils';
 import type { ColumnReinforcement } from './column-reinforcement-types';
 import type { ColumnRebarLayout } from './column-rebar-layout';
 
@@ -54,7 +55,7 @@ export function buildCircularLayout(
   const longitudinalBarsMm = barRadius > 0 ? pointsOnCircle(barRadius, count, -Math.PI / 2) : [];
   const stirrupRingMm = pointsOnCircle(ringRadius, CIRCULAR_STIRRUP_SEGMENTS);
   // Το tessellated κυκλικό μονοπάτι = ΚΑΙ το ring ΚΑΙ το draw path (μηδέν γωνίες).
-  const stirrupPathMm = stirrupRingMm.map((p) => ({ x: p.x, y: p.y }));
+  const stirrupPathMm = projectVerticesTo2D(stirrupRingMm);
 
   return {
     longitudinalBarsMm,

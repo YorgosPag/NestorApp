@@ -24,6 +24,7 @@ import type { Pt2 } from '../../bim/geometry/shared/segment-polygon-coverage';
 import { computeMemberCutbackOutline } from '../../bim/geometry/member-column-cutback';
 import { buildWallFootprintRing } from '../../bim/geometry/wall-geometry';
 import { computeWallCrossCutters, type WallCrossInput } from '../../bim/walls/wall-cross-cutback';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 
 /**
  * Εφαρμόζει το wall-to-wall cross cutback. Επιστρέφει το ίδιο array (by-reference) όταν καμία
@@ -53,7 +54,7 @@ export function applyWallWallCrossCutback2D(entities: DxfEntityUnion[]): DxfEnti
     // Base rings = ήδη-κομμένα κομμάτια από το column pass, αλλιώς ο raw footprint ring.
     const existing = wall.geometry.displayFootprint as Point3D[][] | undefined;
     const baseRings: Pt2[][] = existing
-      ? existing.map((r) => r.map((p) => ({ x: p.x, y: p.y })))
+      ? existing.map((r) => projectVerticesTo2D(r))
       : [buildWallFootprintRing(wall.geometry.outerEdge.points, wall.geometry.innerEdge.points)];
 
     let changed = false;

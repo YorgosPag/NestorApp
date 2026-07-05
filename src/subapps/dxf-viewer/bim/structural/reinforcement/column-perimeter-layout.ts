@@ -17,7 +17,7 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
-import { insetPolygonMiter } from '../../geometry/shared/polygon-utils';
+import { insetPolygonMiter, projectVerticesTo2D } from '../../geometry/shared/polygon-utils';
 import type { ColumnReinforcement } from './column-reinforcement-types';
 import {
   buildRoundedStirrupPath,
@@ -33,7 +33,7 @@ import {
 /** Inward miter inset κλειστού πολυγώνου κατά `d` mm (concave-safe). null αν καταρρεύσει. */
 export function insetOutlineMm(outlineMm: readonly Point2D[], d: number): Point2D[] | null {
   const inner = insetPolygonMiter(outlineMm, d);
-  return inner ? inner.map((p) => ({ x: p.x, y: p.y })) : null;
+  return inner ? projectVerticesTo2D(inner) : null;
 }
 
 /** Ελάχιστο μήκος ακμής κλειστού πολυγώνου (mm). */

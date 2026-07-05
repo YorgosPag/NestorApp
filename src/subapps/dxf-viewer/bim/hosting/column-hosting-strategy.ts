@@ -17,6 +17,7 @@ import { mmScaleFor } from '../../utils/scene-units';
 import { hasGuideBindings } from './guide-binding-types';
 import { derivePointSlots } from './derive-slots';
 import type { HostingStrategy } from './hosting-strategy-types';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 export const columnHostingStrategy: HostingStrategy = {
   reconcile(entity, getOffset) {
@@ -38,6 +39,6 @@ export const columnHostingStrategy: HostingStrategy = {
   },
   outline(nextGeometry) {
     const geometry = nextGeometry as ColumnGeometry;
-    return geometry.footprint.vertices.map((v) => ({ x: v.x, y: v.y }));
+    return projectVerticesTo2D(geometry.footprint.vertices);
   },
 };

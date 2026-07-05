@@ -21,6 +21,7 @@ import { isFoundationEntity, isSlabEntity } from '../../types/entities';
 import { slabHostInput } from '../geometry/wall-host-plan-builder';
 import type { SlabEntity } from '../types/slab-types';
 import type { CoveragePoint } from './footing-column-coverage';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 /** Underlying entity type ενός footing element. */
 export type FootingEntityType = 'foundation' | 'foundation-slab';
@@ -44,9 +45,6 @@ function isFoundationSlab(e: Entity): e is SlabEntity {
 export function isFootingElement(e: Entity): boolean {
   return isFoundationEntity(e) || isFoundationSlab(e);
 }
-
-const toPlan = (verts: readonly { x: number; y: number }[]): CoveragePoint[] =>
-  verts.map((v) => ({ x: v.x, y: v.y }));
 
 /**
  * Absolute (datum-relative) Z extents ενός footing summary, δεδομένου του FFL του
@@ -79,7 +77,7 @@ export function resolveFootingSummary(e: Entity): FootingSummary | null {
     if (!verts || verts.length < 3) return null;
     const topZmm = e.params.topElevationMm;
     return {
-      footprint: toPlan(verts),
+      footprint: projectVerticesTo2D(verts),
       topZmm,
       baseZmm: topZmm - e.params.thicknessMm,
       entityType: 'foundation',
@@ -90,7 +88,7 @@ export function resolveFootingSummary(e: Entity): FootingSummary | null {
     if (input.footprint.length < 3) return null;
     const topZmm = input.topsideZmm ?? input.undersideZmm;
     return {
-      footprint: toPlan(input.footprint),
+      footprint: projectVerticesTo2D(input.footprint),
       topZmm,
       baseZmm: input.undersideZmm,
       entityType: 'foundation-slab',

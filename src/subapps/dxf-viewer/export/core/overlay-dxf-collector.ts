@@ -36,6 +36,7 @@ import {
 import type { SceneLayer } from '../../types/scene-types';
 import type { Point2D } from '../../rendering/types/Types';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import {
   isStructuralComponentVisible,
   type ComponentVisibilityEntity,
@@ -162,7 +163,7 @@ function makeFillHatch(
   return {
     id, type: 'hatch', layerId, color, fillColor: color, visible: true,
     patternType: 'solid', patternName: 'SOLID',
-    boundaryPaths: [ring.map((p) => ({ x: p.x, y: p.y }))],
+    boundaryPaths: [projectVerticesTo2D(ring)],
     dxfFaces: faces,
   };
 }
@@ -190,7 +191,7 @@ function collectBodyFillEntities(
     const color = entity.color ?? CATEGORY_LAYER_DEFS[fillLayer]?.color ?? FINISH_LAYER_COLOR;
     const fill = makeFillHatch(
       `${entity.id}__fill`, fillLayer, color,
-      ring.map(toVertex), 0, extractHeightMm(entity),
+      projectVerticesTo2D(ring), 0, extractHeightMm(entity),
     );
     if (!fill) continue;
     out.push(fill);
@@ -239,7 +240,7 @@ function collectFinishEntities(
       layerId: FINISH_LAYER_ID,
       color: pl.colorHex,
       visible: true,
-      vertices: pl.points.map(toVertex),
+      vertices: projectVerticesTo2D(pl.points),
       // closed quad (aCore→aOuter→bOuter→bCore→aCore) → καθαρό extruded prism, ΙΔΙΟ
       // verified μονοπάτι με το σώμα (AutoCAD-friendly· όχι open-poly-with-thickness).
       closed: true,
@@ -342,7 +343,7 @@ function emitRebarGeometry(
       layerId: REBAR_LAYER_ID,
       color: REBAR_COLOR_HEX,
       visible: true,
-      vertices: path.points.map(toVertex),
+      vertices: projectVerticesTo2D(path.points),
       closed: path.closed,
     };
     out.push(poly);
@@ -363,8 +364,4 @@ function emitRebarGeometry(
     out.push(circle);
   }
   return n;
-}
-
-function toVertex(p: Point2D): Point2D {
-  return { x: p.x, y: p.y };
 }

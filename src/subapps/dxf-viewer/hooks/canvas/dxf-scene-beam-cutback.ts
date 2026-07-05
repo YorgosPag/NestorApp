@@ -28,6 +28,7 @@ import {
   extendBeamOutlineIntoFramingColumns,
 } from '../../bim/geometry/beam-column-cutback';
 import type { Polyline3D } from '../../bim/types/bim-base';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 
 /**
  * Εφαρμόζει το beam-to-column cutback στα δοκάρια του DxfScene. Επιστρέφει το ίδιο array
@@ -90,7 +91,7 @@ export function buildBeamCutbackDisplay(
   columnFootprints: readonly (readonly { readonly x: number; readonly y: number }[])[],
 ): BeamCutbackDisplay | null {
   if (beamOutline.length < 3 || columnFootprints.length === 0) return null;
-  const outline2D = beamOutline.map((v) => ({ x: v.x, y: v.y }));
+  const outline2D = projectVerticesTo2D(beamOutline);
   // ADR-493 — Revit-grade: όταν το επίπεδο persisted άκρο εφάπτεται σε υποχωρούσα παρειά
   // (κυκλική/λοξή/σύνθετη), επέκτεινε ΜΟΝΟ το carve-outline του πλαισιωμένου άκρου ώστε το
   // safeDifference να σκαλίσει την ακριβή άψιδα (μηδέν persisted churn). Το location-line

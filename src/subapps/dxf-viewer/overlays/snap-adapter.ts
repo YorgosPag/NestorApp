@@ -2,6 +2,7 @@
 import type { Region } from '../types/overlay';
 import type { Entity } from '../snapping/extended-types';
 import type { Overlay } from './types';
+import { projectVerticesTo2D } from '../bim/geometry/shared/polygon-utils';
 
 // DEBUG FLAG - Set to false to disable performance-heavy logging
 const DEBUG_SNAP_ADAPTER = false;
@@ -14,7 +15,7 @@ export function regionsToSnapEntities(regions: Region[]): Entity[] {
   return regions.map((region) => {
     if (region.vertices && region.vertices.length >= 2) {
       // Convert vertices to Point2D format required by snap engine
-      const points = region.vertices.map(v => ({ x: v.x, y: v.y }));
+      const points = projectVerticesTo2D(region.vertices);
       
       // 🏢 ENTERPRISE: Use polyline with closed=true instead of polygon
       // Polygons are represented as closed polylines in CAD systems

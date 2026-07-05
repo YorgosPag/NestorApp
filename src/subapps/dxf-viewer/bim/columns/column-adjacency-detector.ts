@@ -32,6 +32,7 @@ import { isColumnEntity } from '../../types/entities';
 import type { ColumnEntity } from '../types/column-types';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { safeUnion, type ClipGeom } from '../geometry/shared/safe-polygon-boolean';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import { snapToGrid } from '../../systems/grid/grid-snap'; // ADR-049 SSoT (per-vertex grid weld)
 import {
   classifyPerimeter,
@@ -63,7 +64,7 @@ export interface ColumnMergeGroup {
 export function columnWorldFootprint(column: ColumnEntity): Point2D[] | null {
   const verts = column.geometry?.footprint?.vertices;
   if (!verts || verts.length < 3) return null;
-  return verts.map((v) => ({ x: v.x, y: v.y }));
+  return projectVerticesTo2D(verts);
 }
 
 /** WORLD polygon → polygon-clipping `ClipGeom` (single outer ring, no holes).

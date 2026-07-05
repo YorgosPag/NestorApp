@@ -26,8 +26,9 @@ import { computeSlabGeometry } from '../geometry/slab-geometry';
 import { validateSlabParams } from '../validators/slab-validator';
 import { mmScaleFor } from '../../utils/scene-units';
 import { hasGuideBindings } from './guide-binding-types';
-import { deriveRectBaySlots, type Vec2 } from './derive-slots';
+import { deriveRectBaySlots } from './derive-slots';
 import type { HostingStrategy } from './hosting-strategy-types';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 /** Ανοχή (scene units) για το «το outline είναι ήδη αυτό το ορθογώνιο» → no-op. */
 const RECT_EQ_TOL = 1e-6;
@@ -76,8 +77,6 @@ export const slabHostingStrategy: HostingStrategy = {
   },
   outline(nextGeometry) {
     const geometry = nextGeometry as SlabGeometry;
-    const ring: Vec2[] = [];
-    for (const v of geometry.polygon.vertices) ring.push({ x: v.x, y: v.y });
-    return ring;
+    return projectVerticesTo2D(geometry.polygon.vertices);
   },
 };

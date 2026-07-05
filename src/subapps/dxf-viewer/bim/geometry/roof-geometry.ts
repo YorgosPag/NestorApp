@@ -37,7 +37,7 @@ import {
   DEFAULT_ROOF_SLOPE_DEG,
   MIN_ROOF_POLYGON_VERTICES,
 } from '../types/roof-types';
-import { isConvexPolygon, polygonArea, polygonBbox, polygonPerimeter } from './shared/polygon-utils';
+import { isConvexPolygon, polygonArea, polygonBbox, polygonPerimeter, projectVerticesTo2D } from './shared/polygon-utils';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { roofSlopeToRatio, roofSlopeFromRatio } from './roof-slope-units';
 import { solveRoofByStraightSkeleton } from './roof-skeleton-solver';
@@ -115,7 +115,7 @@ export function computeRoofGeometry(params: RoofParams): RoofGeometry {
   const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
   const canvasToM = (1 / s) * MM_TO_M;
   const verts = params.outline.vertices;
-  const footprint2D: Vec2[] = verts.map((v) => ({ x: v.x, y: v.y }));
+  const footprint2D: Vec2[] = projectVerticesTo2D(verts);
 
   const projectedAreaM2 = polygonArea(verts) * canvasToM * canvasToM;
   const perimeterM = polygonPerimeter(verts) * canvasToM;

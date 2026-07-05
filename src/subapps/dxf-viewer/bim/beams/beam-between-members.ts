@@ -32,7 +32,7 @@ import { isColumnEntity, isWallEntity } from '../../types/entities';
 import type { BeamEntity } from '../types/beam-types';
 import { DEFAULT_BEAM_WIDTH_MM } from '../types/beam-types';
 import { resolveMemberFootprintVertices } from '../structural/member-footprint-2d';
-import { closedRingFromEdges, polygon2DCentroid } from '../geometry/shared/polygon-utils';
+import { closedRingFromEdges, polygon2DCentroid, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import { projectPolygonOnAxis } from '../geometry/shared/polygon-axis-projection';
 import {
   shortestSegmentBetweenPolygons,
@@ -71,10 +71,10 @@ export function getStructuralMemberFootprint2D(entity: Entity): Point2D[] | null
     const inner = entity.geometry?.innerEdge?.points;
     if (!outer || !inner || outer.length < 2 || inner.length < 2) return null;
     const ring = closedRingFromEdges(outer, inner);
-    return ring.length >= 3 ? ring.map((p) => ({ x: p.x, y: p.y })) : null;
+    return ring.length >= 3 ? projectVerticesTo2D(ring) : null;
   }
   const verts = resolveMemberFootprintVertices(entity);
-  return verts && verts.length >= 3 ? verts.map((p) => ({ x: p.x, y: p.y })) : null;
+  return verts && verts.length >= 3 ? projectVerticesTo2D(verts) : null;
 }
 
 /**

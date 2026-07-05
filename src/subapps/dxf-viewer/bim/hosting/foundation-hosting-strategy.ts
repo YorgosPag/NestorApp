@@ -17,6 +17,7 @@ import { validateFoundationParams } from '../validators/foundation-validator';
 import { hasGuideBindings } from './guide-binding-types';
 import { deriveFoundationParamsFromGuides } from './derive-params-from-guides';
 import type { HostingStrategy } from './hosting-strategy-types';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 export const foundationHostingStrategy: HostingStrategy = {
   reconcile(entity, getOffset) {
@@ -33,6 +34,6 @@ export const foundationHostingStrategy: HostingStrategy = {
   },
   outline(nextGeometry) {
     const geometry = nextGeometry as FoundationGeometry;
-    return geometry.footprint.vertices.map((v) => ({ x: v.x, y: v.y }));
+    return projectVerticesTo2D(geometry.footprint.vertices);
   },
 };

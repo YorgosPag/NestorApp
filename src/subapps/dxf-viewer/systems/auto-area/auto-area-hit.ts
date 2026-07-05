@@ -24,6 +24,7 @@ import { extractLineSegments } from '../../bim/walls/wall-in-region';
 import { TOLERANCE_CONFIG, REGION_PERIMETER_LIMITS } from '../../config/tolerance-config';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
 import { resolveEntityLayerName } from '../../stores/LayerStore';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 
 // ============================================================================
 // TYPES
@@ -172,7 +173,7 @@ function collectEntityCandidates(
 ): void {
   for (const entity of entities) {
     if ((isPolylineEntity(entity) || isLWPolylineEntity(entity)) && entity.closed && entity.vertices.length >= 3) {
-      const verts = entity.vertices.map(v => ({ x: v.x, y: v.y }));
+      const verts = projectVerticesTo2D(entity.vertices);
       if (isPointInPolygon(worldPoint, verts)) {
         out.push({ area: calculatePolygonArea(verts), perimeter: calculatePolygonPerimeter(verts), source: 'dxf-polyline', layerName: resolveEntityLayerName(entity), polygon: verts });
       }
@@ -324,7 +325,7 @@ function collectAllClosedPolygons(
 ): void {
   for (const entity of entities) {
     if ((isPolylineEntity(entity) || isLWPolylineEntity(entity)) && entity.closed && entity.vertices.length >= 3) {
-      const verts = entity.vertices.map(v => ({ x: v.x, y: v.y }));
+      const verts = projectVerticesTo2D(entity.vertices);
       out.push({ area: calculatePolygonArea(verts), perimeter: calculatePolygonPerimeter(verts), source: 'dxf-polyline', layerName: resolveEntityLayerName(entity), polygon: verts });
     } else if (isRectangleEntity(entity) || isRectEntity(entity)) {
       const verts = getRectVertices(entity);

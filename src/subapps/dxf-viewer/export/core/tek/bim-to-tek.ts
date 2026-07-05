@@ -25,6 +25,7 @@ import { computeOpeningGeometry } from '../../../bim/geometry/opening-geometry';
 import { computeStairGeometry } from '../../../bim/geometry/stairs/StairGeometryService';
 import { DEFAULT_WAIST_SLAB_THICKNESS_MM } from '../../../bim/stairs/stair-boq-quantities';
 import { polylineLength, samplePolylineFrame } from '../../../bim/geometry/shared/polyline-frame';
+import { projectVerticesTo2D } from '../../../bim/geometry/shared/polygon-utils';
 import { roofSlopeToRatio } from '../../../bim/geometry/roof-slope-units';
 import { sceneUnitsToMeters } from '../../../utils/scene-units';
 import { extractEntityFootprintRing, extractHeightMm } from '../bim-to-dxf-primitives';
@@ -332,7 +333,7 @@ function ringToTekStairPoints(
 function densifyToStairPoints(
   ring: readonly { x: number; y: number }[], count: number, metersPerSceneUnit: number,
 ): TekStairPoint[] {
-  const pts = ring.map((v) => ({ x: v.x, y: v.y }));
+  const pts = projectVerticesTo2D(ring);
   const total = polylineLength(pts);
   if (pts.length < 2 || count < 2 || total <= 0) return ringToTekStairPoints(ring, metersPerSceneUnit);
   const out: TekStairPoint[] = [];

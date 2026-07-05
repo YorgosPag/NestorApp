@@ -34,6 +34,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateHatchId } from '@/services/enterprise-id-convenience';
 import { firestoreQueryService } from '@/services/firestore';
 import { buildBimScopeConstraints, bimScopeWriteFields } from '../persistence/bim-floor-scope';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import type { Point2D } from '../../rendering/types/Types';
 import type { HatchEntity } from '../../types/entities';
 import type { HatchGradient } from './hatch-gradient';
@@ -137,12 +138,12 @@ type HatchDataSource = Omit<Partial<HatchDocData>, 'boundaryPaths'> & {
 
 /** Serialise the runtime `Point2D[][]` rings to Firestore-legal array-of-maps. */
 export function serializeBoundaryPaths(paths: ReadonlyArray<ReadonlyArray<Point2D>>): HatchBoundaryRing[] {
-  return paths.map((ring) => ({ vertices: ring.map((p) => ({ x: p.x, y: p.y })) }));
+  return paths.map((ring) => ({ vertices: projectVerticesTo2D(ring) }));
 }
 
 /** Rehydrate the persisted rings back to the runtime `Point2D[][]` shape. */
 export function deserializeBoundaryPaths(rings: ReadonlyArray<HatchBoundaryRing>): Point2D[][] {
-  return rings.map((r) => (r.vertices ?? []).map((p) => ({ x: p.x, y: p.y })));
+  return rings.map((r) => projectVerticesTo2D(r.vertices ?? []));
 }
 
 /**

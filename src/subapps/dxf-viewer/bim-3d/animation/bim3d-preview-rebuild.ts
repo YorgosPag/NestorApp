@@ -87,6 +87,7 @@ import {
 } from '../../bim/geometry/column-vertical-profile';
 import { useBim3DEntitiesStore, type Bim3DEntities } from '../stores/Bim3DEntitiesStore';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
+import { projectPointTo2D, projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 
 /** Build the live resize-preview object for `entityId`, or null (no-op / unsupported / multi-floor). */
 export function buildResizePreviewObject(entityId: string, drag: ResizeDragMm): THREE.Object3D | null {
@@ -285,8 +286,8 @@ export function wallPreviewProfiles(wall: Wall, s: Snapshot): { profile?: WallTo
   const baseAttached = wall.params?.baseBinding === 'attached';
   if (!topAttached && !baseAttached) return {};
   const hostInputs = buildWallHostInputs(s.beams, s.slabs, s.roofs);
-  const start = { x: wall.params.start.x, y: wall.params.start.y };
-  const end = { x: wall.params.end.x, y: wall.params.end.y };
+  const start = projectPointTo2D(wall.params.start);
+  const end = projectPointTo2D(wall.params.end);
   return {
     profile: topAttached
       ? resolveWallTopProfile(wall.params, makeWallTopContext(start, end, hostInputs, { floorElevationMm: 0 }))
@@ -330,7 +331,7 @@ export function columnPreviewProfiles(column: Column, s: Snapshot): { topProfile
   const baseAttached = column.params?.baseBinding === 'attached';
   const footVerts = column.geometry?.footprint?.vertices;
   if ((!topAttached && !baseAttached) || !footVerts || footVerts.length < 3) return {};
-  const footprint = footVerts.map((v) => ({ x: v.x, y: v.y }));
+  const footprint = projectVerticesTo2D(footVerts);
   const colCtx = { floorElevationMm: 0, resolveHostInput: makeColumnHostResolver(buildWallHostInputs(s.beams, s.slabs, s.roofs)) };
   return {
     topProfile: topAttached ? resolveColumnTopProfile(column.params, footprint, colCtx) : undefined,
@@ -377,8 +378,8 @@ export function buildDependentWallPreviewObject(
   const hostInputs = buildWallHostInputs(s.beams, s.slabs, s.roofs).map((h) =>
     movedHostIds.has(h.hostId) ? shiftHost(h, d.x, d.y, d.z) : h,
   );
-  const start = { x: wall.params.start.x, y: wall.params.start.y };
-  const end = { x: wall.params.end.x, y: wall.params.end.y };
+  const start = projectPointTo2D(wall.params.start);
+  const end = projectPointTo2D(wall.params.end);
   const profile =
     wall.params?.topBinding === 'attached'
       ? resolveWallTopProfile(wall.params, makeWallTopContext(start, end, hostInputs, { floorElevationMm: 0 }))

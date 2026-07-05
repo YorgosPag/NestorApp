@@ -27,6 +27,7 @@ import { offsetPolyline } from '../../rendering/entities/shared/geometry-offset-
 import { isStraightSegment } from '../../rendering/entities/shared/geometry-bulge-utils';
 import { offsetPolylineWithBulges } from './offset-polyline';
 import { OFFSET_MIN_DIMENSION } from './offset-types';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 
 /** True when `entity` is a type the OFFSET tool can produce a parallel copy of. */
 export function isOffsettable(entity: Entity): boolean {
@@ -70,7 +71,7 @@ function offsetPolylineEntity(src: PolylineEntity | LWPolylineEntity, d: number,
   const ring: Point3D[] = closed && pts3d.length > 0 ? [...pts3d, { ...pts3d[0] }] : pts3d;
   const out = offsetPolyline(ring, d, { join: 'miter' });
   if (out.length < 2) return null;
-  let verts = out.map((p) => ({ x: p.x, y: p.y }));
+  let verts = projectVerticesTo2D(out);
   if (closed && verts.length > 1) verts = verts.slice(0, -1);
   return { ...rest, id: newId, selected: false, vertices: verts };
 }

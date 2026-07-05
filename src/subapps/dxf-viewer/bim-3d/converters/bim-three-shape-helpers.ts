@@ -18,6 +18,7 @@ import { scalePoints } from '../../rendering/entities/shared/geometry-vector-uti
 // ADR-458 — ο pure footprint-ring builder ζει στο `wall-geometry` (χωρίς THREE dep· κοινός
 // με BOQ/2Δ cutback). Import+re-export εδώ για backward-compat στους 3D callers (SSoT, ένα root).
 import { buildWallFootprintRing } from '../../bim/geometry/wall-geometry';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 export { buildWallFootprintRing };
 
 // ── Shared rotation matrix: shape XY → Three.js Y-up ─────────────────────────
@@ -75,7 +76,7 @@ export function centeredMeshY(
 }
 
 export function toShapePoints(pts: readonly Point3D[]): { x: number; y: number }[] {
-  return pts.map((p) => ({ x: p.x, y: p.y }));
+  return projectVerticesTo2D(pts);
 }
 
 export function buildShape(outer: readonly Point3D[], inner?: readonly Point3D[]): THREE.Shape | null {

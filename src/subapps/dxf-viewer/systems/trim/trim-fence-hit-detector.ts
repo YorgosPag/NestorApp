@@ -41,6 +41,7 @@ import { isValidCuttingCandidate, isTrimmable } from './trim-boundary-resolver';
 import { computeIntersectionPoints, tessellateEllipse, tessellateSpline } from './trim-intersection-mapper';
 import type { CuttingEdge, TrimMode } from './trim-types';
 import type { Point2D } from '../../rendering/types/Types';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 
 // Synthetic ID — never matches a real entity ID (enterprise IDs use prefix_uuid pattern).
 const FENCE_ENTITY_ID = '__fence__';
@@ -136,7 +137,7 @@ export function buildEntityPreviewPath(entity: Entity): ReadonlyArray<Point2D> {
   if (isArcEntity(entity)) return tessellateArc(entity, PREVIEW_ARC_SEGMENTS);
   if (isCircleEntity(entity)) return tessellateCircle(entity, PREVIEW_CIRCLE_SEGMENTS);
   if (isLWPolylineEntity(entity) || isPolylineEntity(entity)) {
-    return entity.vertices.map((v) => ({ x: v.x, y: v.y }));
+    return projectVerticesTo2D(entity.vertices);
   }
   if (isEllipseEntity(entity)) return tessellateEllipse(entity, PREVIEW_ARC_SEGMENTS);
   if (isSplineEntity(entity)) return tessellateSpline(entity, PREVIEW_ARC_SEGMENTS);

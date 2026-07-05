@@ -17,6 +17,7 @@ import {
   buildWallFootprintRing,
   type OpeningFootprintForDeduction,
 } from '../../bim/geometry/wall-geometry';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import { computeMemberCutbackRetentionRatio } from '../../bim/geometry/member-column-cutback';
 import { computeWallCrossCutters, type WallCrossInput } from '../../bim/walls/wall-cross-cutback';
 import {
@@ -128,7 +129,7 @@ function wallNetCoreGeometry(entity: WallEntity, geometry: WallGeometry, scene: 
     .filter(isColumnEntity)
     .map((c) => c.geometry?.footprint?.vertices)
     .filter((f): f is NonNullable<typeof f> => !!f && f.length >= 3)
-    .map((f) => f.map((v) => ({ x: v.x, y: v.y })));
+    .map((f) => projectVerticesTo2D(f));
   const cutters: Pt2[][] = [...columnFootprints, ...wallCrossCuttersFor(entity, ring, scene)];
   if (cutters.length === 0) return geometry;
 

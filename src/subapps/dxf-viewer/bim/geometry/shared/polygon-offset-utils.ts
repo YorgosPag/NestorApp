@@ -13,7 +13,7 @@
  */
 
 import type { Point3D } from '../../types/bim-base';
-import { polygonArea } from './polygon-utils';
+import { polygonArea, projectVerticesTo2D } from './polygon-utils';
 
 /** Below this segment length (mm/canvas) a segment is treated as degenerate. */
 const DEGENERATE_LENGTH_EPS = 0.001;
@@ -184,7 +184,7 @@ export function insetPolygonMiter(
     const b = vertices[(i + 1) % n];
     area2 += a.x * b.y - b.x * a.y;
   }
-  const ring = area2 >= 0 ? vertices.map((p) => ({ x: p.x, y: p.y })) : vertices.map((p) => ({ x: p.x, y: p.y })).reverse();
+  const ring = area2 >= 0 ? projectVerticesTo2D(vertices) : projectVerticesTo2D(vertices).reverse();
   if (distance <= 0) return ring;
 
   const EPS = 1e-9;

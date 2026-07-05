@@ -31,6 +31,7 @@ import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { lineLineIntersect, sinAngleBetween } from './wall-trims-geometry';
 import { JOIN_THRESHOLD_MM } from './wall-trims';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 /** Near-parallel guard (sin < this ⇒ overlap is a sliver, handled by trims, not a clean cross). */
 const MIN_CROSS_SIN = 1e-3;
@@ -123,7 +124,7 @@ export function computeWallCrossCutters(
       const winner = winnerId === a.id ? a : b;
       const loser = winner === a ? b : a;
       const cutters = result.get(loser.id) ?? [];
-      cutters.push(winner.footprint.map((p) => ({ x: p.x, y: p.y })));
+      cutters.push(projectVerticesTo2D(winner.footprint));
       result.set(loser.id, cutters);
     }
   }

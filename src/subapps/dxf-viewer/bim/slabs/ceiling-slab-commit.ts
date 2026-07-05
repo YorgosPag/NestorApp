@@ -19,7 +19,7 @@ import { isSlabEntity } from '../../types/entities';
 import type { SlabEntity } from '../types/slab-types';
 import type { SlabParamOverrides } from '../../hooks/drawing/slab-completion';
 import type { SceneUnits } from '../../utils/scene-units';
-import { polygonCentroid } from '../geometry/shared/polygon-utils';
+import { polygonCentroid, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { buildCeilingSlabsFromStructure } from './ceiling-slab-from-structure';
 import { resolveStructuralCode } from '../structural/codes';
@@ -49,7 +49,7 @@ export interface CeilingSlabCommitResult {
 function isAlreadyCovered(slab: SlabEntity, existingCeilings: readonly SlabEntity[]): boolean {
   const c = polygonCentroid(slab.params.outline.vertices);
   for (const e of existingCeilings) {
-    const ring = e.params.outline.vertices.map((v) => ({ x: v.x, y: v.y }));
+    const ring = projectVerticesTo2D(e.params.outline.vertices);
     if (isPointInPolygon(c, ring)) return true;
   }
   return false;

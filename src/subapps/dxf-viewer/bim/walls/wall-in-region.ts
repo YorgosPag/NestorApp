@@ -46,6 +46,7 @@ import {
   type WallParamOverrides,
 } from '../../hooks/drawing/wall-completion';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { projectPointTo2D } from '../geometry/shared/polygon-utils';
 
 // ─── Public types ──────────────────────────────────────────────────────────
 
@@ -96,12 +97,12 @@ function pushChainSegments(
 ): void {
   if (pts.length < 2) return;
   for (let i = 0; i < pts.length - 1; i++) {
-    out.push({ id, start: { x: pts[i].x, y: pts[i].y }, end: { x: pts[i + 1].x, y: pts[i + 1].y } });
+    out.push({ id, start: projectPointTo2D(pts[i]), end: projectPointTo2D(pts[i + 1]) });
   }
   if (closed) {
     const a = pts[pts.length - 1];
     const b = pts[0];
-    out.push({ id, start: { x: a.x, y: a.y }, end: { x: b.x, y: b.y } });
+    out.push({ id, start: projectPointTo2D(a), end: projectPointTo2D(b) });
   }
 }
 
@@ -120,7 +121,7 @@ export function extractLineSegments(
   const segs: RegionLineSeg[] = [];
   for (const e of entities) {
     if (isLineEntity(e)) {
-      segs.push({ id: e.id, start: { x: e.start.x, y: e.start.y }, end: { x: e.end.x, y: e.end.y } });
+      segs.push({ id: e.id, start: projectPointTo2D(e.start), end: projectPointTo2D(e.end) });
       continue;
     }
     if (isPolylineEntity(e) || isLWPolylineEntity(e)) {
@@ -130,7 +131,7 @@ export function extractLineSegments(
       for (let i = 0; i < last; i++) {
         const a = verts[i];
         const b = verts[(i + 1) % verts.length];
-        segs.push({ id: e.id, start: { x: a.x, y: a.y }, end: { x: b.x, y: b.y } });
+        segs.push({ id: e.id, start: projectPointTo2D(a), end: projectPointTo2D(b) });
       }
       continue;
     }
@@ -139,7 +140,7 @@ export function extractLineSegments(
     // να κλείνει/υποδιαιρεί περιοχές πάνω σε διαχωριστές όπως πάνω σε τοίχους.
     if (isSpaceSeparatorEntity(e)) {
       const { start, end } = e.params;
-      segs.push({ id: e.id, start: { x: start.x, y: start.y }, end: { x: end.x, y: end.y } });
+      segs.push({ id: e.id, start: projectPointTo2D(start), end: projectPointTo2D(end) });
       continue;
     }
     // ── Καμπύλα όρια (opt-in) — reuse των κανονικών tessellators ──────────────
@@ -185,7 +186,7 @@ function mergeNodes(
     for (let i = 0; i < nodes.length; i++) {
       if (Math.hypot(nodes[i].x - p.x, nodes[i].y - p.y) <= tol) return i;
     }
-    nodes.push({ x: p.x, y: p.y });
+    nodes.push(projectPointTo2D(p));
     return nodes.length - 1;
   };
   const edges: Array<[number, number]> = [];
@@ -331,8 +332,8 @@ export function detectedRectAxis(rect: DetectedRectangle): DetectedRectAxis {
   const abLen = Math.hypot(b.x - a.x, b.y - a.y);
   const bcLen = Math.hypot(c.x - b.x, c.y - b.y);
   if (rect.axis) {
-    const start = { x: rect.axis[0].x, y: rect.axis[0].y };
-    const end = { x: rect.axis[1].x, y: rect.axis[1].y };
+    const start = projectPointTo2D(rect.axis[0]);
+    const end = projectPointTo2D(rect.axis[1]);
     const length = Math.hypot(end.x - start.x, end.y - start.y);
     return { start, end, length, thickness: length > 1e-9 ? rect.area / length : Math.min(abLen, bcLen) };
   }

@@ -48,6 +48,7 @@ import {
   type EavePlane,
   type Vec2,
 } from './roof-lower-envelope';
+import { projectPointTo2D } from './shared/polygon-utils';
 
 // ─── Public shapes ────────────────────────────────────────────────────────────
 
@@ -115,7 +116,7 @@ export interface RoofEaveDetailInput {
 /** Κάτω από αυτό (canvas) η προεξοχή θεωρείται μηδενική (καμία strip/soffit). */
 const OVERHANG_EPS = 1e-6;
 
-const v2 = (p: Point3D): Vec2 => ({ x: p.x, y: p.y });
+const v2 = (p: Point3D): Vec2 => projectPointTo2D(p);
 const pt = (x: number, y: number, z: number): Point3D => ({ x, y, z });
 
 /**
@@ -403,7 +404,7 @@ export function extendRidgeToOverhang(
     let bestU = Infinity;
     let bestX: Vec2 | null = null;
     for (const L of offLines) {
-      const X = lineIntersect({ x: end.x, y: end.y }, d, L.p, L.d);
+      const X = lineIntersect(projectPointTo2D(end), d, L.p, L.d);
       if (!X) continue;
       const u = ((X.x - end.x) * d.x + (X.y - end.y) * d.y) / dd; // κατά μήκος, ΕΞΩ από το end
       if (u <= 1e-6) continue; // μόνο outward (πέρα από την περίμετρο)

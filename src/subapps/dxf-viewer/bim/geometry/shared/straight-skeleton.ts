@@ -25,7 +25,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-417-bim-roof-element.md §10
  */
 
-import { isPolygonCCW } from './polygon-utils';
+import { isPolygonCCW, projectPointTo2D, projectVerticesTo2D } from './polygon-utils';
 import { assembleEdgeFaces, type SkeletonArc, type SkeletonEdgeFace, type SkPoint } from './straight-skeleton-faces';
 
 export type { SkeletonArc, SkeletonEdgeFace, SkPoint } from './straight-skeleton-faces';
@@ -77,7 +77,7 @@ const EPS = 1e-9;
 /** Ταχύτητα κορυφής: λύνει `nL·vel = 1`, `nR·vel = 1` (διχοτόμος, convex & reflex). */
 function vertexVelocity(nL: SkPoint, nR: SkPoint): SkPoint {
   const denom = cross(nL, nR);
-  if (Math.abs(denom) < EPS) return { x: nL.x, y: nL.y }; // ευθεία γωνία (180°)
+  if (Math.abs(denom) < EPS) return projectPointTo2D(nL); // ευθεία γωνία (180°)
   return { x: (nR.y - nL.y) / denom, y: (nL.x - nR.x) / denom };
 }
 
@@ -90,7 +90,7 @@ function isReflexCorner(left: SkEdge, right: SkEdge): boolean {
 
 /** Καθαρίζει διπλές διαδοχικές κορυφές + εξασφαλίζει CCW σειρά. */
 function normalizePolygon(polygon: readonly SkPoint[]): SkPoint[] {
-  const pts = polygon.map((p) => ({ x: p.x, y: p.y }));
+  const pts = projectVerticesTo2D(polygon);
   const dedup: SkPoint[] = [];
   for (const p of pts) {
     const last = dedup[dedup.length - 1];
@@ -132,7 +132,7 @@ function buildInitialLav(polygon: readonly SkPoint[]): { verts: SkVert[]; edges:
     const right = edges[i];
     const vel = vertexVelocity(left.normal, right.normal);
     return {
-      id: i, pos: { x: p.x, y: p.y }, t0: 0, vel, origin: { x: p.x, y: p.y },
+      id: i, pos: projectPointTo2D(p), t0: 0, vel, origin: projectPointTo2D(p),
       prev: null as unknown as SkVert, next: null as unknown as SkVert,
       left, right, reflex: isReflexCorner(left, right), active: true,
     };
@@ -205,7 +205,7 @@ function makeVertex(ctx: SkelCtx, pos: SkPoint, t: number, left: SkEdge, right: 
 /** Καταγραφή τόξου (σύνορο όψεων left/right της κορυφής που κινήθηκε). */
 function emitArc(ctx: SkelCtx, v: SkVert, to: SkPoint): void {
   ctx.arcs.push({
-    a: { x: v.pos.x, y: v.pos.y }, b: { x: to.x, y: to.y },
+    a: projectPointTo2D(v.pos), b: projectPointTo2D(to),
     leftEdge: v.left.index, rightEdge: v.right.index, fromReflex: v.reflex,
   });
 }

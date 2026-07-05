@@ -18,6 +18,7 @@ import { mmScaleFor } from '../../utils/scene-units';
 import { hasGuideBindings } from './guide-binding-types';
 import { deriveLineSlots, type Vec2 } from './derive-slots';
 import type { HostingStrategy } from './hosting-strategy-types';
+import { projectPointTo2D } from '../geometry/shared/polygon-utils';
 
 export const wallHostingStrategy: HostingStrategy = {
   reconcile(entity, getOffset) {
@@ -45,8 +46,8 @@ export const wallHostingStrategy: HostingStrategy = {
     const inner = geometry.innerEdge.points;
     // Κλειστό δαχτυλίδι: outer →, μετά inner ← (αντίστροφα) ώστε να κλείσει το πολύγωνο.
     const ring: Vec2[] = [];
-    for (const p of outer) ring.push({ x: p.x, y: p.y });
-    for (let i = inner.length - 1; i >= 0; i--) ring.push({ x: inner[i].x, y: inner[i].y });
+    for (const p of outer) ring.push(projectPointTo2D(p));
+    for (let i = inner.length - 1; i >= 0; i--) ring.push(projectPointTo2D(inner[i]));
     return ring;
   },
 };

@@ -15,6 +15,7 @@ import type { SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngi
 import { BaseSnapEngine } from '../shared/BaseSnapEngine';
 import type { ISpatialIndex } from '../../core/spatial';
 import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 
 export class DimDefPointSnapEngine extends BaseSnapEngine {
   private spatialIndex: ISpatialIndex | null = null;
@@ -65,7 +66,7 @@ export class DimDefPointSnapEngine extends BaseSnapEngine {
     // After type narrowing, entity is DimensionEntity — defPoints is readonly Point2D[]
     const defPoints = (entity as EntityModel & { defPoints: readonly { x: number; y: number }[] }).defPoints;
     if (!Array.isArray(defPoints)) return [];
-    return defPoints.map(p => ({ x: p.x, y: p.y }));
+    return projectVerticesTo2D(defPoints);
   }
 
   dispose(): void {

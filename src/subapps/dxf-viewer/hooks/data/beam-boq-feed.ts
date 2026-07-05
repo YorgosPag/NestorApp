@@ -19,6 +19,7 @@ import type { BeamEntity, BeamGeometry } from '../../bim/types/beam-types';
 import type { BimEntityForBoq } from '../../bim/services/BimToBoqBridge';
 import { computeBeamFinishContribution } from '../../bim/finishes/structural-finish-scene';
 import { computeBeamCutbackNetAreaM2 } from '../../bim/geometry/beam-column-cutback';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import { mmToSceneUnits } from '../../utils/scene-units';
 
 const MM_TO_M = 0.001;
@@ -37,13 +38,13 @@ function beamNetCoreGeometry(entity: BeamEntity, scene: SceneModel | null): Beam
     .filter(isColumnEntity)
     .map((c) => c.geometry?.footprint?.vertices)
     .filter((f): f is NonNullable<typeof f> => !!f && f.length >= 3)
-    .map((f) => f.map((v) => ({ x: v.x, y: v.y })));
+    .map((f) => projectVerticesTo2D(f));
   if (columnFootprints.length === 0) return entity.geometry;
 
   const s = mmToSceneUnits(entity.params.sceneUnits ?? 'mm');
   const canvasToM = (1 / s) * MM_TO_M;
   const netAreaM2 = computeBeamCutbackNetAreaM2(
-    entity.geometry.outline.vertices.map((v) => ({ x: v.x, y: v.y })),
+    projectVerticesTo2D(entity.geometry.outline.vertices),
     columnFootprints,
     canvasToM * canvasToM,
   );

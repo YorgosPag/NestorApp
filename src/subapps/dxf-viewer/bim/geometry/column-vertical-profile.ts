@@ -42,6 +42,7 @@ import {
   collectHostFootprints,
   makeHostFootprintResolver,
 } from './host-footprint-eval';
+import { projectVerticesTo2D } from './shared/polygon-utils';
 
 /**
  * Όριο για να θεωρηθούν δύο Z τιμές ίσες (mm).
@@ -339,7 +340,7 @@ export function buildColumnVerticalExtentLookup(
   for (const c of columns) {
     const verts = c.geometry?.footprint?.vertices;
     if (!c.id || !verts || verts.length < 3) continue;
-    map.set(c.id, resolveColumnVerticalExtentMm(c.params, verts.map((v) => ({ x: v.x, y: v.y })), ctx));
+    map.set(c.id, resolveColumnVerticalExtentMm(c.params, projectVerticesTo2D(verts), ctx));
   }
   return map;
 }

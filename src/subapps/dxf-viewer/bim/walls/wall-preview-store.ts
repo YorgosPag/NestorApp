@@ -32,6 +32,7 @@ import type { WallParamOverrides } from '../../hooks/drawing/wall-completion';
 import type { StripJustification } from '../types/foundation-types';
 import type { WallArcVariant } from '../types/wall-types';
 import { createExternalStore } from '../../stores/createExternalStore';
+import { projectPointTo2D, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 export interface WallPreviewState {
   /** First click location (axis start). `null` when wall tool is idle / awaitingStart. */
@@ -186,13 +187,13 @@ export const wallPreviewStore = {
       return;
     }
     const nextState: WallPreviewState = {
-      startPoint: next.startPoint ? { x: next.startPoint.x, y: next.startPoint.y } : null,
-      endPoint: next.endPoint ? { x: next.endPoint.x, y: next.endPoint.y } : null,
-      curveControl: next.curveControl ? { x: next.curveControl.x, y: next.curveControl.y } : null,
-      arcEndPoint: nextArcEnd ? { x: nextArcEnd.x, y: nextArcEnd.y } : null,
+      startPoint: next.startPoint ? projectPointTo2D(next.startPoint) : null,
+      endPoint: next.endPoint ? projectPointTo2D(next.endPoint) : null,
+      curveControl: next.curveControl ? projectPointTo2D(next.curveControl) : null,
+      arcEndPoint: nextArcEnd ? projectPointTo2D(nextArcEnd) : null,
       arcVariant: nextArcVariant,
-      arcCenter: nextArcCenter ? { x: nextArcCenter.x, y: nextArcCenter.y } : null,
-      polylineVertices: next.polylineVertices.map((p) => ({ x: p.x, y: p.y })),
+      arcCenter: nextArcCenter ? projectPointTo2D(nextArcCenter) : null,
+      polylineVertices: projectVerticesTo2D(next.polylineVertices),
       overrides: { ...next.overrides },
       startAnchored: nextAnchored,
       startJustification: nextJustification,

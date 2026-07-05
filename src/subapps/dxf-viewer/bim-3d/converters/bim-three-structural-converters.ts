@@ -38,6 +38,7 @@ import { sceneUnitsToMeters } from '../../utils/scene-units';
 // ADR-539 Φ3a — Cinema 4D «Polygon Mode» per-face appearance (faced multi-material prism).
 import { buildFacedSolidBody } from './bim-three-faced-prism';
 import { shouldRenderFaced } from './should-render-faced';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 
 const MM_TO_M = 0.001;
 
@@ -288,7 +289,7 @@ function buildAttachedColumnPrism(
   const cornerTopLocalM = topZmm.map(toLocal);
   const cornerBaseLocalM = baseZmm.map(toLocal);
   return buildColumnPrismGeometry(
-    footprint.map((p) => ({ x: p.x, y: p.y })),
+    projectVerticesTo2D(footprint),
     cornerBaseLocalM,
     cornerTopLocalM,
   );
@@ -355,7 +356,7 @@ function buildBeam3DCarveOutline(
   hostFootprints: readonly (readonly { x: number; y: number }[])[],
   sceneToM: number,
 ): { x: number; y: number }[] {
-  const flat = verts.map((v) => ({ x: v.x, y: v.y }));
+  const flat = projectVerticesTo2D(verts);
   if (beam.params.kind === 'curved') return flat;
   const ext = extendBeamOutlineIntoFramingColumns(
     flat,
@@ -424,7 +425,7 @@ export function beamToMesh(
     const hostFootprints = columns
       .map((c) => c.geometry?.footprint?.vertices)
       .filter((f): f is NonNullable<typeof f> => !!f && f.length >= 3)
-      .map((f) => scalePoints(f, sceneToM).map((p) => ({ x: p.x, y: p.y })));
+      .map((f) => projectVerticesTo2D(scalePoints(f, sceneToM)));
     // ADR-493 — parity με 2Δ: επέκτεινε το πλαισιωμένο άκρο ώστε το safeDifference να
     // σκαλίσει την ακριβή υποχωρούσα παρειά (κυκλική/λοξή) ΚΑΙ στο 3Δ. Straight axis μόνο.
     const carveVerts = buildBeam3DCarveOutline(beam, verts, hostFootprints, sceneToM);

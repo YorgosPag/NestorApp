@@ -20,7 +20,7 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../render
 import type { Entity } from '../../types/entities';
 import { isFurnitureEntity } from '../../types/entities';
 import type { FurnitureEntity } from '../types/furniture-types';
-import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { pointInPolygon, projectPointTo2D } from '../geometry/shared/polygon-utils';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -148,10 +148,10 @@ export class FurnitureRenderer extends BaseEntityRenderer {
   private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
     if (vertices.length < 3) return;
     this.ctx.beginPath();
-    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
+    const first = this.worldToScreen(projectPointTo2D(vertices[0]));
     this.ctx.moveTo(first.x, first.y);
     for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
+      const s = this.worldToScreen(projectPointTo2D(vertices[i]));
       this.ctx.lineTo(s.x, s.y);
     }
     this.ctx.closePath();
@@ -160,7 +160,7 @@ export class FurnitureRenderer extends BaseEntityRenderer {
   /** Two corner-to-corner diagonals (generic furniture plan glyph). */
   private drawDiagonals(vertices: ReadonlyArray<{ x: number; y: number }>): void {
     if (vertices.length < 4) return;
-    const p = vertices.map((v) => this.worldToScreen({ x: v.x, y: v.y }));
+    const p = vertices.map((v) => this.worldToScreen(projectPointTo2D(v)));
     this.ctx.beginPath();
     this.ctx.moveTo(p[0].x, p[0].y);
     this.ctx.lineTo(p[2].x, p[2].y);

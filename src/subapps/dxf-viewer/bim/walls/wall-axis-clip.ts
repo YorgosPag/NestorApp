@@ -18,6 +18,7 @@ import {
   exposedComplement,
   type Pt2,
 } from '../geometry/shared/segment-polygon-coverage';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 /** Αριθμητικό όριο: t «αγγίζει» άκρο segment (0 ή 1). */
 const T_EDGE_EPS = 1e-9;
@@ -42,7 +43,7 @@ export function clipPolylineOutsidePolygons(
   polygons: readonly (readonly Pt2[])[],
 ): Pt2[][] {
   if (points.length < 2) return [];
-  if (polygons.length === 0) return [points.map((p) => ({ x: p.x, y: p.y }))];
+  if (polygons.length === 0) return [projectVerticesTo2D(points)];
 
   const runs: Pt2[][] = [];
   let current: Pt2[] = [];

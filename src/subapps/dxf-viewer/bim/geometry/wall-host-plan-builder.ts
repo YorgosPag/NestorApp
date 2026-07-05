@@ -31,6 +31,7 @@ import { resolveEavePlanes, roofZmm } from './roof-lower-envelope';
 import { mmScaleFor } from '../../utils/scene-units';
 import type { HostUndersidePlan, HostTopsidePlan, WallVerticalContext } from './wall-top-profile';
 import { coveredIntervals, type Pt2 } from './shared/segment-polygon-coverage';
+import { projectVerticesTo2D } from './shared/polygon-utils';
 
 // `Pt2` + `coveredIntervals` ζουν πλέον στο shared `segment-polygon-coverage`
 // SSoT (ADR-449 N.0.2). Re-export ώστε οι υπάρχοντες importers (column/stair
@@ -211,7 +212,7 @@ export function makeWallBaseContext(
  * (z0mm ≠ z1mm). Ίδιο pattern με τον `slabHostInput` (tilted slab/roof).
  */
 export function beamHostInput(beam: BeamEntity): HostFootprintInput {
-  const footprint = computeBeamGeometry(beam.params).outline.vertices.map((v) => ({ x: v.x, y: v.y }));
+  const footprint = projectVerticesTo2D(computeBeamGeometry(beam.params).outline.vertices);
   const zOff = beam.params.zOffset ?? 0;
   const undersideZmm = beam.params.topElevation + zOff - beam.params.depth;
   const topsideZmm = beam.params.topElevation + zOff; // ADR-401 (γ) — άνω παρειά (χωρίς −depth).
@@ -238,7 +239,7 @@ export function beamHostInput(beam: BeamEntity): HostFootprintInput {
  * (semantic — ο resolver χειρίζεται beam/slab/roof ομοιόμορφα).
  */
 export function slabHostInput(slab: SlabEntity): HostFootprintInput {
-  const footprint = slab.params.outline.vertices.map((v) => ({ x: v.x, y: v.y }));
+  const footprint = projectVerticesTo2D(slab.params.outline.vertices);
   const topZmm = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0); // άνω παρειά.
   const undersideZmm = topZmm - slab.params.thickness;
   const hostType: HostUndersidePlan['hostType'] = slab.params.kind === 'roof' ? 'roof' : 'slab';
@@ -268,7 +269,7 @@ export function roofHostInput(roof: RoofEntity): HostFootprintInput {
     roof.params.edges,
     roof.params.slopeUnit,
   );
-  const footprint = roof.params.outline.vertices.map((v) => ({ x: v.x, y: v.y }));
+  const footprint = projectVerticesTo2D(roof.params.outline.vertices);
   const basePivotZ = roof.params.basePivotZ;
   const thickness = roof.params.thickness;
   return {

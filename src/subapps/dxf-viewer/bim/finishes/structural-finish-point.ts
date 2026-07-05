@@ -11,6 +11,7 @@
  */
 
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
+import { projectPointTo2D } from '../geometry/shared/polygon-utils';
 
 /** {x,y} → `Pt2` (shallow copy — αποσυνδέει από το πηγαίο αντικείμενο). */
-export const toPt2 = (p: { x: number; y: number }): Pt2 => ({ x: p.x, y: p.y });
+export const toPt2 = (p: { x: number; y: number }): Pt2 => projectPointTo2D(p);

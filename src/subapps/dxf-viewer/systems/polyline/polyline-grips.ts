@@ -44,6 +44,7 @@ import { rectLocalWorld } from '../../bim/grips/rect-frame';
 import { rotationHandleMidwayOffset } from '../../bim/grips/rotation-handle-policy';
 import { axisToRectFrame, axisQuarterRotationHandleWorld, axisQuarterMoveHandleWorld } from '../../bim/grips/axis-box-grips';
 import { asOrientedRect, polylineBboxCenter, longestPolylineSegment } from './rectangle-detect';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 
 /** The polyline whole-entity grip kinds (mirror `wall-midpoint` / `wall-rotation`). */
 export const POLYLINE_MOVE_KIND: PolylineGripKind = 'polyline-move';
@@ -157,7 +158,34 @@ export function getPolylineGripAlignmentAnchors(
   else if (closed) anchors.push(vertices[n - 1]);
   if (gripIndex + 1 < n) anchors.push(vertices[gripIndex + 1]);
   else if (closed) anchors.push(vertices[0]);
-  return anchors.length ? anchors.map((p) => ({ x: p.x, y: p.y })) : null;
+  return anchors.length ? projectVerticesTo2D(anchors) : null;
+}
+
+/**
+ * ADR-508 §line-hud / ADR-561 — the vertex-index pairs of the segment(s) whose LENGTH changes
+ * when polyline vertex `gripIndex` is dragged: the (≤2) edges incident to that vertex. An OPEN
+ * endpoint (grip 0 or n−1) has ONE incident edge; an interior/corner vertex has TWO; a closed ring
+ * wraps (vertex 0 ↔ n−1). Feeds the live white length+angle HUD — one `buildSegmentHudMeta`+
+ * `paintWallHud` per returned segment, the SAME painters the plain line/wall use — so EVERY changing
+ * leg of a joined system is dimensioned exactly like a lone line (Revit temporary-dimensions parity,
+ * Giorgio 2026-07-05). Sibling of {@link getPolylineGripAlignmentAnchors} (same neighbour selection,
+ * segments instead of anchor points). Returns [] for a non-vertex index or <2 vertices. Pure.
+ */
+export function getPolylineVertexIncidentSegments(
+  gripIndex: number,
+  vertexCount: number,
+  closed: boolean,
+): Array<readonly [number, number]> {
+  const n = vertexCount;
+  if (n < 2 || gripIndex < 0 || gripIndex >= n) return [];
+  const segments: Array<readonly [number, number]> = [];
+  // incoming edge (previous neighbour → dragged vertex)
+  if (gripIndex - 1 >= 0) segments.push([gripIndex - 1, gripIndex]);
+  else if (closed) segments.push([n - 1, gripIndex]);
+  // outgoing edge (dragged vertex → next neighbour)
+  if (gripIndex + 1 < n) segments.push([gripIndex, gripIndex + 1]);
+  else if (closed) segments.push([gripIndex, 0]);
+  return segments;
 }
 
 // NOTE (ADR-561, 2026-07-05): the live polyline/rectangle ROTATION ghost has NO bespoke

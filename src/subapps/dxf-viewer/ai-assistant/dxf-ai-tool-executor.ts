@@ -37,6 +37,7 @@ import { DXF_AI_DEFAULTS, DXF_AI_LIMITS } from '../config/ai-assistant-config';
 import { EventBus } from '../systems/events';
 // ADR-358 Phase 9D-5a: id-first reader SSoT (LayerStore lookup + legacy name fallback).
 import { resolveEntityLayerName } from '../stores/LayerStore';
+import { projectVerticesTo2D } from '../bim/geometry/shared/polygon-utils';
 
 // ============================================================================
 // ENTITY BUILDERS
@@ -85,7 +86,7 @@ function buildPolylineEntity(args: DrawPolylineArgs): PolylineEntity {
     id: generateEntityId(),
     type: 'polyline',
     visible: true,
-    vertices: args.vertices.map(v => ({ x: v.x, y: v.y })),
+    vertices: projectVerticesTo2D(args.vertices),
     closed: args.closed,
     layerId: args.layer ?? DXF_AI_DEFAULTS.LAYER,
     color: args.color ?? DXF_AI_DEFAULTS.COLOR,

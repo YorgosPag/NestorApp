@@ -26,6 +26,7 @@ import { isFootingElement, resolveFootingSummary, footingAbsoluteZ } from '../..
 import { mmToSceneUnits } from '../../../utils/scene-units';
 import { resolveColumnBaseZmm } from '../../geometry/column-vertical-profile';
 import { beamHostInput } from '../../geometry/wall-host-plan-builder';
+import { projectVerticesTo2D } from '../../geometry/shared/polygon-utils';
 import { findColumnsFramedByBeamForGraph } from '../../columns/column-structural-attach-coordinator';
 import type { ColumnEntity } from '../../types/column-types';
 import type { BeamEntity } from '../../types/beam-types';
@@ -38,7 +39,7 @@ import type {
 
 /** Point3D[] (ή Pt2[]) → plan polygon (canvas units, x/y μόνο). */
 function toPlan(vertices: readonly { x: number; y: number }[]): OrganismPoint[] {
-  return vertices.map((v) => ({ x: v.x, y: v.y }));
+  return projectVerticesTo2D(vertices);
 }
 
 // ─── Node builders ───────────────────────────────────────────────────────────

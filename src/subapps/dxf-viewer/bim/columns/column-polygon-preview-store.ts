@@ -16,6 +16,7 @@
 import { useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import { createExternalStore } from '../../stores/createExternalStore';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 export interface ColumnPolygonPreviewState {
   /** Polygon vertices so far (user-click order). Empty when idle / awaitingFirstVertex. */
@@ -42,7 +43,7 @@ export const columnPolygonPreviewStore = {
   set(next: ColumnPolygonPreviewState): void {
     if (verticesEqual(store.get().vertices, next.vertices)) return;
     const nextState: ColumnPolygonPreviewState = {
-      vertices: next.vertices.map((p) => ({ x: p.x, y: p.y })),
+      vertices: projectVerticesTo2D(next.vertices),
     };
     store.set(nextState);
   },

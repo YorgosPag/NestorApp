@@ -51,6 +51,8 @@ import type { ColumnEntity } from '../../bim/types/column-types';
 import { applyOverlayLeaderStyle } from '../../canvas-v2/preview-canvas/overlay-line-style';
 import { buildSegmentHudMeta, paintWallHud } from '../../canvas-v2/preview-canvas/wall-hud-paint';
 import { paintColumnHud } from '../../canvas-v2/preview-canvas/column-hud-paint';
+// ADR-508 §line-hud / ADR-561 — polyline vertex-reshape HUD: which incident segment(s) change length.
+import { getPolylineVertexIncidentSegments } from '../../systems/polyline/polyline-grips';
 import { buildWallHudSpecLabel } from '../drawing/wall-hud-spec-label';
 import { buildColumnHudSpecLabel } from '../drawing/column-hud-spec-label';
 
@@ -111,6 +113,11 @@ function paintEndpointReshapeArc(
  * the wall rotation uses. The two branches differ only in how the fixed/orig/moved points are
  * picked, so the arc can never diverge. No-op for move/hot-grip/rotation grips (handled
  * elsewhere) or interior/corner polyline vertices (two neighbours → no single pivot).
+ *
+ * For a JOINED SYSTEM (open polyline, n ≥ 3) reshaping a free endpoint draws TWO arcs at the join
+ * (Giorgio 2026-07-05): (1) how far the moving leg SWUNG from its original orientation, and (2) the
+ * live ANGLE between the moving (ghost) leg and the FIXED adjacent leg. Both reuse the ONE
+ * `paintEndpointReshapeArc` (center + baseline ray + arrow ray) → zero new formula.
  */
 export function paintGripEndpointReshapeArcs(
   ctx: CanvasRenderingContext2D,
@@ -139,8 +146,24 @@ export function paintGripEndpointReshapeArcs(
     const n = oPoly.vertices.length;
     const isOpenEndpoint = !oPoly.closed && n >= 2 && (i === 0 || i === n - 1);
     if (isOpenEndpoint && i < tPoly.vertices.length) {
+      // Σημείο ένωσης (pivot) = ο σταθερός γείτονας γύρω από τον οποίο περιστρέφεται το κινούμενο σκέλος.
       const pivotW = i === 0 ? oPoly.vertices[1] : oPoly.vertices[n - 2];
-      paintEndpointReshapeArc(ctx, pivotW, oPoly.vertices[i], tPoly.vertices[i], t, vp);
+      const movedW = tPoly.vertices[i];
+      // (1) ΤΟΞΟ ΣΤΡΟΦΗΣ: πόσο στράφηκε το κινούμενο σκέλος από την ΑΡΧΙΚΗ του θέση (baseline)
+      // στο φάντασμα (arrow) — αμετάβλητη υπάρχουσα ένδειξη.
+      paintEndpointReshapeArc(ctx, pivotW, oPoly.vertices[i], movedW, t, vp);
+      // (2) ΤΟΞΟ ΓΩΝΙΑΣ ΓΩΝΙΑΣ (Giorgio 2026-07-05): δεύτερο 🟢/🔴 ζεύγος στο ΙΔΙΟ σημείο ένωσης που
+      // δείχνει τη ζωντανή γωνία ΑΝΑΜΕΣΑ στο κινούμενο (φάντασμα) σκέλος και το ΣΤΑΘΕΡΟ γειτονικό σκέλος
+      // του ενωμένου συστήματος. ΙΔΙΟ SSoT helper (μηδέν νέα formula): center=σημείο ένωσης,
+      // baseline=φάντασμα σκέλος (pivot→moved), arrow=σταθερό σκέλος (pivot→fixedEnd). Το σταθερό σκέλος
+      // υπάρχει μόνο όταν το σημείο ένωσης έχει κι άλλον γείτονα πέρα από το κινούμενο (n ≥ 3 — αλλιώς είναι
+      // μεμονωμένη γραμμή αποθηκευμένη ως polyline, καμία γωνία γωνίας). Το σταθερό σκέλος διαβάζεται από τα
+      // ΑΡΧΙΚΑ vertices (δεν μετακινείται). Η ακτίνα διαφέρει (μήκος σταθερού σκέλους) → δεν επικαλύπτεται
+      // με το τόξο στροφής.
+      const fixedIdx = i === 0 ? 2 : n - 3;
+      if (fixedIdx >= 0 && fixedIdx < n) {
+        paintEndpointReshapeArc(ctx, pivotW, movedW, oPoly.vertices[fixedIdx], t, vp);
+      }
     }
   }
 }
@@ -421,6 +444,30 @@ export function drawMemberGripHud(
     const c = transformed as unknown as ColumnEntity;
     paintColumnHud(ctx, c.geometry.footprint.vertices, c.params, buildColumnHudSpecLabel(c.params.height), sceneUnits, t, vp);
     return;
+  }
+  // ADR-508 §line-hud / ADR-561 — ΕΝΩΜΕΝΟ ΣΥΣΤΗΜΑ (polyline) vertex-reshape parity με τη ΜΕΜΟΝΩΜΕΝΗ
+  // γραμμή: όταν σέρνεις κορυφή (π.χ. το άκρο ενός σκέλους 2 ενωμένων γραμμών), ΚΑΘΕ σκέλος που αλλάζει
+  // μήκος παίρνει τις ΙΔΙΕΣ λευκές ενδείξεις (μήκος + ∠γωνία) μέσω του ΚΟΙΝΟΥ `buildSegmentHudMeta`+
+  // `paintWallHud` (`specLabel=''` — η γραμμή/polyline δεν έχει BIM ταυτότητα). Endpoint → 1 σκέλος,
+  // γωνιακή/εσωτερική κορυφή → 2 σκέλη (Revit temporary-dimensions parity, Giorgio 2026-07-05).
+  //
+  // ⚠️ Το κλείδωμα γίνεται στο `dp.gripIndex` (ΟΧΙ στο `polylineGripKind`): το vertex-reshape path
+  // (`buildDxfDragPreview`) ΔΕΝ προωθεί `polylineGripKind` στο `dp` (μόνο το rotation path το κάνει) →
+  // ένα guard πάνω σε αυτό δεν κουμπώνει ΠΟΤΕ. Ίδιο proven pattern με τα polyline sibling overlays
+  // (`paintGripEndpointReshapeArcs` arc + `getPolylineGripAlignmentAnchors` traces): `isPolylineEntity`
+  // + `gripIndex`. Οι λαβές whole-entity move/rotation εξαιρούνται από τον έλεγχο `!movesEntity`/
+  // `!rotatePivot` ΚΑΙ επειδή το `gripIndex` τους είναι ≥ vertexCount → `getPolylineVertexIncidentSegments`
+  // επιστρέφει []. Το `transformed` είναι ΗΔΗ 'polyline' (`normalizePreviewEntity`, ADR-561) με
+  // post-reshape vertices → WYSIWYG μήκος/γωνία.
+  if (type === 'polyline' && !dp.movesEntity && !dp.rotatePivot) {
+    const poly = transformed as unknown as { vertices: Point2D[]; closed: boolean };
+    const segments = getPolylineVertexIncidentSegments(dp.gripIndex, poly.vertices.length, poly.closed);
+    if (segments.length > 0) {
+      for (const [a, b] of segments) {
+        paintWallHud(ctx, buildSegmentHudMeta(poly.vertices[a], poly.vertices[b], sceneUnits), '', t, vp);
+      }
+      return;
+    }
   }
   // ADR-508 §line-hud / ADR-363 Slice F/G — plain DXF LINE parity με τον τοίχο (Giorgio 2026-07-04
   // «όταν σέρνω άκρο ή μέσο της γραμμής, γωνία+μήκος ΑΚΡΙΒΩΣ όπως ο τοίχος»): endpoint reshape

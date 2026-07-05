@@ -18,6 +18,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { extractLineSegments, type RegionLineSeg } from './wall-in-region';
 import { dist } from './perimeter-polygon-math';
+import { projectPointTo2D } from '../geometry/shared/polygon-utils';
 
 /** Γράφος κόμβων/γειτνίασης από segments (συγχώνευση άκρων εντός tol). */
 export function buildSegmentGraph(
@@ -30,7 +31,7 @@ export function buildSegmentGraph(
     for (let i = 0; i < nodes.length; i++) {
       if (dist(nodes[i], p) <= tol) return i;
     }
-    nodes.push({ x: p.x, y: p.y });
+    nodes.push(projectPointTo2D(p));
     adj.push([]);
     return nodes.length - 1;
   };
@@ -95,7 +96,7 @@ export function findOpenChainEndpointsNear(
   const open: Point2D[] = [];
   for (let i = 0; i < nodes.length; i++) {
     if (adj[i].length === 1 && dist(nodes[i], point as Point2D) <= reach) {
-      open.push({ x: nodes[i].x, y: nodes[i].y });
+      open.push(projectPointTo2D(nodes[i]));
     }
   }
   return open;

@@ -8,6 +8,7 @@
  * - applyPreviewStyling(): Decorates a preview entity with flags, grip points, and measurement info
  */
 import type { Point2D } from '../../rendering/types/Types';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import type { PolylineEntity } from '../../types/scene';
 import type {
   DrawingTool,
@@ -462,7 +463,7 @@ function makeStairWalklinePreview(
   const direction = Math.atan2(dirPoint.y - basePoint.y, dirPoint.x - basePoint.x) * (180 / Math.PI);
   const params = buildDefaultStairParams(basePoint, direction, overrides, sceneUnits);
   const geometry = computeStairGeometry(params);
-  const vertices: Point2D[] = geometry.walkline.map(p => ({ x: p.x, y: p.y }));
+  const vertices: Point2D[] = projectVerticesTo2D(geometry.walkline);
   const polyline: PolylineEntity = {
     id: 'preview_stair_walkline',
     type: 'polyline',

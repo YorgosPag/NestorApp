@@ -20,6 +20,7 @@ import { useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SlabParamOverrides } from '../../hooks/drawing/slab-completion';
 import { createExternalStore } from '../../stores/createExternalStore';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 export interface SlabPreviewState {
   /** Polygon vertices so far (user-click order). Empty when idle / awaitingFirstVertex. */
@@ -60,7 +61,7 @@ export const slabPreviewStore = {
       return;
     }
     const nextState: SlabPreviewState = {
-      vertices: next.vertices.map((p) => ({ x: p.x, y: p.y })),
+      vertices: projectVerticesTo2D(next.vertices),
       overrides: { ...next.overrides },
     };
     store.set(nextState);

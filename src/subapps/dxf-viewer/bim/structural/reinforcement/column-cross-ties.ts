@@ -22,6 +22,7 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
+import { projectVerticesTo2D } from '../../geometry/shared/polygon-utils';
 import type { CrossTiePattern } from './column-reinforcement-types';
 import {
   buildStirrupHookEndsMm,
@@ -188,7 +189,7 @@ function midBar(arr: readonly Point2D[], axis: 'x' | 'y'): Point2D {
 function embracingHoopPath(barsCCW: readonly Point2D[], dbw: number, dbL: number, seg: number): Point2D[] {
   const n = barsCCW.length;
   const wrapR = dbL / 2 + dbw / 2;
-  if (n < 3 || wrapR <= 0) return barsCCW.map((p) => ({ x: p.x, y: p.y }));
+  if (n < 3 || wrapR <= 0) return projectVerticesTo2D(barsCCW);
   const start: Point2D[] = []; // αναχώρηση από κορυφή i (επί ακμής i)
   const end: Point2D[] = []; // άφιξη στην κορυφή i+1 (επί ακμής i)
   for (let i = 0; i < n; i++) {

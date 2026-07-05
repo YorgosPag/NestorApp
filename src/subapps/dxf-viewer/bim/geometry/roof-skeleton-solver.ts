@@ -27,6 +27,7 @@ import {
   type Vec2,
 } from './roof-lower-envelope';
 import { computeStraightSkeleton, type SkeletonArc } from './shared/straight-skeleton';
+import { projectVerticesTo2D } from './shared/polygon-utils';
 
 /** mm — κάτω από αυτό μια ακμή θεωρείται οριζόντια (ridge vs hip). Mirror lower-envelope. */
 const HORIZONTAL_Z_EPS = 1;
@@ -84,7 +85,7 @@ export function solveRoofByStraightSkeleton(
   for (const f of sk.faces) {
     const ratio = ratioByEdge.get(f.edgeIndex);
     if (ratio === undefined) return null; // ακμή χωρίς plane → fallback
-    const poly2D: Vec2[] = f.polygon.map((p) => ({ x: p.x, y: p.y }));
+    const poly2D: Vec2[] = projectVerticesTo2D(f.polygon);
     faces.push(makeFace(poly2D, ratio, planes, basePivotZ, s, canvasToM));
   }
 

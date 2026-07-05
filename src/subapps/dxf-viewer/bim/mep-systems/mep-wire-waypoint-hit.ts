@@ -17,6 +17,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { getNearestPointOnLine, pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import type { CircuitHostSegment } from './mep-wire-routing';
 import { getOrientedWaypoints, type WireWaypointMap, type WirePlanPoint } from './mep-wire-waypoints';
 
@@ -84,7 +85,7 @@ export function hitTestInsertion(
   for (const seg of segments) {
     const wps = getOrientedWaypoints(map, seg.keyA, seg.keyB);
     // Draw vertex sequence: [a, ...wps, b] → (wps.length + 1) sub-segments.
-    const verts: Point2D[] = [seg.a, ...wps.map((w) => ({ x: w.x, y: w.y })), seg.b];
+    const verts: Point2D[] = [seg.a, ...projectVerticesTo2D(wps), seg.b];
     for (let k = 0; k < verts.length - 1; k++) {
       const dist = pointToLineDistance(worldPos, verts[k]!, verts[k + 1]!);
       if (dist <= bestDist) {

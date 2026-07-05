@@ -47,6 +47,7 @@ import { getNearestPointOnLine } from '../../../rendering/entities/shared/geomet
 import { findOrthogonalPath, type AStarOptions } from './astar-grid';
 import { segmentHitsObstacles } from './wall-obstacles';
 import type { Rect2D } from './routing-constants';
+import { projectVerticesTo2D } from '../../../bim/geometry/shared/polygon-utils';
 
 const COINCIDENT_EPS = 1e-6;
 
@@ -129,9 +130,7 @@ function buildArmOffset(
   const arm = armIndices.map((idx) => referenceTrunks[idx]);
   const pts: Point2D[] = [arm[0].start, ...arm.map((s) => s.end)];
   // offsetPolyline returns Point3D (z preserved); drop z back to clean Point2D for the runs.
-  const offsetPts: Point2D[] = offsetPolyline(pts.map(to3d), offsetMm, { join: 'miter' }).map(
-    (p) => ({ x: p.x, y: p.y }),
-  );
+  const offsetPts: Point2D[] = projectVerticesTo2D(offsetPolyline(pts.map(to3d), offsetMm, { join: 'miter' }));
   if (offsetPts.length < 2) return { stub: null, armTrunks: [] };
   const stub: OffsetStubRun | null = near(root, offsetPts[0])
     ? null

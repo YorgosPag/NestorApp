@@ -21,6 +21,7 @@ import { calculatePolygonArea } from '../../rendering/entities/shared/geometry-p
 import { getHatchDrawDefaults } from './hatch-draw-defaults-store';
 import { buildGradientFromDefaults } from './hatch-gradient-build';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 /** Ελάχιστος αριθμός κορυφών για έγκυρο κλειστό όριο. */
 export const HATCH_MIN_BOUNDARY_POINTS = 3;
@@ -50,7 +51,7 @@ function buildHatchEntityFromPaths(
     // Κράτα μόνο τους έγκυρους δακτυλίους (≥3 κορυφές) + κλώνος των σημείων.
     boundaryPaths: boundaryPaths
       .filter((ring) => ring.length >= HATCH_MIN_BOUNDARY_POINTS)
-      .map((ring) => ring.map((p) => ({ x: p.x, y: p.y }))),
+      .map((ring) => projectVerticesTo2D(ring)),
     fillType: d.fillType,
     patternType: isSolid ? 'solid' : isGradient ? 'gradient' : 'pattern',
     fillColor: d.fillColor,

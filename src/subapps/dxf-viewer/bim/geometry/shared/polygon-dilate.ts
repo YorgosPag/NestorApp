@@ -20,6 +20,7 @@
  */
 
 import type { Pt2 } from './segment-polygon-coverage';
+import { projectVerticesTo2D } from './polygon-utils';
 
 const EPS = 1e-9;
 /** Όριο μήκους miter (× d): αιχμηρές γωνίες δεν παράγουν spike. */
@@ -74,7 +75,7 @@ function outwardNormals(poly: readonly Pt2[], c: Pt2): Pt2[] {
  */
 export function dilatePolygonAlongAxis(poly: readonly Pt2[], axis: Pt2, d: number): Pt2[] {
   const n = poly.length;
-  if (n < 3 || d <= 0) return poly.map((p) => ({ x: p.x, y: p.y }));
+  if (n < 3 || d <= 0) return projectVerticesTo2D(poly);
   const c = centroidOf(poly);
   return poly.map((p) => {
     const proj = (p.x - c.x) * axis.x + (p.y - c.y) * axis.y;
@@ -89,7 +90,7 @@ export function dilatePolygonAlongAxis(poly: readonly Pt2[], axis: Pt2, d: numbe
  */
 export function dilatePolygonOutward(poly: readonly Pt2[], d: number): Pt2[] {
   const n = poly.length;
-  if (n < 3 || d <= 0) return poly.map((p) => ({ x: p.x, y: p.y }));
+  if (n < 3 || d <= 0) return projectVerticesTo2D(poly);
   const c = centroidOf(poly);
   const nrm = outwardNormals(poly, c);
   const out: Pt2[] = [];

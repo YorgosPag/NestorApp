@@ -16,6 +16,7 @@
 import { useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import { createExternalStore } from '../../stores/createExternalStore';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 export interface MepUnderfloorPreviewState {
   /** Footprint vertices so far (user-click order). Empty when idle / awaiting first vertex. */
@@ -42,7 +43,7 @@ export const mepUnderfloorPreviewStore = {
   set(next: MepUnderfloorPreviewState): void {
     if (polylinesEqual(store.get().vertices, next.vertices)) return;
     const nextState: MepUnderfloorPreviewState = {
-      vertices: next.vertices.map((p) => ({ x: p.x, y: p.y })),
+      vertices: projectVerticesTo2D(next.vertices),
     };
     store.set(nextState);
   },

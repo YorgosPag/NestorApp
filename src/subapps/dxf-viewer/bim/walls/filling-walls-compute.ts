@@ -36,6 +36,7 @@ import { computeWallTrims, applyTrimPatches } from './wall-trims';
 import { collectColumnFootprints } from './add-wall-to-scene';
 import { wallFootprintPolygon } from '../finishes/wall-footprint-union';
 import { structuralFootprintOf, findStructuralOverlap } from '../placement/structural-placement-overlap';
+import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
 // ─── Reject reasons (friendly i18n keys — «κόκκινο + tooltip με ΛΟΓΟ») ─────────
 
@@ -146,6 +147,6 @@ export function computeFillingWallFootprints(
   // Σειρά `walls` (όχι scene order) → 1:1 pairing με τα labels στο preview.
   return walls.map((w) => {
     const pw = patchedById.get(w.id) ?? w;
-    return wallFootprintPolygon(pw).map((p) => ({ x: p.x, y: p.y }));
+    return projectVerticesTo2D(wallFootprintPolygon(pw));
   });
 }

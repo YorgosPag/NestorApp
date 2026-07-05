@@ -12,6 +12,7 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
+import { projectVerticesTo2D } from '../../geometry/shared/polygon-utils';
 import { rectRestrainedBarIntervals } from './column-reinforcement-types';
 
 /**
@@ -68,14 +69,14 @@ function interiorPoints(a: Point2D, b: Point2D, n: number): Point2D[] {
 export function distributeBarsAlongPolygon(vertices: readonly Point2D[], count: number): Point2D[] {
   const k = vertices.length;
   if (count <= 0 || k < 2) return [];
-  if (count <= k) return vertices.slice(0, count).map((v) => ({ x: v.x, y: v.y }));
+  if (count <= k) return projectVerticesTo2D(vertices.slice(0, count));
 
   const edgeLengths = vertices.map((v, i) => {
     const n = vertices[(i + 1) % k];
     return Math.hypot(n.x - v.x, n.y - v.y);
   });
   const perSide = apportion(count - k, edgeLengths);
-  const bars: Point2D[] = vertices.map((v) => ({ x: v.x, y: v.y }));
+  const bars: Point2D[] = projectVerticesTo2D(vertices);
   for (let i = 0; i < k; i++) {
     bars.push(...interiorPoints(vertices[i], vertices[(i + 1) % k], perSide[i]));
   }

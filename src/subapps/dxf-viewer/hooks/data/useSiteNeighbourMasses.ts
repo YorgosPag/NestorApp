@@ -28,6 +28,7 @@ import { DxfFirestoreService } from '../../services/dxf-firestore.service';
 import { isWallEntity } from '../../types/entities';
 import { computeEnvelopePerimeter } from '../../bim/geometry/envelope-perimeter';
 import { resolveSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import {
   buildHorizonObstacles,
   DEFAULT_STOREY_HEIGHT_M,
@@ -54,7 +55,7 @@ function sceneFootprint(scene: SceneModel): { footprint: { x: number; y: number 
   const { primaryChain } = computeEnvelopePerimeter(walls, 0, sceneUnits);
   const pts = primaryChain?.exteriorFaceLoop.points;
   if (!pts || pts.length < 3) return null;
-  return { footprint: pts.map((p) => ({ x: p.x, y: p.y })), sceneToM: sceneUnitsToMeters(sceneUnits) };
+  return { footprint: projectVerticesTo2D(pts), sceneToM: sceneUnitsToMeters(sceneUnits) };
 }
 
 /** Τοποθέτηση κτιρίου (ADR-369) + κλίμακα σκηνής → `BuildingPlacement`. */

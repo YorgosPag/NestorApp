@@ -106,6 +106,34 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
 
 ## Changelog
 
+- **2026-07-05 (§line-hud — ΕΝΩΜΕΝΟ ΣΥΣΤΗΜΑ (polyline) vertex-reshape: λευκές ενδείξεις σε ΚΑΘΕ σκέλος που αλλάζει μήκος)**
+  - **Αίτημα Giorgio (browser repro)**: μετά την **Ένωση** 2 γραμμών σε ένα σύστημα (scene `lwpolyline`), όταν πιάνω το
+    **άκρο ενός σκέλους** και το μετακινώ (αυξομειώνω μήκος), ΔΕΝ εμφανίζονταν οι **λευκές ενδείξεις** (μήκος + ∠γωνία)
+    πάνω στο σκέλος — ενώ στη **ΜΕΜΟΝΩΜΕΝΗ** γραμμή εμφανίζονται (§line-hud 2026-06-30/07-04). Ζητούμενο: full parity.
+  - **SSoT audit (grep, ΠΡΙΝ κώδικα)**: το `drawMemberGripHud` (`grip-ghost-preview-draw-helpers.ts`) είχε branches για
+    wall / column / plain-LINE, **αλλά ΟΧΙ για polyline**. Το `normalizePreviewEntity` (ADR-561) κάνει ήδη `lwpolyline→polyline`
+    στο preview boundary → μέσα στο HUD dispatcher το `transformed.type` είναι `'polyline'` με post-reshape `vertices`. Οι
+    painters `buildSegmentHudMeta`+`paintWallHud` ήταν **ΗΔΗ** έτοιμοι (`specLabel=''` για οντότητα χωρίς BIM ταυτότητα).
+  - **Απόφαση (Giorgio 2026-07-05, γωνιακή κορυφή)**: δείξε λευκό HUD σε **ΚΑΘΕ** σκέλος που αλλάζει μήκος — endpoint → 1,
+    γωνιακή/εσωτερική κορυφή → 2 σκέλη (**Revit temporary-dimensions parity**).
+  - **FIX (ZERO νέα formula)**:
+    - NEW pure SSoT `getPolylineVertexIncidentSegments(gripIndex, vertexCount, closed)` (`systems/polyline/polyline-grips.ts`)
+      — τα (≤2) incident edges μιας κορυφής (sibling του `getPolylineGripAlignmentAnchors`, ίδια επιλογή γειτόνων· wrap σε
+      closed ring· `[]` για μη-vertex index). +7 jest.
+    - `drawMemberGripHud`: NEW branch `type === 'polyline' && !movesEntity && !rotatePivot` → για κάθε incident segment
+      `paintWallHud(buildSegmentHudMeta(vA,vB,sceneUnits), '')` — **ΙΔΙΟΙ** painters με τη γραμμή/τοίχο.
+  - **⚠️ GOTCHA (1η προσπάθεια απέτυχε — «οι λευκές γραμμές δεν εμφανίζονται», Giorgio)**: το αρχικό guard κλείδωνε σε
+    `dp.polylineGripKind?.startsWith('polyline-vertex-')`, αλλά το **vertex-reshape path** (`buildDxfDragPreview`) **ΔΕΝ**
+    προωθεί `polylineGripKind` στο `dp` (το προωθεί ΜΟΝΟ το rotation path `buildRotateReferencePreview`) → το guard ήταν
+    πάντα false. **Root cause**: το `dp` για plain polyline vertex-stretch φέρει `gripIndex` αλλά όχι discriminator. Fix:
+    κλείδωμα στο `gripIndex` (μέσω του incident-segments helper που επιστρέφει `[]` για move/rotation/edge, αφού το
+    `gripIndex` τους είναι ≥ vertexCount) — **ίδιο proven pattern** με τα polyline sibling overlays που ΗΔΗ δουλεύουν:
+    `paintGripEndpointReshapeArcs` (arc) + `getPolylineGripAlignmentAnchors` (traces), που κι αυτά κλειδώνουν σε
+    `isPolylineEntity + gripIndex`, ποτέ σε `polylineGripKind`.
+  - **Tests**: `polyline-grips.test.ts` 20/20 ✅ (13 παλιά + 7 νέα για το incident-segments).
+  - ✅ Google-level: YES — μηδέν διπλότυπο· ΚΟΙΝΟΣ HUD painter με γραμμή/τοίχο· η adjacency κεντρικοποιημένη ως pure helper.
+  - CHECK 6D → stage αυτό το ADR + `grip-ghost-preview-draw-helpers.ts`. 🟡 UNCOMMITTED (commit: Giorgio).
+
 - **2026-07-04 (§move-clearance grip-drag parity + arc footprint — κυανές ΚΑΙ στο σύρσιμο λαβών· τόξο = σαρωμένη καμπύλη)**
   - **Αίτημα Giorgio**: το **τόξο «φοράς ανοίγματος»** (DXF arc) δεν έδειχνε τις κυανές κεντρικοποιημένες ενδείξεις
     ούτε στο σύρσιμο **λαβών** (κέντρο/άκρα) ούτε στο **body-drag** — «ίδια συμπεριφορά, ΜΙΑ πηγή αλήθειας» με τις

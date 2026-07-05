@@ -51,6 +51,7 @@ import {
   getDesignOutdoorTempC,
   type ClimateZone,
 } from '../../bim/thermal/kenak-thermal-config';
+import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import type { StoreyPosition } from '../../bim/thermal/heat-load/space-boundary-resolver';
 import type { SpaceHeatLoadDeriveInputs } from '../../bim/thermal/heat-load/derive-space-heat-loads';
 import type { ThermalSpaceEntity } from '../../bim/types/thermal-space-types';
@@ -136,7 +137,7 @@ const ACTIVE_FLOOR_OVERHANG_KINDS: ReadonlySet<SlabKind> = new Set<SlabKind>(['r
 
 /** Outline μιας πλάκας ως κλειστό πολύγωνο XY (world coords μονάδα σκηνής). */
 function slabOutline(slab: SlabEntity): OverhangOutline {
-  return { polygonXY: slab.params.outline.vertices.map((v) => ({ x: v.x, y: v.y })) };
+  return { polygonXY: projectVerticesTo2D(slab.params.outline.vertices) };
 }
 
 /** Σύνολο floorId των ορόφων **πάνω** από τον active (ordered floors basement→up). */

@@ -20,6 +20,7 @@ import { resolveWindowOverhangFactor, type OverhangOutline } from './solar-overh
 import { resolveWindowFinFactor } from './solar-fin-geometry';
 import { resolveWindowHorizonFactor, type HorizonObstacle } from './solar-horizon-geometry';
 import type { Vec2 } from './wall-footprint-match';
+import { projectVerticesTo2D } from '../../geometry/shared/polygon-utils';
 
 /**
  * Structural subset του `SpaceBoundaryContext` που χρειάζονται οι shading resolvers
@@ -53,7 +54,7 @@ function wallFootprintPolygon(wall: WallEntity): readonly Vec2[] | null {
   const inner = wall.geometry?.innerEdge?.points;
   const outer = wall.geometry?.outerEdge?.points;
   if (!inner || inner.length < 2 || !outer || outer.length < 2) return null;
-  const poly: Vec2[] = inner.map((p) => ({ x: p.x, y: p.y }));
+  const poly: Vec2[] = projectVerticesTo2D(inner);
   for (let i = outer.length - 1; i >= 0; i--) poly.push({ x: outer[i].x, y: outer[i].y });
   return poly.length >= 3 ? poly : null;
 }
