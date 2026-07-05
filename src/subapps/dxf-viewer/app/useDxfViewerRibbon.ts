@@ -33,6 +33,8 @@ import { useRibbonArrayBridge } from '../ui/ribbon/hooks/useRibbonArrayBridge';
 import { useArrayRibbonActions } from '../ui/ribbon/hooks/useArrayRibbonActions';
 // ADR-510 Φ5 — generic EXPLODE action interceptor (polyline/rectangle → primitives).
 import { useExplodeRibbonAction } from '../ui/ribbon/hooks/useExplodeRibbonAction';
+// ADR-186 — generic JOIN «Ένωση» action interceptor (inverse of EXPLODE).
+import { useJoinRibbonAction } from '../ui/ribbon/hooks/useJoinRibbonAction';
 // 📐 ADR-358 Phase 7a / ADR-363: BIM contextual bridges aggregated
 import { useDxfBimBridges } from './useDxfBimBridges';
 import { useRibbonLineToolBridge } from '../ui/ribbon/hooks/useRibbonLineToolBridge';
@@ -94,6 +96,12 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
     levelManager, universalSelection,
     handleToolChange, fallback: arrayActionInterceptor,
   });
+  // ADR-186 — JOIN «Ένωση» wraps EXPLODE (chain: join → explode → array → base).
+  // The inverse Modify command: merges the selection into one entity, undoable.
+  const joinActionInterceptor = useJoinRibbonAction({
+    levelManager, universalSelection,
+    handleToolChange, fallback: explodeActionInterceptor,
+  });
 
   // ADR-358 Phase 7a / ADR-363 — BIM contextual bridges. ADR-408 Φ5 — MEP circuit.
   const { stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge } =
@@ -117,7 +125,7 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
 
   const ribbonCommands = useRibbonCommands({
     activeTool, handleToolChange, handleRibbonComingSoon,
-    wrappedHandleAction: explodeActionInterceptor,
+    wrappedHandleAction: joinActionInterceptor,
     closeContextualTab,
     canUndo, canRedo,
     textEditorBridge, arrayBridge, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge,
