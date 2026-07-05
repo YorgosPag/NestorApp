@@ -37,9 +37,9 @@ interface RulerSettingsStore {
  * Create grid settings store
  *
  * SSoT pub/sub via createExternalStore (WAVE 2.8): the hand-rolled
- * `let current` + `new Set<(settings) => void>()` cell now lives on the factory.
- * The public `subscribe(settings => …)` payload contract is preserved by wrapping
- * the factory's parameterless listener so it forwards the current snapshot.
+ * `let current` + inline listener-Set cell now lives on the factory. The public
+ * `subscribe(settings => …)` payload contract is preserved by wrapping the
+ * factory's parameterless listener so it forwards the current snapshot.
  */
 const createGridStore = (): GridSettingsStore => {
   const store = createExternalStore<GridSettings>({ ...DEFAULT_GRID_SETTINGS });
