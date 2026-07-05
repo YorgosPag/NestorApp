@@ -31,6 +31,14 @@ export interface ExternalStore<T> {
   readonly set: (next: T) => void;
   /** Register a listener; returns its unsubscribe. */
   readonly subscribe: (listener: () => void) => () => void;
+  /**
+   * Test/lifecycle reset: replace the state WITHOUT notifying and drop EVERY current
+   * subscriber. Mirrors the hand-rolled `state = INITIAL; listeners.clear()` reset
+   * helpers many stores expose for jest isolation (Zustand `destroy`-aligned). This is
+   * NOT a runtime setter — always use `set` for normal updates; `reset` bypasses both
+   * the notify and the `equals` guard on purpose.
+   */
+  readonly reset: (next: T) => void;
 }
 
 export interface CreateExternalStoreOptions<T> {
@@ -65,5 +73,10 @@ export function createExternalStore<T>(
     };
   };
 
-  return { get, set, subscribe };
+  const reset = (next: T): void => {
+    state = next;
+    listeners.clear();
+  };
+
+  return { get, set, subscribe, reset };
 }

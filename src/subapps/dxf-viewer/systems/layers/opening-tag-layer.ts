@@ -16,33 +16,28 @@
  */
 
 import { useSyncExternalStore } from 'react';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export const OPENING_TAG_LAYER_ID = '__system_opening_tags__';
 
-let visible = true;
-const listeners = new Set<() => void>();
+// `equals: Object.is` = το παλιό `if (visible === next) return` guard.
+const store = createExternalStore<boolean>(true, { equals: Object.is });
 
 export function isOpeningTagLayerVisible(): boolean {
-  return visible;
+  return store.get();
 }
 
 export function setOpeningTagLayerVisible(next: boolean): void {
-  if (visible === next) return;
-  visible = next;
-  for (const cb of listeners) cb();
+  store.set(next);
 }
 
 export function subscribeOpeningTagLayer(cb: () => void): () => void {
-  listeners.add(cb);
-  return () => {
-    listeners.delete(cb);
-  };
+  return store.subscribe(cb);
 }
 
-/** Test-only reset. */
+/** Test-only reset (silent state reset + drop subscribers). */
 export function __resetOpeningTagLayerForTests(): void {
-  visible = true;
-  listeners.clear();
+  store.reset(true);
 }
 
 // ────────────────────────────────────────────────────────────────────────────

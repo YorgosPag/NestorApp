@@ -16,6 +16,7 @@
  */
 
 import { useSyncExternalStore } from 'react';
+import { createExternalStore } from '../../stores/createExternalStore';
 import { DEFAULT_GRID_PERIMETER_MODE, type GridPerimeterMode } from './grid-justification';
 
 export interface GridPerimeterModeStore {
@@ -29,28 +30,16 @@ export interface GridPerimeterModeStore {
 
 /** Φτιάξε ανεξάρτητο περιμετρικό-mode store (default `inner`). */
 export function createGridPerimeterModeStore(): GridPerimeterModeStore {
-  let mode: GridPerimeterMode = DEFAULT_GRID_PERIMETER_MODE;
-  const listeners = new Set<() => void>();
-
-  const subscribe = (listener: () => void): (() => void) => {
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
-  };
-  const getSnapshot = (): GridPerimeterMode => mode;
+  // Single-value store· `equals: Object.is` αναπαράγει το `if (next === mode) return` guard.
+  const store = createExternalStore<GridPerimeterMode>(DEFAULT_GRID_PERIMETER_MODE, {
+    equals: Object.is,
+  });
 
   return {
-    set(next: GridPerimeterMode): void {
-      if (next === mode) return;
-      mode = next;
-      for (const l of listeners) l();
-    },
-    get(): GridPerimeterMode {
-      return mode;
-    },
+    set: store.set,
+    get: store.get,
     use(): GridPerimeterMode {
-      return useSyncExternalStore(subscribe, getSnapshot, () => DEFAULT_GRID_PERIMETER_MODE);
+      return useSyncExternalStore(store.subscribe, store.get, () => DEFAULT_GRID_PERIMETER_MODE);
     },
   };
 }

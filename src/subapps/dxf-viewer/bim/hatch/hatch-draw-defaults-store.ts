@@ -17,6 +17,7 @@
 
 import type { HatchEntity, LineweightMm } from '../../types/entities';
 import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
+import { createExternalStore } from '../../stores/createExternalStore';
 import type { HatchGradientType } from './hatch-gradient';
 import { DEFAULT_GRADIENT_DEFAULTS } from './hatch-gradient-build';
 
@@ -79,30 +80,25 @@ const DEFAULT_HATCH_DRAW_DEFAULTS: HatchDrawDefaults = {
   ...DEFAULT_GRADIENT_DEFAULTS,
 };
 
-let state: HatchDrawDefaults = DEFAULT_HATCH_DRAW_DEFAULTS;
-const listeners = new Set<() => void>();
+// Plain single-state store (always-notify· ο caller στέλνει partial patch → πάντα νέο object).
+const store = createExternalStore<HatchDrawDefaults>(DEFAULT_HATCH_DRAW_DEFAULTS);
 
 /** Τρέχοντα defaults (stable reference — αλλάζει μόνο σε set). */
 export function getHatchDrawDefaults(): HatchDrawDefaults {
-  return state;
+  return store.get();
 }
 
 /** Patch ενός ή περισσότερων default πεδίων + ειδοποίηση subscribers. */
 export function setHatchDrawDefaults(patch: Partial<HatchDrawDefaults>): void {
-  state = { ...state, ...patch };
-  for (const l of listeners) l();
+  store.set({ ...store.get(), ...patch });
 }
 
 /** `useSyncExternalStore` subscribe. */
 export function subscribeHatchDrawDefaults(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
+  return store.subscribe(listener);
 }
 
-/** Επαναφορά στις εργοστασιακές (test helper). */
+/** Επαναφορά στις εργοστασιακές (test helper). Notify-άρει (mirror του παλιού). */
 export function resetHatchDrawDefaults(): void {
-  state = DEFAULT_HATCH_DRAW_DEFAULTS;
-  for (const l of listeners) l();
+  store.set(DEFAULT_HATCH_DRAW_DEFAULTS);
 }

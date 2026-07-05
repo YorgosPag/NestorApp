@@ -9,30 +9,21 @@
  */
 
 import { useSyncExternalStore } from 'react';
+import { createExternalStore } from '../../stores/createExternalStore';
 
-let _active = false;
-const listeners = new Set<() => void>();
-
-function emit(): void {
-  listeners.forEach((l) => l());
-}
+// `equals: Object.is` αναπαράγει το `if (_active === value) return` guard του setActive.
+const store = createExternalStore<boolean>(false, { equals: Object.is });
 
 export const DimRowHandleModeStore = {
-  isActive: (): boolean => _active,
+  isActive: (): boolean => store.get(),
   setActive(value: boolean): void {
-    if (_active === value) return;
-    _active = value;
-    emit();
+    store.set(value);
   },
   toggle(): void {
-    _active = !_active;
-    emit();
+    store.set(!store.get());
   },
   subscribe(cb: () => void): () => void {
-    listeners.add(cb);
-    return () => {
-      listeners.delete(cb);
-    };
+    return store.subscribe(cb);
   },
 } as const;
 

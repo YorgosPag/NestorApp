@@ -72,4 +72,23 @@ describe('createExternalStore', () => {
     s.set({ v: 2 });
     expect(hits).toBe(1);
   });
+
+  it('reset() replaces state silently (no notify) and bypasses the equals guard', () => {
+    const s = createExternalStore<number>(0, { equals: Object.is });
+    let hits = 0;
+    s.subscribe(() => { hits += 1; });
+    s.reset(5);           // silent: state changes but subscribers are NOT called
+    expect(s.get()).toBe(5);
+    expect(hits).toBe(0);
+  });
+
+  it('reset() drops every current subscriber (mirrors listeners.clear())', () => {
+    const s = createExternalStore<number>(0);
+    let hits = 0;
+    s.subscribe(() => { hits += 1; });
+    s.reset(0);
+    s.set(1);             // no live subscriber remains → no notify
+    expect(hits).toBe(0);
+    expect(s.get()).toBe(1);
+  });
 });

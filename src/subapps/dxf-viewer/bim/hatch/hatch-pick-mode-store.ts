@@ -18,18 +18,20 @@
  * @see docs/centralized-systems/reference/adrs/ADR-507-hatch-creation-system.md
  */
 
+import { createExternalStore } from '../../stores/createExternalStore';
+
 /** Πώς δείχνει ο χρήστης την περιοχή της γραμμοσκίασης (AutoCAD BHATCH modes). */
 export type HatchPickMode = 'pick-point' | 'boundary';
 
 /** AutoCAD BHATCH ανοίγει σε «Pick Points» → default pick-point. */
 const DEFAULT_HATCH_PICK_MODE: HatchPickMode = 'pick-point';
 
-let state: HatchPickMode = DEFAULT_HATCH_PICK_MODE;
-const listeners = new Set<() => void>();
+// Plain store· το `set` κρατά δικό του guard (γιατί το reset notify-άρει, το set όχι).
+const store = createExternalStore<HatchPickMode>(DEFAULT_HATCH_PICK_MODE);
 
 /** Τρέχων τρόπος (stable — αλλάζει μόνο σε set). */
 export function getHatchPickMode(): HatchPickMode {
-  return state;
+  return store.get();
 }
 
 /**
@@ -38,26 +40,21 @@ export function getHatchPickMode(): HatchPickMode {
  * live hover preview (`useRegionPerimeterMouseMove`) → μηδέν διπλό inline predicate.
  */
 export function isHatchPickPointActive(tool: string | null | undefined): boolean {
-  return tool === 'hatch' && state === 'pick-point';
+  return tool === 'hatch' && store.get() === 'pick-point';
 }
 
 /** Ορισμός τρόπου + ειδοποίηση subscribers (no-op αν ίδιος). */
 export function setHatchPickMode(mode: HatchPickMode): void {
-  if (mode === state) return;
-  state = mode;
-  for (const l of listeners) l();
+  if (mode === store.get()) return;
+  store.set(mode);
 }
 
 /** `useSyncExternalStore` subscribe. */
 export function subscribeHatchPickMode(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
+  return store.subscribe(listener);
 }
 
-/** Επαναφορά στον default (test helper). */
+/** Επαναφορά στον default (test helper). Notify-άρει (mirror του παλιού). */
 export function resetHatchPickMode(): void {
-  state = DEFAULT_HATCH_PICK_MODE;
-  for (const l of listeners) l();
+  store.set(DEFAULT_HATCH_PICK_MODE);
 }

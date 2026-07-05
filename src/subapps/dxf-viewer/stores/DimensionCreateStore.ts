@@ -24,6 +24,7 @@
 
 import { useSyncExternalStore } from 'react';
 import type { DimensionType } from '../types/dimension';
+import { createExternalStore } from './createExternalStore';
 import {
   dimensionCreateReducer,
   initialDimensionCreateState,
@@ -33,21 +34,15 @@ import {
 } from '../hooks/dimensions/dimension-create-state';
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Module-scoped state + listener set
+// Module-scoped state (external-store SSoT· `equals: Object.is` = reducer identity guard)
 // ──────────────────────────────────────────────────────────────────────────────
 
-let current: DimensionCreateState = initialDimensionCreateState;
-const listeners = new Set<() => void>();
-
-function notify(): void {
-  listeners.forEach((cb) => cb());
-}
+const store = createExternalStore<DimensionCreateState>(initialDimensionCreateState, {
+  equals: Object.is,
+});
 
 function applyAction(action: DimensionCreateAction): void {
-  const next = dimensionCreateReducer(current, action);
-  if (next === current) return;
-  current = next;
-  notify();
+  store.set(dimensionCreateReducer(store.get(), action));
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -57,15 +52,12 @@ function applyAction(action: DimensionCreateAction): void {
 export const dimensionCreateStore = {
   /** Snapshot getter — stable reference until next mutation. */
   get(): DimensionCreateState {
-    return current;
+    return store.get();
   },
 
   /** Subscribe to every state mutation (returns unsubscribe). */
   subscribe(listener: () => void): () => void {
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
+    return store.subscribe(listener);
   },
 
   /** Dispatch a raw action — escape hatch for tests + advanced consumers. */
@@ -132,6 +124,5 @@ export function useDimensionCreateState(): DimensionCreateState {
 
 /** Test-only — restore the module-scoped store to its initial state. */
 export function __resetDimensionCreateStoreForTests(): void {
-  current = initialDimensionCreateState;
-  listeners.clear();
+  store.reset(initialDimensionCreateState);
 }

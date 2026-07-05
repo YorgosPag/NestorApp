@@ -21,6 +21,7 @@
 
 import type { StoreyRef } from '../utils/bim-floor-utils';
 import type { SlabForRegionCoverage } from '../geometry/footprint-region-classifier';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 /** Snapshot of the active building's floors + their slabs (canvas-unit outlines). */
 export interface EnvelopeFloorSlabs {
@@ -34,31 +35,25 @@ export interface EnvelopeFloorSlabs {
 
 const EMPTY: EnvelopeFloorSlabs = { floors: [], slabs: [], activeFloorId: null };
 
-let snapshot: EnvelopeFloorSlabs = EMPTY;
-const listeners = new Set<() => void>();
+// Identity-guarded store (`equals: Object.is` = το παλιό `if (next === snapshot) return`).
+const store = createExternalStore<EnvelopeFloorSlabs>(EMPTY, { equals: Object.is });
 
 /** Current cross-floor slab snapshot (stable ref until the next set). */
 export function getEnvelopeFloorSlabs(): EnvelopeFloorSlabs {
-  return snapshot;
+  return store.get();
 }
 
 /** Replace the snapshot and notify subscribers (idempotent on identity). */
 export function setEnvelopeFloorSlabs(next: EnvelopeFloorSlabs): void {
-  if (next === snapshot) return;
-  snapshot = next;
-  for (const fn of listeners) fn();
+  store.set(next);
 }
 
 /** Subscribe to snapshot replacements. Returns an unsubscribe fn. */
 export function subscribeEnvelopeFloorSlabs(fn: () => void): () => void {
-  listeners.add(fn);
-  return () => {
-    listeners.delete(fn);
-  };
+  return store.subscribe(fn);
 }
 
-/** Test-only reset. */
+/** Test-only reset (silent state reset + drop subscribers). */
 export function __resetEnvelopeFloorSlabsStore(): void {
-  snapshot = EMPTY;
-  listeners.clear();
+  store.reset(EMPTY);
 }

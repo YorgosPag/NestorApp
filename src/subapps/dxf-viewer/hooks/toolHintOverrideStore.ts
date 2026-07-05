@@ -13,28 +13,33 @@
  * @module hooks/toolHintOverrideStore
  */
 
-let currentOverride: string | null = null;
-let currentStepOverride: number | null = null;
-const listeners = new Set<() => void>();
+import { createExternalStore } from '../stores/createExternalStore';
+
+interface ToolHintOverrideState {
+  readonly override: string | null;
+  readonly step: number | null;
+}
+
+// Object wrapper (2 ανεξάρτητα πεδία) + field-compare equals → διατηρεί το per-field
+// `if (x === current) return` guard (κάθε setter notify-άρει μόνο αν το ΔΙΚΟ του πεδίο άλλαξε).
+const store = createExternalStore<ToolHintOverrideState>(
+  { override: null, step: null },
+  { equals: (a, b) => a.override === b.override && a.step === b.step },
+);
 
 export const toolHintOverrideStore = {
   /** Read current text override (useSyncExternalStore snapshot) */
-  getSnapshot: (): string | null => currentOverride,
+  getSnapshot: (): string | null => store.get().override,
 
   /** Read current step override (useSyncExternalStore snapshot) */
-  getStepSnapshot: (): number | null => currentStepOverride,
+  getStepSnapshot: (): number | null => store.get().step,
 
   /** Subscribe to changes (useSyncExternalStore subscription) */
-  subscribe: (listener: () => void): (() => void) => {
-    listeners.add(listener);
-    return () => { listeners.delete(listener); };
-  },
+  subscribe: (listener: () => void): (() => void) => store.subscribe(listener),
 
   /** Set override text (null = clear override, use default hint) */
   setOverride: (text: string | null): void => {
-    if (text === currentOverride) return;
-    currentOverride = text;
-    listeners.forEach(fn => fn());
+    store.set({ ...store.get(), override: text });
   },
 
   /**
@@ -43,8 +48,6 @@ export const toolHintOverrideStore = {
    * (null = use default pointCount from DrawingStateMachine)
    */
   setStepOverride: (step: number | null): void => {
-    if (step === currentStepOverride) return;
-    currentStepOverride = step;
-    listeners.forEach(fn => fn());
+    store.set({ ...store.get(), step });
   },
 };
