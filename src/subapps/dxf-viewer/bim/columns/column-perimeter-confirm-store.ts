@@ -27,6 +27,8 @@
  *   - 'cancel'         → τίποτα.
  * (is-column: το κουμπί δημιουργίας επιστρέφει 'create-all'.)
  */
+import { createConfirmStore } from '../../stores/createConfirmStore';
+
 export type ColumnPerimeterConfirmAction = 'create-all' | 'create-primary' | 'cancel';
 
 export type ColumnPerimeterConfirmMode = 'intent-mixed' | 'is-column';
@@ -47,7 +49,7 @@ export interface ColumnPerimeterConfirmState {
   readonly aspect: number;
 }
 
-// ─── Module-level state ───────────────────────────────────────────────────────
+// ─── Module-level state (createConfirmStore SSoT) ─────────────────────────────
 
 const CLOSED: ColumnPerimeterConfirmState = {
   open: false,
@@ -58,13 +60,7 @@ const CLOSED: ColumnPerimeterConfirmState = {
   aspect: 0,
 };
 
-let _state: ColumnPerimeterConfirmState = CLOSED;
-let _pendingResolve: ((action: ColumnPerimeterConfirmAction) => void) | null = null;
-const _subs = new Set<() => void>();
-
-function _notify(): void {
-  _subs.forEach((cb) => cb());
-}
+const store = createConfirmStore<ColumnPerimeterConfirmState, ColumnPerimeterConfirmAction>(CLOSED);
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -77,17 +73,13 @@ export function requestColumnDiscreteIntentConfirm(args: {
   primaryCount: number;
   secondaryCount: number;
 }): Promise<ColumnPerimeterConfirmAction> {
-  return new Promise<ColumnPerimeterConfirmAction>((resolve) => {
-    _pendingResolve = resolve;
-    _state = {
-      open: true,
-      mode: 'intent-mixed',
-      intent: args.intent,
-      primaryCount: args.primaryCount,
-      secondaryCount: args.secondaryCount,
-      aspect: 0,
-    };
-    _notify();
+  return store.request({
+    open: true,
+    mode: 'intent-mixed',
+    intent: args.intent,
+    primaryCount: args.primaryCount,
+    secondaryCount: args.secondaryCount,
+    aspect: 0,
   });
 }
 
@@ -99,36 +91,27 @@ export function requestColumnDiscreteIntentConfirm(args: {
  * - 'cancel' → ακύρωση
  */
 export function requestColumnIsColumnWarn(aspect: number): Promise<ColumnPerimeterConfirmAction> {
-  return new Promise<ColumnPerimeterConfirmAction>((resolve) => {
-    _pendingResolve = resolve;
-    _state = {
-      open: true,
-      mode: 'is-column',
-      intent: 'columns',
-      primaryCount: 0,
-      secondaryCount: 0,
-      aspect,
-    };
-    _notify();
+  return store.request({
+    open: true,
+    mode: 'is-column',
+    intent: 'columns',
+    primaryCount: 0,
+    secondaryCount: 0,
+    aspect,
   });
 }
 
 /** Καλείται από το dialog στο κλικ του χρήστη. */
 export function resolveColumnPerimeterConfirm(action: ColumnPerimeterConfirmAction): void {
-  const resolve = _pendingResolve;
-  _pendingResolve = null;
-  _state = CLOSED;
-  _notify();
-  resolve?.(action);
+  store.resolve(action);
 }
 
 /** useSyncExternalStore-compatible subscribe. */
 export function subscribeColumnPerimeterConfirm(cb: () => void): () => void {
-  _subs.add(cb);
-  return () => _subs.delete(cb);
+  return store.subscribe(cb);
 }
 
 /** useSyncExternalStore-compatible snapshot getter. Ίδια reference μεταξύ αλλαγών. */
 export function getColumnPerimeterConfirmState(): ColumnPerimeterConfirmState {
-  return _state;
+  return store.getSnapshot();
 }

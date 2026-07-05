@@ -16,6 +16,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md
  */
 
+import { createConfirmStore } from '../../stores/createConfirmStore';
+
 export type WallCascadeDeleteAction = 'delete-all' | 'cancel';
 
 export interface WallCascadeDialogState {
@@ -23,15 +25,11 @@ export interface WallCascadeDialogState {
   readonly openingCount: number;
 }
 
-// ─── Module-level state ───────────────────────────────────────────────────────
+// ─── Module-level state (createConfirmStore SSoT) ─────────────────────────────
 
-let _state: WallCascadeDialogState = { open: false, openingCount: 0 };
-let _pendingResolve: ((action: WallCascadeDeleteAction) => void) | null = null;
-const _subs = new Set<() => void>();
+const CLOSED: WallCascadeDialogState = { open: false, openingCount: 0 };
 
-function _notify(): void {
-  _subs.forEach((cb) => cb());
-}
+const store = createConfirmStore<WallCascadeDialogState, WallCascadeDeleteAction>(CLOSED);
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -40,11 +38,7 @@ function _notify(): void {
  * Suspends the delete flow until the user responds via the dialog.
  */
 export function requestWallCascadeDelete(openingCount: number): Promise<WallCascadeDeleteAction> {
-  return new Promise<WallCascadeDeleteAction>((resolve) => {
-    _pendingResolve = resolve;
-    _state = { open: true, openingCount };
-    _notify();
-  });
+  return store.request({ open: true, openingCount });
 }
 
 /**
@@ -52,20 +46,15 @@ export function requestWallCascadeDelete(openingCount: number): Promise<WallCasc
  * Closes the dialog and resolves the pending promise.
  */
 export function resolveWallCascadeDelete(action: WallCascadeDeleteAction): void {
-  const resolve = _pendingResolve;
-  _pendingResolve = null;
-  _state = { open: false, openingCount: 0 };
-  _notify();
-  resolve?.(action);
+  store.resolve(action);
 }
 
 /** useSyncExternalStore-compatible subscribe. */
 export function subscribeWallCascadeDelete(cb: () => void): () => void {
-  _subs.add(cb);
-  return () => _subs.delete(cb);
+  return store.subscribe(cb);
 }
 
 /** useSyncExternalStore-compatible snapshot getter. Same reference between changes. */
 export function getWallCascadeDeleteState(): WallCascadeDialogState {
-  return _state;
+  return store.getSnapshot();
 }

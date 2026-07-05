@@ -16,6 +16,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6b
  */
 
+import { createConfirmStore } from '../../stores/createConfirmStore';
+
 /** Απόκριση χρήστη: συνέχεια (γνωρίζω) / ακύρωση. */
 export type ShearWallExtentAction = 'proceed' | 'cancel';
 
@@ -41,13 +43,7 @@ const CLOSED: ShearWallExtentState = {
   lengthMm: 0,
 };
 
-let _state: ShearWallExtentState = CLOSED;
-let _pendingResolve: ((action: ShearWallExtentAction) => void) | null = null;
-const _subs = new Set<() => void>();
-
-function _notify(): void {
-  _subs.forEach((cb) => cb());
-}
+const store = createConfirmStore<ShearWallExtentState, ShearWallExtentAction>(CLOSED);
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -61,35 +57,26 @@ export function requestShearWallExtentConfirm(args: {
   thicknessMm: number;
   lengthMm: number;
 }): Promise<ShearWallExtentAction> {
-  return new Promise<ShearWallExtentAction>((resolve) => {
-    _pendingResolve = resolve;
-    _state = {
-      open: true,
-      thickTooLarge: args.thickTooLarge,
-      lengthTooLarge: args.lengthTooLarge,
-      thicknessMm: args.thicknessMm,
-      lengthMm: args.lengthMm,
-    };
-    _notify();
+  return store.request({
+    open: true,
+    thickTooLarge: args.thickTooLarge,
+    lengthTooLarge: args.lengthTooLarge,
+    thicknessMm: args.thicknessMm,
+    lengthMm: args.lengthMm,
   });
 }
 
 /** Καλείται από το dialog στο κλικ του χρήστη. */
 export function resolveShearWallExtent(action: ShearWallExtentAction): void {
-  const resolve = _pendingResolve;
-  _pendingResolve = null;
-  _state = CLOSED;
-  _notify();
-  resolve?.(action);
+  store.resolve(action);
 }
 
 /** useSyncExternalStore-compatible subscribe. */
 export function subscribeShearWallExtent(cb: () => void): () => void {
-  _subs.add(cb);
-  return () => _subs.delete(cb);
+  return store.subscribe(cb);
 }
 
 /** useSyncExternalStore-compatible snapshot getter. Ίδια reference μεταξύ αλλαγών. */
 export function getShearWallExtentState(): ShearWallExtentState {
-  return _state;
+  return store.getSnapshot();
 }

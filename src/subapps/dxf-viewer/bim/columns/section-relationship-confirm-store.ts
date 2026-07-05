@@ -17,6 +17,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6c
  */
 
+import { createConfirmStore } from '../../stores/createConfirmStore';
+
 /** Απόκριση χρήστη: συνέχεια (γνωρίζω) / ακύρωση. */
 export type SectionRelationshipAction = 'proceed' | 'cancel';
 
@@ -30,13 +32,7 @@ export interface SectionRelationshipState {
 
 const CLOSED: SectionRelationshipState = { open: false, violationKeys: [] };
 
-let _state: SectionRelationshipState = CLOSED;
-let _pendingResolve: ((action: SectionRelationshipAction) => void) | null = null;
-const _subs = new Set<() => void>();
-
-function _notify(): void {
-  _subs.forEach((cb) => cb());
-}
+const store = createConfirmStore<SectionRelationshipState, SectionRelationshipAction>(CLOSED);
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -47,29 +43,20 @@ function _notify(): void {
 export function requestSectionRelationshipConfirm(args: {
   violationKeys: readonly string[];
 }): Promise<SectionRelationshipAction> {
-  return new Promise<SectionRelationshipAction>((resolve) => {
-    _pendingResolve = resolve;
-    _state = { open: true, violationKeys: [...args.violationKeys] };
-    _notify();
-  });
+  return store.request({ open: true, violationKeys: [...args.violationKeys] });
 }
 
 /** Καλείται από το dialog στο κλικ του χρήστη. */
 export function resolveSectionRelationship(action: SectionRelationshipAction): void {
-  const resolve = _pendingResolve;
-  _pendingResolve = null;
-  _state = CLOSED;
-  _notify();
-  resolve?.(action);
+  store.resolve(action);
 }
 
 /** useSyncExternalStore-compatible subscribe. */
 export function subscribeSectionRelationship(cb: () => void): () => void {
-  _subs.add(cb);
-  return () => _subs.delete(cb);
+  return store.subscribe(cb);
 }
 
 /** useSyncExternalStore-compatible snapshot getter. Ίδια reference μεταξύ αλλαγών. */
 export function getSectionRelationshipState(): SectionRelationshipState {
-  return _state;
+  return store.getSnapshot();
 }

@@ -19,6 +19,7 @@
 
 /** Απόκριση χρήστη: υιοθέτηση μεγέθους / default διατομή / ακύρωση. */
 import type { ColumnSizeTier } from '../validators/column-validator';
+import { createConfirmStore } from '../../stores/createConfirmStore';
 
 export type ColumnAdoptSizeAction = 'adopt' | 'default' | 'cancel';
 
@@ -50,13 +51,7 @@ const CLOSED: ColumnAdoptSizeState = {
   tier: 'ok',
 };
 
-let _state: ColumnAdoptSizeState = CLOSED;
-let _pendingResolve: ((action: ColumnAdoptSizeAction) => void) | null = null;
-const _subs = new Set<() => void>();
-
-function _notify(): void {
-  _subs.forEach((cb) => cb());
-}
+const store = createConfirmStore<ColumnAdoptSizeState, ColumnAdoptSizeAction>(CLOSED);
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -72,37 +67,28 @@ export function requestColumnAdoptSizeConfirm(args: {
   isShearWall: boolean;
   tier: ColumnSizeTier;
 }): Promise<ColumnAdoptSizeAction> {
-  return new Promise<ColumnAdoptSizeAction>((resolve) => {
-    _pendingResolve = resolve;
-    _state = {
-      open: true,
-      widthMm: args.widthMm,
-      depthMm: args.depthMm,
-      defaultWidthMm: args.defaultWidthMm,
-      defaultDepthMm: args.defaultDepthMm,
-      isShearWall: args.isShearWall,
-      tier: args.tier,
-    };
-    _notify();
+  return store.request({
+    open: true,
+    widthMm: args.widthMm,
+    depthMm: args.depthMm,
+    defaultWidthMm: args.defaultWidthMm,
+    defaultDepthMm: args.defaultDepthMm,
+    isShearWall: args.isShearWall,
+    tier: args.tier,
   });
 }
 
 /** Καλείται από το dialog στο κλικ του χρήστη. */
 export function resolveColumnAdoptSize(action: ColumnAdoptSizeAction): void {
-  const resolve = _pendingResolve;
-  _pendingResolve = null;
-  _state = CLOSED;
-  _notify();
-  resolve?.(action);
+  store.resolve(action);
 }
 
 /** useSyncExternalStore-compatible subscribe. */
 export function subscribeColumnAdoptSize(cb: () => void): () => void {
-  _subs.add(cb);
-  return () => _subs.delete(cb);
+  return store.subscribe(cb);
 }
 
 /** useSyncExternalStore-compatible snapshot getter. Ίδια reference μεταξύ αλλαγών. */
 export function getColumnAdoptSizeState(): ColumnAdoptSizeState {
-  return _state;
+  return store.getSnapshot();
 }

@@ -22,6 +22,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6
  */
 
+import { createConfirmStore } from '../../stores/createConfirmStore';
+
 /** Απόκριση χρήστη: μετατροπή σε τοιχίο / κράτα κολόνα / ακύρωση. */
 export type ColumnBecomesWallAction = 'convert' | 'keep' | 'cancel';
 
@@ -50,13 +52,7 @@ const CLOSED: ColumnBecomesWallState = {
   canReclassify: false,
 };
 
-let _state: ColumnBecomesWallState = CLOSED;
-let _pendingResolve: ((action: ColumnBecomesWallAction) => void) | null = null;
-const _subs = new Set<() => void>();
-
-function _notify(): void {
-  _subs.forEach((cb) => cb());
-}
+const store = createConfirmStore<ColumnBecomesWallState, ColumnBecomesWallAction>(CLOSED);
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -70,35 +66,26 @@ export function requestColumnBecomesWallConfirm(args: {
   shortSideMm: number;
   canReclassify: boolean;
 }): Promise<ColumnBecomesWallAction> {
-  return new Promise<ColumnBecomesWallAction>((resolve) => {
-    _pendingResolve = resolve;
-    _state = {
-      open: true,
-      aspect: args.aspect,
-      longSideMm: args.longSideMm,
-      shortSideMm: args.shortSideMm,
-      canReclassify: args.canReclassify,
-    };
-    _notify();
+  return store.request({
+    open: true,
+    aspect: args.aspect,
+    longSideMm: args.longSideMm,
+    shortSideMm: args.shortSideMm,
+    canReclassify: args.canReclassify,
   });
 }
 
 /** Καλείται από το dialog στο κλικ του χρήστη. */
 export function resolveColumnBecomesWall(action: ColumnBecomesWallAction): void {
-  const resolve = _pendingResolve;
-  _pendingResolve = null;
-  _state = CLOSED;
-  _notify();
-  resolve?.(action);
+  store.resolve(action);
 }
 
 /** useSyncExternalStore-compatible subscribe. */
 export function subscribeColumnBecomesWall(cb: () => void): () => void {
-  _subs.add(cb);
-  return () => _subs.delete(cb);
+  return store.subscribe(cb);
 }
 
 /** useSyncExternalStore-compatible snapshot getter. Ίδια reference μεταξύ αλλαγών. */
 export function getColumnBecomesWallState(): ColumnBecomesWallState {
-  return _state;
+  return store.getSnapshot();
 }
