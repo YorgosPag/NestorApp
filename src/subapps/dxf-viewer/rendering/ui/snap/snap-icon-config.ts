@@ -3,12 +3,12 @@
  * Single Source of Truth για snap indicator dimensions
  *
  * @see docs/centralized-systems/reference/adr-index.md#adr-137-snap-icon-geometry
- * @see canvas-v2/overlays/SnapIndicatorOverlay.tsx - SVG-based rendering
- * @see rendering/ui/snap/SnapRenderer.ts - Canvas path-based rendering
+ * @see canvas-v2/overlays/SnapIndicatorGlyph.tsx - the ONE snap-glyph renderer (SVG, shared 2D+3D per ADR-542)
  *
- * RESOLVED INCONSISTENCIES:
- * - Tangent circle ratio: Was 0.5 (SVG) vs 0.6 (Canvas) → UNIFIED to 0.5
- * - Grid dot radius: Was 3px (SVG) vs 2px (Canvas) → UNIFIED to 3px
+ * HISTORY: originally there were TWO renderers (SVG overlay + a Canvas path-based
+ * `SnapRenderer`) with drifting constants (tangent ratio 0.5 vs 0.6, grid dot 3px vs 2px).
+ * The canvas `SnapRenderer`/`LegacySnapAdapter` were DELETED (ADR-137 §Step 2) — this
+ * geometry SSoT now feeds a single SVG glyph, so those inconsistencies cannot reappear.
  */
 
 // 🏢 ADR-133: Re-export stroke width for convenience

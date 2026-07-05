@@ -46,6 +46,45 @@ export function polylineBboxCenter(vertices: readonly Point2D[]): Point2D {
   return { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 };
 }
 
+/** A polyline edge as its two world endpoints (the axis a handle can sit on). */
+export interface PolylineSegment {
+  readonly start: Point2D;
+  readonly end: Point2D;
+}
+
+/**
+ * ADR-561 — the LONGEST edge of a polyline vertex ring (the outgoing segments
+ * `v[i]→v[i+1]`, plus the closing edge when `closed`). The whole-polyline MOVE +
+ * rotation handles of a GENERIC (non-rectangular) polyline sit on THIS segment's
+ * axis at its ¼/¾ points, so they always land ON a drawn edge — for an open corner
+ * (2 lines joined at an angle, Giorgio 2026-07-05) the axis-aligned-bbox CENTRE fell
+ * in empty space and the handles floated. Picking the longest segment keeps ONE clear
+ * axis to place on. Returns `null` for a degenerate ring (<2 vertices or every point
+ * coincident), so the caller can fall back. Pure — zero React / DOM deps.
+ */
+export function longestPolylineSegment(
+  vertices: readonly Point2D[],
+  closed: boolean,
+): PolylineSegment | null {
+  const n = vertices.length;
+  if (n < 2) return null;
+  const edgeCount = closed ? n : n - 1;
+  let best: PolylineSegment | null = null;
+  let bestLenSq = 0;
+  for (let i = 0; i < edgeCount; i++) {
+    const a = vertices[i];
+    const b = vertices[(i + 1) % n];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq > bestLenSq) {
+      bestLenSq = lenSq;
+      best = { start: a, end: b };
+    }
+  }
+  return bestLenSq > 0 ? best : null;
+}
+
 /** Minimal structural view of the scene shapes that carry a polyline vertex ring. */
 interface RectOrPolylineShape {
   readonly type?: string;

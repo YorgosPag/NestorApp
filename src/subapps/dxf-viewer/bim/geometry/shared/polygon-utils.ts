@@ -305,6 +305,16 @@ export function polygonAreaCentroid(vertices: readonly Point3D[]): { x: number; 
   return { x: cx * factor, y: cy * factor };
 }
 
+/**
+ * **Area** centroid ενός **2D** πολυγώνου (Point2D) — SSoT wrapper του {@link polygonAreaCentroid}
+ * (z=0 lift εσωτερικά), mirror του {@link polygon2DCentroid}. Για κοίλα/μη-συμμετρικά footprints
+ * (L/Γ/T/U) δίνει σημείο ΜΕΣΑ στο υλικό, σε αντίθεση με τον μέσο όρο κορυφών που πέφτει στο notch.
+ * Απαιτεί winding order (τα polygon footprints το έχουν). Καταναλώνεται από `bim-characteristic-points`.
+ */
+export function polygon2DAreaCentroid(verts: readonly Point2D[]): Point2D {
+  return polygonAreaCentroid(verts.map((p) => ({ x: p.x, y: p.y, z: 0 })));
+}
+
 // ─── Polygon ↔ axis projection (SSoT) ─────────────────────────────────────────
 //
 // Moved to sibling module `polygon-axis-projection.ts` (N.7.1 500-line cap).
@@ -337,20 +347,28 @@ export function sortPointsAroundCentroid<T extends { x: number; y: number }>(poi
 
 /**
  * Per-edge midpoints of a footprint from its corner points — a midpoint for EVERY side.
- * Corners are ordered around the centroid first (via {@link sortPointsAroundCentroid}), so
- * any corner source (grips, diagonal anchors, polygon vertices) yields the same perimeter
- * midpoints. SSoT for "midpoints on all sides" of a convex BIM footprint (ADR-370). Exact
- * for convex footprints (≈ all BIM); z ignored.
+ *
+ * Two modes (ADR-370 §non-convex-fix 2026-07-05):
+ *   - **default** (`preOrdered` falsy): corners are angular-sorted around the centroid first
+ *     (via {@link sortPointsAroundCentroid}), so any UNORDERED convex source (grips, diagonal
+ *     anchors, 4 bbox corners) yields the same perimeter midpoints. Exact for CONVEX only.
+ *   - **`preOrdered: true`**: corners are ALREADY in polygon winding order (π.χ. a column /
+ *     slab footprint's `vertices`). The angular sort is SKIPPED — for a NON-convex footprint
+ *     (L/Γ/T/U) the angular sort reshuffles vertices and produces edges that cross the empty
+ *     notch → midpoints land OUTSIDE the shape. Pass `preOrdered` to honour the real edges.
+ *
+ * z ignored.
  */
 export function footprintEdgeMidpoints(
   corners: readonly { x: number; y: number }[],
+  options?: { readonly preOrdered?: boolean },
 ): { x: number; y: number }[] {
   if (corners.length < 2) return [];
   if (corners.length === 2) {
     const [a, b] = corners;
     return [{ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }];
   }
-  const ordered = sortPointsAroundCentroid(corners);
+  const ordered = options?.preOrdered ? corners : sortPointsAroundCentroid(corners);
   return ordered.map((c, i) => {
     const next = ordered[(i + 1) % ordered.length]!;
     return { x: (c.x + next.x) / 2, y: (c.y + next.y) / 2 };

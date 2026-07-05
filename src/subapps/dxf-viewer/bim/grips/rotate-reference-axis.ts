@@ -32,7 +32,7 @@ import type { Entity } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
 import { resolveMoveGlyphFrame } from './move-glyph-frame';
 import { rotateVector } from './grip-math';
-import { rectOrPolylineVertices, asOrientedRect } from '../../systems/polyline/rectangle-detect';
+import { rectOrPolylineVertices, asOrientedRect, longestPolylineSegment, polylineBboxCenter } from '../../systems/polyline/rectangle-detect';
 
 /**
  * World-unit threshold separating a pivot that sits OFF the axis of symmetry (so the
@@ -40,6 +40,25 @@ import { rectOrPolylineVertices, asOrientedRect } from '../../systems/polyline/r
  * direction is ambiguous, default to −major). Tiny: real grips project at ½·dimension.
  */
 const MAJOR_AXIS_PROJ_EPS = 1e-6;
+
+/**
+ * The SINGLE «orient the reference baseline toward the entity body» rule, shared by
+ * EVERY reference family (wall/box via move-glyph-frame, rectangle, generic polyline)
+ * so they can never drift. Given the `pivot`, a UNIT `majorUnit` axis and the entity
+ * `centre`, returns the baseline anchor one unit from the pivot: keep `+majorUnit` only
+ * when it points clearly toward the centre (projection > ε), else `−majorUnit` (it points
+ * away, OR the pivot sits on the axis of symmetry so projection ≈ 0 → the direction is
+ * ambiguous and we default to −major). `centre === null` → −major (no body reference).
+ * This is the exact wall 9-grip truth-table Giorgio specified, expressed once.
+ */
+function anchorTowardBody(pivot: Point2D, majorUnit: Point2D, centre: Point2D | null): Point2D {
+  let dir: Point2D = { x: -majorUnit.x, y: -majorUnit.y };
+  if (centre) {
+    const proj = (centre.x - pivot.x) * majorUnit.x + (centre.y - pivot.y) * majorUnit.y;
+    if (proj > MAJOR_AXIS_PROJ_EPS) dir = majorUnit;
+  }
+  return { x: pivot.x + dir.x, y: pivot.y + dir.y };
+}
 
 interface BBoxView { readonly min: { x: number; y: number }; readonly max: { x: number; y: number }; }
 
@@ -93,8 +112,8 @@ function axisYIsMajor(entity: Entity): boolean {
 /**
  * ADR-561 — the rectangle sibling of the wall's major-axis reference. Recovers the
  * oriented rect frame from the entity's vertices (SSoT `asOrientedRect`) and returns the
- * baseline anchor along its MAJOR side (the longer edge), flipped toward the box centre by
- * the SAME rule the generic path uses (`proj > ε ? +major : −major`). Returns `null` for a
+ * baseline anchor along its MAJOR side (the longer edge), oriented toward the box centre
+ * via the shared `anchorTowardBody` SSoT. Returns `null` for a
  * non-rectangle (⇒ caller falls through to the generic move-glyph-frame path — zero
  * regression to line/arc/generic-polyline). One axis, coaxial with a side, exactly like the
  * wall — the existing `paintDirectionArc` then draws that single dashed 0° baseline.
@@ -108,10 +127,34 @@ function rectReferenceAnchor(entity: Entity, pivot: Point2D): Point2D | null {
   // frame's local +X runs along the first edge (halfWidth); +Y along the second (halfLength).
   const majorDeg = rect.halfLength > rect.halfWidth ? rect.rotationDeg + 90 : rect.rotationDeg;
   const major = rotateVector({ x: 1, y: 0 }, majorDeg);
-  let dir: Point2D = { x: -major.x, y: -major.y };
-  const proj = (rect.center.x - pivot.x) * major.x + (rect.center.y - pivot.y) * major.y;
-  if (proj > MAJOR_AXIS_PROJ_EPS) dir = major;
-  return { x: pivot.x + dir.x, y: pivot.y + dir.y };
+  return anchorTowardBody(pivot, major, rect.center);
+}
+
+/**
+ * ADR-561 — the GENERIC-polyline sibling of `rectReferenceAnchor`. A polyline made of
+ * 2+ lines joined at an angle has NO single oriented rect frame (`asOrientedRect` →
+ * null) and `resolveMoveGlyphFrame` hands it a world-aligned IDENTITY → a horizontal
+ * baseline (wrong). Instead the major axis = the direction of the LONGEST segment (the
+ * SAME segment the move/rotation grips sit on, `longestPolylineSegment`), oriented toward
+ * the polyline body (bbox centre) via the shared `anchorTowardBody` SSoT the wall /
+ * rectangle also use — so the dashed reference line is coaxial with the dominant line
+ * (Giorgio 2026-07-05: «ο άξονας αναφοράς να ταυτίζεται με τον άξονα της γραμμής, πάντοτε»).
+ * Returns `null` for a non-polyline / degenerate ring (⇒ caller falls through).
+ */
+function polylineReferenceAnchor(entity: Entity, pivot: Point2D): Point2D | null {
+  const type = (entity as { type?: string }).type;
+  if (type !== 'polyline' && type !== 'lwpolyline') return null;
+  const vertices = rectOrPolylineVertices(entity);
+  if (!vertices || vertices.length < 2) return null;
+  const closed = (entity as { closed?: boolean }).closed ?? false;
+  const seg = longestPolylineSegment(vertices, closed);
+  if (!seg) return null;
+  const dx = seg.end.x - seg.start.x;
+  const dy = seg.end.y - seg.start.y;
+  const len = Math.hypot(dx, dy);
+  if (len < MAJOR_AXIS_PROJ_EPS) return null;
+  const major: Point2D = { x: dx / len, y: dy / len };
+  return anchorTowardBody(pivot, major, polylineBboxCenter(vertices));
 }
 
 /**
@@ -139,19 +182,16 @@ export function resolveRotateReferenceAnchor(entity: Entity, pivot: Point2D): Po
   const rectAnchor = rectReferenceAnchor(entity, pivot);
   if (rectAnchor) return rectAnchor;
 
+  // ADR-561 — a GENERIC polyline (2+ lines joined at an angle) is coaxial with its
+  // LONGEST segment; without this it would take the world-aligned IDENTITY frame below
+  // and the dashed reference baseline would be horizontal (Giorgio 2026-07-05).
+  const polyAnchor = polylineReferenceAnchor(entity, pivot);
+  if (polyAnchor) return polyAnchor;
+
   const frame = resolveMoveGlyphFrame(entity);
   if (!frame) return null;
   const major = axisYIsMajor(entity) ? frame.axisY : frame.axisX;
-  // Direction along the major axis, toward the body. `major` is kept ONLY when it
-  // points clearly toward the centre (projection > ε); otherwise — it points away
-  // OR the pivot sits on the axis of symmetry (projection ≈ 0) — use −major. For a
-  // wall this reproduces the Giorgio truth-table exactly: east-side grips → west,
-  // west-side grips → east, central-X grips (mid-N / centre / mid-S) → west (−major).
-  let dir: Point2D = { x: -major.x, y: -major.y };
-  const centre = entityCentre(entity);
-  if (centre) {
-    const proj = (centre.x - pivot.x) * major.x + (centre.y - pivot.y) * major.y;
-    if (proj > MAJOR_AXIS_PROJ_EPS) dir = major;
-  }
-  return { x: pivot.x + dir.x, y: pivot.y + dir.y };
+  // Orient along the major axis toward the body via the shared SSoT (the wall 9-grip
+  // truth-table: east-side grips → west, west-side grips → east, central-X grips → −major).
+  return anchorTowardBody(pivot, major, entityCentre(entity));
 }

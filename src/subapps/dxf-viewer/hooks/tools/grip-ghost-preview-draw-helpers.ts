@@ -13,9 +13,13 @@
  * @see ADR-363 / ADR-507 / ADR-543 — the individual readout/co-move behaviours
  */
 
-import type { ViewTransform, Viewport } from '../../rendering/types/Types';
+import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { AnySceneEntity, Entity, SceneLayer } from '../../types/entities';
-import { isLineEntity, isColumnEntity, isWallEntity } from '../../types/entities';
+import { isLineEntity, isPolylineEntity, isColumnEntity, isWallEntity } from '../../types/entities';
+// ADR-357/397/561 — endpoint-reshape 🟢/🔴 direction arc: SAME centralized paint the wall
+// rotation + line/polyline endpoint reshape share (signed swept angle, zero divergence).
+import { paintDirectionArc } from '../../canvas-v2/preview-canvas/direction-arc-paint';
+import { rotateSweepDegFromDirs } from '../grips/grip-projections';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { drawGhostEntity, GHOST_DEFAULTS } from '../../rendering/ghost';
 // ADR-449 — the moving member body ghost renders through the REAL entity renderer (WYSIWYG),
@@ -78,6 +82,67 @@ export function drawDashedSegment(
   ctx.lineTo(toS.x, toS.y);
   ctx.stroke();
   ctx.restore();
+}
+
+/**
+ * ADR-357/397/561 — the SSoT «endpoint-reshape 🟢/🔴 direction arc». Given the FIXED pivot,
+ * the ORIGINAL moved point and the NEW moved point, it derives the signed swept angle via the
+ * shared `rotateSweepDegFromDirs` and paints the centralized `paintDirectionArc`. ONE glue for
+ * BOTH the plain-line endpoint reshape AND the polyline endpoint-vertex reshape — they differ
+ * only in how the fixed/moved points are picked, so the arc can never diverge between them.
+ */
+function paintEndpointReshapeArc(
+  ctx: CanvasRenderingContext2D,
+  fixedW: Point2D,
+  origMovedW: Point2D,
+  movedW: Point2D,
+  t: ViewTransform,
+  vp: Viewport,
+): void {
+  const refDir = { x: origMovedW.x - fixedW.x, y: origMovedW.y - fixedW.y };
+  const curDir = { x: movedW.x - fixedW.x, y: movedW.y - fixedW.y };
+  paintDirectionArc(ctx, fixedW, origMovedW, movedW, rotateSweepDegFromDirs(refDir, curDir), t, vp);
+}
+
+/**
+ * ADR-357/397/561 — endpoint RESHAPE direction arc(s) for BOTH a plain line and an OPEN
+ * polyline's true endpoint. Dragging such an endpoint pivots the single adjacent segment about
+ * its ONE fixed neighbour → the SAME centralized 🟢/🔴 `paintDirectionArc` + live signed angle
+ * the wall rotation uses. The two branches differ only in how the fixed/orig/moved points are
+ * picked, so the arc can never diverge. No-op for move/hot-grip/rotation grips (handled
+ * elsewhere) or interior/corner polyline vertices (two neighbours → no single pivot).
+ */
+export function paintGripEndpointReshapeArcs(
+  ctx: CanvasRenderingContext2D,
+  dp: DxfGripDragPreview,
+  entity: Entity,
+  transformed: Entity,
+  t: ViewTransform,
+  vp: Viewport,
+): void {
+  if (dp.movesEntity || dp.hotGrip || dp.rotatePivot || transformed === entity) return;
+
+  if (isLineEntity(entity) && isLineEntity(transformed)) {
+    const startMoved =
+      transformed.start.x !== entity.start.x || transformed.start.y !== entity.start.y;
+    const fixedW = startMoved ? transformed.end : transformed.start;
+    const movedW = startMoved ? transformed.start : transformed.end;
+    const origMovedW = startMoved ? entity.start : entity.end;
+    paintEndpointReshapeArc(ctx, fixedW, origMovedW, movedW, t, vp);
+    return;
+  }
+
+  if (isPolylineEntity(entity) && isPolylineEntity(transformed)) {
+    const oPoly = entity as unknown as { vertices: Point2D[]; closed: boolean };
+    const tPoly = transformed as unknown as { vertices: Point2D[] };
+    const i = dp.gripIndex;
+    const n = oPoly.vertices.length;
+    const isOpenEndpoint = !oPoly.closed && n >= 2 && (i === 0 || i === n - 1);
+    if (isOpenEndpoint && i < tPoly.vertices.length) {
+      const pivotW = i === 0 ? oPoly.vertices[1] : oPoly.vertices[n - 2];
+      paintEndpointReshapeArc(ctx, pivotW, oPoly.vertices[i], tPoly.vertices[i], t, vp);
+    }
+  }
 }
 
 /**

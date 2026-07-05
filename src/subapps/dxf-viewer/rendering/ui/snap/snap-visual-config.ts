@@ -66,9 +66,13 @@ export const SNAP_COLORS: Record<ExtendedSnapType, string> = {
   [ExtendedSnapType.DIM_LINE]:      SNAP_MARKER_COLORS.DIM,
 
   // ── BIM family (ADR-370 / 363 / 408) ─────────────────────────────────────────
-  [ExtendedSnapType.BIM_CORNER]:        SNAP_MARKER_COLORS.BIM_CORNER,
-  [ExtendedSnapType.BIM_MIDPOINT]:      SNAP_MARKER_COLORS.BIM_MIDPOINT,
-  [ExtendedSnapType.BIM_CENTER]:        SNAP_MARKER_COLORS.BIM_CENTER,
+  // ADR-370 §unified-glyph (2026-07-05): μια BIM γωνία/μέσο/κέντρο είναι το ΙΔΙΟ ΕΙΔΟΣ
+  // σημείου με το γεωμετρικό endpoint/midpoint/center → μοιράζεται και το ΙΔΙΟ χρώμα
+  // (κόκκινο/πράσινο/μπλε), όπως Revit/AutoCAD. Η διάκριση οντότητας ζει στην ετικέτα.
+  // Τα wall-face/mep-connector είναι ξεχωριστά ΕΙΔΗ σημείου → κρατούν το δικό τους χρώμα.
+  [ExtendedSnapType.BIM_CORNER]:        SNAP_MARKER_COLORS.ENDPOINT,
+  [ExtendedSnapType.BIM_MIDPOINT]:      SNAP_MARKER_COLORS.MIDPOINT,
+  [ExtendedSnapType.BIM_CENTER]:        SNAP_MARKER_COLORS.CENTER,
   [ExtendedSnapType.BIM_WALL_FACE]:     SNAP_MARKER_COLORS.BIM_WALL_FACE,
   [ExtendedSnapType.BIM_MEP_CONNECTOR]: SNAP_MARKER_COLORS.BIM_MEP_CONNECTOR,
 

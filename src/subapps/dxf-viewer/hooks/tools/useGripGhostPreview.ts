@@ -32,7 +32,7 @@
  */
 
 import { useCallback } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { AnySceneEntity, Entity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -40,6 +40,7 @@ import type { useLevels } from '../../systems/levels';
 import type { DxfGripDragPreview } from '../grip-computation';
 import {
   applyEntityPreview,
+  normalizePreviewEntity,
   drawGhostEntity,
   GHOST_DEFAULTS,
 } from '../../rendering/ghost';
@@ -58,7 +59,7 @@ import { toEntityPreviewTransform } from './grip-drag-preview-transform';
 import { sceneDistanceToMeters, formatMoveAngle } from '../../bim/labels/move-readout';
 import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-363 — line endpoint RESHAPE readout (length + angle, AutoCAD dynamic input).
-import { isLineEntity, isWallEntity } from '../../types/entities';
+import { isLineEntity, isPolylineEntity, isWallEntity } from '../../types/entities';
 import type { HatchEntity, LineEntity } from '../../types/entities';
 // ADR-508/362 — full ISO perpendicular offset dimension (αρχική↔φάντασμα) στη whole-line MOVE της
 // κεντρικής λαβής· ΙΔΙΟΣ overlay dim SSoT με το body-drag → μία όψη, μηδέν διπλότυπο. ORTHO-gated.
@@ -91,14 +92,16 @@ import {
   isStructuralFinishMember,
   drawColumnAspectWallWarning,
   drawMemberGripHud,
+  paintGripEndpointReshapeArcs,
 } from './grip-ghost-preview-draw-helpers';
 // ADR-040 Φ12 — SSoT grip delta resolvers (shared with buildDxfDragPreview/commit), so
 // the live synchronous ghost derives translate + rotation identically from the effective-world.
-import { resolveGripTranslateDelta, resolveLiveRotationFromCursor, rotateSweepDegFromDirs } from '../grips/grip-projections';
+import { resolveGripTranslateDelta, resolveLiveRotationFromCursor } from '../grips/grip-projections';
 // ADR-357/363/560 — plain-line grip Object-Snap-Tracking traces RESOLVED-IN-DRAW (mirror body-drag).
 // Anchors from the line SSoT; the SAME pure resolve + paint the dimension grip + drawing flows use.
 import { paintActionAlignmentTracking, resolveActionAlignmentTracking } from '../dimensions/dim-alignment-tracking';
 import { getLineGripAlignmentAnchors } from '../../systems/line/line-grips';
+import { getPolylineGripAlignmentAnchors } from '../../systems/polyline/polyline-grips';
 // ADR-560 §OSNAP-priority — όταν το OSNAP κουμπώνει σε χαρακτηριστικό σημείο, κρύβουμε τις κυανές
 // γραμμές ευθυγράμμισης (φαίνεται το OSNAP marker □/△/○ αντ' αυτών· Giorgio 2026-07-04).
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
@@ -192,7 +195,14 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       }
     }
 
-    const entity = getEntity(dp.entityId);
+    const rawEntity = getEntity(dp.entityId);
+    if (!rawEntity) return;
+    // ADR-186/561 — a joined-lines result is a scene `'lwpolyline'`; getEntity returns the RAW
+    // scene entity but the whole ghost pipeline (applyEntityPreview + model builder) is keyed on
+    // `'polyline'`. Normalize the discriminator so the ghost + alignment traces + direction arc
+    // all fire exactly as they do for a standard polyline (Giorgio 2026-07-05 «να εμφανίζονται
+    // πάντοτε τα φαντάσματα»). Shape is identical, so every downstream read is unaffected.
+    const entity = normalizePreviewEntity(rawEntity as unknown as DxfEntityUnion) as unknown as typeof rawEntity;
     if (!entity) return;
 
     const vp = viewport;
@@ -303,6 +313,13 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     } else if (isLineEntity(entity as unknown as Entity)) {
       const line = entity as unknown as { start: Point2D; end: Point2D };
       alignAnchors = getLineGripAlignmentAnchors(dp.gripIndex, dp.lineGripKind, line, dp.anchorPos);
+    } else if (isPolylineEntity(entity as unknown as Entity)) {
+      // ADR-561 — polyline VERTEX reshape (e.g. moving an endpoint of two joined lines):
+      // track off the FIXED neighbour vertices via the polyline SSoT, so the SAME centralized
+      // white/yellow AutoAlign + Polar traces AND the cyan ambient-neighbour hints light up
+      // exactly as they do for a plain line (Giorgio 2026-07-05).
+      const poly = entity as unknown as { vertices: Point2D[]; closed: boolean };
+      alignAnchors = getPolylineGripAlignmentAnchors(dp.gripIndex, poly.vertices, poly.closed);
     }
     // OSNAP-priority: όσο κουμπώνει χαρακτηριστικό σημείο, το OSNAP marker αναλαμβάνει — καμία κυανή.
     if (effectiveCursor && alignAnchors && !getImmediateSnap()?.found) {
@@ -323,28 +340,13 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       paintLineParallelOffsetDim(ctx, entity as unknown as LineEntity, dp.delta, t, vp, resolveSceneUnits(offScene));
     }
 
-    // ADR-357/397 — endpoint RESHAPE direction arc: dragging a line's endpoint pivots the segment
-    // about the FIXED vertex, so this shows the SAME centralized 🟢/🔴 direction arc + live signed
-    // angle the wall rotation uses (`paintDirectionArc`) — replacing the old ad-hoc grey arc +
-    // angle/length pills (Giorgio «το ΙΔΙΟ που χρησιμοποιεί ο τοίχος»). pivot = fixed vertex,
-    // baseline = the ORIGINAL segment direction, cursor = the new moved endpoint. Distance shows
-    // via the alignment tooltip above when the endpoint snaps to a trace. Excludes move/hot-grip/
-    // rotation (handled above). The guide line is the ghost itself.
-    const origLine = entity as unknown as Entity;
-    const tLine = transformed as unknown as Entity;
-    if (
-      !dp.movesEntity && !dp.hotGrip && !dp.rotatePivot &&
-      transformed !== entity && isLineEntity(origLine) && isLineEntity(tLine)
-    ) {
-      const startMoved = tLine.start.x !== origLine.start.x || tLine.start.y !== origLine.start.y;
-      const fixedW = startMoved ? tLine.end : tLine.start;
-      const movedW = startMoved ? tLine.start : tLine.end;
-      const origMovedW = startMoved ? origLine.start : origLine.end;
-      const refDir = { x: origMovedW.x - fixedW.x, y: origMovedW.y - fixedW.y };
-      const curDir = { x: movedW.x - fixedW.x, y: movedW.y - fixedW.y };
-      const sweepDeg = rotateSweepDegFromDirs(refDir, curDir);
-      paintDirectionArc(ctx, fixedW, origMovedW, movedW, sweepDeg, t, vp);
-    }
+    // ADR-357/397/561 — endpoint RESHAPE direction arc for a plain line OR an OPEN polyline's
+    // true endpoint: the SAME centralized 🟢/🔴 `paintDirectionArc` + live signed angle the wall
+    // rotation uses (SSoT helper). Excludes move/hot-grip/rotation (handled above) and interior
+    // polyline vertices (two neighbours → no single pivot). The guide line is the ghost itself.
+    paintGripEndpointReshapeArcs(
+      ctx, dp, entity as unknown as Entity, transformed as unknown as Entity, t, vp,
+    );
 
     // ADR-507 Φ5 A3b/A4 — gradient-origin/angle drag: η λαβή ακολουθεί τον κέρσορα.
     // Σχεδιάζεται ΑΝΕΞΑΡΤΗΤΑ από το delta (ακόμα & στο mousedown πριν την κίνηση) ώστε να

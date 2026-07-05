@@ -137,7 +137,10 @@ describe('getBimCharacteristicPoints — slab', () => {
     const r = getBimCharacteristicPoints(makeSlab());
     expect(r.corners).toHaveLength(4);
     expect(r.midpoints).toHaveLength(4);
-    expect(r.center).toEqual({ x: 500, y: 500 });
+    // ADR-370 §non-convex-fix: area (shoelace) centroid — για convex ≈ vertex-mean με
+    // αμελητέο floating error, άρα toBeCloseTo αντί ακριβούς toEqual.
+    expect(r.center!.x).toBeCloseTo(500, 6);
+    expect(r.center!.y).toBeCloseTo(500, 6);
     expect(r.labelRoot).toBe('slab');
   });
 
@@ -180,7 +183,7 @@ describe('getBimCharacteristicPoints — column', () => {
     expect(r.labelRoot).toBeNull();
   });
 
-  it('L-shape column: 6 REAL footprint corners (incl. reentrant) + 6 edge midpoints + centroid, no label', () => {
+  it('L-shape column: 6 REAL footprint corners (incl. reentrant) + 6 edge midpoints + centroid + label "column"', () => {
     // ADR-363 Φ1G.5 — the stationary L exposes its ACTUAL vertices (not the 4 bbox
     // corners) so a neighbour can magnet onto the notch/reentrant corner too.
     const r = getBimCharacteristicPoints(makeColumn('L-shape'));
@@ -193,7 +196,22 @@ describe('getBimCharacteristicPoints — column', () => {
     const minX = Math.min(...xs), maxX = Math.max(...xs);
     const minY = Math.min(...ys), maxY = Math.max(...ys);
     expect(r.corners.some((c) => c.x > minX && c.x < maxX && c.y > minY && c.y < maxY)).toBe(true);
-    expect(r.labelRoot).toBeNull();
+    // ADR-370 §L-label — μια L κολόνα δείχνει πλέον «Γωνία/Μέσο/Κέντρο κολόνας».
+    expect(r.labelRoot).toBe('column');
+    // ADR-370 §non-convex-fix — REGRESSION GUARD: τα midpoints είναι στις ΠΡΑΓΜΑΤΙΚΕΣ ακμές
+    // (mid του κάθε ζεύγους διαδοχικών κορυφών), ΟΧΙ angular-sorted στο κενό/notch. Πριν το
+    // fix, το angular sort έδινε διαφορετικά (εκτός σχήματος) midpoints → αυτό θα αποτύγχανε.
+    const expectedMids = r.corners.map((c, i) => {
+      const next = r.corners[(i + 1) % r.corners.length]!;
+      return { x: (c.x + next.x) / 2, y: (c.y + next.y) / 2 };
+    });
+    expect(r.midpoints).toEqual(expectedMids);
+    // §non-convex-fix — το κέντρο (area centroid) μένει ΜΕΣΑ στο bounding box (ο μέσος όρος
+    // κορυφών θα μπορούσε να ξεφύγει· εδώ τουλάχιστον εγγυόμαστε εντός-bbox).
+    expect(r.center!.x).toBeGreaterThanOrEqual(minX);
+    expect(r.center!.x).toBeLessThanOrEqual(maxX);
+    expect(r.center!.y).toBeGreaterThanOrEqual(minY);
+    expect(r.center!.y).toBeLessThanOrEqual(maxY);
   });
 });
 

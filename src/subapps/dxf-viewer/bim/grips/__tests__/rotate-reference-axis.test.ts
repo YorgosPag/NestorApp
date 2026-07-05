@@ -152,6 +152,33 @@ describe('resolveRotateReferenceAnchor — RECTANGLE (ADR-561, wall parity, ONE 
   });
 });
 
+describe('resolveRotateReferenceAnchor — GENERIC polyline (2 lines joined at an angle, ADR-561)', () => {
+  // Giorgio 2026-07-05 repro: an open «L» — vertical leg A→P (len 100) is the LONGEST
+  // segment, horizontal leg P→B (len 60). bbox x∈[0,60] y∈[0,100], centre (30,50). The
+  // reference axis must be COAXIAL with the dominant (vertical) leg, NEVER horizontal.
+  const A = { x: 0, y: 100 }, P = { x: 0, y: 0 }, B = { x: 60, y: 0 };
+  const lshape = { type: 'lwpolyline', vertices: [A, P, B], closed: false } as unknown as Entity;
+
+  it('pivot at the corner P → reference runs UP the vertical leg toward the body (+Y), not horizontal', () => {
+    const anchor = resolveRotateReferenceAnchor(lshape, P)!;
+    expect(anchor).not.toBeNull();
+    near(anchor.x - P.x, 0);  // no X component → coaxial with the vertical leg (NOT world-X)
+    near(anchor.y - P.y, 1);  // +Y toward A / the body
+  });
+
+  it('pivot at the free end A → reference runs DOWN the leg toward the body (−Y), coaxial', () => {
+    const anchor = resolveRotateReferenceAnchor(lshape, A)!;
+    near(anchor.x - A.x, 0);
+    near(anchor.y - A.y, -1);
+  });
+
+  it('the baseline is NEVER the world-horizontal IDENTITY axis (the pre-fix bug)', () => {
+    const anchor = resolveRotateReferenceAnchor(lshape, P)!;
+    // Pre-fix it returned pivot + (1,0) (world +X). Assert the X unit is gone.
+    expect(Math.abs(anchor.x - P.x)).toBeLessThan(1e-6);
+  });
+});
+
 describe('resolveRotateReferenceAnchor — no orientation → null (legacy fallback)', () => {
   it('params-less non-line primitive (circle) → null', () => {
     const circle = { id: 'X', type: 'circle', center: { x: 0, y: 0 }, radius: 50 } as unknown as Entity;

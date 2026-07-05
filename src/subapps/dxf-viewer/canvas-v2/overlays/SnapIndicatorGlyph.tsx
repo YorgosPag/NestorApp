@@ -3,9 +3,12 @@
  * (glyph + BIM label + type colour). ADR-542.
  *
  * Extracted from `SnapIndicatorOverlay` so BOTH the 2D canvas overlay AND the 3D BIM
- * viewport overlay (`BimSnapIndicatorOverlay3D`) draw the SAME ■/△/┘/▲/⊕ glyph, the SAME
+ * viewport overlay (`BimSnapIndicatorOverlay3D`) draw the SAME glyph, the SAME
  * «Γωνία/Μέσο/Κέντρο κολώνας» label (`resolveBimSnapLabelText`), and the SAME per-type
- * colour (`resolveSnapColor`). The ONLY thing the two callers differ in is how they project
+ * colour (`resolveSnapColor`). ADR-370 §unified-glyph (2026-07-05): a BIM corner/midpoint/
+ * centre reuses the SAME ■/△/○ symbol as the geometric endpoint/midpoint/centre (Revit/
+ * AutoCAD convention) — the entity noun lives ONLY in the label, not in a distinct shape.
+ * The ONLY thing the two callers differ in is how they project
  * the snap point to screen pixels: the 2D wrapper uses `CoordinateTransforms.worldToScreen`,
  * the 3D wrapper projects through the live Three.js camera. This component takes an already
  * SCREEN-SPACE position — it never projects. One render code = one source of truth.
@@ -50,8 +53,12 @@ export function SnapShape({ type, color }: { type: string; color: string }) {
   const half = SNAP_INDICATOR_HALF;
 
   switch (type.toLowerCase()) {
-    // ■ ENDPOINT: Square - AutoCAD/MicroStation standard
+    // ■ ENDPOINT: Square - AutoCAD/MicroStation standard.
+    // ADR-370 §unified-glyph (2026-07-05): μια BIM «γωνία» (`bim_corner`) είναι σημείο
+    // endpoint-class → ΙΔΙΟ ■ σύμβολο με το γεωμετρικό endpoint, όπως Revit/AutoCAD. Η
+    // σημασιολογία («Γωνία κολώνας») ζει στην ετικέτα (`bimLabel`) — ΟΧΙ σε ξεχωριστό σχήμα.
     case 'endpoint':
+    case 'bim_corner':
       return (
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           <rect
@@ -66,8 +73,10 @@ export function SnapShape({ type, color }: { type: string; color: string }) {
         </svg>
       );
 
-    // △ MIDPOINT: Triangle - AutoCAD/MicroStation standard
+    // △ MIDPOINT: Triangle - AutoCAD/MicroStation standard.
+    // ADR-370 §unified-glyph: `bim_midpoint` = midpoint-class σημείο → ΙΔΙΟ △ (outline).
     case 'midpoint':
+    case 'bim_midpoint':
       return (
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           <polygon
@@ -79,8 +88,10 @@ export function SnapShape({ type, color }: { type: string; color: string }) {
         </svg>
       );
 
-    // ○ CENTER: Circle - AutoCAD/MicroStation standard
+    // ○ CENTER: Circle - AutoCAD/MicroStation standard.
+    // ADR-370 §unified-glyph: `bim_center` = center-class σημείο → ΙΔΙΟ ○.
     case 'center':
+    case 'bim_center':
       return (
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           <circle
@@ -181,57 +192,13 @@ export function SnapShape({ type, color }: { type: string; color: string }) {
         </svg>
       );
 
-    // ⊕ BIM_CENTER: Circle + crosshair — structural centroid (column/slab/foundation/…).
-    // Revit/Tekla plan-view convention: center shown as circle with cross (ADR-370).
-    case 'bim_center':
-      return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <circle
-            cx={half}
-            cy={half}
-            r={half - strokeWidth}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-          />
-          <line x1={half} y1={strokeWidth} x2={half} y2={size - strokeWidth} stroke={color} strokeWidth={strokeWidth} />
-          <line x1={strokeWidth} y1={half} x2={size - strokeWidth} y2={half} stroke={color} strokeWidth={strokeWidth} />
-        </svg>
-      );
-
-    // ┘ BIM_CORNER: L-bracket — ADR-370 generic BIM structural-corner snap (one glyph for
-    // wall/beam/slab/column/opening/foundation/…). The per-entity label comes from the
-    // candidate description; «περίεργα σχήματα» emit no description → glyph ΧΩΡΙΣ text.
-    // Industry convention: right-angle bracket at corner indicates structural face corner.
-    case 'bim_corner':
-      return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <polyline
-            points={`${strokeWidth},${strokeWidth} ${strokeWidth},${size - strokeWidth} ${size - strokeWidth},${size - strokeWidth}`}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-            strokeLinecap="square"
-            strokeLinejoin="miter"
-          />
-        </svg>
-      );
-
-    // ▲ BIM_MIDPOINT: Filled triangle — ADR-370 BIM edge/axis midpoint («Μέσο τοίχου»…).
-    // Distinct from the generic △ midpoint (outline) — a filled triangle reads as
-    // "structural BIM midpoint", mirroring the ┘ corner / ⊕ centre BIM family.
-    case 'bim_midpoint':
-      return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <polygon
-            points={`${half},${strokeWidth} ${size - strokeWidth},${size - strokeWidth} ${strokeWidth},${size - strokeWidth}`}
-            fill={color}
-            stroke={color}
-            strokeWidth={strokeWidth}
-            strokeLinejoin="miter"
-          />
-        </svg>
-      );
+    // ⊕/┘/▲ BIM_CENTER / BIM_CORNER / BIM_MIDPOINT — ADR-370 §unified-glyph (2026-07-05):
+    // ΔΕΝ έχουν πλέον ξεχωριστό σχήμα. Μια BIM γωνία/μέσο/κέντρο είναι το ΙΔΙΟ ΕΙΔΟΣ σημείου
+    // με το γεωμετρικό endpoint/midpoint/center → μοιράζονται το ίδιο ■/△/○ glyph (βλ. τα
+    // ενοποιημένα `case 'endpoint'|'bim_corner'`, `case 'midpoint'|'bim_midpoint'`,
+    // `case 'center'|'bim_center'` παραπάνω). Η διάκριση οντότητας («Γωνία κολώνας») ζει
+    // ΜΟΝΟ στην ετικέτα `bimLabel` — Revit/AutoCAD convention. Τα connector/wall-face/text/
+    // rotation παραμένουν ξεχωριστά ΕΙΔΗ σημείου (δικό τους glyph, κάτω).
 
     // ◇ BIM_MEP_CONNECTOR: Diamond + center dot — ADR-408 Φ9 MEP connector attach point.
     // Distinct from ⊕ column centre (circle+cross) and ■ endpoint; mirrors the

@@ -26,7 +26,9 @@ import {
   isSpaceSeparatorEntity,
   isMepUnderfloorEntity,
 } from '../../types/entities';
-import { getColumnAnchorWorldPoints } from '../columns/column-anchors';
+// ADR-370 §κεντρικοποίηση (2026-07-05): οι column key points διαβάζονται από το ΕΝΑ
+// characteristic-point SSoT (πραγματικές footprint γωνίες), ΟΧΙ από τα 9 bbox anchors.
+import { getBimCharacteristicPointsOfCategory } from './bim-characteristic-points';
 
 /**
  * Κύρια vertex/endpoint collection για BIM entity (2D projection).
@@ -36,7 +38,8 @@ import { getColumnAnchorWorldPoints } from '../columns/column-anchors';
  * - slab-opening → outline vertices
  * - opening   → outline vertices (4-vertex cutout rectangle)
  * - wall      → axis endpoints (straight/curved) OR all spine vertices (polyline)
- * - column    → 9 anchor world points (center + 8 cardinals/diagonals)
+ * - column    → REAL footprint corners (§κεντρικοποίηση ADR-370) — for L/Γ/T/U these are the
+ *               actual reentrant vertices, NOT the 9 bbox anchors (which fell in the empty notch).
  *
  * Returns [] for entity types not in the BIM domain.
  */
@@ -72,7 +75,11 @@ export function getBimEntityKeyPoints2D(entity: Entity): Point2D[] {
   }
 
   if (isColumnEntity(entity)) {
-    return getColumnAnchorWorldPoints(entity).map(a => a.point);
+    // §κεντρικοποίηση (Giorgio 2026-07-05): ΠΡΑΓΜΑΤΙΚΕΣ footprint γωνίες μέσω του ΕΝΟΣ
+    // characteristic-point SSoT — ΟΧΙ τα 9 bbox anchors (`getColumnAnchorWorldPoints`), που
+    // για μη-ορθογώνιες κολόνες (L/Γ/T/U) έπεφταν στο κενό/notch → φάντασμα endpoint markers
+    // (■) ΕΞΩ από το σώμα. Τώρα endpoint & BIM_CORNER δείχνουν στα ΙΔΙΑ σωστά σημεία.
+    return getBimCharacteristicPointsOfCategory(entity, 'corner');
   }
 
   // ADR-419 — floor-finish footprint vertices (closed polygon, like slab).

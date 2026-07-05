@@ -57,7 +57,7 @@ import { getColumnCornerWorldPoints } from '../columns/column-corner-anchors';
 import { computeColumnGeometry } from '../geometry/column-geometry';
 import { getFoundationGrips } from '../foundations/foundation-grips';
 import { getCentredBoxGrips, type CentredBoxParams } from '../grips/centred-box-grips';
-import { polygon2DCentroid, footprintEdgeMidpoints } from '../geometry/shared/polygon-utils';
+import { polygon2DCentroid, polygon2DAreaCentroid, footprintEdgeMidpoints } from '../geometry/shared/polygon-utils';
 import { isSegmentVertical } from '../types/mep-segment-types';
 
 // ─── Public types ────────────────────────────────────────────────────────────
@@ -103,7 +103,11 @@ export function getBimCharacteristicLabelRoot(entity: Entity): string | null {
   if (isSlabOpeningEntity(entity)) return 'slabOpening';
   if (isOpeningEntity(entity)) return 'opening';
   if (isColumnEntity(entity)) {
-    return entity.params.kind === 'rectangular' || entity.params.kind === 'shear-wall' ? 'column' : null;
+    // ADR-370 §L-label (Giorgio 2026-07-05): ΚΑΘΕ πολυγωνική κολόνα (rectangular / shear-wall /
+    // L / Γ / T / U / I / polygon / composite) δείχνει «Γωνία/Μέσο/Κέντρο κολόνας» — οι γωνίες
+    // της είναι πραγματικές δομικές γωνίες, όχι «περίεργο σχήμα». ΜΟΝΟ η circular μένει χωρίς
+    // label (δεν έχει γωνίες — μόνο 45° perimeter anchors).
+    return entity.params.kind === 'circular' ? null : 'column';
   }
   if (isFoundationEntity(entity)) {
     // Distinct nouns per foundation kind (Giorgio): pad → «πέδιλο», strip → «πεδιλοδοκός»,
@@ -178,11 +182,19 @@ export function getBimCharacteristicPointsOfCategory(
  * centred-box / slab / roof / … Returns a midpoint for ALL sides + a centroid. Always emits
  * the points; `labelRoot=null` (περίεργα σχήματα) just suppresses the text (req #4).
  */
-function footprintPoints(corners: Point2D[], labelRoot: string | null): BimCharPoints {
+/**
+ * @param isOrderedPolygon τα `corners` είναι ΗΔΗ σε polygon winding order (footprint vertices).
+ *   ADR-370 §non-convex-fix: για ΜΗ-ΚΥΡΤΑ αποτυπώματα (L/Γ/T/U columns, αυθαίρετα slab polygons)
+ *   ΠΡΕΠΕΙ true — αλλιώς το angular sort των midpoints + ο μέσος-όρος-κορυφών centroid πέφτουν
+ *   ΕΚΤΟΣ σχήματος (στο notch). Convex 4-corner sources (wall/beam/foundation/box) → false.
+ */
+function footprintPoints(corners: Point2D[], labelRoot: string | null, isOrderedPolygon = false): BimCharPoints {
   return {
     corners,
-    midpoints: edgeMidpointsFromCorners(corners),
-    center: corners.length >= 3 ? centroid2D(corners) : null,
+    midpoints: edgeMidpointsFromCorners(corners, isOrderedPolygon),
+    center: corners.length >= 3
+      ? (isOrderedPolygon ? centroidOrdered2D(corners) : centroid2D(corners))
+      : null,
     labelRoot,
   };
 }
@@ -214,7 +226,9 @@ function columnPoints(entity: Entity): BimCharPoints {
   // the moving side — not just the 4 bounding-box corners. Rectangular → the 4 real
   // vertices ARE the 4 bbox corners (zero regression).
   const verts = computeColumnGeometry(entity.params).footprint.vertices.map((v) => ({ x: v.x, y: v.y }));
-  return footprintPoints(verts, labelRoot);
+  // ADR-370 §non-convex-fix: το footprint είναι polygon σε winding order → isOrderedPolygon=true
+  // ώστε L/Γ/T/U να μη βγάζουν midpoints/κέντρο στο κενό (notch).
+  return footprintPoints(verts, labelRoot, true);
 }
 
 function foundationPoints(entity: Entity): BimCharPoints {
@@ -236,7 +250,9 @@ function centredBoxPoints(entity: Entity): BimCharPoints {
 
 /** Polygon-footprint entity (slab / slab-opening / roof / thermal-space / floor-finish / mep-underfloor). */
 function polygonPoints(entity: Entity, vertices: Point2D[]): BimCharPoints {
-  return footprintPoints(vertices, getBimCharacteristicLabelRoot(entity));
+  // ADR-370 §non-convex-fix: polygon outline σε winding order → isOrderedPolygon=true (μπορεί
+  // να είναι κοίλο — π.χ. slab/roof με notch).
+  return footprintPoints(vertices, getBimCharacteristicLabelRoot(entity), true);
 }
 
 /** Linear entity (mep-segment): endpoints as "corners" + axis midpoint, no center. */
@@ -302,12 +318,19 @@ function isCornerGrip(kind: string | undefined): boolean {
   return !!kind && CORNER_GRIP_RE.test(kind);
 }
 
-/** Per-edge midpoints (all sides) — geometry SSoT in `polygon-utils.footprintEdgeMidpoints`. */
-function edgeMidpointsFromCorners(corners: readonly Point2D[]): Point2D[] {
-  return footprintEdgeMidpoints(corners);
+/** Per-edge midpoints (all sides) — geometry SSoT in `polygon-utils.footprintEdgeMidpoints`.
+ *  `preOrdered` → τα corners είναι polygon winding order (μη-κυρτά footprints· §non-convex-fix). */
+function edgeMidpointsFromCorners(corners: readonly Point2D[], preOrdered = false): Point2D[] {
+  return footprintEdgeMidpoints(corners, { preOrdered });
 }
 
-/** Arithmetic-mean centroid (XY), via the polygon-utils SSoT (`polygon2DCentroid` — z lift εσωτερικά). */
+/** Arithmetic-mean centroid (XY) — convex/unordered sources (vertex-mean = area-centroid εκεί). */
 function centroid2D(pts: readonly Point2D[]): Point2D {
   return polygon2DCentroid(pts);
+}
+
+/** Area (mass) centroid (XY) για ordered polygon footprints — μένει ΜΕΣΑ στο υλικό για κοίλα
+ *  L/Γ/T/U (όπου ο μέσος όρος κορυφών πέφτει στο notch). §non-convex-fix (ADR-370). */
+function centroidOrdered2D(pts: readonly Point2D[]): Point2D {
+  return polygon2DAreaCentroid(pts);
 }

@@ -166,8 +166,15 @@ SNAP_ENGINE_PRIORITIES (tolerance-config.ts):
 
 ### 3.4 Visual Indicator
 
+> ⚠️ **SUPERSEDED από §unified-glyph (2026-07-05).** Το αρχικό design έδινε ξεχωριστά
+> σύμβολα στα BIM snaps (┘ corner, ▲ midpoint, ⊕ centre) με δικά τους χρώματα. Αυτό
+> δημιουργούσε **δύο οπτικά λεξιλόγια για το ίδιο ΕΙΔΟΣ σημείου** (μια γωνία εμφανιζόταν
+> ■ κόκκινο ως raw endpoint αλλά ┘ πορτοκαλί ως BIM γωνία). Οι μεγάλοι (Revit/AutoCAD)
+> δείχνουν **ΕΝΑ** σύμβολο ανά είδος σημείου, με τη σημασιολογία στην **ετικέτα**. Βλ.
+> §unified-glyph παρακάτω. Το παρακάτω L-bracket snippet κρατιέται μόνο ως ιστορικό.
+
 ```svg
-<!-- ┘ L-bracket — corner mark
+<!-- ┘ L-bracket — corner mark (ΙΣΤΟΡΙΚΟ — καταργήθηκε, βλ. §unified-glyph)
      Stroke 2px, color = canvasUI.overlay.colors.snap.border -->
 <svg viewBox="0 0 14 14">
   <polyline points="3,3 3,11 11,11"
@@ -177,7 +184,25 @@ SNAP_ENGINE_PRIORITIES (tolerance-config.ts):
 </svg>
 ```
 
-**Σημείωση rotation**: Στο Phase 4 μένει static (πάντα ┘). Σε μελλοντική phase μπορεί να περιστρέφεται προς το κέντρο της οντότητας (auto-orient), αλλά ξεκινάμε static για απλότητα.
+### 3.4b §unified-glyph (2026-07-05) — ΕΝΑ οπτικό λεξιλόγιο (Revit/AutoCAD-grade)
+
+Ένα BIM `corner` / `midpoint` / `center` είναι το **ίδιο ΕΙΔΟΣ σημείου** με το γεωμετρικό
+`endpoint` / `midpoint` / `center`. Άρα μοιράζονται **ίδιο σχήμα ΚΑΙ ίδιο χρώμα**:
+
+| BIM τύπος | Σύμβολο | Χρώμα (= γεωμετρικό) |
+|---|---|---|
+| `bim_corner`   | ■ (endpoint square) | κόκκινο (`ENDPOINT`) |
+| `bim_midpoint` | △ (midpoint triangle) | πράσινο (`MIDPOINT`) |
+| `bim_center`   | ○ (center circle) | μπλε (`CENTER`) |
+
+Η διάκριση οντότητας («Γωνία κολώνας» / «Μέσο τοίχου») ζει **ΜΟΝΟ** στην ετικέτα
+(`bimLabel` → `resolveBimSnapLabelText`), όπως Revit/AutoCAD tooltips. Τα `bim_wall_face`
+/ `bim_mep_connector` είναι **ξεχωριστά ΕΙΔΗ** σημείου → κρατούν δικό τους σύμβολο/χρώμα.
+
+**SSoT υλοποίησης** (2 σημεία, εφαρμόζεται αυτόματα σε ΟΛΕΣ τις BIM/δομικές/ΗΜ οντότητες):
+- Σχήμα: `canvas-v2/overlays/SnapIndicatorGlyph.tsx` — `case 'endpoint'|'bim_corner'` κ.λπ.
+- Χρώμα: `rendering/ui/snap/snap-visual-config.ts` — `SNAP_COLORS` → `SNAP_MARKER_COLORS.ENDPOINT/MIDPOINT/CENTER`.
+- Regression guard: `rendering/ui/snap/__tests__/snap-visual-config.test.ts` (4/4).
 
 ---
 
@@ -934,6 +959,77 @@ Proactive (projection at event time)· no race (pure core, single SSoT)·
 idempotent· belt-and-suspenders (preview+commit share core)· SSoT (one core,
 params-based anchors reused)· await (sync)· lifecycle owner explicit
 (`GripDragStore` bridge + bridge store). ✅
+
+### 17.7 §unified-glyph — ΕΝΑ οπτικό λεξιλόγιο (2026-07-05)
+
+**Αφορμή (Giorgio)**: «Δύο συστήματα ελξεων;» — τα raw OSNAP έδειχναν ■/△/○ (endpoint/
+midpoint/center) ενώ τα BIM έδειχναν ┘/▲/⊕ με άλλα χρώματα, για το **ίδιο ΕΙΔΟΣ σημείου**.
+Απόφαση: ακολουθούμε Revit/AutoCAD — ΕΝΑ σύμβολο+χρώμα ανά είδος σημείου, η οντότητα στην
+ετικέτα. Βλ. §3.4b. Scope: μόνο corner/midpoint/center (connector/wall-face = ξεχωριστά είδη).
+
+- **MOD**: `canvas-v2/overlays/SnapIndicatorGlyph.tsx` — τα `bim_corner/midpoint/center`
+  cases ενοποιήθηκαν με τα `endpoint/midpoint/center` (αφαιρέθηκαν τα ┘/▲/⊕ standalone).
+- **MOD**: `rendering/ui/snap/snap-visual-config.ts` — `SNAP_COLORS[BIM_CORNER/MIDPOINT/CENTER]`
+  → `SNAP_MARKER_COLORS.ENDPOINT/MIDPOINT/CENTER`.
+- **MOD**: `config/color-config.ts` — αφαιρέθηκαν τα ορφανά `SNAP_MARKER_COLORS.BIM_CORNER/
+  MIDPOINT/CENTER` primitives (Boy Scout).
+- **MOD (docstrings)**: `canvas-v2/overlays/SnapIndicatorOverlay.tsx`.
+- **NEW**: `rendering/ui/snap/__tests__/snap-visual-config.test.ts` (4/4 — colour-unification guard).
+
+**Google-Level (N.7.2)**: SSoT (2 σημεία, αυτόματα σε όλες τις οντότητες)· idempotent (pure
+mapping)· zero race· lifecycle owner explicit (SnapShape + SNAP_COLORS). ✅
+
+### 17.8 §non-convex-fix + §L-label — σωστά characteristic points για L/Γ/T/U (2026-07-05)
+
+**Αφορμή (Giorgio, screenshot L column)**: σε L/Γ κολόνα εμφανίζονταν κόκκινα snap σημάδια
+**στο κενό/notch** (εκτός υλικού) και **δεν** έβγαινε το «Γωνία/Μέσο κολόνας». Δύο root-cause bugs
++ ένα policy:
+
+- **Bug Α (midpoints)**: `footprintEdgeMidpoints` έκανε `sortPointsAroundCentroid` (angular sort)
+  — σωστό για convex, αλλά για ΜΗ-ΚΥΡΤΑ (L/Γ/T/U) ανακάτευε τις κορυφές → ακμές που διέσχιζαν το
+  notch → midpoints ΕΚΤΟΣ σχήματος. Fix: νέο `preOrdered` option — polygon footprints (ordered
+  winding) παρακάμπτουν το sort.
+- **Bug Β (center)**: `centroid2D` = **μέσος όρος κορυφών** → για L πέφτει στο notch. Fix: τα
+  ordered polygons χρησιμοποιούν **area (shoelace) centroid** (`polygon2DAreaCentroid`), που μένει
+  ΜΕΣΑ στο υλικό.
+- **§L-label (policy)**: `getBimCharacteristicLabelRoot` επέστρεφε `null` για μη-ορθογώνιες
+  κολόνες. Νέο: ΚΑΘΕ πολυγωνική κολόνα (rectangular/shear-wall/L/Γ/T/U/I/polygon/composite) →
+  `'column'` → «Γωνία/Μέσο/Κέντρο κολόνας». Μόνο circular μένει χωρίς.
+
+- **MOD**: `bim/geometry/shared/polygon-utils.ts` (`footprintEdgeMidpoints` +preOrdered· νέο
+  `polygon2DAreaCentroid`), `bim/utils/bim-characteristic-points.ts` (footprintPoints ordered
+  path· column/polygon callers· labelRoot column policy).
+- **MOD (test)**: `bim/utils/__tests__/bim-characteristic-points.test.ts` — L-shape label='column'
+  + regression guard (midpoints = πραγματικές ακμές, center εντός bbox). 17/17 PASS.
+
+**Google-Level (N.7.2)**: root-cause (όχι hide)· SSoT (ΕΝΑ midpoints/centroid path για όλα τα
+families)· idempotent (pure geometry)· regression-guarded. ✅
+
+### 17.9 §κεντρικοποίηση — column key points = ΕΝΑ SSoT (2026-07-05)
+
+**Αφορμή (Giorgio, follow-up)**: μετά το §non-convex-fix, τα «Γωνία/Μέσο κολόνας» εμφανίστηκαν
+σωστά, ΑΛΛΑ **κόκκινα τετράγωνα (■ endpoint)** παρέμεναν στο κενό/notch της L. Root cause =
+**προϋπάρχον διπλότυπο SSoT** (δεν το δημιούργησε ο agent):
+
+- `bim/utils/bim-characteristic-points.ts` (ADR-370) → `BimCharacteristicSnapEngine` → **σωστές
+  footprint γωνίες** (BIM_CORNER).
+- `bim/utils/bim-entity-points.ts` (ADR-363) → `GeometricCalculations` (ENDPOINT snap) → για
+  column επέστρεφε τα **9 bbox anchors** (`getColumnAnchorWorldPoints`) → για L/Γ/T/U έπεφταν
+  **στο κενό** → φάντασμα ■ markers έξω από το σώμα.
+
+**Κεντρικοποίηση (Giorgio διαταγή «τα προϋπάρχοντα διπλότυπα τα κεντρικοποιείς»)**: το column
+branch του `getBimEntityKeyPoints2D` πλέον **delegates** στο ΕΝΑ characteristic-corner SSoT
+(`getBimCharacteristicPointsOfCategory(entity, 'corner')`) → endpoint & BIM_CORNER δείχνουν στα
+ΙΔΙΑ σωστά σημεία, μηδέν φάντασμα. Ωφελεί ΚΑΙ το `dim-association-service` (dimension association
+σε πραγματικές γωνίες). Κανένα circular import (characteristic ⇏ entity-points).
+
+- **MOD**: `bim/utils/bim-entity-points.ts` (column branch → characteristic SSoT· αφαίρεση
+  `getColumnAnchorWorldPoints` import).
+- **NEW**: `bim/utils/__tests__/bim-entity-points.test.ts` — L=6 real corners (όχι 9 bbox anchors)
+  + toEqual το characteristic SSoT. 3/3 PASS.
+
+**Google-Level (N.7.2)**: ΕΝΑ SSoT για column points (endpoint+BIM_CORNER)· root-cause· zero
+duplication· regression-guarded. ✅
 
 ---
 

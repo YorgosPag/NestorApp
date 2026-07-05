@@ -23,13 +23,18 @@
  *     at the box centre and the rotation handle midway on a FIXED side of the box,
  *     TILTING with the shape — via the shared `rect-frame` SSoT + the SAME
  *     `rotationHandleMidwayOffset` policy the column / text use.
- *   - GENERIC polyline → the move sits at the axis-aligned-bbox centre, the rotation
- *     handle midway below it (bbox-relative). Non-oriented, but covers any shape.
+ *   - GENERIC polyline → both handles sit on the LONGEST segment's axis at its ¼
+ *     points (rotation ¼-east / move ¼-west), via the SAME axis-quarter placement
+ *     SSoT the plain DXF line uses. This keeps them ON a drawn edge — the earlier
+ *     axis-aligned-bbox centre fell in EMPTY space for an open corner (2 lines joined
+ *     at an angle) so the handles floated (Giorgio 2026-07-05 «στο μεγαλύτερο κομμάτι,
+ *     ¼ & ¾, πάνω στη γεωμετρία»). A degenerate ring keeps the bbox centre.
  *
  * Zero React / DOM / Firestore / canvas deps.
  *
- * @see systems/polyline/rectangle-detect.ts — `asOrientedRect` (oriented placement)
- * @see bim/grips/rotation-handle-policy.ts — `rotationHandleMidwayOffset` (shared)
+ * @see systems/polyline/rectangle-detect.ts — `asOrientedRect` + `longestPolylineSegment`
+ * @see bim/grips/axis-box-grips.ts — `axisQuarter{Rotation,Move}HandleWorld` (line-parity SSoT)
+ * @see bim/grips/rotation-handle-policy.ts — `rotationHandleMidwayOffset` (rectangle branch)
  * @see docs/centralized-systems/reference/adrs/ADR-561-move-rotate-grips-primitives.md
  */
 
@@ -37,7 +42,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo, PolylineGripKind } from '../../hooks/grip-types';
 import { rectLocalWorld } from '../../bim/grips/rect-frame';
 import { rotationHandleMidwayOffset } from '../../bim/grips/rotation-handle-policy';
-import { asOrientedRect, polylineBbox, polylineBboxCenter } from './rectangle-detect';
+import { axisToRectFrame, axisQuarterRotationHandleWorld, axisQuarterMoveHandleWorld } from '../../bim/grips/axis-box-grips';
+import { asOrientedRect, polylineBboxCenter, longestPolylineSegment } from './rectangle-detect';
 
 /** The polyline whole-entity grip kinds (mirror `wall-midpoint` / `wall-rotation`). */
 export const POLYLINE_MOVE_KIND: PolylineGripKind = 'polyline-move';
@@ -84,10 +90,32 @@ export function getPolylineMoveRotateGrips(
     ];
   }
 
-  // GENERIC polyline → axis-aligned-bbox placement.
+  // GENERIC polyline → both whole-entity handles on the LONGEST segment's axis, at
+  // its ¼ points, via the SAME `axisQuarter{Rotation,Move}HandleWorld` placement SSoT
+  // the plain DXF line uses (`systems/line/line-grips.ts`) — a polyline and a line can
+  // never diverge, ZERO new placement formula. This lands the handles ON a drawn edge:
+  // for an open corner (2 lines joined at an angle) the axis-aligned-bbox CENTRE fell in
+  // empty space and the move cross + rotation handle floated (Giorgio 2026-07-05 «στο
+  // μεγαλύτερο κομμάτι, ¼ & ¾, πάνω στη γεωμετρία»). Rotation = ¼-east / move = ¼-west of
+  // that segment (line parity; the compass tie-break puts them symmetrically about the
+  // segment centre). Degenerate ring (no non-zero edge) → keep the bbox centre.
+  const seg = longestPolylineSegment(vertices, closed);
+  if (seg) {
+    const frame = axisToRectFrame({ start: seg.start, end: seg.end, width: 0 });
+    return [
+      {
+        entityId, gripIndex: startIndex, type: 'center',
+        position: axisQuarterMoveHandleWorld(frame), movesEntity: true, polylineGripKind: POLYLINE_MOVE_KIND,
+      },
+      {
+        entityId, gripIndex: startIndex + 1, type: 'vertex',
+        position: axisQuarterRotationHandleWorld(frame), movesEntity: false, polylineGripKind: POLYLINE_ROTATION_KIND,
+      },
+    ];
+  }
+
+  // Degenerate ring (every point coincident) → no axis to place on; keep the centre.
   const center = polylineBboxCenter(vertices);
-  const b = polylineBbox(vertices);
-  const rotOffsetY = rotationHandleMidwayOffset(b.maxY - b.minY); // −height/4 (below centre)
   return [
     {
       entityId, gripIndex: startIndex, type: 'center',
@@ -95,9 +123,41 @@ export function getPolylineMoveRotateGrips(
     },
     {
       entityId, gripIndex: startIndex + 1, type: 'vertex',
-      position: { x: center.x, y: center.y + rotOffsetY }, movesEntity: false, polylineGripKind: POLYLINE_ROTATION_KIND,
+      position: center, movesEntity: false, polylineGripKind: POLYLINE_ROTATION_KIND,
     },
   ];
+}
+
+/**
+ * ADR-357/561 — the alignment-tracking anchor point(s) for a plain-polyline VERTEX grip
+ * drag, so the SAME centralized Object-Snap-Tracking (`resolveActionAlignmentTracking`) the
+ * line + dimension flows use lights up while a polyline vertex is dragged: the white/yellow
+ * AutoAlign traces, the Polar increments AND the cyan ambient-neighbour hints. Mirror of
+ * `getLineGripAlignmentAnchors` (its line sibling) — ONE resolver family, per-entity anchor
+ * provider. The dragged vertex tracks off its FIXED neighbour vertices (they stay put) ⊕ the
+ * ambient neighbours the resolver adds itself.
+ *
+ *   • endpoint of an OPEN ring (gripIndex 0 or n−1) → the single adjacent vertex.
+ *   • interior vertex → BOTH adjacent vertices (tracks off either neighbour).
+ *   • closed ring → neighbours wrap (vertex 0 ↔ vertex n−1).
+ *
+ * `gripIndex` outside the vertex range (an edge / move / rotation handle) → `null`, so the
+ * caller keeps its own anchor (whole-entity move → base point) or the raw cursor. Pure —
+ * zero React / DOM / store deps.
+ */
+export function getPolylineGripAlignmentAnchors(
+  gripIndex: number,
+  vertices: readonly Point2D[],
+  closed: boolean,
+): Point2D[] | null {
+  const n = vertices.length;
+  if (n < 2 || gripIndex < 0 || gripIndex >= n) return null;
+  const anchors: Point2D[] = [];
+  if (gripIndex - 1 >= 0) anchors.push(vertices[gripIndex - 1]);
+  else if (closed) anchors.push(vertices[n - 1]);
+  if (gripIndex + 1 < n) anchors.push(vertices[gripIndex + 1]);
+  else if (closed) anchors.push(vertices[0]);
+  return anchors.length ? anchors.map((p) => ({ x: p.x, y: p.y })) : null;
 }
 
 // NOTE (ADR-561, 2026-07-05): the live polyline/rectangle ROTATION ghost has NO bespoke
