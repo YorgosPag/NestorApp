@@ -26,6 +26,7 @@
  * @see commitDxfGripDragModeAware — reads `overrideAnchor` at commit time
  */
 import type { Point2D } from '../../rendering/types/Types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export type GripBasePointPickPhase = 'idle' | 'awaiting-click';
 
@@ -42,44 +43,33 @@ const CLEARED_SNAPSHOT: GripBasePointSnapshot = Object.freeze({
 type Listener = () => void;
 
 class GripBasePointStoreImpl {
-  private snapshot: GripBasePointSnapshot = CLEARED_SNAPSHOT;
-  private listeners = new Set<Listener>();
+  private readonly store = createExternalStore<GripBasePointSnapshot>(CLEARED_SNAPSHOT);
 
-  getSnapshot = (): GripBasePointSnapshot => this.snapshot;
+  getSnapshot = (): GripBasePointSnapshot => this.store.get();
 
-  subscribe = (listener: Listener): (() => void) => {
-    this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
-  };
+  subscribe = (listener: Listener): (() => void) => this.store.subscribe(listener);
 
   /** User selected "Base Point" — arm the next-click capture. */
   armBasePointPick(): void {
-    if (this.snapshot.pickPhase === 'awaiting-click') return;
-    this.snapshot = Object.freeze({
+    if (this.store.get().pickPhase === 'awaiting-click') return;
+    this.store.set(Object.freeze({
       pickPhase: 'awaiting-click',
-      overrideAnchor: this.snapshot.overrideAnchor,
-    });
-    this.emit();
+      overrideAnchor: this.store.get().overrideAnchor,
+    }));
   }
 
   /** Pick consumed — record the new anchor and return to idle. */
   setOverrideAnchor(point: Point2D): void {
-    this.snapshot = Object.freeze({
+    this.store.set(Object.freeze({
       pickPhase: 'idle',
       overrideAnchor: { x: point.x, y: point.y },
-    });
-    this.emit();
+    }));
   }
 
   /** Reset both pickPhase and overrideAnchor (drag end / session reset). */
   clear(): void {
-    if (this.snapshot === CLEARED_SNAPSHOT) return;
-    this.snapshot = CLEARED_SNAPSHOT;
-    this.emit();
-  }
-
-  private emit(): void {
-    for (const l of this.listeners) l();
+    if (this.store.get() === CLEARED_SNAPSHOT) return;
+    this.store.set(CLEARED_SNAPSHOT);
   }
 }
 

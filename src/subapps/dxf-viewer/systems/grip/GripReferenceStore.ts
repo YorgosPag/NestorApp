@@ -30,6 +30,7 @@
  * @see GripHandoffStore — carries `reference: true` + the anchor across tools
  */
 import type { Point2D } from '../../rendering/types/Types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export type GripReferenceMode = 'scale' | 'rotate';
 
@@ -56,60 +57,48 @@ const IDLE_SNAPSHOT: GripReferenceSnapshot = Object.freeze({
 type Listener = () => void;
 
 class GripReferenceStoreImpl {
-  private snapshot: GripReferenceSnapshot = IDLE_SNAPSHOT;
-  private listeners = new Set<Listener>();
+  private readonly store = createExternalStore<GripReferenceSnapshot>(IDLE_SNAPSHOT);
 
-  getSnapshot = (): GripReferenceSnapshot => this.snapshot;
+  getSnapshot = (): GripReferenceSnapshot => this.store.get();
 
-  subscribe = (listener: Listener): (() => void) => {
-    this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
-  };
+  subscribe = (listener: Listener): (() => void) => this.store.subscribe(listener);
 
   /** Start the reference flow for the current grip mode (scale or rotate). */
   startPick(mode: GripReferenceMode): void {
-    this.snapshot = Object.freeze({
+    this.store.set(Object.freeze({
       phase: 'pick-first',
       mode,
       refStart: null,
       refEnd: null,
-    });
-    this.emit();
+    }));
   }
 
   /** Capture the first reference point — advances to `pick-second`. */
   setRefStart(point: Point2D): void {
-    if (this.snapshot.phase !== 'pick-first') return;
-    this.snapshot = Object.freeze({
+    if (this.store.get().phase !== 'pick-first') return;
+    this.store.set(Object.freeze({
       phase: 'pick-second',
-      mode: this.snapshot.mode,
+      mode: this.store.get().mode,
       refStart: { x: point.x, y: point.y },
       refEnd: null,
-    });
-    this.emit();
+    }));
   }
 
   /** Capture the second reference point — advances to `awaiting-value`. */
   setRefEnd(point: Point2D): void {
-    if (this.snapshot.phase !== 'pick-second') return;
-    this.snapshot = Object.freeze({
+    if (this.store.get().phase !== 'pick-second') return;
+    this.store.set(Object.freeze({
       phase: 'awaiting-value',
-      mode: this.snapshot.mode,
-      refStart: this.snapshot.refStart,
+      mode: this.store.get().mode,
+      refStart: this.store.get().refStart,
       refEnd: { x: point.x, y: point.y },
-    });
-    this.emit();
+    }));
   }
 
   /** Reset to idle (Escape / session end / handoff consumed). */
   clear(): void {
-    if (this.snapshot === IDLE_SNAPSHOT) return;
-    this.snapshot = IDLE_SNAPSHOT;
-    this.emit();
-  }
-
-  private emit(): void {
-    for (const l of this.listeners) l();
+    if (this.store.get() === IDLE_SNAPSHOT) return;
+    this.store.set(IDLE_SNAPSHOT);
   }
 }
 

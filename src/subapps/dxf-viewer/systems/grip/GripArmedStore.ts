@@ -23,6 +23,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-501-dxf-grip-multi-arm-group-move.md
  */
 
+import { createExternalStore } from '../../stores/createExternalStore';
 import { gripKey, type GripRef } from '../../rendering/grips/grip-temperature';
 
 type Listener = () => void;
@@ -30,24 +31,29 @@ type Listener = () => void;
 const EMPTY_KEYS: ReadonlySet<string> = new Set<string>();
 const EMPTY_REFS: readonly GripRef[] = [];
 
+/** Cached derived snapshots — rebuilt once per mutation so each getter stays
+ *  referentially stable between changes (required by `useSyncExternalStore`). */
+interface GripArmedSnapshot {
+  readonly keys: ReadonlySet<string>;
+  readonly refs: readonly GripRef[];
+}
+
+const EMPTY_SNAPSHOT: GripArmedSnapshot = { keys: EMPTY_KEYS, refs: EMPTY_REFS };
+
 class GripArmedStoreImpl {
   private refs = new Map<string, GripRef>();
-  private listeners = new Set<Listener>();
-  /** Cached snapshots — rebuilt only on mutation so `getSnapshot` is referentially
-   *  stable between changes (required by `useSyncExternalStore`). */
-  private keysSnapshot: ReadonlySet<string> = EMPTY_KEYS;
-  private refsSnapshot: readonly GripRef[] = EMPTY_REFS;
+  // SSoT pub/sub via createExternalStore (WAVE 2.6). The Map above stays as the
+  // mutation accelerator (has/toggle/… by key); the two derived snapshots live
+  // in the store's single composite state, rebuilt once per `commit`.
+  private readonly store = createExternalStore<GripArmedSnapshot>(EMPTY_SNAPSHOT);
 
-  subscribe = (listener: Listener): (() => void) => {
-    this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
-  };
+  subscribe = (listener: Listener): (() => void) => this.store.subscribe(listener);
 
   /** Stable Set of armed grip keys for `useSyncExternalStore` + temperature input. */
-  getKeysSnapshot = (): ReadonlySet<string> => this.keysSnapshot;
+  getKeysSnapshot = (): ReadonlySet<string> => this.store.get().keys;
 
   /** Stable array of armed grip refs for the group-move commit (Slice 3). */
-  getRefsSnapshot = (): readonly GripRef[] => this.refsSnapshot;
+  getRefsSnapshot = (): readonly GripRef[] => this.store.get().refs;
 
   has(entityId: string, gripIndex: number): boolean {
     return this.refs.has(gripKey(entityId, gripIndex));
@@ -89,9 +95,9 @@ class GripArmedStoreImpl {
   }
 
   private commit(): void {
-    this.keysSnapshot = this.refs.size === 0 ? EMPTY_KEYS : new Set(this.refs.keys());
-    this.refsSnapshot = this.refs.size === 0 ? EMPTY_REFS : Array.from(this.refs.values());
-    this.listeners.forEach((l) => l());
+    const keys = this.refs.size === 0 ? EMPTY_KEYS : new Set(this.refs.keys());
+    const refs = this.refs.size === 0 ? EMPTY_REFS : Array.from(this.refs.values());
+    this.store.set({ keys, refs });
   }
 }
 

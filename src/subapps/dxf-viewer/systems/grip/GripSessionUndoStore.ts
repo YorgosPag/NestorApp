@@ -33,6 +33,8 @@
  * @see grip-context-menu-actions — wires `sessionUndo` to `CommandHistory.undo`
  */
 
+import { createExternalStore } from '../../stores/createExternalStore';
+
 export interface GripSessionUndoSnapshot {
   /** History size at session start — null when no session is active. */
   readonly sessionStartSize: number | null;
@@ -48,60 +50,48 @@ const CLEARED_SNAPSHOT: GripSessionUndoSnapshot = Object.freeze({
 type Listener = () => void;
 
 class GripSessionUndoStoreImpl {
-  private snapshot: GripSessionUndoSnapshot = CLEARED_SNAPSHOT;
-  private listeners = new Set<Listener>();
+  private readonly store = createExternalStore<GripSessionUndoSnapshot>(CLEARED_SNAPSHOT);
 
-  getSnapshot = (): GripSessionUndoSnapshot => this.snapshot;
+  getSnapshot = (): GripSessionUndoSnapshot => this.store.get();
 
-  subscribe = (listener: Listener): (() => void) => {
-    this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
-  };
+  subscribe = (listener: Listener): (() => void) => this.store.subscribe(listener);
 
   /** Begin a grip-hot session — record the baseline history size. */
   markSessionStart(initialHistorySize: number): void {
-    if (this.snapshot.sessionStartSize !== null) {
+    if (this.store.get().sessionStartSize !== null) {
       // Already active — only refresh currentSize so the resolver re-evaluates.
-      if (this.snapshot.currentSize === initialHistorySize) return;
-      this.snapshot = Object.freeze({
-        sessionStartSize: this.snapshot.sessionStartSize,
+      if (this.store.get().currentSize === initialHistorySize) return;
+      this.store.set(Object.freeze({
+        sessionStartSize: this.store.get().sessionStartSize,
         currentSize: initialHistorySize,
-      });
-      this.emit();
+      }));
       return;
     }
-    this.snapshot = Object.freeze({
+    this.store.set(Object.freeze({
       sessionStartSize: initialHistorySize,
       currentSize: initialHistorySize,
-    });
-    this.emit();
+    }));
   }
 
   /** Notify the store of a new history size (after a commit or external undo). */
   reportHistorySize(currentSize: number): void {
-    if (this.snapshot.currentSize === currentSize) return;
-    this.snapshot = Object.freeze({
-      sessionStartSize: this.snapshot.sessionStartSize,
+    if (this.store.get().currentSize === currentSize) return;
+    this.store.set(Object.freeze({
+      sessionStartSize: this.store.get().sessionStartSize,
       currentSize,
-    });
-    this.emit();
+    }));
   }
 
   /** Whether a session-level undo is available (commands produced this session). */
   canSessionUndo(): boolean {
-    const s = this.snapshot;
+    const s = this.store.get();
     return s.sessionStartSize !== null && s.currentSize > s.sessionStartSize;
   }
 
   /** End the session (selection change / Escape to idle). */
   clear(): void {
-    if (this.snapshot === CLEARED_SNAPSHOT) return;
-    this.snapshot = CLEARED_SNAPSHOT;
-    this.emit();
-  }
-
-  private emit(): void {
-    for (const l of this.listeners) l();
+    if (this.store.get() === CLEARED_SNAPSHOT) return;
+    this.store.set(CLEARED_SNAPSHOT);
   }
 }
 

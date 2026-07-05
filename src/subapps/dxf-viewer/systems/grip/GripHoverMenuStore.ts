@@ -11,6 +11,7 @@
  */
 
 import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 export interface GripMenuOption {
   readonly id: string;
@@ -39,15 +40,11 @@ const CLOSED_SNAPSHOT: GripHoverMenuSnapshot = Object.freeze({
 type Listener = () => void;
 
 class GripHoverMenuStoreImpl {
-  private snapshot: GripHoverMenuSnapshot = CLOSED_SNAPSHOT;
-  private listeners = new Set<Listener>();
+  private readonly store = createExternalStore<GripHoverMenuSnapshot>(CLOSED_SNAPSHOT);
 
-  getSnapshot = (): GripHoverMenuSnapshot => this.snapshot;
+  getSnapshot = (): GripHoverMenuSnapshot => this.store.get();
 
-  subscribe = (listener: Listener): (() => void) => {
-    this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
-  };
+  subscribe = (listener: Listener): (() => void) => this.store.subscribe(listener);
 
   show(params: {
     grip: UnifiedGripInfo;
@@ -55,23 +52,17 @@ class GripHoverMenuStoreImpl {
     options: ReadonlyArray<GripMenuOption>;
   }): void {
     if (params.options.length === 0) return;
-    this.snapshot = Object.freeze({
+    this.store.set(Object.freeze({
       visible: true,
       screenPos: { x: params.screenPos.x, y: params.screenPos.y },
       grip: params.grip,
       options: params.options,
-    });
-    this.emit();
+    }));
   }
 
   hide(): void {
-    if (!this.snapshot.visible) return;
-    this.snapshot = CLOSED_SNAPSHOT;
-    this.emit();
-  }
-
-  private emit(): void {
-    for (const l of this.listeners) l();
+    if (!this.store.get().visible) return;
+    this.store.set(CLOSED_SNAPSHOT);
   }
 }
 

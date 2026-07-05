@@ -14,32 +14,24 @@
  */
 
 import { DEFAULT_GRIP_MODE, type GripMode } from './grip-mode-cycle';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 type Listener = () => void;
 
 class GripModeStoreImpl {
-  private mode: GripMode = DEFAULT_GRIP_MODE;
-  private listeners = new Set<Listener>();
+  private readonly store = createExternalStore<GripMode>(DEFAULT_GRIP_MODE);
 
-  getSnapshot = (): GripMode => this.mode;
+  getSnapshot = (): GripMode => this.store.get();
 
-  subscribe = (listener: Listener): (() => void) => {
-    this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
-  };
+  subscribe = (listener: Listener): (() => void) => this.store.subscribe(listener);
 
   set(mode: GripMode): void {
-    if (this.mode === mode) return;
-    this.mode = mode;
-    this.emit();
+    if (this.store.get() === mode) return;
+    this.store.set(mode);
   }
 
   reset(): void {
     this.set(DEFAULT_GRIP_MODE);
-  }
-
-  private emit(): void {
-    for (const l of this.listeners) l();
   }
 }
 

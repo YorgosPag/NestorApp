@@ -23,6 +23,7 @@
  */
 
 import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 /** A single row in the context menu (mode toggle or terminal action). */
 export interface GripContextMenuItem {
@@ -65,15 +66,11 @@ const CLOSED_SNAPSHOT: GripContextMenuSnapshot = Object.freeze({
 type Listener = () => void;
 
 class GripContextMenuStoreImpl {
-  private snapshot: GripContextMenuSnapshot = CLOSED_SNAPSHOT;
-  private listeners = new Set<Listener>();
+  private readonly store = createExternalStore<GripContextMenuSnapshot>(CLOSED_SNAPSHOT);
 
-  getSnapshot = (): GripContextMenuSnapshot => this.snapshot;
+  getSnapshot = (): GripContextMenuSnapshot => this.store.get();
 
-  subscribe = (listener: Listener): (() => void) => {
-    this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
-  };
+  subscribe = (listener: Listener): (() => void) => this.store.subscribe(listener);
 
   show(params: {
     grip: UnifiedGripInfo;
@@ -82,23 +79,17 @@ class GripContextMenuStoreImpl {
   }): void {
     const hasAnyItem = params.sections.some((s) => s.items.length > 0);
     if (!hasAnyItem) return;
-    this.snapshot = Object.freeze({
+    this.store.set(Object.freeze({
       visible: true,
       screenPos: { x: params.screenPos.x, y: params.screenPos.y },
       grip: params.grip,
       sections: params.sections,
-    });
-    this.emit();
+    }));
   }
 
   hide(): void {
-    if (!this.snapshot.visible) return;
-    this.snapshot = CLOSED_SNAPSHOT;
-    this.emit();
-  }
-
-  private emit(): void {
-    for (const l of this.listeners) l();
+    if (!this.store.get().visible) return;
+    this.store.set(CLOSED_SNAPSHOT);
   }
 }
 

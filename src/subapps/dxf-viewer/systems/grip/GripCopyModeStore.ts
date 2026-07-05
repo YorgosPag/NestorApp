@@ -28,6 +28,8 @@
  * @see GripHandoffStore     — scale/rotate/mirror handoff
  */
 
+import { createExternalStore } from '../../stores/createExternalStore';
+
 export interface GripCopyModeSnapshot {
   readonly enabled: boolean;
   /** Number of copies created in the current grip-hot session — UX feedback. */
@@ -42,45 +44,34 @@ const DISABLED_SNAPSHOT: GripCopyModeSnapshot = Object.freeze({
 type Listener = () => void;
 
 class GripCopyModeStoreImpl {
-  private snapshot: GripCopyModeSnapshot = DISABLED_SNAPSHOT;
-  private listeners = new Set<Listener>();
+  private readonly store = createExternalStore<GripCopyModeSnapshot>(DISABLED_SNAPSHOT);
 
-  getSnapshot = (): GripCopyModeSnapshot => this.snapshot;
+  getSnapshot = (): GripCopyModeSnapshot => this.store.get();
 
-  subscribe = (listener: Listener): (() => void) => {
-    this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
-  };
+  subscribe = (listener: Listener): (() => void) => this.store.subscribe(listener);
 
   /** Toggle the copy mode on/off. Resets `count` when turning off. */
   toggle(): void {
-    const next = !this.snapshot.enabled;
-    this.snapshot = Object.freeze({
+    const next = !this.store.get().enabled;
+    this.store.set(Object.freeze({
       enabled: next,
-      count: next ? this.snapshot.count : 0,
-    });
-    this.emit();
+      count: next ? this.store.get().count : 0,
+    }));
   }
 
   /** Increment the in-session copy counter — called after each successful copy commit. */
   bumpCount(): void {
-    if (!this.snapshot.enabled) return;
-    this.snapshot = Object.freeze({
+    if (!this.store.get().enabled) return;
+    this.store.set(Object.freeze({
       enabled: true,
-      count: this.snapshot.count + 1,
-    });
-    this.emit();
+      count: this.store.get().count + 1,
+    }));
   }
 
   /** Reset to disabled (selection change / Escape to idle). */
   clear(): void {
-    if (this.snapshot === DISABLED_SNAPSHOT) return;
-    this.snapshot = DISABLED_SNAPSHOT;
-    this.emit();
-  }
-
-  private emit(): void {
-    for (const l of this.listeners) l();
+    if (this.store.get() === DISABLED_SNAPSHOT) return;
+    this.store.set(DISABLED_SNAPSHOT);
   }
 }
 
