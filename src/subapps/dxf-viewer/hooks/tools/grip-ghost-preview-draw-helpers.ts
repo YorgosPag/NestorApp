@@ -45,18 +45,13 @@ import { drawStructuralFinishSkin2D } from '../../canvas-v2/dxf-canvas/dxf-rende
 // RAF/frame με το ghost (ΚΟΙΝΟΣ SSoT με τη σχεδίαση → σταθερές, μηδέν flicker/διπλότυπο).
 import type { DxfGripDragPreview } from '../grip-computation';
 import type { SceneUnits } from '../../utils/scene-units';
-import type { WallEntity } from '../../bim/types/wall-types';
-import type { ColumnEntity } from '../../bim/types/column-types';
 // ADR-363 / ADR-572 Γ1 — leader dash+colour SSoT (μηδέν bespoke inline setLineDash/strokeStyle).
 import { applyOverlayLeaderStyle } from '../../canvas-v2/preview-canvas/overlay-line-style';
-import { buildSegmentHudMeta, paintWallHud } from '../../canvas-v2/preview-canvas/wall-hud-paint';
-import { paintColumnHud } from '../../canvas-v2/preview-canvas/column-hud-paint';
-// ADR-508 §line-hud / ADR-561 — polyline vertex-reshape HUD: which incident segment(s) change length.
-import { getPolylineVertexIncidentSegments } from '../../systems/polyline/polyline-grips';
 // SSoT point interpolation (ADR-561 corner-arc nesting) — μηδέν inline lerp.
 import { lerpPoint } from '../../rendering/entities/shared/geometry-utils';
-import { buildWallHudSpecLabel } from '../drawing/wall-hud-spec-label';
-import { buildColumnHudSpecLabel } from '../drawing/column-hud-spec-label';
+// ADR-508 §*-hud — live member grip HUD painter (file-size SRP split, N.7.1). Re-exported below so
+// existing consumers of `grip-ghost-preview-draw-helpers` keep their import path unchanged.
+export { drawMemberGripHud } from './grip-ghost-preview-hud-helpers';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -414,81 +409,5 @@ export function drawMemberBodyGhostWithJoinMiter(
   return { ghost, neighbours };
 }
 
-/**
- * ADR-508 §wall-hud/§column-hud — grip kinds ΧΩΡΙΣ live HUD (καθαρή μετακίνηση / περιστροφή που έχει
- * δική της ένδειξη). Τα `*-poly-vertex-*` (free-form) εξαιρούνται χωριστά (startsWith).
- */
-const MEMBER_HUD_SKIP: ReadonlySet<string> = new Set([
-  'wall-midpoint', 'wall-rotation', 'column-center', 'column-rotation',
-]);
-
-/**
- * ADR-508 §wall-hud/§column-hud — LIVE «λευκές ενδείξεις» ΤΟΙΧΟΥ ή ΚΟΛΟΝΑΣ κατά το σύρσιμο λαβής,
- * ζωγραφισμένες στο **ΙΔΙΟ frame/RAF** με το grip ghost (ο caller το καλεί ΜΕΤΑ το ghost draw) → ΣΤΑΘΕΡΕΣ,
- * χωρίς race με ξεχωριστό leaf. **FULL SSoT** — ΙΔΙΟΙ painters/formatters με τη σχεδίαση:
- *   · τοίχος → `buildSegmentHudMeta` + `paintWallHud` (μήκος/γωνία/πάχος·ύψος)·
- *   · κολόνα (ΟΛΟΙ οι τύποι) → `paintColumnHud` (ορθογ./τοιχίο: παρειές· κύκλος: Ø· πολύγωνο: Ø+N·
- *     Γ/Τ/Π/Ι/σύνθετο: aligned δ. ανά ακμή· + ∠γωνία + ύψος). Το per-sub-dim pill αποσύρθηκε.
- * Μόνο σε λαβές αλλαγής διαστάσεων (skip move/rotate/poly-vertex). No-op σε μηδενική αλλαγή (`changed=false`).
- */
-export function drawMemberGripHud(
-  ctx: CanvasRenderingContext2D,
-  dp: DxfGripDragPreview,
-  transformed: DxfEntityUnion,
-  changed: boolean,
-  sceneUnits: SceneUnits,
-  t: ViewTransform,
-  vp: { width: number; height: number },
-): void {
-  if (!changed) return;
-  const type = (transformed as { type?: string }).type;
-  if (dp.wallGripKind && !MEMBER_HUD_SKIP.has(dp.wallGripKind) && type === 'wall') {
-    const w = transformed as unknown as WallEntity;
-    const meta = buildSegmentHudMeta(w.params.start, w.params.end, sceneUnits, w.params.thickness, w.params.height);
-    paintWallHud(ctx, meta, buildWallHudSpecLabel(meta), t, vp);
-    return;
-  }
-  if (
-    dp.columnGripKind && !MEMBER_HUD_SKIP.has(dp.columnGripKind) &&
-    !dp.columnGripKind.startsWith('column-poly-vertex-') && type === 'column'
-  ) {
-    const c = transformed as unknown as ColumnEntity;
-    paintColumnHud(ctx, c.geometry.footprint.vertices, c.params, buildColumnHudSpecLabel(c.params.height), sceneUnits, t, vp);
-    return;
-  }
-  // ADR-508 §line-hud / ADR-561 — ΕΝΩΜΕΝΟ ΣΥΣΤΗΜΑ (polyline) vertex-reshape parity με τη ΜΕΜΟΝΩΜΕΝΗ
-  // γραμμή: όταν σέρνεις κορυφή (π.χ. το άκρο ενός σκέλους 2 ενωμένων γραμμών), ΚΑΘΕ σκέλος που αλλάζει
-  // μήκος παίρνει τις ΙΔΙΕΣ λευκές ενδείξεις (μήκος + ∠γωνία) μέσω του ΚΟΙΝΟΥ `buildSegmentHudMeta`+
-  // `paintWallHud` (`specLabel=''` — η γραμμή/polyline δεν έχει BIM ταυτότητα). Endpoint → 1 σκέλος,
-  // γωνιακή/εσωτερική κορυφή → 2 σκέλη (Revit temporary-dimensions parity, Giorgio 2026-07-05).
-  //
-  // ⚠️ Το κλείδωμα γίνεται στο `dp.gripIndex` (ΟΧΙ στο `polylineGripKind`): το vertex-reshape path
-  // (`buildDxfDragPreview`) ΔΕΝ προωθεί `polylineGripKind` στο `dp` (μόνο το rotation path το κάνει) →
-  // ένα guard πάνω σε αυτό δεν κουμπώνει ΠΟΤΕ. Ίδιο proven pattern με τα polyline sibling overlays
-  // (`paintGripEndpointReshapeArcs` arc + `getPolylineGripAlignmentAnchors` traces): `isPolylineEntity`
-  // + `gripIndex`. Οι λαβές whole-entity move/rotation εξαιρούνται από τον έλεγχο `!movesEntity`/
-  // `!rotatePivot` ΚΑΙ επειδή το `gripIndex` τους είναι ≥ vertexCount → `getPolylineVertexIncidentSegments`
-  // επιστρέφει []. Το `transformed` είναι ΗΔΗ 'polyline' (`normalizePreviewEntity`, ADR-561) με
-  // post-reshape vertices → WYSIWYG μήκος/γωνία.
-  if (type === 'polyline' && !dp.movesEntity && !dp.rotatePivot) {
-    const poly = transformed as unknown as { vertices: Point2D[]; closed: boolean };
-    const segments = getPolylineVertexIncidentSegments(dp.gripIndex, poly.vertices.length, poly.closed);
-    if (segments.length > 0) {
-      for (const [a, b] of segments) {
-        paintWallHud(ctx, buildSegmentHudMeta(poly.vertices[a], poly.vertices[b], sceneUnits), '', t, vp);
-      }
-      return;
-    }
-  }
-  // ADR-508 §line-hud / ADR-363 Slice F/G — plain DXF LINE parity με τον τοίχο (Giorgio 2026-07-04
-  // «όταν σέρνω άκρο ή μέσο της γραμμής, γωνία+μήκος ΑΚΡΙΒΩΣ όπως ο τοίχος»): endpoint reshape
-  // (grip 0/1) + midpoint/MOVE-cross (grip 2/4) δείχνουν την ΙΔΙΑ aligned διάσταση μήκους + ∠γωνία,
-  // μέσω του ΚΟΙΝΟΥ `buildSegmentHudMeta`+`paintWallHud`. Η γραμμή δεν έχει BIM ταυτότητα → `specLabel=''`
-  // (μόνο μήκος+γωνία, χωρίς πάχος/ύψος). Η λαβή περιστροφής (`line-rotation`) εξαιρείται — έχει το δικό
-  // της arc/polar overlay (mirror του `wall-rotation` skip). N.11-clean: κενό label, καμία μετάφραση εδώ.
-  const asEntity = transformed as unknown as Entity;
-  if (isLineEntity(asEntity) && dp.lineGripKind !== 'line-rotation') {
-    const meta = buildSegmentHudMeta(asEntity.start, asEntity.end, sceneUnits);
-    paintWallHud(ctx, meta, '', t, vp);
-  }
-}
+// ADR-508 §*-hud — `drawMemberGripHud` (live member grip HUD) moved to
+// `grip-ghost-preview-hud-helpers.ts` (file-size SRP split, N.7.1) and re-exported at the top.

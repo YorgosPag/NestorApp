@@ -21,10 +21,12 @@ import type {
   RibbonCommand,
   RibbonComboboxOption,
 } from '../../types/ribbon-types';
+// 🏢 SSoT: canonical comma→dot normalizer (comma-normalize ratchet module)
+import { normalizeNumber } from '../../../../systems/dynamic-input/utils/number';
 
 /** Parse an option/draft value to a finite number, or `null` (non-numeric / empty). */
 export function parseOptionNumber(value: string): number | null {
-  const trimmed = value.trim().replace(',', '.');
+  const trimmed = normalizeNumber(value.trim());
   if (trimmed === '' || trimmed === '-' || trimmed === '.') return null;
   const n = Number(trimmed);
   return Number.isFinite(n) ? n : null;

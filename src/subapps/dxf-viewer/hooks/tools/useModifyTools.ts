@@ -266,15 +266,15 @@ export function useModifyTools({
       inputType: 'number',
       unit: '°',
       validate: (val) => {
-        // ADR-397/513 (Giorgio 2026-07-06) — δέξου ΚΑΙ κόμμα ΚΑΙ τελεία (45,5 ≡ 45.5), όπως το grip typed-angle.
-        const n = parseFloat(val.replace(',', '.'));
+        // ADR-397/513 — το `PromptDialog` περνά ΗΔΗ normalized (κόμμα→τελεία, `normalizeValue`) στο validate
+        // ΚΑΙ στο επιστρεφόμενο result → μηδέν επιπλέον `replace` εδώ (θα ήταν διπλότυπο· κόμμα δουλεύει ήδη).
+        const n = parseFloat(val);
         if (isNaN(n)) return t('promptDialog.invalidNumber');
         return null;
       },
     });
     if (result !== null) {
-      // ADR-397/513 — κανονικοποίηση «,» → «.» (ελληνική/ευρωπαϊκή δεκαδική σύμβαση), parity με grip typed-angle.
-      const angle = parseFloat(result.replace(',', '.'));
+      const angle = parseFloat(result);
       if (!isNaN(angle) && Math.abs(angle) > 0.001) rotationTool.handleAngleInput(angle);
     }
   }, [showPromptDialog, t, rotationTool]);

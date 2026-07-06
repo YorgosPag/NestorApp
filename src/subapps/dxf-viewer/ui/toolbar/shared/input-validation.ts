@@ -3,6 +3,8 @@
  */
 // 🏢 ADR-071: Centralized clamp function
 import { clamp } from '../../../rendering/entities/shared/geometry-utils';
+// 🏢 SSoT: canonical comma→dot normalizer (comma-normalize ratchet module)
+import { normalizeNumber } from '../../../systems/dynamic-input/utils/number';
 
 export interface ValidationOptions {
   minValue?: number;
@@ -25,7 +27,7 @@ export function normalizeNumericInput(
   const cleaned = value.trim();
   if (!cleaned) return defaultValue;
   
-  const normalized = cleaned.replace(',', '.');
+  const normalized = normalizeNumber(cleaned);
   const parsed = parseFloat(normalized);
   // 🏢 ADR-071: Using centralized clamp
   return isNaN(parsed) ? defaultValue : clamp(parsed, minValue, maxValue);

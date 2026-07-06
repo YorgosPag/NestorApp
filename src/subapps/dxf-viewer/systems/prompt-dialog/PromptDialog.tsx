@@ -29,6 +29,8 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+// 🏢 SSoT: canonical comma→dot normalizer (comma-normalize ratchet module)
+import { normalizeNumber } from '../dynamic-input/utils/number';
 
 // ============================================================================
 // COMPONENT
@@ -82,7 +84,7 @@ export const PromptDialog: React.FC = () => {
   // Normalize input: comma → dot for numeric fields
   const normalizeValue = useCallback((raw: string): string => {
     if (options?.inputType === 'number') {
-      return raw.replace(',', '.');
+      return normalizeNumber(raw);
     }
     return raw;
   }, [options?.inputType]);

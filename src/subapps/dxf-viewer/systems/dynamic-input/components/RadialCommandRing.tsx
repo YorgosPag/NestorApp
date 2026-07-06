@@ -30,6 +30,8 @@ import type { Point2D } from '../../../rendering/types/Types';
 import { setCrosshairSuppressed } from '../../cursor/CrosshairSuppressionStore';
 import { useEscapeHandler, ESC_PRIORITY } from '../../escape-bus';
 import { evalExpr } from '../numeric-expression';
+// 🏢 SSoT: canonical comma→dot normalizer (comma-normalize ratchet module)
+import { normalizeNumber } from '../utils/number';
 import type { RingConfig, RingFieldDef, RingUnitContext } from '../ring-config';
 import {
   type CursorZone,
@@ -235,7 +237,7 @@ export function RadialCommandRing({
     if (!openField) return false;
     const field = fieldByKey.get(openField);
     if (field?.kind !== 'numeric' || !field.commitNumeric) return false;
-    const num = evalExpr(raw.replace(/,/g, '.'));
+    const num = evalExpr(normalizeNumber(raw));
     if (num === null) return false;
     field.commitNumeric(num, unitCtx);
     pokeCanvas();

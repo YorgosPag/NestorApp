@@ -22,6 +22,8 @@ import { LengthenCommand } from '../../core/commands/entity-commands/LengthenCom
 import { ArcRadiusEditCommand } from '../../core/commands/entity-commands/ArcRadiusEditCommand';
 import type { LengthenEndpoint } from './lengthen-axial-stretch';
 import type { GripMenuActionId } from './grip-menu-resolver';
+// 🏢 SSoT: canonical comma→dot normalizer (comma-normalize ratchet module)
+import { normalizeNumber } from '../dynamic-input/utils/number';
 
 export interface GripMenuActionContext {
   readonly executeCommand: (cmd: ICommand) => void;
@@ -33,7 +35,7 @@ export interface GripMenuActionContext {
 
 function parseFiniteFloat(raw: string | null): number | null {
   if (raw === null) return null;
-  const v = parseFloat(raw.trim().replace(',', '.'));
+  const v = parseFloat(normalizeNumber(raw.trim()));
   return Number.isFinite(v) ? v : null;
 }
 

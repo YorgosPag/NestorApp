@@ -18,6 +18,8 @@ import React from 'react';
 import type { TFunction } from 'i18next';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { DynamicInputField } from './DynamicInputField';
+// 🏢 SSoT: canonical comma→dot normalizer (comma-normalize ratchet module)
+import { normalizeNumber } from '../utils/number';
 
 type RefObj = React.RefObject<HTMLInputElement>;
 
@@ -93,7 +95,7 @@ export function DynamicInputFields(props: DynamicInputFieldsProps): React.ReactE
           label="X"
           value={xValue}
           onChange={(e) => {
-            const normalizedValue = e.target.value.replace(',', '.');
+            const normalizedValue = normalizeNumber(e.target.value);
             setXValue(normalizedValue);
             setIsManualInput(prev => ({ ...prev, x: true }));
           }}
@@ -111,7 +113,7 @@ export function DynamicInputFields(props: DynamicInputFieldsProps): React.ReactE
           value={yValue}
           onChange={(e) => {
             if (fieldUnlocked.y) {
-              const normalizedValue = e.target.value.replace(',', '.');
+              const normalizedValue = normalizeNumber(e.target.value);
               setYValue(normalizedValue);
               setIsManualInput(prev => ({ ...prev, y: true }));
             }
@@ -281,7 +283,7 @@ export function DynamicInputFields(props: DynamicInputFieldsProps): React.ReactE
         <DynamicInputField
           label="R"
           value={riseValue}
-          onChange={(e) => setRiseValue(e.target.value.replace(',', '.'))}
+          onChange={(e) => setRiseValue(normalizeNumber(e.target.value))}
           onFocus={() => setActiveStairField('rise')}
           inputRef={riseInputRef}
           isActive={activeStairField === 'rise'}
@@ -294,7 +296,7 @@ export function DynamicInputFields(props: DynamicInputFieldsProps): React.ReactE
         <DynamicInputField
           label="T"
           value={treadValue}
-          onChange={(e) => setTreadValue(e.target.value.replace(',', '.'))}
+          onChange={(e) => setTreadValue(normalizeNumber(e.target.value))}
           onFocus={() => setActiveStairField('tread')}
           inputRef={treadInputRef}
           isActive={activeStairField === 'tread'}
@@ -307,7 +309,7 @@ export function DynamicInputFields(props: DynamicInputFieldsProps): React.ReactE
         <DynamicInputField
           label="W"
           value={widthValue}
-          onChange={(e) => setWidthValue(e.target.value.replace(',', '.'))}
+          onChange={(e) => setWidthValue(normalizeNumber(e.target.value))}
           onFocus={() => setActiveStairField('width')}
           inputRef={widthInputRef}
           isActive={activeStairField === 'width'}

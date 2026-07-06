@@ -3,6 +3,8 @@ import React from 'react';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
+// 🏢 SSoT: canonical comma→dot normalizer (comma-normalize ratchet module)
+import { normalizeNumber } from '../utils/number';
 
 interface DynamicInputFieldProps {
   label: string;
@@ -39,7 +41,7 @@ export function DynamicInputField({
     
     if (fieldType === 'angle') {
       // Angle-specific validation: 0-360° and comma to period normalization
-      let value = inputValue.replace(',', '.');
+      let value = normalizeNumber(inputValue);
       // Basic validation: only numbers, period and empty
       if (value === '' || /^\d*\.?\d*$/.test(value)) {
         const num = parseFloat(value);
@@ -57,7 +59,7 @@ export function DynamicInputField({
       }
     } else {
       // Default coordinate behavior: normalize comma to period
-      const normalizedValue = inputValue.replace(',', '.');
+      const normalizedValue = normalizeNumber(inputValue);
       const newEvent = { ...e, target: { ...e.target, value: normalizedValue } };
       onChange(newEvent);
     }
