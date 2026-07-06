@@ -11,6 +11,14 @@
 import type { DxfEntityUnion } from '../../../canvas-v2/dxf-canvas/dxf-types';
 import type { EntityPreviewTransform } from '../entity-preview-types';
 import { applyEntityPreview } from '../apply-entity-preview';
+// ADR-557 Φ-attachment — the box now measures real glyph metrics (width + vertical ink).
+// Pin a deterministic stub whose ink == its font metrics, so the VISUAL box equals the
+// nominal em box (extent ratio 1) and these resize expectations stay machine-independent.
+import { installStubFont } from '../../../text-engine/fonts/__tests__/_stub-font';
+
+let __stubCleanup: () => void;
+beforeAll(() => { __stubCleanup = installStubFont(); });
+afterAll(() => __stubCleanup());
 
 const text = (over: Record<string, unknown> = {}): DxfEntityUnion =>
   ({ id: 'tx', type: 'text', visible: true, position: { x: 0, y: 0 }, text: 'DDD', height: 250,

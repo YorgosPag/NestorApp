@@ -22,9 +22,11 @@ import {
   getTextHeightWithFallback,
   TEXT_FONTS,
 } from '../../config/text-rendering-config';
-// ADR-557 Φ-attachment — the attachment-aware text-box SSoT the 2D grips + hover frame
-// also consume, so the 3D plane sits on the SAME box centre (2D ≡ 3D parity).
-import { resolveTextBox } from '../../bim/text/text-box';
+// ADR-557 Φ-attachment — the NOMINAL em box (`resolveTextEmBox`): the 3D canvas draws the
+// glyph centred in an em cell (`textBaseline:'middle'`), so the plane must sit on the em-box
+// centre, NOT the tight VISUAL cap box (`resolveTextBox`) the 2D grips/hover use — else the
+// 3D text shifts vertically vs the plan (measured ~53 units for a 277-unit title).
+import { resolveTextEmBox } from '../../bim/text/text-box';
 
 /** Texture resolution: canvas pixels per drawing unit of text height (crisp at typical zoom). */
 const TEXTURE_PX_PER_UNIT = 16;
@@ -122,7 +124,7 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
   // ADR-557 Φ-attachment — anchor the plane CENTRE at the attachment-aware text-box centre
   // SSoT (`resolveTextBox`), the SAME box the 2D grips + hover frame use, so the 3D glyph
   // block coincides with them and 2D ≡ 3D (was: lower-left at position → ignored attachment).
-  const boxCenter = resolveTextBox(entity).center;
+  const boxCenter = resolveTextEmBox(entity).center;
   mesh.position.set(boxCenter.x, 0, -boxCenter.y);
 
   return { mesh, geometry, material, texture };

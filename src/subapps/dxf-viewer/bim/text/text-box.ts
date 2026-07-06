@@ -17,26 +17,33 @@
  * justification from those two style fields and offsets the box accordingly, so the
  * box lands EXACTLY where the renderer paints the glyphs.
  *
- * SSoT REUSE: the 9-point offset table is NOT re-implemented here — we call the
- * existing `offsetForJustification` (`text-engine/layout/attachment-point.ts`,
- * ADR-344 Φ3). That helper is y-DOWN (Canvas2D) and returns the offset from the
- * insertion point to the block's TOP-LEFT corner; we map it to the world y-UP,
- * bbox-centre `RectFrame` the grip engine consumes:
+ * HORIZONTAL: the 9-point offset table is NOT re-implemented here — the column (L/C/R)
+ * offset comes from the existing `offsetForJustification` (`text-engine/layout/
+ * attachment-point.ts`, ADR-344 Φ3) via `horizontalCenterOffset`, and the width is the
+ * real glyph advance (`measureTextAdvanceWorld`).
  *
- *   {dx,dy} = offsetForJustification(just, {w,h})   // y-down, → top-left corner
- *   localCenter = { x: dx + w/2, y: -(dy + h/2) }    // → world y-up, box centre
- *   center = position + R(rotationDeg) · localCenter
+ * VERTICAL: there are TWO boxes (the "visual bounds vs edit box" split real editors use):
+ *   - `resolveTextBox` (VISUAL) — hugs the DRAWN glyphs: baseline seated by the FONT
+ *     metrics (per the attachment row) + extent = the real glyph INK (cap height / +
+ *     descenders), via `measureTextVerticalRatios`. This is the 2D grip / hover / hitTest
+ *     box, so handles + outline coincide with the letters (Giorgio 2026-07-07).
+ *   - `resolveTextEmBox` (NOMINAL) — the pre-metrics em box (`emVerticalRatios`), used by
+ *     the em-based 3D textured plane + culling, which must NOT follow the cap box.
  *
- * The inverse (`textBoxToPosition`) re-homes `position` from a (resized/rotated)
- * frame using the SAME helper at the new w,h — so a resize keeps the attachment
- * point pinned, exactly like Revit / AutoCAD.
+ *   center = position + R(rotationDeg) · { horizontalCenterOffset, verticalCentre·h }
+ *
+ * The inverse (`textBoxToPosition`) re-homes `position` from a (resized/rotated) VISUAL
+ * frame with the SAME ratios — so a resize keeps the attachment point pinned (Revit /
+ * AutoCAD). The resize divides the dragged box height by `textVisualExtentRatio` to
+ * recover the nominal `height` (see `text-grips.ts` `framePatch`).
  *
  * Import-time pure: zero React / Firestore / THREE deps. The width now measures the
  * real glyph advance (`measureTextAdvanceWorld`); its only DOM touch (the CSS-fallback
  * `measureText`) is lazy + `typeof document`-guarded inside that helper, so this module
  * still loads and runs in jest / SSR (where it degrades to the monospace approximation).
  *
- * @see text-engine/fonts/text-advance.ts — measureTextAdvanceWorld (metrics SSoT)
+ * @see text-engine/fonts/text-advance.ts — measureTextAdvanceWorld (width metrics SSoT)
+ * @see text-engine/fonts/text-vertical-metrics.ts — measureTextVerticalRatios (height metrics SSoT)
  * @see text-engine/layout/attachment-point.ts — offsetForJustification (9-point SSoT)
  * @see bim/grips/rect-frame.ts — RectFrame + corner world helpers
  * @see bim/text/text-grips.ts — the grip adapter that consumes this box
@@ -50,7 +57,7 @@ import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
 // ADR-557 Φ-attachment — metrics-accurate width: the box measures with the SAME real
 // glyph advance the renderer paints (`getGlyphRun` / CSS `measureText`), not a monospace
 // approximation, so grips / hover / hitTest coincide with the drawn glyphs.
-import { measureTextAdvanceWorld, type TextAdvanceStyle } from '../../text-engine/fonts';
+import { measureTextAdvanceWorld, measureTextVerticalRatios, type TextAdvanceStyle } from '../../text-engine/fonts';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { rotateVector } from '../grips/grip-math';
 import { RECT_CORNERS, rectCornerWorld, type RectFrame } from '../grips/rect-frame';
@@ -138,54 +145,134 @@ function justificationOf(text: DxfText): TextJustification {
 }
 
 /**
- * Local (un-rotated, world y-up) offset from `position` to the box CENTRE, derived
- * from the existing y-down `offsetForJustification` SSoT (see module header).
+ * Horizontal (x) offset from `position` to the box CENTRE — the column (L/C/R) part
+ * of the 9-point `offsetForJustification` SSoT. `dx` depends only on the column +
+ * width (not the height), so the vertical extent is free to come from real glyph
+ * metrics (`visualVerticalRatios`) while x still honours the attachment column.
  */
-function localCenterOffset(just: TextJustification, w: number, h: number): Point2D {
-  const { dx, dy } = offsetForJustification(just, { x: 0, y: 0, width: w, height: h });
-  return { x: dx + w / 2, y: -(dy + h / 2) };
+function horizontalCenterOffset(just: TextJustification, w: number): number {
+  const { dx } = offsetForJustification(just, { x: 0, y: 0, width: w, height: 0 });
+  return dx + w / 2;
+}
+
+/** Box top/bottom edges as height-INDEPENDENT ratios of the em height (world y-up, from `position`). */
+interface VBoxRatios {
+  readonly top: number;
+  readonly bottom: number;
 }
 
 /**
- * `DxfText` → attachment-aware bbox-centre `RectFrame` (world units). The box is
- * pinned so its attachment point sits on `entity.position`; it rotates around that
- * point by `rotation` (AutoCAD TEXT rotates about its insertion point).
+ * NOMINAL em-box vertical ratios — the pre-metrics behaviour, the `offsetForJustification`
+ * y-part as ratios (row T → [0,-1], M → [0.5,-0.5], B → [1,0]). Drives the "edit"/3D box
+ * (`resolveTextEmBox`) + is the safe fallback when glyph metrics are unavailable.
  */
-export function resolveTextBox(text: DxfText): RectFrame {
+function emVerticalRatios(just: TextJustification): VBoxRatios {
+  const row = just[0];
+  const center = row === 'M' ? 0 : row === 'B' ? 0.5 : -0.5;
+  return { top: center + 0.5, bottom: center - 0.5 };
+}
+
+/**
+ * VISUAL vertical ratios — the box hugs the REAL painted glyphs. The baseline sits
+ * where the renderer seats it (font ascent/descent per the attachment row, mirroring
+ * `TextRenderer.fillGlyphRun`) and the extent is the real glyph INK (cap height for
+ * caps, +descenders for g/p/y), so the 2D hover frame + grips + hitTest coincide with
+ * the drawn glyphs (Revit / Figma-grade). Degrades to the nominal em box (identical to
+ * the previous behaviour) when no glyph metrics resolve — keeping SSR / jest stable.
+ */
+function visualVerticalRatios(text: DxfText, just: TextJustification): VBoxRatios {
+  const r = measureTextVerticalRatios(text.text ?? '', advanceStyleOf(text));
+  const row = just[0];
+  const baselineDrop = row === 'M' ? (r.fontAscent - r.fontDescent) / 2 : row === 'B' ? -r.fontDescent : r.fontAscent;
+  const baselineUp = -baselineDrop; // world y-up offset from `position` down to the baseline
+  const top = baselineUp + r.inkAscent;
+  const bottom = baselineUp - r.inkDescent;
+  return top - bottom > 1e-9 ? { top, bottom } : emVerticalRatios(just);
+}
+
+/**
+ * `DxfText` → attachment-aware bbox-centre `RectFrame` (world units). The box is pinned
+ * so its attachment point sits on `entity.position` and rotates about it (AutoCAD TEXT
+ * rotates about its insertion point). `mode` picks the vertical extent: the VISUAL glyph
+ * ink box (2D interaction) or the NOMINAL em box (3D plane + culling).
+ */
+function buildTextBox(text: DxfText, mode: 'visual' | 'em'): RectFrame {
   const w = effectiveTextWidth(text);
   const h = resolveBoxHeight(text);
+  const just = justificationOf(text);
+  const v = mode === 'em' ? emVerticalRatios(just) : visualVerticalRatios(text, just);
   const rotationDeg = text.rotation ?? 0;
-  const rel = rotateVector(localCenterOffset(justificationOf(text), w, h), rotationDeg);
+  const rel = rotateVector(
+    { x: horizontalCenterOffset(just, w), y: ((v.top + v.bottom) / 2) * h },
+    rotationDeg,
+  );
   return {
     center: translatePoint(text.position, rel),
     rotationDeg,
     halfWidth: w / 2,
-    halfLength: h / 2,
+    halfLength: ((v.top - v.bottom) / 2) * h,
   };
 }
 
 /**
- * Inverse of `resolveTextBox`'s centre derivation: a (possibly resized/rotated)
- * `RectFrame` → the LOWER-LEVEL `position` (attachment point), using the SAME
- * justification + `offsetForJustification` SSoT at the frame's current dimensions.
+ * The VISUAL glyph box — hugs the drawn glyphs (cap height / real ink extent). THE box
+ * for 2D grips, the 2D hover/selection frame and hitTest, so handles + outline coincide
+ * with the letters (ADR-557 Φ-attachment vertical, Giorgio 2026-07-07).
+ */
+export function resolveTextBox(text: DxfText): RectFrame {
+  return buildTextBox(text, 'visual');
+}
+
+/**
+ * The NOMINAL em box — the pre-metrics geometry (em height, attachment-anchored). Used by
+ * the 3D textured-plane anchor (`dxf-text-3d.ts`) and viewport culling, which are em-based
+ * (the 3D canvas draws the glyph centred in an em cell) and must NOT follow the cap box.
+ */
+export function resolveTextEmBox(text: DxfText): RectFrame {
+  return buildTextBox(text, 'em');
+}
+
+/**
+ * Inverse of the VISUAL box's centre derivation: a (resized/rotated) `RectFrame` → the
+ * `position` (attachment point). Re-homes the anchor with the SAME justification + visual
+ * vertical ratios, so a resize keeps the attachment point pinned (Revit / AutoCAD).
  */
 export function textBoxToPosition(frame: RectFrame, text: DxfText): Point2D {
-  const rel = rotateVector(
-    localCenterOffset(justificationOf(text), frame.halfWidth * 2, frame.halfLength * 2),
-    frame.rotationDeg,
-  );
+  const just = justificationOf(text);
+  const v = visualVerticalRatios(text, just);
+  const relY = frame.halfLength * ((v.top + v.bottom) / (v.top - v.bottom));
+  const rel = rotateVector({ x: horizontalCenterOffset(just, frame.halfWidth * 2), y: relY }, frame.rotationDeg);
   return { x: frame.center.x - rel.x, y: frame.center.y - rel.y };
 }
 
-/** The four box corners in world coords (rotation-aware) — NE, NW, SW, SE. */
+/**
+ * The VISUAL box's vertical extent ÷ em height (= inkAscent + inkDescent) — the divisor a
+ * resize uses to recover the nominal `height` from a dragged box height, so the box holds
+ * after release (`resolveTextBox(after) === draggedFrame`, no jump). Em-box path → 1.0.
+ */
+export function textVisualExtentRatio(text: DxfText): number {
+  const { top, bottom } = visualVerticalRatios(text, justificationOf(text));
+  return top - bottom;
+}
+
+/** The four VISUAL box corners in world coords (rotation-aware) — NE, NW, SW, SE (2D hover frame). */
 export function textBoxCornersWorld(text: DxfText): Point2D[] {
   const frame = resolveTextBox(text);
   return RECT_CORNERS.map((c) => rectCornerWorld(frame, c));
 }
 
-/** Axis-aligned world bounding box enclosing the (rotated) attachment-aware text box. */
+/** The four NOMINAL em-box corners (3D hover glow — matches the em-based 3D textured plane). */
+export function textEmBoxCornersWorld(text: DxfText): Point2D[] {
+  const frame = resolveTextEmBox(text);
+  return RECT_CORNERS.map((c) => rectCornerWorld(frame, c));
+}
+
+/**
+ * Axis-aligned world bounding box enclosing the (rotated) NOMINAL em box — culling uses the
+ * generous em box (not the tight cap box) so text never pops at the viewport edge.
+ */
 export function textBoxAABB(text: DxfText): TextBoxAABB {
-  const corners = textBoxCornersWorld(text);
+  const corners = textEmBoxCornersWorld(text);
   let minX = corners[0].x, minY = corners[0].y, maxX = corners[0].x, maxY = corners[0].y;
   for (let i = 1; i < corners.length; i++) {
     const c = corners[i];

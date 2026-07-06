@@ -86,6 +86,11 @@ jest.mock('@radix-ui/react-alert-dialog', () => ({
 // ── Setup/teardown ───────────────────────────────────────────────────────────
 
 import { DimensionsTab } from '../DimensionsTab';
+// ADR-362 §7 — «Επεξεργασία Στυλ…» ribbon action drives this store.
+import {
+  requestEditDimStyle,
+  __resetDimStyleEditorStoreForTests,
+} from '../DimStyleEditorStore';
 
 function freshRegistry() {
   const reg = new DimStyleRegistry();
@@ -95,6 +100,7 @@ function freshRegistry() {
 
 afterEach(() => {
   __setDimStyleRegistryForTests(null);
+  __resetDimStyleEditorStoreForTests();
 });
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -188,6 +194,35 @@ describe('ADR-362 Phase F1 — DimensionsTab', () => {
     await waitFor(() => {
       expect(screen.queryByText('ToDelete')).not.toBeInTheDocument();
     });
+  });
+
+  // ── ADR-362 §7 — «Επεξεργασία Στυλ…» edit-request consumption ────────────────
+  it('requestEditDimStyle(custom) drops the tab into edit-mode (editingTitle header)', async () => {
+    const reg = freshRegistry();
+    let customId = '';
+    act(() => {
+      customId = reg.createCustomStyle({ name: 'Editable', ...baseFields(reg) }).id;
+    });
+    renderTab();
+    act(() => { requestEditDimStyle(customId); });
+    await waitFor(() => {
+      // The editing header renders `editingTitle:<name>` (mock t interpolates name).
+      expect(screen.getByText('panels.dimensions.editor.editingTitle:Editable')).toBeInTheDocument();
+    });
+  });
+
+  it('requestEditDimStyle(built-in) stays in list-mode (read-only → no edit header)', async () => {
+    const reg = freshRegistry();
+    const builtIn = reg.getAllStyles()[0]; // built-in ISO — updateCustomStyle throws for it
+    renderTab();
+    act(() => { requestEditDimStyle(builtIn.id); });
+    // Never enters edit-mode: the list header (styleManager) stays, no editingTitle.
+    await waitFor(() => {
+      expect(screen.getByText('panels.dimensions.styleManager')).toBeInTheDocument();
+    });
+    expect(
+      screen.queryByText(`panels.dimensions.editor.editingTitle:${builtIn.name}`),
+    ).not.toBeInTheDocument();
   });
 });
 

@@ -44,7 +44,6 @@ import i18next from 'i18next';
 import { setActiveDragGrip } from '../../systems/cursor/GripDragStore';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import type {
-  UnifiedGripInfo,
   SelectedGrip,
   DraggingVertexState,
 } from './unified-grip-types';
@@ -138,49 +137,6 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
   Promise.resolve().then(() => { mouseDownInProgressRef.current = false; });
   // ADR-040 XXII.A: live SSoT read.
   const hitGrip = findNearestGrip(worldPos, allGrips, effectiveTolerance, getImmediateTransform().scale);
-  // ═══════════ TEMP-DIAG (2026-07-06) — TEXT GRIP HIT-TEST TRACE. REMOVE WHEN SOLVED. ═══════════
-  // Fires once per mousedown when a text is selected: shows the cursor vs EVERY published
-  // text grip (world + px distance), the tolerance, the winning grip, and the source entity's
-  // width/widthFactor/textStyle — pinpoints why a corner click misses (→ body-move) or lands off.
-  {
-    const textGrips = allGrips.filter((g) => (g as { textGripKind?: string }).textGripKind);
-    if (textGrips.length > 0) {
-      const scale = getImmediateTransform().scale;
-      const d = (g: UnifiedGripInfo): number => Math.hypot(g.position.x - worldPos.x, g.position.y - worldPos.y);
-      const r2 = (n: number): number => Math.round(n * 100) / 100;
-      const entId = textGrips[0].entityId;
-      const ent = entId
-        ? (createSceneManagerAdapter(dxfCommitDeps)?.getEntity(entId) as unknown as Record<string, unknown> | null | undefined)
-        : null;
-      // eslint-disable-next-line no-console
-      console.log('[GRIP-HIT-DIAG]', {
-        cursorWorld: { x: r2(worldPos.x), y: r2(worldPos.y) },
-        scale: r2(scale),
-        tolerancePx: effectiveTolerance,
-        toleranceWorld: r2(effectiveTolerance / scale),
-        gripCountTotal: allGrips.length,
-        textGripCount: textGrips.length,
-        entity: ent ? {
-          type: ent.type, position: ent.position, width: ent.width ?? null,
-          widthFactor: ent.widthFactor ?? null, height: ent.height ?? null,
-          rotation: ent.rotation ?? 0, textStyle: ent.textStyle ?? null,
-          hasTextNode: 'textNode' in (ent as object),
-        } : { lookup: 'null' },
-        grips: textGrips.map((g) => ({
-          kind: (g as { textGripKind?: string }).textGripKind,
-          type: g.type,
-          pos: { x: r2(g.position.x), y: r2(g.position.y) },
-          distWorld: r2(d(g)),
-          distPx: r2(d(g) * scale),
-          movesEntity: g.movesEntity ?? false,
-        })),
-        winner: hitGrip
-          ? { kind: (hitGrip as { textGripKind?: string }).textGripKind ?? null, type: hitGrip.type, movesEntity: hitGrip.movesEntity ?? false }
-          : null,
-      });
-    }
-  }
-  // ═══════════════════════════════════════════════════════════════════════════════════════════
   // ADR-363 Phase 1G — forgiving hot-grip entry: if the click just missed the
   // handle but a wall hot-grip (corner / move / rotation glyph) is currently
   // highlighted (hovered/warm), treat it as the hit so the click still grabs it

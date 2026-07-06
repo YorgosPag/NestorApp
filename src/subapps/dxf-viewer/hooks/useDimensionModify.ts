@@ -31,6 +31,8 @@ import { useCommandHistory } from '../core/commands/useCommandHistory';
 import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { UpdateEntityCommand } from '../core/commands/entity-commands/UpdateEntityCommand';
 import { openDimTextOverride } from '../ui/panels/dimensions/DimTextOverrideStore';
+// ADR-362 §7 — «Επεξεργασία Στυλ…»: hand the selected dim's styleId to the Style Manager.
+import { requestEditDimStyle } from '../ui/panels/dimensions/DimStyleEditorStore';
 import { CompositeCommand } from '../core/commands/CompositeCommand';
 import type { ICommand, ISceneManager } from '../core/commands/interfaces';
 import { getDimStyleRegistry } from '../systems/dimensions/dim-style-registry';
@@ -333,6 +335,15 @@ export function useDimensionModify(props: { levelManager: LevelManagerLike }): v
       runAtomic(buildResetTextPositionCommands(r.dims, r.ctx), execute);
     });
 
+    // ADR-362 §7 — «Επεξεργασία Στυλ…»: resolve the primary selected dim's `styleId`
+    // (level-scene SSoT) and hand it to the Style Manager store (no command — opens UI).
+    const unsubEditStyle = EventBus.on('dim:edit-style-requested', ({ entityId }) => {
+      const r = resolve([entityId]);
+      if (!r) return;
+      const dim = r.dims.find((d) => d.id === entityId) ?? r.dims[0];
+      requestEditDimStyle(dim.styleId);
+    });
+
     return () => {
       unsubBreak();
       unsubSpace();
@@ -344,6 +355,7 @@ export function useDimensionModify(props: { levelManager: LevelManagerLike }): v
       unsubTextOverrideApply();
       unsubResetOverrides();
       unsubResetTextPosition();
+      unsubEditStyle();
     };
   }, [levelManager, execute]);
 }

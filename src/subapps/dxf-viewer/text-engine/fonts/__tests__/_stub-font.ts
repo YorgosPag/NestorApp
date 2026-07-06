@@ -15,14 +15,41 @@ import type { Font } from 'opentype.js';
 import { fontCache } from '../font-cache';
 import { __resetTextAdvanceMeasureCtx } from '../text-advance';
 
-/** A minimal opentype.Font whose advance is `emPerChar` per glyph (proportional-linear). */
-export function stubProportionalFont(emPerChar: number): Font {
+/** Ink-bounds override (em ratios) for the stub glyph path — see `stubProportionalFont`. */
+export interface StubInkBounds {
+  /** Glyph ink ascent above baseline ÷ em. Default = the font ascent (0.8) → ink == metrics. */
+  inkAscentEm?: number;
+  /** Glyph ink descent below baseline ÷ em. Default = the font descent (0.2) → ink == metrics. */
+  inkDescentEm?: number;
+}
+
+/**
+ * A minimal opentype.Font whose advance is `emPerChar` per glyph (proportional-linear).
+ *
+ * `getPath(...).getBoundingBox()` returns the glyph INK box (opentype y-DOWN, baseline at 0)
+ * so `measureTextVerticalRatios` is deterministic. DEFAULT ink = the font metrics box
+ * (ascent 0.8 / descent 0.2), so the VISUAL text box equals the NOMINAL em box and the
+ * pre-metrics geometry tests stay unchanged. Pass `ink` (e.g. cap 0.7 / descent 0) to model
+ * a real cap-height font for the vertical-metrics tests.
+ */
+export function stubProportionalFont(emPerChar: number, ink?: StubInkBounds): Font {
+  const inkAscentEm = ink?.inkAscentEm ?? 0.8; // = ascender / unitsPerEm
+  const inkDescentEm = ink?.inkDescentEm ?? 0.2; // = -descender / unitsPerEm
   return {
     unitsPerEm: 1000,
     ascender: 800,
     descender: -200,
     getAdvanceWidth: (text: string, size: number): number => text.length * emPerChar * size,
-    getPath: (): { commands: [] } => ({ commands: [] }),
+    getPath: (text: string, _x: number, _y: number, size: number) => ({
+      commands: [] as [],
+      // y-DOWN: top (ink ascent) is negative, bottom (ink descent) is positive.
+      getBoundingBox: () => ({
+        x1: 0,
+        y1: -inkAscentEm * size,
+        x2: (text?.length ?? 0) * emPerChar * size,
+        y2: inkDescentEm * size,
+      }),
+    }),
   } as unknown as Font;
 }
 
@@ -32,10 +59,10 @@ export function stubProportionalFont(emPerChar: number): Font {
  * geometry tests keep their widths) and guarantee a Path2D constructor for
  * `getGlyphRun`. Returns a cleanup fn for `afterAll`.
  */
-export function installStubFont(emPerChar = 0.6, family = 'arial'): () => void {
+export function installStubFont(emPerChar = 0.6, family = 'arial', ink?: StubInkBounds): () => void {
   const hadPath2D = 'Path2D' in globalThis;
   if (!hadPath2D) (globalThis as { Path2D?: unknown }).Path2D = class {};
-  fontCache.set(family, stubProportionalFont(emPerChar));
+  fontCache.set(family, stubProportionalFont(emPerChar, ink));
   __resetTextAdvanceMeasureCtx();
   return () => {
     fontCache.clear();

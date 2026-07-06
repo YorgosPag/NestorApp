@@ -25,6 +25,11 @@ export type { GlyphRun } from './glyph-path-cache';
 // world units), shared by the text-box geometry so grips/hover/hitTest ≡ drawn glyphs.
 export { measureTextAdvanceWorld, __resetTextAdvanceMeasureCtx } from './text-advance';
 export type { TextAdvanceStyle } from './text-advance';
+
+// ADR-557 Φ-attachment — vertical counterpart of `text-advance`: real font-metric
+// baseline anchor + glyph INK extent (world-ratio), so the box HEIGHT ≡ drawn glyphs.
+export { measureTextVerticalRatios } from './text-vertical-metrics';
+export type { TextVerticalRatios, TextVerticalStyle } from './text-vertical-metrics';
 export { subscribeFontReady, bumpFontReady, getFontReadyVersion } from './font-ready-store';
 export { preloadCadSubstituteFonts, CAD_SUBSTITUTE_FONTS } from './cad-font-preload';
 export type { CadSubstituteFont } from './cad-font-preload';

@@ -46,6 +46,10 @@ import { listArrowheadBlockNames, resolveArrowBlockNames } from '../../../system
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+// ADR-362 §7 — «Επίπεδο» (layer) wiring reuses the SSoT LayerStore + the line
+// bridge's `buildLayerOptions` (value=id, label=name) — μηδέν διπλή λίστα layers.
+import { getLayerStoreSnapshot, subscribeLayerStore } from '../../../stores/LayerStore';
+import { buildLayerOptions } from './useRibbonLineToolBridge.helpers';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -124,6 +128,8 @@ const K = DIM_RIBBON_KEYS.override;
 const CHOOSER = DIM_RIBBON_KEYS.style.chooser;
 /** Text rotation is an ENTITY field (`textRotation`, deg), not a DIMSTYLE override. */
 const TEXT_ROTATION = DIM_RIBBON_KEYS.text.rotation;
+/** Layer is an ENTITY field (`layerId`), not a DIMSTYLE override — mirror του line bridge. */
+const LAYER = DIM_RIBBON_KEYS.properties.layer;
 
 const DIM_KEY_MAP: Readonly<Record<string, DimKeySpec>> = {
   [K.color]:      { field: 'dimclrd', kind: 'color', trueColorField: 'dimclrdTrueColor' },
@@ -281,6 +287,16 @@ export function useRibbonDimBridge(props: UseRibbonDimBridgeProps): RibbonDimBri
     [dimStyleSnapshot],
   );
 
+  // ADR-362 §7 — live layer catalog for the «Επίπεδο» dropdown (SSoT LayerStore,
+  // ίδιο store & option builder με το line bridge· low-frequency). value=id, label=name.
+  const layerSnapshot = useSyncExternalStore(
+    subscribeLayerStore, getLayerStoreSnapshot, getLayerStoreSnapshot,
+  );
+  const layerOptions = useMemo<readonly RibbonComboboxOption[]>(
+    () => buildLayerOptions(layerSnapshot.layers),
+    [layerSnapshot],
+  );
+
   /** The selected dimension entity, or null. */
   const resolveSelectedDim = useCallback((): DimensionEntity | null => {
     const id = universalSelection.getPrimaryId();
@@ -326,6 +342,12 @@ export function useRibbonDimBridge(props: UseRibbonDimBridgeProps): RibbonDimBri
         const entity = resolveSelectedDim();
         return { value: entity ? String(entity.textRotation ?? 0) : '', options: [] };
       }
+      // Layer — an ENTITY field (`layerId`); options from the live LayerStore (mirror
+      // του line bridge). No selection → empty value + full option list.
+      if (commandKey === LAYER) {
+        const entity = resolveSelectedDim();
+        return { value: entity?.layerId ?? '', options: layerOptions };
+      }
       const spec = DIM_KEY_MAP[commandKey];
       if (!spec) return null; // action-only dim keys (apply / modify) — not a combobox
       const entity = resolveSelectedDim();
@@ -333,7 +355,7 @@ export function useRibbonDimBridge(props: UseRibbonDimBridgeProps): RibbonDimBri
       const style = resolveDimStyle(entity, getDimStyleRegistry());
       return { value: readValue(spec, style), options: optionsFor(spec.kind) };
     },
-    [resolveSelectedDim, optionsFor, styleOptions],
+    [resolveSelectedDim, optionsFor, styleOptions, layerOptions],
   );
 
   const onComboboxChange = useCallback(
@@ -350,6 +372,11 @@ export function useRibbonDimBridge(props: UseRibbonDimBridgeProps): RibbonDimBri
       if (commandKey === TEXT_ROTATION) {
         const deg = parseFloat(value);
         if (Number.isFinite(deg)) patchEntity(entity, { textRotation: deg });
+        return;
+      }
+      // Layer — write the ENTITY field `layerId` (undoable), mirror του line bridge.
+      if (commandKey === LAYER) {
+        if (value && value !== entity.layerId) patchEntity(entity, { layerId: value });
         return;
       }
       const spec = DIM_KEY_MAP[commandKey];

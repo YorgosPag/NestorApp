@@ -43,14 +43,14 @@ import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 // 🏢 ADR-530: Revit-grade glyph-path text rendering (CAD fonts via opentype.js).
 // Reuses the text-engine font SSoT — resolver + glyph-path cache; CSS fillText
 // stays as the fallback when no loaded font matches the entity's family.
-import { resolveEntityFont, getGlyphRun, GLYPH_REFERENCE_SIZE, measureText, type ResolvedFont } from '../../text-engine/fonts';
+import { resolveEntityFont, getGlyphRun, GLYPH_REFERENCE_SIZE, type ResolvedFont } from '../../text-engine/fonts';
 // ADR-557 — 2D grip render parity: the SAME 10-grip set the interaction +
 // 3D paths use (`computeDxfEntityGrips` → `getTextGrips`), so the on-canvas grip
 // squares match the rect-box. `gripGlyphShape` paints the move/rotation glyphs.
 import { getTextGrips } from '../../bim/text/text-grips';
 // ADR-557 Φ-attachment — attachment-aware text-box SSoT: the hitTest hit-box + the 2D
 // hover frame use the SAME box as the grips / 3D mesh / culling (one geometry, N consumers).
-import { resolveTextBox, textBoxCornersWorld, effectiveTextWidth } from '../../bim/text/text-box';
+import { resolveTextBox, textBoxCornersWorld } from '../../bim/text/text-box';
 import { projectToLocalFrame } from '../../bim/grips/grip-math';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -63,9 +63,6 @@ type TextRichStyle = {
   textBaseline?: 'top' | 'middle' | 'bottom';
   underline?: boolean; overline?: boolean; strikethrough?: boolean;
 } | undefined;
-
-// TEMP-DIAG (2026-07-06) — REMOVE WHEN SOLVED. Throttle map for the render box-vs-glyph trace.
-const TEXTBOX_DIAG_LAST = new Map<string, number>();
 
 export class TextRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -187,114 +184,7 @@ export class TextRenderer extends BaseEntityRenderer {
       const w = this.paintText(screenPos.x, screenPos.y, text, screenHeight, textAlignMode, baselineMode, resolved);
       if (hasDecoration) this.paintDecorations(screenPos.x, screenPos.y, w, screenHeight, richStyle, textAlignMode);
     }
-    // TEMP-DIAG (2026-07-06) — REMOVE WHEN SOLVED. ctx.font is still the text font here.
-    this.logTextBoxDiag(entity, text, screenHeight, resolved);
-    // VBOX-DIAG (2026-07-07) — REMOVE WHEN SOLVED. Vertical box vs real glyph ink metrics.
-    this.logTextVBoxDiag(entity, text, screenHeight, resolved, baselineMode);
     this.ctx.restore();
-  }
-
-  /**
-   * TEMP-DIAG (2026-07-06) — REMOVE WHEN SOLVED. Compares the geometry box
-   * (`resolveTextBox` → grips/hover/hitTest) with the ACTUAL painted glyph advance
-   * (real font metrics). Throttled 1/400 ms per entity id.
-   */
-  private logTextBoxDiag(
-    entity: EntityModel, text: string, screenHeight: number, resolved: ResolvedFont | null,
-  ): void {
-    if (!('position' in entity) || !(entity.position as Point2D)) return;
-    const id = String((entity as { id?: string | number }).id ?? '');
-    const now = typeof performance !== 'undefined' ? performance.now() : 0;
-    if (now - (TEXTBOX_DIAG_LAST.get(id) ?? 0) < 400) return;
-    TEXTBOX_DIAG_LAST.set(id, now);
-
-    const scale = this.transform.scale;
-    const realPx = resolved
-      ? getGlyphRun(resolved.font, resolved.cacheName, text).metrics.width * (screenHeight / GLYPH_REFERENCE_SIZE)
-      : this.ctx.measureText(text).width;
-    const realWorldW = realPx / scale;
-    const dxfText = { ...(entity as unknown as DxfText), height: this.extractTextHeight(entity) };
-    const boxWorldW = effectiveTextWidth(dxfText);
-    const box = resolveTextBox(dxfText);
-    const pos = entity.position as Point2D;
-    const r2 = (n: number): number => Math.round(n * 100) / 100;
-    // eslint-disable-next-line no-console
-    console.log('[TEXTBOX-DIAG]', {
-      id, text,
-      font: resolved ? resolved.cacheName : 'css-fallback',
-      posX: r2(pos.x), posY: r2(pos.y),
-      boxWorldW: r2(boxWorldW), realWorldW: r2(realWorldW), deltaW: r2(boxWorldW - realWorldW),
-      boxCenterX: r2(box.center.x), glyphCenterX: r2(pos.x + realWorldW / 2),
-      boxCenterMinusGlyphCenterX: r2(box.center.x - (pos.x + realWorldW / 2)),
-      widthFactor: (entity as { widthFactor?: number }).widthFactor ?? 1,
-      hasWidth: (entity as { width?: number }).width ?? null,
-    });
-  }
-
-  /**
-   * VBOX-DIAG (2026-07-07) — REMOVE WHEN SOLVED. Logs, in WORLD units, the real
-   * vertical metrics that SHOULD drive the box (font ascent/descent for the baseline
-   * anchor + glyph INK bounds for the extent) vs the current `resolveTextBox` vertical
-   * extent, so the vertical box↔glyph mismatch is measured, not guessed. Throttled.
-   */
-  private logTextVBoxDiag(
-    entity: EntityModel, text: string, screenHeight: number,
-    resolved: ResolvedFont | null, baselineMode: CanvasTextBaseline,
-  ): void {
-    if (!('position' in entity) || !(entity.position as Point2D)) return;
-    const id = String((entity as { id?: string | number }).id ?? '');
-    const now = typeof performance !== 'undefined' ? performance.now() : 0;
-    if (now - (TEXTBOX_DIAG_LAST.get(`${id}:v`) ?? 0) < 400) return;
-    TEXTBOX_DIAG_LAST.set(`${id}:v`, now);
-
-    const scale = this.transform.scale;
-    const heightWorld = screenHeight / scale;
-    // Font metrics (baseline anchor) + glyph ink bounds (extent), both in WORLD units.
-    let fontAscent = 0, fontDescent = 0, inkAscent = NaN, inkDescent = NaN;
-    let cssInkAscent = NaN, cssInkDescent = NaN;
-    if (resolved) {
-      const m = measureText(resolved.font, text, heightWorld);
-      fontAscent = m.ascent; fontDescent = m.descent;
-      // opentype path is y-DOWN, baseline at y=0: y1 = top (≤0), y2 = bottom (≥0).
-      const bb = resolved.font.getPath(text, 0, 0, heightWorld).getBoundingBox();
-      inkAscent = Number.isFinite(bb.y1) ? -bb.y1 : NaN;
-      inkDescent = Number.isFinite(bb.y2) ? bb.y2 : NaN;
-    }
-    // ctx.font is still the text font (px) here → CSS ink bounds for the fallback path.
-    const cm = this.ctx.measureText(text);
-    if (cm.actualBoundingBoxAscent != null) cssInkAscent = cm.actualBoundingBoxAscent / scale;
-    if (cm.actualBoundingBoxDescent != null) cssInkDescent = cm.actualBoundingBoxDescent / scale;
-    if (!resolved) {
-      fontAscent = (cm.fontBoundingBoxAscent ?? 0) / scale;
-      fontDescent = (cm.fontBoundingBoxDescent ?? 0) / scale;
-      inkAscent = cssInkAscent; inkDescent = cssInkDescent;
-    }
-
-    // Baseline drop below `position` (world), per the renderer's textBaseline mode.
-    const baselineDrop = baselineMode === 'middle' ? (fontAscent - fontDescent) / 2
-      : baselineMode === 'bottom' ? -fontDescent : fontAscent;
-    const pos = entity.position as Point2D;
-    const baselineY = pos.y - baselineDrop; // world y-up
-    const inkTop = baselineY + inkAscent;
-    const inkBottom = baselineY - inkDescent;
-
-    const dxfText = { ...(entity as unknown as DxfText), height: this.extractTextHeight(entity) };
-    const box = resolveTextBox(dxfText);
-    const boxTop = box.center.y + box.halfLength;
-    const boxBottom = box.center.y - box.halfLength;
-    const r3 = (n: number): number => Math.round(n * 1000) / 1000;
-    // eslint-disable-next-line no-console
-    console.log('[VBOX-DIAG]', {
-      id, text, baselineMode, font: resolved ? resolved.cacheName : 'css-fallback',
-      heightWorld: r3(heightWorld),
-      fontAscent: r3(fontAscent), fontDescent: r3(fontDescent),
-      inkAscent: r3(inkAscent), inkDescent: r3(inkDescent),
-      cssInkAscent: r3(cssInkAscent), cssInkDescent: r3(cssInkDescent),
-      posY: r3(pos.y), baselineY: r3(baselineY),
-      inkTop: r3(inkTop), inkBottom: r3(inkBottom),
-      boxTop: r3(boxTop), boxBottom: r3(boxBottom),
-      dTop: r3(boxTop - inkTop), dBottom: r3(boxBottom - inkBottom),
-    });
   }
 
   /**

@@ -202,6 +202,10 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap {
   // the `useDimensionModify` host runs one atomic-undo command per gesture.
   'dim:reset-overrides-requested': { entityIds: readonly string[] };
   'dim:reset-text-position-requested': { entityIds: readonly string[] };
+  // ADR-362 §7 — «Επεξεργασία Στυλ…»: open the Style Manager focused on the selected
+  // dim's DIMSTYLE. The `useDimensionModify` host resolves entity→styleId (level-scene
+  // SSoT) and drives the `DimStyleEditorStore`; the panel-open lives in special-actions.
+  'dim:edit-style-requested': { entityId: string };
 
   // 🏢 ADR-055: Entity Creation Event Bus Pattern (Enterprise Architecture)
   // Pattern: Autodesk/Bentley - Event-driven entity creation with Command History integration

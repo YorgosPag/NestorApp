@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useSyncExternalStore, useState, useCallback } from 'react';
+import React, { useSyncExternalStore, useState, useCallback, useEffect } from 'react';
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
 import { ArrowLeft, Plus } from 'lucide-react';
 import { useTranslation } from '@/i18n';
@@ -15,6 +15,12 @@ import type { DimStyle } from '../../../types/dimension';
 import { DimStyleList } from './DimStyleList';
 import { DimStyleCreateDialog } from './DimStyleCreateDialog';
 import { DimStyleAccordion } from './DimStyleAccordion';
+// ADR-362 §7 — «Επεξεργασία Στυλ…» ribbon action → focus the selected dim's DIMSTYLE.
+import {
+  subscribeDimStyleEditor,
+  getDimStyleEditorRequest,
+  clearDimStyleEditorRequest,
+} from './DimStyleEditorStore';
 
 type DialogMode = 'create' | 'duplicate';
 
@@ -92,6 +98,29 @@ export function DimensionsTab() {
     if (!editingId) return;
     getDimStyleRegistry().updateCustomStyle(editingId, patch);
   }, [editingId]);
+
+  // ADR-362 §7 — «Επεξεργασία Στυλ…»: the ribbon action requests a DIMSTYLE to focus.
+  // Custom → drop into edit-mode (accordion, live updateCustomStyle). Built-in →
+  // select it in the list (read-only: `updateCustomStyle` throws for built-ins → the
+  // user Duplicates to edit, matching the DimStyleList affordance). Race-free: the
+  // store holds the request until this (lazily-mounted) tab consumes it here.
+  const editorRequest = useSyncExternalStore(
+    subscribeDimStyleEditor, getDimStyleEditorRequest, getDimStyleEditorRequest,
+  );
+  useEffect(() => {
+    const reqId = editorRequest.styleId;
+    if (!reqId) return;
+    const style = getDimStyleRegistry().getStyle(reqId);
+    if (style) {
+      if (style.isBuiltIn) {
+        setEditingId(null);
+        setSelectedId(reqId);
+      } else {
+        setEditingId(reqId);
+      }
+    }
+    clearDimStyleEditorRequest();
+  }, [editorRequest]);
 
   const existingNames = styles.map((s) => s.name);
   const editingStyle = editingId ? getDimStyleRegistry().getStyle(editingId) : null;

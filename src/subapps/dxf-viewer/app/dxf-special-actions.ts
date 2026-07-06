@@ -236,6 +236,16 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
     EventBus.emit('dim:reset-text-position-requested', { entityIds: [...selectedEntityIds] });
     return true;
   }
+  // ADR-362 §7 — «Επεξεργασία Στυλ…»: open the Dimension Style Manager focused on the
+  // selected dim's DIMSTYLE. The panel-open lives here (floatingRef); the host resolves
+  // entity→styleId (level-scene SSoT) and drives the DimStyleEditorStore.
+  if (action === 'dim.style.edit') {
+    const entityId = selectedEntityIds[0];
+    if (!entityId) return true;
+    floatingRef.current?.showTab('dimensions');
+    EventBus.emit('dim:edit-style-requested', { entityId });
+    return true;
+  }
   // 2026-07-04 — «Διαγραφή» (edit tab «Ενέργειες»): confirm (mirror of the column
   // editor) then delete the selected dimension(s) through the canonical undoable
   // path (`useDimensionModify` → `deleteEntitiesById`).

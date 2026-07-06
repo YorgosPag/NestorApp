@@ -155,7 +155,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.dimEditStyle',
                 icon: 'dim-edit-style',
                 commandKey: DIM_RIBBON_KEYS.style.editStyle,
-                comingSoon: true,
+                action: DIM_RIBBON_KEYS.style.editStyle,
               },
             },
             {

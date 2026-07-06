@@ -38,6 +38,7 @@ import {
   textBoxToPosition,
   effectiveTextWidth,
   baseTextAdvanceWorld,
+  textVisualExtentRatio,
 } from './text-box';
 import { rotationHandleMidwayOffset } from '../grips/rotation-handle-policy';
 import {
@@ -149,14 +150,17 @@ export function getTextGrips(entity: DxfText): GripInfo[] {
 /** Post-resize `RectFrame` → patch, picking MTEXT `width` vs TEXT `widthFactor`. */
 function framePatch(entity: DxfText, newFrame: RectFrame): TextTransformPatch {
   const newWidth = newFrame.halfWidth * 2;
-  const newHeight = newFrame.halfLength * 2;
-  const patch: TextTransformPatch = { position: textBoxToPosition(newFrame, entity), height: newHeight };
+  // The grip box is the VISUAL glyph box (cap height); recover the nominal em `height` by
+  // dividing the dragged box height by the visual extent ratio — the SAME ratio the forward
+  // `resolveTextBox` applies — so the box holds on release (no jump). Em-box path → ratio 1.
+  const nominalHeight = (newFrame.halfLength * 2) / textVisualExtentRatio(entity);
+  const patch: TextTransformPatch = { position: textBoxToPosition(newFrame, entity), height: nominalHeight };
   if (isMTextBox(entity)) {
     patch.width = newWidth;
   } else {
-    // Divide by the REAL glyph advance (widthFactor=1) — the SAME base `effectiveTextWidth`
-    // uses — so the resized box holds (`effectiveTextWidth(after) === newWidth`, no jump).
-    patch.widthFactor = newWidth / baseTextAdvanceWorld(entity, newHeight);
+    // Divide by the REAL glyph advance (widthFactor=1) at the NOMINAL height — the SAME base
+    // `effectiveTextWidth` uses — so the resized box holds (`effectiveTextWidth(after) === newWidth`).
+    patch.widthFactor = newWidth / baseTextAdvanceWorld(entity, nominalHeight);
   }
   return patch;
 }

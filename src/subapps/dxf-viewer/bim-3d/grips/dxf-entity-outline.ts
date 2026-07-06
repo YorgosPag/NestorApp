@@ -11,9 +11,9 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { circlePolyline, arcPolyline } from '../converters/dxf-arc-circle-sample';
-// ADR-557 Φ-attachment — attachment-aware text-box corners SSoT (the SAME box the 2D
-// grips + hover frame + 3D mesh use), so the 3D hover halo coincides with the handles.
-import { textBoxCornersWorld } from '../../bim/text/text-box';
+// ADR-557 Φ-attachment — the NOMINAL em-box corners: the 3D hover halo matches the em-based
+// 3D textured plane (`dxf-text-3d.ts`), not the tight VISUAL cap box the 2D grips/hover use.
+import { textEmBoxCornersWorld } from '../../bim/text/text-box';
 
 /**
  * Plan-mm outline poly-lines of a raw DXF entity (one array per disjoint stroke), or `[]`
@@ -38,9 +38,9 @@ export function dxfEntityOutlineSegments(entity: DxfEntityUnion, unitToMm = 1): 
     case 'arc':
       return [arcPolyline(s(entity.center), entity.radius * unitToMm, entity.startAngle, entity.endAngle, entity.counterclockwise)];
     case 'text': {
-      // ADR-557 Φ-attachment — text glows as its attachment-aware box (the SAME box the
-      // grips + 2D hover frame + 3D mesh use), rotation-aware → hover halo === handles.
-      const c = textBoxCornersWorld(entity); // NE, NW, SW, SE
+      // ADR-557 Φ-attachment — text glows as its NOMINAL em box (rotation-aware), matching the
+      // em-based 3D textured plane so the 3D halo coincides with the 3D glyph quad.
+      const c = textEmBoxCornersWorld(entity); // NE, NW, SW, SE
       return [[s(c[0]), s(c[1]), s(c[2]), s(c[3]), s(c[0])]];
     }
     default:

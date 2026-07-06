@@ -851,6 +851,13 @@ export const TEXT_METRICS_RATIOS = {
   /** Descender height ratio - bottom of letters below baseline (20% of fontSize) */
   DESCENT_RATIO: 0.2,
 
+  /**
+   * Cap-height ratio — top of a CAPITAL letter above the baseline (70% of fontSize).
+   * Standard for Western fonts (AutoCAD/Revit "text height" = cap height). Used as the
+   * no-font fallback for the real glyph ink extent (`text-vertical-metrics.ts`).
+   */
+  CAP_HEIGHT_RATIO: 0.7,
+
   // ────────────────────────────────────────────
   // SUPERSCRIPT/SUBSCRIPT
   // ────────────────────────────────────────────

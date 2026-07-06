@@ -21,6 +21,10 @@ import { resetGlobalCommandHistory } from '../../../../core/commands';
 // (`findClosestAci`) AND the packed true-color companion (`hexToTrueColor`).
 import { findClosestAci } from '../../../../settings/standards/aci';
 import { hexToTrueColor } from '../../../../utils/dxf-true-color';
+// ADR-362 §7 — «Επίπεδο» wiring: options come from the SSoT LayerStore (ίδιο store
+// με το line bridge). Seed via `setLayers`, reset to [] so the singleton stays clean.
+import { setLayers } from '../../../../stores/LayerStore';
+import type { SceneLayer } from '../../../../types/scene';
 
 // ── Mock UpdateEntityCommand to capture selected-entity writes ─────────────────
 jest.mock(
@@ -294,6 +298,47 @@ describe('useRibbonDimBridge — DIMTFILL text mask', () => {
     renderWith(dimPlain, 'dim-2').current.onComboboxChange(TFILL_COLOR, HEX);
     expect(patchOf()).toEqual({ overrides: { dimtfillclr: findClosestAci(HEX) } });
     expect(findClosestAci(HEX)).toBe(2); // sanity: pure yellow → ACI 2
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LAYER (entity field `layerId`) — ADR-362 §7, mirror του line bridge
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('useRibbonDimBridge — layer (entity layerId)', () => {
+  const LAYER = DIM_RIBBON_KEYS.properties.layer;
+  const dimOnLayerA = { ...dimPlain, id: 'dim-L', layerId: 'layer-A' };
+  const LAYERS = [
+    { id: 'layer-A', name: 'Α-ΔΙΑΣΤΑΣΕΙΣ' },
+    { id: 'layer-B', name: 'Β-ΤΟΙΧΟΙ' },
+  ] as unknown as ReadonlyArray<SceneLayer>;
+
+  afterEach(() => setLayers([]));
+
+  it('reads the dim entity layerId; options come from the live LayerStore (value=id, label=name)', () => {
+    setLayers(LAYERS);
+    const state = renderWith(dimOnLayerA, 'dim-L').current.getComboboxState(LAYER);
+    expect(state?.value).toBe('layer-A');
+    expect((state?.options ?? []).map((o) => o.value)).toEqual(['layer-A', 'layer-B']);
+    expect((state?.options ?? []).map((o) => o.labelKey)).toEqual(['Α-ΔΙΑΣΤΑΣΕΙΣ', 'Β-ΤΟΙΧΟΙ']);
+  });
+
+  it('picking a different layer writes the entity `layerId` (undoable), not an override', () => {
+    setLayers(LAYERS);
+    renderWith(dimOnLayerA, 'dim-L').current.onComboboxChange(LAYER, 'layer-B');
+    expect(patchOf()).toEqual({ layerId: 'layer-B' });
+  });
+
+  it('re-picking the current layer is a no-op (no command)', () => {
+    setLayers(LAYERS);
+    renderWith(dimOnLayerA, 'dim-L').current.onComboboxChange(LAYER, 'layer-A');
+    expect(UpdateEntityCommand as unknown as jest.Mock).not.toHaveBeenCalled();
+  });
+
+  it('empty value writes no command; no selection → empty value', () => {
+    renderWith(dimOnLayerA, 'dim-L').current.onComboboxChange(LAYER, '');
+    expect(UpdateEntityCommand as unknown as jest.Mock).not.toHaveBeenCalled();
+    expect(renderWith(null, null).current.getComboboxState(LAYER)?.value).toBe('');
   });
 });
 
