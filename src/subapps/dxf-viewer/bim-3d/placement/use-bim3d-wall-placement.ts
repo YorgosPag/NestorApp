@@ -37,10 +37,10 @@ import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { wallToolBridgeStore } from '../../ui/ribbon/hooks/bridge/wall-tool-bridge-store';
-import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { type SceneUnits } from '../../utils/scene-units';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
-import { getPixelWorldSize } from '../viewport/coordinate-transforms';
+import { cameraSceneUnitsPerPixel } from '../viewport/coordinate-transforms';
 import { PLACEMENT_GHOST_3D_FACTORIES } from './placement-ghost-3d-contracts';
 import { raycastFloorPoint, resolveActiveFloorElevationMm } from './raycast-floor-point';
 import { worldToPlanMm, planMmToScenePoint } from './world-to-scene-point';
@@ -60,7 +60,8 @@ import { setTracking3D, clearTracking3D, type Tracking3DPayload } from '../viewp
 import { resolveAlignmentTracking } from '../../systems/tracking/resolve-alignment-tracking';
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
 import { TrackingPointStore } from '../../systems/tracking/TrackingPointStore';
-import { formatSnapTrackingLabel } from '../../rendering/entities/shared/distance-label-utils';
+import { composedTrackingLabel } from '../../hooks/dimensions/dim-alignment-tracking';
+import { sceneDistanceToMeters } from '../../bim/labels/move-readout';
 
 /** A click whose pointer moved more than this (px) since pointerdown was an orbit
  *  drag, not a placement — skip it (avoids accidental wall endpoints). */
@@ -122,8 +123,7 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
       // ισοδύναμος transform scale (`worldPerPixel(1/s)=s`, `pixelsToWorld(px,1/s)=px·s`), οπότε
       // η ανοχή/radius/adaptive step μένουν byte-identical με το παλιό inline compose. F8/F10 δεν
       // εκτίθενται ακόμα σε 3D → `polarEnabled:false` (H/V ambient COL traces only).
-      const dist = camera.position.distanceTo(world);
-      const scenePerPx = getPixelWorldSize(dist, camera, canvasEl) * 1000 * mmToSceneUnits(units);
+      const scenePerPx = cameraSceneUnitsPerPixel(camera, canvasEl, world, units);
       const cfg = ambientAlignmentConfigStore.getSnapshot();
       const sceneEntities = cfg.enabled ? (wallToolBridgeStore.get()?.getSceneEntities() ?? []) : null;
       const acquired = TrackingPointStore.getPoints();
@@ -140,11 +140,8 @@ export function useBim3DWallPlacement({ managerRef, canvasEl }: UseBim3DWallPlac
         scenePt = composed.point;
         view = null;
         const r = composed.result;
-        const distScene = Math.hypot(composed.point.x - r.anchorPoint.x, composed.point.y - r.anchorPoint.y);
-        const distMm = distScene / Math.max(mmToSceneUnits(units), 1e-9);
-        const label = r.snappedAngle !== null
-          ? formatSnapTrackingLabel(r.snappedAngle, distMm)
-          : null;
+        // ΙΔΙΟ label SSoT με τη 2D/3D σχεδίαση ιχνών (`composedTrackingLabel`), μηδέν inline dist→mm.
+        const label = composedTrackingLabel(composed, (d) => sceneDistanceToMeters(d, units) * 1000);
         trackingPayload = {
           paths: r.activePaths,
           intersections: r.intersections,
