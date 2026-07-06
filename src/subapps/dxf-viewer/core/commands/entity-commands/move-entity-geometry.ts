@@ -18,8 +18,11 @@ import {
   isArcEntity,
   isEllipseEntity,
   isPolylineEntity,
+  isLWPolylineEntity,
   isTextEntity,
+  isMTextEntity,
   isPointEntity,
+  isBlockEntity,
   type Entity,
 } from '../../../types/entities';
 // ADR-363 Phase 7A — BIM move geometry (params + computed geometry atomic patch).
@@ -53,7 +56,7 @@ export function calculateMovedGeometry(entity: SceneEntity, delta: Point3D): Par
     return { center: translatePoint(e.center, delta) };
   }
 
-  if (isRectangleEntity(e)) {
+  if (isRectangleEntity(e) || entity.type === 'rect') {
     const updates: Partial<SceneEntity> = {};
     if ('corner1' in e && e.corner1 && 'corner2' in e && e.corner2) {
       updates.corner1 = translatePoint(e.corner1, delta);
@@ -74,7 +77,10 @@ export function calculateMovedGeometry(entity: SceneEntity, delta: Point3D): Par
     return { center: translatePoint(e.center, delta) };
   }
 
-  if (isPolylineEntity(e)) {
+  // ADR-186/561 — a JOIN produces a scene `'lwpolyline'` (same `vertices` shape as a
+  // polyline). Handle it natively (keep-type) so the whole move/directional/body-drag/copy
+  // spine translates joined entities — the commit-side counterpart of `normalizePreviewEntity`.
+  if (isPolylineEntity(e) || isLWPolylineEntity(e)) {
     return { vertices: e.vertices.map(v => translatePoint(v, delta)) };
   }
 
@@ -89,6 +95,12 @@ export function calculateMovedGeometry(entity: SceneEntity, delta: Point3D): Par
   }
 
   if (isPointEntity(e)) {
+    return { position: translatePoint(e.position, delta) };
+  }
+
+  // MTEXT + INSERT/BLOCK — rigid position translate. Canonical rigid-move now covers the
+  // full type set previously duplicated in `translateEntityByAnchor` (SSoT convergence).
+  if (isMTextEntity(e) || isBlockEntity(e)) {
     return { position: translatePoint(e.position, delta) };
   }
 

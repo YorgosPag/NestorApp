@@ -103,6 +103,9 @@ export function applyClassicEntityPreview(
       case 'arc':
         return { ...entity, center: off(entity.center) };
       case 'polyline':
+      case 'lwpolyline':
+        // ADR-186/561 — a JOINed lwpolyline shares the polyline `vertices` shape; keep-type
+        // translate so the body-drag ghost + Ctrl-copy clone follow the cursor (was a no-op).
         return { ...entity, vertices: entity.vertices.map(off) };
       case 'text':
         return { ...entity, position: off(entity.position) };

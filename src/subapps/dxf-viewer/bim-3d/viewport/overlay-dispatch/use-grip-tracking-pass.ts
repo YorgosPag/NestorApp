@@ -23,7 +23,6 @@
  * (resolve-in-draw, zero timing skew — mirror of the 2D helper).
  */
 
-import { useSyncExternalStore } from 'react';
 import type { Entity } from '../../../types/entities';
 import { resolveSceneUnits } from '../../../utils/scene-units';
 import { planMmToScenePoint } from '../../placement/world-to-scene-point';
@@ -40,19 +39,15 @@ import {
 } from '../../../systems/grip/grip-drag-alignment-role';
 import { getImmediateSnap } from '../../../systems/cursor/ImmediateSnapStore';
 import { sceneDistanceToMeters } from '../../../bim/labels/move-readout';
-import { useGrip3DOverlayStore, grip3DOverlayInteraction } from '../../stores/Grip3DOverlayStore';
-import { findDxfEntityInScope } from '../../scene/dxf-3d-floor-scope';
+import { useGrip3DOverlayStore } from '../../stores/Grip3DOverlayStore';
+import { resolveDraggedDxfGrip, useDxfGhostGripsActive } from '../../grips/dxf-grip-drag-access';
 import type { BimOverlayFrame, BimOverlayPass } from './bim-overlay-pass';
 
 /** One dispatch frame for the grip-tracking layer — resolve-in-draw, SAME 2D painters, 3D projector. */
 function paintGripTrackingOverlay({ ctx, camera, canvas }: BimOverlayFrame): void {
-  const drag = grip3DOverlayInteraction.drag;
-  const grips = useGrip3DOverlayStore.getState().grips;
-  if (!drag || grips.length === 0) return;
-  const grip = grips[drag.index % grips.length];
-  if (!grip?.entityId) return;
-  const found = findDxfEntityInScope(grip.entityId);
-  if (!found) return;
+  const dragged = resolveDraggedDxfGrip(useGrip3DOverlayStore.getState().grips);
+  if (!dragged) return;
+  const { grip, found, drag } = dragged;
 
   // OSNAP-priority (mirror the 2D helper): while a characteristic point is snapping, its marker owns
   // the feedback — no cyan alignment lines.
@@ -90,10 +85,5 @@ function paintGripTrackingOverlay({ ctx, camera, canvas }: BimOverlayFrame): voi
  * the high-frequency non-reactive singleton, read inside `paint`). Hidden during camera motion.
  */
 export function useGripTrackingPass(): BimOverlayPass {
-  const dxfIds = useSyncExternalStore(
-    useGrip3DOverlayStore.subscribe,
-    () => useGrip3DOverlayStore.getState().dxfGhostEntityIds,
-    () => useGrip3DOverlayStore.getState().dxfGhostEntityIds,
-  );
-  return { active: dxfIds.length > 0, hideOnMotion: true, paint: paintGripTrackingOverlay };
+  return { active: useDxfGhostGripsActive(), hideOnMotion: true, paint: paintGripTrackingOverlay };
 }

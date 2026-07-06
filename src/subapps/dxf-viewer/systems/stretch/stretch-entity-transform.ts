@@ -28,6 +28,8 @@ import type { VertexRef } from './stretch-vertex-classifier';
 import { arcFromMovedEndpoint, arcFrom3Points } from '../../rendering/entities/shared/geometry-arc-utils';
 import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
+// SSoT convergence — canonical rigid-move geometry (handles every entity type incl. lwpolyline/BIM/group).
+import { calculateMovedGeometry } from '../../core/commands/entity-commands/move-entity-geometry';
 
 export interface WorldVector {
   readonly x: number;
@@ -47,28 +49,17 @@ export type StretchUpdate =
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
- * Rigid translate an entity by `delta` using its anchor point.
- * Used for CIRCLE / ELLIPSE / TEXT / MTEXT / INSERT / POINT.
+ * Rigid translate an entity by `delta` (whole-entity move).
+ *
+ * SSoT convergence (ADR-397/561): delegates to the canonical rigid-move geometry SSoT
+ * `calculateMovedGeometry` — the ONE source that translates ANY entity (DXF primitives +
+ * `lwpolyline` + BIM params + GROUP recursion). This used to be a poorer duplicate `switch`
+ * that silently no-op'd line / polyline / lwpolyline / BIM / group, which broke the
+ * directional move-by-value handle on JOINed (lwpolyline) entities. Kept as a thin adapter
+ * so the `StretchEntityCommand` call sites stay stable.
  */
 export function translateEntityByAnchor(entity: Entity, delta: WorldVector): Partial<SceneEntity> {
-  switch (entity.type) {
-    case 'circle':
-    case 'ellipse':
-    case 'arc':
-      return { center: translatePoint(entity.center, delta) } as Partial<SceneEntity>;
-    case 'rectangle':
-    case 'rect':
-      return translatePoint({ x: entity.x, y: entity.y }, delta) as Partial<SceneEntity>;
-    case 'text':
-    case 'mtext':
-      return { position: translatePoint(entity.position, delta) } as Partial<SceneEntity>;
-    case 'point':
-      return { position: translatePoint(entity.position, delta) } as Partial<SceneEntity>;
-    case 'block':
-      return { position: translatePoint(entity.position, delta) } as Partial<SceneEntity>;
-    default:
-      return {};
-  }
+  return calculateMovedGeometry(entity as unknown as SceneEntity, { x: delta.x, y: delta.y, z: 0 });
 }
 
 /**

@@ -19,7 +19,6 @@
  * is read imperatively from the non-reactive `grip3DOverlayInteraction` each frame (resolve-in-draw).
  */
 
-import { useSyncExternalStore } from 'react';
 import type { GripInfo } from '../../../hooks/grip-types';
 import { dxfSceneUnitToMm } from '../../../utils/scene-units';
 import { buildSegmentHudMeta, paintWallHudCore } from '../../../canvas-v2/preview-canvas/wall-hud-paint';
@@ -30,8 +29,8 @@ import {
   type GripAlignmentEntityView,
 } from '../../../systems/grip/grip-drag-alignment-role';
 import { buildDxfGripReshapedVertices } from '../../grips/dxf-grip-ghost-paint';
-import { useGrip3DOverlayStore, grip3DOverlayInteraction } from '../../stores/Grip3DOverlayStore';
-import { findDxfEntityInScope } from '../../scene/dxf-3d-floor-scope';
+import { useGrip3DOverlayStore } from '../../stores/Grip3DOverlayStore';
+import { resolveDraggedDxfGrip, useDxfGhostGripsActive } from '../../grips/dxf-grip-drag-access';
 import type { BimOverlayFrame, BimOverlayPass } from './bim-overlay-pass';
 
 /** The vertex-index segment pairs whose length/angle the HUD dimensions for this grip drag, or []. */
@@ -51,13 +50,9 @@ function hudSegmentsFor(grip: GripInfo, entity: GripAlignmentEntityView): Array<
 
 /** One dispatch frame for the grip-HUD layer — resolve-in-draw, SAME `paintWallHudCore`, 3D projector. */
 function paintGripHudOverlay({ ctx, camera, canvas }: BimOverlayFrame): void {
-  const drag = grip3DOverlayInteraction.drag;
-  const grips = useGrip3DOverlayStore.getState().grips;
-  if (!drag || grips.length === 0) return;
-  const grip = grips[drag.index % grips.length];
-  if (!grip?.entityId) return;
-  const found = findDxfEntityInScope(grip.entityId);
-  if (!found) return;
+  const dragged = resolveDraggedDxfGrip(useGrip3DOverlayStore.getState().grips);
+  if (!dragged) return;
+  const { grip, found, drag } = dragged;
 
   // Reshaped INDEXABLE vertices in plan-mm (null for circle/arc/text → no straight-leg HUD).
   const verts = buildDxfGripReshapedVertices(
@@ -83,10 +78,5 @@ function paintGripHudOverlay({ ctx, camera, canvas }: BimOverlayFrame): void {
  * until a drag is in flight (high-frequency drag position read inside `paint`). Hidden during motion.
  */
 export function useGripHudPass(): BimOverlayPass {
-  const dxfIds = useSyncExternalStore(
-    useGrip3DOverlayStore.subscribe,
-    () => useGrip3DOverlayStore.getState().dxfGhostEntityIds,
-    () => useGrip3DOverlayStore.getState().dxfGhostEntityIds,
-  );
-  return { active: dxfIds.length > 0, hideOnMotion: true, paint: paintGripHudOverlay };
+  return { active: useDxfGhostGripsActive(), hideOnMotion: true, paint: paintGripHudOverlay };
 }

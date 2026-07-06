@@ -67,9 +67,18 @@ describe('applyEntityPreview on a normalized lwpolyline → real ghost (transfor
     expect(g.vertices).toEqual([{ x: 20, y: 90 }, { x: 20, y: -10 }, { x: 80, y: -10 }]);
   });
 
-  it('a RAW lwpolyline (un-normalized) stays a no-op — proving the normalization is what fixes it', () => {
+  it('a RAW lwpolyline WHOLE move (movesEntity) translates every vertex, keeping type (ADR-561 native case)', () => {
+    const raw = makeLwpolyline();
+    const preview: EntityPreviewTransform = { entityId: 'lw_1', gripIndex: 5, delta: { x: 20, y: -10 }, movesEntity: true };
+    const g = applyEntityPreview(raw, preview) as unknown as PolyGhost;
+    expect(g).not.toBe(raw);            // a ghost IS produced for a RAW lwpolyline now (body-drag / Ctrl-copy)
+    expect(g.type).toBe('lwpolyline');  // non-destructive: the ghost/clone stays an lwpolyline
+    expect(g.vertices).toEqual([{ x: 20, y: 90 }, { x: 20, y: -10 }, { x: 80, y: -10 }]);
+  });
+
+  it('a RAW lwpolyline VERTEX reshape (no movesEntity) still needs normalization (edgeVertexIndices path)', () => {
     const raw = makeLwpolyline();
     const preview: EntityPreviewTransform = { entityId: 'lw_1', gripIndex: 0, delta: { x: 10, y: 5 } };
-    expect(applyEntityPreview(raw, preview)).toBe(raw); // no ghost without normalization
+    expect(applyEntityPreview(raw, preview)).toBe(raw); // reshape branch is still polyline-keyed → normalize
   });
 });

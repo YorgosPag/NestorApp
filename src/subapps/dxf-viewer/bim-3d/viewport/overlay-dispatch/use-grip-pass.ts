@@ -24,6 +24,7 @@ import { getGripPreviewStyle } from '../../../hooks/useGripPreviewStyle';
 import { makeGripPlanToCanvas, liftGripPlanToWorld, addGripWorldOffsets, type GripWorldOffset } from '../../grips/grip-3d-screen-project';
 import { buildTwinSurfaceConfigs } from '../../grips/grip-3d-twin-overlay';
 import { buildDxfGhostSegments } from '../../grips/dxf-grip-ghost-paint';
+import { resolveDraggedDxfGrip } from '../../grips/dxf-grip-drag-access';
 import { collectCoincidentLinePartnerMoves } from '../../../systems/stretch/coincident-endpoint-comove';
 import type { StretchVertexMove } from '../../../core/commands/entity-commands/StretchEntityCommand';
 import type { Entity } from '../../../types/entities';
@@ -73,12 +74,10 @@ function paintDxfGhost(
   grips: readonly GripInfo[],
 ): void {
   const ids = useGrip3DOverlayStore.getState().dxfGhostEntityIds;
-  const drag = grip3DOverlayInteraction.drag;
-  if (ids.length === 0 || !drag || grips.length === 0) return;
-  const grip = grips[drag.index % grips.length];
-  if (!grip?.entityId) return;
-  const found = findDxfEntityInScope(grip.entityId);
-  if (!found) return;
+  if (ids.length === 0) return;
+  const dragged = resolveDraggedDxfGrip(grips);
+  if (!dragged) return;
+  const { grip, found, drag } = dragged;
   strokeGhostSegments(ctx, project,
     buildDxfGhostSegments(found.entity, grip, drag.livePlanPos, dxfSceneUnitToMm(found.scene)));
   paintPartnerGhosts(ctx, project, found.entity, grip, drag.livePlanPos, ids);
