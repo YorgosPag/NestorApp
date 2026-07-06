@@ -106,6 +106,28 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
 
 ## Changelog
 
+- **2026-07-06 (§column-hud + §polygon-hud — καθολικές περιμετρικές ενδείξεις σε σύρσιμο ΚΟΡΥΦΗΣ, όλες οι πολυγωνικές οντότητες)**
+  - **Αίτημα Giorgio (browser repro, 2 screenshots)**: όταν σέρνω τη **μεσαία λαβή πλευράς** μιας κολόνας εμφανίζονται περιμετρικά
+    οι λευκές ενδείξεις (διαστάσεις + ∠γωνία + ύψος)· όταν σέρνω **ΚΟΡΥΦΗ** ΔΕΝ εμφανίζονται. Ζητούμενο: ίδιες ενδείξεις στο
+    σύρσιμο κορυφής — **καθολικά σε ΟΛΕΣ τις οντότητες**.
+  - **SSoT audit (grep, ΠΡΙΝ κώδικα)**: το gate της κολόνας στο `drawMemberGripHud` (`grip-ghost-preview-draw-helpers.ts`)
+    εξαιρούσε **ρητά** τα `column-poly-vertex-*` (`!dp.columnGripKind.startsWith('column-poly-vertex-')`). Το ghost footprint
+    ενημερώνεται **ήδη** σωστά για vertex drag (`applyColumnGripDrag`→`computeColumnGeometry`), οπότε το `paintColumnHud`
+    (μέσω του entity-agnostic `paintFootprintHud`, ADR-564) θα έδειχνε τις ΣΩΣΤΕΣ live διαστάσεις. Το guard ήταν αυθαίρετο.
+    Επιπλέον: **καμία** πολυγωνική οντότητα εκτός κολόνας/polyline είχε HUD (πλάκα/άνοιγμα/στέγη/επένδυση/ενδοδαπέδια).
+  - **FIX (ZERO νέα formula, ZERO νέος painter)**:
+    - **Κολόνα**: αφαίρεση του `column-poly-vertex-*` guard → το σύρσιμο κορυφής δείχνει το ΙΔΙΟ `paintColumnHud` με το edge grip.
+    - **§polygon-hud (καθολικά)**: νέο generic branch για ΚΑΘΕ πολυγωνική BIM οντότητα με reshape grip (`slabGripKind` /
+      `slabOpeningGripKind` / `openingGripKind` / `roofGripKind` / `floorFinishGripKind` / `mepUnderfloorGripKind`, skip move/rotate):
+      per-edge λευκές ενδείξεις (μήκος + ∠γωνία σε ΚΑΘΕ ακμή) μέσω του **ΙΔΙΟΥ SSoT** `buildSegmentHudMeta`+`paintWallHud`
+      (`specLabel=''` — καθαρή γεωμετρία, χωρίς column ύψος/Ø). Το outline έρχεται **ordered (polygon winding)** από το ΕΝΑ
+      characteristic-corner SSoT (`getBimCharacteristicPointsOfCategory(entity,'corner')`, καλύπτει roof/thermal/όλα)· το ghost
+      το έχει ΗΔΗ ενημερώσει (`apply*GripDrag`→`compute*Geometry`, ADR-550).
+  - **Parity χάρτης**: τοίχος ✅ · κολόνα (edge+ΚΟΡΥΦΗ) ✅ · γραμμή/polyline ✅ · **πλάκα/άνοιγμα/στέγη/επένδυση/ενδοδαπέδια ✅ (νέο)**.
+  - **Tests (jest, χωρίς tsc)**: πράσινα `column-grips` (146), `slab-grips`, `grip-3d-reshape-grips`, `wall-hud-paint`,
+    `bim-characteristic-points`, `overlay-label-layout`. Draw-only overlay — browser verify από Giorgio.
+  - **Files**: `hooks/tools/grip-ghost-preview-draw-helpers.ts` (guard removal + generic polygon branch + import).
+
 - **2026-07-05 (§line-hud — ΕΝΩΜΕΝΟ ΣΥΣΤΗΜΑ (polyline) vertex-reshape: λευκές ενδείξεις σε ΚΑΘΕ σκέλος που αλλάζει μήκος)**
   - **Αίτημα Giorgio (browser repro)**: μετά την **Ένωση** 2 γραμμών σε ένα σύστημα (scene `lwpolyline`), όταν πιάνω το
     **άκρο ενός σκέλους** και το μετακινώ (αυξομειώνω μήκος), ΔΕΝ εμφανίζονταν οι **λευκές ενδείξεις** (μήκος + ∠γωνία)

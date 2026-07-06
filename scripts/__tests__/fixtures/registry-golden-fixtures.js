@@ -239,4 +239,16 @@ export type TextSettings = TextSettingsBase;
 export type TextSettings = Pick<TextSettingsBase, 'color' | 'fontSize'>;
 export interface TextCssPreviewInput { color: string; fontWeight?: 'normal' | 'bold'; }`,
   },
+
+  'comma-normalize': {
+    shouldMatch: `// Scanner must catch both inline comma-normalize shapes:
+const single = cleaned.replace(',', '.');
+const expr = raw.replace(/,/g, '.');
+const dq = value.replace(",", ".");`,
+    shouldSkip: `// Scanner must pass the canonical SSoT import + usage (no inline replace):
+import { normalizeNumber } from '../utils/number';
+const single = normalizeNumber(cleaned);
+const num = evalExpr(normalizeNumber(raw));
+const stripped = formatted.replace(/[^0-9.,-]/g, '');`,
+  },
 };
