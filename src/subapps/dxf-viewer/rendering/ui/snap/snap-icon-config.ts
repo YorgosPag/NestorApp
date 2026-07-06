@@ -68,6 +68,35 @@ export const SNAP_ICON_GEOMETRY = {
 } as const;
 
 // ═══════════════════════════════════════════════════════════════════════════
+// PER-TYPE SIZE OVERRIDES
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Per-snap-type box size (px) override. Most snap glyphs use the base `SIZE` (12);
+ * a few read too small at that box and get bumped here. SSoT — `getSnapIconSize`
+ * is the ONLY reader (both `SnapShape` and the overlay's centering offset go
+ * through it), so the glyph never renders off-centre.
+ *
+ * DIMENSION glyphs (`dim_line` = ⊢───⊣ witness line, `dim_def_point` = ⊡ def
+ * point) are enlarged because the thin dim-line iconography is hard to read next
+ * to the full-box endpoint square at 12px (Giorgio 2026-07-07). Keyed by the
+ * lower-cased snap type (matches `SnapShape`'s `type.toLowerCase()` switch).
+ */
+export const SNAP_ICON_SIZE_BY_TYPE: Readonly<Record<string, number>> = {
+  dim_line: 18,
+  dim_def_point: 18,
+};
+
+/**
+ * Box size (px) for a snap glyph of `type` — the per-type override if one exists,
+ * else the base `SIZE`. `undefined`/unknown type → base size.
+ */
+export function getSnapIconSize(type?: string): number {
+  const key = type?.toLowerCase();
+  return (key && SNAP_ICON_SIZE_BY_TYPE[key]) || SNAP_ICON_GEOMETRY.SIZE;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // HELPER FUNCTIONS
 // ═══════════════════════════════════════════════════════════════════════════
 

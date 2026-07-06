@@ -136,7 +136,9 @@
       "delete": "Delete",
       "edit": "Edit",
       "setActive": "Set as active",
+      "setAsDefault": "Set as default",
       "activeBadge": "Active",
+      "defaultBadge": "Default",
       "builtInBadge": "Built-in",
       "emptyList": "No styles found",
       "deleteConfirm": {

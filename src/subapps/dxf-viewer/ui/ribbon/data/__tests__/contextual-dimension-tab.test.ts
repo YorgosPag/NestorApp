@@ -250,18 +250,11 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
     }
   });
 
-  it('remaining action stubs are marked comingSoon: true', () => {
-    // ADR-562 Φ5 — `dim.style.apply` is now LIVE (applies the primary dim's
-    // DIMSTYLE to every selected dimension via `dim:apply-style-requested`).
-    // ADR-362 §7 — «Επαναφορά Παρακάμψεων» + «Επαναφορά Θέσης» + «Επεξεργασία Στυλ…»
-    // are now LIVE too. Only «Ιδιότητες…» (openPanel) remains a stub.
-    const comingSoonKeys = [
-      'dim.properties.openPanel',
-    ];
-    const allButtons = collectAllButtons(DIMENSION_CONTEXTUAL_TAB);
-    for (const key of comingSoonKeys) {
-      const btn = allButtons.find((b) => b.command.commandKey === key);
-      expect(btn?.command.comingSoon).toBe(true);
+  it('no action stubs remain — every command in the tab is wired (ADR-362 §7)', () => {
+    // ADR-562 Φ5 + ADR-362 §7 — apply / reset-overrides / reset-position / edit-style
+    // / open-panel are all LIVE now; no `comingSoon` placeholder should survive.
+    for (const btn of collectAllButtons(DIMENSION_CONTEXTUAL_TAB)) {
+      expect(btn.command.comingSoon).toBeFalsy();
     }
   });
 
@@ -272,14 +265,15 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
     expect(btn?.command.action).toBe('dim.style.apply');
   });
 
-  // ADR-362 §7 — reset actions + «Επεξεργασία Στυλ…» are now LIVE (selection-driven
-  // EventBus → useDimensionModify). action === commandKey, no comingSoon.
-  it('dim.override.reset + dim.text.resetPosition + dim.style.edit are wired (action set, not comingSoon)', () => {
+  // ADR-362 §7 — reset actions + «Επεξεργασία Στυλ…» + «Ιδιότητες…» are now LIVE
+  // (action === commandKey, no comingSoon).
+  it('reset / edit-style / open-panel actions are wired (action set, not comingSoon)', () => {
     const allButtons = collectAllButtons(DIMENSION_CONTEXTUAL_TAB);
     for (const key of [
       DIM_RIBBON_KEYS.override.resetOverrides,
       DIM_RIBBON_KEYS.text.resetPosition,
       DIM_RIBBON_KEYS.style.editStyle,
+      DIM_RIBBON_KEYS.properties.openPanel,
     ]) {
       const btn = allButtons.find((b) => b.command.commandKey === key);
       expect(btn?.command.comingSoon).toBeUndefined();

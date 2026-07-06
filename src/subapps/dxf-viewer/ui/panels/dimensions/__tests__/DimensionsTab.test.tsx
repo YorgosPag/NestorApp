@@ -31,6 +31,19 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   }}),
 }));
 
+// ADR-362 Phase F4 — persistence gateway is fire-and-forget from the tab; mock it
+// so the optimistic-then-persist path resolves (no rollback) under test.
+jest.mock('@/services/dim-style-mutation-gateway', () => ({
+  createDimStyleWithPolicy: jest.fn().mockResolvedValue({ success: true }),
+  updateDimStyleWithPolicy: jest.fn().mockResolvedValue({ success: true }),
+  deleteDimStyleWithPolicy: jest.fn().mockResolvedValue({ success: true }),
+  setDefaultDimStyleWithPolicy: jest.fn().mockResolvedValue({ success: true }),
+}));
+
+jest.mock('@/lib/telemetry', () => ({
+  createModuleLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
+}));
+
 jest.mock('@/ui-adapters/react/useSemanticColors', () => ({
   useSemanticColors: () => ({
     text: { muted: '', primary: '', onSuccess: '', onDestructive: '' },
@@ -112,27 +125,27 @@ function renderTab() {
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('ADR-362 Phase F1 — DimensionsTab', () => {
-  it('renders 3 built-in styles from registry', () => {
+  it('renders all built-in styles from registry', () => {
     const reg = freshRegistry();
     renderTab();
     const styles = reg.getAllStyles();
-    expect(styles).toHaveLength(3);
+    expect(styles).toHaveLength(4); // Nestor + ISO + ASME + Architectural US
     styles.forEach((s) => {
       expect(screen.getByText(s.name)).toBeInTheDocument();
     });
   });
 
-  it('shows "builtInBadge" label for all 3 built-in styles', () => {
-    freshRegistry();
+  it('shows "builtInBadge" label for every built-in style', () => {
+    const reg = freshRegistry();
     renderTab();
     const badges = screen.getAllByText('panels.dimensions.builtInBadge');
-    expect(badges).toHaveLength(3);
+    expect(badges).toHaveLength(reg.getAllStyles().length);
   });
 
-  it('shows "activeBadge" for the default active style', () => {
+  it('shows "defaultBadge" for the default active style', () => {
     freshRegistry();
     renderTab();
-    expect(screen.getByText('panels.dimensions.activeBadge')).toBeInTheDocument();
+    expect(screen.getByText('panels.dimensions.defaultBadge')).toBeInTheDocument();
   });
 
   it('opens create dialog when "New Style..." button clicked', () => {

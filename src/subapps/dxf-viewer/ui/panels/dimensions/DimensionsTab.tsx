@@ -12,6 +12,14 @@ import {
   type UpdateCustomStylePatch,
 } from '../../../systems/dimensions/dim-style-registry';
 import type { DimStyle } from '../../../types/dimension';
+import { createModuleLogger } from '@/lib/telemetry';
+// ADR-362 Phase F4 — durable per-company persistence (optimistic + rollback).
+import {
+  createDimStyleWithPolicy,
+  updateDimStyleWithPolicy,
+  deleteDimStyleWithPolicy,
+  setDefaultDimStyleWithPolicy,
+} from '@/services/dim-style-mutation-gateway';
 import { DimStyleList } from './DimStyleList';
 import { DimStyleCreateDialog } from './DimStyleCreateDialog';
 import { DimStyleAccordion } from './DimStyleAccordion';
@@ -32,6 +40,14 @@ interface DialogState {
 }
 
 const CLOSED_DIALOG: DialogState = { open: false, mode: 'create', initialName: '', sourceId: null };
+
+const logger = createModuleLogger('DimensionsTab');
+
+/** DimStyle → API `style` payload (drop identity fields; server owns id/isBuiltIn). */
+function toStylePayload(style: DimStyle): Record<string, unknown> {
+  const { id: _id, isBuiltIn: _bi, ...rest } = style;
+  return rest;
+}
 
 function useRegistrySnapshot() {
   const registry = getDimStyleRegistry();
@@ -64,12 +80,23 @@ export function DimensionsTab() {
 
   const handleDialogConfirm = useCallback((name: string) => {
     const registry = getDimStyleRegistry();
-    if (dialog.mode === 'create') {
-      const created = registry.createCustomStyle({ name, ...defaultStyleFields() });
+    // Optimistic in-memory create/duplicate, then durably persist. On rejection
+    // roll the registry back by removing the just-added custom style (ADR-362 F4).
+    const created =
+      dialog.mode === 'create'
+        ? registry.createCustomStyle({ name, ...defaultStyleFields() })
+        : dialog.sourceId
+          ? registry.duplicateStyle(dialog.sourceId, name)
+          : null;
+    if (created) {
       setSelectedId(created.id);
-    } else if (dialog.sourceId) {
-      const duped = registry.duplicateStyle(dialog.sourceId, name);
-      setSelectedId(duped.id);
+      void createDimStyleWithPolicy({
+        payload: { name: created.name, style: toStylePayload(created) },
+      }).catch((err) => {
+        registry.deleteCustomStyle(created.id);
+        setSelectedId((cur) => (cur === created.id ? null : cur));
+        logger.error('[DimStyle/Create] persist failed — rolled back', { error: err });
+      });
     }
     setDialog(CLOSED_DIALOG);
   }, [dialog]);
@@ -81,13 +108,35 @@ export function DimensionsTab() {
 
   const confirmDelete = useCallback(() => {
     if (!deleteTarget) return;
-    getDimStyleRegistry().deleteCustomStyle(deleteTarget.id);
-    if (selectedId === deleteTarget.id) setSelectedId(null);
+    const registry = getDimStyleRegistry();
+    const removed = deleteTarget;
+    const wasActive = registry.getActiveStyleId() === removed.id;
+    registry.deleteCustomStyle(removed.id);
+    if (selectedId === removed.id) setSelectedId(null);
     setDeleteTarget(null);
+    // Optimistic delete → persist; on rejection re-hydrate the removed style
+    // (by its original id) and restore active selection.
+    void deleteDimStyleWithPolicy({ styleId: removed.id }).catch((err) => {
+      registry.hydrateCustomStyles([removed]);
+      if (wasActive) registry.setActiveStyleId(removed.id);
+      logger.error('[DimStyle/Delete] persist failed — restored', { error: err });
+    });
   }, [deleteTarget, selectedId]);
 
   const handleSetActive = useCallback((id: string) => {
-    getDimStyleRegistry().setActiveStyleId(id);
+    const registry = getDimStyleRegistry();
+    const style = registry.getStyle(id);
+    if (!style) return;
+    const prevActive = registry.getActiveStyleId();
+    registry.setActiveStyleId(id); // optimistic
+    void setDefaultDimStyleWithPolicy({
+      styleId: id,
+      isBuiltInRef: style.isBuiltIn,
+      name: style.name,
+    }).catch((err) => {
+      registry.setActiveStyleId(prevActive);
+      logger.error('[DimStyle/SetDefault] persist failed — reverted', { error: err });
+    });
   }, []);
 
   const handleEdit = useCallback((id: string) => {
@@ -96,7 +145,18 @@ export function DimensionsTab() {
 
   const handleStyleChange = useCallback((patch: UpdateCustomStylePatch) => {
     if (!editingId) return;
-    getDimStyleRegistry().updateCustomStyle(editingId, patch);
+    const registry = getDimStyleRegistry();
+    const before = registry.getStyle(editingId);
+    if (!before) return;
+    const next = registry.updateCustomStyle(editingId, patch); // optimistic
+    void updateDimStyleWithPolicy({
+      payload: { styleId: editingId, name: next.name, style: toStylePayload(next) },
+    }).catch((err) => {
+      // Restore the pre-edit field values (id/isBuiltIn preserved by the registry).
+      const { id: _id, isBuiltIn: _bi, ...restore } = before;
+      registry.updateCustomStyle(editingId, restore);
+      logger.error('[DimStyle/Update] persist failed — reverted', { error: err });
+    });
   }, [editingId]);
 
   // ADR-362 §7 — «Επεξεργασία Στυλ…»: the ribbon action requests a DIMSTYLE to focus.

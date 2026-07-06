@@ -125,6 +125,30 @@ export class DimStyleRegistry {
     this.notify();
   }
 
+  /**
+   * ADR-362 Phase F4 — hydrate persisted CUSTOM styles from Firestore into the
+   * live registry, keyed BY THEIR DB id (not a fresh id) so entity `styleId`
+   * references keep resolving across reloads. Upsert-only: built-ins are never
+   * clobbered (id-collision guard) and custom styles absent from the payload are
+   * NOT removed here — deletions flow through `deleteCustomStyle` explicitly, so
+   * an optimistic just-created style is never wiped before its persist round-trip.
+   * Skips `notify()` when nothing actually changed (ADR-040 render-loop guard;
+   * the subscribe layer already drops same-content deliveries upstream).
+   */
+  hydrateCustomStyles(styles: readonly DimStyle[]): void {
+    if (styles.length === 0) return;
+    let changed = false;
+    for (const incoming of styles) {
+      const existing = this.styles.get(incoming.id);
+      if (existing?.isBuiltIn) continue; // never let a DB row shadow a built-in
+      const next: DimStyle = { ...incoming, isBuiltIn: false };
+      if (existing && JSON.stringify(existing) === JSON.stringify(next)) continue;
+      this.styles.set(incoming.id, next);
+      changed = true;
+    }
+    if (changed) this.notify();
+  }
+
   /** Clone an existing style (built-in or custom) under a new user-visible name. */
   duplicateStyle(sourceId: string, newName: string): DimStyle {
     const source = this.styles.get(sourceId);

@@ -38,6 +38,8 @@ import { usePerformanceHUDStore } from '../bim-3d/performance/PerformanceHUDStor
 import { AdminLayerManagerDialogStore } from '../stores/AdminLayerManagerDialogStore';
 // ADR-563 — auto-dimension command flow (dialog → engine → batch commit)
 import { runAutoDimensionFlow } from '../systems/dimensions/auto/run-auto-dimension-flow';
+// ADR-362 §7 — «Ιδιότητες…»: open the F11/Ctrl+1 Full Properties Palette (self-follows selection).
+import { PropertiesPaletteStore } from '../systems/properties/PropertiesPaletteStore';
 
 /** Deps for the special-action dispatcher (read at event time). */
 export interface DxfSpecialActionDeps {
@@ -244,6 +246,12 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
     if (!entityId) return true;
     floatingRef.current?.showTab('dimensions');
     EventBus.emit('dim:edit-style-requested', { entityId });
+    return true;
+  }
+  // ADR-362 §7 — «Ιδιότητες…»: open the Full Properties Palette (F11/Ctrl+1). It
+  // self-subscribes to the selection, so the already-selected dimension appears.
+  if (action === 'dim.properties.openPanel') {
+    PropertiesPaletteStore.open();
     return true;
   }
   // 2026-07-04 — «Διαγραφή» (edit tab «Ενέργειες»): confirm (mirror of the column

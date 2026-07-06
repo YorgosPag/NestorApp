@@ -3587,6 +3587,66 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 📐 DXF DIMENSION STYLES — ADR-362 Phase F4
+    // =========================================================================
+    // 📅 Added: 2026-07-07
+    // 🏢 ENTERPRISE: Per-company custom DIMSTYLE persistence + the per-company
+    //                "default" dim style pointer (isDefault). Top-level collection,
+    //                companyId-scoped, mirrors the dxf_viewer_view_templates rules
+    //                pattern (creator OR company_admin update / delete). One doc per
+    //                CUSTOM style (full `style` payload) plus at most one thin
+    //                `isBuiltInRef` doc pinning a built-in template as default.
+    //
+    // 🔒 SECURITY MODEL:
+    //   - READ:   Tenant member of doc's company OR super_admin
+    //   - CREATE: Tenant member + companyId matches caller + createdBy == self
+    //             + required fields (companyId, name, createdBy)
+    //   - UPDATE: Creator OR company_admin
+    //             + companyId / createdBy / createdAt immutable
+    //   - DELETE: Creator OR company_admin OR super_admin
+    //
+    // 📘 ADR-362 §Group F Phase F4
+    // =========================================================================
+    match /dxf_dimension_styles/{styleId} {
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || belongsToCompany(resource.data.companyId)
+                     );
+
+      allow create: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || (
+                              request.resource.data.companyId == getUserCompanyId()
+                              && request.resource.data.createdBy == request.auth.uid
+                              && request.resource.data.keys().hasAll(
+                                   ['companyId', 'name', 'createdBy']
+                                 )
+                            )
+                       );
+
+      allow update: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || (
+                              (resource.data.createdBy == request.auth.uid
+                               || isCompanyAdminOfCompany(resource.data.companyId))
+                              && request.resource.data.companyId == resource.data.companyId
+                              && request.resource.data.createdBy == resource.data.createdBy
+                              && request.resource.data.createdAt == resource.data.createdAt
+                            )
+                       );
+
+      allow delete: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || resource.data.createdBy == request.auth.uid
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                       );
+    }
+
+    // =========================================================================
     // 🪜 FLOORPLAN_STAIRS COLLECTION — ADR-358 Phase 8 (G6 schema, G24 soft-lock)
     // =========================================================================
     // 📅 Added: 2026-05-17

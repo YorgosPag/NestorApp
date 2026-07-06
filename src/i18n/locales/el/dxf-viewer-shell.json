@@ -427,6 +427,7 @@
   "propertiesPalette": {
     "title": "Ιδιότητες",
     "entityLine": "ΓΡΑΜΜΗ",
+    "entityDimension": "ΔΙΑΣΤΑΣΗ",
     "close": "Κλείσιμο",
     "apply": "Εφαρμογή",
     "noSelection": "Δεν επιλέχθηκε οντότητα",
@@ -434,7 +435,11 @@
     "cmdLabel": "Επεξεργασία ιδιοτήτων",
     "groups": {
       "geometry": "Γεωμετρία",
-      "style": "Στυλ"
+      "style": "Στυλ",
+      "general": "Γενικά",
+      "text": "Κείμενο",
+      "arrows": "Βελάκια",
+      "fitUnits": "Προσαρμογή & Μονάδες"
     },
     "props": {
       "startX": "Αρχή Χ",
@@ -445,7 +450,49 @@
       "angle": "Γωνία",
       "layer": "Επίπεδο",
       "color": "Χρώμα",
-      "linetype": "Τύπος γραμμής"
+      "linetype": "Τύπος γραμμής",
+      "dimLineColor": "Χρώμα γραμμής",
+      "dimTextColor": "Χρώμα κειμένου",
+      "lineweight": "Πάχος γραμμής",
+      "textHeight": "Ύψος κειμένου",
+      "textPosition": "Θέση κειμένου",
+      "textRotation": "Στροφή κειμένου",
+      "textOverride": "Παράκαμψη κειμένου",
+      "arrowStyle": "Στυλ βέλους",
+      "arrowSize": "Μέγεθος βέλους",
+      "dimScale": "Κλίμακα",
+      "lengthUnits": "Μονάδες μήκους",
+      "decimals": "Δεκαδικά ψηφία",
+      "dimType": "Τύπος",
+      "measurement": "Μετρημένη τιμή",
+      "point1": "Σημείο 1",
+      "point2": "Σημείο 2",
+      "styleName": "Στυλ",
+      "associations": "Συσχετισμένα σημεία"
+    },
+    "opts": {
+      "above": "Πάνω",
+      "centered": "Κεντραρισμένο",
+      "below": "Κάτω",
+      "scientific": "Επιστημονικές",
+      "decimal": "Δεκαδικές",
+      "engineering": "Μηχανικές",
+      "architectural": "Αρχιτεκτονικές",
+      "fractional": "Κλασματικές",
+      "windowsDesktop": "Windows"
+    },
+    "dimTypes": {
+      "linear": "Γραμμική",
+      "aligned": "Ευθυγραμμισμένη",
+      "angular2L": "Γωνιακή (2 γραμμές)",
+      "angular3P": "Γωνιακή (3 σημεία)",
+      "radius": "Ακτίνα",
+      "diameter": "Διάμετρος",
+      "arcLength": "Μήκος τόξου",
+      "joggedRadius": "Σπασμένη ακτίνα",
+      "ordinate": "Συντεταγμένη",
+      "baseline": "Γραμμή βάσης",
+      "continued": "Συνεχής"
     }
   },
   "layerPicker": {

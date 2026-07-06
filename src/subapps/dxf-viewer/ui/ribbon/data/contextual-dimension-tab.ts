@@ -645,7 +645,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.dimOpenPanel',
                 icon: 'dim-open-panel',
                 commandKey: DIM_RIBBON_KEYS.properties.openPanel,
-                comingSoon: true,
+                action: DIM_RIBBON_KEYS.properties.openPanel,
               },
             },
           ],

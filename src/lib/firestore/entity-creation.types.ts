@@ -30,6 +30,7 @@ export type ServerEntityType =
   | 'storage'
   | 'parking'
   | 'dxfLevel'
+  | 'dimStyle'
   | 'cadFile'
   | 'dxfOverlayItem';
 
@@ -48,6 +49,7 @@ export type EntityIdGeneratorName =
   | 'generateStorageId'
   | 'generateParkingId'
   | 'generateLevelId'
+  | 'generateDimStyleId'
   | 'generateFileId'
   | 'generateOverlayId';
 
@@ -162,6 +164,23 @@ export const ENTITY_REGISTRY: Record<ServerEntityType, EntityRegistryEntry> = {
     hierarchy: 'tenant-scoped',
     parentField: 'floorId',
     idGenerator: 'generateLevelId',
+    codeType: null,
+    codeField: null,
+    tenantCheck: false,
+    auditTargetType: 'api',
+    entityAuditType: null,
+  },
+  /**
+   * 📐 ADR-362 Phase F4: per-company custom DIMSTYLE. Standalone tenant-scoped
+   * entity (no parent FK) — companyId comes from auth ctx. docId prefix
+   * `dimstyle_` via generateDimStyleId(). Not audit-tracked (DXF subresource,
+   * mirrors dxfLevel).
+   */
+  dimStyle: {
+    collection: COLLECTIONS.DXF_DIMENSION_STYLES,
+    hierarchy: 'tenant-scoped',
+    parentField: null,
+    idGenerator: 'generateDimStyleId',
     codeType: null,
     codeField: null,
     tenantCheck: false,

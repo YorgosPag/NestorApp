@@ -60,7 +60,7 @@ export function DimStyleList({
 
               {isActive && (
                 <span className={`text-xs px-1 rounded ${colors.bg.success} ${colors.text.onSuccess} shrink-0`}>
-                  {t('panels.dimensions.activeBadge')}
+                  {t('panels.dimensions.defaultBadge')}
                 </span>
               )}
 
@@ -74,7 +74,7 @@ export function DimStyleList({
                 {!isActive && (
                   <ActionButton
                     icon={<Check size={12} />}
-                    label={t('panels.dimensions.setActive')}
+                    label={t('panels.dimensions.setAsDefault')}
                     onClick={(e) => { e.stopPropagation(); onSetActive(style.id); }}
                   />
                 )}

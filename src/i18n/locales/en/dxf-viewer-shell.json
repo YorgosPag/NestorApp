@@ -427,6 +427,7 @@
   "propertiesPalette": {
     "title": "Properties",
     "entityLine": "LINE",
+    "entityDimension": "DIMENSION",
     "close": "Close",
     "apply": "Apply",
     "noSelection": "No entity selected",
@@ -434,7 +435,11 @@
     "cmdLabel": "Properties edit",
     "groups": {
       "geometry": "Geometry",
-      "style": "Style"
+      "style": "Style",
+      "general": "General",
+      "text": "Text",
+      "arrows": "Arrowheads",
+      "fitUnits": "Fit & Units"
     },
     "props": {
       "startX": "Start X",
@@ -445,7 +450,49 @@
       "angle": "Angle",
       "layer": "Layer",
       "color": "Color",
-      "linetype": "Linetype"
+      "linetype": "Linetype",
+      "dimLineColor": "Line color",
+      "dimTextColor": "Text color",
+      "lineweight": "Line weight",
+      "textHeight": "Text height",
+      "textPosition": "Text position",
+      "textRotation": "Text rotation",
+      "textOverride": "Text override",
+      "arrowStyle": "Arrow style",
+      "arrowSize": "Arrow size",
+      "dimScale": "Scale",
+      "lengthUnits": "Length units",
+      "decimals": "Decimals",
+      "dimType": "Type",
+      "measurement": "Measurement",
+      "point1": "Point 1",
+      "point2": "Point 2",
+      "styleName": "Style",
+      "associations": "Associated points"
+    },
+    "opts": {
+      "above": "Above",
+      "centered": "Centered",
+      "below": "Below",
+      "scientific": "Scientific",
+      "decimal": "Decimal",
+      "engineering": "Engineering",
+      "architectural": "Architectural",
+      "fractional": "Fractional",
+      "windowsDesktop": "Windows"
+    },
+    "dimTypes": {
+      "linear": "Linear",
+      "aligned": "Aligned",
+      "angular2L": "Angular (2 lines)",
+      "angular3P": "Angular (3 points)",
+      "radius": "Radius",
+      "diameter": "Diameter",
+      "arcLength": "Arc length",
+      "joggedRadius": "Jogged radius",
+      "ordinate": "Ordinate",
+      "baseline": "Baseline",
+      "continued": "Continued"
     }
   },
   "layerPicker": {

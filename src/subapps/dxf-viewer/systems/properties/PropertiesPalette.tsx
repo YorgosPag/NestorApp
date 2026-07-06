@@ -33,17 +33,28 @@ import { useDisplayUnit } from '../../hooks/common/useDisplayUnit';
 // ADR-532 B4 — this micro-leaf self-subscribes to the selection set so the
 // CanvasSection orchestrator no longer re-renders to feed it selectedEntityIds.
 import { useSelectedEntityIds } from '../selection/useSelectedEntities';
-import { fromDisplay, DISPLAY_UNIT_LABELS, type DisplayUnit } from '../../config/units';
+import { DISPLAY_UNIT_LABELS } from '../../config/units';
 import {
   COMMON_LINETYPES,
   buildLineFormState,
   deriveEndPoint,
+  getEntityGroups,
   type LineFormState,
+  type PropertyDescriptor,
 } from './entity-property-schema';
-import type { DxfScene, DxfLine } from '../../canvas-v2/dxf-canvas/dxf-types';
+// ADR-362 §7 — DIMENSION support: schema-driven rows + dim read/apply model.
+import { buildDimensionFormState, buildDimensionPatch } from './dimension-property-model';
+// LINE read/apply model (mirror of the dimension model — keeps this component < 500 lines).
+import { buildLinePatch } from './line-property-model';
+import { PropertyGroupRows, type PropertySelectOption } from './PropertyGroupRows';
+import { listArrowheadBlockNames } from '../dimensions/dim-arrowhead-blocks';
+import type { DxfScene, DxfLine, DxfDimension } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { SceneModel } from '../../types/scene';
 import styles from './PropertiesPalette.module.css';
+
+// ADR-362 §7 — «Πάχος» option list for the dimension palette (ByLayer + common ISO mm).
+const DIM_LINEWEIGHT_OPTIONS = ['ByLayer', '0.13', '0.18', '0.25', '0.35', '0.5', '0.7', '1.0'] as const;
 
 interface LevelManagerLike {
   getLevelScene: (id: string) => SceneModel | null;
@@ -84,6 +95,8 @@ export function PropertiesPalette({
     startX: '0', startY: '0', lengthDisplay: '0', angleDeg: '0',
     layerId: '', color: '', linetype: 'ByLayer',
   });
+  // ADR-362 §7 — DIMENSION form (schema-driven, all values as strings).
+  const [dimForm, setDimForm] = useState<Record<string, string>>({});
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     geometry: true,
@@ -96,9 +109,17 @@ export function PropertiesPalette({
   useEffect(() => {
     if (!entityId || !dxfScene) return;
     const entity = dxfScene.entities.find(e => e.id === entityId);
-    if (!entity || entity.type !== 'line') return;
-    setForm(buildLineFormState(entity as DxfLine, displayUnit));
-  }, [entityId, dxfScene, displayUnit]);
+    if (!entity) return;
+    if (entity.type === 'line') {
+      setForm(buildLineFormState(entity as DxfLine, displayUnit));
+    } else if (entity.type === 'dimension') {
+      // canvas-v2 wraps the dimension → read the flat DimensionEntity from `.dimensionEntity`.
+      const next = buildDimensionFormState((entity as DxfDimension).dimensionEntity, displayUnit);
+      // Localise the read-only variant token (model stays pure — no i18n inside it).
+      next.dimType = t(`propertiesPalette.dimTypes.${next.dimType}`);
+      setDimForm(next);
+    }
+  }, [entityId, dxfScene, displayUnit, t]);
 
   // Close when palette loses focus to a non-select tool (optional — palette stays open)
   // Per industry standard, Properties Palette persists across tool changes.
@@ -118,72 +139,7 @@ export function PropertiesPalette({
     if (!entity || entity.type !== 'line') return;
     const line = entity as DxfLine;
 
-    const patch: Record<string, unknown> = {};
-
-    // Start point
-    const newStartXMm = fromDisplay(parseFloat(form.startX), displayUnit);
-    const newStartYMm = fromDisplay(parseFloat(form.startY), displayUnit);
-    if (!isNaN(newStartXMm) && !isNaN(newStartYMm)) {
-      const origStartX = line.start.x;
-      const origStartY = line.start.y;
-      if (Math.abs(newStartXMm - origStartX) > 0.0001 || Math.abs(newStartYMm - origStartY) > 0.0001) {
-        patch.start = { x: newStartXMm, y: newStartYMm };
-      }
-    }
-
-    // Layer
-    const newLayerId = form.layerId;
-    if (newLayerId && newLayerId !== (entity.layerId ?? '')) {
-      patch.layerId = newLayerId;
-      const layerObj = layerStoreSnap.layers.find(l => l.id === newLayerId);
-      if (layerObj) patch.layer = layerObj.name;
-    }
-
-    // Color
-    const colorTrimmed = form.color.trim();
-    const originalColor = entity.colorMode === 'Concrete' ? (entity.color ?? '') : '';
-    if (colorTrimmed !== originalColor) {
-      if (colorTrimmed === '') {
-        patch.colorMode = 'ByLayer';
-        patch.color = null;
-      } else {
-        patch.colorMode = 'Concrete';
-        patch.color = colorTrimmed;
-      }
-    }
-
-    // Linetype
-    const origLinetype = entity.linetypeName ?? 'ByLayer';
-    if (form.linetype !== origLinetype) {
-      patch.linetypeName = form.linetype === 'ByLayer' ? undefined : form.linetype;
-    }
-
-    // Length + Angle → recompute end
-    const startX = patch.start ? (patch.start as { x: number }).x : line.start.x;
-    const startY = patch.start ? (patch.start as { x: number; y: number }).y : line.start.y;
-    const dx0 = line.end.x - line.start.x;
-    const dy0 = line.end.y - line.start.y;
-    const origLengthMm = Math.hypot(dx0, dy0);
-    let origAngleDeg = Math.atan2(-dy0, dx0) * (180 / Math.PI);
-    if (origAngleDeg < 0) origAngleDeg += 360;
-
-    const newLengthMm = fromDisplay(parseFloat(form.lengthDisplay), displayUnit);
-    const newAngleDeg = parseFloat(form.angleDeg);
-    const finalLength = isNaN(newLengthMm) ? origLengthMm : newLengthMm;
-    const finalAngle = isNaN(newAngleDeg) ? origAngleDeg : newAngleDeg;
-    const finalRad = finalAngle * (Math.PI / 180);
-
-    if (
-      Math.abs(finalLength - origLengthMm) > 0.0001 ||
-      Math.abs(finalAngle - origAngleDeg) > 0.0001 ||
-      patch.start
-    ) {
-      patch.end = {
-        x: startX + finalLength * Math.cos(finalRad),
-        y: startY - finalLength * Math.sin(finalRad),
-      };
-    }
-
+    const patch = buildLinePatch(line, form, layerStoreSnap.layers, displayUnit);
     if (Object.keys(patch).length === 0) return;
 
     const sceneManager = createLevelSceneManagerAdapter(
@@ -200,6 +156,44 @@ export function PropertiesPalette({
     executeCommand(cmd);
   }, [entityId, dxfScene, form, layerStoreSnap, levelManager, displayUnit, executeCommand, t]);
 
+  // ADR-362 §7 — apply the edited DIMENSION form (entity-root fields + nested
+  // `overrides`) as ONE undoable UpdateEntityCommand (mirror of the line path).
+  const handleApplyDimension = useCallback(() => {
+    if (!entityId || !dxfScene || !levelManager.currentLevelId) return;
+    const entity = dxfScene.entities.find(e => e.id === entityId);
+    if (!entity || entity.type !== 'dimension') return;
+    const patch = buildDimensionPatch((entity as DxfDimension).dimensionEntity, dimForm);
+    if (Object.keys(patch).length === 0) return;
+    const sceneManager = createLevelSceneManagerAdapter(
+      levelManager.getLevelScene,
+      levelManager.setLevelScene,
+      levelManager.currentLevelId,
+    );
+    executeCommand(new UpdateEntityCommand(entityId, patch, sceneManager, t('propertiesPalette.cmdLabel')));
+  }, [entityId, dxfScene, dimForm, levelManager, executeCommand, t]);
+
+  // Dynamic + enum option resolver for the dimension select rows (layers / lineweights /
+  // arrow blocks are dynamic; linetype/tad/lunit come from the descriptor's static list).
+  const resolveDimOptions = useCallback(
+    (descriptor: PropertyDescriptor): readonly PropertySelectOption[] => {
+      switch (descriptor.key) {
+        case 'layerId':
+          return layerStoreSnap.layers.map(l => ({ value: l.id ?? l.name, label: l.name }));
+        case 'dimlwd':
+          return DIM_LINEWEIGHT_OPTIONS.map(v => ({ value: v, label: v }));
+        case 'dimblk':
+          return listArrowheadBlockNames().map(n => ({ value: n, label: n }));
+        default:
+          return (descriptor.options ?? []).map(v => ({
+            value: v,
+            // Linetype names are literal; text-position / unit enums are i18n-labelled.
+            label: descriptor.key === 'dimltype' ? v : t(`propertiesPalette.opts.${v}`),
+          }));
+      }
+    },
+    [layerStoreSnap, t],
+  );
+
   const toggleGroup = useCallback((key: string) => {
     setOpenGroups(prev => ({ ...prev, [key]: !prev[key] }));
   }, []);
@@ -208,6 +202,7 @@ export function PropertiesPalette({
 
   const entity = entityId ? dxfScene?.entities.find(e => e.id === entityId) : null;
   const isLine = entity?.type === 'line';
+  const isDimension = entity?.type === 'dimension';
   const derived = isLine ? deriveEndPoint(form, entity as DxfLine, displayUnit) : null;
 
   return (
@@ -222,6 +217,11 @@ export function PropertiesPalette({
           {isLine && (
             <span className={styles.entityBadge}>
               {t('propertiesPalette.entityLine')}
+            </span>
+          )}
+          {isDimension && (
+            <span className={styles.entityBadge}>
+              {t('propertiesPalette.entityDimension')}
             </span>
           )}
         </span>
@@ -239,8 +239,37 @@ export function PropertiesPalette({
         <p className={styles.emptyMsg}>{t('propertiesPalette.noSelection')}</p>
       )}
 
-      {entity && !isLine && (
+      {entity && !isLine && !isDimension && (
         <p className={styles.emptyMsg}>{t('propertiesPalette.unsupported')}</p>
+      )}
+
+      {isDimension && (
+        <>
+          <PropertyGroupRows
+            groups={getEntityGroups('dimension') ?? []}
+            form={dimForm}
+            onFieldChange={(key, value) => setDimForm(prev => ({ ...prev, [key]: value }))}
+            resolveOptions={resolveDimOptions}
+            unitLabel={unitLabel}
+            t={t}
+          />
+          <footer className={styles.footer}>
+            <button
+              type="button"
+              className={styles.btnCancel}
+              onClick={() => PropertiesPaletteStore.close()}
+            >
+              {t('propertiesPalette.close')}
+            </button>
+            <button
+              type="button"
+              className={styles.btnApply}
+              onClick={handleApplyDimension}
+            >
+              {t('propertiesPalette.apply')}
+            </button>
+          </footer>
+        </>
       )}
 
       {isLine && (

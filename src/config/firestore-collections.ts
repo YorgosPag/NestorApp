@@ -98,6 +98,16 @@ export const COLLECTIONS = {
   DXF_VIEWER_VIEW_TEMPLATES: process.env.NEXT_PUBLIC_DXF_VIEWER_VIEW_TEMPLATES_COLLECTION || 'dxf_viewer_view_templates',
   /** ADR-375 Phase C.1 — BIM Pen Table overrides (per-company, docId = companyId). */
   DXF_VIEWER_PEN_TABLES: process.env.NEXT_PUBLIC_DXF_VIEWER_PEN_TABLES_COLLECTION || 'dxf_viewer_pen_tables',
+  /**
+   * ADR-362 Phase F4 — per-company custom DIMSTYLE persistence + the per-company
+   * "default" dim style pointer. One doc per CUSTOM style (full `style` payload,
+   * ~60 DimStyle fields under `style`), plus at most one thin `isBuiltInRef` doc
+   * that pins a built-in template (ISO/ASME/Arch/Nestor) as the company default.
+   * Exactly one doc carries `isDefault:true` at a time (the code default is the
+   * Nestor green template, so ZERO docs = Nestor default). Enterprise IDs via
+   * `generateDimStyleId()` → docId prefix `dimstyle_`. Tenant-scoped (companyId).
+   */
+  DXF_DIMENSION_STYLES: process.env.NEXT_PUBLIC_DXF_DIMENSION_STYLES_COLLECTION || 'dxf_dimension_styles',
 
   // 📐 FLOORPLANS (Enterprise Unified)
   FLOORPLANS: process.env.NEXT_PUBLIC_FLOORPLANS_COLLECTION || 'floorplans',

@@ -608,6 +608,11 @@ export const API_ROUTES = {
     LIST: '/api/dxf-levels',
   },
 
+  // ── DXF Dimension Styles (ADR-362 Phase F4) ───────────────────────────
+  DXF_DIMENSION_STYLES: {
+    LIST: '/api/dxf-dimension-styles',
+  },
+
   // ── CAD Files (ADR-288) ───────────────────────────────────────────────
   CAD_FILES: {
     LIST: '/api/cad-files',

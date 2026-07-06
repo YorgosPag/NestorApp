@@ -22,6 +22,7 @@ import { SNAP_MARKER_COLORS } from '../../../config/color-config';
 export {
   SNAP_ICON_GEOMETRY,
   getSnapIconHalf,
+  getSnapIconSize,
   getSnapIconQuarter,
   getTangentCircleRadius,
   getGridDotRadius,

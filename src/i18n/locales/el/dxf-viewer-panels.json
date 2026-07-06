@@ -136,7 +136,9 @@
       "delete": "Διαγραφή",
       "edit": "Επεξεργασία",
       "setActive": "Ορισμός ως ενεργό",
+      "setAsDefault": "Ορισμός ως προεπιλογή",
       "activeBadge": "Ενεργό",
+      "defaultBadge": "Προεπιλογή",
       "builtInBadge": "Ενσωματωμένο",
       "emptyList": "Δεν υπάρχουν στυλ",
       "deleteConfirm": {

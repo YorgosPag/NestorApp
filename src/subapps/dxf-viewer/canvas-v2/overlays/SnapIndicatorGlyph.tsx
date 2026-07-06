@@ -25,7 +25,8 @@ import { portalComponents } from '@/styles/design-tokens';  // ✅ ENTERPRISE: C
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ADR-137 (geometry) + ADR-515 (χρώμα ανά τύπο) — ΕΝΑ snap-visual SSoT entry point
 import {
-  SNAP_ICON_GEOMETRY,
+  getSnapIconSize,
+  getSnapIconHalf,
   getSnapIconQuarter,
   getTangentCircleRadius,
   getNodeDotRadius,
@@ -37,10 +38,6 @@ import { resolveBimSnapLabelText } from '../../snapping/snap-description-keys';
 // μην πέφτει στο canvas dim pill (cross-layer separate-baselines contract).
 import { snapLabelTop } from '../preview-canvas/overlay-label-layout';
 
-// 🏢 ADR-137: Using centralized snap icon geometry
-const SNAP_INDICATOR_SIZE = SNAP_ICON_GEOMETRY.SIZE;
-const SNAP_INDICATOR_HALF = SNAP_INDICATOR_SIZE * SNAP_ICON_GEOMETRY.HALF_RATIO;
-
 /**
  * 🎯 ENTERPRISE: Renders industry-standard snap shape based on type.
  * Each snap type has a unique geometric symbol for instant recognition
@@ -49,8 +46,9 @@ const SNAP_INDICATOR_HALF = SNAP_INDICATOR_SIZE * SNAP_ICON_GEOMETRY.HALF_RATIO;
 export function SnapShape({ type, color }: { type: string; color: string }) {
   // 🏢 ADR-133: Centralized SVG stroke width
   const strokeWidth = PANEL_LAYOUT.SVG_ICON.STROKE_WIDTH.STANDARD;
-  const size = SNAP_INDICATOR_SIZE;
-  const half = SNAP_INDICATOR_HALF;
+  // Per-type box size (dimension glyphs are bumped; all others fall back to base).
+  const size = getSnapIconSize(type);
+  const half = getSnapIconHalf(size);
 
   switch (type.toLowerCase()) {
     // ■ ENDPOINT: Square - AutoCAD/MicroStation standard.
@@ -361,6 +359,10 @@ export function SnapIndicatorGlyph({ screenPos, type, description, className = '
   const bimLabel = resolveBimSnapLabelText(t, description) ?? undefined;
   // 🏢 ADR-515: type-specific χρώμα marker (Revit-rich) από το snap-visual SSoT.
   const snapColor = resolveSnapColor(type);
+  // Per-type box size (dimension glyphs enlarged) — MUST match `SnapShape` so the
+  // centering offset + label anchor track the actual rendered glyph size.
+  const glyphSize = getSnapIconSize(type);
+  const glyphHalf = getSnapIconHalf(glyphSize);
 
   return (
     // 🏢 ENTERPRISE: pointer-events-none ώστε να μην εμποδίζει mouse events στον καμβά από κάτω.
@@ -373,8 +375,8 @@ export function SnapIndicatorGlyph({ screenPos, type, description, className = '
       <div
         className={`absolute ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
         style={{
-          left: screenPos.x - SNAP_INDICATOR_HALF,
-          top: screenPos.y - SNAP_INDICATOR_HALF,
+          left: screenPos.x - glyphHalf,
+          top: screenPos.y - glyphHalf,
           filter: `drop-shadow(0 0 2px ${snapColor})` // Glow effect for visibility
         }}
       >
@@ -385,10 +387,10 @@ export function SnapIndicatorGlyph({ screenPos, type, description, className = '
         <div
           className={`absolute ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.TYPOGRAPHY.XS}`}
           style={{
-            left: screenPos.x + SNAP_INDICATOR_SIZE,
+            left: screenPos.x + glyphSize,
             // ADR-508 §label-layout (Case A): ετικέτα σε δική της baseline ΠΑΝΩ από το glyph ώστε
             // να μην επικαλύπτει το entity dim pill (που κάθεται ΚΑΤΩ από το κέντρο) — separate baselines.
-            top: snapLabelTop(screenPos.y, SNAP_INDICATOR_HALF),
+            top: snapLabelTop(screenPos.y, glyphHalf),
             color: snapColor,
             whiteSpace: 'nowrap',
           }}
