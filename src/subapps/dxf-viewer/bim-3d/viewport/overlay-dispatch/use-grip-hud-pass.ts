@@ -20,17 +20,10 @@
  */
 
 import { useSyncExternalStore } from 'react';
-import type { Point2D } from '../../../rendering/types/Types';
 import type { GripInfo } from '../../../hooks/grip-types';
 import { dxfSceneUnitToMm } from '../../../utils/scene-units';
-import { dxfPlanToWorld, getPixelWorldSize } from '../coordinate-transforms';
-import { makeGripPlanToCanvas } from '../../grips/grip-3d-screen-project';
-import {
-  buildSegmentHudMeta,
-  paintWallHudCore,
-  paintProjectedAlignedDim,
-  type WallHudProjector,
-} from '../../../canvas-v2/preview-canvas/wall-hud-paint';
+import { buildSegmentHudMeta, paintWallHudCore } from '../../../canvas-v2/preview-canvas/wall-hud-paint';
+import { makeWallHud3DProjector } from './wall-hud-3d-projector';
 import {
   gripInfoToAlignmentRole,
   resolvePolylineHudSegments,
@@ -74,17 +67,9 @@ function paintGripHudOverlay({ ctx, camera, canvas }: BimOverlayFrame): void {
   const segments = hudSegmentsFor(grip, found.entity as unknown as GripAlignmentEntityView);
   if (segments.length === 0) return;
 
-  // plan-mm → canvas-px projector (mmFactor = 1); screen scale at the live grip position.
-  const toScreen = makeGripPlanToCanvas(camera, canvas, () => found.floorElevationMm);
-  const midWorld = dxfPlanToWorld(drag.livePlanPos.x, drag.livePlanPos.y, found.floorElevationMm);
-  const dist = camera.position.distanceTo(midWorld);
-  const worldPerPixel = getPixelWorldSize(dist, camera, canvas) * 1000; // mm per screen px
-  const projector: WallHudProjector = {
-    toScreen,
-    worldPerPixel,
-    drawAlignedDim: (p1: Point2D, p2: Point2D, dimRef: Point2D, label: string, color: string) =>
-      paintProjectedAlignedDim(ctx, p1, p2, dimRef, label, toScreen, color),
-  };
+  // Reshaped vertices are plan-mm → the HUD works in `sceneUnits='mm'`; the live grip position is the
+  // screen-scale reference. Shared 3D wall-HUD projector SSoT (same builder the wall-placement HUD uses).
+  const projector = makeWallHud3DProjector(ctx, camera, canvas, 'mm', found.floorElevationMm, drag.livePlanPos);
 
   for (const [a, b] of segments) {
     if (a >= verts.length || b >= verts.length) continue;

@@ -327,3 +327,12 @@ canvas-layer-stack-tool-preview-mounts.tsx, CanvasLayerStack.tsx}`
   «έβλεπε» ποτέ slab-opening (γι' αυτό ο leaf είχε παρακάμψει το SSoT με `params.outline.vertices`).
   Πλέον ο resolver είναι όντως universal (όπως το docstring του δηλώνει). Tests: `ghost-status-outline.test.ts`
   +2 cases (polygon path + outline-over-polygon precedence).
+- **2026-07-06 (c)** — **Σ4 (line rotation) → RESOLVED-by-design (code audit, καμία αλλαγή κώδικα).**
+  Επαληθεύτηκε με ανάγνωση κώδικα ότι το line preview (`applyLineRotationDrag → rotateAxisPointsAboutPivot`)
+  και το commit (`commitLineGripDrag → rotateEntity`) είναι **identity by construction**: και τα δύο
+  bottom-out στο ΙΔΙΟ `rotatePoint` (`utils/rotation-math.ts`, ADR-188 — το `grip-math.ts` το import-άρει,
+  δεν έχει δικό του cos/sin), στην ΙΔΙΑ `sweptAngleDegAboutPivot`, με pivot/anchor από το ΙΔΙΟ
+  `BimRotateHotGripStore` (ίδιο midpoint fallback). Το output είναι byte-identical — «δύο engines» ήταν
+  misnomer του αρχικού census. Option B (ένωση στο `rotateEntity`) απορρίφθηκε: θα απέσπαγε το `line` από
+  την axis-box οικογένεια (wall/beam/column/foundation) για μηδέν behavioural όφελος + ρίσκο, αντίθετα στο
+  ρητό by-design σχόλιο (`primitive-rotation-drag.ts` γρ.17-20). §5 Νησίδα 4 + §7 Σ4 reclassified.
