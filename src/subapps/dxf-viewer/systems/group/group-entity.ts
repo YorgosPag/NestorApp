@@ -62,6 +62,21 @@ export function createGroupEntity(members: readonly Entity[]): GroupEntity {
 }
 
 /**
+ * Deep-clone ONE owned member with a FRESH id (recursively for nested groups),
+ * so the clone is fully independent of its source — no shared nested references
+ * (params/geometry), no id collision. The single SSoT for "regenerate an owned
+ * member's identity", reused by both UNGROUP (restore to scene) and GROUP COPY
+ * (clone the container) so the re-id logic lives in ONE place (N.0.2).
+ */
+export function cloneGroupMemberDeep(member: Entity): Entity {
+  const cloned = { ...deepClone(member), id: generateEntityId(), selected: false } as Entity;
+  if (isGroupEntity(cloned) && Array.isArray(cloned.members)) {
+    return { ...cloned, members: cloned.members.map(cloneGroupMemberDeep) } as unknown as Entity;
+  }
+  return cloned;
+}
+
+/**
  * UNGROUP: return fresh-id clones of a container's members (identity transform →
  * absolute coordinates are already correct, no matrix applied). Fresh ids keep
  * the restored members independent of the container's own lifecycle, matching
@@ -70,9 +85,21 @@ export function createGroupEntity(members: readonly Entity[]): GroupEntity {
  */
 export function ungroupGroup(group: GroupEntity): Entity[] | null {
   if (!Array.isArray(group.members) || group.members.length === 0) return null;
-  return group.members.map((child) => ({
-    ...deepClone(child),
+  return group.members.map(cloneGroupMemberDeep);
+}
+
+/**
+ * COPY a GROUP into a fully independent container: a FRESH container id + fresh,
+ * deep-cloned member ids (identity transform — absolute coordinates unchanged;
+ * the caller applies any translate afterwards via the move SSoT). Shares the
+ * per-member clone SSoT ({@link cloneGroupMemberDeep}) with UNGROUP, so a copied
+ * group can never collide with the original when both expand for render /
+ * hit-test / selection.
+ */
+export function cloneGroupEntity(group: GroupEntity): GroupEntity {
+  return {
+    ...deepClone(group),
     id: generateEntityId(),
-    selected: false,
-  } as Entity));
+    members: Array.isArray(group.members) ? group.members.map(cloneGroupMemberDeep) : [],
+  } as GroupEntity;
 }

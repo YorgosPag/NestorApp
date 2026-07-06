@@ -3,7 +3,7 @@
  * Mirrors systems/explode/__tests__/explode-entity.test.ts.
  */
 
-import { createGroupEntity, isGroupable, isGroupEntity, ungroupGroup, GROUP_MIN_MEMBERS } from '../group-entity';
+import { createGroupEntity, isGroupable, isGroupEntity, ungroupGroup, cloneGroupEntity, GROUP_MIN_MEMBERS } from '../group-entity';
 import { explodeEntity } from '../../explode/explode-entity';
 import type { Entity, GroupEntity } from '../../../types/entities';
 
@@ -45,6 +45,33 @@ describe('ADR-575 — group-entity (GROUP/UNGROUP SSoT)', () => {
   it('ungroupGroup returns null for an empty container', () => {
     const empty = { id: 'g', type: 'group', visible: true, name: 'x', members: [] } as unknown as GroupEntity;
     expect(ungroupGroup(empty)).toBeNull();
+  });
+
+  it('cloneGroupEntity returns an independent copy: fresh container + fresh member ids', () => {
+    const group = createGroupEntity([mkLine('a'), mkLine('b', 5)]);
+    const copy = cloneGroupEntity(group);
+    expect(copy.type).toBe('group');
+    expect(copy.id).not.toBe(group.id);                                  // fresh container id
+    expect(copy.members).toHaveLength(2);
+    const srcIds = group.members.map((m) => m.id);
+    expect(copy.members.every((m) => !srcIds.includes(m.id))).toBe(true); // fresh member ids (no collision)
+  });
+
+  it('cloneGroupEntity deep-clones members (mutating the copy leaves the source intact)', () => {
+    const group = createGroupEntity([mkLine('a'), mkLine('b')]);
+    const copy = cloneGroupEntity(group);
+    (copy.members[0] as unknown as { start: { x: number } }).start.x = 777;
+    const src = group.members[0] as unknown as { start: { x: number } };
+    expect(src.start.x).toBe(0);                                          // no shared nested refs
+  });
+
+  it('cloneGroupEntity re-ids nested-group members recursively', () => {
+    const inner = createGroupEntity([mkLine('a'), mkLine('b')]);
+    const outer = createGroupEntity([inner as unknown as Entity, mkLine('c')]);
+    const copy = cloneGroupEntity(outer);
+    const copiedInner = copy.members.find((m) => isGroupEntity(m)) as unknown as GroupEntity;
+    const srcInnerMemberIds = inner.members.map((m) => m.id);
+    expect(copiedInner.members.every((m) => !srcInnerMemberIds.includes(m.id))).toBe(true);
   });
 
   it('explodeEntity delegates the group case to UNGROUP (round-trip)', () => {

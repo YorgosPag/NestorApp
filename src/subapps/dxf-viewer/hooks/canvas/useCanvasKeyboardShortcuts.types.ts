@@ -131,10 +131,10 @@ export interface UseCanvasKeyboardShortcutsParams {
   handleWallGapOpeningEscape?: () => void;
   /** ADR-568: Whether the wall-gap-opening tool is active */
   wallGapOpeningIsActive?: boolean;
-  /** ADR-363 R1: BIM Copy ESC handler */
-  handleBimCopyEscape?: () => void;
-  /** ADR-363 R1: Whether the bim-copy tool is active */
-  bimCopyIsActive?: boolean;
+  /** ADR-363 R1 / ADR-577: unified Copy ESC handler */
+  handleCopyEscape?: () => void;
+  /** ADR-363 R1 / ADR-577: Whether the copy tool is active */
+  copyIsActive?: boolean;
   /** SSoT deselect-all callback — clears local entity state + UniversalSelection */
   clearEntitySelection?: () => void;
   /** True when any non-DXF entity is selected (e.g. overlays) — widens the Escape guard */

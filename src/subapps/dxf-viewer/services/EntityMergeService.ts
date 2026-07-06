@@ -78,6 +78,8 @@ export interface MergeResult {
   newEntityId?: string;
   success: boolean;
   message?: string;
+  /** Machine-readable cause when `success === false` (undefined on success). */
+  reasonCode?: JoinRejectReason;
 }
 
 /** Legacy interface — kept for backward compatibility with MergePanel */
@@ -94,11 +96,24 @@ export interface JoinOptions {
   scene: SceneModel;
 }
 
+/**
+ * Structured rejection reason for a failed JOIN preview.
+ * Lets the UI pick the right localized toast WITHOUT matching English `reason`
+ * substrings (which are debug-only, non-localized).
+ */
+export type JoinRejectReason =
+  | 'too-few'
+  | 'non-joinable-type'
+  | 'closed-entity'
+  | 'not-connected';
+
 export interface JoinPreview {
   canJoin: boolean;
   resultType: JoinResultType | 'not-joinable';
   entityCount: number;
   reason?: string;
+  /** Machine-readable cause when `canJoin === false` (undefined when joinable). */
+  reasonCode?: JoinRejectReason;
 }
 
 // ============================================================================
@@ -295,10 +310,16 @@ function buildMergedEntity(
     case 'lwpolyline':
     default: {
       const isClosed = chain.length >= 3 && samePoint(chain[0], chain[chain.length - 1]);
+      // Canonical closed-polyline form (AutoCAD/Revit-grade): store the UNIQUE
+      // corners and let `closed:true` imply the closing edge (last→first). The
+      // renderer draws that edge itself (`line-utils` closing-grip at
+      // midpoint(last, first)), so keeping the duplicate closing vertex would
+      // emit a zero-length segment and drop the closing grip onto the corner.
+      const vertices = isClosed ? chain.slice(0, -1) : chain;
       const result: LWPolylineEntity & Pick<typeof base, 'name'> = {
         ...base,
         type: 'lwpolyline' as const,
-        vertices: chain,
+        vertices,
         closed: isClosed,
       };
       return result as AnySceneEntity;
@@ -321,20 +342,20 @@ export class EntityMergeService {
     // Resolve entities
     const entities = scene.entities.filter(e => entityIds.includes(e.id));
     if (entities.length < 2) {
-      return { updatedScene: scene, success: false, message: 'Need at least 2 entities to join' };
+      return { updatedScene: scene, success: false, message: 'Need at least 2 entities to join', reasonCode: 'too-few' };
     }
 
     // Validate all entities are mergeable
     const nonMergeable = entities.filter(e => !isMergeableEntity(e));
     if (nonMergeable.length > 0) {
       const types = [...new Set(nonMergeable.map(e => e.type))].join(', ');
-      return { updatedScene: scene, success: false, message: `Cannot join: ${types} entities are not joinable` };
+      return { updatedScene: scene, success: false, message: `Cannot join: ${types} entities are not joinable`, reasonCode: 'non-joinable-type' };
     }
 
     // Validate no closed entities
     const closed = entities.filter(isClosedEntity);
     if (closed.length > 0) {
-      return { updatedScene: scene, success: false, message: 'Cannot join closed entities (circles, closed polylines)' };
+      return { updatedScene: scene, success: false, message: 'Cannot join closed entities (circles, closed polylines)', reasonCode: 'closed-entity' };
     }
 
     // Attempt geometric join via segment chaining
@@ -357,7 +378,7 @@ export class EntityMergeService {
   private executeGeometricJoin(entities: AnySceneEntity[], scene: SceneModel): MergeResult {
     const allSegs = entities.flatMap(entityToSegments);
     if (allSegs.length === 0) {
-      return { updatedScene: scene, success: false, message: 'No geometry segments found in selected entities' };
+      return { updatedScene: scene, success: false, message: 'No geometry segments found in selected entities', reasonCode: 'not-connected' };
     }
 
     // Use generous JOIN tolerances (up to 100 CAD units) for deliberate user actions
@@ -370,6 +391,7 @@ export class EntityMergeService {
         updatedScene: scene,
         success: false,
         message: `Entities are not connected${gapInfo}. Move endpoints closer together.`,
+        reasonCode: 'not-connected',
       };
     }
     const chain = detailed.chain;
@@ -424,17 +446,17 @@ export class EntityMergeService {
     const entities = scene.entities.filter(e => entityIds.includes(e.id));
 
     if (entities.length < 2) {
-      return { canJoin: false, resultType: 'not-joinable', entityCount: entities.length, reason: 'Need 2+ entities' };
+      return { canJoin: false, resultType: 'not-joinable', entityCount: entities.length, reason: 'Need 2+ entities', reasonCode: 'too-few' };
     }
 
     const nonMergeable = entities.filter(e => !isMergeableEntity(e));
     if (nonMergeable.length > 0) {
-      return { canJoin: false, resultType: 'not-joinable', entityCount: entities.length, reason: 'Contains non-joinable types' };
+      return { canJoin: false, resultType: 'not-joinable', entityCount: entities.length, reason: 'Contains non-joinable types', reasonCode: 'non-joinable-type' };
     }
 
     const closed = entities.filter(isClosedEntity);
     if (closed.length > 0) {
-      return { canJoin: false, resultType: 'not-joinable', entityCount: entities.length, reason: 'Contains closed entities' };
+      return { canJoin: false, resultType: 'not-joinable', entityCount: entities.length, reason: 'Contains closed entities', reasonCode: 'closed-entity' };
     }
 
     // Attempt chaining to determine result type (use generous JOIN tolerances)
@@ -444,7 +466,7 @@ export class EntityMergeService {
       const gapInfo = detailed.minGapDistance !== undefined && detailed.minGapDistance < Infinity
         ? ` (gap: ${detailed.minGapDistance.toFixed(1)} units)`
         : '';
-      return { canJoin: false, resultType: 'not-joinable', entityCount: entities.length, reason: `Entities not connected${gapInfo}` };
+      return { canJoin: false, resultType: 'not-joinable', entityCount: entities.length, reason: `Entities not connected${gapInfo}`, reasonCode: 'not-connected' };
     }
 
     const resultType = determineResultType(entities, detailed.chain);

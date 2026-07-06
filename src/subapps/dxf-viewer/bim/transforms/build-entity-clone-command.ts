@@ -21,11 +21,16 @@
 import { buildClonesFromEntities } from './bim-copy-builder';
 import { PasteEntitiesCommand } from '../../core/commands/entity-commands/PasteEntitiesCommand';
 import { generateEntityId } from '../../systems/entity-creation/utils';
+// ADR-575/577 — canonical whole-entity translate SSoT (recurses group members).
+import { calculateMovedGeometry } from '../../core/commands/entity-commands/move-entity-geometry';
+// ADR-575/577 — GROUP copy SSoT (fresh container + recursive fresh member ids,
+// deep-cloned). The SAME re-id path UNGROUP uses; systems/group is the group SSoT home.
+import { cloneGroupEntity } from '../../systems/group/group-entity';
 // Same translate SSoT the ghost uses (`useEntityBodyDragPreview`) → preview ≡ commit
 // for every DXF type (line / polyline / rect / circle / text / …).
 import { applyEntityPreview, makeTranslationPreview } from '../../rendering/ghost';
 import { isBimEntity } from '../../types/entities';
-import type { Entity } from '../../types/entities';
+import type { Entity, GroupEntity } from '../../types/entities';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ISceneManager, SceneEntity } from '../../core/commands/interfaces';
 import type { Point2D } from '../../rendering/types/Types';
@@ -53,6 +58,18 @@ export function buildEntityCloneCommand(
   // DXF raw geometry: translate by `delta` (ghost SSoT — handles every DXF type)
   // then id-swap. Zero delta (Ctrl+V paste-in-place) → geometry unchanged.
   const dxfClones: SceneEntity[] = dxfSources.map((e) => {
+    // ADR-575/577 — composite GROUP container: clone into an independent group via
+    // the group SSoT (fresh container + recursive fresh, deep-cloned member ids),
+    // THEN translate every member through the canonical move SSoT (recursive).
+    // `applyEntityPreview` only moves top-level geometry, so a group would otherwise
+    // clone with un-translated, id-colliding, ref-shared members.
+    if (e.type === 'group') {
+      const cloned = cloneGroupEntity(e as unknown as GroupEntity) as unknown as SceneEntity;
+      return {
+        ...(cloned as object),
+        ...calculateMovedGeometry(cloned, { x: delta.x, y: delta.y, z: 0 }),
+      } as unknown as SceneEntity;
+    }
     const transformed = applyEntityPreview(
       e as unknown as DxfEntityUnion,
       makeTranslationPreview(e.id, delta),

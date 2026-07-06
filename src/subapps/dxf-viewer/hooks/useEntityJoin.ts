@@ -13,13 +13,35 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import { EntityMergeService, type JoinPreview } from '../services/EntityMergeService';
+import { toast } from 'sonner';
+import i18next from 'i18next';
+import { EntityMergeService, type JoinPreview, type JoinRejectReason } from '../services/EntityMergeService';
 import { JoinEntityCommand } from '../core/commands';
 import { LevelSceneManagerAdapter, createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { publishHighlight } from '../events/selection-bus';
 import type { ICommand } from '../core/commands';
 import type { SceneEntity } from '../core/commands/interfaces';
 import type { LevelsHookReturn } from '../systems/levels/useLevels';
+
+// ============================================================================
+// FEEDBACK SSoT — reason → i18n key (mirrors useWallMergeTool's BLOCK_REASON_KEY)
+// ============================================================================
+
+/**
+ * Localized toast key per structured JOIN rejection reason. This is the SINGLE
+ * source of truth for JOIN failure messaging — every entry point (ribbon button,
+ * `J` shortcut, right-click context menu) funnels through `joinEntities` below,
+ * so they all get identical, localized feedback. NEVER toast the service's raw
+ * `result.message` (English, debug-only) — map the `reasonCode` here (N.11).
+ */
+const JOIN_REJECT_KEY: Record<JoinRejectReason, string> = {
+  'too-few': 'tool-hints:join.selectEntities',
+  'non-joinable-type': 'tool-hints:join.nonJoinableType',
+  'closed-entity': 'tool-hints:join.closedEntity',
+  'not-connected': 'tool-hints:join.notConnected',
+};
+/** Fallback when the failure has no structured reason (e.g. no active scene). */
+const JOIN_REJECT_FALLBACK_KEY = 'tool-hints:join.cannotJoin';
 
 // ============================================================================
 // TYPES
@@ -75,16 +97,26 @@ export function useEntityJoin({
   }, [levelManager]);
 
   const joinEntities = useCallback((entityIds: string[]): boolean => {
+    // Localized failure feedback SSoT: prefer the caller's `onWarning` sink
+    // (e.g. the context-menu's toast wrapper); otherwise fall back to a direct
+    // toast. Either way the TEXT comes from `reasonCode` → i18n key, so every
+    // entry point shows the same localized message.
+    const warnByReason = (code?: JoinRejectReason): void => {
+      const text = i18next.t(code ? JOIN_REJECT_KEY[code] : JOIN_REJECT_FALLBACK_KEY);
+      if (onWarning) onWarning(text);
+      else toast.warning(text);
+    };
+
     const scene = getScene();
     if (!scene || !levelManager.currentLevelId) {
       console.warn('[EntityJoin] No scene or level ID available');
-      onWarning?.('No active scene');
+      warnByReason();
       return false;
     }
 
     if (entityIds.length < 2) {
       console.warn('[EntityJoin] Need 2+ entities, got:', entityIds.length);
-      onWarning?.('Select at least 2 entities to join');
+      warnByReason('too-few');
       return false;
     }
 
@@ -102,7 +134,7 @@ export function useEntityJoin({
 
     if (!result.success || !result.newEntityId) {
       console.warn('[EntityJoin] Merge failed:', result.message);
-      onWarning?.(result.message || 'Join failed');
+      warnByReason(result.reasonCode);
       return false;
     }
 
@@ -110,7 +142,7 @@ export function useEntityJoin({
     const mergedEntity = result.updatedScene.entities.find(e => e.id === result.newEntityId);
     if (!mergedEntity) {
       console.error('[EntityJoin] Merged entity not found in updated scene');
-      onWarning?.('Join computation error');
+      warnByReason();
       return false;
     }
 
@@ -139,7 +171,10 @@ export function useEntityJoin({
     setSelectedEntityIds([result.newEntityId]);
     publishHighlight({ ids: [result.newEntityId] });
 
-    onSuccess?.(result.message || `Joined ${entities.length} entities`);
+    // Localized success text (the service `result.message` is English/debug-only).
+    // Caller-controlled: only surfaces where an `onSuccess` sink is wired (e.g. the
+    // context menu). Ribbon/`J` stay silent on success — Revit-like, no toast spam.
+    onSuccess?.(i18next.t('tool-hints:join.joined', { count: entities.length }));
     return true;
   }, [getScene, levelManager, mergeService, executeCommand, setSelectedEntityIds, onWarning, onSuccess]);
 

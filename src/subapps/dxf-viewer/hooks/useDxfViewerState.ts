@@ -407,9 +407,9 @@ export function useDxfViewerState() {
       case 'toggle-guide-analysis-panel':
         toolbarState.toggleGuideAnalysisPanel();
         break;
-      // ADR-363 R1: BIM Copy tool activation (C+O chord → AutoCAD COPY pattern)
+      // ADR-363 R1 / ADR-577: unified Copy tool activation (C+O chord → AutoCAD COPY pattern, all entity types)
       case 'copy-selected':
-        handleToolChange('bim-copy');
+        handleToolChange('copy');
         break;
       // ADR-466: Entity clipboard — bridge to useEntityClipboard via EventBus so
       // the keyboard-shortcut SSoT stays the single binding source.

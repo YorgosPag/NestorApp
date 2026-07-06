@@ -15,12 +15,10 @@
  */
 
 import React from 'react';
-import i18next from 'i18next';
 import type { ToolType } from '../../toolbar/types';
 import type { RibbonActionPayload } from '../context/RibbonCommandContext';
 import { useCommandHistory } from '../../../core/commands';
 import { useEntityJoin } from '../../../hooks/useEntityJoin';
-import { toolHintOverrideStore } from '../../../hooks/toolHintOverrideStore';
 import type { LevelsHookReturn } from '../../../systems/levels/useLevels';
 import type { useUniversalSelection } from '../../../systems/selection';
 
@@ -57,20 +55,13 @@ export function useJoinRibbonAction(
         return;
       }
 
-      // AutoCAD JOIN needs at least 2 participants; the merge core validates
-      // compatibility/connectivity and no-ops (returning false) otherwise.
+      // All feedback — including the localized «no shared endpoints» toast and
+      // the too-few / non-joinable-type / closed-entity cases — is owned by the
+      // useEntityJoin SSoT (every JOIN entry point funnels through it). Here we
+      // just invoke and drop back to `select` on success.
       const selectedIds = universalSelection.getSelectedEntityIds();
-      if (selectedIds.length < 2) {
-        toolHintOverrideStore.setOverride(i18next.t('tool-hints:join.selectEntities'));
-        return;
-      }
-
       const joined = entityJoin.joinEntities(selectedIds);
-      if (!joined) {
-        toolHintOverrideStore.setOverride(i18next.t('tool-hints:join.cannotJoin'));
-        return;
-      }
-      handleToolChange('select' as ToolType);
+      if (joined) handleToolChange('select' as ToolType);
     },
     [entityJoin, universalSelection, handleToolChange, fallback],
   );

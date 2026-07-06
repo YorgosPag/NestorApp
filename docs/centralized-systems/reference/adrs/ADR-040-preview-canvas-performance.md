@@ -71,6 +71,9 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-06 — ✏️ RENAME `bimCopyTool`→`copyTool` (ADR-577 unified copy, CHECK 6B touch, μηδέν αρχιτεκτονική αλλαγή)
+**Τι:** το BIM Copy tool ενοποιήθηκε σε ένα `useCopyTool` (ADR-577)· ο ορχηστρωτής + το click-types interface ακολούθησαν το rename `bimCopyTool→copyTool` / `bimCopy*→copy*`. **Συμμόρφωση ADR-040:** καθαρά ονοματολογικό — το `CanvasSection.tsx` απλώς destructure-άρει `copyTool` από `useModifyTools` και το περνά ως `copyIsActive`/`handleCopyClick`/`handleCopyEscape` στο υπάρχον click/escape pipeline (ίδιο pass-through pattern με τα υπόλοιπα modify tools)· το `canvas-click-types.ts` μετονόμασε τα `bimCopyIsActive`/`handleBimCopyClick` optional props. **ΚΑΜΙΑ** νέα `useSyncExternalStore`/high-freq subscription στον orchestrator (CHECK 6C ασφαλές)· μηδέν αλλαγή σε micro-leaf subscriber topology, bitmap cache ή cache key. Co-staged: ADR-040 + ADR-577. 🟡 UNCOMMITTED.
+
 ### 2026-07-05 — ⌨️ Heads-up direct-distance-entry (Δαχτυλίδι Εντολών) + beam length/angle lock (ADR-513/ADR-363, CHECK 6D touch)
 **Τι:** το `RadialCommandRing` απέκτησε AutoCAD heads-up (πληκτρολόγησε αριθμό → auto-open «Μήκος» → Enter τοποθετεί σημείο) και η δοκός απέκτησε ring parity. **Συμμόρφωση ADR-040:** καμία νέα high-freq subscription — η heads-up είναι window keydown (low-freq, user action)· η τοποθέτηση είναι synthetic `mousedown→mouseup` που περνά από το ΥΠΑΡΧΟΝ click pipeline (`mouse-handler-up`)· μηδέν αλλαγή σε bitmap cache / cache key / preview-leaf pattern. Το `drawing-hover-handler` (preview painter) απέκτησε μόνο `+'beam'` στο υπάρχον length/angle-lock branch (paint-time constraint, no-op χωρίς lock). preview≡commit. Co-staged: ADR-513 + ADR-363. 🟡 UNCOMMITTED.
 

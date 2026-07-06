@@ -22,7 +22,7 @@ const BIM_CHORDS: readonly ChordDefinition[] = [
   { firstKey: 'S', secondKey: 'L', action: 'tool:slab' },        // S+L → slab      (ADR-363)
   { firstKey: 'O', secondKey: 'P', action: 'tool:opening' },     // O+P → opening   (ADR-363)
   { firstKey: 'C', secondKey: 'L', action: 'tool:column' },      // C+L → column    (ADR-363)
-  { firstKey: 'C', secondKey: 'O', action: 'tool:bim-copy' },    // C+O → BIM copy  (ADR-466: frees Ctrl+C for clipboard)
+  { firstKey: 'C', secondKey: 'O', action: 'tool:copy' },    // C+O → COPY  (ADR-466: frees Ctrl+C for clipboard; ADR-577: unified all-entity copy)
   { firstKey: 'B', secondKey: 'M', action: 'tool:beam' },        // B+M → beam      (ADR-363)
   // ADR-363 Phase 7B — wall variant chords: W+n activates wall tool + sets kind
   { firstKey: 'W', secondKey: '1', action: 'tool:wall:straight' }, // W+1 → wall straight

@@ -1,46 +1,48 @@
 /**
- * USE BIM COPY TOOL — ADR-363 R1
+ * USE COPY TOOL — ADR-363 R1 / ADR-577 (unified interactive COPY)
  *
- * AutoCAD COPY pattern for BIM entities:
- *   idle → awaiting-base-point (on activate with BIM selection)
+ * AutoCAD COPY pattern for ANY entity type (DXF geometry + BIM parametric +
+ * groups). Reachable from the ribbon «Αντιγραφή» button and the C+O chord —
+ * both drive `activeTool === 'copy'`.
+ *
+ *   idle → awaiting-base-point (on activate with a non-empty selection)
  *        → awaiting-target-point (after base click)
- *        → execute BimCopyCommand(translate delta) → loop (continuous)
+ *        → clone selection at (target − base) delta → loop (continuous)
  *        → ESC → select mode
  *
- * Non-BIM entities in the selection are silently skipped by BimCopyCommand.
- * If no BIM entities exist in selection → tool reverts to 'select' immediately.
+ * The clone itself goes through the SHARED clone SSoT `buildEntityCloneCommand`
+ * — the SAME path the clipboard (Ctrl+V) and the Ctrl+drag body copy use — so
+ * BIM entities get kind-specific enterprise IDs + host rewire + fresh IFC
+ * GlobalId, DXF geometry gets an id-swap clone, and both persist through the one
+ * `PasteEntitiesCommand` (N.0.2 — one clone path, no divergence).
  *
- * @see bim/transforms/bim-copy-builder.ts — pure clone SSoT
- * @see core/commands/entity-commands/BimCopyCommand.ts — ICommand wrapper
+ * Any selected id that resolves to a live scene entity is copyable. If the
+ * selection resolves to nothing → the tool reverts to 'select' immediately.
+ *
+ * @see bim/transforms/build-entity-clone-command.ts — unified clone SSoT (BIM + DXF)
+ * @see core/commands/entity-commands/PasteEntitiesCommand.ts — undoable commit
  */
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import i18next from 'i18next';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
-import { BimCopyCommand } from '../../core/commands/entity-commands/BimCopyCommand';
+import { buildEntityCloneCommand } from '../../bim/transforms/build-entity-clone-command';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { Point2D } from '../../rendering/types/Types';
-import type { ICommand } from '../../core/commands/interfaces';
+import type { ICommand, SceneEntity } from '../../core/commands/interfaces';
 import type { useLevels } from '../../systems/levels';
-
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-/** BIM entity types supported by BimCopyCommand (mirrors bim-copy-builder ID_GENERATORS). */
-const BIM_COPY_TYPES = new Set([
-  'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'stair',
-]);
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type BimCopyPhase = 'idle' | 'awaiting-base-point' | 'awaiting-target-point';
+export type CopyPhase = 'idle' | 'awaiting-base-point' | 'awaiting-target-point';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
   'getLevelScene' | 'setLevelScene' | 'currentLevelId'
 >;
 
-export interface UseBimCopyToolProps {
+export interface UseCopyToolProps {
   activeTool: string;
   selectedEntityIds: string[];
   levelManager: LevelManagerLike;
@@ -48,29 +50,29 @@ export interface UseBimCopyToolProps {
   onToolChange?: (tool: string) => void;
 }
 
-export interface UseBimCopyToolReturn {
+export interface UseCopyToolReturn {
   isActive: boolean;
-  phase: BimCopyPhase;
-  handleBimCopyClick: (worldPoint: Point2D) => void;
-  handleBimCopyEscape: () => void;
+  phase: CopyPhase;
+  handleCopyClick: (worldPoint: Point2D) => void;
+  handleCopyEscape: () => void;
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
-export function useBimCopyTool({
+export function useCopyTool({
   activeTool,
   selectedEntityIds,
   levelManager,
   executeCommand,
   onToolChange,
-}: UseBimCopyToolProps): UseBimCopyToolReturn {
-  const isActive = activeTool === 'bim-copy';
+}: UseCopyToolProps): UseCopyToolReturn {
+  const isActive = activeTool === 'copy';
 
-  const [phase, setPhase] = useState<BimCopyPhase>('idle');
+  const [phase, setPhase] = useState<CopyPhase>('idle');
   const [basePoint, setBasePoint] = useState<Point2D | null>(null);
 
-  /** Snapshot of BIM entity IDs captured on activation — stable throughout the copy session. */
-  const bimIdsRef = useRef<string[]>([]);
+  /** Snapshot of copyable entity IDs captured on activation — stable throughout the session. */
+  const idsRef = useRef<string[]>([]);
   const wasActiveRef = useRef(false);
 
   const getSceneManager = useCallback(() => {
@@ -90,15 +92,15 @@ export function useBimCopyTool({
         ? levelManager.getLevelScene(levelManager.currentLevelId)
         : null;
 
-      const bimIds = selectedEntityIds.filter((id) => {
-        const entity = scene?.entities.find((x) => x.id === id);
-        return entity ? BIM_COPY_TYPES.has(entity.type) : false;
-      });
+      // Any id that resolves to a live entity is copyable (DXF + BIM + group).
+      const ids = selectedEntityIds.filter(
+        (id) => scene?.entities.some((x) => x.id === id) ?? false,
+      );
 
-      bimIdsRef.current = bimIds;
+      idsRef.current = ids;
 
-      if (bimIds.length === 0) {
-        // No BIM entities selected → revert immediately
+      if (ids.length === 0) {
+        // Nothing copyable selected → revert immediately.
         onToolChange?.('select');
       } else {
         setPhase('awaiting-base-point');
@@ -107,15 +109,15 @@ export function useBimCopyTool({
     } else if (!isActive && wasActiveRef.current) {
       setPhase('idle');
       setBasePoint(null);
-      bimIdsRef.current = [];
+      idsRef.current = [];
     }
 
     wasActiveRef.current = isActive;
   }, [isActive, selectedEntityIds, levelManager, onToolChange]);
 
-  // ── Click: base point → target point → execute (continuous loop) ─────────
+  // ── Click: base point → target point → clone (continuous loop) ───────────
 
-  const handleBimCopyClick = useCallback((worldPoint: Point2D): void => {
+  const handleCopyClick = useCallback((worldPoint: Point2D): void => {
     if (!isActive) return;
 
     if (phase === 'awaiting-base-point') {
@@ -131,22 +133,23 @@ export function useBimCopyTool({
         x: worldPoint.x - basePoint.x,
         y: worldPoint.y - basePoint.y,
       };
-      const cmd = new BimCopyCommand(
-        bimIdsRef.current,
-        { kind: 'translate', delta },
-        sm,
-      );
-      executeCommand(cmd);
-      // Continuous: keep base point, loop for next target
+      // Resolve the frozen selection to live entities, then clone through the
+      // shared BIM+DXF SSoT (id regeneration + host rewire + persistence inside).
+      const sources = idsRef.current
+        .map((id) => sm.getEntity(id))
+        .filter((e): e is SceneEntity => e !== null && e !== undefined);
+      const result = buildEntityCloneCommand(sources, delta, sm);
+      if (result) executeCommand(result.command);
+      // Continuous: keep the base point, loop for the next target.
     }
   }, [isActive, phase, basePoint, getSceneManager, executeCommand]);
 
   // ── Escape: exit to select ────────────────────────────────────────────────
 
-  const handleBimCopyEscape = useCallback((): void => {
+  const handleCopyEscape = useCallback((): void => {
     setPhase('idle');
     setBasePoint(null);
-    bimIdsRef.current = [];
+    idsRef.current = [];
     onToolChange?.('select');
   }, [onToolChange]);
 
@@ -164,5 +167,5 @@ export function useBimCopyTool({
     return () => { toolHintOverrideStore.setOverride(null); };
   }, [isActive, phase]);
 
-  return { isActive, phase, handleBimCopyClick, handleBimCopyEscape };
+  return { isActive, phase, handleCopyClick, handleCopyEscape };
 }

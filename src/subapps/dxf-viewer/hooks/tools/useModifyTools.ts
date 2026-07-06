@@ -24,7 +24,7 @@ import { useWallSplitTool } from './useWallSplitTool';
 import { useWallMergeTool } from './useWallMergeTool';
 import { useWallGapOpeningTool } from './useWallGapOpeningTool';
 import { useWallAttachTool } from './useWallAttachTool';
-import { useBimCopyTool } from './useBimCopyTool';
+import { useCopyTool } from './useCopyTool';
 import { useEntityClipboard } from './useEntityClipboard';
 import { useEntityBodyDragCommit } from './useEntityBodyDragCommit';
 import { MoveOverlayCommand, MoveMultipleOverlaysCommand } from '../../core/commands';
@@ -98,8 +98,9 @@ export function useModifyTools({
     activeTool, selectedEntityIds, levelManager, executeCommand, onToolChange,
   });
 
-  // ADR-363 R1 — BIM Copy Tool (AutoCAD COPY pattern)
-  const bimCopyTool = useBimCopyTool({
+  // ADR-363 R1 / ADR-577 — unified COPY Tool (AutoCAD COPY pattern, all entity
+  // types: DXF + BIM + group). Wired to the ribbon «Αντιγραφή» button + C+O chord.
+  const copyTool = useCopyTool({
     activeTool,
     selectedEntityIds,
     levelManager,
@@ -304,7 +305,7 @@ export function useModifyTools({
     wallAttachTool,
     wallMergeTool,
     wallGapOpeningTool,
-    bimCopyTool,
+    copyTool,
     entityClipboard,
     handleRotationAnglePrompt,
   };

@@ -782,7 +782,11 @@
   },
   "join": {
     "selectEntities": "Select 2+ objects to join (lines/arcs/polylines)",
-    "cannotJoin": "Cannot join: objects are not connected or not compatible"
+    "cannotJoin": "Cannot join: objects are not connected or not compatible",
+    "notConnected": "Cannot join: objects have no shared endpoints. Bring their endpoints together so they touch.",
+    "nonJoinableType": "Cannot join: some objects are not joinable (e.g. text, dimensions).",
+    "closedEntity": "Cannot join: closed objects (circles, closed polylines) cannot be joined.",
+    "joined": "Joined {count} objects"
   },
   "group": {
     "selectEntities": "Select 2+ objects to group",

@@ -42,9 +42,30 @@ jest.mock('../../../types/entities', () => ({
   isBimEntity: (e: { type: string }) => e.type === 'wall' || e.type === 'column',
 }));
 
+// ADR-575/577 — composite GROUP translate SSoT (recursive). Mocked so the test
+// focuses on the container/member assembly, not the geometry math.
+jest.mock('../../../core/commands/entity-commands/move-entity-geometry', () => ({
+  calculateMovedGeometry: jest.fn((e: { type: string; members?: unknown[] }, delta: unknown) =>
+    e.type === 'group'
+      ? { members: (e.members ?? []).map((m) => ({ ...(m as object), __movedBy: delta })) }
+      : {},
+  ),
+}));
+
+// ADR-575/577 — GROUP copy SSoT (systems/group is the group SSoT home). Mocked so
+// this test asserts the clone command DELEGATES to it (no re-implemented re-id).
+jest.mock('../../../systems/group/group-entity', () => ({
+  cloneGroupEntity: jest.fn((g: { members?: Array<{ id: string }> }) => ({
+    ...g,
+    id: 'group-clone',
+    members: (g.members ?? []).map((m, i) => ({ ...m, id: `member-clone-${i}` })),
+  })),
+}));
+
 import { buildEntityCloneCommand } from '../build-entity-clone-command';
 import { buildClonesFromEntities } from '../bim-copy-builder';
 import { applyEntityPreview } from '../../../rendering/ghost';
+import { cloneGroupEntity } from '../../../systems/group/group-entity';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const asSources = (arr: any[]) => arr as any;
@@ -89,5 +110,27 @@ describe('buildEntityCloneCommand', () => {
     const dxfClone = (result!.command as any).dxfClones[0];
     expect(dxfClone.__translatedBy).toEqual({ x: 10, y: 5 });
     expect(dxfClone.id).toBe('dxf-clone-1'); // fresh id, not the source id
+  });
+
+  it('clones a GROUP via the group SSoT, then translates members via the move SSoT', () => {
+    const group = {
+      id: 'g1',
+      type: 'group',
+      members: [{ id: 'm1', type: 'line' }, { id: 'm2', type: 'line' }],
+    };
+    const result = buildEntityCloneCommand(asSources([group]), { x: 4, y: 8 }, sm);
+    expect(result).not.toBeNull();
+    // Delegates re-id to the group SSoT — no re-implemented clone logic here.
+    expect(cloneGroupEntity).toHaveBeenCalledTimes(1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const clone = (result!.command as any).dxfClones[0];
+    expect(clone.id).toBe('group-clone'); // fresh container id from the SSoT
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const memberIds = clone.members.map((m: any) => m.id);
+    expect(memberIds).toEqual(['member-clone-0', 'member-clone-1']);
+    expect(memberIds).not.toContain('m1'); // no id collision with the original
+    // Every member translated through the (mocked) move SSoT with a 3D delta.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(clone.members[0].__movedBy).toEqual({ x: 4, y: 8, z: 0 });
   });
 });

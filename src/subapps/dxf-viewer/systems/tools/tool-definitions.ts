@@ -72,7 +72,8 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // 🏢 ENTERPRISE (Phase 3): Editing tools for entity manipulation
   'move': { id: 'move', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'rotate': { id: 'rotate', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
-  'copy': { id: 'copy', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  // ADR-363 R1 / ADR-577: unified COPY (AutoCAD COPY: base + continuous target picks, exits on ESC)
+  'copy': { id: 'copy', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'delete': { id: 'delete', category: 'editing', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
   'grip-edit': { id: 'grip-edit', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: true },
   // ADR-348: Scale command (uniform + non-uniform + copy mode + reference mode)
@@ -96,8 +97,6 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // ADR-401 Phase G.3: Stair Attach Top/Base (pick one host then act, exits on click/ESC)
   'stair-attach-top': { id: 'stair-attach-top', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'stair-attach-base': { id: 'stair-attach-base', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
-  // ADR-363 R1: BIM Copy (AutoCAD COPY: base + continuous target picks, exits on ESC)
-  'bim-copy': { id: 'bim-copy', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-350: Trim (continuous pick loop, Quick mode default, exits on ENTER/ESC/right-click)
   'trim': { id: 'trim', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-353: Extend (continuous pick loop, Quick mode default, exits on ENTER/ESC/right-click)

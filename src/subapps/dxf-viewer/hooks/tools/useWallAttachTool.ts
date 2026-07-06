@@ -13,7 +13,7 @@
  * type. Return prop names keep the `…WallAttach…` prefix (the canvas-click wiring
  * is shared, ADR-040 — no churn there); the tool itself is element-agnostic.
  *
- * Activation mirrors `useBimCopyTool` (snapshot selection on isActive transition);
+ * Activation mirrors `useCopyTool` (snapshot selection on isActive transition);
  * click mirrors `useWallSplitTool`. Host pick reuses the unit-correct `HoverStore`
  * (`getHoveredEntity()`) first; a mm-space geometry fallback covers the case where
  * hover misses the beam/slab.

@@ -278,7 +278,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const guideMenuRef = useRef<GuideContextMenuHandle>(null);
   const guideBatchMenuRef = useRef<GuideBatchContextMenuHandle>(null);
   // === Modify tools (ADR-349/350 — extracted to useModifyTools for CanvasSection size budget) ===
-  const { rotationTool, moveTool, mirrorTool, scaleTool, stretchTool, trimTool, extendTool, offsetTool, filletTool, chamferTool, arrayPolarTool, arrayPathTool, wallSplitTool, wallAttachTool, wallMergeTool, wallGapOpeningTool, bimCopyTool, handleRotationAnglePrompt } = useModifyTools({
+  const { rotationTool, moveTool, mirrorTool, scaleTool, stretchTool, trimTool, extendTool, offsetTool, filletTool, chamferTool, arrayPolarTool, arrayPathTool, wallSplitTool, wallAttachTool, wallMergeTool, wallGapOpeningTool, copyTool, handleRotationAnglePrompt } = useModifyTools({
     activeTool, selectedEntityIds, setSelectedEntityIds, levelManager, executeCommand,
     onToolChange: props.onToolChange as ((tool: string) => void) | undefined,
     previewCanvasRef, transformScale: transform.scale,
@@ -345,7 +345,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     scaleIsActive: scaleTool.isCollectingInput, handleScaleClick: scaleTool.handleScaleClick,
     stretchIsActive: stretchTool.isCollectingInput, handleStretchClick: stretchTool.handleStretchClick,
     trimIsActive: trimTool.isActive, handleTrimClick: trimTool.handleTrimClick, offsetIsActive: offsetTool.isActive, handleOffsetClick: offsetTool.handleOffsetClick, filletIsActive: filletTool.isActive, handleFilletClick: filletTool.handleFilletClick, chamferIsActive: chamferTool.isActive, handleChamferClick: chamferTool.handleChamferClick,
-    extendIsActive: extendTool.isActive, handleExtendClick: extendTool.handleExtendClick, wallSplitIsActive: wallSplitTool.isActive, handleWallSplitClick: wallSplitTool.handleWallSplitClick, wallAttachIsActive: wallAttachTool.isActive, handleWallAttachClick: wallAttachTool.handleWallAttachClick, wallMergeIsActive: wallMergeTool.isActive, handleWallMergeClick: wallMergeTool.handleWallMergeClick, wallGapOpeningIsActive: wallGapOpeningTool.isActive, handleWallGapOpeningClick: wallGapOpeningTool.handleWallGapOpeningClick, bimCopyIsActive: bimCopyTool.isActive, handleBimCopyClick: bimCopyTool.handleBimCopyClick,
+    extendIsActive: extendTool.isActive, handleExtendClick: extendTool.handleExtendClick, wallSplitIsActive: wallSplitTool.isActive, handleWallSplitClick: wallSplitTool.handleWallSplitClick, wallAttachIsActive: wallAttachTool.isActive, handleWallAttachClick: wallAttachTool.handleWallAttachClick, wallMergeIsActive: wallMergeTool.isActive, handleWallMergeClick: wallMergeTool.handleWallMergeClick, wallGapOpeningIsActive: wallGapOpeningTool.isActive, handleWallGapOpeningClick: wallGapOpeningTool.handleWallGapOpeningClick, copyIsActive: copyTool.isActive, handleCopyClick: copyTool.handleCopyClick,
     arrayPolarIsActive: arrayPolarTool.isActive, handleArrayPolarClick: arrayPolarTool.handleArrayPolarClick,
     handleArrayPolarCenterRepick,
     arrayPathIsActive: arrayPathTool.isActive, handleArrayPathClick: arrayPathTool.handleArrayPathClick,
@@ -404,7 +404,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     handleArrayPathEscape: arrayPathTool.handleArrayPathEscape, arrayPathIsActive: arrayPathTool.isActive,
     // ADR-397 Σ2 hot-grip «R» reference flow + ADR-397/513 ROTATE 2-click inline typed-angle (awaiting-angle): πληκτρολόγησε γωνία + Enter.
     handleHotGripKeyDown: unified.handleHotGripKeyDown, hotGripKeyIsActive: unified.hotGripIsActive, handleRotationKeyDown: rotationTool.handleRotationKeyDown, rotateToolAwaitingAngle: rotationTool.isAwaitingAngle,
-    handleWallSplitEscape: wallSplitTool.handleWallSplitEscape, wallSplitIsActive: wallSplitTool.isActive, handleWallAttachEscape: wallAttachTool.handleWallAttachEscape, wallAttachIsActive: wallAttachTool.isActive, handleWallMergeEscape: wallMergeTool.handleWallMergeEscape, wallMergeIsActive: wallMergeTool.isActive, handleWallGapOpeningEscape: wallGapOpeningTool.handleWallGapOpeningEscape, wallGapOpeningIsActive: wallGapOpeningTool.isActive, handleBimCopyEscape: bimCopyTool.handleBimCopyEscape, bimCopyIsActive: bimCopyTool.isActive,
+    handleWallSplitEscape: wallSplitTool.handleWallSplitEscape, wallSplitIsActive: wallSplitTool.isActive, handleWallAttachEscape: wallAttachTool.handleWallAttachEscape, wallAttachIsActive: wallAttachTool.isActive, handleWallMergeEscape: wallMergeTool.handleWallMergeEscape, wallMergeIsActive: wallMergeTool.isActive, handleWallGapOpeningEscape: wallGapOpeningTool.handleWallGapOpeningEscape, wallGapOpeningIsActive: wallGapOpeningTool.isActive, handleCopyEscape: copyTool.handleCopyEscape, copyIsActive: copyTool.isActive,
     hasAnySelection: universalSelection.count() > selectedEntityIds.length,
     // Canonical deselect (Escape): clear the entity selection AND the active
     // circuit (Revit wire-select has no entity, so the sync no longer clears it —

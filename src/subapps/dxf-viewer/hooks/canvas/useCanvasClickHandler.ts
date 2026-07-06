@@ -89,7 +89,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     wallAttachIsActive = false, handleWallAttachClick,
     wallMergeIsActive = false, handleWallMergeClick,
     wallGapOpeningIsActive = false, handleWallGapOpeningClick,
-    bimCopyIsActive = false, handleBimCopyClick,
+    copyIsActive = false, handleCopyClick,
     arrayPolarIsActive = false, handleArrayPolarClick,
     handleArrayPolarCenterRepick,
     arrayPathIsActive = false, handleArrayPathClick,
@@ -229,9 +229,9 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       handleWallGapOpeningClick(worldPoint);
       return;
     }
-    // PRIORITY 1.62: ADR-363 R1 — BIM Copy tool click (AutoCAD COPY: base + target)
-    if (bimCopyIsActive && handleBimCopyClick) {
-      handleBimCopyClick(worldPoint);
+    // PRIORITY 1.62: ADR-363 R1 / ADR-577 — unified Copy tool click (AutoCAD COPY: base + target)
+    if (copyIsActive && handleCopyClick) {
+      handleCopyClick(worldPoint);
       return;
     }
     // PRIORITY 1.605: ADR-353 Phase B/C — Array interactive picks

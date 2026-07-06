@@ -79,9 +79,9 @@ export interface UseCanvasEscapeRegistrationsParams {
   /** ADR-401 Phase E.1: Wall Attach Top/Base ESC handler */
   readonly handleWallAttachEscape?: () => void;
   readonly wallAttachIsActive: boolean;
-  /** ADR-363 R1: BIM Copy ESC handler */
-  readonly handleBimCopyEscape?: () => void;
-  readonly bimCopyIsActive: boolean;
+  /** ADR-363 R1 / ADR-577: unified Copy ESC handler */
+  readonly handleCopyEscape?: () => void;
+  readonly copyIsActive: boolean;
   readonly handleRotationEscape?: () => void;
   readonly rotationIsActive: boolean;
   /**
@@ -131,7 +131,7 @@ export function useCanvasEscapeRegistrations(p: UseCanvasEscapeRegistrationsPara
   useEscapeHandler(buildModifyHandler('wall-attach', p.handleWallAttachEscape, () => p.wallAttachIsActive));
   useEscapeHandler(buildModifyHandler('wall-merge', p.handleWallMergeEscape, () => p.wallMergeIsActive));
   useEscapeHandler(buildModifyHandler('wall-gap-opening', p.handleWallGapOpeningEscape, () => p.wallGapOpeningIsActive));
-  useEscapeHandler(buildModifyHandler('bim-copy', p.handleBimCopyEscape, () => p.bimCopyIsActive));
+  useEscapeHandler(buildModifyHandler('copy', p.handleCopyEscape, () => p.copyIsActive));
   useEscapeHandler(buildModifyHandler('rotation', p.handleRotationEscape, () => p.rotationIsActive));
 
   // P975 — Active hot-grip op (ADR-397). Above every tool/numeric handler so the

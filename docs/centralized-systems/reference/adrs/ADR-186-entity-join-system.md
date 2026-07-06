@@ -99,6 +99,55 @@ User selects 2+ entities → Right-click / Press J
 
 ## Changelog
 
+### 2026-07-06 — Closed-loop JOIN emits canonical closed polyline (no duplicate vertex)
+
+**Problem:** Joining 3 lines that form a triangle produced a closed `lwpolyline` whose
+`vertices` were `[A, B, C, A]` — the closing vertex duplicated. `closed:true` *already*
+implies the last→first edge, so the duplicate yields a zero-length closing segment and
+places the closing-edge grip (`line-utils` midpoint(last, first)) onto corner A.
+
+**Fix:** In `buildMergedEntity` (lwpolyline branch) drop the redundant closing vertex when
+the chain closes: `vertices = isClosed ? chain.slice(0, -1) : chain`. Result matches the
+app-wide convention (rectangles/regions store unique corners + `closed:true`) and
+AutoCAD/Revit. Visual result unchanged (a triangle); representation now clean.
+
+**Files:** `services/EntityMergeService.ts`.
+
+### 2026-07-06 — Centralized, localized JOIN feedback (SSoT in `useEntityJoin`)
+
+**Problem:** When JOIN failed (most commonly: selected entities share no endpoints — a
+real user hit `min gap: 6606 units`), feedback was **inconsistent across the 3 entry
+points**:
+- Ribbon button + `J` shortcut (`useJoinRibbonAction`) → only a subtle
+  `toolHintOverrideStore` override → users perceived the button as doing *nothing*.
+- Right-click context menu (`useCanvasEditActions` → `onWarning`/`onSuccess`) → a toast,
+  but showing the service's raw **English** `result.message` (an N.11 violation).
+
+Feedback was NOT centralized even though **all 3 entry points already funnel through the
+`useEntityJoin` SSoT**.
+
+**Fix — own the localized feedback in `useEntityJoin` (the single funnel):**
+- `EntityMergeService` now returns a machine-readable `reasonCode`
+  (`'too-few' | 'non-joinable-type' | 'closed-entity' | 'not-connected'`) on **both**
+  `MergeResult` (from `joinEntities`) and `JoinPreview` (from `getJoinPreview`), set at each
+  failure branch. UI picks the message by code — never by matching English `reason` text.
+- `useEntityJoin` maps `reasonCode → i18n key` via a local `JOIN_REJECT_KEY` record
+  (mirrors `useWallMergeTool`'s `BLOCK_REASON_KEY`). On failure it calls
+  `onWarning(localizedText)` when a sink is wired, else falls back to `toast.warning(...)`
+  directly — so **every** entry point shows the same localized toast, exactly once.
+  Success text is likewise localized (`join.joined`, `{count}` ICU); success stays
+  caller-controlled (ribbon/`J` silent — Revit-like).
+- `useJoinRibbonAction` reverted to a thin caller: invoke + drop to `select` on success.
+  No feedback logic, no `<2` pre-guard (the SSoT handles it).
+- New i18n keys `join.{notConnected,nonJoinableType,closedEntity,joined}` in
+  `{el,en}/tool-hints.json` (pure-Greek locale).
+
+Confirmed with the AutoCAD rule (option A): JOIN requires shared endpoints; crossing-only
+lines are correctly refused — now with a clear, localized toast on **all** entry points.
+
+**Files:** `services/EntityMergeService.ts`, `hooks/useEntityJoin.ts`,
+`ui/ribbon/hooks/useJoinRibbonAction.ts`, `i18n/locales/{el,en}/tool-hints.json`.
+
 ### 2026-06-16 — Perf guard on reactive join-preview (FPS-1 fix)
 
 **Problem:** `useCanvasEditActions.entityJoinState` recomputed `getJoinPreview(selectedEntityIds)`
