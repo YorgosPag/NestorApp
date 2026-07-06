@@ -17,13 +17,14 @@
  * @module hooks/tools/useMoveTool
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import i18next from 'i18next';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/PreviewCanvas';
 import { MoveEntityCommand, MoveMultipleEntitiesCommand, CompoundCommand } from '../../core/commands';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { useLevels } from '../../systems/levels';
 // ADR-363 — ORTHO (F8) axis-lock for the AutoCAD MOVE destination (no F9 step here).
@@ -92,9 +93,6 @@ export function useMoveTool(props: UseMoveToolProps): UseMoveToolReturn {
   const [phase, setPhase] = useState<MovePhase>('idle');
   const [basePoint, setBasePoint] = useState<Point2D | null>(null);
 
-  const wasActiveRef = useRef(false);
-  const prevEntityCountRef = useRef(0);
-
   const isActive = activeTool === 'move';
   const hasAnySelected = selectedEntityIds.length > 0 || selectedOverlayIds.length > 0;
   const isCollectingInput =
@@ -111,34 +109,27 @@ export function useMoveTool(props: UseMoveToolProps): UseMoveToolReturn {
     );
   }, [levelManager]);
 
-  // ── State machine transitions ────────────────────────────────────────────
-  useEffect(() => {
-    const toolIsMove = activeTool === 'move';
-    const hasEntities = selectedEntityIds.length > 0 || selectedOverlayIds.length > 0;
-
-    if (toolIsMove && !wasActiveRef.current) {
-      setPhase(hasEntities ? 'awaiting-base-point' : 'awaiting-entity');
-      setBasePoint(null);
+  // ── State machine transitions (shared FSM SSoT, ADR-577) ──────────────────
+  // Every hook-driven phase change clears the preview ghost; entering the
+  // entity/base phase also drops the stale base point (mirrors the old inline
+  // effect exactly). Overlays count toward the selection (move supports both).
+  useModifyToolActivation({
+    isActive,
+    selectionCount: selectedEntityIds.length + selectedOverlayIds.length,
+    phase,
+    entityPhase: 'awaiting-entity',
+    basePhase: 'awaiting-base-point',
+    setPhase: (p) => {
       previewCanvasRef.current?.clear();
-    } else if (!toolIsMove && wasActiveRef.current) {
+      if (p === 'awaiting-entity' || p === 'awaiting-base-point') setBasePoint(null);
+      setPhase(p as MovePhase);
+    },
+    onDeactivate: () => {
+      previewCanvasRef.current?.clear();
       setPhase('idle');
       setBasePoint(null);
-      previewCanvasRef.current?.clear();
-    } else if (toolIsMove && wasActiveRef.current) {
-      const prevCount = prevEntityCountRef.current;
-      if (prevCount === 0 && hasEntities && phase === 'awaiting-entity') {
-        setPhase('awaiting-base-point');
-        previewCanvasRef.current?.clear();
-      } else if (prevCount > 0 && !hasEntities) {
-        setPhase('awaiting-entity');
-        setBasePoint(null);
-        previewCanvasRef.current?.clear();
-      }
-    }
-
-    wasActiveRef.current = toolIsMove;
-    prevEntityCountRef.current = selectedEntityIds.length + selectedOverlayIds.length;
-  }, [activeTool, selectedEntityIds.length, selectedOverlayIds.length, phase, previewCanvasRef]);
+    },
+  });
 
   // ── Click handler ────────────────────────────────────────────────────────
   const handleMoveClick = useCallback(

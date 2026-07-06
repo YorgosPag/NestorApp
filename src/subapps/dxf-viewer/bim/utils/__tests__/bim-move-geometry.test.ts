@@ -419,6 +419,64 @@ describe('ADR-363 Phase 1G.5 — point/polygon BIM move SSoT gap fix', () => {
   });
 });
 
+// ─── ADR-507 §8 — flat hatch primitive move (boundaryPaths + pattern anchors) ──────
+describe('ADR-507 §8 — calculateBimMovedGeometry hatch', () => {
+  function makeHatch(extra: Record<string, unknown> = {}): Entity {
+    return {
+      id: 'hatch_1',
+      name: 'H1',
+      type: 'hatch',
+      layerId: 'L',
+      boundaryPaths: [
+        // outer ring
+        [{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }, { x: 0, y: 1000 }],
+        // island ring
+        [{ x: 300, y: 300 }, { x: 700, y: 300 }, { x: 700, y: 700 }, { x: 300, y: 700 }],
+      ],
+      fillType: 'user-defined',
+      ...extra,
+    } as unknown as Entity;
+  }
+
+  it('shifts every vertex of every boundary ring by delta (outer + island)', () => {
+    const patch = calculateBimMovedGeometry(makeHatch(), DELTA) as {
+      boundaryPaths: readonly (readonly { x: number; y: number }[])[];
+    };
+    expect(patch.boundaryPaths[0]).toEqual([
+      { x: 1000, y: 500 }, { x: 2000, y: 500 }, { x: 2000, y: 1500 }, { x: 1000, y: 1500 },
+    ]);
+    expect(patch.boundaryPaths[1]).toEqual([
+      { x: 1300, y: 800 }, { x: 1700, y: 800 }, { x: 1700, y: 1200 }, { x: 1300, y: 1200 },
+    ]);
+  });
+
+  it('returns a non-null, non-empty patch (no longer a no-op)', () => {
+    const patch = calculateBimMovedGeometry(makeHatch(), DELTA);
+    expect(patch).not.toBeNull();
+    expect(patch).not.toEqual({});
+  });
+
+  it('shifts patternOrigin when present (pattern phase follows the hatch)', () => {
+    const patch = calculateBimMovedGeometry(
+      makeHatch({ patternOrigin: { x: 500, y: 500 } }), DELTA,
+    ) as { patternOrigin?: { x: number; y: number } };
+    expect(patch.patternOrigin).toEqual({ x: 1500, y: 1000 });
+  });
+
+  it('shifts every seedPoint when present', () => {
+    const patch = calculateBimMovedGeometry(
+      makeHatch({ seedPoints: [{ x: 500, y: 500 }, { x: 100, y: 100 }] }), DELTA,
+    ) as { seedPoints?: readonly { x: number; y: number }[] };
+    expect(patch.seedPoints).toEqual([{ x: 1500, y: 1000 }, { x: 1100, y: 600 }]);
+  });
+
+  it('omits patternOrigin/seedPoints from the patch when the hatch has none', () => {
+    const patch = calculateBimMovedGeometry(makeHatch(), DELTA) as Record<string, unknown>;
+    expect('patternOrigin' in patch).toBe(false);
+    expect('seedPoints' in patch).toBe(false);
+  });
+});
+
 // ─── ADR-049 Phase 2 — vertical (delta.z) branch: the unified MoveElement(dx,dy,dz) ──
 // `delta.z` is the elevation delta in mm; each vertical-capable type bumps its own
 // per-type elevation field AFTER the plan move, reusing the `bim-vertical-move` SSoT.

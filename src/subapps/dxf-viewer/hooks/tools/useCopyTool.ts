@@ -30,9 +30,10 @@
  */
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import i18next from 'i18next';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
 import { buildEntityCloneCommand } from '../../bim/transforms/build-entity-clone-command';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { Point2D } from '../../rendering/types/Types';
@@ -84,9 +85,6 @@ export function useCopyTool({
   const [phase, setPhase] = useState<CopyPhase>('idle');
   const [basePoint, setBasePoint] = useState<Point2D | null>(null);
 
-  const wasActiveRef = useRef(false);
-  const prevEntityCountRef = useRef(0);
-
   const hasAnySelected = selectedEntityIds.length > 0;
   const isCollectingInput =
     isActive &&
@@ -102,32 +100,21 @@ export function useCopyTool({
     );
   }, [levelManager]);
 
-  // ── State machine: activate / react to selection (mirrors useMoveTool) ────
-  useEffect(() => {
-    const toolIsCopy = activeTool === 'copy';
-    const hasEntities = selectedEntityIds.length > 0;
-
-    if (toolIsCopy && !wasActiveRef.current) {
-      // Activated: skip straight to base-point when a selection exists, else wait
-      // for the user to pick an entity (NEVER silently revert to 'select').
-      setPhase(hasEntities ? 'awaiting-base-point' : 'awaiting-entity');
-      setBasePoint(null);
-    } else if (!toolIsCopy && wasActiveRef.current) {
-      setPhase('idle');
-      setBasePoint(null);
-    } else if (toolIsCopy && wasActiveRef.current) {
-      const prevCount = prevEntityCountRef.current;
-      if (prevCount === 0 && hasEntities && phase === 'awaiting-entity') {
-        setPhase('awaiting-base-point');
-      } else if (prevCount > 0 && !hasEntities) {
-        setPhase('awaiting-entity');
-        setBasePoint(null);
-      }
-    }
-
-    wasActiveRef.current = toolIsCopy;
-    prevEntityCountRef.current = selectedEntityIds.length;
-  }, [activeTool, selectedEntityIds.length, phase]);
+  // ── State machine: activate / react to selection (shared FSM SSoT, ADR-577) ─
+  // Copy uses the default activate branch (has-selection ? base : entity); the
+  // base point is cleared whenever we enter the entity/base phase via the FSM.
+  useModifyToolActivation({
+    isActive,
+    selectionCount: selectedEntityIds.length,
+    phase,
+    entityPhase: 'awaiting-entity',
+    basePhase: 'awaiting-base-point',
+    setPhase: (p) => {
+      if (p === 'awaiting-entity' || p === 'awaiting-base-point') setBasePoint(null);
+      setPhase(p as CopyPhase);
+    },
+    onDeactivate: () => { setPhase('idle'); setBasePoint(null); },
+  });
 
   // ── Click: base point → target point → clone (continuous loop) ───────────
   const handleCopyClick = useCallback((worldPoint: Point2D): void => {

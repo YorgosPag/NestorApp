@@ -33,7 +33,7 @@
  */
 import type { SceneEntity } from '../../core/commands/interfaces';
 import type { Point2D } from '../../rendering/types/Types';
-import type { Entity } from '../../types/entities';
+import type { Entity, HatchEntity } from '../../types/entities';
 import type {
   WallEntity,
   WallParams,
@@ -341,6 +341,26 @@ function moveMepUnderfloor(entity: MepUnderfloorEntity, delta: Point2D): Partial
   return { params: newParams, geometry } as unknown as Partial<SceneEntity>;
 }
 
+// ADR-507 §8 — FLAT hatch primitive (boundaryPaths at top level, ΟΧΙ params/geometry).
+// Whole-entity move: shift ΚΑΘΕ boundary vertex + τα world-coordinate pattern anchors
+// (`patternOrigin`, `seedPoints`) ώστε το γέμισμα/gradient να «κολλάει» στο σχήμα καθώς
+// μετακινείται (AutoCAD MOVE / Revit parity — το pattern phase ακολουθεί το hatch). Το
+// `gradient.angleDeg` είναι θέση-ανεξάρτητο και διαβάζει το `patternOrigin` ως αφετηρία →
+// ακολουθεί αυτόματα, χωρίς ειδική μεταχείριση. Hatch = 2D-only (καμία z). Καθαρή
+// συνάρτηση — μοιράζεται commit (`MoveEntityCommand`) + live ghost (`applyEntityPreview`
+// movesEntity branch) → μηδέν διπλότυπο, preview ≡ commit εξ ορισμού.
+function moveHatch(entity: HatchEntity, delta: Point2D): Partial<SceneEntity> {
+  // Reuse του τοπικού `shiftPoint3D` SSoT (ό,τι χρησιμοποιούν moveSlab/moveColumn/… στο
+  // ΙΔΙΟ αρχείο) — μηδέν νέο inline point+delta. Τα hatch points είναι Point2D (z absent)
+  // → ο z-aware helper επιστρέφει καθαρό {x,y}, καμία αλλαγή συμπεριφοράς.
+  const patch: Partial<HatchEntity> = {
+    boundaryPaths: entity.boundaryPaths.map((ring) => ring.map((v) => shiftPoint3D(v, delta))),
+  };
+  if (entity.patternOrigin) patch.patternOrigin = shiftPoint3D(entity.patternOrigin, delta);
+  if (entity.seedPoints) patch.seedPoints = entity.seedPoints.map((p) => shiftPoint3D(p, delta));
+  return patch as unknown as Partial<SceneEntity>;
+}
+
 /**
  * Returns the partial entity patch (`{params, geometry}`) for moving a BIM
  * entity by a 2D delta. Returns `null` if the entity is not a BIM type
@@ -406,6 +426,12 @@ export function calculateBimMovedGeometry(
       return moveRoof(entity, delta);
     case 'mep-underfloor':
       return moveMepUnderfloor(entity, delta);
+    // ADR-507 §8 — flat hatch primitive (boundaryPaths + pattern anchors). Routing it
+    // through this BIM-first dispatcher gives EVERY move gesture (MOVE tool / body-drag /
+    // nudge / bulk) the same translate, and the live ghost (`applyEntityPreview`
+    // movesEntity branch, which also calls this) matches the commit by identity.
+    case 'hatch':
+      return moveHatch(entity, delta);
     default:
       return null;
   }

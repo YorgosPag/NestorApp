@@ -13,8 +13,10 @@
  *   - ADR-390 symmetric undo/redo: `bim:entity-restore-requested` ('hatch') → re-create
  *     doc με ίδιο id (create-redo + delete-undo). Reuse του `persist` ως `persistRestore`
  *     (η `isNew` διαδρομή ξαναγράφει με `setDoc` + ίδιο id) — μηδέν διπλότυπο.
- *
- * DEFER (ADR-507 later phase): move/grip-edit re-persist (`useBimEntityMovedPersistEffect`).
+ *   - ADR-507 §8 move/transform re-persist: `bim:entities-moved` (`useBimEntityMovedPersistEffect`,
+ *     ίδιο SSoT με wall/beam/slab/column). Το MOVE tool / body-drag εκπέμπει το μετακινημένο
+ *     hatch (νέο `boundaryPaths` + pattern anchors) → immediate persist από το payload,
+ *     ΑΝΕΞΑΡΤΗΤΑ από selection (belt-and-suspenders με το auto-save-while-selected debounce).
  *
  * ⚠️ The create event divergence is deliberate: hatch completes via
  * `completeEntity()` which emits `drawing:complete {tool, entityId, entity}`
@@ -44,6 +46,7 @@ import {
 } from '../../bim/hatch/hatch-firestore-service';
 import { useBimFirestoreWriteGrace } from './useBimFirestoreWriteGrace';
 import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
+import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
 import { mergeDocsIntoScene } from './merge-docs-into-scene';
 
 // ============================================================================
@@ -266,6 +269,11 @@ export function useHatchPersistence(params: UseHatchPersistenceParams): UseHatch
     deletedIdsRef,
     persist,
   );
+
+  // ADR-507 §8 — move/transform re-persist από το `bim:entities-moved` payload (ίδιο SSoT
+  // effect με wall/beam/slab/column). Πιάνει τη μετακίνηση ακόμη κι αν το hatch αποεπιλεγεί
+  // πριν λήξει το auto-save debounce (belt-and-suspenders).
+  useBimEntityMovedPersistEffect(isHatchEntity, serviceRef, dirtyIdsRef, persist);
 
   useEffect(() => {
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };

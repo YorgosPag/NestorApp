@@ -37,9 +37,12 @@ import {
   isSlabOpeningEntity,
   isOpeningEntity,
   isFoundationEntity,
+  isHatchEntity,
 } from '../../types/entities';
 // ADR-363 BIM entity key-point SSoT (delegates to bim-entity-points.ts).
 import { getBimEntityKeyPoints2D, getBimEntityEdgeMidpoints2D } from '../../bim/utils/bim-entity-points';
+// ADR-507 — hatch boundary bbox-center SSoT (reused for the hatch CENTER snap; zero duplicate bbox math).
+import { hatchBoundsCenter } from '../../bim/hatch/hatch-grips';
 
 export interface IntersectionResult {
   point: Point2D;
@@ -105,10 +108,35 @@ export class GeometricCalculations {
       endpoints.push(...getBimEntityKeyPoints2D(entity));
     } else if (isRayEntity(entity)) {
       endpoints.push(entity.basePoint);
+    } else if (isHatchEntity(entity)) {
+      // ADR-507 — γραμμοσκίαση: κάθε κορυφή κάθε ring του ορίου (`boundaryPaths`)
+      // είναι λαβή (`hatch-vertex-*`) → ENDPOINT έλξη, όπως στην κλειστή πολυγραμμή.
+      for (const ring of entity.boundaryPaths) {
+        endpoints.push(...ring);
+      }
     }
     // XLine: infinite in both directions → no endpoints
 
     return endpoints;
+  }
+
+  /**
+   * ADR-507 — Midpoints κάθε ακμής ενός vertex ring. Όταν `closed`, προστίθεται και
+   * η ακμή κλεισίματος (τελευταία→πρώτη, μόνο για length>2). SSoT για κλειστή
+   * πολυγραμμή ΚΑΙ όρια γραμμοσκίασης (μηδέν διπλότυπο edge-midpoint loop).
+   */
+  private static ringEdgeMidpoints(vertices: readonly Point2D[], closed: boolean): Point2D[] {
+    const mids: Point2D[] = [];
+    if (!vertices || vertices.length < 2) return mids;
+    for (let i = 1; i < vertices.length; i++) {
+      mids.push({ x: (vertices[i - 1].x + vertices[i].x) / 2, y: (vertices[i - 1].y + vertices[i].y) / 2 });
+    }
+    if (closed && vertices.length > 2) {
+      const a = vertices[vertices.length - 1];
+      const b = vertices[0];
+      mids.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+    }
+    return mids;
   }
 
   static getEntityMidpoints(entity: Entity): Point2D[] {
@@ -125,29 +153,12 @@ export class GeometricCalculations {
       const midAngle = (entity.startAngle + entity.endAngle) / 2;
       midpoints.push(pointOnCircle(entity.center, entity.radius, midAngle));
     } else if (isPolylineEntity(entity) || isLWPolylineEntity(entity)) {
-      const vertices = entity.vertices;
-      const isClosed = entity.closed || false;
-
-      if (vertices && vertices.length >= 2) {
-        // Calculate midpoint for each edge
-        for (let i = 1; i < vertices.length; i++) {
-          const p1 = vertices[i - 1];
-          const p2 = vertices[i];
-          midpoints.push({
-            x: (p1.x + p2.x) / 2,
-            y: (p1.y + p2.y) / 2
-          });
-        }
-
-        // Add closing edge midpoint for closed polylines
-        if (isClosed && vertices.length > 2) {
-          const p1 = vertices[vertices.length - 1];
-          const p2 = vertices[0];
-          midpoints.push({
-            x: (p1.x + p2.x) / 2,
-            y: (p1.y + p2.y) / 2
-          });
-        }
+      // Edge midpoints (+ closing edge when closed) via shared SSoT helper.
+      midpoints.push(...GeometricCalculations.ringEdgeMidpoints(entity.vertices, entity.closed || false));
+    } else if (isHatchEntity(entity)) {
+      // ADR-507 — γραμμοσκίαση: μέσα ακμών κάθε ring (κλειστός βρόχος) του ορίου.
+      for (const ring of entity.boundaryPaths) {
+        midpoints.push(...GeometricCalculations.ringEdgeMidpoints(ring, true));
       }
     } else if (isWallEntity(entity) || isBeamEntity(entity) || isSlabEntity(entity) || isSlabOpeningEntity(entity) || isOpeningEntity(entity)) {
       // ADR-363 — BIM entity edge midpoints delegated to SSoT (bim-entity-points.ts).
