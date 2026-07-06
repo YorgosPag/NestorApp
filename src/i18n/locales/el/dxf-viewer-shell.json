@@ -772,7 +772,9 @@
       "angle": "Γωνία",
       "linetype": "Τύπος",
       "lineLabel": "Δαχτυλίδι εντολών γραμμής",
-      "endpointLabel": "Δαχτυλίδι εντολών άκρου"
+      "endpointLabel": "Δαχτυλίδι εντολών άκρου",
+      "rotationAngle": "Γωνία",
+      "rotationLabel": "Δαχτυλίδι εντολών περιστροφής"
     },
     "wall": {
       "statusStart": "Επίλεξε αρχή τοίχου",

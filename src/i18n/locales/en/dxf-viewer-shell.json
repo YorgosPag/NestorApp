@@ -772,7 +772,9 @@
       "angle": "Angle",
       "linetype": "Linetype",
       "lineLabel": "Line command ring",
-      "endpointLabel": "Endpoint command ring"
+      "endpointLabel": "Endpoint command ring",
+      "rotationAngle": "Angle",
+      "rotationLabel": "Rotation command ring"
     },
     "wall": {
       "statusStart": "Pick wall start point",

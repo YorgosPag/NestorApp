@@ -44,6 +44,9 @@ import {
   isLineEndpointDragInfo,
 } from '../../systems/cursor/GripDragStore';
 import { DynamicInputLockStore } from '../../systems/dynamic-input/DynamicInputLockStore';
+// ADR-513 §rotation-ring — single-slice «Γωνία» ring στο rotate-free (typed rotation angle).
+import { ROTATION_RING_CONFIG } from '../../systems/dynamic-input/rotation-ring-config';
+import { RotationRingStore } from '../../systems/dynamic-input/rotation-ring-store';
 import type { SceneUnits } from '../../utils/scene-units';
 // ADR-513 (3D parity) — όταν είμαστε σε 3D προβολή, το ΙΔΙΟ overlay mountάρεται στο `BimViewport3D`
 // (`DynamicInput3DLeaf`)· αυτός ο 2D subscriber υποχωρεί ώστε να μην τρέχουν ΔΥΟ radial rings μαζί
@@ -94,8 +97,19 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
   // useWallTool/useBeamTool το διαβάζουν όποτε υπάρχει lock) → χωρίς αυτό, stale τιμές «κολλάνε» σε νέα
   // γραμμή/τοίχο ακόμη κι με τη Δυναμική Εισαγωγή OFF (bug Giorgio 2026-07-06). Idempotent (no-op αν άδειο).
   useEffect(() => {
-    if (!dynInput.on) DynamicInputLockStore.unlock();
+    if (!dynInput.on) {
+      DynamicInputLockStore.unlock();
+      // ADR-513 §rotation-ring — καθάρισε και τυχόν πληκτρολογημένη γωνία περιστροφής ώστε το ghost
+      // να μη «κολλήσει» σε stale γωνία όταν σβήσει η Δυναμική Εισαγωγή μεσα σε rotate-free.
+      RotationRingStore.clearAngle();
+    }
   }, [dynInput.on]);
+
+  // ADR-513 §rotation-ring — low-freq gate: το βήμα `rotate-free` είναι ενεργό (set στο centre-pick,
+  // clear σε commit/cancel/«R»/selection-change). Οδηγεί το mount του single-slice «Γωνία» ring.
+  const rotateFreeActive = useSyncExternalStore(
+    RotationRingStore.subscribe, RotationRingStore.isSessionActive, () => false,
+  );
 
   // High-frequency cursor subscriptions — isolated to this leaf, gated by `interactive`.
   const cursorPosition = useSyncExternalStore(
@@ -154,6 +168,24 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
         sceneUnits={getSceneUnits()}
         getCanvasEl={getCanvasEl}
         onDeactivate={unlockGripEndpointLocks}
+      />
+    );
+  }
+
+  // ADR-513 §rotation-ring — ΠΕΡΙΣΤΡΟΦΗ hot-grip (free-rotate): με κέντρο δηλωμένο, δείξε το ΙΔΙΟ
+  // «Δαχτυλίδι Εντολών» ως ΕΝΑ πλήκτρο «Γωνία» (όλος ο δίσκος = 1 φέτα) για να πληκτρολογείς γωνία
+  // περιστροφής· Enter → synthetic canvas click → `commitFreeRotate` με τη ring-locked γωνία (ΙΔΙΟ
+  // typed-angle path, ADR-397 Σ3). Για ΟΛΑ τα περιστρεφόμενα. Ανεξάρτητο από το `interactive` gate
+  // (στο grip-drag το εργαλείο είναι 'select'). Ίδιος 3D-yield κανόνας (ΕΝΑ ring ανά view).
+  if (dynInput.on && !is3D && rotateFreeActive && getSceneUnits) {
+    return (
+      <RadialCommandRing
+        config={ROTATION_RING_CONFIG}
+        placementMode="canvas-click"
+        startKey="rotation-ring"
+        sceneUnits={getSceneUnits()}
+        getCanvasEl={getCanvasEl}
+        onDeactivate={RotationRingStore.clearAngle}
       />
     );
   }

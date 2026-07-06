@@ -100,7 +100,10 @@ export interface GripMouseUpCtx {
   // entity's major axis (toward its body); consumed by advanceHotGripPick to seed
   // `hotGripRotateBaseRef` at centre-pick. Null → legacy first-move baseline.
   resolveRotateBaselineAnchor?: (pivot: Point2D) => Point2D | null;
-  // ADR-397 Σ3 — typed rotation angle (signed deg) so a terminal click commits the
-  // keyed-in value (parity with Enter). Null → cursor free rotate.
+  // ADR-513 §rotation-ring — FINALIZED angle committed on a terminal click: ONLY the rotation
+  // ring's locked value (its Enter → synthetic click). Keyboard-typed angle is NOT here (Enter-only).
   typedRotateDeg?: number | null;
+  // ADR-397/513 (Giorgio 2026-07-06, επιλογή Β) — true while a KEYBOARD typed-angle entry is in
+  // progress; a terminal click is then a no-op for the rotation (ONLY Enter finalizes the typed angle).
+  keyboardAngleEntryActive?: boolean;
 }

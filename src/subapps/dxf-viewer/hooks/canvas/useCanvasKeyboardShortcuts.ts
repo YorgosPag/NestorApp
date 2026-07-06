@@ -115,6 +115,18 @@ export function useCanvasKeyboardShortcuts({
     const handleKeyDown = async (e: KeyboardEvent) => {
       // Prevent shortcuts when typing in inputs
       const target = e.target as HTMLElement;
+      if (/^[\d.\-]$/.test(e.key) || e.key === 'Enter' || e.key === 'Backspace') {
+        console.log('[RD] KEYDOWN top', { key: e.key, targetTag: target.tagName, targetId: target.id, targetClass: typeof target.className === 'string' ? target.className : '(non-string)', hotGripKeyIsActive }); // [RD]
+      }
+      // ADR-397/513 (Giorgio 2026-07-06) — hot-grip ΠΕΡΙΣΤΡΟΦΗ: τα ψηφία/Enter/Backspace/«R» οδηγούν τη
+      // ΓΩΝΙΑ ΠΡΙΝ τον input-guard, ώστε η πληκτρολόγηση να δουλεύει ΑΚΟΜΗ κι αν ένα stray <input> έκλεψε
+      // το focus (π.χ. ribbon combobox re-focus στο preview re-render) → πολυψήφιες γωνίες (45, 90…) OK.
+      // Capture-phase + stopImmediatePropagation → το focused input ΔΕΝ βλέπει τα πλήκτρα. (Πριν: ήταν ΜΕΤΑ
+      // τον input-guard → το 2ο ψηφίο «τρωγόταν» από το input — bug «δέχεται μόνο το 1ο ψηφίο», Giorgio.)
+      if (hotGripKeyIsActive && handleHotGripKeyDown) {
+        const consumed = handleHotGripKeyDown(e.key);
+        if (consumed) { e.preventDefault(); e.stopImmediatePropagation(); return; }
+      }
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
         return;
       }
@@ -160,13 +172,8 @@ export function useCanvasKeyboardShortcuts({
         if (consumed) { e.preventDefault(); return; }
       }
 
-      // ADR-397 Σ2: rotate-free hot-grip — intercept «R» (reference flow) before any
-      // global shortcut steals it. stopImmediatePropagation so a global rotate-tool
-      // bind never fires while the entity is spinning under the cursor.
-      if (hotGripKeyIsActive && handleHotGripKeyDown) {
-        const consumed = handleHotGripKeyDown(e.key);
-        if (consumed) { e.preventDefault(); e.stopImmediatePropagation(); return; }
-      }
+      // ADR-397 Σ2 hot-grip rotate-free key handling MOVED above the input-focus guard
+      // (top of handleKeyDown) so multi-digit typed angles survive a stray input focus-steal.
 
       // ADR-357 Phase 5: Ctrl+Z intercept during line chain mode → undo chain vertex.
       // Must run before CommandHistory's global Ctrl+Z listener (capture order).

@@ -20,6 +20,8 @@ import { markSystemsDirty } from '../../rendering/core/UnifiedFrameScheduler';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 // ADR-397 — arm the rotation snap targets (pivot ⊙ + entity grips) when the centre is picked.
 import { getGlobalRotationSnapStore } from '../../bim/grips/rotation-snap-store';
+// ADR-513 §rotation-ring — bridge that mounts the single-slice «Γωνία» ring while rotate-free is active.
+import { RotationRingStore } from '../../systems/dynamic-input/rotation-ring-store';
 import { commitDxfGripDragModeAware } from './grip-commit-adapters';
 // ADR-397 Σ3 — typed-angle → world delta (pure SSoT, shared with the live preview).
 import { rotateDeltaForAngleDeg } from './grip-projections';
@@ -68,11 +70,18 @@ export interface HotGripActionCtx {
    */
   resolveRotateBaselineAnchor?: (pivot: Point2D) => Point2D | null;
   /**
-   * ADR-397 Σ3 — the typed rotation angle (signed deg, +CCW) if the user keyed one
-   * in, else null. When set, a terminal CLICK commits this exact value instead of
-   * the cursor sweep (parity with the Enter commit). Null → cursor free rotate.
+   * ADR-513 §rotation-ring — the FINALIZED angle to commit on a terminal click: ONLY the
+   * «Δαχτυλίδι Εντολών» rotation ring's locked value (its own Enter → synthetic canvas click).
+   * A KEYBOARD-typed angle is NOT passed here — it commits solely via the Enter key. Null →
+   * cursor free rotate.
    */
   typedRotateDeg?: number | null;
+  /**
+   * ADR-397/513 (Giorgio 2026-07-06, επιλογή Β) — true while a KEYBOARD typed-angle entry is in
+   * progress. A terminal click is then a no-op for the rotation — ONLY Enter finalizes the typed
+   * angle. Without a typed entry a click commits the free cursor rotation (shipped behavior).
+   */
+  keyboardAngleEntryActive?: boolean;
 }
 
 // ADR-363 Phase 1G.3 — i18n key for the toolbar hint shown during each hot-grip
@@ -133,6 +142,10 @@ export function seedRotateFreeStep(
   refs.hotGripRotateBaseRef.current = baselineAnchor;
   refs.setCurrentWorldPos(null);
   getGlobalRotationSnapStore().setTargets(pivot, entityGripsWorld);
+  // ADR-513 §rotation-ring — rotate-free begins (ΕΝΑ σημείο εισόδου, κοινό για normal centre-pick
+  // + Ctrl-endpoint) → σηματοδότησε τη συνεδρία ώστε ο `DynamicInputSubscriber` να mount-άρει το
+  // single-slice «Γωνία» ring (μαζί με το `dynInput.on` gate). Idempotent.
+  RotationRingStore.beginSession();
 }
 
 /**
@@ -223,7 +236,13 @@ export function commitFreeRotate(worldPos: Point2D, grip: UnifiedGripInfo, ctx: 
   const { hotGripBaseRef, hotGripRotateBaseRef, dxfCommitDeps, resetToIdle } = ctx;
   const pivot = hotGripBaseRef.current;
   if (!pivot) { GripBasePointStore.clear(); resetToIdle(); return; }
-  // ADR-397 Σ3 — a keyed-in angle wins over the cursor sweep (click == Enter).
+  // ADR-397/513 (Giorgio 2026-07-06, επιλογή Β) — ΟΣΟ πληκτρολογείς γωνία με το ΠΛΗΚΤΡΟΛΟΓΙΟ
+  // (`keyboardAngleEntryActive`), ένα terminal κλικ είναι **no-op** για την περιστροφή: ΜΟΝΟ το **Enter**
+  // κλειδώνει την πληκτρολογημένη γωνία (→ `commitTypedRotate` στο `runHotGripKeyDown`). Το flow μένει σε
+  // rotate-free (ESC/Backspace ακυρώνει/επαναφέρει). Το ΠΑΛΙΟ «κλικ == Enter» της Σ3 αφαιρέθηκε.
+  if (ctx.keyboardAngleEntryActive) { console.log('[RD] → SUPPRESSED (πληκτρολογείς — μόνο Enter κλειδώνει)'); return; } // [RD]
+  // ADR-513 §rotation-ring — το «Δαχτυλίδι Εντολών» έχει ΟΛΟΚΛΗΡΩΜΕΝΗ γωνία (popup Enter → synthetic
+  // click)· εδώ το `typedRotateDeg` = ΜΟΝΟ η ring-locked τιμή → commit exact. ΧΩΡΙΣ typed/ring → cursor sweep.
   if (ctx.typedRotateDeg != null) {
     commitTypedRotate(grip, pivot, ctx.typedRotateDeg, dxfCommitDeps);
     resetToIdle();
@@ -271,6 +290,9 @@ export function enterReferenceFromFree(ctx: RotateFreeKeyCtx): void {
   ctx.hotGripRefStartRef.current = null;
   ctx.hotGripRefEndRef.current = null;
   ctx.hotGripAlignStartRef.current = null;
+  // ADR-513 §rotation-ring — «R» εγκαταλείπει το rotate-free για το 6-click reference flow → η
+  // συνεδρία του single-slice ring λήγει (ξε-mount + καθάρισμα τυχόν πληκτρολογημένης γωνίας).
+  RotationRingStore.endSession();
   applyHotGripHint('rotate', 'await-ref-start');
 }
 
@@ -286,6 +308,7 @@ export function commitTypedRotate(
   angleDeg: number,
   deps: DxfCommitDeps,
 ): void {
+  console.log('[RD] ⚠️ commitTypedRotate FIRED', { angleDeg }); // [RD]
   BimRotateHotGripStore.set(pivot, { x: pivot.x + 1, y: pivot.y });
   commitDxfGripDragModeAware(grip, rotateDeltaForAngleDeg(angleDeg), deps, GripModeStore.getSnapshot());
   GripBasePointStore.clear();
@@ -318,6 +341,7 @@ export interface HotGripKeyDownCtx extends RotateFreeKeyCtx {
  * 500-line file limit (SOS N.7.1); behaviour is byte-for-byte identical.
  */
 export function runHotGripKeyDown(key: string, phase: UnifiedGripPhase, ctx: HotGripKeyDownCtx): boolean {
+  console.log('[RD] KEY→runHotGripKeyDown', { key, phase, op: ctx.hotGripOpRef.current, step: ctx.hotGripStepRef.current }); // [RD]
   if (phase !== 'hotGrip' || ctx.hotGripOpRef.current !== 'rotate') return false;
   if (ctx.hotGripStepRef.current !== 'rotate-free') return false;
   // «R» → opt into the 6-click reference flow (drop any typed angle).
@@ -341,12 +365,16 @@ export function runHotGripKeyDown(key: string, phase: UnifiedGripPhase, ctx: Hot
     }
     return true;
   }
-  // Digit alphabet (0-9 / - / .) → buffer the signed angle (DirectDistanceEntry SSoT).
-  if (/^[\d.-]$/.test(key)) {
+  // Digit alphabet (0-9 / - / . / ,) → buffer the signed angle (DirectDistanceEntry SSoT).
+  // ADR-397/513 (Giorgio 2026-07-06) — δέξου ΚΑΙ κόμμα ΚΑΙ τελεία ως δεκαδικό (ελληνική/ευρωπαϊκή
+  // σύμβαση: 45,5 ≡ 45.5). Κανονικοποίησε «,» → «.» ώστε το DDE buffer να μένει έγκυρο για `Number()`.
+  if (/^[\d.,-]$/.test(key)) {
+    const decimalKey = key === ',' ? '.' : key;
     if (dde.snapshot().status !== 'buffering') dde.begin();
-    dde.pressKey(key);                       // rejects illegal keystrokes internally
+    dde.pressKey(decimalKey);                // rejects illegal keystrokes internally
     const s = dde.snapshot();
     ctx.setTypedRotate({ buffer: s.buffer, deg: s.value });
+    console.log('[RD] digit buffered (PREVIEW only)', { key, decimalKey, buffer: s.buffer, deg: s.value }); // [RD]
     markSystemsDirty(['dxf-canvas']);
     return true;
   }

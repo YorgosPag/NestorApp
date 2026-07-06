@@ -140,6 +140,8 @@ export const useKeyboardShortcuts = ({
         !selectIs3D(useViewMode3DStore.getState()) &&
         !e.ctrlKey && !e.metaKey && !e.altKey &&
         e.key !== 'j' && e.key !== 'J' &&
+        // ADR-397/513 — όχι όσο τρέχει λαβή (rotate/move/grip): τα ψηφία ανήκουν στην πράξη της λαβής.
+        !getActiveDragGrip() &&
         /^[A-Za-z0-9]$/.test(e.key)
       ) {
         e.preventDefault();

@@ -276,6 +276,53 @@ geometry.**
 `lockOpenNumericRaw`· γενικό Tab· lock-before-switch· Enter reuse), `systems/dynamic-input/__tests__/
 radial-ring-logic.test.ts` (+6 cases). 188 dynamic-input jest GREEN. 🔴 ΕΚΚΡΕΜΕΙ browser-verify + commit (Giorgio).
 
+## §rotation-ring — single-slice «Γωνία» ring στην ΠΕΡΙΣΤΡΟΦΗ hot-grip (2026-07-06, Giorgio)
+Giorgio: «όταν επιλέγω γραμμή → γλυφή περιστροφής (κόκκινη) → δηλώνω κέντρο → free-rotate φάντασμα με
+κόκκινα/πράσινα τόξα, **με Δυναμική Εισαγωγή ON** θέλω να εμφανίζεται το «Δαχτυλίδι Εντολών» ως **ΕΝΑ
+πλήκτρο (όλος ο δίσκος = 1 φέτα) «Γωνία»** για να πληκτρολογώ γωνία περιστροφής· Enter = οριστικοποίηση».
+Ισχύει για **ΟΛΑ τα περιστρεφόμενα** (γραμμή/τοίχος/κολόνα/δοκός/τόξο/polyline).
+
+**SSoT audit (grep 2026-07-06) — ΚΡΙΣΙΜΟ:** ο μηχανισμός typed rotation angle **ΥΠΑΡΧΕΙ ΗΔΗ** (ADR-397 Σ3):
+το `typedAngleDeg` οδηγεί ΚΑΙ το ghost ΚΑΙ τα τόξα (`buildRotateReferencePreview`, `grip-projections.ts`)
+ΚΑΙ το commit (`commitFreeRotate`→`commitTypedRotate` μέσω `rotateDeltaForAngleDeg` — η γωνία encode-άρεται
+στο delta, **ΟΧΙ** override). Πηγή του `typedAngleDeg` = keyboard `DirectDistanceEntry` (`rotateDdeRef`) μέσα
+στο `useUnifiedGripInteraction`. **Το κενό ήταν καθαρά γέφυρα ring→hook** (το ring ζει σε άλλο component tree,
+`DynamicInputSubscriber`). **Μηδέν νέο sweep-override/lock geometry** — απορρίφθηκε ρητά η προσέγγιση override
+στο `rotateAxisPointsAboutPivot`/`resolveSweptRotationDeg` (άλλαζε ghost αλλά ΟΧΙ `rotateSweepDeg` → τόξα ασύμφωνα).
+
+### Decision (§rotation-ring)
+1. **Bridge store (NEW)** — `systems/dynamic-input/rotation-ring-store.ts` (`RotationRingStore`, zero-React,
+   ίδιο pattern με `DynamicInputLockStore`/`createExternalStore`). ΔΥΟ πεδία της ΙΔΙΑΣ συνεδρίας: `sessionActive`
+   (rotate-free ενεργό → mount gate) + `lockedDeg` (πληκτρολογημένη γωνία, signed +CCW, **ΧΩΡΙΣ normalize** —
+   parity με το `commitTypedRotate`). ΜΟΝΟ γέφυρα ring→hook, **ΟΧΙ geometry seam**.
+2. **Config (NEW)** — `systems/dynamic-input/rotation-ring-config.ts` (`ROTATION_RING_CONFIG`): 1 numeric πεδίο
+   «Γωνία» → `computeRingSlices(1)` = όλος ο δίσκος (μία φέτα). `commitNumeric(deg)→RotationRingStore.lock(deg)`·
+   `clearOnPlace→clearAngle()`. Reuse του tool-agnostic `RingConfig`/`RadialCommandRing` (μηδέν νέο UI).
+3. **Mount signal** — `RotationRingStore.beginSession()` μέσα στο `seedRotateFreeStep` (**ΕΝΑ** σημείο εισόδου στο
+   rotate-free — κοινό για normal centre-pick + Ctrl-endpoint), `endSession()` σε `resetToIdle` / selection-change /
+   `enterReferenceFromFree` («R» → reference). ΔΕΝ overloadάρεται το `BimRotateHotGripStore` (χωριστές ευθύνες).
+4. **Feed στο ΥΠΑΡΧΟΝ typedAngleDeg** — `useUnifiedGripInteraction`: low-freq `useSyncExternalStore(RotationRingStore)`
+   → `typedRotateDeg: typedRotate?.deg ?? ringLockedDeg` στο preview memo (ghost+τόξα)· στο `handleMouseUp` read
+   **at event time** (`?? RotationRingStore.getLockedDeg()`). Το keyboard DDE **νικά** όταν υπάρχουν και τα δύο.
+5. **Enter = commit μέσω ΤΟΥ ΙΔΙΟΥ path** — το ring σε `placementMode='canvas-click'`: Enter → `commitNumeric`
+   (lock γωνία) → `placeAtCursor` (synthetic canvas mousedown+mouseup) → grip `runGripMouseUp` → `commitFreeRotate`
+   (διαβάζει `typedRotateDeg` = ring-locked) → `commitTypedRotate`. **ΕΝΑ commit path** (ίδιο με το cursor-click).
+   Το `hotGripMovedRef` είναι ήδη `true` (rotate-free: κάθε mousemove το σηκώνει)· τα synthetic events δεν το
+   μηδενίζουν (mousedown 'consume') → το synthetic click κουμπώνει ως `'commit'`.
+6. **Mount branch** — `DynamicInputSubscriber`: `dynInput.on && !is3D && rotateFreeActive && getSceneUnits` →
+   `<RadialCommandRing config={ROTATION_RING_CONFIG} placementMode='canvas-click' …/>`. Ανεξάρτητο από το
+   `interactive` gate (στο grip-drag το εργαλείο είναι 'select', όπως το §grip-parity-hotgrip branch).
+7. **Reset** — `RotationRingStore.clearAngle()` στο dynInput-off effect (μηδέν stale γωνία στο ghost).
+8. **i18n (N.11)** — `tools.ring.rotationAngle` («Γωνία»/«Angle») + `tools.ring.rotationLabel`
+   («Δαχτυλίδι εντολών περιστροφής»/«Rotation command ring») σε el+en.
+
+**NEW (§rotation-ring):** `systems/dynamic-input/rotation-ring-store.ts`, `systems/dynamic-input/rotation-ring-config.ts`,
+`systems/dynamic-input/__tests__/rotation-ring-store.test.ts` (+7 cases), `.../rotation-ring-config.test.ts` (+6 cases).
+**MOD:** `hooks/grips/grip-hotgrip-actions.ts` (beginSession/endSession), `hooks/grips/useUnifiedGripInteraction.ts`
+(subscribe + feed preview/commit + endSession σε 2 resets), `components/dxf-layout/DynamicInputSubscriber.tsx`
+(mount branch + clearAngle), `i18n/locales/{el,en}/dxf-viewer-shell.json`. 192 dynamic-input jest GREEN.
+🔴 ΕΚΚΡΕΜΕΙ browser-verify + commit (Giorgio).
+
 ## Sources (μελέτη AutoCAD NavWheel)
 - About SteeringWheels — https://help.autodesk.com/cloudhelp/2020/ENU/AutoCAD-Core/files/GUID-0345448F-5C16-4566-90A7-A6D33A70F67F.htm
 - SteeringWheels Settings Dialog — https://help.autodesk.com/cloudhelp/2019/ENU/AutoCAD-Core/files/GUID-D613FA7A-160C-475F-A83E-B788720C44D0.htm
@@ -341,6 +388,21 @@ radial-ring-logic.test.ts` (+6 cases). 188 dynamic-input jest GREEN. 🔴 ΕΚΚ
   «κόλλαγαν» στη νέα γραμμή με τη Δυν. Εισ. **OFF**. FIX (single owner): NEW effect στον `DynamicInputSubscriber`
   → `if (!dynInput.on) DynamicInputLockStore.unlock()` (idempotent). **MOD:** `components/dxf-layout/DynamicInput
   Subscriber.tsx`. 🔴 ΕΚΚΡΕΜΕΙ: browser-verify + commit.
+- **2026-07-06 (§rotation-ring)** — Giorgio: «στο free-rotate (κέντρο δηλωμένο, τόξα) με Δυν.Εισ. ON, όλος ο
+  δίσκος = **1 πλήκτρο «Γωνία»** για να πληκτρολογώ γωνία περιστροφής· Enter = οριστικοποίηση· για ΟΛΑ τα
+  περιστρεφόμενα». SSoT audit: ο typed-angle μηχανισμός ΥΠΗΡΧΕ (ADR-397 Σ3 — `typedAngleDeg` οδηγεί ghost+τόξα+
+  commit)· κενό = **γέφυρα ring→hook**. FIX (μηδέν νέο override/geometry): NEW `RotationRingStore` (bridge:
+  sessionActive+lockedDeg) + `ROTATION_RING_CONFIG` (1 φέτα «Γωνία»)· `beginSession` στο `seedRotateFreeStep` /
+  `endSession` σε reset/«R»/selection· ο hook τροφοδοτεί το ΙΔΙΟ `typedAngleDeg` (`typedRotate?.deg ?? ringLockedDeg`)
+  σε preview+commit· Enter → synthetic canvas click → `commitFreeRotate`→`commitTypedRotate` (ΕΝΑ commit path).
+  +13 jest → 192 dynamic-input GREEN. 🔴 ΕΚΚΡΕΜΕΙ: browser-verify + commit.
+- **2026-07-06 (§rotation-ring — Enter-only typed commit, Giorgio console diagnostic)** — Ο Giorgio: «μόλις
+  πατήσω το 4 (χωρίς Enter) κλειδώνει». Console diag (`[ROT-DIAG]`) απέδειξε: το ψηφίο μπαίνει σωστά (preview),
+  αλλά ένα terminal `mouseup` οριστικοποιεί τη ΜΕΡΙΚΗ τιμή μέσω του παλιού «κλικ == Enter» της Σ3. **FIX:** το
+  keyboard typed angle κλειδώνει **ΜΟΝΟ με Enter** — `handleMouseUp` στέλνει `keyboardAngleEntryActive` (true όσο
+  πληκτρολογείς) → `commitFreeRotate` early-return· το `typedRotateDeg` (commit-on-click) = **ΜΟΝΟ** η ring-locked
+  γωνία (`RotationRingStore.getLockedDeg()`). Έτσι keyboard=Enter-only, ring=το δικό του popup-Enter→synthetic
+  click. Ισχύει Δυν.Εισ. ON/OFF. Λεπτομέρειες: **ADR-397 §15**. 1150 grip+dynamic-input jest GREEN. 🔴 browser-verify.
 - **2026-06-30 (§line-parity — SSoT audit follow-up, Giorgio)** — Εντοπίστηκε & διορθώθηκε διπλότυπο
   που είχα φτιάξει: η απαρίθμηση «ByLayer + registry linetypes» υπήρχε ΗΔΗ στο ribbon
   (`useRibbonLineToolBridge.buildLinetypeOptions`) και την ξανάγραψα στο `line-ring-config`. **FIX:** NEW

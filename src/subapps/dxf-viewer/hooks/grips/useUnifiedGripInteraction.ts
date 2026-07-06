@@ -58,6 +58,9 @@ import { useGripSpacebarCycle } from './useGripSpacebarCycle';
 import { runHotGripKeyDown } from './grip-hotgrip-actions';
 // ADR-397 Σ3 — typed-angle digit buffer SSoT (ADR-344, «angle for rotation»).
 import { DirectDistanceEntry } from '../../text-engine/interaction/DirectDistanceEntry';
+// ADR-513 §rotation-ring — bridge: το single-slice «Γωνία» ring γεμίζει το ΙΔΙΟ typed-angle που
+// οδηγεί preview (ghost+τόξα) + commit. Το keyboard DDE νικά όταν και τα δύο υπάρχουν.
+import { RotationRingStore } from '../../systems/dynamic-input/rotation-ring-store';
 import {
   buildGripInteractionState,
   buildOverlayHoveredVertex,
@@ -215,6 +218,8 @@ export function useUnifiedGripInteraction(
     // ADR-397 Σ3 — selection change ends any in-progress typed rotation angle.
     rotateDdeRef.current.reset();
     setTypedRotate(null);
+    // ADR-513 §rotation-ring — selection change ends the rotate-free session → ξε-mount το ring.
+    RotationRingStore.endSession();
   }, []);
   useEffect(
     () => subscribeSelection(resetGripSessionOnSelectionChange),
@@ -238,6 +243,7 @@ export function useUnifiedGripInteraction(
   const hitTolerancePx = (gripSettings.gripSize ?? 5) * (gripSettings.dpiScale ?? 1.0) + 2;
   const effectiveTolerance = Math.max(hitTolerancePx, GRIP_CONFIG.HIT_TOLERANCE);
   const resetToIdle = useCallback(() => {
+    console.log('[RD] resetToIdle'); // [RD]
     setPhase('idle');
     setActiveGrip(null);
     setHoveredGrip(null);
@@ -267,6 +273,10 @@ export function useUnifiedGripInteraction(
     // ADR-397 Σ3 — drop any typed rotation angle so the next flow starts clean.
     rotateDdeRef.current.reset();
     setTypedRotate(null);
+    // ADR-513 §rotation-ring — commit / cancel / ESC ends the rotate-free session (ξε-mount το ring
+    // + καθάρισμα τυχόν πληκτρολογημένης γωνίας). ΤΟ ΙΔΙΟ commit path τρέχει και για το ring (synthetic
+    // canvas click → commitFreeRotate), οπότε το endSession εδώ καλύπτει και τις δύο πηγές.
+    RotationRingStore.endSession();
   }, []);
   // ADR-397 Φ2 — classify the cursor into a MOVE-glyph arm (entity WORLD frame) and
   // publish it to `MoveGlyphZoneStore`; repaint the DXF canvas only on change so the
@@ -335,8 +345,13 @@ export function useUnifiedGripInteraction(
           const entity = sm?.getEntity(activeGrip.entityId);
           return entity ? resolveRotateReferenceAnchor(entity as unknown as Entity, pivot) : null;
         },
-        // ADR-397 Σ3 — a terminal click commits the typed angle if one was keyed in.
-        typedRotateDeg: typedRotate?.deg ?? null,
+        // ADR-513 §rotation-ring — ένα terminal click οριστικοποιεί ΜΟΝΟ την ΟΛΟΚΛΗΡΩΜΕΝΗ γωνία του
+        // «Δαχτυλιδιού Εντολών» (το δικό του Enter → synthetic canvas click). Read at event time.
+        typedRotateDeg: RotationRingStore.getLockedDeg(),
+        // ADR-397/513 (Giorgio 2026-07-06, επιλογή Β) — ΟΣΟ πληκτρολογείς γωνία με το ΠΛΗΚΤΡΟΛΟΓΙΟ, ένα
+        // κλικ ΔΕΝ κάνει commit (μόνο το Enter κλειδώνει το πληκτρολογημένο). Χωρίς πληκτρολόγηση → κλικ =
+        // ελεύθερη περιστροφή στον κέρσορα (shipped). Backspace/ESC καθαρίζει → ξανά ελεύθερη με κλικ.
+        keyboardAngleEntryActive: (typedRotate?.deg ?? null) !== null,
       }),
     // ADR-532 B4: allGrips removed from deps — read from AllGripsStore at call time.
     [phase, activeGrip, dxfCommitDeps, overlayCommitDeps, draggingVertices, draggingEdgeMidpoint, draggingOverlayBody, resetToIdle, markDragFinished, typedRotate],
@@ -381,9 +396,16 @@ export function useUnifiedGripInteraction(
   // hook; the fine op/step check happens inside `handleHotGripKeyDown` (refs).
   const hotGripIsActive = phase === 'hotGrip';
   // ── PROJECTIONS (from grip-projections.ts) ──
+  // ADR-513 §rotation-ring — low-freq subscription στη γωνία του «Γωνία» ring (αλλάζει σε ενέργεια
+  // χρήστη, ΟΧΙ ανά frame — ίδια κλάση με το GripArmedStore) ώστε το preview memo να ξαναϋπολογιστεί
+  // μόλις κλειδωθεί γωνία στο ring, ΧΩΡΙΣ κίνηση κέρσορα (πλήκτρα δεν αλλάζουν currentWorldPos).
+  const ringLockedDeg = useSyncExternalStore(
+    RotationRingStore.subscribe, RotationRingStore.getLockedDeg, RotationRingStore.getLockedDeg,
+  );
   // ADR-363/397 — preview resolver extracted → grip-dxf-drag-preview-resolver (file-size
   // N.7.1). typedRotate re-triggers the memo so the typed ghost updates (keystrokes don't
   // change currentWorldPos); dxfCommitDeps drives the deterministic axis-baseline read.
+  // ADR-513 §rotation-ring — effective typed angle = keyboard DDE ?? ring-locked γωνία (ΙΔΙΟ ghost+τόξα).
   const dxfDragPreview = useMemo(
     () => resolveDxfDragPreview({
       phase, activeGrip, anchorPos: anchorRef.current, currentWorldPos,
@@ -391,9 +413,9 @@ export function useUnifiedGripInteraction(
       hotGripBase: hotGripBaseRef.current,
       hotGripRefStart: hotGripRefStartRef.current, hotGripRefEnd: hotGripRefEndRef.current,
       hotGripAlignStart: hotGripAlignStartRef.current, hotGripRotateBase: hotGripRotateBaseRef.current,
-      typedRotateDeg: typedRotate?.deg ?? null, dxfCommitDeps,
+      typedRotateDeg: typedRotate?.deg ?? ringLockedDeg, dxfCommitDeps,
     }),
-    [phase, activeGrip, currentWorldPos, typedRotate, dxfCommitDeps],
+    [phase, activeGrip, currentWorldPos, typedRotate, ringLockedDeg, dxfCommitDeps],
   );
   // ADR-501 — subscribe to the armed-grip set so the canvas repaints (orange grips)
   // when the user clicks/shift-clicks/marquees grips. Low-frequency (click), not a
