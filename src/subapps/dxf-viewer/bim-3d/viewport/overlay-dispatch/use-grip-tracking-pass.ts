@@ -25,24 +25,21 @@
 
 import { useSyncExternalStore } from 'react';
 import type { Entity } from '../../../types/entities';
-import { resolveSceneUnits, mmToSceneUnits } from '../../../utils/scene-units';
+import { resolveSceneUnits } from '../../../utils/scene-units';
 import { planMmToScenePoint } from '../../placement/world-to-scene-point';
-import { dxfPlanToWorld, getPixelWorldSize } from '../coordinate-transforms';
+import { dxfPlanToWorld, cameraSceneUnitsPerPixel } from '../coordinate-transforms';
 import { makePlacementOverlayProjector } from '../../placement/placement-overlay-project';
-import { resolveActionAlignmentTracking } from '../../../hooks/dimensions/dim-alignment-tracking';
+import {
+  resolveActionAlignmentTracking,
+  paintComposedTrackingThroughProjector,
+} from '../../../hooks/dimensions/dim-alignment-tracking';
 import {
   gripInfoToAlignmentRole,
   resolveGripAlignmentAnchors,
   type GripAlignmentEntityView,
 } from '../../../systems/grip/grip-drag-alignment-role';
 import { getImmediateSnap } from '../../../systems/cursor/ImmediateSnapStore';
-import {
-  paintAlignmentPaths,
-  paintIntersections,
-  paintTooltip,
-} from '../../../canvas-v2/preview-canvas/tracking-paint';
-import { getCurrentTrackingPalette } from '../../../canvas-v2/preview-canvas/tracking-colors';
-import { formatSnapTrackingLabel } from '../../../rendering/entities/shared/distance-label-utils';
+import { sceneDistanceToMeters } from '../../../bim/labels/move-readout';
 import { useGrip3DOverlayStore, grip3DOverlayInteraction } from '../../stores/Grip3DOverlayStore';
 import { findDxfEntityInScope } from '../../scene/dxf-3d-floor-scope';
 import type { BimOverlayFrame, BimOverlayPass } from './bim-overlay-pass';
@@ -69,28 +66,22 @@ function paintGripTrackingOverlay({ ctx, camera, canvas }: BimOverlayFrame): voi
   const anchors = resolveGripAlignmentAnchors(found.entity as unknown as GripAlignmentEntityView, role);
   if (!anchors) return;
 
-  // Screen scale at the cursor (native units per px), derived from the live camera — mirror of the
-  // wall-placement `scenePerPx` so tolerance/radius/adaptive-step stay zoom-constant. `scale = 1/scenePerPx`.
+  // Screen scale at the cursor (native units per px), from the live camera via the shared SSoT — so
+  // tolerance/radius/adaptive-step stay zoom-constant. `scale = 1/scenePerPx`.
   const cursorWorld = dxfPlanToWorld(drag.livePlanPos.x, drag.livePlanPos.y, found.floorElevationMm);
-  const dist = camera.position.distanceTo(cursorWorld);
-  const scenePerPx = getPixelWorldSize(dist, camera, canvas) * 1000 * mmToSceneUnits(sceneUnits);
-  const scale = 1 / Math.max(scenePerPx, 1e-9);
+  const scale = 1 / Math.max(cameraSceneUnitsPerPixel(camera, canvas, cursorWorld, sceneUnits), 1e-9);
 
   const tracking = resolveActionAlignmentTracking(
     cursorNative, anchors, scale, found.scene.entities as unknown as readonly Entity[],
   );
   if (!tracking) return;
 
-  // Map + paint EXACTLY like the 2D action paint (paths + intersections + tooltip, no acquired markers).
-  const r = tracking.result;
-  const distScene = Math.hypot(tracking.point.x - r.anchorPoint.x, tracking.point.y - r.anchorPoint.y);
-  const distMm = distScene / Math.max(mmToSceneUnits(sceneUnits), 1e-9);
-  const label = r.snappedAngle !== null ? formatSnapTrackingLabel(r.snappedAngle, distMm) : null;
+  // Paint through the SAME SSoT the 2D grip drag uses (`paintComposedTrackingThroughProjector`), fed the
+  // 3D camera projector + the level's world→mm mapping — zero re-implemented compute/paint.
   const project = makePlacementOverlayProjector(camera, canvas, sceneUnits, found.floorElevationMm);
-  const palette = getCurrentTrackingPalette();
-  paintAlignmentPaths(ctx, r.activePaths, project, palette);
-  paintIntersections(ctx, r.intersections, project, palette);
-  paintTooltip(ctx, tracking.point, label, project, palette);
+  paintComposedTrackingThroughProjector(
+    ctx, tracking, project, (d) => sceneDistanceToMeters(d, sceneUnits) * 1000,
+  );
 }
 
 /**

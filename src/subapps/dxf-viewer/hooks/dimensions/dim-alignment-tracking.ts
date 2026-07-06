@@ -30,7 +30,7 @@ import { resolveOrthoPolarStep } from '../drawing/drawing-handler-utils';
 import { formatSnapTrackingLabel } from '../../rendering/entities/shared/distance-label-utils';
 import { paintAlignmentPaths, paintIntersections, paintTooltip } from '../../canvas-v2/preview-canvas/tracking-paint';
 import { getCurrentTrackingPalette } from '../../canvas-v2/preview-canvas/tracking-colors';
-import { fromTransform } from '../../canvas-v2/preview-canvas/overlay-projector';
+import { fromTransform, type OverlayProjector } from '../../canvas-v2/preview-canvas/overlay-projector';
 import { sceneDistanceToMeters } from '../../bim/labels/move-readout';
 import type { SceneUnits } from '../../utils/scene-units';
 
@@ -211,6 +211,43 @@ export function paintDimActionTracking(
  * app consumer goes through `paintActionAlignmentTracking` (scene-units overload) below —
  * this generic form only exists so the tooltip unit-mapping has one seam.
  */
+/**
+ * The pre-formatted distance/angle tooltip label of a resolved `ComposedTracking`, or `null` when no
+ * angle snapped. The ONE place that maps `result.snappedAngle` + the anchor→point world distance (via the
+ * caller's `toMm`) to `formatSnapTrackingLabel` — shared by the 2D/3D paint ({@link paintComposedTrackingThroughProjector})
+ * AND the 3D wall-placement payload builder, so the label rule lives once (no per-consumer copy).
+ */
+export function composedTrackingLabel(
+  tracking: ComposedTracking,
+  toMm: (worldDist: number) => number,
+): string | null {
+  const r = tracking.result;
+  if (r.snappedAngle === null) return null;
+  const distWorld = Math.hypot(tracking.point.x - r.anchorPoint.x, tracking.point.y - r.anchorPoint.y);
+  return formatSnapTrackingLabel(r.snappedAngle, toMm(distWorld));
+}
+
+/**
+ * SSoT paint of a resolved `ComposedTracking` through ANY {@link OverlayProjector} — dashed alignment
+ * paths + intersection halos + the distance/angle tooltip. Projector-based so ONE painter serves BOTH
+ * canvases: the 2D preview canvas passes `fromTransform(transform, viewport)`, the 3D overlay dispatch
+ * passes its live-camera projector (`makePlacementOverlayProjector`). Same colour/dash/label-slot on both
+ * — the grip-drag traces are visually identical to the creation-time traces on either viewport. `toMm`
+ * maps a world distance → millimetres for the tooltip (the caller supplies the level's unit mapping).
+ */
+export function paintComposedTrackingThroughProjector(
+  ctx: CanvasRenderingContext2D,
+  tracking: ComposedTracking,
+  project: OverlayProjector,
+  toMm: (worldDist: number) => number,
+): void {
+  const palette = getCurrentTrackingPalette();
+  const r = tracking.result;
+  paintAlignmentPaths(ctx, r.activePaths, project, palette);
+  paintIntersections(ctx, r.intersections, project, palette);
+  paintTooltip(ctx, tracking.point, composedTrackingLabel(tracking, toMm), project, palette);
+}
+
 function paintGripAlignmentTracking(
   ctx: CanvasRenderingContext2D,
   tracking: ComposedTracking,
@@ -218,19 +255,7 @@ function paintGripAlignmentTracking(
   viewport: Viewport,
   toMm: (worldDist: number) => number,
 ): void {
-  const palette = getCurrentTrackingPalette();
-  const project = fromTransform(transform, viewport);
-  const r = tracking.result;
-  paintAlignmentPaths(ctx, r.activePaths, project, palette);
-  paintIntersections(ctx, r.intersections, project, palette);
-  const distWorld = Math.hypot(
-    tracking.point.x - r.anchorPoint.x,
-    tracking.point.y - r.anchorPoint.y,
-  );
-  const label = r.snappedAngle !== null
-    ? formatSnapTrackingLabel(r.snappedAngle, toMm(distWorld))
-    : null;
-  paintTooltip(ctx, tracking.point, label, project, palette);
+  paintComposedTrackingThroughProjector(ctx, tracking, fromTransform(transform, viewport), toMm);
 }
 
 /**

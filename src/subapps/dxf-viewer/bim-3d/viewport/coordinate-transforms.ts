@@ -10,6 +10,7 @@
  */
 
 import * as THREE from 'three';
+import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
 // ── NDC / Screen ↔ World ──────────────────────────────────────────────────────
 
@@ -108,6 +109,24 @@ export function getPixelWorldSize(
     return visibleHeight / heightPx;
   }
   return 1;
+}
+
+/**
+ * ADR-543/537 — SCENE units per screen pixel at a given world point, the screen-constant scale every 3D
+ * overlay derives from the live camera (ambient tracking tolerance/radius/adaptive-step, wall/grip HUD
+ * clearances). The ONE home for the `getPixelWorldSize(dist)·1000·mmToSceneUnits(units)` chain
+ * (`worldPerPixel(dist mm)` → scene units) that was inlined across the wall placement, wall-HUD, grip-HUD
+ * and grip-tracking overlays — so «scene units per px» lives once, not four times. `units='mm'` yields
+ * plan-mm per px (the plan-mm HUD path); any scene unit yields that unit per px (the scene-unit tracking path).
+ */
+export function cameraSceneUnitsPerPixel(
+  camera: THREE.Camera,
+  canvas: HTMLElement,
+  worldPoint: THREE.Vector3,
+  units: SceneUnits,
+): number {
+  const dist = camera.position.distanceTo(worldPoint);
+  return getPixelWorldSize(dist, camera, canvas) * 1000 * mmToSceneUnits(units);
 }
 
 /**

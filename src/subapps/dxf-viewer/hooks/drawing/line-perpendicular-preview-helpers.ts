@@ -17,6 +17,9 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
 import { resolveLineFaceSnapAt } from './line-preview-helpers';
+// SSoT foot-of-perpendicular / project-point-onto-line (ADR-065) — ΤΟ ΙΔΙΟ που χρησιμοποιεί ο
+// `PerpendicularSnapEngine`. ΜΗΝ ξαναγράψεις dot-product προβολή εδώ (N.0.2).
+import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
 import type { PerpendicularAxisLock } from '../../bim/placement/perpendicular-axis-lock-store';
 
 /**
@@ -34,14 +37,15 @@ export function resolvePerpendicularAxisLock(
 }
 
 /**
- * 2ο κλικ / hover — προβάλλει το `point` πάνω στον κλειδωμένο κάθετο άξονα (`lock.base` + t·`lock.dir`),
- * όπου `t` = προσημασμένη προβολή (dot-product). Κρατά τη γραμμή ΠΑΝΤΑ κάθετη· το πρόσημο του `t`
- * δίνει την πλευρά, το μέτρο το μήκος. Pure.
+ * 2ο κλικ / hover — προβάλλει το `point` πάνω στον **άπειρο** κλειδωμένο κάθετο άξονα (foot of
+ * perpendicular). Κρατά τη γραμμή ΠΑΝΤΑ κάθετη· η θέση κατά μήκος του άξονα δίνει πλευρά + μήκος.
+ * Delegates στο SSoT `getNearestPointOnLine` (`clampToSegment=false` → άπειρη ευθεία) — ΚΑΝΕΝΑ νέο
+ * projection math (το `dir` είναι μοναδιαίο, οπότε `base → base+dir` ορίζει τον ίδιο άξονα). Pure.
  */
 export function projectOntoPerpendicularAxis(
   point: Readonly<Point2D>,
   lock: PerpendicularAxisLock,
 ): Point2D {
-  const t = (point.x - lock.base.x) * lock.dir.x + (point.y - lock.base.y) * lock.dir.y;
-  return { x: lock.base.x + t * lock.dir.x, y: lock.base.y + t * lock.dir.y };
+  const axisEnd: Point2D = { x: lock.base.x + lock.dir.x, y: lock.base.y + lock.dir.y };
+  return getNearestPointOnLine(point, lock.base, axisEnd, false);
 }
