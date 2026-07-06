@@ -33,6 +33,7 @@ import { resolveActionAlignmentTracking } from '../../../hooks/dimensions/dim-al
 import {
   gripInfoToAlignmentRole,
   resolveGripAlignmentAnchors,
+  type GripAlignmentEntityView,
 } from '../../../systems/grip/grip-drag-alignment-role';
 import { getImmediateSnap } from '../../../systems/cursor/ImmediateSnapStore';
 import {
@@ -65,7 +66,7 @@ function paintGripTrackingOverlay({ ctx, camera, canvas }: BimOverlayFrame): voi
   const cursorNative = planMmToScenePoint(drag.livePlanPos, sceneUnits);
   const anchorNative = planMmToScenePoint(grip.position, sceneUnits);
   const role = gripInfoToAlignmentRole(grip, anchorNative);
-  const anchors = resolveGripAlignmentAnchors(found.entity, role);
+  const anchors = resolveGripAlignmentAnchors(found.entity as unknown as GripAlignmentEntityView, role);
   if (!anchors) return;
 
   // Screen scale at the cursor (native units per px), derived from the live camera — mirror of the

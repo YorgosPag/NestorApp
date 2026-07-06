@@ -26,7 +26,7 @@ import { paintGhostFaceDimensions } from '../../canvas-v2/preview-canvas/ghost-f
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { drawGradientOriginMarker } from './grip-ghost-preview-draw-helpers';
 import { paintActionAlignmentTracking, resolveActionAlignmentTracking } from '../dimensions/dim-alignment-tracking';
-import { resolveGripAlignmentAnchors, type GripAlignmentRole } from '../../systems/grip/grip-drag-alignment-role';
+import { resolveGripAlignmentAnchors, type GripAlignmentRole, type GripAlignmentEntityView } from '../../systems/grip/grip-drag-alignment-role';
 import { getFootprintReshapeAlignmentAnchors, resolveActiveFootprintGripKind } from '../../systems/grip/footprint-reshape-anchors';
 import { getBimCharacteristicPointsOfCategory } from '../../bim/utils/bim-characteristic-points';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
@@ -128,7 +128,8 @@ export function paintGripActionAlignmentTraces(
     edgeVertexIndices: dp.edgeVertexIndices,
     lineGripKind: dp.lineGripKind,
   };
-  let alignAnchors: Point2D[] | null = resolveGripAlignmentAnchors(entity, role);
+  let alignAnchors: Point2D[] | null =
+    resolveGripAlignmentAnchors(entity as unknown as GripAlignmentEntityView, role);
   if (!alignAnchors) {
     const footprintKind = resolveActiveFootprintGripKind(dp);
     if (footprintKind) {

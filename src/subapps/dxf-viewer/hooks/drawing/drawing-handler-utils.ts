@@ -4,13 +4,20 @@ import type { Entity } from '../../types/entities';
 import type { DetectableEntity } from '../../systems/dimensions/dim-smart-detector';
 import { getHoveredEntity } from '../../systems/hover/HoverStore';
 import { isDimLineRefPhase } from '../dimensions/dim-skip-snap';
-import { ExtendedSnapType } from '../../snapping/extended-types';
+import { ExtendedSnapType, isVisibleSnapMode } from '../../snapping/extended-types';
 import { findHostsAtPoint } from '../../systems/dimensions/dim-intersection-host-finder';
 import { applyPolar, type PolarSnapResult } from '../../systems/constraints/polar-utils';
 import { polarTrackingStore } from '../../systems/constraints/polar-tracking-store';
 import { applyAlongAxisStepSnap } from '../../bim/grips/grip-step-quantize';
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { TrackingPointStore } from '../../systems/tracking/TrackingPointStore';
+// ADR-508 §line-cyan / ADR-060 — commit-time «line family» flush + κάθετο κλείδωμα (κοινός εγκέφαλος με το preview).
+import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
+import { applyLengthAngleLock } from '../../systems/dynamic-input/length-angle-lock';
+import { resolveLineCommitPoint } from './line-preview-helpers';
+import { resolvePerpendicularAxisLock, projectOntoPerpendicularAxis } from './line-perpendicular-preview-helpers';
+import { perpendicularAxisLockStore } from '../../bim/placement/perpendicular-axis-lock-store';
+import type { SceneUnits } from '../../utils/scene-units';
 
 /** Snap modes whose snapped point lies ON a single host curve (host recoverable). */
 const POINT_ON_CURVE_SNAPS = new Set<ExtendedSnapType>([
@@ -173,6 +180,60 @@ export function commitM2PClick(opts: {
   if (opts.onMeasurementComplete && MEASURE_TOOLS_FOR_GUIDES.has(opts.activeTool)) {
     opts.onMeasurementComplete([...opts.tempPoints, midPoint], opts.activeTool);
   }
+}
+
+/**
+ * SSoT commit-time transform για την «οικογένεια γραμμής» (`line` + `line-perpendicular`), κοινή με το
+ * preview (`drawing-hover-handler`) → **preview ≡ commit by construction**. Ζει εδώ (όχι inline στο
+ * `useDrawingHandlers`) ώστε το hook να μένει κάτω από το όριο N.7.1.
+ *
+ *  · **Κλικ 1** (`tempPointsLength === 0`): flush/κάθετο κούμπωμα στην παρειά. «Πραγματική κορυφή νικάει» —
+ *    ενεργό ΟΡΑΤΟ OSNAP παρακάμπτει το flush (η αρχή μένει ακριβώς στη γωνία). Για `line` → `resolveLineCommitPoint`.
+ *    Για `line-perpendicular` → καταγράφει τον κάθετο άξονα (`perpendicularAxisLockStore.set`) + βάση = flush foot.
+ *  · **Κλικ 2** (`line-perpendicular`, `tempPointsLength === 1`): προβολή στον κλειδωμένο κάθετο άξονα + typed
+ *    length (Radial Command Ring), μετά `reset()` του lock (καταναλώθηκε).
+ *  · **No-op** για κάθε άλλο εργαλείο (επιστρέφει `point` αυτούσιο).
+ */
+export function resolveLineFamilyCommitPoint(
+  activeTool: ToolType,
+  point: Pt,
+  tempPointsLength: number,
+  lastRef: Pt | undefined,
+  sceneUnits: SceneUnits,
+): Pt {
+  if (activeTool !== 'line' && activeTool !== 'line-perpendicular') return point;
+  let finalPoint = point;
+
+  // ── Κλικ 2 της «κάθετης γραμμής»: hard κάθετο κλείδωμα + typed length, μετά consume το lock. ──
+  if (activeTool === 'line-perpendicular' && tempPointsLength === 1) {
+    const lock = perpendicularAxisLockStore.get();
+    if (lock) finalPoint = projectOntoPerpendicularAxis(finalPoint, lock);
+    finalPoint = applyLengthAngleLock(finalPoint, lastRef ?? lock?.base ?? null);
+    perpendicularAxisLockStore.reset();
+    return finalPoint;
+  }
+
+  // ── length/angle lock (Δαχτυλίδι Εντολών) ΠΡΙΝ το flush — ίδιο με το preview (WYSIWYG). ──
+  if (lastRef) finalPoint = applyLengthAngleLock(finalPoint, lastRef);
+
+  // ── Κλικ 1: flush στην παρειά, εκτός αν κλειδώνει ΟΡΑΤΟ OSNAP (πραγματική κορυφή νικάει). ──
+  if (tempPointsLength === 0) {
+    const lockedSnap = getImmediateSnap();
+    const visibleOsnap = !!lockedSnap?.found && isVisibleSnapMode(lockedSnap.mode);
+    if (visibleOsnap) {
+      // Κορυφή νικάει → καμία παρειά, κανένας κάθετος άξονας να κλειδώσει.
+      if (activeTool === 'line-perpendicular') perpendicularAxisLockStore.reset();
+      return finalPoint;
+    }
+    if (activeTool === 'line-perpendicular') {
+      const lock = resolvePerpendicularAxisLock(finalPoint, sceneUnits);
+      if (lock) { finalPoint = lock.base; perpendicularAxisLockStore.set(lock); }
+      else perpendicularAxisLockStore.reset(); // καμία παρειά κοντά → ελεύθερη γραμμή (χωρίς κάθετο κλείδωμα)
+    } else {
+      finalPoint = resolveLineCommitPoint(finalPoint, sceneUnits);
+    }
+  }
+  return finalPoint;
 }
 
 /** AutoCAD-style hard ortho: projects point onto H or V axis from referencePoint */

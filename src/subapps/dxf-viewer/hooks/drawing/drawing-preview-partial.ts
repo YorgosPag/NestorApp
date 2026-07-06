@@ -46,7 +46,7 @@ export function applyPreviewStyling(
   const isStylableTool =
     tool === 'polygon' || tool === 'polyline' || tool === 'measure-angle' ||
     tool === 'measure-angle-measuregeom' ||
-    tool === 'measure-area' || tool === 'line' || tool === 'measure-distance' ||
+    tool === 'measure-area' || tool === 'line' || tool === 'line-perpendicular' || tool === 'measure-distance' ||
     tool === 'measure-distance-continuous' || tool === 'rectangle' ||
     tool === 'circle' || tool === 'circle-diameter' || tool === 'circle-2p-diameter' ||
     tool === 'circle-3p' || tool === 'circle-chord-sagitta' || tool === 'circle-2p-radius' ||
@@ -75,7 +75,7 @@ export function applyPreviewStyling(
     // το aligned HUD μέσω του ΚΟΙΝΟΥ `paintWallHudCore`.
     // ADR-508 §line-cyan — ΟΧΙ HUD πριν το 1ο κλικ (`worldPoints = [cursor]` → length 1): το κάθετο
     // stub-φάντασμα δείχνει μόνο κυανές, ΟΧΙ HUD (mirror του έξυπνου φαντάσματος τοίχου, wantHud=false).
-    if (tool === 'line' && worldPoints.length >= 2) {
+    if ((tool === 'line' || tool === 'line-perpendicular') && worldPoints.length >= 2) {
       extLine.liveDimHud = buildSegmentHudMeta(extLine.start, extLine.end, 'mm');
       // ADR-508 §line-cyan — listening dims ΚΑΙ μετά το 1ο κλικ (Revit temp dims), decoupled από το flush:
       // μόνο οι διαστάσεις, ΚΑΜΙΑ μετακίνηση σημείου → ελεύθερη περιστροφή ανέπαφη.

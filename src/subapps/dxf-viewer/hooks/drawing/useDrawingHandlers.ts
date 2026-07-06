@@ -29,14 +29,10 @@ import { useCadToggles } from '../common/useCadToggles';
 import type { Entity } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
 import { mmToSceneUnits, resolveSceneUnits } from '../../utils/scene-units';
-// ADR-508 §line-cyan — commit-time flush/κάθετο κούμπωμα γραμμής (ίδιος εγκέφαλος με το preview).
-import { resolveLineCommitPoint } from './line-preview-helpers';
-import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
-import { isVisibleSnapMode } from '../../snapping/extended-types'; // «κορυφή νικάει» flush-gate (SSoT)
 // ADR-508 §line-cyan — η γραμμή συλλέγει τους ΙΔΙΟΥΣ face-snap στόχους σκηνής με τον τοίχο (κοινό store).
 import { useSceneSnapTargetSync } from './use-scene-snap-target-sync';
-// ADR-513 §line-parity — length/angle lock της γραμμής στο commit (mirror του preview & του τοίχου).
-import { applyLengthAngleLock } from '../../systems/dynamic-input/length-angle-lock';
+// ADR-060 — «Κάθετη γραμμή»: reset του κλειδωμένου κάθετου άξονα σε αλλαγή εργαλείου / cancel.
+import { perpendicularAxisLockStore } from '../../bim/placement/perpendicular-axis-lock-store';
 import { useUnifiedDrawing } from './useUnifiedDrawing';
 import { useSnapContext } from '../../snapping/context/SnapContext';
 import { useSnapManager } from '../../snapping/hooks/useSnapManager';
@@ -70,7 +66,7 @@ import { useCenterMarkCreate } from '../dimensions/useCenterMarkCreate';
 // ADR-357 Phase 7: Snap Override orchestrator (single-use snap modifiers)
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { ExtendedSnapType } from '../../snapping/extended-types';
-import { handleToolCompletion, resolveOrthoPolarStep, MEASURE_TOOLS_FOR_GUIDES, resolveDimPickContext, performDoubleClickFinish, commitM2PClick } from './drawing-handler-utils';
+import { handleToolCompletion, resolveOrthoPolarStep, MEASURE_TOOLS_FOR_GUIDES, resolveDimPickContext, performDoubleClickFinish, commitM2PClick, resolveLineFamilyCommitPoint } from './drawing-handler-utils';
 // ADR-562 Φ9 / ADR-357 — dim-creation alignment traces (commit parity with the hover preview).
 import { resolveDimAlignmentTracking } from '../dimensions/dim-alignment-tracking';
 import { dimensionCreateStore } from '../../stores/DimensionCreateStore';
@@ -109,10 +105,18 @@ export function useDrawingHandlers(
   const refreshSnapTargets = useSceneSnapTargetSync(() => currentScene?.entities ?? []);
   // refresh on line-activate ΚΑΙ όταν αλλάζει το πλήθος οντοτήτων (νέα γραμμή committed στο ίδιο session —
   // το γενικό `completeEntity` δεν εκπέμπει `drawing:entity-created`, οπότε δεν αρκεί ο εσωτερικός listener).
-  const lineSceneEntityCount = activeTool === 'line' ? (currentScene?.entities.length ?? 0) : -1;
+  // ADR-060 — η «κάθετη γραμμή» χρειάζεται ΤΟΥΣ ΙΔΙΟΥΣ face-snap στόχους με τη γραμμή· αλλιώς άδειο cache
+  // στην πρώτη ενεργοποίηση (αν δεν είχε χρησιμοποιηθεί ποτέ το `line` στο session) → καμία παρειά → κανένα ghost.
+  const isLineFamilyTool = activeTool === 'line' || activeTool === 'line-perpendicular';
+  const lineSceneEntityCount = isLineFamilyTool ? (currentScene?.entities.length ?? 0) : -1;
   useEffect(() => {
-    if (activeTool === 'line') refreshSnapTargets();
-  }, [activeTool, lineSceneEntityCount, refreshSnapTargets]);
+    if (isLineFamilyTool) refreshSnapTargets();
+  }, [isLineFamilyTool, lineSceneEntityCount, refreshSnapTargets]);
+  // ADR-060 — καθάρισε τον κλειδωμένο κάθετο άξονα όταν φεύγουμε από το εργαλείο (catch-all πέρα από το
+  // consume στο κλικ-2), ώστε να μη «διαρρέει» κλείδωμα σε επόμενη ενεργοποίηση/άλλο εργαλείο.
+  useEffect(() => {
+    if (activeTool !== 'line-perpendicular') perpendicularAxisLockStore.reset();
+  }, [activeTool]);
 
   // Drawing system
   const {
@@ -362,25 +366,17 @@ export function useDrawingHandlers(
     });
     if (committedTracking) finalPoint = committedTracking.point;
 
-    // ADR-513 §line-parity — length/angle lock (Δαχτυλίδι Εντολών) ΠΡΙΝ το flush face-snap, ΑΚΡΙΒΩΣ
-    // όπως το preview (drawing-hover-handler:268 → updatePreview → generateLinePreview). Χωρίς αυτό, lock
-    // μέσω δαχτυλιδιού + κλικ θα κατέληγε στο μη-κλειδωμένο snapped σημείο → preview ≢ commit. No-op όταν
-    // δεν υπάρχει ενεργό lock (ο helper επιστρέφει το σημείο αυτούσιο).
-    if (activeTool === 'line' && lastRef) {
-      finalPoint = applyLengthAngleLock(finalPoint, lastRef);
-    }
-
-    // ADR-508 §line-cyan — flush/κάθετο κούμπωμα της ΓΡΑΜΜΗΣ στο **1ο κλικ** (αρχή flush στην παρειά,
-    // ΙΔΙΟΣ εγκέφαλος με preview → preview ≡ commit). Μετά το 1ο κλικ / μακριά από μέλος → αυτούσιο.
-    // «Πραγματική κορυφή νικάει» (2026-07-04): locked ορατό OSNAP (fux) παρακάμπτει το flush → η αρχή
-    // μένει ΑΚΡΙΒΩΣ στη γωνία. Χωρίς ορατό snap (ή grid/guide silent) → το flush aid δουλεύει κανονικά.
-    if (activeTool === 'line' && drawingState.tempPoints.length === 0) {
-      const lockedSnap = getImmediateSnap();
-      const visibleOsnap = !!lockedSnap?.found && isVisibleSnapMode(lockedSnap.mode);
-      if (!visibleOsnap) {
-        finalPoint = resolveLineCommitPoint(finalPoint, resolveSceneUnits(currentScene));
-      }
-    }
+    // ADR-508 §line-cyan / ADR-060 §line-family — commit-time length/angle lock + flush/κάθετο κλείδωμα
+    // για `line` ΚΑΙ `line-perpendicular`, μέσω του ΚΟΙΝΟΥ SSoT helper (ίδιος εγκέφαλος με το preview →
+    // preview ≡ commit). No-op για κάθε άλλο εργαλείο. Ζει στο drawing-handler-utils ώστε το hook να
+    // μένει κάτω από το όριο N.7.1.
+    finalPoint = resolveLineFamilyCommitPoint(
+      activeTool,
+      finalPoint,
+      drawingState.tempPoints.length,
+      lastRef,
+      resolveSceneUnits(currentScene),
+    );
 
     const transformUtils = canvasOps.getTransformUtils();
     const completed = addPoint(finalPoint, transformUtils);
@@ -457,6 +453,8 @@ export function useDrawingHandlers(
     cancelDrawing();
     // ADR-357 Phase 4: ESC / cancel decays acquired tracking points.
     TrackingPointStore.clearAll();
+    // ADR-060: ESC/cancel στη μέση κάθετης γραμμής → καθάρισε τον κλειδωμένο κάθετο άξονα.
+    perpendicularAxisLockStore.reset();
     // ADR-357 Phase 7: ESC clears any pending snap override.
     SnapOverrideOrchestrator.clearOverride();
     // 🏢 ENTERPRISE: Force select on cancel (user explicitly cancelled)
