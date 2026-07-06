@@ -90,26 +90,27 @@ describe('useCopyTool', () => {
       });
       const { result } = renderHook(() => useCopyTool(props));
       expect(result.current.phase).toBe('awaiting-base-point');
+      expect(result.current.isCollectingInput).toBe(true);
       expect(onToolChange).not.toHaveBeenCalledWith('select');
     });
 
-    it('reverts to select when nothing in the selection resolves to an entity', () => {
-      const onToolChange = jest.fn();
-      const props = defaultProps({
-        activeTool: 'copy',
-        selectedEntityIds: ['ghost_1'],
-        levelManager: makeLevel([WALL_ENTITY]),
-        onToolChange,
-      });
-      renderHook(() => useCopyTool(props));
-      expect(onToolChange).toHaveBeenCalledWith('select');
-    });
-
-    it('reverts to select when the selection is empty', () => {
+    it('stays in awaiting-entity when activated WITHOUT a selection (never silently reverts)', () => {
       const onToolChange = jest.fn();
       const props = defaultProps({ activeTool: 'copy', selectedEntityIds: [], onToolChange });
-      renderHook(() => useCopyTool(props));
-      expect(onToolChange).toHaveBeenCalledWith('select');
+      const { result } = renderHook(() => useCopyTool(props));
+      expect(result.current.phase).toBe('awaiting-entity');
+      expect(result.current.isCollectingInput).toBe(false); // clicks fall through to selection
+      expect(onToolChange).not.toHaveBeenCalledWith('select');
+    });
+
+    it('advances awaiting-entity → awaiting-base-point once an entity gets selected', () => {
+      const { result, rerender } = renderHook((p: Parameters<typeof useCopyTool>[0]) => useCopyTool(p), {
+        initialProps: defaultProps({ activeTool: 'copy', selectedEntityIds: [] }),
+      });
+      expect(result.current.phase).toBe('awaiting-entity');
+      rerender(defaultProps({ activeTool: 'copy', selectedEntityIds: ['wall_1'] }));
+      expect(result.current.phase).toBe('awaiting-base-point');
+      expect(result.current.isCollectingInput).toBe(true);
     });
   });
 

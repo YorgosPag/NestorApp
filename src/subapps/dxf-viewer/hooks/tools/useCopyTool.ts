@@ -5,10 +5,18 @@
  * groups). Reachable from the ribbon «Αντιγραφή» button and the C+O chord —
  * both drive `activeTool === 'copy'`.
  *
- *   idle → awaiting-base-point (on activate with a non-empty selection)
+ *   idle → awaiting-entity     (activated with NO selection — clicks pass through
+ *                               for normal selection, mirrors the Move tool)
+ *        → awaiting-base-point (selection present)
  *        → awaiting-target-point (after base click)
  *        → clone selection at (target − base) delta → loop (continuous)
  *        → ESC → select mode
+ *
+ * Mirrors {@link useMoveTool}'s activation FSM: when activated WITHOUT a
+ * selection the tool stays alive in `awaiting-entity` (the ribbon button no
+ * longer silently reverts to 'select' — that was invisible «δεν αντιγράφει»).
+ * `isCollectingInput` gates the canvas click routing so `awaiting-entity` clicks
+ * flow to normal selection instead of being swallowed as base/target picks.
  *
  * The clone itself goes through the SHARED clone SSoT `buildEntityCloneCommand`
  * — the SAME path the clipboard (Ctrl+V) and the Ctrl+drag body copy use — so
@@ -16,9 +24,7 @@
  * GlobalId, DXF geometry gets an id-swap clone, and both persist through the one
  * `PasteEntitiesCommand` (N.0.2 — one clone path, no divergence).
  *
- * Any selected id that resolves to a live scene entity is copyable. If the
- * selection resolves to nothing → the tool reverts to 'select' immediately.
- *
+ * @see hooks/tools/useMoveTool.ts — the activation-FSM pattern this mirrors
  * @see bim/transforms/build-entity-clone-command.ts — unified clone SSoT (BIM + DXF)
  * @see core/commands/entity-commands/PasteEntitiesCommand.ts — undoable commit
  */
@@ -35,7 +41,11 @@ import type { useLevels } from '../../systems/levels';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type CopyPhase = 'idle' | 'awaiting-base-point' | 'awaiting-target-point';
+export type CopyPhase =
+  | 'idle'
+  | 'awaiting-entity'
+  | 'awaiting-base-point'
+  | 'awaiting-target-point';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -52,6 +62,9 @@ export interface UseCopyToolProps {
 
 export interface UseCopyToolReturn {
   isActive: boolean;
+  /** True only while collecting base/target picks — gates canvas click routing so
+   *  `awaiting-entity` clicks fall through to normal selection (mirrors Move). */
+  isCollectingInput: boolean;
   phase: CopyPhase;
   handleCopyClick: (worldPoint: Point2D) => void;
   handleCopyEscape: () => void;
@@ -71,9 +84,14 @@ export function useCopyTool({
   const [phase, setPhase] = useState<CopyPhase>('idle');
   const [basePoint, setBasePoint] = useState<Point2D | null>(null);
 
-  /** Snapshot of copyable entity IDs captured on activation — stable throughout the session. */
-  const idsRef = useRef<string[]>([]);
   const wasActiveRef = useRef(false);
+  const prevEntityCountRef = useRef(0);
+
+  const hasAnySelected = selectedEntityIds.length > 0;
+  const isCollectingInput =
+    isActive &&
+    hasAnySelected &&
+    (phase === 'awaiting-base-point' || phase === 'awaiting-target-point');
 
   const getSceneManager = useCallback(() => {
     if (!levelManager.currentLevelId) return null;
@@ -84,41 +102,36 @@ export function useCopyTool({
     );
   }, [levelManager]);
 
-  // ── State machine: activate / deactivate ─────────────────────────────────
-
+  // ── State machine: activate / react to selection (mirrors useMoveTool) ────
   useEffect(() => {
-    if (isActive && !wasActiveRef.current) {
-      const scene = levelManager.currentLevelId
-        ? levelManager.getLevelScene(levelManager.currentLevelId)
-        : null;
+    const toolIsCopy = activeTool === 'copy';
+    const hasEntities = selectedEntityIds.length > 0;
 
-      // Any id that resolves to a live entity is copyable (DXF + BIM + group).
-      const ids = selectedEntityIds.filter(
-        (id) => scene?.entities.some((x) => x.id === id) ?? false,
-      );
-
-      idsRef.current = ids;
-
-      if (ids.length === 0) {
-        // Nothing copyable selected → revert immediately.
-        onToolChange?.('select');
-      } else {
-        setPhase('awaiting-base-point');
-        setBasePoint(null);
-      }
-    } else if (!isActive && wasActiveRef.current) {
+    if (toolIsCopy && !wasActiveRef.current) {
+      // Activated: skip straight to base-point when a selection exists, else wait
+      // for the user to pick an entity (NEVER silently revert to 'select').
+      setPhase(hasEntities ? 'awaiting-base-point' : 'awaiting-entity');
+      setBasePoint(null);
+    } else if (!toolIsCopy && wasActiveRef.current) {
       setPhase('idle');
       setBasePoint(null);
-      idsRef.current = [];
+    } else if (toolIsCopy && wasActiveRef.current) {
+      const prevCount = prevEntityCountRef.current;
+      if (prevCount === 0 && hasEntities && phase === 'awaiting-entity') {
+        setPhase('awaiting-base-point');
+      } else if (prevCount > 0 && !hasEntities) {
+        setPhase('awaiting-entity');
+        setBasePoint(null);
+      }
     }
 
-    wasActiveRef.current = isActive;
-  }, [isActive, selectedEntityIds, levelManager, onToolChange]);
+    wasActiveRef.current = toolIsCopy;
+    prevEntityCountRef.current = selectedEntityIds.length;
+  }, [activeTool, selectedEntityIds.length, phase]);
 
   // ── Click: base point → target point → clone (continuous loop) ───────────
-
   const handleCopyClick = useCallback((worldPoint: Point2D): void => {
-    if (!isActive) return;
+    if (!isCollectingInput) return;
 
     if (phase === 'awaiting-base-point') {
       setBasePoint(worldPoint);
@@ -133,39 +146,39 @@ export function useCopyTool({
         x: worldPoint.x - basePoint.x,
         y: worldPoint.y - basePoint.y,
       };
-      // Resolve the frozen selection to live entities, then clone through the
-      // shared BIM+DXF SSoT (id regeneration + host rewire + persistence inside).
-      const sources = idsRef.current
+      // Resolve the LIVE selection to entities, then clone through the shared
+      // BIM+DXF SSoT (id regeneration + host rewire + persistence inside).
+      const sources = selectedEntityIds
         .map((id) => sm.getEntity(id))
         .filter((e): e is SceneEntity => e !== null && e !== undefined);
       const result = buildEntityCloneCommand(sources, delta, sm);
       if (result) executeCommand(result.command);
       // Continuous: keep the base point, loop for the next target.
     }
-  }, [isActive, phase, basePoint, getSceneManager, executeCommand]);
+  }, [isCollectingInput, phase, basePoint, getSceneManager, selectedEntityIds, executeCommand]);
 
   // ── Escape: exit to select ────────────────────────────────────────────────
-
   const handleCopyEscape = useCallback((): void => {
     setPhase('idle');
     setBasePoint(null);
-    idsRef.current = [];
     onToolChange?.('select');
   }, [onToolChange]);
 
   // ── Tool hint override ────────────────────────────────────────────────────
-
   useEffect(() => {
     if (!isActive || phase === 'idle') {
       toolHintOverrideStore.setOverride(null);
       return;
     }
-    const key = phase === 'awaiting-base-point'
-      ? 'dxf-viewer-guides:bimCopyTool.selectBasePoint'
-      : 'dxf-viewer-guides:bimCopyTool.selectTargetPoint';
+    const key =
+      phase === 'awaiting-entity'
+        ? 'dxf-viewer-guides:moveTool.selectEntity'
+        : phase === 'awaiting-base-point'
+          ? 'dxf-viewer-guides:bimCopyTool.selectBasePoint'
+          : 'dxf-viewer-guides:bimCopyTool.selectTargetPoint';
     toolHintOverrideStore.setOverride(i18next.t(key));
     return () => { toolHintOverrideStore.setOverride(null); };
   }, [isActive, phase]);
 
-  return { isActive, phase, handleCopyClick, handleCopyEscape };
+  return { isActive, isCollectingInput, phase, handleCopyClick, handleCopyEscape };
 }

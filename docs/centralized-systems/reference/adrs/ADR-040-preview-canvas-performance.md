@@ -71,6 +71,9 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-06 — 🔧 Copy tool click-gate `isActive`→`isCollectingInput` (ADR-577 follow-up, CHECK 6B touch)
+**Τι:** το wiring του copy tool στον orchestrator διορθώθηκε ώστε το `copyIsActive` click-gate να διαβάζει `copyTool.isCollectingInput` (η φάση που δέχεται base/target picks) αντί για το γενικό `isActive`. **Συμμόρφωση ADR-040:** καθαρά prop-value swap στο ήδη υπάρχον pass-through — **καμία** νέα subscription/`useSyncExternalStore` στον orchestrator (CHECK 6C ασφαλές)· μηδέν αλλαγή σε micro-leaf topology / bitmap cache / cache key. Co-staged: ADR-040. 🟡 UNCOMMITTED.
+
 ### 2026-07-06 — ✏️ RENAME `bimCopyTool`→`copyTool` (ADR-577 unified copy, CHECK 6B touch, μηδέν αρχιτεκτονική αλλαγή)
 **Τι:** το BIM Copy tool ενοποιήθηκε σε ένα `useCopyTool` (ADR-577)· ο ορχηστρωτής + το click-types interface ακολούθησαν το rename `bimCopyTool→copyTool` / `bimCopy*→copy*`. **Συμμόρφωση ADR-040:** καθαρά ονοματολογικό — το `CanvasSection.tsx` απλώς destructure-άρει `copyTool` από `useModifyTools` και το περνά ως `copyIsActive`/`handleCopyClick`/`handleCopyEscape` στο υπάρχον click/escape pipeline (ίδιο pass-through pattern με τα υπόλοιπα modify tools)· το `canvas-click-types.ts` μετονόμασε τα `bimCopyIsActive`/`handleBimCopyClick` optional props. **ΚΑΜΙΑ** νέα `useSyncExternalStore`/high-freq subscription στον orchestrator (CHECK 6C ασφαλές)· μηδέν αλλαγή σε micro-leaf subscriber topology, bitmap cache ή cache key. Co-staged: ADR-040 + ADR-577. 🟡 UNCOMMITTED.
 
