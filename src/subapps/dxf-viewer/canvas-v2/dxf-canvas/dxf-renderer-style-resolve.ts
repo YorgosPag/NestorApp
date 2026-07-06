@@ -23,7 +23,11 @@ import { lineweightToPx, isConcreteLineweight } from '../../config/lineweight-is
 // ADR-510 Φ2G — global "Show Lineweight" toggle (AutoCAD LWDISPLAY). The single
 // gate lives here so BOTH the LINE batch path and the per-entity path honour it.
 import { getShowLineweight } from '../../stores/LineweightDisplayStore';
-import { resolveAnyDashMm } from '../../config/linetype-aliases';
+// ADR-362 — ONE name→pattern SSoT (Unified catalog ∪ runtime registry customs),
+// shared with the dim stroke resolver + linetype thumbnail. Was `resolveAnyDashMm`
+// (catalog-only) → the no-layer fallback silently rendered user-created custom
+// linetypes as solid; this closes that gap without changing catalog behaviour.
+import { resolveLinetypePatternMm } from '../../rendering/linetype-dash-resolver';
 import { getPrintColorPolicy, applyPlotColor } from '../../config/print-color-policy';
 import { adaptEntityColorForCanvas } from '../../config/adaptive-entity-color';
 import { getIsolateEffectsSnapshot } from '../../systems/isolate/IsolateEffectsStore';
@@ -92,10 +96,11 @@ export function resolveEntityRenderStyle(
       ? applyPlotColor(entity.color ?? null, entity.colorAci ?? null, printPolicy)
       : adaptEntityColorForCanvas(entity.color || CAD_UI_COLORS.entity.default),
     lineWidthPx: gatePx(ownLineweightPx || (entity.lineWidth || 1)),
-    // ADR-510 Φ2E — even without a layer/cascade context, the entity's OWN
-    // linetype must still render dashed. Reuses the SAME `resolveAnyDashMm` SSoT
-    // as the BIM renderers — ByLayer/ByBlock/Continuous/unknown ⇒ [] (solid).
-    dashMm: resolveAnyDashMm(entity.linetypeName),
+    // ADR-510 Φ2E / ADR-362 — even without a layer/cascade context, the entity's
+    // OWN linetype must still render dashed. `resolveLinetypePatternMm` = the ONE
+    // catalog∪registry SSoT (also resolves user-created customs) — ByLayer/ByBlock/
+    // Continuous/unknown ⇒ [] (solid).
+    dashMm: resolveLinetypePatternMm(entity.linetypeName),
     alpha: 1,
   };
   if (!layersById) return applyIsolateAlpha(fallback, entity);

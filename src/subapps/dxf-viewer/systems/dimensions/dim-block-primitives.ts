@@ -27,7 +27,7 @@
 import type { DimensionEntity, DimStyle } from '../../types/dimension';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ArrowheadPoint } from './dim-arrowhead-blocks';
-import { getArrowheadBlock } from './dim-arrowhead-blocks';
+import { getArrowheadBlock, resolveArrowBlockNames } from './dim-arrowhead-blocks';
 import {
   buildDimensionGeometry,
   type AngularDimGeometry,
@@ -111,9 +111,14 @@ export function buildDimensionBlockPrimitives(
   }
 
   // 3) Arrowheads (size = dimasz × dimscale, like the renderer's unitPx without the view scale).
+  // ADR-362 §7 — share the `dimblk{1,2} || dimblk` fallback SSoT with both canvas
+  // renderers. This DXF-export path intentionally does NOT honor the per-side
+  // `suppressArrow{1,2}` visibility gate (arrowhead visibility does not round-trip
+  // through DXF — see `dxf-dimstyle-writer`), so it keeps its own `pushArrowhead`.
   const arrowSizeWorld = style.dimasz * style.dimscale;
-  pushArrowhead(out, style.dimblk1 || style.dimblk, g.arrowAnchor1, g.arrowDirection1, arrowSizeWorld, 1);
-  pushArrowhead(out, style.dimblk2 || style.dimblk, g.arrowAnchor2, g.arrowDirection2, arrowSizeWorld, 2);
+  const { block1, block2 } = resolveArrowBlockNames(style);
+  pushArrowhead(out, block1, g.arrowAnchor1, g.arrowDirection1, arrowSizeWorld, 1);
+  pushArrowhead(out, block2, g.arrowAnchor2, g.arrowDirection2, arrowSizeWorld, 2);
 
   // 4) Measured text (centered on textAnchor, rotated to textRotation).
   const text = resolveDimensionText(g, style, entity.userText);

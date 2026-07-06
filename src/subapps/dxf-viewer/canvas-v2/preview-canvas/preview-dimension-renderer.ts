@@ -38,7 +38,7 @@ import {
   type DimLineSegment,
   type RadialDimGeometry,
 } from '../../systems/dimensions/dim-geometry-builder';
-import { renderArrowhead } from '../../rendering/entities/dimension/dim-arrowhead-renderer';
+import { renderDimArrowheadPair } from '../../rendering/entities/dimension/dim-arrowhead-renderer';
 import { renderDimensionText } from '../../rendering/entities/dimension/dim-text-renderer';
 // ADR-362 Phase M — text-fit resolver (SRP split): decides the DIMATFIT/DIMTMOVE
 // fit via the shared `assembleDimFit` SSoT so preview === committed decision.
@@ -46,7 +46,7 @@ import { computePreviewFit, type PreviewFit } from './preview-dimension-fit';
 import { resolveEffectiveDimscale } from '../../utils/annotation-scale';
 import { addPoints, scalePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
-import { getArrowheadBlock } from '../../systems/dimensions/dim-arrowhead-blocks';
+import { resolveArrowBlockNames } from '../../systems/dimensions/dim-arrowhead-blocks';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { CAD_UI_COLORS, OPACITY } from '../../config/color-config';
 import { LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
@@ -310,31 +310,25 @@ function drawArrowheads(
   opts: ResolvedOpts,
   fit?: PreviewFit | null,
 ): void {
-  const block1Name = params.style.dimblk1 || params.style.dimblk;
-  const block2Name = params.style.dimblk2 || params.style.dimblk;
-  const block1 = getArrowheadBlock(block1Name);
-  const block2 = getArrowheadBlock(block2Name);
+  const { block1, block2 } = resolveArrowBlockNames(params.style);
   const unitPx = params.style.dimasz * params.style.dimscale * viewScaleOf(params);
-  const a1 = toScreen(params, geometry.arrowAnchor1);
-  const a2 = toScreen(params, geometry.arrowAnchor2);
-  // ADR-362 Phase M — flipped directions when DIMATFIT pushes arrows outside.
-  const dir1 = fit?.placement.arrowDirection1 ?? geometry.arrowDirection1;
-  const dir2 = fit?.placement.arrowDirection2 ?? geometry.arrowDirection2;
-
-  // ADR-362 Round 36 — mirror DimensionRenderer.drawArrowheads per-side visibility
-  // gate (preview ≡ commit: the ghost must vanish/appear exactly like the committed dim).
-  if (!params.style.suppressArrow1) {
-    renderArrowhead(params.ctx, block1, {
-      screenAnchor: a1, direction: dir1, side: 1,
-      unitPx, strokeColor: opts.color, fillColor: opts.color,
-    });
-  }
-  if (!params.style.suppressArrow2) {
-    renderArrowhead(params.ctx, block2, {
-      screenAnchor: a2, direction: dir2, side: 2,
-      unitPx, strokeColor: opts.color, fillColor: opts.color,
-    });
-  }
+  // ADR-362 §7 — block-pair resolution, the per-side suppress gate, and the
+  // stamping loop live in the shared `renderDimArrowheadPair` SSoT (preview ≡ commit:
+  // the ghost must vanish/appear exactly like the committed dim). What differs per
+  // renderer — unitPx, preview color, ctx, screen-projected anchors/dirs — is input.
+  renderDimArrowheadPair(params.ctx, {
+    block1Name: block1,
+    block2Name: block2,
+    anchor1Screen: toScreen(params, geometry.arrowAnchor1),
+    anchor2Screen: toScreen(params, geometry.arrowAnchor2),
+    // ADR-362 Phase M — flipped directions when DIMATFIT pushes arrows outside.
+    dir1: fit?.placement.arrowDirection1 ?? geometry.arrowDirection1,
+    dir2: fit?.placement.arrowDirection2 ?? geometry.arrowDirection2,
+    unitPx,
+    color: opts.color,
+    suppress1: params.style.suppressArrow1,
+    suppress2: params.style.suppressArrow2,
+  });
 }
 
 /**

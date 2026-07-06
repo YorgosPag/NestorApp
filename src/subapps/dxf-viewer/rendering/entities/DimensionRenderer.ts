@@ -43,8 +43,8 @@ import {
   getDimStyleRegistry,
   type DimStyleRegistry,
 } from '../../systems/dimensions/dim-style-registry';
-import { getArrowheadBlock } from '../../systems/dimensions/dim-arrowhead-blocks';
-import { renderArrowhead } from './dimension/dim-arrowhead-renderer';
+import { resolveArrowBlockNames } from '../../systems/dimensions/dim-arrowhead-blocks';
+import { renderDimArrowheadPair } from './dimension/dim-arrowhead-renderer';
 import { renderDimensionText } from './dimension/dim-text-renderer';
 import { addPoints, scalePoint } from './shared/geometry-vector-utils';
 import { resolveDimColorTC } from './dimension/dim-color-resolver';
@@ -247,10 +247,7 @@ export class DimensionRenderer extends BaseEntityRenderer {
   }
 
   private drawArrowheads(r: ResolvedDimensionRender, lf?: DimFitRender | null): void {
-    const block1Name = r.style.dimblk1 || r.style.dimblk;
-    const block2Name = r.style.dimblk2 || r.style.dimblk;
-    const block1 = getArrowheadBlock(block1Name);
-    const block2 = getArrowheadBlock(block2Name);
+    const { block1, block2 } = resolveArrowBlockNames(r.style);
     // Arrowhead unit length: paper dimasz → model (× dimscale × mmToSceneUnits via
     // the annotation-scale SSoT) → screen px (× view scale).
     const unitPx =
@@ -264,35 +261,22 @@ export class DimensionRenderer extends BaseEntityRenderer {
     const colour = resolveDimColorTC(
       arrowTc, r.style.arrowColor ?? r.style.dimclrd, this.layerColour,
     );
-    const screenA1 = this.toScreen(r.geometry.arrowAnchor1);
-    const screenA2 = this.toScreen(r.geometry.arrowAnchor2);
     // ADR-362 Phase M — when DIMATFIT moves arrows outside, the placement flips the
     // outward directions so the heads sit outside the ext lines pointing inward.
-    const dir1 = lf?.placement.arrowDirection1 ?? r.geometry.arrowDirection1;
-    const dir2 = lf?.placement.arrowDirection2 ?? r.geometry.arrowDirection2;
-
-    // ADR-362 Round 36 — per-side endpoint-marker visibility gate. The block/shape
-    // is still resolved above (so toggling back restores it); we only skip the draw.
-    if (!r.style.suppressArrow1) {
-      renderArrowhead(this.ctx, block1, {
-        screenAnchor: screenA1,
-        direction: dir1,
-        side: 1,
-        unitPx,
-        strokeColor: colour,
-        fillColor: colour,
-      });
-    }
-    if (!r.style.suppressArrow2) {
-      renderArrowhead(this.ctx, block2, {
-        screenAnchor: screenA2,
-        direction: dir2,
-        side: 2,
-        unitPx,
-        strokeColor: colour,
-        fillColor: colour,
-      });
-    }
+    // ADR-362 §7 — the block-pair resolution, per-side suppress gate, and stamping
+    // loop live in the shared `renderDimArrowheadPair` SSoT (main ≡ preview).
+    renderDimArrowheadPair(this.ctx, {
+      block1Name: block1,
+      block2Name: block2,
+      anchor1Screen: this.toScreen(r.geometry.arrowAnchor1),
+      anchor2Screen: this.toScreen(r.geometry.arrowAnchor2),
+      dir1: lf?.placement.arrowDirection1 ?? r.geometry.arrowDirection1,
+      dir2: lf?.placement.arrowDirection2 ?? r.geometry.arrowDirection2,
+      unitPx,
+      color: colour,
+      suppress1: r.style.suppressArrow1,
+      suppress2: r.style.suppressArrow2,
+    });
   }
 
   /**

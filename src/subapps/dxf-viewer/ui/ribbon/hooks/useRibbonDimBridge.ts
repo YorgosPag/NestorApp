@@ -42,7 +42,7 @@ import { resolveDimColorTC } from '../../../rendering/entities/dimension/dim-col
 import { findClosestAci } from '../../../settings/standards/aci';
 import { hexToTrueColor } from '../../../utils/dxf-true-color';
 import { getDimStyleRegistry } from '../../../systems/dimensions/dim-style-registry';
-import { listArrowheadBlockNames } from '../../../systems/dimensions/dim-arrowhead-blocks';
+import { listArrowheadBlockNames, resolveArrowBlockNames } from '../../../systems/dimensions/dim-arrowhead-blocks';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -175,7 +175,8 @@ function readValue(spec: DimKeySpec, style: DimStyle): string {
     case 'lineweight':
       return lineweightToValue(style[spec.field] as LineweightMm);
     case 'arrowStyle':
-      return String(style.dimblk1 || style.dimblk);
+      // ADR-362 §7 — same `dimblk1 || dimblk` fallback SSoT as the renderers.
+      return String(resolveArrowBlockNames(style).block1);
     case 'linetype':
     case 'font':
     case 'enum':

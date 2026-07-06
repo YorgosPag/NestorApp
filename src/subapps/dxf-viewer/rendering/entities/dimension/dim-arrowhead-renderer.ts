@@ -29,6 +29,7 @@ import type {
   ArrowheadPrimitive,
   ArrowheadTriangle,
 } from '../../../systems/dimensions/dim-arrowhead-blocks';
+import { getArrowheadBlock } from '../../../systems/dimensions/dim-arrowhead-blocks';
 import type { Point2D } from '../../types/Types';
 
 /** Length below which a direction vector is treated as "no arrow on this side". */
@@ -122,4 +123,57 @@ function stampCircle(ctx: CanvasRenderingContext2D, circle: ArrowheadCircle): vo
   ctx.arc(circle.center[0], circle.center[1], circle.radius, 0, Math.PI * 2);
   if (circle.solid) ctx.fill();
   else ctx.stroke();
+}
+
+/**
+ * ADR-362 §7 — resolve + gate + stamp BOTH dimension endpoints in one call.
+ *
+ * The single owner of the per-side visibility gate (ADR-362 Round 36): the block
+ * is still resolved for each side (so toggling `suppressArrow{1,2}` back restores
+ * it), we only skip the draw. Both canvas renderers (main + preview) delegate here
+ * so the block-pair resolution, the gate, and the `renderArrowhead` loop never
+ * drift apart. Everything that legitimately differs per renderer — `unitPx`
+ * (annotation-scale vs projector), `color` (layer-inherited vs preview-green),
+ * `ctx`, and the screen-projected anchors/directions — is passed in as input.
+ */
+export interface DimArrowheadPairParams {
+  /** Per-side block names, from `resolveArrowBlockNames`. */
+  readonly block1Name: string;
+  readonly block2Name: string;
+  readonly anchor1Screen: Point2D;
+  readonly anchor2Screen: Point2D;
+  readonly dir1: Point2D;
+  readonly dir2: Point2D;
+  /** Screen-space length of one arrow unit (= dimasz × dimscale × pxPerMm). */
+  readonly unitPx: number;
+  readonly color: string;
+  /** ADR-362 Round 36 per-side endpoint-marker visibility gate. */
+  readonly suppress1: boolean;
+  readonly suppress2: boolean;
+}
+
+export function renderDimArrowheadPair(
+  ctx: CanvasRenderingContext2D,
+  p: DimArrowheadPairParams,
+): void {
+  if (!p.suppress1) {
+    renderArrowhead(ctx, getArrowheadBlock(p.block1Name), {
+      screenAnchor: p.anchor1Screen,
+      direction: p.dir1,
+      side: 1,
+      unitPx: p.unitPx,
+      strokeColor: p.color,
+      fillColor: p.color,
+    });
+  }
+  if (!p.suppress2) {
+    renderArrowhead(ctx, getArrowheadBlock(p.block2Name), {
+      screenAnchor: p.anchor2Screen,
+      direction: p.dir2,
+      side: 2,
+      unitPx: p.unitPx,
+      strokeColor: p.color,
+      fillColor: p.color,
+    });
+  }
 }
