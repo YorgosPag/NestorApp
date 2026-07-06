@@ -247,6 +247,10 @@ export class GeometricCalculations {
           y: centerY / 4
         };
       }
+    } else if (isHatchEntity(entity)) {
+      // ADR-507 — γραμμοσκίαση: CENTER έλξη = κέντρο bbox του ορίου. Επαναχρήση του
+      // `hatchBoundsCenter` SSoT (ίδιο math με τον gradient origin default) → μηδέν διπλότυπο.
+      return hatchBoundsCenter(entity.boundaryPaths);
     }
 
     return null;
