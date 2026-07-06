@@ -64,6 +64,21 @@ idle → awaiting-base-point (activate με μη-κενή selection)
 - **ArrayEntity** (associative array, ADR-353): το `calculateMovedGeometry` δεν χειρίζεται `'array'`, άρα η αντιγραφή array κλωνοποιεί μόνο τον container (χωρίς μετάφραση των `hiddenSources`). Το ίδιο pre-existing κενό ισχύει και για clipboard/Ctrl+drag. **Follow-up**: array-specific clone (hiddenSources translate + re-id + instance rebuild) στο ίδιο SSoT.
 - i18n hint keys: re-use των υπαρχόντων `dxf-viewer-guides:bimCopyTool.selectBasePoint/selectTargetPoint` (locale keys, γενικό νόημα· καμία JSON αλλαγή).
 
+## FSM centralization (2-click modify-tool activation SSoT)
+
+Το activation-FSM invariant (activate→base/entity · deactivate→idle · selection-appeared→base · selection-lost→entity + `wasActive`/`prevCount` bookkeeping) ήταν hand-rolled σε ~15 tools. **NEW SSoT** `systems/tools/useModifyToolActivation.ts` — storage-agnostic (useState **ή** store via `setPhase`/`onDeactivate` callbacks)· tool-specific activate μέσω optional `onActivate` (typed-input restore / grip handoff)· deps = 3 primitives (isActive/selectionCount/phase), callbacks via ref → μηδέν extra re-run. **8 unit tests** (και τα 4 branches + override).
+
+**Migrated (test-guarded):** `useCopyTool` (23 GREEN), `useMoveTool` (+5 **νέα** characterization tests — ήταν untested). Καθαρό refactor, byte-identical συμπεριφορά.
+
+**Εκκρεμούν (per-tool divergences — ΧΡΕΙΑΖΟΝΤΑΙ απόφαση/προσοχή, ΟΧΙ καθαρό refactor):**
+- `useRotationTool` — grip-handoff activate (2 sub-cases: reference→angle / →reference)· lost-branch = **dead code** (`hasEntities && length===0` πάντα false).
+- `useMirrorTool` — grip-handoff activate (pre-seed first axis point → second-point)· **λείπει** selection-lost branch.
+- `useScaleTool` — **store-based** (`ScaleToolStore.setPhase`)· typed-input restore activate.
+- `useStretchTool` — **partial** (μόνο activate-if-selection + deactivate, ΟΧΙ awaiting-entity) → πιθανώς εκτός.
+- Array×3 / Wall×4 — pick-based, ΟΧΙ 2-click select-first → εκτός.
+
+Το shared hook έχει **working** lost-branch → migration Rotation/Mirror = **behavior alignment** (fix του dead/missing branch, net-positive consistency) αλλά αλλάζει proven tools → απόφαση Giorgio: (a) migrate με alignment, ή (b) opt-out flag για byte-identical preservation.
+
 ## Changelog
 - **2026-07-06** — Αρχική υλοποίηση: ενοποίηση `bim-copy`→`copy`, ζωντάνεμα ribbon «Αντιγραφή», unified clone SSoT για DXF+BIM+GROUP.
 - **2026-07-06** — **Fix (Giorgio live test: «κλειστή πολυγραμμή δεν αντιγράφεται»)**. Root cause: το `useCopyTool` (κληρονομιά bim-copy) έκανε **revert σε 'select'** όταν ενεργοποιούνταν χωρίς selection — το bim-copy δοκιμαζόταν ΜΟΝΟ via C+O (canvas focus διατηρεί selection)· το νέο ribbon κουμπί εκθέτει την περίπτωση. Fix: **mirror του `useMoveTool` FSM** — φάση `awaiting-entity` (κλικ περνά για επιλογή, ΠΟΤΕ silent revert) + `isCollectingInput` gate στο click routing (`CanvasSection` → click handler παίρνει `copyTool.isCollectingInput`, escape κρατά `isActive`). Η selection διαβάζεται **live** στο clone (όχι frozen snapshot). Επιπλέον: μια κλειστή πολυγραμμή είναι `type:'polyline'` (και τα δύο εργαλεία polyline/polygon) → μεταφράζεται σωστά από `applyClassicEntityPreview`.
