@@ -9,7 +9,7 @@
  * FULL SSoT — zero new HUD engine:
  *   · segment selection → the shared `resolvePolylineHudSegments` (2D↔3D) via `gripInfoToAlignmentRole`;
  *   · reshaped geometry → `buildDxfGripReshapedVertices` (the SAME «which vertices move» SSoT the ghost uses);
- *   · the paint → `paintWallHudCore` + `paintProjectedAlignedDim`, EXACTLY like `use-wall-hud-pass`.
+ *   · the paint → `paintWallHudCore` + the shared `makeWallHud3DProjector`, EXACTLY like `use-wall-hud-pass`.
  *
  * Coordinate space: the reshaped vertices are in plan-mm (the ghost's space), so the meta is built with
  * `sceneUnits='mm'` and the projector is the plain plan-mm→px camera projector (mmFactor = 1) — the
