@@ -39,6 +39,7 @@ import {
   effectiveTextWidth,
   baseTextAdvanceWorld,
   textVisualExtentRatio,
+  textVisualWidthRatio,
 } from './text-box';
 import { rotationHandleMidwayOffset } from '../grips/rotation-handle-policy';
 import {
@@ -149,18 +150,18 @@ export function getTextGrips(entity: DxfText): GripInfo[] {
 
 /** Post-resize `RectFrame` → patch, picking MTEXT `width` vs TEXT `widthFactor`. */
 function framePatch(entity: DxfText, newFrame: RectFrame): TextTransformPatch {
-  const newWidth = newFrame.halfWidth * 2;
-  // The grip box is the VISUAL glyph box (cap height); recover the nominal em `height` by
-  // dividing the dragged box height by the visual extent ratio — the SAME ratio the forward
-  // `resolveTextBox` applies — so the box holds on release (no jump). Em-box path → ratio 1.
+  const newVisualWidth = newFrame.halfWidth * 2;
+  // The grip box is the VISUAL glyph ink box; recover the nominal fields from the SAME ratios
+  // the forward `resolveTextBox` applies, so the box holds on release (no jump):
+  //   - height ← dragged box height ÷ the visual VERTICAL extent ratio (cap height ÷ em),
+  //   - widthFactor ← dragged box width ÷ (base advance × visual WIDTH ratio (1 − side bearings)).
+  // Em-box / MTEXT / no-font paths → both ratios 1.0 (byte-identical to the advance box).
   const nominalHeight = (newFrame.halfLength * 2) / textVisualExtentRatio(entity);
   const patch: TextTransformPatch = { position: textBoxToPosition(newFrame, entity), height: nominalHeight };
   if (isMTextBox(entity)) {
-    patch.width = newWidth;
+    patch.width = newVisualWidth;
   } else {
-    // Divide by the REAL glyph advance (widthFactor=1) at the NOMINAL height — the SAME base
-    // `effectiveTextWidth` uses — so the resized box holds (`effectiveTextWidth(after) === newWidth`).
-    patch.widthFactor = newWidth / baseTextAdvanceWorld(entity, nominalHeight);
+    patch.widthFactor = newVisualWidth / (baseTextAdvanceWorld(entity, nominalHeight) * textVisualWidthRatio(entity));
   }
   return patch;
 }

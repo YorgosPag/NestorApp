@@ -22,6 +22,8 @@ import type { DimStyle } from '../../types/dimension';
 // ──────────────────────────────────────────────────────────────────────────────
 
 export const BUILTIN_DIM_STYLE_IDS = {
+  /** Nestor enterprise default — Greek architectural, unified green, all-continuous. */
+  NESTOR_DEFAULT: 'dimstyle_nestor_default',
   ISO_129: 'dimstyle_iso_129',
   ASME_Y14_5: 'dimstyle_asme_y14_5',
   ARCHITECTURAL_US: 'dimstyle_arch_us',
@@ -157,7 +159,44 @@ function makeBuiltInTemplate(
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// ISO 129 — default (Greek/EU architectural/civil)
+// ΔΙΑΣΤΑΣΕΙΣ Nestor — enterprise default (Greek architectural, unified green)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The out-of-the-box default active style (Giorgio 2026-07-07). A clean-enterprise
+ * derivation of ISO 129: same Greek architectural conventions inherited from
+ * `sharedDefaults()` (closed-filled arrows, text-above, comma decimal, 2.5mm text)
+ * but with an explicit, unified GREEN identity (#008000) on the dim line, extension
+ * lines and text. Mirrors how ASME/Arch bake an explicit color (blue ACI 5) while
+ * keeping linetype/lineweight ByLayer:
+ *   - Color is EXPLICIT green (`dimclr*` + `*TrueColor` 0x008000) so every new
+ *     dimension is green regardless of its layer's color.
+ *   - Linetype/lineweight stay ByLayer (shared default) → render continuous on the
+ *     ΔΙΑΣΤΑΣΕΙΣ layer (fixes the DashDot extension-line quirk of the sampled dim).
+ *   - `arrowColor` intentionally unset → arrows inherit `dimclrd` (green).
+ * Baked into the style fields — NOT per-entity overrides — so new dimensions inherit
+ * it cleanly and `resolveDimStyle` needs no override merge. ACI `96` carries the
+ * nearest-index for DXF export; the TrueColor companions win at render.
+ */
+export const NESTOR_DEFAULT_TEMPLATE: DimStyle = makeBuiltInTemplate(
+  BUILTIN_DIM_STYLE_IDS.NESTOR_DEFAULT,
+  'ΔΙΑΣΤΑΣΕΙΣ Nestor',
+  {
+    // Explicit unified green on dim line, extension lines & text.
+    dimclrd: 96,
+    dimclrdTrueColor: 0x008000,
+    dimclre: 96,
+    dimclreTrueColor: 0x008000,
+    dimclrt: 96,
+    dimclrtTrueColor: 0x008000,
+    // Greek architectural: witness lines flush at the feature point, ΔΙΑΣΤΑΣΕΙΣ layer.
+    dimexo: 0,
+    targetLayer: 'ΔΙΑΣΤΑΣΕΙΣ',
+  },
+);
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ISO 129 — Greek/EU architectural/civil (kept pristine — do NOT fold Nestor into it)
 // ──────────────────────────────────────────────────────────────────────────────
 
 export const ISO_129_TEMPLATE: DimStyle = makeBuiltInTemplate(
@@ -231,10 +270,14 @@ export const ARCHITECTURAL_US_TEMPLATE: DimStyle = makeBuiltInTemplate(
 // ──────────────────────────────────────────────────────────────────────────────
 
 export const BUILTIN_DIM_STYLES: readonly DimStyle[] = [
+  NESTOR_DEFAULT_TEMPLATE,
   ISO_129_TEMPLATE,
   ASME_Y14_5_TEMPLATE,
   ARCHITECTURAL_US_TEMPLATE,
 ] as const;
 
-/** Default active style for new projects — Greek architectural context (D2). */
-export const DEFAULT_ACTIVE_DIM_STYLE_ID: BuiltInDimStyleId = BUILTIN_DIM_STYLE_IDS.ISO_129;
+/**
+ * Default active style for new projects — Nestor enterprise green (Giorgio 2026-07-07).
+ * ISO 129 remains available in the registry; this is just the out-of-the-box active pick.
+ */
+export const DEFAULT_ACTIVE_DIM_STYLE_ID: BuiltInDimStyleId = BUILTIN_DIM_STYLE_IDS.NESTOR_DEFAULT;

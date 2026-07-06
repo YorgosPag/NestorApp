@@ -26,10 +26,10 @@ export type { GlyphRun } from './glyph-path-cache';
 export { measureTextAdvanceWorld, __resetTextAdvanceMeasureCtx } from './text-advance';
 export type { TextAdvanceStyle } from './text-advance';
 
-// ADR-557 Φ-attachment — vertical counterpart of `text-advance`: real font-metric
-// baseline anchor + glyph INK extent (world-ratio), so the box HEIGHT ≡ drawn glyphs.
-export { measureTextVerticalRatios } from './text-vertical-metrics';
-export type { TextVerticalRatios, TextVerticalStyle } from './text-vertical-metrics';
+// ADR-557 Φ-attachment — glyph INK box (both axes): real font-metric baseline anchor +
+// glyph ink extent + side bearings (world-ratio), so the VISUAL box ≡ the drawn glyphs.
+export { measureTextGlyphInk } from './text-vertical-metrics';
+export type { TextGlyphInk, TextGlyphInkStyle } from './text-vertical-metrics';
 export { subscribeFontReady, bumpFontReady, getFontReadyVersion } from './font-ready-store';
 export { preloadCadSubstituteFonts, CAD_SUBSTITUTE_FONTS } from './cad-font-preload';
 export type { CadSubstituteFont } from './cad-font-preload';

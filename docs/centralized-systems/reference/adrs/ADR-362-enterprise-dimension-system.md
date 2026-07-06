@@ -160,13 +160,14 @@ Coerente con preferenza utente "completeness over MVP".
 
 ### D2. Standard configurabile, 3 template built-in (2026-05-17)
 
-3 DIMSTYLE template predefiniti:
+4 DIMSTYLE template predefiniti (built-in):
 
-1. **ISO 129** (default — EU/architettura/civile): oblique tick, testo sopra & allineato, no break, decimale `,`, target layer `ΔΙΑΣΤΑΣΕΙΣ`
+0. **ΔΙΑΣΤΑΣΕΙΣ Nestor** (⭐ out-of-the-box default active — Round 44, 2026-07-07): clean-enterprise derivation di ISO 129 con identità **verde unificata** (#008000 su dim line/ext/testo via `*TrueColor`), linetype/lineweight ByLayer (→ continua sul layer `ΔΙΑΣΤΑΣΕΙΣ`), closed-filled arrows che ereditano il verde, `dimexo:0`, decimale `,`, target layer `ΔΙΑΣΤΑΣΕΙΣ`
+1. **ISO 129** (EU/architettura/civile, resta pristine): oblique tick, testo sopra & allineato, no break, decimale `,`, target layer `ΔΙΑΣΤΑΣΕΙΣ`
 2. **ASME Y14.5** (US/mechanical): closed filled arrow, testo centrato & orizzontale, line break, decimale `.`, target layer `A-ANNO-DIMS`
 3. **Architectural US** (hybrid): closed filled arrow, testo sopra & allineato, no break, decimale `.`, target layer `A-ANNO-DIMS`
 
-Selezione per-progetto. Default nuovo progetto = ISO 129 (coerente con Nestor_Pagonis = oikodomikà erga Grecia). Utente può duplicare/customizzare template.
+Selezione per-progetto. Default nuovo progetto = **ΔΙΑΣΤΑΣΕΙΣ Nestor** (`DEFAULT_ACTIVE_DIM_STYLE_ID`, coerente con Nestor_Pagonis = oikodomikà erga Grecia). Utente può duplicare/customizzare template; la scelta del default sarà persistita per-azienda in Phase F4.
 
 ### D3. Annotation scaling = Revit-style view-driven (2026-05-17)
 
@@ -710,6 +711,15 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
 ---
 
 ## 7. Changelog
+
+- **2026-07-07 (Round 44 — ✨ Phase 1: «ΔΙΑΣΤΑΣΕΙΣ Nestor» = enterprise default DIMSTYLE (πράσινο), αντικαθιστά ISO 129 ως out-of-the-box active)**
+  - **Ζήτημα (Giorgio)**: baseline audit της βάσης έδειξε **1 μόνο** persisted διάσταση (scene «Ισόγειο 1.dxf»), με per-entity overrides (πράσινη γραμμή #008000, DashDot ext, φούξια βέλη, λαδί κείμενο). Ο Giorgio θέλει αυτές τις τιμές — σε **καθαρή enterprise εκδοχή** — ως **προεπιλογή** για κάθε νέα διάσταση. Επιλογή: «καθαρό enterprise σετ, πρότεινέ μου».
+  - **Ανάλυση (root cause)**: οι τιμές αυτές ΔΕΝ ήταν style — ήταν per-entity `overrides` σε ένα entity. Νέα διάσταση παίρνει `styleId = getDimStyleRegistry().getActiveStyleId()` **χωρίς overrides** (`hooks/dimensions/useDimensionCreate.ts` → `defaultStyleId()`), κι έτσι διάβαζε ISO 129 (ByLayer/oblique), όχι τα πράσινα. Άρα «default» = ένα style + το κάνω active.
+  - **Απόφαση (clean-enterprise, ISO-family-consistent — δική μου, per «make Revit-grade decisions yourself»)**: νέο **built-in** template «ΔΙΑΣΤΑΣΕΙΣ Nestor» (id `dimstyle_nestor_default`) — ΟΧΙ πείραγμα του ISO 129 (μένει pristine). Ρητό **ενοποιημένο πράσινο** (#008000 μέσω `*TrueColor`) σε γραμμή/ext/κείμενο (καθρέφτης του πώς ASME/Arch βάζουν ρητό μπλε), **linetype/lineweight ByLayer** (→ continuous στο layer ΔΙΑΣΤΑΣΕΙΣ, διορθώνει το DashDot quirk), βέλη `closedFilled` που **κληρονομούν** το πράσινο (`arrowColor` unset), `dimexo:0` (witness lines flush), Greek architectural (decimal, `,`). Ορίζεται ως `DEFAULT_ACTIVE_DIM_STYLE_ID`. Baked στα style fields (ΟΧΙ overrides) → νέες διαστάσεις το κληρονομούν καθαρά, `resolveDimStyle` χωρίς override-merge.
+  - **Tests**: jest 22/22 GREEN — νέο `dim-style-nestor-default.test.ts` (6: default active id· fresh registry activates it· green fields· ByLayer linetype + arrows inherit· no-override resolve → green) · `dim-style-templates-per-part.test.ts` GREEN αμετάβλητο (το Nestor σέβεται τα ByLayer-linetype + arrowColor-unset invariants) · `dim-style-importer.test.ts` GREEN. tsc SKIP (N.17).
+  - **Files**: MOD `systems/dimensions/dim-style-templates.ts` (+NESTOR_DEFAULT_TEMPLATE, +id, +στη λίστα, DEFAULT_ACTIVE→NESTOR)· NEW test `systems/dimensions/__tests__/dim-style-nestor-default.test.ts`.
+  - **Next**: **Phase F4** — company-scoped persistence (`dxf_dimension_styles` collection + gateway/API/rules + sync hook) ώστε ο χρήστης να ορίζει/αποθηκεύει το default & custom styles **ανά εταιρεία** (εγκεκριμένο πλάνο, υπό υλοποίηση).
+  - ✅ Google-level: YES — νέο built-in αντί για ρύπανση του ISO 129, deterministic default χωρίς DB (μηδέν bootstrap race), ISO-family-consistent, industry-faithful (explicit-color + ByLayer linetype όπως ASME/Arch).
 
 - **2026-07-07 (Round 43 — ✨ «Επεξεργασία Στυλ…» — άνοιγμα του υπάρχοντος Style Manager εστιασμένο στο DIMSTYLE της διάστασης)**
   - **Ζήτημα (Giorgio, handoff Session 3)**: το κουμπί «Επεξεργασία Στυλ…» (`dim.style.edit`, panel «Στυλ Διάστασης») ήταν `comingSoon`. Πρέπει να ανοίγει τον **υπάρχοντα** Style Manager (`DimensionsTab`) εστιασμένο στο `styleId` της επιλεγμένης διάστασης — μηδέν νέο UI.

@@ -17,18 +17,20 @@
  * justification from those two style fields and offsets the box accordingly, so the
  * box lands EXACTLY where the renderer paints the glyphs.
  *
- * HORIZONTAL: the 9-point offset table is NOT re-implemented here — the column (L/C/R)
- * offset comes from the existing `offsetForJustification` (`text-engine/layout/
- * attachment-point.ts`, ADR-344 Φ3) via `horizontalCenterOffset`, and the width is the
- * real glyph advance (`measureTextAdvanceWorld`).
+ * HORIZONTAL: the 9-point column (L/C/R) offset comes from `offsetForJustification`
+ * (`text-engine/layout/attachment-point.ts`, ADR-344 Φ3) via `horizontalCenterOffset`, on
+ * the real glyph advance (`measureTextAdvanceWorld`). The VISUAL box then insets that by the
+ * glyph SIDE BEARINGS (`horizontalInkFractions`) so it hugs the letters left+right too.
  *
- * VERTICAL: there are TWO boxes (the "visual bounds vs edit box" split real editors use):
- *   - `resolveTextBox` (VISUAL) — hugs the DRAWN glyphs: baseline seated by the FONT
- *     metrics (per the attachment row) + extent = the real glyph INK (cap height / +
- *     descenders), via `measureTextVerticalRatios`. This is the 2D grip / hover / hitTest
- *     box, so handles + outline coincide with the letters (Giorgio 2026-07-07).
- *   - `resolveTextEmBox` (NOMINAL) — the pre-metrics em box (`emVerticalRatios`), used by
- *     the em-based 3D textured plane + culling, which must NOT follow the cap box.
+ * The box hugs the DRAWN glyphs on ALL four sides via ONE measured glyph ink box
+ * (`measureTextGlyphInk`: font metrics + ink extent + side bearings). There are TWO boxes
+ * (the "visual bounds vs edit box" split real editors use):
+ *   - `resolveTextBox` (VISUAL) — baseline seated by the FONT metrics (per the attachment
+ *     row) + vertical extent = glyph INK (cap height / +descenders) + horizontal inset by the
+ *     side bearings. The 2D grip / hover / hitTest box, so handles + outline coincide with the
+ *     letters on all sides (Giorgio 2026-07-07: κάθετα + οριζόντια).
+ *   - `resolveTextEmBox` (NOMINAL) — the pre-metrics em box (`emVerticalRatios` + full
+ *     advance), used by the em-based 3D textured plane + culling, which must NOT follow it.
  *
  *   center = position + R(rotationDeg) · { horizontalCenterOffset, verticalCentre·h }
  *
@@ -43,7 +45,7 @@
  * still loads and runs in jest / SSR (where it degrades to the monospace approximation).
  *
  * @see text-engine/fonts/text-advance.ts — measureTextAdvanceWorld (width metrics SSoT)
- * @see text-engine/fonts/text-vertical-metrics.ts — measureTextVerticalRatios (height metrics SSoT)
+ * @see text-engine/fonts/text-vertical-metrics.ts — measureTextGlyphInk (glyph ink box SSoT)
  * @see text-engine/layout/attachment-point.ts — offsetForJustification (9-point SSoT)
  * @see bim/grips/rect-frame.ts — RectFrame + corner world helpers
  * @see bim/text/text-grips.ts — the grip adapter that consumes this box
@@ -57,7 +59,7 @@ import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
 // ADR-557 Φ-attachment — metrics-accurate width: the box measures with the SAME real
 // glyph advance the renderer paints (`getGlyphRun` / CSS `measureText`), not a monospace
 // approximation, so grips / hover / hitTest coincide with the drawn glyphs.
-import { measureTextAdvanceWorld, measureTextVerticalRatios, type TextAdvanceStyle } from '../../text-engine/fonts';
+import { measureTextAdvanceWorld, measureTextGlyphInk, type TextAdvanceStyle, type TextGlyphInk } from '../../text-engine/fonts';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { rotateVector } from '../grips/grip-math';
 import { RECT_CORNERS, rectCornerWorld, type RectFrame } from '../grips/rect-frame';
@@ -172,22 +174,38 @@ function emVerticalRatios(just: TextJustification): VBoxRatios {
   return { top: center + 0.5, bottom: center - 0.5 };
 }
 
+/** The glyph ink box (font metrics + ink extent + side bearings), measured once per box build. */
+function glyphInkOf(text: DxfText): TextGlyphInk {
+  return measureTextGlyphInk(text.text ?? '', advanceStyleOf(text));
+}
+
 /**
- * VISUAL vertical ratios — the box hugs the REAL painted glyphs. The baseline sits
- * where the renderer seats it (font ascent/descent per the attachment row, mirroring
- * `TextRenderer.fillGlyphRun`) and the extent is the real glyph INK (cap height for
- * caps, +descenders for g/p/y), so the 2D hover frame + grips + hitTest coincide with
- * the drawn glyphs (Revit / Figma-grade). Degrades to the nominal em box (identical to
- * the previous behaviour) when no glyph metrics resolve — keeping SSR / jest stable.
+ * VISUAL vertical ratios from a measured glyph ink box — the box hugs the drawn glyphs:
+ * baseline where the renderer seats it (font ascent/descent per the attachment row,
+ * mirroring `TextRenderer.fillGlyphRun`) + extent = real glyph INK (cap height for caps,
+ * +descenders for g/p/y). Degrades to the nominal em box when the ink is unavailable
+ * (SSR / no font) — keeping the pre-metrics behaviour + jest stable.
  */
-function visualVerticalRatios(text: DxfText, just: TextJustification): VBoxRatios {
-  const r = measureTextVerticalRatios(text.text ?? '', advanceStyleOf(text));
+function visualVerticalRatios(ink: TextGlyphInk, just: TextJustification): VBoxRatios {
   const row = just[0];
-  const baselineDrop = row === 'M' ? (r.fontAscent - r.fontDescent) / 2 : row === 'B' ? -r.fontDescent : r.fontAscent;
+  const baselineDrop = row === 'M' ? (ink.fontAscent - ink.fontDescent) / 2 : row === 'B' ? -ink.fontDescent : ink.fontAscent;
   const baselineUp = -baselineDrop; // world y-up offset from `position` down to the baseline
-  const top = baselineUp + r.inkAscent;
-  const bottom = baselineUp - r.inkDescent;
+  const top = baselineUp + ink.inkAscent;
+  const bottom = baselineUp - ink.inkDescent;
   return top - bottom > 1e-9 ? { top, bottom } : emVerticalRatios(just);
+}
+
+/**
+ * Horizontal ink insets as fractions of the pen advance (leading + trailing side bearing),
+ * so the visual box hugs the glyphs left+right too (Giorgio 2026-07-07: «επεκτείνεται προς
+ * τα έξω»). ZERO for MTEXT (its width is the explicit frame, not the glyph advance) and for
+ * the no-font path (`advance === 0`) — the box then keeps the full advance width. Guaranteed
+ * `left + right < 1` (ink is a sub-span of the advance), so the visual width stays positive.
+ */
+function horizontalInkFractions(text: DxfText, ink: TextGlyphInk): { left: number; right: number } {
+  if (text.width != null && text.width > 0) return { left: 0, right: 0 };
+  if (!(ink.advance > 0)) return { left: 0, right: 0 };
+  return { left: ink.inkLeft / ink.advance, right: (ink.advance - ink.inkRight) / ink.advance };
 }
 
 /**
@@ -197,19 +215,31 @@ function visualVerticalRatios(text: DxfText, just: TextJustification): VBoxRatio
  * ink box (2D interaction) or the NOMINAL em box (3D plane + culling).
  */
 function buildTextBox(text: DxfText, mode: 'visual' | 'em'): RectFrame {
-  const w = effectiveTextWidth(text);
+  const w = effectiveTextWidth(text); // pen advance (world, incl. widthFactor) — or MTEXT frame width
   const h = resolveBoxHeight(text);
   const just = justificationOf(text);
-  const v = mode === 'em' ? emVerticalRatios(just) : visualVerticalRatios(text, just);
   const rotationDeg = text.rotation ?? 0;
+  const advanceCentreX = horizontalCenterOffset(just, w);
+
+  if (mode === 'em') {
+    const v = emVerticalRatios(just);
+    const rel = rotateVector({ x: advanceCentreX, y: ((v.top + v.bottom) / 2) * h }, rotationDeg);
+    return { center: translatePoint(text.position, rel), rotationDeg, halfWidth: w / 2, halfLength: ((v.top - v.bottom) / 2) * h };
+  }
+
+  const ink = glyphInkOf(text);
+  const v = visualVerticalRatios(ink, just);
+  const { left, right } = horizontalInkFractions(text, ink);
+  // Inset the advance box by the side bearings: shift the centre toward the wider bearing,
+  // shrink the width by the total inset (`left`/`right` are fractions of the advance `w`).
   const rel = rotateVector(
-    { x: horizontalCenterOffset(just, w), y: ((v.top + v.bottom) / 2) * h },
+    { x: advanceCentreX + (w * (left - right)) / 2, y: ((v.top + v.bottom) / 2) * h },
     rotationDeg,
   );
   return {
     center: translatePoint(text.position, rel),
     rotationDeg,
-    halfWidth: w / 2,
+    halfWidth: (w * (1 - left - right)) / 2,
     halfLength: ((v.top - v.bottom) / 2) * h,
   };
 }
@@ -239,9 +269,15 @@ export function resolveTextEmBox(text: DxfText): RectFrame {
  */
 export function textBoxToPosition(frame: RectFrame, text: DxfText): Point2D {
   const just = justificationOf(text);
-  const v = visualVerticalRatios(text, just);
+  const ink = glyphInkOf(text);
+  const v = visualVerticalRatios(ink, just);
+  const { left, right } = horizontalInkFractions(text, ink);
+  // Recover the advance width from the visual half-width (visualWidth = w·(1−left−right)),
+  // then reproduce the SAME inset centre offset the forward build applied.
+  const w = (frame.halfWidth * 2) / (1 - left - right);
+  const relX = horizontalCenterOffset(just, w) + (w * (left - right)) / 2;
   const relY = frame.halfLength * ((v.top + v.bottom) / (v.top - v.bottom));
-  const rel = rotateVector({ x: horizontalCenterOffset(just, frame.halfWidth * 2), y: relY }, frame.rotationDeg);
+  const rel = rotateVector({ x: relX, y: relY }, frame.rotationDeg);
   return { x: frame.center.x - rel.x, y: frame.center.y - rel.y };
 }
 
@@ -251,8 +287,18 @@ export function textBoxToPosition(frame: RectFrame, text: DxfText): Point2D {
  * after release (`resolveTextBox(after) === draggedFrame`, no jump). Em-box path → 1.0.
  */
 export function textVisualExtentRatio(text: DxfText): number {
-  const { top, bottom } = visualVerticalRatios(text, justificationOf(text));
+  const { top, bottom } = visualVerticalRatios(glyphInkOf(text), justificationOf(text));
   return top - bottom;
+}
+
+/**
+ * The fraction of the pen advance the VISUAL box occupies (1 − side bearings) — the resize
+ * divides the dragged box width by this (× the base advance) to recover `widthFactor`, so
+ * the box holds after release. MTEXT (explicit width) / no-font → 1.0.
+ */
+export function textVisualWidthRatio(text: DxfText): number {
+  const { left, right } = horizontalInkFractions(text, glyphInkOf(text));
+  return 1 - left - right;
 }
 
 /** The four VISUAL box corners in world coords (rotation-aware) — NE, NW, SW, SE (2D hover frame). */

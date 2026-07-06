@@ -21,16 +21,21 @@ export interface StubInkBounds {
   inkAscentEm?: number;
   /** Glyph ink descent below baseline ÷ em. Default = the font descent (0.2) → ink == metrics. */
   inkDescentEm?: number;
+  /** Glyph ink LEFT edge from the pen origin ÷ em (leading side bearing). Default 0 → no inset. */
+  inkLeftEm?: number;
+  /** Glyph ink RIGHT edge from the pen origin ÷ em. Default = the full advance → no inset. */
+  inkRightEm?: number;
 }
 
 /**
  * A minimal opentype.Font whose advance is `emPerChar` per glyph (proportional-linear).
  *
  * `getPath(...).getBoundingBox()` returns the glyph INK box (opentype y-DOWN, baseline at 0)
- * so `measureTextVerticalRatios` is deterministic. DEFAULT ink = the font metrics box
- * (ascent 0.8 / descent 0.2), so the VISUAL text box equals the NOMINAL em box and the
- * pre-metrics geometry tests stay unchanged. Pass `ink` (e.g. cap 0.7 / descent 0) to model
- * a real cap-height font for the vertical-metrics tests.
+ * so `measureTextGlyphInk` is deterministic. DEFAULT ink = the font metrics box vertically
+ * (ascent 0.8 / descent 0.2) + the FULL advance horizontally (x1=0, x2=advance), so the
+ * VISUAL text box equals the NOMINAL em box and the pre-metrics geometry tests stay unchanged.
+ * Pass `ink` (cap 0.7 / descent 0, or `inkLeftEm`/`inkRightEm` side bearings) to model a real
+ * font for the glyph-ink tests.
  */
 export function stubProportionalFont(emPerChar: number, ink?: StubInkBounds): Font {
   const inkAscentEm = ink?.inkAscentEm ?? 0.8; // = ascender / unitsPerEm
@@ -40,16 +45,19 @@ export function stubProportionalFont(emPerChar: number, ink?: StubInkBounds): Fo
     ascender: 800,
     descender: -200,
     getAdvanceWidth: (text: string, size: number): number => text.length * emPerChar * size,
-    getPath: (text: string, _x: number, _y: number, size: number) => ({
-      commands: [] as [],
-      // y-DOWN: top (ink ascent) is negative, bottom (ink descent) is positive.
-      getBoundingBox: () => ({
-        x1: 0,
-        y1: -inkAscentEm * size,
-        x2: (text?.length ?? 0) * emPerChar * size,
-        y2: inkDescentEm * size,
-      }),
-    }),
+    getPath: (text: string, _x: number, _y: number, size: number) => {
+      const advance = (text?.length ?? 0) * emPerChar * size;
+      return {
+        commands: [] as [],
+        // y-DOWN: top (ink ascent) is negative, bottom (ink descent) is positive.
+        getBoundingBox: () => ({
+          x1: ink?.inkLeftEm != null ? ink.inkLeftEm * size : 0,
+          y1: -inkAscentEm * size,
+          x2: ink?.inkRightEm != null ? ink.inkRightEm * size : advance,
+          y2: inkDescentEm * size,
+        }),
+      };
+    },
   } as unknown as Font;
 }
 
