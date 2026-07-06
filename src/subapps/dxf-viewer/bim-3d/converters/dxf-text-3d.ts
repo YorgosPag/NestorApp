@@ -121,9 +121,10 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
   // rotateX(-90°) maps plane-local (x, y) → world (x, 0, -y) — EXACTLY the DXF→Three mapping
   // (`DxfToThreeConverter`), so the text lies flat, readable from above, aligned with the plan.
   mesh.rotation.x = -Math.PI / 2;
-  // ADR-557 Φ-attachment — anchor the plane CENTRE at the attachment-aware text-box centre
-  // SSoT (`resolveTextBox`), the SAME box the 2D grips + hover frame use, so the 3D glyph
-  // block coincides with them and 2D ≡ 3D (was: lower-left at position → ignored attachment).
+  // ADR-557 Φ-attachment — anchor the plane CENTRE at the NOMINAL em-box centre
+  // (`resolveTextEmBox`): the 3D canvas draws the glyph centred in an em cell, so the plane
+  // follows the em box, NOT the tight VISUAL cap box the 2D grips/hover use (which would
+  // shift the 3D text vs the plan). Attachment-aware → 2D ≡ 3D placement.
   const boxCenter = resolveTextEmBox(entity).center;
   mesh.position.set(boxCenter.x, 0, -boxCenter.y);
 

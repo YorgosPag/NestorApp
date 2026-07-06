@@ -2,9 +2,9 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | 🟢 Slices 1-5 + **Φ-attachment** IMPLEMENTED (UNCOMMITTED) — grips browser-verified· Φ-attachment 🔴 εκκρεμεί browser-verify (Giorgio 2026-06-30) |
+| **Status** | 🟢 Slices 1-5 + **Φ-attachment** (H+V real-metrics) IMPLEMENTED (UNCOMMITTED) — grips + οριζόντια browser-verified· **κάθετο (visual/em split) 🔴 εκκρεμεί browser-verify** (Giorgio 2026-07-07) |
 | **Date** | 2026-06-30 |
-| **Last Updated** | 2026-06-30 |
+| **Last Updated** | 2026-07-07 |
 | **Category** | Canvas & Rendering / Grips |
 | **Location** | `src/subapps/dxf-viewer/` (`bim/text/`, `hooks/grips/`, `rendering/{entities,ghost}/`, `core/commands/text/`, `bim-3d/{converters,grips}/`, `canvas-v2/dxf-canvas/`) |
 | **Author** | Claude (κατόπιν εντολής Giorgio) |
@@ -92,23 +92,24 @@
 
 ### Λύση — ΕΝΑ box SSoT, N consumers (reuse, μηδέν διπλότυπο)
 ΝΕΟ `bim/text/text-box.ts` (pure):
-- `resolveTextBox(entity): RectFrame` — attachment-aware centre. **Reuse** του υπάρχοντος `offsetForJustification` (`text-engine/layout/attachment-point.ts`, ADR-344 Φ3· **κανένα** re-implement του 9-point πίνακα). Mapping y-down→world y-up:
+- **HORIZONTAL** — `x` κέντρο από το `offsetForJustification` (`text-engine/layout/attachment-point.ts`, ADR-344 Φ3· κανένα re-implement· μόνο η στήλη L/C/R) μέσω `horizontalCenterOffset`· **πλάτος = πραγματικό glyph advance** (`measureTextAdvanceWorld`, `text-advance.ts`), όχι monospace προσέγγιση → box ≡ ζωγραφισμένα glyphs οριζόντια (widthFactor X-scale included).
+- **VERTICAL — ΔΥΟ boxes** (η σύμβαση «visual bounds vs edit box» των μεγάλων editors):
+  - `resolveTextBox` (**VISUAL**) — αγκαλιάζει τα ΖΩΓΡΑΦΙΣΜΕΝΑ glyphs: baseline εκεί που τον τοποθετεί ο renderer (**font** ascent/descent ανά attachment row, mirror `TextRenderer.fillGlyphRun`) + extent = πραγματικό glyph **INK** (cap height για κεφαλαία, +descenders για g/p/y), μέσω `measureTextVerticalRatios` (`text-vertical-metrics.ts`). Είναι το box για **2D grips + hover frame + hitTest** → λαβές/πλαίσιο ≡ γράμματα (Giorgio 2026-07-07: το em-box ήταν ~0.19·em ψηλότερο πάνω· μετρημένο 93 units πάνω από το cap-top).
+  - `resolveTextEmBox` (**NOMINAL**) — το προ-metrics em box (`emVerticalRatios`), για το **3D textured plane** (`dxf-text-3d`) + **culling**, που είναι em-based (το 3D canvas ζωγραφίζει το glyph κεντραρισμένο σε em cell) και ΔΕΝ πρέπει να ακολουθήσει το cap box.
   ```
-  {dx,dy} = offsetForJustification(just,{w,h})   // y-down → top-left corner
-  localCenter = { x: dx + w/2, y: -(dy + h/2) }   // → world y-up box centre
-  center = position + R(rotationDeg)·localCenter
+  center = position + R(rotationDeg)·{ horizontalCenterOffset, ((top+bottom)/2)·h }
+  halfLength = ((top−bottom)/2)·h      // visual: top−bottom = inkAscent+inkDescent
   ```
-  `just` = `textBaseline`{T,M,B}+`textAlign`{L,C,R}, default **TL**. Επαλήθευση: **BL** → (+w/2,+h/2) = ταυτόσημο με την παλιά συμπεριφορά (μηδέν regression baseline-left)· **TL** → (+w/2,−h/2)· **BR** → (−w/2,+h/2).
-- `textBoxToPosition(frame, entity)` — inverse με το ΙΔΙΟ `offsetForJustification` στα νέα w,h → resize/rotate κρατά καρφωμένο το attachment point (Revit/AutoCAD).
-- `textBoxCornersWorld` / `textBoxAABB` — rotation-aware γωνίες + AABB.
-- Width/height SSoT (`effectiveTextWidth`/`resolveBoxHeight`/`naturalTextWidth`) μετακινήθηκαν εδώ· `text-grips.ts` τα re-exports.
+- `textBoxToPosition(frame, entity)` — inverse του **VISUAL** box (ίδια ratios) → resize/rotate κρατά καρφωμένο το attachment point (Revit/AutoCAD).
+- `textVisualExtentRatio(entity)` — visual extent ÷ em (= inkAscent+inkDescent) — ο διαιρέτης που το resize χρησιμοποιεί για να ανακτήσει το ονομαστικό `height` από το τραβηγμένο box height (χωρίς jump στο release· em-path → 1.0).
+- `textBoxCornersWorld` (visual) / `textEmBoxCornersWorld` (em) / `textBoxAABB` (em) — rotation-aware γωνίες + AABB.
 
-**Consumers (όλοι διαβάζουν το ΕΝΑ box):**
-- `text-grips.ts` — `textToRectFrame` = re-export του `resolveTextBox`· `rectFrameToPosition` → `textBoxToPosition`.
-- `dxf-text-3d.ts` — anchor mesh στο `resolveTextBox().center` (plane size font-measured αμετάβλητο· μόνο re-center → 2Δ≡3Δ).
-- `TextRenderer.hitTest` — rotation-aware test στο SSoT box· **ΝΕΟ 2D hover frame** (stroke `textBoxCornersWorld`, `HOVER_HIGHLIGHT`) → το φωτεινό πλαίσιο εμφανίζεται πλέον και στο 2Δ.
-- `getEntityBBox` (`dxf-viewport-culling.ts`) → `textBoxAABB` (culling/pick = ό,τι ζωγραφίζεται).
-- `dxf-entity-outline.ts` (3D hover halo) → `textBoxCornersWorld` (rotation-aware = λαβές).
+**Consumers:**
+- `text-grips.ts` — `textToRectFrame` = re-export του `resolveTextBox` (visual)· `framePatch` → `height = boxHeight / textVisualExtentRatio` (visual→nominal), `position` → `textBoxToPosition`.
+- `dxf-text-3d.ts` — anchor mesh στο `resolveTextEmBox().center` (em· ώστε το 3D κείμενο να ΜΗΝ μετακινηθεί ~53 units σε 277-unit τίτλο).
+- `TextRenderer.hitTest` — rotation-aware test στο VISUAL box· 2D hover frame stroke `textBoxCornersWorld` (visual) → φωτεινό πλαίσιο ≡ γράμματα.
+- `getEntityBBox` (`dxf-viewport-culling.ts`) → `textBoxAABB` (em· γενναιόδωρο cull, δεν pop-άρει το κείμενο στην άκρη).
+- `dxf-entity-outline.ts` (3D hover halo) → `textEmBoxCornersWorld` (em· ταιριάζει με το 3D plane).
 
 **ΟΧΙ αλλαγή** στη rotation/zoom/scale math του `renderTextContent` (guard αρχείου τηρήθηκε — μόνο anchor/box/hitTest + additive hover frame).
 
@@ -128,6 +129,9 @@
 ---
 
 ## Changelog
+- **2026-07-07 (Φ-attachment ΚΑΘΕΤΟ — visual glyph-ink box, «μεγάλο κενό πάνω»)** — Το box ύψος χρησιμοποιούσε το ονομαστικό em, ενώ ο renderer ζωγραφίζει τα caps στο ~0.71·em πάνω στο baseline (baseline τοποθετημένο κατά το **font ascent** ~0.905·em) → το πλαίσιο/λαβές ~0.19·em ψηλότερα, μεγάλο κενό πάνω (μετρημένο με temp `[VBOX-DIAG]`: για «ΤΕΣΤ» Liberation Sans, box top **93 units** πάνω από το cap-top, inkDescent=0). **FIX (real metrics, όπως Revit/Figma):** ΝΕΟ SSoT `text-engine/fonts/text-vertical-metrics.ts` `measureTextVerticalRatios` (font ascent/descent για baseline anchor + glyph **INK** bbox `getPath().getBoundingBox()` για extent· nominal fallback από `TEXT_METRICS_RATIOS`, +ΝΕΟ `CAP_HEIGHT_RATIO=0.7`· ο flaky CSS `actualBoundingBox*` tier παραλείφθηκε σκόπιμα — μετρήθηκε `-17` στη μηχανή Giorgio). **«Visual bounds vs edit box» split:** `resolveTextBox` = VISUAL cap/ink box (2D grips/hover/hitTest ≡ γράμματα)· ΝΕΟ `resolveTextEmBox` = nominal em box (3D plane + culling, μηδέν 3D regression — αλλιώς το 3D κείμενο μετακινούνταν ~53 units). Resize inverse μέσω `textVisualExtentRatio` (visual→nominal· `framePatch` διαιρεί το box height, ώστε το resize να ΜΗΝ σπάσει — box holds, no jump). Consumers repointed: `dxf-text-3d`→`resolveTextEmBox`, `dxf-entity-outline`→`textEmBoxCornersWorld`, `textBoxAABB`→em. ΝΕΑ tests: `text-vertical-metrics.test.ts` + `text-box-vertical.test.ts` (cap stub 0.7/0 → box αγκαλιάζει caps + resize round-trip no-jump). Stub επεκτάθηκε (`getBoundingBox`· default ink=metrics → VISUAL≡em → **όλα τα προϋπάρχοντα geometry tests πράσινα αμετάβλητα**). **628 jest GREEN.** 🔴 εκκρεμεί browser-verify.
+- **2026-07-07 (TEMP diagnostics αφαιρέθηκαν)** — Αφαιρέθηκαν ΟΛΑ τα προσωρινά διαγνωστικά (`[TEXTBOX-DIAG]`/`logTextBoxDiag`/throttle map στον `TextRenderer`, `[GRIP-HIT-DIAG]` στον `grip-mouse-handlers` +orphaned `UnifiedGripInfo` import, `[TEXT-COMMIT-DIAG]`/`[TEXT-COMMIT-AFTER]` στον `grip-parametric-text-commits`, το νέο `[VBOX-DIAG]`) πριν το commit. Grep `TEMP-DIAG|*-DIAG|logTextBoxDiag` → 0 hits.
+- **2026-07-06/07 (Φ-attachment ΟΡΙΖΟΝΤΙΟ — real glyph advance + durable height + projection SSoT)** — (α) Το πλάτος του box χρησιμοποιούσε monospace προσέγγιση (`len·h·0.6`) ενώ ο renderer ζωγραφίζει με πραγματικό proportional advance → box off οριζόντια. FIX: ΝΕΟ `text-engine/fonts/text-advance.ts` `measureTextAdvanceWorld` (3-tier: opentype `getGlyphRun`→CSS `measureText`→monospace)· `effectiveTextWidth`+`baseTextAdvanceWorld` το χρησιμοποιούν· `framePatch` inverse μέσω `baseTextAdvanceWorld` (deltaW=0 verified). (β) **Durable resize height:** το ύψος ζει στο `textNode.runs[].style.height` (`resolveTextHeight` το διαβάζει πρώτο) → flat `height` write σκιαζόταν same-tick· FIX `scaleTextNodeRunHeights` (`utils/text-node-utils.ts`) γράφει scaled textNode + `UpdateTextTransformCommand.textNode`. (γ) **Projection SSoT:** ΝΕΟ `bim/text/project-scene-text.ts` `projectSceneTextToDxf` (scene→DxfText, preview≡commit)· ο ghost (`apply-entity-preview.ts`) inject-άρει flat text/height ώστε ο `TextRenderer` να μη κάνει early-return. ΝΕΑ tests `text-advance.test.ts` + `_stub-font.ts` (deterministic 0.6 ratio) + `text-node-utils.test.ts`.
 - **2026-07-06 (TEMP diagnostic — box-vs-glyph offset instrumentation)** — Προσωρινό (`REMOVE BEFORE COMMIT`) διαγνωστικό logging στον `TextRenderer.render` (`logTextBoxDiag` + throttle map, 1 log/400ms/entity) που μετρά την οριζόντια απόκλιση ανάμεσα στο **geometry box** (grips/hover/hit-test, `resolveTextBox` → monospace προσέγγιση) και τα **πραγματικά ζωγραφισμένα glyphs** (real font metrics `getGlyphRun`, else `ctx.measureText`) — για να εντοπιστεί γιατί οι λαβές/hover frame κάθονται μετατοπισμένα σε σχέση με το κείμενο (ADR-557 Φ-attachment follow-up). **Καθαρά instrumentation**: `console.log('[TEXTBOX-DIAG]', …)` πριν το `ctx.restore()`, καμία αλλαγή στη ζωγραφική/geometry/commit. Committed κατόπιν ρητής εντολής Giorgio (2026-07-06) ώστε να διατηρηθεί το working tree καθαρό· να **αφαιρεθεί** πριν το production polish του box-vs-glyph fix. Co-staged: ADR-557 (CHECK 6D). 🟡 TEMP.
 - **2026-07-06 (MTEXT ghost regression re-fix — triage)** — Το `apply-entity-preview.ts:237` guard είχε **αναιρεθεί** από `'text'||'mtext'` πίσω σε μόνο `'text'` (commit `0878ed54`, 30/6) με σχόλιο-αιτιολογία «MTEXT normalised to 'text' at scene→Dxf conversion» → **λάθος γι' αυτό το pipeline**: το mtext→text normalize (`dxf-text-entity-converter.ts:49`) συμβαίνει ΜΟΝΟ στο render/hit-test pipeline (`dxf-scene-entity-converter`)· το ghost-preview παίρνει το **raw scene entity** (`useGripGhostPreview.getEntity`) με `type==='mtext'`, και το `normalizePreviewEntity` μαπάρει μόνο `lwpolyline→polyline`. Αποτέλεσμα: το ζωντανό ghost χανόταν ξανά σε MTEXT grip-drag (regression του ba33b0c2). **FIX:** επαναφορά `entity.type === 'text' || entity.type === 'mtext'` + διόρθωση του παραπλανητικού σχολίου. Το `apply-entity-preview-text.test.ts` (regression guard) ήταν pre-existing failing → τώρα GREEN (move + MTEXT corner resize width 800→860). Triage 16 pre-existing tests.
 - **2026-06-30 (Φ-attachment, drag-response fix)** — «το κείμενο δεν ανταποκρίνεται στις λαβές»: το live ghost (`applyEntityPreview`) αγνοούσε MTEXT (έλεγχε μόνο `type==='text'`, ενώ το commit δεχόταν `'mtext'`) → καμία ζωντανή απόκριση· + το box έχανε το attachment στο drag (scene entity → `textNode.attachment`, commit δεν το περνούσε). FIX: ghost δέχεται `'text'|'mtext'`· `resolveTextBox` διαβάζει `textNode.attachment` → `textStyle` → TL· commit `projectSceneTextToDxf` κουβαλά `textStyle` (`extractFirstRunStyle`). ΝΕΟ `apply-entity-preview-text.test.ts`. 87 jest GREEN.
