@@ -4,8 +4,11 @@
  * @description Handles entity-picking clicks for measurement/drawing tools:
  * - PRIORITY 1.9: Angle entity measurement picking
  * - PRIORITY 2: Circle TTT entity picking
- * - PRIORITY 3: Line Perpendicular entity picking
  * - PRIORITY 4: Line Parallel entity picking
+ *
+ * NOTE (ADR-060): «Κάθετη γραμμή» (`line-perpendicular`) ΔΕΝ κάνει πλέον entity-pick εδώ — έγινε
+ * hover-driven drawing tool (τα κλικ πάνε στο unified drawing pipeline). Ο παλιός `handleLinePerpendicularPick`
+ * αφαιρέθηκε.
  *
  * EXTRACTED FROM: useCanvasClickHandler.ts — SRP split (ADR N.7.1)
  *
@@ -159,46 +162,6 @@ export function handleCircleTTTPick(
   }
   dlog('entityPickHandlers', 'Circle TTT: No line/polyline found at click point');
   return true;
-}
-
-// ============================================================================
-// PRIORITY 3: LINE PERPENDICULAR ENTITY PICKING
-// ============================================================================
-
-/**
- * Handles Line Perpendicular entity picking.
- * Returns `true` if the click was consumed.
- */
-export function handleLinePerpendicularPick(
-  ctx: EntityPickContext,
-  tool: SpecialToolLike,
-  activeTool: string,
-): boolean {
-  if (activeTool !== 'line-perpendicular' || !tool.isActive) return false;
-
-  if (tool.currentStep === 0) {
-    const scene = getScene(ctx);
-    if (!scene?.entities) return true;
-
-    const hitTolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / ctx.transform.scale;
-    for (const entity of scene.entities) {
-      if (isLineEntity(entity)) {
-        if (pointToLineDistance(ctx.worldPoint, entity.start, entity.end) <= hitTolerance) {
-          const accepted = tool.onEntityClick(entity as AnySceneEntity, ctx.worldPoint);
-          if (accepted) {
-            dlog('entityPickHandlers', 'LinePerpendicular entity accepted:', entity.id);
-            return true;
-          }
-        }
-      }
-    }
-    dlog('entityPickHandlers', 'LinePerpendicular: No line found at click point');
-    return true;
-  } else if (tool.currentStep === 1) {
-    tool.onCanvasClick?.(ctx.worldPoint);
-    return true;
-  }
-  return false;
 }
 
 // ============================================================================

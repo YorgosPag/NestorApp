@@ -50,7 +50,7 @@ function clampStubLength(start: Readonly<Point2D>, end: Readonly<Point2D>, lenMm
 }
 
 /** Αποτέλεσμα του εγκεφάλου έλξης για τη γραμμή (zero-width member face-snap). */
-interface LineFaceSnap {
+export interface LineFaceSnap {
   /** Flush σημείο πάνω στην παρειά (το άκρο της γραμμής κλειδώνει εδώ). */
   readonly start: Point2D;
   /** Άκρο μικρού κάθετου stub-φαντάσματος (προς τα έξω από την παρειά). */
@@ -65,7 +65,7 @@ interface LineFaceSnap {
  * 🟢 flush/κάθετα πάνω σε παρειά μέλους (ο `faceFrame` υπάρχει στον Τ-framing κλάδο)· `null` σε ελεύθερη
  * κίνηση ή σε collinear-overlap (όπου δεν υπάρχει κάθετη παρειά).
  */
-function resolveLineFaceSnapAt(effectiveCursor: Readonly<Point2D>, sceneUnits: SceneUnits): LineFaceSnap | null {
+export function resolveLineFaceSnapAt(effectiveCursor: Readonly<Point2D>, sceneUnits: SceneUnits): LineFaceSnap | null {
   const snapResult = resolveBimCursorSnap({
     toolKind: 'line',
     cursor: effectiveCursor,

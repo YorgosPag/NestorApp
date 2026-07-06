@@ -8,7 +8,7 @@
 
 import type { GripInfo } from '../../../hooks/grip-types';
 import type { DxfEntityUnion } from '../../../canvas-v2/dxf-canvas/dxf-types';
-import { buildDxfGhostSegments } from '../dxf-grip-ghost-paint';
+import { buildDxfGhostSegments, buildDxfGripReshapedVertices } from '../dxf-grip-ghost-paint';
 
 const grip = (p: Partial<GripInfo>): GripInfo =>
   ({ entityId: 'e', gripIndex: 0, type: 'vertex', position: { x: 0, y: 0 }, movesEntity: false, ...p });
@@ -122,5 +122,37 @@ describe('buildDxfGhostSegments — arc', () => {
     const last = seg[seg.length - 1];
     expect(last.x).toBeCloseTo(0);
     expect(last.y).toBeCloseTo(60);
+  });
+});
+
+describe('buildDxfGripReshapedVertices — indexable HUD geometry (no closing append)', () => {
+  it('line → the 2 reshaped endpoints (grip 0 moves start)', () => {
+    const g = grip({ gripIndex: 0, position: { x: 0, y: 0 } });
+    expect(buildDxfGripReshapedVertices(line(), g, { x: 10, y: 20 }))
+      .toEqual([{ x: 10, y: 20 }, { x: 100, y: 0 }]);
+  });
+
+  it('polyline → EXACTLY n reshaped vertices, indexable by segment pair (vertex drag)', () => {
+    const g = grip({ gripIndex: 1, position: { x: 100, y: 0 } });
+    const out = buildDxfGripReshapedVertices(polyOpen(), g, { x: 120, y: 0 });
+    expect(out).toEqual([{ x: 0, y: 0 }, { x: 120, y: 0 }, { x: 100, y: 100 }]);
+  });
+
+  it('polyline edge-slide moves BOTH edge vertices', () => {
+    const g = grip({ gripIndex: 3, type: 'edge', position: { x: 50, y: 0 }, edgeVertexIndices: [0, 1] });
+    const out = buildDxfGripReshapedVertices(polyOpen(), g, { x: 60, y: 0 }); // delta (10,0)
+    expect(out).toEqual([{ x: 10, y: 0 }, { x: 110, y: 0 }, { x: 100, y: 100 }]);
+  });
+
+  it('scales native coords to mm before the mm delta (unitToMm)', () => {
+    const g = grip({ gripIndex: 1, position: { x: 1000, y: 0 } });
+    const out = buildDxfGripReshapedVertices(line(), g, { x: 1100, y: 0 }, 10);
+    expect(out).toEqual([{ x: 0, y: 0 }, { x: 1100, y: 0 }]);
+  });
+
+  it('circle / arc → null (no straight-leg HUD)', () => {
+    const g = grip({ gripIndex: 1, position: { x: 50, y: 0 } });
+    const arcE = ({ id: 'e', type: 'arc', visible: true, center: { x: 0, y: 0 }, radius: 50, startAngle: 0, endAngle: 90 }) as unknown as DxfEntityUnion;
+    expect(buildDxfGripReshapedVertices(arcE, g, { x: 60, y: 0 })).toBeNull();
   });
 });

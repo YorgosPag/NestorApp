@@ -34,10 +34,14 @@ function lineGhost(start: Point2D, end: Point2D, grip: GripInfo, dx: number, dy:
   return [s, e];
 }
 
-/** Ghost for a polyline: translate whole, move both edge vertices, or move one vertex. */
-function polylineGhost(
+/**
+ * The reshaped polyline vertices (EXACTLY `n`, no closing-loop append) after the grip drag:
+ * translate whole, move both edge vertices, or move one vertex. The SSoT of «which vertices move»
+ * (mirror `computeDxfEntityGrips`/`gripToVertexRefs`), shared by the stroke ghost ({@link polylineGhost})
+ * AND the live length/angle HUD ({@link buildDxfGripReshapedVertices}) so the measured leg == the drawn leg.
+ */
+function reshapedPolylineVertices(
   vertices: readonly Point2D[],
-  closed: boolean,
   grip: GripInfo,
   dx: number,
   dy: number,
@@ -46,7 +50,18 @@ function polylineGhost(
   if (grip.movesEntity) vertices.forEach((_, i) => moved.add(i));
   else if (grip.edgeVertexIndices) grip.edgeVertexIndices.forEach((i) => moved.add(i));
   else if (grip.gripIndex < vertices.length) moved.add(grip.gripIndex);
-  const out = vertices.map((v, i) => (moved.has(i) ? translate(v, dx, dy) : { x: v.x, y: v.y }));
+  return vertices.map((v, i) => (moved.has(i) ? translate(v, dx, dy) : { x: v.x, y: v.y }));
+}
+
+/** Ghost for a polyline: reshaped vertices + a closing-loop append for a closed ring (stroke path). */
+function polylineGhost(
+  vertices: readonly Point2D[],
+  closed: boolean,
+  grip: GripInfo,
+  dx: number,
+  dy: number,
+): Point2D[] {
+  const out = reshapedPolylineVertices(vertices, grip, dx, dy);
   if (closed && out.length > 1) out.push({ x: out[0].x, y: out[0].y });
   return out;
 }
@@ -107,4 +122,28 @@ export function buildDxfGhostSegments(
     default:
       return []; // text — grip square alone follows (no wireframe)
   }
+}
+
+/**
+ * ADR-537/561/508 — the reshaped INDEXABLE vertices (plan-mm, EXACTLY `n`, no closing append) of a
+ * raw-DXF line / polyline during a grip drag, so the 3D live white HUD can measure each changing leg's
+ * length/angle. Line → the 2 endpoints (`[0,1]` is the only segment); polyline → its reshaped vertices
+ * indexed by the SHARED `resolvePolylineHudSegments` selection. `null` for circle/arc/text (no
+ * straight-leg HUD). Reuses the SAME `lineGhost`/`reshapedPolylineVertices` «which vertices move» SSoT
+ * as the stroke ghost, so the dimensioned geometry is byte-identical to the drawn ghost. `unitToMm`
+ * (ADR-537 γ) scales native DXF coords → mm before the mm-space grip delta (mirror
+ * {@link buildDxfGhostSegments}). Pure — Jest-friendly.
+ */
+export function buildDxfGripReshapedVertices(
+  entity: DxfEntityUnion,
+  grip: GripInfo,
+  livePlanPos: Point2D,
+  unitToMm = 1,
+): Point2D[] | null {
+  const dx = livePlanPos.x - grip.position.x;
+  const dy = livePlanPos.y - grip.position.y;
+  const s = (p: Point2D): Point2D => ({ x: p.x * unitToMm, y: p.y * unitToMm });
+  if (entity.type === 'line') return lineGhost(s(entity.start), s(entity.end), grip, dx, dy);
+  if (entity.type === 'polyline') return reshapedPolylineVertices(entity.vertices.map(s), grip, dx, dy);
+  return null; // circle/arc/text — no straight-leg length HUD
 }

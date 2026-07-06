@@ -75,7 +75,7 @@ const MEASUREMENT_TOOLS: ReadonlySet<DrawingTool> = new Set([
 
 /** Drawing tools that create persistent entities */
 const ENTITY_TOOLS: ReadonlySet<DrawingTool> = new Set([
-  'line', 'rectangle', 'circle', 'circle-diameter', 'circle-2p-diameter',
+  'line', 'line-perpendicular', 'rectangle', 'circle', 'circle-diameter', 'circle-2p-diameter',
   'circle-3p', 'circle-chord-sagitta', 'circle-2p-radius', 'circle-best-fit',
   'polyline', 'polygon', 'arc-3p', 'arc-cse', 'arc-sce',
   // ADR-507 S2 — γραμμοσκίαση (κλειστό όριο → HatchEntity).

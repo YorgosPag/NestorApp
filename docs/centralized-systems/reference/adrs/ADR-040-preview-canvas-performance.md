@@ -3730,3 +3730,7 @@ Master view toggle «Σοβατισμένη όψη» (`showFinishSkin`, per-view
 - **`handleRotationKeyDown: rotationTool.handleRotationKeyDown`** + **`rotateToolAwaitingAngle: rotationTool.isAwaitingAngle`** — event-time callbacks/flags που διαβάζονται από τον `useRotationTool` hook, **όχι** νέα `useSyncExternalStore` στον orchestrator (ADR-040 rule 1 τηρείται). Το config object απλώς προωθεί τους handlers στο keyboard layer· κανένα high-freq store read, bitmap cache άθικτο (rule 3 N/A).
 
 Νέο SSoT module `systems/dynamic-input/typed-angle-entry.ts` (+ test) κατέχει το parsing της πληκτρολογημένης γωνίας. Βλ. **ADR-397 / ADR-513**. Staged για CHECK 6B.
+
+## 2026-07-06 (b): ADR-574 Σ2b — slab-opening placement ghost → WYSIWYG (`CanvasSection` payload, CHECK 6B stage)
+
+**Καμία αρχιτεκτονική αλλαγή στο high-freq path — additive payload field, μηδέν νέα subscription.** Το `CanvasSection` (orchestrator) προσθέτει στο `slabOpeningGhostPreview` payload ένα ακόμη resolver `getHostSlab: () => SlabEntity | null` (event-time closure πάνω στο `slabOpeningTool.state.hostSlabId` + `levelManager.getLevelScene`, ακριβής καθρέφτης του υπάρχοντος `openingGhostPreview.getHostWall`). **Όχι** νέα `useSyncExternalStore` στον orchestrator (ADR-040 rule 1 τηρείται)· ο micro-leaf `useSlabOpeningGhostPreview` παραμένει ο μόνος subscriber (rule 4). Το placement ghost ρεντάρεται πλέον μέσω του πραγματικού `SlabOpeningRenderer` (`renderWysiwygPlacementGhost`) αντί bespoke rect — bitmap cache άθικτο (preview canvas only, rule 3 N/A). Βλ. **ADR-574 §Νησίδα 2 / §10**. Staged για CHECK 6B.

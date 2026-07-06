@@ -72,6 +72,9 @@ export function createEntityFromTool(
   const defaultLayerId = getDefaultLayerId();
   switch (tool) {
     case 'line':
+    // ADR-060 — «κάθετη γραμμή»: παράγει ΤΑΥΤΟΣΗΜΗ `LineEntity` με τη γραμμή (τα σημεία έρχονται ήδη
+    // κάθετα-κλειδωμένα από το commit path). Κοινό branch → μηδέν διπλότυπο.
+    case 'line-perpendicular':
       if (points.length >= 2) {
         return {
           id,
@@ -457,6 +460,7 @@ export function createEntityFromTool(
 export function isEntityComplete(tool: DrawingTool, pointCount: number): boolean {
   switch (tool) {
     case 'line':
+    case 'line-perpendicular': // ADR-060 — 2 σημεία (βάση + κλειδωμένο κάθετο άκρο)
     case 'measure-distance':
     case 'rectangle':
     case 'circle':

@@ -67,7 +67,7 @@ export interface UseCanvasClickHandlerParams {
   activeTool: string;
   overlayMode: OverlayEditorMode;
   circleTTT: SpecialToolLike;
-  linePerpendicular: SpecialToolLike;
+  // ADR-060 — «κάθετη γραμμή» έγινε drawing tool· δεν περνά πλέον ως entity-pick SpecialToolLike.
   lineParallel: SpecialToolLike;
   angleEntityMeasurement: AngleEntityToolLike;
   dxfGripInteraction: DxfGripInteractionLike;

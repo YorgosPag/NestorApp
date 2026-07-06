@@ -47,6 +47,9 @@ import { isDimLineRefPhase } from '../dimensions/dim-skip-snap';
 // shared με το wall click-commit ώστε preview ≡ committed).
 import { applyLengthAngleLock } from '../../systems/dynamic-input/length-angle-lock';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
+// ADR-060 — «Κάθετη γραμμή»: hard κάθετο κλείδωμα στο 2ο κλικ (κοινός άξονας preview ≡ commit).
+import { perpendicularAxisLockStore } from '../../bim/placement/perpendicular-axis-lock-store';
+import { projectOntoPerpendicularAxis } from './line-perpendicular-preview-helpers';
 
 const DEBUG_DRAWING_HANDLERS = false;
 
@@ -178,115 +181,134 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
     // BIM tools have an empty `tempPoints`; fall back to their preview-store anchor
     // so the ghost follows F8/F10 exactly like the committed geometry will.
     const lastRefPt = tempPoints[tempPoints.length - 1] ?? getBimOrthoReference(activeTool) ?? undefined;
+    // ADR-060 — «Κάθετη γραμμή» state-1 (μετά το 1ο κλικ): ο κλειδωμένος κάθετος άξονας. `null` σε
+    // state-0 (hover, πριν το 1ο κλικ) → κανονική ροή παρακάτω (ghost + κυανά + λευκά ίχνη όπως η γραμμή).
+    const perpLock = activeTool === 'line-perpendicular' ? perpendicularAxisLockStore.get() : null;
     let polarSnapResult: PolarSnapResult | null = null;
     let previewPt = p;
-    // ADR-508 — wall 2nd click anchored to a member face → relative-polar-to-face magnet
-    // (auto, supersedes world polar) + its own zoom-adaptive length step. Returns null when
-    // ORTHO is on or the start is not face-anchored. Shares the SSoT with the commit path.
-    // ADR-363 §wall-ortho-tracking — Q (F9+Q) ΝΙΚΑ τον μαγνήτη (ίδιο με το commit path) ώστε το
-    // ρητό βήμα του χρήστη να εφαρμόζεται αντί του zoom-adaptive step του magnet.
-    const faceRel = isGripStepActive() ? null : resolveWallFaceRelativePolar(p, worldPerPixel(getTransformScale()));
-    if (faceRel) {
-      polarSnapResult = faceRel.result;
-      previewPt = faceRel.result.point;
-    } else if (lastRefPt) {
-      // ADR-363 — ORTHO(F8) → POLAR(F10) → fixed-step(F9+Q) via the shared SSoT
-      // (`resolveOrthoPolarStep`), the EXACT pipeline both commit paths use
-      // (`onDrawingPoint` generic + `applyBimDrawingConstraint` BIM) → ghost ≡ committed
-      // geometry (WYSIWYG), zero duplication. Step is a no-op unless F9 armed + Q held.
-      const opStep = resolveOrthoPolarStep(p, lastRefPt, { ortho: orthoOnRef.current, polar: polarOnRef.current });
-      polarSnapResult = opStep.polarResult;
-      previewPt = opStep.stepped;
-    }
-    // ADR-357 Phase 7: Snap Override — filter preview snap to override engine.
-    // Only applies to single-use engine overrides (not 'from'/'m2p' which have
-    // their own multi-click flow). The preview rubber-band locks to the override
-    // engine's snap point when found; otherwise falls back to cursor position.
-    const snapOverrideForHover = SnapOverrideOrchestrator.getOverride();
-    const findSnapFnForHover = findSnapPointRef.current;
-    if (snapOverrideForHover && snapOverrideForHover !== 'from' && snapOverrideForHover !== 'm2p' && findSnapFnForHover) {
-      const engineTarget = snapOverrideForHover === 'app'
-        ? ExtendedSnapType.INTERSECTION
-        : snapOverrideForHover as ExtendedSnapType;
-      try {
-        const overrideResult = findSnapFnForHover(previewPt.x, previewPt.y);
-        if (overrideResult?.found && overrideResult.activeMode === engineTarget && overrideResult.snappedPoint) {
-          previewPt = overrideResult.snappedPoint;
-        }
-      } catch { /* snap error — keep previewPt unchanged */ }
-    }
-    // ADR-357 Phase 4: Object Snap Tracking — acquisition timer + resolver.
-    // Acquisition: when ImmediateSnapStore reports a stable snap candidate
-    // for ACQUISITION_DURATION_MS, the point joins the FIFO. Resolution:
-    // alignment paths from acquired points override `previewPt` when the
-    // cursor crosses one (priority intersection > projection).
-    const trackingState = trackingHoverRef.current;
-    const immediateSnap = getImmediateSnap();
-    const isDrawingTool = activeTool !== 'select' && activeTool !== 'pan';
-    // ADR-363 §wall-ortho-tracking (OTRACK acquire) — «κλείδωσε» το osnap-σε-οντότητα σημείο ως tracking
-    // αναφορά για το 1ο σημείο του τοίχου (ΟΡΘΟ/Q ως προς τη διπλανή κολόνα). `isVisibleSnapMode` (ΤΟ
-    // ΙΔΙΟ SSoT με τη fux): μόνο ΠΡΑΓΜΑΤΙΚΕΣ/ορατές έλξεις — όχι grid/guide (σιωπηλά aids, χωρίς marker →
-    // δεν γίνονται anchor). Sticky: κρατά την τελευταία όσο ο κέρσορας είναι ελεύθερος.
-    if (isDrawingTool && immediateSnap?.found && isVisibleSnapMode(immediateSnap.mode)) {
-      setPlacementTrackingAnchor(immediateSnap.point);
-    }
-    if (isDrawingTool && immediateSnap?.found) {
-      const sameAsLast = trackingState.point
-        && trackingState.snapType === immediateSnap.mode
-        && Math.hypot(trackingState.point.x - immediateSnap.point.x, trackingState.point.y - immediateSnap.point.y) < 0.5;
-      if (sameAsLast) {
-        if (performance.now() - trackingState.hoverStartedAt >= ACQUISITION_DURATION_MS) {
-          TrackingPointStore.acquirePoint(immediateSnap.point, immediateSnap.mode);
-          trackingState.point = null;
-          trackingState.snapType = null;
-          trackingState.hoverStartedAt = 0;
+    // Hoisted (ήταν const) ώστε ο κάθετος κλάδος να τα αφήνει `null` (κανένα stray overlay) και να
+    // παραμένουν έγκυρα στο κάτω PERF trace block.
+    let faceRel: ReturnType<typeof resolveWallFaceRelativePolar> = null;
+    let trackingResult: NonNullable<ReturnType<typeof resolveAlignmentTracking>>['result'] | null = null;
+    let trackingPoint: Pt | null = null;
+    let ambientEntities: readonly Entity[] | null = null;
+    let _trkMs = 0;
+    if (perpLock) {
+      // ADR-060 — ΣΚΛΗΡΟΣ κάθετος περιορισμός (2ο κλικ): προβολή του cursor στον κλειδωμένο άξονα,
+      // παρακάμπτοντας ortho/polar/face-relative/OSNAP-override/tracking (ΕΝΑΣ κυρίαρχος περιορισμός
+      // τη φορά — mirror του wall face-relative, ώστε να μη ζωγραφίζονται stray arcs/traces που θα
+      // «πάλευαν» με το κλείδωμα). Το typed length (Radial Command Ring) εφαρμόζεται αμέσως μετά.
+      previewPt = projectOntoPerpendicularAxis(p, perpLock);
+      previewPt = applyLengthAngleLock(previewPt, lastRefPt ?? perpLock.base);
+    } else {
+      // ADR-508 — wall 2nd click anchored to a member face → relative-polar-to-face magnet
+      // (auto, supersedes world polar) + its own zoom-adaptive length step. Returns null when
+      // ORTHO is on or the start is not face-anchored. Shares the SSoT with the commit path.
+      // ADR-363 §wall-ortho-tracking — Q (F9+Q) ΝΙΚΑ τον μαγνήτη (ίδιο με το commit path) ώστε το
+      // ρητό βήμα του χρήστη να εφαρμόζεται αντί του zoom-adaptive step του magnet.
+      faceRel = isGripStepActive() ? null : resolveWallFaceRelativePolar(p, worldPerPixel(getTransformScale()));
+      if (faceRel) {
+        polarSnapResult = faceRel.result;
+        previewPt = faceRel.result.point;
+      } else if (lastRefPt) {
+        // ADR-363 — ORTHO(F8) → POLAR(F10) → fixed-step(F9+Q) via the shared SSoT
+        // (`resolveOrthoPolarStep`), the EXACT pipeline both commit paths use
+        // (`onDrawingPoint` generic + `applyBimDrawingConstraint` BIM) → ghost ≡ committed
+        // geometry (WYSIWYG), zero duplication. Step is a no-op unless F9 armed + Q held.
+        const opStep = resolveOrthoPolarStep(p, lastRefPt, { ortho: orthoOnRef.current, polar: polarOnRef.current });
+        polarSnapResult = opStep.polarResult;
+        previewPt = opStep.stepped;
+      }
+      // ADR-357 Phase 7: Snap Override — filter preview snap to override engine.
+      // Only applies to single-use engine overrides (not 'from'/'m2p' which have
+      // their own multi-click flow). The preview rubber-band locks to the override
+      // engine's snap point when found; otherwise falls back to cursor position.
+      const snapOverrideForHover = SnapOverrideOrchestrator.getOverride();
+      const findSnapFnForHover = findSnapPointRef.current;
+      if (snapOverrideForHover && snapOverrideForHover !== 'from' && snapOverrideForHover !== 'm2p' && findSnapFnForHover) {
+        const engineTarget = snapOverrideForHover === 'app'
+          ? ExtendedSnapType.INTERSECTION
+          : snapOverrideForHover as ExtendedSnapType;
+        try {
+          const overrideResult = findSnapFnForHover(previewPt.x, previewPt.y);
+          if (overrideResult?.found && overrideResult.activeMode === engineTarget && overrideResult.snappedPoint) {
+            previewPt = overrideResult.snappedPoint;
+          }
+        } catch { /* snap error — keep previewPt unchanged */ }
+      }
+      // ADR-357 Phase 4: Object Snap Tracking — acquisition timer + resolver.
+      // Acquisition: when ImmediateSnapStore reports a stable snap candidate
+      // for ACQUISITION_DURATION_MS, the point joins the FIFO. Resolution:
+      // alignment paths from acquired points override `previewPt` when the
+      // cursor crosses one (priority intersection > projection).
+      const trackingState = trackingHoverRef.current;
+      const immediateSnap = getImmediateSnap();
+      const isDrawingTool = activeTool !== 'select' && activeTool !== 'pan';
+      // ADR-363 §wall-ortho-tracking (OTRACK acquire) — «κλείδωσε» το osnap-σε-οντότητα σημείο ως tracking
+      // αναφορά για το 1ο σημείο του τοίχου (ΟΡΘΟ/Q ως προς τη διπλανή κολόνα). `isVisibleSnapMode` (ΤΟ
+      // ΙΔΙΟ SSoT με τη fux): μόνο ΠΡΑΓΜΑΤΙΚΕΣ/ορατές έλξεις — όχι grid/guide (σιωπηλά aids, χωρίς marker →
+      // δεν γίνονται anchor). Sticky: κρατά την τελευταία όσο ο κέρσορας είναι ελεύθερος.
+      if (isDrawingTool && immediateSnap?.found && isVisibleSnapMode(immediateSnap.mode)) {
+        setPlacementTrackingAnchor(immediateSnap.point);
+      }
+      if (isDrawingTool && immediateSnap?.found) {
+        const sameAsLast = trackingState.point
+          && trackingState.snapType === immediateSnap.mode
+          && Math.hypot(trackingState.point.x - immediateSnap.point.x, trackingState.point.y - immediateSnap.point.y) < 0.5;
+        if (sameAsLast) {
+          if (performance.now() - trackingState.hoverStartedAt >= ACQUISITION_DURATION_MS) {
+            TrackingPointStore.acquirePoint(immediateSnap.point, immediateSnap.mode);
+            trackingState.point = null;
+            trackingState.snapType = null;
+            trackingState.hoverStartedAt = 0;
+          }
+        } else {
+          trackingState.point = { x: immediateSnap.point.x, y: immediateSnap.point.y };
+          trackingState.snapType = immediateSnap.mode;
+          trackingState.hoverStartedAt = performance.now();
         }
       } else {
-        trackingState.point = { x: immediateSnap.point.x, y: immediateSnap.point.y };
-        trackingState.snapType = immediateSnap.mode;
-        trackingState.hoverStartedAt = performance.now();
+        trackingState.point = null;
+        trackingState.snapType = null;
+        trackingState.hoverStartedAt = 0;
+        if (isDrawingTool) TrackingPointStore.touch();
       }
-    } else {
-      trackingState.point = null;
-      trackingState.snapType = null;
-      trackingState.hoverStartedAt = 0;
-      if (isDrawingTool) TrackingPointStore.touch();
-    }
-    // Resolve tracking snap — alignment paths from acquired points. Polar
-    // angles participate when F10 is on (so 45°/30° increments emanate from
-    // every acquired point in addition to the H/V baseline).
-    // ADR-357 ambient alignment (Revit-style): auto-emit transient anchors from the
-    // members near the cursor — a SECOND source merged with the acquired (AutoCAD)
-    // points into the SAME resolver. Gate the (perf-sensitive) scene read behind the
-    // AutoAlign toggle so it stays lazy (resolved once for the collector + the trace).
-    const ambientCfg = ambientAlignmentConfigStore.getSnapshot();
-    const ambientEntities = (isDrawingTool && ambientCfg.enabled) ? getSceneEntities() : null;
-    // ADR-357 / ADR-397 — merge (acquired ⊕ ambient) → resolve alignment path →
-    // adaptive-distance quantize, via the SHARED tracking SSoT (`resolveAlignmentTracking`),
-    // the EXACT same brain the rotation overlay (ADR-397) reuses → preview ≡ rotation parity.
-    // Returns null when no anchor / no path within tolerance (caller keeps the raw cursor).
-    const _trkT0 = performance.now();
-    const composedTracking = resolveAlignmentTracking(previewPt, {
-      scale: getTransformScale(),
-      polarEnabled: polarOnRef.current && !orthoOnRef.current,
-      sceneEntities: ambientEntities,
-      // OTRACK clean-corner: the segment's start ray × an anchor trace (e.g. the
-      // rectangle corner). null on the free first point. (2026-07-04)
-      segmentBase: lastRefPt ?? null,
-    });
-    const _trkMs = performance.now() - _trkT0;
-    const trackingResult = composedTracking?.result ?? null;
-    const trackingPoint = composedTracking?.point ?? null;
-    if (trackingResult && trackingPoint) {
-      previewPt = trackingPoint;
-    }
+      // Resolve tracking snap — alignment paths from acquired points. Polar
+      // angles participate when F10 is on (so 45°/30° increments emanate from
+      // every acquired point in addition to the H/V baseline).
+      // ADR-357 ambient alignment (Revit-style): auto-emit transient anchors from the
+      // members near the cursor — a SECOND source merged with the acquired (AutoCAD)
+      // points into the SAME resolver. Gate the (perf-sensitive) scene read behind the
+      // AutoAlign toggle so it stays lazy (resolved once for the collector + the trace).
+      const ambientCfg = ambientAlignmentConfigStore.getSnapshot();
+      ambientEntities = (isDrawingTool && ambientCfg.enabled) ? getSceneEntities() : null;
+      // ADR-357 / ADR-397 — merge (acquired ⊕ ambient) → resolve alignment path →
+      // adaptive-distance quantize, via the SHARED tracking SSoT (`resolveAlignmentTracking`),
+      // the EXACT same brain the rotation overlay (ADR-397) reuses → preview ≡ rotation parity.
+      // Returns null when no anchor / no path within tolerance (caller keeps the raw cursor).
+      const _trkT0 = performance.now();
+      const composedTracking = resolveAlignmentTracking(previewPt, {
+        scale: getTransformScale(),
+        polarEnabled: polarOnRef.current && !orthoOnRef.current,
+        sceneEntities: ambientEntities,
+        // OTRACK clean-corner: the segment's start ray × an anchor trace (e.g. the
+        // rectangle corner). null on the free first point. (2026-07-04)
+        segmentBase: lastRefPt ?? null,
+      });
+      _trkMs = performance.now() - _trkT0;
+      trackingResult = composedTracking?.result ?? null;
+      trackingPoint = composedTracking?.point ?? null;
+      if (trackingResult && trackingPoint) {
+        previewPt = trackingPoint;
+      }
 
-    // ADR-513 / ADR-357 Phase 13 G14: length/angle lock — constrain preview geometry to
-    // the locked value. Runs after all snaps so the lock takes priority (AutoCAD/BricsCAD).
-    // SSoT helper (no-op when nothing locked) — ίδιος περιορισμός με το wall/beam click-commit.
-    // 'line' = γραμμικό Dynamic Input· 'wall'/'beam' = «Δαχτυλίδι Εντολών» (Radial Command Ring).
-    if (lastRefPt && (activeTool === 'line' || activeTool === 'wall' || activeTool === 'beam')) {
-      previewPt = applyLengthAngleLock(previewPt, lastRefPt);
+      // ADR-513 / ADR-357 Phase 13 G14: length/angle lock — constrain preview geometry to
+      // the locked value. Runs after all snaps so the lock takes priority (AutoCAD/BricsCAD).
+      // SSoT helper (no-op when nothing locked) — ίδιος περιορισμός με το wall/beam click-commit.
+      // 'line' = γραμμικό Dynamic Input· 'wall'/'beam' = «Δαχτυλίδι Εντολών» (Radial Command Ring).
+      if (lastRefPt && (activeTool === 'line' || activeTool === 'wall' || activeTool === 'beam')) {
+        previewPt = applyLengthAngleLock(previewPt, lastRefPt);
+      }
     }
 
     // Update the preview entity (calculates geometry, updates ref)

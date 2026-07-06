@@ -16,6 +16,7 @@ import React from 'react';
 import { useSlabOpeningGhostPreview } from '../../hooks/tools/useSlabOpeningGhostPreview';
 import type { SlabOpeningKind } from '../../bim/types/slab-opening-types';
 import type { SlabOpeningParamOverrides } from '../../hooks/drawing/slab-opening-completion';
+import type { SlabEntity } from '../../bim/types/slab-types';
 import type { ViewTransform } from '../../rendering/types/Types';
 import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -24,6 +25,8 @@ export interface SlabOpeningGhostPreviewMountProps {
   isAwaitingPosition: boolean;
   kind: SlabOpeningKind;
   overrides: SlabOpeningParamOverrides;
+  /** ADR-574 Σ2b — locked host slab resolver (WYSIWYG ghost via commit builders). */
+  getHostSlab: () => SlabEntity | null;
   hoveredEdgeMidpointGrip?: UnifiedGripInfo | null;
   transform: ViewTransform;
   getCanvas: () => HTMLCanvasElement | null;

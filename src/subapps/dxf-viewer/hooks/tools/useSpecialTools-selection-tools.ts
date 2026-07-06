@@ -3,16 +3,16 @@
  * 🏢 ENTERPRISE: useSpecialToolsSelectionTools Hook
  *
  * @description Selection-based geometry tools extracted from useSpecialTools
- *   (Google file-size SSoT, N.7.1): CircleTTT, LinePerpendicular, LineParallel
- *   and AngleEntityMeasurement. All four follow the same pattern — pick existing
+ *   (Google file-size SSoT, N.7.1): CircleTTT, LineParallel and
+ *   AngleEntityMeasurement. All follow the same pattern — pick existing
  *   entities, then append the created entity to the active level scene.
+ *   NOTE (ADR-060): «Κάθετη γραμμή» έφυγε από εδώ — έγινε hover-driven drawing tool.
  *
  * Pattern: Single Responsibility Principle — selection-tool group.
  * Extracted from: useSpecialTools.ts
  */
 import { useEffect } from 'react';
 import { useCircleTTT } from '../drawing/useCircleTTT';
-import { useLinePerpendicular } from '../drawing/useLinePerpendicular';
 import { useLineParallel } from '../drawing/useLineParallel';
 import { useAngleEntityMeasurement, type AngleEntityVariant } from './useAngleEntityMeasurement';
 import type { AngleMeasurementEntity, AnySceneEntity } from '../../types/scene';
@@ -25,7 +25,6 @@ export interface SelectionToolsProps {
 
 export interface SelectionToolsReturn {
   circleTTT: ReturnType<typeof useCircleTTT>;
-  linePerpendicular: ReturnType<typeof useLinePerpendicular>;
   lineParallel: ReturnType<typeof useLineParallel>;
   angleEntityMeasurement: ReturnType<typeof useAngleEntityMeasurement>;
 }
@@ -66,16 +65,8 @@ export function useSpecialToolsSelectionTools(props: SelectionToolsProps): Selec
     else deactivateCircleTTT();
   }, [activeTool, activateCircleTTT, deactivateCircleTTT]);
 
-  // LINE PERPENDICULAR TOOL — line perpendicular to a reference line.
-  const linePerpendicular = useLinePerpendicular({
-    currentLevelId: levelManager.currentLevelId || '0',
-    onLineCreated: (lineEntity) => appendToScene(lineEntity, 'LinePerpendicular'),
-  });
-  const { activate: activateLinePerpendicular, deactivate: deactivateLinePerpendicular } = linePerpendicular;
-  useEffect(() => {
-    if (activeTool === 'line-perpendicular') activateLinePerpendicular();
-    else deactivateLinePerpendicular();
-  }, [activeTool, activateLinePerpendicular, deactivateLinePerpendicular]);
+  // ADR-060 — «Κάθετη γραμμή»: πλέον hover-driven drawing tool (unified drawing pipeline),
+  // ΟΧΙ selection tool εδώ. Βλ. line-perpendicular-preview-helpers.ts + drawing-handler-utils.ts.
 
   // LINE PARALLEL TOOL — line parallel to a reference line.
   const lineParallel = useLineParallel({
@@ -99,5 +90,5 @@ export function useSpecialToolsSelectionTools(props: SelectionToolsProps): Selec
     else deactivateAngle();
   }, [activeTool, activateAngle, deactivateAngle]);
 
-  return { circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement };
+  return { circleTTT, lineParallel, angleEntityMeasurement };
 }

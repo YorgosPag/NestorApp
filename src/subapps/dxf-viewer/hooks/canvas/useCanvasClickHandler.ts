@@ -28,7 +28,6 @@ import type { GuideClickContext } from './guide-click-handlers';
 import {
   handleAngleEntityPick,
   handleCircleTTTPick,
-  handleLinePerpendicularPick,
   handleLineParallelPick,
 } from './entity-pick-handlers';
 import type { EntityPickContext } from './entity-pick-handlers';
@@ -48,7 +47,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
   const {
     viewportReady, viewport, transform: _transform,
     activeTool, overlayMode,
-    circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, dxfGripInteraction,
+    circleTTT, lineParallel, angleEntityMeasurement, dxfGripInteraction,
     stairTool,
     wallTool,
     slabTool,
@@ -269,12 +268,13 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       handleHatchPickPointClick(worldPoint, params);
       return;
     }
-    // PRIORITY 1.9-4: Entity picking tools (angle, circle-ttt, perpendicular, parallel)
+    // PRIORITY 1.9-4: Entity picking tools (angle, circle-ttt, parallel).
+    // ADR-060 — «κάθετη γραμμή» ΔΕΝ κάνει πλέον entity-pick εδώ: είναι drawing tool και τα κλικ του
+    // πέφτουν στο PRIORITY 6 (`onDrawingPoint`, ίδιο μονοπάτι με το `line`).
     // ADR-040 XXII.A: live SSoT read at click time.
     const entityCtx: EntityPickContext = { worldPoint, transform: getImmediateTransform(), levelManager };
     if (handleAngleEntityPick(entityCtx, angleEntityMeasurement, universalSelection.replaceEntitySelection)) return;
     if (handleCircleTTTPick(entityCtx, circleTTT, activeTool)) return;
-    if (handleLinePerpendicularPick(entityCtx, linePerpendicular, activeTool)) return;
     if (handleLineParallelPick(entityCtx, lineParallel, activeTool)) return;
     // ADR-363 — F8 ortho / F10 polar for BIM tools with a placement anchor
     // (wall/stair/beam/slab). No-op for every other tool and for column /
@@ -340,7 +340,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
   }, [
     viewportReady, viewport,
     activeTool, overlayMode,
-    circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement, dxfGripInteraction,
+    circleTTT, lineParallel, angleEntityMeasurement, dxfGripInteraction,
     stairTool,
     wallTool,
     slabTool,

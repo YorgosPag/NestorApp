@@ -25,10 +25,8 @@ import { resolveMoveClearanceDims } from '../../bim/framing/move-clearance-dims'
 import { paintGhostFaceDimensions } from '../../canvas-v2/preview-canvas/ghost-face-dim-paint';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { drawGradientOriginMarker } from './grip-ghost-preview-draw-helpers';
-import { isLineEntity, isPolylineEntity } from '../../types/entities';
 import { paintActionAlignmentTracking, resolveActionAlignmentTracking } from '../dimensions/dim-alignment-tracking';
-import { getLineGripAlignmentAnchors } from '../../systems/line/line-grips';
-import { getPolylineGripAlignmentAnchors, isPolylineStraightEdgeSlide } from '../../systems/polyline/polyline-grips';
+import { resolveGripAlignmentAnchors, type GripAlignmentRole } from '../../systems/grip/grip-drag-alignment-role';
 import { getFootprintReshapeAlignmentAnchors, resolveActiveFootprintGripKind } from '../../systems/grip/footprint-reshape-anchors';
 import { getBimCharacteristicPointsOfCategory } from '../../bim/utils/bim-characteristic-points';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
@@ -118,22 +116,20 @@ export function paintGripActionAlignmentTraces(
   vp: Viewport,
 ): void {
   if (!effectiveCursor) return;
-  let alignAnchors: Point2D[] | null = null;
-  if (dp.movesEntity === true && !dp.rotatePivot && dp.anchorPos) {
-    alignAnchors = [dp.anchorPos];
-  } else if (isLineEntity(entity)) {
-    const line = entity as unknown as { start: Point2D; end: Point2D };
-    alignAnchors = getLineGripAlignmentAnchors(dp.gripIndex, dp.lineGripKind, line, dp.anchorPos);
-  } else if (isPolylineEntity(entity)) {
-    const poly = entity as unknown as { vertices: Point2D[]; closed: boolean; bulges?: number[] };
-    // ADR-508/561 (Giorgio 2026-07-06) — σύρσιμο ΜΕΣΗΣ λαβής ευθύγραμμης πλευράς («λαβές των μέσων»):
-    // ολισθαίνει ΟΛΟ το σκέλος (base-point move) → ίχνη από το ΣΗΜΕΙΟ που έπιασες (`anchorPos`), όπως
-    // ΟΠΟΙΑΔΗΠΟΤΕ whole-entity μετακίνηση (ΙΔΙΟ anchor pattern με το `dp.movesEntity` κλάδο πιο πάνω).
-    // Σύρσιμο ΚΟΡΥΦΗΣ → οι σταθερές γειτονικές κορυφές (vertex-reshape SSoT). Το τόξο εξαιρείται.
-    alignAnchors = isPolylineStraightEdgeSlide(dp.edgeVertexIndices, poly.bulges)
-      ? (dp.anchorPos ? [dp.anchorPos] : null)
-      : getPolylineGripAlignmentAnchors(dp.gripIndex, poly.vertices, poly.closed);
-  } else {
+  // ADR-537/561/508 — line/polyline anchor selection (base-point move · line endpoint · polyline
+  // vertex reshape · straight edge-slide «λαβές των μέσων», arc-apex excluded) lives in the SHARED
+  // 2D↔3D SSoT `resolveGripAlignmentAnchors`. This helper is now a thin adapter: `dp`→role. The BIM
+  // footprint branch (not reachable in raw-DXF 3D) stays here as the fallback.
+  const role: GripAlignmentRole = {
+    movesEntity: dp.movesEntity === true,
+    isRotation: dp.rotatePivot != null,
+    gripIndex: dp.gripIndex,
+    anchorPos: dp.anchorPos ?? null,
+    edgeVertexIndices: dp.edgeVertexIndices,
+    lineGripKind: dp.lineGripKind,
+  };
+  let alignAnchors: Point2D[] | null = resolveGripAlignmentAnchors(entity, role);
+  if (!alignAnchors) {
     const footprintKind = resolveActiveFootprintGripKind(dp);
     if (footprintKind) {
       const corners = getBimCharacteristicPointsOfCategory(entity, 'corner');

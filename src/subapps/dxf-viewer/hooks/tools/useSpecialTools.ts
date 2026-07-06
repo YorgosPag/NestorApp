@@ -74,8 +74,8 @@ export interface UseSpecialToolsProps {
  * Uses ReturnType to automatically match the actual hook return types
  */
 export interface UseSpecialToolsReturn extends SelectionToolsReturn, PlacementToolsReturn, AreaToolsReturn {
-  // SelectionToolsReturn provides: circleTTT, linePerpendicular, lineParallel,
-  // angleEntityMeasurement (extracted to useSpecialTools-selection-tools.ts).
+  // SelectionToolsReturn provides: circleTTT, lineParallel, angleEntityMeasurement
+  // (extracted to useSpecialTools-selection-tools.ts). ADR-060: «κάθετη γραμμή» έγινε drawing tool.
   // PlacementToolsReturn provides: mepFixtureTool, furnitureTool,
   // floorplanSymbolTool, electricalPanelTool, mepManifoldTool, mepRadiatorTool,
   // mepBoilerTool, mepWaterHeaterTool, mepSegmentTool, railingTool (extracted to useSpecialTools-placement-tools.ts).
@@ -95,13 +95,12 @@ export interface UseSpecialToolsReturn extends SelectionToolsReturn, PlacementTo
  * 🏢 ENTERPRISE: Special entity creation tools hook
  *
  * This hook manages the state and activation of special drawing tools
- * that require entity selection (CircleTTT, LinePerpendicular, LineParallel).
+ * that require entity selection (CircleTTT, LineParallel).
  *
  * @example
  * ```tsx
  * const {
  *   circleTTT,
- *   linePerpendicular,
  *   lineParallel,
  * } = useSpecialTools({
  *   activeTool,
@@ -122,9 +121,9 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   const floorIdForStair = levelManager.saveContext?.floorId ?? null;
   const floorForStair = useFloorMetadata(floorIdForStair);
 
-  // Selection-based geometry tools (CircleTTT / LinePerpendicular / LineParallel /
-  // AngleEntityMeasurement) — extracted to useSpecialTools-selection-tools.ts (N.7.1).
-  const { circleTTT, linePerpendicular, lineParallel, angleEntityMeasurement } =
+  // Selection-based geometry tools (CircleTTT / LineParallel / AngleEntityMeasurement)
+  // — extracted to useSpecialTools-selection-tools.ts (N.7.1). ADR-060: «κάθετη γραμμή» → drawing tool.
+  const { circleTTT, lineParallel, angleEntityMeasurement } =
     useSpecialToolsSelectionTools({ activeTool, levelManager });
 
   // ADR-358 Phase 5a — STAIR TOOL
@@ -448,7 +447,6 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   // RETURN
   return {
     circleTTT,
-    linePerpendicular,
     lineParallel,
     angleEntityMeasurement,
     stairTool,

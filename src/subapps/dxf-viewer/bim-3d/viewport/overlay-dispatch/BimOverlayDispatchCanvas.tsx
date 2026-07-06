@@ -30,6 +30,8 @@ import { useRafWhile, useCameraMotionGate, useGripDepthOccluder } from '../overl
 import { paintBimOverlayFrame, activePassSignature, type BimOverlayPass } from './bim-overlay-pass';
 import { useHoverGlowPass } from './use-hover-glow-pass';
 import { useGripPass } from './use-grip-pass';
+import { useGripTrackingPass } from './use-grip-tracking-pass';
+import { useGripHudPass } from './use-grip-hud-pass';
 import { useTrackingPass } from './use-tracking-pass';
 import { useWallHudPass } from './use-wall-hud-pass';
 import { usePlacementPass } from './use-placement-pass';
@@ -45,15 +47,19 @@ export function BimOverlayDispatchCanvas({ managerRef }: BimOverlayDispatchCanva
   const occluderRef = useGripDepthOccluder();
   const isCameraMoving = useCameraMotionGate();
 
-  // z-order bottom→top: hover-glow → grips → tracking → wall-HUD → placement.
+  // z-order bottom→top: hover-glow → grips → grip-tracking → grip-HUD → tracking → wall-HUD → placement.
+  // ADR-537 — the raw-DXF grip-drag traces + white HUD sit right above the grip squares (traces under
+  // their length/angle labels, mirror of the wall tracking↔HUD ordering).
   const hover = useHoverGlowPass(containerRef);
   const grip = useGripPass();
+  const gripTracking = useGripTrackingPass();
+  const gripHud = useGripHudPass();
   const tracking = useTrackingPass();
   const wallHud = useWallHudPass();
   const placement = usePlacementPass();
   const passes = useMemo<readonly BimOverlayPass[]>(
-    () => [hover, grip, tracking, wallHud, placement],
-    [hover, grip, tracking, wallHud, placement],
+    () => [hover, grip, gripTracking, gripHud, tracking, wallHud, placement],
+    [hover, grip, gripTracking, gripHud, tracking, wallHud, placement],
   );
 
   // Read the latest passes inside the stable RAF draw without re-subscribing the loop each render.

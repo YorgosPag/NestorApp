@@ -287,6 +287,8 @@ export interface CanvasLayerStackProps {
     isAwaitingPosition: boolean;
     kind: import('../../bim/types/slab-opening-types').SlabOpeningKind;
     overrides: import('../../hooks/drawing/slab-opening-completion').SlabOpeningParamOverrides;
+    /** ADR-574 Σ2b — locked host slab resolver (WYSIWYG ghost via commit builders). */
+    getHostSlab: () => import('../../bim/types/slab-types').SlabEntity | null;
     hoveredEdgeMidpointGrip?: import('../../hooks/grips/unified-grip-types').UnifiedGripInfo | null;
     /** ADR-370 — active scene units για mm→scene conversion στο ghost. */
     getSceneUnits?: () => import('../../utils/scene-units').SceneUnits;

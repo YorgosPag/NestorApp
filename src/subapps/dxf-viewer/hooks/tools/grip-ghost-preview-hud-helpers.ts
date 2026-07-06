@@ -24,8 +24,9 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import { buildSegmentHudMeta, paintWallHud } from '../../canvas-v2/preview-canvas/wall-hud-paint';
 import { paintColumnHud } from '../../canvas-v2/preview-canvas/column-hud-paint';
-// ADR-508 §line-hud / ADR-561 — polyline vertex-reshape HUD: which incident segment(s) change length.
-import { getPolylineVertexIncidentSegments, getPolylineEdgeSlideIncidentSegments, isPolylineStraightEdgeSlide } from '../../systems/polyline/polyline-grips';
+// ADR-537/561/508 — polyline HUD-segment selection (which incident segment(s) change length) lives
+// in the SHARED 2D↔3D SSoT; this helper is a thin adapter (`dp`→role).
+import { resolvePolylineHudSegments, type GripAlignmentRole, type GripAlignmentEntityView } from '../../systems/grip/grip-drag-alignment-role';
 // ADR-508 §polygon-hud (Giorgio 2026-07-06) — ordered polygon-footprint corners (ΕΝΑ characteristic SSoT,
 // καλύπτει slab/opening/roof/floor-finish/thermal/mep-underfloor) για τις live περιμετρικές διαστάσεις
 // ΚΑΘΕ πολυγωνικής BIM οντότητας κατά το reshape λαβής.
@@ -122,9 +123,15 @@ export function drawMemberGripHud(
     // ADR-508/561 (Giorgio 2026-07-06) — «λαβές των μέσων»: σύρσιμο ΜΕΣΗΣ λαβής ευθύγραμμης πλευράς
     // ολισθαίνει ΟΛΟ το σκέλος (και τις 2 κορυφές του) → λευκές ενδείξεις σε ΚΑΘΕ σκέλος που ακουμπά
     // στις κινούμενες κορυφές (το ίδιο + οι 2 γείτονες). Σύρσιμο ΚΟΡΥΦΗΣ → τα incident σκέλη της.
-    const segments = isPolylineStraightEdgeSlide(dp.edgeVertexIndices, poly.bulges)
-      ? getPolylineEdgeSlideIncidentSegments(dp.edgeVertexIndices!, poly.vertices.length, poly.closed)
-      : getPolylineVertexIncidentSegments(dp.gripIndex, poly.vertices.length, poly.closed);
+    // Επιλογή σκελών μέσω του ΚΟΙΝΟΥ 2D↔3D SSoT· η μέτρηση μήκους/γωνίας από ΤΟ reshaped `transformed`.
+    const role: GripAlignmentRole = {
+      movesEntity: dp.movesEntity === true,
+      isRotation: dp.rotatePivot != null,
+      gripIndex: dp.gripIndex,
+      anchorPos: dp.anchorPos ?? null,
+      edgeVertexIndices: dp.edgeVertexIndices,
+    };
+    const segments = resolvePolylineHudSegments(transformed as unknown as GripAlignmentEntityView, role);
     if (segments.length > 0) {
       for (const [a, b] of segments) {
         paintWallHud(ctx, buildSegmentHudMeta(poly.vertices[a], poly.vertices[b], sceneUnits), '', t, vp);

@@ -254,8 +254,10 @@ export const TOOL_POINT_REQUIREMENTS: Record<string, ToolPointRequirements> = {
   'arc-cse': { minPoints: 3, maxPoints: 3, allowsContinuous: false },
   'arc-sce': { minPoints: 3, maxPoints: 3, allowsContinuous: false },
 
-  // 🏢 ENTERPRISE (2026-01-31): Line tools - entity selection mode (0 points) - ADR-060
-  'line-perpendicular': { minPoints: 0, maxPoints: 0, allowsContinuous: false },
+  // ADR-060 (Revit-grade 2-click hover) — «κάθετη γραμμή»: 2-point drawing tool (ίδιο με `line`),
+  // 1ο κλικ = flush foot + κλείδωμα κάθετου άξονα, 2ο κλικ = μήκος/πλευρά. Βλ. line-perpendicular-preview-helpers.
+  'line-perpendicular': { minPoints: 2, maxPoints: 2, allowsContinuous: false },
+  // `line-parallel` παραμένει entity-selection mode (out of scope εδώ).
   'line-parallel': { minPoints: 0, maxPoints: 0, allowsContinuous: false },
 
   // Multi-point shapes

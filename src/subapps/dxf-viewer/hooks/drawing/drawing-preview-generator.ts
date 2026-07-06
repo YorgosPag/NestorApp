@@ -185,6 +185,14 @@ export function generatePreviewEntity(
     const lineGhost = generateLinePreview(tempPoints, cursorPoint, sceneUnits);
     if (lineGhost) return lineGhost;
   }
+  // ── ADR-060 — «Κάθετη γραμμή» state-0 (πριν το 1ο κλικ): ΤΑΥΤΟΣΗΜΟ hover φάντασμα + κυανές με τη
+  //    γραμμή (ΙΔΙΟΣ tool-agnostic `generateLinePreview`). Το state-1 (μετά το 1ο κλικ) πέφτει στο
+  //    generic `createEntity(...)` fallback — ο `cursorPoint` έρχεται ΗΔΗ κάθετα-κλειδωμένος από το
+  //    `drawing-hover-handler` (hard axis lock) → preview ≡ commit, μηδέν νέα γεωμετρία εδώ. ──────────
+  if (tool === 'line-perpendicular') {
+    const lineGhost = generateLinePreview(tempPoints, cursorPoint, sceneUnits);
+    if (lineGhost) return lineGhost;
+  }
   // ── ADR-436 Slice 2 — Foundation line tools (strip / tie-beam) preview branch.
   //    from-wall (1-click pick) has no rubber-band band (mirror beam-from-wall). ──
   if (tool === 'foundation-strip' || tool === 'foundation-tie-beam') {
@@ -213,7 +221,7 @@ export function generatePreviewEntity(
       tool === 'measure-angle-measuregeom';
     // All tools that need a starting dot
     const needsStartDot =
-      tool === 'line' || tool === 'measure-distance' || tool === 'measure-distance-continuous' ||
+      tool === 'line' || tool === 'line-perpendicular' || tool === 'measure-distance' || tool === 'measure-distance-continuous' ||
       tool === 'rectangle' || tool === 'circle' || tool === 'circle-diameter' ||
       tool === 'circle-2p-diameter' || tool === 'circle-3p' || tool === 'circle-chord-sagitta' ||
       tool === 'circle-2p-radius' || tool === 'polygon' || tool === 'polyline' ||

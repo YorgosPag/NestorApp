@@ -98,7 +98,7 @@ export type ExtendedSceneEntity =
 
 // ADR-059: Arc tools, ADR-083: Circle variants, ADR-358 Phase 5a: Stair tool, ADR-363 Phase 1B: Wall tool
 export type DrawingTool =
-  | 'select' | 'line' | 'rectangle'
+  | 'select' | 'line' | 'line-perpendicular' | 'rectangle'
   | 'circle' | 'circle-diameter' | 'circle-2p-diameter'
   | 'circle-3p' | 'circle-chord-sagitta' | 'circle-2p-radius' | 'circle-best-fit'
   | 'polyline' | 'polygon'

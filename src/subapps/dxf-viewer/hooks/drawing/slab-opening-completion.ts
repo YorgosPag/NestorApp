@@ -26,7 +26,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D, Polygon3D } from '../../bim/types/bim-base';
+import type { BimValidation, Point3D, Polygon3D } from '../../bim/types/bim-base';
 import type {
   SlabOpeningEntity,
   SlabOpeningKind,
@@ -127,6 +127,32 @@ export type BuildSlabOpeningEntityResult =
   | { readonly ok: true; readonly entity: SlabOpeningEntity }
   | { readonly ok: false; readonly hardErrors: readonly string[] };
 
+/** Hard-error i18n key για outline εκτός host slab — το ΜΟΝΟ preview-tolerable. */
+const OUTLINE_OUTSIDE_SLAB_KEY = 'slabOpening.validation.hardErrors.outlineOutsideSlab';
+
+/**
+ * Assemble the final `SlabOpeningEntity` από validated params + geometry (SSoT
+ * `computeSlabOpeningGeometry`) + enterprise id. Shared από τον strict commit
+ * builder (`buildSlabOpeningEntity`) ΚΑΙ τον preview-tolerant builder
+ * (`buildSlabOpeningPreviewEntity`) → μηδέν διπλότυπη construction (N.0.2).
+ */
+function assembleSlabOpeningEntity(
+  params: Readonly<SlabOpeningParams>,
+  layerId: string,
+  bimValidation: BimValidation,
+): SlabOpeningEntity {
+  return {
+    id: generateSlabOpeningId(),
+    type: 'slab-opening',
+    kind: params.kind,
+    layerId,
+    params,
+    geometry: computeSlabOpeningGeometry(params),
+    validation: bimValidation,
+    visible: true,
+  };
+}
+
 /**
  * Build `SlabOpeningEntity` από `SlabOpeningParams + hostSlab`. Geometry
  * recomputed via SSoT pure functions. Hard errors short-circuit creation.
@@ -140,18 +166,36 @@ export function buildSlabOpeningEntity(
   if (validation.hardErrors.length > 0) {
     return { ok: false, hardErrors: validation.hardErrors };
   }
-  const geometry = computeSlabOpeningGeometry(params);
-  const entity: SlabOpeningEntity = {
-    id: generateSlabOpeningId(),
-    type: 'slab-opening',
-    kind: params.kind,
-    layerId,
-    params,
-    geometry,
-    validation: validation.bimValidation,
-    visible: true,
-  };
-  return { ok: true, entity };
+  return { ok: true, entity: assembleSlabOpeningEntity(params, layerId, validation.bimValidation) };
+}
+
+// ─── Preview-tolerant builder (ADR-574 Σ2b) ─────────────────────────────────
+
+export interface SlabOpeningPreviewBuild {
+  readonly entity: SlabOpeningEntity;
+  /** True όταν το outline βγαίνει εκτός host slab → preview δείχνει 🔴 schematic. */
+  readonly isOutsideSlab: boolean;
+}
+
+/**
+ * Preview-tolerant build (ADR-574 Σ2b): ΙΔΙΟ geometry pipeline με το commit
+ * (`buildSlabOpeningEntity`) — ίδιοι `params`/`geometry`/`validator` SSoT — αλλά
+ * ΔΕΝ κάνει hard-reject στο `outlineOutsideSlab`, ώστε το placement ghost ΠΟΤΕ να
+ * μην εξαφανίζεται στις άκρες της πλάκας (big-player: Revit δείχνει το opening +
+ * warning, δεν το σβήνει). Κάθε ΑΛΛΟ hard error (self-intersecting / zero-area /
+ * missing host) → `null` (τίποτα valid προς ζωγράφισμα). PREVIEW-ONLY — ο commit
+ * μένει strict μέσω `buildSlabOpeningEntity`.
+ */
+export function buildSlabOpeningPreviewEntity(
+  params: Readonly<SlabOpeningParams>,
+  hostSlab: SlabEntity,
+  layerId: string,
+): SlabOpeningPreviewBuild | null {
+  const validation = validateSlabOpeningParams(params, hostSlab);
+  const blocking = validation.hardErrors.filter((k) => k !== OUTLINE_OUTSIDE_SLAB_KEY);
+  if (blocking.length > 0) return null;
+  const entity = assembleSlabOpeningEntity(params, layerId, validation.bimValidation);
+  return { entity, isOutsideSlab: validation.hardErrors.includes(OUTLINE_OUTSIDE_SLAB_KEY) };
 }
 
 // ─── Click-to-place completion helper ───────────────────────────────────────
