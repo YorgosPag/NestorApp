@@ -240,7 +240,7 @@ export function commitFreeRotate(worldPos: Point2D, grip: UnifiedGripInfo, ctx: 
   // (`keyboardAngleEntryActive`), ένα terminal κλικ είναι **no-op** για την περιστροφή: ΜΟΝΟ το **Enter**
   // κλειδώνει την πληκτρολογημένη γωνία (→ `commitTypedRotate` στο `runHotGripKeyDown`). Το flow μένει σε
   // rotate-free (ESC/Backspace ακυρώνει/επαναφέρει). Το ΠΑΛΙΟ «κλικ == Enter» της Σ3 αφαιρέθηκε.
-  if (ctx.keyboardAngleEntryActive) { console.log('[RD] → SUPPRESSED (πληκτρολογείς — μόνο Enter κλειδώνει)'); return; } // [RD]
+  if (ctx.keyboardAngleEntryActive) return;
   // ADR-513 §rotation-ring — το «Δαχτυλίδι Εντολών» έχει ΟΛΟΚΛΗΡΩΜΕΝΗ γωνία (popup Enter → synthetic
   // click)· εδώ το `typedRotateDeg` = ΜΟΝΟ η ring-locked τιμή → commit exact. ΧΩΡΙΣ typed/ring → cursor sweep.
   if (ctx.typedRotateDeg != null) {
@@ -308,7 +308,6 @@ export function commitTypedRotate(
   angleDeg: number,
   deps: DxfCommitDeps,
 ): void {
-  console.log('[RD] ⚠️ commitTypedRotate FIRED', { angleDeg }); // [RD]
   BimRotateHotGripStore.set(pivot, { x: pivot.x + 1, y: pivot.y });
   commitDxfGripDragModeAware(grip, rotateDeltaForAngleDeg(angleDeg), deps, GripModeStore.getSnapshot());
   GripBasePointStore.clear();
@@ -341,7 +340,6 @@ export interface HotGripKeyDownCtx extends RotateFreeKeyCtx {
  * 500-line file limit (SOS N.7.1); behaviour is byte-for-byte identical.
  */
 export function runHotGripKeyDown(key: string, phase: UnifiedGripPhase, ctx: HotGripKeyDownCtx): boolean {
-  console.log('[RD] KEY→runHotGripKeyDown', { key, phase, op: ctx.hotGripOpRef.current, step: ctx.hotGripStepRef.current }); // [RD]
   if (phase !== 'hotGrip' || ctx.hotGripOpRef.current !== 'rotate') return false;
   if (ctx.hotGripStepRef.current !== 'rotate-free') return false;
   // «R» → opt into the 6-click reference flow (drop any typed angle).
@@ -374,7 +372,6 @@ export function runHotGripKeyDown(key: string, phase: UnifiedGripPhase, ctx: Hot
     dde.pressKey(decimalKey);                // rejects illegal keystrokes internally
     const s = dde.snapshot();
     ctx.setTypedRotate({ buffer: s.buffer, deg: s.value });
-    console.log('[RD] digit buffered (PREVIEW only)', { key, decimalKey, buffer: s.buffer, deg: s.value }); // [RD]
     markSystemsDirty(['dxf-canvas']);
     return true;
   }

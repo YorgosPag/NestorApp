@@ -130,7 +130,6 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
     const hotUp = resolveHotGripMouseUp(
       hotOp, phase, hotGripAwaitingFirstReleaseRef.current, hotGripStepRef.current, hotGripMovedRef.current,
     );
-    console.log('[RD] mouseUP', { hotUp, phase, hotOp, step: hotGripStepRef.current, moved: hotGripMovedRef.current, kbActive: ctx.keyboardAngleEntryActive, ringDeg: ctx.typedRotateDeg }); // [RD]
     if (hotUp !== 'none' && activeGrip?.source === 'dxf') {
       if (hotUp === 'arm') {
         // 1st-click release — arm the move, stay hot. Re-baseline the move flag

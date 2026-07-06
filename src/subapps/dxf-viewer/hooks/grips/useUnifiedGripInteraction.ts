@@ -243,7 +243,6 @@ export function useUnifiedGripInteraction(
   const hitTolerancePx = (gripSettings.gripSize ?? 5) * (gripSettings.dpiScale ?? 1.0) + 2;
   const effectiveTolerance = Math.max(hitTolerancePx, GRIP_CONFIG.HIT_TOLERANCE);
   const resetToIdle = useCallback(() => {
-    console.log('[RD] resetToIdle'); // [RD]
     setPhase('idle');
     setActiveGrip(null);
     setHoveredGrip(null);

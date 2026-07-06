@@ -132,9 +132,8 @@ export function RadialCommandRing({
   // κλέβει πληκτρολόγηση από άλλο editable element (ribbon combobox κ.λπ.).
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (openField !== null) { console.log('[RD] RING headsup: popup open, swallows key', { key: e.key, ring: config.ariaLabelKey }); return; } // [RD]
+      if (openField !== null) return; // popup ανοιχτό → το input χειρίζεται την πληκτρολόγηση
       if (!isHeadsUpNumericKey(e)) return;
-      console.log('[RD] RING headsup numeric key', { key: e.key, ring: config.ariaLabelKey, hasLength: fieldByKey.has('length') }); // [RD]
       if (isEditableTarget(typeof document !== 'undefined' ? document.activeElement : null)) return;
       const lengthField = fieldByKey.get('length');
       if (!lengthField || lengthField.kind !== 'numeric') return; // δεν υπάρχει «Μήκος» → no-op
@@ -269,7 +268,6 @@ export function RadialCommandRing({
       // αυτό το release είναι το commit του grip (αλλιώς κόβεται η επέκταση άκρου). Στη ΣΧΕΔΙΑΣΗ
       // (canvas-click) μπλοκάρουμε όλα τα inside events όπως πριν (το synthetic click κάνει το commit).
       if (placementMode === 'lock-only' && e.type !== 'mousedown' && openField === null) return;
-      console.log('[RD] 🛑 RING BLOCKS event', { type: e.type, ring: config.ariaLabelKey, placementMode }); // [RD]
       if (e.type === 'mousedown') {
         openWedge(sliceIndexAtAngle((Math.atan2(cur.y - c.y, cur.x - c.x) * 180) / Math.PI, config.fields.length));
       }

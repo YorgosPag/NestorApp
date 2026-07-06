@@ -165,7 +165,6 @@ function beginHotGripSession(
 // MOUSE DOWN
 // ============================================================================
 export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripMouseDownCtx): boolean {
-  console.log('[RD] mouseDOWN', { phase: ctx.phase, isGripMode: ctx.isGripMode, grips: ctx.allGrips.length, hotStep: ctx.hotGripStepRef.current }); // [RD]
   const {
     mouseDownInProgressRef, activeGrip, anchorRef, onToolChangeRef, resetToIdle,
     isGripMode, allGrips, phase, effectiveTolerance, hoveredGrip, selectedGrips,
@@ -226,10 +225,9 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
   // ADR-363 Phase 1G — 2nd click of a corner hot-grip: consume the mousedown
   // so lasso/selection do not arm; the commit fires on the matching mouseup.
   if (isGripMode && resolveHotGripMouseDown(phase, hotGripKindOf(activeGrip)) === 'consume') {
-    console.log('[RD] mouseDOWN → CONSUME (phase hotGrip, no selection)'); // [RD]
     return true;
   }
-  if (!isGripMode || allGrips.length === 0 || phase === 'dragging') { console.log('[RD] mouseDOWN → early false', { isGripMode, grips: allGrips.length, phase }); return false; } // [RD]
+  if (!isGripMode || allGrips.length === 0 || phase === 'dragging') return false;
   mouseDownInProgressRef.current = true;
   // The handler is fully synchronous, so a microtask is enough to release
   // the mutex once the current event tick (canvas + bubbled container)

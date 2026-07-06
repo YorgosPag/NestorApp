@@ -115,9 +115,6 @@ export function useCanvasKeyboardShortcuts({
     const handleKeyDown = async (e: KeyboardEvent) => {
       // Prevent shortcuts when typing in inputs
       const target = e.target as HTMLElement;
-      if (/^[\d.\-]$/.test(e.key) || e.key === 'Enter' || e.key === 'Backspace') {
-        console.log('[RD] KEYDOWN top', { key: e.key, targetTag: target.tagName, targetId: target.id, targetClass: typeof target.className === 'string' ? target.className : '(non-string)', hotGripKeyIsActive }); // [RD]
-      }
       // ADR-397/513 (Giorgio 2026-07-06) — hot-grip ΠΕΡΙΣΤΡΟΦΗ: τα ψηφία/Enter/Backspace/«R» οδηγούν τη
       // ΓΩΝΙΑ ΠΡΙΝ τον input-guard, ώστε η πληκτρολόγηση να δουλεύει ΑΚΟΜΗ κι αν ένα stray <input> έκλεψε
       // το focus (π.χ. ribbon combobox re-focus στο preview re-render) → πολυψήφιες γωνίες (45, 90…) OK.
