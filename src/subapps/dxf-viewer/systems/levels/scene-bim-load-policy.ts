@@ -25,6 +25,11 @@
 import type { SceneModel } from '../../types/scene';
 import type { Entity } from '../../types/entities';
 import { isBimEntity, isStairEntity, isHatchEntity } from '../../types/entities';
+// ADR-578 — SSoT crypto-unique id (ADR-065) for re-minting collided ids on load.
+import { generateEntityId } from '../entity-creation/utils';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const integrityLogger = createModuleLogger('dxf-scene-integrity');
 
 /**
  * True για κάθε entity που έχει δικό του **per-entity Firestore persistence (SSoT)**,
@@ -94,6 +99,48 @@ export function stripForeignFloorBim(
     return !(isPerEntityPersistedEntity(e) && typeof floorId === 'string' && floorId !== ownFloorId);
   });
   return entities.length === scene.entities.length ? scene : { ...scene, entities };
+}
+
+/**
+ * ADR-578 — Scene entity-id integrity guard («Revit Audit»-on-open pattern).
+ *
+ * ΓΙΑΤΙ: enterprise CAD/BIM εργαλεία (Revit `ElementId`, Figma node GUID, Maxon
+ * object markers) εγγυώνται **globally-unique σταθερά ids** στο write-time ΚΑΙ
+ * τρέχουν integrity **audit/repair στο open** ώστε ήδη-χαλασμένα αρχεία να
+ * αυτο-θεραπεύονται. Η ρίζα του διπλότυπου (`entity_${n}` counter) διορθώθηκε στο
+ * write-time (`useUnifiedDrawing` → `generateEntityId`), αλλά **ήδη αποθηκευμένα**
+ * `.scene.json` snapshots μπορεί να περιέχουν legacy duplicate ids (π.χ. `entity_8`
+ * ×2). Αυτό το net τα επιδιορθώνει στο load.
+ *
+ * Πολιτική (deterministic, non-destructive): κράτα την **πρώτη** εμφάνιση κάθε id
+ * σταθερή (ώστε υπάρχουσες αναφορές να παραμείνουν έγκυρες) και **ξανα-mint-άρε**
+ * μόνο τα επόμενα διπλότυπα με τον crypto-unique SSoT. Το healed scene γράφεται πίσω
+ * στο επόμενο auto-save → μόνιμη διόρθωση. Idempotent + fast-path **same-reference
+ * no-op** όταν όλα τα ids είναι μοναδικά (equality-guard friendly, ADR-040).
+ *
+ * @param scene Το φορτωμένο scene (μετά το `reconcileLoadedSceneBim`).
+ */
+export function ensureUniqueEntityIds(scene: SceneModel): SceneModel {
+  const ids = scene.entities.map((e) => e.id);
+  // Fast-path: κανένα διπλότυπο → ίδιο reference (no allocation, no re-render).
+  if (new Set(ids).size === ids.length) return scene;
+
+  const seen = new Set<string>();
+  const entities = scene.entities.map((entity) => {
+    if (!seen.has(entity.id)) {
+      seen.add(entity.id);
+      return entity;
+    }
+    const newId = generateEntityId();
+    seen.add(newId);
+    integrityLogger.warn('Healed duplicate entity id on scene load', {
+      duplicateId: entity.id,
+      newId,
+      type: (entity as { type?: string }).type,
+    });
+    return { ...entity, id: newId };
+  });
+  return { ...scene, entities };
 }
 
 /** True για foundation entities (πέδιλα) — minimal type-tag check. */

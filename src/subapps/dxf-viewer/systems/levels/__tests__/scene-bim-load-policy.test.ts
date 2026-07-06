@@ -8,12 +8,22 @@
  * half-width on reload despite clean per-entity docs" divergence.
  */
 
+// ADR-578 — deterministic re-mint + silent logger so the integrity-guard tests are hermetic.
+jest.mock('@/lib/telemetry', () => ({
+  createModuleLogger: () => ({ warn: jest.fn(), info: jest.fn(), error: jest.fn(), debug: jest.fn() }),
+}));
+jest.mock('../../entity-creation/utils', () => {
+  let n = 0;
+  return { generateEntityId: () => `fresh_${++n}` };
+});
+
 import {
   reconcileLoadedSceneBim,
   isPerEntityPersistedEntity,
   stripForeignFloorBim,
   replaceFootingsFromModel,
   stripAllFoundations,
+  ensureUniqueEntityIds,
 } from '../scene-bim-load-policy';
 import type { SceneModel } from '../../../types/scene';
 import type { Entity } from '../../../types/entities';
@@ -212,6 +222,53 @@ describe('replaceFootingsFromModel', () => {
   it('keeps non-entity scene fields (spread) when injecting', () => {
     const s = scene([ent('l1', 'line')]);
     const result = replaceFootingsFromModel(s, [ent('fnd_a', 'foundation')]);
+    expect(result.units).toBe('mm');
+    expect(result.layersById).toBe(s.layersById);
+  });
+});
+
+describe('ensureUniqueEntityIds (ADR-578 — Revit «Audit»-on-open id integrity guard)', () => {
+  it('same-reference no-op when all ids are unique (equality-guard friendly)', () => {
+    const s = scene([ent('l1', 'line'), ent('l2', 'line'), ent('c1', 'column')]);
+    expect(ensureUniqueEntityIds(s)).toBe(s);
+  });
+
+  it('heals a duplicate id: keeps the FIRST occurrence, re-mints the later one', () => {
+    // Ο ακριβής bug: `entity_8` ×2 στο ίδιο scene.entities.
+    const s = scene([ent('entity_1', 'line'), ent('entity_8', 'line'), ent('entity_8', 'line')]);
+    const result = ensureUniqueEntityIds(s);
+    const ids = result.entities.map((e) => e.id);
+    expect(ids).toHaveLength(3);
+    expect(new Set(ids).size).toBe(3); // όλα μοναδικά πλέον
+    expect(ids[0]).toBe('entity_1');
+    expect(ids[1]).toBe('entity_8'); // πρώτη εμφάνιση σταθερή (αναφορές παραμένουν έγκυρες)
+    expect(ids[2]).not.toBe('entity_8'); // το διπλότυπο ξανα-mint-αρίστηκε
+  });
+
+  it('heals multiple distinct collisions independently', () => {
+    const s = scene([ent('a', 'line'), ent('a', 'line'), ent('b', 'line'), ent('b', 'line')]);
+    const ids = ensureUniqueEntityIds(s).entities.map((e) => e.id);
+    expect(new Set(ids).size).toBe(4);
+    expect(ids.filter((id) => id === 'a')).toHaveLength(1);
+    expect(ids.filter((id) => id === 'b')).toHaveLength(1);
+  });
+
+  it('is idempotent: a healed scene passes through unchanged (same reference)', () => {
+    const s = scene([ent('x', 'line'), ent('x', 'line')]);
+    const once = ensureUniqueEntityIds(s);
+    expect(ensureUniqueEntityIds(once)).toBe(once); // δεύτερο pass = clean = no-op
+  });
+
+  it('preserves the non-id entity payload when re-minting', () => {
+    const s = scene([ent('dup', 'line'), { id: 'dup', type: 'circle', radius: 5 } as unknown as Entity]);
+    const healed = ensureUniqueEntityIds(s).entities[1] as unknown as { type: string; radius: number };
+    expect(healed.type).toBe('circle');
+    expect(healed.radius).toBe(5);
+  });
+
+  it('keeps non-entity scene fields (spread) when healing', () => {
+    const s = scene([ent('d', 'line'), ent('d', 'line')]);
+    const result = ensureUniqueEntityIds(s);
     expect(result.units).toBe('mm');
     expect(result.layersById).toBe(s.layersById);
   });

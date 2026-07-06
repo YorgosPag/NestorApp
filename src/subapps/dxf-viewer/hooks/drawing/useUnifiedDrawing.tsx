@@ -60,6 +60,10 @@ import { resolveBimToolTempPoints } from './drawing-preview-tool-points';
 import { toolStateStore } from '../../stores/ToolStateStore';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import { applyPreviewSettingsToEntity } from './apply-preview-settings';
+// ADR-578 — SSoT crypto-unique entity id (ADR-065). Replaces the legacy per-hook
+// `useRef(1)` counter that minted reusable `entity_${n}` ids and produced scene
+// duplicate-id corruption (`entity_8` ×2) across remounts / multiple hook instances.
+import { generateEntityId } from '../../systems/entity-creation/utils';
 
 // ─── Module-level helpers ───────────────────────────────────────────────────
 
@@ -145,7 +149,6 @@ export function useUnifiedDrawing() {
 
   const { setMode } = usePreviewMode();
   const linePreviewStyles = useLineStyles('preview');
-  const nextEntityIdRef = useRef(1);
 
   /**
    * Applies ColorPalettePanel preview settings to an entity (ADR-358 §G7
@@ -157,7 +160,11 @@ export function useUnifiedDrawing() {
   }, [linePreviewStyles]);
 
   const createEntityFromTool = useCallback((tool: DrawingTool, points: Point2D[]): ExtendedSceneEntity | null => {
-    const id = `entity_${nextEntityIdRef.current++}`;
+    // ADR-578 — crypto-unique id from the enterprise SSoT (ADR-065), minted here so
+    // the id is known before `completeEntity`/`CreateEntityCommand` execute (preserves
+    // the ADR-507 §5δ.9 post-create compound-command contract that needs a stable id
+    // up front). Guarantees global uniqueness across hook instances and remounts.
+    const id = generateEntityId();
     return createEntityFromToolPure(tool, points, id, arcFlippedRef.current);
   }, []);
 
