@@ -1,4 +1,5 @@
 import { normalizeSearchText } from '@/lib/search/search';
+import { parseLocaleNumber } from '@/lib/number/locale-number';
 import type { Quote } from '../types/quote';
 
 export type SearchPattern = 'quote-number' | 'date' | 'numeric' | 'free-text';
@@ -17,7 +18,8 @@ export function detectPattern(query: string): SearchPattern {
 }
 
 function parseNumeric(query: string): number {
-  return parseFloat(query.replace(/[€$\s]/g, '').replace(/,/g, '.'));
+  // Strips `$`/`€`/spaces via the SSoT garbage filter; NaN when unparseable.
+  return parseLocaleNumber(query) ?? NaN;
 }
 
 function parseQueryDate(query: string): Date | null {

@@ -32,7 +32,7 @@
  */
 
 import { useCallback } from 'react';
-import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
+import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { AnySceneEntity, Entity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -62,7 +62,7 @@ import { toEntityPreviewTransform } from './grip-drag-preview-transform';
 import { sceneDistanceToMeters, formatMoveAngle } from '../../bim/labels/move-readout';
 import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-363 — line endpoint RESHAPE readout (length + angle, AutoCAD dynamic input).
-import { isLineEntity, isPolylineEntity, isWallEntity } from '../../types/entities';
+import { isLineEntity, isWallEntity } from '../../types/entities';
 import type { LineEntity } from '../../types/entities';
 // ADR-508/362 — full ISO perpendicular offset dimension (αρχική↔φάντασμα) στη whole-line MOVE της
 // κεντρικής λαβής· ΙΔΙΟΣ overlay dim SSoT με το body-drag → μία όψη, μηδέν διπλότυπο. ORTHO-gated.
@@ -97,17 +97,16 @@ import {
 // ADR-040 Φ12 — SSoT grip delta resolvers (shared with buildDxfDragPreview/commit), so
 // the live synchronous ghost derives translate + rotation identically from the effective-world.
 import { resolveGripTranslateDelta, resolveLiveRotationFromCursor } from '../grips/grip-projections';
-// ADR-357/363/560 — plain-line grip Object-Snap-Tracking traces RESOLVED-IN-DRAW (mirror body-drag).
-// Anchors from the line SSoT; the SAME pure resolve + paint the dimension grip + drawing flows use.
-import { paintActionAlignmentTracking, resolveActionAlignmentTracking } from '../dimensions/dim-alignment-tracking';
-import { getLineGripAlignmentAnchors } from '../../systems/line/line-grips';
-import { getPolylineGripAlignmentAnchors } from '../../systems/polyline/polyline-grips';
-// ADR-560 §OSNAP-priority — όταν το OSNAP κουμπώνει σε χαρακτηριστικό σημείο, κρύβουμε τις κυανές
-// γραμμές ευθυγράμμισης (φαίνεται το OSNAP marker □/△/○ αντ' αυτών· Giorgio 2026-07-04).
-import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
-// ADR-508/507 — grip-drag tail overlays (move-clearance dims + hatch gradient handle marker) σε δικό
-// τους module (file-size SRP N.7.1, 2026-07-05). Gates/SSoT ζουν μέσα στους helpers.
-import { paintGripMoveClearanceDims, drawHatchGradientHandleMarker } from './grip-ghost-preview-overlay-helpers';
+// ADR-508 §grip-tracking (Giorgio 2026-07-06) — ενεργό footprint grip-kind σε reshape λαβές
+// (κορυφή/μεσαία) πολυγωνικής BIM οντότητας — χρησιμοποιείται στο POLAR lock του άκρου.
+import { resolveActiveFootprintGripKind } from '../../systems/grip/footprint-reshape-anchors';
+// ADR-508/507/560 — grip-drag tail overlays (action-alignment traces + move-clearance dims + hatch
+// gradient handle marker) σε δικό τους module (file-size SRP N.7.1). Gates/SSoT ζουν μέσα στους helpers.
+import {
+  paintGripActionAlignmentTraces,
+  paintGripMoveClearanceDims,
+  drawHatchGradientHandleMarker,
+} from './grip-ghost-preview-overlay-helpers';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -219,6 +218,8 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
         // ORTHO on, δεν είναι άκρο, ή ο κέρσορας δεν κούμπωσε σε polar ακτίνα.
         endpointPolar = resolveEndpointReshapePolarLock(
           entity, dp.gripIndex, dp.lineGripKind, dp.anchorPos, effectiveCursor,
+          // ADR-508 §grip-tracking — καθολικό POLAR σε reshape λαβές πολυγωνικών BIM (κολόνα/πλάκα/…).
+          resolveActiveFootprintGripKind(dp),
         );
         if (endpointPolar) dp = { ...dp, delta: endpointPolar.delta };
       }
@@ -316,40 +317,17 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       drawDashedSegment(ctx, fromW, toW, t, vp);
     }
 
-    // ADR-357/363/560 — action-alignment traces RESOLVED-IN-DRAW (mirror useEntityBodyDragPreview):
-    // το ΙΔΙΟ pure SSoT resolve τρέχει ΤΟΠΙΚΑ ανά frame πάνω στον `effectiveCursor` → self-contained,
-    // ΜΗΔΕΝ timing-skew· idempotent double-resolve → WYSIWYG. Anchors:
-    //  · whole-entity translate — Alt-move ΟΠΟΙΑΣΔΗΠΟΤΕ οντότητας (κολόνα/τοίχος/DXF|BIM) ή line
-    //    move-cross/hot-grip move → base point [anchorPos] (parity με body-drag· κυανά ίχνη + έλξη
-    //    προς κάθε γείτονα). Gate στο BAKED `dp.movesEntity` — ΟΧΙ στο volatile `GripAltMoveStore.
-    //    getActive()`, που το Alt→blur στα Windows το μηδενίζει ενώ ο RAF-decoupled ghost συνεχίζει
-    //    (το `dragPreview.movesEntity` χτίστηκε μία φορά στο drag-start → σταθερό όλο το gesture).
-    //  · line ENDPOINT reshape (movesEntity=false) → line SSoT anchors (fixed endpoint· rotation→null).
-    // ΚΑΜΙΑ πινακίδα (Giorgio). Non-line non-move grip → null → no-op.
-    let alignAnchors: Point2D[] | null = null;
-    if (dp.movesEntity === true && !dp.rotatePivot && dp.anchorPos) {
-      alignAnchors = [dp.anchorPos];
-    } else if (isLineEntity(entity as unknown as Entity)) {
-      const line = entity as unknown as { start: Point2D; end: Point2D };
-      alignAnchors = getLineGripAlignmentAnchors(dp.gripIndex, dp.lineGripKind, line, dp.anchorPos);
-    } else if (isPolylineEntity(entity as unknown as Entity)) {
-      // ADR-561 — polyline VERTEX reshape (e.g. moving an endpoint of two joined lines):
-      // track off the FIXED neighbour vertices via the polyline SSoT, so the SAME centralized
-      // white/yellow AutoAlign + Polar traces AND the cyan ambient-neighbour hints light up
-      // exactly as they do for a plain line (Giorgio 2026-07-05).
-      const poly = entity as unknown as { vertices: Point2D[]; closed: boolean };
-      alignAnchors = getPolylineGripAlignmentAnchors(dp.gripIndex, poly.vertices, poly.closed);
-    }
-    // OSNAP-priority: όσο κουμπώνει χαρακτηριστικό σημείο, το OSNAP marker αναλαμβάνει — καμία κυανή.
-    if (effectiveCursor && alignAnchors && !getImmediateSnap()?.found) {
+    // ADR-357/363/560/508 §grip-tracking — action-alignment traces RESOLVED-IN-DRAW. Anchors +
+    // OSNAP-priority + paint ζουν στο overlay helper (file-size SRP N.7.1): whole-entity translate →
+    // base point· line/polyline endpoint reshape → fixed neighbour anchors· ΚΑΘΕ πολυγωνική BIM
+    // reshape λαβή → σταθερές footprint κορυφές. Display-only (δεν αλλάζει το `dp.delta`).
+    {
       const trkScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
-      const actionTracking = resolveActionAlignmentTracking(
-        effectiveCursor, alignAnchors, t.scale,
+      paintGripActionAlignmentTraces(
+        ctx, dp, entity as unknown as Entity, effectiveCursor,
         (trkScene?.entities ?? null) as unknown as readonly Entity[] | null,
+        resolveSceneUnits(trkScene), t, vp,
       );
-      if (actionTracking) {
-        paintActionAlignmentTracking(ctx, actionTracking, t, vp, resolveSceneUnits(trkScene));
-      }
     }
 
     // ADR-357/513 §grip-polar — πορτοκαλί polar ray + γωνία από τον ΣΤΑΘΕΡΟ γείτονα προς το κλειδωμένο

@@ -24,12 +24,17 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import type { Entity } from '../../types/entities';
 import type { LineGripKind } from '../grip-types';
 import type { PolarSnapResult } from '../../systems/constraints/polar-utils';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { resolveOrthoPolarStep } from '../drawing/drawing-handler-utils';
 import { getLineGripAlignmentAnchors } from '../../systems/line/line-grips';
 import { getPolylineGripAlignmentAnchors } from '../../systems/polyline/polyline-grips';
+// ADR-508 §grip-tracking (Giorgio 2026-07-06) — καθολικό POLAR σε reshape λαβές πολυγωνικών BIM
+// οντοτήτων (κολόνα/πλάκα/άνοιγμα/στέγη/…): ο σταθερός polar origin από το ΕΝΑ footprint SSoT.
+import { getBimCharacteristicPointsOfCategory } from '../../bim/utils/bim-characteristic-points';
+import { getFootprintReshapePolarAnchor } from '../../systems/grip/footprint-reshape-anchors';
 
 interface EndpointReshapeGeom {
   readonly type?: string;
@@ -49,6 +54,7 @@ function resolveEndpointReshapeAnchor(
   entity: EndpointReshapeGeom,
   gripIndex: number,
   lineGripKind: LineGripKind | null | undefined,
+  footprintGripKind?: string,
 ): Point2D | null {
   if (entity.type === 'line' && entity.start && entity.end) {
     if (lineGripKind) return null; // rotation / move handles carry a kind → excluded
@@ -59,6 +65,13 @@ function resolveEndpointReshapeAnchor(
     const isEndpoint = !entity.closed && n >= 2 && (gripIndex === 0 || gripIndex === n - 1);
     if (!isEndpoint) return null;
     return getPolylineGripAlignmentAnchors(gripIndex, entity.vertices, !!entity.closed)?.[0] ?? null;
+  }
+  // ADR-508 §grip-tracking — πολυγωνικό BIM footprint (κολόνα/πλάκα/άνοιγμα/στέγη/επένδυση/ενδοδαπέδια):
+  // ο σταθερός polar origin (prev γείτονας κορυφής / πρώτο άκρο ακμής) από το ΕΝΑ ordered-corner SSoT.
+  // Παρειά/parametric (single-axis) → `null` μέσα στο `getFootprintReshapePolarAnchor`.
+  if (footprintGripKind) {
+    const corners = getBimCharacteristicPointsOfCategory(entity as unknown as Entity, 'corner');
+    return getFootprintReshapePolarAnchor(corners, footprintGripKind);
   }
   return null;
 }
@@ -84,10 +97,11 @@ export function resolveEndpointReshapePolarLock(
   lineGripKind: LineGripKind | null | undefined,
   anchorPos: Readonly<Point2D>,
   cursorWorld: Readonly<Point2D>,
+  footprintGripKind?: string,
 ): EndpointReshapePolarLock | null {
   if (gripIndex === undefined) return null;
   if (!cadToggleState.isPolarOn() || cadToggleState.isOrthoOn()) return null;
-  const fixed = resolveEndpointReshapeAnchor(entity as EndpointReshapeGeom, gripIndex, lineGripKind);
+  const fixed = resolveEndpointReshapeAnchor(entity as EndpointReshapeGeom, gripIndex, lineGripKind, footprintGripKind);
   if (!fixed) return null;
   const step = resolveOrthoPolarStep(cursorWorld, fixed, { ortho: false, polar: true });
   const polar = step.polarResult;

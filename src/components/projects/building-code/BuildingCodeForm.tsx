@@ -14,6 +14,7 @@ import {
   FieldIssues,
   ValidationSummary,
 } from './BuildingCodeValidationDisplay';
+import { parseLocaleNumber } from '@/lib/number/locale-number';
 import type { Project } from '@/types/project';
 
 interface BuildingCodeFormProps {
@@ -23,8 +24,7 @@ interface BuildingCodeFormProps {
 }
 
 function parseNumber(raw: string): number {
-  const n = Number(raw.replace(',', '.'));
-  return Number.isFinite(n) ? n : 0;
+  return parseLocaleNumber(raw) ?? 0;
 }
 
 export function BuildingCodeForm({ hook, isEditing, project }: BuildingCodeFormProps) {

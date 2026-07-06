@@ -16,6 +16,7 @@ import { commitDxfGripDragModeAware, createSceneManagerAdapter } from './grip-co
 // ADR-513 §grip-parity — πληκτρολογημένο Μήκος/Γωνία (Δαχτυλίδι) στην ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ γραμμής.
 import { resolveLineEndpointLockedDelta } from '../../systems/dynamic-input/grip-endpoint-lock';
 import { resolveEndpointReshapePolarLock } from './grip-endpoint-polar-lock';
+import { resolveActiveFootprintGripKind } from '../../systems/grip/footprint-reshape-anchors';
 import { commitHotGripCopy } from './grip-parametric-commits';
 import { applyGripStepSnap } from '../../bim/grips/grip-step-quantize';
 import { applyMoveConstraints, applyResizeConstraints } from '../../bim/grips/grip-move-constraints';
@@ -79,7 +80,11 @@ function resolveEndpointReshapeCommitPolar(
   if (grip.entityId === undefined) return null;
   const entity = createSceneManagerAdapter(deps)?.getEntity(grip.entityId);
   if (!entity) return null;
-  return resolveEndpointReshapePolarLock(entity, grip.gripIndex, grip.lineGripKind, grip.position, worldPos)?.delta ?? null;
+  return resolveEndpointReshapePolarLock(
+    entity, grip.gripIndex, grip.lineGripKind, grip.position, worldPos,
+    // ADR-508 §grip-tracking — καθολικό POLAR commit για reshape λαβές πολυγωνικών BIM (WYSIWYG με preview).
+    resolveActiveFootprintGripKind(grip),
+  )?.delta ?? null;
 }
 
 /**

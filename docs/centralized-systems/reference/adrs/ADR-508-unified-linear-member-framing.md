@@ -106,6 +106,33 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
 
 ## Changelog
 
+- **2026-07-06 (§grip-tracking — καθολικά ίχνη ευθυγράμμισης (λευκά+ambient) + POLAR σε reshape λαβές, όλες οι οντότητες)**
+  - **Αίτημα Giorgio**: όταν σέρνω **μεσαία λαβή** ή **λαβή κορυφής** οποιασδήποτε οντότητας, να λειτουργούν τα **λευκά ίχνη
+    ευθυγράμμισης** (acquired ⊕ ambient AutoAlign) **και** το **κίτρινο/πορτοκαλί POLAR** — καθολικά.
+  - **SSoT audit (grep + trace, ΠΡΙΝ κώδικα)**: στο `hooks/tools/useGripGhostPreview.ts` τα `alignAnchors` (γρ. 329-342)
+    υπολογίζονταν ΜΟΝΟ για whole-move / line / polyline· ο POLAR anchor resolver (`hooks/grips/grip-endpoint-polar-lock.ts`)
+    ήταν line/polyline-only. Το commit-seam (`grip-mouseup-handler.ts` `resolveEndpointCommitDelta`) είναι **ήδη grip-agnostic**
+    (καλείται πρώτο, non-null delta κερδίζει) → γενίκευση ΜΟΝΟ του anchor resolver αρκεί για preview **και** commit (WYSIWYG).
+    Το delta εφαρμόζεται ομοιόμορφα (full 2D) σε vertex/edge-midpoint grips· **εξαίρεση**: column παρειά width/depth =
+    single-axis parametric → POLAR άσχετο εκεί.
+  - **FIX (ZERO νέα μηχανή tracking/polar)**:
+    - **ΝΕΟ SSoT** `systems/grip/footprint-reshape-anchors.ts` (pure): `getFootprintReshapeAlignmentAnchors` (σταθερές κορυφές =
+      όλες εκτός της κινούμενης) + `getFootprintReshapePolarAnchor` (prev γείτονας για vertex / edge-start για midpoint /
+      **null για παρειά**) + `resolveActiveFootprintGripKind`. Reuse `parseGripKindIndex` + `getPolylineVertexNeighbourIndices` +
+      `getBimCharacteristicPointsOfCategory(entity,'corner')` — entity-agnostic, μηδέν point-matching.
+    - **Φάση Α (λευκά+ambient, display-only)**: νέο branch στο `useGripGhostPreview.ts` — footprint reshape grip → anchors =
+      σταθερές κορυφές → το ΥΠΑΡΧΟΝ `resolveActionAlignmentTracking`+`paintActionAlignmentTracking` τα ζωγραφίζει (μηδέν αλλαγή commit).
+    - **Φάση Β (POLAR, preview+commit)**: `resolveEndpointReshapePolarLock` αποκτά optional `footprintGripKind` param· preview
+      (`useGripGhostPreview.ts`) + commit (`grip-mouseup-handler.ts` `resolveEndpointReshapeCommitPolar`) περνούν
+      `resolveActiveFootprintGripKind(dp/grip)`. Το ΥΠΑΡΧΟΝ `paintPolarTrackingLine` + `resolveEndpointCommitDelta` δουλεύουν ως έχουν.
+  - **Γνωστός περιορισμός (τεκμηριωμένο)**: POLAR ΔΕΝ εφαρμόζεται στην **παρειά κολόνας** (width/depth) — parametric single-axis·
+    εκεί λειτουργούν τα λευκά/ambient ίχνη (Φάση Α). Κορυφές κολόνας + όλες οι λαβές πλάκας/ανοίγματος/στέγης/επένδυσης παίρνουν και POLAR.
+  - **Tests (jest, χωρίς tsc)**: νέο `systems/grip/__tests__/footprint-reshape-anchors.test.ts` (13 ✅) + πράσινα
+    `resolve-alignment-tracking`, `dim-alignment-tracking-tolerance`, `polyline-grips`, `column-grips`, `slab-grips`,
+    `grip-3d-reshape-grips`, `grip-endpoint-lock`, `line-endpoint-hotgrip` (207/207 σύνολο). Draw+commit — browser verify από Giorgio.
+  - **Files**: `systems/grip/footprint-reshape-anchors.ts` (NEW+test), `hooks/tools/useGripGhostPreview.ts`,
+    `hooks/grips/grip-endpoint-polar-lock.ts`, `hooks/grips/grip-mouseup-handler.ts`.
+
 - **2026-07-06 (§column-hud + §polygon-hud — καθολικές περιμετρικές ενδείξεις σε σύρσιμο ΚΟΡΥΦΗΣ, όλες οι πολυγωνικές οντότητες)**
   - **Αίτημα Giorgio (browser repro, 2 screenshots)**: όταν σέρνω τη **μεσαία λαβή πλευράς** μιας κολόνας εμφανίζονται περιμετρικά
     οι λευκές ενδείξεις (διαστάσεις + ∠γωνία + ύψος)· όταν σέρνω **ΚΟΡΥΦΗ** ΔΕΝ εμφανίζονται. Ζητούμενο: ίδιες ενδείξεις στο

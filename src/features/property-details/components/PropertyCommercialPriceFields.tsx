@@ -13,11 +13,16 @@
  *   - for-rent → rentPrice only
  *   - for-sale-and-rent → both fields
  *
+ * Price entry uses a format-on-blur input (see PriceInputField): while focused the
+ * raw el-GR decimal (comma, no grouping) is shown so a typed `.`/`,` is unambiguously
+ * the decimal mark; on blur the grouped "125.500,50" display is rendered. Parsing is
+ * delegated to the locale-number SSoT (ADR-576).
+ *
  * @module features/property-details/components/PropertyCommercialPriceFields
  * @since 2026-04-20
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,9 +30,57 @@ import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { SalesDashboardRequirementsAlert } from '@/components/properties/shared/SalesDashboardRequirementsAlert';
 import { PricePlausibilityWarning } from '@/components/properties/shared/PricePlausibilityWarning';
+import { normalizeDecimalString } from '@/lib/number/locale-number';
 import '@/lib/design-system';
 import type { TFunction } from 'i18next';
 import type { PropertyFieldsFormData } from './property-fields-form-types';
+
+/** Canonical machine-decimal string: digits with an optional single `.` decimal. */
+const MACHINE_NUMBER_RE = /^\d+\.?\d*$/;
+
+interface PriceInputFieldProps {
+  id: string;
+  label: string;
+  /** Machine-decimal string ('.' decimal, no grouping), e.g. "125500.5". */
+  value: string;
+  onValueChange: (raw: string) => void;
+  disabled: boolean;
+  placeholder: string;
+}
+
+function PriceInputField({ id, label, value, onValueChange, disabled, placeholder }: PriceInputFieldProps) {
+  const colors = useSemanticColors();
+  const [isFocused, setIsFocused] = useState(false);
+
+  const displayValue = isFocused
+    ? value.replace('.', ',')
+    : value ? Number(value).toLocaleString('el-GR') : '';
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = normalizeDecimalString(e.target.value);
+    if (raw === '' || MACHINE_NUMBER_RE.test(raw)) {
+      onValueChange(raw);
+    }
+  };
+
+  return (
+    <>
+      <Label className={cn('text-xs', colors.text.muted)}>{label}</Label>
+      <Input
+        id={id}
+        type="text"
+        inputMode="decimal"
+        value={displayValue}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        onChange={handleChange}
+        size="sm" className="text-xs text-right"
+        placeholder={placeholder}
+        disabled={disabled}
+      />
+    </>
+  );
+}
 
 export interface PropertyCommercialPriceFieldsProps {
   commercialStatus: string;
@@ -54,29 +107,19 @@ export function PropertyCommercialPriceFields({
   isHierarchyLocked,
   t,
 }: PropertyCommercialPriceFieldsProps) {
-  const colors = useSemanticColors();
+  const disabled = !isEditing || isSoldOrRented || isHierarchyLocked;
   return (
     <>
       {/* Sale price — shown for for-sale, for-sale-and-rent, and default */}
       {commercialStatus !== 'for-rent' && (
         <fieldset className="space-y-1">
-          <Label className={cn("text-xs", colors.text.muted)}>
-            {t('fields.commercial.askingPrice')}
-          </Label>
-          <Input
+          <PriceInputField
             id="unit-asking-price"
-            type="text"
-            inputMode="decimal"
-            value={askingPrice ? Number(askingPrice).toLocaleString('el-GR') : ''}
-            onChange={(e) => {
-              const raw = e.target.value.replace(/\./g, '').replace(/,/g, '.');
-              if (raw === '' || /^\d+\.?\d*$/.test(raw)) {
-                setFormData(prev => ({ ...prev, askingPrice: raw }));
-              }
-            }}
-            size="sm" className="text-xs text-right"
+            label={t('fields.commercial.askingPrice')}
+            value={askingPrice}
+            onValueChange={(raw) => setFormData(prev => ({ ...prev, askingPrice: raw }))}
+            disabled={disabled}
             placeholder={t('placeholders.priceExample')}
-            disabled={!isEditing || isSoldOrRented || isHierarchyLocked}
           />
           <PricePlausibilityWarning
             commercialStatus={commercialStatus}
@@ -90,23 +133,13 @@ export function PropertyCommercialPriceFields({
       {/* Rent price — shown for for-rent and for-sale-and-rent */}
       {(commercialStatus === 'for-rent' || commercialStatus === 'for-sale-and-rent') && (
         <fieldset className="space-y-1">
-          <Label className={cn("text-xs", colors.text.muted)}>
-            {t('fields.commercial.rentPrice')}
-          </Label>
-          <Input
+          <PriceInputField
             id="unit-rent-price"
-            type="text"
-            inputMode="decimal"
-            value={rentPrice ? Number(rentPrice).toLocaleString('el-GR') : ''}
-            onChange={(e) => {
-              const raw = e.target.value.replace(/\./g, '').replace(/,/g, '.');
-              if (raw === '' || /^\d+\.?\d*$/.test(raw)) {
-                setFormData(prev => ({ ...prev, rentPrice: raw }));
-              }
-            }}
-            size="sm" className="text-xs text-right"
+            label={t('fields.commercial.rentPrice')}
+            value={rentPrice}
+            onValueChange={(raw) => setFormData(prev => ({ ...prev, rentPrice: raw }))}
+            disabled={disabled}
             placeholder={t('placeholders.priceExample')}
-            disabled={!isEditing || isSoldOrRented || isHierarchyLocked}
           />
           <PricePlausibilityWarning
             commercialStatus="for-rent"

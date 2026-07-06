@@ -4121,14 +4121,15 @@
     },
     "comma-normalize": {
       "ssotFile": "src/subapps/dxf-viewer/systems/dynamic-input/utils/number.ts",
-      "description": "ADR-397/513 (2026-07-06): el-GR comma→dot decimal normalization for the DXF viewer is owned by normalizeNumber() in systems/dynamic-input/utils/number.ts (canonical, `/,/g` superset — covers single decimals AND multi-comma arithmetic expressions fed to evalExpr in the RadialCommandRing). Forbidden: inline `.replace(',', '.')` / `.replace(/,/g, '.')` — import normalizeNumber instead. CROSS-DOMAIN NOTE: the app-level currency SSoT parseGreekDecimal (src/lib/number/greek-decimal.ts) also comma-normalizes but interprets `.` as a thousands separator and returns number|null — a DIFFERENT contract, so it is allowlisted here (its own SSoT), not a violation. Per-keystroke applyTypedAngleKey (single-char inline buffer, ADR-397 §15) is a different level and is not full-string normalization. The 4 non-dxf app consumers (building-code / procurement / property-details / accounting) hand-roll comma-replace in the currency domain and are baseline-frozen pending a separate migration to parseGreekDecimal.",
+      "description": "ADR-397/513 (2026-07-06): el-GR comma→dot decimal normalization for the DXF viewer is owned by normalizeNumber() in systems/dynamic-input/utils/number.ts (canonical, `/,/g` superset — covers single decimals AND multi-comma arithmetic expressions fed to evalExpr in the RadialCommandRing). Forbidden: inline `.replace(',', '.')` / `.replace(/,/g, '.')` — import normalizeNumber instead. CROSS-DOMAIN NOTE: the app-level currency/decimal SSoT lives in src/lib/number/ — locale-number.ts (ADR-576: normalizeDecimalString + parseLocaleNumber, locale-aware building blocks) plus the thin greek-decimal.ts wrapper. It interprets separators for the currency domain (last-separator = decimal, thousands grouping stripped) and returns number|null / canonical string — a DIFFERENT contract from the DXF viewer, so both files are allowlisted here (their own SSoT), not violations. The 4 former app consumers (building-code / procurement / property-details / accounting csv-import) were migrated to these building blocks on 2026-07-06 (ADR-576) and no longer hand-roll comma-replace. Per-keystroke applyTypedAngleKey (single-char inline buffer, ADR-397 §15) is a different level and is not full-string normalization.",
       "forbiddenPatterns": [
         "\\.replace\\(['\"],['\"], ?['\"]\\.['\"]\\)",
         "\\.replace\\(/,/g, ?['\"]\\.['\"]\\)"
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/systems/dynamic-input/utils/number.ts",
-        "src/lib/number/greek-decimal.ts"
+        "src/lib/number/greek-decimal.ts",
+        "src/lib/number/locale-number.ts"
       ],
       "addedDate": "2026-07-06",
       "addedByAdr": "ADR-397",

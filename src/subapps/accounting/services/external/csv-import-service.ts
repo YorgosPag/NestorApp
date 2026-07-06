@@ -18,6 +18,7 @@ import type {
 } from '../../types/bank';
 import { getSupportedBanks, getParserConfig } from '../config/csv-parsers';
 import { isoNow } from '../repository/firestore-helpers';
+import { parseLocaleNumber, type DecimalSeparator } from '@/lib/number/locale-number';
 
 // ============================================================================
 // PARSED TRANSACTION TYPE (fields NOT set by CSV parser)
@@ -266,15 +267,10 @@ function parseBankDate(dateStr: string, format: string): string {
 }
 
 function parseBankDecimal(value: string, decimalSeparator: string): number {
-  const cleaned = value.trim().replace(/[^\d,.-]/g, '');
-  let normalized: string;
-  if (decimalSeparator === ',') {
-    normalized = cleaned.replace(/\./g, '').replace(',', '.');
-  } else {
-    normalized = cleaned.replace(/,/g, '');
-  }
-  const result = parseFloat(normalized);
-  return isNaN(result) ? 0 : result;
+  // Fixed-locale mode: the configured separator is the decimal, the other = thousands.
+  // Any non-comma config means dot-decimal (US style), matching the legacy behaviour.
+  const decimal: DecimalSeparator = decimalSeparator === ',' ? ',' : '.';
+  return parseLocaleNumber(value, { decimalSeparator: decimal }) ?? 0;
 }
 
 // ============================================================================
@@ -403,16 +399,6 @@ function parseAutoDate(raw: string): string | null {
 }
 
 function parseAutoAmount(raw: string): number | null {
-  const trimmed = raw.trim().replace(/"/g, '').replace(/\s/g, '');
-  if (!trimmed || trimmed === '-') return null;
-
-  if (trimmed.includes(',') && trimmed.indexOf(',') > trimmed.lastIndexOf('.')) {
-    const normalized = trimmed.replace(/\./g, '').replace(',', '.');
-    const num = parseFloat(normalized);
-    return Number.isNaN(num) ? null : num;
-  }
-
-  const normalized = trimmed.replace(/,/g, '');
-  const num = parseFloat(normalized);
-  return Number.isNaN(num) ? null : num;
+  // Auto-detect Greek vs US: the last-occurring separator is the decimal mark.
+  return parseLocaleNumber(raw);
 }

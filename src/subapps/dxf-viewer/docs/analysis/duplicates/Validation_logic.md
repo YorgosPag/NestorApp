@@ -10,8 +10,12 @@
 > `/,/g` superset). Enforced by the `comma-normalize` ratchet module in
 > `.ssot-registry.json` (dxf = 0-violation). The app-level currency SSoT
 > `src/lib/number/greek-decimal.ts → parseGreekDecimal` (thousands-aware,
-> `number|null`) is a SEPARATE domain, kept distinct. The broader Category-4
-> unification of `validateNumericInput` vs `isValidNumber` remains open.
+> `number|null`) is a SEPARATE domain, kept distinct. As of ADR-576 (2026-07-06)
+> the app currency/decimal SSoT is `src/lib/number/locale-number.ts`
+> (`normalizeDecimalString` + `parseLocaleNumber`; `parseGreekDecimal` = thin
+> wrapper), and the 4 former app consumers (property / accounting-CSV / procurement
+> / building-code) were migrated to it. The broader Category-4 unification of
+> `validateNumericInput` vs `isValidNumber` (both inside the dxf viewer) remains open.
 **��ķ�����**: Validation Logic (Entity validation, Input validation, Settings validation)
 **���ǿ�**: ��Ŀ��ü�� ��� ĵ������÷ ̻ɽ �ɽ ��������ɽ �ķ ������ �������÷�
 

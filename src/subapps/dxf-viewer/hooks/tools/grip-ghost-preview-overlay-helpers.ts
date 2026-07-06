@@ -13,7 +13,7 @@
  * @see ADR-507 / ADR-508 — the individual overlay behaviours
  */
 
-import type { ViewTransform, Viewport } from '../../rendering/types/Types';
+import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { Entity, HatchEntity } from '../../types/entities';
 import type { DxfGripDragPreview } from '../grip-computation';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -25,6 +25,13 @@ import { resolveMoveClearanceDims } from '../../bim/framing/move-clearance-dims'
 import { paintGhostFaceDimensions } from '../../canvas-v2/preview-canvas/ghost-face-dim-paint';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { drawGradientOriginMarker } from './grip-ghost-preview-draw-helpers';
+import { isLineEntity, isPolylineEntity } from '../../types/entities';
+import { paintActionAlignmentTracking, resolveActionAlignmentTracking } from '../dimensions/dim-alignment-tracking';
+import { getLineGripAlignmentAnchors } from '../../systems/line/line-grips';
+import { getPolylineGripAlignmentAnchors } from '../../systems/polyline/polyline-grips';
+import { getFootprintReshapeAlignmentAnchors, resolveActiveFootprintGripKind } from '../../systems/grip/footprint-reshape-anchors';
+import { getBimCharacteristicPointsOfCategory } from '../../bim/utils/bim-characteristic-points';
+import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 
 /**
  * ADR-508 §move-clearance — κυανές neighbor-clearance listening dims κατά το grip-drag: ΤΟ ΙΔΙΟ
@@ -85,5 +92,54 @@ export function drawHatchGradientHandleMarker(
       paintPolarTrackingLine(ctx, originW, angleDeg, formatMoveAngle(angleDeg), handleW, t, vp);
       drawGradientOriginMarker(ctx, CoordinateTransforms.worldToScreen(handleW, t, vp));
     }
+  }
+}
+
+/**
+ * ADR-357/363/560/508 — action-alignment traces RESOLVED-IN-DRAW (mirror useEntityBodyDragPreview):
+ * το ΙΔΙΟ pure SSoT resolve τρέχει ΤΟΠΙΚΑ ανά frame πάνω στον `effectiveCursor` → self-contained,
+ * ΜΗΔΕΝ timing-skew· idempotent double-resolve → WYSIWYG. Anchors:
+ *  · whole-entity translate (Alt-move ΟΠΟΙΑΣΔΗΠΟΤΕ οντότητας ή line move-cross/hot-grip) → base point.
+ *  · line ENDPOINT reshape → line SSoT anchors (fixed endpoint· rotation→null).
+ *  · polyline VERTEX reshape → fixed neighbour vertices (polyline SSoT).
+ *  · ADR-508 §grip-tracking — ΚΑΘΕ πολυγωνική BIM οντότητα (κολόνα/πλάκα/…) σε reshape ΚΟΡΥΦΗΣ/ΜΕΣΑΙΑΣ
+ *    λαβής → οι ΣΤΑΘΕΡΕΣ κορυφές του footprint (ordered corner SSoT).
+ * OSNAP-priority: όσο κουμπώνει χαρακτηριστικό σημείο, το OSNAP marker αναλαμβάνει — καμία κυανή.
+ * ΚΑΜΙΑ πινακίδα. Non-line non-move grip → null → no-op. Display-only (δεν αλλάζει το `dp.delta`).
+ */
+export function paintGripActionAlignmentTraces(
+  ctx: CanvasRenderingContext2D,
+  dp: DxfGripDragPreview,
+  entity: Entity,
+  effectiveCursor: Point2D | null,
+  sceneEntities: readonly Entity[] | null,
+  sceneUnits: SceneUnits,
+  t: ViewTransform,
+  vp: Viewport,
+): void {
+  if (!effectiveCursor) return;
+  let alignAnchors: Point2D[] | null = null;
+  if (dp.movesEntity === true && !dp.rotatePivot && dp.anchorPos) {
+    alignAnchors = [dp.anchorPos];
+  } else if (isLineEntity(entity)) {
+    const line = entity as unknown as { start: Point2D; end: Point2D };
+    alignAnchors = getLineGripAlignmentAnchors(dp.gripIndex, dp.lineGripKind, line, dp.anchorPos);
+  } else if (isPolylineEntity(entity)) {
+    const poly = entity as unknown as { vertices: Point2D[]; closed: boolean };
+    alignAnchors = getPolylineGripAlignmentAnchors(dp.gripIndex, poly.vertices, poly.closed);
+  } else {
+    const footprintKind = resolveActiveFootprintGripKind(dp);
+    if (footprintKind) {
+      const corners = getBimCharacteristicPointsOfCategory(entity, 'corner');
+      const anchors = getFootprintReshapeAlignmentAnchors(corners, footprintKind);
+      alignAnchors = anchors.length ? anchors : null;
+    }
+  }
+  if (!alignAnchors || getImmediateSnap()?.found) return;
+  const actionTracking = resolveActionAlignmentTracking(
+    effectiveCursor, alignAnchors, t.scale, sceneEntities,
+  );
+  if (actionTracking) {
+    paintActionAlignmentTracking(ctx, actionTracking, t, vp, sceneUnits);
   }
 }
