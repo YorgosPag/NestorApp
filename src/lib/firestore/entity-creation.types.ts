@@ -253,6 +253,16 @@ export interface EntityCreationParams {
   /** API path for audit log metadata */
   apiPath?: string;
   /**
+   * Optional caller-supplied document id (must be a valid enterprise id — same
+   * prefix the registry's `idGenerator` would produce). When present it is used
+   * verbatim as the docId instead of generating a fresh one, so a client that is
+   * the identity authority (e.g. the DIMSTYLE registry, which mints the id
+   * client-side for an optimistic in-memory entry) keeps the SAME id in the DB —
+   * no post-write reconcile, no duplicate, no orphaned references. Absent →
+   * `idGenerator()` mints the id as before (all existing callers unaffected).
+   */
+  explicitId?: string;
+  /**
    * Optional resolvers for ID → display-name translation in audit change values.
    * Key: tracked field name (e.g. `projectId`).
    * Value: async function that receives the raw ID and returns the display name or null.

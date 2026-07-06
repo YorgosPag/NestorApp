@@ -90,8 +90,10 @@ export function DimensionsTab() {
           : null;
     if (created) {
       setSelectedId(created.id);
+      // Persist under the SAME client-minted id (server honours `id` via explicitId)
+      // so a reload hydrates the exact id — no duplicate, no orphaned styleId.
       void createDimStyleWithPolicy({
-        payload: { name: created.name, style: toStylePayload(created) },
+        payload: { id: created.id, name: created.name, style: toStylePayload(created) },
       }).catch((err) => {
         registry.deleteCustomStyle(created.id);
         setSelectedId((cur) => (cur === created.id ? null : cur));

@@ -233,15 +233,18 @@ export class GridSpatialIndex implements ISpatialIndex {
   // ========================================
 
   querySnap(point: Point2D, tolerance: number, snapType: 'endpoint' | 'midpoint' | 'center' | 'dim_def_point' | 'dim_line'): SpatialQueryResult[] {
-    // Grid is optimized για snapping - use smaller search radius
-    const snapRadius = Math.min(tolerance, this.cellSize / 2);
-    const results = this.queryNear(point, snapRadius);
-
-    // Filter based on snap type (basic implementation)
-    return results.filter(result => {
-      // Placeholder για snap type filtering
-      return true;
-    });
+    // `tolerance` is the snap APERTURE — a fixed SCREEN-space pickbox (px) already
+    // converted to world units by the caller (`worldRadiusForType`). This is the
+    // AutoCAD/Revit/Figma model: the reach is constant on screen at every zoom.
+    // Honour it directly. `queryNear` scans exactly the grid cells the radius
+    // covers, so it is correct for ANY radius — the earlier `min(tolerance,
+    // cellSize/2)` clamp only shrank the reach BELOW the intended aperture, which
+    // silently killed snapping when zoomed out on large geometry (e.g. a 155 m
+    // dimension: the aperture became a sub-pixel world distance → no attract, and
+    // far points appeared/vanished with zoom). ADR-362/378 fix — 2026-07-07.
+    // `snapType` filtering is done per-engine upstream (each engine indexes only
+    // its own point kind), so no post-filter is needed here.
+    return this.queryNear(point, tolerance);
   }
 
   querySelection(bounds: SpatialBounds, selectionType: 'window' | 'crossing'): SpatialQueryResult[] {

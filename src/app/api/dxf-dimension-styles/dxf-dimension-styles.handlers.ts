@@ -109,7 +109,8 @@ export async function handleCreateDxfDimStyle(
       style: body.style ?? null,
       // Thin built-in-ref docs carry the built-in slug as a stored `id` field so
       // the subscribe layer ({ id: doc.id, ...data }) resolves it to the registry.
-      // Custom styles NEVER store `id` (doc.id must win → hydrate uses the DB id).
+      // Custom styles NEVER store `id` in the payload → the DB docId IS the id
+      // (see `explicitId` below: docId == the client-minted id → hydrate matches).
       ...(isBuiltInRef && body.id ? { id: body.id } : {}),
     };
 
@@ -117,6 +118,12 @@ export async function handleCreateDxfDimStyle(
       auth: ctx,
       parentId: null,
       entitySpecificFields,
+      // Custom style → the client (DIMSTYLE registry) is the identity authority:
+      // persist under the SAME `dimstyle_*` id it minted for its optimistic
+      // in-memory entry, so a reload hydrates the exact id every drawn dimension
+      // references (no duplicate, no orphaned styleId). Built-in-ref docs keep a
+      // fresh docId (their stored `id` field is the built-in slug).
+      explicitId: !isBuiltInRef ? body.id : undefined,
       apiPath: '/api/dxf-dimension-styles (POST)',
     });
 

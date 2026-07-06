@@ -35,14 +35,17 @@ export function convertTextEntity(entity: SceneEntity, base: DxfBaseFields): Dxf
   const finalStyle = flatFont && !textStyle?.fontFamily
     ? { ...textStyle, fontFamily: flatFont }
     : textStyle;
-  // ADR-557 — grip-box width discriminator: MTEXT → its real `width` frame; simple
-  // TEXT → its AutoCAD X-scale `widthFactor` (adapter derives the box width from
-  // char-count). Never both.
+  // ADR-557 — grip-box width discriminator: MTEXT WITH a real `width` frame → that frame;
+  // otherwise (simple TEXT, or a width-less in-app MTEXT) → the AutoCAD X-scale `widthFactor`.
+  // This MIRRORS the resize discriminator (`text-grips.ts` `isMTextBox` = `width != null`):
+  // a width-less MTEXT resize writes `widthFactor`, so the converter MUST carry it here too —
+  // else the render/display path (converted entity) drops it and its box stays wide while the
+  // hit-test box narrows, so grips draw at one width but hover-test at another (Giorgio 2026-07-07).
   const mtextWidth = entity.type === 'mtext'
     ? (entity as unknown as { width?: number }).width
     : undefined;
-  const textWidthFactor = entity.type === 'text'
-    ? (entity as TextEntity).widthFactor
+  const textWidthFactor = mtextWidth == null
+    ? (entity as unknown as { widthFactor?: number }).widthFactor
     : undefined;
   return {
     ...base,

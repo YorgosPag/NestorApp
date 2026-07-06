@@ -322,7 +322,22 @@ export async function createEntity(
   // --- Step 8: Generate ID + write ---
   const idModule = await import('@/services/enterprise-id.service');
   const generateId = idModule[entry.idGenerator] as () => string;
-  const entityId = generateId();
+  // Honour a caller-supplied enterprise id (client is the identity authority),
+  // but only when it shares the SAME prefix the registry generator would mint —
+  // otherwise fall back to a fresh id so a malformed/foreign id can never land.
+  let entityId = generateId();
+  if (params.explicitId) {
+    const expectedPrefix = `${entityId.split('_')[0]}_`;
+    if (params.explicitId.startsWith(expectedPrefix)) {
+      entityId = params.explicitId;
+    } else {
+      logger.warn('Ignoring explicitId with mismatched prefix', {
+        entityType,
+        explicitId: params.explicitId,
+        expectedPrefix,
+      });
+    }
+  }
 
   await adminDb.collection(entry.collection).doc(entityId).set(sanitizedDoc);
   logger.info('Entity created', { entityType, entityId });
