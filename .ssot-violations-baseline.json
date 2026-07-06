@@ -1,9 +1,9 @@
 {
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet pattern)",
-    "generated": "2026-06-03T09:58:02Z",
-    "totalViolations": 129,
-    "totalFiles": 88,
+    "generated": "2026-07-06T16:27:38Z",
+    "totalViolations": 131,
+    "totalFiles": 90,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "registry": ".ssot-registry.json"
   },
@@ -68,6 +68,7 @@
     "src/subapps/dxf-viewer/hooks/tools/useTrimTool.ts": 1,
     "src/subapps/dxf-viewer/hooks/useEntityDrag.ts": 2,
     "src/subapps/dxf-viewer/snapping/index.ts": 1,
+    "src/subapps/dxf-viewer/systems/cursor/GripDragStore.ts": 1,
     "src/subapps/dxf-viewer/systems/prompt-dialog/PromptDialog.tsx": 2,
     "src/subapps/dxf-viewer/ui/color/eyedropper.ts": 2,
     "src/subapps/dxf-viewer/ui/components/dxf-settings/categories/CursorCategory.tsx": 1,
@@ -94,6 +95,7 @@
     "src/subapps/geo-canvas/floor-plan-system/parsers/vector/DxfParser.ts": 3,
     "src/subapps/geo-canvas/services/geo-transform/DxfGeoTransform.ts": 2,
     "src/subapps/procurement/services/external/openai-quote-analyzer.ts": 1,
+    "src/types/building/derived-foundation-depth.ts": 1,
     "src/utils/accessibility.ts": 1,
     "src/utils/building-features-i18n.ts": 1
   }

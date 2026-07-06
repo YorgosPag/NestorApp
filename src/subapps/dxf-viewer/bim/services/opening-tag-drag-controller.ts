@@ -95,7 +95,11 @@ export function getOffsetOrZero(opening: OpeningEntity): TagDragOffset {
 export function tagWorldCenter(opening: OpeningEntity): Point2D {
   const base = computeTagCenter(opening);
   const off = getOffsetOrZero(opening);
-  return translatePoint(base, { x: off.dx, y: off.dy });
+  // `base` is a Point3D (z:0); this is a 2D tag centre, so strip z after the
+  // canonical translate to keep the Point2D contract (the pre-SSoT inline
+  // `{ x: base.x+…, y: base.y+… }` dropped z implicitly).
+  const world = translatePoint(base, { x: off.dx, y: off.dy });
+  return { x: world.x, y: world.y };
 }
 
 /**

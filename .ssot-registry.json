@@ -30,6 +30,17 @@
       ],
       "tier": 3
     },
+    "scene-manager-adapter-hook": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/entity-creation/useSceneManagerAdapter.ts",
+      "description": "ADR-577 — the memoized `getSceneManager` builder that binds an ISceneManager to the current level lives ONCE as the useSceneManagerAdapter() hook. The identical `const getSceneManager = useCallback(() => { if (!levelManager.currentLevelId) return null; return createLevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelManager.currentLevelId); }, [levelManager])` block was copy-pasted verbatim into 20 interactive tool hooks (copy/move/mirror/rotation/scale/trim/stretch/offset/fillet/chamfer/extend/array/entity-clipboard + the wall-pick + array-polar/path + body-drag tools). Re-declaring a `const getSceneManager = useCallback(...)` reintroduces the duplicate — call `const getSceneManager = useSceneManagerAdapter(levelManager)` instead (the SSoT hook, which delegates to the ADR-527 cached factory). The SSoT file is allowlisted only for its doc-comment example of the forbidden shape.",
+      "forbiddenPatterns": [
+        "const getSceneManager = useCallback\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/entity-creation/useSceneManagerAdapter.ts"
+      ],
+      "tier": 3
+    },
     "nan-safe-box3-bounds": {
       "ssotFile": "src/subapps/dxf-viewer/bim-3d/scene/finite-bounds.ts",
       "description": "ADR-537 — every 3D bounds-from-object computation MUST go through finiteBox3FromObject() in bim-3d/scene/finite-bounds.ts. A raw `new THREE.Box3().setFromObject(obj)` + `.isEmpty()` is NaN-BLIND (`isEmpty()` is `max < min`, which is `false` when a bound is NaN), so a single corrupt vertex yields a box that reports 'not empty' yet carries NaN bounds. Fed into the SHARED camera frame (viewport.frameBounds) or the section box, that NaN blanks the ENTIRE viewport — both the DXF underlay AND the lit BIM. finiteBox3FromObject() returns null on empty OR non-finite so callers hit their existing no-op branch. It is the ONLY legitimate `setFromObject` site. Route new bounds sites through it (null-guard per local semantics), never inline. Test files are exempt (they assert on raw bounds).",
@@ -75,6 +86,14 @@
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/bim/grips/ortho-delta.ts"
+      ],
+      "tier": 3
+    },
+    "point-translate-helpers": {
+      "ssotFile": "src/subapps/dxf-viewer/rendering/entities/shared/geometry-vector-utils.ts",
+      "description": "ADR-090 — point+vector translation lives ONCE in geometry-vector-utils.ts: translatePoint/translatePoints (z-PRESERVING 2D add), translatePoint3D/translatePoints3D (Firestore-safe 3D, z := z ?? 0), addPoint3D (genuine 3D z-SUM). Big players keep ONE `add` per dimension (three.js Vector2/Vector3.add, glMatrix vec2/vec3.add); offsetPoint (=addScaledVector) and subtractPoints stay separate. It had been re-implemented as 13 divergent named copies (applyDelta ×2, shiftPoint3D ×2, shiftPolygon3D, translateVertex ×5, plus private translatePoint/translate/translate3D/offsetPoint-2arg) + ~140 inline `{ x: p.x+delta.x, y: p.y+delta.y }` literals across ~90 files (2026-07-06 consolidation). Re-declaring `function applyDelta|shiftPoint3D|shiftPolygon3D|translateVertex` reintroduces the drift — import the canonical instead. NOTE: inline-literal discipline is enforced by the canonical + code review + ADR-090, NOT by a content pattern here — CHECK 3.7 is repo-wide with no path scoping, so a generic `{x:a.x+b.x,y:a.y+b.y}` ban would over-block legitimate non-dxf vector math and every thin delegator. This zero-tolerance name guard locks the specific eliminated duplicates.",
+      "forbiddenPatterns": [
+        "function (applyDelta|shiftPoint3D|shiftPolygon3D|translateVertex)\\b"
       ],
       "tier": 3
     },

@@ -251,4 +251,31 @@ const single = normalizeNumber(cleaned);
 const num = evalExpr(normalizeNumber(raw));
 const stripped = formatted.replace(/[^0-9.,-]/g, '');`,
   },
+
+  'scene-manager-adapter-hook': {
+    shouldMatch: `// Scanner must catch a re-declared inline getSceneManager builder:
+const getSceneManager = useCallback(() => {
+  if (!levelManager.currentLevelId) return null;
+  return createLevelSceneManagerAdapter(levelManager.getLevelScene, levelManager.setLevelScene, levelManager.currentLevelId);
+}, [levelManager]);`,
+    shouldSkip: `// Scanner must pass the canonical SSoT hook import + usage:
+import { useSceneManagerAdapter } from '../../systems/entity-creation/useSceneManagerAdapter';
+const getSceneManager = useSceneManagerAdapter(levelManager);`,
+  },
+
+  'point-translate-helpers': {
+    shouldMatch: `// Scanner must catch re-declared point-translate duplicate helpers:
+function applyDelta(point, delta) { return { x: point.x + delta.x, y: point.y + delta.y }; }
+function shiftPoint3D(p, delta) { return { x: p.x + delta.x, y: p.y + delta.y, z: p.z }; }
+function shiftPolygon3D(poly, delta) { return { vertices: poly.vertices.map((v) => shiftPoint3D(v, delta)) }; }
+function translateVertex(v, delta) { return { x: v.x + delta.x, y: v.y + delta.y }; }`,
+    shouldSkip: `// Scanner must pass canonical usage + thin delegators that use OTHER names:
+import { translatePoint, translatePoints, translatePoint3D, addPoint3D } from '../geometry-vector-utils';
+const moved = translatePoint(p, delta);
+const shifted = translatePoints(poly.vertices, delta);
+const raised = translatePoint3D(p, delta);
+function add(a, b) { return translatePoint(a, b); }
+function translate3D(p, delta) { return translatePoint3D(p, delta); }
+const summed = addPoint3D(a, b);`,
+  },
 };

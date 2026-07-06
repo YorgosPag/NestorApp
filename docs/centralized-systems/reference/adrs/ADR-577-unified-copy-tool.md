@@ -79,9 +79,37 @@ idle → awaiting-base-point (activate με μη-κενή selection)
 
 **ΕΚΤΟΣ (τεκμηριωμένα):** `useStretchTool` (partial — μόνο activate-if-selection+deactivate, no awaiting-entity· δεν εντάσσεται χωρίς behavior add)· Array×3 / Wall×4 (pick-based, όχι 2-click select-first).
 
-**Εκκρεμεί (final step):** registry guard `.ssot-registry` module «forbid inline `wasActiveRef`+`prevEntityCountRef` modify-FSM στα hooks/tools» (allowlist τα εκτός: stretch/array/wall) + `ssot:baseline`.
+**Εκκρεμεί (final step):** registry guard `.ssot-registry` module «forbid inline `wasActiveRef`+`prevEntityCountRef` modify-FSM στα hooks/tools» + `ssot:baseline`. **⚠️ ΑΝΑΘΕΩΡΗΣΗ (2026-07-06):** grep έδειξε ότι τα refs `wasActiveRef`/`prevEntityCountRef` υπάρχουν σε **13 tool files** (όχι μόνο stretch/array×3/wall×4 — και extend/trim/offset/chamfer/fillet + region-pick), δηλ. πολλά tools με activation-refs ΔΕΝ έχουν migrate-αριστεί ακόμη στο FSM SSoT. Ένας guard τώρα θα απαιτούσε allowlist 13+ αρχείων (≈ «όλα εκτός των 5 migrated») = θόρυβος με μηδενική ratchet-αξία. **Αναβάλλεται** μέχρι να migrate-αριστούν τα υπόλοιπα 2-click tools στο `useModifyToolActivation` (τότε ο allowlist συρρικνώνεται και ο guard γίνεται ουσιαστικός). Δικός του Plan pass.
+
+## Scene-manager adapter SSoT (`getSceneManager` builder)
+
+Το memoized «φτιάξε έναν `ISceneManager` για το τρέχον level» builder ήταν copy-pasted **byte-identical** σε **20 tool hooks**:
+
+```ts
+const getSceneManager = useCallback(() => {
+  if (!levelManager.currentLevelId) return null;
+  return createLevelSceneManagerAdapter(
+    levelManager.getLevelScene, levelManager.setLevelScene, levelManager.currentLevelId);
+}, [levelManager]);
+```
+
+μαζί με τον διπλότυπο τύπο `type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene'|'setLevelScene'|'currentLevelId'>` (16×).
+
+**NEW SSoT** `systems/entity-creation/useSceneManagerAdapter.ts` — `useSceneManagerAdapter(levelManager): () => ISceneManager | null` (delegate στο ADR-527 cached factory· ίδιο null-guard, ίδιο `[levelManager]` dependency → byte-identical συμπεριφορά) + exported `SceneAdapterLevelManager` τύπος. Barrel export από `systems/entity-creation/index.ts`.
+
+**Migrated 20 files** (17 memoized-`getSceneManager` idiom + 3 inline-adapter tools με ταυτόσημη `currentLevelId` σημασιολογία):
+- 2-click modify tools: copy/move/mirror/rotation/scale/trim/stretch/offset/fillet/chamfer/extend/array.
+- clipboard/body-drag: `useEntityClipboard`, `useEntityBodyDragCommit`.
+- wall-pick: `useWallSplit/Merge/Attach/GapOpeningTool`.
+- array variants: `useArrayPolarTool`, `useArrayPathTool`.
+- Οι 16 «Pick» consumers → `SceneAdapterLevelManager` (ο διπλότυπος τύπος + το `import type { useLevels }` σβήστηκαν)· `useWallGapOpeningTool` κρατά `LevelsHookReturn` (χρειάζεται τον full hook για το `buildOpeningResolvers`) — ο SSoT δέχεται και τον superset.
+
+**GUARD:** `.ssot-registry` tier-3 module `scene-manager-adapter-hook` (forbid inline `const getSceneManager = useCallback(`· ERE `const getSceneManager = useCallback\(`· allowlist = ο SSoT hook, μόνο για το doc-comment παράδειγμα). **dxf-viewer = 0-violation** (grep-verified). Golden fixture (shouldMatch/shouldSkip) προστέθηκε.
+
+**Tests:** `useSceneManagerAdapter.test.ts` (6 GREEN: null-χωρίς-level / adapter-bound-to-level / ADR-527 singleton / memo-stability / rebuild-on-identity-change / live read-after-write). `test:ssot-suite` **233 GREEN** (registry-golden 66). Regression: useCopyTool + useMove/useScale activation + useSceneManagerAdapter = 39 GREEN. ΟΧΙ tsc (N.17).
 
 ## Changelog
 - **2026-07-06** — Αρχική υλοποίηση: ενοποίηση `bim-copy`→`copy`, ζωντάνεμα ribbon «Αντιγραφή», unified clone SSoT για DXF+BIM+GROUP.
 - **2026-07-06** — **Fix (Giorgio live test: «κλειστή πολυγραμμή δεν αντιγράφεται»)**. Root cause: το `useCopyTool` (κληρονομιά bim-copy) έκανε **revert σε 'select'** όταν ενεργοποιούνταν χωρίς selection — το bim-copy δοκιμαζόταν ΜΟΝΟ via C+O (canvas focus διατηρεί selection)· το νέο ribbon κουμπί εκθέτει την περίπτωση. Fix: **mirror του `useMoveTool` FSM** — φάση `awaiting-entity` (κλικ περνά για επιλογή, ΠΟΤΕ silent revert) + `isCollectingInput` gate στο click routing (`CanvasSection` → click handler παίρνει `copyTool.isCollectingInput`, escape κρατά `isActive`). Η selection διαβάζεται **live** στο clone (όχι frozen snapshot). Επιπλέον: μια κλειστή πολυγραμμή είναι `type:'polyline'` (και τα δύο εργαλεία polyline/polygon) → μεταφράζεται σωστά από `applyClassicEntityPreview`.
+- **2026-07-06** — **Scene-manager adapter SSoT**: εξαγωγή `useSceneManagerAdapter` (`systems/entity-creation/`), migration **20 tool hooks** (+ ενοποίηση διπλότυπου `LevelManagerLike` → `SceneAdapterLevelManager`), registry guard `scene-manager-adapter-hook` (0-violation) + golden fixture + 6 unit tests. `test:ssot-suite` 233 GREEN. Ο FSM-refs guard αναβλήθηκε (13 tools με activation-refs ακόμη un-migrated — βλ. §FSM centralization).
 - **Known gap (follow-up)**: το DXF translate στο `build-entity-clone-command` (`applyEntityPreview`→`applyClassicEntityPreview`) δεν έχει case για `rectangle`/`ellipse`/`polygon`/`lwpolyline` → clone πάνω στο πρωτότυπο. Πιθανή λύση: μετάβαση στο canonical move SSoT `calculateMovedGeometry` (καλύπτει rect/ellipse/polygon) + lwpolyline normalize.
