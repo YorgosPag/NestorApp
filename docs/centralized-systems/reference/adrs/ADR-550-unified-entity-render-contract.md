@@ -126,6 +126,9 @@ interface EntityRenderContract<E> {
 
 ## Changelog
 
+### 2026-07-06 — follow-up: αφαίρεση orphaned `visual-regression.test.ts` (triage)
+Το Φ2 (`f15395aa`) διέγραψε σκόπιμα τα `test/setupCanvas.ts` + `test/setupTests.ts` («legacy, broken, unused», @napi-rs/canvas override), αλλά το `src/subapps/dxf-viewer/__tests__/visual-regression.test.ts` έμεινε ορφανό με dangling import `../test/setupCanvas` → «Cannot find module» (η σουίτα δεν έτρεχε καν). Δεν είναι moved-file: ο πραγματικός pixel-diff μηχανισμός έχει φύγει και το jsdom δεν παράγει πραγματικά pixels. **Big-player πρακτική (Autodesk/Maxon/Figma/Chromium):** το πραγματικό visual-regression ζει σε **browser/Playwright screenshot-diff** (βλ. `e2e/bim-3d-visual-regression.spec.ts` + `visual-bim-3d` project παραπάνω), όχι σε jest+jsdom+napi· κανείς δεν κρατά zombie test με import διαγραμμένου module. **Απόφαση:** διαγραφή του orphaned suite (το jsdom sanity coverage καλύπτεται ήδη από το ζωντανό `visual-regression-basic.test.ts` — PASS). Boy-scout note: τα deps `@napi-rs/canvas`/`pixelmatch`/`pngjs` γίνονται πλέον removable (ξεχωριστό cleanup).
+
 ### 2026-07-05 — Φ-Preview2D hotfix: wrapped sub-entity SSoT (crash «Cannot read properties of undefined») (UNCOMMITTED)
 **Πλαίσιο (Giorgio):** runtime crash κατά το **grip/Move ghost preview** πλάκας/ανοίγματος:
 `TypeError: Cannot read properties of undefined (reading 'kind')` στο `buildEntityModelFromDxf`

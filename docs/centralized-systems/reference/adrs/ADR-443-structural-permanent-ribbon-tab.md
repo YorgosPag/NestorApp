@@ -121,6 +121,7 @@ permanent-tab vs contextual-tab separation. 38/38 ribbon-data tests green.
 
 ## Changelog
 
+- **2026-07-06** — §beam-between-members-unique-glyph (triage). Το `beam-between-members` (ADR-569) μοιραζόταν το icon token `struct-beam-single` με το `beam` → έσπαγε το unique-glyph regression test (29 vs 30). FULL-SSoT fix (όχι hand-drawn glyph): νέο **method fragment** `between-members` στο `STRUCTURAL_METHOD_FRAGMENTS` (structural-icon-methods.tsx) — 1 fragment, reusable από ΚΑΘΕ base (η SSoT αρχή του composed icon system)· νέο token `struct-beam-between` → `case` στο `RibbonButtonIcon.tsx` → `<StructuralToolIcon base="beam" method="between-members"/>`. Κανένα διπλότυπο. `structural-tab.test.ts` GREEN.
 - **2026-07-04** — §wall-single-entry-dedicated-glyph (Opus 4.8). Ο Giorgio: το entry-point εικονίδιο
   «Τοίχος» στην καρτέλα **Δομικά** (`struct-wall-single`) να ΜΗΝ είναι πια το σύμβολο «δύο παράλληλες
   γραμμές» (`StructuralToolIcon base="wall" method="single"`), αλλά ένας **καφές τοίχος-ορθογώνιο** στο
