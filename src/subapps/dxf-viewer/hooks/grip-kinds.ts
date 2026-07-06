@@ -75,9 +75,9 @@ export type StairGripKind =
 export type DimensionGripKind =
   | 'dim-defpoint-0'  // ext line origin 1 → defPoints[0]
   | 'dim-defpoint-1'  // ext line origin 2 → defPoints[1]
-  | 'dim-line-ref'    // dim line reference → defPoints[2]
+  | 'dim-line-ref'    // dim line endpoint 1 (offset stretch) → commits defPoints[2]
   | 'dim-text'        // text label → textMidpoint
-  | 'dim-extra';      // type-specific 5th grip (rotation handle / arcPoint / datum / etc.)
+  | 'dim-extra';      // 5th grip — linear/aligned: dim line endpoint 2 (offset stretch, NO rotation); radial/angular/ordinate: type-specific arcPoint / datum / etc.
 
 /**
  * ADR-363 Phase 1C — Wall grip kind (parametric grip type).

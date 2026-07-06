@@ -7,6 +7,7 @@
  */
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { ExtendedSnapType } from '../extended-types';
+import { resolvePersistedSnapState } from './snap-state-persistence';
 import { userSettingsRepository, stableHash } from '@/services/user-settings';
 import type { CadTogglesSettingsSlice } from '@/services/user-settings/user-settings-schema';
 import { useAuth } from '@/auth/contexts/AuthContext';
@@ -55,6 +56,35 @@ const ALWAYS_ON_BIM_SNAPS = [
   ExtendedSnapType.BIM_CORNER, ExtendedSnapType.BIM_MIDPOINT, ExtendedSnapType.BIM_CENTER,
 ];
 
+// SSoT default snap state — matches DEFAULT_PRO_SNAP_SETTINGS.enabledTypes. Owned here so
+// BOTH the initial useState AND the migration-safe load merge read the SAME source: a snap
+// id shipped after a persisted blob was written falls back to its default (never silently
+// off). ADR-378 — fixes DIM_DEF_POINT/DIM_LINE (ADR-362) vanishing for pre-existing users.
+const DEFAULT_ENABLED_SNAPS = new Set<ExtendedSnapType>([
+  ExtendedSnapType.ENDPOINT,
+  // ADR-510 Φ1 (Q3): full smart OSNAP set on by default. Still gated behind the global
+  // OSNAP master toggle (off by default), so nothing snaps until enabled.
+  ExtendedSnapType.MIDPOINT,
+  ExtendedSnapType.CENTER,
+  ExtendedSnapType.INTERSECTION,
+  ExtendedSnapType.PERPENDICULAR,
+  ExtendedSnapType.TANGENT,
+  ExtendedSnapType.EXTENSION,
+  ExtendedSnapType.GUIDE,
+  ExtendedSnapType.CONSTRUCTION_POINT,
+  ExtendedSnapType.GRID,
+  ExtendedSnapType.DIM_DEF_POINT,   // ADR-362: dimension def-point snap (toggleable)
+  ExtendedSnapType.DIM_LINE,        // ADR-362: dimension line snap (toggleable)
+  ExtendedSnapType.BIM_MEP_CONNECTOR, // ADR-408 Φ9: enabled by default
+  // ADR-370 BIM_CORNER/MIDPOINT/CENTER are always-on (force-enabled in enabledModes)
+]);
+
+const getDefaultSnapState = (): SnapState => {
+  const state = {} as SnapState;
+  ALL_MODES.forEach(type => { state[type] = DEFAULT_ENABLED_SNAPS.has(type); });
+  return state;
+};
+
 interface SnapContextType {
   snapState: SnapState;
   toggleSnap: (type: ExtendedSnapType) => void;
@@ -77,33 +107,7 @@ interface SnapProviderProps {
 }
 
 export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
-  const [snapState, setSnapState] = useState<SnapState>(() => {
-    const initialState = {} as SnapState;
-    // Set default enabled snaps — matches DEFAULT_PRO_SNAP_SETTINGS.enabledTypes
-    ALL_MODES.forEach(type => {
-      initialState[type] = (
-        type === ExtendedSnapType.ENDPOINT ||
-        // ADR-510 Φ1 (Q3): full smart OSNAP set on by default — endpoint/midpoint/
-        // center/intersection/perpendicular/tangent/extension. Still gated behind the
-        // global OSNAP master toggle (off by default), so nothing snaps until enabled;
-        // affects defaults for new users only (existing per-mode prefs are preserved).
-        type === ExtendedSnapType.MIDPOINT ||
-        type === ExtendedSnapType.CENTER ||
-        type === ExtendedSnapType.INTERSECTION ||
-        type === ExtendedSnapType.PERPENDICULAR ||
-        type === ExtendedSnapType.TANGENT ||
-        type === ExtendedSnapType.EXTENSION ||
-        type === ExtendedSnapType.GUIDE ||
-        type === ExtendedSnapType.CONSTRUCTION_POINT ||
-        type === ExtendedSnapType.GRID ||
-        type === ExtendedSnapType.DIM_DEF_POINT ||
-        type === ExtendedSnapType.DIM_LINE ||
-        type === ExtendedSnapType.BIM_MEP_CONNECTOR // ADR-408 Φ9: enabled by default
-        // ADR-370 BIM_CORNER/MIDPOINT/CENTER are always-on (force-enabled in enabledModes)
-      );
-    });
-    return initialState;
-  });
+  const [snapState, setSnapState] = useState<SnapState>(getDefaultSnapState);
 
   // 🏢 ENTERPRISE (2026-01-27): Snap disabled by default on app start/refresh
   // User requested snap to be OFF initially for better performance during exploration
@@ -197,20 +201,23 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
     const unsubscribe = userSettingsRepository.subscribeSlice(
       'dxfViewer.snap',
       (remote) => {
-        const blob = remote as { activeTypes?: string[] } | undefined;
+        const blob = remote as { activeTypes?: string[]; knownTypes?: string[] } | undefined;
         if (blob?.activeTypes) {
           const remoteHash = stableHash(blob.activeTypes);
           if (remoteHash === lastSnapHashRef.current) return; // own echo
           lastSnapHashRef.current = remoteHash;
-          setSnapState(() => {
-            const next = {} as SnapState;
-            ALL_MODES.forEach(m => { next[m] = blob.activeTypes!.includes(m); });
-            return next;
-          });
+          // Migration-safe merge (ADR-378): unknown/newer ids fall back to their default so a
+          // default-on snap (e.g. DIM_DEF_POINT/DIM_LINE, ADR-362) can't silently vanish for
+          // users whose blob predates it. Toggleable preserved — no ALWAYS_ON promotion.
+          setSnapState(() =>
+            resolvePersistedSnapState(ALL_MODES, getDefaultSnapState(), blob.activeTypes!, blob.knownTypes),
+          );
         } else if (firstSnapshot) {
           const activeTypes = ALL_MODES.filter(m => snapStateRef.current[m]);
           lastSnapHashRef.current = stableHash(activeTypes);
-          userSettingsRepository.updateSlice('dxfViewer.snap', { activeTypes });
+          // knownTypes = every mode this build knows about → future ids are distinguishable
+          // from explicitly-off on the next load (see migration-safe merge above).
+          userSettingsRepository.updateSlice('dxfViewer.snap', { activeTypes, knownTypes: ALL_MODES });
         }
         firstSnapshot = false;
       },
@@ -225,7 +232,8 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
     const activeHash = stableHash(activeTypes);
     if (activeHash === lastSnapHashRef.current) return;
     lastSnapHashRef.current = activeHash;
-    userSettingsRepository.updateSlice('dxfViewer.snap', { activeTypes });
+    // Always persist knownTypes alongside — self-heals legacy blobs to the precise schema.
+    userSettingsRepository.updateSlice('dxfViewer.snap', { activeTypes, knownTypes: ALL_MODES });
   }, [snapUserId, snapCompanyId, snapState]);
 
   // Sync snapEnabled ↔ cadToggles.osnap (CadStatusBar OSNAP = canonical SSoT)

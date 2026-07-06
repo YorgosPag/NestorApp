@@ -5,8 +5,8 @@
  * AutoAlign traces (mouse-handler-move/up + useDimGripGhostPreview):
  *   - endpoint grips align to their partner origin
  *   - dim-line offset / text align to both measured origins
- *   - `dim-extra` is per dimensionType (aligned→origins, radius/diameter/ordinate→point,
- *     linear rotation handle / angular → null = alignment skipped)
+ *   - `dim-extra` is per dimensionType (linear/aligned→origins, radius/diameter/ordinate→point,
+ *     angular → null = alignment skipped)
  *   - `toDimensionEntity` normalises both the raw entity and the DxfDimension wrapper.
  */
 
@@ -66,8 +66,8 @@ describe('getDimGripAlignmentAnchors', () => {
     expect(getDimGripAlignmentAnchors('dim-extra', ordinate([A], { x: 5, y: 5 }))).toEqual([A]);
   });
 
-  it('linear dim-extra (rotation handle) → null (alignment skipped)', () => {
-    expect(getDimGripAlignmentAnchors('dim-extra', linear([A, B, C]))).toBeNull();
+  it('linear dim-extra (2nd dim-line offset) → both origins', () => {
+    expect(getDimGripAlignmentAnchors('dim-extra', linear([A, B, C]))).toEqual([A, B]);
   });
 
   it('degenerate single-point dim → empty anchors, never throws', () => {

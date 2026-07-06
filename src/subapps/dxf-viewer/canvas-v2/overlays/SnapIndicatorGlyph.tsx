@@ -255,6 +255,40 @@ export function SnapShape({ type, color }: { type: string; color: string }) {
         </svg>
       );
 
+    // ⊢────⊣ DIM_LINE: dimension line with witness end-ticks — ADR-362 / ADR-378 Step 3.
+    // The universal "dimension line" iconography (horizontal line capped by two vertical
+    // extension-line ticks). Distinct from ═ guide (center tick + double line) and ║ parallel.
+    case 'dim_line': {
+      const dimTick = getSnapIconQuarter(size); // half-height of each end tick
+      return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <line x1={strokeWidth} y1={half} x2={size - strokeWidth} y2={half} stroke={color} strokeWidth={strokeWidth} />
+          <line x1={strokeWidth} y1={half - dimTick} x2={strokeWidth} y2={half + dimTick} stroke={color} strokeWidth={strokeWidth} />
+          <line x1={size - strokeWidth} y1={half - dimTick} x2={size - strokeWidth} y2={half + dimTick} stroke={color} strokeWidth={strokeWidth} />
+        </svg>
+      );
+    }
+
+    // ⊡ DIM_DEF_POINT: Square with center dot — ADR-362 / ADR-378 Step 3.
+    // A dimension "definition point" (AutoCAD DIMSNAP anchor). Distinct from ■ endpoint
+    // (adds the dot) and ⊙ node/insertion (square vs circle); the fuchsia/orange DIM colour
+    // + "Dimension Def Point" label complete the disambiguation.
+    case 'dim_def_point':
+      return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <rect
+            x={strokeWidth / 2}
+            y={strokeWidth / 2}
+            width={size - strokeWidth}
+            height={size - strokeWidth}
+            fill="none"
+            stroke={color}
+            strokeWidth={strokeWidth}
+          />
+          <circle cx={half} cy={half} r={getNodeDotRadius()} fill={color} />
+        </svg>
+      );
+
     // ✦ CONSTRUCTION_POINT: Diamond with center dot — ADR-189
     case 'construction_point':
       return (

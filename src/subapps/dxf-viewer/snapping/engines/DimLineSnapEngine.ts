@@ -1,11 +1,17 @@
 /**
  * ADR-362 Phase I1 — Dimension Line Snap Engine.
  *
- * Snaps to the visual center of a dimension line (text midpoint) and the
- * type-specific dim-line reference point. Used primarily for:
+ * Snaps to the *rendered* dim-line geometry — the dim-line feet, its midpoint,
+ * the text anchor, and (radial/angular) the arc/leader endpoints — sourced from
+ * the `dim-snap-geometry` SSoT (which reuses the hit-geometry / builder SSoT, so
+ * it matches exactly what the renderer draws). Used primarily for:
  *   - Baseline chaining: snap to an existing linear/aligned dim's dim line
  *     to know where the new parallel baseline should originate.
  *   - Continued chaining: snap to where the dim line ends.
+ *
+ * The raw definition points are covered separately by `DimDefPointSnapEngine`.
+ * ADR-378 Step 2 (handoff 2026-07-06) extended this from textMidpoint + one ref
+ * point to the full rendered geometry.
  *
  * Priority: DIM_LINE (3) — medium, equivalent to CENTER.
  */
@@ -17,6 +23,7 @@ import { BaseSnapEngine } from '../shared/BaseSnapEngine';
 import type { ISpatialIndex } from '../../core/spatial';
 import type { DimensionEntity } from '../../types/dimension';
 import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
+import { computeDimLineSnapPoints } from '../../systems/dimensions/dim-snap-geometry';
 
 export class DimLineSnapEngine extends BaseSnapEngine {
   private spatialIndex: ISpatialIndex | null = null;
@@ -64,71 +71,10 @@ export class DimLineSnapEngine extends BaseSnapEngine {
 
   private extractDimLinePoints(entity: EntityModel): Point2D[] {
     if (entity.type !== 'dimension') return [];
-    const dim = entity as unknown as DimensionEntity;
-
-    const points: Point2D[] = [];
-
-    // textMidpoint = visual center of the dimension line (always snap-worthy)
-    if (dim.textMidpoint) {
-      points.push({ x: dim.textMidpoint.x, y: dim.textMidpoint.y });
-    }
-
-    const refPt = this.resolveRefPoint(dim);
-    if (refPt) {
-      const isDuplicate = dim.textMidpoint &&
-        refPt.x === dim.textMidpoint.x &&
-        refPt.y === dim.textMidpoint.y;
-      if (!isDuplicate) {
-        points.push(refPt);
-      }
-    }
-
-    return points;
-  }
-
-  private resolveRefPoint(dim: DimensionEntity): Point2D | null {
-    const dp = dim.defPoints;
-
-    switch (dim.dimensionType) {
-      case 'linear':
-      case 'aligned':
-      case 'baseline':
-      case 'continued':
-        // defPoints[2] = dim line reference (where the horizontal/vertical line sits)
-        return dp[2] ? { x: dp[2].x, y: dp[2].y } : null;
-
-      case 'angular2L':
-        // defPoints[4] = arc point on angular dim arc
-        return dp[4]
-          ? { x: dp[4].x, y: dp[4].y }
-          : dp[3] ? { x: dp[3].x, y: dp[3].y } : null;
-
-      case 'angular3P':
-        // defPoints[3] = arc point
-        return dp[3] ? { x: dp[3].x, y: dp[3].y } : null;
-
-      case 'radius':
-      case 'diameter':
-        // Midpoint of the two endpoint defPoints — centre of the measurement
-        return dp[0] && dp[1]
-          ? { x: (dp[0].x + dp[1].x) / 2, y: (dp[0].y + dp[1].y) / 2 }
-          : dp[0] ? { x: dp[0].x, y: dp[0].y } : null;
-
-      case 'ordinate':
-        // datum = the measured reference origin for this ordinate
-        return { x: dim.datum.x, y: dim.datum.y };
-
-      case 'arcLength':
-        // center of the arc being measured (defPoints[0])
-        return dp[0] ? { x: dp[0].x, y: dp[0].y } : null;
-
-      case 'joggedRadius':
-        // jogPoint (defPoints[2]) = the kink point on the jogged leader
-        return dp[2] ? { x: dp[2].x, y: dp[2].y } : null;
-
-      default:
-        return dp[0] ? { x: dp[0].x, y: dp[0].y } : null;
-    }
+    // SSoT: the rendered dim-line geometry (feet, midpoint, text anchor, arc/leader
+    // endpoints) comes from `dim-snap-geometry`, which reuses the hit-geometry /
+    // builder SSoT — the exact geometry the renderer draws. ADR-378 Step 2.
+    return computeDimLineSnapPoints(entity as unknown as DimensionEntity);
   }
 
   dispose(): void {

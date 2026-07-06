@@ -97,6 +97,10 @@ const dxfSettingsSliceSchema = z
 
 const snapSettingsSchema = z.object({
   activeTypes: z.array(z.string()),
+  // knownTypes = the snap ids this build knew about when the blob was written. Lets the
+  // load merge distinguish "explicitly off" from "shipped after this blob" so a new
+  // default-on snap can't silently vanish for existing users (ADR-378, ADR-362 dim snaps).
+  knownTypes: z.array(z.string()).optional(),
   tolerance: z.number().min(0).max(100).optional(),
 });
 

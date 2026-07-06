@@ -44,13 +44,14 @@ describe('diffDimEntity', () => {
     expect(previous.textMidpoint).toBeUndefined(); // was unset before
   });
 
-  it('linear dim-extra (rotation handle) → only rotation changed', () => {
+  it('linear dim-extra (2nd dim-line offset) → only defPoints changed', () => {
     const prev = linear(PTS, 0);
     const next = applyDimensionGripDrag('dim-extra', prev, DELTA, { x: 50, y: 50 });
     const { patch, previous } = diffDimEntity(prev, next);
-    expect(Object.keys(patch)).toEqual(['rotation']);
-    expect(typeof patch.rotation).toBe('number');
-    expect(previous.rotation).toBe(0);
+    // footEnd grip stretches defPoints[2] (the dim-line offset), like dim-line-ref — NO rotation.
+    expect(Object.keys(patch)).toEqual(['defPoints']);
+    expect(patch.defPoints?.[2]).toEqual({ x: PTS[2].x + DELTA.x, y: PTS[2].y + DELTA.y });
+    expect(previous.defPoints).toBe(prev.defPoints);
   });
 
   it('ordinate dim-extra (datum) → only datum changed', () => {

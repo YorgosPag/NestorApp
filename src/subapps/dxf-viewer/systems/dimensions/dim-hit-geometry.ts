@@ -72,14 +72,21 @@ export function computeDimHitGeometry(entity: DimensionEntity): DimHitGeometry |
   return { footStart, footEnd, textAnchor };
 }
 
+/** Degrees → radians (linear `rotation` is stored in DEGREES, matching the builder). */
+const DEG_TO_RAD = Math.PI / 180;
+
 /**
  * Unit-vector axis of the dim line:
- *   - linear  → (cos rotation, sin rotation), rotation in radians
+ *   - linear  → (cos rotation, sin rotation), rotation in DEGREES
  *   - aligned → normalize(pts[1] - pts[0])
  */
 function resolveDimAxis(entity: DimensionEntity): Point2D | null {
   if (entity.dimensionType === 'linear') {
-    const r = entity.rotation;
+    // `rotation` is DEGREES everywhere it is written (create builder, grip handle via
+    // RAD_TO_DEG, auto-planner `rotation: 90`) and `linear-aligned-builder` reads it as
+    // `rotation * DEG_TO_RAD`. This SSoT previously treated it as radians → wrong axis
+    // (and thus wrong hit-test + snap) for every rotated linear dim. ADR-378 Boy-Scout fix.
+    const r = entity.rotation * DEG_TO_RAD;
     return { x: Math.cos(r), y: Math.sin(r) };
   }
   if (entity.dimensionType === 'aligned') {

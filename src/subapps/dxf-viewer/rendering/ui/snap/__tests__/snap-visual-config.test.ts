@@ -31,4 +31,11 @@ describe('snap-visual-config — BIM/geometric colour unification (ADR-370 §uni
     expect(resolveSnapColor('bim_wall_face')).not.toBe(resolveSnapColor('endpoint'));
     expect(resolveSnapColor('bim_mep_connector')).not.toBe(resolveSnapColor('endpoint'));
   });
+
+  // ADR-378 Step 3 — dimension snaps share ONE colour (both are "dimension" kind) and are
+  // disambiguated from INTERSECTION by SHAPE, so their colour MAY differ from it but the
+  // guard below just locks the family: dim_line ≡ dim_def_point.
+  it('dimension snaps (dim_line / dim_def_point) share one colour', () => {
+    expect(resolveSnapColor('dim_line')).toBe(resolveSnapColor('dim_def_point'));
+  });
 });

@@ -7,9 +7,10 @@
  * 5 grips per DimensionEntity (§D9):
  *   0 → defPoints[0]   ext line origin 1
  *   1 → defPoints[1]   ext line origin 2
- *   2 → defPoints[2]   dim line reference (only for 3+ defPoint types)
- *   3 → textMidpoint   text label (computed fallback when absent)
- *   4 → type-specific  rotation handle (linear) / arcPoint / jogPoint / datum / etc.
+ *   2 → dim-line end 1 (linear/aligned: footStart from hit-geometry; else defPoints[2])
+ *   3 → text label     (linear/aligned: real textAnchor; else textMidpoint fallback)
+ *   4 → dim-line end 2 (linear/aligned: footEnd — 2nd OFFSET grip, NO rotation;
+ *                       else type-specific arcPoint / jogPoint / datum / etc.)
  *
  * `applyDimensionGripDrag` returns a new `DimensionEntity` with the
  * relevant field immutably updated. Measurement recompute is deferred
@@ -24,29 +25,16 @@ import type { Point2D } from '../../rendering/types/Types';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { DxfDimension } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { GripInfo, DimensionGripKind } from '../grip-types';
+import { computeDimHitGeometry } from '../../systems/dimensions/dim-hit-geometry';
 import type {
   DimensionEntity,
-  LinearDimensionEntity,
   OrdinateDimensionEntity,
 } from '../../types/dimension';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const ROTATION_HANDLE_OFFSET = 50;
-const RAD_TO_DEG = 180 / Math.PI;
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 function midpt(a: Point2D, b: Point2D): Point2D {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-}
-
-function unitVec(from: Point2D, to: Point2D): Point2D {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const len = Math.sqrt(dx * dx + dy * dy);
-  if (len < 1e-9) return { x: 1, y: 0 };
-  return { x: dx / len, y: dy / len };
 }
 
 function patchDefPoint(
@@ -69,15 +57,14 @@ function resolveTextMidpoint(dim: DimensionEntity): Point2D {
   return { x: 0, y: 0 };
 }
 
+/**
+ * 5th ("extra") grip position for the NON-linear variants only. Linear & aligned
+ * dims resolve their dim-line + text grips from `computeDimHitGeometry` (see
+ * `getDimensionGrips`) and never reach here.
+ */
 function extraGripPos(dim: DimensionEntity): Point2D | null {
   const pts = dim.defPoints;
   switch (dim.dimensionType) {
-    case 'linear':
-    case 'aligned': {
-      if (pts.length < 3) return null;
-      const u = unitVec(pts[0], pts[1]);
-      return { x: pts[2].x + u.x * ROTATION_HANDLE_OFFSET, y: pts[2].y + u.y * ROTATION_HANDLE_OFFSET };
-    }
     case 'radius':
     case 'diameter':
       return pts.length >= 2 ? pts[1] : null;
@@ -118,6 +105,21 @@ export function getDimensionGrips(entity: DxfDimension): GripInfo[] {
     grips.push({ entityId: id, gripIndex: 1, type: 'vertex', position: pts[1], movesEntity: false, dimGripKind: 'dim-defpoint-1' });
   }
 
+  // ADR-362 §D9 — linear/aligned dims read their dim-line + text grip positions
+  // from the RENDERED geometry (dim-hit SSoT), not raw params. Grips 2 & 4 sit on
+  // the TWO real dim-line endpoints (footStart/footEnd) — both STRETCH the offset
+  // (AutoCAD parity, NO rotation handle); grip 3 sits on the actual text anchor.
+  // Interaction ≡ render ≡ hit-test, all consuming computeDimHitGeometry.
+  const hit = computeDimHitGeometry(dim);
+  if (hit) {
+    grips.push({ entityId: id, gripIndex: 2, type: 'edge', position: hit.footStart, movesEntity: false, dimGripKind: 'dim-line-ref' });
+    grips.push({ entityId: id, gripIndex: 3, type: 'center', position: hit.textAnchor, movesEntity: false, dimGripKind: 'dim-text' });
+    grips.push({ entityId: id, gripIndex: 4, type: 'edge', position: hit.footEnd, movesEntity: false, dimGripKind: 'dim-extra' });
+    return grips;
+  }
+
+  // Non-linear variants (radial / angular / ordinate / baseline / continued) keep
+  // the raw-param positions — their dim-line ref + 5th grip stay type-specific.
   if (pts.length >= 3) {
     grips.push({ entityId: id, gripIndex: 2, type: 'edge', position: pts[2], movesEntity: false, dimGripKind: 'dim-line-ref' });
   }
@@ -138,8 +140,9 @@ export function getDimensionGrips(entity: DxfDimension): GripInfo[] {
  * Pure transform: dimension grip kind + drag delta → new `DimensionEntity`.
  * Caller (`commitDimensionGripDrag`) persists the result to the scene.
  *
- * @param gripPos World position captured at mouseDown; used only for `dim-extra`
- *                rotation handle (linear dim: new rotation = atan2(cursor − dimLineRef)).
+ * @param gripPos World position captured at mouseDown. Retained for signature
+ *                stability across grip kinds; no longer read (the linear `dim-extra`
+ *                rotation handle was removed 2026-07-06 — dims must not free-rotate).
  */
 export function applyDimensionGripDrag(
   kind: DimensionGripKind,
@@ -206,13 +209,14 @@ export function getDimGripAlignmentAnchors(
     case 'dim-text':       return pts.slice(0, Math.min(2, pts.length));
     case 'dim-extra':
       switch (dim.dimensionType) {
-        case 'aligned':  return pts.slice(0, 2);        // patches defPoints[2]
+        // linear & aligned 5th grip = 2nd dim-line OFFSET endpoint (patches
+        // defPoints[2]) → align to both measured origins, like dim-line-ref.
+        case 'linear':
+        case 'aligned':  return pts.slice(0, 2);
         case 'radius':
         case 'diameter': return pts.length >= 1 ? [pts[0]] : []; // measure point → centre
         case 'ordinate': return pts.length >= 1 ? [pts[0]] : []; // datum → leader origin
-        // Linear rotation handle = an ANGLE, angular vertices = arc geometry: no
-        // point translation to align → skip alignment tracking entirely.
-        case 'linear':
+        // Angular vertices = arc geometry: no point translation to align → skip.
         case 'angular2L':
         case 'angular3P':
         default:         return null;
@@ -301,12 +305,11 @@ function applyExtraGripDrag(
 ): DimensionEntity {
   const pts = dimEntity.defPoints;
   switch (dimEntity.dimensionType) {
-    case 'linear': {
-      if (pts.length < 3) return dimEntity;
-      const currentPos = translatePoint(gripPos, delta);
-      const newRotation = Math.atan2(currentPos.y - pts[2].y, currentPos.x - pts[2].x) * RAD_TO_DEG;
-      return { ...(dimEntity as LinearDimensionEntity), rotation: newRotation };
-    }
+    // ADR-362 §D9 — linear & aligned: the 5th grip is the 2nd dim-line endpoint
+    // (footEnd). Both dim-line grips STRETCH the offset via defPoints[2] (AutoCAD
+    // parity). NO rotation — dimensions must not free-rotate (rotation handle
+    // removed 2026-07-06; see ADR-362 changelog).
+    case 'linear':
     case 'aligned':
       return patchDefPoint(dimEntity, 2, delta);
     case 'radius':
