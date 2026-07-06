@@ -137,9 +137,10 @@ describe('resolveSubcategoryStyle — color override', () => {
   });
 
   it('returns null color when no override (category without a C.9 line color)', () => {
-    // ADR-375 C.9: wall/column/slab/opening πλέον έχουν default χρώμα· χρησιμοποιούμε
-    // `beam` (άχρωμη κατηγορία) για να ελεγχθεί το canvas-token fallback (null).
-    const result = resolveSubcategoryStyle({ ...BASE_CTX, category: 'beam' });
+    // ADR-375 C.9 + ADR-445: wall/column/slab/opening/beam πλέον έχουν default χρώμα·
+    // χρησιμοποιούμε `roof` (άχρωμη κατηγορία, μόνο pens) για να ελεγχθεί το
+    // canvas-token fallback (null).
+    const result = resolveSubcategoryStyle({ ...BASE_CTX, category: 'roof' });
     expect(result.color).toBeNull();
   });
 

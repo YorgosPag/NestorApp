@@ -31,8 +31,8 @@ const EXPECTED_COMMAND_KEYS = [
   // ADR-363 §column-polygon-sketch — «Κολώνα από σχεδιασμένο πολύγωνο» (vertex chain).
   'column-from-polygon',
   'column.actions.fromGrid',
-  // beams (last = ADR-441 «Δοκάρια από κάναβο» action)
-  'beam', 'beam-from-wall', 'beam.actions.fromGrid',
+  // beams (ADR-569 «Δοκάρι ανάμεσα σε μέλη»· last = ADR-441 «Δοκάρια από κάναβο» action)
+  'beam', 'beam-from-wall', 'beam-between-members', 'beam.actions.fromGrid',
   // floors & openings (+ ADR-441 «Πλάκες από κάναβο» grid actions)
   'slab', 'slab-opening', 'opening',
   'slab.actions.fromGridMat', 'slab.actions.fromGridFloor', 'slab.actions.fromGridRoof',

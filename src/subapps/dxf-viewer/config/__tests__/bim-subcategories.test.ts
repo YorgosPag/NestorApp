@@ -10,12 +10,12 @@ import {
 } from '../bim-subcategories';
 
 describe('SUBCATEGORY_TAXONOMY total count', () => {
-  it('contains exactly 50 subcategory keys across all categories', () => {
+  it('contains exactly 53 subcategory keys across all categories', () => {
     const total = Object.values(SUBCATEGORY_TAXONOMY).reduce(
       (sum, keys) => sum + keys.length,
       0,
     );
-    expect(total).toBe(50);
+    expect(total).toBe(53);
   });
 });
 
@@ -53,6 +53,13 @@ describe('SUBCATEGORY_TAXONOMY per-category counts', () => {
     expect(SUBCATEGORY_TAXONOMY.stair.length).toBe(11);
     expect(SUBCATEGORY_TAXONOMY.stair).toContain('handrails');
     expect(SUBCATEGORY_TAXONOMY.stair).toContain('tread-labels');
+  });
+
+  it('foundation has 3 subcategories (ADR-436 Slice 1: hidden-lines + centerline + cut-pattern)', () => {
+    expect(SUBCATEGORY_TAXONOMY.foundation.length).toBe(3);
+    expect(SUBCATEGORY_TAXONOMY.foundation).toContain('hidden-lines');
+    expect(SUBCATEGORY_TAXONOMY.foundation).toContain('centerline');
+    expect(SUBCATEGORY_TAXONOMY.foundation).toContain('cut-pattern');
   });
 
   it('categories without subcategory model return empty arrays', () => {

@@ -232,9 +232,14 @@ export function applyEntityPreview(
   // new position / rotation / height (+ width|widthFactor). `anchorPos` = the grabbed
   // grip world pos at mouseDown so the rotation sweep matches the commit. text-move
   // also routes here (its patch = position+delta) for one transform path, not two.
-  // NOTE: `DxfEntityUnion` has no `mtext` variant — MTEXT is normalised to `'text'` at
-  // scene→Dxf conversion (`dxf-text-entity-converter`), so `'text'` covers both here.
-  if (textGripKind && entity.type === 'text') {
+  // NOTE: this ghost-preview pipeline receives the RAW scene entity (`useGripGhostPreview`
+  // → `getEntity`), whose discriminator is `'text'` OR `'mtext'`. The mtext→`'text'`
+  // normalisation (`dxf-text-entity-converter`) happens ONLY in the render/hit-test pipeline
+  // (`dxf-scene-entity-converter`), NOT here — so an MTEXT grip drag arrives as `'mtext'` and
+  // the guard MUST accept both, else the live ghost vanishes ("το κείμενο δεν ανταποκρίνεται",
+  // Giorgio 2026-06-30). Regression re-fix of ba33b0c2 (reverted by 0878ed54 on a wrong
+  // premise). Guarded by `apply-entity-preview-text.test.ts`.
+  if (textGripKind && (entity.type === 'text' || entity.type === 'mtext')) {
     const t = entity as unknown as DxfText;
     const currentPos: Point2D = anchorPos
       ? translatePoint(anchorPos, delta)

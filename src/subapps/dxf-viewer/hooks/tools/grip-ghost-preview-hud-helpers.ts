@@ -25,7 +25,7 @@ import type { ColumnEntity } from '../../bim/types/column-types';
 import { buildSegmentHudMeta, paintWallHud } from '../../canvas-v2/preview-canvas/wall-hud-paint';
 import { paintColumnHud } from '../../canvas-v2/preview-canvas/column-hud-paint';
 // ADR-508 §line-hud / ADR-561 — polyline vertex-reshape HUD: which incident segment(s) change length.
-import { getPolylineVertexIncidentSegments } from '../../systems/polyline/polyline-grips';
+import { getPolylineVertexIncidentSegments, getPolylineEdgeSlideIncidentSegments, isPolylineStraightEdgeSlide } from '../../systems/polyline/polyline-grips';
 // ADR-508 §polygon-hud (Giorgio 2026-07-06) — ordered polygon-footprint corners (ΕΝΑ characteristic SSoT,
 // καλύπτει slab/opening/roof/floor-finish/thermal/mep-underfloor) για τις live περιμετρικές διαστάσεις
 // ΚΑΘΕ πολυγωνικής BIM οντότητας κατά το reshape λαβής.
@@ -118,8 +118,13 @@ export function drawMemberGripHud(
   // επιστρέφει []. Το `transformed` είναι ΗΔΗ 'polyline' (`normalizePreviewEntity`, ADR-561) με
   // post-reshape vertices → WYSIWYG μήκος/γωνία.
   if (type === 'polyline' && !dp.movesEntity && !dp.rotatePivot) {
-    const poly = transformed as unknown as { vertices: Point2D[]; closed: boolean };
-    const segments = getPolylineVertexIncidentSegments(dp.gripIndex, poly.vertices.length, poly.closed);
+    const poly = transformed as unknown as { vertices: Point2D[]; closed: boolean; bulges?: number[] };
+    // ADR-508/561 (Giorgio 2026-07-06) — «λαβές των μέσων»: σύρσιμο ΜΕΣΗΣ λαβής ευθύγραμμης πλευράς
+    // ολισθαίνει ΟΛΟ το σκέλος (και τις 2 κορυφές του) → λευκές ενδείξεις σε ΚΑΘΕ σκέλος που ακουμπά
+    // στις κινούμενες κορυφές (το ίδιο + οι 2 γείτονες). Σύρσιμο ΚΟΡΥΦΗΣ → τα incident σκέλη της.
+    const segments = isPolylineStraightEdgeSlide(dp.edgeVertexIndices, poly.bulges)
+      ? getPolylineEdgeSlideIncidentSegments(dp.edgeVertexIndices!, poly.vertices.length, poly.closed)
+      : getPolylineVertexIncidentSegments(dp.gripIndex, poly.vertices.length, poly.closed);
     if (segments.length > 0) {
       for (const [a, b] of segments) {
         paintWallHud(ctx, buildSegmentHudMeta(poly.vertices[a], poly.vertices[b], sceneUnits), '', t, vp);

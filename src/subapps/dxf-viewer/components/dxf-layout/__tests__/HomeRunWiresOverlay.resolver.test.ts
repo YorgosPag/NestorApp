@@ -47,7 +47,7 @@ describe('HomeRunWiresOverlay.buildResolver — live drag follow', () => {
 
   it('resolves the committed connector point when there is no drag', () => {
     const r = buildResolver(sc, null);
-    expect(r('fx1', 'c1')).toEqual({ x: 10, y: 0, zMm: 0 });
+    expect(r('fx1', 'c1')).toEqual({ x: 10, y: 0, zMm: 2700 });
   });
 
   it('shifts ONLY the dragged host by the move delta', () => {
@@ -55,12 +55,12 @@ describe('HomeRunWiresOverlay.buildResolver — live drag follow', () => {
     expect(r('fx1', 'c1')!.x).toBeCloseTo(15, 6);
     expect(r('fx1', 'c1')!.y).toBeCloseTo(-4, 6);
     // The other fixture stays at its committed position.
-    expect(r('fx2', 'c1')).toEqual({ x: 30, y: 0, zMm: 0 });
+    expect(r('fx2', 'c1')).toEqual({ x: 30, y: 0, zMm: 2700 });
   });
 
   it('leaves the host committed when the drag targets a different entity', () => {
     const r = buildResolver(sc, movePreview('somethingElse', 5, 0));
-    expect(r('fx1', 'c1')).toEqual({ x: 10, y: 0, zMm: 0 });
+    expect(r('fx1', 'c1')).toEqual({ x: 10, y: 0, zMm: 2700 });
   });
 
   it('returns null for an unknown host id', () => {

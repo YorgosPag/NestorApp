@@ -39,9 +39,12 @@ describe('mergeSubcategoriesInto', () => {
   });
 
   it('drops subcategories for categories the source has none', () => {
+    // ADR-375 C.9: `column` πλέον ships default `shear-wall` subcategory, οπότε δεν είναι
+    // πια κατάλληλη «κατηγορία χωρίς subcategories». Χρησιμοποιούμε `roof` (γνήσια χωρίς
+    // subcategories στο DEFAULT_OBJECT_STYLES) για να ελεγχθεί το drop.
     const merged = mergeSubcategoriesInto(null, sourceWithWallOverride());
     expect(merged.objectStyles).toBeDefined();
-    expect(merged.objectStyles!.column?.subcategories).toBeUndefined();
+    expect(merged.objectStyles!.roof?.subcategories).toBeUndefined();
   });
 
   it('preserves the target level\'s own drawingScale', () => {

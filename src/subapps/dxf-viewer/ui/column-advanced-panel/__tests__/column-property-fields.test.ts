@@ -13,9 +13,10 @@ import {
 } from '../../ribbon/hooks/bridge/column-command-keys';
 
 describe('column-property-fields descriptor (SSoT)', () => {
-  it('έχει τα 5 αναμενόμενα groups με μοναδικά ids', () => {
+  it('έχει τα 6 αναμενόμενα groups με μοναδικά ids', () => {
     const ids = COLUMN_PROPERTY_GROUPS.map((g) => g.id);
-    expect(ids).toEqual(['structural', 'loads', 'finish', 'envelope', 'material']);
+    // ADR-404 Φ5 — `tilt` group (κεκλιμένη κολώνα / Revit "Slanted Column").
+    expect(ids).toEqual(['structural', 'loads', 'tilt', 'finish', 'envelope', 'material']);
     expect(new Set(ids).size).toBe(ids.length);
   });
 

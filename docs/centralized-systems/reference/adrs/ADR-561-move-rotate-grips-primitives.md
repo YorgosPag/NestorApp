@@ -114,6 +114,21 @@ Circle / arc / polyline / rectangle → επιστρέφουν **WORLD-aligned i
 
 ## Changelog
 
+- **2026-07-06** — ✨ **«Λαβές των μέσων» (σύρσιμο ΜΕΣΗΣ ευθύγραμμης πλευράς) → λευκές ενδείξεις + ίχνη ευθυγράμμισης (parity με τις κορυφές)** (Giorgio:
+  «σε τρίγωνο 3 ενωμένων γραμμών, όταν σέρνω τις λαβές των **άκρων** εμφανίζονται οι λευκές ενδείξεις + τα λευκά & Polar ίχνη·
+  όταν σέρνω τις λαβές των **μέσων** δεν εμφανίζεται τίποτα — θέλω να εμφανίζονται κι εκεί»). **Root cause**: και οι δύο live
+  overlays κλειδώνουν στο `dp.gripIndex`· μια `polyline-segment-midpoint-N` λαβή έχει `gripIndex ≥ vertexCount` →
+  `getPolylineVertexIncidentSegments` (HUD) επέστρεφε `[]` και `getPolylineGripAlignmentAnchors` (ίχνη) επέστρεφε `null`.
+  Το σύρσιμο μέσης-λαβής ολισθαίνει ΟΛΟ το σκέλος (`edgeVertexIndices:[i,next]`, translate και των 2 κορυφών). **Fix (καθαρά
+  additive wiring· ΚΑΝΕΝΑΣ νέος μηχανισμός)**: **(A)** **ίχνη = base-point** (απόφαση Giorgio «από το σημείο που έπιασες, σαν
+  μετακίνηση») → anchor `[dp.anchorPos]`, το **ίδιο** anchor pattern με τον `dp.movesEntity` κλάδο, τροφοδοτεί το ίδιο
+  `resolveActionAlignmentTracking`/`paintActionAlignmentTracking` → λευκά AutoAlign + Polar + κυανά ambient. **(B)** νέος pure
+  SSoT `getPolylineEdgeSlideIncidentSegments(edgeVertexIndices, vertexCount, closed)` (deduped UNION των incident σκελών των
+  2 κινούμενων κορυφών, παραγόμενος από το υπάρχον `getPolylineVertexIncidentSegments`) → λευκές ενδείξεις σε κάθε σκέλος που
+  αλλάζει (το ίδιο + οι 2 γείτονες). **(C)** gate `isPolylineStraightEdgeSlide(edgeVertexIndices, bulges)` (`isStraightSegment`
+  SSoT στο segment index `edgeVertexIndices[0]`) → το ΤΟΞΟ apex (`polyline-arc-midpoint-N`, tune curvature) εξαιρείται.
+  Display-only parity με τις κορυφές (κανένα commit/snap override). **Αρχεία**: `systems/polyline/polyline-grips.ts` (+test,
+  34 GREEN), `hooks/tools/grip-ghost-preview-overlay-helpers.ts` (ίχνη), `hooks/tools/grip-ghost-preview-hud-helpers.ts` (HUD).
 - **2026-07-05** — ✨ **POLAR angle-snap + πορτοκαλί ray στο endpoint RESHAPE (γραμμή + ενωμένο polyline)** (Giorgio: «όταν
   μετακινώ το άκρο, με POLAR on, θέλω τα polar ίχνη — snap + ray»). **Ρίζα**: το grip-reshape flow (γραμμή ΚΑΙ polyline)
   ΔΕΝ έκανε polar — το `applyResizeConstraints` κάνει μόνο ORTHO, και το action-tracking έδειχνε «μόνο alignment lines,

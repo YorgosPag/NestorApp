@@ -6,7 +6,8 @@
 import { ARCHITECTURE_TAB } from '../architecture-tab';
 import type { RibbonCommand } from '../../types/ribbon-types';
 
-const EXPECTED_COMMAND_KEYS = ['roof', 'floor-finish', 'thermal-space', 'space-separator'] as const;
+// ADR-511 slices B/C — wall-covering (γενικό) + wall-covering-room (per-room variant).
+const EXPECTED_COMMAND_KEYS = ['roof', 'floor-finish', 'wall-covering', 'wall-covering-room', 'thermal-space', 'space-separator'] as const;
 
 function allButtons() {
   return ARCHITECTURE_TAB.panels.flatMap((p) => p.rows.flatMap((r) => r.buttons));

@@ -46,9 +46,12 @@ function makeWall(over?: Partial<WallTypeParams>, typeId?: string) {
 
 describe('family-type-ui-helpers (ADR-412 Φ4)', () => {
   it('1. listWallTypes keeps only wall types', () => {
-    const all = getAllBuiltInTypes(CO); // 5 wall + 2 stair
+    const all = getAllBuiltInTypes(CO); // wall types + 2 stair
     const walls = listWallTypes(all);
-    expect(walls.length).toBe(5);
+    // Anti-brittle (ADR-447 προσθέτει exterior variants): derive το count από τον
+    // dedicated built-in getter αντί για hardcoded literal — cross-check ότι το
+    // `listWallTypes` filter συμφωνεί με το `getBuiltInWallTypes`.
+    expect(walls.length).toBe(getBuiltInWallTypes(CO).length);
     expect(walls.every((t) => t.category === 'wall')).toBe(true);
   });
 

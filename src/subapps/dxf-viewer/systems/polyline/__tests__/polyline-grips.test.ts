@@ -7,6 +7,8 @@ import {
   getPolylineGripAlignmentAnchors,
   getPolylineVertexIncidentSegments,
   getPolylineVertexNeighbourIndices,
+  getPolylineEdgeSlideIncidentSegments,
+  isPolylineStraightEdgeSlide,
   POLYLINE_MOVE_KIND,
   POLYLINE_ROTATION_KIND,
 } from '../polyline-grips';
@@ -142,5 +144,52 @@ describe('getPolylineVertexIncidentSegments (ADR-508/561 — white HUD per chang
 
   it('degenerate ring (<2 vertices) → []', () => {
     expect(getPolylineVertexIncidentSegments(0, 1, false)).toEqual([]);
+  });
+});
+
+describe('isPolylineStraightEdgeSlide (ADR-508/561 — «λαβές των μέσων» gate)', () => {
+  it('edge grip on a straight segment (no bulges) → true', () => {
+    expect(isPolylineStraightEdgeSlide([0, 1], undefined)).toBe(true);
+  });
+
+  it('edge grip on a straight segment (zero bulge) → true', () => {
+    expect(isPolylineStraightEdgeSlide([1, 2], [0, 0, 0])).toBe(true);
+  });
+
+  it('edge grip on an ARC segment (non-zero bulge at seg index) → false', () => {
+    // edgeVertexIndices[0] = 1 → segment index 1 → bulges[1] ≠ 0 ⇒ arc apex, excluded.
+    expect(isPolylineStraightEdgeSlide([1, 2], [0, 0.5, 0])).toBe(false);
+  });
+
+  it('vertex grip (no edgeVertexIndices) → false', () => {
+    expect(isPolylineStraightEdgeSlide(undefined, [0, 0, 0])).toBe(false);
+  });
+
+  it('closed-ring wrap edge (segment index = n−1) reads the right bulge', () => {
+    // Wrap edge [2, 0] → segment index 2 → bulges[2].
+    expect(isPolylineStraightEdgeSlide([2, 0], [0, 0, 0])).toBe(true);
+    expect(isPolylineStraightEdgeSlide([2, 0], [0, 0, 0.4])).toBe(false);
+  });
+});
+
+describe('getPolylineEdgeSlideIncidentSegments (ADR-508/561 — white HUD per changing leg on a slide)', () => {
+  it('interior edge of an open ring → the leg itself + both neighbours', () => {
+    // A-B-C-D, slide edge B→C (indices [1,2]): legs A→B, B→C, C→D all touch a moving vertex.
+    expect(getPolylineEdgeSlideIncidentSegments([1, 2], 4, false)).toEqual([[0, 1], [1, 2], [2, 3]]);
+  });
+
+  it('boundary edge of an open ring → drops the missing neighbour', () => {
+    // A-B-C, slide first edge A→B ([0,1]): A has no incoming leg → only A→B + B→C.
+    expect(getPolylineEdgeSlideIncidentSegments([0, 1], 3, false)).toEqual([[0, 1], [1, 2]]);
+  });
+
+  it('closed-ring wrap edge → neighbours wrap, deduped', () => {
+    // Triangle A-B-C closed, slide edge C→A (wrap, [2,0]): legs B→C, C→A, A→B.
+    expect(getPolylineEdgeSlideIncidentSegments([2, 0], 3, true)).toEqual([[1, 2], [2, 0], [0, 1]]);
+  });
+
+  it('closed triangle first edge → all three legs (each vertex is a corner)', () => {
+    // Slide edge A→B ([0,1]): incident of A = {C→A, A→B}, of B = {A→B, B→C} ⇒ deduped 3 legs.
+    expect(getPolylineEdgeSlideIncidentSegments([0, 1], 3, true)).toEqual([[2, 0], [0, 1], [1, 2]]);
   });
 });

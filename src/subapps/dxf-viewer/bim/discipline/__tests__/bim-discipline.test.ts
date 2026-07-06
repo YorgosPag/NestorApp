@@ -71,9 +71,10 @@ describe('ADR-405 CATEGORIES_BY_DISCIPLINE (inverse)', () => {
     // ADR-406/408 populated electrical (light-fixture + electrical-panel + mep-wire);
     // ADR-408 Φ8 populated mechanical (duct) + plumbing (pipe); ADR-408 Φ14 added the
     // drainage pipe; ADR-408 Φ12 the manifold (συλλέκτης); Εύρος Β the radiator + boiler;
-    // ADR-415 added sanitary to plumbing; ADR-410 added furniture (interior). Order
-    // follows DISCIPLINE_BY_CATEGORY declaration order.
-    expect(CATEGORIES_BY_DISCIPLINE.mechanical).toEqual(['duct']);
+    // ADR-434 added fuel to mechanical (boiler fuel line); ADR-415 added sanitary to
+    // plumbing; ADR-410 added furniture (interior). Order follows DISCIPLINE_BY_CATEGORY
+    // declaration order.
+    expect(CATEGORIES_BY_DISCIPLINE.mechanical).toEqual(['duct', 'fuel']);
     expect(CATEGORIES_BY_DISCIPLINE.plumbing).toEqual([
       'pipe', 'drain-pipe', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'sanitary',
     ]);

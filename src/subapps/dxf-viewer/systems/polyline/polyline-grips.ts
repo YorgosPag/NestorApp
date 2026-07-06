@@ -45,6 +45,7 @@ import { rotationHandleMidwayOffset } from '../../bim/grips/rotation-handle-poli
 import { axisToRectFrame, axisQuarterRotationHandleWorld, axisQuarterMoveHandleWorld } from '../../bim/grips/axis-box-grips';
 import { asOrientedRect, polylineBboxCenter, longestPolylineSegment } from './rectangle-detect';
 import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
+import { isStraightSegment } from '../../rendering/entities/shared/geometry-bulge-utils';
 
 /** The polyline whole-entity grip kinds (mirror `wall-midpoint` / `wall-rotation`). */
 export const POLYLINE_MOVE_KIND: PolylineGripKind = 'polyline-move';
@@ -201,6 +202,47 @@ export function getPolylineVertexIncidentSegments(
   if (prev !== null) segments.push([prev, gripIndex]); // incoming edge (prev → dragged vertex)
   if (next !== null) segments.push([gripIndex, next]); // outgoing edge (dragged vertex → next)
   return segments;
+}
+
+/**
+ * ADR-561/508 — is this grip drag a STRAIGHT whole-segment SLIDE? A `polyline-segment-midpoint-N`
+ * grip carries `edgeVertexIndices` (`[i, next]`) and translates BOTH edge vertices rigidly, so
+ * dragging it slides the whole leg (Giorgio 2026-07-06 «λαβές των μέσων»). Only STRAIGHT segments
+ * qualify — an ARC apex (`polyline-arc-midpoint-N`, non-zero `bulges[i]`) tunes curvature instead,
+ * so it is excluded (`isStraightSegment` SSoT on the outgoing-segment bulge, `edgeVertexIndices[0]`
+ * = segment index N). Lets the two live overlays (base-point alignment traces + λευκές ενδείξεις)
+ * treat a mid-leg slide exactly like the vertex reshape they already light up. Pure — zero deps.
+ */
+export function isPolylineStraightEdgeSlide(
+  edgeVertexIndices: readonly [number, number] | undefined,
+  bulges: readonly number[] | undefined,
+): boolean {
+  if (!edgeVertexIndices) return false;
+  return isStraightSegment(bulges?.[edgeVertexIndices[0]]);
+}
+
+/**
+ * ADR-508 §line-hud / ADR-561 — the vertex-index pairs of the segment(s) that the live white HUD
+ * (length + ∠angle) must dimension while a STRAIGHT segment-midpoint grip is dragged. Sliding edge
+ * `[i, next]` moves BOTH its vertices, so every segment incident to EITHER moving vertex is relevant:
+ * the leg itself (`i → next`, rigid-translated) PLUS its two neighbours (`prev → i`, `next → nn`),
+ * whose length/angle change. Derived as the deduped UNION of the two vertices' incident segments via
+ * the shared {@link getPolylineVertexIncidentSegments} adjacency SSoT — never re-deriving adjacency.
+ * Open-ring boundaries drop the missing neighbour automatically. Returns [] for a degenerate ring.
+ * Pure — zero deps.
+ */
+export function getPolylineEdgeSlideIncidentSegments(
+  edgeVertexIndices: readonly [number, number],
+  vertexCount: number,
+  closed: boolean,
+): Array<readonly [number, number]> {
+  const seen = new Map<string, readonly [number, number]>();
+  for (const vertexIndex of edgeVertexIndices) {
+    for (const seg of getPolylineVertexIncidentSegments(vertexIndex, vertexCount, closed)) {
+      seen.set(`${seg[0]}-${seg[1]}`, seg);
+    }
+  }
+  return [...seen.values()];
 }
 
 // NOTE (ADR-561, 2026-07-05): the live polyline/rectangle ROTATION ghost has NO bespoke

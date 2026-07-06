@@ -27,7 +27,8 @@ export type StructuralMethod =
   | 'discrete-from-perimeter-walls'
   | 'from-grid'
   | 'sketch-polygon'
-  | 'tie';
+  | 'tie'
+  | 'between-members';
 
 export const STRUCTURAL_METHOD_FRAGMENTS: Record<StructuralMethod, React.ReactNode> = {
   // Placed directly — no creation-method modifier.
@@ -104,6 +105,17 @@ export const STRUCTURAL_METHOD_FRAGMENTS: Record<StructuralMethod, React.ReactNo
       <line x1="15" y1="16.5" x2="22" y2="16.5" strokeWidth="1.3" />
       <line x1="15" y1="20.5" x2="22" y2="20.5" strokeWidth="1.3" />
       <line x1="18.5" y1="16.5" x2="18.5" y2="20.5" strokeWidth="1.1" />
+    </>
+  ),
+  // ADR-569 «Δοκάρι ανάμεσα σε μέλη»: two upright members (columns/walls) picked in
+  // series, spanned by a single beam bar between their connection points.
+  'between-members': (
+    <>
+      <line x1="15" y1="15" x2="15" y2="22" strokeWidth="1.1" />
+      <line x1="22" y1="15" x2="22" y2="22" strokeWidth="1.1" />
+      <line x1="15" y1="18.5" x2="22" y2="18.5" strokeWidth="1.4" />
+      <circle cx="15" cy="18.5" r="1" fill="currentColor" stroke="none" />
+      <circle cx="22" cy="18.5" r="1" fill="currentColor" stroke="none" />
     </>
   ),
 };

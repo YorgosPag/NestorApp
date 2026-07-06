@@ -294,6 +294,8 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     // Beams (base=beam × creation method).
     case 'struct-beam-single': return <StructuralToolIcon base="beam" method="single" className={className} />;
     case 'struct-beam-on-entity': return <StructuralToolIcon base="beam" method="on-entity" className={className} />;
+    // ADR-569 — «Δοκάρι ανάμεσα σε μέλη» (distinct glyph από το plain beam «single»).
+    case 'struct-beam-between': return <StructuralToolIcon base="beam" method="between-members" className={className} />;
     // Foundation (pad / strip × creation method; `tie` keeps tie-beam distinct).
     case 'struct-found-pad-single': return <StructuralToolIcon base="foundation-pad" method="single" className={className} />;
     case 'struct-found-strip-single': return <StructuralToolIcon base="foundation-strip" method="single" className={className} />;
