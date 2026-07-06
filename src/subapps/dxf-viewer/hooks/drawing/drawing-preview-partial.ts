@@ -169,7 +169,7 @@ export function applyPreviewStyling(
 function cursorStepColor(tool: DrawingTool, clickedCount: number): string {
   // Maps tool → index of the final click (0-based, counting from P1)
   const FINAL_STEP: Partial<Record<DrawingTool, number>> = {
-    'line': 1, 'rectangle': 1, 'circle': 1, 'circle-diameter': 1,
+    'line': 1, 'line-perpendicular': 1, 'rectangle': 1, 'circle': 1, 'circle-diameter': 1,
     'circle-2p-diameter': 1, 'polygon': 1,
     'arc-3p': 2, 'arc-cse': 2, 'arc-sce': 2,
     'circle-3p': 2, 'circle-chord-sagitta': 2, 'circle-2p-radius': 2,
