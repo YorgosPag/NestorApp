@@ -20,6 +20,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { rotateVector } from './grip-math';
 
 /**
@@ -71,7 +72,7 @@ export const RECT_CORNERS: readonly RectCorner[] = [
  */
 export function rectLocalWorld(frame: RectFrame, localX: number, localY: number): Point2D {
   const r = rotateVector({ x: localX, y: localY }, frame.rotationDeg);
-  return { x: frame.center.x + r.x, y: frame.center.y + r.y };
+  return translatePoint(frame.center, r);
 }
 
 /** World position of a corner handle. */

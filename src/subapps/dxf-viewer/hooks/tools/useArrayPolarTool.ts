@@ -29,23 +29,17 @@ import i18next from 'i18next';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { Point2D } from '../../rendering/types/Types';
 import { CreateArrayCommand } from '../../core/commands/entity-commands/CreateArrayCommand';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { validateArrayParams } from '../../systems/array/array-validation';
 import type { PolarParams } from '../../systems/array/types';
 import type { Entity, EntityType } from '../../types/entities';
 import { isArrayEntity } from '../../types/entities';
-import type { useLevels } from '../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
 
 export interface UseArrayPolarToolProps {
   activeTool: string;
   selectedEntityIds: string[];
-  levelManager: LevelManagerLike;
+  levelManager: SceneAdapterLevelManager;
   executeCommand: (cmd: ICommand) => void;
   setSelectedEntityIds: (ids: string[]) => void;
   onToolChange?: (tool: string) => void;
@@ -77,6 +71,7 @@ export function useArrayPolarTool(
     onToolChange,
   } = props;
 
+  const getSceneManager = useSceneManagerAdapter(levelManager);
   const wasActiveRef = useRef(false);
   const pendingSourceIdsRef = useRef<string[]>([]);
   const awaitingCenterRef = useRef(false);
@@ -193,11 +188,8 @@ export function useArrayPolarTool(
         return;
       }
 
-      const sm = createLevelSceneManagerAdapter(
-        levelManager.getLevelScene,
-        levelManager.setLevelScene,
-        levelId,
-      );
+      const sm = getSceneManager();
+      if (!sm) return;
 
       const cmd = new CreateArrayCommand(sourceIds, 'polar', params, sm);
       executeCommand(cmd);
@@ -207,7 +199,7 @@ export function useArrayPolarTool(
 
       exitToSelect();
     },
-    [isActive, levelManager, executeCommand, setSelectedEntityIds, exitToSelect, showHint],
+    [isActive, levelManager, executeCommand, setSelectedEntityIds, exitToSelect, showHint, getSceneManager],
   );
 
   const handleArrayPolarEscape = useCallback((): void => {

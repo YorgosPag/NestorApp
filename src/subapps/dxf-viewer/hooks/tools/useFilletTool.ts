@@ -20,7 +20,7 @@ import { generateEntityId } from '@/services/enterprise-id.service';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import { CornerEntityCommand, type CornerTrimOp } from '../../core/commands/entity-commands/CornerEntityCommand';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { FilletToolStore } from '../../systems/corner/FilletToolStore';
 import { ToolCursorStore } from '../../systems/cursor/ToolCursorStore';
@@ -45,16 +45,10 @@ import {
   type LWPolylineEntity,
 } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
-import type { useLevels } from '../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
 
 export interface UseFilletToolProps {
   activeTool: string;
-  levelManager: LevelManagerLike;
+  levelManager: SceneAdapterLevelManager;
   executeCommand: (cmd: ICommand) => void;
   /** Returns the entity ID hit by `worldPoint` within tolerance (shared with trim/offset). */
   hitTestEntity: (worldPoint: Point2D) => string | null;
@@ -120,14 +114,7 @@ export function useFilletTool(props: UseFilletToolProps): UseFilletToolReturn {
     };
   }, [isActive, phase, polylineMode]);
 
-  const getSceneManager = useCallback(() => {
-    if (!levelManager.currentLevelId) return null;
-    return createLevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      levelManager.currentLevelId,
-    );
-  }, [levelManager]);
+  const getSceneManager = useSceneManagerAdapter(levelManager);
 
   const commitPolyline = useCallback(
     (scene: SceneModel, poly: PolylineEntity | LWPolylineEntity, worldPoint: Point2D): void => {

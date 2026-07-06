@@ -47,6 +47,7 @@ import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import { resolveEntityBuilding, type EntityWithStoreyParams } from '../../bim/utils/bim-floor-utils';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 type Snapshot = ReturnType<typeof useBim3DEntitiesStore.getState>;
 
@@ -228,7 +229,7 @@ export function buildWallReshapePreviewObject(
   const wall = s.walls.find((w) => w.id === entityId);
   if (!wall) return null;
   const levelId = s.activeLevelId ?? undefined;
-  const currentPos: Point2D = { x: originPos.x + deltaMm.x, y: originPos.y + deltaMm.y };
+  const currentPos: Point2D = translatePoint(originPos, deltaMm);
   const next = applyWallGripDrag(gripKind, { originalParams: wall.params, delta: deltaMm, currentPos });
   if (next === wall.params) return null; // no-op (zero delta / out-of-range vertex index)
   const preview = { ...wall, params: next, geometry: computeWallGeometry(next, wall.kind) };
@@ -265,7 +266,7 @@ export function buildBeamReshapePreviewObject(
   const beam = s.beams.find((b) => b.id === entityId);
   if (!beam) return null;
   const levelId = s.activeLevelId ?? undefined;
-  const currentPos: Point2D = { x: originPos.x + deltaMm.x, y: originPos.y + deltaMm.y };
+  const currentPos: Point2D = translatePoint(originPos, deltaMm);
   const next = applyBeamGripDrag(gripKind, { originalParams: beam.params, delta: deltaMm, currentPos });
   if (next === beam.params) return null; // no-op (zero delta / out-of-range vertex index)
   const preview = { ...beam, params: next, geometry: computeBeamGeometry(next) };

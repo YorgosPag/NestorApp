@@ -40,6 +40,8 @@ import { useBimPreviewRenderer } from './useBimPreviewRenderer';
 import { useLevelLayersById } from './useLevelLayersById';
 // ADR-363 — ORTHO (F8) axis-lock for the live MOVE ghost (no-op when OFF).
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
+// ADR-090 — SSoT point+vector add (translate), replaces inline `{x:A.x+B.x,y:A.y+B.y}`.
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-562 Φ9.3 — AutoAlign traces during the 2-click MOVE (base point ⊕ ambient). Same
 // SSoT resolve + paint as the dim grip flow; WYSIWYG parity with the commit (useMoveTool).
@@ -141,7 +143,7 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     // rubber band, ghost, and tooltip all match the committed move (useMoveTool).
     // No-op when ORTHO is OFF.
     const orthoDelta = applyOrthoToDelta({ x: effectiveCursor.x - basePoint.x, y: effectiveCursor.y - basePoint.y });
-    const orthoDestination: Point2D = { x: basePoint.x + orthoDelta.x, y: basePoint.y + orthoDelta.y };
+    const orthoDestination: Point2D = translatePoint(basePoint, orthoDelta);
 
     // ADR-562 Φ9.3 — AutoAlign override + traces on the ORTHO-locked destination (base
     // point ⊕ ambient). SAME resolve as the commit (useMoveTool) → the ghost, rubber band

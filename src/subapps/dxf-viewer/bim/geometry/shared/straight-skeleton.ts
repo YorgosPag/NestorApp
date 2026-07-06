@@ -27,6 +27,7 @@
 
 import { isPolygonCCW, projectPointTo2D, projectVerticesTo2D } from './polygon-utils';
 import { assembleEdgeFaces, type SkeletonArc, type SkeletonEdgeFace, type SkPoint } from './straight-skeleton-faces';
+import { translatePoint } from '../../../rendering/entities/shared/geometry-vector-utils';
 
 export type { SkeletonArc, SkeletonEdgeFace, SkPoint } from './straight-skeleton-faces';
 
@@ -40,7 +41,7 @@ export interface StraightSkeletonResult {
 // ─── Vector helpers (tiny, local — mirror roof-lower-envelope style) ───────────
 
 const sub = (a: SkPoint, b: SkPoint): SkPoint => ({ x: a.x - b.x, y: a.y - b.y });
-const add = (a: SkPoint, b: SkPoint): SkPoint => ({ x: a.x + b.x, y: a.y + b.y });
+const add = (a: SkPoint, b: SkPoint): SkPoint => translatePoint(a, b);
 const scale = (a: SkPoint, k: number): SkPoint => ({ x: a.x * k, y: a.y * k });
 const dot = (a: SkPoint, b: SkPoint): number => a.x * b.x + a.y * b.y;
 const cross = (a: SkPoint, b: SkPoint): number => a.x * b.y - a.y * b.x;

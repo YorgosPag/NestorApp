@@ -1,35 +1,25 @@
 /**
  * Roof eave PLAN geometry primitives (ADR-417) — pure, THREE-free.
  *
- * Ό,τι αφορά το **plan** δαχτυλίδι του γείσου: τομή ευθειών, τεμαχισμός της
- * περιμέτρου στους κορφιάδες/hips, και το mitered **εξωτερικό δαχτυλίδι**
- * (`roofEaveOuterRing`). Εξαγμένο από το `roof-eave-detail.ts` (SRP + όριο 500γρ.).
+ * Ό,τι αφορά το **plan** δαχτυλίδι του γείσου: τεμαχισμός της περιμέτρου στους
+ * κορφιάδες/hips, οι εξωτερικές offset-γραμμές, και το mitered **εξωτερικό
+ * δαχτυλίδι** (`roofEaveOuterRing`). Εξαγμένο από το `roof-eave-detail.ts`
+ * (SRP + όριο 500γρ.).
  *
  * SSoT: το εξωτερικό δαχτυλίδι καταναλώνεται ΚΑΙ από τον 2D/3D builder γείσου
  * (`buildRoofEaveDetail`) ΚΑΙ από τις **έλξεις** στο γείσο (`GeometricCalculations`,
- * ADR-417) → τα snap κουμπώνουν ΑΚΡΙΒΩΣ πάνω στο ορατό γείσο.
+ * ADR-417) → τα snap κουμπώνουν ΑΚΡΙΒΩΣ πάνω στο ορατό γείσο. Η τομή ευθειών
+ * γίνεται με το app-wide SSoT `lineIntersectionPoint` (μηδέν roof-private διπλότυπο).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-417-bim-roof-element.md §10
  * @see bim/geometry/roof-eave-detail.ts — ο 2D/3D consumer (quads + overhang ring)
+ * @see bim/geometry/shared/polygon-axis-projection.ts — `lineIntersectionPoint` SSoT
  */
 
 import type { Point3D } from '../types/bim-base';
 import type { RoofEdgeSlope, RoofRidgeLine } from '../types/roof-types';
 import { inwardNormal, windingSign, type Vec2 } from './roof-lower-envelope';
-import { projectPointTo2D } from './shared/polygon-utils';
-
-const v2 = (p: Point3D): Vec2 => projectPointTo2D(p);
-
-/**
- * Τομή δύο ευθειών (σημείο `p` + διεύθυνση `d`). Λύνει `p1 + t·d1 = p2 + u·d2`
- * για `t` (cross-product). `null` όταν ~παράλληλες (καμία/άπειρες τομές).
- */
-export function lineIntersect(p1: Vec2, d1: Vec2, p2: Vec2, d2: Vec2): Vec2 | null {
-  const denom = d1.x * d2.y - d1.y * d2.x;
-  if (Math.abs(denom) < 1e-9) return null;
-  const t = ((p2.x - p1.x) * d2.y - (p2.y - p1.y) * d2.x) / denom;
-  return { x: p1.x + t * d1.x, y: p1.y + t * d1.y };
-}
+import { lineIntersectionPoint } from './shared/polygon-axis-projection';
 
 /**
  * Παράμετρος `t∈[0,1]` του `p` πάνω στο τμήμα `a→b`, ή `null` αν δεν κάθεται
@@ -98,12 +88,46 @@ export function splitOutlineAtRidges(
   return { verts: outVerts, edges: outEdges };
 }
 
+/** Offset-γραμμή footprint edge: σημείο `p` + διεύθυνση `d` (παράλληλη ακμής). */
+export interface RoofOverhangOffsetLine {
+  readonly p: Vec2;
+  readonly d: Vec2;
+}
+
+/**
+ * Η εξωτερική offset-γραμμή ανά footprint edge (παράλληλη, μετατοπισμένη έξω κατά
+ * `overhangMm`) — το όριο της προέκτασης του γείσου. SSoT για ΟΛΟΥΣ τους consumers
+ * (mitered δαχτυλίδι, επέκταση κορφιάδων/hips πάνω στην προέκταση). Pure.
+ */
+export function roofOverhangOffsetLines(
+  verts: readonly Point3D[],
+  edges: readonly RoofEdgeSlope[],
+  s: number,
+): RoofOverhangOffsetLine[] {
+  const n = verts.length;
+  if (n < 3 || edges.length !== n) return [];
+  const sign = windingSign(verts);
+  const out: RoofOverhangOffsetLine[] = [];
+  for (let i = 0; i < n; i++) {
+    const v0 = verts[i];
+    const v1 = verts[(i + 1) % n];
+    const inward = inwardNormal(v0, v1, sign); // outward = -inward
+    const oh = Math.max(0, edges[i].overhangMm) * s;
+    out.push({
+      p: { x: v0.x - inward.x * oh, y: v0.y - inward.y * oh },
+      d: { x: v1.x - v0.x, y: v1.y - v0.y },
+    });
+  }
+  return out;
+}
+
 /**
  * Το εξωτερικό **mitered δαχτυλίδι του γείσου** σε plan (canvas-unit xy) — μία
- * κορυφή ανά (split) footprint κορυφή. Όταν όλες οι ακμές έχουν overhang 0, το
- * δαχτυλίδι ταυτίζεται με το footprint. `ridges` → split των ακμών που διασχίζουν
- * κορφιά/hip (ίδιο τεμαχισμό με τον renderer). Κενό όταν footprint < 3 κορυφές ή
- * edges/verts mismatch. Pure / idempotent.
+ * κορυφή ανά (split) footprint κορυφή. Επαναχρησιμοποιεί το `roofOverhangOffsetLines`
+ * (SSoT offset-γραμμών) + `lineIntersectionPoint` (SSoT τομής) → μηδέν διπλότυπο.
+ * Όταν όλες οι ακμές έχουν overhang 0, το δαχτυλίδι ταυτίζεται με το footprint.
+ * `ridges` → split των ακμών που διασχίζουν κορφιά/hip (ίδιο τεμαχισμό με τον
+ * renderer). Κενό όταν footprint < 3 κορυφές ή edges/verts mismatch. Pure / idempotent.
  */
 export function roofEaveOuterRing(
   verts: readonly Point3D[],
@@ -113,27 +137,15 @@ export function roofEaveOuterRing(
 ): Vec2[] {
   if (verts.length < 3 || edges.length !== verts.length) return [];
   const { verts: rv, edges: re } = splitOutlineAtRidges(verts, edges, ridges);
-  const n = rv.length;
-  const sign = windingSign(rv);
-
-  // Offset-γραμμή ανά ακμή (παράλληλη, μετατοπισμένη έξω κατά overhang· outward = -inward).
-  const offPts: Vec2[] = [];
-  const offDirs: Vec2[] = [];
-  for (let i = 0; i < n; i++) {
-    const p0 = v2(rv[i]);
-    const p1 = v2(rv[(i + 1) % n]);
-    const inward = inwardNormal(rv[i], rv[(i + 1) % n], sign);
-    const oh = Math.max(0, re[i].overhangMm) * s;
-    offPts.push({ x: p0.x - inward.x * oh, y: p0.y - inward.y * oh });
-    offDirs.push({ x: p1.x - p0.x, y: p1.y - p0.y });
-  }
+  const off = roofOverhangOffsetLines(rv, re, s);
+  const n = off.length;
 
   // Mitered κορυφή `k` = τομή offset(k-1) ∩ offset(k) (γειτονικές strips μοιράζονται
   // την ΙΔΙΑ γωνία → καμία τρύπα). Fallback (~παράλληλες ακμές): κάθετο offset.
   const ring: Vec2[] = [];
   for (let k = 0; k < n; k++) {
     const prev = (k - 1 + n) % n;
-    ring.push(lineIntersect(offPts[prev], offDirs[prev], offPts[k], offDirs[k]) ?? offPts[k]);
+    ring.push(lineIntersectionPoint(off[prev].p, off[prev].d, off[k].p, off[k].d) ?? off[k].p);
   }
   return ring;
 }

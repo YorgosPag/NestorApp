@@ -32,6 +32,9 @@ import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
 import { setActiveDragGripAnchor } from '../../systems/cursor/GripDragStore';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import i18next from 'i18next';
+// ADR-090 — SSoT point+vector add (translate) + subtract, replaces inline
+// `{x:A.x+B.x,y:A.y+B.y}` / `{x:A.x-B.x,y:A.y-B.y}`.
+import { translatePoint, subtractPoints } from '../../rendering/entities/shared/geometry-vector-utils';
 
 /**
  * Narrow context for the hot-grip action helpers. Structurally satisfied by
@@ -191,7 +194,7 @@ export function advanceHotGripPick(worldPos: Point2D, ctx: HotGripActionCtx): vo
     const rs = hotGripRefStartRef.current;
     const pv = hotGripBaseRef.current;
     if (rs && pv) {
-      const anchor: Point2D = { x: pv.x + (p.x - rs.x), y: pv.y + (p.y - rs.y) };
+      const anchor: Point2D = translatePoint(pv, subtractPoints(p, rs));
       anchorRef.current = anchor;
       BimRotateHotGripStore.set(pv, anchor);
     }
@@ -260,7 +263,7 @@ export function commitFreeRotate(worldPos: Point2D, grip: UnifiedGripInfo, ctx: 
   const refDir = { x: baseline.x - pivot.x, y: baseline.y - pivot.y };
   const alignDir = { x: worldPos.x - pivot.x, y: worldPos.y - pivot.y };
   const delta: Point2D = { x: alignDir.x - refDir.x, y: alignDir.y - refDir.y };
-  BimRotateHotGripStore.set(pivot, { x: pivot.x + refDir.x, y: pivot.y + refDir.y });
+  BimRotateHotGripStore.set(pivot, translatePoint(pivot, refDir));
   commitDxfGripDragModeAware(grip, delta, dxfCommitDeps, GripModeStore.getSnapshot());
   GripBasePointStore.clear();
   resetToIdle();

@@ -44,6 +44,7 @@ import type { Point3D } from '../types/bim-base';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnTopProfile, ColumnBaseProfile } from './column-vertical-profile';
 import { polygonArea, polygonBbox } from './shared/polygon-utils';
+import { translatePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { buildIShapeProfile } from './shared/i-shape-profile';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { columnFootprintDims } from '../columns/column-footprint-dims';
@@ -395,7 +396,9 @@ function transformFootprint(
   s: number,
 ): Point3D[] {
   if (params.kind === 'circular') {
-    return local.map((v) => ({ x: params.position.x + v.x, y: params.position.y + v.y, z: 0 }));
+    // Circular: κάθε local vertex (z=0 από τους builders) μετατοπίζεται κατά `position`.
+    // `translatePoints` (SSoT) διατηρεί το z=0 του source — byte-identical με το πρώην `z: 0`.
+    return translatePoints(local, params.position);
   }
   const { dimX, dimY } = columnFootprintDims(params);
   const frame: CentredAnchorFrame = {

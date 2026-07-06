@@ -10,9 +10,9 @@
 import {
   buildRoofEaveDetail,
   extendRidgeToOverhang,
-  roofOverhangOffsetLines,
   type RoofEaveDetailInput,
 } from '../roof-eave-detail';
+import { roofOverhangOffsetLines } from '../roof-eave-plan-geom';
 import { mmToSceneUnits } from '../../../utils/scene-units';
 import type { Point3D } from '../../types/bim-base';
 import type { RoofEdgeSlope, RoofRidgeLine, RoofSoffitMode } from '../../types/roof-types';

@@ -23,12 +23,13 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/PreviewCanvas';
 import { MoveEntityCommand, MoveMultipleEntitiesCommand, CompoundCommand } from '../../core/commands';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
-import type { useLevels } from '../../systems/levels';
 // ADR-363 — ORTHO (F8) axis-lock for the AutoCAD MOVE destination (no F9 step here).
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
+// ADR-090 — SSoT point+vector add (translate), replaces inline `{x:A.x+B.x,y:A.y+B.y}`.
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 // ADR-562 Φ9.3 — AutoAlign traces during the 2-click MOVE (base point ⊕ ambient), same
 // SSoT resolve as the ghost (useMovePreview) → WYSIWYG. Gated behind POLAR/AutoAlign.
 import { resolveActionAlignmentTracking } from '../dimensions/dim-alignment-tracking';
@@ -45,16 +46,11 @@ export type MovePhase =
   | 'awaiting-base-point'
   | 'awaiting-destination';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface UseMoveToolProps {
   activeTool: string;
   selectedEntityIds: string[];
   selectedOverlayIds?: string[];
-  levelManager: LevelManagerLike;
+  levelManager: SceneAdapterLevelManager;
   executeCommand: (cmd: ICommand) => void;
   executeOverlayMove?: (ids: string[], delta: Point2D) => void;
   /** Factory that builds the overlay move ICommand without executing it — used for mixed-selection CompoundCommand. */
@@ -100,14 +96,7 @@ export function useMoveTool(props: UseMoveToolProps): UseMoveToolReturn {
     hasAnySelected &&
     (phase === 'awaiting-base-point' || phase === 'awaiting-destination');
 
-  const getSceneManager = useCallback(() => {
-    if (!levelManager.currentLevelId) return null;
-    return createLevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      levelManager.currentLevelId,
-    );
-  }, [levelManager]);
+  const getSceneManager = useSceneManagerAdapter(levelManager);
 
   // ── State machine transitions (shared FSM SSoT, ADR-577) ──────────────────
   // Every hook-driven phase change clears the preview ghost; entering the
@@ -153,7 +142,7 @@ export function useMoveTool(props: UseMoveToolProps): UseMoveToolReturn {
         // ⊕ ambient), so the committed move lands EXACTLY where the ghost trace snapped
         // (WYSIWYG). The helper gates ambient/polar behind the CAD toggles → no-op when
         // AutoAlign + POLAR are off (identity delta = the previous behaviour).
-        const orthoDest: Point2D = { x: basePoint.x + orthoDelta.x, y: basePoint.y + orthoDelta.y };
+        const orthoDest: Point2D = translatePoint(basePoint, orthoDelta);
         const scene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
         const alignTrk = resolveActionAlignmentTracking(
           orthoDest, [basePoint], getImmediateTransform().scale,

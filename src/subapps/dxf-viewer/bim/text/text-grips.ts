@@ -175,7 +175,7 @@ function applyTextRotation(frame: RectFrame, input: TextGripDragInput): TextTran
   if (input.ortho) sweepDeg = Math.round(sweepDeg / 45) * 45;
   const rel = rotateVector({ x: frame.center.x - pivot.x, y: frame.center.y - pivot.y }, sweepDeg);
   const newFrame: RectFrame = {
-    center: { x: pivot.x + rel.x, y: pivot.y + rel.y },
+    center: translatePoint(pivot, rel),
     rotationDeg: (entity.rotation ?? 0) + sweepDeg,
     halfWidth: frame.halfWidth,
     halfLength: frame.halfLength,

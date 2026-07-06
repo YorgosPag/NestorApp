@@ -54,6 +54,8 @@ import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 import type { useLevels } from '../../systems/levels';
+// ADR-090 — SSoT point+vector add (translate), replaces inline `{x:A.x+B.x,y:A.y+B.y}`.
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -105,7 +107,7 @@ export function useEntityBodyDragPreview(props: UseEntityBodyDragPreviewProps): 
     // ORTHO (F8) axis-lock, THEN the F9/Q SNAP-MODE step (parity with the grip-move path — both
     // gestures now quantize identically). Both no-op when their toggle is off, so default is unchanged.
     const moveDelta = applyGripStepSnap(applyOrthoToDelta({ x: effectiveCursor.x - anchor.x, y: effectiveCursor.y - anchor.y }));
-    const constrainedDestination: Point2D = { x: anchor.x + moveDelta.x, y: anchor.y + moveDelta.y };
+    const constrainedDestination: Point2D = translatePoint(anchor, moveDelta);
 
     if (Math.abs(moveDelta.x) < 0.001 && Math.abs(moveDelta.y) < 0.001) return;
 

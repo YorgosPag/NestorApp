@@ -33,6 +33,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint, translatePoint3D } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmScaleFor } from '../../utils/scene-units';
 import { rotateVector, sweptAngleDegAboutPivot } from './grip-math';
@@ -177,7 +178,7 @@ export function centredBoxRotationHandleWorld(params: CentredBoxParams): Point2D
   const local = { x: 0, y: (params.length / 2 + ROTATION_HANDLE_OFFSET_MM) * s };
   const c = centre(params);
   const rot = rotateVector(local, params.rotation);
-  return { x: c.x + rot.x, y: c.y + rot.y };
+  return translatePoint(c, rot);
 }
 
 // ─── Grip emission ───────────────────────────────────────────────────────────
@@ -249,11 +250,7 @@ function moveCentre(input: Readonly<CentredBoxGripDragInput>): CentredBoxPatch {
   const { originalParams, delta } = input;
   return {
     ...basePatch(originalParams),
-    position: {
-      x: originalParams.position.x + delta.x,
-      y: originalParams.position.y + delta.y,
-      z: originalParams.position.z ?? 0,
-    },
+    position: translatePoint3D(originalParams.position, delta),
   };
 }
 

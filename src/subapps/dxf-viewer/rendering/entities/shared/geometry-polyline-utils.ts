@@ -5,7 +5,7 @@
 
 import type { Point2D } from '../../types/Types';
 // 🏢 ADR-065: Centralized Distance Calculation
-import { calculateDistance } from './geometry-rendering-utils';
+import { calculateDistance, translatePoint } from './geometry-rendering-utils';
 // 🏢 ADR-118: Centralized Zero Point Pattern
 import { ZERO_VECTOR } from '../../../config/geometry-constants';
 
@@ -139,7 +139,7 @@ export function calculatePolygonCentroid(points: Point2D[]): Point2D {
   if (Math.abs(signedArea2) < 1e-10) {
     // Degenerate polygon - return average of points
     // 🏢 ADR-118: Use centralized ZERO_VECTOR for accumulator initialization
-    const sum = points.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { ...ZERO_VECTOR });
+    const sum = points.reduce((acc, p) => translatePoint(acc, p), { ...ZERO_VECTOR });
     return { x: sum.x / points.length, y: sum.y / points.length };
   }
 

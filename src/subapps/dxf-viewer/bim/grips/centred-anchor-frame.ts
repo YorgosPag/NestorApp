@@ -25,6 +25,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { rotateVector } from './grip-math';
 
 /**
@@ -57,7 +58,7 @@ export function centredCentroidWorld(frame: CentredAnchorFrame): Point2D {
     { x: -frame.anchorOffset.dx * frame.dimX * frame.scale, y: -frame.anchorOffset.dy * frame.dimY * frame.scale },
     frame.rotationDeg,
   );
-  return { x: frame.position.x + shift.x, y: frame.position.y + shift.y };
+  return translatePoint(frame.position, shift);
 }
 
 /**
@@ -69,7 +70,7 @@ export function centredCentroidWorld(frame: CentredAnchorFrame): Point2D {
 export function centredLocalToWorld(frame: CentredAnchorFrame, localMm: Point2D): Point2D {
   const centroid = centredCentroidWorld(frame);
   const rotated = rotateVector({ x: localMm.x * frame.scale, y: localMm.y * frame.scale }, frame.rotationDeg);
-  return { x: centroid.x + rotated.x, y: centroid.y + rotated.y };
+  return translatePoint(centroid, rotated);
 }
 
 /**
@@ -88,6 +89,6 @@ export function centredPolyToWorld(
   const centroid = centredCentroidWorld(frame);
   return localCanvasPts.map((p) => {
     const rotated = rotateVector({ x: p.x, y: p.y }, frame.rotationDeg);
-    return { x: centroid.x + rotated.x, y: centroid.y + rotated.y };
+    return translatePoint(centroid, rotated);
   });
 }

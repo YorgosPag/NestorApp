@@ -23,24 +23,18 @@ import i18next from 'i18next';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import { StretchEntityCommand, type StretchVertexMove } from '../../core/commands/entity-commands/StretchEntityCommand';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { StretchToolStore } from '../../systems/stretch/StretchToolStore';
 import { enumerateVertices, getAnchorPoint } from '../../systems/stretch/stretch-vertex-classifier';
-import type { useLevels } from '../../systems/levels';
 import type { Entity } from '../../types/entities';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface UseStretchToolProps {
   activeTool: string;
   selectedEntityIds: string[];
-  levelManager: LevelManagerLike;
+  levelManager: SceneAdapterLevelManager;
   executeCommand: (cmd: ICommand) => void;
   onToolChange?: (tool: string) => void;
 }
@@ -58,7 +52,7 @@ export interface UseStretchToolReturn {
 
 function filterLockedEntities(
   ids: string[],
-  getLevelScene: LevelManagerLike['getLevelScene'],
+  getLevelScene: SceneAdapterLevelManager['getLevelScene'],
   levelId: string | null,
 ): { workable: string[]; skipped: number } {
   if (!levelId) return { workable: ids, skipped: 0 };
@@ -123,14 +117,7 @@ export function useStretchTool(props: UseStretchToolProps): UseStretchToolReturn
   const state = StretchToolStore.getState();
   const isCollectingInput = isActive && (state.phase === 'base_point' || state.phase === 'displacement');
 
-  const getSceneManager = useCallback(() => {
-    if (!levelManager.currentLevelId) return null;
-    return createLevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      levelManager.currentLevelId,
-    );
-  }, [levelManager]);
+  const getSceneManager = useSceneManagerAdapter(levelManager);
 
   // ── Activation / deactivation ─────────────────────────────────────────────
 

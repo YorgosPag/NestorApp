@@ -23,7 +23,7 @@ import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { formatLengthForDisplay } from '../../config/display-length-format';
 // SSoT γεωμετρίας: ίδια helpers με renderLine/polyline/dimensions — μηδέν inline atan2/hypot/normalize.
 import { formatAngleLocale, calculateWorldDistance } from '../../rendering/entities/shared/distance-label-utils';
-import { calculateAngle } from '../../rendering/entities/shared/geometry-vector-utils';
+import { calculateAngle, translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { radToDeg, normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 import { paintAlignedOverlayDimension } from './ghost-face-dim-paint';
 import { drawOverlayLabel } from './overlay-text-style';
@@ -188,8 +188,8 @@ export function paintProjectedAlignedDim(
   const mid: Point2D = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
   const off: Point2D = { x: dimRef.x - mid.x, y: dimRef.y - mid.y };
   const s1 = toScreen(p1), s2 = toScreen(p2);
-  const sd1 = toScreen({ x: p1.x + off.x, y: p1.y + off.y });
-  const sd2 = toScreen({ x: p2.x + off.x, y: p2.y + off.y });
+  const sd1 = toScreen(translatePoint(p1, off));
+  const sd2 = toScreen(translatePoint(p2, off));
   applyOverlayLineStyle(ctx, color);
   strokeOverlaySegment(ctx, sd1, sd2); // dim line
   strokeOverlaySegment(ctx, s1, sd1);  // extension line @ start

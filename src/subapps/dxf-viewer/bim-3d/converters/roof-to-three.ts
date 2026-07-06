@@ -42,9 +42,11 @@ import { buildRoundedRidgeCap, findAdjacentFaces } from './roof-ridge-cap';
 import {
   buildRoofEaveDetail,
   extendRidgeToOverhang,
+} from '../../bim/geometry/roof-eave-detail';
+import {
   roofOverhangOffsetLines,
   type RoofOverhangOffsetLine,
-} from '../../bim/geometry/roof-eave-detail';
+} from '../../bim/geometry/roof-eave-plan-geom';
 import { buildEaveQuadGeometry } from './roof-eave-detail-mesh';
 // ADR-539 Φ3b — Cinema 4D «Polygon Mode»: per-«νερό» (face) appearance override.
 import type { FaceAppearanceMap } from '../../bim/types/face-appearance-types';

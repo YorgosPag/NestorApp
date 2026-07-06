@@ -29,10 +29,12 @@ import { tieBeamRebarLayout, tieBeamAxisPoints } from './tie-beam-linear-member'
 import { collectLinearMemberRebarPlanGeometry } from './linear-member-rebar-plan-geometry';
 import type { RebarPlanGeometry, RebarPlanPath } from './rebar-plan-geometry-types';
 import { EMPTY_REBAR_PLAN_GEOMETRY } from './rebar-plan-geometry-types';
+// SSoT sweep — canonical 2D point+vector translate (ADR-090).
+import { translatePoint } from '../../../rendering/entities/shared/geometry-vector-utils';
 
 interface Vec { readonly x: number; readonly y: number }
 function sub(a: Vec, b: Vec): Vec { return { x: a.x - b.x, y: a.y - b.y }; }
-function add(a: Vec, b: Vec): Vec { return { x: a.x + b.x, y: a.y + b.y }; }
+function add(a: Vec, b: Vec): Vec { return translatePoint(a, b); }
 function scale(a: Vec, k: number): Vec { return { x: a.x * k, y: a.y * k }; }
 function len(a: Vec): number { return Math.hypot(a.x, a.y); }
 function unit(a: Vec): Vec { const l = len(a); return l > 0 ? { x: a.x / l, y: a.y / l } : { x: 0, y: 0 }; }

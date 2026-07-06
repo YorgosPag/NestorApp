@@ -20,6 +20,7 @@ import type {
   Dim3DPlacement,
   Vec3,
 } from './dim3d-types';
+import { addPoint3D } from '../../rendering/entities/shared/geometry-vector-utils';
 
 export interface ArrowTransform {
   /** World position of arrow tip. */
@@ -48,7 +49,7 @@ function sub(a: Vec3, b: Vec3): Vec3 {
 }
 
 function add(a: Vec3, b: Vec3): Vec3 {
-  return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z };
+  return addPoint3D(a, b);
 }
 
 function scale(v: Vec3, s: number): Vec3 {

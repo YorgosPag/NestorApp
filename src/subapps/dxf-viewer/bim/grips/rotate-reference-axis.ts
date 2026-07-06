@@ -30,6 +30,7 @@
 
 import type { Entity } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { resolveMoveGlyphFrame } from './move-glyph-frame';
 import { rotateVector } from './grip-math';
 import { rectOrPolylineVertices, asOrientedRect, longestPolylineSegment, polylineBboxCenter } from '../../systems/polyline/rectangle-detect';
@@ -57,7 +58,7 @@ function anchorTowardBody(pivot: Point2D, majorUnit: Point2D, centre: Point2D | 
     const proj = (centre.x - pivot.x) * majorUnit.x + (centre.y - pivot.y) * majorUnit.y;
     if (proj > MAJOR_AXIS_PROJ_EPS) dir = majorUnit;
   }
-  return { x: pivot.x + dir.x, y: pivot.y + dir.y };
+  return translatePoint(pivot, dir);
 }
 
 interface BBoxView { readonly min: { x: number; y: number }; readonly max: { x: number; y: number }; }

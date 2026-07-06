@@ -26,10 +26,9 @@
 import { useCallback, useEffect } from 'react';
 import { EventBus } from '../../systems/events';
 import { EntityClipboardStore } from '../../systems/clipboard/EntityClipboardStore';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { buildEntityCloneCommand } from '../../bim/transforms/build-entity-clone-command';
 import type { ICommand, SceneEntity } from '../../core/commands/interfaces';
-import type { useLevels } from '../../systems/levels';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -38,14 +37,9 @@ const PASTE_IN_PLACE_DELTA = { x: 0, y: 0 } as const;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface UseEntityClipboardProps {
   selectedEntityIds: string[];
-  levelManager: LevelManagerLike;
+  levelManager: SceneAdapterLevelManager;
   executeCommand: (cmd: ICommand) => void;
   /** Re-selects the freshly pasted entities (Revit feedback). */
   selectEntities: (ids: string[]) => void;
@@ -64,14 +58,7 @@ export function useEntityClipboard({
   executeCommand,
   selectEntities,
 }: UseEntityClipboardProps): UseEntityClipboardReturn {
-  const getSceneManager = useCallback(() => {
-    if (!levelManager.currentLevelId) return null;
-    return createLevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      levelManager.currentLevelId,
-    );
-  }, [levelManager]);
+  const getSceneManager = useSceneManagerAdapter(levelManager);
 
   // ── Ctrl+C: snapshot the current selection ──────────────────────────────
   const copySelection = useCallback(() => {

@@ -32,7 +32,7 @@ import type { StructuralGraph, StructuralNode } from '../../bim/structural/organ
 import type { ColumnEntity } from '../../bim/types/column-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import { columnLocalMmToWorld } from '../../bim/geometry/column-geometry';
-import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
+import { scalePoints, translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { resolveActiveColumnReinforcementForEntity } from '../../bim/structural/active-reinforcement';
 import { resolveActiveFootingReinforcementForParams } from '../../bim/structural/active-footing-reinforcement';
@@ -47,7 +47,7 @@ const MAX_JOINT_RODS = 8;
 
 function centroid(pts: readonly { x: number; y: number }[]): { x: number; y: number } {
   if (!pts.length) return { x: 0, y: 0 };
-  const s = pts.reduce((a, p) => ({ x: a.x + p.x, y: a.y + p.y }), { x: 0, y: 0 });
+  const s = pts.reduce((a, p) => translatePoint(a, p), { x: 0, y: 0 });
   return { x: s.x / pts.length, y: s.y / pts.length };
 }
 

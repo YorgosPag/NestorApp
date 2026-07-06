@@ -20,6 +20,7 @@ import type { MepFixtureGeometry, MepFixtureParams } from '../types/mep-fixture-
 import { MIN_FIXTURE_DIMENSION_MM } from '../types/mep-fixture-types';
 import { polygonArea, polygonBbox } from '../geometry/shared/polygon-utils';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 const MM_TO_M = 1 / 1000;
 const DEG_TO_RAD = Math.PI / 180;
@@ -87,14 +88,14 @@ function transformFootprint(
 ): Point3D[] {
   const { position } = params;
   if (params.shape === 'circular') {
-    return local.map((v) => ({ x: position.x + v.x, y: position.y + v.y, z: 0 }));
+    return local.map((v) => translatePoint(position, v));
   }
   const cos = Math.cos(params.rotation * DEG_TO_RAD);
   const sin = Math.sin(params.rotation * DEG_TO_RAD);
   return local.map((v) => {
     const rx = v.x * cos - v.y * sin;
     const ry = v.x * sin + v.y * cos;
-    return { x: position.x + rx, y: position.y + ry, z: 0 };
+    return translatePoint(position, { x: rx, y: ry });
   });
 }
 

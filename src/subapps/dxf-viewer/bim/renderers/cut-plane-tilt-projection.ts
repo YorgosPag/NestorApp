@@ -16,6 +16,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-404-3d-bim-element-tilt.md
  */
 
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
+
 interface Vec2 {
   readonly x: number;
   readonly y: number;
@@ -62,7 +64,7 @@ export function drawCutPlaneTiltProjection(
   ctx.beginPath();
   for (const v of ring) {
     const a = worldToScreen(v);
-    const b = worldToScreen({ x: v.x + shift.dx, y: v.y + shift.dy });
+    const b = worldToScreen(translatePoint(v, { x: shift.dx, y: shift.dy }));
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
   }

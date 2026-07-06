@@ -21,13 +21,12 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/PreviewCanvas';
 import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
 import { angleBetweenPointsDeg } from '../../utils/rotation-math';
 import { resolveOrthoPolarStep } from '../drawing/drawing-handler-utils';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
-import type { useLevels } from '../../systems/levels';
 import type { Overlay, UpdateOverlayData } from '../../overlays/types';
 import { rotatePoint } from '../../utils/rotation-math';
 import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
@@ -42,14 +41,11 @@ import { applyTypedAngleKey } from '../../systems/dynamic-input/typed-angle-entr
 
 export type RotationPhase = 'idle' | 'awaiting-entity' | 'awaiting-base-point' | 'awaiting-reference' | 'awaiting-angle';
 
-/** Subset of useLevels return type needed by rotation tool */
-type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene' | 'setLevelScene' | 'currentLevelId'>;
-
 export interface UseRotationToolProps {
   activeTool: string;
   selectedEntityIds: string[];
   /** Level manager for scene access (creates ISceneManager adapter internally) */
-  levelManager: LevelManagerLike;
+  levelManager: SceneAdapterLevelManager;
   /** Command executor (from useCommandHistory) */
   executeCommand: (cmd: ICommand) => void;
   /** PreviewCanvas ref for clearing on complete */
@@ -135,14 +131,7 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
     && (phase === 'awaiting-base-point' || phase === 'awaiting-reference' || phase === 'awaiting-angle');
 
   // Build scene manager adapter on demand
-  const getSceneManager = useCallback(() => {
-    if (!levelManager.currentLevelId) return null;
-    return createLevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      levelManager.currentLevelId,
-    );
-  }, [levelManager]);
+  const getSceneManager = useSceneManagerAdapter(levelManager);
 
   // ── State machine transitions (shared FSM SSoT, ADR-577) ──────────────────
   // Every hook-driven phase change clears the ghost + drops stale pivot/ref/angle.

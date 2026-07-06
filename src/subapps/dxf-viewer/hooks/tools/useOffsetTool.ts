@@ -19,23 +19,17 @@ import { generateEntityId } from '@/services/enterprise-id.service';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import { OffsetEntityCommand } from '../../core/commands/entity-commands/OffsetEntityCommand';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { OffsetToolStore } from '../../systems/offset/OffsetToolStore';
 import { ToolCursorStore } from '../../systems/cursor/ToolCursorStore';
 import { offsetEntity, isOffsettable } from '../../systems/offset/offset-entity-geometry';
 import { resolveSignedOffset } from '../../systems/offset/offset-side';
 import type { Entity } from '../../types/entities';
-import type { useLevels } from '../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
 
 export interface UseOffsetToolProps {
   activeTool: string;
-  levelManager: LevelManagerLike;
+  levelManager: SceneAdapterLevelManager;
   executeCommand: (cmd: ICommand) => void;
   /** Returns the entity ID hit by `worldPoint` within tolerance (shared with trim/extend). */
   hitTestEntity: (worldPoint: Point2D) => string | null;
@@ -85,14 +79,7 @@ export function useOffsetTool(props: UseOffsetToolProps): UseOffsetToolReturn {
     };
   }, [isActive, phase]);
 
-  const getSceneManager = useCallback(() => {
-    if (!levelManager.currentLevelId) return null;
-    return createLevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      levelManager.currentLevelId,
-    );
-  }, [levelManager]);
+  const getSceneManager = useSceneManagerAdapter(levelManager);
 
   const performOffsetPick = useCallback(
     (worldPoint: Point2D): void => {

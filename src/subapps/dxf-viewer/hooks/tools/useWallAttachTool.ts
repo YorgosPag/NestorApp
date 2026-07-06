@@ -28,7 +28,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import i18next from 'i18next';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import {
   AttachWallsTopCommand,
   type WallAttachTarget,
@@ -54,17 +54,11 @@ import { EventBus } from '../../systems/events/EventBus';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { mmToSceneUnits, resolveSceneUnits } from '../../utils/scene-units';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
-import type { useLevels } from '../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
 
 export interface UseWallAttachToolProps {
   activeTool: string;
   selectedEntityIds: string[];
-  levelManager: LevelManagerLike;
+  levelManager: SceneAdapterLevelManager;
   executeCommand: (cmd: ICommand) => void;
   /** Current viewport scale factor — converts snap tolerance to world units. */
   transformScale: number;
@@ -101,14 +95,7 @@ export function useWallAttachTool({
   const targetsRef = useRef<WallAttachTarget[] | ColumnAttachTarget[] | StairAttachTarget[]>([]);
   const wasActiveRef = useRef(false);
 
-  const getSceneManager = useCallback(() => {
-    if (!levelManager.currentLevelId) return null;
-    return createLevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      levelManager.currentLevelId,
-    );
-  }, [levelManager]);
+  const getSceneManager = useSceneManagerAdapter(levelManager);
 
   // ── Activate / deactivate: snapshot targets + prompt ──────────────────────
 

@@ -59,6 +59,7 @@ import { MIN_WALL_THICKNESS_MM, MAX_WALL_THICKNESS_MM } from '../../bim/types/wa
 import { MIN_BEAM_DEPTH_MM } from '../../bim/types/beam-types';
 import { MIN_SLAB_THICKNESS_MM } from '../../bim/types/slab-types';
 import { perpUnit, unitVector } from '../../bim/grips/grip-math';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { detachWallSide, isWallSideAttached } from '../../bim/walls/wall-attach-detach';
 import { detachEntitySide, isEntitySideAttached } from '../../bim/entities/entity-attach-detach';
 import { detachStairSide, isStairSideAttached } from '../../bim/stairs/stair-attach-detach';
@@ -336,7 +337,7 @@ export function computeStairResizeParams(
     gripKind === 'stair-length'
       ? { x: base.x + params.totalRun * u.x, y: base.y + params.totalRun * u.y }
       : { x: base.x + (params.width / 2) * p.x, y: base.y + (params.width / 2) * p.y };
-  const currentPos: Point2D = { x: anchor.x + deltaScene.x, y: anchor.y + deltaScene.y };
+  const currentPos: Point2D = translatePoint(anchor, deltaScene);
   const next = applyStairGripDrag(gripKind, {
     originalParams: params,
     delta: deltaScene,

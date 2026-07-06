@@ -38,6 +38,7 @@ import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getOpeningGrips } from '../walls/opening-grips';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
@@ -197,7 +198,7 @@ export class OpeningRenderer extends BaseEntityRenderer {
     const anchorScreen = this.worldToScreen({ x: anchorWorld.x, y: anchorWorld.y });
     const { ux, uy } = computeWallNormal(opening);
     const offset = opening.params.tagOffset ?? { dx: 0, dy: 0 };
-    const draggedWorld = { x: anchorWorld.x + offset.dx, y: anchorWorld.y + offset.dy };
+    const draggedWorld = translatePoint(anchorWorld, { x: offset.dx, y: offset.dy });
     const draggedScreen = this.worldToScreen(draggedWorld);
     const tagScreen = {
       x: anchorScreen.x + ux * TAG_INITIAL_SCREEN_PX + (draggedScreen.x - anchorScreen.x),

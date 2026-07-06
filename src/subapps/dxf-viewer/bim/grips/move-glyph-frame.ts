@@ -30,6 +30,7 @@
 
 import type { Entity } from '../../types/entities';
 import type { GripInfo, Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 const DEG_TO_RAD = Math.PI / 180;
 
@@ -139,7 +140,7 @@ export function withMoveGlyphRotation(
   const angleAt = (pos: Point2D): number => {
     if (cached !== null) return cached;
     const c = worldToScreen(pos);
-    const ax = worldToScreen({ x: pos.x + frame.axisX.x, y: pos.y + frame.axisX.y });
+    const ax = worldToScreen(translatePoint(pos, frame.axisX));
     cached = Math.atan2(ax.y - c.y, ax.x - c.x);
     return cached;
   };

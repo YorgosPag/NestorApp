@@ -17,6 +17,8 @@ export * from './utils';
 // 🏢 ENTERPRISE (2026-01-30): Event Bus + Command Pattern Integration
 // This is the new enterprise way to create entities with undo/redo support
 export { LevelSceneManagerAdapter, createLevelSceneManagerAdapter } from './LevelSceneManagerAdapter';
+// 🏢 ADR-577: SSoT memoized `getSceneManager` builder for interactive tool hooks
+export { useSceneManagerAdapter, type SceneAdapterLevelManager } from './useSceneManagerAdapter';
 export {
   useEntityCreationManager,
   emitEntityCreateRequest,

@@ -9,7 +9,7 @@ import type { SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngi
 import { BaseSnapEngine } from '../shared/BaseSnapEngine';
 // 🏢 ADR-378: SSoT snap-visibility predicate (imported DXF entities omit `visible`)
 import { isEntityVisibleForSnap } from '../shared/snap-visibility';
-import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { calculateDistance, translatePoint } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-149: Centralized Snap Engine Priorities
 import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
@@ -134,7 +134,7 @@ export class NearestSnapEngine extends BaseSnapEngine {
         const base = entity.basePoint as Point2D;
         const dir = entity.direction as Point2D;
         // Projection on infinite line (no clamping)
-        return getNearestPointOnLine(point, base, { x: base.x + dir.x, y: base.y + dir.y }, false);
+        return getNearestPointOnLine(point, base, translatePoint(base, dir), false);
       }
     } else if (entityType === 'ray') {
       if ('basePoint' in entity && 'direction' in entity && entity.basePoint && entity.direction) {

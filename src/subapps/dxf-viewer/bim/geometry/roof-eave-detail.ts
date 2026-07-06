@@ -49,8 +49,10 @@ import {
   type Vec2,
 } from './roof-lower-envelope';
 import { projectPointTo2D } from './shared/polygon-utils';
-// ADR-417 — plan-geometry primitives (SSoT εξωτ. δαχτυλιδιού γείσου + split/τομή).
-import { lineIntersect, roofEaveOuterRing, splitOutlineAtRidges } from './roof-eave-plan-geom';
+// ADR-417 — plan-geometry primitives (SSoT εξωτ. δαχτυλιδιού γείσου + split + offset-γραμμές).
+import { roofEaveOuterRing, splitOutlineAtRidges, type RoofOverhangOffsetLine } from './roof-eave-plan-geom';
+// App-wide SSoT τομής ευθειών (μηδέν roof-private διπλότυπο).
+import { lineIntersectionPoint } from './shared/polygon-axis-projection';
 
 // ─── Public shapes ────────────────────────────────────────────────────────────
 
@@ -246,39 +248,6 @@ function buildEdgeQuads(
 
 // ─── Overhang offset lines + ridge extension (για κορφιάδες πάνω στην προέκταση) ──
 
-/** Offset-γραμμή footprint edge: σημείο `p` + διεύθυνση `d` (παράλληλη ακμής). */
-export interface RoofOverhangOffsetLine {
-  readonly p: Vec2;
-  readonly d: Vec2;
-}
-
-/**
- * Η εξωτερική offset-γραμμή ανά footprint edge (παράλληλη, μετατοπισμένη έξω κατά
- * `overhangMm`) — το όριο της προέκτασης του γείσου. SSoT για consumers εκτός του
- * ίδιου του γείσου (π.χ. επέκταση κορφιάδων/hips πάνω στην προέκταση). Pure.
- */
-export function roofOverhangOffsetLines(
-  verts: readonly Point3D[],
-  edges: readonly RoofEdgeSlope[],
-  s: number,
-): RoofOverhangOffsetLine[] {
-  const n = verts.length;
-  if (n < 3 || edges.length !== n) return [];
-  const sign = windingSign(verts);
-  const out: RoofOverhangOffsetLine[] = [];
-  for (let i = 0; i < n; i++) {
-    const v0 = verts[i];
-    const v1 = verts[(i + 1) % n];
-    const inward = inwardNormal(v0, v1, sign); // outward = -inward
-    const oh = Math.max(0, edges[i].overhangMm) * s;
-    out.push({
-      p: { x: v0.x - inward.x * oh, y: v0.y - inward.y * oh },
-      d: { x: v1.x - v0.x, y: v1.y - v0.y },
-    });
-  }
-  return out;
-}
-
 /** Απόσταση (xy) σημείου `p` από το τμήμα a→b. */
 function distPtSeg(p: Vec2, a: Point3D, b: Point3D): number {
   const dx = b.x - a.x;
@@ -326,7 +295,7 @@ export function extendRidgeToOverhang(
     let bestU = Infinity;
     let bestX: Vec2 | null = null;
     for (const L of offLines) {
-      const X = lineIntersect(projectPointTo2D(end), d, L.p, L.d);
+      const X = lineIntersectionPoint(projectPointTo2D(end), d, L.p, L.d);
       if (!X) continue;
       const u = ((X.x - end.x) * d.x + (X.y - end.y) * d.y) / dd; // κατά μήκος, ΕΞΩ από το end
       if (u <= 1e-6) continue; // μόνο outward (πέρα από την περίμετρο)

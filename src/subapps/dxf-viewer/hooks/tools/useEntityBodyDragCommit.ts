@@ -21,20 +21,14 @@
 
 import { useCallback, useEffect } from 'react';
 import { EventBus } from '../../systems/events';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { buildEntityCloneCommand } from '../../bim/transforms/build-entity-clone-command';
 import { MoveEntityCommand, MoveMultipleEntitiesCommand } from '../../core/commands';
 import type { ICommand, SceneEntity } from '../../core/commands/interfaces';
 import type { Point2D } from '../../rendering/types/Types';
-import type { useLevels } from '../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
 
 export interface UseEntityBodyDragCommitProps {
-  levelManager: LevelManagerLike;
+  levelManager: SceneAdapterLevelManager;
   executeCommand: (cmd: ICommand) => void;
   /** Re-selects the freshly pasted clones (copy) — Revit feedback. */
   selectEntities: (ids: string[]) => void;
@@ -51,17 +45,15 @@ export function useEntityBodyDragCommit({
   executeCommand,
   selectEntities,
 }: UseEntityBodyDragCommitProps): void {
+  const getSceneManager = useSceneManagerAdapter(levelManager);
   const commit = useCallback((payload: BodyDragCommitPayload) => {
     const { entityIds, delta, copy } = payload;
     const floorId = levelManager.currentLevelId;
     if (!floorId || entityIds.length === 0) return;
     if (delta.x === 0 && delta.y === 0) return;
 
-    const sm = createLevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      floorId,
-    );
+    const sm = getSceneManager();
+    if (!sm) return;
 
     if (copy) {
       const scene = levelManager.getLevelScene(floorId);
@@ -80,7 +72,7 @@ export function useEntityBodyDragCommit({
       ? new MoveEntityCommand(entityIds[0], delta, sm, false)
       : new MoveMultipleEntitiesCommand(entityIds, delta, sm, false);
     executeCommand(command);
-  }, [levelManager, executeCommand, selectEntities]);
+  }, [levelManager, executeCommand, selectEntities, getSceneManager]);
 
   useEffect(() => {
     const off = EventBus.on('entity-body-drag:commit', commit);

@@ -17,6 +17,8 @@ import type { AcquiredTrackingPoint } from '../../systems/tracking/TrackingPoint
 import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-resolver';
 import { applyOverlayLineStyle, OVERLAY_LINE_WIDTH_PX, OVERLAY_LINE_COLORS } from './overlay-line-style';
 import { drawOverlayLabel, CURSOR_LABEL_SLOTS } from './overlay-text-style';
+// ADR-090 — SSoT point+vector add (translate), replaces inline `{x:A.x+B.x,y:A.y+B.y}`.
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 /** Acquired-point `+` glyphs (persist across drawPreview cycles). */
 export function paintTrackingMarkers(
@@ -59,7 +61,7 @@ export function paintAlignmentPaths(
     const origin = project(path.origin);
     // Screen-space direction derived from the projector (projection-agnostic, ADR-544): project a
     // 2nd point one world-unit along the path dir and subtract → the projector owns the Y-flip.
-    const ahead = project({ x: path.origin.x + path.dx, y: path.origin.y + path.dy });
+    const ahead = project(translatePoint(path.origin, { x: path.dx, y: path.dy }));
     const sdx = ahead.x - origin.x;
     const sdy = ahead.y - origin.y;
     const len = Math.hypot(sdx, sdy) || 1;

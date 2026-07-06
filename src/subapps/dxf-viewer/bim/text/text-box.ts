@@ -43,6 +43,7 @@ import type { DxfText, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dxf-types
 import type { TextJustification } from '../../text-engine/types/text-ast.types';
 import { offsetForJustification } from '../../text-engine/layout';
 import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { rotateVector } from '../grips/grip-math';
 import { RECT_CORNERS, rectCornerWorld, type RectFrame } from '../grips/rect-frame';
 
@@ -121,7 +122,7 @@ export function resolveTextBox(text: DxfText): RectFrame {
   const rotationDeg = text.rotation ?? 0;
   const rel = rotateVector(localCenterOffset(justificationOf(text), w, h), rotationDeg);
   return {
-    center: { x: text.position.x + rel.x, y: text.position.y + rel.y },
+    center: translatePoint(text.position, rel),
     rotationDeg,
     halfWidth: w / 2,
     halfLength: h / 2,

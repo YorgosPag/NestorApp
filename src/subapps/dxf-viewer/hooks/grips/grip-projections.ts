@@ -22,6 +22,8 @@ import type {
 } from './unified-grip-types';
 import type { HotGripStep } from './wall-hot-grip-fsm';
 import { applyMoveConstraints, applyResizeConstraints } from '../../bim/grips/grip-move-constraints';
+// ADR-090 — SSoT point+vector add (translate), replaces inline `{x:A.x+B.x,y:A.y+B.y}`.
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 // ── ADR-397 Σ3 — pure rotate-angle helpers (typed angle ⇄ world delta) ──
 
@@ -279,7 +281,7 @@ export function buildRotateReferencePreview(
     const alignDir = { x: cursor.x - pivot.x, y: cursor.y - pivot.y };
     return {
       ...base,
-      anchorPos: { x: pivot.x + refDir.x, y: pivot.y + refDir.y },
+      anchorPos: translatePoint(pivot, refDir),
       delta: { x: alignDir.x - refDir.x, y: alignDir.y - refDir.y },
       rotateSweepDeg: rotateSweepDegFromDirs(refDir, alignDir),
       rotateReadoutAnchor: cursor,
@@ -297,7 +299,7 @@ export function buildRotateReferencePreview(
     const alignDir = { x: cursor.x - alignStart.x, y: cursor.y - alignStart.y };
     return {
       ...base,
-      anchorPos: { x: pivot.x + refDir.x, y: pivot.y + refDir.y },
+      anchorPos: translatePoint(pivot, refDir),
       delta: { x: alignDir.x - refDir.x, y: alignDir.y - refDir.y },
       rotateRefLine: { from: refStart, to: refEnd },
       rotateAlignLine: { from: alignStart, to: cursor },

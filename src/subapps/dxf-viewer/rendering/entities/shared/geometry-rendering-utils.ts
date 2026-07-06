@@ -52,6 +52,8 @@ export {
   scalePoint,
   translatePoint,
   translatePoints,
+  translatePoint3D,
+  translatePoints3D,
   addPoint3D,
   offsetPoint,
   calculateMidpoint,

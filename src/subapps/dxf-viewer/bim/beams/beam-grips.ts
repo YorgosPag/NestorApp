@@ -36,6 +36,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint3D } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { GripInfo, BeamGripKind } from '../../hooks/useGripMovement';
 import type { BeamEntity, BeamParams } from '../types/beam-types';
 import { MIN_BEAM_WIDTH_MM, MIN_BEAM_DEPTH_MM } from '../types/beam-types';
@@ -116,7 +117,7 @@ function axisMidpoint2D(params: BeamParams): Point2D {
 }
 
 function translate3D(p: Point3D, delta: Point2D): Point3D {
-  return { x: p.x + delta.x, y: p.y + delta.y, z: p.z ?? 0 };
+  return translatePoint3D(p, delta);
 }
 
 /** Unit axis vector (params.startPoint → params.endPoint). null on degenerate. */
@@ -425,7 +426,7 @@ function moveCurveControl(input: Readonly<BeamGripDragInput>): BeamParams {
   if (!existing) {
     // Seed από axis midpoint + delta (handle πριν το drag stood στο midpoint).
     const mid = axisMidpoint2D(originalParams);
-    const seeded: Point3D = { x: mid.x + delta.x, y: mid.y + delta.y, z: 0 };
+    const seeded: Point3D = translatePoint3D(mid, delta);
     return { ...originalParams, curveControl: seeded };
   }
   return { ...originalParams, curveControl: translate3D(existing, delta) };

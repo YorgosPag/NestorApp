@@ -31,6 +31,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { quantizeToStep } from '../../rendering/entities/shared/geometry-utils';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { immediateSceneScale } from '../../systems/cursor/ImmediateSceneScaleStore';
 import { QKeyTracker } from '../../keyboard/QKeyTracker';
@@ -115,7 +116,7 @@ export function applyGripStepSnap(delta: Point2D): Point2D {
  */
 export function applyPointStepSnap(point: Point2D, anchor: Point2D): Point2D {
   const d = applyGripStepSnap({ x: point.x - anchor.x, y: point.y - anchor.y });
-  return { x: anchor.x + d.x, y: anchor.y + d.y };
+  return translatePoint(anchor, d);
 }
 
 /**

@@ -28,6 +28,7 @@ import {
   type HatchPoint2D,
 } from './polygon-hatch-utils';
 import { polygonBbox, pointInPolygon } from './polygon-utils';
+import { translatePoint } from '../../../rendering/entities/shared/geometry-vector-utils';
 import { lerpPoint } from '../../../rendering/entities/shared/geometry-utils';
 import { degToRad } from '../../../rendering/entities/shared/geometry-angle-utils';
 import type { HatchIslandStyle } from '../../hatch/hatch-properties';
@@ -163,8 +164,8 @@ export function buildHatchLines(
   if (double) segments.push(...buildClippedSet(shifted, spacingMm, angleDeg + 90, islandStyle));
 
   return segments.map((s) => ({
-    start: { x: s.start.x + origin.x, y: s.start.y + origin.y },
-    end: { x: s.end.x + origin.x, y: s.end.y + origin.y },
+    start: translatePoint(s.start, origin),
+    end: translatePoint(s.end, origin),
   }));
 }
 
@@ -313,8 +314,8 @@ export function buildPredefinedHatchLines(
   }
 
   return out.map((s) => ({
-    start: { x: s.start.x + origin.x, y: s.start.y + origin.y },
-    end: { x: s.end.x + origin.x, y: s.end.y + origin.y },
+    start: translatePoint(s.start, origin),
+    end: translatePoint(s.end, origin),
   }));
 }
 

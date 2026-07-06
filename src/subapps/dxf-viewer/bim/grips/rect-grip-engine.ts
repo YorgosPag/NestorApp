@@ -25,6 +25,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { projectToLocalFrame, rotateVector } from './grip-math';
 import { constrainDeltaToDominantAxis } from './ortho-delta';
 import type { RectFrame, RectCorner, RectEdge } from './rect-frame';
@@ -38,7 +39,7 @@ export interface RectResizeLimits {
 /** Translate the centroid by a local-frame shift (rotated into world). */
 function shiftCenter(frame: RectFrame, localShift: Point2D): Point2D {
   const w = rotateVector(localShift, frame.rotationDeg);
-  return { x: frame.center.x + w.x, y: frame.center.y + w.y };
+  return translatePoint(frame.center, w);
 }
 
 /**

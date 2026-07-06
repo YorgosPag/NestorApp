@@ -39,7 +39,7 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import { isWallEntity } from '../../types/entities';
 import { SelectedEntitiesStore } from '../../systems/selection';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
 import { projectPointOnWallAxis } from '../../bim/walls/wall-axis-projection';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
@@ -57,19 +57,13 @@ import { CompositeCommand } from '../../core/commands/CompositeCommand';
 import { EventBus } from '../../systems/events/EventBus';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
-import type { useLevels } from '../../systems/levels';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
 
 export interface UseWallMergeToolProps {
   activeTool: string;
   selectedEntityIds: string[];
-  levelManager: LevelManagerLike;
+  levelManager: SceneAdapterLevelManager;
   executeCommand: (cmd: ICommand) => void;
   /** Current viewport scale factor — converts snap tolerance to world units. */
   transformScale: number;
@@ -120,14 +114,7 @@ export function useWallMergeTool({
 
   // ── Scene helpers (mirror useWallSplitTool) ───────────────────────────────
 
-  const getSceneManager = useCallback(() => {
-    if (!levelManager.currentLevelId) return null;
-    return createLevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      levelManager.currentLevelId,
-    );
-  }, [levelManager]);
+  const getSceneManager = useSceneManagerAdapter(levelManager);
 
   const getScene = useCallback(() => {
     if (!levelManager.currentLevelId) return null;

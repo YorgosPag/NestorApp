@@ -20,6 +20,7 @@
 import * as THREE from 'three';
 import type { Point2D } from '../../rendering/types/Types';
 import { dxfPlanToWorld, worldToScreen } from '../viewport/coordinate-transforms';
+import { addPoint3D } from '../../rendering/entities/shared/geometry-vector-utils';
 
 /** Off-canvas sentinel for points behind the camera (drawn out of view, never visible). */
 export const GRIP_OFFSCREEN: Point2D = { x: -100000, y: -100000 };
@@ -57,7 +58,7 @@ export function addGripWorldOffsets(
 ): GripWorldOffset | null {
   if (!a) return b ?? null;
   if (!b) return a;
-  return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z };
+  return addPoint3D(a, b);
 }
 
 /**

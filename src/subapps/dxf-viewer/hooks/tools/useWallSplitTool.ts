@@ -34,7 +34,7 @@ import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { AnySceneEntity } from '../../types/entities';
 import { isWallEntity } from '../../types/entities';
 import { WallSplitStore } from '../../systems/wall-split/WallSplitStore';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
 import {
   computeSplitOffset,
@@ -46,18 +46,12 @@ import { WallSplitCommand } from '../../core/commands/entity-commands/WallSplitC
 import { CompositeCommand } from '../../core/commands/CompositeCommand';
 import { EventBus } from '../../systems/events/EventBus';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
-import type { useLevels } from '../../systems/levels';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface UseWallSplitToolProps {
   activeTool: string;
-  levelManager: LevelManagerLike;
+  levelManager: SceneAdapterLevelManager;
   executeCommand: (cmd: ICommand) => void;
   onToolChange?: (tool: string) => void;
 }
@@ -170,14 +164,7 @@ export function useWallSplitTool({
 
   // ── Scene manager factory (mirrors useTrimTool pattern) ──────────────────
 
-  const getSceneManager = useCallback((): ISceneManager | null => {
-    if (!levelManager.currentLevelId) return null;
-    return createLevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      levelManager.currentLevelId,
-    );
-  }, [levelManager]);
+  const getSceneManager = useSceneManagerAdapter(levelManager);
 
   // ── Activation / deactivation: manage the status hint + knife reset ───────
 

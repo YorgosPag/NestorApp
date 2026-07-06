@@ -22,12 +22,11 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/PreviewCanvas';
 import { MirrorEntityCommand } from '../../core/commands/entity-commands/MirrorEntityCommand';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { useCadToggles } from '../common/useCadToggles';
 import { orthoSnap } from '../../utils/mirror-math';
-import type { useLevels } from '../../systems/levels';
 
 // ============================================================================
 // TYPES
@@ -40,15 +39,10 @@ export type MirrorPhase =
   | 'awaiting-second-point'
   | 'awaiting-keep-originals';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface UseMirrorToolProps {
   activeTool: string;
   selectedEntityIds: string[];
-  levelManager: LevelManagerLike;
+  levelManager: SceneAdapterLevelManager;
   executeCommand: (cmd: ICommand) => void;
   previewCanvasRef: React.RefObject<PreviewCanvasHandle | null>;
   onToolChange?: (tool: string) => void;
@@ -106,14 +100,7 @@ export function useMirrorTool(props: UseMirrorToolProps): UseMirrorToolReturn {
   const isCollectingInput = isActive && selectedEntityIds.length > 0
     && (phase === 'awaiting-first-point' || phase === 'awaiting-second-point' || phase === 'awaiting-keep-originals');
 
-  const getSceneManager = useCallback(() => {
-    if (!levelManager.currentLevelId) return null;
-    return createLevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      levelManager.currentLevelId,
-    );
-  }, [levelManager]);
+  const getSceneManager = useSceneManagerAdapter(levelManager);
 
   // ── State machine transitions (shared FSM SSoT, ADR-577) ──────────────────
   // Every hook-driven phase change clears the ghost + drops stale axis points.

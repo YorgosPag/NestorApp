@@ -17,6 +17,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../../bim/types/bim-base';
+import { translatePoint3D } from '../../rendering/entities/shared/geometry-vector-utils';
 import type {
   WallCategory,
   WallEntity,
@@ -142,8 +143,8 @@ export function buildDefaultWallParams(
   const offset = alignmentPoint
     ? computeWallAlignmentOffset(startPoint, endPoint, alignmentPoint, thickness, sceneUnits)
     : { x: 0, y: 0 };
-  const start: Point3D = { x: startPoint.x + offset.x, y: startPoint.y + offset.y, z: 0 };
-  const end: Point3D = { x: endPoint.x + offset.x, y: endPoint.y + offset.y, z: 0 };
+  const start: Point3D = translatePoint3D(startPoint, offset);
+  const end: Point3D = translatePoint3D(endPoint, offset);
 
   const base = {
     category,

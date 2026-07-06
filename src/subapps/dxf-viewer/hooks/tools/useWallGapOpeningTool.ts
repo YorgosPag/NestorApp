@@ -43,7 +43,7 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import { isWallEntity } from '../../types/entities';
 import { SelectedEntitiesStore } from '../../systems/selection';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
 import { projectPointOnWallAxis } from '../../bim/walls/wall-axis-projection';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
@@ -131,14 +131,7 @@ export function useWallGapOpeningTool({
 
   // ── Scene helpers (mirror useWallMergeTool) ───────────────────────────────
 
-  const getSceneManager = useCallback(() => {
-    if (!levelManager.currentLevelId) return null;
-    return createLevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      levelManager.currentLevelId,
-    );
-  }, [levelManager]);
+  const getSceneManager = useSceneManagerAdapter(levelManager);
 
   const getScene = useCallback(() => {
     if (!levelManager.currentLevelId) return null;

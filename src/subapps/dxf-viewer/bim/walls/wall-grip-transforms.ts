@@ -46,8 +46,8 @@ type WallMiter = NonNullable<WallParams['startMiter']>;
 
 function shiftMiter(m: WallMiter, delta: Point2D): WallMiter {
   return {
-    outer: { x: m.outer.x + delta.x, y: m.outer.y + delta.y },
-    inner: { x: m.inner.x + delta.x, y: m.inner.y + delta.y },
+    outer: translatePoint(m.outer, delta),
+    inner: translatePoint(m.inner, delta),
   };
 }
 

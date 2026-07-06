@@ -19,7 +19,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import { ExtendEntityCommand } from '../../core/commands/entity-commands/ExtendEntityCommand';
 import { TrimEntityCommand } from '../../core/commands/entity-commands/TrimEntityCommand';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { ExtendToolStore } from '../../systems/extend/ExtendToolStore';
 import { ToolCursorStore } from '../../systems/cursor/ToolCursorStore';
@@ -29,19 +29,13 @@ import { trimEntity } from '../../systems/trim/trim-entity-cutter';
 import { castExtendIntersection, isExtendable } from '../../systems/extend/extend-intersection-caster';
 import type { ExtendOperation } from '../../systems/extend/extend-types';
 import type { Entity } from '../../types/entities';
-import type { useLevels } from '../../systems/levels';
 import { generateEntityId } from '@/services/enterprise-id.service';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface UseExtendToolProps {
   activeTool: string;
-  levelManager: LevelManagerLike;
+  levelManager: SceneAdapterLevelManager;
   executeCommand: (cmd: ICommand) => void;
   hitTestEntity: (worldPoint: Point2D) => string | null;
   onToolChange?: (tool: string) => void;
@@ -105,14 +99,7 @@ export function useExtendTool(props: UseExtendToolProps): UseExtendToolReturn {
 
   // ── Scene helpers ────────────────────────────────────────────────────────
 
-  const getSceneManager = useCallback(() => {
-    if (!levelManager.currentLevelId) return null;
-    return createLevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      levelManager.currentLevelId,
-    );
-  }, [levelManager]);
+  const getSceneManager = useSceneManagerAdapter(levelManager);
 
   // Show ephemeral "no intersection" status bar message (G8)
   const showNoIntersectionHint = useCallback(() => {

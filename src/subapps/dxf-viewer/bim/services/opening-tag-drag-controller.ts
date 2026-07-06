@@ -26,6 +26,7 @@ import {
   computeTagCenter,
   OPENING_TAG_MIN_ZOOM,
 } from '../renderers/OpeningTagRenderer';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 // ────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -94,7 +95,7 @@ export function getOffsetOrZero(opening: OpeningEntity): TagDragOffset {
 export function tagWorldCenter(opening: OpeningEntity): Point2D {
   const base = computeTagCenter(opening);
   const off = getOffsetOrZero(opening);
-  return { x: base.x + off.dx, y: base.y + off.dy };
+  return translatePoint(base, { x: off.dx, y: off.dy });
 }
 
 /**

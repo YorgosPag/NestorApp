@@ -33,6 +33,7 @@ import type { WallParams } from '../../bim/types/wall-types';
 import type { BeamParams } from '../../bim/types/beam-types';
 import { applyWallGripDrag } from '../../bim/walls/wall-grips';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { GizmoEndpoint } from './gizmo-types';
 
 /**
@@ -87,7 +88,7 @@ export function computeWallEndpointMove(
     originalParams: params,
     delta: deltaCanvas,
     // `currentPos` is unused by moveStart/moveEnd; pass the new endpoint for type-completeness.
-    currentPos: { x: anchor.x + deltaCanvas.x, y: anchor.y + deltaCanvas.y },
+    currentPos: translatePoint(anchor, deltaCanvas),
   });
 }
 

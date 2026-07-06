@@ -265,6 +265,30 @@ export function addPoint3D<T extends Point2D & { z?: number }>(
 }
 
 /**
+ * Translate a point by a 2D plan delta and materialise a Firestore-safe {@link Point3D}
+ * whose `z` is ALWAYS a concrete number (`p.z ?? 0`) — never `undefined`.
+ *
+ * This is the plan-move → persisted-3D primitive. Distinct from {@link translatePoint}
+ * (which is z-PRESERVING: it keeps `p.z` verbatim, so an absent/optional z stays absent —
+ * fine for pure geometry but a THROW when written to Firestore, which rejects explicit
+ * `undefined`). Every grip/move path that builds a persisted Point3D param (foundation
+ * start/end, beam anchors, wall endpoints, centred-box position…) needs the `?? 0` floor,
+ * and it was hand-copied as `{ x: p.x+d.x, y: p.y+d.y, z: p.z ?? 0 }` across ~10 sites.
+ * `delta` only ever contributes x/y (a 2D plan slide leaves elevation untouched).
+ */
+export function translatePoint3D(p: Point2D & { z?: number }, delta: Point2D): Point2D & { z: number } {
+  return { x: p.x + delta.x, y: p.y + delta.y, z: p.z ?? 0 };
+}
+
+/** Array sibling of {@link translatePoint3D}. */
+export function translatePoints3D(
+  pts: readonly (Point2D & { z?: number })[],
+  delta: Point2D,
+): (Point2D & { z: number })[] {
+  return pts.map((p) => translatePoint3D(p, delta));
+}
+
+/**
  * Offset a point by a direction vector scaled by distance.
  * Equivalent to: point + direction * distance.
  */

@@ -15,6 +15,7 @@ import type { GripInfo } from '../../hooks/useGripMovement';
 import { ANCHOR_OFFSETS } from '../types/column-types';
 import { columnFootprintDims, polygonBboxMm } from './column-footprint-dims';
 import { mmScaleFor } from '../../utils/scene-units';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 // ADR-397 §D3 — local-frame rotation primitives are shared SSoT (grip-math →
 // canonical rotatePoint, ADR-188). This module keeps the column-named exports as
 // thin wrappers so callers (column-grips / column-variant-grips) stay unchanged.
@@ -180,7 +181,7 @@ export function columnRotationHandleMidwayWorld(
   const clearanceMm = Number.isFinite(clearanceWorld) ? clearanceWorld / scale : Infinity;
   const offMm = rotationHandleMidwayOffset(dimY, clearanceMm);
   const off = rotate({ x: 0, y: offMm * scale }, rotationDeg);
-  return { x: centerWorld.x + off.x, y: centerWorld.y + off.y };
+  return translatePoint(centerWorld, off);
 }
 
 /**

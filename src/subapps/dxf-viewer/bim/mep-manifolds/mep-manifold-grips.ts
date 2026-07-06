@@ -29,6 +29,7 @@ import {
 import { clampOutletCount } from './mep-manifold-geometry';
 import { mmScaleFor } from '../../utils/scene-units';
 import { rotateVector } from '../grips/grip-math';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 // ─── Role ↔ manifold-kind maps ────────────────────────────────────────────────
 
@@ -69,7 +70,7 @@ function outletActionGripWorld(params: MepManifoldParams, localDyMm: number): Po
   const s = mmScaleFor(params);
   const local = { x: (params.width / 2 + OUTLET_ACTION_GRIP_OFFSET_MM) * s, y: localDyMm * s };
   const rot = rotateVector(local, params.rotation);
-  return { x: params.position.x + rot.x, y: params.position.y + rot.y };
+  return translatePoint(params.position, rot);
 }
 
 // ─── Grip emission ───────────────────────────────────────────────────────────

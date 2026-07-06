@@ -27,6 +27,7 @@ import {
   type WallMoveDimReference,
 } from '../../bim/walls/wall-move-dim-references';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { dxfPlanToWorld, getPixelWorldSize } from '../viewport/coordinate-transforms';
 import { createDimension3DRenderer } from '../dimensions/Dimension3DRenderer';
 import type { LayoutOptions } from '../dimensions/dim3d-line-geometry';
@@ -83,8 +84,8 @@ export class TempWallMoveDimOverlay {
     const dScene = { x: translation.x * k, y: -translation.z * k };
     const moving = {
       id: wall.id,
-      start: { x: wall.params.start.x + dScene.x, y: wall.params.start.y + dScene.y },
-      end: { x: wall.params.end.x + dScene.x, y: wall.params.end.y + dScene.y },
+      start: translatePoint(wall.params.start, dScene),
+      end: translatePoint(wall.params.end, dScene),
       thicknessMm: wall.params.thickness,
       sceneUnits: units,
     };

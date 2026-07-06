@@ -24,6 +24,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 /** A linear reference (wall face / axis / grid line) the snap projected onto, mm. */
 export interface SnapAlignmentRef {
@@ -121,7 +122,7 @@ export function makeMoveSnapFn(
       ref?: SnapAlignmentRef; description?: string; type?: string;
     } | null = null;
     for (const offset of offsets) {
-      const probe = { x: anchorMm.x + offset.x, y: anchorMm.y + offset.y };
+      const probe = translatePoint(anchorMm, offset);
       const r = engine.findSnapPoint(probe, excludeEntityId);
       if (!r.found || !r.snapPoint) continue;
       const d = sqDist(probe, r.snapPoint.point);

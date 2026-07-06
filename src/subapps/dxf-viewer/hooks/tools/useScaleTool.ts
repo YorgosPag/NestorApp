@@ -21,26 +21,20 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/PreviewCanvas';
 import { ScaleEntityCommand } from '../../core/commands/entity-commands/ScaleEntityCommand';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { ScaleToolStore } from '../../systems/scale/ScaleToolStore';
 import { computeUniformRef } from '../../systems/scale/scale-reference-calc';
-import type { useLevels } from '../../systems/levels';
 import type { ScaleSubPhase } from '../../systems/scale/ScaleToolStore';
 import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface UseScaleToolProps {
   activeTool: string;
   selectedEntityIds: string[];
-  levelManager: LevelManagerLike;
+  levelManager: SceneAdapterLevelManager;
   executeCommand: (cmd: ICommand) => void;
   previewCanvasRef: React.RefObject<PreviewCanvasHandle | null>;
   onToolChange?: (tool: string) => void;
@@ -59,7 +53,7 @@ export interface UseScaleToolReturn {
 
 function filterLockedEntities(
   ids: string[],
-  getLevelScene: LevelManagerLike['getLevelScene'],
+  getLevelScene: SceneAdapterLevelManager['getLevelScene'],
   levelId: string | null,
 ): { workable: string[]; skipped: number } {
   if (!levelId) return { workable: ids, skipped: 0 };
@@ -99,14 +93,7 @@ export function useScaleTool(props: UseScaleToolProps): UseScaleToolReturn {
   const state = ScaleToolStore.getState();
   const isCollectingInput = isActive && (state.phase === 'base_point' || state.phase === 'scale_input');
 
-  const getSceneManager = useCallback(() => {
-    if (!levelManager.currentLevelId) return null;
-    return createLevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      levelManager.currentLevelId,
-    );
-  }, [levelManager]);
+  const getSceneManager = useSceneManagerAdapter(levelManager);
 
   // ── State machine transitions ─────────────────────────────────────────────
 

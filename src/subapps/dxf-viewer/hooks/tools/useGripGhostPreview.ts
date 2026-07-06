@@ -82,6 +82,8 @@ import { resolveNeighborAxisAngle } from '../../bim/walls/wall-rotation-neighbor
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
+// ADR-090 — SSoT point+vector add (translate), replaces inline `{x:A.x+B.x,y:A.y+B.y}`.
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 // File-size SRP split — pure draw helpers (dashed leaders / readout arc / gradient
 // marker / ADR-543 co-move partner ghosts) live in a sibling module.
 import {
@@ -313,7 +315,7 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       (dp.delta.x !== 0 || dp.delta.y !== 0)
     ) {
       const fromW = dp.rotatePivot ?? dp.anchorPos;
-      const toW = { x: dp.anchorPos.x + dp.delta.x, y: dp.anchorPos.y + dp.delta.y };
+      const toW = translatePoint(dp.anchorPos, dp.delta);
       drawDashedSegment(ctx, fromW, toW, t, vp);
     }
 
@@ -334,7 +336,7 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // άκρο (ΙΔΙΟ `paintPolarTrackingLine` SSoT με σχεδίαση/περιστροφή/κολώνα — μηδέν νέο paint). Γραμμή
     // + ενωμένο σύστημα (polyline) parity: μόλις το άκρο κουμπώσει σε 0°/45°/90°… φαίνεται η ένδειξη.
     if (endpointPolar && dp.anchorPos && endpointPolar.polar.snappedAngle !== null) {
-      const lockedPt = { x: dp.anchorPos.x + endpointPolar.delta.x, y: dp.anchorPos.y + endpointPolar.delta.y };
+      const lockedPt = translatePoint(dp.anchorPos, endpointPolar.delta);
       paintPolarTrackingLine(
         ctx, endpointPolar.fixed, endpointPolar.polar.snappedAngle,
         formatMoveAngle(endpointPolar.polar.snappedAngle), lockedPt, t, vp,

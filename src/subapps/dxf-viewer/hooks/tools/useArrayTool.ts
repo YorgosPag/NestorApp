@@ -27,24 +27,18 @@ import { useCallback, useEffect, useRef } from 'react';
 import i18next from 'i18next';
 import type { ICommand } from '../../core/commands/interfaces';
 import { CreateArrayCommand } from '../../core/commands/entity-commands/CreateArrayCommand';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { computeSourceGroupBbox, defaultRectSpacing } from '../../systems/array/array-bbox';
 import { validateArrayParams } from '../../systems/array/array-validation';
 import type { RectParams } from '../../systems/array/types';
 import type { Entity, EntityType } from '../../types/entities';
 import { isArrayEntity } from '../../types/entities';
-import type { useLevels } from '../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
 
 export interface UseArrayToolProps {
   activeTool: string;
   selectedEntityIds: string[];
-  levelManager: LevelManagerLike;
+  levelManager: SceneAdapterLevelManager;
   executeCommand: (cmd: ICommand) => void;
   setSelectedEntityIds: (ids: string[]) => void;
   onToolChange?: (tool: string) => void;
@@ -71,14 +65,7 @@ export function useArrayTool(props: UseArrayToolProps): UseArrayToolReturn {
   const wasActiveRef = useRef(false);
   const isActive = activeTool === 'array-rect';
 
-  const getSceneManager = useCallback(() => {
-    if (!levelManager.currentLevelId) return null;
-    return createLevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      levelManager.currentLevelId,
-    );
-  }, [levelManager]);
+  const getSceneManager = useSceneManagerAdapter(levelManager);
 
   const showHint = useCallback((key: string) => {
     toolHintOverrideStore.setOverride(i18next.t(`tool-hints:${key}`));

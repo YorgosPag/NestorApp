@@ -37,6 +37,8 @@ import { GripHoverMenuStore, type GripMenuOption } from '../../systems/grip/Grip
 import { getClientPosition } from '../../systems/cursor/ImmediatePositionStore';
 import { resolveMenuActions } from '../../systems/grip/grip-menu-resolver';
 import { bindMenuAction, type GripMenuActionContext } from '../../systems/grip/grip-menu-actions';
+// ADR-090 — SSoT point+vector add (translate), replaces inline `{x:A.x+B.x,y:A.y+B.y}`.
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 /** Hold-time before the menu pops, in ms. Matches Windows ToolTip default. */
 const MENU_HOLD_MS = DXF_TIMING.gesture.MENU_HOLD; // ADR-516
@@ -150,7 +152,7 @@ export function useGripHoverMenuController(params: UseGripHoverMenuControllerPar
 
       GripHoverMenuStore.show({
         grip: hoveredGrip,
-        screenPos: { x: startClientPos.x + MENU_OFFSET_PX.x, y: startClientPos.y + MENU_OFFSET_PX.y },
+        screenPos: translatePoint(startClientPos, MENU_OFFSET_PX),
         options,
       });
     }, MENU_HOLD_MS);

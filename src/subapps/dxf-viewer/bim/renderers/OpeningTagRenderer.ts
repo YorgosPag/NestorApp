@@ -39,6 +39,7 @@ import {
   OPENING_TAG_STYLE_DEFAULTS,
   type ResolvedOpeningTagStyle,
 } from '../services/opening-tag-style-service';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 /** Below this zoom scale, tags are hidden to reduce clutter. Matches minScale (0.1) from
  * transform-config so tags appear at every usable zoom level. */
@@ -103,7 +104,7 @@ export class OpeningTagRenderer {
 
     // User drag delta in world coords → screen delta from centroid.
     const offset = args.opening.params.tagOffset ?? { dx: 0, dy: 0 };
-    const draggedWorld = { x: anchorWorld.x + offset.dx, y: anchorWorld.y + offset.dy };
+    const draggedWorld = translatePoint(anchorWorld, { x: offset.dx, y: offset.dy });
     const draggedScreen = CoordinateTransforms.worldToScreen(draggedWorld, args.transform, args.viewport);
 
     const tagScreen: Point2D = {

@@ -32,13 +32,12 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import i18next from 'i18next';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
 import { buildEntityCloneCommand } from '../../bim/transforms/build-entity-clone-command';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand, SceneEntity } from '../../core/commands/interfaces';
-import type { useLevels } from '../../systems/levels';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -48,15 +47,10 @@ export type CopyPhase =
   | 'awaiting-base-point'
   | 'awaiting-target-point';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface UseCopyToolProps {
   activeTool: string;
   selectedEntityIds: string[];
-  levelManager: LevelManagerLike;
+  levelManager: SceneAdapterLevelManager;
   executeCommand: (cmd: ICommand) => void;
   onToolChange?: (tool: string) => void;
 }
@@ -91,14 +85,7 @@ export function useCopyTool({
     hasAnySelected &&
     (phase === 'awaiting-base-point' || phase === 'awaiting-target-point');
 
-  const getSceneManager = useCallback(() => {
-    if (!levelManager.currentLevelId) return null;
-    return createLevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      levelManager.currentLevelId,
-    );
-  }, [levelManager]);
+  const getSceneManager = useSceneManagerAdapter(levelManager);
 
   // ── State machine: activate / react to selection (shared FSM SSoT, ADR-577) ─
   // Copy uses the default activate branch (has-selection ? base : entity); the

@@ -17,6 +17,8 @@
 
 import type { Point2D } from '../../../rendering/types/Types';
 import type { DimPrimitive } from './detail-sheet-types';
+// SSoT sweep — canonical 2D point+vector translate (ADR-090).
+import { translatePoint } from '../../../rendering/entities/shared/geometry-vector-utils';
 
 /** Gap (mm) between the measured object and the start of the extension line. */
 const EXT_GAP_MM = 1;
@@ -44,7 +46,7 @@ export interface ResolvedDimGeometry {
 }
 
 function sub(a: Point2D, b: Point2D): Point2D { return { x: a.x - b.x, y: a.y - b.y }; }
-function add(a: Point2D, b: Point2D): Point2D { return { x: a.x + b.x, y: a.y + b.y }; }
+function add(a: Point2D, b: Point2D): Point2D { return translatePoint(a, b); }
 function scale(a: Point2D, k: number): Point2D { return { x: a.x * k, y: a.y * k }; }
 function mid(a: Point2D, b: Point2D): Point2D { return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; }
 

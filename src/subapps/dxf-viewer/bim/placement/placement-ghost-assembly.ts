@@ -66,6 +66,7 @@ import {
 import type { Entity } from '../../types/entities';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 /**
  * Entity-specific builder: χτίζει την ΤΕΛΙΚΗ BIM οντότητα στη θέση/λαβή/γωνία (μέσω των ΙΔΙΩΝ builders
@@ -159,7 +160,7 @@ export function assemblePlacementGhost(args: PlacementGhostArgs): ExtendedSceneE
       const shift = resolveGapStepShift(ghostFootprint, targets, stepScene, NEIGHBOR_DIM_MAX_CLEARANCE_PX * wpp, getGapPlacementMoveDir());
       setGapPlacementShift(shift ?? { x: 0, y: 0 });
       if (shift && (shift.x !== 0 || shift.y !== 0)) {
-        const shifted = buildEntity({ x: position.x + shift.x, y: position.y + shift.y }, anchor, rotation, faceSnap?.sizing ?? null);
+        const shifted = buildEntity(translatePoint(position, shift), anchor, rotation, faceSnap?.sizing ?? null);
         if (shifted) {
           entity = shifted;
           ghostFootprint = resolveEntityFootprintForDims(shifted as unknown as Entity) ?? ghostFootprint;

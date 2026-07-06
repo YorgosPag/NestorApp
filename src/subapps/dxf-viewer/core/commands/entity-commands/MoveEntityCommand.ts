@@ -31,6 +31,8 @@ import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '..
 import type { Point3D } from '../../../bim/types/bim-base';
 import { calculateMovedGeometry } from './move-entity-geometry';
 import { SnapshotTransformCommand } from './SnapshotTransformCommand';
+// SSoT sweep — canonical 3D component-wise sum (ADR-090).
+import { addPoint3D } from '../../../rendering/entities/shared/geometry-vector-utils';
 
 /**
  * Sum two move deltas (merge of consecutive drag samples). `z` is kept only when
@@ -38,10 +40,10 @@ import { SnapshotTransformCommand } from './SnapshotTransformCommand';
  * serialises a spurious `z: 0` (ADR-049 Phase 2).
  */
 function mergeMoveDelta(a: Point3D, b: Point3D): Point3D {
-  const z = (a.z ?? 0) + (b.z ?? 0);
-  return z !== 0
-    ? { x: a.x + b.x, y: a.y + b.y, z }
-    : { x: a.x + b.x, y: a.y + b.y };
+  // SSoT sweep — sum via addPoint3D (z: (a.z??0)+(b.z??0)), then strip a zero `z`
+  // so a pure-plan merge stays 2D (Firestore never sees a spurious `z: 0`).
+  const summed = addPoint3D(a, b);
+  return summed.z !== 0 ? summed : { x: summed.x, y: summed.y };
 }
 
 /**

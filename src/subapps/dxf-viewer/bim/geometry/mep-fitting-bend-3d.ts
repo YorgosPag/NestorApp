@@ -27,6 +27,7 @@
  */
 
 import type { Point3D } from '../types/bim-base';
+import { addPoint3D } from '../../rendering/entities/shared/geometry-vector-utils';
 
 /** Below/above this angle from straight (rad) the legs need no arc. */
 const STRAIGHT_EPSILON_RAD = 0.05;
@@ -38,7 +39,7 @@ interface V3 {
 }
 
 const v3 = (p: { x: number; y: number; z?: number }): V3 => ({ x: p.x, y: p.y, z: p.z ?? 0 });
-const add = (a: V3, b: V3): V3 => ({ x: a.x + b.x, y: a.y + b.y, z: a.z + b.z });
+const add = (a: V3, b: V3): V3 => addPoint3D(a, b);
 const sub = (a: V3, b: V3): V3 => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z });
 const scale = (a: V3, k: number): V3 => ({ x: a.x * k, y: a.y * k, z: a.z * k });
 const dot = (a: V3, b: V3): number => a.x * b.x + a.y * b.y + a.z * b.z;

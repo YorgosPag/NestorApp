@@ -19,7 +19,7 @@ import { generateEntityId } from '@/services/enterprise-id.service';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import { TrimEntityCommand } from '../../core/commands/entity-commands/TrimEntityCommand';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { TrimToolStore } from '../../systems/trim/TrimToolStore';
 import { ToolCursorStore } from '../../systems/cursor/ToolCursorStore';
@@ -30,18 +30,12 @@ import { computeIntersectionPoints } from '../../systems/trim/trim-intersection-
 import { trimEntity } from '../../systems/trim/trim-entity-cutter';
 import type { TrimOperation } from '../../systems/trim/trim-types';
 import type { Entity } from '../../types/entities';
-import type { useLevels } from '../../systems/levels';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface UseTrimToolProps {
   activeTool: string;
-  levelManager: LevelManagerLike;
+  levelManager: SceneAdapterLevelManager;
   executeCommand: (cmd: ICommand) => void;
   /** Returns the entity ID hit by `worldPoint` within tolerance (snap-only path). */
   hitTestEntity: (worldPoint: Point2D) => string | null;
@@ -105,14 +99,7 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
 
   // ── Scene + edge helpers ─────────────────────────────────────────────────
 
-  const getSceneManager = useCallback(() => {
-    if (!levelManager.currentLevelId) return null;
-    return createLevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      levelManager.currentLevelId,
-    );
-  }, [levelManager]);
+  const getSceneManager = useSceneManagerAdapter(levelManager);
 
   const performTrimPick = useCallback(
     (worldPoint: Point2D, shiftKey: boolean): void => {

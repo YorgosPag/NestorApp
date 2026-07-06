@@ -11,7 +11,7 @@ import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
-import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { calculateDistance, translatePoint } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-378: SSoT snap-visibility predicate (imported DXF entities omit `visible`)
 import { isEntityVisibleForSnap } from '../shared/snap-visibility';
 import { findEntityBasedSnapCandidates } from './shared/snap-engine-utils';
@@ -165,7 +165,7 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
       // Foot of perpendicular on infinite line — always valid (no clamping)
       const base = entity.basePoint;
       const dir = entity.direction;
-      const foot = getNearestPointOnLine(cursorPoint, base, { x: base.x + dir.x, y: base.y + dir.y }, false);
+      const foot = getNearestPointOnLine(cursorPoint, base, translatePoint(base, dir), false);
       if (calculateDistance(cursorPoint, foot) <= maxDistance) {
         perpendicularPoints.push({ point: foot, type: 'XLine' });
       }

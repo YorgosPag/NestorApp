@@ -41,7 +41,7 @@ import type {
 } from '../types/foundation-types';
 import { ANCHOR_OFFSETS, MIN_FOUNDATION_DIMENSION_MM } from '../types/foundation-types';
 import { rotatePoint } from '../../utils/rotation-math';
-import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
+import { translatePoint, translatePoint3D } from '../../rendering/entities/shared/geometry-vector-utils';
 import {
   sweptAngleDegAboutPivot,
   farEdgeSign,
@@ -338,26 +338,14 @@ function moveCenter(input: Readonly<FoundationGripDragInput>): FoundationParams 
   if (originalParams.kind === 'pad') {
     return {
       ...originalParams,
-      position: {
-        x: originalParams.position.x + delta.x,
-        y: originalParams.position.y + delta.y,
-        z: originalParams.position.z ?? 0,
-      },
+      position: translatePoint3D(originalParams.position, delta),
     };
   }
   // strip / tie-beam: translate both axis endpoints (Slice 2 will emit grips).
   return {
     ...originalParams,
-    start: {
-      x: originalParams.start.x + delta.x,
-      y: originalParams.start.y + delta.y,
-      z: originalParams.start.z ?? 0,
-    },
-    end: {
-      x: originalParams.end.x + delta.x,
-      y: originalParams.end.y + delta.y,
-      z: originalParams.end.z ?? 0,
-    },
+    start: translatePoint3D(originalParams.start, delta),
+    end: translatePoint3D(originalParams.end, delta),
   };
 }
 
@@ -403,7 +391,7 @@ function rotateAroundPivot(
 function moveLineStart(line: LineFoundationParams, delta: Point2D): LineFoundationParams {
   return {
     ...line,
-    start: { x: line.start.x + delta.x, y: line.start.y + delta.y, z: line.start.z ?? 0 },
+    start: translatePoint3D(line.start, delta),
   };
 }
 
@@ -411,7 +399,7 @@ function moveLineStart(line: LineFoundationParams, delta: Point2D): LineFoundati
 function moveLineEnd(line: LineFoundationParams, delta: Point2D): LineFoundationParams {
   return {
     ...line,
-    end: { x: line.end.x + delta.x, y: line.end.y + delta.y, z: line.end.z ?? 0 },
+    end: translatePoint3D(line.end, delta),
   };
 }
 

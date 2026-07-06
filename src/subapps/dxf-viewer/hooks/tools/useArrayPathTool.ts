@@ -24,24 +24,18 @@ import { useCallback, useEffect, useRef } from 'react';
 import i18next from 'i18next';
 import type { ICommand } from '../../core/commands/interfaces';
 import { CreateArrayCommand } from '../../core/commands/entity-commands/CreateArrayCommand';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { PathParams } from '../../systems/array/types';
 import type { Entity, EntityType } from '../../types/entities';
 import { isArrayEntity } from '../../types/entities';
 import { getHoveredEntity } from '../../systems/hover/HoverStore';
 import { PATH_ENTITY_TYPES } from '../../systems/array/path-pick-controller';
-import type { useLevels } from '../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
 
 export interface UseArrayPathToolProps {
   activeTool: string;
   selectedEntityIds: string[];
-  levelManager: LevelManagerLike;
+  levelManager: SceneAdapterLevelManager;
   executeCommand: (cmd: ICommand) => void;
   setSelectedEntityIds: (ids: string[]) => void;
   onToolChange?: (tool: string) => void;
@@ -59,6 +53,7 @@ const DEFAULT_METHOD: PathParams['method'] = 'divide';
 export function useArrayPathTool(props: UseArrayPathToolProps): UseArrayPathToolReturn {
   const { activeTool, selectedEntityIds, levelManager, executeCommand, setSelectedEntityIds, onToolChange } = props;
 
+  const getSceneManager = useSceneManagerAdapter(levelManager);
   const wasActiveRef = useRef(false);
   const pendingSourceIdsRef = useRef<string[]>([]);
   const awaitingPathRef = useRef(false);
@@ -162,11 +157,8 @@ export function useArrayPathTool(props: UseArrayPathToolProps): UseArrayPathTool
       pathEntityId: hoveredId,
     };
 
-    const sm = createLevelSceneManagerAdapter(
-      levelManager.getLevelScene,
-      levelManager.setLevelScene,
-      levelId,
-    );
+    const sm = getSceneManager();
+    if (!sm) return;
 
     const cmd = new CreateArrayCommand(sourceIds, 'path', params, sm, hoveredId);
     executeCommand(cmd);
@@ -175,7 +167,7 @@ export function useArrayPathTool(props: UseArrayPathToolProps): UseArrayPathTool
     if (newArrayId) setSelectedEntityIds([newArrayId]);
 
     exitToSelect();
-  }, [isActive, levelManager, executeCommand, setSelectedEntityIds, exitToSelect, showHint]);
+  }, [isActive, levelManager, executeCommand, setSelectedEntityIds, exitToSelect, showHint, getSceneManager]);
 
   const handleArrayPathEscape = useCallback((): void => {
     if (!isActive) return;
