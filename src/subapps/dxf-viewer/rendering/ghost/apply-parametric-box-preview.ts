@@ -18,6 +18,8 @@
  */
 
 import type { Point2D } from '../types/Types';
+// SSoT — canonical point translation (ADR-577 consolidation).
+import { translatePoint } from '../entities/shared/geometry-vector-utils';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { computeBeamGeometry } from '../../bim/geometry/beam-geometry';
@@ -69,7 +71,7 @@ export function applyParametricBoxPreview(
   // had ZERO live preview (commit worked on release only) → "δεν συμπεριφέρεται σωστά".
   if (columnGripKind && anchorPos && entity.type === 'column') {
     const col = entity as unknown as ColumnEntity;
-    const currentPos: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
+    const currentPos: Point2D = translatePoint(anchorPos, delta);
     const newParams = applyColumnGripDrag(columnGripKind, { originalParams: col.params, delta, currentPos, ...(rotatePivot ? { pivot: rotatePivot } : {}) });
     if (newParams === col.params) return entity;
     const newGeometry = computeColumnGeometry(newParams);
@@ -82,7 +84,7 @@ export function applyParametricBoxPreview(
   // (foundation-rotation 6-click) orbits the picked centre.
   if (foundationGripKind && anchorPos && entity.type === 'foundation') {
     const foundation = entity as unknown as FoundationEntity;
-    const currentPos: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
+    const currentPos: Point2D = translatePoint(anchorPos, delta);
     const newParams = applyFoundationGripDrag(foundationGripKind, { originalParams: foundation.params, delta, currentPos, ...(rotatePivot ? { pivot: rotatePivot } : {}) });
     if (newParams === foundation.params) return entity;
     const newGeometry = computeFoundationGeometry(newParams);
@@ -97,7 +99,7 @@ export function applyParametricBoxPreview(
   if (beamGripKind && entity.type === 'beam') {
     const beam = entity as unknown as BeamEntity;
     const currentPos: Point2D = anchorPos
-      ? { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y }
+      ? translatePoint(anchorPos, delta)
       : { x: delta.x, y: delta.y };
     const newParams = applyBeamGripDrag(beamGripKind, {
       originalParams: beam.params,
@@ -120,7 +122,7 @@ export function applyParametricBoxPreview(
     // hot-grip) orbits the ghost around the picked centre; `currentPos` lets the
     // pivot-rotate measure the swept angle. Move/corner ignore both (delta-driven).
     const currentPos: Point2D = anchorPos
-      ? { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y }
+      ? translatePoint(anchorPos, delta)
       : { x: delta.x, y: delta.y };
     const newParams = applyMepFixtureGripDrag(mepFixtureGripKind, {
       originalParams: fixture.params,
@@ -141,7 +143,7 @@ export function applyParametricBoxPreview(
   if (electricalPanelGripKind && entity.type === 'electrical-panel') {
     const panel = entity as unknown as ElectricalPanelEntity;
     const currentPos: Point2D = anchorPos
-      ? { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y }
+      ? translatePoint(anchorPos, delta)
       : { x: delta.x, y: delta.y };
     const newParams = applyElectricalPanelGripDrag(electricalPanelGripKind, {
       originalParams: panel.params,
@@ -162,7 +164,7 @@ export function applyParametricBoxPreview(
   if (mepManifoldGripKind && entity.type === 'mep-manifold') {
     const manifold = entity as unknown as MepManifoldEntity;
     const currentPos: Point2D = anchorPos
-      ? { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y }
+      ? translatePoint(anchorPos, delta)
       : { x: delta.x, y: delta.y };
     const newParams = applyMepManifoldGripDrag(mepManifoldGripKind, {
       originalParams: manifold.params,
@@ -183,7 +185,7 @@ export function applyParametricBoxPreview(
   if (mepSegmentGripKind && entity.type === 'mep-segment') {
     const seg = entity as unknown as MepSegmentEntity;
     const currentPos: Point2D = anchorPos
-      ? { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y }
+      ? translatePoint(anchorPos, delta)
       : { x: delta.x, y: delta.y };
     const newParams = applyMepSegmentGripDrag(mepSegmentGripKind, {
       originalParams: seg.params,
@@ -203,7 +205,7 @@ export function applyParametricBoxPreview(
   if (furnitureGripKind && entity.type === 'furniture') {
     const furniture = entity as unknown as FurnitureEntity;
     const currentPos: Point2D = anchorPos
-      ? { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y }
+      ? translatePoint(anchorPos, delta)
       : { x: delta.x, y: delta.y };
     const newParams = applyFurnitureGripDrag(furnitureGripKind, {
       originalParams: furniture.params,

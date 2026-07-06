@@ -11,6 +11,7 @@
  * import.
  */
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { UnifiedGripInfo } from './unified-grip-types';
 import type { DxfCommitDeps } from './unified-grip-types';
 import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
@@ -68,7 +69,7 @@ export function commitMepFixtureGripDrag(
   const useRotatePivot =
     grip.mepFixtureGripKind === 'mep-fixture-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const currentPos: Point2D = translatePoint(anchor, delta);
   const newParams = applyMepFixtureGripDrag(grip.mepFixtureGripKind, {
     originalParams,
     delta,
@@ -132,7 +133,7 @@ export function commitElectricalPanelGripDrag(
   const useRotatePivot =
     grip.electricalPanelGripKind === 'electrical-panel-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const currentPos: Point2D = translatePoint(anchor, delta);
   const newParams = applyElectricalPanelGripDrag(grip.electricalPanelGripKind, {
     originalParams,
     delta,
@@ -185,7 +186,7 @@ export function commitMepManifoldGripDrag(
   const useRotatePivot =
     grip.mepManifoldGripKind === 'mep-manifold-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const currentPos: Point2D = translatePoint(anchor, delta);
   const newParams = applyMepManifoldGripDrag(grip.mepManifoldGripKind, {
     originalParams,
     delta,
@@ -293,7 +294,7 @@ export function commitFurnitureGripDrag(
   const useRotatePivot =
     grip.furnitureGripKind === 'furniture-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const currentPos: Point2D = translatePoint(anchor, delta);
   const newParams = applyFurnitureGripDrag(grip.furnitureGripKind, {
     originalParams,
     delta,
@@ -340,7 +341,7 @@ export function commitFloorplanSymbolGripDrag(
   const useRotatePivot =
     grip.floorplanSymbolGripKind === 'floorplan-symbol-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const currentPos: Point2D = translatePoint(anchor, delta);
   const newParams = applyFloorplanSymbolGripDrag(grip.floorplanSymbolGripKind, {
     originalParams,
     delta,

@@ -26,6 +26,7 @@ import type {
   StairVariantParams,
 } from '../../bim/types/stair-types';
 import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-utils';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import {
   getAxisAngleDeg,
   mirrorAngle,
@@ -51,7 +52,7 @@ function rotatePoint3D(
 }
 
 function translatePoint3D(p: Readonly<Point3D>, delta: Readonly<Point2D>): Point3D {
-  return { x: p.x + delta.x, y: p.y + delta.y, z: p.z };
+  return translatePoint(p, delta);
 }
 
 // ─── Turn direction flippers (Q23 auto-flip semantics) ───────────────────────

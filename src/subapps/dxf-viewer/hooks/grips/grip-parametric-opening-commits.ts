@@ -10,6 +10,7 @@
  * drag collapses into a single undo entry.
  */
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
@@ -46,10 +47,7 @@ export function commitOpeningGripDrag(
   if (hostCandidate.type !== 'wall' || !hostCandidate.params || !hostCandidate.geometry) return;
   const hostWall = hostCandidate as WallEntity;
   const originalParams = opening.params;
-  const currentPos: Point2D = {
-    x: grip.position.x + delta.x,
-    y: grip.position.y + delta.y,
-  };
+  const currentPos: Point2D = translatePoint(grip.position, delta);
   const newParams = applyOpeningGripDrag(grip.openingGripKind, {
     originalParams,
     currentPos,
@@ -101,7 +99,7 @@ export function commitOpeningAltMove(
   const resolved = resolveOpeningAltMove({
     originalParams,
     basePoint: grip.position,
-    currentPos: { x: grip.position.x + delta.x, y: grip.position.y + delta.y },
+    currentPos: translatePoint(grip.position, delta),
     currentHost,
     candidateWalls,
     rehostToleranceWorld: openingRehostToleranceWorld(currentHost),

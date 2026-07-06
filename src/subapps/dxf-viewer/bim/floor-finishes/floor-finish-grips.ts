@@ -22,6 +22,7 @@ import type { FloorFinishEntity, FloorFinishParams } from '../types/floor-finish
 import type { Entity } from '../../types/entities';
 import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
 import { constrainDeltaToDominantAxis } from '../grips/ortho-delta';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { parseGripKindIndex } from '../../systems/grip/grip-kind-index';
 
 // ─── Grip position computation ────────────────────────────────────────────────
@@ -112,7 +113,7 @@ function moveFootprintVertex(
   if (index >= verts.length) return originalParams;
   if (delta.x === 0 && delta.y === 0) return originalParams;
   const next: Point3D[] = verts.map((v, i) =>
-    i === index ? translateVertex(v, delta) : cloneVertex(v),
+    i === index ? translatePoint(v, delta) : cloneVertex(v),
   );
   return { ...originalParams, footprint: { vertices: next } };
 }
@@ -156,10 +157,6 @@ export function removeVertexFromFloorFinish(
   if (verts.length <= 3) return originalParams;
   if (vertexIndex < 0 || vertexIndex >= verts.length) return originalParams;
   return { ...originalParams, footprint: { vertices: verts.filter((_, i) => i !== vertexIndex) } };
-}
-
-function translateVertex(v: Point3D, delta: Point2D): Point3D {
-  return { x: v.x + delta.x, y: v.y + delta.y, ...(v.z !== undefined ? { z: v.z } : {}) };
 }
 
 function cloneVertex(v: Point3D): Point3D {

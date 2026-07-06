@@ -46,6 +46,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { hardOrtho } from '../../hooks/drawing/drawing-handler-utils';
 import { applyGripStepSnap, quantizeDeltaToStep, quantizeValueToStep, activeStepSceneUnits } from './grip-step-quantize';
@@ -91,7 +92,7 @@ export function applyMoveFineStep(delta: Point2D): Point2D {
  */
 export function applyMoveFineStepAboutAnchor(point: Point2D, anchor: Point2D): Point2D {
   const d = applyMoveFineStep({ x: point.x - anchor.x, y: point.y - anchor.y });
-  return { x: anchor.x + d.x, y: anchor.y + d.y };
+  return translatePoint(anchor, d);
 }
 
 /**

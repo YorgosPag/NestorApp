@@ -68,16 +68,18 @@ idle → awaiting-base-point (activate με μη-κενή selection)
 
 Το activation-FSM invariant (activate→base/entity · deactivate→idle · selection-appeared→base · selection-lost→entity + `wasActive`/`prevCount` bookkeeping) ήταν hand-rolled σε ~15 tools. **NEW SSoT** `systems/tools/useModifyToolActivation.ts` — storage-agnostic (useState **ή** store via `setPhase`/`onDeactivate` callbacks)· tool-specific activate μέσω optional `onActivate` (typed-input restore / grip handoff)· deps = 3 primitives (isActive/selectionCount/phase), callbacks via ref → μηδέν extra re-run. **8 unit tests** (και τα 4 branches + override).
 
-**Migrated (test-guarded):** `useCopyTool` (23 GREEN), `useMoveTool` (+5 **νέα** characterization tests — ήταν untested). Καθαρό refactor, byte-identical συμπεριφορά.
+**✅ Migrated ΟΛΑ ΤΑ 5 (test-guarded, big-player consistent framework — Giorgio decision «όπως οι μεγάλοι παίκτες»):**
+- `useCopyTool` (23 GREEN) — default activate.
+- `useMoveTool` (+5 νέα tests) — overlays στο selectionCount· preview-clear σε κάθε transition.
+- `useMirrorTool` (+5 νέα tests) — `onActivate` grip-handoff (pre-seed first axis → second-point).
+- `useRotationTool` (+5 νέα tests) — `onActivate` grip-handoff (2 sub-cases: reference-vector→angle / pivot→reference).
+- `useScaleTool` (+5 νέα tests) — **store-based** (`ScaleToolStore`)· `onActivate` grip-handoff + refresh selected-ids· `onDeactivate`=`store.reset()`.
 
-**Εκκρεμούν (per-tool divergences — ΧΡΕΙΑΖΟΝΤΑΙ απόφαση/προσοχή, ΟΧΙ καθαρό refactor):**
-- `useRotationTool` — grip-handoff activate (2 sub-cases: reference→angle / →reference)· lost-branch = **dead code** (`hasEntities && length===0` πάντα false).
-- `useMirrorTool` — grip-handoff activate (pre-seed first axis point → second-point)· **λείπει** selection-lost branch.
-- `useScaleTool` — **store-based** (`ScaleToolStore.setPhase`)· typed-input restore activate.
-- `useStretchTool` — **partial** (μόνο activate-if-selection + deactivate, ΟΧΙ awaiting-entity) → πιθανώς εκτός.
-- Array×3 / Wall×4 — pick-based, ΟΧΙ 2-click select-first → εκτός.
+**Behavior alignment (big-player consistency):** το shared hook έχει working selection-lost branch → Rotation (dead code) + Mirror (missing) + Scale (missing) πλέον **consistent**: deselect mid-command → επιστροφή σε entity-pick (ό,τι κάνουν Revit/C4D/Figma command frameworks — ΕΝΑ FSM, μηδέν per-tool divergence). Characterization tests locked το κάθε transition.
 
-Το shared hook έχει **working** lost-branch → migration Rotation/Mirror = **behavior alignment** (fix του dead/missing branch, net-positive consistency) αλλά αλλάζει proven tools → απόφαση Giorgio: (a) migrate με alignment, ή (b) opt-out flag για byte-identical preservation.
+**ΕΚΤΟΣ (τεκμηριωμένα):** `useStretchTool` (partial — μόνο activate-if-selection+deactivate, no awaiting-entity· δεν εντάσσεται χωρίς behavior add)· Array×3 / Wall×4 (pick-based, όχι 2-click select-first).
+
+**Εκκρεμεί (final step):** registry guard `.ssot-registry` module «forbid inline `wasActiveRef`+`prevEntityCountRef` modify-FSM στα hooks/tools» (allowlist τα εκτός: stretch/array/wall) + `ssot:baseline`.
 
 ## Changelog
 - **2026-07-06** — Αρχική υλοποίηση: ενοποίηση `bim-copy`→`copy`, ζωντάνεμα ribbon «Αντιγραφή», unified clone SSoT για DXF+BIM+GROUP.

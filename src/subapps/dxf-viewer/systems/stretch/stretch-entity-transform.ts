@@ -27,6 +27,7 @@ import type { SceneEntity } from '../../core/commands/interfaces';
 import type { VertexRef } from './stretch-vertex-classifier';
 import { arcFromMovedEndpoint, arcFrom3Points } from '../../rendering/entities/shared/geometry-arc-utils';
 import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 export interface WorldVector {
   readonly x: number;
@@ -45,10 +46,6 @@ export type StretchUpdate =
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
-export function translatePoint(p: Point2D, d: WorldVector): Point2D {
-  return { x: p.x + d.x, y: p.y + d.y };
-}
-
 /**
  * Rigid translate an entity by `delta` using its anchor point.
  * Used for CIRCLE / ELLIPSE / TEXT / MTEXT / INSERT / POINT.
@@ -61,7 +58,7 @@ export function translateEntityByAnchor(entity: Entity, delta: WorldVector): Par
       return { center: translatePoint(entity.center, delta) } as Partial<SceneEntity>;
     case 'rectangle':
     case 'rect':
-      return { x: entity.x + delta.x, y: entity.y + delta.y } as Partial<SceneEntity>;
+      return translatePoint({ x: entity.x, y: entity.y }, delta) as Partial<SceneEntity>;
     case 'text':
     case 'mtext':
       return { position: translatePoint(entity.position, delta) } as Partial<SceneEntity>;
@@ -246,7 +243,7 @@ function stretchRectangle(
   if (captured.size === 0) return { kind: 'noop' };
 
   if (captured.size === 4) {
-    return { kind: 'update', updates: { x: entity.x + d.x, y: entity.y + d.y } as Partial<SceneEntity> };
+    return { kind: 'update', updates: translatePoint({ x: entity.x, y: entity.y }, d) as Partial<SceneEntity> };
   }
 
   // Partial capture → coerce to polyline preserving id, layer, visibility, etc.

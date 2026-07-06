@@ -38,7 +38,7 @@ import { applyMepSegmentGripDrag } from '../../bim/mep-segments/mep-segment-grip
 import { computeMepSegmentGeometry } from '../../bim/geometry/mep-segment-geometry';
 import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
 import { computeFurnitureGeometry } from '../../bim/furniture/furniture-geometry';
-import { calculateDistance } from '../entities/shared/geometry-rendering-utils';
+import { calculateDistance, translatePoint, translatePoints } from '../entities/shared/geometry-rendering-utils';
 
 export function getCircleQuadrant(
   entity: { center: Point2D; radius: number },
@@ -80,10 +80,6 @@ export function unwrapStair(entity: DxfEntityUnion): StairEntity | null {
 // ── Classic entity preview (whole-translation + vertex stretch) ───────────────
 // Extracted from apply-entity-preview.ts to keep that file under 500 lines.
 
-function offsetPoint(p: Point2D, delta: Point2D): Point2D {
-  return { x: p.x + delta.x, y: p.y + delta.y };
-}
-
 /**
  * SSoT for whole-entity translation, edge-stretch, and single-vertex-stretch
  * preview paths (the "classic" non-parametric grip branches).
@@ -96,7 +92,7 @@ export function applyClassicEntityPreview(
   movesEntity: boolean | undefined,
   edgeVertexIndices: readonly [number, number] | undefined,
 ): DxfEntityUnion {
-  const off = (p: Point2D) => offsetPoint(p, delta);
+  const off = (p: Point2D) => translatePoint(p, delta);
 
   if (movesEntity) {
     switch (entity.type) {
@@ -155,24 +151,24 @@ export function applyClassicEntityPreview(
       }
       case 'slab': {
         const slab = entity as unknown as SlabEntity;
-        const movedVerts = slab.params.outline.vertices.map((v) => ({ ...v, x: v.x + delta.x, y: v.y + delta.y }));
+        const movedVerts = translatePoints(slab.params.outline.vertices, delta);
         return { ...(entity as object), params: { ...slab.params, outline: { ...slab.params.outline, vertices: movedVerts } } } as unknown as DxfEntityUnion;
       }
       case 'floor-finish': {
         const finish = entity as unknown as FloorFinishEntity;
-        const movedVerts = finish.params.footprint.vertices.map((v) => ({ ...v, x: v.x + delta.x, y: v.y + delta.y }));
+        const movedVerts = translatePoints(finish.params.footprint.vertices, delta);
         return { ...(entity as object), params: { ...finish.params, footprint: { ...finish.params.footprint, vertices: movedVerts } } } as unknown as DxfEntityUnion;
       }
       case 'slab-opening': {
         const so = entity as unknown as SlabOpeningEntity;
-        const movedVerts = so.params.outline.vertices.map((v) => ({ ...v, x: v.x + delta.x, y: v.y + delta.y }));
+        const movedVerts = translatePoints(so.params.outline.vertices, delta);
         return { ...(entity as object), params: { ...so.params, outline: { ...so.params.outline, vertices: movedVerts } } } as unknown as DxfEntityUnion;
       }
       case 'opening': {
         const opening = entity as unknown as OpeningEntity;
         const outline = opening.geometry?.outline;
         if (!outline) return entity;
-        return { ...(entity as object), geometry: { ...opening.geometry, outline: { ...outline, vertices: outline.vertices.map((v) => ({ ...v, x: v.x + delta.x, y: v.y + delta.y })) } } } as unknown as DxfEntityUnion;
+        return { ...(entity as object), geometry: { ...opening.geometry, outline: { ...outline, vertices: translatePoints(outline.vertices, delta) } } } as unknown as DxfEntityUnion;
       }
     }
   }

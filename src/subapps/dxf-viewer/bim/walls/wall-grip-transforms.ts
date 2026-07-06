@@ -37,16 +37,12 @@ import { rotateAxisPointsAboutPivot } from '../grips/grip-math';
 import { parseGripKindIndex } from '../../systems/grip/grip-kind-index';
 // ADR-565 — arc apex drag ↔ bulge conversion reuses the bulge SSoT (ADR-510).
 import { bulgeApexPoint, bulgeFromApexPoint } from '../../rendering/entities/shared/geometry-bulge-utils';
+// SSoT — canonical z-aware point + delta translate (spread preserves z & extra fields).
+import { translatePoint, translatePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 
 // ─── Whole-wall translation SSoT ─────────────────────────────────────────────
 
 type WallMiter = NonNullable<WallParams['startMiter']>;
-
-function shiftPoint3D(p: Point3D, delta: Point2D): Point3D {
-  return p.z !== undefined
-    ? { x: p.x + delta.x, y: p.y + delta.y, z: p.z }
-    : { x: p.x + delta.x, y: p.y + delta.y };
-}
 
 function shiftMiter(m: WallMiter, delta: Point2D): WallMiter {
   return {
@@ -65,10 +61,12 @@ function shiftMiter(m: WallMiter, delta: Point2D): WallMiter {
 export function translateWallParams(params: WallParams, delta: Point2D): WallParams {
   return {
     ...params,
-    start: shiftPoint3D(params.start, delta),
-    end: shiftPoint3D(params.end, delta),
-    polylineVertices: params.polylineVertices?.map((v) => shiftPoint3D(v, delta)),
-    curveControl: params.curveControl ? shiftPoint3D(params.curveControl, delta) : undefined,
+    start: translatePoint(params.start, delta),
+    end: translatePoint(params.end, delta),
+    polylineVertices: params.polylineVertices
+      ? translatePoints(params.polylineVertices, delta)
+      : undefined,
+    curveControl: params.curveControl ? translatePoint(params.curveControl, delta) : undefined,
     startMiter: params.startMiter ? shiftMiter(params.startMiter, delta) : undefined,
     endMiter: params.endMiter ? shiftMiter(params.endMiter, delta) : undefined,
   };
@@ -136,11 +134,7 @@ export function applyWallGripDrag(
 
 function moveStart(input: Readonly<WallGripDragInput>): WallParams {
   const { originalParams, delta } = input;
-  const newStart: Point3D = {
-    x: originalParams.start.x + delta.x,
-    y: originalParams.start.y + delta.y,
-    z: originalParams.start.z,
-  };
+  const newStart: Point3D = translatePoint(originalParams.start, delta);
   // startMiter is an absolute world-coord junction point — moving the start
   // endpoint breaks the junction, so clear it (recomputed on commit).
   return { ...originalParams, start: newStart, startMiter: undefined };
@@ -148,11 +142,7 @@ function moveStart(input: Readonly<WallGripDragInput>): WallParams {
 
 function moveEnd(input: Readonly<WallGripDragInput>): WallParams {
   const { originalParams, delta } = input;
-  const newEnd: Point3D = {
-    x: originalParams.end.x + delta.x,
-    y: originalParams.end.y + delta.y,
-    z: originalParams.end.z,
-  };
+  const newEnd: Point3D = translatePoint(originalParams.end, delta);
   // endMiter is an absolute world-coord junction point — moving the end
   // endpoint breaks the junction, so clear it (recomputed on commit).
   return { ...originalParams, end: newEnd, endMiter: undefined };
@@ -247,7 +237,7 @@ function moveArcApex(input: Readonly<WallGripDragInput>): WallParams {
   const start: Point2D = { x: originalParams.start.x, y: originalParams.start.y };
   const end: Point2D = { x: originalParams.end.x, y: originalParams.end.y };
   const apex = bulgeApexPoint(start, end, originalParams.arc);
-  const nextApex: Point2D = { x: apex.x + delta.x, y: apex.y + delta.y };
+  const nextApex: Point2D = translatePoint(apex, delta);
   return { ...originalParams, arc: bulgeFromApexPoint(start, end, nextApex) };
 }
 
@@ -263,11 +253,7 @@ function moveCurveControl(input: Readonly<WallGripDragInput>): WallParams {
     };
     return { ...originalParams, curveControl: mid };
   }
-  const next: Point3D = {
-    x: existing.x + delta.x,
-    y: existing.y + delta.y,
-    z: existing.z,
-  };
+  const next: Point3D = translatePoint(existing, delta);
   return { ...originalParams, curveControl: next };
 }
 
@@ -280,7 +266,7 @@ function movePolylineVertex(
   if (!verts || index < 1 || index >= verts.length - 1) return originalParams;
   const next: Point3D[] = verts.map((v, i) =>
     i === index
-      ? { x: v.x + delta.x, y: v.y + delta.y, z: v.z }
+      ? translatePoint(v, delta)
       : { x: v.x, y: v.y, z: v.z },
   );
   // Polyline endpoints stay anchored to params.start/end (axis-aligned SSoT).

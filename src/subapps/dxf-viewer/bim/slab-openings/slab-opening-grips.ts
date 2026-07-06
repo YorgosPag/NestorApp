@@ -29,6 +29,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo, SlabOpeningGripKind } from '../../hooks/useGripMovement';
 import { constrainDeltaToDominantAxis } from '../grips/ortho-delta';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { parseGripKindIndex } from '../../systems/grip/grip-kind-index';
 import type { Point3D } from '../types/bim-base';
 import type {
@@ -136,7 +137,7 @@ function moveOutlineVertex(
   if (index >= verts.length) return originalParams;
   if (delta.x === 0 && delta.y === 0) return originalParams;
   const next: Point3D[] = verts.map((v, i) =>
-    i === index ? translateVertex(v, delta) : cloneVertex(v),
+    i === index ? translatePoint(v, delta) : cloneVertex(v),
   );
   return {
     ...originalParams,
@@ -190,12 +191,6 @@ export function removeVertexFromSlabOpening(
     ...originalParams,
     outline: { vertices: verts.filter((_, i) => i !== vertexIndex) },
   };
-}
-
-function translateVertex(v: Point3D, delta: Point2D): Point3D {
-  return v.z !== undefined
-    ? { x: v.x + delta.x, y: v.y + delta.y, z: v.z }
-    : { x: v.x + delta.x, y: v.y + delta.y };
 }
 
 function cloneVertex(v: Point3D): Point3D {

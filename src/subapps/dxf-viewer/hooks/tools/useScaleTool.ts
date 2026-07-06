@@ -15,13 +15,14 @@
  * @module hooks/tools/useScaleTool
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import i18next from 'i18next';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/PreviewCanvas';
 import { ScaleEntityCommand } from '../../core/commands/entity-commands/ScaleEntityCommand';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { ScaleToolStore } from '../../systems/scale/ScaleToolStore';
 import { computeUniformRef } from '../../systems/scale/scale-reference-calc';
@@ -93,8 +94,6 @@ export function useScaleTool(props: UseScaleToolProps): UseScaleToolReturn {
   const { activeTool, selectedEntityIds, levelManager, executeCommand, previewCanvasRef, onToolChange } = props;
 
   const [promptText, setPromptText] = useState('');
-  const wasActiveRef = useRef(false);
-  const prevEntityCountRef = useRef(0);
 
   const isActive = activeTool === 'scale';
   const state = ScaleToolStore.getState();
@@ -111,24 +110,32 @@ export function useScaleTool(props: UseScaleToolProps): UseScaleToolReturn {
 
   // ── State machine transitions ─────────────────────────────────────────────
 
-  useEffect(() => {
-    const toolIsScale = activeTool === 'scale';
-    const hasEntities = selectedEntityIds.length > 0;
-
-    if (toolIsScale && !wasActiveRef.current) {
+  // ── State machine transitions (shared FSM SSoT, ADR-577) ──────────────────
+  // Store-backed phase (`ScaleToolStore`): `setPhase`/`onDeactivate` delegate to
+  // it. The store's selected-id snapshot is refreshed on every activate + on the
+  // entity→base advance. The grip-drag handoff (pre-seeded base point, optional
+  // reference vector) is the tool-specific ACTIVATE variant (`onActivate`).
+  useModifyToolActivation({
+    isActive,
+    selectionCount: selectedEntityIds.length,
+    phase: state.phase,
+    entityPhase: 'selecting',
+    basePhase: 'base_point',
+    setPhase: (p) => {
+      previewCanvasRef.current?.clear();
+      if (p === 'base_point') ScaleToolStore.setSelectedEntityIds(selectedEntityIds);
+      ScaleToolStore.setPhase(p as typeof state.phase);
+    },
+    onDeactivate: () => {
+      ScaleToolStore.reset();
+      previewCanvasRef.current?.clear();
+    },
+    onActivate: (hasSelection) => {
       ScaleToolStore.setSelectedEntityIds(selectedEntityIds);
       const handoff = GripHandoffStore.consume('scale');
-      if (hasEntities && handoff) {
-        // Grip drag pre-seeded the base point → skip straight to scale_input.
+      if (hasSelection && handoff) {
         ScaleToolStore.setBasePoint(handoff.point);
-        // ADR-357 Phase 12 — `copyMode` modifier: start with Scale's native
-        // copy toggle ON (`ScaleEntityCommand` clones instead of mutating).
-        if (handoff.options.copyMode) {
-          ScaleToolStore.setCopyMode(true);
-        }
-        // ADR-357 Phase 12 — `refStart`/`refEnd` modifier: skip the two pick
-        // sub-phases and land on `ref_new_x` (Scale's "Enter new length" prompt)
-        // with the picked vector already loaded into the uniform-X ref slots.
+        if (handoff.options.copyMode) ScaleToolStore.setCopyMode(true);
         if (handoff.options.refStart && handoff.options.refEnd) {
           ScaleToolStore.setRefPoint('refP1x', handoff.options.refStart);
           ScaleToolStore.setRefPoint('refP2x', handoff.options.refEnd);
@@ -136,24 +143,12 @@ export function useScaleTool(props: UseScaleToolProps): UseScaleToolReturn {
         } else {
           ScaleToolStore.setPhase('scale_input', 'direct');
         }
-      } else {
-        ScaleToolStore.setPhase(hasEntities ? 'base_point' : 'selecting');
+        previewCanvasRef.current?.clear();
+        return true;
       }
-      previewCanvasRef.current?.clear();
-    } else if (!toolIsScale && wasActiveRef.current) {
-      ScaleToolStore.reset();
-      previewCanvasRef.current?.clear();
-    } else if (toolIsScale && wasActiveRef.current) {
-      const s = ScaleToolStore.getState();
-      if (prevEntityCountRef.current === 0 && hasEntities && s.phase === 'selecting') {
-        ScaleToolStore.setSelectedEntityIds(selectedEntityIds);
-        ScaleToolStore.setPhase('base_point');
-      }
-    }
-
-    wasActiveRef.current = toolIsScale;
-    prevEntityCountRef.current = selectedEntityIds.length;
-  }, [activeTool, selectedEntityIds, previewCanvasRef]);
+      return false; // default (hasSelection ? base_point : selecting) via setPhase
+    },
+  });
 
   // ── Execute ───────────────────────────────────────────────────────────────
 

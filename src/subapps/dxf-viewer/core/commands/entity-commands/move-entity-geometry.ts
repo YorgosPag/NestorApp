@@ -24,13 +24,8 @@ import {
 } from '../../../types/entities';
 // ADR-363 Phase 7A — BIM move geometry (params + computed geometry atomic patch).
 import { calculateBimMovedGeometry } from '../../../bim/utils/bim-move-geometry';
-
-/**
- * Apply delta movement to a point
- */
-export function applyDelta(point: Point2D, delta: Point2D): Point2D {
-  return { x: point.x + delta.x, y: point.y + delta.y };
-}
+// SSoT — canonical point translation (ADR-577 consolidation).
+import { translatePoint } from '../../../rendering/entities/shared/geometry-vector-utils';
 
 /**
  * Calculate geometry updates for an entity based on delta.
@@ -49,20 +44,20 @@ export function calculateMovedGeometry(entity: SceneEntity, delta: Point3D): Par
 
   if (isLineEntity(e)) {
     return {
-      start: applyDelta(e.start, delta),
-      end: applyDelta(e.end, delta),
+      start: translatePoint(e.start, delta),
+      end: translatePoint(e.end, delta),
     };
   }
 
   if (isCircleEntity(e)) {
-    return { center: applyDelta(e.center, delta) };
+    return { center: translatePoint(e.center, delta) };
   }
 
   if (isRectangleEntity(e)) {
     const updates: Partial<SceneEntity> = {};
     if ('corner1' in e && e.corner1 && 'corner2' in e && e.corner2) {
-      updates.corner1 = applyDelta(e.corner1, delta);
-      updates.corner2 = applyDelta(e.corner2, delta);
+      updates.corner1 = translatePoint(e.corner1, delta);
+      updates.corner2 = translatePoint(e.corner2, delta);
     }
     if ('x' in e && 'y' in e) {
       updates.x = e.x + delta.x;
@@ -72,29 +67,29 @@ export function calculateMovedGeometry(entity: SceneEntity, delta: Point3D): Par
   }
 
   if (isArcEntity(e)) {
-    return { center: applyDelta(e.center, delta) };
+    return { center: translatePoint(e.center, delta) };
   }
 
   if (isEllipseEntity(e)) {
-    return { center: applyDelta(e.center, delta) };
+    return { center: translatePoint(e.center, delta) };
   }
 
   if (isPolylineEntity(e)) {
-    return { vertices: e.vertices.map(v => applyDelta(v, delta)) };
+    return { vertices: e.vertices.map(v => translatePoint(v, delta)) };
   }
 
   // Handle polygon type (not in centralized guards but used in codebase)
   if (entity.type === 'polygon' && 'vertices' in entity) {
     const polyEntity = entity as unknown as { vertices: Point2D[] };
-    return { vertices: polyEntity.vertices.map(v => applyDelta(v, delta)) };
+    return { vertices: polyEntity.vertices.map(v => translatePoint(v, delta)) };
   }
 
   if (isTextEntity(e)) {
-    return { position: applyDelta(e.position, delta) };
+    return { position: translatePoint(e.position, delta) };
   }
 
   if (isPointEntity(e)) {
-    return { position: applyDelta(e.position, delta) };
+    return { position: translatePoint(e.position, delta) };
   }
 
   // ADR-575 — GROUP container: moving the group moves every member. Recurse the

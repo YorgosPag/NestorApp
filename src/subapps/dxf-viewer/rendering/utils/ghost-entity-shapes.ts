@@ -19,7 +19,8 @@ import { GHOST_COLORS } from '../../config/color-config';
 // 🏢 ADR-058: Centralized Canvas Primitives
 import { addCirclePath } from '../primitives/canvasPaths';
 // 🏢 ADR-080: Centralized Rectangle Bounds
-import { rectFromTwoPoints } from '../entities/shared/geometry-rendering-utils';
+// 🏢 ADR-577: Centralized point translation SSoT
+import { rectFromTwoPoints, translatePoint } from '../entities/shared/geometry-rendering-utils';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration
@@ -81,10 +82,6 @@ export interface BoundingBox {
 // ============================================================================
 // 🏢 ENTERPRISE: Utility Functions
 // ============================================================================
-
-export function applyDelta(point: Point2D, delta: Point2D): Point2D {
-  return { x: point.x + delta.x, y: point.y + delta.y };
-}
 
 export function defaultWorldToScreen(point: Point2D): Point2D {
   return point;
@@ -188,8 +185,8 @@ function renderGhostLine(
   delta: Point2D, options: GhostRenderOptions
 ): void {
   const worldToScreen = options.worldToScreen ?? defaultWorldToScreen;
-  const ghostStart = worldToScreen(applyDelta(start, delta));
-  const ghostEnd = worldToScreen(applyDelta(end, delta));
+  const ghostStart = worldToScreen(translatePoint(start, delta));
+  const ghostEnd = worldToScreen(translatePoint(end, delta));
 
   ctx.beginPath();
   ctx.moveTo(ghostStart.x, ghostStart.y);
@@ -206,7 +203,7 @@ function renderGhostCircle(
 ): void {
   const worldToScreen = options.worldToScreen ?? defaultWorldToScreen;
   const scale = options.scale ?? 1;
-  const ghostCenter = worldToScreen(applyDelta(center, delta));
+  const ghostCenter = worldToScreen(translatePoint(center, delta));
   const screenRadius = radius * scale;
 
   ctx.beginPath();
@@ -224,8 +221,8 @@ function renderGhostRectangle(
   delta: Point2D, options: GhostRenderOptions
 ): void {
   const worldToScreen = options.worldToScreen ?? defaultWorldToScreen;
-  const ghostCorner1 = worldToScreen(applyDelta(corner1, delta));
-  const ghostCorner2 = worldToScreen(applyDelta(corner2, delta));
+  const ghostCorner1 = worldToScreen(translatePoint(corner1, delta));
+  const ghostCorner2 = worldToScreen(translatePoint(corner2, delta));
   const { x, y, width, height } = rectFromTwoPoints(ghostCorner1, ghostCorner2);
 
   ctx.beginPath();
@@ -246,11 +243,11 @@ function renderGhostPolyline(
   const worldToScreen = options.worldToScreen ?? defaultWorldToScreen;
 
   ctx.beginPath();
-  const firstPoint = worldToScreen(applyDelta(vertices[0], delta));
+  const firstPoint = worldToScreen(translatePoint(vertices[0], delta));
   ctx.moveTo(firstPoint.x, firstPoint.y);
 
   for (let i = 1; i < vertices.length; i++) {
-    const point = worldToScreen(applyDelta(vertices[i], delta));
+    const point = worldToScreen(translatePoint(vertices[i], delta));
     ctx.lineTo(point.x, point.y);
   }
 

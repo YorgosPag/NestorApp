@@ -32,6 +32,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo, TextGripKind } from '../../hooks/useGripMovement';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { rotateVector } from '../grips/grip-math';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import {
   resolveTextBox,
   textBoxToPosition,
@@ -166,7 +167,7 @@ function framePatch(entity: DxfText, newFrame: RectFrame): TextTransformPatch {
 function applyTextRotation(frame: RectFrame, input: TextGripDragInput): TextTransformPatch {
   const { entity, delta } = input;
   const pivot = input.pivot ?? frame.center;
-  const cur = input.currentPos ?? { x: entity.position.x + delta.x, y: entity.position.y + delta.y };
+  const cur = input.currentPos ?? translatePoint(entity.position, delta);
   const start = { x: cur.x - delta.x, y: cur.y - delta.y };
   const a0 = Math.atan2(start.y - pivot.y, start.x - pivot.x);
   const a1 = Math.atan2(cur.y - pivot.y, cur.x - pivot.x);
@@ -190,7 +191,7 @@ function applyTextRotation(frame: RectFrame, input: TextGripDragInput): TextTran
 export function applyTextGripDrag(kind: TextGripKind, input: TextGripDragInput): TextTransformPatch {
   const { entity, delta } = input;
   if (kind === 'text-move') {
-    return { position: { x: entity.position.x + delta.x, y: entity.position.y + delta.y } };
+    return { position: translatePoint(entity.position, delta) };
   }
   const frame = resolveTextBox(entity);
   if (kind === 'text-rotation') return applyTextRotation(frame, input);

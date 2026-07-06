@@ -14,15 +14,12 @@ import type { ItemTransform } from './types';
 import type { Point2D } from '../../rendering/types/Types';
 import { rotatePoint } from '../../utils/rotation-math';
 import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-utils';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
-function translatePoint(p: Point2D, tx: number, ty: number): Point2D {
-  return { x: p.x + tx, y: p.y + ty };
-}
-
 function transformPoint(p: Point2D, t: ItemTransform, pivot: Point2D): Point2D {
-  const translated = translatePoint(p, t.translateX, t.translateY);
+  const translated = translatePoint(p, { x: t.translateX, y: t.translateY });
   if (t.rotateDeg === 0) return translated;
   return rotatePoint(translated, { x: pivot.x + t.translateX, y: pivot.y + t.translateY }, t.rotateDeg);
 }
@@ -270,15 +267,15 @@ function translateEntityFallback(entity: Entity, t: ItemTransform): Entity {
   const result: Record<string, unknown> = { ...e };
   if (typeof e['position'] === 'object' && e['position'] !== null) {
     const p = e['position'] as Point2D;
-    result['position'] = translatePoint(p, t.translateX, t.translateY);
+    result['position'] = translatePoint(p, { x: t.translateX, y: t.translateY });
   }
   if (typeof e['center'] === 'object' && e['center'] !== null) {
     const c = e['center'] as Point2D;
-    result['center'] = translatePoint(c, t.translateX, t.translateY);
+    result['center'] = translatePoint(c, { x: t.translateX, y: t.translateY });
   }
   if (typeof e['basePoint'] === 'object' && e['basePoint'] !== null) {
     const bp = e['basePoint'] as Point2D;
-    result['basePoint'] = translatePoint(bp, t.translateX, t.translateY);
+    result['basePoint'] = translatePoint(bp, { x: t.translateX, y: t.translateY });
   }
   return result as unknown as Entity;
 }

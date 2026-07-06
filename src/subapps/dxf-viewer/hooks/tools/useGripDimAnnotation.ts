@@ -35,6 +35,7 @@
 
 import { useCallback } from 'react';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { useLevels } from '../../systems/levels';
 import type { DxfGripDragPreview } from '../grip-computation';
 import type { BeamParams } from '../../bim/types/beam-types';
@@ -217,7 +218,7 @@ export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
     const entity = scene?.entities?.find(e => e.id === entityId);
     if (!entity) return;
 
-    const gripWorld: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
+    const gripWorld: Point2D = translatePoint(anchorPos, delta);
     // BUG FIX (Y-flip): use the canonical CoordinateTransforms.worldToScreen SSoT
     // (Y-inversion + margins) — the previous local helper omitted the Y-flip, so
     // the label tracked the cursor vertically inverted. Viewport derived from the

@@ -21,6 +21,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { DxfDimension } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { GripInfo, DimensionGripKind } from '../grip-types';
 import type {
@@ -35,10 +36,6 @@ const ROTATION_HANDLE_OFFSET = 50;
 const RAD_TO_DEG = 180 / Math.PI;
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
-
-function translate(p: Point2D, delta: Point2D): Point2D {
-  return { x: p.x + delta.x, y: p.y + delta.y };
-}
 
 function midpt(a: Point2D, b: Point2D): Point2D {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
@@ -60,7 +57,7 @@ function patchDefPoint(
   const pts = dimEntity.defPoints;
   if (index >= pts.length) return dimEntity;
   const newPts = [...pts] as Point2D[];
-  newPts[index] = translate(pts[index], delta);
+  newPts[index] = translatePoint(pts[index], delta);
   return { ...dimEntity, defPoints: newPts };
 }
 
@@ -156,7 +153,7 @@ export function applyDimensionGripDrag(
     case 'dim-line-ref':   return patchDefPoint(dimEntity, 2, delta);
     case 'dim-text': {
       const old = resolveTextMidpoint(dimEntity);
-      return { ...dimEntity, textMidpoint: translate(old, delta) };
+      return { ...dimEntity, textMidpoint: translatePoint(old, delta) };
     }
     case 'dim-extra': return applyExtraGripDrag(dimEntity, delta, gripPos);
     default: {
@@ -306,7 +303,7 @@ function applyExtraGripDrag(
   switch (dimEntity.dimensionType) {
     case 'linear': {
       if (pts.length < 3) return dimEntity;
-      const currentPos = translate(gripPos, delta);
+      const currentPos = translatePoint(gripPos, delta);
       const newRotation = Math.atan2(currentPos.y - pts[2].y, currentPos.x - pts[2].x) * RAD_TO_DEG;
       return { ...(dimEntity as LinearDimensionEntity), rotation: newRotation };
     }
@@ -320,7 +317,7 @@ function applyExtraGripDrag(
     case 'angular3P':
       return patchDefPoint(dimEntity, 3, delta);
     case 'ordinate':
-      return { ...dimEntity, datum: translate(dimEntity.datum, delta) };
+      return { ...dimEntity, datum: translatePoint(dimEntity.datum, delta) };
     case 'arcLength':
     case 'joggedRadius':
       return patchDefPoint(dimEntity, 2, delta);

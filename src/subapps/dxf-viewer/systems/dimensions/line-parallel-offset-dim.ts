@@ -18,7 +18,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 // SSoT geometry primitives — μηδέν hand-rolled normal/dot/midpoint/hypot (ADR-065).
-import { calculateMidpoint, calculateDistance } from '../../rendering/entities/shared/geometry-vector-utils';
+import { calculateMidpoint, calculateDistance, translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
 
 export interface ParallelOffsetDim {
@@ -50,8 +50,8 @@ export function resolveParallelOffsetDim(
   if (calculateDistance(start, end) < EPS) return null; // degenerate line — no axis to measure against
   const p1 = calculateMidpoint(start, end); // μέσο αρχικής
   // Ghost axis = original translated by delta (stays parallel to the original).
-  const ghostStart: Point2D = { x: start.x + delta.x, y: start.y + delta.y };
-  const ghostEnd: Point2D = { x: end.x + delta.x, y: end.y + delta.y };
+  const ghostStart: Point2D = translatePoint(start, delta);
+  const ghostEnd: Point2D = translatePoint(end, delta);
   // Foot of the perpendicular from the original midpoint onto the (infinite) ghost axis.
   const p2 = getNearestPointOnLine(p1, ghostStart, ghostEnd, false);
   const distanceScene = calculateDistance(p1, p2);

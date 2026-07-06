@@ -27,6 +27,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { resolveSweptRotationDeg } from './primitive-rotation-drag';
@@ -69,7 +70,7 @@ function resolveRotation(
   const useCtx = ctx.pivot !== null && ctx.anchor !== null;
   const pivot = useCtx ? ctx.pivot! : fallbackPivot;
   const anchor = useCtx ? ctx.anchor! : grip.position;
-  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const currentPos: Point2D = translatePoint(anchor, delta);
   // SHARED guarded swept-angle SSoT (commit ↔ preview twin — `primitive-rotation-drag.ts`).
   const sweptDeg = resolveSweptRotationDeg(pivot, anchor, currentPos);
   if (sweptDeg === null) return null;

@@ -24,6 +24,7 @@ import type {
   StairVariantParams,
   StairVariantLShapeWinders,
 } from '../../bim/types/stair-types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 const DEFAULT_SWEEP_DEG = 360;
 const HELICAL_SWEEP_DEG = 270;
@@ -118,8 +119,8 @@ export function buildDefaultVariantFor(
         kind: 'triangular-outline',
         triangleVertices: [
           clonePoint(prev.basePoint),
-          translatePoint(prev.basePoint, side, 0),
-          translatePoint(prev.basePoint, 0, side),
+          translatePoint(prev.basePoint, { x: side, y: 0 }),
+          translatePoint(prev.basePoint, { x: 0, y: side }),
         ] as const,
         entrySide: 0,
         orientation: 'cw',
@@ -131,7 +132,7 @@ export function buildDefaultVariantFor(
         kind: 'sketch',
         walklinePath: [
           clonePoint(prev.basePoint),
-          translatePoint(prev.basePoint, reach, 0),
+          translatePoint(prev.basePoint, { x: reach, y: 0 }),
         ],
       };
     }
@@ -229,8 +230,4 @@ export function buildLShapeWindersVariant(
 
 function clonePoint(p: Readonly<Point3D>): Point3D {
   return { x: p.x, y: p.y, z: p.z };
-}
-
-function translatePoint(p: Readonly<Point3D>, dx: number, dy: number): Point3D {
-  return { x: p.x + dx, y: p.y + dy, z: p.z };
 }

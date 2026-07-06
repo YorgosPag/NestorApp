@@ -23,6 +23,7 @@ import type { ICommand } from '../../core/commands/interfaces';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/PreviewCanvas';
 import { MirrorEntityCommand } from '../../core/commands/entity-commands/MirrorEntityCommand';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { useCadToggles } from '../common/useCadToggles';
 import { orthoSnap } from '../../utils/mirror-math';
@@ -105,9 +106,6 @@ export function useMirrorTool(props: UseMirrorToolProps): UseMirrorToolReturn {
   const isCollectingInput = isActive && selectedEntityIds.length > 0
     && (phase === 'awaiting-first-point' || phase === 'awaiting-second-point' || phase === 'awaiting-keep-originals');
 
-  const wasActiveRef = useRef(false);
-  const prevEntityCountRef = useRef(0);
-
   const getSceneManager = useCallback(() => {
     if (!levelManager.currentLevelId) return null;
     return createLevelSceneManagerAdapter(
@@ -117,45 +115,39 @@ export function useMirrorTool(props: UseMirrorToolProps): UseMirrorToolReturn {
     );
   }, [levelManager]);
 
-  // ── State machine transitions ─────────────────────────────────────────────
-  useEffect(() => {
-    const toolIsMirror = activeTool === 'mirror';
-    const hasEntities = selectedEntityIds.length > 0;
-
-    if (toolIsMirror && !wasActiveRef.current) {
+  // ── State machine transitions (shared FSM SSoT, ADR-577) ──────────────────
+  // Every hook-driven phase change clears the ghost + drops stale axis points.
+  // The grip-drag handoff (pre-seeded first axis point → jump to second point)
+  // is the tool-specific ACTIVATE variant, handled in `onActivate`.
+  useModifyToolActivation({
+    isActive,
+    selectionCount: selectedEntityIds.length,
+    phase,
+    entityPhase: 'awaiting-entity',
+    basePhase: 'awaiting-first-point',
+    setPhase: (p) => {
+      previewCanvasRef.current?.clear();
+      if (p === 'awaiting-entity' || p === 'awaiting-first-point') { setFirstPoint(null); setSecondPoint(null); }
+      setPhase(p as MirrorPhase);
+    },
+    onDeactivate: () => {
+      previewCanvasRef.current?.clear();
+      setPhase('idle'); setFirstPoint(null); setSecondPoint(null);
+    },
+    onActivate: (hasSelection) => {
       const handoff = GripHandoffStore.consume('mirror');
-      if (hasEntities && handoff) {
-        // Grip drag pre-seeded the first axis point → skip straight to second point.
+      if (hasSelection && handoff) {
+        previewCanvasRef.current?.clear();
         setFirstPoint(handoff.point);
         setSecondPoint(null);
-        setPhase('awaiting-second-point');
-        // ADR-357 Phase 12 — `copyMode` modifier: arm `keepOriginals=true` to
-        // be applied at confirm time without the Y/N prompt. The auto-confirm
-        // wiring lives in the second-point click handler below.
         copyModeHandoffRef.current = handoff.options.copyMode === true;
-      } else {
-        setPhase(hasEntities ? 'awaiting-first-point' : 'awaiting-entity');
-        setFirstPoint(null);
-        setSecondPoint(null);
-        copyModeHandoffRef.current = false;
+        setPhase('awaiting-second-point');
+        return true;
       }
-      previewCanvasRef.current?.clear();
-    } else if (!toolIsMirror && wasActiveRef.current) {
-      setPhase('idle');
-      setFirstPoint(null);
-      setSecondPoint(null);
-      previewCanvasRef.current?.clear();
-    } else if (toolIsMirror && wasActiveRef.current) {
-      const prevCount = prevEntityCountRef.current;
-      if (prevCount === 0 && hasEntities && phase === 'awaiting-entity') {
-        setPhase('awaiting-first-point');
-        previewCanvasRef.current?.clear();
-      }
-    }
-
-    wasActiveRef.current = toolIsMirror;
-    prevEntityCountRef.current = selectedEntityIds.length;
-  }, [activeTool, selectedEntityIds.length, phase, previewCanvasRef]);
+      copyModeHandoffRef.current = false;
+      return false; // default (hasSelection ? first-point : entity) resets points via setPhase
+    },
+  });
 
   const handleMirrorClick = useCallback((worldPoint: Point2D) => {
     if (!isCollectingInput) return;

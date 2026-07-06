@@ -40,6 +40,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { constrainDeltaToDominantAxis } from '../grips/ortho-delta'; // ORTHO/F8 SSoT
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { parseGripKindIndex } from '../../systems/grip/grip-kind-index';
 import type { GripInfo, RoofGripKind } from '../../hooks/useGripMovement';
 import type { Point3D } from '../types/bim-base';
@@ -140,7 +141,7 @@ function moveOutlineVertex(
   if (index >= verts.length) return originalParams;
   if (delta.x === 0 && delta.y === 0) return originalParams;
   const next: Point3D[] = verts.map((v, i) =>
-    i === index ? translateVertex(v, delta) : cloneVertex(v),
+    i === index ? translatePoint(v, delta) : cloneVertex(v),
   );
   // edges count is preserved — a moved vertex keeps the same edge topology.
   return {
@@ -205,12 +206,6 @@ export function removeVertexFromRoof(
     outline: { vertices: verts.filter((_, i) => i !== vertexIndex) },
     edges: originalParams.edges.filter((_, i) => i !== vertexIndex),
   };
-}
-
-function translateVertex(v: Point3D, delta: Point2D): Point3D {
-  return v.z !== undefined
-    ? { x: v.x + delta.x, y: v.y + delta.y, z: v.z }
-    : { x: v.x + delta.x, y: v.y + delta.y };
 }
 
 function cloneVertex(v: Point3D): Point3D {

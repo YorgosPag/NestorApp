@@ -10,6 +10,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { XLineEntity } from '../../types/entities';
 import type { GripInfo, XLineGripKind } from '../../hooks/useGripMovement';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 /** Fixed world-space offset for the direction handle. Normalized dir × OFFSET. */
 const DIR_HANDLE_OFFSET = 100;
@@ -58,7 +59,7 @@ export function applyXLineGripDrag(
   const { entity, delta, currentPos } = input;
   if (kind === 'xline-base') {
     return {
-      basePoint: { x: entity.basePoint.x + delta.x, y: entity.basePoint.y + delta.y },
+      basePoint: translatePoint(entity.basePoint, delta),
     };
   }
   const vx = currentPos.x - entity.basePoint.x;

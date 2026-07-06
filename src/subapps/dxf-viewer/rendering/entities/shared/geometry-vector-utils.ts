@@ -194,10 +194,14 @@ export function subtractPoints(p1: Point2D, p2: Point2D): Point2D {
 }
 
 /**
- * Add two points/vectors (component-wise).
+ * Add two points/vectors (component-wise). Semantic alias of {@link translatePoint}
+ * — three.js / glMatrix keep ONE `add` primitive for point+vector (translate AND
+ * vector-sum are the same op). Delegates so the arithmetic lives in ONE place; the
+ * name is kept for call-sites where "a + b" reads as a symmetric sum (e.g. the
+ * `base + scalePoint(dir, d)` construction idiom) rather than a move.
  */
 export function addPoints(p1: Point2D, p2: Point2D): Point2D {
-  return { x: p1.x + p2.x, y: p1.y + p2.y };
+  return translatePoint(p1, p2);
 }
 
 /**
@@ -215,6 +219,49 @@ export function scalePoint(point: Point2D, scalar: number): Point2D {
  */
 export function scalePoints<T extends Point2D>(points: readonly T[], scalar: number): T[] {
   return points.map((p) => ({ ...p, x: p.x * scalar, y: p.y * scalar }));
+}
+
+/**
+ * Translate a point by a displacement vector (`point + delta`) — the canonical
+ * SSoT for the most fundamental geometry op in the viewer (ADR-090).
+ *
+ * z-aware & extra-field-preserving: the generic `<T extends Point2D>` + `{ ...p }`
+ * spread keeps `z` (elevation) and any other fields, so a 2D plan-view move never
+ * strips a Point3D's elevation. Mirrors {@link scalePoints}. Immutable — returns a
+ * new object, like three.js `v.clone().add(delta)`.
+ *
+ * Replaces the 7 pre-existing duplicates (`applyDelta` ×2, `translatePoint`,
+ * `offsetPoint`(private), `shiftPoint3D` ×2) + ~87 inline `{ x: p.x+d.x, y: p.y+d.y }`
+ * sites. NOTE: distinct from {@link offsetPoint} (`point + direction*distance`) and
+ * {@link addPoints} (symmetric `base + dir*dist` vector sum) — do not conflate.
+ */
+export function translatePoint<T extends Point2D>(p: T, delta: Point2D): T {
+  return { ...p, x: p.x + delta.x, y: p.y + delta.y };
+}
+
+/**
+ * Translate an ARRAY of points by a displacement vector, preserving each element's
+ * extra fields (e.g. `z`). The array sibling of {@link translatePoint} — SSoT for
+ * the `pts.map(v => ({ ...v, x: v.x+d.x, y: v.y+d.y }))` idiom (e.g. polygon/vertex
+ * moves, the former `shiftPolygon3D`).
+ */
+export function translatePoints<T extends Point2D>(pts: readonly T[], delta: Point2D): T[] {
+  return pts.map((p) => translatePoint(p, delta));
+}
+
+/**
+ * Add two 3D points/vectors component-wise, SUMMING z (`a + b` in ℝ³) — the
+ * `vec3.add` sibling of {@link translatePoint} (big players keep one `add` PER
+ * dimension: three.js `Vector3.add`, glMatrix `vec3.add`). Use this ONLY when z is
+ * a genuine third summed component (3D geometry). For a 2D/plan move that must LEAVE
+ * elevation untouched, use {@link translatePoint} (which preserves `a.z`, never sums
+ * `b.z`). `?? 0` guards the optional-z shape so a 2D operand contributes 0.
+ */
+export function addPoint3D<T extends Point2D & { z?: number }>(
+  a: T,
+  b: Point2D & { z?: number },
+): T {
+  return { ...a, x: a.x + b.x, y: a.y + b.y, z: (a.z ?? 0) + (b.z ?? 0) };
 }
 
 /**

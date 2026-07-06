@@ -39,13 +39,13 @@ import { ARROW_ANGLE } from '../entities/shared/geometry-utils';
 // 🏢 ADR-150: Centralized Arrow Head Size
 import { OVERLAY_DIMENSIONS } from '../../utils/hover/config';
 // 🏢 ADR-080: Centralized Rectangle Bounds
-import { rectFromTwoPoints } from '../entities/shared/geometry-rendering-utils';
+// 🏢 ADR-577: Centralized point translation SSoT
+import { rectFromTwoPoints, translatePoint } from '../entities/shared/geometry-rendering-utils';
 
 import {
   GHOST_RENDER_CONFIG,
   LINE_DASH_PATTERNS,
   TEXT_LABEL_OFFSETS,
-  applyDelta,
   defaultWorldToScreen,
   getEntityBounds,
   mergeBounds,
@@ -74,8 +74,8 @@ function renderSimplifiedGhost(
 ): void {
   const worldToScreen = options.worldToScreen ?? defaultWorldToScreen;
 
-  const ghostMin = worldToScreen(applyDelta({ x: bounds.minX, y: bounds.minY }, delta));
-  const ghostMax = worldToScreen(applyDelta({ x: bounds.maxX, y: bounds.maxY }, delta));
+  const ghostMin = worldToScreen(translatePoint({ x: bounds.minX, y: bounds.minY }, delta));
+  const ghostMax = worldToScreen(translatePoint({ x: bounds.maxX, y: bounds.maxY }, delta));
   const { x, y, width, height } = rectFromTwoPoints(ghostMin, ghostMax);
 
   ctx.beginPath();
@@ -123,7 +123,7 @@ function renderDeltaLine(
 
   const worldToScreen = options.worldToScreen ?? defaultWorldToScreen;
   const startScreen = worldToScreen(originalCenter);
-  const endScreen = worldToScreen(applyDelta(originalCenter, delta));
+  const endScreen = worldToScreen(translatePoint(originalCenter, delta));
 
   ctx.beginPath();
   ctx.moveTo(startScreen.x, startScreen.y);

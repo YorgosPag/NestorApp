@@ -17,6 +17,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { DxfTextNode } from '../../text-engine/types';
@@ -112,7 +113,7 @@ export function commitTextGripDrag(
   // Anchor = the grabbed grip's world position (matches the rotation sweep start
   // `currentPos − delta`); `currentPos` is the live cursor. Mirror of the column commit.
   const anchor = grip.position;
-  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const currentPos: Point2D = translatePoint(anchor, delta);
   const patch = applyTextGripDrag(grip.textGripKind, { entity: dxfText, delta, currentPos });
   if (Object.keys(patch).length === 0) return;
 

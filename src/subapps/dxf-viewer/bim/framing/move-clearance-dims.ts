@@ -27,6 +27,7 @@ import type { SceneSnapTargets } from './scene-snap-targets';
 import { collectSceneSnapTargets } from './scene-snap-targets';
 import { resolveClearanceDimsForGhost } from './clearance-dims';
 import { resolveEntityFootprintForDims } from './entity-footprint-for-dims';
+import { translatePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 
 interface TargetsCache {
   readonly scene: readonly Entity[];
@@ -59,7 +60,7 @@ export function resolveMoveClearanceDims(
 ): GhostFaceDimensionsMeta | null {
   const base = resolveEntityFootprintForDims(baseEntity);
   if (!base) return null;
-  const footprint = base.map((p) => ({ x: p.x + delta.x, y: p.y + delta.y }));
+  const footprint = translatePoints(base, delta);
   const targets = selfExcludedTargets(sceneEntities, movingIds);
   // ΚΟΙΝΟΣ SSoT (ίδια metrics με το placement) — μηδέν inline opts εδώ.
   return resolveClearanceDimsForGhost(footprint, targets, sceneUnits, wpp);

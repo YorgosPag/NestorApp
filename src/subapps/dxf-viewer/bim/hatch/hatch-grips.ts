@@ -19,6 +19,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { HatchGripKind } from '../../hooks/grip-types';
 import { constrainDeltaToDominantAxis } from '../grips/ortho-delta';
 import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 const VERTEX_PREFIX = 'hatch-vertex-';
 
@@ -90,7 +91,7 @@ export function applyHatchOriginGripDrag(
   input: Readonly<Pick<HatchGripDragInput, 'delta' | 'rectilinear'>>,
 ): Point2D {
   const delta = input.rectilinear ? constrainDeltaToDominantAxis(input.delta) : input.delta;
-  return { x: originalOrigin.x + delta.x, y: originalOrigin.y + delta.y };
+  return translatePoint(originalOrigin, delta);
 }
 
 /**
@@ -175,7 +176,7 @@ export function applyHatchGripDrag(
   // Clone only the affected ring; share the untouched rings by reference.
   return original.map((ring, p) =>
     p === pathIdx
-      ? ring.map((v, i) => (i === vertexIdx ? { x: v.x + delta.x, y: v.y + delta.y } : { x: v.x, y: v.y }))
+      ? ring.map((v, i) => (i === vertexIdx ? translatePoint(v, delta) : { x: v.x, y: v.y }))
       : projectVerticesTo2D(ring),
   );
 }

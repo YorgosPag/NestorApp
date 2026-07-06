@@ -9,6 +9,7 @@
  * slab so a continuous drag collapses into a single undo entry.
  */
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { UnifiedGripInfo } from './unified-grip-types';
 import type { DxfCommitDeps } from './unified-grip-types';
 import type { StairEntity } from '../../bim/types/stair-types';
@@ -142,7 +143,7 @@ export function commitStairGripDrag(
   if (candidate.type !== 'stair' || !candidate.params) return;
   const stair = candidate as StairEntity;
   const originalParams = stair.params;
-  const currentPos: Point2D = { x: grip.position.x + delta.x, y: grip.position.y + delta.y };
+  const currentPos: Point2D = translatePoint(grip.position, delta);
   const newParams = applyStairGripDrag(grip.stairGripKind, {
     originalParams,
     delta,
@@ -193,10 +194,7 @@ export function commitWallGripDrag(
   const useRotatePivot =
     grip.wallGripKind === 'wall-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = {
-    x: anchor.x + delta.x,
-    y: anchor.y + delta.y,
-  };
+  const currentPos: Point2D = translatePoint(anchor, delta);
   const newParams = applyWallGripDrag(grip.wallGripKind, {
     originalParams,
     delta,
@@ -252,7 +250,7 @@ export function commitBeamGripDrag(
   const useRotatePivot =
     grip.beamGripKind === 'beam-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const currentPos: Point2D = translatePoint(anchor, delta);
   const newParams = applyBeamGripDrag(grip.beamGripKind, {
     originalParams,
     delta,
@@ -321,7 +319,7 @@ export function commitMepSegmentGripDrag(
     rotateCtx.pivot !== null &&
     rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const currentPos: Point2D = translatePoint(anchor, delta);
   const newParams = applyMepSegmentGripDrag(grip.mepSegmentGripKind, {
     originalParams,
     delta,
@@ -372,7 +370,7 @@ export function commitColumnGripDrag(
   const useRotatePivot =
     grip.columnGripKind === 'column-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const currentPos: Point2D = translatePoint(anchor, delta);
   const newParams = applyColumnGripDrag(grip.columnGripKind, {
     originalParams,
     delta,
@@ -432,7 +430,7 @@ export function commitFoundationGripDrag(
   const useRotatePivot =
     grip.foundationGripKind === 'foundation-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const currentPos: Point2D = translatePoint(anchor, delta);
   const newParams = applyFoundationGripDrag(grip.foundationGripKind, {
     originalParams,
     delta,

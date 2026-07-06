@@ -15,6 +15,7 @@
  * grip-parametric-commits.ts so the commit API stays one import.
  */
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { UnifiedGripInfo } from './unified-grip-types';
 import type { DxfCommitDeps } from './unified-grip-types';
 import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
@@ -57,7 +58,7 @@ export function commitMepRadiatorGripDrag(
   const useRotatePivot =
     grip.mepRadiatorGripKind === 'mep-radiator-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const currentPos: Point2D = translatePoint(anchor, delta);
   const newParams = applyMepRadiatorGripDrag(grip.mepRadiatorGripKind, {
     originalParams,
     delta,
@@ -111,7 +112,7 @@ export function commitMepBoilerGripDrag(
   const useRotatePivot =
     grip.mepBoilerGripKind === 'mep-boiler-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const currentPos: Point2D = translatePoint(anchor, delta);
   const newParams = applyMepBoilerGripDrag(grip.mepBoilerGripKind, {
     originalParams,
     delta,
@@ -165,7 +166,7 @@ export function commitMepWaterHeaterGripDrag(
   const useRotatePivot =
     grip.mepWaterHeaterGripKind === 'mep-water-heater-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const currentPos: Point2D = translatePoint(anchor, delta);
   const newParams = applyMepWaterHeaterGripDrag(grip.mepWaterHeaterGripKind, {
     originalParams,
     delta,

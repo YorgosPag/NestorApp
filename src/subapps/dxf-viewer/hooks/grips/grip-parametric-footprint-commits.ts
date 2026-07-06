@@ -11,6 +11,7 @@
  * so the commit API stays one import.
  */
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
 import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
 import type { HatchEntity } from '../../types/entities';
@@ -257,7 +258,7 @@ export function commitHatchGripDrag(
     const anchor = hatchGradientAngleGripPos(origin, gradient.angleDeg ?? 0, candidate.boundaryPaths);
     if (!anchor) return;
     // Shift → snap σε 15° (ίδιο modifier με το rectilinear των άλλων hatch grips).
-    const newAngle = applyHatchAngleGripDrag(origin, { x: anchor.x + delta.x, y: anchor.y + delta.y }, rectilinear);
+    const newAngle = applyHatchAngleGripDrag(origin, translatePoint(anchor, delta), rectilinear);
     if (newAngle === (gradient.angleDeg ?? 0)) return;
     const newGradient = withGradientPatch(gradient, DEFAULT_GRADIENT_DEFAULTS, { field: 'angleDeg', value: newAngle });
     const angleCommand = new UpdateHatchGradientCommand(

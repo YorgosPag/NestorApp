@@ -20,6 +20,8 @@
  */
 
 import type { Point2D } from '../types/Types';
+// SSoT — canonical point translation (ADR-577 consolidation).
+import { translatePoint } from '../entities/shared/geometry-vector-utils';
 import type { DxfEntityUnion, DxfText, DxfLine, DxfArc, DxfPolyline } from '../../canvas-v2/dxf-canvas/dxf-types';
 // ADR-363 Slice F — plain DXF line rotation live ghost (shared axis-box rotate SSoT).
 import { applyLineRotationDrag } from '../../systems/line/line-grips';
@@ -116,7 +118,7 @@ export function applyEntityPreview(
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
   if (wallGripKind && anchorPos && entity.type === 'wall') {
     const wall = entity as unknown as WallEntity;
-    const currentPos: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
+    const currentPos: Point2D = translatePoint(anchorPos, delta);
     // ADR-363 Phase 1G — `rotatePivot` (set only for the wall-rotation 3-click
     // hot-grip) rotates the ghost around the picked centre instead of the midpoint.
     const newParams = applyWallGripDrag(wallGripKind, { originalParams: wall.params, delta, currentPos, ...(rotatePivot ? { pivot: rotatePivot } : {}) });
@@ -214,7 +216,7 @@ export function applyEntityPreview(
       if (!anchor) return entity;
       // Shift → snap σε 15° (preview === commit· ίδιο modifier με το commit path).
       const newAngle = applyHatchAngleGripDrag(
-        origin, { x: anchor.x + delta.x, y: anchor.y + delta.y }, ShiftKeyTracker.getSnapshot(),
+        origin, translatePoint(anchor, delta), ShiftKeyTracker.getSnapshot(),
       );
       const newGradient = withGradientPatch(gradient, DEFAULT_GRADIENT_DEFAULTS, { field: 'angleDeg', value: newAngle });
       return { ...(entity as object), gradient: newGradient } as unknown as DxfEntityUnion;
@@ -235,7 +237,7 @@ export function applyEntityPreview(
   if (textGripKind && entity.type === 'text') {
     const t = entity as unknown as DxfText;
     const currentPos: Point2D = anchorPos
-      ? { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y }
+      ? translatePoint(anchorPos, delta)
       : { x: delta.x, y: delta.y };
     const patch = applyTextGripDrag(textGripKind, { entity: t, delta, currentPos });
     if (Object.keys(patch).length === 0) return entity;
@@ -253,7 +255,7 @@ export function applyEntityPreview(
   // spin. A bare `if (lineGripKind)` rotated the move ghost.
   if (lineGripKind === 'line-rotation' && anchorPos && entity.type === 'line') {
     const line = entity as unknown as DxfLine;
-    const currentPos: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
+    const currentPos: Point2D = translatePoint(anchorPos, delta);
     const rotated = applyLineRotationDrag({ start: line.start, end: line.end, delta, currentPos, ...(rotatePivot ? { pivot: rotatePivot } : {}) });
     if (!rotated) return entity;
     return { ...(entity as object), start: rotated.start, end: rotated.end } as unknown as DxfEntityUnion;
@@ -272,7 +274,7 @@ export function applyEntityPreview(
   // the centre MOVE grip (`movesEntity`) falls through to the classic translate below.
   if (arcGripKind === 'arc-rotation' && anchorPos && entity.type === 'arc') {
     const arc = entity as unknown as DxfArc;
-    const currentPos: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
+    const currentPos: Point2D = translatePoint(anchorPos, delta);
     const patch = applyPrimitiveRotationDrag(entity as unknown as Entity, {
       anchor: anchorPos, currentPos, pivot: rotatePivot ?? arc.center,
     });
@@ -281,7 +283,7 @@ export function applyEntityPreview(
   }
   if (polylineGripKind === 'polyline-rotation' && anchorPos && entity.type === 'polyline') {
     const poly = entity as unknown as DxfPolyline;
-    const currentPos: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
+    const currentPos: Point2D = translatePoint(anchorPos, delta);
     const patch = applyPrimitiveRotationDrag(entity as unknown as Entity, {
       anchor: anchorPos, currentPos, pivot: rotatePivot ?? polylineBboxCenter(poly.vertices),
     });
@@ -298,7 +300,7 @@ export function applyEntityPreview(
   if (stairGripKind && anchorPos) {
     const stair = unwrapStair(entity);
     if (!stair) return entity;
-    const currentPos: Point2D = { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y };
+    const currentPos: Point2D = translatePoint(anchorPos, delta);
     const newParams = applyStairGripDrag(stairGripKind, {
       originalParams: stair.params,
       delta,
@@ -339,7 +341,7 @@ export function applyEntityPreview(
         const resolved = resolveOpeningAltMove({
           originalParams: opening.params,
           basePoint: anchorPos,
-          currentPos: { x: anchorPos.x + delta.x, y: anchorPos.y + delta.y },
+          currentPos: translatePoint(anchorPos, delta),
           currentHost,
           candidateWalls: walls,
           rehostToleranceWorld: openingRehostToleranceWorld(currentHost),

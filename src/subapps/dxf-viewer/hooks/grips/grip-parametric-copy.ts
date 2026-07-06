@@ -14,6 +14,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-397-bim-grip-glyph-behavior-ssot.md
  */
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { ColumnEntity } from '../../bim/types/column-types';
@@ -85,7 +86,7 @@ export function commitWallCopy(
   if (candidate.type !== 'wall' || !candidate.params) return;
   const wall = candidate as WallEntity;
   const originalParams = wall.params;
-  const currentPos: Point2D = { x: grip.position.x + delta.x, y: grip.position.y + delta.y };
+  const currentPos: Point2D = translatePoint(grip.position, delta);
   const translated = applyWallGripDrag('wall-midpoint', { originalParams, delta, currentPos });
   const sceneUnits = originalParams.sceneUnits ?? 'mm';
   const built = buildWallEntity(translated, wall.layerId, wall.kind ?? 'straight', sceneUnits);

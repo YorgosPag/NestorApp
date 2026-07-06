@@ -15,6 +15,7 @@
  * @see geometry-bulge-utils — bulgeFromApexPoint (drag → bulge SSoT, Φ3a)
  */
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
 import { SetBulgeCommand } from '../../core/commands/entity-commands/SetBulgeCommand';
 import { bulgeFromApexPoint } from '../../rendering/entities/shared/geometry-bulge-utils';
@@ -53,7 +54,7 @@ export function commitPolylineBulgeGripDrag(
   const p0 = vertices[segIdx];
   const p1 = vertices[next];
   // Apex starts at the grip position (= original apex) and follows the drag delta.
-  const apex: Point2D = { x: grip.position.x + delta.x, y: grip.position.y + delta.y };
+  const apex: Point2D = translatePoint(grip.position, delta);
   const newBulge = bulgeFromApexPoint(p0, p1, apex);
   const oldBulge = entity.bulges?.[segIdx] ?? 0;
   if (newBulge === oldBulge) return;

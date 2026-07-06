@@ -26,6 +26,7 @@ import type { MepSegmentParams } from '../../bim/types/mep-segment-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { WallEntity } from '../../bim/types/wall-types';
 import { resolveOpeningAltMove, openingRehostToleranceWorld } from '../../bim/walls/opening-grips';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { UpdateOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateOpeningParamsCommand';
 import { mmToEntityUnitFactor } from '../utils/bim3d-edit-math';
 import { createSceneManagerAdapter } from '../../hooks/grips/grip-commit-adapters';
@@ -232,7 +233,7 @@ function buildOpeningRehostMoveCommand(
   const resolved = resolveOpeningAltMove({
     originalParams: opening.params,
     basePoint: center,
-    currentPos: { x: center.x + delta.x, y: center.y + delta.y },
+    currentPos: translatePoint(center, delta),
     currentHost,
     candidateWalls: entities.filter(isWallEntity),
     rehostToleranceWorld: openingRehostToleranceWorld(currentHost),

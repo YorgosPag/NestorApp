@@ -8,6 +8,7 @@
  * so the commit API stays one import.
  */
 import type { Point2D } from '../../rendering/types/Types';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { SceneEntity } from '../../core/commands/interfaces';
 import type { UnifiedGripInfo } from './unified-grip-types';
 import type { DxfCommitDeps } from './unified-grip-types';
@@ -43,7 +44,7 @@ export function commitXLineGripDrag(
   const raw = sceneManager.getEntity(grip.entityId);
   if (!raw || (raw as Record<string, unknown>).type !== 'xline') return;
   const entity = raw as unknown as XLineEntity;
-  const currentPos: Point2D = { x: grip.position.x + delta.x, y: grip.position.y + delta.y };
+  const currentPos: Point2D = translatePoint(grip.position, delta);
   const updates = applyXLineGripDrag(grip.xlineGripKind, { entity, delta, currentPos });
   if (Object.keys(updates).length === 0) return;
   sceneManager.updateEntity(grip.entityId, updates as unknown as Partial<SceneEntity>);
@@ -64,7 +65,7 @@ export function commitRayGripDrag(
   const raw = sceneManager.getEntity(grip.entityId);
   if (!raw || (raw as Record<string, unknown>).type !== 'ray') return;
   const entity = raw as unknown as RayEntity;
-  const currentPos: Point2D = { x: grip.position.x + delta.x, y: grip.position.y + delta.y };
+  const currentPos: Point2D = translatePoint(grip.position, delta);
   const updates = applyRayGripDrag(grip.rayGripKind, { entity, delta, currentPos });
   if (Object.keys(updates).length === 0) return;
   sceneManager.updateEntity(grip.entityId, updates as unknown as Partial<SceneEntity>);
@@ -97,7 +98,7 @@ export function commitLineGripDrag(
     ? rotateCtx.pivot!
     : { x: (line.start.x + line.end.x) / 2, y: (line.start.y + line.end.y) / 2 };
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+  const currentPos: Point2D = translatePoint(anchor, delta);
   const sweptDeg = sweptAngleDegAboutPivot(pivot, anchor, currentPos);
   if (sweptDeg === null || sweptDeg === 0) return;
   // ADR-561 EXT — Ctrl (or the right-click «Copy» toggle) held → rotate a CLONE about the

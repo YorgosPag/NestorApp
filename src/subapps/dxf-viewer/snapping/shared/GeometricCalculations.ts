@@ -38,11 +38,16 @@ import {
   isOpeningEntity,
   isFoundationEntity,
   isHatchEntity,
+  isRoofEntity,
 } from '../../types/entities';
+import type { RoofEntity } from '../../bim/types/roof-types';
 // ADR-363 BIM entity key-point SSoT (delegates to bim-entity-points.ts).
 import { getBimEntityKeyPoints2D, getBimEntityEdgeMidpoints2D } from '../../bim/utils/bim-entity-points';
 // ADR-507 — hatch boundary bbox-center SSoT (reused for the hatch CENTER snap; zero duplicate bbox math).
 import { hatchBoundsCenter } from '../../bim/hatch/hatch-grips';
+// ADR-417 — roof eave outer-ring SSoT (ό,τι ζωγραφίζεται ως γείσο → έλξη εκεί).
+import { roofEaveOuterRing } from '../../bim/geometry/roof-eave-plan-geom';
+import { mmToSceneUnits } from '../../utils/scene-units';
 
 export interface IntersectionResult {
   point: Point2D;
@@ -114,6 +119,15 @@ export class GeometricCalculations {
       for (const ring of entity.boundaryPaths) {
         endpoints.push(...ring);
       }
+    } else if (isRoofEntity(entity)) {
+      // ADR-417 — στέγη: κορυφές footprint (γραμμή τοίχου/pivot) + εξωτερικό mitered
+      // δαχτυλίδι γείσου (SSoT `roofEaveOuterRing` — ό,τι ζωγραφίζεται) + άκρα
+      // κορφιάδων/hips (`geometry.ridges`). Καλύπτει το πλήρες Revit-grade σετ.
+      for (const v of entity.params?.outline?.vertices ?? []) endpoints.push({ x: v.x, y: v.y });
+      endpoints.push(...GeometricCalculations.roofEaveRing(entity));
+      for (const r of entity.geometry?.ridges ?? []) {
+        endpoints.push({ x: r.a.x, y: r.a.y }, { x: r.b.x, y: r.b.y });
+      }
     }
     // XLine: infinite in both directions → no endpoints
 
@@ -159,6 +173,13 @@ export class GeometricCalculations {
       // ADR-507 — γραμμοσκίαση: μέσα ακμών κάθε ring (κλειστός βρόχος) του ορίου.
       for (const ring of entity.boundaryPaths) {
         midpoints.push(...GeometricCalculations.ringEdgeMidpoints(ring, true));
+      }
+    } else if (isRoofEntity(entity)) {
+      // ADR-417 — στέγη: μέσα ακμών footprint + εξωτερικού δαχτυλιδιού γείσου + κορφιάδων/hips.
+      midpoints.push(...GeometricCalculations.ringEdgeMidpoints(entity.params?.outline?.vertices ?? [], true));
+      midpoints.push(...GeometricCalculations.ringEdgeMidpoints(GeometricCalculations.roofEaveRing(entity), true));
+      for (const r of entity.geometry?.ridges ?? []) {
+        midpoints.push({ x: (r.a.x + r.b.x) / 2, y: (r.a.y + r.b.y) / 2 });
       }
     } else if (isWallEntity(entity) || isBeamEntity(entity) || isSlabEntity(entity) || isSlabOpeningEntity(entity) || isOpeningEntity(entity)) {
       // ADR-363 — BIM entity edge midpoints delegated to SSoT (bim-entity-points.ts).
@@ -251,9 +272,24 @@ export class GeometricCalculations {
       // ADR-507 — γραμμοσκίαση: CENTER έλξη = κέντρο bbox του ορίου. Επαναχρήση του
       // `hatchBoundsCenter` SSoT (ίδιο math με τον gradient origin default) → μηδέν διπλότυπο.
       return hatchBoundsCenter(entity.boundaryPaths);
+    } else if (isRoofEntity(entity)) {
+      // ADR-417 — στέγη: CENTER = κέντρο bbox footprint (derived `geometry.bbox` SSoT).
+      const b = entity.geometry?.bbox;
+      return b ? { x: (b.min.x + b.max.x) / 2, y: (b.min.y + b.max.y) / 2 } : null;
     }
 
     return null;
+  }
+
+  /**
+   * ADR-417 — το εξωτερικό mitered δαχτυλίδι γείσου μιας στέγης σε plan
+   * (SSoT `roofEaveOuterRing` — ό,τι ζωγραφίζει ο `RoofRenderer`). `s` = canvas
+   * units ανά mm. Κοινό για ENDPOINT + MIDPOINT έλξη γείσου· κενό σε degenerate roof.
+   */
+  private static roofEaveRing(entity: RoofEntity): Point2D[] {
+    const p = entity.params;
+    const s = mmToSceneUnits(p?.sceneUnits ?? 'mm');
+    return roofEaveOuterRing(p?.outline?.vertices ?? [], p?.edges ?? [], s, entity.geometry?.ridges ?? []);
   }
 
   // --------- RECTANGLE UTILITIES ---------

@@ -61,6 +61,7 @@ import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import { ANCHOR_OFFSETS, MIN_COLUMN_DIMENSION_MM } from '../types/column-types';
 import { rotatePoint } from '../../utils/rotation-math';
 import { sweptAngleDegAboutPivot, farEdgeSign } from '../grips/grip-math';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { parseGripKindIndex } from '../../systems/grip/grip-kind-index';
 import {
   RAD_TO_DEG,
@@ -396,7 +397,7 @@ function rotateAroundPosition(input: Readonly<ColumnGripDragInput>): ColumnParam
   const oldHandle = usesFreeReshapeGrips(originalParams)
     ? freeReshapeRotationWorld(originalParams)
     : rotationHandleWorld(originalParams);
-  const newHandle = { x: oldHandle.x + delta.x, y: oldHandle.y + delta.y };
+  const newHandle = translatePoint(oldHandle, delta);
   const oldVec = {
     x: oldHandle.x - originalParams.position.x,
     y: oldHandle.y - originalParams.position.y,

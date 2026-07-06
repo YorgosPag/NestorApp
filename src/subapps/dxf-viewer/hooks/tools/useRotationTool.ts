@@ -22,6 +22,7 @@ import type { ICommand } from '../../core/commands/interfaces';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas/PreviewCanvas';
 import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
 import { angleBetweenPointsDeg } from '../../utils/rotation-math';
 import { resolveOrthoPolarStep } from '../drawing/drawing-handler-utils';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
@@ -133,10 +134,6 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
   const isCollectingInput = isActive && selectedEntityIds.length > 0
     && (phase === 'awaiting-base-point' || phase === 'awaiting-reference' || phase === 'awaiting-angle');
 
-  // Track previous states to detect transitions
-  const wasActiveRef = useRef(false);
-  const prevEntityCountRef = useRef(0);
-
   // Build scene manager adapter on demand
   const getSceneManager = useCallback(() => {
     if (!levelManager.currentLevelId) return null;
@@ -147,76 +144,51 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
     );
   }, [levelManager]);
 
-  // ── State machine transitions ──────────────────────────────────────────
-  useEffect(() => {
-    const toolIsRotate = activeTool === 'rotate';
-    const hasEntities = selectedEntityIds.length > 0;
-
-    if (toolIsRotate && !wasActiveRef.current) {
-      // Transition: entering rotation mode
+  // ── State machine transitions (shared FSM SSoT, ADR-577) ──────────────────
+  // Every hook-driven phase change clears the ghost + drops stale pivot/ref/angle.
+  // The grip-drag handoff (pre-seeded pivot → jump to reference, or reference
+  // vector → jump to angle) is the tool-specific ACTIVATE variant (`onActivate`).
+  useModifyToolActivation({
+    isActive,
+    selectionCount: selectedEntityIds.length,
+    phase,
+    entityPhase: 'awaiting-entity',
+    basePhase: 'awaiting-base-point',
+    setPhase: (p) => {
+      previewCanvasRef.current?.clear();
+      if (p === 'awaiting-entity' || p === 'awaiting-base-point') {
+        setBasePoint(null); setReferencePoint(null); setCurrentAngle(0);
+      }
+      setPhase(p as RotationPhase);
+    },
+    onDeactivate: () => {
+      previewCanvasRef.current?.clear();
+      setPhase('idle'); setBasePoint(null); setReferencePoint(null); setCurrentAngle(0);
+    },
+    onActivate: (hasSelection) => {
       const handoff = GripHandoffStore.consume('rotate');
-      if (hasEntities && handoff) {
-        // ADR-357 Phase 12 — `copyMode` modifier: arm Rotation's clone path.
+      if (hasSelection && handoff) {
+        previewCanvasRef.current?.clear();
         copyModeHandoffRef.current = handoff.options.copyMode === true;
         if (handoff.options.refStart && handoff.options.refEnd) {
-          // ADR-357 Phase 12 — Reference modifier: refStart/refEnd were picked
-          // through the grip menu's Reference flow. Pivot stays at the handoff
-          // anchor; reference direction is derived from the picked vector and
-          // we fast-forward past `awaiting-reference` straight to `awaiting-angle`.
+          // Reference modifier: fast-forward past awaiting-reference to awaiting-angle.
           setBasePoint(handoff.point);
           setReferencePoint(handoff.options.refEnd);
-          startAngleRef.current = angleBetweenPointsDeg(
-            handoff.options.refStart,
-            handoff.options.refEnd,
-          );
+          startAngleRef.current = angleBetweenPointsDeg(handoff.options.refStart, handoff.options.refEnd);
           setCurrentAngle(0);
           setPhase('awaiting-angle');
         } else {
-          // Grip drag pre-seeded the base point → skip straight to reference
+          // Grip drag pre-seeded the pivot → skip straight to reference.
           setBasePoint(handoff.point);
           setReferencePoint(null);
           setCurrentAngle(0);
           setPhase('awaiting-reference');
         }
-      } else if (hasEntities) {
-        setBasePoint(null);
-        setReferencePoint(null);
-        setCurrentAngle(0);
-        setPhase('awaiting-base-point');
-      } else {
-        setBasePoint(null);
-        setReferencePoint(null);
-        setCurrentAngle(0);
-        setPhase('awaiting-entity');
+        return true;
       }
-      previewCanvasRef.current?.clear();
-    } else if (!toolIsRotate && wasActiveRef.current) {
-      // Transition: leaving rotation mode
-      setPhase('idle');
-      setBasePoint(null);
-      setReferencePoint(null);
-      setCurrentAngle(0);
-      previewCanvasRef.current?.clear();
-    } else if (toolIsRotate && wasActiveRef.current) {
-      // Still in rotation mode — check if entities were just selected
-      const prevCount = prevEntityCountRef.current;
-      if (prevCount === 0 && hasEntities && phase === 'awaiting-entity') {
-        // Entity just selected during awaiting-entity → transition to base-point
-        setPhase('awaiting-base-point');
-        previewCanvasRef.current?.clear();
-      } else if (hasEntities && prevCount > 0 && selectedEntityIds.length === 0) {
-        // Entities deselected during rotation → back to awaiting-entity
-        setPhase('awaiting-entity');
-        setBasePoint(null);
-        setReferencePoint(null);
-        setCurrentAngle(0);
-        previewCanvasRef.current?.clear();
-      }
-    }
-
-    wasActiveRef.current = toolIsRotate;
-    prevEntityCountRef.current = selectedEntityIds.length;
-  }, [activeTool, selectedEntityIds.length, phase, previewCanvasRef]);
+      return false; // default (hasSelection ? base : entity) resets pivot/ref/angle via setPhase
+    },
+  });
 
   /**
    * Handle canvas click during rotation

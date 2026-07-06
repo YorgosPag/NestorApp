@@ -41,6 +41,7 @@ import type {
 } from '../types/foundation-types';
 import { ANCHOR_OFFSETS, MIN_FOUNDATION_DIMENSION_MM } from '../types/foundation-types';
 import { rotatePoint } from '../../utils/rotation-math';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import {
   sweptAngleDegAboutPivot,
   farEdgeSign,
@@ -366,7 +367,7 @@ function rotateAroundPosition(
 ): PadFootingParams {
   const { delta } = input;
   const oldHandle = rotationHandleWorld(pad);
-  const newHandle = { x: oldHandle.x + delta.x, y: oldHandle.y + delta.y };
+  const newHandle = translatePoint(oldHandle, delta);
   const oldAngle = Math.atan2(oldHandle.y - pad.position.y, oldHandle.x - pad.position.x);
   const newAngle = Math.atan2(newHandle.y - pad.position.y, newHandle.x - pad.position.x);
   const deltaDeg = (newAngle - oldAngle) * RAD_TO_DEG;
