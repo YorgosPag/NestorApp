@@ -30,6 +30,7 @@ import { EventBus } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands/useCommandHistory';
 import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { UpdateEntityCommand } from '../core/commands/entity-commands/UpdateEntityCommand';
+import { openDimTextOverride } from '../ui/panels/dimensions/DimTextOverrideStore';
 import { CompositeCommand } from '../core/commands/CompositeCommand';
 import type { ICommand, ISceneManager } from '../core/commands/interfaces';
 import { getDimStyleRegistry } from '../systems/dimensions/dim-style-registry';
@@ -258,6 +259,27 @@ export function useDimensionModify(props: { levelManager: LevelManagerLike }): v
         .then((ok) => { if (ok) SelectedEntitiesStore.clearByType('dxf-entity'); });
     });
 
+    // ADR-362 Phase G1 (2026-07-06 fix) — «Παράκαμψη Κειμένου». Open: read the dim's
+    // current `userText` from the level-scene SSoT and open the dialog pre-filled (so it
+    // no longer depends on the dead module `SceneUpdateManager` singleton). Apply: run an
+    // undoable `UpdateEntityCommand` that patches `userText` on the level scene.
+    const unsubTextOverrideOpen = EventBus.on('dim:text-override-open-requested', ({ entityId }) => {
+      const r = resolve([entityId]);
+      if (!r) return;
+      const dim = r.dims.find((d) => d.id === entityId);
+      if (!dim) return;
+      openDimTextOverride(entityId, dim.userText);
+    });
+
+    const unsubTextOverrideApply = EventBus.on('dim:text-override-apply-requested', ({ entityId, userText }) => {
+      const r = resolve([entityId]);
+      if (!r) return;
+      runAtomic(
+        [new UpdateEntityCommand(entityId, { userText }, r.ctx.sm, 'Dimension text override')],
+        execute,
+      );
+    });
+
     return () => {
       unsubBreak();
       unsubSpace();
@@ -265,6 +287,8 @@ export function useDimensionModify(props: { levelManager: LevelManagerLike }): v
       unsubSelectRow();
       unsubRowMove();
       unsubDelete();
+      unsubTextOverrideOpen();
+      unsubTextOverrideApply();
     };
   }, [levelManager, execute]);
 }

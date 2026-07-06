@@ -20,7 +20,6 @@ import type { NotificationContextValue } from '@/types/notifications';
 import type { LevelsHookReturn } from '../systems/levels/useLevels';
 import type { FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import type { FirebaseAuthUser } from '@/auth/types/auth.types';
-import { openDimTextOverride } from '../ui/panels/dimensions/DimTextOverrideStore';
 import { EventBus } from '../systems/events/EventBus';
 import { useAnalysisDiagramViewStore } from '../state/analysis-diagram-view-store';
 import { useAnimationStore } from '../bim-3d/animation/AnimationStore';
@@ -193,10 +192,14 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
     EventBus.emit('dxf:import-tek-requested', {});
     return true;
   }
-  // ADR-362 Phase G1: open dimension text-override dialog
+  // ADR-362 Phase G1 (2026-07-06 fix): request the text-override dialog. The
+  // `useDimensionModify` host owns the level-scene SSoT — it reads the dim's current
+  // `userText` and opens the dialog pre-filled. Emitting (not opening directly) is what
+  // lets the dialog resolve the entity from the REAL scene instead of the dead
+  // `SceneUpdateManager` singleton (root cause of «Δεν επιλέχθηκε διάσταση»).
   if (action === 'dim.text.override') {
     const entityId = selectedEntityIds[0];
-    if (entityId) openDimTextOverride(entityId);
+    if (entityId) EventBus.emit('dim:text-override-open-requested', { entityId });
     return true;
   }
   // ADR-362 Phase K: DIMBREAK / DIMSPACE — selection-driven, the

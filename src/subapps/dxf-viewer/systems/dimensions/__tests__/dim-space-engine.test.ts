@@ -157,10 +157,10 @@ describe("computeDimSpacing 'custom' mode", () => {
 // ── 'auto' mode ───────────────────────────────────────────────────────────────
 
 describe("computeDimSpacing 'auto' mode", () => {
-  it('spacing = 2 × paperTextHeight', () => {
-    const paperTextHeight = 3.5;
-    const style = makeStyle({ paperTextHeight });
-    const expectedSpacing = 2 * paperTextHeight; // 7
+  it('spacing = 2 × dimtxt (text height SSoT)', () => {
+    const dimtxt = 3.5;
+    const style = makeStyle({ dimtxt });
+    const expectedSpacing = 2 * dimtxt; // 7
 
     const base = makeLinearDim(10);
     const target = makeLinearDim(100); // far from base, so will be moved

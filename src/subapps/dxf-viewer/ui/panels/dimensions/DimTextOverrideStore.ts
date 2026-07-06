@@ -14,13 +14,16 @@ import { createExternalStore } from '../../../stores/createExternalStore';
 export interface DimTextOverrideState {
   readonly isOpen: boolean;
   readonly entityId: string | null;
+  /** Current `userText` of the target dim, read from the level-scene SSoT at open time. */
+  readonly initialUserText: string | undefined;
 }
 
-const CLOSED: DimTextOverrideState = { isOpen: false, entityId: null };
+const CLOSED: DimTextOverrideState = { isOpen: false, entityId: null, initialUserText: undefined };
 
 // Field-compare equals αναπαράγει τα custom guards (open: ήδη-open-ίδιο-entity· close: ήδη-closed).
 const store = createExternalStore<DimTextOverrideState>(CLOSED, {
-  equals: (a, b) => a.isOpen === b.isOpen && a.entityId === b.entityId,
+  equals: (a, b) =>
+    a.isOpen === b.isOpen && a.entityId === b.entityId && a.initialUserText === b.initialUserText,
 });
 
 export function getDimTextOverrideState(): DimTextOverrideState {
@@ -31,9 +34,13 @@ export function subscribeDimTextOverride(listener: () => void): () => void {
   return store.subscribe(listener);
 }
 
-/** Open the text-override dialog for the given dimension entity. */
-export function openDimTextOverride(entityId: string): void {
-  store.set({ isOpen: true, entityId });
+/**
+ * Open the text-override dialog for the given dimension entity, pre-filled with its
+ * current `userText`. Called by the `useDimensionModify` host AFTER it has read the dim
+ * from the level-scene SSoT — so `isOpen && entityId` always denotes a real dimension.
+ */
+export function openDimTextOverride(entityId: string, initialUserText?: string): void {
+  store.set({ isOpen: true, entityId, initialUserText });
 }
 
 /** Close the dialog. Idempotent. */

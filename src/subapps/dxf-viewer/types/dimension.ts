@@ -180,7 +180,11 @@ export interface DimStyle {
   breakGap: number;
 
   // ── Text ───────────────────────────────────────────────────────────────────
-  /** DIMTXT — model-space text height. Computed = paperTextHeight × dimscale. */
+  /**
+   * DIMTXT (code 140) — text height in paper-mm. **SSoT for text height** —
+   * read by the renderer (which applies `× dimscale`) and by all DXF I/O. The
+   * "Text Height" ribbon control writes THIS field.
+   */
   dimtxt: number;
   /** DIMCLRT — text color (ACI). */
   dimclrt: number;
@@ -216,8 +220,11 @@ export interface DimStyle {
    */
   dimscale: number;
   /**
-   * D3 — paper-space text height (mm). Resolves to `dimtxt = paperTextHeight × dimscale` at render.
-   * Mirrors Revit's view-driven annotation scaling, future-proof for AutoCAD entity-driven mode.
+   * @deprecated Legacy duplicate of `dimtxt` (both paper-mm). NOT a live edit
+   * target — `dimtxt` is the text-height SSoT (renderer + I/O read it; the ribbon
+   * control writes it). Kept populated (= `dimtxt` on import) for back-compat only;
+   * do NOT read for rendering/spacing. Fold into `dimtxt` when annotation scaling
+   * is reworked (was silently ignored by render, causing the 2026-07-06 text-height bug).
    */
   paperTextHeight: number;
 

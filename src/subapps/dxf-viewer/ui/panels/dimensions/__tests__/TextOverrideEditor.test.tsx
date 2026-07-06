@@ -134,6 +134,24 @@ describe('DimTextOverrideStore', () => {
     expect(getDimTextOverrideState()).toEqual({ isOpen: true, entityId: 'e1' });
   });
 
+  it('openDimTextOverride carries the pre-filled userText from the level scene', () => {
+    openDimTextOverride('e1', 'PRE<>SUF');
+    expect(getDimTextOverrideState()).toEqual({
+      isOpen: true,
+      entityId: 'e1',
+      initialUserText: 'PRE<>SUF',
+    });
+  });
+
+  it('re-notifies when the same id opens with a different pre-filled userText', () => {
+    const listener = jest.fn();
+    subscribeDimTextOverride(listener);
+    openDimTextOverride('e1', 'A');
+    openDimTextOverride('e1', 'B'); // same entity, different prefill → must update
+    expect(listener).toHaveBeenCalledTimes(2);
+    expect(getDimTextOverrideState().initialUserText).toBe('B');
+  });
+
   it('idempotent: second open with same id does not re-notify', () => {
     const listener = jest.fn();
     subscribeDimTextOverride(listener);

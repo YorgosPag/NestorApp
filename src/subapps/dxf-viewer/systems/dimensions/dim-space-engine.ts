@@ -6,7 +6,7 @@
  * dimension. Mirrors AutoCAD's DIMSPACE command.
  *
  * Modes:
- *   - 'auto'   — spacing = 2 × resolvedStyle.paperTextHeight (DIMSPACE default)
+ *   - 'auto'   — spacing = 2 × resolvedStyle.dimtxt (text height SSoT, DIMSPACE default)
  *   - 'custom' — caller-supplied spacing value (mm paper)
  *   - 'align'  — spacing = 0 (collapse all dim lines to the base dim line)
  *
@@ -103,7 +103,7 @@ function resolveSpacing(
   customValue: number,
 ): number {
   switch (mode) {
-    case 'auto':   return 2 * style.paperTextHeight;
+    case 'auto':   return 2 * style.dimtxt;
     case 'custom': return Math.max(0, customValue);
     case 'align':  return 0;
   }

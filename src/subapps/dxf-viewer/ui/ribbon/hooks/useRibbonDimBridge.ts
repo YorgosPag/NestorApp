@@ -114,7 +114,10 @@ const DIM_KEY_MAP: Readonly<Record<string, DimKeySpec>> = {
   [K.arrowSize]:  { field: 'dimasz', kind: 'number' },
   [K.textColor]:  { field: 'dimclrt', kind: 'color', trueColorField: 'dimclrtTrueColor' },
   [K.textFont]:   { field: 'textFontFamily', kind: 'font' },
-  [DIM_RIBBON_KEYS.text.height]: { field: 'paperTextHeight', kind: 'number' },
+  // Text height → DIMTXT (code 140), the SSoT the renderer + all DXF I/O read
+  // (paper-mm; render applies dimscale). NOT `paperTextHeight` — writing that
+  // left a stale `dimtxt`, so the text never resized (fix 2026-07-06).
+  [DIM_RIBBON_KEYS.text.height]: { field: 'dimtxt', kind: 'number' },
   // Vertical text placement (DIMTAD) — a DIMSTYLE override (above/centered/below/…).
   [DIM_RIBBON_KEYS.text.position]: { field: 'dimtad', kind: 'enum' },
 };

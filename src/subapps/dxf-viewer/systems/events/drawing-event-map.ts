@@ -187,6 +187,14 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap {
   // 2026-07-04 — «Διαγραφή» (edit tab «Ενέργειες»): delete the selected dimension(s)
   // through the canonical undoable `deleteEntitiesById` SSoT. `useDimensionModify` host.
   'dim:delete-requested': { entityIds: readonly string[] };
+  // ADR-362 Phase G1 (2026-07-06 fix) — «Παράκαμψη Κειμένου». The ribbon action emits
+  // *-open-requested; the `useDimensionModify` host (which owns the level-scene SSoT)
+  // reads the dim's current `userText` and opens the dialog pre-filled. On Apply the
+  // dialog emits *-apply-requested and the host runs an undoable `UpdateEntityCommand`.
+  // Both route through the level scene — the dialog no longer touches the (dead) module
+  // `SceneUpdateManager` singleton, which was why it reported «Δεν επιλέχθηκε διάσταση».
+  'dim:text-override-open-requested': { entityId: string };
+  'dim:text-override-apply-requested': { entityId: string; userText: string | undefined };
 
   // 🏢 ADR-055: Entity Creation Event Bus Pattern (Enterprise Architecture)
   // Pattern: Autodesk/Bentley - Event-driven entity creation with Command History integration

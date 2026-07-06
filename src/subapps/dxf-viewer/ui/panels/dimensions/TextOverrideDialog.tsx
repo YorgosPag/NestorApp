@@ -3,9 +3,13 @@
 /**
  * ADR-362 Phase G1 — Text override dialog (connected to DimTextOverrideStore).
  *
- * Reads open state + entityId from DimTextOverrideStore via useSyncExternalStore.
- * Reads the entity's current userText from SceneUpdateManager at open time.
- * Writes back via updateEntity on save.
+ * 2026-07-06 fix — the dialog is now PURE with respect to the scene: it reads the target
+ * dim's current `userText` from the store (`initialUserText`, populated by the
+ * `useDimensionModify` host from the level-scene SSoT) and writes back by emitting
+ * `dim:text-override-apply-requested`, which the host applies as an undoable
+ * `UpdateEntityCommand`. It no longer touches the module `SceneUpdateManager` singleton —
+ * that dead instance (never fed the live scene) was why the dialog reported «Δεν
+ * επιλέχθηκε διάσταση» and Apply did nothing.
  *
  * Mounted once in FloatingPanelsSection — portal handles z-index stacking.
  */
@@ -26,20 +30,13 @@ import {
   closeDimTextOverride,
 } from './DimTextOverrideStore';
 import { TextOverrideEditor } from './TextOverrideEditor';
-import { getCurrentScene, updateEntity } from '../../../managers/SceneUpdateManager';
-import type { DimensionEntity } from '../../../types/dimension';
-import type { AnySceneEntity } from '../../../types/scene';
-
-function asDimensionEntity(entity: AnySceneEntity | undefined): DimensionEntity | null {
-  if (!entity || entity.type !== 'dimension') return null;
-  return entity as DimensionEntity;
-}
+import { EventBus } from '../../../systems/events/EventBus';
 
 export function TextOverrideDialog() {
   const { t } = useTranslation('dxf-viewer-panels');
   const k = (key: string) => t(`panels.dimensions.textOverride.${key}`);
 
-  const { isOpen, entityId } = useSyncExternalStore(
+  const { isOpen, entityId, initialUserText } = useSyncExternalStore(
     subscribeDimTextOverride,
     getDimTextOverrideState,
     getDimTextOverrideState,
@@ -47,24 +44,19 @@ export function TextOverrideDialog() {
 
   const [localUserText, setLocalUserText] = React.useState<string | undefined>(undefined);
 
+  // Re-seed the editor from the level-scene value the host captured at open time.
   React.useEffect(() => {
     if (!isOpen || !entityId) return;
-    const scene = getCurrentScene();
-    const raw = scene?.entities.find((e) => e.id === entityId);
-    const dim = asDimensionEntity(raw);
-    setLocalUserText(dim?.userText);
-  }, [isOpen, entityId]);
+    setLocalUserText(initialUserText);
+  }, [isOpen, entityId, initialUserText]);
 
-  const entity: DimensionEntity | null = React.useMemo(() => {
-    if (!isOpen || !entityId) return null;
-    const scene = getCurrentScene();
-    const raw = scene?.entities.find((e) => e.id === entityId);
-    return asDimensionEntity(raw);
-  }, [isOpen, entityId]);
+  // The host only opens the dialog once it has resolved a real dimension, so a live
+  // entityId denotes a valid target — no scene re-read needed here.
+  const hasEntity = isOpen && !!entityId;
 
   function handleSave() {
     if (!entityId) return;
-    updateEntity(entityId, { userText: localUserText });
+    EventBus.emit('dim:text-override-apply-requested', { entityId, userText: localUserText });
     closeDimTextOverride();
   }
 
@@ -79,7 +71,7 @@ export function TextOverrideDialog() {
           <DialogTitle className="text-sm">{k('dialogTitle')}</DialogTitle>
         </DialogHeader>
 
-        {entity ? (
+        {hasEntity ? (
           <TextOverrideEditor
             userText={localUserText}
             onChange={setLocalUserText}
@@ -92,7 +84,7 @@ export function TextOverrideDialog() {
           <Button variant="outline" size="sm" onClick={closeDimTextOverride}>
             {k('cancel')}
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={!entity}>
+          <Button size="sm" onClick={handleSave} disabled={!hasEntity}>
             {k('apply')}
           </Button>
         </DialogFooter>
