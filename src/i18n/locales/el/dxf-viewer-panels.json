@@ -214,7 +214,9 @@
           "arrowColor": "Χρώμα βελών",
           "textFontFamily": "Γραμματοσειρά",
           "dimltscale": "Πυκνότητα γρ. διάστασης",
-          "dimltexscale": "Πυκνότητα προεκτάσεων"
+          "dimltexscale": "Πυκνότητα προεκτάσεων",
+          "dimtfill": "Μάσκα κειμένου",
+          "dimtfillclr": "Χρώμα μάσκας"
         },
         "byLayer": "Από επίπεδο",
         "colorOptions": {
@@ -233,6 +235,11 @@
           "outside": "Εξωτερικά",
           "jis": "JIS",
           "below": "Κάτω"
+        },
+        "dimtfill": {
+          "none": "Καμία",
+          "backgroundColor": "Φόντο σχεδίου",
+          "customColor": "Δικό μου χρώμα"
         },
         "dimatfit": {
           "0": "Εκτός γραμμών επέκτασης",

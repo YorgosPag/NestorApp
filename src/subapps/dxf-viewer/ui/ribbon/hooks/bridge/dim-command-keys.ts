@@ -45,7 +45,12 @@ export const DIM_RIBBON_KEYS = {
     rotation:      'dim.text.rotation',
     resetPosition: 'dim.text.resetPosition',
     override:      'dim.text.override',
-    tfillToggle:   'dim.text.tfillToggle',
+    // ADR-362 Phase K3 — DIMTFILL text-background mask. `tfill` = 3-way mode
+    // (none / backgroundColor / customColor), wired as an `enum` combobox;
+    // `tfillColor` = DIMTFILLCLR (ACI), wired as a `color` combobox (used when
+    // mode === 'customColor'). Both route through `useRibbonDimBridge`.
+    tfill:         'dim.text.tfill',
+    tfillColor:    'dim.text.tfillColor',
   },
   modify: {
     dimBreak:   'dim.modify.dimBreak',

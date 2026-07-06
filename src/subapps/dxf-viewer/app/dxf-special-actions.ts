@@ -224,6 +224,18 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
     EventBus.emit('dim:select-row-requested', { entityIds: [...selectedEntityIds] });
     return true;
   }
+  // ADR-362 §7 — «Επαναφορά Παρακάμψεων»: strip every selected dim's per-entity
+  // overrides (back to its pure DIMSTYLE). Undoable — no confirm (AutoCAD «reset»).
+  if (action === 'dim.override.reset') {
+    EventBus.emit('dim:reset-overrides-requested', { entityIds: [...selectedEntityIds] });
+    return true;
+  }
+  // ADR-362 §7 — «Επαναφορά Θέσης»: clear the manual text placement so the dim's
+  // text returns to its computed default (AutoCAD DIMTEDIT «Home»). Undoable.
+  if (action === 'dim.text.resetPosition') {
+    EventBus.emit('dim:reset-text-position-requested', { entityIds: [...selectedEntityIds] });
+    return true;
+  }
   // 2026-07-04 — «Διαγραφή» (edit tab «Ενέργειες»): confirm (mirror of the column
   // editor) then delete the selected dimension(s) through the canonical undoable
   // path (`useDimensionModify` → `deleteEntitiesById`).

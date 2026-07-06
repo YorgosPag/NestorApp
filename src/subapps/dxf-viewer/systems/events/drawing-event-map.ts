@@ -195,6 +195,13 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap {
   // `SceneUpdateManager` singleton, which was why it reported «Δεν επιλέχθηκε διάσταση».
   'dim:text-override-open-requested': { entityId: string };
   'dim:text-override-apply-requested': { entityId: string; userText: string | undefined };
+  // ADR-362 §7 — «Επαναφορά Παρακάμψεων»: clear every selected dim's per-entity
+  // `overrides` so it falls back to its pure DIMSTYLE (AutoCAD «reset to style»).
+  // «Επαναφορά Θέσης»: clear the manual `textMidpoint` so the builder recomputes the
+  // default text placement (AutoCAD DIMTEDIT «Home»). Both selection-driven, undoable;
+  // the `useDimensionModify` host runs one atomic-undo command per gesture.
+  'dim:reset-overrides-requested': { entityIds: readonly string[] };
+  'dim:reset-text-position-requested': { entityIds: readonly string[] };
 
   // 🏢 ADR-055: Entity Creation Event Bus Pattern (Enterprise Architecture)
   // Pattern: Autodesk/Bentley - Event-driven entity creation with Command History integration

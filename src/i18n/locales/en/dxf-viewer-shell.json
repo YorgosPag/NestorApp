@@ -3779,6 +3779,7 @@
       "dimSpace": "Dimension Space",
       "dimSelectRow": "Select Row",
       "dimTfillToggle": "Text Mask",
+      "dimTfillColor": "Mask Color",
       "dimRowHandles": {
         "label": "Row Handles",
         "on": "On",
@@ -3823,6 +3824,11 @@
           "above": "Above",
           "centered": "Centered",
           "below": "Below"
+        },
+        "tfillOptions": {
+          "none": "None",
+          "backgroundColor": "Drawing background",
+          "customColor": "Custom color"
         }
       },
       "dimContextMenu": {

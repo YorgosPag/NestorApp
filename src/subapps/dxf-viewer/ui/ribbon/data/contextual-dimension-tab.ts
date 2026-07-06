@@ -87,6 +87,14 @@ const TEXT_POSITION_OPTIONS = [
   { value: 'below',    labelKey: 'ribbon.commands.dimContextual.textPositionOptions.below',    isLiteralLabel: false },
 ] as const;
 
+// ADR-362 Phase K3 — DIMTFILL text-background mask modes (AutoCAD 3-way, matches
+// the `DimTextFillMode` type 1-to-1). Καμία / Φόντο σχεδίου / Δικό μου χρώμα.
+const TEXT_FILL_OPTIONS = [
+  { value: 'none',            labelKey: 'ribbon.commands.dimContextual.tfillOptions.none',            isLiteralLabel: false },
+  { value: 'backgroundColor', labelKey: 'ribbon.commands.dimContextual.tfillOptions.backgroundColor', isLiteralLabel: false },
+  { value: 'customColor',     labelKey: 'ribbon.commands.dimContextual.tfillOptions.customColor',     isLiteralLabel: false },
+] as const;
+
 // Text-rotation presets (degrees). Numeric literals — not translatable.
 const TEXT_ROTATION_OPTIONS = [
   { value: '0',   labelKey: '0°',   isLiteralLabel: true },
@@ -158,7 +166,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.dimResetOverrides',
                 icon: 'dim-reset-overrides',
                 commandKey: O.resetOverrides,
-                comingSoon: true,
+                action: O.resetOverrides,
               },
             },
           ],
@@ -495,7 +503,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 labelKey: 'ribbon.commands.dimResetTextPosition',
                 icon: 'dim-reset-text-position',
                 commandKey: DIM_RIBBON_KEYS.text.resetPosition,
-                comingSoon: true,
+                action: DIM_RIBBON_KEYS.text.resetPosition,
               },
             },
             // ADR-362 Phase G1 — text override editor
@@ -510,16 +518,31 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 action: 'dim.text.override',
               },
             },
-            // ADR-362 Phase K3 — DIMTFILL background mask toggle
+            // ADR-362 Phase K3 — DIMTFILL text-background mask (3-way, AutoCAD-grade).
+            // Mode selector (Καμία / Φόντο σχεδίου / Δικό μου χρώμα) + custom-color
+            // picker. Both live per-entity overrides via useRibbonDimBridge; the
+            // mask renderer (`drawTextBackgroundMask`) reacts immediately. The color
+            // is only honoured by the renderer when the mode is «Δικό μου χρώμα».
             {
-              type: 'simple',
+              type: 'combobox',
               size: 'small',
               command: {
-                id: 'dim.text.tfillToggle',
+                id: 'dim.text.tfill',
                 labelKey: 'ribbon.commands.dimTfillToggle',
-                icon: 'dim-tfill-toggle',
-                commandKey: DIM_RIBBON_KEYS.text.tfillToggle,
-                comingSoon: true,
+                commandKey: DIM_RIBBON_KEYS.text.tfill,
+                comboboxWidthPx: 130,
+                options: TEXT_FILL_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'dim.text.tfillColor',
+                labelKey: 'ribbon.commands.dimTfillColor',
+                commandKey: DIM_RIBBON_KEYS.text.tfillColor,
+                comboboxWidthPx: 110,
+                comboboxVariant: 'dxf-color', // enterprise picker → nearest ACI (dimtfillclr)
               },
             },
           ],

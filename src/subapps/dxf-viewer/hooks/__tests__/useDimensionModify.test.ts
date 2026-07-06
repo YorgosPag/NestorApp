@@ -19,7 +19,14 @@ import {
 } from '../../systems/dimensions/dim-geometry-builder';
 import { computeAutoBreakPoints } from '../../systems/dimensions/dim-break-engine';
 import { ARCHITECTURAL_US_TEMPLATE } from '../../systems/dimensions/dim-style-templates';
-import { buildBreakCommands, buildSpaceCommands, buildApplyStyleCommands, buildRowMoveCommands } from '../useDimensionModify';
+import {
+  buildBreakCommands,
+  buildSpaceCommands,
+  buildApplyStyleCommands,
+  buildRowMoveCommands,
+  buildResetOverridesCommands,
+  buildResetTextPositionCommands,
+} from '../useDimensionModify';
 
 // A throwaway scene manager — the builders only pass it to the command
 // constructor, which does not touch it until execute() (never called here).
@@ -169,5 +176,55 @@ describe('buildRowMoveCommands', () => {
     const a = linearDim('a', { x: 5, y: 100 });
     const cmds = buildRowMoveCommands([a], { x: 0, y: 0 }, { entities: [a], sm: STUB_SM });
     expect(cmds).toHaveLength(0);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Host — buildResetOverridesCommands (ADR-362 §7 «Επαναφορά Παρακάμψεων»)
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('buildResetOverridesCommands', () => {
+  it('clears overrides only on dims that carry them (skips clean dims)', () => {
+    const withOverrides = linearDim('o', { x: 0, y: 5 }, { overrides: { dimclrd: 1 } });
+    const clean = linearDim('c', { x: 0, y: 25 });
+    const cmds = buildResetOverridesCommands(
+      [withOverrides, clean], { entities: [withOverrides, clean], sm: STUB_SM },
+    );
+    expect(cmds).toHaveLength(1);
+    expect(cmds[0].getDescription()).toBe('Reset dimension overrides');
+    expect(cmds[0].getAffectedEntityIds()).toEqual(['o']);
+  });
+
+  it('no command when no selected dim has overrides (idempotent, empty object too)', () => {
+    const a = linearDim('a', { x: 0, y: 5 });
+    const b = linearDim('b', { x: 0, y: 25 }, { overrides: {} });
+    expect(
+      buildResetOverridesCommands([a, b], { entities: [a, b], sm: STUB_SM }),
+    ).toHaveLength(0);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Host — buildResetTextPositionCommands (ADR-362 §7 «Επαναφορά Θέσης»)
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('buildResetTextPositionCommands', () => {
+  it('clears textMidpoint only on dims that carry a manual placement', () => {
+    const moved = linearDim('m', { x: 0, y: 5 }, { textMidpoint: { x: 3, y: 8 } });
+    const home = linearDim('h', { x: 0, y: 25 });
+    const cmds = buildResetTextPositionCommands(
+      [moved, home], { entities: [moved, home], sm: STUB_SM },
+    );
+    expect(cmds).toHaveLength(1);
+    expect(cmds[0].getDescription()).toBe('Reset dimension text position');
+    expect(cmds[0].getAffectedEntityIds()).toEqual(['m']);
+  });
+
+  it('no command when every selected dim is already at its default text position', () => {
+    const a = linearDim('a', { x: 0, y: 5 });
+    const b = linearDim('b', { x: 0, y: 25 });
+    expect(
+      buildResetTextPositionCommands([a, b], { entities: [a, b], sm: STUB_SM }),
+    ).toHaveLength(0);
   });
 });

@@ -3779,6 +3779,7 @@
       "dimSpace": "Απόσταση Διαστάσεων",
       "dimSelectRow": "Επιλογή Σειράς",
       "dimTfillToggle": "Μάσκα Κειμένου",
+      "dimTfillColor": "Χρώμα Μάσκας",
       "dimRowHandles": {
         "label": "Λαβές Σειρών",
         "on": "Ενεργές",
@@ -3823,6 +3824,11 @@
           "above": "Πάνω",
           "centered": "Κεντρικά",
           "below": "Κάτω"
+        },
+        "tfillOptions": {
+          "none": "Καμία",
+          "backgroundColor": "Φόντο σχεδίου",
+          "customColor": "Δικό μου χρώμα"
         }
       },
       "dimContextMenu": {

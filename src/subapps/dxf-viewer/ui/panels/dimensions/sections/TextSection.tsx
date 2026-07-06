@@ -12,12 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { DimStyle, DimTextVerticalPlacement } from '../../../../types/dimension';
+import type { DimStyle, DimTextFillMode, DimTextVerticalPlacement } from '../../../../types/dimension';
 import type { UpdateCustomStylePatch } from '../../../../systems/dimensions/dim-style-registry';
 import { ColorField, SelectField } from './dim-style-fields';
 import { DIM_FONT_OPTIONS } from './dim-style-field-options';
 
 const TEXT_PLACEMENTS: DimTextVerticalPlacement[] = ['centered', 'above', 'outside', 'jis', 'below'];
+// ADR-362 Phase K3 — DIMTFILL text-background mask modes (AutoCAD 3-way).
+const TEXT_FILL_MODES: DimTextFillMode[] = ['none', 'backgroundColor', 'customColor'];
 
 interface TextSectionProps {
   style: DimStyle;
@@ -29,6 +31,7 @@ export function TextSection({ style, onChange, readOnly = false }: TextSectionPr
   const { t } = useTranslation('dxf-viewer-panels');
   const f = (key: string) => t(`panels.dimensions.editor.fields.${key}`);
   const tadLabel = (v: string) => t(`panels.dimensions.editor.dimtad.${v}`);
+  const tfillLabel = (v: string) => t(`panels.dimensions.editor.dimtfill.${v}`);
 
   return (
     <div className="flex flex-col gap-2 py-1">
@@ -77,6 +80,27 @@ export function TextSection({ style, onChange, readOnly = false }: TextSectionPr
           className="h-6 text-xs w-20 px-1.5"
         />
       </div>
+
+      {/* ADR-362 Phase K3 — DIMTFILL text-background mask: mode (3-way) + custom
+          colour (shown only for «Δικό μου χρώμα»). Feeds the SAME `dimtfill` /
+          `dimtfillclr` the renderer's `drawTextBackgroundMask` already reads. */}
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-xs shrink-0 w-36">{f('dimtfill')}</Label>
+        <Select value={style.dimtfill} onValueChange={(v) => onChange({ dimtfill: v as DimTextFillMode })} disabled={readOnly}>
+          <SelectTrigger className="h-6 text-xs w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {TEXT_FILL_MODES.map((v) => (
+              <SelectItem key={v} value={v} className="text-xs">{tfillLabel(v)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {style.dimtfill === 'customColor' && (
+        <ColorField label={f('dimtfillclr')} value={style.dimtfillclr} onChange={(v) => onChange({ dimtfillclr: v })} disabled={readOnly} />
+      )}
 
       <div className="flex items-center gap-2">
         <Checkbox id="dimtih" checked={style.dimtih} onCheckedChange={(v) => onChange({ dimtih: Boolean(v) })} disabled={readOnly} />

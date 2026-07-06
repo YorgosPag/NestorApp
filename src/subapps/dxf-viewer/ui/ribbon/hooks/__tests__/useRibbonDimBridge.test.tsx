@@ -265,6 +265,39 @@ describe('useRibbonDimBridge — text position + rotation', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DIMTFILL text-background mask (ADR-362 Phase K3) — mode enum + custom ACI colour
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('useRibbonDimBridge — DIMTFILL text mask', () => {
+  const TFILL = DIM_RIBBON_KEYS.text.tfill;
+  const TFILL_COLOR = DIM_RIBBON_KEYS.text.tfillColor;
+
+  it('reads the DIMTFILL mode from the resolved style (ISO 129 built-in → none)', () => {
+    expect(renderWith(dimPlain, 'dim-2').current.getComboboxState(TFILL)?.value).toBe('none');
+  });
+
+  it('reads an overridden DIMTFILL mode (customColor)', () => {
+    const masked = { ...dimPlain, id: 'dim-m', overrides: { dimtfill: 'customColor' } };
+    expect(renderWith(masked, 'dim-m').current.getComboboxState(TFILL)?.value).toBe('customColor');
+  });
+
+  it('mode change writes a plain dimtfill enum override', () => {
+    renderWith(dimPlain, 'dim-2').current.onComboboxChange(TFILL, 'backgroundColor');
+    expect(patchOf()).toEqual({ overrides: { dimtfill: 'backgroundColor' } });
+  });
+
+  it('mask colour (hex picker) writes ONLY the nearest ACI dimtfillclr — no true-color companion', () => {
+    // DIMTFILLCLR is ACI-only in AutoCAD (the renderer resolves it via ACI), so unlike
+    // the Φ7 line/text colours there is NO `dimtfillclrTrueColor` — the exact toEqual
+    // guards that no companion field leaks into the patch.
+    const HEX = '#ffff00'; // pure yellow → ACI 2
+    renderWith(dimPlain, 'dim-2').current.onComboboxChange(TFILL_COLOR, HEX);
+    expect(patchOf()).toEqual({ overrides: { dimtfillclr: findClosestAci(HEX) } });
+    expect(findClosestAci(HEX)).toBe(2); // sanity: pure yellow → ACI 2
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GUARDS
 // ─────────────────────────────────────────────────────────────────────────────
 

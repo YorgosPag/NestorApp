@@ -150,10 +150,10 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
     expect(panelById('dim-visibility').rows).toHaveLength(1);
   });
 
-  it('dim-text panel: 2 columns of 4 (Giorgio 2026-07-07 compaction — 8 buttons, 2 rows)', () => {
+  it('dim-text panel: col1×4 + col2×5 (ADR-362 K3 — mask mode + colour, 9 buttons, 2 rows)', () => {
     const panel = panelById('dim-text');
     const btns = panel.rows.flatMap((r) => r.buttons);
-    expect(btns).toHaveLength(8);
+    expect(btns).toHaveLength(9);
     expect(panel.rows).toHaveLength(2);
     // Column 1: color / font / height / position (top→bottom).
     expect(panel.rows[0].buttons.map((b) => b.command.commandKey)).toEqual([
@@ -162,13 +162,24 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
       DIM_RIBBON_KEYS.text.height,
       DIM_RIBBON_KEYS.text.position,
     ]);
-    // Column 2: rotation / reset-position / text-override / mask (top→bottom).
+    // Column 2: rotation / reset-position / text-override / mask-mode / mask-color.
     expect(panel.rows[1].buttons.map((b) => b.command.commandKey)).toEqual([
       DIM_RIBBON_KEYS.text.rotation,
       DIM_RIBBON_KEYS.text.resetPosition,
       DIM_RIBBON_KEYS.text.override,
-      DIM_RIBBON_KEYS.text.tfillToggle,
+      DIM_RIBBON_KEYS.text.tfill,
+      DIM_RIBBON_KEYS.text.tfillColor,
     ]);
+    // ADR-362 K3 — the mask MODE is a live 3-way enum combobox (no longer a
+    // comingSoon stub), and the mask COLOUR is the enterprise dxf-color picker.
+    const [maskMode, maskColor] = panel.rows[1].buttons.slice(3);
+    expect(maskMode.type).toBe('combobox');
+    expect(maskMode.command.comingSoon).toBeFalsy();
+    expect((maskMode.command.options ?? []).map((o) => o.value)).toEqual([
+      'none', 'backgroundColor', 'customColor',
+    ]);
+    expect(maskColor.type).toBe('combobox');
+    expect(maskColor.command.comboboxVariant).toBe('dxf-color');
   });
 
   it('dim-modify panel: DIMBREAK + DIMSPACE + Select-Row carry actions (not stubs)', () => {
@@ -242,10 +253,10 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
   it('remaining action stubs are marked comingSoon: true', () => {
     // ADR-562 Φ5 — `dim.style.apply` is now LIVE (applies the primary dim's
     // DIMSTYLE to every selected dimension via `dim:apply-style-requested`).
+    // ADR-362 §7 — «Επαναφορά Παρακάμψεων» + «Επαναφορά Θέσης» are now LIVE too
+    // (dim:reset-overrides-requested / dim:reset-text-position-requested).
     const comingSoonKeys = [
       'dim.style.edit',
-      'dim.override.reset',
-      'dim.text.resetPosition',
       'dim.properties.openPanel',
     ];
     const allButtons = collectAllButtons(DIMENSION_CONTEXTUAL_TAB);
@@ -260,5 +271,16 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
       .find((b) => b.command.commandKey === 'dim.style.apply');
     expect(btn?.command.comingSoon).toBeUndefined();
     expect(btn?.command.action).toBe('dim.style.apply');
+  });
+
+  // ADR-362 §7 — the two reset actions are now LIVE (selection-driven EventBus →
+  // useDimensionModify undoable command). action === commandKey, no comingSoon.
+  it('dim.override.reset + dim.text.resetPosition are wired (action set, not comingSoon)', () => {
+    const allButtons = collectAllButtons(DIMENSION_CONTEXTUAL_TAB);
+    for (const key of [DIM_RIBBON_KEYS.override.resetOverrides, DIM_RIBBON_KEYS.text.resetPosition]) {
+      const btn = allButtons.find((b) => b.command.commandKey === key);
+      expect(btn?.command.comingSoon).toBeUndefined();
+      expect(btn?.command.action).toBe(key);
+    }
   });
 });

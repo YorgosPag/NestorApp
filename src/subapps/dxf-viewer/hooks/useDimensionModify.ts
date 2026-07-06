@@ -171,6 +171,43 @@ export function buildApplyStyleCommands(
   return commands;
 }
 
+/**
+ * ADR-362 §7 — «Επαναφορά Παρακάμψεων»: clear every selected dim's per-entity
+ * `overrides` so it resolves back to its pure DIMSTYLE (AutoCAD «reset to style»).
+ * Skips dims that carry no overrides (no-op → no undo entry). Mirrors
+ * `buildApplyStyleCommands`: the generic `UpdateEntityCommand`, zero new classes.
+ */
+export function buildResetOverridesCommands(
+  dims: readonly DimensionEntity[],
+  ctx: ModifyContext,
+): ICommand[] {
+  const commands: ICommand[] = [];
+  for (const dim of dims) {
+    if (dim.overrides && Object.keys(dim.overrides).length > 0) {
+      commands.push(new UpdateEntityCommand(dim.id, { overrides: undefined }, ctx.sm, 'Reset dimension overrides'));
+    }
+  }
+  return commands;
+}
+
+/**
+ * ADR-362 §7 — «Επαναφορά Θέσης»: clear the manual `textMidpoint` on every selected
+ * dim so the geometry builder recomputes the default text placement (AutoCAD
+ * DIMTEDIT «Home»). Skips dims whose text is already at the default (no `textMidpoint`).
+ */
+export function buildResetTextPositionCommands(
+  dims: readonly DimensionEntity[],
+  ctx: ModifyContext,
+): ICommand[] {
+  const commands: ICommand[] = [];
+  for (const dim of dims) {
+    if (dim.textMidpoint) {
+      commands.push(new UpdateEntityCommand(dim.id, { textMidpoint: undefined }, ctx.sm, 'Reset dimension text position'));
+    }
+  }
+  return commands;
+}
+
 export function useDimensionModify(props: { levelManager: LevelManagerLike }): void {
   const { levelManager } = props;
   const { execute } = useCommandHistory();
@@ -280,6 +317,22 @@ export function useDimensionModify(props: { levelManager: LevelManagerLike }): v
       );
     });
 
+    // ADR-362 §7 — «Επαναφορά Παρακάμψεων»: clear every selected dim's `overrides`
+    // (back to pure DIMSTYLE) as ONE atomic-undo command.
+    const unsubResetOverrides = EventBus.on('dim:reset-overrides-requested', ({ entityIds }) => {
+      const r = resolve(entityIds);
+      if (!r) return;
+      runAtomic(buildResetOverridesCommands(r.dims, r.ctx), execute);
+    });
+
+    // ADR-362 §7 — «Επαναφορά Θέσης»: clear the manual `textMidpoint` on every
+    // selected dim so the builder recomputes the default text placement.
+    const unsubResetTextPosition = EventBus.on('dim:reset-text-position-requested', ({ entityIds }) => {
+      const r = resolve(entityIds);
+      if (!r) return;
+      runAtomic(buildResetTextPositionCommands(r.dims, r.ctx), execute);
+    });
+
     return () => {
       unsubBreak();
       unsubSpace();
@@ -289,6 +342,8 @@ export function useDimensionModify(props: { levelManager: LevelManagerLike }): v
       unsubDelete();
       unsubTextOverrideOpen();
       unsubTextOverrideApply();
+      unsubResetOverrides();
+      unsubResetTextPosition();
     };
   }, [levelManager, execute]);
 }

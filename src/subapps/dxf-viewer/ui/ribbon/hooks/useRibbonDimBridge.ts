@@ -148,6 +148,15 @@ const DIM_KEY_MAP: Readonly<Record<string, DimKeySpec>> = {
   [DIM_RIBBON_KEYS.text.height]: { field: 'dimtxt', kind: 'number' },
   // Vertical text placement (DIMTAD) — a DIMSTYLE override (above/centered/below/…).
   [DIM_RIBBON_KEYS.text.position]: { field: 'dimtad', kind: 'enum' },
+  // ADR-362 Phase K3 — DIMTFILL text-background mask. Mode = enum (none /
+  // backgroundColor / customColor); custom color = ACI `dimtfillclr`. The mask
+  // renderer (`drawTextBackgroundMask`) already reads BOTH fields, so setting
+  // them here makes the mask appear immediately (commit + preview). Unlike the
+  // Φ7 line/text colours, DIMTFILLCLR has NO true-color companion (AutoCAD stores
+  // it as ACI only, and the renderer resolves it via `resolveDimColor(ACI)`), so
+  // the picker degrades to the nearest ACI on write — no `trueColorField`.
+  [DIM_RIBBON_KEYS.text.tfill]:      { field: 'dimtfill', kind: 'enum' },
+  [DIM_RIBBON_KEYS.text.tfillColor]: { field: 'dimtfillclr', kind: 'color' },
 };
 
 // ──────────────────────────────────────────────────────────────────────────────
