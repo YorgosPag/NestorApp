@@ -266,13 +266,15 @@ export function useModifyTools({
       inputType: 'number',
       unit: '°',
       validate: (val) => {
-        const n = parseFloat(val);
+        // ADR-397/513 (Giorgio 2026-07-06) — δέξου ΚΑΙ κόμμα ΚΑΙ τελεία (45,5 ≡ 45.5), όπως το grip typed-angle.
+        const n = parseFloat(val.replace(',', '.'));
         if (isNaN(n)) return t('promptDialog.invalidNumber');
         return null;
       },
     });
     if (result !== null) {
-      const angle = parseFloat(result);
+      // ADR-397/513 — κανονικοποίηση «,» → «.» (ελληνική/ευρωπαϊκή δεκαδική σύμβαση), parity με grip typed-angle.
+      const angle = parseFloat(result.replace(',', '.'));
       if (!isNaN(angle) && Math.abs(angle) > 0.001) rotationTool.handleAngleInput(angle);
     }
   }, [showPromptDialog, t, rotationTool]);

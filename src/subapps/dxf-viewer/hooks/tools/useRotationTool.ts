@@ -30,6 +30,10 @@ import type { useLevels } from '../../systems/levels';
 import type { Overlay, UpdateOverlayData } from '../../overlays/types';
 import { rotatePoint } from '../../utils/rotation-math';
 import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
+// ADR-397/513 (Giorgio 2026-07-06) — big-player parity: inline πληκτρολόγηση γωνίας (Revit/C4D/Figma),
+// ΟΧΙ modal dialog. ΙΔΙΟ SSoT input-parsing με το grip hot-grip rotate-free (κόμμα ≡ τελεία).
+import { DirectDistanceEntry } from '../../text-engine/interaction/DirectDistanceEntry';
+import { applyTypedAngleKey } from '../../systems/dynamic-input/typed-angle-entry';
 
 // ============================================================================
 // TYPES
@@ -78,6 +82,10 @@ export interface UseRotationToolReturn {
   handleRotationEscape: () => void;
   /** Set angle directly from DynamicInput (degrees) */
   handleAngleInput: (angleDeg: number) => void;
+  /** ADR-397/513 — inline typed-angle keyboard handler (awaiting-angle): ψηφία/κόμμα/Backspace/Enter. */
+  handleRotationKeyDown: (key: string) => boolean;
+  /** True όταν η φάση είναι `awaiting-angle` (gate για το inline typed-angle keyboard routing). */
+  isAwaitingAngle: boolean;
   /** Prompt text for DynamicInput */
   prompt: string;
 }
@@ -105,6 +113,12 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
 
   // Ref for start angle (angle from pivot to reference point — set explicitly by click)
   const startAngleRef = useRef(0);
+
+  // ADR-397/513 — inline typed-angle buffer (ΙΔΙΟ DirectDistanceEntry SSoT με το grip hot-grip). Όσο
+  // `status==='buffering'` (πληκτρολογείς), το φάντασμα δείχνει τη ΓΩΝΙΑ που χτίζεις και το mouse-move/κλικ
+  // ΔΕΝ την αλλάζουν (option Β)· Enter οριστικοποιεί. Reset σε κάθε φυγή από `awaiting-angle` (effect κάτω).
+  const angleDdeRef = useRef(new DirectDistanceEntry());
+  const isTypingAngle = useCallback(() => angleDdeRef.current.snapshot().status === 'buffering', []);
 
   // ADR-357 Phase 12 — armed when the grip-context-menu "Copy" toggle was on at
   // handoff. Forwarded to `RotateEntityCommand` so the rotation produces clones
@@ -235,6 +249,9 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
     }
 
     if (phase === 'awaiting-angle' && basePoint) {
+      // ADR-397/513 (Giorgio 2026-07-06, option Β) — όσο πληκτρολογείς γωνία, το κλικ είναι no-op:
+      // ΜΟΝΟ το Enter κλειδώνει την πληκτρολογημένη γωνία (parity με το grip hot-grip rotate-free).
+      if (isTypingAngle()) return;
       // Calculate final angle and execute rotation
       const finalAngle = currentAngle; // Use the angle that was being previewed
 
@@ -283,13 +300,15 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
       setCurrentAngle(0);
       return;
     }
-  }, [isCollectingInput, phase, basePoint, currentAngle, getSceneManager, selectedEntityIds, executeCommand, previewCanvasRef, currentOverlays, overlayUpdate]);
+  }, [isCollectingInput, phase, basePoint, currentAngle, getSceneManager, selectedEntityIds, executeCommand, previewCanvasRef, currentOverlays, overlayUpdate, isTypingAngle]);
 
   /**
    * Handle mouse move — update angle for preview
    */
   const handleRotationMouseMove = useCallback((worldPoint: Point2D) => {
     if (phase !== 'awaiting-angle' || !basePoint) return;
+    // ADR-397/513 (option Β) — όσο πληκτρολογείς γωνία, το ποντίκι ΔΕΝ την αλλάζει (το typed νικά· Enter οριστικοποιεί).
+    if (isTypingAngle()) return;
 
     // ORTHO(F8)/POLAR(F10) angle-lock around the pivot — SAME SSoT chain the hot-grip
     // rotation uses (rotation-tracking-overlay.resolveRotationTracking). No-op when both
@@ -304,13 +323,14 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
     const rawAngle = angleBetweenPointsDeg(basePoint, stepped);
     const angle = rawAngle - startAngleRef.current;
     setCurrentAngle(angle);
-  }, [phase, basePoint]);
+  }, [phase, basePoint, isTypingAngle]);
 
   /**
    * Cancel rotation
    */
   const handleRotationEscape = useCallback(() => {
     previewCanvasRef.current?.clear();
+    angleDdeRef.current.reset(); // ADR-397/513 — καθάρισε τυχόν πληκτρολογημένη γωνία
     setPhase('idle');
     setBasePoint(null);
     setReferencePoint(null);
@@ -367,12 +387,41 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
     setCurrentAngle(0);
   }, [phase, basePoint, getSceneManager, selectedEntityIds, executeCommand, previewCanvasRef, currentOverlays, overlayUpdate]);
 
+  /**
+   * ADR-397/513 (Giorgio 2026-07-06) — big-player inline typed-angle (Revit / Maxon Cinema-4D / Figma):
+   * στη φάση `awaiting-angle`, ψηφία/κόμμα/τελεία χτίζουν τη γωνία (ζωντανό preview στο ghost),
+   * `Backspace` επεξεργάζεται, `Enter` οριστικοποιεί. ΙΔΙΟ SSoT input-parsing (`applyTypedAngleKey`) +
+   * option-Β semantics με το grip hot-grip rotate-free (κόμμα ≡ τελεία· ΜΟΝΟ Enter κλειδώνει το typed).
+   * Επιστρέφει `true` όταν καταναλώθηκε το πλήκτρο (ο keyboard hook κάνει preventDefault + stopImmediatePropagation).
+   */
+  const handleRotationKeyDown = useCallback((key: string): boolean => {
+    if (phase !== 'awaiting-angle' || !basePoint) return false;
+    const res = applyTypedAngleKey(angleDdeRef.current, key);
+    if (res.kind === 'none') return res.consumed;   // δεν είναι πλήκτρο γωνίας → falls through
+    if (res.kind === 'commit') {
+      // Enter → οριστικοποίηση: πληκτρολογημένη γωνία αν υπάρχει, αλλιώς η τρέχουσα (cursor) preview γωνία.
+      const deg = res.value ?? currentAngle;
+      angleDdeRef.current.reset();
+      handleAngleInput(deg);   // commit + reset phase (→ το effect καθαρίζει το buffer)
+      return true;
+    }
+    // 'buffer' → live preview: το ghost γυρίζει στην πληκτρολογημένη γωνία (override cursor).
+    setCurrentAngle(res.value ?? 0);
+    return true;
+  }, [phase, basePoint, currentAngle, handleAngleInput]);
+
+  // ADR-397/513 — καθάρισε το typed-angle buffer σε ΚΑΘΕ φυγή από `awaiting-angle` (commit/escape/deselect/
+  // tool-change), ώστε η επόμενη περιστροφή να ξεκινά με άδειο buffer (μηδέν stale typed γωνία).
+  useEffect(() => {
+    if (phase !== 'awaiting-angle') angleDdeRef.current.reset();
+  }, [phase]);
+
   // Prompt text based on phase
   let prompt = '';
   if (phase === 'awaiting-entity') prompt = 'Επιλέξτε οντότητα για περιστροφή';
   else if (phase === 'awaiting-base-point') prompt = 'Κλικ: κέντρο περιστροφής';
   else if (phase === 'awaiting-reference') prompt = 'Κλικ: κατεύθυνση αναφοράς';
-  else if (phase === 'awaiting-angle') prompt = 'Μετακίνηση: περιστροφή — Κλικ: επιβεβαίωση';
+  else if (phase === 'awaiting-angle') prompt = 'Πληκτρολόγησε γωνία + Enter, ή μετακίνησε + κλικ';
 
   // Sync prompt to toolbar status bar via external store
   useEffect(() => {
@@ -395,6 +444,8 @@ export function useRotationTool(props: UseRotationToolProps): UseRotationToolRet
     handleRotationMouseMove,
     handleRotationEscape,
     handleAngleInput,
+    handleRotationKeyDown,
+    isAwaitingAngle: isActive && phase === 'awaiting-angle',
     prompt,
   };
 }

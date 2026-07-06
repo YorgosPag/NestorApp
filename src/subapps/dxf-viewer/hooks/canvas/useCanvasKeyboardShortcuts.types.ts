@@ -111,6 +111,10 @@ export interface UseCanvasKeyboardShortcutsParams {
   handleHotGripKeyDown?: (key: string) => boolean;
   /** ADR-397 Σ2: Whether a hot-grip flow is live (gates the rotate-free key handler). */
   hotGripKeyIsActive?: boolean;
+  /** ADR-397/513: 2-click ROTATE tool inline typed-angle handler (awaiting-angle) — true if consumed. */
+  handleRotationKeyDown?: (key: string) => boolean;
+  /** ADR-397/513: Whether the 2-click ROTATE tool is in `awaiting-angle` (gates the typed-angle handler). */
+  rotateToolAwaitingAngle?: boolean;
   /** ADR-363 Phase 5.6: Wall Split ESC handler */
   handleWallSplitEscape?: () => void;
   /** ADR-363 Phase 5.6: Whether the wall-split tool is active */

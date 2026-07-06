@@ -22,6 +22,8 @@ import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store'
 import { getGlobalRotationSnapStore } from '../../bim/grips/rotation-snap-store';
 // ADR-513 §rotation-ring — bridge that mounts the single-slice «Γωνία» ring while rotate-free is active.
 import { RotationRingStore } from '../../systems/dynamic-input/rotation-ring-store';
+// ADR-397/513 — SSoT inline angle-key parsing (ψηφία/κόμμα/τελεία/Backspace/Enter), κοινό με το ROTATE tool.
+import { applyTypedAngleKey } from '../../systems/dynamic-input/typed-angle-entry';
 import { commitDxfGripDragModeAware } from './grip-commit-adapters';
 // ADR-397 Σ3 — typed-angle → world delta (pure SSoT, shared with the live preview).
 import { rotateDeltaForAngleDeg } from './grip-projections';
@@ -352,38 +354,21 @@ export function runHotGripKeyDown(key: string, phase: UnifiedGripPhase, ctx: Hot
     markSystemsDirty(['dxf-canvas']);        // repaint: hint switch + ghost cleared
     return true;
   }
-  const dde = ctx.rotateDdeRef.current;
-  // Enter → commit the typed angle (exact). Swallowed even when empty so a stray
-  // Enter never reaches the drawing-finish path while the entity is spinning.
-  if (key === 'Enter') {
-    const { value } = dde.snapshot();
-    if (value != null && ctx.hotGripBaseRef.current && ctx.activeGrip?.source === 'dxf') {
-      commitTypedRotate(ctx.activeGrip, ctx.hotGripBaseRef.current, value, ctx.dxfCommitDeps);
+  // ADR-397/513 — ψηφία/κόμμα/τελεία/Backspace/Enter μέσω του SSoT `applyTypedAngleKey` (ίδιο input-parsing
+  // με το 2-click ROTATE tool· κόμμα ≡ τελεία). Wire-άρουμε το δικό μας preview (`setTypedRotate`) + commit.
+  const res = applyTypedAngleKey(ctx.rotateDdeRef.current, key);
+  if (res.kind === 'none') return res.consumed;   // δεν είναι πλήκτρο γωνίας → falls through στον caller
+  if (res.kind === 'commit') {
+    // Enter → οριστικοποίηση της πληκτρολογημένης γωνίας (exact). Καταναλώνεται ΑΚΟΜΗ κι όταν είναι κενό,
+    // ώστε ένα αδέσποτο Enter να μη διαρρέει στο drawing-finish όσο η οντότητα περιστρέφεται.
+    if (res.value != null && ctx.hotGripBaseRef.current && ctx.activeGrip?.source === 'dxf') {
+      commitTypedRotate(ctx.activeGrip, ctx.hotGripBaseRef.current, res.value, ctx.dxfCommitDeps);
       ctx.resetToIdle();                     // clears refs + typed buffer
     }
     return true;
   }
-  // Digit alphabet (0-9 / - / . / ,) → buffer the signed angle (DirectDistanceEntry SSoT).
-  // ADR-397/513 (Giorgio 2026-07-06) — δέξου ΚΑΙ κόμμα ΚΑΙ τελεία ως δεκαδικό (ελληνική/ευρωπαϊκή
-  // σύμβαση: 45,5 ≡ 45.5). Κανονικοποίησε «,» → «.» ώστε το DDE buffer να μένει έγκυρο για `Number()`.
-  if (/^[\d.,-]$/.test(key)) {
-    const decimalKey = key === ',' ? '.' : key;
-    if (dde.snapshot().status !== 'buffering') dde.begin();
-    dde.pressKey(decimalKey);                // rejects illegal keystrokes internally
-    const s = dde.snapshot();
-    ctx.setTypedRotate({ buffer: s.buffer, deg: s.value });
-    markSystemsDirty(['dxf-canvas']);
-    return true;
-  }
-  // Backspace → edit the buffer (swallowed during rotate so it never smart-deletes).
-  if (key === 'Backspace') {
-    if (dde.snapshot().status === 'buffering') {
-      dde.pressKey('Backspace');
-      const s = dde.snapshot();
-      ctx.setTypedRotate({ buffer: s.buffer, deg: s.value });
-      markSystemsDirty(['dxf-canvas']);
-    }
-    return true;
-  }
-  return false;
+  // 'buffer' → live preview της γωνίας (τα keystrokes δεν κουνούν τον κέρσορα).
+  ctx.setTypedRotate({ buffer: res.buffer, deg: res.value });
+  markSystemsDirty(['dxf-canvas']);
+  return true;
 }

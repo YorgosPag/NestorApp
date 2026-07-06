@@ -402,8 +402,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     handleExtendEscape: extendTool.handleExtendEscape, handleExtendKeyDown: extendTool.handleExtendKeyDown, extendIsActive: extendTool.isActive,
     handleArrayPolarEscape: arrayPolarTool.handleArrayPolarEscape, arrayPolarIsActive: arrayPolarTool.isActive,
     handleArrayPathEscape: arrayPathTool.handleArrayPathEscape, arrayPathIsActive: arrayPathTool.isActive,
-    // ADR-397 Σ2 — rotate-free hot-grip keyboard («R» → reference flow).
-    handleHotGripKeyDown: unified.handleHotGripKeyDown, hotGripKeyIsActive: unified.hotGripIsActive,
+    // ADR-397 Σ2 hot-grip «R» reference flow + ADR-397/513 ROTATE 2-click inline typed-angle (awaiting-angle): πληκτρολόγησε γωνία + Enter.
+    handleHotGripKeyDown: unified.handleHotGripKeyDown, hotGripKeyIsActive: unified.hotGripIsActive, handleRotationKeyDown: rotationTool.handleRotationKeyDown, rotateToolAwaitingAngle: rotationTool.isAwaitingAngle,
     handleWallSplitEscape: wallSplitTool.handleWallSplitEscape, wallSplitIsActive: wallSplitTool.isActive, handleWallAttachEscape: wallAttachTool.handleWallAttachEscape, wallAttachIsActive: wallAttachTool.isActive, handleWallMergeEscape: wallMergeTool.handleWallMergeEscape, wallMergeIsActive: wallMergeTool.isActive, handleWallGapOpeningEscape: wallGapOpeningTool.handleWallGapOpeningEscape, wallGapOpeningIsActive: wallGapOpeningTool.isActive, handleBimCopyEscape: bimCopyTool.handleBimCopyEscape, bimCopyIsActive: bimCopyTool.isActive,
     hasAnySelection: universalSelection.count() > selectedEntityIds.length,
     // Canonical deselect (Escape): clear the entity selection AND the active

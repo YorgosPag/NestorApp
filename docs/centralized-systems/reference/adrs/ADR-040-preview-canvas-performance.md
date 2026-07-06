@@ -3717,3 +3717,10 @@ Master view toggle «Σοβατισμένη όψη» (`showFinishSkin`, per-view
 ## 2026-07-05 (b): ADR-561 EXT — `CanvasLayerStack` copy-detection → `isGripCopyIntent` SSoT (CHECK 6B stage)
 
 **Καμία αρχιτεκτονική αλλαγή — καθαρή αντικατάσταση inline logic με SSoT κλήση.** Το `CanvasLayerStack` (6B shell) υπολόγιζε το `gripDragIsCopy` inline (`CtrlKeyTracker` + `GripCopyModeStore` plain reads). Η copy-intent ανίχνευση εξήχθη στο **`systems/grip/grip-copy-intent.ts` (`isGripCopyIntent()`)** — το ΙΔΙΟ SSoT που πλέον χρησιμοποιούν τα grip commits — ώστε shell και commits να μη διπλότυπα-κρίνουν copy intent. Το `CanvasLayerStack` τώρα: `gripDragIsCopy = gripDraggedEntityId != null && isGripCopyIntent()`. Το `isGripCopyIntent()` κάνει **plain `getSnapshot` reads** εσωτερικά (`GripCopyModeStore` + `CtrlKeyTracker`), **ΟΧΙ `useSyncExternalStore`** → το Shell μένει inert (CHECK 6C safe). Μηδέν αλλαγή στο leaf/prop path, μηδέν νέα subscription, bitmap cache άθικτο (rule 3 N/A). Βλ. **ADR-561**. Staged για CHECK 6B.
+
+## 2026-07-06: ADR-397/513 — ROTATE 2-click inline typed-angle keyboard wiring (`CanvasSection`, CHECK 6B stage)
+
+**Καμία αρχιτεκτονική αλλαγή στο high-freq path — additive keyboard-shortcut config, μηδέν νέα subscription.** Το `CanvasSection` (orchestrator) περνά στο `useCanvasKeyboardShortcuts` config δύο ακόμη πεδία για το 2-click ROTATE tool inline typed-angle (πληκτρολόγηση γωνίας + Enter στη φάση `awaiting-angle`, ADR-513 Δαχτυλίδι Εντολών pattern):
+- **`handleRotationKeyDown: rotationTool.handleRotationKeyDown`** + **`rotateToolAwaitingAngle: rotationTool.isAwaitingAngle`** — event-time callbacks/flags που διαβάζονται από τον `useRotationTool` hook, **όχι** νέα `useSyncExternalStore` στον orchestrator (ADR-040 rule 1 τηρείται). Το config object απλώς προωθεί τους handlers στο keyboard layer· κανένα high-freq store read, bitmap cache άθικτο (rule 3 N/A).
+
+Νέο SSoT module `systems/dynamic-input/typed-angle-entry.ts` (+ test) κατέχει το parsing της πληκτρολογημένης γωνίας. Βλ. **ADR-397 / ADR-513**. Staged για CHECK 6B.

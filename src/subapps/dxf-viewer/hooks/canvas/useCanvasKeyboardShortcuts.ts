@@ -87,6 +87,8 @@ export function useCanvasKeyboardShortcuts({
   arrayPathIsActive = false,
   handleHotGripKeyDown,
   hotGripKeyIsActive = false,
+  handleRotationKeyDown,
+  rotateToolAwaitingAngle = false,
   handleWallSplitEscape,
   wallSplitIsActive = false,
   handleWallAttachEscape,
@@ -122,6 +124,13 @@ export function useCanvasKeyboardShortcuts({
       // τον input-guard → το 2ο ψηφίο «τρωγόταν» από το input — bug «δέχεται μόνο το 1ο ψηφίο», Giorgio.)
       if (hotGripKeyIsActive && handleHotGripKeyDown) {
         const consumed = handleHotGripKeyDown(e.key);
+        if (consumed) { e.preventDefault(); e.stopImmediatePropagation(); return; }
+      }
+      // ADR-397/513 (Giorgio 2026-07-06) — 2-click ROTATE tool inline typed-angle (awaiting-angle):
+      // ΙΔΙΟ μοτίβο με το hot-grip (ΠΑΝΩ από τον input-guard, capture + stopImmediatePropagation) →
+      // big-player parity (Revit/C4D/Figma), πολυψήφια γωνία + κόμμα + Enter, χωρίς modal dialog.
+      if (rotateToolAwaitingAngle && handleRotationKeyDown) {
+        const consumed = handleRotationKeyDown(e.key);
         if (consumed) { e.preventDefault(); e.stopImmediatePropagation(); return; }
       }
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
@@ -335,7 +344,7 @@ export function useCanvasKeyboardShortcuts({
     // 🏢 ENTERPRISE: Use capture: true to handle Delete before other handlers
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [draftPolygon, finishDrawing, handleSmartDelete, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleKeyDown, scaleIsActive, handleStretchKeyDown, stretchIsActive, handleTrimKeyDown, trimIsActive, handleOffsetKeyDown, offsetIsActive, handleFilletKeyDown, filletIsActive, handleChamferKeyDown, chamferIsActive, handleExtendKeyDown, extendIsActive, handleHotGripKeyDown, hotGripKeyIsActive, handleReorderEntity, drawingTempPoints, onDirectDistanceEntry, onUndoChainVertex, onChainFinish]);
+  }, [draftPolygon, finishDrawing, handleSmartDelete, activeTool, handleFlipArc, handleDrawingFinish, canEntityJoin, handleEntityJoin, handleMirrorConfirm, mirrorAwaitingConfirm, handleScaleKeyDown, scaleIsActive, handleStretchKeyDown, stretchIsActive, handleTrimKeyDown, trimIsActive, handleOffsetKeyDown, offsetIsActive, handleFilletKeyDown, filletIsActive, handleChamferKeyDown, chamferIsActive, handleExtendKeyDown, extendIsActive, handleHotGripKeyDown, hotGripKeyIsActive, handleRotationKeyDown, rotateToolAwaitingAngle, handleReorderEntity, drawingTempPoints, onDirectDistanceEntry, onUndoChainVertex, onChainFinish]);
 
   // ADR-364 — auto-clear DDE buffer when the active drawing flow resets
   // (tempPoints empties on cancel / commit). Replaces the legacy ESC fall-through.
