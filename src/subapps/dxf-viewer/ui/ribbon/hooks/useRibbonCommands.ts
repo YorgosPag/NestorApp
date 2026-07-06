@@ -56,7 +56,7 @@ import { isBeamRibbonKey, isBeamRibbonStringKey, isBeamFinishKey } from './bridg
 import { isFoundationRibbonKey, isFoundationRibbonStringKey, isFoundationBadgeKey } from './bridge/foundation-command-keys';
 import { isSlabOpeningRibbonStringKey } from './bridge/slab-opening-command-keys';
 import { isLineToolRibbonKey, isLineToolPanelVisibilityKey } from './bridge/line-tool-command-keys';
-import { isDimRibbonKey } from './bridge/dim-command-keys';
+import { isDimRibbonKey, isDimVisibilityKey } from './bridge/dim-command-keys';
 import { isXlineRibbonKey } from './bridge/xline-command-keys';
 import { routeRibbonAction } from './useRibbonCommands-action';
 import { useActiveStoreyContext } from '../../../systems/levels/useActiveStoreySync';
@@ -340,6 +340,11 @@ export function useRibbonCommands({
         hatchBridge.onToggle(key, next);
         return;
       }
+      // ADR-362 Round 36 — per-part dimension visibility toggles (suppress* overrides).
+      if (isDimVisibilityKey(key)) {
+        dimBridge.onToggle(key, next);
+        return;
+      }
       textEditorBridge.onToggle(key, next);
     },
   );
@@ -353,9 +358,11 @@ export function useRibbonCommands({
       if (isRoofRibbonToggleKey(key)) return roofBridge.getToggleState(key);
       if (isMepBoilerToggleKey(key)) return mepBoilerBridge.getToggleState(key);
       if (isHatchRibbonToggleKey(key)) return hatchBridge.getToggleState(key);
+      // ADR-362 Round 36 — per-part dimension visibility toggle state (visible = !suppress).
+      if (isDimVisibilityKey(key)) return dimBridge.getToggleState(key);
       return textEditorBridge.getToggleState(key);
     },
-    [snapEnabled, wallBridge, arrayBridge, openingBridge, roofBridge, mepBoilerBridge, hatchBridge, textEditorBridge],
+    [snapEnabled, wallBridge, arrayBridge, openingBridge, roofBridge, mepBoilerBridge, hatchBridge, dimBridge, textEditorBridge],
   );
 
   // ADR-358 Phase 7b1 — Stair bridge owns badge keys; ADR-363 Phase 1B adds

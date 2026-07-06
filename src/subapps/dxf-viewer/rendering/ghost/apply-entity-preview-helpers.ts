@@ -10,35 +10,12 @@
 import type { Point2D } from '../types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { StairEntity } from '../../bim/types/stair-types';
-import type { WallEntity } from '../../bim/types/wall-types';
-import type { BeamEntity } from '../../bim/types/beam-types';
-import type { ColumnEntity } from '../../bim/types/column-types';
-import type { MepFixtureEntity } from '../../bim/types/mep-fixture-types';
-import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
-import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
-import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
-import type { FurnitureEntity } from '../../bim/types/furniture-types';
-import type { FloorFinishEntity } from '../../bim/types/floor-finish-types';
-import type { SlabEntity } from '../../bim/types/slab-types';
-import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
-import type { OpeningEntity } from '../../bim/types/opening-types';
-import { applyWallGripDrag } from '../../bim/walls/wall-grips';
-import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
-import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
-import { computeBeamGeometry } from '../../bim/geometry/beam-geometry';
-import { applyColumnGripDrag } from '../../bim/columns/column-grips';
-import { computeColumnGeometry } from '../../bim/geometry/column-geometry';
-import { applyMepFixtureGripDrag } from '../../bim/mep-fixtures/mep-fixture-grips';
-import { computeMepFixtureGeometry } from '../../bim/mep-fixtures/mep-fixture-geometry';
-import { applyElectricalPanelGripDrag } from '../../bim/electrical-panels/electrical-panel-grips';
-import { computeElectricalPanelGeometry } from '../../bim/electrical-panels/electrical-panel-geometry';
-import { applyMepManifoldGripDrag } from '../../bim/mep-manifolds/mep-manifold-grips';
-import { computeMepManifoldGeometry } from '../../bim/mep-manifolds/mep-manifold-geometry';
-import { applyMepSegmentGripDrag } from '../../bim/mep-segments/mep-segment-grips';
-import { computeMepSegmentGeometry } from '../../bim/geometry/mep-segment-geometry';
-import { applyFurnitureGripDrag } from '../../bim/furniture/furniture-grips';
-import { computeFurnitureGeometry } from '../../bim/furniture/furniture-geometry';
-import { calculateDistance, translatePoint, translatePoints } from '../entities/shared/geometry-rendering-utils';
+import type { SceneEntity } from '../../core/commands/interfaces';
+import { calculateDistance, translatePoint } from '../entities/shared/geometry-rendering-utils';
+// SSoT — canonical rigid-move geometry: routes BIM/hatch via `calculateBimMovedGeometry`
+// (openings stay host-derived) + DXF primitives incl. `lwpolyline` natively. The classic
+// whole-entity ghost delegates here so preview ≡ commit BY IDENTITY (zero duplicate logic).
+import { calculateMovedGeometry } from '../../core/commands/entity-commands/move-entity-geometry';
 
 export function getCircleQuadrant(
   entity: { center: Point2D; radius: number },
@@ -95,85 +72,16 @@ export function applyClassicEntityPreview(
   const off = (p: Point2D) => translatePoint(p, delta);
 
   if (movesEntity) {
-    switch (entity.type) {
-      case 'line':
-        return { ...entity, start: off(entity.start), end: off(entity.end) };
-      case 'circle':
-        return { ...entity, center: off(entity.center) };
-      case 'arc':
-        return { ...entity, center: off(entity.center) };
-      case 'polyline':
-      case 'lwpolyline':
-        // ADR-186/561 — a JOINed lwpolyline shares the polyline `vertices` shape; keep-type
-        // translate so the body-drag ghost + Ctrl-copy clone follow the cursor (was a no-op).
-        return { ...entity, vertices: entity.vertices.map(off) };
-      case 'text':
-        return { ...entity, position: off(entity.position) };
-      case 'angle-measurement':
-        return { ...entity, vertex: off(entity.vertex), point1: off(entity.point1), point2: off(entity.point2) };
-      case 'wall': {
-        const wall = entity as unknown as WallEntity;
-        const newParams = applyWallGripDrag('wall-midpoint', { originalParams: wall.params, delta, currentPos: delta });
-        if (newParams === wall.params) return entity;
-        return { ...(entity as object), params: newParams, geometry: computeWallGeometry(newParams, wall.kind) } as unknown as DxfEntityUnion;
-      }
-      case 'beam': {
-        const beam = entity as unknown as BeamEntity;
-        const newParams = applyBeamGripDrag('beam-midpoint', { originalParams: beam.params, delta });
-        return { ...(entity as object), params: newParams, geometry: computeBeamGeometry(newParams) } as unknown as DxfEntityUnion;
-      }
-      case 'column': {
-        const col = entity as unknown as ColumnEntity;
-        const newParams = applyColumnGripDrag('column-center', { originalParams: col.params, delta });
-        return { ...(entity as object), params: newParams, geometry: computeColumnGeometry(newParams) } as unknown as DxfEntityUnion;
-      }
-      case 'mep-fixture': {
-        const fix = entity as unknown as MepFixtureEntity;
-        const newParams = applyMepFixtureGripDrag('mep-fixture-move', { originalParams: fix.params, delta });
-        return { ...(entity as object), params: newParams, geometry: computeMepFixtureGeometry(newParams) } as unknown as DxfEntityUnion;
-      }
-      case 'electrical-panel': {
-        const panel = entity as unknown as ElectricalPanelEntity;
-        const newParams = applyElectricalPanelGripDrag('electrical-panel-move', { originalParams: panel.params, delta });
-        return { ...(entity as object), params: newParams, geometry: computeElectricalPanelGeometry(newParams) } as unknown as DxfEntityUnion;
-      }
-      case 'mep-manifold': {
-        const manifold = entity as unknown as MepManifoldEntity;
-        const newParams = applyMepManifoldGripDrag('mep-manifold-move', { originalParams: manifold.params, delta });
-        return { ...(entity as object), params: newParams, geometry: computeMepManifoldGeometry(newParams) } as unknown as DxfEntityUnion;
-      }
-      case 'furniture': {
-        const furn = entity as unknown as FurnitureEntity;
-        const newParams = applyFurnitureGripDrag('furniture-move', { originalParams: furn.params, delta });
-        return { ...(entity as object), params: newParams, geometry: computeFurnitureGeometry(newParams) } as unknown as DxfEntityUnion;
-      }
-      case 'mep-segment': {
-        const seg = entity as unknown as MepSegmentEntity;
-        const newParams = applyMepSegmentGripDrag('mep-segment-midpoint', { originalParams: seg.params, delta });
-        return { ...(entity as object), params: newParams, geometry: computeMepSegmentGeometry(newParams) } as unknown as DxfEntityUnion;
-      }
-      case 'slab': {
-        const slab = entity as unknown as SlabEntity;
-        const movedVerts = translatePoints(slab.params.outline.vertices, delta);
-        return { ...(entity as object), params: { ...slab.params, outline: { ...slab.params.outline, vertices: movedVerts } } } as unknown as DxfEntityUnion;
-      }
-      case 'floor-finish': {
-        const finish = entity as unknown as FloorFinishEntity;
-        const movedVerts = translatePoints(finish.params.footprint.vertices, delta);
-        return { ...(entity as object), params: { ...finish.params, footprint: { ...finish.params.footprint, vertices: movedVerts } } } as unknown as DxfEntityUnion;
-      }
-      case 'slab-opening': {
-        const so = entity as unknown as SlabOpeningEntity;
-        const movedVerts = translatePoints(so.params.outline.vertices, delta);
-        return { ...(entity as object), params: { ...so.params, outline: { ...so.params.outline, vertices: movedVerts } } } as unknown as DxfEntityUnion;
-      }
-      case 'opening': {
-        const opening = entity as unknown as OpeningEntity;
-        const outline = opening.geometry?.outline;
-        if (!outline) return entity;
-        return { ...(entity as object), geometry: { ...opening.geometry, outline: { ...outline, vertices: translatePoints(outline.vertices, delta) } } } as unknown as DxfEntityUnion;
-      }
-    }
+    // SSoT convergence (ADR-561) — whole-entity translate delegates to the canonical
+    // rigid-move geometry `calculateMovedGeometry`, which routes BIM/hatch through
+    // `calculateBimMovedGeometry` (openings stay host-derived → no-op, matching the commit)
+    // and DXF primitives incl. `lwpolyline` + angle-measurement natively. This replaced a
+    // divergent inline per-type BIM switch (`applyXGripDrag` re-derivations) that could — and
+    // for `opening` DID — drift from the commit. Now preview ≡ commit BY IDENTITY.
+    const patch = calculateMovedGeometry(entity as unknown as SceneEntity, { x: delta.x, y: delta.y, z: 0 });
+    return Object.keys(patch).length > 0
+      ? ({ ...(entity as object), ...patch } as unknown as DxfEntityUnion)
+      : entity;
   }
 
   if (edgeVertexIndices) {

@@ -215,6 +215,8 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'dim-open-panel': return <Settings width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'dim-style-chooser': return <Palette width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'dim-text-override': return <Type width={sizePx[size]} height={sizePx[size]} className={className} />;
+    // ADR-362 Round 36 — per-part visibility toggles («Ορατότητα» panel: show/hide each dim part).
+    case 'dim-visibility': return <Eye width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-363 Phase 4.5d — BIM launcher icons (Home → Draw).
     case 'bim-wall': return <Construction width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'bim-opening': return <DoorOpen width={sizePx[size]} height={sizePx[size]} className={className} />;

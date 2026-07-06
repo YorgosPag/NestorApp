@@ -5,8 +5,13 @@
 import {
   dashMmToScreenPx,
   isSolidPattern,
+  resolveLinetypePatternMm,
   MIN_DOT_PX,
 } from '../linetype-dash-resolver';
+import {
+  registerUserLinetype,
+  __resetLinetypeRegistryForTesting,
+} from '../../stores/LinetypeRegistry';
 
 describe('dashMmToScreenPx', () => {
   it('returns [] for a solid (Continuous) pattern', () => {
@@ -64,5 +69,30 @@ describe('isSolidPattern', () => {
   it('is true only for an empty pattern', () => {
     expect(isSolidPattern([])).toBe(true);
     expect(isSolidPattern([12.7, -6.35])).toBe(false);
+  });
+});
+
+describe('resolveLinetypePatternMm — catalog + registry SSoT (ADR-362)', () => {
+  beforeEach(() => __resetLinetypeRegistryForTesting());
+
+  it('resolves a built-in catalog name to its mm pattern', () => {
+    expect(resolveLinetypePatternMm('Dashed')).toEqual([12.7, -6.35]);
+  });
+
+  it('resolves density variants + legacy enums via the aliases catalog', () => {
+    expect(resolveLinetypePatternMm('DashedX2')).toEqual([25.4, -12.7]);
+    expect(resolveLinetypePatternMm('dashed')).toEqual([12.7, -6.35]); // legacy enum
+  });
+
+  it('Continuous / ByLayer / unknown → [] (solid, no registry noise)', () => {
+    expect(resolveLinetypePatternMm('Continuous')).toEqual([]);
+    expect(resolveLinetypePatternMm('ByLayer')).toEqual([]);
+    expect(resolveLinetypePatternMm('NopeNotReal')).toEqual([]);
+    expect(resolveLinetypePatternMm(null)).toEqual([]);
+  });
+
+  it('falls back to a runtime user-created custom linetype', () => {
+    registerUserLinetype('MyDots', [0, -3]);
+    expect(resolveLinetypePatternMm('MyDots')).toEqual([0, -3]);
   });
 });

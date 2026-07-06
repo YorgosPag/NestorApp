@@ -10,27 +10,42 @@
  * no longer needs to re-render on selection to keep grip hit-testing current
  * (ADR-040 dual-access invariant).
  *
- * Renders null. Subscribes to the selection set itself; the scene + overlay data
- * arrive as props (they change on scene/overlay edits, which CanvasSection already
- * re-renders for).
+ * Renders null. Subscribes to the selection set AND — since ADR-040 scene-source
+ * parity — to the level's reactive scene SSoT (`useLevelScene`), the SAME source the
+ * paint leaf (`DxfCanvasSubscriber`) reads. Overlay data still arrives as a prop.
+ *
+ * WHY reactive scene (not the `dxfScene` prop): the prop is a non-reactive
+ * `getLevelScene()` pull threaded through the orchestrator; it refreshes only on an
+ * incidental CanvasSection re-render. A freshly-committed-and-selected entity is
+ * painted immediately by the reactive paint leaf, but its grips reached AllGripsStore
+ * only after that lagging re-render — so `findNearestGrip` saw zero grips at mousedown
+ * and the drag fell through to a whole-entity body-move (grips visible, no resize, no
+ * ghost). Reading the same reactive scene keeps hit-test grips ≡ painted grips.
  */
 
 import React, { useEffect, useMemo } from 'react';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { SceneModel } from '../../types/scene';
 import type { Overlay } from '../../overlays/types';
 import { useGripRegistry } from '../../hooks/grips/grip-registry';
 import { useSelectedEntityIds, useSelectionByType } from '../../systems/selection/useSelectedEntities';
+import { useLevelScene } from '../../systems/scene/useSceneSelectors';
 import { AllGripsStore } from '../../systems/grip/AllGripsStore';
 import { ArmableGripsStore } from '../../systems/grip/ArmableGripsStore';
 import { hotGripKindOf, isWallHotGripKind } from '../../hooks/grips/wall-hot-grip-fsm';
 
 interface GripRegistryPublisherProps {
+  /** Active level id — the reactive scene slice this leaf subscribes to (ADR-040). */
+  sceneLevelId: string | null;
+  /** Cached SceneModel → DxfScene converter (shares the orchestrator's WeakMap). */
+  convertScene: (scene: SceneModel | null) => DxfScene;
+  /** Orchestrator scene snapshot — fallback before the store has the level (first paint). */
   dxfScene: DxfScene | null;
   currentOverlays: Overlay[];
 }
 
 export const GripRegistryPublisher: React.FC<GripRegistryPublisherProps> = ({
-  dxfScene, currentOverlays,
+  sceneLevelId, convertScene, dxfScene, currentOverlays,
 }) => {
   const selectedEntityIds = useSelectedEntityIds();
   const overlayIds = useSelectionByType('overlay');
@@ -40,7 +55,15 @@ export const GripRegistryPublisher: React.FC<GripRegistryPublisherProps> = ({
       .filter((o): o is Overlay => o !== undefined),
     [overlayIds, currentOverlays],
   );
-  const allGrips = useGripRegistry({ dxfScene, selectedEntityIds, selectedOverlays });
+  // ADR-040 scene-source parity — subscribe to the SAME reactive scene SSoT the paint
+  // leaf uses (see header), so a just-created entity's grips reach AllGripsStore on the
+  // frame it is painted. Falls back to the orchestrator prop before the store has the level.
+  const liveSceneModel = useLevelScene(sceneLevelId);
+  const reactiveScene = useMemo(
+    () => (liveSceneModel ? convertScene(liveSceneModel) : dxfScene),
+    [liveSceneModel, convertScene, dxfScene],
+  );
+  const allGrips = useGripRegistry({ dxfScene: reactiveScene, selectedEntityIds, selectedOverlays });
 
   // Publish the full grip set for event-time hit-testing.
   useEffect(() => { AllGripsStore.set(allGrips); }, [allGrips]);

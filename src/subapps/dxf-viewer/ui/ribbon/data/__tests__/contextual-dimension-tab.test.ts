@@ -19,6 +19,8 @@ const PANEL_IDS = [
   'dim-line',
   'dim-ext',
   'dim-arrow',
+  // ADR-362 Round 36 — per-part visibility toggles panel.
+  'dim-visibility',
   'dim-text',
   'dim-modify',
   'dim-properties',
@@ -29,6 +31,7 @@ const PANEL_LABEL_KEYS = [
   'ribbon.panels.dimLine',
   'ribbon.panels.dimExt',
   'ribbon.panels.dimArrow',
+  'ribbon.panels.dimVisibility',
   'ribbon.panels.dimText',
   'ribbon.panels.dimModify',
   'ribbon.panels.dimProperties',
@@ -59,8 +62,8 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
     expect(DIMENSION_CONTEXTUAL_TAB.labelKey).toBe('ribbon.tabs.dimension');
   });
 
-  it('declares exactly 8 panels in the canonical per-part order', () => {
-    expect(DIMENSION_CONTEXTUAL_TAB.panels).toHaveLength(8);
+  it('declares exactly 9 panels in the canonical per-part order', () => {
+    expect(DIMENSION_CONTEXTUAL_TAB.panels).toHaveLength(9);
     expect(DIMENSION_CONTEXTUAL_TAB.panels.map((p) => p.id)).toEqual(PANEL_IDS);
     expect(DIMENSION_CONTEXTUAL_TAB.panels.map((p) => p.labelKey)).toEqual(PANEL_LABEL_KEYS);
   });
@@ -112,6 +115,22 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
     ]);
     // Arrow-style + linetype options are empty in the tab → supplied live by the bridge.
     expect(btns[0].command.options ?? []).toEqual([]);
+  });
+
+  it('dim-visibility panel: 5 toggle buttons wiring the per-part visibility keys', () => {
+    const btns = buttonsOf('dim-visibility');
+    // ADR-362 Round 36 — order mirrors the physical layout: left ext / dim line /
+    // right ext (row 1), then left marker / right marker (row 2).
+    expect(btns.map((b) => b.command.commandKey)).toEqual([
+      DIM_RIBBON_KEYS.visibility.extLine1,
+      DIM_RIBBON_KEYS.visibility.dimLine,
+      DIM_RIBBON_KEYS.visibility.extLine2,
+      DIM_RIBBON_KEYS.visibility.arrow1,
+      DIM_RIBBON_KEYS.visibility.arrow2,
+    ]);
+    // All are on/off toggle controls (not comboboxes / actions).
+    for (const b of btns) expect(b.type).toBe('toggle');
+    expect(panelById('dim-visibility').rows).toHaveLength(2);
   });
 
   it('dim-text panel adds color + font and keeps height/position/rotation (8 buttons, 4 rows)', () => {

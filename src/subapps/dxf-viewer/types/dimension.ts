@@ -138,6 +138,16 @@ export interface DimStyle {
    */
   dimltex1: string;
   dimltex2: string;
+  /**
+   * DIMLTSCALE — per-style linetype DENSITY multiplier for the dim + extension
+   * lines (ADR-362, Path A). Rides the AutoCAD CELTSCALE slot in the dash
+   * resolver: the resolved mm pattern (dashes, gaps, dot spacing) scales × this
+   * value, on top of the global LTSCALE — so >1 spreads the pattern out (sparser
+   * dots/longer segments) and <1 tightens it. `1` = catalog density (no change).
+   * Optional for back-compat: styles persisted before this field resolve to `1`.
+   * Non-standard for DXF (no group code) → does not round-trip.
+   */
+  dimltscale?: number;
   /** DIMEXE — extension beyond dim line (mm paper). */
   dimexe: number;
   /** DIMEXO — extension line offset from object (mm paper). */
@@ -160,6 +170,18 @@ export interface DimStyle {
   dimblk1: string;
   /** DIMBLK2 — arrowhead block name for second arrow. */
   dimblk2: string;
+  /**
+   * ADR-362 Round 36 — per-side endpoint-marker (arrowhead/tick) VISIBILITY.
+   * A show/hide channel that exceeds AutoCAD (which can only hide a marker by
+   * setting its block to `None`, destroying the chosen shape). `false` = marker
+   * drawn (default); `true` = suppressed at render while the block choice
+   * (`dimblk1`/`dimblk2`/`dimblk`) is preserved, so toggling back restores the
+   * exact arrow/tick. Mirrors the `suppressExtLine1/2` naming. DXF export degrades
+   * a suppressed side to block `None` (no dedicated DXF group code exists for
+   * arrow visibility separate from the block name). @see ADR-362 §7 · ADR-562.
+   */
+  suppressArrow1: boolean;
+  suppressArrow2: boolean;
   /**
    * ADR-562 Φ1 — arrowhead color (ACI), a SEPARATE channel that exceeds AutoCAD
    * (which binds arrowheads to DIMCLRD). Optional override: when **absent**, the

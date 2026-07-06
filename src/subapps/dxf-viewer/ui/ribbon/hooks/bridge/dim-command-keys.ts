@@ -47,6 +47,18 @@ export const DIM_RIBBON_KEYS = {
     // ADR-362 Round 35 — «Λαβές Μετακίνησης Σειρών» toggle (row-handle mode).
     rowHandles: 'dim.rowHandles.toggle',
   },
+  // ADR-362 Round 36 — per-part VISIBILITY toggles (show/hide each dimension part
+  // independently). Each is an on/off `type:'toggle'` button; the bridge maps
+  // «visible» ⇄ the `suppress*` DIMSTYLE overrides on the selected dim. The
+  // endpoint marker (arrow/tick) is ONE toggle per side — its shape stays on the
+  // «Στυλ Βέλους» dropdown (AutoCAD/Revit model). @see ADR-362 §7.
+  visibility: {
+    extLine1: 'dim.visibility.extLine1',
+    extLine2: 'dim.visibility.extLine2',
+    dimLine:  'dim.visibility.dimLine',
+    arrow1:   'dim.visibility.arrow1',
+    arrow2:   'dim.visibility.arrow2',
+  },
   properties: {
     layer:           'dim.properties.layer',
     annotationScale: 'dim.properties.annotationScale',
@@ -73,4 +85,18 @@ const ALL_DIM_KEYS: ReadonlySet<string> = new Set(
 
 export function isDimRibbonKey(key: string): boolean {
   return ALL_DIM_KEYS.has(key);
+}
+
+const DIM_VISIBILITY_KEYS: ReadonlySet<string> = new Set(
+  Object.values(DIM_RIBBON_KEYS.visibility),
+);
+
+/**
+ * ADR-362 Round 36 — true only for the per-part visibility toggle keys. The
+ * ribbon composer (`useRibbonCommands`) routes `onToggle`/`getToggleState` for
+ * these to `useRibbonDimBridge`; the broader `isDimRibbonKey` also matches them
+ * (they live under `DIM_RIBBON_KEYS`) but the combobox path ignores toggles.
+ */
+export function isDimVisibilityKey(key: string): boolean {
+  return DIM_VISIBILITY_KEYS.has(key);
 }

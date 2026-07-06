@@ -90,6 +90,16 @@ export function calculateMovedGeometry(entity: SceneEntity, delta: Point3D): Par
     return { vertices: polyEntity.vertices.map(v => translatePoint(v, delta)) };
   }
 
+  // Angle-measurement primitive (not a centralized guard) — translate its 3 defining points.
+  if (entity.type === 'angle-measurement' && 'vertex' in entity) {
+    const a = entity as unknown as { vertex: Point2D; point1: Point2D; point2: Point2D };
+    return {
+      vertex: translatePoint(a.vertex, delta),
+      point1: translatePoint(a.point1, delta),
+      point2: translatePoint(a.point2, delta),
+    } as unknown as Partial<SceneEntity>;
+  }
+
   if (isTextEntity(e)) {
     return { position: translatePoint(e.position, delta) };
   }

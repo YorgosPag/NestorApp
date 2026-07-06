@@ -144,12 +144,14 @@ function applyDimStroke(
   lineweight: LineweightMm,
   linetype: string,
   worldToScreenScale: number,
+  ltScale?: number,
 ): void {
   if (opts.overlayLineStyle) {
     applyOverlayLineStyle(ctx, opts.color);
     return;
   }
-  const stroke = resolveDimStroke(lineweight, linetype, worldToScreenScale);
+  // ADR-362 — WYSIWYG: mirror the committed per-style DIMLTSCALE density (Path A).
+  const stroke = resolveDimStroke(lineweight, linetype, worldToScreenScale, ltScale);
   ctx.strokeStyle = opts.color;
   ctx.lineWidth = stroke.lineWidthPx;
   ctx.setLineDash(stroke.dashPx);
@@ -244,7 +246,7 @@ function drawExtensionLines(
   const ext1 = readExtLine(geometry, 1);
   const ext2 = readExtLine(geometry, 2);
   if (!ext1 && !ext2) return;
-  applyDimStroke(params.ctx, opts, params.style.dimlwe, params.style.dimltex1, viewScaleOf(params));
+  applyDimStroke(params.ctx, opts, params.style.dimlwe, params.style.dimltex1, viewScaleOf(params), params.style.dimltscale);
   if (ext1 && !params.style.suppressExtLine1) strokeSegment(params, ext1);
   if (ext2 && !params.style.suppressExtLine2) strokeSegment(params, ext2);
 }
@@ -255,7 +257,7 @@ function drawDimLineOrArc(
   opts: ResolvedOpts,
   fit?: PreviewFit | null,
 ): void {
-  applyDimStroke(params.ctx, opts, params.style.dimlwd, params.style.dimltype, viewScaleOf(params));
+  applyDimStroke(params.ctx, opts, params.style.dimlwd, params.style.dimltype, viewScaleOf(params), params.style.dimltscale);
   switch (geometry.kind) {
     case 'linear':
       if (!params.style.suppressDimLine1 && !params.style.suppressDimLine2) {
@@ -319,14 +321,20 @@ function drawArrowheads(
   const dir1 = fit?.placement.arrowDirection1 ?? geometry.arrowDirection1;
   const dir2 = fit?.placement.arrowDirection2 ?? geometry.arrowDirection2;
 
-  renderArrowhead(params.ctx, block1, {
-    screenAnchor: a1, direction: dir1, side: 1,
-    unitPx, strokeColor: opts.color, fillColor: opts.color,
-  });
-  renderArrowhead(params.ctx, block2, {
-    screenAnchor: a2, direction: dir2, side: 2,
-    unitPx, strokeColor: opts.color, fillColor: opts.color,
-  });
+  // ADR-362 Round 36 — mirror DimensionRenderer.drawArrowheads per-side visibility
+  // gate (preview ≡ commit: the ghost must vanish/appear exactly like the committed dim).
+  if (!params.style.suppressArrow1) {
+    renderArrowhead(params.ctx, block1, {
+      screenAnchor: a1, direction: dir1, side: 1,
+      unitPx, strokeColor: opts.color, fillColor: opts.color,
+    });
+  }
+  if (!params.style.suppressArrow2) {
+    renderArrowhead(params.ctx, block2, {
+      screenAnchor: a2, direction: dir2, side: 2,
+      unitPx, strokeColor: opts.color, fillColor: opts.color,
+    });
+  }
 }
 
 /**
@@ -340,7 +348,7 @@ function drawFitLeader(
 ): void {
   const path = fit?.placement.leaderPath;
   if (!path || path.length < 2) return;
-  applyDimStroke(params.ctx, opts, params.style.dimlwd, params.style.dimltype, viewScaleOf(params));
+  applyDimStroke(params.ctx, opts, params.style.dimlwd, params.style.dimltype, viewScaleOf(params), params.style.dimltscale);
   for (let i = 1; i < path.length; i++) {
     strokeSegment(params, { start: path[i - 1], end: path[i] });
   }

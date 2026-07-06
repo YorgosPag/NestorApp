@@ -37,3 +37,21 @@ describe('resolveDimStroke — linetype → dash', () => {
     expect(dashed.every((v) => v > 0)).toBe(true); // canvas wants all-positive px
   });
 });
+
+describe('resolveDimStroke — per-style DIMLTSCALE density (ADR-362 Path A)', () => {
+  it('scales every dash segment by the ltScale (celtscale slot)', () => {
+    const base = resolveDimStroke(-2, 'Dashed', SCALE).dashPx;
+    const dense = resolveDimStroke(-2, 'Dashed', SCALE, 0.5).dashPx;
+    const sparse = resolveDimStroke(-2, 'Dashed', SCALE, 2).dashPx;
+    expect(dense).toEqual(base.map((v) => v * 0.5));
+    expect(sparse).toEqual(base.map((v) => v * 2));
+  });
+
+  it('absent / non-positive ltScale falls back to 1 (no density change)', () => {
+    const base = resolveDimStroke(-2, 'Dashed', SCALE).dashPx;
+    expect(resolveDimStroke(-2, 'Dashed', SCALE, 1).dashPx).toEqual(base);
+    expect(resolveDimStroke(-2, 'Dashed', SCALE, 0).dashPx).toEqual(base);
+    expect(resolveDimStroke(-2, 'Dashed', SCALE, -3).dashPx).toEqual(base);
+    expect(resolveDimStroke(-2, 'Dashed', SCALE, Number.NaN).dashPx).toEqual(base);
+  });
+});

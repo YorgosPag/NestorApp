@@ -62,6 +62,7 @@ import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
 import { useViewportAutoFit } from '../../hooks/canvas/useViewportAutoFit'; import { useCanvasEditActions } from '../../hooks/canvas/useCanvasEditActions';
 import { useCanvasSectionUI } from '../../hooks/canvas/useCanvasSectionUI';
+import { useCanvasSelectAll } from '../../hooks/canvas/useCanvasSelectAll';
 import { useSelectionCycling } from '../../systems/selection/use-selection-cycling';
 import { useCanvasSection2DFocus } from '../../hooks/canvas/useCanvasSection2DFocus';
 import { CanvasSectionOverlays } from './CanvasSectionOverlays';
@@ -174,15 +175,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   // === Snap engine scene-sync (SSoT, sole owner — ADR-040 / ADR-547) ===
   // Driven by <SnapSceneSyncLeaf/> below (subscribes to live SceneStore + overlay
   // SSoT; re-inits the snap engine on every in-session commit). Rationale: ADR-547.
-  // Ctrl+A: select all DXF entities — fired via EventBus from useKeyboardShortcuts.
-  // setSelectedEntityIds writes through universalSelection (SSoT).
-  useEffect(() => {
-    return eventBus.on('canvas:select-all', () => {
-      const entities = dxfSceneRef.current?.entities;
-      if (!entities?.length) return;
-      setSelectedEntityIds(entities.map(e => e.id));
-    });
-  }, [eventBus, setSelectedEntityIds]);
+  // Ctrl+A select-all wiring extracted to useCanvasSelectAll (ADR-040) to keep this orchestrator <500 lines.
+  useCanvasSelectAll({ eventBus, dxfSceneRef, setSelectedEntityIds });
   // ADR-366 Phase 4.6 / A.7.Q1 — 2D keyboard focus (Tab/Enter/Esc); wiring + ADR-030 toggle SSoT extracted to keep this orchestrator <500 lines.
   useCanvasSection2DFocus({ dxfSceneRef, transformRef, transform, viewport, universalSelectionRef });
   // === Unified Grip System ===
@@ -439,7 +433,12 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     <>
       {/* ADR-532 B4 — selection-subscribed grip registry publisher (renders null;
           keeps AllGripsStore current without re-rendering this orchestrator). */}
-      <GripRegistryPublisher dxfScene={dxfScene} currentOverlays={currentOverlays} />
+      <GripRegistryPublisher
+        sceneLevelId={levelManager.currentLevelId}
+        convertScene={convertScene}
+        dxfScene={dxfScene}
+        currentOverlays={currentOverlays}
+      />
       {/* ADR-547 — sole snap-scene-sync owner (re-inits snap engine; renders null). */}
       <SnapSceneSyncLeaf levelId={levelManager.currentLevelId} fallbackScene={props.currentScene ?? null} />
       <CanvasLayerStack

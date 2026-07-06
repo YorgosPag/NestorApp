@@ -15,6 +15,8 @@
  * special-case code in `DimensionRenderer`.
  */
 
+import type { DimStyle } from '../../types/dimension';
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Geometry primitives (unit space)
 // ──────────────────────────────────────────────────────────────────────────────
@@ -354,4 +356,21 @@ export function getArrowheadBlock(name: string): ArrowheadBlockDefinition {
 /** All registered arrowhead block names (for UI dropdowns). */
 export function listArrowheadBlockNames(): readonly string[] {
   return Object.keys(ARROWHEAD_BLOCKS);
+}
+
+/**
+ * ADR-362 §7 — resolve the per-side arrowhead block names from a DIMSTYLE.
+ *
+ * AutoCAD convention: `dimblk1`/`dimblk2` override the common `dimblk` per end
+ * (empty string falls back to `dimblk`). This is the single owner of that
+ * `dimblk{1,2} || dimblk` rule — reused by both canvas renderers and the DXF
+ * block-primitive builder so the fallback never drifts between them.
+ */
+export function resolveArrowBlockNames(
+  style: Pick<DimStyle, 'dimblk' | 'dimblk1' | 'dimblk2'>,
+): { readonly block1: string; readonly block2: string } {
+  return {
+    block1: style.dimblk1 || style.dimblk,
+    block2: style.dimblk2 || style.dimblk,
+  };
 }

@@ -30,4 +30,12 @@ describe('calculateMovedGeometry — canonical rigid-move SSoT (lwpolyline + blo
     expect((calculateMovedGeometry(mtext, { x: 3, y: 4, z: 0 }) as { position?: unknown }).position).toEqual({ x: 13, y: 14 });
     expect((calculateMovedGeometry(block, { x: -2, y: 7, z: 0 }) as { position?: unknown }).position).toEqual({ x: -2, y: 7 });
   });
+
+  it('translates an angle-measurement primitive by its 3 points (converged from applyClassicEntityPreview)', () => {
+    const am = { id: 'am', type: 'angle-measurement', vertex: { x: 0, y: 0 }, point1: { x: 10, y: 0 }, point2: { x: 0, y: 10 } } as unknown as SceneEntity;
+    const patch = calculateMovedGeometry(am, { x: 2, y: 3, z: 0 }) as { vertex?: unknown; point1?: unknown; point2?: unknown };
+    expect(patch.vertex).toEqual({ x: 2, y: 3 });
+    expect(patch.point1).toEqual({ x: 12, y: 3 });
+    expect(patch.point2).toEqual({ x: 2, y: 13 });
+  });
 });

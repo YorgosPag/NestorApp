@@ -1569,6 +1569,7 @@
       "dimProperties": "Properties",
       "dimModify": "Modify",
       "dimActions": "Actions",
+      "dimVisibility": "Visibility",
       "bim": "Structural",
       "layers": "Layers",
       "lineToolQuickStyle": "Quick Style",
@@ -3782,6 +3783,13 @@
         "off": "Off",
         "tooltipOn": "Show per-row dimension move handles",
         "tooltipOff": "Hide row move handles"
+      },
+      "dimVisibility": {
+        "extLine1": "Left Ext. Line",
+        "extLine2": "Right Ext. Line",
+        "dimLine": "Dimension Line",
+        "arrow1": "Left Marker",
+        "arrow2": "Right Marker"
       },
       "dimContextual": {
         "close": "Close",

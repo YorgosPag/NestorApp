@@ -88,6 +88,8 @@ const TEXT_ROTATION_OPTIONS = [
 ] as const;
 
 const O = DIM_RIBBON_KEYS.override;
+// ADR-362 Round 36 — per-part visibility toggle keys («Ορατότητα» panel).
+const VIS = DIM_RIBBON_KEYS.visibility;
 
 export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
   id: 'dimension',
@@ -291,6 +293,76 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 options: ARROW_SIZE_OPTIONS,
                 // Editable paper-mm size (> 0).
                 numericInput: { editable: true, min: 0 },
+              },
+            },
+          ],
+        },
+      ],
+    },
+    // (D2) Ορατότητα — ADR-362 Round 36. Per-part show/hide toggles (any combination):
+    // βοηθητικές (αρ./δεξ.), κεντρική γραμμή, σημάδια άκρου (αρ./δεξ.). «Πατημένο» =
+    // ορατό· γράφει τα `suppress*` overrides μέσω useRibbonDimBridge (AutoCAD-grade
+    // per-entity, undoable). Το ΣΧΗΜΑ του σημαδιού μένει στο panel «Βελάκια».
+    {
+      id: 'dim-visibility',
+      labelKey: 'ribbon.panels.dimVisibility',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'dim.visibility.extLine1',
+                labelKey: 'ribbon.commands.dimVisibility.extLine1',
+                icon: 'dim-visibility',
+                commandKey: VIS.extLine1,
+              },
+            },
+            {
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'dim.visibility.dimLine',
+                labelKey: 'ribbon.commands.dimVisibility.dimLine',
+                icon: 'dim-visibility',
+                commandKey: VIS.dimLine,
+              },
+            },
+            {
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'dim.visibility.extLine2',
+                labelKey: 'ribbon.commands.dimVisibility.extLine2',
+                icon: 'dim-visibility',
+                commandKey: VIS.extLine2,
+              },
+            },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'dim.visibility.arrow1',
+                labelKey: 'ribbon.commands.dimVisibility.arrow1',
+                icon: 'dim-visibility',
+                commandKey: VIS.arrow1,
+              },
+            },
+            {
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'dim.visibility.arrow2',
+                labelKey: 'ribbon.commands.dimVisibility.arrow2',
+                icon: 'dim-visibility',
+                commandKey: VIS.arrow2,
               },
             },
           ],

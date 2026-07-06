@@ -42,6 +42,75 @@ function buildIsoSeed(): { byName: Map<string, LinetypeDef>; order: string[] } {
 
 let { byName: definitionsByName, order: insertionOrder } = buildIsoSeed();
 
+// ─── User-created linetype persistence (ADR-362, Path B) ─────────────────────
+// Lightweight localStorage durability for USER-CREATED patterns only — mirrors
+// `LinetypeScaleStore`. Without it, a dim style keeps a custom linetype NAME
+// across reload while the registry forgets the pattern → the dim renders solid
+// (a real correctness bug, not just lost UX). Firestore/`.lin` sync stays the
+// registry's later phase; this is the in-browser SSoT layer.
+
+const LS_CUSTOM_LINETYPES = 'dxf:custom-linetypes';
+
+/** Deterministic, ASCII, RNG-free id from a (unique) name — `ltp_<base36 hash>`. */
+function userLinetypeId(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (Math.imul(31, h) + name.charCodeAt(i)) | 0;
+  return `ltp_${Math.abs(h).toString(36)}`;
+}
+
+function loadPersistedUserLinetypes(): LinetypeDef[] {
+  if (typeof localStorage === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(LS_CUSTOM_LINETYPES);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    const out: LinetypeDef[] = [];
+    for (const entry of parsed) {
+      if (!entry || typeof entry !== 'object') continue;
+      const { name, description, pattern } = entry as Record<string, unknown>;
+      if (typeof name !== 'string' || name.length === 0) continue;
+      if (!Array.isArray(pattern) || !pattern.every((v) => typeof v === 'number' && Number.isFinite(v))) continue;
+      out.push(Object.freeze({
+        id: userLinetypeId(name),
+        name,
+        description: typeof description === 'string' ? description : '',
+        pattern: Object.freeze([...pattern]) as ReadonlyArray<number>,
+        origin: 'user-created',
+      }));
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+function persistUserLinetypes(): void {
+  if (typeof localStorage === 'undefined') return;
+  const customs: Array<Pick<LinetypeDef, 'name' | 'description' | 'pattern'>> = [];
+  for (const name of insertionOrder) {
+    const def = definitionsByName.get(name);
+    if (def && def.origin === 'user-created') {
+      customs.push({ name: def.name, description: def.description, pattern: [...def.pattern] });
+    }
+  }
+  try {
+    if (customs.length === 0) localStorage.removeItem(LS_CUSTOM_LINETYPES);
+    else localStorage.setItem(LS_CUSTOM_LINETYPES, JSON.stringify(customs));
+  } catch {
+    // localStorage full / disabled — non-fatal (in-memory registry still holds it).
+  }
+}
+
+// Hydrate persisted customs on top of the ISO seed, BEFORE the snapshot store is
+// built, so the very first `listLinetypes()` already exposes them.
+for (const def of loadPersistedUserLinetypes()) {
+  if (!definitionsByName.has(def.name)) {
+    definitionsByName.set(def.name, def);
+    insertionOrder.push(def.name);
+  }
+}
+
 // SSoT pub/sub via createExternalStore (WAVE 2.6). The Map/array above stay as
 // mutation accelerators; `cachedSnapshot`/`subscribers`/`notify()` collapse into
 // this single composite-snapshot store — `rebuildSnapshot()` still builds the
@@ -113,7 +182,35 @@ export function registerLinetype(def: LinetypeDef): boolean {
   definitionsByName.set(def.name, def);
   insertionOrder.push(def.name);
   rebuildSnapshot();
+  if (def.origin === 'user-created') persistUserLinetypes();
   return true;
+}
+
+/**
+ * Create + register a USER-CREATED linetype from an editor-authored mm pattern
+ * (ADR-362 Path B). Assigns a deterministic id + `origin: 'user-created'` and
+ * persists it (localStorage) so it survives reload. Caller validates name/pattern
+ * first (`validateLinePattern`); this still returns false on a name collision
+ * (AutoCAD "first registration wins").
+ *
+ * @returns the registered def, or null if the name was already taken.
+ */
+export function registerUserLinetype(
+  name: string,
+  pattern: ReadonlyArray<number>,
+  description = '',
+): LinetypeDef | null {
+  const trimmed = name.trim();
+  if (definitionsByName.has(trimmed)) return null;
+  const def: LinetypeDef = Object.freeze({
+    id: userLinetypeId(trimmed),
+    name: trimmed,
+    description,
+    pattern: Object.freeze([...pattern]) as ReadonlyArray<number>,
+    origin: 'user-created',
+  });
+  registerLinetype(def);
+  return def;
 }
 
 /**
@@ -131,6 +228,7 @@ export function registerLinetypes(defs: ReadonlyArray<LinetypeDef>): number {
   }
   if (added > 0) {
     rebuildSnapshot();
+    if (defs.some((d) => d.origin === 'user-created')) persistUserLinetypes();
   }
   return added;
 }
@@ -142,6 +240,10 @@ export function __resetLinetypeRegistryForTesting(): void {
   const seed = buildIsoSeed();
   definitionsByName = seed.byName;
   insertionOrder = seed.order;
+  // Drop any persisted user-created customs so tests start from a clean slate.
+  if (typeof localStorage !== 'undefined') {
+    try { localStorage.removeItem(LS_CUSTOM_LINETYPES); } catch { /* noop */ }
+  }
   // NOTE: goes through `store.reset()` (no notify, drops all listeners) — NOT
   // `rebuildSnapshot()`/`store.set()`, which would notify still-attached test
   // listeners before clearing them (byte-identical to the original silent

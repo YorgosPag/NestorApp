@@ -55,6 +55,8 @@ function sharedDefaults(): Omit<DimStyle, 'id' | 'name' | 'isBuiltIn'> {
     dimltype: 'ByLayer',
     dimltex1: 'ByLayer',
     dimltex2: 'ByLayer',
+    // ADR-362 — per-style linetype density (Path A). 1 = catalog density.
+    dimltscale: 1,
     dimexe: 1.25,
     dimexo: 0.625,
     dimdli: 3.75,
@@ -68,6 +70,9 @@ function sharedDefaults(): Omit<DimStyle, 'id' | 'name' | 'isBuiltIn'> {
     dimblk: 'closedFilled',
     dimblk1: '',
     dimblk2: '',
+    // ADR-362 Round 36 — endpoint markers visible by default (both sides).
+    suppressArrow1: false,
+    suppressArrow2: false,
     dimcen: 2.5,
     breakGap: 3.75,
 

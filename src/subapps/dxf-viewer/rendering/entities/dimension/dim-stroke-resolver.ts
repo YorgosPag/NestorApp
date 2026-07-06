@@ -10,17 +10,24 @@
  * Reuses (no re-implementation):
  *   - `lineweightToPx`   (config/lineweight-iso-catalog) — mm → px, zoom-INDEPENDENT
  *      AutoCAD LWT. Returns 0 for the -3/-2/-1 sentinels.
- *   - `resolveAnyDashMm` (config/linetype-aliases)       — linetype name → mm pattern
- *      via the ADR-510 Unified Linetype catalog (unknown/'ByLayer' → [] = solid).
- *   - `dashMmToScreenPx` (rendering/linetype-dash-resolver) — mm → px, zoom-aware × LTSCALE.
+ *   - `resolveLinetypePatternMm` (rendering/linetype-dash-resolver) — linetype name
+ *      → mm pattern via the ADR-510 Unified catalog + runtime registry customs
+ *      (unknown/'ByLayer' → [] = solid). ONE resolution shared with the thumbnail.
+ *   - `dashMmToScreenPx` (rendering/linetype-dash-resolver) — mm → px, zoom-aware × LTSCALE × CELTSCALE.
  *   - `getLinetypeScale` (stores/LinetypeScaleStore)     — global LTSCALE knob.
+ *
+ * Per-dim-style density (DIMLTSCALE, `DimStyle.dimltscale`) rides the `celtscale`
+ * slot of `dashMmToScreenPx` — exactly the AutoCAD per-object linetype-scale
+ * model (Path A). Global LTSCALE × per-style DIMLTSCALE compose multiplicatively.
  */
 
 import type { LineweightMm } from '../../../types/entities';
 import { lineweightToPx } from '../../../config/lineweight-iso-catalog';
-import { resolveAnyDashMm } from '../../../config/linetype-aliases';
-import { dashMmToScreenPx } from '../../linetype-dash-resolver';
+import { dashMmToScreenPx, resolveLinetypePatternMm } from '../../linetype-dash-resolver';
 import { getLinetypeScale } from '../../../stores/LinetypeScaleStore';
+
+/** DIMLTSCALE default — no per-style density change (AutoCAD CELTSCALE convention). */
+export const DEFAULT_DIM_LTSCALE = 1;
 
 export interface DimStrokeStyle {
   /** Canvas `ctx.lineWidth` in px. */
@@ -44,18 +51,23 @@ export const DIM_SENTINEL_STROKE_PX = 1;
  * @param lineweight          `DimStyle.dimlwd` / `dimlwe` (LineweightMm).
  * @param linetype            `DimStyle.dimltype` / `dimltex1|2` (linetype name).
  * @param worldToScreenScale  Live world→screen zoom (`transform.scale`) — dash only.
+ * @param ltScale             `DimStyle.dimltscale` — per-style density multiplier
+ *                            (AutoCAD CELTSCALE slot). Non-positive/absent → 1.
  */
 export function resolveDimStroke(
   lineweight: LineweightMm,
   linetype: string,
   worldToScreenScale: number,
+  ltScale: number = DEFAULT_DIM_LTSCALE,
 ): DimStrokeStyle {
   const px = lineweightToPx(lineweight, 96); // 0 for the -3/-2/-1 sentinels
   const lineWidthPx = px > 0 ? px : DIM_SENTINEL_STROKE_PX;
+  const celtscale = Number.isFinite(ltScale) && ltScale > 0 ? ltScale : DEFAULT_DIM_LTSCALE;
   const dashPx = dashMmToScreenPx(
-    resolveAnyDashMm(linetype),
+    resolveLinetypePatternMm(linetype),
     worldToScreenScale,
     getLinetypeScale(),
+    celtscale,
   );
   return { lineWidthPx, dashPx };
 }

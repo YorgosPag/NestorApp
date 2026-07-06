@@ -46,9 +46,12 @@ import { listArrowheadBlockNames } from '../../../systems/dimensions/dim-arrowhe
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
-import type { RibbonComboboxState } from '../context/RibbonCommandContext';
+import type {
+  RibbonComboboxState,
+  RibbonToggleState,
+} from '../context/RibbonCommandContext';
 import type { RibbonComboboxOption } from '../types/ribbon-types';
-import { DIM_RIBBON_KEYS, isDimRibbonKey } from './bridge/dim-command-keys';
+import { DIM_RIBBON_KEYS, isDimRibbonKey, isDimVisibilityKey } from './bridge/dim-command-keys';
 import type { useLevels } from '../../../systems/levels';
 import type { useUniversalSelection } from '../../../systems/selection';
 
@@ -69,7 +72,22 @@ export interface UseRibbonDimBridgeProps {
 export interface RibbonDimBridge {
   readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
   readonly onComboboxChange: (commandKey: string, value: string) => void;
+  // ADR-362 Round 36 — per-part visibility toggles (show/hide each dim part).
+  readonly getToggleState: (commandKey: string) => RibbonToggleState;
+  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
 }
+
+// ADR-362 Round 36 — visibility command key → the `suppress*` DIMSTYLE fields it
+// drives. «Visible» = NONE of the mapped flags set; toggling writes the inverse to
+// every field (the central dim line owns BOTH halves → one toggle sets both).
+const V = DIM_RIBBON_KEYS.visibility;
+const VISIBILITY_FIELD_MAP: Readonly<Record<string, readonly (keyof DimStyle)[]>> = {
+  [V.extLine1]: ['suppressExtLine1'],
+  [V.extLine2]: ['suppressExtLine2'],
+  [V.dimLine]:  ['suppressDimLine1', 'suppressDimLine2'],
+  [V.arrow1]:   ['suppressArrow1'],
+  [V.arrow2]:   ['suppressArrow2'],
+};
 
 const BYLAYER = 'ByLayer';
 /** ACI 256 = ByLayer sentinel for the dim color channels. */
@@ -335,8 +353,37 @@ export function useRibbonDimBridge(props: UseRibbonDimBridgeProps): RibbonDimBri
     [resolveSelectedDim, patchEntity],
   );
 
+  // ADR-362 Round 36 — read one visibility toggle: «pressed» (visible) when NONE of
+  // the mapped `suppress*` flags are set on the resolved style. No selection → false.
+  const getToggleState = useCallback(
+    (commandKey: string): RibbonToggleState => {
+      if (!isDimVisibilityKey(commandKey)) return false;
+      const fields = VISIBILITY_FIELD_MAP[commandKey];
+      const entity = resolveSelectedDim();
+      if (!entity || !fields) return false;
+      const style = resolveDimStyle(entity, getDimStyleRegistry());
+      return fields.every((f) => !style[f]);
+    },
+    [resolveSelectedDim],
+  );
+
+  // Write the inverse (`suppress = !visible`) to every mapped field via the same
+  // undoable `overrides` path as the combobox controls (ADR-562 D7).
+  const onToggle = useCallback(
+    (commandKey: string, nextValue: boolean): void => {
+      if (!isDimVisibilityKey(commandKey)) return;
+      const fields = VISIBILITY_FIELD_MAP[commandKey];
+      const entity = resolveSelectedDim();
+      if (!entity || !fields) return;
+      const next: Record<string, unknown> = { ...entity.overrides };
+      for (const f of fields) next[f] = !nextValue;
+      patchEntity(entity, { overrides: next });
+    },
+    [resolveSelectedDim, patchEntity],
+  );
+
   return useMemo(
-    () => ({ getComboboxState, onComboboxChange }),
-    [getComboboxState, onComboboxChange],
+    () => ({ getComboboxState, onComboboxChange, getToggleState, onToggle }),
+    [getComboboxState, onComboboxChange, getToggleState, onToggle],
   );
 }

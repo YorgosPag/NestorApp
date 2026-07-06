@@ -180,7 +180,7 @@ export class DimensionRenderer extends BaseEntityRenderer {
     if (!ext1 && !ext2) return;
     // Extension lines share one stroke setup (unified per-part granularity):
     // dimlwe + dimltex1 (dimltex1===dimltex2 while the UI sets both together).
-    this.applyLineStyle(r.style.dimclre, r.style.dimlwe, r.style.dimltex1, r.style.dimclreTrueColor);
+    this.applyLineStyle(r.style.dimclre, r.style.dimlwe, r.style.dimltex1, r.style.dimclreTrueColor, r.style.dimltscale);
     if (ext1 && !r.style.suppressExtLine1) {
       const segs = breaks?.extLine1Segments ?? [ext1];
       for (const s of segs) this.strokeSegment(s);
@@ -196,7 +196,7 @@ export class DimensionRenderer extends BaseEntityRenderer {
     breaks?: DimBreakResult,
     lf?: DimFitRender | null,
   ): void {
-    this.applyLineStyle(r.style.dimclrd, r.style.dimlwd, r.style.dimltype, r.style.dimclrdTrueColor);
+    this.applyLineStyle(r.style.dimclrd, r.style.dimlwd, r.style.dimltype, r.style.dimclrdTrueColor, r.style.dimltscale);
     switch (r.geometry.kind) {
       case 'linear':
         if (!r.style.suppressDimLine1 && !r.style.suppressDimLine2) {
@@ -271,22 +271,28 @@ export class DimensionRenderer extends BaseEntityRenderer {
     const dir1 = lf?.placement.arrowDirection1 ?? r.geometry.arrowDirection1;
     const dir2 = lf?.placement.arrowDirection2 ?? r.geometry.arrowDirection2;
 
-    renderArrowhead(this.ctx, block1, {
-      screenAnchor: screenA1,
-      direction: dir1,
-      side: 1,
-      unitPx,
-      strokeColor: colour,
-      fillColor: colour,
-    });
-    renderArrowhead(this.ctx, block2, {
-      screenAnchor: screenA2,
-      direction: dir2,
-      side: 2,
-      unitPx,
-      strokeColor: colour,
-      fillColor: colour,
-    });
+    // ADR-362 Round 36 — per-side endpoint-marker visibility gate. The block/shape
+    // is still resolved above (so toggling back restores it); we only skip the draw.
+    if (!r.style.suppressArrow1) {
+      renderArrowhead(this.ctx, block1, {
+        screenAnchor: screenA1,
+        direction: dir1,
+        side: 1,
+        unitPx,
+        strokeColor: colour,
+        fillColor: colour,
+      });
+    }
+    if (!r.style.suppressArrow2) {
+      renderArrowhead(this.ctx, block2, {
+        screenAnchor: screenA2,
+        direction: dir2,
+        side: 2,
+        unitPx,
+        strokeColor: colour,
+        fillColor: colour,
+      });
+    }
   }
 
   /**
@@ -316,7 +322,7 @@ export class DimensionRenderer extends BaseEntityRenderer {
   private drawFitLeader(r: ResolvedDimensionRender, lf?: DimFitRender | null): void {
     const path = lf?.placement.leaderPath;
     if (!path || path.length < 2) return;
-    this.applyLineStyle(r.style.dimclrd, r.style.dimlwd, r.style.dimltype, r.style.dimclrdTrueColor);
+    this.applyLineStyle(r.style.dimclrd, r.style.dimlwd, r.style.dimltype, r.style.dimclrdTrueColor, r.style.dimltscale);
     for (let i = 1; i < path.length; i++) {
       this.strokeSegment({ start: path[i - 1], end: path[i] });
     }
@@ -360,9 +366,11 @@ export class DimensionRenderer extends BaseEntityRenderer {
     lineweight: LineweightMm,
     linetype: string,
     trueColor?: number | null,
+    ltScale?: number,
   ): void {
     // ADR-562 Φ2 — resolved per-part width + dash (was hardcoded 1px solid).
-    const stroke = resolveDimStroke(lineweight, linetype, this.transform.scale);
+    // ADR-362 — per-style DIMLTSCALE density (Path A) rides the celtscale slot.
+    const stroke = resolveDimStroke(lineweight, linetype, this.transform.scale, ltScale);
     if (this._inGlowPass) {
       // Hover halo: keep the wider stroke but a CONTINUOUS line (a dashed halo
       // reads as broken) — unchanged from the pre-ADR-562 glow behaviour.

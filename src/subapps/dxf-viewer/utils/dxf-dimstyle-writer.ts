@@ -135,7 +135,14 @@ export function emitDimStyle(sink: DimGroupSink, s: DimStyle, scale = 1): void {
   sink(170, flag(s.dimalt));
   sink(171, s.dimaltd);
   sink(172, flag(s.dimtofl));
-  sink(173, 0);                         // DIMSAH (separate arrowheads, use DIMBLK1/2)
+  // DIMSAH (separate arrowheads, use DIMBLK1/2). ADR-362 Round 36 — per-side
+  // endpoint-marker visibility (`suppressArrow1/2`) is an INTERNAL channel persisted
+  // via the scene model (`entity.overrides`), so it round-trips losslessly inside the
+  // app. It is NOT emitted here: this simplified writer never emits arrowhead BLOCK
+  // names/handles either (342-344 = 0 below → default closed-filled), so there is no
+  // block to degrade to `_NONE`. Faking DIMSAH=1 without block records would produce
+  // an invalid DIMSTYLE. Extension/dim-line suppression DO round-trip (codes 75/76/281/282).
+  sink(173, 0);
   sink(174, flag(s.dimtix));
   sink(175, 0);                         // DIMSOXD
 

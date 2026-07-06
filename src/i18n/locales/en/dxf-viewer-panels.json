@@ -179,6 +179,8 @@
           "suppressDimLine2": "Suppress dim line 2",
           "suppressExtLine1": "Suppress ext line 1",
           "suppressExtLine2": "Suppress ext line 2",
+          "suppressArrow1": "Suppress marker 1",
+          "suppressArrow2": "Suppress marker 2",
           "dimblk": "Arrowhead",
           "dimcen": "Center mark (mm)",
           "dimtxt": "Text height (mm)",
@@ -210,7 +212,8 @@
           "dimltype": "Dimension line type",
           "dimltex1": "Extension line type",
           "arrowColor": "Arrow color",
-          "textFontFamily": "Font family"
+          "textFontFamily": "Font family",
+          "dimltscale": "Linetype density"
         },
         "byLayer": "ByLayer",
         "colorOptions": {
@@ -313,6 +316,42 @@
           "date": "Current date",
           "time": "Current time",
           "author": "Author"
+        }
+      },
+      "linePatternEditor": {
+        "openButton": "New line type…",
+        "title": "New line type",
+        "description": "Define explicit lengths for dashes, gaps and dots. The pattern is saved and selectable by name on any dimension.",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. Dashed 5-2",
+        "previewLabel": "Preview",
+        "segmentsLabel": "Pattern segments",
+        "mm": "mm",
+        "removeSegment": "Remove segment",
+        "kinds": {
+          "dash": "Dash",
+          "gap": "Gap",
+          "dot": "Dot"
+        },
+        "add": {
+          "dash": "Dash",
+          "gap": "Gap",
+          "dot": "Dot"
+        },
+        "cancel": "Cancel",
+        "save": "Save",
+        "errors": {
+          "name": {
+            "empty": "Enter a name.",
+            "reserved": "Reserved name — choose another.",
+            "taken": "A line type with this name already exists."
+          },
+          "pattern": {
+            "empty": "Add at least one segment.",
+            "needsVisible": "Needs at least one dash or dot.",
+            "needsGap": "Needs at least one gap in between.",
+            "badLength": "Lengths must be greater than zero."
+          }
         }
       }
     },

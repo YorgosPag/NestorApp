@@ -384,6 +384,22 @@ Ref: ADR-357 (Object Snap Tracking), ADR-397 (rotation consumer).
 
 ## 7. Changelog
 
+- **2026-07-06 (Φ11 — Per-part VISIBILITY toggles / ορατότητα μερών διάστασης, UNCOMMITTED)** — Επέκταση του per-part
+  ελέγχου από «στυλ» σε «ορατότητα»: εμφάνιση/απόκρυψη ανά διάσταση, σε οποιονδήποτε συνδυασμό, των μερών —
+  βοηθητικές (αρ./δεξ.), κεντρική γραμμή, σημάδια άκρου (αρ./δεξ.). **SSoT audit (re-grep)**: βρέθηκαν ΗΔΗ πλήρη
+  `suppressExtLine1/2` + `suppressDimLine1/2` (data+render+DXF 75/76/281/282)· έλειπε μόνο flag ορατότητας βέλους +
+  UI. Απόφαση Giorgio: το «tick» = arrowhead block → **ΕΝΑ marker-toggle ανά πλευρά** (τρόπος AutoCAD/Revit· το ΣΧΗΜΑ
+  μένει στο «Στυλ Βέλους»). Υλοποίηση: νέα `suppressArrow1/2` στο `DimStyle`+defaults· render gate σε **και τους δύο**
+  renderers (`DimensionRenderer`+`preview-dimension-renderer`, preview≡commit)· νέο `DIM_RIBBON_KEYS.visibility`+
+  `isDimVisibilityKey`· `useRibbonDimBridge` απέκτησε `getToggleState`/`onToggle` (VISIBILITY_FIELD_MAP, «ορατό»=κανένα
+  `suppress*` set· κεντρική=1 toggle→2 μισές) μέσω του ΙΔΙΟΥ undoable `overrides` path (μηδέν νέα store)· νέο panel
+  «Ορατότητα» (5 `type:'toggle'`, icon `Eye`) στο contextual tab· wiring 2 branches στο `useRibbonCommands`·
+  i18n el+en (1 panel + 5 commands). **Global surface = reuse, ΟΧΙ phase-2**: το `LinesSection.tsx` (Φ5) ήδη έχει
+  `BoolField` για `suppressDimLine1/2`+`suppressExtLine1/2` → προστέθηκαν 2 ακόμη για `suppressArrow1/2` (+labels
+  `dxf-viewer-panels`). ΕΝΑ data SSoT (`suppress*`), ΔΥΟ surfaces (ribbon override + Style Manager global) — ίδιο μοτίβο
+  με Φ1-Φ5. DXF (honesty): τα `suppressArrow1/2` persist-άρονται μόνο εσωτερικά (scene JSON) — ο απλοποιημένος writer
+  δεν εκπέμπει block names, οπότε δεν γίνεται fake DIMSAH (documented). Πλήρες root-cause/files: **ADR-362 §7 Round 36**. tsc SKIP (N.17)·
+  🔴 browser-verify Giorgio. ✅ Google-level: FULL SSoT reuse, preview≡commit, undoable, honest DXF scope.
 - **2026-07-04 (Φ9.4 — Action-drag «tracking pull» aperture, BUGFIX, UNCOMMITTED)** — Τα alignment ίχνη των Φ9.2/Φ9.3
   (grip / MOVE / body-drag) **ποτέ δεν εμφανίζονταν** (`resolveActionAlignmentTracking` → null κάθε frame): τα action
   drags έχουν μόνο `[basePoint]` anchor, κανένα hover-acquire, και δεν κάνουν POLAR-lock → το single-anchor projection

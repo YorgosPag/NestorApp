@@ -7,17 +7,15 @@
  * inline `<svg>` με `stroke="currentColor"` (theme-correct, μηδέν hardcoded — N.3).
  *
  * **FULL SSoT:** το dash pattern προέρχεται από το ΙΔΙΟ Unified Linetype SSoT που
- * τρέφει τον renderer (`resolveAnyDashMm` → catalog· fallback `resolveLinetype`
- * για registry custom) + το ΙΔΙΟ mm→px (`dashMmToScreenPx`, all-positive + dot-safe).
+ * τρέφει τον renderer (`resolveLinetypePatternMm` → catalog + registry custom) +
+ * το ΙΔΙΟ mm→px (`dashMmToScreenPx`, all-positive + dot-safe).
  * Μηδέν δεύτερη dash math. Μοτίβα σταθερά → memoize ανά `name|w|h`.
  *
  * @see rendering/linetype-dash-resolver.ts (dashMmToScreenPx — mm→px SSoT)
  * @see bim/hatch/hatch-pattern-thumbnail.ts (το πρότυπο pattern-thumbnail builder)
  */
 
-import { resolveAnyDashMm } from '../config/linetype-aliases';
-import { resolveLinetype } from '../stores/LinetypeRegistry';
-import { dashMmToScreenPx } from './linetype-dash-resolver';
+import { dashMmToScreenPx, resolveLinetypePatternMm } from './linetype-dash-resolver';
 
 export interface LinetypeThumbnail {
   readonly width: number;
@@ -36,11 +34,21 @@ const FALLBACK_CYCLE_MM = 20;
 
 const cache = new Map<string, LinetypeThumbnail>();
 
-/** mm dash pattern για ένα όνομα: ISO catalog πρώτα, μετά registry custom. */
-function dashMmFor(name: string): readonly number[] {
-  const iso = resolveAnyDashMm(name);
-  if (iso.length > 0) return iso;
-  return resolveLinetype(name)?.pattern ?? [];
+/**
+ * Thumbnail δεδομένα από ΕΝΑ mm pattern (χωρίς memo — για live editor preview
+ * ενός μη-αποθηκευμένου custom pattern, ADR-362 Path B). Κενό pattern → solid.
+ * ΙΔΙΟ scale + mm→px SSoT με το named `buildLinetypeThumbnail`.
+ */
+export function buildLinetypeThumbnailFromPattern(
+  patternMm: readonly number[],
+  width: number = DEFAULT_LINETYPE_THUMB_WIDTH,
+  height: number = DEFAULT_LINETYPE_THUMB_HEIGHT,
+): LinetypeThumbnail {
+  if (patternMm.length === 0) return { width, height, dash: [] };
+  // Scale ώστε ~TARGET_REPEATS κύκλοι να γεμίζουν το πλάτος του thumbnail.
+  const cycleMm = patternMm.reduce((s, v) => s + Math.abs(v), 0) || FALLBACK_CYCLE_MM;
+  const scale = width / (cycleMm * TARGET_REPEATS);
+  return { width, height, dash: dashMmToScreenPx(patternMm, scale, 1) };
 }
 
 /**
@@ -56,19 +64,7 @@ export function buildLinetypeThumbnail(
   const hit = cache.get(key);
   if (hit) return hit;
 
-  const patternMm = dashMmFor(name);
-  if (patternMm.length === 0) {
-    const solid: LinetypeThumbnail = { width, height, dash: [] };
-    cache.set(key, solid);
-    return solid;
-  }
-
-  // Scale ώστε ~TARGET_REPEATS κύκλοι να γεμίζουν το πλάτος του thumbnail.
-  const cycleMm = patternMm.reduce((s, v) => s + Math.abs(v), 0) || FALLBACK_CYCLE_MM;
-  const scale = width / (cycleMm * TARGET_REPEATS);
-  const dash = dashMmToScreenPx(patternMm, scale, 1);
-
-  const result: LinetypeThumbnail = { width, height, dash };
+  const result = buildLinetypeThumbnailFromPattern(resolveLinetypePatternMm(name), width, height);
   cache.set(key, result);
   return result;
 }
