@@ -112,6 +112,11 @@ interface DimKeySpec {
    * the packed hex on change (exact colour), while `field` gets the nearest ACI.
    */
   readonly trueColorField?: keyof DimStyle;
+  /**
+   * ADR-362 — for `kind:'number'`, the value shown when the field is absent on the
+   * resolved style (e.g. `dimltscale` default = 1, not 0). Defaults to 0.
+   */
+  readonly numberDefault?: number;
 }
 
 const K = DIM_RIBBON_KEYS.override;
@@ -124,6 +129,9 @@ const DIM_KEY_MAP: Readonly<Record<string, DimKeySpec>> = {
   [K.color]:      { field: 'dimclrd', kind: 'color', trueColorField: 'dimclrdTrueColor' },
   [K.lineWeight]: { field: 'dimlwd', kind: 'lineweight' },
   [K.lineType]:   { field: 'dimltype', kind: 'linetype' },
+  // ADR-362 — linetype density (Path A). Shared by dim + ext lines (one dimltscale
+  // per style); numeric override, default 1 (= catalog density).
+  [K.lineTypeScale]: { field: 'dimltscale', kind: 'number', numberDefault: 1 },
   [K.extColor]:   { field: 'dimclre', kind: 'color', trueColorField: 'dimclreTrueColor' },
   [K.extWeight]:  { field: 'dimlwe', kind: 'lineweight' },
   [K.extType]:    { field: 'dimltex1', kind: 'linetype', sameValue: ['dimltex2'] },
@@ -182,7 +190,7 @@ function readValue(spec: DimKeySpec, style: DimStyle): string {
     case 'enum':
       return String(style[spec.field] ?? '');
     case 'number':
-      return String(style[spec.field] ?? 0);
+      return String(style[spec.field] ?? spec.numberDefault ?? 0);
   }
 }
 

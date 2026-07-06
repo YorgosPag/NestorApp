@@ -120,6 +120,10 @@ describe('useRibbonDimBridge — selected dimension (read)', () => {
     expect(r().current.getComboboxState(K.textFont)?.value).toBe('Roboto');
   });
 
+  it('ADR-362 — linetype density (dimltscale) reads the default 1 when absent (not 0)', () => {
+    expect(r().current.getComboboxState(K.lineTypeScale)?.value).toBe('1');
+  });
+
   it('un-overridden extension color resolves the ByLayer built-in (256) to the default hex', () => {
     // Φ7 — the picker has no ByLayer sentinel; ACI 256 with no layer colour resolves
     // to the neutral default swatch so the picker opens on a sane value.
@@ -179,6 +183,11 @@ describe('useRibbonDimBridge — selected dimension (write = undoable overrides)
   it('invalid arrow size (NaN) writes no command', () => {
     r().current.onComboboxChange(K.arrowSize, 'abc');
     expect(UpdateEntityCommand as unknown as jest.Mock).not.toHaveBeenCalled();
+  });
+
+  it('ADR-362 — linetype density writes the dimltscale override', () => {
+    r().current.onComboboxChange(K.lineTypeScale, '2');
+    expect(patchOf()).toEqual({ overrides: { dimltscale: 2 } });
   });
 
   it('write merges on top of existing overrides (non-destructive)', () => {

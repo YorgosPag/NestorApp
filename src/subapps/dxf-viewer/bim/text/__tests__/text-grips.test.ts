@@ -17,6 +17,14 @@ import {
   textToRectFrame,
   applyTextGripDrag,
 } from '../text-grips';
+// ADR-557 Φ-attachment — the box now measures the real glyph advance; pin a stub font
+// at the 0.6 monospace ratio so these hand-computed widths stay deterministic (the jest
+// jsdom canvas would otherwise feed machine-dependent metrics into the tier-2 fallback).
+import { installStubFont } from '../../../text-engine/fonts/__tests__/_stub-font';
+
+let __stubCleanup: () => void;
+beforeAll(() => { __stubCleanup = installStubFont(); });
+afterAll(() => __stubCleanup());
 
 // CHAR_WIDTH_MONOSPACE = 0.6 (TEXT_METRICS_RATIOS). "DDD" (3) × height 10 × 0.6 = 18.
 // ADR-557 Φ-attachment: the box is now attachment-aware. These adapter tests pin the
@@ -66,7 +74,11 @@ describe('textToRectFrame', () => {
 });
 
 describe('getTextGrips', () => {
-  const grips = getTextGrips(text());
+  // Lazy: computed in beforeAll so the stub font (outer beforeAll) is installed first —
+  // a describe-body `const` would run at collection time, before the font, and hit the
+  // non-deterministic tier-2 canvas metrics.
+  let grips: ReturnType<typeof getTextGrips>;
+  beforeAll(() => { grips = getTextGrips(text()); });
 
   it('emits exactly 10 grips', () => {
     expect(grips).toHaveLength(10);

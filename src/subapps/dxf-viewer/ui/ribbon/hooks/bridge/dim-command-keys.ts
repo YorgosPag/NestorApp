@@ -19,6 +19,12 @@ export const DIM_RIBBON_KEYS = {
     color:          'dim.override.color',       // dimclrd (existing key, now wired)
     lineWeight:     'dim.override.lineWeight',   // dimlwd
     lineType:       'dim.override.lineType',     // dimltype
+    // ADR-362 — per-style linetype DENSITY (dimltscale, Path A). Numeric override,
+    // mirror of arrowSize; scales the dashed pattern (dashes/gaps/dots) ×value.
+    lineTypeScale:  'dim.override.lineTypeScale', // dimltscale
+    // ADR-362 — «Νέος τύπος γραμμής» launcher (Path B). Self-contained widget
+    // (opens LinePatternEditorDialog); no bridge handler — key is for the tab only.
+    newLineType:    'dim.override.newLineType',
     // Extension lines (dimclre/dimlwe/dimltex1+2 unified).
     extColor:       'dim.override.extColor',     // dimclre
     extWeight:      'dim.override.extWeight',     // dimlwe

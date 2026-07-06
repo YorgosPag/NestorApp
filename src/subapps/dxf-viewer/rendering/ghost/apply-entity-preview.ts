@@ -22,7 +22,7 @@
 import type { Point2D } from '../types/Types';
 // SSoT — canonical point translation (ADR-577 consolidation).
 import { translatePoint } from '../entities/shared/geometry-vector-utils';
-import type { DxfEntityUnion, DxfText, DxfLine, DxfArc, DxfPolyline } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { DxfEntityUnion, DxfLine, DxfArc, DxfPolyline } from '../../canvas-v2/dxf-canvas/dxf-types';
 // ADR-363 Slice F — plain DXF line rotation live ghost (shared axis-box rotate SSoT).
 import { applyLineRotationDrag } from '../../systems/line/line-grips';
 // ADR-561 — plain DXF arc + polyline/rectangle rotation live ghost: the ONE shared
@@ -32,6 +32,9 @@ import { applyPrimitiveRotationDrag } from '../../hooks/grips/primitive-rotation
 import { polylineBboxCenter } from '../../systems/polyline/rectangle-detect';
 import type { Entity } from '../../types/entities';
 import { applyTextGripDrag } from '../../bim/text/text-grips';
+// ADR-557 Φ-attachment — scene→DxfText projection SSoT (shared with the commit): resolves
+// the raw entity's textNode height/text/style so the ghost box math ≡ the commit's.
+import { projectSceneTextToDxf, type TextSceneShape } from '../../bim/text/project-scene-text';
 // ADR-363 Phase 1G.5 — whole-entity translate SSoT (shared by the Alt move ghost + commit).
 import { calculateBimMovedGeometry } from '../../bim/utils/bim-move-geometry';
 import { applyStairGripDrag } from '../../bim/stairs/stair-grips';
@@ -240,13 +243,26 @@ export function applyEntityPreview(
   // Giorgio 2026-06-30). Regression re-fix of ba33b0c2 (reverted by 0878ed54 on a wrong
   // premise). Guarded by `apply-entity-preview-text.test.ts`.
   if (textGripKind && (entity.type === 'text' || entity.type === 'mtext')) {
-    const t = entity as unknown as DxfText;
+    // The ghost pipeline hands us the RAW scene entity (textNode-based): its flat
+    // `text`/`height`/`textStyle` are absent for in-app text, so previously (a)
+    // `resolveBoxHeight` fell back to the 2.5 DIMTXT default → a ~1.5×2.5 box (garbage
+    // transform → the drag read as a whole-entity move) and (b) the ghost `TextRenderer`
+    // early-returned on the missing flat `text` → NO ghost at all (Giorgio 2026-07-06).
+    // Project via the SAME SSoT the commit runs (preview ≡ commit) and inject the flat
+    // fields so the box math is correct AND the ghost actually paints.
+    const t = projectSceneTextToDxf(entity as unknown as TextSceneShape, entity.id);
     const currentPos: Point2D = anchorPos
       ? translatePoint(anchorPos, delta)
       : { x: delta.x, y: delta.y };
     const patch = applyTextGripDrag(textGripKind, { entity: t, delta, currentPos });
     if (Object.keys(patch).length === 0) return entity;
-    return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
+    return {
+      ...(entity as object),
+      text: t.text,
+      height: t.height,
+      ...(t.textStyle ? { textStyle: t.textStyle } : {}),
+      ...patch,
+    } as unknown as DxfEntityUnion;
   }
 
   // ── ADR-363 Slice F — plain DXF line ROTATION live ghost ──────────────────

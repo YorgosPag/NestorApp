@@ -5,6 +5,13 @@
 
 import type { DxfEntityUnion } from '../../../canvas-v2/dxf-canvas/dxf-types';
 import { dxfEntityOutlineSegments } from '../dxf-entity-outline';
+// ADR-557 Φ-attachment — the text box now measures the real glyph advance; pin a stub
+// font at the 0.6 monospace ratio so the hand-computed 'AB'=6 bbox stays deterministic.
+import { installStubFont } from '../../../text-engine/fonts/__tests__/_stub-font';
+
+let __stubCleanup: () => void;
+beforeAll(() => { __stubCleanup = installStubFont(); });
+afterAll(() => __stubCleanup());
 
 const line = (): DxfEntityUnion =>
   ({ id: 'l', type: 'line', visible: true, start: { x: 0, y: 0 }, end: { x: 100, y: 0 } }) as unknown as DxfEntityUnion;

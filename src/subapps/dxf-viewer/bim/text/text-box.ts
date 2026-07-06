@@ -31,8 +31,12 @@
  * frame using the SAME helper at the new w,h — so a resize keeps the attachment
  * point pinned, exactly like Revit / AutoCAD.
  *
- * Pure: zero React / DOM / Firestore / canvas / THREE deps.
+ * Import-time pure: zero React / Firestore / THREE deps. The width now measures the
+ * real glyph advance (`measureTextAdvanceWorld`); its only DOM touch (the CSS-fallback
+ * `measureText`) is lazy + `typeof document`-guarded inside that helper, so this module
+ * still loads and runs in jest / SSR (where it degrades to the monospace approximation).
  *
+ * @see text-engine/fonts/text-advance.ts — measureTextAdvanceWorld (metrics SSoT)
  * @see text-engine/layout/attachment-point.ts — offsetForJustification (9-point SSoT)
  * @see bim/grips/rect-frame.ts — RectFrame + corner world helpers
  * @see bim/text/text-grips.ts — the grip adapter that consumes this box
@@ -43,6 +47,10 @@ import type { DxfText, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dxf-types
 import type { TextJustification } from '../../text-engine/types/text-ast.types';
 import { offsetForJustification } from '../../text-engine/layout';
 import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
+// ADR-557 Φ-attachment — metrics-accurate width: the box measures with the SAME real
+// glyph advance the renderer paints (`getGlyphRun` / CSS `measureText`), not a monospace
+// approximation, so grips / hover / hitTest coincide with the drawn glyphs.
+import { measureTextAdvanceWorld, type TextAdvanceStyle } from '../../text-engine/fonts';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { rotateVector } from '../grips/grip-math';
 import { RECT_CORNERS, rectCornerWorld, type RectFrame } from '../grips/rect-frame';
@@ -60,10 +68,25 @@ export interface TextBoxAABB {
   readonly maxY: number;
 }
 
-/** Natural (widthFactor = 1) rendered width of a simple TEXT at a given height. */
+/**
+ * Monospace fallback width (widthFactor = 1) of a simple TEXT at a given height —
+ * retained for the resize inverse's deterministic base and no-font/SSR paths. The
+ * live box now sizes with the real glyph advance via `measureTextAdvanceWorld`.
+ */
 function naturalTextWidth(text: string | undefined | null, height: number): number {
   const len = text ? text.length : 0;
   return Math.max(len, 1) * height * CHAR_WIDTH;
+}
+
+/** Font/X-scale inputs for the metrics-accurate advance, read off the flat `DxfText`. */
+function advanceStyleOf(text: DxfText): TextAdvanceStyle {
+  const style = text.textStyle;
+  return {
+    fontFamily: style?.fontFamily,
+    bold: style?.bold,
+    italic: style?.italic,
+    widthFactor: text.widthFactor ?? 1,
+  };
 }
 
 /** A finite, positive box height (world units) — guards undefined/0/NaN at the source. */
@@ -73,16 +96,28 @@ export function resolveBoxHeight(text: DxfText): number {
 
 /**
  * Effective box width (world units): the MTEXT frame `width` when carried, else the
- * simple-TEXT `len·height·CHAR_WIDTH·widthFactor`. Robust to a missing flat `text`
- * (content can live in a `textNode` on some scene shapes) — never throws.
+ * simple-TEXT REAL glyph advance (`measureTextAdvanceWorld` — proportional font
+ * metrics, incl. the AutoCAD X-scale `widthFactor`), so the box === the drawn glyphs.
+ * Falls back to a monospace approximation only when no font + no DOM are available
+ * (jest / SSR / font not yet loaded). Robust to a missing flat `text` — never throws.
  */
 export function effectiveTextWidth(text: DxfText): number {
   if (text.width != null && text.width > 0) return text.width;
-  return naturalTextWidth(text.text, resolveBoxHeight(text)) * (text.widthFactor ?? 1);
+  return measureTextAdvanceWorld(text.text ?? '', resolveBoxHeight(text), advanceStyleOf(text));
 }
 
 /** Re-export so a resize can recompute width from a patched height (TEXT widthFactor path). */
 export { naturalTextWidth };
+
+/**
+ * The REAL glyph advance at `widthFactor = 1` (world units) — the base a TEXT resize
+ * divides the new box width by to derive the new `widthFactor`. Uses the SAME metrics
+ * as `effectiveTextWidth`, so `effectiveTextWidth(after-resize) === newWidth` (no jump
+ * on release). Matches the monospace `naturalTextWidth` only in the no-font fallback.
+ */
+export function baseTextAdvanceWorld(text: DxfText, height: number): number {
+  return measureTextAdvanceWorld(text.text ?? '', height, { ...advanceStyleOf(text), widthFactor: 1 });
+}
 
 /**
  * Resolve the 9-point justification of a text. Sources, in priority order:

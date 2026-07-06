@@ -68,27 +68,41 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
     expect(DIMENSION_CONTEXTUAL_TAB.panels.map((p) => p.labelKey)).toEqual(PANEL_LABEL_KEYS);
   });
 
-  it('dim-style panel: chooser + apply/edit/reset (4 buttons, 2 rows)', () => {
+  it('dim-style panel: chooser + apply/edit/reset stacked in one column (4 buttons, 1 row)', () => {
+    // Giorgio 2026-07-07 — compacted to a single column: chooser on top, then
+    // Apply / Edit / Reset stacked beneath it.
     const panel = panelById('dim-style');
-    expect(panel.rows).toHaveLength(2);
-    expect(panel.rows[0].buttons).toHaveLength(1);
-    expect(panel.rows[1].buttons).toHaveLength(3);
+    expect(panel.rows).toHaveLength(1);
+    expect(panel.rows[0].buttons).toHaveLength(4);
     const chooser = panel.rows[0].buttons[0];
     expect(chooser.type).toBe('combobox');
     expect(chooser.command.commandKey).toBe('dim.style.chooser');
     expect((chooser.command.options ?? []).length).toBeGreaterThanOrEqual(3);
+    // The 3 stacked actions keep their canonical order below the chooser.
+    expect(panel.rows[0].buttons.slice(1).map((b) => b.command.commandKey)).toEqual([
+      DIM_RIBBON_KEYS.style.applyStyle,
+      DIM_RIBBON_KEYS.style.editStyle,
+      DIM_RIBBON_KEYS.override.resetOverrides,
+    ]);
   });
 
   // ── ADR-562 Φ4 per-part panels ────────────────────────────────────────────
-  it('dim-line panel wires 3 comboboxes → dimclrd / dimlwd / dimltype keys', () => {
+  it('dim-line panel: color/weight/type/density comboboxes + new-pattern widget (ADR-362)', () => {
     const btns = buttonsOf('dim-line');
-    expect(btns).toHaveLength(3);
-    expect(btns.every((b) => b.type === 'combobox')).toBe(true);
-    expect(btns.map((b) => b.command.commandKey)).toEqual([
+    // ADR-362 — density (dimltscale) + «Νέος τύπος» launcher added right of «Τύπος».
+    expect(btns).toHaveLength(5);
+    const comboKeys = btns.slice(0, 4);
+    expect(comboKeys.every((b) => b.type === 'combobox')).toBe(true);
+    expect(comboKeys.map((b) => b.command.commandKey)).toEqual([
       DIM_RIBBON_KEYS.override.color,
       DIM_RIBBON_KEYS.override.lineWeight,
       DIM_RIBBON_KEYS.override.lineType,
+      DIM_RIBBON_KEYS.override.lineTypeScale,
     ]);
+    const widget = btns[4];
+    expect(widget.type).toBe('widget');
+    expect((widget as { widgetId?: string }).widgetId).toBe('dim-new-line-pattern');
+    expect(widget.command.commandKey).toBe(DIM_RIBBON_KEYS.override.newLineType);
   });
 
   it('dim-line color is now the enterprise dxf-color picker (ADR-562 Φ6, not the broken color-swatch)', () => {
@@ -117,10 +131,10 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
     expect(btns[0].command.options ?? []).toEqual([]);
   });
 
-  it('dim-visibility panel: 5 toggle buttons wiring the per-part visibility keys', () => {
+  it('dim-visibility panel: 5 toggle buttons stacked in one column (Giorgio 2026-07-07)', () => {
     const btns = buttonsOf('dim-visibility');
-    // ADR-362 Round 36 — order mirrors the physical layout: left ext / dim line /
-    // right ext (row 1), then left marker / right marker (row 2).
+    // Giorgio 2026-07-07 — all five toggles in ONE column: left ext / dim line /
+    // right ext, then the two markers stacked below «Δεξιά Βοηθητική».
     expect(btns.map((b) => b.command.commandKey)).toEqual([
       DIM_RIBBON_KEYS.visibility.extLine1,
       DIM_RIBBON_KEYS.visibility.dimLine,
@@ -130,16 +144,28 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
     ]);
     // All are on/off toggle controls (not comboboxes / actions).
     for (const b of btns) expect(b.type).toBe('toggle');
-    expect(panelById('dim-visibility').rows).toHaveLength(2);
+    expect(panelById('dim-visibility').rows).toHaveLength(1);
   });
 
-  it('dim-text panel adds color + font and keeps height/position/rotation (8 buttons, 4 rows)', () => {
+  it('dim-text panel: 2 columns of 4 (Giorgio 2026-07-07 compaction — 8 buttons, 2 rows)', () => {
     const panel = panelById('dim-text');
     const btns = panel.rows.flatMap((r) => r.buttons);
     expect(btns).toHaveLength(8);
-    expect(panel.rows).toHaveLength(4);
-    expect(btns[0].command.commandKey).toBe(DIM_RIBBON_KEYS.override.textColor);
-    expect(btns[1].command.commandKey).toBe(DIM_RIBBON_KEYS.override.textFont);
+    expect(panel.rows).toHaveLength(2);
+    // Column 1: color / font / height / position (top→bottom).
+    expect(panel.rows[0].buttons.map((b) => b.command.commandKey)).toEqual([
+      DIM_RIBBON_KEYS.override.textColor,
+      DIM_RIBBON_KEYS.override.textFont,
+      DIM_RIBBON_KEYS.text.height,
+      DIM_RIBBON_KEYS.text.position,
+    ]);
+    // Column 2: rotation / reset-position / text-override / mask (top→bottom).
+    expect(panel.rows[1].buttons.map((b) => b.command.commandKey)).toEqual([
+      DIM_RIBBON_KEYS.text.rotation,
+      DIM_RIBBON_KEYS.text.resetPosition,
+      DIM_RIBBON_KEYS.text.override,
+      DIM_RIBBON_KEYS.text.tfillToggle,
+    ]);
   });
 
   it('dim-modify panel: DIMBREAK + DIMSPACE + Select-Row carry actions (not stubs)', () => {
@@ -163,10 +189,15 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
     expect((rowHandles as { widgetId?: string }).widgetId).toBe('dim-row-handles-toggle');
   });
 
-  it('dim-properties panel has 3 buttons across 2 rows', () => {
+  it('dim-properties panel: layer / annotation-scale / properties stacked in one column (3 buttons, 1 row)', () => {
+    // Giorgio 2026-07-07 — «Ιδιότητες» stacked below «Κλίμακα Σχολιασμού».
     const panel = panelById('dim-properties');
-    expect(panel.rows.flatMap((r) => r.buttons)).toHaveLength(3);
-    expect(panel.rows).toHaveLength(2);
+    expect(panel.rows).toHaveLength(1);
+    expect(panel.rows[0].buttons.map((b) => b.command.commandKey)).toEqual([
+      DIM_RIBBON_KEYS.properties.layer,
+      DIM_RIBBON_KEYS.properties.annotationScale,
+      DIM_RIBBON_KEYS.properties.openPanel,
+    ]);
   });
 
   it('dim-actions panel: «Κλείσιμο» + «Διαγραφή», both wired (action === commandKey)', () => {

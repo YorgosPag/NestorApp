@@ -20,55 +20,15 @@ import type { Point2D } from '../../rendering/types/Types';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { DxfTextNode } from '../../text-engine/types';
 import { applyTextGripDrag, type TextTransformPatch } from '../../bim/text/text-grips';
 import {
   UpdateTextTransformCommand,
   type TextTransformState,
 } from '../../core/commands/text/UpdateTextTransformCommand';
-import { resolveTextHeight, extractFirstRunStyle } from '../canvas/dxf-text-style-extractor';
-import { extractFlatText } from '../../utils/text-node-utils';
+// ADR-557 Φ-attachment — scene→DxfText projection SSoT (shared with the live ghost, so
+// preview ≡ commit; see project-scene-text.ts header for the raw-entity regression it fixes).
+import { projectSceneTextToDxf, type TextSceneShape } from '../../bim/text/project-scene-text';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
-
-/** Narrow scene shape needed to project a TEXT/MTEXT entity to a flat `DxfText`. */
-interface TextSceneShape {
-  type: string;
-  position: Point2D;
-  text?: string;
-  textNode?: DxfTextNode;
-  height?: number;
-  fontSize?: number;
-  rotation?: number;
-  width?: number;       // MTEXT frame
-  widthFactor?: number; // simple-TEXT X-scale
-}
-
-/**
- * Scene TEXT/MTEXT → the flat `DxfText` the grip adapter consumes. Reuses the SAME
- * converter SSoT (`resolveTextHeight`, `extractFlatText`) so the box geometry the
- * commit transforms matches the one the grips were emitted from. MTEXT carries its
- * real `width`; simple TEXT carries `widthFactor` (the discriminator the adapter reads).
- */
-function projectSceneTextToDxf(e: TextSceneShape, id: string): DxfText {
-  const text = e.text ?? (e.textNode ? extractFlatText(e.textNode) : '') ?? '';
-  const height = resolveTextHeight(e);
-  // ADR-557 Φ-attachment — carry the derived style (textAlign/textBaseline) so the box
-  // SSoT (`resolveTextBox`, via `applyTextGripDrag`) is attachment-aware in the commit
-  // too — i.e. the committed transform matches the box the user grabbed (TL..BR), not a
-  // hard TL. (The grip positions the user clicked already honour the attachment.)
-  const textStyle = extractFirstRunStyle(e);
-  return {
-    id,
-    type: 'text',
-    visible: true,
-    position: e.position,
-    text,
-    height,
-    rotation: e.rotation,
-    ...(textStyle ? { textStyle } : {}),
-    ...(e.type === 'mtext' ? { width: e.width } : { widthFactor: e.widthFactor }),
-  };
-}
 
 /** Current full transform state of the projected text (the undo target). */
 function textTransformStateOf(t: DxfText): TextTransformState {

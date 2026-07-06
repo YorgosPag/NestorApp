@@ -1650,6 +1650,8 @@
       }
     },
     "commands": {
+      "dimLineTypeScale": "Density",
+      "dimNewLineType": "New type",
       "currentLayerPicker": "Current Layer",
       "line": "Line",
       "lineVariants": {

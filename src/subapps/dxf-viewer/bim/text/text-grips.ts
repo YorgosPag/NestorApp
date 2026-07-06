@@ -37,7 +37,7 @@ import {
   resolveTextBox,
   textBoxToPosition,
   effectiveTextWidth,
-  naturalTextWidth,
+  baseTextAdvanceWorld,
 } from './text-box';
 import { rotationHandleMidwayOffset } from '../grips/rotation-handle-policy';
 import {
@@ -154,7 +154,9 @@ function framePatch(entity: DxfText, newFrame: RectFrame): TextTransformPatch {
   if (isMTextBox(entity)) {
     patch.width = newWidth;
   } else {
-    patch.widthFactor = newWidth / naturalTextWidth(entity.text, newHeight);
+    // Divide by the REAL glyph advance (widthFactor=1) — the SAME base `effectiveTextWidth`
+    // uses — so the resized box holds (`effectiveTextWidth(after) === newWidth`, no jump).
+    patch.widthFactor = newWidth / baseTextAdvanceWorld(entity, newHeight);
   }
   return patch;
 }

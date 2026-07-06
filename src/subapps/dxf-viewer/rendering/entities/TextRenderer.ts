@@ -64,8 +64,7 @@ type TextRichStyle = {
   underline?: boolean; overline?: boolean; strikethrough?: boolean;
 } | undefined;
 
-// TEMP-DIAG (2026-07-06) — REMOVE BEFORE COMMIT. Throttle map for the box-vs-glyph
-// offset measurement (see logTextBoxDiag). Keyed by entity id.
+// TEMP-DIAG (2026-07-06) — REMOVE WHEN SOLVED. Throttle map for the render box-vs-glyph trace.
 const TEXTBOX_DIAG_LAST = new Map<string, number>();
 
 export class TextRenderer extends BaseEntityRenderer {
@@ -188,20 +187,15 @@ export class TextRenderer extends BaseEntityRenderer {
       const w = this.paintText(screenPos.x, screenPos.y, text, screenHeight, textAlignMode, baselineMode, resolved);
       if (hasDecoration) this.paintDecorations(screenPos.x, screenPos.y, w, screenHeight, richStyle, textAlignMode);
     }
-    // TEMP-DIAG (2026-07-06) — REMOVE BEFORE COMMIT. ctx.font is still the text font here,
-    // so ctx.measureText() gives the painted CSS-fallback width. Logged before restore().
+    // TEMP-DIAG (2026-07-06) — REMOVE WHEN SOLVED. ctx.font is still the text font here.
     this.logTextBoxDiag(entity, text, screenHeight, resolved);
     this.ctx.restore();
   }
 
   /**
-   * TEMP-DIAG (2026-07-06) — REMOVE BEFORE COMMIT.
-   * Measures the exact horizontal offset between the geometry box (grips / hover /
-   * hit-test, via `resolveTextBox` → monospace CHAR_WIDTH approx) and the ACTUAL
-   * painted glyphs (real font metrics: `getGlyphRun` when a CAD font resolved, else
-   * `ctx.measureText`). `centerShiftWorld` (for left/TL text) = how far RIGHT the box
-   * centre — and thus the grips + hover frame — sit relative to the drawn text.
-   * Throttled to 1 log / 400 ms per entity id to keep the console readable.
+   * TEMP-DIAG (2026-07-06) — REMOVE WHEN SOLVED. Compares the geometry box
+   * (`resolveTextBox` → grips/hover/hitTest) with the ACTUAL painted glyph advance
+   * (real font metrics). Throttled 1/400 ms per entity id.
    */
   private logTextBoxDiag(
     entity: EntityModel, text: string, screenHeight: number, resolved: ResolvedFont | null,
@@ -209,8 +203,7 @@ export class TextRenderer extends BaseEntityRenderer {
     if (!('position' in entity) || !(entity.position as Point2D)) return;
     const id = String((entity as { id?: string | number }).id ?? '');
     const now = typeof performance !== 'undefined' ? performance.now() : 0;
-    const last = TEXTBOX_DIAG_LAST.get(id) ?? 0;
-    if (now - last < 400) return;
+    if (now - (TEXTBOX_DIAG_LAST.get(id) ?? 0) < 400) return;
     TEXTBOX_DIAG_LAST.set(id, now);
 
     const scale = this.transform.scale;
@@ -218,31 +211,21 @@ export class TextRenderer extends BaseEntityRenderer {
       ? getGlyphRun(resolved.font, resolved.cacheName, text).metrics.width * (screenHeight / GLYPH_REFERENCE_SIZE)
       : this.ctx.measureText(text).width;
     const realWorldW = realPx / scale;
-
     const dxfText = { ...(entity as unknown as DxfText), height: this.extractTextHeight(entity) };
     const boxWorldW = effectiveTextWidth(dxfText);
     const box = resolveTextBox(dxfText);
     const pos = entity.position as Point2D;
-    const style = (entity as { textStyle?: { textAlign?: string; textBaseline?: string } }).textStyle;
-    const round = (n: number): number => Math.round(n * 1000) / 1000;
-
+    const r2 = (n: number): number => Math.round(n * 100) / 100;
     // eslint-disable-next-line no-console
     console.log('[TEXTBOX-DIAG]', {
-      id, text, len: text.length,
-      height: round(this.extractTextHeight(entity)),
+      id, text,
+      font: resolved ? resolved.cacheName : 'css-fallback',
+      posX: r2(pos.x), posY: r2(pos.y),
+      boxWorldW: r2(boxWorldW), realWorldW: r2(realWorldW), deltaW: r2(boxWorldW - realWorldW),
+      boxCenterX: r2(box.center.x), glyphCenterX: r2(pos.x + realWorldW / 2),
+      boxCenterMinusGlyphCenterX: r2(box.center.x - (pos.x + realWorldW / 2)),
       widthFactor: (entity as { widthFactor?: number }).widthFactor ?? 1,
       hasWidth: (entity as { width?: number }).width ?? null,
-      font: resolved ? resolved.cacheName : 'css-fallback',
-      align: style?.textAlign ?? 'left',
-      baseline: style?.textBaseline ?? 'top',
-      boxWorldW: round(boxWorldW),
-      realWorldW: round(realWorldW),
-      deltaWorldW: round(boxWorldW - realWorldW),
-      centerShiftWorld: round((boxWorldW - realWorldW) / 2),
-      posX: round(pos.x),
-      boxCenterX: round(box.center.x),
-      glyphCenterX: round(pos.x + realWorldW / 2),
-      boxCenterMinusGlyphCenterX: round(box.center.x - (pos.x + realWorldW / 2)),
     });
   }
 

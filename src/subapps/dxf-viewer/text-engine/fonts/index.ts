@@ -20,6 +20,11 @@ export { resolveEntityFont } from './font-resolver';
 export type { ResolvedFont, FontResolveStyle } from './font-resolver';
 export { getGlyphRun, clearGlyphPathCache, GLYPH_REFERENCE_SIZE } from './glyph-path-cache';
 export type { GlyphRun } from './glyph-path-cache';
+
+// ADR-557 Φ-attachment — metrics-accurate text advance SSoT (real glyph width in
+// world units), shared by the text-box geometry so grips/hover/hitTest ≡ drawn glyphs.
+export { measureTextAdvanceWorld, __resetTextAdvanceMeasureCtx } from './text-advance';
+export type { TextAdvanceStyle } from './text-advance';
 export { subscribeFontReady, bumpFontReady, getFontReadyVersion } from './font-ready-store';
 export { preloadCadSubstituteFonts, CAD_SUBSTITUTE_FONTS } from './cad-font-preload';
 export type { CadSubstituteFont } from './cad-font-preload';

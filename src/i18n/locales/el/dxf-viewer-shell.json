@@ -1650,6 +1650,8 @@
       }
     },
     "commands": {
+      "dimLineTypeScale": "Πυκνότητα",
+      "dimNewLineType": "Νέος τύπος",
       "currentLayerPicker": "Τρέχον Επίπεδο",
       "line": "Γραμμή",
       "lineVariants": {

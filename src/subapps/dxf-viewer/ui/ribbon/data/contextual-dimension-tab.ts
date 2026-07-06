@@ -43,6 +43,16 @@ const DIMSTYLE_OPTIONS = [
 // (`comboboxVariant:'dxf-color'`), so the former ACI `COLOR_OPTIONS` dropdown list
 // was removed. The bridge speaks hex ↔ ACI+true-color; the picker ignores `options`.
 
+// ADR-362 — linetype DENSITY presets (dimltscale, Path A). Numeric literals —
+// editable (type any value > 0). ×0.5 = πυκνά, ×1 = catalog, ×2 = αραιά.
+const LINETYPE_SCALE_OPTIONS = [
+  { value: '0.5', labelKey: '0.5', isLiteralLabel: true },
+  { value: '0.75', labelKey: '0.75', isLiteralLabel: true },
+  { value: '1', labelKey: '1', isLiteralLabel: true },
+  { value: '1.5', labelKey: '1.5', isLiteralLabel: true },
+  { value: '2', labelKey: '2', isLiteralLabel: true },
+] as const;
+
 // Arrow size presets (paper mm). Numeric literals — editable (type any value).
 const ARROW_SIZE_OPTIONS = [
   { value: '1.5', labelKey: '1.5', isLiteralLabel: true },
@@ -101,6 +111,8 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
     {
       id: 'dim-style',
       labelKey: 'ribbon.panels.dimStyle',
+      // Compact single-column stack (Giorgio 2026-07-07): DIMSTYLE chooser on top,
+      // Apply / Edit / Reset stacked beneath it — one column instead of two.
       rows: [
         {
           isInFlyout: false,
@@ -116,11 +128,6 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 options: DIMSTYLE_OPTIONS,
               },
             },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
             {
               type: 'simple',
               size: 'small',
@@ -200,6 +207,32 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 comboboxWidthPx: 120,
                 // Options supplied live by the bridge (LinetypeRegistry).
                 options: [],
+              },
+            },
+            // ADR-362 Path A — linetype DENSITY, right beside «Τύπος» (what it scales).
+            // Numeric override → dimltscale (shared dim + ext lines). Editable > 0.
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'dim.override.lineTypeScale',
+                labelKey: 'ribbon.commands.dimLineTypeScale',
+                commandKey: O.lineTypeScale,
+                comboboxWidthPx: 80,
+                options: LINETYPE_SCALE_OPTIONS,
+                numericInput: { editable: true, min: 0 },
+              },
+            },
+            // ADR-362 Path B — «＋ Νέος τύπος» launcher (self-contained widget: opens
+            // the Line Pattern editor; the new type appears live in «Τύπος»).
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'dim-new-line-pattern',
+              command: {
+                id: 'dim.override.newLineType',
+                labelKey: 'ribbon.commands.dimNewLineType',
+                commandKey: O.newLineType,
               },
             },
           ],
@@ -340,11 +373,8 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 commandKey: VIS.extLine2,
               },
             },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
+            // Giorgio 2026-07-07 — τα δύο σημάδια άκρου (αριστ./δεξί) στοιβάζονται
+            // κάτω από τη «Δεξιά Βοηθητική» → όλα τα toggles σε μία στήλη.
             {
               type: 'toggle',
               size: 'small',
@@ -399,11 +429,6 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 options: FONT_OPTIONS,
               },
             },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
             {
               type: 'combobox',
               size: 'small',
@@ -453,12 +478,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 comingSoon: true,
               },
             },
-          ],
-        },
-        // ADR-362 Phase G1 — text override editor
-        {
-          isInFlyout: false,
-          buttons: [
+            // ADR-362 Phase G1 — text override editor
             {
               type: 'simple',
               size: 'small',
@@ -528,13 +548,9 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 action: DIM_RIBBON_KEYS.modify.selectRow,
               },
             },
-          ],
-        },
-        // ADR-362 Round 35 — «Λαβές Μετακίνησης Σειρών» toggle (self-contained widget
-        // that flips DimRowHandleModeStore; live pressed state via useSyncExternalStore).
-        {
-          isInFlyout: false,
-          buttons: [
+            // ADR-362 Round 35 — «Λαβές Μετακίνησης Σειρών» toggle (self-contained widget
+            // that flips DimRowHandleModeStore; live pressed state via useSyncExternalStore).
+            // Giorgio 2026-07-07 — stacked below «Επιλογή Σειράς» in the same column.
             {
               type: 'widget',
               size: 'small',
@@ -577,11 +593,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 commandKey: DIM_RIBBON_KEYS.properties.annotationScale,
               },
             },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
+            // Giorgio 2026-07-07 — «Ιδιότητες» stacked below «Κλίμακα Σχολιασμού».
             {
               type: 'simple',
               size: 'small',
