@@ -209,14 +209,9 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 options: [],
               },
             },
-          ],
-        },
-        // ADR-362 — 2η στήλη (Giorgio 2026-07-07 «δεξιά αν δεν χωρούν κάτω»): density
-        // + «Νέος τύπος» δεξιά του «Τύπος» → μηδέν κάθετο scroll στη στήλη.
-        {
-          isInFlyout: false,
-          buttons: [
-            // Path A — πυκνότητα ΓΡΑΜΜΗΣ ΔΙΑΣΤΑΣΗΣ (dimltscale). Editable > 0.
+            // ADR-362 Path A — «Πυκνότητα» ΚΑΤΩ από «Τύπος» (ρυθμίζει ό,τι είναι από
+            // πάνω· Giorgio 2026-07-07). dimltscale, editable > 0. 4 στοιβαγμένα στη
+            // στήλη = μηδέν scroll (όπως το panel «Κείμενο»).
             {
               type: 'combobox',
               size: 'small',
@@ -229,8 +224,13 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 numericInput: { editable: true, min: 0 },
               },
             },
-            // Path B — «＋ Νέος τύπος» launcher (self-contained widget: opens the
-            // Line Pattern editor; the new type appears live in «Τύπος»).
+          ],
+        },
+        // ADR-362 Path B — «＋ Νέος τύπος» σε 2η στήλη (δεξιά): reusable launcher,
+        // γενικός τύπος (όχι per-part) → μία θέση, όχι διπλός.
+        {
+          isInFlyout: false,
+          buttons: [
             {
               type: 'widget',
               size: 'small',
@@ -245,7 +245,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
         },
       ],
     },
-    // (C) Προεκτάσεις — χρώμα / πάχος / τύπος (+ πυκνότητα σε 2η στήλη)
+    // (C) Προεκτάσεις — χρώμα / πάχος / τύπος + πυκνότητα (κάτω από «Τύπος»)
     {
       id: 'dim-ext',
       labelKey: 'ribbon.panels.dimExt',
@@ -286,13 +286,8 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 options: [],
               },
             },
-          ],
-        },
-        // ADR-362 — 2η στήλη: πυκνότητα ΒΟΗΘΗΤΙΚΩΝ (dimltexscale), δεξιά του «Τύπος»
-        // (ανεξάρτητη από τη γραμμή διάστασης). Giorgio 2026-07-07.
-        {
-          isInFlyout: false,
-          buttons: [
+            // ADR-362 — «Πυκνότητα» ΒΟΗΘΗΤΙΚΩΝ ΚΑΤΩ από «Τύπος» (dimltexscale,
+            // ανεξάρτητη από τη γραμμή διάστασης· Giorgio 2026-07-07).
             {
               type: 'combobox',
               size: 'small',

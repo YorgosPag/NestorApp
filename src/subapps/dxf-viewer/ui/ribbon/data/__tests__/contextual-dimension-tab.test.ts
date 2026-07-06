@@ -112,15 +112,15 @@ describe('ADR-562 Φ4 — DIMENSION_CONTEXTUAL_TAB', () => {
     expect(colorBtn.command.comboboxVariant).toBe('dxf-color');
   });
 
-  it('dim-ext panel: color/weight/type + ext-density (dimltexscale) in a 2nd column', () => {
-    // ADR-362 — ext-line density added right of «Τύπος» (2nd row = 2nd column).
+  it('dim-ext panel: color/weight/type + ext-density (dimltexscale) below «Τύπος», 1 column', () => {
+    // ADR-362 — ext-line density stacked BELOW «Τύπος» in the same column (Giorgio).
     expect(buttonsOf('dim-ext').map((b) => b.command.commandKey)).toEqual([
       DIM_RIBBON_KEYS.override.extColor,
       DIM_RIBBON_KEYS.override.extWeight,
       DIM_RIBBON_KEYS.override.extType,
       DIM_RIBBON_KEYS.override.extTypeScale,
     ]);
-    expect(panelById('dim-ext').rows).toHaveLength(2);
+    expect(panelById('dim-ext').rows).toHaveLength(1);
   });
 
   it('dim-arrow panel wires style / color / size; style options come from the bridge', () => {

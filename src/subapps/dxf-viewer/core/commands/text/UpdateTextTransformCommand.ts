@@ -20,6 +20,7 @@
 
 import type { ISceneManager, SceneEntity } from '../interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
+import type { DxfTextNode } from '../../../text-engine/types';
 import { MergeableUpdateCommand } from '../entity-commands/MergeableUpdateCommand';
 
 /** The full top-level transform state written by the command (forward + undo are symmetric). */
@@ -33,6 +34,13 @@ export interface TextTransformState {
   width?: number;
   /** Simple-TEXT X-scale (horizontal stretch). Present for TEXT only. */
   widthFactor?: number;
+  /**
+   * ADR-557 Φ-attachment — the run-height-scaled textNode. Height's SSoT is
+   * `textNode.runs[].style.height` (`resolveTextHeight` reads it FIRST), so the flat
+   * `height` above is a shadowed mirror; this is the durable write. Present only when a
+   * resize changed the height. Undo carries the pre-drag node (symmetric).
+   */
+  textNode?: DxfTextNode;
 }
 
 export class UpdateTextTransformCommand extends MergeableUpdateCommand<TextTransformState> {
@@ -59,6 +67,10 @@ export class UpdateTextTransformCommand extends MergeableUpdateCommand<TextTrans
     // Exactly one width channel — never write the other entity-type's field.
     if (state.width != null) patch.width = state.width;
     if (state.widthFactor != null) patch.widthFactor = state.widthFactor;
+    // ADR-557 Φ-attachment — durable height: write the run-height-scaled textNode (the
+    // SSoT `resolveTextHeight` reads first). Without this the flat `height` above is
+    // shadowed same-tick and a resize visually reverts (Giorgio 2026-07-06).
+    if (state.textNode != null) patch.textNode = state.textNode;
     this.sceneManager.updateEntity(this.entityId, patch as unknown as Partial<SceneEntity>);
   }
 

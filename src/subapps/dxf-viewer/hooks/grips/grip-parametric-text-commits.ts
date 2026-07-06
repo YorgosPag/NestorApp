@@ -28,6 +28,8 @@ import {
 // ADR-557 Φ-attachment — scene→DxfText projection SSoT (shared with the live ghost, so
 // preview ≡ commit; see project-scene-text.ts header for the raw-entity regression it fixes).
 import { projectSceneTextToDxf, type TextSceneShape } from '../../bim/text/project-scene-text';
+// ADR-557 Φ-attachment — durable height write: the run-height SSoT `resolveTextHeight` reads.
+import { scaleTextNodeRunHeights } from '../../utils/text-node-utils';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
 
 /** Current full transform state of the projected text (the undo target). */
@@ -79,6 +81,16 @@ export function commitTextGripDrag(
 
   const previous = textTransformStateOf(dxfText);
   const next = mergeTextTransform(previous, patch);
+  // ADR-557 Φ-attachment — durable height: `resolveTextHeight` reads the textNode run
+  // height FIRST, so a flat `height` write is shadowed. When a resize changed the height,
+  // scale the raw entity's textNode run heights by the box-height ratio and carry it on
+  // BOTH states (undo restores the pre-drag node). Move/rotate leave `patch.height` unset
+  // → textNode untouched.
+  if (e.textNode && patch.height != null && previous.height > 0) {
+    const ratio = next.height / previous.height;
+    previous.textNode = e.textNode;
+    next.textNode = scaleTextNodeRunHeights(e.textNode, ratio);
+  }
   const command = new UpdateTextTransformCommand(grip.entityId, next, previous, sceneManager, true);
   const validateResult = command.validate();
   // TEMP-DIAG (2026-07-06) — commit trace. REMOVE WHEN SOLVED. Shows the computed
@@ -86,6 +98,7 @@ export function commitTextGripDrag(
   // eslint-disable-next-line no-console
   console.log('[TEXT-COMMIT-DIAG]', {
     kind: grip.textGripKind,
+    entityType: e.type,
     delta,
     projected: { height: dxfText.height, text: dxfText.text, widthFactor: dxfText.widthFactor, width: dxfText.width },
     patch, next, validate: validateResult,
@@ -98,7 +111,7 @@ export function commitTextGripDrag(
     ?.paragraphs?.[0]?.runs?.[0]?.style?.height ?? null;
   // eslint-disable-next-line no-console
   console.log('[TEXT-COMMIT-AFTER]', after ? {
-    position: after.position, height: after.height, fontSize: after.fontSize,
+    type: after.type, position: after.position, height: after.height, fontSize: after.fontSize,
     widthFactor: after.widthFactor, width: after.width, textNodeRunHeight: runHeight,
   } : { after: 'null' });
 }
