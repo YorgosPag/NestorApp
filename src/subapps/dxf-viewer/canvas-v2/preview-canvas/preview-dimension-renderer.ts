@@ -246,7 +246,7 @@ function drawExtensionLines(
   const ext1 = readExtLine(geometry, 1);
   const ext2 = readExtLine(geometry, 2);
   if (!ext1 && !ext2) return;
-  applyDimStroke(params.ctx, opts, params.style.dimlwe, params.style.dimltex1, viewScaleOf(params), params.style.dimltscale);
+  applyDimStroke(params.ctx, opts, params.style.dimlwe, params.style.dimltex1, viewScaleOf(params), params.style.dimltexscale);
   if (ext1 && !params.style.suppressExtLine1) strokeSegment(params, ext1);
   if (ext2 && !params.style.suppressExtLine2) strokeSegment(params, ext2);
 }

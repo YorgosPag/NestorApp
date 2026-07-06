@@ -139,15 +139,22 @@ export interface DimStyle {
   dimltex1: string;
   dimltex2: string;
   /**
-   * DIMLTSCALE — per-style linetype DENSITY multiplier for the dim + extension
-   * lines (ADR-362, Path A). Rides the AutoCAD CELTSCALE slot in the dash
-   * resolver: the resolved mm pattern (dashes, gaps, dot spacing) scales × this
-   * value, on top of the global LTSCALE — so >1 spreads the pattern out (sparser
-   * dots/longer segments) and <1 tightens it. `1` = catalog density (no change).
-   * Optional for back-compat: styles persisted before this field resolve to `1`.
-   * Non-standard for DXF (no group code) → does not round-trip.
+   * DIMLTSCALE — linetype DENSITY multiplier for the DIMENSION LINE (ADR-362,
+   * Path A). Rides the AutoCAD CELTSCALE slot in the dash resolver: the resolved
+   * mm pattern (dashes, gaps, dot spacing) scales × this value, on top of the
+   * global LTSCALE — so >1 spreads the pattern out (sparser dots/longer segments)
+   * and <1 tightens it. `1` = catalog density (no change). Optional for back-compat:
+   * styles persisted before this field resolve to `1`. Non-standard for DXF → no
+   * round-trip. Per-part (mirrors dimltype vs dimltex1): {@link dimltexscale} is
+   * the independent twin for the extension lines.
    */
   dimltscale?: number;
+  /**
+   * Extension-line linetype DENSITY (ADR-362, Path A) — the independent twin of
+   * {@link dimltscale} for the extension lines (mirrors the `dimltex1` vs
+   * `dimltype` per-part split). Absent → `1`. Non-standard for DXF.
+   */
+  dimltexscale?: number;
   /** DIMEXE — extension beyond dim line (mm paper). */
   dimexe: number;
   /** DIMEXO — extension line offset from object (mm paper). */

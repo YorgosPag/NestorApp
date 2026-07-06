@@ -180,7 +180,7 @@ export class DimensionRenderer extends BaseEntityRenderer {
     if (!ext1 && !ext2) return;
     // Extension lines share one stroke setup (unified per-part granularity):
     // dimlwe + dimltex1 (dimltex1===dimltex2 while the UI sets both together).
-    this.applyLineStyle(r.style.dimclre, r.style.dimlwe, r.style.dimltex1, r.style.dimclreTrueColor, r.style.dimltscale);
+    this.applyLineStyle(r.style.dimclre, r.style.dimlwe, r.style.dimltex1, r.style.dimclreTrueColor, r.style.dimltexscale);
     if (ext1 && !r.style.suppressExtLine1) {
       const segs = breaks?.extLine1Segments ?? [ext1];
       for (const s of segs) this.strokeSegment(s);

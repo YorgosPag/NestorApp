@@ -80,6 +80,25 @@ export function commitTextGripDrag(
   const previous = textTransformStateOf(dxfText);
   const next = mergeTextTransform(previous, patch);
   const command = new UpdateTextTransformCommand(grip.entityId, next, previous, sceneManager, true);
-  if (command.validate() !== null) return;
+  const validateResult = command.validate();
+  // TEMP-DIAG (2026-07-06) — commit trace. REMOVE WHEN SOLVED. Shows the computed
+  // patch/next, validate result, then what ACTUALLY persisted (flat vs textNode height).
+  // eslint-disable-next-line no-console
+  console.log('[TEXT-COMMIT-DIAG]', {
+    kind: grip.textGripKind,
+    delta,
+    projected: { height: dxfText.height, text: dxfText.text, widthFactor: dxfText.widthFactor, width: dxfText.width },
+    patch, next, validate: validateResult,
+  });
+  if (validateResult !== null) return;
   deps.execute(command);
+  // TEMP-DIAG — re-fetch AFTER commit: does the flat write stick, or is height shadowed by textNode?
+  const after = sceneManager.getEntity(grip.entityId) as unknown as Record<string, unknown> | null;
+  const runHeight = (after?.textNode as { paragraphs?: Array<{ runs?: Array<{ style?: { height?: number } }> }> } | undefined)
+    ?.paragraphs?.[0]?.runs?.[0]?.style?.height ?? null;
+  // eslint-disable-next-line no-console
+  console.log('[TEXT-COMMIT-AFTER]', after ? {
+    position: after.position, height: after.height, fontSize: after.fontSize,
+    widthFactor: after.widthFactor, width: after.width, textNodeRunHeight: runHeight,
+  } : { after: 'null' });
 }

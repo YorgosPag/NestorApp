@@ -53,6 +53,28 @@ describe('applyEntityPreview — text/mtext', () => {
     expect(ghost.height).toBeCloseTo(290, 6);
   });
 
+  // ADR-557 Φ-attachment — the in-app scene entity carries NO flat text/height (they live
+  // in textNode). The ghost must project via the commit's SSoT so it (a) uses the REAL box
+  // (not the 2.5 DIMTXT default → a garbage ~1.5×2.5 transform read as a whole-entity move)
+  // and (b) injects flat text/height so `TextRenderer` — which early-returns on a missing
+  // flat `text` — actually paints the ghost. (Giorgio 2026-07-06: "moves whole text, no ghost".)
+  const textNodeOnly = (over: Record<string, unknown> = {}): DxfEntityUnion =>
+    ({ id: 'tn', type: 'text', visible: true, position: { x: 0, y: 0 },
+       textNode: { paragraphs: [{ runs: [{ text: 'DDD', style: { height: 250 } }] }], attachment: 'BR' },
+       ...over }) as unknown as DxfEntityUnion;
+
+  it('textNode-only TEXT (no flat text/height) → ghost injects flat fields + uses the REAL box', () => {
+    const preview: EntityPreviewTransform = {
+      entityId: 'tn', gripIndex: 7, delta: { x: 60, y: -40 }, movesEntity: false,
+      textGripKind: 'text-corner-se', anchorPos: { x: 0, y: 0 },
+    };
+    const ghost = applyEntityPreview(textNodeOnly(), preview) as unknown as { text: string; height: number };
+    // Flat text injected → TextRenderer paints the ghost (was: missing → early-return → no ghost).
+    expect(ghost.text).toBe('DDD');
+    // Height resized from the REAL 250 box (SE corner grows height by |Δy|=40), NOT the 2.5 default.
+    expect(ghost.height).toBeCloseTo(290, 6);
+  });
+
   it('zero delta → returns the same reference (no ghost paint)', () => {
     const preview: EntityPreviewTransform = {
       entityId: 'mx', gripIndex: 0, delta: { x: 0, y: 0 }, movesEntity: true,

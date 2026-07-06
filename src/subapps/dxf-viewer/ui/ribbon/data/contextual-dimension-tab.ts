@@ -209,8 +209,14 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 options: [],
               },
             },
-            // ADR-362 Path A — linetype DENSITY, right beside «Τύπος» (what it scales).
-            // Numeric override → dimltscale (shared dim + ext lines). Editable > 0.
+          ],
+        },
+        // ADR-362 — 2η στήλη (Giorgio 2026-07-07 «δεξιά αν δεν χωρούν κάτω»): density
+        // + «Νέος τύπος» δεξιά του «Τύπος» → μηδέν κάθετο scroll στη στήλη.
+        {
+          isInFlyout: false,
+          buttons: [
+            // Path A — πυκνότητα ΓΡΑΜΜΗΣ ΔΙΑΣΤΑΣΗΣ (dimltscale). Editable > 0.
             {
               type: 'combobox',
               size: 'small',
@@ -223,8 +229,8 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 numericInput: { editable: true, min: 0 },
               },
             },
-            // ADR-362 Path B — «＋ Νέος τύπος» launcher (self-contained widget: opens
-            // the Line Pattern editor; the new type appears live in «Τύπος»).
+            // Path B — «＋ Νέος τύπος» launcher (self-contained widget: opens the
+            // Line Pattern editor; the new type appears live in «Τύπος»).
             {
               type: 'widget',
               size: 'small',
@@ -239,7 +245,7 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
         },
       ],
     },
-    // (C) Προεκτάσεις — χρώμα / πάχος / τύπος
+    // (C) Προεκτάσεις — χρώμα / πάχος / τύπος (+ πυκνότητα σε 2η στήλη)
     {
       id: 'dim-ext',
       labelKey: 'ribbon.panels.dimExt',
@@ -278,6 +284,25 @@ export const DIMENSION_CONTEXTUAL_TAB: RibbonTab = {
                 commandKey: O.extType,
                 comboboxWidthPx: 120,
                 options: [],
+              },
+            },
+          ],
+        },
+        // ADR-362 — 2η στήλη: πυκνότητα ΒΟΗΘΗΤΙΚΩΝ (dimltexscale), δεξιά του «Τύπος»
+        // (ανεξάρτητη από τη γραμμή διάστασης). Giorgio 2026-07-07.
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'dim.override.extTypeScale',
+                labelKey: 'ribbon.commands.dimLineTypeScale',
+                commandKey: O.extTypeScale,
+                comboboxWidthPx: 80,
+                options: LINETYPE_SCALE_OPTIONS,
+                numericInput: { editable: true, min: 0 },
               },
             },
           ],

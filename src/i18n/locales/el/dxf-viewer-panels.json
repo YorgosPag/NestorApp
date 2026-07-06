@@ -213,7 +213,8 @@
           "dimltex1": "Τύπος προεκτάσεων",
           "arrowColor": "Χρώμα βελών",
           "textFontFamily": "Γραμματοσειρά",
-          "dimltscale": "Πυκνότητα τύπου γρ."
+          "dimltscale": "Πυκνότητα γρ. διάστασης",
+          "dimltexscale": "Πυκνότητα προεκτάσεων"
         },
         "byLayer": "Από επίπεδο",
         "colorOptions": {

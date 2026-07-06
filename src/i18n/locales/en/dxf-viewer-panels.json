@@ -213,7 +213,8 @@
           "dimltex1": "Extension line type",
           "arrowColor": "Arrow color",
           "textFontFamily": "Font family",
-          "dimltscale": "Linetype density"
+          "dimltscale": "Dimension-line density",
+          "dimltexscale": "Extension-line density"
         },
         "byLayer": "ByLayer",
         "colorOptions": {

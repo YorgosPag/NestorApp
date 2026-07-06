@@ -55,8 +55,10 @@ function sharedDefaults(): Omit<DimStyle, 'id' | 'name' | 'isBuiltIn'> {
     dimltype: 'ByLayer',
     dimltex1: 'ByLayer',
     dimltex2: 'ByLayer',
-    // ADR-362 — per-style linetype density (Path A). 1 = catalog density.
+    // ADR-362 — per-part linetype density (Path A). 1 = catalog density.
+    // dimltscale = dim line · dimltexscale = extension lines (independent twins).
     dimltscale: 1,
+    dimltexscale: 1,
     dimexe: 1.25,
     dimexo: 0.625,
     dimdli: 3.75,

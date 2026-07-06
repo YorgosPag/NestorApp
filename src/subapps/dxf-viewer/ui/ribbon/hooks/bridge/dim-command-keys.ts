@@ -29,6 +29,7 @@ export const DIM_RIBBON_KEYS = {
     extColor:       'dim.override.extColor',     // dimclre
     extWeight:      'dim.override.extWeight',     // dimlwe
     extType:        'dim.override.extType',       // dimltex1 (+dimltex2 mirror)
+    extTypeScale:   'dim.override.extTypeScale',  // dimltexscale (ext-line density)
     // Arrowheads (dimblk unified / arrowColor separate channel / dimasz).
     arrowStyle:     'dim.override.arrowStyle',   // dimblk (existing key, now wired)
     arrowColor:     'dim.override.arrowColor',    // arrowColor

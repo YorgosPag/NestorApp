@@ -35,13 +35,15 @@ export function LinesSection({ style, onChange, readOnly = false }: LinesSection
       <ColorField label={f('dimclrd')} value={style.dimclrd} onChange={(v) => onChange({ dimclrd: v })} disabled={readOnly} />
       <LineweightField label={f('dimlwd')} value={style.dimlwd} onChange={(v) => onChange({ dimlwd: v })} disabled={readOnly} />
       <LinetypeField label={f('dimltype')} value={style.dimltype} onChange={(v) => onChange({ dimltype: v })} disabled={readOnly} />
+      {/* ADR-362 Path A — density for the DIMENSION LINE (dashes/gaps/dots ×value). */}
+      <NumField id="dimltscale" label={f('dimltscale')} value={style.dimltscale ?? DEFAULT_DIM_LTSCALE} onChange={(v) => onChange({ dimltscale: v > 0 ? v : DEFAULT_DIM_LTSCALE })} disabled={readOnly} />
       {/* Extension lines — colour / weight / linetype (dimltex1 mirrors dimltex2, unified) */}
       <ColorField label={f('dimclre')} value={style.dimclre} onChange={(v) => onChange({ dimclre: v })} disabled={readOnly} />
       <LineweightField label={f('dimlwe')} value={style.dimlwe} onChange={(v) => onChange({ dimlwe: v })} disabled={readOnly} />
       <LinetypeField label={f('dimltex1')} value={style.dimltex1} onChange={(v) => onChange({ dimltex1: v, dimltex2: v })} disabled={readOnly} />
+      {/* ADR-362 Path A — density for the EXTENSION LINES (independent twin). */}
+      <NumField id="dimltexscale" label={f('dimltexscale')} value={style.dimltexscale ?? DEFAULT_DIM_LTSCALE} onChange={(v) => onChange({ dimltexscale: v > 0 ? v : DEFAULT_DIM_LTSCALE })} disabled={readOnly} />
 
-      {/* ADR-362 Path A — per-style linetype DENSITY (dashes/gaps/dots ×value). */}
-      <NumField id="dimltscale" label={f('dimltscale')} value={style.dimltscale ?? DEFAULT_DIM_LTSCALE} onChange={(v) => onChange({ dimltscale: v > 0 ? v : DEFAULT_DIM_LTSCALE })} disabled={readOnly} />
       {/* ADR-362 Path B — author a reusable custom line pattern (explicit lengths). */}
       <Button
         variant="outline"

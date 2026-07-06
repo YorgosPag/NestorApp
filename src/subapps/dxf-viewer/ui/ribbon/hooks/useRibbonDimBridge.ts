@@ -135,6 +135,8 @@ const DIM_KEY_MAP: Readonly<Record<string, DimKeySpec>> = {
   [K.extColor]:   { field: 'dimclre', kind: 'color', trueColorField: 'dimclreTrueColor' },
   [K.extWeight]:  { field: 'dimlwe', kind: 'lineweight' },
   [K.extType]:    { field: 'dimltex1', kind: 'linetype', sameValue: ['dimltex2'] },
+  // ADR-362 — extension-line linetype density (Path A), independent of dimltscale.
+  [K.extTypeScale]: { field: 'dimltexscale', kind: 'number', numberDefault: 1 },
   [K.arrowStyle]: { field: 'dimblk', kind: 'arrowStyle', clear: ['dimblk1', 'dimblk2'] },
   [K.arrowColor]: { field: 'arrowColor', kind: 'color', trueColorField: 'arrowTrueColor' },
   [K.arrowSize]:  { field: 'dimasz', kind: 'number' },
