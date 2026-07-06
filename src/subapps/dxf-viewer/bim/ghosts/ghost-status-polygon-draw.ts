@@ -13,6 +13,7 @@
 import type { ViewTransform } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import type { GhostStatusColor } from './ghost-status-color';
+import { resolveStatusGhostOutline } from './ghost-status-outline';
 
 type PolygonVertices = ReadonlyArray<{ readonly x: number; readonly y: number }>;
 interface GhostViewport {
@@ -89,4 +90,28 @@ export function drawStatusGhostPolygon(
 ): void {
   fillGhostPolygon(ctx, vertices, transform, viewport, color.fill);
   strokeGhostPolygon(ctx, vertices, transform, viewport, color.stroke, 1, opts?.lineWidth ?? 2);
+}
+
+/**
+ * SSoT: resolve το footprint outline μιας preview οντότητας (`resolveStatusGhostOutline`) και
+ * ζωγράφισε το status-coloured schematic (`drawStatusGhostPolygon`). Επιστρέφει `true` όταν
+ * ζωγράφισε (έγκυρο outline ≥3 κορυφές), `false` όταν η οντότητα δεν φέρει χρησιμοποιήσιμο outline.
+ *
+ * Το ΜΟΝΑΔΙΚΟ σημείο που ενώνει «resolve outline → guard → draw 🔴» — καταναλώνεται ΚΑΙ από το
+ * scene preview path (`preview-entity-paint.ts`, member ghosts κολώνα/δοκάρι/τοίχος) ΚΑΙ από τα
+ * direct-paint leaf hooks (`useSlabOpeningGhostPreview`), ώστε το status-schematic να μην
+ * ξαναγράφεται inline (ADR-574 Σ2b).
+ */
+export function drawEntityStatusSchematic(
+  ctx: CanvasRenderingContext2D,
+  entity: unknown,
+  color: GhostStatusColor,
+  transform: ViewTransform,
+  viewport: GhostViewport,
+  opts?: { readonly lineWidth?: number },
+): boolean {
+  const outline = resolveStatusGhostOutline(entity);
+  if (!outline || outline.length < 3) return false;
+  drawStatusGhostPolygon(ctx, outline, transform, viewport, color, opts);
+  return true;
 }

@@ -55,7 +55,7 @@ import type { UnifiedGripInfo } from '../grips/unified-grip-types';
 import { getDefaultLayerId } from '../../stores/LayerStore';
 import { renderWysiwygPlacementGhost } from '../../bim/ghosts/wysiwyg-placement-ghost';
 import { resolveGhostStatusColor } from '../../bim/ghosts/ghost-status-color';
-import { drawStatusGhostPolygon } from '../../bim/ghosts/ghost-status-polygon-draw';
+import { drawEntityStatusSchematic } from '../../bim/ghosts/ghost-status-polygon-draw';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { type SceneUnits } from '../../utils/scene-units';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
@@ -107,16 +107,12 @@ export function useSlabOpeningGhostPreview(props: Readonly<UseSlabOpeningGhostPr
         // (big-player: το placement ghost ποτέ δεν σβήνει στις άκρες).
         const built = buildSlabOpeningPreviewEntity(params, hostSlab, getDefaultLayerId());
         if (built) {
-          if (built.isOutsideSlab) {
-            // 🔴 εκτός πλάκας → status schematic αντί WYSIWYG (κοινό SSoT με δοκάρι/κολώνα).
-            const statusColor = resolveGhostStatusColor('overlap');
-            const outline = params.outline.vertices;
-            if (statusColor && outline.length >= 3) {
-              drawStatusGhostPolygon(ctx, outline, t, viewport, statusColor);
-            }
-          } else {
-            // εντός πλάκας → πλήρες WYSIWYG μέσω του πραγματικού SlabOpeningRenderer.
-            renderWysiwygPlacementGhost(ctx, built.entity as unknown as Entity, t, viewport);
+          const entity = built.entity as unknown as Entity;
+          // εκτός πλάκας → 🔴 status schematic μέσω του ΙΔΙΟΥ `drawEntityStatusSchematic`
+          // SSoT με το scene preview path (κολώνα/δοκάρι/τοίχος)· εντός → πλήρες WYSIWYG.
+          const overlapColor = built.isOutsideSlab ? resolveGhostStatusColor('overlap') : null;
+          if (!(overlapColor && drawEntityStatusSchematic(ctx, entity, overlapColor, t, viewport))) {
+            renderWysiwygPlacementGhost(ctx, entity, t, viewport);
           }
         }
       }

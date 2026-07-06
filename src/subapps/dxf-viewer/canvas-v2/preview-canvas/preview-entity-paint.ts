@@ -19,8 +19,7 @@ import type { PreviewRenderOptions, PreviewRenderHelpers } from './preview-rende
 import { renderDistanceLabelFromWorld, renderInfoLabel } from './preview-render-labels';
 import { dispatchPreviewEntityRender } from './preview-entity-dispatch';
 import { BimPreviewRenderer } from './bim-preview-render';
-import { drawStatusGhostPolygon } from '../../bim/ghosts/ghost-status-polygon-draw';
-import { resolveStatusGhostOutline } from '../../bim/ghosts/ghost-status-outline';
+import { drawEntityStatusSchematic } from '../../bim/ghosts/ghost-status-polygon-draw';
 import type { GhostStatusColor } from '../../bim/ghosts/ghost-status-color';
 
 /** Grip painter injected from the renderer (keeps ownership of the `UnifiedGripRenderer`). */
@@ -55,14 +54,12 @@ export function paintPreviewEntity(
   };
   if (bimMeta.wysiwygPreview && bimPreview) {
     // ADR-398 §beam-to-beam framing — όταν η σύνδεση είναι παράλογη (🔴), ζωγράφισε
-    // κόκκινο schematic (outline + 30% fill) του outline αντί WYSIWYG amber, μέσω του
-    // κοινού `drawStatusGhostPolygon` SSoT (ίδιο look με το active column anchor ghost).
+    // κόκκινο schematic (outline + 30% fill) αντί WYSIWYG amber, μέσω του κοινού
+    // `drawEntityStatusSchematic` SSoT (resolve-outline + guard + draw σε ΕΝΑ σημείο —
+    // ADR-574 Σ2b· κοινό ΚΑΙ με τα direct-paint leaf hooks). Το `resolveStatusGhostOutline`
+    // μέσα του καλύπτει column/beam (outline) · slab/slab-opening (polygon) · τοίχο (edges).
     const statusColor = bimMeta.ghostStatusColor;
-    // SSoT: footprint polygon for ANY entity (column/beam → outline.vertices· τοίχος →
-    // outerEdge+innerEdge). Χωρίς αυτό το wall ghost δεν γινόταν ποτέ κόκκινο (ADR-508).
-    const outline = resolveStatusGhostOutline(entity);
-    if (statusColor && outline && outline.length >= 3) {
-      drawStatusGhostPolygon(ctx, outline, transform, viewport, statusColor);
+    if (statusColor && drawEntityStatusSchematic(ctx, entity, statusColor, transform, viewport)) {
       return;
     }
     // ADR-363 §wall-joint-miter-preview («Επίπεδο 2») — LIVE join: draw the affected

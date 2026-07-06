@@ -11,6 +11,19 @@ describe('resolveStatusGhostOutline', () => {
     expect(resolveStatusGhostOutline({ geometry: { outline: { vertices: verts } } })).toBe(verts);
   });
 
+  it('returns polygon.vertices for slab / slab-opening (ADR-574 Σ2b)', () => {
+    const verts = [{ x: 0, y: 0, z: 0 }, { x: 1500, y: 0, z: 0 }, { x: 1500, y: 1500, z: 0 }, { x: 0, y: 1500, z: 0 }];
+    expect(resolveStatusGhostOutline({ geometry: { polygon: { vertices: verts } } })).toBe(verts);
+  });
+
+  it('prefers outline.vertices over polygon.vertices when both present', () => {
+    const outline = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }];
+    const polygon = [{ x: 9, y: 9 }, { x: 8, y: 9 }, { x: 8, y: 8 }];
+    expect(
+      resolveStatusGhostOutline({ geometry: { outline: { vertices: outline }, polygon: { vertices: polygon } } }),
+    ).toBe(outline);
+  });
+
   it('builds the wall footprint loop from outerEdge + reversed innerEdge', () => {
     const out = resolveStatusGhostOutline({
       geometry: {

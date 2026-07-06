@@ -299,3 +299,14 @@ canvas-layer-stack-tool-preview-mounts.tsx, CanvasLayerStack.tsx}`
   hover affordance (branch 2) έμεινε bespoke σκόπιμα (δεν είναι placement ghost). Test:
   `hooks/drawing/__tests__/slab-opening-completion-preview.test.ts` (3 PASS). CHECK 6B: staged ADR-040
   (payload change στο architecture-critical `CanvasSection.tsx`, καμία αλλαγή subscription).
+- **2026-07-06 (b)** — **Κεντρικοποίηση status-schematic (Σ2b follow-up, self-review).** Το αρχικό Σ2b
+  patch ξανά-έγραφε **inline** στον leaf το «resolve outline → guard → drawStatusGhostPolygon» — μικρό
+  διπλότυπο του `preview-entity-paint.ts` (scene member-ghost path). Ενοποιήθηκε σε **ΕΝΑ** SSoT:
+  · νέο `drawEntityStatusSchematic(ctx, entity, color, transform, viewport): boolean` στο
+  `bim/ghosts/ghost-status-polygon-draw.ts` (resolve-outline + guard + draw σε ένα σημείο)· καταναλώνεται
+  ΚΑΙ από `preview-entity-paint.ts` (κολώνα/δοκάρι/τοίχος) ΚΑΙ από `useSlabOpeningGhostPreview`.
+  · **Fix προϋπάρχοντος gap:** το `resolveStatusGhostOutline` επεκτάθηκε να διαβάζει `geometry.polygon.vertices`
+  (slab / slab-opening) — πριν κάλυπτε μόνο `outline.vertices` (column/beam) + wall edges, οπότε δεν
+  «έβλεπε» ποτέ slab-opening (γι' αυτό ο leaf είχε παρακάμψει το SSoT με `params.outline.vertices`).
+  Πλέον ο resolver είναι όντως universal (όπως το docstring του δηλώνει). Tests: `ghost-status-outline.test.ts`
+  +2 cases (polygon path + outline-over-polygon precedence).

@@ -202,36 +202,35 @@ export function resolveLineFamilyCommitPoint(
   sceneUnits: SceneUnits,
 ): Pt {
   if (activeTool !== 'line' && activeTool !== 'line-perpendicular') return point;
-  let finalPoint = point;
 
-  // ── Κλικ 2 της «κάθετης γραμμής»: hard κάθετο κλείδωμα + typed length, μετά consume το lock. ──
-  if (activeTool === 'line-perpendicular' && tempPointsLength === 1) {
+  // ── «Κάθετη γραμμή» — πλήρως χωριστός κλάδος (το flush/κάθετο κλείδωμα είναι ο ΠΥΡΗΝΑΣ του εργαλείου,
+  //    ΔΕΝ μπλοκάρεται από «κορυφή νικάει»: αλλιώς όταν το snap κουμπώνει στο σώμα/κορυφή δεν θα κλείδωνε
+  //    ποτέ ο κάθετος άξονας). ──────────────────────────────────────────────────────────────────────
+  if (activeTool === 'line-perpendicular') {
+    if (tempPointsLength === 0) {
+      // Κλικ 1: κατέγραψε τον κάθετο άξονα (`faceFrame.perpDir`) + βάση = flush foot στην παρειά.
+      const lock = resolvePerpendicularAxisLock(point, sceneUnits);
+      if (lock) { perpendicularAxisLockStore.set(lock); return lock.base; }
+      perpendicularAxisLockStore.reset(); // καμία παρειά κοντά → ελεύθερη γραμμή (χωρίς κάθετο κλείδωμα)
+      return point;
+    }
+    // Κλικ 2: προβολή στον κλειδωμένο κάθετο άξονα + typed length (Radial Command Ring), μετά consume.
     const lock = perpendicularAxisLockStore.get();
-    if (lock) finalPoint = projectOntoPerpendicularAxis(finalPoint, lock);
+    let finalPoint = lock ? projectOntoPerpendicularAxis(point, lock) : point;
     finalPoint = applyLengthAngleLock(finalPoint, lastRef ?? lock?.base ?? null);
     perpendicularAxisLockStore.reset();
     return finalPoint;
   }
 
-  // ── length/angle lock (Δαχτυλίδι Εντολών) ΠΡΙΝ το flush — ίδιο με το preview (WYSIWYG). ──
+  // ── Απλή γραμμή (`line`) — αμετάβλητη λογική (relocated από το useDrawingHandlers). ──
+  let finalPoint = point;
+  // length/angle lock (Δαχτυλίδι Εντολών) ΠΡΙΝ το flush — ίδιο με το preview (WYSIWYG).
   if (lastRef) finalPoint = applyLengthAngleLock(finalPoint, lastRef);
-
-  // ── Κλικ 1: flush στην παρειά, εκτός αν κλειδώνει ΟΡΑΤΟ OSNAP (πραγματική κορυφή νικάει). ──
+  // Κλικ 1: flush στην παρειά, εκτός αν κλειδώνει ΟΡΑΤΟ OSNAP (πραγματική κορυφή νικάει).
   if (tempPointsLength === 0) {
     const lockedSnap = getImmediateSnap();
     const visibleOsnap = !!lockedSnap?.found && isVisibleSnapMode(lockedSnap.mode);
-    if (visibleOsnap) {
-      // Κορυφή νικάει → καμία παρειά, κανένας κάθετος άξονας να κλειδώσει.
-      if (activeTool === 'line-perpendicular') perpendicularAxisLockStore.reset();
-      return finalPoint;
-    }
-    if (activeTool === 'line-perpendicular') {
-      const lock = resolvePerpendicularAxisLock(finalPoint, sceneUnits);
-      if (lock) { finalPoint = lock.base; perpendicularAxisLockStore.set(lock); }
-      else perpendicularAxisLockStore.reset(); // καμία παρειά κοντά → ελεύθερη γραμμή (χωρίς κάθετο κλείδωμα)
-    } else {
-      finalPoint = resolveLineCommitPoint(finalPoint, sceneUnits);
-    }
+    if (!visibleOsnap) finalPoint = resolveLineCommitPoint(finalPoint, sceneUnits);
   }
   return finalPoint;
 }
