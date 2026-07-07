@@ -119,13 +119,33 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
     return new Map(scene.entities.map((e) => [e.id, e]));
   }, [scene]);
 
+  // ADR-575 §selection/hover semantics — converted members grouped by their GROUP
+  // container id. Every expanded member carries `group.id`, so `entityMap` keeps only
+  // ONE arbitrary member per group; the interactive overlay uses THIS 1→N map instead
+  // to paint the WHOLE group on hover/selection. Built only for ids the live scene
+  // flagged as groups (`renderOptions.groupIds`) → a member the user "entered" (own id,
+  // not in any group set) still resolves individually via `entityMap`. Rebuilt only
+  // when the scene or the group set changes (not per frame).
+  const groupIds = renderOptions.groupIds;
+  const membersByGroupId = useMemo<Map<string, DxfEntityUnion[]>>(() => {
+    const map = new Map<string, DxfEntityUnion[]>();
+    if (!scene || !groupIds || groupIds.size === 0) return map;
+    for (const e of scene.entities) {
+      if (!groupIds.has(e.id)) continue;
+      const bucket = map.get(e.id);
+      if (bucket) bucket.push(e);
+      else map.set(e.id, [e]);
+    }
+    return map;
+  }, [scene, groupIds]);
+
   // 🚀 PERF (ADR-040, 2026-05-11 Phase XII): single paramsRef holds ALL volatile
   // per-frame state (scene, entityMap, renderOptions, grid, ruler), synced
   // render-by-render. Mirrors Phase XI pattern in layer-canvas-hooks.ts.
   // → renderScene useCallback deps = [refs] only → STABLE identity
   // → registerRenderCallback effect runs ONCE per mount (was ~13Hz before)
-  const paramsRef = useRef({ scene, entityMap, renderOptions, gridSettings, rulerSettings });
-  paramsRef.current = { scene, entityMap, renderOptions, gridSettings, rulerSettings };
+  const paramsRef = useRef({ scene, entityMap, membersByGroupId, renderOptions, gridSettings, rulerSettings });
+  paramsRef.current = { scene, entityMap, membersByGroupId, renderOptions, gridSettings, rulerSettings };
 
   const renderScene = useCallback(() => {
     const renderer = refs.rendererRef.current;
@@ -146,6 +166,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
     const {
       scene: curScene,
       entityMap: curEntityMap,
+      membersByGroupId: curMembersByGroupId,
       renderOptions: curRenderOptions,
       gridSettings: curGrid,
       rulerSettings: curRuler,
@@ -192,13 +213,29 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
 
       // 1b: Single-entity interactive overlays (O(1) via entityMap)
       if (curScene) {
-        if (curRenderOptions.hoveredEntityId) {
-          const ent = curEntityMap.get(curRenderOptions.hoveredEntityId);
-          if (ent) {
-            renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'hovered', {
-              gripInteractionState: curRenderOptions.gripInteractionState,
-              layersById: curLayersById,
-            });
+        // ADR-575 §selection/hover semantics — a hovered GROUP id highlights the WHOLE
+        // group: every expanded member shares `group.id`, so `entityMap` would surface
+        // ONE arbitrary member (the pre-ADR-575 «stray member glows» bug). When the id is
+        // a group we paint EACH of its members as 'hovered' (whole-group cyan); otherwise
+        // the plain O(1) single-entity path (incl. a member the user "entered" — own id).
+        const hoveredId = curRenderOptions.hoveredEntityId;
+        if (hoveredId) {
+          const hoveredMembers = curMembersByGroupId.get(hoveredId);
+          if (hoveredMembers) {
+            for (const ent of hoveredMembers) {
+              renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'hovered', {
+                gripInteractionState: curRenderOptions.gripInteractionState,
+                layersById: curLayersById,
+              });
+            }
+          } else {
+            const ent = curEntityMap.get(hoveredId);
+            if (ent) {
+              renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'hovered', {
+                gripInteractionState: curRenderOptions.gripInteractionState,
+                layersById: curLayersById,
+              });
+            }
           }
         }
 
@@ -222,6 +259,26 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
           // ADR-419 — region/perimeter εργαλεία δείχνουν grips στα accumulated 4-line picks.
           isBimRegionOrPerimeterTool(activeTool);
         for (const selId of curRenderOptions.selectedEntityIds) {
+          // ADR-575 §selection/hover semantics — a selected GROUP renders as ONE unit:
+          // paint ALL its members as 'selected' with grips SUPPRESSED (the whole-group
+          // gizmo — move cross + rotation handle — owns the handles, emitted separately by
+          // the grip registry). Pre-ADR-575 the shared `group.id` surfaced ONE stray member
+          // with per-member grips, mis-reading as «one member selected» + letting it drag
+          // alone. A non-group id (incl. an "entered" member's own id) keeps the O(1) path.
+          const selMembers = curMembersByGroupId.get(selId);
+          if (selMembers) {
+            for (const ent of selMembers) {
+              renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'selected', {
+                gripInteractionState: curRenderOptions.gripInteractionState,
+                layersById: curLayersById,
+                suppressGrips: true,
+                movePreviewActive:
+                  curRenderOptions.movePreviewActive ||
+                  (selId === curRenderOptions.gripDraggedEntityId && !curRenderOptions.gripDragIsCopy),
+              });
+            }
+            continue;
+          }
           const ent = curEntityMap.get(selId);
           if (ent) {
             renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'selected', {

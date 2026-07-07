@@ -59,6 +59,25 @@ export function computeGroupSelectionBounds(group: GroupEntity): GroupSelectionB
 }
 
 /**
+ * SSoT — collect the GROUP containers of a scene keyed by id. The ONE derivation of
+ * «which ids are groups» reused by every leaf that needs it: the grip registry (emit
+ * the whole-group gizmo + suppress per-member grips) and the canvas interactive overlay
+ * (paint the whole group on hover/selection). Pure — no React. Reads the ORIGINAL scene
+ * entities (a GROUP container survives only pre-expansion; the converted DxfScene holds
+ * just its tagged members).
+ */
+export function collectGroupEntities(
+  entities: readonly Entity[] | undefined,
+): Map<string, GroupEntity> {
+  const map = new Map<string, GroupEntity>();
+  if (!entities) return map;
+  for (const entity of entities) {
+    if (isGroupEntity(entity)) map.set(entity.id, entity);
+  }
+  return map;
+}
+
+/**
  * SSoT — «σε ποια ομάδα ανήκει ένα entity id». Every expanded GROUP member carries
  * the container's `id` (see {@link expandGroupEntity}), and the container itself IS
  * that id, so an id resolves to its owning {@link GroupEntity} by a direct lookup.

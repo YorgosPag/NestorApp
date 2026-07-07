@@ -32,6 +32,7 @@ import { useSelectedEntityIds } from '../../systems/selection/useSelectedEntitie
 // snapshot itself, so a committed entity repaints on the SAME frame — instead of
 // waiting for a coincidental orchestrator re-render. ONLY this leaf re-renders.
 import { useLevelScene } from '../../systems/scene/useSceneSelectors';
+import { collectGroupEntities } from '../../systems/group/group-selection-bounds';
 import type { SceneModel } from '../../types/scene';
 // ADR-550 — the leaf self-subscribes the store-driven transform tools (scale / stretch) so their
 // originals dim to ghosts while the real moving copy is shown (mirror of `movePreviewActive`).
@@ -256,6 +257,15 @@ export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
   // η αλλαγή επιλεγμένης ακμής να ξανατρέχει το δυναμικό «selected» pass (live
   // edge highlight). Μόνο αυτό το leaf re-renders, ΟΧΙ ο orchestrator (ADR-040).
   const selectedRoofEdge = useSelectedRoofEdge();
+  // ADR-575 §selection/hover semantics — ids of the live GROUP containers, so the canvas
+  // interactive overlay paints a hovered/selected group as ONE unit (whole-group highlight,
+  // no per-member grips) instead of one stray member. Same derivation SSoT as the grip
+  // registry (`collectGroupEntities`). Reads the RAW SceneModel (groups survive only
+  // pre-expansion); rebuilds only on a real scene mutation → stable through hover re-renders.
+  const groupIds = useMemo(
+    () => new Set(collectGroupEntities(liveSceneModel?.entities).keys()),
+    [liveSceneModel],
+  );
   // ADR-550 — store-driven transform tools dim their selected originals (a real moving copy is on
   // PreviewCanvas). Phase reads are low-freq; the active phase holds steady through the 60fps drag.
   const scalePhase = useSyncExternalStore(ScaleToolStore.subscribe, () => ScaleToolStore.getState().phase);
@@ -270,10 +280,11 @@ export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
       hoveredEntityId,
       selectedRoofEdge,
       selectedEntityIds,
+      groupIds,
       // OR-in the store-driven transform tools (the Shell already OR-ed move + rotate).
       movePreviewActive: renderOptionsBase.movePreviewActive || transformPreviewActive,
     }),
-    [renderOptionsBase, hoveredEntityId, selectedRoofEdge, selectedEntityIds, transformPreviewActive],
+    [renderOptionsBase, hoveredEntityId, selectedRoofEdge, selectedEntityIds, groupIds, transformPreviewActive],
   );
 
   return (

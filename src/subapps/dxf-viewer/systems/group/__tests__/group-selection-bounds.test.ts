@@ -7,6 +7,8 @@ import { createGroupEntity } from '../group-entity';
 import {
   computeGroupSelectionBounds,
   resolveSelectedGroups,
+  resolveGroupContainingEntity,
+  collectGroupEntities,
 } from '../group-selection-bounds';
 import type { Entity, GroupEntity } from '../../../types/entities';
 
@@ -42,5 +44,45 @@ describe('resolveSelectedGroups (ADR-575)', () => {
     // Empty selection / empty scene → empty.
     expect(resolveSelectedGroups(entities, [])).toEqual([]);
     expect(resolveSelectedGroups(undefined, [group.id])).toEqual([]);
+  });
+});
+
+describe('resolveGroupContainingEntity (ADR-575 §selection/hover semantics)', () => {
+  const group = createGroupEntity([mkLine('a', 0, 0, 1, 0), mkLine('b', 2, 2, 3, 2)]);
+  const loose = mkLine('loose', 5, 5, 6, 6);
+  const entities: Entity[] = [group as unknown as Entity, loose];
+
+  it('resolves a group container id to its GroupEntity (every member shares group.id)', () => {
+    expect(resolveGroupContainingEntity(entities, group.id)).toBe(group);
+  });
+
+  it('returns null for a plain (non-grouped) entity id', () => {
+    expect(resolveGroupContainingEntity(entities, 'loose')).toBeNull();
+  });
+
+  it('returns null for unknown / empty / missing inputs', () => {
+    expect(resolveGroupContainingEntity(entities, 'nope')).toBeNull();
+    expect(resolveGroupContainingEntity(entities, null)).toBeNull();
+    expect(resolveGroupContainingEntity(undefined, group.id)).toBeNull();
+    expect(resolveGroupContainingEntity([], group.id)).toBeNull();
+  });
+});
+
+describe('collectGroupEntities (ADR-575 §selection/hover semantics)', () => {
+  it('keys ONLY the GROUP containers by id, skipping plain entities', () => {
+    const g1 = createGroupEntity([mkLine('a', 0, 0, 1, 0), mkLine('b', 2, 2, 3, 2)]);
+    const g2 = createGroupEntity([mkLine('c', 4, 4, 5, 4), mkLine('d', 6, 6, 7, 6)]);
+    const loose = mkLine('loose', 5, 5, 6, 6);
+    const map = collectGroupEntities([g1 as unknown as Entity, loose, g2 as unknown as Entity]);
+
+    expect(map.size).toBe(2);
+    expect(map.get(g1.id)).toBe(g1);
+    expect(map.get(g2.id)).toBe(g2);
+    expect(map.has('loose')).toBe(false);
+  });
+
+  it('returns an empty map for undefined / empty input', () => {
+    expect(collectGroupEntities(undefined).size).toBe(0);
+    expect(collectGroupEntities([]).size).toBe(0);
   });
 });

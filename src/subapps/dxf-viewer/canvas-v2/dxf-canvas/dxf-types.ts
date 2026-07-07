@@ -596,6 +596,15 @@ export interface DxfRenderOptions {
   selectedEntityIds: string[];
   hoveredEntityId?: string | null;
   /**
+   * ADR-575 §selection/hover semantics — ids of the GROUP containers in the live
+   * scene. Every expanded member carries its container's id, so the interactive
+   * overlay collapses a whole group to ONE arbitrary member via `entityMap.get(id)`.
+   * With this set the overlay recognises a hovered/selected id as a GROUP and paints
+   * ALL its members (whole-group highlight, no per-member grips — the gizmo owns the
+   * handles), instead of one stray member. Absent → legacy single-entity overlay.
+   */
+  groupIds?: ReadonlySet<string>;
+  /**
    * ADR-417 Φ-per-edge — redraw trigger για το live highlight της ακμής στέγης
    * υπό επεξεργασία («Κλίση ανά νερό»). Folded από το `roofEdgeSelectionStore`
    * (μέσω `useSelectedRoofEdge`) ώστε η αλλαγή επιλογής να ξανατρέχει το δυναμικό

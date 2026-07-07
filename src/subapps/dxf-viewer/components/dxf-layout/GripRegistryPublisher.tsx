@@ -26,9 +26,9 @@
 import React, { useEffect, useMemo } from 'react';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { SceneModel } from '../../types/scene';
-import type { GroupEntity } from '../../types/entities';
 import type { Overlay } from '../../overlays/types';
 import { useGripRegistry } from '../../hooks/grips/grip-registry';
+import { collectGroupEntities } from '../../systems/group/group-selection-bounds';
 import { useSelectedEntityIds, useSelectionByType } from '../../systems/selection/useSelectedEntities';
 import { useLevelScene } from '../../systems/scene/useSceneSelectors';
 import { AllGripsStore } from '../../systems/grip/AllGripsStore';
@@ -70,13 +70,10 @@ export const GripRegistryPublisher: React.FC<GripRegistryPublisherProps> = ({
   // only one would show, mis-reading as «one object selected») AND emits the whole-group
   // move/rotation gizmo from the `GroupEntity` (needed for its bounds). Reads the ORIGINAL
   // SceneModel entities (the GroupEntity survives only pre-expansion), NOT the dxfScene.
-  const groupEntities = useMemo(() => {
-    const map = new Map<string, GroupEntity>();
-    for (const entity of liveSceneModel?.entities ?? []) {
-      if (entity.type === 'group') map.set(entity.id, entity as GroupEntity);
-    }
-    return map;
-  }, [liveSceneModel]);
+  const groupEntities = useMemo(
+    () => collectGroupEntities(liveSceneModel?.entities),
+    [liveSceneModel],
+  );
   const allGrips = useGripRegistry({ dxfScene: reactiveScene, selectedEntityIds, selectedOverlays, groupEntities });
 
   // Publish the full grip set for event-time hit-testing.
