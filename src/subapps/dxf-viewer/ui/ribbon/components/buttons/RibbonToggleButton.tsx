@@ -18,7 +18,7 @@
 
 import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { RibbonCommand } from '../../types/ribbon-types';
+import type { ButtonSize, RibbonCommand } from '../../types/ribbon-types';
 import { useRibbonDispatch } from '../../context/RibbonCommandContext';
 import { useRibbonToggleState } from '../../context/useRibbonFieldSelectors';
 import { RibbonButtonIcon } from './RibbonButtonIcon';
@@ -26,6 +26,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../RibbonTooltip';
 
 interface RibbonToggleButtonProps {
   command: RibbonCommand;
+  /**
+   * ADR-507 Φ3 — Button footprint. `'large'` renders the tall Home-tab-style
+   * button (32px icon on top + label below, `dxf-ribbon-btn-large`) so radio-like
+   * mode toggles read like the big drawing-tool buttons; `'small'` (default) keeps
+   * the inline `[icon Label]` toggle. Defaults to small for back-compat.
+   */
+  size?: ButtonSize;
 }
 
 // ADR-547 Stage 4 Option B — writers from the STABLE dispatch context, reactive
@@ -33,15 +40,18 @@ interface RibbonToggleButtonProps {
 // `command` → editing another field never re-renders this toggle.
 const RibbonToggleButtonInner: React.FC<RibbonToggleButtonProps> = ({
   command,
+  size = 'small',
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
   const { onToggle, onComingSoon, onAction } = useRibbonDispatch();
   const state = useRibbonToggleState(command.commandKey);
 
   const label = t(command.labelKey);
+  const tooltip = command.tooltipKey ? t(command.tooltipKey) : label;
   const shortcut = command.shortcut ? ` (${command.shortcut})` : '';
   const isMixed = state === null;
   const pressed = state === true;
+  const isLarge = size === 'large';
 
   const handleClick = useCallback(() => {
     if (command.comingSoon) {
@@ -70,7 +80,11 @@ const RibbonToggleButtonInner: React.FC<RibbonToggleButtonProps> = ({
       <TooltipTrigger asChild>
         <button
           type="button"
-          className="dxf-ribbon-btn dxf-ribbon-btn-small dxf-ribbon-btn-toggle"
+          className={
+            isLarge
+              ? 'dxf-ribbon-btn dxf-ribbon-btn-large dxf-ribbon-btn-toggle'
+              : 'dxf-ribbon-btn dxf-ribbon-btn-small dxf-ribbon-btn-toggle'
+          }
           onClick={handleClick}
           aria-pressed={pressed}
           data-command-id={command.id}
@@ -78,14 +92,22 @@ const RibbonToggleButtonInner: React.FC<RibbonToggleButtonProps> = ({
           data-pressed={pressed ? 'true' : undefined}
           data-mixed={isMixed ? 'true' : undefined}
         >
-          <RibbonButtonIcon
-            icon={command.iconSmall ?? command.icon}
-            size="small"
-          />
-          <span className="dxf-ribbon-btn-label-inline">{label}</span>
+          {isLarge ? (
+            <>
+              <span className="dxf-ribbon-btn-icon-wrap">
+                <RibbonButtonIcon icon={command.icon} size="large" />
+              </span>
+              <span className="dxf-ribbon-btn-label">{label}</span>
+            </>
+          ) : (
+            <>
+              <RibbonButtonIcon icon={command.iconSmall ?? command.icon} size="small" />
+              <span className="dxf-ribbon-btn-label-inline">{label}</span>
+            </>
+          )}
         </button>
       </TooltipTrigger>
-      <TooltipContent>{`${label}${shortcut}`}</TooltipContent>
+      <TooltipContent>{`${tooltip}${shortcut}`}</TooltipContent>
     </Tooltip>
   );
 };

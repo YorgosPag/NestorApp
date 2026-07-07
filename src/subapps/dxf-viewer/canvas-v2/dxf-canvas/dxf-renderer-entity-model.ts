@@ -37,6 +37,15 @@ export function buildEntityModelFromDxf(
     // ADR-510 Φ2 — resolved metric dash pattern; BaseEntityRenderer.setupStyle
     // converts mm → px at stroke time. Absent/[] ⇒ solid (zero regression).
     ...(resolved.dashMm && resolved.dashMm.length > 0 && { dashMm: resolved.dashMm }),
+    // ADR-510 Φ2E #2 — per-object linetype scale (CELTSCALE «Βήμα»). The stroke-time
+    // dash sizer (`applyEntityLinetypeDash`) reads `entity.ltscale` off THIS EntityModel;
+    // without carrying it here the ribbon «Βήμα» edit was silently dropped (always 1)
+    // on every dashed-line render path (the LINE solid-batch fast path excludes dashed
+    // linetypes, so this per-entity model is the ONLY path a dash can reach). Absent/1
+    // ⇒ omitted (zero regression). Mirror of the `dashMm` spread above.
+    ...(((entity as typeof entity & { ltscale?: number }).ltscale ?? 1) !== 1 && {
+      ltscale: (entity as typeof entity & { ltscale?: number }).ltscale,
+    }),
     ...(entityWithMeasurement.measurement !== undefined && { measurement: entityWithMeasurement.measurement }),
     ...(entityWithMeasurement.showEdgeDistances !== undefined && { showEdgeDistances: entityWithMeasurement.showEdgeDistances }),
   };

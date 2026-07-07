@@ -65,6 +65,7 @@ type TextRichStyle = {
   runColor?: string; textAlign?: 'left' | 'center' | 'right';
   textBaseline?: 'top' | 'middle' | 'bottom';
   underline?: boolean; overline?: boolean; strikethrough?: boolean;
+  obliqueAngle?: number; // ADR-557 — AutoCAD oblique (shear) angle in degrees
 } | undefined;
 
 export class TextRenderer extends BaseEntityRenderer {
@@ -172,6 +173,14 @@ export class TextRenderer extends BaseEntityRenderer {
       ? entity.widthFactor
       : 1;
 
+    // 🏢 ADR-557 — AutoCAD TEXT oblique angle (`run.style.obliqueAngle`, degrees). Rendered
+    // as a horizontal shear around the text anchor, AFTER rotation + widthFactor (same block,
+    // so the rotation/zoom math is untouched). Screen-y is DOWN → `-tan(θ)` makes a positive
+    // angle lean FORWARD (top-right, like italic «/») for EVERY attachment anchor. `0` (every
+    // upright TEXT + legacy path) keeps the original byte-identical paint path — zero regression.
+    const obliqueAngle = (richStyle && typeof richStyle.obliqueAngle === 'number') ? richStyle.obliqueAngle : 0;
+    const obliqueShear = obliqueAngle !== 0 ? -Math.tan(degToRad(obliqueAngle)) : 0;
+
     // ADR-557 (multi-line) — split on `\n`; each line steps down by `advancePx`. The block is
     // shifted so `position` stays the attachment anchor (T/M/B) — `firstOffsetPx = −topAdd·height`,
     // the exact rule the box SSoT applies, so the drawn lines fill the grip/hover box precisely.
@@ -183,14 +192,13 @@ export class TextRenderer extends BaseEntityRenderer {
     const paint = (ox: number, oy: number) =>
       this.paintTextLines(ox, oy, lines, advancePx, firstOffsetPx, screenHeight, textAlignMode, baselineMode, resolved, richStyle, hasDecoration);
 
-    if (normalizedRotation !== 0) {
+    // ADR-557 — any of rotation / widthFactor / oblique needs a local frame around the
+    // anchor; when all are neutral, keep the original anchor-space paint (byte-identical).
+    if (normalizedRotation !== 0 || widthFactor !== 1 || obliqueShear !== 0) {
       this.ctx.translate(screenPos.x, screenPos.y);
-      this.ctx.rotate(degToRad(-normalizedRotation));
+      if (normalizedRotation !== 0) this.ctx.rotate(degToRad(-normalizedRotation));
       if (widthFactor !== 1) this.ctx.scale(widthFactor, 1);
-      paint(0, 0);
-    } else if (widthFactor !== 1) {
-      this.ctx.translate(screenPos.x, screenPos.y);
-      this.ctx.scale(widthFactor, 1);
+      if (obliqueShear !== 0) this.ctx.transform(1, 0, obliqueShear, 1, 0, 0);
       paint(0, 0);
     } else {
       paint(screenPos.x, screenPos.y);

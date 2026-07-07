@@ -44,6 +44,10 @@ import { translatePoint } from '../../rendering/entities/shared/geometry-vector-
 import { useTextToolbarStore, type TextStylePreviewPatch } from '../../state/text-toolbar';
 import { useUniversalSelection } from '../../systems/selection';
 import { reconcileTextToolbarFromSelection } from '../../ui/text-toolbar/hooks/useTextToolbarSelectionSync';
+// ADR-557/397 — the entity-agnostic rotate hot-grip context (picked pivot + reference
+// anchor), published during a `text-rotation` spin. Reading it here makes the LIVE
+// «Περιστροφή» preview byte-identical to `commitTextGripDrag` (preview ≡ commit).
+import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 
 type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene' | 'currentLevelId'>;
 
@@ -96,13 +100,25 @@ export function useTextGripRibbonSync(props: UseTextGripRibbonSyncProps): void {
     // Project the RAW scene text → flat `DxfText` via the SAME SSoT the ghost uses.
     const dxfText = projectSceneTextToDxf(raw as unknown as TextSceneShape, dragPreview.entityId);
     const { delta, anchorPos, rotatePivot } = dragPreview;
-    // currentPos = anchorPos + delta — EXACTLY the ghost-preview path (apply-entity-preview.ts).
-    const currentPos = anchorPos ? translatePoint(anchorPos, delta) : { x: delta.x, y: delta.y };
+    // ADR-557/397 — resolve the rotation anchor/pivot EXACTLY like `commitTextGripDrag`:
+    // the rotate hot-grip flow publishes {pivot, anchor} in `BimRotateHotGripStore`, so
+    // preferring it makes the LIVE «Περιστροφή» byte-identical to the commit. It is set live
+    // during the 6-click reference flow; a FREE spin only sets it at commit, so we fall back
+    // to the dragPreview anchor/pivot (which the ghost uses) → live ≡ ghost ≡ commit either way.
+    const rotateCtx = BimRotateHotGripStore.getSnapshot();
+    const useRotateCtx =
+      dragPreview.textGripKind === 'text-rotation' &&
+      rotateCtx.pivot !== null &&
+      rotateCtx.anchor !== null;
+    const anchor = useRotateCtx ? rotateCtx.anchor : anchorPos;
+    const pivot = useRotateCtx ? rotateCtx.pivot : rotatePivot;
+    // currentPos = anchor + delta — EXACTLY the ghost-preview + commit path.
+    const currentPos = anchor ? translatePoint(anchor, delta) : { x: delta.x, y: delta.y };
     const input: TextGripDragInput = {
       entity: dxfText,
       delta,
       currentPos,
-      ...(rotatePivot ? { pivot: rotatePivot } : {}),
+      ...(pivot ? { pivot } : {}),
     };
     const patch = applyTextGripDrag(dragPreview.textGripKind, input);
     // Map ONLY the fields this grip actually changed → «Ύψος» / «Πλάτος» / «Περιστροφή»:

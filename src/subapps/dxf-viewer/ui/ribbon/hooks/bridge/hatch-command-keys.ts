@@ -20,8 +20,6 @@ export const HATCH_RIBBON_KEYS = {
     patternName: 'hatch.params.patternName',
     /** Πάχος γραμμών (AutoCAD LWT) — 'ByLayer' ή mm ως string (ADR-507 Φ2). */
     lineweight: 'hatch.params.lineweight',
-    /** Μέθοδος ορίου (ADR-507 Φ3): 'pick-point' (Τρόπος Β) | 'boundary' (Τρόπος Α). */
-    method: 'hatch.params.method',
     /** Τύπος gradient (DXF 470) — μόνο fillType='gradient' (ADR-507 Φ5). */
     gradientType: 'hatch.params.gradientType',
     /** Πρώτο χρώμα gradient (hex). */
@@ -50,6 +48,12 @@ export const HATCH_RIBBON_KEYS = {
     gradientSingleColor: 'hatch.toggle.gradientSingleColor',
     /** «Επιλογή γραμμοσκίασης» — armed pick-existing (πατημένο = armed, one-shot). */
     selectExisting: 'hatch.toggle.selectExisting',
+    // ADR-507 Φ3 — Μέθοδος ορίου ως 2 μεγάλα radio-toggles (αντί dropdown): το ένα
+    // πάντα ενεργό, driven από το ΚΟΙΝΟ `hatch-pick-mode-store` SSoT.
+    /** «Επιλογή σημείου» (Τρόπος Β / auto-detect) — pressed = pickMode==='pick-point'. */
+    methodPickPoint: 'hatch.toggle.methodPickPoint',
+    /** «Σχεδίαση ορίου» (Τρόπος Α / N-click boundary) — pressed = pickMode==='boundary'. */
+    methodBoundary: 'hatch.toggle.methodBoundary',
   },
   readouts: {
     /** Live εμβαδόν (read-only, m²). */
@@ -81,7 +85,6 @@ export type HatchRibbonStringCommandKey =
   | typeof HATCH_RIBBON_KEYS.stringParams.islandStyle
   | typeof HATCH_RIBBON_KEYS.stringParams.patternName
   | typeof HATCH_RIBBON_KEYS.stringParams.lineweight
-  | typeof HATCH_RIBBON_KEYS.stringParams.method
   | typeof HATCH_RIBBON_KEYS.stringParams.gradientType
   | typeof HATCH_RIBBON_KEYS.stringParams.gradientColor1
   | typeof HATCH_RIBBON_KEYS.stringParams.gradientColor2;
@@ -89,7 +92,9 @@ export type HatchRibbonStringCommandKey =
 export type HatchRibbonToggleKey =
   | typeof HATCH_RIBBON_KEYS.toggles.doubleCrossHatch
   | typeof HATCH_RIBBON_KEYS.toggles.gradientSingleColor
-  | typeof HATCH_RIBBON_KEYS.toggles.selectExisting;
+  | typeof HATCH_RIBBON_KEYS.toggles.selectExisting
+  | typeof HATCH_RIBBON_KEYS.toggles.methodPickPoint
+  | typeof HATCH_RIBBON_KEYS.toggles.methodBoundary;
 
 export type HatchRibbonReadoutKey =
   | typeof HATCH_RIBBON_KEYS.readouts.area;
@@ -115,7 +120,6 @@ const STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.stringParams.islandStyle,
   HATCH_RIBBON_KEYS.stringParams.patternName,
   HATCH_RIBBON_KEYS.stringParams.lineweight,
-  HATCH_RIBBON_KEYS.stringParams.method,
   HATCH_RIBBON_KEYS.stringParams.gradientType,
   HATCH_RIBBON_KEYS.stringParams.gradientColor1,
   HATCH_RIBBON_KEYS.stringParams.gradientColor2,
@@ -124,6 +128,8 @@ const TOGGLE_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.toggles.doubleCrossHatch,
   HATCH_RIBBON_KEYS.toggles.gradientSingleColor,
   HATCH_RIBBON_KEYS.toggles.selectExisting,
+  HATCH_RIBBON_KEYS.toggles.methodPickPoint,
+  HATCH_RIBBON_KEYS.toggles.methodBoundary,
 ]);
 const READOUT_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.readouts.area,

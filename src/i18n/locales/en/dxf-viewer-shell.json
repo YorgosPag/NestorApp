@@ -3633,6 +3633,8 @@
         "method": "Boundary method",
         "methodPickPoint": "Pick point",
         "methodBoundary": "Draw boundary",
+        "methodPickPointTip": "One click inside a closed area; the boundary is detected automatically.",
+        "methodBoundaryTip": "Define the outline with successive clicks; close with Enter or by clicking the first point.",
         "gapTolerance": "Gap tolerance",
         "fillType": "Fill type",
         "fillTypeSolid": "Solid",

@@ -25,12 +25,6 @@ export const HATCH_CONTEXTUAL_TRIGGER = 'hatch-selected';
 
 // ─── Combobox options ─────────────────────────────────────────────────────────
 
-/** Μέθοδος ορίου (ADR-507 Φ3): Τρόπος Β (pick-point) ⇄ Τρόπος Α (σχεδίαση ορίου). */
-const METHOD_OPTIONS = [
-  { value: 'pick-point', labelKey: 'ribbon.commands.hatchEditor.methodPickPoint', isLiteralLabel: false },
-  { value: 'boundary', labelKey: 'ribbon.commands.hatchEditor.methodBoundary', isLiteralLabel: false },
-] as const;
-
 /**
  * Gap tolerance (AutoCAD HPGAPTOL, σε μονάδες σχεδίου — π.χ. mm) — editable numeric.
  * Presets ρεαλιστικά για κατόψεις σε mm· ο χρήστης πληκτρολογεί ελεύθερα 0..5000.
@@ -125,7 +119,9 @@ export const CONTEXTUAL_HATCH_TAB: RibbonTab = {
   contextualTrigger: HATCH_CONTEXTUAL_TRIGGER,
   panels: [
     {
-      // ADR-507 Φ3 — Τρόπος ορισμού περιοχής (AutoCAD «Boundaries»).
+      // ADR-507 Φ3 — Τρόπος ορισμού περιοχής (AutoCAD «Boundaries» / Revit): 2 μεγάλα
+      // radio-toggles με εικονίδια ώστε ο χρήστης να καταλαβαίνει οπτικά τη μέθοδο,
+      // αντί για dropdown. Το ένα πάντα ενεργό (SSoT = hatch-pick-mode-store).
       id: 'hatch-method',
       labelKey: 'ribbon.panels.hatchMethod',
       rows: [
@@ -133,16 +129,32 @@ export const CONTEXTUAL_HATCH_TAB: RibbonTab = {
           isInFlyout: false,
           buttons: [
             {
-              type: 'combobox',
-              size: 'small',
+              type: 'toggle',
+              size: 'large',
               command: {
-                id: 'hatch.method',
-                labelKey: 'ribbon.commands.hatchEditor.method',
-                commandKey: HATCH_RIBBON_KEYS.stringParams.method,
-                comboboxWidthPx: 150,
-                options: METHOD_OPTIONS,
+                id: 'hatch.methodPickPoint',
+                labelKey: 'ribbon.commands.hatchEditor.methodPickPoint',
+                tooltipKey: 'ribbon.commands.hatchEditor.methodPickPointTip',
+                icon: 'hatch-pick-point',
+                commandKey: HATCH_RIBBON_KEYS.toggles.methodPickPoint,
               },
             },
+            {
+              type: 'toggle',
+              size: 'large',
+              command: {
+                id: 'hatch.methodBoundary',
+                labelKey: 'ribbon.commands.hatchEditor.methodBoundary',
+                tooltipKey: 'ribbon.commands.hatchEditor.methodBoundaryTip',
+                icon: 'hatch-draw-boundary',
+                commandKey: HATCH_RIBBON_KEYS.toggles.methodBoundary,
+              },
+            },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
             {
               type: 'combobox',
               size: 'small',

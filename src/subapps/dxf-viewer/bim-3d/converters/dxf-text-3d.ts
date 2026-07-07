@@ -68,6 +68,12 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
   // ADR-557 (multi-line) — split on `\n`; width = max line, height = stacked block.
   const lines = splitTextLines(text);
   const lineSpacingRatio = resolveLineSpacingRatio(entity);
+  // ADR-557 — AutoCAD oblique angle: horizontal shear of the texture glyphs (2D≡3D). Screen-y
+  // is DOWN (same convention as the 2D `TextRenderer`) → `-tan(θ)` leans forward. 🔴 3D slant
+  // direction browser-verify: the CanvasTexture `flipY` + plane `rotateX(-90°)` may invert it;
+  // flip the sign if the 3D lean is opposite the 2D plan.
+  const obliqueAngle = typeof entity.textStyle?.obliqueAngle === 'number' ? entity.textStyle.obliqueAngle : 0;
+  const obliqueShear = obliqueAngle !== 0 ? -Math.tan((obliqueAngle * Math.PI) / 180) : 0;
 
   const canvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
   const ctx = canvas?.getContext('2d');
@@ -85,9 +91,12 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
     for (const line of lines) { const w = Math.ceil(ctx.measureText(line).width); if (w > textPx) textPx = w; }
     const advancePx = fontPx * lineSpacingRatio;
     const blockPx = fontPx + (lines.length - 1) * advancePx;
+    // ADR-557 — extra horizontal margin so a sheared (oblique) glyph never touches the canvas
+    // edge: each line shears ±|shear|·fontPx/2 around its own centre. Zero when upright.
+    const obliqueMarginPx = obliqueShear !== 0 ? Math.ceil(Math.abs(obliqueShear) * fontPx) : 0;
     return {
-      fontPx, padPx, advancePx, blockPx,
-      width: Math.max(8, textPx + padPx * 2),
+      fontPx, padPx, advancePx, blockPx, obliqueMarginPx,
+      width: Math.max(8, textPx + padPx * 2 + obliqueMarginPx * 2),
       height: Math.max(8, Math.ceil(blockPx) + padPx * 2),
     };
   };
@@ -116,7 +125,18 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
   // block is vertically centred (matches the em-box anchor below), each next line steps by advance.
   const firstCenterY = (canvas.height - m.blockPx) / 2 + m.fontPx / 2;
   for (let i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i], canvas.width / 2, firstCenterY + i * m.advancePx);
+    const cy = firstCenterY + i * m.advancePx;
+    if (obliqueShear !== 0) {
+      // ADR-557 — shear each line around its own centre (textBaseline:'middle'), so the
+      // oblique pivots on the line, matching the 2D anchor-space shear.
+      ctx.save();
+      ctx.translate(canvas.width / 2, cy);
+      ctx.transform(1, 0, obliqueShear, 1, 0, 0);
+      ctx.fillText(lines[i], 0, 0);
+      ctx.restore();
+    } else {
+      ctx.fillText(lines[i], canvas.width / 2, cy);
+    }
   }
 
   const texture = new THREE.CanvasTexture(canvas);

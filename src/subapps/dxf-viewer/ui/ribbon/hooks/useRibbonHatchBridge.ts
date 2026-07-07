@@ -212,10 +212,6 @@ export function useRibbonHatchBridge(
         if (commandKey === HATCH_RIBBON_KEYS.stringParams.gradientColor2) {
           return { value: hatch?.gradient?.color2 ?? defaults.gradientColor2, options: [] };
         }
-        // Μέθοδος ορίου = tool setting (όχι ιδιότητα οντότητας) → πάντα από το store.
-        if (commandKey === HATCH_RIBBON_KEYS.stringParams.method) {
-          return { value: pickMode, options: [] };
-        }
         return { value: hatch?.islandStyle ?? defaults.islandStyle, options: [] };
       }
       if (isHatchRibbonNumberKey(commandKey)) {
@@ -253,7 +249,7 @@ export function useRibbonHatchBridge(
       }
       return null;
     },
-    [resolveHatch, defaults, pickMode],
+    [resolveHatch, defaults],
   );
 
   const onComboboxChange = useCallback(
@@ -309,11 +305,6 @@ export function useRibbonHatchBridge(
         }
         if (commandKey === HATCH_RIBBON_KEYS.stringParams.gradientColor2) {
           applyGradientChange(hatch, { field: 'color2', value });
-          return;
-        }
-        // Μέθοδος ορίου (pick-point ⇄ boundary) — καθαρό tool setting.
-        if (commandKey === HATCH_RIBBON_KEYS.stringParams.method) {
-          setHatchPickMode(value === 'boundary' ? 'boundary' : 'pick-point');
           return;
         }
         // islandStyle
@@ -375,6 +366,16 @@ export function useRibbonHatchBridge(
   const onToggle = useCallback(
     (commandKey: string, nextValue: boolean): void => {
       if (!isHatchRibbonToggleKey(commandKey)) return;
+      // ADR-507 Φ3 — Μέθοδος ορίου ως radio-toggles: το κουμπί ΠΑΝΤΑ επιλέγει το mode
+      // του (αγνοεί το nextValue — ένα από τα δύο μένει πάντα ενεργό). SSoT = pick-mode store.
+      if (commandKey === HATCH_RIBBON_KEYS.toggles.methodPickPoint) {
+        setHatchPickMode('pick-point');
+        return;
+      }
+      if (commandKey === HATCH_RIBBON_KEYS.toggles.methodBoundary) {
+        setHatchPickMode('boundary');
+        return;
+      }
       // «Επιλογή γραμμοσκίασης» — armed pick-existing (όχι ιδιότητα οντότητας). Όσο
       // πατημένο, το επόμενο κλικ στον καμβά επιλέγει hatch-only (mouse-handler-up).
       if (commandKey === HATCH_RIBBON_KEYS.toggles.selectExisting) {
@@ -400,6 +401,13 @@ export function useRibbonHatchBridge(
   const getToggleState = useCallback(
     (commandKey: string): RibbonToggleState => {
       if (!isHatchRibbonToggleKey(commandKey)) return NULL_TOGGLE;
+      // ADR-507 Φ3 — Μέθοδος ορίου: pressed = το mode του κουμπιού είναι το ενεργό.
+      if (commandKey === HATCH_RIBBON_KEYS.toggles.methodPickPoint) {
+        return pickMode === 'pick-point';
+      }
+      if (commandKey === HATCH_RIBBON_KEYS.toggles.methodBoundary) {
+        return pickMode === 'boundary';
+      }
       // Armed state (πατημένο όσο περιμένουμε κλικ σε γραμμοσκίαση).
       if (commandKey === HATCH_RIBBON_KEYS.toggles.selectExisting) {
         return hatchSelectArmed;
@@ -410,7 +418,7 @@ export function useRibbonHatchBridge(
       }
       return hatch ? (hatch.doubleCrossHatch ?? false) : defaults.doubleCrossHatch;
     },
-    [resolveHatch, defaults, hatchSelectArmed],
+    [resolveHatch, defaults, hatchSelectArmed, pickMode],
   );
 
   const onAction = useCallback(

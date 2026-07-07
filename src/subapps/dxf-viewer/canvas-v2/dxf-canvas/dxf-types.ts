@@ -165,6 +165,12 @@ export interface DxfTextStyle {
   textAlign?: 'left' | 'center' | 'right';
   /** Derived from textNode.attachment vertical component (T/M/B). */
   textBaseline?: 'top' | 'middle' | 'bottom';
+  /**
+   * ADR-557 — AutoCAD TEXT oblique angle (degrees, +CW forward slant). Rendered as a
+   * horizontal shear around the anchor by `TextRenderer` (`ctx.transform(1,0,-tan(θ),1,0,0)`);
+   * independent of `italic` (which swaps to the italic font face). Default 0 (upright).
+   */
+  obliqueAngle?: number;
 }
 
 export interface DxfText extends DxfEntity {

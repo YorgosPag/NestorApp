@@ -35,17 +35,53 @@ import {
   useTextSelectionStore,
   useTextToolbarStore,
   computeMixedValues,
+  DEFAULT_TOOLBAR_VALUES,
+  type TextFlatGeometry,
 } from '../../../state/text-toolbar';
 import { ensureTextNode } from '../../../text-engine/edit';
 import type { SceneModel, AnySceneEntity } from '../../../types/scene';
 import type { DxfTextNode } from '../../../text-engine/types';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
 import { resolveEntityLayerName } from '../../../stores/LayerStore';
+// ADR-557 read-side flat-SSoT — the SAME height / run-style extractors the render
+// pipeline (dxf-scene-entity-converter) uses, so the toolbar geometry ≡ the canvas.
+import { resolveTextHeight, extractFirstRunStyle } from '../../../hooks/canvas/dxf-text-style-extractor';
 
 interface ResolvedTextEntity {
   readonly id: string;
   readonly node: DxfTextNode;
   readonly layerId: string;
+  readonly flat: TextFlatGeometry;
+}
+
+/** Narrow flat-field view of a scene TEXT/MTEXT (the fields the renderer owns). */
+type FlatTextFields = {
+  rotation?: number;
+  widthFactor?: number;
+  fontFamily?: string;
+};
+
+/**
+ * ADR-557 — derive the FLAT entity geometry SSoT (rotation / widthFactor / height /
+ * fontFamily) the renderer + grip commit own, using the SAME extractors the render
+ * pipeline uses. This is what the toolbar must reflect — NOT the AST node, whose
+ * `rotation` / `run.style.widthFactor` the commit deliberately never updates.
+ */
+function resolveFlatGeometry(entity: AnySceneEntity): TextFlatGeometry {
+  const flat = entity as unknown as FlatTextFields;
+  // fontFamily: prefer the rendered run style, then the flat field, then the toolbar
+  // default — NEVER an empty string (which the font combobox reads as «Μεικτή»).
+  const fontFamily =
+    extractFirstRunStyle(entity as unknown as Parameters<typeof extractFirstRunStyle>[0])?.fontFamily ||
+    (flat.fontFamily?.trim() ? flat.fontFamily : '') ||
+    DEFAULT_TOOLBAR_VALUES.fontFamily;
+  return {
+    rotation: flat.rotation ?? 0,
+    // Simple TEXT carries `widthFactor`; MTEXT uses a `width` frame → factor 1.
+    widthFactor: flat.widthFactor ?? 1,
+    height: resolveTextHeight(entity as unknown as Parameters<typeof resolveTextHeight>[0]),
+    fontFamily,
+  };
 }
 
 function resolveTextEntities(
@@ -65,6 +101,7 @@ function resolveTextEntities(
       node: ensureTextNode(entity as unknown as Parameters<typeof ensureTextNode>[0]),
       // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
       layerId: resolveEntityLayerName(entity) ?? '',
+      flat: resolveFlatGeometry(entity),
     });
   }
   return out;
@@ -87,7 +124,7 @@ export function reconcileTextToolbarFromSelection(
   const resolved = resolveTextEntities(ids, scene);
   if (resolved.length === 0) return [];
   const values = computeMixedValues(
-    resolved.map((r) => ({ node: r.node, layerId: r.layerId })),
+    resolved.map((r) => ({ node: r.node, layerId: r.layerId, flat: r.flat })),
   );
   useTextToolbarStore.getState().populate(values);
   return resolved.map((r) => r.id);
@@ -110,7 +147,7 @@ export function useTextToolbarSelectionSync(): void {
     setTextSelection(textIds);
     if (resolved.length === 0) return;
     const values = computeMixedValues(
-      resolved.map((r) => ({ node: r.node, layerId: r.layerId })),
+      resolved.map((r) => ({ node: r.node, layerId: r.layerId, flat: r.flat })),
     );
     populate(values);
     // `allIds` is captured indirectly via idsKey to keep the dep array stable.

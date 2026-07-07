@@ -48,6 +48,9 @@ export function extractFirstRunStyle(entity: TextStyledEntity): DxfTextStyle | u
       if (s.overline !== undefined) result.overline = s.overline;
       if (s.strikethrough !== undefined) result.strikethrough = s.strikethrough;
       if (s.fontFamily) result.fontFamily = s.fontFamily;
+      // ADR-557 — carry the AutoCAD oblique angle so `TextRenderer` can shear the glyphs
+      // (the ribbon «Κλίση» writes `run.style.obliqueAngle`; the renderer reads it from here).
+      if (s.obliqueAngle !== undefined) result.obliqueAngle = s.obliqueAngle;
       if (s.color) {
         const c = s.color as DxfColor;
         if (c.kind === 'TrueColor') {

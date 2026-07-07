@@ -267,7 +267,7 @@ function renderButton(button: RibbonButton): React.ReactNode {
     return <RibbonSplitButton key={key} button={button} />;
   }
   if (button.type === 'toggle') {
-    return <RibbonToggleButton key={key} command={button.command} />;
+    return <RibbonToggleButton key={key} command={button.command} size={button.size} />;
   }
   if (button.type === 'combobox') {
     return <RibbonCombobox key={key} command={button.command} />;

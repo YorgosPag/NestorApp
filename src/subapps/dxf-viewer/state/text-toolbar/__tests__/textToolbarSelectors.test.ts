@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from '@jest/globals';
-import { computeMixedValues } from '../textToolbarSelectors';
+import { computeMixedValues, type TextFlatGeometry } from '../textToolbarSelectors';
 import { DEFAULT_TOOLBAR_VALUES } from '../useTextToolbarStore';
 import type {
   DxfTextNode,
@@ -12,6 +12,20 @@ import type {
   DxfColor,
 } from '../../../text-engine/types';
 import { DXF_COLOR_BY_LAYER } from '../../../text-engine/types';
+
+/**
+ * ADR-557 — flat entity geometry SSoT (renderer + commit truth). `computeMixedValues`
+ * reads rotation / widthFactor / height / fontFamily from HERE, not the AST node.
+ */
+function flat(overrides: Partial<TextFlatGeometry> = {}): TextFlatGeometry {
+  return {
+    rotation: 0,
+    widthFactor: 1,
+    height: 2.5,
+    fontFamily: 'Arial',
+    ...overrides,
+  };
+}
 
 function style(overrides: Partial<TextRunStyle> = {}): TextRunStyle {
   return {
@@ -63,7 +77,7 @@ describe('computeMixedValues', () => {
 
   it('single entity exposes its style verbatim', () => {
     const result = computeMixedValues([
-      { node: node(style({ bold: true, height: 4 })), layerId: 'WALLS' },
+      { node: node(style({ bold: true })), layerId: 'WALLS', flat: flat({ height: 4 }) },
     ]);
     expect(result.bold).toBe(true);
     expect(result.fontHeight).toBe(4);
@@ -72,8 +86,8 @@ describe('computeMixedValues', () => {
 
   it('multi-selection with agreement keeps the value', () => {
     const result = computeMixedValues([
-      { node: node(style({ bold: true })), layerId: 'L1' },
-      { node: node(style({ bold: true })), layerId: 'L1' },
+      { node: node(style({ bold: true })), layerId: 'L1', flat: flat() },
+      { node: node(style({ bold: true })), layerId: 'L1', flat: flat() },
     ]);
     expect(result.bold).toBe(true);
     expect(result.layerId).toBe('L1');
@@ -81,16 +95,16 @@ describe('computeMixedValues', () => {
 
   it('multi-selection with disagreement collapses to null', () => {
     const result = computeMixedValues([
-      { node: node(style({ bold: true })), layerId: 'L1' },
-      { node: node(style({ bold: false })), layerId: 'L1' },
+      { node: node(style({ bold: true })), layerId: 'L1', flat: flat() },
+      { node: node(style({ bold: false })), layerId: 'L1', flat: flat() },
     ]);
     expect(result.bold).toBeNull();
   });
 
   it('layer disagreement collapses layerId', () => {
     const result = computeMixedValues([
-      { node: node(style()), layerId: 'A' },
-      { node: node(style()), layerId: 'B' },
+      { node: node(style()), layerId: 'A', flat: flat() },
+      { node: node(style()), layerId: 'B', flat: flat() },
     ]);
     expect(result.layerId).toBeNull();
   });
@@ -98,31 +112,88 @@ describe('computeMixedValues', () => {
   it('color DxfColor union compared by value', () => {
     const aci5: DxfColor = { kind: 'ACI', index: 5 };
     const r1 = computeMixedValues([
-      { node: node(style({ color: aci5 })), layerId: '0' },
-      { node: node(style({ color: { kind: 'ACI', index: 5 } })), layerId: '0' },
+      { node: node(style({ color: aci5 })), layerId: '0', flat: flat() },
+      { node: node(style({ color: { kind: 'ACI', index: 5 } })), layerId: '0', flat: flat() },
     ]);
     expect(r1.color).toEqual(aci5);
 
     const r2 = computeMixedValues([
-      { node: node(style({ color: aci5 })), layerId: '0' },
-      { node: node(style({ color: { kind: 'ACI', index: 6 } })), layerId: '0' },
+      { node: node(style({ color: aci5 })), layerId: '0', flat: flat() },
+      { node: node(style({ color: { kind: 'ACI', index: 6 } })), layerId: '0', flat: flat() },
     ]);
     expect(r2.color).toBeNull();
   });
 
   it('justification disagreement collapses to null', () => {
     const result = computeMixedValues([
-      { node: node(style(), { attachment: 'TL' }), layerId: '0' },
-      { node: node(style(), { attachment: 'MC' }), layerId: '0' },
+      { node: node(style(), { attachment: 'TL' }), layerId: '0', flat: flat() },
+      { node: node(style(), { attachment: 'MC' }), layerId: '0', flat: flat() },
     ]);
     expect(result.justification).toBeNull();
   });
 
-  it('rotation agreement preserves value', () => {
+  // ── ADR-557 flat entity SSoT (rotation / widthFactor / height / fontFamily) ──
+
+  it('rotation agreement preserves the FLAT value (not the stale node)', () => {
     const result = computeMixedValues([
-      { node: node(style(), { rotation: 45 }), layerId: '0' },
-      { node: node(style(), { rotation: 45 }), layerId: '0' },
+      // node.rotation stays 0 (commit never writes it); the flat SSoT is 45.
+      { node: node(style(), { rotation: 0 }), layerId: '0', flat: flat({ rotation: 45 }) },
+      { node: node(style(), { rotation: 0 }), layerId: '0', flat: flat({ rotation: 45 }) },
     ]);
     expect(result.rotation).toBe(45);
+  });
+
+  it('rotation disagreement collapses to null (flat SSoT)', () => {
+    const result = computeMixedValues([
+      { node: node(style()), layerId: '0', flat: flat({ rotation: 45 }) },
+      { node: node(style()), layerId: '0', flat: flat({ rotation: 90 }) },
+    ]);
+    expect(result.rotation).toBeNull();
+  });
+
+  it('widthFactor reads the FLAT value, not the run style', () => {
+    const result = computeMixedValues([
+      // run.style.widthFactor stays 1 (commit never updates it); the flat SSoT is 0.8.
+      { node: node(style({ widthFactor: 1 })), layerId: '0', flat: flat({ widthFactor: 0.8 }) },
+    ]);
+    expect(result.widthFactor).toBe(0.8);
+  });
+
+  it('widthFactor disagreement collapses to null (flat SSoT)', () => {
+    const result = computeMixedValues([
+      { node: node(style()), layerId: '0', flat: flat({ widthFactor: 0.8 }) },
+      { node: node(style()), layerId: '0', flat: flat({ widthFactor: 1 }) },
+    ]);
+    expect(result.widthFactor).toBeNull();
+  });
+
+  it('fontHeight reads the FLAT value and collapses on disagreement', () => {
+    const agree = computeMixedValues([
+      { node: node(style()), layerId: '0', flat: flat({ height: 5 }) },
+      { node: node(style()), layerId: '0', flat: flat({ height: 5 }) },
+    ]);
+    expect(agree.fontHeight).toBe(5);
+
+    const mixed = computeMixedValues([
+      { node: node(style()), layerId: '0', flat: flat({ height: 5 }) },
+      { node: node(style()), layerId: '0', flat: flat({ height: 3 }) },
+    ]);
+    expect(mixed.fontHeight).toBeNull();
+  });
+
+  it('fontFamily reads the FLAT value (never «Μεικτή» from an empty run)', () => {
+    const result = computeMixedValues([
+      // The AST run carries no font, but the flat SSoT resolved a real family.
+      { node: node(style({ fontFamily: '' })), layerId: '0', flat: flat({ fontFamily: 'Arial' }) },
+    ]);
+    expect(result.fontFamily).toBe('Arial');
+  });
+
+  it('fontFamily disagreement collapses to null (flat SSoT)', () => {
+    const result = computeMixedValues([
+      { node: node(style()), layerId: '0', flat: flat({ fontFamily: 'Arial' }) },
+      { node: node(style()), layerId: '0', flat: flat({ fontFamily: 'Times New Roman' }) },
+    ]);
+    expect(result.fontFamily).toBeNull();
   });
 });

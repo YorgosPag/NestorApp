@@ -19,6 +19,11 @@ import {
   setHatchDrawDefaults,
   resetHatchDrawDefaults,
 } from '../../../../bim/hatch/hatch-draw-defaults-store';
+// ADR-507 Φ3 — Μέθοδος ορίου ως radio-toggles (SSoT = pick-mode store).
+import {
+  getHatchPickMode,
+  resetHatchPickMode,
+} from '../../../../bim/hatch/hatch-pick-mode-store';
 import {
   hatchMinWorldSpacing,
   patternScaleForSpacingMm,
@@ -68,9 +73,13 @@ const GRAD_ANGLE_KEY = HATCH_RIBBON_KEYS.params.gradientAngle;
 const GRAD_SINGLE_KEY = HATCH_RIBBON_KEYS.toggles.gradientSingleColor;
 const GRAD_VIS_KEY = HATCH_RIBBON_KEYS.visibility.gradient;
 
+const METHOD_PICK_KEY = HATCH_RIBBON_KEYS.toggles.methodPickPoint;
+const METHOD_BOUNDARY_KEY = HATCH_RIBBON_KEYS.toggles.methodBoundary;
+
 beforeEach(() => {
   resetGlobalCommandHistory();
   resetHatchDrawDefaults();
+  resetHatchPickMode();
   (UpdateEntityCommand as jest.Mock).mockClear();
 });
 
@@ -208,6 +217,54 @@ describe('useRibbonHatchBridge — «Γωνία»/«Απόσταση» mode-awar
     act(() => result.current.onComboboxChange(SPACING_KEY, '100'));
     expect(getHatchDrawDefaults().patternAngle).toBe(30);
     expect(getHatchDrawDefaults().patternScale).toBeCloseTo(patternScaleForSpacingMm('ANSI31', 100), 6);
+    expect((UpdateEntityCommand as jest.Mock).mock.calls.length).toBe(0);
+  });
+});
+
+describe('useRibbonHatchBridge — Μέθοδος ορίου (ADR-507 Φ3, radio toggles)', () => {
+  function bridge() {
+    const { result } = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(null),
+        universalSelection: makeSelection(null),
+      }),
+    );
+    return result;
+  }
+
+  it('default: pick-point ενεργό, boundary ανενεργό', () => {
+    const result = bridge();
+    expect(result.current.getToggleState(METHOD_PICK_KEY)).toBe(true);
+    expect(result.current.getToggleState(METHOD_BOUNDARY_KEY)).toBe(false);
+  });
+
+  it('κλικ «Σχεδίαση ορίου» → pickMode=boundary (store) + pressed state αντιστρέφεται', () => {
+    const result = bridge();
+    act(() => result.current.onToggle(METHOD_BOUNDARY_KEY, true));
+    expect(getHatchPickMode()).toBe('boundary');
+    expect(result.current.getToggleState(METHOD_BOUNDARY_KEY)).toBe(true);
+    expect(result.current.getToggleState(METHOD_PICK_KEY)).toBe(false);
+  });
+
+  it('κλικ «Επιλογή σημείου» επιστρέφει σε pick-point', () => {
+    const result = bridge();
+    act(() => result.current.onToggle(METHOD_BOUNDARY_KEY, true));
+    act(() => result.current.onToggle(METHOD_PICK_KEY, true));
+    expect(getHatchPickMode()).toBe('pick-point');
+    expect(result.current.getToggleState(METHOD_PICK_KEY)).toBe(true);
+  });
+
+  it('radio: κλικ στο ήδη ενεργό ΔΕΝ το απενεργοποιεί (μένει πάντα ένα ενεργό)', () => {
+    const result = bridge();
+    // Το toggle component στέλνει nextValue=false όταν πατηθεί ένα ήδη-πατημένο κουμπί.
+    act(() => result.current.onToggle(METHOD_PICK_KEY, false));
+    expect(getHatchPickMode()).toBe('pick-point');
+    expect(result.current.getToggleState(METHOD_PICK_KEY)).toBe(true);
+  });
+
+  it('δεν εκτελείται UpdateEntityCommand (tool setting, όχι ιδιότητα οντότητας)', () => {
+    const result = bridge();
+    act(() => result.current.onToggle(METHOD_BOUNDARY_KEY, true));
     expect((UpdateEntityCommand as jest.Mock).mock.calls.length).toBe(0);
   });
 });
