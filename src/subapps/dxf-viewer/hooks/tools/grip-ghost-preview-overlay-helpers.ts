@@ -138,6 +138,22 @@ export function paintGripActionAlignmentTraces(
       alignAnchors = anchors.length ? anchors : null;
     }
   }
+  // [MLDIAG] TEMP — ADR-557 multiline cyan investigation (Giorgio 2026-07-07). Remove after diagnosis.
+  if (entity.type === 'text' || entity.type === 'mtext') {
+    const g = globalThis as unknown as { __ml?: number };
+    g.__ml = (g.__ml ?? 0) + 1;
+    if (g.__ml % 12 === 0) {
+      const trk = alignAnchors
+        ? resolveActionAlignmentTracking(effectiveCursor, alignAnchors, t.scale, sceneEntities, new Set([dp.entityId]))
+        : null;
+      // eslint-disable-next-line no-console
+      console.log('[MLDIAG]', JSON.stringify({
+        type: entity.type, moves: dp.movesEntity === true, anchor: dp.anchorPos, cursor: effectiveCursor,
+        anchors: alignAnchors, snapFound: getImmediateSnap()?.found ?? false,
+        sceneN: sceneEntities?.length ?? 0, trk: trk ? 'HIT' : 'null',
+      }));
+    }
+  }
   if (!alignAnchors || getImmediateSnap()?.found) return;
   const actionTracking = resolveActionAlignmentTracking(
     // ADR-557 — exclude the dragged entity from the ambient scan: a moving multi-line text must NOT

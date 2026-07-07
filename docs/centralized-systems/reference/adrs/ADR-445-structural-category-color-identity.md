@@ -108,6 +108,7 @@ This auto-heals every level/user on next open without wiping genuine V/G edits.
 
 ## Changelog
 
+- **2026-07-07** — cross-check (Opus 4.8, ADR-559 §3b-bis). **Grip warm (hover) colour re-value — colour-identity check.** Ο Giorgio άλλαξε το **grip hover (warm)** χρώμα από orange `#FF7F00` σε **ροζ/magenta `#ff00ff`** (= `UI_COLORS.SNAP_INTERSECTION`), αλλάζοντας την τιμή της named σταθεράς `GRIP_WARM_COLOR` (config/color-config.ts). Αυτό είναι **grip-UI χρώμα, ΟΧΙ structural** — επιβεβαιώθηκε ότι **δεν** αγγίζει το structural palette αυτού του ADR: **δοκός amber `#b07d1f`** (`BIM_CATEGORY_LINE_COLORS.beam`), κολώνα μπλε, foundation sienna — όλα ξεχωριστές σταθερές, **άθικτα**. Επίσης το grip **armed** (ADR-501 `GRIP_ARMED_COLOR #FF6A00`) μένει orange (distinct identity). Καμία αλλαγή στο structural color system εδώ — μόνο καταγραφή του cross-check. Λεπτομέρειες: ADR-559 §3b-bis. UNCOMMITTED.
 - **2026-07-03** — v1.4 (Opus 4.8). **«Το δοκάρι καταπίνεται από τον τοίχο» — structural
   framing reads by its category edges (Giorgio 2026-07-03).** Πρόβλημα: δοκάρι flush ΠΑΝΩ σε
   τοίχο με ΙΔΙΟ footprint (πλάτος = πάχος τοίχου) → οι πλάγιες όψεις coplanar & συνεχείς με τον
