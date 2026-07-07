@@ -11,6 +11,11 @@ import { useAutoAreaMouseMove } from './useAutoAreaMouseMove';
 import { useRegionPerimeterMouseMove } from './useRegionPerimeterMouseMove';
 import { QuickPropertiesMiniPanelStore } from '../../systems/properties/QuickPropertiesMiniPanelStore';
 import { PropertiesPaletteStore } from '../../systems/properties/PropertiesPaletteStore';
+// ADR-575 §enter-group — double-click a selected GROUP to step INTO it (Revit «Edit
+// Group» / Figma). Selection-driven (single-click selects the whole group, double-click
+// enters): resolve the selected id to its container, push the drill-in level.
+import { enterGroup } from '../../systems/group/ActiveGroupStore';
+import { resolveGroupContainingEntity } from '../../systems/group/group-selection-bounds';
 
 interface Params {
   transformRef: React.MutableRefObject<{ scale: number; offsetX: number; offsetY: number }>;
@@ -45,6 +50,13 @@ export function useCanvasSectionUI({
     if (activeTool === 'select') {
       const ids = getSelectedEntityIds();
       if (ids.length === 1) {
+        // ADR-575 §enter-group — double-click a selected GROUP → drill in (Revit «Edit
+        // Group»). Read the RAW scene at event time (groups survive only pre-expansion);
+        // a member/nested group double-clicked while inside resolves to its own container.
+        const levelId = levelManager.currentLevelId;
+        const rawScene = levelId ? levelManager.getLevelScene(levelId) : null;
+        const group = resolveGroupContainingEntity(rawScene?.entities, ids[0]);
+        if (group) { enterGroup(group.id); return; }
         const entity = dxfScene?.entities.find(en => en.id === ids[0]);
         if (entity?.type === 'line') {
           const rect = containerRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 };
@@ -54,7 +66,7 @@ export function useCanvasSectionUI({
       }
     }
     textEditor.handleDoubleClick(e);
-  }, [activeTool, getSelectedEntityIds, dxfScene, containerRef, textEditor]);
+  }, [activeTool, getSelectedEntityIds, dxfScene, containerRef, textEditor, levelManager]);
   const { handleMouseMoveWithAutoArea } = useAutoAreaMouseMove({ handleMouseMove, activeTool, levelManager, currentOverlays, transformScale });
   // ADR-419 Layer 3 — αλυσίδωση: region/perimeter hover preview πάνω από το auto-area.
   const { handleMouseMoveWithRegionPreview } = useRegionPerimeterMouseMove({ handleMouseMove: handleMouseMoveWithAutoArea, activeTool, levelManager });

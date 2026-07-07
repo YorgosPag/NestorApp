@@ -26,6 +26,8 @@ import { CommandLineStore } from '../systems/command-line/CommandLineStore';
 import { useViewMode3DStore, selectIs3D } from '../bim-3d/stores/ViewMode3DStore';
 // ADR-364 — Escape Command Bus SSoT
 import { useEscapeHandler, ESC_PRIORITY } from '../systems/escape-bus';
+// ADR-575 §enter-group — ESC steps OUT of the active group (registers its own bus slot).
+import { useGroupExitEscape } from '../systems/group/useGroupExitEscape';
 // ADR-036 / ADR-364 Group 3 follow-up (2026-05-19): Single Source of Truth for
 // "is this tool a drawing or measurement tool?" lives in TOOL_DEFINITIONS via
 // `isInteractiveTool`. Eliminates the previously-hand-maintained
@@ -289,6 +291,10 @@ export const useKeyboardShortcuts = ({
     canHandle: () => true,
     handle: () => { onColorMenuClose(); return true; },
   });
+
+  // ADR-575 §enter-group — ESC bus registration #3: step OUT of the active group
+  // (GROUP_EXIT 275, between clear-grips and plain deselect).
+  useGroupExitEscape();
 
   return {
     handleCanvasMouseMove

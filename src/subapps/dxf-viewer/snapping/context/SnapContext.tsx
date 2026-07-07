@@ -133,6 +133,12 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
       // accidentally turned off (it has no toolbar button).
       modes.add(ExtendedSnapType.ROTATION_PIVOT);
       modes.add(ExtendedSnapType.ROTATION_GRIP);
+      // ADR-580: the SELECTED objects' grips snap is CONTEXTUAL like rotation — it only ever
+      // produces candidates while `AllGripsStore` holds the selection's grips (empty otherwise →
+      // zero cost). Force-enable it with the global OSNAP toggle so a selected entity's grip always
+      // wins the attraction over an unselected entity beneath it, for every user, with no toolbar
+      // button and no stored per-mode preference that could turn it off.
+      modes.add(ExtendedSnapType.SELECTED_GRIP);
       // ADR-370: BIM characteristic-point snaps are always-on structural snaps (same
       // pattern) — force-enabled so they never depend on a stored per-mode preference.
       for (const t of ALWAYS_ON_BIM_SNAPS) modes.add(t);

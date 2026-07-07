@@ -513,6 +513,11 @@ export const SNAP_ENGINE_PRIORITIES = {
   ROTATION_PIVOT: -2.5,
   /** ADR-397: rotating entity grips — endpoint tier (exact grip points) */
   ROTATION_GRIP: 0,
+  /** ADR-580: SELECTED objects' grips — STRONGER than every static underlying snap (endpoint 0 /
+   *  node 1 / bim_corner -2) so a selected entity's grip WINS the coincidence tiebreak over an
+   *  unselected entity lying under it (grab-the-grip precedence). Below ROTATION_PIVOT (-2.5) is
+   *  fine — rotation is a distinct contextual op (its store is empty outside a rotation). */
+  SELECTED_GRIP: -3,
 } as const;
 
 // ===== SNAP UI OFFSETS =====

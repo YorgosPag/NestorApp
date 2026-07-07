@@ -84,6 +84,9 @@ export const SNAP_COLORS: Record<ExtendedSnapType, string> = {
   [ExtendedSnapType.ROTATION_PIVOT]: SNAP_MARKER_COLORS.ROTATION,
   [ExtendedSnapType.ROTATION_GRIP]:  SNAP_MARKER_COLORS.ROTATION,
 
+  // ── Selected-object grips (ADR-580) — grip/vertex-class point → NODE colour ──
+  [ExtendedSnapType.SELECTED_GRIP]:  SNAP_MARKER_COLORS.NODE,
+
   // ── Auto / fallback ───────────────────────────────────────────────────────────
   [ExtendedSnapType.AUTO]:          SNAP_MARKER_COLORS.BASE,
 };

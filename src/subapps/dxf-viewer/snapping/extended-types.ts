@@ -56,6 +56,7 @@ export enum ExtendedSnapType {
   TEXT               = 'text',                // ADR-378 Phase 3: TEXT/MTEXT 8-point snap (insertion + 4 corners + center + 2 edge mids)
   ROTATION_PIVOT     = 'rotation_pivot',      // ADR-397: rotation centre ⊙ snap (active only during a rotation op)
   ROTATION_GRIP      = 'rotation_grip',       // ADR-397: rotating entity's grips snap (active only during a rotation op)
+  SELECTED_GRIP      = 'selected_grip',       // ADR-580: SELECTED objects' grips snap — precedence over underlying entities (always-on when OSNAP)
   AUTO = 'auto'
 }
 
@@ -203,10 +204,16 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.TEXT,                // ADR-378 Phase 3: TEXT/MTEXT 8-point snap
     ExtendedSnapType.ROTATION_PIVOT,      // ADR-397: rotation centre snap (contextual — store empty when idle)
     ExtendedSnapType.ROTATION_GRIP,       // ADR-397: rotating entity grips snap (contextual)
+    ExtendedSnapType.SELECTED_GRIP,       // ADR-580: selected objects' grips snap (contextual — AllGripsStore empty when nothing selected)
   ]),
   showSnapMarkers: true,
   showSnapTooltips: true,
   priority: [
+    // ADR-580: the SELECTED objects' grips run FIRST (before every static/underlying engine)
+    // so their candidates are collected before the maxCandidates budget fills, and their strong
+    // negative priority (-3) makes them WIN the coincidence tiebreak — a selected entity's grip
+    // beats an unselected entity's endpoint/corner under it (grab-the-grip precedence).
+    ExtendedSnapType.SELECTED_GRIP,
     ExtendedSnapType.ROTATION_PIVOT,      // ADR-397: rotation centre — highest precision while rotating
     // ADR-370: the 3 always-on BIM structural characteristic snaps run FIRST (right after the
     // rotation pivot), BEFORE the generic discrete engines (INTERSECTION/ENDPOINT/MIDPOINT/NEAREST).
@@ -269,6 +276,7 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     [ExtendedSnapType.TEXT]:                10, // ADR-378 Phase 3: text 8-point snap (insertion/corners/center/edges)
     [ExtendedSnapType.ROTATION_PIVOT]:      12, // ADR-397: rotation centre — wide grab (easy magnetism to ⊙)
     [ExtendedSnapType.ROTATION_GRIP]:       10, // ADR-397: rotating entity grips — AutoCAD APERTURE default
+    [ExtendedSnapType.SELECTED_GRIP]:       12, // ADR-580: selected objects' grips — slightly wider grab (magnetise onto the grip you aim for)
   }
 };
 

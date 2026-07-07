@@ -327,6 +327,25 @@ export function SnapShape({ type, color }: { type: string; color: string }) {
         </svg>
       );
 
+    // ▪ SELECTED_GRIP: Square + centre dot — ADR-580 selected-object grip snap.
+    // Reads as "the grip you are aiming for": the ■ grip square (echoes the on-canvas grip
+    // handle) with a filled centre so it disambiguates from a plain ■ endpoint underneath it.
+    case 'selected_grip':
+      return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <rect
+            x={strokeWidth / 2}
+            y={strokeWidth / 2}
+            width={size - strokeWidth}
+            height={size - strokeWidth}
+            fill="none"
+            stroke={color}
+            strokeWidth={strokeWidth}
+          />
+          <circle cx={half} cy={half} r={getNodeDotRadius()} fill={color} />
+        </svg>
+      );
+
     // Default: X shape (intersection style) - fallback
     default:
       return (

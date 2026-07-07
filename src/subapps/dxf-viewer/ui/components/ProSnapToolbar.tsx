@@ -54,6 +54,8 @@ const SNAP_MODE_KEYS: Record<ExtendedSnapType, string> = {
   // ADR-397: rotation snap modes — contextual (not shown in the toolbar lists), keyed for type completeness + future panel use.
   [ExtendedSnapType.ROTATION_PIVOT]: 'rotationPivot',
   [ExtendedSnapType.ROTATION_GRIP]: 'rotationGrip',
+  // ADR-580: selected-object grips snap — contextual/always-on (not a toolbar toggle), keyed for type completeness.
+  [ExtendedSnapType.SELECTED_GRIP]: 'selectedGrip',
 };
 
 // 🏢 ENTERPRISE: Get translated snap label

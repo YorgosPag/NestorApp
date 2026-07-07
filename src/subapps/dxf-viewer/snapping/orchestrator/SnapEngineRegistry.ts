@@ -53,6 +53,8 @@ import { MepConnectorSnapEngine } from '../engines/MepConnectorSnapEngine';
 import { TextSnapEngine } from '../engines/TextSnapEngine';
 // ADR-397: rotation snap engines (pivot ⊙ + rotating entity grips — contextual, read RotationSnapStore)
 import { RotationPivotSnapEngine, RotationGripSnapEngine } from '../engines/RotationPointSnapEngine';
+// ADR-580: selected objects' grips snap (contextual — reads AllGripsStore; precedence over underlying entities)
+import { SelectedGripSnapEngine } from '../engines/SelectedGripSnapEngine';
 
 interface Viewport {
   worldPerPixelAt(p: Point2D): number;
@@ -120,6 +122,9 @@ export class SnapEngineRegistry {
     // Contextual: both read RotationSnapStore, which is empty outside a rotation op.
     this.engines.set(ExtendedSnapType.ROTATION_PIVOT, new RotationPivotSnapEngine());
     this.engines.set(ExtendedSnapType.ROTATION_GRIP, new RotationGripSnapEngine());
+    // ADR-580: selected objects' grips (priority -3 — precedence over underlying entities).
+    // Contextual: reads AllGripsStore, empty when nothing selected → zero cost.
+    this.engines.set(ExtendedSnapType.SELECTED_GRIP, new SelectedGripSnapEngine());
   }
 
   initializeEnginesWithEntities(entities: Entity[], settings: ProSnapSettings): void {

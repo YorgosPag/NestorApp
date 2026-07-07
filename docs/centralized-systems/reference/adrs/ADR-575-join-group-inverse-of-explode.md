@@ -190,6 +190,39 @@ member → λαβές + MOVE/ROTATION σε **μία μόνο** γραμμή (mis
   `type:'group'` (best-effort τώρα, no-op αν το command δεν κλωνοποιεί group).
 
 ## Changelog
+- **2026-07-07** — **Phase 3β: ENTER-GROUP + in-place επεξεργασία member (Revit «Edit Group» / Figma / C4D null).**
+  Approach ΕΓΚΕΚΡΙΜΕΝΟ (Giorgio): **in-place edit** — η ομάδα ΜΕΝΕΙ ακέραια· μέσα στο active group τα direct
+  μέλη κρατούν το ΔΙΚΟ τους id και το command/SceneManager layer γίνεται member-aware. ΟΧΙ temporary ungroup.
+  **Μηχανική (SSoT, additive):**
+  (1) **Conditional tagging** — το `expandGroupEntity(group, allEntities, activeGroupId?)` δέχεται τον active id
+     ως **param** (pure, ΟΧΙ store-read): όταν `group.id === activeGroupId` τα direct μέλη **δεν** re-tag-άρονται
+     (κρατούν own id → hover/selection/grips δουλεύουν ατομικά)· τα υπόλοιπα (incl. nested group μέσα στο active)
+     μένουν tagged με το container id (ένα drill-in level τη φορά). Threaded μέσω
+     `convertSceneToDxfWithCache(..., activeGroupId)` + `convertScene(scene, activeGroupId?)`· ο **arrayCache
+     bypass-άρεται ΜΟΝΟ για το active group** (πάντα fresh untagged· 1 group → μηδαμινό κόστος). Τα render/grip
+     **leaves** (`DxfCanvasSubscriber`, `GripRegistryPublisher`) self-subscribe `useActiveGroupId()` και το περνούν
+     ως 2ο arg → ο orchestrator (CanvasSection) ΔΕΝ re-render-άρει (ADR-040-safe, low-freq).
+  (2) **Member-aware writeback (SSoT)** — νέο `systems/group/group-member-scene-access.ts`:
+     `findEntityOrGroupMember` / `updateEntityOrGroupMember` / `updateEntitiesOrGroupMembers` (recursive, immutable:
+     changed member → νέο members array → νέο GroupEntity ref → scene subscription + persist serializer το βλέπουν).
+     Ο `grip-scene-manager-adapter` (getEntity/updateEntity/updateVertex/getVertices/updateEntities) delegate-άρει
+     εκεί ΜΙΑ φορά — ΟΧΙ σκόρπια per-command. Always-on descent ασφαλές (member id addressable μόνο όσο active).
+  (3) **Gizmo suppression** — ο `grip-registry` δέχεται `activeGroupStack`· όσο `isInside(group.id)` το whole-group
+     gizmo suppress-άρεται (τα handles τα δίνουν τα member grips μέσω του own-id path).
+  (4) **INPUT** — ENTER: double-click σε επιλεγμένο GROUP → `enterGroup(group.id)` (selection-driven, mirror
+     `useTextDoubleClickEditor`, στο `useCanvasSectionUI`, raw scene @ event-time). EXIT: **ESC bus** νέο slot
+     `ESC_PRIORITY.GROUP_EXIT` (275, μεταξύ GRIP_SELECTION 300 & ENTITY_SELECTION 250) → `useGroupExitEscape`
+     (pop 1 level + re-select το exited group). ⏳ **click-outside exit = DEFERRED** (αγγίζει το ADR-040 hot
+     `mouse-handler-up` selection path· Revit/Figma εξ ίσου βγαίνουν με Esc — dedicated pass).
+  (5) **VISUAL** — `StatusBarActiveGroupLeaf` breadcrumb «Επεξεργασία ομάδας · Esc για έξοδο» (+ «επίπεδο N» nested),
+     micro-leaf στο `useActiveGroupStack` (i18n el/en). ⏳ **fade non-active (group isolate) = DEFERRED** (render dim
+     path, mirror IsolateEffectsStore — polish, dedicated pass).
+  **Tests:** `group-member-scene-access.test.ts` (find/update/batch/nested), `group-expander-active.test.ts`
+  (active vs tagged), `grip-adapter-member-writeback.test.ts` (getEntity/updateEntity/updateVertex/getVertices
+  member-aware + top-level regression). **75/75 group+escape + 170/170 grip+conversion + 5/5 adapter GREEN.**
+  ΟΧΙ tsc (N.17). Render/grip leaf + conversion + grip-registry touch → ADR-040 §changelog (CHECK 6B/6D).
+  🔴 εκκρεμεί browser-verify (double-click enter → member grips· grip-drag member → writeback στο container·
+  Esc → step-out + reselect· breadcrumb).
 - **2026-07-07** — **Phase 3α: σημασιολογία HOVER/SELECTION ομάδας (Figma/Revit/C4D).** ΡΙΖΑ (audit): κάθε
   expanded member κουβαλά το ΙΔΙΟ `group.id`, οπότε τα interactive overlays του καμβά (`dxf-canvas-renderer`
   §1b) που κάνουν `entityMap.get(id)` κρατούσαν **ΕΝΑ αυθαίρετο member** → (Bug 1) hover ομάδας φώτιζε

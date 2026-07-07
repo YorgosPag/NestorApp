@@ -406,7 +406,10 @@
   },
   "groupSelection": {
     "label": "Group · {count, plural, one {# object} other {# objects}}",
-    "statusMultiple": "{count, plural, one {# group} other {# groups}}"
+    "statusMultiple": "{count, plural, one {# group} other {# groups}}",
+    "editingActive": "Editing group",
+    "editingHint": "Esc to exit",
+    "editingNested": "Editing group · level {level}"
   },
   "tools": {
     "xline": {

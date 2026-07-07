@@ -29,6 +29,9 @@ import type { SceneModel } from '../../types/scene';
 import type { Overlay } from '../../overlays/types';
 import { useGripRegistry } from '../../hooks/grips/grip-registry';
 import { collectGroupEntities } from '../../systems/group/group-selection-bounds';
+// ADR-575 §enter-group — the drill-in stack: convert the active group's members with
+// their own id (so member grips build) AND suppress the whole-group gizmo while inside.
+import { useActiveGroupId, useActiveGroupStack } from '../../systems/group/useActiveGroup';
 import { useSelectedEntityIds, useSelectionByType } from '../../systems/selection/useSelectedEntities';
 import { useLevelScene } from '../../systems/scene/useSceneSelectors';
 import { AllGripsStore } from '../../systems/grip/AllGripsStore';
@@ -60,9 +63,14 @@ export const GripRegistryPublisher: React.FC<GripRegistryPublisherProps> = ({
   // leaf uses (see header), so a just-created entity's grips reach AllGripsStore on the
   // frame it is painted. Falls back to the orchestrator prop before the store has the level.
   const liveSceneModel = useLevelScene(sceneLevelId);
+  // ADR-575 §enter-group — drill-in level: convert the active group's members with their
+  // own id so the grip registry builds the entered member's grips (not the whole-group
+  // gizmo). Low-freq → ADR-040-safe; only this leaf re-renders.
+  const activeGroupId = useActiveGroupId();
+  const activeGroupStack = useActiveGroupStack();
   const reactiveScene = useMemo(
-    () => (liveSceneModel ? convertScene(liveSceneModel) : dxfScene),
-    [liveSceneModel, convertScene, dxfScene],
+    () => (liveSceneModel ? convertScene(liveSceneModel, activeGroupId) : dxfScene),
+    [liveSceneModel, convertScene, dxfScene, activeGroupId],
   );
   // ADR-575 §8 — GROUP containers in the live scene, keyed by id. A selected group
   // renders as ONE unit (dashed box + «Ομάδα · N» overlay + shared gizmo), so the
@@ -74,7 +82,7 @@ export const GripRegistryPublisher: React.FC<GripRegistryPublisherProps> = ({
     () => collectGroupEntities(liveSceneModel?.entities),
     [liveSceneModel],
   );
-  const allGrips = useGripRegistry({ dxfScene: reactiveScene, selectedEntityIds, selectedOverlays, groupEntities });
+  const allGrips = useGripRegistry({ dxfScene: reactiveScene, selectedEntityIds, selectedOverlays, groupEntities, activeGroupStack });
 
   // Publish the full grip set for event-time hit-testing.
   useEffect(() => { AllGripsStore.set(allGrips); }, [allGrips]);

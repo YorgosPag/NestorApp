@@ -64,8 +64,12 @@ export interface UseDxfSceneConversionReturn {
    * (subscribed to the scene SSoT) convert a fresh snapshot IMMEDIATELY at commit
    * time — without re-rendering this orchestrator — while unchanged entities stay
    * reference-identical (shared cache → no divergence, no O(N) re-spread).
+   *
+   * ADR-575 §enter-group — `activeGroupId` is passed by the render/grip LEAVES (which
+   * self-subscribe to the ActiveGroupStore), not by this orchestrator, so entering a
+   * group re-tags only the active group's members without re-rendering CanvasSection.
    */
-  convertScene: (scene: SceneModel | null) => DxfScene;
+  convertScene: (scene: SceneModel | null, activeGroupId?: string | null) => DxfScene;
 }
 
 // ============================================================================
@@ -85,6 +89,7 @@ function convertSceneToDxfWithCache(
   userDrawingUnits: SceneUnits | undefined,
   cache: EntityCache,
   arrayCache: ArrayCache,
+  activeGroupId?: string | null,
 ): DxfScene {
   const entities = scene?.entities ?? [];
   const layers = scene?.layersById ?? {};
@@ -114,15 +119,20 @@ function convertSceneToDxfWithCache(
 
     // ADR-575: GroupEntity expands 1→N members before conversion (identity container).
     if (isGroupEntity(entity)) {
-      let items = arrayCache.get(entity);
+      // §enter-group: the ACTIVE drill-in group is expanded FRESH every render (its
+      // direct members keep their own id for in-place edit — see expandGroupEntity),
+      // so a cache entry keyed by the container obj can never serve a stale tagged
+      // result when active toggles. Only ONE group bypasses the cache → negligible.
+      const isActiveGroup = activeGroupId != null && entity.id === activeGroupId;
+      let items = isActiveGroup ? undefined : arrayCache.get(entity);
       if (!items) {
-        const expanded = expandGroupEntity(entity, entities as Entity[]);
+        const expanded = expandGroupEntity(entity, entities as Entity[], activeGroupId);
         items = expanded.reduce<DxfEntityUnion[]>((acc, e) => {
           const c = convertEntity(e, layers, layersById);
           if (c) acc.push(c);
           return acc;
         }, []);
-        if (items.length > 0) arrayCache.set(entity, items);
+        if (!isActiveGroup && items.length > 0) arrayCache.set(entity, items);
       }
       for (const item of items) converted.push(item);
       continue;
@@ -242,8 +252,8 @@ export function useDxfSceneConversion({
   // commit time without re-rendering this orchestrator. Stable across scene edits
   // (deps: userDrawingUnits only) so the leaf's useMemo key stays effective.
   const convertScene = useCallback(
-    (scene: SceneModel | null): DxfScene =>
-      convertSceneToDxfWithCache(scene, userDrawingUnits, cacheRef.current, arrayCacheRef.current),
+    (scene: SceneModel | null, activeGroupId?: string | null): DxfScene =>
+      convertSceneToDxfWithCache(scene, userDrawingUnits, cacheRef.current, arrayCacheRef.current, activeGroupId),
     [userDrawingUnits],
   );
 

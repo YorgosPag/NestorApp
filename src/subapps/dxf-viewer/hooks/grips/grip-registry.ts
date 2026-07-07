@@ -184,6 +184,13 @@ interface UseGripRegistryParams {
    * bounds). The Map subsumes the id set (`.has(id)` still gates suppression).
    */
   groupEntities?: ReadonlyMap<string, GroupEntity>;
+  /**
+   * ADR-575 §enter-group — the active drill-in stack. While INSIDE a group (its id is on
+   * the stack), its whole-group gizmo is suppressed so the entered member's own grips
+   * show instead (the member carries its own id in the converted scene via active-group
+   * tagging → the normal per-entity grip path builds them). Revit «Edit Group».
+   */
+  activeGroupStack?: readonly string[];
 }
 
 /**
@@ -195,6 +202,7 @@ export function useGripRegistry({
   selectedEntityIds,
   selectedOverlays,
   groupEntities,
+  activeGroupStack,
 }: UseGripRegistryParams): UnifiedGripInfo[] {
   const { showMidpoints, showCenters, showQuadrants, maxGripsPerEntity, gripObjLimit } = useGripStyle();
 
@@ -226,7 +234,12 @@ export function useGripRegistry({
         // showMidpoints/showCenters gate cannot hide them; never suppressed by the
         // ≥2-object multi-select rule (a group is ONE selected id).
         const group = groupEntities?.get(entityId);
-        if (group) {
+        // ADR-575 §enter-group — while INSIDE this group, suppress its whole-group gizmo:
+        // the entered member is edited via its own grips (own id in the converted scene).
+        // Falling through with `group` still truthy would emit the gizmo AND the member
+        // grips together. `undefined` group (a member's own id) already takes the normal
+        // per-entity path below, so only the still-selected container id needs this guard.
+        if (group && !(activeGroupStack?.includes(entityId))) {
           const bounds = computeGroupSelectionBounds(group);
           if (bounds) {
             for (const grip of getGroupGizmoGrips(group, bounds)) {
@@ -277,5 +290,5 @@ export function useGripRegistry({
     }
 
     return result;
-  }, [dxfScene, selectedEntityIds, selectedOverlays, groupEntities, showMidpoints, showCenters, showQuadrants, maxGripsPerEntity, gripObjLimit]);
+  }, [dxfScene, selectedEntityIds, selectedOverlays, groupEntities, activeGroupStack, showMidpoints, showCenters, showQuadrants, maxGripsPerEntity, gripObjLimit]);
 }

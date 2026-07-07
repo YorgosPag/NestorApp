@@ -149,6 +149,16 @@ export const ESC_PRIORITY = {
   GRIP_SELECTION: 300,
 
   /**
+   * P275 — Active group drill-in (ADR-575 §enter-group).
+   *
+   * While INSIDE a group (Revit «Edit Group» / Figma), ESC steps OUT one level and
+   * re-selects the exited group — BEFORE the plain deselect at ENTITY_SELECTION (250),
+   * so the first ESC leaves the group (selecting it) and the next ESC deselects it.
+   * Below GRIP_SELECTION (300) so clearing selected grips still wins first.
+   */
+  GROUP_EXIT: 275,
+
+  /**
    * P250 — Entity selection non-empty (DXF + overlays).
    *
    * AutoCAD/BricsCAD pattern: ESC deselects after all higher contexts cleared.

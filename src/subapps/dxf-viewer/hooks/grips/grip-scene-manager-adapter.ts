@@ -19,6 +19,16 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ISceneManager, SceneEntity } from '../../core/commands/interfaces';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import type { AnySceneEntity } from '../../types/scene';
+import type { Entity } from '../../types/entities';
+// ADR-575 §enter-group — member-aware read/write SSoT: an id may be a top-level entity
+// OR a member of a GROUP container the user has drilled into (in-place edit). ONE place
+// resolves + immutably writes back the member, so every grip command edits an entered
+// member without re-implementing the container descent.
+import {
+  findEntityOrGroupMember,
+  updateEntityOrGroupMember,
+  updateEntitiesOrGroupMembers,
+} from '../../systems/group/group-member-scene-access';
 import type { DxfCommitDeps } from './unified-grip-types';
 
 // ============================================================================
@@ -66,7 +76,8 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
     },
     getEntity: (id: string) => {
       const scene = getLevelScene(currentLevelId);
-      return scene?.entities?.find((e) => e.id === id) as SceneEntity | undefined;
+      // ADR-575 — member-aware: also resolves an id INSIDE an entered group container.
+      return (findEntityOrGroupMember(scene?.entities as readonly Entity[] | undefined, id) ?? undefined) as SceneEntity | undefined;
     },
     getEntities: () => {
       const scene = getLevelScene(currentLevelId);
@@ -75,21 +86,25 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
     updateEntity: (id: string, updates: Partial<SceneEntity>) => {
       const scene = getLevelScene(currentLevelId);
       if (scene) {
+        // ADR-575 — member-aware writeback (top-level OR inside an entered group).
         setLevelScene(currentLevelId, {
           ...scene,
-          entities: scene.entities.map((e) =>
-            e.id === id ? ({ ...e, ...updates } as AnySceneEntity) : e
-          ),
+          entities: updateEntityOrGroupMember(
+            scene.entities as readonly Entity[],
+            id,
+            (e) => ({ ...e, ...updates } as unknown as Entity),
+          ) as unknown as AnySceneEntity[],
         });
       }
     },
     updateVertex: (id: string, vertexIndex: number, position: Point2D) => {
       const scene = getLevelScene(currentLevelId);
       if (!scene) return;
+      // ADR-575 — member-aware writeback: the per-type vertex transform runs on the
+      // resolved entity whether it is top-level or a member of an entered group.
       setLevelScene(currentLevelId, {
         ...scene,
-        entities: scene.entities.map((e) => {
-          if (e.id !== id) return e;
+        entities: updateEntityOrGroupMember(scene.entities as readonly Entity[], id, (e) => {
           // Polyline/polygon: has vertices array
           if ('vertices' in e && Array.isArray(e.vertices)) {
             const vertices = [...e.vertices] as Point2D[];
@@ -152,7 +167,8 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
     },
     getVertices: (id: string): Point2D[] | undefined => {
       const scene = getLevelScene(currentLevelId);
-      const entity = scene?.entities?.find((e) => e.id === id);
+      // ADR-575 — member-aware: resolve an entered group member by its own id too.
+      const entity = findEntityOrGroupMember(scene?.entities as readonly Entity[] | undefined, id);
       if (!entity) return undefined;
       if ('vertices' in entity && Array.isArray(entity.vertices)) {
         return entity.vertices as Point2D[];
@@ -206,12 +222,14 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
     updateEntities: (updates: ReadonlyMap<string, Partial<SceneEntity>>) => {
       const scene = getLevelScene(currentLevelId);
       if (!scene) return;
+      // ADR-575 — member-aware batch writeback: patches also reach members inside an
+      // entered group (multi-grip move of an in-place member). Build a per-id patch-fn
+      // map once; the SSoT descends into group containers.
+      const patchFns = new Map<string, (e: Entity) => Entity>();
+      updates.forEach((patch, id) => patchFns.set(id, (e) => ({ ...e, ...patch } as unknown as Entity)));
       setLevelScene(currentLevelId, {
         ...scene,
-        entities: scene.entities.map((e) => {
-          const patch = updates.get(e.id);
-          return patch ? ({ ...e, ...patch } as AnySceneEntity) : e;
-        }),
+        entities: updateEntitiesOrGroupMembers(scene.entities as readonly Entity[], patchFns) as unknown as AnySceneEntity[],
       });
     },
     getEntityIndex: (entityId: string): number => {

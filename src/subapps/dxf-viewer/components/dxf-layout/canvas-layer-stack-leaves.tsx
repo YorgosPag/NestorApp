@@ -33,6 +33,9 @@ import { useSelectedEntityIds } from '../../systems/selection/useSelectedEntitie
 // waiting for a coincidental orchestrator re-render. ONLY this leaf re-renders.
 import { useLevelScene } from '../../systems/scene/useSceneSelectors';
 import { collectGroupEntities } from '../../systems/group/group-selection-bounds';
+// ADR-575 §enter-group — leaf self-subscribes the drill-in level so the active group's
+// members are re-tagged with their own id (in-place edit) without re-rendering CanvasSection.
+import { useActiveGroupId } from '../../systems/group/useActiveGroup';
 import type { SceneModel } from '../../types/scene';
 // ADR-550 — the leaf self-subscribes the store-driven transform tools (scale / stretch) so their
 // originals dim to ghosts while the real moving copy is shown (mirror of `movePreviewActive`).
@@ -227,12 +230,18 @@ export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
   // this leaf reuse the cached ref (no needless rebuild). Falls back to the prop
   // `scene` before the store has the level (first paint).
   const liveSceneModel = useLevelScene(sceneLevelId);
-  // Recompute ONLY on a real scene mutation (liveSceneModel ref) or units change
-  // (convertScene) — NOT on this leaf's hover/selection re-renders → no needless
-  // bitmap rebuild. Falls back to the orchestrator prop before the store has the level.
+  // ADR-575 §enter-group — drill-in level. Changing it (double-click enter / Esc exit)
+  // re-tags only the active group's members with their own id so the entered member is
+  // individually paintable/hover-able/selectable (Revit «Edit Group»). Low-freq (one
+  // transition per gesture) → ADR-040-safe; only this leaf re-renders, not the orchestrator.
+  const activeGroupId = useActiveGroupId();
+  // Recompute ONLY on a real scene mutation (liveSceneModel ref), units change
+  // (convertScene) or a drill-in enter/exit (activeGroupId) — NOT on this leaf's
+  // hover/selection re-renders → no needless bitmap rebuild. Falls back to the
+  // orchestrator prop before the store has the level.
   const liveScene = useMemo(
-    () => (liveSceneModel ? convertScene(liveSceneModel) : null),
-    [liveSceneModel, convertScene],
+    () => (liveSceneModel ? convertScene(liveSceneModel, activeGroupId) : null),
+    [liveSceneModel, convertScene, activeGroupId],
   );
   const reactiveScene = liveScene ?? scene;
   // 🚀 PERF: Subscribe to guide store DIRECTLY here (micro-leaf pattern, ADR-040).

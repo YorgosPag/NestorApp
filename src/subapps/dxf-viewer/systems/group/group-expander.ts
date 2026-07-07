@@ -23,8 +23,8 @@ import { expandArrayEntity } from '../array/array-expander';
 import type { PathParams } from '../array/types';
 
 /** Expand a single member, recursing into nested GROUP/ARRAY containers. */
-function expandMember(member: Entity, allEntities?: readonly Entity[]): Entity[] {
-  if (isGroupEntity(member)) return expandGroupEntity(member, allEntities);
+function expandMember(member: Entity, allEntities?: readonly Entity[], activeGroupId?: string | null): Entity[] {
+  if (isGroupEntity(member)) return expandGroupEntity(member, allEntities, activeGroupId);
   if (isArrayEntity(member)) {
     const pathEnt = member.arrayKind === 'path' && member.params.kind === 'path' && allEntities
       ? allEntities.find((e) => e.id === (member.params as PathParams).pathEntityId)
@@ -35,17 +35,29 @@ function expandMember(member: Entity, allEntities?: readonly Entity[]): Entity[]
 }
 
 /**
- * Expand a GROUP into rendered/snap-candidate items, each re-tagged with the
- * GROUP's `id` (so a click on ANY member selects the whole group — Figma/Revit
- * semantics). `allEntities` is the scene list, used only to resolve a nested path
- * array's external path entity.
+ * Expand a GROUP into rendered/snap-candidate items. Each item is normally re-tagged
+ * with the GROUP's `id` (so a click on ANY member selects the whole group — Figma/Revit
+ * semantics). `allEntities` is the scene list, used only to resolve a nested path array's
+ * external path entity.
+ *
+ * ADR-575 §enter-group (in-place edit): when this group IS the active drill-in group
+ * (`group.id === activeGroupId`), its DIRECT members KEEP their own id instead — so
+ * hit-test / hover / selection / grips resolve to the individual member the user is
+ * editing (Revit «Edit Group»). Non-active groups (incl. a nested group inside the
+ * active one) stay tagged with their container id, so one drill-in level is editable at
+ * a time. Pure — the active id is threaded as a param, never read from a store here.
  */
-export function expandGroupEntity(group: GroupEntity, allEntities?: readonly Entity[]): Entity[] {
+export function expandGroupEntity(
+  group: GroupEntity,
+  allEntities?: readonly Entity[],
+  activeGroupId?: string | null,
+): Entity[] {
   if (!group.members || group.members.length === 0) return [];
+  const isActive = activeGroupId != null && group.id === activeGroupId;
   const result: Entity[] = [];
   for (const member of group.members) {
-    for (const item of expandMember(member, allEntities)) {
-      result.push({ ...item, id: group.id });
+    for (const item of expandMember(member, allEntities, activeGroupId)) {
+      result.push(isActive ? item : { ...item, id: group.id });
     }
   }
   return result;

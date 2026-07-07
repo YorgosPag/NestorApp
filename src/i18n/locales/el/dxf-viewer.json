@@ -406,7 +406,10 @@
   },
   "groupSelection": {
     "label": "Ομάδα · {count, plural, one {# αντικείμενο} other {# αντικείμενα}}",
-    "statusMultiple": "{count, plural, one {# ομάδα} other {# ομάδες}}"
+    "statusMultiple": "{count, plural, one {# ομάδα} other {# ομάδες}}",
+    "editingActive": "Επεξεργασία ομάδας",
+    "editingHint": "Esc για έξοδο",
+    "editingNested": "Επεξεργασία ομάδας · επίπεδο {level}"
   },
   "tools": {
     "xline": {

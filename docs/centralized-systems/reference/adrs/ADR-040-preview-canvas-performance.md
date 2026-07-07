@@ -3772,3 +3772,23 @@ Bitmap cache άθικτο (SVG overlay, ΟΧΙ DXF render pass — rule 3 N/A). 
 per-member grips ενός group container (η ομάδα = ενιαία μονάδα). Αρχεία: `GroupSelectionOverlaySubscriber.tsx`
 (NEW), `GroupSelectionOverlay.tsx` (NEW), `CanvasLayerStack.tsx` (mount), `GripRegistryPublisher.tsx`,
 `grip-registry.ts`. Staged για CHECK 6B/6D. ΟΧΙ tsc (N.17).
+
+## 2026-07-07 (b): ADR-575 Phase 3β — ENTER-GROUP conditional tagging (leaf-scoped, CHECK 6B/6D stage)
+
+**Τι:** in-place group editing — όσο ο χρήστης είναι «μέσα» σε group, τα direct μέλη του παίρνουν
+το ΔΙΚΟ τους id στο converted scene (αντί για re-tag με `group.id`), ώστε hover/selection/grips να
+δουλεύουν ατομικά (Revit «Edit Group»). Το `activeGroupId` περνά ως **param** στο pure
+`convertScene(scene, activeGroupId?)` / `convertSceneToDxfWithCache(..., activeGroupId)` /
+`expandGroupEntity(group, all, activeGroupId?)`. Ο per-entity WeakMap arrayCache **bypass-άρεται ΜΟΝΟ
+για το active group** (πάντα fresh untagged· 1 group → μηδαμινό κόστος).
+
+**ADR-040 συμμόρφωση:** το `activeGroupId` το διαβάζουν τα **leaves** (`DxfCanvasSubscriber`,
+`GripRegistryPublisher`) μέσω `useActiveGroupId()` (self-subscribe) και το threadάρουν στο `convertScene`
+— ο orchestrator **CanvasSection ΔΕΝ αποκτά νέα subscription** (cardinal rule #1)· **CHECK 6C safe**
+(η `useSyncExternalStore` ζει στο `useActiveGroup` leaf hook). Χαμηλή συχνότητα (ένα enter/exit ανά
+gesture, ΟΧΙ 60fps). **Bitmap cache key ΑΝΕΓΓΙΧΤΟ** (rule #3): το `activeGroupId` αλλάζει το ΙΔΙΟ το
+`DxfScene` (member παίρνει own id) → η αλλαγή scene-ref invalidate-άρει το bitmap φυσιολογικά (ΟΧΙ νέο
+πεδίο στο cache key). Ο `grip-registry` πήρε `activeGroupStack` (gizmo suppression όσο inside). Αρχεία:
+`useDxfSceneConversion.ts`, `group-expander.ts`, `group-member-scene-access.ts` (NEW SSoT),
+`grip-scene-manager-adapter.ts`, `grip-registry.ts`, `canvas-layer-stack-leaves.tsx`,
+`GripRegistryPublisher.tsx`, `useActiveGroup.ts`. Staged για CHECK 6B/6D. ΟΧΙ tsc (N.17).
