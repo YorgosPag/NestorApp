@@ -30,6 +30,7 @@ export const TEXT_RIBBON_KEYS = {
   properties: {
     layer: 'text.properties.layer',
     annotationScale: 'text.properties.annotationScale',
+    rotation: 'text.properties.rotation',
   },
 } as const;
 
@@ -49,4 +50,5 @@ export type TextRibbonCommandKey =
   | typeof TEXT_RIBBON_KEYS.align.right
   | typeof TEXT_RIBBON_KEYS.paragraph.lineSpacing
   | typeof TEXT_RIBBON_KEYS.properties.layer
-  | typeof TEXT_RIBBON_KEYS.properties.annotationScale;
+  | typeof TEXT_RIBBON_KEYS.properties.annotationScale
+  | typeof TEXT_RIBBON_KEYS.properties.rotation;

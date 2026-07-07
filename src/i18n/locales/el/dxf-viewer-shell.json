@@ -2381,7 +2381,8 @@
         },
         "properties": {
           "layer": "Επίπεδο",
-          "annotationScale": "Κλίμακα Σχολιασμού"
+          "annotationScale": "Κλίμακα Σχολιασμού",
+          "rotation": "Περιστροφή"
         },
         "insert": {
           "tokens": "Χαρακτήρες",

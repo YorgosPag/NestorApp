@@ -49,6 +49,15 @@ const TRACKING_OPTIONS = [
   { value: '1.50', labelKey: '1.50', isLiteralLabel: true },
 ] as const;
 
+const ROTATION_OPTIONS = [
+  { value: '0', labelKey: '0°', isLiteralLabel: true },
+  { value: '45', labelKey: '45°', isLiteralLabel: true },
+  { value: '90', labelKey: '90°', isLiteralLabel: true },
+  { value: '135', labelKey: '135°', isLiteralLabel: true },
+  { value: '180', labelKey: '180°', isLiteralLabel: true },
+  { value: '270', labelKey: '270°', isLiteralLabel: true },
+] as const;
+
 const FONT_HEIGHT_OPTIONS = [
   { value: '1', labelKey: '1.0', isLiteralLabel: true },
   { value: '2.5', labelKey: '2.5', isLiteralLabel: true },
@@ -302,6 +311,20 @@ export const CONTEXTUAL_TEXT_EDITOR_TAB: RibbonTab = {
                 labelKey:
                   'ribbon.commands.textEditor.properties.annotationScale',
                 commandKey: TEXT_RIBBON_KEYS.properties.annotationScale,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'text.properties.rotation',
+                labelKey: 'ribbon.commands.textEditor.properties.rotation',
+                commandKey: TEXT_RIBBON_KEYS.properties.rotation,
+                comboboxWidthPx: 80,
+                options: ROTATION_OPTIONS,
+                // Rotation is a free degree value: allow negatives + decimals when typing
+                // (presets are the common 0/45/90… snaps; the live rotate-grip writes any°).
+                numericInput: { allowNegative: true, allowDecimal: true },
               },
             },
           ],

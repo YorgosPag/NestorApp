@@ -32,6 +32,9 @@ import { useSelectedEntityIds, usePrimarySelectedId, SelectedEntitiesStore } fro
 // whole subtree on every click). This null leaf already subscribes to the
 // selection, so the reactivity is correctly contained here.
 import { useTextToolbarSelectionSync } from '../ui/text-toolbar/hooks/useTextToolbarSelectionSync';
+// ADR-557 — live-preview reactivity leaf: pulses the ribbon field store when the grip-drag
+// publisher writes live height/widthFactor/rotation, so the Text-Editor tab tracks the drag.
+import { TextToolbarRibbonPreviewSyncMount } from '../ui/ribbon/context/TextToolbarRibbonPreviewSync';
 import { isBimEntity, isStairEntity } from '../types/entities';
 import type { SceneModel } from '../types/scene';
 import type { ToolType } from '../ui/toolbar/types';
@@ -103,7 +106,9 @@ export const SelectionSideEffectsHost = React.memo<SelectionSideEffectsHostProps
     }
   }, [primarySelectedId, currentScene, floatingRef]);
 
-  return null;
+  // ADR-557 — dedicated live-preview leaf (subscribes ONLY to the 3 grip-drag fields);
+  // isolates the 60fps re-render to this null child, not this selection host.
+  return <TextToolbarRibbonPreviewSyncMount />;
 });
 
 SelectionSideEffectsHost.displayName = 'SelectionSideEffectsHost';

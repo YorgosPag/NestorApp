@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * ADR-557 — live «Ύψος»/«Πλάτος» ribbon sync during a TEXT/MTEXT resize grip drag.
+ * ADR-557 — live «Ύψος»/«Πλάτος»/«Περιστροφή» ribbon sync during a TEXT/MTEXT resize
+ * or rotate grip drag.
  *
  * Pure DATA-SYNC leaf (NO canvas / NO RAF): while the user drags a text resize
  * handle, this reads the live `dragPreview`, projects the selected scene text to a
@@ -43,7 +44,6 @@ import { translatePoint } from '../../rendering/entities/shared/geometry-vector-
 import { useTextToolbarStore, type TextStylePreviewPatch } from '../../state/text-toolbar';
 import { useUniversalSelection } from '../../systems/selection';
 import { reconcileTextToolbarFromSelection } from '../../ui/text-toolbar/hooks/useTextToolbarSelectionSync';
-import { notifyRibbonFieldReaders } from '../../ui/ribbon/context/RibbonFieldStore';
 
 type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene' | 'currentLevelId'>;
 
@@ -57,7 +57,11 @@ export function useTextGripRibbonSync(props: UseTextGripRibbonSyncProps): void {
   const { dragPreview, levelManager } = props;
   // Redundant-write guard: skip `setPreview` when the mapped values are unchanged
   // from the previous frame (avoids re-render churn on axis-locked / sub-pixel moves).
-  const lastRef = useRef<{ height: number; widthFactor: number | null } | null>(null);
+  const lastRef = useRef<{
+    height: number | null;
+    widthFactor: number | null;
+    rotation: number | null;
+  } | null>(null);
   // Live pick-set (low-freq) — held in a ref so the drag-end reconcile can settle the
   // ribbon on the committed selection WITHOUT adding `selection` to the effect deps.
   const selection = useUniversalSelection();
@@ -79,9 +83,6 @@ export function useTextGripRibbonSync(props: UseTextGripRibbonSyncProps): void {
         const { currentLevelId } = levelManager;
         const scene = currentLevelId ? levelManager.getLevelScene(currentLevelId) ?? null : null;
         reconcileTextToolbarFromSelection(selectionRef.current.getIds(), scene);
-        // Pulse the ribbon leaves so the settle to committed values shows immediately
-        // (the provider does not subscribe to the store → no auto re-notify).
-        notifyRibbonFieldReaders();
       }
       return;
     }
@@ -104,28 +105,39 @@ export function useTextGripRibbonSync(props: UseTextGripRibbonSyncProps): void {
       ...(rotatePivot ? { pivot: rotatePivot } : {}),
     };
     const patch = applyTextGripDrag(dragPreview.textGripKind, input);
-    // Move / rotation-only patches do NOT change Ύψος/Πλάτος → nothing to live-update.
-    if (patch.height == null && patch.widthFactor == null) return;
-
-    // Map the patch → ribbon fields. `widthFactor` is written ONLY when the drag actually
-    // produced one (TEXT / hugging MTEXT); a frame-constrained MTEXT (`patch.width`, no
-    // `widthFactor`) live-updates Ύψος alone (ADR-557 decision #3 — avoids a jumpy Πλάτος).
-    const preview: TextStylePreviewPatch = { fontHeight: patch.height ?? dxfText.height };
+    // Map ONLY the fields this grip actually changed → «Ύψος» / «Πλάτος» / «Περιστροφή»:
+    //   resize corner/edge → height (+ widthFactor for TEXT / hugging MTEXT);
+    //   rotate            → rotation;
+    //   move-only         → none → nothing to live-update.
+    // `widthFactor` is written ONLY when the drag produced one — a frame-constrained MTEXT
+    // (`patch.width`, no `widthFactor`) live-updates Ύψος alone (ADR-557 decision #3: no
+    // jumpy Πλάτος that would snap back on commit).
+    const preview: TextStylePreviewPatch = {};
+    if (patch.height != null) preview.fontHeight = patch.height;
     if (patch.widthFactor != null) preview.widthFactor = patch.widthFactor;
+    if (patch.rotation != null) preview.rotation = patch.rotation;
+    if (preview.fontHeight == null && preview.widthFactor == null && preview.rotation == null) {
+      return;
+    }
 
-    const nextHeight = preview.fontHeight ?? dxfText.height;
+    // Redundant-write guard: skip `setPreview` when every mapped value matches last frame.
+    const nextHeight = preview.fontHeight ?? null;
     const nextWidthFactor = preview.widthFactor ?? null;
+    const nextRotation = preview.rotation ?? null;
     const prev = lastRef.current;
-    if (prev && prev.height === nextHeight && prev.widthFactor === nextWidthFactor) return;
-    lastRef.current = { height: nextHeight, widthFactor: nextWidthFactor };
+    if (
+      prev &&
+      prev.height === nextHeight &&
+      prev.widthFactor === nextWidthFactor &&
+      prev.rotation === nextRotation
+    ) {
+      return;
+    }
+    lastRef.current = { height: nextHeight, widthFactor: nextWidthFactor, rotation: nextRotation };
 
     // Grip-drag preview channel: raises `isPreviewing` (self-clearing microtask), so the
     // command bridge ignores it → no per-frame command / undo entry.
     useTextToolbarStore.getState().setPreview(preview);
-    // The provider reads the store via a getter (never re-renders on store writes), so the
-    // combobox leaves only refresh on a RibbonFieldStore notify. Pulse them now → «Ύψος» /
-    // «Πλάτος» track the drag frame-for-frame (signature cache re-renders only the 2 moved).
-    notifyRibbonFieldReaders();
     wasPreviewingRef.current = true;
   }, [dragPreview, levelManager]);
 }

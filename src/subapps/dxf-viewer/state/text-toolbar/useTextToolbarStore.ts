@@ -70,12 +70,14 @@ export const DEFAULT_TOOLBAR_VALUES: TextToolbarValues = {
 };
 
 /**
- * ADR-557 — the ONLY shape `setPreview` accepts: the 2 fields a text-resize grip
- * drag can change (`fontHeight` / `widthFactor`). Deliberately excludes rotation /
- * colour / etc. so the live grip-drag preview channel can never write anything but
- * the height/width the user is dragging.
+ * ADR-557 — the ONLY shape `setPreview` accepts: the fields a text-resize / rotate grip
+ * drag can change (`fontHeight` / `widthFactor` / `rotation`). Deliberately excludes
+ * colour / oblique / etc. so the live grip-drag preview channel can never write anything
+ * but the height/width/rotation the user is dragging.
  */
-export type TextStylePreviewPatch = Partial<Pick<TextToolbarValues, 'fontHeight' | 'widthFactor'>>;
+export type TextStylePreviewPatch = Partial<
+  Pick<TextToolbarValues, 'fontHeight' | 'widthFactor' | 'rotation'>
+>;
 
 interface TextToolbarStore extends TextToolbarValues {
   /**

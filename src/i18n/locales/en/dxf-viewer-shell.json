@@ -2381,7 +2381,8 @@
         },
         "properties": {
           "layer": "Layer",
-          "annotationScale": "Annotation Scale"
+          "annotationScale": "Annotation Scale",
+          "rotation": "Rotation"
         },
         "insert": {
           "tokens": "Characters",

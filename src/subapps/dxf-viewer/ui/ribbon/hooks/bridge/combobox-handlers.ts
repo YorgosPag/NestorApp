@@ -68,6 +68,12 @@ export function readComboboxState(
     const raw = values.tracking;
     return { value: raw === null ? null : raw.toFixed(2), options: [] };
   }
+  if (commandKey === TEXT_RIBBON_KEYS.properties.rotation) {
+    const raw = values.rotation;
+    // Round for display so the live rotate-grip drag reads as e.g. "45" / "44.99",
+    // never a long float tail; the preset options come from the command declaration.
+    return { value: raw === null ? null : String(Math.round(raw * 100) / 100), options: [] };
+  }
   if (commandKey === TEXT_RIBBON_KEYS.properties.layer) {
     return { value: values.layerId, options: buildLayerOptions(sources.layers) };
   }

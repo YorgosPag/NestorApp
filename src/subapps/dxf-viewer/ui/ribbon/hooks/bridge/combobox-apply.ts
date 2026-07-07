@@ -59,6 +59,11 @@ export function applyCombobox(
     if (n !== null && n > 0) setValue('tracking', n);
     return;
   }
+  if (commandKey === TEXT_RIBBON_KEYS.properties.rotation) {
+    const n = parseFiniteNumber(value);
+    if (n !== null) setValue('rotation', n); // any finite degree (negative / 0 allowed)
+    return;
+  }
   if (commandKey === TEXT_RIBBON_KEYS.properties.layer) {
     setValue('layerId', value);
     return;
