@@ -9,7 +9,8 @@
 import React, { useSyncExternalStore } from 'react';
 import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough, Ruler, MoveHorizontal, MoveDiagonal2, Triangle, CircleDot, Diameter, Spline, CircleSlash, MoveUpRight, Rows3, Equal, Palette, Check, Pencil, RotateCcw, RefreshCw, Settings, Type, Construction, DoorOpen, Columns3, SquareDashed, RectangleHorizontal, TableProperties, Boxes, FileDown, Thermometer, Flame, Droplet, ArrowUpToLine, ArrowDownToLine, Unlink2, Lightbulb, Fence, Server, Armchair, Split, Info, Plug, Printer, Frame, Merge, Group, Ungroup, Syringe } from 'lucide-react';
 // ADR-581 Φ6 — reactive 2-state σύριγγα icon (empty ⇄ full) driven by the brush store.
-import { subscribeMatchBrush, hasMatchBrushSource } from '../../../../systems/match-properties';
+// Direct module import (ΟΧΙ barrel) → ο ribbon icon chunk δεν τραβά command classes.
+import { subscribeMatchBrush, hasMatchBrushSource } from '../../../../systems/match-properties/match-brush-store';
 import { LineIcon } from '../../../toolbar/icons/LineIcon';
 import { CircleIcon } from '../../../toolbar/icons/CircleIcon';
 import { ArcIcon } from '../../../toolbar/icons/ArcIcon';
