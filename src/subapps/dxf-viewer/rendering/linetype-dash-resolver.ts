@@ -25,31 +25,47 @@
 import { scaleDashPattern } from '../config/text-rendering-config';
 import { resolveAnyLinetype } from '../config/linetype-aliases';
 import { resolveLinetype } from '../stores/LinetypeRegistry';
+import type { LinetypeDef } from '../config/linetype-iso-catalog';
 
 /** Minimum on-screen length (px) for a dot segment (DXF `0`). */
 export const MIN_DOT_PX = 0.5;
 
 /**
- * Resolve ANY linetype **name** to its mm pattern (positive=dash, negative=gap,
- * `0`=dot, `[]`=solid) — the app-wide name→pattern SSoT.
+ * Resolve ANY linetype **name** to its full `LinetypeDef` — the app-wide
+ * name→def SSoT. Every consumer that needs the definition (pattern + metadata),
+ * not just the raw pattern, MUST go through here so the catalog∪registry union is
+ * resolved in exactly ONE place.
  *
  * Two-tier lookup, both existing SSoTs (no new pattern data):
  *   1. `resolveAnyLinetype` (ADR-510 Unified catalog) — ISO base + density
- *      variants + legacy enums + BIM keys + case-insensitive DXF names. Returns
- *      a def (with `pattern`) for every built-in, incl. `Continuous` → `[]`.
+ *      variants (`Dashed2`/`DotX2`/…) + legacy enums + BIM keys + case-insensitive
+ *      DXF names. Returns a def for every built-in, incl. `Continuous`.
  *   2. `resolveLinetype` (runtime `LinetypeRegistry`) — user-created / `.lin` /
  *      DXF-import customs, which the pure catalog deliberately does NOT know.
  *
+ * Catalog wins on name collisions (canonical/standard names are authoritative,
+ * AutoCAD convention). Unknown / `ByLayer` / empty → `null` (caller falls back to
+ * `Continuous` / a solid line).
+ */
+export function resolveLinetypeDef(
+  name: string | null | undefined,
+): LinetypeDef | null {
+  return resolveAnyLinetype(name) ?? (name ? resolveLinetype(name) : null);
+}
+
+/**
+ * Resolve ANY linetype **name** to its mm pattern (positive=dash, negative=gap,
+ * `0`=dot, `[]`=solid) — the app-wide name→pattern SSoT. Thin derivation of
+ * `resolveLinetypeDef` (the catalog∪registry union lives there, once).
+ *
  * Unknown / `ByLayer` / empty → `[]` (caller renders a solid line). Centralised
- * here so the dim stroke resolver + linetype thumbnail share ONE resolution — no
- * duplicated "catalog-then-registry" fallback (ADR-510 §Boy-Scout).
+ * so the dim stroke resolver + linetype thumbnail + entity-style cascade share ONE
+ * resolution — no duplicated "catalog-then-registry" fallback (ADR-510 §Boy-Scout).
  */
 export function resolveLinetypePatternMm(
   name: string | null | undefined,
 ): ReadonlyArray<number> {
-  const known = resolveAnyLinetype(name);
-  if (known) return known.pattern;
-  return (name ? resolveLinetype(name)?.pattern : null) ?? [];
+  return resolveLinetypeDef(name)?.pattern ?? [];
 }
 
 /**

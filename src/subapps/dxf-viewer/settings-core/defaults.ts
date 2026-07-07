@@ -17,8 +17,7 @@ import { UI_COLORS, GRIP_WARM_COLOR, GRIP_HOT_COLOR } from '../config/color-conf
 // 🏢 SSoT base grip size
 import { GRIP_SIZE_DEFAULT } from '../config/grip-size-default';
 // ADR-510 Φ2D — unified linetype catalog SSoT (mm) + canonical resolver.
-import { resolveAnyDashMm } from '../config/linetype-aliases';
-import { dashMmToScreenPx } from '../rendering/linetype-dash-resolver';
+import { dashMmToScreenPx, resolveLinetypePatternMm } from '../rendering/linetype-dash-resolver';
 
 /**
  * ADR-510 Φ2D — normalises catalog mm patterns to the legacy preview-px scale
@@ -213,16 +212,21 @@ export const DASH_PATTERNS: Record<string, number[]> = {
 
 /**
  * ADR-510 Φ2D — legacy settings/preview dash array, now sourced from the unified
- * mm catalog (SSoT) instead of the local `DASH_PATTERNS`. The catalog mm pattern
- * is normalised to legacy preview-px via `LEGACY_PREVIEW_MM_TO_PX` (so a `dashed`
- * preview stays ≈ its previous size) and scaled by `dashScale` (CELTSCALE-like).
- * Reuses the canonical resolver (abs gaps, dot→min, solid→[]).
+ * name→pattern SSoT (`resolveLinetypePatternMm`, catalog∪registry) instead of the
+ * local `DASH_PATTERNS`. The mm pattern is normalised to legacy preview-px via
+ * `LEGACY_PREVIEW_MM_TO_PX` (so a `dashed` preview stays ≈ its previous size) and
+ * scaled by `dashScale` (CELTSCALE-like). Reuses the canonical resolver (abs gaps,
+ * dot→min, solid→[]).
+ *
+ * Boy-Scout (item B): switched catalog-only `resolveAnyDashMm` → the full
+ * `resolveLinetypePatternMm`, so previews of user-created / `.lin` custom linetypes
+ * (which the pure catalog does NOT know) no longer render as solid.
  *
  * Used by SVG previews + the legacy preview hook. The committed-entity canvas
  * path uses the zoom-aware `dashMmToScreenPx` directly (ADR-510 Φ2B/C).
  */
 export function getDashArray(lineType: string, dashScale: number = 1): number[] {
-  return dashMmToScreenPx(resolveAnyDashMm(lineType), LEGACY_PREVIEW_MM_TO_PX, dashScale);
+  return dashMmToScreenPx(resolveLinetypePatternMm(lineType), LEGACY_PREVIEW_MM_TO_PX, dashScale);
 }
 
 // ============================================================================

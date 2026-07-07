@@ -17,7 +17,8 @@
  *   ACI (1-255)           ▸ via getAciColor() palette
  *   legacy hex (`#rrggbb`) ▸ fallback
  *
- * Linetype SSoT: every name flows through `LinetypeRegistry.resolveLinetype()`.
+ * Linetype SSoT: every name flows through `resolveLinetypeDef()` (catalog∪registry
+ * union — so ISO density variants like `Dashed2`/`DotX2` AND user customs resolve).
  * Unknown names fall back to `DEFAULT_LINETYPE_NAME` ('Continuous').
  *
  * Lineweight SSoT: sentinels (-3 DEFAULT / -2 ByLayer / -1 ByBlock) are
@@ -26,7 +27,7 @@
 
 import type { SceneLayer } from '../../types/entities';
 import type { LineweightMm } from '../../types/entities';
-import { resolveLinetype } from '../../stores/LinetypeRegistry';
+import { resolveLinetypeDef } from '../../rendering/linetype-dash-resolver';
 import {
   DEFAULT_LINETYPE_NAME,
   type LinetypeDef,
@@ -144,15 +145,15 @@ function resolveLinetypeName(opts: ResolveOptions): { def: LinetypeDef; source: 
   const entName = entity.linetypeName;
 
   if (entName === 'ByBlock' && parentBlock?.linetypeName) {
-    const def = resolveLinetype(parentBlock.linetypeName);
+    const def = resolveLinetypeDef(parentBlock.linetypeName);
     if (def) return { def, source: 'block' };
   }
   if (entName && entName !== 'ByLayer' && entName !== 'ByBlock') {
-    const def = resolveLinetype(entName);
+    const def = resolveLinetypeDef(entName);
     if (def) return { def, source: 'entity' };
   }
   if (layer.linetype) {
-    const def = resolveLinetype(layer.linetype);
+    const def = resolveLinetypeDef(layer.linetype);
     if (def) return { def, source: 'layer' };
   }
   return { def: LINETYPE_ISO_CATALOG[DEFAULT_LINETYPE_NAME], source: 'default' };
