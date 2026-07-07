@@ -477,6 +477,14 @@ export function useRibbonLineToolBridge(
       if (visibilityKey === LINE_TOOL_PANEL_VISIBILITY_KEYS.chamferOptions) {
         return activeTool === 'chamfer';
       }
+      if (visibilityKey === LINE_TOOL_PANEL_VISIBILITY_KEYS.widthApplicable) {
+        // ADR-510 Φ3d — «Πλάτος» is polyline-only. Show it in draw-defaults mode (no
+        // selection → sets the NEXT polyline's default width) or when a width-capable
+        // polyline is selected; HIDE it for a selected plain LINE (or any non-polyline
+        // primitive), where the field is meaningless and the write silently skips.
+        const sel = resolveSelected();
+        return sel === null || isPolylineLike(sel.type);
+      }
       return true;
     },
     [resolveSelected, activeTool],

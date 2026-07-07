@@ -69,4 +69,22 @@ describe('ADR-510 Φ4g — CONTEXTUAL_LINE_TOOL_TAB modify reorg', () => {
       expect(button.type).not.toBe('combobox');
     }
   });
+
+  // ADR-510 Φ3d — «Πλάτος» (polyline-only) lives in its OWN visibility-gated panel so it
+  // self-hides for a selected plain LINE (where width is meaningless), mirroring the
+  // line-only Geometry panel.
+  it('isolates the polyline «Πλάτος» field into a widthApplicable-gated panel', () => {
+    const panel = panelById('line-width');
+    expect(panel?.visibilityKey).toBe(LINE_TOOL_PANEL_VISIBILITY_KEYS.widthApplicable);
+    expect(buttonsOf('line-width').map((b) => b.command.id)).toEqual(['lineToolStyle.width']);
+  });
+
+  it('leaves the always-visible «Εμφάνιση Γραμμής» panel free of the polyline width field', () => {
+    const appearanceKeys = buttonsOf('line-appearance').map((b) => b.command.commandKey);
+    expect(appearanceKeys).not.toContain('lineToolStyle.width');
+    // linetype / lineweight / scale (valid for a plain LINE) stay put.
+    expect(appearanceKeys).toEqual([
+      'lineToolStyle.linetype', 'lineToolStyle.lineweight', 'lineToolStyle.linetypeScale',
+    ]);
+  });
 });

@@ -33,6 +33,14 @@ export interface RectFrame {
   readonly rotationDeg: number;
   readonly halfWidth: number;
   readonly halfLength: number;
+  /**
+   * ADR-557 — optional horizontal SHEAR (local `x += shearX · y`), applied in the local
+   * frame BEFORE rotation. Turns the rectangle into a PARALLELOGRAM so a text box follows
+   * the AutoCAD oblique angle (`shearX = tan θ`), keeping grips + hover frame aligned with
+   * the sheared glyphs. Absent / 0 (every wall / column / foundation frame) = plain rect,
+   * byte-identical to the pre-shear path.
+   */
+  readonly shearX?: number;
 }
 
 /** Sign along a local axis: `+1` = positive face, `-1` = negative face. */
@@ -71,7 +79,9 @@ export const RECT_CORNERS: readonly RectCorner[] = [
  * handle's stand-off beyond a face) instead of re-deriving the rotate+translate.
  */
 export function rectLocalWorld(frame: RectFrame, localX: number, localY: number): Point2D {
-  const r = rotateVector({ x: localX, y: localY }, frame.rotationDeg);
+  // ADR-557 — shear local +Y into +X (parallelogram) BEFORE rotate; `?? 0` → plain rect.
+  const shearedX = localX + (frame.shearX ?? 0) * localY;
+  const r = rotateVector({ x: shearedX, y: localY }, frame.rotationDeg);
   return translatePoint(frame.center, r);
 }
 

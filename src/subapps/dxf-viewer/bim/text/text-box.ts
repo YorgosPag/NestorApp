@@ -230,6 +230,18 @@ function glyphInkOf(text: DxfText): TextGlyphInk {
 }
 
 /**
+ * ADR-557 — the box SHEAR (`tan θ`) for the AutoCAD oblique angle, so the grip/hover box
+ * is a PARALLELOGRAM that leans with the sheared glyphs. Local +Y = up (cap top), local +X
+ * = advance (reading-right): a positive oblique shifts the top RIGHT (forward «/»), matching
+ * the renderer's `ctx.transform(1,0,-tanθ,1,0,0)` in the y-DOWN screen frame. 🔴 browser-verify
+ * the lean matches the glyphs; flip the sign if the box leans opposite the text.
+ */
+function obliqueShearOf(text: DxfText): number {
+  const angle = text.textStyle?.obliqueAngle;
+  return typeof angle === 'number' && angle !== 0 ? Math.tan((angle * Math.PI) / 180) : 0;
+}
+
+/**
  * VISUAL vertical ratios from a measured glyph ink box — the box hugs the drawn glyphs:
  * baseline where the renderer seats it (font ascent/descent per the attachment row,
  * mirroring `TextRenderer.fillGlyphRun`) + extent = real glyph INK (cap height for caps,
@@ -274,11 +286,13 @@ function buildTextBox(text: DxfText, mode: 'visual' | 'em'): RectFrame {
   const rotationDeg = text.rotation ?? 0;
   const advanceCentreX = horizontalCenterOffset(just, w);
   const extents = multilineExtentsOf(text, just);
+  // ADR-557 — parallelogram shear for the oblique angle (0 → plain rect, zero regression).
+  const shearX = obliqueShearOf(text);
 
   if (mode === 'em') {
     const v = emVerticalRatios(just, extents);
     const rel = rotateVector({ x: advanceCentreX, y: ((v.top + v.bottom) / 2) * h }, rotationDeg);
-    return { center: translatePoint(text.position, rel), rotationDeg, halfWidth: w / 2, halfLength: ((v.top - v.bottom) / 2) * h };
+    return { center: translatePoint(text.position, rel), rotationDeg, halfWidth: w / 2, halfLength: ((v.top - v.bottom) / 2) * h, ...(shearX !== 0 && { shearX }) };
   }
 
   const ink = glyphInkOf(text);
@@ -295,6 +309,7 @@ function buildTextBox(text: DxfText, mode: 'visual' | 'em'): RectFrame {
     rotationDeg,
     halfWidth: (w * (1 - left - right)) / 2,
     halfLength: ((v.top - v.bottom) / 2) * h,
+    ...(shearX !== 0 && { shearX }),
   };
 }
 
