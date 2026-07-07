@@ -105,6 +105,10 @@
 | `systems/match-properties/match-habit-store.ts` | default checklist (localStorage) | Φ3 |
 | `hooks/canvas/apply-match-transfer.ts` | **κοινός writer** (execute→emit→habit) | Φ3 |
 | `hooks/canvas/match-click-handlers.ts` | σταγονόμετρο/σύριγγα click | Φ3 |
+| `systems/match-properties/match-preview-entity.ts` | **SSoT** `buildMatchPreviewEntity` + `recomputeParametricGeometry` (ghost ≡ commit) | Φ6 |
+| `hooks/tools/useMatchHoverGhostPreview.ts` | live hover ghost hook (+brush clear-on-tool-exit) | Φ6 |
+| `components/dxf-layout/canvas-layer-stack-match-ghost.tsx` | micro-leaf mount (ADR-040) | Φ6 |
+| `ui/ribbon/data/home-tab-match.ts` | Home «Ιδιότητες» panel — μεγάλο κουμπί σύριγγας | Φ6 |
 | `ui/match-properties/match-dialog-model.ts` | pure offered-groups + preview | Φ3 |
 | `ui/match-properties/useMatchProperties.ts` | dialog controller (selection→applier) | Φ3 |
 | `ui/match-properties/{MatchSettingsDialog,MatchChecklist,match-mapping-preview}.tsx` | UI | Φ3 |

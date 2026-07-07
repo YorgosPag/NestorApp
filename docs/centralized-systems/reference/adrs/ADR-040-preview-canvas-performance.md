@@ -3798,3 +3798,25 @@ gesture, ΟΧΙ 60fps). **Bitmap cache key ΑΝΕΓΓΙΧΤΟ** (rule #3): το 
 `useDxfSceneConversion.ts`, `group-expander.ts`, `group-member-scene-access.ts` (NEW SSoT),
 `grip-scene-manager-adapter.ts`, `grip-registry.ts`, `canvas-layer-stack-leaves.tsx`,
 `GripRegistryPublisher.tsx`, `useActiveGroup.ts`. Staged για CHECK 6B/6D. ΟΧΙ tsc (N.17).
+
+## 2026-07-07 (c): ADR-581 Φ6 — «σύριγγα» live hover ghost (νέο micro-leaf, CHECK 6B/6D stage)
+
+**Τι:** νέο preview leaf `MatchHoverGhostPreviewMount` (`canvas-layer-stack-match-ghost.tsx`) που
+ζωγραφίζει το live WYSIWYG φάντασμα της σύριγγας Match/Transfer Properties: όσο το εργαλείο
+`match-properties` είναι ενεργό ΚΑΙ η σύριγγα φορτωμένη, το hover πάνω σε άλλη οντότητα δείχνει το
+αποτέλεσμα (στυλ + ξανασχηματισμένη γεωμετρία) ΠΡΙΝ το click. Το leaf mount-άρεται στο
+`PreviewCanvasMounts` (store-driven, χωρίς payload prop — όπως ο body-drag mount).
+
+**ADR-040 συμμόρφωση:** ο hook `useMatchHoverGhostPreview` είναι ο **μόνος** subscriber σε hover
+(`useHoveredEntity`) / brush (`useSyncExternalStore(subscribeMatchBrush)`) / activeTool (`useActiveTool`)
+σε αυτό το μονοπάτι — ζει **μέσα στο always-mounted leaf**, ο orchestrator `CanvasSection`/`CanvasLayerStack`
+**δεν αποκτά καμία νέα subscription** (cardinal rule #1)· **CHECK 6C safe**. Ride στο shared
+`useCanvasGhostPreview` harness με `cursorMode:'none'` → το ghost **δεν** τρέχει per-frame: ζωγραφίζεται
+σε hover-change + transform-change μόνο (recolor/reshape in place, μηδέν 60fps redraw). **Bitmap cache
+ΑΝΕΓΓΙΧΤΟ** (rule #3): SVG-free preview-canvas overlay, ΟΧΙ DXF render pass. Render μέσω του κοινού
+`drawRealEntityPreview` (real `EntityRendererComposite`, ghost alpha) → WYSIWYG. ghost ≡ commit:
+ίδια patches (`collectMatchPatches`) + ίδιοι ρόλοι (`getDefaultChecklist`) + ίδιο geometry recompute
+(`compute{Kind}Geometry` μέσω νέου SSoT `match-preview-entity.ts`) με το click-commit. Αρχεία:
+`canvas-layer-stack-match-ghost.tsx` (NEW leaf), `useMatchHoverGhostPreview.ts` (NEW hook),
+`match-preview-entity.ts` (NEW SSoT), `canvas-layer-stack-preview-mounts.tsx` (+mount),
+`RibbonButtonIcon.tsx` (reactive icon). Staged για CHECK 6B/6D. ΟΧΙ tsc (N.17).
