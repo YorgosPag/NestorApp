@@ -143,6 +143,25 @@
 
 ## Changelog
 
+### 2026-07-07 — Φ6 fix: section-lock σε μεταφορά διατομής (auto-sizable μέλη, user wins)
+**Incident (browser-verify):** column→column μεταφορά width/depth εφαρμοζόταν σωστά (250→400) αλλά ο
+**δυναμικός οργανισμός** (`AutoSizeMembersCommand` via `useProactiveMemberSizing`) την επανέφερε άμεσα
+στην auto-computed διατομή (400→250), επειδή η κολόνα-στόχος ήταν `autoSized` (absent/true). Το
+**χειροκίνητο** grip/ribbon resize δεν έχει το πρόβλημα γιατί περνά από το SSoT `resolve{Kind}SectionLock`
+(ADR-503) που θέτει `autoSized:false` (κλείδωμα, «user wins»). **Απόφαση (Giorgio, big-player/Revit
+«Match»):** η μεταφορά διατομής = ρητή χειροκίνητη ενέργεια → πρέπει να κλειδώνει, με τον ΙΔΙΟ έλεγχο
+επάρκειας (< επαρκές → bump στο ελάχιστο + toast). **Fix (full-SSoT):** ΝΕΟ ενοποιημένο
+`bim/structural/sizing/member-section-lock.ts` (`resolveMemberSectionLock` + `applyMemberSectionLock`)
+που dispatch-άρει στους 3 per-kind resolvers (column/beam/slab) + resolve ενεργού κανονισμού & per-member
+design context. Injected ως optional `finalizeParams` **και** στο commit (`buildParamsUpdateCommand` →
+`buildMatchTransferCommand` → `apply-match-transfer`) **και** στο ghost (`buildMatchPreviewEntity` →
+`useMatchHoverGhostPreview`) → **ghost ≡ commit** (η προεπισκόπηση δείχνει την κλειδωμένη/bumped διατομή).
+Ο οργανισμός συνεχίζει live rebar+static ανάλυση στην κλειδωμένη διατομή (μόνο το auto-**resize** σταματά,
+όπως σε κάθε χειροκίνητα-ορισμένη διατομή). **+1 jest** (`match-preview-entity` finalize case) → 38 match
+suite GREEN. Pending-ratchet: migrate τους 4 υπάρχοντες manual callers (grip ×2 + 3 ribbon dispatchers)
+στο ενοποιημένο `resolveMemberSectionLock` (σήμερα copy-paste ανά kind). Το section-rejected toast στη
+σύριγγα = follow-up (ο bump εφαρμόζεται ήδη σωστά, λείπει μόνο το μήνυμα).
+
 ### 2026-07-07 — Φ6 IMPLEMENTED (persistent σύριγγα tool + live hover ghost)
 Revit/Archicad-grade UX για το Match/Transfer: το εργαλείο δεν εξαρτάται πλέον από modifiers/dialog.
 **(A) Κουμπί «Αρχική»:** νέο `HOME_MATCH_PANEL` (`home-tab-match.ts`) — μεγάλο κουμπί με `commandKey:'match-properties'`

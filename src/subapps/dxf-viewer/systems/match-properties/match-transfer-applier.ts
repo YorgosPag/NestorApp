@@ -17,7 +17,7 @@ import { COERCE_SKIP, type SemanticRole } from './match-types';
 import { getDescriptorByKey } from './match-registry';
 import { resolveSemanticMapping } from './semantic-mapping-resolver';
 import { coerceValue } from './match-value-coercion';
-import { buildParamsUpdateCommand, isParamsCommandKind } from './match-params-command-builder';
+import { buildParamsUpdateCommand, isParamsCommandKind, type FinalizeParams } from './match-params-command-builder';
 
 export interface MatchTransferRequest {
   readonly sourceId: string;
@@ -25,6 +25,13 @@ export interface MatchTransferRequest {
   /** Έξοδος του checklist — ποιοι σημασιολογικοί ρόλοι μεταφέρονται. */
   readonly selectedRoles: ReadonlySet<SemanticRole>;
   readonly sceneManager: ISceneManager;
+  /**
+   * ADR-581 Φ6 — optional section-lock finalize (`resolveMemberSectionLock`). Injected
+   * από το impure boundary (`apply-match-transfer` hook)· κλειδώνει τη διατομή
+   * (`autoSized:false`) όταν μεταφέρεται γεωμετρία σε auto-sizable μέλος (user wins).
+   * Absent (π.χ. unit tests) → identity.
+   */
+  readonly finalizeParams?: FinalizeParams;
 }
 
 export interface MatchTransferEmit {
@@ -76,7 +83,7 @@ export function collectMatchPatches(
 
 /** Χτίζει το Match/Transfer command (δεν το εκτελεί). */
 export function buildMatchTransferCommand(req: MatchTransferRequest): MatchTransferResult {
-  const { sourceId, targetIds, selectedRoles, sceneManager } = req;
+  const { sourceId, targetIds, selectedRoles, sceneManager, finalizeParams } = req;
   const commands: ICommand[] = [];
   const emit: MatchTransferEmit[] = [];
   const skipped: { targetId: string; reason: string }[] = [];
@@ -104,7 +111,7 @@ export function buildMatchTransferCommand(req: MatchTransferRequest): MatchTrans
       if (!isParamsCommandKind(targetType)) {
         skipped.push({ targetId, reason: 'unsupported-params-kind' });
       } else {
-        const cmd = buildParamsUpdateCommand(target, paramsPatch, sceneManager);
+        const cmd = buildParamsUpdateCommand(target, paramsPatch, sceneManager, finalizeParams);
         if (cmd) {
           commands.push(cmd);
           emit.push({ type: targetType, id: targetId });

@@ -24,6 +24,15 @@ import {
   recordApply,
   type SemanticRole,
 } from '../../systems/match-properties';
+// ADR-581 Φ6 — μεταφορά διατομής σε auto-sizable μέλος = ρητή χειροκίνητη ενέργεια →
+// κλείδωμα (`autoSized:false`, user wins), αλλιώς ο δυναμικός οργανισμός την επαναφέρει.
+import { applyMemberSectionLock } from '../../bim/structural/sizing/member-section-lock';
+import type { Entity } from '../../types/entities';
+import type { SceneEntity } from '../../core/commands/interfaces';
+
+/** ADR-581 Φ6 — section-lock finalize (κοινό με το ghost· ghost ≡ commit). */
+const sectionLockFinalize = (entity: SceneEntity, next: Record<string, unknown>): Record<string, unknown> =>
+  applyMemberSectionLock(entity as unknown as Entity, next);
 
 export interface ApplyMatchTransferArgs {
   readonly levelManager: LevelsHookReturn;
@@ -55,6 +64,7 @@ export function applyMatchTransfer(args: ApplyMatchTransferArgs): ApplyMatchTran
 
   const { command, emit, skipped } = buildMatchTransferCommand({
     sourceId, targetIds, selectedRoles, sceneManager,
+    finalizeParams: sectionLockFinalize,
   });
   if (command.commands.length > 0) getGlobalCommandHistory().execute(command);
   for (const e of emit) emitBimEntityParamsUpdated(e.type, e.id);

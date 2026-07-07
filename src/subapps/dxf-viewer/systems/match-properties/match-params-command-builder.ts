@@ -31,6 +31,14 @@ import type { EntityType } from '../../types/entities';
 /** Top-level params patch — flat merge only (βλ. header warning). */
 export type ParamsPatch = Readonly<Record<string, unknown>>;
 
+/**
+ * ADR-581 Φ6 — optional post-merge hook. Ο caller (Match/Transfer) το χρησιμοποιεί
+ * ώστε ΜΕΤΑ το `{...prev, ...patch}` merge να περάσουν τα params από το section-lock
+ * SSoT (`resolveMemberSectionLock`) → `autoSized:false` (user wins), αλλιώς ο δυναμικός
+ * οργανισμός επαναφέρει τη διατομή. Absent → identity (bulk-edit path αμετάβλητο).
+ */
+export type FinalizeParams = (entity: SceneEntity, next: Record<string, unknown>) => Record<string, unknown>;
+
 /** True αν ο τύπος υποστηρίζεται από τον κοινό builder (BIM parametric kinds). */
 export function isParamsCommandKind(type: EntityType): boolean {
   return (
@@ -47,58 +55,65 @@ export function buildParamsUpdateCommand(
   entity: SceneEntity,
   patch: ParamsPatch,
   sm: ISceneManager,
+  finalize?: FinalizeParams,
 ): ICommand | null {
   const kind = entity.type as EntityType;
   switch (kind) {
-    case 'wall':    return buildWallCommand(entity, patch, sm);
-    case 'opening': return buildOpeningCommand(entity, patch, sm);
-    case 'slab':    return buildSlabCommand(entity, patch, sm);
-    case 'column':  return buildColumnCommand(entity, patch, sm);
-    case 'beam':    return buildBeamCommand(entity, patch, sm);
-    case 'stair':   return buildStairCommand(entity, patch, sm);
+    case 'wall':    return buildWallCommand(entity, patch, sm, finalize);
+    case 'opening': return buildOpeningCommand(entity, patch, sm, finalize);
+    case 'slab':    return buildSlabCommand(entity, patch, sm, finalize);
+    case 'column':  return buildColumnCommand(entity, patch, sm, finalize);
+    case 'beam':    return buildBeamCommand(entity, patch, sm, finalize);
+    case 'stair':   return buildStairCommand(entity, patch, sm, finalize);
     default:        return null;
   }
 }
 
-function buildWallCommand(entity: SceneEntity, patch: ParamsPatch, sm: ISceneManager): ICommand | null {
+/** `{...prev, ...patch}` + optional post-merge finalize (section-lock). */
+function mergeParams<T>(entity: SceneEntity, prev: T, patch: ParamsPatch, finalize?: FinalizeParams): T {
+  const merged = { ...prev, ...patch } as Record<string, unknown>;
+  return (finalize ? finalize(entity, merged) : merged) as T;
+}
+
+function buildWallCommand(entity: SceneEntity, patch: ParamsPatch, sm: ISceneManager, finalize?: FinalizeParams): ICommand | null {
   const prev = entity.params as WallParams | undefined;
   if (!prev) return null;
-  const next: WallParams = { ...prev, ...patch } as WallParams;
+  const next = mergeParams<WallParams>(entity, prev, patch, finalize);
   const wallKind = (entity as unknown as { kind?: WallKind }).kind ?? 'straight';
   return new UpdateWallParamsCommand(entity.id, next, prev, sm, false, wallKind);
 }
 
-function buildOpeningCommand(entity: SceneEntity, patch: ParamsPatch, sm: ISceneManager): ICommand | null {
+function buildOpeningCommand(entity: SceneEntity, patch: ParamsPatch, sm: ISceneManager, finalize?: FinalizeParams): ICommand | null {
   const prev = entity.params as OpeningParams | undefined;
   if (!prev) return null;
-  const next: OpeningParams = { ...prev, ...patch } as OpeningParams;
+  const next = mergeParams<OpeningParams>(entity, prev, patch, finalize);
   return new UpdateOpeningParamsCommand(entity.id, next, prev, sm, false);
 }
 
-function buildSlabCommand(entity: SceneEntity, patch: ParamsPatch, sm: ISceneManager): ICommand | null {
+function buildSlabCommand(entity: SceneEntity, patch: ParamsPatch, sm: ISceneManager, finalize?: FinalizeParams): ICommand | null {
   const prev = entity.params as SlabParams | undefined;
   if (!prev) return null;
-  const next: SlabParams = { ...prev, ...patch } as SlabParams;
+  const next = mergeParams<SlabParams>(entity, prev, patch, finalize);
   return new UpdateSlabParamsCommand(entity.id, next, prev, sm, false);
 }
 
-function buildColumnCommand(entity: SceneEntity, patch: ParamsPatch, sm: ISceneManager): ICommand | null {
+function buildColumnCommand(entity: SceneEntity, patch: ParamsPatch, sm: ISceneManager, finalize?: FinalizeParams): ICommand | null {
   const prev = entity.params as ColumnParams | undefined;
   if (!prev) return null;
-  const next: ColumnParams = { ...prev, ...patch } as ColumnParams;
+  const next = mergeParams<ColumnParams>(entity, prev, patch, finalize);
   return new UpdateColumnParamsCommand(entity.id, next, prev, sm, false);
 }
 
-function buildBeamCommand(entity: SceneEntity, patch: ParamsPatch, sm: ISceneManager): ICommand | null {
+function buildBeamCommand(entity: SceneEntity, patch: ParamsPatch, sm: ISceneManager, finalize?: FinalizeParams): ICommand | null {
   const prev = entity.params as BeamParams | undefined;
   if (!prev) return null;
-  const next: BeamParams = { ...prev, ...patch } as BeamParams;
+  const next = mergeParams<BeamParams>(entity, prev, patch, finalize);
   return new UpdateBeamParamsCommand(entity.id, next, prev, sm, false);
 }
 
-function buildStairCommand(entity: SceneEntity, patch: ParamsPatch, sm: ISceneManager): ICommand | null {
+function buildStairCommand(entity: SceneEntity, patch: ParamsPatch, sm: ISceneManager, finalize?: FinalizeParams): ICommand | null {
   const prev = entity.params as StairParams | undefined;
   if (!prev) return null;
-  const next: StairParams = { ...prev, ...patch } as StairParams;
+  const next = mergeParams<StairParams>(entity, prev, patch, finalize);
   return new UpdateStairParamsCommand(entity.id, next, prev, sm, false);
 }

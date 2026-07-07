@@ -88,6 +88,22 @@ describe('match-preview-entity (ADR-581 Φ6)', () => {
     expect(recomputeParametricGeometry('column' as EntityType, { ...params, ...patch })).toEqual(expected);
   });
 
+  it('(ε) finalize hook: geometry recompute τρέχει πάνω στα FINALIZED params (section-lock)', () => {
+    const target = columnEntity(rectColumnParams(300, 300));
+    // Προσομοίωση section-lock που κλειδώνει/bump-άρει: πηγή θέλει 500, ο lock κρατά 520.
+    const finalize = (_t: DxfEntityUnion, next: Record<string, unknown>): Record<string, unknown> =>
+      ({ ...next, width: 520, depth: 520, autoSized: false });
+
+    const preview = buildMatchPreviewEntity(
+      target, 'column' as EntityType, { scenePatch: {}, paramsPatch: { width: 500, depth: 500 } }, finalize,
+    );
+
+    expect(rec(rec(preview).params).width).toBe(520);
+    expect(rec(rec(preview).params).autoSized).toBe(false);
+    // geometry ξαναϋπολογίστηκε από τα finalized params (520), ΟΧΙ τα raw (500)
+    expect(rec(preview).geometry).toEqual(computeColumnGeometry(rectColumnParams(520, 520)));
+  });
+
   it('recomputeParametricGeometry → null για opening (host-wall context) + raw kinds', () => {
     expect(recomputeParametricGeometry('opening' as EntityType, { widthMm: 900 })).toBeNull();
     expect(recomputeParametricGeometry('line' as EntityType, {})).toBeNull();

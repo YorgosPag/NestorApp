@@ -39,6 +39,8 @@ import {
   collectMatchPatches,
   buildMatchPreviewEntity,
 } from '../../systems/match-properties';
+import { applyMemberSectionLock } from '../../bim/structural/sizing/member-section-lock';
+import type { Entity } from '../../types/entities';
 import { useHoveredEntity } from '../../systems/hover/useHover';
 import { useActiveTool } from '../../stores/ToolStateStore';
 import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
@@ -115,6 +117,8 @@ export function useMatchHoverGhostPreview(props: Readonly<UseMatchHoverGhostPrev
 
     const preview = buildMatchPreviewEntity(
       targetEntity as unknown as DxfEntityUnion, targetType, patches,
+      // ghost ≡ commit — ίδιο section-lock με τον applier (κλειδωμένη/bumped διατομή).
+      (t, next) => applyMemberSectionLock(t as unknown as Entity, next),
     );
 
     ctx.save();

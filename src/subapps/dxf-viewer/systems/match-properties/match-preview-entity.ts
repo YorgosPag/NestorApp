@@ -38,6 +38,14 @@ import type { StairParams } from '../../bim/types/stair-types';
 type ParamsRecord = Readonly<Record<string, unknown>>;
 
 /**
+ * ADR-581 Φ6 — optional post-merge hook (mirror του command builder `FinalizeParams`).
+ * Το ghost το χρησιμοποιεί ώστε να περνά τα params από το ΙΔΙΟ section-lock SSoT με το
+ * commit (`applyMemberSectionLock`) → η προεπισκόπηση δείχνει την τελική (κλειδωμένη ή
+ * bumped) διατομή. Absent (unit tests) → identity.
+ */
+export type FinalizePreviewParams = (target: DxfEntityUnion, next: Record<string, unknown>) => Record<string, unknown>;
+
+/**
  * Ξαναϋπολογίζει `geometry` από τα (patched) `params`, μέσω ΕΝΟΣ switch που καλεί
  * τα ΥΠΑΡΧΟΝΤΑ `compute{Kind}Geometry` — τα ΙΔΙΑ που τρέχει το commit path, ώστε το
  * ghost να ταυτίζεται με το τελικό αποτέλεσμα. `opening` χρειάζεται host-wall context
@@ -69,6 +77,7 @@ export function buildMatchPreviewEntity(
   target: DxfEntityUnion,
   targetType: EntityType,
   patches: Channelled,
+  finalize?: FinalizePreviewParams,
 ): DxfEntityUnion {
   const { scenePatch, paramsPatch } = patches;
   const merged: Record<string, unknown> = { ...(target as object) };
@@ -76,11 +85,12 @@ export function buildMatchPreviewEntity(
   // scene κανάλι → top-level scene πεδία (raw style / BIM styleOverride).
   if (Object.keys(scenePatch).length > 0) Object.assign(merged, scenePatch);
 
-  // params κανάλι → params merge + geometry recompute (ghost ≡ commit).
+  // params κανάλι → params merge (+ optional section-lock finalize) + geometry recompute.
   if (Object.keys(paramsPatch).length > 0) {
     const prevParams = (target as { params?: Record<string, unknown> }).params;
     if (prevParams) {
-      const nextParams = { ...prevParams, ...paramsPatch };
+      const mergedParams = { ...prevParams, ...paramsPatch };
+      const nextParams = finalize ? finalize(target, mergedParams) : mergedParams;
       merged.params = nextParams;
       const wallKind = (target as { kind?: WallKind }).kind ?? 'straight';
       const geometry = recomputeParametricGeometry(targetType, nextParams, wallKind);
