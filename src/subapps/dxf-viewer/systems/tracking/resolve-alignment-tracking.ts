@@ -66,6 +66,12 @@ export interface AlignmentTrackingInput {
    * σταθερό σε κάθε zoom.
    */
   readonly matchTolerancePx?: number;
+  /**
+   * ADR-557 — entity id(s) currently being MOVED, excluded from the ambient scan (no self-OTRACK).
+   * Omit for creation/rotation flows (nothing is being dragged). The caller supplies the dragged
+   * entity id(s) so a moving text/line does not lock its own origin as an alignment anchor.
+   */
+  readonly excludeEntityIds?: ReadonlySet<string> | null;
 }
 
 /**
@@ -80,7 +86,7 @@ export function resolveAlignmentTracking(
   cursor: Point2D,
   input: AlignmentTrackingInput,
 ): ComposedTracking | null {
-  const { scale, polarEnabled, sceneEntities, segmentBase, refPoints, matchTolerancePx } = input;
+  const { scale, polarEnabled, sceneEntities, segmentBase, refPoints, matchTolerancePx, excludeEntityIds } = input;
   const worldTolerance = pixelsToWorld(matchTolerancePx ?? DEFAULT_ALIGN_TOLERANCE_PX, scale);
   // Τα ρητά reference points ως transient anchors (acquiredAt:0, εκτός FIFO), ΠΡΩΤΑ, μαζί με τα
   // AutoCAD hover-acquired store points. Κενό refPoints ⇒ store-only (parity σχεδίασης/περιστροφής).
@@ -98,7 +104,7 @@ export function resolveAlignmentTracking(
         radiusWorld: pixelsToWorld(ambientCfg.radiusPx, scale),
         maxMembers: ambientCfg.maxMembers,
         axisToleranceWorld: worldTolerance,
-      })
+      }, excludeEntityIds)
     : [];
   return composeTrackingSnap(cursor, acquired, ambient, {
     polar: {

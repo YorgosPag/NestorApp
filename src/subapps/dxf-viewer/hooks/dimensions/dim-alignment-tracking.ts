@@ -60,6 +60,11 @@ export interface DimAlignmentInput {
    * `resolveActionAlignmentTracking`.
    */
   readonly matchTolerancePx?: number;
+  /**
+   * ADR-557 — entity id(s) being MOVED, excluded from the ambient scan (no self-OTRACK). Threaded
+   * to the canonical resolver so a moving text/line does not lock its own origin as an anchor.
+   */
+  readonly excludeEntityIds?: ReadonlySet<string> | null;
 }
 
 /**
@@ -79,6 +84,7 @@ export function resolveDimAlignmentTracking(
     sceneEntities: input.sceneEntities,
     refPoints,
     matchTolerancePx: input.matchTolerancePx,
+    excludeEntityIds: input.excludeEntityIds,
   });
 }
 
@@ -97,6 +103,10 @@ export function resolveActionAlignmentTracking(
   refPoints: readonly Point2D[],
   scale: number,
   sceneEntities: readonly Entity[] | null,
+  // ADR-557 — entity id(s) being MOVED, excluded from the ambient scan (no self-OTRACK). The
+  // whole-entity move callers (grip / body-drag / Move tool) pass the dragged id(s); creation /
+  // rotation / dimension flows omit it (nothing is being dragged).
+  excludeEntityIds?: ReadonlySet<string> | null,
 ): ComposedTracking | null {
   const ambientOn = ambientAlignmentConfigStore.getSnapshot().enabled;
   return resolveDimAlignmentTracking(cursor, refPoints, {
@@ -106,6 +116,7 @@ export function resolveActionAlignmentTracking(
     // Interactive drag → ευρύτερο tracking pull (χωρίς hover-acquire dwell/POLAR-lock, το 3px
     // single-anchor projection δεν κουμπώνει ποτέ με το χέρι → τα ίχνη έλειπαν εντελώς).
     matchTolerancePx: ACTION_ALIGN_TOLERANCE_PX,
+    excludeEntityIds,
   });
 }
 

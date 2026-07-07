@@ -13,9 +13,9 @@ import type {
   DxfSettings,
   LayerIsolateSettings
 } from './types';
-import { UI_COLORS, GRIP_WARM_COLOR, GRIP_HOT_COLOR } from '../config/color-config';
-// 🏢 SSoT base grip size
-import { GRIP_SIZE_DEFAULT } from '../config/grip-size-default';
+import { UI_COLORS } from '../config/color-config';
+// 🏢 ADR-559 §3b — canonical grip default VALUES (aperture 20, warm ροζ, sentinel cold)
+import { GRIP_FACTORY_DEFAULTS } from '../config/grip-factory-defaults';
 // ADR-510 Φ2D — unified linetype catalog SSoT (mm) + canonical resolver.
 import { dashMmToScreenPx, resolveLinetypePatternMm } from '../rendering/linetype-dash-resolver';
 
@@ -109,28 +109,10 @@ export const DEFAULT_TEXT_SETTINGS: TextSettings = {
 // GRIP DEFAULTS - AutoCAD Standards
 // ============================================================================
 
-export const DEFAULT_GRIP_SETTINGS: GripSettings = {
-  enabled: true,
-  gripSize: GRIP_SIZE_DEFAULT, // 🏢 SSoT base grip size (AutoCAD GRIPSIZE = 7)
-  pickBoxSize: 3,              // AutoCAD PICKBOX default: 3 DIP
-  apertureSize: 10,            // AutoCAD APERTURE default: 10 pixels
-  opacity: 1.0,                // Full opacity
-  colors: {
-    cold: null,                            // Sentinel: null → GRIP_COLD_COLOR at render time
-    warm: GRIP_WARM_COLOR,                 // SSOT → color-config.ts (orange, hover) — was Hot Pink
-    hot: GRIP_HOT_COLOR,                   // SSOT → color-config.ts (red, selected) — was SNAP_ENDPOINT
-    contour: UI_COLORS.BLACK               // AutoCAD: Black contour
-  },
-  showAperture: true,          // Show aperture box
-  multiGripEdit: true,         // Allow multiple grip editing
-  snapToGrips: true,           // Snap to grips enabled
-  showMidpoints: true,         // Show midpoint grips
-  showCenters: true,           // Show center grips
-  showQuadrants: true,         // Show quadrant grips
-  maxGripsPerEntity: 50,       // Maximum grips per entity
-  gripObjLimit: 100,           // AutoCAD GRIPOBJLIMIT — hide all grips above this selection count (0 = no limit)
-  showGrips: true              // ✅ ENTERPRISE: Added missing property expected by tests
-};
+// 🏢 ADR-559 §3b — DERIVED from canonical GRIP_FACTORY_DEFAULTS (aperture 20, warm ροζ,
+// sentinel cold). Stored-domain shape (no render extras); VALUES live once in
+// config/grip-factory-defaults.ts.
+export const DEFAULT_GRIP_SETTINGS: GripSettings = { ...GRIP_FACTORY_DEFAULTS };
 
 // ============================================================================
 // CURSOR DEFAULTS - AutoCAD Standards

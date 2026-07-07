@@ -140,7 +140,10 @@ export function paintGripActionAlignmentTraces(
   }
   if (!alignAnchors || getImmediateSnap()?.found) return;
   const actionTracking = resolveActionAlignmentTracking(
-    effectiveCursor, alignAnchors, t.scale, sceneEntities,
+    // ADR-557 — exclude the dragged entity from the ambient scan: a moving multi-line text must NOT
+    // lock onto its OWN insertion point (which sits far below the box-centre anchor) — that phantom
+    // self-anchor was drowning out the neighbour cyan traces (Giorgio browser-verify 2026-07-07).
+    effectiveCursor, alignAnchors, t.scale, sceneEntities, new Set([dp.entityId]),
   );
   if (actionTracking) {
     paintActionAlignmentTracking(ctx, actionTracking, t, vp, sceneUnits);

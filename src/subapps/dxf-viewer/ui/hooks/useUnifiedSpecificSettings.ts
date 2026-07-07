@@ -61,9 +61,10 @@ import {
   useTextDraftSettings,
   useGripDraftSettings
 } from '../../settings-provider';
-import { UI_COLORS } from '../../config/color-config';
+import { UI_COLORS, resolveGripColors } from '../../config/color-config';
 // 🏢 SSoT base grip size
-import { GRIP_SIZE_DEFAULT } from '../../config/grip-size-default';
+// 🏢 ADR-559 §3b — canonical grip default VALUES (aperture 20, warm ροζ, sentinel cold)
+import { GRIP_FACTORY_DEFAULTS } from '../../config/grip-factory-defaults';
 import type { LineSettings } from '../../settings-core/types';
 import type { TextSettings } from '../../contexts/TextSettingsContext';
 import type { GripSettings } from '../../types/gripSettings';
@@ -215,26 +216,16 @@ type MockGripSettings = Omit<GripSettingsBase, 'showGrips'> & {
   colors: ResolvedGripColors;
 };
 
+// 🏢 ADR-559 §3b — DERIVED from canonical GRIP_FACTORY_DEFAULTS (aperture 20, warm ροζ).
+// Preview mock omits `showGrips` and keeps a concrete blue `cold` swatch (an intentional
+// preview affordance); every other VALUE comes from the canonical.
+const { showGrips: _omitShowGrips, ...gripPreviewBase } = GRIP_FACTORY_DEFAULTS;
 const defaultGripPreviewSettings: MockGripSettings = {
-  enabled: true,
-  gripSize: GRIP_SIZE_DEFAULT, // 🏢 SSoT base grip size (AutoCAD GRIPSIZE = 7)
-  pickBoxSize: 3,           // ✅ AutoCAD PICKBOX default: 3 DIP
-  apertureSize: 10,         // ✅ AutoCAD APERTURE default: 10 pixels
-  opacity: 1.0,             // ✅ Full opacity by default
+  ...gripPreviewBase,
   colors: {
-    cold: UI_COLORS.SNAP_CENTER,        // ✅ AutoCAD standard: Blue (ACI 5) - unselected grips
-    warm: UI_COLORS.SNAP_INTERSECTION,        // ✅ AutoCAD standard: Hot Pink - hover grips
-    hot: UI_COLORS.SELECTED_RED,         // ✅ AutoCAD standard: Red (ACI 1) - selected grips
-    contour: UI_COLORS.BLACK      // ✅ AutoCAD standard: Black contour
-  },
-  showAperture: true,       // ✅ AutoCAD APBOX default: enabled
-  multiGripEdit: true,      // ✅ ΑΠΟΚΑΤΑΣΤΑΣΗ: Ενεργοποίηση multi grips
-  snapToGrips: true,        // ✅ ΑΠΟΚΑΤΑΣΤΑΣΗ: Ενεργοποίηση snap to grips
-  showMidpoints: true,      // ✅ Show midpoint grips
-  showCenters: true,        // ✅ Show center grips
-  showQuadrants: true,      // ✅ Show quadrant grips
-  maxGripsPerEntity: 50,    // ✅ Default maximum grips per entity
-  gripObjLimit: 100         // ✅ AutoCAD GRIPOBJLIMIT default: hide all grips above 100 selected objects
+    ...resolveGripColors(GRIP_FACTORY_DEFAULTS.colors), // cold sentinel → concrete
+    cold: UI_COLORS.SNAP_CENTER // preview swatch: Blue (ACI 5) unselected grips
+  }
 };
 
 /**

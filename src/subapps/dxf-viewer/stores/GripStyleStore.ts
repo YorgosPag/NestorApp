@@ -20,35 +20,19 @@ export type GripStyle = GripSettingsBase & GripStyleExtras & {
 };
 
 import { useSyncExternalStore } from 'react';
-import { GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR, GRIP_CONTOUR_COLOR, resolveGripColors } from '../config/color-config';
-// 🏢 SSoT base grip size
-import { GRIP_SIZE_DEFAULT } from '../config/grip-size-default';
+import { resolveGripColors } from '../config/color-config';
+// 🏢 ADR-559 §3b — canonical grip default VALUES (aperture 20, warm ροζ, sentinel cold)
+import { GRIP_FACTORY_DEFAULTS } from '../config/grip-factory-defaults';
 import { createExternalStore } from './createExternalStore';
 
+// 🏢 ADR-559 §3b — DERIVED from canonical GRIP_FACTORY_DEFAULTS (aperture 20, warm ροζ).
+// Runtime store resolves the `cold` sentinel to a concrete colour at init and adds the
+// render extras (showGripTips / dpiScale); the VALUES live once in grip-factory-defaults.ts.
 const INITIAL: GripStyle = {
-  enabled: true,
-  colors: {
-    cold: GRIP_COLD_COLOR,               // Resolved at init — resolveGripColors() applied on write
-    warm: GRIP_WARM_COLOR,               // SSOT → color-config.ts (orange hover) — was SNAP_INTERSECTION hot-pink
-    hot: GRIP_HOT_COLOR,                 // SSOT → color-config.ts (red selected) — was SNAP_ENDPOINT
-    contour: GRIP_CONTOUR_COLOR // SSOT → color-config.ts (black) — was UI_COLORS.BLACK
-  },
-  gripSize: GRIP_SIZE_DEFAULT, // 🏢 SSoT base grip size
-  pickBoxSize: 3,
-  apertureSize: 20,
-  showGrips: true,
-  opacity: 1.0,
-  // ✅ ENTERPRISE: Additional grip settings defaults
-  showAperture: true,       // ✅ AutoCAD APBOX default: enabled
-  multiGripEdit: true,      // ✅ ΑΠΟΚΑΤΑΣΤΑΣΗ: Ενεργοποίηση multi grips
-  snapToGrips: true,        // ✅ ΑΠΟΚΑΤΑΣΤΑΣΗ: Ενεργοποίηση snap to grips
-  showGripTips: false,      // ✅ Grip tooltips disabled by default
-  dpiScale: 1.0,            // ✅ Default DPI scale
-  showMidpoints: true,      // ✅ Show midpoint grips
-  showCenters: true,        // ✅ Show center grips
-  showQuadrants: true,      // ✅ Show quadrant grips
-  maxGripsPerEntity: 50,    // ✅ Maximum grips per entity
-  gripObjLimit: 100         // ✅ AutoCAD GRIPOBJLIMIT — hide all grips above 100 selected objects (0 = no limit)
+  ...GRIP_FACTORY_DEFAULTS,
+  colors: resolveGripColors(GRIP_FACTORY_DEFAULTS.colors), // cold sentinel → concrete at init
+  showGripTips: false,      // Grip tooltips disabled by default
+  dpiScale: 1.0             // Default DPI scale
 };
 
 // SSoT pub/sub plumbing via createExternalStore (WAVE 2.6). Patch-merge (with a colour

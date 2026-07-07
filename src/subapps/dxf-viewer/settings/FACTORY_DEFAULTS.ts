@@ -19,8 +19,8 @@ import { ACI_PALETTE } from './standards/aci';
 import { UI_COLORS, GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR } from '../config/color-config';
 // 🏢 ADR-101: Centralized deep clone utility
 import { deepClone } from '../utils/clone-utils';
-// 🏢 SSoT base grip size
-import { GRIP_SIZE_DEFAULT } from '../config/grip-size-default';
+// 🏢 ADR-559 §3b — canonical grip default VALUES (aperture 20, warm ροζ, sentinel cold)
+import { GRIP_FACTORY_DEFAULTS } from '../config/grip-factory-defaults';
 
 // ============================================================================
 // CURRENT SCHEMA VERSION
@@ -37,8 +37,9 @@ import { GRIP_SIZE_DEFAULT } from '../config/grip-size-default';
  * ✅ FIX v4: Complete grip colors (add missing cold/warm/hot/contour for selection/completion)
  * ✅ FIX v6: Revit-style null sentinel — cold: null means "use GRIP_COLD_COLOR SSoT at render"
  * ✅ FIX v8: Grip size heal — stale pre-ADR-107 default 14 → SSoT GRIP_SIZE_DEFAULT (7)
+ * ✅ FIX v9: Grip warm heal — stale orange #FF7F00 → GRIP_WARM_COLOR SSoT (magenta/ροζ, ADR-559 §3b)
  */
-export const CURRENT_VERSION = 8;
+export const CURRENT_VERSION = 9;
 
 // ============================================================================
 // LINE SETTINGS DEFAULTS

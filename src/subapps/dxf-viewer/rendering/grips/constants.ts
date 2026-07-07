@@ -55,13 +55,13 @@ export const EDGE_GRIP_SIZE_MULTIPLIERS = {
  * Can be overridden by GripSettings from user preferences
  *
  * - COLD: Blue (ACI 5) - Standard unselected grip
- * - WARM: Orange - Hover feedback
+ * - WARM: Magenta/ροζ - Hover feedback (Giorgio 2026-07-07, was orange)
  * - HOT: Red (ACI 1) - Active/selected grip
  * - CONTOUR: Black - Grip outline
  */
 export const DEFAULT_GRIP_COLORS = {
   COLD: GRIP_COLD_COLOR,  // SSOT → color-config.ts (σιελ)
-  WARM: GRIP_WARM_COLOR,  // SSOT → color-config.ts (orange, hover) — was hardcoded
+  WARM: GRIP_WARM_COLOR,  // SSOT → color-config.ts (magenta/ροζ, hover) — auto-flips with the constant
   HOT: GRIP_HOT_COLOR,    // SSOT → color-config.ts (red, active drag) — was hardcoded
   ARMED: GRIP_ARMED_COLOR, // ADR-501 — orange, armed/selected (multi-grip)
   SNAPPABLE: GRIP_SNAPPABLE_COLOR, // Cyan — snap target during rotation (ADR-397)

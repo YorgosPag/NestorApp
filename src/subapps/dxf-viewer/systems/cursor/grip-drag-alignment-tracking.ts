@@ -43,6 +43,7 @@ export function applyGripDragAlignmentTracking(
       const dimTracking = resolveActionAlignmentTracking(
         moved, anchors, transformScale,
         (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+        new Set([dimGrip.entityId]),
       );
       setGripAlignmentTracking(dimTracking);
       if (dimTracking) moved = dimTracking.point;
@@ -63,7 +64,7 @@ export function applyGripDragAlignmentTracking(
     // tracking. Το text-move ΔΕΝ είναι γραμμή ούτε Alt, οπότε έπεφτε στο null → ΚΑΝΕΝΑ κυανό/polar
     // ίχνος· τώρα το `movesEntity` flag το εντάσσει στο ΙΔΙΟ base-point brain, entity-agnostic.
     if ((isActiveGripAltMove() || dimGrip.movesEntity === true) && dimGrip.dragAnchor) {
-      return resolveBasePointTracking(moved, dimGrip.dragAnchor, scene, transformScale);
+      return resolveBasePointTracking(moved, dimGrip.dragAnchor, scene, transformScale, new Set([dimGrip.entityId]));
     }
     // ADR-357/363 — plain DXF LINE grip drag (χωρίς Alt): anchors per grip (fixed endpoint / move
     // base) from the line SSoT; the rotation handle returns null (its traces run in the ghost).
@@ -75,6 +76,7 @@ export function applyGripDragAlignmentTracking(
       const lineTracking = resolveActionAlignmentTracking(
         moved, anchors, transformScale,
         (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+        new Set([dimGrip.entityId]),
       );
       setGripAlignmentTracking(lineTracking);
       if (lineTracking) moved = lineTracking.point;
@@ -100,10 +102,14 @@ function resolveBasePointTracking(
   anchor: Point2D,
   scene: DxfScene | null,
   transformScale: number,
+  // ADR-557 — the dragged entity/-ies, excluded from the ambient scan (no self-OTRACK: a moving
+  // multi-line text must not lock onto its own insertion point). Mirrors the OSNAP exclusion.
+  excludeIds?: ReadonlySet<string> | null,
 ): WorldPoint {
   const tracking = resolveActionAlignmentTracking(
     moved, [anchor], transformScale,
     (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+    excludeIds,
   );
   setGripAlignmentTracking(tracking);
   return tracking ? tracking.point : moved;
@@ -125,5 +131,8 @@ export function applyBodyDragAlignmentTracking(
     clearGripAlignmentTracking();
     return moveWorldPos;
   }
-  return resolveBasePointTracking(moveWorldPos, anchor, scene, transformScale);
+  // ADR-557 — exclude the dragged selection from the ambient scan (no self-OTRACK).
+  return resolveBasePointTracking(
+    moveWorldPos, anchor, scene, transformScale, new Set(EntityBodyDragStore.getEntityIds()),
+  );
 }

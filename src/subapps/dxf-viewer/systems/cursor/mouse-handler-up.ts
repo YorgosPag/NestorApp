@@ -158,6 +158,7 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
           const bodyTracking = isGripStepActive() ? null : resolveActionAlignmentTracking(
             upWorld, [session.anchor], transform.scale,
             (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+            new Set(session.entityIds), // ADR-557 — no self-OTRACK to the dragged selection.
           );
           if (bodyTracking) upWorld = bodyTracking.point;
           // ORTHO (F8) + F9/Q SNAP-MODE step — SAME transform as the live ghost (`useEntityBodyDragPreview`) → WYSIWYG.
@@ -233,6 +234,7 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
             const dimTracking = resolveActionAlignmentTracking(
               upWorldPos, anchors, transform.scale,
               (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+              new Set([dimGrip.entityId]),
             );
             if (dimTracking) upWorldPos = dimTracking.point;
           }
@@ -246,6 +248,7 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
           const bpTracking = resolveActionAlignmentTracking(
             upWorldPos, [dimGrip.dragAnchor], transform.scale,
             (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+            new Set([dimGrip.entityId]),
           );
           if (bpTracking) upWorldPos = bpTracking.point;
           clearGripAlignmentTracking();
@@ -262,6 +265,7 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
             const lineTracking = resolveActionAlignmentTracking(
               upWorldPos, anchors, transform.scale,
               (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+              new Set([dimGrip.entityId]),
             );
             if (lineTracking) upWorldPos = lineTracking.point;
             clearGripAlignmentTracking();

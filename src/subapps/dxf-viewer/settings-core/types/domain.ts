@@ -29,6 +29,8 @@ import {
 } from '../../config/validation-bounds-config';
 // 🏢 SSoT base grip size
 import { GRIP_SIZE_DEFAULT } from '../../config/grip-size-default';
+// 🏢 ADR-559 §3b — canonical grip default VALUES (aperture 20, warm ροζ, sentinel cold)
+import { GRIP_FACTORY_DEFAULTS } from '../../config/grip-factory-defaults';
 
 // ============================================================================
 // LINE TYPES & SETTINGS (ISO 128)
@@ -330,28 +332,9 @@ export const validateTextSettings = (settings: Partial<TextSettings>): TextSetti
 };
 
 export const validateGripSettings = (settings: Partial<GripSettings>): GripSettings => {
-  const defaults: GripSettings = {
-    enabled: true,
-    gripSize: GRIP_SIZE_DEFAULT, // 🏢 SSoT base grip size
-    pickBoxSize: 3,
-    apertureSize: 10,
-    opacity: 1.0,
-    colors: {
-      cold: null,
-      warm: UI_COLORS.SNAP_INTERSECTION,
-      hot: UI_COLORS.SNAP_ENDPOINT,
-      contour: UI_COLORS.BLACK
-    },
-    showAperture: true,
-    multiGripEdit: true,
-    snapToGrips: true,
-    showMidpoints: true,
-    showCenters: true,
-    showQuadrants: true,
-    maxGripsPerEntity: 50,
-    gripObjLimit: 100,
-    showGrips: true
-  };
+  // 🏢 ADR-559 §3b — DERIVED from canonical GRIP_FACTORY_DEFAULTS (aperture 20, warm ροζ,
+  // sentinel cold). VALUES live once in config/grip-factory-defaults.ts.
+  const defaults: GripSettings = GRIP_FACTORY_DEFAULTS;
 
   const validatedSettings: Partial<GripSettings> = { ...settings };
 

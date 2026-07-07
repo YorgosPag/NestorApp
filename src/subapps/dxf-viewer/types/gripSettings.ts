@@ -4,13 +4,12 @@
  */
 
 import type { Point2D, GripKind } from '../rendering/types/Types';
-import { UI_COLORS, GRIP_COLD_COLOR, GRIP_WARM_COLOR, GRIP_HOT_COLOR, GRIP_CONTOUR_COLOR } from '../config/color-config';
 // 🏢 ADR-071: Centralized clamp function
 import { clamp } from '../rendering/entities/shared/geometry-utils';
 // 🏢 ADR-034: Centralized Validation Bounds
 import { OPACITY_BOUNDS, GRIP_BOUNDS } from '../config/validation-bounds-config';
-// 🏢 SSoT base grip size
-import { GRIP_SIZE_DEFAULT } from '../config/grip-size-default';
+// 🏢 ADR-559 §3b — canonical grip default VALUES (aperture 20, warm ροζ, sentinel cold)
+import { GRIP_FACTORY_DEFAULTS } from '../config/grip-factory-defaults';
 // 🏢 ADR-559: canonical grip-settings schema (this DTO === GripSettingsFull projection)
 import type { GripSettingsFull } from './grip-settings-schema';
 
@@ -32,37 +31,13 @@ export interface GripInteractionState {
 }
 
 // === DEFAULT AUTOCAD-STYLE SETTINGS (International Standards) ===
-const defaultGripSettings = {
-  gripSize: GRIP_SIZE_DEFAULT, // 🏢 SSoT base grip size (AutoCAD GRIPSIZE = 7)
-  pickBoxSize: 3,    // ✅ AutoCAD PICKBOX default: 3 DIP
-  apertureSize: 10,  // ✅ AutoCAD APERTURE default: 10 pixels
-  showAperture: true, // ✅ AutoCAD APBOX default: enabled
-
-  colors: {
-    cold: null,                      // Sentinel: null → GRIP_COLD_COLOR at render time
-    warm: UI_COLORS.SNAP_INTERSECTION,     // ✅ AutoCAD standard: Hot Pink - hover grips
-    hot: UI_COLORS.SNAP_ENDPOINT,      // ✅ AutoCAD standard: Red (ACI 1) - selected grips
-    contour: UI_COLORS.BLACK   // ✅ AutoCAD standard: Black contour
-  },
-};
-
+// 🏢 ADR-559 §3b — DERIVED from canonical GRIP_FACTORY_DEFAULTS (aperture 20, warm ροζ,
+// sentinel cold). This input-DTO adds only the render extras (showGripTips / dpiScale);
+// the VALUES live once in config/grip-factory-defaults.ts.
 export const DEFAULT_GRIP_SETTINGS: GripSettings = {
-  ...defaultGripSettings,
-
-  enabled: true,            // ✅ Enable grip system by default
-  showGrips: true,          // ✅ ΑΠΟΚΑΤΑΣΤΑΣΗ: Ενεργοποίηση grips
-  multiGripEdit: true,      // ✅ ΑΠΟΚΑΤΑΣΤΑΣΗ: Ενεργοποίηση multi grips
-  snapToGrips: true,        // ✅ ΑΠΟΚΑΤΑΣΤΑΣΗ: Ενεργοποίηση snap to grips
-  showGripTips: false,
-  dpiScale: 1.0,
-  maxGripsPerEntity: 50,    // ✅ Default maximum grips per entity
-  gripObjLimit: 100,        // ✅ AutoCAD GRIPOBJLIMIT default: hide all grips above 100 selected objects
-
-  // === Display Settings ===
-  opacity: 1.0,             // ✅ Full opacity by default
-  showMidpoints: true,      // ✅ Show midpoint grips
-  showCenters: true,        // ✅ Show center grips
-  showQuadrants: true       // ✅ Show quadrant grips
+  ...GRIP_FACTORY_DEFAULTS,
+  showGripTips: false,      // Grip tooltips disabled by default
+  dpiScale: 1.0             // Default DPI scale
 };
 
 // === VALIDATION ===

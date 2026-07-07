@@ -25,7 +25,7 @@ import {
   revertLinePropertyNames, revertTextPropertyNames, revertGripPropertyNames,
   renameField,
 } from './migration-helpers';
-import { migration_v4_to_v5, migration_v5_to_v6, migration_v6_to_v7, migration_v7_to_v8 } from './grip-cold-color-migrations';
+import { migration_v4_to_v5, migration_v5_to_v6, migration_v6_to_v7, migration_v7_to_v8, migration_v8_to_v9 } from './grip-cold-color-migrations';
 
 // ============================================================================
 // MIGRATION TYPES
@@ -216,7 +216,7 @@ export const migrations: Migration[] = [
       // ✅ ENTERPRISE: Default colors from ACI palette.
       // 🏢 ADR-571: these are the HISTORICAL pre-v7 grip defaults for THIS migration
       // step — intentionally frozen (must not drift). NOT the current SSoT: today's
-      // warm is GRIP_WARM_COLOR '#FF7F00' (orange). Do NOT "sync" this to the SSoT —
+      // warm is GRIP_WARM_COLOR '#ff00ff' (magenta/ροζ). Do NOT "sync" this to the SSoT —
       // it would rewrite what old stored settings migrate to. See grip-cold-color-migrations.ts.
       const DEFAULT_COLORS: Required<GripColors> = {
         cold: '#0000FF',      // Blue (ACI 5)
@@ -281,11 +281,12 @@ export const migrations: Migration[] = [
     }
   },
 
-  // Versions 4→5, 5→6, 6→7, 7→8 extracted to ./grip-cold-color-migrations.ts (SRP / 500-line ratchet)
+  // Versions 4→5, 5→6, 6→7, 7→8, 8→9 extracted to ./grip-cold-color-migrations.ts (SRP / 500-line ratchet)
   migration_v4_to_v5,
   migration_v5_to_v6,
   migration_v6_to_v7,
   migration_v7_to_v8,
+  migration_v8_to_v9,
 ];
 
 // ============================================================================

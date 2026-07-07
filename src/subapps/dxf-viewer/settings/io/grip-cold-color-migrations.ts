@@ -4,8 +4,10 @@
  *
  * Extracted from migrationRegistry.ts (SRP / 500-line ratchet).
  * Versions 4→5 and 5→6 — grip COLD color SSoT alignment.
- * Version 6→7 — grip WARM (hover) color SSoT alignment (Giorgio 2026-06-17).
+ * Version 6→7 — grip WARM (hover) color → GRIP_WARM_COLOR SSoT (Giorgio 2026-06-17).
  * Version 7→8 — grip SIZE SSoT alignment: stale pre-ADR-107 default 14 → 7.
+ * Version 8→9 — grip WARM color re-value heal: stale orange (#FF7F00) → GRIP_WARM_COLOR
+ *   SSoT (now magenta/ροζ #ff00ff, Giorgio 2026-07-07).
  */
 
 import { deepClone } from '../../utils/clone-utils';
@@ -69,13 +71,15 @@ export const migration_v5_to_v6: Migration = {
   },
 };
 
-// Version 6 → 7: Update grip WARM (hover) color to GRIP_WARM_COLOR SSoT (orange).
+// Version 6 → 7: Update grip WARM (hover) color to the GRIP_WARM_COLOR SSoT constant.
 // Pre-v7 factory defaults baked Cyan (ACI 4) / Hot-Pink into the stored warm value
 // (no null sentinel — warm is non-nullable in GripColorsSchema), so a value migration
-// is required to flip existing stored settings to the orange SSoT (Giorgio 2026-06-17).
+// is required to flip existing stored settings to the warm SSoT (Giorgio 2026-06-17).
+// NOTE: this migrates to whatever GRIP_WARM_COLOR is at runtime — it was orange when
+// authored, later re-valued to magenta/ροζ (see v8→v9 below).
 export const migration_v6_to_v7: Migration = {
   version: 7,
-  description: 'Update grip warm (hover) color to GRIP_WARM_COLOR SSoT (orange)',
+  description: 'Update grip warm (hover) color to GRIP_WARM_COLOR SSoT',
   migrate: (data: unknown) => {
     const state = deepClone(data) as GripColdState;
     applyToAllGripScopes(state, (obj) => {
@@ -137,5 +141,30 @@ export const migration_v7_to_v8: Migration = {
   rollback: (data: unknown) => {
     const state = deepClone(data) as { __standards_version: number };
     return { ...state, __standards_version: 7 };
+  },
+};
+
+// ============================================================================
+// Version 8 → 9: Grip WARM colour re-value heal (ADR-559 §3b / ADR-445)
+// ============================================================================
+// v6→v7 flipped stored warm to GRIP_WARM_COLOR while that constant was orange
+// (#FF7F00). Giorgio 2026-07-07 re-valued warm to magenta/ροζ (#ff00ff), so stored
+// settings that baked the old orange need one more heal to the current SSoT. Conditional
+// on the EXACT old default so user-customised warm colours stay untouched. Idempotent.
+const LEGACY_WARM_ORANGE = '#FF7F00';
+
+export const migration_v8_to_v9: Migration = {
+  version: 9,
+  description: 'Grip warm colour: heal stale orange default (#FF7F00) → GRIP_WARM_COLOR SSoT (magenta/ροζ)',
+  migrate: (data: unknown) => {
+    const state = deepClone(data) as GripColdState;
+    applyToAllGripScopes(state, (obj) => {
+      if (obj?.colors && obj.colors.warm === LEGACY_WARM_ORANGE) obj.colors.warm = GRIP_WARM_COLOR;
+    });
+    return { ...state, __standards_version: 9 };
+  },
+  rollback: (data: unknown) => {
+    const state = deepClone(data) as { __standards_version: number };
+    return { ...state, __standards_version: 8 };
   },
 };

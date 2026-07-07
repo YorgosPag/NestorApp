@@ -62,6 +62,18 @@
       ],
       "tier": 3
     },
+    "grip-factory-defaults": {
+      "ssotFile": "src/subapps/dxf-viewer/config/grip-factory-defaults.ts",
+      "description": "ADR-559 §3b / ADR-445 — the grip default VALUES (aperture 20, warm=GRIP_WARM_COLOR magenta/ροζ, sentinel cold) live ONCE in config/grip-factory-defaults.ts. Before this they were re-declared in 7 divergent places (FACTORY_DEFAULTS GRIP_DEFAULTS, types/gripSettings DEFAULT_GRIP_SETTINGS, GripStyleStore INITIAL, settings-core/defaults DEFAULT_GRIP_SETTINGS, domain.validateGripSettings inline defaults, useUnifiedSpecificSettings preview mock, rendering/grips/constants DEFAULT_GRIP_COLORS) that disagreed on apertureSize (10 vs 20) and warm colour (orange vs hot-pink) — an inconsistency that made hover grips render orange while the store said 20. Every default surface now DERIVES (`...GRIP_FACTORY_DEFAULTS`) from the canonical. A new `apertureSize:<number>` literal means a NEW divergent default object — add it to the canonical instead. The only allowlisted non-canonical site is the GripSettings.tsx Small/Medium/Large preset buttons (deliberately distinct preset values, not defaults). Mode-variant deltas (draft/hover/selection sizes) carry no apertureSize and are unaffected. Warm colour discipline is enforced by the single GRIP_WARM_COLOR SSoT constant + the grip-factory-defaults-ssot.test.ts parity test, not a content pattern here (GRIP_WARM_COLOR is legitimately referenced by mode-deltas).",
+      "forbiddenPatterns": [
+        "apertureSize:\\s*[0-9]"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/config/grip-factory-defaults.ts",
+        "src/subapps/dxf-viewer/ui/components/dxf-settings/settings/core/GripSettings.tsx"
+      ],
+      "tier": 3
+    },
     "line-settings-schema": {
       "ssotFile": "src/subapps/dxf-viewer/types/line-settings-schema.ts",
       "description": "ADR-559 §3e — the line-settings object SHAPE is defined ONCE in types/line-settings-schema.ts (LineSettingsBase + the LineType/LineCapStyle/LineJoinStyle unions). Every other line-settings type (domain LineSettings, the LinePreview/CurrentSettingsDisplay preview view-models) MUST be a PROJECTION (`type X = Pick<LineSettingsBase, ...> & {...}`), not a standalone `interface LineSettings`. Re-declaring one reintroduces the 4-divergent-copies duplication where adding one field meant editing every copy by hand. Add new line fields to LineSettingsBase. The tiny CSS-preview input `{color,width,style}` (different field names/types) must use a distinct name (LineCssPreviewInput), not `LineSettings` — mirror the grip GripCssPreviewInput.",
@@ -3369,7 +3381,7 @@
       "ssotFile": "src/subapps/dxf-viewer/stores/LayerStore.ts",
       "description": "ADR-358 Phase 9D-5a: stable `layerId` (`lyr_<UUID-v4>`) is the canonical entity↔layer binding. Direct reads of `entity.layer` (the legacy display-name field) and writes via `.layer = '<name>'` literal are forbidden in active product code — use `resolveEntityLayerName(entity)` (id-first via LayerStore, legacy fallback) or `LayerStore.getLayer(entity.layerId)?.name`. Transitional readers + the BaseEntity interface itself + the DXF parse boundary remain allowlisted until Phase 9D-5b drops the legacy field outright. Ratchet, not zero-tolerance: existing reader sites baseline-tolerated until 9D-5b sweep.",
       "forbiddenPatterns": [
-        "entity\\.layer\\b",
+        "\\bentity\\.layer\\b",
         "\\.layer\\s*=\\s*['\"]"
       ],
       "allowlist": [

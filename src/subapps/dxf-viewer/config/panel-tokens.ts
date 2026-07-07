@@ -887,7 +887,7 @@ export const PANEL_LAYOUT = {
     LINE_INFO: '#0000FF',                // Pure blue - info/secondary selection
     // Grip colors (AutoCAD standard)
     GRIP_COLD: GRIP_COLD_COLOR,          // SSOT → color-config.ts
-    GRIP_WARM: GRIP_WARM_COLOR,          // SSOT → color-config.ts (orange hover) — was '#FF69B4' hot-pink
+    GRIP_WARM: GRIP_WARM_COLOR,          // SSOT → color-config.ts (magenta/ροζ hover) — auto-flips with the constant
     GRIP_HOT: GRIP_HOT_COLOR,            // SSOT → color-config.ts (red selected) — was '#FF0000' hardcoded
     // Text colors
     TEXT_DEFAULT: '#000000',             // Black - default text on light bg

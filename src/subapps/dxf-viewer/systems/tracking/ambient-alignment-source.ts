@@ -91,8 +91,15 @@ export function collectAmbientAlignmentAnchors(
   cursor: Point2D,
   entities: readonly Entity[],
   cfg: AmbientAlignmentConfig,
+  // ADR-557 — the entity/-ies currently being MOVED. You never OTRACK to the object you are
+  // dragging (Revit/AutoCAD; mirrors the OSNAP `excludeEntityId` in corner-projection-snap). Its
+  // own insertion point would otherwise be a phantom anchor: harmless for a line / short single-line
+  // text (its origin ≈ the grabbed base point, so it dedups with the ref anchor), but for a MULTI-LINE
+  // text the origin sits far below the box-centre anchor → it becomes a distinct anchor that the
+  // resolver locks onto, drowning out the real neighbour traces (Giorgio browser-verify 2026-07-07).
+  excludeIds?: ReadonlySet<string> | null,
 ): AcquiredTrackingPoint[] {
-  const near = nearestMembersWithinRadius(cursor, entities, cfg);
+  const near = nearestMembersWithinRadius(cursor, entities, cfg, excludeIds);
   const anchors: AcquiredTrackingPoint[] = [];
   for (const m of near) {
     pushAxisGatedAnchors(cursor, m.points, cfg.axisToleranceWorld, anchors);
@@ -123,9 +130,12 @@ function nearestMembersWithinRadius(
   cursor: Point2D,
   entities: readonly Entity[],
   cfg: AmbientAlignmentConfig,
+  excludeIds?: ReadonlySet<string> | null,
 ): MemberProximity[] {
   const out: MemberProximity[] = [];
   for (const e of entities) {
+    // ADR-557 — skip the entity/-ies being dragged (no self-tracking); see `collectAmbientAlignmentAnchors`.
+    if (excludeIds?.has(e.id)) continue;
     const points = ambientPointsForEntity(e);
     if (points.length === 0) continue;
     // ADR-557 — a text contributes a single insertion point (< 3 verts), so fall

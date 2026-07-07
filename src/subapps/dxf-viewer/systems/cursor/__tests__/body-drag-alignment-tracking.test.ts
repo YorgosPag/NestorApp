@@ -46,8 +46,9 @@ describe('applyBodyDragAlignmentTracking (ADR-560)', () => {
     const out = applyBodyDragAlignmentTracking({ x: 12.3, y: 19.8 }, null, 2);
 
     // refPoints === [anchor] (base-point tracking, parity with the line grip MOVE).
+    // ADR-557 — the dragged selection is excluded from the ambient scan (no self-OTRACK).
     expect(mockResolve).toHaveBeenCalledWith(
-      { x: 12.3, y: 19.8 }, [{ x: 10, y: 20 }], 2, null,
+      { x: 12.3, y: 19.8 }, [{ x: 10, y: 20 }], 2, null, new Set(['line-1']),
     );
     // Overrides the effective world to the aligned point (→ ghost delta) …
     expect(out).toEqual({ x: 12, y: 20 });

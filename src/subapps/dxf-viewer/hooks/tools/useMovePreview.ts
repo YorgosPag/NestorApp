@@ -153,6 +153,7 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     const moveTrk = resolveActionAlignmentTracking(
       orthoDestination, [basePoint], t.scale,
       (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+      new Set(selectedEntityIds), // ADR-557 — no self-OTRACK: the moving selection is excluded from ambient.
     );
     const destination = moveTrk ? moveTrk.point : orthoDestination;
     const cursorScreen = CoordinateTransforms.worldToScreen(destination, t, viewport);

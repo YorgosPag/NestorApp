@@ -47,8 +47,11 @@ describe('ADR-557 — applyGripDragAlignmentTracking whole-entity MOVE (movesEnt
 
     const out = applyGripDragAlignmentTracking({ x: 12.4, y: 19.7 }, null, 2);
 
-    // Resolves against the SINGLE grabbed base point (parity with body-drag + line MOVE).
-    expect(mockResolve).toHaveBeenCalledWith({ x: 12.4, y: 19.7 }, [{ x: 10, y: 20 }], 2, null);
+    // Resolves against the SINGLE grabbed base point (parity with body-drag + line MOVE), and
+    // ADR-557 — excludes the dragged text itself from the ambient scan (no self-OTRACK).
+    expect(mockResolve).toHaveBeenCalledWith(
+      { x: 12.4, y: 19.7 }, [{ x: 10, y: 20 }], 2, null, new Set(['text-1']),
+    );
     // Overrides the effective world to the aligned point (→ ghost delta) …
     expect(out).toEqual({ x: 12, y: 20 });
     // … and publishes the SAME result for the trace paint.

@@ -123,6 +123,7 @@ export function useEntityBodyDragPreview(props: UseEntityBodyDragPreviewProps): 
     // rides clean step multiples; otherwise resolve the cyan AutoAlign traces as before (no regression).
     const tracking = isGripStepActive() ? null : resolveActionAlignmentTracking(
       constrainedDestination, [anchor], t.scale, (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+      new Set(entityIds), // ADR-557 — no self-OTRACK: the dragged selection is excluded from the ambient scan.
     );
     const destination: Point2D = tracking ? tracking.point : constrainedDestination;
     const delta: Point2D = { x: destination.x - anchor.x, y: destination.y - anchor.y };
