@@ -144,3 +144,28 @@ describe('hatchMinWorldSpacing (density-LOD input)', () => {
     expect(x4).toBeCloseTo(x1 * 4, 3);
   });
 });
+
+describe('patternScaleForSpacingMm (ADR-507 — «Απόσταση» mm → patternScale στο «έτοιμο μοτίβο»)', () => {
+  it('round-trip: το προκύπτον patternScale δίνει την επιθυμητή world απόσταση', () => {
+    for (const desired of [50, 100, 250]) {
+      const scale = patternScaleForSpacingMm('ANSI31', desired);
+      const actual = hatchMinWorldSpacing(
+        { fillType: 'predefined', patternName: 'ANSI31', patternScale: scale } as unknown as HatchEntity,
+      );
+      expect(actual).toBeCloseTo(desired, 3);
+    }
+  });
+
+  it('μεγαλύτερη επιθυμητή απόσταση → μεγαλύτερο patternScale (μονότονο)', () => {
+    expect(patternScaleForSpacingMm('ANSI31', 200)).toBeGreaterThan(patternScaleForSpacingMm('ANSI31', 100));
+  });
+
+  it('desired ≤ 0 → 1 (καμία εκφυλισμένη κλίμακα)', () => {
+    expect(patternScaleForSpacingMm('ANSI31', 0)).toBe(1);
+    expect(patternScaleForSpacingMm('ANSI31', -5)).toBe(1);
+  });
+
+  it('άγνωστο pattern (unit spacing 0) → 1', () => {
+    expect(patternScaleForSpacingMm('NOPE', 100)).toBe(1);
+  });
+});
