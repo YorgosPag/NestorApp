@@ -368,6 +368,18 @@ export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
             },
           ],
         },
+      ],
+    },
+    // ── Πολυγραμμή (AutoCAD «Global Width» — polyline-only → self-hides for a LINE) ─
+    // ADR-510 Φ3d — «Πλάτος» is a polyline-only property; a plain LINE has no width in
+    // the data model (the write silently skips it). Mirroring the Geometry panel's
+    // line-only self-hide, this panel appears ONLY when a width-capable (polyline-like)
+    // entity is selected (`visibilityKey` → getPanelVisibility → isPolylineLike).
+    {
+      id: 'line-width',
+      labelKey: 'ribbon.panels.linePolyline',
+      visibilityKey: LINE_TOOL_PANEL_VISIBILITY_KEYS.widthApplicable,
+      rows: [
         {
           isInFlyout: false,
           buttons: [

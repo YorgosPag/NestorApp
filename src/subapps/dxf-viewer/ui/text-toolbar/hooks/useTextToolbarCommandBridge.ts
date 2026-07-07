@@ -13,11 +13,13 @@
  * Routing matrix (toolbar field → command):
  *
  *   fontFamily, fontHeight, bold, italic, underline, overline,
- *   strikethrough, color, widthFactor, obliqueAngle, tracking
+ *   strikethrough, color, obliqueAngle, tracking
  *     → UpdateTextStyleCommand  (run-level style, merges across calls)
  *
- *   rotation
- *     → UpdateTextGeometryCommand (merges within 500 ms drag window)
+ *   rotation, widthFactor
+ *     → UpdateTextTransformCommand (FLAT top-level box transform the renderer reads —
+ *       ADR-557; writing the AST `textNode.rotation` / `run.style.widthFactor` renders
+ *       as a no-op, which is why those two ribbon fields "did nothing" before)
  *
  *   justification, lineSpacingMode, lineSpacingFactor, layerId,
  *   currentScale
@@ -41,9 +43,12 @@ import {
   type TextStylePatch,
 } from '../../../core/commands/text/UpdateTextStyleCommand';
 import {
-  UpdateTextGeometryCommand,
-  type GeometryPatch,
-} from '../../../core/commands/text/UpdateTextGeometryCommand';
+  UpdateTextTransformCommand,
+  type TextTransformState,
+} from '../../../core/commands/text/UpdateTextTransformCommand';
+// ADR-557 — the SAME scene→flat projection the grips read, so a ribbon-typed transform
+// is byte-identical to a grip-dragged one (preview ≡ commit).
+import { projectSceneTextToDxf, type TextSceneShape } from '../../../bim/text/project-scene-text';
 import { UpdateTextCurrentScaleCommand } from '../../../core/commands/text/UpdateTextCurrentScaleCommand';
 import { UpdateMTextParagraphCommand } from '../../../core/commands/text/UpdateMTextParagraphCommand';
 import type { TextJustification } from '../../../text-engine/types';
@@ -60,7 +65,6 @@ const STYLE_FIELDS = [
   'overline',
   'strikethrough',
   'color',
-  'widthFactor',
   'obliqueAngle',
   'tracking',
 ] as const satisfies readonly (keyof TextToolbarValues)[];
@@ -89,8 +93,6 @@ function buildStylePatch(
       return { strikethrough: value as boolean };
     case 'color':
       return { color: value as TextStylePatch['color'] };
-    case 'widthFactor':
-      return { widthFactor: value as number };
     case 'obliqueAngle':
       return { obliqueAngle: value as number };
     case 'tracking':
@@ -115,19 +117,44 @@ function dispatchStylePatch(
   }
 }
 
-function dispatchGeometryPatch(
+/**
+ * ADR-557 — dispatch a FLAT box-transform field (`rotation` / `widthFactor`).
+ *
+ * These live as TOP-LEVEL entity fields the renderer + grip commit own — NOT on the AST
+ * `textNode` / run-style. Route them through the SAME `UpdateTextTransformCommand` the grips
+ * use: build the full transform state from the SAME projection the grips read
+ * (`projectSceneTextToDxf`), change the one field, dispatch. Writing the AST fields instead
+ * (the old routing) rendered as a no-op — that is why the ribbon «Περιστροφή»/«Πλάτος» did
+ * nothing. Position/height are re-written with their current (projected) values → idempotent.
+ */
+function dispatchTransformField(
   ids: readonly string[],
-  patch: GeometryPatch,
+  field: 'rotation' | 'widthFactor',
+  value: number,
   services: DxfTextServices,
 ): void {
   const history = getGlobalCommandHistory();
   for (const entityId of ids) {
-    const cmd = new UpdateTextGeometryCommand(
-      { entityId, patch },
-      services.sceneManager,
-      services.layerProvider,
-      services.auditRecorder,
-    );
+    const raw = services.sceneManager.getEntity(entityId) as unknown as TextSceneShape | undefined;
+    if (!raw || (raw.type !== 'text' && raw.type !== 'mtext')) continue;
+    const dxf = projectSceneTextToDxf(raw, entityId);
+    const height = dxf.height;
+    const previous: TextTransformState = {
+      position: dxf.position,
+      rotation: dxf.rotation ?? 0,
+      height,
+      fontSize: height,
+      ...(dxf.width != null ? { width: dxf.width } : { widthFactor: dxf.widthFactor ?? 1 }),
+    };
+    // `widthFactor` is the simple-TEXT X-scale; a frame-width MTEXT has no ribbon width
+    // field, so never force the widthFactor channel onto it (would drop its `width`).
+    if (field === 'widthFactor' && previous.width != null) continue;
+    const next: TextTransformState =
+      field === 'rotation'
+        ? { ...previous, rotation: value }
+        : { ...previous, widthFactor: value };
+    const cmd = new UpdateTextTransformCommand(entityId, next, previous, services.sceneManager, false);
+    if (cmd.validate() !== null) continue;
     history.execute(cmd);
   }
 }
@@ -145,9 +172,13 @@ function diffAndDispatch(
     if (!patch) continue;
     dispatchStylePatch(ids, patch, services);
   }
-  // Geometry — rotation is the only toolbar-driven geometry field.
+  // Box transform (FLAT SSoT) — rotation + widthFactor go through UpdateTextTransformCommand
+  // (the SAME command the grips use), so the ribbon edit actually renders (ADR-557).
   if (!Object.is(next.rotation, prev.rotation) && next.rotation !== null) {
-    dispatchGeometryPatch(ids, { rotation: next.rotation }, services);
+    dispatchTransformField(ids, 'rotation', next.rotation, services);
+  }
+  if (!Object.is(next.widthFactor, prev.widthFactor) && next.widthFactor !== null) {
+    dispatchTransformField(ids, 'widthFactor', next.widthFactor, services);
   }
   // Annotation scale — sync viewport + update entity textNode.currentScale.
   if (!Object.is(next.currentScale, prev.currentScale) && next.currentScale !== null) {

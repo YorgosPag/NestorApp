@@ -39,6 +39,7 @@ export interface TextSceneShape {
   rotation?: number;
   width?: number;       // MTEXT frame
   widthFactor?: number; // simple-TEXT X-scale
+  fontFamily?: string;  // ADR-526 Φ5a — flat-font fallback (imported / Τέκτονας text w/o run font)
 }
 
 /**
@@ -52,6 +53,14 @@ export function projectSceneTextToDxf(e: TextSceneShape, id: string): DxfText {
   // SSoT (`resolveTextBox`, via `applyTextGripDrag`) is attachment-aware — i.e. the
   // transform matches the box the user grabbed (TL..BR), not a hard TL.
   const textStyle = extractFirstRunStyle(e);
+  // ADR-526 Φ5a — flat `fontFamily` fallback (mirror `convertTextEntity`): when the run
+  // style carries no font (imported / Τέκτονας text), fold the flat entity font into the
+  // style so BOTH the live ghost AND the drag-sync ribbon render with the SAME font the
+  // committed canvas shows — else the font dropped to the renderer default DURING a resize
+  // drag (Giorgio 2026-07-07 «το Arial χάνεται όταν αλλάζει η διάσταση»).
+  const finalStyle = e.fontFamily && !textStyle?.fontFamily
+    ? { ...(textStyle ?? {}), fontFamily: e.fontFamily }
+    : textStyle;
   return {
     id,
     type: 'text',
@@ -60,7 +69,7 @@ export function projectSceneTextToDxf(e: TextSceneShape, id: string): DxfText {
     text,
     height,
     rotation: e.rotation,
-    ...(textStyle ? { textStyle } : {}),
+    ...(finalStyle ? { textStyle: finalStyle } : {}),
     ...(e.type === 'mtext' ? { width: e.width } : { widthFactor: e.widthFactor }),
   };
 }

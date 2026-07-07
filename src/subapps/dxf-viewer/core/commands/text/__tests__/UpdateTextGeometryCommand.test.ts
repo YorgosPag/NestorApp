@@ -39,6 +39,24 @@ describe('UpdateTextGeometryCommand', () => {
     expect(next.textNode.rotation).toBe(45);
   });
 
+  // ADR-557 — the renderer + converter + read-selector all read the FLAT `entity.rotation`
+  // (the grip commit writes it flat); a ribbon rotation must write it there, else the canvas
+  // never spins even though `textNode.rotation` changed. Regression guard for that bug.
+  it('writes the FLAT rotation SSoT the renderer reads', () => {
+    const { scene, store } = makeScene([makeTextEntity('ent_1')]);
+    const cmd = new UpdateTextGeometryCommand(
+      { entityId: 'ent_1', patch: { rotation: 45 } },
+      scene,
+      makeLayerProvider({ '0': {} }),
+    );
+    cmd.execute();
+    const next = store.get('ent_1') as DxfTextSceneEntity & { rotation?: number };
+    expect(next.rotation).toBe(45);
+    cmd.undo();
+    const restored = store.get('ent_1') as DxfTextSceneEntity & { rotation?: number };
+    expect(restored.rotation).toBe(0);
+  });
+
   it('resizes MTEXT column width when columns exist', () => {
     const entity = makeTextEntity('ent_1', {
       textNode: makeNode({ columns: { type: 'static', count: 2, width: 50, gutter: 5 } }),

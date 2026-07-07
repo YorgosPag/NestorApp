@@ -74,19 +74,25 @@ export class UpdateTextGeometryCommand implements ICommand {
     assertCanEditLayer({ layerName: resolveEntityLayerName(entity) ?? '', provider: this.layerProvider });
 
     const safeNode = ensureTextNode(entity);
+    // ADR-557 — rotation SSoT is the FLAT `entity.rotation` (the converter reads
+    // `e.rotation` → render EntityModel `te.rotation`, and the grip commit
+    // `UpdateTextTransformCommand` writes it flat). Snapshot/read/write the flat field so
+    // a ribbon rotation actually spins the canvas; `textNode.rotation` is kept in sync.
+    const currentRotation = (entity as { rotation?: number }).rotation ?? safeNode.rotation ?? 0;
     if (!this.snapshot) {
       this.snapshot = {
         position: entity.position,
-        rotation: safeNode.rotation,
+        rotation: currentRotation,
         width: safeNode.columns?.width,
         textNode: safeNode,
       };
     }
 
     const { patch } = this.input;
+    const nextRotation = patch.rotation ?? currentRotation;
     const nextNode: DxfTextNode = {
       ...safeNode,
-      rotation: patch.rotation ?? safeNode.rotation,
+      rotation: nextRotation,
       columns: safeNode.columns && patch.width !== undefined
         ? { ...safeNode.columns, width: patch.width }
         : safeNode.columns,
@@ -94,6 +100,8 @@ export class UpdateTextGeometryCommand implements ICommand {
     const nextPosition = patch.position ?? entity.position;
     this.sceneManager.updateEntity(this.input.entityId, {
       position: nextPosition,
+      // Flat rotation = the field the renderer/converter/read-selector all read (ADR-557).
+      rotation: nextRotation,
       textNode: nextNode,
     });
     this.wasExecuted = true;
@@ -122,6 +130,8 @@ export class UpdateTextGeometryCommand implements ICommand {
     if (!this.snapshot || !this.wasExecuted) return;
     this.sceneManager.updateEntity(this.input.entityId, {
       position: this.snapshot.position,
+      // Restore the flat rotation SSoT (ADR-557) alongside the textNode.
+      rotation: this.snapshot.rotation,
       textNode: this.snapshot.textNode,
     });
   }

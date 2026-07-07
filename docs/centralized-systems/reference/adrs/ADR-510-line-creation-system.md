@@ -1131,3 +1131,19 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   catalog-only, ΔΕΝ άλλαξε. **Tests:** `linetype-dash-resolver.test.ts` +4 (DotX2 regression / custom / collision / null),
   `resolve-entity-style.test.ts` +1 (entity-level DotX2 cascade), 81 GREEN linetype-suite + 12 downstream (dim-stroke/style-resolve).
   tsc SKIP (N.17). 🔴 browser-verify (DXF με DotX2/Dashed2 linetype ζωγραφίζεται dashed) + commit → Giorgio.
+- **2026-07-08 — Φ2E #2 fix: το «Βήμα» (per-object CELTSCALE) στο tab «Στυλ Γραμμής» ΔΕΝ ενημέρωνε τη γραμμή
+  (Opus 4.8, shared tree).** **Σύμπτωμα (Giorgio):** στο contextual tab, Χρώμα/Τύπος/Στυλ λειτουργούν, αλλά το
+  **Βήμα** (ltscale) δεν άλλαζε την πυκνότητα των παυλών. **Ρίζα (root-cause, SSoT trace event→write→render):** το
+  write ήταν σωστό (`useRibbonLineToolBridge` → `patchEntity(selected, { ltscale: n })`), αλλά ο **render EntityModel
+  converter** (`canvas-v2/dxf-canvas/dxf-renderer-entity-model.ts buildEntityModelFromDxf`) **δεν** αντέγραφε το
+  `entity.ltscale` στο render model. Ο stroke-time dash sizer (`rendering/entities/base-entity-style-helpers.ts
+  applyEntityLinetypeDash`) διαβάζει `entity.ltscale ?? 1` **από αυτό το EntityModel** → πάντα 1. Η dashed γραμμή
+  ΔΕΝ μπορεί να περάσει από το solid-batch fast path (`DxfRenderer` αποκλείει non-solid linetypes), οπότε αυτό το
+  per-entity model είναι ο **μόνος** δρόμος που φτάνει μια παύλα → το «Βήμα» χανόταν σε ΚΑΘΕ dashed render.
+  **Fix (1 γραμμή, mirror του `dashMm` spread, zero regression):** το `base` object κουβαλά πλέον
+  `...(ltscale !== 1 && { ltscale })`. **Άλλα πεδία του tab (audit ίδιας συνεδρίας):** **Πλάτος** = polyline-only
+  έννοια (LINE δεν έχει width στο data-model· ο handler κάνει silent-skip) → product decision: απόκρυψη για μη-polyline
+  (εκκρεμεί έγκριση Giorgio)· **Πάχος/Διαφάνεια/Επίπεδο** = write+resolve+cache ΣΩΣΤΑ στον κώδικα (το bitmap-cache
+  invalidate-άρει σε scene-ref change, όχι per-field· αφού το Χρώμα δουλεύει, ξαναχτίζεται) → χρειάζονται συγκεκριμένο
+  repro (πιθανό subtle change ή selection-render masking, όχι code bug). tsc SKIP (N.17). 🔴 browser-verify (Βήμα σε
+  dashed γραμμή αλλάζει πυκνότητα παυλών) + commit → Giorgio.

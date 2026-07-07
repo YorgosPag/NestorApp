@@ -59,6 +59,11 @@ export const LINE_TOOL_PANEL_VISIBILITY_KEYS = Object.freeze({
   geometry: 'lineTool.panel.geometry',
   filletOptions: 'lineTool.panel.filletOptions',
   chamferOptions: 'lineTool.panel.chamferOptions',
+  // ADR-510 Φ3d — «Πλάτος» is a polyline-only property (global width; DXF grp 40/41).
+  // A plain LINE has no width in the data model, so the field is meaningless there and
+  // the write silently skips it — the panel self-hides for non-polyline selections
+  // (AutoCAD/Revit parity: Global Width shows ONLY on a polyline).
+  widthApplicable: 'lineTool.panel.widthApplicable',
 } as const);
 
 export type LineToolPanelVisibilityKey =

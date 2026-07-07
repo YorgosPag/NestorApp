@@ -194,21 +194,24 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'hatch': return <Grid3X3 width={sizePx[size]} height={sizePx[size]} className={className} />; // ADR-507 — γραμμοσκίαση
     // ADR-507 Φ3 — Μέθοδος ορίου. «Επιλογή σημείου» = γραμμοσκιασμένη περιοχή με σημείο-κλικ
     // στο κέντρο (auto-detect). «Σχεδίαση ορίου» = πολύγωνο με τελείες-κορυφές (N-click).
+    // Accent χρώματα (theme-safe σε light+dark) ώστε οι δύο μέθοδοι να διαφέρουν οπτικά:
+    //   #4FA3F7 (μπλε) = γραμμοσκίαση του 1ου· #FF9800 (πορτοκαλί) = κορυφές του 2ου.
+    // Οι περιμετρικές γραμμές μένουν `currentColor` (theme-aware) και στα δύο.
     case 'hatch-pick-point': return inlineSvg(size, (
       <>
         <rect x="3" y="4" width="18" height="16" rx="1" />
-        <path d="M11 4 L5 10 M17 4 L5 16 M21 6 L9 20 M21 12 L15 20" strokeWidth="0.75" />
+        <path d="M11 4 L5 10 M17 4 L5 16 M21 6 L9 20 M21 12 L15 20" strokeWidth="0.75" stroke="#4FA3F7" />
         <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none" />
       </>
     ));
     case 'hatch-draw-boundary': return inlineSvg(size, (
       <>
         <path d="M5 7 L12 3 L20 8 L17 20 L7 18 Z" />
-        <circle cx="5" cy="7" r="1.5" fill="currentColor" stroke="none" />
-        <circle cx="12" cy="3" r="1.5" fill="currentColor" stroke="none" />
-        <circle cx="20" cy="8" r="1.5" fill="currentColor" stroke="none" />
-        <circle cx="17" cy="20" r="1.5" fill="currentColor" stroke="none" />
-        <circle cx="7" cy="18" r="1.5" fill="currentColor" stroke="none" />
+        <circle cx="5" cy="7" r="1.5" fill="#FF9800" stroke="none" />
+        <circle cx="12" cy="3" r="1.5" fill="#FF9800" stroke="none" />
+        <circle cx="20" cy="8" r="1.5" fill="#FF9800" stroke="none" />
+        <circle cx="17" cy="20" r="1.5" fill="#FF9800" stroke="none" />
+        <circle cx="7" cy="18" r="1.5" fill="#FF9800" stroke="none" />
       </>
     ));
     case 'finish-paint': return <Palette width={sizePx[size]} height={sizePx[size]} className={className} />; // ADR-449 — «Βαφή σοβά» 2D paintbrush

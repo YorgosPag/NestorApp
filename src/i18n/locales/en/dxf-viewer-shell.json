@@ -1625,6 +1625,7 @@
       "lineGeneral": "General",
       "lineAppearance": "Line Appearance",
       "lineGeometry": "Geometry",
+      "linePolyline": "Polyline",
       "lineDraw": "Line",
       "lineModify": "Modify",
       "lineFilletOptions": "Fillet Options",
