@@ -190,6 +190,21 @@ member → λαβές + MOVE/ROTATION σε **μία μόνο** γραμμή (mis
   `type:'group'` (best-effort τώρα, no-op αν το command δεν κλωνοποιεί group).
 
 ## Changelog
+- **2026-07-07** — **Phase 3α: σημασιολογία HOVER/SELECTION ομάδας (Figma/Revit/C4D).** ΡΙΖΑ (audit): κάθε
+  expanded member κουβαλά το ΙΔΙΟ `group.id`, οπότε τα interactive overlays του καμβά (`dxf-canvas-renderer`
+  §1b) που κάνουν `entityMap.get(id)` κρατούσαν **ΕΝΑ αυθαίρετο member** → (Bug 1) hover ομάδας φώτιζε
+  άσχετο member· (Bug 2) selection έδειχνε ΕΝΑ member ως 'selected' **με per-member canvas grips** →
+  «ένα μέλος επιλεγμένο/κινείται μόνο του». Το hit-test/click ΗΔΗ επέστρεφε `group.id` (tagged scene) και
+  τα React grips ΗΔΗ ήταν group-aware (grip-registry gizmo). **FIX (SSoT, additive):**
+  (1) νέος resolver `resolveGroupContainingEntity` + `collectGroupEntities` στο `group-selection-bounds.ts`
+  (ΜΙΑ πηγή «σε ποια ομάδα ανήκει ένα id»· ο grip-registry publisher migrated σ' αυτόν — N.0.2)·
+  (2) `DxfRenderOptions.groupIds` (raw group ids, από `DxfCanvasSubscriber` via `collectGroupEntities`)·
+  (3) `dxf-canvas-renderer` overlay pass: hovered/selected id που είναι group → paint **ΟΛΑ τα members**
+  (hover=κυανό όλη η ομάδα· selected=όλα με `suppressGrips:true`, τα handles τα δίνει το gizmo). Non-group id
+  (και «entered» member με δικό του id) → legacy O(1) path. **Foundations enter-group:** νέο `ActiveGroupStore`
+  (stack drill-in, zero-React, mirror HoverStore) + `useActiveGroup`. Tests: `group-selection-bounds.test.ts`
+  (+resolver/collect), `active-group-store.test.ts` (7). 15/15 GREEN, ΟΧΙ tsc (N.17). Render leaf + micro-leaf
+  touch → ADR-040 §changelog (CHECK 6B/6D). ⏳ Phase 3β: double-click enter-group + ατομική επεξεργασία member.
 - **2026-07-07** — **Phase 2: interactive GIZMO ομάδας (§8 DONE).** ΕΝΑ κοινό move-cross + rotation
   handle στο κέντρο του group bbox (Revit/C4D). FULL SSoT reuse (mirror `getPolylineMoveRotateGrips`):
   `GroupGripKind` + `getGroupGizmoGrips` + εκπομπή στο `grip-registry` (Map<id,GroupEntity>) + hot-grip
