@@ -30,7 +30,13 @@ import { applyLineRotationDrag } from '../../systems/line/line-grips';
 // by identity). polylineBboxCenter = the commit's per-polyline pivot fallback.
 import { applyPrimitiveRotationDrag } from '../../hooks/grips/primitive-rotation-drag';
 import { polylineBboxCenter } from '../../systems/polyline/rectangle-detect';
-import type { Entity } from '../../types/entities';
+import type { Entity, GroupEntity } from '../../types/entities';
+// ADR-575 §8 — GROUP gizmo live ghost: reuse the commit's whole-group transform SSoTs
+// (rotate via `applyPrimitiveRotationDrag`→`rotateEntity`, move via `calculateMovedGeometry`)
+// + the bbox-centre pivot fallback (the gizmo origin).
+import { computeGroupSelectionBounds } from '../../systems/group/group-selection-bounds';
+import { calculateMovedGeometry } from '../../core/commands/entity-commands/move-entity-geometry';
+import type { SceneEntity } from '../../core/commands/interfaces';
 import { applyTextGripDrag } from '../../bim/text/text-grips';
 // ADR-557 Φ-attachment — scene→DxfText projection SSoT (shared with the commit): resolves
 // the raw entity's textNode height/text/style so the ghost box math ≡ the commit's.
@@ -115,7 +121,7 @@ export function applyEntityPreview(
   ctx?: ApplyEntityPreviewContext,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, floorFinishGripKind, hatchGripKind, textGripKind, lineGripKind, arcGripKind, polylineGripKind, anchorPos, rotatePivot } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, floorFinishGripKind, hatchGripKind, textGripKind, lineGripKind, arcGripKind, polylineGripKind, groupGripKind, anchorPos, rotatePivot } = preview;
   if (delta.x === 0 && delta.y === 0) return entity;
 
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
@@ -242,7 +248,7 @@ export function applyEntityPreview(
   // the guard MUST accept both, else the live ghost vanishes ("το κείμενο δεν ανταποκρίνεται",
   // Giorgio 2026-06-30). Regression re-fix of ba33b0c2 (reverted by 0878ed54 on a wrong
   // premise). Guarded by `apply-entity-preview-text.test.ts`.
-  if (textGripKind && (entity.type === 'text' || entity.type === 'mtext')) {
+  if ((entity.type === 'text' || entity.type === 'mtext') && (textGripKind || movesEntity)) {
     // The ghost pipeline hands us the RAW scene entity (textNode-based): its flat
     // `text`/`height`/`textStyle` are absent for in-app text, so previously (a)
     // `resolveBoxHeight` fell back to the 2.5 DIMTXT default → a ~1.5×2.5 box (garbage
@@ -251,6 +257,20 @@ export function applyEntityPreview(
     // Project via the SAME SSoT the commit runs (preview ≡ commit) and inject the flat
     // fields so the box math is correct AND the ghost actually paints.
     const t = projectSceneTextToDxf(entity as unknown as TextSceneShape, entity.id);
+    // ADR-557 — inject the projected flat fields onto EVERY text ghost so the render
+    // EntityModel never carries undefined content (→ `TextRenderer` bails → invisible).
+    const flat = {
+      text: t.text,
+      height: t.height,
+      ...(t.textStyle ? { textStyle: t.textStyle } : {}),
+    };
+    // Whole-entity translate (body-drag / Move tool: `movesEntity`, no grip kind) — shift
+    // the insertion point by `delta`. Previously this fell through to the generic
+    // `movesEntity` path, which patched only `position` and left the flat fields undefined,
+    // so a MOVING in-app text ghost never painted (Giorgio 2026-07-07).
+    if (!textGripKind) {
+      return { ...(entity as object), ...flat, position: translatePoint(t.position, delta) } as unknown as DxfEntityUnion;
+    }
     const currentPos: Point2D = anchorPos
       ? translatePoint(anchorPos, delta)
       : { x: delta.x, y: delta.y };
@@ -262,9 +282,7 @@ export function applyEntityPreview(
     if (Object.keys(patch).length === 0) return entity;
     return {
       ...(entity as object),
-      text: t.text,
-      height: t.height,
-      ...(t.textStyle ? { textStyle: t.textStyle } : {}),
+      ...flat,
       ...patch,
     } as unknown as DxfEntityUnion;
   }
@@ -313,6 +331,29 @@ export function applyEntityPreview(
       anchor: anchorPos, currentPos, pivot: rotatePivot ?? polylineBboxCenter(poly.vertices),
     });
     if (!patch) return entity;
+    return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
+  }
+
+  // ── ADR-575 §8 — GROUP gizmo live ghost (whole-group rotate / move) ────────
+  // The group is a `type:'group'` CONTAINER whose transform the ONE `rotateEntity` /
+  // `calculateMovedGeometry` engine already owns (`case 'group'` recurses members). The
+  // ghost delegates to the SAME engines the commit runs → preview ≡ commit by IDENTITY.
+  // Returns a transformed GROUP entity; the ghost RENDER (`useGripGhostPreview`) expands
+  // it and draws each member. Rotation pivot defaults to the bbox centre (the gizmo origin
+  // = the commit's fallback) when no hot-grip centre was picked.
+  if (groupGripKind === 'group-rotation' && anchorPos && entity.type === 'group') {
+    const currentPos: Point2D = translatePoint(anchorPos, delta);
+    const pivot = rotatePivot ?? computeGroupSelectionBounds(entity as unknown as GroupEntity)?.center;
+    if (!pivot) return entity;
+    const patch = applyPrimitiveRotationDrag(entity as unknown as Entity, { anchor: anchorPos, currentPos, pivot });
+    if (!patch) return entity;
+    return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
+  }
+  if (movesEntity && entity.type === 'group') {
+    // Whole-group translate (gizmo move cross OR any whole-group move) — the SAME
+    // `calculateMovedGeometry` case 'group' the commit runs (recurse members). Returns
+    // `{ members }`; folded onto the cloned group so the render expands + ghosts each.
+    const patch = calculateMovedGeometry(entity as unknown as SceneEntity, delta);
     return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
   }
 

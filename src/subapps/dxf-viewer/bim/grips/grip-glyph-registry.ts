@@ -101,6 +101,10 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   'arc-rotation': 'rotation',
   'polyline-move': 'move',
   'polyline-rotation': 'rotation',
+  // GROUP gizmo (ADR-575 §8) — the whole-group move cross + rotation handle render the
+  // SAME 4-arrow MOVE glyph + curved ROTATION glyph as every entity (Revit / C4D gizmo).
+  'group-move': 'move',
+  'group-rotation': 'rotation',
 } as const;
 
 /**

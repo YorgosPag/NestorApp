@@ -18,6 +18,19 @@ import { useTextCreationTool } from '../useTextCreationTool';
 import type { ICommand } from '../../../core/commands';
 import type { DxfTextNode } from '../../../text-engine/types';
 import type { SceneUnits } from '../../../utils/scene-units';
+import type { Point2D } from '../../../rendering/types/Types';
+import { clearTextRotationOrigin, setTextEditingActive } from '../../../systems/cursor/TextRotationStore';
+
+// ADR-508 §text-parity — το εργαλείο είναι πλέον 2-click (1ο = θέση + rotation phase, 2ο = κλείδωμα
+// κλίσης → άνοιγμα πεδίου). Ο βοηθός κάνει και τα δύο κλικ ώστε το `creatingState` (πεδίο) να ανοίξει·
+// το 2ο κλικ οριζόντια δεξιά → 0° κλίση (δεν επηρεάζει το ύψος που ελέγχουν αυτά τα tests).
+function placeAndOpenField(
+  result: { current: { handleCanvasClick: (p: Point2D) => boolean } },
+  at: Point2D = { x: 0, y: 0 },
+): void {
+  act(() => { result.current.handleCanvasClick(at); });
+  act(() => { result.current.handleCanvasClick({ x: at.x + 100, y: at.y }); });
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Stubs
@@ -103,6 +116,11 @@ describe('useTextCreationTool — scene-units awareness (ADR-344 Phase 13)', () 
 
   beforeEach(() => {
     capturedNode = null;
+    clearTextRotationOrigin();
+  });
+  afterEach(() => {
+    clearTextRotationOrigin();
+    setTextEditingActive(false);
   });
 
   it.each(CASES)('scales default height for $units scenes', ({ units, expected }) => {
@@ -110,10 +128,8 @@ describe('useTextCreationTool — scene-units awareness (ADR-344 Phase 13)', () 
       capturedNode = (cmd as CapturedCommand)._params.textNode;
     });
 
-    // Initial click — creates the in-progress text state at this world point.
-    act(() => {
-      result.current.handleCanvasClick({ x: 0, y: 0 });
-    });
+    // 2-click place→rotate: 1ο κλικ θέση, 2ο κλικ κλείδωμα κλίσης → ανοίγει το πεδίο.
+    placeAndOpenField(result);
     const state = result.current.creatingState;
     expect(state).not.toBeNull();
     const initialHeight = state!.initial.paragraphs[0].runs[0];
@@ -162,7 +178,7 @@ describe('useTextCreationTool — scene-units awareness (ADR-344 Phase 13)', () 
       capturedNode = (cmd as CapturedCommand)._params.textNode;
     });
 
-    act(() => { result.current.handleCanvasClick({ x: 0, y: 0 }); });
+    placeAndOpenField(result);
     const state = result.current.creatingState!;
     const initialRun = state.initial.paragraphs[0].runs[0];
 
@@ -199,7 +215,7 @@ describe('useTextCreationTool — scene-units awareness (ADR-344 Phase 13)', () 
       capturedNode = (cmd as CapturedCommand)._params.textNode;
     });
 
-    act(() => { result.current.handleCanvasClick({ x: 0, y: 0 }); });
+    placeAndOpenField(result);
     const state = result.current.creatingState!;
     const initialRun = state.initial.paragraphs[0].runs[0];
 
@@ -240,9 +256,7 @@ describe('useTextCreationTool — scene-units awareness (ADR-344 Phase 13)', () 
       }),
     );
 
-    act(() => {
-      result.current.handleCanvasClick({ x: 0, y: 0 });
-    });
+    placeAndOpenField(result);
     const run = result.current.creatingState!.initial.paragraphs[0].runs[0];
     if ('text' in run) {
       // mm units (default) × drawingScale 100 (stubbed) × paper 2.5 = 250.

@@ -35,6 +35,7 @@ import type { ToolType } from '../../ui/toolbar/types';
 // Re-export types for backward compatibility (19 consumer files import from here)
 export type {
   PreviewPoint,
+  PreviewText,
   ExtendedPolylineEntity,
   ExtendedCircleEntity,
   ExtendedLineEntity,
@@ -277,8 +278,14 @@ export function useUnifiedDrawing() {
     // ADR-363 Phase 1J — «Τοίχος πάνω σε οντότητα»: δικό του single-entity preview (γραμμή →
     // φάντασμα τοίχου, side = live cursor). Στυλίζεται ως 'wall' (WYSIWYG member ghost).
     const isWallOnEntity = activeTool === 'wall-on-entity';
-    const currentTool: DrawingTool = isStair ? 'stair' : (isWall || isWallOnEntity) ? 'wall' : isSlab ? 'slab' : isBeam ? 'beam' : isRoof ? 'roof' : isColumn ? 'column' : isFoundationPad ? 'foundation-pad' : machineTool;
-    if (!isStair && !isWall && !isWallOnEntity && !isSlab && !isBeam && !isRoof && !isColumn && !isFoundationPad && (!machineTool || machineTool === 'select')) return;
+    // ADR-508 §text-parity (Giorgio 2026-07-07) — «Κείμενο»/«Πολυγραμμικό Κείμενο»: single-click
+    // annotation tools που ΠΑΡΑΚΑΜΠΤΟΥΝ το FSM (καμία entry στο core/state-machine/interfaces.ts →
+    // `machineTool` μένει 'select'). Route μέσω του toolStateStore SSoT (mirror stair/wall/column)
+    // ώστε να παραχθεί το ghost-φάντασμα + οι ενδείξεις τοποθέτησης (λευκά ίχνη + κυανές + OSNAP).
+    const isText = activeTool === 'text';
+    const isMText = activeTool === 'mtext';
+    const currentTool: DrawingTool = isStair ? 'stair' : (isWall || isWallOnEntity) ? 'wall' : isSlab ? 'slab' : isBeam ? 'beam' : isRoof ? 'roof' : isColumn ? 'column' : isFoundationPad ? 'foundation-pad' : isText ? 'text' : isMText ? 'mtext' : machineTool;
+    if (!isStair && !isWall && !isWallOnEntity && !isSlab && !isBeam && !isRoof && !isColumn && !isFoundationPad && !isText && !isMText && (!machineTool || machineTool === 'select')) return;
 
     // machineMoveCursor intentionally removed — it updated cursorPosition in machine context
     // (never read by any component) and notified React useSyncExternalStore subscribers on

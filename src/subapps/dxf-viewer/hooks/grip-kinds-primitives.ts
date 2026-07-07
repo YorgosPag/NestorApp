@@ -75,3 +75,19 @@ export type ArcGripKind = 'arc-move' | 'arc-rotation';
  *     (`movesEntity`). NO new mechanism — only the kind + ¼-west position are added.
  */
 export type LineGripKind = 'line-rotation' | 'line-move';
+
+/**
+ * ADR-575 §8 — GROUP gizmo grip kind (composite `type:'group'` container, ΟΧΙ
+ * BIM params entity). Το επιλεγμένο group εμφανίζει ΕΝΑ κοινό βελάκι στο κέντρο του
+ * bounding box (Revit / Cinema 4D gizmo), αντί per-member λαβές:
+ *   - `group-move`     → κεντρικός σταυρός μετακίνησης (4-arrow MOVE glyph + hot-grip
+ *                        move + whole-group translate μέσω `calculateMovedGeometry`
+ *                        case 'group' → recurse στα members).
+ *   - `group-rotation` → λαβή περιστροφής (midway κάτω από το κέντρο, μέσω
+ *                        `rotationHandleMidwayOffset`)· commit μέσω της canonical
+ *                        `RotateEntityCommand` (pivot = κέντρο bbox) → `rotateEntity`
+ *                        case 'group' → recurse. Ίδιο shared hot-grip flow με
+ *                        `line-rotation` / `arc-rotation` / `text-rotation`.
+ * ΜΗΔΕΝ νέα glyph math / rotation engine / group transform — όλα REUSE.
+ */
+export type GroupGripKind = 'group-move' | 'group-rotation';

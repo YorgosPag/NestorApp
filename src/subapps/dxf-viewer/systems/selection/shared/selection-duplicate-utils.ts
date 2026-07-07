@@ -226,6 +226,17 @@ export function calculateEntityBounds(entity: AnySceneEntity): { min: Point2D, m
       
       return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
     }
+    // ADR-507 — HATCH geometry = its boundary paths (outer ring + islands). Without this
+    // case the switch fell to `default → null`, so the window/crossing marquee SILENTLY
+    // excluded every hatch → a hatch could never be added to a selection, and thus never
+    // GROUPED together with its boundary lines (Giorgio 2026-07-07: «ΔΕΝ ομαδοποιείται η
+    // γραμμοσκίαση με τις γραμμές — αντιλαμβάνεται μόνον τις γραμμές»). Mirror of the AABB
+    // in `types/entity-bounds.ts` (case 'hatch') + `Bounds.ts` broad-phase.
+    case 'hatch': {
+      const paths = ('boundaryPaths' in entity ? entity.boundaryPaths : undefined) as Point2D[][] | undefined;
+      const pts = paths?.flat() ?? [];
+      return pts.length > 0 ? calculateVerticesBounds(pts) : null;
+    }
     // ADR-363 Phase 7A — BIM parametric entities project pre-computed
     // `geometry.bbox` (BoundingBox3D) onto the XY plan view. Without these
     // cases the switch fell through to `default → null` and marquee selection

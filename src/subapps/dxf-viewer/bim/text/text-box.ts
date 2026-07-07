@@ -63,6 +63,9 @@ import { measureTextAdvanceWorld, measureTextGlyphInk, type TextAdvanceStyle, ty
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { rotateVector } from '../grips/grip-math';
 import { RECT_CORNERS, rectCornerWorld, type RectFrame } from '../grips/rect-frame';
+// ADR-557 (multi-line) — the shared split + line-stacking SSoT: box height = Σ γραμμών,
+// width = max γραμμής. The SAME helper the renderer + 3D use, so the three stay in parity.
+import { splitTextLines, textLineCount, resolveLineSpacingRatio, resolveMultilineExtents, type TextRow, type MultilineExtents } from './text-lines';
 
 const CHAR_WIDTH = TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
 
@@ -104,15 +107,51 @@ export function resolveBoxHeight(text: DxfText): number {
 }
 
 /**
- * Effective box width (world units): the MTEXT frame `width` when carried, else the
- * simple-TEXT REAL glyph advance (`measureTextAdvanceWorld` — proportional font
- * metrics, incl. the AutoCAD X-scale `widthFactor`), so the box === the drawn glyphs.
- * Falls back to a monospace approximation only when no font + no DOM are available
- * (jest / SSR / font not yet loaded). Robust to a missing flat `text` — never throws.
+ * ADR-557 (multi-line) — the WIDEST visual line of a text (by real glyph advance). The
+ * multi-line box width = max line, and its horizontal ink insets must come from that SAME
+ * line, so width + side-bearings agree. Single-line → the sole line (zero regression).
+ */
+function widestLineOf(text: DxfText): string {
+  const lines = splitTextLines(text.text);
+  if (lines.length <= 1) return lines[0] ?? '';
+  const h = resolveBoxHeight(text);
+  const style = advanceStyleOf(text);
+  let best = lines[0] ?? '';
+  let bestW = -1;
+  for (const line of lines) {
+    const w = measureTextAdvanceWorld(line, h, style);
+    if (w > bestW) { bestW = w; best = line; }
+  }
+  return best;
+}
+
+/** The REAL glyph advance (world) of the WIDEST line — the box's content width when it hugs. */
+function contentAdvanceWorld(text: DxfText): number {
+  return measureTextAdvanceWorld(widestLineOf(text), resolveBoxHeight(text), advanceStyleOf(text));
+}
+
+/**
+ * ADR-557 (multi-line, Giorgio 2026-07-07: «οι λαβές να αγκαλιάζουν το κείμενο») — is the box
+ * constrained by an EXPLICIT MTEXT frame narrower than the text (i.e. the text would wrap /
+ * overflow to fit the column)? Only THEN does the frame win. When the frame is WIDER than every
+ * line (no wrap — the reported case, an editor-overlay-sized frame), the box hugs the glyphs
+ * like a simple TEXT. `false` for simple TEXT (no frame) and for a frame ≥ the content.
+ */
+export function isTextBoxFrameConstrained(text: DxfText): boolean {
+  return text.width != null && text.width > 0 && text.width < contentAdvanceWorld(text);
+}
+
+/**
+ * Effective box width (world units): the WIDEST-line glyph advance (`measureTextAdvanceWorld`
+ * — proportional metrics, incl. the AutoCAD X-scale `widthFactor`), CLAMPED to an explicit
+ * MTEXT frame `width` when that frame is narrower (text wraps/clips to the column). So the box
+ * HUGS the drawn glyphs whenever the text does not fill the frame (Giorgio 2026-07-07), and only
+ * falls back to the column frame under genuine wrap. Falls back to a monospace approximation when
+ * no font + no DOM are available (jest / SSR). Robust to a missing flat `text` — never throws.
  */
 export function effectiveTextWidth(text: DxfText): number {
-  if (text.width != null && text.width > 0) return text.width;
-  return measureTextAdvanceWorld(text.text ?? '', resolveBoxHeight(text), advanceStyleOf(text));
+  const content = contentAdvanceWorld(text);
+  return text.width != null && text.width > 0 ? Math.min(text.width, content) : content;
 }
 
 /** Re-export so a resize can recompute width from a patched height (TEXT widthFactor path). */
@@ -125,7 +164,7 @@ export { naturalTextWidth };
  * on release). Matches the monospace `naturalTextWidth` only in the no-font fallback.
  */
 export function baseTextAdvanceWorld(text: DxfText, height: number): number {
-  return measureTextAdvanceWorld(text.text ?? '', height, { ...advanceStyleOf(text), widthFactor: 1 });
+  return measureTextAdvanceWorld(widestLineOf(text), height, { ...advanceStyleOf(text), widthFactor: 1 });
 }
 
 /**
@@ -164,46 +203,60 @@ interface VBoxRatios {
 }
 
 /**
- * NOMINAL em-box vertical ratios — the pre-metrics behaviour, the `offsetForJustification`
- * y-part as ratios (row T → [0,-1], M → [0.5,-0.5], B → [1,0]). Drives the "edit"/3D box
- * (`resolveTextEmBox`) + is the safe fallback when glyph metrics are unavailable.
+ * ADR-557 (multi-line) — the extra vertical extent of the text block beyond one line,
+ * split by attachment row so `position` stays the anchor (T grows down, B up, M both).
+ * Single line → both zero. Shared by the em + visual ratios AND the renderer's first-line
+ * offset (`text-lines.ts`), so render ≡ box for every attachment + line count.
  */
-function emVerticalRatios(just: TextJustification): VBoxRatios {
-  const row = just[0];
-  const center = row === 'M' ? 0 : row === 'B' ? 0.5 : -0.5;
-  return { top: center + 0.5, bottom: center - 0.5 };
+function multilineExtentsOf(text: DxfText, just: TextJustification): MultilineExtents {
+  return resolveMultilineExtents(just[0] as TextRow, textLineCount(text.text), resolveLineSpacingRatio(text));
 }
 
-/** The glyph ink box (font metrics + ink extent + side bearings), measured once per box build. */
+/**
+ * NOMINAL em-box vertical ratios — the pre-metrics behaviour, the `offsetForJustification`
+ * y-part as ratios (row T → [0,-1], M → [0.5,-0.5], B → [1,0]), extended DOWN/UP by the
+ * multi-line block. Drives the "edit"/3D box (`resolveTextEmBox`) + is the safe fallback
+ * when glyph metrics are unavailable.
+ */
+function emVerticalRatios(just: TextJustification, extents: MultilineExtents): VBoxRatios {
+  const row = just[0];
+  const center = row === 'M' ? 0 : row === 'B' ? 0.5 : -0.5;
+  return { top: center + 0.5 + extents.topAdd, bottom: center - 0.5 - extents.bottomAdd };
+}
+
+/** The glyph ink box (font metrics + ink extent + side bearings) of the WIDEST line. */
 function glyphInkOf(text: DxfText): TextGlyphInk {
-  return measureTextGlyphInk(text.text ?? '', advanceStyleOf(text));
+  return measureTextGlyphInk(widestLineOf(text), advanceStyleOf(text));
 }
 
 /**
  * VISUAL vertical ratios from a measured glyph ink box — the box hugs the drawn glyphs:
  * baseline where the renderer seats it (font ascent/descent per the attachment row,
  * mirroring `TextRenderer.fillGlyphRun`) + extent = real glyph INK (cap height for caps,
- * +descenders for g/p/y). Degrades to the nominal em box when the ink is unavailable
- * (SSR / no font) — keeping the pre-metrics behaviour + jest stable.
+ * +descenders for g/p/y), then extended by the multi-line block (`extents`). Degrades to the
+ * nominal em box when the ink is unavailable (SSR / no font) — keeping jest stable.
  */
-function visualVerticalRatios(ink: TextGlyphInk, just: TextJustification): VBoxRatios {
+function visualVerticalRatios(ink: TextGlyphInk, just: TextJustification, extents: MultilineExtents): VBoxRatios {
   const row = just[0];
   const baselineDrop = row === 'M' ? (ink.fontAscent - ink.fontDescent) / 2 : row === 'B' ? -ink.fontDescent : ink.fontAscent;
   const baselineUp = -baselineDrop; // world y-up offset from `position` down to the baseline
-  const top = baselineUp + ink.inkAscent;
-  const bottom = baselineUp - ink.inkDescent;
-  return top - bottom > 1e-9 ? { top, bottom } : emVerticalRatios(just);
+  const top = baselineUp + ink.inkAscent + extents.topAdd;
+  const bottom = baselineUp - ink.inkDescent - extents.bottomAdd;
+  return top - bottom > 1e-9 ? { top, bottom } : emVerticalRatios(just, extents);
 }
 
 /**
  * Horizontal ink insets as fractions of the pen advance (leading + trailing side bearing),
  * so the visual box hugs the glyphs left+right too (Giorgio 2026-07-07: «επεκτείνεται προς
- * τα έξω»). ZERO for MTEXT (its width is the explicit frame, not the glyph advance) and for
- * the no-font path (`advance === 0`) — the box then keeps the full advance width. Guaranteed
+ * τα έξω»). ZERO for a frame-constrained MTEXT (width = the explicit column frame, not the
+ * glyph advance) and for the no-font path (`advance === 0`) — the box then keeps the full
+ * advance width; a WIDE-frame MTEXT hugs the glyphs like a simple TEXT. Guaranteed
  * `left + right < 1` (ink is a sub-span of the advance), so the visual width stays positive.
  */
 function horizontalInkFractions(text: DxfText, ink: TextGlyphInk): { left: number; right: number } {
-  if (text.width != null && text.width > 0) return { left: 0, right: 0 };
+  // Frame-constrained MTEXT (text wraps to the column) → the width is the explicit frame, no inset.
+  // A hugging box (simple TEXT or a frame WIDER than the text) insets by the real side bearings.
+  if (isTextBoxFrameConstrained(text)) return { left: 0, right: 0 };
   if (!(ink.advance > 0)) return { left: 0, right: 0 };
   return { left: ink.inkLeft / ink.advance, right: (ink.advance - ink.inkRight) / ink.advance };
 }
@@ -220,15 +273,16 @@ function buildTextBox(text: DxfText, mode: 'visual' | 'em'): RectFrame {
   const just = justificationOf(text);
   const rotationDeg = text.rotation ?? 0;
   const advanceCentreX = horizontalCenterOffset(just, w);
+  const extents = multilineExtentsOf(text, just);
 
   if (mode === 'em') {
-    const v = emVerticalRatios(just);
+    const v = emVerticalRatios(just, extents);
     const rel = rotateVector({ x: advanceCentreX, y: ((v.top + v.bottom) / 2) * h }, rotationDeg);
     return { center: translatePoint(text.position, rel), rotationDeg, halfWidth: w / 2, halfLength: ((v.top - v.bottom) / 2) * h };
   }
 
   const ink = glyphInkOf(text);
-  const v = visualVerticalRatios(ink, just);
+  const v = visualVerticalRatios(ink, just, extents);
   const { left, right } = horizontalInkFractions(text, ink);
   // Inset the advance box by the side bearings: shift the centre toward the wider bearing,
   // shrink the width by the total inset (`left`/`right` are fractions of the advance `w`).
@@ -270,7 +324,7 @@ export function resolveTextEmBox(text: DxfText): RectFrame {
 export function textBoxToPosition(frame: RectFrame, text: DxfText): Point2D {
   const just = justificationOf(text);
   const ink = glyphInkOf(text);
-  const v = visualVerticalRatios(ink, just);
+  const v = visualVerticalRatios(ink, just, multilineExtentsOf(text, just));
   const { left, right } = horizontalInkFractions(text, ink);
   // Recover the advance width from the visual half-width (visualWidth = w·(1−left−right)),
   // then reproduce the SAME inset centre offset the forward build applied.
@@ -287,7 +341,8 @@ export function textBoxToPosition(frame: RectFrame, text: DxfText): Point2D {
  * after release (`resolveTextBox(after) === draggedFrame`, no jump). Em-box path → 1.0.
  */
 export function textVisualExtentRatio(text: DxfText): number {
-  const { top, bottom } = visualVerticalRatios(glyphInkOf(text), justificationOf(text));
+  const just = justificationOf(text);
+  const { top, bottom } = visualVerticalRatios(glyphInkOf(text), just, multilineExtentsOf(text, just));
   return top - bottom;
 }
 

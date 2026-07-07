@@ -61,6 +61,17 @@ export function applyPreviewStyling(
     extPoly.showPreviewGrips = true;
     extPoly.isOverlayPreview = isOverlayMode;
     applySettings(extPoly as unknown as Record<string, unknown>);
+    // ADR-508 §polyline-parity (Giorgio 2026-07-07) — full parity ΓΡΑΜΜΗ↔ΠΟΛΥΓΡΑΜΜΗ: το ΕΝΕΡΓΟ
+    // (τελευταίο) segment της αλυσίδας `vertices[N-2] → cursor` δείχνει το ΙΔΙΟ live HUD μήκους+γωνίας
+    // ΚΑΙ τις ΙΔΙΕΣ κυανές listening dims με τη γραμμή — ΙΔΙΟΙ SSoT helpers (`buildSegmentHudMeta`/
+    // `resolveLineListeningDims`), μηδέν νέος μηχανισμός. Τα προηγούμενα segments είναι κλειδωμένη
+    // γεωμετρία· μόνο η «ουρά» ακολουθεί τον cursor (mirror του awaiting-end της γραμμής, γρ. 78-84).
+    if (tool === 'polyline' && worldPoints.length >= 2) {
+      const segStart = worldPoints[worldPoints.length - 2];
+      extPoly.liveDimHud = buildSegmentHudMeta(segStart, cursorPoint, 'mm');
+      const listeningDims = resolveLineListeningDims(cursorPoint, 'mm');
+      if (listeningDims) extPoly.faceDimensions = listeningDims;
+    }
 
   } else if (entity.type === 'line') {
     const extLine = entity as ExtendedLineEntity;

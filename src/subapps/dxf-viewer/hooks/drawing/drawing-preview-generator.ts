@@ -8,7 +8,6 @@
  * - applyPreviewStyling(): Decorates a preview entity with flags, grip points, and measurement info
  */
 import type { Point2D } from '../../rendering/types/Types';
-import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import type { PolylineEntity } from '../../types/scene';
 import type {
   DrawingTool,
@@ -18,15 +17,19 @@ import type {
   ExtendedLineEntity,
   ExtendedArcEntity,
   PreviewPoint,
+  PreviewText,
 } from './drawing-types';
-// ADR-358 Phase 5a — stair preview via SSoT `computeStairGeometry`.
-import { buildDefaultStairParams } from './stair-completion';
-import { computeStairGeometry } from '../../bim/geometry/stairs/StairGeometryService';
-import type { SceneUnits, StairParamOverrides } from './stair-completion';
+// ADR-358 Phase 5a — stair preview extracted to stair-preview-helpers.ts (N.7.1 file-size SRP).
+import { generateStairPreview } from './stair-preview-helpers';
+import type { SceneUnits } from './stair-completion';
 // ADR-363 Phase 1C — wall preview extracted to wall-preview-helpers.ts.
 import { generateWallPreview } from './wall-preview-helpers';
 // ADR-508 §line-cyan — line flush/κάθετο κούμπωμα + κυανές listening dims (ίδιος εγκέφαλος με τον τοίχο).
-import { generateLinePreview } from './line-preview-helpers';
+// ADR-508 §text-parity — annotation ghost placement (position ⊕ κυανές από ΕΝΑ κοινό snap).
+import { generateLinePreview, resolveLineListeningPlacement } from './line-preview-helpers';
+// ADR-508 §text-parity — 2-click place→rotate: το κλειδωμένο σημείο εισαγωγής (rotation phase) +
+// flag «πεδίο ανοιχτό» (κανένα stray ghost ενώ γράφει ο χρήστης).
+import { getTextRotationOrigin, isTextEditingActive } from '../../systems/cursor/TextRotationStore';
 // ADR-363 Phase 6.5.B — slab preview.
 import { generateSlabPreview } from './slab-preview-helpers';
 // ADR-514 Φ6 — face-snap κορυφών στο preview (flush + edge-slide): ΙΔΙΟΣ resolver + ΙΔΙΟ store με
@@ -58,8 +61,9 @@ import {
 } from '../../rendering/entities/shared';
 import { GEOMETRY_PRECISION } from '../../config/tolerance-config';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
-import { UI_COLORS } from '../../config/color-config';
 import { getDefaultLayerId } from '../../stores/LayerStore';
+// ADR-359 Phase 3 — XLine / Ray preview helpers (extracted).
+import { generateXLinePreview, generateRayPreview } from './xline-ray-preview-helpers';
 // ADR-358 Phase 9D-5a: id-only WRITE — legacy `layer` field dropped (schema flip deferred to 9D-5b).
 // ─── Callback types for dependency injection ───────────────────────────────
 /** Creates an entity from tool + points. Injected to avoid circular dependency. */
@@ -97,6 +101,45 @@ function resolvePolygonPreviewCursor(cursorPoint: Point2D, sceneUnits: SceneUnit
   const eff = resolveEffectivePreviewCursor(cursorPoint);
   const snap = resolvePolygonVertexSnap(eff, sceneSnapTargetsStore.get(), sceneUnits, polygonVertexLockStore.get() ?? undefined);
   return snap.point;
+}
+
+/**
+ * ADR-508 §text-parity — φάντασμα annotation (Κείμενο/Πολυγραμμικό Κείμενο). Το σημείο εισαγωγής
+ * κουμπώνει flush σε παρειά μέλους (όταν υπάρχει εντός capture) και φέρει τις ΙΔΙΕΣ κυανές listening
+ * dims με τη γραμμή — αμφότερα από το ΕΝΑ κοινό `resolveLineListeningPlacement` snap. Η ίδια η λέξη
+ * ΔΕΝ αποθηκεύεται (pure fn· N.11) — ο painter (`preview-text-paint`) την επιλύει μέσω `i18n.t('tools.text')`.
+ */
+function generateTextPreview(cursorPoint: Point2D, sceneUnits: SceneUnits): PreviewText | null {
+  // ── Πεδίο ανοιχτό (μετά το 2ο κλικ, γράφει ο χρήστης): κανένα stray φάντασμα-λέξη στη θέση cursor.
+  if (isTextEditingActive()) return null;
+  // ── Rotation phase (μετά το 1ο κλικ): το σημείο εισαγωγής είναι ΚΛΕΙΔΩΜΕΝΟ· το φάντασμα-λέξη
+  //    περιστρέφεται προς τον κέρσορα. Ο `cursorPoint` έρχεται ΗΔΗ ΟΡΘΟ/Polar-snapped (F8/F10) από
+  //    το hover pipeline (μέσω `getBimOrthoReference('text') = origin`) → η γωνία κουμπώνει σε
+  //    0°/90°/45°... Ίδια CCW σύμβαση με το commit → preview ≡ commit. Καμία κυανή εδώ (η θέση κλείδωσε).
+  const rotationOrigin = getTextRotationOrigin();
+  if (rotationOrigin) {
+    const rotationDeg = (Math.atan2(cursorPoint.y - rotationOrigin.y, cursorPoint.x - rotationOrigin.x) * 180) / Math.PI;
+    return {
+      id: 'preview_text_ghost',
+      type: 'text',
+      position: rotationOrigin,
+      rotationDeg,
+      visible: true,
+      layerId: getDefaultLayerId(),
+      preview: true,
+    };
+  }
+  // ── Φάση τοποθέτησης (πριν το 1ο κλικ): φάντασμα στη θέση εισαγωγής (flush) + κυανές listening dims.
+  const { point, faceDimensions } = resolveLineListeningPlacement(cursorPoint, sceneUnits);
+  return {
+    id: 'preview_text_ghost',
+    type: 'text',
+    position: point,
+    visible: true,
+    layerId: getDefaultLayerId(),
+    preview: true,
+    ...(faceDimensions ? { faceDimensions } : {}),
+  };
 }
 
 /**
@@ -193,6 +236,15 @@ export function generatePreviewEntity(
     const lineGhost = generateLinePreview(tempPoints, cursorPoint, sceneUnits);
     if (lineGhost) return lineGhost;
   }
+  // ── ADR-508 §polyline-parity (Giorgio 2026-07-07) — Πολυγραμμή state-0 (πριν το 1ο κλικ):
+  //    ΤΑΥΤΟΣΗΜΟ hover φάντασμα (κάθετο stub) + κυανές listening dims με τη ΓΡΑΜΜΗ, μέσω του ΙΔΙΟΥ
+  //    tool-agnostic `generateLinePreview` (zero-width member face-snap). Μετά το 1ο κλικ → `null`
+  //    (fall-through στο generic rubber-band, γρ. ~247)· οι κυανές/HUD/βελάκια του ενεργού segment
+  //    προστίθενται τότε στο `applyPreviewStyling` + overlays. Μηδέν νέος painter/μηχανισμός. ────────
+  if (tool === 'polyline' && tempPoints.length === 0) {
+    const lineGhost = generateLinePreview(tempPoints, cursorPoint, sceneUnits);
+    if (lineGhost) return lineGhost;
+  }
   // ── ADR-436 Slice 2 — Foundation line tools (strip / tie-beam) preview branch.
   //    from-wall (1-click pick) has no rubber-band band (mirror beam-from-wall). ──
   if (tool === 'foundation-strip' || tool === 'foundation-tie-beam') {
@@ -210,6 +262,14 @@ export function generatePreviewEntity(
   // ── ADR-359 Phase 3 — Ray preview ────────────────────────────────────────
   if (tool === 'ray') {
     return generateRayPreview(tempPoints, cursorPoint);
+  }
+  // ── ADR-508 §text-parity (Giorgio 2026-07-07) — «Κείμενο»/«Πολυγραμμικό Κείμενο» (single-click):
+  //    ζωντανό φάντασμα-λέξη στη θέση εισαγωγής + ΙΔΙΕΣ ενδείξεις τοποθέτησης με τη γραμμή. Οι λευκές
+  //    γραμμές ευθυγράμμισης έρχονται δωρεάν (ο cursorPoint είναι ήδη post-tracking) μόλις υπάρξει
+  //    non-null previewEntity· οι κυανές flush-to-face + το flush σημείο εισαγωγής προκύπτουν από τον
+  //    ΙΔΙΟ εγκέφαλο έλξης της γραμμής (zero-width member). Η λέξη επιλύεται i18n στον painter (N.11). ─
+  if (tool === 'text' || tool === 'mtext') {
+    return generateTextPreview(cursorPoint, sceneUnits);
   }
   // ── Zero-point preview: show start indicator ─────────────────────────────
   if (tempPoints.length === 0) {
@@ -410,79 +470,3 @@ export function generatePreviewEntity(
 }
 // Re-export from extracted module for backward compatibility
 export { applyPreviewStyling, createPartialPreview } from './drawing-preview-partial';
-// ─── ADR-358 Phase 5a — Stair preview helpers ───────────────────────────────
-/**
- * Build a stair preview entity from `tempPoints` + cursor. State machine map:
- *   - [] → cursor marker (basePoint indicator)
- *   - [base] → ghost polyline base→cursor (direction indicator)
- *   - [base, dirPoint] → walkline polyline from StairGeometry SSoT
- *
- * Phase 5a returns a single polyline preview (walkline). The full multi-entity
- * preview (treads + walkline + arrow) lands a dedicated stair preview overlay
- * leaf in Phase 5b; this single-entity shape preserves the existing
- * `ExtendedSceneEntity` contract used by PreviewCanvas (ADR-040 §6.2).
- */
-function generateStairPreview(
-  tempPoints: readonly Point2D[],
-  cursorPoint: Point2D,
-  overrides: StairParamOverrides = {},
-  sceneUnits: SceneUnits = 'mm',
-): ExtendedSceneEntity | null {
-  if (tempPoints.length === 0) {
-    return {
-      id: 'preview_stair_basepoint',
-      type: 'point',
-      position: cursorPoint,
-      size: 6,
-      visible: true,
-      layerId: getDefaultLayerId(),
-      preview: true,
-      showPreviewGrips: true,
-    } as PreviewPoint;
-  }
-  if (tempPoints.length === 1) {
-    return makeStairGhost('preview_stair_direction', [tempPoints[0], cursorPoint]);
-  }
-  return makeStairWalklinePreview(tempPoints[0], tempPoints[1], overrides, sceneUnits);
-}
-function makeStairGhost(id: string, vertices: readonly Point2D[]): ExtendedPolylineEntity {
-  const base: PolylineEntity = {
-    id,
-    type: 'polyline',
-    vertices: [...vertices],
-    closed: false,
-    visible: true,
-    layerId: getDefaultLayerId(),
-    color: PANEL_LAYOUT.CAD_COLORS.DRAWING_WHITE,
-    lineweight: LINEWEIGHT_SPECIAL.BYLAYER,
-    opacity: 0.6,
-    lineType: 'dashed' as const,
-  };
-  return { ...base, preview: true, showEdgeDistances: true, showPreviewGrips: true } as ExtendedPolylineEntity;
-}
-// ADR-359 Phase 3 — XLine / Ray preview helpers extracted to xline-ray-preview-helpers.ts.
-import { generateXLinePreview, generateRayPreview } from './xline-ray-preview-helpers';
-function makeStairWalklinePreview(
-  basePoint: Readonly<Point2D>,
-  dirPoint: Readonly<Point2D>,
-  overrides: StairParamOverrides,
-  sceneUnits: SceneUnits = 'mm',
-): ExtendedSceneEntity {
-  const direction = Math.atan2(dirPoint.y - basePoint.y, dirPoint.x - basePoint.x) * (180 / Math.PI);
-  const params = buildDefaultStairParams(basePoint, direction, overrides, sceneUnits);
-  const geometry = computeStairGeometry(params);
-  const vertices: Point2D[] = projectVerticesTo2D(geometry.walkline);
-  const polyline: PolylineEntity = {
-    id: 'preview_stair_walkline',
-    type: 'polyline',
-    vertices,
-    closed: false,
-    visible: true,
-    layerId: getDefaultLayerId(),
-    color: UI_COLORS.BRIGHT_GREEN,
-    lineweight: LINEWEIGHT_SPECIAL.BYLAYER,
-    opacity: 0.8,
-    lineType: 'solid' as const,
-  };
-  return { ...polyline, preview: true, showPreviewGrips: true } as ExtendedPolylineEntity;
-}

@@ -222,6 +222,11 @@ export class UnifiedEntitySelection {
       if (!pts) return [];
       return [pts.vertex, pts.point1, pts.point2];
     }
+    // ADR-507 — HATCH key points = its boundary-path vertices (so lasso window/crossing can
+    // catch a hatch, parity with the marquee bounds fix; Giorgio 2026-07-07).
+    if (entity.type === 'hatch' && 'boundaryPaths' in entity) {
+      return ((entity as { boundaryPaths: Point2D[][] }).boundaryPaths ?? []).flat();
+    }
     const center = this.getEntityCenter(entity);
     return center ? [center] : [];
   }
@@ -268,6 +273,15 @@ export class UnifiedEntitySelection {
       const pts = extractAngleMeasurementPoints(entity);
       if (!pts) return [];
       return [[pts.vertex, pts.point1], [pts.vertex, pts.point2]];
+    }
+    // ADR-507 — HATCH boundary segments (each closed path's edges) so a crossing lasso that
+    // clips the fill outline catches it (parity with the marquee bounds fix; Giorgio 2026-07-07).
+    if (entity.type === 'hatch' && 'boundaryPaths' in entity) {
+      const segs: Array<[Point2D, Point2D]> = [];
+      for (const path of ((entity as { boundaryPaths: Point2D[][] }).boundaryPaths ?? [])) {
+        for (let i = 0; i < path.length; i++) segs.push([path[i], path[(i + 1) % path.length]]);
+      }
+      return segs;
     }
     return [];
   }

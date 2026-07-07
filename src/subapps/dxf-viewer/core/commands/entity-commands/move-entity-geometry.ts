@@ -23,6 +23,7 @@ import {
   isMTextEntity,
   isPointEntity,
   isBlockEntity,
+  isHatchEntity,
   type Entity,
 } from '../../../types/entities';
 // ADR-363 Phase 7A — BIM move geometry (params + computed geometry atomic patch).
@@ -88,6 +89,19 @@ export function calculateMovedGeometry(entity: SceneEntity, delta: Point3D): Par
   if (entity.type === 'polygon' && 'vertices' in entity) {
     const polyEntity = entity as unknown as { vertices: Point2D[] };
     return { vertices: polyEntity.vertices.map(v => translatePoint(v, delta)) };
+  }
+
+  // ADR-507 — HATCH: geometry lives in `boundaryPaths` (outer + islands) + optional
+  // `seedPoints` (island-detection anchors). Translate every point so a whole-entity move
+  // (body-drag / directional / Alt move-from-point / COPY) — and a GROUP move that recurses
+  // this SSoT per member — carries the fill with its frame. Without this a hatch inside a
+  // moved group stayed put while its boundary lines moved (Giorgio 2026-07-07).
+  if (isHatchEntity(e)) {
+    const patch: { boundaryPaths: Point2D[][]; seedPoints?: Point2D[] } = {
+      boundaryPaths: e.boundaryPaths.map(path => path.map(p => translatePoint(p, delta))),
+    };
+    if (e.seedPoints) patch.seedPoints = e.seedPoints.map(p => translatePoint(p, delta));
+    return patch as Partial<SceneEntity>;
   }
 
   // Angle-measurement primitive (not a centralized guard) — translate its 3 defining points.

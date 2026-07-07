@@ -120,6 +120,7 @@ import {
   commitLineGripDrag,
   commitArcGripDrag,
   commitPolylineRotationGripDrag,
+  commitGroupGizmoRotation,
 } from './grip-parametric-commits';
 /**
  * ADR-363 Phase 1G.5 — whole-entity "move from characteristic point" (AutoCAD
@@ -412,6 +413,22 @@ export function commitDxfGripDragModeAware(
   // `'polyline-move'` cross + the vertex / segment / arc-apex grips fall through.
   if (grip.polylineGripKind === 'polyline-rotation') {
     commitPolylineRotationGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-575 §8 — GROUP gizmo ROTATION handle → rotate the whole group about its bbox
+  // centre via the canonical `RotateEntityCommand` (`rotateEntity` case 'group' recurses
+  // members). Gate to `'group-rotation'` ONLY — the `'group-move'` cross is a whole-group
+  // TRANSLATE (handled just below).
+  if (grip.groupGripKind === 'group-rotation') {
+    commitGroupGizmoRotation(grip, delta, deps);
+    return;
+  }
+  // ADR-575 §8 — GROUP gizmo MOVE cross → translate the whole group DETERMINISTICALLY
+  // (mode-independent, mirror `line-move`) via the whole-entity move SSoT
+  // (`deps.moveEntities` → `MoveEntityCommand` → `calculateMovedGeometry` case 'group' →
+  // recurse members). Ctrl / «Copy» clones with the same base point.
+  if (grip.groupGripKind === 'group-move') {
+    commitWholeEntityMove(grip, delta, deps, isGripCopyIntent());
     return;
   }
   // ADR-510 Φ3c — polyline ARC-MIDPOINT grip → live bulge curvature drag (the

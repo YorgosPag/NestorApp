@@ -38,6 +38,7 @@ import type {
   CircleGripKind,
   ArcGripKind,
   LineGripKind,
+  GroupGripKind,
   TextGripKind,
 } from './grip-kinds';
 
@@ -73,6 +74,7 @@ export type {
   CircleGripKind,
   ArcGripKind,
   LineGripKind,
+  GroupGripKind,
   TextGripKind,
 } from './grip-kinds';
 
@@ -284,6 +286,15 @@ export interface GripInfo {
    * parity: corner/edge resize + center move + rotation via `rect-grip-engine`).
    */
   textGripKind?: TextGripKind;
+  /**
+   * ADR-575 §8 — GROUP gizmo grip discriminator. Present only on the two whole-group
+   * handles emitted for a selected `type:'group'` container (move cross + rotation
+   * handle at the bbox centre). Routes commit through the whole-group move
+   * (`calculateMovedGeometry` case 'group') / `RotateEntityCommand` (`rotateEntity`
+   * case 'group') — ΜΗΔΕΝ bespoke transform. Emitted at `grip-registry` (the members
+   * are suppressed), NOT `computeDxfEntityGrips`.
+   */
+  groupGripKind?: GroupGripKind;
 }
 
 /** Grip drag state */

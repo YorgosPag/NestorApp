@@ -27,6 +27,7 @@ import type { FootprintHudDescriptor } from '../../canvas-v2/preview-canvas/colu
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
 import { resolveColumnRotationDeg } from '../../bim/columns/column-rotation';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
+import { getTextRotationOrigin } from '../../systems/cursor/TextRotationStore';
 import { i18n } from '@/i18n';
 
 type Pt = Point2D;
@@ -127,9 +128,13 @@ export function paintDrawingHoverOverlays(
   // το `lastRefPt` (= getBimOrthoReference) δείχνει την αρχή του δοκαριού ΟΠΩΣ και του τοίχου.
   // ADR-564 §foundation-hud — τα γραμμικά πέδιλα (strip/tie-beam) είναι καθρέφτης του δοκαριού
   // → ίδιο τόξο ΦΟΡΑΣ. pivot = αρχή band (lastRefPt = getBimOrthoReference, foundation case).
+  // ADR-508 §polyline-parity (Giorgio 2026-07-07) — το ΙΔΙΟ πράσινο/κόκκινο τόξο ΦΟΡΑΣ (SSoT
+  // `drawDirectionArc`) και στη ΓΡΑΜΜΗ + ΠΟΛΥΓΡΑΜΜΗ κατά τη σχεδίαση (μετά το 1ο σημείο, όταν
+  // υπάρχει `lastRefPt`). Ίδιος pivot/bearing υπολογισμός με τοίχο/δοκό — μηδέν νέος painter.
   if (
     (activeTool === 'wall' || activeTool === 'beam' ||
-      activeTool === 'foundation-strip' || activeTool === 'foundation-tie-beam') && lastRefPt
+      activeTool === 'foundation-strip' || activeTool === 'foundation-tie-beam' ||
+      activeTool === 'line' || activeTool === 'polyline') && lastRefPt
   ) {
     const bearingDeg = (Math.atan2(previewPt.y - lastRefPt.y, previewPt.x - lastRefPt.x) * 180) / Math.PI;
     canvas.drawDirectionArc(
@@ -199,6 +204,17 @@ export function paintDrawingHoverOverlays(
       previewPt,
       arcBearingDeg,
     );
+  }
+  // ADR-508 §text-parity (2-click place→rotate) — rotation phase των «Κείμενο»/«Πολυγραμμικό Κείμενο»:
+  // ΙΔΙΕΣ ενδείξεις με την κολόνα (πορτοκαλί γραμμή στρέψης + πράσινο/κόκκινο τόξο φοράς + γωνία), αλλά
+  // η γωνία κουμπώνει με ΟΡΘΟ/Polar (F8/F10): ο `previewPt` έρχεται ΗΔΗ snapped από το hover pipeline
+  // (μέσω `getBimOrthoReference('text') = origin`), οπότε ζωγραφίζουμε από τον `previewPt` — μηδέν
+  // adaptive-step quantize (που θα «πάλευε» με το F8/F10), μηδέν διπλό τόξο. pivot = σημείο εισαγωγής.
+  const textRotOrigin = (activeTool === 'text' || activeTool === 'mtext') ? getTextRotationOrigin() : null;
+  if (textRotOrigin) {
+    const bearingDeg = (Math.atan2(previewPt.y - textRotOrigin.y, previewPt.x - textRotOrigin.x) * 180) / Math.PI;
+    canvas.drawPolarTrackingLine(textRotOrigin, bearingDeg, formatAngleLocale(bearingDeg, 0), previewPt);
+    canvas.drawDirectionArc(textRotOrigin, { x: textRotOrigin.x + 1, y: textRotOrigin.y }, previewPt, bearingDeg);
   }
   // ADR-357 Phase 1: Polar tracking line overlay (dashed alignment path + tooltip)
   if (polarSnapResult?.isSnapped && lastRefPt && polarSnapResult.snappedAngle !== null) {

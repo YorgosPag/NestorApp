@@ -32,10 +32,52 @@ export interface PreviewPoint {
   preview: boolean;
 }
 
+// ─── Preview Text (annotation ghost) ─────────────────────────────────────────
+
+/**
+ * ADR-508 §text-parity (Giorgio 2026-07-07) — ελαφρύ preview-only φάντασμα για τα single-click
+ * annotation εργαλεία «Κείμενο» (`text`) / «Πολυγραμμικό Κείμενο» (`mtext`): μια μικρή ημιδιάφανη
+ * λέξη στη θέση εισαγωγής + (προαιρετικά) κυανές listening dims όταν το σημείο κουμπώνει flush σε
+ * παρειά μέλους (ΙΔΙΟ `faceDimensions` πεδίο/SSoT με τη γραμμή → κοινός reader, μηδέν νέος μηχανισμός).
+ *
+ * N.11: η ίδια η λέξη ΔΕΝ αποθηκεύεται εδώ — ο generator είναι pure. Ο painter την επιλύει μέσω
+ * `i18n.t('tools.text', { ns: 'dxf-viewer-shell' })` (render layer), μηδέν hardcoded «text»/«κείμενο».
+ */
+export interface PreviewText {
+  id: string;
+  type: 'text';
+  /** Σημείο εισαγωγής (world) — ήδη flush-to-face όταν υπάρχει παρειά εντός capture. */
+  position: Point2D;
+  visible: boolean;
+  /** Stable layer id — `lyr_<UUID-v4>`. */
+  layerId: string;
+  preview: boolean;
+  /** ADR-508 §line-cyan (κοινό SSoT) — κυανές listening dims όταν το σημείο εισαγωγής κουμπώνει flush. */
+  faceDimensions?: GhostFaceDimensionsMeta;
+  /**
+   * ADR-508 §text-parity (2-click place→rotate) — γωνία κλίσης της λέξης (CCW μοίρες, DXF σύμβαση) στη
+   * rotation phase (μετά το 1ο κλικ). Απών/0 στη φάση τοποθέτησης (πριν το 1ο κλικ). Ο painter το
+   * μετατρέπει σε γωνία canvas (`-rotationDeg` λόγω Y-flip, ίδια σύμβαση με τον `TextRenderer`).
+   */
+  rotationDeg?: number;
+}
+
 // ─── Extended Entity Types (preview-aware) ──────────────────────────────────
 
 export interface ExtendedPolylineEntity extends PolylineEntity {
   showEdgeDistances?: boolean;
+  /**
+   * ADR-508 §polyline-parity (2026-07-07) — ζωντανό HUD μήκους+γωνίας του ΕΝΕΡΓΟΥ (τελευταίου)
+   * segment της αλυσίδας, ΙΔΙΟ πεδίο/SSoT με τη γραμμή (`ExtendedLineEntity.liveDimHud`). Set στο
+   * `applyPreviewStyling` για το `polyline` tool· ο tool-agnostic painter το ζωγραφίζει χωρίς αλλαγή.
+   */
+  liveDimHud?: WallHudMeta;
+  /**
+   * ADR-508 §polyline-parity (2026-07-07) — κυανές listening dimensions όταν η «ουρά» της
+   * πολυγραμμής κουμπώνει flush/κάθετα σε υφιστάμενο μέλος. ΙΔΙΟ πεδίο/SSoT με τη γραμμή
+   * (`ExtendedLineEntity.faceDimensions`) → κοινός reader, μηδέν νέος μηχανισμός.
+   */
+  faceDimensions?: GhostFaceDimensionsMeta;
 }
 
 export interface ExtendedCircleEntity extends CircleEntity {
@@ -92,6 +134,7 @@ export type ExtendedSceneEntity =
   | ExtendedLineEntity
   | ExtendedArcEntity
   | PreviewPoint
+  | PreviewText
   | AnySceneEntity;
 
 // ─── Drawing Tool & State ───────────────────────────────────────────────────
@@ -124,7 +167,10 @@ export type DrawingTool =
   | 'wall-covering'
   | 'mep-underfloor'
   | 'thermal-space'
-  | 'space-separator';
+  | 'space-separator'
+  // ADR-508 §text-parity — annotation single-click tools (ghost-word + placement indicators).
+  | 'text'
+  | 'mtext';
 
 export interface DrawingState {
   currentTool: DrawingTool;

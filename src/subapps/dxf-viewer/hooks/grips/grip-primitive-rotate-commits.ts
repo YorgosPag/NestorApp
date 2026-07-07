@@ -60,8 +60,12 @@ interface RotationResolution {
  * Resolve pivot + swept angle from the hot-grip rotate context (published by the
  * FSM) or fall back to `fallbackPivot` + the grip position (legacy drag). Mirror of
  * the pivot/anchor resolution in `commitLineGripDrag`.
+ *
+ * Exported (ADR-575 §8) so the GROUP gizmo rotation commit (`commitGroupGizmoRotation`)
+ * reuses the EXACT same pivot/anchor/swept-angle resolution — the group is just another
+ * consumer of the shared rotate flow, no fork.
  */
-function resolveRotation(
+export function resolveRotation(
   grip: UnifiedGripInfo,
   delta: Point2D,
   fallbackPivot: Point2D,

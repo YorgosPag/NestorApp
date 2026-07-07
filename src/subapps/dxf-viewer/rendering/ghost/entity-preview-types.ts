@@ -29,6 +29,7 @@ import type {
   LineGripKind,
   ArcGripKind,
   PolylineGripKind,
+  GroupGripKind,
   TextGripKind,
 } from '../../hooks/grip-types';
 import type { WallGripKind } from '../../hooks/useGripMovement';
@@ -159,5 +160,14 @@ export interface EntityPreviewTransform {
    * already a closed 4-vertex polyline at this point, so this one branch covers both.
    */
   readonly polylineGripKind?: PolylineGripKind;
+  /**
+   * ADR-575 §8 — GROUP gizmo discriminator. Routes the preview through the whole-group
+   * transform: `'group-move'` translates every member by `delta` (mirror
+   * `calculateMovedGeometry` case 'group'); `'group-rotation'` spins every member about
+   * `rotatePivot` via the shared `applyPrimitiveRotationDrag` → `rotateEntity` case 'group'
+   * (the SAME engine the commit runs). `anchorPos` = the reference anchor (sweep start).
+   * The ghost RENDER expands the transformed group + draws each member (`useGripGhostPreview`).
+   */
+  readonly groupGripKind?: GroupGripKind;
   readonly anchorPos?: Point2D;
 }

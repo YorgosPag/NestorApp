@@ -38,6 +38,11 @@ export interface CreateTextCommandInput {
   readonly forceType?: 'mtext';
   /** MTEXT bounding box width in world units. Only meaningful when forceType='mtext'. */
   readonly width?: number;
+  /**
+   * ADR-508 §text-parity — γωνία κλίσης (CCW μοίρες, DXF σύμβαση) από το 2-click place→rotate flow.
+   * Γράφεται στο entity-level `rotation` (αυτό διαβάζει ο `TextRenderer`). Παραλείπεται/0 = οριζόντιο.
+   */
+  readonly rotation?: number;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -82,6 +87,8 @@ export class CreateTextCommand implements ICommand {
         position: this.input.position,
         textNode: this.input.textNode,
         ...(entityType === 'mtext' && this.input.width != null ? { width: this.input.width } : {}),
+        // ADR-508 §text-parity — γωνία κλίσης (μόνο όταν ≠ 0· οριζόντιο κείμενο μένει καθαρό).
+        ...(this.input.rotation ? { rotation: this.input.rotation } : {}),
       };
     }
     this.sceneManager.addEntity(this.entity);

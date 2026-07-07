@@ -447,6 +447,7 @@ export type {
   CircleGripKind,
   ArcGripKind,
   LineGripKind,
+  GroupGripKind,
 } from './grip-kinds-primitives';
 
 // ADR-557 — Text / MText grip kinds live in the sibling module

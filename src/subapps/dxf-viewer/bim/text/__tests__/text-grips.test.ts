@@ -49,8 +49,11 @@ describe('effectiveTextWidth', () => {
   it('TEXT → honours widthFactor', () => {
     expect(effectiveTextWidth(text({ widthFactor: 2 }))).toBeCloseTo(36, 9);
   });
-  it('MTEXT → the real box width (ignores char formula)', () => {
-    expect(effectiveTextWidth(text({ width: 50, text: 'X' }))).toBeCloseTo(50, 9);
+  it('MTEXT wide frame → HUGS the glyphs (Giorgio 2026-07-07: frame ignored when text is narrower)', () => {
+    expect(effectiveTextWidth(text({ width: 50, text: 'X' }))).toBeCloseTo(6, 9); // content 'X' = 6, NOT 50
+  });
+  it('MTEXT narrow frame → the column frame wins (text wraps to it)', () => {
+    expect(effectiveTextWidth(text({ width: 4, text: 'X' }))).toBeCloseTo(4, 9); // 4 < content 6
   });
 });
 
@@ -147,9 +150,10 @@ describe('applyTextGripDrag — edge resize (opposite edge fixed)', () => {
     expect(patch.position!.y).toBeCloseTo(0, 9);        // bottom edge (baseline) held at y=0
   });
 
-  it('MTEXT east edge → patches width directly (no widthFactor)', () => {
-    const patch = applyTextGripDrag('text-edge-e', { entity: text({ width: 20, text: 'X' }), delta: { x: 4, y: 0 } });
-    expect(patch.width).toBeCloseTo(24, 9);
+  it('frame-constrained MTEXT east edge → patches width directly (no widthFactor)', () => {
+    // width 4 < content('X')=6 → frame-constrained → the column frame resizes (not widthFactor).
+    const patch = applyTextGripDrag('text-edge-e', { entity: text({ width: 4, text: 'X' }), delta: { x: 4, y: 0 } });
+    expect(patch.width).toBeCloseTo(8, 9); // 4 + Δx 4
     expect(patch.widthFactor).toBeUndefined();
     expect(patch.height).toBeCloseTo(10, 9);
   });

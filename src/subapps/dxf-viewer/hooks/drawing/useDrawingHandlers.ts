@@ -66,12 +66,8 @@ import { useCenterMarkCreate } from '../dimensions/useCenterMarkCreate';
 // ADR-357 Phase 7: Snap Override orchestrator (single-use snap modifiers)
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { ExtendedSnapType } from '../../snapping/extended-types';
-import { handleToolCompletion, resolveOrthoPolarStep, MEASURE_TOOLS_FOR_GUIDES, resolveDimPickContext, performDoubleClickFinish, commitM2PClick, resolveLineFamilyCommitPoint } from './drawing-handler-utils';
-// ADR-562 Φ9 / ADR-357 — dim-creation alignment traces (commit parity with the hover preview).
-import { resolveDimAlignmentTracking } from '../dimensions/dim-alignment-tracking';
-import { dimensionCreateStore } from '../../stores/DimensionCreateStore';
+import { handleToolCompletion, resolveOrthoPolarStep, MEASURE_TOOLS_FOR_GUIDES, resolveDimCommitPoint, performDoubleClickFinish, commitM2PClick, resolveLineFamilyCommitPoint } from './drawing-handler-utils';
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
-import { isDimLineRefPhase } from '../dimensions/dim-skip-snap';
 import { processDrawingHover } from './drawing-hover-handler';
 export { MEASURE_TOOLS_FOR_GUIDES } from './drawing-handler-utils';
 
@@ -107,7 +103,14 @@ export function useDrawingHandlers(
   // το γενικό `completeEntity` δεν εκπέμπει `drawing:entity-created`, οπότε δεν αρκεί ο εσωτερικός listener).
   // ADR-060 — η «κάθετη γραμμή» χρειάζεται ΤΟΥΣ ΙΔΙΟΥΣ face-snap στόχους με τη γραμμή· αλλιώς άδειο cache
   // στην πρώτη ενεργοποίηση (αν δεν είχε χρησιμοποιηθεί ποτέ το `line` στο session) → καμία παρειά → κανένα ghost.
-  const isLineFamilyTool = activeTool === 'line' || activeTool === 'line-perpendicular';
+  // ADR-508 §polyline-parity (Giorgio 2026-07-07) — και η «πολυγραμμή» χρειάζεται τους ΙΔΙΟΥΣ face-snap
+  // στόχους (ghost/κυανές πάνω σε οντότητα, ίδια SSoT με τη γραμμή).
+  // ADR-508 §text-parity (Giorgio 2026-07-07) — και τα annotation «Κείμενο»/«Πολυγραμμικό Κείμενο»
+  // χρειάζονται τους ΙΔΙΟΥΣ face-snap στόχους: το σημείο εισαγωγής κουμπώνει flush σε παρειά + κυανές
+  // listening dims (κοινός zero-width εγκέφαλος έλξης). Χωρίς refresh → άδειοι στόχοι → καμία κυανή.
+  const isLineFamilyTool =
+    activeTool === 'line' || activeTool === 'line-perpendicular' || activeTool === 'polyline' ||
+    activeTool === 'text' || activeTool === 'mtext';
   const lineSceneEntityCount = isLineFamilyTool ? (currentScene?.entities.length ?? 0) : -1;
   useEffect(() => {
     if (isLineFamilyTool) refreshSnapTargets();
@@ -207,26 +210,16 @@ export function useDrawingHandlers(
   const onDrawingPoint = useCallback((p: Pt) => {
     // 🏢 ADR-362 Phase D1: route dim tools through the dedicated orchestrator.
     if (dimRouting.isDimTool) {
-      // ADR-362 hotfix (2026-05-19): the dim-line-offset click (3rd click) is a free
-      // position pick — skip-snap + entity-under-cursor resolution lives in the shared
-      // helper so preview & commit stay in sync (see resolveDimPickContext).
-      const { snapped, hoveredEntity, snapMode, secondEntity } = resolveDimPickContext(
-        p, applySnap, findSnapPoint, currentScene?.entities,
-      );
-      // ADR-562 Φ9 / ADR-357 — commit parity: apply the SAME alignment override the hover
-      // preview showed, so the committed defPoint equals the trace (WYSIWYG). Skipped on the
-      // free dim-line offset pick (isDimLineRefPhase), matching OSNAP + the hover path.
-      let alignedSnapped = snapped;
-      if (!isDimLineRefPhase()) {
-        const refPoints = dimensionCreateStore.get().clicks.map((c) => c.world);
-        const ambientOn = ambientAlignmentConfigStore.getSnapshot().enabled;
-        const composed = resolveDimAlignmentTracking(snapped, refPoints, {
-          scale: canvasOps.getTransform().scale,
-          polarEnabled: polarOnRef.current && !orthoOnRef.current,
-          sceneEntities: ambientOn ? (currentScene?.entities ?? null) : null,
-        });
-        if (composed) alignedSnapped = composed.point;
-      }
+      // ADR-362 / ADR-562 Φ9 — snap + entity-under-cursor + commit-parity alignment override
+      // (WYSIWYG with the hover preview) live in the shared SSoT helper so the hook stays lean.
+      const { alignedSnapped, hoveredEntity, snapMode, secondEntity } = resolveDimCommitPoint(p, {
+        applySnap,
+        findSnapPoint,
+        sceneEntities: currentScene?.entities,
+        scale: canvasOps.getTransform().scale,
+        polarEnabled: polarOnRef.current && !orthoOnRef.current,
+        ambientEnabled: ambientAlignmentConfigStore.getSnapshot().enabled,
+      });
       // ADR-362 Phase J3 (gap #2) — forward snap mode + 2nd intersection host so
       // the association capture records intersection / parametric-nearest anchors.
       dimRouting.handlePoint(alignedSnapped, hoveredEntity, { snapMode, secondEntity });
@@ -492,6 +485,11 @@ export function useDrawingHandlers(
     onDrawingDoubleClick,
     onUndoLastPoint: undoLastPoint,  // 🏢 ADR-047: Undo last point (context menu)
     onFlipArc: flipArcDirection,  // 🏢 ENTERPRISE (2026-01-31): Flip arc direction (context menu)
-    cancelAllOperations
+    cancelAllOperations,
+    // ADR-508 §text-parity — imperative preview clear (SSoT: ίδιος `previewCanvasRef.clear()` με το
+    // double-click finish). Το text 2-click commit (`onTextToolClick`) δεν περνά από `onDrawingPoint`,
+    // οπότε ο κλικ-handler το καλεί ρητά για να σβήσει τις ενδείξεις (κυανές/λευκά/πορτοκαλί) μόλις
+    // ανοίξει το πεδίο — αλλιώς το τελευταίο hover frame «κολλάει» (ο κέρσορας δεν κινείται πια).
+    clearPreview: () => previewCanvasRef?.current?.clear(),
   };
 }

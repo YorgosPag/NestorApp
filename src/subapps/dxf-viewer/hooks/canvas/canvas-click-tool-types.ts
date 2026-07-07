@@ -42,6 +42,8 @@ export interface LinePickableEntity {
 export interface DrawingHandlersLike {
   onDrawingPoint?: (point: Point2D) => void;
   drawingState?: { tempPoints?: Array<unknown> };
+  /** ADR-508 §text-parity — imperative preview-canvas clear (text 2-click commit path). */
+  clearPreview?: () => void;
 }
 
 /** Minimal interface for special tool hooks */

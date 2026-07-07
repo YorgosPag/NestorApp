@@ -10,7 +10,7 @@
  */
 
 import type { Point2D, GripKind } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, FoundationGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind, PolylineGripKind, CircleGripKind, ArcGripKind, LineGripKind, TextGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, FoundationGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind, PolylineGripKind, CircleGripKind, ArcGripKind, LineGripKind, GroupGripKind, TextGripKind } from '../useGripMovement';
 import type {
   DxfGripDragPreview,
   DxfGripInteractionState,
@@ -336,6 +336,14 @@ export interface UnifiedGripInfo {
    * corner/edge resize + centre move + rotation via the shared `rect-grip-engine`).
    */
   readonly textGripKind?: TextGripKind;
+  /**
+   * ADR-575 §8 — GROUP gizmo grip discriminator (forwarded from `GripInfo.groupGripKind`
+   * in `grip-registry.wrapDxfGrip`). `'group-move'` → shared MOVE pipeline (whole-group
+   * translate)· `'group-rotation'` → shared hot-grip rotate + `commitGroupGizmoRotation()`
+   * (RotateEntityCommand about the bbox centre). Both recurse the group members via the
+   * canonical `calculateMovedGeometry` / `rotateEntity` case 'group'.
+   */
+  readonly groupGripKind?: GroupGripKind;
   /**
    * ADR-397 Φ2 (Giorgio 2026-06-17) — the owning entity's local frame (world unit
    * axes) for MOVE-glyph grips, from `resolveMoveGlyphFrame`. Attached in

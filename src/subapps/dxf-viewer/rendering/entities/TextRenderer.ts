@@ -51,6 +51,9 @@ import { getTextGrips } from '../../bim/text/text-grips';
 // ADR-557 Φ-attachment — attachment-aware text-box SSoT: the hitTest hit-box + the 2D
 // hover frame use the SAME box as the grips / 3D mesh / culling (one geometry, N consumers).
 import { resolveTextBox, textBoxCornersWorld } from '../../bim/text/text-box';
+// ADR-557 (multi-line) — split flat `text` on `\n` and stack each line at its own y-offset,
+// with the SAME line-spacing + attachment distribution the box SSoT uses (render ≡ box).
+import { splitTextLines, resolveLineSpacingRatio, resolveMultilineExtents, type TextRow } from '../../bim/text/text-lines';
 import { projectToLocalFrame } from '../../bim/grips/grip-math';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -169,22 +172,47 @@ export class TextRenderer extends BaseEntityRenderer {
       ? entity.widthFactor
       : 1;
 
+    // ADR-557 (multi-line) — split on `\n`; each line steps down by `advancePx`. The block is
+    // shifted so `position` stays the attachment anchor (T/M/B) — `firstOffsetPx = −topAdd·height`,
+    // the exact rule the box SSoT applies, so the drawn lines fill the grip/hover box precisely.
+    const lines = splitTextLines(text);
+    const lineSpacingRatio = resolveLineSpacingRatio(entity as unknown as DxfText);
+    const advancePx = screenHeight * lineSpacingRatio;
+    const row: TextRow = baselineMode === 'middle' ? 'M' : baselineMode === 'bottom' ? 'B' : 'T';
+    const firstOffsetPx = -resolveMultilineExtents(row, lines.length, lineSpacingRatio).topAdd * screenHeight;
+    const paint = (ox: number, oy: number) =>
+      this.paintTextLines(ox, oy, lines, advancePx, firstOffsetPx, screenHeight, textAlignMode, baselineMode, resolved, richStyle, hasDecoration);
+
     if (normalizedRotation !== 0) {
       this.ctx.translate(screenPos.x, screenPos.y);
       this.ctx.rotate(degToRad(-normalizedRotation));
       if (widthFactor !== 1) this.ctx.scale(widthFactor, 1);
-      const w = this.paintText(0, 0, text, screenHeight, textAlignMode, baselineMode, resolved);
-      if (hasDecoration) this.paintDecorations(0, 0, w, screenHeight, richStyle, textAlignMode);
+      paint(0, 0);
     } else if (widthFactor !== 1) {
       this.ctx.translate(screenPos.x, screenPos.y);
       this.ctx.scale(widthFactor, 1);
-      const w = this.paintText(0, 0, text, screenHeight, textAlignMode, baselineMode, resolved);
-      if (hasDecoration) this.paintDecorations(0, 0, w, screenHeight, richStyle, textAlignMode);
+      paint(0, 0);
     } else {
-      const w = this.paintText(screenPos.x, screenPos.y, text, screenHeight, textAlignMode, baselineMode, resolved);
-      if (hasDecoration) this.paintDecorations(screenPos.x, screenPos.y, w, screenHeight, richStyle, textAlignMode);
+      paint(screenPos.x, screenPos.y);
     }
     this.ctx.restore();
+  }
+
+  /**
+   * ADR-557 (multi-line) — paint each visual line at `origin + firstOffset + i·advance`
+   * (screen y-down). Reuses the single-line `paintText` (glyph-path or CSS fallback) +
+   * `paintDecorations` per line, so every line keeps the run's font / baseline / decorations.
+   */
+  private paintTextLines(
+    originX: number, originY: number, lines: string[], advancePx: number, firstOffsetPx: number,
+    screenHeight: number, align: CanvasTextAlign, baseline: CanvasTextBaseline,
+    resolved: ResolvedFont | null, richStyle: TextRichStyle, hasDecoration: boolean,
+  ): void {
+    for (let i = 0; i < lines.length; i++) {
+      const y = originY + firstOffsetPx + i * advancePx;
+      const w = this.paintText(originX, y, lines[i], screenHeight, align, baseline, resolved);
+      if (hasDecoration) this.paintDecorations(originX, y, w, screenHeight, richStyle, align);
+    }
   }
 
   /**

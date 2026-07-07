@@ -33,7 +33,9 @@
 
 import { useCallback } from 'react';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
-import type { AnySceneEntity, Entity } from '../../types/entities';
+import type { AnySceneEntity, Entity, GroupEntity } from '../../types/entities';
+// ADR-575 §8 — expand the transformed GROUP into its member primitives to ghost each.
+import { expandGroupEntity } from '../../systems/group/group-expander';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { useLevels } from '../../systems/levels';
@@ -271,6 +273,28 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     }
 
     const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview, previewCtx);
+
+    // ── ADR-575 §8 — GROUP gizmo live ghost (whole-group move / rotate) ──────────
+    // `applyEntityPreview` returns a transformed `type:'group'` CONTAINER (every member
+    // translated / rotated by the SAME `calculateMovedGeometry` / `rotateEntity` case
+    // 'group' the commit runs). The single-entity ghost path below cannot draw a group,
+    // so expand it here and paint EACH member as a translucent ghost — the Revit / C4D
+    // «όλη η ομάδα κινείται» preview. The rotation pivot ⊙ + live angle arc were already
+    // drawn above (they read `dp.rotatePivot`/`dp.rotateSweepDeg`, not the entity). Skip
+    // the BIM member-body / alignment / HUD overlays (group-agnostic) via the early return.
+    if ((transformed as { type?: string }).type === 'group') {
+      if (transformed !== entity) {
+        ctx.save();
+        ctx.globalAlpha = GHOST_DEFAULTS.alpha;
+        ctx.strokeStyle = GHOST_DEFAULTS.color;
+        ctx.fillStyle = GHOST_DEFAULTS.color;
+        for (const member of expandGroupEntity(transformed as unknown as GroupEntity)) {
+          drawGhostEntity(ctx, member as unknown as DxfEntityUnion, t, vp);
+        }
+        ctx.restore();
+      }
+      return;
+    }
 
     // ADR-397 §15b — SECOND direction arc while ROTATING a wall JOINED to a neighbour:
     // the LIVE corner angle between the two walls' axes (Giorgio, στιγμιότυπο 153825).

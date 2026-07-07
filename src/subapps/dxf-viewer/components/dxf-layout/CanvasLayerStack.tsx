@@ -17,11 +17,8 @@ import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config';
 import { PREVIEW_DEFAULTS } from '../../config/color-config';
 import { buildDxfRulerSettings } from './canvas-layer-stack-ruler-settings';
 import { canvasUI } from '@/styles/design-tokens/canvas';
-import { createCombinedBounds } from '../../systems/zoom/utils/bounds';
 import { isInDrawingMode } from '../../systems/tools/ToolStateManager';
-import { dwarn } from '../../debug';
 import type { Point2D } from '../../rendering/types/Types';
-import { getImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
 import { setHoveredEntity, setHoveredOverlay } from '../../systems/hover/HoverStore';
 // ADR-561 EXT — copy-drag detection for the inverted-ghost gate, via the SAME copy-intent
 // SSoT the commits use. Plain getSnapshot reads inside it (NOT useSyncExternalStore) →
@@ -48,6 +45,8 @@ import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/Ca
 import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleButton'; import { Focus2DOverlayLeaf } from './Focus2DOverlayLeaf'; import { SelectionCursorIcon } from '../../accessibility/SelectionCursorIcon';
 // ADR-575 — GROUP selection affordance overlay (dashed box + «Ομάδα · N»), ADR-040 leaf.
 import { GroupSelectionOverlaySubscriber } from './GroupSelectionOverlaySubscriber';
+// ADR-575 §8 — GROUP interactive gizmo (move cross + rotation handle) canvas leaf.
+import { GroupGizmoLayer } from './GroupGizmoLayer';
 import { CutPlaneSliderLeaf } from './CutPlaneSliderLeaf'; /* ADR-452 cut-plane slider, self-gated 2D */ import { AxisCutSliderLeaf } from './AxisCutSliderLeaf'; /* ADR-455 vertical X/Y section sliders, self-gated 2D */ import { useDxfOverlay3DSync } from './useDxfOverlay3DSync'; import { useLevelId3DSync } from './useLevelId3DSync';
 // ADR-396 P4 — ETICS θερμοπρόσοψη 2D overlay (dedicated floor-overlay micro-leaf).
 import { EnvelopeOverlay } from './EnvelopeOverlay';
@@ -58,6 +57,7 @@ import { DimRowHandleOverlay } from './DimRowHandleOverlay';
 import { FloorUnderlayOverlay } from './FloorUnderlayOverlay';
 import { CanvasLayerStack2DOverlays } from './canvas-layer-stack-2d-overlays-leaf';
 import { useCanvasLayerStackHandlers } from './useCanvasLayerStackHandlers';
+import { useCanvasLayerStackZoomHandlers } from './useCanvasLayerStackZoomHandlers';
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
 export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   transform, viewport, activeTool, overlayMode, showLayers,
@@ -133,36 +133,13 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   dxfSceneRef.current = dxfScene;
   const colorLayersRef = useRef(colorLayers);
   colorLayersRef.current = colorLayers;
-  const handleRulerZoomToFit = useCallback(() => {
-    const combinedBounds = createCombinedBounds(dxfSceneRef.current, colorLayersRef.current, true);
-    if (combinedBounds && viewport.width > 0 && viewport.height > 0) {
-      zoomSystem.zoomToFit(combinedBounds, viewport, true);
-    } else {
-      dwarn('CanvasLayerStack', 'ZoomToFit: Invalid bounds or viewport!', {
-        combinedBounds,
-        viewport,
-      });
-    }
-  }, [viewport, zoomSystem]);
-  const handleRulerWheelZoom = useCallback((delta: number) => {
-    const cssPos = getImmediatePosition();
-    if (cssPos) {
-      zoomSystem.handleWheelZoom(delta, cssPos);
-    }
-  }, [zoomSystem]);
-  // 🏢 ADR-418: zoom to 1:1 actual size — units resolved imperatively (ADR-040: no subscription)
-  const handleZoomActualSize = useCallback(
-    () => zoomSystem.zoomToActualSize(resolveSceneUnits(dxfSceneRef.current)),
-    [zoomSystem],
-  );
-  const handleZoomIn = useCallback(() => zoomSystem.zoomIn(), [zoomSystem]);
-  const handleZoomOut = useCallback(() => zoomSystem.zoomOut(), [zoomSystem]);
-  const handleZoomPrevious = useCallback(() => zoomSystem.zoomPrevious(), [zoomSystem]);
-  // 🏢 ADR-418: preset/menu now passes a drawing-scale ratio N (1:N)
-  const handleZoomToRatio = useCallback(
-    (ratioN: number) => zoomSystem.zoomToRatio(ratioN, resolveSceneUnits(dxfSceneRef.current)),
-    [zoomSystem],
-  );
+  // Ruler/zoom callbacks — extracted to keep the shell <500 lines (N.7.1, ADR-040).
+  const {
+    handleRulerZoomToFit, handleRulerWheelZoom, handleZoomActualSize,
+    handleZoomIn, handleZoomOut, handleZoomPrevious, handleZoomToRatio,
+  } = useCanvasLayerStackZoomHandlers({
+    zoomSystem, viewport, sceneRef: dxfSceneRef, colorLayersRef,
+  });
   // --- Computed props ---
   const draggingOverlayDelta =
     draggingOverlayBody && dragPreviewPosition
@@ -428,6 +405,18 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             transform={transform}
             viewport={viewport}
             className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['30']}`}
+          />
+          {/* ADR-575 §8 — GROUP interactive GIZMO: ONE move cross + ONE rotation handle
+              at each selected group's bbox centre, painted with the SAME grip glyphs +
+              hover/hot temperature as every other grip (canvas, Giorgio's choice). Self-
+              subscribing leaf (selection + scene + grip-interaction state). */}
+          <GroupGizmoLayer
+            sceneLevelId={levelManager.currentLevelId}
+            transform={transform}
+            viewport={viewport}
+            gripInteractionState={dxfGripInteraction.gripInteractionState}
+            gripSize={settings.grip?.gripSize}
+            className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['30']}`}
           />
           <RulerCornerBox
             rulerWidth={rulerSettings.width ?? RULERS_GRID_CONFIG.DEFAULT_RULER_WIDTH}

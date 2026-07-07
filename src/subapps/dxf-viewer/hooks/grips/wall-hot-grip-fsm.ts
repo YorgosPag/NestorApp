@@ -139,6 +139,11 @@ export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
   // spin). The 4 corners + 4 edge midpoints stay press-drag (absent here).
   'text-move': 'move',
   'text-rotation': 'rotate',
+  // GROUP gizmo (ADR-575 §8) — the whole-group move cross + rotation handle, full
+  // wall parity: move MOVE (3-click) + rotation REFERENCE (6-click) / free spin. The
+  // commit recurses the group members (`calculateMovedGeometry` / `rotateEntity`).
+  'group-move': 'move',
+  'group-rotation': 'rotate',
 } as const;
 
 /** Map any grip kind to its hot-grip operation, or null if it stays drag. */
@@ -169,7 +174,10 @@ export function hotGripKindOf(grip: UnifiedGripInfo | null | undefined): string 
   // reference), IDENTICAL to the column. The non-hot text kinds (corner / edge
   // resize) resolve to a string simply absent from HOT_GRIP_OP_REGISTRY → they
   // stay press-drag, so widening the chain is safe.
-  return grip.wallGripKind ?? grip.beamGripKind ?? grip.columnGripKind ?? grip.foundationGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind ?? grip.mepManifoldGripKind ?? grip.mepSegmentGripKind ?? grip.furnitureGripKind ?? grip.floorplanSymbolGripKind ?? grip.lineGripKind ?? grip.circleGripKind ?? grip.arcGripKind ?? grip.polylineGripKind ?? grip.textGripKind;
+  // ADR-575 §8 — `groupGripKind` joins the chain so the whole-group move + rotation
+  // handles opt into the shared hot-grip flow (3-click move / free-rotate + «R»
+  // reference), IDENTICAL to the line/column. The group is the sole owner of this kind.
+  return grip.wallGripKind ?? grip.beamGripKind ?? grip.columnGripKind ?? grip.foundationGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind ?? grip.mepManifoldGripKind ?? grip.mepSegmentGripKind ?? grip.furnitureGripKind ?? grip.floorplanSymbolGripKind ?? grip.lineGripKind ?? grip.circleGripKind ?? grip.arcGripKind ?? grip.polylineGripKind ?? grip.textGripKind ?? grip.groupGripKind;
 }
 
 /**

@@ -81,6 +81,10 @@ export {
   commitPolylineRotationGripDrag,
 } from './grip-primitive-rotate-commits';
 
+// ADR-575 §8 — GROUP gizmo rotation commit (whole-group rotate about bbox centre) lives
+// in grip-group-commits.ts. Re-exported here so the commit API stays one import.
+export { commitGroupGizmoRotation } from './grip-group-commits';
+
 // ADR-406 / ADR-408 Φ3 / ADR-410 — centred-box grip commits (mep-fixture /
 // electrical panel / furniture) live in grip-parametric-centred-box-commits.ts
 // (N.7.1 file-size split). Re-exported here so the commit API stays one import.

@@ -25,6 +25,8 @@ import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolveEffectivePreviewCursor, resolveGhostFaceDimensionsMeta } from './wysiwyg-preview-shared';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
+import { isVisibleSnapMode } from '../../snapping/extended-types';
 import { getDefaultLayerId } from '../../stores/LayerStore';
 import type { GhostFaceFrame } from '../../bim/framing/linear-member-face-snap';
 import type { GhostFaceDimensionsMeta } from '../../bim/framing/ghost-face-dim-references';
@@ -117,6 +119,38 @@ export function resolveLineListeningDims(cursor: Readonly<Point2D>, sceneUnits: 
 export function resolveLineCommitPoint(point: Readonly<Point2D>, sceneUnits: SceneUnits): Point2D {
   const snap = resolveLineFaceSnapAt(point, sceneUnits);
   return snap ? { x: snap.start.x, y: snap.start.y } : { x: point.x, y: point.y };
+}
+
+/**
+ * ADR-508 §text-parity — placement resolver για single-click annotation tools (Κείμενο/Πολυγραμμικό
+ * Κείμενο): επιστρέφει το σημείο εισαγωγής **ΚΑΙ** τις κυανές listening dims από **ΕΝΑ κοινό snap**
+ * (effective cursor). Έτσι το φάντασμα-λέξη και οι διαστάσεις διαβάζουν πάντα την ΙΔΙΑ παρειά — μηδέν
+ * race μεταξύ δύο ανεξάρτητων snaps (mirror του `generateLinePreview`, που παίρνει θέση + dims από το
+ * ΙΔΙΟ `resolveLineFaceSnap`). Χωρίς παρειά εντός capture → σημείο = cursor αυτούσιο, dims = null
+ * (μόνο λευκά ίχνη / OSNAP). Το **commit** εφαρμόζει το ΙΔΙΟ flush μέσω `resolveFaceFlushInsertionPoint`.
+ */
+export function resolveLineListeningPlacement(
+  cursor: Readonly<Point2D>,
+  sceneUnits: SceneUnits,
+): { point: Point2D; faceDimensions: GhostFaceDimensionsMeta | null } {
+  const snap = resolveLineFaceSnap(cursor, sceneUnits);
+  if (!snap) return { point: { x: cursor.x, y: cursor.y }, faceDimensions: null };
+  return {
+    point: { x: snap.start.x, y: snap.start.y },
+    faceDimensions: resolveLineFaceDims(snap.faceFrame, sceneUnits),
+  };
+}
+
+/**
+ * ADR-508 §text-parity — **COMMIT** entry για annotation tools: εφαρμόζει το ΙΔΙΟ flush-to-face με τη
+ * γραμμή (1ο κλικ), **εκτός αν κλειδώνει ΟΡΑΤΟ OSNAP** (πραγματική κορυφή/έλξη νικάει το flush).
+ * 1:1 mirror του line commit branch (`drawing-handler-utils` §Απλή γραμμή, κλικ 1). Το `point` είναι
+ * ήδη OSNAP/tracking-resolved από το click pipeline → preview ≡ commit μέσω του ΙΔΙΟΥ `resolveLineCommitPoint`.
+ */
+export function resolveFaceFlushInsertionPoint(point: Readonly<Point2D>, sceneUnits: SceneUnits): Point2D {
+  const lockedSnap = getImmediateSnap();
+  const visibleOsnap = !!lockedSnap?.found && isVisibleSnapMode(lockedSnap.mode);
+  return visibleOsnap ? { x: point.x, y: point.y } : resolveLineCommitPoint(point, sceneUnits);
 }
 
 /** Χτίζει minimal preview `ExtendedLineEntity`· τα στυλ (color/lineweight/grips/HUD) τα προσθέτει ο `applyPreviewStyling`. */

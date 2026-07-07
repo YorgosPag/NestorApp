@@ -40,6 +40,7 @@ import {
   baseTextAdvanceWorld,
   textVisualExtentRatio,
   textVisualWidthRatio,
+  isTextBoxFrameConstrained,
 } from './text-box';
 import { rotationHandleMidwayOffset } from '../grips/rotation-handle-policy';
 import {
@@ -86,11 +87,6 @@ export interface TextGripDragInput {
   ortho?: boolean;
   /** Rotation pivot override (default = the bbox-centre). */
   pivot?: Point2D;
-}
-
-/** `width != null` ⇒ the box came from an MTEXT frame (patch `width`, not `widthFactor`). */
-function isMTextBox(entity: DxfText): boolean {
-  return entity.width != null;
 }
 
 /**
@@ -158,7 +154,11 @@ function framePatch(entity: DxfText, newFrame: RectFrame): TextTransformPatch {
   // Em-box / MTEXT / no-font paths → both ratios 1.0 (byte-identical to the advance box).
   const nominalHeight = (newFrame.halfLength * 2) / textVisualExtentRatio(entity);
   const patch: TextTransformPatch = { position: textBoxToPosition(newFrame, entity), height: nominalHeight };
-  if (isMTextBox(entity)) {
+  // Only a frame-constrained MTEXT (text wraps to a column narrower than it) resizes its `width`
+  // frame. A HUGGING box (simple TEXT, or a wide-frame MTEXT whose box now hugs the glyphs —
+  // Giorgio 2026-07-07) resizes its `widthFactor` like TEXT, so the hug tracks the drag with NO
+  // jump on release (the box no longer snaps back to the glyph content width).
+  if (isTextBoxFrameConstrained(entity)) {
     patch.width = newVisualWidth;
   } else {
     patch.widthFactor = newVisualWidth / (baseTextAdvanceWorld(entity, nominalHeight) * textVisualWidthRatio(entity));

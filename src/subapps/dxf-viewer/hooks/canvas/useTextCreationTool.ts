@@ -14,7 +14,7 @@
  * Safe to mount in the orchestrator (CanvasSection).
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands';
 import { generateEntityId } from '../../systems/entity-creation/utils';
@@ -33,6 +33,14 @@ import { type SceneUnits } from '../../utils/scene-units';
 import { paperHeightToModel } from '../../utils/annotation-scale';
 import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
+// ADR-508 §text-parity — flush-to-face του σημείου εισαγωγής (ΙΔΙΟΣ πυρήνας με το line commit) ώστε
+// το κείμενο να μπαίνει ΑΚΡΙΒΩΣ εκεί που δείχνει το ghost-φάντασμα (preview ≡ commit).
+import { resolveFaceFlushInsertionPoint } from '../drawing/line-preview-helpers';
+// ADR-508 §text-parity (2-click place→rotate) — το 1ο κλικ κλειδώνει τη θέση + μπαίνει σε rotation
+// phase· το 2ο ορίζει την κλίση (ΟΡΘΟ/Polar F8/F10 μέσω του ΚΟΙΝΟΥ `resolveOrthoPolarStep` SSoT).
+import { resolveOrthoPolarStep } from '../drawing/drawing-handler-utils';
+import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
+import { setTextRotationOrigin, clearTextRotationOrigin, setTextEditingActive } from '../../systems/cursor/TextRotationStore';
 
 interface CreatingState {
   readonly entityId: string;
@@ -48,6 +56,19 @@ interface CreatingState {
   readonly worldWidth?: number;
   /** Force MTEXT type on commit (mtext tool mode). */
   readonly forceMText?: boolean;
+  /** ADR-508 §text-parity — γωνία κλίσης (CCW μοίρες) από το 2-click place→rotate. 0/undefined = οριζόντιο. */
+  readonly rotation?: number;
+}
+
+/**
+ * ADR-508 §text-parity — ενδιάμεση φάση «awaitingRotation» (μετά το 1ο κλικ, πριν το 2ο): το σημείο
+ * εισαγωγής έχει κλειδώσει και ο χρήστης ορίζει την κλίση κινώντας τον κέρσορα. Το πεδίο ΔΕΝ ανοίγει
+ * ακόμη — ανοίγει στο 2ο κλικ με την κλίση κλειδωμένη.
+ */
+interface RotatingState {
+  readonly insertionPoint: Point2D;
+  readonly units: SceneUnits;
+  readonly isMText: boolean;
 }
 
 interface CanvasTransform {
@@ -174,41 +195,82 @@ export function useTextCreationTool(
   const { transformRef, containerRef, activeTool, onToolChange, executeCommand, getSceneUnits } = params;
   const services = useDxfTextServices();
   const [creatingState, setCreatingState] = useState<CreatingState | null>(null);
+  // ADR-508 §text-parity — rotation phase (μεταξύ 1ου και 2ου κλικ).
+  const [rotatingState, setRotatingState] = useState<RotatingState | null>(null);
 
   const handleCanvasClick = useCallback(
     (worldPoint: Point2D): boolean => {
       if (activeTool !== 'text' && activeTool !== 'mtext') return false;
-      if (creatingState) return false; // Already creating; let overlay handle it.
+      if (creatingState) return false; // Field already open; let the overlay handle it.
       const container = containerRef.current;
       const transform = transformRef.current;
       if (!container || !transform) return false;
       const isMText = activeTool === 'mtext';
-      const { worldWidth, ...anchorRect } = computeAnchorRect(worldPoint, transform, container, isMText);
-      const units = getSceneUnits ? getSceneUnits() : 'mm';
-      // ADR-344 Round 7 — annotation scale = the canonical `drawingScale` SSoT
-      // (ADR-375, Revit annotation-scale pattern, default 1:100, set in the View
-      // ribbon, decoupled from zoom). Replaces the Round-6 unit-system heuristic
-      // (m→100/cm→10/mm→1) which produced inconsistent physical sizes — invisible
-      // 2.5mm text in the very common model-space-in-mm drawings. Read at click
-      // time (event-time getState, ADR-040) so it always reflects the live scale.
+      // ADR-344 Round 7 — annotation scale = the canonical `drawingScale` SSoT (ADR-375, Revit
+      // annotation-scale pattern, default 1:100, set in the View ribbon, decoupled from zoom).
+      // Read at click time (event-time getState, ADR-040) so it always reflects the live scale.
       const drawingScale = useDrawingScaleStore.getState().drawingScale;
-      setCreatingState({
-        entityId: generateEntityId(),
-        position: worldPoint,
-        initial: makeEmptyTextNode(units, drawingScale),
-        anchorRect,
-        worldWidth,
-        forceMText: isMText,
-      });
+
+      // ── 2ο κλικ (rotation phase) — κλείδωσε την κλίση → ΤΩΡΑ άνοιξε το πεδίο πληκτρολόγησης.
+      //    Η γωνία κουμπώνει με ΟΡΘΟ/Polar (F8/F10) μέσω του ΚΟΙΝΟΥ `resolveOrthoPolarStep` SSoT
+      //    (ίδιος περιορισμός με το preview → preview ≡ commit). CCW μοίρες (DXF σύμβαση).
+      if (rotatingState) {
+        const snapped = resolveOrthoPolarStep(worldPoint, rotatingState.insertionPoint, {
+          ortho: cadToggleState.isOrthoOn(),
+          polar: cadToggleState.isPolarOn(),
+        }).stepped;
+        const rotationDeg = (Math.atan2(
+          snapped.y - rotatingState.insertionPoint.y,
+          snapped.x - rotatingState.insertionPoint.x,
+        ) * 180) / Math.PI;
+        const { worldWidth, ...anchorRect } = computeAnchorRect(rotatingState.insertionPoint, transform, container, isMText);
+        setRotatingState(null);
+        clearTextRotationOrigin();
+        setTextEditingActive(true); // πεδίο ανοιχτό → καμία stray φάντασμα-λέξη στο hover
+        setCreatingState({
+          entityId: generateEntityId(),
+          position: rotatingState.insertionPoint,
+          initial: makeEmptyTextNode(rotatingState.units, drawingScale),
+          anchorRect,
+          worldWidth,
+          forceMText: isMText,
+          rotation: rotationDeg,
+        });
+        return true;
+      }
+
+      // ── 1ο κλικ (φάση τοποθέτησης) — κλείδωσε το σημείο εισαγωγής (flush στην παρειά μέλους, εκτός αν
+      //    νικά ορατό OSNAP· 1:1 mirror του line commit) και μπες σε rotation phase. ΔΕΝ ανοίγει ακόμη
+      //    το πεδίο — ο χρήστης ορίζει πρώτα την κλίση με το 2ο κλικ. Το `worldPoint` είναι ήδη
+      //    OSNAP/tracking-resolved από το click pipeline (mouse-handler-up).
+      const units = getSceneUnits ? getSceneUnits() : 'mm';
+      const insertionPoint = resolveFaceFlushInsertionPoint(worldPoint, units);
+      setTextRotationOrigin(insertionPoint);
+      setRotatingState({ insertionPoint, units, isMText });
       return true;
     },
-    [activeTool, creatingState, containerRef, transformRef, getSceneUnits],
+    [activeTool, creatingState, rotatingState, containerRef, transformRef, getSceneUnits],
   );
 
   const finishAndExit = useCallback(() => {
     setCreatingState(null);
+    // ADR-508 §text-parity — καθάρισε τυχόν rotation phase (π.χ. ESC μετά το 1ο κλικ) + το κοινό store
+    // + το «πεδίο ανοιχτό» flag (ξαναεπιτρέπει το ghost στο επόμενο κείμενο).
+    setRotatingState(null);
+    clearTextRotationOrigin();
+    setTextEditingActive(false);
     onToolChange('select');
   }, [onToolChange]);
+
+  // ADR-508 §text-parity — αν ο χρήστης φύγει από το εργαλείο κειμένου ενώ είναι σε rotation/editing
+  // phase (αλλαγή εργαλείου/ESC), καθάρισε το lock + flag ώστε να μη «διαρρέει» κατάσταση σε άλλο εργαλείο.
+  useEffect(() => {
+    if (activeTool !== 'text' && activeTool !== 'mtext') {
+      setRotatingState(null);
+      clearTextRotationOrigin();
+      setTextEditingActive(false);
+    }
+  }, [activeTool]);
 
   const onCancel = useCallback(() => {
     finishAndExit();
@@ -242,6 +304,8 @@ export function useTextCreationTool(
           existingId: state.entityId,
           ...(state.forceMText ? { forceType: 'mtext' as const } : {}),
           ...(state.forceMText && state.worldWidth != null ? { width: state.worldWidth } : {}),
+          // ADR-508 §text-parity — γωνία κλίσης από το 2-click place→rotate (entity-level rotation).
+          ...(state.rotation ? { rotation: state.rotation } : {}),
         },
         services.sceneManager,
         services.auditRecorder,

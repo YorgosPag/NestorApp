@@ -106,6 +106,82 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
 
 ## Changelog
 
+- **2026-07-07 (§text-parity — φάντασμα-λέξη + ενδείξεις τοποθέτησης + 2-click place→rotate στα «Κείμενο»/«Πολυγραμμικό Κείμενο»)** — pointer: **ADR-344** (text/mtext creation tool, Phase 6.E/6.F)
+  - **Αίτημα Giorgio (2 γύροι)**: όταν επιλέγω «Κείμενο» (`text`)/«Πολυγραμμικό Κείμενο» (`mtext`): (α) οι **ΙΔΙΕΣ ενδείξεις
+    τοποθέτησης** με τα άλλα εργαλεία (λευκά ίχνη + **κυανές** flush-to-face + OSNAP) + μικρό **φάντασμα-λέξη** «κείμενο»/
+    «text» (i18n `tools.text`). **Αναθεώρηση (ίδια μέρα)**: το εργαλείο να γίνει **2-click** — 1ο κλικ ορίζει τη ΘΕΣΗ, μετά
+    ορίζω **κλίση** περιστρέφοντας, 2ο κλικ κλειδώνει τη γωνία → **ΤΟΤΕ** ανοίγει το πεδίο πληκτρολόγησης. Επιλογές Giorgio:
+    γωνία κουμπώνει με **ΟΡΘΟ/Polar (F8/F10)**· ενδείξεις = **τόξο φοράς + γωνία** (όπως κολόνα). (Αντικαθιστά την αρχική
+    «single-click, χωρίς γωνία» απόφαση.)
+  - **SSoT audit (grep + trace ΠΡΙΝ κώδικα)**: το hover pipeline (`processDrawingHover`) **τρέχει ήδη** για text/mtext
+    (category `'drawing'`)· τα **λευκά ίχνη** υπολογίζονταν ήδη. **Blockers**: (1) κανένα preview entity → ο
+    `paintDrawingHoverOverlays` δεν καλούνταν → τίποτα δεν ζωγραφιζόταν· (2) `updatePreview` early-return (text/mtext
+    παρακάμπτουν το FSM → `machineTool='select'`)· (3) το `sceneSnapTargetsStore` δεν γέμιζε για text → καμία κυανή.
+  - **FIX τοποθέτησης (ZERO νέος μηχανισμός έλξης — reuse του line zero-width εγκεφάλου)**:
+    - `drawing-types.ts` — `PreviewText { type:'text'; position; faceDimensions?; rotationDeg? }` (η λέξη ΔΕΝ αποθηκεύεται —
+      N.11) + `'text'`/`'mtext'` στο `DrawingTool` + `ExtendedSceneEntity`.
+    - `line-preview-helpers.ts` — `resolveLineListeningPlacement(cursor)` (θέση **⊕** κυανές από **ΕΝΑ** snap) +
+      `resolveFaceFlushInsertionPoint(point)` (commit flush, mirror του line 1ου-κλικ: flush εκτός αν νικά ΟΡΑΤΟ OSNAP).
+    - `drawing-preview-generator.ts` — `generateTextPreview` (φάση τοποθέτησης: flush ghost + κυανές).
+    - `preview-text-paint.ts` (**νέο**) + `preview-entity-dispatch.ts` `case 'text'` — ημιδιάφανο ghost-word· λέξη = `i18n.t`
+      **στον painter** (N.11)· περιστρέφεται κατά `rotationDeg` (canvas CW = −DXF CCW, ίδια σύμβαση με `TextRenderer`).
+    - `useUnifiedDrawing.tsx` — routing text/mtext μέσω `toolStateStore`. `useDrawingHandlers.ts` — text/mtext στο
+      `isLineFamilyTool` refresh (γεμίζει το `sceneSnapTargetsStore` → κυανές).
+  - **FIX 2-click place→rotate (reuse του «κολόνα place+rotate» SSoT)**:
+    - `TextRotationStore.ts` (**νέο**) — origin singleton (1ο κλικ → set, 2ο/ESC → clear). Ξεχωριστό από το
+      `PlacementRotationStore` **επίτηδες**: εκείνο σκανδαλίζει τον ungated column-rotation painter (adaptive-step)· το
+      κείμενο θέλει **F8/F10** — άρα δικός του overlay block ζωγραφίζει από τον (ήδη-snapped) `previewPt`, μηδέν διπλό τόξο.
+    - `bim-ortho-reference.ts` — `getBimOrthoReference('text'/'mtext')` = origin → το hover pipeline εφαρμόζει ΟΡΘΟ/Polar
+      (F8/F10) στη γωνία κλίσης (κοινός `resolveOrthoPolarStep`).
+    - `drawing-preview-generator.ts` (`generateTextPreview`) — rotation phase: θέση = origin (ΚΛΕΙΔΩΜΕΝΗ), `rotationDeg` =
+      atan2(previewPt−origin) (ο previewPt ήδη F8/F10-snapped). Καμία κυανή στη rotation phase.
+    - `drawing-hover-overlays.ts` — text-rotation block: `drawPolarTrackingLine` (πορτοκαλί) + `drawDirectionArc` (πράσινο/
+      κόκκινο τόξο + μοίρες), **ΙΔΙΟΙ SSoT painters με την κολόνα**, από τον `previewPt` (F8/F10-consistent).
+    - `useTextCreationTool.ts` — 2-phase FSM: 1ο κλικ → `setTextRotationOrigin` + `rotatingState` (ΟΧΙ πεδίο)· 2ο κλικ →
+      γωνία μέσω `resolveOrthoPolarStep` (preview ≡ commit) → `setCreatingState` (πεδίο) + `clearTextRotationOrigin`·
+      `useEffect` καθαρίζει σε αλλαγή εργαλείου. `CreateTextCommand`+`types.ts` — νέο entity-level `rotation` (αυτό διαβάζει
+      ο `TextRenderer`, γρ. 81).
+    - **Καθαρισμός ενδείξεων στο commit (Giorgio)**: μόλις ανοίξει το πεδίο (2ο κλικ) ΟΛΕΣ οι ενδείξεις (κυανές / λευκά
+      ίχνη / πορτοκαλί polar / τόξο) σβήνουν άμεσα. Ο `TextRotationStore` κρατά flag `isTextEditingActive` → ο
+      `generateTextPreview` επιστρέφει `null` (κανένα stray ghost)· ο `useCanvasClickHandler` καλεί ρητά το νέο
+      `useDrawingHandlers.clearPreview()` (SSoT `previewCanvasRef.clear()`) γιατί ο κέρσορας δεν κινείται πια → το
+      τελευταίο hover frame θα «κόλλαγε» χωρίς αυτό.
+  - **Tests**: `text-preview-placement.test.ts` (11 — placement flush+κυανές, mtext parity, commit OSNAP-priority, rotation
+    phase θέση/γωνία)· `useTextCreationTool-scene-units.test.tsx` προσαρμ. σε 2-click. Όλο το drawing+preview-canvas+text
+    suite πράσινο (537).
+  - **Boy-scout (N.0.2)**: ο stair preview εξήχθη σε `stair-preview-helpers.ts` (`drawing-preview-generator.ts` είχε φτάσει
+    526 γρ. > 500· τώρα 469) — ο τελευταίος inline tool-preview, τώρα ευθυγραμμισμένος με τους αδελφούς του.
+
+- **2026-07-07 (§polyline-parity — full hover/preview parity ΓΡΑΜΜΗ → ΠΟΛΥΓΡΑΜΜΗ, μία SSoT)**
+  - **Αίτημα Giorgio**: όταν επιλέγω «Πολυγραμμή», να εμφανίζεται (α) το ΙΔΙΟ φάντασμα + κυανές (γαλανές) listening
+    ενδείξεις κειμένου/γραμμικές πάνω σε οντότητα όπως στη «Γραμμή», (β) αμέσως τα λευκά ίχνη ευθυγράμμισης, και μόλις
+    οριστεί το 1ο σημείο: (γ) λευκές ενδείξεις μήκους+γωνίας στο τρέχον σκέλος, (δ) polar ίχνη, (ε) οι κυανές να
+    συνεχίζουν, (στ) πράσινα/κόκκινα βελάκια φοράς γωνίας. «Την ίδια ακριβώς κωδικοποίηση, μία SSoT.»
+  - **SSoT audit (grep + trace ΠΡΙΝ κώδικα)**: 2/6 στοιχεία ήταν **ήδη** tool-agnostic → δούλευαν στην πολυγραμμή χωρίς
+    αλλαγή: **λευκά ίχνη** (`resolveAlignmentTracking`) και **polar** (`resolveOrthoPolarStep`/`applyPolar`), οδηγούμενα
+    από `lastRefPt = tempPoints[last]` (μεγαλώνει ανά κλικ). Δομική διαφορά: line = ξεχωριστό `type:'line'` entity (1
+    segment)· polyline = ΕΝΑ `type:'polyline'` entity με ΟΛΗ την αλυσίδα → το «ενεργό segment» = `vertices[N-2] → cursor`.
+  - **FIX (ZERO νέος painter/store/μηχανισμός — reuse ΟΛΩΝ των line SSoT)**:
+    - `drawing-preview-generator.ts` — νέο branch `tool==='polyline' && tempPoints.length===0` → **ΙΔΙΟΣ** `generateLinePreview`
+      (zero-width member face-snap) → κάθετο stub-φάντασμα + κυανές (state-0). (§1, §2 state-0)
+    - `drawing-preview-partial.ts` (`entity.type==='polyline'`) — στο ενεργό segment `(worldPoints[N-2], cursor)`: ΙΔΙΟΙ
+      `buildSegmentHudMeta` (→ `liveDimHud`, §4 λευκές μήκος/γωνία) + `resolveLineListeningDims` (→ `faceDimensions`, §2/§5
+      κυανές state-1+). Οι δύο painters στο `drawing-hover-overlays.ts` τα διαβάζουν ήδη γενικά (καμία αλλαγή).
+    - `drawing-types.ts` — `ExtendedPolylineEntity` απέκτησε `liveDimHud?`/`faceDimensions?` (ΙΔΙΑ πεδία με `ExtendedLineEntity`).
+    - `drawing-hover-overlays.ts` — το gate του SSoT `drawDirectionArc` (πράσινο/κόκκινο τόξο φοράς) επεκτάθηκε σε
+      `'line' || 'polyline'` (§6). **Σημείωση**: το τόξο ΔΕΝ υπήρχε στη σχεδίαση της απλής Γραμμής (μόνο τοίχος/δοκός +
+      grip-drag)· ο Giorgio ενέκρινε να μπει ΚΑΙ στα δύο (line+polyline) ώστε να μείνουν πανομοιότυπα (μία SSoT).
+    - `useDrawingHandlers.ts` — `isLineFamilyTool` += `'polyline'` → refresh του `sceneSnapTargetsStore` (προαπαιτούμενο:
+      αλλιώς άδειοι face-snap στόχοι → καμία κυανή).
+    - `drawing-handler-utils.ts` (`resolveLineFamilyCommitPoint`) — δέχεται `'polyline'` (γενικός line-κλάδος): flush/κάθετο
+      κούμπωμα στο 1ο κλικ + length/angle lock στα επόμενα → **preview ≡ commit** με το νέο ghost/HUD/κυανές.
+    - `drawing-hover-handler.ts` — `applyLengthAngleLock` preview gate += `'polyline'` → πληκτρολογημένο μήκος/γωνία στο
+      τρέχον segment (full parity, Dynamic Input· ίδιο με γραμμή/τοίχο/δοκό).
+  - **Tests**: `__tests__/polyline-commit-parity.test.ts` (3 tests — locked length/angle + pass-through). Υπάρχοντα
+    line/preview tests πράσινα (33).
+  - **Verification (χειροκίνητα, Giorgio, localhost)**: Πολυγραμμή → hover σε οντότητα → ghost+κυανές+λευκά ίχνη → κλικ 1ο
+    σημείο → κάθε επόμενο σκέλος: λευκές μήκος/γωνία + κυανές + polar + πράσινο/κόκκινο τόξο. Εκκρεμεί.
+
 - **2026-07-06 (§grip-tracking — καθολικά ίχνη ευθυγράμμισης (λευκά+ambient) + POLAR σε reshape λαβές, όλες οι οντότητες)**
   - **Αίτημα Giorgio**: όταν σέρνω **μεσαία λαβή** ή **λαβή κορυφής** οποιασδήποτε οντότητας, να λειτουργούν τα **λευκά ίχνη
     ευθυγράμμισης** (acquired ⊕ ambient AutoAlign) **και** το **κίτρινο/πορτοκαλί POLAR** — καθολικά.

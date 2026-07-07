@@ -44,6 +44,9 @@ import { applyPolar, type PolarSnapResult } from '../../systems/constraints/pola
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { getColumnPlacementAnchor } from '../../systems/cursor/ColumnPlacementAnchorStore';
 import { getColumnRotationLock } from '../../systems/cursor/ColumnRotationStore';
+// ADR-508 §text-parity — annotation 2-click place→rotate: το κλειδωμένο σημείο εισαγωγής (1ο κλικ)
+// είναι ο ΟΡΘΟ/Polar άξονας γύρω από τον οποίο κουμπώνει η γωνία κλίσης (F8/F10) στο 2ο κλικ.
+import { getTextRotationOrigin } from '../../systems/cursor/TextRotationStore';
 import { getColumnTopLeanLock } from '../../systems/cursor/ColumnTopLeanStore';
 import { getPlacementTrackingAnchor } from '../../systems/cursor/PlacementTrackingAnchorStore';
 import { isGripStepActive } from '../../bim/grips/grip-step-quantize';
@@ -121,6 +124,12 @@ export function getBimOrthoReference(tool: string): Point2D | null {
       // ΥΠΕΡΙΣΧΥΕΙ (πιο πρόσφατη ρητή πρόθεση)· αλλιώς η προηγούμενη τοποθετημένη κολόνα.
       return getPlacementTrackingAnchor() ?? getColumnPlacementAnchor();
     }
+    case 'text':
+    case 'mtext':
+      // ADR-508 §text-parity — rotation phase (μετά το 1ο κλικ): το κλειδωμένο σημείο εισαγωγής είναι
+      // ο ΟΡΘΟ/Polar άξονας → η γωνία κλίσης κουμπώνει σε 0°/90°/45°... με F8/F10. `null` πριν το 1ο
+      // κλικ (φάση τοποθέτησης) → ελεύθερος κέρσορας (φάντασμα + κυανές, κανένας περιορισμός γωνίας).
+      return getTextRotationOrigin();
     default:
       return null;
   }

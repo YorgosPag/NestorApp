@@ -27,6 +27,9 @@ import {
 // centre, NOT the tight VISUAL cap box (`resolveTextBox`) the 2D grips/hover use — else the
 // 3D text shifts vertically vs the plan (measured ~53 units for a 277-unit title).
 import { resolveTextEmBox } from '../../bim/text/text-box';
+// ADR-557 (multi-line) — the SAME split + line-spacing SSoT the 2D renderer + box use, so the
+// stacked lines in this CanvasTexture match the plan glyphs and fill the (multi-line) em box.
+import { splitTextLines, resolveLineSpacingRatio } from '../../bim/text/text-lines';
 
 /** Texture resolution: canvas pixels per drawing unit of text height (crisp at typical zoom). */
 const TEXTURE_PX_PER_UNIT = 16;
@@ -62,6 +65,9 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
   if (!text.trim()) return null;
 
   const heightUnits = getTextHeightWithFallback(undefined, entity.height);
+  // ADR-557 (multi-line) — split on `\n`; width = max line, height = stacked block.
+  const lines = splitTextLines(text);
+  const lineSpacingRatio = resolveLineSpacingRatio(entity);
 
   const canvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
   const ctx = canvas?.getContext('2d');
@@ -69,13 +75,21 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
 
   // Font px = text height × texture resolution. Pad so glyph side-bearings / anti-aliasing never
   // touch the canvas edge (Greek caps like Π are wider than a 0.6×height estimate → clipped).
-  // `measureCanvas` returns the canvas px footprint for a given px/unit resolution.
+  // `measureCanvas` returns the canvas px footprint for a given px/unit resolution: width = the
+  // WIDEST line, block height = fontPx + (L−1)·advance (advance = fontPx × line-spacing ratio).
   const measureCanvas = (pxPerUnit: number) => {
     const fontPx = Math.max(1, Math.round(heightUnits * pxPerUnit));
     const padPx = Math.ceil(fontPx * 0.25);
     ctx.font = `${fontPx}px ${TEXT_FONTS.DEFAULT_FAMILY}`;
-    const textPx = Math.ceil(ctx.measureText(text).width);
-    return { fontPx, padPx, width: Math.max(8, textPx + padPx * 2), height: Math.max(8, fontPx + padPx * 2) };
+    let textPx = 0;
+    for (const line of lines) { const w = Math.ceil(ctx.measureText(line).width); if (w > textPx) textPx = w; }
+    const advancePx = fontPx * lineSpacingRatio;
+    const blockPx = fontPx + (lines.length - 1) * advancePx;
+    return {
+      fontPx, padPx, advancePx, blockPx,
+      width: Math.max(8, textPx + padPx * 2),
+      height: Math.max(8, Math.ceil(blockPx) + padPx * 2),
+    };
   };
 
   // ADR-366 §B.5 — measure at full resolution, then if the canvas would exceed MAX_TEXTURE_DIM
@@ -98,7 +112,12 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.font = font;
-  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+  // ADR-557 (multi-line) — stack the lines centred in the canvas: first line centre sits so the
+  // block is vertically centred (matches the em-box anchor below), each next line steps by advance.
+  const firstCenterY = (canvas.height - m.blockPx) / 2 + m.fontPx / 2;
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], canvas.width / 2, firstCenterY + i * m.advancePx);
+  }
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.minFilter = THREE.LinearFilter; // non power-of-two canvas → no mipmaps

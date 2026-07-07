@@ -55,6 +55,25 @@ describe('ADR-394 — calculateEntityBounds covers non-enumerated DXF types', ()
   });
 });
 
+describe('ADR-507 — window/crossing marquee selects a HATCH (2026-07-07)', () => {
+  // Before the fix a hatch fell to `default → null` → the marquee silently excluded it, so it
+  // could never be selected together with its frame lines and thus never GROUPED with them.
+  it('hatch → AABB over boundaryPaths (outer + islands)', () => {
+    const hatch = as({
+      id: 'h1', type: 'hatch',
+      boundaryPaths: [
+        [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 60 }, { x: 0, y: 60 }], // outer
+        [{ x: 20, y: 20 }, { x: 40, y: 20 }, { x: 40, y: 40 }],                 // island
+      ],
+    });
+    expect(calculateEntityBounds(hatch)).toEqual({ min: { x: 0, y: 0 }, max: { x: 100, y: 60 } });
+  });
+
+  it('hatch with empty boundaryPaths → null (graceful)', () => {
+    expect(calculateEntityBounds(as({ id: 'h2', type: 'hatch', boundaryPaths: [] }))).toBeNull();
+  });
+});
+
 describe('window/crossing marquee selects dimensions (wrapped DxfDimension, 2026-07-03)', () => {
   // The marquee is fed scene.entities = DxfEntityUnion[], so a dimension arrives WRAPPED:
   // { type:'dimension', dimensionEntity: { defPoints, ... } }. Before the unwrap fix the flat

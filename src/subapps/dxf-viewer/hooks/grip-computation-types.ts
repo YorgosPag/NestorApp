@@ -11,7 +11,7 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { StairGripKind, WallGripKind } from './useGripMovement';
-import type { ColumnGripKind, FoundationGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, DimensionGripKind, LineGripKind, ArcGripKind, PolylineGripKind, TextGripKind } from './grip-types';
+import type { ColumnGripKind, FoundationGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, DimensionGripKind, LineGripKind, ArcGripKind, PolylineGripKind, GroupGripKind, TextGripKind } from './grip-types';
 
 // ============================================================================
 // TYPES (still used by grips/ modules and CanvasLayerStack)
@@ -171,6 +171,14 @@ export interface DxfGripDragPreview {
    * the reference anchor (sweep 0).
    */
   polylineGripKind?: PolylineGripKind;
+  /**
+   * ADR-575 §8 — GROUP gizmo discriminator (forwarded from `UnifiedGripInfo.groupGripKind`
+   * via `buildDxfDragPreview` / `buildRotateReferencePreview`). Routes the live ghost
+   * through the SAME `calculateMovedGeometry` (move) / `applyPrimitiveRotationDrag` →
+   * `rotateEntity` case 'group' (rotation) the commit runs, so preview ≡ commit by
+   * identity — every member translated / rotated. `anchorPos` carries the reference anchor.
+   */
+  groupGripKind?: GroupGripKind;
   /**
    * ADR-363 Phase 1G — set when the active grip is a wall corner being moved via
    * the hot-grip (click-click) state. Consumed by `useGripGhostPreview` to draw

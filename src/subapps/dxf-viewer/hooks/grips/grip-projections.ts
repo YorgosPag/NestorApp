@@ -189,6 +189,11 @@ export function buildDxfDragPreview(
     // spinning-line ghost (applyEntityPreview → applyLineRotationDrag, the SAME
     // shared rotate SSoT the commit runs). Only the rotation handle carries the kind.
     ...(activeGrip.lineGripKind        ? { lineGripKind:        activeGrip.lineGripKind,        anchorPos } : {}),
+    // ADR-575 §8 — GROUP gizmo MOVE cross: forward the kind + anchor so the live ghost
+    // translates every member (applyEntityPreview → calculateMovedGeometry case 'group',
+    // then the render expands the moved group). The rotation handle forwards via
+    // `buildRotateReferencePreview` (hot-grip rotate path).
+    ...(activeGrip.groupGripKind       ? { groupGripKind:       activeGrip.groupGripKind,       anchorPos } : {}),
   };
 }
 
@@ -258,6 +263,10 @@ export function buildRotateReferencePreview(
     // typed angle) via the shared hot-grip flow, same as the column. Without this
     // forward the ghost never receives the discriminator in the rotate flow.
     ...(activeGrip.textGripKind ? { textGripKind: activeGrip.textGripKind } : {}),
+    // ADR-575 §8 — GROUP gizmo rotation live ghost (free spin / 6-click reference / typed
+    // angle) via the shared hot-grip flow, same as the line/arc/text. Without this forward
+    // the ghost never receives the discriminator in the rotate flow.
+    ...(activeGrip.groupGripKind ? { groupGripKind: activeGrip.groupGripKind } : {}),
     hotGrip: true as const,
     rotatePivot: pivot,
     delta: { x: 0, y: 0 },

@@ -301,7 +301,14 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // PRIORITY 5.5: ADR-344 Phase 6.E/6.F — text / mtext creation tool
     // Both 'text' and 'mtext' open an in-canvas TipTap overlay at the click point.
     if ((activeTool === 'text' || activeTool === 'mtext') && params.onTextToolClick) {
-      if (params.onTextToolClick(worldPoint)) return;
+      if (params.onTextToolClick(worldPoint)) {
+        // ADR-508 §text-parity — σβήσε άμεσα τις ενδείξεις τοποθέτησης/περιστροφής (κυανές / λευκά ίχνη /
+        // πορτοκαλί polar / τόξο) του τελευταίου hover frame· μόλις ανοίξει το πεδίο (2ο κλικ) ο κέρσορας
+        // δεν κινείται πια, άρα κανένα νέο hover δεν θα τις καθάριζε. (Στο 1ο κλικ επανασχεδιάζονται στο
+        // επόμενο hover ως rotation ghost — μηδέν παρενέργεια.)
+        drawingHandlersRef.current?.clearPreview?.();
+        return;
+      }
     }
     // PRIORITY 6: Unified drawing/measurement tools
     if (isInteractiveTool(activeTool) && drawingHandlersRef.current) {

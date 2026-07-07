@@ -60,6 +60,8 @@ export function toEntityPreviewTransform(dp: DxfGripDragPreview): EntityPreviewT
     ...(dp.arcGripKind         ? { arcGripKind:         dp.arcGripKind }          : {}),
     // ADR-561 — plain DXF polyline/rectangle rotation ghost (rotate every vertex about pivot).
     ...(dp.polylineGripKind    ? { polylineGripKind:    dp.polylineGripKind }     : {}),
+    // ADR-575 §8 — GROUP gizmo ghost (translate / rotate every member about the bbox centre).
+    ...(dp.groupGripKind       ? { groupGripKind:       dp.groupGripKind }        : {}),
     ...(dp.anchorPos           ? { anchorPos:           dp.anchorPos }            : {}),
     // ADR-363 Phase 1G — rotation centre for the rotation hot-grip ghost.
     ...(dp.rotatePivot         ? { rotatePivot:         dp.rotatePivot }          : {}),

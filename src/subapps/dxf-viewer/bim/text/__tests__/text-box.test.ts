@@ -50,10 +50,12 @@ const nearP = (p: { x: number; y: number }, x: number, y: number, eps = 1e-9) =>
   near(p.x, x, eps) && near(p.y, y, eps);
 
 describe('resolveTextBox — width/height SSoT', () => {
-  it('effectiveTextWidth: TEXT formula, widthFactor, MTEXT width', () => {
+  it('effectiveTextWidth: TEXT formula, widthFactor, MTEXT frame (hug vs constrained)', () => {
     expect(effectiveTextWidth(text())).toBeCloseTo(18, 9);
     expect(effectiveTextWidth(text({ widthFactor: 2 }))).toBeCloseTo(36, 9);
-    expect(effectiveTextWidth(text({ width: 50, text: 'X' }))).toBeCloseTo(50, 9);
+    // MTEXT wide frame → hugs the glyphs (Giorgio 2026-07-07); narrow frame → the frame wins.
+    expect(effectiveTextWidth(text({ width: 50, text: 'X' }))).toBeCloseTo(6, 9); // content 'X', NOT 50
+    expect(effectiveTextWidth(text({ width: 4, text: 'X' }))).toBeCloseTo(4, 9);  // 4 < content 6
   });
   it('resolveBoxHeight falls back to the AutoCAD DIMTXT default for a bad height', () => {
     expect(resolveBoxHeight(text({ height: 0 }))).toBeCloseTo(2.5, 9);

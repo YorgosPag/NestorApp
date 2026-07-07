@@ -24,6 +24,11 @@ export interface DxfTextSceneEntity extends SceneEntity {
   textNode: DxfTextNode;
   /** MTEXT bounding box width in world units. Undefined for TEXT entities. */
   width?: number;
+  /**
+   * ADR-508 §text-parity — γωνία κλίσης (CCW μοίρες, DXF σύμβαση· 0 = οριζόντια). Ορίζεται από το
+   * 2-click place→rotate flow. Ο `TextRenderer` τη διαβάζει (entity-level `rotation`).
+   */
+  rotation?: number;
 }
 
 // ── Audit (Q12) ───────────────────────────────────────────────────────────────

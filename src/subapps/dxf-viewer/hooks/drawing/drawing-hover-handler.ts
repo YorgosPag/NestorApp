@@ -306,7 +306,9 @@ export function processDrawingHover(p: Pt | null, ctx: DrawingHoverCtx): void {
       // the locked value. Runs after all snaps so the lock takes priority (AutoCAD/BricsCAD).
       // SSoT helper (no-op when nothing locked) — ίδιος περιορισμός με το wall/beam click-commit.
       // 'line' = γραμμικό Dynamic Input· 'wall'/'beam' = «Δαχτυλίδι Εντολών» (Radial Command Ring).
-      if (lastRefPt && (activeTool === 'line' || activeTool === 'wall' || activeTool === 'beam')) {
+      // ADR-508 §polyline-parity (Giorgio 2026-07-07) — και 'polyline': πληκτρολογημένο μήκος/γωνία στο
+      // τρέχον segment (preview≡commit μέσω του ΙΔΙΟΥ lock στο `resolveLineFamilyCommitPoint`).
+      if (lastRefPt && (activeTool === 'line' || activeTool === 'polyline' || activeTool === 'wall' || activeTool === 'beam')) {
         previewPt = applyLengthAngleLock(previewPt, lastRefPt);
       }
     }

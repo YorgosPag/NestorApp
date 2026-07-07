@@ -14,7 +14,7 @@
 
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import type {
-  ExtendedSceneEntity, ExtendedLineEntity, ExtendedCircleEntity, ExtendedPolylineEntity, PreviewPoint,
+  ExtendedSceneEntity, ExtendedLineEntity, ExtendedCircleEntity, ExtendedPolylineEntity, PreviewPoint, PreviewText,
 } from '../../hooks/drawing/useUnifiedDrawing';
 import type { AngleMeasurementEntity } from '../../types/scene';
 import type { PreviewRenderOptions, ArcPreviewEntity, PreviewRenderHelpers } from './preview-renderer-types';
@@ -22,6 +22,8 @@ import {
   renderLine, renderCircle, renderPolyline, renderRectangle,
   renderAngleMeasurement, renderPoint, renderArc,
 } from './preview-entity-renderers';
+// ADR-508 §text-parity — annotation ghost-word painter (single-click text/mtext insertion indicator).
+import { renderPreviewText } from './preview-text-paint';
 import { renderPreviewDimension } from './preview-dimension-renderer';
 import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
 import type { DimensionEntity } from '../../types/dimension';
@@ -49,6 +51,8 @@ export function dispatchPreviewEntityRender(
     case 'angle-measurement': renderAngleMeasurement(ctx, entity as AngleMeasurementEntity, transform, renderOpts, helpers); break;
     case 'point': renderPoint(ctx, entity as PreviewPoint, transform, renderOpts, helpers); break;
     case 'arc': renderArc(ctx, entity as ArcPreviewEntity, transform, renderOpts, helpers); break;
+    // ADR-508 §text-parity — annotation ghost-word (Κείμενο/Πολυγραμμικό Κείμενο) στη θέση εισαγωγής.
+    case 'text': renderPreviewText(ctx, entity as PreviewText, transform, helpers); break;
     // ADR-362 Phase D1: route dim preview through the Phase C2 renderer.
     case 'dimension': {
       const dimEntity = entity as DimensionEntity;

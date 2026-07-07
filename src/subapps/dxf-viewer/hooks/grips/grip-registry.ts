@@ -30,8 +30,11 @@ import { shouldHideDataGripForSelection } from './transform-glyph-visibility';
 import { resolveMoveGlyphFrame } from '../../bim/grips/move-glyph-frame';
 import { hotGripKindOf, hotGripOpForKind } from './wall-hot-grip-fsm';
 import { mmScaleFor } from '../../utils/scene-units';
-import type { Entity } from '../../types/entities';
+import type { Entity, GroupEntity } from '../../types/entities';
 import type { SceneUnits } from '../../utils/scene-units';
+// ADR-575 §8 — the whole-group gizmo (move cross + rotation handle) + its bbox SSoT.
+import { getGroupGizmoGrips } from '../../systems/group/group-gizmo-grips';
+import { computeGroupSelectionBounds } from '../../systems/group/group-selection-bounds';
 
 // ============================================================================
 // PURE: Wrap DXF GripInfo → UnifiedGripInfo
@@ -107,6 +110,8 @@ function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     ...(grip.arcGripKind ? { arcGripKind: grip.arcGripKind } : {}),
     // ADR-557 — forward text/mtext rect-box grip discriminator.
     ...(grip.textGripKind ? { textGripKind: grip.textGripKind } : {}),
+    // ADR-575 §8 — forward GROUP gizmo move/rotation grip discriminator.
+    ...(grip.groupGripKind ? { groupGripKind: grip.groupGripKind } : {}),
   };
 }
 
@@ -170,14 +175,15 @@ interface UseGripRegistryParams {
   /** Currently selected overlay objects */
   selectedOverlays: Overlay[];
   /**
-   * ADR-575 — ids of selected GROUP containers. A group renders as ONE unit
-   * (dashed box + «Ομάδα · N» overlay + shared gizmo), so its members must NOT
-   * emit per-member grips: every expanded member carries the SAME `group.id`, so
-   * the entity map keeps just one — showing handles on a single arbitrary member
-   * mis-reads as «one object selected». Skipping them removes that ambiguity; the
-   * group-selection overlay owns the whole-group affordance instead.
+   * ADR-575 §8 — selected GROUP containers keyed by id. A group renders as ONE unit
+   * (dashed box + «Ομάδα · N» overlay + shared gizmo), so its members must NOT emit
+   * per-member grips: every expanded member carries the SAME `group.id`, so the entity
+   * map keeps just one — showing handles on a single arbitrary member mis-reads as «one
+   * object selected». INSTEAD, the whole-group gizmo (move cross + rotation handle at
+   * the bbox centre) is emitted here from the `GroupEntity` (needed to compute its
+   * bounds). The Map subsumes the id set (`.has(id)` still gates suppression).
    */
-  groupEntityIds?: ReadonlySet<string>;
+  groupEntities?: ReadonlyMap<string, GroupEntity>;
 }
 
 /**
@@ -188,7 +194,7 @@ export function useGripRegistry({
   dxfScene,
   selectedEntityIds,
   selectedOverlays,
-  groupEntityIds,
+  groupEntities,
 }: UseGripRegistryParams): UnifiedGripInfo[] {
   const { showMidpoints, showCenters, showQuadrants, maxGripsPerEntity, gripObjLimit } = useGripStyle();
 
@@ -213,10 +219,24 @@ export function useGripRegistry({
         entityMap.set(entity.id, entity);
       }
       for (const entityId of selectedEntityIds) {
-        // ADR-575 — a selected GROUP renders as ONE unit: suppress its members'
+        // ADR-575 §8 — a selected GROUP renders as ONE unit: suppress its members'
         // per-member grips (they all share `group.id`, so only one would show) and
-        // let the group-selection overlay own the whole-group affordance.
-        if (groupEntityIds?.has(entityId)) continue;
+        // emit the whole-group GIZMO instead (move cross + rotation handle at the bbox
+        // centre — Revit / Cinema 4D). Always visible (both `type: 'vertex'`), so the
+        // showMidpoints/showCenters gate cannot hide them; never suppressed by the
+        // ≥2-object multi-select rule (a group is ONE selected id).
+        const group = groupEntities?.get(entityId);
+        if (group) {
+          const bounds = computeGroupSelectionBounds(group);
+          if (bounds) {
+            for (const grip of getGroupGizmoGrips(group, bounds)) {
+              const wrapped = wrapDxfGrip(grip);
+              if (!isGripTypeVisible(wrapped.type, gripTypeFlags)) continue;
+              result.push(wrapped);
+            }
+          }
+          continue;
+        }
         const entity = entityMap.get(entityId);
         if (entity) {
           const dxfGrips = computeDxfEntityGrips(entity);
@@ -257,5 +277,5 @@ export function useGripRegistry({
     }
 
     return result;
-  }, [dxfScene, selectedEntityIds, selectedOverlays, groupEntityIds, showMidpoints, showCenters, showQuadrants, maxGripsPerEntity, gripObjLimit]);
+  }, [dxfScene, selectedEntityIds, selectedOverlays, groupEntities, showMidpoints, showCenters, showQuadrants, maxGripsPerEntity, gripObjLimit]);
 }

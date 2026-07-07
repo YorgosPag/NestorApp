@@ -51,14 +51,16 @@ describe('applyEntityPreview — text/mtext', () => {
     expect(pos(ghost)).toEqual({ x: 100, y: 50 });
   });
 
-  it('MTEXT corner resize → patches the frame width (not widthFactor)', () => {
+  it('wide-frame MTEXT corner resize → hugs via widthFactor (Giorgio 2026-07-07), height grows', () => {
+    // frame 800 ≫ content('DDD',250)=450 → the box hugs the glyphs, so a corner resize stretches
+    // widthFactor (like TEXT) rather than the column frame → no snap-back to content on release.
     const preview: EntityPreviewTransform = {
       entityId: 'mx', gripIndex: 7, delta: { x: 60, y: -40 }, movesEntity: false,
       textGripKind: 'text-corner-se', anchorPos: { x: 0, y: 0 },
     };
-    const ghost = applyEntityPreview(mtext(), preview) as unknown as { width: number; height: number };
-    expect(ghost.width).toBeCloseTo(860, 6);
-    expect(ghost.height).toBeCloseTo(290, 6);
+    const ghost = applyEntityPreview(mtext(), preview) as unknown as { widthFactor?: number; height: number };
+    expect(ghost.height).toBeCloseTo(290, 6);           // SE corner grows height by |Δy|=40
+    expect(typeof ghost.widthFactor).toBe('number');    // hug stretch, not a frame resize
   });
 
   // ADR-557 Φ-attachment — the in-app scene entity carries NO flat text/height (they live
@@ -81,6 +83,37 @@ describe('applyEntityPreview — text/mtext', () => {
     expect(ghost.text).toBe('DDD');
     // Height resized from the REAL 250 box (SE corner grows height by |Δy|=40), NOT the 2.5 default.
     expect(ghost.height).toBeCloseTo(290, 6);
+  });
+
+  // ADR-557 / body-drag — clicking INSIDE the text body and dragging arms a whole-entity
+  // MOVE (`makeTranslationPreview` → `{ movesEntity: true }`, NO grip kind). This previously
+  // fell through to the generic `movesEntity` path, which patched only `position` and left
+  // the flat text/height undefined → the moving in-app text ghost never painted (Giorgio
+  // 2026-07-07). The text branch now also owns this case: project + shift the insertion point.
+  describe('body-drag whole-entity MOVE (movesEntity, no grip kind)', () => {
+    it('textNode-only TEXT → injects flat text/height + shifts position (ghost paints)', () => {
+      const preview: EntityPreviewTransform = { entityId: 'tn', gripIndex: -1, delta: { x: 100, y: 50 }, movesEntity: true };
+      const ghost = applyEntityPreview(textNodeOnly(), preview) as unknown as { text: string; height: number; position: { x: number; y: number } };
+      expect(ghost.text).toBe('DDD');            // injected from textNode → TextRenderer paints
+      expect(ghost.height).toBe(250);            // resolved from the textNode run height
+      expect(ghost.position).toEqual({ x: 100, y: 50 });
+    });
+
+    it('flat TEXT → keeps text + shifts position', () => {
+      const preview: EntityPreviewTransform = { entityId: 'tx', gripIndex: -1, delta: { x: 7, y: -3 }, movesEntity: true };
+      const ghost = applyEntityPreview(text(), preview) as unknown as { text: string; position: { x: number; y: number } };
+      expect(ghost.text).toBe('DDD');
+      expect(ghost.position).toEqual({ x: 7, y: -3 });
+    });
+
+    it('textNode-only MTEXT → injects flat text + shifts position, keeps type', () => {
+      const inAppM = mtext({ text: undefined, textNode: { paragraphs: [{ runs: [{ text: 'MM', style: { height: 100 } }] }], attachment: 'BR' } });
+      const preview: EntityPreviewTransform = { entityId: 'mx', gripIndex: -1, delta: { x: 20, y: 20 }, movesEntity: true };
+      const ghost = applyEntityPreview(inAppM, preview) as unknown as { text: string; type: string; position: { x: number; y: number } };
+      expect(ghost.text).toBe('MM');
+      expect(ghost.type).toBe('mtext');
+      expect(ghost.position).toEqual({ x: 20, y: 20 });
+    });
   });
 
   // ADR-557 — the text-rotation hot-grip ghost must ORBIT the user-picked pivot

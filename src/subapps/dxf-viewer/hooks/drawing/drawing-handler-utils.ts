@@ -18,6 +18,9 @@ import { resolveLineCommitPoint } from './line-preview-helpers';
 import { resolvePerpendicularAxisLock, projectOntoPerpendicularAxis } from './line-perpendicular-preview-helpers';
 import { perpendicularAxisLockStore } from '../../bim/placement/perpendicular-axis-lock-store';
 import type { SceneUnits } from '../../utils/scene-units';
+// ADR-562 Φ9 / ADR-357 — dim-creation alignment traces (commit parity with the hover preview).
+import { resolveDimAlignmentTracking } from '../dimensions/dim-alignment-tracking';
+import { dimensionCreateStore } from '../../stores/DimensionCreateStore';
 
 /** Snap modes whose snapped point lies ON a single host curve (host recoverable). */
 const POINT_ON_CURVE_SNAPS = new Set<ExtendedSnapType>([
@@ -100,6 +103,45 @@ function normalizeSnapMode(mode: string | null | undefined): ExtendedSnapType | 
   return Object.values(ExtendedSnapType).includes(mode as ExtendedSnapType)
     ? (mode as ExtendedSnapType)
     : undefined;
+}
+
+/**
+ * ADR-362 Phase D1 / ADR-562 Φ9 — resolve a dim-tool commit click: snap + entity-under-cursor
+ * (via `resolveDimPickContext`) THEN apply the SAME alignment override the hover preview showed
+ * (WYSIWYG), skipped on the free dim-line offset pick (`isDimLineRefPhase`) exactly like OSNAP +
+ * the hover path. Extracted from `useDrawingHandlers.onDrawingPoint` (SSoT, keeps the hook under
+ * the file-size budget N.7.1).
+ */
+export function resolveDimCommitPoint(
+  p: Pt,
+  args: {
+    applySnap: (pt: Pt) => Pt;
+    findSnapPoint: Parameters<typeof resolveDimPickContext>[2];
+    sceneEntities: ReadonlyArray<Entity> | undefined;
+    scale: number;
+    polarEnabled: boolean;
+    ambientEnabled: boolean;
+  },
+): {
+  alignedSnapped: Pt;
+  hoveredEntity: DetectableEntity | undefined;
+  snapMode: ExtendedSnapType | undefined;
+  secondEntity: DetectableEntity | undefined;
+} {
+  const { snapped, hoveredEntity, snapMode, secondEntity } = resolveDimPickContext(
+    p, args.applySnap, args.findSnapPoint, args.sceneEntities,
+  );
+  let alignedSnapped = snapped;
+  if (!isDimLineRefPhase()) {
+    const refPoints = dimensionCreateStore.get().clicks.map((c) => c.world);
+    const composed = resolveDimAlignmentTracking(snapped, refPoints, {
+      scale: args.scale,
+      polarEnabled: args.polarEnabled,
+      sceneEntities: args.ambientEnabled ? (args.sceneEntities ?? null) : null,
+    });
+    if (composed) alignedSnapped = composed.point;
+  }
+  return { alignedSnapped, hoveredEntity, snapMode, secondEntity };
 }
 
 /**
@@ -201,7 +243,10 @@ export function resolveLineFamilyCommitPoint(
   lastRef: Pt | undefined,
   sceneUnits: SceneUnits,
 ): Pt {
-  if (activeTool !== 'line' && activeTool !== 'line-perpendicular') return point;
+  // ADR-508 §polyline-parity (Giorgio 2026-07-07) — η «πολυγραμμή» μπαίνει στην ΙΔΙΑ commit-λογική με
+  // τη γραμμή (γενικός κλάδος πιο κάτω): flush/κάθετο κούμπωμα στο 1ο κλικ + length/angle lock στα
+  // επόμενα → preview ≡ commit με το νέο ghost/κυανές/HUD του ενεργού segment. (ΟΧΙ perpendicular κλάδος.)
+  if (activeTool !== 'line' && activeTool !== 'line-perpendicular' && activeTool !== 'polyline') return point;
 
   // ── «Κάθετη γραμμή» — πλήρως χωριστός κλάδος (το flush/κάθετο κλείδωμα είναι ο ΠΥΡΗΝΑΣ του εργαλείου,
   //    ΔΕΝ μπλοκάρεται από «κορυφή νικάει»: αλλιώς όταν το snap κουμπώνει στο σώμα/κορυφή δεν θα κλείδωνε
