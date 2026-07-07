@@ -40,9 +40,15 @@ import {
   type TextEntity,
   type MTextEntity,
 } from '../../types/entities';
-// ADR-378 §Step 4 — the 8-point geometry SSoT lives in TextSnapProvider; the engine
-// reuses it (font-free bbox feed) instead of re-implementing the rotation math.
-import { computeTextSnapGeometry, type TextSnapKind } from '../../text-engine/interaction/TextSnapProvider';
+// ADR-378 / ADR-557 — the 8 snap points derive from the SAME visual box the text grips
+// and hover use (`resolveTextBox`), fed by the shared scene→DxfText projection
+// (`projectSceneTextToDxf` — resolves content/height/style from `textNode`). So the snap
+// markers land EXACTLY on the text grips (corners / center / edge midpoints) and on the
+// drawn glyphs — not an estimated char-count bbox that misses badly for in-app text.
+import type { TextSnapKind } from '../../text-engine/interaction/TextSnapProvider';
+import { resolveTextBox } from '../../bim/text/text-box';
+import { rectCornerWorld, rectEdgeWorld } from '../../bim/grips/rect-frame';
+import { projectSceneTextToDxf, type TextSceneShape } from '../../bim/text/project-scene-text';
 // 🏢 ADR-378: SSoT snap-visibility predicate (imported DXF entities omit `visible`)
 import { isEntityVisibleForSnap } from '../shared/snap-visibility';
 
@@ -51,9 +57,6 @@ interface IndexedTextPoint {
   readonly kind: TextSnapKind;
   readonly entityId: string;
 }
-
-const TEXT_DEFAULT_FONT_SIZE = 10;
-const TEXT_WIDTH_PER_CHAR_FACTOR = 0.6;
 
 export class TextSnapEngine extends BaseSnapEngine {
   private points: ReadonlyArray<IndexedTextPoint> = [];
@@ -112,31 +115,18 @@ interface ComputedTextSnap {
 }
 
 function computeTextSnapPoints(entity: TextEntity | MTextEntity): readonly ComputedTextSnap[] {
-  const insertion = entity.position;
-  const rad = ((entity.rotation ?? 0) * Math.PI) / 180;
-  const { width, height } = estimateTextBbox(entity);
-  // Engine convention: insertion = top-left, extent grows by width/height. Express
-  // that as an ABSOLUTE bbox anchored at the insertion point and feed the shared
-  // geometry SSoT (`computeTextSnapGeometry` rotates every corner about insertion,
-  // so corner-tl maps back to the insertion point exactly as before).
-  const bbox = { x: insertion.x, y: insertion.y, width, height };
-  return computeTextSnapGeometry(insertion, rad, bbox).map((g) => ({ point: g.point, kind: g.kind }));
-}
-
-function estimateTextBbox(entity: TextEntity | MTextEntity): { width: number; height: number } {
-  const fontSize = entity.fontSize ?? entity.height ?? TEXT_DEFAULT_FONT_SIZE;
-
-  if (entity.type === 'mtext') {
-    const lines = entity.text ? entity.text.split('\n').length : 1;
-    return {
-      width: entity.width,
-      height: entity.height ?? fontSize * lines,
-    };
-  }
-
-  const charCount = entity.text ? entity.text.length : 1;
-  return {
-    width: Math.max(charCount, 1) * fontSize * TEXT_WIDTH_PER_CHAR_FACTOR,
-    height: fontSize,
-  };
+  // The SAME attachment-aware VISUAL box the grips/hover emit (`resolveTextBox`), fed by
+  // the shared projection so in-app text (content in `textNode`) sizes correctly. The
+  // rotated frame's corners/edges/centre coincide with the drawn grip handles.
+  const frame = resolveTextBox(projectSceneTextToDxf(entity as unknown as TextSceneShape, entity.id));
+  return [
+    { kind: 'insertion', point: entity.position },
+    { kind: 'corner-tl', point: rectCornerWorld(frame, { sx: -1, sy: 1 }) },
+    { kind: 'corner-tr', point: rectCornerWorld(frame, { sx: 1, sy: 1 }) },
+    { kind: 'corner-bl', point: rectCornerWorld(frame, { sx: -1, sy: -1 }) },
+    { kind: 'corner-br', point: rectCornerWorld(frame, { sx: 1, sy: -1 }) },
+    { kind: 'center', point: frame.center },
+    { kind: 'edge-top-mid', point: rectEdgeWorld(frame, { axis: 'y', sign: 1 }) },
+    { kind: 'edge-bottom-mid', point: rectEdgeWorld(frame, { axis: 'y', sign: -1 }) },
+  ];
 }

@@ -124,6 +124,7 @@ const ADVANCED_MODES = [
   ExtendedSnapType.EXTENSION,
   ExtendedSnapType.NODE,
   ExtendedSnapType.INSERTION,
+  ExtendedSnapType.TEXT,        // ADR-378: TEXT/MTEXT 8-point snap (visible toggle)
   ExtendedSnapType.NEAR,
   ExtendedSnapType.ORTHO_TRACK
 ];
