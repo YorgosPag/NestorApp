@@ -30,6 +30,9 @@ import { resolveGripAlignmentAnchors, type GripAlignmentRole, type GripAlignment
 import { getFootprintReshapeAlignmentAnchors, resolveActiveFootprintGripKind } from '../../systems/grip/footprint-reshape-anchors';
 import { getBimCharacteristicPointsOfCategory } from '../../bim/utils/bim-characteristic-points';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
+// ADR-557 — whole-entity move paints resolve #1's PUBLISHED tracking (same store useDimGripGhostPreview
+// paints for dims) instead of a divergent local re-resolve on the post-OSNAP-override cursor.
+import { getGripAlignmentTracking } from '../../systems/cursor/GripAlignmentTrackingStore';
 
 /**
  * ADR-508 §move-clearance — κυανές neighbor-clearance listening dims κατά το grip-drag: ΤΟ ΙΔΙΟ
@@ -128,6 +131,32 @@ export function paintGripActionAlignmentTraces(
     edgeVertexIndices: dp.edgeVertexIndices,
     lineGripKind: dp.lineGripKind,
   };
+  // ── ADR-557 — WHOLE-ENTITY MOVE: paint resolve #1's PUBLISHED store, NOT a local re-resolve ──
+  // The snap pass (`applyGripDragAlignmentTracking`, mouse-handler-move) already resolved the ambient
+  // alignment on the PRE-override cursor and published it (HIT for an MTEXT). Re-resolving HERE on the
+  // POST-OSNAP-override `effectiveCursor` DIVERGED — an MTEXT's cursor is pulled off the ambient by
+  // neighbour extension snaps, so the local pass saw `null`/suppressed while the snap pass saw HIT (the
+  // «διπλότυπο» two-resolve smell). Painting the ONE published store removes the divergence — exactly
+  // what `useDimGripGhostPreview` already does for dims. mouse-handler-move clears the store when a
+  // DISCRETE OSNAP wins, so OSNAP priority still holds (null store → no cyan on those frames).
+  if (role.movesEntity && !role.isRotation && role.anchorPos) {
+    const published = getGripAlignmentTracking();
+    // [MLDIAG-store] TEMP — remove after confirm. Shows resolve #1's published state for text moves.
+    if (entity.type === 'text' || entity.type === 'mtext') {
+      const g = globalThis as unknown as { __mls?: number };
+      g.__mls = (g.__mls ?? 0) + 1;
+      if (g.__mls % 10 === 0) {
+        const s = getImmediateSnap();
+        // eslint-disable-next-line no-console
+        console.log('[MLDIAG-store]', JSON.stringify({
+          type: entity.type, published: published ? 'HIT' : 'null',
+          osnapFound: s?.found ?? false, snapMode: (s as unknown as { mode?: string })?.mode ?? null,
+        }));
+      }
+    }
+    if (published) paintActionAlignmentTracking(ctx, published, t, vp, sceneUnits);
+    return;
+  }
   let alignAnchors: Point2D[] | null =
     resolveGripAlignmentAnchors(entity as unknown as GripAlignmentEntityView, role);
   if (!alignAnchors) {
