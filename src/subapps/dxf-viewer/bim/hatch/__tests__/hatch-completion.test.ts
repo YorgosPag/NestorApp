@@ -27,9 +27,11 @@ const SQUARE: Point2D[] = [
 describe('hatch-draw-defaults-store', () => {
   beforeEach(() => resetHatchDrawDefaults());
 
-  it('defaults to solid grey poché', () => {
+  it('defaults to user-defined diagonal lines 45°/100mm (ADR-507, Giorgio 2026-07-07)', () => {
     const d = getHatchDrawDefaults();
-    expect(d.fillType).toBe('solid');
+    expect(d.fillType).toBe('user-defined');
+    expect(d.lineAngle).toBe(45);
+    expect(d.lineSpacing).toBe(100);
     expect(d.fillColor).toBe('#808080');
     expect(d.islandStyle).toBe('normal');
   });
@@ -58,14 +60,15 @@ describe('buildHatchEntityFromBoundary', () => {
     expect(buildHatchEntityFromBoundary(SQUARE.slice(0, HATCH_MIN_BOUNDARY_POINTS - 1), 'e1', 'lyr')).toBeNull();
   });
 
-  it('builds a solid hatch from defaults (drawOrder=0, no double-hatch)', () => {
+  it('builds a user-defined 45°/100mm hatch from the new defaults (drawOrder=0)', () => {
     const h = buildHatchEntityFromBoundary(SQUARE, 'e1', 'lyr');
     expect(h).not.toBeNull();
     expect(h!.type).toBe('hatch');
-    expect(h!.fillType).toBe('solid');
-    expect(h!.patternType).toBe('solid');
+    expect(h!.fillType).toBe('user-defined');
+    expect(h!.patternType).toBe('pattern');
+    expect(h!.lineAngle).toBe(45);
+    expect(h!.lineSpacing).toBe(100);
     expect(h!.drawOrder).toBe(0);
-    expect(h!.doubleCrossHatch).toBeUndefined();
     expect(h!.boundaryPaths[0]).toHaveLength(4);
     expect(h!.layerId).toBe('lyr');
   });
