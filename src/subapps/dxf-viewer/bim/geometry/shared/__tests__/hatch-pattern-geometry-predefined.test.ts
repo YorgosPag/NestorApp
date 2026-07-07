@@ -7,6 +7,7 @@
 
 import {
   buildPredefinedHatchLines, buildHatchEntitySegments, hatchMinWorldSpacing,
+  patternScaleForSpacingMm,
 } from '../hatch-pattern-geometry';
 import { getHatchPattern, resolveEffectiveHatchScale, type HatchPattern } from '../../../../data/hatch-pattern-catalog';
 import type { HatchEntity } from '../../../../types/entities';
