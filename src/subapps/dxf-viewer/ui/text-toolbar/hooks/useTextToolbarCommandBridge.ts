@@ -4,9 +4,11 @@
  * ADR-344 Phase 6.E — Toolbar mutation → CommandHistory bridge.
  *
  * Subscribes (vanilla Zustand) to `useTextToolbarStore`. On every change
- * that is NOT a populate cycle (`isPopulating === false`), diffs the
- * previous vs next snapshot and dispatches one DXF text command per
- * affected field, per selected entity, through `getGlobalCommandHistory`.
+ * that is NEITHER a populate cycle NOR a grip-drag live preview
+ * (`isPopulating === false` AND `isPreviewing === false`, ADR-557 grip-drag
+ * live-preview flow), diffs the previous vs next snapshot and dispatches one
+ * DXF text command per affected field, per selected entity, through
+ * `getGlobalCommandHistory`.
  *
  * Routing matrix (toolbar field → command):
  *
@@ -184,7 +186,10 @@ export function useTextToolbarCommandBridge(): void {
   useEffect(() => {
     if (!services) return;
     const unsubscribe = useTextToolbarStore.subscribe((state, prev) => {
-      if (state.isPopulating) return;
+      // ADR-557 — suppress dispatch during selection populate (isPopulating) AND
+      // during a grip-drag live preview (isPreviewing), so the live `setPreview`
+      // writes never fire an UpdateTextStyleCommand / undo entry per frame.
+      if (state.isPopulating || state.isPreviewing) return;
       const ids = useTextSelectionStore.getState().selectedIds;
       if (ids.length === 0) return;
       diffAndDispatch(state, prev, ids, services);

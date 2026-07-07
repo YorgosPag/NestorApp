@@ -70,6 +70,29 @@ function resolveTextEntities(
   return out;
 }
 
+/**
+ * ADR-557 — imperative reconcile of the toolbar to the CURRENT committed selection,
+ * reusing the exact SSoT the selection-sync effect uses (`resolveTextEntities` +
+ * `computeMixedValues` + `populate`). Used by the grip-drag ribbon sync to settle the
+ * ribbon on the final committed height/width when a text resize drag ENDS — covering the
+ * cancel/Esc path where the scene reference does NOT change and the effect below would
+ * therefore never re-fire, leaving a stale live-preview value in the store.
+ *
+ * @returns the resolved TEXT/MTEXT ids (empty if none) — mirrors the effect's `textIds`.
+ */
+export function reconcileTextToolbarFromSelection(
+  ids: readonly string[],
+  scene: SceneModel | null,
+): string[] {
+  const resolved = resolveTextEntities(ids, scene);
+  if (resolved.length === 0) return [];
+  const values = computeMixedValues(
+    resolved.map((r) => ({ node: r.node, layerId: r.layerId })),
+  );
+  useTextToolbarStore.getState().populate(values);
+  return resolved.map((r) => r.id);
+}
+
 export function useTextToolbarSelectionSync(): void {
   const selection = useUniversalSelection();
   const scene = useCurrentSceneModel();

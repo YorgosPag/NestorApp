@@ -43,6 +43,9 @@ import { GripDimAnnotationMount } from './canvas-layer-stack-grip-dim-annotation
 import { DimAssociationGhostPreviewMount } from '../../hooks/dimensions/useDimAssociationGhostPreview';
 // ADR-362 Phase I (Round 22) — live dimension ghost while dragging a dim grip.
 import { DimGripGhostPreviewMount } from '../../hooks/dimensions/useDimGripGhostPreview';
+// ADR-557 — live «Ύψος»/«Πλάτος» ribbon sync while dragging a TEXT/MTEXT resize grip
+// (pure data-sync leaf, no canvas — writes the live values to the text-toolbar store).
+import { TextGripRibbonSyncMount } from '../../hooks/grips/useTextGripRibbonSync';
 import { TrimPreviewMount } from './TrimPreviewMount';
 import { OffsetPreviewMount } from './OffsetPreviewMount';
 import { FilletPreviewMount } from './FilletPreviewMount';
@@ -227,6 +230,11 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
+      {/* ADR-557 — live «Ύψος»/«Πλάτος» ribbon sync during a TEXT/MTEXT resize grip drag.
+          Pure data-sync (no canvas): projects the dragged text + runs the SAME
+          applyTextGripDrag SSoT, pushing the live height/widthFactor to the text-toolbar
+          store's preview channel (command bridge suppressed via isPreviewing). */}
+      <TextGripRibbonSyncMount dragPreview={gripDragPreview} levelManager={levelManager} />
       {/* ADR-581 Φ6 — «σύριγγα» live hover ghost: self-subscribes to hover / brush /
           activeTool; paints the WYSIWYG preview (style + reshaped geometry) of the
           hovered target BEFORE the click. Store-driven → no payload prop. */}

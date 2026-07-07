@@ -3820,3 +3820,12 @@ gesture, ΟΧΙ 60fps). **Bitmap cache key ΑΝΕΓΓΙΧΤΟ** (rule #3): το 
 `canvas-layer-stack-match-ghost.tsx` (NEW leaf), `useMatchHoverGhostPreview.ts` (NEW hook),
 `match-preview-entity.ts` (NEW SSoT), `canvas-layer-stack-preview-mounts.tsx` (+mount),
 `RibbonButtonIcon.tsx` (reactive icon). Staged για CHECK 6B/6D. ΟΧΙ tsc (N.17).
+
+## 2026-07-07 (d): ADR-581 Φ6 follow-up — `match-properties` στο `entityPickingActive` gate
+
+**Τι:** το εργαλείο σύριγγα χρειάζεται hover-highlight κάτω από τον κέρσορα (το click-FSM διαβάζει
+`getHoveredEntity()`, και ο χρήστης πρέπει να βλέπει ποια οντότητα θα «ρουφήξει»/βάψει). Το hover pass
+στο `mouse-handler-move.ts` τρέχει ΜΟΝΟ όταν `activeTool==='select' || entityPickingActive`. Προστέθηκε
+`|| activeTool === 'match-properties'` στο SSoT `entityPickingActive` (inline prop στο `CanvasSection.tsx:464`,
+η ίδια λίστα με wall-on-entity / dim tools / move-awaiting-entity κ.λπ.). Καμία νέα subscription — απλή
+επέκταση υπάρχοντος derived boolean. Αρχείο: `CanvasSection.tsx`. Staged για CHECK 6B/6D. ΟΧΙ tsc (N.17).

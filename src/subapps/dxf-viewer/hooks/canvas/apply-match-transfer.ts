@@ -56,8 +56,31 @@ export function applyMatchTransfer(args: ApplyMatchTransferArgs): ApplyMatchTran
   const { command, emit, skipped } = buildMatchTransferCommand({
     sourceId, targetIds, selectedRoles, sceneManager,
   });
+  // 🔬 TEMP PROBE (ADR-581 Φ6 diag) — remove after verify.
+  {
+    const tgt0 = targetIds[0] ? sceneManager.getEntity(targetIds[0]) : null;
+    const p0 = tgt0?.params as Record<string, unknown> | undefined;
+    // eslint-disable-next-line no-console
+    console.warn('[MTAPPLY] before', { sourceType, roles: [...selectedRoles], cmds: command.commands.length, emit: emit.length, skipped, targetWidth: p0?.width, targetDepth: p0?.depth });
+  }
   if (command.commands.length > 0) getGlobalCommandHistory().execute(command);
   for (const e of emit) emitBimEntityParamsUpdated(e.type, e.id);
+  {
+    const tgt1 = targetIds[0] ? sceneManager.getEntity(targetIds[0]) : null;
+    const p1 = tgt1?.params as Record<string, unknown> | undefined;
+    const g1 = tgt1?.geometry as { footprint?: { vertices?: unknown[] } } | undefined;
+    // eslint-disable-next-line no-console
+    console.warn('[MTAPPLY] after', { targetWidth: p1?.width, targetDepth: p1?.depth, footprintVerts: g1?.footprint?.vertices?.length });
+    // Detect async revert (emit-driven recompute writing back stale geometry).
+    const tid = targetIds[0];
+    if (tid) {
+      setTimeout(() => {
+        const late = levelManager.getLevelScene(levelId)?.entities.find((e) => e.id === tid) as { params?: Record<string, unknown> } | undefined;
+        // eslint-disable-next-line no-console
+        console.warn('[MTAPPLY] +600ms', { targetWidth: late?.params?.width, targetDepth: late?.params?.depth });
+      }, 600);
+    }
+  }
 
   // Habit ανά διακριτό targetType (ό,τι προσφέρθηκε σε ΑΥΤΟΝ τον τύπο).
   const recorded = new Set<string>();

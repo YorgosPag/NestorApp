@@ -62,6 +62,19 @@ export function setRibbonFieldReaders(next: RibbonFieldReaders): void {
   for (const l of listeners) l();
 }
 
+/**
+ * ADR-557 — re-notify subscribers WITHOUT swapping readers. The readers pull their
+ * value from `useTextToolbarStore.getState()` at call time (getter pattern), so when a
+ * high-frequency non-React source mutates the store — a text-grip live preview
+ * (`setPreview`) during a resize/rotate drag — the provider never re-renders and would
+ * therefore never call `setRibbonFieldReaders`. This lets the drag publisher pulse the
+ * per-key subscribers directly: each re-pulls its snapshot and the signature cache gates
+ * re-render to only the field(s) whose value actually moved (fontHeight / widthFactor).
+ */
+export function notifyRibbonFieldReaders(): void {
+  for (const l of listeners) l();
+}
+
 /** Reset to the inert default (test teardown / provider unmount). */
 export function resetRibbonFieldReaders(): void {
   readers = NULL_READERS;
