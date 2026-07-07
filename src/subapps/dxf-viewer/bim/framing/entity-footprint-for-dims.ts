@@ -20,11 +20,14 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { isColumnEntity, isBeamEntity, isWallEntity, type Entity } from '../../types/entities';
+import { isColumnEntity, isBeamEntity, isWallEntity, isTextEntity, isMTextEntity, type Entity } from '../../types/entities';
+import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { resolveMemberFootprintVertices } from '../structural/member-footprint-2d';
 import { wallFootprintPolygon } from '../finishes/wall-footprint-union';
+import { textBoxCornersWorld } from '../text/text-box';
 import { getEntityBounds, type BoundsEntity } from '../../systems/zoom/utils/bounds-entity';
 import { arcToPolyline } from '../../utils/geometry/GeometryUtils';
+import { isFinitePoint } from '../../config/geometry-constants';
 
 /** Δείγματα της σαρωμένης καμπύλης τόξου ως footprint (πυκνά αρκετά για ομαλό perp clearance). */
 const ARC_FOOTPRINT_SEGMENTS = 24;
@@ -39,6 +42,28 @@ export function resolveEntityFootprintForDims(entity: Entity): ReadonlyArray<Poi
     // WallEntity ⊇ WallFinishObstacle ({id, kind, params}) — μηδέν cast, structural.
     const fp = wallFootprintPolygon({ id: entity.id, kind: entity.kind, params: entity.params });
     if (fp.length >= 3) return fp;
+  }
+  // ADR-508/557 §move-clearance — TEXT/MTEXT: το attachment/rotation/MULTI-LINE-aware VISUAL box
+  // (`textBoxCornersWorld` — ΤΟ ΙΔΙΟ SSoT box με grips/hover/hitTest), ώστε ένα κινούμενο κείμενο να
+  // δείχνει clearance προς τους γείτονες στο ΠΡΑΓΜΑΤΙΚΟ του footprint. Το generic `getEntityBounds`
+  // fallback γνώριζε ΜΟΝΟ 'text' (single-line char-count bbox) κι επέστρεφε null για 'mtext' → ένα
+  // κινούμενο MTEXT δεν έδειχνε ΚΑΜΙΑ κυανή clearance dim (Giorgio 2026-07-07). ΕΝΑ SSoT καλύπτει
+  // και τους δύο τύπους + περιστροφή + πολλαπλές γραμμές. Height fallback ίδιο με το hitTest
+  // (`Bounds.calculateTextBounds`): height → fontSize → AutoCAD DIMTXT default.
+  if (isTextEntity(entity) || isMTextEntity(entity)) {
+    const src = entity as unknown as { position?: Point2D; height?: number; fontSize?: number };
+    if (src.position && isFinitePoint(src.position)) {
+      const dxfText: DxfText = {
+        ...(entity as unknown as DxfText),
+        height: src.height || src.fontSize || 2.5,
+      };
+      const corners = textBoxCornersWorld(dxfText);
+      // Finite-guard (SSoT `isFinitePoint`): a degenerate text (no glyph metrics / bad width)
+      // must NOT emit NaN corners — those poison the clearance aggregate. Fall through to the
+      // generic bbox fallback below when the box is not usable.
+      if (corners.length >= 3 && corners.every(isFinitePoint)) return corners;
+    }
+    // no position / non-finite box → fall through to the generic bbox fallback (undefined for bare text).
   }
   // ADR-508 §move-clearance — ΤΟΞΟ: η ΠΡΑΓΜΑΤΙΚΗ σαρωμένη καμπύλη (δειγματοληπτημένη), ΟΧΙ το γεμάτο
   // disc-bbox (center±r). Το bbox περιλαμβάνει τη γωνία-κέντρο (π.χ. μεντεσές πόρτας) που συχνά κάθεται

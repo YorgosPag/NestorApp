@@ -41,6 +41,36 @@ describe('resolveEntityFootprintForDims', () => {
     const empty = { id: 'x1', type: 'text' };
     expect(resolveEntityFootprintForDims(empty as unknown as Entity)).toBeUndefined();
   });
+
+  // ADR-508/557 §move-clearance — TEXT/MTEXT footprint via το attachment/rotation/multi-line-aware
+  // `textBoxCornersWorld` SSoT. Regression: πριν, το generic `getEntityBounds` γνώριζε ΜΟΝΟ 'text'
+  // κι επέστρεφε null για 'mtext' → ένα κινούμενο MTEXT δεν έδειχνε ΚΑΜΙΑ κυανή clearance dim.
+  it('TEXT (μία γραμμή) → box footprint (4 finite corners)', () => {
+    const text = { id: 't1', type: 'text', position: { x: 0, y: 0 }, height: 10, text: 'ABC' };
+    const fp = resolveEntityFootprintForDims(text as unknown as Entity);
+    expect(fp).toHaveLength(4);
+    for (const p of fp!) {
+      expect(Number.isFinite(p.x)).toBe(true);
+      expect(Number.isFinite(p.y)).toBe(true);
+    }
+  });
+
+  it('MTEXT (πολλαπλών γραμμών) → box footprint (4 finite corners) — ΤΟ BUG', () => {
+    const mtext = {
+      id: 'm1', type: 'mtext', position: { x: 5, y: 5 }, height: 8, width: 60, text: 'ΓΡΑΜΜΗ 1\nΓΡΑΜΜΗ 2',
+    };
+    const fp = resolveEntityFootprintForDims(mtext as unknown as Entity);
+    expect(fp).toHaveLength(4);
+    for (const p of fp!) {
+      expect(Number.isFinite(p.x)).toBe(true);
+      expect(Number.isFinite(p.y)).toBe(true);
+    }
+  });
+
+  it('TEXT/MTEXT χωρίς position → undefined (finite-guard fall-through)', () => {
+    expect(resolveEntityFootprintForDims({ id: 't2', type: 'text' } as unknown as Entity)).toBeUndefined();
+    expect(resolveEntityFootprintForDims({ id: 'm2', type: 'mtext' } as unknown as Entity)).toBeUndefined();
+  });
 });
 
 describe('resolveMoveClearanceDims (full path: footprint → collect → resolve)', () => {
