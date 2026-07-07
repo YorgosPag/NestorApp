@@ -104,6 +104,38 @@ describe('resolveMoveGlyphFrame (ADR-397)', () => {
     const unknown = { id: 'U1', type: 'point', position: { x: 0, y: 0 } } as unknown as Entity;
     expect(resolveMoveGlyphFrame(unknown)).toBeNull();
   });
+
+  // ADR-557 — Text / MText carry orientation in the TOP-LEVEL `rotation` field (no
+  // `params`), like a box entity → the 4-arrow MOVE cross rotates with the text and
+  // the per-arm directional move-by-value runs along its local axes (column parity).
+  it('text / mtext at rotation 0 → world-aligned identity frame', () => {
+    for (const type of ['text', 'mtext'] as const) {
+      const t = { id: 'T1', type, rotation: 0, position: { x: 0, y: 0 } } as unknown as Entity;
+      const f = resolveMoveGlyphFrame(t)!;
+      expect(f).not.toBeNull();
+      expect(f.axisX.x).toBeCloseTo(1, 6);
+      expect(f.axisX.y).toBeCloseTo(0, 6);
+      expect(f.axisY.x).toBeCloseTo(0, 6);
+      expect(f.axisY.y).toBeCloseTo(1, 6);
+    }
+  });
+
+  it('text at rotation 90° → axisX points +Y (world CCW), like a box entity', () => {
+    const t = { id: 'T2', type: 'text', rotation: 90, position: { x: 0, y: 0 } } as unknown as Entity;
+    const f = resolveMoveGlyphFrame(t)!;
+    expect(f.axisX.x).toBeCloseTo(0, 6);
+    expect(f.axisX.y).toBeCloseTo(1, 6);
+    expect(f.axisY.x).toBeCloseTo(-1, 6);
+    expect(f.axisY.y).toBeCloseTo(0, 6);
+  });
+
+  it('text with missing/NaN rotation → treated as 0 (identity), never null', () => {
+    const t = { id: 'T3', type: 'text', position: { x: 0, y: 0 } } as unknown as Entity;
+    const f = resolveMoveGlyphFrame(t)!;
+    expect(f).not.toBeNull();
+    expect(f.axisX.x).toBeCloseTo(1, 6);
+    expect(f.axisX.y).toBeCloseTo(0, 6);
+  });
 });
 
 describe('withMoveGlyphRotation (ADR-397)', () => {

@@ -54,8 +54,6 @@ import { resolveTextBox, textBoxCornersWorld } from '../../bim/text/text-box';
 import { projectToLocalFrame } from '../../bim/grips/grip-math';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
-// GRIP-PARITY-DIAG (2026-07-07) — REMOVE WHEN SOLVED. Compare drawn grips vs published hover grips.
-import { AllGripsStore } from '../../systems/grip/AllGripsStore';
 
 
 // ADR-344 Phase 6.E: rich text style shape
@@ -65,9 +63,6 @@ type TextRichStyle = {
   textBaseline?: 'top' | 'middle' | 'bottom';
   underline?: boolean; overline?: boolean; strikethrough?: boolean;
 } | undefined;
-
-// GRIP-PARITY-DIAG (2026-07-07) — REMOVE WHEN SOLVED. Throttle map for the render-vs-hover grip trace.
-const GRIP_PARITY_DIAG_LAST = new Map<string, number>();
 
 export class TextRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -291,9 +286,7 @@ export class TextRenderer extends BaseEntityRenderer {
     // `ColumnRenderer.getGrips`). `extractTextHeight` guarantees a positive height
     // for the box even when the flat `height` is absent.
     const dxfText = { ...(entity as unknown as DxfText), height: this.extractTextHeight(entity) };
-    const drawn = getTextGrips(dxfText);
-    this.logGripParityDiag(entity, dxfText, drawn); // GRIP-PARITY-DIAG — REMOVE WHEN SOLVED
-    return drawn.map((g) => ({
+    return getTextGrips(dxfText).map((g) => ({
       id: `${g.entityId}-grip-${g.gripIndex}`,
       position: g.position,
       type: g.type === 'center' ? ('center' as const) : ('vertex' as const),
@@ -304,49 +297,6 @@ export class TextRenderer extends BaseEntityRenderer {
       // registry SSoT, mirror Column/Wall); corners + edges stay square.
       shape: gripGlyphShape(g.textGripKind),
     }));
-  }
-
-  /**
-   * GRIP-PARITY-DIAG (2026-07-07) — REMOVE WHEN SOLVED. Compares the DRAWN grip box (render
-   * path, `extractTextHeight` = flat height) against the PUBLISHED hover grips
-   * (`AllGripsStore`, from the converted scene entity) + logs the two height sources
-   * (flat vs `textNode` run) + widthFactor, so a post-resize render↔hover mismatch is
-   * measured. Throttled 1/500 ms per entity id.
-   */
-  private logGripParityDiag(
-    entity: EntityModel, dxfText: DxfText, drawn: ReturnType<typeof getTextGrips>,
-  ): void {
-    const id = String((entity as { id?: string | number }).id ?? '');
-    const now = typeof performance !== 'undefined' ? performance.now() : 0;
-    if (now - (GRIP_PARITY_DIAG_LAST.get(id) ?? 0) < 500) return;
-    GRIP_PARITY_DIAG_LAST.set(id, now);
-
-    const r2 = (n: number): number => Math.round(n * 100) / 100;
-    const cornerOf = (grips: Array<{ textGripKind?: string; position: Point2D }>, kind: string): Point2D | null => {
-      const g = grips.find((x) => x.textGripKind === kind);
-      return g ? { x: r2(g.position.x), y: r2(g.position.y) } : null;
-    };
-    const published = AllGripsStore.get().filter((g) => g.entityId === id);
-    const box = resolveTextBox(dxfText);
-    const tnRun = (entity as { textNode?: { paragraphs?: Array<{ runs?: Array<{ style?: { height?: number } }> }>; runs?: Array<{ style?: { height?: number } }> } }).textNode;
-    const textNodeHeight = tnRun?.paragraphs?.[0]?.runs?.[0]?.style?.height ?? tnRun?.runs?.[0]?.style?.height ?? null;
-    // eslint-disable-next-line no-console
-    console.log('[GRIP-PARITY-DIAG]', {
-      id,
-      flatHeight: (entity as { height?: number }).height ?? null,
-      fontSize: (entity as { fontSize?: number }).fontSize ?? null,
-      extractTextHeight: r2(dxfText.height ?? 0),
-      textNodeHeight: textNodeHeight != null ? r2(textNodeHeight) : null,
-      widthFactor: (entity as { widthFactor?: number }).widthFactor ?? null,
-      width: (entity as { width?: number }).width ?? null,
-      boxCenter: { x: r2(box.center.x), y: r2(box.center.y) },
-      boxHalf: { w: r2(box.halfWidth), l: r2(box.halfLength) },
-      drawnNE: cornerOf(drawn, 'text-corner-ne'),
-      publishedNE: cornerOf(published as Array<{ textGripKind?: string; position: Point2D }>, 'text-corner-ne'),
-      drawnSW: cornerOf(drawn, 'text-corner-sw'),
-      publishedSW: cornerOf(published as Array<{ textGripKind?: string; position: Point2D }>, 'text-corner-sw'),
-      publishedCount: published.length,
-    });
   }
 
   /**

@@ -83,6 +83,27 @@ describe('applyEntityPreview — text/mtext', () => {
     expect(ghost.height).toBeCloseTo(290, 6);
   });
 
+  // ADR-557 — the text-rotation hot-grip ghost must ORBIT the user-picked pivot
+  // (`rotatePivot`), not the bbox-centre (preview ≡ commit). Guards the forward that
+  // threads `rotatePivot` into `applyTextGripDrag` (mirror of the line/arc/polyline).
+  it('TEXT rotation ghost threads the picked pivot (orbits it, not the bbox-centre)', () => {
+    const anchorPos = { x: 10, y: 0 };
+    const delta = { x: -10, y: 10 }; // currentPos = anchor + delta = (0,10)
+    const withPivot: EntityPreviewTransform = {
+      entityId: 'tx', gripIndex: 1, delta, movesEntity: false,
+      textGripKind: 'text-rotation', anchorPos, rotatePivot: { x: -500, y: -500 },
+    };
+    const noPivot: EntityPreviewTransform = { ...withPivot, rotatePivot: undefined };
+    const gP = applyEntityPreview(text(), withPivot) as unknown as { rotation: number; position: { x: number; y: number } };
+    const gN = applyEntityPreview(text(), noPivot) as unknown as { rotation: number; position: { x: number; y: number } };
+    // Both produce a real rotation patch (non-trivial sweep about their pivot)...
+    expect(Number.isFinite(gP.rotation)).toBe(true);
+    expect(gP.rotation).not.toBe(0);
+    // ...but orbiting a far-off pivot re-homes the position very differently than
+    // spinning about the bbox-centre → proves `rotatePivot` is actually threaded.
+    expect(Math.hypot(gP.position.x - gN.position.x, gP.position.y - gN.position.y)).toBeGreaterThan(1);
+  });
+
   it('zero delta → returns the same reference (no ghost paint)', () => {
     const preview: EntityPreviewTransform = {
       entityId: 'mx', gripIndex: 0, delta: { x: 0, y: 0 }, movesEntity: true,

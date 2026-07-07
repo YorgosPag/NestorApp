@@ -819,6 +819,7 @@
       "angle": "Angle",
       "linetype": "Linetype",
       "lineLabel": "Line command ring",
+      "perpendicularLabel": "Perpendicular line command ring",
       "endpointLabel": "Endpoint command ring",
       "rotationAngle": "Angle",
       "rotationLabel": "Rotation command ring"

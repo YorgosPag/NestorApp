@@ -36,7 +36,7 @@ import { AllGripsStore } from '../../systems/grip/AllGripsStore';
 import { subscribeSelection } from '../../systems/selection/SelectedEntitiesStore';
 import { WallRotateHotGripStore } from '../../bim/walls/wall-rotate-hotgrip-store';
 // ADR-397 — rotation snap targets SSoT (arm on centre-pick, clear on reset).
-import { getGlobalRotationSnapStore } from '../../bim/grips/rotation-snap-store';
+import { getGlobalRotationSnapStore, collectEntityGripWorldPoints } from '../../bim/grips/rotation-snap-store';
 import { runGripMouseDown } from './grip-mouse-handlers';
 import { runGripMouseUp } from './grip-mouseup-handler';
 import { runGripMouseMove } from './grip-mouse-move-handler';
@@ -330,9 +330,7 @@ export function useUnifiedGripInteraction(
         // step can arm the rotation snap targets (pivot ⊙ + grips).
         rotatingEntityGripsWorld: () =>
           activeGrip?.source === 'dxf' && activeGrip.entityId
-            ? AllGripsStore.get()
-                .filter((g) => g.source === 'dxf' && g.entityId === activeGrip.entityId)
-                .map((g) => ({ entityId: g.entityId!, gripIndex: g.gripIndex, point: g.position }))
+            ? collectEntityGripWorldPoints(AllGripsStore.get(), activeGrip.entityId)
             : [],
         // ADR-363 Slice G.6 — seed the free-rotate reference baseline along the active
         // entity's MAJOR axis (toward its body). Reads the entity via the same scene

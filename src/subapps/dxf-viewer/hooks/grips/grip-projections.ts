@@ -254,6 +254,10 @@ export function buildRotateReferencePreview(
     // reference / typed angle), same shared hot-grip flow as the line/arc. Without this
     // forward the ghost never receives the discriminator in the rotate flow.
     ...(activeGrip.polylineGripKind ? { polylineGripKind: activeGrip.polylineGripKind } : {}),
+    // ADR-557 — text/mtext rotation live ghost (free spin / 6-click reference /
+    // typed angle) via the shared hot-grip flow, same as the column. Without this
+    // forward the ghost never receives the discriminator in the rotate flow.
+    ...(activeGrip.textGripKind ? { textGripKind: activeGrip.textGripKind } : {}),
     hotGrip: true as const,
     rotatePivot: pivot,
     delta: { x: 0, y: 0 },

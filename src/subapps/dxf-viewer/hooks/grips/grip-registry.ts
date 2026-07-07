@@ -169,6 +169,15 @@ interface UseGripRegistryParams {
   selectedEntityIds: string[];
   /** Currently selected overlay objects */
   selectedOverlays: Overlay[];
+  /**
+   * ADR-575 — ids of selected GROUP containers. A group renders as ONE unit
+   * (dashed box + «Ομάδα · N» overlay + shared gizmo), so its members must NOT
+   * emit per-member grips: every expanded member carries the SAME `group.id`, so
+   * the entity map keeps just one — showing handles on a single arbitrary member
+   * mis-reads as «one object selected». Skipping them removes that ambiguity; the
+   * group-selection overlay owns the whole-group affordance instead.
+   */
+  groupEntityIds?: ReadonlySet<string>;
 }
 
 /**
@@ -179,6 +188,7 @@ export function useGripRegistry({
   dxfScene,
   selectedEntityIds,
   selectedOverlays,
+  groupEntityIds,
 }: UseGripRegistryParams): UnifiedGripInfo[] {
   const { showMidpoints, showCenters, showQuadrants, maxGripsPerEntity, gripObjLimit } = useGripStyle();
 
@@ -203,6 +213,10 @@ export function useGripRegistry({
         entityMap.set(entity.id, entity);
       }
       for (const entityId of selectedEntityIds) {
+        // ADR-575 — a selected GROUP renders as ONE unit: suppress its members'
+        // per-member grips (they all share `group.id`, so only one would show) and
+        // let the group-selection overlay own the whole-group affordance.
+        if (groupEntityIds?.has(entityId)) continue;
         const entity = entityMap.get(entityId);
         if (entity) {
           const dxfGrips = computeDxfEntityGrips(entity);
@@ -243,5 +257,5 @@ export function useGripRegistry({
     }
 
     return result;
-  }, [dxfScene, selectedEntityIds, selectedOverlays, showMidpoints, showCenters, showQuadrants, maxGripsPerEntity, gripObjLimit]);
+  }, [dxfScene, selectedEntityIds, selectedOverlays, groupEntityIds, showMidpoints, showCenters, showQuadrants, maxGripsPerEntity, gripObjLimit]);
 }

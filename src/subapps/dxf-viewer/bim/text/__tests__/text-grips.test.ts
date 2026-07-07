@@ -200,4 +200,23 @@ describe('applyTextGripDrag — rotation (pivot = bbox-centre)', () => {
     const patch = applyTextGripDrag('text-rotation', { entity: t, delta, currentPos, ortho: true });
     expect(patch.rotation).toBeCloseTo(45, 6);
   });
+
+  // ADR-557 — the text-rotation hot-grip lets the user PICK a rotation centre (parity
+  // with the column). A `pivot` override makes the box ORBIT that point instead of
+  // spinning in place around its bbox-centre — the pipeline threads it from the
+  // hot-grip (ghost via `rotatePivot`, commit via `BimRotateHotGripStore`).
+  it('honors a picked pivot override — the box centre ORBITS the pivot', () => {
+    const t = text();
+    const center = textToRectFrame(t).center; // BL box → (9, 5)
+    const pivot = { x: 0, y: 0 };
+    // start east of the pivot, current north of the pivot → sweep +90° about the PIVOT.
+    const start = { x: pivot.x + 10, y: pivot.y };
+    const currentPos = { x: pivot.x, y: pivot.y + 10 };
+    const delta = { x: currentPos.x - start.x, y: currentPos.y - start.y };
+    const patch = applyTextGripDrag('text-rotation', { entity: t, delta, currentPos, pivot });
+    expect(patch.rotation).toBeCloseTo(90, 6);
+    // rel = (center − pivot) rotated +90° = (−cy, cx) → new centre = pivot + rel = (−5, 9).
+    const after = textToRectFrame({ ...t, ...patch });
+    expect(nearP(after.center, -(center.y - pivot.y), center.x - pivot.x, 1e-6)).toBe(true);
+  });
 });

@@ -253,6 +253,38 @@ describe('ADR-408 Φ8 — MEP segment hot-grip kinds (axis-based beam parity)', 
   });
 });
 
+describe('ADR-557 — text/mtext hot-grip kinds (rect-box column parity)', () => {
+  it("text-move → 'move', text-rotation → 'rotate'", () => {
+    expect(hotGripOpForKind('text-move')).toBe('move');
+    expect(hotGripOpForKind('text-rotation')).toBe('rotate');
+  });
+
+  it('text corner + edge resize grips stay press-drag (null op)', () => {
+    for (const k of [
+      'text-corner-ne', 'text-corner-nw', 'text-corner-sw', 'text-corner-se',
+      'text-edge-e', 'text-edge-w', 'text-edge-n', 'text-edge-s',
+    ]) {
+      expect(hotGripOpForKind(k)).toBeNull();
+      expect(isWallHotGripKind(k)).toBe(false);
+    }
+  });
+
+  it('text-move/rotation enter hot-grip on mousedown', () => {
+    expect(resolveHotGripMouseDown('idle', 'text-move')).toBe('enter');
+    expect(resolveHotGripMouseDown('warm', 'text-rotation')).toBe('enter');
+  });
+
+  // Regression: hotGripKindOf MUST surface textGripKind, else the text move/rotation
+  // never arms the 3-/6-click FSM and falls back to a press-drag WITHOUT the pivot
+  // pick + rotation/alignment overlays (the exact gap this ADR closes).
+  it('hotGripKindOf reads the textGripKind discriminator', () => {
+    const move = { textGripKind: 'text-move' } as unknown as UnifiedGripInfo;
+    const rot = { textGripKind: 'text-rotation' } as unknown as UnifiedGripInfo;
+    expect(hotGripKindOf(move)).toBe('text-move');
+    expect(hotGripKindOf(rot)).toBe('text-rotation');
+  });
+});
+
 describe('resolveHotGripMouseDown', () => {
   const NON_HOT: UnifiedGripPhase[] = ['idle', 'hovering', 'warm', 'dragging'];
 

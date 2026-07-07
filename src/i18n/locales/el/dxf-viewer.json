@@ -404,6 +404,10 @@
   "selectionCycling": {
     "label": "Επιλογή οντότητας"
   },
+  "groupSelection": {
+    "label": "Ομάδα · {count, plural, one {# αντικείμενο} other {# αντικείμενα}}",
+    "statusMultiple": "{count, plural, one {# ομάδα} other {# ομάδες}}"
+  },
   "tools": {
     "xline": {
       "name": "Γραμμή Κατασκευής",

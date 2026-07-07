@@ -254,7 +254,11 @@ export function applyEntityPreview(
     const currentPos: Point2D = anchorPos
       ? translatePoint(anchorPos, delta)
       : { x: delta.x, y: delta.y };
-    const patch = applyTextGripDrag(textGripKind, { entity: t, delta, currentPos });
+    // ADR-557 — `rotatePivot` (set only for the text-rotation hot-grip: free spin /
+    // 6-click reference) orbits the picked centre, so the live ghost matches the
+    // commit (preview ≡ commit). Move / resize leave it undefined → applyTextRotation
+    // falls back to the bbox-centre. Mirror of the line / arc / polyline branches.
+    const patch = applyTextGripDrag(textGripKind, { entity: t, delta, currentPos, ...(rotatePivot ? { pivot: rotatePivot } : {}) });
     if (Object.keys(patch).length === 0) return entity;
     return {
       ...(entity as object),

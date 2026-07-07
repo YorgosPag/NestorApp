@@ -3745,3 +3745,21 @@ Master view toggle «Σοβατισμένη όψη» (`showFinishSkin`, per-view
 **Η ρίζα:** δύο μονοπάτια διάβαζαν τη σκηνή από **διαφορετική πηγή**. (1) **Paint** (λαβές που βλέπεις — `DxfCanvasSubscriber` leaf) → **reactive** `useLevelScene(sceneLevelId)` (`useSyncExternalStore` στο `SceneStore`) → ζωγραφίζει το νέο entity στο ΙΔΙΟ frame. (2) **Hit-test** (`GripRegistryPublisher` → `useGripRegistry` → `AllGripsStore` που διαβάζει το `findNearestGrip` στο mousedown) → έπαιρνε τη σκηνή ως **prop** `dxfScene`, που πηγάζει από **μη-reactive** `getLevelScene()` pull (`hooks/scene/useSceneState.ts`), ενημερωνόμενο μόνο σε τυχαίο re-render του `CanvasSection`. Για φρεσκο-committed+selected entity, το prop έμενε **stale** → `entityMap.get(newId)` miss → **μηδέν grips** στο `AllGripsStore` γι' αυτό → `findNearestGrip` → `null` → το mousedown έπεφτε στο **whole-entity body-move** (καμία resize, κανένα ghost). Manifest **μόνο** σε entity που μόλις δημιουργήθηκε (το ancestor re-render καθυστερεί ένα tick σε σχέση με το reactive paint leaf).
 
 **FIX (SSoT parity, μηδέν νέο store):** το `GripRegistryPublisher` (leaf publisher, renders null — **ΟΧΙ** orchestrator) διαβάζει πλέον την **ΙΔΙΑ** reactive scene SSoT με το paint leaf: `useLevelScene(sceneLevelId)` + `convertScene` (props από `CanvasSection`, ίδια με `DxfCanvasSubscriber`), με fallback στο prop `dxfScene` για την πρώτη φόρτωση πριν το store έχει το level. Έτσι hit-test grips **≡** painted grips στο ίδιο frame. **CHECK 6C safe** — η `useSyncExternalStore` (μέσω `useLevelScene`) μπαίνει στο **leaf** `GripRegistryPublisher`, ΟΧΙ στο `CanvasSection.tsx`/`CanvasLayerStack.tsx`· ο publisher ήδη subscribe-άρει την επιλογή (`useSelectedEntityIds`). Το `CanvasSection` απλώς προωθεί 2 props ακόμη (`sceneLevelId={levelManager.currentLevelId}`, `convertScene`) — καμία νέα subscription στον orchestrator (rule 1). Bitmap cache άθικτο (rule 3 N/A). Αρχεία: `GripRegistryPublisher.tsx`, `CanvasSection.tsx`. Το fix είναι entity-agnostic — διορθώνει το race για **κάθε** τύπο (το κείμενο ήταν απλώς το repro). Staged για CHECK 6B.
+
+## 2026-07-07: ADR-575 — GROUP selection affordance overlay (dashed box + «Ομάδα · N», CHECK 6B/6D stage)
+
+**Τι:** νέο micro-leaf `GroupSelectionOverlaySubscriber` (`components/dxf-layout/`) + presentational
+`GroupSelectionOverlay` (`canvas-v2/overlays/`), mounted στο `CanvasLayerStack` δίπλα στο
+`SnapIndicatorSubscriber`. Όταν επιλέγεται GROUP container → ζωγραφίζει ΕΝΑ διακεκομμένο bounding box
+γύρω από όλα τα μέλη + pill «Ομάδα · N αντικείμενα», ώστε ο χρήστης να αντιλαμβάνεται την ομάδα ως
+ενιαία μονάδα (Figma/Revit/C4D parity) αντί για ασαφείς λαβές σε ένα μόνο member (ADR-575 §8).
+
+**ADR-040 συμμόρφωση:** το leaf είναι ο **μόνος** subscriber (selection `useSelectedEntityIds` + scene
+`useLevelScene(sceneLevelId)`) — το Shell `CanvasLayerStack` δεν αποκτά καμία νέα subscription (cardinal
+rule #1)· **CHECK 6C safe** (η `useSyncExternalStore` ζει στο leaf, ΟΧΙ στο `CanvasSection`/`CanvasLayerStack`).
+Projection world→screen μέσω `CoordinateTransforms.worldToScreen` (ίδιο pipeline με `SnapIndicatorOverlay`).
+Bitmap cache άθικτο (SVG overlay, ΟΧΙ DXF render pass — rule 3 N/A). Επιπλέον: `GripRegistryPublisher`
+υπολογίζει `groupEntityIds` (από το reactive SceneModel) και το `useGripRegistry` **skip**-άρει τα
+per-member grips ενός group container (η ομάδα = ενιαία μονάδα). Αρχεία: `GroupSelectionOverlaySubscriber.tsx`
+(NEW), `GroupSelectionOverlay.tsx` (NEW), `CanvasLayerStack.tsx` (mount), `GripRegistryPublisher.tsx`,
+`grip-registry.ts`. Staged για CHECK 6B/6D. ΟΧΙ tsc (N.17).

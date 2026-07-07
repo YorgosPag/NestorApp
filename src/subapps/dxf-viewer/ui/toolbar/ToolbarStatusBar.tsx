@@ -13,6 +13,8 @@ import { useToolHints } from '../../hooks/useToolHints';
 import { ToolbarCoordinatesDisplay } from './ToolbarCoordinatesDisplay';
 // ADR-366 B.2.Q1 / ADR-357: hovered BIM entity info inline in the status bar (3D + 2D)
 import { StatusBarBimHoverLeaf } from './StatusBarBimHoverLeaf';
+// ADR-575: selected GROUP readout inline in the status bar («Ομάδα · N αντικείμενα»)
+import { StatusBarGroupSelectionLeaf } from './StatusBarGroupSelectionLeaf';
 // 🏢 ADR-418: real view-scale (1:N) micro-leaf
 import { useViewScale } from '../../systems/zoom/hooks/useViewScale';
 import type { ToolType } from './types';
@@ -166,6 +168,12 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
           className={colors.text.info}
           separatorClassName={colors.text.muted}
           activeTool={activeTool}
+        />
+
+        {/* ADR-575 — selected GROUP identity + size, inline in the status bar. */}
+        <StatusBarGroupSelectionLeaf
+          className={colors.text.info}
+          separatorClassName={colors.text.muted}
         />
       </div>
       

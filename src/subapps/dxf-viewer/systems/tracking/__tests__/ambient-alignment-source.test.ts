@@ -57,6 +57,17 @@ function lineFrom(x0: number, y0: number, x1: number, y1: number): Entity {
   } as unknown as Entity;
 }
 
+/** Plain text / mtext with an insertion point at (x,y). */
+function textAt(x: number, y: number, type: 'text' | 'mtext' = 'text'): Entity {
+  return {
+    id: `txt_${type}_${x}_${y}`,
+    type,
+    layerId: '0',
+    position: { x, y },
+    visible: true,
+  } as unknown as Entity;
+}
+
 const CFG = (over: Partial<AmbientAlignmentConfig> = {}): AmbientAlignmentConfig => ({
   radiusWorld: 100000,
   maxMembers: 6,
@@ -117,6 +128,30 @@ describe('collectAmbientAlignmentAnchors (ADR-357 ambient)', () => {
   it('drops every point of a column that is off both cursor axes', () => {
     // Column at (500,500); cursor at (0,0). No char point is near x=0 or y=0.
     const anchors = collectAmbientAlignmentAnchors({ x: 0, y: 0 }, [rectColumnAt(500, 500)], CFG());
+    expect(anchors).toEqual([]);
+  });
+
+  // ADR-557 — a nearby TEXT / MTEXT insertion point participates as an alignment
+  // source (parity with a line endpoint), so moving/rotating any entity near a label
+  // lights the same cyan H/V traces (Giorgio 2026-07-07: «κυανές ενδείξεις κειμένων»).
+  it('emits an anchor for a text insertion point aligned with the cursor column', () => {
+    // Text at (300,0); cursor at (300,-100) shares x=300 → vertical alignment.
+    const anchors = collectAmbientAlignmentAnchors({ x: 300, y: -100 }, [textAt(300, 0)], CFG());
+    expect(anchors.length).toBe(1);
+    expect(anchors[0].sourceSnapType).toBe(AMBIENT_SOURCE_TYPE);
+    expect(anchors[0].acquiredAt).toBe(0);
+    expect(anchors[0].x).toBeCloseTo(300, 6);
+    expect(anchors[0].y).toBeCloseTo(0, 6);
+  });
+
+  it('emits an anchor for an mtext insertion point aligned with the cursor row', () => {
+    const anchors = collectAmbientAlignmentAnchors({ x: -50, y: 200 }, [textAt(400, 200, 'mtext')], CFG());
+    expect(anchors.length).toBe(1);
+    expect(anchors[0].y).toBeCloseTo(200, 6);
+  });
+
+  it('drops a text whose insertion point is off both cursor axes', () => {
+    const anchors = collectAmbientAlignmentAnchors({ x: 0, y: 0 }, [textAt(500, 500)], CFG());
     expect(anchors).toEqual([]);
   });
 

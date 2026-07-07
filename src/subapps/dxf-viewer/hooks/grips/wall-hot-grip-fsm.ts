@@ -134,6 +134,11 @@ export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
   'arc-rotation': 'rotate',
   'polyline-move': 'move',
   'polyline-rotation': 'rotate',
+  // Text / MText (ADR-557) — full rect-box parity with the column: centre MOVE
+  // (3-click move + per-arm directional) + rotation (6-click reference / free
+  // spin). The 4 corners + 4 edge midpoints stay press-drag (absent here).
+  'text-move': 'move',
+  'text-rotation': 'rotate',
 } as const;
 
 /** Map any grip kind to its hot-grip operation, or null if it stays drag. */
@@ -159,7 +164,12 @@ export function hotGripKindOf(grip: UnifiedGripInfo | null | undefined): string 
   // kinds (vertex / segment-midpoint / arc-apex) resolve to a string that is
   // simply absent from HOT_GRIP_OP_REGISTRY → `hotGripOpForKind` returns null
   // (stays press-drag), so widening the chain is safe.
-  return grip.wallGripKind ?? grip.beamGripKind ?? grip.columnGripKind ?? grip.foundationGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind ?? grip.mepManifoldGripKind ?? grip.mepSegmentGripKind ?? grip.furnitureGripKind ?? grip.floorplanSymbolGripKind ?? grip.lineGripKind ?? grip.circleGripKind ?? grip.arcGripKind ?? grip.polylineGripKind;
+  // ADR-557 — `textGripKind` joins the chain so the text centre-move + rotation
+  // handles opt into the shared hot-grip flow (3-click move / free-rotate + «R»
+  // reference), IDENTICAL to the column. The non-hot text kinds (corner / edge
+  // resize) resolve to a string simply absent from HOT_GRIP_OP_REGISTRY → they
+  // stay press-drag, so widening the chain is safe.
+  return grip.wallGripKind ?? grip.beamGripKind ?? grip.columnGripKind ?? grip.foundationGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind ?? grip.mepManifoldGripKind ?? grip.mepSegmentGripKind ?? grip.furnitureGripKind ?? grip.floorplanSymbolGripKind ?? grip.lineGripKind ?? grip.circleGripKind ?? grip.arcGripKind ?? grip.polylineGripKind ?? grip.textGripKind;
 }
 
 /**

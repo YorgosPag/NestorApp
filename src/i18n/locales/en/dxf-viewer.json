@@ -404,6 +404,10 @@
   "selectionCycling": {
     "label": "Select entity"
   },
+  "groupSelection": {
+    "label": "Group · {count, plural, one {# object} other {# objects}}",
+    "statusMultiple": "{count, plural, one {# group} other {# groups}}"
+  },
   "tools": {
     "xline": {
       "name": "Construction Line",

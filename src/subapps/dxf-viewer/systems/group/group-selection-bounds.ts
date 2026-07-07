@@ -1,0 +1,78 @@
+/**
+ * ADR-575 — GROUP selection affordance bounds (SSoT, pure).
+ *
+ * Computes the combined 2D bounding box + centre + member count of a selected
+ * {@link GroupEntity}, so the group-selection overlay (dashed box + «Ομάδα · N»
+ * label) and the status-bar indicator read the SAME geometry from ONE place.
+ *
+ * FULL reuse — zero new bbox math:
+ *   - {@link expandGroupEntity} flattens nested GROUP/ARRAY members (ADR-575 SSoT)
+ *   - {@link calculateCombinedEntityBounds} unions each member's AABB (ADR-394 SSoT,
+ *     already covers every DXF + BIM entity type)
+ *
+ * The centre is the box midpoint (Revit/C4D group gizmo origin); the count is the
+ * number of TOP-LEVEL members the user grouped (not the flattened leaf count), so
+ * the label reads «Ομάδα · N αντικείμενα» with N = what was selected at group time.
+ */
+
+import type { GroupEntity, Entity } from '../../types/entities';
+import type { Point2D } from '../../rendering/types/Types';
+import type { AnySceneEntity } from '../../types/scene';
+import { expandGroupEntity } from './group-expander';
+import { calculateCombinedEntityBounds } from '../selection/shared/selection-duplicate-utils';
+
+export interface GroupSelectionBounds {
+  /** Combined AABB minimum corner (world). */
+  readonly min: Point2D;
+  /** Combined AABB maximum corner (world). */
+  readonly max: Point2D;
+  /** Box centre (world) — the group gizmo origin. */
+  readonly center: Point2D;
+  /** Number of top-level members the user grouped (label «Ομάδα · N»). */
+  readonly memberCount: number;
+}
+
+/**
+ * Combined bounds + centre + member count for a selected GROUP container, or
+ * `null` when no member yields bounds (degenerate/empty group).
+ */
+export function computeGroupSelectionBounds(group: GroupEntity): GroupSelectionBounds | null {
+  const members = group.members;
+  if (!Array.isArray(members) || members.length === 0) return null;
+
+  // Flatten nested GROUP/ARRAY members via the render/snap expansion SSoT so the
+  // box hugs every leaf primitive, then union their AABBs via the ADR-394 SSoT.
+  const leaves = expandGroupEntity(group);
+  const bounds = calculateCombinedEntityBounds(leaves as unknown as AnySceneEntity[]);
+  if (!bounds) return null;
+
+  return {
+    min: bounds.min,
+    max: bounds.max,
+    center: {
+      x: (bounds.min.x + bounds.max.x) / 2,
+      y: (bounds.min.y + bounds.max.y) / 2,
+    },
+    memberCount: members.length,
+  };
+}
+
+/**
+ * Resolve the selected GROUP containers from a scene + selection set. A GROUP is
+ * selected via its container id (every expanded member carries `group.id`), so a
+ * single selected id can resolve to a whole group. Pure — no React.
+ */
+export function resolveSelectedGroups(
+  entities: readonly Entity[] | undefined,
+  selectedIds: readonly string[],
+): GroupEntity[] {
+  if (!entities || entities.length === 0 || selectedIds.length === 0) return [];
+  const selected = new Set(selectedIds);
+  const groups: GroupEntity[] = [];
+  for (const entity of entities) {
+    if (entity.type === 'group' && selected.has(entity.id)) {
+      groups.push(entity as GroupEntity);
+    }
+  }
+  return groups;
+}

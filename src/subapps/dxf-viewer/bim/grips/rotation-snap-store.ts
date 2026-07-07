@@ -128,6 +128,22 @@ export function getGlobalRotationSnapStore(): RotationSnapStore {
 }
 
 /**
+ * ADR-397 — the rotating entity's grips as rotation snap-target inputs (world
+ * points). SSoT for the `AllGripsStore`/`allGrips` → `setTargets` projection,
+ * shared by BOTH arming sites (the await-base ENTER in `grip-mouse-handlers` and the
+ * centre-pick `seedRotateFreeStep` via `useUnifiedGripInteraction`) so they can never
+ * drift. Structural param type (no `UnifiedGripInfo` import → no layer cycle).
+ */
+export function collectEntityGripWorldPoints(
+  grips: ReadonlyArray<{ readonly source?: string; readonly entityId?: string; readonly gripIndex: number; readonly position: Point2D }>,
+  entityId: string,
+): Array<{ entityId: string; gripIndex: number; point: Point2D }> {
+  return grips
+    .filter((g) => g.source === 'dxf' && g.entityId === entityId)
+    .map((g) => ({ entityId: g.entityId!, gripIndex: g.gripIndex, point: g.position }));
+}
+
+/**
  * The grip key that should currently render cyan ('snappable') — i.e. the rotating
  * entity's grip the cursor is RIGHT NOW snapped to (proximity), or null. Reads the
  * live snap result (`ImmediateSnapStore`): cyan appears only while there is an

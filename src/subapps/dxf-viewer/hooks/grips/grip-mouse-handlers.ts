@@ -29,6 +29,9 @@ import { setMoveOrthoAxis, clearMoveOrthoAxis } from '../../systems/grip/MoveOrt
 import {
   resolveMoveGlyphZoneForGrip, isDirectionalZone,
 } from '../../bim/grips/move-glyph-zones';
+// ADR-397 (Giorgio 2026-07-07) — arm the rotation grip snap targets the moment the
+// rotation handle is grabbed, so the CENTRE pick already magnetises to the entity's grips.
+import { getGlobalRotationSnapStore, collectEntityGripWorldPoints } from '../../bim/grips/rotation-snap-store';
 // ADR-501 — armed-grip SSoT: click a cold grip → arm it orange (multi-grip move).
 import { GripArmedStore } from '../../systems/grip/GripArmedStore';
 import { GripModeStore } from '../../systems/grip/GripModeStore';
@@ -285,6 +288,15 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
         anchor: op === 'corner' ? nearGrip.position : null,
         step: initialStep,
       });
+      // ADR-397 (Giorgio 2026-07-07) — arm the rotation grip snap targets ALREADY at the
+      // await-base step (πάτημα του σημαδιού περιστροφής → κόκκινο), so the rotation-CENTRE
+      // pick magnetises to + paints cyan on the entity's own grips (drop the pivot exactly on
+      // a corner/handle). Entity-agnostic (text/column/wall). Re-armed with the pivot at
+      // centre-pick (`seedRotateFreeStep`); disarmed in `resetToIdle`. Same `RotationGripSnapEngine`
+      // + cyan-temperature SSoT the free-rotate spin already uses — μηδέν νέα μηχανή.
+      if (op === 'rotate' && nearGrip.entityId) {
+        getGlobalRotationSnapStore().setTargets(null, collectEntityGripWorldPoints(allGrips, nearGrip.entityId));
+      }
       // ADR-363 Phase 1G.3 — prompt the first awaited pick (centre / base).
       applyHotGripHint(op, initialStep);
       setActiveDragGrip({

@@ -10,6 +10,8 @@
  *   • Plain CAD geometry (Giorgio 2026-07-04): line, polyline, lwpolyline,
  *     rectangle, arc — endpoints + midpoints, so a drawn line's corner emits a
  *     vertical/horizontal trace WITHOUT the AutoCAD hover-acquire (OTRACK) step.
+ *   • Text / MText (Giorgio 2026-07-07, ADR-557): the insertion point (origin), so
+ *     a nearby label lights the same cyan H/V traces — full column-move parity.
  *
  * It returns the SAME `AcquiredTrackingPoint[]` shape the resolver already
  * consumes, so the caller simply MERGES `[...TrackingPointStore.getPoints(),
@@ -36,6 +38,7 @@ import { getBimCharacteristicPoints } from '../../bim/utils/bim-characteristic-p
 import {
   footprintBounds,
   distanceToFootprintBounds,
+  type FootprintBounds,
 } from '../../bim/geometry/shared/footprint-face-frame';
 // ADR-357 (2026-07-04) — plain-geometry endpoints/midpoints reuse the OSNAP
 // geometry SSoT (the SAME extractor the Endpoint/Midpoint snap engines consume),
@@ -97,6 +100,24 @@ export function collectAmbientAlignmentAnchors(
   return anchors;
 }
 
+/**
+ * Axis-aligned bbox straight from a point list — the degenerate fallback for a
+ * member with < 3 characteristic points (`footprintBounds` needs a polygon ≥ 3
+ * verts). A single text insertion point yields a zero-size bbox AT the point, so
+ * `distanceToFootprintBounds` still measures cursor-to-point proximity correctly.
+ */
+function boundsFromPoints(pts: readonly Point2D[]): FootprintBounds | null {
+  if (pts.length === 0) return null;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const p of pts) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+  return { minX, maxX, minY, maxY };
+}
+
 /** Single linear scan: members whose footprint bbox is within radius, nearest-N. */
 function nearestMembersWithinRadius(
   cursor: Point2D,
@@ -107,7 +128,9 @@ function nearestMembersWithinRadius(
   for (const e of entities) {
     const points = ambientPointsForEntity(e);
     if (points.length === 0) continue;
-    const bounds = footprintBounds(points);
+    // ADR-557 — a text contributes a single insertion point (< 3 verts), so fall
+    // back to the point-list bbox when the polygon SSoT returns null.
+    const bounds = footprintBounds(points) ?? boundsFromPoints(points);
     if (!bounds) continue;
     const distance = distanceToFootprintBounds(cursor, bounds);
     if (distance > cfg.radiusWorld) continue;
@@ -133,6 +156,16 @@ function ambientPointsForEntity(e: Entity): Point2D[] {
       ...GeometricCalculations.getEntityEndpoints(e),
       ...GeometricCalculations.getEntityMidpoints(e),
     ];
+  }
+  // ADR-557 — Text / MText participate as alignment SOURCES via their insertion
+  // point (origin), so a nearby label lights the SAME cyan H/V traces a line does
+  // when ANY entity is moved/rotated near it (Giorgio 2026-07-07: «κυανές ενδείξεις
+  // κειμένων»). Kept to the O(1) top-level `position` — NOT the glyph-ink box —
+  // because `ambientPointsForEntity` runs for EVERY scene entity each drag frame
+  // (ADR-040 perf); box corners would force per-frame font metrics over all texts.
+  if (e.type === 'text' || e.type === 'mtext') {
+    const p = (e as { position?: Point2D }).position;
+    return p ? [{ x: p.x, y: p.y }] : [];
   }
   return [];
 }

@@ -104,6 +104,19 @@ export function resolveMoveGlyphFrame(entity: Entity): MoveGlyphFrame | null {
     return fromAxis(line.end.x - line.start.x, line.end.y - line.start.y);
   }
 
+  // ADR-557 — Text / MText: no `params`; the planar orientation lives in the
+  // TOP-LEVEL `rotation` field (degrees, world CCW), like a box entity. So the
+  // 4-arrow MOVE cross rotates with the text AND the per-arm directional
+  // move-by-value runs along the text's local axes — parity with the column's
+  // centre MOVE. Default 0 → identity (world-aligned), matching un-rotated text.
+  // NOTE: this same frame's major axis also seeds the deterministic rotation
+  // reference baseline via `resolveRotateReferenceAnchor` (one SSoT, two uses).
+  const txt = entity as { type?: string; rotation?: number };
+  if (txt.type === 'text' || txt.type === 'mtext') {
+    const rot = typeof txt.rotation === 'number' && Number.isFinite(txt.rotation) ? txt.rotation : 0;
+    return fromAngleRad(rot * DEG_TO_RAD);
+  }
+
   // ADR-561 — plain DXF primitives (circle / arc / polyline; rectangle/rect/lwpolyline
   // normalise to 'polyline' in the DXF pipeline but the scene entity keeps its own
   // type, so accept them too). They are symmetric or have no single axis → the MOVE

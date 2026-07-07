@@ -14,7 +14,6 @@ import { SpatialUtils } from '../../../core/spatial/SpatialUtils';
 // 🏢 ADR-158: Centralized Infinity Bounds Initialization
 // 🏢 ADR-034: Centralized Empty Spatial Bounds
 import { createInfinityBounds, EMPTY_SPATIAL_BOUNDS } from '../../../config/geometry-constants';
-import { TEXT_METRICS_RATIOS } from '../../../config/text-rendering-config';
 // ADR-363 Phase 7A — BIM marquee bounds (SSoT delegation).
 import { calculateBimEntity2DBounds } from '../../../bim/utils/bim-bounds';
 // ADR-394 — full per-type DXF bounds SSoT (the same calculator the spatial-index
@@ -28,6 +27,15 @@ import type { EntityModel } from '../../../rendering/types/Types';
 // so it must unwrap before reading defPoints — else window/crossing silently skips dimensions.
 import { getDimensionWorldBounds } from '../../dimensions/dimension-cull-bounds';
 import type { DimensionEntity } from '../../../types/dimension';
+// ADR-557 / ADR-394 — text/mtext bounds via the SAME visual-box SSoT the 2D grips, hover
+// and hit-test use (`resolveTextBox`), fed by the shared scene→DxfText projection
+// (`projectSceneTextToDxf` — resolves content/height/style from `textNode`, ADR-344). This
+// makes Z fit-to-selection + marquee frame EXACTLY the drawn glyphs: in-app text stores its
+// content only in `textNode` (raw flat `text` was undefined → null bounds → Z did nothing),
+// and a char-count heuristic never matched the real proportional-font box → "fit" undershot.
+import { projectSceneTextToDxf, type TextSceneShape } from '../../../bim/text/project-scene-text';
+import { resolveTextBox } from '../../../bim/text/text-box';
+import { RECT_CORNERS, rectCornerWorld } from '../../../bim/grips/rect-frame';
 
 /**
  * Calculate bounding box for entities
@@ -250,36 +258,18 @@ export function calculateEntityBounds(entity: AnySceneEntity): { min: Point2D, m
       return calculateBimEntity2DBounds(entity as unknown as Entity);
     case 'text':
     case 'mtext': {
-      const textEntity = entity as unknown as { position?: Point2D; text?: string; height?: number; fontSize?: number; rotation?: number };
-      const pos = textEntity.position;
-      const textStr = textEntity.text;
-      if (!pos || !textStr) return null;
-
-      const height = (typeof textEntity.height === 'number' && textEntity.height > 0)
-        ? textEntity.height
-        : (typeof textEntity.fontSize === 'number' && textEntity.fontSize > 0)
-          ? textEntity.fontSize
-          : 2.5;
-
-      const width = textStr.length * height * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
-      const rotation = typeof textEntity.rotation === 'number' ? textEntity.rotation : 0;
-
-      if (rotation === 0) {
-        return { min: { x: pos.x, y: pos.y - height }, max: { x: pos.x + width, y: pos.y } };
-      }
-
-      // Rotated text: compute AABB from all 4 rotated corners
-      const rad = rotation * Math.PI / 180;
-      const cosA = Math.cos(rad);
-      const sinA = Math.sin(rad);
-      const localCorners: Point2D[] = [
-        { x: 0, y: 0 }, { x: width, y: 0 }, { x: width, y: -height }, { x: 0, y: -height },
-      ];
-      const worldCorners = localCorners.map(c => ({
-        x: pos.x + c.x * cosA - c.y * sinA,
-        y: pos.y + c.x * sinA + c.y * cosA,
-      }));
-      return calculateVerticesBounds(worldCorners);
+      // Project the raw scene entity (content/height/style may live only in `textNode`,
+      // ADR-344) to a flat DxfText, then take the SAME attachment-aware VISUAL box the 2D
+      // grips/hover/hit-test use — so the fit box coincides with the drawn glyphs (metrics-
+      // accurate width, cap-height extent, rotation about the insertion point). The rotated
+      // RectFrame → AABB via its four world corners.
+      const shape = entity as unknown as TextSceneShape;
+      if (!shape.position) return null;
+      const dxfText = projectSceneTextToDxf(shape, (entity as { id?: string }).id ?? '');
+      if (!dxfText.text) return null;
+      const frame = resolveTextBox(dxfText);
+      const corners = RECT_CORNERS.map(corner => rectCornerWorld(frame, corner));
+      return calculateVerticesBounds(corners);
     }
     case 'dimension': {
       // ADR-362 / ADR-040 — the marquee receives the WRAPPED DxfDimension (all fields nested

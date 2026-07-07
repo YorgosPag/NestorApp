@@ -76,6 +76,13 @@ export function buildEntityModelFromDxf(
         height: te.height,
         rotation: te.rotation,
         ...(te.textStyle && { textStyle: te.textStyle }),
+        // ADR-557 — carry the AutoCAD X-scale `widthFactor` + the MTEXT `width` frame onto the
+        // render EntityModel, so the drawn glyphs + grip box apply the SAME horizontal scale the
+        // interaction/hover path reads from the scene entity. Without this the render box stayed
+        // wide (widthFactor dropped) while hover-test narrowed → grips drew/hit-tested at different
+        // widths after a resize (Giorgio 2026-07-07: right/centre grips + move/rotation lost hover).
+        ...(te.widthFactor != null && { widthFactor: te.widthFactor }),
+        ...(te.width != null && { width: te.width }),
       } as unknown as Entity;
     }
     case 'angle-measurement':

@@ -136,7 +136,40 @@ block library — ξεχωριστό, μεγαλύτερο subsystem.
   αντί reuse-snapshot) + parametrized factory (layerId/kind/params/path/basePoint). Ήδη μοιράζεται το
   ίδιο extract/restore SSoT· αυτό αρκεί (μην over-abstract-άρεις — big-player κρίση).
 
+## 8. GROUP selection affordance (Figma / Revit / Cinema 4D parity)
+
+**Πρόβλημα:** κλικ σε ομαδοποιημένες οντότητες → ο χρήστης ΔΕΝ αντιλαμβανόταν πόσες/ποιες
+είναι επιλεγμένες. **Ρίζα:** το `expandGroupEntity` δίνει σε ΚΑΘΕ member το ίδιο `group.id`
+(σκόπιμο — click→container), οπότε το `grip-registry` `entityMap` (dedup ανά id) κρατά **έναν**
+member → λαβές + MOVE/ROTATION σε **μία μόνο** γραμμή (mis-read ως «ένα αντικείμενο»).
+
+**Λύση (industry-convergent — bbox + πλήθος + ενιαία μονάδα):**
+- **`systems/group/group-selection-bounds.ts`** (NEW SSoT, pure): `computeGroupSelectionBounds(group)`
+  = `expandGroupEntity` (flatten nested, SSoT) → `calculateCombinedEntityBounds` (ADR-394 union AABB,
+  SSoT) → `{min,max,center,memberCount}`. `resolveSelectedGroups(entities, selectedIds)` = τα
+  selected `type:'group'` containers. **Μηδέν νέο bbox math.**
+- **Overlay** `canvas-v2/overlays/GroupSelectionOverlay.tsx` (NEW, presentational SVG) + leaf
+  `components/dxf-layout/GroupSelectionOverlaySubscriber.tsx` (ADR-040 micro-leaf: subscribe selection +
+  scene, project world→screen μέσω `CoordinateTransforms.worldToScreen`, mirror `SnapIndicatorOverlay`).
+  Σχεδιάζει **ΕΝΑ διακεκομμένο πλαίσιο** γύρω από όλα τα μέλη + pill **«Ομάδα · N αντικείμενα»**
+  (`UI_COLORS_BASE.SELECTION_MARQUEE` SSoT). Mount στο `CanvasLayerStack` δίπλα στο `SnapIndicatorSubscriber`.
+- **grip-registry** (`hooks/grips/grip-registry.ts` + `GripRegistryPublisher.tsx`): νέο `groupEntityIds`
+  → όταν selected id = group container, **skip** τα per-member grips (η ομάδα = ενιαία μονάδα· το overlay
+  κατέχει το whole-group affordance). Αφαιρεί την «μία γραμμή» αμφισημία.
+- **Status bar** `ui/toolbar/StatusBarGroupSelectionLeaf.tsx` (ADR-040 leaf) → inline «Ομάδα · N αντικείμενα»
+  / «K ομάδες». i18n `groupSelection.*` (el/en, ICU plurals). Tests: `group-selection-bounds.test.ts`.
+- **Highlight όλων των μελών**: ήδη ισχύει (κάθε expanded member έχει `group.id` → `_selectionSet.has`
+  true για όλους στον `DxfRenderer`) — VERIFY live.
+- **DEFERRED (επόμενη φάση):** πλήρως interactive shared move/rotate **gizmo** (grip-glyph στο κέντρο
+  με per-type commit routing). Το group MOVE/ROTATE/SCALE ήδη δουλεύει μέσω body-drag/rotate tool
+  (`calculateMovedGeometry`/`rotateEntity` recurse σε members) — λείπει μόνο το ενιαίο glyph-as-click-target.
+
 ## Changelog
+- **2026-07-07** — GROUP selection affordance (§8): dashed bbox + «Ομάδα · N» overlay leaf +
+  status-bar leaf + grip suppression για group containers + `group-selection-bounds` SSoT (reuse
+  `expandGroupEntity` + `calculateCombinedEntityBounds`). i18n el/en. 16/16 group tests pass. ΟΧΙ tsc
+  (N.17). Overlay leaf + `CanvasLayerStack` mount → ADR-040 §changelog (CHECK 6B/6D). Interactive gizmo
+  = deferred.
 - **2026-07-05** — Αρχική υλοποίηση. JOIN ribbon exposure + GROUP `type:'group'` container
   (engine/command/expander/transforms/ribbon) + UNGROUP=EXPLODE delegation. 26/26 tests.
 - **2026-07-05** — SSoT boy-scout (§7): promote `entity-source-extraction` σε ουδέτερο SSoT·

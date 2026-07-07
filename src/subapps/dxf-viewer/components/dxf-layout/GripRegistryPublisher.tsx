@@ -63,7 +63,19 @@ export const GripRegistryPublisher: React.FC<GripRegistryPublisherProps> = ({
     () => (liveSceneModel ? convertScene(liveSceneModel) : dxfScene),
     [liveSceneModel, convertScene, dxfScene],
   );
-  const allGrips = useGripRegistry({ dxfScene: reactiveScene, selectedEntityIds, selectedOverlays });
+  // ADR-575 — GROUP container ids in the live scene. A selected group renders as
+  // ONE unit (dashed box + «Ομάδα · N» overlay), so the registry suppresses its
+  // members' per-member grips (which all share `group.id` → only one would show,
+  // mis-reading as «one object selected»). Reads the original SceneModel entities
+  // (the GroupEntity survives only pre-expansion), NOT the converted dxfScene.
+  const groupEntityIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const entity of liveSceneModel?.entities ?? []) {
+      if (entity.type === 'group') ids.add(entity.id);
+    }
+    return ids;
+  }, [liveSceneModel]);
+  const allGrips = useGripRegistry({ dxfScene: reactiveScene, selectedEntityIds, selectedOverlays, groupEntityIds });
 
   // Publish the full grip set for event-time hit-testing.
   useEffect(() => { AllGripsStore.set(allGrips); }, [allGrips]);

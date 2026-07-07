@@ -35,6 +35,8 @@ import { RadialCommandRing } from '../../systems/dynamic-input/components/Radial
 import { WALL_RING_CONFIG } from '../../systems/dynamic-input/wall-ring-config';
 import { BEAM_RING_CONFIG } from '../../systems/dynamic-input/beam-ring-config';
 import { LINE_RING_CONFIG } from '../../systems/dynamic-input/line-ring-config';
+// ADR-060 — «Κάθετη Γραμμή»: μετά το 1ο σημείο, length-only δαχτυλίδι (direction ήδη κλειδωμένη).
+import { PERPENDICULAR_LINE_RING_CONFIG } from '../../systems/dynamic-input/perpendicular-line-ring-config';
 import { ringStartKey } from '../../systems/dynamic-input/ring-config';
 // ADR-513 §grip-parity — press-drag άκρου γραμμής δείχνει το ΙΔΙΟ δαχτυλίδι (lock-only).
 import { GRIP_LINEAR_RING_CONFIG } from '../../systems/dynamic-input/grip-linear-ring-config';
@@ -142,6 +144,15 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
   const activeDrag = useSyncExternalStore(subscribeActiveDragGrip, getActiveDragGrip, () => null);
   const lineEndpointDrag = isLineEndpointDragInfo(activeDrag);
 
+  // [PERP-DIAG] προσωρινό — γιατί δεν εμφανίζεται/δεν πιάνει το ring για την «Κάθετη Γραμμή».
+  // Log ΜΟΝΟ σε αλλαγές (deps), όχι σε κάθε mousemove (interactive re-render).
+  useEffect(() => {
+    if (activeTool !== 'line-perpendicular') return;
+    const ringBranch = tempPoints.length >= 1 && !!getSceneUnits;
+    const blockedByGate = !interactive || is3D;
+    console.log(`[PERP] subscriber tool=${activeTool} temp=${tempPoints.length} interactive=${interactive} dynOn=${dynInput.on} is3D=${is3D} hasSceneUnits=${!!getSceneUnits} -> earlyNull(!interactive||is3D)=${blockedByGate} ringBranchWouldMount=${ringBranch && !blockedByGate}`);
+  }, [activeTool, tempPoints.length, interactive, dynInput.on, is3D, getSceneUnits]);
+
   // Wire keyboard pipeline: maps `dynamic-input-coordinate-submit` events back
   // to the canvas drawing pipeline (`onDrawingPoint`) — see ADR §4 G2.
   useDynamicInputHandler({
@@ -232,6 +243,23 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
       <RadialCommandRing
         config={LINE_RING_CONFIG}
         startKey={ringStartKey(tempPoints[0], 'line-pending')}
+        sceneUnits={getSceneUnits()}
+        getCanvasEl={getCanvasEl}
+      />
+    );
+  }
+
+  // ADR-060 — «Κάθετη Γραμμή»: ΜΟΝΟ ΜΕΤΑ το 1ο κλικ (σημείο εισαγωγής πάνω στην οντότητα, δηλ.
+  // `tempPoints.length >= 1`) δείξε το length-only «Δαχτυλίδι Εντολών». Πριν το click-1 (hover/ghost +
+  // κυανά face-dims) ΔΕΝ mount-άρεται → ο χρήστης δηλώνει το σημείο εισαγωγής κανονικά με κλικ. Μετά,
+  // η διεύθυνση είναι ήδη κλειδωμένη (κάθετος άξονας, `perpendicularAxisLockStore`) οπότε αρκεί το Μήκος:
+  // πληκτρολόγηση αριθμού → «Μήκος» wedge → Enter → synthetic canvas click → commit (`resolveLineFamily
+  // CommitPoint` → `applyLengthAngleLock`, preview≡commit). Early-return → δεν πέφτει στο legacy overlay.
+  if (activeTool === 'line-perpendicular' && tempPoints.length >= 1 && getSceneUnits) {
+    return (
+      <RadialCommandRing
+        config={PERPENDICULAR_LINE_RING_CONFIG}
+        startKey={ringStartKey(tempPoints[0], 'line-perp-pending')}
         sceneUnits={getSceneUnits()}
         getCanvasEl={getCanvasEl}
       />

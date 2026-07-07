@@ -28,6 +28,9 @@ import {
 // ADR-557 Φ-attachment — scene→DxfText projection SSoT (shared with the live ghost, so
 // preview ≡ commit; see project-scene-text.ts header for the raw-entity regression it fixes).
 import { projectSceneTextToDxf, type TextSceneShape } from '../../bim/text/project-scene-text';
+// ADR-557/397 — the entity-agnostic rotate hot-grip commit context (picked pivot +
+// reference anchor), published by the hook during a `text-rotation` free/reference spin.
+import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 // ADR-557 Φ-attachment — durable height write: the run-height SSoT `resolveTextHeight` reads.
 import { scaleTextNodeRunHeights } from '../../utils/text-node-utils';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
@@ -72,11 +75,23 @@ export function commitTextGripDrag(
   if (e.type !== 'text' && e.type !== 'mtext') return;
 
   const dxfText = projectSceneTextToDxf(e, grip.entityId);
-  // Anchor = the grabbed grip's world position (matches the rotation sweep start
-  // `currentPos − delta`); `currentPos` is the live cursor. Mirror of the column commit.
-  const anchor = grip.position;
+  // ADR-557/397 — the text-rotation 6-click / free hot-grip rotates around a
+  // USER-PICKED centre. The hook publishes {pivot, anchor} in BimRotateHotGripStore
+  // (entity-agnostic); `delta = cursor − anchor`, so `currentPos = anchor + delta` is
+  // the live cursor and `pivot` is the rotation centre. Mirror of commitColumnGripDrag.
+  // Every other text grip (move / resize) uses the grabbed grip position as the anchor
+  // and applyTextRotation's default bbox-centre pivot.
+  const rotateCtx = BimRotateHotGripStore.getSnapshot();
+  const useRotatePivot =
+    grip.textGripKind === 'text-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+  const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
   const currentPos: Point2D = translatePoint(anchor, delta);
-  const patch = applyTextGripDrag(grip.textGripKind, { entity: dxfText, delta, currentPos });
+  const patch = applyTextGripDrag(grip.textGripKind, {
+    entity: dxfText,
+    delta,
+    currentPos,
+    ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
+  });
   if (Object.keys(patch).length === 0) return;
 
   const previous = textTransformStateOf(dxfText);
