@@ -16,6 +16,7 @@
  */
 
 import type { GroupEntity, Entity } from '../../types/entities';
+import { isGroupEntity } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
 import type { AnySceneEntity } from '../../types/scene';
 import { expandGroupEntity } from './group-expander';
@@ -55,6 +56,27 @@ export function computeGroupSelectionBounds(group: GroupEntity): GroupSelectionB
     },
     memberCount: members.length,
   };
+}
+
+/**
+ * SSoT — «σε ποια ομάδα ανήκει ένα entity id». Every expanded GROUP member carries
+ * the container's `id` (see {@link expandGroupEntity}), and the container itself IS
+ * that id, so an id resolves to its owning {@link GroupEntity} by a direct lookup.
+ *
+ * The ONE source of truth reused by BOTH the hover overlay and the selection overlay
+ * (a hovered/selected member id → highlight/select the WHOLE group), and by the
+ * enter-group input path (double-click a member → resolve its container to enter).
+ * Pure — no React. Returns `null` when the id is a plain (non-grouped) entity.
+ */
+export function resolveGroupContainingEntity(
+  entities: readonly Entity[] | undefined,
+  entityId: string | null | undefined,
+): GroupEntity | null {
+  if (!entities || entities.length === 0 || !entityId) return null;
+  for (const entity of entities) {
+    if (entity.id === entityId && isGroupEntity(entity)) return entity;
+  }
+  return null;
 }
 
 /**

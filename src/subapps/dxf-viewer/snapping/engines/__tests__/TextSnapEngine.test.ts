@@ -19,6 +19,11 @@ import { TextSnapEngine } from '../TextSnapEngine';
 import { ExtendedSnapType } from '../../extended-types';
 import type { SnapEngineContext } from '../../shared/BaseSnapEngine';
 import type { EntityModel, TextEntity, MTextEntity } from '../../../types/entities';
+// ADR-378 / ADR-557 — the snap points now derive from the SAME grip box the user sees, so
+// tests assert parity against `resolveTextBox` (not a hand-computed heuristic bbox).
+import { projectSceneTextToDxf } from '../../../bim/text/project-scene-text';
+import { resolveTextBox } from '../../../bim/text/text-box';
+import { rectCornerWorld, rectEdgeWorld } from '../../../bim/grips/rect-frame';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -87,6 +92,11 @@ function expectClose(actual: number, expected: number, eps = EPS) {
   expect(Math.abs(actual - expected)).toBeLessThan(eps);
 }
 
+/** The SAME visual grip box the engine derives its snap points from. */
+function gripFrame(entity: TextEntity | MTextEntity) {
+  return resolveTextBox(projectSceneTextToDxf(entity as unknown as Parameters<typeof projectSceneTextToDxf>[0], entity.id));
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('TextSnapEngine — ADR-378 Phase 3', () => {
@@ -152,14 +162,45 @@ describe('TextSnapEngine — ADR-378 Phase 3', () => {
     ]);
   });
 
-  it('mtext entity uses entity.width for bbox width', () => {
-    // width=40 → corner-tr local (40,0). Rotation 0 → world (40, 0) when position (0,0).
-    engine.initialize([makeMText({ position: { x: 0, y: 0 }, width: 40 })]);
-    const { candidates } = engine.findSnapCandidates({ x: 40, y: 0 }, makeContext({ worldRadiusForType: () => 1 }));
+  it('corners / edge-mids / center coincide with the text grip box (resolveTextBox)', () => {
+    const e = makeText({ position: { x: 0, y: 0 } });
+    engine.initialize([e]);
+    const { candidates } = engine.findSnapCandidates({ x: 0, y: 0 }, makeContext());
+    const frame = gripFrame(e);
+    const at = (d: string) => candidates.find((c) => c.description === d)!.point;
+    const same = (d: string, p: { x: number; y: number }) => { expectClose(at(d).x, p.x); expectClose(at(d).y, p.y); };
+    same('text-corner-tr', rectCornerWorld(frame, { sx: 1, sy: 1 }));
+    same('text-corner-tl', rectCornerWorld(frame, { sx: -1, sy: 1 }));
+    same('text-corner-bl', rectCornerWorld(frame, { sx: -1, sy: -1 }));
+    same('text-corner-br', rectCornerWorld(frame, { sx: 1, sy: -1 }));
+    same('text-center', frame.center);
+    same('text-edge-top-mid', rectEdgeWorld(frame, { axis: 'y', sign: 1 }));
+    same('text-edge-bottom-mid', rectEdgeWorld(frame, { axis: 'y', sign: -1 }));
+  });
+
+  it('MTEXT snap box uses the frame width (coincides with its grip box)', () => {
+    const e = makeMText({ position: { x: 0, y: 0 }, width: 40 });
+    engine.initialize([e]);
+    const { candidates } = engine.findSnapCandidates({ x: 0, y: 0 }, makeContext());
+    const expected = rectCornerWorld(gripFrame(e), { sx: 1, sy: 1 });
     const tr = candidates.find((c) => c.description === 'text-corner-tr')!;
     expect(tr).toBeDefined();
-    expectClose(tr.point.x, 40);
-    expectClose(tr.point.y, 0);
+    expectClose(tr.point.x, expected.x);
+    expectClose(tr.point.y, expected.y);
+  });
+
+  it('in-app text (content ONLY in textNode) produces 8 grip-coincident points', () => {
+    const e = {
+      id: 'tn', name: 'tn', type: 'text', layerId: '0', position: { x: 3, y: 4 }, visible: true,
+      textNode: { paragraphs: [{ runs: [{ text: 'AB', style: { height: 10 } }] }], attachment: 'BL' },
+    } as unknown as TextEntity;
+    engine.initialize([e]);
+    const { candidates } = engine.findSnapCandidates({ x: 3, y: 4 }, makeContext());
+    expect(candidates).toHaveLength(8);
+    const expected = rectCornerWorld(gripFrame(e), { sx: 1, sy: 1 });
+    const tr = candidates.find((c) => c.description === 'text-corner-tr')!.point;
+    expectClose(tr.x, expected.x);
+    expectClose(tr.y, expected.y);
   });
 
   it('cursor outside radius returns no candidates', () => {
@@ -182,15 +223,17 @@ describe('TextSnapEngine — ADR-378 Phase 3', () => {
     expect(candidates).toHaveLength(0);
   });
 
-  it('rotation 90° rotates corner-tr around insertion point', () => {
-    // Text at origin, rotation 90°. bbox width 12 (text='AB' length 2 * 10 * 0.6). Local corner-tr (12,0).
-    // Rotated 90° CCW around origin → (0, 12).
-    engine.initialize([makeText({ position: { x: 0, y: 0 }, rotation: 90 })]);
-    const { candidates } = engine.findSnapCandidates({ x: 0, y: 12 }, makeContext({ worldRadiusForType: () => 1 }));
+  it('rotation is applied — corner-tr matches the rotated grip-box corner', () => {
+    const e = makeText({ position: { x: 0, y: 0 }, rotation: 90 });
+    engine.initialize([e]);
+    const { candidates } = engine.findSnapCandidates({ x: 0, y: 0 }, makeContext());
+    const expected = rectCornerWorld(gripFrame(e), { sx: 1, sy: 1 });
     const tr = candidates.find((c) => c.description === 'text-corner-tr')!;
     expect(tr).toBeDefined();
-    expectClose(tr.point.x, 0, 1e-5);
-    expectClose(tr.point.y, 12, 1e-5);
+    expectClose(tr.point.x, expected.x, 1e-5);
+    expectClose(tr.point.y, expected.y, 1e-5);
+    // Sanity: a 90° rotation must actually move the corner off the +X axis.
+    expect(Math.abs(expected.y)).toBeGreaterThan(1e-3);
   });
 
   it('multiple text entities indexed independently — each contributes 8 points', () => {
