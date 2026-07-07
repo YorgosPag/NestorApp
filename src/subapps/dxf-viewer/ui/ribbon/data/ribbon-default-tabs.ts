@@ -7,6 +7,7 @@
 import type { RibbonTab } from '../types/ribbon-types';
 import { HOME_DRAW_PANEL } from './home-tab-draw';
 import { HOME_MODIFY_PANEL, HOME_MODIFY_EDIT_PANEL } from './home-tab-modify';
+import { HOME_MATCH_PANEL } from './home-tab-match';
 import { VIEW_NAVIGATE_PANEL } from './view-tab-navigate';
 import { VIEW_DISPLAY_PANEL } from './view-tab-display';
 import { VIEW_VISUAL_STYLES_PANEL } from './view-tab-visual-styles';
@@ -54,6 +55,7 @@ export const DEFAULT_RIBBON_TABS: readonly RibbonTab[] = [
       HOME_DRAW_PANEL,
       HOME_MODIFY_PANEL,
       HOME_MODIFY_EDIT_PANEL,
+      HOME_MATCH_PANEL,
       HOME_GUIDES_PANEL,
       ANNOTATE_MEASURE_PANEL,
       HOME_DIMENSIONS_PANEL,

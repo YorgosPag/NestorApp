@@ -6,8 +6,10 @@
  * Path constants live in RibbonButtonIconPaths.tsx (data file, SRP split).
  */
 
-import React from 'react';
-import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough, Ruler, MoveHorizontal, MoveDiagonal2, Triangle, CircleDot, Diameter, Spline, CircleSlash, MoveUpRight, Rows3, Equal, Palette, Check, Pencil, RotateCcw, RefreshCw, Settings, Type, Construction, DoorOpen, Columns3, SquareDashed, RectangleHorizontal, TableProperties, Boxes, FileDown, Thermometer, Flame, Droplet, ArrowUpToLine, ArrowDownToLine, Unlink2, Lightbulb, Fence, Server, Armchair, Split, Info, Plug, Printer, Frame, Merge, Group, Ungroup } from 'lucide-react';
+import React, { useSyncExternalStore } from 'react';
+import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough, Ruler, MoveHorizontal, MoveDiagonal2, Triangle, CircleDot, Diameter, Spline, CircleSlash, MoveUpRight, Rows3, Equal, Palette, Check, Pencil, RotateCcw, RefreshCw, Settings, Type, Construction, DoorOpen, Columns3, SquareDashed, RectangleHorizontal, TableProperties, Boxes, FileDown, Thermometer, Flame, Droplet, ArrowUpToLine, ArrowDownToLine, Unlink2, Lightbulb, Fence, Server, Armchair, Split, Info, Plug, Printer, Frame, Merge, Group, Ungroup, Syringe } from 'lucide-react';
+// ADR-581 Φ6 — reactive 2-state σύριγγα icon (empty ⇄ full) driven by the brush store.
+import { subscribeMatchBrush, hasMatchBrushSource } from '../../../../systems/match-properties';
 import { LineIcon } from '../../../toolbar/icons/LineIcon';
 import { CircleIcon } from '../../../toolbar/icons/CircleIcon';
 import { ArcIcon } from '../../../toolbar/icons/ArcIcon';
@@ -76,6 +78,17 @@ function inlineSvg(
   );
 }
 
+/**
+ * ADR-581 Φ6 — reactive «σύριγγα» icon. Subscribes to the low-frequency brush store
+ * (αλλάζει μόνο σε pick / clear — ΟΧΙ hot-path) και εναλλάσσει άδεια (outline) ⇄
+ * γεμάτη (fill) σύριγγα ώστε ο χρήστης να βλέπει ότι έχει «ρουφήξει» πηγή.
+ */
+const MatchSyringeIcon: React.FC<{ size: RibbonIconSize; className: string }> = ({ size, className }) => {
+  const armed = useSyncExternalStore(subscribeMatchBrush, hasMatchBrushSource, hasMatchBrushSource);
+  const px = sizePx[size];
+  return <Syringe width={px} height={px} className={className} fill={armed ? 'currentColor' : 'none'} />;
+};
+
 export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }) => {
   const className = size === 'large' ? 'dxf-ribbon-btn-icon-large' : 'dxf-ribbon-btn-icon-small';
   switch (icon) {
@@ -136,6 +149,8 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'ungroup': return <Ungroup width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'select': return inlineSvg(size, SELECT_PATH);
     case 'grip-edit': return inlineSvg(size, GRIP_EDIT_PATH);
+    // ADR-581 Φ6 — reactive σύριγγα (empty ⇄ full) driven by the match-brush store.
+    case 'match-syringe': return <MatchSyringeIcon size={size} className={className} />;
     case 'pan': return inlineSvg(size, PAN_PATH);
     case 'zoom': return inlineSvg(size, ZOOM_PATH);
     case 'zoom-in': return inlineSvg(size, ZOOM_IN_PATH);

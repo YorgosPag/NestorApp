@@ -18,6 +18,8 @@ import React from 'react';
 // self-subscribes so the Shell/orchestrator stay inert on entity selection.
 import { useSelectedEntityIds } from '../../systems/selection/useSelectedEntities';
 import { MepFixtureGhostPreviewMount, type MepFixtureGhostPreviewMountProps } from './canvas-layer-stack-mep-fixture-ghost';
+// ADR-581 Φ6 — «σύριγγα» live hover ghost (store-driven: hover / brush / activeTool).
+import { MatchHoverGhostPreviewMount } from './canvas-layer-stack-match-ghost';
 import { ElectricalPanelGhostPreviewMount, type ElectricalPanelGhostPreviewMountProps } from './canvas-layer-stack-electrical-panel-ghost';
 import { MepManifoldGhostPreviewMount, type MepManifoldGhostPreviewMountProps } from './canvas-layer-stack-mep-manifold-ghost';
 import { MepRadiatorGhostPreviewMount, type MepRadiatorGhostPreviewMountProps } from './canvas-layer-stack-mep-radiator-ghost';
@@ -220,6 +222,15 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
           dimensions (no apply-entity-preview branch → transformed === entity). */}
       <DimGripGhostPreviewMount
         dragPreview={gripDragPreview}
+        levelManager={levelManager}
+        transform={transform}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      {/* ADR-581 Φ6 — «σύριγγα» live hover ghost: self-subscribes to hover / brush /
+          activeTool; paints the WYSIWYG preview (style + reshaped geometry) of the
+          hovered target BEFORE the click. Store-driven → no payload prop. */}
+      <MatchHoverGhostPreviewMount
         levelManager={levelManager}
         transform={transform}
         getCanvas={getCanvas}
