@@ -385,7 +385,8 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
       const clickPoint = connectorZmm !== null
         ? { x: worldPoint.x, y: worldPoint.y, z: connectorZmm }
         : worldPoint;
-      onCanvasClick(clickPoint, e.shiftKey);
+      // ADR-581 — altKey/ctrlKey για το «Αντιγραφή Ιδιοτήτων» πινέλο (σταγονόμετρο/σύριγγα).
+      onCanvasClick(clickPoint, e.shiftKey, e.altKey, e.ctrlKey || e.metaKey);
     }
 
     // Lasso selection (button-held drag → free-form polygon).
@@ -426,7 +427,7 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
             const emptySnap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
             if (emptySnap) {
               const emptyScreenPos = getScreenPosFromEvent(e, emptySnap);
-              onCanvasClick(screenToWorldWithSnapshot(emptyScreenPos, transform, emptySnap), e.shiftKey);
+              onCanvasClick(screenToWorldWithSnapshot(emptyScreenPos, transform, emptySnap), e.shiftKey, e.altKey, e.ctrlKey || e.metaKey);
             }
           }
         }

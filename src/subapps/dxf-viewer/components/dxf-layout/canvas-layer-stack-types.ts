@@ -169,7 +169,7 @@ export interface CanvasLayerStackProps {
   // === Canvas interaction handlers ===
   handleOverlayClick: (overlayId: string, point: Point2D) => void;
   handleMultiOverlayClick: (layerIds: string[]) => void;
-  handleCanvasClick: (worldPoint: Point2D, shiftKey?: boolean) => void;
+  handleCanvasClick: (worldPoint: Point2D, shiftKey?: boolean, altKey?: boolean, ctrlKey?: boolean) => void;
   handleUnifiedMouseMove: (worldPos: Point2D, screenPos: Point2D) => void;
   handleDrawingContextMenu: (e: React.MouseEvent) => void;
 

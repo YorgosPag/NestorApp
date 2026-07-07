@@ -15,6 +15,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { usePerformanceHUDStore } from './PerformanceHUDStore';
 import type { PerformanceMetricsSnapshot } from './PerformanceHUDStore';
+import { storageGet, storageSet } from '../../utils/storage-utils';
 
 export const SPARKLINE_METRICS = [
   'fps',
@@ -33,12 +34,7 @@ export const SAMPLE_BUFFER_SIZE = 240;
 
 const LS_HISTORY_ENABLED = 'bim3d.performanceHud.historyEnabled';
 
-function defaultHistoryEnabled(): boolean {
-  try {
-    const stored = localStorage.getItem(LS_HISTORY_ENABLED);
-    if (stored !== null) return stored === 'true';
-  } catch { /* SSR / private browsing */ }
-
+function heuristicHistoryEnabled(): boolean {
   // Heuristic opt-out for low-end devices (research C.7.Q1).
   try {
     const cores = navigator.hardwareConcurrency;
@@ -46,6 +42,10 @@ function defaultHistoryEnabled(): boolean {
   } catch { /* SSR */ }
 
   return true;
+}
+
+function defaultHistoryEnabled(): boolean {
+  return storageGet(LS_HISTORY_ENABLED, heuristicHistoryEnabled());
 }
 
 function makeBuffers(): Record<SparklineMetric, Float32Array> {
@@ -83,7 +83,7 @@ export const usePerformanceHistoryStore = create<PerformanceHistoryStoreType>()(
     revision: 0,
 
     setEnabled(v) {
-      try { localStorage.setItem(LS_HISTORY_ENABLED, String(v)); } catch { /* ignore */ }
+      storageSet(LS_HISTORY_ENABLED, v);
       set({ enabled: v });
     },
 

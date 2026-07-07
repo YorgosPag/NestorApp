@@ -5,12 +5,13 @@
  * Rolling 7-day sample window. Robust statistics (median + MAD) used
  * for outlier detection by regression-detector.
  *
- * Pure module: LocalStorage I/O wrapped in try/catch for SSR / private
- * browsing; absent storage degrades gracefully to no-baseline.
+ * Pure module: LocalStorage I/O via the storage-utils SSoT (ADR-092) —
+ * SSR-safe / quota-guarded; absent storage degrades gracefully to no-baseline.
  */
 
 import type { HudRenderMode } from './hud-render-mode';
 import { median } from '../../utils/statistics';
+import { storageGet, storageSet, storageRemove } from '../../utils/storage-utils';
 
 export const ROLLING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 export const MIN_SAMPLES_FOR_BASELINE = 30;
@@ -32,21 +33,13 @@ function lsKey(mode: HudRenderMode): string {
 }
 
 function readStored(mode: HudRenderMode): StoredSamples {
-  try {
-    const raw = localStorage.getItem(lsKey(mode));
-    if (!raw) return { samples: [] };
-    const parsed = JSON.parse(raw) as Partial<StoredSamples>;
-    if (!Array.isArray(parsed.samples)) return { samples: [] };
-    return { samples: parsed.samples };
-  } catch {
-    return { samples: [] };
-  }
+  const parsed = storageGet<Partial<StoredSamples>>(lsKey(mode), { samples: [] });
+  if (!Array.isArray(parsed.samples)) return { samples: [] };
+  return { samples: parsed.samples };
 }
 
 function writeStored(mode: HudRenderMode, data: StoredSamples): void {
-  try {
-    localStorage.setItem(lsKey(mode), JSON.stringify(data));
-  } catch { /* quota / SSR */ }
+  storageSet(lsKey(mode), data);
 }
 
 /** Tukey 1977 median absolute deviation — robust outlier-resistant spread. */
@@ -91,6 +84,6 @@ export const baselineTracker = {
   },
 
   clear(mode: HudRenderMode): void {
-    try { localStorage.removeItem(lsKey(mode)); } catch { /* ignore */ }
+    storageRemove(lsKey(mode));
   },
 };

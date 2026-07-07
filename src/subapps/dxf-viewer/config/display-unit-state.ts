@@ -25,21 +25,20 @@ import {
   DISPLAY_UNIT_STORAGE_KEY,
   isValidDisplayUnit,
 } from './units';
-import { createExternalStore } from '../stores/createExternalStore';
+import { createPersistedValue } from '../stores/createPersistedValue';
 
 type Listener = () => void;
 
-function readInitialUnit(): DisplayUnit {
-  if (typeof window === 'undefined') return DEFAULT_DISPLAY_UNIT;
-  const stored = window.localStorage.getItem(DISPLAY_UNIT_STORAGE_KEY);
-  return isValidDisplayUnit(stored) ? stored : DEFAULT_DISPLAY_UNIT;
-}
-
-// SSoT pub/sub via createExternalStore (WAVE 2.6). `equals: Object.is` mirrors
-// the hand-rolled guard; `setUnit` ALSO keeps its own manual pre-check because
-// the localStorage persist must run ONLY on an actual change (same order as
-// the original: guard → mutate → persist → notify).
-const store = createExternalStore<DisplayUnit>(readInitialUnit(), { equals: Object.is });
+// SSoT reactive + persisted value (createPersistedValue = createExternalStore + storage-utils).
+// `equals: Object.is` mirrors the hand-rolled guard. The unit is persisted as a BARE string
+// (e.g. `mm`, not JSON `"mm"`) — the serialize/deserialize codec preserves that exact legacy
+// format, and `deserialize` runs the existing `isValidDisplayUnit` validity check (unknown →
+// default), so pre-existing stored preferences hydrate unchanged.
+const store = createPersistedValue<DisplayUnit>(DISPLAY_UNIT_STORAGE_KEY, DEFAULT_DISPLAY_UNIT, {
+  equals: Object.is,
+  serialize: (unit) => unit,
+  deserialize: (raw) => (isValidDisplayUnit(raw) ? raw : DEFAULT_DISPLAY_UNIT),
+});
 
 export const displayUnitState = {
   /** Live display unit — read synchronously by the canvas render path. */
@@ -54,10 +53,7 @@ export const displayUnitState = {
    */
   setUnit(unit: DisplayUnit): void {
     if (unit === store.get()) return;
-    store.set(unit);
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(DISPLAY_UNIT_STORAGE_KEY, unit);
-    }
+    store.set(unit); // persists the bare unit string via the codec
   },
 
   /** Subscribe to unit changes (for `useSyncExternalStore`). */

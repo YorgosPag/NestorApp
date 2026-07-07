@@ -17,6 +17,7 @@
  */
 
 import type { RibbonTab } from '../types/ribbon-types';
+import { MATCH_PROPERTIES_OPEN_ACTION } from '../../../stores/MatchPropertiesDialogStore';
 
 export const MULTI_SELECTION_CONTEXTUAL_TRIGGER = 'multi-selection-bim';
 
@@ -72,6 +73,30 @@ export const CONTEXTUAL_MULTI_SELECTION_TAB: RibbonTab = {
                 id: 'multi-selection.filter',
                 labelKey: 'ribbon.panels.multiSelectionFilter',
                 commandKey: 'multi-selection.filter',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    // ADR-581 — «Αντιγραφή Ιδιοτήτων»: source = primary, targets = υπόλοιπη επιλογή.
+    {
+      id: 'multi-selection-match',
+      labelKey: 'ribbon.panels.multiSelectionMatch',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'match-properties.open',
+                labelKey: 'ribbon.commands.matchProperties',
+                tooltipKey: 'ribbon.commands.matchPropertiesTooltip',
+                icon: 'copy',
+                commandKey: MATCH_PROPERTIES_OPEN_ACTION,
+                action: MATCH_PROPERTIES_OPEN_ACTION,
               },
             },
           ],

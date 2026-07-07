@@ -22,6 +22,8 @@ import {
   type LinetypeDef,
 } from '../config/linetype-iso-catalog';
 import { createExternalStore } from './createExternalStore';
+import { createPersistedValue } from './createPersistedValue';
+import { storageRemove } from '../utils/storage-utils';
 
 type Listener = () => void;
 
@@ -48,8 +50,19 @@ let { byName: definitionsByName, order: insertionOrder } = buildIsoSeed();
 // across reload while the registry forgets the pattern → the dim renders solid
 // (a real correctness bug, not just lost UX). Firestore/`.lin` sync stays the
 // registry's later phase; this is the in-browser SSoT layer.
+//
+// SSoT persistence primitive (createPersistedValue = createExternalStore +
+// storage-utils, WAVE 2.6 migration). The persisted shape is the picked
+// `{ name, description, pattern }` triple ONLY — `id`/`origin` are re-derived
+// on hydrate, byte-identical to the hand-rolled loader. `removeOnDefault` is
+// intentionally OMITTED: it compares via `Object.is`, which never matches a
+// fresh `[]` literal against the `[]` default reference, so an always-persist
+// (`set([])` writes `"[]"` instead of removing the key) is the correct,
+// documented behaviour here — not a regression.
 
 const LS_CUSTOM_LINETYPES = 'dxf:custom-linetypes';
+
+type PersistedUserLinetype = Pick<LinetypeDef, 'name' | 'description' | 'pattern'>;
 
 /** Deterministic, ASCII, RNG-free id from a (unique) name — `ltp_<base36 hash>`. */
 function userLinetypeId(name: string): string {
@@ -58,54 +71,53 @@ function userLinetypeId(name: string): string {
   return `ltp_${Math.abs(h).toString(36)}`;
 }
 
-function loadPersistedUserLinetypes(): LinetypeDef[] {
-  if (typeof localStorage === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(LS_CUSTOM_LINETYPES);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    const out: LinetypeDef[] = [];
-    for (const entry of parsed) {
-      if (!entry || typeof entry !== 'object') continue;
-      const { name, description, pattern } = entry as Record<string, unknown>;
-      if (typeof name !== 'string' || name.length === 0) continue;
-      if (!Array.isArray(pattern) || !pattern.every((v) => typeof v === 'number' && Number.isFinite(v))) continue;
-      out.push(Object.freeze({
-        id: userLinetypeId(name),
-        name,
-        description: typeof description === 'string' ? description : '',
-        pattern: Object.freeze([...pattern]) as ReadonlyArray<number>,
-        origin: 'user-created',
-      }));
-    }
-    return out;
-  } catch {
-    return [];
+/** Hydrate-time validation — reproduces the old `Array.isArray` + per-entry guard exactly. */
+function sanitizeHydratedCustoms(hydrated: PersistedUserLinetype[]): PersistedUserLinetype[] {
+  const raw: unknown = hydrated;
+  if (!Array.isArray(raw)) return [];
+  const out: PersistedUserLinetype[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== 'object') continue;
+    const { name, description, pattern } = entry as Record<string, unknown>;
+    if (typeof name !== 'string' || name.length === 0) continue;
+    if (!Array.isArray(pattern) || !pattern.every((v) => typeof v === 'number' && Number.isFinite(v))) continue;
+    out.push({
+      name,
+      description: typeof description === 'string' ? description : '',
+      pattern: Object.freeze([...pattern]) as ReadonlyArray<number>,
+    });
   }
+  return out;
 }
 
+const customLinetypesStore = createPersistedValue<PersistedUserLinetype[]>(
+  LS_CUSTOM_LINETYPES,
+  [],
+  { validate: sanitizeHydratedCustoms },
+);
+
 function persistUserLinetypes(): void {
-  if (typeof localStorage === 'undefined') return;
-  const customs: Array<Pick<LinetypeDef, 'name' | 'description' | 'pattern'>> = [];
+  const customs: PersistedUserLinetype[] = [];
   for (const name of insertionOrder) {
     const def = definitionsByName.get(name);
     if (def && def.origin === 'user-created') {
       customs.push({ name: def.name, description: def.description, pattern: [...def.pattern] });
     }
   }
-  try {
-    if (customs.length === 0) localStorage.removeItem(LS_CUSTOM_LINETYPES);
-    else localStorage.setItem(LS_CUSTOM_LINETYPES, JSON.stringify(customs));
-  } catch {
-    // localStorage full / disabled — non-fatal (in-memory registry still holds it).
-  }
+  customLinetypesStore.set(customs);
 }
 
 // Hydrate persisted customs on top of the ISO seed, BEFORE the snapshot store is
 // built, so the very first `listLinetypes()` already exposes them.
-for (const def of loadPersistedUserLinetypes()) {
-  if (!definitionsByName.has(def.name)) {
+for (const custom of customLinetypesStore.get()) {
+  if (!definitionsByName.has(custom.name)) {
+    const def: LinetypeDef = Object.freeze({
+      id: userLinetypeId(custom.name),
+      name: custom.name,
+      description: custom.description,
+      pattern: Object.freeze([...custom.pattern]) as ReadonlyArray<number>,
+      origin: 'user-created',
+    });
     definitionsByName.set(def.name, def);
     insertionOrder.push(def.name);
   }
@@ -241,12 +253,11 @@ export function __resetLinetypeRegistryForTesting(): void {
   definitionsByName = seed.byName;
   insertionOrder = seed.order;
   // Drop any persisted user-created customs so tests start from a clean slate.
-  if (typeof localStorage !== 'undefined') {
-    try { localStorage.removeItem(LS_CUSTOM_LINETYPES); } catch { /* noop */ }
-  }
-  // NOTE: goes through `store.reset()` (no notify, drops all listeners) — NOT
-  // `rebuildSnapshot()`/`store.set()`, which would notify still-attached test
-  // listeners before clearing them (byte-identical to the original silent
+  storageRemove(LS_CUSTOM_LINETYPES);
+  // NOTE: goes through `.reset()` (no notify, drops all listeners) — NOT
+  // `persistUserLinetypes()`/`rebuildSnapshot()`, which would notify still-attached
+  // test listeners before clearing them (byte-identical to the original silent
   // `rebuildSnapshot(); subscribers.clear();` pairing).
+  customLinetypesStore.reset([]);
   store.reset(freezeSnapshot());
 }

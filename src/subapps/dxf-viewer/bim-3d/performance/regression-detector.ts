@@ -10,6 +10,9 @@
 
 import type { HudRenderMode } from './hud-render-mode';
 import { baselineTracker, type BaselineStats } from './baseline-tracker';
+// 🏢 ADR-092 — persistence via the storage-utils SSoT (SSR-safe + quota-guarded + JSON),
+// not hand-rolled getItem/Number/setItem. Non-reactive read-modify-write per call.
+import { storageGet, storageSet } from '../../utils/storage-utils';
 
 const SUSTAINED_LOW_MS = 30_000;
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -26,14 +29,11 @@ export interface RegressionAlertPayload {
 type AlertHandler = (payload: RegressionAlertPayload) => void;
 
 function readLastAlert(mode: HudRenderMode): number {
-  try {
-    const raw = localStorage.getItem(LS_LAST_ALERT_PREFIX + mode);
-    return raw ? Number(raw) : 0;
-  } catch { return 0; }
+  return storageGet<number>(LS_LAST_ALERT_PREFIX + mode, 0);
 }
 
 function writeLastAlert(mode: HudRenderMode, ts: number): void {
-  try { localStorage.setItem(LS_LAST_ALERT_PREFIX + mode, String(ts)); } catch { /* ignore */ }
+  storageSet(LS_LAST_ALERT_PREFIX + mode, ts);
 }
 
 export function createRegressionDetector(onAlert: AlertHandler) {

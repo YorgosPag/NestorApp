@@ -32,6 +32,8 @@ import {
 } from './entity-pick-handlers';
 import type { EntityPickContext } from './entity-pick-handlers';
 import { handleRotationEntitySelection, handleAutoAreaClick, handleHatchPickPointClick, handleOverlayDrawClick } from './canvas-click-tool-handlers';
+// ADR-581 — Match Properties σταγονόμετρο/σύριγγα (Alt pick / Ctrl+Alt inject / πινέλο).
+import { handleMatchBrushClick } from './match-click-handlers';
 // ADR-507 Φ3 — pick-mode SSoT (Τρόπος Α boundary ⇄ Τρόπος Β pick-point).
 import { isHatchPickPointActive } from '../../bim/hatch/hatch-pick-mode-store';
 // ADR-507 — armed «Επιλογή γραμμοσκίασης»: hatch-only pick (even-odd SSoT, world-coords).
@@ -102,11 +104,22 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     currentOverlays, handleOverlayClick,
   } = params;
   void _transform;
-  const handleCanvasClick = useCallback((worldPoint: Point2D, shiftKey: boolean = false) => {
+  const handleCanvasClick = useCallback((worldPoint: Point2D, shiftKey: boolean = false, altKey: boolean = false, ctrlKey: boolean = false) => {
     // Block interactions until viewport is ready
     if (!viewportReady) {
       dwarn('useCanvasClickHandler', 'Click blocked: viewport not ready', viewport);
       return;
+    }
+    // PRIORITY 0.45: ADR-581 — «Αντιγραφή Ιδιοτήτων» πινέλο (σταγονόμετρο/σύριγγα).
+    // Ενεργό είτε με το εργαλείο `match-properties`, είτε με Alt/Ctrl+Alt ΜΟΝΟ σε select
+    // mode (ΟΧΙ κατά τη σχεδίαση — δεν κλέβει το Alt-click των drawing tools). Το target
+    // διαβάζεται event-time από το HoverStore (ADR-040). Consume όταν βρει οντότητα.
+    {
+      const matchModifierPath = altKey && !isInteractiveTool(activeTool);
+      if ((activeTool === 'match-properties' || matchModifierPath)
+        && handleMatchBrushClick(worldPoint, altKey, ctrlKey, params)) {
+        return;
+      }
     }
     // PRIORITY 0.5: Polygon crop — accumulate click-to-add polygon point
     if (activeTool === 'polygon-crop') {

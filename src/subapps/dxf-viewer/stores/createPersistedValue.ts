@@ -33,7 +33,14 @@
  */
 
 import { createExternalStore, type ExternalStore } from './createExternalStore';
-import { storageGet, storageSet, storageRemove, type StorageKey } from '../utils/storage-utils';
+import {
+  storageGet,
+  storageSet,
+  storageRemove,
+  storageGetString,
+  storageSetString,
+  type StorageKey,
+} from '../utils/storage-utils';
 
 export interface PersistedValueOptions<T> {
   /**
@@ -50,10 +57,20 @@ export interface PersistedValueOptions<T> {
   readonly removeOnDefault?: boolean;
   /**
    * Normalise a hydrated value before it seeds the store — return the sanitised value (e.g.
-   * clamp, or fall back to `defaultValue` when non-finite). Runs ONLY on the hydrated snapshot,
-   * not on later `set`s (mutators keep their own domain validation). Defaults to identity.
+   * clamp, coerce an unknown enum to the default, or fall back when non-finite). Runs on the
+   * hydrated snapshot in BOTH the JSON and raw-string paths, not on later `set`s (mutators keep
+   * their own domain validation). Defaults to identity.
    */
   readonly validate?: (hydrated: T) => T;
+  /**
+   * Raw-string codec (Zustand-parity). Provide BOTH `serialize` and `deserialize` to persist as
+   * a BARE string instead of JSON — required to preserve a pre-existing non-JSON format (an enum
+   * literal like `'mm'`, a legacy `'1'`/`'0'` flag) so existing users' stored values still
+   * hydrate. Omit both ⇒ JSON via `storageGet`/`storageSet`. `deserialize` may throw on a corrupt
+   * value → falls back to `defaultValue` (then `validate`).
+   */
+  readonly serialize?: (value: T) => string;
+  readonly deserialize?: (raw: string) => T;
 }
 
 /**
@@ -69,16 +86,34 @@ export function createPersistedValue<T>(
   options?: PersistedValueOptions<T>,
 ): ExternalStore<T> {
   const validate = options?.validate ?? ((v: T): T => v);
-  const hydrated = validate(storageGet<T>(key, defaultValue));
+  // Raw-string codec active only when BOTH halves are supplied (preserve non-JSON formats).
+  const codec = options?.serialize && options?.deserialize
+    ? { serialize: options.serialize, deserialize: options.deserialize }
+    : null;
+
+  const hydrate = (): T => {
+    if (codec) {
+      const raw = storageGetString(key);
+      if (raw === null) return defaultValue;
+      try {
+        return codec.deserialize(raw);
+      } catch {
+        return defaultValue; // corrupt raw value → default (then validate)
+      }
+    }
+    return storageGet<T>(key, defaultValue);
+  };
 
   const store = createExternalStore<T>(
-    hydrated,
+    validate(hydrate()),
     options?.equals ? { equals: options.equals } : undefined,
   );
 
   const persist = (value: T): void => {
     if (options?.removeOnDefault && Object.is(value, defaultValue)) {
       storageRemove(key);
+    } else if (codec) {
+      storageSetString(key, codec.serialize(value));
     } else {
       storageSet(key, value);
     }

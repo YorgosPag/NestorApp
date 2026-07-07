@@ -4,6 +4,9 @@
 
 import { compareByLocale } from '@/lib/intl-formatting';
 import type { ToolType } from '../../ui/toolbar/types';
+// 🏢 ADR-092 — persistence via the storage-utils SSoT (SSR-safe + quota-guarded + JSON),
+// not hand-rolled getItem/JSON.parse/setItem. Non-reactive read-modify-write per call.
+import { storageGet, storageSet } from '../../utils/storage-utils';
 
 const LS_CUSTOM_KEY = 'dxf:customAliases';
 
@@ -206,28 +209,17 @@ let _custom: Map<string, ToolType> | null = null;
 function _loadCustom(): Map<string, ToolType> {
   if (_custom !== null) return _custom;
   _custom = new Map();
-  try {
-    const raw = localStorage.getItem(LS_CUSTOM_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Record<string, string>;
-      for (const [alias, toolId] of Object.entries(parsed)) {
-        _custom.set(alias.toUpperCase(), toolId as ToolType);
-      }
-    }
-  } catch {
-    // localStorage unavailable or corrupted
+  const parsed = storageGet<Record<string, string>>(LS_CUSTOM_KEY, {});
+  for (const [alias, toolId] of Object.entries(parsed)) {
+    _custom.set(alias.toUpperCase(), toolId as ToolType);
   }
   return _custom;
 }
 
 function _saveCustom(map: Map<string, ToolType>): void {
-  try {
-    const obj: Record<string, string> = {};
-    map.forEach((toolId, alias) => { obj[alias] = toolId; });
-    localStorage.setItem(LS_CUSTOM_KEY, JSON.stringify(obj));
-  } catch {
-    // Ignore storage errors
-  }
+  const obj: Record<string, string> = {};
+  map.forEach((toolId, alias) => { obj[alias] = toolId; });
+  storageSet(LS_CUSTOM_KEY, obj);
 }
 
 // ── Public API ───────────────────────────────────────────────────────────────

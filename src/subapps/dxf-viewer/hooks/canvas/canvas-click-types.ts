@@ -439,5 +439,6 @@ export interface UseCanvasClickHandlerParams {
 }
 
 export interface UseCanvasClickHandlerReturn {
-  handleCanvasClick: (worldPoint: Point2D, shiftKey?: boolean) => void;
+  // ADR-581 — altKey/ctrlKey για το «Αντιγραφή Ιδιοτήτων» πινέλο (σταγονόμετρο/σύριγγα).
+  handleCanvasClick: (worldPoint: Point2D, shiftKey?: boolean, altKey?: boolean, ctrlKey?: boolean) => void;
 }

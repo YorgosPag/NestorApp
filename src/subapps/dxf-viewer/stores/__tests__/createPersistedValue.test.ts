@@ -78,4 +78,45 @@ describe('createPersistedValue', () => {
     // reset does not persist — the last persisted value (4) stays untouched
     expect(JSON.parse(localStorage.getItem(KEY) as string)).toBe(4);
   });
+
+  describe('raw-string codec (serialize/deserialize)', () => {
+    it('persists a bare string (no JSON quotes) via serialize', () => {
+      const store = createPersistedValue<'mm' | 'cm'>(KEY, 'cm', {
+        serialize: (v) => v,
+        deserialize: (r) => (r === 'mm' || r === 'cm' ? r : 'cm'),
+      });
+      store.set('mm');
+      expect(localStorage.getItem(KEY)).toBe('mm'); // bare, not "\"mm\""
+    });
+
+    it('hydrates a pre-existing bare string (legacy format compat)', () => {
+      localStorage.setItem(KEY, 'mm'); // legacy raw write
+      const store = createPersistedValue<'mm' | 'cm'>(KEY, 'cm', {
+        serialize: (v) => v,
+        deserialize: (r) => (r === 'mm' || r === 'cm' ? r : 'cm'),
+      });
+      expect(store.get()).toBe('mm');
+    });
+
+    it("boolean as legacy '1'/'0' round-trips with exact format", () => {
+      const codec = {
+        serialize: (v: boolean) => (v ? '1' : '0'),
+        deserialize: (r: string) => r === '1',
+      };
+      localStorage.setItem(KEY, '1'); // legacy raw flag
+      const store = createPersistedValue<boolean>(KEY, false, { equals: Object.is, ...codec });
+      expect(store.get()).toBe(true);
+      store.set(false);
+      expect(localStorage.getItem(KEY)).toBe('0'); // exact legacy format preserved
+    });
+
+    it('corrupt raw value falls back to default (via validate)', () => {
+      localStorage.setItem(KEY, 'garbage');
+      const store = createPersistedValue<'mm' | 'cm'>(KEY, 'cm', {
+        serialize: (v) => v,
+        deserialize: (r) => (r === 'mm' || r === 'cm' ? r : 'cm'),
+      });
+      expect(store.get()).toBe('cm');
+    });
+  });
 });

@@ -10,6 +10,10 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { createExternalStore } from '../../stores/createExternalStore';
+// 🏢 ADR-092 — raw-string persistence via the storage-utils SSoT (SSR/quota-safe), not
+// hand-rolled getItem/setItem. Only the `mode` field persists (bare string), so this uses the
+// raw string accessors rather than createPersistedValue (state here is a composite object).
+import { storageGetString, storageSetString } from '../../utils/storage-utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,24 +43,16 @@ type Listener = () => void;
 const STORAGE_KEY = 'dxf:xlineMode.lastUsed';
 
 function loadPersistedMode(): XLineMode {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw === 'through' || raw === 'horizontal' || raw === 'vertical' ||
-        raw === 'angle'   || raw === 'bisect'     || raw === 'offset') {
-      return raw;
-    }
-  } catch {
-    // localStorage unavailable (SSR / private browsing)
+  const raw = storageGetString(STORAGE_KEY);
+  if (raw === 'through' || raw === 'horizontal' || raw === 'vertical' ||
+      raw === 'angle'   || raw === 'bisect'     || raw === 'offset') {
+    return raw;
   }
   return 'through';
 }
 
 function persistMode(mode: XLineMode): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, mode);
-  } catch {
-    // ignore
-  }
+  storageSetString(STORAGE_KEY, mode);
 }
 
 // ─── Internal mutable state ───────────────────────────────────────────────────

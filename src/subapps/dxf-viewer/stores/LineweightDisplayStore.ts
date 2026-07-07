@@ -25,16 +25,15 @@ const LS_SHOW_LINEWEIGHT = 'dxf:showLineweight';
 
 // SSoT reactive + persisted value (createPersistedValue = createExternalStore + storage-utils).
 // `equals: Object.is` reproduces the hand-rolled `if (next === showLineweight) return` identity
-// guard; `removeOnDefault` mirrors the old `removeItem` on DEFAULT. NOTE on format: the
-// hand-rolled version wrote raw `'1'`/`'0'` (NOT JSON `true`/`false`); storage-utils always
-// JSON-parses, so a legacy `'1'`/`'0'` hydrates as the NUMBER `1`/`0`, not a boolean — `validate`
-// coerces that (and any other truthy/falsy legacy value) back to a real boolean so existing
-// users' persisted flag still reads correctly. Forward writes now serialize as JSON
-// `true`/`false` (one-way, non-breaking upgrade — still valid JSON on re-read).
+// guard; `removeOnDefault` mirrors the old `removeItem` on DEFAULT. The hand-rolled version
+// persisted the flag as a RAW `'1'`/`'0'` string (not JSON) — the serialize/deserialize codec
+// preserves that EXACT format byte-for-byte, so existing users' stored flag hydrates unchanged
+// and no storage-format migration is introduced.
 const store = createPersistedValue<boolean>(LS_SHOW_LINEWEIGHT, DEFAULT_SHOW_LINEWEIGHT, {
   equals: Object.is,
   removeOnDefault: true,
-  validate: (v) => (v === true || v === false ? v : Boolean(v)),
+  serialize: (v) => (v ? '1' : '0'),
+  deserialize: (raw) => raw === '1',
 });
 
 // ─── Snapshot getter (useSyncExternalStore-compatible) ───────────────────────

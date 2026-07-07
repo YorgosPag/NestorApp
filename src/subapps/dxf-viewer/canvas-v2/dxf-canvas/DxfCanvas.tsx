@@ -67,7 +67,7 @@ interface DxfCanvasProps {
   onEntitySelect?: (entityId: string | null) => void;
   onMouseMove?: (screenPos: Point2D, worldPos: Point2D) => void;
   onWheelZoom?: (wheelDelta: number, center: Point2D) => void;
-  onCanvasClick?: (point: Point2D, shiftKey?: boolean) => void;
+  onCanvasClick?: (point: Point2D, shiftKey?: boolean, altKey?: boolean, ctrlKey?: boolean) => void;
   onContextMenu?: (e: React.MouseEvent) => void;
   onLayerSelected?: (layerId: string, position: Point2D) => void;
   onMultiLayerSelected?: (layerIds: string[]) => void;

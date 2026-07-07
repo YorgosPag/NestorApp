@@ -42,6 +42,8 @@ import { isBeamActionKey } from './bridge/beam-command-keys';
 import { isFoundationActionKey } from './bridge/foundation-command-keys';
 import { isSlabOpeningActionKey } from './bridge/slab-opening-command-keys';
 import { isContextualTabCloseAction } from './bridge/contextual-tab-close';
+// ADR-581 — «Αντιγραφή Ιδιοτήτων» dialog open (dependency-free early intercept).
+import { MatchPropertiesDialogStore, MATCH_PROPERTIES_OPEN_ACTION } from '../../../stores/MatchPropertiesDialogStore';
 
 // ADR-363 — «Κλείσιμο» SSoT predicate lives in a dependency-free module so it
 // is unit-testable without the heavy bridge import graph. Re-exported here for
@@ -104,6 +106,11 @@ export function routeRibbonAction(
   // and no-op). Reuses the single working primitive `clearAll()`.
   if (isContextualTabCloseAction(action)) {
     bridges.closeContextualTab();
+    return;
+  }
+  // ADR-581 — άνοιγμα του «Αντιγραφή Ιδιοτήτων» dialog (source=primary, targets=rest).
+  if (action === MATCH_PROPERTIES_OPEN_ACTION) {
+    MatchPropertiesDialogStore.open();
     return;
   }
   if (isWallActionKey(action)) {

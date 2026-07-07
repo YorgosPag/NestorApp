@@ -191,7 +191,7 @@ interface DxfCanvasSubscriberProps {
   onGripMouseDown?: (worldPos: Point2D) => boolean;
   onGripMouseUp?: (worldPos: Point2D) => boolean;
   onContextMenu?: (e: React.MouseEvent) => void;
-  onCanvasClick?: (point: Point2D, shiftKey?: boolean) => void;
+  onCanvasClick?: (point: Point2D, shiftKey?: boolean, altKey?: boolean, ctrlKey?: boolean) => void;
   onTransformChange?: (transform: ViewTransform) => void;
   onWheelZoom?: (wheelDelta: number, center: Point2D) => void;
   onMouseMove?: (screenPos: Point2D, worldPos: Point2D) => void;

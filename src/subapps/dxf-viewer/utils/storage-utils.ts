@@ -172,6 +172,47 @@ export function storageHas(key: StorageKey): boolean {
   }
 }
 
+/**
+ * 🏢 Get a RAW string value from localStorage (no JSON parse) — SSR/quota-safe.
+ *
+ * For values persisted as bare strings (not JSON), e.g. an enum literal `'mm'` or a
+ * legacy `'1'`/`'0'` flag. Pairs with `storageSetString`. Prefer `storageGet` (JSON)
+ * for structured data; use this only to preserve a pre-existing raw-string format.
+ *
+ * @returns the stored string, or `null` if absent / storage unavailable.
+ */
+export function storageGetString(key: StorageKey): string | null {
+  if (!isStorageAvailable()) return null;
+
+  try {
+    return localStorage.getItem(key);
+  } catch (error) {
+    dwarn('Storage', `Failed to get string "${key}":`, error);
+    return null;
+  }
+}
+
+/**
+ * 🏢 Set a RAW string value to localStorage (no JSON stringify) — SSR/quota-safe.
+ *
+ * @returns true if successful, false on error.
+ */
+export function storageSetString(key: StorageKey, value: string): boolean {
+  if (!isStorageAvailable()) return false;
+
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+      derr('Storage', `Quota exceeded for "${key}"`);
+    } else {
+      dwarn('Storage', `Failed to set string "${key}":`, error);
+    }
+    return false;
+  }
+}
+
 // ============================================================================
 // STORAGE MANAGER CLASS (existing functionality)
 // ============================================================================
