@@ -2277,6 +2277,8 @@
       },
       "select": "Select",
       "gripEdit": "Grip Edit",
+      "matchSyringe": "Match Properties",
+      "matchSyringeTooltip": "Property syringe: click a source entity to pick up its properties, then click targets to apply them in sequence.",
       "move": "Move",
       "copy": "Copy",
       "rotate": "Rotate",

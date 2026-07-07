@@ -65,3 +65,8 @@ export {
   isParamsCommandKind,
   type ParamsPatch,
 } from './match-params-command-builder';
+
+export {
+  buildMatchPreviewEntity,
+  recomputeParametricGeometry,
+} from './match-preview-entity';
