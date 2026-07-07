@@ -33,6 +33,10 @@ import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 // ADR-557 — whole-entity move paints resolve #1's PUBLISHED tracking (same store useDimGripGhostPreview
 // paints for dims) instead of a divergent local re-resolve on the post-OSNAP-override cursor.
 import { getGripAlignmentTracking } from '../../systems/cursor/GripAlignmentTrackingStore';
+// 🔬 TEMP DIAGNOSTIC (2026-07-07, ADR-557) — MTEXT whole-move κυανό αόρατο. Μετρά αν το
+// `path.origin` (winning anchor) βγαίνει NaN / off-screen / on-screen-finite. ΑΦΑΙΡΕΙΤΑΙ μετά.
+import { isFinitePoint } from '../../config/geometry-constants';
+let __mtDiagFrame = 0;
 
 /**
  * ADR-508 §move-clearance — κυανές neighbor-clearance listening dims κατά το grip-drag: ΤΟ ΙΔΙΟ
@@ -141,6 +145,28 @@ export function paintGripActionAlignmentTraces(
   // DISCRETE OSNAP wins, so OSNAP priority still holds (null store → no cyan on those frames).
   if (role.movesEntity && !role.isRotation && role.anchorPos) {
     const published = getGripAlignmentTracking();
+    // 🔬 TEMP DIAGNOSTIC (2026-07-07) — για text/mtext, throttled, καταγράφει το winning
+    // `path.origin` (world) + το projected screen + finiteness + vp bounds ώστε να διαχωρίσει
+    // οριστικά NaN vs off-screen vs on-screen-finite. ΑΦΑΙΡΕΙΤΑΙ μετά τη μέτρηση.
+    if ((entity.type === 'text' || entity.type === 'mtext') && (__mtDiagFrame++ % 10 === 0)) {
+      const path0 = published?.result?.activePaths?.[0] ?? null;
+      const originW = path0?.origin ?? null;
+      const originS = originW ? CoordinateTransforms.worldToScreen(originW, t, vp) : null;
+      // eslint-disable-next-line no-console
+      console.log('[MTDIAG]', {
+        type: entity.type,
+        hasPublished: !!published,
+        activePaths: published?.result?.activePaths?.length ?? -1,
+        originWorld: originW,
+        originWorldFinite: originW ? isFinitePoint(originW) : null,
+        originScreen: originS,
+        originScreenFinite: originS ? isFinitePoint(originS) : null,
+        vp: { width: vp.width, height: vp.height },
+        onScreen: originS
+          ? originS.x >= 0 && originS.x <= vp.width && originS.y >= 0 && originS.y <= vp.height
+          : null,
+      });
+    }
     if (published) paintActionAlignmentTracking(ctx, published, t, vp, sceneUnits);
     return;
   }
