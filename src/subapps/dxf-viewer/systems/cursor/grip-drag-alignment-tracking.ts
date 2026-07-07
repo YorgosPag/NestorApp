@@ -58,7 +58,11 @@ export function applyGripDragAlignmentTracking(
     // ADR-560 — blur-proof altMove via the SSoT resolver (`isActiveGripAltMove`): prefers the
     // baked flag over the live `GripAltMoveStore` that the Windows Alt→blur clears mid-drag. ONE
     // resolver shared with the OSNAP corner-projection so the two paths can never disagree.
-    if (isActiveGripAltMove() && dimGrip.dragAnchor) {
+    // ADR-557 — ΚΑΘΕ whole-entity MOVE (Alt move-from-base Ή ένα `movesEntity` grip: text/mtext
+    // centre-move hot-grip, column-center, group gizmo, line MOVE-cross/midpoint) → base-point
+    // tracking. Το text-move ΔΕΝ είναι γραμμή ούτε Alt, οπότε έπεφτε στο null → ΚΑΝΕΝΑ κυανό/polar
+    // ίχνος· τώρα το `movesEntity` flag το εντάσσει στο ΙΔΙΟ base-point brain, entity-agnostic.
+    if ((isActiveGripAltMove() || dimGrip.movesEntity === true) && dimGrip.dragAnchor) {
       return resolveBasePointTracking(moved, dimGrip.dragAnchor, scene, transformScale);
     }
     // ADR-357/363 — plain DXF LINE grip drag (χωρίς Alt): anchors per grip (fixed endpoint / move

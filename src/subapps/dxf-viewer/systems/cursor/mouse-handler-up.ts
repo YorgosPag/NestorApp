@@ -237,6 +237,18 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
             if (dimTracking) upWorldPos = dimTracking.point;
           }
           clearGripAlignmentTracking();
+        } else if (dimGrip && (isActiveGripAltMove() || dimGrip.movesEntity === true) && dimGrip.dragAnchor) {
+          // ADR-557/560 — commit parity for ANY whole-entity MOVE (Alt move-from-base OR a
+          // `movesEntity` centre grip: text/mtext/column/group hot-grip move, line MOVE-cross). SAME
+          // base-point resolve as the live ghost (`grip-drag-alignment-tracking`) so the committed
+          // position lands EXACTLY where the cyan/Polar trace snapped (WYSIWYG). Fixes the text move
+          // that previously fell through to the line-only branch → no snap. Traces cleared once consumed.
+          const bpTracking = resolveActionAlignmentTracking(
+            upWorldPos, [dimGrip.dragAnchor], transform.scale,
+            (scene?.entities ?? null) as unknown as readonly Entity[] | null,
+          );
+          if (bpTracking) upWorldPos = bpTracking.point;
+          clearGripAlignmentTracking();
         } else if (dimGrip) {
           // ADR-357/363 — commit parity for a plain-line grip: SAME resolver + anchors as the
           // live move override so the committed endpoint / whole line lands EXACTLY where the

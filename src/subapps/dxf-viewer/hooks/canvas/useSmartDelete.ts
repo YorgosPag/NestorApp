@@ -53,6 +53,10 @@ import type { SlabEntity } from '../../bim/types/slab-types';
 import { removeVertexFromRoof } from '../../bim/roofs/roof-grips';
 import { UpdateRoofParamsCommand } from '../../core/commands/entity-commands/UpdateRoofParamsCommand';
 import type { RoofEntity } from '../../bim/types/roof-types';
+// ADR-507 / ADR-501 EXT — hatch boundary vertex delete: hovered single (reuse the context-menu
+// SSoT builder) + armed/marquee bulk (GripArmedStore → one CompoundCommand, single undo).
+import { GripArmedStore } from '../../systems/grip/GripArmedStore';
+import { buildHatchVertexOpCommand, buildArmedHatchVertexDeleteCommand } from '../../systems/grip/hatch-grip-ops';
 import type { SelectedGrip, UnifiedGripInfo } from '../grips/unified-grip-types';
 import type { useOverlayStore } from '../../overlays/overlay-store';
 import type { UniversalSelectionHook } from '../../systems/selection/SelectionSystem';
@@ -173,6 +177,34 @@ export function useSmartDelete({
             }
           }
         }
+      }
+    }
+
+    // PRIORITY 0.5c: ADR-507 — Delete a hovered hatch boundary vertex (mirror slab/roof).
+    // Reuses the SAME context-menu SSoT builder (`buildHatchVertexOpCommand`) → identical
+    // remove-vertex semantics (min-triangle guard) whether triggered by menu or Delete key.
+    if (hoveredDxfGrip?.hatchGripKind?.startsWith('hatch-vertex-') && hoveredDxfGrip.entityId && levelManager.currentLevelId) {
+      const adapter = createLevelSceneManagerAdapter(
+        levelManager.getLevelScene, levelManager.setLevelScene, levelManager.currentLevelId,
+      );
+      const command = buildHatchVertexOpCommand(hoveredDxfGrip, 'remove-vertex', adapter);
+      if (command) { executeCommand(command); return true; }
+    }
+
+    // PRIORITY 0.6: ADR-501 EXT — BULK delete of armed/marquee-selected hatch vertices.
+    // Both selection paths (marquee `armMany` + Shift-click `toggle`) publish to
+    // `GripArmedStore`; here Delete removes ALL armed boundary vertices in ONE undo step
+    // (grouped per hatch, ≥3-per-ring guard). Must precede the entity-delete tiers below so
+    // arming vertices deletes the VERTICES, not the whole hatch. Non-hatch armed grips → skip.
+    if (GripArmedStore.size > 0 && levelManager.currentLevelId) {
+      const adapter = createLevelSceneManagerAdapter(
+        levelManager.getLevelScene, levelManager.setLevelScene, levelManager.currentLevelId,
+      );
+      const command = buildArmedHatchVertexDeleteCommand(GripArmedStore.getRefsSnapshot(), adapter);
+      if (command) {
+        executeCommand(command);
+        GripArmedStore.clear();
+        return true;
       }
     }
 

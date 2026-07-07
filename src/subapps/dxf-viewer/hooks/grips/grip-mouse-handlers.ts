@@ -306,6 +306,10 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
         // whole-line translate lights up the same Object-Snap-Tracking traces (anchor = base).
         gripIndex: nearGrip.gripIndex,
         lineGripKind: nearGrip.lineGripKind ?? null,
+        // ADR-557/560 — whole-entity MOVE hot-grip (text/mtext/column/group centre-move): flag it so
+        // the base-point AutoAlign (cyan + Polar traces) fires once the base is picked, entity-agnostic.
+        // The base point (dragAnchor) arrives later via `setActiveDragGripAnchor` (2nd click).
+        movesEntity: nearGrip.movesEntity === true,
       });
       GripSessionUndoStore.markSessionStart(getGlobalCommandHistory().size());
       return true;
@@ -337,6 +341,10 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
       // end / whole line tracks off the fixed end / base point ⊕ ambient neighbours.
       gripIndex: nearGrip.gripIndex,
       lineGripKind: nearGrip.lineGripKind ?? null,
+      // ADR-557/560 — whole-entity MOVE press-drag grip (e.g. circle-center, or any non-line mover):
+      // flag it so the base-point AutoAlign traces fire, entity-agnostic. Line midpoint/MOVE-cross
+      // (`movesEntity` too) already tracked via the line branch — this keeps every mover consistent.
+      movesEntity: nearGrip.movesEntity === true,
     });
     // ADR-357 Phase 12 — mark the start of the grip-hot session so the
     // right-click `Undo` extra can bound the global CommandHistory to

@@ -9,7 +9,7 @@ import {
   isHatchAngleGripKind, hatchGradientAngleGripPos, applyHatchAngleGripDrag,
   HATCH_GRADIENT_ANGLE_KIND,
   getHatchEdgeMidpointGrips, decodeHatchEdgeMidpointGripKind,
-  insertHatchVertexOnEdge, removeVertexFromHatch,
+  insertHatchVertexOnEdge, removeVertexFromHatch, removeVerticesFromHatch,
 } from '../hatch-grips';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { HatchGripKind } from '../../../hooks/grip-types';
@@ -203,6 +203,55 @@ describe('removeVertexFromHatch', () => {
     const result = removeVertexFromHatch([OUTER, island5], 1, 1);
     expect(result[0]).toEqual(OUTER);
     expect(result[1]).toHaveLength(island5.length - 1);
+  });
+});
+
+describe('removeVerticesFromHatch — bulk delete of armed vertices', () => {
+  const HEX: Point2D[] = [
+    { x: 0, y: 0 }, { x: 100, y: 0 }, { x: 150, y: 80 },
+    { x: 100, y: 160 }, { x: 0, y: 160 }, { x: -50, y: 80 },
+  ];
+
+  it('removes several vertices of one ring at once', () => {
+    const result = removeVerticesFromHatch([HEX], [
+      { pathIdx: 0, vertexIdx: 1 }, { pathIdx: 0, vertexIdx: 3 },
+    ]);
+    expect(result[0]).toHaveLength(HEX.length - 2);
+    expect(result[0]).not.toContainEqual({ x: 100, y: 0 });
+    expect(result[0]).not.toContainEqual({ x: 100, y: 160 });
+  });
+
+  it('removes across multiple rings independently', () => {
+    const island: Point2D[] = [...HEX];
+    const result = removeVerticesFromHatch([HEX, island], [
+      { pathIdx: 0, vertexIdx: 0 }, { pathIdx: 1, vertexIdx: 2 },
+    ]);
+    expect(result[0]).toHaveLength(HEX.length - 1);
+    expect(result[1]).toHaveLength(island.length - 1);
+  });
+
+  it('never drops a ring below the minimum triangle (removes as many as it can)', () => {
+    // Request all 6 vertices → only 3 can go, exactly a triangle survives.
+    const result = removeVerticesFromHatch([HEX], HEX.map((_, i) => ({ pathIdx: 0, vertexIdx: i })));
+    expect(result[0]).toHaveLength(3);
+  });
+
+  it('no-op (original reference) when the ring is already a triangle', () => {
+    const tri = [ISLAND];
+    expect(removeVerticesFromHatch(tri, [{ pathIdx: 0, vertexIdx: 0 }])).toBe(tri);
+  });
+
+  it('no-op on empty targets / out-of-range ring', () => {
+    const original = [HEX];
+    expect(removeVerticesFromHatch(original, [])).toBe(original);
+    expect(removeVerticesFromHatch(original, [{ pathIdx: 5, vertexIdx: 0 }])).toBe(original);
+  });
+
+  it('deduplicates repeated targets (same vertex twice removes once)', () => {
+    const result = removeVerticesFromHatch([HEX], [
+      { pathIdx: 0, vertexIdx: 2 }, { pathIdx: 0, vertexIdx: 2 },
+    ]);
+    expect(result[0]).toHaveLength(HEX.length - 1);
   });
 });
 

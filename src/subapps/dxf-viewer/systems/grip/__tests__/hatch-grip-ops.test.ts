@@ -6,10 +6,11 @@
  * guard, wrong op/kind pairings, and non-hatch / missing inputs (all → null, no command).
  */
 
-import { buildHatchVertexOpCommand } from '../hatch-grip-ops';
+import { buildHatchVertexOpCommand, buildArmedHatchVertexDeleteCommand } from '../hatch-grip-ops';
 import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
 import type { UnifiedGripInfo } from '../../../hooks/grips/unified-grip-types';
 import type { ISceneManager } from '../../../core/commands/interfaces';
+import type { GripRef } from '../../../rendering/grips/grip-temperature';
 
 jest.mock('../../../core/commands/entity-commands/UpdateEntityCommand', () => ({
   UpdateEntityCommand: jest.fn().mockImplementation((id, patch) => ({
@@ -64,5 +65,50 @@ describe('buildHatchVertexOpCommand', () => {
     expect(buildHatchVertexOpCommand(grip('hatch-vertex-0-0'), 'remove-vertex', sm({ id: 'h1', type: 'line' }))).toBeNull();
     expect(buildHatchVertexOpCommand({ entityId: 'h1' } as UnifiedGripInfo, 'remove-vertex', sm(HATCH))).toBeNull();
     expect(buildHatchVertexOpCommand(grip('hatch-vertex-0-0'), 'remove-vertex', sm(null))).toBeNull();
+  });
+});
+
+describe('buildArmedHatchVertexDeleteCommand (bulk delete of armed vertices)', () => {
+  // 5-vertex hatch → gripIndex 0..4 = vertices, 5..9 = edge-midpoints.
+  const PENTA = {
+    id: 'h1', type: 'hatch',
+    boundaryPaths: [[{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 150, y: 80 }, { x: 100, y: 160 }, { x: 0, y: 160 }]],
+  };
+  function ref(entityId: string, gripIndex: number): GripRef {
+    return { entityId, gripIndex };
+  }
+  // A scene manager that resolves several entities by id.
+  function multiSm(...entities: unknown[]): ISceneManager {
+    return {
+      getEntity: (id: string) => entities.find((e) => e && (e as { id: string }).id === id),
+    } as unknown as ISceneManager;
+  }
+
+  it('removes all armed VERTEX grips of a hatch in one command (indices → ring vertices)', () => {
+    const cmd = buildArmedHatchVertexDeleteCommand([ref('h1', 1), ref('h1', 3)], multiSm(PENTA));
+    expect(cmd).not.toBeNull();
+    expect(lastPatch().boundaryPaths[0]).toHaveLength(3);
+    expect(lastPatch().boundaryPaths[0]).not.toContainEqual({ x: 100, y: 0 });
+    expect(lastPatch().boundaryPaths[0]).not.toContainEqual({ x: 100, y: 160 });
+  });
+
+  it('ignores armed edge-midpoint grips (gripIndex ≥ vertex count) — not deletable', () => {
+    // gripIndex 5,6 = edge-midpoints on a 5-vertex hatch → nothing removable → null.
+    expect(buildArmedHatchVertexDeleteCommand([ref('h1', 5), ref('h1', 6)], multiSm(PENTA))).toBeNull();
+    expect((UpdateEntityCommand as jest.Mock).mock.calls.length).toBe(0);
+  });
+
+  it('groups armed grips across multiple hatches → one command each (CompoundCommand)', () => {
+    const other = { id: 'h2', type: 'hatch', boundaryPaths: PENTA.boundaryPaths };
+    const cmd = buildArmedHatchVertexDeleteCommand(
+      [ref('h1', 0), ref('h2', 2)], multiSm(PENTA, other),
+    );
+    expect(cmd).not.toBeNull();
+    expect((UpdateEntityCommand as jest.Mock).mock.calls.length).toBe(2);
+  });
+
+  it('non-hatch armed entity or empty refs → null', () => {
+    expect(buildArmedHatchVertexDeleteCommand([ref('x', 0)], multiSm({ id: 'x', type: 'line' }))).toBeNull();
+    expect(buildArmedHatchVertexDeleteCommand([], multiSm(PENTA))).toBeNull();
   });
 });

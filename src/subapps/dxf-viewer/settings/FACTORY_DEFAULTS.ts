@@ -157,31 +157,15 @@ const TEXT_COMPLETION_DEFAULTS = {
 // GRIP SETTINGS DEFAULTS
 // ============================================================================
 
+// 🏢 ADR-559 §3b — DERIVED from canonical GRIP_FACTORY_DEFAULTS (aperture 20, warm ροζ,
+// sentinel cold). Only the legacy-compat flat fields (size/color/hoverColor) + shape are
+// added on top as a projection — the VALUES live once in config/grip-factory-defaults.ts.
 const GRIP_DEFAULTS = {
-  enabled: true,                // ✅ FIX: Added enabled property (for LinePreview)
-  gripSize: GRIP_SIZE_DEFAULT,  // 🏢 SSoT base grip size (AutoCAD GRIPSIZE = 7)
-  size: GRIP_SIZE_DEFAULT,      // ✅ ENTERPRISE FIX: Add backward compatibility (mirrors gripSize)
-  color: GRIP_COLD_COLOR,                  // SSOT → color-config.ts
-  hoverColor: GRIP_WARM_COLOR,            // SSOT → color-config.ts (orange hover, Giorgio 2026-06-17)
-  pickBoxSize: 3,               // ✅ FIX: Added pickBoxSize (AutoCAD PICKBOX default: 3 DIP)
-  apertureSize: 10,             // ✅ FIX: Added apertureSize (AutoCAD APERTURE default: 10 pixels)
-  colors: {                     // ✅ FIX: changed from flat color/hoverColor to nested structure
-    cold: null,                           // Sentinel: null → GRIP_COLD_COLOR at render time
-    warm: GRIP_WARM_COLOR,                // SSOT → color-config.ts (orange, hover)
-    hot: GRIP_HOT_COLOR,                  // SSOT → color-config.ts (red, selected) — was ACI_PALETTE[1]
-    contour: UI_COLORS.BLACK              // Black contour
-  },
-  shape: 'square' as const,     // Square (CAD standard)
-  opacity: 1.0,
-  showAperture: true,           // ✅ FIX: Added showAperture (AutoCAD APBOX default: enabled)
-  multiGripEdit: true,          // ✅ FIX: Added multiGripEdit (multi-grip editing enabled)
-  snapToGrips: true,            // ✅ FIX: Added snapToGrips (snap to grips enabled)
-  showMidpoints: true,          // ✅ FIX: Added showMidpoints (show midpoint grips)
-  showCenters: true,            // ✅ FIX: Added showCenters (show center grips)
-  showQuadrants: true,          // ✅ FIX: Added showQuadrants (show quadrant grips)
-  maxGripsPerEntity: 50,        // ✅ FIX: Added maxGripsPerEntity (default max grips)
-  gripObjLimit: 100,            // ✅ AutoCAD GRIPOBJLIMIT — hide all grips above this selection count (0 = no limit)
-  showGrips: true               // ✅ FIX: Added showGrips (grip visibility toggle)
+  ...GRIP_FACTORY_DEFAULTS,
+  size: GRIP_FACTORY_DEFAULTS.gripSize,          // backward-compat mirror of gripSize
+  color: GRIP_COLD_COLOR,                        // legacy flat cold colour (for LinePreview)
+  hoverColor: GRIP_FACTORY_DEFAULTS.colors.warm, // legacy flat warm colour
+  shape: 'square' as const                       // Square (CAD standard)
 };
 
 const GRIP_DRAFT_DEFAULTS = {

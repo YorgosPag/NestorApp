@@ -274,6 +274,47 @@ export function removeVertexFromHatch(
   );
 }
 
+/** A boundary-vertex delete target: which ring + which vertex. */
+export interface HatchVertexTarget {
+  readonly pathIdx: number;
+  readonly vertexIdx: number;
+}
+
+/**
+ * Pure: remove MANY boundary vertices at once (bulk Delete of armed/selected grips).
+ * Per ring, removes the requested vertices in descending index order but STOPS at the
+ * minimum triangle — a ring never drops below 3 vertices (removes as many as it can).
+ * Returns the ORIGINAL array reference (no-op signal) when nothing could be removed.
+ * Shared by the armed-grip bulk delete (`buildArmedHatchVertexDeleteCommand`).
+ */
+export function removeVerticesFromHatch(
+  boundaryPaths: ReadonlyArray<ReadonlyArray<Point2D>>,
+  targets: ReadonlyArray<HatchVertexTarget>,
+): Point2D[][] {
+  const byRing = new Map<number, number[]>();
+  for (const t of targets) {
+    if (t.pathIdx < 0 || t.pathIdx >= boundaryPaths.length) continue;
+    const list = byRing.get(t.pathIdx) ?? [];
+    list.push(t.vertexIdx);
+    byRing.set(t.pathIdx, list);
+  }
+  let changed = false;
+  const next = boundaryPaths.map((ring, p) => {
+    const idxs = byRing.get(p);
+    const result: Point2D[] = ring.map((v) => ({ x: v.x, y: v.y }));
+    if (!idxs || idxs.length === 0) return result;
+    // Unique, in-range, descending → splicing a higher index never shifts a lower one.
+    const sorted = [...new Set(idxs)].filter((i) => i >= 0 && i < ring.length).sort((a, b) => b - a);
+    for (const i of sorted) {
+      if (result.length <= MIN_RING_VERTICES) break; // keep the minimum triangle
+      result.splice(i, 1);
+      changed = true;
+    }
+    return result;
+  });
+  return changed ? next : (boundaryPaths as Point2D[][]);
+}
+
 /**
  * Pure transform: hatch grip kind + drag input → new `boundaryPaths`. Returns the
  * ORIGINAL array reference unchanged on out-of-range index or zero delta (no-op

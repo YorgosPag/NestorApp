@@ -48,6 +48,15 @@ export interface ActiveDragGripInfo {
    * a column/wall/any Alt-move keeps its base-point tracking. Set only when the drag armed with Alt.
    */
   altMove?: boolean;
+  /**
+   * ADR-557/560 — whole-entity MOVE grip flag (the grabbed grip's `movesEntity`). Set for EVERY
+   * move grip — the line MOVE-cross / midpoint, the column-center, and (the gap this fixes) the
+   * text/mtext/group centre-MOVE hot-grip — so the AutoAlign resolve treats ANY whole-entity move
+   * as a base-point track (cyan neighbour pull + AutoAlign + Polar traces from the base), exactly
+   * like the plain-line midpoint move already did. Without it a text drag showed NO traces (it is
+   * neither a line grip nor an Alt-move). Entity-agnostic — one base-point brain for every mover.
+   */
+  movesEntity?: boolean;
 }
 
 let activeDragGrip: ActiveDragGripInfo | null = null;
