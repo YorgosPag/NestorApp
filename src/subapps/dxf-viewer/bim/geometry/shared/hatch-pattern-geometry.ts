@@ -415,3 +415,22 @@ export function hatchMinWorldSpacing(
   }
   return hatch.lineSpacing ?? hatch.patternScale ?? DEFAULT_HATCH_LINE_SPACING_MM;
 }
+
+/**
+ * Ο `patternScale` (×) ώστε ένα **predefined** μοτίβο να έχει ορατή απόσταση γραμμών
+ * `desiredMm` σε world mm. Big-player παράλληλο: το «έτοιμο μοτίβο» δεν έχει «απόσταση»
+ * — μόνο κλίμακα (AutoCAD/Revit)· εδώ αντιστρέφουμε το `hatchMinWorldSpacing` (που είναι
+ * γραμμικό στο `patternScale`) ώστε ο χρήστης να δίνει «Απόσταση σε mm» και να μεταφράζεται
+ * αυτόματα σε κλίμακα (ADR-507). Reuse του ΙΔΙΟΥ `hatchMinWorldSpacing` — μηδέν νέα pattern math.
+ *
+ * Επιστρέφει 1 όταν το μοτίβο/απόσταση είναι εκφυλισμένα (δεν υπάρχει έγκυρη πυκνότητα).
+ */
+export function patternScaleForSpacingMm(
+  patternName: string | undefined, desiredMm: number,
+): number {
+  if (desiredMm <= 0) return 1;
+  // world min-spacing σε patternScale=1 → γραμμικός συντελεστής (spacing = unit × scale).
+  const unit = hatchMinWorldSpacing({ fillType: 'predefined', patternName, patternScale: 1 });
+  if (unit <= EPS) return 1;
+  return desiredMm / unit;
+}

@@ -62,9 +62,13 @@ export interface HatchDrawDefaults {
   readonly gradientShift: number;
 }
 
-/** Εργοστασιακές προεπιλογές — συμπαγής γκρι poché (η συνηθέστερη χρήση). */
+/**
+ * Εργοστασιακές προεπιλογές — «γραμμές» (user-defined) διαγώνιες 45° / 100 mm
+ * (Giorgio 2026-07-07, ADR-507): η συνηθέστερη αρχιτεκτονική γραμμοσκίαση ξεκινά ως
+ * παράλληλες διαγώνιες γραμμές, όχι συμπαγές γέμισμα.
+ */
 const DEFAULT_HATCH_DRAW_DEFAULTS: HatchDrawDefaults = {
-  fillType: 'solid',
+  fillType: 'user-defined',
   fillColor: '#808080',
   lineAngle: 45,
   lineSpacing: 100,

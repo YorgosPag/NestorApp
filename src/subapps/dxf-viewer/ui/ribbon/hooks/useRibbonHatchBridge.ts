@@ -40,6 +40,11 @@ import {
   type HatchPickMode,
 } from '../../../bim/hatch/hatch-pick-mode-store';
 import { computeHatchAreaMm2 } from '../../../bim/hatch/hatch-completion';
+// ADR-507 — mode-aware «Απόσταση» στο «έτοιμο μοτίβο»: world min-spacing ⇄ patternScale (SSoT).
+import {
+  hatchMinWorldSpacing,
+  patternScaleForSpacingMm,
+} from '../../../bim/geometry/shared/hatch-pattern-geometry';
 // Area readout SSoT (ADR-462) — locale + display-unit aware (μηδέν δικό μου format).
 import { formatAreaForDisplay } from '../../../config/display-length-format';
 // ADR-507 — «Επιλογή γραμμοσκίασης» (armed pick-existing) mode SSoT.
@@ -218,7 +223,13 @@ export function useRibbonHatchBridge(
           return { value: String(hatch?.gapTolerance ?? defaults.gapTolerance), options: [] };
         }
         if (commandKey === HATCH_RIBBON_KEYS.params.lineAngle) {
-          return { value: String(hatch?.lineAngle ?? defaults.lineAngle), options: [] };
+          // «Γωνία»: στο «έτοιμο μοτίβο» οδηγεί το patternAngle (ο predefined renderer
+          // αγνοεί το lineAngle)· αλλιώς το lineAngle (user-defined).
+          const isPredef = (hatch?.fillType ?? defaults.fillType) === 'predefined';
+          const angle = isPredef
+            ? (hatch?.patternAngle ?? defaults.patternAngle)
+            : (hatch?.lineAngle ?? defaults.lineAngle);
+          return { value: String(angle), options: [] };
         }
         if (commandKey === HATCH_RIBBON_KEYS.params.patternScale) {
           return { value: String(hatch?.patternScale ?? defaults.patternScale), options: [] };
@@ -228,6 +239,15 @@ export function useRibbonHatchBridge(
         }
         if (commandKey === HATCH_RIBBON_KEYS.params.gradientShift) {
           return { value: String(hatch?.gradient?.shift ?? defaults.gradientShift), options: [] };
+        }
+        // «Απόσταση»: στο «έτοιμο μοτίβο» δείχνει την ΠΡΑΓΜΑΤΙΚΗ world απόσταση γραμμών
+        // (min-spacing), που προκύπτει από το patternScale· αλλιώς το lineSpacing (mm).
+        const isPredef = (hatch?.fillType ?? defaults.fillType) === 'predefined';
+        if (isPredef) {
+          const worldSpacing = hatchMinWorldSpacing(
+            hatch ?? { fillType: 'predefined', patternName: defaults.patternName, patternScale: defaults.patternScale },
+          );
+          return { value: String(Math.round(worldSpacing)), options: [] };
         }
         return { value: String(hatch?.lineSpacing ?? defaults.lineSpacing), options: [] };
       }
@@ -321,8 +341,12 @@ export function useRibbonHatchBridge(
           return;
         }
         if (commandKey === HATCH_RIBBON_KEYS.params.lineAngle) {
-          if (hatch) patchHatch(hatch, { lineAngle: numeric });
-          else setHatchDrawDefaults({ lineAngle: numeric });
+          // «Γωνία»: predefined → patternAngle (ο renderer αγνοεί το lineAngle στο μοτίβο)·
+          // αλλιώς → lineAngle (user-defined).
+          const isPredef = (hatch?.fillType ?? defaults.fillType) === 'predefined';
+          const patch = isPredef ? { patternAngle: numeric } : { lineAngle: numeric };
+          if (hatch) patchHatch(hatch, patch);
+          else setHatchDrawDefaults(patch);
           return;
         }
         if (commandKey === HATCH_RIBBON_KEYS.params.patternScale) {
@@ -332,6 +356,15 @@ export function useRibbonHatchBridge(
           return;
         }
         if (numeric <= 0) return;
+        // «Απόσταση»: predefined → μεταφράζεται σε patternScale ώστε οι γραμμές του μοτίβου
+        // να απέχουν ~numeric mm (SSoT conversion)· αλλιώς → lineSpacing (user-defined mm).
+        const isPredef = (hatch?.fillType ?? defaults.fillType) === 'predefined';
+        if (isPredef) {
+          const patternScale = patternScaleForSpacingMm(hatch?.patternName ?? defaults.patternName, numeric);
+          if (hatch) patchHatch(hatch, { patternScale });
+          else setHatchDrawDefaults({ patternScale });
+          return;
+        }
         if (hatch) patchHatch(hatch, { lineSpacing: numeric });
         else setHatchDrawDefaults({ lineSpacing: numeric });
       }
