@@ -41,6 +41,8 @@ import { isValidCuttingCandidate, isTrimmable } from './trim-boundary-resolver';
 import { computeIntersectionPoints, tessellateEllipse, tessellateSpline } from './trim-intersection-mapper';
 import type { CuttingEdge, TrimMode } from './trim-types';
 import type { Point2D } from '../../rendering/types/Types';
+// ArcEntity angles are DEGREES; the tessellation below samples in RADIANS.
+import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
 import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 
 // Synthetic ID — never matches a real entity ID (enterprise IDs use prefix_uuid pattern).
@@ -149,15 +151,17 @@ export function buildEntityPreviewPath(entity: Entity): ReadonlyArray<Point2D> {
 function tessellateArc(arc: ArcEntity, n: number): Point2D[] {
   const two = Math.PI * 2;
   const ccw = arc.counterclockwise !== false;
+  const startRad = degToRad(arc.startAngle);
+  const endRad = degToRad(arc.endAngle);
   let sweep: number;
   if (ccw) {
-    sweep = arc.endAngle >= arc.startAngle ? arc.endAngle - arc.startAngle : two - (arc.startAngle - arc.endAngle);
+    sweep = endRad >= startRad ? endRad - startRad : two - (startRad - endRad);
   } else {
-    sweep = arc.startAngle >= arc.endAngle ? arc.startAngle - arc.endAngle : two - (arc.endAngle - arc.startAngle);
+    sweep = startRad >= endRad ? startRad - endRad : two - (endRad - startRad);
   }
   const pts: Point2D[] = [];
   for (let i = 0; i <= n; i++) {
-    const t = ccw ? arc.startAngle + (sweep * i) / n : arc.startAngle - (sweep * i) / n;
+    const t = ccw ? startRad + (sweep * i) / n : startRad - (sweep * i) / n;
     pts.push({ x: arc.center.x + arc.radius * Math.cos(t), y: arc.center.y + arc.radius * Math.sin(t) });
   }
   return pts;

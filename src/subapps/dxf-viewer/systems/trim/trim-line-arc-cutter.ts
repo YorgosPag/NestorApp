@@ -18,6 +18,10 @@ import {
   type LineEntity,
 } from '../../types/entities';
 import { angleInSweep, paramOnLineSegment } from './trim-intersection-mapper';
+// ADR-350/510 — `ArcEntity.startAngle/endAngle` are DEGREES (canonical, matches
+// ArcRenderer/DXF); the trim math below is a self-consistent RADIAN pipeline, so we
+// convert deg→rad on every read and rad→deg on every emitted arc (boundary-only).
+import { degToRad, radToDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 import type { TrimResult } from './trim-types';
 import {
   buildSegments,
@@ -100,10 +104,12 @@ interface ArcSweep {
 
 function arcSweep(arc: ArcEntity): ArcSweep {
   const ccw = arc.counterclockwise !== false;
+  const startRad = degToRad(arc.startAngle);
+  const endRad = degToRad(arc.endAngle);
   const two = Math.PI * 2;
-  let total = ccw ? arc.endAngle - arc.startAngle : arc.startAngle - arc.endAngle;
+  let total = ccw ? endRad - startRad : startRad - endRad;
   total = ((total % two) + two) % two;
-  return { start: arc.startAngle, total, ccw };
+  return { start: startRad, total, ccw };
 }
 
 function pointsToArcParams(arc: ArcEntity, pts: ReadonlyArray<Point2D>, sweep: ArcSweep): number[] {
@@ -118,7 +124,7 @@ function pointsToArcParams(arc: ArcEntity, pts: ReadonlyArray<Point2D>, sweep: A
 
 function pointToArcParam(arc: ArcEntity, p: Point2D, sweep: ArcSweep): number | null {
   const theta = Math.atan2(p.y - arc.center.y, p.x - arc.center.x);
-  if (!angleInSweep(theta, arc.startAngle, arc.endAngle, sweep.ccw)) return null;
+  if (!angleInSweep(theta, degToRad(arc.startAngle), degToRad(arc.endAngle), sweep.ccw)) return null;
   if (sweep.total < 1e-9) return null;
   const two = Math.PI * 2;
   let delta = sweep.ccw ? theta - sweep.start : sweep.start - theta;
@@ -146,9 +152,10 @@ function sliceArc(
 }
 
 function arcFromParams(arc: ArcEntity, [t0, t1]: [number, number], sweep: ArcSweep): ArcEntity {
-  const startAngle = sweep.ccw ? sweep.start + sweep.total * t0 : sweep.start - sweep.total * t0;
-  const endAngle = sweep.ccw ? sweep.start + sweep.total * t1 : sweep.start - sweep.total * t1;
-  return { ...arc, startAngle, endAngle };
+  // sweep.start/total are radians → emit DEGREES back into the ArcEntity fields.
+  const startRad = sweep.ccw ? sweep.start + sweep.total * t0 : sweep.start - sweep.total * t0;
+  const endRad = sweep.ccw ? sweep.start + sweep.total * t1 : sweep.start - sweep.total * t1;
+  return { ...arc, startAngle: radToDeg(startRad), endAngle: radToDeg(endRad) };
 }
 
 // ── CIRCLE → ARC ──────────────────────────────────────────────────────────────
@@ -162,13 +169,14 @@ export function cutCircle(circle: CircleEntity, ctx: CutContext): TrimResult {
     .sort((a, b) => a - b);
   const pickAngle = Math.atan2(ctx.pickPoint.y - circle.center.y, ctx.pickPoint.x - circle.center.x);
   const [a, b] = pickArcRange(angles, pickAngle);
+  // a/b are atan2 RADIANS → emit DEGREES into the promoted ArcEntity.
   const arc: ArcEntity = {
     id: circle.id,
     type: 'arc',
     center: circle.center,
     radius: circle.radius,
-    startAngle: a,
-    endAngle: b,
+    startAngle: radToDeg(a),
+    endAngle: radToDeg(b),
     counterclockwise: true,
     layerId: circle.layerId,
     visible: circle.visible,

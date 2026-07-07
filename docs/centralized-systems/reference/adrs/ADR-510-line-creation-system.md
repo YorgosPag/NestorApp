@@ -1117,3 +1117,17 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   η ρίζα ήταν 100% στο bounds aggregation. Τα persisted NaN entities μένουν αόρατα/un-hittable (αβλαβή πλέον)· νέα δεν παράγονται
   (Bug 1 guard). **Test:** `bounds-nan-guard.test.ts` (NaN entity δεν μολύνει το aggregate) → 4/4· hitTesting+explode σουίτες 39/39
   GREEN. tsc SKIP (N.17)· browser-verify + commit → Giorgio.
+- **2026-07-07 — Φ2 linetype name→def SSoT convergence (flagged item B, latent-bug fix· Opus 4.8, shared tree).**
+  Το «linetype ΟΝΟΜΑ → def/pattern» resolve-άρονταν με **3 αποκλίνοντες** τρόπους· ο κύριος entity cascade
+  (`systems/properties/resolve-entity-style.ts resolveLinetypeName`) χρησιμοποιούσε **registry-only**
+  `resolveLinetype()`, που seed-άρει ΜΟΝΟ τα 8 ISO baseline → οι catalog density variants (`Dashed2`/`DotX2`/…)
+  έκαναν miss → default `Continuous` → **ζωγραφίζονταν solid** (latent bug). **Fix:** NEW def-level SSoT
+  **`resolveLinetypeDef(name) = resolveAnyLinetype ?? resolveLinetype`** στο ΥΠΑΡΧΟΝ `rendering/linetype-dash-resolver.ts`
+  (το μόνο αρχείο που ήδη importάρει και τους δύο resolvers χωρίς cycle)· το `resolveLinetypePatternMm` έγινε thin
+  derivation (`resolveLinetypeDef(name)?.pattern ?? []`) → η catalog∪registry ένωση ζει σε **ΕΝΑ** σημείο (catalog
+  wins σε collisions, canonical). Ο cascade migrated στο `resolveLinetypeDef` (variants **ΚΑΙ** customs τώρα resolve-άρουν).
+  **Boy-Scout:** `settings-core/defaults.ts getDashArray` (legacy preview) `resolveAnyDashMm` → `resolveLinetypePatternMm`
+  (previews custom linetypes δεν είναι πια solid). `bim-dash-resolver` = BIM keys (fixed enum, όχι customs) → σωστά
+  catalog-only, ΔΕΝ άλλαξε. **Tests:** `linetype-dash-resolver.test.ts` +4 (DotX2 regression / custom / collision / null),
+  `resolve-entity-style.test.ts` +1 (entity-level DotX2 cascade), 81 GREEN linetype-suite + 12 downstream (dim-stroke/style-resolve).
+  tsc SKIP (N.17). 🔴 browser-verify (DXF με DotX2/Dashed2 linetype ζωγραφίζεται dashed) + commit → Giorgio.

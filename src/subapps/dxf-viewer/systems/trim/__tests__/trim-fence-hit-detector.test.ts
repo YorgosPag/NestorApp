@@ -144,11 +144,16 @@ describe('buildEntityPreviewPath', () => {
   });
 
   it('ARC → n+1 points along arc sweep', () => {
-    const arc: ArcEntity = { id: 'a1', type: 'arc', center: { x: 0, y: 0 }, radius: 5, startAngle: 0, endAngle: Math.PI, layerId: 'lyr_test_default' };
+    // startAngle/endAngle in DEGREES (ArcEntity canonical) — a 0°→180° semicircle.
+    const arc: ArcEntity = { id: 'a1', type: 'arc', center: { x: 0, y: 0 }, radius: 5, startAngle: 0, endAngle: 180, layerId: 'lyr_test_default' };
     const path = buildEntityPreviewPath(arc);
     expect(path.length).toBeGreaterThan(2);
-    expect(path[0].x).toBeCloseTo(5);   // cos(0)*5
+    expect(path[0].x).toBeCloseTo(5);   // cos(0°)*5
     expect(path[0].y).toBeCloseTo(0);
+    // Regression (item C): 180 was read as 180 RADIANS before the deg→rad fix, so the
+    // sweep was garbage. As a real semicircle the last point sits at 180° = (−5, 0).
+    expect(path[path.length - 1].x).toBeCloseTo(-5);
+    expect(path[path.length - 1].y).toBeCloseTo(0);
   });
 
   it('CIRCLE → closed loop of points', () => {

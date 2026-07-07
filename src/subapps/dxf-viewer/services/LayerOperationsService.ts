@@ -23,7 +23,7 @@ import {
   LINEWEIGHT_SPECIAL,
   LINEWEIGHT_SPECIAL_VALUES,
 } from '../config/lineweight-iso-catalog';
-import { resolveLinetype } from '../stores/LinetypeRegistry';
+import { resolveLinetypeDef } from '../rendering/linetype-dash-resolver';
 import { DEFAULT_LINETYPE_NAME } from '../config/linetype-iso-catalog';
 import { createSceneLayer, type LineweightMm } from '../types/entities';
 // ADR-358 Phase 9B: server-side naming trust boundary
@@ -414,7 +414,9 @@ export class LayerOperationsService {
   }
 
   private validateLinetype(name: string): string {
-    if (resolveLinetype(name)) return name;
+    // item B: catalog∪registry union — so ISO density variants (Dashed2/DotX2/…)
+    // assigned to a layer validate instead of being rejected → Continuous.
+    if (resolveLinetypeDef(name)) return name;
     console.warn(
       `[LayerOperationsService] Unknown linetype "${name}" — fallback ${DEFAULT_LINETYPE_NAME}`,
     );

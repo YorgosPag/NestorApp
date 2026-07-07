@@ -148,7 +148,7 @@ describe('trimEntity — ARC', () => {
     center: { x: 0, y: 0 },
     radius: 5,
     startAngle: 0,
-    endAngle: Math.PI,
+    endAngle: 180, // DEGREES (ArcEntity canonical) — a 0°→180° semicircle
     counterclockwise: true,
   };
 

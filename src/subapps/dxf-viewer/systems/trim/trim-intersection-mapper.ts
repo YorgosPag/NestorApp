@@ -21,6 +21,8 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { GeometricCalculations } from '../../snapping/shared/GeometricCalculations';
 import { getPolylineSegments } from '../../rendering/entities/shared/geometry-rendering-utils';
+// ArcEntity angles are DEGREES; `angleInSweep` works in RADIANS — convert on read.
+import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
 import {
   isArcEntity,
   isCircleEntity,
@@ -347,7 +349,7 @@ function segmentsCircle(segs: Seg[], c: Entity): Point2D[] {
 
 export function angleWithinArc(arc: ArcEntity, p: Point2D): boolean {
   const theta = Math.atan2(p.y - arc.center.y, p.x - arc.center.x);
-  return angleInSweep(theta, arc.startAngle, arc.endAngle, arc.counterclockwise !== false);
+  return angleInSweep(theta, degToRad(arc.startAngle), degToRad(arc.endAngle), arc.counterclockwise !== false);
 }
 
 export function angleInSweep(theta: number, start: number, end: number, ccw: boolean): boolean {

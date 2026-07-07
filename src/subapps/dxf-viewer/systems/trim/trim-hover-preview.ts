@@ -27,6 +27,8 @@ import {
   type LineEntity,
 } from '../../types/entities';
 import { getPolylineSegments } from '../../rendering/entities/shared/geometry-rendering-utils';
+// ArcEntity angles are DEGREES; the sweep math below works in RADIANS — convert on read.
+import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
 import { buildSegments, dedupeSorted, findSegmentContaining, PARAM_EPSILON } from './trim-cut-shared';
 import { paramOnLineSegment } from './trim-intersection-mapper';
 
@@ -100,15 +102,15 @@ function hoverArc(arc: ArcEntity, intersections: ReadonlyArray<Point2D>, pickPoi
 
 function arcSweepLength(arc: ArcEntity): number {
   const ccw = arc.counterclockwise !== false;
-  const s = normalizeAngle(arc.startAngle);
-  const e = normalizeAngle(arc.endAngle);
+  const s = normalizeAngle(degToRad(arc.startAngle));
+  const e = normalizeAngle(degToRad(arc.endAngle));
   if (ccw) return e >= s ? e - s : TWO_PI - (s - e);
   return -(s >= e ? s - e : TWO_PI - (e - s));
 }
 
 function arcSweepParam(arc: ArcEntity, pt: Point2D, sweepLen: number): number {
   const theta = normalizeAngle(Math.atan2(pt.y - arc.center.y, pt.x - arc.center.x));
-  const s = normalizeAngle(arc.startAngle);
+  const s = normalizeAngle(degToRad(arc.startAngle));
   const ccw = sweepLen > 0;
   let offset: number;
   if (ccw) {
@@ -120,7 +122,7 @@ function arcSweepParam(arc: ArcEntity, pt: Point2D, sweepLen: number): number {
 }
 
 function tessellateArcSweep(arc: ArcEntity, t0: number, t1: number, sweepLen: number, n: number): Point2D[] {
-  const s = normalizeAngle(arc.startAngle);
+  const s = normalizeAngle(degToRad(arc.startAngle));
   const pts: Point2D[] = [];
   for (let i = 0; i <= n; i++) {
     const t = t0 + ((t1 - t0) * i) / n;

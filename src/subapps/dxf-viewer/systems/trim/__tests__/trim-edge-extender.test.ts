@@ -41,7 +41,7 @@ describe('extendEdge — ARC', () => {
   const arc: ArcEntity = {
     id: 'a1', type: 'arc',
     center: { x: 2, y: 3 }, radius: 5,
-    startAngle: 0, endAngle: Math.PI,
+    startAngle: 0, endAngle: 180, // DEGREES (ArcEntity canonical)
     layerId: 'lyr_test_default',
   };
 

@@ -69,9 +69,9 @@ function makeEntity(over: Partial<DxfTextSceneEntity> = {}): DxfTextSceneEntity 
 const BBOX: Rect = { x: 0, y: 0, width: 10, height: 4 };
 
 describe('getTextSnapPoints — taxonomy', () => {
-  it('returns exactly 8 snap points', () => {
+  it('returns exactly 10 snap points', () => {
     const points = getTextSnapPoints(makeEntity(), BBOX);
-    expect(points).toHaveLength(8);
+    expect(points).toHaveLength(10);
   });
 
   it('emits each kind exactly once in canonical order', () => {
@@ -84,6 +84,8 @@ describe('getTextSnapPoints — taxonomy', () => {
       'center',
       'edge-top-mid',
       'edge-bottom-mid',
+      'edge-left-mid',
+      'edge-right-mid',
     ];
     const got = getTextSnapPoints(makeEntity(), BBOX).map((p) => p.kind);
     expect(got).toEqual(expected);
@@ -97,6 +99,8 @@ describe('getTextSnapPoints — taxonomy', () => {
     expect(map.get('center')).toBe(ExtendedSnapType.CENTER);
     expect(map.get('edge-top-mid')).toBe(ExtendedSnapType.MIDPOINT);
     expect(map.get('edge-bottom-mid')).toBe(ExtendedSnapType.MIDPOINT);
+    expect(map.get('edge-left-mid')).toBe(ExtendedSnapType.MIDPOINT);
+    expect(map.get('edge-right-mid')).toBe(ExtendedSnapType.MIDPOINT);
     expect(map.get('corner-tl')).toBe(ExtendedSnapType.ENDPOINT);
     expect(map.get('corner-br')).toBe(ExtendedSnapType.ENDPOINT);
   });
@@ -138,6 +142,14 @@ describe('getTextSnapPoints — geometry (no rotation)', () => {
     expect(top.point).toEqual({ x: 5, y: 0 });
     expect(bot.point).toEqual({ x: 5, y: 4 });
   });
+
+  it('left/right mids sit at the edge midpoints', () => {
+    const points = getTextSnapPoints(makeEntity(), BBOX);
+    const left = points.find((p) => p.kind === 'edge-left-mid')!;
+    const right = points.find((p) => p.kind === 'edge-right-mid')!;
+    expect(left.point).toEqual({ x: 0, y: 2 });
+    expect(right.point).toEqual({ x: 10, y: 2 });
+  });
 });
 
 describe('getTextSnapPoints — rotation', () => {
@@ -170,7 +182,7 @@ describe('toSnapCandidates', () => {
   it('maps each TextSnapPoint to a SnapCandidate with the right entityId', () => {
     const points = getTextSnapPoints(makeEntity(), BBOX);
     const candidates = toSnapCandidates(points, { x: 0, y: 0 }, 'ent_42');
-    expect(candidates).toHaveLength(8);
+    expect(candidates).toHaveLength(10);
     expect(candidates.every((c) => c.entityId === 'ent_42')).toBe(true);
   });
 

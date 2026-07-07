@@ -7,16 +7,19 @@
  * ProSnapEngineV2 → Orchestrator → Registry → Engine pipeline like every other
  * snap mode, instead of being fed manually outside the registry.
  *
- * Pattern: mirror `ColumnCenterSnapEngine`. Eight snap points per text entity:
+ * Pattern: mirror `ColumnCenterSnapEngine`. Ten snap points per text entity —
+ * full Figma/C4D bounding-box, coincident 1:1 with the text grips (ADR-378):
  *
- *   1. insertion       — entity.position (rotation-invariant anchor)
- *   2. corner-tl       — top-left of approximate bounding box
- *   3. corner-tr       — top-right
- *   4. corner-bl       — bottom-left
- *   5. corner-br       — bottom-right
- *   6. center          — bbox centroid
- *   7. edge-top-mid    — top edge midpoint
- *   8. edge-bottom-mid — bottom edge midpoint
+ *   1. insertion        — entity.position (rotation-invariant anchor)
+ *   2. corner-tl        — top-left of approximate bounding box
+ *   3. corner-tr        — top-right
+ *   4. corner-bl        — bottom-left
+ *   5. corner-br        — bottom-right
+ *   6. center           — bbox centroid
+ *   7. edge-top-mid     — top edge midpoint
+ *   8. edge-bottom-mid  — bottom edge midpoint
+ *   9. edge-right-mid   — right (east) edge midpoint  → coincides with `text-edge-e` grip
+ *  10. edge-left-mid    — left (west) edge midpoint   → coincides with `text-edge-w` grip
  *
  * Bounding box is approximated from `fontSize` / `height` and text content (for
  * TEXT) or `width` × `height` (for MTEXT) — matching industry convention
@@ -128,5 +131,9 @@ function computeTextSnapPoints(entity: TextEntity | MTextEntity): readonly Compu
     { kind: 'center', point: frame.center },
     { kind: 'edge-top-mid', point: rectEdgeWorld(frame, { axis: 'y', sign: 1 }) },
     { kind: 'edge-bottom-mid', point: rectEdgeWorld(frame, { axis: 'y', sign: -1 }) },
+    // ADR-378 — east/west edge midpoints, same frame + `rectEdgeWorld` as the
+    // `text-edge-e` / `text-edge-w` grips, so the hover snap markers land EXACTLY on them.
+    { kind: 'edge-right-mid', point: rectEdgeWorld(frame, { axis: 'x', sign: 1 }) },
+    { kind: 'edge-left-mid', point: rectEdgeWorld(frame, { axis: 'x', sign: -1 }) },
   ];
 }

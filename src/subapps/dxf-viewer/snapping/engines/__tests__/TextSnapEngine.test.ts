@@ -3,7 +3,7 @@
  *
  * Verifies:
  *   - Only TEXT/MTEXT entities produce candidates (other entity types ignored).
- *   - 8 snap points emitted per visible text entity (insertion + 4 corners + center + 2 edge mids).
+ *   - 10 snap points emitted per visible text entity (insertion + 4 corners + center + 4 edge mids).
  *   - Insertion point at entity.position.
  *   - Bounding-box-derived points respect entity.fontSize / text length (TEXT) or width × height (MTEXT).
  *   - Rotation applied around insertion point.
@@ -122,11 +122,11 @@ describe('TextSnapEngine — ADR-378 Phase 3', () => {
     expect(candidates).toHaveLength(0);
   });
 
-  it('text entity at origin produces 8 candidates within radius', () => {
+  it('text entity at origin produces 10 candidates within radius', () => {
     // bbox ≈ width 2*10*0.6=12, height 10. Center at (6,5). Radius 200 catches all.
     engine.initialize([makeText({ position: { x: 0, y: 0 } })]);
     const { candidates } = engine.findSnapCandidates({ x: 0, y: 0 }, makeContext());
-    expect(candidates).toHaveLength(8);
+    expect(candidates).toHaveLength(10);
   });
 
   it('insertion point exactly matches entity.position', () => {
@@ -146,7 +146,7 @@ describe('TextSnapEngine — ADR-378 Phase 3', () => {
     expect(candidates.every((c) => c.priority === 2)).toBe(true);
   });
 
-  it('descriptions encode all 8 kinds', () => {
+  it('descriptions encode all 10 kinds', () => {
     engine.initialize([makeText()]);
     const { candidates } = engine.findSnapCandidates({ x: 0, y: 0 }, makeContext());
     const kinds = candidates.map((c) => c.description).sort();
@@ -157,6 +157,8 @@ describe('TextSnapEngine — ADR-378 Phase 3', () => {
       'text-corner-tl',
       'text-corner-tr',
       'text-edge-bottom-mid',
+      'text-edge-left-mid',
+      'text-edge-right-mid',
       'text-edge-top-mid',
       'text-insertion',
     ]);
@@ -176,6 +178,9 @@ describe('TextSnapEngine — ADR-378 Phase 3', () => {
     same('text-center', frame.center);
     same('text-edge-top-mid', rectEdgeWorld(frame, { axis: 'y', sign: 1 }));
     same('text-edge-bottom-mid', rectEdgeWorld(frame, { axis: 'y', sign: -1 }));
+    // ADR-378 — east/west edge mids coincide with the `text-edge-e` / `text-edge-w` grips.
+    same('text-edge-right-mid', rectEdgeWorld(frame, { axis: 'x', sign: 1 }));
+    same('text-edge-left-mid', rectEdgeWorld(frame, { axis: 'x', sign: -1 }));
   });
 
   it('MTEXT snap box uses the frame width (coincides with its grip box)', () => {
@@ -189,14 +194,14 @@ describe('TextSnapEngine — ADR-378 Phase 3', () => {
     expectClose(tr.point.y, expected.y);
   });
 
-  it('in-app text (content ONLY in textNode) produces 8 grip-coincident points', () => {
+  it('in-app text (content ONLY in textNode) produces 10 grip-coincident points', () => {
     const e = {
       id: 'tn', name: 'tn', type: 'text', layerId: '0', position: { x: 3, y: 4 }, visible: true,
       textNode: { paragraphs: [{ runs: [{ text: 'AB', style: { height: 10 } }] }], attachment: 'BL' },
     } as unknown as TextEntity;
     engine.initialize([e]);
     const { candidates } = engine.findSnapCandidates({ x: 3, y: 4 }, makeContext());
-    expect(candidates).toHaveLength(8);
+    expect(candidates).toHaveLength(10);
     const expected = rectCornerWorld(gripFrame(e), { sx: 1, sy: 1 });
     const tr = candidates.find((c) => c.description === 'text-corner-tr')!.point;
     expectClose(tr.x, expected.x);
@@ -210,7 +215,7 @@ describe('TextSnapEngine — ADR-378 Phase 3', () => {
     expect(candidates).toHaveLength(0);
   });
 
-  it('excludeEntityId suppresses all 8 points of matching entity', () => {
+  it('excludeEntityId suppresses all 10 points of matching entity', () => {
     engine.initialize([makeText({ position: { x: 0, y: 0 } }, 'txt_excluded')]);
     const ctx = makeContext({ excludeEntityId: 'txt_excluded' });
     const { candidates } = engine.findSnapCandidates({ x: 0, y: 0 }, ctx);
@@ -236,14 +241,14 @@ describe('TextSnapEngine — ADR-378 Phase 3', () => {
     expect(Math.abs(expected.y)).toBeGreaterThan(1e-3);
   });
 
-  it('multiple text entities indexed independently — each contributes 8 points', () => {
+  it('multiple text entities indexed independently — each contributes 10 points', () => {
     const a = makeText({ position: { x: 0, y: 0 } }, 'txt_a');
     const b = makeText({ position: { x: 500, y: 500 } }, 'txt_b');
     engine.initialize([a, b]);
 
     const nearA = engine.findSnapCandidates({ x: 0, y: 0 }, makeContext());
     expect(nearA.candidates.every((c) => c.entityId === 'txt_a')).toBe(true);
-    expect(nearA.candidates).toHaveLength(8);
+    expect(nearA.candidates).toHaveLength(10);
 
     const nearB = engine.findSnapCandidates(
       { x: 500, y: 500 },

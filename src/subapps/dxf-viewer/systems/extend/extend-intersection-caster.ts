@@ -38,6 +38,9 @@ import {
 } from '../../types/entities';
 import { computeIntersectionPoints, angleInSweep } from '../trim/trim-intersection-mapper';
 import { getPolylineSegments } from '../../rendering/entities/shared/geometry-rendering-utils';
+// ArcEntity.startAngle/endAngle are DEGREES (canonical); the sweep/endpoint math here
+// works in RADIANS — convert deg→rad on read, rad→deg on the emitted arc (boundary-only).
+import { degToRad, radToDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 import type { CuttingEdge } from '../trim/trim-types';
 import type { ExtendOperation } from './extend-types';
 
@@ -113,8 +116,10 @@ function extendArc(
   pickPoint: Point2D,
   boundaries: ReadonlyArray<CuttingEdge>,
 ): ExtendOperation | null {
-  const startPt = arcEndpoint(arc, arc.startAngle);
-  const endPt = arcEndpoint(arc, arc.endAngle);
+  const startRad = degToRad(arc.startAngle);
+  const endRad = degToRad(arc.endAngle);
+  const startPt = arcEndpoint(arc, startRad);
+  const endPt = arcEndpoint(arc, endRad);
   const extendingStart = dist2(pickPoint, startPt) < dist2(pickPoint, endPt);
 
   const virtualCircle: Entity = {
@@ -138,11 +143,11 @@ function extendArc(
 
   for (const p of intersections) {
     const theta = normalize(Math.atan2(p.y - arc.center.y, p.x - arc.center.x));
-    if (angleInSweep(theta, arc.startAngle, arc.endAngle, ccw)) continue;
+    if (angleInSweep(theta, startRad, endRad, ccw)) continue;
 
     const delta = extendingStart
-      ? angularDistanceBefore(theta, arc.startAngle, ccw)
-      : angularDistanceAfter(theta, arc.endAngle, ccw);
+      ? angularDistanceBefore(theta, startRad, ccw)
+      : angularDistanceAfter(theta, endRad, ccw);
 
     if (delta > FORWARD_EPS && delta < bestDelta) {
       bestDelta = delta;
@@ -152,9 +157,10 @@ function extendArc(
 
   if (bestAngle === null) return null;
 
+  // bestAngle is RADIANS (normalized atan2) → emit DEGREES into the ArcEntity field.
   const newArc: ArcEntity = extendingStart
-    ? { ...arc, startAngle: bestAngle }
-    : { ...arc, endAngle: bestAngle };
+    ? { ...arc, startAngle: radToDeg(bestAngle) }
+    : { ...arc, endAngle: radToDeg(bestAngle) };
 
   return { kind: 'extend', entityId: arc.id, originalGeom: arc, newGeom: newArc };
 }
