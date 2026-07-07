@@ -11,7 +11,7 @@
  * Αν δεν υπάρχει έγκυρη πηγή+στόχοι → μήνυμα + μόνο Άκυρο.
  */
 
-import React, { useCallback } from 'react';
+import React, { Suspense, useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   Dialog,
@@ -22,6 +22,8 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
+import { USE_AI_MATCH_PROPERTIES } from '../../config/feature-flags';
+import { MatchAiPrompt } from '../../app/dxf-viewer-lazy-components';
 import { useMatchProperties } from './useMatchProperties';
 import { MatchChecklist } from './MatchChecklist';
 import { MatchMappingPreview } from './match-mapping-preview';
@@ -58,6 +60,16 @@ export const MatchSettingsDialog: React.FC<MatchSettingsDialogProps> = ({
             <p className={styles.summary}>
               {t('matchProperties.targetsLabel', { count: match.targetCount })}
             </p>
+            {USE_AI_MATCH_PROPERTIES ? (
+              <Suspense fallback={null}>
+                <MatchAiPrompt
+                  offeredRoles={match.offeredRoles}
+                  sourceType={match.sourceType}
+                  targetTypes={match.targetTypes}
+                  onResolve={match.applyAiRoles}
+                />
+              </Suspense>
+            ) : null}
             <MatchChecklist
               groups={match.groups}
               selectedRoles={match.selectedRoles}

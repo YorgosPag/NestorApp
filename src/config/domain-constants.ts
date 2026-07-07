@@ -883,7 +883,7 @@ export const API_ROUTES = {
     CHECK: (linkId: string) => `/api/link-removal-guard/${linkId}` as const,
   },
   GEOCODING: '/api/geocoding',
-  DXF_AI: { COMMAND: '/api/dxf-ai/command' },
+  DXF_AI: { COMMAND: '/api/dxf-ai/command', MATCH: '/api/dxf-ai/match' },
 
   // ── Entity Activity (generic) ─────────────────────────────────────────
   ENTITY_ACTIVITY: (entityType: string, entityId: string) => {

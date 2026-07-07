@@ -30,9 +30,23 @@ export const USE_UNIFIED_OVERLAY_TOOLBAR = true;
 export const USE_AI_DRAWING_ASSISTANT = process.env.NEXT_PUBLIC_DXF_AI_ASSISTANT === 'true';
 
 /**
+ * 🤖 ADR-581 §12: Optional AI layer for «Αντιγραφή Ιδιοτήτων» (Match/Transfer Properties)
+ *
+ * Gates the optional AI intent layer on top of the deterministic Match engine.
+ * The deterministic core (roles/registry/resolver/applier) works 100% offline;
+ * this flag only enables the natural-language intent surface (NL → which roles to
+ * transfer vs preserve). The LLM never produces values — it only picks role strings.
+ * Set NEXT_PUBLIC_DXF_AI_MATCH=true in .env.local to enable.
+ *
+ * @default false - Disabled until explicitly enabled
+ */
+export const USE_AI_MATCH_PROPERTIES = process.env.NEXT_PUBLIC_DXF_AI_MATCH === 'true';
+
+/**
  * Re-export for backward compatibility
  */
 export const FEATURE_FLAGS = {
   USE_UNIFIED_OVERLAY_TOOLBAR,
   USE_AI_DRAWING_ASSISTANT,
+  USE_AI_MATCH_PROPERTIES,
 } as const;

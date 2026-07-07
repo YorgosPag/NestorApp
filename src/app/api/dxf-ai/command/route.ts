@@ -8,12 +8,14 @@
  * Pattern: Single-call (NOT agentic loop) — Phase 1 doesn't need multi-step.
  * Uses same OpenAI infrastructure as agentic-loop.ts but scoped to DXF tools.
  *
+ * Pure helpers (validation, tool-call extraction, suggestions, simulated tool
+ * results) live in `./command-helpers` to keep this route <300 lines (N.7.1).
+ *
  * @see ADR-185 (AI Drawing Assistant)
  * @since 2026-02-17
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { safeJsonParse } from '@/lib/json-utils';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -21,282 +23,31 @@ import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { DXF_AI_TOOL_DEFINITIONS } from '@/subapps/dxf-viewer/ai-assistant/dxf-tool-definitions';
 import { buildDxfAiSystemPrompt } from '@/subapps/dxf-viewer/ai-assistant/dxf-system-prompt';
+import {
+  callOpenAI,
+  type ChatCompletionMessage,
+  type ChatCompletionToolCall,
+} from '@/subapps/dxf-viewer/ai-assistant/dxf-openai-call';
 import type {
-  DxfAiCommandRequest,
   DxfAiCommandResponse,
   DxfAiToolCall,
-  DxfAiToolName,
-  DxfCanvasContext,
-  DxfAiChatHistoryEntry,
 } from '@/subapps/dxf-viewer/ai-assistant/types';
-import { DXF_AI_LIMITS } from '@/subapps/dxf-viewer/config/ai-assistant-config';
-import type { AgenticToolDefinition } from '@/services/ai-pipeline/tools/agentic-tool-definitions';
 import { getErrorMessage } from '@/lib/error-utils';
+import {
+  MAX_LOOP_ITERATIONS,
+  validateRequest,
+  extractToolCalls,
+  extractSuggestions,
+  buildToolResultMessages,
+} from './command-helpers';
 
 export const maxDuration = 60;
 
 const logger = createModuleLogger('DXF_AI_COMMAND');
 
 // ============================================================================
-// OPENAI CHAT COMPLETIONS TYPES (same pattern as agentic-loop.ts)
-// ============================================================================
-
-interface ChatCompletionMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
-
-interface ChatCompletionToolCall {
-  id: string;
-  type: 'function';
-  function: {
-    name: string;
-    arguments: string;
-  };
-}
-
-interface ChatCompletionChoice {
-  message: {
-    role: 'assistant';
-    content: string | null;
-    tool_calls?: ChatCompletionToolCall[];
-  };
-  finish_reason: string;
-}
-
-// ============================================================================
-// VALIDATION
-// ============================================================================
-
-const VALID_TOOL_NAMES = new Set<string>([
-  'draw_line',
-  'draw_rectangle',
-  'draw_circle',
-  'draw_polyline',
-  'draw_shapes',
-  'draw_regular_polygon',
-  'query_entities',
-  'undo_action',
-  // Grid tools (ADR-189 — activated when Grid System is implemented)
-  'add_grid_guide',
-  'remove_grid_guide',
-  'move_grid_guide',
-  'create_grid_group',
-  'set_grid_spacing',
-  'toggle_grid_snap',
-]);
-
-function isValidToolName(name: string): name is DxfAiToolName {
-  return VALID_TOOL_NAMES.has(name);
-}
-
-function validateRequest(body: unknown): {
-  valid: true;
-  data: DxfAiCommandRequest;
-} | {
-  valid: false;
-  error: string;
-} {
-  if (!body || typeof body !== 'object') {
-    return { valid: false, error: 'Request body is required' };
-  }
-
-  const req = body as Record<string, unknown>;
-
-  if (typeof req.message !== 'string' || req.message.trim().length === 0) {
-    return { valid: false, error: 'Message is required' };
-  }
-
-  if (req.message.length > DXF_AI_LIMITS.MAX_MESSAGE_LENGTH) {
-    return { valid: false, error: `Message exceeds ${DXF_AI_LIMITS.MAX_MESSAGE_LENGTH} characters` };
-  }
-
-  if (!req.canvasContext || typeof req.canvasContext !== 'object') {
-    return { valid: false, error: 'canvasContext is required' };
-  }
-
-  const ctx = req.canvasContext as Record<string, unknown>;
-  if (typeof ctx.entityCount !== 'number' || !Array.isArray(ctx.layers)) {
-    return { valid: false, error: 'Invalid canvasContext format' };
-  }
-
-  return {
-    valid: true,
-    data: {
-      message: req.message as string,
-      canvasContext: req.canvasContext as DxfCanvasContext,
-      chatHistory: Array.isArray(req.chatHistory)
-        ? (req.chatHistory as DxfAiChatHistoryEntry[]).slice(-DXF_AI_LIMITS.MAX_HISTORY_ENTRIES)
-        : [],
-    },
-  };
-}
-
-// ============================================================================
-// OPENAI CALL
-// ============================================================================
-
-async function callOpenAI(
-  messages: ChatCompletionMessage[],
-  tools: AgenticToolDefinition[],
-  timeoutMs: number,
-): Promise<{ message: ChatCompletionChoice['message']; finishReason: string }> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error('OPENAI_API_KEY not configured');
-  }
-
-  const baseUrl = AI_ANALYSIS_DEFAULTS.OPENAI.BASE_URL;
-  const model = AI_ANALYSIS_DEFAULTS.OPENAI.TEXT_MODEL;
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        tools,
-        tool_choice: 'auto' as const,
-        parallel_tool_calls: true,
-      }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      let errorMsg = `OpenAI error (${response.status})`;
-      const errorPayload = safeJsonParse<{ error?: { message?: string } }>(errorText, null as unknown as { error?: { message?: string } });
-      if (errorPayload?.error?.message) {
-        errorMsg = errorPayload.error.message;
-      } else if (errorText.length > 0 && errorText.length < 500) {
-        errorMsg += `: ${errorText}`;
-      }
-      throw new Error(errorMsg);
-    }
-
-    const payload = await response.json() as { choices?: ChatCompletionChoice[] };
-    const choice = payload.choices?.[0];
-
-    if (!choice) {
-      throw new Error('No response from OpenAI');
-    }
-
-    return {
-      message: choice.message,
-      finishReason: choice.finish_reason,
-    };
-  } catch (err) {
-    clearTimeout(timeout);
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new Error('OpenAI request timed out');
-    }
-    throw err;
-  }
-}
-
-// ============================================================================
-// EXTRACT TOOL CALLS
-// ============================================================================
-
-function extractToolCalls(rawCalls: ChatCompletionToolCall[] | undefined): DxfAiToolCall[] {
-  if (!rawCalls || rawCalls.length === 0) return [];
-
-  const result: DxfAiToolCall[] = [];
-
-  for (const call of rawCalls) {
-    const name = call.function.name;
-    if (!isValidToolName(name)) {
-      logger.warn(`Unknown tool call: ${name}`);
-      continue;
-    }
-
-    const args = safeJsonParse<unknown>(call.function.arguments, null);
-    if (args === null) {
-      logger.error(`Failed to parse tool arguments for ${name}`);
-      continue;
-    }
-    result.push({
-      name,
-      arguments: args as DxfAiToolCall['arguments'],
-    });
-  }
-
-  return result;
-}
-
-// ============================================================================
-// EXTRACT SUGGESTIONS
-// ============================================================================
-
-function extractSuggestions(content: string): string[] {
-  // Try to find suggestion lines (lines starting with • or - or numbered)
-  const lines = content.split('\n');
-  const suggestions: string[] = [];
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (
-      (trimmed.startsWith('•') || trimmed.startsWith('-') || /^\d+[\.\)]/.test(trimmed)) &&
-      trimmed.length > 5 &&
-      trimmed.length < 100
-    ) {
-      // Clean prefix
-      const cleaned = trimmed.replace(/^[•\-\d\.\)]+\s*/, '').trim();
-      if (cleaned.length > 3) {
-        suggestions.push(cleaned);
-      }
-    }
-  }
-
-  return suggestions.slice(0, 3);
-}
-
-// ============================================================================
 // HANDLER
 // ============================================================================
-
-/** Max iterations for mini agentic loop (prevents runaway) */
-const MAX_LOOP_ITERATIONS = 3;
-
-/**
- * Build simulated tool result messages to send back to OpenAI.
- * The server doesn't execute drawing tools — it simulates success
- * so OpenAI continues calling more tools if needed.
- *
- * Results are descriptive to encourage the model to continue with remaining work.
- */
-function buildToolResultMessages(
-  rawCalls: ChatCompletionToolCall[],
-): Array<{ role: 'tool'; tool_call_id: string; content: string }> {
-  return rawCalls.map(call => {
-    let description = '';
-    const args = safeJsonParse<Record<string, unknown>>(call.function.arguments, null as unknown as Record<string, unknown>);
-    if (args !== null) {
-      if (call.function.name === 'draw_line') {
-        description = ` from (${args.start_x},${args.start_y}) to (${args.end_x},${args.end_y})`;
-      } else if (call.function.name === 'draw_rectangle') {
-        description = ` ${args.width}x${args.height} at (${args.x},${args.y})`;
-      } else if (call.function.name === 'draw_circle') {
-        description = ` radius=${args.radius} at (${args.center_x},${args.center_y})`;
-      }
-    }
-
-    return {
-      role: 'tool' as const,
-      tool_call_id: call.id,
-      content: `OK: ${call.function.name}${description} drawn. If user requested more items, continue calling tools for the remaining ones.`,
-    };
-  });
-}
 
 async function handler(
   request: NextRequest,

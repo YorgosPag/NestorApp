@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 513 ADRs | Last Updated: 2026-07-02
+**📊 Stats**: 530 ADRs | Last Updated: 2026-07-07
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 295 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 312 | [View](#uncategorized) |
 
 ---
 
@@ -539,7 +539,7 @@
 | **ADR-554** | MEP Proposal-Ghost Dispatch Canvas (7 → 1) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-554-proposal-dispatch-canvas.md) |
 | **ADR-555** | Unified 3D Projected-Overlay Dispatch Canvas (5 → 1) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-555-unified-3d-projected-overlay-dispatch-canvas.md) |
 | **ADR-556** | Central devicePixelRatio-change sync for all viewport canvases | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-556-device-pixel-ratio-change-sync.md) |
-| **ADR-557** | Text / MText λαβές με ΠΛΗΡΗ parity ορθογώνιου τοίχου/κολόνας (SSoT) | ✅ 🟢 Slices 1-5 + **Φ-attachment** IMPLEMENTED (UNCOMMITTED) — grips browser-verified· Φ-attachment 🔴 εκκρεμεί browser-verify (Giorgio 2026-06-30) | 2026-06-30 | Canvas & Rendering / Grips | [📄](./adrs/ADR-557-text-mtext-rect-box-grip-parity.md) |
+| **ADR-557** | Text / MText λαβές με ΠΛΗΡΗ parity ορθογώνιου τοίχου/κολόνας (SSoT) | ✅ 🟢 Slices 1-5 + **Φ-attachment** (H+V real-metrics) IMPLEMENTED (UNCOMMITTED) — grips + οριζόντια browser-verified· **κάθετο (visual/em split) 🔴 εκκρεμεί browser-verify** (Giorgio 2026-07-07) | 2026-06-30 | Canvas & Rendering / Grips | [📄](./adrs/ADR-557-text-mtext-rect-box-grip-parity.md) |
 | **ADR-558** | Cinema-4D-style ground grid στην 3D προβολή | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-558-cinema4d-3d-viewport-grid.md) |
 | **ADR-559** | Όριο πλήθους επιλογής για εμφάνιση λαβών (AutoCAD `GRIPOBJLIMIT`) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-559-grip-object-limit.md) |
 | **ADR-560** | Entity Body-Drag (Move / Ctrl-Copy) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-560-entity-body-drag-move-copy.md) |
@@ -547,20 +547,24 @@
 | **ADR-562** | Dimension Per-Part Styling (πλήρης έλεγχος χρώματος / πάχους / τύπου γραμμής / βελών ανά μέρος διάστασης) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-562-dimension-per-part-styling.md) |
 | **ADR-563** | Auto-Dimension Engine (αυτόματη περιμετρική διαστασιολόγηση κάτοψης) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-563-auto-dimension-engine.md) |
 | **ADR-564** | Ενοποιημένο BIM Placement HUD & Τόξο Φοράς (SSoT overlay για τοίχο/κολόνα/δοκάρι/πέδιλο) | ✅ 🟢 Φ-beam + Φ-column + Φ-foundation (linear + pad) IMPLEMENTED (UNCOMMITTED) · Φ-tests μερικώς | 2026-07-02 | DXF Viewer · BIM Placement · Preview Overlay SSoT | [📄](./adrs/ADR-564-unified-bim-placement-hud-overlay.md) |
-| **ADR-565** | Καμπύλα & Κυκλικά Δομικά BIM Στοιχεία: Έρευνα Αγοράς + Πρόταση Υλοποίησης (τοίχοι/δοκάρια/κολόνες/πέδιλα/συνδετήρια) | ✅ 🔵 RESEARCH / PROPOSED — τεκμηρίωση αγοράς + σύσταση αρχιτεκτονικής· καμία υλοποίηση ακόμη | 2026-07-02 | DXF Viewer · BIM · Geometry · Research | [📄](./adrs/ADR-565-curved-circular-structural-bim-elements.md) |
-| **ADR-566** | Ένωση Τοίχων (Merge / Join Walls — AutoCAD JOIN για τοίχους, command-first + selection-first) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-03 | DXF Viewer · BIM · Wall Editing | [📄](./adrs/ADR-566-merge-join-walls.md) |
-| **ADR-567** | Καμία δομική BIM οντότητα πάνω σε υπάρχουσα (no-overlap placement guard — ratio-based, SSoT) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-03 | DXF Viewer · BIM · Placement · Geometry | [📄](./adrs/ADR-567-structural-no-overlap-placement.md) |
-| **ADR-568** | Γεφύρωση Τοίχων με Αυτόματο Κούφωμα (ομοαξονικοί με κενό → ένας τοίχος + πόρτα στο κενό, reuse merge+opening SSoT) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-03 | DXF Viewer · BIM · Wall Editing · Openings | [📄](./adrs/ADR-568-wall-gap-auto-opening.md) |
-| **ADR-569** | Δοκάρι ανάμεσα σε μέλη (σειριακά κλικ σε κολόνες/τοιχία → δοκάρι ανά ζεύγος, παρειά→παρειά· + selection-first· live ghost) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-03 | DXF Viewer · BIM · Structural · Beams | [📄](./adrs/ADR-569-beam-between-members.md) |
-| **ADR-570** | Line Style System (named «Στυλ Γραμμής» picker + πλήρες 5-panel contextual tab: Στυλ&Γενικά/Εμφάνιση/Γεωμετρία/Ενέργειες/Προχωρημένα· ByStyle registry ξεχωριστό από BIM Object Styles· Match Properties paintbrush) | 📝 PROPOSED | 2026-07-04 | DXF Viewer · Ribbon · Line Styles SSoT | [📄](./adrs/ADR-570-line-style-system.md) |
-| **ADR-571** | DXF Viewer Cyan / Construction Color SSoT (κεντροποίηση διάσπαρτων κυανών/teal σε MEP renderers/ghosts, tool previews, guides· νέο CYAN/MEP/TOOL block στο color-config.ts· καμία οπτική αλλαγή) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-04 | DXF Viewer · Color SSoT · MEP | [📄](./adrs/ADR-571-dxf-cyan-construction-color-ssot.md) |
-| **ADR-572** | Alignment Traces (ίχνη ευθυγράμμισης) SSoT Audit & Centralization (locale γωνίας μέσω `formatAngleLocale` σε 8 σημεία action+creation· leader style SSoT στο overlay-line-style.ts· 3D χρώμα RESOLVED-no-change per-context tuning) | 🟢 IMPLEMENTED (Γ2+Γ1) · 🟦 RESOLVED (Γ3) | 2026-07-04 | DXF Viewer · Alignment Traces SSoT | [📄](./adrs/ADR-572-alignment-traces-ssot-audit.md) |
-| **ADR-573** | Color-Conversion SSoT (big-player single color module — κεντρικοποίηση ~15+ διάσπαρτων hex↔rgb↔int↔ACI↔HSL/HSV converters σε 3 SSoT· αφαίρεση προσεγγιστικού ACI ramp· διόρθωση entity-vs-dimstyle export bug· `color-math` extend 8-digit alpha + HSL/HSV· `ui/color/utils`+`aci-palette` → thin adapters) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-04 | DXF Viewer · Color SSoT · ACI export | [📄](./adrs/ADR-573-color-conversion-ssot.md) |
-| **ADR-574** | Ghost/Preview (φαντάσματα οντοτήτων) SSoT Audit (χαρτογράφηση ΟΛΩΝ των previews σε κάθε κατάσταση —γέννηση/μετακίνηση/επεξεργασία/περιστροφή— 2D+3D· γεωμετρία = ενοποιημένη SSoT `applyEntityPreview`+`compute*Geometry`, preview≡commit· 4 νησίδες paint/routing: primitive-creation-style, MEP/opening placement paint, twin dispatch ladders, line-rotation engine· καμία αλλαγή runtime) | 🟢 RESOLVED-NO-CHANGE (audit) | 2026-07-05 | DXF Viewer · Ghost/Preview SSoT | [📄](./adrs/ADR-574-ghost-preview-ssot-audit.md) |
-| **ADR-575** | JOIN «Ένωση» + GROUP «Ομαδοποίηση» — το αντίστροφο της «Διάλυσης» (Explode)· JOIN reuse `useEntityJoin` + έκθεση Home▸Modify· GROUP νέος `type:'group'` container (καθρέφτης ArrayEntity, expand-before-convert)· UNGROUP≡EXPLODE ενός group· `CreateGroupCommand`· MOVE/ROTATE/SCALE/MIRROR SSoT recursion· 26/26 tests | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-05 | DXF Viewer · Modify · Entity model · Ribbon | [📄](./adrs/ADR-575-join-group-inverse-of-explode.md) |
-| **ADR-576** | Locale-aware currency/decimal parsing SSoT (`src/lib/number/locale-number.ts` — `normalizeDecimalString` + `parseLocaleNumber` building blocks· single sep = decimal, last-of-two = decimal, repeated = thousands· fixed-locale bank mode· `parseGreekDecimal` → thin wrapper· 4 app consumers migrated: property/accounting-CSV/procurement/building-code· property format-on-blur· 23 tests) | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-06 | App · Currency/Decimal SSoT · Property · Accounting · Procurement | [📄](./adrs/ADR-576-locale-number-ssot.md) |
-| **ADR-578** | Scene entity-id integrity — crypto-unique write-time id (drawing hook `useUnifiedDrawing` → `generateEntityId` SSoT, ADR-065· αφαίρεση αφελούς `useRef(1)` counter που έβγαζε reusable `entity_${n}` → `entity_8` ×2) + «Revit Audit»-on-open `ensureUniqueEntityIds` heal στο load chokepoint (pure/idempotent, same-ref no-op όταν clean, keep-first/re-mint-later)· 6 tests | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-06 | DXF Viewer · Scene integrity · Entity creation · Load/persistence | [📄](./adrs/ADR-578-scene-entity-id-integrity.md) |
-| **ADR-579** | «Κάθετη γραμμή» hover-driven (Revit-grade 2-click) — full SSoT reuse του line hover (ghost stub + κυανές dims + OSNAP + λευκά ίχνη) + hard κάθετο κλείδωμα στον `faceFrame.perpDir` (ADR-508)· νέο lock store + 2 pure helpers (preview≡commit)· κοινός `resolveLineFamilyCommitPoint`· απόσυρση παλιού pick tool `useLinePerpendicular` + entity-pick interception· 6 tests | ✅ 🟢 IMPLEMENTED (UNCOMMITTED) | 2026-07-06 | DXF Viewer · Drawing tools · Snap/Preview/Tracking SSoT · Ribbon Line Style | [📄](./adrs/ADR-579-perpendicular-line-hover-tool.md) |
+| **ADR-565** | Καμπύλα & Κυκλικά Δομικά BIM Στοιχεία: Έρευνα Αγοράς + Πρόταση Υλοποίησης (τοίχοι/δοκάρια/κολόνες/πέδιλα/συνδετήρια) | ✅ 🟢 Φ1 + Φ1.x IMPLEMENTED (UNCOMMITTED) — καμπύλος τοίχος + Revit «Draw Options Bar» (4 arc draw-variants, §13)· research + απόφαση αναπαράστασης παρακάτω | 2026-07-02 | DXF Viewer · BIM · Geometry · Research | [📄](./adrs/ADR-565-curved-circular-structural-bim-elements.md) |
+| **ADR-566** | Ένωση Τοίχων (Merge / Join Walls) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-566-merge-join-walls.md) |
+| **ADR-567** | Καμία δομική BIM οντότητα πάνω σε υπάρχουσα (no-overlap placement guard) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-567-structural-no-overlap-placement.md) |
+| **ADR-568** | Γεφύρωση Τοίχων με Αυτόματο Κούφωμα (Wall Gap → Bridge + Opening) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-568-wall-gap-auto-opening.md) |
+| **ADR-569** | Δοκάρι ανάμεσα σε μέλη (Beam between two structural members) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-569-beam-between-members.md) |
+| **ADR-570** | Line Style System (named «Στυλ Γραμμής» + πλήρες contextual tab, big-player-grade) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-570-line-style-system.md) |
+| **ADR-571** | DXF Viewer Cyan / Construction Color SSoT (κεντροποίηση διάσπαρτων κυανών) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-571-dxf-cyan-construction-color-ssot.md) |
+| **ADR-572** | Alignment Traces (ίχνη ευθυγράμμισης) SSoT Audit & Centralization Plan | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-572-alignment-traces-ssot-audit.md) |
+| **ADR-573** | Color-Conversion SSoT (big-player single color module) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-573-color-conversion-ssot.md) |
+| **ADR-574** | Ghost / Preview (φαντάσματα οντοτήτων) SSoT Audit | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-574-ghost-preview-ssot-audit.md) |
+| **ADR-575** | JOIN «Ένωση» + GROUP «Ομαδοποίηση»: το αντίστροφο της «Διάλυσης» (Explode) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-575-join-group-inverse-of-explode.md) |
+| **ADR-576** | Locale-aware currency/decimal parsing SSoT (`src/lib/number/`) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-576-locale-number-ssot.md) |
+| **ADR-577** | Unified interactive COPY tool (ribbon «Αντιγραφή» + C+O, all entity types) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-577-unified-copy-tool.md) |
+| **ADR-578** | Scene entity-id integrity: crypto-unique write-time ids + «Audit»-on-open heal | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-578-scene-entity-id-integrity.md) |
+| **ADR-579** | «Κάθετη γραμμή» hover-driven (Revit-grade 2-click, full SSoT reuse του line hover) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-579-perpendicular-line-hover-tool.md) |
+| **ADR-580** | Προτεραιότητα έλξης στις λαβές της επιλεγμένης οντότητας (Selected-Grip Snap Precedence) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-580-selected-grip-snap-precedence.md) |
+| **ADR-581** | Καθολικός Μηχανισμός «Αντιγραφή / Μεταφορά Ιδιοτήτων» (Universal Match/Transfer Properties Engine) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-581-universal-match-transfer-properties.md) |
+| **ADR-582** | `createPersistedValue` — localStorage-persistence SSoT | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-582-localstorage-persist-value-ssot.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1089,19 +1093,23 @@
 | **ADR-561** | Σταυρός Μετακίνησης + Σημάδι Περιστροφής σε Primitives (polyline / circle / arc / rectangle) | ✅ APPROVED | [View](./adrs/ADR-561-move-rotate-grips-primitives.md) |
 | **ADR-562** | Dimension Per-Part Styling (πλήρης έλεγχος χρώματος / πάχους / τύπου γραμμής / βελών ανά μέρος διάστασης) | ✅ APPROVED | [View](./adrs/ADR-562-dimension-per-part-styling.md) |
 | **ADR-563** | Auto-Dimension Engine (αυτόματη περιμετρική διαστασιολόγηση κάτοψης) | ✅ APPROVED | [View](./adrs/ADR-563-auto-dimension-engine.md) |
-| **ADR-566** | Ένωση Τοίχων (Merge / Join Walls) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-566-merge-join-walls.md) |
-| **ADR-567** | Καμία δομική BIM οντότητα πάνω σε υπάρχουσα (no-overlap placement guard) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-567-structural-no-overlap-placement.md) |
-| **ADR-568** | Γεφύρωση Τοίχων με Αυτόματο Κούφωμα (ομοαξονικοί με κενό → ένας τοίχος + πόρτα) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-568-wall-gap-auto-opening.md) |
-| **ADR-570** | Line Style System (named «Στυλ Γραμμής» + πλήρες contextual tab, big-player-grade) | 📝 PROPOSED | [View](./adrs/ADR-570-line-style-system.md) |
-| **ADR-571** | DXF Viewer Cyan / Construction Color SSoT (κεντροποίηση διάσπαρτων κυανών/teal) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-571-dxf-cyan-construction-color-ssot.md) |
-| **ADR-572** | Alignment Traces SSoT Audit (locale γωνίας + leader style SSoT· 3D no-change) | 🟢 IMPLEMENTED / 🟦 RESOLVED | [View](./adrs/ADR-572-alignment-traces-ssot-audit.md) |
-| **ADR-573** | Color-Conversion SSoT (single color module· 3 SSoT· ACI ramp removed· entity-vs-dimstyle export bug fixed) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-573-color-conversion-ssot.md) |
-| **ADR-574** | Ghost/Preview SSoT Audit (φαντάσματα όλων των οντοτήτων· γεωμετρία=ενοποιημένη SSoT· 4 νησίδες paint/routing· no-change) | 🟢 RESOLVED-NO-CHANGE | [View](./adrs/ADR-574-ghost-preview-ssot-audit.md) |
-| **ADR-575** | JOIN «Ένωση» + GROUP «Ομαδοποίηση» — αντίστροφο της «Διάλυσης»· `type:'group'` container (καθρέφτης ArrayEntity)· UNGROUP≡EXPLODE· 26/26 tests | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-575-join-group-inverse-of-explode.md) |
-| **ADR-576** | Locale-aware currency/decimal parsing SSoT (`src/lib/number/` building blocks· 4 app consumers migrated· property format-on-blur· 23 tests) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-576-locale-number-ssot.md) |
-| **ADR-578** | Scene entity-id integrity — crypto-unique write-time id (SSoT `generateEntityId`) + «Revit Audit»-on-open `ensureUniqueEntityIds` heal· root cause `entity_8` ×2· 6 tests | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-578-scene-entity-id-integrity.md) |
-| **ADR-579** | «Κάθετη γραμμή» hover-driven (Revit-grade 2-click)· full SSoT reuse του line hover + hard κάθετο κλείδωμα (`faceFrame.perpDir`)· απόσυρση παλιού pick tool· 6 tests | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-579-perpendicular-line-hover-tool.md) |
-| **ADR-569** | Δοκάρι ανάμεσα σε μέλη (beam between two picked structural members) | ✅ IMPLEMENTED (UNCOMMITTED) | [View](./adrs/ADR-569-beam-between-members.md) |
+| **ADR-566** | Ένωση Τοίχων (Merge / Join Walls) | ✅ APPROVED | [View](./adrs/ADR-566-merge-join-walls.md) |
+| **ADR-567** | Καμία δομική BIM οντότητα πάνω σε υπάρχουσα (no-overlap placement guard) | ✅ APPROVED | [View](./adrs/ADR-567-structural-no-overlap-placement.md) |
+| **ADR-568** | Γεφύρωση Τοίχων με Αυτόματο Κούφωμα (Wall Gap → Bridge + Opening) | ✅ APPROVED | [View](./adrs/ADR-568-wall-gap-auto-opening.md) |
+| **ADR-569** | Δοκάρι ανάμεσα σε μέλη (Beam between two structural members) | ✅ APPROVED | [View](./adrs/ADR-569-beam-between-members.md) |
+| **ADR-570** | Line Style System (named «Στυλ Γραμμής» + πλήρες contextual tab, big-player-grade) | ✅ APPROVED | [View](./adrs/ADR-570-line-style-system.md) |
+| **ADR-571** | DXF Viewer Cyan / Construction Color SSoT (κεντροποίηση διάσπαρτων κυανών) | ✅ APPROVED | [View](./adrs/ADR-571-dxf-cyan-construction-color-ssot.md) |
+| **ADR-572** | Alignment Traces (ίχνη ευθυγράμμισης) SSoT Audit & Centralization Plan | ✅ APPROVED | [View](./adrs/ADR-572-alignment-traces-ssot-audit.md) |
+| **ADR-573** | Color-Conversion SSoT (big-player single color module) | ✅ APPROVED | [View](./adrs/ADR-573-color-conversion-ssot.md) |
+| **ADR-574** | Ghost / Preview (φαντάσματα οντοτήτων) SSoT Audit | ✅ APPROVED | [View](./adrs/ADR-574-ghost-preview-ssot-audit.md) |
+| **ADR-575** | JOIN «Ένωση» + GROUP «Ομαδοποίηση»: το αντίστροφο της «Διάλυσης» (Explode) | ✅ APPROVED | [View](./adrs/ADR-575-join-group-inverse-of-explode.md) |
+| **ADR-576** | Locale-aware currency/decimal parsing SSoT (`src/lib/number/`) | ✅ APPROVED | [View](./adrs/ADR-576-locale-number-ssot.md) |
+| **ADR-577** | Unified interactive COPY tool (ribbon «Αντιγραφή» + C+O, all entity types) | ✅ APPROVED | [View](./adrs/ADR-577-unified-copy-tool.md) |
+| **ADR-578** | Scene entity-id integrity: crypto-unique write-time ids + «Audit»-on-open heal | ✅ APPROVED | [View](./adrs/ADR-578-scene-entity-id-integrity.md) |
+| **ADR-579** | «Κάθετη γραμμή» hover-driven (Revit-grade 2-click, full SSoT reuse του line hover) | ✅ APPROVED | [View](./adrs/ADR-579-perpendicular-line-hover-tool.md) |
+| **ADR-580** | Προτεραιότητα έλξης στις λαβές της επιλεγμένης οντότητας (Selected-Grip Snap Precedence) | ✅ APPROVED | [View](./adrs/ADR-580-selected-grip-snap-precedence.md) |
+| **ADR-581** | Καθολικός Μηχανισμός «Αντιγραφή / Μεταφορά Ιδιοτήτων» (Universal Match/Transfer Properties Engine) | ✅ APPROVED | [View](./adrs/ADR-581-universal-match-transfer-properties.md) |
+| **ADR-582** | `createPersistedValue` — localStorage-persistence SSoT | ✅ APPROVED | [View](./adrs/ADR-582-localstorage-persist-value-ssot.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

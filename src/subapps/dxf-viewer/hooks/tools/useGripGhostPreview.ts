@@ -33,9 +33,7 @@
 
 import { useCallback } from 'react';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
-import type { AnySceneEntity, Entity, GroupEntity } from '../../types/entities';
-// ADR-575 §8 — expand the transformed GROUP into its member primitives to ghost each.
-import { expandGroupEntity } from '../../systems/group/group-expander';
+import type { AnySceneEntity, Entity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { useLevels } from '../../systems/levels';
@@ -97,6 +95,7 @@ import {
   drawColumnAspectWallWarning,
   drawMemberGripHud,
   paintGripEndpointReshapeArcs,
+  drawGroupGhost,
 } from './grip-ghost-preview-draw-helpers';
 // ADR-040 Φ12 — SSoT grip delta resolvers (shared with buildDxfDragPreview/commit), so
 // the live synchronous ghost derives translate + rotation identically from the effective-world.
@@ -277,20 +276,10 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // ── ADR-575 §8 — GROUP gizmo live ghost (whole-group move / rotate) ──────────
     // `applyEntityPreview` returns a transformed `type:'group'` CONTAINER (every member
     // moved by the SAME `calculateMovedGeometry`/`rotateEntity` case 'group' the commit
-    // runs). The single-entity path below cannot draw a group, so expand + ghost each
-    // member (Revit/C4D «όλη η ομάδα κινείται»). Pivot ⊙ + angle arc already drawn above;
-    // early-return skips the BIM member-body/alignment/HUD overlays (group-agnostic).
-    if ((transformed as { type?: string }).type === 'group') {
-      if (transformed !== entity) {
-        ctx.save();
-        ctx.globalAlpha = GHOST_DEFAULTS.alpha;
-        ctx.strokeStyle = GHOST_DEFAULTS.color;
-        ctx.fillStyle = GHOST_DEFAULTS.color;
-        for (const member of expandGroupEntity(transformed as unknown as GroupEntity)) {
-          drawGhostEntity(ctx, member as unknown as DxfEntityUnion, t, vp);
-        }
-        ctx.restore();
-      }
+    // runs). The single-entity path below cannot draw a group, so `drawGroupGhost` expands
+    // + ghosts each member (Revit/C4D «όλη η ομάδα κινείται»). Pivot ⊙ + angle arc already
+    // drawn above; early-return skips the BIM member-body/alignment/HUD overlays (group-agnostic).
+    if (drawGroupGhost(ctx, transformed as unknown as AnySceneEntity, entity as unknown as AnySceneEntity, t, vp)) {
       return;
     }
 
@@ -339,19 +328,6 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       const fromW = dp.rotatePivot ?? dp.anchorPos;
       const toW = translatePoint(dp.anchorPos, dp.delta);
       drawDashedSegment(ctx, fromW, toW, t, vp);
-    }
-
-    // ADR-357/363/560/508 §grip-tracking — action-alignment traces RESOLVED-IN-DRAW. Anchors +
-    // OSNAP-priority + paint ζουν στο overlay helper (file-size SRP N.7.1): whole-entity translate →
-    // base point· line/polyline endpoint reshape → fixed neighbour anchors· ΚΑΘΕ πολυγωνική BIM
-    // reshape λαβή → σταθερές footprint κορυφές. Display-only (δεν αλλάζει το `dp.delta`).
-    {
-      const trkScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
-      paintGripActionAlignmentTraces(
-        ctx, dp, entity as unknown as Entity, effectiveCursor,
-        (trkScene?.entities ?? null) as unknown as readonly Entity[] | null,
-        resolveSceneUnits(trkScene), t, vp,
-      );
     }
 
     // ADR-357/513 §grip-polar — πορτοκαλί polar ray + γωνία από τον ΣΤΑΘΕΡΟ γείτονα προς το κλειδωμένο
@@ -455,6 +431,25 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       // body). Ίδιο gate με το dialog-on-release. No-op για μη-crossing/άλλα είδη.
       drawColumnAspectWallWarning(ctx, entity as unknown as Entity, transformed as unknown as Entity, t, vp);
       ctx.restore();
+    }
+
+    // ADR-357/363/560/508 §grip-tracking — action-alignment traces RESOLVED-IN-DRAW. Anchors +
+    // OSNAP-priority + paint ζουν στο overlay helper (file-size SRP N.7.1): whole-entity translate →
+    // base point· line/polyline endpoint reshape → fixed neighbour anchors· ΚΑΘΕ πολυγωνική BIM
+    // reshape λαβή → σταθερές footprint κορυφές. Display-only (δεν αλλάζει το `dp.delta`).
+    // ADR-557 (Giorgio 2026-07-07) — painted AFTER the moving-ghost body block above (which renders the
+    // WYSIWYG copy FULLY OPAQUE via the real entity renderer, `BaseEntityRenderer.setupStyle` → globalAlpha
+    // = OPAQUE) so the traces are NEVER overdrawn — «paint LAST», exactly like the HUD/clearance/gradient
+    // overlays below. Previously painted BEFORE the ghost body: a large MTEXT's opaque multi-line glyph
+    // block swallowed its own traces near the anchor (`frame.center`), so a moving MTEXT showed no cyan
+    // while a small single-line TEXT did (3-agent deep-dive, unanimous root cause).
+    {
+      const trkScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+      paintGripActionAlignmentTraces(
+        ctx, dp, entity as unknown as Entity, effectiveCursor,
+        (trkScene?.entities ?? null) as unknown as readonly Entity[] | null,
+        resolveSceneUnits(trkScene), t, vp,
+      );
     }
 
     // ADR-508 §wall-hud/§column-hud — LIVE «λευκές ενδείξεις» τοίχου/κολόνας ΠΑΝΩ από το ghost, στο ΙΔΙΟ

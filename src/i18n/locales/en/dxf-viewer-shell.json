@@ -1682,7 +1682,21 @@
           "width": "Width (mm)",
           "depth": "Depth (mm)",
           "elevation": "Elevation (mm)",
-          "sillHeight": "Sill Height (mm)"
+          "sillHeight": "Sill Height (mm)",
+          "color": "Color",
+          "linetype": "Linetype",
+          "lineweight": "Lineweight",
+          "transparency": "Transparency",
+          "lineStyle": "Line style",
+          "ltscale": "Linetype scale",
+          "lineCap": "Line cap",
+          "lineJoin": "Line join",
+          "widthFactor": "Width factor",
+          "fontFamily": "Font",
+          "fontSize": "Font size",
+          "hatchPattern": "Hatch pattern",
+          "hatchScale": "Hatch scale",
+          "hatchAngle": "Hatch angle"
         },
         "differentValues": "Different values",
         "emptyCommon": "Mixed selection — no shared editable properties. Use Filter to narrow the selection.",
@@ -4943,6 +4957,12 @@
     "selectAll": "Select all",
     "clearAll": "Clear",
     "targetTypeHeading": "{type} — {count, plural, one {# object} other {# objects}}",
+    "ai": {
+      "placeholder": "Describe what to copy…",
+      "submit": "Apply with AI",
+      "thinking": "Thinking…",
+      "hint": "E.g. “copy everything but keep the length”. The AI picks WHICH properties; the engine computes the values."
+    },
     "categories": {
       "style": "Style",
       "geometry": "Geometry",

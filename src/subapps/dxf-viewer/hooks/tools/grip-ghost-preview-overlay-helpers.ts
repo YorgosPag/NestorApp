@@ -141,19 +141,6 @@ export function paintGripActionAlignmentTraces(
   // DISCRETE OSNAP wins, so OSNAP priority still holds (null store → no cyan on those frames).
   if (role.movesEntity && !role.isRotation && role.anchorPos) {
     const published = getGripAlignmentTracking();
-    // [MLDIAG-store] TEMP — remove after confirm. Shows resolve #1's published state for text moves.
-    if (entity.type === 'text' || entity.type === 'mtext') {
-      const g = globalThis as unknown as { __mls?: number };
-      g.__mls = (g.__mls ?? 0) + 1;
-      if (g.__mls % 10 === 0) {
-        const s = getImmediateSnap();
-        // eslint-disable-next-line no-console
-        console.log('[MLDIAG-store]', JSON.stringify({
-          type: entity.type, published: published ? 'HIT' : 'null',
-          osnapFound: s?.found ?? false, snapMode: (s as unknown as { mode?: string })?.mode ?? null,
-        }));
-      }
-    }
     if (published) paintActionAlignmentTracking(ctx, published, t, vp, sceneUnits);
     return;
   }

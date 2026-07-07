@@ -164,6 +164,45 @@
   color: var(--muted-foreground, #6b7280);
 }
 
+/* ── AI intent prompt (ADR-581 §12, flag-gated) ─────────────────────────── */
+
+.aiRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--border, rgba(148, 163, 184, 0.3));
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--muted, rgba(148, 163, 184, 0.08));
+}
+
+.aiField {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.aiInput {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8125rem;
+  padding: 6px 10px;
+  border: 1px solid var(--border, rgba(148, 163, 184, 0.4));
+  border-radius: 6px;
+  background: var(--background, #fff);
+  color: inherit;
+}
+
+.aiHint {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground, #6b7280);
+}
+
+.aiError {
+  font-size: 0.75rem;
+  color: var(--destructive, #dc2626);
+}
+
 /* ── Footer actions ─────────────────────────────────────────────────────── */
 
 .footerActions {

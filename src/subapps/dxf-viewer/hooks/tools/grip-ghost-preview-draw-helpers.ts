@@ -22,6 +22,9 @@ import { paintDirectionArc } from '../../canvas-v2/preview-canvas/direction-arc-
 import { rotateSweepDegFromDirs } from '../grips/grip-projections';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { drawGhostEntity, GHOST_DEFAULTS } from '../../rendering/ghost';
+// ADR-575 §8 — expand a transformed GROUP container into its member primitives to ghost each.
+import { expandGroupEntity } from '../../systems/group/group-expander';
+import type { GroupEntity } from '../../types/entities';
 // ADR-449 — the moving member body ghost renders through the REAL entity renderer (WYSIWYG),
 // and a wall additionally re-forms its live join-miter (same SSoT as commit + resize).
 import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
@@ -411,3 +414,36 @@ export function drawMemberBodyGhostWithJoinMiter(
 
 // ADR-508 §*-hud — `drawMemberGripHud` (live member grip HUD) moved to
 // `grip-ghost-preview-hud-helpers.ts` (file-size SRP split, N.7.1) and re-exported at the top.
+
+// ── ADR-575 §8 — GROUP gizmo live ghost (whole-group move / rotate) ──────────────
+/**
+ * Ghost a transformed `type:'group'` CONTAINER by expanding it into its member
+ * primitives and drawing each translucent (every member was already moved by the
+ * SAME `calculateMovedGeometry`/`rotateEntity` case 'group' the commit runs).
+ *
+ * The single-entity ghost path cannot draw a group, so this is called first and,
+ * when it returns `true`, the caller early-returns (Revit/C4D «όλη η ομάδα κινείται»).
+ * A no-op transform (`transformed === entity`) still counts as handled → returns `true`.
+ *
+ * @returns `true` if the entity was a group (caller must stop), else `false`.
+ */
+export function drawGroupGhost(
+  ctx: CanvasRenderingContext2D,
+  transformed: AnySceneEntity,
+  entity: AnySceneEntity,
+  t: ViewTransform,
+  vp: Viewport,
+): boolean {
+  if ((transformed as { type?: string }).type !== 'group') return false;
+  if (transformed !== entity) {
+    ctx.save();
+    ctx.globalAlpha = GHOST_DEFAULTS.alpha;
+    ctx.strokeStyle = GHOST_DEFAULTS.color;
+    ctx.fillStyle = GHOST_DEFAULTS.color;
+    for (const member of expandGroupEntity(transformed as unknown as GroupEntity)) {
+      drawGhostEntity(ctx, member as unknown as DxfEntityUnion, t, vp);
+    }
+    ctx.restore();
+  }
+  return true;
+}

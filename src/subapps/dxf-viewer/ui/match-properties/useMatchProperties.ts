@@ -43,8 +43,14 @@ export interface UseMatchPropertiesResult {
   readonly groups: readonly MatchGroup[];
   readonly previews: readonly MatchTargetPreview[];
   readonly selectedRoles: ReadonlySet<SemanticRole>;
+  /** Ρόλοι που προσφέρονται (context για το προαιρετικό AI στρώμα, ADR-581 §12). */
+  readonly offeredRoles: readonly SemanticRole[];
+  /** Διακριτοί τύποι στόχων (context για το AI prompt). */
+  readonly targetTypes: readonly EntityType[];
   readonly toggleRole: (role: SemanticRole) => void;
   readonly setCategoryRoles: (roles: readonly SemanticRole[], on: boolean) => void;
+  /** Αντικαθιστά όλη την επιλογή (χρησιμοποιείται από το AI intent). */
+  readonly applyAiRoles: (roles: ReadonlySet<SemanticRole>) => void;
   readonly apply: () => void;
   readonly cancel: () => void;
 }
@@ -112,6 +118,10 @@ export function useMatchProperties(args: UseMatchPropertiesArgs): UseMatchProper
     });
   }, []);
 
+  const applyAiRoles = useCallback((roles: ReadonlySet<SemanticRole>) => {
+    setSelectedRoles(new Set(roles));
+  }, []);
+
   const previews = useMemo(
     () => (model.source && model.sourceType
       ? buildPreviews(model.source, model.sourceType, model.targetsByType, selectedRoles)
@@ -139,8 +149,11 @@ export function useMatchProperties(args: UseMatchPropertiesArgs): UseMatchProper
     groups: model.offered?.groups ?? [],
     previews,
     selectedRoles,
+    offeredRoles: model.offered?.offeredRoles ?? [],
+    targetTypes: model.targetTypes,
     toggleRole,
     setCategoryRoles,
+    applyAiRoles,
     apply,
     cancel: onClose,
   };
