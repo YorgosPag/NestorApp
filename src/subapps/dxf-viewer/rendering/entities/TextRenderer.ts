@@ -66,6 +66,7 @@ type TextRichStyle = {
   textBaseline?: 'top' | 'middle' | 'bottom';
   underline?: boolean; overline?: boolean; strikethrough?: boolean;
   obliqueAngle?: number; // ADR-557 — AutoCAD oblique (shear) angle in degrees
+  tracking?: number; // AutoCAD `\T` — inter-glyph spacing factor (1 = normal)
 } | undefined;
 
 export class TextRenderer extends BaseEntityRenderer {
@@ -181,6 +182,13 @@ export class TextRenderer extends BaseEntityRenderer {
     const obliqueAngle = (richStyle && typeof richStyle.obliqueAngle === 'number') ? richStyle.obliqueAngle : 0;
     const obliqueShear = obliqueAngle !== 0 ? -Math.tan(degToRad(obliqueAngle)) : 0;
 
+    // AutoCAD `\T` character tracking (spacing factor). `1` (every legacy TEXT + untouched
+    // MTEXT) keeps the byte-identical kerned glyph run — zero regression. The ribbon «Διάκενο»
+    // writes `run.style.tracking` → extractor → `richStyle.tracking` → here.
+    const tracking = (richStyle && typeof richStyle.tracking === 'number' && richStyle.tracking > 0)
+      ? richStyle.tracking
+      : 1;
+
     // ADR-557 (multi-line) — split on `\n`; each line steps down by `advancePx`. The block is
     // shifted so `position` stays the attachment anchor (T/M/B) — `firstOffsetPx = −topAdd·height`,
     // the exact rule the box SSoT applies, so the drawn lines fill the grip/hover box precisely.
@@ -190,7 +198,7 @@ export class TextRenderer extends BaseEntityRenderer {
     const row: TextRow = baselineMode === 'middle' ? 'M' : baselineMode === 'bottom' ? 'B' : 'T';
     const firstOffsetPx = -resolveMultilineExtents(row, lines.length, lineSpacingRatio).topAdd * screenHeight;
     const paint = (ox: number, oy: number) =>
-      this.paintTextLines(ox, oy, lines, advancePx, firstOffsetPx, screenHeight, textAlignMode, baselineMode, resolved, richStyle, hasDecoration);
+      this.paintTextLines(ox, oy, lines, advancePx, firstOffsetPx, screenHeight, textAlignMode, baselineMode, resolved, richStyle, hasDecoration, tracking);
 
     // ADR-557 — any of rotation / widthFactor / oblique needs a local frame around the
     // anchor; when all are neutral, keep the original anchor-space paint (byte-identical).
@@ -215,10 +223,11 @@ export class TextRenderer extends BaseEntityRenderer {
     originX: number, originY: number, lines: string[], advancePx: number, firstOffsetPx: number,
     screenHeight: number, align: CanvasTextAlign, baseline: CanvasTextBaseline,
     resolved: ResolvedFont | null, richStyle: TextRichStyle, hasDecoration: boolean,
+    tracking = 1,
   ): void {
     for (let i = 0; i < lines.length; i++) {
       const y = originY + firstOffsetPx + i * advancePx;
-      const w = this.paintText(originX, y, lines[i], screenHeight, align, baseline, resolved);
+      const w = this.paintText(originX, y, lines[i], screenHeight, align, baseline, resolved, tracking);
       if (hasDecoration) this.paintDecorations(originX, y, w, screenHeight, richStyle, align);
     }
   }
@@ -231,9 +240,22 @@ export class TextRenderer extends BaseEntityRenderer {
   private paintText(
     originX: number, originY: number, text: string, screenHeight: number,
     align: CanvasTextAlign, baseline: CanvasTextBaseline, resolved: ResolvedFont | null,
+    tracking = 1,
   ): number {
     if (resolved) {
-      return this.fillGlyphRun(originX, originY, text, screenHeight, align, baseline, resolved);
+      return this.fillGlyphRun(originX, originY, text, screenHeight, align, baseline, resolved, tracking);
+    }
+    // CSS fillText fallback (no loaded opentype font). AutoCAD `\T` tracking → canvas
+    // `letterSpacing`: (tracking − 1) × screenHeight added between glyphs. Set on BOTH
+    // measure + paint so the returned advance matches the drawn text (parity). Restored after.
+    const extraPx = tracking !== 1 ? (tracking - 1) * screenHeight : 0;
+    if (extraPx !== 0 && 'letterSpacing' in this.ctx) {
+      const prev = (this.ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing;
+      (this.ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${extraPx}px`;
+      this.ctx.fillText(text, originX, originY);
+      const w = this.ctx.measureText(text).width;
+      (this.ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = prev;
+      return w;
     }
     this.ctx.fillText(text, originX, originY);
     return this.ctx.measureText(text).width;
@@ -247,8 +269,11 @@ export class TextRenderer extends BaseEntityRenderer {
   private fillGlyphRun(
     originX: number, originY: number, text: string, screenHeight: number,
     align: CanvasTextAlign, baseline: CanvasTextBaseline, resolved: ResolvedFont,
+    tracking = 1,
   ): number {
-    const run = getGlyphRun(resolved.font, resolved.cacheName, text);
+    // `tracking` (AutoCAD `\T`) is baked into the cached run's path + metrics, so the draw
+    // math below (scale by `s`, widthFactor outer scale) is unchanged — parity for free.
+    const run = getGlyphRun(resolved.font, resolved.cacheName, text, tracking);
     const s = screenHeight / GLYPH_REFERENCE_SIZE;
     const widthPx = run.metrics.width * s;
     const ascentPx = run.metrics.ascent * s;

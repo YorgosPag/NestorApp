@@ -98,6 +98,8 @@ function advanceStyleOf(text: DxfText): TextAdvanceStyle {
     bold: style?.bold,
     italic: style?.italic,
     widthFactor: text.widthFactor ?? 1,
+    // AutoCAD `\T` tracking so the grip/hover box hugs the tracked glyphs (ADR-557 parity).
+    tracking: style?.tracking ?? 1,
   };
 }
 

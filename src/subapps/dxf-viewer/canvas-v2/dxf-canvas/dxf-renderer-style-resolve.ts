@@ -101,7 +101,12 @@ export function resolveEntityRenderStyle(
     // catalog∪registry SSoT (also resolves user-created customs) — ByLayer/ByBlock/
     // Continuous/unknown ⇒ [] (solid).
     dashMm: resolveLinetypePatternMm(entity.linetypeName),
-    alpha: 1,
+    // ADR-510 — even without a layer/cascade context, the entity's OWN object
+    // transparency (AutoCAD per-object, ribbon «Διαφάνεια») must still apply — same
+    // rule as the OWN lineweight/linetype above. Was hardcoded `1` → the ribbon
+    // transparency edit was silently dropped for every entity whose layer isn't in
+    // `layersById` (freshly-drawn / imported lines → this fallback branch). Absent ⇒ 1.
+    alpha: transparencyToAlpha(entity.transparency),
   };
   if (!layersById) return applyIsolateAlpha(fallback, entity);
   // ADR-358 Phase 9E-1: id-keyed lookup first (scene.layersById populated by builder),

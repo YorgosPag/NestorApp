@@ -82,8 +82,9 @@ function tokenMetrics(
   font: Font,
   token: string,
   height: number,
+  tracking: number,
 ): { width: number; ascent: number; descent: number } {
-  const m = measureText(font, token, height > 0 ? height : 1);
+  const m = measureText(font, token, height > 0 ? height : 1, tracking);
   return { width: m.width, ascent: m.ascent, descent: m.descent };
 }
 
@@ -116,7 +117,7 @@ export function breakLines(
         commitLine();
         continue;
       }
-      const m = tokenMetrics(font, token, run.style.height);
+      const m = tokenMetrics(font, token, run.style.height, run.style.tracking ?? 1);
       const wouldOverflow = accum.width + m.width > maxWidth;
       if (wouldOverflow && accum.runs.length > 0 && !isWhitespaceOnly(token)) {
         commitLine();

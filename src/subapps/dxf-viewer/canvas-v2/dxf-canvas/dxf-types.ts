@@ -171,6 +171,12 @@ export interface DxfTextStyle {
    * independent of `italic` (which swaps to the italic font face). Default 0 (upright).
    */
   obliqueAngle?: number;
+  /**
+   * AutoCAD MTEXT `\T` character tracking — inter-glyph spacing FACTOR (1.0 = normal, >1
+   * looser, <1 tighter). Applied by `TextRenderer`/`text-advance` as a per-glyph pen-advance
+   * multiplier (shapes untouched, unlike `widthFactor`). Default 1.
+   */
+  tracking?: number;
 }
 
 export interface DxfText extends DxfEntity {

@@ -40,13 +40,15 @@ const CHAR_WIDTH_MONOSPACE = TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
 /** Reference px size for the tier-2 offscreen measure (advance scales linearly with size). */
 const CSS_MEASURE_REF_PX = 100;
 
-/** Style inputs that drive font resolution + the horizontal X-scale. */
+/** Style inputs that drive font resolution + the horizontal X-scale + character tracking. */
 export interface TextAdvanceStyle {
   readonly fontFamily?: string;
   readonly bold?: boolean;
   readonly italic?: boolean;
   /** AutoCAD TEXT X-scale — the horizontal stretch the renderer applies (`ctx.scale(wf,1)`). */
   readonly widthFactor?: number;
+  /** AutoCAD MTEXT `\T` character tracking — inter-glyph spacing factor (1 = normal). */
+  readonly tracking?: number;
 }
 
 /** Monospace approximation — the no-font / no-DOM fallback (tier 3). `max(len,1)` never collapses. */
@@ -80,24 +82,33 @@ function baseAdvanceWorld(text: string, height: number, style?: TextAdvanceStyle
   if (!text) return monospaceAdvance(text, height);
 
   const family = style?.fontFamily || 'arial';
+  const tracking = style?.tracking != null && style.tracking > 0 ? style.tracking : 1;
 
-  // Tier 1 — loaded opentype font: byte-for-byte the renderer's glyph-paint advance.
+  // Tier 1 — loaded opentype font: byte-for-byte the renderer's glyph-paint advance
+  // (getGlyphRun bakes the SAME tracking the renderer uses → measure ≡ paint).
   const resolved = resolveEntityFont(family, { bold: style?.bold, italic: style?.italic });
   if (resolved) {
-    const run = getGlyphRun(resolved.font, resolved.cacheName, text);
+    const run = getGlyphRun(resolved.font, resolved.cacheName, text, tracking);
     return (run.metrics.width / GLYPH_REFERENCE_SIZE) * height;
   }
 
   // Tier 2 — CSS fillText parity: same font string, measured at a reference px size.
+  // Tracking → `ctx.letterSpacing` (mirrors TextRenderer's CSS fallback), so the measured
+  // width matches the drawn text in the no-opentype-font case too.
   const ctx = cssMeasureContext();
   if (ctx) {
     ctx.font = buildUIFont(CSS_MEASURE_REF_PX, family, style?.bold ? 'bold' : 'normal', style?.italic);
+    const ls = ctx as CanvasRenderingContext2D & { letterSpacing?: string };
+    const applySpacing = tracking !== 1 && 'letterSpacing' in ctx;
+    const prevLs = applySpacing ? ls.letterSpacing : undefined;
+    if (applySpacing) ls.letterSpacing = `${(tracking - 1) * CSS_MEASURE_REF_PX}px`;
     const px = ctx.measureText(text).width;
+    if (applySpacing) ls.letterSpacing = prevLs ?? '0px';
     if (Number.isFinite(px) && px > 0) return (px / CSS_MEASURE_REF_PX) * height;
   }
 
-  // Tier 3 — no font, no DOM: monospace approximation.
-  return monospaceAdvance(text, height);
+  // Tier 3 — no font, no DOM: monospace approximation × tracking.
+  return monospaceAdvance(text, height) * tracking;
 }
 
 /**

@@ -1147,3 +1147,13 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   invalidate-άρει σε scene-ref change, όχι per-field· αφού το Χρώμα δουλεύει, ξαναχτίζεται) → χρειάζονται συγκεκριμένο
   repro (πιθανό subtle change ή selection-render masking, όχι code bug). tsc SKIP (N.17). 🔴 browser-verify (Βήμα σε
   dashed γραμμή αλλάζει πυκνότητα παυλών) + commit → Giorgio.
+- **2026-07-08 — Φ3d follow-up: «Πλάτος» self-hides για μη-polyline επιλογή (εγκρίθηκε από Giorgio, AutoCAD/Revit
+  parity).** Το «Πλάτος» (polyline global width) εμφανιζόταν και σε επιλεγμένη απλή ΓΡΑΜΜΗ, όπου δεν έχει νόημα
+  (το data-model του LINE δεν έχει width → ο handler έκανε silent-skip). **Υλοποίηση (mirror του line-only Geometry
+  panel):** το πεδίο μετακινήθηκε σε **δικό του panel `line-width`** (labelKey `ribbon.panels.linePolyline` = «Πολυγραμμή»/
+  «Polyline», el+en) με νέο `visibilityKey` `LINE_TOOL_PANEL_VISIBILITY_KEYS.widthApplicable`· το `getPanelVisibility`
+  (`useRibbonLineToolBridge`) επιστρέφει `true` σε draw-defaults (καμία επιλογή → ορίζει το default πλάτος της
+  ΕΠΟΜΕΝΗΣ polyline) **ή** όταν επιλέγεται polyline-like οντότητα (`isPolylineLike`), και **κρύβει** το panel για
+  επιλεγμένη απλή ΓΡΑΜΜΗ (ή άλλη μη-polyline primitive). Το «Εμφάνιση Γραμμής» panel μένει καθαρό (linetype/lineweight/
+  scale, όλα έγκυρα για LINE). **+2 jest** στο `contextual-line-tool-tab.test.ts` (width-panel gated + appearance χωρίς
+  width). tsc SKIP (N.17). 🔴 browser-verify (επιλογή LINE → «Πλάτος» κρυμμένο· επιλογή polyline → ορατό) + commit → Giorgio.

@@ -14,9 +14,8 @@ import type { Font, Path as OtPath } from 'opentype.js';
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
-/** Convert an opentype.js Path to a browser Path2D. */
-function otPathToPath2D(otPath: OtPath): Path2D {
-  const p = new Path2D();
+/** Append an opentype.js Path's commands into an existing Path2D (no addPath — jsdom-safe). */
+function appendOtPath(p: Path2D, otPath: OtPath): void {
   for (const cmd of otPath.commands) {
     switch (cmd.type) {
       case 'M':
@@ -36,7 +35,29 @@ function otPathToPath2D(otPath: OtPath): Path2D {
         break;
     }
   }
+}
+
+/** Convert an opentype.js Path to a browser Path2D. */
+function otPathToPath2D(otPath: OtPath): Path2D {
+  const p = new Path2D();
+  appendOtPath(p, otPath);
   return p;
+}
+
+/**
+ * 🏢 AutoCAD MTEXT `\T` character tracking — a SPACING FACTOR (1.0 = normal). Applied as a
+ * per-glyph pen-advance multiplier: `penX += glyphAdvance × tracking`, so glyph SHAPES stay
+ * intact and only the gaps grow/shrink (≠ `widthFactor`, which X-scales the shapes). Kerning
+ * is intentionally dropped in the tracked path — the letters are deliberately re-spaced, so the
+ * sub-unit kern adjustments are irrelevant (mirrors CSS `letter-spacing`). The `tracking === 1`
+ * fast paths in `stringToPath2D` / `measureText` keep `font.getPath` / `getAdvanceWidth` (kerned,
+ * byte-identical) so every existing TEXT/MTEXT is unaffected.
+ */
+function trackedAdvanceWidth(font: Font, text: string, size: number, tracking: number): number {
+  let x = 0;
+  // Per-character advance (no cross-glyph kerning — deliberate for re-spaced text) × tracking.
+  for (const ch of text) x += font.getAdvanceWidth(ch, size) * tracking;
+  return x;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -61,6 +82,10 @@ export function glyphToPath2D(
 /**
  * Build a single Path2D for an entire string at (x, y).
  * Glyphs are laid out left-to-right; use measureText for advance width.
+ *
+ * `tracking` (AutoCAD `\T`, default 1 = normal) scales the inter-glyph pen advance. At the
+ * default the ORIGINAL `font.getPath` path (kerned) is returned byte-for-byte; a non-1 value
+ * takes the per-glyph tracked layout. Pair with `measureText(..., tracking)` for parity.
  */
 export function stringToPath2D(
   font: Font,
@@ -68,9 +93,18 @@ export function stringToPath2D(
   x: number,
   y: number,
   size: number,
+  tracking = 1,
 ): Path2D {
-  const otPath = font.getPath(text, x, y, size);
-  return otPathToPath2D(otPath);
+  if (tracking === 1) return otPathToPath2D(font.getPath(text, x, y, size));
+
+  // Tracked: place each glyph at the running pen X (advance × tracking); shapes untouched.
+  const p = new Path2D();
+  let penX = x;
+  for (const ch of text) {
+    appendOtPath(p, font.getPath(ch, penX, y, size));
+    penX += font.getAdvanceWidth(ch, size) * tracking;
+  }
+  return p;
 }
 
 export interface TextMetrics {
@@ -82,10 +116,16 @@ export interface TextMetrics {
 /**
  * Measure the advance width and font metrics for a string at given size.
  * ascent/descent are in the same coordinate space as the size parameter.
+ *
+ * `tracking` (AutoCAD `\T`, default 1) scales the inter-glyph advance, matching
+ * `stringToPath2D(..., tracking)` exactly so a box measured here coincides with the drawn
+ * glyphs. At the default, the ORIGINAL `font.getAdvanceWidth` (kerned) is used byte-for-byte.
  */
-export function measureText(font: Font, text: string, size: number): TextMetrics {
+export function measureText(font: Font, text: string, size: number, tracking = 1): TextMetrics {
   const scale = size / (font.unitsPerEm || 1000);
-  const width = font.getAdvanceWidth(text, size);
+  const width = tracking === 1
+    ? font.getAdvanceWidth(text, size)
+    : trackedAdvanceWidth(font, text, size, tracking);
   const ascent = (font.ascender ?? 0) * scale;
   const descent = Math.abs((font.descender ?? 0) * scale);
   return { width, ascent, descent };

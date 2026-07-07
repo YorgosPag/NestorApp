@@ -51,6 +51,9 @@ export function extractFirstRunStyle(entity: TextStyledEntity): DxfTextStyle | u
       // ADR-557 — carry the AutoCAD oblique angle so `TextRenderer` can shear the glyphs
       // (the ribbon «Κλίση» writes `run.style.obliqueAngle`; the renderer reads it from here).
       if (s.obliqueAngle !== undefined) result.obliqueAngle = s.obliqueAngle;
+      // Carry the AutoCAD `\T` character tracking so `TextRenderer` can space the glyphs
+      // (the ribbon «Διάκενο» writes `run.style.tracking`; the renderer reads it from here).
+      if (s.tracking !== undefined) result.tracking = s.tracking;
       if (s.color) {
         const c = s.color as DxfColor;
         if (c.kind === 'TrueColor') {

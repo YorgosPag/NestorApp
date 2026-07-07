@@ -45,9 +45,16 @@ describe('glyph-path-cache (ADR-530)', () => {
     expect(buildMock).toHaveBeenCalledTimes(2);
   });
 
-  it('builds the path at the reference em size', () => {
+  it('builds the path at the reference em size (tracking 1 by default)', () => {
     getGlyphRun(font, 'Liberation Sans', 'X');
-    expect(buildMock).toHaveBeenCalledWith(font, 'X', 0, 0, GLYPH_REFERENCE_SIZE);
+    expect(buildMock).toHaveBeenCalledWith(font, 'X', 0, 0, GLYPH_REFERENCE_SIZE, 1);
+  });
+
+  it('keys on tracking — a different factor rebuilds a distinct run', () => {
+    getGlyphRun(font, 'Liberation Sans', 'A', 1);
+    getGlyphRun(font, 'Liberation Sans', 'A', 2);
+    expect(buildMock).toHaveBeenCalledWith(font, 'A', 0, 0, GLYPH_REFERENCE_SIZE, 2);
+    expect(buildMock).toHaveBeenCalledTimes(2);
   });
 
   it('clearGlyphPathCache forces a rebuild', () => {
