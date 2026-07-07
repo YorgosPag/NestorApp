@@ -1,6 +1,6 @@
 # ADR-581 — Καθολικός Μηχανισμός «Αντιγραφή / Μεταφορά Ιδιοτήτων» (Universal Match/Transfer Properties Engine)
 
-**Status:** 🟡 IMPLEMENTED (UNCOMMITTED) — Φ1+Φ2+Φ3+Φ4 υλοποιημένα (69 jest GREEN: 57 πυρήνας + 12 AI intent)· 🔴 browser-verify εκκρεμεί
+**Status:** 🟡 IMPLEMENTED (UNCOMMITTED) — Φ1+Φ2+Φ3+Φ4+Φ6 υλοποιημένα (75 jest GREEN: 57 πυρήνας + 12 AI intent + 6 preview-entity)· 🔴 browser-verify εκκρεμεί
 **Date:** 2026-07-07
 **Domain:** DXF Viewer / Editing / BIM params & style / UX (canvas + ribbon)
 **Related:** ADR-185 (AI αποφασίζει ΤΙ, ντετερμινιστικός υπολογίζει ΤΙΜΕΣ), ADR-363 §7.1 (multi-selection bulk-edit — το fan-out template), ADR-040 (click hot-path / micro-leaf — CHECK 6B/6D co-stage), ADR-001 (Radix Dialog SSoT), ADR-092 (localStorage SSoT), ADR-294 (SSoT ratchet), ADR-449 (finish-paint — το «writer από click» template), ADR-532 B4 (AllGrips/selection stores)
@@ -142,6 +142,27 @@
 ---
 
 ## Changelog
+
+### 2026-07-07 — Φ6 IMPLEMENTED (persistent σύριγγα tool + live hover ghost)
+Revit/Archicad-grade UX για το Match/Transfer: το εργαλείο δεν εξαρτάται πλέον από modifiers/dialog.
+**(A) Κουμπί «Αρχική»:** νέο `HOME_MATCH_PANEL` (`home-tab-match.ts`) — μεγάλο κουμπί με `commandKey:'match-properties'`
+(persistent tool, όπως Move/Copy/Rotate). **Reactive 2-state icon** `match-syringe` στο `RibbonButtonIcon.tsx`:
+subcomponent `MatchSyringeIcon` κάνει `useSyncExternalStore(subscribeMatchBrush, hasMatchBrushSource)` →
+lucide `Syringe` **outline (άδεια) ⇄ fill (γεμάτη)**· low-freq brush store → subscription ασφαλές (ΟΧΙ hot-path).
+**(B) Lifecycle:** `useMatchHoverGhostPreview` καθαρίζει τη σύριγγα (`clearMatchBrushSource`) όταν το `activeTool`
+φεύγει από `match-properties` (Escape/άλλο εργαλείο) → επόμενη ενεργοποίηση ξεκινά «άδεια». **(C) Live hover ghost:**
+νέο micro-leaf `MatchHoverGhostPreviewMount` (πρότυπο `mep-fixture-ghost`) + hook `useMatchHoverGhostPreview` που
+ride-άρει στο `useCanvasGhostPreview` (`cursorMode:'none'`) — hover πάνω σε στόχο ζωγραφίζει **WYSIWYG preview
+(στυλ + ξανασχηματισμένη γεωμετρία)** ΠΡΙΝ το click, μέσω του real `drawRealEntityPreview` σε ghost alpha.
+**Νέος SSoT** `match-preview-entity.ts` (`buildMatchPreviewEntity` + `recomputeParametricGeometry`, ένα switch):
+scene πεδία → top-level merge (καθρέφτης `UpdateEntityCommand`), params → merge + geometry recompute μέσω των ΙΔΙΩΝ
+`compute{Kind}Geometry` (καθρέφτης `Update{Kind}ParamsCommand`) → **ghost ≡ commit** (ίδια patches
+`collectMatchPatches`, ίδιοι ρόλοι `getDefaultChecklist`). Το click-FSM (`match-click-handlers.ts`) **δεν άλλαξε**.
+**ADR-040:** subscription ΜΟΝΟ στο νέο leaf, orchestrators inert· co-staged ADR-040 changelog (2026-07-07 (c),
+CHECK 6B/6D). **+6 jest (`match-preview-entity.test.ts`) → 37/37 GREEN** στο `systems/match-properties/__tests__` suite
+(style-only clone, column params→geometry reshape, empty-patch clone, ghost ≡ commit ισότητα, opening/raw → null),
+μηδέν regression στα 31 υπάρχοντα. Pending-ratchet: μελλοντική ενοποίηση των 3 `type→compute*Geometry` sites. 🔴 browser-verify +
+commit εκκρεμούν.
 
 ### 2026-07-07 — Φ4 IMPLEMENTED (optional AI intent layer, flag-gated)
 Ολοκλήρωση του προαιρετικού AI στρώματος. **Flag** `USE_AI_MATCH_PROPERTIES` (`NEXT_PUBLIC_DXF_AI_MATCH`). **Εξαγωγή** inline `callOpenAI` → κοινό `ai-assistant/dxf-openai-call.ts` (Boy-Scout SSoT· generalised `toolChoice`/`parallelToolCalls`· command route ανέγγιχτο· κράτησε raw-fetch αντί SDK ώστε match+command routes = ΕΝΑΣ μηχανισμός, βλ. §12 reconciliation). **Contract** `ai-assistant/match-tool-definitions.ts` (forced tool `plan_match_properties` + zod `matchIntentSchema` + `validateMatchIntent` hallucination-drop + `computeSelectedRolesFromIntent`, isomorphic). **Route** `app/api/dxf-ai/match/route.ts` (withAuth+rate-limit+maxDuration=60+sanitizeForPromptInjection). **UI** `useMatchAi` (flag-gated no-op) + `MatchAiPrompt` (lazy στο `dxf-viewer-lazy-components.tsx`, mount στο dialog σε `<Suspense>`) + `useMatchProperties.applyAiRoles`/`offeredRoles`/`targetTypes`. Locale `matchProperties.ai.*` el+en. **+12 jest → 69/69 GREEN**, μηδέν regression στα 37 υπάρχοντα. Invariant ADR-185 κλειδωμένο με test («never numbers» + drop hallucinated). **Browser-verify fix:** τα style checklist labels έδειχναν raw i18n keys — τα κλειδιά `ribbon.contextualTabs.multiSelection.properties.{color,linetype,lineweight,transparency,lineStyle,ltscale,lineCap,lineJoin,widthFactor,fontFamily,fontSize,hatchPattern,hatchScale,hatchAngle}` έλειπαν (το node είχε μόνο geometry) → προστέθηκαν el+en (Φ3 label gap, διορθώθηκε τώρα). 🔴 browser-verify (AI row) + commit εκκρεμούν. 🟡 UNCOMMITTED.
