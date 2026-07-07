@@ -33,3 +33,35 @@ export {
 export { coerceValue } from './match-value-coercion';
 
 export { roleFamily, asRole } from './semantic-roles';
+
+export {
+  buildMatchTransferCommand,
+  collectMatchPatches,
+  type MatchTransferRequest,
+  type MatchTransferResult,
+  type MatchTransferEmit,
+  type Channelled,
+} from './match-transfer-applier';
+
+export { checkConsistency, type MatchWarning } from './match-consistency-check';
+
+export {
+  getMatchBrushSource,
+  setMatchBrushSource,
+  clearMatchBrushSource,
+  hasMatchBrushSource,
+  subscribeMatchBrush,
+  type MatchBrushSource,
+} from './match-brush-store';
+
+export {
+  getDefaultChecklist,
+  recordApply,
+  subscribeHabit,
+} from './match-habit-store';
+
+export {
+  buildParamsUpdateCommand,
+  isParamsCommandKind,
+  type ParamsPatch,
+} from './match-params-command-builder';

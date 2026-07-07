@@ -4,26 +4,19 @@
  * Consumed by `BimPropertiesShell` (the 3D card was merged into the floating palette).
  */
 
+// 🏢 ADR-092 — persistence via the storage-utils SSoT (SSR-safe + quota-guarded + JSON),
+// not hand-rolled getItem/JSON.parse/setItem. Non-reactive read-modify-write per call.
+import { storageGet, storageSet } from '../../../utils/storage-utils';
+
 const STORAGE_KEY = 'bim3d:entityCardTabs';
 
 export function getLastActiveTab(entityType: string): string {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return 'parameters';
-    const map = JSON.parse(raw) as Record<string, string>;
-    return map[entityType] ?? 'parameters';
-  } catch {
-    return 'parameters';
-  }
+  const map = storageGet<Record<string, string>>(STORAGE_KEY, {});
+  return map[entityType] ?? 'parameters';
 }
 
 export function setLastActiveTab(entityType: string, tabValue: string): void {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const map = raw ? (JSON.parse(raw) as Record<string, string>) : {};
-    map[entityType] = tabValue;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
-  } catch {
-    // localStorage unavailable (SSR or private mode)
-  }
+  const map = storageGet<Record<string, string>>(STORAGE_KEY, {});
+  map[entityType] = tabValue;
+  storageSet(STORAGE_KEY, map);
 }

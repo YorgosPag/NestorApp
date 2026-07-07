@@ -40,6 +40,7 @@ export type ToolType =
   | 'scale'             // ADR-348: Scale command (uniform + non-uniform + reference + copy)
   | 'mirror'            // ADR-2xx: Mirror command
   | 'copy'               // ADR-363 R1 / ADR-577: unified COPY (AutoCAD COPY pattern, all entity types)
+  | 'match-properties'   // ADR-581: Match/Transfer Properties brush (σταγονόμετρο/σύριγγα)
   | 'delete'
   // ADR-349 Phase 1a: Stretch command (crossing-window displacement)
   | 'stretch'

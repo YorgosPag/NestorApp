@@ -58,6 +58,9 @@ export const STORAGE_KEYS = {
   VIEWPORT_STATE_PREFIX: 'dxf-viewer:viewport-state',
   // 3D Camera State Persistence (ADR-400 §3D) — dynamic key, used with `:{fileRecordId}` suffix
   CAMERA3D_STATE_PREFIX: 'dxf-viewer:camera3d-state',
+
+  // Match/Transfer Properties habit stats (ADR-581) — default checklist ανά (sourceType,targetType)
+  MATCH_PROPERTIES_HABIT: 'dxf-viewer:match-properties-habit:v1',
 } as const;
 
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS] | string;

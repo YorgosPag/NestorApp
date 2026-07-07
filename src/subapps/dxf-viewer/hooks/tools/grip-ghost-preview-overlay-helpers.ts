@@ -138,19 +138,22 @@ export function paintGripActionAlignmentTraces(
       alignAnchors = anchors.length ? anchors : null;
     }
   }
-  // [MLDIAG] TEMP — ADR-557 multiline cyan investigation (Giorgio 2026-07-07). Remove after diagnosis.
+  // [MLDIAG-paint] TEMP — ADR-557 multiline cyan (Giorgio). Remove after diagnosis. This is the ACTUAL
+  // text-cyan painter (useGripGhostPreview local); useDimGripGhostPreview is dim-only.
   if (entity.type === 'text' || entity.type === 'mtext') {
-    const g = globalThis as unknown as { __ml?: number };
-    g.__ml = (g.__ml ?? 0) + 1;
-    if (g.__ml % 12 === 0) {
-      const trk = alignAnchors
+    const g = globalThis as unknown as { __mlp?: number };
+    g.__mlp = (g.__mlp ?? 0) + 1;
+    if (g.__mlp % 10 === 0) {
+      const snapFound = getImmediateSnap()?.found ?? false;
+      const trk = alignAnchors && !snapFound
         ? resolveActionAlignmentTracking(effectiveCursor, alignAnchors, t.scale, sceneEntities, new Set([dp.entityId]))
         : null;
+      const ml = typeof (entity as unknown as { text?: string }).text === 'string'
+        && (entity as unknown as { text: string }).text.includes('\n');
       // eslint-disable-next-line no-console
-      console.log('[MLDIAG]', JSON.stringify({
-        type: entity.type, moves: dp.movesEntity === true, anchor: dp.anchorPos, cursor: effectiveCursor,
-        anchors: alignAnchors, snapFound: getImmediateSnap()?.found ?? false,
-        sceneN: sceneEntities?.length ?? 0, trk: trk ? 'HIT' : 'null',
+      console.log('[MLDIAG-paint]', JSON.stringify({
+        type: entity.type, multiline: ml, reached: true, anchors: alignAnchors, snapFound,
+        cursor: effectiveCursor, trk: !alignAnchors ? 'no-anchors' : (snapFound ? 'SUPPRESSED-by-osnap' : (trk ? 'HIT' : 'null')),
       }));
     }
   }

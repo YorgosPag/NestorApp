@@ -14,6 +14,7 @@ import type { EntityType } from '../../types/entities';
 import type { MatchablePropertyDescriptor, SemanticRole } from './match-types';
 import { getStyleMatchables } from './style-matchable-descriptors';
 import { getGeometryMatchables } from './geometry-matchables';
+import { getStructuralMatchables } from './param-matchables-by-type';
 
 const CACHE = new Map<string, readonly MatchablePropertyDescriptor[]>();
 
@@ -24,7 +25,11 @@ export function getMatchableProperties(
   const cached = CACHE.get(type);
   if (cached) return cached;
 
-  const merged = [...getStyleMatchables(type), ...getGeometryMatchables(type)];
+  const merged = [
+    ...getStyleMatchables(type),
+    ...getGeometryMatchables(type),
+    ...getStructuralMatchables(type),
+  ];
   CACHE.set(type, merged);
   return merged;
 }

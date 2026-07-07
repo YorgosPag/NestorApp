@@ -74,6 +74,8 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'rotate': { id: 'rotate', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-363 R1 / ADR-577: unified COPY (AutoCAD COPY: base + continuous target picks, exits on ESC)
   'copy': { id: 'copy', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-581: Match/Transfer Properties brush (σύριγγα) — category 'editing' ⇒ ΟΧΙ interactive/drawing (δεν μπαίνει στο drawing-preview pipeline). allowsContinuous: πολλαπλά inject clicks.
+  'match-properties': { id: 'match-properties', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'delete': { id: 'delete', category: 'editing', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
   'grip-edit': { id: 'grip-edit', category: 'editing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: true },
   // ADR-348: Scale command (uniform + non-uniform + copy mode + reference mode)

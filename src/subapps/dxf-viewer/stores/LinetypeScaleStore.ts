@@ -14,7 +14,7 @@
  * mismatch vs drawing size (ADR-510 §2.2); this knob is the fix surface.
  */
 
-import { createExternalStore } from './createExternalStore';
+import { createPersistedValue } from './createPersistedValue';
 
 /** Default LTSCALE — AutoCAD convention. */
 export const DEFAULT_LTSCALE = 1.0;
@@ -22,28 +22,15 @@ export const DEFAULT_LTSCALE = 1.0;
 /** localStorage key — session-persisted, user-scoped. */
 const LS_LTSCALE = 'dxf:ltscale';
 
-function loadInitialScale(): number {
-  if (typeof localStorage === 'undefined') return DEFAULT_LTSCALE;
-  const raw = localStorage.getItem(LS_LTSCALE);
-  if (raw === null) return DEFAULT_LTSCALE;
-  const parsed = parseFloat(raw);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_LTSCALE;
-}
-
-function persist(next: number): void {
-  if (typeof localStorage === 'undefined') return;
-  if (next === DEFAULT_LTSCALE) {
-    localStorage.removeItem(LS_LTSCALE);
-  } else {
-    localStorage.setItem(LS_LTSCALE, String(next));
-  }
-}
-
-// SSoT pub/sub plumbing via createExternalStore (WAVE 2.6). `equals: Object.is`
-// reproduces the hand-rolled `if (next === scale) return` identity guard. The
-// wrapper also short-circuits explicitly before persisting, so an unchanged
-// value never touches localStorage — byte-identical to the original.
-const store = createExternalStore<number>(loadInitialScale(), { equals: Object.is });
+// SSoT reactive + persisted value (createPersistedValue = createExternalStore + storage-utils).
+// `equals: Object.is` reproduces the hand-rolled `if (next === scale) return` identity guard;
+// `removeOnDefault` mirrors the old `removeItem` on DEFAULT; `validate` reproduces the
+// finite-&-positive hydrate check. JSON number format === the old `String(n)` for numbers.
+const store = createPersistedValue<number>(LS_LTSCALE, DEFAULT_LTSCALE, {
+  equals: Object.is,
+  removeOnDefault: true,
+  validate: (v) => (Number.isFinite(v) && v > 0 ? v : DEFAULT_LTSCALE),
+});
 
 // ─── Snapshot getter (useSyncExternalStore-compatible) ───────────────────────
 
@@ -67,8 +54,7 @@ export function subscribeLinetypeScale(cb: () => void): () => void {
 export function setLinetypeScale(next: number): void {
   if (!Number.isFinite(next) || next <= 0) return;
   if (Object.is(store.get(), next)) return;
-  store.set(next);
-  persist(next);
+  store.set(next); // persists via createPersistedValue (removeOnDefault on DEFAULT_LTSCALE)
 }
 
 /** Reset to the AutoCAD default (1.0). */

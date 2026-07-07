@@ -41,13 +41,17 @@ export interface MatchTransferResult {
   readonly skipped: readonly { readonly targetId: string; readonly reason: string }[];
 }
 
-interface Channelled {
+export interface Channelled {
   readonly scenePatch: Record<string, unknown>;
   readonly paramsPatch: Record<string, unknown>;
 }
 
-/** Μαζεύει τα coerced fragments ενός target σε scene + params patches. */
-function collectPatches(
+/**
+ * Μαζεύει τα coerced fragments ενός target σε scene + params patches. Εξαγωγή
+ * (SSoT): το ίδιο χρησιμοποιείται και από το dialog preview (consistency warnings)
+ * ώστε να ΜΗΝ διπλασιάζεται η λογική coercion/mapping.
+ */
+export function collectMatchPatches(
   source: SceneEntity,
   sourceType: EntityType,
   target: SceneEntity,
@@ -89,7 +93,7 @@ export function buildMatchTransferCommand(req: MatchTransferRequest): MatchTrans
     if (!target) continue;
     const targetType = target.type as EntityType;
 
-    const { scenePatch, paramsPatch } = collectPatches(
+    const { scenePatch, paramsPatch } = collectMatchPatches(
       source, sourceType, target, targetType, selectedRoles,
     );
 

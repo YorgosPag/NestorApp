@@ -15,7 +15,7 @@
  * (AutoCAD parity) — the resolver forces it on when a print policy is active.
  */
 
-import { createExternalStore } from './createExternalStore';
+import { createPersistedValue } from './createPersistedValue';
 
 /** Default — AutoCAD ships LWDISPLAY OFF, but Giorgio wants weights visible by default. */
 export const DEFAULT_SHOW_LINEWEIGHT = true;
@@ -23,27 +23,19 @@ export const DEFAULT_SHOW_LINEWEIGHT = true;
 /** localStorage key — session-persisted, user-scoped. */
 const LS_SHOW_LINEWEIGHT = 'dxf:showLineweight';
 
-function loadInitial(): boolean {
-  if (typeof localStorage === 'undefined') return DEFAULT_SHOW_LINEWEIGHT;
-  const raw = localStorage.getItem(LS_SHOW_LINEWEIGHT);
-  if (raw === null) return DEFAULT_SHOW_LINEWEIGHT;
-  return raw === '1';
-}
-
-function persist(next: boolean): void {
-  if (typeof localStorage === 'undefined') return;
-  if (next === DEFAULT_SHOW_LINEWEIGHT) {
-    localStorage.removeItem(LS_SHOW_LINEWEIGHT);
-  } else {
-    localStorage.setItem(LS_SHOW_LINEWEIGHT, next ? '1' : '0');
-  }
-}
-
-// SSoT pub/sub plumbing via createExternalStore (WAVE 2.6). `equals: Object.is`
-// reproduces the hand-rolled `if (next === showLineweight) return` identity guard.
-// The wrapper also short-circuits explicitly before persisting, so an unchanged
-// value never touches localStorage — byte-identical to the original.
-const store = createExternalStore<boolean>(loadInitial(), { equals: Object.is });
+// SSoT reactive + persisted value (createPersistedValue = createExternalStore + storage-utils).
+// `equals: Object.is` reproduces the hand-rolled `if (next === showLineweight) return` identity
+// guard; `removeOnDefault` mirrors the old `removeItem` on DEFAULT. NOTE on format: the
+// hand-rolled version wrote raw `'1'`/`'0'` (NOT JSON `true`/`false`); storage-utils always
+// JSON-parses, so a legacy `'1'`/`'0'` hydrates as the NUMBER `1`/`0`, not a boolean — `validate`
+// coerces that (and any other truthy/falsy legacy value) back to a real boolean so existing
+// users' persisted flag still reads correctly. Forward writes now serialize as JSON
+// `true`/`false` (one-way, non-breaking upgrade — still valid JSON on re-read).
+const store = createPersistedValue<boolean>(LS_SHOW_LINEWEIGHT, DEFAULT_SHOW_LINEWEIGHT, {
+  equals: Object.is,
+  removeOnDefault: true,
+  validate: (v) => (v === true || v === false ? v : Boolean(v)),
+});
 
 // ─── Snapshot getter (useSyncExternalStore-compatible) ───────────────────────
 
@@ -63,8 +55,7 @@ export function subscribeLineweightDisplay(cb: () => void): () => void {
 /** Set the flag. No-ops when unchanged (avoids redundant redraws). */
 export function setShowLineweight(next: boolean): void {
   if (Object.is(store.get(), next)) return;
-  store.set(next);
-  persist(next);
+  store.set(next); // persists via createPersistedValue (removeOnDefault on DEFAULT_SHOW_LINEWEIGHT)
 }
 
 /** Flip the flag. */
