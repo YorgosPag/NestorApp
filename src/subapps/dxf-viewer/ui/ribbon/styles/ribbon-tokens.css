@@ -386,6 +386,12 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
   gap: 2px;
 }
 
+/* ADR-557 — a row whose sole widget self-hides (e.g. «Διάστιχο» on single-line text,
+   MTEXT-only) leaves an empty flex item; collapse it so no phantom gap remains. */
+.dxf-ribbon-panel-row:empty {
+  display: none;
+}
+
 .dxf-ribbon-panel-row[data-row-size="large"] {
   flex-direction: row;
   align-items: stretch;

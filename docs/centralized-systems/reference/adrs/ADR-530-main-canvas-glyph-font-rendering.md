@@ -123,3 +123,29 @@ per entity (inside the cached bitmap rebuild only — NOT 60Hz):
 ## Changelog
 - **2026-06-25** — Initial implementation (POC with Roboto). Resolver + glyph-path cache +
   font-ready store + preloader + TextRenderer glyph branch + canvas-renderer wiring. 16 jest.
+- **2026-07-08** — **Character tracking (AutoCAD MTEXT `\T` / ribbon «Διάκενο») now actually
+  renders.** Root cause: `tracking` was wired end-to-end through the DATA path (ribbon →
+  `useTextToolbarCommandBridge` → `UpdateTextStyleCommand` → `run.style.tracking`) but NEVER
+  consumed by any measure/paint path — so changing «Διάκενο» updated the entity yet moved nothing
+  on canvas. **Fix (measure ≡ paint via the shared `getGlyphRun`):**
+  - `glyph-renderer.ts` — `stringToPath2D` / `measureText` gained an optional `tracking` (default
+    1). `tracking===1` keeps `font.getPath` / `getAdvanceWidth` **byte-identical** (kerned, zero
+    regression); `tracking!==1` lays glyphs out per-character (`font.getPath(ch, penX, …)`, pen
+    advance `× tracking`, shapes untouched — unlike `widthFactor`). Kerning intentionally dropped
+    on the tracked path (re-spaced text, mirrors CSS `letter-spacing`).
+  - `glyph-path-cache.ts` — `getGlyphRun(font, name, text, tracking=1)`; `tracking` joins the
+    cache key. Every existing caller (dimension/label renderers) omits it → unchanged run.
+  - `TextRenderer.ts` — reads `richStyle.tracking`, threads it through `paintTextLines` →
+    `paintText` → `fillGlyphRun` → `getGlyphRun`. CSS `fillText` fallback uses `ctx.letterSpacing`
+    on BOTH measure + paint (parity). Draw math (scale, `widthFactor` outer scale) unchanged.
+  - **Data-to-render wiring (2nd gap):** `dxf-text-style-extractor.extractFirstRunStyle` now
+    carries `run.style.tracking` into `DxfTextStyle.tracking` (mirrors the `obliqueAngle` line),
+    so the renderer actually receives the value.
+  - `text-advance.ts` (`measureTextAdvanceWorld` SSoT) — `TextAdvanceStyle.tracking`; tier-1 →
+    `getGlyphRun` tracked, tier-2 → `ctx.letterSpacing`, tier-3 → `× tracking`. `line-breaker.ts`
+    token metrics + `bim/text/text-box.ts` `advanceStyleOf` pass tracking → grips/hover/hitTest/3D
+    box hug the tracked glyphs (ADR-557 parity).
+  - Tests: `glyph-tracking.test.ts` (7 — byte-identical@1, monotonic scaling, cache-key,
+    world-advance + widthFactor combine) + `glyph-path-cache.test` tracking-key assertions.
+    111 jest GREEN across the touched text/render suites (tracking=1 default → zero regression).
+    ⚠️ `TextRenderer.ts` = canvas drawing file (CHECK 6D) — this ADR staged with the change.

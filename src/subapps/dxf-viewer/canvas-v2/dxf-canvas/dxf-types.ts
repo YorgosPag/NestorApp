@@ -4,6 +4,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import type { LineSpacingMode } from '../../text-engine/types';
 import type { SceneLayer, LineweightMm, HatchEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
 // ADR-362 Phase C1 — Dimension entity wrapper for DXF render pipeline.
@@ -201,6 +202,14 @@ export interface DxfText extends DxfEntity {
    * grip adapter and `TextRenderer` (horizontal `ctx.scale(widthFactor, 1)`).
    */
   widthFactor?: number;
+  /**
+   * ADR-557 — node line-spacing `{ mode, factor }`, carried FLAT by the scene→DxfText
+   * converter (the full `textNode` AST is deliberately flattened away — like `textStyle` /
+   * `widthFactor`). `TextRenderer` / `text-box` / 3D read the `factor` via
+   * `resolveLineSpacingRatio`; without this the render/box path never saw a non-default
+   * factor (the ribbon «Διάστιχο» edit did nothing on canvas). Absent → factor 1.
+   */
+  lineSpacing?: { readonly mode: LineSpacingMode; readonly factor: number };
 }
 
 export interface DxfAngleMeasurement extends DxfEntity {

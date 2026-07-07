@@ -39,6 +39,10 @@ import {
   type TextFlatGeometry,
 } from '../../../state/text-toolbar';
 import { ensureTextNode } from '../../../text-engine/edit';
+// ADR-557 — line-count SSoT (same split the renderer uses) + node→flat join, so the
+// «Διάστιχο» MTEXT-only gate agrees byte-for-byte with what the canvas paints.
+import { textLineCount } from '../../../bim/text/text-lines';
+import { extractFlatText } from '../../../utils/text-node-utils';
 import type { SceneModel, AnySceneEntity } from '../../../types/scene';
 import type { DxfTextNode } from '../../../text-engine/types';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
@@ -84,6 +88,16 @@ function resolveFlatGeometry(entity: AnySceneEntity): TextFlatGeometry {
   };
 }
 
+/**
+ * ADR-557 — the selection is «multi-line» (→ the ribbon «Διάστιχο» widget is shown)
+ * when ANY selected text has ≥ 2 visual lines. Line spacing is the baseline-to-baseline
+ * step, so it only has a visible effect on a block of ≥ 2 lines (AutoCAD/Revit: MTEXT-only).
+ * A lone single-line TEXT hides it; a multi-line one in the mix shows it.
+ */
+function selectionIsMultiLine(resolved: readonly ResolvedTextEntity[]): boolean {
+  return resolved.some((r) => textLineCount(extractFlatText(r.node)) >= 2);
+}
+
 function resolveTextEntities(
   ids: readonly string[],
   scene: SceneModel | null,
@@ -126,7 +140,7 @@ export function reconcileTextToolbarFromSelection(
   const values = computeMixedValues(
     resolved.map((r) => ({ node: r.node, layerId: r.layerId, flat: r.flat })),
   );
-  useTextToolbarStore.getState().populate(values);
+  useTextToolbarStore.getState().populate(values, { isMultiLine: selectionIsMultiLine(resolved) });
   return resolved.map((r) => r.id);
 }
 
@@ -149,7 +163,7 @@ export function useTextToolbarSelectionSync(): void {
     const values = computeMixedValues(
       resolved.map((r) => ({ node: r.node, layerId: r.layerId, flat: r.flat })),
     );
-    populate(values);
+    populate(values, { isMultiLine: selectionIsMultiLine(resolved) });
     // `allIds` is captured indirectly via idsKey to keep the dep array stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idsKey, scene, setTextSelection, populate]);

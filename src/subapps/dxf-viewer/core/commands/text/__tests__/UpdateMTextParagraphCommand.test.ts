@@ -121,4 +121,34 @@ describe('UpdateMTextParagraphCommand', () => {
     );
     expect(cmd.validate()).toMatch(/patch|columns/);
   });
+
+  // ADR-557 — node-level line spacing (the SINGLE field the renderer reads).
+  it('writes node-level lineSpacing without touching paragraphs, and undo restores', () => {
+    const entity = makeMultiParagraphEntity();
+    const { scene, store } = makeScene([entity]);
+    const cmd = new UpdateMTextParagraphCommand(
+      { entityId: 'ent_1', patch: {}, lineSpacing: { mode: 'exact', factor: 2 } },
+      scene,
+      makeLayerProvider({ '0': {} }),
+    );
+    expect(cmd.validate()).toBeNull();
+    cmd.execute();
+    const next = store.get('ent_1') as DxfTextSceneEntity;
+    expect(next.textNode.lineSpacing).toEqual({ mode: 'exact', factor: 2 });
+    // Paragraph-level line-spacing fields are left untouched (renderer ignores them).
+    expect(next.textNode.paragraphs).toHaveLength(3);
+    cmd.undo();
+    const restored = store.get('ent_1') as DxfTextSceneEntity;
+    expect(restored.textNode).toBe(entity.textNode);
+  });
+
+  it('validate accepts a lineSpacing-only input', () => {
+    const { scene } = makeScene();
+    const cmd = new UpdateMTextParagraphCommand(
+      { entityId: 'x', patch: {}, lineSpacing: { mode: 'at-least', factor: 1.5 } },
+      scene,
+      makeLayerProvider({}),
+    );
+    expect(cmd.validate()).toBeNull();
+  });
 });

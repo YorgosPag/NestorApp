@@ -21,9 +21,13 @@
  *       ADR-557; writing the AST `textNode.rotation` / `run.style.widthFactor` renders
  *       as a no-op, which is why those two ribbon fields "did nothing" before)
  *
- *   justification, lineSpacingMode, lineSpacingFactor, layerId,
- *   currentScale
- *     → deferred (no commands yet — see Q11/Q17 wiring follow-ups)
+ *   justification, lineSpacingMode, lineSpacingFactor
+ *     → UpdateMTextParagraphCommand (node-level `textNode.attachment` /
+ *       `textNode.lineSpacing` — the fields the renderer reads via
+ *       `bim/text/text-lines.ts`; ADR-557)
+ *
+ *   layerId, currentScale
+ *     → deferred (layerId) / handled above (currentScale)
  *
  * AutoCAD parity: equivalent to the PROPERTIES palette → grpcode
  * dispatcher in stock AutoCAD. One change = one logical undo step
@@ -208,7 +212,28 @@ function diffAndDispatch(
       history.execute(cmd);
     }
   }
-  // lineSpacing* / layerId — deferred.
+  // Line spacing (node-level {mode,factor}) — ADR-557: writes textNode.lineSpacing,
+  // the SINGLE field resolveLineSpacingRatio reads. Same command + updateEntity path as
+  // justification, so the multi-line block re-lays-out live (single-line → renderer no-op).
+  if (
+    (!Object.is(next.lineSpacingMode, prev.lineSpacingMode) ||
+      !Object.is(next.lineSpacingFactor, prev.lineSpacingFactor)) &&
+    next.lineSpacingMode !== null &&
+    next.lineSpacingFactor !== null
+  ) {
+    const lineSpacing = { mode: next.lineSpacingMode, factor: next.lineSpacingFactor };
+    const history = getGlobalCommandHistory();
+    for (const entityId of ids) {
+      const cmd = new UpdateMTextParagraphCommand(
+        { entityId, patch: {}, lineSpacing },
+        services.sceneManager,
+        services.layerProvider,
+        services.auditRecorder,
+      );
+      if (cmd.validate() === null) history.execute(cmd);
+    }
+  }
+  // layerId — deferred.
 }
 
 export function useTextToolbarCommandBridge(): void {

@@ -102,10 +102,23 @@ interface TextToolbarStore extends TextToolbarValues {
    * drag is interrupted (Esc / blur / mouse-leave-window).
    */
   isPreviewing: boolean;
+  /**
+   * ADR-557 — DERIVED (not a committable value): whether the current selection
+   * contains any text with ≥ 2 visual lines. Drives the MTEXT-only visibility of
+   * the ribbon «Διάστιχο» widget (AutoCAD/Revit parity: line spacing is meaningless
+   * on a single line). Computed at populate time from `textLineCount` (SSoT) — see
+   * `useTextToolbarSelectionSync`. NOT part of `TextToolbarValues`, so it never flows
+   * into `computeMixedValues` or the command-bridge diff.
+   */
+  isMultiLine: boolean;
   setValue: <K extends keyof TextToolbarValues>(key: K, value: TextToolbarValues[K]) => void;
   setMany: (values: Partial<TextToolbarValues>) => void;
-  /** Populate the store atomically (sets isPopulating true → false). */
-  populate: (values: Partial<TextToolbarValues>) => void;
+  /**
+   * Populate the store atomically (sets isPopulating true → false). The optional
+   * `meta.isMultiLine` is set in the SAME atomic write so the `isPopulating` guard
+   * covers it (the command bridge never sees it as a user edit).
+   */
+  populate: (values: Partial<TextToolbarValues>, meta?: { isMultiLine?: boolean }) => void;
   /**
    * ADR-557 — push a LIVE grip-drag preview value (height / widthFactor). Sets
    * `isPreviewing` true then self-clears in the next microtask (belt-and-suspenders:
@@ -120,15 +133,21 @@ export const useTextToolbarStore = create<TextToolbarStore>((set) => ({
   ...DEFAULT_TOOLBAR_VALUES,
   isPopulating: false,
   isPreviewing: false,
+  isMultiLine: false,
   setValue: (key, value) => set((state) => ({ ...state, [key]: value })),
   setMany: (values) => set((state) => ({ ...state, ...values })),
-  populate: (values) => {
-    set((state) => ({ ...state, ...values, isPopulating: true }));
+  populate: (values, meta) => {
+    set((state) => ({
+      ...state,
+      ...values,
+      ...(meta?.isMultiLine !== undefined ? { isMultiLine: meta.isMultiLine } : {}),
+      isPopulating: true,
+    }));
     queueMicrotask(() => set(() => ({ isPopulating: false })));
   },
   setPreview: (values) => {
     set((state) => ({ ...state, ...values, isPreviewing: true }));
     queueMicrotask(() => set(() => ({ isPreviewing: false })));
   },
-  reset: () => set(() => ({ ...DEFAULT_TOOLBAR_VALUES, isPopulating: false, isPreviewing: false })),
+  reset: () => set(() => ({ ...DEFAULT_TOOLBAR_VALUES, isPopulating: false, isPreviewing: false, isMultiLine: false })),
 }));

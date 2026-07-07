@@ -1157,3 +1157,18 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   επιλεγμένη απλή ΓΡΑΜΜΗ (ή άλλη μη-polyline primitive). Το «Εμφάνιση Γραμμής» panel μένει καθαρό (linetype/lineweight/
   scale, όλα έγκυρα για LINE). **+2 jest** στο `contextual-line-tool-tab.test.ts` (width-panel gated + appearance χωρίς
   width). tsc SKIP (N.17). 🔴 browser-verify (επιλογή LINE → «Πλάτος» κρυμμένο· επιλογή polyline → ορατό) + commit → Giorgio.
+- **2026-07-08 — Bugfix Φ4: η «Διαφάνεια» δεν εφαρμοζόταν στις οντότητες του καμβά (Giorgio· UNCOMMITTED· 11 jest GREEN
+  στα style-resolve suites).** Σύμπτωμα: ρύθμιση διαφάνειας στο ribbon σε επιλεγμένη γραμμή/πολυγραμμή → **καμία αλλαγή
+  στον καμβά, ούτε μετά το deselect**. **SSoT audit (grep, ΠΡΙΝ κώδικα):** όλη η αλυσίδα (ribbon `patchEntity({transparency})`
+  → `resolveEntityStyle`/`resolveTransparency` → `transparencyToAlpha` → batch key `alpha` + `globalAlpha` / per-entity
+  `renderOptions.alpha` → bitmap cache rebuild by sceneRef) ήταν σωστή — **ΕΚΤΟΣ** από το fallback του
+  `resolveEntityRenderStyle` (`dxf-renderer-style-resolve.ts`). **ROOT CAUSE:** το fallback branch (όταν λείπει το
+  `layersById` **ή** το layer της οντότητας δεν βρίσκεται σε αυτό — συχνό για φρεσκο-σχεδιασμένες/εισαγόμενες γραμμές)
+  επέστρεφε **hardcoded `alpha: 1`**, αγνοώντας το `entity.transparency`. Το fallback ήδη τιμούσε το ΔΙΚΟ lineweight
+  (`ownLineweightPx`) + linetype (`resolveLinetypePatternMm`) της οντότητας, αλλά **ξέχασαν το transparency** — το object
+  transparency (AutoCAD per-object) πρέπει να ισχύει ΚΑΙ χωρίς layer cascade. **FIX (1 γραμμή, ίδιο pattern, SSoT):**
+  `alpha: transparencyToAlpha(entity.transparency)` (absent ⇒ 1). Καλύπτει **όλους** τους τύπους (και τα δύο render paths
+  διαβάζουν αυτό το ένα `alpha`), όπως ζήτησε ο Giorgio. NEW `dxf-renderer-style-resolve-transparency.test.ts` (5: full-path,
+  no-layer fallback = το bug, layer-absent fallback, opaque default, max-90 monotonic) + lineweight suite 6/6 αμετάβλητο.
+  ⚠️ **CHECK 6D** (canvas render αρχείο) → stage ADR-510 (ή ADR-040). 🔴 browser-verify (επιλογή γραμμής → «Διαφάνεια» 80 →
+  ξεθωριάζει· deselect → παραμένει διάφανη· δοκίμασε και κύκλο/τόξο/κείμενο) + commit → Giorgio.

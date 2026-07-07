@@ -12,7 +12,7 @@
 
 import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
-import type { DxfTextNode, TextParagraph, TextJustification } from '../../../text-engine/types';
+import type { DxfTextNode, TextParagraph, TextJustification, LineSpacingMode } from '../../../text-engine/types';
 import {
   noopAuditRecorder,
   type DxfTextSceneEntity,
@@ -34,6 +34,15 @@ export interface UpdateMTextParagraphCommandInput {
   readonly columns?: DxfTextNode['columns'];
   /** 9-point attachment point (node-level). Updates textNode.attachment. */
   readonly attachment?: TextJustification;
+  /**
+   * ADR-557 — node-level line spacing `{ mode, factor }`. Updates
+   * `textNode.lineSpacing`, the SINGLE field the renderer reads
+   * (`bim/text/text-lines.ts` → `resolveLineSpacingRatio` → `TextRenderer`).
+   * Deliberately node-level (NOT the per-paragraph `lineSpacingMode/Factor` on
+   * `ParagraphPatch`, which the renderer ignores — that mismatch is why the
+   * ribbon «Διάστιχο» previously did nothing). Mirror of `attachment` above.
+   */
+  readonly lineSpacing?: { readonly mode: LineSpacingMode; readonly factor: number };
   /** When set, only this paragraph index is patched. Otherwise all paragraphs. */
   readonly paragraphIndex?: number;
 }
@@ -87,6 +96,7 @@ export class UpdateMTextParagraphCommand implements ICommand {
       ),
       columns: this.input.columns ?? safeNode.columns,
       ...(this.input.attachment !== undefined && { attachment: this.input.attachment }),
+      ...(this.input.lineSpacing !== undefined && { lineSpacing: this.input.lineSpacing }),
     };
     this.sceneManager.updateEntity(this.input.entityId, { textNode: nextNode });
     this.wasExecuted = true;
@@ -134,6 +144,8 @@ export class UpdateMTextParagraphCommand implements ICommand {
         entityId: this.input.entityId,
         patch: this.input.patch as unknown as Record<string, unknown>,
         columns: this.input.columns as unknown as Record<string, unknown> | undefined,
+        attachment: this.input.attachment,
+        lineSpacing: this.input.lineSpacing as unknown as Record<string, unknown> | undefined,
         paragraphIndex: this.input.paragraphIndex,
       },
       version: 1,
@@ -145,7 +157,10 @@ export class UpdateMTextParagraphCommand implements ICommand {
     const hasParaPatch = this.input.patch && Object.keys(this.input.patch).length > 0;
     const hasColumns = this.input.columns !== undefined;
     const hasAttachment = this.input.attachment !== undefined;
-    if (!hasParaPatch && !hasColumns && !hasAttachment) return 'patch, columns, or attachment is required';
+    const hasLineSpacing = this.input.lineSpacing !== undefined;
+    if (!hasParaPatch && !hasColumns && !hasAttachment && !hasLineSpacing) {
+      return 'patch, columns, attachment, or lineSpacing is required';
+    }
     return null;
   }
 
