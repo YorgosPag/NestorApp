@@ -35,6 +35,16 @@ import { resolveBodyDragTarget } from '../drag/body-drag-target';
 import { getHoveredEntity } from '../hover/HoverStore';
 import { SelectedEntitiesStore } from '../selection/SelectedEntitiesStore';
 import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
+// ADR-560 §big-player grip-guard — protect a selected object's grip zone from body-drag.
+import { findNearestGrip } from '../../hooks/grips/grip-hit-testing';
+import { AllGripsStore } from '../grip/AllGripsStore';
+
+/**
+ * ADR-560 §big-player grip-guard — pixel radius around a selected object's grip inside which a
+ * press must NOT start a whole-object body-move (a bit wider than the grip PICK tolerance so a
+ * near-miss when aiming at a boundary grip does not drag the whole entity — Figma/Revit parity).
+ */
+const BODY_DRAG_GRIP_GUARD_PX = 14;
 
 // Re-export types for consumers
 export type { SnapResultItem, ZoomConstraints, CentralizedMouseHandlersProps } from './mouse-handler-types';
@@ -212,6 +222,15 @@ export function useCentralizedMouseHandlers(
         selectedIds: SelectedEntitiesStore.getIds(),
       });
       if (target) {
+        // ADR-560 §big-player grip-guard — a press AIMED at a selected object's grip must never
+        // start a whole-object body-move. The grip pick at :199 already grabbed anything within
+        // pick tolerance; this protects the slightly-wider aim ring so a near-miss on a boundary
+        // grip resolves as select/no-op instead of dragging the whole hatch (Giorgio 2026-07-07).
+        const nearGrip = findNearestGrip(worldPos, AllGripsStore.get(), BODY_DRAG_GRIP_GUARD_PX, transform.scale);
+        if (nearGrip?.entityId && target.includes(nearGrip.entityId)) {
+          lassoDownRef.current = { pos: null, buttonHeld: false };
+          return;
+        }
         EntityBodyDragStore.arm({
           anchor: worldPos,
           entityIds: target,

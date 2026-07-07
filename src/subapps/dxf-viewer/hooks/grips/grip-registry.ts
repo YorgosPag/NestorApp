@@ -204,7 +204,9 @@ export function useGripRegistry({
   groupEntities,
   activeGroupStack,
 }: UseGripRegistryParams): UnifiedGripInfo[] {
-  const { showMidpoints, showCenters, showQuadrants, maxGripsPerEntity, gripObjLimit } = useGripStyle();
+  // ADR-559 §big-player — `maxGripsPerEntity` intentionally NOT read here: no per-object grip
+  // cap (visible ≡ pickable). Only the object-COUNT `gripObjLimit` (AutoCAD GRIPOBJLIMIT) bounds perf.
+  const { showMidpoints, showCenters, showQuadrants, gripObjLimit } = useGripStyle();
 
   return useMemo(() => {
     const result: UnifiedGripInfo[] = [];
@@ -259,9 +261,15 @@ export function useGripRegistry({
           const mmScale = moveFrame
             ? mmScaleFor(((entity as { params?: { sceneUnits?: SceneUnits | null } }).params) ?? {})
             : 1;
-          let count = 0;
+          // ADR-559 §big-player (Giorgio 2026-07-07) — NO per-single-entity grip cap. Revit
+          // (edit boundary) / Figma (vector edit) / Cinema 4D (point mode) make EVERY point of a
+          // selected object draggable — «visible ≡ editable» is sacred; they never draw a handle
+          // you cannot grab. The former `maxGripsPerEntity` truncation made a dense hatch's later
+          // boundary vertices visible-but-unpickable → clicking one fell through to a whole-entity
+          // body-move (Giorgio: «άλλες φορές μετακινείται όλη η γραμμοσκίαση»). The pickable set now
+          // matches the (uncapped) visible renderer. Selection-COUNT perf is still bounded by the
+          // AutoCAD `gripObjLimit` (checked above); per-object hit-test is event-time O(n), fine.
           for (const grip of dxfGrips) {
-            if (count >= maxGripsPerEntity) break;
             // ADR-559 §multi-select — ≥2 objects selected → drop the whole-object MOVE +
             // ROTATION glyphs from the pickable/snap set too (so they are neither drawn
             // nor hit-testable). Structural corner/midpoint/vertex grips stay.
@@ -272,7 +280,6 @@ export function useGripRegistry({
               ? { ...wrapped, moveGlyphFrame: moveFrame, moveGlyphMmScale: mmScale }
               : wrapped;
             result.push(withFrame);
-            count++;
           }
         }
       }
@@ -290,5 +297,5 @@ export function useGripRegistry({
     }
 
     return result;
-  }, [dxfScene, selectedEntityIds, selectedOverlays, groupEntities, activeGroupStack, showMidpoints, showCenters, showQuadrants, maxGripsPerEntity, gripObjLimit]);
+  }, [dxfScene, selectedEntityIds, selectedOverlays, groupEntities, activeGroupStack, showMidpoints, showCenters, showQuadrants, gripObjLimit]);
 }

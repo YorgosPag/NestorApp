@@ -23,6 +23,34 @@ import { translatePoint } from '../../rendering/entities/shared/geometry-vector-
 
 const VERTEX_PREFIX = 'hatch-vertex-';
 
+/** A boundary-vertex grip target: ring + vertex indices (→ `hatch-vertex-${pathIdx}-${vertexIdx}`) + world point. */
+export interface HatchBoundaryGrip {
+  readonly pathIdx: number;
+  readonly vertexIdx: number;
+  readonly point: Point2D;
+}
+
+/**
+ * ADR-507 §grip-SSoT (Giorgio 2026-07-07, big-player) — THE single source for "where are a
+ * hatch's boundary-vertex grips". Both the VISIBLE grips (`HatchRenderer.getGrips`) and the
+ * INTERACTION grips (`computeDxfEntityGrips` case 'hatch') derive their per-vertex grips from
+ * HERE, so the two sets can NEVER diverge again. Previously each ran its OWN `boundaryPaths`
+ * loop — the duplication that let «visible ≠ pickable» drift (one path got capped, the other
+ * did not → grips you could see but not grab). Order = path-major, vertex-minor: the array
+ * index IS the running `gripIndex` both consumers assign, kept 1-to-1 (render ≡ interaction).
+ */
+export function getHatchBoundaryGrips(
+  boundaryPaths: ReadonlyArray<ReadonlyArray<Point2D>>,
+): HatchBoundaryGrip[] {
+  const grips: HatchBoundaryGrip[] = [];
+  boundaryPaths.forEach((path, pathIdx) => {
+    path.forEach((v, vertexIdx) => {
+      grips.push({ pathIdx, vertexIdx, point: { x: v.x, y: v.y } });
+    });
+  });
+  return grips;
+}
+
 /** Grip kind για το gradient origin/seed (ADR-507 Φ5 A3). */
 export const HATCH_GRADIENT_ORIGIN_KIND = 'hatch-gradient-origin' as const;
 

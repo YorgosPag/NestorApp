@@ -24,6 +24,10 @@ import { getImmediateWorldPosition } from '../../systems/cursor/ImmediatePositio
 import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesStore';
 import { fromDisplay } from '../../config/units';
 import type { DisplayUnit } from '../../config/units';
+// ADR-357/397 — DDE buffer SSoT (ADR-344 DirectDistanceEntry) + per-keystroke input SSoT.
+// Απόσταση → allowNegative:false (κατεύθυνση από τον κέρσορα, AutoCAD DDE parity).
+import { DirectDistanceEntry } from '../../text-engine/interaction/DirectDistanceEntry';
+import { applyTypedNumericKey } from '../../systems/dynamic-input/typed-angle-entry';
 // ADR-364 — Escape Command Bus SSoT (priority chain extracted to registrations module)
 import { useCanvasEscapeRegistrations } from './useCanvasEscapeRegistrations';
 // ============================================================================
@@ -106,11 +110,12 @@ export function useCanvasKeyboardShortcuts({
   onSnapOverrideMenuRequest,
   drawingTempPointCount = 0,
 }: UseCanvasKeyboardShortcutsParams): void {
-  // ADR-357 Phase 3: DDE digit accumulation buffer (persists across renders, no re-render needed)
-  const ddeBufferRef = useRef('');
+  // ADR-357 Phase 3 / ADR-397: DDE buffer via `DirectDistanceEntry` SSoT (persists across renders,
+  // no re-render needed). Αντικατέστησε το hand-rolled string ref → κοινό buffer με rotation typed-input.
+  const ddeRef = useRef<DirectDistanceEntry>(new DirectDistanceEntry());
   // Clear DDE buffer when tool changes (e.g. ESC → select, next tool activation)
   useEffect(() => {
-    ddeBufferRef.current = '';
+    ddeRef.current.reset();
   }, [activeTool]);
   // Handle keyboard shortcuts for drawing, delete, and local operations
   useEffect(() => {
@@ -197,19 +202,13 @@ export function useCanvasKeyboardShortcuts({
         && (drawingTempPoints?.length ?? 0) >= 1
         && !CanvasNumericInputStore.isActive();
 
-      if (isDde) {
-        if (/^[\d.]$/.test(e.key)) {
-          // Avoid double-decimal: only allow one dot in the buffer
-          if (e.key === '.' && ddeBufferRef.current.includes('.')) return;
-          e.preventDefault();
-          ddeBufferRef.current += e.key;
-          return;
-        }
-        if (e.key === 'Backspace' && ddeBufferRef.current.length > 0) {
-          e.preventDefault();
-          ddeBufferRef.current = ddeBufferRef.current.slice(0, -1);
-          return;
-        }
+      if (isDde && e.key !== 'Enter') {
+        // ADR-357/397 — ψηφία / `.` / `,` / Backspace μέσω του SSoT `applyTypedNumericKey`
+        // (κόμμα-parity δωρεάν· allowNegative:false → η απόσταση μένει θετική, η κατεύθυνση έρχεται
+        // από τον κέρσορα, AutoCAD DDE). Enter το χειρίζεται το switch παρακάτω (κενό buffer →
+        // chain-finish, ΟΧΙ commit εδώ).
+        const res = applyTypedNumericKey(ddeRef.current, e.key, { allowNegative: false });
+        if (res.consumed) { e.preventDefault(); return; }
         // ADR-364: Escape no longer fall-throughs here — DDE buffer is cleared
         // by the auto-reset effect below when tempPoints empties (after the
         // DRAW_TOOL bus handler in useKeyboardShortcuts cancels the drawing).
@@ -259,11 +258,11 @@ export function useCanvasKeyboardShortcuts({
           // ADR-357 Phase 3: Direct Distance Entry — fires when DDE buffer is non-empty.
           // User typed a number (in display units) while cursor points direction. Enter applies it.
           // Pipeline: display-unit distance → mm → lastRef + dir*dist → onDirectDistanceEntry
-          const ddeStr = ddeBufferRef.current.trim();
-          if (isDde && ddeStr.length > 0 && onDirectDistanceEntry && drawingTempPoints?.length) {
-            ddeBufferRef.current = '';
-            const rawDistance = parseFloat(ddeStr);
-            if (!isNaN(rawDistance) && rawDistance > 0) {
+          const ddeSnap = ddeRef.current.snapshot();
+          if (isDde && ddeSnap.buffer.length > 0 && onDirectDistanceEntry && drawingTempPoints?.length) {
+            ddeRef.current.reset();
+            const rawDistance = ddeSnap.value;
+            if (rawDistance != null && rawDistance > 0) {
               const lastRef = drawingTempPoints[drawingTempPoints.length - 1];
               const cursor = getImmediateWorldPosition();
               if (cursor && lastRef) {
@@ -282,7 +281,7 @@ export function useCanvasKeyboardShortcuts({
           }
 
           // ADR-357 Phase 5: Enter during line chain mode (no DDE pending) → finish chain.
-          if (isInChain && ddeStr.length === 0 && onChainFinish) {
+          if (isInChain && ddeSnap.buffer.length === 0 && onChainFinish) {
             e.preventDefault();
             onChainFinish();
             break;
@@ -350,7 +349,7 @@ export function useCanvasKeyboardShortcuts({
   // (tempPoints empties on cancel / commit). Replaces the legacy ESC fall-through.
   useEffect(() => {
     if ((drawingTempPoints?.length ?? 0) === 0) {
-      ddeBufferRef.current = '';
+      ddeRef.current.reset();
     }
   }, [drawingTempPoints]);
 

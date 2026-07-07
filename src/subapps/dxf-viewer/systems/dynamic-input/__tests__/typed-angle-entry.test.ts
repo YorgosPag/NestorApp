@@ -4,7 +4,7 @@
  */
 
 import { DirectDistanceEntry } from '../../../text-engine/interaction/DirectDistanceEntry';
-import { applyTypedAngleKey } from '../typed-angle-entry';
+import { applyTypedAngleKey, applyTypedNumericKey } from '../typed-angle-entry';
 
 describe('ADR-397/513 — applyTypedAngleKey', () => {
   let dde: DirectDistanceEntry;
@@ -63,5 +63,48 @@ describe('ADR-397/513 — applyTypedAngleKey', () => {
   it('πλήκτρο εκτός αλφαβήτου γωνίας → none, ΔΕΝ καταναλώνεται', () => {
     const r = applyTypedAngleKey(dde, 'a');
     expect(r).toMatchObject({ consumed: false, kind: 'none' });
+  });
+});
+
+describe('ADR-357/397 — applyTypedNumericKey (neutral SSoT + allowNegative)', () => {
+  let dde: DirectDistanceEntry;
+  beforeEach(() => { dde = new DirectDistanceEntry(); });
+
+  it('συσσωρεύει ψηφία (ίδια input-λογική με το angle alias)', () => {
+    applyTypedNumericKey(dde, '1');
+    const r = applyTypedNumericKey(dde, '2');
+    expect(r).toMatchObject({ kind: 'buffer', buffer: '12', value: 12 });
+  });
+
+  it('κόμμα-parity δωρεάν για αποστάσεις (1,5 ≡ 1.5)', () => {
+    for (const k of ['1', ',', '5']) applyTypedNumericKey(dde, k, { allowNegative: false });
+    const s = dde.snapshot();
+    expect(s.buffer).toBe('1.5');
+    expect(s.value).toBeCloseTo(1.5, 6);
+  });
+
+  it('allowNegative:false → το «-» ΔΕΝ καταναλώνεται (απόσταση πάντα θετική, AutoCAD DDE)', () => {
+    const r = applyTypedNumericKey(dde, '-', { allowNegative: false });
+    expect(r).toMatchObject({ consumed: false, kind: 'none' });
+    expect(dde.snapshot().buffer).toBe('');
+  });
+
+  it('allowNegative default (true) → το «-» γίνεται δεκτό (γωνία signed)', () => {
+    for (const k of ['-', '9', '0']) applyTypedNumericKey(dde, k);
+    expect(dde.snapshot().value).toBe(-90);
+  });
+
+  it('Enter → commit-signal με parsed απόσταση', () => {
+    for (const k of ['5', '0']) applyTypedNumericKey(dde, k, { allowNegative: false });
+    const r = applyTypedNumericKey(dde, 'Enter', { allowNegative: false });
+    expect(r).toMatchObject({ consumed: true, kind: 'commit', value: 50 });
+  });
+
+  it('applyTypedAngleKey === thin alias (byte-identical με allowNegative default)', () => {
+    const a = new DirectDistanceEntry();
+    const b = new DirectDistanceEntry();
+    for (const k of ['4', '5', ',', '5']) {
+      expect(applyTypedAngleKey(a, k)).toEqual(applyTypedNumericKey(b, k));
+    }
   });
 });

@@ -22,7 +22,7 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../types/Typ
 import type { Entity, HatchEntity } from '../../types/entities';
 import { isHatchEntity } from '../../types/entities';
 import { createVertexGrip } from './shared/grip-utils';
-import { hatchBoundsCenter, hatchGradientAngleGripPos } from '../../bim/hatch/hatch-grips';
+import { hatchBoundsCenter, hatchGradientAngleGripPos, getHatchBoundaryGrips } from '../../bim/hatch/hatch-grips';
 import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
 import { buildHatchEntitySegments, hatchMinWorldSpacing } from '../../bim/geometry/shared/hatch-pattern-geometry';
 import { isSolidHatch, resolveHatchLineWidthPx } from '../../bim/hatch/hatch-properties';
@@ -150,11 +150,12 @@ export class HatchRenderer extends BaseEntityRenderer {
     const hatch = entity as HatchEntity;
     const grips: GripInfo[] = [];
     let gi = 0;
-    for (const path of hatch.boundaryPaths ?? []) {
-      for (const v of path) {
-        grips.push(createVertexGrip(entity.id, { x: v.x, y: v.y }, gi));
-        gi += 1;
-      }
+    // ADR-507 §grip-SSoT — the SAME boundary-vertex source the interaction path
+    // (`computeDxfEntityGrips`) uses, so drawn grips ≡ pickable grips (no divergence). Array
+    // order = the running `gi` index, kept 1-to-1 with the interaction gripIndex.
+    for (const g of getHatchBoundaryGrips(hatch.boundaryPaths ?? [])) {
+      grips.push(createVertexGrip(entity.id, { x: g.point.x, y: g.point.y }, gi));
+      gi += 1;
     }
     // ADR-507 Φ5 A3 — gradient origin/seed grip (ΟΡΑΤΟ· το interaction οδηγείται από
     // το computeDxfEntityGrips με `hatchGripKind`). Index = μετά τις κορυφές, ώστε να

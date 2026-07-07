@@ -3,7 +3,7 @@
  */
 
 import {
-  applyHatchGripDrag, decodeHatchVertexGripKind,
+  applyHatchGripDrag, decodeHatchVertexGripKind, getHatchBoundaryGrips,
   applyHatchOriginGripDrag, isHatchOriginGripKind, hatchBounds, hatchBoundsCenter,
   HATCH_GRADIENT_ORIGIN_KIND,
   isHatchAngleGripKind, hatchGradientAngleGripPos, applyHatchAngleGripDrag,
@@ -23,6 +23,30 @@ const ISLAND: Point2D[] = [
   { x: 600, y: 400 },
   { x: 600, y: 600 },
 ];
+
+describe('getHatchBoundaryGrips — the render↔interaction grip SSoT (ADR-507 §grip-SSoT)', () => {
+  it('emits one grip per vertex of every ring, path-major order, with correct indices', () => {
+    const grips = getHatchBoundaryGrips([OUTER, ISLAND]);
+    expect(grips).toHaveLength(OUTER.length + ISLAND.length); // 4 + 3
+    // path-major, vertex-minor → array index is the running gripIndex both consumers assign.
+    expect(grips[0]).toEqual({ pathIdx: 0, vertexIdx: 0, point: { x: 0, y: 0 } });
+    expect(grips[3]).toEqual({ pathIdx: 0, vertexIdx: 3, point: { x: 0, y: 1000 } });
+    expect(grips[4]).toEqual({ pathIdx: 1, vertexIdx: 0, point: { x: 400, y: 400 } });
+    // The decoded kind of each grip round-trips to its (pathIdx, vertexIdx).
+    for (const g of grips) {
+      expect(decodeHatchVertexGripKind(`hatch-vertex-${g.pathIdx}-${g.vertexIdx}` as HatchGripKind)).toEqual([g.pathIdx, g.vertexIdx]);
+    }
+  });
+
+  it('is UNCAPPED — a dense boundary (>50 vertices) yields a grip for EVERY vertex (big-player visible≡editable)', () => {
+    const dense: Point2D[] = Array.from({ length: 200 }, (_, i) => ({ x: i, y: 0 }));
+    expect(getHatchBoundaryGrips([dense])).toHaveLength(200);
+  });
+
+  it('empty boundary → no grips', () => {
+    expect(getHatchBoundaryGrips([])).toHaveLength(0);
+  });
+});
 
 describe('decodeHatchVertexGripKind', () => {
   it('decodes path + vertex indices', () => {

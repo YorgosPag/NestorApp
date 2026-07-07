@@ -57,7 +57,7 @@ import { getFloorFinishGrips } from '../bim/floor-finishes/floor-finish-grips';
 import { getMepUnderfloorGrips } from '../bim/mep-underfloor/mep-underfloor-grips';
 import { getTextGrips } from '../bim/text/text-grips';
 import {
-  hatchBoundsCenter, hatchGradientAngleGripPos,
+  hatchBoundsCenter, hatchGradientAngleGripPos, getHatchBoundaryGrips,
   HATCH_GRADIENT_ORIGIN_KIND, HATCH_GRADIENT_ANGLE_KIND,
 } from '../bim/hatch/hatch-grips';
 import { getDimensionGrips } from './dimensions/useDimensionGrips';
@@ -376,17 +376,18 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
       };
       const hatchLike = entity as unknown as HatchLike;
       const paths = hatchLike.boundaryPaths ?? [];
+      // ADR-507 §grip-SSoT — derive the per-vertex grips from the ONE shared source
+      // (`getHatchBoundaryGrips`), the SAME the visible `HatchRenderer.getGrips` uses → render ≡
+      // interaction, no divergence. Array index = the running `gripIndex` (1-to-1 with the render).
       let gripIndex = 0;
-      paths.forEach((path, pathIdx) => {
-        path.forEach((v, vertexIdx) => {
-          grips.push({
-            entityId: entity.id, gripIndex, type: 'vertex',
-            position: { x: v.x, y: v.y }, movesEntity: false,
-            hatchGripKind: `hatch-vertex-${pathIdx}-${vertexIdx}`,
-          });
-          gripIndex += 1;
+      for (const g of getHatchBoundaryGrips(paths)) {
+        grips.push({
+          entityId: entity.id, gripIndex, type: 'vertex',
+          position: { x: g.point.x, y: g.point.y }, movesEntity: false,
+          hatchGripKind: `hatch-vertex-${g.pathIdx}-${g.vertexIdx}`,
         });
-      });
+        gripIndex += 1;
+      }
       // ADR-507 Φ5 A3 — gradient origin/seed λαβή (ΜΟΝΟ όταν fillType='gradient').
       // Θέση = patternOrigin όταν υπάρχει, αλλιώς κέντρο bbox (ίδιο SSoT με τον
       // fillGradient). Commit → applyHatchOriginGripDrag + UpdateHatchOriginCommand.

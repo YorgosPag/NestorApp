@@ -25,15 +25,17 @@
  * a bridge leaves the opening orphaned. Follow-up: wrap in a command (ADR-568 §5).
  *
  * Gap < `MIN_GAP_FOR_OPENING_MM` (or touch/overlap) → plain bridge (single wall, no
- * opening). Dual-flow (selection-first + command-first pick loop) mirrors the merge
- * tool exactly. ESC exits to 'select'.
+ * opening). The dual-flow (selection-first + command-first pick loop) + scene helpers
+ * live in the shared `useWallPickScaffold` SSoT — this hook owns only the bridge
+ * action (`executeBridge`). ESC exits to 'select'.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-568-wall-gap-auto-opening.md
  * @see hooks/tools/useWallMergeTool.ts — the collinear-merge sibling
+ * @see hooks/tools/useWallPickScaffold.ts — the shared two-wall pick FSM + scene helpers
  */
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import i18next from 'i18next';
 import { toast } from 'sonner';
 import { generateWallId } from '@/services/enterprise-id.service';
@@ -41,13 +43,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
-import { isWallEntity } from '../../types/entities';
-import { SelectedEntitiesStore } from '../../systems/selection';
-import { useSceneManagerAdapter } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { computeWallGeometry } from '../../bim/geometry/wall-geometry';
-import { projectPointOnWallAxis } from '../../bim/walls/wall-axis-projection';
-import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
-import { getHoveredEntity } from '../../systems/hover/HoverStore';
 import {
   canMergeWalls,
   buildMergedWallParams,
@@ -61,10 +57,9 @@ import { buildOpeningEntity } from '../drawing/opening-completion';
 import { WallMergeCommand } from '../../core/commands/entity-commands/WallMergeCommand';
 import { buildOpeningResolvers } from './useSpecialTools-opening';
 import { EventBus } from '../../systems/events/EventBus';
-import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
-import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import type { LevelsHookReturn } from '../../systems/levels';
+import { useWallPickScaffold, type WallPickExecuteContext } from './useWallPickScaffold';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -117,78 +112,22 @@ export function useWallGapOpeningTool({
   onToolChange,
   selectEntities,
 }: UseWallGapOpeningToolProps): UseWallGapOpeningToolReturn {
-  const isActive = activeTool === 'wall-gap-opening';
-  const transformScaleRef = useRef(transformScale);
-  transformScaleRef.current = transformScale;
-
-  /** First-picked wall in the command-first flow (null = awaiting first pick). */
-  const pickedARef = useRef<WallEntity | null>(null);
-  const wasActiveRef = useRef(false);
-
-  const setHint = useCallback((key: string): void => {
-    toolHintOverrideStore.setOverride(i18next.t(key, { ns: NS }));
-  }, []);
-
-  // ── Scene helpers (mirror useWallMergeTool) ───────────────────────────────
-
-  const getSceneManager = useSceneManagerAdapter(levelManager);
-
-  const getScene = useCallback(() => {
-    if (!levelManager.currentLevelId) return null;
-    return levelManager.getLevelScene(levelManager.currentLevelId) ?? null;
-  }, [levelManager]);
-
-  const getWallById = useCallback((id: string | null): WallEntity | null => {
-    if (!id) return null;
-    const scene = getScene();
-    const e = scene?.entities.find((x) => x.id === id);
-    return e && isWallEntity(e) ? e : null;
-  }, [getScene]);
-
-  const findWallAtPoint = useCallback((worldPoint: Point2D, excludeId?: string): WallEntity | null => {
-    const hovered = getWallById(getHoveredEntity());
-    if (hovered && hovered.id !== excludeId) return hovered;
-
-    const scene = getScene();
-    if (!scene?.entities) return null;
-    const hitTol = TOLERANCE_CONFIG.SNAP_DEFAULT / transformScaleRef.current;
-    let best: WallEntity | null = null;
-    let bestDist = Infinity;
-    for (const e of scene.entities) {
-      if (!isWallEntity(e) || e.id === excludeId) continue;
-      const foot = projectPointOnWallAxis(e, worldPoint);
-      if (!foot) continue;
-      const d = calculateDistance(worldPoint, foot);
-      if (d < hitTol && d < bestDist) {
-        bestDist = d;
-        best = e;
-      }
-    }
-    return best;
-  }, [getScene, getWallById]);
-
-  const collectSelectedWalls = useCallback((): WallEntity[] => {
-    const scene = getScene();
-    if (!scene?.entities) return [];
-    // Prefer the prop; fall back to the selection SSoT store so activation-time
-    // reads are never stale (ADR-532), mirror useWallMergeTool.
-    const ids = selectedEntityIds.length ? selectedEntityIds : SelectedEntitiesStore.getSelectedEntityIds();
-    const idSet = new Set(ids);
-    return scene.entities.filter((e): e is WallEntity => idSet.has(e.id) && isWallEntity(e));
-  }, [getScene, selectedEntityIds]);
-
   // ── Bridge execution (shared by both flows; preview ≡ commit) ──────────────
 
-  const executeBridge = useCallback((a: WallEntity, b: WallEntity): boolean => {
+  const executeBridge = useCallback((
+    a: WallEntity,
+    b: WallEntity,
+    ctx: WallPickExecuteContext<LevelManagerLike>,
+  ): boolean => {
     const gate = canMergeWalls(a, b);
     if (!gate.ok) {
-      setHint(BLOCK_REASON_KEY[gate.reason]);
+      ctx.setHint(BLOCK_REASON_KEY[gate.reason]);
       toast.warning(i18next.t(BLOCK_REASON_KEY[gate.reason], { ns: NS })); // Revit-style non-blocking
       return false;
     }
-    const sm = getSceneManager();
-    const scene = getScene();
-    const layerId = levelManager.currentLevelId;
+    const sm = ctx.getSceneManager();
+    const scene = ctx.getScene();
+    const layerId = ctx.levelManager.currentLevelId;
     if (!sm || !scene?.entities || !layerId) return false;
 
     // ── Collinear bridge: the two walls become ONE (outer-to-outer span). ──────
@@ -236,7 +175,7 @@ export function useWallGapOpeningTool({
       const sceneUnits = resolveSceneUnits(scene); // scene-level SSoT (matches the opening tool)
       const res = buildOpeningEntity(buildGapOpeningParams(mergedId, gap), merged, layerId, sceneUnits);
       if (res.ok) {
-        buildOpeningResolvers(levelManager).onOpeningCreated(res.entity);
+        buildOpeningResolvers(ctx.levelManager).onOpeningCreated(res.entity);
         placedOpening = true;
       }
     }
@@ -244,62 +183,23 @@ export function useWallGapOpeningTool({
     selectEntities?.([mergedId]);
     toast.success(i18next.t(placedOpening ? 'wallGapOpening.bridged' : 'wallGapOpening.merged', { ns: NS }));
     return true;
-  }, [getSceneManager, getScene, levelManager, executeCommand, selectEntities, setHint]);
+  }, [executeCommand, selectEntities]);
 
-  // ── Activation: Flow B (selection-first) or enter picking (Flow A) ─────────
+  const { isActive, handleClick, handleEscape } = useWallPickScaffold({
+    activeTool,
+    toolId: 'wall-gap-opening',
+    levelManager,
+    selectedEntityIds,
+    transformScale,
+    onToolChange,
+    selectEntities,
+    hints: { pickFirst: 'wallGapOpening.pickFirst', pickSecond: 'wallGapOpening.pickSecond' },
+    execute: executeBridge,
+  });
 
-  useEffect(() => {
-    if (isActive && !wasActiveRef.current) {
-      pickedARef.current = null;
-      const walls = collectSelectedWalls();
-      if (walls.length === 2) {
-        if (executeBridge(walls[0], walls[1])) {
-          onToolChange?.('select');
-        } else {
-          setHint('wallGapOpening.pickFirst'); // invalid pre-selection → manual picking
-        }
-      } else if (walls.length === 1) {
-        pickedARef.current = walls[0];
-        selectEntities?.([walls[0].id]);
-        setHint('wallGapOpening.pickSecond');
-      } else {
-        setHint('wallGapOpening.pickFirst');
-      }
-    } else if (!isActive && wasActiveRef.current) {
-      pickedARef.current = null;
-      toolHintOverrideStore.setOverride(null);
-    }
-    wasActiveRef.current = isActive;
-  }, [isActive, collectSelectedWalls, executeBridge, onToolChange, selectEntities, setHint]);
-
-  // ── Click: Flow A picking loop ─────────────────────────────────────────────
-
-  const handleWallGapOpeningClick = useCallback((worldPoint: Point2D): void => {
-    const hit = findWallAtPoint(worldPoint, pickedARef.current?.id);
-    if (!hit) return;
-
-    if (!pickedARef.current) {
-      pickedARef.current = hit;
-      selectEntities?.([hit.id]);
-      setHint('wallGapOpening.pickSecond');
-      return;
-    }
-
-    if (executeBridge(pickedARef.current, hit)) {
-      pickedARef.current = null;
-      setHint('wallGapOpening.pickFirst'); // loop (continuous tool)
-    }
-    // invalid: hint shows the reason; keep A picked so the user retries wall 2.
-  }, [findWallAtPoint, executeBridge, selectEntities, setHint]);
-
-  // ── Escape: exit tool ─────────────────────────────────────────────────────
-
-  const handleWallGapOpeningEscape = useCallback((): void => {
-    pickedARef.current = null;
-    toolHintOverrideStore.setOverride(null);
-    selectEntities?.([]);
-    onToolChange?.('select');
-  }, [onToolChange, selectEntities]);
-
-  return { isActive, handleWallGapOpeningClick, handleWallGapOpeningEscape };
+  return {
+    isActive,
+    handleWallGapOpeningClick: handleClick,
+    handleWallGapOpeningEscape: handleEscape,
+  };
 }

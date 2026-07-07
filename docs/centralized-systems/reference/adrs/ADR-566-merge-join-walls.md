@@ -146,3 +146,16 @@ renderάρονται). Αποφεύγει churn στα ADR-040 render αρχεί
   (opening cascade + geometry recompute + auto-save = standard reuse, μηδέν custom event). NEW block
   reason `parallel-offset` + i18n (`wallMerge.blocked.parallelOffset`, `wallMerge.joinedCorner`).
   27 jest πράσινα. 🔴 browser-verify (γωνία/κάθετα/υπό-κλίση· 1 Ctrl+Z· openings· auto-save reload) + commit.
+- **2026-07-07 (SSoT scaffold extract, flagged item E — Opus 4.8, shared tree)** — Το «pick two walls»
+  dual-flow interaction (Flow B selection-first ⊕ Flow A command-first pick loop + escape) + οι scene
+  helpers (`getScene`/`getWallById`/`findWallAtPoint`/`collectSelectedWalls`) ήταν **byte-identical**
+  διπλότυπα στο `useWallMergeTool` **και** `useWallGapOpeningTool` (ADR-568). Εξήχθησαν σε **NEW SSoT**
+  `hooks/tools/useWallPickScaffold.ts` (generic πάνω στον level manager, reuse του ADR-577
+  `useSceneManagerAdapter`). Τα 2 hooks κρατούν μόνο το per-tool JOIN action (`executeMerge`/`executeBridge`),
+  που δέχεται όλα όσα χρειάζεται μέσω **execute context** (`getSceneManager`/`getScene`/`levelManager`/`setHint`)
+  → μηδέν circular dep, το action μένει pure closure πάνω στα δικά του commands/geometry. **Public API
+  (props + return) αμετάβλητο** → μηδέν αλλαγή στα call sites (`useModifyTools`) & downstream (`CanvasSection`).
+  Το `useWallSplitTool` **ΔΕΝ** είναι consumer (είναι point→point knife, όχι wall-pick — grep-verified, το
+  αρχικό flag «3×» ήταν stale· ήδη migrated σε `useSceneManagerAdapter`). **NEW test**
+  `__tests__/useWallPickScaffold.test.ts` (6 GREEN: Flow B ×3 / Flow A loop / execute-ctx / escape). ΟΧΙ tsc
+  (N.17). 🔴 browser-verify (merge + gap-bridge, selection-first & pick-loop) + commit (Giorgio).
