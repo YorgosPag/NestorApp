@@ -18,6 +18,7 @@ import { formatSnapTrackingLabel, formatAngleLocale } from '../../rendering/enti
 import { formatPolarLabel, faceRelativeDisplayAngle } from '../../systems/constraints/polar-utils';
 import { resolveAlignmentTracking } from '../../systems/tracking/resolve-alignment-tracking';
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
+import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import type { PlacementOverlayFields } from '../../bim/placement/placement-overlay-fields';
 import type { WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
 import { buildWallHudSpecLabel } from './wall-hud-spec-label';
@@ -116,8 +117,10 @@ export function paintDrawingHoverOverlays(
   // ADR-508 §line-hud — η ΓΡΑΜΜΗ δείχνει το ΙΔΙΟ live HUD μήκους+γωνίας με τον τοίχο, μέσω
   // του ΚΟΙΝΟΥ painter (drawWallHud → paintWallHudCore). Δεν έχει BIM ταυτότητα (πάχος/ύψος)
   // → κενό specLabel (παραλείπεται). Το `liveDimHud` τέθηκε στο applyPreviewStyling (line tool).
+  // Κατ. 2 toggle (status-bar «ΜΗΚΟΣ/ΓΩΝΙΑ») — το `liveDimHud` το θέτουν μόνο line/polyline·
+  // ο τοίχος έχει ξεχωριστό `wallHud` (πάνω) → δεν επηρεάζεται. ADR-508 §line-hud.
   const lineHud = (previewEntity as { liveDimHud?: WallHudMeta }).liveDimHud;
-  if (lineHud) {
+  if (lineHud && cadToggleState.isDimHudOn()) {
     canvas.drawWallHud(lineHud, '');
   }
   // ADR-397 §15 (wall) / ADR-564 §linear-hud (beam) — μετά το 1ο κλικ γραμμικού μέλους:
@@ -131,11 +134,12 @@ export function paintDrawingHoverOverlays(
   // ADR-508 §polyline-parity (Giorgio 2026-07-07) — το ΙΔΙΟ πράσινο/κόκκινο τόξο ΦΟΡΑΣ (SSoT
   // `drawDirectionArc`) και στη ΓΡΑΜΜΗ + ΠΟΛΥΓΡΑΜΜΗ κατά τη σχεδίαση (μετά το 1ο σημείο, όταν
   // υπάρχει `lastRefPt`). Ίδιος pivot/bearing υπολογισμός με τοίχο/δοκό — μηδέν νέος painter.
-  if (
-    (activeTool === 'wall' || activeTool === 'beam' ||
-      activeTool === 'foundation-strip' || activeTool === 'foundation-tie-beam' ||
-      activeTool === 'line' || activeTool === 'polyline') && lastRefPt
-  ) {
+  // Κατ. 3 toggle (status-bar «ΤΟΞΟ ΦΟΡΑΣ») — αφορά ΜΟΝΟ line/polyline· τα BIM μέλη
+  // (τοίχος/δοκός/πέδιλο) κρατούν πάντα το τόξο τους. ADR-508 §polyline-parity.
+  const dirArcOnForLine = activeTool === 'wall' || activeTool === 'beam' ||
+    activeTool === 'foundation-strip' || activeTool === 'foundation-tie-beam' ||
+    ((activeTool === 'line' || activeTool === 'polyline') && cadToggleState.isDirArcOn());
+  if (dirArcOnForLine && lastRefPt) {
     const bearingDeg = (Math.atan2(previewPt.y - lastRefPt.y, previewPt.x - lastRefPt.x) * 180) / Math.PI;
     canvas.drawDirectionArc(
       lastRefPt,

@@ -99,8 +99,16 @@ export function convertDxfEntityToEntityModel(entity: DxfEntityUnion): EntityMod
         position: textEntity.position,
         text: textEntity.text,
         height: textEntity.height,
-        rotation: textEntity.rotation
-      };
+        rotation: textEntity.rotation,
+        // ADR-557 Φ-attachment (Giorgio 2026-07-07) — carry the SAME style fields the RENDER
+        // EntityModel does (`dxf-renderer-entity-model.ts` case 'text'), so the hover hit-test's
+        // `resolveTextBox` derives the IDENTICAL box the hover frame draws. Without these the
+        // spatial-index entity lost justification (textStyle) + X-scale (widthFactor) + MTEXT
+        // frame (width) → the hit zone drifted from the glowing rectangle.
+        ...(textEntity.textStyle && { textStyle: textEntity.textStyle }),
+        ...(textEntity.widthFactor != null && { widthFactor: textEntity.widthFactor }),
+        ...(textEntity.width != null && { width: textEntity.width }),
+      } as unknown as EntityModel;
     }
     case 'angle-measurement': {
       const angleEntity = entity as import('../canvas-v2/dxf-canvas/dxf-types').DxfAngleMeasurement;

@@ -160,11 +160,47 @@ member → λαβές + MOVE/ROTATION σε **μία μόνο** γραμμή (mis
   / «K ομάδες». i18n `groupSelection.*` (el/en, ICU plurals). Tests: `group-selection-bounds.test.ts`.
 - **Highlight όλων των μελών**: ήδη ισχύει (κάθε expanded member έχει `group.id` → `_selectionSet.has`
   true για όλους στον `DxfRenderer`) — VERIFY live.
-- **DEFERRED (επόμενη φάση):** πλήρως interactive shared move/rotate **gizmo** (grip-glyph στο κέντρο
-  με per-type commit routing). Το group MOVE/ROTATE/SCALE ήδη δουλεύει μέσω body-drag/rotate tool
-  (`calculateMovedGeometry`/`rotateEntity` recurse σε members) — λείπει μόνο το ενιαίο glyph-as-click-target.
+- **DONE (Phase 2 — interactive gizmo):** ΕΝΑ κοινό **βελάκι** στο κέντρο του group bbox (Revit /
+  Cinema 4D) — move-cross + rotation handle. **SSoT reuse, μηδέν νέα math/engine:**
+  - **Grips** `systems/group/group-gizmo-grips.ts` `getGroupGizmoGrips(group, bounds)` — mirror του
+    `getPolylineMoveRotateGrips` πάνω στο world-axis AABB: move `type:'vertex'` @ `bounds.center`
+    (`group-move`), rotation @ `rectLocalWorld(frame, 0, rotationHandleMidwayOffset(halfLength*2))`
+    (`group-rotation`, ίδια policy με column/text/rectangle). Πάντα ορατά (κανένα showMidpoints gate).
+  - **Kind** `GroupGripKind = 'group-move' | 'group-rotation'` (`grip-kinds-primitives.ts`) → forward
+    σε `GripInfo`/`UnifiedGripInfo` (`wrapDxfGrip`). Εκπομπή στο `grip-registry` (στο branch που πριν
+    έκανε skip τα per-member grips· `groupEntityIds:Set` → `groupEntities:Map<id,GroupEntity>` για bounds).
+  - **Hot-grip flow (entity-agnostic):** `hotGripKindOf` chain + `HOT_GRIP_OP_REGISTRY`
+    (`group-move`→move 3-click, `group-rotation`→rotate free/6-click reference) + `GRIP_GLYPH_REGISTRY`
+    (`group-move`→4-arrow, `group-rotation`→curved) — ίδιο pipeline με line/arc/text.
+  - **Commit:** `grip-commit-adapters` gates → `group-move` = `commitWholeEntityMove` (→ `moveEntities`
+    → `calculateMovedGeometry` case 'group' recurse)· `group-rotation` = `commitGroupGizmoRotation`
+    (`grip-group-commits.ts`) → canonical `RotateEntityCommand` (`rotateEntity` case 'group' recurse),
+    pivot = bbox centre, reuse του shared `resolveRotation` (BimRotateHotGripStore).
+  - **Live ghost (WYSIWYG):** `applyEntityPreview` group move/rotation branches (reuse
+    `calculateMovedGeometry` / `applyPrimitiveRotationDrag`→`rotateEntity` — preview ≡ commit by
+    identity)· `useGripGhostPreview` expand-άρει το transformed group + `drawGhostEntity` ανά member.
+    Rotation pivot ⊙ + live angle arc = τα υπάρχοντα hot-grip overlays.
+  - **Render (pixel-identical, επιλογή Giorgio):** `components/dxf-layout/GroupGizmoLayer.tsx` — dedicated
+    ADR-040 canvas leaf που ζωγραφίζει το gizmo με τον ΙΔΙΟ `UnifiedGripRenderer`/`gripGlyphShape` +
+    warm/hot temperature (από `gripInteractionState`), αφού το group είναι expanded → δεν έχει
+    per-entity renderer. Mount στο `CanvasLayerStack` δίπλα στο `GroupSelectionOverlaySubscriber`.
+  - Tests: `group-gizmo-grips.test.ts` (grips + glyph/hot-grip wiring + ghost move/rotate). 8/8 pass.
+- **DEFERRED (επόμενη φάση):** custom rotation pivot (3ds Max «Affect Pivot»)· group **copy** μέσω
+  gizmo (Ctrl+rotate/move) εξαρτάται από `RotateEntityCommand.copyMode`/`CopyEntityCommand` support για
+  `type:'group'` (best-effort τώρα, no-op αν το command δεν κλωνοποιεί group).
 
 ## Changelog
+- **2026-07-07** — **Phase 2: interactive GIZMO ομάδας (§8 DONE).** ΕΝΑ κοινό move-cross + rotation
+  handle στο κέντρο του group bbox (Revit/C4D). FULL SSoT reuse (mirror `getPolylineMoveRotateGrips`):
+  `GroupGripKind` + `getGroupGizmoGrips` + εκπομπή στο `grip-registry` (Map<id,GroupEntity>) + hot-grip
+  registry/glyph wiring (`wall-hot-grip-fsm`/`grip-glyph-registry`) + commit gates (`grip-commit-adapters`
+  → `commitWholeEntityMove` / `commitGroupGizmoRotation`→`RotateEntityCommand`, pivot=bbox centre) + live
+  ghost (`apply-entity-preview` group branches + `useGripGhostPreview` member-expand draw) + pixel-identical
+  canvas render leaf `GroupGizmoLayer` (ΙΔΙΟΣ `UnifiedGripRenderer`/glyph, warm/hot temperature) mounted στο
+  `CanvasLayerStack`. Group MOVE/ROTATE ήδη recurse σε members (`calculateMovedGeometry`/`rotateEntity` case
+  'group') — μηδέν νέα math/engine. **8/8 group-gizmo tests + 103/103 touched-shared regression GREEN.** ΟΧΙ
+  tsc (N.17). Render leaf + `CanvasLayerStack`/`useGripGhostPreview` touch → ADR-040 §changelog (CHECK 6B/6D).
+  🔴 εκκρεμεί browser-verify (drag move-cross → όλη η ομάδα· drag rotation handle → περιστροφή γύρω από κέντρο).
 - **2026-07-07** — Η ΓΡΑΜΜΟΣΚΙΑΣΗ δεν ΟΜΑΔΟΠΟΙΟΥΝΤΑΝ με τις γραμμές (Giorgio: «αντιλαμβάνεται μόνον τις γραμμές»). **Ρίζα (trace ολόκληρου του selection→group pipeline):** το GROUP παίρνει τα μέλη από `getSelectedEntityIds()`· ο χρήστης επιλέγει hatch+γραμμές με **window/crossing marquee**, αλλά ο marquee bounds SSoT `systems/selection/shared/selection-duplicate-utils.ts:175 calculateEntityBounds` **δεν είχε `case 'hatch'`** → `null` → `findEntitiesInMarquee` (window `isEntityFullyInsideBounds` / crossing `entityIntersectsBounds`) σιωπηλά **απέκλειε** τη hatch → ποτέ στη selection → ποτέ μέλος της ομάδας. (Το single-click hit-test χειρίζεται hatch — `hit-test-entity-tests.ts:77` even-odd — άρα το click-select δούλευε· ΜΟΝΟ το marquee το έκοβε.) **FIX (2 αρχεία):** (α) `selection-duplicate-utils.ts` — `case 'hatch'` = AABB over `boundaryPaths` (καθρέφτης `types/entity-bounds.ts` case 'hatch' + `Bounds.ts` broad-phase). (β) Πληρότητα: hatch key-points + boundary-segments στο lasso (`systems/selection/utils.ts` `getEntityKeyPoints`/`getEntitySegments`). Πλέον window/crossing/lasso πιάνουν τη hatch → ομαδοποιείται μαζί με τις γραμμές· έτσι το click σε οποιοδήποτε μέλος επιλέγει όλη την ομάδα (id re-tag `group.id`) και το Alt-move μετακινεί ΟΛΟ το σύστημα (μαζί με το προηγούμενο hatch-move fix). **+2 tests** (`calculate-entity-bounds-dxf.test.ts` hatch AABB + empty). **85/85 selection GREEN.** ⚠️ **SSoT χρέος (boy-scout):** ΔΥΟ `calculateEntityBounds` (το `types/entity-bounds.ts` είχε hatch, το selection-copy όχι) — σύγκλιση = μεγάλο/ριψοκίνδυνο → pending. 🔴 εκκρεμεί browser-verify.
 - **2026-07-07** — GROUP-move έχανε τη ΓΡΑΜΜΟΣΚΙΑΣΗ-member (Giorgio: «Alt+drag λαβής → μετακινούνται μόνο οι γραμμές, όχι όλο το σύστημα»). **Ρίζα:** το group move (`calculateMovedGeometry`, γρ.120) αναδρομεί τον κανονικό rigid-move SSoT **ανά member**, αλλά ο SSoT δεν είχε **`hatch` case** → η hatch επέστρεφε `{}` → έμενε στη θέση της ενώ τα line-members μετακινούνταν. (Το Alt+drag σε επιλεγμένη ομάδα, με grip suppression §8, πέφτει σε whole-entity body-move της ομάδας → ίδιο path.) **FIX (SSoT, 1 αρχείο):** `core/commands/entity-commands/move-entity-geometry.ts` — προστέθηκε `isHatchEntity` case που μετατοπίζει `boundaryPaths` (outer + islands) + `seedPoints`. Επειδή είναι ο ΚΑΝΟΝΙΚΟΣ rigid-move SSoT (body-drag / directional / Alt move-from-point / COPY + `translateEntityByAnchor` delegate εκεί), διορθώνεται ΚΑΙ το standalone hatch move (ήταν επίσης no-op). **ΝΕΟ** `move-entity-geometry-hatch.test.ts` (standalone hatch + group-with-hatch). **468/468 core/commands+group+stretch tests GREEN.** 🔴 εκκρεμεί browser-verify (Alt+drag ομάδας πλαίσιο+hatch → μετακινείται όλο μαζί).
 - **2026-07-07** — GROUP selection affordance (§8): dashed bbox + «Ομάδα · N» overlay leaf +

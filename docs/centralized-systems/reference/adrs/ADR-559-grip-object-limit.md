@@ -177,6 +177,7 @@
 
 ## Changelog
 
+- **2026-07-07 (ADR-575 §8 — GROUP gizmo)** — Το επιλεγμένο group **δεν** εκπέμπει per-member grips (suppression) αλλά ΕΝΑ κοινό gizmo (move-cross + rotation handle) στο κέντρο του bbox. Και οι δύο λαβές είναι `type:'vertex'` → **πάντα ορατές** (κανένα showMidpoints/showCenters gate) και **δεν** εμπίπτουν στον multi-select suppression κανόνα (`shouldHideDataGripForSelection`: το group = ΕΝΑ selected id). Εκπομπή στο `grip-registry` (branch που πριν έκανε skip), render μέσω dedicated canvas leaf `GroupGizmoLayer` (το group είναι expanded → δεν έχει per-entity renderer). Δες ADR-575 §8.
 - **2026-06-30** — Αρχική υλοποίηση: setting `gripObjLimit` (default 100) + predicate SSoT + 3 gates (2D + 2×3D) + UI slider + i18n + 7 jest. UNCOMMITTED.
 - **2026-06-30 (follow-up, Giorgio SSoT order)** — Κεντρικοποίηση grip-settings shape (§3b): νέο `types/grip-settings-schema.ts` (canonical) + 6 projections + 2 de-collision renames + ratchet guard module. Zero behavior change (μόνο types, όχι default values). 261/262 jest GREEN (1 προϋπάρχον MEP mock fail, άσχετο). UNCOMMITTED.
 - **2026-06-30 (bugfix, Giorgio browser-verify)** — **Ctrl+A εμφάνιζε όλα τα grips:** ο αρχικός gate ήταν σε λάθος producer (`grip-registry`→hit-test μόνο). Προστέθηκε ο **πραγματικός** gate στο `DxfRenderer.renderEntityUnified` (`gripsVisible`, per-frame `_gripsSuppressedByObjLimit`) — ο visible-grips render path. ADR-040 changelog ενημερωμένο (CHECK 6B/6D). UNCOMMITTED.

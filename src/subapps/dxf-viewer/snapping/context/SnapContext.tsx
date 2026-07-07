@@ -38,6 +38,10 @@ const ALL_MODES: ExtendedSnapType[] = [
   // ADR-362: Dimension snap types
   ExtendedSnapType.DIM_DEF_POINT,
   ExtendedSnapType.DIM_LINE,
+  // ADR-378: Text snap (insertion + 4 corners + center + edge mids — coincide with the
+  // text grips). The engine was registered but TEXT was missing here, so it could never
+  // enter `enabledModes` → no text snap markers for ANY user (Giorgio 2026-07-07).
+  ExtendedSnapType.TEXT,
   // ADR-408 Φ9: MEP connector attach-point snap
   ExtendedSnapType.BIM_MEP_CONNECTOR,
   // NOTE: ROTATION_PIVOT / ROTATION_GRIP (ADR-397) and BIM_CORNER / BIM_MIDPOINT /
@@ -75,6 +79,7 @@ const DEFAULT_ENABLED_SNAPS = new Set<ExtendedSnapType>([
   ExtendedSnapType.GRID,
   ExtendedSnapType.DIM_DEF_POINT,   // ADR-362: dimension def-point snap (toggleable)
   ExtendedSnapType.DIM_LINE,        // ADR-362: dimension line snap (toggleable)
+  ExtendedSnapType.TEXT,            // ADR-378: text snap (toggleable, on by default)
   ExtendedSnapType.BIM_MEP_CONNECTOR, // ADR-408 Φ9: enabled by default
   // ADR-370 BIM_CORNER/MIDPOINT/CENTER are always-on (force-enabled in enabledModes)
 ]);

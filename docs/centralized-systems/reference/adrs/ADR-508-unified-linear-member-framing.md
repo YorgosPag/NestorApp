@@ -106,6 +106,11 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
 
 ## Changelog
 
+- **2026-07-07 (§line-indicator-toggles — status-bar toggles για HUD/τόξο/listening-dims της «Γραμμής»)** — owner τεκμηρίωσης UI: **ADR-357**
+  - **Αίτημα Giorgio**: οι οπτικές ενδείξεις του line-tool ghost να **ανάβουν/σβήνουν** από την κάτω CAD status bar.
+  - **3 flags** (default ON) στο ήδη υπάρχον `cad-toggle-state.ts` + `useCadToggles.ts` (reuse του `dynInput` pattern, μηδέν νέος μηχανισμός), με Firestore persistence (`cadTogglesSchema` `.default(true)`).
+  - **Gates (single-point, non-React getters):** (§line-hud) `dimHudOn` → `drawing-hover-overlays.ts` (`if (lineHud && isDimHudOn())`, μόνο line/polyline — ο τοίχος έχει ξεχωριστό `wallHud`)· (§polyline-parity) `dirArcOn` → `drawing-hover-overlays.ts` (line/polyline όρος `&& isDirArcOn()`, BIM μέλη πάντα ON)· (§line-cyan) `listeningDimOn` → `line-preview-helpers.ts:resolveLineFaceDims` (`if (!isListeningDimOn()) return null` — καλύπτει stub State A + State B).
+  - **UI:** 2× status-bar `CadToggleRow` («ΜΗΚΟΣ/ΓΩΝΙΑ», «ΤΟΞΟ ΦΟΡΑΣ», χωρίς F-key) + sub-toggle («Αποστάσεις») μέσα στο OSNAP popover (`ProSnapToolbar`). Οι κατ. 1α (OSNAP glyphs) & κατ. 4 (AutoAlign) ΔΕΝ διπλασιάστηκαν. Αφαιρέθηκε το span/κλειδί «CAD Mode | F-keys» (`modeInfo`). Πλήρες changelog + λίστα αρχείων: **ADR-357 (2026-07-07)**.
 - **2026-07-07 (§text-parity — φάντασμα-λέξη + ενδείξεις τοποθέτησης + 2-click place→rotate στα «Κείμενο»/«Πολυγραμμικό Κείμενο»)** — pointer: **ADR-344** (text/mtext creation tool, Phase 6.E/6.F)
   - **Αίτημα Giorgio (2 γύροι)**: όταν επιλέγω «Κείμενο» (`text`)/«Πολυγραμμικό Κείμενο» (`mtext`): (α) οι **ΙΔΙΕΣ ενδείξεις
     τοποθέτησης** με τα άλλα εργαλεία (λευκά ίχνη + **κυανές** flush-to-face + OSNAP) + μικρό **φάντασμα-λέξη** «κείμενο»/

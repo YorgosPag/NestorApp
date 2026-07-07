@@ -31,7 +31,7 @@ import {
 import { CommandLineInput } from '../ui/command-line/CommandLineInput';
 
 export default function CadStatusBar() {
-  const { osnap, grid, snap, ortho, polar, dynInput, snapStep, setSnapStep } = useCadToggles();
+  const { osnap, grid, snap, ortho, polar, dynInput, dimHud, dirArc, listeningDim, snapStep, setSnapStep } = useCadToggles();
   const { t } = useTranslation('dxf-viewer-panels');
   const { t: tTools } = useTranslation('tool-hints');
   const { displayUnit, setDisplayUnit } = useDisplayUnit();
@@ -98,6 +98,8 @@ export default function CadStatusBar() {
                 toggle={toggle}
                 enabledModes={enabledModes}
                 onToggleMode={toggleMode}
+                listeningDimOn={listeningDim.on}
+                onToggleListeningDim={listeningDim.toggle}
               />
             ) : key === 'snap' ? (
               <SnapToggleWithStep
@@ -135,6 +137,22 @@ export default function CadStatusBar() {
             label={t('cadDock.statusBar.autoAlign')}
             description={t('cadDock.statusBar.autoAlignDesc')}
           />
+          {/* ADR-508 §line-hud / §polyline-parity: line-tool preview indicators.
+              Status-bar-only toggles (no F-key, όπως AutoAlign/ΔΥΝ). */}
+          <CadToggleRow
+            id="cad-toggle-dimhud"
+            label={t('cadDock.statusBar.dimHud')}
+            fkey=""
+            description={t('cadDock.statusBar.dimHudDesc')}
+            toggle={dimHud}
+          />
+          <CadToggleRow
+            id="cad-toggle-dirarc"
+            label={t('cadDock.statusBar.dirArc')}
+            fkey=""
+            description={t('cadDock.statusBar.dirArcDesc')}
+            toggle={dirArc}
+          />
           {/* ADR-357 Phase 2b: Display unit selector */}
           <DisplayUnitSelector displayUnit={displayUnit} onUnitChange={setDisplayUnit} t={t} />
           {/* ADR-510 Φ2E #2: global linetype scale (LTSCALE) */}
@@ -143,9 +161,6 @@ export default function CadStatusBar() {
           <LineweightDisplayControl />
           <CurrentLayerPicker variant="status-bar" className="ml-auto" />
           <IsolateStatusIndicator />
-          <span className="shrink-0 text-xs text-muted-foreground">
-            {t('cadDock.statusBar.modeInfo')}
-          </span>
         </div>
       </aside>
     </TooltipProvider>
@@ -183,7 +198,7 @@ function CadToggleRow({ id, label, fkey, description, toggle }: {
         </div>
       </TooltipTrigger>
       <TooltipContent side="top">
-        {`${description} (${fkey})`}
+        {fkey ? `${description} (${fkey})` : description}
       </TooltipContent>
     </Tooltip>
   );
@@ -421,7 +436,7 @@ function DisplayUnitSelector({ displayUnit, onUnitChange, t }: {
   );
 }
 
-function OsnapToggleWithPopover({ id, label, fkey, description, toggle, enabledModes, onToggleMode }: {
+function OsnapToggleWithPopover({ id, label, fkey, description, toggle, enabledModes, onToggleMode, listeningDimOn, onToggleListeningDim }: {
   id: string;
   label: string;
   fkey: string;
@@ -429,6 +444,8 @@ function OsnapToggleWithPopover({ id, label, fkey, description, toggle, enabledM
   toggle: CadToggle;
   enabledModes: Set<ExtendedSnapType>;
   onToggleMode: (mode: ExtendedSnapType, enabled: boolean) => void;
+  listeningDimOn: boolean;
+  onToggleListeningDim: () => void;
 }) {
   return (
     <div className="flex items-center gap-0.5 shrink-0">
@@ -469,6 +486,8 @@ function OsnapToggleWithPopover({ id, label, fkey, description, toggle, enabledM
           <ProSnapToolbar
             enabledModes={enabledModes}
             onToggleMode={onToggleMode}
+            listeningDimOn={listeningDimOn}
+            onToggleListeningDim={onToggleListeningDim}
             compact
           />
         </PopoverContent>

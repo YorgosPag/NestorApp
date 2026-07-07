@@ -4,10 +4,10 @@
  */
 
 import type { EntityModel } from '../types/Types';
-// 🏢 ADR-107: Centralized Text Metrics Ratios
-// 🏢 ADR-142: Centralized Default Font Size
-import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
-import { resolveEntityText } from '../../utils/text-node-utils';
+import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
+// ADR-557 (multi-line) — the attachment/rotation/multi-line-aware text-box AABB SSoT (em box),
+// the generous superset the spatial-index broad phase uses so it always encloses every line.
+import { textBoxAABB } from '../../bim/text/text-box';
 import { calculateXLineBounds, calculateRayBounds } from './bounds-parametric-line';
 import type {
   EntityWithLine,
@@ -334,69 +334,25 @@ export class BoundsCalculator {
    * the AABB is computed from the rotated corners of the text rectangle.
    */
   private static calculateTextBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    // 🏢 ENTERPRISE: Type-safe casting for TextEntity properties
+    // ADR-557 (multi-line, Giorgio 2026-07-07) — the spatial-index broad phase now uses the
+    // attachment / rotation / MULTI-LINE-aware em-box AABB SSoT (`textBoxAABB`), the generous
+    // superset of the VISUAL hover/hit box (`resolveTextBox`). Was: a hardcoded single-line box
+    // (`estimatedHeight = textHeight`, monospace width, baseline-top-left) → for multi-line text
+    // lines 2..N sat BELOW the bbox, so the entity was never returned as a candidate and the
+    // narrow-phase `hitTestText` never ran → πολυγραμμικά κείμενα δεν φωτίζονταν στο hover. The
+    // em box is multi-line-aware (Σ γραμμών) + honours attachment / widthFactor / rotation, so it
+    // always encloses every drawn line. Height / fontSize / 2.5 fallback preserved.
     const textEntity = entity as EntityWithText;
-    const position = textEntity.position;
-    const text = resolveEntityText(textEntity);
-
-    // 🏢 FIX (2026-02-20): Priority chain matching TextRenderer.extractTextHeight()
-    // DXF entities store text size in `height`, NOT `fontSize`
-    const textHeight = textEntity.height || textEntity.fontSize || 2.5;
-
-    // 🏢 ADR-107: Use centralized text metrics ratio for width estimation
-    const estimatedWidth = text.length * textHeight * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
-    const estimatedHeight = textHeight;
-
-    // 🏢 FIX (2026-02-20): Rotation-aware AABB
-    // For rotated text (e.g. vertical dimension "2.95" at 90°), compute the axis-aligned
-    // bounding box of the rotated text rectangle. Without this, the AABB for rotated text
-    // extends incorrectly in one axis.
-    const rotation = textEntity.rotation ?? 0;
-    let normalizedRotation = rotation % 360;
-    if (normalizedRotation < 0) normalizedRotation += 360;
-
-    if (normalizedRotation !== 0) {
-      // Rotate the 4 corners of the text rectangle around position
-      const rad = normalizedRotation * (Math.PI / 180);
-      const cos = Math.cos(rad);
-      const sin = Math.sin(rad);
-
-      // Text rectangle corners relative to position (origin).
-      // TextRenderer uses textBaseline='top': position is the TOP of the text in screen
-      // space, so text extends DOWNWARD on screen = NEGATIVE Y in world coords (Y-up).
-      // Corners: (0,0)=top-left, (w,0)=top-right, (w,-h)=bottom-right, (0,-h)=bottom-left.
-      const corners = [
-        { x: 0, y: 0 },
-        { x: estimatedWidth, y: 0 },
-        { x: estimatedWidth, y: -estimatedHeight },
-        { x: 0, y: -estimatedHeight },
-      ];
-
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      for (const corner of corners) {
-        const rx = corner.x * cos - corner.y * sin + position.x;
-        const ry = corner.x * sin + corner.y * cos + position.y;
-        minX = Math.min(minX, rx);
-        minY = Math.min(minY, ry);
-        maxX = Math.max(maxX, rx);
-        maxY = Math.max(maxY, ry);
-      }
-
-      return this.createBoundingBox(
-        minX - tolerance,
-        minY - tolerance,
-        maxX + tolerance,
-        maxY + tolerance
-      );
-    }
-
-    // Non-rotated: text goes DOWN from position (textBaseline='top' → position = top).
-    // World Y range: [position.y - estimatedHeight, position.y].
+    const dxfText = {
+      ...(textEntity as unknown as DxfText),
+      height: textEntity.height || textEntity.fontSize || 2.5,
+    };
+    const aabb = textBoxAABB(dxfText);
     return this.createBoundingBox(
-      position.x - tolerance,
-      position.y - estimatedHeight - tolerance,
-      position.x + estimatedWidth + tolerance,
-      position.y + tolerance
+      aabb.minX - tolerance,
+      aabb.minY - tolerance,
+      aabb.maxX + tolerance,
+      aabb.maxY + tolerance,
     );
   }
 

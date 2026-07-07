@@ -26,6 +26,7 @@ import { resolveEffectivePreviewCursor, resolveGhostFaceDimensionsMeta } from '.
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
+import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { isVisibleSnapMode } from '../../snapping/extended-types';
 import { getDefaultLayerId } from '../../stores/LayerStore';
 import type { GhostFaceFrame } from '../../bim/framing/linear-member-face-snap';
@@ -94,8 +95,13 @@ function resolveLineFaceSnap(cursor: Readonly<Point2D>, sceneUnits: SceneUnits):
  * ADR-508 §line-cyan — **ΤΟ ΕΝΑ** σημείο υπολογισμού των κυανών listening dims από `faceFrame`
  * (gap-left / gap-right / κέντρο-προς-κέντρο). Καλείται από το stub-φάντασμα (State A, πριν το 1ο
  * κλικ) ΚΑΙ από το `resolveLineListeningDims` (State B, μετά το 1ο κλικ) — μηδέν διπλότυπο.
+ *
+ * Κατ. 1β toggle (OSNAP popover «Αποστάσεις») — single-point gate εδώ σβήνει τις κυανές dims
+ * ΚΑΙ στο stub (State A) ΚΑΙ στο State B, μόνο για το line-tool (τοίχος/δοκός/κολόνα έχουν
+ * δικούς τους callers του ίδιου SSoT). ADR-508 §line-cyan.
  */
 export function resolveLineFaceDims(faceFrame: GhostFaceFrame, sceneUnits: SceneUnits): GhostFaceDimensionsMeta | null {
+  if (!cadToggleState.isListeningDimOn()) return null;
   const wpp = worldPerPixel(getImmediateTransform().scale);
   return resolveGhostFaceDimensionsMeta(faceFrame, false, sceneUnits, wpp);
 }

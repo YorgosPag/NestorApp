@@ -138,14 +138,6 @@ export function RadialCommandRing({
     centerRef.current = p;
     setCursor(p);
     setCenter(p);
-    console.log(`[PERP] ring seed client=${Math.round(p.x)},${Math.round(p.y)}`);
-  }, []);
-
-  // [PERP-DIAG] mount/unmount + ποιο config (aria) — προσωρινό.
-  useEffect(() => {
-    console.log(`[PERP] ring MOUNT aria=${config.ariaLabelKey} fields=${config.fields.map((f) => f.key).join(',')} placementMode=${placementMode}`);
-    return () => console.log(`[PERP] ring UNMOUNT aria=${config.ariaLabelKey}`);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Η θέση οδηγείται από WINDOW mousemove (clientX/Y, `position: fixed`): ΔΕΝ παγώνει ποτέ, ακόμη
@@ -166,10 +158,6 @@ export function RadialCommandRing({
   // κλέβει πληκτρολόγηση από άλλο editable element (ribbon combobox κ.λπ.).
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      // [PERP-DIAG] κάθε keydown που φτάνει στο window-capture του ring + κατάσταση όλων των guards.
-      const editable = isEditableTarget(typeof document !== 'undefined' ? document.activeElement : null);
-      const activeEl = typeof document !== 'undefined' ? (document.activeElement?.tagName ?? '-') : '-';
-      console.log(`[PERP] headsup key=${e.key} aria=${config.ariaLabelKey} openField=${openField ?? 'null'} numericKey=${isHeadsUpNumericKey(e)} editableTarget=${editable} activeEl=${activeEl}`);
       if (openField !== null) return; // popup ανοιχτό → το input χειρίζεται την πληκτρολόγηση
       if (!isHeadsUpNumericKey(e)) return;
       if (isEditableTarget(typeof document !== 'undefined' ? document.activeElement : null)) return;
@@ -179,8 +167,7 @@ export function RadialCommandRing({
       e.stopPropagation();
       setOpenField('length');
       setDraft(e.key);
-      console.log(`[PERP] headsup OPEN length wedge seed=${e.key}`);
-      setTimeout(() => { inputRef.current?.focus(); console.log(`[PERP] headsup focus input hasInput=${!!inputRef.current}`); }, 0);
+      setTimeout(() => { inputRef.current?.focus(); }, 0);
     };
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
@@ -329,7 +316,6 @@ export function RadialCommandRing({
   const commitNumericOpen = useCallback((): boolean => {
     // Δέξου ΚΑΙ κόμμα ΚΑΙ τελεία ως δεκαδικό (0,25 ≡ 0.25) — μέσω του κοινού `lockOpenNumericRaw`.
     const committed = lockOpenNumericRaw(draft);
-    console.log(`[PERP] commitNumericOpen draft=${draft} committed=${committed} lockedLen=${DynamicInputLockStore.getLocked().length}`);
     setOpenField(null);
     return committed;
   }, [lockOpenNumericRaw, draft]);
@@ -342,7 +328,6 @@ export function RadialCommandRing({
   const placeAtCursor = useCallback((placedField: RingFieldDef | null) => {
     const canvasEl = getCanvasEl?.();
     const cur = cursorRef.current;
-    console.log(`[PERP] placeAtCursor hasCanvas=${!!canvasEl} cur=${cur ? `${Math.round(cur.x)},${Math.round(cur.y)}` : 'null'} lockedLenBefore=${DynamicInputLockStore.getLocked().length}`);
     if (canvasEl && cur) {
       placingRef.current = true;
       try {
@@ -368,7 +353,6 @@ export function RadialCommandRing({
   }, [openField, fieldByKey, pokeCanvas]);
 
   const onPopupKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    console.log(`[PERP] popupKey key=${e.key} openField=${openField ?? 'null'} draft=${draft}`);
     if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();

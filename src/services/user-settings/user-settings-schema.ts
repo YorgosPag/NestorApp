@@ -113,6 +113,12 @@ const cadTogglesSchema = z.object({
   ortho: z.boolean(),
   polar: z.boolean(),
   dynInput: z.boolean(),
+  // Line-tool preview indicators (ADR-357 / ADR-508). `.default(true)` → blobs
+  // persisted before these fields existed hydrate as ON (= current behaviour),
+  // no silent vanish for existing users.
+  dimHud: z.boolean().default(true),        // κατ. 2 — HUD μήκους/γωνίας
+  dirArc: z.boolean().default(true),        // κατ. 3 — τόξο ΦΟΡΑΣ
+  listeningDim: z.boolean().default(true),  // κατ. 1β — κυανές listening dims
   // Snap-mode (F9) increment step in scene units — quantizes the 2D grip-drag
   // delta (move + resize) so dimension/position changes follow a fixed step.
   // Optional for back-compat with docs persisted before this field existed.

@@ -144,15 +144,6 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
   const activeDrag = useSyncExternalStore(subscribeActiveDragGrip, getActiveDragGrip, () => null);
   const lineEndpointDrag = isLineEndpointDragInfo(activeDrag);
 
-  // [PERP-DIAG] προσωρινό — γιατί δεν εμφανίζεται/δεν πιάνει το ring για την «Κάθετη Γραμμή».
-  // Log ΜΟΝΟ σε αλλαγές (deps), όχι σε κάθε mousemove (interactive re-render).
-  useEffect(() => {
-    if (activeTool !== 'line-perpendicular') return;
-    const ringBranch = tempPoints.length >= 1 && !!getSceneUnits;
-    const blockedByGate = !interactive || is3D;
-    console.log(`[PERP] subscriber tool=${activeTool} temp=${tempPoints.length} interactive=${interactive} dynOn=${dynInput.on} is3D=${is3D} hasSceneUnits=${!!getSceneUnits} -> earlyNull(!interactive||is3D)=${blockedByGate} ringBranchWouldMount=${ringBranch && !blockedByGate}`);
-  }, [activeTool, tempPoints.length, interactive, dynInput.on, is3D, getSceneUnits]);
-
   // Wire keyboard pipeline: maps `dynamic-input-coordinate-submit` events back
   // to the canvas drawing pipeline (`onDrawingPoint`) — see ADR §4 G2.
   useDynamicInputHandler({

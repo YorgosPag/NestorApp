@@ -142,6 +142,13 @@ interface ProSnapToolbarProps {
   /** If omitted, the master SNAP toggle button is hidden (CadStatusBar OSNAP is the canonical toggle). */
   snapEnabled?: boolean;
   onToggleSnap?: (enabled: boolean) => void;
+  /**
+   * Κατ. 1β — εμφάνιση/απόκρυψη των κυανών «Αποστάσεων» (listening dimensions) του line-tool ghost
+   * (ADR-508 §line-cyan). ΔΕΝ είναι snap-mode → ξεχωριστό κουμπί, όχι μέλος των CORE/ADVANCED/BIM.
+   * Render μόνο όταν ο caller (CadStatusBar) περνά το `onToggleListeningDim`.
+   */
+  listeningDimOn?: boolean;
+  onToggleListeningDim?: () => void;
   className?: string;
   compact?: boolean;
 }
@@ -152,6 +159,8 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
   onToggleMode,
   snapEnabled,
   onToggleSnap,
+  listeningDimOn,
+  onToggleListeningDim,
   className = '',
   compact = false,
 }) => {
@@ -268,6 +277,29 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
         </TooltipTrigger>
         <TooltipContent>{t('overlayToolbar.basicFunctions')}</TooltipContent>
       </Tooltip>
+
+      {/* Κατ. 1β — κυανές «Αποστάσεις» (listening dims) visibility toggle. Ξεχωριστό
+          κουμπί (όχι snap-mode) — ADR-508 §line-cyan. */}
+      {onToggleListeningDim !== undefined && (
+        <>
+          <div className={`w-px ${PANEL_LAYOUT.HEIGHT.LG} ${colors.bg.muted}`} />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={listeningDimOn ? 'default' : 'ghost'}
+                size="sm"
+                onClick={onToggleListeningDim}
+                className={`${compact ? 'h-7 px-2 text-xs' : 'h-8 px-3 text-sm'} ${listeningDimOn ? HOVER_TEXT_EFFECTS.CYAN : ''}`}
+              >
+                <span className={`${PANEL_LAYOUT.SELECT.NONE} ${PANEL_LAYOUT.TEXT_OVERFLOW.TRUNCATE}`}>
+                  {t('dxf-viewer-panels:cadDock.statusBar.listeningDim')}
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('dxf-viewer-panels:cadDock.statusBar.listeningDimDesc')}</TooltipContent>
+          </Tooltip>
+        </>
+      )}
 
       {/* 🏢 ENTERPRISE: Advanced modes panel */}
       {showAdvanced && (

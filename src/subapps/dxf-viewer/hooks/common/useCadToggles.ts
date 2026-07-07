@@ -18,6 +18,12 @@ export interface CadToggles {
   ortho: CadToggle;
   polar: CadToggle;
   dynInput: CadToggle;
+  /** Line-tool «ΜΗΚΟΣ/ΓΩΝΙΑ» HUD (κατ. 2). */
+  dimHud: CadToggle;
+  /** Line-tool «ΤΟΞΟ ΦΟΡΑΣ» (κατ. 3). */
+  dirArc: CadToggle;
+  /** Line-tool κυανές «Αποστάσεις» / listening dims (κατ. 1β) — ελέγχεται από το OSNAP popover. */
+  listeningDim: CadToggle;
   /** SNAP-MODE (F9) increment step (scene units) + setter. */
   snapStep: number;
   setSnapStep: (value: number) => void;
@@ -34,6 +40,10 @@ const DEFAULTS: CadTogglesSettingsSlice = {
   // ADR-357 §5.1 (revised 2026-05-27): Dynamic Input default OFF — user opt-in via status-bar toggle.
   // Rationale: Giorgio explicit override of original AutoCAD/BricsCAD "always-on" parity preference.
   dynInput: false,
+  // Line-tool preview indicators — default ON (current behaviour = always visible).
+  dimHud: true,
+  dirArc: true,
+  listeningDim: true,
   // SNAP-MODE step — quantizes the 2D grip-drag delta (move + resize).
   snapStep: DEFAULT_GRIP_SNAP_STEP,
 };
@@ -67,6 +77,19 @@ export const useCadToggles = (): CadToggles => {
   const dynInputOn = useSyncExternalStore(
     cadToggleState.subscribe, cadToggleState.isDynInputOn, cadToggleState.isDynInputOn,
   );
+  // Line-tool indicators (dimHud/dirArc/listeningDim) — SAME multi-instance fix as
+  // ortho/polar/dynInput: the status-bar toggle (CadStatusBar / OSNAP popover) and the
+  // non-React draw path are different consumers, so the live value flows through the
+  // shared store; `state.*` below stays updated purely for Firestore persistence.
+  const dimHudOn = useSyncExternalStore(
+    cadToggleState.subscribe, cadToggleState.isDimHudOn, cadToggleState.isDimHudOn,
+  );
+  const dirArcOn = useSyncExternalStore(
+    cadToggleState.subscribe, cadToggleState.isDirArcOn, cadToggleState.isDirArcOn,
+  );
+  const listeningDimOn = useSyncExternalStore(
+    cadToggleState.subscribe, cadToggleState.isListeningDimOn, cadToggleState.isListeningDimOn,
+  );
 
   // Subscribe to Firestore slice — hydrate on load, guard echo-loops
   useEffect(() => {
@@ -87,6 +110,9 @@ export const useCadToggles = (): CadToggles => {
           // synchronous setter push already covers the live in-session window.
           cadToggleState.set(remote.ortho, remote.polar);
           cadToggleState.setDynInput(remote.dynInput);
+          cadToggleState.setDimHud(remote.dimHud);
+          cadToggleState.setDirArc(remote.dirArc);
+          cadToggleState.setListeningDim(remote.listeningDim);
         } else if (firstSnapshot) {
           const hash = stableHash(DEFAULTS);
           lastHashRef.current = hash;
@@ -154,6 +180,25 @@ export const useCadToggles = (): CadToggles => {
   }, []);
   const toggleDynInput = useCallback(() => setDynInput(!cadToggleState.isDynInputOn()), [setDynInput]);
 
+  // Line-tool indicators — same synchronous-store + Firestore-mirror pattern as dynInput.
+  const setDimHud = useCallback((v: boolean) => {
+    cadToggleState.setDimHud(v);
+    setState(prev => ({ ...prev, dimHud: v }));
+  }, []);
+  const toggleDimHud = useCallback(() => setDimHud(!cadToggleState.isDimHudOn()), [setDimHud]);
+
+  const setDirArc = useCallback((v: boolean) => {
+    cadToggleState.setDirArc(v);
+    setState(prev => ({ ...prev, dirArc: v }));
+  }, []);
+  const toggleDirArc = useCallback(() => setDirArc(!cadToggleState.isDirArcOn()), [setDirArc]);
+
+  const setListeningDim = useCallback((v: boolean) => {
+    cadToggleState.setListeningDim(v);
+    setState(prev => ({ ...prev, listeningDim: v }));
+  }, []);
+  const toggleListeningDim = useCallback(() => setListeningDim(!cadToggleState.isListeningDimOn()), [setListeningDim]);
+
   // SNAP-MODE step — clamp to ≥0; non-finite input falls back to the default.
   const setSnapStep = useCallback((v: number) => setState(prev => ({
     ...prev, snapStep: Number.isFinite(v) && v >= 0 ? v : DEFAULT_GRIP_SNAP_STEP,
@@ -166,6 +211,9 @@ export const useCadToggles = (): CadToggles => {
     ortho:    { on: orthoOn,        toggle: toggleOrtho,    set: setOrtho    },
     polar:    { on: polarOn,        toggle: togglePolar,    set: setPolar    },
     dynInput: { on: dynInputOn,     toggle: toggleDynInput, set: setDynInput },
+    dimHud:   { on: dimHudOn,       toggle: toggleDimHud,   set: setDimHud   },
+    dirArc:   { on: dirArcOn,       toggle: toggleDirArc,   set: setDirArc   },
+    listeningDim: { on: listeningDimOn, toggle: toggleListeningDim, set: setListeningDim },
     snapStep: state.snapStep ?? DEFAULT_GRIP_SNAP_STEP,
     setSnapStep,
   };

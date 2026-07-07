@@ -7,10 +7,14 @@
  */
 import type { Point2D } from '../types/Types';
 import type { Entity, DimensionEntity } from '../../types/entities';
+import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { HitTestResult } from './hit-tester-types';
-import { pointToLineDistance, degToRad } from '../entities/shared/geometry-utils';
-import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
+import { pointToLineDistance } from '../entities/shared/geometry-utils';
 import { calculateDistance } from '../entities/shared/geometry-rendering-utils';
+// ADR-557 Φ-attachment — the attachment-aware text-box SSoT (the SAME box the 2D hover
+// frame / grips / 3D mesh draw), so the hover HIT zone coincides with the drawn rectangle.
+import { resolveTextBox } from '../../bim/text/text-box';
+import { projectToLocalFrame } from '../../bim/grips/grip-math';
 import {
   computeDimHitGeometry,
   buildVariantHitGeometry,
@@ -21,9 +25,7 @@ import { closestPointOnLine } from './hit-test-entity-tests';
 // ===== TEXT / MTEXT =====
 
 export function hitTestText(entity: Entity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
-  if (!('position' in entity)) return null;
-  const position = entity.position as Point2D;
-  if (!position) return null;
+  if (!('position' in entity) || !(entity.position as Point2D)) return null;
 
   // Support flat `text` field (DXF-imported) and `textNode` AST (CreateTextCommand).
   let text = ('text' in entity ? entity.text : undefined) as string | undefined;
@@ -44,32 +46,17 @@ export function hitTestText(entity: Entity, point: Point2D, tolerance: number): 
       ? entity.fontSize as number
       : 2.5;
 
-  const rotation = ('rotation' in entity && typeof entity.rotation === 'number')
-    ? entity.rotation as number
-    : 0;
-
-  const width = text.length * height * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
-
-  let testPoint = point;
-  if (rotation !== 0) {
-    const rad = degToRad(-rotation);
-    const dx = point.x - position.x;
-    const dy = point.y - position.y;
-    testPoint = {
-      x: position.x + dx * Math.cos(rad) - dy * Math.sin(rad),
-      y: position.y + dx * Math.sin(rad) + dy * Math.cos(rad),
-    };
-  }
-
-  const minX = position.x;
-  const maxX = position.x + width;
-  const minY = position.y - height;
-  const maxY = position.y;
-
-  if (testPoint.x >= minX - tolerance &&
-      testPoint.x <= maxX + tolerance &&
-      testPoint.y >= minY - tolerance &&
-      testPoint.y <= maxY + tolerance) {
+  // ADR-557 Φ-attachment (Giorgio 2026-07-07) — test against the attachment-aware text-box
+  // SSoT (`resolveTextBox`), the SAME rotation-aware box the 2D hover frame + grips + 3D mesh
+  // draw. Was: a hardcoded monospace, baseline-bottom-left box that ignored the attachment
+  // point / widthFactor / real glyph advance / cap-height ink → the glowing frame lit up
+  // BEFORE the cursor reached the glyphs on some sides and stayed dark though the cursor was
+  // already inside on others. Mirrors `TextRenderer.hitTest`; `tolerance` here is already in
+  // world units (HitTester passes `pixelTolerance / scale`), so it adds directly to the box.
+  const dxfText = { ...(entity as unknown as DxfText), text, height };
+  const box = resolveTextBox(dxfText);
+  const local = projectToLocalFrame({ x: point.x - box.center.x, y: point.y - box.center.y }, box.rotationDeg);
+  if (Math.abs(local.x) <= box.halfWidth + tolerance && Math.abs(local.y) <= box.halfLength + tolerance) {
     return { hitType: 'entity', hitPoint: point };
   }
   return null;

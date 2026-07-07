@@ -40,6 +40,11 @@ interface CadToggleSnapshot {
   readonly snapOn: boolean;
   readonly snapStep: number;
   readonly dynInputOn: boolean;
+  // Line-tool preview indicators (ADR-357 / ADR-508). Default ON (current behaviour
+  // = always visible). Read by the non-React draw path via the getters below.
+  readonly dimHudOn: boolean;        // κατ. 2 — λευκό HUD μήκους/γωνίας (§line-hud)
+  readonly dirArcOn: boolean;        // κατ. 3 — κόκκινο/πράσινο τόξο ΦΟΡΑΣ (§polyline-parity)
+  readonly listeningDimOn: boolean;  // κατ. 1β — κυανές listening dims (§line-cyan)
 }
 
 const INITIAL_TOGGLE_STATE: CadToggleSnapshot = {
@@ -48,6 +53,9 @@ const INITIAL_TOGGLE_STATE: CadToggleSnapshot = {
   snapOn: false,
   snapStep: 0,
   dynInputOn: false,
+  dimHudOn: true,
+  dirArcOn: true,
+  listeningDimOn: true,
 };
 
 // SSoT pub/sub via createExternalStore (WAVE 2.6). The 5 loose module-level
@@ -92,6 +100,29 @@ export const cadToggleState = {
     if (on === cur.dynInputOn) return;
     store.set({ ...cur, dynInputOn: on });
   },
+  /**
+   * Writer — line-tool «ΜΗΚΟΣ/ΓΩΝΙΑ» HUD toggle (κατ. 2). Same single-writer
+   * mirror pattern as `setDynInput`: the status-bar toggle and the non-React
+   * draw path are different consumers, so the live value must flow through this
+   * store synchronously. No-op when unchanged.
+   */
+  setDimHud(on: boolean): void {
+    const cur = store.get();
+    if (on === cur.dimHudOn) return;
+    store.set({ ...cur, dimHudOn: on });
+  },
+  /** Writer — line-tool «ΤΟΞΟ ΦΟΡΑΣ» toggle (κατ. 3). No-op when unchanged. */
+  setDirArc(on: boolean): void {
+    const cur = store.get();
+    if (on === cur.dirArcOn) return;
+    store.set({ ...cur, dirArcOn: on });
+  },
+  /** Writer — line-tool κυανές «Αποστάσεις» (listening dims) toggle (κατ. 1β). No-op when unchanged. */
+  setListeningDim(on: boolean): void {
+    const cur = store.get();
+    if (on === cur.listeningDimOn) return;
+    store.set({ ...cur, listeningDimOn: on });
+  },
   /** F8 ORTHO live state. */
   isOrthoOn(): boolean {
     return store.get().orthoOn;
@@ -99,6 +130,18 @@ export const cadToggleState = {
   /** Dynamic Input live state. */
   isDynInputOn(): boolean {
     return store.get().dynInputOn;
+  },
+  /** Line-tool length/angle HUD live state (κατ. 2). */
+  isDimHudOn(): boolean {
+    return store.get().dimHudOn;
+  },
+  /** Line-tool direction-arc live state (κατ. 3). */
+  isDirArcOn(): boolean {
+    return store.get().dirArcOn;
+  },
+  /** Line-tool listening-dimensions live state (κατ. 1β). */
+  isListeningDimOn(): boolean {
+    return store.get().listeningDimOn;
   },
   /** F10 POLAR live state. */
   isPolarOn(): boolean {

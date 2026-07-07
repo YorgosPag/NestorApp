@@ -188,6 +188,8 @@ Shared seams ήδη: `BaseEntityRenderer`, `resolveIsEntityVisible` (ADR-382), `
 ### D2 — Shared hot-grip FSM SSoT
 Γενίκευση `wall-hot-grip-fsm.ts` → `hooks/grips/bim-hot-grip-fsm.ts` (entity-agnostic: op = `corner|move|rotate`, ίδιο step engine). `hotGripOpForKind` γίνεται registry: ανά entity ένα map `gripKind → op`. Wall + Column (+ μελλοντικά stair/beam/slab) καταναλώνουν το ίδιο engine. `WallRotateHotGripStore` → γενικό `BimRotateHotGripStore` (ή entity-keyed).
 
+> **Νέοι consumers (μηδέν fork, μόνο rows):** plain-DXF line/arc/polyline (ADR-561), text/mtext (ADR-557) και το **GROUP gizmo** (ADR-575 §8 — `group-move`→move, `group-rotation`→rotate) προστέθηκαν στα `HOT_GRIP_OP_REGISTRY` + `GRIP_GLYPH_REGISTRY` + στην `hotGripKindOf` chain, χωρίς αλλαγή στο engine. Το group rotation reuse-άρει το `BimRotateHotGripStore` + shared `resolveRotation` όπως κάθε primitive.
+
 ### D3 — Shared grip math SSoT (εκκαθάριση flagged duplication)
 `project2D`/`perpUnit`/`unitAxis`/`moveCorner` (decompose-recenter) διπλά σε wall/beam/stair (ADR-393 §8.2 pending-ratchet). Εξαγωγή σε `bim/grips/grip-math.ts`. Column transforms το καταναλώνουν αντί νέας copy.
 
