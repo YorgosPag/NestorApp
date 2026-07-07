@@ -5,6 +5,7 @@
 import {
   dashMmToScreenPx,
   isSolidPattern,
+  resolveLinetypeDef,
   resolveLinetypePatternMm,
   MIN_DOT_PX,
 } from '../linetype-dash-resolver';
@@ -94,5 +95,36 @@ describe('resolveLinetypePatternMm — catalog + registry SSoT (ADR-362)', () =>
   it('falls back to a runtime user-created custom linetype', () => {
     registerUserLinetype('MyDots', [0, -3]);
     expect(resolveLinetypePatternMm('MyDots')).toEqual([0, -3]);
+  });
+});
+
+describe('resolveLinetypeDef — name→def SSoT (item B, catalog∪registry union)', () => {
+  beforeEach(() => __resetLinetypeRegistryForTesting());
+
+  it('regression: a catalog DENSITY VARIANT the registry does NOT seed resolves to a REAL dashed def (not solid)', () => {
+    // `DotX2` lives in the ISO catalog but NOT in the LinetypeRegistry seed (8 ISO
+    // baseline only). Before item B the entity cascade used registry-only lookup →
+    // miss → default Continuous → the line rendered SOLID (latent bug).
+    const def = resolveLinetypeDef('DotX2');
+    expect(def).not.toBeNull();
+    expect(def?.name).toBe('DotX2');
+    expect(def?.pattern.length ?? 0).toBeGreaterThan(0); // dashed, NOT solid
+  });
+
+  it('resolves a user-created custom the catalog does not know', () => {
+    registerUserLinetype('MyDots', [0, -3]);
+    const def = resolveLinetypeDef('MyDots');
+    expect(def?.pattern).toEqual([0, -3]);
+  });
+
+  it('catalog wins on a name collision (canonical names are authoritative)', () => {
+    registerUserLinetype('Dashed', [999]); // shadow attempt
+    expect(resolveLinetypeDef('Dashed')?.pattern).toEqual([12.7, -6.35]);
+  });
+
+  it('unknown / null → null (caller falls back to Continuous)', () => {
+    expect(resolveLinetypeDef('NopeNotReal')).toBeNull();
+    expect(resolveLinetypeDef(null)).toBeNull();
+    expect(resolveLinetypeDef(undefined)).toBeNull();
   });
 });

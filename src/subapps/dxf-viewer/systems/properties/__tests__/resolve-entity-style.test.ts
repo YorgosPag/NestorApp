@@ -205,6 +205,18 @@ describe('resolveEntityStyle — linetype fallback', () => {
     expect(r.linetype.name).toBe(DEFAULT_LINETYPE_NAME);
     expect(r.provenance.linetype).toBe('default');
   });
+
+  test('regression (item B): a catalog DENSITY VARIANT (DotX2) on the entity resolves to its real def, NOT solid Continuous', () => {
+    // `DotX2` is in the ISO catalog but not in the LinetypeRegistry seed. The
+    // cascade used registry-only lookup → miss → default Continuous → rendered
+    // solid. After item B the cascade goes through `resolveLinetypeDef`
+    // (catalog∪registry), so the variant resolves at entity level.
+    const layer = freshLayer({ linetype: 'Continuous' });
+    const r = resolveEntityStyle({ linetypeName: 'DotX2' }, layer);
+    expect(r.linetype.name).toBe('DotX2');
+    expect(r.linetype.pattern.length).toBeGreaterThan(0); // dashed, not solid
+    expect(r.provenance.linetype).toBe('entity');
+  });
 });
 
 describe('resolveEntityStyle — transparency cascade + clamp', () => {
