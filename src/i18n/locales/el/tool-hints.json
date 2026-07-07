@@ -863,6 +863,7 @@
       "extras": "Επιπλέον",
       "vertexOps": "Γωνία",
       "polylineOps": "Πολυγραμμή",
+      "hatchOps": "Γραμμοσκίαση",
       "terminal": "Ενέργειες"
     },
     "prompts": {

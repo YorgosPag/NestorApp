@@ -42,6 +42,8 @@ import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/Le
 import { buildFootprintVertexOpCommand, type FootprintVertexMenuOp } from '../../systems/grip/footprint-grip-ops';
 // ADR-510 Φ3c — polyline grip ops (add/remove/convert) → shared SSoT command builder.
 import { buildPolylineVertexOpCommand, type PolylineVertexMenuOp } from '../../systems/grip/polyline-grip-ops';
+// ADR-507 — hatch boundary vertex ops (add on edge-midpoint / remove on vertex) → SSoT builder.
+import { buildHatchVertexOpCommand, type HatchVertexMenuOp } from '../../systems/grip/hatch-grip-ops';
 
 type LevelManagerLike = Pick<
   ReturnType<typeof useLevels>,
@@ -151,7 +153,7 @@ export function useGripContextMenuController(
       // Keep the grip menu on hover only when it carries vertex-ops (slab/roof
       // add/delete corner), and unconditionally during an active drag.
       const hasVertexOps = sectionsMeta.some(
-        (s) => s.id === 'vertex-ops' || s.id === 'polyline-ops',
+        (s) => s.id === 'vertex-ops' || s.id === 'polyline-ops' || s.id === 'hatch-ops',
       );
       if ((d.phase === 'hovering' || d.phase === 'warm') && !hasVertexOps) return;
 
@@ -192,6 +194,16 @@ export function useGripContextMenuController(
         if (cmd && (cmd.validate?.() ?? null) === null) getGlobalCommandHistory().execute(cmd);
       };
 
+      // ADR-507 — hatch boundary vertex ops. Shared SSoT builder patches boundaryPaths via
+      // UpdateEntityCommand; run through global history = one undo (mirror onPolylineVertexOp).
+      const onHatchVertexOp = (targetGrip: UnifiedGripInfo, op: HatchVertexMenuOp) => {
+        const lm = depsRef.current.levelManager;
+        if (!targetGrip.entityId || !lm.currentLevelId) return;
+        const adapter = createLevelSceneManagerAdapter(lm.getLevelScene, lm.setLevelScene, lm.currentLevelId);
+        const cmd = buildHatchVertexOpCommand(targetGrip, op, adapter);
+        if (cmd && (cmd.validate?.() ?? null) === null) getGlobalCommandHistory().execute(cmd);
+      };
+
       for (const sectionMeta of sectionsMeta) {
         const items: GripContextMenuSection['items'][number][] = [];
         for (const actionMeta of sectionMeta.items) {
@@ -201,6 +213,7 @@ export function useGripContextMenuController(
             sessionUndo,
             onSlabVertexOp,
             onPolylineVertexOp,
+            onHatchVertexOp,
           }, grip);
           if (!onSelect) continue;
           const { checked, disabled } = applyDynamicFlags(actionMeta);

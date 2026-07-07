@@ -237,6 +237,10 @@ export type FloorFinishGripKind =
  */
 export type HatchGripKind =
   | `hatch-vertex-${number}-${number}`
+  // ADR-507 — edge-midpoint grip (ring `pathIdx`, edge `edgeIdx`→`edgeIdx+1`). Drag/click
+  // inserts a NEW boundary vertex at the edge midpoint (commit: `applyHatchGripDrag()` +
+  // `UpdateHatchBoundaryCommand`). Mirror of `floor-finish-edge-midpoint-N`.
+  | `hatch-edge-midpoint-${number}-${number}`
   | 'hatch-gradient-origin'
   | 'hatch-gradient-angle';
 

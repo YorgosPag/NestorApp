@@ -21,8 +21,8 @@ import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../types/Types';
 import type { Entity, HatchEntity } from '../../types/entities';
 import { isHatchEntity } from '../../types/entities';
-import { createVertexGrip } from './shared/grip-utils';
-import { hatchBoundsCenter, hatchGradientAngleGripPos, getHatchBoundaryGrips } from '../../bim/hatch/hatch-grips';
+import { createVertexGrip, createEdgeGrip } from './shared/grip-utils';
+import { hatchBoundsCenter, hatchGradientAngleGripPos, getHatchBoundaryGrips, getHatchEdgeMidpointGrips } from '../../bim/hatch/hatch-grips';
 import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
 import { buildHatchEntitySegments, hatchMinWorldSpacing } from '../../bim/geometry/shared/hatch-pattern-geometry';
 import { isSolidHatch, resolveHatchLineWidthPx } from '../../bim/hatch/hatch-properties';
@@ -155,6 +155,13 @@ export class HatchRenderer extends BaseEntityRenderer {
     // order = the running `gi` index, kept 1-to-1 with the interaction gripIndex.
     for (const g of getHatchBoundaryGrips(hatch.boundaryPaths ?? [])) {
       grips.push(createVertexGrip(entity.id, { x: g.point.x, y: g.point.y }, gi));
+      gi += 1;
+    }
+    // ADR-507 (Giorgio 2026-07-07) — edge-midpoint grips (one per boundary edge), right after
+    // the vertex grips, from the SAME SSoT (`getHatchEdgeMidpointGrips`) the interaction path
+    // (`computeDxfEntityGrips`) uses → drawn ≡ pickable. Clicking/dragging one inserts a vertex.
+    for (const e of getHatchEdgeMidpointGrips(hatch.boundaryPaths ?? [])) {
+      grips.push(createEdgeGrip(entity.id, { x: e.point.x, y: e.point.y }, gi));
       gi += 1;
     }
     // ADR-507 Φ5 A3 — gradient origin/seed grip (ΟΡΑΤΟ· το interaction οδηγείται από

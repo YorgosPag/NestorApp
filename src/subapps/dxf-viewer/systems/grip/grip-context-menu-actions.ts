@@ -56,6 +56,15 @@ export interface GripContextActionBindContext {
     grip: UnifiedGripInfo,
     op: 'add-vertex' | 'remove-vertex' | 'convert-to-arc' | 'convert-to-line',
   ) => void;
+  /**
+   * ADR-507 (Giorgio 2026-07-07) — hatch boundary vertex ops (add on edge-midpoint,
+   * remove on vertex). Provided by `useGripContextMenuController`; builds the command via
+   * the `buildHatchVertexOpCommand` SSoT and runs it through global history (one undo).
+   */
+  readonly onHatchVertexOp?: (
+    grip: UnifiedGripInfo,
+    op: 'add-vertex' | 'remove-vertex',
+  ) => void;
 }
 
 function updateModeHint(): void {
@@ -164,6 +173,12 @@ export function bindContextMenuAction(
     case 'polyline-ops:convertToLine':
       if (!grip || !ctx.onPolylineVertexOp) return null;
       return () => { ctx.onPolylineVertexOp!(grip, 'convert-to-line'); ctx.onAfterDispatch(); };
+    case 'hatch-ops:addVertex':
+      if (!grip || !ctx.onHatchVertexOp) return null;
+      return () => { ctx.onHatchVertexOp!(grip, 'add-vertex'); ctx.onAfterDispatch(); };
+    case 'hatch-ops:removeVertex':
+      if (!grip || !ctx.onHatchVertexOp) return null;
+      return () => { ctx.onHatchVertexOp!(grip, 'remove-vertex'); ctx.onAfterDispatch(); };
     default:
       return null;
   }

@@ -891,6 +891,7 @@
       "extras": "Extras",
       "vertexOps": "Corner",
       "polylineOps": "Polyline",
+      "hatchOps": "Hatch",
       "terminal": "Actions"
     },
     "prompts": {

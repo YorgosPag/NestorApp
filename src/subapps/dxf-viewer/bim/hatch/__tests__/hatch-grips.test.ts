@@ -8,6 +8,8 @@ import {
   HATCH_GRADIENT_ORIGIN_KIND,
   isHatchAngleGripKind, hatchGradientAngleGripPos, applyHatchAngleGripDrag,
   HATCH_GRADIENT_ANGLE_KIND,
+  getHatchEdgeMidpointGrips, decodeHatchEdgeMidpointGripKind,
+  insertHatchVertexOnEdge, removeVertexFromHatch,
 } from '../hatch-grips';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { HatchGripKind } from '../../../hooks/grip-types';
@@ -107,6 +109,121 @@ describe('applyHatchGripDrag', () => {
     const snapshot = JSON.stringify(original);
     applyHatchGripDrag('hatch-vertex-0-1', { originalBoundaryPaths: original, delta: { x: 50, y: 50 } });
     expect(JSON.stringify(original)).toBe(snapshot);
+  });
+});
+
+// ── ADR-507 (Giorgio 2026-07-07) — edge-midpoint grips: add/remove boundary vertex ──
+
+describe('getHatchEdgeMidpointGrips — the render↔interaction edge-grip SSoT', () => {
+  it('emits one midpoint grip per edge of every ring (incl. the closing edge), path-major', () => {
+    const grips = getHatchEdgeMidpointGrips([OUTER, ISLAND]);
+    expect(grips).toHaveLength(OUTER.length + ISLAND.length); // one per edge (closed rings)
+    // outer edge 0 = midpoint of (0,0)→(1000,0).
+    expect(grips[0]).toEqual({ pathIdx: 0, edgeIdx: 0, point: { x: 500, y: 0 } });
+    // outer closing edge 3 = midpoint of (0,1000)→(0,0).
+    expect(grips[3]).toEqual({ pathIdx: 0, edgeIdx: 3, point: { x: 0, y: 500 } });
+    // island first edge.
+    expect(grips[4]).toEqual({ pathIdx: 1, edgeIdx: 0, point: { x: 500, y: 400 } });
+  });
+
+  it('skips degenerate rings (<3 vertices)', () => {
+    expect(getHatchEdgeMidpointGrips([[{ x: 0, y: 0 }, { x: 10, y: 0 }]])).toHaveLength(0);
+    expect(getHatchEdgeMidpointGrips([])).toHaveLength(0);
+  });
+});
+
+describe('decodeHatchEdgeMidpointGripKind', () => {
+  it('decodes path + edge indices', () => {
+    expect(decodeHatchEdgeMidpointGripKind('hatch-edge-midpoint-0-2')).toEqual([0, 2]);
+    expect(decodeHatchEdgeMidpointGripKind('hatch-edge-midpoint-1-0')).toEqual([1, 0]);
+  });
+  it('returns null on a vertex/gradient kind', () => {
+    expect(decodeHatchEdgeMidpointGripKind('hatch-vertex-0-1')).toBeNull();
+    expect(decodeHatchEdgeMidpointGripKind(HATCH_GRADIENT_ORIGIN_KIND)).toBeNull();
+  });
+});
+
+describe('insertHatchVertexOnEdge', () => {
+  it('inserts a new vertex at the edge midpoint (delta 0) right after the edge start', () => {
+    const result = insertHatchVertexOnEdge([OUTER], 0, 0, { x: 0, y: 0 });
+    expect(result[0]).toHaveLength(OUTER.length + 1);
+    expect(result[0][1]).toEqual({ x: 500, y: 0 }); // inserted between v0 and v1
+    expect(result[0][2]).toEqual({ x: 1000, y: 0 }); // former v1 shifted
+  });
+
+  it('offsets the inserted vertex by delta (drag-to-place)', () => {
+    const result = insertHatchVertexOnEdge([OUTER], 0, 0, { x: 0, y: -40 });
+    expect(result[0][1]).toEqual({ x: 500, y: -40 });
+  });
+
+  it('inserts on the closing edge (wraps to vertex 0)', () => {
+    const result = insertHatchVertexOnEdge([OUTER], 0, 3, { x: 0, y: 0 });
+    // edge 3 = v3(0,1000)→v0(0,0) → midpoint (0,500), appended at end.
+    expect(result[0]).toHaveLength(OUTER.length + 1);
+    expect(result[0][4]).toEqual({ x: 0, y: 500 });
+  });
+
+  it('targets the correct island ring, leaves the outer untouched', () => {
+    const result = insertHatchVertexOnEdge([OUTER, ISLAND], 1, 0, { x: 0, y: 0 });
+    expect(result[0]).toEqual(OUTER);
+    expect(result[1]).toHaveLength(ISLAND.length + 1);
+  });
+
+  it('returns the original reference on out-of-range', () => {
+    const original = [OUTER];
+    expect(insertHatchVertexOnEdge(original, 5, 0, { x: 0, y: 0 })).toBe(original);
+    expect(insertHatchVertexOnEdge(original, 0, 9, { x: 0, y: 0 })).toBe(original);
+  });
+});
+
+describe('removeVertexFromHatch', () => {
+  const PENTAGON: Point2D[] = [
+    { x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 50, y: 150 }, { x: 0, y: 100 },
+  ];
+
+  it('drops the targeted vertex', () => {
+    const result = removeVertexFromHatch([PENTAGON], 0, 2);
+    expect(result[0]).toHaveLength(PENTAGON.length - 1);
+    expect(result[0]).not.toContainEqual({ x: 100, y: 100 });
+  });
+
+  it('no-op (original reference) at the minimum triangle', () => {
+    const tri = [ISLAND];
+    expect(removeVertexFromHatch(tri, 0, 0)).toBe(tri);
+  });
+
+  it('no-op on out-of-range index / ring', () => {
+    const original = [PENTAGON];
+    expect(removeVertexFromHatch(original, 0, 9)).toBe(original);
+    expect(removeVertexFromHatch(original, 3, 0)).toBe(original);
+  });
+
+  it('removes from the correct island ring, leaves outer untouched', () => {
+    const island5: Point2D[] = [...PENTAGON];
+    const result = removeVertexFromHatch([OUTER, island5], 1, 1);
+    expect(result[0]).toEqual(OUTER);
+    expect(result[1]).toHaveLength(island5.length - 1);
+  });
+});
+
+describe('applyHatchGripDrag — edge-midpoint branch (insert-on-drag)', () => {
+  it('inserts a vertex at the edge midpoint + delta', () => {
+    const result = applyHatchGripDrag('hatch-edge-midpoint-0-0', {
+      originalBoundaryPaths: [OUTER],
+      delta: { x: 0, y: -25 },
+    });
+    expect(result[0]).toHaveLength(OUTER.length + 1);
+    expect(result[0][1]).toEqual({ x: 500, y: -25 });
+  });
+
+  it('quantizes the insert delta to the dominant axis when rectilinear', () => {
+    const result = applyHatchGripDrag('hatch-edge-midpoint-0-0', {
+      originalBoundaryPaths: [OUTER],
+      delta: { x: 20, y: 80 },
+      rectilinear: true,
+    });
+    // |dy| > |dx| → x component dropped; midpoint (500,0) + (0,80).
+    expect(result[0][1]).toEqual({ x: 500, y: 80 });
   });
 });
 

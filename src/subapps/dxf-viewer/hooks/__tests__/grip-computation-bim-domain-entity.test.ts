@@ -82,8 +82,8 @@ describe('computeDxfEntityGrips — hatch gradient origin grip (ADR-507 Φ5 A3)'
     expect(angle).toBeDefined();
     expect(angle?.position.x).toBeCloseTo(500 + 0.5 * Math.hypot(1000, 1000), 3);
     expect(angle?.position.y).toBeCloseTo(500, 3);
-    // 4 vertex grips + origin + angle.
-    expect(grips).toHaveLength(6);
+    // 4 vertex + 4 edge-midpoint (ADR-507 add/remove vertex) + origin + angle.
+    expect(grips).toHaveLength(10);
   });
 
   it('does NOT emit gradient grips for a non-gradient (solid) hatch', () => {
@@ -93,6 +93,8 @@ describe('computeDxfEntityGrips — hatch gradient origin grip (ADR-507 Φ5 A3)'
     const grips = computeDxfEntityGrips(hatch);
     expect(grips.find((g) => g.hatchGripKind === 'hatch-gradient-origin')).toBeUndefined();
     expect(grips.find((g) => g.hatchGripKind === 'hatch-gradient-angle')).toBeUndefined();
-    expect(grips).toHaveLength(4);
+    // ADR-507 (Giorgio 2026-07-07) — 4 vertex + 4 edge-midpoint grips (add/remove vertex).
+    expect(grips).toHaveLength(8);
+    expect(grips.filter((g) => g.hatchGripKind?.startsWith('hatch-edge-midpoint-'))).toHaveLength(4);
   });
 });

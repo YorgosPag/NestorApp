@@ -57,6 +57,10 @@ export type GripContextActionId =
   | 'polyline-ops:removeVertex'
   | 'polyline-ops:convertToArc'
   | 'polyline-ops:convertToLine'
+  // ADR-507 (Giorgio 2026-07-07) — hatch boundary vertex ops (add on edge-midpoint,
+  // remove on vertex). Multi-ring/island-safe via the `hatchGripKind` discriminator.
+  | 'hatch-ops:addVertex'
+  | 'hatch-ops:removeVertex'
   | 'exit';
 
 export interface GripContextActionMeta {
@@ -72,7 +76,7 @@ export interface GripContextActionMeta {
 }
 
 export interface GripContextSectionMeta {
-  readonly id: 'modes' | 'extras' | 'vertex-ops' | 'polyline-ops' | 'terminal';
+  readonly id: 'modes' | 'extras' | 'vertex-ops' | 'polyline-ops' | 'hatch-ops' | 'terminal';
   readonly titleKey?: string;
   readonly items: ReadonlyArray<GripContextActionMeta>;
 }
@@ -204,6 +208,35 @@ function buildPolylineOpsSection(grip: UnifiedGripInfo): GripContextSectionMeta 
 }
 
 /**
+ * ADR-507 (Giorgio 2026-07-07) — hatch boundary grip ops, keyed by `hatchGripKind`:
+ *   - `hatch-vertex-*`        → Remove Vertex (drop this corner)
+ *   - `hatch-edge-midpoint-*` → Add Vertex (insert a corner at this edge midpoint)
+ * Lives in the right-click menu (mirror of slab/roof `buildVertexOpsSection` and the
+ * polyline `buildPolylineOpsSection`) so one menu carries every grip action. Add lives on
+ * edge-midpoint grips, Remove on vertex grips — big-player parity (AutoCAD/Revit).
+ */
+function buildHatchOpsSection(grip: UnifiedGripInfo): GripContextSectionMeta | null {
+  const kind = grip.hatchGripKind;
+  if (!kind) return null;
+  const titleKey = 'gripContextMenu.section.hatchOps';
+  if (kind.startsWith('hatch-vertex-')) {
+    return {
+      id: 'hatch-ops',
+      titleKey,
+      items: [{ id: 'hatch-ops:removeVertex', labelKey: 'gripContextMenu.removeVertex' }],
+    };
+  }
+  if (kind.startsWith('hatch-edge-midpoint-')) {
+    return {
+      id: 'hatch-ops',
+      titleKey,
+      items: [{ id: 'hatch-ops:addVertex', labelKey: 'gripContextMenu.addVertex' }],
+    };
+  }
+  return null;
+}
+
+/**
  * Resolve the section + action list for a right-click context menu on a hot
  * grip. Pure: the same `(entity, grip)` always yields the same sections.
  *
@@ -218,8 +251,9 @@ export function resolveContextMenuSections(
   _entity: Entity,
   grip: UnifiedGripInfo,
 ): ReadonlyArray<GripContextSectionMeta> {
-  // slab/roof vertex-ops OR polyline-ops (mutually exclusive per entity type).
-  const opsSection = buildVertexOpsSection(grip) ?? buildPolylineOpsSection(grip);
+  // slab/roof vertex-ops OR polyline-ops OR hatch-ops (mutually exclusive per entity type).
+  const opsSection =
+    buildVertexOpsSection(grip) ?? buildPolylineOpsSection(grip) ?? buildHatchOpsSection(grip);
   if (!opsSection) return BASE_SECTIONS;
   return [
     BASE_SECTIONS[0],

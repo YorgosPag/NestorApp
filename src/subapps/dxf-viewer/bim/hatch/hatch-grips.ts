@@ -22,11 +22,22 @@ import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 const VERTEX_PREFIX = 'hatch-vertex-';
+const EDGE_MIDPOINT_PREFIX = 'hatch-edge-midpoint-';
+
+/** Minimum vertices a boundary ring must keep (a polygon degenerates below a triangle). */
+const MIN_RING_VERTICES = 3;
 
 /** A boundary-vertex grip target: ring + vertex indices (→ `hatch-vertex-${pathIdx}-${vertexIdx}`) + world point. */
 export interface HatchBoundaryGrip {
   readonly pathIdx: number;
   readonly vertexIdx: number;
+  readonly point: Point2D;
+}
+
+/** An edge-midpoint grip target: ring + edge indices (→ `hatch-edge-midpoint-${pathIdx}-${edgeIdx}`) + world midpoint. */
+export interface HatchEdgeMidpointGrip {
+  readonly pathIdx: number;
+  readonly edgeIdx: number;
   readonly point: Point2D;
 }
 
@@ -46,6 +57,28 @@ export function getHatchBoundaryGrips(
   boundaryPaths.forEach((path, pathIdx) => {
     path.forEach((v, vertexIdx) => {
       grips.push({ pathIdx, vertexIdx, point: { x: v.x, y: v.y } });
+    });
+  });
+  return grips;
+}
+
+/**
+ * ADR-507 (Giorgio 2026-07-07) — THE single source for a hatch's edge-midpoint grips
+ * (one per ring edge). Both the VISIBLE grips (`HatchRenderer.getGrips`) and the
+ * INTERACTION grips (`computeDxfEntityGrips` case 'hatch') iterate THIS in the SAME order,
+ * appended right after the vertex grips → display ≡ interaction (gripIndex stays 1-to-1).
+ * Clicking/dragging one inserts a new boundary vertex there (mirror of floor-finish/slab).
+ * Degenerate rings (<3 vertices) contribute no edge-midpoint grips.
+ */
+export function getHatchEdgeMidpointGrips(
+  boundaryPaths: ReadonlyArray<ReadonlyArray<Point2D>>,
+): HatchEdgeMidpointGrip[] {
+  const grips: HatchEdgeMidpointGrip[] = [];
+  boundaryPaths.forEach((ring, pathIdx) => {
+    if (ring.length < MIN_RING_VERTICES) return;
+    ring.forEach((a, edgeIdx) => {
+      const b = ring[(edgeIdx + 1) % ring.length];
+      grips.push({ pathIdx, edgeIdx, point: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } });
     });
   });
   return grips;
@@ -170,15 +203,75 @@ export function applyHatchAngleGripDrag(
   return (Math.round(deg / HATCH_ANGLE_SNAP_DEG) * HATCH_ANGLE_SNAP_DEG) % 360;
 }
 
+/** Decode a `hatch-*-${a}-${b}` grip kind (given its prefix) → `[a, b]` or `null`. */
+function decodeTwoIndexGripKind(gripKind: HatchGripKind, prefix: string): [number, number] | null {
+  if (!gripKind.startsWith(prefix)) return null;
+  const rest = gripKind.slice(prefix.length).split('-');
+  if (rest.length !== 2) return null;
+  const a = parseInt(rest[0], 10);
+  const b = parseInt(rest[1], 10);
+  if (!Number.isFinite(a) || !Number.isFinite(b) || a < 0 || b < 0) return null;
+  return [a, b];
+}
+
 /** Decode `hatch-vertex-${pathIdx}-${vertexIdx}` → `[pathIdx, vertexIdx]` or `null`. */
 export function decodeHatchVertexGripKind(gripKind: HatchGripKind): [number, number] | null {
-  if (!gripKind.startsWith(VERTEX_PREFIX)) return null;
-  const rest = gripKind.slice(VERTEX_PREFIX.length).split('-');
-  if (rest.length !== 2) return null;
-  const pathIdx = parseInt(rest[0], 10);
-  const vertexIdx = parseInt(rest[1], 10);
-  if (!Number.isFinite(pathIdx) || !Number.isFinite(vertexIdx) || pathIdx < 0 || vertexIdx < 0) return null;
-  return [pathIdx, vertexIdx];
+  return decodeTwoIndexGripKind(gripKind, VERTEX_PREFIX);
+}
+
+/** Decode `hatch-edge-midpoint-${pathIdx}-${edgeIdx}` → `[pathIdx, edgeIdx]` or `null`. */
+export function decodeHatchEdgeMidpointGripKind(gripKind: HatchGripKind): [number, number] | null {
+  return decodeTwoIndexGripKind(gripKind, EDGE_MIDPOINT_PREFIX);
+}
+
+/**
+ * Pure: insert a NEW boundary vertex on edge `[edgeIdx, edgeIdx+1]` of ring `pathIdx`,
+ * at the edge midpoint + `delta`. Returns the ORIGINAL array reference on out-of-range
+ * (no-op signal). Shared by the edge-midpoint drag (`applyHatchGripDrag`) AND the grip
+ * context-menu «Add vertex» (`buildHatchVertexOpCommand`, delta 0) — one insertion SSoT.
+ */
+export function insertHatchVertexOnEdge(
+  boundaryPaths: ReadonlyArray<ReadonlyArray<Point2D>>,
+  pathIdx: number,
+  edgeIdx: number,
+  delta: Point2D,
+): Point2D[][] {
+  if (pathIdx < 0 || pathIdx >= boundaryPaths.length) return boundaryPaths as Point2D[][];
+  const ring = boundaryPaths[pathIdx];
+  if (edgeIdx < 0 || edgeIdx >= ring.length) return boundaryPaths as Point2D[][];
+  const a = ring[edgeIdx];
+  const b = ring[(edgeIdx + 1) % ring.length];
+  const inserted: Point2D = { x: (a.x + b.x) / 2 + delta.x, y: (a.y + b.y) / 2 + delta.y };
+  return boundaryPaths.map((r, p) => {
+    if (p !== pathIdx) return projectVerticesTo2D(r);
+    const next: Point2D[] = [];
+    r.forEach((v, i) => {
+      next.push({ x: v.x, y: v.y });
+      if (i === edgeIdx) next.push(inserted);
+    });
+    return next;
+  });
+}
+
+/**
+ * Pure: remove boundary vertex `vertexIdx` from ring `pathIdx`. Guard: returns the
+ * ORIGINAL array reference (no-op signal) when the ring is already at the minimum
+ * triangle (≤3 vertices) or the index is out of range — callers detect via identity.
+ */
+export function removeVertexFromHatch(
+  boundaryPaths: ReadonlyArray<ReadonlyArray<Point2D>>,
+  pathIdx: number,
+  vertexIdx: number,
+): Point2D[][] {
+  if (pathIdx < 0 || pathIdx >= boundaryPaths.length) return boundaryPaths as Point2D[][];
+  const ring = boundaryPaths[pathIdx];
+  if (ring.length <= MIN_RING_VERTICES) return boundaryPaths as Point2D[][];
+  if (vertexIdx < 0 || vertexIdx >= ring.length) return boundaryPaths as Point2D[][];
+  return boundaryPaths.map((r, p) =>
+    p === pathIdx
+      ? r.filter((_, i) => i !== vertexIdx).map((v) => ({ x: v.x, y: v.y }))
+      : projectVerticesTo2D(r),
+  );
 }
 
 /**
@@ -191,6 +284,15 @@ export function applyHatchGripDrag(
   input: Readonly<HatchGripDragInput>,
 ): Point2D[][] {
   const original = input.originalBoundaryPaths;
+
+  // Edge-midpoint grip → insert a new vertex at the edge midpoint + delta (always a
+  // real edit, even at delta 0 → the fresh vertex appears the moment the drag starts).
+  const edge = decodeHatchEdgeMidpointGripKind(gripKind);
+  if (edge) {
+    const d = input.rectilinear ? constrainDeltaToDominantAxis(input.delta) : input.delta;
+    return insertHatchVertexOnEdge(original, edge[0], edge[1], d);
+  }
+
   const decoded = decodeHatchVertexGripKind(gripKind);
   if (!decoded) return original as Point2D[][];
   const [pathIdx, vertexIdx] = decoded;

@@ -35,6 +35,9 @@ import { getPolylineGripAlignmentAnchors } from '../../systems/polyline/polyline
 // οντοτήτων (κολόνα/πλάκα/άνοιγμα/στέγη/…): ο σταθερός polar origin από το ΕΝΑ footprint SSoT.
 import { getBimCharacteristicPointsOfCategory } from '../../bim/utils/bim-characteristic-points';
 import { getFootprintReshapePolarAnchor } from '../../systems/grip/footprint-reshape-anchors';
+// ADR-557 — blur-proof whole-entity Alt-move flag (SSoT). A text/mtext/any non-reshape grip carries no
+// endpoint/footprint anchor, so an Alt «move-from-base-point» pivots its POLAR ray about the base point.
+import { isActiveGripAltMove } from '../../systems/cursor/GripDragStore';
 
 interface EndpointReshapeGeom {
   readonly type?: string;
@@ -88,8 +91,10 @@ export interface EndpointReshapePolarLock {
 /**
  * The POLAR-snapped displacement for an endpoint reshape, relative to the endpoint's ORIGINAL
  * position (`anchorPos` = the dragged endpoint at grab time). `cursorWorld` = the live cursor
- * (`anchorPos + rawDelta`). Returns `null` unless POLAR is on, ORTHO is off, the grip is a true
- * endpoint reshape AND the cursor actually snapped to a polar ray.
+ * (`anchorPos + rawDelta`). Returns `null` unless POLAR is on, ORTHO is off, the cursor actually
+ * snapped to a polar ray AND the grip is either (a) a true endpoint / footprint reshape OR (b) a
+ * whole-entity Alt «move-from-base-point» (ADR-557) — the latter pivots about the base point itself,
+ * so ANY entity (text / mtext / line / column …) shows the SAME orange polar ray when Alt-moved.
  */
 export function resolveEndpointReshapePolarLock(
   entity: unknown,
@@ -101,7 +106,17 @@ export function resolveEndpointReshapePolarLock(
 ): EndpointReshapePolarLock | null {
   if (gripIndex === undefined) return null;
   if (!cadToggleState.isPolarOn() || cadToggleState.isOrthoOn()) return null;
-  const fixed = resolveEndpointReshapeAnchor(entity as EndpointReshapeGeom, gripIndex, lineGripKind, footprintGripKind);
+  let fixed = resolveEndpointReshapeAnchor(entity as EndpointReshapeGeom, gripIndex, lineGripKind, footprintGripKind);
+  // ADR-557 — ENTITY-AGNOSTIC whole-entity Alt «move-from-base-point» (text / mtext / any grip that is
+  // NOT a line-polyline endpoint nor a BIM-footprint reshape): no fixed neighbour anchor exists, so the
+  // POLAR ray pivots about the BASE POINT itself (the grabbed grip = `anchorPos`). Same orange-ray SSoT
+  // (`resolveOrthoPolarStep` + `paintPolarTrackingLine`) the line-endpoint move already runs — just a
+  // base-point origin instead of the far endpoint. Gated on the blur-proof alt-move flag so BOTH seams
+  // that call this (the live ghost `useGripGhostPreview` AND the commit `grip-mouseup-handler`) stay
+  // preview ≡ commit. NO regression: a line/polyline ENDPOINT alt-move keeps its far-end origin (`fixed`
+  // is already non-null there → fallback skipped); a NON-alt reshape grip returns null (no ray), exactly
+  // as before. Base-point polar is geometry-free (`anchorPos` + cursor), so text ≡ mtext ≡ multi-line.
+  if (!fixed && isActiveGripAltMove()) fixed = anchorPos;
   if (!fixed) return null;
   const step = resolveOrthoPolarStep(cursorWorld, fixed, { ortho: false, polar: true });
   const polar = step.polarResult;

@@ -57,7 +57,7 @@ import { getFloorFinishGrips } from '../bim/floor-finishes/floor-finish-grips';
 import { getMepUnderfloorGrips } from '../bim/mep-underfloor/mep-underfloor-grips';
 import { getTextGrips } from '../bim/text/text-grips';
 import {
-  hatchBoundsCenter, hatchGradientAngleGripPos, getHatchBoundaryGrips,
+  hatchBoundsCenter, hatchGradientAngleGripPos, getHatchBoundaryGrips, getHatchEdgeMidpointGrips,
   HATCH_GRADIENT_ORIGIN_KIND, HATCH_GRADIENT_ANGLE_KIND,
 } from '../bim/hatch/hatch-grips';
 import { getDimensionGrips } from './dimensions/useDimensionGrips';
@@ -385,6 +385,18 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
           entityId: entity.id, gripIndex, type: 'vertex',
           position: { x: g.point.x, y: g.point.y }, movesEntity: false,
           hatchGripKind: `hatch-vertex-${g.pathIdx}-${g.vertexIdx}`,
+        });
+        gripIndex += 1;
+      }
+      // ADR-507 (Giorgio 2026-07-07) — edge-midpoint λαβές (μία ανά ακμή ορίου), ΑΜΕΣΩΣ μετά
+      // τις vertex λαβές, από το ΙΔΙΟ SSoT (`getHatchEdgeMidpointGrips`) που τρέφει και τον
+      // `HatchRenderer.getGrips` → display ≡ interaction. Drag/click → εισαγωγή νέας κορυφής
+      // (commit: applyHatchGripDrag edge-branch → UpdateHatchBoundaryCommand).
+      for (const e of getHatchEdgeMidpointGrips(paths)) {
+        grips.push({
+          entityId: entity.id, gripIndex, type: 'midpoint',
+          position: { x: e.point.x, y: e.point.y }, movesEntity: false,
+          hatchGripKind: `hatch-edge-midpoint-${e.pathIdx}-${e.edgeIdx}`,
         });
         gripIndex += 1;
       }
