@@ -45,9 +45,20 @@ const NON_CORNER_TARGET_MODES = new Set<string>([
   'perpendicular', 'tangent', 'nearest', 'near', 'extension', 'parallel', 'ortho',
 ]);
 
-/** True όταν το snap mode είναι διακριτός στόχος ευθυγράμμισης γωνίας (όχι construction line). */
-function isCornerAlignmentTarget(result: ProSnapResult): boolean {
+/**
+ * True όταν το snap mode είναι ΔΙΑΚΡΙΤΟΣ χαρακτηριστικός στόχος (άκρο/μέσο/κέντρο/τομή/γωνία), ΟΧΙ
+ * construction line (extension/perpendicular/parallel/nearest/tangent/ortho) που υπάρχει ΠΑΝΤΟΥ. Κοινό
+ * SSoT: το χρησιμοποιεί ΚΑΙ το corner-projection target filter ΚΑΙ το grip-drag OSNAP (`resolveGripDragSnap`,
+ * ADR-557) ώστε μια αδύναμη construction έλξη να μη «πνίγει» τα διακριτά AutoAlign κυανά (π.χ. ένα MTEXT
+ * που σέρνεται να μη χάνει τις κυανές ενδείξεις γειτόνων επειδή ο cursor περνά πάνω από μια extension ακτίνα).
+ */
+export function isDiscreteSnapTarget(result: ProSnapResult): boolean {
   return !NON_CORNER_TARGET_MODES.has(String(result.activeMode ?? ''));
+}
+
+/** @deprecated internal alias — use {@link isDiscreteSnapTarget}. */
+function isCornerAlignmentTarget(result: ProSnapResult): boolean {
+  return isDiscreteSnapTarget(result);
 }
 
 export interface CornerProjectionResult {

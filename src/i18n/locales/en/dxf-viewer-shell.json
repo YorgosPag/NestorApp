@@ -1383,6 +1383,7 @@
     },
     "panels": {
       "draw": "Draw",
+      "multiSelectionMatch": "Match Properties",
       "modify": "Modify",
       "modifyEdit": "Edit",
       "annotation": "Annotation",
@@ -1698,6 +1699,8 @@
       }
     },
     "commands": {
+      "matchProperties": "Match Properties",
+      "matchPropertiesTooltip": "Copy properties from the source object to the selected target objects",
       "dimLineTypeScale": "Density",
       "dimNewLineType": "New type",
       "currentLayerPicker": "Current Layer",
@@ -4928,6 +4931,58 @@
     "description": "Manage floors, elevations and foundation — changes update the drawing levels automatically.",
     "loading": "Loading building...",
     "noBuilding": "No building is linked to this drawing."
+  },
+  "matchProperties": {
+    "title": "Match Properties",
+    "apply": "Apply",
+    "cancel": "Cancel",
+    "noSelection": "Select a source object and one or more targets first to copy properties.",
+    "targetsLabel": "{count, plural, one {# selected target} other {# selected targets}}",
+    "previewTitle": "Mapping preview",
+    "previewEmpty": "No mapping for the selected properties.",
+    "selectAll": "Select all",
+    "clearAll": "Clear",
+    "targetTypeHeading": "{type} — {count, plural, one {# object} other {# objects}}",
+    "categories": {
+      "style": "Style",
+      "geometry": "Geometry",
+      "structural": "Structural",
+      "material": "Material",
+      "identity": "Identity"
+    },
+    "reason": {
+      "sameType": "Same type",
+      "sameRole": "Same role",
+      "roleFamily": "Related"
+    },
+    "fields": {
+      "concreteGrade": "Concrete grade",
+      "envelopeFunction": "Envelope function",
+      "autoSized": "Auto-sized",
+      "justification": "Justification",
+      "autoSizedWidth": "Auto-sized width",
+      "supportType": "Support type",
+      "reinforcement": "Reinforcement layout",
+      "category": "Wall category",
+      "joinPriority": "Join priority"
+    },
+    "warnings": {
+      "materialIncompatibleStructural": "Incompatible material: wood on reinforced concrete",
+      "materialCrossCategory": "Transferring material across different member categories"
+    },
+    "entityType": {
+      "column": "Column",
+      "beam": "Beam",
+      "slab": "Slab",
+      "wall": "Wall",
+      "foundation": "Foundation",
+      "line": "Line",
+      "text": "Text",
+      "hatch": "Hatch",
+      "polyline": "Polyline",
+      "circle": "Circle",
+      "arc": "Arc"
+    }
   },
   "furniture": {
     "catalog": {

@@ -40,6 +40,8 @@ export const SlabDetailHost = React.lazy(() => import('../ui/components/slab-det
 export const AdminLayerManagerDialogHost = React.lazy(() => import('./AdminLayerManagerDialogHost').then(mod => ({ default: mod.AdminLayerManagerDialogHost })));
 // Floor management («Όροφοι Κτιρίου») dialog host — open from Levels panel ⚙️ / floor-tab right-click
 export const FloorManagementDialogHost = React.lazy(() => import('./FloorManagementDialogHost').then(mod => ({ default: mod.FloorManagementDialogHost })));
+// ADR-581 — «Αντιγραφή Ιδιοτήτων» (Match/Transfer Properties) dialog host — open from multi-selection contextual tab
+export const MatchPropertiesDialogHost = React.lazy(() => import('./MatchPropertiesDialogHost').then(mod => ({ default: mod.MatchPropertiesDialogHost })));
 // ADR-363 Φ3c — «Κολώνα από περίγραμμα» confirm dialog (self-subscribing, zero props)
 export const ColumnPerimeterConfirmDialog = React.lazy(() => import('../ui/dialogs/ColumnPerimeterConfirmDialog').then(mod => ({ default: mod.ColumnPerimeterConfirmDialog })));
 // ADR-419 §gap-close — «Να κλείσω το κενό;» confirm dialog (self-subscribing, zero props)

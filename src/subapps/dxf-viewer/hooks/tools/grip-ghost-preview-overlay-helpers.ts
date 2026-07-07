@@ -138,29 +138,12 @@ export function paintGripActionAlignmentTraces(
       alignAnchors = anchors.length ? anchors : null;
     }
   }
-  // [MLDIAG-paint] TEMP — ADR-557 multiline cyan (Giorgio). Remove after diagnosis. This is the ACTUAL
-  // text-cyan painter (useGripGhostPreview local); useDimGripGhostPreview is dim-only.
-  if (entity.type === 'text' || entity.type === 'mtext') {
-    const g = globalThis as unknown as { __mlp?: number };
-    g.__mlp = (g.__mlp ?? 0) + 1;
-    if (g.__mlp % 10 === 0) {
-      const snap = getImmediateSnap();
-      const snapFound = snap?.found ?? false;
-      // eslint-disable-next-line no-console
-      console.log('[MLDIAG-paint]', JSON.stringify({
-        type: entity.type, draggedId: dp.entityId, snapFound,
-        snapEntityId: snap?.entityId ?? null, snapIsSelf: snapFound && snap?.entityId === dp.entityId,
-        snapMode: (snap as unknown as { mode?: string })?.mode ?? null,
-      }));
-    }
-  }
-  // ADR-557 — OSNAP priority suppresses the cyan traces ONLY when it snapped to a DIFFERENT
-  // entity (a real characteristic point to align onto). A SELF-snap on the entity being dragged
-  // (e.g. an MTEXT whose own box/insertion the un-excluded snap engine keeps grabbing) is
-  // meaningless and must NOT kill the neighbour cyan — that was why a moving MTEXT showed no
-  // traces while a single-line TEXT (no self-snap) did (Giorgio browser-verify 2026-07-07).
-  const osnap = getImmediateSnap();
-  if (!alignAnchors || (osnap?.found && osnap.entityId !== dp.entityId)) return;
+  // OSNAP priority — a DISCRETE characteristic-point snap (endpoint/midpoint/center/intersection)
+  // takes over the cyan (the marker shows the exact target). Construction-line snaps (extension /
+  // perpendicular / parallel) are filtered UPSTREAM in `resolveGripDragSnap` (they no longer set
+  // `getImmediateSnap().found`), so an MTEXT no longer has its neighbour cyan drowned by an
+  // everywhere-present extension ray (ADR-557, Giorgio browser-verify 2026-07-07).
+  if (!alignAnchors || getImmediateSnap()?.found) return;
   const actionTracking = resolveActionAlignmentTracking(
     // ADR-557 — exclude the dragged entity from the ambient scan: a moving multi-line text must NOT
     // lock onto its OWN insertion point (which sits far below the box-centre anchor) — that phantom

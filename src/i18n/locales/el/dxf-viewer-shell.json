@@ -1383,6 +1383,7 @@
     },
     "panels": {
       "draw": "Σχεδίαση",
+      "multiSelectionMatch": "Αντιγραφή Ιδιοτήτων",
       "modify": "Τροποποίηση",
       "modifyEdit": "Επεξεργασία",
       "annotation": "Επισημείωση",
@@ -1698,6 +1699,8 @@
       }
     },
     "commands": {
+      "matchProperties": "Αντιγραφή Ιδιοτήτων",
+      "matchPropertiesTooltip": "Αντιγραφή ιδιοτήτων από το αντικείμενο-πηγή στα επιλεγμένα αντικείμενα-στόχους",
       "dimLineTypeScale": "Πυκνότητα",
       "dimNewLineType": "Νέος τύπος",
       "currentLayerPicker": "Τρέχον Επίπεδο",
@@ -4928,6 +4931,58 @@
     "description": "Διαχείριση ορόφων, υψομέτρων και θεμελίωσης — οι αλλαγές ενημερώνουν αυτόματα τις στάθμες του σχεδίου.",
     "loading": "Φόρτωση κτιρίου...",
     "noBuilding": "Δεν βρέθηκε συνδεδεμένο κτίριο για αυτό το σχέδιο."
+  },
+  "matchProperties": {
+    "title": "Αντιγραφή Ιδιοτήτων",
+    "apply": "Εφαρμογή",
+    "cancel": "Άκυρο",
+    "noSelection": "Επίλεξε πρώτα ένα αντικείμενο-πηγή και έναν ή περισσότερους στόχους για να αντιγράψεις ιδιότητες.",
+    "targetsLabel": "{count, plural, one {# επιλεγμένος στόχος} other {# επιλεγμένοι στόχοι}}",
+    "previewTitle": "Προεπισκόπηση αντιστοίχισης",
+    "previewEmpty": "Δεν υπάρχει καμία αντιστοίχιση για τις επιλεγμένες ιδιότητες.",
+    "selectAll": "Επιλογή όλων",
+    "clearAll": "Καθαρισμός",
+    "targetTypeHeading": "{type} — {count, plural, one {# αντικείμενο} other {# αντικείμενα}}",
+    "categories": {
+      "style": "Στυλ",
+      "geometry": "Γεωμετρία",
+      "structural": "Δομικά",
+      "material": "Υλικό",
+      "identity": "Ταυτότητα"
+    },
+    "reason": {
+      "sameType": "Ίδιος τύπος",
+      "sameRole": "Ίδιος ρόλος",
+      "roleFamily": "Συγγενές"
+    },
+    "fields": {
+      "concreteGrade": "Ποιότητα σκυροδέματος",
+      "envelopeFunction": "Λειτουργία κελύφους",
+      "autoSized": "Αυτόματη διαστασιολόγηση",
+      "justification": "Γραμμή αναφοράς",
+      "autoSizedWidth": "Αυτόματο πλάτος",
+      "supportType": "Τύπος στήριξης",
+      "reinforcement": "Διάταξη οπλισμού",
+      "category": "Κατηγορία τοίχου",
+      "joinPriority": "Προτεραιότητα ένωσης"
+    },
+    "warnings": {
+      "materialIncompatibleStructural": "Ασύμβατο υλικό: ξύλο σε οπλισμένο σκυρόδεμα",
+      "materialCrossCategory": "Μεταφορά υλικού μεταξύ διαφορετικών κατηγοριών μελών"
+    },
+    "entityType": {
+      "column": "Κολόνα",
+      "beam": "Δοκός",
+      "slab": "Πλάκα",
+      "wall": "Τοίχος",
+      "foundation": "Θεμελίωση",
+      "line": "Γραμμή",
+      "text": "Κείμενο",
+      "hatch": "Γραμμοσκίαση",
+      "polyline": "Πολυγραμμή",
+      "circle": "Κύκλος",
+      "arc": "Τόξο"
+    }
   },
   "furniture": {
     "catalog": {

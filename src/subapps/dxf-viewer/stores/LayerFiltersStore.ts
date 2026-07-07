@@ -42,6 +42,9 @@ import {
   type FilterPersistenceHandle,
 } from '../services/layer-filter-persistence';
 import { createExternalStore } from './createExternalStore';
+// 🏢 ADR-092 — pinned-smart persistence via the storage-utils SSoT (SSR/quota-safe + JSON),
+// not hand-rolled getItem/JSON.parse/setItem. Dynamic per-project key passed as the arg.
+import { storageGet, storageSet } from '../utils/storage-utils';
 
 type Listener = () => void;
 
@@ -355,24 +358,12 @@ function pinnedStorageKey(pid: string | null): string {
 }
 
 function readPinnedFromStorage(pid: string | null): ReadonlyArray<string> {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = window.localStorage.getItem(pinnedStorageKey(pid));
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
-  } catch {
-    return [];
-  }
+  const parsed: unknown = storageGet<unknown>(pinnedStorageKey(pid), []);
+  return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
 }
 
 function writePinnedToStorage(pid: string | null, ids: ReadonlyArray<string>): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(pinnedStorageKey(pid), JSON.stringify(ids));
-  } catch {
-    // SSR / private mode → silent.
-  }
+  storageSet(pinnedStorageKey(pid), ids);
 }
 
 // ─── Test-only reset ─────────────────────────────────────────────────────────

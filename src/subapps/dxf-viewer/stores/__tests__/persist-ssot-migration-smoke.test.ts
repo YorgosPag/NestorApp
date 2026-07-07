@@ -13,8 +13,18 @@ import { getMode, setMode, subscribe as subscribeXline } from '../../systems/too
 import { displayUnitState } from '../../config/display-unit-state';
 import { getLastActiveTab, setLastActiveTab } from '../../bim-3d/properties/tabs/last-active-tab-tracker';
 import { baselineTracker } from '../../bim-3d/performance/baseline-tracker';
+import {
+  resolveAlias,
+  registerCustomAlias,
+  removeCustomAlias,
+  invalidateCustomAliasCache,
+} from '../../systems/command-line/CommandAliasRegistry';
+import { createRegressionDetector } from '../../bim-3d/performance/regression-detector';
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  invalidateCustomAliasCache(); // module-level cache must not leak across tests
+});
 
 describe('persist-SSoT migration — load + public API smoke', () => {
   it('CommandHistoryStore: push/getEntries/navigate round-trip + persistence', () => {
@@ -65,5 +75,31 @@ describe('persist-SSoT migration — load + public API smoke', () => {
     expect(b?.sampleCount).toBeGreaterThanOrEqual(30);
     baselineTracker.clear('3d');
     expect(baselineTracker.getBaseline('3d', now + 40)).toBeNull();
+  });
+
+  it('CommandAliasRegistry: built-in + custom alias register/resolve/remove persists', () => {
+    expect(resolveAlias('L')).toBe('line'); // built-in
+    expect(resolveAlias('ZZZ')).toBeNull();
+    registerCustomAlias('ZZZ', 'circle');
+    expect(resolveAlias('zzz')).toBe('circle'); // case-insensitive
+    // persisted as a JSON string->string map under dxf:customAliases
+    expect(JSON.parse(localStorage.getItem('dxf:customAliases') as string)).toEqual({ ZZZ: 'circle' });
+    removeCustomAlias('ZZZ');
+    expect(resolveAlias('ZZZ')).toBeNull();
+  });
+
+  it('regression-detector: loads + fires an alert once, then persists cooldown', () => {
+    // now must exceed COOLDOWN_MS (24h) so the default last-alert (0) is past cooldown.
+    const now = 200_000_000;
+    for (let i = 0; i < 40; i++) baselineTracker.recordSample('3d', 60, now + i);
+    let alerts = 0;
+    const det = createRegressionDetector(() => { alerts += 1; });
+    // sustained low fps beyond the 30s window → one alert
+    det.evaluate('3d', 5, now + 100);
+    const fired = det.evaluate('3d', 5, now + 100 + 31_000);
+    expect(fired).toBe(true);
+    expect(alerts).toBe(1);
+    // last-alert timestamp persisted (cooldown) as a JSON number
+    expect(typeof JSON.parse(localStorage.getItem('bim3d.regressionAlert.3d') as string)).toBe('number');
   });
 });

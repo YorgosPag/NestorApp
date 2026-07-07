@@ -1,0 +1,173 @@
+/**
+ * ADR-581 — «Αντιγραφή Ιδιοτήτων» dialog presentation styles.
+ *
+ * CSS module (μηδέν inline styles, N.3). Το layout ακολουθεί το DialogContent
+ * shell — checklist αριστερά, mapping preview κάτω, footer με actions.
+ */
+
+/* Ρίζα σώματος του dialog — κάθετη διάταξη με ανάσα ανάμεσα στα τμήματα. */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Σύνοψη στόχων πάνω από το checklist. */
+.summary {
+  font-size: 0.875rem;
+  color: var(--muted-foreground, #6b7280);
+}
+
+/* Κενή/ανέτοιμη κατάσταση (χωρίς πηγή/στόχους). */
+.empty {
+  padding: 24px 8px;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--muted-foreground, #6b7280);
+}
+
+/* ── Checklist ──────────────────────────────────────────────────────────── */
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.category {
+  border: 1px solid var(--border, rgba(148, 163, 184, 0.3));
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0;
+}
+
+.categoryHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.categoryTitle {
+  flex: 1;
+}
+
+.items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px 12px;
+}
+
+.itemRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.itemLabel {
+  flex: 1;
+}
+
+/* ── Mapping preview ────────────────────────────────────────────────────── */
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.previewTitle {
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.previewGroup {
+  border: 1px solid var(--border, rgba(148, 163, 184, 0.3));
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.previewGroupHeader {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  margin: 0 0 6px;
+}
+
+.previewRows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.previewRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+}
+
+.mapArrow {
+  color: var(--muted-foreground, #6b7280);
+}
+
+.mapTarget {
+  flex: 1;
+}
+
+.confidence {
+  font-size: 0.6875rem;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--muted, rgba(148, 163, 184, 0.18));
+  color: var(--muted-foreground, #6b7280);
+  white-space: nowrap;
+}
+
+.reason {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground, #6b7280);
+}
+
+.warnings {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.warning {
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--warning-bg, rgba(234, 179, 8, 0.15));
+  color: var(--warning-fg, #92400e);
+}
+
+.previewEmpty {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground, #6b7280);
+}
+
+/* ── Footer actions ─────────────────────────────────────────────────────── */
+
+.footerActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}

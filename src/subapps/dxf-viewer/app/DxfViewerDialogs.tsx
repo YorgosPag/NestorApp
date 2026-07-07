@@ -33,7 +33,7 @@ import {
   DxfFindReplaceHost, DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost,
   OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, AdminLayerManagerDialogHost,
   DxfAiChatPanel, ColumnPerimeterConfirmDialog, GapCloseConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, PrintHost, ExportHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
-  SlabDetailHost, FloorManagementDialogHost,
+  SlabDetailHost, FloorManagementDialogHost, MatchPropertiesDialogHost,
 } from './dxf-viewer-lazy-components';
 
 type LevelManager = ReturnType<typeof useLevels>;
@@ -239,6 +239,8 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       <React.Suspense fallback={hiddenFallback}><AdminLayerManagerDialogHost projectId={levelManager.saveContext?.projectId ?? null} /></React.Suspense>
       {/* «Όροφοι Κτιρίου» modal (opened from Levels panel ⚙️ or floor-tab right-click). */}
       <React.Suspense fallback={hiddenFallback}><FloorManagementDialogHost buildingId={buildingId} /></React.Suspense>
+      {/* ADR-581 — «Αντιγραφή Ιδιοτήτων» modal (opened from multi-selection contextual tab). */}
+      <React.Suspense fallback={hiddenFallback}><MatchPropertiesDialogHost levelManager={levelManager} /></React.Suspense>
       {USE_AI_DRAWING_ASSISTANT && (
         <React.Suspense fallback={hiddenFallback}>
           <DxfAiChatPanel

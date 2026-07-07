@@ -35,28 +35,6 @@ export function applyGripDragAlignmentTracking(
 ): WorldPoint {
   let moved = moveWorldPos;
   const dimGrip = getActiveDragGrip();
-  // [MLDIAG] TEMP — ADR-557 multiline cyan investigation (Giorgio 2026-07-07). Remove after diagnosis.
-  if (dimGrip) {
-    const ent = scene?.entities?.find(en => en.id === dimGrip.entityId) as unknown as { type?: string; text?: string } | undefined;
-    if (ent?.type === 'text' || ent?.type === 'mtext') {
-      const g = globalThis as unknown as { __ml?: number };
-      g.__ml = (g.__ml ?? 0) + 1;
-      if (g.__ml % 10 === 0) {
-        const alt = isActiveGripAltMove();
-        const willBP = (alt || dimGrip.movesEntity === true) && !!dimGrip.dragAnchor;
-        const trk = willBP && dimGrip.dragAnchor
-          ? resolveActionAlignmentTracking(moved, [dimGrip.dragAnchor], transformScale, scene?.entities ?? null, new Set([dimGrip.entityId]))
-          : null;
-        // eslint-disable-next-line no-console
-        console.log('[MLDIAG]', JSON.stringify({
-          type: ent.type, multiline: typeof ent.text === 'string' && ent.text.includes('\n'),
-          alt, moves: dimGrip.movesEntity === true, dragAnchor: dimGrip.dragAnchor,
-          dimKind: dimGrip.dimGripKind ?? null, willBasePoint: willBP,
-          moved, sceneN: scene?.entities?.length ?? 0, trk: !willBP ? 'branch-not-taken' : (trk ? 'HIT' : 'null'),
-        }));
-      }
-    }
-  }
   if (dimGrip?.dimGripKind) {
     // Anchors = the dimension's OTHER defPoints ⊕ acquired ⊕ ambient (AutoAlign-gated → lazy read).
     const dimEntity = toDimensionEntity(scene?.entities?.find(en => en.id === dimGrip.entityId));

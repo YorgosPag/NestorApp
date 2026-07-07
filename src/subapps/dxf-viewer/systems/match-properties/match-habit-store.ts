@@ -56,7 +56,7 @@ export function getDefaultChecklist(
   targetType: string,
   offeredRoles: readonly SemanticRole[],
 ): Set<SemanticRole> {
-  const stats = store.get()[pairKey(sourceType, targetType)];
+  const stats = (store.get() ?? {})[pairKey(sourceType, targetType)];
   const on = new Set<SemanticRole>();
   for (const role of offeredRoles) {
     const stat = stats?.[role];
@@ -81,7 +81,7 @@ export function recordApply(
 ): void {
   if (offeredRoles.length === 0) return;
   const key = pairKey(sourceType, targetType);
-  const data = store.get();
+  const data = store.get() ?? {};
   const prevPair = data[key] ?? {};
   const nextPair: Record<string, RoleStat> = { ...prevPair };
   for (const role of offeredRoles) {
@@ -101,5 +101,5 @@ export function subscribeHabit(cb: () => void): () => void {
 
 /** Test hook — καθαρίζει όλα τα στατιστικά. */
 export function __resetMatchHabitStore(): void {
-  store.reset();
+  store.reset({});
 }

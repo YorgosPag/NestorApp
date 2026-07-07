@@ -32,6 +32,7 @@ import { findWallFaceCornerSnap } from '../../bim/walls/wall-face-corner-snap';
 import { findMemberGripCornerSnap } from '../../bim/structural/member-grip-corner-snap';
 import {
   resolveProjectedSnap,
+  isDiscreteSnapTarget,
   type CornerProjectionResult,
   type FindSnapPoint,
 } from './corner-projection-snap';
@@ -92,7 +93,15 @@ export function resolveGripDragSnap(
   const picked = resolveProjectedSnap(cursorPos, corner, findSnapPoint);
   // Grip drag δέχεται ΜΟΝΟ ορατές έλξεις — σιωπηλό grid/guide → null ώστε να νικήσει το AutoAlign
   // (αντί να τραβήξει το ghost σε αόρατο grid point ΧΩΡΙΣ marker — το ADR-560 θ/ι root cause).
-  return picked?.visible ? { snapResult: picked.snapResult, moveWorldPos: picked.ghostPoint } : null;
+  // ADR-557 — ΚΑΙ μόνο ΔΙΑΚΡΙΤΟΥΣ στόχους (άκρο/μέσο/κέντρο/τομή): μια construction-line έλξη
+  // (extension/perpendicular/parallel/…) υπάρχει ΠΑΝΤΟΥ και, μετρώντας ως «osnapFound», πνίγει τα
+  // AutoAlign κυανά — ένα MTEXT που σέρνεται περνούσε συνέχεια πάνω από extension ακτίνες γειτονικών
+  // γραμμών κι έχανε τις κυανές ενδείξεις (Giorgio browser-verify 2026-07-07). ΙΔΙΟ φίλτρο με το
+  // corner-projection (`isDiscreteSnapTarget`/`NON_CORNER_TARGET_MODES`) → ΕΝΑ SSoT. Το corner-projection
+  // result είναι ήδη διακριτό, οπότε ένα construction `picked` προέρχεται πάντα από το cursor fallback.
+  return picked?.visible && isDiscreteSnapTarget(picked.snapResult)
+    ? { snapResult: picked.snapResult, moveWorldPos: picked.ghostPoint }
+    : null;
 }
 
 /** Ο SnapResultItem της γλυφής (React draw path) από ένα resolved snap. */

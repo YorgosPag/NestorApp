@@ -48,5 +48,5 @@ export function subscribeMatchBrush(cb: () => void): () => void {
 
 /** Test hook — επαναφορά στο κενό. */
 export function __resetMatchBrushStore(): void {
-  store.reset();
+  store.reset(null);
 }
