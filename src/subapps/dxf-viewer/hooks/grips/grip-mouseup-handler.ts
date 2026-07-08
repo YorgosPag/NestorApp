@@ -36,6 +36,7 @@ import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformSt
 import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
 import { advanceHotGripPick, commitRotateReference, commitFreeRotate } from './grip-hotgrip-actions';
 import type { GripMouseUpCtx } from './grip-mouse-handlers.types';
+import { gripKindOf } from '../grip-kinds';
 
 // ADR-501 — click-vs-drag threshold (screen px). A press-release on a DXF grip that
 // moves the cursor LESS than this counts as a CLICK → arm the grip (orange) for a
@@ -54,6 +55,18 @@ function applyGripArmClick(grip: UnifiedGripInfo): void {
 }
 
 /**
+ * Resolves the hovered entity + its tagged 'line' grip-kind for a grip commit, or `null`
+ * when the grip has no entityId / the entity can't be found. Shared by the lock/polar
+ * endpoint-commit resolvers below.
+ */
+function resolveLineGripContext(grip: UnifiedGripInfo, deps: DxfCommitDeps) {
+  if (grip.entityId === undefined) return null;
+  const entity = createSceneManagerAdapter(deps)?.getEntity(grip.entityId);
+  if (!entity) return null;
+  return { entity, lineKind: gripKindOf(grip, 'line') };
+}
+
+/**
  * ADR-513 §grip-parity — the length/angle-locked commit displacement for a plain-LINE
  * endpoint drag (grip 0/1), or `null` when no lock is active / not a line endpoint. Uses
  * the SAME `resolveLineEndpointLockedDelta` SSoT the ghost uses, relative to the endpoint's
@@ -62,10 +75,9 @@ function applyGripArmClick(grip: UnifiedGripInfo): void {
 function resolveLineEndpointCommitLock(
   grip: UnifiedGripInfo, worldPos: Point2D, deps: DxfCommitDeps,
 ): Point2D | null {
-  if (grip.entityId === undefined) return null;
-  const entity = createSceneManagerAdapter(deps)?.getEntity(grip.entityId);
-  if (!entity) return null;
-  return resolveLineEndpointLockedDelta(entity, grip.gripIndex, grip.lineGripKind, grip.position, worldPos);
+  const ctx = resolveLineGripContext(grip, deps);
+  if (!ctx) return null;
+  return resolveLineEndpointLockedDelta(ctx.entity, grip.gripIndex, ctx.lineKind, grip.position, worldPos);
 }
 
 /**
@@ -77,11 +89,11 @@ function resolveLineEndpointCommitLock(
 function resolveEndpointReshapeCommitPolar(
   grip: UnifiedGripInfo, worldPos: Point2D, deps: DxfCommitDeps,
 ): Point2D | null {
-  if (grip.entityId === undefined) return null;
-  const entity = createSceneManagerAdapter(deps)?.getEntity(grip.entityId);
-  if (!entity) return null;
+  const ctx = resolveLineGripContext(grip, deps);
+  if (!ctx) return null;
+  const { entity, lineKind } = ctx;
   return resolveEndpointReshapePolarLock(
-    entity, grip.gripIndex, grip.lineGripKind, grip.position, worldPos,
+    entity, grip.gripIndex, lineKind, grip.position, worldPos,
     // ADR-508 §grip-tracking — καθολικό POLAR commit για reshape λαβές πολυγωνικών BIM (WYSIWYG με preview).
     resolveActiveFootprintGripKind(grip),
   )?.delta ?? null;

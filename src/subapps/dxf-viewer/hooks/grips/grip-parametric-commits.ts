@@ -12,6 +12,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { UnifiedGripInfo } from './unified-grip-types';
 import type { DxfCommitDeps } from './unified-grip-types';
+import { gripKindOf } from '../grip-kinds';
 import type { StairEntity } from '../../bim/types/stair-types';
 import type { WallEntity, WallKind } from '../../bim/types/wall-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
@@ -139,7 +140,8 @@ export function commitStairGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.stairGripKind) return;
+  const stairKind = gripKindOf(grip, 'stair');
+  if (!grip.entityId || !stairKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -149,7 +151,7 @@ export function commitStairGripDrag(
   const stair = candidate as StairEntity;
   const originalParams = stair.params;
   const currentPos: Point2D = translatePoint(grip.position, delta);
-  const newParams = applyStairGripDrag(grip.stairGripKind, {
+  const newParams = applyStairGripDrag(stairKind, {
     originalParams,
     delta,
     currentPos,
@@ -181,7 +183,8 @@ export function commitWallGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.wallGripKind) return;
+  const wallKind = gripKindOf(grip, 'wall');
+  if (!grip.entityId || !wallKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -197,10 +200,10 @@ export function commitWallGripDrag(
   // the legacy rotation drag) use the grip position as the anchor.
   const rotateCtx = BimRotateHotGripStore.getSnapshot();
   const useRotatePivot =
-    grip.wallGripKind === 'wall-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+    wallKind === 'wall-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
   const currentPos: Point2D = translatePoint(anchor, delta);
-  const newParams = applyWallGripDrag(grip.wallGripKind, {
+  const newParams = applyWallGripDrag(wallKind, {
     originalParams,
     delta,
     currentPos,
@@ -237,7 +240,8 @@ export function commitBeamGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.beamGripKind) return;
+  const beamKind = gripKindOf(grip, 'beam');
+  if (!grip.entityId || !beamKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -253,10 +257,10 @@ export function commitBeamGripDrag(
   // commitColumnGripDrag). All other beam grips use the grip position as anchor.
   const rotateCtx = BimRotateHotGripStore.getSnapshot();
   const useRotatePivot =
-    grip.beamGripKind === 'beam-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+    beamKind === 'beam-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
   const currentPos: Point2D = translatePoint(anchor, delta);
-  const newParams = applyBeamGripDrag(grip.beamGripKind, {
+  const newParams = applyBeamGripDrag(beamKind, {
     originalParams,
     delta,
     currentPos,
@@ -306,7 +310,8 @@ export function commitMepSegmentGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.mepSegmentGripKind) return;
+  const mepSegmentKind = gripKindOf(grip, 'mep-segment');
+  if (!grip.entityId || !mepSegmentKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -320,12 +325,12 @@ export function commitMepSegmentGripDrag(
   // other segment grips use the grip position as anchor.
   const rotateCtx = BimRotateHotGripStore.getSnapshot();
   const useRotatePivot =
-    grip.mepSegmentGripKind === 'mep-segment-rotation' &&
+    mepSegmentKind === 'mep-segment-rotation' &&
     rotateCtx.pivot !== null &&
     rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
   const currentPos: Point2D = translatePoint(anchor, delta);
-  const newParams = applyMepSegmentGripDrag(grip.mepSegmentGripKind, {
+  const newParams = applyMepSegmentGripDrag(mepSegmentKind, {
     originalParams,
     delta,
     currentPos,
@@ -357,7 +362,8 @@ export function commitColumnGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.columnGripKind) return;
+  const columnKind = gripKindOf(grip, 'column');
+  if (!grip.entityId || !columnKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -373,10 +379,10 @@ export function commitColumnGripDrag(
   // column grips use the grip position as the anchor.
   const rotateCtx = BimRotateHotGripStore.getSnapshot();
   const useRotatePivot =
-    grip.columnGripKind === 'column-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+    columnKind === 'column-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
   const currentPos: Point2D = translatePoint(anchor, delta);
-  const newParams = applyColumnGripDrag(grip.columnGripKind, {
+  const newParams = applyColumnGripDrag(columnKind, {
     originalParams,
     delta,
     currentPos,
@@ -422,7 +428,8 @@ export function commitFoundationGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.foundationGripKind) return;
+  const foundationKind = gripKindOf(grip, 'foundation');
+  if (!grip.entityId || !foundationKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -433,10 +440,10 @@ export function commitFoundationGripDrag(
   const originalParams = foundation.params;
   const rotateCtx = BimRotateHotGripStore.getSnapshot();
   const useRotatePivot =
-    grip.foundationGripKind === 'foundation-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+    foundationKind === 'foundation-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
   const currentPos: Point2D = translatePoint(anchor, delta);
-  const newParams = applyFoundationGripDrag(grip.foundationGripKind, {
+  const newParams = applyFoundationGripDrag(foundationKind, {
     originalParams,
     delta,
     currentPos,

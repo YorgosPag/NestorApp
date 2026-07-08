@@ -37,6 +37,7 @@ import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store'
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { gripKindOf } from '../grip-kinds';
 
 /**
  * ADR-406 — Parametric MEP fixture grip commit (centre translate + rotation +
@@ -52,7 +53,8 @@ export function commitMepFixtureGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.mepFixtureGripKind) return;
+  const mepFixtureKind = gripKindOf(grip, 'mep-fixture');
+  if (!grip.entityId || !mepFixtureKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -67,10 +69,10 @@ export function commitMepFixtureGripDrag(
   // other grips use the grip position as anchor (currentPos ignored downstream).
   const rotateCtx = BimRotateHotGripStore.getSnapshot();
   const useRotatePivot =
-    grip.mepFixtureGripKind === 'mep-fixture-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+    mepFixtureKind === 'mep-fixture-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
   const currentPos: Point2D = translatePoint(anchor, delta);
-  const newParams = applyMepFixtureGripDrag(grip.mepFixtureGripKind, {
+  const newParams = applyMepFixtureGripDrag(mepFixtureKind, {
     originalParams,
     delta,
     currentPos,
@@ -116,7 +118,8 @@ export function commitElectricalPanelGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.electricalPanelGripKind) return;
+  const electricalPanelKind = gripKindOf(grip, 'electrical-panel');
+  if (!grip.entityId || !electricalPanelKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -131,10 +134,10 @@ export function commitElectricalPanelGripDrag(
   // `commitMepFixtureGripDrag`). All other grips use the grip position as anchor.
   const rotateCtx = BimRotateHotGripStore.getSnapshot();
   const useRotatePivot =
-    grip.electricalPanelGripKind === 'electrical-panel-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+    electricalPanelKind === 'electrical-panel-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
   const currentPos: Point2D = translatePoint(anchor, delta);
-  const newParams = applyElectricalPanelGripDrag(grip.electricalPanelGripKind, {
+  const newParams = applyElectricalPanelGripDrag(electricalPanelKind, {
     originalParams,
     delta,
     currentPos,
@@ -155,6 +158,21 @@ export function commitElectricalPanelGripDrag(
 }
 
 /**
+ * Resolves the scene-manager adapter + the hovered `MepManifoldEntity` (typed, with
+ * its `params`) for a grip commit, or `null` when the entity is missing/mistyped.
+ * Shared by the drag-commit and the outlet-count-click-commit below.
+ */
+function resolveMepManifoldGripContext(deps: DxfCommitDeps, entityId: string) {
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return null;
+  const raw = sceneManager.getEntity(entityId);
+  if (!raw) return null;
+  const candidate = raw as unknown as Partial<MepManifoldEntity>;
+  if (candidate.type !== 'mep-manifold' || !candidate.params) return null;
+  return { sceneManager, manifold: candidate as MepManifoldEntity, originalParams: candidate.params };
+}
+
+/**
  * ADR-408 Φ12 — Parametric MEP manifold grip commit (centre translate +
  * rotation + opposite-corner-anchored width/length resize). Bypasses
  * stretch/move because `MepManifoldEntity` is params-driven;
@@ -169,14 +187,11 @@ export function commitMepManifoldGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.mepManifoldGripKind) return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<MepManifoldEntity>;
-  if (candidate.type !== 'mep-manifold' || !candidate.params) return;
-  const originalParams = candidate.params;
+  const mepManifoldKind = gripKindOf(grip, 'mep-manifold');
+  if (!grip.entityId || !mepManifoldKind) return;
+  const ctx = resolveMepManifoldGripContext(deps, grip.entityId);
+  if (!ctx) return;
+  const { sceneManager, originalParams } = ctx;
   // ADR-408 Φ12 / ADR-397 — the `mep-manifold-rotation` 6-click hot-grip orbits
   // a picked centre. The hook publishes {pivot, anchor} in BimRotateHotGripStore;
   // the delta here is `alignDir − refDir`, so `currentPos = anchor + delta` is the
@@ -184,10 +199,10 @@ export function commitMepManifoldGripDrag(
   // `commitElectricalPanelGripDrag`). All other grips use the grip position as anchor.
   const rotateCtx = BimRotateHotGripStore.getSnapshot();
   const useRotatePivot =
-    grip.mepManifoldGripKind === 'mep-manifold-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+    mepManifoldKind === 'mep-manifold-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
   const currentPos: Point2D = translatePoint(anchor, delta);
-  const newParams = applyMepManifoldGripDrag(grip.mepManifoldGripKind, {
+  const newParams = applyMepManifoldGripDrag(mepManifoldKind, {
     originalParams,
     delta,
     currentPos,
@@ -206,7 +221,7 @@ export function commitMepManifoldGripDrag(
   // ADR-408 Φ-C — connectivity-preserving move: pipes snapped to the manifold's
   // inlet/outlets follow it (XY + Z + rotation) in one undo (Revit-style). The
   // outlet add/remove grip keeps its own Z-only `buildManifoldParamUpdate` path.
-  const manifold = candidate as MepManifoldEntity;
+  const manifold = ctx.manifold;
   const entityId = grip.entityId;
   executeHostMoveWithConnectedPipes({
     prevHost: manifold,
@@ -232,22 +247,18 @@ export function commitMepManifoldOutletCountGrip(
   grip: UnifiedGripInfo,
   deps: DxfCommitDeps,
 ): void {
+  const outletGripKind = gripKindOf(grip, 'mep-manifold');
   if (
     !grip.entityId ||
-    (grip.mepManifoldGripKind !== 'mep-manifold-outlet-add' &&
-      grip.mepManifoldGripKind !== 'mep-manifold-outlet-remove')
+    (outletGripKind !== 'mep-manifold-outlet-add' &&
+      outletGripKind !== 'mep-manifold-outlet-remove')
   ) {
     return;
   }
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<MepManifoldEntity>;
-  if (candidate.type !== 'mep-manifold' || !candidate.params) return;
-  const manifold = candidate as MepManifoldEntity;
-  const originalParams = manifold.params;
-  const step = grip.mepManifoldGripKind === 'mep-manifold-outlet-add' ? 1 : -1;
+  const ctx = resolveMepManifoldGripContext(deps, grip.entityId);
+  if (!ctx) return;
+  const { sceneManager, manifold, originalParams } = ctx;
+  const step = outletGripKind === 'mep-manifold-outlet-add' ? 1 : -1;
   const nextCount = clampOutletCount(originalParams.outletCount + step);
   if (nextCount === clampOutletCount(originalParams.outletCount)) return; // clamp no-op
   const nextParams: MepManifoldParams = { ...originalParams, outletCount: nextCount };
@@ -277,7 +288,8 @@ export function commitFurnitureGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.furnitureGripKind) return;
+  const furnitureKind = gripKindOf(grip, 'furniture');
+  if (!grip.entityId || !furnitureKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -292,10 +304,10 @@ export function commitFurnitureGripDrag(
   // All other grips use the grip position as anchor (currentPos ignored downstream).
   const rotateCtx = BimRotateHotGripStore.getSnapshot();
   const useRotatePivot =
-    grip.furnitureGripKind === 'furniture-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+    furnitureKind === 'furniture-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
   const currentPos: Point2D = translatePoint(anchor, delta);
-  const newParams = applyFurnitureGripDrag(grip.furnitureGripKind, {
+  const newParams = applyFurnitureGripDrag(furnitureKind, {
     originalParams,
     delta,
     currentPos,
@@ -329,7 +341,8 @@ export function commitFloorplanSymbolGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.floorplanSymbolGripKind) return;
+  const floorplanSymbolKind = gripKindOf(grip, 'floorplan-symbol');
+  if (!grip.entityId || !floorplanSymbolKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -339,10 +352,10 @@ export function commitFloorplanSymbolGripDrag(
   const originalParams = candidate.params;
   const rotateCtx = BimRotateHotGripStore.getSnapshot();
   const useRotatePivot =
-    grip.floorplanSymbolGripKind === 'floorplan-symbol-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+    floorplanSymbolKind === 'floorplan-symbol-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
   const currentPos: Point2D = translatePoint(anchor, delta);
-  const newParams = applyFloorplanSymbolGripDrag(grip.floorplanSymbolGripKind, {
+  const newParams = applyFloorplanSymbolGripDrag(floorplanSymbolKind, {
     originalParams,
     delta,
     currentPos,

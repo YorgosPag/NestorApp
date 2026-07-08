@@ -31,6 +31,7 @@ import { getMepFixtureGrips } from '../mep-fixtures/mep-fixture-grips';
 import { bimMeshCache } from '../../bim-3d/library/bim-mesh-library/bim-mesh-cache';
 import { drawMeshSilhouette } from './mesh-silhouette-draw';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -186,7 +187,7 @@ export class MepFixtureRenderer extends BaseEntityRenderer {
       entityId: g.entityId,
       isVisible: true,
       gripIndex: g.gripIndex,
-      shape: gripGlyphShape(g.mepFixtureGripKind),
+      shape: gripGlyphShape(gripKindOf(g, 'mep-fixture')),
     }));
   }
 
