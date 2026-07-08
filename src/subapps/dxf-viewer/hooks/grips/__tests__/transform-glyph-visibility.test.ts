@@ -49,29 +49,55 @@ describe('isTransformGlyphShape', () => {
 
 describe('dataGripGlyphShape', () => {
   it('resolves the MOVE glyph from any entity kind field', () => {
-    expect(dataGripGlyphShape(grip({ wallGripKind: 'wall-midpoint' }))).toBe('move');
-    expect(dataGripGlyphShape(grip({ columnGripKind: 'column-center' }))).toBe('move');
-    expect(dataGripGlyphShape(grip({ lineGripKind: 'line-move' }))).toBe('move');
-    expect(dataGripGlyphShape(grip({ textGripKind: 'text-move' }))).toBe('move');
+    expect(
+      dataGripGlyphShape(
+        grip({ wallGripKind: 'wall-midpoint', gripKind: { on: 'wall', kind: 'wall-midpoint' } }),
+      ),
+    ).toBe('move');
+    expect(
+      dataGripGlyphShape(
+        grip({ columnGripKind: 'column-center', gripKind: { on: 'column', kind: 'column-center' } }),
+      ),
+    ).toBe('move');
+    expect(
+      dataGripGlyphShape(grip({ lineGripKind: 'line-move', gripKind: { on: 'line', kind: 'line-move' } })),
+    ).toBe('move');
+    expect(
+      dataGripGlyphShape(grip({ textGripKind: 'text-move', gripKind: { on: 'text', kind: 'text-move' } })),
+    ).toBe('move');
   });
 
   it('resolves the ROTATION glyph from any entity kind field', () => {
-    expect(dataGripGlyphShape(grip({ wallGripKind: 'wall-rotation' }))).toBe('rotation');
-    expect(dataGripGlyphShape(grip({ columnGripKind: 'column-rotation' }))).toBe('rotation');
-    expect(dataGripGlyphShape(grip({ lineGripKind: 'line-rotation' }))).toBe('rotation');
+    expect(
+      dataGripGlyphShape(
+        grip({ wallGripKind: 'wall-rotation', gripKind: { on: 'wall', kind: 'wall-rotation' } }),
+      ),
+    ).toBe('rotation');
+    expect(
+      dataGripGlyphShape(
+        grip({ columnGripKind: 'column-rotation', gripKind: { on: 'column', kind: 'column-rotation' } }),
+      ),
+    ).toBe('rotation');
+    expect(
+      dataGripGlyphShape(
+        grip({ lineGripKind: 'line-rotation', gripKind: { on: 'line', kind: 'line-rotation' } }),
+      ),
+    ).toBe('rotation');
   });
 
   it('resolves structural grips to the default square (never hidden)', () => {
-    expect(dataGripGlyphShape(grip({ wallGripKind: 'wall-start' }))).toBe('square');
+    expect(
+      dataGripGlyphShape(grip({ wallGripKind: 'wall-start', gripKind: { on: 'wall', kind: 'wall-start' } })),
+    ).toBe('square');
     expect(dataGripGlyphShape(grip({ type: 'vertex' }))).toBe('square');
   });
 });
 
 describe('shouldHideDataGripForSelection', () => {
   it('hides move + rotation grips ONLY when ≥2 objects are selected', () => {
-    const wallMove = grip({ wallGripKind: 'wall-midpoint' });
-    const wallRot = grip({ wallGripKind: 'wall-rotation' });
-    const lineRot = grip({ lineGripKind: 'line-rotation' });
+    const wallMove = grip({ wallGripKind: 'wall-midpoint', gripKind: { on: 'wall', kind: 'wall-midpoint' } });
+    const wallRot = grip({ wallGripKind: 'wall-rotation', gripKind: { on: 'wall', kind: 'wall-rotation' } });
+    const lineRot = grip({ lineGripKind: 'line-rotation', gripKind: { on: 'line', kind: 'line-rotation' } });
 
     // single selection → nothing hidden (wall shows its 8 handles + move + rotation)
     expect(shouldHideDataGripForSelection(wallMove, 1)).toBe(false);
@@ -84,7 +110,12 @@ describe('shouldHideDataGripForSelection', () => {
   });
 
   it('never hides structural corner / midpoint / vertex grips, even on multi-select', () => {
-    expect(shouldHideDataGripForSelection(grip({ wallGripKind: 'wall-start' }), 3)).toBe(false);
+    expect(
+      shouldHideDataGripForSelection(
+        grip({ wallGripKind: 'wall-start', gripKind: { on: 'wall', kind: 'wall-start' } }),
+        3,
+      ),
+    ).toBe(false);
     expect(shouldHideDataGripForSelection(grip({ type: 'corner' }), 3)).toBe(false);
     expect(shouldHideDataGripForSelection(grip({ type: 'edge' }), 3)).toBe(false);
   });

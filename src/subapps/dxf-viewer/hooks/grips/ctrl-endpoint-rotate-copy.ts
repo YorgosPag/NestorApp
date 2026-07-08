@@ -28,6 +28,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { UnifiedGripInfo } from './unified-grip-types';
+import { gripKindOf } from '../grip-kinds';
 import { LINE_ROTATION_KIND } from '../../systems/line/line-grips';
 import { ARC_ROTATION_KIND } from '../../systems/arc/arc-grips';
 import { POLYLINE_ROTATION_KIND } from '../../systems/polyline/polyline-grips';
@@ -62,19 +63,31 @@ export function resolveCtrlEndpointRotateCopy(
 
   const pivot: Point2D = { x: grip.position.x, y: grip.position.y };
   switch (entity.type) {
+    // ADR-602 Stage 4 — the synthetic grip dual-writes the tagged `gripKind` beside the
+    // legacy field (this is a producer: without it, `gripKindOf(syntheticGrip, …)` at the
+    // consumers in `grip-mouse-handlers.ts` would read `undefined` → silent regression).
     case 'line':
-      if (grip.lineGripKind) return null;
-      return { pivot, syntheticGrip: { ...grip, lineGripKind: LINE_ROTATION_KIND } };
+      if (gripKindOf(grip, 'line')) return null;
+      return {
+        pivot,
+        syntheticGrip: { ...grip, lineGripKind: LINE_ROTATION_KIND, gripKind: { on: 'line', kind: LINE_ROTATION_KIND } },
+      };
     case 'arc':
-      if (grip.arcGripKind) return null;
-      return { pivot, syntheticGrip: { ...grip, arcGripKind: ARC_ROTATION_KIND } };
+      if (gripKindOf(grip, 'arc')) return null;
+      return {
+        pivot,
+        syntheticGrip: { ...grip, arcGripKind: ARC_ROTATION_KIND, gripKind: { on: 'arc', kind: ARC_ROTATION_KIND } },
+      };
     // A scene rectangle shows polyline grips in the DXF pipeline → same vertex path.
     case 'polyline':
     case 'lwpolyline':
     case 'rectangle':
     case 'rect':
-      if (grip.polylineGripKind) return null;
-      return { pivot, syntheticGrip: { ...grip, polylineGripKind: POLYLINE_ROTATION_KIND } };
+      if (gripKindOf(grip, 'polyline')) return null;
+      return {
+        pivot,
+        syntheticGrip: { ...grip, polylineGripKind: POLYLINE_ROTATION_KIND, gripKind: { on: 'polyline', kind: POLYLINE_ROTATION_KIND } },
+      };
     default:
       return null;
   }

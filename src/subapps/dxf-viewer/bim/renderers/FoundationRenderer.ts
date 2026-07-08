@@ -39,6 +39,7 @@ import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import { topFacePlanFill } from '../utils/bim-face-plan-fill';
 import { getFoundationGrips } from '../foundations/foundation-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 // ADR-507 Φ7 — unified material poché (αντικαθιστά το foundation-hatch-patterns engine).
 import { computeMaterialHatchSegments } from '../geometry/shared/material-hatch-geometry';
@@ -234,7 +235,7 @@ export class FoundationRenderer extends BaseEntityRenderer {
       gripIndex: g.gripIndex,
       // ADR-397 — rotation handle gets the curved-arrow glyph via the shared
       // registry SSoT; width/length stay square.
-      shape: gripGlyphShape(g.foundationGripKind),
+      shape: gripGlyphShape(gripKindOf(g, 'foundation')),
     }));
   }
 
