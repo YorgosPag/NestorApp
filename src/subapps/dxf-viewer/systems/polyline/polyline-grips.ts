@@ -83,11 +83,13 @@ export function getPolylineMoveRotateGrips(
     return [
       {
         entityId, gripIndex: startIndex, type: 'center',
-        position: rect.center, movesEntity: true, polylineGripKind: POLYLINE_MOVE_KIND,
+        position: rect.center, movesEntity: true,
+        gripKind: { on: 'polyline', kind: POLYLINE_MOVE_KIND },
       },
       {
         entityId, gripIndex: startIndex + 1, type: 'vertex',
-        position: rectLocalWorld(rect, 0, rotOffsetY), movesEntity: false, polylineGripKind: POLYLINE_ROTATION_KIND,
+        position: rectLocalWorld(rect, 0, rotOffsetY), movesEntity: false,
+        gripKind: { on: 'polyline', kind: POLYLINE_ROTATION_KIND },
       },
     ];
   }
@@ -107,11 +109,13 @@ export function getPolylineMoveRotateGrips(
     return [
       {
         entityId, gripIndex: startIndex, type: 'center',
-        position: axisQuarterMoveHandleWorld(frame), movesEntity: true, polylineGripKind: POLYLINE_MOVE_KIND,
+        position: axisQuarterMoveHandleWorld(frame), movesEntity: true,
+        gripKind: { on: 'polyline', kind: POLYLINE_MOVE_KIND },
       },
       {
         entityId, gripIndex: startIndex + 1, type: 'vertex',
-        position: axisQuarterRotationHandleWorld(frame), movesEntity: false, polylineGripKind: POLYLINE_ROTATION_KIND,
+        position: axisQuarterRotationHandleWorld(frame), movesEntity: false,
+        gripKind: { on: 'polyline', kind: POLYLINE_ROTATION_KIND },
       },
     ];
   }
@@ -121,11 +125,13 @@ export function getPolylineMoveRotateGrips(
   return [
     {
       entityId, gripIndex: startIndex, type: 'center',
-      position: center, movesEntity: true, polylineGripKind: POLYLINE_MOVE_KIND,
+      position: center, movesEntity: true,
+      gripKind: { on: 'polyline', kind: POLYLINE_MOVE_KIND },
     },
     {
       entityId, gripIndex: startIndex + 1, type: 'vertex',
-      position: center, movesEntity: false, polylineGripKind: POLYLINE_ROTATION_KIND,
+      position: center, movesEntity: false,
+      gripKind: { on: 'polyline', kind: POLYLINE_ROTATION_KIND },
     },
   ];
 }

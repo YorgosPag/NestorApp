@@ -13,7 +13,7 @@
  * The circle is geometrically SYMMETRIC → it gets ONLY a move cross, NO rotation
  * handle (a rotation would be a visual no-op; parity με την κυκλική κολόνα
  * ADR-519 που εκπέμπει μόνο center-move, Giorgio 2026-07-01). The centre grip
- * carries `circleGripKind: 'circle-move'` so the shared registry gives it the
+ * carries `gripKind: { on:'circle', kind:'circle-move' }` so the shared registry gives it the
  * 4-arrow MOVE glyph and the per-arm directional move-by-value runs (ADR-397 Φ2);
  * the whole-entity translate is the existing `movesEntity` path — NO new commit.
  *
@@ -56,7 +56,8 @@ export function getCircleGrips(entityId: string, center: Point2D, radius: number
   const grips: GripInfo[] = [
     {
       entityId, gripIndex: 0, type: 'center',
-      position: center, movesEntity: true, circleGripKind: CIRCLE_MOVE_KIND,
+      position: center, movesEntity: true,
+      gripKind: { on: 'circle', kind: CIRCLE_MOVE_KIND },
     },
   ];
   circleQuadrantPoints(center, radius).forEach((position, i) => {

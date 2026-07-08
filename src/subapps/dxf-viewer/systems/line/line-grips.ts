@@ -115,12 +115,14 @@ export function getLineGrips(entityId: string, start: Point2D, end: Point2D): Gr
     {
       entityId, gripIndex: 3, type: 'vertex',
       position: lineRotationHandlePos(start, end),
-      movesEntity: false, lineGripKind: LINE_ROTATION_KIND,
+      movesEntity: false,
+      gripKind: { on: 'line', kind: LINE_ROTATION_KIND },
     },
     {
       entityId, gripIndex: 4, type: 'vertex',
       position: lineMoveHandlePos(start, end),
-      movesEntity: true, edgeVertexIndices: [0, 1], lineGripKind: LINE_MOVE_KIND,
+      movesEntity: true, edgeVertexIndices: [0, 1],
+      gripKind: { on: 'line', kind: LINE_MOVE_KIND },
     },
   ];
 }

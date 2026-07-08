@@ -77,14 +77,16 @@ export function getArcGrips(
   return [
     {
       entityId, gripIndex: 0, type: 'center',
-      position: center, movesEntity: true, arcGripKind: ARC_MOVE_KIND,
+      position: center, movesEntity: true,
+      gripKind: { on: 'arc', kind: ARC_MOVE_KIND },
     },
     { entityId, gripIndex: 1, type: 'vertex', position: pointOnCircle(center, radius, startRad), movesEntity: false },
     { entityId, gripIndex: 2, type: 'vertex', position: pointOnCircle(center, radius, endRad), movesEntity: false },
     { entityId, gripIndex: 3, type: 'edge', position: pointOnCircle(center, radius, midRad), movesEntity: true },
     {
       entityId, gripIndex: 4, type: 'vertex',
-      position: arcRotationHandlePos(center, radius), movesEntity: false, arcGripKind: ARC_ROTATION_KIND,
+      position: arcRotationHandlePos(center, radius), movesEntity: false,
+      gripKind: { on: 'arc', kind: ARC_ROTATION_KIND },
     },
   ];
 }

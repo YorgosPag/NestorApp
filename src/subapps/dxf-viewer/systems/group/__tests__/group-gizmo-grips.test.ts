@@ -11,6 +11,7 @@ import { computeGroupSelectionBounds } from '../group-selection-bounds';
 import { getGroupGizmoGrips, GROUP_MOVE_KIND, GROUP_ROTATION_KIND } from '../group-gizmo-grips';
 import { gripGlyphShape } from '../../../bim/grips/grip-glyph-registry';
 import { hotGripOpForKind, hotGripKindOf } from '../../../hooks/grips/wall-hot-grip-fsm';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 import { applyEntityPreview } from '../../../rendering/ghost/apply-entity-preview';
 import type { Entity } from '../../../types/entities';
 import type { DxfEntityUnion } from '../../../canvas-v2/dxf-canvas/dxf-types';
@@ -40,7 +41,7 @@ describe('getGroupGizmoGrips (ADR-575 §8)', () => {
     expect(move.gripIndex).toBe(0);
     expect(move.position).toEqual({ x: 2, y: 1 });
     expect(move.movesEntity).toBe(true);
-    expect(move.groupGripKind).toBe(GROUP_MOVE_KIND);
+    expect(gripKindOf(move, 'group')).toBe(GROUP_MOVE_KIND);
   });
 
   it('places the rotation handle midway toward the bottom edge (−halfLength/2)', () => {
@@ -52,7 +53,7 @@ describe('getGroupGizmoGrips (ADR-575 §8)', () => {
     expect(rot.position.x).toBeCloseTo(2);
     expect(rot.position.y).toBeCloseTo(0.5);
     expect(rot.movesEntity).toBe(false);
-    expect(rot.groupGripKind).toBe(GROUP_ROTATION_KIND);
+    expect(gripKindOf(rot, 'group')).toBe(GROUP_ROTATION_KIND);
   });
 });
 
@@ -68,8 +69,12 @@ describe('GROUP gizmo — shared-pipeline wiring (ADR-575 §8)', () => {
   });
 
   it('resolves the group discriminator via the shared hotGripKindOf chain', () => {
-    expect(hotGripKindOf({ groupGripKind: 'group-move' } as unknown as UnifiedGripInfo)).toBe('group-move');
-    expect(hotGripKindOf({ groupGripKind: 'group-rotation' } as unknown as UnifiedGripInfo)).toBe('group-rotation');
+    expect(hotGripKindOf({
+      gripKind: { on: 'group', kind: 'group-move' },
+    } as unknown as UnifiedGripInfo)).toBe('group-move');
+    expect(hotGripKindOf({
+      gripKind: { on: 'group', kind: 'group-rotation' },
+    } as unknown as UnifiedGripInfo)).toBe('group-rotation');
   });
 });
 
@@ -81,7 +86,7 @@ describe('applyEntityPreview — GROUP live ghost (ADR-575 §8)', () => {
       gripIndex: 0,
       delta: { x: 10, y: 20 },
       movesEntity: true,
-      groupGripKind: 'group-move',
+      gripKind: { on: 'group', kind: 'group-move' },
     };
     const ghost = applyEntityPreview(group as unknown as DxfEntityUnion, preview) as unknown as { type: string; members: Entity[] };
     expect(ghost.type).toBe('group');
@@ -99,7 +104,7 @@ describe('applyEntityPreview — GROUP live ghost (ADR-575 §8)', () => {
       gripIndex: 1,
       delta: { x: -2, y: 2 },        // anchor+delta = {2,3} → 90° CCW sweep about {2,1}
       movesEntity: false,
-      groupGripKind: 'group-rotation',
+      gripKind: { on: 'group', kind: 'group-rotation' },
       anchorPos: anchor,
       rotatePivot: pivot,
     };
