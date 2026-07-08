@@ -9,6 +9,10 @@ import type {
   ProjectMutationDependencyMode,
   ProjectMutationImpactPreview,
 } from '@/types/project-mutation-impact';
+import {
+  buildAllowImpactPreview as buildAllowPreview,
+  buildUnavailableImpactPreview as buildUnavailablePreview,
+} from '@/lib/firestore/impact-preview-primitives';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ProjectAddressMutationImpact');
@@ -184,32 +188,6 @@ function buildDependencies(
 // =============================================================================
 // PUBLIC API
 // =============================================================================
-
-function buildAllowPreview(): ProjectMutationImpactPreview {
-  return {
-    mode: 'allow',
-    mutationKinds: [],
-    changes: [],
-    dependencies: [],
-    companyLinkChange: 'none',
-    messageKey: 'impactGuard.messages.allow',
-    blockingCount: 0,
-    warningCount: 0,
-  };
-}
-
-function buildUnavailablePreview(): ProjectMutationImpactPreview {
-  return {
-    mode: 'block',
-    mutationKinds: [],
-    changes: [],
-    dependencies: [],
-    companyLinkChange: 'none',
-    messageKey: 'impactGuard.messages.unavailable',
-    blockingCount: 0,
-    warningCount: 0,
-  };
-}
 
 export async function previewProjectAddressMutationImpact(
   project: Project,

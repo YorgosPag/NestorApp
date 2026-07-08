@@ -25,6 +25,7 @@ import type {
   ProjectMutationDependency,
   ProjectMutationImpactPreview,
 } from '@/types/project-mutation-impact';
+import { resolveImpactPreview } from '@/lib/firestore/impact-preview-primitives';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('IkaLaborComplianceSaveImpact');
@@ -81,63 +82,14 @@ function buildDependencies(counts: EmploymentRecordCounts): {
 }
 
 // =============================================================================
-// HELPERS
-// =============================================================================
-
-function buildAllowPreview(): ProjectMutationImpactPreview {
-  return {
-    mode: 'allow',
-    mutationKinds: [],
-    changes: [],
-    dependencies: [],
-    companyLinkChange: 'none',
-    messageKey: 'impactGuard.messages.allow',
-    blockingCount: 0,
-    warningCount: 0,
-  };
-}
-
-function buildUnavailablePreview(): ProjectMutationImpactPreview {
-  return {
-    mode: 'block',
-    mutationKinds: [],
-    changes: [],
-    dependencies: [],
-    companyLinkChange: 'none',
-    messageKey: 'impactGuard.messages.unavailable',
-    blockingCount: 0,
-    warningCount: 0,
-  };
-}
-
-// =============================================================================
 // PUBLIC API
 // =============================================================================
 
 export async function previewLaborComplianceSaveImpact(
   companyId: string,
 ): Promise<ProjectMutationImpactPreview> {
-  try {
-    const counts = await countEmploymentRecords(companyId);
-    const { deps, messageKey } = buildDependencies(counts);
-
-    if (deps.length === 0) return buildAllowPreview();
-
-    const warningCount = deps.filter((d) => d.mode === 'warn').length;
-    const blockingCount = deps.filter((d) => d.mode === 'block').length;
-
-    return {
-      mode: 'warn',
-      mutationKinds: [],
-      changes: [],
-      dependencies: deps,
-      companyLinkChange: 'none',
-      messageKey: messageKey ?? 'impactGuard.messages.warn',
-      blockingCount,
-      warningCount,
-    };
-  } catch (error) {
-    logger.warn('Labor compliance save impact preview failed', { error });
-    return buildUnavailablePreview();
-  }
+  return resolveImpactPreview(
+    async () => buildDependencies(await countEmploymentRecords(companyId)),
+    (error) => logger.warn('Labor compliance save impact preview failed', { error }),
+  );
 }

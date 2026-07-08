@@ -6,6 +6,7 @@ import type {
   ProjectMutationDependency,
   ProjectMutationImpactPreview,
 } from '@/types/project-mutation-impact';
+import { resolveImpactPreview } from '@/lib/firestore/impact-preview-primitives';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ProjectBrokerTerminateImpact');
@@ -55,36 +56,6 @@ function buildDependencies(
 }
 
 // =============================================================================
-// HELPERS
-// =============================================================================
-
-function buildAllowPreview(): ProjectMutationImpactPreview {
-  return {
-    mode: 'allow',
-    mutationKinds: [],
-    changes: [],
-    dependencies: [],
-    companyLinkChange: 'none',
-    messageKey: 'impactGuard.messages.allow',
-    blockingCount: 0,
-    warningCount: 0,
-  };
-}
-
-function buildUnavailablePreview(): ProjectMutationImpactPreview {
-  return {
-    mode: 'block',
-    mutationKinds: [],
-    changes: [],
-    dependencies: [],
-    companyLinkChange: 'none',
-    messageKey: 'impactGuard.messages.unavailable',
-    blockingCount: 0,
-    warningCount: 0,
-  };
-}
-
-// =============================================================================
 // PUBLIC API
 // =============================================================================
 
@@ -92,28 +63,12 @@ export async function previewBrokerTerminateImpact(
   req: BrokerTerminateImpactRequest,
   companyId: string,
 ): Promise<ProjectMutationImpactPreview> {
-  try {
-    const pendingCommissions = await countPendingCommissions(req.agreementId, companyId);
-    const { deps, messageKey } = buildDependencies({ pendingCommissions });
-
-    if (deps.length === 0) return buildAllowPreview();
-
-    const warningCount = deps.filter((d) => d.mode === 'warn').length;
-    const blockingCount = deps.filter((d) => d.mode === 'block').length;
-    const mode = blockingCount > 0 ? 'block' : 'warn';
-
-    return {
-      mode,
-      mutationKinds: [],
-      changes: [],
-      dependencies: deps,
-      companyLinkChange: 'none',
-      messageKey: messageKey ?? 'impactGuard.messages.warn',
-      blockingCount,
-      warningCount,
-    };
-  } catch (error) {
-    logger.warn('Broker terminate impact preview failed', { agreementId: req.agreementId, error });
-    return buildUnavailablePreview();
-  }
+  return resolveImpactPreview(
+    async () =>
+      buildDependencies({
+        pendingCommissions: await countPendingCommissions(req.agreementId, companyId),
+      }),
+    (error) =>
+      logger.warn('Broker terminate impact preview failed', { agreementId: req.agreementId, error }),
+  );
 }

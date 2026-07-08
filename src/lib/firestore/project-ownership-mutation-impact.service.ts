@@ -7,6 +7,11 @@ import type {
   ProjectMutationDependencyMode,
   ProjectMutationImpactPreview,
 } from '@/types/project-mutation-impact';
+import {
+  buildAllowImpactPreview as buildAllowPreview,
+  buildUnavailableImpactPreview as buildUnavailablePreview,
+  finalizeImpactPreview,
+} from '@/lib/firestore/impact-preview-primitives';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ProjectOwnershipMutationImpact');
@@ -198,36 +203,6 @@ function buildDependencies(
 }
 
 // =============================================================================
-// PREVIEW BUILDERS
-// =============================================================================
-
-function buildAllowPreview(): ProjectMutationImpactPreview {
-  return {
-    mode: 'allow',
-    mutationKinds: [],
-    changes: [],
-    dependencies: [],
-    companyLinkChange: 'none',
-    messageKey: 'impactGuard.messages.allow',
-    blockingCount: 0,
-    warningCount: 0,
-  };
-}
-
-function buildUnavailablePreview(): ProjectMutationImpactPreview {
-  return {
-    mode: 'block',
-    mutationKinds: [],
-    changes: [],
-    dependencies: [],
-    companyLinkChange: 'none',
-    messageKey: 'impactGuard.messages.unavailable',
-    blockingCount: 0,
-    warningCount: 0,
-  };
-}
-
-// =============================================================================
 // PUBLIC API
 // =============================================================================
 
@@ -254,20 +229,7 @@ export async function previewOwnershipMutationImpact(
 
     if (deps.length === 0 && !forcedWarn) return buildAllowPreview();
 
-    const blockingCount = deps.filter((d) => d.mode === 'block').length;
-    const warningCount = deps.filter((d) => d.mode === 'warn').length;
-    const mode = blockingCount > 0 ? 'block' : 'warn';
-
-    return {
-      mode,
-      mutationKinds: [],
-      changes: [],
-      dependencies: deps,
-      companyLinkChange: 'none',
-      messageKey: messageKey ?? 'impactGuard.messages.warn',
-      blockingCount,
-      warningCount,
-    };
+    return finalizeImpactPreview(deps, messageKey);
   } catch (error) {
     logger.warn('Ownership mutation impact preview failed', { projectId, error });
     return buildUnavailablePreview();
