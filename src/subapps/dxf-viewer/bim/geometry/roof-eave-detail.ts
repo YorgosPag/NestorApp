@@ -42,6 +42,7 @@ import type {
 } from '../types/roof-types';
 import {
   eaveDistance,
+  footprintDiagonal,
   inwardNormal,
   resolveEavePlanes,
   windingSign,
@@ -51,6 +52,7 @@ import {
 import { projectPointTo2D } from './shared/polygon-utils';
 // ADR-417 — plan-geometry primitives (SSoT εξωτ. δαχτυλιδιού γείσου + split + offset-γραμμές).
 import { roofEaveOuterRing, splitOutlineAtRidges, type RoofOverhangOffsetLine } from './roof-eave-plan-geom';
+import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 // App-wide SSoT τομής ευθειών (μηδέν roof-private διπλότυπο).
 import { lineIntersectionPoint } from './shared/polygon-axis-projection';
 
@@ -248,17 +250,6 @@ function buildEdgeQuads(
 
 // ─── Overhang offset lines + ridge extension (για κορφιάδες πάνω στην προέκταση) ──
 
-/** Απόσταση (xy) σημείου `p` από το τμήμα a→b. */
-function distPtSeg(p: Vec2, a: Point3D, b: Point3D): number {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const lenSq = dx * dx + dy * dy;
-  if (lenSq < 1e-12) return Math.hypot(p.x - a.x, p.y - a.y);
-  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
-  t = Math.max(0, Math.min(1, t));
-  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
-}
-
 /**
  * Επεκτείνει τα **eave** άκρα μιας ridge/hip γραμμής (αυτά που κάθονται στην
  * περίμετρο) έως το εξωτερικό όριο της προέκτασης, ώστε ο κορφιάς να συνεχίζει
@@ -273,16 +264,11 @@ export function extendRidgeToOverhang(
   footprint: readonly Point3D[],
   offLines: readonly RoofOverhangOffsetLine[],
 ): RoofRidgeLine {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const v of footprint) {
-    if (v.x < minX) minX = v.x; if (v.y < minY) minY = v.y;
-    if (v.x > maxX) maxX = v.x; if (v.y > maxY) maxY = v.y;
-  }
-  const eps = Math.max(1e-6, 1e-3 * Math.hypot(maxX - minX, maxY - minY));
+  const eps = Math.max(1e-6, 1e-3 * footprintDiagonal(footprint));
 
   const onBoundary = (p: Vec2): boolean => {
     for (let i = 0; i < footprint.length; i++) {
-      if (distPtSeg(p, footprint[i], footprint[(i + 1) % footprint.length]) <= eps) return true;
+      if (pointToLineDistance(p, footprint[i], footprint[(i + 1) % footprint.length]) <= eps) return true;
     }
     return false;
   };

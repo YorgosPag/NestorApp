@@ -26,6 +26,7 @@ import type { Pair, Polygon } from 'polygon-clipping';
 import { safeDifference } from './shared/safe-polygon-boolean';
 import { multiPolygonArea } from './shared/polygon-utils';
 import type { Pt2 } from './shared/segment-polygon-coverage';
+import { clamp01 } from '../../utils/scalar-math';
 
 /** Σχετικό εμβαδικό όριο: αν αφαιρεθεί λιγότερο από αυτό → «μηδέν τομή» (identity). */
 export const AREA_EPS_REL = 1e-6;
@@ -87,6 +88,28 @@ function collectCutters(memberBbox: Bbox, columnFootprints: readonly (readonly P
 }
 
 /**
+ * Κοινός πυρήνας cutback (SSoT των 3 consumers outline/area/ratio): cheap-reject →
+ * polygon difference. `null` → **καμία ουσιαστική τομή** (identity)· αλλιώς
+ * `{ diff, grossArea, netArea }` (τα rings + gross/net εμβαδά σε canvas units²).
+ */
+function computeCutbackDiff(
+  memberOutline: readonly Pt2[],
+  columnFootprints: readonly (readonly Pt2[])[],
+): { diff: ReturnType<typeof safeDifference>; grossArea: number; netArea: number } | null {
+  if (memberOutline.length < 3 || columnFootprints.length === 0) return null;
+  const memberBbox = bboxOf(memberOutline);
+  const cutters = collectCutters(memberBbox, columnFootprints);
+  if (cutters.length === 0) return null;
+
+  const diff = safeDifference(toClipPolygon(memberOutline), ...cutters);
+  const grossArea = ringArea(memberOutline);
+  const netArea = multiPolygonArea(diff);
+  // Καμία (ή αμελητέα) αφαίρεση → identity. Πιάνει και bbox-overlap-χωρίς-γεωμετρική-τομή.
+  if (grossArea <= 0 || netArea >= grossArea * (1 - AREA_EPS_REL)) return null;
+  return { diff, grossArea, netArea };
+}
+
+/**
  * Κόβει το outline ενός δομικού μέλους στις παρειές των κολωνών που το τέμνουν (column wins).
  *
  * @returns
@@ -104,19 +127,11 @@ export function computeMemberCutbackOutline(
   memberOutline: readonly Pt2[],
   columnFootprints: readonly (readonly Pt2[])[],
 ): Pt2[][] | null {
-  if (memberOutline.length < 3 || columnFootprints.length === 0) return null;
-  const memberBbox = bboxOf(memberOutline);
-  const cutters = collectCutters(memberBbox, columnFootprints);
-  if (cutters.length === 0) return null;
-
-  const diff = safeDifference(toClipPolygon(memberOutline), ...cutters);
-  const grossArea = ringArea(memberOutline);
-  const netArea = multiPolygonArea(diff);
-  // Καμία (ή αμελητέα) αφαίρεση → identity. Πιάνει και bbox-overlap-χωρίς-γεωμετρική-τομή.
-  if (grossArea <= 0 || netArea >= grossArea * (1 - AREA_EPS_REL)) return null;
+  const r = computeCutbackDiff(memberOutline, columnFootprints);
+  if (!r) return null;
 
   // Outer ring κάθε κομματιού (ring[0]). `[]` όταν το μέλος καταναλώθηκε ολόκληρο.
-  return diff
+  return r.diff
     .filter((poly) => poly.length > 0 && poly[0].length >= 3)
     .map((poly) => poly[0].map((pr: Pair): Pt2 => ({ x: pr[0], y: pr[1] })));
 }
@@ -133,16 +148,9 @@ export function computeMemberCutbackNetAreaM2(
   columnFootprints: readonly (readonly Pt2[])[],
   canvasToM2: number,
 ): number | null {
-  if (memberOutline.length < 3 || columnFootprints.length === 0) return null;
-  const memberBbox = bboxOf(memberOutline);
-  const cutters = collectCutters(memberBbox, columnFootprints);
-  if (cutters.length === 0) return null;
-
-  const diff = safeDifference(toClipPolygon(memberOutline), ...cutters);
-  const grossArea = ringArea(memberOutline);
-  const netArea = multiPolygonArea(diff);
-  if (grossArea <= 0 || netArea >= grossArea * (1 - AREA_EPS_REL)) return null;
-  return Math.max(0, netArea) * canvasToM2;
+  const r = computeCutbackDiff(memberOutline, columnFootprints);
+  if (!r) return null;
+  return Math.max(0, r.netArea) * canvasToM2;
 }
 
 /**
@@ -159,14 +167,7 @@ export function computeMemberCutbackRetentionRatio(
   memberOutline: readonly Pt2[],
   columnFootprints: readonly (readonly Pt2[])[],
 ): number | null {
-  if (memberOutline.length < 3 || columnFootprints.length === 0) return null;
-  const memberBbox = bboxOf(memberOutline);
-  const cutters = collectCutters(memberBbox, columnFootprints);
-  if (cutters.length === 0) return null;
-
-  const diff = safeDifference(toClipPolygon(memberOutline), ...cutters);
-  const grossArea = ringArea(memberOutline);
-  const netArea = multiPolygonArea(diff);
-  if (grossArea <= 0 || netArea >= grossArea * (1 - AREA_EPS_REL)) return null;
-  return Math.max(0, Math.min(1, netArea / grossArea));
+  const r = computeCutbackDiff(memberOutline, columnFootprints);
+  if (!r) return null;
+  return clamp01(r.netArea / r.grossArea);
 }

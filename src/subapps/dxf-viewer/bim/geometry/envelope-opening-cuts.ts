@@ -28,6 +28,7 @@
 import type { Point3D, Polyline3D } from '../types/bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { clamp01 } from '../../utils/scalar-math';
 import type { EnvelopeChain } from './envelope-perimeter';
 
 const MM_TO_M = 1 / 1000;
@@ -111,7 +112,8 @@ export interface EnvelopeOpeningCut {
 // GEOMETRY HELPERS
 // ============================================================================
 
-function lerp(a: Point3D, b: Point3D, t: number): Point3D {
+/** Corner lerp προς `z=0` — SSoT (κοινό με τον 3D envelope builder). */
+export function lerp(a: Point3D, b: Point3D, t: number): Point3D {
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 0 };
 }
 
@@ -131,7 +133,7 @@ function projectOnEdge(p: { x: number; y: number }, a: Point3D, b: Point3D): Pro
     return { t: 0, dist2: ex * ex + ey * ey };
   }
   let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
-  t = Math.max(0, Math.min(1, t));
+  t = clamp01(t);
   const cx = a.x + t * dx;
   const cy = a.y + t * dy;
   const ex = p.x - cx;

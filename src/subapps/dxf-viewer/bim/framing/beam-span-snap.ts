@@ -74,6 +74,7 @@ import type { SceneSnapTargets } from './scene-snap-targets';
 import { subtractPoints, addPoints, scalePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { canonicalAxisNormal } from '../grid/axis-normal';
 import type { StripJustification } from '../types/foundation-types';
+import { clamp01 } from '../../utils/scalar-math';
 
 /** Πόσο κοντά (mm) στη **νοητή ευθεία** κέντρο→κέντρο πρέπει να φτάσει ο cursor / να βρίσκεται στήριξη. */
 const SPAN_CAPTURE_MM = MEMBER_GHOST_CAPTURE_MM; // 600mm (tunable — ίδιο SSoT με τα υπόλοιπα member captures)
@@ -164,7 +165,7 @@ function closestPointOnSegment(p: Point2D, a: Point2D, b: Point2D): Point2D {
   const dy = b.y - a.y;
   const l2 = dx * dx + dy * dy;
   if (l2 < EPS) return { x: a.x, y: a.y };
-  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2));
+  const t = clamp01(((p.x - a.x) * dx + (p.y - a.y) * dy) / l2);
   return { x: a.x + t * dx, y: a.y + t * dy };
 }
 

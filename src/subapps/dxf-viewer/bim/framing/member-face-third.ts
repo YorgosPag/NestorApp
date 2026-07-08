@@ -12,6 +12,8 @@
  * @see ../beams/beam-face-third.ts — thin re-export alias (πίσω συμβατότητα δοκαριού)
  */
 
+import { clamp01 } from '../../utils/scalar-math';
+
 /** Αγκύρωση κατά μήκος ενός εύρους: αρχή / μέση / τέλος. */
 export type MemberGhostThird = 'lo' | 'mid' | 'hi';
 
@@ -19,6 +21,6 @@ export type MemberGhostThird = 'lo' | 'mid' | 'hi';
 export function pickThird(value: number, lo: number, hi: number): MemberGhostThird {
   const span = hi - lo;
   if (span <= 0) return 'mid';
-  const t = Math.min(1, Math.max(0, (value - lo) / span));
+  const t = clamp01((value - lo) / span);
   return t < 1 / 3 ? 'lo' : t < 2 / 3 ? 'mid' : 'hi';
 }

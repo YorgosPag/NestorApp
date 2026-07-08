@@ -35,6 +35,7 @@ import type {
 } from '../types/roof-types';
 import { polygonArea, pointInPolygon } from './shared/polygon-utils';
 import { roofSlopeToRatio } from './roof-slope-units';
+import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 
 // ─── Geometry primitives ─────────────────────────────────────────────────────
 
@@ -191,30 +192,19 @@ const BOUNDARY_EPS = 1e-3;
 /** Tolerance (mm) — κάτω από αυτό μια ακμή θεωρείται οριζόντια (ridge vs hip). */
 const HORIZONTAL_Z_EPS = 1;
 
-/** Απόσταση σημείου `p` από το ευθύγραμμο τμήμα a→b (canvas). */
-function distToSegment(p: Vec2, a: Vec2, b: Vec2): number {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const lenSq = dx * dx + dy * dy;
-  if (lenSq < 1e-12) return Math.hypot(p.x - a.x, p.y - a.y);
-  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
-  t = Math.max(0, Math.min(1, t));
-  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
-}
-
 /** True όταν το midpoint της face-ακμής a→b είναι ΕΣΩΤΕΡΙΚΟ (όχι σε footprint edge). */
 function isInteriorEdge(a: Vec2, b: Vec2, footprint: readonly Vec2[]): boolean {
   const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
   if (!pointInPolygon(mid, footprint as readonly Point3D[])) return false;
   const n = footprint.length;
   for (let i = 0; i < n; i++) {
-    if (distToSegment(mid, footprint[i], footprint[(i + 1) % n]) <= BOUNDARY_EPS) return false;
+    if (pointToLineDistance(mid, footprint[i], footprint[(i + 1) % n]) <= BOUNDARY_EPS) return false;
   }
   return true;
 }
 
-/** Διαγώνιος του bounding box του footprint (canvas) — κλίμακα για tolerances. */
-function footprintDiagonal(footprint: readonly Vec2[]): number {
+/** Διαγώνιος του bounding box του footprint (canvas) — κλίμακα για tolerances. SSoT (roof-eave reuse). */
+export function footprintDiagonal(footprint: readonly Vec2[]): number {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const v of footprint) {
     if (v.x < minX) minX = v.x;

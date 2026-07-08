@@ -36,6 +36,7 @@ import {
   exposedComplement,
   type Pt2,
 } from '../geometry/shared/segment-polygon-coverage';
+import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 
 /** Συνάρτηση ταξινόμησης παρειάς (εγχέεται από caller — building-footprint based). */
 export type FinishEdgeClassifier = (midpoint: Pt2, outwardNormal: Pt2) => FinishClassification;
@@ -111,17 +112,6 @@ const JUNCTION_TOL_MM = 10;
 const dist = (a: Pt2, b: Pt2): number => Math.hypot(b.x - a.x, b.y - a.y);
 const lerp = (a: Pt2, b: Pt2, t: number): Pt2 => ({ x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) });
 
-/** Απόσταση σημείου `p` από το ευθύγραμμο τμήμα a→b (canvas units). */
-function pointSegDistance(p: Pt2, a: Pt2, b: Pt2): number {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const len2 = dx * dx + dy * dy;
-  if (len2 < 1e-18) return dist(p, a);
-  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
-  t = Math.max(0, Math.min(1, t));
-  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
-}
-
 /**
  * ADR-449 Slice 10 — `true` όταν το σημείο `p` βρίσκεται σε απόσταση ≤ `tol` από την
  * περίμετρο ΕΝΟΣ obstacle (γείτονα). Στις flush «από κάναβο» συμβολές το άκρο σοβά
@@ -131,7 +121,7 @@ function pointNearObstacle(p: Pt2, obstacles: readonly (readonly Pt2[])[], tol: 
   if (tol <= 0) return false;
   for (const poly of obstacles) {
     for (let i = 0; i < poly.length; i++) {
-      if (pointSegDistance(p, poly[i], poly[(i + 1) % poly.length]) <= tol) return true;
+      if (pointToLineDistance(p, poly[i], poly[(i + 1) % poly.length]) <= tol) return true;
     }
   }
   return false;
