@@ -28,6 +28,7 @@ import type { HatchEntity } from '../../types/entities';
 import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateEntityCommand';
 import { CompoundCommand } from '../../core/commands';
 import type { GripRef } from '../../rendering/grips/grip-temperature';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import {
   decodeHatchVertexGripKind,
   decodeHatchEdgeMidpointGripKind,
@@ -53,7 +54,8 @@ export function buildHatchVertexOpCommand(
   sceneManager: ISceneManager,
 ): ICommand | null {
   const id = grip.entityId;
-  if (!id || !grip.hatchGripKind) return null;
+  const hatchKind = gripKindOf(grip, 'hatch');
+  if (!id || !hatchKind) return null;
   const raw = sceneManager.getEntity(id);
   if (!raw) return null;
   const e = raw as unknown as Partial<HatchEntity>;
@@ -62,11 +64,11 @@ export function buildHatchVertexOpCommand(
 
   let next: typeof original = original;
   if (op === 'remove-vertex') {
-    const decoded = decodeHatchVertexGripKind(grip.hatchGripKind);
+    const decoded = decodeHatchVertexGripKind(hatchKind);
     if (!decoded) return null;
     next = removeVertexFromHatch(original, decoded[0], decoded[1]);
   } else {
-    const decoded = decodeHatchEdgeMidpointGripKind(grip.hatchGripKind);
+    const decoded = decodeHatchEdgeMidpointGripKind(hatchKind);
     if (!decoded) return null;
     next = insertHatchVertexOnEdge(original, decoded[0], decoded[1], ZERO);
   }

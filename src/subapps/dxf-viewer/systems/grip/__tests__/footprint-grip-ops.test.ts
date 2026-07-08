@@ -44,11 +44,11 @@ function slabOpeningEntity(verts: Point3D[] = QUAD): SceneEntity {
 }
 
 describe('buildFootprintVertexOpCommand (ADR-535 Φ4)', () => {
-  const cases: { name: string; entity: (v?: Point3D[]) => SceneEntity; vKind: string; eKind: string; type: string }[] = [
-    { name: 'slab', entity: slabEntity, vKind: 'slabGripKind', eKind: 'slabGripKind', type: 'update-slab-params' },
-    { name: 'roof', entity: roofEntity, vKind: 'roofGripKind', eKind: 'roofGripKind', type: 'update-roof-params' },
-    { name: 'floor-finish', entity: floorFinishEntity, vKind: 'floorFinishGripKind', eKind: 'floorFinishGripKind', type: 'update-floor-finish-params' },
-    { name: 'slab-opening', entity: slabOpeningEntity, vKind: 'slabOpeningGripKind', eKind: 'slabOpeningGripKind', type: 'update-slab-opening-params' },
+  const cases: { name: string; entity: (v?: Point3D[]) => SceneEntity; type: string }[] = [
+    { name: 'slab', entity: slabEntity, type: 'update-slab-params' },
+    { name: 'roof', entity: roofEntity, type: 'update-roof-params' },
+    { name: 'floor-finish', entity: floorFinishEntity, type: 'update-floor-finish-params' },
+    { name: 'slab-opening', entity: slabOpeningEntity, type: 'update-slab-opening-params' },
   ];
 
   for (const c of cases) {
@@ -57,32 +57,47 @@ describe('buildFootprintVertexOpCommand (ADR-535 Φ4)', () => {
 
     it(`${c.name}: delete-corner on a quad → ${c.type}`, () => {
       const sm = createMockSceneManager([c.entity()]);
-      const cmd = buildFootprintVertexOpCommand(grip({ [c.vKind]: vertexKind }), 'delete-corner', sm);
+      const cmd = buildFootprintVertexOpCommand(
+        grip({ gripKind: { on: c.name, kind: vertexKind } } as Partial<UnifiedGripInfo>),
+        'delete-corner', sm,
+      );
       expect(cmd?.type).toBe(c.type);
     });
 
     it(`${c.name}: add-corner on an edge-midpoint → ${c.type}`, () => {
       const sm = createMockSceneManager([c.entity()]);
-      const cmd = buildFootprintVertexOpCommand(grip({ [c.eKind]: edgeKind, type: 'edge' }), 'add-corner', sm);
+      const cmd = buildFootprintVertexOpCommand(
+        grip({ gripKind: { on: c.name, kind: edgeKind }, type: 'edge' } as Partial<UnifiedGripInfo>),
+        'add-corner', sm,
+      );
       expect(cmd?.type).toBe(c.type);
     });
 
     it(`${c.name}: delete-corner at the minimum triangle → null (guard)`, () => {
       const sm = createMockSceneManager([c.entity(TRI)]);
-      const cmd = buildFootprintVertexOpCommand(grip({ [c.vKind]: vertexKind }), 'delete-corner', sm);
+      const cmd = buildFootprintVertexOpCommand(
+        grip({ gripKind: { on: c.name, kind: vertexKind } } as Partial<UnifiedGripInfo>),
+        'delete-corner', sm,
+      );
       expect(cmd).toBeNull();
     });
   }
 
   it('returns null for an unknown entity id', () => {
     const sm = createMockSceneManager([]);
-    expect(buildFootprintVertexOpCommand(grip({ slabGripKind: 'slab-vertex-0' }), 'delete-corner', sm)).toBeNull();
+    expect(buildFootprintVertexOpCommand(
+      grip({ gripKind: { on: 'slab', kind: 'slab-vertex-0' } } as Partial<UnifiedGripInfo>),
+      'delete-corner', sm,
+    )).toBeNull();
   });
 
   it('returns null when the entity type mismatches the grip discriminator', () => {
     const sm = createMockSceneManager([roofEntity()]); // entity is a roof…
     // …but the grip claims a slab kind → guard rejects.
-    expect(buildFootprintVertexOpCommand(grip({ slabGripKind: 'slab-vertex-0' }), 'delete-corner', sm)).toBeNull();
+    expect(buildFootprintVertexOpCommand(
+      grip({ gripKind: { on: 'slab', kind: 'slab-vertex-0' } } as Partial<UnifiedGripInfo>),
+      'delete-corner', sm,
+    )).toBeNull();
   });
 
   it('returns null when no footprint discriminator is present', () => {

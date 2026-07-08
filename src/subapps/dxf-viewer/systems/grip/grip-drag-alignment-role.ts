@@ -25,7 +25,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { LineGripKind } from '../../hooks/grip-kinds';
+import { gripKindOf, type LineGripKind } from '../../hooks/grip-kinds';
 import type { GripInfo } from '../../hooks/grip-types';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import { getLineGripAlignmentAnchors } from '../line/line-grips';
@@ -64,14 +64,18 @@ export interface GripAlignmentRole {
  * 2D side builds the role inline from `DxfGripDragPreview` (different shape) — this adapter is 3D-only.
  */
 export function gripInfoToAlignmentRole(grip: GripInfo, anchorPos: Point2D | null): GripAlignmentRole {
-  const kind = grip.lineGripKind ?? grip.arcGripKind ?? grip.polylineGripKind ?? grip.circleGripKind;
+  // ADR-602 Stage 4 — 1:1 chain over the 4 raw-DXF kinds (line/arc/polyline/circle), NOT a
+  // bare `grip.gripKind?.kind` collapse: this adapter is raw-DXF-only, and a defensive BIM
+  // grip must still resolve to `undefined` here (else a BIM rotation kind would flip isRotation).
+  const kind = gripKindOf(grip, 'line') ?? gripKindOf(grip, 'arc')
+    ?? gripKindOf(grip, 'polyline') ?? gripKindOf(grip, 'circle');
   return {
     movesEntity: grip.movesEntity,
     isRotation: gripGlyphShape(kind) === 'rotation',
     gripIndex: grip.gripIndex,
     anchorPos,
     edgeVertexIndices: grip.edgeVertexIndices,
-    lineGripKind: grip.lineGripKind,
+    lineGripKind: gripKindOf(grip, 'line'),
   };
 }
 

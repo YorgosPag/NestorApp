@@ -78,10 +78,12 @@ describe('getFootprintReshapePolarAnchor', () => {
 
 describe('resolveActiveFootprintGripKind', () => {
   it('επιστρέφει το ενεργό footprint grip-kind (priority column→…→mep)', () => {
-    expect(resolveActiveFootprintGripKind({ slabGripKind: 'slab-vertex-0' })).toBe('slab-vertex-0');
-    expect(resolveActiveFootprintGripKind({ roofGripKind: 'roof-edge-midpoint-1' })).toBe('roof-edge-midpoint-1');
+    expect(resolveActiveFootprintGripKind({ gripKind: { on: 'slab', kind: 'slab-vertex-0' } })).toBe('slab-vertex-0');
+    expect(resolveActiveFootprintGripKind({ gripKind: { on: 'roof', kind: 'roof-edge-midpoint-1' } })).toBe('roof-edge-midpoint-1');
+    // column wins the priority chain (its `on` tag is read first); a grip carries exactly one
+    // tagged kind, so the tagged form pins the column case directly.
     expect(resolveActiveFootprintGripKind({
-      columnGripKind: 'column-poly-vertex-1', slabGripKind: 'slab-vertex-0',
+      gripKind: { on: 'column', kind: 'column-poly-vertex-1' },
     })).toBe('column-poly-vertex-1');
   });
 

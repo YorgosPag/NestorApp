@@ -22,6 +22,7 @@ import { PolylineVertexCommand } from '../../core/commands/entity-commands/Polyl
 import { SetBulgeCommand } from '../../core/commands/entity-commands/SetBulgeCommand';
 import { calculateMidpoint } from '../../rendering/entities/shared/geometry-utils';
 import { parseGripKindIndex } from './grip-kind-index';
+import { gripKindOf } from '../../hooks/grip-kinds';
 // SSoT polyline shape (same canonical type PolylineVertexCommand uses — no ad-hoc duplicate).
 import type { PolylineEntity, LWPolylineEntity } from '../../types/entities';
 
@@ -64,12 +65,13 @@ export function buildPolylineVertexOpCommand(
   op: PolylineVertexMenuOp,
   sceneManager: ISceneManager,
 ): ICommand | null {
-  if (!grip.entityId || !grip.polylineGripKind) return null;
+  const polylineKind = gripKindOf(grip, 'polyline');
+  if (!grip.entityId || !polylineKind) return null;
   const entity = sceneManager.getEntity(grip.entityId) as unknown as PolyReadView | undefined;
   if (!entity || (entity.type !== 'polyline' && entity.type !== 'lwpolyline')) return null;
   const vertices = entity.vertices;
   if (!Array.isArray(vertices) || vertices.length < 2) return null;
-  const segIdx = parsePolylineSegIndex(grip.polylineGripKind);
+  const segIdx = parsePolylineSegIndex(polylineKind);
   if (segIdx == null) return null;
   const vLen = vertices.length;
 
