@@ -18,7 +18,7 @@
  * @module hooks/tools/useStretchTool
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import i18next from 'i18next';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
@@ -28,6 +28,7 @@ import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { StretchToolStore } from '../../systems/stretch/StretchToolStore';
 import { enumerateVertices, getAnchorPoint } from '../../systems/stretch/stretch-vertex-classifier';
 import type { Entity } from '../../types/entities';
+import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -111,7 +112,6 @@ export function useStretchTool(props: UseStretchToolProps): UseStretchToolReturn
   const { activeTool, selectedEntityIds, levelManager, executeCommand, onToolChange } = props;
 
   const [promptText, setPromptText] = useState('');
-  const wasActiveRef = useRef(false);
 
   const isActive = activeTool === 'stretch' || activeTool === 'mstretch';
   const state = StretchToolStore.getState();
@@ -121,8 +121,12 @@ export function useStretchTool(props: UseStretchToolProps): UseStretchToolReturn
 
   // ── Activation / deactivation ─────────────────────────────────────────────
 
-  useEffect(() => {
-    if (isActive && !wasActiveRef.current) {
+  // (ADR-589 edge-triggered SSoT — activate/deactivate fire only on edges;
+  // activeTool/selectedEntityIds/onToolChange are read via closure at the
+  // transition render, matching the previous edge-guarded effect exactly.)
+  useEdgeTriggeredLifecycle(
+    isActive,
+    () => {
       StretchToolStore.setMode(activeTool === 'mstretch' ? 'multi' : 'single');
       if (selectedEntityIds.length > 0) {
         StretchToolStore.setSelectionMode('pre-selected');
@@ -134,11 +138,11 @@ export function useStretchTool(props: UseStretchToolProps): UseStretchToolReturn
         StretchToolStore.reset();
         onToolChange?.('select');
       }
-    } else if (!isActive && wasActiveRef.current) {
+    },
+    () => {
       StretchToolStore.reset();
-    }
-    wasActiveRef.current = isActive;
-  }, [isActive, activeTool, selectedEntityIds, onToolChange]);
+    },
+  );
 
   // ── Execute ───────────────────────────────────────────────────────────────
 

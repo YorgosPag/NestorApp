@@ -24,7 +24,7 @@
 
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import i18next from 'i18next';
 import type { ICommand } from '../../core/commands/interfaces';
 import type { Point2D } from '../../rendering/types/Types';
@@ -35,6 +35,7 @@ import { validateArrayParams } from '../../systems/array/array-validation';
 import type { PolarParams } from '../../systems/array/types';
 import type { Entity, EntityType } from '../../types/entities';
 import { isArrayEntity } from '../../types/entities';
+import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
 
 export interface UseArrayPolarToolProps {
   activeTool: string;
@@ -72,7 +73,6 @@ export function useArrayPolarTool(
   } = props;
 
   const getSceneManager = useSceneManagerAdapter(levelManager);
-  const wasActiveRef = useRef(false);
   const pendingSourceIdsRef = useRef<string[]>([]);
   const awaitingCenterRef = useRef(false);
   const isActive = activeTool === 'array-polar';
@@ -89,17 +89,18 @@ export function useArrayPolarTool(
   }, [onToolChange]);
 
   // Activation edge — validate pre-selection and enter awaiting-center state.
-  useEffect(() => {
-    if (isActive && !wasActiveRef.current) {
+  // (ADR-589 edge-triggered SSoT)
+  useEdgeTriggeredLifecycle(
+    isActive,
+    () => {
       armPickFromSelection();
-    } else if (!isActive && wasActiveRef.current) {
+    },
+    () => {
       pendingSourceIdsRef.current = [];
       awaitingCenterRef.current = false;
       toolHintOverrideStore.setOverride(null);
-    }
-    wasActiveRef.current = isActive;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive]);
+    },
+  );
 
   function armPickFromSelection(): void {
     const levelId = levelManager.currentLevelId;

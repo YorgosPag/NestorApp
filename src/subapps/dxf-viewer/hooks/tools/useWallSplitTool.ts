@@ -23,7 +23,7 @@
  */
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import i18next from 'i18next';
 import { toast } from 'sonner';
 import { generateWallId } from '@/services/enterprise-id.service';
@@ -46,6 +46,7 @@ import { WallSplitCommand } from '../../core/commands/entity-commands/WallSplitC
 import { CompositeCommand } from '../../core/commands/CompositeCommand';
 import { EventBus } from '../../systems/events/EventBus';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
+import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -151,7 +152,6 @@ export function useWallSplitTool({
 
   /** First knife point (null = awaiting the first click). */
   const firstPointRef = useRef<Point2D | null>(null);
-  const wasActiveRef = useRef(false);
 
   const setHint = useCallback((key: string): void => {
     toolHintOverrideStore.setOverride(i18next.t(key, { ns: NS }));
@@ -168,16 +168,19 @@ export function useWallSplitTool({
 
   // ── Activation / deactivation: manage the status hint + knife reset ───────
 
-  useEffect(() => {
-    if (isActive && !wasActiveRef.current) {
+  // (ADR-589 edge-triggered SSoT — resetKnife/setHint are stable useCallback([])
+  // refs, so the transition-only contract matches the previous effect exactly.)
+  useEdgeTriggeredLifecycle(
+    isActive,
+    () => {
       resetKnife();
       setHint('wallSplit.pickFirst');
-    } else if (!isActive && wasActiveRef.current) {
+    },
+    () => {
       resetKnife();
       toolHintOverrideStore.setOverride(null);
-    }
-    wasActiveRef.current = isActive;
-  }, [isActive, resetKnife, setHint]);
+    },
+  );
 
   // ── Click: knife FSM (first point → multi-split) ──────────────────────────
 

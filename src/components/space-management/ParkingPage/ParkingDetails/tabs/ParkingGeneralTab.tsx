@@ -23,13 +23,7 @@ import { createParkingWithPolicy, updateParkingWithPolicy } from '@/services/par
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { OptionSelectField } from '@/components/shared/space-info/OptionSelectField';
 import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useParkingNotifications } from '@/hooks/notifications/useParkingNotifications';
@@ -41,7 +35,9 @@ import { EntityCodeField } from '@/components/shared/EntityCodeField';
 import { parseFloorLevel } from '@/hooks/useEntityCodeSuggestion';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useEntityNameSuggestion } from '@/hooks/useEntityNameSuggestion';
+import { useSaveHandlerRef } from '@/hooks/useSaveHandlerRef';
 import { DescriptionNotesCard } from '@/components/shared/space-info/DescriptionNotesCard';
+import { buildBuildingLinkLabels } from '@/components/shared/space-info/building-link-labels';
 
 const logger = createModuleLogger('ParkingGeneralTab');
 
@@ -202,18 +198,7 @@ export function ParkingGeneralTab({
     icon: NAVIGATION_ENTITIES.building.icon,
     iconColor: NAVIGATION_ENTITIES.building.color,
     cardId: 'parking-building-link',
-    labels: {
-      title: t('entityLinks.building.title'),
-      label: t('entityLinks.building.label'),
-      placeholder: t('entityLinks.building.placeholder'),
-      noSelection: t('entityLinks.building.noSelection'),
-      loading: t('entityLinks.building.loading'),
-      save: t('entityLinks.building.save'),
-      saving: t('entityLinks.building.saving'),
-      success: t('entityLinks.building.success'),
-      error: t('entityLinks.building.error'),
-      currentLabel: t('entityLinks.building.currentLabel'),
-    },
+    labels: buildBuildingLinkLabels(t),
   }, isEditing);
 
   // Register save handler with parent via ref
@@ -328,17 +313,8 @@ export function ParkingGeneralTab({
     }
   }, [form, parking, onEditingChange, buildingLink, createMode, onCreated]);
 
-  // Register save ref for header delegation
-  useEffect(() => {
-    if (onSaveRef) {
-      onSaveRef.current = handleSave;
-    }
-    return () => {
-      if (onSaveRef) {
-        onSaveRef.current = null;
-      }
-    };
-  }, [handleSave, onSaveRef]);
+  // Register save ref for header delegation (SSoT hook)
+  useSaveHandlerRef(onSaveRef, handleSave);
 
   return (
     <div className="p-4 space-y-4">
@@ -401,44 +377,22 @@ export function ParkingGeneralTab({
                 disabled={!isEditing}
               />
             </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.type')}</Label>
-              <Select
-                value={form.type}
-                onValueChange={(v) => handleTypeChange(v as ParkingSpotType)}
-                disabled={!isEditing}
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PARKING_TYPES.map(pt => (
-                    <SelectItem key={pt.value} value={pt.value}>
-                      {t(pt.labelKey)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </fieldset>
-            <fieldset className="space-y-1.5">
-              <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.status')}</Label>
-              <Select
-                value={form.status}
-                onValueChange={(v) => updateField('status', v as ParkingSpotStatus)}
-                disabled={!isEditing}
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PARKING_STATUSES.map(ps => (
-                    <SelectItem key={ps.value} value={ps.value}>
-                      {t(ps.labelKey)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </fieldset>
+            <OptionSelectField
+              label={t('general.fields.type')}
+              value={form.type}
+              options={PARKING_TYPES}
+              onValueChange={handleTypeChange}
+              t={t}
+              disabled={!isEditing}
+            />
+            <OptionSelectField
+              label={t('general.fields.status')}
+              value={form.status}
+              options={PARKING_STATUSES}
+              onValueChange={(v) => updateField('status', v)}
+              t={t}
+              disabled={!isEditing}
+            />
             <fieldset className="space-y-1.5">
               <Label className={cn("text-xs", colors.text.muted)}>{t('general.fields.area')}</Label>
               <Input
