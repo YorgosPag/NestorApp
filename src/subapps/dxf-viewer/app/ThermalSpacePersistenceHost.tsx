@@ -17,20 +17,15 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { useLevels } from '../systems/levels';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 import type { ThermalSpaceEntity } from '../bim/types/thermal-space-types';
 import { isThermalSpaceEntity } from '../types/entities';
 import { useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useThermalSpacePersistence } from '../hooks/data/useThermalSpacePersistence';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface ThermalSpacePersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly projectId?: string;
   readonly floorplanId?: string;
   readonly buildingId?: string;

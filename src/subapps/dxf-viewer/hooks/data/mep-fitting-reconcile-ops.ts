@@ -10,7 +10,7 @@
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { MepFittingEntity } from '../../bim/types/mep-fitting-types';
 import { collectHostConnectorEndpoints } from '../../bim/mep-systems/mep-host-connector-endpoints';
-import type { LevelManagerLike } from './useMepFittingAutoReconciliation';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 
 /**
  * Apply the reconcile create/delete ops to the scene in a single setLevelScene.
@@ -23,7 +23,7 @@ import type { LevelManagerLike } from './useMepFittingAutoReconciliation';
  */
 export function applySceneOps(
   levelId: string,
-  levelManager: LevelManagerLike,
+  levelManager: LevelSceneWriter,
   created: readonly MepFittingEntity[],
   deletedIds: readonly string[],
 ): void {

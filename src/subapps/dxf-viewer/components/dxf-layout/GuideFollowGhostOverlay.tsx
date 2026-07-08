@@ -56,16 +56,13 @@ import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { subscribeDevicePixelRatio } from '../../systems/cursor/device-pixel-ratio';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { GHOST_DEFAULTS } from '../../rendering/ghost';
+import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene(levelId: string): SceneModel | null;
-}
 
 export interface GuideFollowGhostOverlayProps {
   readonly transform: ViewTransform;
   readonly viewport: { readonly width: number; readonly height: number };
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneReader;
 }
 
 /** ms να μείνει το ghost μετά το release, ώστε να προσγειωθεί το committed commit. */

@@ -13,13 +13,11 @@
 import React from 'react';
 import { useMatchHoverGhostPreview } from '../../hooks/tools/useMatchHoverGhostPreview';
 import type { ViewTransform } from '../../rendering/types/Types';
-import type { useLevels } from '../../systems/levels';
-
-type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene' | 'currentLevelId'>;
+import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 
 export interface MatchHoverGhostPreviewMountProps {
   transform: ViewTransform;
-  levelManager: LevelManagerLike;
+  levelManager: LevelSceneReader;
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }

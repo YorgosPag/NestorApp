@@ -46,6 +46,7 @@ import type {
   RibbonToggleState,
 } from '../../ui/ribbon/context/RibbonCommandContext';
 import type { useLevels } from '../../systems/levels';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../systems/selection';
 import { mmToSceneUnits, resolveSceneUnits } from '../../utils/scene-units';
 import { useFloorMetadata } from '../../hooks/data/useFloorMetadata';
@@ -58,10 +59,9 @@ import {
   patchStairNumericParam,
 } from './bridge/stair-param-helpers';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId' | 'saveContext'
->;
+interface LevelManagerLike
+  extends LevelSceneWriter,
+    Pick<ReturnType<typeof useLevels>, 'saveContext'> {}
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,

@@ -14,6 +14,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
+import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 
 // ============================================================================
 // ENTITY TYPES
@@ -185,9 +186,7 @@ export interface OpeningToolLike {
 }
 
 /** Minimal interface for level manager (read-only for click handling) */
-export interface LevelManagerLike {
-  currentLevelId: string | null;
-  getLevelScene: (levelId: string) => SceneModel | null;
+export interface LevelManagerLike extends LevelSceneReader {
   /**
    * Optional: write a level scene. Present on the real `useLevels()` manager
    * (ADR-507 Φ3 pick-point hatch creation via `completeEntity`). Optional so

@@ -17,20 +17,15 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { useLevels } from '../systems/levels';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 import type { WallCoveringEntity } from '../bim/types/wall-covering-types';
 import { isWallCoveringEntity } from '../types/entities';
 import { useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useWallCoveringPersistence } from '../hooks/data/useWallCoveringPersistence';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface WallCoveringPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly projectId?: string;
   readonly floorplanId?: string;
   readonly buildingId?: string;
