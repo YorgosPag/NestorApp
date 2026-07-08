@@ -19,6 +19,7 @@ import { applyOpeningGripDrag, resolveOpeningAltMove, openingRehostToleranceWorl
 import { isWallEntity, type Entity } from '../../types/entities';
 import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { gripKindOf } from '../grip-kinds';
 
 /**
  * ADR-363 Phase 2.5 — Parametric opening grip commit (drag-along-wall).
@@ -33,7 +34,8 @@ export function commitOpeningGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.openingGripKind) return;
+  const openingKind = gripKindOf(grip, 'opening');
+  if (!grip.entityId || !openingKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -48,7 +50,7 @@ export function commitOpeningGripDrag(
   const hostWall = hostCandidate as WallEntity;
   const originalParams = opening.params;
   const currentPos: Point2D = translatePoint(grip.position, delta);
-  const newParams = applyOpeningGripDrag(grip.openingGripKind, {
+  const newParams = applyOpeningGripDrag(openingKind, {
     originalParams,
     currentPos,
     hostWall,
@@ -81,7 +83,7 @@ export function commitOpeningAltMove(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.openingGripKind) return;
+  if (!grip.entityId || !gripKindOf(grip, 'opening')) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);

@@ -19,6 +19,7 @@ import { UpdateMepUnderfloorParamsCommand } from '../../core/commands/entity-com
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { gripKindOf } from '../grip-kinds';
 
 /**
  * ADR-408 Εύρος Β #3 — Parametric underfloor heating loop grip commit (per-vertex
@@ -33,7 +34,8 @@ export function commitMepUnderfloorGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.mepUnderfloorGripKind) return;
+  const mepUnderfloorKind = gripKindOf(grip, 'mep-underfloor');
+  if (!grip.entityId || !mepUnderfloorKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -43,7 +45,7 @@ export function commitMepUnderfloorGripDrag(
   const underfloor = candidate as MepUnderfloorEntity;
   const originalParams = underfloor.params;
   const rectilinear = ShiftKeyTracker.getSnapshot();
-  const newParams = applyMepUnderfloorGripDrag(grip.mepUnderfloorGripKind, {
+  const newParams = applyMepUnderfloorGripDrag(mepUnderfloorKind, {
     originalParams,
     delta,
     rectilinear,

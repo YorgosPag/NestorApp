@@ -324,7 +324,7 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
     // The anchor is the grabbed grip position → base point of the move.
     if (altMove) GripAltMoveStore.arm();
     if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
-    // ADR-371 extension — expose active grip to mouse handlers for face corner projection snap.
+    // ADR-597 extension — expose active grip to mouse handlers for face corner projection snap.
     // ADR-398 — also publish the column grip kind + the resize/drag anchor (grip
     // position) so the column Body Corner Projection snap can run on press-drag.
     setActiveDragGrip({

@@ -32,6 +32,7 @@ import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store'
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { gripKindOf } from '../grip-kinds';
 
 /**
  * ADR-408 Εύρος Β — Parametric heating radiator grip commit (centre translate +
@@ -46,7 +47,8 @@ export function commitMepRadiatorGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.mepRadiatorGripKind) return;
+  const mepRadiatorKind = gripKindOf(grip, 'mep-radiator');
+  if (!grip.entityId || !mepRadiatorKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -56,10 +58,10 @@ export function commitMepRadiatorGripDrag(
   const originalParams = candidate.params;
   const rotateCtx = BimRotateHotGripStore.getSnapshot();
   const useRotatePivot =
-    grip.mepRadiatorGripKind === 'mep-radiator-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+    mepRadiatorKind === 'mep-radiator-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
   const currentPos: Point2D = translatePoint(anchor, delta);
-  const newParams = applyMepRadiatorGripDrag(grip.mepRadiatorGripKind, {
+  const newParams = applyMepRadiatorGripDrag(mepRadiatorKind, {
     originalParams,
     delta,
     currentPos,
@@ -100,7 +102,8 @@ export function commitMepBoilerGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.mepBoilerGripKind) return;
+  const mepBoilerKind = gripKindOf(grip, 'mep-boiler');
+  if (!grip.entityId || !mepBoilerKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -110,10 +113,10 @@ export function commitMepBoilerGripDrag(
   const originalParams = candidate.params;
   const rotateCtx = BimRotateHotGripStore.getSnapshot();
   const useRotatePivot =
-    grip.mepBoilerGripKind === 'mep-boiler-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+    mepBoilerKind === 'mep-boiler-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
   const currentPos: Point2D = translatePoint(anchor, delta);
-  const newParams = applyMepBoilerGripDrag(grip.mepBoilerGripKind, {
+  const newParams = applyMepBoilerGripDrag(mepBoilerKind, {
     originalParams,
     delta,
     currentPos,
@@ -154,7 +157,8 @@ export function commitMepWaterHeaterGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.mepWaterHeaterGripKind) return;
+  const mepWaterHeaterKind = gripKindOf(grip, 'mep-water-heater');
+  if (!grip.entityId || !mepWaterHeaterKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -164,10 +168,10 @@ export function commitMepWaterHeaterGripDrag(
   const originalParams = candidate.params;
   const rotateCtx = BimRotateHotGripStore.getSnapshot();
   const useRotatePivot =
-    grip.mepWaterHeaterGripKind === 'mep-water-heater-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+    mepWaterHeaterKind === 'mep-water-heater-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
   const currentPos: Point2D = translatePoint(anchor, delta);
-  const newParams = applyMepWaterHeaterGripDrag(grip.mepWaterHeaterGripKind, {
+  const newParams = applyMepWaterHeaterGripDrag(mepWaterHeaterKind, {
     originalParams,
     delta,
     currentPos,

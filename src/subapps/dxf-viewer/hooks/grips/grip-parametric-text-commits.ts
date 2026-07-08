@@ -31,6 +31,7 @@ import { projectSceneTextToDxf, type TextSceneShape } from '../../bim/text/proje
 // ADR-557/397 — the entity-agnostic rotate hot-grip commit context (picked pivot +
 // reference anchor), published by the hook during a `text-rotation` free/reference spin.
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
+import { gripKindOf } from '../grip-kinds';
 // ADR-557 Φ-attachment — durable height write: the run-height SSoT `resolveTextHeight` reads.
 import { scaleTextNodeRunHeights } from '../../utils/text-node-utils';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
@@ -66,7 +67,8 @@ export function commitTextGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.textGripKind) return;
+  const textKind = gripKindOf(grip, 'text');
+  if (!grip.entityId || !textKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -83,10 +85,10 @@ export function commitTextGripDrag(
   // and applyTextRotation's default bbox-centre pivot.
   const rotateCtx = BimRotateHotGripStore.getSnapshot();
   const useRotatePivot =
-    grip.textGripKind === 'text-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+    textKind === 'text-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
   const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
   const currentPos: Point2D = translatePoint(anchor, delta);
-  const patch = applyTextGripDrag(grip.textGripKind, {
+  const patch = applyTextGripDrag(textKind, {
     entity: dxfText,
     delta,
     currentPos,
