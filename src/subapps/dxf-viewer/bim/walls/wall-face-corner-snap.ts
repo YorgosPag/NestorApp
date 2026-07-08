@@ -1,5 +1,5 @@
 /**
- * Wall Face Corner Projection Snap — ADR-371 extension
+ * Wall Face Corner Projection Snap — ADR-597 extension
  *
  * Re-homed to `bim/walls/` (was `systems/cursor/`) to sit beside its sibling
  * `bim/columns/column-corner-snap.ts` — both are BIM corner-snap helpers over the

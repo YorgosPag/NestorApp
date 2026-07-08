@@ -1,5 +1,5 @@
 /**
- * ADR-370 §5.1 — `getWallCornerWorldPoints` tests.
+ * ADR-597 §5.1 — `getWallCornerWorldPoints` tests.
  *
  * Verifies:
  *   - Returns exactly 4 corners (outer-start, outer-end, inner-end, inner-start).

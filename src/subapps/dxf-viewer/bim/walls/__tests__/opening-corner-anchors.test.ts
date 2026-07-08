@@ -1,5 +1,5 @@
 /**
- * ADR-370 §5.5 — `getOpeningCornerWorldPoints` tests.
+ * ADR-597 §5.5 — `getOpeningCornerWorldPoints` tests.
  *
  * Verifies:
  *   - Returns exactly 4 entries for valid 4-vertex outline.

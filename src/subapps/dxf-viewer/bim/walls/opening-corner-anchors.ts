@@ -1,5 +1,5 @@
 /**
- * ADR-370 §5.5 — Opening face-corner world-point exposure (pure SSoT).
+ * ADR-597 §5.5 — Opening face-corner world-point exposure (pure SSoT).
  *
  * Exposes the **4 face corners** of a BIM opening (door / window / etc.) as
  * world-coordinate snap targets. These are the 4 vertices of the opening
@@ -25,7 +25,7 @@
  *
  * Pure module: zero React / DOM / Firestore / canvas deps. Idempotent.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-370-bim-corner-snap-system.md §5.5
+ * @see docs/centralized-systems/reference/adrs/ADR-597-bim-corner-snap-system.md §5.5
  * @see bim/types/opening-types.ts  (OpeningGeometry.outline — SSoT vertex source)
  * @see bim/columns/column-anchors.ts  (pattern reference)
  */

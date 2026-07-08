@@ -1,5 +1,5 @@
 /**
- * ADR-370 §5.1 — Wall face-corner world-point exposure (pure SSoT).
+ * ADR-597 §5.1 — Wall face-corner world-point exposure (pure SSoT).
  *
  * Exposes the **4 face corners** of a BIM wall entity as world-coordinate
  * snap targets: 2 corners on the outer edge (start + end) and 2 on the
@@ -9,13 +9,13 @@
  * For a straight wall the 4 corners form the 4 vertices of the plan-view
  * rectangle. For curved / polyline walls only the START and END face corners
  * are exposed (not all Bezier subdivision vertices) — a deliberate design
- * decision to avoid snap noise on long curved walls (ADR-370 §2.3).
+ * decision to avoid snap noise on long curved walls (ADR-597 §2.3).
  *
  * Pure module: zero React / DOM / Firestore / canvas deps. Idempotent.
  * Re-derives geometry from `params` on every call — geometry cache is
  * intentionally NOT read so that callers need not worry about stale cache.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-370-bim-corner-snap-system.md §5.1
+ * @see docs/centralized-systems/reference/adrs/ADR-597-bim-corner-snap-system.md §5.1
  * @see bim/geometry/wall-geometry.ts (computeWallGeometry — SSoT geometry source)
  * @see bim/columns/column-anchors.ts  (pattern reference)
  */
