@@ -17,6 +17,7 @@ import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Typ
 import type { Entity, HatchEntity } from '../../types/entities';
 import type { DxfGripDragPreview } from '../grip-computation';
 import type { SceneUnits } from '../../utils/scene-units';
+import { gripKindOf } from '../grip-kinds';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { hatchBoundsCenter, hatchGradientAngleGripPos } from '../../bim/hatch/hatch-grips';
 import { paintPolarTrackingLine } from '../../canvas-v2/preview-canvas/polar-tracking-line-paint';
@@ -53,7 +54,7 @@ export function paintGripMoveClearanceDims(
   t: ViewTransform,
   vp: Viewport,
 ): void {
-  if (transformed === entity || dp.rotatePivot || dp.hatchGripKind) return;
+  if (transformed === entity || dp.rotatePivot || gripKindOf(dp, 'hatch')) return;
   const clearanceDims = resolveMoveClearanceDims(
     transformed,
     { x: 0, y: 0 },
@@ -129,7 +130,7 @@ export function paintGripActionAlignmentTraces(
     gripIndex: dp.gripIndex,
     anchorPos: dp.anchorPos ?? null,
     edgeVertexIndices: dp.edgeVertexIndices,
-    lineGripKind: dp.lineGripKind,
+    lineGripKind: gripKindOf(dp, 'line'),
   };
   // ── ADR-557 — WHOLE-ENTITY MOVE: paint resolve #1's PUBLISHED store, NOT a local re-resolve ──
   // The snap pass (`applyGripDragAlignmentTracking`, mouse-handler-move) already resolved the ambient

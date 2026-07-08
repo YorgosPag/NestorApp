@@ -33,6 +33,7 @@ import { resolvePolylineHudSegments, type GripAlignmentRole, type GripAlignmentE
 import { getBimCharacteristicPointsOfCategory } from '../../bim/utils/bim-characteristic-points';
 import { buildWallHudSpecLabel } from '../drawing/wall-hud-spec-label';
 import { buildColumnHudSpecLabel } from '../drawing/column-hud-spec-label';
+import { gripKindOf } from '../grip-kinds';
 
 /**
  * ADR-508 §wall-hud/§column-hud — grip kinds ΧΩΡΙΣ live HUD (καθαρή μετακίνηση / περιστροφή που έχει
@@ -63,14 +64,16 @@ export function drawMemberGripHud(
 ): void {
   if (!changed) return;
   const type = (transformed as { type?: string }).type;
-  if (dp.wallGripKind && !MEMBER_HUD_SKIP.has(dp.wallGripKind) && type === 'wall') {
+  const wallKind = gripKindOf(dp, 'wall');
+  if (wallKind && !MEMBER_HUD_SKIP.has(wallKind) && type === 'wall') {
     const w = transformed as unknown as WallEntity;
     const meta = buildSegmentHudMeta(w.params.start, w.params.end, sceneUnits, w.params.thickness, w.params.height);
     paintWallHud(ctx, meta, buildWallHudSpecLabel(meta), t, vp);
     return;
   }
+  const columnKind = gripKindOf(dp, 'column');
   if (
-    dp.columnGripKind && !MEMBER_HUD_SKIP.has(dp.columnGripKind) && type === 'column'
+    columnKind && !MEMBER_HUD_SKIP.has(columnKind) && type === 'column'
   ) {
     // ADR-508 §column-hud (Giorgio 2026-07-06) — ΚΑΙ το σύρσιμο ΚΟΡΥΦΗΣ (`column-poly-vertex-*`)
     // δείχνει πλέον τις ΙΔΙΕΣ περιμετρικές λευκές ενδείξεις με το σύρσιμο ΜΕΣΑΙΑΣ ΛΑΒΗΣ ΠΛΕΥΡΑΣ
@@ -91,8 +94,8 @@ export function drawMemberGripHud(
   // (`apply*GripDrag`→`compute*Geometry`). Move/rotate εξαιρούνται (`!movesEntity`/`!rotatePivot` —
   // έχουν δικό τους overlay). Η κολόνα πιάνεται πάνω (richer HUD)· η γραμμή/polyline κάτω.
   if (
-    (dp.slabGripKind || dp.slabOpeningGripKind || dp.openingGripKind ||
-      dp.roofGripKind || dp.floorFinishGripKind || dp.mepUnderfloorGripKind) &&
+    (gripKindOf(dp, 'slab') || gripKindOf(dp, 'slab-opening') || gripKindOf(dp, 'opening') ||
+      gripKindOf(dp, 'roof') || gripKindOf(dp, 'floor-finish') || gripKindOf(dp, 'mep-underfloor')) &&
     !dp.movesEntity && !dp.rotatePivot
   ) {
     const outline = getBimCharacteristicPointsOfCategory(transformed as unknown as Entity, 'corner');
@@ -146,7 +149,7 @@ export function drawMemberGripHud(
   // (μόνο μήκος+γωνία, χωρίς πάχος/ύψος). Η λαβή περιστροφής (`line-rotation`) εξαιρείται — έχει το δικό
   // της arc/polar overlay (mirror του `wall-rotation` skip). N.11-clean: κενό label, καμία μετάφραση εδώ.
   const asEntity = transformed as unknown as Entity;
-  if (isLineEntity(asEntity) && dp.lineGripKind !== 'line-rotation') {
+  if (isLineEntity(asEntity) && gripKindOf(dp, 'line') !== 'line-rotation') {
     const meta = buildSegmentHudMeta(asEntity.start, asEntity.end, sceneUnits);
     paintWallHud(ctx, meta, '', t, vp);
   }

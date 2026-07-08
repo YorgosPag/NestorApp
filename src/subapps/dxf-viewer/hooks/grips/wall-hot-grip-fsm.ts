@@ -185,7 +185,12 @@ export function hotGripKindOf(grip: UnifiedGripInfo | null | undefined): string 
   // ADR-583 — `annotationSymbolGripKind` joins the chain so the North arrow's move +
   // rotation handles opt into the shared hot-grip flow (IDENTICAL to the arc). The
   // symbol is the sole owner of this kind.
-  return grip.wallGripKind ?? grip.beamGripKind ?? grip.columnGripKind ?? grip.foundationGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind ?? grip.mepManifoldGripKind ?? grip.mepSegmentGripKind ?? grip.furnitureGripKind ?? grip.floorplanSymbolGripKind ?? grip.lineGripKind ?? grip.circleGripKind ?? grip.arcGripKind ?? grip.polylineGripKind ?? grip.textGripKind ?? grip.groupGripKind ?? grip.annotationSymbolGripKind;
+  // ADR-602 Stage 4 — the 18-entity `??` chain collapses to the ONE tagged
+  // discriminator: `gripKind.kind` is whatever kind this grip carries, entity-agnostic
+  // (same runtime result under the Stage-1/3 dual-write invariant). Non-hot kinds
+  // resolve to a string absent from HOT_GRIP_OP_REGISTRY → `hotGripOpForKind` returns
+  // null (stays press-drag), so widening to all 31 entities is safe.
+  return grip.gripKind?.kind;
 }
 
 /**
