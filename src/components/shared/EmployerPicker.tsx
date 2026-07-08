@@ -2,38 +2,27 @@
 
 /**
  * ============================================================================
- * Employer Picker — Entity-Linked Autocomplete (ADR-177)
+ * Employer Picker — Entity-Linked Autocomplete (ADR-177 · ADR-601)
  * ============================================================================
  *
- * Autocomplete component for selecting an employer from existing Company contacts.
- *
- * Features:
- * - Debounced search (300ms, min 2 chars)
- * - Searches Company contacts: companyName, tradeName, vatNumber
- * - LINKED badge when a Company contact is selected
- * - Free text fallback (backward compatible)
- * - Radix Popover + Input (ADR-001 compliant — no custom dropdown)
- * - Keyboard navigation (ArrowUp/Down, Enter, Escape)
- *
- * Architecture:
- * - Uses ContactsService.getAllContacts({ type: 'company' }) + client-side filtering
- * - Emits EmployerPickerValue with employer text + optional employerId
- * - Integrates with config-driven form system via custom renderer
+ * Autocomplete for selecting an employer from existing Company contacts.
+ * Search/debounce/keyboard/listbox + the linked-single-select shell come from
+ * the shared picker SSoT (useLinkedSinglePicker → useAsyncPickerSearch +
+ * PickerPopoverShell + PickerSearchInput + PickerResultsList). This component
+ * owns ONLY its data source (ContactsService client cache) and its value shape.
+ * Migrated off the raw `<PopoverTrigger>` (fixes the zero-height dropdown flash).
  *
  * @module components/shared/EmployerPicker
  */
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { Building2, PenLine, X } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
-import { useTranslation } from 'react-i18next';
+import { Building2 } from 'lucide-react';
 import { ContactsService } from '@/services/contacts.service';
 import type { CompanyContact } from '@/types/contacts';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { LinkedSinglePickerView, useContactPickerTranslation } from '@/components/shared/pickers';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -62,29 +51,12 @@ interface EmployerPickerProps {
   placeholder?: string;
 }
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/** Debounce delay in milliseconds */
-const DEBOUNCE_MS = 300;
-
-/** Minimum characters to trigger search */
-const MIN_CHARS = 2;
-
 /** Maximum results to display */
 const MAX_RESULTS = 10;
 
-// ============================================================================
-// MODULE LOGGER
-// ============================================================================
-
 const logger = createModuleLogger('EmployerPicker');
 
-// ============================================================================
-// SEARCH RESULT TYPE (internal)
-// ============================================================================
-
+/** Internal search result shape */
 interface CompanySearchResult {
   id: string;
   companyName: string;
@@ -103,35 +75,12 @@ export function EmployerPicker({
   disabled = false,
   placeholder,
 }: EmployerPickerProps) {
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useContactPickerTranslation();
   const colors = useSemanticColors();
-
-  // State
-  const [isOpen, setIsOpen] = useState(false);
-  const [inputValue, setInputValue] = useState(value ?? '');
-  const [results, setResults] = useState<CompanySearchResult[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [hasLinkedSelection, setHasLinkedSelection] = useState(!!employerId);
 
   // Cache: all company contacts (fetched once, filtered client-side)
   const companyCacheRef = useRef<CompanySearchResult[] | null>(null);
   const fetchingRef = useRef(false);
-
-  // Refs
-  const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const listRef = useRef<HTMLUListElement>(null);
-
-  // Sync external value changes
-  useEffect(() => {
-    setInputValue(value ?? '');
-    setHasLinkedSelection(!!employerId);
-  }, [value, employerId]);
-
-  // ========================================================================
-  // COMPANY CONTACTS CACHE
-  // ========================================================================
 
   const fetchCompanyContacts = useCallback(async (): Promise<CompanySearchResult[]> => {
     if (companyCacheRef.current) return companyCacheRef.current;
@@ -139,11 +88,9 @@ export function EmployerPicker({
 
     fetchingRef.current = true;
     try {
-      // Fetch all contacts without type filter to avoid composite index requirement
-      // Client-side filtering is more resilient and company count is typically <500
-      const { contacts } = await ContactsService.getAllContacts({
-        limitCount: 500,
-      });
+      // Fetch all contacts without type filter to avoid composite index requirement.
+      // Client-side filtering is more resilient and company count is typically <500.
+      const { contacts } = await ContactsService.getAllContacts({ limitCount: 500 });
 
       const mapped: CompanySearchResult[] = contacts
         .filter((c): c is CompanyContact => c.type === 'company')
@@ -166,308 +113,63 @@ export function EmployerPicker({
     }
   }, []);
 
-  // ========================================================================
-  // SEARCH LOGIC
-  // ========================================================================
-
-  const performSearch = useCallback(async (query: string) => {
-    if (query.trim().length < MIN_CHARS) {
-      setResults([]);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const companies = await fetchCompanyContacts();
-      const term = query.toLowerCase().trim();
-
-      const filtered = companies
-        .filter((c) => {
-          const nameMatch = c.companyName.toLowerCase().includes(term);
-          const tradeMatch = c.tradeName?.toLowerCase().includes(term) ?? false;
-          const vatMatch = c.vatNumber?.includes(term) ?? false;
-          return nameMatch || tradeMatch || vatMatch;
-        })
-        .slice(0, MAX_RESULTS);
-
-      setResults(filtered);
-      setHighlightedIndex(-1);
-    } catch (error) {
-      logger.error('Search error', { error });
-      setResults([]);
-    } finally {
-      setIsLoading(false);
-    }
+  // Data source — owns filtering + slicing
+  const search = useCallback(async (query: string): Promise<CompanySearchResult[]> => {
+    const companies = await fetchCompanyContacts();
+    const term = query.toLowerCase().trim();
+    return companies
+      .filter((c) => {
+        const nameMatch = c.companyName.toLowerCase().includes(term);
+        const tradeMatch = c.tradeName?.toLowerCase().includes(term) ?? false;
+        const vatMatch = c.vatNumber?.includes(term) ?? false;
+        return nameMatch || tradeMatch || vatMatch;
+      })
+      .slice(0, MAX_RESULTS);
   }, [fetchCompanyContacts]);
 
-  const debouncedSearch = useCallback((query: string) => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    debounceRef.current = setTimeout(() => {
-      performSearch(query);
-    }, DEBOUNCE_MS);
-  }, [performSearch]);
-
-  // Cleanup debounce on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, []);
-
-  // ========================================================================
-  // EVENT HANDLERS
-  // ========================================================================
-
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setInputValue(newValue);
-    setHasLinkedSelection(false);
-
-    // Emit free text change immediately
-    onChange({
-      employer: newValue,
-      employerId: undefined,
-    });
-
-    // Trigger debounced search
-    if (newValue.trim().length >= MIN_CHARS) {
-      setIsOpen(true);
-      debouncedSearch(newValue);
-    } else {
-      setResults([]);
-      setIsOpen(false);
-    }
-  }, [onChange, debouncedSearch]);
-
-  const handleSelectCompany = useCallback((result: CompanySearchResult) => {
-    setInputValue(result.companyName);
-    setHasLinkedSelection(true);
-    setIsOpen(false);
-    setResults([]);
-
-    onChange({
-      employer: result.companyName,
-      employerId: result.id,
-    });
-  }, [onChange]);
-
-  const handleUseFreeText = useCallback(() => {
-    setIsOpen(false);
-    setResults([]);
-    setHasLinkedSelection(false);
-
-    onChange({
-      employer: inputValue,
-      employerId: undefined,
-    });
-  }, [inputValue, onChange]);
-
-  const handleClearSelection = useCallback(() => {
-    setInputValue('');
-    setHasLinkedSelection(false);
-    setResults([]);
-
-    onChange({
-      employer: '',
-      employerId: undefined,
-    });
-
-    inputRef.current?.focus();
-  }, [onChange]);
-
-  // ========================================================================
-  // KEYBOARD NAVIGATION
-  // ========================================================================
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!isOpen || results.length === 0) return;
-
-    // Total items = results + 1 (free text option)
-    const totalItems = results.length + 1;
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setHighlightedIndex(prev =>
-          prev < totalItems - 1 ? prev + 1 : 0
-        );
-        break;
-
-      case 'ArrowUp':
-        e.preventDefault();
-        setHighlightedIndex(prev =>
-          prev > 0 ? prev - 1 : totalItems - 1
-        );
-        break;
-
-      case 'Enter':
-        e.preventDefault();
-        if (highlightedIndex >= 0 && highlightedIndex < results.length) {
-          handleSelectCompany(results[highlightedIndex]);
-        } else if (highlightedIndex === results.length) {
-          handleUseFreeText();
-        }
-        break;
-
-      case 'Escape':
-        e.preventDefault();
-        setIsOpen(false);
-        setResults([]);
-        break;
-    }
-  }, [isOpen, results, highlightedIndex, handleSelectCompany, handleUseFreeText]);
-
-  // Scroll highlighted item into view
-  useEffect(() => {
-    if (highlightedIndex >= 0 && listRef.current) {
-      const items = listRef.current.querySelectorAll('[role="option"]');
-      const item = items[highlightedIndex];
-      if (item) {
-        item.scrollIntoView({ block: 'nearest' });
-      }
-    }
-  }, [highlightedIndex]);
-
-  // ========================================================================
-  // RENDER
-  // ========================================================================
-
   return (
-    <Popover open={isOpen && !disabled} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <div className="relative w-full">
-          <Building2 className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none", colors.text.muted)} />
-          <Input
-            ref={inputRef}
-            value={inputValue}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            onFocus={() => {
-              if (inputValue.trim().length >= MIN_CHARS && !hasLinkedSelection) {
-                setIsOpen(true);
-                debouncedSearch(inputValue);
-              }
-            }}
-            disabled={disabled}
-            placeholder={placeholder ?? t('individual.placeholders.employer')}
-            hasLeftIcon
-            hasRightIcon={!!inputValue || isLoading}
-            className={cn(
-              hasLinkedSelection && 'pr-20'
+    <LinkedSinglePickerView<CompanySearchResult, EmployerPickerValue>
+      value={value}
+      linkedId={employerId}
+      search={search}
+      getResultLabel={(r) => r.companyName}
+      buildSelected={(r, label) => ({ employer: label, employerId: r.id })}
+      buildFreeText={(text) => ({ employer: text, employerId: undefined })}
+      onChange={onChange}
+      disabled={disabled}
+      placeholder={placeholder ?? t('individual.placeholders.employer')}
+      clearLabel={t('common.clear')}
+      selectedInputPadding="pr-20"
+      leftIcon={<Building2 className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none", colors.text.muted)} />}
+      badge={
+        <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs font-medium text-[hsl(var(--text-success))] bg-[hsl(var(--bg-success))]/10 px-1.5 py-0.5 rounded">
+          {t('employer.linkedBadge')}
+        </span>
+      }
+      getKey={(r) => r.id}
+      renderItemContent={(result) => (
+        <>
+          <span className="text-sm font-medium">
+            {result.companyName}
+            {result.tradeName && result.tradeName !== result.companyName && (
+              <span className={cn("ml-1.5 text-xs", colors.text.muted)}>
+                ({result.tradeName})
+              </span>
             )}
-            aria-expanded={isOpen}
-            aria-haspopup="listbox"
-            aria-autocomplete="list"
-            role="combobox"
-          />
-          {/* LINKED badge when a company is selected */}
-          {hasLinkedSelection && !disabled && (
-            <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs font-medium text-[hsl(var(--text-success))] bg-[hsl(var(--bg-success))]/10 px-1.5 py-0.5 rounded">
-              {t('employer.linkedBadge', 'LINKED')}
+          </span>
+          {result.vatNumber && (
+            <span className={cn("text-xs", colors.text.muted)}>
+              {t('employer.vat')}: {result.vatNumber}
             </span>
           )}
-          {/* Loading / Clear buttons */}
-          {isLoading && (
-            <Spinner size="small" className="absolute right-3 top-1/2 -translate-y-1/2" />
-          )}
-          {!isLoading && inputValue && !disabled && (
-            <button
-              type="button"
-              onClick={handleClearSelection}
-              className={cn("absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 hover:text-foreground transition-colors", colors.text.muted)}
-              aria-label={t('common.clear')}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-      </PopoverTrigger>
-
-      <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] p-0 max-h-80 overflow-y-auto"
-        align="start"
-        sideOffset={4}
-        onOpenAutoFocus={(e) => e.preventDefault()}
-      >
-        <ul
-          ref={listRef}
-          role="listbox"
-          aria-label={t('employer.searchResults')}
-          className="py-1"
-        >
-          {/* Search results */}
-          {results.map((result, index) => (
-            <li
-              key={result.id}
-              role="option"
-              aria-selected={highlightedIndex === index}
-              className={cn(
-                'flex flex-col px-3 py-2 cursor-pointer transition-colors',
-                highlightedIndex === index
-                  ? 'bg-accent text-accent-foreground'
-                  : 'hover:bg-muted'
-              )}
-              onClick={() => handleSelectCompany(result)}
-              onMouseEnter={() => setHighlightedIndex(index)}
-            >
-              <span className="text-sm font-medium">
-                {result.companyName}
-                {result.tradeName && result.tradeName !== result.companyName && (
-                  <span className={cn("ml-1.5 text-xs", colors.text.muted)}>
-                    ({result.tradeName})
-                  </span>
-                )}
-              </span>
-              {result.vatNumber && (
-                <span className={cn("text-xs", colors.text.muted)}>
-                  {t('employer.vat')}: {result.vatNumber}
-                </span>
-              )}
-            </li>
-          ))}
-
-          {/* No results message */}
-          {!isLoading && results.length === 0 && inputValue.trim().length >= MIN_CHARS && (
-            <li className={cn("px-3 py-2 text-sm text-center", colors.text.muted)}>
-              {t('employer.noResults')}
-            </li>
-          )}
-
-          {/* Separator */}
-          {results.length > 0 && (
-            <li role="separator" className="border-t border-border my-1" />
-          )}
-
-          {/* Free text fallback option */}
-          {inputValue.trim().length >= MIN_CHARS && (
-            <li
-              role="option"
-              aria-selected={highlightedIndex === results.length}
-              className={cn(
-                'flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors',
-                highlightedIndex === results.length
-                  ? 'bg-accent text-accent-foreground'
-                  : 'hover:bg-muted'
-              )}
-              onClick={handleUseFreeText}
-              onMouseEnter={() => setHighlightedIndex(results.length)}
-            >
-              <PenLine className={cn("h-4 w-4 shrink-0", colors.text.muted)} />
-              <span className="text-sm">
-                {t('employer.useFreeText')}: &quot;{inputValue}&quot;
-              </span>
-            </li>
-          )}
-        </ul>
-      </PopoverContent>
-    </Popover>
+        </>
+      )}
+      labels={{
+        searchResults: t('employer.searchResults'),
+        noResults: t('employer.noResults'),
+        useFreeText: t('employer.useFreeText'),
+      }}
+    />
   );
 }
 

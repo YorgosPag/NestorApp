@@ -3,68 +3,42 @@
 
 /**
  * ============================================================================
- * ESCO Skill Picker (ADR-132)
+ * ESCO Skill Picker (ADR-132 · ADR-601)
  * ============================================================================
  *
- * Multi-select autocomplete component for selecting ESCO-standardized skills.
- *
- * Features:
- * - Multi-select with chips/tags for selected skills
- * - Debounced search (300ms, min 2 chars)
- * - Bilingual display (EL/EN)
- * - Free text fallback (custom skills without ESCO URI)
- * - Radix Popover + Input (ADR-001 compliant)
- * - Keyboard navigation (ArrowUp/Down, Enter, Escape)
- * - Configurable max skills limit (default: 20)
- *
- * Architecture:
- * - Uses EscoService.searchSkills() for Firestore-cached search
- * - Emits EscoSkillValue[] array
- * - Integrates with config-driven form system via custom renderer
+ * Multi-select autocomplete for ESCO-standardized skills (chips + max limit).
+ * Search/debounce/keyboard/listbox mechanics come from the shared picker SSoT;
+ * this component owns the multi-select value model (append-on-commit, dedupe,
+ * max limit, Backspace removal) via injected commit callbacks + onBackspaceEmpty.
  *
  * @module components/shared/EscoSkillPicker
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { createModuleLogger } from '@/lib/telemetry';
-import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
-import { EscoPickerPopoverShell } from '@/components/shared/esco/esco-picker-popover-shell';
-import { Input } from '@/components/ui/input';
+import React, { useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { Search, PenLine, X } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
-import { useTranslation } from 'react-i18next';
+import { Search, X } from 'lucide-react';
 import { EscoService } from '@/services/esco.service';
 import type {
   EscoSkillPickerProps,
   EscoSkillValue,
   EscoSkillSearchResult,
-  EscoLanguage,
 } from '@/types/contacts/esco-types';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { pickBilingualLabel, resolveEscoLang } from '@/components/shared/esco/esco-label';
+import {
+  PickerPopoverShell,
+  PickerSearchInput,
+  PickerResultsList,
+  useAsyncPickerSearch,
+  useContactPickerTranslation,
+} from '@/components/shared/pickers';
 import '@/lib/design-system';
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/** Debounce delay in milliseconds */
-const DEBOUNCE_MS = 300;
-
-/** Minimum characters to trigger search */
-const MIN_CHARS = 2;
 
 /** Maximum results to display in dropdown */
 const MAX_RESULTS = 10;
 
 /** Default maximum skills allowed */
 const DEFAULT_MAX_SKILLS = 20;
-
-// ============================================================================
-// MODULE LOGGER
-// ============================================================================
-
-const logger = createModuleLogger('EscoSkillPicker');
 
 // ============================================================================
 // COMPONENT
@@ -78,200 +52,54 @@ export function EscoSkillPicker({
   language,
   maxSkills = DEFAULT_MAX_SKILLS,
 }: EscoSkillPickerProps) {
-  const { t, i18n } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t, i18n } = useContactPickerTranslation();
   const colors = useSemanticColors();
-  const resolvedLanguage: EscoLanguage = language ?? (i18n.language === 'el' ? 'el' : 'en');
+  const { lang, otherLang } = resolveEscoLang(language, i18n.language);
 
-  // State
-  const [isOpen, setIsOpen] = useState(false);
-  const [inputValue, setInputValue] = useState('');
-  const [results, setResults] = useState<EscoSkillSearchResult[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [highlightedIndex, setHighlightedIndex] = useState(-1);
-
-  // Refs
-  const inputRef = React.useRef<HTMLInputElement>(null);
-  const listRef = React.useRef<HTMLUListElement>(null);
-
-  // Derived
   const isMaxReached = value.length >= maxSkills;
 
-  // ========================================================================
-  // SEARCH LOGIC
-  // ========================================================================
+  const handleRemoveSkill = useCallback((index: number) => {
+    onChange(value.filter((_, i) => i !== index));
+  }, [value, onChange]);
 
-  const performSearch = useCallback(async (query: string) => {
-    if (query.trim().length < MIN_CHARS) {
-      setResults([]);
-      setIsLoading(false);
-      return;
-    }
+  const search = useCallback(async (query: string): Promise<EscoSkillSearchResult[]> => {
+    const response = await EscoService.searchSkills({ query, language: lang, limit: MAX_RESULTS });
+    const selectedUris = new Set(value.map(s => s.uri));
+    return response.results.filter(r => !selectedUris.has(r.skill.uri));
+  }, [lang, value]);
 
-    setIsLoading(true);
-
-    try {
-      const response = await EscoService.searchSkills({
-        query,
-        language: resolvedLanguage,
-        limit: MAX_RESULTS,
-      });
-
-      // Filter out already-selected skills
-      const selectedUris = new Set(value.map(s => s.uri));
-      const filtered = response.results.filter(r => !selectedUris.has(r.skill.uri));
-
-      setResults(filtered);
-      setHighlightedIndex(-1);
-    } catch (error) {
-      logger.error('Search error', { error });
-      setResults([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [resolvedLanguage, value]);
-
-  const debouncedSearch = useDebouncedCallback((query: string) => {
-    performSearch(query);
-  }, DEBOUNCE_MS);
-
-  // ========================================================================
-  // EVENT HANDLERS
-  // ========================================================================
+  const picker = useAsyncPickerSearch<EscoSkillSearchResult>({
+    search,
+    onSelectResult: (result, ctx) => {
+      if (isMaxReached) return;
+      const label = pickBilingualLabel(result.skill.preferredLabel, lang);
+      onChange([...value, { uri: result.skill.uri, label }]);
+      ctx.setInputValue('');
+      ctx.resetResults();
+      ctx.inputRef.current?.focus();
+    },
+    onFreeText: (ctx) => {
+      const text = ctx.inputValue.trim();
+      if (isMaxReached || !text) return;
+      const alreadyExists = value.some(s => s.label.toLowerCase() === text.toLowerCase());
+      if (alreadyExists) return;
+      const newSkill: EscoSkillValue = { uri: '', label: text };
+      onChange([...value, newSkill]);
+      ctx.setInputValue('');
+      ctx.resetResults();
+      ctx.inputRef.current?.focus();
+    },
+    onBackspaceEmpty: () => {
+      if (value.length > 0) handleRemoveSkill(value.length - 1);
+    },
+  });
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    setInputValue(newValue);
-
+    picker.setInputValue(newValue);
     if (isMaxReached) return;
-
-    if (newValue.trim().length >= MIN_CHARS) {
-      setIsOpen(true);
-      debouncedSearch(newValue);
-    } else {
-      setResults([]);
-      setIsOpen(false);
-    }
-  }, [debouncedSearch, isMaxReached]);
-
-  const handleSelectSkill = useCallback((result: EscoSkillSearchResult) => {
-    if (isMaxReached) return;
-
-    const label = resolvedLanguage === 'el'
-      ? result.skill.preferredLabel.el
-      : result.skill.preferredLabel.en;
-
-    const newSkill: EscoSkillValue = {
-      uri: result.skill.uri,
-      label,
-    };
-
-    onChange([...value, newSkill]);
-    setInputValue('');
-    setIsOpen(false);
-    setResults([]);
-    inputRef.current?.focus();
-  }, [resolvedLanguage, onChange, value, isMaxReached]);
-
-  const handleUseFreeText = useCallback(() => {
-    if (isMaxReached || !inputValue.trim()) return;
-
-    // Check if already selected (by label)
-    const alreadyExists = value.some(
-      s => s.label.toLowerCase() === inputValue.trim().toLowerCase()
-    );
-    if (alreadyExists) return;
-
-    const newSkill: EscoSkillValue = {
-      uri: '',
-      label: inputValue.trim(),
-    };
-
-    onChange([...value, newSkill]);
-    setInputValue('');
-    setIsOpen(false);
-    setResults([]);
-    inputRef.current?.focus();
-  }, [inputValue, onChange, value, isMaxReached]);
-
-  const handleRemoveSkill = useCallback((index: number) => {
-    const updated = value.filter((_, i) => i !== index);
-    onChange(updated);
-  }, [value, onChange]);
-
-  // ========================================================================
-  // KEYBOARD NAVIGATION
-  // ========================================================================
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!isOpen || results.length === 0) {
-      // Handle backspace to remove last skill
-      if (e.key === 'Backspace' && !inputValue && value.length > 0) {
-        e.preventDefault();
-        handleRemoveSkill(value.length - 1);
-      }
-      return;
-    }
-
-    const totalItems = results.length + (inputValue.trim().length >= MIN_CHARS ? 1 : 0);
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setHighlightedIndex(prev => (prev < totalItems - 1 ? prev + 1 : 0));
-        break;
-
-      case 'ArrowUp':
-        e.preventDefault();
-        setHighlightedIndex(prev => (prev > 0 ? prev - 1 : totalItems - 1));
-        break;
-
-      case 'Enter':
-        e.preventDefault();
-        if (highlightedIndex >= 0 && highlightedIndex < results.length) {
-          handleSelectSkill(results[highlightedIndex]);
-        } else if (highlightedIndex === results.length) {
-          handleUseFreeText();
-        }
-        break;
-
-      case 'Escape':
-        e.preventDefault();
-        setIsOpen(false);
-        setResults([]);
-        break;
-    }
-  }, [isOpen, results, highlightedIndex, handleSelectSkill, handleUseFreeText, inputValue, value, handleRemoveSkill]);
-
-  // Scroll highlighted item into view
-  useEffect(() => {
-    if (highlightedIndex >= 0 && listRef.current) {
-      const items = listRef.current.querySelectorAll('[role="option"]');
-      const item = items[highlightedIndex];
-      if (item) {
-        item.scrollIntoView({ block: 'nearest' });
-      }
-    }
-  }, [highlightedIndex]);
-
-  // ========================================================================
-  // RENDER HELPERS
-  // ========================================================================
-
-  const getDisplayLabel = (result: EscoSkillSearchResult): string => {
-    return resolvedLanguage === 'el'
-      ? result.skill.preferredLabel.el
-      : result.skill.preferredLabel.en;
-  };
-
-  const getSecondaryLabel = (result: EscoSkillSearchResult): string => {
-    return resolvedLanguage === 'el'
-      ? result.skill.preferredLabel.en
-      : result.skill.preferredLabel.el;
-  };
-
-  // ========================================================================
-  // RENDER
-  // ========================================================================
+    picker.syncQuery(newValue);
+  }, [isMaxReached, picker.setInputValue, picker.syncQuery]);
 
   return (
     <section className="w-full space-y-2">
@@ -312,102 +140,39 @@ export function EscoSkillPicker({
 
       {/* Search Input with Popover */}
       {!isMaxReached && (
-        <EscoPickerPopoverShell
-          open={isOpen && !disabled}
-          onOpenChange={setIsOpen}
+        <PickerPopoverShell open={picker.isOpen && !disabled} onOpenChange={picker.setIsOpen}
           anchor={
-            <>
-              <Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none", colors.text.muted)} />
-              <Input
-                ref={inputRef}
-                value={inputValue}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                onFocus={() => {
-                  if (inputValue.trim().length >= MIN_CHARS && !isMaxReached) {
-                    setIsOpen(true);
-                    debouncedSearch(inputValue);
-                  }
-                }}
-                disabled={disabled}
-                placeholder={placeholder ?? t('esco.skills.searchPlaceholder')}
-                hasLeftIcon
-                hasRightIcon={isLoading}
-                aria-expanded={isOpen}
-                aria-haspopup="listbox"
-                aria-autocomplete="list"
-                role="combobox"
-              />
-              {isLoading && (
-                <Spinner size="small" className="absolute right-3 top-1/2 -translate-y-1/2" />
-              )}
-            </>
+            <PickerSearchInput
+              picker={picker}
+              onChange={handleInputChange}
+              onFocus={() => picker.handleFocus(!isMaxReached)}
+              disabled={disabled}
+              placeholder={placeholder ?? t('esco.skills.searchPlaceholder')}
+              hasRightIcon={picker.isLoading}
+              leftIcon={<Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none", colors.text.muted)} />}
+            />
           }
         >
-            <ul
-              ref={listRef}
-              role="listbox"
-              aria-label={t('esco.searchResults')}
-              className="py-1"
-            >
-              {/* Search results */}
-              {results.map((result, index) => (
-                <li
-                  key={result.skill.uri}
-                  role="option"
-                  aria-selected={highlightedIndex === index}
-                  className={cn(
-                    'flex flex-col px-3 py-2 cursor-pointer transition-colors',
-                    highlightedIndex === index
-                      ? 'bg-accent text-accent-foreground'
-                      : 'hover:bg-muted'
-                  )}
-                  onClick={() => handleSelectSkill(result)}
-                  onMouseEnter={() => setHighlightedIndex(index)}
-                >
-                  <span className="text-sm font-medium">
-                    {getDisplayLabel(result)}
-                  </span>
-                  <span className={cn("text-xs", colors.text.muted)}>
-                    {getSecondaryLabel(result)}
-                  </span>
-                </li>
-              ))}
-
-              {/* No results message */}
-              {!isLoading && results.length === 0 && inputValue.trim().length >= MIN_CHARS && (
-                <li className={cn("px-3 py-2 text-sm text-center", colors.text.muted)}>
-                  {t('esco.skills.noResults')}
-                </li>
-              )}
-
-              {/* Separator */}
-              {results.length > 0 && (
-                <li role="separator" className="border-t border-border my-1" />
-              )}
-
-              {/* Free text fallback option */}
-              {inputValue.trim().length >= MIN_CHARS && (
-                <li
-                  role="option"
-                  aria-selected={highlightedIndex === results.length}
-                  className={cn(
-                    'flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors',
-                    highlightedIndex === results.length
-                      ? 'bg-accent text-accent-foreground'
-                      : 'hover:bg-muted'
-                  )}
-                  onClick={handleUseFreeText}
-                  onMouseEnter={() => setHighlightedIndex(results.length)}
-                >
-                  <PenLine className={cn("h-4 w-4 shrink-0", colors.text.muted)} />
-                  <span className="text-sm">
-                    {t('esco.skills.useFreeText')}: &quot;{inputValue}&quot;
-                  </span>
-                </li>
-              )}
-            </ul>
-        </EscoPickerPopoverShell>
+          <PickerResultsList<EscoSkillSearchResult>
+            picker={picker}
+            getKey={(r) => r.skill.uri}
+            renderItemContent={(result) => (
+              <>
+                <span className="text-sm font-medium">
+                  {pickBilingualLabel(result.skill.preferredLabel, lang)}
+                </span>
+                <span className={cn("text-xs", colors.text.muted)}>
+                  {pickBilingualLabel(result.skill.preferredLabel, otherLang)}
+                </span>
+              </>
+            )}
+            labels={{
+              searchResults: t('esco.searchResults'),
+              noResults: t('esco.skills.noResults'),
+              useFreeText: t('esco.skills.useFreeText'),
+            }}
+          />
+        </PickerPopoverShell>
       )}
 
       {/* Max reached message */}
