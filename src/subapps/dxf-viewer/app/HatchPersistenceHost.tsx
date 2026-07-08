@@ -19,20 +19,15 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { useLevels } from '../systems/levels';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 import type { HatchEntity } from '../types/entities';
 import { isHatchEntity } from '../types/entities';
 import { useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useHatchPersistence } from '../hooks/data/useHatchPersistence';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface HatchPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly projectId?: string;
   readonly floorplanId?: string;
   readonly buildingId?: string;

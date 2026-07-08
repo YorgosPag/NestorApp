@@ -16,17 +16,12 @@
  */
 
 import React from 'react';
-import type { useLevels } from '../systems/levels';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 import { useHostingReconciler } from '../hooks/data/useHostingReconciler';
 import { useGridGuideSettleEmitter } from '../hooks/data/useGridGuideSettleEmitter';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface HostingReconcilerHostProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 export function HostingReconcilerHost({

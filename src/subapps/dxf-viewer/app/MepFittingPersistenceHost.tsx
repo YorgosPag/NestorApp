@@ -23,21 +23,16 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { useLevels } from '../systems/levels';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 import type { MepFittingEntity } from '../bim/types/mep-fitting-types';
 import { isMepFittingEntity } from '../types/entities';
 import { useSceneEntitiesByType } from '../systems/scene/useSceneSelectors';
 import { useMepFittingAutoReconciliation } from '../hooks/data/useMepFittingAutoReconciliation';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface MepFittingPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly projectId?: string;
   readonly floorplanId?: string;
   /** ADR-420 — stable building-storey scope key forwarded from DxfViewerTopBar. */

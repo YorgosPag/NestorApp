@@ -18,21 +18,16 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { useLevels } from '../systems/levels';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 import type { MepFixtureEntity } from '../bim/types/mep-fixture-types';
 import { isMepFixtureEntity } from '../types/entities';
 import { useSceneEntitiesByType, useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useMepFixturePersistence } from '../hooks/data/useMepFixturePersistence';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface MepFixturePersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly projectId?: string;
   readonly floorplanId?: string;
   /** ADR-420 — stable building-storey scope key forwarded from DxfViewerTopBar. */

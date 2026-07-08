@@ -14,15 +14,10 @@
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type { SceneModel } from '../types/scene';
-import type { useLevels } from '../systems/levels';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 import { useMepSystemPersistence } from '../hooks/data/useMepSystemPersistence';
 import { useMepConnectorReconciliation } from '../hooks/data/useMepConnectorReconciliation';
 import { useMepCircuitEditorSync } from '../hooks/data/useMepCircuitEditorSync';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
 
 export interface MepSystemPersistenceHostProps {
   readonly projectId?: string;
@@ -31,7 +26,7 @@ export interface MepSystemPersistenceHostProps {
   readonly floorId?: string;
   /** ADR-408 Φ5 — needed by the connector-reconciliation pass (scene-time cache). */
   readonly currentScene: SceneModel | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   /** ADR-408 Φ6 — drives the "active managed circuit" sync for the editing UI. */
   readonly primarySelectedId: string | null;
 }
