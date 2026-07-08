@@ -1,11 +1,11 @@
 /**
  * ADR-412 — «Edit Slab Type» dialog open/close handshake store.
  *
- * Thin binding of the shared `createEditTypeDialogStore` factory (ADR-603 Φ2).
+ * Thin binding of the shared `createEditTypeDialogStore` factory (ADR-604 Φ2).
  * Re-exports the four handles under the slab-named identifiers so existing
  * consumers (EditSlabTypeDialog, RibbonSlabFamilyTypeWidget) are unchanged.
  *
- * @see ./create-edit-type-dialog-store.ts — shared factory (ADR-603)
+ * @see ./create-edit-type-dialog-store.ts — shared factory (ADR-604)
  * @see ../../ui/ribbon/components/EditSlabTypeDialog.tsx
  */
 

@@ -1,5 +1,5 @@
 /**
- * ADR-603 Φ2 — shape/behaviour smoke for `createEditTypeDialogStore`.
+ * ADR-604 Φ2 — shape/behaviour smoke for `createEditTypeDialogStore`.
  *
  * Guards the shared Edit-Type dialog store factory the four `edit-{x}-type-store`
  * modules bind: open/close semantics, subscriber notification, idempotent close,
@@ -8,7 +8,7 @@
 
 import { createEditTypeDialogStore } from '../create-edit-type-dialog-store';
 
-describe('createEditTypeDialogStore (ADR-603 Φ2)', () => {
+describe('createEditTypeDialogStore (ADR-604 Φ2)', () => {
   it('starts closed with a null typeId', () => {
     const store = createEditTypeDialogStore();
     expect(store.getState()).toEqual({ open: false, typeId: null });

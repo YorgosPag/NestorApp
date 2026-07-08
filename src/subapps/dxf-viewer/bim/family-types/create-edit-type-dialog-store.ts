@@ -1,5 +1,5 @@
 /**
- * ADR-603 Φ2 — «Edit {X} Type» dialog open/close handshake store factory (SSoT).
+ * ADR-604 Φ2 — «Edit {X} Type» dialog open/close handshake store factory (SSoT).
  *
  * Every BIM family-typed entity (wall / slab / roof / opening / …) shipped a
  * byte-identical `edit-{x}-type-store` module: a module-level `createExternalStore`
@@ -17,7 +17,7 @@
  * object so real changes always notify, while a redundant close no-ops.
  *
  * @see ../../stores/createExternalStore — SSoT pub/sub primitive (notify plumbing)
- * @see docs/centralized-systems/reference/adrs/ADR-603-generic-family-type-framework.md
+ * @see docs/centralized-systems/reference/adrs/ADR-604-generic-family-type-framework.md
  */
 
 import { createExternalStore } from '../../stores/createExternalStore';

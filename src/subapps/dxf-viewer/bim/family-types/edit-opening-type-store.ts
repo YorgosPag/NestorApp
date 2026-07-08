@@ -1,12 +1,12 @@
 /**
  * ADR-421 SLICE C — «Edit Opening Type» dialog open/close handshake store.
  *
- * Thin binding of the shared `createEditTypeDialogStore` factory (ADR-603 Φ2).
+ * Thin binding of the shared `createEditTypeDialogStore` factory (ADR-604 Φ2).
  * Re-exports the four handles under the opening-named identifiers so existing
  * consumers (EditOpeningTypeDialog, RibbonOpeningTypePropertiesWidget) are
  * unchanged.
  *
- * @see ./create-edit-type-dialog-store.ts — shared factory (ADR-603)
+ * @see ./create-edit-type-dialog-store.ts — shared factory (ADR-604)
  * @see ../../ui/ribbon/components/EditOpeningTypeDialog.tsx
  */
 
