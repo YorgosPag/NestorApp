@@ -574,6 +574,8 @@
 | **ADR-593** | Communication Row Primitives SSoT (`communication-row-primitives`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-593-communication-row-primitives-ssot.md) |
 | **ADR-594** | BIM Entity Persistence Hook Factory SSoT (`createBimEntityPersistenceHook`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-594-bim-entity-persistence-hook-ssot.md) |
 | **ADR-595** | Generic Form Renderer Primitives SSoT (`form-field-primitives` + `form-tabs-shell`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-595-generic-form-renderer-primitives-ssot.md) |
+| **ADR-597** | Store-backed Ribbon Toggle Widget SSoT (`RibbonToggleWidget` + `RibbonInlineToggleButton`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-597-ribbon-toggle-widget-ssot.md) |
+| **ADR-596** | Multiple-Photos Upload-State SSoT (`use-photo-slot-state` + photo grid primitives) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-596-multiple-photos-upload-state-ssot.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1128,6 +1130,8 @@
 | **ADR-593** | Communication Row Primitives SSoT (`communication-row-primitives`) | ✅ ACTIVE | [View](./adrs/ADR-593-communication-row-primitives-ssot.md) |
 | **ADR-594** | BIM Entity Persistence Hook Factory SSoT (`createBimEntityPersistenceHook`) | ✅ ACTIVE | [View](./adrs/ADR-594-bim-entity-persistence-hook-ssot.md) |
 | **ADR-595** | Generic Form Renderer Primitives SSoT (`form-field-primitives` + `form-tabs-shell`) | ✅ ACTIVE | [View](./adrs/ADR-595-generic-form-renderer-primitives-ssot.md) |
+| **ADR-597** | Store-backed Ribbon Toggle Widget SSoT (`RibbonToggleWidget` + `RibbonInlineToggleButton`) | ✅ ACTIVE | [View](./adrs/ADR-597-ribbon-toggle-widget-ssot.md) |
+| **ADR-596** | Multiple-Photos Upload-State SSoT (`use-photo-slot-state` + photo grid primitives) | ✅ ACTIVE | [View](./adrs/ADR-596-multiple-photos-upload-state-ssot.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
