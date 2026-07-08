@@ -27,7 +27,7 @@ import type { AnySceneEntity, Entity } from '../../types/entities';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import type { MovePhase } from './useMoveTool';
-import type { useLevels } from '../../systems/levels';
+import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 import type { Overlay } from '../../overlays/types';
 import {
   applyEntityPreview,
@@ -57,18 +57,13 @@ import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 // TYPES
 // ============================================================================
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'currentLevelId'
->;
-
 export interface UseMovePreviewProps {
   phase: MovePhase;
   basePoint: Point2D | null;
   selectedEntityIds: string[];
   selectedOverlayIds?: string[];
   getOverlay?: (id: string) => Overlay | null;
-  levelManager: LevelManagerLike;
+  levelManager: LevelSceneReader;
   transform: ViewTransform;
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;

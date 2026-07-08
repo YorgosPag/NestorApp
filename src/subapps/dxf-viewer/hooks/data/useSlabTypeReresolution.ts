@@ -20,16 +20,10 @@
 
 import { useEffect, type RefObject } from 'react';
 
-import type { SceneModel } from '../../types/entities';
-import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import { useBimFamilyTypeStore } from '../../bim/family-types/bim-family-type-store';
 import { reresolveSceneSlabs } from './slab-persistence-helpers';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
-}
 
 /**
  * Wire family-type re-resolution into the slab scene-sync path.
@@ -40,7 +34,7 @@ interface LevelManagerLike {
  *   re-resolution so local edits always win).
  */
 export function useSlabTypeReresolution(
-  levelManager: LevelManagerLike,
+  levelManager: LevelSceneWriter,
   dirtyIdsRef: RefObject<Set<string>>,
 ): void {
   useEffect(() => {
