@@ -1,0 +1,89 @@
+name: ♿ A11y Test-Coverage Ratchet (ADR-598 G11)
+
+# =============================================================================
+# ADR-598 ΦΑΣΗ 3 · G11 — a11y test-coverage ratchet.
+#
+# scripts/check-a11y-test-coverage-ratchet.js is a fast, AST-free string scan
+# (no tsc/build) → its baseline (.a11y-coverage-baseline.json) is seeded locally
+# and committed (unlike the heavy ΦΑΣΗ 2 gates). This workflow re-runs the check
+# on every PR / push so a new component under src/components/ui|generic without an
+# a11y test blocks. Zero-tolerance-on-touch; grandfathered debt paid down + reseed.
+#
+# `workflow_dispatch{seed}` is a convenience to refresh the committed baseline
+# from CI (upload artifact + echo summary); normally you reseed locally with
+# `pnpm run a11y-coverage:baseline`.
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/ui/**'
+      - 'src/components/generic/**'
+      - 'src/test-utils/a11y.tsx'
+      - '.a11y-coverage-baseline.json'
+      - 'scripts/check-a11y-test-coverage-ratchet.js'
+      - 'scripts/lib/ratchet-baseline.js'
+      - '.github/workflows/a11y-ratchet.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/components/ui/**'
+      - 'src/components/generic/**'
+      - 'src/test-utils/a11y.tsx'
+      - '.a11y-coverage-baseline.json'
+      - 'scripts/check-a11y-test-coverage-ratchet.js'
+      - 'scripts/lib/ratchet-baseline.js'
+      - '.github/workflows/a11y-ratchet.yml'
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: 'Refresh the baseline (writes JSON, uploads artifact, does NOT commit)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: a11y-ratchet-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  a11y-ratchet:
+    name: 🔒 A11y Test-Coverage Ratchet (ADR-598 G11)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: ♿ A11y coverage ratchet (seed or check)
+        run: |
+          if [ "${{ inputs.seed }}" = "true" ]; then
+            node scripts/check-a11y-test-coverage-ratchet.js --write-baseline
+          else
+            node scripts/check-a11y-test-coverage-ratchet.js --check
+          fi
+
+      - name: 📤 Upload refreshed baseline (seed mode only)
+        if: ${{ inputs.seed == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: a11y-coverage-baseline
+          path: .a11y-coverage-baseline.json
+
+      - name: ✅ Summary
+        if: ${{ success() && inputs.seed != true }}
+        run: echo "::notice title=A11y Ratchet (G11)::no new uncovered component vs .a11y-coverage-baseline.json"

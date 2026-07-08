@@ -1,0 +1,107 @@
+name: 🕸️ Dependency-Graph Ratchet (ADR-598 G9+G10)
+
+# =============================================================================
+# ADR-598 ΦΑΣΗ 3 · G9 (cycles) + G10 (boundaries) — dependency-cruiser ratchets,
+# both driven by the ONE generic engine scripts/check-depcruise-ratchet.js
+# (selected by --gate), against the shared .dependency-cruiser.cjs.
+#
+# Each gate crawls the module graph over src/ and blocks when its violation count
+# rises above the committed baseline (.depcruise-<gate>-baseline.json). Rules are
+# `warn`; the baselines are seeded from the current (non-zero) counts — a ratchet
+# that only decreases, never a zero-tolerance flag-day. Graph analysis is heavy →
+# Layer-2 CI only (N.17), never pre-commit. Mirrors eslint-ratchet.yml.
+#
+# Seeding: seed=true writes the baselines, uploads them + echoes to summary;
+# Giorgio commits them (no CI auto-commit).
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.{ts,tsx,js,jsx}'
+      - 'tsconfig.json'
+      - '.dependency-cruiser.cjs'
+      - '.depcruise-cycles-baseline.json'
+      - '.depcruise-boundaries-baseline.json'
+      - 'scripts/check-depcruise-ratchet.js'
+      - 'scripts/lib/ratchet-baseline.js'
+      - '.github/workflows/depcruise-ratchet.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**/*.{ts,tsx,js,jsx}'
+      - 'tsconfig.json'
+      - '.dependency-cruiser.cjs'
+      - '.depcruise-cycles-baseline.json'
+      - '.depcruise-boundaries-baseline.json'
+      - 'scripts/check-depcruise-ratchet.js'
+      - 'scripts/lib/ratchet-baseline.js'
+      - '.github/workflows/depcruise-ratchet.yml'
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: 'Seed/refresh the baselines (writes JSON, uploads artifact, does NOT commit)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: depcruise-ratchet-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  depcruise-ratchet:
+    name: 🔒 Dependency-Graph Ratchet (${{ matrix.gate }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        gate: [cycles, boundaries]
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # No --ignore-scripts: the TS-aware crawl needs the resolved type graph.
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🕸️ Dependency-graph ratchet (seed or check)
+        run: |
+          if [ "${{ inputs.seed }}" = "true" ]; then
+            node scripts/check-depcruise-ratchet.js --gate ${{ matrix.gate }} --write-baseline
+          else
+            node scripts/check-depcruise-ratchet.js --gate ${{ matrix.gate }} --check
+          fi
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+
+      - name: 📤 Upload seeded baseline (seed mode only)
+        if: ${{ inputs.seed == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: depcruise-${{ matrix.gate }}-baseline
+          path: .depcruise-${{ matrix.gate }}-baseline.json
+
+      - name: 📝 Echo baseline to summary (seed mode only)
+        if: ${{ inputs.seed == true }}
+        run: |
+          echo '### G9/G10 depcruise ${{ matrix.gate }} baseline (commit this file)' >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          cat .depcruise-${{ matrix.gate }}-baseline.json >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: ✅ Summary
+        if: ${{ success() && inputs.seed != true }}
+        run: echo "::notice title=Dependency-Graph Ratchet (${{ matrix.gate }})::violation count did not rise vs .depcruise-${{ matrix.gate }}-baseline.json"

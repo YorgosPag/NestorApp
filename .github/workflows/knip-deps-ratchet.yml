@@ -1,0 +1,98 @@
+name: 📚 knip Dependency-Hygiene Ratchet (ADR-598 G15)
+
+# =============================================================================
+# ADR-598 ΦΑΣΗ 3 · G15 — knip dependency-hygiene ratchet (Layer-2 CI, N.17).
+#
+# Counts knip's dependency findings (unused deps/devDeps, unlisted, binaries,
+# unresolved) via `knip --dependencies --reporter json` and blocks when the total
+# rises above .knip-deps-baseline.json. Ratchet DOWN only. Does NOT change knip's
+# file-level project scope — dxf-viewer stays intentionally knip-ignored (dynamic
+# registries → false positives; see the G15 note in the ADR + the ratchet script).
+#
+# Seeding: seed=true writes the baseline, uploads it + echoes to summary; Giorgio
+# commits it (no auto-commit).
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'knip.json'
+      - '.knip-deps-baseline.json'
+      - 'scripts/check-knip-deps-ratchet.js'
+      - 'scripts/lib/ratchet-baseline.js'
+      - '.github/workflows/knip-deps-ratchet.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'knip.json'
+      - '.knip-deps-baseline.json'
+      - 'scripts/check-knip-deps-ratchet.js'
+      - 'scripts/lib/ratchet-baseline.js'
+      - '.github/workflows/knip-deps-ratchet.yml'
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: 'Seed/refresh the baseline (writes JSON, uploads artifact, does NOT commit)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: knip-deps-ratchet-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  knip-deps-ratchet:
+    name: 🔒 knip Dependency-Hygiene Ratchet (ADR-598 G15)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 📚 knip dependency-hygiene ratchet (seed or check)
+        run: |
+          if [ "${{ inputs.seed }}" = "true" ]; then
+            node scripts/check-knip-deps-ratchet.js --write-baseline
+          else
+            node scripts/check-knip-deps-ratchet.js --check
+          fi
+
+      - name: 📤 Upload seeded baseline (seed mode only)
+        if: ${{ inputs.seed == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: knip-deps-baseline
+          path: .knip-deps-baseline.json
+
+      - name: 📝 Echo baseline to summary (seed mode only)
+        if: ${{ inputs.seed == true }}
+        run: |
+          echo '### G15 knip-deps baseline (commit this file)' >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          cat .knip-deps-baseline.json >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: ✅ Summary
+        if: ${{ success() && inputs.seed != true }}
+        run: echo "::notice title=knip Dependency-Hygiene Ratchet (G15)::dep-issue count did not rise vs .knip-deps-baseline.json"

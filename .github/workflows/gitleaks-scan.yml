@@ -1,0 +1,58 @@
+name: 🔐 Secret Scan (ADR-598 G12)
+
+# =============================================================================
+# ADR-598 ΦΑΣΗ 3 · G12 — gitleaks secret scanning (authoritative layer).
+#
+# The pre-commit CHECK 14 is a soft, staged-only scan that depends on the dev
+# having the gitleaks binary. THIS is the hard backstop: it downloads a pinned
+# gitleaks binary and scans the FULL git history on every PR / push to main, so a
+# secret cannot slip in via a machine without the local hook. Uses the shared
+# .gitleaks.toml (built-in rules + repo allowlist). Not a ratchet — secrets are
+# zero-tolerance, always.
+#
+# Direct binary download (not gitleaks-action) to stay license-free and version-
+# pinned: gitleaks-action gates organization accounts behind GITLEAKS_LICENSE;
+# the binary + `gitleaks detect` has no such gate and is deterministic.
+# =============================================================================
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: gitleaks-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GITLEAKS_VERSION: '8.18.4'
+
+jobs:
+  gitleaks:
+    name: 🔐 gitleaks (full history)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 📥 Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: ⬇️ Install gitleaks ${{ env.GITLEAKS_VERSION }}
+        run: |
+          set -euo pipefail
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -o gitleaks.tar.gz
+          tar -xzf gitleaks.tar.gz gitleaks
+          sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: 🔐 Scan full git history
+        run: gitleaks detect --source . --config .gitleaks.toml --redact --exit-code 1 --verbose
+
+      - name: ✅ Summary
+        if: success()
+        run: echo "::notice title=Secret Scan (G12)::no secrets found in git history (gitleaks ${GITLEAKS_VERSION})"
