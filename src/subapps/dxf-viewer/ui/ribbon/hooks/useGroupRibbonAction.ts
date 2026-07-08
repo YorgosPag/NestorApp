@@ -29,13 +29,8 @@ import { GROUP_MIN_MEMBERS } from '../../../systems/group/group-entity';
 import { isGroupEntity } from '../../../types/entities';
 import { toolHintOverrideStore } from '../../../hooks/toolHintOverrideStore';
 import type { Entity } from '../../../types/entities';
-import type { useLevels } from '../../../systems/levels';
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
@@ -43,7 +38,7 @@ type UniversalSelectionLike = Pick<
 >;
 
 export interface UseGroupRibbonActionProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly universalSelection: UniversalSelectionLike;
   readonly handleToolChange: (tool: ToolType) => void;
   /** Fall-through for non-group actions. */

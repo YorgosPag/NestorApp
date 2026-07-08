@@ -15,7 +15,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import type { useLevels } from '../../../systems/levels';
+import type { LevelSceneGetter } from '../../../systems/levels/level-scene-accessor';
 import { useEventGatedDialog } from '../../../app/dialog-hosts/useEventGatedDialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { isFoundationEntity } from '../../../types/entities';
@@ -41,15 +41,13 @@ const CAPTURE_LONG_EDGE_PX = 1200;
 /** Export file name for the footing reinforcement detail PDF (data, not i18n). */
 const PDF_FILENAME = 'foundation-reinforcement-detail.pdf';
 
-type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene'>;
-
 export interface FoundationDetailHostProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneGetter;
 }
 
 /** Resolves the target footing entity from a level scene, or `null` if missing. */
 function resolveFooting(
-  levelManager: LevelManagerLike,
+  levelManager: LevelSceneGetter,
   levelId: string | null,
   foundationId: string | null,
 ): FoundationEntity | null {
@@ -91,7 +89,7 @@ export function FoundationDetailHost({
 }
 
 interface FoundationDetailBodyProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneGetter;
   readonly foundationId: string;
   readonly levelId: string;
   readonly onClose: () => void;

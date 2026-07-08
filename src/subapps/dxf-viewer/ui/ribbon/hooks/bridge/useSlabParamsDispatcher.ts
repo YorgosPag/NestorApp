@@ -25,18 +25,13 @@ import { resolveStructuralCode } from '../../../../bim/structural/codes';
 import { useStructuralSettingsStore } from '../../../../state/structural-settings-store';
 import { createLevelSceneManagerAdapter } from '../../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { EventBus } from '../../../../systems/events/EventBus';
-import type { useLevels } from '../../../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
+import type { LevelSceneWriter } from '../../../../systems/levels/level-scene-accessor';
 
 /** Writer: εφαρμόζει νέα params σε μια πλάκα (undoable command + persist + re-study event). */
 export type DispatchSlabParams = (slab: SlabEntity, nextParams: SlabParams) => void;
 
 export interface UseSlabParamsDispatcherProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 export function useSlabParamsDispatcher(

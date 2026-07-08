@@ -41,15 +41,10 @@ import { designFire } from '../../../systems/mep-design/fire';
 import { fireProposalStore } from '../../../systems/mep-design/fire/fire-proposal-store';
 import { buildFireCommit } from '../../../systems/mep-design/fire/commit/build-fire-commit';
 import { FIRE_AUTO_RIBBON_ACTIONS } from './bridge/fire-auto-command-keys';
-import type { useLevels } from '../../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 
 export interface UseRibbonFireAutoBridgeProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 export interface RibbonFireAutoBridge {
