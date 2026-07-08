@@ -11,6 +11,7 @@
  */
 
 import type { SlabParams } from '../../../../bim/types/slab-types';
+import { makeKeySetGuard } from './make-key-set-guard';
 
 export const SLAB_RIBBON_KEYS = {
   stringParams: {
@@ -92,13 +93,7 @@ export const SLAB_RIBBON_KEYS_ACTIONS = {
   reinforcementDetail: 'slab.actions.reinforcementDetail',
 } as const;
 
-const SLAB_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
-  Object.values(SLAB_RIBBON_KEYS_ACTIONS),
-);
-
-export function isSlabActionKey(action: string): boolean {
-  return SLAB_ACTION_KEY_SET.has(action);
-}
+export const isSlabActionKey = makeKeySetGuard(Object.values(SLAB_RIBBON_KEYS_ACTIONS));
 
 /** Visibility key (red badge when `validation.hasCodeViolations === true`). */
 export const SLAB_RIBBON_BADGE_KEYS = {
@@ -107,16 +102,9 @@ export const SLAB_RIBBON_BADGE_KEYS = {
 
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────
 
-const SLAB_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(SLAB_RIBBON_NUMBER_KEYS);
-const SLAB_STRING_KEY_SET: ReadonlySet<string> = new Set<string>(SLAB_RIBBON_STRING_KEYS);
+export const isSlabRibbonKey = makeKeySetGuard(SLAB_RIBBON_NUMBER_KEYS);
 
-export function isSlabRibbonKey(commandKey: string): boolean {
-  return SLAB_NUMBER_KEY_SET.has(commandKey);
-}
-
-export function isSlabRibbonStringKey(commandKey: string): boolean {
-  return SLAB_STRING_KEY_SET.has(commandKey);
-}
+export const isSlabRibbonStringKey = makeKeySetGuard(SLAB_RIBBON_STRING_KEYS);
 
 // ─── ADR-404 Phase 5c — slope key set + guard ─────────────────────────────────
 
@@ -134,11 +122,7 @@ export const SLAB_RIBBON_SLOPE_KEYS = [
   SLAB_RIBBON_KEYS.slope.pivot,
 ] as const;
 
-const SLAB_SLOPE_KEY_SET: ReadonlySet<string> = new Set<string>(SLAB_RIBBON_SLOPE_KEYS);
-
-export function isSlabSlopeKey(commandKey: string): boolean {
-  return SLAB_SLOPE_KEY_SET.has(commandKey);
-}
+export const isSlabSlopeKey = makeKeySetGuard(SLAB_RIBBON_SLOPE_KEYS);
 
 // ─── ADR-476 — δομοστατικά / οπλισμός πλάκας (reinforcement) ───────────────────
 
@@ -203,20 +187,9 @@ export const SLAB_STRUCTURAL_KEY_TO_FIELD: Readonly<Record<string, SlabStructura
   [SLAB_STRUCTURAL_KEYS.cover]: 'cover',
 };
 
-const SLAB_STRUCTURAL_KEY_SET: ReadonlySet<string> = new Set<string>(
-  Object.values(SLAB_STRUCTURAL_KEYS),
-);
-const SLAB_STRUCTURAL_READOUT_KEY_SET: ReadonlySet<string> = new Set<string>(
-  Object.values(SLAB_STRUCTURAL_READOUT_KEYS),
-);
+export const isSlabStructuralKey = makeKeySetGuard(Object.values(SLAB_STRUCTURAL_KEYS));
 
-export function isSlabStructuralKey(commandKey: string): boolean {
-  return SLAB_STRUCTURAL_KEY_SET.has(commandKey);
-}
-
-export function isSlabStructuralReadoutKey(commandKey: string): boolean {
-  return SLAB_STRUCTURAL_READOUT_KEY_SET.has(commandKey);
-}
+export const isSlabStructuralReadoutKey = makeKeySetGuard(Object.values(SLAB_STRUCTURAL_READOUT_KEYS));
 
 /**
  * Panel visibility keys πλάκας (Properties palette + structural ribbon panel gating).
@@ -229,13 +202,7 @@ export const SLAB_STRUCTURAL_VISIBILITY_KEYS = {
   ceilingFinish: 'slab.visibility.ceilingFinish',
 } as const;
 
-const SLAB_STRUCTURAL_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>(
-  Object.values(SLAB_STRUCTURAL_VISIBILITY_KEYS),
-);
-
-export function isSlabStructuralVisibilityKey(key: string): boolean {
-  return SLAB_STRUCTURAL_VISIBILITY_KEY_SET.has(key);
-}
+export const isSlabStructuralVisibilityKey = makeKeySetGuard(Object.values(SLAB_STRUCTURAL_VISIBILITY_KEYS));
 
 /**
  * Pure SSoT: αποφασίζει αν ένα visibility-gated section/panel της πλάκας πρέπει να

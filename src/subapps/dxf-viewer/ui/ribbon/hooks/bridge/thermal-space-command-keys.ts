@@ -8,6 +8,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-422-bim-heating-mechanical-study.md
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const THERMAL_SPACE_RIBBON_KEYS = {
   stringParams: {
     /** Use-type selector (ThermalSpaceUseType). */
@@ -66,12 +68,13 @@ export type ThermalSpaceRibbonReadoutKey =
   | typeof THERMAL_SPACE_RIBBON_KEYS.readouts.heatLoadTotalW
   | typeof THERMAL_SPACE_RIBBON_KEYS.readouts.heatLoadSpecific;
 
-const NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isThermalSpaceRibbonNumberKey = makeKeySetGuard<ThermalSpaceRibbonNumberCommandKey>([
   THERMAL_SPACE_RIBBON_KEYS.params.setpointTempC,
   THERMAL_SPACE_RIBBON_KEYS.params.airChangesPerHour,
   THERMAL_SPACE_RIBBON_KEYS.params.ceilingHeightMm,
 ]);
-const STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
+
+export const isThermalSpaceRibbonStringKey = makeKeySetGuard<ThermalSpaceRibbonStringCommandKey>([
   THERMAL_SPACE_RIBBON_KEYS.stringParams.useType,
   THERMAL_SPACE_RIBBON_KEYS.stringParams.thermalBridgeLevel,
   THERMAL_SPACE_RIBBON_KEYS.stringParams.reheatMode,
@@ -79,27 +82,13 @@ const STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
   THERMAL_SPACE_RIBBON_KEYS.stringParams.airTightnessLevel,
   THERMAL_SPACE_RIBBON_KEYS.stringParams.ventilationSystem,
 ]);
-const ACTION_KEY_SET: ReadonlySet<string> = new Set<string>([
+
+export const isThermalSpaceRibbonActionKey = makeKeySetGuard<ThermalSpaceRibbonActionKey>([
   THERMAL_SPACE_RIBBON_KEYS.actions.close,
   THERMAL_SPACE_RIBBON_KEYS.actions.delete,
 ]);
-const READOUT_KEY_SET: ReadonlySet<string> = new Set<string>([
+
+export const isThermalSpaceRibbonReadoutKey = makeKeySetGuard<ThermalSpaceRibbonReadoutKey>([
   THERMAL_SPACE_RIBBON_KEYS.readouts.heatLoadTotalW,
   THERMAL_SPACE_RIBBON_KEYS.readouts.heatLoadSpecific,
 ]);
-
-export function isThermalSpaceRibbonNumberKey(commandKey: string): commandKey is ThermalSpaceRibbonNumberCommandKey {
-  return NUMBER_KEY_SET.has(commandKey);
-}
-
-export function isThermalSpaceRibbonStringKey(commandKey: string): commandKey is ThermalSpaceRibbonStringCommandKey {
-  return STRING_KEY_SET.has(commandKey);
-}
-
-export function isThermalSpaceRibbonActionKey(commandKey: string): commandKey is ThermalSpaceRibbonActionKey {
-  return ACTION_KEY_SET.has(commandKey);
-}
-
-export function isThermalSpaceRibbonReadoutKey(commandKey: string): commandKey is ThermalSpaceRibbonReadoutKey {
-  return READOUT_KEY_SET.has(commandKey);
-}

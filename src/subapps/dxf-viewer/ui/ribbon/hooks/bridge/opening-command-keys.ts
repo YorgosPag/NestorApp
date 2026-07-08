@@ -6,6 +6,8 @@
  * Mirrors `WALL_RIBBON_KEYS` pattern.
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const OPENING_RIBBON_KEYS = {
   stringParams: {
     /** Opening kind selector (5 options: door/window/sliding-door/french-door/fixed). */
@@ -68,17 +70,13 @@ export type OpeningTagStyleComboboxKey =
   | typeof OPENING_TAG_STYLE_KEYS.pillBgColor
   | typeof OPENING_TAG_STYLE_KEYS.leaderColor;
 
-const TAG_STYLE_COMBOBOX_SET: ReadonlySet<string> = new Set<string>([
+export const isOpeningTagStyleComboboxKey = makeKeySetGuard([
   OPENING_TAG_STYLE_KEYS.fontSizePx,
   OPENING_TAG_STYLE_KEYS.borderWidthPx,
   OPENING_TAG_STYLE_KEYS.leaderStyle,
   OPENING_TAG_STYLE_KEYS.pillBgColor,
   OPENING_TAG_STYLE_KEYS.leaderColor,
 ]);
-
-export function isOpeningTagStyleComboboxKey(key: string): boolean {
-  return TAG_STYLE_COMBOBOX_SET.has(key);
-}
 
 export const OPENING_RIBBON_KEYS_ACTIONS = {
   close: 'opening.actions.close',
@@ -93,21 +91,13 @@ export const OPENING_RIBBON_KEYS_ACTIONS = {
   exportSchedulePdf: 'opening.actions.exportSchedulePdf',
 } as const;
 
-const OPENING_TAG_STYLE_TOGGLE_SET: ReadonlySet<string> = new Set<string>([
+export const isOpeningTagStyleToggleKey = makeKeySetGuard([
   OPENING_TAG_STYLE_KEYS.leaderVisible,
 ]);
 
-export function isOpeningTagStyleToggleKey(key: string): boolean {
-  return OPENING_TAG_STYLE_TOGGLE_SET.has(key);
-}
-
-const OPENING_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isOpeningActionKey = makeKeySetGuard([
   ...Object.values(OPENING_RIBBON_KEYS_ACTIONS),
 ]);
-
-export function isOpeningActionKey(action: string): boolean {
-  return OPENING_ACTION_KEY_SET.has(action);
-}
 
 /** Visibility key (red badge when `validation.hasCodeViolations === true`). */
 export const OPENING_RIBBON_BADGE_KEYS = {
@@ -116,16 +106,8 @@ export const OPENING_RIBBON_BADGE_KEYS = {
 
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────
 
-const OPENING_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(OPENING_RIBBON_NUMBER_KEYS);
-const OPENING_STRING_KEY_SET: ReadonlySet<string> = new Set<string>(OPENING_RIBBON_STRING_KEYS);
-
-export function isOpeningRibbonKey(commandKey: string): boolean {
-  return OPENING_NUMBER_KEY_SET.has(commandKey);
-}
-
-export function isOpeningRibbonStringKey(commandKey: string): boolean {
-  return OPENING_STRING_KEY_SET.has(commandKey);
-}
+export const isOpeningRibbonKey = makeKeySetGuard(OPENING_RIBBON_NUMBER_KEYS);
+export const isOpeningRibbonStringKey = makeKeySetGuard(OPENING_RIBBON_STRING_KEYS);
 
 // ─── ADR-421 SLICE C follow-up (a): type-aware gating ────────────────────────
 
@@ -141,12 +123,8 @@ export function isOpeningRibbonStringKey(commandKey: string): boolean {
  * INSTANCE owns `sillHeight` / `handing` / `openDirection` / `mark`, so those
  * stay fully editable on a typed opening (zero regression for untyped openings).
  */
-export const OPENING_TYPE_GOVERNED_COMBOBOX_KEYS: ReadonlySet<string> = new Set<string>([
+export const isOpeningTypeGovernedComboboxKey = makeKeySetGuard([
   OPENING_RIBBON_KEYS.stringParams.kind,
   OPENING_RIBBON_KEYS.params.width,
   OPENING_RIBBON_KEYS.params.height,
 ]);
-
-export function isOpeningTypeGovernedComboboxKey(commandKey: string): boolean {
-  return OPENING_TYPE_GOVERNED_COMBOBOX_KEYS.has(commandKey);
-}

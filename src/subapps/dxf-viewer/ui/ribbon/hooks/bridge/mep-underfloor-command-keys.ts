@@ -13,6 +13,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const MEP_UNDERFLOOR_RIBBON_KEYS = {
   params: {
     /** mm — centre-to-centre pipe spacing of the serpentine rows. */
@@ -41,39 +43,24 @@ export const MEP_UNDERFLOOR_RIBBON_NUMBER_KEYS: readonly string[] = [
   MEP_UNDERFLOOR_RIBBON_KEYS.params.thermalOutput,
 ];
 
-/** All underfloor param keys (number + pattern + readout) — for composer routing. */
-const MEP_UNDERFLOOR_ALL_KEY_SET: ReadonlySet<string> = new Set<string>([
+/** True for ANY underfloor combobox key (routes the combobox to this bridge). */
+export const isMepUnderfloorRibbonKey = makeKeySetGuard([
   ...MEP_UNDERFLOOR_RIBBON_NUMBER_KEYS,
   MEP_UNDERFLOOR_RIBBON_KEYS.params.patternType,
   MEP_UNDERFLOOR_RIBBON_KEYS.params.totalLength,
 ]);
 
-const MEP_UNDERFLOOR_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(
-  MEP_UNDERFLOOR_RIBBON_NUMBER_KEYS,
-);
-
-/** True for ANY underfloor combobox key (routes the combobox to this bridge). */
-export function isMepUnderfloorRibbonKey(commandKey: string): boolean {
-  return MEP_UNDERFLOOR_ALL_KEY_SET.has(commandKey);
-}
-
 /** True only for the editable numeric param keys. */
-export function isMepUnderfloorNumberKey(commandKey: string): boolean {
-  return MEP_UNDERFLOOR_NUMBER_KEY_SET.has(commandKey);
-}
+export const isMepUnderfloorNumberKey = makeKeySetGuard(MEP_UNDERFLOOR_RIBBON_NUMBER_KEYS);
 
 export const MEP_UNDERFLOOR_RIBBON_KEYS_ACTIONS = {
   close: 'mepUnderfloor.actions.close',
   delete: 'mepUnderfloor.actions.delete',
 } as const;
 
-const MEP_UNDERFLOOR_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
+export const isMepUnderfloorActionKey = makeKeySetGuard(
   Object.values(MEP_UNDERFLOOR_RIBBON_KEYS_ACTIONS),
 );
-
-export function isMepUnderfloorActionKey(action: string): boolean {
-  return MEP_UNDERFLOOR_ACTION_KEY_SET.has(action);
-}
 
 /**
  * Panel visibility keys.
@@ -87,12 +74,6 @@ export const MEP_UNDERFLOOR_RIBBON_VISIBILITY_KEYS = {
 export type MepUnderfloorRibbonVisibilityKey =
   typeof MEP_UNDERFLOOR_RIBBON_VISIBILITY_KEYS.hasNetwork;
 
-const MEP_UNDERFLOOR_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isMepUnderfloorVisibilityKey = makeKeySetGuard<MepUnderfloorRibbonVisibilityKey>([
   MEP_UNDERFLOOR_RIBBON_VISIBILITY_KEYS.hasNetwork,
 ]);
-
-export function isMepUnderfloorVisibilityKey(
-  key: string,
-): key is MepUnderfloorRibbonVisibilityKey {
-  return MEP_UNDERFLOOR_VISIBILITY_KEY_SET.has(key);
-}

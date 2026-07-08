@@ -10,6 +10,8 @@
  * then the events are emitted but no-op.
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const WALL_RIBBON_KEYS = {
   stringParams: {
     /** Wall category selector (5 options: exterior/interior/partition/parapet/fence). */
@@ -84,13 +86,7 @@ export const WALL_RIBBON_KEYS_ACTIONS = {
   fromGridOuter: 'wall.actions.fromGridOuter',
 } as const;
 
-const WALL_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
-  Object.values(WALL_RIBBON_KEYS_ACTIONS),
-);
-
-export function isWallActionKey(action: string): boolean {
-  return WALL_ACTION_KEY_SET.has(action);
-}
+export const isWallActionKey = makeKeySetGuard(Object.values(WALL_RIBBON_KEYS_ACTIONS));
 
 /** Visibility key (red badge when `validation.hasCodeViolations === true`). */
 export const WALL_RIBBON_BADGE_KEYS = {
@@ -99,21 +95,11 @@ export const WALL_RIBBON_BADGE_KEYS = {
 
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────
 
-const WALL_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(WALL_RIBBON_NUMBER_KEYS);
-const WALL_STRING_KEY_SET: ReadonlySet<string> = new Set<string>(WALL_RIBBON_STRING_KEYS);
-const WALL_TOGGLE_KEY_SET: ReadonlySet<string> = new Set<string>(WALL_RIBBON_TOGGLE_KEYS);
+export const isWallRibbonKey = makeKeySetGuard(WALL_RIBBON_NUMBER_KEYS);
 
-export function isWallRibbonKey(commandKey: string): boolean {
-  return WALL_NUMBER_KEY_SET.has(commandKey);
-}
+export const isWallRibbonStringKey = makeKeySetGuard(WALL_RIBBON_STRING_KEYS);
 
-export function isWallRibbonStringKey(commandKey: string): boolean {
-  return WALL_STRING_KEY_SET.has(commandKey);
-}
-
-export function isWallRibbonToggleKey(commandKey: string): boolean {
-  return WALL_TOGGLE_KEY_SET.has(commandKey);
-}
+export const isWallRibbonToggleKey = makeKeySetGuard(WALL_RIBBON_TOGGLE_KEYS);
 
 // ─── ADR-404 Phase 5b — tilt key set + guard ─────────────────────────────────
 
@@ -125,8 +111,4 @@ export const WALL_RIBBON_TILT_KEYS = [
   WALL_RIBBON_KEYS.tilt.angle,
 ] as const;
 
-const WALL_TILT_KEY_SET: ReadonlySet<string> = new Set<string>(WALL_RIBBON_TILT_KEYS);
-
-export function isWallTiltKey(commandKey: string): boolean {
-  return WALL_TILT_KEY_SET.has(commandKey);
-}
+export const isWallTiltKey = makeKeySetGuard(WALL_RIBBON_TILT_KEYS);

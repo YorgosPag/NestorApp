@@ -11,6 +11,8 @@
  * @see ui/ribbon/hooks/bridge/slab-command-keys.ts — το πρότυπο
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const ROOF_RIBBON_KEYS = {
   stringParams: {
     /** Roof shape preset (flat / mono-pitch / gable). Drives `applyRoofShapePreset`. */
@@ -81,24 +83,14 @@ export const ROOF_EDGE_KEY_LIST: readonly string[] = [
   ROOF_EDGE_KEYS.overhang,
 ];
 
-const ROOF_EDGE_KEY_SET: ReadonlySet<string> = new Set<string>(ROOF_EDGE_KEY_LIST);
-
-export function isRoofEdgeKey(commandKey: string): boolean {
-  return ROOF_EDGE_KEY_SET.has(commandKey);
-}
+export const isRoofEdgeKey = makeKeySetGuard(ROOF_EDGE_KEY_LIST);
 
 export const ROOF_RIBBON_KEYS_ACTIONS = {
   close: 'roof.actions.close',
   delete: 'roof.actions.delete',
 } as const;
 
-const ROOF_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
-  Object.values(ROOF_RIBBON_KEYS_ACTIONS),
-);
-
-export function isRoofActionKey(action: string): boolean {
-  return ROOF_ACTION_KEY_SET.has(action);
-}
+export const isRoofActionKey = makeKeySetGuard(Object.values(ROOF_RIBBON_KEYS_ACTIONS));
 
 /** Visibility key (red badge when `validation.hasCodeViolations === true`). */
 export const ROOF_RIBBON_BADGE_KEYS = {
@@ -107,20 +99,8 @@ export const ROOF_RIBBON_BADGE_KEYS = {
 
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────
 
-const ROOF_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(ROOF_RIBBON_NUMBER_KEYS);
-const ROOF_STRING_KEY_SET: ReadonlySet<string> = new Set<string>(ROOF_RIBBON_STRING_KEYS);
-const ROOF_TOGGLE_KEY_SET: ReadonlySet<string> = new Set<string>(
-  Object.values(ROOF_RIBBON_TOGGLE_KEYS),
-);
+export const isRoofRibbonKey = makeKeySetGuard(ROOF_RIBBON_NUMBER_KEYS);
 
-export function isRoofRibbonKey(commandKey: string): boolean {
-  return ROOF_NUMBER_KEY_SET.has(commandKey);
-}
+export const isRoofRibbonStringKey = makeKeySetGuard(ROOF_RIBBON_STRING_KEYS);
 
-export function isRoofRibbonStringKey(commandKey: string): boolean {
-  return ROOF_STRING_KEY_SET.has(commandKey);
-}
-
-export function isRoofRibbonToggleKey(commandKey: string): boolean {
-  return ROOF_TOGGLE_KEY_SET.has(commandKey);
-}
+export const isRoofRibbonToggleKey = makeKeySetGuard(Object.values(ROOF_RIBBON_TOGGLE_KEYS));

@@ -14,6 +14,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const MEP_WATER_HEATER_RIBBON_KEYS = {
   params: {
     /** mm — body width (the largest horizontal dimension of the water heater cabinet). */
@@ -58,13 +60,9 @@ export const MEP_WATER_HEATER_RIBBON_KEYS_ACTIONS = {
   delete: 'mepWaterHeater.actions.delete',
 } as const;
 
-const MEP_WATER_HEATER_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
+export const isMepWaterHeaterActionKey = makeKeySetGuard(
   Object.values(MEP_WATER_HEATER_RIBBON_KEYS_ACTIONS),
 );
-
-export function isMepWaterHeaterActionKey(action: string): boolean {
-  return MEP_WATER_HEATER_ACTION_KEY_SET.has(action);
-}
 
 /**
  * Panel visibility keys.
@@ -78,22 +76,10 @@ export const MEP_WATER_HEATER_RIBBON_VISIBILITY_KEYS = {
 export type MepWaterHeaterRibbonVisibilityKey =
   typeof MEP_WATER_HEATER_RIBBON_VISIBILITY_KEYS.hasNetwork;
 
-const MEP_WATER_HEATER_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isMepWaterHeaterVisibilityKey = makeKeySetGuard<MepWaterHeaterRibbonVisibilityKey>([
   MEP_WATER_HEATER_RIBBON_VISIBILITY_KEYS.hasNetwork,
 ]);
 
-export function isMepWaterHeaterVisibilityKey(
-  key: string,
-): key is MepWaterHeaterRibbonVisibilityKey {
-  return MEP_WATER_HEATER_VISIBILITY_KEY_SET.has(key);
-}
-
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────
 
-const MEP_WATER_HEATER_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(
-  MEP_WATER_HEATER_RIBBON_NUMBER_KEYS,
-);
-
-export function isMepWaterHeaterRibbonKey(commandKey: string): boolean {
-  return MEP_WATER_HEATER_NUMBER_KEY_SET.has(commandKey);
-}
+export const isMepWaterHeaterRibbonKey = makeKeySetGuard(MEP_WATER_HEATER_RIBBON_NUMBER_KEYS);

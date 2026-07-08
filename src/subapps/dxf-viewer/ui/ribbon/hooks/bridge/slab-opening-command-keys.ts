@@ -6,6 +6,8 @@
  * (`useRibbonSlabOpeningBridge`). Mirrors `SLAB_RIBBON_KEYS` pattern.
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const SLAB_OPENING_RIBBON_KEYS = {
   stringParams: {
     /** Slab-opening kind (shaft / well / duct / chimney). */
@@ -30,13 +32,7 @@ export const SLAB_OPENING_RIBBON_KEYS_ACTIONS = {
   copyToFloors: 'slabOpening.actions.copyToFloors',
 } as const;
 
-const SLAB_OPENING_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
-  Object.values(SLAB_OPENING_RIBBON_KEYS_ACTIONS),
-);
-
-export function isSlabOpeningActionKey(action: string): boolean {
-  return SLAB_OPENING_ACTION_KEY_SET.has(action);
-}
+export const isSlabOpeningActionKey = makeKeySetGuard(Object.values(SLAB_OPENING_RIBBON_KEYS_ACTIONS));
 
 /** Visibility key (red badge when `validation.hasCodeViolations === true`). */
 export const SLAB_OPENING_RIBBON_BADGE_KEYS = {
@@ -45,10 +41,4 @@ export const SLAB_OPENING_RIBBON_BADGE_KEYS = {
 
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────
 
-const SLAB_OPENING_STRING_KEY_SET: ReadonlySet<string> = new Set<string>(
-  SLAB_OPENING_RIBBON_STRING_KEYS,
-);
-
-export function isSlabOpeningRibbonStringKey(commandKey: string): boolean {
-  return SLAB_OPENING_STRING_KEY_SET.has(commandKey);
-}
+export const isSlabOpeningRibbonStringKey = makeKeySetGuard(SLAB_OPENING_RIBBON_STRING_KEYS);

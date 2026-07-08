@@ -13,6 +13,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ8
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const MEP_SEGMENT_RIBBON_KEYS = {
   stringParams: {
     /** Cross-section profile selector (rectangular / round). */
@@ -71,13 +73,9 @@ export const MEP_SEGMENT_RIBBON_KEYS_ACTIONS = {
   delete: 'mepSegment.actions.delete',
 } as const;
 
-const MEP_SEGMENT_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
+export const isMepSegmentActionKey = makeKeySetGuard(
   Object.values(MEP_SEGMENT_RIBBON_KEYS_ACTIONS),
 );
-
-export function isMepSegmentActionKey(action: string): boolean {
-  return MEP_SEGMENT_ACTION_KEY_SET.has(action);
-}
 
 /**
  * Panel visibility keys (driven by effective section/domain):
@@ -116,7 +114,7 @@ export type MepSegmentRibbonVisibilityKey =
   | typeof MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.pipeClassification
   | typeof MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.selectionOnly;
 
-const MEP_SEGMENT_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isMepSegmentVisibilityKey = makeKeySetGuard<MepSegmentRibbonVisibilityKey>([
   MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.domainAllowsSectionChoice,
   MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.rectangularSection,
   MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.roundSection,
@@ -125,25 +123,7 @@ const MEP_SEGMENT_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_SEGMENT_RIBBON_VISIBILITY_KEYS.selectionOnly,
 ]);
 
-export function isMepSegmentVisibilityKey(
-  key: string,
-): key is MepSegmentRibbonVisibilityKey {
-  return MEP_SEGMENT_VISIBILITY_KEY_SET.has(key);
-}
-
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────
 
-const MEP_SEGMENT_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(
-  MEP_SEGMENT_RIBBON_NUMBER_KEYS,
-);
-const MEP_SEGMENT_STRING_KEY_SET: ReadonlySet<string> = new Set<string>(
-  MEP_SEGMENT_RIBBON_STRING_KEYS,
-);
-
-export function isMepSegmentRibbonKey(commandKey: string): boolean {
-  return MEP_SEGMENT_NUMBER_KEY_SET.has(commandKey);
-}
-
-export function isMepSegmentRibbonStringKey(commandKey: string): boolean {
-  return MEP_SEGMENT_STRING_KEY_SET.has(commandKey);
-}
+export const isMepSegmentRibbonKey = makeKeySetGuard(MEP_SEGMENT_RIBBON_NUMBER_KEYS);
+export const isMepSegmentRibbonStringKey = makeKeySetGuard(MEP_SEGMENT_RIBBON_STRING_KEYS);

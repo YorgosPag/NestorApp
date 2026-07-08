@@ -6,13 +6,11 @@
  * `column-command-keys` pattern.
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const STOREY_RIBBON_KEYS = {
   /** mm — ύψος του ΕΝΕΡΓΟΥ ορόφου (γράφει `floors/{id}.height`, σε μέτρα). */
   height: 'storey.params.height',
 } as const;
 
-const STOREY_KEY_SET: ReadonlySet<string> = new Set<string>(Object.values(STOREY_RIBBON_KEYS));
-
-export function isStoreyRibbonKey(commandKey: string): boolean {
-  return STOREY_KEY_SET.has(commandKey);
-}
+export const isStoreyRibbonKey = makeKeySetGuard(Object.values(STOREY_RIBBON_KEYS));
