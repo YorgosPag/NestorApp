@@ -1,12 +1,15 @@
 /**
- * ADR-530 — TextRenderer glyph-paint branch unit tests.
+ * ADR-530 / ADR-557 Φάση C — TextRenderer.paintText delegation unit tests.
  *
- * Verifies the paint decision: fill a cached glyph Path2D when a CAD font
- * resolves, else fall back to the legacy CSS ctx.fillText (zero regression).
- * The font modules are mocked so no real TTF is loaded in the suite.
+ * The glyph-vs-CSS paint DECISION now lives in the shared SSoT `paintTextRun`
+ * (`text-engine/fonts/glyph-run-draw.ts`, covered by glyph-run-draw.test.ts) — the SAME
+ * routine the 3D textured-plane converter uses. Here we verify only that `paintText`
+ * FORWARDS to that SSoT with the correct run params (origin / height / align / baseline /
+ * resolved / tracking). The font modules are mocked so no real TTF is loaded in the suite.
  */
 
 import type { ResolvedFont } from '../../../text-engine/fonts';
+import { paintTextRun } from '../../../text-engine/fonts';
 
 // Firebase auth chain reaches BaseEntityRenderer via PhaseManager → GripProvider
 // → user-settings → firestore. Stub it before any imports execute so the test
@@ -23,11 +26,7 @@ jest.mock('firebase/auth', () => ({
 
 jest.mock('../../../text-engine/fonts', () => ({
   resolveEntityFont: jest.fn(() => null),
-  getGlyphRun: jest.fn(() => ({
-    path: new Path2D(),
-    metrics: { width: 60, ascent: 80, descent: 20 },
-  })),
-  GLYPH_REFERENCE_SIZE: 100,
+  paintTextRun: jest.fn(() => 60),
 }));
 
 import { TextRenderer } from '../TextRenderer';
@@ -46,39 +45,34 @@ function makeCtx() {
       width: 800,
       height: 600,
     },
-  } as unknown as CanvasRenderingContext2D & {
-    fill: jest.Mock; fillText: jest.Mock; scale: jest.Mock; translate: jest.Mock;
-  };
+  } as unknown as CanvasRenderingContext2D;
 }
 
 const resolved: ResolvedFont = { font: {} as never, cacheName: 'Liberation Sans' };
 
-describe('TextRenderer glyph paint (ADR-530)', () => {
-  it('fills a scaled glyph path when a font resolves', () => {
+describe('TextRenderer.paintText → shared paintTextRun SSoT (ADR-557 Φάση C)', () => {
+  beforeEach(() => (paintTextRun as jest.Mock).mockClear());
+
+  it('forwards the run params (resolved font + tracking) to paintTextRun', () => {
     const ctx = makeCtx();
-    const renderer = new TextRenderer(ctx);
-
-    // screenHeight 100 → scale 1 → widthPx = metrics.width (60).
-    const width = (renderer as unknown as {
+    const width = (new TextRenderer(ctx) as unknown as {
       paintText: (...a: unknown[]) => number;
-    }).paintText(0, 0, 'A', 100, 'left', 'top', resolved);
+    }).paintText(5, 7, 'AB', 100, 'center', 'middle', resolved, 2);
 
-    expect(ctx.fill).toHaveBeenCalledTimes(1);
-    expect(ctx.fillText).not.toHaveBeenCalled();
-    expect(ctx.scale).toHaveBeenCalledWith(1, 1);
-    expect(width).toBe(60);
+    expect(paintTextRun).toHaveBeenCalledWith(ctx, 'AB', {
+      originX: 5, originY: 7, targetHeight: 100, align: 'center', baseline: 'middle', resolved, tracking: 2,
+    });
+    expect(width).toBe(60); // returns the SSoT's advance width
   });
 
-  it('falls back to ctx.fillText when no font resolves', () => {
+  it('forwards a null font (CSS fallback tier) unchanged, tracking defaults to 1', () => {
     const ctx = makeCtx();
-    const renderer = new TextRenderer(ctx);
-
-    const width = (renderer as unknown as {
+    (new TextRenderer(ctx) as unknown as {
       paintText: (...a: unknown[]) => number;
-    }).paintText(5, 7, 'A', 100, 'left', 'top', null);
+    }).paintText(0, 0, 'A', 50, 'left', 'top', null);
 
-    expect(ctx.fillText).toHaveBeenCalledWith('A', 5, 7);
-    expect(ctx.fill).not.toHaveBeenCalled();
-    expect(width).toBe(42);
+    expect(paintTextRun).toHaveBeenCalledWith(ctx, 'A', {
+      originX: 0, originY: 0, targetHeight: 50, align: 'left', baseline: 'top', resolved: null, tracking: 1,
+    });
   });
 });

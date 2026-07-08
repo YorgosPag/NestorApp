@@ -1,6 +1,9 @@
 import type { Entity } from './entities';
-import { TEXT_METRICS_RATIOS, TEXT_SIZE_LIMITS } from '../config/text-rendering-config';
 import { EMPTY_SPATIAL_BOUNDS } from '../config/geometry-constants';
+// ADR-557 Φ-attachment (Φάση B) — attachment/rotation/widthFactor-aware text-box SSoT (the SAME
+// box the grips, hover frame, 3D mesh and culling read) + the scene→flat projection it consumes.
+import { textBoxAABB } from '../bim/text/text-box';
+import { projectSceneTextToDxf } from '../bim/text/project-scene-text';
 // ADR-583 — annotative model-size SSoT for the North-arrow annotation symbol.
 import { annotationSymbolModelSizeLive } from '../bim/annotation-symbols/annotation-symbol-model-size';
 import { DEFAULT_ANNOTATION_SYMBOL_SIZE_MM } from './annotation-symbol';
@@ -78,29 +81,14 @@ function computeBounds(entity: Entity, forExtents: boolean): SpatialBounds {
         maxY: entity.position.y + half,
       };
     }
-    case 'text': {
-      // ADR-557 — honour the TEXT X-scale (`widthFactor`) so bounds (zoom-to-fit /
-      // selection extent) track a horizontally-stretched glyph.
-      const textWidthFactor = ('widthFactor' in entity && typeof entity.widthFactor === 'number' && entity.widthFactor > 0)
-        ? entity.widthFactor
-        : 1;
-      const textWidth = entity.text.length * (entity.height || entity.fontSize || 2.5) * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE * textWidthFactor;
-      const textHeight = entity.height || entity.fontSize || 2.5;
-      return {
-        minX: entity.position.x,
-        minY: entity.position.y - textHeight,
-        maxX: entity.position.x + textWidth,
-        maxY: entity.position.y,
-      };
-    }
+    case 'text':
     case 'mtext': {
-      const mtextHeight = entity.height || (entity.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE);
-      return {
-        minX: entity.position.x,
-        minY: entity.position.y - mtextHeight,
-        maxX: entity.position.x + entity.width,
-        maxY: entity.position.y,
-      };
+      // ADR-557 Φ-attachment (Φάση B) — bounds via the attachment/rotation/widthFactor-aware
+      // text-box SSoT, replacing the bespoke monospace-upward approximation (attachment-blind,
+      // rotation-blind, wrong Y convention). `projectSceneTextToDxf` discriminates TEXT
+      // (widthFactor) vs MTEXT (explicit frame width); `textBoxAABB` returns the same AABB the
+      // culling path uses — so selection-extent / zoom-to-fit and culling now agree.
+      return textBoxAABB(projectSceneTextToDxf(entity, entity.id));
     }
     case 'spline':
       return 'controlPoints' in entity && entity.controlPoints

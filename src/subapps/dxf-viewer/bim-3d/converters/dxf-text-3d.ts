@@ -5,13 +5,18 @@
  * a `CanvasTexture` on a `PlaneGeometry`, in NATIVE DXF units — the converter's group-level
  * `sceneUnitsToMeters` scale converts it to the metre world like the rest of the wireframe.
  *
- * Font / height / width resolution reuse the 2D text SSoT (`text-rendering-config.ts`:
- * `getTextHeightWithFallback`, `estimateTextWidth`, `TEXT_FONTS`) so a glyph's footprint in 3D
- * matches the 2D plan — no duplicate text-metrics logic.
+ * Font / glyph rendering reuses the 2D single-line paint SSoT (`paintTextRun` /
+ * `measureTextRunPx`, ADR-557 Φάση C): the texture is drawn with the SAME vector glyph outlines
+ * (`resolveEntityFont` → `getGlyphRun`) the 2D renderer paints, honouring fontFamily / bold /
+ * italic / widthFactor / tracking. Before Φάση C this converter used a hard-coded `ctx.fillText`
+ * + `DEFAULT_FAMILY` string — a second, divergent text mechanism that dropped all of those and
+ * rendered registry-only fonts (SHX / Τέκτονας) as the CSS fallback in 3D while 2D showed their
+ * real outlines. Now there is ONE font engine across 2D & 3D (Revit / Cinema 4D / Figma model).
  *
- * v1 scope: horizontal text (rotation ignored — most plan annotations are upright; rotated
- * text renders upright, a documented follow-up). The pick / hover-glow use the axis-aligned
- * `getEntityBBox` SSoT, so the generous click box stays consistent with this quad.
+ * Placement: the quad is laid flat AND spun by the DXF plan `rotation` (ADR-557 C-rotation,
+ * `orientTextPlane`) so the 3D text leans EXACTLY like the 2D glyphs; the glyph STYLE (font /
+ * weight / italic / X-scale / tracking / oblique) matches the plan too. The pick / hover-glow use
+ * the em-box SSoT (`resolveTextEmBox`), so the click box stays consistent with this quad.
  */
 
 import * as THREE from 'three';
@@ -21,7 +26,11 @@ import { trueColorToHex } from '../../utils/dxf-true-color';
 import {
   getTextHeightWithFallback,
   TEXT_FONTS,
+  buildUIFont,
 } from '../../config/text-rendering-config';
+// ADR-557 Φάση C — the single-line glyph-run paint SSoT (same routine the 2D `TextRenderer`
+// uses): vector glyph outlines when a CAD font resolves, else CSS `ctx.fillText` on `ctx.font`.
+import { resolveEntityFont, paintTextRun, measureTextRunPx, type ResolvedFont } from '../../text-engine/fonts';
 // ADR-557 Φ-attachment — the NOMINAL em box (`resolveTextEmBox`): the 3D canvas draws the
 // glyph centred in an em cell (`textBaseline:'middle'`), so the plane must sit on the em-box
 // centre, NOT the tight VISUAL cap box (`resolveTextBox`) the 2D grips/hover use — else the
@@ -48,6 +57,39 @@ const TEXTURE_PX_PER_UNIT = 16;
  */
 const MAX_TEXTURE_DIM = 2048;
 
+/** Degrees→radians (local constant, mirroring the sibling geometry modules' convention). */
+const DEG_TO_RAD = Math.PI / 180;
+/** World-space axes for the flat-lay + plan-spin quaternion composition (module-level = no per-mesh alloc). */
+const PLANE_FLAT_AXIS = new THREE.Vector3(1, 0, 0);
+const PLANE_UP_AXIS = new THREE.Vector3(0, 1, 0);
+
+/**
+ * ADR-557 (C-rotation) — orient the flat text quad so it leans EXACTLY like the 2D glyphs.
+ *
+ * Two composed world-space rotations, built as a QUATERNION (no Euler-order ambiguity, mirroring
+ * `mep-fitting-to-mesh` / `railing-to-three`):
+ *   • `flat` = rotateX(−90°): lays the plane on the floor, mapping plane-local (x, y) →
+ *     world (x, 0, −y) — the DXF→Three convention (`DxfToThreeConverter`).
+ *   • `spin` = rotateY(+rotation): the DXF plan rotation (CCW, degrees), applied AFTER `flat`
+ *     (outer factor `spin ∘ flat`) so it spins about the WORLD vertical.
+ *
+ * Sign derivation (locked by `dxf-text-3d.rotation.test.ts`): for a plane-local corner (a, b),
+ * `R_Y(θ)·R_X(−90°)·(a, b, 0) = (a·cosθ − b·sinθ, 0, −a·sinθ − b·cosθ)` — identical to the DXF box
+ * corner `R(θ)·(a, b)` (the `text-box` SSoT, SAME `entity.rotation`) mapped (x, y) → (x, 0, −y).
+ * So `+rotation` is correct here, NOT the `−rotationDeg` of `mesh-to-object3d` (whose UPRIGHT
+ * objects lack the −90° flip that reverses the in-plane handedness).
+ */
+export function orientTextPlane(mesh: THREE.Object3D, entity: Pick<DxfText, 'rotation'>): void {
+  const flat = new THREE.Quaternion().setFromAxisAngle(PLANE_FLAT_AXIS, -Math.PI / 2);
+  const rotationRad = (entity.rotation ?? 0) * DEG_TO_RAD;
+  if (rotationRad === 0) {
+    mesh.quaternion.copy(flat);
+    return;
+  }
+  const spin = new THREE.Quaternion().setFromAxisAngle(PLANE_UP_AXIS, rotationRad);
+  mesh.quaternion.copy(spin.multiply(flat)); // spin ∘ flat: flat applied first, then world-Y spin
+}
+
 /** Disposable bundle for one text mesh (the converter disposes these on re-sync / unmount). */
 export interface DxfTextMeshBundle {
   readonly mesh: THREE.Mesh;
@@ -56,11 +98,88 @@ export interface DxfTextMeshBundle {
   readonly texture: THREE.CanvasTexture;
 }
 
+/** Resolved glyph style for the texture, mirroring the 2D renderer's font resolution. */
+interface TextFontResolution {
+  /** A loaded opentype font, or null → CSS `ctx.fillText` fallback (`fallbackFont`). */
+  readonly resolved: ResolvedFont | null;
+  /** AutoCAD `\T` tracking factor (1 = normal). */
+  readonly tracking: number;
+  /** AutoCAD TEXT X-scale (horizontal stretch, 1 = none). */
+  readonly widthFactor: number;
+  /** CSS font string for the fallback path, at a given px size (family/bold/italic honoured). */
+  readonly fallbackFont: (px: number) => string;
+}
+
+/**
+ * Resolve the glyph font + style once, exactly like the 2D `TextRenderer`: a loaded CAD font
+ * via `resolveEntityFont` (bold direct, italic → null → CSS), plus the tracking / widthFactor /
+ * fallback-CSS-font the shared paint SSoT needs. So the 3D texture honours the SAME style.
+ */
+function resolveTextFont(entity: DxfText): TextFontResolution {
+  const style = entity.textStyle;
+  const family = style?.fontFamily || TEXT_FONTS.DEFAULT_FAMILY;
+  const weight: 'normal' | 'bold' = style?.bold ? 'bold' : 'normal';
+  const italic = style?.italic;
+  return {
+    resolved: resolveEntityFont(style?.fontFamily, { bold: style?.bold, italic: style?.italic }),
+    tracking: typeof style?.tracking === 'number' && style.tracking > 0 ? style.tracking : 1,
+    widthFactor: typeof entity.widthFactor === 'number' && entity.widthFactor > 0 ? entity.widthFactor : 1,
+    fallbackFont: (px: number) => buildUIFont(px, family, weight, italic),
+  };
+}
+
+/** Canvas px footprint for one measure pass (width = widest line, block = stacked lines). */
+interface CanvasMeasure {
+  readonly fontPx: number;
+  readonly padPx: number;
+  readonly advancePx: number;
+  readonly blockPx: number;
+  readonly obliqueMarginPx: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+/**
+ * Draw the stacked text lines onto the (sized) texture canvas via the shared glyph-run SSoT.
+ * Each line is centred (`textBaseline:'middle'`) at its stacked Y; the oblique shear + widthFactor
+ * form a per-line frame around the line centre (shear BEFORE the X-scale, mirroring `TextRenderer`).
+ */
+function drawTextLinesToCanvas(
+  ctx: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  lines: string[],
+  m: CanvasMeasure,
+  font: TextFontResolution,
+  obliqueShear: number,
+  colorHex: string,
+): void {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = colorHex;
+  ctx.textAlign = 'center';   // CSS-fallback alignment (glyph-run path passes 'center' explicitly)
+  ctx.textBaseline = 'middle';
+  ctx.font = font.fallbackFont(m.fontPx);
+  // First line centre sits so the block is vertically centred (matches the em-box anchor below).
+  const firstCenterY = (canvas.height - m.blockPx) / 2 + m.fontPx / 2;
+  for (let i = 0; i < lines.length; i++) {
+    const cy = firstCenterY + i * m.advancePx;
+    ctx.save();
+    ctx.translate(canvas.width / 2, cy);
+    // ADR-557 — shear BEFORE the widthFactor scale so the lean is `tan θ` per unit height
+    // INDEPENDENT of widthFactor (same order as `TextRenderer.renderTextContent`).
+    if (obliqueShear !== 0) ctx.transform(1, 0, obliqueShear, 1, 0, 0);
+    if (font.widthFactor !== 1) ctx.scale(font.widthFactor, 1);
+    paintTextRun(ctx, lines[i], {
+      originX: 0, originY: 0, targetHeight: m.fontPx,
+      align: 'center', baseline: 'middle', resolved: font.resolved, tracking: font.tracking,
+    });
+    ctx.restore();
+  }
+}
+
 /**
  * Build a flat textured-plane mesh for a DXF text entity laid on the floor plane (Y=0) in
  * native DXF units, coloured `colorInt`. Returns null for empty text or when a 2D canvas is
- * unavailable. The plane spans the text's width × height anchored at `entity.position`
- * (baseline-left, matching the 2D anchor + the `getEntityBBox` lower-left corner).
+ * unavailable. The plane spans the text's width × height anchored at the em-box centre.
  */
 export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMeshBundle | null {
   const text = entity.text ?? '';
@@ -70,6 +189,8 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
   // ADR-557 (multi-line) — split on `\n`; width = max line, height = stacked block.
   const lines = splitTextLines(text);
   const lineSpacingRatio = resolveLineSpacingRatio(entity);
+  // ADR-557 Φάση C — reuse the 2D font resolution (fontFamily/bold/italic/tracking/widthFactor).
+  const font = resolveTextFont(entity);
   // ADR-557 — AutoCAD oblique angle: horizontal shear of the texture glyphs (2D≡3D). Reads the
   // SAME shear SSoT (`obliqueShearFromAngle`, world y-up) the 2D renderer + box use; the texture
   // canvas is screen-y-DOWN so it NEGATES it (like `TextRenderer`) → `-tan(θ)` leans forward.
@@ -81,21 +202,23 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
   const ctx = canvas?.getContext('2d');
   if (!canvas || !ctx) return null;
 
-  // Font px = text height × texture resolution. Pad so glyph side-bearings / anti-aliasing never
-  // touch the canvas edge (Greek caps like Π are wider than a 0.6×height estimate → clipped).
-  // `measureCanvas` returns the canvas px footprint for a given px/unit resolution: width = the
-  // WIDEST line, block height = fontPx + (L−1)·advance (advance = fontPx × line-spacing ratio).
-  const measureCanvas = (pxPerUnit: number) => {
+  // `measureCanvas` returns the canvas px footprint for a given px/unit resolution via the SAME
+  // measure SSoT the draw uses (`measureTextRunPx` — glyph advance when a font resolves, else CSS
+  // measureText). Width = the WIDEST line × widthFactor; block height = fontPx + (L−1)·advance.
+  const measureCanvas = (pxPerUnit: number): CanvasMeasure => {
     const fontPx = Math.max(1, Math.round(heightUnits * pxPerUnit));
     const padPx = Math.ceil(fontPx * 0.25);
-    ctx.font = `${fontPx}px ${TEXT_FONTS.DEFAULT_FAMILY}`;
+    ctx.font = font.fallbackFont(fontPx); // CSS-fallback measure reads `ctx.font`
     let textPx = 0;
-    for (const line of lines) { const w = Math.ceil(ctx.measureText(line).width); if (w > textPx) textPx = w; }
+    for (const line of lines) {
+      const w = measureTextRunPx(ctx, line, { targetHeight: fontPx, resolved: font.resolved, tracking: font.tracking }) * font.widthFactor;
+      if (w > textPx) textPx = Math.ceil(w);
+    }
     const advancePx = fontPx * lineSpacingRatio;
     const blockPx = fontPx + (lines.length - 1) * advancePx;
-    // ADR-557 — extra horizontal margin so a sheared (oblique) glyph never touches the canvas
-    // edge: each line shears ±|shear|·fontPx/2 around its own centre. Zero when upright.
-    const obliqueMarginPx = obliqueShear !== 0 ? Math.ceil(Math.abs(obliqueShear) * fontPx) : 0;
+    // ADR-557 — extra horizontal margin so a sheared (oblique) / stretched glyph never touches the
+    // canvas edge: each line shears ±|shear|·fontPx/2 around its centre, then scales by widthFactor.
+    const obliqueMarginPx = obliqueShear !== 0 ? Math.ceil(Math.abs(obliqueShear) * fontPx * font.widthFactor) : 0;
     return {
       fontPx, padPx, advancePx, blockPx, obliqueMarginPx,
       width: Math.max(8, textPx + padPx * 2 + obliqueMarginPx * 2),
@@ -113,33 +236,11 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
     pxPerUnit *= MAX_TEXTURE_DIM / maxDim;
     m = measureCanvas(pxPerUnit);
   }
-  const font = `${m.fontPx}px ${TEXT_FONTS.DEFAULT_FAMILY}`;
 
   canvas.width = m.width;
   canvas.height = m.height;
-  // Resizing the canvas resets the 2D context → re-apply all draw state before filling.
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = trueColorToHex(colorInt);
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.font = font;
-  // ADR-557 (multi-line) — stack the lines centred in the canvas: first line centre sits so the
-  // block is vertically centred (matches the em-box anchor below), each next line steps by advance.
-  const firstCenterY = (canvas.height - m.blockPx) / 2 + m.fontPx / 2;
-  for (let i = 0; i < lines.length; i++) {
-    const cy = firstCenterY + i * m.advancePx;
-    if (obliqueShear !== 0) {
-      // ADR-557 — shear each line around its own centre (textBaseline:'middle'), so the
-      // oblique pivots on the line, matching the 2D anchor-space shear.
-      ctx.save();
-      ctx.translate(canvas.width / 2, cy);
-      ctx.transform(1, 0, obliqueShear, 1, 0, 0);
-      ctx.fillText(lines[i], 0, 0);
-      ctx.restore();
-    } else {
-      ctx.fillText(lines[i], canvas.width / 2, cy);
-    }
-  }
+  // Resizing the canvas resets the 2D context → the draw helper re-applies all draw state.
+  drawTextLinesToCanvas(ctx, canvas, lines, m, font, obliqueShear, trueColorToHex(colorInt));
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.minFilter = THREE.LinearFilter; // non power-of-two canvas → no mipmaps
@@ -159,9 +260,9 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
     map: texture, transparent: true, depthWrite: false, side: THREE.DoubleSide,
   });
   const mesh = new THREE.Mesh(geometry, material);
-  // rotateX(-90°) maps plane-local (x, y) → world (x, 0, -y) — EXACTLY the DXF→Three mapping
-  // (`DxfToThreeConverter`), so the text lies flat, readable from above, aligned with the plan.
-  mesh.rotation.x = -Math.PI / 2;
+  // ADR-557 (C-rotation) — flat-lay (rotateX(−90°), the DXF→Three mapping) + plan-spin about the
+  // world vertical by `entity.rotation`, so the text lies flat AND leans exactly like the 2D glyphs.
+  orientTextPlane(mesh, entity);
   // ADR-557 Φ-attachment — anchor the plane CENTRE at the NOMINAL em-box centre
   // (`resolveTextEmBox`): the 3D canvas draws the glyph centred in an em cell, so the plane
   // follows the em box, NOT the tight VISUAL cap box the 2D grips/hover use (which would

@@ -11,9 +11,12 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
-import { UI_SIZE_DEFAULTS, TEXT_METRICS_RATIOS } from '../../../config/text-rendering-config';
+// ADR-557 Φ-attachment (Φάση B) — attachment/rotation/widthFactor-aware text-box SSoT + the
+// scene→flat projection it consumes, replacing the bespoke CHAR_WIDTH_WIDE monospace box.
+import { textBoxAABB } from '../../../bim/text/text-box';
+import { projectSceneTextToDxf } from '../../../bim/text/project-scene-text';
 import { DEFAULT_BOUNDS } from '../../../config/geometry-constants';
-import { createInfinityBounds, isInfinityBounds } from '../../../config/geometry-constants';
+import { createInfinityBounds, isInfinityBounds, expandInfinityBounds } from '../../../config/geometry-constants';
 import { isValidPoint } from '../../../rendering/entities/shared/entity-validation-utils';
 import type { Bounds } from './bounds';
 
@@ -94,10 +97,7 @@ export function getEntityBounds(entity: BoundsEntity): Bounds | null {
 
         for (const vertex of entity.vertices) {
           if (isValidPoint(vertex)) {
-            polyBounds.minX = Math.min(polyBounds.minX, vertex.x);
-            polyBounds.minY = Math.min(polyBounds.minY, vertex.y);
-            polyBounds.maxX = Math.max(polyBounds.maxX, vertex.x);
-            polyBounds.maxY = Math.max(polyBounds.maxY, vertex.y);
+            expandInfinityBounds(polyBounds, vertex.x, vertex.y);
           }
         }
 
@@ -128,17 +128,15 @@ export function getEntityBounds(entity: BoundsEntity): Bounds | null {
       break;
     }
 
-    case 'text': {
+    case 'text':
+    case 'mtext': {
       if (entity.position) {
-        const textWidth = (entity.text?.length || 5) * (entity.height || UI_SIZE_DEFAULTS.TEXT_HEIGHT_FALLBACK) * TEXT_METRICS_RATIOS.CHAR_WIDTH_WIDE;
-        const textHeight = entity.height || UI_SIZE_DEFAULTS.TEXT_HEIGHT_FALLBACK;
-        return {
-          min: { x: entity.position.x, y: entity.position.y },
-          max: {
-            x: entity.position.x + textWidth,
-            y: entity.position.y + textHeight
-          }
-        };
+        // ADR-557 Φ-attachment (Φάση B) — zoom bounds via the text-box SSoT instead of a
+        // monospace CHAR_WIDTH_WIDE box (attachment-blind, rotation-blind, no MTEXT). The spread
+        // preserves any runtime style/rotation/textNode/widthFactor fields this loose interface
+        // under-declares, so the SSoT measures the real box. Empty id: bounds ignore it.
+        const b = textBoxAABB(projectSceneTextToDxf({ ...entity, position: entity.position }, ''));
+        return { min: { x: b.minX, y: b.minY }, max: { x: b.maxX, y: b.maxY } };
       }
       break;
     }

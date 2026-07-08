@@ -21,6 +21,12 @@ export type { ResolvedFont, FontResolveStyle } from './font-resolver';
 export { getGlyphRun, clearGlyphPathCache, GLYPH_REFERENCE_SIZE } from './glyph-path-cache';
 export type { GlyphRun } from './glyph-path-cache';
 
+// ADR-557 Φάση C — the ONE single-line text-run paint SSoT, shared by the 2D renderer AND
+// the 3D textured-plane converter, so a glyph draws with the SAME outlines/tracking/fallback
+// in every viewport (no second `ctx.fillText` mechanism in 3D).
+export { drawGlyphRunToCanvas, paintTextRun, measureTextRunPx } from './glyph-run-draw';
+export type { PaintTextRunOptions } from './glyph-run-draw';
+
 // ADR-557 Φ-attachment — metrics-accurate text advance SSoT (real glyph width in
 // world units), shared by the text-box geometry so grips/hover/hitTest ≡ drawn glyphs.
 export { measureTextAdvanceWorld, __resetTextAdvanceMeasureCtx } from './text-advance';

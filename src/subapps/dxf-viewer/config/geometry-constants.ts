@@ -211,6 +211,24 @@ export function createInfinityBounds(): InfinityBounds {
 }
 
 /**
+ * 🏢 ADR-158: Fold one (x, y) point into an accumulating {@link InfinityBounds}.
+ *
+ * The ONE place the `min/max` accumulation step lives — mutates `bounds` in place
+ * so the four-line `Math.min/Math.max` dance is not copy-pasted at every call site.
+ * Caller is responsible for skipping non-finite / invalid points before folding.
+ *
+ * @example
+ * const bounds = createInfinityBounds();
+ * for (const p of points) if (isValidPoint(p)) expandInfinityBounds(bounds, p.x, p.y);
+ */
+export function expandInfinityBounds(bounds: InfinityBounds, x: number, y: number): void {
+  bounds.minX = Math.min(bounds.minX, x);
+  bounds.minY = Math.min(bounds.minY, y);
+  bounds.maxX = Math.max(bounds.maxX, x);
+  bounds.maxY = Math.max(bounds.maxY, y);
+}
+
+/**
  * 🏢 ADR-158: Check if bounds are still at initial Infinity state
  *
  * After creating with createInfinityBounds(), if no points were processed,

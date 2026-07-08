@@ -6,13 +6,17 @@
 
 import { dlog, dwarn } from '../debug';
 import { calculateLineBounds } from '../rendering/entities/shared/geometry-rendering-utils';
+// ADR-557 Φ-attachment (Φάση B) — attachment/rotation/widthFactor-aware text-box SSoT + the
+// scene→flat projection it consumes, so fit-to-view frames text like the canvas draws it.
+import { textBoxAABB } from '../bim/text/text-box';
+import { projectSceneTextToDxf } from '../bim/text/project-scene-text';
 import type { Point2D } from '../rendering/types/Types';
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Import κεντρικής υπηρεσίας αντί για renderer.fitToView()
 // ✅ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ: Import centralized BoundingBox από rulers-grid system
 // 🏢 ADR-119: UnifiedFrameScheduler για centralized RAF management
 import { UnifiedFrameScheduler } from '../rendering/core/UnifiedFrameScheduler';
 // 🏢 ADR-158: Centralized Infinity Bounds Initialization
-import { createInfinityBounds, isInfinityBounds } from '../config/geometry-constants';
+import { createInfinityBounds, isInfinityBounds, expandInfinityBounds } from '../config/geometry-constants';
 
 // Local interface for legacy compatibility (different from centralized BoundingBox)
 interface LegacyBoundingBox {
@@ -170,10 +174,7 @@ export class SmartBoundsManager {
 
           for (const vertex of entity.vertices) {
             if (vertex.x != null && vertex.y != null) {
-              polyBounds.minX = Math.min(polyBounds.minX, vertex.x);
-              polyBounds.minY = Math.min(polyBounds.minY, vertex.y);
-              polyBounds.maxX = Math.max(polyBounds.maxX, vertex.x);
-              polyBounds.maxY = Math.max(polyBounds.maxY, vertex.y);
+              expandInfinityBounds(polyBounds, vertex.x, vertex.y);
             }
           }
 
@@ -189,6 +190,20 @@ export class SmartBoundsManager {
           }
         }
         break;
+
+      case 'text':
+      case 'mtext': {
+        // ADR-557 Φ-attachment (Φάση B) — text was previously ABSENT here (fell to `default` →
+        // null via missing `entity.bounds`), so smart fit-to-view silently EXCLUDED every label
+        // from the scene extent. Route through the text-box SSoT (attachment/rotation/widthFactor
+        // aware) so fit-to-view frames text exactly like the canvas draws it.
+        const textBounds = textBoxAABB(projectSceneTextToDxf(entity, entity.id));
+        return {
+          ...textBounds,
+          width: textBounds.maxX - textBounds.minX,
+          height: textBounds.maxY - textBounds.minY,
+        };
+      }
 
       default:
         // Generic fallback για unknown entity types

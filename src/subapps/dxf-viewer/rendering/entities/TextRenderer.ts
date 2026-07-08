@@ -43,7 +43,10 @@ import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 // 🏢 ADR-530: Revit-grade glyph-path text rendering (CAD fonts via opentype.js).
 // Reuses the text-engine font SSoT — resolver + glyph-path cache; CSS fillText
 // stays as the fallback when no loaded font matches the entity's family.
-import { resolveEntityFont, getGlyphRun, GLYPH_REFERENCE_SIZE, type ResolvedFont } from '../../text-engine/fonts';
+// ADR-557 Φάση C — the single-line glyph-run paint SSoT (`paintTextRun`), shared with the 3D
+// textured-plane converter so 2D & 3D draw the SAME outlines. `getGlyphRun`/`GLYPH_REFERENCE_SIZE`
+// now live inside that SSoT (was the old private `fillGlyphRun`).
+import { resolveEntityFont, paintTextRun, type ResolvedFont } from '../../text-engine/fonts';
 // ADR-557 — 2D grip render parity: the SAME 10-grip set the interaction +
 // 3D paths use (`computeDxfEntityGrips` → `getTextGrips`), so the on-canvas grip
 // squares match the rect-box. `gripGlyphShape` paints the move/rotation glyphs.
@@ -241,62 +244,20 @@ export class TextRenderer extends BaseEntityRenderer {
   }
 
   /**
-   * 🏢 ADR-530: paint a single run at (originX, originY) — glyph path when a
-   * loaded CAD font resolved, else the legacy CSS fillText. Returns the rendered
-   * advance width in px (used to position text decorations).
+   * 🏢 ADR-530 / ADR-557 Φάση C: paint a single run at (originX, originY) via the shared
+   * glyph-run SSoT (`paintTextRun`) — the cached glyph Path2D when a loaded CAD font resolved
+   * (zoom-stable, tracking baked in), else the legacy CSS fillText on the `ctx.font` set by
+   * `setupStyle`. Returns the advance width in px (decoration positioning). The 3D
+   * textured-plane converter (`dxf-text-3d.ts`) calls the SAME SSoT — one font engine, 2D ≡ 3D.
    */
   private paintText(
     originX: number, originY: number, text: string, screenHeight: number,
     align: CanvasTextAlign, baseline: CanvasTextBaseline, resolved: ResolvedFont | null,
     tracking = 1,
   ): number {
-    if (resolved) {
-      return this.fillGlyphRun(originX, originY, text, screenHeight, align, baseline, resolved, tracking);
-    }
-    // CSS fillText fallback (no loaded opentype font). AutoCAD `\T` tracking → canvas
-    // `letterSpacing`: (tracking − 1) × screenHeight added between glyphs. Set on BOTH
-    // measure + paint so the returned advance matches the drawn text (parity). Restored after.
-    const extraPx = tracking !== 1 ? (tracking - 1) * screenHeight : 0;
-    if (extraPx !== 0 && 'letterSpacing' in this.ctx) {
-      const prev = (this.ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing;
-      (this.ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${extraPx}px`;
-      this.ctx.fillText(text, originX, originY);
-      const w = this.ctx.measureText(text).width;
-      (this.ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = prev;
-      return w;
-    }
-    this.ctx.fillText(text, originX, originY);
-    return this.ctx.measureText(text).width;
-  }
-
-  /**
-   * 🏢 ADR-530: fill a cached glyph Path2D. Paths are built once at a reference
-   * em size (zoom-stable cache); the per-frame scale = screenHeight / refSize is
-   * applied via ctx.scale, so paths are never rebuilt on zoom.
-   */
-  private fillGlyphRun(
-    originX: number, originY: number, text: string, screenHeight: number,
-    align: CanvasTextAlign, baseline: CanvasTextBaseline, resolved: ResolvedFont,
-    tracking = 1,
-  ): number {
-    // `tracking` (AutoCAD `\T`) is baked into the cached run's path + metrics, so the draw
-    // math below (scale by `s`, widthFactor outer scale) is unchanged — parity for free.
-    const run = getGlyphRun(resolved.font, resolved.cacheName, text, tracking);
-    const s = screenHeight / GLYPH_REFERENCE_SIZE;
-    const widthPx = run.metrics.width * s;
-    const ascentPx = run.metrics.ascent * s;
-    const descentPx = run.metrics.descent * s;
-    const xOff = align === 'center' ? -widthPx / 2 : align === 'right' ? -widthPx : 0;
-    // Glyph paths are baseline-anchored; map to the canvas textBaseline modes.
-    const baselineY = baseline === 'middle' ? (ascentPx - descentPx) / 2
-      : baseline === 'bottom' ? -descentPx
-        : ascentPx; // 'top' / 'alphabetic' default → drop by ascent so the top sits at originY
-    this.ctx.save();
-    this.ctx.translate(originX + xOff, originY + baselineY);
-    this.ctx.scale(s, s);
-    this.ctx.fill(run.path);
-    this.ctx.restore();
-    return widthPx;
+    return paintTextRun(this.ctx, text, {
+      originX, originY, targetHeight: screenHeight, align, baseline, resolved, tracking,
+    });
   }
 
   /**
