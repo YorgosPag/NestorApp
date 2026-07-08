@@ -113,6 +113,15 @@ Orchestrator = Stages 3-4 (disjoint μηχανικά files, worktree ΟΧΙ απ
 
 ---
 
+### 3.3 Stage 4 recognition (2026-07-08, 3 parallel Sonnet readers) — 2 surfaced hazards
+
+Read-only recognition χαρτογράφησε τα ~222 read-sites (R1 routing/commits 145· R2 forwarding/preview/systems 55· R3 renderers/3D 22) και ανέδειξε **δύο** πράγματα που το αρχικό §1.3 plan δεν είχε λάβει υπόψη:
+
+1. **`ActiveDragGripInfo` = 5η bespoke δομή** (`systems/cursor/GripDragStore.ts`) — **ΔΕΝ** είναι ένα από τα 4 field-bags· έχει **δικά της** πεδία (`gripKind: string|null`, `dimGripKind?`, `lineGripKind?`) που ΔΕΝ κουβαλούν το tagged `EntityGripKind`. **8 reads** την διαβάζουν (`mouse-handler-up.ts` ×3, `grip-drag-alignment-tracking.ts` ×3 — guarded· `GripDragStore.ts` ×1 owner· `grip-drag-alignment-role.ts:113` role field). **DEFER εκτός Stage 4** (χωριστή απόφαση αν αποκτήσει tagged gripKind). **ΔΕΝ μπλοκάρει το Stage 5:** τα πεδία της είναι ξεχωριστό schema — το Stage 5 αφαιρεί legacy από τα 4 bags, ΟΧΙ από την `ActiveDragGripInfo`. Τα πεδία της τροφοδοτούνται στο boundary (`grip-mouse-handlers.ts`) από **migrated** `gripKindOf` reads του source UnifiedGripInfo.
+2. **`ctrl-endpoint-rotate-copy.ts` producer-gap:** φτιάχνει synthetic grips `{ ...grip, lineGripKind: LINE_ROTATION_KIND }` που dual-write **μόνο** το legacy → Stage 4 τα έκανε dual-write ΚΑΙ το `gripKind` (αλλιώς `gripKindOf(syntheticGrip, …)` στους consumers `grip-mouse-handlers.ts:211/213` = `undefined` → silent regression του Ctrl+drag rotate-copy).
+
+**Transform policy:** entity-specific reads → `gripKindOf(x,'on')` (type-preserving, ίδιος τύπος). «Any-entity» coalesces όπου το entity identity είναι άσχετο (glyph-shape `dataGripGlyphShape` 16-way· hot-grip `hotGripKindOf` 18-way) → collapse σε `grip.gripKind?.kind` (SSoT win). Footprint 7-way + alignment-role 4-way + context-menu 3-way = **1:1 `gripKindOf` chain** (ΟΧΙ collapse — διατηρεί τα «undefined για non-member» semantics). Guarded renderers (18) → stage ADR-040 (CHECK 6D). Τα 3D commit bridges (§3.2) forward `gripKind` (raw-DXF με `on==='polyline'` guard ώστε να μη leak-άρει BIM kind).
+
 ### 3.2 3D commit bridges → deferred στο Stage 4 (ΟΧΙ Stage 2)
 Οι 2 3D bridges (`grip-3d-commit.toUnifiedGrip`, `grip-3d-dxf-commit.toRawDxfUnifiedGrip`) φτιάχνουν
 `UnifiedGripInfo` για το **3D commit path** — ΟΧΙ μέρος των «4 forwarding hubs» (2D chain). Το 3D commit
