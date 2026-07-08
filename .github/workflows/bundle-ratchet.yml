@@ -78,8 +78,31 @@ jobs:
       # `next build` OOMs at 6144 MB, so use 12288 MB (ubuntu-latest has 16 GB).
       - name: 🏗️ Production build
         run: pnpm run build
+        # Firebase public config mirrors docker-build.yml (the canonical build).
+        # Without it, static page-data collection for routes that init Firebase
+        # at module load (e.g. /api/admin/migrations/execute) throws
+        # `auth/invalid-api-key` and fails the build. Browser-exposed, not secret.
         env:
           NODE_OPTIONS: --max-old-space-size=12288
+          NODE_ENV: production
+          DISABLE_SENTRY_WEBPACK: 'true'
+          NEXT_TELEMETRY_DISABLED: '1'
+          NEXT_PUBLIC_FIREBASE_API_KEY: AIzaSyAcqK3o-zPmXodFPr-gG328QJHlcEc6g1k
+          NEXT_PUBLIC_FIREBASE_APP_ID: '1:157616068729:web:c7dc1ed6661c895ee19ca8'
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: pagonis-87766.firebaseapp.com
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '157616068729'
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: pagonis-87766
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: pagonis-87766.firebasestorage.app
+          NEXT_PUBLIC_SENTRY_DSN: https://ceba8fb4650f8d54df1b489f6360e109@o4511056899014656.ingest.de.sentry.io/4511056927981648
+          NEXT_PUBLIC_ADMIN_EMAIL: errors@inbound.nestorconstruct.gr
+          NEXT_PUBLIC_ADMIN_EMAILS: 'pagonis.oe@gmail.com,georgios.pagonis@gmail.com,giorgos@pagonis.gr,pagonis@nestorconstruct.gr,info@nestorconstruct.gr'
+          NEXT_PUBLIC_DEFAULT_COMPANY_ID: comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757
+          NEXT_PUBLIC_DEBUG: 'false'
+          NEXT_PUBLIC_DXF_AI_ASSISTANT: 'false'
+          NEXT_PUBLIC_COMPANY_NAME: Pagonis Energo
+          NEXT_PUBLIC_COMPANY_EMAIL: georgios.pagonis@gmail.com
+          NEXT_PUBLIC_COMPANY_PHONE: '6974050023'
+          NEXT_PUBLIC_COMPANY_WEBSITE: https://nestorconstruct.gr
 
       - name: 📦 Bundle-size ratchet (seed or check)
         run: |

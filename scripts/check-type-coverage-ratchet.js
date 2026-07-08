@@ -42,15 +42,17 @@ function getBaselineFile() {
     : DEFAULT_BASELINE_FILE;
 }
 
-// Parse type-coverage's summary line. Its last stdout line is:
-//   "9500 / 9600 98.96%"  (typedCount / totalCount percent%)
+// Parse type-coverage's summary line. Depending on the version it prints
+// either "9500 / 9600 98.96%" or "(9500 / 9600) 98.96%" (the fraction may be
+// wrapped in parentheses), optionally followed by "type-coverage success.".
+// The `\(?…\)?` make the parens optional so both formats parse.
 // Scan bottom-up for the last matching line so per-file `--detail` output (if
 // ever enabled) can't shadow the summary. Throws if no summary line is present
 // (a broken run must fail closed, never read as 100%).
 function parseTypeCoverageOutput(stdout) {
   const lines = String(stdout || '').trim().split(/\r?\n/);
   for (let i = lines.length - 1; i >= 0; i--) {
-    const m = lines[i].match(/(\d+)\s*\/\s*(\d+)\s+([\d.]+)%/);
+    const m = lines[i].match(/\(?(\d+)\s*\/\s*(\d+)\)?\s+([\d.]+)%/);
     if (m) {
       return {
         typedCount: Number(m[1]),

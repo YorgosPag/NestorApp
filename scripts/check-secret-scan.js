@@ -12,7 +12,8 @@
  *   - PEM private keys (BEGIN * PRIVATE KEY)
  *
  * Skip list: images, lock files, .env.example, .env.sample, node_modules,
- *   git-hooks/, .github/workflows/, docs/architecture-review/
+ *   git-hooks/, .github/workflows/, docs/architecture-review/, .gitleaks.toml,
+ *   this file itself (its own detection patterns self-match, e.g. PRIVATE_KEY_RE)
  *
  * CLI:
  *   node scripts/check-secret-scan.js file1 file2 ...
@@ -29,7 +30,7 @@ const YELLOW = '\x1b[1;33m';
 const NC     = '\x1b[0m';
 
 // Files to skip entirely
-const FILE_SKIP_RE = /(\.(png|jpg|ico|woff|lock)$|\.env\.(example|sample)|node_modules|scripts[\\/]git-hooks[\\/]|\.github[\\/]workflows[\\/]|docs[\\/]architecture-review[\\/])/;
+const FILE_SKIP_RE = /(\.(png|jpg|ico|woff|lock)$|\.env\.(example|sample)|node_modules|scripts[\\/]git-hooks[\\/]|\.github[\\/]workflows[\\/]|docs[\\/]architecture-review[\\/]|(^|[\\/])\.gitleaks\.toml$|(^|[\\/])check-secret-scan\.js$)/;
 
 // Line-level patterns
 const API_KEY_RE     = /(sk-[a-zA-Z0-9_-]{20,}|sk_live_[a-zA-Z0-9]{20,}|AIza[a-zA-Z0-9_-]{35}|ghp_[a-zA-Z0-9]{36}|xoxb-[a-zA-Z0-9-]+|AAAA[a-zA-Z0-9_-]{100,})/;

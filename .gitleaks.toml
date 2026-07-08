@@ -1,12 +1,24 @@
 # ADR-598 G12 — gitleaks configuration.
 #
-# Extends gitleaks' built-in ruleset (100+ secret detectors) and only adds
-# repo-specific allowlisting for known-safe paths that produce false positives
-# (test fixtures, mocks, locale JSON, the lockfile). Never disable a detector —
-# scope an allowlist entry to the exact path/regex instead.
+# Extends gitleaks' built-in ruleset (100+ secret detectors) and adds repo-specific
+# allowlisting for KNOWN-SAFE strings only. Two allowlist strategies, chosen per the
+# big-player playbook (2026-07-08 full-history triage of 35 findings):
 #
-# Used by both layers: the pre-commit CHECK 14 (`gitleaks protect --staged`) and
-# the CI full-history scan (.github/workflows/gitleaks-scan.yml).
+#   * paths[]   — generated/vendored files that can NEVER hold a real secret
+#                 (font blobs, minified vendor bundles, build artifacts, placeholder
+#                 templates, saved 3rd-party pages, junk dumps).
+#   * regexes[] — VALUE-scoped allowlist for individual known-safe strings that live
+#                 inside otherwise-real source/docs. This is deliberate: it silences
+#                 the exact placeholder / public-by-design value WITHOUT blinding the
+#                 whole file, so a NEW real secret in the same file is still caught.
+#                 It also survives a history rewrite (no commit-SHA binding, unlike a
+#                 .gitleaksignore fingerprint).
+#
+# GENUINE secrets are NOT allowlisted here — they are rotated + purged from history
+# (git filter-repo). See docs/security (runbook) for the remediation record.
+#
+# Used by both layers: pre-commit CHECK 14 (`gitleaks protect --staged`) and the CI
+# full-history scan (.github/workflows/gitleaks-scan.yml).
 
 title = "Nestor Pagonis — gitleaks (ADR-598 G12)"
 
@@ -14,8 +26,13 @@ title = "Nestor Pagonis — gitleaks (ADR-598 G12)"
 useDefault = true
 
 [allowlist]
-description = "Global allowlist — non-production paths with no real secrets"
+description = "Global allowlist — known-safe paths + value-scoped false positives"
+
+# Legacy behaviour: match a finding if EITHER its path OR its secret matches below.
+regexTarget = "match"
+
 paths = [
+  # --- non-production paths (pre-existing) ---
   '''(^|/)__mocks__/''',
   '''(^|/)__tests__/''',
   '''\.(test|spec)\.[jt]sx?$''',
@@ -23,4 +40,32 @@ paths = [
   '''(^|/)e2e/''',
   '''(^|/)playwright-report/''',
   '''pnpm-lock\.yaml$''',
+
+  # --- G12 triage 2026-07-08: generated / vendored / junk — never a real secret ---
+  '''(^|/)public/pdf\.worker\.min\.mjs$''',                    # vendored pdf.js worker (base64 → aws-token FP)
+  '''(^|/)src/services/gantt-export/roboto-font-data\.ts$''',  # embedded Roboto font base64 (→ aws-token FP)
+  '''(^|/)\.next-backup-[0-9-]+/''',                           # stale Next.js build artifact dir
+  '''(^|/)\.env\.example$''',                                  # placeholder env template
+  '''Sharing Debugger - Meta for Developers\.html$''',         # saved 3rd-party Meta page (short-lived FB tokens)
+  '''(^|/)local_3\.txt$''',                                    # junk debug dump (Firebase Auth UID, not a credential)
+]
+
+regexes = [
+  # --- G12 triage 2026-07-08: value-scoped structural false positives ---
+  # token-charset constant (src/services/sharing/unified-sharing.service.ts)
+  '''ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789''',
+  # doc/source PLACEHOLDERS (not real keys)
+  '''\.\.\.private key data\.\.\.''',                          # DockerOrchestrator.ts (×2 paths)
+  '''YOUR_PRIVATE_KEY_HERE''',                                 # ENV_SETUP_INSTRUCTIONS.md
+  '''Your_Private_Key_Here''',                                 # .env.example (also path-allowlisted)
+  '''MIIEvQIBADANBgkqhkiG9w0BA\.\.\.''',                       # VERCEL_PRODUCTION_SETUP.md (truncated sample key)
+
+  # --- Firebase WEB API keys: public-by-design (shipped in the browser bundle;
+  #     access is controlled by Firestore rules, not by key secrecy — Google docs).
+  #     Allowlisted by EXACT value so any new/unknown key stays flagged.
+  #     Defense-in-depth: still add HTTP-referrer/API restrictions in GCP console. ---
+  '''AIzaSyAcqK3o-zPmXodFPr-gG328QJHlcEc6g1k''',               # nestor-app (NEXT_PUBLIC_FIREBASE_API_KEY)
+  '''AIzaSyBXeJkJnGtLa7QhTwGb_hBUqBsM-QZcMqg''',               # pagonis-87766 (create-storages.js)
+  '''AIzaSyAXnmBhlPvUX89FmbYqvJdh7VLNKVBwx0Y''',               # data scripts / audit report
+  '''AIzaSyCcOlFWq8lWQqZjjf9EfebWKZVfV3jzuoc''',               # data scripts
 ]
