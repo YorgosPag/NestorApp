@@ -1,0 +1,9 @@
+{
+  "description": "ADR-598 G3 — test-coverage floor ratchet baseline. Percentages from coverage/coverage-summary.json (jest --coverage, json-summary reporter). Ratchet UP only: `lines` dropping below baseline blocks the PR (statements/functions/branches recorded for visibility). Reseed via CI dispatch.",
+  "generatedBy": "scripts/check-coverage-ratchet.js --write-baseline",
+  "adr": "ADR-598 G3",
+  "lines": 34.37,
+  "statements": 33.98,
+  "functions": 25.54,
+  "branches": 24.87
+}

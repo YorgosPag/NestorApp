@@ -1,0 +1,8 @@
+{
+  "description": "ADR-598 G5 — type-coverage ratchet baseline. percent = share of identifiers with a real (non-any) type over the whole tree (type-coverage --strict --ignore-catch). Ratchet UP only: a drop below `percent` blocks the PR. Reseed via CI seed dispatch.",
+  "generatedBy": "scripts/check-type-coverage-ratchet.js --write-baseline",
+  "adr": "ADR-598 G5",
+  "percent": 99.4,
+  "typedCount": 1817923,
+  "totalCount": 1828841
+}
