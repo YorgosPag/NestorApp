@@ -42,15 +42,10 @@ import { designHvac } from '../../../systems/mep-design/hvac';
 import { hvacProposalStore } from '../../../systems/mep-design/hvac/hvac-proposal-store';
 import { buildHvacCommit } from '../../../systems/mep-design/hvac/commit/build-hvac-commit';
 import { HVAC_AUTO_RIBBON_ACTIONS } from './bridge/hvac-auto-command-keys';
-import type { useLevels } from '../../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 
 export interface UseRibbonHvacAutoBridgeProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 export interface RibbonHvacAutoBridge {

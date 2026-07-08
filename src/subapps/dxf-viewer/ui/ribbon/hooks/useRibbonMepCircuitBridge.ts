@@ -53,14 +53,9 @@ import {
 import { generateMepSystemId } from '@/services/enterprise-id-convenience';
 import { MEP_CIRCUIT_RIBBON_ACTIONS } from './bridge/mep-circuit-command-keys';
 import { EventBus } from '../../../systems/events/EventBus';
-import type { useLevels } from '../../../systems/levels';
+import type { LevelSceneReader } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
 import { useTranslation } from 'react-i18next';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'currentLevelId'
->;
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
@@ -68,7 +63,7 @@ type UniversalSelectionLike = Pick<
 >;
 
 export interface UseRibbonMepCircuitBridgeProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneReader;
   readonly universalSelection: UniversalSelectionLike;
 }
 
