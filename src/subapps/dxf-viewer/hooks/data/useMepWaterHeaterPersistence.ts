@@ -3,23 +3,20 @@
 /**
  * ADR-408 DHW — Domestic hot water heater Firestore persistence React adapter.
  *
- * Bridges `MepWaterHeaterFirestoreService` to the scene model owned by `LevelsSystem`.
- * Mirrors `useMepBoilerPersistence` — same hybrid auto-save, selective-skip
- * diff-merge, and first-save listener wired to `drawing:entity-created` with
- * `tool === 'mep-water-heater'`.
+ * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-594). Behaviour
+ * unchanged: MEP connector projection (`projectMepConnectorsOntoFresh`) on the
+ * merged doc-entity, `differs` on the projected candidate (anti-ping-pong), audit
+ * via `recordMepWaterHeaterChange`, and the Η-Μ BOQ auto-feed (1 piece).
+ * First-save on `drawing:entity-created` (tool 'mep-water-heater').
  *
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
+ * @see docs/centralized-systems/reference/adrs/ADR-594-bim-entity-persistence-hook-ssot.md
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { dequal } from 'dequal';
+import { useMemo } from 'react';
 
-import type { AnySceneEntity, SceneModel } from '../../types/entities';
-import { DXF_TIMING } from '../../config/dxf-timing';
-import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { MepWaterHeaterEntity } from '../../bim/types/mep-water-heater-types';
-import { EventBus } from '../../systems/events/EventBus';
-import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import {
   createMepWaterHeaterFirestoreService,
   entityToSaveInput,
@@ -28,23 +25,19 @@ import {
 } from '../../bim/mep-water-heaters/mep-water-heater-firestore-service';
 import { recordMepWaterHeaterChange } from '../../bim/mep-water-heaters/mep-water-heater-audit-client';
 import { mepWaterHeaterDocToEntity as docToEntity } from './mep-water-heater-persistence-helpers';
-import { projectMepConnectorsOntoFresh } from './mep-connector-projection-merge';
-import { mergeDocsIntoScene } from './merge-docs-into-scene';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
-import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
-import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
+import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
+import { mepConnectorMergeConfig } from './mep-connector-merge-config';
+import type {
+  BimEntityPersistenceParams,
+  BimEntitySaveState,
+} from './bim-entity-persistence-hook-types';
 
 // ============================================================================
-// TYPES
+// PUBLIC API (unchanged)
 // ============================================================================
 
-export type MepWaterHeaterSaveState = 'idle' | 'saving' | 'saved' | 'error';
-
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
-}
+export type MepWaterHeaterSaveState = BimEntitySaveState;
 
 export interface UseMepWaterHeaterPersistenceParams {
   readonly companyId: string | null;
@@ -55,7 +48,7 @@ export interface UseMepWaterHeaterPersistenceParams {
   /** ADR-408 — building scope for the Η-Μ BOQ auto-feed (BimToBoqBridge). */
   readonly buildingId?: string | null;
   readonly userId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly primarySelectedWaterHeater: MepWaterHeaterEntity | null;
 }
 
@@ -68,299 +61,98 @@ export interface UseMepWaterHeaterPersistenceResult {
 }
 
 // ============================================================================
-// CONSTANTS
+// FACTORY CONFIG
 // ============================================================================
 
-const AUTO_SAVE_DEBOUNCE_MS = DXF_TIMING.persist.ENTITY_AUTOSAVE; // ADR-516
+const useMepWaterHeaterPersistenceBase = createBimEntityPersistenceHook<
+  MepWaterHeaterFirestoreService,
+  MepWaterHeaterDoc,
+  MepWaterHeaterEntity,
+  MepWaterHeaterEntity['params']
+>({
+  entityType: 'mep-water-heater',
+  restoreEntityType: 'mep-water-heater',
+  saveErrorKey: 'MEP_WATER_HEATER_SAVE_ERROR',
+  restoreErrorKey: 'MEP_WATER_HEATER_RESTORE_ERROR',
+  entityComparable: (e) => e.params,
+  createService: (scope) => createMepWaterHeaterFirestoreService(scope),
+  service: {
+    save: (svc, e) => svc.saveWaterHeater(entityToSaveInput(e)),
+    update: (svc, e) =>
+      svc.updateWaterHeater(e.id, {
+        params: e.params,
+        validation: e.validation,
+        geometry: e.geometry,
+        layerId: e.layerId,
+      }),
+    remove: (svc, id) => svc.deleteWaterHeater(id),
+    subscribe: (svc, onDocs, onErr) =>
+      svc.subscribeWaterHeaters(onDocs as (docs: readonly MepWaterHeaterDoc[]) => void, onErr),
+  },
+  merge: {
+    mode: 'generic',
+    config: mepConnectorMergeConfig(
+      (e): e is MepWaterHeaterEntity => (e as { type?: string }).type === 'mep-water-heater',
+      docToEntity,
+    ),
+  },
+  deleteTrigger: {
+    event: 'bim:mep-water-heater-delete-requested',
+    getId: (p) => (p as { waterHeaterId?: string }).waterHeaterId,
+  },
+  onPersisted: (entity, { isNew, prevComparable, scope }) => {
+    void recordMepWaterHeaterChange(isNew ? 'created' : 'updated', entity, {
+      prevParams: prevComparable ?? undefined,
+    });
+    // ADR-408 — Η-Μ BOQ auto-feed: domestic hot water heater = 1 piece.
+    if (scope.companyId && scope.projectId && scope.buildingId) {
+      void bimToBoqBridge.upsertBoqItemForBim(
+        'mep-water-heater',
+        { id: entity.id, kind: entity.kind },
+        {
+          companyId: scope.companyId,
+          projectId: scope.projectId,
+          buildingId: scope.buildingId,
+          floorId: scope.floorId ?? undefined,
+        },
+        isNew ? 'created' : 'updated',
+      );
+    }
+  },
+  onDeleted: (id, deleted, { scope }) => {
+    void recordMepWaterHeaterChange(
+      'deleted',
+      deleted
+        ? { id: deleted.id, kind: deleted.kind, layerId: deleted.layerId, params: deleted.params }
+        : { id, kind: 'electric-water-heater' },
+    );
+    // ADR-408 — remove the auto-fed Η-Μ BOQ row (skips user-detached rows).
+    if (scope.companyId) void bimToBoqBridge.deleteBoqItemForBim(id, scope.companyId);
+  },
+  onRestored: (entity) => {
+    void recordMepWaterHeaterChange('restored', entity);
+  },
+});
 
 // ============================================================================
-// HELPERS
-// ============================================================================
-
-function isWaterHeater(entity: AnySceneEntity): entity is MepWaterHeaterEntity {
-  return (entity as { type?: string }).type === 'mep-water-heater';
-}
-
-// ============================================================================
-// HOOK
+// HOOK (thin wrapper — preserves the public param/result names)
 // ============================================================================
 
 export function useMepWaterHeaterPersistence(
   params: UseMepWaterHeaterPersistenceParams,
 ): UseMepWaterHeaterPersistenceResult {
-  const {
-    companyId,
-    projectId,
-    floorplanId,
-    floorId,
-    buildingId,
-    userId,
-    levelManager,
-    primarySelectedWaterHeater,
-  } = params;
-
-  const [saveState, setSaveState] = useState<MepWaterHeaterSaveState>('idle');
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const serviceRef = useRef<MepWaterHeaterFirestoreService | null>(null);
-  const dirtyIdsRef = useRef<Set<string>>(new Set());
-  const lastSavedParamsRef = useRef<Map<string, MepWaterHeaterEntity['params']>>(new Map());
-  const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
-  const deletedIdsRef = useRef<Set<string>>(new Set());
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const selectedWaterHeaterRef = useRef<MepWaterHeaterEntity | null>(null);
-  selectedWaterHeaterRef.current = primarySelectedWaterHeater;
-
-  // ⚡ STABILITY (ca9 fix 2026-06-08): key the Firestore subscription off stable
-  // scope primitives + `currentLevelId`, NOT the per-render `levelManager` object,
-  // so onSnapshot does not unsubscribe/re-subscribe on every render (target removed
-  // before ack → `INTERNAL ASSERTION FAILED ca9 {ve:-1}`). Mirror of the fitting hook.
-  const levelManagerRef = useRef(levelManager);
-  levelManagerRef.current = levelManager;
-  const currentLevelId = levelManager.currentLevelId;
-
-  // Instantiate service when auth + scope ready.
-  useEffect(() => {
-    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
-    if (!scope) {
-      serviceRef.current = null;
-      return;
-    }
-    serviceRef.current = createMepWaterHeaterFirestoreService({
-      companyId: scope.companyId,
-      projectId: scope.projectId,
-      floorplanId: scope.floorplanId,
-      floorId: scope.floorId,
-      userId: scope.userId,
-    });
-  }, [companyId, projectId, floorplanId, floorId, userId]);
-
-  // Subscribe + diff-merge + selective skip locally-dirty water heaters.
-  // Keyed on STABLE primitives only (scope + currentLevelId) — NOT the per-render
-  // `levelManager` object — so onSnapshot subscribes once per real scope/level
-  // change (ca9 churn fix).
-  useEffect(() => {
-    const svc = serviceRef.current;
-    const levelId = currentLevelId;
-    if (!svc || !levelId) return;
-
-    const unsubscribe = svc.subscribeWaterHeaters(
-      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`. Το MEP
-      // project-άρει το live systemId πάνω στο fresh doc-entity (ADR-408 anti-ping-pong)
-      // μέσω του `projectMepConnectorsOntoFresh` adapter. Δεν έχει write-grace.
-      (docs) => {
-        mergeDocsIntoScene<MepWaterHeaterDoc, MepWaterHeaterEntity, MepWaterHeaterEntity['params']>(
-          docs,
-          levelId,
-          levelManagerRef.current,
-          {
-            isEntity: isWaterHeater,
-            docToEntity: (doc, existing) => projectMepConnectorsOntoFresh(docToEntity(doc), existing),
-            entityComparable: (e) => e.params,
-            docComparable: (d) => d.params,
-            differs: (existing, _doc, getCandidate) => {
-              const candidate = getCandidate();
-              return candidate !== null && !dequal(existing.params, candidate.params);
-            },
-          },
-          {
-            dirty: dirtyIdsRef.current,
-            deleted: deletedIdsRef.current,
-            pending: pendingFirstSaveIdsRef.current,
-            isWithinGrace: () => false,
-            lastSavedBaseline: lastSavedParamsRef.current,
-          },
-        );
-      },
-      (err: Error) => {
-        setError(err.message);
-        setSaveState('error');
-      },
-    );
-
-    return () => unsubscribe();
-  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
-
-  // Immediate persist (used by both auto-save flush and explicit button).
-  const persist = useCallback(async (entity: MepWaterHeaterEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
-    const isNew = prevParams === null;
-    setSaveState('saving');
-    setError(null);
-    try {
-      if (isNew) {
-        await svc.saveWaterHeater(entityToSaveInput(entity));
-      } else {
-        await svc.updateWaterHeater(entity.id, {
-          params: entity.params,
-          validation: entity.validation,
-          geometry: entity.geometry,
-          layerId: entity.layerId,
-        });
-      }
-      lastSavedParamsRef.current.set(entity.id, entity.params);
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-      void recordMepWaterHeaterChange(
-        isNew ? 'created' : 'updated',
-        entity,
-        { prevParams: prevParams ?? undefined },
-      );
-      // ADR-408 — Η-Μ BOQ auto-feed: domestic hot water heater = 1 piece.
-      if (companyId && projectId && buildingId) {
-        void bimToBoqBridge.upsertBoqItemForBim(
-          'mep-water-heater',
-          { id: entity.id, kind: entity.kind },
-          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
-          isNew ? 'created' : 'updated',
-        );
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'MEP_WATER_HEATER_SAVE_ERROR');
-      setSaveState('error');
-    }
-  }, [companyId, projectId, buildingId, floorId]);
-
-  // Auto-save debounce on selected water heater params change.
-  useEffect(() => {
-    const waterHeater = primarySelectedWaterHeater;
-    if (!waterHeater || !serviceRef.current) return;
-    const known = lastSavedParamsRef.current.has(waterHeater.id);
-    const pending = pendingFirstSaveIdsRef.current.has(waterHeater.id);
-    if (!known && !pending) return;
-    const lastSaved = lastSavedParamsRef.current.get(waterHeater.id);
-    if (lastSaved && dequal(lastSaved, waterHeater.params)) return;
-
-    dirtyIdsRef.current.add(waterHeater.id);
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      void persist(waterHeater);
-    }, AUTO_SAVE_DEBOUNCE_MS);
-
-    return () => {
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = null;
-      }
-    };
-  }, [primarySelectedWaterHeater, persist]);
-
-  const saveNow = useCallback(async () => {
-    const waterHeater = selectedWaterHeaterRef.current;
-    if (!waterHeater) return;
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-    await persist(waterHeater);
-  }, [persist]);
-
-  // Delete water heater: remove from Firestore + scene + audit.
-  const deleteWaterHeater = useCallback(async (waterHeaterId: string) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const levelId = levelManager.currentLevelId;
-    if (!levelId) return;
-
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-
-    const scene = levelManager.getLevelScene(levelId);
-    const deletedEntity = scene?.entities.find((e) => e.id === waterHeaterId);
-    const deletedWaterHeater = (deletedEntity && isWaterHeater(deletedEntity)) ? deletedEntity : null;
-    try {
-      await svc.deleteWaterHeater(waterHeaterId);
-      void recordMepWaterHeaterChange(
-        'deleted',
-        deletedWaterHeater
-          ? { id: deletedWaterHeater.id, kind: deletedWaterHeater.kind, layerId: deletedWaterHeater.layerId, params: deletedWaterHeater.params }
-          : { id: waterHeaterId, kind: 'electric-water-heater' },
-      );
-      // ADR-408 — remove the auto-fed Η-Μ BOQ row (skips user-detached rows).
-      if (companyId) void bimToBoqBridge.deleteBoqItemForBim(waterHeaterId, companyId);
-    } catch {
-      // Non-fatal: deletion failure silent — user retries.
-    }
-
-    if (scene) {
-      const nextEntities = scene.entities.filter((e) => e.id !== waterHeaterId);
-      levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
-    }
-
-    dirtyIdsRef.current.delete(waterHeaterId);
-    lastSavedParamsRef.current.delete(waterHeaterId);
-    pendingFirstSaveIdsRef.current.delete(waterHeaterId);
-    deletedIdsRef.current.add(waterHeaterId);
-  }, [levelManager, companyId]);
-
-  // persistRestore: undo→Firestore re-create + audit 'restored'.
-  const persistRestore = useCallback(async (entity: MepWaterHeaterEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    setSaveState('saving');
-    setError(null);
-    try {
-      await svc.saveWaterHeater(entityToSaveInput(entity));
-      lastSavedParamsRef.current.set(entity.id, entity.params);
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-      void recordMepWaterHeaterChange('restored', entity);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'MEP_WATER_HEATER_RESTORE_ERROR');
-      setSaveState('error');
-    }
-  }, []);
-
-  // First-save listener — fires immediately for freshly drawn water heaters.
-  useEffect(() => {
-    const cleanup = EventBus.on('drawing:entity-created', (payload) => {
-      if (payload.tool !== 'mep-water-heater') return;
-      const entity = payload.entity as MepWaterHeaterEntity | undefined;
-      if (!entity || (entity as { type?: string }).type !== 'mep-water-heater') return;
-      if (!serviceRef.current) return;
-      pendingFirstSaveIdsRef.current.add(entity.id);
-      dirtyIdsRef.current.add(entity.id);
-      void persist(entity);
-    });
-    return cleanup;
-  }, [persist]);
-
-  // Delete-requested listener (smart-delete emits after batch filter).
-  useEffect(() => {
-    const cleanup = EventBus.on('bim:mep-water-heater-delete-requested', ({ waterHeaterId }) => {
-      void deleteWaterHeater(waterHeaterId);
-    });
-    return cleanup;
-  }, [deleteWaterHeater]);
-
-  useBimEntityMovedPersistEffect(isWaterHeater, serviceRef, dirtyIdsRef, persist);
-  useBimEntityRestoredPersistEffect(
-    'mep-water-heater',
-    isWaterHeater,
-    serviceRef,
-    pendingFirstSaveIdsRef,
-    deletedIdsRef,
-    persistRestore,
-  );
-
-  // Unmount cleanup — flush pending timers.
-  useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, []);
-
+  const { saveState, lastSavedAt, error, saveNow, deleteEntity } = useMepWaterHeaterPersistenceBase({
+    companyId: params.companyId,
+    projectId: params.projectId,
+    floorplanId: params.floorplanId,
+    floorId: params.floorId,
+    buildingId: params.buildingId,
+    userId: params.userId,
+    levelManager: params.levelManager,
+    primarySelected: params.primarySelectedWaterHeater,
+  } as BimEntityPersistenceParams<MepWaterHeaterEntity>);
   return useMemo(
-    () => ({ saveState, lastSavedAt, error, saveNow, deleteWaterHeater }),
-    [saveState, lastSavedAt, error, saveNow, deleteWaterHeater],
+    () => ({ saveState, lastSavedAt, error, saveNow, deleteWaterHeater: deleteEntity }),
+    [saveState, lastSavedAt, error, saveNow, deleteEntity],
   );
 }
