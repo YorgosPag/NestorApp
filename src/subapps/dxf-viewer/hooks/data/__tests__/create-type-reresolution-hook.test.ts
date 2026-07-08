@@ -1,5 +1,5 @@
 /**
- * ADR-603 Φ1 — shape smoke for `createTypeReresolutionHook`.
+ * ADR-604 Φ1 — shape smoke for `createTypeReresolutionHook`.
  *
  * The factory returns a React hook (calls `useEffect`), so behaviour is covered by
  * the integration path; here we just guard the contract that binding a pure
@@ -9,7 +9,7 @@
 
 import { createTypeReresolutionHook, type ReresolveSceneFn } from '../create-type-reresolution-hook';
 
-describe('createTypeReresolutionHook (ADR-603 Φ1)', () => {
+describe('createTypeReresolutionHook (ADR-604 Φ1)', () => {
   const identity: ReresolveSceneFn = (scene) => scene;
 
   it('returns a callable hook function', () => {

@@ -4,7 +4,7 @@
  * ADR-421 SLICE C «type always wins» — opening re-resolution on family-type
  * catalog change.
  *
- * Thin binding of the shared `createTypeReresolutionHook` factory (ADR-603 Φ1)
+ * Thin binding of the shared `createTypeReresolutionHook` factory (ADR-604 Φ1)
  * to the pure `reresolveSceneOpenings` SSoT. On every `BimFamilyType` store
  * `version` bump, re-runs resolution over the active scene's typed openings so
  * their cached type-governed params (kind/width/height/frame/glazing) re-flow
@@ -12,7 +12,7 @@
  * Locally dirty openings are skipped (local edits win); untyped openings are
  * untouched (ZERO regression).
  *
- * @see ./create-type-reresolution-hook.ts — shared factory (ADR-603)
+ * @see ./create-type-reresolution-hook.ts — shared factory (ADR-604)
  * @see ../../bim/family-types/opening-type-resolution.ts §reresolveSceneOpenings
  * @see docs/centralized-systems/reference/adrs/ADR-421-bim-opening-types-revit-grade.md
  */

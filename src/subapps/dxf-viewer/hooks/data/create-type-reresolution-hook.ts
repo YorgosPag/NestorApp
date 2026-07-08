@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * ADR-603 Φ1 — «type always wins» re-resolution hook factory (SSoT).
+ * ADR-604 Φ1 — «type always wins» re-resolution hook factory (SSoT).
  *
  * Every BIM family-typed entity (wall / slab / roof / opening / …) wired the
  * SAME `use{X}TypeReresolution` hook: subscribe to the `BimFamilyType` store
@@ -19,7 +19,7 @@
  *
  * Precedent «shared primitive + per-instance binding»:
  *   @see ../../bim/family-types/... createBimEntityPersistenceHook (ADR-594)
- * @see docs/centralized-systems/reference/adrs/ADR-603-generic-family-type-framework.md
+ * @see docs/centralized-systems/reference/adrs/ADR-604-generic-family-type-framework.md
  */
 
 import { useEffect, type RefObject } from 'react';
