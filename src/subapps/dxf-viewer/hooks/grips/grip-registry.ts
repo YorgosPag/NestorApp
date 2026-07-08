@@ -57,73 +57,9 @@ export function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     position: grip.position,
     movesEntity: grip.movesEntity,
     edgeVertexIndices: grip.edgeVertexIndices,
-    // ADR-358 Phase 5b — forward stair parametric grip discriminator.
-    ...(grip.stairGripKind ? { stairGripKind: grip.stairGripKind } : {}),
-    // ADR-362 Phase I2 — forward dimension grip discriminator.
-    ...(grip.dimGripKind ? { dimGripKind: grip.dimGripKind } : {}),
-    // ADR-363 Phase 1C — forward wall parametric grip discriminator.
-    ...(grip.wallGripKind ? { wallGripKind: grip.wallGripKind } : {}),
-    // ADR-363 Phase 2.5 — forward opening parametric grip discriminator.
-    ...(grip.openingGripKind ? { openingGripKind: grip.openingGripKind } : {}),
-    // ADR-363 Phase 3.5 — forward slab parametric grip discriminator.
-    ...(grip.slabGripKind ? { slabGripKind: grip.slabGripKind } : {}),
-    // ADR-363 Phase 3.7a — forward slab-opening parametric grip discriminator.
-    ...(grip.slabOpeningGripKind ? { slabOpeningGripKind: grip.slabOpeningGripKind } : {}),
-    // ADR-417 Φ1-part-2 #2 — forward roof parametric grip discriminator.
-    ...(grip.roofGripKind ? { roofGripKind: grip.roofGripKind } : {}),
-    // ADR-363 Phase 5.5a — forward beam parametric grip discriminator.
-    ...(grip.beamGripKind ? { beamGripKind: grip.beamGripKind } : {}),
-    // ADR-363 Phase 4.5 — forward column parametric grip discriminator.
-    ...(grip.columnGripKind ? { columnGripKind: grip.columnGripKind } : {}),
-    // ADR-436 Slice 1b — forward foundation parametric grip discriminator.
-    ...(grip.foundationGripKind ? { foundationGripKind: grip.foundationGripKind } : {}),
-    // ADR-406 — forward MEP fixture parametric grip discriminator.
-    ...(grip.mepFixtureGripKind ? { mepFixtureGripKind: grip.mepFixtureGripKind } : {}),
-    // ADR-408 Φ3 — forward electrical panel parametric grip discriminator.
-    ...(grip.electricalPanelGripKind ? { electricalPanelGripKind: grip.electricalPanelGripKind } : {}),
-    // ADR-408 Φ12 — forward MEP manifold parametric grip discriminator.
-    ...(grip.mepManifoldGripKind ? { mepManifoldGripKind: grip.mepManifoldGripKind } : {}),
-    // ADR-408 Εύρος Β — forward heating radiator parametric grip discriminator.
-    ...(grip.mepRadiatorGripKind ? { mepRadiatorGripKind: grip.mepRadiatorGripKind } : {}),
-    // ADR-408 Εύρος Β #2 — forward heating boiler parametric grip discriminator.
-    ...(grip.mepBoilerGripKind ? { mepBoilerGripKind: grip.mepBoilerGripKind } : {}),
-    // ADR-408 DHW — forward heating water-heater parametric grip discriminator.
-    // ADR-602 §1.4 Bug 1 fix: declared σε GripInfo+UnifiedGripInfo αλλά ΔΕΝ αντιγραφόταν
-    // εδώ → consumers (grip-parametric-dispatch/-copy, heating-host-commits,
-    // transform-glyph-visibility) το έπαιρναν πάντα undefined. Τώρα forwarded (mirror mepBoiler).
-    ...(grip.mepWaterHeaterGripKind ? { mepWaterHeaterGripKind: grip.mepWaterHeaterGripKind } : {}),
-    // ADR-408 Φ8/Φ15 — forward MEP segment parametric grip discriminator.
-    ...(grip.mepSegmentGripKind ? { mepSegmentGripKind: grip.mepSegmentGripKind } : {}),
-    // ADR-410 — forward furniture parametric grip discriminator.
-    ...(grip.furnitureGripKind ? { furnitureGripKind: grip.furnitureGripKind } : {}),
-    // ADR-415 — forward floorplan-symbol parametric grip discriminator.
-    ...(grip.floorplanSymbolGripKind ? { floorplanSymbolGripKind: grip.floorplanSymbolGripKind } : {}),
-    // ADR-419 — forward floor-finish parametric grip discriminator.
-    ...(grip.floorFinishGripKind ? { floorFinishGripKind: grip.floorFinishGripKind } : {}),
-    // ADR-507 — forward hatch boundary grip discriminator.
-    ...(grip.hatchGripKind ? { hatchGripKind: grip.hatchGripKind } : {}),
-    // ADR-408 Εύρος Β #3 — forward underfloor heating loop parametric grip discriminator.
-    ...(grip.mepUnderfloorGripKind ? { mepUnderfloorGripKind: grip.mepUnderfloorGripKind } : {}),
-    // ADR-359 Phase 11 — forward XLine grip discriminator.
-    ...(grip.xlineGripKind ? { xlineGripKind: grip.xlineGripKind } : {}),
-    // ADR-359 Phase 11 — forward Ray grip discriminator.
-    ...(grip.rayGripKind ? { rayGripKind: grip.rayGripKind } : {}),
-    // ADR-510 Φ3c — forward multifunctional polyline grip discriminator.
-    ...(grip.polylineGripKind ? { polylineGripKind: grip.polylineGripKind } : {}),
-    // ADR-363 Slice F — forward line rotation grip discriminator (shared hot-grip rotate).
-    ...(grip.lineGripKind ? { lineGripKind: grip.lineGripKind } : {}),
-    // ADR-561 — forward circle/arc primitive move+rotation grip discriminators.
-    ...(grip.circleGripKind ? { circleGripKind: grip.circleGripKind } : {}),
-    ...(grip.arcGripKind ? { arcGripKind: grip.arcGripKind } : {}),
-    // ADR-557 — forward text/mtext rect-box grip discriminator.
-    ...(grip.textGripKind ? { textGripKind: grip.textGripKind } : {}),
-    // ADR-575 §8 — forward GROUP gizmo move/rotation grip discriminator.
-    ...(grip.groupGripKind ? { groupGripKind: grip.groupGripKind } : {}),
-    // ADR-583 — forward annotation symbol (North arrow) move/rotation grip discriminator.
-    ...(grip.annotationSymbolGripKind ? { annotationSymbolGripKind: grip.annotationSymbolGripKind } : {}),
-    // ADR-602 (ADR-587 Φ6) Stage 2 — dual-write του tagged grip discriminator SSoT δίπλα
-    // στα 31 legacy forwards (GripInfo→UnifiedGripInfo). Inert μέχρι οι producers να το
-    // σετάρουν (Stage 3)· εδώ απλώς προωθείται 1:1, μηδέν behavior change τώρα.
+    // ADR-602 (ADR-587 Φ6) Stage 5 — the ONE tagged grip discriminator SSoT
+    // (GripInfo→UnifiedGripInfo). The 31 legacy `xxxGripKind` forwards were deleted;
+    // every consumer now reads via `gripKindOf(g, '<entity.type>')`.
     ...(grip.gripKind ? { gripKind: grip.gripKind } : {}),
   };
 }

@@ -27,7 +27,10 @@ function sm(entity: unknown): ISceneManager {
   } as unknown as ISceneManager;
 }
 function grip(kind: string): UnifiedGripInfo {
-  return { entityId: 'h1', hatchGripKind: kind } as unknown as UnifiedGripInfo;
+  return {
+    entityId: 'h1',
+    gripKind: { on: 'hatch', kind },
+  } as unknown as UnifiedGripInfo;
 }
 function lastPatch(): { boundaryPaths: { x: number; y: number }[][] } {
   return (UpdateEntityCommand as jest.Mock).mock.calls[0][1];

@@ -127,14 +127,27 @@ describe('gripInfoToAlignmentRole — 3D GripInfo adapter', () => {
   });
 
   it('detects rotation via the glyph-registry SSoT (line / polyline / arc kinds)', () => {
-    expect(gripInfoToAlignmentRole(gripInfo({ lineGripKind: 'line-rotation' }), null).isRotation).toBe(true);
-    expect(gripInfoToAlignmentRole(gripInfo({ polylineGripKind: 'polyline-rotation' }), null).isRotation).toBe(true);
-    expect(gripInfoToAlignmentRole(gripInfo({ arcGripKind: 'arc-rotation' }), null).isRotation).toBe(true);
+    expect(gripInfoToAlignmentRole(
+      gripInfo({ gripKind: { on: 'line', kind: 'line-rotation' } }), null,
+    ).isRotation).toBe(true);
+    expect(gripInfoToAlignmentRole(
+      gripInfo({ gripKind: { on: 'polyline', kind: 'polyline-rotation' } }), null,
+    ).isRotation).toBe(true);
+    expect(gripInfoToAlignmentRole(
+      gripInfo({ gripKind: { on: 'arc', kind: 'arc-rotation' } }), null,
+    ).isRotation).toBe(true);
   });
 
   it('move / non-rotation kinds are NOT rotation', () => {
-    expect(gripInfoToAlignmentRole(gripInfo({ circleGripKind: 'circle-move' }), null).isRotation).toBe(false);
-    expect(gripInfoToAlignmentRole(gripInfo({ polylineGripKind: 'polyline-move', movesEntity: true }), null).isRotation).toBe(false);
+    expect(gripInfoToAlignmentRole(
+      gripInfo({ gripKind: { on: 'circle', kind: 'circle-move' } }), null,
+    ).isRotation).toBe(false);
+    expect(gripInfoToAlignmentRole(
+      gripInfo({
+        movesEntity: true,
+        gripKind: { on: 'polyline', kind: 'polyline-move' },
+      }), null,
+    ).isRotation).toBe(false);
     expect(gripInfoToAlignmentRole(gripInfo({}), null).isRotation).toBe(false);
   });
 });

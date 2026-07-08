@@ -12,6 +12,7 @@ import {
 } from '../polyline-grip-ops';
 import type { ISceneManager, SceneEntity } from '../../../core/commands/interfaces';
 import type { UnifiedGripInfo } from '../../../hooks/grips/unified-grip-types';
+import type { GripKindByEntity } from '../../../hooks/grip-kinds';
 import { createMockSceneManager } from '../../../core/commands/__tests__/mock-scene-manager';
 
 interface TestPoly {
@@ -43,10 +44,11 @@ const square = (): TestPoly => ({
   bulges: [0, 0, 0, 0],
 });
 
-const grip = (kind: UnifiedGripInfo['polylineGripKind']): UnifiedGripInfo => ({
+const grip = (kind: GripKindByEntity['polyline']): UnifiedGripInfo => ({
   id: 'g', source: 'dxf', entityId: 'p1', gripIndex: 0, type: 'edge',
-  position: { x: 5, y: 0 }, movesEntity: false, polylineGripKind: kind,
-});
+  position: { x: 5, y: 0 }, movesEntity: false,
+  gripKind: { on: 'polyline', kind },
+} as UnifiedGripInfo);
 
 describe('parsePolylineSegIndex', () => {
   it('parses the trailing index of every polyline grip kind', () => {

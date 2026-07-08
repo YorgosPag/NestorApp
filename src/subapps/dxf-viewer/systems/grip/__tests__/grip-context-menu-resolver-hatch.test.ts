@@ -13,7 +13,10 @@ import type { Entity } from '../../../types/entities';
 const ENTITY = { id: 'h1', type: 'hatch' } as unknown as Entity;
 
 function grip(kind?: string): UnifiedGripInfo {
-  return { entityId: 'h1', ...(kind ? { hatchGripKind: kind } : {}) } as unknown as UnifiedGripInfo;
+  return {
+    entityId: 'h1',
+    ...(kind ? { gripKind: { on: 'hatch', kind } } : {}),
+  } as unknown as UnifiedGripInfo;
 }
 
 function hatchOps(g: UnifiedGripInfo) {
