@@ -4,109 +4,65 @@
  *
  * Auth: withAuth | Rate: sensitive
  * @see ADR-267 Phase B — Share Link
+ * @see ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
 import { z } from 'zod';
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { defineRoute, ok, created, badRequest, notFound, httpError } from '@/lib/api/define-route';
 import { getPO } from '@/services/procurement';
 import { createPOShare, revokePOShare } from '@/services/procurement/po-share-service';
-import { getErrorMessage } from '@/lib/error-utils';
-import { createModuleLogger } from '@/lib/telemetry/Logger';
-
-const logger = createModuleLogger('PO_SHARE_API');
 
 const RevokeSchema = z.object({
   shareId: z.string().min(1),
 });
 
-async function handlePost(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ poId: string }> }
-) {
-  const { poId } = await segmentData!.params;
+// ============================================================================
+// POST — Create share link (404 wrong tenant, 201 with token URL)
+// ============================================================================
 
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const po = await getPO(poId);
-        if (!po || po.companyId !== ctx.companyId) {
-          return NextResponse.json(
-            { success: false, error: 'PO not found' },
-            { status: 404 }
-          );
-        }
+export const POST = defineRoute<z.ZodTypeAny, { poId: string }>({
+  rateLimit: 'sensitive',
+  fallbackError: 'Unknown error',
+  handler: async ({ auth, params }) => {
+    const { poId } = params;
 
-        const result = await createPOShare(poId, ctx.uid, ctx.companyId);
+    const po = await getPO(poId);
+    if (!po || po.companyId !== auth.companyId) notFound('PO not found');
 
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://nestor-app.vercel.app';
-        const shareUrl = `${baseUrl}/shared/po/${result.token}`;
+    const result = await createPOShare(poId, auth.uid, auth.companyId);
 
-        return NextResponse.json({
-          success: true,
-          data: {
-            shareId: result.shareId,
-            token: result.token,
-            url: shareUrl,
-            expiresAt: result.expiresAt,
-          },
-        }, { status: 201 });
-      } catch (err) {
-        logger.error('Share creation failed', { poId, error: getErrorMessage(err) });
-        return NextResponse.json(
-          { success: false, error: getErrorMessage(err) },
-          { status: 500 }
-        );
-      }
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://nestor-app.vercel.app';
+    const shareUrl = `${baseUrl}/shared/po/${result.token}`;
+
+    return created({
+      shareId: result.shareId,
+      token: result.token,
+      url: shareUrl,
+      expiresAt: result.expiresAt,
+    });
+  },
+});
+
+// ============================================================================
+// DELETE — Revoke share link (bespoke parse → 400, revoke-fail → 500)
+// ============================================================================
+
+export const DELETE = defineRoute<z.ZodTypeAny, { poId: string }>({
+  rateLimit: 'sensitive',
+  fallbackError: 'Unknown error',
+  handler: async ({ req }) => {
+    let body: z.infer<typeof RevokeSchema>;
+    try {
+      body = RevokeSchema.parse(await req.json());
+    } catch {
+      badRequest('shareId is required');
     }
-  );
 
-  return withSensitiveRateLimit(handler)(request);
-}
+    const revoked = await revokePOShare(body!.shareId);
+    if (!revoked) httpError(500, 'Failed to revoke share');
 
-async function handleDelete(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ poId: string }> }
-) {
-  await segmentData!.params; // consume params
-
-  const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        let body: z.infer<typeof RevokeSchema>;
-        try {
-          body = RevokeSchema.parse(await req.json());
-        } catch {
-          return NextResponse.json(
-            { success: false, error: 'shareId is required' },
-            { status: 400 }
-          );
-        }
-
-        const revoked = await revokePOShare(body.shareId);
-        if (!revoked) {
-          return NextResponse.json(
-            { success: false, error: 'Failed to revoke share' },
-            { status: 500 }
-          );
-        }
-
-        return NextResponse.json({ success: true });
-      } catch (err) {
-        logger.error('Share revoke failed', { error: getErrorMessage(err) });
-        return NextResponse.json(
-          { success: false, error: getErrorMessage(err) },
-          { status: 500 }
-        );
-      }
-    }
-  );
-
-  return withSensitiveRateLimit(handler)(request);
-}
-
-export { handlePost as POST, handleDelete as DELETE };
+    return ok();
+  },
+});

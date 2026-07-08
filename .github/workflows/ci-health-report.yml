@@ -1,0 +1,98 @@
+name: 🚑 CI Health Report
+
+# =============================================================================
+# CI → agent notification, part 1 (GitHub-native, always reliable).
+#
+# Listens for the COMPLETION of every quality-gate / ratchet / test workflow. On
+# a FAILURE it upserts a single pinned issue ("🚨 CI Health — failing gate(s)",
+# label `ci-health`) and appends a comment describing which gate failed, on which
+# branch/commit, with a direct link to the run. This is the durable SSoT of CI
+# failures: any Claude agent reads it with `gh issue list --label ci-health`, and
+# the daily scheduled agent (part 2) turns open issues into a push notification.
+#
+# Runs entirely inside GitHub with the built-in GITHUB_TOKEN — no external auth,
+# so the issue trail is accurate even when no agent is running. Adding a new gate
+# workflow = add its `name:` to the workflows list below.
+# =============================================================================
+
+on:
+  workflow_run:
+    workflows:
+      - "🎯 TypeScript Error Gate (ADR-027)"
+      - "🛡️ Dependency-CVE Audit (ADR-598 G2)"
+      - "⚖️ License Audit (ADR-598 G13)"
+      - "🧹 ESLint Warning Ratchet (ADR-598 ΦΑΣΗ 1)"
+      - "🔤 Type-Coverage Ratchet (ADR-598 G5)"
+      - "📦 Bundle-Size Ratchet (ADR-598 G6)"
+      - "🧮 Type-Complexity Ratchet (ADR-598 G14)"
+      - "🧪 Coverage Floor Ratchet (ADR-598 G3)"
+      - "🕸️ Dependency-Graph Ratchet (ADR-598 G9+G10)"
+      - "♿ A11y Test-Coverage Ratchet (ADR-598 G11)"
+      - "📚 knip Dependency-Hygiene Ratchet (ADR-598 G15)"
+      - "🔐 Secret Scan (ADR-598 G12)"
+      - "🪦 Dead-code Ratchet (CHECK 3.22)"
+      - "🔒 Firestore Rules (ADR-298)"
+      - "🔬 Functions Integration (ADR-327)"
+      - "🌐 i18n Governance (ADR-279)"
+      - "🧬 jscpd Clone Ratchet (CHECK 3.28)"
+      - "🧬 SSoT Discover Ratchet (ADR-314)"
+    types: [completed]
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: ci-health-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    name: 🚑 Report failing gate to CI Health issue
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    timeout-minutes: 5
+    steps:
+      - name: 🚑 Upsert CI Health issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            const LABEL = 'ci-health';
+            const TITLE = '🚨 CI Health — failing gate(s)';
+            const line =
+              `- ❌ **${run.name}** — \`${run.head_branch}\` @ \`${run.head_sha.slice(0, 8)}\` ` +
+              `· [run #${run.run_number}](${run.html_url}) · ${run.updated_at}`;
+
+            // Ensure the label exists (idempotent).
+            try {
+              await github.rest.issues.getLabel({ ...context.repo, name: LABEL });
+            } catch {
+              await github.rest.issues.createLabel({
+                ...context.repo, name: LABEL, color: 'b60205',
+                description: 'Automated CI gate failure report',
+              });
+            }
+
+            // Find the existing open CI-health issue (most recent).
+            const existing = await github.rest.issues.listForRepo({
+              ...context.repo, state: 'open', labels: LABEL, per_page: 1,
+            });
+
+            if (existing.data.length > 0) {
+              const number = existing.data[0].number;
+              await github.rest.issues.createComment({
+                ...context.repo, issue_number: number,
+                body: `${line}\n\n<sub>Fix the gate, then close this issue once CI is green again.</sub>`,
+              });
+              core.notice(`Appended failure to CI Health issue #${number}`);
+            } else {
+              const body =
+                `Automated report of failing CI quality gates. Each comment is one failure.\n\n` +
+                `**How to use:** an agent reads this with \`gh issue list --label ${LABEL}\`, ` +
+                `fixes the gate, then closes this issue when CI is green.\n\n---\n\n${line}`;
+              const created = await github.rest.issues.create({
+                ...context.repo, title: TITLE, labels: [LABEL], body,
+              });
+              core.notice(`Opened CI Health issue #${created.data.number}`);
+            }

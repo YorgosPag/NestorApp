@@ -4,21 +4,18 @@
  *
  * Auth: withAuth | Rate: standard (GET), sensitive (PATCH)
  * @see ADR-327 §17 step (d) Q31
+ * @see ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
 import { z } from 'zod';
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit, withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { defineRoute, ok, notFound } from '@/lib/api/define-route';
 import {
   getSourcingEvent,
   updateSourcingEvent,
 } from '@/subapps/procurement/services/sourcing-event-service';
-import { getErrorMessage } from '@/lib/error-utils';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { runProcurementMutation } from '../../_shared/procurement-mutation';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('SOURCING_EVENT_API');
@@ -38,75 +35,30 @@ const UpdateSourcingEventSchema = z.object({
 // GET — Single event (404 if not found or wrong tenant)
 // ============================================================================
 
-async function handleGet(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ eventId: string }> },
-): Promise<NextResponse> {
-  const { eventId } = await segmentData!.params;
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const event = await getSourcingEvent(ctx, eventId);
-        if (!event) {
-          return NextResponse.json(
-            { success: false, error: 'Sourcing event not found' },
-            { status: 404 },
-          );
-        }
-        return NextResponse.json({ success: true, data: event });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to get sourcing event');
-        logger.error('Sourcing event get error', { eventId, error: message });
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    },
-  );
-  return handler(request);
-}
+export const GET = defineRoute<z.ZodTypeAny, { eventId: string }>({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to get sourcing event',
+  handler: async ({ auth, params }) => {
+    const event = await getSourcingEvent(auth, params.eventId);
+    if (!event) notFound('Sourcing event not found');
+    return ok(event);
+  },
+});
 
 // ============================================================================
 // PATCH — Update fields or trigger status transition
 // ============================================================================
 
-async function handlePatch(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ eventId: string }> },
-): Promise<NextResponse> {
-  const { eventId } = await segmentData!.params;
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const parsed = safeParseBody(UpdateSourcingEventSchema, await req.json());
-        if (parsed.error) return parsed.error;
-        const event = await updateSourcingEvent(ctx, eventId, parsed.data);
-        return NextResponse.json({ success: true, data: event });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to update sourcing event');
-        logger.error('Sourcing event update error', { eventId, error: message });
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: errorStatus(error) },
-        );
-      }
-    },
-  );
-  return handler(request);
-}
-
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-function errorStatus(error: unknown): number {
-  const msg = error instanceof Error ? error.message : String(error);
-  if (msg.includes('not found')) return 404;
-  if (msg.includes('Forbidden')) return 403;
-  return 400;
-}
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export const GET = withStandardRateLimit(handleGet);
-export const PATCH = withSensitiveRateLimit(handlePatch);
+export const PATCH = defineRoute<z.ZodTypeAny, { eventId: string }>({
+  rateLimit: 'sensitive',
+  handler: ({ req, auth, params }) =>
+    runProcurementMutation({
+      req,
+      schema: UpdateSourcingEventSchema,
+      logger,
+      logMessage: 'Sourcing event update error',
+      logContext: { eventId: params.eventId },
+      fallbackError: 'Failed to update sourcing event',
+      run: async (data) => ok(await updateSourcingEvent(auth, params.eventId, data)),
+    }),
+});

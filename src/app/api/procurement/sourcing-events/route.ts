@@ -6,15 +6,13 @@
  *
  * Auth: withAuth | Rate: standard (GET), sensitive (POST)
  * @see ADR-327 §17 step (d) Q31
+ * @see ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
 import { z } from 'zod';
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit, withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { defineRoute, ok, created, httpError } from '@/lib/api/define-route';
 import {
   listSourcingEvents,
   createSourcingEvent,
@@ -42,57 +40,41 @@ const CreateSourcingEventSchema = z.object({
 // GET — List events (excludes archived by default)
 // ============================================================================
 
-async function handleGet(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const url = new URL(req.url);
-        const status = url.searchParams.get('status') as SourcingEventStatus | null;
-        const projectId = url.searchParams.get('projectId') ?? undefined;
-        const search = url.searchParams.get('search') ?? undefined;
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to list sourcing events',
+  handler: async ({ req, auth }) => {
+    const url = new URL(req.url);
+    const status = url.searchParams.get('status') as SourcingEventStatus | null;
+    const projectId = url.searchParams.get('projectId') ?? undefined;
+    const search = url.searchParams.get('search') ?? undefined;
 
-        const events = await listSourcingEvents(ctx, {
-          status: status ?? undefined,
-          projectId,
-          search,
-        });
+    const events = await listSourcingEvents(auth, {
+      status: status ?? undefined,
+      projectId,
+      search,
+    });
 
-        return NextResponse.json({ success: true, data: events });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to list sourcing events');
-        logger.error('Sourcing events list error', { error: message });
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    },
-  );
-  return handler(request);
-}
+    return ok(events);
+  },
+});
 
 // ============================================================================
-// POST — Create sourcing event (starts as draft)
+// POST — Create sourcing event (starts as draft; all errors → flat 400)
 // ============================================================================
 
-async function handlePost(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const parsed = safeParseBody(CreateSourcingEventSchema, await req.json());
-        if (parsed.error) return parsed.error;
-        const event = await createSourcingEvent(ctx, parsed.data);
-        return NextResponse.json({ success: true, data: event }, { status: 201 });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to create sourcing event');
-        logger.error('Sourcing event create error', { error: message });
-        return NextResponse.json({ success: false, error: message }, { status: 400 });
-      }
-    },
-  );
-  return handler(request);
-}
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export const GET = withStandardRateLimit(handleGet);
-export const POST = withSensitiveRateLimit(handlePost);
+export const POST = defineRoute({
+  rateLimit: 'sensitive',
+  handler: async ({ req, auth }) => {
+    try {
+      const parsed = safeParseBody(CreateSourcingEventSchema, await req.json());
+      if (parsed.error) return parsed.error;
+      const event = await createSourcingEvent(auth, parsed.data);
+      return created(event);
+    } catch (error) {
+      const message = getErrorMessage(error, 'Failed to create sourcing event');
+      logger.error('Sourcing event create error', { error: message });
+      httpError(400, message);
+    }
+  },
+});
