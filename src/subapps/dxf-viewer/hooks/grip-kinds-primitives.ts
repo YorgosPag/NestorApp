@@ -77,6 +77,21 @@ export type ArcGripKind = 'arc-move' | 'arc-rotation';
 export type LineGripKind = 'line-rotation' | 'line-move';
 
 /**
+ * ADR-583 — Annotation symbol grip kind (lightweight non-BIM North arrow, NOT a
+ * BIM params entity). Mirror of `arc-*`: the glyph has an intrinsic orientation
+ * so it gets BOTH a move cross AND a rotation handle, but NO resize (fixed aspect,
+ * D5 — μέγεθος αλλάζει από το contextual tab):
+ *   - `annotation-symbol-move`     → κεντρικό grip, 4-arrow MOVE glyph + directional
+ *                                    prompt + whole-entity translate (`movesEntity` →
+ *                                    `calculateMovedGeometry` case 'annotation-symbol').
+ *   - `annotation-symbol-rotation` → λαβή περιστροφής· commit μέσω της canonical
+ *                                    `RotateEntityCommand` (pivot = θέση) → `rotateEntity`
+ *                                    case 'annotation-symbol'. Ίδιο shared hot-grip flow
+ *                                    με `arc-rotation` / `text-rotation`.
+ */
+export type AnnotationSymbolGripKind = 'annotation-symbol-move' | 'annotation-symbol-rotation';
+
+/**
  * ADR-575 §8 — GROUP gizmo grip kind (composite `type:'group'` container, ΟΧΙ
  * BIM params entity). Το επιλεγμένο group εμφανίζει ΕΝΑ κοινό βελάκι στο κέντρο του
  * bounding box (Revit / Cinema 4D gizmo), αντί per-member λαβές:

@@ -267,6 +267,10 @@ export function buildRotateReferencePreview(
     // angle) via the shared hot-grip flow, same as the line/arc/text. Without this forward
     // the ghost never receives the discriminator in the rotate flow.
     ...(activeGrip.groupGripKind ? { groupGripKind: activeGrip.groupGripKind } : {}),
+    // ADR-583 — annotation symbol (North arrow) rotation live ghost, same shared
+    // hot-grip flow as the arc/line/group. Without this forward the ghost never
+    // receives the discriminator in the rotate flow.
+    ...(activeGrip.annotationSymbolGripKind ? { annotationSymbolGripKind: activeGrip.annotationSymbolGripKind } : {}),
     hotGrip: true as const,
     rotatePivot: pivot,
     delta: { x: 0, y: 0 },

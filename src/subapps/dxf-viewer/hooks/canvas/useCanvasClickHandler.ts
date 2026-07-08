@@ -31,7 +31,7 @@ import {
   handleLineParallelPick,
 } from './entity-pick-handlers';
 import type { EntityPickContext } from './entity-pick-handlers';
-import { handleRotationEntitySelection, handleAutoAreaClick, handleHatchPickPointClick, handleOverlayDrawClick } from './canvas-click-tool-handlers';
+import { handleRotationEntitySelection, handleAutoAreaClick, handleHatchPickPointClick, handleOverlayDrawClick, handleAnnotationSymbolClick } from './canvas-click-tool-handlers';
 // ADR-581 — Match Properties σταγονόμετρο/σύριγγα (Alt pick / Ctrl+Alt inject / πινέλο).
 import { handleMatchBrushClick } from './match-click-handlers';
 // ADR-507 Φ3 — pick-mode SSoT (Τρόπος Α boundary ⇄ Τρόπος Β pick-point).
@@ -279,6 +279,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // ΜΗΝ μπει στο unified drawing (boundary accumulation = Τρόπος Α).
     if (isHatchPickPointActive(activeTool)) {
       handleHatchPickPointClick(worldPoint, params);
+      return;
+    }
+    // PRIORITY 1.8: ADR-583 — annotation symbol (North arrow) single-click placement.
+    // Consumes the click so it does NOT fall through to the unified drawing accumulator.
+    if (activeTool === 'north-arrow') {
+      handleAnnotationSymbolClick(worldPoint, params);
       return;
     }
     // PRIORITY 1.9-4: Entity picking tools (angle, circle-ttt, parallel).

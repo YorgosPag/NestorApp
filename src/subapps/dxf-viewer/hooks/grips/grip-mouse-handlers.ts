@@ -208,7 +208,7 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
         applyHotGripHint('rotate', 'rotate-free');
         setActiveDragGrip({
           entityId: nearGrip.entityId!,
-          gripKind: syntheticGrip.lineGripKind ?? syntheticGrip.arcGripKind ?? syntheticGrip.polylineGripKind ?? null,
+          gripKind: syntheticGrip.lineGripKind ?? syntheticGrip.arcGripKind ?? syntheticGrip.polylineGripKind ?? syntheticGrip.annotationSymbolGripKind ?? null,
           gripIndex: nearGrip.gripIndex,
           lineGripKind: syntheticGrip.lineGripKind ?? null,
         });

@@ -15,6 +15,7 @@ import { DEFAULT_BACKGROUND_TRANSFORM } from '../providers/types';
 import { getProvider } from '../providers/provider-registry';
 import type { IFloorplanBackgroundProvider } from '../providers/IFloorplanBackgroundProvider';
 import { generateFloorplanBackgroundId } from '@/services/enterprise-id.service';
+import { clamp01 } from '../../utils/scalar-math';
 
 // ── Slot: per-floor state (no provider — class instances live outside immer) ──
 
@@ -139,7 +140,20 @@ function buildBackground(
 }
 
 function clampOpacity(v: number): number {
-  return Math.max(0, Math.min(1, v));
+  return clamp01(v);
+}
+
+// ADR-583 / N.18 — `_hydratePersistedBackground` and `_loadBackground` shared the
+// same loading-init and error-catch slot construction; centralised as SSoT slots.
+
+/** FloorSlot for a load that just started. */
+function loadingSlot(): FloorSlot {
+  return { background: null, isLoading: true, error: null };
+}
+
+/** FloorSlot for a failed load, normalising the thrown value to a message. */
+function errorSlot(err: unknown): FloorSlot {
+  return { background: null, isLoading: false, error: err instanceof Error ? err.message : String(err) };
 }
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -283,7 +297,7 @@ export const useFloorplanBackgroundStore = create<FloorplanBackgroundStoreType>(
 
           const promise = (async () => {
             set((draft) => {
-              draft.floors[floorId] = { background: null, isLoading: true, error: null };
+              draft.floors[floorId] = loadingSlot();
             });
 
             try {
@@ -301,9 +315,8 @@ export const useFloorplanBackgroundStore = create<FloorplanBackgroundStoreType>(
                 };
               });
             } catch (err) {
-              const message = err instanceof Error ? err.message : String(err);
               set((draft) => {
-                draft.floors[floorId] = { background: null, isLoading: false, error: message };
+                draft.floors[floorId] = errorSlot(err);
               });
             }
           })().finally(() => {
@@ -316,7 +329,7 @@ export const useFloorplanBackgroundStore = create<FloorplanBackgroundStoreType>(
 
         _loadBackground: async (floorId, source, providerId) => {
           set((draft) => {
-            draft.floors[floorId] = { background: null, isLoading: true, error: null };
+            draft.floors[floorId] = loadingSlot();
           });
 
           try {
@@ -340,9 +353,8 @@ export const useFloorplanBackgroundStore = create<FloorplanBackgroundStoreType>(
               draft.floors[floorId] = { background, isLoading: false, error: null };
             });
           } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
             set((draft) => {
-              draft.floors[floorId] = { background: null, isLoading: false, error: message };
+              draft.floors[floorId] = errorSlot(err);
             });
           }
         },

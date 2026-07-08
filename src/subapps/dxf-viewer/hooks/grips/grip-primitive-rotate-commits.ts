@@ -82,27 +82,68 @@ export function resolveRotation(
 }
 
 /**
+ * ADR-561/583 — SHARED "rotate a single-anchor primitive about a fixed pivot point"
+ * commit (arc → centre, annotation symbol → insertion point). Gated by the caller's
+ * own `isThisHandle` (its `*-rotation` discriminator) + `expectedType`; the pivot is
+ * read from the raw scene shape via `pivotOf`. Rotates through the canonical
+ * `RotateEntityCommand` (Ctrl / «Copy» → rotate a CLONE, `copyMode` owns undo/redo,
+ * ADR-357 Φ12). Extracted so the arc + annotation-symbol commits are ONE source, not
+ * sibling twins (N.18 — jscpd caught the copy).
+ */
+function commitRotationAboutAnchorPoint(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+  isThisHandle: boolean,
+  expectedType: string,
+  pivotOf: (raw: PrimitiveSceneShape & { position?: Point2D }) => Point2D | undefined,
+): void {
+  if (!grip.entityId || !isThisHandle) return;
+  const sceneManager = createSceneManagerAdapter(deps);
+  if (!sceneManager) return;
+  const raw = sceneManager.getEntity(grip.entityId) as (PrimitiveSceneShape & { position?: Point2D }) | undefined;
+  if (!raw || raw.type !== expectedType) return;
+  const pivot = pivotOf(raw);
+  if (!pivot) return;
+  const res = resolveRotation(grip, delta, pivot);
+  if (!res) return;
+  const command = new RotateEntityCommand([grip.entityId], res.pivot, res.sweptDeg, sceneManager, false, isGripCopyIntent());
+  if (command.validate() !== null) return;
+  deps.execute(command);
+}
+
+/**
  * ADR-561 — arc rotation commit. Only the `'arc-rotation'` handle routes here (the
  * `'arc-move'` centre falls through to the whole-entity translate path upstream).
- * Rotates the arc about its centre via the canonical `RotateEntityCommand`.
+ * Rotates the arc about its centre via the shared single-anchor rotate SSoT.
  */
 export function commitArcGripDrag(
   grip: UnifiedGripInfo,
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || grip.arcGripKind !== 'arc-rotation') return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId) as PrimitiveSceneShape | undefined;
-  if (!raw || raw.type !== 'arc' || !raw.center) return;
-  const res = resolveRotation(grip, delta, raw.center);
-  if (!res) return;
-  // ADR-561 EXT — Ctrl / «Copy» toggle → rotate a CLONE about the pivot (hinge). The
-  // canonical `RotateEntityCommand.copyMode` owns the clone + undo/redo (ADR-357 Φ12).
-  const command = new RotateEntityCommand([grip.entityId], res.pivot, res.sweptDeg, sceneManager, false, isGripCopyIntent());
-  if (command.validate() !== null) return;
-  deps.execute(command);
+  commitRotationAboutAnchorPoint(
+    grip, delta, deps,
+    grip.arcGripKind === 'arc-rotation', 'arc', (raw) => raw.center,
+  );
+}
+
+/**
+ * ADR-583 — annotation symbol (North arrow) rotation commit. Only the
+ * `'annotation-symbol-rotation'` handle routes here (the `'annotation-symbol-move'`
+ * centre falls through to the whole-entity translate path upstream). Rotates the
+ * symbol about its insertion point (`rotateEntity` case 'annotation-symbol':
+ * position + accumulated `rotation`) via the shared single-anchor rotate SSoT.
+ */
+export function commitAnnotationSymbolGripDrag(
+  grip: UnifiedGripInfo,
+  delta: Point2D,
+  deps: DxfCommitDeps,
+): void {
+  commitRotationAboutAnchorPoint(
+    grip, delta, deps,
+    grip.annotationSymbolGripKind === 'annotation-symbol-rotation', 'annotation-symbol', (raw) => raw.position,
+  );
 }
 
 /**

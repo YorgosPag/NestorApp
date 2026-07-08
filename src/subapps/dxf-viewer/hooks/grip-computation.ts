@@ -51,6 +51,7 @@ import { getMepBoilerGrips } from '../bim/mep-boilers/mep-boiler-grips';
 import { getMepWaterHeaterGrips } from '../bim/mep-water-heaters/mep-water-heater-grips';
 import { getFurnitureGrips } from '../bim/furniture/furniture-grips';
 import { getFloorplanSymbolGrips } from '../bim/floorplan-symbols/floorplan-symbol-grips';
+import { getAnnotationSymbolGrips } from '../bim/annotation-symbols/annotation-symbol-grips';
 import { getMepSegmentGrips } from '../bim/mep-segments/mep-segment-grips';
 import { getRoofGrips } from '../bim/roofs/roof-grips';
 import { getFloorFinishGrips } from '../bim/floor-finishes/floor-finish-grips';
@@ -332,6 +333,14 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
       // ADR-408 Φ8 — parametric MEP segment grips (start / end / midpoint /
       // section-width / rotation). Carries params at top level (mirror beam).
       grips.push(...getMepSegmentGrips(entity as unknown as MepSegmentEntity));
+      break;
+    }
+
+    case 'annotation-symbol': {
+      // ADR-583 — lightweight North arrow: move cross + rotation handle (NO resize,
+      // D5). Shared SSoT with `AnnotationSymbolRenderer.getGrips` → interaction ≡
+      // render. Move via `movesEntity`, rotation via RotateEntityCommand (mirror arc).
+      grips.push(...getAnnotationSymbolGrips(entity.id, entity.position, entity.sizeMm, entity.rotation));
       break;
     }
 

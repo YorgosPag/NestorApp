@@ -112,6 +112,8 @@ function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     ...(grip.textGripKind ? { textGripKind: grip.textGripKind } : {}),
     // ADR-575 §8 — forward GROUP gizmo move/rotation grip discriminator.
     ...(grip.groupGripKind ? { groupGripKind: grip.groupGripKind } : {}),
+    // ADR-583 — forward annotation symbol (North arrow) move/rotation grip discriminator.
+    ...(grip.annotationSymbolGripKind ? { annotationSymbolGripKind: grip.annotationSymbolGripKind } : {}),
   };
 }
 

@@ -87,41 +87,23 @@ export function commitDxfGripDragViaStretchCommand(
   if (command.validate() !== null) return;
   deps.execute(command);
 }
-// Parametric commit handlers moved to ./grip-parametric-commits.ts
+// Parametric commit handlers live in ./grip-parametric-commits.ts. The uniform
+// params-driven BIM dispatch (stair … ray) is extracted to ./grip-parametric-
+// dispatch.ts (N.7.1 file-size split); only the handlers still referenced by the
+// primitive / whole-entity / action-grip paths below are imported directly here.
 import {
-  commitStairGripDrag,
-  commitWallGripDrag,
   commitOpeningGripDrag,
   commitOpeningAltMove,
-  commitSlabGripDrag,
-  commitSlabOpeningGripDrag,
-  commitRoofGripDrag,
-  commitBeamGripDrag,
-  commitColumnGripDrag,
-  commitFoundationGripDrag,
-  commitMepFixtureGripDrag,
-  commitElectricalPanelGripDrag,
-  commitMepManifoldGripDrag,
   commitMepManifoldOutletCountGrip,
-  commitMepRadiatorGripDrag,
-  commitMepBoilerGripDrag,
-  commitMepWaterHeaterGripDrag,
-  commitMepSegmentGripDrag,
-  commitFurnitureGripDrag,
-  commitFloorplanSymbolGripDrag,
-  commitFloorFinishGripDrag,
-  commitHatchGripDrag,
-  commitMepUnderfloorGripDrag,
-  commitXLineGripDrag,
-  commitRayGripDrag,
-  commitDimensionGripDrag,
   commitPolylineBulgeGripDrag,
   commitTextGripDrag,
   commitLineGripDrag,
   commitArcGripDrag,
   commitPolylineRotationGripDrag,
+  commitAnnotationSymbolGripDrag,
   commitGroupGizmoRotation,
 } from './grip-parametric-commits';
+import { tryCommitParametricGripDrag } from './grip-parametric-dispatch';
 /**
  * ADR-363 Phase 1G.5 — whole-entity "move from characteristic point" (AutoCAD
  * base-point move). Translates the ENTIRE entity by `delta` via
@@ -220,185 +202,13 @@ export function commitDxfGripDragModeAware(
     commitWholeEntityMove(grip, delta, deps, isGripCopyIntent());
     return;
   }
-  // ADR-358 Phase 5b — stair parametric grip path (5 kinds, §5.12).
-  if (grip.stairGripKind) {
-    commitStairGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-362 Phase I2 — dimension grip path (defPoints / textMidpoint / rotation).
-  if (grip.dimGripKind) {
-    commitDimensionGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-363 Phase 1C — wall parametric grip path (endpoint / midpoint /
-  // thickness / curve / polyline-vertex). Bypasses stretch because walls are
-  // params-driven (geometry recomputed atomically by UpdateWallParamsCommand).
-  if (grip.wallGripKind) {
-    commitWallGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-363 Phase 2.5 — opening parametric grip path (drag-along-wall).
-  // Bypasses stretch because openings are params-driven (offsetFromStart) and
-  // their geometry is host-wall-relative; commit recomputes via
-  // `UpdateOpeningParamsCommand` after axis projection + clamp.
-  if (grip.openingGripKind) {
-    commitOpeningGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-363 Phase 3.5 — slab parametric grip path (per-vertex translate).
-  // Bypasses stretch because slabs are params-driven (outline polygon) and
-  // geometry (area / netArea / volume / perimeter / bbox) is recomputed
-  // atomically by UpdateSlabParamsCommand.
-  if (grip.slabGripKind) {
-    commitSlabGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-363 Phase 3.7a — slab-opening parametric grip path (per-vertex
-  // translate + edge-midpoint insertion). Bypasses stretch because
-  // slab-openings are params-driven (outline polygon) και geometry
-  // (area / perimeter / bbox) is recomputed atomically by
-  // UpdateSlabOpeningParamsCommand.
-  if (grip.slabOpeningGripKind) {
-    commitSlabOpeningGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-417 Φ1-part-2 #2 — roof parametric grip path (per-vertex translate +
-  // edge-midpoint insertion). Bypasses stretch because roofs are params-driven
-  // (footprint outline + per-edge slopes) and geometry (faces / ridges / areas /
-  // bbox) is recomputed atomically by UpdateRoofParamsCommand.
-  if (grip.roofGripKind) {
-    commitRoofGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-363 Phase 5.5a — beam parametric grip path (start/end/midpoint
-  // translate + curve control move). Bypasses stretch because beams are
-  // params-driven (axis endpoints + optional Bezier control) και geometry
-  // (axisPolyline / outline / length / area / volume / bbox) is recomputed
-  // atomically by UpdateBeamParamsCommand.
-  if (grip.beamGripKind) {
-    commitBeamGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-363 Phase 4.5 — column parametric grip path (center translate +
-  // rotation + width/depth resize). Bypasses stretch because columns are
-  // params-driven (position + kind + anchor + width/depth/height/rotation)
-  // και geometry (footprint / bbox / area / volume) is recomputed atomically
-  // by UpdateColumnParamsCommand.
-  if (grip.columnGripKind) {
-    commitColumnGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-436 Slice 1b — foundation pad parametric grip path (rotation + width/length
-  // resize + Alt-move). Bypasses stretch because the pad is params-driven; geometry
-  // (footprint / bbox / area / volume) recomputed atomically by UpdateFoundationParamsCommand.
-  if (grip.foundationGripKind) {
-    commitFoundationGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-406 — MEP fixture parametric grip path (center translate + rotation +
-  // opposite-corner-anchored width/length resize). Bypasses stretch because the
-  // fixture is params-driven; UpdateMepFixtureParamsCommand recomputes geometry.
-  if (grip.mepFixtureGripKind) {
-    commitMepFixtureGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-408 Φ3 — electrical panel parametric grip path (center translate +
-  // rotation + opposite-corner-anchored width/length resize). Bypasses stretch
-  // because the panel is params-driven; UpdateElectricalPanelParamsCommand
-  // recomputes geometry.
-  if (grip.electricalPanelGripKind) {
-    commitElectricalPanelGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-408 Φ12 — MEP manifold parametric grip path (center translate +
-  // rotation + opposite-corner-anchored width/length resize). Bypasses stretch
-  // because the manifold is params-driven; UpdateMepManifoldParamsCommand
-  // recomputes geometry.
-  if (grip.mepManifoldGripKind) {
-    commitMepManifoldGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-408 Εύρος Β — heating radiator parametric grip path (center translate +
-  // rotation + opposite-corner-anchored width/length resize). Bypasses stretch
-  // because the radiator is params-driven; UpdateMepRadiatorParamsCommand
-  // recomputes geometry + re-seeds connectors.
-  if (grip.mepRadiatorGripKind) {
-    commitMepRadiatorGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-408 Εύρος Β #2 — heating boiler parametric grip path (center translate +
-  // rotation + opposite-corner-anchored width/length resize). Bypasses stretch
-  // because the boiler is params-driven; UpdateMepBoilerParamsCommand
-  // recomputes geometry + re-seeds connectors.
-  if (grip.mepBoilerGripKind) {
-    commitMepBoilerGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-408 DHW — domestic hot water heater parametric grip path (center translate +
-  // rotation + opposite-corner-anchored width/length resize). Bypasses stretch
-  // because the water heater is params-driven; UpdateMepWaterHeaterParamsCommand
-  // recomputes geometry + re-seeds connectors.
-  if (grip.mepWaterHeaterGripKind) {
-    commitMepWaterHeaterGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-408 Φ8/Φ15 — MEP segment parametric grip path (start/end/midpoint
-  // translate + section resize + rotation; vertical riser = whole-entity move).
-  // Bypasses stretch/move because segments are params-driven (axis endpoints);
-  // UpdateMepSegmentParamsCommand recomputes geometry atomically.
-  if (grip.mepSegmentGripKind) {
-    commitMepSegmentGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-410 — furniture parametric grip path (center translate + rotation +
-  // opposite-corner-anchored width/depth resize). Bypasses stretch because the
-  // furniture is params-driven; UpdateFurnitureParamsCommand recomputes geometry.
-  if (grip.furnitureGripKind) {
-    commitFurnitureGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-415 — floorplan-symbol parametric grip path (center translate + rotation +
-  // opposite-corner-anchored width/depth resize). Bypasses stretch because the
-  // symbol is params-driven; UpdateFloorplanSymbolParamsCommand recomputes geometry.
-  if (grip.floorplanSymbolGripKind) {
-    commitFloorplanSymbolGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-419 — floor-finish parametric grip path (per-vertex translate +
-  // edge-midpoint insertion). Bypasses stretch because floor-finishes are
-  // params-driven (footprint polygon); UpdateFloorFinishParamsCommand recomputes
-  // geometry atomically. Mirrors slab/roof path.
-  if (grip.floorFinishGripKind) {
-    commitFloorFinishGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-507 — hatch boundary parametric grip path (per-vertex translate on
-  // boundaryPaths). Bypasses stretch; UpdateHatchBoundaryCommand patches the
-  // outline + merges drag samples into one undo.
-  if (grip.hatchGripKind) {
-    commitHatchGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-408 Εύρος Β #3 — underfloor heating loop parametric grip path (per-vertex
-  // translate + edge-midpoint insertion). Bypasses stretch because the entity is
-  // params-driven (footprint polygon + connector re-derivation);
-  // UpdateMepUnderfloorParamsCommand recomputes geometry + connectors atomically.
-  // Mirrors floor-finish path.
-  if (grip.mepUnderfloorGripKind) {
-    commitMepUnderfloorGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-359 Phase 11 — XLine grip path (basePoint translate or direction rotate).
-  // Bypasses stretch because XLine has no vertex array.
-  if (grip.xlineGripKind) {
-    commitXLineGripDrag(grip, delta, deps);
-    return;
-  }
-  // ADR-359 Phase 11 — Ray grip path (basePoint translate or direction rotate).
-  if (grip.rayGripKind) {
-    commitRayGripDrag(grip, delta, deps);
-    return;
-  }
+  // ADR-183 / N.7.1 — params-driven BIM entity grips (stair, dimension, wall,
+  // slab, roof, beam, column, foundation, every MEP kind, floor-finish, hatch,
+  // xline, ray) dispatch to their dedicated commit handlers via the extracted
+  // SSoT. Returns true when it handled the grip; on a miss we fall through to the
+  // primitive / whole-entity paths below (arc / polyline / annotation / group /
+  // text / line rotation & move, then the mode dispatch).
+  if (tryCommitParametricGripDrag(grip, delta, deps)) return;
   // ADR-561 — arc ROTATION handle → rotate the arc about its centre via the
   // canonical `RotateEntityCommand`. The `'arc-move'` centre carries an
   // `arcGripKind` too but is a whole-entity TRANSLATE — it must fall through to the
@@ -415,6 +225,14 @@ export function commitDxfGripDragModeAware(
     commitPolylineRotationGripDrag(grip, delta, deps);
     return;
   }
+  // ADR-583 — annotation symbol (North arrow) ROTATION handle → rotate about the
+  // insertion point via the canonical `RotateEntityCommand`. Gate to
+  // `'annotation-symbol-rotation'` ONLY — the `'annotation-symbol-move'` cross is a
+  // whole-entity TRANSLATE (`movesEntity`) and must fall through to the move path.
+  if (grip.annotationSymbolGripKind === 'annotation-symbol-rotation') {
+    commitAnnotationSymbolGripDrag(grip, delta, deps);
+    return;
+  }
   // ADR-575 §8 — GROUP gizmo ROTATION handle → rotate the whole group about its bbox
   // centre via the canonical `RotateEntityCommand` (`rotateEntity` case 'group' recurses
   // members). Gate to `'group-rotation'` ONLY — the `'group-move'` cross is a whole-group
@@ -428,6 +246,15 @@ export function commitDxfGripDragModeAware(
   // (`deps.moveEntities` → `MoveEntityCommand` → `calculateMovedGeometry` case 'group' →
   // recurse members). Ctrl / «Copy» clones with the same base point.
   if (grip.groupGripKind === 'group-move') {
+    commitWholeEntityMove(grip, delta, deps, isGripCopyIntent());
+    return;
+  }
+  // ADR-583 — annotation symbol (North arrow) MOVE cross → translate the whole
+  // entity DETERMINISTICALLY (mode-independent, mirror `group-move`) via the
+  // whole-entity move SSoT (`MoveEntityCommand` → `calculateMovedGeometry` case
+  // 'annotation-symbol'). The insertion point is not a vertex, so the stretch path
+  // (line-move) cannot serve — this position-anchored move is the correct SSoT.
+  if (grip.annotationSymbolGripKind === 'annotation-symbol-move') {
     commitWholeEntityMove(grip, delta, deps, isGripCopyIntent());
     return;
   }

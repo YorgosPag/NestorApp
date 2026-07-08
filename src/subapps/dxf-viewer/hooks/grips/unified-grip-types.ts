@@ -10,10 +10,11 @@
  */
 
 import type { Point2D, GripKind } from '../../rendering/types/Types';
-import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, FoundationGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind, PolylineGripKind, CircleGripKind, ArcGripKind, LineGripKind, GroupGripKind, TextGripKind } from '../useGripMovement';
+import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, FoundationGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind, PolylineGripKind, CircleGripKind, ArcGripKind, LineGripKind, GroupGripKind, AnnotationSymbolGripKind, TextGripKind } from '../useGripMovement';
 import type {
   DxfGripDragPreview,
   DxfGripInteractionState,
+  UseDxfGripInteractionReturn,
 } from '../grip-computation';
 
 // ============================================================================
@@ -345,6 +346,15 @@ export interface UnifiedGripInfo {
    */
   readonly groupGripKind?: GroupGripKind;
   /**
+   * ADR-583 — annotation symbol (North arrow) grip discriminator (forwarded from
+   * `GripInfo.annotationSymbolGripKind` in `grip-registry.wrapDxfGrip`).
+   * `'annotation-symbol-move'` → shared MOVE pipeline (whole-entity translate via
+   * `calculateMovedGeometry` case 'annotation-symbol')· `'annotation-symbol-rotation'`
+   * → shared hot-grip rotate + `commitAnnotationSymbolGripDrag()` (RotateEntityCommand
+   * about the insertion point, `rotateEntity` case 'annotation-symbol'). Mirror of arc.
+   */
+  readonly annotationSymbolGripKind?: AnnotationSymbolGripKind;
+  /**
    * ADR-397 Φ2 (Giorgio 2026-06-17) — the owning entity's local frame (world unit
    * axes) for MOVE-glyph grips, from `resolveMoveGlyphFrame`. Attached in
    * `useGripRegistry` (which has the entity). Lets the directional move-by-value
@@ -417,19 +427,12 @@ export interface UseUnifiedGripInteractionParams {
   onToolChange?: (tool: string) => void;
 }
 
-/** DXF projection — backward-compatible with UseDxfGripInteractionReturn */
-export interface DxfProjection {
-  gripInteractionState: DxfGripInteractionState;
-  isDraggingGrip: boolean;
-  isFollowingGrip: boolean;
-  handleGripMouseMove: (worldPos: Point2D, screenPos: Point2D) => boolean;
-  handleGripMouseDown: (worldPos: Point2D) => boolean;
-  handleGripMouseUp: (worldPos: Point2D) => boolean;
-  handleGripClick: (worldPos: Point2D) => boolean;
-  handleGripEscape: () => boolean;
-  handleGripRightClick: () => boolean;
-  dragPreview: DxfGripDragPreview | null;
-}
+/**
+ * DXF projection — structurally identical to (and kept in lockstep with)
+ * {@link UseDxfGripInteractionReturn}. Aliased to that SSoT so the shape can
+ * never drift (ADR-583 / N.18 — no parallel twin interface).
+ */
+export type DxfProjection = UseDxfGripInteractionReturn;
 
 /** Overlay projection — backward-compatible with useGripSystem + useLayerCanvasMouseMove */
 export interface OverlayProjection {

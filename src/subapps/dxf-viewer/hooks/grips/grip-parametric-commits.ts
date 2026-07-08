@@ -79,6 +79,7 @@ export {
 export {
   commitArcGripDrag,
   commitPolylineRotationGripDrag,
+  commitAnnotationSymbolGripDrag,
 } from './grip-primitive-rotate-commits';
 
 // ADR-575 §8 — GROUP gizmo rotation commit (whole-group rotate about bbox centre) lives

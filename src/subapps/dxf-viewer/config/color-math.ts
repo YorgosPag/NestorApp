@@ -14,6 +14,8 @@
  * @see ./adaptive-entity-color.ts — background-adaptive contrast resolver (reuse WCAG μέρος)
  */
 
+import { clamp01, clamp255 } from '../utils/scalar-math';
+
 export interface Rgb {
   readonly r: number;
   readonly g: number;
@@ -47,7 +49,7 @@ export function parseHex(hex: string): Rgb | null {
 
 /** Ένα κανάλι (0..255, clamped+rounded) → 2-ψήφιο hex. */
 export function channelToHex(channel: number): string {
-  const clamped = Math.max(0, Math.min(255, Math.round(channel)));
+  const clamped = clamp255(Math.round(channel));
   return clamped.toString(16).padStart(2, '0');
 }
 
@@ -103,7 +105,7 @@ export function mixHex(aHex: string, bHex: string, t: number): string {
   const a = parseHex(aHex);
   const b = parseHex(bHex);
   if (!a || !b) return aHex;
-  const k = Math.max(0, Math.min(1, t));
+  const k = clamp01(t);
   return rgbToHex({
     r: a.r + (b.r - a.r) * k,
     g: a.g + (b.g - a.g) * k,
@@ -128,13 +130,13 @@ export function parseColor(input: string): RgbaColor | null {
   const b = Number(m[3]);
   const a = m[4] === undefined ? 1 : Number(m[4]);
   if ([r, g, b, a].some(Number.isNaN)) return null;
-  return { r, g, b, a: Math.max(0, Math.min(1, a)) };
+  return { r, g, b, a: clamp01(a) };
 }
 
 /** `{r,g,b,a}` → `rgba(r, g, b, a)` (κανάλια rounded+clamped 0..255, alpha clamped 0..1). */
 export function rgbaString(c: RgbaColor): string {
-  const ch = (n: number): number => Math.max(0, Math.min(255, Math.round(n)));
-  return `rgba(${ch(c.r)}, ${ch(c.g)}, ${ch(c.b)}, ${Math.max(0, Math.min(1, c.a))})`;
+  const ch = (n: number): number => clamp255(Math.round(n));
+  return `rgba(${ch(c.r)}, ${ch(c.g)}, ${ch(c.b)}, ${clamp01(c.a)})`;
 }
 
 /**
@@ -194,37 +196,34 @@ export function parseHexAlpha(hex: string): RgbaColor | null {
   return rgb ? { ...rgb, a: 1 } : null;
 }
 
-/** `Rgb` (0..255) → `Hsl` (h 0..360, s/l 0..100). */
-export function rgbToHsl(rgb: Rgb): Hsl {
+/** Normalize `Rgb` (0..255) → r,g,b (0..1) + max/min/delta (SSoT for HSL/HSV). */
+function rgbNormalized(rgb: Rgb): {
+  r: number; g: number; b: number; max: number; min: number; delta: number;
+} {
   const r = rgb.r / 255;
   const g = rgb.g / 255;
   const b = rgb.b / 255;
-
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
-  const delta = max - min;
+  return { r, g, b, max, min, delta: max - min };
+}
 
-  let h = 0;
-  let s = 0;
-  const l = (max + min) / 2;
-
-  if (delta !== 0) {
-    s = l > 0.5 ? delta / (2 - max - min) : delta / (max + min);
-
-    switch (max) {
-      case r:
-        h = ((g - b) / delta + (g < b ? 6 : 0)) / 6;
-        break;
-      case g:
-        h = ((b - r) / delta + 2) / 6;
-        break;
-      case b:
-        h = ((r - g) / delta + 4) / 6;
-        break;
-    }
+/** Hue (0..1) from normalized r,g,b + max/delta (shared hexcone for HSL/HSV); delta 0 → 0. */
+function hueFromRgb(r: number, g: number, b: number, max: number, delta: number): number {
+  if (delta === 0) return 0;
+  switch (max) {
+    case r: return ((g - b) / delta + (g < b ? 6 : 0)) / 6;
+    case g: return ((b - r) / delta + 2) / 6;
+    default: return ((r - g) / delta + 4) / 6; // case b
   }
+}
 
-  return { h: h * 360, s: s * 100, l: l * 100 };
+/** `Rgb` (0..255) → `Hsl` (h 0..360, s/l 0..100). */
+export function rgbToHsl(rgb: Rgb): Hsl {
+  const { r, g, b, max, min, delta } = rgbNormalized(rgb);
+  const l = (max + min) / 2;
+  const s = delta === 0 ? 0 : l > 0.5 ? delta / (2 - max - min) : delta / (max + min);
+  return { h: hueFromRgb(r, g, b, max, delta) * 360, s: s * 100, l: l * 100 };
 }
 
 /** `Hsl` (h 0..360, s/l 0..100) → `Rgb` (0..255, un-rounded floats). */
@@ -262,33 +261,9 @@ export function hslToRgb(hsl: Hsl): Rgb {
 
 /** `Rgb` (0..255) → `Hsv` (h 0..360, s/v 0..100). */
 export function rgbToHsv(rgb: Rgb): Hsv {
-  const r = rgb.r / 255;
-  const g = rgb.g / 255;
-  const b = rgb.b / 255;
-
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const delta = max - min;
-
-  let h = 0;
+  const { r, g, b, max, delta } = rgbNormalized(rgb);
   const s = max === 0 ? 0 : delta / max;
-  const v = max;
-
-  if (delta !== 0) {
-    switch (max) {
-      case r:
-        h = ((g - b) / delta + (g < b ? 6 : 0)) / 6;
-        break;
-      case g:
-        h = ((b - r) / delta + 2) / 6;
-        break;
-      case b:
-        h = ((r - g) / delta + 4) / 6;
-        break;
-    }
-  }
-
-  return { h: h * 360, s: s * 100, v: v * 100 };
+  return { h: hueFromRgb(r, g, b, max, delta) * 360, s: s * 100, v: max * 100 };
 }
 
 /** `Hsv` (h 0..360, s/v 0..100) → `Rgb` (0..255, un-rounded floats). */

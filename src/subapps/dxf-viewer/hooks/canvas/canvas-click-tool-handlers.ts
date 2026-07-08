@@ -226,7 +226,7 @@ export function handleAnnotationSymbolClick(
   const setScene = p.levelManager.setLevelScene;
   if (!levelId || !setScene) return false;
 
-  const { symbolId, sizeMm } = useAnnotationSymbolSelectionStore.getState();
+  const { symbolId, sizeMm, rotationDeg } = useAnnotationSymbolSelectionStore.getState();
   const entity: AnnotationSymbolEntity = {
     id: generateEntityId(),
     type: 'annotation-symbol',
@@ -235,7 +235,7 @@ export function handleAnnotationSymbolClick(
     kind: 'north-arrow',
     symbolId,
     sizeMm,
-    rotation: 0,
+    rotation: rotationDeg,
   };
 
   completeEntity(entity, {

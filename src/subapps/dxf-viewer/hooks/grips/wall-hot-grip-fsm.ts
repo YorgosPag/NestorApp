@@ -144,6 +144,11 @@ export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
   // commit recurses the group members (`calculateMovedGeometry` / `rotateEntity`).
   'group-move': 'move',
   'group-rotation': 'rotate',
+  // Annotation symbol (ADR-583) — North arrow: move cross (3-click move + per-arm
+  // directional) + rotation (6-click reference / free spin), full parity με τον arc.
+  // NO resize (fixed aspect, D5).
+  'annotation-symbol-move': 'move',
+  'annotation-symbol-rotation': 'rotate',
 } as const;
 
 /** Map any grip kind to its hot-grip operation, or null if it stays drag. */
@@ -177,7 +182,10 @@ export function hotGripKindOf(grip: UnifiedGripInfo | null | undefined): string 
   // ADR-575 §8 — `groupGripKind` joins the chain so the whole-group move + rotation
   // handles opt into the shared hot-grip flow (3-click move / free-rotate + «R»
   // reference), IDENTICAL to the line/column. The group is the sole owner of this kind.
-  return grip.wallGripKind ?? grip.beamGripKind ?? grip.columnGripKind ?? grip.foundationGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind ?? grip.mepManifoldGripKind ?? grip.mepSegmentGripKind ?? grip.furnitureGripKind ?? grip.floorplanSymbolGripKind ?? grip.lineGripKind ?? grip.circleGripKind ?? grip.arcGripKind ?? grip.polylineGripKind ?? grip.textGripKind ?? grip.groupGripKind;
+  // ADR-583 — `annotationSymbolGripKind` joins the chain so the North arrow's move +
+  // rotation handles opt into the shared hot-grip flow (IDENTICAL to the arc). The
+  // symbol is the sole owner of this kind.
+  return grip.wallGripKind ?? grip.beamGripKind ?? grip.columnGripKind ?? grip.foundationGripKind ?? grip.stairGripKind ?? grip.mepFixtureGripKind ?? grip.electricalPanelGripKind ?? grip.mepManifoldGripKind ?? grip.mepSegmentGripKind ?? grip.furnitureGripKind ?? grip.floorplanSymbolGripKind ?? grip.lineGripKind ?? grip.circleGripKind ?? grip.arcGripKind ?? grip.polylineGripKind ?? grip.textGripKind ?? grip.groupGripKind ?? grip.annotationSymbolGripKind;
 }
 
 /**

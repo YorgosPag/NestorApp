@@ -14,6 +14,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type { CropRegionRect } from '../../stores/ViewMode3DStore';
+import { clamp } from '../../../utils/scalar-math';
 
 export type HandleId = 'tl' | 'tc' | 'tr' | 'ml' | 'mr' | 'bl' | 'bc' | 'br';
 export type CropEditState = 'idle' | 'dragging' | 'editing' | 'committed';
@@ -56,10 +57,6 @@ const INITIAL: CropRegionState = {
   showPreview: true,
   dragStart: null,
 };
-
-function clamp(v: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, v));
-}
 
 function normalizeRect(r: CropRegionRect): CropRegionRect {
   return {

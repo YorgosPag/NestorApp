@@ -11,7 +11,7 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { StairGripKind, WallGripKind } from './useGripMovement';
-import type { ColumnGripKind, FoundationGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, DimensionGripKind, LineGripKind, ArcGripKind, PolylineGripKind, GroupGripKind, TextGripKind } from './grip-types';
+import type { ColumnGripKind, FoundationGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, DimensionGripKind, LineGripKind, ArcGripKind, PolylineGripKind, GroupGripKind, AnnotationSymbolGripKind, TextGripKind } from './grip-types';
 
 // ============================================================================
 // TYPES (still used by grips/ modules and CanvasLayerStack)
@@ -179,6 +179,13 @@ export interface DxfGripDragPreview {
    * identity — every member translated / rotated. `anchorPos` carries the reference anchor.
    */
   groupGripKind?: GroupGripKind;
+  /**
+   * ADR-583 — annotation symbol (North arrow) discriminator (forwarded from
+   * `UnifiedGripInfo.annotationSymbolGripKind`). Routes the live ghost through the
+   * SAME `calculateMovedGeometry` (move) / `applyPrimitiveRotationDrag` → `rotateEntity`
+   * case 'annotation-symbol' (rotation) the commit runs → preview ≡ commit. Mirror of arc.
+   */
+  annotationSymbolGripKind?: AnnotationSymbolGripKind;
   /**
    * ADR-363 Phase 1G — set when the active grip is a wall corner being moved via
    * the hot-grip (click-click) state. Consumed by `useGripGhostPreview` to draw
