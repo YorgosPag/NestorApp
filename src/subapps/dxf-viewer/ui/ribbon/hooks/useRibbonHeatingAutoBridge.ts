@@ -42,15 +42,10 @@ import { designHeating } from '../../../systems/mep-design/heating';
 import { heatingProposalStore } from '../../../systems/mep-design/heating/heating-proposal-store';
 import { buildHeatingCommit } from '../../../systems/mep-design/heating/commit/build-heating-commit';
 import { HEATING_AUTO_RIBBON_ACTIONS } from './bridge/heating-auto-command-keys';
-import type { useLevels } from '../../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 
 export interface UseRibbonHeatingAutoBridgeProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 export interface RibbonHeatingAutoBridge {

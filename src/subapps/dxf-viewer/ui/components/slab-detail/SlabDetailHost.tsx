@@ -16,7 +16,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import type { useLevels } from '../../../systems/levels';
+import type { LevelSceneGetter } from '../../../systems/levels/level-scene-accessor';
 import { useEventGatedDialog } from '../../../app/dialog-hosts/useEventGatedDialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { isSlabEntity } from '../../../types/entities';
@@ -35,15 +35,13 @@ const CAPTURE_LONG_EDGE_PX = 1200;
 /** Export file name for the slab reinforcement detail PDF (data, not i18n). */
 const PDF_FILENAME = 'slab-reinforcement-detail.pdf';
 
-type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene'>;
-
 export interface SlabDetailHostProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneGetter;
 }
 
 /** Resolves the target slab entity from a level scene, or `null` if missing. */
 function resolveSlab(
-  levelManager: LevelManagerLike,
+  levelManager: LevelSceneGetter,
   levelId: string | null,
   slabId: string | null,
 ): SlabEntity | null {
@@ -85,7 +83,7 @@ export function SlabDetailHost({
 }
 
 interface SlabDetailBodyProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneGetter;
   readonly slabId: string;
   readonly levelId: string;
   readonly onClose: () => void;
