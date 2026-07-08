@@ -11,6 +11,7 @@ import type { ColumnKind, ColumnParams } from '../../../../bim/types/column-type
 import { resolveColumnReinforcementSection } from '../../../../bim/structural/reinforcement/column-section-outline';
 import { CROSS_TIE_PATTERN_ORDER } from '../../../../bim/structural/reinforcement/column-reinforcement-types';
 import type { FinishParamField } from './finish-param';
+import { makeKeySetGuard } from './make-key-set-guard';
 
 export const COLUMN_RIBBON_KEYS = {
   stringParams: {
@@ -114,13 +115,9 @@ export const COLUMN_RIBBON_KEYS_ACTIONS = {
   reinforcementDetail: 'column.actions.reinforcementDetail',
 } as const;
 
-const COLUMN_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
+export const isColumnActionKey = makeKeySetGuard(
   Object.values(COLUMN_RIBBON_KEYS_ACTIONS),
 );
-
-export function isColumnActionKey(action: string): boolean {
-  return COLUMN_ACTION_KEY_SET.has(action);
-}
 
 // ─── ADR-521 — «Τύποι» ribbon dropdown (column kind quick-draw) ────────────────
 
@@ -189,7 +186,7 @@ export type ColumnRibbonVisibilityKey =
   | typeof COLUMN_RIBBON_VISIBILITY_KEYS.ushapeParams
   | typeof COLUMN_RIBBON_VISIBILITY_KEYS.structural;
 
-const COLUMN_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isColumnVisibilityKey = makeKeySetGuard<ColumnRibbonVisibilityKey>([
   COLUMN_RIBBON_VISIBILITY_KEYS.polygonParams,
   COLUMN_RIBBON_VISIBILITY_KEYS.ishapeParams,
   COLUMN_RIBBON_VISIBILITY_KEYS.shearWallCatalog,
@@ -197,10 +194,6 @@ const COLUMN_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
   COLUMN_RIBBON_VISIBILITY_KEYS.ushapeParams,
   COLUMN_RIBBON_VISIBILITY_KEYS.structural,
 ]);
-
-export function isColumnVisibilityKey(key: string): key is ColumnRibbonVisibilityKey {
-  return COLUMN_VISIBILITY_KEY_SET.has(key);
-}
 
 /**
  * Pure SSoT: αποφασίζει αν ένα visibility-gated panel/section πρέπει να φαίνεται,
@@ -270,16 +263,8 @@ export function resolveColumnFieldOptions(commandKey: string, params: ColumnPara
 
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────
 
-const COLUMN_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(COLUMN_RIBBON_NUMBER_KEYS);
-const COLUMN_STRING_KEY_SET: ReadonlySet<string> = new Set<string>(COLUMN_RIBBON_STRING_KEYS);
-
-export function isColumnRibbonKey(commandKey: string): boolean {
-  return COLUMN_NUMBER_KEY_SET.has(commandKey);
-}
-
-export function isColumnRibbonStringKey(commandKey: string): boolean {
-  return COLUMN_STRING_KEY_SET.has(commandKey);
-}
+export const isColumnRibbonKey = makeKeySetGuard(COLUMN_RIBBON_NUMBER_KEYS);
+export const isColumnRibbonStringKey = makeKeySetGuard(COLUMN_RIBBON_STRING_KEYS);
 
 // ─── ADR-449 Slice 5 — structural finish (σοβάς) per-element override ──────────
 
@@ -299,11 +284,7 @@ export const COLUMN_FINISH_KEY_TO_FIELD: Readonly<Record<string, FinishParamFiel
   [COLUMN_FINISH_KEYS.thickness]: 'thickness',
 };
 
-const COLUMN_FINISH_KEY_SET: ReadonlySet<string> = new Set<string>(Object.keys(COLUMN_FINISH_KEY_TO_FIELD));
-
-export function isColumnFinishKey(commandKey: string): boolean {
-  return COLUMN_FINISH_KEY_SET.has(commandKey);
-}
+export const isColumnFinishKey = makeKeySetGuard(Object.keys(COLUMN_FINISH_KEY_TO_FIELD));
 
 // ─── ADR-456 Slice 2 — δομοστατικά / οπλισμός (reinforcement) ──────────────────
 
@@ -378,17 +359,10 @@ export const COLUMN_STRUCTURAL_KEY_TO_FIELD: Readonly<Record<string, StructuralR
   [COLUMN_STRUCTURAL_KEYS.cover]: 'cover',
 };
 
-const COLUMN_STRUCTURAL_KEY_SET: ReadonlySet<string> = new Set<string>(
+export const isColumnStructuralKey = makeKeySetGuard(
   Object.values(COLUMN_STRUCTURAL_KEYS),
 );
-const COLUMN_STRUCTURAL_READOUT_KEY_SET: ReadonlySet<string> = new Set<string>(
+
+export const isColumnStructuralReadoutKey = makeKeySetGuard(
   Object.values(COLUMN_STRUCTURAL_READOUT_KEYS),
 );
-
-export function isColumnStructuralKey(commandKey: string): boolean {
-  return COLUMN_STRUCTURAL_KEY_SET.has(commandKey);
-}
-
-export function isColumnStructuralReadoutKey(commandKey: string): boolean {
-  return COLUMN_STRUCTURAL_READOUT_KEY_SET.has(commandKey);
-}

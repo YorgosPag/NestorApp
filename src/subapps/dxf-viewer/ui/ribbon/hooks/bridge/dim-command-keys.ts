@@ -8,6 +8,8 @@
  * through the action fallthrough.
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const DIM_RIBBON_KEYS = {
   style: {
     chooser:      'dim.style.chooser',
@@ -89,18 +91,10 @@ export const DIM_RIBBON_KEYS = {
   },
 } as const;
 
-const ALL_DIM_KEYS: ReadonlySet<string> = new Set(
+export const isDimRibbonKey = makeKeySetGuard(
   (Object.values(DIM_RIBBON_KEYS) as Record<string, string>[]).flatMap(
     (group) => Object.values(group),
   ),
-);
-
-export function isDimRibbonKey(key: string): boolean {
-  return ALL_DIM_KEYS.has(key);
-}
-
-const DIM_VISIBILITY_KEYS: ReadonlySet<string> = new Set(
-  Object.values(DIM_RIBBON_KEYS.visibility),
 );
 
 /**
@@ -109,6 +103,6 @@ const DIM_VISIBILITY_KEYS: ReadonlySet<string> = new Set(
  * these to `useRibbonDimBridge`; the broader `isDimRibbonKey` also matches them
  * (they live under `DIM_RIBBON_KEYS`) but the combobox path ignores toggles.
  */
-export function isDimVisibilityKey(key: string): boolean {
-  return DIM_VISIBILITY_KEYS.has(key);
-}
+export const isDimVisibilityKey = makeKeySetGuard(
+  Object.values(DIM_RIBBON_KEYS.visibility),
+);

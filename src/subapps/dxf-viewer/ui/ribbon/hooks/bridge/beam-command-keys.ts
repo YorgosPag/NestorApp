@@ -8,6 +8,7 @@
 
 import type { BeamParams } from '../../../../bim/types/beam-types';
 import type { FinishParamField } from './finish-param';
+import { makeKeySetGuard } from './make-key-set-guard';
 
 export const BEAM_RIBBON_KEYS = {
   stringParams: {
@@ -61,14 +62,10 @@ export type BeamRibbonVisibilityKey =
   | typeof BEAM_RIBBON_VISIBILITY_KEYS.ishapeCatalog
   | typeof BEAM_RIBBON_VISIBILITY_KEYS.ishapeParams;
 
-const BEAM_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isBeamVisibilityKey = makeKeySetGuard<BeamRibbonVisibilityKey>([
   BEAM_RIBBON_VISIBILITY_KEYS.ishapeCatalog,
   BEAM_RIBBON_VISIBILITY_KEYS.ishapeParams,
 ]);
-
-export function isBeamVisibilityKey(key: string): key is BeamRibbonVisibilityKey {
-  return BEAM_VISIBILITY_KEY_SET.has(key);
-}
 
 export type BeamRibbonNumberCommandKey =
   | typeof BEAM_RIBBON_KEYS.params.width
@@ -124,13 +121,9 @@ export const BEAM_RIBBON_KEYS_ACTIONS = {
   reinforcementDetail: 'beam.actions.reinforcementDetail',
 } as const;
 
-const BEAM_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
+export const isBeamActionKey = makeKeySetGuard(
   Object.values(BEAM_RIBBON_KEYS_ACTIONS),
 );
-
-export function isBeamActionKey(action: string): boolean {
-  return BEAM_ACTION_KEY_SET.has(action);
-}
 
 /** Visibility key (red badge when `validation.hasCodeViolations === true`). */
 export const BEAM_RIBBON_BADGE_KEYS = {
@@ -139,16 +132,8 @@ export const BEAM_RIBBON_BADGE_KEYS = {
 
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────
 
-const BEAM_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(BEAM_RIBBON_NUMBER_KEYS);
-const BEAM_STRING_KEY_SET: ReadonlySet<string> = new Set<string>(BEAM_RIBBON_STRING_KEYS);
-
-export function isBeamRibbonKey(commandKey: string): boolean {
-  return BEAM_NUMBER_KEY_SET.has(commandKey);
-}
-
-export function isBeamRibbonStringKey(commandKey: string): boolean {
-  return BEAM_STRING_KEY_SET.has(commandKey);
-}
+export const isBeamRibbonKey = makeKeySetGuard(BEAM_RIBBON_NUMBER_KEYS);
+export const isBeamRibbonStringKey = makeKeySetGuard(BEAM_RIBBON_STRING_KEYS);
 
 // ─── ADR-449 Slice 5 — structural finish (σοβάς) per-element override ──────────
 
@@ -168,11 +153,7 @@ export const BEAM_FINISH_KEY_TO_FIELD: Readonly<Record<string, FinishParamField>
   [BEAM_FINISH_KEYS.thickness]: 'thickness',
 };
 
-const BEAM_FINISH_KEY_SET: ReadonlySet<string> = new Set<string>(Object.keys(BEAM_FINISH_KEY_TO_FIELD));
-
-export function isBeamFinishKey(commandKey: string): boolean {
-  return BEAM_FINISH_KEY_SET.has(commandKey);
-}
+export const isBeamFinishKey = makeKeySetGuard(Object.keys(BEAM_FINISH_KEY_TO_FIELD));
 
 // ─── ADR-471 — δομοστατικά / οπλισμός δοκού (reinforcement) ────────────────────
 
@@ -257,20 +238,13 @@ export const BEAM_STRUCTURAL_KEY_TO_FIELD: Readonly<Record<string, BeamStructura
   [BEAM_STRUCTURAL_KEYS.cover]: 'cover',
 };
 
-const BEAM_STRUCTURAL_KEY_SET: ReadonlySet<string> = new Set<string>(
+export const isBeamStructuralKey = makeKeySetGuard(
   Object.values(BEAM_STRUCTURAL_KEYS),
 );
-const BEAM_STRUCTURAL_READOUT_KEY_SET: ReadonlySet<string> = new Set<string>(
+
+export const isBeamStructuralReadoutKey = makeKeySetGuard(
   Object.values(BEAM_STRUCTURAL_READOUT_KEYS),
 );
-
-export function isBeamStructuralKey(commandKey: string): boolean {
-  return BEAM_STRUCTURAL_KEY_SET.has(commandKey);
-}
-
-export function isBeamStructuralReadoutKey(commandKey: string): boolean {
-  return BEAM_STRUCTURAL_READOUT_KEY_SET.has(commandKey);
-}
 
 /**
  * Panel visibility keys δοκού (Properties palette gating). `structural` = ορατό
@@ -281,13 +255,9 @@ export const BEAM_STRUCTURAL_VISIBILITY_KEYS = {
   structural: 'beam.visibility.structural',
 } as const;
 
-const BEAM_STRUCTURAL_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>(
+export const isBeamStructuralVisibilityKey = makeKeySetGuard(
   Object.values(BEAM_STRUCTURAL_VISIBILITY_KEYS),
 );
-
-export function isBeamStructuralVisibilityKey(key: string): boolean {
-  return BEAM_STRUCTURAL_VISIBILITY_KEY_SET.has(key);
-}
 
 /**
  * Pure SSoT: αποφασίζει αν ένα visibility-gated section του beam Properties panel

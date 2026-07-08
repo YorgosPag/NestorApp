@@ -8,6 +8,8 @@
  * There is NO `accept` (coordination output is never committed to entities in v1).
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const CLASH_DETECTION_RIBBON_ACTIONS = {
   /** Run broad+narrow phase over the storey → clash report overlay. */
   detect: 'clashDetection.actions.detect',
@@ -15,11 +17,7 @@ export const CLASH_DETECTION_RIBBON_ACTIONS = {
   clear: 'clashDetection.actions.clear',
 } as const;
 
-const CLASH_DETECTION_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
+/** Type guard used by the `useRibbonCommands` composer. */
+export const isClashDetectionActionKey = makeKeySetGuard(
   Object.values(CLASH_DETECTION_RIBBON_ACTIONS),
 );
-
-/** Type guard used by the `useRibbonCommands` composer. */
-export function isClashDetectionActionKey(action: string): boolean {
-  return CLASH_DETECTION_ACTION_KEY_SET.has(action);
-}

@@ -10,6 +10,8 @@
  * discards it.
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const DRAINAGE_AUTO_RIBBON_ACTIONS = {
   /** Recognize the storey + auto-design the gravity drainage network → proposal ghost. */
   generate: 'drainageAuto.actions.generate',
@@ -19,11 +21,7 @@ export const DRAINAGE_AUTO_RIBBON_ACTIONS = {
   reject: 'drainageAuto.actions.reject',
 } as const;
 
-const DRAINAGE_AUTO_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
+/** Type guard used by the `useRibbonCommands` composer. */
+export const isDrainageAutoActionKey = makeKeySetGuard(
   Object.values(DRAINAGE_AUTO_RIBBON_ACTIONS),
 );
-
-/** Type guard used by the `useRibbonCommands` composer. */
-export function isDrainageAutoActionKey(action: string): boolean {
-  return DRAINAGE_AUTO_ACTION_KEY_SET.has(action);
-}

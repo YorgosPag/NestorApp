@@ -7,6 +7,8 @@
  * the text editor bridge.
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const ARRAY_RIBBON_KEYS = {
   params: {
     // Rect (Phase A)
@@ -67,7 +69,7 @@ export type ArrayRibbonStringComboKey =
 /** @deprecated Phase A alias — use {@link ArrayRibbonComboKey}. */
 export type ArrayRibbonKey = ArrayRibbonComboKey;
 
-const ALL_ARRAY_COMBO_KEYS: ReadonlySet<string> = new Set<string>([
+export const isArrayRibbonKey = makeKeySetGuard<ArrayRibbonComboKey>([
   ARRAY_RIBBON_KEYS.params.rows,
   ARRAY_RIBBON_KEYS.params.cols,
   ARRAY_RIBBON_KEYS.params.rowSpacing,
@@ -81,26 +83,12 @@ const ALL_ARRAY_COMBO_KEYS: ReadonlySet<string> = new Set<string>([
   ARRAY_RIBBON_KEYS.params.pathSpacing,
 ]);
 
-const ALL_ARRAY_TOGGLE_KEYS: ReadonlySet<string> = new Set<string>([
+export const isArrayRibbonStringKey = makeKeySetGuard<ArrayRibbonStringComboKey>([
+  ARRAY_RIBBON_KEYS.stringParams.pathMethod,
+]);
+
+export const isArrayRibbonToggleKey = makeKeySetGuard<ArrayRibbonToggleKey>([
   ARRAY_RIBBON_KEYS.toggles.polarRotateItems,
   ARRAY_RIBBON_KEYS.toggles.pathAlignItems,
   ARRAY_RIBBON_KEYS.toggles.pathReversed,
 ]);
-
-const ALL_ARRAY_STRING_COMBO_KEYS: ReadonlySet<string> = new Set<string>([
-  ARRAY_RIBBON_KEYS.stringParams.pathMethod,
-]);
-
-export function isArrayRibbonKey(key: string): key is ArrayRibbonComboKey {
-  return ALL_ARRAY_COMBO_KEYS.has(key);
-}
-
-export function isArrayRibbonStringKey(key: string): key is ArrayRibbonStringComboKey {
-  return ALL_ARRAY_STRING_COMBO_KEYS.has(key);
-}
-
-export function isArrayRibbonToggleKey(
-  key: string,
-): key is ArrayRibbonToggleKey {
-  return ALL_ARRAY_TOGGLE_KEYS.has(key);
-}

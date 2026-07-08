@@ -8,6 +8,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-583-annotation-symbol-library-north-arrow.md
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const ANNOTATION_SYMBOL_RIBBON_KEYS = {
   stringParams: {
     /** Catalog variant selector (which North arrow to place). */
@@ -28,18 +30,11 @@ export type AnnotationSymbolRibbonNumberCommandKey =
 export type AnnotationSymbolRibbonStringCommandKey =
   | typeof ANNOTATION_SYMBOL_RIBBON_KEYS.stringParams.symbolId;
 
-const NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isAnnotationSymbolRibbonKey = makeKeySetGuard<AnnotationSymbolRibbonNumberCommandKey>([
   ANNOTATION_SYMBOL_RIBBON_KEYS.params.sizeMm,
   ANNOTATION_SYMBOL_RIBBON_KEYS.params.rotation,
 ]);
-const STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
+
+export const isAnnotationSymbolRibbonStringKey = makeKeySetGuard<AnnotationSymbolRibbonStringCommandKey>([
   ANNOTATION_SYMBOL_RIBBON_KEYS.stringParams.symbolId,
 ]);
-
-export function isAnnotationSymbolRibbonKey(commandKey: string): boolean {
-  return NUMBER_KEY_SET.has(commandKey);
-}
-
-export function isAnnotationSymbolRibbonStringKey(commandKey: string): boolean {
-  return STRING_KEY_SET.has(commandKey);
-}
