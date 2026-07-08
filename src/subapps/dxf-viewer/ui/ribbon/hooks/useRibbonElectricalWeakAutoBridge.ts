@@ -40,16 +40,11 @@ import { resolverFromHosts } from '../../../bim/mep-systems/mep-wire-resolver';
 import { collectWireHosts } from '../../../bim/mep-systems/mep-wire-scene';
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
 import { ELECTRICAL_WEAK_AUTO_RIBBON_ACTIONS } from './bridge/electrical-weak-auto-command-keys';
-import type { useLevels } from '../../../systems/levels';
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { Entity } from '../../../types/entities';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface UseRibbonElectricalWeakAutoBridgeProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 export interface RibbonElectricalWeakAutoBridge {

@@ -25,13 +25,8 @@ import { useCallback, useMemo } from 'react';
 import { useCommandHistory } from '../../../core/commands';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { deleteEntitiesById } from '../../../hooks/canvas/delete-entities-core';
-import type { useLevels } from '../../../systems/levels';
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
@@ -39,7 +34,7 @@ type UniversalSelectionLike = Pick<
 >;
 
 export interface UseRibbonEntityDeleteParams {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly universalSelection: UniversalSelectionLike;
 }
 
