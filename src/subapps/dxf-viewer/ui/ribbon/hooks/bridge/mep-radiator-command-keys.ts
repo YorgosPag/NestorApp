@@ -13,6 +13,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const MEP_RADIATOR_RIBBON_KEYS = {
   params: {
     /** mm — body width (the run along the wall, the two connectors sit at its ends). */
@@ -64,23 +66,13 @@ export const MEP_RADIATOR_RIBBON_KEYS_ACTIONS = {
   delete: 'mepRadiator.actions.delete',
 } as const;
 
-const MEP_RADIATOR_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
+export const isMepRadiatorActionKey = makeKeySetGuard(
   Object.values(MEP_RADIATOR_RIBBON_KEYS_ACTIONS),
 );
 
-export function isMepRadiatorActionKey(action: string): boolean {
-  return MEP_RADIATOR_ACTION_KEY_SET.has(action);
-}
-
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────
 
-const MEP_RADIATOR_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(
-  MEP_RADIATOR_RIBBON_NUMBER_KEYS,
-);
-
-export function isMepRadiatorRibbonKey(commandKey: string): boolean {
-  return MEP_RADIATOR_NUMBER_KEY_SET.has(commandKey);
-}
+export const isMepRadiatorRibbonKey = makeKeySetGuard(MEP_RADIATOR_RIBBON_NUMBER_KEYS);
 
 // ─── ADR-422 L2 — string (regime) + readout (sizing) key guards ───────────────
 
@@ -88,10 +80,6 @@ export function isMepRadiatorRibbonStringKey(commandKey: string): boolean {
   return commandKey === MEP_RADIATOR_RIBBON_KEYS.stringParams.systemRegime;
 }
 
-const MEP_RADIATOR_READOUT_KEY_SET: ReadonlySet<string> = new Set<string>(
+export const isMepRadiatorRibbonReadoutKey = makeKeySetGuard(
   Object.values(MEP_RADIATOR_RIBBON_KEYS.readouts),
 );
-
-export function isMepRadiatorRibbonReadoutKey(commandKey: string): boolean {
-  return MEP_RADIATOR_READOUT_KEY_SET.has(commandKey);
-}

@@ -9,6 +9,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-411-bim-mesh-library.md
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const MEP_FIXTURE_LIBRARY_KEYS = {
   stringParams: {
     /** Catalog asset selector — `''` ⇒ parametric fixture (no mesh). */
@@ -42,23 +44,11 @@ export const MEP_FIXTURE_LIBRARY_KEYS_ACTIONS = {
   close: 'mepFixtureLibrary.actions.close',
 } as const;
 
-const ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
+export const isMepFixtureLibraryActionKey = makeKeySetGuard(
   Object.values(MEP_FIXTURE_LIBRARY_KEYS_ACTIONS),
 );
 
-export function isMepFixtureLibraryActionKey(action: string): boolean {
-  return ACTION_KEY_SET.has(action);
-}
-
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────
 
-const NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(MEP_FIXTURE_LIBRARY_NUMBER_KEYS);
-const STRING_KEY_SET: ReadonlySet<string> = new Set<string>(MEP_FIXTURE_LIBRARY_STRING_KEYS);
-
-export function isMepFixtureLibraryKey(commandKey: string): boolean {
-  return NUMBER_KEY_SET.has(commandKey);
-}
-
-export function isMepFixtureLibraryStringKey(commandKey: string): boolean {
-  return STRING_KEY_SET.has(commandKey);
-}
+export const isMepFixtureLibraryKey = makeKeySetGuard(MEP_FIXTURE_LIBRARY_NUMBER_KEYS);
+export const isMepFixtureLibraryStringKey = makeKeySetGuard(MEP_FIXTURE_LIBRARY_STRING_KEYS);

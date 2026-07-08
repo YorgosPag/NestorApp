@@ -9,6 +9,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-406-point-based-mep-fixture.md
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const MEP_FIXTURE_RIBBON_KEYS = {
   stringParams: {
     /** Footprint shape selector (rectangular / circular). */
@@ -68,13 +70,9 @@ export const MEP_FIXTURE_RIBBON_KEYS_ACTIONS = {
   editCircuit: 'mepFixture.actions.editCircuit',
 } as const;
 
-const MEP_FIXTURE_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
+export const isMepFixtureActionKey = makeKeySetGuard(
   Object.values(MEP_FIXTURE_RIBBON_KEYS_ACTIONS),
 );
-
-export function isMepFixtureActionKey(action: string): boolean {
-  return MEP_FIXTURE_ACTION_KEY_SET.has(action);
-}
 
 /**
  * Panel visibility keys (ADR-358 Phase 7b2b-β pattern).
@@ -91,30 +89,13 @@ export type MepFixtureRibbonVisibilityKey =
   | typeof MEP_FIXTURE_RIBBON_VISIBILITY_KEYS.rectangularParams
   | typeof MEP_FIXTURE_RIBBON_VISIBILITY_KEYS.hasCircuit;
 
-const MEP_FIXTURE_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isMepFixtureVisibilityKey = makeKeySetGuard<MepFixtureRibbonVisibilityKey>([
   MEP_FIXTURE_RIBBON_VISIBILITY_KEYS.rectangularParams,
   MEP_FIXTURE_RIBBON_VISIBILITY_KEYS.hasCircuit,
 ]);
 
-export function isMepFixtureVisibilityKey(
-  key: string,
-): key is MepFixtureRibbonVisibilityKey {
-  return MEP_FIXTURE_VISIBILITY_KEY_SET.has(key);
-}
-
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────
 
-const MEP_FIXTURE_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(
-  MEP_FIXTURE_RIBBON_NUMBER_KEYS,
-);
-const MEP_FIXTURE_STRING_KEY_SET: ReadonlySet<string> = new Set<string>(
-  MEP_FIXTURE_RIBBON_STRING_KEYS,
-);
+export const isMepFixtureRibbonKey = makeKeySetGuard(MEP_FIXTURE_RIBBON_NUMBER_KEYS);
 
-export function isMepFixtureRibbonKey(commandKey: string): boolean {
-  return MEP_FIXTURE_NUMBER_KEY_SET.has(commandKey);
-}
-
-export function isMepFixtureRibbonStringKey(commandKey: string): boolean {
-  return MEP_FIXTURE_STRING_KEY_SET.has(commandKey);
-}
+export const isMepFixtureRibbonStringKey = makeKeySetGuard(MEP_FIXTURE_RIBBON_STRING_KEYS);

@@ -12,6 +12,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const MEP_RISER_RIBBON_KEYS = {
   stringParams: {
     /** Target floor id — the stack top («Έως όροφο»). */
@@ -36,13 +38,5 @@ export const MEP_RISER_STRING_KEYS: readonly MepRiserStringCommandKey[] = [
 
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────
 
-const NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(MEP_RISER_NUMBER_KEYS);
-const STRING_KEY_SET: ReadonlySet<string> = new Set<string>(MEP_RISER_STRING_KEYS);
-
-export function isMepRiserKey(commandKey: string): boolean {
-  return NUMBER_KEY_SET.has(commandKey);
-}
-
-export function isMepRiserStringKey(commandKey: string): boolean {
-  return STRING_KEY_SET.has(commandKey);
-}
+export const isMepRiserKey = makeKeySetGuard(MEP_RISER_NUMBER_KEYS);
+export const isMepRiserStringKey = makeKeySetGuard(MEP_RISER_STRING_KEYS);

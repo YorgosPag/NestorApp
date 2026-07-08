@@ -10,6 +10,8 @@
  * discards it.
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const HEATING_AUTO_RIBBON_ACTIONS = {
   /** Recognize the storey + auto-design the two-pipe heating loop → proposal ghost. */
   generate: 'heatingAuto.actions.generate',
@@ -19,11 +21,5 @@ export const HEATING_AUTO_RIBBON_ACTIONS = {
   reject: 'heatingAuto.actions.reject',
 } as const;
 
-const HEATING_AUTO_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
-  Object.values(HEATING_AUTO_RIBBON_ACTIONS),
-);
-
 /** Type guard used by the `useRibbonCommands` composer. */
-export function isHeatingAutoActionKey(action: string): boolean {
-  return HEATING_AUTO_ACTION_KEY_SET.has(action);
-}
+export const isHeatingAutoActionKey = makeKeySetGuard(Object.values(HEATING_AUTO_RIBBON_ACTIONS));

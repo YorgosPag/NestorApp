@@ -11,6 +11,8 @@
  * action keys are pipe-specific.
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const MEP_PIPE_NETWORK_RIBBON_ACTIONS = {
   /** Build a plumbing network from the selected manifold (source) + pipes (members). */
   create: 'mepPipeNetwork.actions.create',
@@ -22,11 +24,7 @@ export const MEP_PIPE_NETWORK_RIBBON_ACTIONS = {
   removeMembers: 'mepPipeNetwork.actions.removeMembers',
 } as const;
 
-const MEP_PIPE_NETWORK_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
+/** Type guard used by the `useRibbonCommands` composer. */
+export const isMepPipeNetworkActionKey = makeKeySetGuard(
   Object.values(MEP_PIPE_NETWORK_RIBBON_ACTIONS),
 );
-
-/** Type guard used by the `useRibbonCommands` composer. */
-export function isMepPipeNetworkActionKey(action: string): boolean {
-  return MEP_PIPE_NETWORK_ACTION_KEY_SET.has(action);
-}

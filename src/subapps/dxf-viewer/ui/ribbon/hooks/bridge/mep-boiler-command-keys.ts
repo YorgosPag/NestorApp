@@ -15,6 +15,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const MEP_BOILER_RIBBON_KEYS = {
   params: {
     /** mm — body width (the largest horizontal dimension of the boiler cabinet). */
@@ -254,27 +256,15 @@ export const MEP_BOILER_RIBBON_TOGGLE_KEYS: readonly MepBoilerRibbonToggleComman
   MEP_BOILER_RIBBON_KEYS.toggles.fillingLoop,
 ];
 
-const MEP_BOILER_TOGGLE_KEY_SET: ReadonlySet<string> = new Set<string>(
-  MEP_BOILER_RIBBON_TOGGLE_KEYS,
-);
-
 /** Returns `true` when `commandKey` is a boiler boolean-toggle param (combi flag). */
-export function isMepBoilerToggleKey(commandKey: string): boolean {
-  return MEP_BOILER_TOGGLE_KEY_SET.has(commandKey);
-}
+export const isMepBoilerToggleKey = makeKeySetGuard(MEP_BOILER_RIBBON_TOGGLE_KEYS);
 
 export const MEP_BOILER_RIBBON_KEYS_ACTIONS = {
   close: 'mepBoiler.actions.close',
   delete: 'mepBoiler.actions.delete',
 } as const;
 
-const MEP_BOILER_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
-  Object.values(MEP_BOILER_RIBBON_KEYS_ACTIONS),
-);
-
-export function isMepBoilerActionKey(action: string): boolean {
-  return MEP_BOILER_ACTION_KEY_SET.has(action);
-}
+export const isMepBoilerActionKey = makeKeySetGuard(Object.values(MEP_BOILER_RIBBON_KEYS_ACTIONS));
 
 /**
  * Panel visibility keys.
@@ -297,28 +287,16 @@ export type MepBoilerRibbonVisibilityKey =
   | typeof MEP_BOILER_RIBBON_VISIBILITY_KEYS.combustion
   | typeof MEP_BOILER_RIBBON_VISIBILITY_KEYS.condensing;
 
-const MEP_BOILER_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isMepBoilerVisibilityKey = makeKeySetGuard<MepBoilerRibbonVisibilityKey>([
   MEP_BOILER_RIBBON_VISIBILITY_KEYS.hasNetwork,
   MEP_BOILER_RIBBON_VISIBILITY_KEYS.combi,
   MEP_BOILER_RIBBON_VISIBILITY_KEYS.combustion,
   MEP_BOILER_RIBBON_VISIBILITY_KEYS.condensing,
 ]);
 
-export function isMepBoilerVisibilityKey(
-  key: string,
-): key is MepBoilerRibbonVisibilityKey {
-  return MEP_BOILER_VISIBILITY_KEY_SET.has(key);
-}
-
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────
 
-const MEP_BOILER_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(
-  MEP_BOILER_RIBBON_NUMBER_KEYS,
-);
-
-export function isMepBoilerRibbonKey(commandKey: string): boolean {
-  return MEP_BOILER_NUMBER_KEY_SET.has(commandKey);
-}
+export const isMepBoilerRibbonKey = makeKeySetGuard(MEP_BOILER_RIBBON_NUMBER_KEYS);
 
 // ─── Read-only sizing readout keys (ADR-422 L2) ──────────────────────────────
 
@@ -331,7 +309,8 @@ export type MepBoilerRibbonReadoutKey =
   | typeof MEP_BOILER_RIBBON_KEYS.readouts.acousticBand
   | typeof MEP_BOILER_RIBBON_KEYS.readouts.recommendedVessel;
 
-const MEP_BOILER_READOUT_KEY_SET: ReadonlySet<string> = new Set<string>([
+/** Read-only sizing readouts — served by the bridge as `disabled` combobox state. */
+export const isMepBoilerReadoutKey = makeKeySetGuard<MepBoilerRibbonReadoutKey>([
   MEP_BOILER_RIBBON_KEYS.readouts.requiredOutputW,
   MEP_BOILER_RIBBON_KEYS.readouts.installedOutputW,
   MEP_BOILER_RIBBON_KEYS.readouts.adequacyStatus,
@@ -340,11 +319,6 @@ const MEP_BOILER_READOUT_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_BOILER_RIBBON_KEYS.readouts.acousticBand,
   MEP_BOILER_RIBBON_KEYS.readouts.recommendedVessel,
 ]);
-
-/** Read-only sizing readouts — served by the bridge as `disabled` combobox state. */
-export function isMepBoilerReadoutKey(commandKey: string): commandKey is MepBoilerRibbonReadoutKey {
-  return MEP_BOILER_READOUT_KEY_SET.has(commandKey);
-}
 
 // ─── String param key guards (model catalog picker) ──────────────────────────
 
@@ -357,7 +331,13 @@ export type MepBoilerRibbonStringCommandKey =
   | typeof MEP_BOILER_RIBBON_KEYS.stringParams.reliefValvePressure
   | typeof MEP_BOILER_RIBBON_KEYS.stringParams.systemPressure;
 
-export const MEP_BOILER_STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
+/**
+ * Returns `true` when `commandKey` is a boiler string-combobox param (model picker OR
+ * flue-terminal picker) — not numeric, not a toggle, not a readout, not an action. The
+ * composer routes ALL of these to the boiler bridge; the bridge then splits by specific
+ * key. Mirror of `isMepRadiatorRibbonStringKey` (ADR-408 Εύρος Β).
+ */
+export const isMepBoilerRibbonStringKey = makeKeySetGuard([
   MEP_BOILER_RIBBON_KEYS.stringParams.modelId,
   MEP_BOILER_RIBBON_KEYS.stringParams.flueTermination,
   MEP_BOILER_RIBBON_KEYS.stringParams.fuelType,
@@ -365,16 +345,6 @@ export const MEP_BOILER_STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
   MEP_BOILER_RIBBON_KEYS.stringParams.reliefValvePressure,
   MEP_BOILER_RIBBON_KEYS.stringParams.systemPressure,
 ]);
-
-/**
- * Returns `true` when `commandKey` is a boiler string-combobox param (model picker OR
- * flue-terminal picker) — not numeric, not a toggle, not a readout, not an action. The
- * composer routes ALL of these to the boiler bridge; the bridge then splits by specific
- * key. Mirror of `isMepRadiatorRibbonStringKey` (ADR-408 Εύρος Β).
- */
-export function isMepBoilerRibbonStringKey(commandKey: string): boolean {
-  return MEP_BOILER_STRING_KEY_SET.has(commandKey);
-}
 
 /**
  * Returns `true` for the flue VENT TERMINAL picker specifically (a static enum, NOT the

@@ -12,6 +12,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const MEP_MANIFOLD_RIBBON_KEYS = {
   params: {
     /** mm — bar width (the run along which outlets line up). */
@@ -61,13 +63,9 @@ export const MEP_MANIFOLD_RIBBON_KEYS_ACTIONS = {
   delete: 'mepManifold.actions.delete',
 } as const;
 
-const MEP_MANIFOLD_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
+export const isMepManifoldActionKey = makeKeySetGuard(
   Object.values(MEP_MANIFOLD_RIBBON_KEYS_ACTIONS),
 );
-
-export function isMepManifoldActionKey(action: string): boolean {
-  return MEP_MANIFOLD_ACTION_KEY_SET.has(action);
-}
 
 /**
  * Panel visibility keys.
@@ -81,25 +79,13 @@ export const MEP_MANIFOLD_RIBBON_VISIBILITY_KEYS = {
 export type MepManifoldRibbonVisibilityKey =
   typeof MEP_MANIFOLD_RIBBON_VISIBILITY_KEYS.hasNetwork;
 
-const MEP_MANIFOLD_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isMepManifoldVisibilityKey = makeKeySetGuard<MepManifoldRibbonVisibilityKey>([
   MEP_MANIFOLD_RIBBON_VISIBILITY_KEYS.hasNetwork,
 ]);
 
-export function isMepManifoldVisibilityKey(
-  key: string,
-): key is MepManifoldRibbonVisibilityKey {
-  return MEP_MANIFOLD_VISIBILITY_KEY_SET.has(key);
-}
-
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────
 
-const MEP_MANIFOLD_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(
-  MEP_MANIFOLD_RIBBON_NUMBER_KEYS,
-);
-
-export function isMepManifoldRibbonKey(commandKey: string): boolean {
-  return MEP_MANIFOLD_NUMBER_KEY_SET.has(commandKey);
-}
+export const isMepManifoldRibbonKey = makeKeySetGuard(MEP_MANIFOLD_RIBBON_NUMBER_KEYS);
 
 /**
  * The manifold classification combobox key (ADR-408 Φ-heating). Kept OUT of the

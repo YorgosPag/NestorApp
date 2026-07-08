@@ -10,6 +10,8 @@
  * discards it.
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const HVAC_AUTO_RIBBON_ACTIONS = {
   /** Recognize the storey + auto-design the supply-air duct network → proposal ghost. */
   generate: 'hvacAuto.actions.generate',
@@ -19,11 +21,5 @@ export const HVAC_AUTO_RIBBON_ACTIONS = {
   reject: 'hvacAuto.actions.reject',
 } as const;
 
-const HVAC_AUTO_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
-  Object.values(HVAC_AUTO_RIBBON_ACTIONS),
-);
-
 /** Type guard used by the `useRibbonCommands` composer. */
-export function isHvacAutoActionKey(action: string): boolean {
-  return HVAC_AUTO_ACTION_KEY_SET.has(action);
-}
+export const isHvacAutoActionKey = makeKeySetGuard(Object.values(HVAC_AUTO_RIBBON_ACTIONS));

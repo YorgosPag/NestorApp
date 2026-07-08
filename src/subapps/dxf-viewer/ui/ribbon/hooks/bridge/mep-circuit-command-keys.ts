@@ -7,6 +7,8 @@
  * is action-only (no per-field comboboxes in the opening slice).
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const MEP_CIRCUIT_RIBBON_ACTIONS = {
   /** Build an electrical circuit from the current panel + fixture selection. */
   create: 'mepCircuit.actions.create',
@@ -20,11 +22,7 @@ export const MEP_CIRCUIT_RIBBON_ACTIONS = {
   deriveNetworks: 'mepCircuit.actions.deriveNetworks',
 } as const;
 
-const MEP_CIRCUIT_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
+/** Type guard used by the `useRibbonCommands` composer. */
+export const isMepCircuitActionKey = makeKeySetGuard(
   Object.values(MEP_CIRCUIT_RIBBON_ACTIONS),
 );
-
-/** Type guard used by the `useRibbonCommands` composer. */
-export function isMepCircuitActionKey(action: string): boolean {
-  return MEP_CIRCUIT_ACTION_KEY_SET.has(action);
-}
