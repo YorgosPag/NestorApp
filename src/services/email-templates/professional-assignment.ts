@@ -8,11 +8,19 @@
 import 'server-only';
 
 import {
-  wrapInBrandedTemplate,
   BRAND,
   escapeHtml,
   formatDateGreek,
 } from './base-email-template';
+import {
+  buildInfoRow,
+  buildInfoCard,
+  buildGreeting,
+  buildClosing,
+  assembleConfirmationEmail,
+  textSectionHeader,
+  type ConfirmationEmailResult,
+} from './confirmation-email-shared';
 
 // ============================================================================
 // TYPES
@@ -59,6 +67,57 @@ function formatFloor(floor: number): string {
   return `${floor}ος όροφος`;
 }
 
+/** Property info-card body — shared by the assignment & removal templates. */
+function buildPropertyCardBody(data: ProfessionalAssignmentEmailData, floorText: string | null): string {
+  return `
+          ${data.propertyCode ? buildInfoRow('Κωδικός', escapeHtml(data.propertyCode)) : ''}
+          ${buildInfoRow('Ακίνητο', escapeHtml(data.propertyName))}
+          ${floorText ? buildInfoRow('Όροφος', floorText) : ''}
+          ${data.buildingName ? buildInfoRow('Κτίριο', escapeHtml(data.buildingName)) : ''}
+          ${data.projectName ? buildInfoRow('Έργο', escapeHtml(data.projectName)) : ''}
+          ${data.projectAddress ? buildInfoRow('Διεύθυνση', escapeHtml(data.projectAddress)) : ''}`;
+}
+
+/** Buyer info-card body — shared by the assignment & removal templates. */
+function buildBuyerCardBody(data: ProfessionalAssignmentEmailData): string {
+  return `
+          ${buildInfoRow('Ονοματεπώνυμο', escapeHtml(data.buyerName ?? ''))}
+          ${data.buyerPhone ? buildInfoRow('Τηλέφωνο', escapeHtml(data.buyerPhone)) : ''}
+          ${data.buyerEmail ? buildInfoRow('Email', escapeHtml(data.buyerEmail)) : ''}`;
+}
+
+/** Property plain-text lines — shared by the assignment & removal fallbacks. */
+function buildPropertyTextLines(data: ProfessionalAssignmentEmailData): string[] {
+  const lines: string[] = [];
+  if (data.propertyCode) lines.push(`Κωδικός: ${data.propertyCode}`);
+  lines.push(`Ακίνητο: ${data.propertyName}`);
+  if (data.propertyFloor !== null) lines.push(`Όροφος: ${formatFloor(data.propertyFloor)}`);
+  if (data.buildingName) lines.push(`Κτίριο: ${data.buildingName}`);
+  if (data.projectName) lines.push(`Έργο: ${data.projectName}`);
+  if (data.projectAddress) lines.push(`Διεύθυνση: ${data.projectAddress}`);
+  return lines;
+}
+
+/** Buyer plain-text lines (incl. section header) — shared by both fallbacks. */
+function buildBuyerTextLines(data: ProfessionalAssignmentEmailData): string[] {
+  if (!data.buyerName) return [];
+  const lines: string[] = ['', textSectionHeader('ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ'), `Ονοματεπώνυμο: ${data.buyerName}`];
+  if (data.buyerPhone) lines.push(`Τηλέφωνο: ${data.buyerPhone}`);
+  if (data.buyerEmail) lines.push(`Email: ${data.buyerEmail}`);
+  return lines;
+}
+
+/** Company contact-info plain-text block — shared by both fallbacks. */
+function buildContactTextLines(data: ProfessionalAssignmentEmailData): string[] {
+  if (!data.companyPhone && !data.companyEmail && !data.companyAddress) return [];
+  const lines: string[] = ['', `--- Στοιχεία Επικοινωνίας ---`];
+  if (data.companyPhone) lines.push(`Τηλ: ${data.companyPhone}`);
+  if (data.companyEmail) lines.push(`Email: ${data.companyEmail}`);
+  if (data.companyAddress) lines.push(`Διεύθυνση: ${data.companyAddress}`);
+  if (data.companyWebsite) lines.push(`Web: ${data.companyWebsite}`);
+  return lines;
+}
+
 // ============================================================================
 // TEMPLATE BUILDER
 // ============================================================================
@@ -68,28 +127,14 @@ function formatFloor(floor: number): string {
  *
  * @returns { subject, html, text } — subject line, HTML body, plain-text fallback
  */
-export function buildProfessionalAssignmentEmail(data: ProfessionalAssignmentEmailData): {
-  subject: string;
-  html: string;
-  text: string;
-} {
+export function buildProfessionalAssignmentEmail(data: ProfessionalAssignmentEmailData): ConfirmationEmailResult {
   const propertyLabel = data.propertyCode ?? data.propertyName;
-  const subject = `Ανάθεση ρόλου: ${data.roleName} — ${propertyLabel}`;
-
-  const contentHtml = buildContentSection(data);
-
-  const html = wrapInBrandedTemplate({
-    contentHtml,
-    companyName: data.companyName ?? 'Pagonis Energo',
-    companyPhone: data.companyPhone,
-    companyEmail: data.companyEmail,
-    companyAddress: data.companyAddress,
-    companyWebsite: data.companyWebsite,
+  return assembleConfirmationEmail({
+    subject: `Ανάθεση ρόλου: ${data.roleName} — ${propertyLabel}`,
+    contentHtml: buildContentSection(data),
+    text: buildPlainText(data),
+    data,
   });
-
-  const text = buildPlainText(data);
-
-  return { subject, html, text };
 }
 
 // ============================================================================
@@ -101,86 +146,30 @@ function buildContentSection(data: ProfessionalAssignmentEmailData): string {
     ? formatFloor(data.propertyFloor)
     : null;
 
-  return `
-    <!-- Greeting -->
-    <p style="margin:0 0 16px;font-size:16px;color:${BRAND.navyDark};">
-      Αγαπητέ/ή <strong>${escapeHtml(data.professionalName)}</strong>,
-    </p>
-    <p style="margin:0 0 24px;font-size:15px;color:${BRAND.gray};line-height:1.6;">
-      Σας ενημερώνουμε ότι σας ανατέθηκε ο ρόλος
-      <strong style="color:${BRAND.navyDark};">${escapeHtml(data.roleName)}</strong>
-      για το παρακάτω ακίνητο. Παρακαλούμε λάβετε υπόψη τα στοιχεία που ακολουθούν
-      και επικοινωνήστε μαζί μας το συντομότερο δυνατό.
-    </p>
-
-    <!-- Info card: Property -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border:1px solid ${BRAND.border};border-radius:6px;overflow:hidden;">
-      <tr>
-        <td style="background-color:${BRAND.navy};padding:10px 16px;">
-          <p style="margin:0;font-size:13px;font-weight:600;color:${BRAND.white};letter-spacing:0.5px;">
-            ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ
-          </p>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:16px;">
-          ${data.propertyCode ? buildInfoRow('Κωδικός', escapeHtml(data.propertyCode)) : ''}
-          ${buildInfoRow('Ακίνητο', escapeHtml(data.propertyName))}
-          ${floorText ? buildInfoRow('Όροφος', floorText) : ''}
-          ${data.buildingName ? buildInfoRow('Κτίριο', escapeHtml(data.buildingName)) : ''}
-          ${data.projectName ? buildInfoRow('Έργο', escapeHtml(data.projectName)) : ''}
-          ${data.projectAddress ? buildInfoRow('Διεύθυνση', escapeHtml(data.projectAddress)) : ''}
-        </td>
-      </tr>
-    </table>
-
-    ${data.buyerName ? `
-    <!-- Info card: Buyer -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border:1px solid ${BRAND.border};border-radius:6px;overflow:hidden;">
-      <tr>
-        <td style="background-color:${BRAND.navy};padding:10px 16px;">
-          <p style="margin:0;font-size:13px;font-weight:600;color:${BRAND.white};letter-spacing:0.5px;">
-            ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ
-          </p>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:16px;">
-          ${buildInfoRow('Ονοματεπώνυμο', escapeHtml(data.buyerName))}
-          ${data.buyerPhone ? buildInfoRow('Τηλέφωνο', escapeHtml(data.buyerPhone)) : ''}
-          ${data.buyerEmail ? buildInfoRow('Email', escapeHtml(data.buyerEmail)) : ''}
-        </td>
-      </tr>
-    </table>
-    ` : ''}
-
-    <!-- Info card: Assignment details -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border:1px solid ${BRAND.border};border-radius:6px;overflow:hidden;">
-      <tr>
-        <td style="background-color:${BRAND.navy};padding:10px 16px;">
-          <p style="margin:0;font-size:13px;font-weight:600;color:${BRAND.white};letter-spacing:0.5px;">
-            ΣΤΟΙΧΕΙΑ ΑΝΑΘΕΣΗΣ
-          </p>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:16px;">
+  const assignmentBody = `
           ${buildInfoRow('Ρόλος', escapeHtml(data.roleName))}
           ${buildInfoRow('Ημερομηνία ανάθεσης', formatDateGreek(new Date()))}
-          ${data.companyName ? buildInfoRow('Κατασκευαστική', escapeHtml(data.companyName)) : ''}
-        </td>
-      </tr>
-    </table>
+          ${data.companyName ? buildInfoRow('Κατασκευαστική', escapeHtml(data.companyName)) : ''}`;
 
-    <!-- CTA -->
-    <p style="margin:0 0 8px;font-size:14px;color:${BRAND.gray};line-height:1.6;">
-      Παρακαλούμε επικοινωνήστε μαζί μας ώστε να συζητήσουμε τη διαδικασία,
-      τα απαραίτητα δικαιολογητικά και το χρονοδιάγραμμα ολοκλήρωσης.
-    </p>
-    <p style="margin:16px 0 0;font-size:14px;color:${BRAND.navyDark};font-weight:600;">
-      Με εκτίμηση,<br/>
-      ${escapeHtml(data.companyName ?? 'Pagonis Energo')}
-    </p>
+  return `
+    ${buildGreeting(
+      data.professionalName,
+      `Σας ενημερώνουμε ότι σας ανατέθηκε ο ρόλος
+      <strong style="color:${BRAND.navyDark};">${escapeHtml(data.roleName)}</strong>
+      για το παρακάτω ακίνητο. Παρακαλούμε λάβετε υπόψη τα στοιχεία που ακολουθούν
+      και επικοινωνήστε μαζί μας το συντομότερο δυνατό.`,
+    )}
+
+    ${buildInfoCard({ title: 'ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ', bodyHtml: buildPropertyCardBody(data, floorText) })}
+
+    ${data.buyerName ? buildInfoCard({ title: 'ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ', bodyHtml: buildBuyerCardBody(data) }) : ''}
+
+    ${buildInfoCard({ title: 'ΣΤΟΙΧΕΙΑ ΑΝΑΘΕΣΗΣ', bodyHtml: assignmentBody })}
+
+    ${buildClosing(
+      'Παρακαλούμε επικοινωνήστε μαζί μας ώστε να συζητήσουμε τη διαδικασία, τα απαραίτητα δικαιολογητικά και το χρονοδιάγραμμα ολοκλήρωσης.',
+      data.companyName ?? 'Pagonis Energo',
+    )}
   `;
 }
 
@@ -192,28 +181,14 @@ function buildContentSection(data: ProfessionalAssignmentEmailData): string {
  * Builds the branded HTML email for professional removal (ακύρωση ανάθεσης).
  * Same data interface as assignment — reuses the same hierarchy.
  */
-export function buildProfessionalRemovalEmail(data: ProfessionalAssignmentEmailData): {
-  subject: string;
-  html: string;
-  text: string;
-} {
+export function buildProfessionalRemovalEmail(data: ProfessionalAssignmentEmailData): ConfirmationEmailResult {
   const propertyLabel = data.propertyCode ?? data.propertyName;
-  const subject = `Ακύρωση ανάθεσης: ${data.roleName} — ${propertyLabel}`;
-
-  const contentHtml = buildRemovalContentSection(data);
-
-  const html = wrapInBrandedTemplate({
-    contentHtml,
-    companyName: data.companyName ?? 'Pagonis Energo',
-    companyPhone: data.companyPhone,
-    companyEmail: data.companyEmail,
-    companyAddress: data.companyAddress,
-    companyWebsite: data.companyWebsite,
+  return assembleConfirmationEmail({
+    subject: `Ακύρωση ανάθεσης: ${data.roleName} — ${propertyLabel}`,
+    contentHtml: buildRemovalContentSection(data),
+    text: buildRemovalPlainText(data),
+    data,
   });
-
-  const text = buildRemovalPlainText(data);
-
-  return { subject, html, text };
 }
 
 function buildRemovalContentSection(data: ProfessionalAssignmentEmailData): string {
@@ -221,57 +196,19 @@ function buildRemovalContentSection(data: ProfessionalAssignmentEmailData): stri
     ? formatFloor(data.propertyFloor)
     : null;
 
+  const cancelledEmphasis = escapeHtml('ακυρώθηκε');
+
   return `
-    <!-- Greeting -->
-    <p style="margin:0 0 16px;font-size:16px;color:${BRAND.navyDark};">
-      Αγαπητέ/ή <strong>${escapeHtml(data.professionalName)}</strong>,
-    </p>
-    <p style="margin:0 0 24px;font-size:15px;color:${BRAND.gray};line-height:1.6;">
-      Σας ενημερώνουμε ότι η ανάθεση του ρόλου
+    ${buildGreeting(
+      data.professionalName,
+      `Σας ενημερώνουμε ότι η ανάθεση του ρόλου
       <strong style="color:${BRAND.navyDark};">${escapeHtml(data.roleName)}</strong>
-      για το παρακάτω ακίνητο <strong>ακυρώθηκε</strong>.
-    </p>
+      για το παρακάτω ακίνητο <strong>${cancelledEmphasis}</strong>.`,
+    )}
 
-    <!-- Info card: Property -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border:1px solid ${BRAND.border};border-radius:6px;overflow:hidden;">
-      <tr>
-        <td style="background-color:${BRAND.navy};padding:10px 16px;">
-          <p style="margin:0;font-size:13px;font-weight:600;color:${BRAND.white};letter-spacing:0.5px;">
-            ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ
-          </p>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:16px;">
-          ${data.propertyCode ? buildInfoRow('Κωδικός', escapeHtml(data.propertyCode)) : ''}
-          ${buildInfoRow('Ακίνητο', escapeHtml(data.propertyName))}
-          ${floorText ? buildInfoRow('Όροφος', floorText) : ''}
-          ${data.buildingName ? buildInfoRow('Κτίριο', escapeHtml(data.buildingName)) : ''}
-          ${data.projectName ? buildInfoRow('Έργο', escapeHtml(data.projectName)) : ''}
-          ${data.projectAddress ? buildInfoRow('Διεύθυνση', escapeHtml(data.projectAddress)) : ''}
-        </td>
-      </tr>
-    </table>
+    ${buildInfoCard({ title: 'ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ', bodyHtml: buildPropertyCardBody(data, floorText) })}
 
-    ${data.buyerName ? `
-    <!-- Info card: Buyer -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border:1px solid ${BRAND.border};border-radius:6px;overflow:hidden;">
-      <tr>
-        <td style="background-color:${BRAND.navy};padding:10px 16px;">
-          <p style="margin:0;font-size:13px;font-weight:600;color:${BRAND.white};letter-spacing:0.5px;">
-            ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ
-          </p>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:16px;">
-          ${buildInfoRow('Ονοματεπώνυμο', escapeHtml(data.buyerName))}
-          ${data.buyerPhone ? buildInfoRow('Τηλέφωνο', escapeHtml(data.buyerPhone)) : ''}
-          ${data.buyerEmail ? buildInfoRow('Email', escapeHtml(data.buyerEmail)) : ''}
-        </td>
-      </tr>
-    </table>
-    ` : ''}
+    ${data.buyerName ? buildInfoCard({ title: 'ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ', bodyHtml: buildBuyerCardBody(data) }) : ''}
 
     <!-- Notice -->
     <p style="margin:0 0 8px;font-size:14px;color:${BRAND.gray};line-height:1.6;">
@@ -294,24 +231,9 @@ function buildRemovalPlainText(data: ProfessionalAssignmentEmailData): string {
     ``,
     `Σας ενημερώνουμε ότι η ανάθεση του ρόλου "${data.roleName}" για το παρακάτω ακίνητο ΑΚΥΡΩΘΗΚΕ.`,
     ``,
-    `═══ ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ ═══`,
-  ];
-
-  if (data.propertyCode) lines.push(`Κωδικός: ${data.propertyCode}`);
-  lines.push(`Ακίνητο: ${data.propertyName}`);
-  if (data.propertyFloor !== null) lines.push(`Όροφος: ${formatFloor(data.propertyFloor)}`);
-  if (data.buildingName) lines.push(`Κτίριο: ${data.buildingName}`);
-  if (data.projectName) lines.push(`Έργο: ${data.projectName}`);
-  if (data.projectAddress) lines.push(`Διεύθυνση: ${data.projectAddress}`);
-
-  if (data.buyerName) {
-    lines.push(``, `═══ ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ ═══`);
-    lines.push(`Ονοματεπώνυμο: ${data.buyerName}`);
-    if (data.buyerPhone) lines.push(`Τηλέφωνο: ${data.buyerPhone}`);
-    if (data.buyerEmail) lines.push(`Email: ${data.buyerEmail}`);
-  }
-
-  lines.push(
+    textSectionHeader('ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ'),
+    ...buildPropertyTextLines(data),
+    ...buildBuyerTextLines(data),
     ``,
     `Εάν έχετε ήδη ξεκινήσει εργασίες, παρακαλούμε επικοινωνήστε μαζί μας`,
     `για τη διευθέτηση τυχόν εκκρεμοτήτων.`,
@@ -320,36 +242,10 @@ function buildRemovalPlainText(data: ProfessionalAssignmentEmailData): string {
     ``,
     `Με εκτίμηση,`,
     data.companyName ?? 'Pagonis Energo',
-  );
-
-  if (data.companyPhone || data.companyEmail || data.companyAddress) {
-    lines.push(``, `--- Στοιχεία Επικοινωνίας ---`);
-    if (data.companyPhone) lines.push(`Τηλ: ${data.companyPhone}`);
-    if (data.companyEmail) lines.push(`Email: ${data.companyEmail}`);
-    if (data.companyAddress) lines.push(`Διεύθυνση: ${data.companyAddress}`);
-    if (data.companyWebsite) lines.push(`Web: ${data.companyWebsite}`);
-  }
+    ...buildContactTextLines(data),
+  ];
 
   return lines.join('\n');
-}
-
-// ============================================================================
-// ROW HELPER
-// ============================================================================
-
-/** Single info row: label + value */
-function buildInfoRow(label: string, value: string): string {
-  return `
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
-      <tr>
-        <td width="45%" style="font-size:13px;color:${BRAND.grayLight};vertical-align:top;">
-          ${label}
-        </td>
-        <td style="font-size:13px;color:${BRAND.navyDark};font-weight:500;">
-          ${value}
-        </td>
-      </tr>
-    </table>`;
 }
 
 // ============================================================================
@@ -363,29 +259,14 @@ function buildPlainText(data: ProfessionalAssignmentEmailData): string {
     `Σας ενημερώνουμε ότι σας ανατέθηκε ο ρόλος "${data.roleName}" για το παρακάτω ακίνητο.`,
     `Παρακαλούμε λάβετε υπόψη τα στοιχεία και επικοινωνήστε μαζί μας.`,
     ``,
-    `═══ ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ ═══`,
-  ];
-
-  if (data.propertyCode) lines.push(`Κωδικός: ${data.propertyCode}`);
-  lines.push(`Ακίνητο: ${data.propertyName}`);
-  if (data.propertyFloor !== null) lines.push(`Όροφος: ${formatFloor(data.propertyFloor)}`);
-  if (data.buildingName) lines.push(`Κτίριο: ${data.buildingName}`);
-  if (data.projectName) lines.push(`Έργο: ${data.projectName}`);
-  if (data.projectAddress) lines.push(`Διεύθυνση: ${data.projectAddress}`);
-
-  if (data.buyerName) {
-    lines.push(``, `═══ ΣΤΟΙΧΕΙΑ ΑΓΟΡΑΣΤΗ ═══`);
-    lines.push(`Ονοματεπώνυμο: ${data.buyerName}`);
-    if (data.buyerPhone) lines.push(`Τηλέφωνο: ${data.buyerPhone}`);
-    if (data.buyerEmail) lines.push(`Email: ${data.buyerEmail}`);
-  }
-
-  lines.push(
+    textSectionHeader('ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ'),
+    ...buildPropertyTextLines(data),
+    ...buildBuyerTextLines(data),
     ``,
-    `═══ ΣΤΟΙΧΕΙΑ ΑΝΑΘΕΣΗΣ ═══`,
+    textSectionHeader('ΣΤΟΙΧΕΙΑ ΑΝΑΘΕΣΗΣ'),
     `Ρόλος: ${data.roleName}`,
     `Ημερομηνία: ${formatDateGreek(new Date())}`,
-  );
+  ];
   if (data.companyName) lines.push(`Κατασκευαστική: ${data.companyName}`);
 
   lines.push(
@@ -395,15 +276,8 @@ function buildPlainText(data: ProfessionalAssignmentEmailData): string {
     ``,
     `Με εκτίμηση,`,
     data.companyName ?? 'Pagonis Energo',
+    ...buildContactTextLines(data),
   );
-
-  if (data.companyPhone || data.companyEmail || data.companyAddress) {
-    lines.push(``, `--- Στοιχεία Επικοινωνίας ---`);
-    if (data.companyPhone) lines.push(`Τηλ: ${data.companyPhone}`);
-    if (data.companyEmail) lines.push(`Email: ${data.companyEmail}`);
-    if (data.companyAddress) lines.push(`Διεύθυνση: ${data.companyAddress}`);
-    if (data.companyWebsite) lines.push(`Web: ${data.companyWebsite}`);
-  }
 
   return lines.join('\n');
 }
