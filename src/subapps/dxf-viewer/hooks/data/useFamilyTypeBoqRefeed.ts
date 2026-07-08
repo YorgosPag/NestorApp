@@ -6,7 +6,7 @@
  *
  * Mounted in `WallPersistenceHost` (the always-on host that already holds the
  * company/project/building context + level manager). Listens for
- * `bim:family-type-changed` (emitted by `UpdateWallFamilyTypeCommand` on
+ * `bim:family-type-changed` (emitted by `UpdateFamilyTypeCommand` on
  * execute/undo) and runs the `refeedBoqForTypeAcrossFloors` fan-out.
  *
  * The command keeps the catalog store / persist / audit (it has the service);
@@ -18,7 +18,7 @@
  * listener, fired only on a type edit/undo.
  *
  * @see bim/family-types/family-type-side-effects.ts — the pure fan-out
- * @see core/commands/entity-commands/UpdateWallFamilyTypeCommand.ts — the emitter
+ * @see core/commands/entity-commands/UpdateFamilyTypeCommand.ts — the emitter
  */
 
 import { useEffect, useRef } from 'react';

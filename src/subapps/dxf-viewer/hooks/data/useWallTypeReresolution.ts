@@ -3,14 +3,14 @@
 /**
  * ADR-412 «type always wins» — wall re-resolution on family-type catalog change.
  *
- * Thin binding of the shared `createTypeReresolutionHook` factory (ADR-603 Φ1)
+ * Thin binding of the shared `createTypeReresolutionHook` factory (ADR-604 Φ1)
  * to the pure `reresolveSceneWalls` SSoT. On every `BimFamilyType` store
  * `version` bump (a type edit OR a late type load landing after the wall docs
  * already mapped to scene entities), re-runs resolution over the active scene's
  * typed walls so their cached type-governed params re-flow from the live type.
  * Locally dirty walls are skipped (local edits win); untyped walls are untouched.
  *
- * @see ./create-type-reresolution-hook.ts — shared factory (ADR-603)
+ * @see ./create-type-reresolution-hook.ts — shared factory (ADR-604)
  * @see ./wall-persistence-helpers.ts — reresolveSceneWalls (pure SSoT)
  * @see docs/centralized-systems/reference/adrs/ADR-412-bim-family-types.md §3.4
  */

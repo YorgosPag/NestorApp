@@ -6,7 +6,7 @@
  * Edits a wall TYPE's `typeParams` (category / material / thickness / full DNA
  * layer composition). Changes re-flow to EVERY instance of the type, on all
  * floors (Revit «Edit Type»). One undoable op via `controller.updateTypeParams`
- * → `UpdateWallFamilyTypeCommand` (optimistic store + persist + audit + BOQ
+ * → `UpdateFamilyTypeCommand` (optimistic store + persist + audit + BOQ
  * re-feed). Built-ins are read-only — the trigger Duplicates first.
  *
  * Mounted always-on in `WallPersistenceHost`; opened via `openEditWallType`
