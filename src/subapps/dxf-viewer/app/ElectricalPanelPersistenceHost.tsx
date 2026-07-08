@@ -18,21 +18,16 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { useLevels } from '../systems/levels';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 import type { ElectricalPanelEntity } from '../bim/types/electrical-panel-types';
 import { isElectricalPanelEntity } from '../types/entities';
 import { useSceneEntitiesByType, useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useElectricalPanelPersistence } from '../hooks/data/useElectricalPanelPersistence';
 import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface ElectricalPanelPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly projectId?: string;
   readonly floorplanId?: string;
   /** ADR-420 — stable building-storey id. Forwarded to hook → service. */

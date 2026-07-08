@@ -18,20 +18,15 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { useLevels } from '../systems/levels';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 import type { FloorplanSymbolEntity } from '../bim/types/floorplan-symbol-types';
 import { isFloorplanSymbolEntity } from '../types/entities';
 import { useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useFloorplanSymbolPersistence } from '../hooks/data/useFloorplanSymbolPersistence';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface FloorplanSymbolPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly projectId?: string;
   readonly floorplanId?: string;
   /** ADR-420 — stable building-storey scope key (IfcBuildingStorey). */
