@@ -18,3 +18,11 @@ export { PhoneRenderer as PhoneRowRenderer } from './PhoneRenderer';
 export { EmailRenderer as EmailRowRenderer } from './EmailRenderer';
 export { WebsiteRenderer as WebsiteRowRenderer } from './WebsiteRenderer';
 export { SocialRenderer as SocialRowRenderer } from './SocialRenderer';
+
+// 🏢 SSoT primitives (ADR-593) — shared shell + typed cells για desktop rows
+export {
+  CommunicationRowShell,
+  CommunicationSelectCell,
+  CommunicationInputCell,
+  CommunicationActionsCell
+} from './shared/communication-row-primitives';
