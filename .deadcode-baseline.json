@@ -5,11 +5,12 @@
     "src/app/test-harness/dxf-canvas/DxfCanvasHarness.prod.ts",
     "src/components/contacts/pickers/AdministrativeAddressPicker.tsx",
     "src/components/properties/dialogs/PropertyDeletionGuardDialog.tsx",
+    "src/hooks/useDebouncedCallback.ts",
     "src/services/dxf-overlay-item-mutation-gateway.ts",
     "src/subapps/procurement/components/ConflictDialog.tsx",
     "src/subapps/procurement/hooks/useLiveChangeToasts.ts",
     "src/subapps/procurement/hooks/useTradeRegistry.ts",
     "src/subapps/procurement/services/trade-registry.ts"
   ],
-  "fileCount": 8
+  "fileCount": 9
 }

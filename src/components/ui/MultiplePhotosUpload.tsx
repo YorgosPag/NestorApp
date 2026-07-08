@@ -12,6 +12,8 @@ import type { UploadPurpose } from '@/config/file-upload-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
+// 🏢 ADR-596: canonical PhotoSlot (SSoT) — re-exported for API stability
+import type { PhotoSlot, MultiplePhotosBaseProps } from './multiple-photos/photo-slot-types';
 
 const logger = createModuleLogger('MultiplePhotosUpload');
 
@@ -19,15 +21,8 @@ const logger = createModuleLogger('MultiplePhotosUpload');
 // TYPES & INTERFACES
 // ============================================================================
 
-export interface PhotoSlot {
-  file?: File | null;
-  preview?: string;
-  uploadUrl?: string;
-  fileName?: string; // 🔥 ΠΡΟΣΘΗΚΗ: Custom filename για εμφάνιση στο UI
-  isUploading?: boolean;
-  uploadProgress?: number;
-  error?: string;
-}
+// 🔁 Public API stability — consumers import PhotoSlot from this module
+export type { PhotoSlot } from './multiple-photos/photo-slot-types';
 
 export interface MultiplePhotosUploadProps {
   /** Maximum number of photos allowed (default: 5) */
@@ -141,50 +136,39 @@ export function MultiplePhotosUpload({
   // RENDER
   // ========================================================================
 
-  // 🔥 COMPONENT SEPARATION: Using extracted render components
+  // 🔥 COMPONENT SEPARATION: Using extracted render components.
+  // 🏢 ADR-596: shared prop-forwarding bag → spread into both variants so the
+  // near-identical prop list is not duplicated across the two return branches.
+  const sharedProps: MultiplePhotosBaseProps = {
+    normalizedPhotos,
+    maxPhotos,
+    photosKey,
+    addCacheBuster,
+    purpose,
+    uploadHandler,
+    handleUploadComplete: onPhotoUploadComplete,
+    onPhotosChange,
+    disabled,
+    showProgress,
+    className,
+    contactData,
+    onPhotoClick, // 🏢 ENTERPRISE: Photo click handler
+    showPhotosWhenDisabled,
+  };
+
   if (compact) {
     return (
       <MultiplePhotosCompact
-        normalizedPhotos={normalizedPhotos}
-        maxPhotos={maxPhotos}
-        photosKey={photosKey}
-        addCacheBuster={addCacheBuster}
-        purpose={purpose}
-        uploadHandler={uploadHandler}
-        handleUploadComplete={onPhotoUploadComplete}
-        onPhotosChange={onPhotosChange}
-        disabled={disabled}
-        showProgress={showProgress}
-        className={className}
+        {...sharedProps}
         showProfileSelector={showProfileSelector}
         selectedProfilePhotoIndex={selectedProfilePhotoIndex}
         onProfilePhotoSelection={onProfilePhotoSelection}
-        contactData={contactData}
-        onPhotoClick={onPhotoClick} // 🏢 ENTERPRISE: Photo click handler
-        showPhotosWhenDisabled={showPhotosWhenDisabled}
       />
     );
   }
 
   // Full mode
-  return (
-    <MultiplePhotosFull
-      normalizedPhotos={normalizedPhotos}
-      maxPhotos={maxPhotos}
-      photosKey={photosKey}
-      addCacheBuster={addCacheBuster}
-      purpose={purpose}
-      uploadHandler={uploadHandler}
-      handleUploadComplete={onPhotoUploadComplete}
-      onPhotosChange={onPhotosChange}
-      disabled={disabled}
-      showProgress={showProgress}
-      className={className}
-      contactData={contactData}
-      onPhotoClick={onPhotoClick} // 🏢 ENTERPRISE: Photo click handler
-      showPhotosWhenDisabled={showPhotosWhenDisabled}
-    />
-  );
+  return <MultiplePhotosFull {...sharedProps} />;
 }
 
 export default MultiplePhotosUpload;
