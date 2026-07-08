@@ -11,6 +11,8 @@
 
 import type { Point2D, GripKind } from '../../rendering/types/Types';
 import type { StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, FoundationGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, MepSegmentGripKind, FurnitureGripKind, FloorplanSymbolGripKind, XLineGripKind, RayGripKind, PolylineGripKind, CircleGripKind, ArcGripKind, LineGripKind, GroupGripKind, AnnotationSymbolGripKind, TextGripKind } from '../useGripMovement';
+// ADR-602 (ADR-587 Φ6) Stage 1 — tagged grip discriminator SSoT (canonical module).
+import type { EntityGripKind } from '../grip-kinds';
 import type {
   DxfGripDragPreview,
   DxfGripInteractionState,
@@ -354,6 +356,13 @@ export interface UnifiedGripInfo {
    * about the insertion point, `rotateEntity` case 'annotation-symbol'). Mirror of arc.
    */
   readonly annotationSymbolGripKind?: AnnotationSymbolGripKind;
+  /**
+   * ADR-602 (ADR-587 Φ6) Stage 1 — tagged grip discriminator SSoT. Additive:
+   * κάθεται ΔΙΠΛΑ στα 31 `xxxGripKind?` optionals παραπάνω (forwarded από
+   * `GripInfo.gripKind` στο `grip-registry.wrapDxfGrip`, Stage 2). Μηδέν behavior
+   * change στο Stage 1. Read μέσω `gripKindOf(grip, '<entity.type>')`.
+   */
+  readonly gripKind?: EntityGripKind;
   /**
    * ADR-397 Φ2 (Giorgio 2026-06-17) — the owning entity's local frame (world unit
    * axes) for MOVE-glyph grips, from `resolveMoveGlyphFrame`. Attached in

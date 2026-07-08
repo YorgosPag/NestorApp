@@ -40,7 +40,9 @@ import { computeGroupSelectionBounds } from '../../systems/group/group-selection
 // PURE: Wrap DXF GripInfo → UnifiedGripInfo
 // ============================================================================
 
-function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
+// ADR-602 (ADR-587 Φ6) — exported (pure mapper, mirror των exported sibling mappers
+// `toUnifiedGrip`/`toRawDxfUnifiedGrip`) ώστε το forwarding να είναι unit-testable.
+export function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
   return {
     id: `dxf_${grip.entityId}_${grip.gripIndex}`,
     source: 'dxf',
@@ -85,6 +87,11 @@ function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     ...(grip.mepRadiatorGripKind ? { mepRadiatorGripKind: grip.mepRadiatorGripKind } : {}),
     // ADR-408 Εύρος Β #2 — forward heating boiler parametric grip discriminator.
     ...(grip.mepBoilerGripKind ? { mepBoilerGripKind: grip.mepBoilerGripKind } : {}),
+    // ADR-408 DHW — forward heating water-heater parametric grip discriminator.
+    // ADR-602 §1.4 Bug 1 fix: declared σε GripInfo+UnifiedGripInfo αλλά ΔΕΝ αντιγραφόταν
+    // εδώ → consumers (grip-parametric-dispatch/-copy, heating-host-commits,
+    // transform-glyph-visibility) το έπαιρναν πάντα undefined. Τώρα forwarded (mirror mepBoiler).
+    ...(grip.mepWaterHeaterGripKind ? { mepWaterHeaterGripKind: grip.mepWaterHeaterGripKind } : {}),
     // ADR-408 Φ8/Φ15 — forward MEP segment parametric grip discriminator.
     ...(grip.mepSegmentGripKind ? { mepSegmentGripKind: grip.mepSegmentGripKind } : {}),
     // ADR-410 — forward furniture parametric grip discriminator.
@@ -114,6 +121,10 @@ function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     ...(grip.groupGripKind ? { groupGripKind: grip.groupGripKind } : {}),
     // ADR-583 — forward annotation symbol (North arrow) move/rotation grip discriminator.
     ...(grip.annotationSymbolGripKind ? { annotationSymbolGripKind: grip.annotationSymbolGripKind } : {}),
+    // ADR-602 (ADR-587 Φ6) Stage 2 — dual-write του tagged grip discriminator SSoT δίπλα
+    // στα 31 legacy forwards (GripInfo→UnifiedGripInfo). Inert μέχρι οι producers να το
+    // σετάρουν (Stage 3)· εδώ απλώς προωθείται 1:1, μηδέν behavior change τώρα.
+    ...(grip.gripKind ? { gripKind: grip.gripKind } : {}),
   };
 }
 

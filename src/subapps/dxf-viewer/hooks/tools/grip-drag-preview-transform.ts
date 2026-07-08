@@ -44,6 +44,11 @@ export function toEntityPreviewTransform(dp: DxfGripDragPreview): EntityPreviewT
     ...(dp.electricalPanelGripKind ? { electricalPanelGripKind: dp.electricalPanelGripKind } : {}),
     // ADR-408 Φ12 — MEP manifold parametric ghost (move / rotation / corner resize).
     ...(dp.mepManifoldGripKind ? { mepManifoldGripKind: dp.mepManifoldGripKind } : {}),
+    // ADR-408 Φ8 — MEP segment parametric ghost (start/end/midpoint / section resize / rotate).
+    // ADR-602 §1.4 Bug 2 fix: declared σε DxfGripDragPreview+EntityPreviewTransform και
+    // διαβάζεται στο apply-parametric-box-preview, αλλά ΔΕΝ αντιγραφόταν εδώ → ζωντανό ghost
+    // dragged mep-segment έχανε το kind. Τώρα forwarded (mirror mepManifold).
+    ...(dp.mepSegmentGripKind ? { mepSegmentGripKind: dp.mepSegmentGripKind } : {}),
     // ADR-410 — furniture parametric ghost (move / rotation / corner resize).
     ...(dp.furnitureGripKind   ? { furnitureGripKind:   dp.furnitureGripKind }    : {}),
     // ADR-415 — floorplan-symbol parametric ghost (move / rotation / corner resize).
@@ -64,6 +69,9 @@ export function toEntityPreviewTransform(dp: DxfGripDragPreview): EntityPreviewT
     ...(dp.groupGripKind       ? { groupGripKind:       dp.groupGripKind }        : {}),
     // ADR-583 — annotation symbol (North arrow) move/rotation live ghost.
     ...(dp.annotationSymbolGripKind ? { annotationSymbolGripKind: dp.annotationSymbolGripKind } : {}),
+    // ADR-602 (ADR-587 Φ6) Stage 2 — dual-write του tagged grip discriminator SSoT
+    // (DxfGripDragPreview→EntityPreviewTransform). Inert μέχρι Stage 3· μηδέν behavior change.
+    ...(dp.gripKind            ? { gripKind:            dp.gripKind }             : {}),
     ...(dp.anchorPos           ? { anchorPos:           dp.anchorPos }            : {}),
     // ADR-363 Phase 1G — rotation centre for the rotation hot-grip ghost.
     ...(dp.rotatePivot         ? { rotatePivot:         dp.rotatePivot }          : {}),

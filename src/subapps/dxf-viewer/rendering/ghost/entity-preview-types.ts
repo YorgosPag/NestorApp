@@ -34,6 +34,8 @@ import type {
   TextGripKind,
 } from '../../hooks/grip-types';
 import type { WallGripKind } from '../../hooks/useGripMovement';
+// ADR-602 (ADR-587 Φ6) Stage 1 — tagged grip discriminator SSoT (canonical module).
+import type { EntityGripKind } from '../../hooks/grip-kinds';
 
 /**
  * Per-entity preview transform. Structurally compatible with `DxfGripDragPreview`
@@ -178,5 +180,12 @@ export interface EntityPreviewTransform {
    * 'annotation-symbol' (the SAME engine the commit runs). `anchorPos` = sweep start.
    */
   readonly annotationSymbolGripKind?: AnnotationSymbolGripKind;
+  /**
+   * ADR-602 (ADR-587 Φ6) Stage 1 — tagged grip discriminator SSoT. Additive:
+   * κάθεται ΔΙΠΛΑ στα per-entity `xxxGripKind?` optionals παραπάνω (μηδέν behavior
+   * change· ο bag είναι ο narrowest, 21/31 σήμερα — Stage 5 τα ενοποιεί σε αυτό).
+   * Read μέσω `gripKindOf(transform, '<entity.type>')`.
+   */
+  readonly gripKind?: EntityGripKind;
   readonly anchorPos?: Point2D;
 }
