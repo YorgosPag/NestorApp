@@ -566,6 +566,9 @@
 | **ADR-581** | Καθολικός Μηχανισμός «Αντιγραφή / Μεταφορά Ιδιοτήτων» (Universal Match/Transfer Properties Engine) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-581-universal-match-transfer-properties.md) |
 | **ADR-582** | `createPersistedValue` — localStorage-persistence SSoT | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-582-localstorage-persist-value-ssot.md) |
 | **ADR-585** | Domain Card View-Model Hook SSoT (`useXxxCardModel` + `DomainCard`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-585-domain-card-view-model-hook.md) |
+| **ADR-588** | Space Media Tab Shell SSoT (`EntityMediaFilesTab` + binding + configs) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-588-space-media-tab-shell.md) |
+| **ADR-589** | Edge-triggered Tool Lifecycle SSoT (`useEdgeTriggeredLifecycle`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-589-edge-triggered-tool-lifecycle-ssot.md) |
+| **ADR-590** | Email Template Shared Primitives SSoT (`confirmation-email-shared` + showcase hero/labels) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-590-email-template-shared-primitives.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1112,6 +1115,9 @@
 | **ADR-581** | Καθολικός Μηχανισμός «Αντιγραφή / Μεταφορά Ιδιοτήτων» (Universal Match/Transfer Properties Engine) | ✅ APPROVED | [View](./adrs/ADR-581-universal-match-transfer-properties.md) |
 | **ADR-582** | `createPersistedValue` — localStorage-persistence SSoT | ✅ APPROVED | [View](./adrs/ADR-582-localstorage-persist-value-ssot.md) |
 | **ADR-585** | Domain Card View-Model Hook SSoT (`useXxxCardModel` + `DomainCard`) | ✅ ACTIVE | [View](./adrs/ADR-585-domain-card-view-model-hook.md) |
+| **ADR-588** | Space Media Tab Shell SSoT (`EntityMediaFilesTab` + binding + configs) | ✅ ACTIVE | [View](./adrs/ADR-588-space-media-tab-shell.md) |
+| **ADR-589** | Edge-triggered Tool Lifecycle SSoT (`useEdgeTriggeredLifecycle`) | ✅ ACTIVE | [View](./adrs/ADR-589-edge-triggered-tool-lifecycle-ssot.md) |
+| **ADR-590** | Email Template Shared Primitives SSoT (`confirmation-email-shared` + showcase hero/labels) | ✅ ACTIVE | [View](./adrs/ADR-590-email-template-shared-primitives.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

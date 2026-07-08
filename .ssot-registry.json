@@ -132,6 +132,61 @@
       ],
       "tier": 3
     },
+    "scalar-clamp": {
+      "ssotFile": "src/subapps/dxf-viewer/utils/scalar-math.ts",
+      "description": "TIER A duplicate-audit (2026-07-08) / ADR-071 — the scalar clamp family (clamp/clamp01/clamp255) lives ONCE in the neutral, dependency-free utils/scalar-math.ts; rendering/entities/shared/geometry-utils.ts re-exports it for backward-compat. Before this ~61 sites across config/bim/bim-3d/snapping/systems/rendering hand-rolled inline `Math.max(0, Math.min(1, v))` / `Math.max(0, Math.min(255, v))` clamps and local clamp01/clamp255 re-declarations. Import clamp/clamp01/clamp255 from utils/scalar-math instead of re-declaring. GUARD SCOPE NOTE (mirrors point-translate-helpers): CHECK 3.7 is repo-wide with no path scoping, and scalar-math is a dxf-viewer util that non-dxf code cannot import — so the generic shapes that legitimately occur in other domains are deliberately NOT guarded here: the forward `Math.max(0, Math.min(1,` inline (report-engine/address-editor/floorplan-background), the reverse `Math.min(1, Math.max(0,` inline (procurement/comparison-service), and the generic `function clamp(` / `const clamp = (` (report-engine/address-editor). Those forms stay enforced by the canonical + code review + jscpd (N.18), exactly like ADR-090 inline-literal discipline. The patterns below are the collision-safe subset: the eliminated helper NAMES (clamp01/clamp255 as function- or const-declarations) plus the clamp255 inline shape, which appear only in dxf plus one non-dxf clamp01 (floorplan-background.service.ts, a separate-domain clamp that cannot import the dxf util — allowlisted). Allowlisted dxf survivors: heat-load-color.ts clamp01 (NaN-guard wrapper delegating to clampUnitInterval), studio-background-texture.ts clamp255 (rounds-before-clamp, different behaviour), and geometry-utils.ts (the backward-compat re-export shim). The AxisCutSliderControl.tsx clamp(v, range) (domain-range signature) and RibbonMepCircuitConductorsWidget.tsx clamp(n) (fixed-bounds closure) use the un-guarded generic shapes, so they need no allowlist entry.",
+      "forbiddenPatterns": [
+        "Math\\.max\\(0, ?Math\\.min\\(255,",
+        "function clamp01\\(",
+        "function clamp255\\(",
+        "const clamp01 ?= ?\\(",
+        "const clamp255 ?= ?\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/utils/scalar-math.ts",
+        "src/subapps/dxf-viewer/rendering/entities/shared/geometry-utils.ts",
+        "src/subapps/dxf-viewer/bim/thermal/heat-load/heat-load-color.ts",
+        "src/subapps/dxf-viewer/bim-3d/lighting/studio-background-texture.ts",
+        "src/services/floorplan-background/floorplan-background.service.ts"
+      ],
+      "tier": 3
+    },
+    "normalize-angle-deg": {
+      "ssotFile": "src/subapps/dxf-viewer/rendering/entities/shared/geometry-angle-utils.ts",
+      "description": "TIER A duplicate-audit (2026-07-08) — normalizing a degree value into [0,360) lives ONCE as normalizeAngleDeg() in rendering/entities/shared/geometry-angle-utils.ts (branch form: `let n = deg % 360; if (n < 0) n += 360;`). It had been re-implemented as the double-modulo idiom `((x % 360) + 360) % 360` inline + local re-declarations across ~18 sites (io/tek, formatting, dimensions, array path-sampler, polygon-azimuth-utils, dxf-symbol-detector, thermal, snapping intersection-calculators, clip-geometry, useCalibration, …). Re-introducing either the double-modulo inline or a local `function normalizeAngleDeg` forks the wrap logic — import normalizeAngleDeg instead. Both patterns are zero-collision repo-wide. Allowlist: geometry-angle-utils.ts (the SSoT), and radial-ring-logic.ts for the single legitimate self-use of the double-modulo inside pieSectorPath() (a pure SVG-arc large-arc-flag test, not an entity-angle normalization).",
+      "forbiddenPatterns": [
+        "\\(\\(.*% 360\\) \\+ 360\\) % 360",
+        "function normalizeAngleDeg"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/rendering/entities/shared/geometry-angle-utils.ts",
+        "src/subapps/dxf-viewer/systems/dynamic-input/radial-ring-logic.ts"
+      ],
+      "tier": 3
+    },
+    "safe-storage": {
+      "ssotFile": "src/subapps/dxf-viewer/utils/storage-utils.ts",
+      "description": "TIER A duplicate-audit (2026-07-08) / ADR-092 — SSR-safe localStorage access lives ONCE in utils/storage-utils.ts (storageGet/storageSet/storageRemove/storageHas over the private isStorageAvailable() guard + STORAGE_KEYS registry). Three persistence services (layer-state-persistence, layer-filter-persistence, layer-picker-persistence) had each re-declared a verbatim `function safeStorage(): Storage | null { ... }` plus hand-rolled getItem/setItem try/catch guards that bypassed the centralized SSR + quota handling. Use the storageGet/Set/Remove/Has helpers instead of re-declaring a safeStorage accessor. The `function safeStorage` name is zero-collision repo-wide.",
+      "forbiddenPatterns": [
+        "function safeStorage"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/utils/storage-utils.ts"
+      ],
+      "tier": 3
+    },
+    "edge-triggered-tool-lifecycle": {
+      "ssotFile": "src/subapps/dxf-viewer/hooks/tools/useEdgeTriggeredLifecycle.ts",
+      "description": "TIER A duplicate-audit (2026-07-08) / ADR-589 — the transition-only tool lifecycle idiom (a `wasActiveRef = useRef(false)` cell + a 3-branch effect that fires the on-enter body only on the false->true edge, the on-exit body only on the true->false edge, then tail-assigns `wasActiveRef.current = isActive`, deps `[isActive]`) lives ONCE in useEdgeTriggeredLifecycle(isActive, onActivate, onDeactivate). It had been byte-copied across 13 modify-tool hooks (trim/extend/fillet/chamfer/offset/array/array-path/array-polar/wall-attach/wall-split/schedule-region-pick/stretch/wall-pick-scaffold). Re-declaring an inline `wasActiveRef = useRef` re-implements the edge detector — call useEdgeTriggeredLifecycle instead. It is NOT the same as useToolLifecycle (ADR-363), which is deliberately NOT transition-only (it fires activate()/deactivate() on every deps change + deactivate() on-mount, used by the drawing tools). The `wasActiveRef = useRef` shape is zero-collision repo-wide (grep-verified 2026-07-08). Allowlist: useEdgeTriggeredLifecycle.ts (the SSoT) + systems/tools/useModifyToolActivation.ts (ADR-577 deselect->pick FSM — a DIFFERENT mechanism that legitimately keeps its own internal wasActiveRef edge-latch).",
+      "forbiddenPatterns": [
+        "wasActiveRef ?= ?useRef"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/hooks/tools/useEdgeTriggeredLifecycle.ts",
+        "src/subapps/dxf-viewer/systems/tools/useModifyToolActivation.ts"
+      ],
+      "tier": 3
+    },
     "create-confirm-store": {
       "ssotFile": "src/subapps/dxf-viewer/stores/createConfirmStore.ts",
       "description": "ADR-507 Phi3 — Promise-handshake confirm-dialog stores (open dialog with payload then await the user choice as a Promise) live on the createConfirmStore<TState,TAction>() factory. The _state/_pendingResolve/_subs/_notify boilerplate was hand-copied byte-identical across 7 stores (column-perimeter/column-adopt-size/shear-wall-extent/column-becomes-wall/section-relationship/wall-cascade-delete/bim-family-type-delete). Declaring a new `let _pendingResolve` re-implements the handshake — call createConfirmStore(closedState) plus thin named wrappers instead.",

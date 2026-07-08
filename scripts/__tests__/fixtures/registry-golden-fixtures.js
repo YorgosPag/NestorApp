@@ -278,4 +278,52 @@ function add(a, b) { return translatePoint(a, b); }
 function translate3D(p, delta) { return translatePoint3D(p, delta); }
 const summed = addPoint3D(a, b);`,
   },
+
+  'scalar-clamp': {
+    shouldMatch: `// Scanner must catch re-declared clamp01/clamp255 + the clamp255 inline shape:
+const channel = Math.max(0, Math.min(255, Math.round(v)));
+function clamp01(t) { return t < 0 ? 0 : t > 1 ? 1 : t; }
+function clamp255(v) { return v; }
+const clamp01 = (t) => (t < 0 ? 0 : t);
+const clamp255 = (v) => v;`,
+    shouldSkip: `// Scanner must pass canonical SSoT import + call-site usage (no re-declaration):
+import { clamp, clamp01, clamp255 } from '../../utils/scalar-math';
+const alpha = clamp01(rawAlpha);
+const bounded = clamp(value, lo, hi);
+const rgbChannel = clamp255(rawChannel);`,
+  },
+
+  'normalize-angle-deg': {
+    shouldMatch: `// Scanner must catch the double-modulo inline + a local normalizeAngleDeg re-declaration:
+const wrapped = ((raw % 360) + 360) % 360;
+function normalizeAngleDeg(deg) { return deg; }`,
+    shouldSkip: `// Scanner must pass SSoT import + call-site usage + an unrelated single-modulo test:
+import { normalizeAngleDeg } from '../shared/geometry-angle-utils';
+const heading = normalizeAngleDeg(rawDeg);
+const isReflex = (span % 360) > 180 ? 1 : 0;`,
+  },
+
+  'safe-storage': {
+    shouldMatch: `// Scanner must catch a re-declared safeStorage accessor:
+function safeStorage(): Storage | null {
+  try { return window.localStorage; } catch { return null; }
+}`,
+    shouldSkip: `// Scanner must pass the SSoT storage helpers (no safeStorage re-declaration):
+import { storageGet, storageSet } from '../../utils/storage-utils';
+const stored = storageGet('layers', fallback);
+storageSet('layers', value);`,
+  },
+
+  'edge-triggered-tool-lifecycle': {
+    shouldMatch: `// Scanner must catch an inline wasActiveRef edge-latch re-declaration:
+const wasActiveRef = useRef(false);
+useEffect(() => {
+  if (isActive && !wasActiveRef.current) enterTool();
+  else if (!isActive && wasActiveRef.current) exitTool();
+  wasActiveRef.current = isActive;
+}, [isActive]);`,
+    shouldSkip: `// Scanner must pass canonical SSoT usage (no wasActiveRef re-declaration):
+import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
+useEdgeTriggeredLifecycle(isActive, () => enterTool(), () => exitTool());`,
+  },
 };
