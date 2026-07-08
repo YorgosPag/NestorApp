@@ -38,6 +38,7 @@ import {
 } from '../../systems/group/group-selection-bounds';
 import { getGroupGizmoGrips } from '../../systems/group/group-gizmo-grips';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { UnifiedGripRenderer } from '../../rendering/grips/UnifiedGripRenderer';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { getDevicePixelRatio } from '../../systems/cursor/utils';
@@ -116,7 +117,7 @@ export const GroupGizmoLayer = React.memo(function GroupGizmoLayer({
     const configs: GripRenderConfig[] = grips.map((g) => ({
       position: g.position,
       type: g.type,
-      shape: gripGlyphShape(g.groupGripKind),
+      shape: gripGlyphShape(gripKindOf(g, 'group')),
       temperature: resolveGizmoTemperature(g, gripInteractionState),
       entityId: g.entityId,
       gripIndex: g.gripIndex,

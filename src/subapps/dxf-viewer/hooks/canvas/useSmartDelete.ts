@@ -57,6 +57,7 @@ import type { RoofEntity } from '../../bim/types/roof-types';
 // SSoT builder) + armed/marquee bulk (GripArmedStore → one CompoundCommand, single undo).
 import { GripArmedStore } from '../../systems/grip/GripArmedStore';
 import { buildHatchVertexOpCommand, buildArmedHatchVertexDeleteCommand } from '../../systems/grip/hatch-grip-ops';
+import { gripKindOf } from '../grip-kinds';
 import type { SelectedGrip, UnifiedGripInfo } from '../grips/unified-grip-types';
 import type { useOverlayStore } from '../../overlays/overlay-store';
 import type { UniversalSelectionHook } from '../../systems/selection/SelectionSystem';
@@ -96,6 +97,27 @@ export interface UseSmartDeleteReturn {
   handleSmartDelete: () => Promise<boolean>;
 }
 
+/**
+ * Parses the vertex index out of a hovered grip kind (`{prefix}{index}`) and resolves the
+ * hovered entity via the level-scoped adapter. Returns null when the index isn't numeric.
+ * Shared by the slab-vertex and roof-vertex delete branches below.
+ */
+function resolveHoveredVertexTarget(
+  levelManager: LevelsHookReturn,
+  kind: string,
+  prefix: string,
+  entityId: string,
+): { idx: number; adapter: ReturnType<typeof createLevelSceneManagerAdapter>; raw: unknown } | null {
+  const idx = parseInt(kind.slice(prefix.length), 10);
+  if (!Number.isFinite(idx)) return null;
+  const adapter = createLevelSceneManagerAdapter(
+    levelManager.getLevelScene,
+    levelManager.setLevelScene,
+    levelManager.currentLevelId!,
+  );
+  return { idx, adapter, raw: adapter.getEntity(entityId) };
+}
+
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -117,15 +139,11 @@ export function useSmartDelete({
     const overlayStoreInstance = overlayStoreRef.current;
 
     // PRIORITY 0.5: ADR-363 Phase 3.8 — Delete hovered slab vertex
-    if (hoveredDxfGrip?.slabGripKind?.startsWith('slab-vertex-') && hoveredDxfGrip.entityId && levelManager.currentLevelId) {
-      const idx = parseInt(hoveredDxfGrip.slabGripKind.slice('slab-vertex-'.length), 10);
-      if (Number.isFinite(idx)) {
-        const adapter = createLevelSceneManagerAdapter(
-          levelManager.getLevelScene,
-          levelManager.setLevelScene,
-          levelManager.currentLevelId,
-        );
-        const raw = adapter.getEntity(hoveredDxfGrip.entityId);
+    const hoveredSlabKind = hoveredDxfGrip ? gripKindOf(hoveredDxfGrip, 'slab') : undefined;
+    if (hoveredDxfGrip && hoveredSlabKind?.startsWith('slab-vertex-') && hoveredDxfGrip.entityId && levelManager.currentLevelId) {
+      const target = resolveHoveredVertexTarget(levelManager, hoveredSlabKind, 'slab-vertex-', hoveredDxfGrip.entityId);
+      if (target) {
+        const { idx, adapter, raw } = target;
         const candidate = raw as unknown as Partial<SlabEntity>;
         if (candidate?.type === 'slab' && candidate.params) {
           const slab = candidate as SlabEntity;
@@ -150,15 +168,11 @@ export function useSmartDelete({
     // PRIORITY 0.5b: ADR-417 Φ1-part-2 #2 — Delete hovered roof footprint vertex.
     // Mirror of the slab block above (roof is a DIRECT entity; removeVertexFromRoof
     // filters BOTH outline.vertices AND the parallel edges array in lockstep).
-    if (hoveredDxfGrip?.roofGripKind?.startsWith('roof-vertex-') && hoveredDxfGrip.entityId && levelManager.currentLevelId) {
-      const idx = parseInt(hoveredDxfGrip.roofGripKind.slice('roof-vertex-'.length), 10);
-      if (Number.isFinite(idx)) {
-        const adapter = createLevelSceneManagerAdapter(
-          levelManager.getLevelScene,
-          levelManager.setLevelScene,
-          levelManager.currentLevelId,
-        );
-        const raw = adapter.getEntity(hoveredDxfGrip.entityId);
+    const hoveredRoofKind = hoveredDxfGrip ? gripKindOf(hoveredDxfGrip, 'roof') : undefined;
+    if (hoveredDxfGrip && hoveredRoofKind?.startsWith('roof-vertex-') && hoveredDxfGrip.entityId && levelManager.currentLevelId) {
+      const target = resolveHoveredVertexTarget(levelManager, hoveredRoofKind, 'roof-vertex-', hoveredDxfGrip.entityId);
+      if (target) {
+        const { idx, adapter, raw } = target;
         const candidate = raw as unknown as Partial<RoofEntity>;
         if (candidate?.type === 'roof' && candidate.params) {
           const roof = candidate as RoofEntity;
@@ -183,7 +197,8 @@ export function useSmartDelete({
     // PRIORITY 0.5c: ADR-507 — Delete a hovered hatch boundary vertex (mirror slab/roof).
     // Reuses the SAME context-menu SSoT builder (`buildHatchVertexOpCommand`) → identical
     // remove-vertex semantics (min-triangle guard) whether triggered by menu or Delete key.
-    if (hoveredDxfGrip?.hatchGripKind?.startsWith('hatch-vertex-') && hoveredDxfGrip.entityId && levelManager.currentLevelId) {
+    const hoveredHatchKind = hoveredDxfGrip ? gripKindOf(hoveredDxfGrip, 'hatch') : undefined;
+    if (hoveredDxfGrip && hoveredHatchKind?.startsWith('hatch-vertex-') && hoveredDxfGrip.entityId && levelManager.currentLevelId) {
       const adapter = createLevelSceneManagerAdapter(
         levelManager.getLevelScene, levelManager.setLevelScene, levelManager.currentLevelId,
       );

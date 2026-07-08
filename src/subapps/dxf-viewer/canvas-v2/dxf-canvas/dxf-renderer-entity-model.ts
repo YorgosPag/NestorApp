@@ -125,73 +125,51 @@ export function buildEntityModelFromDxf(
       const o = (entity as DxfOpening).openingEntity;
       return { ...base, type: 'opening', kind: o.kind, params: o.params, geometry: o.geometry, validation: o.validation } as unknown as Entity;
     }
+    // ─── BIM direct-passthrough · quartet {kind, params, geometry, validation} (ADR-587 Φ5 seam · TIER-C dup audit) ───
+    // Table-driven fall-through: every BIM variant carrying the standard flat quartet routes
+    // through ONE return, replacing 17 byte-identical cases (the TIER-C duplicate audit target).
+    // The switch (NOT a Record) is retained on purpose — the `default: never` guard is a strictly
+    // stronger exhaustiveness guarantee than `Object.keys(Record)` (ADR-587 Φ5). A new BIM type
+    // still MUST land a case here or tsc's `never` breaks. Per-renderer geometry contracts are
+    // unchanged: foundation ADR-436 (footprint) · roof ADR-417 (faces+ridges) · mep-water-heater
+    // ADR-408 DHW (footprint) · mep-underfloor ADR-408 Εύρος Β (area loop).
     case 'wall':
-      return { ...base, type: 'wall', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'beam':
-      return { ...base, type: 'beam', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'column':
-      return { ...base, type: 'column', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'foundation':
-      // ADR-436 Slice 1 — direct entity (same pattern as column/beam). FoundationRenderer
-      // reads geometry.footprint + kind + params at top level.
-      return { ...base, type: 'foundation', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'mep-fixture':
-      return { ...base, type: 'mep-fixture', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'electrical-panel':
-      return { ...base, type: 'electrical-panel', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'railing':
-      return { ...base, type: 'railing', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'furniture':
-      return { ...base, type: 'furniture', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'roof':
-      // ADR-417 — direct entity (same pattern as slab/furniture). RoofRenderer
-      // reads geometry.faces + ridges + footprint at top level.
-      return { ...base, type: 'roof', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
-    case 'floor-finish':
-      // ADR-419 — direct entity (same pattern as roof/slab). FloorFinishRenderer
-      // reads geometry.bbox + params.footprint + params.materialId at top level.
-      return { ...base, type: 'floor-finish', kind: entity.kind, params: entity.params, geometry: entity.geometry } as unknown as Entity;
-    case 'thermal-space':
-      // ADR-422 — direct entity (same pattern as floor-finish). ThermalSpaceRenderer
-      // reads geometry.bbox + params.footprint + params.useType at top level.
-      return { ...base, type: 'thermal-space', kind: entity.kind, params: entity.params, geometry: entity.geometry } as unknown as Entity;
-    case 'wall-covering':
-      // ADR-511 — direct entity (same pattern as floor-finish). WallCoveringRenderer
-      // computes the live face strip from the host wall (per-frame setWallsById).
-      return { ...base, type: 'wall-covering', kind: entity.kind, params: entity.params, geometry: entity.geometry } as unknown as Entity;
-    case 'space-separator':
-      // ADR-437 — direct entity (same pattern as thermal-space). SpaceSeparatorRenderer
-      // reads geometry.bbox + params.start/end at top level.
-      return { ...base, type: 'space-separator', kind: entity.kind, params: entity.params, geometry: entity.geometry } as unknown as Entity;
     case 'mep-segment':
-      return { ...base, type: 'mep-segment', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'mep-fitting':
-      return { ...base, type: 'mep-fitting', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'floorplan-symbol':
-      return { ...base, type: 'floorplan-symbol', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
+    case 'mep-manifold':
+    case 'mep-radiator':
+    case 'mep-boiler':
+    case 'mep-water-heater':
+    case 'mep-underfloor':
+      return { ...base, type: entity.type, kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
+    // ─── BIM direct-passthrough WITHOUT validation · finishes & spaces ───────────────────────
+    // Genuinely divergent from the quartet above: these carry NO `validation` field. No-God-shell —
+    // kept a separate fall-through branch, NOT force-merged (adding `validation: undefined` would be
+    // a behavioral change). floor-finish ADR-419 · thermal-space ADR-422 · wall-covering ADR-511
+    // (live face strip per-frame) · space-separator ADR-437.
+    case 'floor-finish':
+    case 'thermal-space':
+    case 'wall-covering':
+    case 'space-separator':
+      return { ...base, type: entity.type, kind: entity.kind, params: entity.params, geometry: entity.geometry } as unknown as Entity;
     case 'annotation-symbol':
-      // ADR-583 — lightweight non-BIM annotation (North arrow). Flat fields carried
-      // to the EntityModel; AnnotationSymbolRenderer reads position/symbolId/sizeMm/
-      // rotation + the catalog glyph. The exhaustive `never` guard below forces this
-      // case whenever the DxfEntityUnion gains the variant.
+      // ADR-583 — lightweight non-BIM annotation (North arrow). Divergent flat-field shape (position/
+      // symbolId/sizeMm/rotation — NOT the BIM quartet); AnnotationSymbolRenderer reads them + the
+      // catalog glyph. The exhaustive `never` guard below forces this case whenever the union grows.
       return {
         ...base, type: 'annotation-symbol',
         position: entity.position, kind: entity.kind, symbolId: entity.symbolId,
         sizeMm: entity.sizeMm, rotation: entity.rotation,
       } as unknown as Entity;
-    case 'mep-manifold':
-      return { ...base, type: 'mep-manifold', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
-    case 'mep-radiator':
-      return { ...base, type: 'mep-radiator', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
-    case 'mep-boiler':
-      return { ...base, type: 'mep-boiler', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
-    case 'mep-water-heater':
-      // ADR-408 DHW — direct entity (same pattern as mep-boiler). MepWaterHeaterRenderer
-      // reads geometry.footprint + kind + params at top level.
-      return { ...base, type: 'mep-water-heater', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
-    case 'mep-underfloor':
-      // ADR-408 Εύρος Β #3 — area-based underfloor loop (mirror mep-boiler passthrough).
-      return { ...base, type: 'mep-underfloor', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'xline':
       return { ...base, type: 'xline', basePoint: entity.xlineEntity.basePoint, direction: entity.xlineEntity.direction } as unknown as Entity;
     case 'ray':

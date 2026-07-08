@@ -26,6 +26,7 @@ import { pointInPolygon } from '../geometry/shared/polygon-utils';
 import { buildPanelSymbol } from '../electrical-panels/electrical-panel-symbol';
 import { getElectricalPanelGrips } from '../electrical-panels/electrical-panel-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -124,7 +125,7 @@ export class ElectricalPanelRenderer extends BaseEntityRenderer {
       entityId: g.entityId,
       isVisible: true,
       gripIndex: g.gripIndex,
-      shape: gripGlyphShape(g.electricalPanelGripKind),
+      shape: gripGlyphShape(gripKindOf(g, 'electrical-panel')),
     }));
   }
 
