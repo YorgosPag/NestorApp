@@ -102,6 +102,7 @@ export function getStairGrips(entity: Readonly<StairEntity>): GripInfo[] {
     position: moveAnchor,
     movesEntity: true,
     stairGripKind: 'stair-base',
+    gripKind: { on: 'stair', kind: 'stair-base' },
   });
 
   // 1 — direction handle (ROTATION). ADR-393 v2: displayed at the front-centre
@@ -116,6 +117,7 @@ export function getStairGrips(entity: Readonly<StairEntity>): GripInfo[] {
     position: { x: base.x - handleOffset * u.x, y: base.y - handleOffset * u.y },
     movesEntity: false,
     stairGripKind: 'stair-direction',
+    gripKind: { on: 'stair', kind: 'stair-direction' },
   });
 
   if (params.variant.kind === 'straight') {
@@ -123,20 +125,20 @@ export function getStairGrips(entity: Readonly<StairEntity>): GripInfo[] {
     // stairs — the 4 corner grips own both resize axes (perp→width,
     // axial→length, opposite face anchored). The transforms + union members are
     // kept (the corners reuse them); they are simply not emitted here.
-    pushStraightGrips(grips, entity, base, u, p);
+    pushStraightGrips(grips, entity, { base, u, p });
   } else if (hasSplitGrip(params.variant)) {
     // ADR-393 v2 Phase 2 — L/U/Γ: the on-axis width + length handles are
     // SUPPRESSED here too; 4 corner grips (positions READ from the computed
     // stringer endpoints, SSoT) own width + per-flight length. Landing grips
     // stay. The end corner sits on the LAST flight (a different direction than
     // the start corner — the stair bends at the landing).
-    pushFlightBasedCorners(grips, entity, u, p);
-    pushLandingGrips(grips, entity, base, u, p);
+    pushFlightBasedCorners(grips, entity, { base, u, p });
+    pushLandingGrips(grips, entity, { base, u, p });
   } else {
     // Curved (spiral/helical/elliptical/winder/triangular×2/sketch/v-shape):
     // no rectangular footprint → keep the on-axis width + length handles
     // permanently (no corners make sense on an arc).
-    pushAxisWidthLength(grips, entity, base, u, p);
+    pushAxisWidthLength(grips, entity, { base, u, p });
   }
 
   // ADR-363 Φ1G.5 Slice 2 — drop the central MOVE marker (`stair-base`, 4-way
@@ -149,6 +151,32 @@ export function getStairGrips(entity: Readonly<StairEntity>): GripInfo[] {
 
 // ─── ADR-358 Phase 5b — axis width + length handles (non-straight variants) ──
 
+/** Shared (base, u, p) axis-frame accepted by the stair grip-emitting helpers. */
+interface StairAxisFrame {
+  readonly base: Point2D;
+  readonly u: { x: number; y: number };
+  readonly p: { x: number; y: number };
+}
+
+/** Pushes one `type: 'vertex'` grip per `corners` entry (shared push boilerplate). */
+function pushCornerGrips(
+  grips: GripInfo[],
+  entity: Readonly<StairEntity>,
+  corners: ReadonlyArray<{ pos: Point2D; kind: GripInfo['stairGripKind'] }>,
+): void {
+  for (const c of corners) {
+    grips.push({
+      entityId: entity.id,
+      gripIndex: grips.length,
+      type: 'vertex',
+      position: c.pos,
+      movesEntity: false,
+      stairGripKind: c.kind,
+      gripKind: { on: 'stair', kind: c.kind },
+    });
+  }
+}
+
 /**
  * The two on-axis resize handles (`stair-width` at the outer-stringer midpoint,
  * `stair-length` at the walkline end). Emitted for every non-straight variant.
@@ -157,10 +185,9 @@ export function getStairGrips(entity: Readonly<StairEntity>): GripInfo[] {
 function pushAxisWidthLength(
   grips: GripInfo[],
   entity: Readonly<StairEntity>,
-  base: Point2D,
-  u: { x: number; y: number },
-  p: { x: number; y: number },
+  frame: StairAxisFrame,
 ): void {
+  const { base, u, p } = frame;
   const { params, geometry } = entity;
 
   // width handle (outer stringer midpoint; fallback to params.width/2)
@@ -175,6 +202,7 @@ function pushAxisWidthLength(
     position: widthPos,
     movesEntity: false,
     stairGripKind: 'stair-width',
+    gripKind: { on: 'stair', kind: 'stair-width' },
   });
 
   // length handle (walkline end; fallback to base + totalRun·u)
@@ -189,6 +217,7 @@ function pushAxisWidthLength(
     position: lengthPos,
     movesEntity: false,
     stairGripKind: 'stair-length',
+    gripKind: { on: 'stair', kind: 'stair-length' },
   });
 }
 
@@ -197,10 +226,9 @@ function pushAxisWidthLength(
 function pushStraightGrips(
   grips: GripInfo[],
   entity: Readonly<StairEntity>,
-  base: Point2D,
-  u: { x: number; y: number },
-  p: { x: number; y: number },
+  frame: StairAxisFrame,
 ): void {
+  const { base, u, p } = frame;
   const { params } = entity;
   const half = params.width / 2;
   const backX = base.x + params.totalRun * u.x;
@@ -212,16 +240,7 @@ function pushStraightGrips(
     { pos: { x: backX + half * p.x, y: backY + half * p.y }, kind: 'stair-corner-end-left' },
     { pos: { x: backX - half * p.x, y: backY - half * p.y }, kind: 'stair-corner-end-right' },
   ];
-  for (const c of corners) {
-    grips.push({
-      entityId: entity.id,
-      gripIndex: grips.length,
-      type: 'vertex',
-      position: c.pos,
-      movesEntity: false,
-      stairGripKind: c.kind,
-    });
-  }
+  pushCornerGrips(grips, entity, corners);
   // ADR-393 v2: the legacy `stair-start-side` mid-front grip is no longer
   // emitted — the rotation handle now occupies the front-centre slot, and the
   // start corners cover the front-edge resize. The transform + union member are
@@ -250,9 +269,9 @@ function sidePerp(pt: Point2D, ref: Point2D, perpDir: { x: number; y: number }):
 function pushFlightBasedCorners(
   grips: GripInfo[],
   entity: Readonly<StairEntity>,
-  u: { x: number; y: number },
-  p: { x: number; y: number },
+  frame: StairAxisFrame,
 ): void {
+  const { u, p } = frame;
   const { geometry, params } = entity;
   const walk = geometry.walkline;
   const outer = geometry.stringers.outer;
@@ -260,7 +279,7 @@ function pushFlightBasedCorners(
 
   // Defensive: geometry not computed yet → fall back to flight-1 footprint.
   if (walk.length < 2 || outer.length < 1 || inner.length < 1) {
-    pushStraightGrips(grips, entity, project2D(params.basePoint), u, p);
+    pushStraightGrips(grips, entity, { base: project2D(params.basePoint), u, p });
     return;
   }
 
@@ -282,16 +301,7 @@ function pushFlightBasedCorners(
     { pos: endLeftIsA ? endA : endB, kind: 'stair-corner-end-left' },
     { pos: endLeftIsA ? endB : endA, kind: 'stair-corner-end-right' },
   ];
-  for (const c of corners) {
-    grips.push({
-      entityId: entity.id,
-      gripIndex: grips.length,
-      type: 'vertex',
-      position: c.pos,
-      movesEntity: false,
-      stairGripKind: c.kind,
-    });
-  }
+  pushCornerGrips(grips, entity, corners);
 }
 
 // ─── ADR-393 Phase B1 + B2 — landing edge + depth + corner-radius grips ──────
@@ -323,10 +333,9 @@ function landingFrameBox(
 function pushLandingGrips(
   grips: GripInfo[],
   entity: Readonly<StairEntity>,
-  base: Point2D,
-  u: { x: number; y: number },
-  p: { x: number; y: number },
+  frame: StairAxisFrame,
 ): void {
+  const { base, u, p } = frame;
   const { params, geometry } = entity;
   const variant = params.variant;
   const landing = geometry.landings.length > 0 ? geometry.landings[0] : undefined;
@@ -355,6 +364,7 @@ function pushLandingGrips(
     position: { x: box.centroid.x - box.halfU * u.x, y: box.centroid.y - box.halfU * u.y },
     movesEntity: false,
     stairGripKind: 'stair-flight1-end',
+    gripKind: { on: 'stair', kind: 'stair-flight1-end' },
   });
 
   // G13 — flight-2 start (landing exit edge midpoint).
@@ -365,6 +375,7 @@ function pushLandingGrips(
     position: { x: box.centroid.x + box.halfU * u.x, y: box.centroid.y + box.halfU * u.y },
     movesEntity: false,
     stairGripKind: 'stair-flight2-start',
+    gripKind: { on: 'stair', kind: 'stair-flight2-start' },
   });
 
   if (!variantHasLandingDepthEmit(variant)) return;
@@ -377,6 +388,7 @@ function pushLandingGrips(
     position: { x: box.centroid.x + box.halfP * p.x, y: box.centroid.y + box.halfP * p.y },
     movesEntity: false,
     stairGripKind: 'stair-landing-depth',
+    gripKind: { on: 'stair', kind: 'stair-landing-depth' },
   });
 
   // G17 — landing corner radius (far +u,+p corner) — only for chamfer/fillet.
@@ -391,6 +403,7 @@ function pushLandingGrips(
       },
       movesEntity: false,
       stairGripKind: 'stair-landing-corner-radius',
+      gripKind: { on: 'stair', kind: 'stair-landing-corner-radius' },
     });
   }
 }

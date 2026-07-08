@@ -117,6 +117,7 @@ export function getOpeningGrips(entity: Readonly<OpeningEntity>): GripInfo[] {
       position: center,
       movesEntity: true,
       openingGripKind: 'opening-move',
+      gripKind: { on: 'opening', kind: 'opening-move' },
     },
     {
       entityId: entity.id,
@@ -125,6 +126,7 @@ export function getOpeningGrips(entity: Readonly<OpeningEntity>): GripInfo[] {
       position: { x: center.x + perp.x * standoff, y: center.y + perp.y * standoff },
       movesEntity: false,
       openingGripKind: 'opening-rotation',
+      gripKind: { on: 'opening', kind: 'opening-rotation' },
     },
   ];
   CORNER_SIGNS.forEach(([role, sx, sy], i) => {
@@ -138,6 +140,7 @@ export function getOpeningGrips(entity: Readonly<OpeningEntity>): GripInfo[] {
       },
       movesEntity: false,
       openingGripKind: ROLE_TO_KIND[role],
+      gripKind: { on: 'opening', kind: ROLE_TO_KIND[role] },
     });
   });
   // Revit-style «Flip Facing» grip — opposite side of wall from the hand-flip grip.
@@ -151,6 +154,7 @@ export function getOpeningGrips(entity: Readonly<OpeningEntity>): GripInfo[] {
       position: { x: center.x - perp.x * standoff, y: center.y - perp.y * standoff },
       movesEntity: false,
       openingGripKind: 'opening-facing',
+      gripKind: { on: 'opening', kind: 'opening-facing' },
     });
   }
   // ADR-363 Φ1G.5 Slice 2 — drop the central MOVE marker (`opening-move`, 4-way

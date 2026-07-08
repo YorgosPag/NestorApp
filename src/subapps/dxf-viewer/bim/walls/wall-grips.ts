@@ -132,6 +132,7 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
       position: g.position,
       movesEntity: false,
       wallGripKind: WALL_ROLE_TO_KIND[g.role],
+      gripKind: { on: 'wall', kind: WALL_ROLE_TO_KIND[g.role] },
     }));
 
     // Centre 4-arrow MOVE glyph (`wall-midpoint`) — appended last. The shared move-glyph
@@ -141,6 +142,7 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
       entityId: entity.id, gripIndex: grips.length, type: 'center',
       position: axisMidpoint(axisParams),
       movesEntity: true, wallGripKind: 'wall-midpoint',
+      gripKind: { on: 'wall', kind: 'wall-midpoint' },
     });
     return grips;
   }
@@ -155,8 +157,8 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
   const end = project2D(params.end);
   const mid: Point2D = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
 
-  grips.push({ entityId: entity.id, gripIndex: 0, type: 'vertex', position: start, movesEntity: false, wallGripKind: 'wall-start' });
-  grips.push({ entityId: entity.id, gripIndex: 1, type: 'vertex', position: end, movesEntity: false, wallGripKind: 'wall-end' });
+  grips.push({ entityId: entity.id, gripIndex: 0, type: 'vertex', position: start, movesEntity: false, wallGripKind: 'wall-start', gripKind: { on: 'wall', kind: 'wall-start' } });
+  grips.push({ entityId: entity.id, gripIndex: 1, type: 'vertex', position: end, movesEntity: false, wallGripKind: 'wall-end', gripKind: { on: 'wall', kind: 'wall-end' } });
 
   // Single symmetric thickness handle at the axis midpoint (scene-scaled perp).
   const u = unitAxis(params);
@@ -171,6 +173,7 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
       position: { x: mid.x + sign * halfT * p.x, y: mid.y + sign * halfT * p.y },
       movesEntity: false,
       wallGripKind: 'wall-thickness',
+      gripKind: { on: 'wall', kind: 'wall-thickness' },
     });
   }
 
@@ -185,6 +188,7 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
       position: bulgeApexPoint(start, end, params.arc),
       movesEntity: false,
       wallGripKind: 'wall-arc-apex',
+      gripKind: { on: 'wall', kind: 'wall-arc-apex' },
     });
   } else if (kind === 'curved' && params.curveControl) {
     // Curve control (legacy Bézier curved kind only).
@@ -195,6 +199,7 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
       position: project2D(params.curveControl),
       movesEntity: false,
       wallGripKind: 'wall-curve',
+      gripKind: { on: 'wall', kind: 'wall-curve' },
     });
   }
 
@@ -209,6 +214,7 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
         position: project2D(verts[i]),
         movesEntity: false,
         wallGripKind: `wall-vertex-${i}`,
+        gripKind: { on: 'wall', kind: `wall-vertex-${i}` },
       });
     }
   }
@@ -222,6 +228,7 @@ export function getWallGrips(entity: Readonly<WallEntity>): GripInfo[] {
     position: mid,
     movesEntity: true,
     wallGripKind: 'wall-midpoint',
+    gripKind: { on: 'wall', kind: 'wall-midpoint' },
   });
 
   return grips;
