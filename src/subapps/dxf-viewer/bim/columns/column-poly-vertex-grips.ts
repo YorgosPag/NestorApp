@@ -219,6 +219,7 @@ export function freeCornerReshapeGrips(entity: Readonly<ColumnEntity>): GripInfo
     position: n >= 3 ? freeReshapeRotationWorld(entity.params) : rotationHandleWorld(entity.params),
     movesEntity: false,
     columnGripKind: 'column-rotation',
+    gripKind: { on: 'column', kind: 'column-rotation' },
   });
   grips.push(...perVertexAndEdgeGrips(entity, verts));
   return grips;
@@ -245,6 +246,7 @@ function perVertexAndEdgeGrips(
       position: { x: v.x, y: v.y },
       movesEntity: false,
       columnGripKind: `column-poly-vertex-${i}`,
+      gripKind: { on: 'column', kind: `column-poly-vertex-${i}` },
     });
   });
   // ADR-363/449 — μέσο κάθε πλευράς: σύρσιμο μετακινεί ΟΛΗ την πλευρά (edge i = κορυφές i, i+1).
@@ -257,6 +259,7 @@ function perVertexAndEdgeGrips(
       position: { x: (v.x + w.x) / 2, y: (v.y + w.y) / 2 },
       movesEntity: false,
       columnGripKind: `column-poly-edge-${i}`,
+      gripKind: { on: 'column', kind: `column-poly-edge-${i}` },
     });
   });
   return grips;
@@ -286,6 +289,7 @@ export function polygonReshapeGrips(entity: Readonly<ColumnEntity>): GripInfo[] 
       position: rotationHandleWorld(entity.params),
       movesEntity: false,
       columnGripKind: 'column-rotation',
+      gripKind: { on: 'column', kind: 'column-rotation' },
     },
     ...perVertexAndEdgeGrips(entity, verts),
   ];

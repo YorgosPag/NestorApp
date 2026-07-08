@@ -196,6 +196,7 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
       position: g.position,
       movesEntity: false,
       beamGripKind: BEAM_ROLE_TO_KIND[g.role],
+      gripKind: { on: 'beam', kind: BEAM_ROLE_TO_KIND[g.role] },
     }));
 
     // Centre 4-arrow MOVE glyph (`beam-midpoint`) — appended last (gripIndex 9). Moves
@@ -213,6 +214,7 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
       entityId: entity.id, gripIndex: grips.length, type: 'center',
       position: bodyCenter,
       movesEntity: true, beamGripKind: 'beam-midpoint',
+      gripKind: { on: 'beam', kind: 'beam-midpoint' },
     });
     return grips;
   }
@@ -224,21 +226,21 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
   const end = project2D(params.endPoint);
   const mid = axisMidpoint2D(params);
 
-  grips.push({ entityId: entity.id, gripIndex: 0, type: 'vertex', position: start, movesEntity: false, beamGripKind: 'beam-start' });
-  grips.push({ entityId: entity.id, gripIndex: 1, type: 'vertex', position: end, movesEntity: false, beamGripKind: 'beam-end' });
+  grips.push({ entityId: entity.id, gripIndex: 0, type: 'vertex', position: start, movesEntity: false, beamGripKind: 'beam-start', gripKind: { on: 'beam', kind: 'beam-start' } });
+  grips.push({ entityId: entity.id, gripIndex: 1, type: 'vertex', position: end, movesEntity: false, beamGripKind: 'beam-end', gripKind: { on: 'beam', kind: 'beam-end' } });
 
   // 2 — centre 4-arrow MOVE glyph (column parity, Giorgio 2026-06-20). Moves
   // start + end + curveControl together (see `moveMidpoint`).
-  grips.push({ entityId: entity.id, gripIndex: 2, type: 'center', position: mid, movesEntity: true, beamGripKind: 'beam-midpoint' });
+  grips.push({ entityId: entity.id, gripIndex: 2, type: 'center', position: mid, movesEntity: true, beamGripKind: 'beam-midpoint', gripKind: { on: 'beam', kind: 'beam-midpoint' } });
 
   // 3 — curve control. Seed στο midpoint όταν undefined.
   const curvePos = params.curveControl ? project2D(params.curveControl) : mid;
-  grips.push({ entityId: entity.id, gripIndex: 3, type: 'vertex', position: curvePos, movesEntity: false, beamGripKind: 'beam-curve' });
+  grips.push({ entityId: entity.id, gripIndex: 3, type: 'vertex', position: curvePos, movesEntity: false, beamGripKind: 'beam-curve', gripKind: { on: 'beam', kind: 'beam-curve' } });
 
   // 4 — width dimension handle (mid-axis offset κατά width/2). Skip σε degenerate axis.
   const widthPos = beamWidthHandlePosition(params);
   if (widthPos) {
-    grips.push({ entityId: entity.id, gripIndex: 4, type: 'edge', position: widthPos, movesEntity: false, beamGripKind: 'beam-width' });
+    grips.push({ entityId: entity.id, gripIndex: 4, type: 'edge', position: widthPos, movesEntity: false, beamGripKind: 'beam-width', gripKind: { on: 'beam', kind: 'beam-width' } });
   }
 
   // 5 — rotation handle (axis fraction 0.75, scale-free). Spins start/end/curveControl.
@@ -250,6 +252,7 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
       position: { x: start.x + 0.75 * (end.x - start.x), y: start.y + 0.75 * (end.y - start.y) },
       movesEntity: false,
       beamGripKind: 'beam-rotation',
+      gripKind: { on: 'beam', kind: 'beam-rotation' },
     });
   }
 
@@ -433,6 +436,18 @@ function moveCurveControl(input: Readonly<BeamGripDragInput>): BeamParams {
 }
 
 /**
+ * Perpendicular-to-axis projection of `delta` (CCW perpendicular unit vector).
+ * Shared by width/depth resize — both project drag delta onto the same axis
+ * normal before applying their own sign/field. Returns null on degenerate axis.
+ */
+function axisPerpDelta(originalParams: BeamParams, delta: Point2D): number | null {
+  const u = unitAxis(originalParams);
+  if (!u) return null;
+  const p = perpUnit(u);
+  return delta.x * p.x + delta.y * p.y;
+}
+
+/**
  * Phase 5.5b — symmetric width resize perpendicular to axis. Handle stands στη
  * μία πλευρά (offset `width/2`), οπότε ένα perpendicular delta `d` αντιστοιχεί
  * σε `2d` συνολικό πλάτος (mirror του wall-thickness `* 2` factor).
@@ -442,10 +457,8 @@ function moveCurveControl(input: Readonly<BeamGripDragInput>): BeamParams {
  */
 function resizeWidth(input: Readonly<BeamGripDragInput>): BeamParams {
   const { originalParams, delta } = input;
-  const u = unitAxis(originalParams);
-  if (!u) return originalParams;
-  const p = perpUnit(u);
-  const deltaPerp = delta.x * p.x + delta.y * p.y;
+  const deltaPerp = axisPerpDelta(originalParams, delta);
+  if (deltaPerp === null) return originalParams;
   const rawWidth = originalParams.width + 2 * deltaPerp;
   const clamped = Math.max(MIN_BEAM_WIDTH_MM, rawWidth);
   return { ...originalParams, width: clamped };
@@ -467,10 +480,8 @@ function resizeWidth(input: Readonly<BeamGripDragInput>): BeamParams {
  */
 function resizeDepth(input: Readonly<BeamGripDragInput>): BeamParams {
   const { originalParams, delta } = input;
-  const u = unitAxis(originalParams);
-  if (!u) return originalParams;
-  const p = perpUnit(u);
-  const deltaPerp = delta.x * p.x + delta.y * p.y;
+  const deltaPerp = axisPerpDelta(originalParams, delta);
+  if (deltaPerp === null) return originalParams;
   const rawDepth = originalParams.depth - 2 * deltaPerp;
   const clamped = Math.max(MIN_BEAM_DEPTH_MM, rawDepth);
   return { ...originalParams, depth: clamped };

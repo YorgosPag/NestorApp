@@ -39,7 +39,7 @@ const adapter = createCentredBoxGripAdapter<
   minDimensionMm: MIN_PANEL_DIMENSION_MM,
   toBoxParams: (params) => params,
   fromBoxPatch: (original, patch) => ({ ...original, ...patch }),
-  toGripInfo: (base, kind) => ({ ...base, electricalPanelGripKind: kind }),
+  toGripInfo: (base, kind) => ({ ...base, electricalPanelGripKind: kind, gripKind: { on: 'electrical-panel', kind } }),
 });
 
 /** Drag input for an electrical panel grip (the shared centred-box 5-field shape). */

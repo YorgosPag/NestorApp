@@ -66,11 +66,13 @@ export function getAnnotationSymbolGrips(
     {
       entityId, gripIndex: 0, type: 'center',
       position, movesEntity: true, annotationSymbolGripKind: ANNOTATION_SYMBOL_MOVE_KIND,
+      gripKind: { on: 'annotation-symbol', kind: ANNOTATION_SYMBOL_MOVE_KIND },
     },
     {
       entityId, gripIndex: 1, type: 'vertex',
       position: annotationSymbolRotationHandlePos(position, modelSize, rot),
       movesEntity: false, annotationSymbolGripKind: ANNOTATION_SYMBOL_ROTATION_KIND,
+      gripKind: { on: 'annotation-symbol', kind: ANNOTATION_SYMBOL_ROTATION_KIND },
     },
   ];
 }

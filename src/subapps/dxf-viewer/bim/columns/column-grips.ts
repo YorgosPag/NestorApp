@@ -208,6 +208,7 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
     position: rotationHandleWorld(params),
     movesEntity: false,
     columnGripKind: 'column-rotation',
+    gripKind: { on: 'column', kind: 'column-rotation' },
   });
   grips.push({
     entityId: entity.id,
@@ -216,6 +217,7 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
     position: widthHandleWorld(params),
     movesEntity: false,
     columnGripKind: 'column-width',
+    gripKind: { on: 'column', kind: 'column-width' },
   });
   grips.push({
     entityId: entity.id,
@@ -224,6 +226,7 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
     position: depthHandleWorld(params),
     movesEntity: false,
     columnGripKind: 'column-depth',
+    gripKind: { on: 'column', kind: 'column-depth' },
   });
 
   if (params.kind === 'L-shape') {
@@ -234,6 +237,7 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
       position: armLengthHandlePosition(params),
       movesEntity: false,
       columnGripKind: 'column-arm-length',
+      gripKind: { on: 'column', kind: 'column-arm-length' },
     });
     grips.push({
       entityId: entity.id,
@@ -242,6 +246,7 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
       position: armWidthHandlePosition(params),
       movesEntity: false,
       columnGripKind: 'column-arm-width',
+      gripKind: { on: 'column', kind: 'column-arm-width' },
     });
   } else if (params.kind === 'T-shape') {
     grips.push({
@@ -251,6 +256,7 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
       position: flangeLengthHandlePosition(params),
       movesEntity: false,
       columnGripKind: 'column-flange-length',
+      gripKind: { on: 'column', kind: 'column-flange-length' },
     });
     grips.push({
       entityId: entity.id,
@@ -259,6 +265,7 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
       position: webThicknessHandlePosition(params),
       movesEntity: false,
       columnGripKind: 'column-web-thickness',
+      gripKind: { on: 'column', kind: 'column-web-thickness' },
     });
   } else if (params.kind === 'I-shape') {
     grips.push({
@@ -268,6 +275,7 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
       position: iFlangeThicknessHandlePosition(params),
       movesEntity: false,
       columnGripKind: 'column-i-flange-thickness',
+      gripKind: { on: 'column', kind: 'column-i-flange-thickness' },
     });
     grips.push({
       entityId: entity.id,
@@ -276,6 +284,7 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
       position: iWebThicknessHandlePosition(params),
       movesEntity: false,
       columnGripKind: 'column-i-web-thickness',
+      gripKind: { on: 'column', kind: 'column-i-web-thickness' },
     });
   } else if (params.kind === 'U-shape') {
     // ADR-363 Phase 2b — manual παραμετρικό Π (χωρίς polygon): base 4 grips +
@@ -287,6 +296,7 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
       position: legThicknessHandlePosition(params),
       movesEntity: false,
       columnGripKind: 'column-leg-thickness',
+      gripKind: { on: 'column', kind: 'column-leg-thickness' },
     });
     grips.push({
       entityId: entity.id,
@@ -295,6 +305,7 @@ export function getColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
       position: baseThicknessHandlePosition(params),
       movesEntity: false,
       columnGripKind: 'column-base-thickness',
+      gripKind: { on: 'column', kind: 'column-base-thickness' },
     });
   }
   // (rectangular / shear-wall return early via `rectColumnGrips` above — they no
