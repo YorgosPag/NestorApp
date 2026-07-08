@@ -3,53 +3,24 @@
 /**
  * ADR-412 Φ4 — controller for the contextual Wall «Family Type» ribbon widgets.
  *
- * Single owner of the type-assignment / override / duplicate / rename logic so
- * the two presentational widgets (`RibbonWallFamilyTypeWidget` selector +
- * `RibbonWallTypePropertiesWidget` override editor) stay thin (N.7.1) and share
- * one SSoT for every mutation.
+ * Thin binding of the generic `useFamilyTypeController` core (ADR-603 Φ3) to the
+ * wall bindings, re-mapped to the wall-named public API the widgets, dialog and
+ * draw-tool draft panel consume. The wall-only `saveNewType` (draw-tool «save as
+ * new type») stays here — it is not part of the shared surface.
  *
- * Mutations:
- *   - assign / clear type    → `AssignWallTypeCommand` (undoable, optimistic),
- *   - set / clear override   → same command (re-resolves effective params),
- *   - duplicate (clone-to-edit, Q3) / rename → `BimFamilyTypeService` + optimistic
- *     store update (mirror the MEP «optimistic upsertSystem» idiom).
- *
- * Reads the live catalog from `bim-family-type-store` (the host's
- * `useBimFamilyTypes` is the sole loader). Writes create a private service
- * instance — multiple instances are fine (stateless except a 5-min cache), the
- * optimistic store update keeps the UI in sync without a host re-fetch.
- *
+ * @see ./create-family-type-controller.ts — shared core (ADR-603)
  * @see ../components/RibbonWallFamilyTypeWidget.tsx
- * @see ../components/RibbonWallTypePropertiesWidget.tsx
  * @see docs/centralized-systems/reference/adrs/ADR-412-bim-family-types.md §3.7
  */
 
-import { useCallback, useMemo } from 'react';
-import { useAuth } from '@/auth/hooks/useAuth';
-import { useLevels } from '../../../systems/levels';
-import { useUniversalSelection } from '../../../systems/selection';
-import { useCommandHistory } from '../../../core/commands';
+import { useCallback } from 'react';
 import { AssignWallTypeCommand } from '../../../core/commands/entity-commands/AssignWallTypeCommand';
-import {
-  UpdateWallFamilyTypeCommand,
-  type FamilyTypeMutationDeps,
-} from '../../../core/commands/entity-commands/UpdateWallFamilyTypeCommand';
-import {
-  createDeleteWallFamilyTypeCommand,
-  type FamilyTypeDeleteDeps,
-} from '../../../core/commands/entity-commands/DeleteWallFamilyTypeCommand';
-import { EventBus } from '../../../systems/events/EventBus';
+import { UpdateWallFamilyTypeCommand } from '../../../core/commands/entity-commands/UpdateWallFamilyTypeCommand';
+import { createDeleteWallFamilyTypeCommand } from '../../../core/commands/entity-commands/DeleteWallFamilyTypeCommand';
 import { recordFamilyTypeChange } from '../../../bim/family-types/bim-family-type-audit-client';
 import { findWallsByTypeId } from '../../../bim/family-types/family-type-side-effects';
-import { requestFamilyTypeDelete } from '../../../bim/family-types/bim-family-type-delete-store';
-import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { isWallEntity } from '../../../types/entities';
 import { useBimFamilyTypeStore } from '../../../bim/family-types/bim-family-type-store';
-import {
-  createBimFamilyTypeService,
-  type BimFamilyTypeService,
-} from '../../../bim/family-types/bim-family-type-service';
-import { cloneTypeToInput } from '../../../bim/family-types/built-in-types';
 import {
   asWallFamilyType,
   getOverriddenParamKeys,
@@ -59,6 +30,10 @@ import {
 } from '../../../bim/family-types/family-type-ui-helpers';
 import type { WallEntity } from '../../../bim/types/wall-types';
 import type { BimFamilyType, WallTypeParams } from '../../../bim/types/bim-family-type';
+import {
+  useFamilyTypeController,
+  type FamilyTypeControllerConfig,
+} from './create-family-type-controller';
 
 export interface WallFamilyTypeController {
   readonly wall: WallEntity | null;
@@ -80,136 +55,49 @@ export interface WallFamilyTypeController {
   readonly resetOverrides: () => void;
   /**
    * Clone the current type to a new editable user type and assign it (Q3).
-   * Returns the new type's id (or `null` when unavailable) so callers can chain
-   * a «Duplicate & edit» flow (ADR-412 Φ5).
+   * Returns the new type's id (or `null` when unavailable).
    */
   readonly duplicateCurrent: (displayName: string) => Promise<string | null>;
   /**
    * ADR-363/412 — save a BRAND-NEW user wall type from explicit `typeParams`
-   * (not a clone of an existing type). Used by the draw-tool draft panel
-   * «Αποθήκευση ως νέος τύπος»: the composition set before drawing becomes a
-   * reusable, persistent type. Returns the new id (or `null` when auth not ready).
+   * (not a clone). Used by the draw-tool draft panel «Αποθήκευση ως νέος τύπος».
+   * Returns the new id (or `null` when auth not ready).
    */
-  readonly saveNewType: (
-    typeParams: WallTypeParams,
-    displayName: string,
-  ) => Promise<string | null>;
+  readonly saveNewType: (typeParams: WallTypeParams, displayName: string) => Promise<string | null>;
   /** Rename a (user) type. Built-ins are read-only — guard in the UI. */
   readonly renameType: (typeId: string, name: string) => Promise<void>;
-  /**
-   * How many walls in the CURRENT level scene are linked to `typeId` — drives the
-   * «changes apply to N walls» warning in the Edit Type panel (ADR-414). Returns
-   * 0 when no scene is active. (Multi-floor count is future work.)
-   */
+  /** How many walls in the CURRENT level scene are linked to `typeId` (ADR-414). */
   readonly countWallsOfType: (typeId: string) => number;
-  /**
-   * Edit a (user) type's `typeParams` (thickness / dna / material / category) —
-   * re-flows to every instance, all floors. Undoable. Built-ins are read-only
-   * (the UI must Duplicate first). ADR-412 Φ5.
-   */
+  /** Edit a (user) type's `typeParams` — re-flows to every instance. Undoable. */
   readonly updateTypeParams: (typeId: string, nextTypeParams: WallTypeParams) => void;
-  /**
-   * Delete a (user) type: warn → confirm → detach current-scene instances
-   * (non-destructive, Q6) + delete the type. Single undoable op. Built-ins are
-   * read-only (guard in the UI). ADR-412 Φ5.
-   */
+  /** Delete a (user) type: warn → confirm → detach + delete. Single undoable op. */
   readonly deleteType: (typeId: string) => Promise<void>;
 }
 
+const WALL_CONFIG: FamilyTypeControllerConfig<'wall', WallEntity> = {
+  category: 'wall',
+  isEntity: isWallEntity,
+  listTypes: listWallTypes,
+  asFamilyType: asWallFamilyType,
+  getOverriddenParamKeys,
+  normaliseOverrides,
+  findByTypeId: findWallsByTypeId,
+  makeAssignCommand: (entity, typeId, overrides, sceneManager, getType) => {
+    const { next, previous } = resolveWallTypeAssignment(entity, typeId, overrides, getType);
+    return new AssignWallTypeCommand(entity.id, next, previous, sceneManager, entity.kind);
+  },
+  makeUpdateCommand: (typeId, next, previous, deps) =>
+    new UpdateWallFamilyTypeCommand(typeId, next, previous, deps),
+  makeDeleteCommand: (snapshot, detachCommands, deps) =>
+    createDeleteWallFamilyTypeCommand(snapshot, detachCommands, deps),
+};
+
 export function useWallFamilyTypeController(): WallFamilyTypeController {
-  const { user } = useAuth();
-  const levelManager = useLevels();
-  const universalSelection = useUniversalSelection();
-  const { execute } = useCommandHistory();
+  const core = useFamilyTypeController(WALL_CONFIG);
+  const { service } = core;
 
-  // Reactive catalog snapshot + stable lookup.
-  const byId = useBimFamilyTypeStore((s) => s.byId);
-  const getType = useBimFamilyTypeStore((s) => s.getType);
-  const wallTypes = useMemo(() => listWallTypes(Array.from(byId.values())), [byId]);
-
-  const service: BimFamilyTypeService | null = useMemo(
-    () =>
-      user?.companyId && user?.uid
-        ? createBimFamilyTypeService({ companyId: user.companyId, userId: user.uid })
-        : null,
-    [user?.companyId, user?.uid],
-  );
-
-  const wall = useMemo<WallEntity | null>(() => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    const e = scene?.entities.find((x) => x.id === id);
-    return e && isWallEntity(e) ? e : null;
-    // byId is a dep so the resolved type refreshes when the catalog changes.
-  }, [levelManager, universalSelection, byId]);
-
-  const currentType = useMemo(
-    () => (wall?.typeId ? asWallFamilyType(getType(wall.typeId)) : null),
-    [wall?.typeId, getType, byId],
-  );
-
-  const overriddenKeys = useMemo(
-    () => getOverriddenParamKeys(wall?.typeOverrides),
-    [wall?.typeOverrides],
-  );
-
-  // Single dispatch path — resolves effective params and commits one undo step.
-  const dispatchAssignment = useCallback(
-    (nextTypeId: string | undefined, nextOverrides: Partial<WallTypeParams> | undefined) => {
-      if (!wall || !levelManager.currentLevelId) return;
-      const { next, previous } = resolveWallTypeAssignment(wall, nextTypeId, nextOverrides, getType);
-      const sm = createLevelSceneManagerAdapter(
-        levelManager.getLevelScene,
-        levelManager.setLevelScene,
-        levelManager.currentLevelId,
-      );
-      execute(new AssignWallTypeCommand(wall.id, next, previous, sm, wall.kind));
-    },
-    [wall, levelManager, getType, execute],
-  );
-
-  const assignType = useCallback(
-    (typeId: string | undefined) => dispatchAssignment(typeId, undefined),
-    [dispatchAssignment],
-  );
-
-  const setOverride = useCallback(
-    <K extends keyof WallTypeParams>(key: K, value: WallTypeParams[K]) => {
-      if (!wall?.typeId) return;
-      const next = normaliseOverrides({ ...(wall.typeOverrides ?? {}), [key]: value });
-      dispatchAssignment(wall.typeId, next);
-    },
-    [wall, dispatchAssignment],
-  );
-
-  const clearOverride = useCallback(
-    (key: keyof WallTypeParams) => {
-      if (!wall?.typeId) return;
-      const rest: Partial<WallTypeParams> = { ...(wall.typeOverrides ?? {}) };
-      delete rest[key];
-      dispatchAssignment(wall.typeId, normaliseOverrides(rest));
-    },
-    [wall, dispatchAssignment],
-  );
-
-  const resetOverrides = useCallback(() => {
-    if (!wall?.typeId) return;
-    dispatchAssignment(wall.typeId, undefined);
-  }, [wall, dispatchAssignment]);
-
-  const duplicateCurrent = useCallback(
-    async (displayName: string): Promise<string | null> => {
-      if (!service || !currentType) return null;
-      const created = await service.saveType(cloneTypeToInput(currentType, displayName, 'company'));
-      const store = useBimFamilyTypeStore.getState();
-      store.setTypes([...store.getTypes(), created]); // optimistic — store now resolves the new id
-      dispatchAssignment(created.id, undefined);
-      return created.id;
-    },
-    [service, currentType, dispatchAssignment],
-  );
-
+  // ADR-363/412 — draw-tool «save as new type»: the composition set before
+  // drawing becomes a reusable, persistent type. Wall-only, not in the shared core.
   const saveNewType = useCallback(
     async (typeParams: WallTypeParams, displayName: string): Promise<string | null> => {
       if (!service) return null;
@@ -223,118 +111,31 @@ export function useWallFamilyTypeController(): WallFamilyTypeController {
       const store = useBimFamilyTypeStore.getState();
       store.setTypes([...store.getTypes(), created]); // optimistic — catalog now lists it
       void recordFamilyTypeChange('created', {
-        id: created.id, name: created.name, category: 'wall', typeParams,
+        id: created.id,
+        name: created.name,
+        category: 'wall',
+        typeParams,
       });
       return created.id;
     },
     [service],
   );
 
-  const countWallsOfType = useCallback(
-    (typeId: string): number => {
-      if (!levelManager.currentLevelId) return 0;
-      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-      return scene ? findWallsByTypeId(scene, typeId).length : 0;
-    },
-    [levelManager],
-  );
-
-  const renameType = useCallback(
-    async (typeId: string, name: string) => {
-      if (!service) return;
-      await service.updateType(typeId, { name });
-      const store = useBimFamilyTypeStore.getState();
-      store.setTypes(store.getTypes().map((t) => (t.id === typeId ? { ...t, name } : t)));
-    },
-    [service],
-  );
-
-  // ADR-412 Φ5 — edit the type's params as one undoable op. The command applies
-  // an optimistic catalog `setTypes` (→ free in-scene re-resolution), persists
-  // the doc, audits, and emits `bim:family-type-changed` (→ all-floors BOQ
-  // re-feed in the persistence host). Built-in guard is the UI's job.
-  const updateTypeParams = useCallback(
-    (typeId: string, nextTypeParams: WallTypeParams) => {
-      if (!service) return;
-      const current = asWallFamilyType(getType(typeId));
-      if (!current) return;
-      const deps: FamilyTypeMutationDeps = {
-        getTypes: () => useBimFamilyTypeStore.getState().getTypes(),
-        setTypes: (types) => useBimFamilyTypeStore.getState().setTypes(types),
-        persist: (typeParams) => {
-          void service.updateType(typeId, { typeParams, category: 'wall' });
-        },
-        audit: (from, to) =>
-          recordFamilyTypeChange(
-            'updated',
-            { id: typeId, name: current.name, category: 'wall', typeParams: to },
-            { prevTypeParams: from },
-          ),
-        notifyChanged: () => EventBus.emit('bim:family-type-changed', { typeId, category: 'wall' }),
-      };
-      execute(new UpdateWallFamilyTypeCommand(typeId, nextTypeParams, current.typeParams, deps));
-    },
-    [service, getType, execute],
-  );
-
-  // ADR-412 Φ5 Q6 — warn → confirm → detach current-scene instances + delete.
-  // Detach reuses AssignWallTypeCommand (typeId→undefined, params kept); the
-  // catalog op removes/restores the type. Single undoable CompoundCommand.
-  const deleteType = useCallback(
-    async (typeId: string) => {
-      if (!service || !levelManager.currentLevelId) return;
-      const type = asWallFamilyType(getType(typeId));
-      if (!type) return;
-      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-      const affected = scene ? findWallsByTypeId(scene, typeId) : [];
-
-      const action = await requestFamilyTypeDelete({ typeId, affectedCount: affected.length });
-      if (action !== 'delete-and-detach') return;
-
-      const sm = createLevelSceneManagerAdapter(
-        levelManager.getLevelScene,
-        levelManager.setLevelScene,
-        levelManager.currentLevelId,
-      );
-      const detachCommands = affected.map((w) => {
-        const { next, previous } = resolveWallTypeAssignment(w, undefined, undefined, getType);
-        return new AssignWallTypeCommand(w.id, next, previous, sm, w.kind);
-      });
-
-      const deps: FamilyTypeDeleteDeps = {
-        getTypes: () => useBimFamilyTypeStore.getState().getTypes(),
-        setTypes: (types) => useBimFamilyTypeStore.getState().setTypes(types),
-        removePersist: () => { void service.deleteType(typeId); },
-        restorePersist: () => { void service.restoreType(type); },
-        auditDeleted: () =>
-          recordFamilyTypeChange('deleted', {
-            id: type.id, name: type.name, category: 'wall', typeParams: type.typeParams,
-          }),
-        auditRestored: () =>
-          recordFamilyTypeChange('created', {
-            id: type.id, name: type.name, category: 'wall', typeParams: type.typeParams,
-          }),
-      };
-      execute(createDeleteWallFamilyTypeCommand(type, detachCommands, deps));
-    },
-    [service, getType, levelManager, execute],
-  );
-
   return {
-    wall,
-    wallTypes,
-    currentType,
-    overriddenKeys,
-    canWrite: !!service,
-    assignType,
-    setOverride,
-    clearOverride,
-    resetOverrides,
-    duplicateCurrent,
+    wall: core.entity,
+    wallTypes: core.types,
+    currentType: core.currentType,
+    overriddenKeys: core.overriddenKeys,
+    canWrite: core.canWrite,
+    assignType: core.assignType,
+    setOverride: core.setOverride,
+    clearOverride: core.clearOverride,
+    resetOverrides: core.resetOverrides,
+    duplicateCurrent: core.duplicateCurrent,
     saveNewType,
-    renameType,
-    updateTypeParams,
-    deleteType,
-    countWallsOfType,
+    renameType: core.renameType,
+    updateTypeParams: core.updateTypeParams,
+    deleteType: core.deleteType,
+    countWallsOfType: core.countOfType,
   };
 }

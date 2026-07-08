@@ -1,48 +1,29 @@
 /**
  * ADR-412 Φ5 — «Edit Wall Type» dialog open/close handshake store.
  *
- * Module-level state mirroring `wall-cascade-delete-store` (ADR-040 SSoT store
- * idiom: mutable module state + subscriber set + stable snapshot getter,
- * `useSyncExternalStore`-compatible). No Promise handshake — the dialog just
- * opens for a `typeId` and closes; the edit itself goes through the controller's
- * `updateTypeParams` (undoable command).
+ * Thin binding of the shared `createEditTypeDialogStore` factory (ADR-603 Φ2).
+ * Re-exports the four handles under the wall-named identifiers so existing
+ * consumers (EditWallTypeDialog, RibbonWallTypePropertiesWidget) are unchanged.
  *
- * Invariant: one Edit-Type dialog at a time (user-driven, synchronous open).
- *
+ * @see ./create-edit-type-dialog-store.ts — shared factory (ADR-603)
  * @see ../../ui/ribbon/components/EditWallTypeDialog.tsx
- * @see ../../stores/createExternalStore — SSoT pub/sub primitive (notify plumbing)
  */
 
-import { createExternalStore } from '../../stores/createExternalStore';
+import {
+  createEditTypeDialogStore,
+  type EditTypeDialogState,
+} from './create-edit-type-dialog-store';
 
-export interface EditWallTypeDialogState {
-  readonly open: boolean;
-  readonly typeId: string | null;
-}
+/** Open/close state of the Edit-Wall-Type dialog. */
+export type EditWallTypeDialogState = EditTypeDialogState;
 
-const CLOSED: EditWallTypeDialogState = { open: false, typeId: null };
+const store = createEditTypeDialogStore();
 
-// Identity-guarded store (`equals: Object.is` = «ίδιο ref → μη notify»· κάθε open/close
-// παράγει νέο object, οπότε οι πραγματικές αλλαγές περνούν πάντα).
-const store = createExternalStore<EditWallTypeDialogState>(CLOSED, { equals: Object.is });
-
-/** Open the Edit-Type dialog for a given family type. */
-export function openEditWallType(typeId: string): void {
-  store.set({ open: true, typeId });
-}
-
+/** Open the Edit-Type dialog for a given wall family type. */
+export const openEditWallType = store.open;
 /** Close the dialog (Save committed, or Cancel/overlay-dismiss). */
-export function closeEditWallType(): void {
-  if (!store.get().open) return;
-  store.set(CLOSED);
-}
-
+export const closeEditWallType = store.close;
 /** useSyncExternalStore-compatible subscribe. */
-export function subscribeEditWallType(cb: () => void): () => void {
-  return store.subscribe(cb);
-}
-
-/** useSyncExternalStore-compatible snapshot getter. Same reference between changes. */
-export function getEditWallTypeState(): EditWallTypeDialogState {
-  return store.get();
-}
+export const subscribeEditWallType = store.subscribe;
+/** useSyncExternalStore-compatible snapshot getter. Same ref between changes. */
+export const getEditWallTypeState = store.getState;

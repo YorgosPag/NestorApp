@@ -228,3 +228,32 @@ export function buildEntityModelFromDxf(
     }
   }
 }
+
+/**
+ * ADR-587 Φ5 (TIER-2 introspectable seam — coverage-only Μηχανισμός 2). Runtime mirror of
+ * the `DxfEntityUnion` discriminant set that {@link buildEntityModelFromDxf} accepts. The
+ * switch's `never` guard above already guarantees a case per variant; this manifest lifts
+ * that compile-time fact to a runtime value so `__tests__/build-entity-model-coverage.test.ts`
+ * can bind it to the descriptor domain (`RENDERABLE_ENTITY_TYPES`) — a new renderable type
+ * with no DxfEntityUnion variant + case surfaces there instead of silently never modelling.
+ *
+ * Kept coverage-only (no switch→Record conversion) precisely because the `never` exhaustiveness
+ * is a strictly stronger guarantee than `Object.keys(Record)` — converting would LOSE it.
+ */
+export const TO_ENTITY_MODEL_SUPPORTED_TYPES = [
+  'line', 'circle', 'polyline', 'arc', 'text', 'angle-measurement', 'stair', 'dimension',
+  'slab', 'slab-opening', 'opening', 'wall', 'beam', 'column', 'foundation', 'mep-fixture',
+  'electrical-panel', 'railing', 'furniture', 'roof', 'floor-finish', 'thermal-space',
+  'wall-covering', 'space-separator', 'mep-segment', 'mep-fitting', 'floorplan-symbol',
+  'annotation-symbol', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater',
+  'mep-underfloor', 'xline', 'ray', 'hatch',
+] as const;
+
+// Bridge 1 — every listed token IS a real `DxfEntityUnion` discriminant (typo/stale ⇒ tsc breaks).
+const _listedAreUnionTypes: readonly DxfEntityUnion['type'][] = TO_ENTITY_MODEL_SUPPORTED_TYPES;
+void _listedAreUnionTypes;
+// Bridge 2 — every `DxfEntityUnion` discriminant is listed (a new variant left out ⇒ tsc breaks,
+// mirroring the switch's `never`): if the manifest is complete `_MissingUnionType` is `never`.
+type _MissingUnionType = Exclude<DxfEntityUnion['type'], (typeof TO_ENTITY_MODEL_SUPPORTED_TYPES)[number]>;
+const _assertManifestComplete = (missing: _MissingUnionType): never => missing;
+void _assertManifestComplete;

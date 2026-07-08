@@ -15,6 +15,7 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { Entity } from '../types/entities';
+import type { EntityType } from '../types/base-entity';
 // 🏢 ADR-067: Centralized angle conversion
 import { degToRad, normalizeAngleDeg } from '../rendering/entities/shared/geometry-utils';
 
@@ -45,135 +46,149 @@ export function rotatePoint(point: Point2D, pivot: Point2D, angleDeg: number): P
 }
 
 /**
+ * Per-entity rotation handler. Receives the full `Entity` and narrows internally
+ * (mirrors the discriminated-union narrowing the previous `switch` relied on).
+ */
+type RotateHandler = (entity: Entity, pivot: Point2D, angleDeg: number) => Partial<Entity>;
+
+/** POLYLINE/LWPOLYLINE — rotate all vertices (shared body, previously fall-through). */
+const rotatePolylineLike: RotateHandler = (entity, pivot, angleDeg) => {
+  const e = entity as Extract<Entity, { type: 'polyline' | 'lwpolyline' }>;
+  return { vertices: e.vertices.map((v) => rotatePoint(v, pivot, angleDeg)) };
+};
+
+/** RECTANGLE/RECT — rotate origin + accumulate rotation + recompute corners (grip interaction). */
+const rotateRectangleLike: RotateHandler = (entity, pivot, angleDeg) => {
+  const e = entity as Extract<Entity, { type: 'rectangle' | 'rect' }>;
+  const currentRotation = e.rotation ?? 0;
+  const origin = rotatePoint({ x: e.x, y: e.y }, pivot, angleDeg);
+  const updates: Partial<Entity> = {
+    x: origin.x,
+    y: origin.y,
+    rotation: normalizeAngleDeg(currentRotation + angleDeg),
+  };
+  if (e.corner1 && e.corner2) {
+    updates.corner1 = rotatePoint(e.corner1, pivot, angleDeg);
+    updates.corner2 = rotatePoint(e.corner2, pivot, angleDeg);
+  }
+  return updates;
+};
+
+/** TEXT/MTEXT — rotate position + accumulate rotation field (shared body). */
+const rotateTextLike: RotateHandler = (entity, pivot, angleDeg) => {
+  const e = entity as Extract<Entity, { type: 'text' | 'mtext' }>;
+  const currentRotation = e.rotation ?? 0;
+  return {
+    position: rotatePoint(e.position, pivot, angleDeg),
+    rotation: normalizeAngleDeg(currentRotation + angleDeg),
+  };
+};
+
+/**
+ * Introspectable rotation seam (ADR-587 Φ5 — TIER-2 cheap seam). ΕΝΑ type-keyed
+ * registry αντί για `switch (entity.type)`, ώστε τα keys να δένονται στο descriptor
+ * domain μέσω coverage test (`__tests__/rotate-entity-coverage.test.ts`) — νέος
+ * renderable τύπος χωρίς συνειδητή απόφαση rotation → σπάει το build.
+ *
+ * **Adapter, όχι rewrite** (ADR-587 §4.1): κάθε case έγινε handler με ΤΑΥΤΟΣΗΜΗ math·
+ * ζει στο ΙΔΙΟ layer (utils) → μηδέν layering inversion/cycle. Απόντος handler ⇒ ο τύπος
+ * ΔΕΝ περιστρέφεται μέσω αυτού του path (BIM/point/dimension/hatch/xline/ray → `{}` no-op,
+ * ρητά καρφωμένο στο coverage — per-site default, ADR-587 §4.6).
+ */
+const ROTATE_HANDLERS: Partial<Record<EntityType, RotateHandler>> = {
+  line: (entity, pivot, angleDeg) => {
+    const e = entity as Extract<Entity, { type: 'line' }>;
+    return {
+      start: rotatePoint(e.start, pivot, angleDeg),
+      end: rotatePoint(e.end, pivot, angleDeg),
+    };
+  },
+  circle: (entity, pivot, angleDeg) => {
+    const e = entity as Extract<Entity, { type: 'circle' }>;
+    return { center: rotatePoint(e.center, pivot, angleDeg) };
+  },
+  arc: (entity, pivot, angleDeg) => {
+    const e = entity as Extract<Entity, { type: 'arc' }>;
+    return {
+      center: rotatePoint(e.center, pivot, angleDeg),
+      startAngle: normalizeAngleDeg(e.startAngle + angleDeg),
+      endAngle: normalizeAngleDeg(e.endAngle + angleDeg),
+    };
+  },
+  polyline: rotatePolylineLike,
+  lwpolyline: rotatePolylineLike,
+  rectangle: rotateRectangleLike,
+  rect: rotateRectangleLike,
+  ellipse: (entity, pivot, angleDeg) => {
+    const e = entity as Extract<Entity, { type: 'ellipse' }>;
+    const currentRot = e.rotation ?? 0;
+    return {
+      center: rotatePoint(e.center, pivot, angleDeg),
+      rotation: normalizeAngleDeg(currentRot + angleDeg),
+    };
+  },
+  text: rotateTextLike,
+  mtext: rotateTextLike,
+  // ADR-583 — annotation symbol (North arrow): rotate the insertion point about the
+  // pivot + accumulate the glyph rotation (1:1 the text/mtext case). About its own
+  // centre (grip pivot = position) the point is fixed and only `rotation` advances.
+  'annotation-symbol': (entity, pivot, angleDeg) => {
+    const e = entity as typeof entity & { position: Point2D; rotation?: number };
+    const currentRotation = e.rotation ?? 0;
+    return {
+      position: rotatePoint(e.position, pivot, angleDeg),
+      rotation: normalizeAngleDeg(currentRotation + angleDeg),
+    } as Partial<Entity>;
+  },
+  'angle-measurement': (entity, pivot, angleDeg) => {
+    const e = entity as Extract<Entity, { type: 'angle-measurement' }>;
+    // Angle between arms is invariant under rotation — keep original angle value
+    return {
+      vertex: rotatePoint(e.vertex, pivot, angleDeg),
+      point1: rotatePoint(e.point1, pivot, angleDeg),
+      point2: rotatePoint(e.point2, pivot, angleDeg),
+    };
+  },
+  spline: (entity, pivot, angleDeg) => {
+    const e = entity as Extract<Entity, { type: 'spline' }>;
+    return { controlPoints: e.controlPoints.map((v) => rotatePoint(v, pivot, angleDeg)) };
+  },
+  // ADR-575 — GROUP container: rotating the group rotates every member about the SAME
+  // pivot. Recurse the SAME SSoT per member (handles nested groups).
+  group: (entity, pivot, angleDeg) => {
+    const members = (entity as unknown as { members: Entity[] }).members.map((m) => ({
+      ...m,
+      ...rotateEntity(m, pivot, angleDeg),
+    }));
+    return { members } as unknown as Partial<Entity>;
+  },
+};
+
+/**
+ * Types με ρητή rotation υλοποίηση (keys του `ROTATE_HANDLERS`) — δένονται στο
+ * descriptor domain μέσω coverage test. Mirror του `POINT_BUILT_TYPES` pattern.
+ */
+export const ROTATE_SUPPORTED_TYPES: readonly EntityType[] =
+  Object.keys(ROTATE_HANDLERS) as EntityType[];
+
+/**
  * Rotate entity geometry around a pivot (ADR-188 §6.2).
  *
  * Returns a partial update object suitable for `sceneManager.updateEntity()`.
- * Dispatches to per-entity-type rotation logic:
- *
- * - LINE:  rotate start + end vertices
- * - CIRCLE: rotate center only (radius invariant)
- * - ARC: rotate center + offset startAngle/endAngle by θ
- * - POLYLINE/LWPOLYLINE: rotate all vertices
- * - RECTANGLE/RECT: rotate origin + accumulate rotation + recompute corners
- * - TEXT: rotate position + accumulate rotation field
- * - ANGLE-MEASUREMENT: rotate vertex + point1 + point2
- * - ELLIPSE: rotate center + offset rotation angle
+ * Dispatches via the introspectable `ROTATE_HANDLERS` seam (ADR-587 Φ5).
  *
  * @param entity   - Entity to rotate (Enterprise Entity type)
  * @param pivot    - Rotation center
  * @param angleDeg - Angle in degrees (positive = CCW)
- * @returns Partial entity update object
+ * @returns Partial entity update object (`{}` no-op for non-rotatable types)
  */
 export function rotateEntity(
   entity: Entity,
   pivot: Point2D,
   angleDeg: number
 ): Partial<Entity> {
-  switch (entity.type) {
-    case 'line':
-      return {
-        start: rotatePoint(entity.start, pivot, angleDeg),
-        end: rotatePoint(entity.end, pivot, angleDeg),
-      };
-
-    case 'circle':
-      return {
-        center: rotatePoint(entity.center, pivot, angleDeg),
-      };
-
-    case 'arc':
-      return {
-        center: rotatePoint(entity.center, pivot, angleDeg),
-        startAngle: normalizeAngleDeg(entity.startAngle + angleDeg),
-        endAngle: normalizeAngleDeg(entity.endAngle + angleDeg),
-      };
-
-    case 'polyline':
-    case 'lwpolyline':
-      return {
-        vertices: entity.vertices.map(v => rotatePoint(v, pivot, angleDeg)),
-      };
-
-    case 'rectangle':
-    case 'rect': {
-      const currentRotation = entity.rotation ?? 0;
-      const newRotation = normalizeAngleDeg(currentRotation + angleDeg);
-      const origin = rotatePoint({ x: entity.x, y: entity.y }, pivot, angleDeg);
-
-      const updates: Partial<Entity> = {
-        x: origin.x,
-        y: origin.y,
-        rotation: newRotation,
-      };
-
-      // Recompute corners if present (used by grip interaction)
-      if (entity.corner1 && entity.corner2) {
-        updates.corner1 = rotatePoint(entity.corner1, pivot, angleDeg);
-        updates.corner2 = rotatePoint(entity.corner2, pivot, angleDeg);
-      }
-
-      return updates;
-    }
-
-    case 'ellipse': {
-      const currentRot = entity.rotation ?? 0;
-      return {
-        center: rotatePoint(entity.center, pivot, angleDeg),
-        rotation: normalizeAngleDeg(currentRot + angleDeg),
-      };
-    }
-
-    case 'text':
-    case 'mtext': {
-      const currentRotation = entity.rotation ?? 0;
-      return {
-        position: rotatePoint(entity.position, pivot, angleDeg),
-        rotation: normalizeAngleDeg(currentRotation + angleDeg),
-      };
-    }
-
-    // ADR-583 — annotation symbol (North arrow): rotate the insertion point about the
-    // pivot + accumulate the glyph rotation (1:1 the text/mtext case). About its own
-    // centre (grip pivot = position) the point is fixed and only `rotation` advances.
-    case 'annotation-symbol': {
-      const e = entity as typeof entity & { position: Point2D; rotation?: number };
-      const currentRotation = e.rotation ?? 0;
-      return {
-        position: rotatePoint(e.position, pivot, angleDeg),
-        rotation: normalizeAngleDeg(currentRotation + angleDeg),
-      } as Partial<Entity>;
-    }
-
-    case 'angle-measurement': {
-      const newVertex = rotatePoint(entity.vertex, pivot, angleDeg);
-      const newPoint1 = rotatePoint(entity.point1, pivot, angleDeg);
-      const newPoint2 = rotatePoint(entity.point2, pivot, angleDeg);
-      // Angle between arms is invariant under rotation — keep original angle value
-      return {
-        vertex: newVertex,
-        point1: newPoint1,
-        point2: newPoint2,
-      };
-    }
-
-    case 'spline':
-      return {
-        controlPoints: entity.controlPoints.map(v => rotatePoint(v, pivot, angleDeg)),
-      };
-
-    case 'group': {
-      // ADR-575 — GROUP container: rotating the group rotates every member about
-      // the SAME pivot. Recurse the SAME SSoT per member (handles nested groups).
-      const members = (entity as unknown as { members: Entity[] }).members.map((m) => ({
-        ...m,
-        ...rotateEntity(m, pivot, angleDeg),
-      }));
-      return { members } as unknown as Partial<Entity>;
-    }
-
-    default:
-      return {};
-  }
+  const handler = ROTATE_HANDLERS[entity.type];
+  return handler ? handler(entity, pivot, angleDeg) : {};
 }
 
 /**
