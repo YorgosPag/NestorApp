@@ -1,5 +1,5 @@
 /**
- * ADR-370 — Generic BIM Corner Snap Priority + cross-entity integration tests.
+ * ADR-597 — Generic BIM Corner Snap Priority + cross-entity integration tests.
  *
  * After the 5→1 collapse, ONE `BimCharacteristicSnapEngine('corner')` indexes the
  * corners of EVERY BIM entity. Verifies:

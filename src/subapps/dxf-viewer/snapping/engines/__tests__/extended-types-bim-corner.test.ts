@@ -1,5 +1,5 @@
 /**
- * ADR-370 — ExtendedSnapType BIM characteristic-point types (generic) tests.
+ * ADR-597 — ExtendedSnapType BIM characteristic-point types (generic) tests.
  *
  * After the consolidation, the 5 per-entity `BIM_*_CORNER` types AND the old
  * `BIM_COLUMN_CENTER` are replaced by 3 generic types: `BIM_CORNER` / `BIM_MIDPOINT` /

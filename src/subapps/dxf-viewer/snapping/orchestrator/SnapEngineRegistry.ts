@@ -41,7 +41,7 @@ import { GuideSnapEngine } from '../engines/GuideSnapEngine';
 import { ConstructionPointSnapEngine } from '../engines/ConstructionPointSnapEngine';
 import { DimDefPointSnapEngine } from '../engines/DimDefPointSnapEngine';
 import { DimLineSnapEngine } from '../engines/DimLineSnapEngine';
-// ADR-370: ONE generic BIM characteristic-point snap engine (corner/midpoint/center)
+// ADR-597: ONE generic BIM characteristic-point snap engine (corner/midpoint/center)
 // — replaces the 5 per-entity {Wall,Beam,Slab,Column,Opening}CornerSnapEngine classes.
 import { BimCharacteristicSnapEngine } from '../engines/BimCharacteristicSnapEngine';
 import { SNAP_ENGINE_PRIORITIES } from '../../config/tolerance-config';
@@ -97,13 +97,13 @@ export class SnapEngineRegistry {
     // ADR-362 I1: Dimension snap — def points + dim line
     this.engines.set(ExtendedSnapType.DIM_DEF_POINT, new DimDefPointSnapEngine());
     this.engines.set(ExtendedSnapType.DIM_LINE, new DimLineSnapEngine());
-    // ADR-370: ONE generic BIM structural-corner snap (priority -2 — highest structural
+    // ADR-597: ONE generic BIM structural-corner snap (priority -2 — highest structural
     // precision) for ALL BIM entities, sourced from the bim-characteristic-points SSoT.
     this.engines.set(
       ExtendedSnapType.BIM_CORNER,
       new BimCharacteristicSnapEngine(ExtendedSnapType.BIM_CORNER, 'corner', SNAP_ENGINE_PRIORITIES.BIM_CORNER),
     );
-    // ADR-370: generic BIM edge/axis midpoint + centroid snaps (same engine, other categories).
+    // ADR-597: generic BIM edge/axis midpoint + centroid snaps (same engine, other categories).
     this.engines.set(
       ExtendedSnapType.BIM_MIDPOINT,
       new BimCharacteristicSnapEngine(ExtendedSnapType.BIM_MIDPOINT, 'midpoint', SNAP_ENGINE_PRIORITIES.BIM_MIDPOINT),

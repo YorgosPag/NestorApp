@@ -45,12 +45,12 @@ export enum ExtendedSnapType {
   CONSTRUCTION_POINT = 'construction_point',  // ADR-189 §3.7-3.16: Construction snap points
   DIM_DEF_POINT = 'dim_def_point',  // ADR-362 I1: snap to dimension def points (AutoCAD DIMSNAP)
   DIM_LINE = 'dim_line',            // ADR-362 I1: snap to dimension line for baseline/continued chains
-  // ADR-370: ONE generic BIM structural corner snap (wall/beam/slab/column/opening +
+  // ADR-597: ONE generic BIM structural corner snap (wall/beam/slab/column/opening +
   // foundation/centred-box…). Replaces the 5 per-entity BIM_*_CORNER types — the
   // per-entity label («Γωνία τοίχου»/«δοκαριού») comes from the candidate `description`.
   BIM_CORNER         = 'bim_corner',
-  BIM_MIDPOINT       = 'bim_midpoint',        // ADR-370: generic BIM edge/axis midpoint («Μέσο τοίχου»…)
-  BIM_CENTER         = 'bim_center',          // ADR-370: generic BIM centroid («Κέντρο πλάκας»…)
+  BIM_MIDPOINT       = 'bim_midpoint',        // ADR-597: generic BIM edge/axis midpoint («Μέσο τοίχου»…)
+  BIM_CENTER         = 'bim_center',          // ADR-597: generic BIM centroid («Κέντρο πλάκας»…)
   BIM_WALL_FACE      = 'bim_wall_face',       // ADR-363 Φ1G.5 Slice 2i: wall outer/inner FACE line (face-to-face magnetism)
   BIM_MEP_CONNECTOR  = 'bim_mep_connector',  // ADR-408 Φ9: MEP connector attach point (segment endpoints / fixture / panel)
   TEXT               = 'text',                // ADR-378 Phase 3: TEXT/MTEXT 8-point snap (insertion + 4 corners + center + 2 edge mids)
@@ -196,9 +196,9 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.CONSTRUCTION_POINT, // ADR-189: Construction point snap
     ExtendedSnapType.DIM_DEF_POINT,     // ADR-362 I1: dimension def point snap
     ExtendedSnapType.DIM_LINE,          // ADR-362 I1: dimension line snap
-    ExtendedSnapType.BIM_CORNER,          // ADR-370: generic BIM structural corner (all entities)
-    ExtendedSnapType.BIM_MIDPOINT,        // ADR-370: generic BIM edge/axis midpoint (all entities)
-    ExtendedSnapType.BIM_CENTER,          // ADR-370: generic BIM centroid (area entities)
+    ExtendedSnapType.BIM_CORNER,          // ADR-597: generic BIM structural corner (all entities)
+    ExtendedSnapType.BIM_MIDPOINT,        // ADR-597: generic BIM edge/axis midpoint (all entities)
+    ExtendedSnapType.BIM_CENTER,          // ADR-597: generic BIM centroid (area entities)
     ExtendedSnapType.BIM_WALL_FACE,       // ADR-363 Φ1G.5 Slice 2i: wall face line (face magnetism)
     ExtendedSnapType.BIM_MEP_CONNECTOR,   // ADR-408 Φ9: MEP connector attach point
     ExtendedSnapType.TEXT,                // ADR-378 Phase 3: TEXT/MTEXT 8-point snap
@@ -215,15 +215,15 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     // beats an unselected entity's endpoint/corner under it (grab-the-grip precedence).
     ExtendedSnapType.SELECTED_GRIP,
     ExtendedSnapType.ROTATION_PIVOT,      // ADR-397: rotation centre — highest precision while rotating
-    // ADR-370: the 3 always-on BIM structural characteristic snaps run FIRST (right after the
+    // ADR-597: the 3 always-on BIM structural characteristic snaps run FIRST (right after the
     // rotation pivot), BEFORE the generic discrete engines (INTERSECTION/ENDPOINT/MIDPOINT/NEAREST).
     // This array is the orchestrator's *iteration* order and is bounded by maxCandidates (8): a
     // dense DXF's raw endpoints/intersections would otherwise fill the budget and STARVE these
     // engines (the «Μέσο/Κέντρο never appear» bug). Their negative priority numbers still let the
     // SnapCandidateProcessor pick the correct winner when points coincide.
-    ExtendedSnapType.BIM_CORNER,          // ADR-370: BIM structural corners — highest structural precision
-    ExtendedSnapType.BIM_MIDPOINT,        // ADR-370: BIM edge/axis midpoint — structural, before generic snaps
-    ExtendedSnapType.BIM_CENTER,          // ADR-370: BIM centroid — structural, before generic snaps
+    ExtendedSnapType.BIM_CORNER,          // ADR-597: BIM structural corners — highest structural precision
+    ExtendedSnapType.BIM_MIDPOINT,        // ADR-597: BIM edge/axis midpoint — structural, before generic snaps
+    ExtendedSnapType.BIM_CENTER,          // ADR-597: BIM centroid — structural, before generic snaps
     ExtendedSnapType.BIM_MEP_CONNECTOR,   // ADR-408 Φ9: MEP attach point — before endpoint
     ExtendedSnapType.INTERSECTION,
     ExtendedSnapType.ENDPOINT,
@@ -268,9 +268,9 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     [ExtendedSnapType.CONSTRUCTION_POINT]: 10,
     [ExtendedSnapType.DIM_DEF_POINT]: 10,      // ADR-362 I1: exact definition point — AutoCAD APERTURE default
     [ExtendedSnapType.DIM_LINE]: 10,            // ADR-362 I1: dim line reference point
-    [ExtendedSnapType.BIM_CORNER]:          10, // ADR-370: generic BIM structural corner
-    [ExtendedSnapType.BIM_MIDPOINT]:        10, // ADR-370: generic BIM edge/axis midpoint
-    [ExtendedSnapType.BIM_CENTER]:          10, // ADR-370: generic BIM centroid
+    [ExtendedSnapType.BIM_CORNER]:          10, // ADR-597: generic BIM structural corner
+    [ExtendedSnapType.BIM_MIDPOINT]:        10, // ADR-597: generic BIM edge/axis midpoint
+    [ExtendedSnapType.BIM_CENTER]:          10, // ADR-597: generic BIM centroid
     [ExtendedSnapType.BIM_WALL_FACE]:       30, // ADR-363 Φ1G.5 Slice 2i/2j: wall face line (2j: strong diagnostic pull, Giorgio)
     [ExtendedSnapType.BIM_MEP_CONNECTOR]:   10, // ADR-408 Φ9: MEP connector attach point
     [ExtendedSnapType.TEXT]:                10, // ADR-378 Phase 3: text 8-point snap (insertion/corners/center/edges)

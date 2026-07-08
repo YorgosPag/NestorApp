@@ -5,7 +5,7 @@
  * the same Greek labels ("Γωνία τοίχου", "Παρειά τοίχου", …) from one place.
  *
  * Two description shapes:
- *   - **Characteristic points** (ADR-370): `bim-<root>-<corner|mid|center>` — composed
+ *   - **Characteristic points** (ADR-597): `bim-<root>-<corner|mid|center>` — composed
  *     at render time from a CATEGORY noun («Γωνία/Μέσο/Κέντρο») + an ENTITY noun
  *     («τοίχου/δοκαριού/θεμελίωσης»…) so 3 categories × ~20 entities need ~23 keys, not
  *     60. Empty description (`''`) → «περίεργο σχήμα» → no label (req #4).
