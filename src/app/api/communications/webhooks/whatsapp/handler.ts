@@ -17,8 +17,7 @@
  * @enterprise ADR-029 - Omnichannel Conversation Model
  */
 
-import { type NextRequest, NextResponse, after } from 'next/server';
-import { createHmac } from 'crypto';
+import type { NextRequest, NextResponse } from 'next/server';
 import { storeWhatsAppMessage, updateMessageDeliveryStatus, extractMessageText } from './crm-adapter';
 import { markWhatsAppMessageRead, sendWhatsAppButtons, sendWhatsAppMessage } from './whatsapp-client';
 import type {
@@ -31,6 +30,7 @@ import { getCompanyId } from '@/config/tenant';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
+import * as MetaWebhook from '@/lib/communications/meta-webhook';
 
 const logger = createModuleLogger('WhatsAppWebhookHandler');
 
@@ -45,21 +45,11 @@ const logger = createModuleLogger('WhatsAppWebhookHandler');
  * @see https://developers.facebook.com/docs/graph-api/webhooks/getting-started
  */
 export async function handleGET(request: NextRequest): Promise<NextResponse> {
-  const searchParams = request.nextUrl.searchParams;
-  const mode = searchParams.get('hub.mode');
-  const token = searchParams.get('hub.verify_token');
-  const challenge = searchParams.get('hub.challenge');
-
-  const verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN?.trim();
-
-  if (mode === 'subscribe' && token === verifyToken) {
-    logger.info('WhatsApp webhook verified successfully');
-    // Must return JUST the challenge string with 200 status
-    return new NextResponse(challenge, { status: 200 });
-  }
-
-  logger.warn('WhatsApp webhook verification failed', { mode, tokenMatch: token === verifyToken });
-  return NextResponse.json({ error: 'Verification failed' }, { status: 403 });
+  return MetaWebhook.handleMetaWebhookGet(request, {
+    verifyToken: process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN?.trim(),
+    platform: 'WhatsApp',
+    logger,
+  });
 }
 
 // ============================================================================
@@ -68,86 +58,53 @@ export async function handleGET(request: NextRequest): Promise<NextResponse> {
 
 /**
  * Handle incoming webhook events from WhatsApp Cloud API.
- *
- * IMPORTANT: Always return 200 to prevent Meta from retrying.
- * Meta retries on non-2xx responses.
+ * Signature verify + object guard + pipeline batch are owned by the shared
+ * Meta webhook POST envelope (ADR-586); this file owns the WhatsApp payload walk.
  */
 export async function handlePOST(request: NextRequest): Promise<NextResponse> {
-  try {
-    // 1. Verify signature (security)
-    const rawBody = await request.text();
-    const signature = request.headers.get('x-hub-signature-256');
-
-    if (!verifySignature(rawBody, signature)) {
-      logger.warn('WhatsApp webhook signature verification failed');
-      // Return 200 to prevent retries but log rejection
-      return NextResponse.json({ ok: true, rejected: true, reason: 'invalid_signature' });
-    }
-
-    // 2. Parse payload
-    const payload = JSON.parse(rawBody) as WhatsAppWebhookPayload;
-
-    if (payload.object !== 'whatsapp_business_account') {
-      logger.warn('Unexpected webhook object', { object: payload.object });
-      return NextResponse.json({ ok: true });
-    }
-
-    // 3. Clear pending pipeline messages from previous invocation
-    pendingPipelineMessages.length = 0;
-
-    // 4. Process each entry
-    for (const entry of payload.entry) {
-      for (const change of entry.changes) {
-        if (change.field === 'messages') {
-          await processChangeValue(change.value);
-        }
-      }
-    }
-
-    // 5. Feed to AI pipeline via after() — same pattern as Telegram (ADR-134)
-    // Enqueue first, then trigger batch processing after response is sent
-    if (pendingPipelineMessages.length > 0) {
-      const messagesToFeed = [...pendingPipelineMessages];
-      pendingPipelineMessages.length = 0;
-
-      // Enqueue pipeline items BEFORE after() — critical for race condition prevention
-      for (const msg of messagesToFeed) {
-        await feedWhatsAppToPipeline(msg);
-      }
-
-      // Trigger batch processing AFTER response is sent
-      after(async () => {
-        try {
-          const { processAIPipelineBatch } = await import(
-            '@/server/ai/workers/ai-pipeline-worker'
-          );
-          const result = await processAIPipelineBatch();
-          logger.info('[WhatsApp->Pipeline] after(): batch complete', {
-            processed: result.processed,
-            failed: result.failed,
-          });
-        } catch (error) {
-          // Non-fatal: daily cron will retry pipeline items
-          logger.warn('[WhatsApp->Pipeline] after(): pipeline batch failed (cron will retry)', {
-            error: getErrorMessage(error),
-          });
-        }
-      });
-    }
-
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    logger.error('WhatsApp webhook processing error', { error });
-    // Return 200 even on error to prevent Meta from retrying
-    return NextResponse.json({ ok: true, error: 'Processing error' });
-  }
+  return MetaWebhook.handleMetaWebhookPost(request, {
+    logger,
+    platform: 'WhatsApp',
+    expectedObject: 'whatsapp_business_account',
+    collectPipelineMessages,
+    feedToPipeline: feedWhatsAppToPipeline,
+  });
 }
 
 // ============================================================================
 // MESSAGE PROCESSING
 // ============================================================================
 
-async function processChangeValue(value: WhatsAppChangeValue): Promise<void> {
+/** A WhatsApp message queued for AI pipeline processing. */
+interface WhatsAppPipelineMessage {
+  phoneNumber: string;
+  senderName: string;
+  messageText: string;
+  messageId: string;
+}
+
+/**
+ * Walk the WhatsApp payload, run CRM side effects, and collect the messages
+ * destined for the AI pipeline (returned to the shared POST envelope).
+ */
+async function collectPipelineMessages(
+  payload: WhatsAppWebhookPayload
+): Promise<WhatsAppPipelineMessage[]> {
+  const pipelineMessages: WhatsAppPipelineMessage[] = [];
+  for (const entry of payload.entry) {
+    for (const change of entry.changes) {
+      if (change.field === 'messages') {
+        await processChangeValue(change.value, pipelineMessages);
+      }
+    }
+  }
+  return pipelineMessages;
+}
+
+async function processChangeValue(
+  value: WhatsAppChangeValue,
+  pipelineMessages: WhatsAppPipelineMessage[]
+): Promise<void> {
   // Handle status updates (sent, delivered, read)
   if (value.statuses && value.statuses.length > 0) {
     for (const status of value.statuses) {
@@ -158,7 +115,7 @@ async function processChangeValue(value: WhatsAppChangeValue): Promise<void> {
   // Handle incoming messages
   if (value.messages && value.messages.length > 0) {
     for (const message of value.messages) {
-      await processIncomingMessage(message, value.contacts);
+      await processIncomingMessage(message, value.contacts, pipelineMessages);
     }
   }
 
@@ -174,17 +131,10 @@ async function processChangeValue(value: WhatsAppChangeValue): Promise<void> {
   }
 }
 
-/** Tracks messages that need pipeline processing (for after() batch) */
-const pendingPipelineMessages: Array<{
-  phoneNumber: string;
-  senderName: string;
-  messageText: string;
-  messageId: string;
-}> = [];
-
 async function processIncomingMessage(
   message: WhatsAppMessage,
-  contacts: WhatsAppContact[] | undefined
+  contacts: WhatsAppContact[] | undefined,
+  pipelineMessages: WhatsAppPipelineMessage[]
 ): Promise<void> {
   // Find matching contact info
   const contact = contacts?.find(c => c.wa_id === message.from);
@@ -224,7 +174,7 @@ async function processIncomingMessage(
     if (buttonId.startsWith('sug_')) {
       await markWhatsAppMessageRead(message.id);
       safeFireAndForget(sendWhatsAppMessage(message.from, '\u23F3 \u0395\u03C0\u03B5\u03BE\u03B5\u03C1\u03B3\u03AC\u03B6\u03BF\u03BC\u03B1\u03B9...'), 'WhatsApp.ackMessage');
-      pendingPipelineMessages.push({
+      pipelineMessages.push({
         phoneNumber: message.from,
         senderName: contact?.profile?.name ?? message.from,
         messageText: buttonTitle,
@@ -253,7 +203,7 @@ async function processIncomingMessage(
     // Send immediate "processing" acknowledgment (non-blocking)
     safeFireAndForget(sendWhatsAppMessage(message.from, '\u23F3 \u0395\u03C0\u03B5\u03BE\u03B5\u03C1\u03B3\u03AC\u03B6\u03BF\u03BC\u03B1\u03B9...'), 'WhatsApp.ackMessage');
 
-    pendingPipelineMessages.push({
+    pipelineMessages.push({
       phoneNumber: message.from,
       senderName: contact?.profile?.name ?? message.from,
       messageText,
@@ -272,23 +222,15 @@ async function processIncomingMessage(
  */
 async function handleFeedbackButton(buttonId: string, senderPhone: string): Promise<void> {
   try {
-    // Parse: fb_{feedbackDocId}_{up|down}
-    const parts = buttonId.split('_');
-    const sentiment = parts[parts.length - 1]; // 'up' or 'down'
-    const feedbackDocId = parts.slice(1, -1).join('_');
-
-    if (!feedbackDocId || !sentiment) {
+    const parsed = MetaWebhook.parseFeedbackPayload(buttonId);
+    if (!parsed) {
       logger.warn('Invalid feedback button ID', { buttonId });
       return;
     }
+    const { feedbackDocId, isPositive } = parsed;
 
-    const isPositive = sentiment === 'up';
-
-    // Record feedback in Firestore
-    const { getFeedbackService } = await import(
-      '@/services/ai-pipeline/feedback-service'
-    );
-    await getFeedbackService().updateRating(feedbackDocId, isPositive ? 'positive' : 'negative');
+    // Record feedback in Firestore (shared SSoT)
+    await MetaWebhook.applyFeedbackRating(feedbackDocId, isPositive);
 
     if (isPositive) {
       await sendWhatsAppMessage(senderPhone, '\u{1F44D} \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE!');
@@ -304,7 +246,7 @@ async function handleFeedbackButton(buttonId: string, senderPhone: string): Prom
       ]);
     }
 
-    logger.info('WhatsApp feedback recorded', { feedbackDocId, sentiment, phone: senderPhone.slice(-4) });
+    logger.info('WhatsApp feedback recorded', { feedbackDocId, sentiment: isPositive ? 'up' : 'down', phone: senderPhone.slice(-4) });
   } catch (error) {
     // Non-fatal
     logger.warn('WhatsApp feedback handler error', {
@@ -317,39 +259,20 @@ async function handleFeedbackButton(buttonId: string, senderPhone: string): Prom
 // NEGATIVE CATEGORY HANDLER
 // ============================================================================
 
-/** Category code → Firestore value mapping */
-const CATEGORY_MAP: Record<string, 'wrong_answer' | 'wrong_data' | 'not_understood' | 'slow'> = {
-  w: 'wrong_answer',
-  d: 'wrong_data',
-  u: 'not_understood',
-  s: 'slow',
-};
-
 /**
  * Handle negative feedback category button taps.
  * Button ID format: fbc_{feedbackDocId}_{w|d|u|s}
  */
 async function handleCategoryButton(buttonId: string, senderPhone: string): Promise<void> {
   try {
-    const parts = buttonId.split('_');
-    const categoryCode = parts[parts.length - 1];
-    const feedbackDocId = parts.slice(1, -1).join('_');
-
-    if (!feedbackDocId || !categoryCode) {
-      logger.warn('Invalid category button ID', { buttonId });
+    const parsed = MetaWebhook.parseCategoryPayload(buttonId);
+    if (!parsed) {
+      logger.warn('Invalid or unknown category button ID', { buttonId });
       return;
     }
+    const { feedbackDocId, category } = parsed;
 
-    const category = CATEGORY_MAP[categoryCode];
-    if (!category) {
-      logger.warn('Unknown category code', { categoryCode });
-      return;
-    }
-
-    const { getFeedbackService } = await import(
-      '@/services/ai-pipeline/feedback-service'
-    );
-    await getFeedbackService().updateNegativeCategory(feedbackDocId, category);
+    await MetaWebhook.applyNegativeCategory(feedbackDocId, category);
 
     await sendWhatsAppMessage(senderPhone, '\u2705 \u0395\u03C5\u03C7\u03B1\u03C1\u03B9\u03C3\u03C4\u03CE \u03B3\u03B9\u03B1 \u03C4\u03BF feedback! \u0398\u03B1 \u03B2\u03B5\u03BB\u03C4\u03B9\u03C9\u03B8\u03CE.');
 
@@ -375,12 +298,7 @@ async function handleCategoryButton(buttonId: string, senderPhone: string): Prom
  * @see ADR-174 (Meta Omnichannel — WhatsApp)
  * @see ADR-134 pattern (Telegram pipeline feed)
  */
-async function feedWhatsAppToPipeline(msg: {
-  phoneNumber: string;
-  senderName: string;
-  messageText: string;
-  messageId: string;
-}): Promise<void> {
+async function feedWhatsAppToPipeline(msg: WhatsAppPipelineMessage): Promise<void> {
   const companyId = getCompanyId();
 
   try {
@@ -406,50 +324,5 @@ async function feedWhatsAppToPipeline(msg: {
     logger.warn('[WhatsApp->Pipeline] Non-fatal error', {
       error: getErrorMessage(error),
     });
-  }
-}
-
-// ============================================================================
-// SIGNATURE VERIFICATION
-// ============================================================================
-
-/**
- * Verify the X-Hub-Signature-256 header using HMAC-SHA256 with App Secret.
- *
- * @see https://developers.facebook.com/docs/graph-api/webhooks/getting-started#verification-requests
- */
-function verifySignature(rawBody: string, signature: string | null): boolean {
-  const appSecret = process.env.META_APP_SECRET?.trim();
-
-  // If no app secret configured, allow with warning (temporary until META_APP_SECRET is set)
-  // TODO: Remove this fallback once META_APP_SECRET is configured on Vercel
-  if (!appSecret) {
-    logger.warn('META_APP_SECRET not configured — skipping signature verification (TEMPORARY)');
-    return true;
-  }
-
-  if (!signature) {
-    logger.warn('No X-Hub-Signature-256 header present');
-    return false;
-  }
-
-  const expectedSignature = 'sha256=' + createHmac('sha256', appSecret)
-    .update(rawBody)
-    .digest('hex');
-
-  // Constant-time comparison to prevent timing attacks
-  if (signature.length !== expectedSignature.length) {
-    return false;
-  }
-
-  const sigBuffer = Buffer.from(signature);
-  const expectedBuffer = Buffer.from(expectedSignature);
-
-  try {
-    const { timingSafeEqual } = require('crypto') as typeof import('crypto');
-    return timingSafeEqual(sigBuffer, expectedBuffer);
-  } catch {
-    // Fallback (should never happen in Node.js)
-    return signature === expectedSignature;
   }
 }

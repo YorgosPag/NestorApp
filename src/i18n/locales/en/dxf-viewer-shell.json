@@ -1,4 +1,10 @@
 {
+  "annotationSymbol": {
+    "northArrow": {
+      "simple": "Simple North",
+      "star": "Compass Rose"
+    }
+  },
   "analyticalModel": {
     "diagnostics": {
       "memberUnsupported": "Member is not connected to any support — analytical mechanism (unstable).",
@@ -1379,6 +1385,7 @@
       "analyze": "Analyze",
       "furnitureProperties": "Furniture Properties",
       "floorplanSymbolProperties": "Symbol Properties",
+      "annotationSymbolProperties": "North Arrow",
       "floorFinishProperties": "Floor Finish Properties",
       "wallCoveringProperties": "Wall Finish Properties",
       "hatchProperties": "Hatch",
@@ -1601,6 +1608,7 @@
       "coordination": "Coordination",
       "display": "Display",
       "dxfFiles": "DXF Files",
+      "annotationSymbols": "Symbols",
       "background": "Background",
       "exportPanel": "Export",
       "cursor": "Cursor",
@@ -1652,6 +1660,8 @@
       "furnitureActions": "Actions",
       "floorplanSymbolCatalog": "Symbol",
       "floorplanSymbolGeometry": "Geometry",
+      "annotationSymbolCatalog": "Style",
+      "annotationSymbolGeometry": "Geometry",
       "mepFixtureLibrary": "Library",
       "mepFixtureLibraryPlacement": "Placement",
       "mepRiser": "Stack",
@@ -1752,6 +1762,8 @@
       "xlineTooltip": "Infinite reference line in both directions",
       "ray": "Ray",
       "rayTooltip": "Semi-infinite line from origin in a direction",
+      "northArrow": "North Arrow",
+      "northArrowTooltip": "Place a North arrow symbol with a single click on the canvas",
       "xlineModeSelector": "Mode",
       "bim": {
         "wall": {
@@ -4407,6 +4419,11 @@
       },
       "floorplanSymbolEditor": {
         "asset": "Symbol",
+        "rotation": "Rotation"
+      },
+      "annotationSymbolEditor": {
+        "variant": "Style",
+        "size": "Size (mm)",
         "rotation": "Rotation"
       },
       "furnitureEditor": {

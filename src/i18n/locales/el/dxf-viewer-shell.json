@@ -1,4 +1,10 @@
 {
+  "annotationSymbol": {
+    "northArrow": {
+      "simple": "Απλός Βορράς",
+      "star": "Ρόδος των Ανέμων"
+    }
+  },
   "analyticalModel": {
     "diagnostics": {
       "memberUnsupported": "Το μέλος δεν συνδέεται με καμία στήριξη — αναλυτικός μηχανισμός (ασταθές).",
@@ -1379,6 +1385,7 @@
       "analyze": "Ανάλυση",
       "furnitureProperties": "Ιδιότητες Επίπλου",
       "floorplanSymbolProperties": "Ιδιότητες Συμβόλου",
+      "annotationSymbolProperties": "Σύμβολο Βορρά",
       "floorFinishProperties": "Ιδιότητες Επικάλυψης Δαπέδου",
       "wallCoveringProperties": "Ιδιότητες Φινιρίσματος Τοίχου",
       "hatchProperties": "Γραμμοσκίαση",
@@ -1601,6 +1608,7 @@
       "coordination": "Συντονισμός",
       "display": "Εμφάνιση",
       "dxfFiles": "Αρχεία DXF",
+      "annotationSymbols": "Σύμβολα",
       "background": "Υπόβαθρο",
       "exportPanel": "Εξαγωγή",
       "cursor": "Δρομέας",
@@ -1652,6 +1660,8 @@
       "furnitureActions": "Ενέργειες",
       "floorplanSymbolCatalog": "Σύμβολο",
       "floorplanSymbolGeometry": "Γεωμετρία",
+      "annotationSymbolCatalog": "Στυλ",
+      "annotationSymbolGeometry": "Γεωμετρία",
       "mepFixtureLibrary": "Βιβλιοθήκη",
       "mepFixtureLibraryPlacement": "Τοποθέτηση",
       "mepRiser": "Στήλη",
@@ -1752,6 +1762,8 @@
       "xlineTooltip": "Άπειρη γραμμή αναφοράς και για τις δύο κατευθύνσεις",
       "ray": "Ακτίνα",
       "rayTooltip": "Ημι-άπειρη γραμμή από αρχή προς κατεύθυνση",
+      "northArrow": "Βορράς",
+      "northArrowTooltip": "Τοποθέτηση συμβόλου Βορρά με ένα κλικ στον καμβά",
       "xlineModeSelector": "Λειτουργία",
       "bim": {
         "wall": {
@@ -4407,6 +4419,11 @@
       },
       "floorplanSymbolEditor": {
         "asset": "Σύμβολο",
+        "rotation": "Περιστροφή"
+      },
+      "annotationSymbolEditor": {
+        "variant": "Στυλ",
+        "size": "Μέγεθος (mm)",
         "rotation": "Περιστροφή"
       },
       "furnitureEditor": {

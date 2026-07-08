@@ -11,9 +11,8 @@
  * @enterprise ADR-174 - Meta Omnichannel Integration (Phase 2)
  */
 
-import { type NextRequest, NextResponse } from 'next/server';
 import { handleGET, handlePOST } from './handler';
-import { withWebhookRateLimit } from '@/lib/middleware/with-rate-limit';
+import { createMetaWebhookRoute } from '@/lib/communications/meta-webhook';
 
 /**
  * Vercel Serverless Function max duration.
@@ -23,26 +22,10 @@ import { withWebhookRateLimit } from '@/lib/middleware/with-rate-limit';
 export const maxDuration = 60;
 
 /**
- * GET — Webhook verification
- * Meta sends this once when configuring the webhook URL.
- * Must respond with hub.challenge to confirm ownership.
+ * GET  — Webhook verification (Meta sends hub.challenge once at configuration).
+ * POST — Incoming messages, delivery receipts, and read events.
  *
- * @rateLimit WEBHOOK (30 req/min)
+ * Wiring (rate limit WEBHOOK 30 req/min on both verbs) is owned by the shared
+ * Meta webhook route factory (ADR-586).
  */
-async function getHandler(request: NextRequest): Promise<NextResponse> {
-  return handleGET(request);
-}
-
-export const GET = withWebhookRateLimit(getHandler);
-
-/**
- * POST — Incoming messages and events
- * Meta sends message events, delivery receipts, and read events here.
- *
- * @rateLimit WEBHOOK (30 req/min)
- */
-async function postHandler(request: NextRequest): Promise<NextResponse> {
-  return handlePOST(request);
-}
-
-export const POST = withWebhookRateLimit(postHandler);
+export const { GET, POST } = createMetaWebhookRoute({ handleGET, handlePOST });

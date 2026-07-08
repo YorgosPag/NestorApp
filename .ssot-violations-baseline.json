@@ -1,9 +1,9 @@
 {
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet pattern)",
-    "generated": "2026-07-06T16:27:38Z",
-    "totalViolations": 131,
-    "totalFiles": 90,
+    "generated": "2026-07-08T10:20:03Z",
+    "totalViolations": 132,
+    "totalFiles": 91,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "registry": ".ssot-registry.json"
   },
@@ -69,6 +69,7 @@
     "src/subapps/dxf-viewer/hooks/useEntityDrag.ts": 2,
     "src/subapps/dxf-viewer/snapping/index.ts": 1,
     "src/subapps/dxf-viewer/systems/cursor/GripDragStore.ts": 1,
+    "src/subapps/dxf-viewer/systems/group/ActiveGroupStore.ts": 1,
     "src/subapps/dxf-viewer/systems/prompt-dialog/PromptDialog.tsx": 2,
     "src/subapps/dxf-viewer/ui/color/eyedropper.ts": 2,
     "src/subapps/dxf-viewer/ui/components/dxf-settings/categories/CursorCategory.tsx": 1,

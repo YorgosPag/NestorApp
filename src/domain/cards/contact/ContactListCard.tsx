@@ -3,13 +3,12 @@
 /**
  * 👤 ENTERPRISE CONTACT LIST CARD - Domain Component
  *
- * Thin wrapper: computes the shared view-model via useContactCardModel (ADR-585)
- * and renders it into the ListCard shell. List-only concern = address enrichment
- * mini-badges (ADR-332 Phase 10) rendered as children.
+ * Thin typed adapter: computes the shared view-model via useContactCardModel
+ * (ADR-585) and delegates rendering to the DomainCard list shell. List-only
+ * concern = address enrichment mini-badges (ADR-332 Phase 10) as children.
  *
  * @fileoverview Contact domain card using centralized ListCard.
  * @enterprise Fortune 500 compliant - ZERO hardcoded values
- * @see ListCard for base component
  * @see useContactCardModel for the shared view-model (ADR-585)
  * @author Enterprise Architecture Team
  * @since 2026-01-08
@@ -17,69 +16,23 @@
 
 import React, { useMemo } from 'react';
 
-// 🏢 DESIGN SYSTEM
-import { ListCard } from '@/design-system';
-
-// 🏢 DOMAIN TYPES
 import type { Contact } from '@/types/contacts';
-
 // ADR-332 Phase 10 — address enrichment mini-badges
 import { AddressSourceLabel, AddressFreshnessIndicator, computeFreshness } from '@/components/shared/addresses/editor';
-
-// 🏢 SHARED VIEW-MODEL (ADR-585)
+import type { DomainCardInteraction } from '../shared/card-model.types';
+import { DomainCard } from '../shared/DomainCard';
 import { useContactCardModel } from './useContactCardModel';
 
-// =============================================================================
-// 🏢 TYPES
-// =============================================================================
-
-export interface ContactListCardProps {
+export interface ContactListCardProps extends DomainCardInteraction {
   /** Contact data */
   contact: Contact;
-  /** Whether card is selected */
-  isSelected?: boolean;
-  /** Whether item is favorite */
-  isFavorite?: boolean;
-  /** Click handler */
-  onSelect?: () => void;
-  /** Favorite toggle handler */
-  onToggleFavorite?: () => void;
-  /** Compact mode */
-  compact?: boolean;
-  /** Additional className */
-  className?: string;
 }
 
-// =============================================================================
-// 🏢 COMPONENT
-// =============================================================================
-
 /**
- * 👤 ContactListCard Component
- *
- * Domain-specific card for contacts in list views.
- *
- * @example
- * ```tsx
- * <ContactListCard
- *   contact={contact}
- *   isSelected={selectedId === contact.id}
- *   onSelect={() => setSelectedId(contact.id)}
- *   onToggleFavorite={() => toggleFavorite(contact.id)}
- *   isFavorite={favorites.has(contact.id)}
- * />
- * ```
+ * 👤 ContactListCard — domain card for contacts in list views.
  */
-export function ContactListCard({
-  contact,
-  isSelected = false,
-  isFavorite,
-  onSelect,
-  onToggleFavorite,
-  compact = false,
-  className,
-}: ContactListCardProps) {
-  const { ariaLabel, ...cardProps } = useContactCardModel(contact);
+export function ContactListCard({ contact, ...interaction }: ContactListCardProps) {
+  const model = useContactCardModel(contact);
 
   /** Address enrichment badges for primary address (ADR-332 Phase 10) */
   const addressEnrichment = useMemo(() => {
@@ -92,16 +45,7 @@ export function ContactListCard({
   }, [contact.addresses]);
 
   return (
-    <ListCard
-      {...cardProps}
-      isSelected={isSelected}
-      onClick={onSelect}
-      isFavorite={isFavorite}
-      onToggleFavorite={onToggleFavorite}
-      compact={compact}
-      className={className}
-      aria-label={ariaLabel}
-    >
+    <DomainCard variant="list" model={model} {...interaction}>
       {addressEnrichment && (
         <div className="flex items-center gap-1.5 pt-1">
           {addressEnrichment.source && (
@@ -110,7 +54,7 @@ export function ContactListCard({
           <AddressFreshnessIndicator freshness={addressEnrichment.freshness} />
         </div>
       )}
-    </ListCard>
+    </DomainCard>
   );
 }
 

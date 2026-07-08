@@ -3,12 +3,11 @@
 /**
  * 🏢 ENTERPRISE BUILDING GRID CARD - Domain Component
  *
- * Thin wrapper: computes the shared view-model via useBuildingCardModel (ADR-585)
- * and renders it into the GridCard shell.
+ * Thin typed adapter: computes the shared view-model via useBuildingCardModel
+ * (ADR-585) and delegates rendering to the DomainCard grid shell.
  *
  * @fileoverview Building domain card using centralized GridCard.
  * @enterprise Fortune 500 compliant - ZERO hardcoded values
- * @see GridCard for base component
  * @see BuildingListCard for list view equivalent
  * @see useBuildingCardModel for the shared view-model (ADR-585)
  * @author Enterprise Architecture Team
@@ -17,79 +16,22 @@
 
 import React from 'react';
 
-// 🏢 DESIGN SYSTEM
-import { GridCard } from '@/design-system';
-
-// 🏢 DOMAIN TYPES
 import type { Building } from '@/types/building/contracts';
-
-// 🏢 SHARED VIEW-MODEL (ADR-585)
+import type { DomainCardInteraction } from '../shared/card-model.types';
+import { DomainCard } from '../shared/DomainCard';
 import { useBuildingCardModel } from './useBuildingCardModel';
 
-// =============================================================================
-// 🏢 TYPES
-// =============================================================================
-
-export interface BuildingGridCardProps {
+export interface BuildingGridCardProps extends DomainCardInteraction {
   /** Building data */
   building: Building;
-  /** Whether card is selected */
-  isSelected?: boolean;
-  /** Whether item is favorite */
-  isFavorite?: boolean;
-  /** Click handler */
-  onSelect?: () => void;
-  /** Favorite toggle handler */
-  onToggleFavorite?: () => void;
-  /** Compact mode */
-  compact?: boolean;
-  /** Additional className */
-  className?: string;
 }
 
-// =============================================================================
-// 🏢 COMPONENT
-// =============================================================================
-
 /**
- * 🏢 BuildingGridCard Component
- *
- * Domain-specific card for buildings in grid views.
- *
- * @example
- * ```tsx
- * <BuildingGridCard
- *   building={building}
- *   isSelected={selectedId === building.id}
- *   onSelect={() => setSelectedId(building.id)}
- *   onToggleFavorite={() => toggleFavorite(building.id)}
- *   isFavorite={favorites.has(building.id)}
- * />
- * ```
+ * 🏢 BuildingGridCard — domain card for buildings in grid/tile views.
  */
-export function BuildingGridCard({
-  building,
-  isSelected = false,
-  isFavorite,
-  onSelect,
-  onToggleFavorite,
-  compact = false,
-  className,
-}: BuildingGridCardProps) {
-  const { ariaLabel, ...cardProps } = useBuildingCardModel(building);
-
-  return (
-    <GridCard
-      {...cardProps}
-      isSelected={isSelected}
-      onClick={onSelect}
-      isFavorite={isFavorite}
-      onToggleFavorite={onToggleFavorite}
-      compact={compact}
-      className={className}
-      aria-label={ariaLabel}
-    />
-  );
+export function BuildingGridCard({ building, ...interaction }: BuildingGridCardProps) {
+  const model = useBuildingCardModel(building);
+  return <DomainCard variant="grid" model={model} {...interaction} />;
 }
 
 BuildingGridCard.displayName = 'BuildingGridCard';
