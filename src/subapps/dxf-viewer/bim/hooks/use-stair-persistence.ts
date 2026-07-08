@@ -30,8 +30,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dequal } from 'dequal';
 
-import type { SceneModel } from '../../types/entities';
-import type { SceneWriteOrigin } from '../../hooks/scene/scene-write-origin';
 import type { StairEntity } from '../types/stair-types';
 import { makeStairHostResolverFromScene } from '../geometry/stairs/stair-host-resolver';
 import { EventBus } from '../../systems/events/EventBus';
@@ -46,6 +44,7 @@ import { useBimEntityAttachedPersistEffect } from '../../hooks/data/useBimEntity
 import { upsertStairBoq, deleteStairBoq } from '../services/stair-boq-sync';
 import { isStair, mergeStairSnapshot } from '../stairs/stair-snapshot-merge';
 import { DXF_TIMING } from '../../config/dxf-timing';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 
 // ============================================================================
 // TYPES
@@ -53,11 +52,6 @@ import { DXF_TIMING } from '../../config/dxf-timing';
 
 export type StairSaveState = 'idle' | 'saving' | 'saved' | 'error';
 
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
-}
 
 export interface UseStairPersistenceParams {
   readonly companyId: string | null;
@@ -68,7 +62,7 @@ export interface UseStairPersistenceParams {
   /** ADR-395 Phase 1 (G7) — floor link for per-floor BOQ grouping. */
   readonly floorId?: string | null | undefined;
   readonly userId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly primarySelectedStair: StairEntity | null;
 }
 
@@ -230,39 +224,75 @@ export function useStairPersistence(
     [levelManager],
   );
 
-  // Immediate persist (used by both auto-save flush and explicit button).
-  const persist = useCallback(async (entity: StairEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
-    const isNew = prevParams === null;
-    setSaveState('saving');
-    setError(null);
-    try {
-      await acquireLock(entity.id);
-      await svc.saveStair(entityToSaveInput(entity));
-      lastSavedParamsRef.current.set(entity.id, entity.params);
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
+  // Shared post-save side-effects (audit trail + BoQ upsert) for persist /
+  // persistRestore. Action strings differ per caller; the payload shape is identical.
+  const recordStairSaveSideEffects = useCallback(
+    (
+      entity: StairEntity,
+      auditAction: Parameters<typeof recordStairChange>[0],
+      boqAction: Parameters<typeof upsertStairBoq>[2],
+      prevParams?: StairEntity['params'],
+    ) => {
       void recordStairChange(
-        isNew ? 'created' : 'updated',
+        auditAction,
         { id: entity.id, kind: entity.kind, layerId: entity.layerId, params: entity.params },
-        { prevParams: prevParams ?? undefined },
+        { prevParams },
       );
       if (companyId && projectId && buildingId) {
         void upsertStairBoq(
           { id: entity.id, kind: entity.kind, params: entity.params },
           { companyId, projectId, buildingId, floorId: floorId ?? undefined, resolveHostInput: buildStairHostResolver(entity) },
-          isNew ? 'created' : 'updated',
+          boqAction,
         );
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'STAIR_SAVE_ERROR');
-      setSaveState('error');
-    }
-  }, [acquireLock, companyId, projectId, buildingId, floorId, buildStairHostResolver]);
+    },
+    [companyId, projectId, buildingId, floorId, buildStairHostResolver],
+  );
+
+  // Shared save orchestration for both persist (create/update) and persistRestore.
+  // Lock → Firestore save → ref bookkeeping → audit/BoQ side-effects, wrapped in the
+  // identical saving/saved/error state machine. Callers supply only the per-flow bits.
+  const commitStairSave = useCallback(
+    async (
+      entity: StairEntity,
+      auditAction: Parameters<typeof recordStairChange>[0],
+      boqAction: Parameters<typeof upsertStairBoq>[2],
+      errorCode: string,
+      prevParams?: StairEntity['params'],
+    ) => {
+      const svc = serviceRef.current;
+      if (!svc) return;
+      setSaveState('saving');
+      setError(null);
+      try {
+        await acquireLock(entity.id);
+        await svc.saveStair(entityToSaveInput(entity));
+        lastSavedParamsRef.current.set(entity.id, entity.params);
+        dirtyIdsRef.current.delete(entity.id);
+        pendingFirstSaveIdsRef.current.delete(entity.id);
+        setSaveState('saved');
+        setLastSavedAt(Date.now());
+        recordStairSaveSideEffects(entity, auditAction, boqAction, prevParams);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : errorCode);
+        setSaveState('error');
+      }
+    },
+    [acquireLock, recordStairSaveSideEffects],
+  );
+
+  // Immediate persist (used by both auto-save flush and explicit button).
+  const persist = useCallback(async (entity: StairEntity) => {
+    const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
+    const isNew = prevParams === null;
+    await commitStairSave(
+      entity,
+      isNew ? 'created' : 'updated',
+      isNew ? 'created' : 'updated',
+      'STAIR_SAVE_ERROR',
+      prevParams ?? undefined,
+    );
+  }, [commitStairSave]);
 
   // Auto-save debounce on selected stair params change.
   useEffect(() => {
@@ -339,34 +369,8 @@ export function useStairPersistence(
 
   // ADR-390 — persistRestore: undo→Firestore re-create + audit 'restored'.
   const persistRestore = useCallback(async (entity: StairEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    setSaveState('saving');
-    setError(null);
-    try {
-      await acquireLock(entity.id);
-      await svc.saveStair(entityToSaveInput(entity));
-      lastSavedParamsRef.current.set(entity.id, entity.params);
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-      void recordStairChange(
-        'restored',
-        { id: entity.id, kind: entity.kind, layerId: entity.layerId, params: entity.params },
-      );
-      if (companyId && projectId && buildingId) {
-        void upsertStairBoq(
-          { id: entity.id, kind: entity.kind, params: entity.params },
-          { companyId, projectId, buildingId, floorId: floorId ?? undefined, resolveHostInput: buildStairHostResolver(entity) },
-          'created',
-        );
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'STAIR_RESTORE_ERROR');
-      setSaveState('error');
-    }
-  }, [acquireLock, companyId, projectId, buildingId, floorId, buildStairHostResolver]);
+    await commitStairSave(entity, 'restored', 'created', 'STAIR_RESTORE_ERROR');
+  }, [commitStairSave]);
 
   // Imperative save trigger (explicit "Αποθήκευση" button).
   const saveNow = useCallback(async () => {
