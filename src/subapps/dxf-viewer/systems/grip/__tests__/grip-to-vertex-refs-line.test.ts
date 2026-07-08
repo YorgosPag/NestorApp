@@ -31,13 +31,13 @@ describe('gripToVertexRefs — plain DXF line', () => {
   });
 
   it('¼-west MOVE cross (#4, Slice G.5) moves BOTH endpoints — IDENTICAL to the midpoint (the bug)', () => {
-    const moveCross = grip({ gripIndex: 4, type: 'vertex', movesEntity: true, edgeVertexIndices: [0, 1], lineGripKind: 'line-move' });
+    const moveCross = grip({ gripIndex: 4, type: 'vertex', movesEntity: true, edgeVertexIndices: [0, 1] });
     const midpoint = grip({ gripIndex: 2, type: 'edge', movesEntity: true, edgeVertexIndices: [0, 1] });
     expect(gripToVertexRefs(line, moveCross)).toEqual([{ entityId: 'L1', kind: 'line-start' }, { entityId: 'L1', kind: 'line-end' }]);
     expect(gripToVertexRefs(line, moveCross)).toEqual(gripToVertexRefs(line, midpoint));
   });
 
   it('rotation handle (#3, no edgeVertexIndices) resolves to [] — it has its own commit', () => {
-    expect(gripToVertexRefs(line, grip({ gripIndex: 3, type: 'vertex', lineGripKind: 'line-rotation' }))).toEqual([]);
+    expect(gripToVertexRefs(line, grip({ gripIndex: 3, type: 'vertex' }))).toEqual([]);
   });
 });

@@ -17,6 +17,7 @@ import { axisQuarterRotationHandleWorld, axisQuarterMoveHandleWorld, axisToRectF
 import { gripGlyphShape } from '../../../bim/grips/grip-glyph-registry';
 import { hotGripOpForKind } from '../../../hooks/grips/wall-hot-grip-fsm';
 import { computeDxfEntityGrips } from '../../../hooks/grip-computation';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 import type { DxfEntityUnion } from '../../../canvas-v2/dxf-canvas/dxf-types';
 
 const near = (a: number, b: number) => expect(a).toBeCloseTo(b, 6);
@@ -160,14 +161,16 @@ describe('getLineGrips — the SSoT both grip paths consume', () => {
     expect(grips[1]).toMatchObject({ gripIndex: 1, type: 'vertex', movesEntity: false });
     // centre midpoint — kept as-is (ORTHO-eligible + StretchEntityCommand parity).
     expect(grips[2]).toMatchObject({ gripIndex: 2, type: 'edge', movesEntity: true, edgeVertexIndices: [0, 1] });
-    expect(grips[2].lineGripKind).toBeUndefined();
+    expect(gripKindOf(grips[2], 'line')).toBeUndefined();
     near(grips[2].position.x, 50); near(grips[2].position.y, 0);
     // rotation handle — ¼ east, tagged so it opts into the shared rotate flow.
-    expect(grips[3]).toMatchObject({ gripIndex: 3, type: 'vertex', movesEntity: false, lineGripKind: LINE_ROTATION_KIND });
+    expect(grips[3]).toMatchObject({ gripIndex: 3, type: 'vertex', movesEntity: false });
+    expect(gripKindOf(grips[3], 'line')).toBe(LINE_ROTATION_KIND);
     near(grips[3].position.x, 75); near(grips[3].position.y, 0);
     // MOVE cross — ¼ west, tagged so it opts into the shared move flow (glyph +
     // directional). `type: 'vertex'` so it always shows; whole-line translate parity.
-    expect(grips[4]).toMatchObject({ gripIndex: 4, type: 'vertex', movesEntity: true, edgeVertexIndices: [0, 1], lineGripKind: LINE_MOVE_KIND });
+    expect(grips[4]).toMatchObject({ gripIndex: 4, type: 'vertex', movesEntity: true, edgeVertexIndices: [0, 1] });
+    expect(gripKindOf(grips[4], 'line')).toBe(LINE_MOVE_KIND);
     near(grips[4].position.x, 25); near(grips[4].position.y, 0);
   });
 });
@@ -210,13 +213,13 @@ describe('computeDxfEntityGrips (case line) — emits the rotation + move handle
     expect(grips).toHaveLength(5);
     const rot = grips[3];
     expect(rot.gripIndex).toBe(3);
-    expect(rot.lineGripKind).toBe(LINE_ROTATION_KIND);
+    expect(gripKindOf(rot, 'line')).toBe(LINE_ROTATION_KIND);
     expect(rot.movesEntity).toBe(false);
     near(rot.position.x, 75);
     near(rot.position.y, 0);
     const move = grips[4];
     expect(move.gripIndex).toBe(4);
-    expect(move.lineGripKind).toBe(LINE_MOVE_KIND);
+    expect(gripKindOf(move, 'line')).toBe(LINE_MOVE_KIND);
     expect(move.movesEntity).toBe(true);
     near(move.position.x, 25);
     near(move.position.y, 0);

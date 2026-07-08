@@ -2,6 +2,7 @@
  * ADR-561 — `getArcGrips` SSoT tests (centre MOVE + start/end/mid + rotation handle).
  */
 import { getArcGrips, arcRotationHandlePos, ARC_MOVE_KIND, ARC_ROTATION_KIND } from '../arc-grips';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 
 describe('getArcGrips (ADR-561)', () => {
   const center = { x: 0, y: 0 };
@@ -15,13 +16,14 @@ describe('getArcGrips (ADR-561)', () => {
   it('centre grip is a whole-entity MOVE with the arc-move kind', () => {
     const [centre] = getArcGrips('A1', center, radius, 0, 90);
     expect(centre).toMatchObject({
-      gripIndex: 0, type: 'center', position: center, movesEntity: true, arcGripKind: ARC_MOVE_KIND,
+      gripIndex: 0, type: 'center', position: center, movesEntity: true,
     });
+    expect(gripKindOf(centre, 'arc')).toBe(ARC_MOVE_KIND);
   });
 
   it('rotation handle carries arc-rotation kind and sits midway (−radius/2 below centre)', () => {
     const grips = getArcGrips('A1', center, radius, 0, 90);
-    const rot = grips.find((g) => g.arcGripKind === ARC_ROTATION_KIND)!;
+    const rot = grips.find((g) => gripKindOf(g, 'arc') === ARC_ROTATION_KIND)!;
     expect(rot).toBeDefined();
     expect(rot.type).toBe('vertex');
     expect(rot.movesEntity).toBe(false);
@@ -39,8 +41,8 @@ describe('getArcGrips (ADR-561)', () => {
 
   it('start/end/mid grips carry NO arcGripKind (standard reshape / whole-move)', () => {
     const grips = getArcGrips('A1', center, radius, 0, 90);
-    expect(grips[1].arcGripKind).toBeUndefined();
-    expect(grips[2].arcGripKind).toBeUndefined();
-    expect(grips[3].arcGripKind).toBeUndefined();
+    expect(gripKindOf(grips[1], 'arc')).toBeUndefined();
+    expect(gripKindOf(grips[2], 'arc')).toBeUndefined();
+    expect(gripKindOf(grips[3], 'arc')).toBeUndefined();
   });
 });

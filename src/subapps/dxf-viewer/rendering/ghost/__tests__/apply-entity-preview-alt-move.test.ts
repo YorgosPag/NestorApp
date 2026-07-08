@@ -50,7 +50,7 @@ describe('ADR-363 Phase 1G.5 — applyEntityPreview whole-entity move ghost', ()
   it('a parametric wallGripKind still routes through the wall branch (not whole-move)', () => {
     const preview: EntityPreviewTransform = {
       entityId: 'wall_1', gripIndex: 3, delta: DELTA, movesEntity: false,
-      wallGripKind: 'wall-thickness', anchorPos: { x: 2500, y: 125 },
+      gripKind: { on: 'wall', kind: 'wall-thickness' }, anchorPos: { x: 2500, y: 125 },
     };
     const ghost = applyEntityPreview(makeWall(), preview) as unknown as {
       params: { start: { x: number }; thickness: number };

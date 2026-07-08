@@ -2,6 +2,7 @@
  * ADR-561 — `getCircleGrips` SSoT tests (centre MOVE cross + 4 quadrants, NO rotation).
  */
 import { getCircleGrips, circleQuadrantPoints, CIRCLE_MOVE_KIND } from '../circle-grips';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 
 describe('getCircleGrips (ADR-561)', () => {
   const center = { x: 10, y: 20 };
@@ -16,15 +17,16 @@ describe('getCircleGrips (ADR-561)', () => {
     const [centre] = getCircleGrips('C1', center, radius);
     expect(centre).toMatchObject({
       entityId: 'C1', gripIndex: 0, type: 'center', position: center,
-      movesEntity: true, circleGripKind: CIRCLE_MOVE_KIND,
+      movesEntity: true,
     });
+    expect(gripKindOf(centre, 'circle')).toBe(CIRCLE_MOVE_KIND);
   });
 
   it('emits NO rotation grip (circle is symmetric — parity ADR-519)', () => {
     const grips = getCircleGrips('C1', center, radius);
-    expect(grips.some((g) => g.circleGripKind === 'circle-move')).toBe(true);
+    expect(grips.some((g) => gripKindOf(g, 'circle') === 'circle-move')).toBe(true);
     // No kind other than the move exists, and no 'rotation'-shaped kind at all.
-    expect(grips.filter((g) => g.circleGripKind).map((g) => g.circleGripKind)).toEqual(['circle-move']);
+    expect(grips.filter((g) => gripKindOf(g, 'circle')).map((g) => gripKindOf(g, 'circle'))).toEqual(['circle-move']);
   });
 
   it('quadrants are typed "quadrant" (radius edit), not entity-moving', () => {
@@ -33,7 +35,7 @@ describe('getCircleGrips (ADR-561)', () => {
     for (const q of quads) {
       expect(q.type).toBe('quadrant');
       expect(q.movesEntity).toBe(false);
-      expect(q.circleGripKind).toBeUndefined();
+      expect(gripKindOf(q, 'circle')).toBeUndefined();
     }
   });
 

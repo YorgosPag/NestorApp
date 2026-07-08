@@ -24,53 +24,10 @@ export function toEntityPreviewTransform(dp: DxfGripDragPreview): EntityPreviewT
     delta: dp.delta,
     movesEntity: dp.movesEntity,
     edgeVertexIndices: dp.edgeVertexIndices,
-    // ADR-358 Phase 5d — stair parametric ghost discriminator pass-through.
-    ...(dp.stairGripKind       ? { stairGripKind:       dp.stairGripKind }       : {}),
-    // ADR-363 Phase 1C — wall parametric ghost discriminator pass-through.
-    ...(dp.wallGripKind        ? { wallGripKind:        dp.wallGripKind }         : {}),
-    // ADR-363 Phase 5.5 / 3.5 / 3.7a — beam / slab / slab-opening parametric ghost.
-    ...(dp.beamGripKind        ? { beamGripKind:        dp.beamGripKind }         : {}),
-    // ADR-397 — column parametric ghost (move/rotation/resize) pass-through.
-    ...(dp.columnGripKind      ? { columnGripKind:      dp.columnGripKind }       : {}),
-    // ADR-436 Slice 1b — foundation parametric ghost (rotation / width-length resize / move).
-    ...(dp.foundationGripKind  ? { foundationGripKind:  dp.foundationGripKind }   : {}),
-    ...(dp.slabGripKind        ? { slabGripKind:        dp.slabGripKind }         : {}),
-    ...(dp.slabOpeningGripKind ? { slabOpeningGripKind: dp.slabOpeningGripKind }  : {}),
-    // ADR-417 Φ1-part-2 #2 — roof parametric ghost (footprint vertex / insert).
-    ...(dp.roofGripKind        ? { roofGripKind:        dp.roofGripKind }         : {}),
-    // ADR-406 — MEP fixture parametric ghost (move / rotation / corner resize).
-    ...(dp.mepFixtureGripKind  ? { mepFixtureGripKind:  dp.mepFixtureGripKind }   : {}),
-    // ADR-408 Φ3 — electrical panel parametric ghost (move / rotation / corner resize).
-    ...(dp.electricalPanelGripKind ? { electricalPanelGripKind: dp.electricalPanelGripKind } : {}),
-    // ADR-408 Φ12 — MEP manifold parametric ghost (move / rotation / corner resize).
-    ...(dp.mepManifoldGripKind ? { mepManifoldGripKind: dp.mepManifoldGripKind } : {}),
-    // ADR-408 Φ8 — MEP segment parametric ghost (start/end/midpoint / section resize / rotate).
-    // ADR-602 §1.4 Bug 2 fix: declared σε DxfGripDragPreview+EntityPreviewTransform και
-    // διαβάζεται στο apply-parametric-box-preview, αλλά ΔΕΝ αντιγραφόταν εδώ → ζωντανό ghost
-    // dragged mep-segment έχανε το kind. Τώρα forwarded (mirror mepManifold).
-    ...(dp.mepSegmentGripKind ? { mepSegmentGripKind: dp.mepSegmentGripKind } : {}),
-    // ADR-410 — furniture parametric ghost (move / rotation / corner resize).
-    ...(dp.furnitureGripKind   ? { furnitureGripKind:   dp.furnitureGripKind }    : {}),
-    // ADR-415 — floorplan-symbol parametric ghost (move / rotation / corner resize).
-    ...(dp.floorplanSymbolGripKind ? { floorplanSymbolGripKind: dp.floorplanSymbolGripKind } : {}),
-    // ADR-419 — floor-finish parametric ghost (footprint vertex / insert).
-    ...(dp.floorFinishGripKind ? { floorFinishGripKind: dp.floorFinishGripKind } : {}),
-    // ADR-507 — hatch boundary parametric ghost (vertex translate).
-    ...(dp.hatchGripKind       ? { hatchGripKind:       dp.hatchGripKind }        : {}),
-    // ADR-557 — text/mtext rect-box parametric ghost (move / rotation / corner+edge resize).
-    ...(dp.textGripKind        ? { textGripKind:        dp.textGripKind }         : {}),
-    // ADR-363 Slice F — plain DXF line rotation ghost (rotate start/end about pivot).
-    ...(dp.lineGripKind        ? { lineGripKind:        dp.lineGripKind }         : {}),
-    // ADR-561 — plain DXF arc rotation ghost (rotate centre + start/end angles about pivot).
-    ...(dp.arcGripKind         ? { arcGripKind:         dp.arcGripKind }          : {}),
-    // ADR-561 — plain DXF polyline/rectangle rotation ghost (rotate every vertex about pivot).
-    ...(dp.polylineGripKind    ? { polylineGripKind:    dp.polylineGripKind }     : {}),
-    // ADR-575 §8 — GROUP gizmo ghost (translate / rotate every member about the bbox centre).
-    ...(dp.groupGripKind       ? { groupGripKind:       dp.groupGripKind }        : {}),
-    // ADR-583 — annotation symbol (North arrow) move/rotation live ghost.
-    ...(dp.annotationSymbolGripKind ? { annotationSymbolGripKind: dp.annotationSymbolGripKind } : {}),
-    // ADR-602 (ADR-587 Φ6) Stage 2 — dual-write του tagged grip discriminator SSoT
-    // (DxfGripDragPreview→EntityPreviewTransform). Inert μέχρι Stage 3· μηδέν behavior change.
+    // ADR-602 (ADR-587 Φ6) Stage 5 — the ONE tagged grip discriminator SSoT
+    // (DxfGripDragPreview→EntityPreviewTransform). The per-entity legacy `xxxGripKind`
+    // pass-throughs were deleted; `applyEntityPreview` / `applyParametricBoxPreview` read
+    // each discriminator via `gripKindOf`.
     ...(dp.gripKind            ? { gripKind:            dp.gripKind }             : {}),
     ...(dp.anchorPos           ? { anchorPos:           dp.anchorPos }            : {}),
     // ADR-363 Phase 1G — rotation centre for the rotation hot-grip ghost.

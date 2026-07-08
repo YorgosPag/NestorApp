@@ -132,15 +132,15 @@ describe('resolveMenuActions — multifunctional entries', () => {
   // menu therefore yields NOTHING for polyline grips (no duplicate floating menu).
   it('polyline vertex → [] (ops live in the right-click menu)', () => {
     expect(ids(polyOpen, grip({ type: 'vertex', gripIndex: 0 }))).toEqual([]);
-    expect(ids(polyClosed, grip({ type: 'vertex', gripIndex: 1, polylineGripKind: 'polyline-vertex-1' }))).toEqual([]);
+    expect(ids(polyClosed, grip({ type: 'vertex', gripIndex: 1 }))).toEqual([]);
   });
 
   it('polyline segment-midpoint / arc-midpoint → [] in the hover menu', () => {
     expect(
-      ids(polyClosed, grip({ type: 'edge', gripIndex: 3, polylineGripKind: 'polyline-segment-midpoint-0' })),
+      ids(polyClosed, grip({ type: 'edge', gripIndex: 3 })),
     ).toEqual([]);
     expect(
-      ids(polyClosed, grip({ type: 'edge', gripIndex: 3, polylineGripKind: 'polyline-arc-midpoint-0' })),
+      ids(polyClosed, grip({ type: 'edge', gripIndex: 3 })),
     ).toEqual([]);
   });
 });
