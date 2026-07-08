@@ -26,7 +26,6 @@ import {
 import { recordMepSegmentChange } from '../../bim/mep-segments/mep-segment-audit-client';
 import { mepSegmentDocToEntity as docToEntity } from './mep-segment-persistence-helpers';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
-import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
 import type {
   BimEntityPersistenceParams,
@@ -39,16 +38,8 @@ import type {
 
 export type MepSegmentSaveState = BimEntitySaveState;
 
-export interface UseMepSegmentPersistenceParams {
-  readonly companyId: string | null;
-  readonly projectId: string | null | undefined;
-  readonly floorplanId: string | null | undefined;
-  /** ADR-420 — stable building-storey scope key (IfcBuildingStorey). */
-  readonly floorId?: string | null;
-  /** ADR-408 — building scope for the Η-Μ BOQ auto-feed (BimToBoqBridge). */
-  readonly buildingId?: string | null;
-  readonly userId: string | null;
-  readonly levelManager: LevelSceneWriter;
+export interface UseMepSegmentPersistenceParams
+  extends Omit<BimEntityPersistenceParams<MepSegmentEntity>, 'primarySelected'> {
   readonly primarySelectedSegment: MepSegmentEntity | null;
 }
 
@@ -86,6 +77,7 @@ const useMepSegmentPersistenceBase = createBimEntityPersistenceHook<
   entityComparable: (e) => e.params,
   // Delete-wins race semantics + event-driven autosave (no write-grace / serializer).
   raceGuardDelete: true,
+  markDeletedOnRequest: true,
   autoSaveTrigger: {
     event: 'bim:mep-segment-params-updated',
     getId: (p) => (p as { segmentId?: string }).segmentId,

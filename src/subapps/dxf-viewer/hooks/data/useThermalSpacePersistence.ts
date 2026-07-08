@@ -3,14 +3,14 @@
 /**
  * ADR-422 L0 — Thermal-space Firestore persistence React adapter.
  *
- * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-593). Behaviour
+ * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-594). Behaviour
  * unchanged: subscribe + diff-merge, first-save on `drawing:entity-created`
  * (tool 'thermal-space'), 500ms auto-save debounce, delete on
  * `bim:thermal-space-delete-requested`. Area entity, write-grace, no audit/BOQ,
  * lean (silent) restore.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-422-bim-heating-mechanical-study.md
- * @see docs/centralized-systems/reference/adrs/ADR-593-bim-entity-persistence-hook-ssot.md
+ * @see docs/centralized-systems/reference/adrs/ADR-594-bim-entity-persistence-hook-ssot.md
  */
 
 import { useMemo } from 'react';

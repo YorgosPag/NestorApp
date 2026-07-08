@@ -84,15 +84,8 @@ function feedWallBoq(
 
 export type WallSaveState = BimEntitySaveState;
 
-export interface UseWallPersistenceParams {
-  readonly companyId: string | null;
-  readonly projectId: string | null | undefined;
-  readonly floorplanId: string | null | undefined;
-  readonly buildingId: string | null | undefined;
-  /** ADR-395 Phase 1 (G7) — floor link for per-floor BOQ grouping. */
-  readonly floorId: string | null | undefined;
-  readonly userId: string | null;
-  readonly levelManager: LevelSceneWriter;
+export interface UseWallPersistenceParams
+  extends Omit<BimEntityPersistenceParams<WallEntity>, 'primarySelected'> {
   readonly primarySelectedWall: WallEntity | null;
 }
 

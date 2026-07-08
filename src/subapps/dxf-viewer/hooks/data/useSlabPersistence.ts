@@ -3,7 +3,7 @@
 /**
  * ADR-363 Phase 3 — Slab Firestore persistence React adapter.
  *
- * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-593). Behaviour
+ * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-594). Behaviour
  * unchanged: hybrid auto-save + `saveNow`, diff-merge with ADR-412 "type always
  * wins" (`slabEntityDiffersFromDoc` + family-type link baseline seed), always-save
  * persist (setDoc, no update path), BOQ feed (create/update/delete/restore), and two
@@ -11,7 +11,7 @@
  * + `useSlabTypeReresolution`. First-save on `drawing:entity-created` (tool 'slab').
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.10
- * @see docs/centralized-systems/reference/adrs/ADR-593-bim-entity-persistence-hook-ssot.md
+ * @see docs/centralized-systems/reference/adrs/ADR-594-bim-entity-persistence-hook-ssot.md
  */
 
 import { useEffect, useMemo } from 'react';

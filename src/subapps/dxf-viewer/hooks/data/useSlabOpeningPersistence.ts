@@ -3,7 +3,7 @@
 /**
  * ADR-363 Phase 3.7 — Slab-Opening Firestore persistence React adapter.
  *
- * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-593). Behaviour
+ * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-594). Behaviour
  * unchanged: subscribe + diff-merge, first-save on `drawing:entity-created` (tool
  * 'slab-opening'), 500ms auto-save debounce, delete on
  * `bim:slab-opening-delete-requested`, audit via `recordSlabOpeningChange` (narrowed
@@ -18,7 +18,7 @@
  * αναπαράγεται client-side από `params`.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.10 §11.Q3
- * @see docs/centralized-systems/reference/adrs/ADR-593-bim-entity-persistence-hook-ssot.md
+ * @see docs/centralized-systems/reference/adrs/ADR-594-bim-entity-persistence-hook-ssot.md
  */
 
 import { useMemo } from 'react';

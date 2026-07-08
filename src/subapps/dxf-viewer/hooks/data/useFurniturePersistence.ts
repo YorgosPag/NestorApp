@@ -3,14 +3,14 @@
 /**
  * ADR-410 — Furniture Firestore persistence React adapter.
  *
- * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-593). Behaviour
+ * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-594). Behaviour
  * unchanged: hybrid auto-save, selective-skip diff-merge, first-save listener
  * wired to `drawing:entity-created` with `tool === 'furniture'`, delete + undo
  * restore, audit trail (created/updated/deleted/restored). No BOQ feed, no
  * connector reconciliation (furniture carries no MEP connectors).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-410-cc0-mesh-furniture-import.md
- * @see docs/centralized-systems/reference/adrs/ADR-593-bim-entity-persistence-hook-ssot.md
+ * @see docs/centralized-systems/reference/adrs/ADR-594-bim-entity-persistence-hook-ssot.md
  */
 
 import { useMemo } from 'react';

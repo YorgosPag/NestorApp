@@ -1,51 +1,47 @@
 'use client';
 
 /**
- * ADR-363 Phase 2 — Opening Firestore persistence React adapter.
+ * ADR-363 Phase 2 / ADR-594 Phase 2 — Opening Firestore persistence React adapter.
  *
- * Bridges `OpeningFirestoreService` σε scene model owned by `LevelsSystem`.
- * Mirrors `useWallPersistence` — same hybrid auto-save pattern, same selective
- * skip diff-merge, same first-save listener wired to `drawing:entity-created`.
- *
- * Persistence trigger — hybrid (DD-1 parallel):
- *   - Debounced auto-save 500 ms μετά από `opening.params` change settle.
- *   - `saveNow()` imperative escape hatch (explicit "Αποθήκευση" button).
- *
- * Scene sync — diff-merge με selective skip:
- *   - Κάθε snapshot adds / updates / removes openings στο active scene.
- *   - Openings marked locally-dirty ΠΟΤΕ δεν overwritten από snapshot data
- *     (local edits πάντα κερδίζουν μέχρι το round-trip να ολοκληρωθεί).
- *
- * Geometry re-derivation: όταν φτάνει ένα snapshot από Firestore, η γεωμετρία
- * αναπαράγεται client-side από `params + hostWall`. Αν ο host wall δεν υπάρχει
- * (πάλι load) → opening μένει εκτός scene μέχρι ο wall να υδρευθεί (next snapshot).
+ * Thin config over the `createBimEntityPersistenceHook` SSoT. Opening is the richest
+ * member — it threads its bespoke pieces through the factory's escape hatches:
+ *   - `beforeSave` — ADR-376 mark allocation on first save + ADR-363 §5.4 kind→mark
+ *     re-sync on edit (both patch the scene, then persist the returned entity).
+ *   - `merge.mode: 'custom'` — `mergeOpeningDocsIntoScene` (host-wall re-derivation +
+ *     Family/Type link baseline), reading the `lastSavedLink` map from the extra bag.
+ *   - family-type link: `createExtraRefs` (lastSavedLink) + `autoSaveDirty` (params OR
+ *     link changed) + `onPersisted`/`onRestored` seed the map.
+ *   - `useExtra` — re-resolution, thermal-envelope persist, and the pre-floorplanId
+ *     retry-save; `onDeleted` / `onRestored` own the ADR-376 signature-group BOQ +
+ *     `bim:opening-persisted` host-wall re-feed.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.10
+ * @see docs/centralized-systems/reference/adrs/ADR-594-bim-entity-persistence-hook-ssot.md
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { dequal } from 'dequal';
 
-import { DXF_TIMING } from '../../config/dxf-timing';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { Level } from '../../systems/levels/config';
 import { EventBus } from '../../systems/events/EventBus';
-import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
   createOpeningFirestoreService,
   entityToSaveInput,
   OpeningFirestoreService,
+  type OpeningDoc,
 } from '../../bim/walls/opening-firestore-service';
 import { recordOpeningChange } from '../../bim/walls/opening-audit-client';
-import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 import {
   deleteOpeningFromGroup,
   upsertOpeningGroupForOpening,
 } from '../../bim/services/opening-boq-sync';
 import { isOpening, mergeOpeningDocsIntoScene } from '../../bim/walls/opening-doc-hydration';
-import { allocateMarkAndPatchScene, syncMarkToKindAndPatchScene } from '../../bim/walls/opening-mark-allocator';
-// ADR-421 SLICE C — Family/Type link persistence + re-resolution.
+import {
+  allocateMarkAndPatchScene,
+  syncMarkToKindAndPatchScene,
+} from '../../bim/walls/opening-mark-allocator';
 import {
   openingTypeLinkChanged,
   openingUpdateLinkPatch,
@@ -53,25 +49,25 @@ import {
 } from '../../bim/family-types/opening-type-resolution';
 import { useOpeningTypeReresolution } from './useOpeningTypeReresolution';
 import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
+import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
+import type {
+  BimEntityPersistenceParams,
+  BimEntitySaveState,
+  BimPersistenceHookContext,
+} from './bim-entity-persistence-hook-types';
 
 // ============================================================================
-// TYPES
+// PUBLIC API (unchanged)
 // ============================================================================
 
-export type OpeningSaveState = 'idle' | 'saving' | 'saved' | 'error';
+export type OpeningSaveState = BimEntitySaveState;
 
 interface OpeningLevelManager extends LevelSceneWriter {
   readonly levels: readonly Level[];
 }
 
-export interface UseOpeningPersistenceParams {
-  readonly companyId: string | null;
-  readonly projectId: string | null | undefined;
-  readonly floorplanId: string | null | undefined;
-  readonly buildingId: string | null | undefined;
-  /** ADR-420 — stable building-storey scope key for Firestore query/write. */
-  readonly floorId?: string | null;
-  readonly userId: string | null;
+export interface UseOpeningPersistenceParams
+  extends Omit<BimEntityPersistenceParams<OpeningEntity>, 'primarySelected' | 'levelManager'> {
   readonly levelManager: OpeningLevelManager;
   readonly primarySelectedOpening: OpeningEntity | null;
 }
@@ -85,227 +81,182 @@ export interface UseOpeningPersistenceResult {
 }
 
 // ============================================================================
-// CONSTANTS
+// EXTRA REF BAG (family-type link map + live t / derived floorId)
 // ============================================================================
 
-const AUTO_SAVE_DEBOUNCE_MS = DXF_TIMING.persist.ENTITY_AUTOSAVE; // ADR-516
+interface OpeningExtra {
+  /** ADR-421 — last-persisted Family/Type link per opening. */
+  readonly lastSavedLink: Map<string, OpeningTypeLink>;
+  /** Live deps updated each render by `useExtra` (read at persist/delete time). */
+  readonly live: { t: (k: string) => string; floorId: string | null };
+}
 
 // ============================================================================
-// HOOK
+// FACTORY CONFIG
 // ============================================================================
 
-export function useOpeningPersistence(
-  params: UseOpeningPersistenceParams,
-): UseOpeningPersistenceResult {
-  const {
-    companyId,
-    projectId,
-    floorplanId,
-    buildingId,
-    floorId,
-    userId,
-    levelManager,
-    primarySelectedOpening,
-  } = params;
-
-  const { t } = useTranslation('dxf-viewer');
-
-  const [saveState, setSaveState] = useState<OpeningSaveState>('idle');
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const serviceRef = useRef<OpeningFirestoreService | null>(null);
-  const dirtyIdsRef = useRef<Set<string>>(new Set());
-  const deletedIdsRef = useRef<Set<string>>(new Set());
-  // ADR-390 — pending first save (drawn or restored via undo).
-  const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
-  const lastSavedParamsRef = useRef<Map<string, OpeningEntity['params']>>(new Map());
-  // ADR-421 SLICE C — last-saved Family/Type link per opening, so a pure detach /
-  // override-only edit (params unchanged) still triggers the auto-save.
-  const lastSavedLinkRef = useRef<Map<string, OpeningTypeLink>>(new Map());
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const selectedOpeningRef = useRef<OpeningEntity | null>(null);
-  selectedOpeningRef.current = primarySelectedOpening;
-  // Ref-based access to avoid stale closures without adding to effect dep arrays.
-  const levelManagerRef = useRef(levelManager);
-  levelManagerRef.current = levelManager;
-  // ⚡ STABILITY (ca9 fix 2026-06-08): key the Firestore subscription off stable
-  // scope primitives + `currentLevelId`, NOT the per-render `levelManager` object,
-  // so onSnapshot does not unsubscribe/re-subscribe on every render (target removed
-  // before ack → `INTERNAL ASSERTION FAILED ca9 {ve:-1}`). Mirror of the fitting hook.
-  const currentLevelId = levelManager.currentLevelId;
-  const currentFloorIdRef = useRef<string | null>(null);
-  currentFloorIdRef.current =
-    levelManager.levels.find((l) => l.id === levelManager.currentLevelId)?.floorId ?? null;
-
-  // ADR-421 SLICE C — re-resolve typed openings on a family-type catalog bump
-  // (type edit / late catalog load). Locally-dirty openings are skipped.
-  useOpeningTypeReresolution(levelManager, dirtyIdsRef);
-
-  // Listen for explicit deletion — marks ID so subscription never re-adds it.
-  useEffect(() => {
-    return EventBus.on('bim:opening-delete-requested', ({ openingId }) => {
-      deletedIdsRef.current.add(openingId);
-      void serviceRef.current?.deleteOpening(openingId).catch(() => undefined);
-    });
-  }, []);
-
-  // Instantiate service όταν auth + scope ready.
-  useEffect(() => {
-    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
-    if (!scope) {
-      serviceRef.current = null;
-      return;
-    }
-    serviceRef.current = createOpeningFirestoreService({
-      companyId: scope.companyId,
-      projectId: scope.projectId,
-      floorplanId: scope.floorplanId,
-      floorId: scope.floorId,
-      userId: scope.userId,
-    });
-  }, [companyId, projectId, floorplanId, floorId, userId]);
-
-  // Subscribe + diff-merge + selective skip locally-dirty openings.
-  // Keyed on STABLE primitives only (scope + currentLevelId) — NOT the per-render
-  // `levelManager` object — so onSnapshot subscribes once per real scope/level
-  // change (ca9 churn fix).
-  useEffect(() => {
-    const svc = serviceRef.current;
-    const levelId = currentLevelId;
-    if (!svc || !levelId) return;
-
-    const unsubscribe = svc.subscribeOpenings(
-      (docs) => mergeOpeningDocsIntoScene(docs, levelId, levelManagerRef.current, {
-        dirty: dirtyIdsRef.current,
-        deleted: deletedIdsRef.current,
-        pending: pendingFirstSaveIdsRef.current,
-        lastSavedParams: lastSavedParamsRef.current,
-        lastSavedLink: lastSavedLinkRef.current,
+const useOpeningPersistenceBase = createBimEntityPersistenceHook<
+  OpeningFirestoreService,
+  OpeningDoc,
+  OpeningEntity,
+  OpeningEntity['params'],
+  void,
+  OpeningExtra
+>({
+  entityType: 'opening',
+  restoreEntityType: 'opening',
+  saveErrorKey: 'OPENING_SAVE_ERROR',
+  restoreErrorKey: 'OPENING_RESTORE_ERROR',
+  typeGuard: isOpening,
+  entityComparable: (e) => e.params,
+  // Opening is NOT in the shared moved-persist family; it uses its own envelope
+  // listener (useExtra). Mark the tombstone synchronously on delete-request.
+  enableMovedEffect: false,
+  markDeletedOnRequest: true,
+  createExtraRefs: () => ({
+    lastSavedLink: new Map<string, OpeningTypeLink>(),
+    live: { t: (k: string) => k, floorId: null },
+  }),
+  createService: (scope) => createOpeningFirestoreService(scope),
+  service: {
+    save: (svc, e) => svc.saveOpening(entityToSaveInput(e)).then(() => undefined),
+    update: (svc, e) =>
+      svc.updateOpening(e.id, {
+        kind: e.params.kind,
+        params: e.params,
+        validation: e.validation,
+        layerId: e.layerId,
+        // ADR-421 — persist the Family/Type link (null → deleteField).
+        ...openingUpdateLinkPatch(e),
       }),
-      (err: Error) => {
-        setError(err.message);
-        setSaveState('error');
-      },
+    remove: (svc, id) => svc.deleteOpening(id),
+    subscribe: (svc, onDocs, onErr) =>
+      svc.subscribeOpenings(onDocs as (docs: readonly OpeningDoc[]) => void, onErr),
+  },
+  merge: {
+    mode: 'custom',
+    run: (docs, levelId, lm, refs, extra) =>
+      mergeOpeningDocsIntoScene(docs as readonly OpeningDoc[], levelId, lm, {
+        dirty: refs.dirty,
+        deleted: refs.deleted,
+        pending: refs.pending,
+        lastSavedParams: refs.lastSavedParams,
+        lastSavedLink: extra.lastSavedLink,
+      }),
+  },
+  // ADR-376 mark allocation (first save) + ADR-363 §5.4 kind→mark re-sync (edit).
+  beforeSave: async (entity, { isNew, prevComparable, scope, extra }) => {
+    const { companyId, projectId, floorplanId } = scope;
+    if (!companyId || !projectId || !floorplanId) return entity;
+    // The runtime levelManager is always an `OpeningLevelManager` (carries `levels`),
+    // which the mark allocator needs; the scope surface types it as the writer subset.
+    const levelManager = scope.levelManager as OpeningLevelManager;
+    const deps = { companyId, projectId, floorplanId, levelManager, t: extra.live.t };
+    if (isNew) return allocateMarkAndPatchScene(entity, deps);
+    if (prevComparable && prevComparable.kind !== entity.params.kind) {
+      return syncMarkToKindAndPatchScene(entity, deps);
+    }
+    return entity;
+  },
+  // ADR-421 — also persist when only the Family/Type link changed (params identical).
+  autoSaveDirty: (entity, lastSaved, extra) => {
+    const linkChanged = openingTypeLinkChanged(extra.lastSavedLink.get(entity.id), entity);
+    return !(lastSaved !== undefined && dequalParams(lastSaved, entity.params) && !linkChanged);
+  },
+  deleteTrigger: {
+    event: 'bim:opening-delete-requested',
+    getId: (p) => (p as { openingId?: string }).openingId,
+  },
+  onPersisted: (entity, { isNew, prevComparable, scope, extra }) => {
+    extra.lastSavedLink.set(entity.id, {
+      typeId: entity.typeId,
+      typeOverrides: entity.typeOverrides,
+    });
+    void recordOpeningChange(
+      isNew ? 'created' : 'updated',
+      entity,
+      { prevParams: prevComparable ?? undefined },
     );
-
-    return () => unsubscribe();
-  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
-
-  const persist = useCallback(async (entity: OpeningEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
-    const isNew = prevParams === null;
-    // ADR-363 §5.4 — kind change on an AUTO mark re-aligns the mark prefix
-    // (Θ↔Π). Detected vs the last-saved kind; manual marks skipped inside the
-    // helper. Re-allocation patches the scene, so persist the returned entity.
-    let toSave = entity;
-    if (
-      !isNew && prevParams && prevParams.kind !== entity.params.kind &&
-      companyId && projectId && floorplanId
-    ) {
-      toSave = await syncMarkToKindAndPatchScene(entity, { companyId, projectId, floorplanId, levelManager, t });
-    }
-    setSaveState('saving');
-    setError(null);
-    try {
-      await (isNew
-        ? svc.saveOpening(entityToSaveInput(toSave))
-        : svc.updateOpening(toSave.id, {
-            kind: toSave.params.kind,
-            params: toSave.params,
-            validation: toSave.validation,
-            layerId: toSave.layerId,
-            // ADR-421 SLICE C — persist the Family/Type link (null → deleteField).
-            ...openingUpdateLinkPatch(toSave),
-          }));
-      lastSavedParamsRef.current.set(toSave.id, toSave.params);
-      lastSavedLinkRef.current.set(toSave.id, {
-        typeId: toSave.typeId,
-        typeOverrides: toSave.typeOverrides,
-      });
-      dirtyIdsRef.current.delete(toSave.id);
-      pendingFirstSaveIdsRef.current.delete(toSave.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-      void recordOpeningChange(
-        isNew ? 'created' : 'updated',
-        toSave,
-        { prevParams: prevParams ?? undefined },
+    // ADR-376 Phase B.2 — signature-group aggregation (recomputes new group + old).
+    const { companyId, projectId, buildingId, floorplanId } = scope;
+    if (companyId && projectId && buildingId && floorplanId) {
+      void upsertOpeningGroupForOpening(
+        { id: entity.id, kind: entity.params.kind, params: entity.params },
+        prevComparable ?? null,
+        { companyId, projectId, buildingId, floorplanId, floorId: extra.live.floorId ?? undefined },
       );
-      // ADR-376 Phase B.2 — signature-group aggregation (όχι per-opening row).
-      // opening-boq-sync recomputes the new signature group (+ old αν άλλαξε).
-      if (companyId && projectId && buildingId && floorplanId) {
-        void upsertOpeningGroupForOpening(
-          { id: toSave.id, kind: toSave.params.kind, params: toSave.params },
-          prevParams,
-          { companyId, projectId, buildingId, floorplanId, floorId: currentFloorIdRef.current ?? undefined },
-        );
-      }
-      // ADR-395 G6 — host wall net area depends on its openings; signal the wall
-      // persistence hook to re-feed BOQ with the updated subtraction.
-      EventBus.emit('bim:opening-persisted', { wallId: toSave.params.wallId });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'OPENING_SAVE_ERROR');
-      setSaveState('error');
     }
-  }, [companyId, projectId, buildingId, floorplanId, levelManager, t]);
-
-  // ADR-376 Phase A — allocate mark before first persist (idempotent if already set).
-  const allocateAndPersistOpening = useCallback(async (entity: OpeningEntity) => {
-    const finalEntity =
-      companyId && projectId && floorplanId
-        ? await allocateMarkAndPatchScene(entity, { companyId, projectId, floorplanId, levelManager, t })
-        : entity;
-    await persist(finalEntity);
-  }, [persist, companyId, projectId, floorplanId, levelManager, t]);
-
-  const allocateAndPersistRef = useRef(allocateAndPersistOpening);
-  allocateAndPersistRef.current = allocateAndPersistOpening;
-
-  // Auto-save debounce on selected opening params change.
-  useEffect(() => {
-    const opening = primarySelectedOpening;
-    if (!opening || !serviceRef.current) return;
-    // ADR-390 — Bug A defense-in-depth.
-    const known = lastSavedParamsRef.current.has(opening.id);
-    const pendingOpening = pendingFirstSaveIdsRef.current.has(opening.id);
-    if (!known && !pendingOpening) return;
-    const lastSaved = lastSavedParamsRef.current.get(opening.id);
-    // ADR-421 SLICE C — also persist when only the Family/Type link changed
-    // (pure detach / override edit keeps params identical).
-    const linkChanged = openingTypeLinkChanged(lastSavedLinkRef.current.get(opening.id), opening);
-    if (lastSaved && dequal(lastSaved, opening.params) && !linkChanged) return;
-
-    dirtyIdsRef.current.add(opening.id);
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      void persist(opening);
-    }, AUTO_SAVE_DEBOUNCE_MS);
-
-    return () => {
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = null;
-      }
-    };
-  }, [primarySelectedOpening, persist]);
-
-  const saveNow = useCallback(async () => {
-    const opening = selectedOpeningRef.current;
-    if (!opening) return;
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
+    // ADR-395 G6 — host wall net area depends on its openings; re-feed the wall BOQ.
+    EventBus.emit('bim:opening-persisted', { wallId: entity.params.wallId });
+  },
+  onDeleted: (id, deleted, { scope, extra, lastSavedComparable }) => {
+    const lastKnownParams = lastSavedComparable ?? deleted?.params ?? null;
+    void recordOpeningChange(
+      'deleted',
+      deleted
+        ? { id: deleted.id, kind: deleted.kind, layerId: deleted.layerId, params: lastKnownParams ?? deleted.params }
+        : { id, kind: 'door' },
+    );
+    const { companyId, projectId, buildingId, floorplanId } = scope;
+    if (companyId && projectId && buildingId && floorplanId) {
+      void deleteOpeningFromGroup(lastKnownParams, {
+        companyId, projectId, buildingId, floorplanId, floorId: extra.live.floorId ?? undefined,
+      });
     }
-    await persist(opening);
-  }, [persist]);
+    if (lastKnownParams?.wallId) {
+      EventBus.emit('bim:opening-persisted', { wallId: lastKnownParams.wallId });
+    }
+  },
+  onDeleteCleanup: (id, extra) => {
+    extra.lastSavedLink.delete(id);
+  },
+  onRestored: (entity, { scope, extra }) => {
+    extra.lastSavedLink.set(entity.id, {
+      typeId: entity.typeId,
+      typeOverrides: entity.typeOverrides,
+    });
+    void recordOpeningChange('restored', entity);
+    const { companyId, projectId, buildingId, floorplanId } = scope;
+    if (companyId && projectId && buildingId && floorplanId) {
+      void upsertOpeningGroupForOpening(
+        { id: entity.id, kind: entity.kind, params: entity.params },
+        null,
+        { companyId, projectId, buildingId, floorplanId, floorId: extra.live.floorId ?? undefined },
+      );
+    }
+    EventBus.emit('bim:opening-persisted', { wallId: entity.params.wallId });
+  },
+  useExtra: (ctx) => useOpeningExtra(ctx),
+});
 
-  // ADR-396 P7 Part B — thermal envelope applied → persist Z4 reveal insulation
-  // on exterior openings. Openings are NOT in the shared moved-persist family
-  // (`useBimEntityMovedPersistEffect`), so they need their own listener. Payload
-  // carries the changed entities directly (no stale getLevelScene read).
+// dequal is used only inside autoSaveDirty; keep a local alias so the config object
+// reads cleanly (the factory owns the default dequal path for the majority hooks).
+function dequalParams(a: OpeningEntity['params'], b: OpeningEntity['params']): boolean {
+  return dequal(a, b);
+}
+
+// ============================================================================
+// useExtra — reresolution + envelope persist + retry-save + live deps
+// ============================================================================
+
+function useOpeningExtra(
+  ctx: BimPersistenceHookContext<OpeningEntity, OpeningEntity['params'], OpeningExtra>,
+): void {
+  const { t } = useTranslation('dxf-viewer');
+  const lm = ctx.levelManagerRef.current as OpeningLevelManager;
+  const currentLevelId = lm.currentLevelId;
+  const floorId = lm.levels.find((l) => l.id === currentLevelId)?.floorId ?? null;
+  // Live deps read at persist/delete time.
+  ctx.extra.live.t = t;
+  ctx.extra.live.floorId = floorId;
+
+  // ADR-421 — re-resolve typed openings on a family-type catalog bump.
+  useOpeningTypeReresolution(lm, ctx.dirtyIdsRef);
+
+  const { persist, serviceRef, dirtyIdsRef, lastSavedParamsRef, deletedIdsRef, levelManagerRef } = ctx;
+  const { companyId, projectId, floorplanId } = ctx.scope;
+
+  // ADR-396 P7 — thermal envelope applied → persist Z4 reveal on exterior openings.
   useEffect(() => {
     return EventBus.on('bim:envelope-applied', ({ entities }) => {
       if (!serviceRef.current) return;
@@ -315,167 +266,44 @@ export function useOpeningPersistence(
         void persist(entity);
       }
     });
-  }, [persist]);
+  }, [persist, serviceRef, dirtyIdsRef]);
 
-  // Phase 2 — Delete opening: remove από Firestore + scene + audit.
-  const deleteOpening = useCallback(async (openingId: string) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const levelId = levelManager.currentLevelId;
-    if (!levelId) return;
-
-    // Cancel pending auto-save για να αποφύγουμε save-after-delete race.
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-
-    const scene = levelManager.getLevelScene(levelId);
-    const deletedEntity = scene?.entities.find((e) => e.id === openingId);
-    const lastKnownParams =
-      lastSavedParamsRef.current.get(openingId) ??
-      ((deletedEntity as Partial<OpeningEntity> | undefined)?.params ?? null);
-
-    const deletedOpening = (deletedEntity && isOpening(deletedEntity)) ? deletedEntity : null;
-    try {
-      await svc.deleteOpening(openingId);
-      void recordOpeningChange(
-        'deleted',
-        deletedOpening
-          ? {
-              id: deletedOpening.id,
-              kind: deletedOpening.kind,
-              layerId: deletedOpening.layerId,
-              params: lastKnownParams ?? deletedOpening.params,
-            }
-          : { id: openingId, kind: 'door' },
-      );
-      // ADR-376 Phase B.2 — recompute signature group post-delete (count
-      // decrements; row deleted if last opening of signature gone).
-      if (companyId && projectId && buildingId && floorplanId) {
-        void deleteOpeningFromGroup(
-          lastKnownParams,
-          { companyId, projectId, buildingId, floorplanId, floorId: currentFloorIdRef.current ?? undefined },
-        );
-      }
-      // ADR-395 G6 — removing an opening grows the host wall's net area.
-      if (lastKnownParams?.wallId) {
-        EventBus.emit('bim:opening-persisted', { wallId: lastKnownParams.wallId });
-      }
-    } catch {
-      // Non-fatal: deletion failure silent — user can retry.
-    }
-
-    if (scene) {
-      const nextEntities = scene.entities.filter((e) => e.id !== openingId);
-      levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
-    }
-
-    dirtyIdsRef.current.delete(openingId);
-    lastSavedParamsRef.current.delete(openingId);
-    lastSavedLinkRef.current.delete(openingId);
-    pendingFirstSaveIdsRef.current.delete(openingId);
-  }, [levelManager, companyId, projectId, buildingId, floorplanId]);
-
-  // ADR-390 — persistRestore: undo→Firestore re-create + audit 'restored'.
-  const persistRestore = useCallback(async (entity: OpeningEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    setSaveState('saving');
-    setError(null);
-    try {
-      await svc.saveOpening(entityToSaveInput(entity));
-      lastSavedParamsRef.current.set(entity.id, entity.params);
-      lastSavedLinkRef.current.set(entity.id, {
-        typeId: entity.typeId,
-        typeOverrides: entity.typeOverrides,
-      });
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-      void recordOpeningChange('restored', entity);
-      if (companyId && projectId && buildingId && floorplanId) {
-        void upsertOpeningGroupForOpening(
-          { id: entity.id, kind: entity.kind, params: entity.params },
-          null,
-          { companyId, projectId, buildingId, floorplanId, floorId: currentFloorIdRef.current ?? undefined },
-        );
-      }
-      // ADR-395 G6 — restored opening re-shrinks the host wall's net area.
-      EventBus.emit('bim:opening-persisted', { wallId: entity.params.wallId });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'OPENING_RESTORE_ERROR');
-      setSaveState('error');
-    }
-  }, [companyId, projectId, buildingId, floorplanId]);
-
-  // First-save listener — fires άμεσα για freshly drawn openings.
-  // ADR-376 Phase A: lazy-allocate `params.mark` here (single SSoT lifecycle
-  // owner για mark assignment — N.7.2 Q7) πριν το persist + scene optimistic
-  // patch ώστε ο tag να εμφανίζεται immediately χωρίς να περιμένει round-trip.
+  // Retry-save for openings drawn before floorplanId was available (never persisted).
+  // Gated on a ready service (implies auth/scope resolved — userId present).
   useEffect(() => {
-    const cleanup = EventBus.on('drawing:entity-created', (payload) => {
-      if (payload.tool !== 'opening') return;
-      const entity = payload.entity as OpeningEntity | undefined;
-      if (!entity || (entity as { type?: string }).type !== 'opening') return;
-      if (!serviceRef.current) return;
-      pendingFirstSaveIdsRef.current.add(entity.id);
-      dirtyIdsRef.current.add(entity.id);
-      void allocateAndPersistOpening(entity);
-    });
-    return cleanup;
-  }, [allocateAndPersistOpening]);
-
-  // Retry-save for openings drawn before floorplanId was available (neverSaved in Firestore).
-  useEffect(() => {
-    if (!floorplanId || !companyId || !projectId || !userId) return;
-    const lm = levelManagerRef.current;
-    const levelId = lm.currentLevelId;
+    if (!floorplanId || !companyId || !projectId || !serviceRef.current) return;
+    const manager = levelManagerRef.current;
+    const levelId = manager.currentLevelId;
     if (!levelId) return;
-    const scene = lm.getLevelScene(levelId);
+    const scene = manager.getLevelScene(levelId);
     if (!scene) return;
     const unsaved = scene.entities.filter(
       (e): e is OpeningEntity =>
-        isOpening(e) &&
-        !lastSavedParamsRef.current.has(e.id) &&
-        !deletedIdsRef.current.has(e.id),
+        isOpening(e) && !lastSavedParamsRef.current.has(e.id) && !deletedIdsRef.current.has(e.id),
     );
-    if (unsaved.length === 0) return;
     for (const opening of unsaved) {
       dirtyIdsRef.current.add(opening.id);
-      void allocateAndPersistRef.current(opening);
+      void persist(opening);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [floorplanId, companyId, projectId, userId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [floorplanId, companyId, projectId]);
+}
 
-  // Phase 2 — Delete-requested listener (bridge emits μετά από confirm).
-  useEffect(() => {
-    const cleanup = EventBus.on('bim:opening-delete-requested', ({ openingId }) => {
-      void deleteOpening(openingId);
-    });
-    return cleanup;
-  }, [deleteOpening]);
+// ============================================================================
+// HOOK (thin wrapper — preserves the public param/result names)
+// ============================================================================
 
-  // ADR-390 — symmetric undo→Firestore restore.
-  useBimEntityRestoredPersistEffect(
-    'opening',
-    isOpening,
-    serviceRef,
-    pendingFirstSaveIdsRef,
-    deletedIdsRef,
-    persistRestore,
-  );
-
-  // Unmount cleanup — flush pending timers.
-  useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, []);
-
+export function useOpeningPersistence(
+  params: UseOpeningPersistenceParams,
+): UseOpeningPersistenceResult {
+  const { primarySelectedOpening, ...rest } = params;
+  const { saveState, lastSavedAt, error, saveNow, deleteEntity } =
+    useOpeningPersistenceBase({
+      ...rest,
+      primarySelected: primarySelectedOpening,
+    } as BimEntityPersistenceParams<OpeningEntity>);
   return useMemo(
-    () => ({ saveState, lastSavedAt, error, saveNow, deleteOpening }),
-    [saveState, lastSavedAt, error, saveNow, deleteOpening],
+    () => ({ saveState, lastSavedAt, error, saveNow, deleteOpening: deleteEntity }),
+    [saveState, lastSavedAt, error, saveNow, deleteEntity],
   );
 }
