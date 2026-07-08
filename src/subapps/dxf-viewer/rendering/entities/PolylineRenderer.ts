@@ -17,6 +17,7 @@ import { computePolygonAreaMetrics, paintPolygonAreaLabel } from './shared/measu
 // interaction path (`computeDxfEntityGrips`) so render ≡ interaction.
 import { getPolylineMoveRotateGrips, polylineMoveRotateStartIndex } from '../../systems/polyline/polyline-grips';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
+import { gripKindOf } from '../../hooks/grip-kinds';
 // 🏢 ADR-510 Φ3: bulge (arc-segment) geometry SSoT
 import { hasAnyBulge, expandPolyline, bulgeToPolyline } from './shared/geometry-bulge-utils';
 // 🏢 ADR-510 Φ3d: wide / tapered polyline (per-segment width) geometry SSoT
@@ -249,7 +250,7 @@ export class PolylineRenderer extends BaseEntityRenderer {
         gripIndex: g.gripIndex,
         position: g.position,
         isVisible: true,
-        shape: gripGlyphShape(g.polylineGripKind),
+        shape: gripGlyphShape(gripKindOf(g, 'polyline')),
       });
     }
 

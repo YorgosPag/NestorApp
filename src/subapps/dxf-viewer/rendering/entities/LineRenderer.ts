@@ -54,6 +54,7 @@ import { renderSplitLine } from './shared/line-utils';
 // 2D grips match exactly (mirror `TextRenderer.getGrips` → `getTextGrips`).
 import { getLineGrips } from '../../systems/line/line-grips';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
+import { gripKindOf } from '../../hooks/grip-kinds';
 // 🏢 ADR-065: Centralized Distance & Vector Operations, ADR-124: Centralized Text Gap
 import { calculateDistance, getPerpendicularUnitVector, calculateTextGap } from './shared/geometry-rendering-utils';
 // 🏢 ADR-102: Centralized Entity Type Guards
@@ -146,7 +147,7 @@ export class LineRenderer extends BaseEntityRenderer {
       entityId: g.entityId,
       isVisible: true,
       gripIndex: g.gripIndex,
-      shape: gripGlyphShape(g.lineGripKind),
+      shape: gripGlyphShape(gripKindOf(g, 'line')),
     }));
   }
 

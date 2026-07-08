@@ -1,6 +1,6 @@
 /**
  * ADR-398 — shared corner-projection core tests. Backs both wall face-corner
- * (ADR-371) and column body-corner (ADR-398) snapping.
+ * (ADR-597) and column body-corner (ADR-398) snapping.
  */
 
 import { findBestCornerProjection, type FindSnapPoint } from '../corner-projection-snap';

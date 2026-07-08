@@ -62,6 +62,7 @@ import { splitTextLines, resolveLineSpacingRatio, resolveMultilineExtents, type 
 import { obliqueShearFromAngle } from '../../bim/text/text-oblique';
 import { projectToLocalFrame } from '../../bim/grips/grip-math';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 
 
@@ -325,7 +326,7 @@ export class TextRenderer extends BaseEntityRenderer {
       gripIndex: g.gripIndex,
       // ADR-557 — centre → 4-arrow MOVE glyph, rotation → curved-arrow glyph (shared
       // registry SSoT, mirror Column/Wall); corners + edges stay square.
-      shape: gripGlyphShape(g.textGripKind),
+      shape: gripGlyphShape(gripKindOf(g, 'text')),
     }));
   }
 

@@ -37,6 +37,7 @@ import {
 import { annotationSymbolModelSize } from '../../bim/annotation-symbols/annotation-symbol-model-size';
 import { getAnnotationSymbolGrips } from '../../bim/annotation-symbols/annotation-symbol-grips';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { toRenderGripInfo } from './shared/grip-utils';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -152,7 +153,7 @@ export class AnnotationSymbolRenderer extends BaseEntityRenderer {
     if (!isAnnotationSymbolEntity(entity as Entity)) return [];
     const e = entity as unknown as AnnotationSymbolEntity;
     return getAnnotationSymbolGrips(e.id, e.position, e.sizeMm, e.rotation).map((g) =>
-      toRenderGripInfo(g, gripGlyphShape(g.annotationSymbolGripKind)),
+      toRenderGripInfo(g, gripGlyphShape(gripKindOf(g, 'annotation-symbol'))),
     );
   }
 

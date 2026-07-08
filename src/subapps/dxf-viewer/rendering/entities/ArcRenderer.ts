@@ -15,6 +15,7 @@ import {
 // with the interaction path (`computeDxfEntityGrips`) so render ≡ interaction.
 import { getArcGrips } from '../../systems/arc/arc-grips';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { toRenderGripInfo } from './shared/grip-utils';
 import { validateArcEntity } from './shared/entity-validation-utils';
 // 🏢 ADR-557 follow-up: center measurement label SSoT (gated painter + stacked-label helper)
@@ -132,7 +133,7 @@ export class ArcRenderer extends BaseEntityRenderer {
     // centre → 4-arrow MOVE glyph, the rotation handle → curved ROTATION glyph via the
     // shared `gripGlyphShape` registry; start/end/mid stay 'square'.
     return getArcGrips(entity.id, center, radius, startAngle, endAngle).map((g) =>
-      toRenderGripInfo(g, gripGlyphShape(g.arcGripKind)),
+      toRenderGripInfo(g, gripGlyphShape(gripKindOf(g, 'arc'))),
     );
   }
 

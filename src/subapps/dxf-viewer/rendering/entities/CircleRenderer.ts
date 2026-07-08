@@ -23,6 +23,7 @@ interface ExtendedCircleEntity extends CircleEntity {
 // interaction path (`computeDxfEntityGrips`) so render ≡ interaction.
 import { getCircleGrips } from '../../systems/circle/circle-grips';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
+import { gripKindOf } from '../../hooks/grip-kinds';
 // 🏢 ADR-058: Centralized Canvas Primitives
 // 🏢 ADR-077: Centralized TAU Constant
 import { addCirclePath, TAU } from '../primitives/canvasPaths';
@@ -162,7 +163,7 @@ export class CircleRenderer extends BaseEntityRenderer {
       gripIndex: g.gripIndex,
       position: g.position,
       isVisible: true,
-      shape: gripGlyphShape(g.circleGripKind),
+      shape: gripGlyphShape(gripKindOf(g, 'circle')),
     }));
   }
 

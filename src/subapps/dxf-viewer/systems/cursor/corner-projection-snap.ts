@@ -1,5 +1,5 @@
 /**
- * Corner Projection Snap — shared SSoT core (ADR-371 wall + ADR-398 column …).
+ * Corner Projection Snap — shared SSoT core (ADR-597 wall + ADR-398 column …).
  *
  * One algorithm backs every "drag/draw an entity so one of ITS OWN corners snaps
  * onto a nearby target" behaviour:
@@ -10,7 +10,7 @@
  *      match (optionally excluding the dragged entity's own stale corners), and
  *      returns the cursor correction so that corner lands EXACTLY on the target.
  *
- * Both `wall-face-corner-snap.ts` (ADR-371) and `bim/columns/column-corner-snap.ts`
+ * Both `wall-face-corner-snap.ts` (ADR-597) and `bim/columns/column-corner-snap.ts`
  * (ADR-398) consume this — the projection loop lives in ONE place. A new entity
  * opts in by computing its corners and calling `findBestCornerProjection`; it must
  * never re-implement the query/best/correction loop.

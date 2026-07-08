@@ -503,7 +503,7 @@ Because `getGlobalSnapEngine()` is a module-level singleton, if both DXF Viewer 
 Original plan: 2 edits. Actual: 12 edits across 11 files after Phase 1+2 verification uncovered wider stale-ref surface.
 
 #### 5.1 ADR phantom reference fixes — ALL ADR-149 → ADR-378
-- ✅ `ADR-370-bim-corner-snap-system.md` line 12 (Related ADRs row), line 23 (ιεραρχία ADR-149 → ADR-378 §5), line 842 (References list entry)
+- ✅ `ADR-597-bim-corner-snap-system.md` (formerly `ADR-370-bim-corner-snap-system.md`) line 12 (Related ADRs row), line 23 (ιεραρχία ADR-149 → ADR-378 §5), line 842 (References list entry)
 - ✅ `ADR-153-snap-tooltip-offset-centralization.md` line 40 (Companion ADRs)
 - ✅ `ADR-359-auxiliary-geometry-tools.md` line 7 (Related ADRs)
 

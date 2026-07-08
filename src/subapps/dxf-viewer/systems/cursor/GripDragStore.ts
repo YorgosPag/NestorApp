@@ -5,7 +5,7 @@
  * Written by useUnifiedGripInteraction on drag start/end.
  * Read by mouse-handler-move + mouse-handler-up for face corner projection snap.
  *
- * ADR-371 extension: Wall Face Corner Projection Snap
+ * ADR-597 extension: Wall Face Corner Projection Snap
  * ADR-398 extension: `dragAnchor` carries the drag origin (move base / resize
  * handle) so the column Body Corner Projection snap can compute the proposed
  * footprint from the SAME anchor the commit math uses.
