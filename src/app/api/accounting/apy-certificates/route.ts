@@ -9,32 +9,24 @@
  *   Duplicate check: 409 if (customerId, fiscalYear) already exists.
  *
  * Auth: withAuth (authenticated users)
- * Rate: GET → withStandardRateLimit | POST → withSensitiveRateLimit
+ * Rate: GET → standard | POST → sensitive
  *
  * @module api/accounting/apy-certificates
  * @enterprise ADR-ACC-020 Βεβαίωση Παρακράτησης Φόρου
+ * @enterprise ADR-602 API Route-Handler Factory SSoT (pilot migration)
  */
 
 import 'server-only';
 
 import { z } from 'zod';
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import {
-  withStandardRateLimit,
-  withSensitiveRateLimit,
-} from '@/lib/middleware/with-rate-limit';
+import { defineRoute, ok, created, badRequest, conflict } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type {
-  APYCertificate,
   APYCertificateProvider,
   APYCertificateCustomer,
   APYCertificateLineItem,
 } from '@/subapps/accounting/types';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { getErrorMessage } from '@/lib/error-utils';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 const CreateAPYSchema = z.object({
   fiscalYear: z.number().int().min(2020).max(2099),
@@ -58,127 +50,82 @@ const CreateAPYSchema = z.object({
 const logger = createModuleLogger('APY_CERTIFICATES');
 
 // =============================================================================
-// TYPES
-// =============================================================================
-
-interface CreateAPYCertificateBody {
-  fiscalYear: number;
-  customerId: string | null;
-  provider: APYCertificate['provider'];
-  customer: APYCertificate['customer'];
-  lineItems: APYCertificate['lineItems'];
-  totalNetAmount: number;
-  totalWithholdingAmount: number;
-  notes?: string | null;
-}
-
-// =============================================================================
 // GET — List Certificates
 // =============================================================================
 
-async function handleGet(
-  request: NextRequest
-): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const url = new URL(req.url);
-        const fiscalYearParam = url.searchParams.get('fiscalYear');
-        const customerId = url.searchParams.get('customerId') ?? undefined;
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to list APY certificates',
+  handler: async ({ req, auth }) => {
+    const url = new URL(req.url);
+    const fiscalYearParam = url.searchParams.get('fiscalYear');
+    const customerId = url.searchParams.get('customerId') ?? undefined;
 
-        const fiscalYear = fiscalYearParam ? parseInt(fiscalYearParam, 10) : undefined;
+    const fiscalYear = fiscalYearParam ? parseInt(fiscalYearParam, 10) : undefined;
 
-        if (fiscalYearParam && isNaN(fiscalYear!)) {
-          return NextResponse.json(
-            { success: false, error: 'Invalid fiscalYear parameter' },
-            { status: 400 }
-          );
-        }
-
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const certificates = await repository.listAPYCertificates(fiscalYear, customerId);
-
-        return NextResponse.json({ success: true, data: certificates });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to list APY certificates');
-        logger.error('APY certificates list error', { error: message });
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
+    if (fiscalYearParam && isNaN(fiscalYear!)) {
+      badRequest('Invalid fiscalYear parameter');
     }
-  );
 
-  return handler(request);
-}
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const certificates = await repository.listAPYCertificates(fiscalYear, customerId);
+
+    return ok(certificates);
+  },
+});
 
 // =============================================================================
 // POST — Create Certificate
 // =============================================================================
 
-async function handlePost(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const parsed = safeParseBody(CreateAPYSchema, await req.json());
-        if (parsed.error) return parsed.error;
-        const {
-          fiscalYear,
-          customerId,
-          provider,
-          customer,
-          lineItems,
-          totalNetAmount,
-          totalWithholdingAmount,
-          notes,
-        } = parsed.data;
+export const POST = defineRoute({
+  rateLimit: 'sensitive',
+  schema: CreateAPYSchema,
+  fallbackError: 'Failed to create APY certificate',
+  handler: async ({ auth, body }) => {
+    const {
+      fiscalYear,
+      customerId,
+      provider,
+      customer,
+      lineItems,
+      totalNetAmount,
+      totalWithholdingAmount,
+      notes,
+    } = body;
 
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
 
-        // ── Duplicate check — one per customerId + fiscalYear ───────────
-        if (customerId) {
-          const existing = await repository.listAPYCertificates(fiscalYear, customerId);
-          if (existing.length > 0) {
-            return NextResponse.json(
-              {
-                success: false,
-                error: 'Certificate already exists for this customer and fiscal year',
-                existingCertificateId: existing[0].certificateId,
-              },
-              { status: 409 }
-            );
-          }
-        }
-
-        // ── Create ───────────────────────────────────────────────────────
-        const result = await repository.createAPYCertificate({
-          fiscalYear,
-          customerId: customerId ?? null,
-          provider: provider as unknown as APYCertificateProvider,
-          customer: customer as unknown as APYCertificateCustomer,
-          lineItems: lineItems as unknown as APYCertificateLineItem[],
-          totalNetAmount,
-          totalWithholdingAmount,
-          isReceived: false,
-          receivedAt: null,
-          notes: notes ?? null,
+    // ── Duplicate check — one per customerId + fiscalYear ───────────
+    if (customerId) {
+      const existing = await repository.listAPYCertificates(fiscalYear, customerId);
+      if (existing.length > 0) {
+        conflict('Certificate already exists for this customer and fiscal year', {
+          existingCertificateId: existing[0].certificateId,
         });
-
-        logger.info('APY certificate created', {
-          certificateId: result.id,
-          fiscalYear,
-          customerId,
-        });
-
-        return NextResponse.json({ success: true, data: { id: result.id } }, { status: 201 });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to create APY certificate');
-        logger.error('APY certificate create error', { error: message });
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     }
-  );
 
-  return handler(request);
-}
+    // ── Create ───────────────────────────────────────────────────────
+    const result = await repository.createAPYCertificate({
+      fiscalYear,
+      customerId: customerId ?? null,
+      provider: provider as unknown as APYCertificateProvider,
+      customer: customer as unknown as APYCertificateCustomer,
+      lineItems: lineItems as unknown as APYCertificateLineItem[],
+      totalNetAmount,
+      totalWithholdingAmount,
+      isReceived: false,
+      receivedAt: null,
+      notes: notes ?? null,
+    });
 
-export const GET = withStandardRateLimit(handleGet);
-export const POST = withSensitiveRateLimit(handlePost);
+    logger.info('APY certificate created', {
+      certificateId: result.id,
+      fiscalYear,
+      customerId,
+    });
+
+    return created({ id: result.id });
+  },
+});

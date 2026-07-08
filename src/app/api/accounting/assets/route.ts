@@ -7,18 +7,16 @@
  * POST: Create a new fixed asset entry
  *
  * Auth: withAuth (authenticated users)
- * Rate: withStandardRateLimit (60 req/min)
+ * Rate: standard (60 req/min)
  *
  * @module api/accounting/assets
  * @enterprise ADR-ACC-007 Fixed Assets & Depreciation
+ * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { defineRoute, ok, created, badRequest } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type {
   FixedAssetFilters,
@@ -26,100 +24,66 @@ import type {
   AssetCategory,
   AssetStatus,
 } from '@/subapps/accounting/types';
-import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // GET — List Fixed Assets
 // =============================================================================
 
-async function handleGet(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const { searchParams } = new URL(req.url);
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to list fixed assets',
+  handler: async ({ req, auth }) => {
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const { searchParams } = new URL(req.url);
 
-        const filters: FixedAssetFilters = {};
+    const filters: FixedAssetFilters = {};
 
-        const category = searchParams.get('category');
-        if (category) {
-          filters.category = category as AssetCategory;
-        }
-
-        const status = searchParams.get('status');
-        if (status) {
-          filters.status = status as AssetStatus;
-        }
-
-        const acquisitionYear = searchParams.get('acquisitionYear');
-        if (acquisitionYear) {
-          filters.acquisitionYear = parseInt(acquisitionYear, 10);
-        }
-
-        const pageSize = searchParams.get('pageSize');
-        const result = await repository.listFixedAssets(
-          filters,
-          pageSize ? parseInt(pageSize, 10) : undefined
-        );
-
-        return NextResponse.json({ success: true, data: result });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to list fixed assets');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
+    const category = searchParams.get('category');
+    if (category) {
+      filters.category = category as AssetCategory;
     }
-  );
 
-  return handler(request);
-}
+    const status = searchParams.get('status');
+    if (status) {
+      filters.status = status as AssetStatus;
+    }
 
-export const GET = withStandardRateLimit(handleGet);
+    const acquisitionYear = searchParams.get('acquisitionYear');
+    if (acquisitionYear) {
+      filters.acquisitionYear = parseInt(acquisitionYear, 10);
+    }
+
+    const pageSize = searchParams.get('pageSize');
+    const result = await repository.listFixedAssets(
+      filters,
+      pageSize ? parseInt(pageSize, 10) : undefined
+    );
+
+    return ok(result);
+  },
+});
 
 // =============================================================================
 // POST — Create Fixed Asset
 // =============================================================================
 
-async function handlePost(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const body = (await req.json()) as CreateFixedAssetInput;
+export const POST = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to create fixed asset',
+  handler: async ({ req, auth }) => {
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const body = (await req.json()) as CreateFixedAssetInput;
 
-        if (!body.description || !body.category || !body.acquisitionDate) {
-          return NextResponse.json(
-            { success: false, error: 'description, category, and acquisitionDate are required' },
-            { status: 400 }
-          );
-        }
-
-        if (typeof body.acquisitionCost !== 'number' || body.acquisitionCost <= 0) {
-          return NextResponse.json(
-            { success: false, error: 'acquisitionCost must be a positive number' },
-            { status: 400 }
-          );
-        }
-
-        const { id } = await repository.createFixedAsset(body);
-
-        return NextResponse.json(
-          { success: true, data: { assetId: id } },
-          { status: 201 }
-        );
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to create fixed asset');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
+    if (!body.description || !body.category || !body.acquisitionDate) {
+      badRequest('description, category, and acquisitionDate are required');
     }
-  );
 
-  return handler(request);
-}
+    if (typeof body.acquisitionCost !== 'number' || body.acquisitionCost <= 0) {
+      badRequest('acquisitionCost must be a positive number');
+    }
 
-export const POST = withStandardRateLimit(handlePost);
+    const { id } = await repository.createFixedAsset(body);
+
+    return created({ assetId: id });
+  },
+});

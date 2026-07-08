@@ -62,12 +62,20 @@ export type ApiResponse<T = unknown> = ApiErrorResponse | ApiSuccessResponse<T>;
 export class ApiError extends Error {
   public readonly statusCode: number;
   public readonly errorCode?: string;
+  /** Extra fields spread into the response envelope (e.g. { existingCertificateId }). */
+  public readonly details?: Record<string, unknown>;
 
-  constructor(statusCode: number, message: string, errorCode?: string) {
+  constructor(
+    statusCode: number,
+    message: string,
+    errorCode?: string,
+    details?: Record<string, unknown>,
+  ) {
     super(message);
     this.name = 'ApiError';
     this.statusCode = statusCode;
     this.errorCode = errorCode;
+    this.details = details;
 
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, ApiError);
