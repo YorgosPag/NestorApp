@@ -5,6 +5,9 @@
  * in `ToolStateManager.ts`, which re-exports these for back-compat.
  */
 import type { ToolType } from '../../ui/toolbar/types';
+// ADR-587 Φ2b — tool→entity back-link. `import type` only ⇒ zero runtime coupling/cycle
+// (the merge below reads the plain map, not any runtime value from the render layer).
+import type { RenderableEntityType } from '../../rendering/contract/renderable-entity-type';
 
 export type ToolCategory = 'selection' | 'drawing' | 'measurement' | 'zoom' | 'utility' | 'editing';
 export interface ToolInfo {
@@ -17,6 +20,15 @@ export interface ToolInfo {
   preservesOverlayMode: boolean;
   /** ADR-357 Phase 5: Chain mode — last endpoint seeds start of next segment (AutoCAD LINE pattern) */
   allowsChain?: boolean;
+  /**
+   * ADR-587 Φ2b — the RenderableEntityType this tool authors (tool→entity back-link).
+   * DERIVED from {@link TOOL_CREATES_ENTITY} at module load, never hand-set on an entry
+   * (mirror of the Φ2 `descriptor.dxfExportType` derivation). Absent ⇒ the tool does not
+   * author a persistent renderable scene entity (editing / selection / measurement /
+   * guide / dimension / attach tools, and the `finish-paint` face-override brush).
+   * ToolType-keyed by design (§5.1): one entity ⇐ many tools (e.g. 6 `wall-*`, 16 fixtures).
+   */
+  createsEntityType?: RenderableEntityType;
 }
 export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // Selection tools - preserve overlay mode for editing
@@ -272,3 +284,97 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // useCanvasClickHandler PRIORITY 1.8 so it never enters the unified drawing accumulator.
   'north-arrow':       { id: 'north-arrow',       category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
 };
+
+/**
+ * ADR-587 Φ2b — Tool → RenderableEntityType authoring SSoT (ToolType-keyed, §5.1).
+ *
+ * ΤΟ σημείο αλήθειας για «ποια οντότητα φτιάχνει κάθε εργαλείο». Κρατιέται **συμπαγές**
+ * (grouped ανά entity type) ώστε το «μία οντότητα → ΠΟΛΛΑ tools» (§5.1) να φαίνεται με
+ * μια ματιά — ακριβώς όπως ο compact command→category πίνακας του Revit, ΟΧΙ ένα πεδίο
+ * σκορπισμένο σε 6 wall entries 40 γραμμές μακριά. Το `ToolInfo.createsEntityType` είναι
+ * **DERIVED** από εδώ (loop παρακάτω), mirror του Φ2 `descriptor.dxfExportType` ⇐ `ENTITY_TYPE_MAPPING`.
+ *
+ * **Κάθε τιμή επαληθεύτηκε από τον κώδικα δημιουργίας** (factory `type:` literal ή drawing-hook
+ * commit), ΟΧΙ από το όνομα του tool — π.χ. `north-arrow`→`annotation-symbol`,
+ * `mep-drainage-collector`→`mep-manifold`, `mep-drain-riser`→`mep-segment`.
+ *
+ * **Deliberately absent** (τεκμηριωμένο, ΟΧΙ κενό προς συμπλήρωση):
+ *  - editing / selection / zoom / utility / attach tools → τροποποιούν, δεν δημιουργούν.
+ *  - `category:'measurement'` tools → τα line/polyline/angle outputs τους είναι measurement
+ *    artifacts (flag `measurement:true`), όχι entity authoring.
+ *  - `guide-*` → construction guides (όχι RenderableEntityType scene entities).
+ *  - `dim-*` / `auto-dim-cutline` → dimension subsystem (dimension + center-mark/centerline·
+ *    τα δύο τελευταία ΔΕΝ είναι ακόμη RenderableEntityTypes → χωριστό follow-up).
+ *  - `finish-paint` → per-face override σε υπάρχον wall-covering (δεν δημιουργεί entity).
+ *  - `ellipse` / `arc` (dropdown parent) → χωρίς επαληθευμένο dedicated creation path.
+ *
+ * **Surfaced asymmetry** (ADR-587 §6 — το registry το ανέδειξε, ΟΧΙ διορθώνεται εδώ):
+ *  - `floorplan-symbol` — το tool `floorplan-symbol` ΔΗΜΙΟΥΡΓΕΙ `type:'floorplan-symbol'`
+ *    (`floorplan-symbol.factory.ts:47`) που ΕΧΕΙ renderer (`FloorplanSymbolRenderer`), αλλά ο τύπος
+ *    ΛΕΙΠΕΙ από το ADR-550 `RENDERABLE_ENTITY_TYPES` (αποδίδεται μέσω του entity-model path, όχι του
+ *    `EntityRendererComposite`). Το να μπει εκεί απαιτεί πλήρη αλλαγή ADR-550 (surfaces+contracts+
+ *    render-coverage) → χωριστό follow-up. Εξαιρείται από τον χάρτη· καρφωμένο στο coverage test.
+ *
+ * **Entity-side gaps** (RenderableEntityTypes ΧΩΡΙΣ ToolType back-link): `thermal-space`,
+ * `space-separator` (δημιουργούνται από hooks που ΔΕΝ είναι `ToolType` → εκτός `TOOL_DEFINITIONS`),
+ * καθώς και import-only types (`spline`/`lwpolyline`/`rect`/`point`/`dimension`/`angle-measurement`).
+ * Καρφωμένα στο coverage test.
+ */
+export const TOOL_CREATES_ENTITY: Partial<Record<ToolType, RenderableEntityType>> = {
+  // ── CAD primitives (2D) ──
+  'line': 'line', 'line-perpendicular': 'line', 'line-parallel': 'line',
+  'rectangle': 'rectangle',
+  'circle': 'circle', 'circle-diameter': 'circle', 'circle-2p-diameter': 'circle',
+  'circle-3p': 'circle', 'circle-chord-sagitta': 'circle', 'circle-2p-radius': 'circle',
+  'circle-best-fit': 'circle', 'circle-ttt': 'circle',
+  'polyline': 'polyline', 'polygon': 'polyline',
+  'arc-3p': 'arc', 'arc-cse': 'arc', 'arc-sce': 'arc',
+  'hatch': 'hatch',
+  'text': 'text', 'mtext': 'mtext',
+  'xline': 'xline', 'ray': 'ray',
+  // ── BIM structural ──
+  'stair': 'stair',
+  'wall': 'wall', 'wall-on-entity': 'wall', 'wall-region-lines': 'wall',
+  'wall-region-inside': 'wall', 'wall-region-box': 'wall', 'wall-from-perimeter': 'wall',
+  'column': 'column', 'column-from-perimeter': 'column', 'column-discrete-from-perimeter': 'column',
+  'column-discrete-from-perimeter-walls': 'column', 'column-region-lines': 'column',
+  'column-region-inside': 'column', 'column-region-box': 'column', 'column-from-polygon': 'column',
+  'opening': 'opening',
+  'slab': 'slab',
+  'slab-opening': 'slab-opening',
+  'beam': 'beam', 'beam-from-wall': 'beam', 'beam-between-members': 'beam',
+  'foundation-pad': 'foundation', 'foundation-strip': 'foundation',
+  'foundation-tie-beam': 'foundation', 'foundation-strip-from-wall': 'foundation',
+  'roof': 'roof',
+  'railing': 'railing',
+  // ── BIM finishes ──
+  'floor-finish': 'floor-finish',
+  'wall-covering': 'wall-covering', 'wall-covering-room': 'wall-covering',
+  'furniture': 'furniture',
+  // NB: `floorplan-symbol` deliberately absent — see the JSDoc «surfaced asymmetries» note.
+  // ── Annotation (ADR-583 Βορράς) — tool id ≠ entity type ──
+  'north-arrow': 'annotation-symbol',
+  // ── MEP fixtures (16 tools → ΕΝΑ entity, discriminated by `kind`) ──
+  'mep-fixture': 'mep-fixture', 'mep-socket': 'mep-fixture', 'mep-data-outlet': 'mep-fixture',
+  'mep-air-terminal': 'mep-fixture', 'mep-ahu': 'mep-fixture', 'mep-sprinkler': 'mep-fixture',
+  'mep-fire-riser': 'mep-fixture', 'mep-gas-meter': 'mep-fixture', 'mep-gas-cooker': 'mep-fixture',
+  'mep-floor-drain': 'mep-fixture', 'mep-wc': 'mep-fixture', 'mep-washbasin': 'mep-fixture',
+  'mep-shower': 'mep-fixture', 'mep-bathtub': 'mep-fixture', 'mep-bidet': 'mep-fixture',
+  'mep-washing-machine': 'mep-fixture',
+  // ── MEP panels / manifolds (comms-rack→panel, drainage-collector→manifold) ──
+  'electrical-panel': 'electrical-panel', 'mep-comms-rack': 'electrical-panel',
+  'mep-manifold': 'mep-manifold', 'mep-drainage-collector': 'mep-manifold',
+  // ── MEP equipment ──
+  'mep-radiator': 'mep-radiator', 'mep-boiler': 'mep-boiler',
+  'mep-water-heater': 'mep-water-heater', 'mep-underfloor': 'mep-underfloor',
+  // ── MEP linear segments (duct/pipe/drain/riser → ΕΝΑ entity) ──
+  'mep-duct': 'mep-segment', 'mep-pipe': 'mep-segment', 'mep-drain-pipe': 'mep-segment',
+  'mep-drain-riser': 'mep-segment',
+};
+
+// ADR-587 Φ2b — project the SSoT map onto each `ToolInfo.createsEntityType` (DERIVED, mirror
+// of Φ2 `dxfExportType`). One derives the other ⇒ cannot drift; consumers may read either the
+// compact map (fan-out view) or `TOOL_DEFINITIONS[tool].createsEntityType` (per-tool view).
+for (const toolId of Object.keys(TOOL_CREATES_ENTITY) as ToolType[]) {
+  TOOL_DEFINITIONS[toolId].createsEntityType = TOOL_CREATES_ENTITY[toolId];
+}
