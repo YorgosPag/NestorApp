@@ -31,18 +31,13 @@ import { resolveStructuralCode } from '../../../../bim/structural/codes';
 import { useStructuralSettingsStore } from '../../../../state/structural-settings-store';
 import { createLevelSceneManagerAdapter } from '../../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { EventBus } from '../../../../systems/events/EventBus';
-import type { useLevels } from '../../../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
+import type { LevelSceneWriter } from '../../../../systems/levels/level-scene-accessor';
 
 /** Writer: εφαρμόζει νέα params σε ένα δοκάρι (undoable command + persist). */
 export type DispatchBeamParams = (beam: BeamEntity, nextParams: BeamParams) => void;
 
 export interface UseBeamParamsDispatcherProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 export function useBeamParamsDispatcher(

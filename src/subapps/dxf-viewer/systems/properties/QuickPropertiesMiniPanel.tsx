@@ -34,8 +34,8 @@ import { useDisplayUnit } from '../../hooks/common/useDisplayUnit';
 import { formatDisplayValue, fromDisplay, DISPLAY_UNIT_LABELS, type DisplayUnit } from '../../config/units';
 import type { DxfScene, DxfLine } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ICommand } from '../../core/commands/interfaces';
-import type { SceneModel } from '../../types/scene';
 import styles from './QuickPropertiesMiniPanel.module.css';
+import type { LevelSceneWriter } from '../levels/level-scene-accessor';
 
 const COMMON_LINETYPES = [
   'ByLayer', 'Continuous', 'DASHED', 'DASHED2', 'DASHEDX2',
@@ -44,17 +44,12 @@ const COMMON_LINETYPES = [
   'BORDER', 'DIVIDE', 'PHANTOM',
 ] as const;
 
-interface LevelManagerLike {
-  getLevelScene: (id: string) => SceneModel | null;
-  setLevelScene: (id: string, scene: SceneModel) => void;
-  currentLevelId: string | null;
-}
 
 interface Props {
   dxfScene: DxfScene | null;
   activeTool: string;
   executeCommand: (cmd: ICommand) => void;
-  levelManager: LevelManagerLike;
+  levelManager: LevelSceneWriter;
 }
 
 interface FormState {

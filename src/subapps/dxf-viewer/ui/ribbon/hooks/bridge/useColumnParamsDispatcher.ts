@@ -29,18 +29,13 @@ import { runColumnEditGuards } from '../../../../bim/columns/column-edit-guard-f
 import { useStructuralSettingsStore } from '../../../../state/structural-settings-store';
 import { createLevelSceneManagerAdapter } from '../../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { EventBus } from '../../../../systems/events/EventBus';
-import type { useLevels } from '../../../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
+import type { LevelSceneWriter } from '../../../../systems/levels/level-scene-accessor';
 
 /** Writer: εφαρμόζει νέα params σε μια κολώνα (undoable command + persist). */
 export type DispatchColumnParams = (column: ColumnEntity, nextParams: ColumnParams) => void;
 
 export interface UseColumnParamsDispatcherProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 export function useColumnParamsDispatcher(

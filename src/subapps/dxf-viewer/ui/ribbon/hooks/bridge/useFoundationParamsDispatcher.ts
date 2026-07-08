@@ -41,11 +41,11 @@ import {
 } from '../../../../bim/foundations/foundation-cross-level-writer';
 import { useFoundationLevelStore } from '../../../../state/foundation-level-store';
 import type { useLevels } from '../../../../systems/levels';
+import type { LevelSceneWriter } from '../../../../systems/levels/level-scene-accessor';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId' | 'levels'
->;
+interface LevelManagerLike
+  extends LevelSceneWriter,
+    Pick<ReturnType<typeof useLevels>, 'levels'> {}
 
 /** Writer: εφαρμόζει νέα params σε ένα θεμελιακό στοιχείο (undoable command + persist). */
 export type DispatchFoundationParams = (

@@ -19,7 +19,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import type { useLevels } from '../../../systems/levels';
+import type { LevelSceneGetter } from '../../../systems/levels/level-scene-accessor';
 import { useEventGatedDialog } from '../../../app/dialog-hosts/useEventGatedDialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { isColumnEntity } from '../../../types/entities';
@@ -38,15 +38,13 @@ import { ColumnDetailDialog } from './ColumnDetailDialog';
 /** Longest side (device px) of the offscreen 3D capture — balances crispness vs cost. */
 const CAPTURE_LONG_EDGE_PX = 1200;
 
-type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene'>;
-
 export interface ColumnDetailHostProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneGetter;
 }
 
 /** Resolves the target column entity from a level scene, or `null` if missing. */
 function resolveColumn(
-  levelManager: LevelManagerLike,
+  levelManager: LevelSceneGetter,
   levelId: string | null,
   columnId: string | null,
 ): ColumnEntity | null {
@@ -103,7 +101,7 @@ export function ColumnDetailHost({
 }
 
 interface ColumnDetailBodyProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneGetter;
   readonly columnId: string;
   readonly levelId: string;
   readonly onClose: () => void;
