@@ -52,6 +52,9 @@ export function toUnifiedGrip(grip: GripInfo): UnifiedGripInfo {
     columnGripKind: grip.columnGripKind,
     wallGripKind: grip.wallGripKind,
     beamGripKind: grip.beamGripKind,
+    // ADR-602 Stage 4 — forward the tagged discriminator too (dual-write beside the
+    // 7 legacy fields above). `commitDxfGripDragModeAware` reads via `gripKindOf`.
+    gripKind: grip.gripKind,
   };
 }
 

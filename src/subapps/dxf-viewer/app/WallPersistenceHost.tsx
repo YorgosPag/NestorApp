@@ -70,7 +70,7 @@ function WallPersistenceHostImpl({
     projectId,
   });
 
-  // ADR-412 Φ5 — when a wall family type is edited (UpdateWallFamilyTypeCommand
+  // ADR-412 Φ5 — when a wall family type is edited (UpdateFamilyTypeCommand
   // emits `bim:family-type-changed`), re-feed BOQ for every instance across all
   // floors of the building. Geometry re-flows for free (useWallTypeReresolution
   // on the active floor + docToEntity on load elsewhere); only the BOQ

@@ -18,9 +18,11 @@ import type * as THREE from 'three';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo } from '../../hooks/grip-types';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { computeDxfEntityGrips } from '../../hooks/grip-computation';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
+import type { SlabEntity } from '../../bim/types/slab-types';
 import { reshapeGripsForFootprint } from '../grips/grip-3d-reshape-grips';
 import { commitGrip3DReshape } from '../grips/grip-3d-commit';
 import type { PlanElevationMmFor, GripWorldOffset } from '../grips/grip-3d-screen-project';
@@ -182,6 +184,15 @@ function slabGripSurfaceElevations(slabId: string, fallbackWorldY: number): Grip
   const slab = s.slabs.find((sl) => sl.id === slabId);
   if (!slab) return flatSurfaceElevations(fallbackWorldY);
   const baseMm = (resolveEntityBuilding(slab, s.floors, s.buildings)?.baseElevation ?? 0) * 1000;
+  return slabTopBottomElevations(slab, baseMm);
+}
+
+/**
+ * TOP & BOTTOM surface elevation functions riding a slab's (possibly tilted) top plane via the
+ * `slabTopZmmAt` SSoT and its parallel underside via `slabUndersideZmmAt`, offset by the building
+ * base. Shared by slab grips and slab-opening grips (openings ride their host slab's faces).
+ */
+function slabTopBottomElevations(slab: SlabEntity, baseMm: number): GripSurfaceElevations {
   return {
     top: (p) => slabTopZmmAt(slab.params, p) + baseMm,
     bottom: (p) => slabUndersideZmmAt(slab.params, p) + baseMm,
@@ -230,10 +241,7 @@ function slabOpeningGripSurfaceElevations(openingId: string, fallbackWorldY: num
   if (!slab) return flatSurfaceElevations(fallbackWorldY);
   const s = useBim3DEntitiesStore.getState();
   const baseMm = (resolveEntityBuilding(slab, s.floors, s.buildings)?.baseElevation ?? 0) * 1000;
-  return {
-    top: (p) => slabTopZmmAt(slab.params, p) + baseMm,
-    bottom: (p) => slabUndersideZmmAt(slab.params, p) + baseMm,
-  };
+  return slabTopBottomElevations(slab, baseMm);
 }
 
 /** Resolve the host SlabEntity for a slab-opening id (null when either is missing). */
@@ -270,28 +278,36 @@ export function applyGripReshapePreview(ctx: EditInteractionCtx): void {
 
 /** Dispatch a reshape-grip drag to its per-type live preview builder (ghost === commit). */
 function buildGripReshapePreview(grip: GripInfo, deltaMm: Point2D): THREE.Object3D | null {
-  if (grip.slabGripKind) return buildSlabReshapePreviewObject(grip.entityId, grip.slabGripKind, deltaMm);
-  if (grip.roofGripKind) return buildRoofReshapePreviewObject(grip.entityId, grip.roofGripKind, deltaMm);
-  if (grip.floorFinishGripKind) {
-    return buildFloorFinishReshapePreviewObject(grip.entityId, grip.floorFinishGripKind, deltaMm);
+  // ADR-602 Stage 4 — read each discriminator once via the tagged accessor (hoisted).
+  const slabKind = gripKindOf(grip, 'slab');
+  if (slabKind) return buildSlabReshapePreviewObject(grip.entityId, slabKind, deltaMm);
+  const roofKind = gripKindOf(grip, 'roof');
+  if (roofKind) return buildRoofReshapePreviewObject(grip.entityId, roofKind, deltaMm);
+  const floorFinishKind = gripKindOf(grip, 'floor-finish');
+  if (floorFinishKind) {
+    return buildFloorFinishReshapePreviewObject(grip.entityId, floorFinishKind, deltaMm);
   }
   // ADR-535 Φ3b — slab-opening: rebuild the HOST SLAB with the moved hole (entityId = opening id).
-  if (grip.slabOpeningGripKind) {
-    return buildSlabOpeningReshapePreviewObject(grip.entityId, grip.slabOpeningGripKind, deltaMm);
+  const slabOpeningKind = gripKindOf(grip, 'slab-opening');
+  if (slabOpeningKind) {
+    return buildSlabOpeningReshapePreviewObject(grip.entityId, slabOpeningKind, deltaMm);
   }
   // ADR-535 Φ7 — column cross-section reshape (corner / edge / parametric face / poly-vertex).
-  if (grip.columnGripKind) {
-    return buildColumnReshapePreviewObject(grip.entityId, grip.columnGripKind, deltaMm);
+  const columnKind = gripKindOf(grip, 'column');
+  if (columnKind) {
+    return buildColumnReshapePreviewObject(grip.entityId, columnKind, deltaMm);
   }
   // ADR-535 Φ8 — wall cross-section reshape (corner / thickness / length / endpoint / curve /
   // poly-vertex). The grip anchor (`grip.position`) seeds `currentPos` for the thickness resolve.
-  if (grip.wallGripKind) {
-    return buildWallReshapePreviewObject(grip.entityId, grip.wallGripKind, deltaMm, grip.position);
+  const wallKind = gripKindOf(grip, 'wall');
+  if (wallKind) {
+    return buildWallReshapePreviewObject(grip.entityId, wallKind, deltaMm, grip.position);
   }
   // ADR-535 Φ9 — beam cross-section reshape (corner / width / length edge / endpoint / poly-vertex).
   // The grip anchor (`grip.position`) seeds `currentPos` for the width resolve (mirror wall).
-  if (grip.beamGripKind) {
-    return buildBeamReshapePreviewObject(grip.entityId, grip.beamGripKind, deltaMm, grip.position);
+  const beamKind = gripKindOf(grip, 'beam');
+  if (beamKind) {
+    return buildBeamReshapePreviewObject(grip.entityId, beamKind, deltaMm, grip.position);
   }
   return null;
 }
