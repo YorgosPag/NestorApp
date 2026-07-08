@@ -42,15 +42,10 @@ import { designWaterSupply } from '../../../systems/mep-design/water';
 import { waterProposalStore } from '../../../systems/mep-design/water/water-proposal-store';
 import { buildWaterSupplyCommit } from '../../../systems/mep-design/water/commit/build-water-supply-commit';
 import { WATER_SUPPLY_RIBBON_ACTIONS } from './bridge/water-auto-supply-command-keys';
-import type { useLevels } from '../../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 
 export interface UseRibbonWaterAutoSupplyBridgeProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 export interface RibbonWaterAutoSupplyBridge {

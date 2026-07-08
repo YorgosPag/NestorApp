@@ -24,7 +24,7 @@
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { StairEntity } from '../../types/entities';
-import type { useLevels } from '../../systems/levels';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import type { UseStairPersistenceResult } from '../../bim/hooks/use-stair-persistence';
 import { StairWarningsSection } from './sections/StairWarningsSection';
 import { StairPersistenceSection } from './sections/StairPersistenceSection';
@@ -37,18 +37,13 @@ import { StairTreadLabelSizeSection } from './sections/StairTreadLabelSizeSectio
 import { StairNosingSection } from './sections/StairNosingSection';
 import type { DispatchStairParamPatch } from './commands/dispatchStairParamPatch';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface StairAdvancedPanelProps {
   readonly stair: StairEntity;
   readonly dispatchPatch: DispatchStairParamPatch;
   readonly companyId: string | null;
   readonly userId: string | null;
   readonly projectId?: string;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly persistence?: UseStairPersistenceResult;
   /**
    * Override container className (sidebar-tab mode passes a flow-layout

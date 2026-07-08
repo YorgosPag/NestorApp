@@ -58,7 +58,7 @@ import type {
   RibbonComboboxState,
   RibbonToggleState,
 } from '../context/RibbonCommandContext';
-import type { useLevels } from '../../../systems/levels';
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
 import { mmToSceneUnits, resolveSceneUnits } from '../../../utils/scene-units';
 import {
@@ -69,18 +69,13 @@ import {
   patchWallNumericParam,
 } from './bridge/wall-param-helpers';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
   'getPrimaryId' | 'getSelectedEntityIds' | 'clearByType'
 >;
 
 export interface UseRibbonWallBridgeProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly universalSelection: UniversalSelectionLike;
 }
 
