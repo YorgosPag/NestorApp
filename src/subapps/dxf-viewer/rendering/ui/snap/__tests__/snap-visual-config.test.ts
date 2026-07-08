@@ -1,5 +1,5 @@
 /**
- * ADR-370 §unified-glyph (2026-07-05) — snap visual SSoT regression guard.
+ * ADR-597 §unified-glyph (2026-07-05) — snap visual SSoT regression guard.
  *
  * A BIM corner/midpoint/centre is the SAME KIND of point as the geometric
  * endpoint/midpoint/centre, so — like Revit/AutoCAD — it MUST render with the SAME
@@ -12,7 +12,7 @@
 
 import { resolveSnapColor } from '../snap-visual-config';
 
-describe('snap-visual-config — BIM/geometric colour unification (ADR-370 §unified-glyph)', () => {
+describe('snap-visual-config — BIM/geometric colour unification (ADR-597 §unified-glyph)', () => {
   it('bim_corner shares the endpoint colour', () => {
     expect(resolveSnapColor('bim_corner')).toBe(resolveSnapColor('endpoint'));
   });

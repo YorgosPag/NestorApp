@@ -1,6 +1,6 @@
 /**
  * SnapIndicatorOverlay — the 2D-canvas wrapper for the snap marker (■ endpoint, △ midpoint,
- * ○ centre, ✕ intersection, κλπ). ADR-370 §unified-glyph: BIM corner/midpoint/centre reuse
+ * ○ centre, ✕ intersection, κλπ). ADR-597 §unified-glyph: BIM corner/midpoint/centre reuse
  * the SAME ■/△/○ symbols as the geometric snaps — the entity noun lives in the label only.
  *
  * ADR-542: the glyph + label + colour now live in the shared `SnapIndicatorGlyph` SSoT so

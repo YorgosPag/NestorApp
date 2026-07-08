@@ -5,7 +5,7 @@
  * Extracted from `SnapIndicatorOverlay` so BOTH the 2D canvas overlay AND the 3D BIM
  * viewport overlay (`BimSnapIndicatorOverlay3D`) draw the SAME glyph, the SAME
  * «Γωνία/Μέσο/Κέντρο κολώνας» label (`resolveBimSnapLabelText`), and the SAME per-type
- * colour (`resolveSnapColor`). ADR-370 §unified-glyph (2026-07-05): a BIM corner/midpoint/
+ * colour (`resolveSnapColor`). ADR-597 §unified-glyph (2026-07-05): a BIM corner/midpoint/
  * centre reuses the SAME ■/△/○ symbol as the geometric endpoint/midpoint/centre (Revit/
  * AutoCAD convention) — the entity noun lives ONLY in the label, not in a distinct shape.
  * The ONLY thing the two callers differ in is how they project
@@ -32,7 +32,7 @@ import {
   getNodeDotRadius,
   resolveSnapColor
 } from '../../rendering/ui/snap/snap-visual-config';
-// ADR-363 Phase A + 5.5i + ADR-370 + Slice 2i: BIM description → i18n key (SSoT).
+// ADR-363 Phase A + 5.5i + ADR-597 + Slice 2i: BIM description → i18n key (SSoT).
 import { resolveBimSnapLabelText } from '../../snapping/snap-description-keys';
 // ADR-508 §label-layout (Case A) — το snap label σε ΞΕΧΩΡΙΣΤΗ baseline πάνω από το glyph ώστε να
 // μην πέφτει στο canvas dim pill (cross-layer separate-baselines contract).
@@ -52,7 +52,7 @@ export function SnapShape({ type, color }: { type: string; color: string }) {
 
   switch (type.toLowerCase()) {
     // ■ ENDPOINT: Square - AutoCAD/MicroStation standard.
-    // ADR-370 §unified-glyph (2026-07-05): μια BIM «γωνία» (`bim_corner`) είναι σημείο
+    // ADR-597 §unified-glyph (2026-07-05): μια BIM «γωνία» (`bim_corner`) είναι σημείο
     // endpoint-class → ΙΔΙΟ ■ σύμβολο με το γεωμετρικό endpoint, όπως Revit/AutoCAD. Η
     // σημασιολογία («Γωνία κολώνας») ζει στην ετικέτα (`bimLabel`) — ΟΧΙ σε ξεχωριστό σχήμα.
     case 'endpoint':
@@ -72,7 +72,7 @@ export function SnapShape({ type, color }: { type: string; color: string }) {
       );
 
     // △ MIDPOINT: Triangle - AutoCAD/MicroStation standard.
-    // ADR-370 §unified-glyph: `bim_midpoint` = midpoint-class σημείο → ΙΔΙΟ △ (outline).
+    // ADR-597 §unified-glyph: `bim_midpoint` = midpoint-class σημείο → ΙΔΙΟ △ (outline).
     case 'midpoint':
     case 'bim_midpoint':
       return (
@@ -87,7 +87,7 @@ export function SnapShape({ type, color }: { type: string; color: string }) {
       );
 
     // ○ CENTER: Circle - AutoCAD/MicroStation standard.
-    // ADR-370 §unified-glyph: `bim_center` = center-class σημείο → ΙΔΙΟ ○.
+    // ADR-597 §unified-glyph: `bim_center` = center-class σημείο → ΙΔΙΟ ○.
     case 'center':
     case 'bim_center':
       return (
@@ -190,7 +190,7 @@ export function SnapShape({ type, color }: { type: string; color: string }) {
         </svg>
       );
 
-    // ⊕/┘/▲ BIM_CENTER / BIM_CORNER / BIM_MIDPOINT — ADR-370 §unified-glyph (2026-07-05):
+    // ⊕/┘/▲ BIM_CENTER / BIM_CORNER / BIM_MIDPOINT — ADR-597 §unified-glyph (2026-07-05):
     // ΔΕΝ έχουν πλέον ξεχωριστό σχήμα. Μια BIM γωνία/μέσο/κέντρο είναι το ΙΔΙΟ ΕΙΔΟΣ σημείου
     // με το γεωμετρικό endpoint/midpoint/center → μοιράζονται το ίδιο ■/△/○ glyph (βλ. τα
     // ενοποιημένα `case 'endpoint'|'bim_corner'`, `case 'midpoint'|'bim_midpoint'`,
@@ -373,7 +373,7 @@ export interface SnapIndicatorGlyphProps {
  */
 export function SnapIndicatorGlyph({ screenPos, type, description, className = '' }: SnapIndicatorGlyphProps) {
   const { t } = useTranslation('dxf-viewer-shell');
-  // ADR-370: BIM label = «Γωνία/Μέσο/Κέντρο» + entity noun (composition), or null for
+  // ADR-597: BIM label = «Γωνία/Μέσο/Κέντρο» + entity noun (composition), or null for
   // «περίεργα σχήματα» (empty description) → glyph WITHOUT text (req #4).
   const bimLabel = resolveBimSnapLabelText(t, description) ?? undefined;
   // 🏢 ADR-515: type-specific χρώμα marker (Revit-rich) από το snap-visual SSoT.

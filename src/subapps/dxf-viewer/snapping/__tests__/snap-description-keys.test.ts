@@ -1,9 +1,9 @@
 /**
- * ADR-370 — snap-description-keys (SSoT) tests.
+ * ADR-597 — snap-description-keys (SSoT) tests.
  *
  * The 2D snap indicator and the 3D gizmo snap-type label both resolve labels here, so a
  * wrong mapping mislabels BOTH. Verifies the legacy BIM description map, the generic
- * `snapModes.labels.<type>` fallback, AND the ADR-370 characteristic-point composition
+ * `snapModes.labels.<type>` fallback, AND the ADR-597 characteristic-point composition
  * («Γωνία/Μέσο/Κέντρο» + entity noun).
  */
 
@@ -35,7 +35,7 @@ describe('snap-description-keys — legacy single-key map', () => {
   });
 });
 
-describe('snap-description-keys — ADR-370 characteristic-point composition', () => {
+describe('snap-description-keys — ADR-597 characteristic-point composition', () => {
   it('composes corner/mid/center labels from category + entity noun', () => {
     expect(resolveBimSnapLabelText(t, 'bim-wall-corner'))
       .toBe('snapModes.labels.bim.category.corner snapModes.labels.bim.noun.wall');
