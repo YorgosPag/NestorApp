@@ -39,7 +39,7 @@ describe('resolveLineEndpointHotGrip (ADR-513 §grip-parity)', () => {
 
   it('the rotation handle (already kinded) → false (keeps its rotate role)', () => {
     expect(
-      resolveLineEndpointHotGrip({ type: 'line' }, grip({ gripIndex: 3, lineGripKind: LINE_ROTATION_KIND })),
+      resolveLineEndpointHotGrip({ type: 'line' }, grip({ gripIndex: 3, gripKind: { on: 'line', kind: LINE_ROTATION_KIND } })),
     ).toBe(false);
   });
 

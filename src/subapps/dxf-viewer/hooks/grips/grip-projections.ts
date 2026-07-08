@@ -143,61 +143,9 @@ export function buildDxfDragPreview(
     anchorPos,
     // ADR-363 Phase 1G — flag the dashed rubber-band leader for the corner hot-grip.
     ...(phase === 'hotGrip' ? { hotGrip: true } : {}),
-    // ADR-358 Phase 5d — propagate parametric stair discriminator + anchor
-    // so `applyEntityPreview` can reach `applyStairGripDrag` with the same
-    // inputs the commit adapter uses (origin/delta/currentPos).
-    ...(activeGrip.stairGripKind ? { stairGripKind: activeGrip.stairGripKind } : {}),
-    ...(activeGrip.stairGripKind ? { anchorPos } : {}),
-    // ADR-363 Phase 1C — parametric wall grip discriminator + anchor.
-    ...(activeGrip.wallGripKind ? { wallGripKind: activeGrip.wallGripKind, anchorPos } : {}),
-    // ADR-363 Phase 4.5c.5 — propagate column/beam grip kind so the dim-annotation
-    // leaf can compute live "w=350mm" labels without re-subscribing to scene state.
-    ...(activeGrip.columnGripKind ? { columnGripKind: activeGrip.columnGripKind } : {}),
-    ...(activeGrip.beamGripKind   ? { beamGripKind:   activeGrip.beamGripKind }   : {}),
-    ...((activeGrip.columnGripKind ?? activeGrip.beamGripKind) ? { anchorPos } : {}),
-    // ADR-436 Slice 1b — foundation grip kind + anchor for live resize/rotate ghost + "w=/l=" label.
-    ...(activeGrip.foundationGripKind ? { foundationGripKind: activeGrip.foundationGripKind, anchorPos } : {}),
-    // ADR-406 — MEP fixture grip kind + anchor for the live corner/move/rotate ghost.
-    ...(activeGrip.mepFixtureGripKind ? { mepFixtureGripKind: activeGrip.mepFixtureGripKind, anchorPos } : {}),
-    // ADR-408 Φ3 — electrical panel grip kind + anchor for the live corner/move/rotate ghost.
-    ...(activeGrip.electricalPanelGripKind ? { electricalPanelGripKind: activeGrip.electricalPanelGripKind, anchorPos } : {}),
-    // ADR-408 Φ12 — MEP manifold grip kind + anchor for the live corner/move/rotate ghost.
-    ...(activeGrip.mepManifoldGripKind ? { mepManifoldGripKind: activeGrip.mepManifoldGripKind, anchorPos } : {}),
-    // ADR-408 Φ8 — MEP segment grip kind + anchor for the live midpoint-move / drag ghost.
-    ...(activeGrip.mepSegmentGripKind ? { mepSegmentGripKind: activeGrip.mepSegmentGripKind, anchorPos } : {}),
-    // ADR-410 — furniture grip kind + anchor for the live corner/move/rotate ghost.
-    ...(activeGrip.furnitureGripKind ? { furnitureGripKind: activeGrip.furnitureGripKind, anchorPos } : {}),
-    // ADR-415 — floorplan-symbol grip kind + anchor for the live ghost.
-    ...(activeGrip.floorplanSymbolGripKind ? { floorplanSymbolGripKind: activeGrip.floorplanSymbolGripKind, anchorPos } : {}),
-    // ADR-363 Phase 3.5 / 3.7a / 2.5 — slab / slab-opening / opening grip kinds.
-    ...(activeGrip.slabGripKind        ? { slabGripKind:        activeGrip.slabGripKind,        anchorPos } : {}),
-    ...(activeGrip.slabOpeningGripKind ? { slabOpeningGripKind: activeGrip.slabOpeningGripKind, anchorPos } : {}),
-    ...(activeGrip.openingGripKind     ? { openingGripKind:     activeGrip.openingGripKind,     anchorPos } : {}),
-    // ADR-417 Φ1-part-2 #2 — roof grip kind + anchor for the live footprint ghost.
-    ...(activeGrip.roofGripKind        ? { roofGripKind:        activeGrip.roofGripKind,        anchorPos } : {}),
-    // ADR-507 — hatch boundary grip kind + anchor for the live outline ghost.
-    ...(activeGrip.hatchGripKind       ? { hatchGripKind:       activeGrip.hatchGripKind,       anchorPos } : {}),
-    // ADR-362 Phase I (Round 22) — dimension grip kind + anchor for the live dim ghost
-    // (useDimGripGhostPreview → applyDimensionGripDrag + renderPreviewDimension). anchorPos
-    // = grip world pos at mouseDown (gripPos for the linear rotation handle).
-    ...(activeGrip.dimGripKind         ? { dimGripKind:         activeGrip.dimGripKind,         anchorPos } : {}),
-    // ADR-557 — text/mtext rect-box grip kind + anchor for the live box ghost
-    // (applyEntityPreview → applyTextGripDrag, the SAME transform the commit runs).
-    // `anchorPos` = the grabbed grip world pos at mouseDown (rotation sweep start).
-    ...(activeGrip.textGripKind        ? { textGripKind:        activeGrip.textGripKind,        anchorPos } : {}),
-    // ADR-363 Slice F — plain DXF line rotation grip kind + anchor for the live
-    // spinning-line ghost (applyEntityPreview → applyLineRotationDrag, the SAME
-    // shared rotate SSoT the commit runs). Only the rotation handle carries the kind.
-    ...(activeGrip.lineGripKind        ? { lineGripKind:        activeGrip.lineGripKind,        anchorPos } : {}),
-    // ADR-575 §8 — GROUP gizmo MOVE cross: forward the kind + anchor so the live ghost
-    // translates every member (applyEntityPreview → calculateMovedGeometry case 'group',
-    // then the render expands the moved group). The rotation handle forwards via
-    // `buildRotateReferencePreview` (hot-grip rotate path).
-    ...(activeGrip.groupGripKind       ? { groupGripKind:       activeGrip.groupGripKind,       anchorPos } : {}),
-    // ADR-602 (ADR-587 Φ6) Stage 2 — dual-write του tagged grip discriminator SSoT. Inert
-    // μέχρι Stage 3· ΚΛΕΙΝΕΙ by construction το §1.4 Bug 3 (disjoint builders): το ΕΝΑ
-    // `gripKind` προωθείται ΚΑΙ από τους δύο builders, ανεξαρτήτως του legacy subset που
-    // κρατά ο καθένας. `anchorPos` ήδη emitted (πάντα, γραμμή 143).
+    // ADR-602 (ADR-587 Φ6) Stage 5 — the ONE tagged grip discriminator SSoT. The per-entity
+    // legacy `xxxGripKind` forwards were deleted; consumers read via `gripKindOf`. `anchorPos`
+    // is already emitted unconditionally above (line 143), so no per-kind anchor spread is needed.
     ...(activeGrip.gripKind ? { gripKind: activeGrip.gripKind } : {}),
   };
 }
@@ -236,49 +184,10 @@ export function buildRotateReferencePreview(
     entityId: activeGrip.entityId!,
     gripIndex: activeGrip.gripIndex,
     movesEntity: activeGrip.movesEntity,
-    // ADR-397 / ADR-406 — forward whichever parametric kind owns the rotation
-    // handle so the live ghost reaches the right `apply*GripDrag` (wall / beam /
-    // column / mep-fixture 6-click rotate).
-    ...(activeGrip.wallGripKind ? { wallGripKind: activeGrip.wallGripKind } : {}),
-    ...(activeGrip.beamGripKind ? { beamGripKind: activeGrip.beamGripKind } : {}),
-    ...(activeGrip.columnGripKind ? { columnGripKind: activeGrip.columnGripKind } : {}),
-    // ADR-436 Slice 1b — foundation pad 6-click rotate live ghost.
-    ...(activeGrip.foundationGripKind ? { foundationGripKind: activeGrip.foundationGripKind } : {}),
-    ...(activeGrip.mepFixtureGripKind ? { mepFixtureGripKind: activeGrip.mepFixtureGripKind } : {}),
-    ...(activeGrip.electricalPanelGripKind ? { electricalPanelGripKind: activeGrip.electricalPanelGripKind } : {}),
-    // ADR-408 Φ12 — MEP manifold 6-click rotate live ghost.
-    ...(activeGrip.mepManifoldGripKind ? { mepManifoldGripKind: activeGrip.mepManifoldGripKind } : {}),
-    // ADR-408 Φ8 — MEP segment 6-click rotate live ghost.
-    ...(activeGrip.mepSegmentGripKind ? { mepSegmentGripKind: activeGrip.mepSegmentGripKind } : {}),
-    // ADR-410 — furniture 6-click rotate live ghost.
-    ...(activeGrip.furnitureGripKind ? { furnitureGripKind: activeGrip.furnitureGripKind } : {}),
-    // ADR-415 — floorplan-symbol 6-click rotate live ghost.
-    ...(activeGrip.floorplanSymbolGripKind ? { floorplanSymbolGripKind: activeGrip.floorplanSymbolGripKind } : {}),
-    // ADR-363 Slice F — plain DXF line rotation live ghost (free spin / 6-click
-    // reference / typed angle), full wall parity via the shared hot-grip flow.
-    ...(activeGrip.lineGripKind ? { lineGripKind: activeGrip.lineGripKind } : {}),
-    // ADR-561 — plain DXF arc rotation live ghost (free spin / 6-click reference /
-    // typed angle), same shared hot-grip flow as the line.
-    ...(activeGrip.arcGripKind ? { arcGripKind: activeGrip.arcGripKind } : {}),
-    // ADR-561 — plain DXF polyline/rectangle rotation live ghost (free spin / 6-click
-    // reference / typed angle), same shared hot-grip flow as the line/arc. Without this
-    // forward the ghost never receives the discriminator in the rotate flow.
-    ...(activeGrip.polylineGripKind ? { polylineGripKind: activeGrip.polylineGripKind } : {}),
-    // ADR-557 — text/mtext rotation live ghost (free spin / 6-click reference /
-    // typed angle) via the shared hot-grip flow, same as the column. Without this
-    // forward the ghost never receives the discriminator in the rotate flow.
-    ...(activeGrip.textGripKind ? { textGripKind: activeGrip.textGripKind } : {}),
-    // ADR-575 §8 — GROUP gizmo rotation live ghost (free spin / 6-click reference / typed
-    // angle) via the shared hot-grip flow, same as the line/arc/text. Without this forward
-    // the ghost never receives the discriminator in the rotate flow.
-    ...(activeGrip.groupGripKind ? { groupGripKind: activeGrip.groupGripKind } : {}),
-    // ADR-583 — annotation symbol (North arrow) rotation live ghost, same shared
-    // hot-grip flow as the arc/line/group. Without this forward the ghost never
-    // receives the discriminator in the rotate flow.
-    ...(activeGrip.annotationSymbolGripKind ? { annotationSymbolGripKind: activeGrip.annotationSymbolGripKind } : {}),
-    // ADR-602 (ADR-587 Φ6) Stage 2 — dual-write του tagged grip discriminator SSoT (ίδιο ΕΝΑ
-    // field και στον rotate builder → §1.4 Bug 3 disjoint-subsets κλείνει by construction).
-    // Inert μέχρι Stage 3.
+    // ADR-602 (ADR-587 Φ6) Stage 5 — the ONE tagged grip discriminator SSoT carries whichever
+    // parametric kind owns the rotation handle (wall / beam / column / mep-fixture / … 6-click
+    // rotate). The per-entity legacy `xxxGripKind` forwards were deleted; consumers read via
+    // `gripKindOf`.
     ...(activeGrip.gripKind ? { gripKind: activeGrip.gripKind } : {}),
     hotGrip: true as const,
     rotatePivot: pivot,

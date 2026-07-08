@@ -133,15 +133,12 @@ describe('ADR-397 — column hot-grip kinds (shared registry)', () => {
 
   it('hotGripKindOf reads the set discriminator regardless of entity', () => {
     const wall = {
-      wallGripKind: 'wall-midpoint',
       gripKind: { on: 'wall', kind: 'wall-midpoint' },
     } as unknown as UnifiedGripInfo;
     const col = {
-      columnGripKind: 'column-rotation',
       gripKind: { on: 'column', kind: 'column-rotation' },
     } as unknown as UnifiedGripInfo;
     const stair = {
-      stairGripKind: 'stair-base',
       gripKind: { on: 'stair', kind: 'stair-base' },
     } as unknown as UnifiedGripInfo;
     expect(hotGripKindOf(wall)).toBe('wall-midpoint');
@@ -172,7 +169,6 @@ describe('ADR-363 Phase 5.5d — beam hot-grip kinds (axis-based wall parity)', 
 
   it('hotGripKindOf reads the beamGripKind discriminator', () => {
     const beam = {
-      beamGripKind: 'beam-rotation',
       gripKind: { on: 'beam', kind: 'beam-rotation' },
     } as unknown as UnifiedGripInfo;
     expect(hotGripKindOf(beam)).toBe('beam-rotation');
@@ -207,7 +203,6 @@ describe('ADR-406 — MEP fixture hot-grip kinds (full wall parity)', () => {
 
   it('hotGripKindOf reads the mepFixtureGripKind discriminator', () => {
     const fix = {
-      mepFixtureGripKind: 'mep-fixture-rotation',
       gripKind: { on: 'mep-fixture', kind: 'mep-fixture-rotation' },
     } as unknown as UnifiedGripInfo;
     expect(hotGripKindOf(fix)).toBe('mep-fixture-rotation');
@@ -237,7 +232,6 @@ describe('ADR-408 Φ3 — electrical panel hot-grip kinds (full wall parity)', (
 
   it('hotGripKindOf reads the electricalPanelGripKind discriminator', () => {
     const panel = {
-      electricalPanelGripKind: 'electrical-panel-rotation',
       gripKind: { on: 'electrical-panel', kind: 'electrical-panel-rotation' },
     } as unknown as UnifiedGripInfo;
     expect(hotGripKindOf(panel)).toBe('electrical-panel-rotation');
@@ -267,7 +261,6 @@ describe('ADR-408 Φ8 — MEP segment hot-grip kinds (axis-based beam parity)', 
   // press-drag that reverts on release.
   it('hotGripKindOf reads the mepSegmentGripKind discriminator', () => {
     const seg = {
-      mepSegmentGripKind: 'mep-segment-rotation',
       gripKind: { on: 'mep-segment', kind: 'mep-segment-rotation' },
     } as unknown as UnifiedGripInfo;
     expect(hotGripKindOf(seg)).toBe('mep-segment-rotation');
@@ -300,11 +293,9 @@ describe('ADR-557 — text/mtext hot-grip kinds (rect-box column parity)', () =>
   // pick + rotation/alignment overlays (the exact gap this ADR closes).
   it('hotGripKindOf reads the textGripKind discriminator', () => {
     const move = {
-      textGripKind: 'text-move',
       gripKind: { on: 'text', kind: 'text-move' },
     } as unknown as UnifiedGripInfo;
     const rot = {
-      textGripKind: 'text-rotation',
       gripKind: { on: 'text', kind: 'text-rotation' },
     } as unknown as UnifiedGripInfo;
     expect(hotGripKindOf(move)).toBe('text-move');

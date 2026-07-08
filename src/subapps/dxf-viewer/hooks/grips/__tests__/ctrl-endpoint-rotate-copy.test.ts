@@ -9,6 +9,7 @@
  */
 import { resolveCtrlEndpointRotateCopy } from '../ctrl-endpoint-rotate-copy';
 import type { UnifiedGripInfo } from '../unified-grip-types';
+import { gripKindOf } from '../../grip-kinds';
 import { LINE_ROTATION_KIND } from '../../../systems/line/line-grips';
 import { ARC_ROTATION_KIND } from '../../../systems/arc/arc-grips';
 import { POLYLINE_ROTATION_KIND } from '../../../systems/polyline/polyline-grips';
@@ -25,22 +26,22 @@ describe('resolveCtrlEndpointRotateCopy (ADR-561 EXT)', () => {
     const res = resolveCtrlEndpointRotateCopy({ type: 'line' }, grip({ gripIndex: 1 }), true);
     expect(res).not.toBeNull();
     expect(res!.pivot).toEqual({ x: 100, y: 0 });
-    expect(res!.syntheticGrip.lineGripKind).toBe(LINE_ROTATION_KIND);
+    expect(gripKindOf(res!.syntheticGrip, 'line')).toBe(LINE_ROTATION_KIND);
   });
 
   it('arc endpoint + Ctrl → arc-rotation synthetic kind', () => {
     const res = resolveCtrlEndpointRotateCopy({ type: 'arc' }, grip({ gripIndex: 2 }), true);
-    expect(res!.syntheticGrip.arcGripKind).toBe(ARC_ROTATION_KIND);
+    expect(gripKindOf(res!.syntheticGrip, 'arc')).toBe(ARC_ROTATION_KIND);
   });
 
   it('polyline vertex + Ctrl → polyline-rotation synthetic kind', () => {
     const res = resolveCtrlEndpointRotateCopy({ type: 'polyline' }, grip({ gripIndex: 0 }), true);
-    expect(res!.syntheticGrip.polylineGripKind).toBe(POLYLINE_ROTATION_KIND);
+    expect(gripKindOf(res!.syntheticGrip, 'polyline')).toBe(POLYLINE_ROTATION_KIND);
   });
 
   it('scene rectangle vertex + Ctrl → polyline-rotation (rect shows polyline grips)', () => {
     const res = resolveCtrlEndpointRotateCopy({ type: 'rectangle' }, grip({ gripIndex: 0 }), true);
-    expect(res!.syntheticGrip.polylineGripKind).toBe(POLYLINE_ROTATION_KIND);
+    expect(gripKindOf(res!.syntheticGrip, 'polyline')).toBe(POLYLINE_ROTATION_KIND);
   });
 
   it('WITHOUT Ctrl → null (endpoint stays a normal stretch — regression guard)', () => {
@@ -52,8 +53,8 @@ describe('resolveCtrlEndpointRotateCopy (ADR-561 EXT)', () => {
   });
 
   it('a rotation handle (already kinded) → null (keeps its role; its copy is at commit)', () => {
-    expect(resolveCtrlEndpointRotateCopy({ type: 'line' }, grip({ gripIndex: 3, lineGripKind: LINE_ROTATION_KIND, gripKind: { on: 'line', kind: LINE_ROTATION_KIND } }), true)).toBeNull();
-    expect(resolveCtrlEndpointRotateCopy({ type: 'arc' }, grip({ gripIndex: 4, arcGripKind: ARC_ROTATION_KIND, gripKind: { on: 'arc', kind: ARC_ROTATION_KIND } }), true)).toBeNull();
+    expect(resolveCtrlEndpointRotateCopy({ type: 'line' }, grip({ gripIndex: 3, gripKind: { on: 'line', kind: LINE_ROTATION_KIND } }), true)).toBeNull();
+    expect(resolveCtrlEndpointRotateCopy({ type: 'arc' }, grip({ gripIndex: 4, gripKind: { on: 'arc', kind: ARC_ROTATION_KIND } }), true)).toBeNull();
   });
 
   it('an EDGE grip (not a vertex) → null', () => {

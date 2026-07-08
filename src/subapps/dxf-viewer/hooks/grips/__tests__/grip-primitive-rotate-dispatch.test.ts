@@ -47,31 +47,31 @@ describe('ADR-561 — primitive move/rotation dispatch', () => {
   });
 
   it('arc-rotation → commitArcGripDrag', () => {
-    commitDxfGripDragModeAware(grip({ type: 'vertex', arcGripKind: 'arc-rotation', gripKind: { on: 'arc', kind: 'arc-rotation' }, movesEntity: false }), DELTA, makeDeps(), 'stretch');
+    commitDxfGripDragModeAware(grip({ type: 'vertex', gripKind: { on: 'arc', kind: 'arc-rotation' }, movesEntity: false }), DELTA, makeDeps(), 'stretch');
     expect(commitArcGripDrag).toHaveBeenCalledTimes(1);
     expect(commitPolylineRotationGripDrag).not.toHaveBeenCalled();
   });
 
   it('polyline-rotation → commitPolylineRotationGripDrag', () => {
-    commitDxfGripDragModeAware(grip({ type: 'vertex', polylineGripKind: 'polyline-rotation', gripKind: { on: 'polyline', kind: 'polyline-rotation' }, movesEntity: false }), DELTA, makeDeps(), 'stretch');
+    commitDxfGripDragModeAware(grip({ type: 'vertex', gripKind: { on: 'polyline', kind: 'polyline-rotation' }, movesEntity: false }), DELTA, makeDeps(), 'stretch');
     expect(commitPolylineRotationGripDrag).toHaveBeenCalledTimes(1);
     expect(commitArcGripDrag).not.toHaveBeenCalled();
   });
 
   it('arc-move → neither rotation handler (whole-entity translate falls through)', () => {
-    commitDxfGripDragModeAware(grip({ arcGripKind: 'arc-move', gripKind: { on: 'arc', kind: 'arc-move' } }), DELTA, makeDeps(), 'stretch');
+    commitDxfGripDragModeAware(grip({ gripKind: { on: 'arc', kind: 'arc-move' } }), DELTA, makeDeps(), 'stretch');
     expect(commitArcGripDrag).not.toHaveBeenCalled();
     expect(commitPolylineRotationGripDrag).not.toHaveBeenCalled();
   });
 
   it('circle-move → neither rotation handler', () => {
-    commitDxfGripDragModeAware(grip({ circleGripKind: 'circle-move', gripKind: { on: 'circle', kind: 'circle-move' } }), DELTA, makeDeps(), 'stretch');
+    commitDxfGripDragModeAware(grip({ gripKind: { on: 'circle', kind: 'circle-move' } }), DELTA, makeDeps(), 'stretch');
     expect(commitArcGripDrag).not.toHaveBeenCalled();
     expect(commitPolylineRotationGripDrag).not.toHaveBeenCalled();
   });
 
   it('polyline-move → neither rotation handler', () => {
-    commitDxfGripDragModeAware(grip({ polylineGripKind: 'polyline-move', gripKind: { on: 'polyline', kind: 'polyline-move' } }), DELTA, makeDeps(), 'stretch');
+    commitDxfGripDragModeAware(grip({ gripKind: { on: 'polyline', kind: 'polyline-move' } }), DELTA, makeDeps(), 'stretch');
     expect(commitArcGripDrag).not.toHaveBeenCalled();
     expect(commitPolylineRotationGripDrag).not.toHaveBeenCalled();
   });

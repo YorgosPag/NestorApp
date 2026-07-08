@@ -10,6 +10,7 @@
 
 import { buildDxfDragPreview } from '../grip-projections';
 import type { UnifiedGripInfo } from '../unified-grip-types';
+import { gripKindOf } from '../../grip-kinds';
 
 const ANCHOR = { x: 100, y: 100 };
 const CURSOR = { x: 400, y: 250 };
@@ -19,7 +20,7 @@ function cornerGrip(): UnifiedGripInfo {
   return {
     id: 'g', source: 'dxf', type: 'vertex',
     entityId: 'wall_1', gripIndex: 6,
-    wallGripKind: 'wall-corner-start-neg',
+    gripKind: { on: 'wall', kind: 'wall-corner-start-neg' },
     position: ANCHOR, movesEntity: false,
   } as unknown as UnifiedGripInfo;
 }
@@ -30,19 +31,19 @@ describe('ADR-363 Phase 1G.5 — buildDxfDragPreview altMove', () => {
     expect(preview).not.toBeNull();
     expect(preview!.movesEntity).toBe(true);
     expect(preview!.delta).toEqual(EXPECTED_DELTA);
-    expect(preview!.wallGripKind).toBeUndefined();
+    expect(gripKindOf(preview!, 'wall')).toBeUndefined();
     expect(preview!.entityId).toBe('wall_1');
   });
 
   it('altMove=false → keeps wallGripKind (parametric ghost unchanged)', () => {
     const preview = buildDxfDragPreview('dragging', cornerGrip(), ANCHOR, CURSOR, false);
     expect(preview).not.toBeNull();
-    expect(preview!.wallGripKind).toBe('wall-corner-start-neg');
+    expect(gripKindOf(preview!, 'wall')).toBe('wall-corner-start-neg');
     expect(preview!.delta).toEqual(EXPECTED_DELTA);
   });
 
   it('altMove defaults to false when omitted (backward compatible)', () => {
     const preview = buildDxfDragPreview('dragging', cornerGrip(), ANCHOR, CURSOR);
-    expect(preview!.wallGripKind).toBe('wall-corner-start-neg');
+    expect(gripKindOf(preview!, 'wall')).toBe('wall-corner-start-neg');
   });
 });

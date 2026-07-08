@@ -23,7 +23,7 @@ function rotationGrip(): UnifiedGripInfo {
   return {
     id: 'g', source: 'dxf', type: 'vertex',
     entityId: 'wall_1', gripIndex: 4,
-    wallGripKind: 'wall-rotation',
+    gripKind: { on: 'wall', kind: 'wall-rotation' },
     position: PIVOT, movesEntity: false,
   } as unknown as UnifiedGripInfo;
 }
