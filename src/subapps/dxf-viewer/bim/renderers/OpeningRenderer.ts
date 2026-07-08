@@ -40,6 +40,7 @@ import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getOpeningGrips } from '../walls/opening-grips';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
@@ -170,7 +171,7 @@ export class OpeningRenderer extends BaseEntityRenderer {
       entityId: g.entityId,
       isVisible: true,
       gripIndex: g.gripIndex,
-      shape: gripGlyphShape(g.openingGripKind),
+      shape: gripGlyphShape(gripKindOf(g, 'opening')),
     }));
   }
 

@@ -27,7 +27,7 @@ const adapter = createCentredBoxGripAdapter<MepBoilerEntity, MepBoilerParams, Me
   minDimensionMm: MIN_BOILER_DIMENSION_MM,
   toBoxParams: (params) => params,
   fromBoxPatch: (original, patch) => ({ ...original, ...patch }),
-  toGripInfo: (base, kind) => ({ ...base, mepBoilerGripKind: kind, gripKind: { on: 'mep-boiler', kind } }),
+  toGripInfo: (base, kind) => ({ ...base, gripKind: { on: 'mep-boiler', kind } }),
 });
 
 /** Drag input for a boiler grip (the shared centred-box 5-field shape). */

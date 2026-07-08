@@ -29,6 +29,7 @@ import type { StairEntity } from '../types/stair-types';
 import type { Entity } from '../../types/entities';
 import { isStairEntity } from '../../types/entities';
 import { getStairGrips, stairGripGlyphShape } from '../stairs/stair-grips';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { DEFAULT_CUT_PLANE_HEIGHT } from '../geometry/stairs/stair-geometry-shared';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
@@ -199,7 +200,7 @@ export class StairRenderer extends BaseEntityRenderer {
       isVisible: true,
       gripIndex: g.gripIndex,
       // ADR-393 v2 — carry the icon glyph for the move/rotation handles.
-      shape: stairGripGlyphShape(g.stairGripKind),
+      shape: stairGripGlyphShape(gripKindOf(g, 'stair')),
     }));
   }
 
