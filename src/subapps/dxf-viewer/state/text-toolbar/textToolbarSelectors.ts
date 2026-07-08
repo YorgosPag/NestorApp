@@ -87,7 +87,6 @@ export function computeMixedValues(
 
   const first = selection[0]!;
   const firstStyle = representativeStyle(first.node);
-  const firstParagraph = first.node.paragraphs[0];
 
   // ADR-557 — flat entity SSoT (renderer + commit truth) for the box-transform fields.
   let fontFamily: TextToolbarValues['fontFamily'] = first.flat.fontFamily;
@@ -108,8 +107,6 @@ export function computeMixedValues(
   let lineSpacingFactor: TextToolbarValues['lineSpacingFactor'] = first.node.lineSpacing.factor;
   let layerId: TextToolbarValues['layerId'] = first.layerId;
   let currentScale: TextToolbarValues['currentScale'] = first.node.currentScale;
-
-  void firstParagraph;
 
   for (let i = 1; i < selection.length; i++) {
     const entry = selection[i]!;

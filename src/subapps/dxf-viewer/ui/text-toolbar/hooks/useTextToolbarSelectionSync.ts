@@ -46,7 +46,6 @@ import { extractFlatText } from '../../../utils/text-node-utils';
 import type { SceneModel, AnySceneEntity } from '../../../types/scene';
 import type { DxfTextNode } from '../../../text-engine/types';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
-import { resolveEntityLayerName } from '../../../stores/LayerStore';
 // ADR-557 read-side flat-SSoT — the SAME height / run-style extractors the render
 // pipeline (dxf-scene-entity-converter) uses, so the toolbar geometry ≡ the canvas.
 import { resolveTextHeight, extractFirstRunStyle } from '../../../hooks/canvas/dxf-text-style-extractor';
@@ -113,8 +112,11 @@ function resolveTextEntities(
     out.push({
       id: entity.id,
       node: ensureTextNode(entity as unknown as Parameters<typeof ensureTextNode>[0]),
-      // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
-      layerId: resolveEntityLayerName(entity) ?? '',
+      // ADR-557 E-α — seed the entity's OWN layer ID (not the resolved NAME): the dropdown's
+      // `SelectItem` value is `layer.id`, so the picker only highlights the current layer AND
+      // the command bridge only diffs id↔id when this holds an id. `resolveEntityLayerName`
+      // (which returns the layer NAME) mismatched every SelectItem → wrong/blank selection.
+      layerId: (entity as { layerId?: string }).layerId ?? '',
       flat: resolveFlatGeometry(entity),
     });
   }

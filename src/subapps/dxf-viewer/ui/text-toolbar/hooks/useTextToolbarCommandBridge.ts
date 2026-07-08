@@ -26,8 +26,14 @@
  *       `textNode.lineSpacing` — the fields the renderer reads via
  *       `bim/text/text-lines.ts`; ADR-557)
  *
- *   layerId, currentScale
- *     → deferred (layerId) / handled above (currentScale)
+ *   layerId
+ *     → UpdateTextLayerCommand (ADR-557 E-α — patches the TOP-LEVEL `layerId`, moving the
+ *       entity to another layer; the picker was a no-op before because no command changed an
+ *       existing entity's layer). The store field holds the TARGET layer ID (dropdown
+ *       `SelectItem` value = `layer.id`; the selection-sync seeds the entity's own `layerId`).
+ *
+ *   currentScale
+ *     → handled above (UpdateTextCurrentScaleCommand)
  *
  * AutoCAD parity: equivalent to the PROPERTIES palette → grpcode
  * dispatcher in stock AutoCAD. One change = one logical undo step
@@ -55,7 +61,7 @@ import {
 import { projectSceneTextToDxf, type TextSceneShape } from '../../../bim/text/project-scene-text';
 import { UpdateTextCurrentScaleCommand } from '../../../core/commands/text/UpdateTextCurrentScaleCommand';
 import { UpdateMTextParagraphCommand } from '../../../core/commands/text/UpdateMTextParagraphCommand';
-import type { TextJustification } from '../../../text-engine/types';
+import { UpdateTextLayerCommand } from '../../../core/commands/text/UpdateTextLayerCommand';
 import { getGlobalCommandHistory } from '../../../core/commands';
 import { setActiveScale } from '../../../systems/viewport';
 import { useDxfTextServices, type DxfTextServices } from './useDxfTextServices';
@@ -200,7 +206,7 @@ function diffAndDispatch(
   }
   // Justification (9-point attachment) — updates textNode.attachment → canvas textAlign.
   if (!Object.is(next.justification, prev.justification) && next.justification !== null) {
-    const attachment = next.justification as TextJustification;
+    const attachment = next.justification;
     const history = getGlobalCommandHistory();
     for (const entityId of ids) {
       const cmd = new UpdateMTextParagraphCommand(
@@ -233,7 +239,22 @@ function diffAndDispatch(
       if (cmd.validate() === null) history.execute(cmd);
     }
   }
-  // layerId — deferred.
+  // layerId — move the selected entities to another layer (ADR-557 E-α). The store field holds
+  // the TARGET layer ID (dropdown value = `layer.id`; the selection-sync seeds the entity's own
+  // `layerId`). Skip null (mixed selection) / '' (unresolved) — only a real, CHANGED id dispatches.
+  if (!Object.is(next.layerId, prev.layerId) && next.layerId !== null && next.layerId !== '') {
+    const layerId = next.layerId;
+    const history = getGlobalCommandHistory();
+    for (const entityId of ids) {
+      const cmd = new UpdateTextLayerCommand(
+        { entityId, layerId },
+        services.sceneManager,
+        services.layerProvider,
+        services.auditRecorder,
+      );
+      if (cmd.validate() === null) history.execute(cmd);
+    }
+  }
 }
 
 export function useTextToolbarCommandBridge(): void {
