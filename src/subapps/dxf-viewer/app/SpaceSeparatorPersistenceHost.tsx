@@ -17,20 +17,15 @@
 
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
-import type { useLevels } from '../systems/levels';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 import type { SpaceSeparatorEntity } from '../bim/types/space-separator-types';
 import { isSpaceSeparatorEntity } from '../types/entities';
 import { useSceneEntityById } from '../systems/scene/useSceneSelectors';
 import { useSpaceSeparatorPersistence } from '../hooks/data/useSpaceSeparatorPersistence';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface SpaceSeparatorPersistenceHostProps {
   readonly primarySelectedId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly projectId?: string;
   readonly floorplanId?: string;
   readonly buildingId?: string;

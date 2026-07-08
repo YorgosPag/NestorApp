@@ -18,6 +18,7 @@
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type { useLevels } from '../systems/levels';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 import type { OpeningEntity } from '../bim/types/opening-types';
 import { isOpeningEntity } from '../types/entities';
 import { useSceneEntitiesByType, useSceneEntityById } from '../systems/scene/useSceneSelectors';
@@ -28,10 +29,9 @@ import { useBim3DEntitiesStore } from '../bim-3d/stores/Bim3DEntitiesStore';
 // delete dialog are already mounted by WallPersistenceHost → reused here.
 import { EditOpeningTypeDialog } from '../ui/ribbon/components/EditOpeningTypeDialog';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId' | 'levels'
->;
+interface LevelManagerLike
+  extends LevelSceneWriter,
+    Pick<ReturnType<typeof useLevels>, 'levels'> {}
 
 export interface OpeningPersistenceHostProps {
   readonly primarySelectedId: string | null;

@@ -14,6 +14,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import type { useLevels } from '../systems/levels';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 import type { SlabOpeningEntity } from '../bim/types/slab-opening-types';
 import { EventBus } from '../systems/events/EventBus';
 import { generateBimStackGroupId } from '@/services/enterprise-id-convenience';
@@ -23,10 +24,9 @@ import {
 } from '../bim/slab-openings/slab-opening-stack';
 import { SlabOpeningStackDialog } from '../ui/components/slab-opening/SlabOpeningStackDialog';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'levels' | 'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
+interface LevelManagerLike
+  extends LevelSceneWriter,
+    Pick<ReturnType<typeof useLevels>, 'levels'> {}
 
 export interface SlabOpeningStackHostProps {
   readonly levelManager: LevelManagerLike;

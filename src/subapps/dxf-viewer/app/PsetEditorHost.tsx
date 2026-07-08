@@ -14,7 +14,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import type { useLevels } from '../systems/levels';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 import { EventBus } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands';
 import { UpdateEntityPsetCommand } from '../core/commands/entity-commands/UpdateEntityPsetCommand';
@@ -26,13 +26,8 @@ import type { BimPsetEntityType } from '../ui/components/bim-pset/pset-templates
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene'
->;
-
 export interface PsetEditorHostProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────

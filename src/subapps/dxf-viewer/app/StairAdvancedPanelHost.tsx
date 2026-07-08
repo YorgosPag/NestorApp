@@ -25,21 +25,16 @@
 import React from 'react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type { SceneModel } from '../types/scene';
-import type { useLevels } from '../systems/levels';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 import { useSelectedStair } from '../ui/stair-advanced-panel/hooks/useSelectedStair';
 import { useStairParamsDispatcher } from '../ui/stair-advanced-panel/commands/dispatchStairParamPatch';
 import { useStairPersistence } from '../bim/hooks/use-stair-persistence';
 import { StairAdvancedPanel } from '../ui/stair-advanced-panel/StairAdvancedPanel';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface StairAdvancedPanelHostProps {
   readonly primarySelectedId: string | null;
   readonly currentScene: SceneModel | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly projectId?: string;
   /** Required by Phase 8 persistence — falls back to floorplanId when absent (subscribe gated). */
   readonly floorplanId?: string;
