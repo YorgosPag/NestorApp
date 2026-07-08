@@ -25,6 +25,7 @@ import {
   type LinetypeDef,
 } from '../config/linetype-iso-catalog';
 import type { SceneLayer } from '../types/entities';
+import { clamp255 } from './scalar-math';
 
 export interface WriteLayerTableInput {
   readonly layers: ReadonlyArray<SceneLayer>;
@@ -112,7 +113,7 @@ function emitLayerXData(out: string[], layer: SceneLayer): void {
 
   // AcCmTransparency — only emit when non-zero (DXF convention: omit = opaque).
   if ((layer.transparency ?? 0) > 0) {
-    const alpha = Math.max(0, Math.min(255, Math.round((1 - layer.transparency! / 90) * 255)));
+    const alpha = clamp255(Math.round((1 - layer.transparency! / 90) * 255));
     const encoded = 0x02000000 | alpha; // bit 25 = fixed transparency present
     emit(out, '1001', 'AcCmTransparency');
     emit(out, '1071', String(encoded));

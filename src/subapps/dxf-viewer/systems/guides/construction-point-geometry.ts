@@ -19,6 +19,8 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { CONSTRUCTION_POINT_LIMITS } from './guide-types';
+import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
+import { clamp01 } from '../../utils/scalar-math';
 
 // ============================================================================
 // LINEAR DISTRIBUTION (§3.7, §3.8)
@@ -90,15 +92,6 @@ function degToRad(deg: number): number {
 /** Point on circle at given angle (radians) */
 function pointOnCircle(center: Point2D, radius: number, angleRad: number): Point2D {
   return { x: center.x + radius * Math.cos(angleRad), y: center.y + radius * Math.sin(angleRad) };
-}
-
-/**
- * Normalize angle to [0, 360) range.
- */
-function normalizeAngleDeg(deg: number): number {
-  let a = deg % 360;
-  if (a < 0) a += 360;
-  return a;
 }
 
 /**
@@ -234,9 +227,9 @@ export function computeLineArcIntersection(
 
   // Allow small tolerance for endpoints
   const EPS = 1e-9;
-  if (t1 >= -EPS && t1 <= 1 + EPS) tValues.push(Math.max(0, Math.min(1, t1)));
+  if (t1 >= -EPS && t1 <= 1 + EPS) tValues.push(clamp01(t1));
   if (t2 >= -EPS && t2 <= 1 + EPS && Math.abs(t2 - t1) > EPS) {
-    tValues.push(Math.max(0, Math.min(1, t2)));
+    tValues.push(clamp01(t2));
   }
 
   const results: Array<{ point: Point2D }> = [];

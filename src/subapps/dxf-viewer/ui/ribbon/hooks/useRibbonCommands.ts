@@ -6,7 +6,6 @@ import type {
   RibbonCommandsApi,
   RibbonActionPayload,
   RibbonComboboxState,
-  RibbonToggleState,
 } from '../context/RibbonCommandContext';
 import type { UseRibbonCommandsProps } from './useRibbonCommands-types';
 import { setRibbonFieldReaders } from '../context/RibbonFieldStore';
@@ -26,7 +25,7 @@ import { isElectricalPanelPanelVisibilityKey } from './useRibbonElectricalPanelB
 import { isElectricalPanelRibbonKey } from './bridge/electrical-panel-command-keys';
 import { isMepRadiatorRibbonKey, isMepRadiatorRibbonStringKey, isMepRadiatorRibbonReadoutKey } from './bridge/mep-radiator-command-keys';
 import { isMepBoilerPanelVisibilityKey } from './useRibbonMepBoilerBridge';
-import { isMepBoilerRibbonKey, isMepBoilerRibbonStringKey, isMepBoilerReadoutKey, isMepBoilerToggleKey } from './bridge/mep-boiler-command-keys';
+import { isMepBoilerRibbonKey, isMepBoilerRibbonStringKey, isMepBoilerReadoutKey } from './bridge/mep-boiler-command-keys';
 import { isMepWaterHeaterPanelVisibilityKey } from './useRibbonMepWaterHeaterBridge';
 import { isMepWaterHeaterRibbonKey } from './bridge/mep-water-heater-command-keys';
 import { isMepUnderfloorPanelVisibilityKey } from './useRibbonMepUnderfloorBridge';
@@ -37,17 +36,18 @@ import { isFurniturePanelVisibilityKey } from './useRibbonFurnitureBridge';
 import { isFurnitureRibbonKey, isFurnitureRibbonStringKey } from './bridge/furniture-command-keys';
 import { isFloorplanSymbolPanelVisibilityKey } from './useRibbonFloorplanSymbolBridge';
 import { isFloorplanSymbolRibbonKey, isFloorplanSymbolRibbonStringKey } from './bridge/floorplan-symbol-command-keys';
+import { isAnnotationSymbolRibbonKey, isAnnotationSymbolRibbonStringKey } from './bridge/annotation-symbol-command-keys';
 import { isMepFixtureLibraryKey, isMepFixtureLibraryStringKey } from './bridge/mep-fixture-library-command-keys';
 import { isMepRiserKey, isMepRiserStringKey } from './bridge/mep-riser-command-keys';
-import { isArrayRibbonKey, isArrayRibbonStringKey, isArrayRibbonToggleKey } from './bridge/array-command-keys';
+import { isArrayRibbonKey, isArrayRibbonStringKey } from './bridge/array-command-keys';
 import { isStairRibbonKey, isStairRibbonStringKey } from './bridge/stair-command-keys';
 import { isWallRibbonKey, isWallRibbonStringKey, isWallRibbonToggleKey, isWallTiltKey } from './bridge/wall-command-keys';
-import { isOpeningRibbonKey, isOpeningRibbonStringKey, isOpeningTagStyleComboboxKey, isOpeningTagStyleToggleKey } from './bridge/opening-command-keys';
+import { isOpeningRibbonKey, isOpeningRibbonStringKey, isOpeningTagStyleComboboxKey } from './bridge/opening-command-keys';
 import { isSlabRibbonKey, isSlabRibbonStringKey, isSlabSlopeKey } from './bridge/slab-command-keys';
-import { isRoofRibbonKey, isRoofRibbonStringKey, isRoofRibbonToggleKey, isRoofEdgeKey } from './bridge/roof-command-keys';
+import { isRoofRibbonKey, isRoofRibbonStringKey, isRoofEdgeKey } from './bridge/roof-command-keys';
 import { isFloorFinishRibbonNumberKey, isFloorFinishRibbonStringKey } from './bridge/floor-finish-command-keys';
 import { isWallCoveringRibbonNumberKey, isWallCoveringRibbonStringKey } from './bridge/wall-covering-command-keys';
-import { isHatchRibbonNumberKey, isHatchRibbonStringKey, isHatchRibbonToggleKey, isHatchRibbonReadoutKey, isHatchRibbonVisibilityKey } from './bridge/hatch-command-keys';
+import { isHatchRibbonNumberKey, isHatchRibbonStringKey, isHatchRibbonReadoutKey, isHatchRibbonVisibilityKey } from './bridge/hatch-command-keys';
 import { isThermalSpaceRibbonNumberKey, isThermalSpaceRibbonStringKey } from './bridge/thermal-space-command-keys';
 import { isColumnRibbonKey, isColumnRibbonStringKey, isColumnFinishKey, isColumnStructuralKey, isColumnStructuralReadoutKey } from './bridge/column-command-keys';
 import { isStoreyRibbonKey } from './bridge/storey-command-keys';
@@ -56,9 +56,10 @@ import { isBeamRibbonKey, isBeamRibbonStringKey, isBeamFinishKey } from './bridg
 import { isFoundationRibbonKey, isFoundationRibbonStringKey, isFoundationBadgeKey } from './bridge/foundation-command-keys';
 import { isSlabOpeningRibbonStringKey } from './bridge/slab-opening-command-keys';
 import { isLineToolRibbonKey, isLineToolPanelVisibilityKey } from './bridge/line-tool-command-keys';
-import { isDimRibbonKey, isDimVisibilityKey } from './bridge/dim-command-keys';
+import { isDimRibbonKey } from './bridge/dim-command-keys';
 import { isXlineRibbonKey } from './bridge/xline-command-keys';
 import { routeRibbonAction } from './useRibbonCommands-action';
+import { useRibbonToggleCommands } from './useRibbonToggleCommands';
 import { useActiveStoreyContext } from '../../../systems/levels/useActiveStoreySync';
 import { isCommandRecommendedForStorey } from './bridge/storey-tool-gating';
 // ADR-521 — «Τύποι» column-type dropdown: action → setKind + activate column tool.
@@ -112,6 +113,7 @@ export function useRibbonCommands({
   mepSegmentBridge,
   furnitureBridge,
   floorplanSymbolBridge,
+  annotationSymbolBridge,
   mepFixtureLibraryBridge,
   mepRiserBridge,
   lineToolBridge,
@@ -242,6 +244,10 @@ export function useRibbonCommands({
         floorplanSymbolBridge.onComboboxChange(key, value);
         return;
       }
+      if (isAnnotationSymbolRibbonKey(key) || isAnnotationSymbolRibbonStringKey(key)) {
+        annotationSymbolBridge.onComboboxChange(key, value);
+        return;
+      }
       if (isMepFixtureLibraryKey(key) || isMepFixtureLibraryStringKey(key)) {
         mepFixtureLibraryBridge.onComboboxChange(key, value);
         return;
@@ -302,6 +308,7 @@ export function useRibbonCommands({
       if (isMepSegmentRibbonKey(key) || isMepSegmentRibbonStringKey(key)) return mepSegmentBridge.getComboboxState(key);
       if (isFurnitureRibbonKey(key) || isFurnitureRibbonStringKey(key)) return furnitureBridge.getComboboxState(key);
       if (isFloorplanSymbolRibbonKey(key) || isFloorplanSymbolRibbonStringKey(key)) return floorplanSymbolBridge.getComboboxState(key);
+      if (isAnnotationSymbolRibbonKey(key) || isAnnotationSymbolRibbonStringKey(key)) return annotationSymbolBridge.getComboboxState(key);
       if (isMepFixtureLibraryKey(key) || isMepFixtureLibraryStringKey(key)) return mepFixtureLibraryBridge.getComboboxState(key);
       if (isMepRiserKey(key) || isMepRiserStringKey(key)) return mepRiserBridge.getComboboxState(key);
       if (isArrayRibbonKey(key) || isArrayRibbonStringKey(key)) return arrayBridge.getComboboxState(key);
@@ -311,59 +318,23 @@ export function useRibbonCommands({
       if (isXlineRibbonKey(key)) return xlineModeBridge.getComboboxState(key);
       return textEditorBridge.getComboboxState(key);
     },
-    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, arrayBridge, lineToolBridge, dimBridge, xlineModeBridge, textEditorBridge],
+    [snapStepUnits, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge, annotationSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, arrayBridge, lineToolBridge, dimBridge, xlineModeBridge, textEditorBridge],
   );
 
-  const onToggle = useEventCallback(
-    (key: string, next: boolean) => {
-      if (isWallRibbonToggleKey(key)) {
-        wallBridge.onToggle(key, next);
-        return;
-      }
-      if (isArrayRibbonToggleKey(key)) {
-        arrayBridge.onToggle(key, next);
-        return;
-      }
-      if (isOpeningTagStyleToggleKey(key)) {
-        openingBridge.onToggle(key, next);
-        return;
-      }
-      if (isRoofRibbonToggleKey(key)) {
-        roofBridge.onToggle(key, next);
-        return;
-      }
-      if (isMepBoilerToggleKey(key)) {
-        mepBoilerBridge.onToggle(key, next);
-        return;
-      }
-      if (isHatchRibbonToggleKey(key)) {
-        hatchBridge.onToggle(key, next);
-        return;
-      }
-      // ADR-362 Round 36 — per-part dimension visibility toggles (suppress* overrides).
-      if (isDimVisibilityKey(key)) {
-        dimBridge.onToggle(key, next);
-        return;
-      }
-      textEditorBridge.onToggle(key, next);
-    },
-  );
-
-  const getToggleState = React.useCallback(
-    (key: string): RibbonToggleState => {
-      if (key === 'animation.snap-toggle') return snapEnabled;
-      if (isWallRibbonToggleKey(key)) return wallBridge.getToggleState(key);
-      if (isArrayRibbonToggleKey(key)) return arrayBridge.getToggleState(key);
-      if (isOpeningTagStyleToggleKey(key)) return openingBridge.getToggleState(key);
-      if (isRoofRibbonToggleKey(key)) return roofBridge.getToggleState(key);
-      if (isMepBoilerToggleKey(key)) return mepBoilerBridge.getToggleState(key);
-      if (isHatchRibbonToggleKey(key)) return hatchBridge.getToggleState(key);
-      // ADR-362 Round 36 — per-part dimension visibility toggle state (visible = !suppress).
-      if (isDimVisibilityKey(key)) return dimBridge.getToggleState(key);
-      return textEditorBridge.getToggleState(key);
-    },
-    [snapEnabled, wallBridge, arrayBridge, openingBridge, roofBridge, mepBoilerBridge, hatchBridge, dimBridge, textEditorBridge],
-  );
+  // ADR-547 / N.7.1 — boolean-toggle dispatch (write + read) extracted to its own
+  // hook. `getToggleState` stays a stable useCallback here (via the sub-hook) so it
+  // feeds `RibbonFieldStore` through the layout-effect below unchanged.
+  const { onToggle, getToggleState } = useRibbonToggleCommands({
+    snapEnabled,
+    wallBridge,
+    arrayBridge,
+    openingBridge,
+    roofBridge,
+    mepBoilerBridge,
+    hatchBridge,
+    dimBridge,
+    textEditorBridge,
+  });
 
   // ADR-358 Phase 7b1 — Stair bridge owns badge keys; ADR-363 Phase 1B adds
   // wall badge keys for the violation indicator on the wall contextual tab.

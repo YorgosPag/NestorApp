@@ -77,6 +77,31 @@ export const INSERT_TAB: RibbonTab = {
       ],
     },
     {
+      // ADR-583 — Annotation symbol library (North arrow first). Single-click
+      // placement tool (commandKey = ToolType 'north-arrow').
+      id: 'annotationSymbols',
+      labelKey: 'ribbon.panels.annotationSymbols',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'insert.north-arrow',
+                labelKey: 'ribbon.commands.northArrow',
+                tooltipKey: 'ribbon.commands.northArrowTooltip',
+                icon: 'north-arrow',
+                commandKey: 'north-arrow',
+                shortcut: 'NORTH',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       id: 'background',
       labelKey: 'ribbon.panels.background',
       rows: [

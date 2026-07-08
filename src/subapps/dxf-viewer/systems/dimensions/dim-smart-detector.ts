@@ -40,6 +40,7 @@ import type {
   WallEntity,
 } from '../../types/entities';
 import type { DimensionType } from '../../types/dimension';
+import { clamp01 } from '../../utils/scalar-math';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Public input/output
@@ -263,7 +264,7 @@ function distancePointToSegment(p: Point2D, a: Point2D, b: Point2D): number {
     return Math.hypot(p.x - a.x, p.y - a.y);
   }
   let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
-  t = Math.max(0, Math.min(1, t));
+  t = clamp01(t);
   const projX = a.x + t * dx;
   const projY = a.y + t * dy;
   return Math.hypot(p.x - projX, p.y - projY);

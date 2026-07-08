@@ -132,6 +132,18 @@ export function rotateEntity(
       };
     }
 
+    // ADR-583 — annotation symbol (North arrow): rotate the insertion point about the
+    // pivot + accumulate the glyph rotation (1:1 the text/mtext case). About its own
+    // centre (grip pivot = position) the point is fixed and only `rotation` advances.
+    case 'annotation-symbol': {
+      const e = entity as typeof entity & { position: Point2D; rotation?: number };
+      const currentRotation = e.rotation ?? 0;
+      return {
+        position: rotatePoint(e.position, pivot, angleDeg),
+        rotation: normalizeAngleDeg(currentRotation + angleDeg),
+      } as Partial<Entity>;
+    }
+
     case 'angle-measurement': {
       const newVertex = rotatePoint(entity.vertex, pivot, angleDeg);
       const newPoint1 = rotatePoint(entity.point1, pivot, angleDeg);

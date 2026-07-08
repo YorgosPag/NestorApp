@@ -348,6 +348,15 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'struct-run-analysis': return <Activity width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-457 — «Λεπτομέρεια Οπλισμού» (dimensioned reinforcement detail sheet).
     case 'column-reinforcement-detail': return <Ruler width={sizePx[size]} height={sizePx[size]} className={className} />;
+    // ADR-583 — annotation symbol library: North arrow (compass glyph — filled
+    // arrowhead + shaft + "N", the surveyor's convention).
+    case 'north-arrow': return inlineSvg(size, (
+      <>
+        <path d="M12 3 L15 10 L9 10 Z" fill="currentColor" stroke="none" />
+        <line x1="12" y1="10" x2="12" y2="21" />
+        <text x="12" y="6.5" textAnchor="middle" fontSize="5" fontWeight="700" stroke="none" fill="currentColor">N</text>
+      </>
+    ));
     default: return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
   }
 };

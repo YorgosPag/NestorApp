@@ -17,6 +17,7 @@ import type { Point2D } from '../../rendering/types/Types';
 // 🏢 ADR-189: Centralized hover highlight config (single source of truth)
 // 🏢 ADR-571: GUIDE_X cyan SSoT — μην ξανα-hardcode-άρεις '#00BCD4' εδώ
 import { HOVER_HIGHLIGHT, UI_COLORS_BASE } from '../../config/color-config';
+import { clamp01 } from '../../utils/scalar-math';
 
 // Re-export for convenience
 export type { GridAxis, GridGuideStyle } from '../../ai-assistant/grid-types';
@@ -266,7 +267,7 @@ export function pointToSegmentDistance(point: Point2D, segStart: Point2D, segEnd
     return Math.sqrt((point.x - segStart.x) ** 2 + (point.y - segStart.y) ** 2);
   }
 
-  const t = Math.max(0, Math.min(1, ((point.x - segStart.x) * dx + (point.y - segStart.y) * dy) / lenSq));
+  const t = clamp01(((point.x - segStart.x) * dx + (point.y - segStart.y) * dy) / lenSq);
   const projX = segStart.x + t * dx;
   const projY = segStart.y + t * dy;
   return Math.sqrt((point.x - projX) ** 2 + (point.y - projY) ** 2);
@@ -290,7 +291,7 @@ export function projectPointOnSegment(
     return { snapPoint: { x: segStart.x, y: segStart.y }, distance: d, t: 0 };
   }
 
-  const t = Math.max(0, Math.min(1, ((point.x - segStart.x) * dx + (point.y - segStart.y) * dy) / lenSq));
+  const t = clamp01(((point.x - segStart.x) * dx + (point.y - segStart.y) * dy) / lenSq);
   const snapPoint = { x: segStart.x + t * dx, y: segStart.y + t * dy };
   const distance = Math.sqrt((point.x - snapPoint.x) ** 2 + (point.y - snapPoint.y) ** 2);
 

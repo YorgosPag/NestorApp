@@ -266,7 +266,9 @@ export type ToolType =
   | 'dim-continued'       // AutoCAD DIMCONTINUE — chain end-to-end on parent's dim line
   // ADR-362 Phase L2: Standalone center mark + centerline tools
   | 'dim-center-mark'     // AutoCAD CENTERMARK — click circle/arc → CenterMarkEntity
-  | 'dim-centerline';     // AutoCAD CENTERLINE — 2-click on 2 circles/arcs → CenterLineEntity
+  | 'dim-centerline'      // AutoCAD CENTERLINE — 2-click on 2 circles/arcs → CenterLineEntity
+  // ADR-583: Annotation symbol library — single-click placement of a paper decoration
+  | 'north-arrow';        // NORTH — click canvas → AnnotationSymbolEntity (North arrow)
 
 
 export interface ToolDefinition {

@@ -22,6 +22,7 @@ import {
   pointToCircleDistance,
 } from '../../rendering/entities/shared/geometry-utils';
 import { isAngleInRange } from '../../snapping/engines/intersection-calculators';
+import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 
 const RAD_TO_DEG = 180 / Math.PI;
 
@@ -33,7 +34,7 @@ function distanceToEntity(p: Point2D, e: DetectableEntity): number {
     case 'circle':
       return pointToCircleDistance(p, e.center, e.radius);
     case 'arc': {
-      const angleDeg = (Math.atan2(p.y - e.center.y, p.x - e.center.x) * RAD_TO_DEG + 360) % 360;
+      const angleDeg = normalizeAngleDeg(Math.atan2(p.y - e.center.y, p.x - e.center.x) * RAD_TO_DEG);
       if (!isAngleInRange(angleDeg, e.startAngle, e.endAngle)) return Infinity;
       return pointToCircleDistance(p, e.center, e.radius);
     }

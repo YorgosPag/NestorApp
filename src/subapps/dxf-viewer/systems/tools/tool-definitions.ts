@@ -267,4 +267,8 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // ADR-563 Φ4-Α: interactive cut-line dimension tool (dialog → 3-click → ghost chain).
   // `drawing` category → mouse-up skips selection + grips skipped, like the dim tools.
   'auto-dim-cutline':  { id: 'auto-dim-cutline',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
+  // ADR-583: Annotation symbol library — single-click placement (North arrow first).
+  // `drawing` category, continuous (place several), the click is consumed in
+  // useCanvasClickHandler PRIORITY 1.8 so it never enters the unified drawing accumulator.
+  'north-arrow':       { id: 'north-arrow',       category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
 };
