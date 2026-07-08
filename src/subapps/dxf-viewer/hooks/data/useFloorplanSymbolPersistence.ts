@@ -3,27 +3,24 @@
 /**
  * ADR-415 Φ1 — Floorplan symbol Firestore persistence React adapter.
  *
- * Bridges `FloorplanSymbolFirestoreService` to the scene model owned by
- * `LevelsSystem`. Mirrors `useFurniturePersistence` — same hybrid auto-save,
- * selective-skip diff-merge, first-save listener wired to `drawing:entity-created`
- * with `tool === 'floorplan-symbol'`, delete + undo restore. No connector
- * reconciliation (floorplan symbols carry no MEP connectors).
+ * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-593). Behaviour
+ * unchanged: hybrid auto-save, selective-skip diff-merge, first-save listener
+ * wired to `drawing:entity-created` with `tool === 'floorplan-symbol'`, undo
+ * restore, audit trail (created/updated/deleted/restored). No BOQ feed, no
+ * connector reconciliation (floorplan symbols carry no MEP connectors).
  *
- * Φ1 has no in-app delete UI yet, so there is no delete-requested EventBus bridge;
- * `deleteFloorplanSymbol` is exposed for a later sub-step.
+ * Φ1 has no in-app delete UI yet, so there is no delete-requested EventBus bridge
+ * (no `deleteTrigger` in the config); `deleteFloorplanSymbol` is still exposed on
+ * the result for a later sub-step (the factory's `deleteEntity` is unconditional).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-415-2d-floorplan-symbol-library.md
+ * @see docs/centralized-systems/reference/adrs/ADR-593-bim-entity-persistence-hook-ssot.md
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { dequal } from 'dequal';
+import { useMemo } from 'react';
 
-import type { AnySceneEntity, SceneModel } from '../../types/entities';
-import { DXF_TIMING } from '../../config/dxf-timing';
-import type { SceneWriteOrigin } from '../scene/scene-write-origin';
+import type { AnySceneEntity } from '../../types/entities';
 import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-types';
-import { EventBus } from '../../systems/events/EventBus';
-import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
   createFloorplanSymbolFirestoreService,
   entityToSaveInput,
@@ -32,21 +29,18 @@ import {
 } from '../../bim/floorplan-symbols/floorplan-symbol-firestore-service';
 import { recordFloorplanSymbolChange } from '../../bim/floorplan-symbols/floorplan-symbol-audit-client';
 import { floorplanSymbolDocToEntity as docToEntity } from './floorplan-symbol-persistence-helpers';
-import { mergeDocsIntoScene } from './merge-docs-into-scene';
-import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
-import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
+import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
+import type {
+  BimEntityPersistenceParams,
+  BimEntitySaveState,
+} from './bim-entity-persistence-hook-types';
 
 // ============================================================================
-// TYPES
+// PUBLIC API (unchanged)
 // ============================================================================
 
-export type FloorplanSymbolSaveState = 'idle' | 'saving' | 'saved' | 'error';
-
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
-}
+export type FloorplanSymbolSaveState = BimEntitySaveState;
 
 export interface UseFloorplanSymbolPersistenceParams {
   readonly companyId: string | null;
@@ -55,7 +49,7 @@ export interface UseFloorplanSymbolPersistenceParams {
   /** ADR-420 — stable building-storey scope key (IfcBuildingStorey). */
   readonly floorId?: string | null;
   readonly userId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly primarySelectedSymbol: FloorplanSymbolEntity | null;
 }
 
@@ -68,12 +62,6 @@ export interface UseFloorplanSymbolPersistenceResult {
 }
 
 // ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const AUTO_SAVE_DEBOUNCE_MS = DXF_TIMING.persist.ENTITY_AUTOSAVE; // ADR-516
-
-// ============================================================================
 // HELPERS
 // ============================================================================
 
@@ -82,261 +70,81 @@ function isFloorplanSymbol(entity: AnySceneEntity): entity is FloorplanSymbolEnt
 }
 
 // ============================================================================
-// HOOK
+// FACTORY CONFIG
+// ============================================================================
+
+const useFloorplanSymbolPersistenceBase = createBimEntityPersistenceHook<
+  FloorplanSymbolFirestoreService,
+  FloorplanSymbolDoc,
+  FloorplanSymbolEntity,
+  FloorplanSymbolEntity['params']
+>({
+  entityType: 'floorplan-symbol',
+  restoreEntityType: 'floorplan-symbol',
+  saveErrorKey: 'FLOORPLAN_SYMBOL_SAVE_ERROR',
+  restoreErrorKey: 'FLOORPLAN_SYMBOL_RESTORE_ERROR',
+  typeGuard: isFloorplanSymbol,
+  entityComparable: (e) => e.params,
+  createService: (scope) => createFloorplanSymbolFirestoreService(scope),
+  service: {
+    save: (svc, e) => svc.saveFloorplanSymbol(entityToSaveInput(e)),
+    update: (svc, e) =>
+      svc.updateFloorplanSymbol(e.id, {
+        params: e.params,
+        validation: e.validation,
+        geometry: e.geometry,
+        layerId: e.layerId,
+      }),
+    remove: (svc, id) => svc.deleteFloorplanSymbol(id),
+    subscribe: (svc, onDocs, onErr) =>
+      svc.subscribeFloorplanSymbols(onDocs as (docs: readonly FloorplanSymbolDoc[]) => void, onErr),
+  },
+  merge: {
+    mode: 'generic',
+    config: {
+      isEntity: isFloorplanSymbol,
+      docToEntity,
+      entityComparable: (e) => e.params,
+      docComparable: (d) => d.params,
+    },
+  },
+  onPersisted: (entity, { isNew, prevComparable }) => {
+    void recordFloorplanSymbolChange(isNew ? 'created' : 'updated', entity, {
+      prevParams: prevComparable ?? undefined,
+    });
+  },
+  onDeleted: (id, deleted) => {
+    void recordFloorplanSymbolChange(
+      'deleted',
+      deleted
+        ? { id: deleted.id, kind: deleted.kind, layerId: deleted.layerId, params: deleted.params }
+        : { id, kind: 'wc' },
+    );
+  },
+  onRestored: (entity) => {
+    void recordFloorplanSymbolChange('restored', entity);
+  },
+});
+
+// ============================================================================
+// HOOK (thin wrapper — preserves the public param/result names)
 // ============================================================================
 
 export function useFloorplanSymbolPersistence(
   params: UseFloorplanSymbolPersistenceParams,
 ): UseFloorplanSymbolPersistenceResult {
-  const {
-    companyId,
-    projectId,
-    floorplanId,
-    floorId,
-    userId,
-    levelManager,
-    primarySelectedSymbol,
-  } = params;
-
-  const [saveState, setSaveState] = useState<FloorplanSymbolSaveState>('idle');
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const serviceRef = useRef<FloorplanSymbolFirestoreService | null>(null);
-  const dirtyIdsRef = useRef<Set<string>>(new Set());
-  const lastSavedParamsRef = useRef<Map<string, FloorplanSymbolEntity['params']>>(new Map());
-  const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
-  const deletedIdsRef = useRef<Set<string>>(new Set());
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const selectedSymbolRef = useRef<FloorplanSymbolEntity | null>(null);
-  selectedSymbolRef.current = primarySelectedSymbol;
-
-  // ⚡ STABILITY (ca9 fix 2026-06-08): key the Firestore subscription off stable
-  // scope primitives + `currentLevelId`, NOT the per-render `levelManager` object,
-  // so onSnapshot does not unsubscribe/re-subscribe on every render (target removed
-  // before ack → `INTERNAL ASSERTION FAILED ca9 {ve:-1}`). Mirror of the fitting hook.
-  const levelManagerRef = useRef(levelManager);
-  levelManagerRef.current = levelManager;
-  const currentLevelId = levelManager.currentLevelId;
-
-  // Instantiate service when auth + scope ready.
-  useEffect(() => {
-    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
-    if (!scope) {
-      serviceRef.current = null;
-      return;
-    }
-    serviceRef.current = createFloorplanSymbolFirestoreService({
-      companyId: scope.companyId,
-      projectId: scope.projectId,
-      floorplanId: scope.floorplanId,
-      floorId: scope.floorId,
-      userId: scope.userId,
-    });
-  }, [companyId, projectId, floorplanId, floorId, userId]);
-
-  // Subscribe + diff-merge + selective skip locally-dirty symbols.
-  // Keyed on STABLE primitives only (scope + currentLevelId) — NOT the per-render
-  // `levelManager` object — so onSnapshot subscribes once per real scope/level
-  // change (ca9 churn fix).
-  useEffect(() => {
-    const svc = serviceRef.current;
-    const levelId = currentLevelId;
-    if (!svc || !levelId) return;
-
-    const unsubscribe = svc.subscribeFloorplanSymbols(
-      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`
-      // (μηδέν copy-pasted loop· mirror column/hatch). Δεν έχει write-grace →
-      // `isWithinGrace: () => false`.
-      (docs) => {
-        mergeDocsIntoScene<FloorplanSymbolDoc, FloorplanSymbolEntity, FloorplanSymbolEntity['params']>(
-          docs,
-          levelId,
-          levelManagerRef.current,
-          {
-            isEntity: isFloorplanSymbol,
-            docToEntity,
-            entityComparable: (e) => e.params,
-            docComparable: (d) => d.params,
-          },
-          {
-            dirty: dirtyIdsRef.current,
-            deleted: deletedIdsRef.current,
-            pending: pendingFirstSaveIdsRef.current,
-            isWithinGrace: () => false,
-            lastSavedBaseline: lastSavedParamsRef.current,
-          },
-        );
-      },
-      (err: Error) => {
-        setError(err.message);
-        setSaveState('error');
-      },
-    );
-
-    return () => unsubscribe();
-  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
-
-  // Immediate persist (used by both auto-save flush and explicit button).
-  const persist = useCallback(async (entity: FloorplanSymbolEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
-    const isNew = prevParams === null;
-    setSaveState('saving');
-    setError(null);
-    try {
-      if (isNew) {
-        await svc.saveFloorplanSymbol(entityToSaveInput(entity));
-      } else {
-        await svc.updateFloorplanSymbol(entity.id, {
-          params: entity.params,
-          validation: entity.validation,
-          geometry: entity.geometry,
-          layerId: entity.layerId,
-        });
-      }
-      lastSavedParamsRef.current.set(entity.id, entity.params);
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-      void recordFloorplanSymbolChange(
-        isNew ? 'created' : 'updated',
-        entity,
-        { prevParams: prevParams ?? undefined },
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'FLOORPLAN_SYMBOL_SAVE_ERROR');
-      setSaveState('error');
-    }
-  }, []);
-
-  // Auto-save debounce on selected symbol params change.
-  useEffect(() => {
-    const symbol = primarySelectedSymbol;
-    if (!symbol || !serviceRef.current) return;
-    const known = lastSavedParamsRef.current.has(symbol.id);
-    const pending = pendingFirstSaveIdsRef.current.has(symbol.id);
-    if (!known && !pending) return;
-    const lastSaved = lastSavedParamsRef.current.get(symbol.id);
-    if (lastSaved && dequal(lastSaved, symbol.params)) return;
-
-    dirtyIdsRef.current.add(symbol.id);
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      void persist(symbol);
-    }, AUTO_SAVE_DEBOUNCE_MS);
-
-    return () => {
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = null;
-      }
-    };
-  }, [primarySelectedSymbol, persist]);
-
-  const saveNow = useCallback(async () => {
-    const symbol = selectedSymbolRef.current;
-    if (!symbol) return;
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-    await persist(symbol);
-  }, [persist]);
-
-  // Delete symbol: remove from Firestore + scene + audit.
-  const deleteFloorplanSymbol = useCallback(async (symbolId: string) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const levelId = levelManager.currentLevelId;
-    if (!levelId) return;
-
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-
-    const scene = levelManager.getLevelScene(levelId);
-    const deletedEntity = scene?.entities.find((e) => e.id === symbolId);
-    const deletedSymbol = (deletedEntity && isFloorplanSymbol(deletedEntity)) ? deletedEntity : null;
-    try {
-      await svc.deleteFloorplanSymbol(symbolId);
-      void recordFloorplanSymbolChange(
-        'deleted',
-        deletedSymbol
-          ? { id: deletedSymbol.id, kind: deletedSymbol.kind, layerId: deletedSymbol.layerId, params: deletedSymbol.params }
-          : { id: symbolId, kind: 'wc' },
-      );
-    } catch {
-      // Non-fatal: deletion failure silent — user retries.
-    }
-
-    if (scene) {
-      const nextEntities = scene.entities.filter((e) => e.id !== symbolId);
-      levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
-    }
-
-    dirtyIdsRef.current.delete(symbolId);
-    lastSavedParamsRef.current.delete(symbolId);
-    pendingFirstSaveIdsRef.current.delete(symbolId);
-    deletedIdsRef.current.add(symbolId);
-  }, [levelManager]);
-
-  // persistRestore: undo→Firestore re-create + audit 'restored'.
-  const persistRestore = useCallback(async (entity: FloorplanSymbolEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    setSaveState('saving');
-    setError(null);
-    try {
-      await svc.saveFloorplanSymbol(entityToSaveInput(entity));
-      lastSavedParamsRef.current.set(entity.id, entity.params);
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-      void recordFloorplanSymbolChange('restored', entity);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'FLOORPLAN_SYMBOL_RESTORE_ERROR');
-      setSaveState('error');
-    }
-  }, []);
-
-  // First-save listener — fires immediately for freshly drawn symbols.
-  useEffect(() => {
-    const cleanup = EventBus.on('drawing:entity-created', (payload) => {
-      if (payload.tool !== 'floorplan-symbol') return;
-      const entity = payload.entity as FloorplanSymbolEntity | undefined;
-      if (!entity || (entity as { type?: string }).type !== 'floorplan-symbol') return;
-      if (!serviceRef.current) return;
-      pendingFirstSaveIdsRef.current.add(entity.id);
-      dirtyIdsRef.current.add(entity.id);
-      void persist(entity);
-    });
-    return cleanup;
-  }, [persist]);
-
-  useBimEntityMovedPersistEffect(isFloorplanSymbol, serviceRef, dirtyIdsRef, persist);
-  useBimEntityRestoredPersistEffect(
-    'floorplan-symbol',
-    isFloorplanSymbol,
-    serviceRef,
-    pendingFirstSaveIdsRef,
-    deletedIdsRef,
-    persistRestore,
-  );
-
-  // Unmount cleanup — flush pending timers.
-  useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, []);
-
+  const { saveState, lastSavedAt, error, saveNow, deleteEntity } =
+    useFloorplanSymbolPersistenceBase({
+      companyId: params.companyId,
+      projectId: params.projectId,
+      floorplanId: params.floorplanId,
+      floorId: params.floorId,
+      userId: params.userId,
+      levelManager: params.levelManager,
+      primarySelected: params.primarySelectedSymbol,
+    } as BimEntityPersistenceParams<FloorplanSymbolEntity>);
   return useMemo(
-    () => ({ saveState, lastSavedAt, error, saveNow, deleteFloorplanSymbol }),
-    [saveState, lastSavedAt, error, saveNow, deleteFloorplanSymbol],
+    () => ({ saveState, lastSavedAt, error, saveNow, deleteFloorplanSymbol: deleteEntity }),
+    [saveState, lastSavedAt, error, saveNow, deleteEntity],
   );
 }

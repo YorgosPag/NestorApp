@@ -3,23 +3,21 @@
 /**
  * ADR-408 Φ3 — Electrical panel Firestore persistence React adapter.
  *
- * Bridges `ElectricalPanelFirestoreService` to the scene model owned by
- * `LevelsSystem`. Mirrors `useMepFixturePersistence` — same hybrid auto-save,
- * selective-skip diff-merge, and first-save listener wired to
- * `drawing:entity-created` with `tool === 'electrical-panel'`.
+ * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-593). Behaviour
+ * unchanged: MEP connector projection (`projectMepConnectorsOntoFresh`) on the
+ * merged doc-entity, `differs` on the projected candidate (anti-ping-pong), and
+ * audit via `recordElectricalPanelChange`. No BOQ feed. First-save on
+ * `drawing:entity-created` (tool 'electrical-panel').
  *
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
+ * @see docs/centralized-systems/reference/adrs/ADR-593-bim-entity-persistence-hook-ssot.md
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { dequal } from 'dequal';
 
-import type { AnySceneEntity, SceneModel } from '../../types/entities';
-import { DXF_TIMING } from '../../config/dxf-timing';
-import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
-import { EventBus } from '../../systems/events/EventBus';
-import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import {
   createElectricalPanelFirestoreService,
   entityToSaveInput,
@@ -29,21 +27,17 @@ import {
 import { recordElectricalPanelChange } from '../../bim/electrical-panels/electrical-panel-audit-client';
 import { electricalPanelDocToEntity as docToEntity } from './electrical-panel-persistence-helpers';
 import { projectMepConnectorsOntoFresh } from './mep-connector-projection-merge';
-import { mergeDocsIntoScene } from './merge-docs-into-scene';
-import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
-import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
+import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
+import type {
+  BimEntityPersistenceParams,
+  BimEntitySaveState,
+} from './bim-entity-persistence-hook-types';
 
 // ============================================================================
-// TYPES
+// PUBLIC API (unchanged)
 // ============================================================================
 
-export type ElectricalPanelSaveState = 'idle' | 'saving' | 'saved' | 'error';
-
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
-}
+export type ElectricalPanelSaveState = BimEntitySaveState;
 
 export interface UseElectricalPanelPersistenceParams {
   readonly companyId: string | null;
@@ -52,7 +46,7 @@ export interface UseElectricalPanelPersistenceParams {
   /** ADR-420 — stable building-storey id. Forwarded to service config. */
   readonly floorId?: string | null;
   readonly userId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly primarySelectedPanel: ElectricalPanelEntity | null;
 }
 
@@ -65,284 +59,87 @@ export interface UseElectricalPanelPersistenceResult {
 }
 
 // ============================================================================
-// CONSTANTS
+// FACTORY CONFIG
 // ============================================================================
 
-const AUTO_SAVE_DEBOUNCE_MS = DXF_TIMING.persist.ENTITY_AUTOSAVE; // ADR-516
+const useElectricalPanelPersistenceBase = createBimEntityPersistenceHook<
+  ElectricalPanelFirestoreService,
+  ElectricalPanelDoc,
+  ElectricalPanelEntity,
+  ElectricalPanelEntity['params']
+>({
+  entityType: 'electrical-panel',
+  restoreEntityType: 'electrical-panel',
+  saveErrorKey: 'ELECTRICAL_PANEL_SAVE_ERROR',
+  restoreErrorKey: 'ELECTRICAL_PANEL_RESTORE_ERROR',
+  entityComparable: (e) => e.params,
+  createService: (scope) => createElectricalPanelFirestoreService(scope),
+  service: {
+    save: (svc, e) => svc.savePanel(entityToSaveInput(e)),
+    update: (svc, e) =>
+      svc.updatePanel(e.id, {
+        params: e.params,
+        validation: e.validation,
+        geometry: e.geometry,
+        layerId: e.layerId,
+      }),
+    remove: (svc, id) => svc.deletePanel(id),
+    subscribe: (svc, onDocs, onErr) =>
+      svc.subscribePanels(onDocs as (docs: readonly ElectricalPanelDoc[]) => void, onErr),
+  },
+  merge: {
+    mode: 'generic',
+    config: {
+      isEntity: (e): e is ElectricalPanelEntity => (e as { type?: string }).type === 'electrical-panel',
+      docToEntity: (doc, existing) => projectMepConnectorsOntoFresh(docToEntity(doc), existing),
+      entityComparable: (e) => e.params,
+      docComparable: (d) => d.params,
+      differs: (existing, _doc, getCandidate) => {
+        const candidate = getCandidate();
+        return candidate !== null && !dequal(existing.params, candidate.params);
+      },
+    },
+  },
+  deleteTrigger: {
+    event: 'bim:electrical-panel-delete-requested',
+    getId: (p) => (p as { panelId?: string }).panelId,
+  },
+  onPersisted: (entity, { isNew, prevComparable }) => {
+    void recordElectricalPanelChange(isNew ? 'created' : 'updated', entity, {
+      prevParams: prevComparable ?? undefined,
+    });
+  },
+  onDeleted: (id, deleted) => {
+    void recordElectricalPanelChange(
+      'deleted',
+      deleted
+        ? { id: deleted.id, kind: deleted.kind, layerId: deleted.layerId, params: deleted.params }
+        : { id, kind: 'distribution-board' },
+    );
+  },
+  onRestored: (entity) => {
+    void recordElectricalPanelChange('restored', entity);
+  },
+});
 
 // ============================================================================
-// HELPERS
-// ============================================================================
-
-function isPanel(entity: AnySceneEntity): entity is ElectricalPanelEntity {
-  return (entity as { type?: string }).type === 'electrical-panel';
-}
-
-// ============================================================================
-// HOOK
+// HOOK (thin wrapper — preserves the public param/result names)
 // ============================================================================
 
 export function useElectricalPanelPersistence(
   params: UseElectricalPanelPersistenceParams,
 ): UseElectricalPanelPersistenceResult {
-  const {
-    companyId,
-    projectId,
-    floorplanId,
-    floorId,
-    userId,
-    levelManager,
-    primarySelectedPanel,
-  } = params;
-
-  const [saveState, setSaveState] = useState<ElectricalPanelSaveState>('idle');
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const serviceRef = useRef<ElectricalPanelFirestoreService | null>(null);
-  const dirtyIdsRef = useRef<Set<string>>(new Set());
-  const lastSavedParamsRef = useRef<Map<string, ElectricalPanelEntity['params']>>(new Map());
-  const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
-  const deletedIdsRef = useRef<Set<string>>(new Set());
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const selectedPanelRef = useRef<ElectricalPanelEntity | null>(null);
-  selectedPanelRef.current = primarySelectedPanel;
-
-  // ⚡ STABILITY (ca9 fix 2026-06-08): key the Firestore subscription off stable
-  // scope primitives + `currentLevelId`, NOT the per-render `levelManager` object,
-  // so onSnapshot does not unsubscribe/re-subscribe on every render (target removed
-  // before ack → `INTERNAL ASSERTION FAILED ca9 {ve:-1}`). Mirror of the fitting hook.
-  const levelManagerRef = useRef(levelManager);
-  levelManagerRef.current = levelManager;
-  const currentLevelId = levelManager.currentLevelId;
-
-  // Instantiate service when auth + scope ready.
-  useEffect(() => {
-    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
-    if (!scope) {
-      serviceRef.current = null;
-      return;
-    }
-    serviceRef.current = createElectricalPanelFirestoreService({
-      companyId: scope.companyId,
-      projectId: scope.projectId,
-      floorplanId: scope.floorplanId,
-      floorId: scope.floorId,
-      userId: scope.userId,
-    });
-  }, [companyId, projectId, floorplanId, floorId, userId]);
-
-  // Subscribe + diff-merge + selective skip locally-dirty panels.
-  useEffect(() => {
-    const svc = serviceRef.current;
-    const levelId = currentLevelId;
-    if (!svc || !levelId) return;
-
-    const unsubscribe = svc.subscribePanels(
-      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`. Το MEP
-      // project-άρει το live systemId πάνω στο fresh doc-entity (ADR-408 anti-ping-pong)
-      // μέσω του `projectMepConnectorsOntoFresh` adapter. Δεν έχει write-grace.
-      (docs) => {
-        mergeDocsIntoScene<ElectricalPanelDoc, ElectricalPanelEntity, ElectricalPanelEntity['params']>(
-          docs,
-          levelId,
-          levelManagerRef.current,
-          {
-            isEntity: isPanel,
-            docToEntity: (doc, existing) => projectMepConnectorsOntoFresh(docToEntity(doc), existing),
-            entityComparable: (e) => e.params,
-            docComparable: (d) => d.params,
-            differs: (existing, _doc, getCandidate) => {
-              const candidate = getCandidate();
-              return candidate !== null && !dequal(existing.params, candidate.params);
-            },
-          },
-          {
-            dirty: dirtyIdsRef.current,
-            deleted: deletedIdsRef.current,
-            pending: pendingFirstSaveIdsRef.current,
-            isWithinGrace: () => false,
-            lastSavedBaseline: lastSavedParamsRef.current,
-          },
-        );
-      },
-      (err: Error) => {
-        setError(err.message);
-        setSaveState('error');
-      },
-    );
-
-    return () => unsubscribe();
-  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
-
-  // Immediate persist (used by both auto-save flush and explicit button).
-  const persist = useCallback(async (entity: ElectricalPanelEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
-    const isNew = prevParams === null;
-    setSaveState('saving');
-    setError(null);
-    try {
-      if (isNew) {
-        await svc.savePanel(entityToSaveInput(entity));
-      } else {
-        await svc.updatePanel(entity.id, {
-          params: entity.params,
-          validation: entity.validation,
-          geometry: entity.geometry,
-          layerId: entity.layerId,
-        });
-      }
-      lastSavedParamsRef.current.set(entity.id, entity.params);
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-      void recordElectricalPanelChange(
-        isNew ? 'created' : 'updated',
-        entity,
-        { prevParams: prevParams ?? undefined },
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'ELECTRICAL_PANEL_SAVE_ERROR');
-      setSaveState('error');
-    }
-  }, []);
-
-  // Auto-save debounce on selected panel params change.
-  useEffect(() => {
-    const panel = primarySelectedPanel;
-    if (!panel || !serviceRef.current) return;
-    const known = lastSavedParamsRef.current.has(panel.id);
-    const pending = pendingFirstSaveIdsRef.current.has(panel.id);
-    if (!known && !pending) return;
-    const lastSaved = lastSavedParamsRef.current.get(panel.id);
-    if (lastSaved && dequal(lastSaved, panel.params)) return;
-
-    dirtyIdsRef.current.add(panel.id);
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      void persist(panel);
-    }, AUTO_SAVE_DEBOUNCE_MS);
-
-    return () => {
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = null;
-      }
-    };
-  }, [primarySelectedPanel, persist]);
-
-  const saveNow = useCallback(async () => {
-    const panel = selectedPanelRef.current;
-    if (!panel) return;
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-    await persist(panel);
-  }, [persist]);
-
-  // Delete panel: remove from Firestore + scene + audit.
-  const deletePanel = useCallback(async (panelId: string) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const levelId = levelManager.currentLevelId;
-    if (!levelId) return;
-
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-
-    const scene = levelManager.getLevelScene(levelId);
-    const deletedEntity = scene?.entities.find((e) => e.id === panelId);
-    const deletedPanel = (deletedEntity && isPanel(deletedEntity)) ? deletedEntity : null;
-    try {
-      await svc.deletePanel(panelId);
-      void recordElectricalPanelChange(
-        'deleted',
-        deletedPanel
-          ? { id: deletedPanel.id, kind: deletedPanel.kind, layerId: deletedPanel.layerId, params: deletedPanel.params }
-          : { id: panelId, kind: 'distribution-board' },
-      );
-    } catch {
-      // Non-fatal: deletion failure silent — user retries.
-    }
-
-    if (scene) {
-      const nextEntities = scene.entities.filter((e) => e.id !== panelId);
-      levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
-    }
-
-    dirtyIdsRef.current.delete(panelId);
-    lastSavedParamsRef.current.delete(panelId);
-    pendingFirstSaveIdsRef.current.delete(panelId);
-    deletedIdsRef.current.add(panelId);
-  }, [levelManager]);
-
-  // persistRestore: undo→Firestore re-create + audit 'restored'.
-  const persistRestore = useCallback(async (entity: ElectricalPanelEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    setSaveState('saving');
-    setError(null);
-    try {
-      await svc.savePanel(entityToSaveInput(entity));
-      lastSavedParamsRef.current.set(entity.id, entity.params);
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-      void recordElectricalPanelChange('restored', entity);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'ELECTRICAL_PANEL_RESTORE_ERROR');
-      setSaveState('error');
-    }
-  }, []);
-
-  // First-save listener — fires immediately for freshly drawn panels.
-  useEffect(() => {
-    const cleanup = EventBus.on('drawing:entity-created', (payload) => {
-      if (payload.tool !== 'electrical-panel') return;
-      const entity = payload.entity as ElectricalPanelEntity | undefined;
-      if (!entity || (entity as { type?: string }).type !== 'electrical-panel') return;
-      if (!serviceRef.current) return;
-      pendingFirstSaveIdsRef.current.add(entity.id);
-      dirtyIdsRef.current.add(entity.id);
-      void persist(entity);
-    });
-    return cleanup;
-  }, [persist]);
-
-  // Delete-requested listener (smart-delete emits after batch filter).
-  useEffect(() => {
-    const cleanup = EventBus.on('bim:electrical-panel-delete-requested', ({ panelId }) => {
-      void deletePanel(panelId);
-    });
-    return cleanup;
-  }, [deletePanel]);
-
-  useBimEntityMovedPersistEffect(isPanel, serviceRef, dirtyIdsRef, persist);
-  useBimEntityRestoredPersistEffect(
-    'electrical-panel',
-    isPanel,
-    serviceRef,
-    pendingFirstSaveIdsRef,
-    deletedIdsRef,
-    persistRestore,
-  );
-
-  // Unmount cleanup — flush pending timers.
-  useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, []);
-
+  const { saveState, lastSavedAt, error, saveNow, deleteEntity } = useElectricalPanelPersistenceBase({
+    companyId: params.companyId,
+    projectId: params.projectId,
+    floorplanId: params.floorplanId,
+    floorId: params.floorId,
+    userId: params.userId,
+    levelManager: params.levelManager,
+    primarySelected: params.primarySelectedPanel,
+  } as BimEntityPersistenceParams<ElectricalPanelEntity>);
   return useMemo(
-    () => ({ saveState, lastSavedAt, error, saveNow, deletePanel }),
-    [saveState, lastSavedAt, error, saveNow, deletePanel],
+    () => ({ saveState, lastSavedAt, error, saveNow, deletePanel: deleteEntity }),
+    [saveState, lastSavedAt, error, saveNow, deleteEntity],
   );
 }

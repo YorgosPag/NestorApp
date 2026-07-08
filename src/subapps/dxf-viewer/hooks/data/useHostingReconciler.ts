@@ -29,7 +29,6 @@
 import { useEffect, useRef } from 'react';
 import { DXF_TIMING } from '../../config/dxf-timing';
 import type { AnySceneEntity, SceneModel } from '../../types/scene';
-import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { getDraggingGuideId } from '../../systems/guides/guide-drag-store';
 import { EventBus } from '../../systems/events/EventBus';
@@ -41,15 +40,11 @@ import {
 import { hasGuideBindings } from '../../bim/hosting/guide-binding-types';
 import { getHostingStrategy } from '../../bim/hosting/hosting-strategy';
 import { makeGuideOffsetLookup } from '../../bim/hosting/guide-store-offset-lookup';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
-}
 
 export interface UseHostingReconcilerParams {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 /** ms μετά το τελευταίο guide move πριν persist-άρουμε τις moved strips. */

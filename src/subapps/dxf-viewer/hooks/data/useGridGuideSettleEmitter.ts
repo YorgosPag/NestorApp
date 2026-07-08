@@ -27,13 +27,10 @@ import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { getDraggingGuideId } from '../../systems/guides/guide-drag-store';
 import { EventBus } from '../../systems/events/EventBus';
 import type { AxisGuideReader } from '../../bim/foundations/foundation-from-grid';
-
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-}
+import type { CurrentLevelRef } from '../../systems/levels/level-scene-accessor';
 
 export interface UseGridGuideSettleEmitterParams {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: CurrentLevelRef;
 }
 
 /** ms αδράνειας κανάβου πριν θεωρηθεί «καθισμένος» ο οδηγός (μετά το coordinate-follow). */
