@@ -47,7 +47,6 @@ export function getFloorFinishGrips(entity: Readonly<FloorFinishEntity>): GripIn
       type: 'vertex',
       position: { x: v.x, y: v.y },
       movesEntity: false,
-      floorFinishGripKind: `floor-finish-vertex-${i}`,
       gripKind: { on: 'floor-finish', kind: `floor-finish-vertex-${i}` },
     });
   }
@@ -62,7 +61,6 @@ export function getFloorFinishGrips(entity: Readonly<FloorFinishEntity>): GripIn
       position: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
       movesEntity: false,
       edgeVertexIndices: [i, (i + 1) % verts.length],
-      floorFinishGripKind: `floor-finish-edge-midpoint-${i}`,
       gripKind: { on: 'floor-finish', kind: `floor-finish-edge-midpoint-${i}` },
     });
   }

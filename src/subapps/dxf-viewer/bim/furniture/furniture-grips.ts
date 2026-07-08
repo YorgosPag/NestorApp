@@ -28,7 +28,7 @@ const adapter = createCentredBoxGripAdapter<FurnitureEntity, FurnitureParams, Fu
   minDimensionMm: MIN_FURNITURE_DIMENSION_MM,
   // Field names differ (`rotationDeg`/`widthMm`/`depthMm`) → shared mm-suffixed bridge.
   ...mmSuffixedBoxBridge<FurnitureParams>(),
-  toGripInfo: (base, kind) => ({ ...base, furnitureGripKind: kind, gripKind: { on: 'furniture', kind } }),
+  toGripInfo: (base, kind) => ({ ...base, gripKind: { on: 'furniture', kind } }),
 });
 
 /** Drag input for a furniture grip (the shared centred-box 5-field shape). */

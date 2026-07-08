@@ -65,14 +65,14 @@ const panel = createCentredBoxGripAdapter<
   minDimensionMm: 20,
   toBoxParams: (p) => p,
   fromBoxPatch: (o, patch) => ({ ...o, ...patch }),
-  toGripInfo: (base, kind) => ({ ...base, electricalPanelGripKind: kind }),
+  toGripInfo: (base, kind) => ({ ...base, gripKind: { on: 'electrical-panel', kind } }),
 });
 
 describe('createCentredBoxGripAdapter — getGrips (pure)', () => {
   const grips = panel.getGrips({ id: 'panel-1', params: box });
 
   it('emits the 5 box grips wrapped with the entity discriminant field + id', () => {
-    expect(grips.map((g) => g.electricalPanelGripKind)).toEqual([
+    expect(grips.map((g) => g.gripKind?.kind)).toEqual([
       'electrical-panel-rotation',
       'electrical-panel-corner-ne',
       'electrical-panel-corner-nw',
@@ -83,7 +83,7 @@ describe('createCentredBoxGripAdapter — getGrips (pure)', () => {
   });
 
   it('carries the box geometry through unchanged (rotation handle on +Y face)', () => {
-    const byKind = Object.fromEntries(grips.map((g) => [g.electricalPanelGripKind, g.position]));
+    const byKind = Object.fromEntries(grips.map((g) => [g.gripKind?.kind, g.position]));
     expect(byKind['electrical-panel-rotation']).toEqual({ x: 1000, y: 2300 });
     expect(byKind['electrical-panel-corner-ne']).toEqual({ x: 1300, y: 2300 });
   });
@@ -122,7 +122,7 @@ const manifold = createCentredBoxGripAdapter<
   minDimensionMm: 20,
   toBoxParams: (p) => p,
   fromBoxPatch: (o, patch) => ({ ...o, ...patch }),
-  toGripInfo: (base, kind) => ({ ...base, mepManifoldGripKind: kind }),
+  toGripInfo: (base, kind) => ({ ...base, gripKind: { on: 'mep-manifold', kind } }),
 });
 
 describe('createCentredBoxGripAdapter — unknown-kind guard', () => {
@@ -163,7 +163,7 @@ const remap = createCentredBoxGripAdapter<RemapEntity, RemapParams, FurnitureGri
     widthMm: patch.width,
     depthMm: patch.length,
   }),
-  toGripInfo: (base, kind) => ({ ...base, furnitureGripKind: kind }),
+  toGripInfo: (base, kind) => ({ ...base, gripKind: { on: 'furniture', kind } }),
 });
 
 describe('createCentredBoxGripAdapter — field remap', () => {
@@ -177,7 +177,7 @@ describe('createCentredBoxGripAdapter — field remap', () => {
 
   it('emits grips from the bridged box params (remapped field names)', () => {
     const grips = remap.getGrips({ id: 'f-1', params });
-    const byKind = Object.fromEntries(grips.map((g) => [g.furnitureGripKind, g.position]));
+    const byKind = Object.fromEntries(grips.map((g) => [g.gripKind?.kind, g.position]));
     expect(byKind['furniture-corner-ne']).toEqual({ x: 1300, y: 2300 });
   });
 

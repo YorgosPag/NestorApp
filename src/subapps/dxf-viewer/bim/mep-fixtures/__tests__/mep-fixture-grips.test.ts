@@ -9,6 +9,7 @@
 import { getMepFixtureGrips, applyMepFixtureGripDrag } from '../mep-fixture-grips';
 import type { MepFixtureEntity, MepFixtureParams } from '../../types/mep-fixture-types';
 import { MIN_FIXTURE_DIMENSION_MM } from '../../types/mep-fixture-types';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 
 const baseParams: MepFixtureParams = {
   kind: 'light-fixture',
@@ -34,7 +35,7 @@ describe('getMepFixtureGrips', () => {
   // ADR-363 Φ1G.5 Slice 2 — move grip removed; 5 grips, rotation is index 0.
   it('emits 5 grips for a rectangular fixture in stable order', () => {
     const grips = getMepFixtureGrips(entityWith());
-    expect(grips.map((g) => g.mepFixtureGripKind)).toEqual([
+    expect(grips.map((g) => gripKindOf(g, 'mep-fixture'))).toEqual([
       'mep-fixture-rotation',
       'mep-fixture-corner-ne',
       'mep-fixture-corner-nw',
@@ -46,7 +47,7 @@ describe('getMepFixtureGrips', () => {
   // ADR-363 Φ1G.5 Slice 2 — move grip removed; byKind lookup for corners unchanged.
   it('places corners at ±half-extents (rotation 0)', () => {
     const grips = getMepFixtureGrips(entityWith());
-    const byKind = Object.fromEntries(grips.map((g) => [g.mepFixtureGripKind, g.position]));
+    const byKind = Object.fromEntries(grips.map((g) => [gripKindOf(g, 'mep-fixture'), g.position]));
     expect(byKind['mep-fixture-move']).toBeUndefined();
     expect(byKind['mep-fixture-corner-ne']).toEqual({ x: 1300, y: 2300 });
     expect(byKind['mep-fixture-corner-nw']).toEqual({ x: 700, y: 2300 });
@@ -66,7 +67,7 @@ describe('getMepFixtureGrips', () => {
   it('emits only diameter for a circular fixture', () => {
     const grips = getMepFixtureGrips(entityWith({ shape: 'circular', width: 200 }));
     expect(grips).toHaveLength(1);
-    expect(grips.map((g) => g.mepFixtureGripKind)).toEqual([
+    expect(grips.map((g) => gripKindOf(g, 'mep-fixture'))).toEqual([
       'mep-fixture-diameter',
     ]);
     // gripIndex field is 1 (unused gap at 0 — no reindex per Slice 2 contract).

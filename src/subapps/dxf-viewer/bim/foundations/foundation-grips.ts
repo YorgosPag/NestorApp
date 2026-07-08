@@ -152,7 +152,6 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       type: 'center',
       position: computeCentroidWorld(params),
       movesEntity: true,
-      foundationGripKind: 'foundation-center',
       gripKind: { on: 'foundation', kind: 'foundation-center' },
     },
     {
@@ -161,7 +160,6 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       type: 'vertex',
       position: rotationHandleWorld(params),
       movesEntity: false,
-      foundationGripKind: 'foundation-rotation',
       gripKind: { on: 'foundation', kind: 'foundation-rotation' },
     },
     {
@@ -170,7 +168,6 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       type: 'edge',
       position: widthHandleWorld(params),
       movesEntity: false,
-      foundationGripKind: 'foundation-width',
       gripKind: { on: 'foundation', kind: 'foundation-width' },
     },
     {
@@ -179,7 +176,6 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       type: 'edge',
       position: lengthHandleWorld(params),
       movesEntity: false,
-      foundationGripKind: 'foundation-length',
       gripKind: { on: 'foundation', kind: 'foundation-length' },
     },
     {
@@ -188,7 +184,6 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       type: 'edge',
       position: edgeWHandleWorld(params),
       movesEntity: false,
-      foundationGripKind: 'foundation-edge-w',
       gripKind: { on: 'foundation', kind: 'foundation-edge-w' },
     },
     {
@@ -197,7 +192,6 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       type: 'edge',
       position: edgeSHandleWorld(params),
       movesEntity: false,
-      foundationGripKind: 'foundation-edge-s',
       gripKind: { on: 'foundation', kind: 'foundation-edge-s' },
     },
     {
@@ -206,7 +200,6 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       type: 'vertex',
       position: cornerHandleWorld(params, +1, +1),
       movesEntity: false,
-      foundationGripKind: 'foundation-corner-ne',
       gripKind: { on: 'foundation', kind: 'foundation-corner-ne' },
     },
     {
@@ -215,7 +208,6 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       type: 'vertex',
       position: cornerHandleWorld(params, -1, +1),
       movesEntity: false,
-      foundationGripKind: 'foundation-corner-nw',
       gripKind: { on: 'foundation', kind: 'foundation-corner-nw' },
     },
     {
@@ -224,7 +216,6 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       type: 'vertex',
       position: cornerHandleWorld(params, -1, -1),
       movesEntity: false,
-      foundationGripKind: 'foundation-corner-sw',
       gripKind: { on: 'foundation', kind: 'foundation-corner-sw' },
     },
     {
@@ -233,7 +224,6 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       type: 'vertex',
       position: cornerHandleWorld(params, +1, -1),
       movesEntity: false,
-      foundationGripKind: 'foundation-corner-se',
       gripKind: { on: 'foundation', kind: 'foundation-corner-se' },
     },
   ];
@@ -255,7 +245,6 @@ function getLineFoundationGrips(
     type: g.type,
     position: g.position,
     movesEntity: false,
-    foundationGripKind: FOUNDATION_LINE_ROLE_TO_KIND[g.role],
     gripKind: { on: 'foundation', kind: FOUNDATION_LINE_ROLE_TO_KIND[g.role] },
   }));
 }

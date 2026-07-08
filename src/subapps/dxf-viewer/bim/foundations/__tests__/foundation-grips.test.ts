@@ -10,6 +10,7 @@
 
 import { getFoundationGrips, applyFoundationGripDrag } from '../foundation-grips';
 import { computeFoundationGeometry } from '../../geometry/foundation-geometry';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 import {
   MIN_FOUNDATION_DIMENSION_MM,
   type FoundationEntity,
@@ -53,7 +54,7 @@ describe('getFoundationGrips — pad', () => {
   it('emits exactly 10 grips: center / rotation / 4 edges / 4 corners (mirror rect column)', () => {
     const grips = getFoundationGrips(padEntity());
     expect(grips).toHaveLength(10);
-    expect(grips.map((g) => g.foundationGripKind)).toEqual([
+    expect(grips.map((g) => gripKindOf(g, 'foundation'))).toEqual([
       'foundation-center',
       'foundation-rotation',
       'foundation-width',
@@ -69,7 +70,7 @@ describe('getFoundationGrips — pad', () => {
 
   it('emits the center grip as a whole-entity MOVE handle at the centroid (4-arrow cross)', () => {
     const grips = getFoundationGrips(padEntity());
-    const center = grips.find((g) => g.foundationGripKind === 'foundation-center')!;
+    const center = grips.find((g) => gripKindOf(g, 'foundation') === 'foundation-center')!;
     expect(center.type).toBe('center');
     expect(center.movesEntity).toBe(true);
     expect(center.position).toEqual({ x: 0, y: 0 }); // anchor=center → centroid = position
@@ -77,13 +78,13 @@ describe('getFoundationGrips — pad', () => {
 
   it('marks every non-center grip as movesEntity=false', () => {
     const grips = getFoundationGrips(padEntity());
-    const nonCenter = grips.filter((g) => g.foundationGripKind !== 'foundation-center');
+    const nonCenter = grips.filter((g) => gripKindOf(g, 'foundation') !== 'foundation-center');
     expect(nonCenter.every((g) => g.movesEntity === false)).toBe(true);
   });
 
   it('places the WEST + SOUTH edge handles at the «other two» mid-side faces', () => {
     const grips = getFoundationGrips(padEntity());
-    const at = (k: string) => grips.find((g) => g.foundationGripKind === k)!.position;
+    const at = (k: string) => grips.find((g) => gripKindOf(g, 'foundation') === k)!.position;
     // width=1500 → W face at −750; length=2000 → S face at −1000.
     expect(at('foundation-edge-w')).toEqual({ x: -750, y: 0 });
     expect(at('foundation-edge-s')).toEqual({ x: 0, y: -1000 });
@@ -91,7 +92,7 @@ describe('getFoundationGrips — pad', () => {
 
   it('places the four corners at the footprint vertices (anchor=center, rotation=0)', () => {
     const grips = getFoundationGrips(padEntity());
-    const at = (k: string) => grips.find((g) => g.foundationGripKind === k)!.position;
+    const at = (k: string) => grips.find((g) => gripKindOf(g, 'foundation') === k)!.position;
     expect(at('foundation-corner-ne')).toEqual({ x: 750, y: 1000 });
     expect(at('foundation-corner-nw')).toEqual({ x: -750, y: 1000 });
     expect(at('foundation-corner-sw')).toEqual({ x: -750, y: -1000 });
@@ -100,21 +101,21 @@ describe('getFoundationGrips — pad', () => {
 
   it('places width handle at the far +X edge for anchor=center, rotation=0', () => {
     const grips = getFoundationGrips(padEntity());
-    const width = grips.find((g) => g.foundationGripKind === 'foundation-width')!;
+    const width = grips.find((g) => gripKindOf(g, 'foundation') === 'foundation-width')!;
     expect(width.position.x).toBeCloseTo(750); // width/2
     expect(width.position.y).toBeCloseTo(0);
   });
 
   it('places length handle at the far +Y edge for anchor=center, rotation=0', () => {
     const grips = getFoundationGrips(padEntity());
-    const length = grips.find((g) => g.foundationGripKind === 'foundation-length')!;
+    const length = grips.find((g) => gripKindOf(g, 'foundation') === 'foundation-length')!;
     expect(length.position.x).toBeCloseTo(0);
     expect(length.position.y).toBeCloseTo(1000); // length/2
   });
 
   it('places the rotation handle MIDWAY between centre and the south mid-side (rect-column parity)', () => {
     const grips = getFoundationGrips(padEntity());
-    const rot = grips.find((g) => g.foundationGripKind === 'foundation-rotation')!;
+    const rot = grips.find((g) => gripKindOf(g, 'foundation') === 'foundation-rotation')!;
     // ADR-517 — mirror the rectangular column: rotation marker at local (0, −length/4)
     // = the midpoint of centre→south-edge-midpoint. length=2000 → y = −500. This also
     // keeps it clear of the new `foundation-edge-s` grip (which sits at −1000).
@@ -128,7 +129,7 @@ describe('getFoundationGrips — line (strip / tie-beam, axis-box 7-grip wall pa
   it('emits 7 wall-parity grips: width edge / length edge / 4 corners / rotation', () => {
     const grips = getFoundationGrips(stripEntity());
     expect(grips).toHaveLength(7);
-    expect(grips.map((g) => g.foundationGripKind)).toEqual([
+    expect(grips.map((g) => gripKindOf(g, 'foundation'))).toEqual([
       'foundation-line-width',
       'foundation-line-length',
       'foundation-corner-start-pos',
@@ -142,7 +143,7 @@ describe('getFoundationGrips — line (strip / tie-beam, axis-box 7-grip wall pa
 
   it('places the 4 corners at the band footprint vertices (axis +X, width 600)', () => {
     const grips = getFoundationGrips(stripEntity());
-    const at = (k: string) => grips.find((g) => g.foundationGripKind === k)!.position;
+    const at = (k: string) => grips.find((g) => gripKindOf(g, 'foundation') === k)!.position;
     // axis (0,0)→(2000,0), +perp = +Y, halfWidth = width/2 = 300.
     expect(at('foundation-corner-start-pos')).toEqual({ x: 0, y: 300 });
     expect(at('foundation-corner-start-neg')).toEqual({ x: 0, y: -300 });
@@ -152,7 +153,7 @@ describe('getFoundationGrips — line (strip / tie-beam, axis-box 7-grip wall pa
 
   it('places width edge at axis midpoint offset by width/2 along perpendicular', () => {
     const grips = getFoundationGrips(stripEntity());
-    const w = grips.find((g) => g.foundationGripKind === 'foundation-line-width')!;
+    const w = grips.find((g) => gripKindOf(g, 'foundation') === 'foundation-line-width')!;
     // axis along +X → CCW perp = +Y; midpoint (1000,0) + 300 → (1000, 300).
     expect(w.position.x).toBeCloseTo(1000);
     expect(w.position.y).toBeCloseTo(300);
@@ -160,7 +161,7 @@ describe('getFoundationGrips — line (strip / tie-beam, axis-box 7-grip wall pa
 
   it('places length edge at the END short edge midpoint along the axis', () => {
     const grips = getFoundationGrips(stripEntity());
-    const l = grips.find((g) => g.foundationGripKind === 'foundation-line-length')!;
+    const l = grips.find((g) => gripKindOf(g, 'foundation') === 'foundation-line-length')!;
     expect(l.position).toEqual({ x: 2000, y: 0 });
   });
 
@@ -184,7 +185,7 @@ describe('getFoundationGrips — justified strip grips track the drawn body', ()
   const cornerSet = (e: FoundationEntity) => {
     const grips = getFoundationGrips(e);
     return cornerKinds
-      .map((k) => grips.find((g) => g.foundationGripKind === k)!.position)
+      .map((k) => grips.find((g) => gripKindOf(g, 'foundation') === k)!.position)
       .map((p) => `${Math.round(p.x)},${Math.round(p.y)}`)
       .sort();
   };
@@ -207,7 +208,7 @@ describe('getFoundationGrips — justified strip grips track the drawn body', ()
 
   it('right-justified: one band face lies on the location-line axis (y=0)', () => {
     const grips = getFoundationGrips(stripEntity({ justification: 'right' }));
-    const at = (k: string) => grips.find((g) => g.foundationGripKind === k)!.position;
+    const at = (k: string) => grips.find((g) => gripKindOf(g, 'foundation') === k)!.position;
     // start-pos / end-pos sit on the axis face; start-neg / end-neg on the far face.
     expect(at('foundation-corner-start-pos')).toEqual({ x: 0, y: 0 });
     expect(at('foundation-corner-end-pos')).toEqual({ x: 2000, y: 0 });

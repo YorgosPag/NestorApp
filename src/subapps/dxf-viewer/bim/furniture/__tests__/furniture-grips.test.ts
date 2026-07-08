@@ -11,6 +11,7 @@
 import { getFurnitureGrips, applyFurnitureGripDrag } from '../furniture-grips';
 import type { FurnitureEntity, FurnitureParams } from '../../types/furniture-types';
 import { MIN_FURNITURE_DIMENSION_MM } from '../../types/furniture-types';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 
 const baseParams: FurnitureParams = {
   kind: 'chair',
@@ -36,7 +37,7 @@ describe('getFurnitureGrips', () => {
   // ADR-363 Φ1G.5 Slice 2 — move grip no longer emitted; 6→5 grips, rotation at array index 0.
   it('emits 5 grips for a rectangular furniture in stable order', () => {
     const grips = getFurnitureGrips(entityWith());
-    expect(grips.map((g) => g.furnitureGripKind)).toEqual([
+    expect(grips.map((g) => gripKindOf(g, 'furniture'))).toEqual([
       'furniture-rotation',
       'furniture-corner-ne',
       'furniture-corner-nw',
@@ -48,7 +49,7 @@ describe('getFurnitureGrips', () => {
   // ADR-363 Φ1G.5 Slice 2 — furniture-move grip removed; assert only corners (byKind lookup unaffected by array shift).
   it('places corners at ±half-extents (rotation 0)', () => {
     const grips = getFurnitureGrips(entityWith());
-    const byKind = Object.fromEntries(grips.map((g) => [g.furnitureGripKind, g.position]));
+    const byKind = Object.fromEntries(grips.map((g) => [gripKindOf(g, 'furniture'), g.position]));
     expect(byKind['furniture-corner-ne']).toEqual({ x: 1300, y: 2300 });
     expect(byKind['furniture-corner-nw']).toEqual({ x: 700, y: 2300 });
     expect(byKind['furniture-corner-sw']).toEqual({ x: 700, y: 1700 });

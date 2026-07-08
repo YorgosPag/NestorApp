@@ -10,6 +10,7 @@
 
 import { getFloorplanSymbolGrips, applyFloorplanSymbolGripDrag } from '../floorplan-symbol-grips';
 import type { FloorplanSymbolEntity, FloorplanSymbolParams } from '../../types/floorplan-symbol-types';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 
 const baseParams: FloorplanSymbolParams = {
   category: 'sanitary',
@@ -34,7 +35,7 @@ describe('getFloorplanSymbolGrips', () => {
   // ADR-363 Φ1G.5 Slice 2: move grip no longer emitted → 5 grips (rotation + 4 corners)
   it('emits 5 grips in stable order (rotation, 4 corners)', () => {
     const grips = getFloorplanSymbolGrips(entityWith());
-    expect(grips.map((g) => g.floorplanSymbolGripKind)).toEqual([
+    expect(grips.map((g) => gripKindOf(g, 'floorplan-symbol'))).toEqual([
       'floorplan-symbol-rotation',
       'floorplan-symbol-corner-ne',
       'floorplan-symbol-corner-nw',
@@ -46,7 +47,7 @@ describe('getFloorplanSymbolGrips', () => {
   // ADR-363 Φ1G.5 Slice 2: move grip gone — byKind lookup still works for remaining grips
   it('places corners at ±half-extents (rotation 0)', () => {
     const grips = getFloorplanSymbolGrips(entityWith());
-    const byKind = Object.fromEntries(grips.map((g) => [g.floorplanSymbolGripKind, g.position]));
+    const byKind = Object.fromEntries(grips.map((g) => [gripKindOf(g, 'floorplan-symbol'), g.position]));
     expect(byKind['floorplan-symbol-move']).toBeUndefined();
     expect(byKind['floorplan-symbol-corner-ne']).toEqual({ x: 1300, y: 2300 });
     expect(byKind['floorplan-symbol-corner-nw']).toEqual({ x: 700, y: 2300 });
