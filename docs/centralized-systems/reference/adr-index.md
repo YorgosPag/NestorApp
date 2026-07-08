@@ -574,8 +574,15 @@
 | **ADR-593** | Communication Row Primitives SSoT (`communication-row-primitives`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-593-communication-row-primitives-ssot.md) |
 | **ADR-594** | BIM Entity Persistence Hook Factory SSoT (`createBimEntityPersistenceHook`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-594-bim-entity-persistence-hook-ssot.md) |
 | **ADR-595** | Generic Form Renderer Primitives SSoT (`form-field-primitives` + `form-tabs-shell`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-595-generic-form-renderer-primitives-ssot.md) |
-| **ADR-597** | Store-backed Ribbon Toggle Widget SSoT (`RibbonToggleWidget` + `RibbonInlineToggleButton`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-597-ribbon-toggle-widget-ssot.md) |
+| **ADR-599** | Store-backed Ribbon Toggle Widget SSoT (`RibbonToggleWidget` + `RibbonInlineToggleButton`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-599-ribbon-toggle-widget-ssot.md) |
+| **ADR-600** | Single-click Placement Tool factory SSoT (`createSingleClickPlacementTool`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-600-single-click-placement-tool-ssot.md) |
+| **ADR-602** | Centred-box Grip Adapter factory SSoT (`createCentredBoxGripAdapter`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-602-centred-box-grip-adapter-ssot.md) |
 | **ADR-596** | Multiple-Photos Upload-State SSoT (`use-photo-slot-state` + photo grid primitives) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-596-multiple-photos-upload-state-ssot.md) |
+| **ADR-601** | Async Autocomplete Picker SSoT (`useAsyncPickerSearch` + picker primitives) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-601-async-autocomplete-picker-ssot.md) |
+| **ADR-603** | API Route-Handler Factory SSoT (`defineRoute` + envelope helpers) | 🔵 ACTIVE (Φ0 pilot) | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-603-api-route-handler-factory-ssot.md) |
+| **ADR-602** | Grip Field-Bag Unification (ΕΝΑ `EntityGripKind` αντί 31 optionals × 4 bags· ADR-587 Φ6) | 🔵 RECOGNITION+DESIGN | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-602-grip-field-bag-unification.md) |
+| **ADR-604** | Generic BIM Family-Type Framework SSoT (reresolution-hook + edit-store + controller + widget factories· Wall/Slab/Roof/Opening) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-604-generic-family-type-framework.md) |
+| **ADR-598** | Production-Readiness Quality Gates (big-player parity roadmap — 15 gaps, 4 phases) | 📋 PROPOSED | 2026-07-08 | CI/Infra | [📄](./adrs/ADR-598-production-readiness-quality-gates.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1130,8 +1137,14 @@
 | **ADR-593** | Communication Row Primitives SSoT (`communication-row-primitives`) | ✅ ACTIVE | [View](./adrs/ADR-593-communication-row-primitives-ssot.md) |
 | **ADR-594** | BIM Entity Persistence Hook Factory SSoT (`createBimEntityPersistenceHook`) | ✅ ACTIVE | [View](./adrs/ADR-594-bim-entity-persistence-hook-ssot.md) |
 | **ADR-595** | Generic Form Renderer Primitives SSoT (`form-field-primitives` + `form-tabs-shell`) | ✅ ACTIVE | [View](./adrs/ADR-595-generic-form-renderer-primitives-ssot.md) |
-| **ADR-597** | Store-backed Ribbon Toggle Widget SSoT (`RibbonToggleWidget` + `RibbonInlineToggleButton`) | ✅ ACTIVE | [View](./adrs/ADR-597-ribbon-toggle-widget-ssot.md) |
+| **ADR-599** | Store-backed Ribbon Toggle Widget SSoT (`RibbonToggleWidget` + `RibbonInlineToggleButton`) | ✅ ACTIVE | [View](./adrs/ADR-599-ribbon-toggle-widget-ssot.md) |
+| **ADR-600** | Single-click Placement Tool factory SSoT (`createSingleClickPlacementTool`) | ✅ ACTIVE | [View](./adrs/ADR-600-single-click-placement-tool-ssot.md) |
+| **ADR-602** | Centred-box Grip Adapter factory SSoT (`createCentredBoxGripAdapter`) | ✅ ACTIVE | [View](./adrs/ADR-602-centred-box-grip-adapter-ssot.md) |
+| **ADR-604** | Generic BIM Family-Type Framework SSoT (reresolution + edit-store + controller + widget factories) | ✅ ACTIVE | [View](./adrs/ADR-604-generic-family-type-framework.md) |
 | **ADR-596** | Multiple-Photos Upload-State SSoT (`use-photo-slot-state` + photo grid primitives) | ✅ ACTIVE | [View](./adrs/ADR-596-multiple-photos-upload-state-ssot.md) |
+| **ADR-601** | Async Autocomplete Picker SSoT (`useAsyncPickerSearch` + picker primitives) | ✅ ACTIVE | [View](./adrs/ADR-601-async-autocomplete-picker-ssot.md) |
+| **ADR-603** | API Route-Handler Factory SSoT (`defineRoute` + envelope helpers) | 🔵 ACTIVE (Φ0 pilot) | [View](./adrs/ADR-603-api-route-handler-factory-ssot.md) |
+| **ADR-598** | Production-Readiness Quality Gates (big-player parity roadmap) | 📋 PROPOSED | [View](./adrs/ADR-598-production-readiness-quality-gates.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
