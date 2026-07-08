@@ -6,6 +6,7 @@
  */
 
 import { computeDxfEntityGrips } from '../grip-computation';
+import { gripKindOf } from '../grip-kinds';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 
@@ -21,14 +22,14 @@ describe('computeDxfEntityGrips — text', () => {
 
   it('every grip carries a textGripKind discriminator', () => {
     const grips = computeDxfEntityGrips(dxfText());
-    expect(grips.every(g => g.textGripKind !== undefined)).toBe(true);
+    expect(grips.every(g => gripKindOf(g, 'text') !== undefined)).toBe(true);
   });
 
   it('exposes exactly one centre-move grip and four corner grips', () => {
     const grips = computeDxfEntityGrips(dxfText());
-    expect(grips.filter(g => g.textGripKind === 'text-move')).toHaveLength(1);
-    expect(grips.filter(g => g.textGripKind?.startsWith('text-corner-'))).toHaveLength(4);
-    expect(grips.filter(g => g.textGripKind?.startsWith('text-edge-'))).toHaveLength(4);
+    expect(grips.filter(g => gripKindOf(g, 'text') === 'text-move')).toHaveLength(1);
+    expect(grips.filter(g => gripKindOf(g, 'text')?.startsWith('text-corner-'))).toHaveLength(4);
+    expect(grips.filter(g => gripKindOf(g, 'text')?.startsWith('text-edge-'))).toHaveLength(4);
   });
 
   it('works for an MTEXT-derived box (carried width)', () => {

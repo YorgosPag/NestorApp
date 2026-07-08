@@ -15,6 +15,7 @@
  */
 
 import { computeDxfEntityGrips } from '../grip-computation';
+import { gripKindOf } from '../grip-kinds';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import {
   buildDefaultStairParams,
@@ -74,11 +75,11 @@ describe('computeDxfEntityGrips — hatch gradient origin grip (ADR-507 Φ5 A3)'
       gradient: { type: 'linear', color1: '#2980b9', color2: '#ffffff' },
     } as unknown as DxfEntityUnion;
     const grips = computeDxfEntityGrips(hatch);
-    const origin = grips.find((g) => g.hatchGripKind === 'hatch-gradient-origin');
+    const origin = grips.find((g) => gripKindOf(g, 'hatch') === 'hatch-gradient-origin');
     expect(origin).toBeDefined();
     expect(origin?.position).toEqual({ x: 500, y: 500 });
     // ADR-507 Φ5 A4 — angle βραχίονας: origin + R·(cos0,sin0), R = 0.5·hypot(1000,1000).
-    const angle = grips.find((g) => g.hatchGripKind === 'hatch-gradient-angle');
+    const angle = grips.find((g) => gripKindOf(g, 'hatch') === 'hatch-gradient-angle');
     expect(angle).toBeDefined();
     expect(angle?.position.x).toBeCloseTo(500 + 0.5 * Math.hypot(1000, 1000), 3);
     expect(angle?.position.y).toBeCloseTo(500, 3);
@@ -91,10 +92,10 @@ describe('computeDxfEntityGrips — hatch gradient origin grip (ADR-507 Φ5 A3)'
       id: 'h2', type: 'hatch', boundaryPaths: SQUARE, fillType: 'solid',
     } as unknown as DxfEntityUnion;
     const grips = computeDxfEntityGrips(hatch);
-    expect(grips.find((g) => g.hatchGripKind === 'hatch-gradient-origin')).toBeUndefined();
-    expect(grips.find((g) => g.hatchGripKind === 'hatch-gradient-angle')).toBeUndefined();
+    expect(grips.find((g) => gripKindOf(g, 'hatch') === 'hatch-gradient-origin')).toBeUndefined();
+    expect(grips.find((g) => gripKindOf(g, 'hatch') === 'hatch-gradient-angle')).toBeUndefined();
     // ADR-507 (Giorgio 2026-07-07) — 4 vertex + 4 edge-midpoint grips (add/remove vertex).
     expect(grips).toHaveLength(8);
-    expect(grips.filter((g) => g.hatchGripKind?.startsWith('hatch-edge-midpoint-'))).toHaveLength(4);
+    expect(grips.filter((g) => gripKindOf(g, 'hatch')?.startsWith('hatch-edge-midpoint-'))).toHaveLength(4);
   });
 });

@@ -4,6 +4,7 @@
  * it changes curvature and the context menu can offer Convert-to-Line.
  */
 import { computeDxfEntityGrips } from '../grip-computation';
+import { gripKindOf } from '../grip-kinds';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { bulgeApexPoint } from '../../rendering/entities/shared/geometry-bulge-utils';
 import { calculateMidpoint } from '../../rendering/entities/shared/geometry-utils';
@@ -23,13 +24,13 @@ describe('computeDxfEntityGrips — polyline multifunctional grip tagging', () =
   const grips = computeDxfEntityGrips(makeArcedSquare());
 
   it('tags every vertex grip with polyline-vertex-N', () => {
-    const vertexGrips = grips.filter((g) => g.polylineGripKind?.startsWith('polyline-vertex-'));
+    const vertexGrips = grips.filter((g) => gripKindOf(g, 'polyline')?.startsWith('polyline-vertex-'));
     expect(vertexGrips).toHaveLength(4);
-    expect(vertexGrips[0].polylineGripKind).toBe('polyline-vertex-0');
+    expect(gripKindOf(vertexGrips[0], 'polyline')).toBe('polyline-vertex-0');
   });
 
   it('places the arc segment grip at the apex and tags it polyline-arc-midpoint-0', () => {
-    const arc = grips.find((g) => g.polylineGripKind === 'polyline-arc-midpoint-0');
+    const arc = grips.find((g) => gripKindOf(g, 'polyline') === 'polyline-arc-midpoint-0');
     expect(arc).toBeDefined();
     const apex = bulgeApexPoint({ x: 0, y: 0 }, { x: 10, y: 0 }, 0.5);
     expect(arc!.position.x).toBeCloseTo(apex.x);
@@ -37,7 +38,7 @@ describe('computeDxfEntityGrips — polyline multifunctional grip tagging', () =
   });
 
   it('keeps straight segment grips at the chord midpoint, tagged polyline-segment-midpoint-N', () => {
-    const seg = grips.find((g) => g.polylineGripKind === 'polyline-segment-midpoint-1');
+    const seg = grips.find((g) => gripKindOf(g, 'polyline') === 'polyline-segment-midpoint-1');
     expect(seg).toBeDefined();
     const mid = calculateMidpoint({ x: 10, y: 0 }, { x: 10, y: 10 });
     expect(seg!.position).toEqual(mid);
@@ -48,9 +49,9 @@ describe('computeDxfEntityGrips — polyline multifunctional grip tagging', () =
       id: 'poly-2', type: 'polyline', closed: false,
       vertices: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 20, y: 0 }],
     } as unknown as DxfEntityUnion);
-    const arcGrips = straight.filter((g) => g.polylineGripKind?.startsWith('polyline-arc-midpoint-'));
+    const arcGrips = straight.filter((g) => gripKindOf(g, 'polyline')?.startsWith('polyline-arc-midpoint-'));
     expect(arcGrips).toHaveLength(0);
-    const segGrips = straight.filter((g) => g.polylineGripKind?.startsWith('polyline-segment-midpoint-'));
+    const segGrips = straight.filter((g) => gripKindOf(g, 'polyline')?.startsWith('polyline-segment-midpoint-'));
     expect(segGrips).toHaveLength(2); // open polyline: 2 edges
   });
 });

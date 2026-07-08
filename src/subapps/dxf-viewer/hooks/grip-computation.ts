@@ -121,7 +121,7 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
         grips.push({
           entityId: entity.id, gripIndex: i, type: 'vertex',
           position: v, movesEntity: false,
-          polylineGripKind: `polyline-vertex-${i}`,
+          gripKind: { on: 'polyline', kind: `polyline-vertex-${i}` },
         });
       });
       const vLen = entity.vertices.length;
@@ -138,9 +138,10 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
           entityId: entity.id, gripIndex: vLen + i, type: 'edge',
           position: isArc ? bulgeApexPoint(p0, p1, bulge as number) : calculateMidpoint(p0, p1),
           movesEntity: false, edgeVertexIndices: [i, next],
-          polylineGripKind: isArc
-            ? `polyline-arc-midpoint-${i}`
-            : `polyline-segment-midpoint-${i}`,
+          gripKind: {
+            on: 'polyline',
+            kind: isArc ? `polyline-arc-midpoint-${i}` : `polyline-segment-midpoint-${i}`,
+          },
         });
       }
       // ADR-561 — whole-polyline MOVE cross + rotation handle (rect-box parity for a
@@ -393,7 +394,6 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
         grips.push({
           entityId: entity.id, gripIndex, type: 'vertex',
           position: { x: g.point.x, y: g.point.y }, movesEntity: false,
-          hatchGripKind: `hatch-vertex-${g.pathIdx}-${g.vertexIdx}`,
           gripKind: { on: 'hatch', kind: `hatch-vertex-${g.pathIdx}-${g.vertexIdx}` },
         });
         gripIndex += 1;
@@ -406,7 +406,6 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
         grips.push({
           entityId: entity.id, gripIndex, type: 'midpoint',
           position: { x: e.point.x, y: e.point.y }, movesEntity: false,
-          hatchGripKind: `hatch-edge-midpoint-${e.pathIdx}-${e.edgeIdx}`,
           gripKind: { on: 'hatch', kind: `hatch-edge-midpoint-${e.pathIdx}-${e.edgeIdx}` },
         });
         gripIndex += 1;
@@ -420,7 +419,6 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
           grips.push({
             entityId: entity.id, gripIndex, type: 'vertex',
             position: { x: originPos.x, y: originPos.y }, movesEntity: false,
-            hatchGripKind: HATCH_GRADIENT_ORIGIN_KIND,
             gripKind: { on: 'hatch', kind: HATCH_GRADIENT_ORIGIN_KIND },
           });
           gripIndex += 1;
@@ -432,7 +430,6 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
             grips.push({
               entityId: entity.id, gripIndex, type: 'vertex',
               position: { x: anglePos.x, y: anglePos.y }, movesEntity: false,
-              hatchGripKind: HATCH_GRADIENT_ANGLE_KIND,
               gripKind: { on: 'hatch', kind: HATCH_GRADIENT_ANGLE_KIND },
             });
             gripIndex += 1;

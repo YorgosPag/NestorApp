@@ -15,6 +15,7 @@
  */
 
 import { computeDxfEntityGrips } from '../grip-computation';
+import { gripKindOf } from '../grip-kinds';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 
 function makeLine(): DxfEntityUnion {
@@ -38,9 +39,9 @@ describe('computeDxfEntityGrips — line midpoint = whole-entity move (ADR-363 O
     expect(grips[1].gripIndex).toBe(1);
     expect(grips[2].gripIndex).toBe(2);
     expect(grips[3].gripIndex).toBe(3);
-    expect(grips[3].lineGripKind).toBe('line-rotation');
+    expect(gripKindOf(grips[3], 'line')).toBe('line-rotation');
     expect(grips[4].gripIndex).toBe(4);
-    expect(grips[4].lineGripKind).toBe('line-move');
+    expect(gripKindOf(grips[4], 'line')).toBe('line-move');
   });
 
   it('endpoints reshape — movesEntity stays false', () => {

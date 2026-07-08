@@ -39,7 +39,7 @@ const movePreview = (entityId: string, dx: number, dy: number): DxfGripDragPrevi
   gripIndex: 0,
   delta: { x: dx, y: dy },
   movesEntity: true,
-  mepFixtureGripKind: 'mep-fixture-move',
+  gripKind: { on: 'mep-fixture', kind: 'mep-fixture-move' },
 });
 
 describe('HomeRunWiresOverlay.buildResolver — live drag follow', () => {
