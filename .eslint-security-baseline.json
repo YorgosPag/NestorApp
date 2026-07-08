@@ -1,0 +1,17 @@
+{
+  "description": "ADR-598 ΦΑΣΗ 1 — ESLint warning ratchet baseline for gate \"security\" (ADR-598 G8). Tracks the total ESLint warning count over src/ for this gate's rules. Ratchet down only: a rise blocks the PR. Refresh via the gate's :baseline script after a legitimate cleanup.",
+  "generatedBy": "scripts/check-eslint-ratchet.js --gate security --write-baseline",
+  "adr": "ADR-598 G8",
+  "gate": "security",
+  "config": "eslint/gates/security.mjs",
+  "total": 208,
+  "files": 57,
+  "parseErrors": 2,
+  "perRule": {
+    "security/detect-possible-timing-attacks": 5,
+    "security/detect-unsafe-regex": 83,
+    "security/detect-non-literal-fs-filename": 65,
+    "security/detect-non-literal-regexp": 54,
+    "security/detect-non-literal-require": 1
+  }
+}

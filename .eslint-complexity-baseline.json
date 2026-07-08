@@ -1,0 +1,15 @@
+{
+  "description": "ADR-598 ΦΑΣΗ 1 — ESLint warning ratchet baseline for gate \"complexity\" (ADR-598 G7). Tracks the total ESLint warning count over src/ for this gate's rules. Ratchet down only: a rise blocks the PR. Refresh via the gate's :baseline script after a legitimate cleanup.",
+  "generatedBy": "scripts/check-eslint-ratchet.js --gate complexity --write-baseline",
+  "adr": "ADR-598 G7",
+  "gate": "complexity",
+  "config": "eslint/gates/complexity.mjs",
+  "total": 2201,
+  "files": 1330,
+  "parseErrors": 2,
+  "perRule": {
+    "complexity": 1341,
+    "max-depth": 229,
+    "max-params": 631
+  }
+}

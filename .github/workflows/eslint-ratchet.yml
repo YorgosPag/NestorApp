@@ -1,0 +1,87 @@
+name: 🧹 ESLint Warning Ratchet (ADR-598 ΦΑΣΗ 1)
+
+# =============================================================================
+# ADR-598 ΦΑΣΗ 1 — ESLint additive-rule ratchets (G4 jsx-a11y, G7 complexity,
+# G8 security), all driven by the ONE generic engine
+# scripts/check-eslint-ratchet.js (selected by --gate).
+#
+# Why this exists
+# ---------------
+# These rules are `warn`, not `error`, and are added on top of the repo's main
+# lint config without a flag-day. Each gate runs ESLint over src/ with ONLY its
+# standalone config (eslint/gates/<gate>.mjs) and blocks the PR when its warning
+# count rises above the committed baseline (.eslint-<gate>-baseline.json). The
+# count can only decrease — a ratchet, mirroring jscpd-ratchet.yml (CHECK 3.28)
+# and deadcode-ratchet.yml (CHECK 3.22).
+#
+# A full-repo ESLint run is heavy, so it lives in Layer-2 CI only — never in the
+# pre-commit hook (N.17 layer-split principle). Baselines are refreshed manually
+# via `pnpm run eslint-gate:<gate>:baseline` after a legitimate cleanup.
+#
+# Matrix note: all three gates are active. `complexity` needs no plugin (ESLint
+# core); `jsx-a11y` (eslint-plugin-jsx-a11y, MIT) and `security`
+# (eslint-plugin-security, Apache-2.0) are pinned devDependencies with seeded
+# baselines. `pnpm install --frozen-lockfile` provides all three.
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.{ts,tsx,js,jsx,mjs,cjs}'
+      - 'eslint/gates/**'
+      - '.eslint-complexity-baseline.json'
+      - '.eslint-jsx-a11y-baseline.json'
+      - '.eslint-security-baseline.json'
+      - 'scripts/check-eslint-ratchet.js'
+      - '.github/workflows/eslint-ratchet.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**/*.{ts,tsx,js,jsx,mjs,cjs}'
+      - 'eslint/gates/**'
+      - '.eslint-complexity-baseline.json'
+      - '.eslint-jsx-a11y-baseline.json'
+      - '.eslint-security-baseline.json'
+      - 'scripts/check-eslint-ratchet.js'
+      - '.github/workflows/eslint-ratchet.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: eslint-ratchet-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eslint-ratchet:
+    name: 🔒 ESLint Ratchet (${{ matrix.gate }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        gate: [complexity, jsx-a11y, security]
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🧹 ESLint warning ratchet (vs baseline)
+        run: node scripts/check-eslint-ratchet.js --gate ${{ matrix.gate }} --check
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=ESLint Ratchet (${{ matrix.gate }})::warning count did not rise vs .eslint-${{ matrix.gate }}-baseline.json"

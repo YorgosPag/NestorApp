@@ -1,0 +1,39 @@
+{
+  "description": "ADR-598 G13 — full-tree license allowlist (CLAUDE.md N.5). A package passes if its SPDX license is in allowedLicenses (OR-any / AND-all semantics) or it is a vetted exception in allowedPackages. GPL/LGPL/AGPL with no permissive alternative is never auto-baselined. Refresh via `pnpm run license:baseline`.",
+  "adr": "ADR-598",
+  "generatedBy": "scripts/check-license-ratchet.js --write-baseline",
+  "allowedLicenses": [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "0BSD",
+    "CC0-1.0",
+    "Unlicense",
+    "BlueOak-1.0.0",
+    "Python-2.0"
+  ],
+  "allowedPackages": {
+    "@resvg/resvg-js@2.6.2": {
+      "license": "MPL-2.0",
+      "reason": "Seeded — off-allowlist but non-copyleft; manually vetted permissive/dev-only",
+      "owner": "giorgio"
+    },
+    "nextn@0.1.1": {
+      "license": "UNLICENSED",
+      "reason": "Seeded — off-allowlist but non-copyleft; manually vetted permissive/dev-only",
+      "owner": "giorgio"
+    },
+    "pako@2.1.0": {
+      "license": "(MIT AND Zlib)",
+      "reason": "Seeded — off-allowlist but non-copyleft; manually vetted permissive/dev-only",
+      "owner": "giorgio"
+    },
+    "web-ifc@0.0.77": {
+      "license": "MPL-2.0",
+      "reason": "Seeded — off-allowlist but non-copyleft; manually vetted permissive/dev-only",
+      "owner": "giorgio"
+    }
+  }
+}
