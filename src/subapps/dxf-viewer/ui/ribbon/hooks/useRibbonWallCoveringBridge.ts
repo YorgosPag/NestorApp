@@ -39,18 +39,14 @@ import {
 } from './bridge/wall-covering-command-keys';
 import { EventBus } from '../../../systems/events/EventBus';
 import type { RibbonComboboxState } from '../context/RibbonCommandContext';
-import type { useLevels } from '../../../systems/levels';
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
+import { useResolveSelectedEntity } from './ribbon-entity-bridge-shared';
 
 type UniversalSelectionLike = Pick<ReturnType<typeof useUniversalSelection>, 'getPrimaryId'>;
 
 export interface UseRibbonWallCoveringBridgeProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly universalSelection: UniversalSelectionLike;
 }
 
@@ -85,15 +81,11 @@ export function useRibbonWallCoveringBridge(
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
 
-  const resolveWallCovering = useCallback((): WallCoveringEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isWallCoveringEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveWallCovering = useResolveSelectedEntity(
+    levelManager,
+    universalSelection,
+    isWallCoveringEntity,
+  );
 
   const dispatchParams = useCallback(
     (wc: WallCoveringEntity, nextParams: WallCoveringParams): void => {

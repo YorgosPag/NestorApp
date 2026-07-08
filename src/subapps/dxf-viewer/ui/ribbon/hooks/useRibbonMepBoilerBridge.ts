@@ -73,13 +73,12 @@ import {
   sumServedHeatLoadW,
 } from '../../../bim/thermal/resolve-source-served-spaces';
 import type { RibbonComboboxState, RibbonToggleState } from '../context/RibbonCommandContext';
-import type { useLevels } from '../../../systems/levels';
+import {
+  useResolveSelectedEntity,
+  type RibbonEntityBridgeCore,
+} from './ribbon-entity-bridge-shared';
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
@@ -87,18 +86,11 @@ type UniversalSelectionLike = Pick<
 >;
 
 export interface UseRibbonMepBoilerBridgeProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly universalSelection: UniversalSelectionLike;
 }
 
-export interface RibbonMepBoilerBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
-  readonly getToggleState: (commandKey: string) => RibbonToggleState;
-  readonly onAction: (action: string) => void;
-  readonly getPanelVisibility: (visibilityKey: string) => boolean;
-}
+export type RibbonMepBoilerBridge = RibbonEntityBridgeCore;
 
 export function useRibbonMepBoilerBridge(
   props: UseRibbonMepBoilerBridgeProps,
@@ -107,15 +99,7 @@ export function useRibbonMepBoilerBridge(
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
 
-  const resolveBoiler = useCallback((): MepBoilerEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isMepBoilerEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveBoiler = useResolveSelectedEntity(levelManager, universalSelection, isMepBoilerEntity);
 
   // ADR-422 L2 — sizing readout (Revit «Heating Loads → Equipment»). Computed only
   // when a boiler is selected (the contextual tab is active). Required output =
@@ -187,29 +171,34 @@ export function useRibbonMepBoilerBridge(
     [resolveBoiler, sizing, t],
   );
 
+  // ADR-408 — both boiler bar-pressure combobox keys (relief-valve set-pressure and
+  // system cold-fill pressure) share the identical parse → validate → dispatch flow; only
+  // the guard and the target param field differ. Returns true when `commandKey` is one of
+  // them (consumed regardless of value validity), false to fall through to model-catalog.
+  const tryApplyBarPressureKey = useCallback(
+    (commandKey: string, value: string): boolean => {
+      const field: 'reliefValvePressureBar' | 'systemPressureBar' | null =
+        isMepBoilerReliefPressureKey(commandKey) ? 'reliefValvePressureBar'
+          : isMepBoilerSystemPressureKey(commandKey) ? 'systemPressureBar'
+            : null;
+      if (!field) return false;
+      const boiler = resolveBoiler();
+      if (boiler) {
+        const bar = Number.parseFloat(value);
+        if (Number.isFinite(bar) && bar > 0) {
+          dispatchParams(boiler, { ...boiler.params, [field]: bar });
+        }
+      }
+      return true;
+    },
+    [resolveBoiler, dispatchParams],
+  );
+
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
-      // ADR-408 — SAFETY RELIEF VALVE set-pressure change (static enum). Checked before the
-      // model-catalog branch; parses the standard bar rating and persists `reliefValvePressureBar`.
-      if (isMepBoilerReliefPressureKey(commandKey)) {
-        const boiler = resolveBoiler();
-        if (!boiler) return;
-        const bar = Number.parseFloat(value);
-        if (!Number.isFinite(bar) || bar <= 0) return;
-        dispatchParams(boiler, { ...boiler.params, reliefValvePressureBar: bar });
-        return;
-      }
-      // ADR-408 — PRESSURE GAUGE system (cold fill) pressure change (static enum). Checked before
-      // the model-catalog branch; parses the standard bar value and persists `systemPressureBar`.
-      // DISTINCT from the relief-valve set-pressure branch above (system fill vs valve lift).
-      if (isMepBoilerSystemPressureKey(commandKey)) {
-        const boiler = resolveBoiler();
-        if (!boiler) return;
-        const bar = Number.parseFloat(value);
-        if (!Number.isFinite(bar) || bar <= 0) return;
-        dispatchParams(boiler, { ...boiler.params, systemPressureBar: bar });
-        return;
-      }
+      // ADR-408 — safety relief-valve set-pressure + system cold-fill pressure (static enums).
+      // Checked before the model-catalog branch (see tryApplyBarPressureKey).
+      if (tryApplyBarPressureKey(commandKey, value)) return;
       // ADR-408 — standalone HEATING FUEL change (static enum, Revit instance param). Checked
       // before the model-catalog branch. The «Απροσδιόριστο» sentinel removes `fuelType`
       // (parametric boiler with no fuel); otherwise persist the validated fuel. The command
@@ -270,7 +259,7 @@ export function useRibbonMepBoilerBridge(
       const nextParams = { ...boiler.params, [field]: numeric } as MepBoilerParams;
       dispatchParams(boiler, nextParams);
     },
-    [resolveBoiler, dispatchParams],
+    [resolveBoiler, dispatchParams, tryApplyBarPressureKey],
   );
 
   // ADR-408 Εύρος Β (combi) — Revit Yes/No toggles routed by commandKey:

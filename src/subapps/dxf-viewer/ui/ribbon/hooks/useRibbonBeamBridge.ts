@@ -77,13 +77,12 @@ import type {
   RibbonComboboxState,
   RibbonToggleState,
 } from '../context/RibbonCommandContext';
-import type { useLevels } from '../../../systems/levels';
+import {
+  useResolveSelectedEntity,
+  type RibbonEntityBridgeCore,
+} from './ribbon-entity-bridge-shared';
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
@@ -91,23 +90,12 @@ type UniversalSelectionLike = Pick<
 >;
 
 export interface UseRibbonBeamBridgeProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly universalSelection: UniversalSelectionLike;
 }
 
-export interface RibbonBeamBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
-  readonly getToggleState: (commandKey: string) => RibbonToggleState;
+export interface RibbonBeamBridge extends RibbonEntityBridgeCore {
   readonly getBadgeState: (badgeKey: string) => boolean;
-  readonly onAction: (action: string) => void;
-  /**
-   * ADR-363 Φ2 — panel visibility resolver. `true` όταν το panel πρέπει να
-   * εμφανίζεται· keys εκτός `BEAM_RIBBON_VISIBILITY_KEYS` → `true` (no-op).
-   * ishapeCatalog/ishapeParams → ορατά μόνο όταν `sectionKind === 'I-shape'`.
-   */
-  readonly getPanelVisibility: (visibilityKey: string) => boolean;
 }
 
 const BEAM_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
@@ -153,15 +141,7 @@ export function useRibbonBeamBridge(
   const { t } = useTranslation('dxf-viewer-shell');
   const ribbonDelete = useRibbonEntityDelete({ levelManager, universalSelection });
 
-  const resolveBeam = useCallback((): BeamEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isBeamEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveBeam = useResolveSelectedEntity(levelManager, universalSelection, isBeamEntity);
 
   // ADR-471 — κοινός SSoT writer (μοιράζεται με το BeamPropertiesTab· undoable
   // command + geometry/validation recompute + emit `bim:beam-params-updated`).

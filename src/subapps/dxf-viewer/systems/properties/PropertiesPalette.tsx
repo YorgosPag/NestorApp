@@ -47,26 +47,22 @@ import { buildDimensionFormState, buildDimensionPatch } from './dimension-proper
 // LINE read/apply model (mirror of the dimension model — keeps this component < 500 lines).
 import { buildLinePatch } from './line-property-model';
 import { PropertyGroupRows, type PropertySelectOption } from './PropertyGroupRows';
+import { NumberInputRow, ReadonlyInputRow, PaletteFooter } from './PropertiesPaletteRows';
 import { listArrowheadBlockNames } from '../dimensions/dim-arrowhead-blocks';
 import type { DxfScene, DxfLine, DxfDimension } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ICommand } from '../../core/commands/interfaces';
-import type { SceneModel } from '../../types/scene';
 import styles from './PropertiesPalette.module.css';
+import type { LevelSceneWriter } from '../levels/level-scene-accessor';
 
 // ADR-362 §7 — «Πάχος» option list for the dimension palette (ByLayer + common ISO mm).
 const DIM_LINEWEIGHT_OPTIONS = ['ByLayer', '0.13', '0.18', '0.25', '0.35', '0.5', '0.7', '1.0'] as const;
 
-interface LevelManagerLike {
-  getLevelScene: (id: string) => SceneModel | null;
-  setLevelScene: (id: string, scene: SceneModel) => void;
-  currentLevelId: string | null;
-}
 
 interface Props {
   dxfScene: DxfScene | null;
   activeTool: string;
   executeCommand: (cmd: ICommand) => void;
-  levelManager: LevelManagerLike;
+  levelManager: LevelSceneWriter;
 }
 
 export function PropertiesPalette({
@@ -253,22 +249,7 @@ export function PropertiesPalette({
             unitLabel={unitLabel}
             t={t}
           />
-          <footer className={styles.footer}>
-            <button
-              type="button"
-              className={styles.btnCancel}
-              onClick={() => PropertiesPaletteStore.close()}
-            >
-              {t('propertiesPalette.close')}
-            </button>
-            <button
-              type="button"
-              className={styles.btnApply}
-              onClick={handleApplyDimension}
-            >
-              {t('propertiesPalette.apply')}
-            </button>
-          </footer>
+          <PaletteFooter onApply={handleApplyDimension} t={t} />
         </>
       )}
 
@@ -286,91 +267,43 @@ export function PropertiesPalette({
             </button>
             {openGroups.geometry && (
               <div className={styles.groupBody}>
-                {/* Start X */}
-                <div className={styles.row}>
-                  <span className={styles.label}>{t('propertiesPalette.props.startX')}</span>
-                  <div className={styles.inputWrap}>
-                    <input
-                      className={styles.input}
-                      type="number"
-                      step="any"
-                      value={form.startX}
-                      onChange={e => setForm(prev => ({ ...prev, startX: e.target.value }))}
-                    />
-                    <span className={styles.unit}>{unitLabel}</span>
-                  </div>
-                </div>
-                {/* Start Y */}
-                <div className={styles.row}>
-                  <span className={styles.label}>{t('propertiesPalette.props.startY')}</span>
-                  <div className={styles.inputWrap}>
-                    <input
-                      className={styles.input}
-                      type="number"
-                      step="any"
-                      value={form.startY}
-                      onChange={e => setForm(prev => ({ ...prev, startY: e.target.value }))}
-                    />
-                    <span className={styles.unit}>{unitLabel}</span>
-                  </div>
-                </div>
-                {/* End X (readonly derived) */}
-                <div className={styles.row}>
-                  <span className={styles.label}>{t('propertiesPalette.props.endX')}</span>
-                  <div className={styles.inputWrap}>
-                    <input
-                      className={styles.inputReadonly}
-                      type="text"
-                      readOnly
-                      value={derived?.endX ?? ''}
-                    />
-                    <span className={styles.unit}>{unitLabel}</span>
-                  </div>
-                </div>
-                {/* End Y (readonly derived) */}
-                <div className={styles.row}>
-                  <span className={styles.label}>{t('propertiesPalette.props.endY')}</span>
-                  <div className={styles.inputWrap}>
-                    <input
-                      className={styles.inputReadonly}
-                      type="text"
-                      readOnly
-                      value={derived?.endY ?? ''}
-                    />
-                    <span className={styles.unit}>{unitLabel}</span>
-                  </div>
-                </div>
-                {/* Length */}
-                <div className={styles.row}>
-                  <span className={styles.label}>{t('propertiesPalette.props.length')}</span>
-                  <div className={styles.inputWrap}>
-                    <input
-                      className={styles.input}
-                      type="number"
-                      step="any"
-                      min="0.001"
-                      value={form.lengthDisplay}
-                      onChange={e => setForm(prev => ({ ...prev, lengthDisplay: e.target.value }))}
-                    />
-                    <span className={styles.unit}>{unitLabel}</span>
-                  </div>
-                </div>
-                {/* Angle */}
-                <div className={styles.row}>
-                  <span className={styles.label}>{t('propertiesPalette.props.angle')}</span>
-                  <div className={styles.inputWrap}>
-                    <input
-                      className={styles.input}
-                      type="number"
-                      step="any"
-                      min="0"
-                      max="360"
-                      value={form.angleDeg}
-                      onChange={e => setForm(prev => ({ ...prev, angleDeg: e.target.value }))}
-                    />
-                    <span className={styles.unit}>°</span>
-                  </div>
-                </div>
+                <NumberInputRow
+                  label={t('propertiesPalette.props.startX')}
+                  value={form.startX}
+                  onChange={v => setForm(prev => ({ ...prev, startX: v }))}
+                  unitLabel={unitLabel}
+                />
+                <NumberInputRow
+                  label={t('propertiesPalette.props.startY')}
+                  value={form.startY}
+                  onChange={v => setForm(prev => ({ ...prev, startY: v }))}
+                  unitLabel={unitLabel}
+                />
+                <ReadonlyInputRow
+                  label={t('propertiesPalette.props.endX')}
+                  value={derived?.endX ?? ''}
+                  unitLabel={unitLabel}
+                />
+                <ReadonlyInputRow
+                  label={t('propertiesPalette.props.endY')}
+                  value={derived?.endY ?? ''}
+                  unitLabel={unitLabel}
+                />
+                <NumberInputRow
+                  label={t('propertiesPalette.props.length')}
+                  value={form.lengthDisplay}
+                  onChange={v => setForm(prev => ({ ...prev, lengthDisplay: v }))}
+                  unitLabel={unitLabel}
+                  min="0.001"
+                />
+                <NumberInputRow
+                  label={t('propertiesPalette.props.angle')}
+                  value={form.angleDeg}
+                  onChange={v => setForm(prev => ({ ...prev, angleDeg: v }))}
+                  unitLabel="°"
+                  min="0"
+                  max="360"
+                />
               </div>
             )}
           </section>
@@ -442,22 +375,7 @@ export function PropertiesPalette({
             )}
           </section>
 
-          <footer className={styles.footer}>
-            <button
-              type="button"
-              className={styles.btnCancel}
-              onClick={() => PropertiesPaletteStore.close()}
-            >
-              {t('propertiesPalette.close')}
-            </button>
-            <button
-              type="button"
-              className={styles.btnApply}
-              onClick={handleApply}
-            >
-              {t('propertiesPalette.apply')}
-            </button>
-          </footer>
+          <PaletteFooter onApply={handleApply} t={t} />
         </>
       )}
     </div>
