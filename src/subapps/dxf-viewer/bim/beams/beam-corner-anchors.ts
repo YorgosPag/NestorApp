@@ -1,5 +1,5 @@
 /**
- * ADR-370 §5.2 — Beam face-corner world-point exposure (pure SSoT).
+ * ADR-597 §5.2 — Beam face-corner world-point exposure (pure SSoT).
  *
  * Exposes the **4 face-end corners** of a BIM beam entity as world-coordinate
  * snap targets. For all beam kinds (straight / curved / cantilever) only the
@@ -14,7 +14,7 @@
  * For a curved beam the Bezier subdivision produces an N-vertex outline but
  * only the 4 face-end corners (vertices [0], [n-1], [n], [2n-1] in the CCW
  * outline polygon) are exposed as snap targets — NOT all 2N intermediate
- * vertices — to avoid snap noise on long curved beams (ADR-370 §2.3).
+ * vertices — to avoid snap noise on long curved beams (ADR-597 §2.3).
  *
  * Implementation strategy: rely on `computeBeamGeometry().outline.vertices`
  * which already contains the CCW polygon. For axis length n, the face-end
@@ -23,7 +23,7 @@
  *
  * Pure module: zero React / DOM / Firestore / canvas deps. Idempotent.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-370-bim-corner-snap-system.md §5.2
+ * @see docs/centralized-systems/reference/adrs/ADR-597-bim-corner-snap-system.md §5.2
  * @see bim/geometry/beam-geometry.ts (computeBeamGeometry — SSoT geometry source)
  * @see bim/columns/column-anchors.ts  (pattern reference)
  */

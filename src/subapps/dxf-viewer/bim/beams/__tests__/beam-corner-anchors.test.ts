@@ -1,5 +1,5 @@
 /**
- * ADR-370 §5.2 — `getBeamCornerWorldPoints` tests.
+ * ADR-597 §5.2 — `getBeamCornerWorldPoints` tests.
  *
  * Verifies:
  *   - Returns exactly 4 corners for straight/cantilever beams.

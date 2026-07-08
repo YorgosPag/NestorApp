@@ -1,5 +1,5 @@
 /**
- * Column Body Corner Projection Snap — ADR-398 (sibling of ADR-371 wall faces).
+ * Column Body Corner Projection Snap — ADR-398 (sibling of ADR-597 wall faces).
  *
  * When the user MOVES, RESIZES or DRAWS a BIM column, the cursor sits on the
  * move base / resize handle / placement anchor — NOT on a corner. This module
@@ -29,8 +29,8 @@
  *
  * Pure module: zero React / DOM / Firestore / canvas deps. Idempotent.
  *
- * @see bim/walls/wall-face-corner-snap.ts — wall sibling (ADR-371)
- * @see docs/centralized-systems/reference/adrs/ADR-371-wall-face-corner-projection-snap.md §Column
+ * @see bim/walls/wall-face-corner-snap.ts — wall sibling (ADR-597)
+ * @see docs/centralized-systems/reference/adrs/ADR-597-bim-corner-snap-system.md §17 (Column)
  */
 
 import type { Point2D } from '../../rendering/types/Types';

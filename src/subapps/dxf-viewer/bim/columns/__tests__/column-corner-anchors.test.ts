@@ -1,5 +1,5 @@
 /**
- * ADR-370 §5.4 + ADR-363 Phase 8C — `getColumnCornerWorldPoints` tests.
+ * ADR-597 §5.4 + ADR-363 Phase 8C — `getColumnCornerWorldPoints` tests.
  *
  * Verifies:
  *   - Returns exactly 4 entries (NW/NE/SE/SW) for all 7 column kinds.

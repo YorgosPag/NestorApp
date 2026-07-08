@@ -1,5 +1,5 @@
 /**
- * ADR-370 §5.4 — Column perimeter-corner world-point exposure (pure SSoT).
+ * ADR-597 §5.4 — Column perimeter-corner world-point exposure (pure SSoT).
  *
  * Exposes the **4 diagonal (corner) anchors** of a BIM column as world-
  * coordinate snap targets: NE, NW, SE, SW. These are the corners of the
@@ -19,7 +19,7 @@
  *
  * Pure module: zero React / DOM / Firestore / canvas deps. Idempotent.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-370-bim-corner-snap-system.md §5.4
+ * @see docs/centralized-systems/reference/adrs/ADR-597-bim-corner-snap-system.md §5.4
  * @see bim/columns/column-anchors.ts  (SSoT source — getColumnAnchorWorldPoints)
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §6 Phase 5.5d
  */
