@@ -10,6 +10,8 @@
  * discards it.
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const WATER_SUPPLY_RIBBON_ACTIONS = {
   /** Recognize the storey + auto-design the cold/hot networks → proposal ghost. */
   generate: 'waterSupply.actions.generate',
@@ -19,11 +21,5 @@ export const WATER_SUPPLY_RIBBON_ACTIONS = {
   reject: 'waterSupply.actions.reject',
 } as const;
 
-const WATER_SUPPLY_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
-  Object.values(WATER_SUPPLY_RIBBON_ACTIONS),
-);
-
 /** Type guard used by the `useRibbonCommands` composer. */
-export function isWaterSupplyActionKey(action: string): boolean {
-  return WATER_SUPPLY_ACTION_KEY_SET.has(action);
-}
+export const isWaterSupplyActionKey = makeKeySetGuard(Object.values(WATER_SUPPLY_RIBBON_ACTIONS));

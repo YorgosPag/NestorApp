@@ -11,6 +11,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-511-wall-finish-per-room.md
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const WALL_COVERING_RIBBON_KEYS = {
   stringParams: {
     /** Body finish material (σοβάς / knauf / πλακίδια). */
@@ -44,27 +46,17 @@ export type WallCoveringRibbonActionKey =
   | typeof WALL_COVERING_RIBBON_KEYS.actions.close
   | typeof WALL_COVERING_RIBBON_KEYS.actions.delete;
 
-const NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isWallCoveringRibbonNumberKey = makeKeySetGuard<WallCoveringRibbonNumberCommandKey>([
   WALL_COVERING_RIBBON_KEYS.params.heightTopMm,
 ]);
-const STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
+
+export const isWallCoveringRibbonStringKey = makeKeySetGuard<WallCoveringRibbonStringCommandKey>([
   WALL_COVERING_RIBBON_KEYS.stringParams.bodyMaterialId,
   WALL_COVERING_RIBBON_KEYS.stringParams.surfaceMaterialId,
   WALL_COVERING_RIBBON_KEYS.stringParams.faceSide,
 ]);
-const ACTION_KEY_SET: ReadonlySet<string> = new Set<string>([
+
+export const isWallCoveringRibbonActionKey = makeKeySetGuard<WallCoveringRibbonActionKey>([
   WALL_COVERING_RIBBON_KEYS.actions.close,
   WALL_COVERING_RIBBON_KEYS.actions.delete,
 ]);
-
-export function isWallCoveringRibbonNumberKey(commandKey: string): commandKey is WallCoveringRibbonNumberCommandKey {
-  return NUMBER_KEY_SET.has(commandKey);
-}
-
-export function isWallCoveringRibbonStringKey(commandKey: string): commandKey is WallCoveringRibbonStringCommandKey {
-  return STRING_KEY_SET.has(commandKey);
-}
-
-export function isWallCoveringRibbonActionKey(commandKey: string): commandKey is WallCoveringRibbonActionKey {
-  return ACTION_KEY_SET.has(commandKey);
-}
