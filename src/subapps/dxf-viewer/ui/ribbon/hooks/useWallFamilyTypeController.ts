@@ -15,8 +15,8 @@
 
 import { useCallback } from 'react';
 import { AssignWallTypeCommand } from '../../../core/commands/entity-commands/AssignWallTypeCommand';
-import { UpdateWallFamilyTypeCommand } from '../../../core/commands/entity-commands/UpdateWallFamilyTypeCommand';
-import { createDeleteWallFamilyTypeCommand } from '../../../core/commands/entity-commands/DeleteWallFamilyTypeCommand';
+import { UpdateFamilyTypeCommand } from '../../../core/commands/entity-commands/UpdateFamilyTypeCommand';
+import { createDeleteFamilyTypeCommand } from '../../../core/commands/entity-commands/DeleteFamilyTypeCommand';
 import { recordFamilyTypeChange } from '../../../bim/family-types/bim-family-type-audit-client';
 import { findWallsByTypeId } from '../../../bim/family-types/family-type-side-effects';
 import { isWallEntity } from '../../../types/entities';
@@ -87,9 +87,9 @@ const WALL_CONFIG: FamilyTypeControllerConfig<'wall', WallEntity> = {
     return new AssignWallTypeCommand(entity.id, next, previous, sceneManager, entity.kind);
   },
   makeUpdateCommand: (typeId, next, previous, deps) =>
-    new UpdateWallFamilyTypeCommand(typeId, next, previous, deps),
+    new UpdateFamilyTypeCommand<WallTypeParams>(typeId, next, previous, deps),
   makeDeleteCommand: (snapshot, detachCommands, deps) =>
-    createDeleteWallFamilyTypeCommand(snapshot, detachCommands, deps),
+    createDeleteFamilyTypeCommand('DeleteWallFamilyType', snapshot, detachCommands, deps),
 };
 
 export function useWallFamilyTypeController(): WallFamilyTypeController {

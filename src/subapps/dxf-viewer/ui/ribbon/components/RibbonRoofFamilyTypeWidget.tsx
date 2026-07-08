@@ -3,13 +3,13 @@
 /**
  * ADR-417 §10 #3 — contextual Roof «Family Type» ribbon widget.
  *
- * Thin binding of the shared `FamilyTypeEditorWidget` (ADR-603 Φ4): resolves the
+ * Thin binding of the shared `FamilyTypeEditorWidget` (ADR-604 Φ4): resolves the
  * roof i18n labels (static keys → CHECK 3.13 safe) and wires the roof controller +
  * `openEditRoofType` store. All mutations route through `useRoofFamilyTypeController`
  * (SSoT). Per-instance overrides live in `RibbonRoofTypePropertiesWidget`.
  * Self-hides for non-roof selections.
  *
- * @see ./FamilyTypeEditorWidget.tsx — shared widget (ADR-603)
+ * @see ./FamilyTypeEditorWidget.tsx — shared widget (ADR-604)
  * @see ../hooks/useRoofFamilyTypeController.ts
  */
 

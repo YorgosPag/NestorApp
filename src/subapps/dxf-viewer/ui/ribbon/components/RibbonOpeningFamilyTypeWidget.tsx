@@ -3,12 +3,12 @@
 /**
  * ADR-421 SLICE C — Opening Family Type selector (contextual Opening ribbon).
  *
- * Thin binding of the shared `createFamilyTypeSelectorWidget` factory (ADR-603 Φ4)
+ * Thin binding of the shared `createFamilyTypeSelectorWidget` factory (ADR-604 Φ4)
  * to the opening controller. Same Radix `Select` + «Duplicate» design as the wall
  * widget; all logic lives in `useOpeningFamilyTypeController` (SSoT). A Type switch
  * re-routes the opening's 2D symbol / 3D mesh / IFC family.
  *
- * @see ./create-family-type-selector-widget.tsx — shared factory (ADR-603)
+ * @see ./create-family-type-selector-widget.tsx — shared factory (ADR-604)
  * @see ../hooks/useOpeningFamilyTypeController.ts
  */
 
