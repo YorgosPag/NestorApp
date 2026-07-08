@@ -28,13 +28,8 @@ import { isColumnEntity, isFoundationEntity } from '../types/entities';
 import { isFoundationSlabEntity } from '../bim/structural/section-context';
 import type { Entity } from '../types/entities';
 import type { ColumnParams } from '../bim/types/column-types';
-import type { SceneModel } from '../types/scene';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene: (levelId: string) => SceneModel | null;
-  setLevelScene: (levelId: string, scene: SceneModel) => void;
-}
 
 /** True αν το entity μπορεί να φιλοξενήσει `footingId` (πέδιλο ή εδαφόπλακα). */
 function isFootingTarget(e: Entity): boolean {
@@ -46,7 +41,7 @@ function columnFootingId(e: Entity): string | undefined {
   return isColumnEntity(e) ? (e.params as ColumnParams).footingId : undefined;
 }
 
-export function useStructuralFootingConnect(props: { levelManager: LevelManagerLike }): void {
+export function useStructuralFootingConnect(props: { levelManager: LevelSceneWriter }): void {
   const { levelManager } = props;
   const { execute } = useCommandHistory();
 

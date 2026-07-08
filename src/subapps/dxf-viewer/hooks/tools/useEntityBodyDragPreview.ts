@@ -53,16 +53,14 @@ import { paintGhostFaceDimensions } from '../../canvas-v2/preview-canvas/ghost-f
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
-import type { useLevels } from '../../systems/levels';
+import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 // ADR-090 — SSoT point+vector add (translate), replaces inline `{x:A.x+B.x,y:A.y+B.y}`.
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene' | 'currentLevelId'>;
-
 export interface UseEntityBodyDragPreviewProps {
-  levelManager: LevelManagerLike;
+  levelManager: LevelSceneReader;
   transform: ViewTransform;
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;

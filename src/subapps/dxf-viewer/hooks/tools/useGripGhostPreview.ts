@@ -36,7 +36,7 @@ import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { AnySceneEntity, Entity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { useLevels } from '../../systems/levels';
+import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 import type { DxfGripDragPreview } from '../grip-computation';
 // ADR-513 §grip-parity — length/angle lock για την ΕΠΕΚΤΑΣΗ ΑΚΡΟΥ γραμμής (ίδιος SSoT preview≡commit).
 import { resolveLineEndpointLockedDelta } from '../../systems/dynamic-input/grip-endpoint-lock';
@@ -113,15 +113,10 @@ import {
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'currentLevelId'
->;
-
 export interface UseGripGhostPreviewProps {
   /** Live drag-preview snapshot from useUnifiedGripInteraction (null when idle). */
   dragPreview: DxfGripDragPreview | null;
-  levelManager: LevelManagerLike;
+  levelManager: LevelSceneReader;
   transform: ViewTransform;
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;

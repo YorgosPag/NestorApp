@@ -58,16 +58,11 @@ import {
 import { isWallEntity, isColumnEntity, isStairEntity, isSlabEntity } from '../types/entities';
 import type { Entity } from '../types/entities';
 import type { ICommand, ISceneManager } from '../core/commands/interfaces';
-import type { SceneModel } from '../types/scene';
 import type { WallEntity } from '../bim/types/wall-types';
 import type { ColumnEntity } from '../bim/types/column-types';
 import type { StairEntity } from '../bim/types/stair-types';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene: (levelId: string) => SceneModel | null;
-  setLevelScene: (levelId: string, scene: SceneModel) => void;
-}
 
 /** Map wall ids → attach targets ({wallId, kind}) από το live scene. */
 function buildAttachTargets(
@@ -212,7 +207,7 @@ function attachFootingColumnFK(
   }
 }
 
-export function useStructuralAutoAttach(props: { levelManager: LevelManagerLike }): void {
+export function useStructuralAutoAttach(props: { levelManager: LevelSceneWriter }): void {
   const { levelManager } = props;
   const { execute } = useCommandHistory();
 
