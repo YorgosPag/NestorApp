@@ -1,0 +1,75 @@
+name: 🛡️ Dependency-CVE Audit (ADR-598 G2)
+
+# =============================================================================
+# ADR-598 G2 — Dependency-CVE audit gate (pnpm audit).
+#
+# Why this exists
+# ---------------
+# Until now `pnpm audit` was 100% manual (script `enterprise:security`) and ran
+# in no CI. Big players (Vercel/Meta/Dependabot) fail a PR when a new HIGH/
+# CRITICAL advisory lands. scripts/check-dependency-audit-ratchet.js is an
+# ALLOWLIST ratchet keyed by GHSA id: every HIGH/CRITICAL advisory pnpm reports
+# must be present in .pnpm-audit-baseline.json. A new one outside the allowlist
+# blocks. Raw-count ratcheting is deliberately avoided — new CVEs get published
+# against unchanged dependencies, which would produce false regressions.
+#
+# Runs on PR (dependency-manifest changes), a weekly cron (catches newly-
+# disclosed CVEs on an untouched lockfile), and manual dispatch. Network-bound
+# + slow → CI only, never pre-commit. Pattern mirrors jscpd-ratchet.yml.
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.pnpm-audit-baseline.json'
+      - 'scripts/check-dependency-audit-ratchet.js'
+      - '.github/workflows/dependency-audit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.pnpm-audit-baseline.json'
+      - 'scripts/check-dependency-audit-ratchet.js'
+      - '.github/workflows/dependency-audit.yml'
+  schedule:
+    # Weekly, Monday 06:00 UTC — surfaces CVEs disclosed against unchanged deps.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: dependency-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-audit:
+    name: 🔒 Dependency-CVE Audit (HIGH/CRITICAL allowlist)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # No dependency install needed: `pnpm audit` reads pnpm-lock.yaml and
+      # queries the registry advisory DB directly.
+      - name: 🛡️ Dependency-CVE gate (pnpm audit vs GHSA allowlist)
+        run: node scripts/check-dependency-audit-ratchet.js --check
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=Dependency-CVE Audit::No new HIGH/CRITICAL advisories outside .pnpm-audit-baseline.json"

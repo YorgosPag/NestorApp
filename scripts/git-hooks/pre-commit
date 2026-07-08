@@ -588,14 +588,19 @@ HOOK_EOF
     echo -e "${GREEN}  ✅ Installed commit-msg hook (Conventional Commits)${NC}"
 fi
 
-# CHECK 12: License Compliance (CLAUDE.md N.5 — no GPL/AGPL)
-PACKAGE_JSON_CHANGED=$(echo "$STAGED_FILES" | grep -E "^package\.json$" || true)
+# CHECK 12: License Compliance (CLAUDE.md N.5 — no GPL/AGPL) — ADR-598 G13
+# Fires when the dependency manifest OR the lockfile changes (transitive deps
+# shift without package.json touching). Uses the pinned license-checker
+# devDependency via `pnpm exec` — never `npx` (which silently skips on a network
+# fail, turning the gate off unnoticed). Fast --direct scan here; the full
+# transitive tree is gated in CI (.github/workflows/license-audit.yml).
+DEP_MANIFEST_CHANGED=$(echo "$STAGED_FILES" | grep -E "^(package\.json|pnpm-lock\.yaml)$" || true)
 
-if [[ -n "$PACKAGE_JSON_CHANGED" ]]; then
+if [[ -n "$DEP_MANIFEST_CHANGED" ]]; then
     echo -e "${YELLOW}🔍 Checking dependency licenses (CLAUDE.md N.5)...${NC}"
 
     LICENSE_TMPFILE=$(mktemp)
-    npx license-checker --direct --json --production 2>/dev/null > "$LICENSE_TMPFILE"
+    pnpm exec license-checker --direct --json --production 2>/dev/null > "$LICENSE_TMPFILE"
     LICENSE_EXIT=$?
 
     if [[ $LICENSE_EXIT -eq 0 && -s "$LICENSE_TMPFILE" ]]; then
@@ -618,7 +623,18 @@ if [[ -n "$PACKAGE_JSON_CHANGED" ]]; then
 
         echo -e "${GREEN}  ✅ License compliance: all permissive${NC}"
     else
-        echo -e "${YELLOW}  ⏭️  license-checker not available — skipped${NC}"
+        # license-checker is a pinned devDependency (ADR-598 G13). If it produced
+        # no output, the toolchain is broken — fail closed, never silent-skip.
+        echo ""
+        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+        echo -e "${RED}  🚫 COMMIT BLOCKED — license-checker produced no output${NC}"
+        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+        echo ""
+        echo -e "${YELLOW}  license-checker is a pinned devDependency (ADR-598 G13).${NC}"
+        echo -e "${YELLOW}  Run 'pnpm install', then retry. Do NOT bypass this gate.${NC}"
+        echo ""
+        rm -f "$LICENSE_TMPFILE"
+        exit 1
     fi
     rm -f "$LICENSE_TMPFILE"
 fi

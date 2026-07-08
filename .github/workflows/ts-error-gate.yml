@@ -1,0 +1,81 @@
+name: 🎯 TypeScript Error Gate (ADR-027)
+
+# =============================================================================
+# ADR-598 G1 — Wire the enterprise TypeScript error-budget gate into CI.
+#
+# Why this exists
+# ---------------
+# scripts/enterprise-ts-gate.js (ADR-027) is a complete tsc-error-count ratchet:
+# it runs `tsc --noEmit`, counts `error TS` lines, and compares against the
+# committed baseline (.ts-error-baseline.json, via config/quality-gates/
+# ts-error-budget.json with allowedRegression: 0). Until now NO workflow or hook
+# called it, so the gate was dormant. Per N.17 the agent never runs tsc locally;
+# the authoritative full type-check belongs in Layer-2 CI. This workflow is that
+# layer: every PR / push to main re-runs the gate so the TypeScript error count
+# can only ever decrease.
+#
+# Pattern mirrors .github/workflows/jscpd-ratchet.yml (CHECK 3.28) and
+# .github/workflows/deadcode-ratchet.yml (CHECK 3.22). Baseline updates stay
+# gated by the script's own governance token (TS_BASELINE_APPROVAL_TOKEN); this
+# workflow only ever runs the check, never --update.
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'tsconfig.json'
+      - '.ts-error-baseline.json'
+      - 'config/quality-gates/ts-error-budget.json'
+      - 'scripts/enterprise-ts-gate.js'
+      - '.github/workflows/ts-error-gate.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'tsconfig.json'
+      - '.ts-error-baseline.json'
+      - 'config/quality-gates/ts-error-budget.json'
+      - 'scripts/enterprise-ts-gate.js'
+      - '.github/workflows/ts-error-gate.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ts-error-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ts-error-gate:
+    name: 🔒 TypeScript Error Gate (ADR-027)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # NOTE: no --ignore-scripts here — the type-check needs the full dependency
+      # graph (framework/type declarations) that postinstall steps materialise.
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🎯 Enterprise TypeScript Error Gate (ratchet vs baseline)
+        run: node scripts/enterprise-ts-gate.js
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=TypeScript Error Gate::tsc error count did not rise vs .ts-error-baseline.json"

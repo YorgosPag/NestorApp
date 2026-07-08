@@ -167,6 +167,12 @@
     "enterprise:ts-gate": "node scripts/enterprise-ts-gate.js",
     "enterprise:ts-gate:update": "node scripts/enterprise-ts-gate.js --update",
     "enterprise:ts-gate:report": "node scripts/enterprise-ts-gate.js --report",
+    "deps-audit:check": "node scripts/check-dependency-audit-ratchet.js --check",
+    "deps-audit:baseline": "node scripts/check-dependency-audit-ratchet.js --write-baseline",
+    "license:check": "node scripts/check-license-ratchet.js --check",
+    "license:baseline": "node scripts/check-license-ratchet.js --write-baseline",
+    "eslint-gate:complexity": "node scripts/check-eslint-ratchet.js --gate complexity --check",
+    "eslint-gate:complexity:baseline": "node scripts/check-eslint-ratchet.js --gate complexity --write-baseline",
     "validate:i18n-manifest": "node scripts/validate-i18n-manifest.js"
   },
   "dependencies": {
@@ -331,6 +337,7 @@
     "jscpd": "5.0.11",
     "jsdom": "^27.0.0",
     "knip": "6.6.2",
+    "license-checker": "25.0.1",
     "lru-memoizer": "3.0.0",
     "ora": "9.3.0",
     "pdf-parse": "2.4.5",

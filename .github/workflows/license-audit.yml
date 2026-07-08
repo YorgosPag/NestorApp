@@ -1,0 +1,72 @@
+name: ⚖️ License Audit (ADR-598 G13)
+
+# =============================================================================
+# ADR-598 G13 — Full-tree license compliance (CLAUDE.md N.5).
+#
+# Why this exists
+# ---------------
+# The pre-commit CHECK 12 runs a fast `license-checker --direct` over DIRECT
+# production deps only. But GPL/LGPL/AGPL almost always enter TRANSITIVELY, so
+# --direct is blind to the real risk. This Layer-2 job scans the FULL dependency
+# tree (no --direct) via scripts/check-license-ratchet.js, blocking any package
+# whose SPDX license is neither permissive-allowlisted nor a vetted exception in
+# .license-allowlist.json. Big players (Google/MS) scan the whole tree.
+#
+# Pattern mirrors jscpd-ratchet.yml. Needs deps installed (license-checker reads
+# node_modules), so it runs `pnpm install --frozen-lockfile`.
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.license-allowlist.json'
+      - 'scripts/check-license-ratchet.js'
+      - '.github/workflows/license-audit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.license-allowlist.json'
+      - 'scripts/check-license-ratchet.js'
+      - '.github/workflows/license-audit.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: license-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  license-audit:
+    name: 🔒 License Audit (full tree, N.5)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # Full dependency graph required — license-checker reads node_modules.
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: ⚖️ License gate (full tree vs SPDX allowlist)
+        run: node scripts/check-license-ratchet.js --check
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=License Audit::All package licenses permissive or vetted in .license-allowlist.json"

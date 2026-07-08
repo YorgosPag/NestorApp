@@ -1,0 +1,677 @@
+{
+  "description": "ADR-598 G2 — pnpm audit CVE allowlist. Every HIGH/CRITICAL advisory pnpm reports must appear here (keyed by GHSA id). A HIGH/CRITICAL advisory outside this list blocks the PR. Ratchet: to accept a new advisory add it here with a reason/owner; to lock progress after a fix, prune the stale entry and refresh via `pnpm run deps-audit:baseline`.",
+  "adr": "ADR-598",
+  "gatedSeverities": [
+    "high",
+    "critical"
+  ],
+  "generatedBy": "scripts/check-dependency-audit-ratchet.js --write-baseline",
+  "allowed": {
+    "GHSA-f8cm-6447-x5h2": {
+      "id": 1112264,
+      "severity": "critical",
+      "module": "jspdf",
+      "title": "jsPDF has Local File Inclusion/Path Traversal vulnerability",
+      "cves": [
+        "CVE-2025-68428"
+      ],
+      "url": "https://github.com/advisories/GHSA-f8cm-6447-x5h2",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-34x7-hfp2-rc4v": {
+      "id": 1112659,
+      "severity": "high",
+      "module": "tar",
+      "title": "node-tar Vulnerable to Arbitrary File Creation/Overwrite via Hardlink Path Traversal",
+      "cves": [
+        "CVE-2026-24842"
+      ],
+      "url": "https://github.com/advisories/GHSA-34x7-hfp2-rc4v",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-pqxr-3g65-p328": {
+      "id": 1112801,
+      "severity": "high",
+      "module": "jspdf",
+      "title": "jsPDF has PDF Injection in AcroFormChoiceField that allows Arbitrary JavaScript Execution",
+      "cves": [
+        "CVE-2026-24737"
+      ],
+      "url": "https://github.com/advisories/GHSA-pqxr-3g65-p328",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-95fx-jjr5-f39c": {
+      "id": 1112802,
+      "severity": "high",
+      "module": "jspdf",
+      "title": "jsPDF Vulnerable to Denial of Service (DoS) via Unvalidated BMP Dimensions in BMPDecoder",
+      "cves": [
+        "CVE-2026-24133"
+      ],
+      "url": "https://github.com/advisories/GHSA-95fx-jjr5-f39c",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-8qq5-rm4j-mr97": {
+      "id": 1113300,
+      "severity": "high",
+      "module": "tar",
+      "title": "node-tar is Vulnerable to Arbitrary File Overwrite and Symlink Poisoning via Insufficient Path Sanitization",
+      "cves": [
+        "CVE-2026-23745"
+      ],
+      "url": "https://github.com/advisories/GHSA-8qq5-rm4j-mr97",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-9vjf-qc39-jprp": {
+      "id": 1113310,
+      "severity": "high",
+      "module": "jspdf",
+      "title": "jsPDF has a PDF Object Injection via Unsanitized Input in addJS Method",
+      "cves": [
+        "CVE-2026-25755"
+      ],
+      "url": "https://github.com/advisories/GHSA-9vjf-qc39-jprp",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-67pg-wm7f-q7fj": {
+      "id": 1113324,
+      "severity": "high",
+      "module": "jspdf",
+      "title": "jsPDF Affected by Client-Side/Server-Side Denial of Service via Malicious GIF Dimensions",
+      "cves": [
+        "CVE-2026-25535"
+      ],
+      "url": "https://github.com/advisories/GHSA-67pg-wm7f-q7fj",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-83g3-92jg-28cx": {
+      "id": 1113375,
+      "severity": "high",
+      "module": "tar",
+      "title": "Arbitrary File Read/Write via Hardlink Target Escape Through Symlink Chain in node-tar Extraction",
+      "cves": [
+        "CVE-2026-26960"
+      ],
+      "url": "https://github.com/advisories/GHSA-83g3-92jg-28cx",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-3ppc-4f35-3m26": {
+      "id": 1113465,
+      "severity": "high",
+      "module": "minimatch",
+      "title": "minimatch has a ReDoS via repeated wildcards with non-matching literal in pattern",
+      "cves": [
+        "CVE-2026-26996"
+      ],
+      "url": "https://github.com/advisories/GHSA-3ppc-4f35-3m26",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-7r86-cg39-jmmj": {
+      "id": 1113544,
+      "severity": "high",
+      "module": "minimatch",
+      "title": "minimatch has ReDoS: matchOne() combinatorial backtracking via multiple non-adjacent GLOBSTAR segments",
+      "cves": [
+        "CVE-2026-27903"
+      ],
+      "url": "https://github.com/advisories/GHSA-7r86-cg39-jmmj",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-23c5-xmqv-rm74": {
+      "id": 1113552,
+      "severity": "high",
+      "module": "minimatch",
+      "title": "minimatch ReDoS: nested *() extglobs generate catastrophically backtracking regular expressions",
+      "cves": [
+        "CVE-2026-27904"
+      ],
+      "url": "https://github.com/advisories/GHSA-23c5-xmqv-rm74",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-m7jm-9gc2-mpf2": {
+      "id": 1113567,
+      "severity": "critical",
+      "module": "fast-xml-parser",
+      "title": "fast-xml-parser has an entity encoding bypass via regex injection in DOCTYPE entity names",
+      "cves": [
+        "CVE-2026-25896"
+      ],
+      "url": "https://github.com/advisories/GHSA-m7jm-9gc2-mpf2",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-jmr7-xgp7-cmfj": {
+      "id": 1113570,
+      "severity": "high",
+      "module": "fast-xml-parser",
+      "title": "fast-xml-parser affected by DoS through entity expansion in DOCTYPE (no expansion limit)",
+      "cves": [
+        "CVE-2026-26278"
+      ],
+      "url": "https://github.com/advisories/GHSA-jmr7-xgp7-cmfj",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-5c6j-r48x-rmvq": {
+      "id": 1113686,
+      "severity": "high",
+      "module": "serialize-javascript",
+      "title": "Serialize JavaScript is Vulnerable to RCE via RegExp.flags and Date.prototype.toISOString()",
+      "cves": [],
+      "url": "https://github.com/advisories/GHSA-5c6j-r48x-rmvq",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-qffp-2rhf-9h96": {
+      "id": 1114200,
+      "severity": "high",
+      "module": "tar",
+      "title": "tar has Hardlink Path Traversal via Drive-Relative Linkpath",
+      "cves": [
+        "CVE-2026-29786"
+      ],
+      "url": "https://github.com/advisories/GHSA-qffp-2rhf-9h96",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-9ppj-qmqm-q256": {
+      "id": 1114302,
+      "severity": "high",
+      "module": "tar",
+      "title": "node-tar Symlink Path Traversal via Drive-Relative Linkpath",
+      "cves": [
+        "CVE-2026-31802"
+      ],
+      "url": "https://github.com/advisories/GHSA-9ppj-qmqm-q256",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-p5xg-68wr-hm3m": {
+      "id": 1114396,
+      "severity": "high",
+      "module": "jspdf",
+      "title": "jsPDF has a PDF Injection in AcroForm module allows Arbitrary JavaScript Execution (RadioButton.createOption and \"AS\" property)",
+      "cves": [
+        "CVE-2026-25940"
+      ],
+      "url": "https://github.com/advisories/GHSA-p5xg-68wr-hm3m",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-25h7-pfq9-p65f": {
+      "id": 1114526,
+      "severity": "high",
+      "module": "flatted",
+      "title": "flatted vulnerable to unbounded recursion DoS in parse() revive phase",
+      "cves": [
+        "CVE-2026-32141"
+      ],
+      "url": "https://github.com/advisories/GHSA-25h7-pfq9-p65f",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-r6q2-hw4h-h46w": {
+      "id": 1114680,
+      "severity": "high",
+      "module": "tar",
+      "title": "Race Condition in node-tar Path Reservations via Unicode Ligature Collisions on macOS APFS",
+      "cves": [
+        "CVE-2026-23950"
+      ],
+      "url": "https://github.com/advisories/GHSA-r6q2-hw4h-h46w",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-7x6v-j9x4-qf24": {
+      "id": 1114950,
+      "severity": "high",
+      "module": "jspdf",
+      "title": "jsPDF has a PDF Object Injection via FreeText color",
+      "cves": [
+        "CVE-2026-31898"
+      ],
+      "url": "https://github.com/advisories/GHSA-7x6v-j9x4-qf24",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-wfv2-pwc8-crg5": {
+      "id": 1114974,
+      "severity": "critical",
+      "module": "jspdf",
+      "title": "jsPDF has HTML Injection in New Window paths",
+      "cves": [
+        "CVE-2026-31938"
+      ],
+      "url": "https://github.com/advisories/GHSA-wfv2-pwc8-crg5",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-8gc5-j5rx-235r": {
+      "id": 1115338,
+      "severity": "high",
+      "module": "fast-xml-parser",
+      "title": "fast-xml-parser affected by numeric entity expansion bypassing all entity expansion limits (incomplete fix for CVE-2026-26278)",
+      "cves": [
+        "CVE-2026-33036"
+      ],
+      "url": "https://github.com/advisories/GHSA-8gc5-j5rx-235r",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-rf6f-7fwh-wjgh": {
+      "id": 1115357,
+      "severity": "high",
+      "module": "flatted",
+      "title": "Prototype Pollution via parse() in NodeJS flatted",
+      "cves": [
+        "CVE-2026-33228"
+      ],
+      "url": "https://github.com/advisories/GHSA-rf6f-7fwh-wjgh",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-3mfm-83xf-c92r": {
+      "id": 1115538,
+      "severity": "high",
+      "module": "handlebars",
+      "title": "Handlebars.js has JavaScript Injection via AST Type Confusion by tampering @partial-block",
+      "cves": [
+        "CVE-2026-33938"
+      ],
+      "url": "https://github.com/advisories/GHSA-3mfm-83xf-c92r",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-2w6w-674q-4c4q": {
+      "id": 1115539,
+      "severity": "critical",
+      "module": "handlebars",
+      "title": "Handlebars.js has JavaScript Injection via AST Type Confusion",
+      "cves": [
+        "CVE-2026-33937"
+      ],
+      "url": "https://github.com/advisories/GHSA-2w6w-674q-4c4q",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-2328-f5f3-gj25": {
+      "id": 1115545,
+      "severity": "high",
+      "module": "node-forge",
+      "title": "Forge has a basicConstraints bypass in its certificate chain verification (RFC 5280 violation)",
+      "cves": [
+        "CVE-2026-33896"
+      ],
+      "url": "https://github.com/advisories/GHSA-2328-f5f3-gj25",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-q67f-28xg-22rw": {
+      "id": 1115546,
+      "severity": "high",
+      "module": "node-forge",
+      "title": "Forge has signature forgery in Ed25519 due to missing S > L check",
+      "cves": [
+        "CVE-2026-33895"
+      ],
+      "url": "https://github.com/advisories/GHSA-q67f-28xg-22rw",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-5m6q-g25r-mvwx": {
+      "id": 1115548,
+      "severity": "high",
+      "module": "node-forge",
+      "title": "Forge has Denial of Service via Infinite Loop in BigInteger.modInverse() with Zero Input",
+      "cves": [
+        "CVE-2026-33891"
+      ],
+      "url": "https://github.com/advisories/GHSA-5m6q-g25r-mvwx",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-c2c7-rcm5-vvqj": {
+      "id": 1115554,
+      "severity": "high",
+      "module": "picomatch",
+      "title": "Picomatch has a ReDoS vulnerability via extglob quantifiers",
+      "cves": [
+        "CVE-2026-33671"
+      ],
+      "url": "https://github.com/advisories/GHSA-c2c7-rcm5-vvqj",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-ppp5-5v6c-4jwp": {
+      "id": 1115612,
+      "severity": "high",
+      "module": "node-forge",
+      "title": "Forge has signature forgery in RSA-PKCS due to ASN.1 extra field  ",
+      "cves": [
+        "CVE-2026-33894"
+      ],
+      "url": "https://github.com/advisories/GHSA-ppp5-5v6c-4jwp",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-xhpv-hc6g-r9c6": {
+      "id": 1115693,
+      "severity": "high",
+      "module": "handlebars",
+      "title": "Handlebars.js has JavaScript Injection via AST Type Confusion when passing an object as dynamic partial",
+      "cves": [
+        "CVE-2026-33940"
+      ],
+      "url": "https://github.com/advisories/GHSA-xhpv-hc6g-r9c6",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-9cx6-37pm-9jff": {
+      "id": 1115694,
+      "severity": "high",
+      "module": "handlebars",
+      "title": "Handlebars.js has Denial of Service via Malformed Decorator Syntax in Template Compilation",
+      "cves": [
+        "CVE-2026-33939"
+      ],
+      "url": "https://github.com/advisories/GHSA-9cx6-37pm-9jff",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-r5fr-rjxr-66jc": {
+      "id": 1115806,
+      "severity": "high",
+      "module": "lodash",
+      "title": "lodash vulnerable to Code Injection via `_.template` imports key names",
+      "cves": [
+        "CVE-2026-4800"
+      ],
+      "url": "https://github.com/advisories/GHSA-r5fr-rjxr-66jc",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-q4gf-8mx6-v5v3": {
+      "id": 1116376,
+      "severity": "high",
+      "module": "next",
+      "title": "Next.js has a Denial of Service with Server Components",
+      "cves": [],
+      "url": "https://github.com/advisories/GHSA-q4gf-8mx6-v5v3",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-xjpj-3mr7-gcpf": {
+      "id": 1117465,
+      "severity": "high",
+      "module": "handlebars",
+      "title": "Handlebars.js has JavaScript Injection in CLI Precompiler via Unescaped Names and Options",
+      "cves": [
+        "CVE-2026-33941"
+      ],
+      "url": "https://github.com/advisories/GHSA-xjpj-3mr7-gcpf",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-xq3m-2v4x-88gg": {
+      "id": 1117571,
+      "severity": "critical",
+      "module": "protobufjs",
+      "title": "Arbitrary code execution in protobufjs",
+      "cves": [
+        "CVE-2026-41242"
+      ],
+      "url": "https://github.com/advisories/GHSA-xq3m-2v4x-88gg",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-q3j6-qgpj-74h6": {
+      "id": 1117870,
+      "severity": "high",
+      "module": "fast-uri",
+      "title": "fast-uri vulnerable to path traversal via percent-encoded dot segments",
+      "cves": [
+        "CVE-2026-6321"
+      ],
+      "url": "https://github.com/advisories/GHSA-q3j6-qgpj-74h6",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-v39h-62p7-jpjc": {
+      "id": 1117884,
+      "severity": "high",
+      "module": "fast-uri",
+      "title": "fast-uri vulnerable to host confusion via percent-encoded authority delimiters",
+      "cves": [
+        "CVE-2026-6322"
+      ],
+      "url": "https://github.com/advisories/GHSA-v39h-62p7-jpjc",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-8h8q-6873-q5fj": {
+      "id": 1117931,
+      "severity": "high",
+      "module": "next",
+      "title": "Next.js Vulnerable to Denial of Service with Server Components",
+      "cves": [],
+      "url": "https://github.com/advisories/GHSA-8h8q-6873-q5fj",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-66ff-xgx4-vchm": {
+      "id": 1118641,
+      "severity": "high",
+      "module": "protobufjs",
+      "title": "protobuf.js: Code injection through bytes field defaults in generated toObject code",
+      "cves": [
+        "CVE-2026-44293"
+      ],
+      "url": "https://github.com/advisories/GHSA-66ff-xgx4-vchm",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-75px-5xx7-5xc7": {
+      "id": 1118928,
+      "severity": "high",
+      "module": "protobufjs",
+      "title": "protobuf.js: Code generation gadget after prototype pollution",
+      "cves": [
+        "CVE-2026-44291"
+      ],
+      "url": "https://github.com/advisories/GHSA-75px-5xx7-5xc7",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-jvwf-75h9-cwgg": {
+      "id": 1118930,
+      "severity": "high",
+      "module": "protobufjs",
+      "title": "protobuf.js: Process-wide denial of service through unsafe option paths",
+      "cves": [
+        "CVE-2026-44290"
+      ],
+      "url": "https://github.com/advisories/GHSA-jvwf-75h9-cwgg",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-685m-2w69-288q": {
+      "id": 1118932,
+      "severity": "high",
+      "module": "protobufjs",
+      "title": "protobuf.js: Denial of service through unbounded protobuf recursion",
+      "cves": [
+        "CVE-2026-44289"
+      ],
+      "url": "https://github.com/advisories/GHSA-685m-2w69-288q",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-26hh-7cqf-hhc6": {
+      "id": 1118939,
+      "severity": "high",
+      "module": "next",
+      "title": "Next.js has a Middleware / Proxy bypass in App Router applications via segment-prefetch routes - Incomplete Fix Follow-Up",
+      "cves": [
+        "CVE-2026-45109"
+      ],
+      "url": "https://github.com/advisories/GHSA-26hh-7cqf-hhc6",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-mg66-mrh9-m8jx": {
+      "id": 1118950,
+      "severity": "high",
+      "module": "next",
+      "title": "Next.js vulnerable to Denial of Service via connection exhaustion in applications using Cache Components",
+      "cves": [
+        "CVE-2026-44579"
+      ],
+      "url": "https://github.com/advisories/GHSA-mg66-mrh9-m8jx",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-c4j6-fc7j-m34r": {
+      "id": 1118954,
+      "severity": "high",
+      "module": "next",
+      "title": "Next.js vulnerable to server-side request forgery in applications using WebSocket upgrades",
+      "cves": [
+        "CVE-2026-44578"
+      ],
+      "url": "https://github.com/advisories/GHSA-c4j6-fc7j-m34r",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-492v-c6pp-mqqv": {
+      "id": 1118956,
+      "severity": "high",
+      "module": "next",
+      "title": "Next.js has a Middleware / Proxy bypass through dynamic route parameter injection",
+      "cves": [
+        "CVE-2026-44574"
+      ],
+      "url": "https://github.com/advisories/GHSA-492v-c6pp-mqqv",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-267c-6grr-h53f": {
+      "id": 1118960,
+      "severity": "high",
+      "module": "next",
+      "title": "Next.js has a Middleware / Proxy bypass in App Router applications via segment-prefetch routes",
+      "cves": [
+        "CVE-2026-44575"
+      ],
+      "url": "https://github.com/advisories/GHSA-267c-6grr-h53f",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-36qx-fr4f-26g5": {
+      "id": 1118962,
+      "severity": "high",
+      "module": "next",
+      "title": "Next.js has a Middleware / Proxy bypass in Pages Router applications using i18n",
+      "cves": [
+        "CVE-2026-44573"
+      ],
+      "url": "https://github.com/advisories/GHSA-36qx-fr4f-26g5",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-w7jw-789q-3m8p": {
+      "id": 1120422,
+      "severity": "critical",
+      "module": "shell-quote",
+      "title": "shell-quote quote() does not escape newlines in object .op values",
+      "cves": [
+        "CVE-2026-9277"
+      ],
+      "url": "https://github.com/advisories/GHSA-w7jw-789q-3m8p",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-5375-pq7m-f5r2": {
+      "id": 1120587,
+      "severity": "high",
+      "module": "@grpc/grpc-js",
+      "title": "@grpc/grpc-js: A malformed request can cause a server crash",
+      "cves": [
+        "CVE-2026-48068"
+      ],
+      "url": "https://github.com/advisories/GHSA-5375-pq7m-f5r2",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-99f4-grh7-6pcq": {
+      "id": 1120593,
+      "severity": "high",
+      "module": "@grpc/grpc-js",
+      "title": "@grpc/grpc-js: An incoming malformed compressed message can cause a client or server crash",
+      "cves": [
+        "CVE-2026-48069"
+      ],
+      "url": "https://github.com/advisories/GHSA-99f4-grh7-6pcq",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-ph9p-34f9-6g65": {
+      "id": 1120654,
+      "severity": "high",
+      "module": "tmp",
+      "title": "tmp has Path Traversal via unsanitized prefix/postfix that enables directory escape",
+      "cves": [
+        "CVE-2026-44705"
+      ],
+      "url": "https://github.com/advisories/GHSA-ph9p-34f9-6g65",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-96hv-2xvq-fx4p": {
+      "id": 1120731,
+      "severity": "high",
+      "module": "ws",
+      "title": "ws: Memory exhaustion DoS from tiny fragments and data chunks",
+      "cves": [
+        "CVE-2026-48779"
+      ],
+      "url": "https://github.com/advisories/GHSA-96hv-2xvq-fx4p",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-hmw2-7cc7-3qxx": {
+      "id": 1120745,
+      "severity": "high",
+      "module": "form-data",
+      "title": "form-data: CRLF injection in form-data via unescaped multipart field names and filenames",
+      "cves": [
+        "CVE-2026-12143"
+      ],
+      "url": "https://github.com/advisories/GHSA-hmw2-7cc7-3qxx",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    },
+    "GHSA-wcpc-wj8m-hjx6": {
+      "id": 1120799,
+      "severity": "high",
+      "module": "protobufjs",
+      "title": "protobufjs: Denial of service through unbounded Any expansion during JSON conversion",
+      "cves": [
+        "CVE-2026-48712"
+      ],
+      "url": "https://github.com/advisories/GHSA-wcpc-wj8m-hjx6",
+      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "owner": "giorgio"
+    }
+  }
+}
