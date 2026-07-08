@@ -1,10 +1,10 @@
-# ADR-597: Store-backed Ribbon Toggle Widget SSoT (`RibbonToggleWidget` + `RibbonInlineToggleButton`)
+# ADR-599: Store-backed Ribbon Toggle Widget SSoT (`RibbonToggleWidget` + `RibbonInlineToggleButton`)
 
 ## Status
 ✅ **ACTIVE — 2026-07-08** — De-duplication of the 13 store-backed inline ribbon toggles under `src/subapps/dxf-viewer/ui/ribbon/components/*Toggle.tsx` (View-tab combobox rows: HeatLoad / PipeSizing / Balancing / Utilization / AnalysisDiagrams / Reinforcement / FinishSkin / ColorBySystem / HideBim / DrainPipe / MepWire / DimRowHandles / DisciplineVisibility). Each was a ~55-line component repeating the identical `<span dxf-ribbon-combobox-row><label/><button aria-pressed …>{icon}{actionLabel}</button></span>` markup, differing only in the store flag it reads/writes, its on/off icons, and its i18n keys. Collapsed onto a shared presentational **atom** (`RibbonInlineToggleButton`) + a config-driven **shell** (`RibbonToggleWidget`) so a toggle is now a ~10-line config object.
 
 **Related:**
-- **ADR-585 / 586 / 588 / 590 / 591 / 592 / 593 / 594 / 595** — same 2026-07-08 de-duplication sweep, same archetype (**shared primitive + per-instance binding**), different buckets. ADR-597 is the ribbon-UI bucket (TIER B / B3).
+- **ADR-585 / 586 / 588 / 590 / 591 / 592 / 593 / 594 / 595** — same 2026-07-08 de-duplication sweep, same archetype (**shared primitive + per-instance binding**), different buckets. ADR-599 is the ribbon-UI bucket (TIER B / B3).
 - **ADR-584** (jscpd Clone Ratchet, CHECK 3.28) — the token-based detector that gates re-introduction (this ADR's chosen guard).
 - **ADR-345 / ADR-547** (`RibbonToggleButton`) — the *command-context/dispatch-driven* ribbon toggle (`dxf-ribbon-btn` inside the command tables). **Distinct** from this SSoT: those are keyed by `commandKey` and read state via `useRibbonToggleState`, whereas the widgets here bind directly to a subapp store. No overlap, no collision.
 - **ADR-408 / ADR-422 / ADR-449 / ADR-456 / ADR-483 / ADR-485 / ADR-375 / ADR-362 / ADR-405** — the individual toggles' behaviours, reproduced 1:1.
