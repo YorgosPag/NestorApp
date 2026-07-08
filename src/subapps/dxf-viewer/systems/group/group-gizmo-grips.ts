@@ -71,7 +71,7 @@ export function getGroupGizmoGrips(group: GroupEntity, bounds: GroupSelectionBou
       type: 'vertex',
       position: bounds.center,
       movesEntity: true,
-      groupGripKind: GROUP_MOVE_KIND,
+      gripKind: { on: 'group', kind: GROUP_MOVE_KIND },
     },
     {
       entityId: group.id,
@@ -79,7 +79,7 @@ export function getGroupGizmoGrips(group: GroupEntity, bounds: GroupSelectionBou
       type: 'vertex',
       position: rectLocalWorld(frame, 0, rotOffsetY),
       movesEntity: false,
-      groupGripKind: GROUP_ROTATION_KIND,
+      gripKind: { on: 'group', kind: GROUP_ROTATION_KIND },
     },
   ];
 }

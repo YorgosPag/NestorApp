@@ -17,7 +17,7 @@
  * `createBimEntityPersistenceHook`. The catalog side-effect deps (store / persist
  * / audit / EventBus) are built HERE from `category` + `service` — only the
  * command *construction* is injected so each entity keeps its own tested command
- * (per-entity `Update*/Delete*FamilyTypeCommand`); migrating those to the generic
+ * (per-entity `Update…` / `Delete…FamilyTypeCommand`); migrating those to the generic
  * `UpdateFamilyTypeCommand` is a separate, deferred ratchet (shared working tree).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-604-generic-family-type-framework.md
