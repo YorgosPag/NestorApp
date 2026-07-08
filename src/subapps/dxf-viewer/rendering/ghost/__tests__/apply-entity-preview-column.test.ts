@@ -25,7 +25,7 @@ describe('applyEntityPreview — column (ADR-397)', () => {
       gripIndex: 0,
       delta: { x: 300, y: 150 },
       movesEntity: true,
-      columnGripKind: 'column-center',
+      gripKind: { on: 'column', kind: 'column-center' },
       anchorPos: { x: 0, y: 0 },
     };
     const ghost = applyEntityPreview(col as unknown as DxfEntityUnion, preview) as unknown as ColumnEntity;
@@ -45,7 +45,7 @@ describe('applyEntityPreview — column (ADR-397)', () => {
       gripIndex: 1,
       delta: { x: -100, y: 100 },
       movesEntity: false,
-      columnGripKind: 'column-rotation',
+      gripKind: { on: 'column', kind: 'column-rotation' },
       anchorPos: { x: 100, y: 0 },
       rotatePivot: { x: 0, y: 0 },
     };
@@ -60,7 +60,8 @@ describe('applyEntityPreview — column (ADR-397)', () => {
     const col = makeColumn({ x: 0, y: 0 });
     const zero: EntityPreviewTransform = {
       entityId: col.id, gripIndex: 0, delta: { x: 0, y: 0 }, movesEntity: true,
-      columnGripKind: 'column-center', anchorPos: { x: 0, y: 0 },
+      gripKind: { on: 'column', kind: 'column-center' },
+      anchorPos: { x: 0, y: 0 },
     };
     expect(applyEntityPreview(col as unknown as DxfEntityUnion, zero)).toBe(col);
   });

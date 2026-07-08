@@ -55,6 +55,7 @@ import {
   pillPath,
 } from '../../rendering/utils/canvas-pill';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+import { gripKindOf } from '../grip-kinds';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
@@ -101,7 +102,7 @@ function buildBeamLabel(
   preview: DxfGripDragPreview,
   originalParams: BeamParams,
 ): string | null {
-  const { beamGripKind } = preview;
+  const beamGripKind = gripKindOf(preview, 'beam');
   if (!beamGripKind) return null;
   if (
     beamGripKind === 'beam-start' ||
@@ -139,7 +140,7 @@ function buildFoundationLabel(
   preview: DxfGripDragPreview,
   originalParams: FoundationParams,
 ): string | null {
-  const { foundationGripKind } = preview;
+  const foundationGripKind = gripKindOf(preview, 'foundation');
   if (!foundationGripKind) return null;
   if (foundationGripKind === 'foundation-center' || foundationGripKind === 'foundation-rotation') return null;
 
@@ -190,8 +191,8 @@ export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
   // δείχνει πλέον το πλούσιο HUD στο `useGripGhostPreview`.
   const isDimPreview =
     dragPreview !== null &&
-    (dragPreview.beamGripKind !== undefined ||
-      dragPreview.foundationGripKind !== undefined);
+    (gripKindOf(dragPreview, 'beam') !== undefined ||
+      gripKindOf(dragPreview, 'foundation') !== undefined);
 
   // cursorMode: 'none' — cursor comes via dragPreview.anchorPos + delta, not
   // useCursorWorldPosition. effectiveCursor will be null (unused below).
@@ -204,7 +205,9 @@ export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
     // the already-cleared canvas. Two clears in the same frame = label wipe.
     if (!dragPreview?.anchorPos) return;
 
-    const { beamGripKind, foundationGripKind, anchorPos, delta, entityId } = dragPreview;
+    const beamGripKind = gripKindOf(dragPreview, 'beam');
+    const foundationGripKind = gripKindOf(dragPreview, 'foundation');
+    const { anchorPos, delta, entityId } = dragPreview;
     if (!beamGripKind && !foundationGripKind) return;
 
     const lid = levelManager.currentLevelId;

@@ -110,6 +110,7 @@ import {
   paintGripMoveClearanceDims,
   drawHatchGradientHandleMarker,
 } from './grip-ghost-preview-overlay-helpers';
+import { gripKindOf } from '../grip-kinds';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -151,13 +152,18 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
   const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
     if (!dragPreview) return;
 
+    // ADR-602 Stage 4 — hoisted once (read ×5 across this callback: isHatchDrag +
+    // isHatchOriginDrag/isHatchAngleDrag below). hatchGripKind is invariant across the
+    // `dp` reassignments below (every spread preserves it from `dragPreview`).
+    const hatchKind = gripKindOf(dragPreview, 'hatch');
+
     // Live recompute of whatever the cursor drives 1:1:
     //  · CURSOR-DRIVEN ROTATION (free rotate / 6-click align-end) → recompute the sweep
     //    (delta + angle readout) from the cursor — Revit/AutoCAD rotate tracks 1:1.
     //  · TRANSLATE / parametric RESIZE → recompute the move delta from the cursor.
     // Excluded (kept on the React `dragPreview`): TYPED-angle rotation (keyed value, NOT
     // cursor-driven) and HATCH-gradient drags (bespoke origin/angle marker geometry).
-    const isHatchDrag = !!dragPreview.hatchGripKind;
+    const isHatchDrag = !!hatchKind;
     const isRotation = !!(dragPreview.rotatePivot || dragPreview.rotateRefLine || dragPreview.rotateAlignLine);
     let dp = dragPreview;
     // ADR-397 / ADR-357 — POLAR + AutoAlign ίχνη κατά την περιστροφή (parity με σχεδίαση). Resolve
@@ -203,9 +209,12 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // ADR-513 §grip-parity — length/angle lock στο ghost της ΕΠΕΚΤΑΣΗΣ ΑΚΡΟΥ γραμμής (grip 0/1). Ο
     // ΙΔΙΟΣ helper τρέχει και στο commit (grip-mouseup) → preview ≡ commit. No-op όταν δεν υπάρχει lock.
     let endpointPolar: EndpointReshapePolarLock | null = null;
+    // ADR-602 Stage 4 — hoisted once (read ×2 below). lineGripKind is invariant across the
+    // `dp` reassignment inside this block (the spread at the `lockedDelta` branch preserves it).
+    const lineKind = gripKindOf(dp, 'line');
     if (!isRotation && !isHatchDrag && dp.anchorPos && effectiveCursor) {
       const lockedDelta = resolveLineEndpointLockedDelta(
-        entity, dp.gripIndex, dp.lineGripKind, dp.anchorPos, effectiveCursor,
+        entity, dp.gripIndex, lineKind, dp.anchorPos, effectiveCursor,
       );
       if (lockedDelta) {
         dp = { ...dp, delta: lockedDelta };
@@ -215,7 +224,7 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
         // Ο ίδιος resolver τρέχει στο commit (grip-mouseup) → preview ≡ commit. No-op όταν POLAR off,
         // ORTHO on, δεν είναι άκρο, ή ο κέρσορας δεν κούμπωσε σε polar ακτίνα.
         endpointPolar = resolveEndpointReshapePolarLock(
-          entity, dp.gripIndex, dp.lineGripKind, dp.anchorPos, effectiveCursor,
+          entity, dp.gripIndex, lineKind, dp.anchorPos, effectiveCursor,
           // ADR-508 §grip-tracking — καθολικό POLAR σε reshape λαβές πολυγωνικών BIM (κολόνα/πλάκα/…).
           resolveActiveFootprintGripKind(dp),
         );
@@ -355,9 +364,9 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // Σχεδιάζεται ΑΝΕΞΑΡΤΗΤΑ από το delta (ακόμα & στο mousedown πριν την κίνηση) ώστε να
     // μη «εξαφανίζεται» — το committed grip κρύβεται από το main canvas στο active drag.
     const isHatchOriginDrag =
-      !!dp.hatchGripKind && isHatchOriginGripKind(dp.hatchGripKind) && entity.type === 'hatch';
+      !!hatchKind && isHatchOriginGripKind(hatchKind) && entity.type === 'hatch';
     const isHatchAngleDrag =
-      !!dp.hatchGripKind && isHatchAngleGripKind(dp.hatchGripKind) && entity.type === 'hatch';
+      !!hatchKind && isHatchAngleGripKind(hatchKind) && entity.type === 'hatch';
 
     // applyEntityPreview returns the *same* reference for zero-delta or unsupported
     // types → skip the ghost overlay (avoids a redundant paint). The hatch-origin

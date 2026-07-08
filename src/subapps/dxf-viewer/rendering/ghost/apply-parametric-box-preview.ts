@@ -47,6 +47,7 @@ import { computeFurnitureGeometry } from '../../bim/furniture/furniture-geometry
 import type { FurnitureEntity } from '../../bim/types/furniture-types';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import type { EntityPreviewTransform } from './entity-preview-types';
+import { gripKindOf } from '../../hooks/grip-kinds';
 
 /**
  * Apply the box-like parametric grip-drag preview for column / foundation /
@@ -58,11 +59,17 @@ export function applyParametricBoxPreview(
   entity: DxfEntityUnion,
   preview: EntityPreviewTransform,
 ): DxfEntityUnion | null {
-  const {
-    delta, anchorPos, rotatePivot,
-    beamGripKind, columnGripKind, foundationGripKind, mepFixtureGripKind,
-    electricalPanelGripKind, mepManifoldGripKind, mepSegmentGripKind, furnitureGripKind,
-  } = preview;
+  const { delta, anchorPos, rotatePivot } = preview;
+  // ADR-602 Stage 4 — read each discriminator via the tagged SSoT accessor (populated by
+  // `toEntityPreviewTransform` beside the legacy fields). Same names + types → dispatch below unchanged.
+  const beamGripKind = gripKindOf(preview, 'beam');
+  const columnGripKind = gripKindOf(preview, 'column');
+  const foundationGripKind = gripKindOf(preview, 'foundation');
+  const mepFixtureGripKind = gripKindOf(preview, 'mep-fixture');
+  const electricalPanelGripKind = gripKindOf(preview, 'electrical-panel');
+  const mepManifoldGripKind = gripKindOf(preview, 'mep-manifold');
+  const mepSegmentGripKind = gripKindOf(preview, 'mep-segment');
+  const furnitureGripKind = gripKindOf(preview, 'furniture');
 
   // ── ADR-397 — parametric column live preview (move / rotation / resize) ────
   // Mirror of the wall branch: routes through `applyColumnGripDrag` so the live

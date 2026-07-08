@@ -71,6 +71,7 @@ import { resolveOpeningAltMove, openingRehostToleranceWorld } from '../../bim/wa
 import { computeOpeningGeometry } from '../../bim/geometry/opening-geometry';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import type { EntityPreviewTransform } from './entity-preview-types';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { unwrapStair, applyClassicEntityPreview } from './apply-entity-preview-helpers';
 import { applyParametricBoxPreview } from './apply-parametric-box-preview';
 
@@ -141,7 +142,23 @@ export function applyEntityPreview(
   ctx?: ApplyEntityPreviewContext,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, floorFinishGripKind, hatchGripKind, textGripKind, lineGripKind, arcGripKind, polylineGripKind, groupGripKind, annotationSymbolGripKind, anchorPos, rotatePivot } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, anchorPos, rotatePivot } = preview;
+  // ADR-602 Stage 4 — read each discriminator via the tagged SSoT accessor (populated by
+  // `toEntityPreviewTransform` beside the legacy fields). Same variable names + types keep
+  // the per-entity dispatch below unchanged.
+  const stairGripKind = gripKindOf(preview, 'stair');
+  const wallGripKind = gripKindOf(preview, 'wall');
+  const slabGripKind = gripKindOf(preview, 'slab');
+  const slabOpeningGripKind = gripKindOf(preview, 'slab-opening');
+  const roofGripKind = gripKindOf(preview, 'roof');
+  const floorFinishGripKind = gripKindOf(preview, 'floor-finish');
+  const hatchGripKind = gripKindOf(preview, 'hatch');
+  const textGripKind = gripKindOf(preview, 'text');
+  const lineGripKind = gripKindOf(preview, 'line');
+  const arcGripKind = gripKindOf(preview, 'arc');
+  const polylineGripKind = gripKindOf(preview, 'polyline');
+  const groupGripKind = gripKindOf(preview, 'group');
+  const annotationSymbolGripKind = gripKindOf(preview, 'annotation-symbol');
   if (delta.x === 0 && delta.y === 0) return entity;
 
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
