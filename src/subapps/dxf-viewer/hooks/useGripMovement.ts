@@ -76,8 +76,45 @@ const DEBUG_MODE = process.env.NODE_ENV === 'development';
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (extracted to grip-types.ts — SRP)
 // ============================================================================
-export type { GripType, StairGripKind, DimensionGripKind, WallGripKind, OpeningGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, BeamGripKind, ColumnGripKind, FoundationGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, XLineGripKind, RayGripKind, PolylineGripKind, CircleGripKind, ArcGripKind, LineGripKind, GroupGripKind, TextGripKind, GripInfo, GripDragState } from './grip-types';
+// Re-export every grip type from the SSoT (`grip-types`, which itself re-exports
+// `grip-kinds`) without re-typing the 33 names — ADR-583 / N.18, no twin list.
+export type * from './grip-types';
 import type { GripInfo, GripDragState } from './grip-types';
+
+// ── Scene-entity array helpers (SSoT for the ISceneManager vertex/order ops) ──
+// ADR-583 / N.18 — the three vertex mutators (update/insert/remove) and the two
+// reorder ops (reorder/moveToIndex) shared byte-identical bodies; extracted here
+// so each method below carries only its own one-line mutation.
+
+/** Map `entities`, cloning the `vertices` array of the entity matching `id` and
+ *  applying `mutate` to the clone. Non-matching / vertex-less entities pass through. */
+function mapEntityVertices(
+  entities: readonly AnySceneEntity[],
+  id: string,
+  mutate: (vertices: Point2D[]) => void,
+): AnySceneEntity[] {
+  return entities.map((e) => {
+    if (e.id === id && 'vertices' in e && Array.isArray(e.vertices)) {
+      const vertices = [...e.vertices] as Point2D[];
+      mutate(vertices);
+      return { ...e, vertices } as AnySceneEntity;
+    }
+    return e;
+  });
+}
+
+/** Splice the entity matching `entityId` out of `entities`, returning the remaining
+ *  array plus the detached entity (or `null` when absent). */
+function detachEntity(
+  entities: readonly AnySceneEntity[],
+  entityId: string,
+): { rest: AnySceneEntity[]; entity: AnySceneEntity } | null {
+  const idx = entities.findIndex((e) => e.id === entityId);
+  if (idx === -1) return null;
+  const rest = [...entities];
+  const [entity] = rest.splice(idx, 1);
+  return { rest, entity };
+}
 /**
  * Options for useGripMovement hook
  */
@@ -222,50 +259,28 @@ export function useGripMovement({
       },
       updateVertex: (id: string, vertexIndex: number, position: Point2D) => {
         const scene = getLevelScene(currentLevelId);
-        if (scene) {
-          const updatedEntities = scene.entities.map(e => {
-            if (e.id === id && 'vertices' in e && Array.isArray(e.vertices)) {
-              const vertices = [...e.vertices];
-              if (vertexIndex >= 0 && vertexIndex < vertices.length) {
-                vertices[vertexIndex] = position;
-              }
-              return { ...e, vertices };
-            }
-            return e;
-          });
-          setLevelScene(currentLevelId, { ...scene, entities: updatedEntities });
-        }
+        if (!scene) return;
+        const updatedEntities = mapEntityVertices(scene.entities, id, (vertices) => {
+          if (vertexIndex >= 0 && vertexIndex < vertices.length) vertices[vertexIndex] = position;
+        });
+        setLevelScene(currentLevelId, { ...scene, entities: updatedEntities });
       },
       insertVertex: (id: string, insertIndex: number, position: Point2D) => {
         const scene = getLevelScene(currentLevelId);
-        if (scene) {
-          const updatedEntities = scene.entities.map(e => {
-            if (e.id === id && 'vertices' in e && Array.isArray(e.vertices)) {
-              const vertices = [...e.vertices];
-              const safeIndex = Math.max(0, Math.min(insertIndex, vertices.length));
-              vertices.splice(safeIndex, 0, position);
-              return { ...e, vertices };
-            }
-            return e;
-          });
-          setLevelScene(currentLevelId, { ...scene, entities: updatedEntities });
-        }
+        if (!scene) return;
+        const updatedEntities = mapEntityVertices(scene.entities, id, (vertices) => {
+          const safeIndex = Math.max(0, Math.min(insertIndex, vertices.length));
+          vertices.splice(safeIndex, 0, position);
+        });
+        setLevelScene(currentLevelId, { ...scene, entities: updatedEntities });
       },
       removeVertex: (id: string, vertexIndex: number) => {
         const scene = getLevelScene(currentLevelId);
-        if (scene) {
-          const updatedEntities = scene.entities.map(e => {
-            if (e.id === id && 'vertices' in e && Array.isArray(e.vertices)) {
-              const vertices = [...e.vertices];
-              if (vertexIndex >= 0 && vertexIndex < vertices.length) {
-                vertices.splice(vertexIndex, 1);
-              }
-              return { ...e, vertices };
-            }
-            return e;
-          });
-          setLevelScene(currentLevelId, { ...scene, entities: updatedEntities });
-        }
+        if (!scene) return;
+        const updatedEntities = mapEntityVertices(scene.entities, id, (vertices) => {
+          if (vertexIndex >= 0 && vertexIndex < vertices.length) vertices.splice(vertexIndex, 1);
+        });
+        setLevelScene(currentLevelId, { ...scene, entities: updatedEntities });
       },
       getVertices: (id: string): Point2D[] | undefined => {
         const scene = getLevelScene(currentLevelId);
@@ -294,23 +309,21 @@ export function useGripMovement({
       reorderEntity: (entityId: string, direction: 'front' | 'back') => {
         const scene = getLevelScene(currentLevelId);
         if (!scene) return;
-        const idx = scene.entities.findIndex((e) => e.id === entityId);
-        if (idx === -1) return;
-        const entities = [...scene.entities];
-        const [entity] = entities.splice(idx, 1);
-        if (direction === 'front') entities.push(entity);
-        else entities.unshift(entity);
-        setLevelScene(currentLevelId, { ...scene, entities });
+        const detached = detachEntity(scene.entities, entityId);
+        if (!detached) return;
+        const { rest, entity } = detached;
+        if (direction === 'front') rest.push(entity);
+        else rest.unshift(entity);
+        setLevelScene(currentLevelId, { ...scene, entities: rest });
       },
       moveEntityToIndex: (entityId: string, targetIndex: number) => {
         const scene = getLevelScene(currentLevelId);
         if (!scene) return;
-        const idx = scene.entities.findIndex((e) => e.id === entityId);
-        if (idx === -1) return;
-        const entities = [...scene.entities];
-        const [entity] = entities.splice(idx, 1);
-        entities.splice(targetIndex, 0, entity);
-        setLevelScene(currentLevelId, { ...scene, entities });
+        const detached = detachEntity(scene.entities, entityId);
+        if (!detached) return;
+        const { rest, entity } = detached;
+        rest.splice(targetIndex, 0, entity);
+        setLevelScene(currentLevelId, { ...scene, entities: rest });
       },
     };
   }, [currentLevelId, getLevelScene, setLevelScene]);

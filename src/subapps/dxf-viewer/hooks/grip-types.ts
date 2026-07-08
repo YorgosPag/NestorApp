@@ -39,44 +39,14 @@ import type {
   ArcGripKind,
   LineGripKind,
   GroupGripKind,
+  AnnotationSymbolGripKind,
   TextGripKind,
 } from './grip-kinds';
 
 // Re-export the grip-kind unions for backward compatibility (call-sites import
-// these from `grip-types`).
-export type {
-  GripType,
-  StairGripKind,
-  DimensionGripKind,
-  WallGripKind,
-  OpeningGripKind,
-  SlabGripKind,
-  SlabOpeningGripKind,
-  RoofGripKind,
-  FloorFinishGripKind,
-  HatchGripKind,
-  MepUnderfloorGripKind,
-  BeamGripKind,
-  ColumnGripKind,
-  FoundationGripKind,
-  MepFixtureGripKind,
-  ElectricalPanelGripKind,
-  MepManifoldGripKind,
-  MepRadiatorGripKind,
-  MepBoilerGripKind,
-  MepWaterHeaterGripKind,
-  FurnitureGripKind,
-  FloorplanSymbolGripKind,
-  MepSegmentGripKind,
-  XLineGripKind,
-  RayGripKind,
-  PolylineGripKind,
-  CircleGripKind,
-  ArcGripKind,
-  LineGripKind,
-  GroupGripKind,
-  TextGripKind,
-} from './grip-kinds';
+// these from `grip-types`). `export type *` mirrors the import list above without
+// re-typing the 33 names — ADR-583 / N.18, no parallel twin list.
+export type * from './grip-kinds';
 
 /** Grip information */
 export interface GripInfo {
@@ -295,6 +265,14 @@ export interface GripInfo {
    * are suppressed), NOT `computeDxfEntityGrips`.
    */
   groupGripKind?: GroupGripKind;
+  /**
+   * ADR-583 — annotation symbol (North arrow) grip discriminator. Present on the two
+   * whole-entity handles (move cross + rotation) of a lightweight `annotation-symbol`.
+   * Routes commit through the whole-entity move (`calculateMovedGeometry` case
+   * 'annotation-symbol') / `RotateEntityCommand` (`rotateEntity` case 'annotation-symbol')
+   * — ΜΗΔΕΝ bespoke transform. Mirror of `arc-*` (move + rotation, no resize).
+   */
+  annotationSymbolGripKind?: AnnotationSymbolGripKind;
 }
 
 /** Grip drag state */

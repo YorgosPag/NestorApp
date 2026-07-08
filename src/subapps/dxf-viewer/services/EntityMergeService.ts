@@ -23,6 +23,7 @@ import type {
 import { entityToSegments, samePoint, arePointsCollinear } from '../utils/geometry/GeometryUtils';
 import { chainSegmentsDetailed } from '../utils/geometry/SegmentChaining';
 import { publishHighlight } from '../events/selection-bus';
+import { normalizeAngleDeg } from '../rendering/entities/shared/geometry-angle-utils';
 // ADR-065: Centralized ID Generation (crypto-secure, collision-resistant)
 import { generateEntityId } from '../systems/entity-creation/utils';
 // 🏢 ADR-186: Centralized JOIN Tolerances
@@ -295,7 +296,7 @@ function buildMergedEntity(
       // Use chain endpoints to compute start/end angles
       const startAngleRad = Math.atan2(chain[0].y - firstArc.center.y, chain[0].x - firstArc.center.x);
       const endAngleRad = Math.atan2(chain[chain.length - 1].y - firstArc.center.y, chain[chain.length - 1].x - firstArc.center.x);
-      const radToDeg = (r: number) => ((r * 180) / Math.PI + 360) % 360;
+      const radToDeg = (r: number) => normalizeAngleDeg((r * 180) / Math.PI);
       const result: ArcEntity & Pick<typeof base, 'name'> = {
         ...base,
         type: 'arc' as const,

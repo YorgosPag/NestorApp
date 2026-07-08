@@ -6,6 +6,8 @@
 import type { Entity, CircleEntity } from '../../../types/entities';
 import { isCircleEntity } from '../../../types/entities';
 import type { PathSample, PathSamplerStrategy } from '../path-arc-length-sampler';
+import { clamp01 } from '../../../utils/scalar-math';
+import { circularArcSample } from './path-sample-math';
 
 const TAU = Math.PI * 2;
 const RAD_TO_DEG = 180 / Math.PI;
@@ -20,19 +22,13 @@ export class CircleStrategy implements PathSamplerStrategy<CircleEntity> {
   }
 
   sample(entity: CircleEntity, u: number, reversed: boolean): PathSample {
-    const cu = Math.max(0, Math.min(1, u));
+    const cu = clamp01(u);
     if (entity.radius === 0) {
       return { position: { x: entity.center.x, y: entity.center.y }, tangentDeg: 0 };
     }
     const dir = reversed ? -1 : +1;
     const angleRad = dir * cu * TAU;
     const angleDeg = angleRad * RAD_TO_DEG;
-    return {
-      position: {
-        x: entity.center.x + entity.radius * Math.cos(angleRad),
-        y: entity.center.y + entity.radius * Math.sin(angleRad),
-      },
-      tangentDeg: angleDeg + dir * 90,
-    };
+    return circularArcSample(entity.center, entity.radius, angleRad, angleDeg, dir);
   }
 }

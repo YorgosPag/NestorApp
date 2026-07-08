@@ -7,6 +7,8 @@ import type { Entity, ArcEntity } from '../../../types/entities';
 import { isArcEntity } from '../../../types/entities';
 import type { PathSample, PathSamplerStrategy } from '../path-arc-length-sampler';
 import { normalizeAngleDeg } from '../../../rendering/entities/shared/geometry-angle-utils';
+import { clamp01 } from '../../../utils/scalar-math';
+import { circularArcSample } from './path-sample-math';
 
 const DEG_TO_RAD = Math.PI / 180;
 
@@ -31,7 +33,7 @@ export class ArcStrategy implements PathSamplerStrategy<ArcEntity> {
   }
 
   sample(entity: ArcEntity, u: number, reversed: boolean): PathSample {
-    const cu = Math.max(0, Math.min(1, u));
+    const cu = clamp01(u);
     const sweep = sweepDegFor(entity);
 
     if (sweep === 0 || entity.radius === 0) {
@@ -49,12 +51,6 @@ export class ArcStrategy implements PathSamplerStrategy<ArcEntity> {
     const angleDeg = effectiveStart + dir * cu * sweep;
     const angleRad = angleDeg * DEG_TO_RAD;
 
-    return {
-      position: {
-        x: entity.center.x + entity.radius * Math.cos(angleRad),
-        y: entity.center.y + entity.radius * Math.sin(angleRad),
-      },
-      tangentDeg: angleDeg + dir * 90,
-    };
+    return circularArcSample(entity.center, entity.radius, angleRad, angleDeg, dir);
   }
 }

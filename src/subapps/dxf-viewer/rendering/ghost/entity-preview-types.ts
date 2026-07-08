@@ -30,6 +30,7 @@ import type {
   ArcGripKind,
   PolylineGripKind,
   GroupGripKind,
+  AnnotationSymbolGripKind,
   TextGripKind,
 } from '../../hooks/grip-types';
 import type { WallGripKind } from '../../hooks/useGripMovement';
@@ -169,5 +170,13 @@ export interface EntityPreviewTransform {
    * The ghost RENDER expands the transformed group + draws each member (`useGripGhostPreview`).
    */
   readonly groupGripKind?: GroupGripKind;
+  /**
+   * ADR-583 — annotation symbol (North arrow) discriminator. `'annotation-symbol-move'`
+   * translates the insertion point by `delta` (mirror `calculateMovedGeometry` case
+   * 'annotation-symbol'); `'annotation-symbol-rotation'` spins the glyph about
+   * `rotatePivot` via `applyPrimitiveRotationDrag` → `rotateEntity` case
+   * 'annotation-symbol' (the SAME engine the commit runs). `anchorPos` = sweep start.
+   */
+  readonly annotationSymbolGripKind?: AnnotationSymbolGripKind;
   readonly anchorPos?: Point2D;
 }

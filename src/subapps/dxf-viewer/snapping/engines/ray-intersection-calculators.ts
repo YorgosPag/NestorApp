@@ -13,6 +13,7 @@ import type { Entity } from '../extended-types';
 import type { IntersectionResult } from '../shared/GeometricCalculations';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { getPolylineSegments } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 import type { LineEntity, CircleEntity, ArcEntity, XLineEntity, EllipseEntity, RayEntity } from '../../types/entities';
 import { isRectangleEntity } from '../../types/entities';
 import {
@@ -21,6 +22,31 @@ import {
   isAngleInRange,
   getPolylineVertices,
 } from './intersection-calculators';
+
+/**
+ * Ray × poly-segments intersection SSoT (ADR-583 / N.18). Both the polyline and
+ * the rectangle calculators reduce to "a ray against a list of straight segments";
+ * the per-segment math lived duplicated in each. `type` tags the emitted results.
+ */
+function raySegmentsIntersection(
+  ray: RayEntity,
+  segments: readonly { start: Point2D; end: Point2D }[],
+  type: IntersectionResult['type'],
+): IntersectionResult[] {
+  const results: IntersectionResult[] = [];
+  for (const seg of segments) {
+    const segDir: Point2D = { x: seg.end.x - seg.start.x, y: seg.end.y - seg.start.y };
+    const denom = cross2D(ray.direction, segDir);
+    if (Math.abs(denom) < XLINE_EPSILON) continue;
+    const diff: Point2D = { x: seg.start.x - ray.basePoint.x, y: seg.start.y - ray.basePoint.y };
+    const tRay = cross2D(diff, segDir) / denom;
+    const sSeg = cross2D(diff, ray.direction) / denom;
+    if (tRay < -XLINE_EPSILON) continue;
+    if (sSeg < -XLINE_EPSILON || sSeg > 1 + XLINE_EPSILON) continue;
+    results.push({ point: { x: seg.start.x + sSeg * segDir.x, y: seg.start.y + sSeg * segDir.y }, type });
+  }
+  return results;
+}
 
 // ─── Ray Phase 6.5.a (ADR-359) ───────────────────────────────────────────────
 
@@ -78,7 +104,7 @@ export function rayArcIntersection(ray: RayEntity, arc: ArcEntity): Intersection
   for (const t of tValues) {
     if (t < -XLINE_EPSILON) continue;
     const p: Point2D = { x: ray.basePoint.x + t * dir.x, y: ray.basePoint.y + t * dir.y };
-    const angleDeg = (Math.atan2(p.y - arc.center.y, p.x - arc.center.x) * 180 / Math.PI + 360) % 360;
+    const angleDeg = normalizeAngleDeg(Math.atan2(p.y - arc.center.y, p.x - arc.center.x) * 180 / Math.PI);
     if (isAngleInRange(angleDeg, arc.startAngle, arc.endAngle))
       results.push({ point: p, type: 'Ray-Arc' });
   }
@@ -109,20 +135,7 @@ export function rayXlineIntersection(ray: RayEntity, xline: XLineEntity): Inters
 export function rayPolylineIntersection(ray: RayEntity, polyline: Entity): IntersectionResult[] {
   const { vertices, closed: isClosed } = getPolylineVertices(polyline);
   if (!vertices || vertices.length < 2) return [];
-  const results: IntersectionResult[] = [];
-  const segments = getPolylineSegments(vertices, isClosed);
-  for (const seg of segments) {
-    const segDir: Point2D = { x: seg.end.x - seg.start.x, y: seg.end.y - seg.start.y };
-    const denom = cross2D(ray.direction, segDir);
-    if (Math.abs(denom) < XLINE_EPSILON) continue;
-    const diff: Point2D = { x: seg.start.x - ray.basePoint.x, y: seg.start.y - ray.basePoint.y };
-    const tRay = cross2D(diff, segDir) / denom;
-    const sSeg = cross2D(diff, ray.direction) / denom;
-    if (tRay < -XLINE_EPSILON) continue;
-    if (sSeg < -XLINE_EPSILON || sSeg > 1 + XLINE_EPSILON) continue;
-    results.push({ point: { x: seg.start.x + sSeg * segDir.x, y: seg.start.y + sSeg * segDir.y }, type: 'Ray-Polyline' });
-  }
-  return results;
+  return raySegmentsIntersection(ray, getPolylineSegments(vertices, isClosed), 'Ray-Polyline');
 }
 
 export function rayEllipseIntersection(ray: RayEntity, ellipse: EllipseEntity): IntersectionResult[] {
@@ -179,18 +192,5 @@ export function rayEllipseIntersection(ray: RayEntity, ellipse: EllipseEntity): 
 
 export function rayRectangleIntersection(ray: RayEntity, rectangle: Entity): IntersectionResult[] {
   if (!isRectangleEntity(rectangle)) return [];
-  const rectLines = GeometricCalculations.getRectangleLines(rectangle);
-  const results: IntersectionResult[] = [];
-  for (const seg of rectLines) {
-    const segDir: Point2D = { x: seg.end.x - seg.start.x, y: seg.end.y - seg.start.y };
-    const denom = cross2D(ray.direction, segDir);
-    if (Math.abs(denom) < XLINE_EPSILON) continue;
-    const diff: Point2D = { x: seg.start.x - ray.basePoint.x, y: seg.start.y - ray.basePoint.y };
-    const tRay = cross2D(diff, segDir) / denom;
-    const sSeg = cross2D(diff, ray.direction) / denom;
-    if (tRay < -XLINE_EPSILON) continue;
-    if (sSeg < -XLINE_EPSILON || sSeg > 1 + XLINE_EPSILON) continue;
-    results.push({ point: { x: seg.start.x + sSeg * segDir.x, y: seg.start.y + sSeg * segDir.y }, type: 'Ray-Rectangle' });
-  }
-  return results;
+  return raySegmentsIntersection(ray, GeometricCalculations.getRectangleLines(rectangle), 'Ray-Rectangle');
 }

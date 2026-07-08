@@ -12,6 +12,8 @@
  * @module rendering/ui/grid/grid-adaptive
  */
 
+import { clamp01 } from '../../../utils/scalar-math';
+
 export interface AdaptiveLevelInputs {
   /** World-space base step (settings.size). */
   readonly worldStep: number;
@@ -106,7 +108,7 @@ export function lerpOpacityTowards(
   durationMs: number,
 ): number {
   if (durationMs <= 0 || dtMs <= 0) return target;
-  const alpha = Math.max(0, Math.min(1, dtMs / durationMs));
+  const alpha = clamp01(dtMs / durationMs);
   return previous + (target - previous) * alpha;
 }
 
@@ -162,7 +164,7 @@ export function computeAdaptiveLevels(input: AdaptiveLevelInputs): AdaptiveLevel
   const majorScreenPx = majorWorldStep * scale;
 
   const denom = Math.max(0.001, fadeMaxPx - fadeMinPx);
-  const t = Math.max(0, Math.min(1, (minorScreenPx - fadeMinPx) / denom));
+  const t = clamp01((minorScreenPx - fadeMinPx) / denom);
   const minorOpacity = t * t * (3 - 2 * t); // smoothstep
 
   return { majorScreenPx, minorScreenPx, minorOpacity };

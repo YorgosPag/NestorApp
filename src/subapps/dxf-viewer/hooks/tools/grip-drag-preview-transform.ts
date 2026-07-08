@@ -62,6 +62,8 @@ export function toEntityPreviewTransform(dp: DxfGripDragPreview): EntityPreviewT
     ...(dp.polylineGripKind    ? { polylineGripKind:    dp.polylineGripKind }     : {}),
     // ADR-575 §8 — GROUP gizmo ghost (translate / rotate every member about the bbox centre).
     ...(dp.groupGripKind       ? { groupGripKind:       dp.groupGripKind }        : {}),
+    // ADR-583 — annotation symbol (North arrow) move/rotation live ghost.
+    ...(dp.annotationSymbolGripKind ? { annotationSymbolGripKind: dp.annotationSymbolGripKind } : {}),
     ...(dp.anchorPos           ? { anchorPos:           dp.anchorPos }            : {}),
     // ADR-363 Phase 1G — rotation centre for the rotation hot-grip ghost.
     ...(dp.rotatePivot         ? { rotatePivot:         dp.rotatePivot }          : {}),

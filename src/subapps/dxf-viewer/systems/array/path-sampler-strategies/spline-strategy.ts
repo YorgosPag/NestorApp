@@ -8,6 +8,8 @@ import type { Entity, SplineEntity } from '../../../types/entities';
 import { isSplineEntity } from '../../../types/entities';
 import type { PathSample, PathSamplerStrategy } from '../path-arc-length-sampler';
 import type { Point2D } from '../../../rendering/types/Types';
+import { clamp01 } from '../../../utils/scalar-math';
+import { buildCumLengths, degeneratePointSample, sampleAlongPointList } from './path-sample-math';
 
 const SAMPLE_N = 256;
 
@@ -38,14 +40,6 @@ function buildSplineSamples(entity: SplineEntity): Point2D[] {
   return samples;
 }
 
-function buildCumLengths(pts: readonly Point2D[]): number[] {
-  const cum: number[] = [0];
-  for (let i = 1; i < pts.length; i++) {
-    cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
-  }
-  return cum;
-}
-
 export class SplineStrategy implements PathSamplerStrategy<SplineEntity> {
   matches(entity: Entity): entity is SplineEntity {
     return isSplineEntity(entity);
@@ -59,30 +53,13 @@ export class SplineStrategy implements PathSamplerStrategy<SplineEntity> {
   }
 
   sample(entity: SplineEntity, u: number, reversed: boolean): PathSample {
-    const cu = Math.max(0, Math.min(1, u));
     const pts = buildSplineSamples(entity);
+    const degenerate = degeneratePointSample(pts);
+    if (degenerate) return degenerate;
 
-    if (pts.length === 0) return { position: { x: 0, y: 0 }, tangentDeg: 0 };
-    if (pts.length === 1) return { position: { x: pts[0].x, y: pts[0].y }, tangentDeg: 0 };
-
-    const cum = buildCumLengths(pts);
-    const total = cum[cum.length - 1];
-    if (total === 0) return { position: { x: pts[0].x, y: pts[0].y }, tangentDeg: 0 };
-
-    const target = (reversed ? 1 - cu : cu) * total;
-    let i = 1;
-    while (i < cum.length - 1 && cum[i] < target) i++;
-
-    const segLen = cum[i] - cum[i - 1];
-    const t = segLen === 0 ? 0 : (target - cum[i - 1]) / segLen;
-    const p0 = pts[i - 1];
-    const p1 = pts[i];
-    const dx = p1.x - p0.x;
-    const dy = p1.y - p0.y;
-    const flip = reversed ? -1 : 1;
-    return {
-      position: { x: p0.x + t * dx, y: p0.y + t * dy },
-      tangentDeg: Math.atan2(flip * dy, flip * dx) * (180 / Math.PI),
-    };
+    // Reverse convention: keep the sample list as-is, measure arc-length from the
+    // far end (1 − cu) and flip the tangent sign — see sampleAlongPointList.
+    const cu = clamp01(u);
+    return sampleAlongPointList(pts, reversed ? 1 - cu : cu, reversed ? -1 : 1);
   }
 }

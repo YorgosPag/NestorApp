@@ -20,13 +20,18 @@ interface AnnotationSymbolSelectionState {
   readonly symbolId: string;
   /** Paper height (mm) the placed symbol gets. */
   readonly sizeMm: number;
+  /** Initial rotation (deg CCW, 0 = authored north / up) the placed symbol gets. */
+  readonly rotationDeg: number;
   setSymbolId(symbolId: string): void;
   setSizeMm(sizeMm: number): void;
+  setRotationDeg(rotationDeg: number): void;
 }
 
 export const useAnnotationSymbolSelectionStore = create<AnnotationSymbolSelectionState>((set) => ({
   symbolId: defaultAnnotationSymbolId('north-arrow'),
   sizeMm: DEFAULT_ANNOTATION_SYMBOL_SIZE_MM,
+  rotationDeg: 0,
   setSymbolId: (symbolId) => set({ symbolId }),
   setSizeMm: (sizeMm) => set({ sizeMm }),
+  setRotationDeg: (rotationDeg) => set({ rotationDeg }),
 }));

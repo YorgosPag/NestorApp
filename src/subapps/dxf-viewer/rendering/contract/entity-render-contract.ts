@@ -93,6 +93,9 @@ export const ENTITY_RENDER_CONTRACTS: Readonly<
   hatch: dxf('hatch'),
   xline: dxf('xline'),
   ray: dxf('ray'),
+  // ADR-583 — annotation symbol (North arrow): lightweight non-BIM paper decoration,
+  // 2D canvas only (no per-type 3D mesh).
+  'annotation-symbol': dxf('annotation-symbol'),
 
   // ── BIM — bespoke 3D (cross-entity host context) ──
   wall: bespoke('wall', true), // 3D placement ghost: WallPlacementGhost

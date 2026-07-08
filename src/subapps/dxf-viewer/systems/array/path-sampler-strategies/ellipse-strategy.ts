@@ -7,6 +7,7 @@
 import type { Entity, EllipseEntity } from '../../../types/entities';
 import { isEllipseEntity } from '../../../types/entities';
 import type { PathSample, PathSamplerStrategy } from '../path-arc-length-sampler';
+import { clamp01 } from '../../../utils/scalar-math';
 
 const TWO_PI = Math.PI * 2;
 const DEG_TO_RAD = Math.PI / 180;
@@ -78,7 +79,7 @@ export class EllipseStrategy implements PathSamplerStrategy<EllipseEntity> {
   }
 
   sample(entity: EllipseEntity, u: number, reversed: boolean): PathSample {
-    const cu = Math.max(0, Math.min(1, u));
+    const cu = clamp01(u);
     const a = entity.majorAxis;
     const b = entity.minorAxis;
     const rotRad = (entity.rotation ?? 0) * DEG_TO_RAD;

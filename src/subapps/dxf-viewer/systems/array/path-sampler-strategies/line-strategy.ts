@@ -5,6 +5,7 @@
 import type { Entity, LineEntity } from '../../../types/entities';
 import { isLineEntity } from '../../../types/entities';
 import type { PathSample, PathSamplerStrategy } from '../path-arc-length-sampler';
+import { clamp01 } from '../../../utils/scalar-math';
 
 export class LineStrategy implements PathSamplerStrategy<LineEntity> {
   matches(entity: Entity): entity is LineEntity {
@@ -16,7 +17,7 @@ export class LineStrategy implements PathSamplerStrategy<LineEntity> {
   }
 
   sample(entity: LineEntity, u: number, reversed: boolean): PathSample {
-    const cu = Math.max(0, Math.min(1, u));
+    const cu = clamp01(u);
     const from = reversed ? entity.end : entity.start;
     const to = reversed ? entity.start : entity.end;
     const dx = to.x - from.x;

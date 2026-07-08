@@ -107,6 +107,26 @@ export function normalizePreviewEntity(entity: DxfEntityUnion): DxfEntityUnion {
 }
 
 /**
+ * ADR-561/583 — SHARED rotation live-ghost: spin `entity` about `pivot` via the SAME
+ * `applyPrimitiveRotationDrag` → `rotateEntity` engine the commit runs (preview ≡
+ * commit). `undefined` pivot (no gizmo centre) or a degenerate sweep → the entity
+ * unchanged. The single source the arc / polyline / annotation-symbol / group rotation
+ * ghost branches all delegate to (N.18 — jscpd flagged the inline twins).
+ */
+function rotationGhost(
+  entity: DxfEntityUnion,
+  anchorPos: Point2D,
+  delta: Point2D,
+  pivot: Point2D | undefined,
+): DxfEntityUnion {
+  if (!pivot) return entity;
+  const currentPos: Point2D = translatePoint(anchorPos, delta);
+  const patch = applyPrimitiveRotationDrag(entity as unknown as Entity, { anchor: anchorPos, currentPos, pivot });
+  if (!patch) return entity;
+  return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
+}
+
+/**
  * Apply a drag-preview transform to a DXF entity. Returns a cloned entity
  * with new geometry, or the original entity unchanged when:
  *  - `preview` is undefined / does not target this entity
@@ -121,7 +141,7 @@ export function applyEntityPreview(
   ctx?: ApplyEntityPreviewContext,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, floorFinishGripKind, hatchGripKind, textGripKind, lineGripKind, arcGripKind, polylineGripKind, groupGripKind, anchorPos, rotatePivot } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, stairGripKind, wallGripKind, slabGripKind, slabOpeningGripKind, roofGripKind, floorFinishGripKind, hatchGripKind, textGripKind, lineGripKind, arcGripKind, polylineGripKind, groupGripKind, annotationSymbolGripKind, anchorPos, rotatePivot } = preview;
   if (delta.x === 0 && delta.y === 0) return entity;
 
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
@@ -315,39 +335,23 @@ export function applyEntityPreview(
   // hot-grip centre was picked. A scene rectangle is already a closed 4-vertex polyline here,
   // so the polyline branch covers it. Only the rotation handle carries the `*-rotation` kind;
   // the centre MOVE grip (`movesEntity`) falls through to the classic translate below.
+  // Arc / polyline / annotation-symbol / group ROTATION live ghosts all spin about a
+  // per-type pivot via the SHARED `rotationGhost` SSoT (preview ≡ commit; N.18 — the
+  // only difference is the discriminator + the pivot expression). The `*-move` crosses
+  // (`movesEntity`) fall through to the classic translate below.
   if (arcGripKind === 'arc-rotation' && anchorPos && entity.type === 'arc') {
-    const arc = entity as unknown as DxfArc;
-    const currentPos: Point2D = translatePoint(anchorPos, delta);
-    const patch = applyPrimitiveRotationDrag(entity as unknown as Entity, {
-      anchor: anchorPos, currentPos, pivot: rotatePivot ?? arc.center,
-    });
-    if (!patch) return entity;
-    return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
+    return rotationGhost(entity, anchorPos, delta, rotatePivot ?? (entity as unknown as DxfArc).center);
   }
   if (polylineGripKind === 'polyline-rotation' && anchorPos && entity.type === 'polyline') {
-    const poly = entity as unknown as DxfPolyline;
-    const currentPos: Point2D = translatePoint(anchorPos, delta);
-    const patch = applyPrimitiveRotationDrag(entity as unknown as Entity, {
-      anchor: anchorPos, currentPos, pivot: rotatePivot ?? polylineBboxCenter(poly.vertices),
-    });
-    if (!patch) return entity;
-    return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
+    return rotationGhost(entity, anchorPos, delta, rotatePivot ?? polylineBboxCenter((entity as unknown as DxfPolyline).vertices));
   }
-
-  // ── ADR-575 §8 — GROUP gizmo live ghost (whole-group rotate / move) ────────
-  // The group is a `type:'group'` CONTAINER whose transform the ONE `rotateEntity` /
-  // `calculateMovedGeometry` engine already owns (`case 'group'` recurses members). The
-  // ghost delegates to the SAME engines the commit runs → preview ≡ commit by IDENTITY.
-  // Returns a transformed GROUP entity; the ghost RENDER (`useGripGhostPreview`) expands
-  // it and draws each member. Rotation pivot defaults to the bbox centre (the gizmo origin
-  // = the commit's fallback) when no hot-grip centre was picked.
+  // ADR-583 — pivot = insertion point (`rotateEntity` case 'annotation-symbol').
+  if (annotationSymbolGripKind === 'annotation-symbol-rotation' && anchorPos && entity.type === 'annotation-symbol') {
+    return rotationGhost(entity, anchorPos, delta, rotatePivot ?? (entity as unknown as { position: Point2D }).position);
+  }
+  // ADR-575 §8 — GROUP gizmo: pivot = bbox centre (`rotateEntity` case 'group' recurses members).
   if (groupGripKind === 'group-rotation' && anchorPos && entity.type === 'group') {
-    const currentPos: Point2D = translatePoint(anchorPos, delta);
-    const pivot = rotatePivot ?? computeGroupSelectionBounds(entity as unknown as GroupEntity)?.center;
-    if (!pivot) return entity;
-    const patch = applyPrimitiveRotationDrag(entity as unknown as Entity, { anchor: anchorPos, currentPos, pivot });
-    if (!patch) return entity;
-    return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
+    return rotationGhost(entity, anchorPos, delta, rotatePivot ?? computeGroupSelectionBounds(entity as unknown as GroupEntity)?.center);
   }
   if (movesEntity && entity.type === 'group') {
     // Whole-group translate (gizmo move cross OR any whole-group move) — the SAME
