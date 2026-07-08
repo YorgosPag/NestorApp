@@ -45,13 +45,13 @@ const ALL_MODES: ExtendedSnapType[] = [
   // ADR-408 Φ9: MEP connector attach-point snap
   ExtendedSnapType.BIM_MEP_CONNECTOR,
   // NOTE: ROTATION_PIVOT / ROTATION_GRIP (ADR-397) and BIM_CORNER / BIM_MIDPOINT /
-  // BIM_CENTER (ADR-370) are intentionally NOT in ALL_MODES — they are always-on
+  // BIM_CENTER (ADR-597) are intentionally NOT in ALL_MODES — they are always-on
   // structural snaps force-enabled with the global OSNAP toggle (see `enabledModes`
   // below), so they bypass per-mode persistence and CANNOT silently vanish for existing
   // users when a new snap id ships (Revit treats structural snaps as always available).
 ];
 
-// ADR-370 — the generic BIM characteristic-point snaps (BIM_CORNER / BIM_MIDPOINT /
+// ADR-597 — the generic BIM characteristic-point snaps (BIM_CORNER / BIM_MIDPOINT /
 // BIM_CENTER) are always-on: force-enabled in `enabledModes` with the OSNAP toggle, NOT
 // persisted per-mode. This is the rotation-snap pattern (ADR-397) and the definitive fix
 // for "structural snaps vanish for existing users" — a stored blob can never disable a
@@ -81,7 +81,7 @@ const DEFAULT_ENABLED_SNAPS = new Set<ExtendedSnapType>([
   ExtendedSnapType.DIM_LINE,        // ADR-362: dimension line snap (toggleable)
   ExtendedSnapType.TEXT,            // ADR-378: text snap (toggleable, on by default)
   ExtendedSnapType.BIM_MEP_CONNECTOR, // ADR-408 Φ9: enabled by default
-  // ADR-370 BIM_CORNER/MIDPOINT/CENTER are always-on (force-enabled in enabledModes)
+  // ADR-597 BIM_CORNER/MIDPOINT/CENTER are always-on (force-enabled in enabledModes)
 ]);
 
 const getDefaultSnapState = (): SnapState => {
@@ -139,7 +139,7 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
       // wins the attraction over an unselected entity beneath it, for every user, with no toolbar
       // button and no stored per-mode preference that could turn it off.
       modes.add(ExtendedSnapType.SELECTED_GRIP);
-      // ADR-370: BIM characteristic-point snaps are always-on structural snaps (same
+      // ADR-597: BIM characteristic-point snaps are always-on structural snaps (same
       // pattern) — force-enabled so they never depend on a stored per-mode preference.
       for (const t of ALWAYS_ON_BIM_SNAPS) modes.add(t);
     }

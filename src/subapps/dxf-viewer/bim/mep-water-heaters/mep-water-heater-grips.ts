@@ -32,7 +32,7 @@ const adapter = createCentredBoxGripAdapter<
   minDimensionMm: MIN_WATER_HEATER_DIMENSION_MM,
   toBoxParams: (params) => params,
   fromBoxPatch: (original, patch) => ({ ...original, ...patch }),
-  toGripInfo: (base, kind) => ({ ...base, mepWaterHeaterGripKind: kind, gripKind: { on: 'mep-water-heater', kind } }),
+  toGripInfo: (base, kind) => ({ ...base, gripKind: { on: 'mep-water-heater', kind } }),
 });
 
 /** Drag input for a water-heater grip (the shared centred-box 5-field shape). */

@@ -1,7 +1,7 @@
 /**
  * ADR-363 Φ1G.5 Slice 2i — Wall FACE-line snap engine (face-to-face magnetism).
  *
- * The generic BIM corner engine (`BimCharacteristicSnapEngine`, ADR-370) snaps to the
+ * The generic BIM corner engine (`BimCharacteristicSnapEngine`, ADR-597) snaps to the
  * 4 corner POINTS of a wall; this engine snaps to the 2 face LINES (outer + inner) — the
  * missing piece for Revit "drag a wall flush against another wall's face". A probe
  * point (e.g. a moving wall's face corner, fed as a characteristic offset by the 3D
@@ -18,7 +18,7 @@
  * line is preferred over a generic nearest/axis snap when sliding a wall flush).
  *
  * @see bim/walls/wall-corner-anchors.ts — SSoT for the 4 face-corner world points
- * @see snapping/engines/BimCharacteristicSnapEngine.ts — the corner-POINT sibling (ADR-370)
+ * @see snapping/engines/BimCharacteristicSnapEngine.ts — the corner-POINT sibling (ADR-597)
  * @see snapping/engines/NearestSnapEngine.ts     — query-time projection pattern
  */
 
