@@ -32,6 +32,9 @@ import { applyOverlayLineStyle, OVERLAY_LINE_COLORS, strokeOverlaySegment } from
 // πέρα από τη dim line (η ΚΟΝΤΙΝΗ ακμή του, όχι το κέντρο) — ίδιο contract για όλα τα overlay numbers.
 import { measureOverlayLabelBox, clearanceForBox } from './overlay-label-layout';
 import type { OverlayProjector } from './overlay-projector';
+// SSoT gate «ΜΗΚΟΣ/ΓΩΝΙΑ» (status-bar toggle) — οι listening/clearance dims είναι αμιγώς
+// ενδείξεις μήκους/γωνίας. Gate ΣΤΟ dispatch (call site), όχι μέσα στον shared painter.
+import { isLengthAngleHudVisible } from '../../systems/constraints/length-angle-hud-gate';
 
 /** Projection helper: ο 3D projector όταν δίνεται (ADR-544), αλλιώς το 2D `worldToScreen`. */
 function resolveToScreen(
@@ -74,6 +77,7 @@ export function paintGhostFaceDimensions(
   viewport: { readonly width: number; readonly height: number },
   project?: OverlayProjector,
 ): void {
+  if (!isLengthAngleHudVisible()) return; // Gate ΜΗΚΟΣ/ΓΩΝΙΑ: όλες οι listening dims κρύβονται καθολικά.
   const textColor = OVERLAY_LINE_COLORS.listeningDim; // CYAN — distinct mechanism colour
   const labelMode = meta.labelMode ?? 'length'; // ADR-398 §3.12 — μήκος / γωνία / και τα δύο (arc gaps)
   for (const d of meta.dims) {

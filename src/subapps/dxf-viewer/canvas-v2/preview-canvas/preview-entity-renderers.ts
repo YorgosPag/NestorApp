@@ -25,6 +25,10 @@ import {
   buildAreaLabel,
   buildArcLengthLabel,
 } from '../../rendering/entities/shared/measurement-label';
+// 🌐 Καθολικό status-bar toggle «ΜΗΚΟΣ/ΓΩΝΙΑ» (SSoT predicate): gate ΣΤΑ CALL SITES των
+// length/angle preview draws — ΠΟΤΕ μέσα στους shared painters (κοινοί με committed).
+// ΔΕΝ αφορά εμβαδόν/περίμετρο/circumference (μένουν πάντα ορατά).
+import { isLengthAngleHudVisible } from '../../systems/constraints/length-angle-hud-gate';
 
 // ===== LINE =====
 
@@ -53,7 +57,8 @@ export function renderLine(
   // διάσταση, ίδιο με τον τοίχο), ο handler το ζωγραφίζει μέσω `paintWallHudCore`· εδώ ΠΑΡΑΛΕΙΠΟΥΜΕ
   // τα παλιά inline text labels ώστε να μην εμφανίζεται διπλό μήκος/γωνία. measure-distance (χωρίς
   // `liveDimHud`) κρατά τα inline labels του.
-  if ((entity.measurement || entity.showEdgeDistances) && !entity.liveDimHud) {
+  // 🌐 toggle «ΜΗΚΟΣ/ΓΩΝΙΑ»: κρύψε μήκος+γωνία της γραμμής όταν OFF (call-site gate).
+  if ((entity.measurement || entity.showEdgeDistances) && !entity.liveDimHud && isLengthAngleHudVisible()) {
     h.renderDistanceLabelFromWorld(ctx, entity.start, entity.end, start, end);
     // ADR-510 Φ1 (Q7): show the live heading alongside the length, so the ghost
     // reports BOTH μήκος + γωνία directly on the canvas (locale-aware via SSoT).
@@ -108,7 +113,11 @@ export function renderCircle(
   if (opts.showGrips) h.renderGrip(ctx, center, opts);
 
   if (entity.showPreviewMeasurements && entity.radius > 0) {
-    renderCircleMeasurementLine(ctx, entity, transform, center, h);
+    // 🌐 toggle «ΜΗΚΟΣ/ΓΩΝΙΑ»: κρύψε ΜΟΝΟ την ένδειξη ακτίνας/διαμέτρου (μήκος)· το
+    // εμβαδόν+περίμετρος (renderInfoLabel παρακάτω) ΜΕΝΕΙ πάντα ορατό.
+    if (isLengthAngleHudVisible()) {
+      renderCircleMeasurementLine(ctx, entity, transform, center, h);
+    }
     const circumference = TAU * entity.radius;
     const area = Math.PI * entity.radius * entity.radius;
     // ADR-160 (δ): κοινή σειρά εμβαδόν→περίμετρος παντού (area line πρώτα).
@@ -141,8 +150,12 @@ export function renderPolyline(
   }
 
   if (entity.showEdgeDistances) {
-    for (let i = 1; i < screenPoints.length; i++) {
-      h.renderDistanceLabelFromWorld(ctx, entity.vertices[i - 1], entity.vertices[i], screenPoints[i - 1], screenPoints[i]);
+    // 🌐 toggle «ΜΗΚΟΣ/ΓΩΝΙΑ»: κρύψε ΜΟΝΟ τα edge lengths (μήκη ακμών) όταν OFF·
+    // το εμβαδόν/περίμετρος (paintPolygonAreaLabel παρακάτω) ΜΕΝΕΙ πάντα ορατό.
+    if (isLengthAngleHudVisible()) {
+      for (let i = 1; i < screenPoints.length; i++) {
+        h.renderDistanceLabelFromWorld(ctx, entity.vertices[i - 1], entity.vertices[i], screenPoints[i - 1], screenPoints[i]);
+      }
     }
 
     if (entity.vertices.length >= 3) {
@@ -183,8 +196,12 @@ export function renderRectangle(
     const screenTopRight = CoordinateTransforms.worldToScreen(topRight, transform, h.viewport);
     const screenBottomLeft = CoordinateTransforms.worldToScreen(bottomLeft, transform, h.viewport);
 
-    h.renderDistanceLabelFromWorld(ctx, wc1, topRight, c1, screenTopRight);
-    h.renderDistanceLabelFromWorld(ctx, wc1, bottomLeft, c1, screenBottomLeft);
+    // 🌐 toggle «ΜΗΚΟΣ/ΓΩΝΙΑ»: κρύψε ΜΟΝΟ πλάτος/ύψος (γεωμετρικές διαστάσεις) όταν OFF·
+    // το εμβαδόν+περίμετρος (renderInfoLabel παρακάτω) ΜΕΝΕΙ πάντα ορατό.
+    if (isLengthAngleHudVisible()) {
+      h.renderDistanceLabelFromWorld(ctx, wc1, topRight, c1, screenTopRight);
+      h.renderDistanceLabelFromWorld(ctx, wc1, bottomLeft, c1, screenBottomLeft);
+    }
 
     const worldWidth = calculateWorldDistance(wc1, topRight);
     const worldHeight = calculateWorldDistance(wc1, bottomLeft);
@@ -233,21 +250,27 @@ export function renderAngleMeasurement(
     h.renderGrip(ctx, screenPoint2, opts);
   }
 
-  if (entity.vertex && entity.point1) h.renderDistanceLabelFromWorld(ctx, entity.vertex, entity.point1, screenVertex, screenPoint1);
-  if (entity.vertex && entity.point2) h.renderDistanceLabelFromWorld(ctx, entity.vertex, entity.point2, screenVertex, screenPoint2);
+  // 🌐 toggle «ΜΗΚΟΣ/ΓΩΝΙΑ»: κρύψε τα μήκη των σκελών μέτρησης όταν OFF (call-site gate).
+  if (isLengthAngleHudVisible()) {
+    if (entity.vertex && entity.point1) h.renderDistanceLabelFromWorld(ctx, entity.vertex, entity.point1, screenVertex, screenPoint1);
+    if (entity.vertex && entity.point2) h.renderDistanceLabelFromWorld(ctx, entity.vertex, entity.point2, screenVertex, screenPoint2);
+  }
 
   const bisectorAngleValue = bisectorAngle(angle1, angle2);
   const textDistance = RENDER_GEOMETRY.ANGLE_TEXT_DISTANCE;
   const textX = screenVertex.x + Math.cos(bisectorAngleValue) * textDistance;
   const textY = screenVertex.y + Math.sin(bisectorAngleValue) * textDistance;
 
-  ctx.save();
-  ctx.fillStyle = UI_COLORS.DIMENSION_TEXT;
-  ctx.font = UI_FONTS.ARIAL.LARGE;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(`${entity.angle.toFixed(1)}°`, textX, textY);
-  ctx.restore();
+  // 🌐 toggle «ΜΗΚΟΣ/ΓΩΝΙΑ»: κρύψε την ένδειξη γωνίας (∠θ) όταν OFF (call-site gate).
+  if (isLengthAngleHudVisible()) {
+    ctx.save();
+    ctx.fillStyle = UI_COLORS.DIMENSION_TEXT;
+    ctx.font = UI_FONTS.ARIAL.LARGE;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${entity.angle.toFixed(1)}°`, textX, textY);
+    ctx.restore();
+  }
 }
 
 // ===== POINT =====

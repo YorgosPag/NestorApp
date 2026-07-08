@@ -31,6 +31,9 @@ import { OVERLAY_LINE_COLORS, applyOverlayLineStyle, strokeOverlaySegment } from
 // SSoT anti-collision: text-box-aware perpendicular clearance ώστε spec/γωνία να ΜΗΝ διασχίζουν
 // ποτέ τον άξονα του τοίχου (κάθετος/λοξός) και να πέφτουν πάνω στη διάσταση μήκους.
 import { measureOverlayLabelBox, clearanceForBox, type LabelBox } from './overlay-label-layout';
+// SSoT gate «ΜΗΚΟΣ/ΓΩΝΙΑ» (status-bar toggle) — κρύβει καθολικά length+angle HUD ενδείξεις
+// (draw + grip-drag, 2D + 3D). Gate ΣΤΟ CALL SITE, όχι μέσα στους shared painters.
+import { isLengthAngleHudVisible } from '../../systems/constraints/length-angle-hud-gate';
 
 /** Καθαρά αριθμητικά δεδομένα HUD (κρέμονται στο ghost entity· N.11-clean — καμία μετάφραση εδώ). */
 export interface WallHudMeta {
@@ -127,8 +130,11 @@ export function paintWallHudCore(
     halfT + clearanceForBox(px, py, box, LABEL_CLEAR_PX) * wpp;
 
   // (1) aligned διάσταση μήκους — κάτω από τον τοίχο (πλευρά +κάθετη), μέσω του injected drawer.
-  const dimRef: Point2D = { x: mid.x + px * dimOff, y: mid.y + py * dimOff };
-  proj.drawAlignedDim(start, end, dimRef, formatLengthForDisplay(lengthMm), HUD_COLOR);
+  // Gate ΜΗΚΟΣ (SSoT toggle): OFF → παραλείπεται σε draw + grip-drag, 2D + 3D.
+  if (isLengthAngleHudVisible()) {
+    const dimRef: Point2D = { x: mid.x + px * dimOff, y: mid.y + py * dimOff };
+    proj.drawAlignedDim(start, end, dimRef, formatLengthForDisplay(lengthMm), HUD_COLOR);
+  }
 
   // (2) ετικέτα πάχος · ύψος — αντίθετη πλευρά (−κάθετη), στη μέση. Κενό specLabel → η οντότητα
   // δεν έχει BIM ταυτότητα (π.χ. γραμμή: μηδέν πάχος/ύψος) → παραλείπεται· μόνο μήκος + γωνία.
@@ -140,11 +146,14 @@ export function paintWallHudCore(
   }
 
   // (3) γωνία ∠θ — κοντά στην αρχή, αντίθετη πλευρά (box-aware, ίδιο SSoT clearance).
-  const angleLabel = `∠ ${formatAngleLocale(angleDeg)}`;
-  const angOff = perpClearOff(measureOverlayLabelBox(ctx, angleLabel));
-  const angW: Point2D = { x: start.x - px * angOff, y: start.y - py * angOff };
-  const sAng = proj.toScreen(angW);
-  drawOverlayLabel(ctx, angleLabel, sAng.x, sAng.y, { textColor: HUD_COLOR, align: 'center' });
+  // Gate ΓΩΝΙΑ (SSoT toggle): OFF → παραλείπεται σε draw + grip-drag, 2D + 3D.
+  if (isLengthAngleHudVisible()) {
+    const angleLabel = `∠ ${formatAngleLocale(angleDeg)}`;
+    const angOff = perpClearOff(measureOverlayLabelBox(ctx, angleLabel));
+    const angW: Point2D = { x: start.x - px * angOff, y: start.y - py * angOff };
+    const sAng = proj.toScreen(angW);
+    drawOverlayLabel(ctx, angleLabel, sAng.x, sAng.y, { textColor: HUD_COLOR, align: 'center' });
+  }
 }
 
 /**

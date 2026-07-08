@@ -19,6 +19,7 @@ import { formatPolarLabel, faceRelativeDisplayAngle } from '../../systems/constr
 import { resolveAlignmentTracking } from '../../systems/tracking/resolve-alignment-tracking';
 import { wallPreviewStore } from '../../bim/walls/wall-preview-store';
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
+import { isLengthAngleHudVisible } from '../../systems/constraints/length-angle-hud-gate';
 import type { PlacementOverlayFields } from '../../bim/placement/placement-overlay-fields';
 import type { WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
 import { buildWallHudSpecLabel } from './wall-hud-spec-label';
@@ -120,7 +121,9 @@ export function paintDrawingHoverOverlays(
   // Κατ. 2 toggle (status-bar «ΜΗΚΟΣ/ΓΩΝΙΑ») — το `liveDimHud` το θέτουν μόνο line/polyline·
   // ο τοίχος έχει ξεχωριστό `wallHud` (πάνω) → δεν επηρεάζεται. ADR-508 §line-hud.
   const lineHud = (previewEntity as { liveDimHud?: WallHudMeta }).liveDimHud;
-  if (lineHud && cadToggleState.isDimHudOn()) {
+  // 🌐 toggle «ΜΗΚΟΣ/ΓΩΝΙΑ» — ίδιο SSoT (dimHudOn) μέσω του καθαρού predicate seam
+  // αντί απευθείας store call· το lineHud call είναι μόνο length+angle (specLabel='').
+  if (lineHud && isLengthAngleHudVisible()) {
     canvas.drawWallHud(lineHud, '');
   }
   // ADR-397 §15 (wall) / ADR-564 §linear-hud (beam) — μετά το 1ο κλικ γραμμικού μέλους:

@@ -33,6 +33,9 @@ import {
   orientedRectFrame, footprintEdges, type RectFrame,
 } from '../../bim/framing/rect-frame';
 import { footprintBounds } from '../../bim/geometry/shared/footprint-face-frame';
+// SSoT gate «ΜΗΚΟΣ/ΓΩΝΙΑ» (status-bar toggle) — κρύβει καθολικά length (πλάτος/βάθος/Ø/ακμές)
+// + angle. Gate ΣΤΟ CALL SITE· ύψος(spec)/N ΜΕΝΟΥΝ πάντα (BIM ταυτότητα, όχι length/angle).
+import { isLengthAngleHudVisible } from '../../systems/constraints/length-angle-hud-gate';
 
 /** Viewport που δέχονται οι 2D painters (ίδιο σχήμα με το wall HUD). */
 type HudViewport = { readonly width: number; readonly height: number };
@@ -61,7 +64,10 @@ function paintFrameAngleHeight(
   vp: HudViewport,
 ): void {
   const lblClr = LABEL_CLEAR_PX * wpp;
-  labelAt(ctx, `∠ ${formatAngleLocale(normalizeAngleDeg(rotationDeg))}`, rectLocalToWorld(frame, -frame.halfW, frame.halfV + lblClr), t, vp);
+  // Gate ΜΟΝΟ τη ∠γωνία (SSoT toggle)· το ύψος (BIM ταυτότητα) ΜΕΝΕΙ πάντα ορατό.
+  if (isLengthAngleHudVisible()) {
+    labelAt(ctx, `∠ ${formatAngleLocale(normalizeAngleDeg(rotationDeg))}`, rectLocalToWorld(frame, -frame.halfW, frame.halfV + lblClr), t, vp);
+  }
   labelAt(ctx, heightSpecLabel, rectLocalToWorld(frame, frame.halfW, frame.halfV + lblClr), t, vp);
 }
 
@@ -77,17 +83,20 @@ function paintRectColumnHud(
 ): void {
   const wpp = worldPerPixel(t.scale);
   const dimClr = DIM_CLEAR_PX * wpp;
-  // (1) πλάτος κατά την παρειά-u, offset προς τα έξω (−v).
-  paintAlignedOverlayDimension(
-    ctx, rectLocalToWorld(rect, -rect.halfW, -rect.halfV), rectLocalToWorld(rect, rect.halfW, -rect.halfV),
-    rectLocalToWorld(rect, 0, -(rect.halfV + dimClr)), formatSceneLengthForDisplay(rect.halfW * 2, sceneUnits), t, vp, HUD_COLOR,
-  );
-  // (2) βάθος κατά την παρειά-v, offset προς τα έξω (+u).
-  paintAlignedOverlayDimension(
-    ctx, rectLocalToWorld(rect, rect.halfW, -rect.halfV), rectLocalToWorld(rect, rect.halfW, rect.halfV),
-    rectLocalToWorld(rect, rect.halfW + dimClr, 0), formatSceneLengthForDisplay(rect.halfV * 2, sceneUnits), t, vp, HUD_COLOR,
-  );
-  // (3) ∠γωνία (πάνω-αριστερά) + (4) ύψος (πάνω-δεξιά).
+  // (1) πλάτος + (2) βάθος — ενδείξεις ΜΗΚΟΥΣ· gate SSoT toggle (draw + grip-drag, 2D + 3D).
+  if (isLengthAngleHudVisible()) {
+    // (1) πλάτος κατά την παρειά-u, offset προς τα έξω (−v).
+    paintAlignedOverlayDimension(
+      ctx, rectLocalToWorld(rect, -rect.halfW, -rect.halfV), rectLocalToWorld(rect, rect.halfW, -rect.halfV),
+      rectLocalToWorld(rect, 0, -(rect.halfV + dimClr)), formatSceneLengthForDisplay(rect.halfW * 2, sceneUnits), t, vp, HUD_COLOR,
+    );
+    // (2) βάθος κατά την παρειά-v, offset προς τα έξω (+u).
+    paintAlignedOverlayDimension(
+      ctx, rectLocalToWorld(rect, rect.halfW, -rect.halfV), rectLocalToWorld(rect, rect.halfW, rect.halfV),
+      rectLocalToWorld(rect, rect.halfW + dimClr, 0), formatSceneLengthForDisplay(rect.halfV * 2, sceneUnits), t, vp, HUD_COLOR,
+    );
+  }
+  // (3) ∠γωνία (πάνω-αριστερά, self-gated) + (4) ύψος (πάνω-δεξιά, πάντα).
   paintFrameAngleHeight(ctx, rect, rotationDeg, heightSpecLabel, wpp, t, vp);
 }
 
@@ -107,10 +116,13 @@ function paintCircularColumnHud(
   const r = (b.maxX - b.minX) / 2;
   if (!(r > 0)) return;
   const wpp = worldPerPixel(t.scale);
-  paintAlignedOverlayDimension(
-    ctx, { x: cx - r, y: cy }, { x: cx + r, y: cy },
-    { x: cx, y: cy - (r + DIM_CLEAR_PX * wpp) }, `Ø ${formatSceneLengthForDisplay(r * 2, sceneUnits)}`, t, vp, HUD_COLOR,
-  );
+  // Ø ΔΙΑΜΕΤΡΟΣ — ένδειξη ΜΗΚΟΥΣ· gate SSoT toggle. Το ύψος (BIM ταυτότητα) ΜΕΝΕΙ.
+  if (isLengthAngleHudVisible()) {
+    paintAlignedOverlayDimension(
+      ctx, { x: cx - r, y: cy }, { x: cx + r, y: cy },
+      { x: cx, y: cy - (r + DIM_CLEAR_PX * wpp) }, `Ø ${formatSceneLengthForDisplay(r * 2, sceneUnits)}`, t, vp, HUD_COLOR,
+    );
+  }
   labelAt(ctx, heightSpecLabel, { x: cx, y: cy + r + LABEL_CLEAR_PX * wpp }, t, vp);
 }
 
@@ -134,11 +146,14 @@ function paintPolygonColumnHud(
   const wpp = worldPerPixel(t.scale);
   const rScene = (widthMm * mmToSceneUnits(sceneUnits)) / 2; // Ø/2 (περιγεγραμμένη) σε scene units
   if (!(rScene > 0)) return;
-  paintAlignedOverlayDimension(
-    ctx, rectLocalToWorld(frame, -rScene, 0), rectLocalToWorld(frame, rScene, 0),
-    rectLocalToWorld(frame, 0, frame.halfV + DIM_CLEAR_PX * wpp),
-    `Ø ${formatLengthForDisplay(widthMm)}`, t, vp, HUD_COLOR,
-  );
+  // Ø περιγεγραμμένου — ένδειξη ΜΗΚΟΥΣ· gate SSoT toggle. Το N (αριθμός πλευρών) ΜΕΝΕΙ πάντα.
+  if (isLengthAngleHudVisible()) {
+    paintAlignedOverlayDimension(
+      ctx, rectLocalToWorld(frame, -rScene, 0), rectLocalToWorld(frame, rScene, 0),
+      rectLocalToWorld(frame, 0, frame.halfV + DIM_CLEAR_PX * wpp),
+      `Ø ${formatLengthForDisplay(widthMm)}`, t, vp, HUD_COLOR,
+    );
+  }
   labelAt(ctx, `N ${sides}`, rectLocalToWorld(frame, 0, -(frame.halfV + LABEL_CLEAR_PX * wpp)), t, vp);
   paintFrameAngleHeight(ctx, frame, rotationDeg, heightSpecLabel, wpp, t, vp);
 }
@@ -159,13 +174,16 @@ function paintProfileColumnHud(
 ): void {
   const wpp = worldPerPixel(t.scale);
   const dimClr = DIM_CLEAR_PX * wpp;
-  for (const e of footprintEdges(footprint)) {
-    if (e.lengthScene / wpp < MIN_EDGE_SCREEN_PX) continue; // πολύ μικρή ακμή → skip (anti-clutter)
-    const midX = (e.p1.x + e.p2.x) / 2, midY = (e.p1.y + e.p2.y) / 2;
-    paintAlignedOverlayDimension(
-      ctx, e.p1, e.p2, { x: midX + e.nx * dimClr, y: midY + e.ny * dimClr },
-      formatSceneLengthForDisplay(e.lengthScene, sceneUnits), t, vp, HUD_COLOR,
-    );
+  // Μήκη ακμών footprint — ενδείξεις ΜΗΚΟΥΣ· gate SSoT toggle (draw + grip-drag, 2D + 3D).
+  if (isLengthAngleHudVisible()) {
+    for (const e of footprintEdges(footprint)) {
+      if (e.lengthScene / wpp < MIN_EDGE_SCREEN_PX) continue; // πολύ μικρή ακμή → skip (anti-clutter)
+      const midX = (e.p1.x + e.p2.x) / 2, midY = (e.p1.y + e.p2.y) / 2;
+      paintAlignedOverlayDimension(
+        ctx, e.p1, e.p2, { x: midX + e.nx * dimClr, y: midY + e.ny * dimClr },
+        formatSceneLengthForDisplay(e.lengthScene, sceneUnits), t, vp, HUD_COLOR,
+      );
+    }
   }
   const frame = orientedRectFrame(footprint, rotationDeg);
   if (frame) paintFrameAngleHeight(ctx, frame, rotationDeg, heightSpecLabel, wpp, t, vp);
