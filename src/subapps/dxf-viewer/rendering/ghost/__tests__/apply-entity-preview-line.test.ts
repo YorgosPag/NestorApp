@@ -30,7 +30,8 @@ describe('ADR-363 Slice G.5 — line MOVE grip ghost = whole-entity translate', 
   it('X-axial arm (delta along the axis) translates the whole line — NOT a no-op (the bug)', () => {
     const preview: EntityPreviewTransform = {
       entityId: 'line_1', gripIndex: 4, delta: { x: 50, y: 0 },
-      movesEntity: true, edgeVertexIndices: [0, 1], lineGripKind: 'line-move',
+      movesEntity: true, edgeVertexIndices: [0, 1],
+      gripKind: { on: 'line', kind: 'line-move' },
     };
     const g = applyEntityPreview(makeLine(), preview) as unknown as LineGhost;
     expect(g.start).toEqual({ x: 50, y: 0 });
@@ -41,7 +42,8 @@ describe('ADR-363 Slice G.5 — line MOVE grip ghost = whole-entity translate', 
   it('Y-perp arm (delta across the axis) translates the whole line', () => {
     const preview: EntityPreviewTransform = {
       entityId: 'line_1', gripIndex: 4, delta: { x: 0, y: 50 },
-      movesEntity: true, edgeVertexIndices: [0, 1], lineGripKind: 'line-move',
+      movesEntity: true, edgeVertexIndices: [0, 1],
+      gripKind: { on: 'line', kind: 'line-move' },
     };
     const g = applyEntityPreview(makeLine(), preview) as unknown as LineGhost;
     expect(g.start).toEqual({ x: 0, y: 50 });
@@ -53,7 +55,8 @@ describe('ADR-363 Slice G.5 — line MOVE grip ghost = whole-entity translate', 
     const delta = { x: 50, y: 0 };
     const moveCross: EntityPreviewTransform = {
       entityId: 'line_1', gripIndex: 4, delta, movesEntity: true,
-      edgeVertexIndices: [0, 1], lineGripKind: 'line-move',
+      edgeVertexIndices: [0, 1],
+      gripKind: { on: 'line', kind: 'line-move' },
     };
     const midpoint: EntityPreviewTransform = {
       entityId: 'line_1', gripIndex: 2, delta, movesEntity: true, edgeVertexIndices: [0, 1],
@@ -67,7 +70,8 @@ describe('ADR-363 Slice F — line ROTATION grip ghost still spins (unchanged)',
     // anchor = ¼-east (75,0); cursor delta sweeps it off-axis → non-zero angle.
     const preview: EntityPreviewTransform = {
       entityId: 'line_1', gripIndex: 3, delta: { x: -25, y: 25 },
-      movesEntity: false, lineGripKind: 'line-rotation', anchorPos: { x: 75, y: 0 },
+      movesEntity: false,
+      gripKind: { on: 'line', kind: 'line-rotation' }, anchorPos: { x: 75, y: 0 },
     };
     const g = applyEntityPreview(makeLine(), preview) as unknown as LineGhost;
     expect(len(g)).toBeCloseTo(100, 6);       // rotation preserves length

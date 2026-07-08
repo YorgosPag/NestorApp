@@ -47,7 +47,7 @@ describe('applyEntityPreview — wall rotation strips stale join trim (Επίπ�
       gripIndex: 1,
       delta: { x: -100, y: 100 }, // 0° → 90° sweep about the pivot
       movesEntity: false,
-      wallGripKind: 'wall-rotation',
+      gripKind: { on: 'wall', kind: 'wall-rotation' },
       anchorPos: { x: 100, y: 0 },
       rotatePivot: { x: 0, y: 0 },
     };

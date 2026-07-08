@@ -28,7 +28,7 @@ describe('applyEntityPreview — foundation (ADR-436)', () => {
       gripIndex: 0,
       delta: { x: 300, y: 150 },
       movesEntity: false,
-      foundationGripKind: 'foundation-center',
+      gripKind: { on: 'foundation', kind: 'foundation-center' },
       anchorPos: { x: 0, y: 0 },
     };
     const ghost = applyEntityPreview(pad as unknown as DxfEntityUnion, preview) as unknown as FoundationEntity;
@@ -46,7 +46,7 @@ describe('applyEntityPreview — foundation (ADR-436)', () => {
       gripIndex: 1,
       delta: { x: -100, y: 100 },
       movesEntity: false,
-      foundationGripKind: 'foundation-rotation',
+      gripKind: { on: 'foundation', kind: 'foundation-rotation' },
       anchorPos: { x: 100, y: 0 },
       rotatePivot: { x: 0, y: 0 },
     };
@@ -62,7 +62,8 @@ describe('applyEntityPreview — foundation (ADR-436)', () => {
     const pad = makePad({ x: 0, y: 0 });
     const zero: EntityPreviewTransform = {
       entityId: pad.id, gripIndex: 0, delta: { x: 0, y: 0 }, movesEntity: false,
-      foundationGripKind: 'foundation-center', anchorPos: { x: 0, y: 0 },
+      gripKind: { on: 'foundation', kind: 'foundation-center' },
+      anchorPos: { x: 0, y: 0 },
     };
     expect(applyEntityPreview(pad as unknown as DxfEntityUnion, zero)).toBe(pad);
   });

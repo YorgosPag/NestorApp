@@ -34,7 +34,7 @@ describe('applyEntityPreview — text/mtext', () => {
   it('TEXT move grip → clones with shifted position', () => {
     const preview: EntityPreviewTransform = {
       entityId: 'tx', gripIndex: 0, delta: { x: 100, y: 50 }, movesEntity: true,
-      textGripKind: 'text-move', anchorPos: { x: 0, y: 0 },
+      gripKind: { on: 'text', kind: 'text-move' }, anchorPos: { x: 0, y: 0 },
     };
     const ghost = applyEntityPreview(text(), preview);
     expect(ghost).not.toBe(text());
@@ -44,7 +44,7 @@ describe('applyEntityPreview — text/mtext', () => {
   it('MTEXT move grip → responds (was skipped: type !== "text")', () => {
     const preview: EntityPreviewTransform = {
       entityId: 'mx', gripIndex: 0, delta: { x: 100, y: 50 }, movesEntity: true,
-      textGripKind: 'text-move', anchorPos: { x: 0, y: 0 },
+      gripKind: { on: 'text', kind: 'text-move' }, anchorPos: { x: 0, y: 0 },
     };
     const ghost = applyEntityPreview(mtext(), preview);
     expect((ghost as unknown as { type: string }).type).toBe('mtext');
@@ -56,7 +56,7 @@ describe('applyEntityPreview — text/mtext', () => {
     // widthFactor (like TEXT) rather than the column frame → no snap-back to content on release.
     const preview: EntityPreviewTransform = {
       entityId: 'mx', gripIndex: 7, delta: { x: 60, y: -40 }, movesEntity: false,
-      textGripKind: 'text-corner-se', anchorPos: { x: 0, y: 0 },
+      gripKind: { on: 'text', kind: 'text-corner-se' }, anchorPos: { x: 0, y: 0 },
     };
     const ghost = applyEntityPreview(mtext(), preview) as unknown as { widthFactor?: number; height: number };
     expect(ghost.height).toBeCloseTo(290, 6);           // SE corner grows height by |Δy|=40
@@ -76,7 +76,7 @@ describe('applyEntityPreview — text/mtext', () => {
   it('textNode-only TEXT (no flat text/height) → ghost injects flat fields + uses the REAL box', () => {
     const preview: EntityPreviewTransform = {
       entityId: 'tn', gripIndex: 7, delta: { x: 60, y: -40 }, movesEntity: false,
-      textGripKind: 'text-corner-se', anchorPos: { x: 0, y: 0 },
+      gripKind: { on: 'text', kind: 'text-corner-se' }, anchorPos: { x: 0, y: 0 },
     };
     const ghost = applyEntityPreview(textNodeOnly(), preview) as unknown as { text: string; height: number };
     // Flat text injected → TextRenderer paints the ghost (was: missing → early-return → no ghost).
@@ -124,7 +124,8 @@ describe('applyEntityPreview — text/mtext', () => {
     const delta = { x: -10, y: 10 }; // currentPos = anchor + delta = (0,10)
     const withPivot: EntityPreviewTransform = {
       entityId: 'tx', gripIndex: 1, delta, movesEntity: false,
-      textGripKind: 'text-rotation', anchorPos, rotatePivot: { x: -500, y: -500 },
+      gripKind: { on: 'text', kind: 'text-rotation' },
+      anchorPos, rotatePivot: { x: -500, y: -500 },
     };
     const noPivot: EntityPreviewTransform = { ...withPivot, rotatePivot: undefined };
     const gP = applyEntityPreview(text(), withPivot) as unknown as { rotation: number; position: { x: number; y: number } };
@@ -140,7 +141,7 @@ describe('applyEntityPreview — text/mtext', () => {
   it('zero delta → returns the same reference (no ghost paint)', () => {
     const preview: EntityPreviewTransform = {
       entityId: 'mx', gripIndex: 0, delta: { x: 0, y: 0 }, movesEntity: true,
-      textGripKind: 'text-move', anchorPos: { x: 0, y: 0 },
+      gripKind: { on: 'text', kind: 'text-move' }, anchorPos: { x: 0, y: 0 },
     };
     const e = mtext();
     expect(applyEntityPreview(e, preview)).toBe(e);
