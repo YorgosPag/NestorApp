@@ -17,42 +17,22 @@
 
 import {
   generateThermalSpaceId,
-  generateIfcGuid,
 } from '@/services/enterprise-id-convenience';
 import type {
   ThermalSpaceEntity,
   ThermalSpaceGeometry,
   ThermalSpaceParams,
 } from '@/subapps/dxf-viewer/bim/types/thermal-space-types';
-import { makeBimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
-import type { BimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
-import type { IfcPropertySet } from '@/subapps/dxf-viewer/bim/types/ifc-entity-mixin';
+import {
+  type CreateBimEntityInputBase,
+  assembleBimEntity,
+} from '@/services/factories/bim-entity-factory-base';
 
-export interface CreateThermalSpaceInput {
+export interface CreateThermalSpaceInput extends CreateBimEntityInputBase {
   /** Required: param block (footprint polygon + useType + ceilingHeightMm + overrides). */
   params: ThermalSpaceParams;
   /** Required: pre-computed geometry cache (caller responsibility). */
   geometry: ThermalSpaceGeometry;
-  /** Required: BaseEntity stable layer id. */
-  layerId: string;
-  /** Optional `visible` flag (BaseEntity). Default unset. */
-  visible?: boolean;
-  /** Optional override (test-only). Default = enterprise thermal-space ID. */
-  id?: string;
-  /** Optional override (test-only). Default = generateIfcGuid(). */
-  ifcGuid?: string;
-  /** Optional sparse IFC Property Sets payload. */
-  pset?: IfcPropertySet;
-  /** Optional validation block. Default = empty BimValidation. */
-  validation?: BimValidation;
-  /** Optional tenant fields — pass-through. */
-  companyId?: string;
-  projectId?: string;
-  buildingId?: string;
-  floorplanId?: string;
-  floorId?: string;
-  createdBy?: string;
-  updatedBy?: string;
 }
 
 /**
@@ -64,25 +44,16 @@ export interface CreateThermalSpaceInput {
  *   // → ifcType='IfcSpace', kind='bedroom'
  */
 export function createThermalSpace(input: CreateThermalSpaceInput): ThermalSpaceEntity {
-  const entity: ThermalSpaceEntity = {
-    id: input.id ?? generateThermalSpaceId(),
-    type: 'thermal-space',
-    kind: input.params.useType,
-    layerId: input.layerId,
-    params: input.params,
-    geometry: input.geometry,
-    validation: input.validation ?? makeBimValidation(),
-    ifcGuid: input.ifcGuid ?? generateIfcGuid(),
-    ifcType: 'IfcSpace',
-    ...(input.visible !== undefined && { visible: input.visible }),
-    ...(input.pset !== undefined && { pset: input.pset }),
-    ...(input.companyId !== undefined && { companyId: input.companyId }),
-    ...(input.projectId !== undefined && { projectId: input.projectId }),
-    ...(input.buildingId !== undefined && { buildingId: input.buildingId }),
-    ...(input.floorplanId !== undefined && { floorplanId: input.floorplanId }),
-    ...(input.floorId !== undefined && { floorId: input.floorId }),
-    ...(input.createdBy !== undefined && { createdBy: input.createdBy }),
-    ...(input.updatedBy !== undefined && { updatedBy: input.updatedBy }),
-  };
-  return entity;
+  return assembleBimEntity(
+    {
+      type: 'thermal-space',
+      kind: input.params.useType,
+      layerId: input.layerId,
+      params: input.params,
+      geometry: input.geometry,
+      ifcType: 'IfcSpace',
+      generateId: generateThermalSpaceId,
+    },
+    input,
+  );
 }

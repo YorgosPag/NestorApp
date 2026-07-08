@@ -16,47 +16,27 @@
 
 import {
   generateRoofId,
-  generateIfcGuid,
 } from '@/services/enterprise-id-convenience';
 import type {
   RoofEntity,
   RoofGeometry,
   RoofParams,
 } from '@/subapps/dxf-viewer/bim/types/roof-types';
-import { makeBimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
-import type { BimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
+import {
+  type CreateBimEntityInputBase,
+  assembleBimEntity,
+} from '@/services/factories/bim-entity-factory-base';
 import type { RoofTypeParams } from '@/subapps/dxf-viewer/bim/types/bim-family-type';
-import type { IfcPropertySet } from '@/subapps/dxf-viewer/bim/types/ifc-entity-mixin';
 
-export interface CreateRoofInput {
+export interface CreateRoofInput extends CreateBimEntityInputBase {
   /** Required: param block (footprint + per-edge slopes + slopeUnit + basePivotZ). */
   params: RoofParams;
   /** Required: pre-computed geometry cache (caller responsibility). */
   geometry: RoofGeometry;
-  /** Required: BaseEntity stable layer id. */
-  layerId: string;
-  /** Optional `visible` flag (BaseEntity). Default unset. */
-  visible?: boolean;
-  /** Optional override (test-only). Default = enterprise roof ID. */
-  id?: string;
-  /** Optional override (test-only). Default = generateIfcGuid(). */
-  ifcGuid?: string;
-  /** Optional sparse IFC Property Sets payload. */
-  pset?: IfcPropertySet;
-  /** Optional validation block. Default = empty BimValidation. */
-  validation?: BimValidation;
   /** ADR-412 — FK → BimFamilyType.id (RoofType). */
   typeId?: string;
   /** ADR-412 — per-instance overrides of type-level params. */
   typeOverrides?: Partial<RoofTypeParams>;
-  /** Optional tenant fields — pass-through. */
-  companyId?: string;
-  projectId?: string;
-  buildingId?: string;
-  floorplanId?: string;
-  floorId?: string;
-  createdBy?: string;
-  updatedBy?: string;
 }
 
 /**
@@ -67,27 +47,20 @@ export interface CreateRoofInput {
  *   thickness:434 }, geometry, layerId:'lyr_x' }); // → ifcType='IfcRoof'
  */
 export function createRoof(input: CreateRoofInput): RoofEntity {
-  const entity: RoofEntity = {
-    id: input.id ?? generateRoofId(),
-    type: 'roof',
-    kind: 'roof',
-    layerId: input.layerId,
-    params: input.params,
-    geometry: input.geometry,
-    validation: input.validation ?? makeBimValidation(),
-    ifcGuid: input.ifcGuid ?? generateIfcGuid(),
-    ifcType: 'IfcRoof',
-    ...(input.visible !== undefined && { visible: input.visible }),
-    ...(input.pset !== undefined && { pset: input.pset }),
+  return {
+    ...assembleBimEntity(
+      {
+        type: 'roof',
+        kind: 'roof',
+        layerId: input.layerId,
+        params: input.params,
+        geometry: input.geometry,
+        ifcType: 'IfcRoof',
+        generateId: generateRoofId,
+      },
+      input,
+    ),
     ...(input.typeId !== undefined && { typeId: input.typeId }),
     ...(input.typeOverrides !== undefined && { typeOverrides: input.typeOverrides }),
-    ...(input.companyId !== undefined && { companyId: input.companyId }),
-    ...(input.projectId !== undefined && { projectId: input.projectId }),
-    ...(input.buildingId !== undefined && { buildingId: input.buildingId }),
-    ...(input.floorplanId !== undefined && { floorplanId: input.floorplanId }),
-    ...(input.floorId !== undefined && { floorId: input.floorId }),
-    ...(input.createdBy !== undefined && { createdBy: input.createdBy }),
-    ...(input.updatedBy !== undefined && { updatedBy: input.updatedBy }),
   };
-  return entity;
 }

@@ -19,10 +19,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-369-bim-elevation-convention-revit-alignment.md §9 Q7, Q8
  */
 
-import {
-  generateSlabId,
-  generateIfcGuid,
-} from '@/services/enterprise-id-convenience';
+import { generateSlabId } from '@/services/enterprise-id-convenience';
 import {
   DEFAULT_SLAB_GEOMETRY_TYPE,
   type SlabEntity,
@@ -32,9 +29,10 @@ import {
   type SlabParams,
   type SlabSlope,
 } from '@/subapps/dxf-viewer/bim/types/slab-types';
-import { makeBimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
-import type { BimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
-import type { IfcPropertySet } from '@/subapps/dxf-viewer/bim/types/ifc-entity-mixin';
+import {
+  type CreateBimEntityInputBase,
+  assembleBimEntity,
+} from '@/services/factories/bim-entity-factory-base';
 
 /** SlabParams χωρίς το ADR-369 `geometryType` (factory το γεμίζει με default). */
 type SlabParamsCallerInput = Omit<SlabParams, 'geometryType'> & {
@@ -42,31 +40,11 @@ type SlabParamsCallerInput = Omit<SlabParams, 'geometryType'> & {
   slope?: SlabSlope;
 };
 
-export interface CreateSlabInput {
+export interface CreateSlabInput extends CreateBimEntityInputBase {
   /** Required: param block (geometryType optional — factory defaults 'box'). */
   params: SlabParamsCallerInput;
   /** Required: pre-computed geometry cache (caller responsibility). */
   geometry: SlabGeometry;
-  /** Required: BaseEntity stable layer id (ADR-358 Phase 9E-6e). */
-  layerId: string;
-  /** Optional `visible` flag (BaseEntity). Default unset. */
-  visible?: boolean;
-  /** Optional override (test-only). Default = enterprise slab ID. */
-  id?: string;
-  /** Optional override (test-only). Default = generateIfcGuid(). */
-  ifcGuid?: string;
-  /** Optional sparse IFC Property Sets payload. */
-  pset?: IfcPropertySet;
-  /** Optional validation block. Default = empty BimValidation. */
-  validation?: BimValidation;
-  /** Optional tenant fields — pass-through. */
-  companyId?: string;
-  projectId?: string;
-  buildingId?: string;
-  floorplanId?: string;
-  floorId?: string;
-  createdBy?: string;
-  updatedBy?: string;
 }
 
 function resolveSlabParams(input: SlabParamsCallerInput): SlabParams {
@@ -102,27 +80,18 @@ function resolveSlabParams(input: SlabParamsCallerInput): SlabParams {
  */
 export function createSlab(input: CreateSlabInput): SlabEntity {
   const params = resolveSlabParams(input.params);
-  const entity: SlabEntity = {
-    id: input.id ?? generateSlabId(),
-    type: 'slab',
-    kind: params.kind,
-    layerId: input.layerId,
-    params,
-    geometry: input.geometry,
-    validation: input.validation ?? makeBimValidation(),
-    ifcGuid: input.ifcGuid ?? generateIfcGuid(),
-    ifcType: 'IfcSlab',
-    ...(input.visible !== undefined && { visible: input.visible }),
-    ...(input.pset !== undefined && { pset: input.pset }),
-    ...(input.companyId !== undefined && { companyId: input.companyId }),
-    ...(input.projectId !== undefined && { projectId: input.projectId }),
-    ...(input.buildingId !== undefined && { buildingId: input.buildingId }),
-    ...(input.floorplanId !== undefined && { floorplanId: input.floorplanId }),
-    ...(input.floorId !== undefined && { floorId: input.floorId }),
-    ...(input.createdBy !== undefined && { createdBy: input.createdBy }),
-    ...(input.updatedBy !== undefined && { updatedBy: input.updatedBy }),
-  };
-  return entity;
+  return assembleBimEntity(
+    {
+      type: 'slab',
+      kind: params.kind,
+      layerId: input.layerId,
+      params,
+      geometry: input.geometry,
+      ifcType: 'IfcSlab',
+      generateId: generateSlabId,
+    },
+    input,
+  );
 }
 
 // Re-export SlabKind for caller convenience (test ergonomics).
