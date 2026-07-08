@@ -12,6 +12,8 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { StairGripKind, WallGripKind } from './useGripMovement';
 import type { ColumnGripKind, FoundationGripKind, BeamGripKind, SlabGripKind, SlabOpeningGripKind, RoofGripKind, OpeningGripKind, MepFixtureGripKind, ElectricalPanelGripKind, MepManifoldGripKind, MepRadiatorGripKind, MepBoilerGripKind, MepWaterHeaterGripKind, FurnitureGripKind, FloorplanSymbolGripKind, MepSegmentGripKind, FloorFinishGripKind, HatchGripKind, MepUnderfloorGripKind, DimensionGripKind, LineGripKind, ArcGripKind, PolylineGripKind, GroupGripKind, AnnotationSymbolGripKind, TextGripKind } from './grip-types';
+// ADR-602 (ADR-587 Φ6) Stage 1 — tagged grip discriminator SSoT (canonical module).
+import type { EntityGripKind } from './grip-kinds';
 
 // ============================================================================
 // TYPES (still used by grips/ modules and CanvasLayerStack)
@@ -186,6 +188,13 @@ export interface DxfGripDragPreview {
    * case 'annotation-symbol' (rotation) the commit runs → preview ≡ commit. Mirror of arc.
    */
   annotationSymbolGripKind?: AnnotationSymbolGripKind;
+  /**
+   * ADR-602 (ADR-587 Φ6) Stage 1 — tagged grip discriminator SSoT. Additive:
+   * κάθεται ΔΙΠΛΑ στα per-entity `xxxGripKind?` optionals παραπάνω (μηδέν behavior
+   * change· ο bag έχει 28/31 σήμερα — Stage 5 τα ενοποιεί όλα σε αυτό). Read μέσω
+   * `gripKindOf(preview, '<entity.type>')`.
+   */
+  gripKind?: EntityGripKind;
   /**
    * ADR-363 Phase 1G — set when the active grip is a wall corner being moved via
    * the hot-grip (click-click) state. Consumed by `useGripGhostPreview` to draw

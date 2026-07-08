@@ -394,6 +394,7 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
           entityId: entity.id, gripIndex, type: 'vertex',
           position: { x: g.point.x, y: g.point.y }, movesEntity: false,
           hatchGripKind: `hatch-vertex-${g.pathIdx}-${g.vertexIdx}`,
+          gripKind: { on: 'hatch', kind: `hatch-vertex-${g.pathIdx}-${g.vertexIdx}` },
         });
         gripIndex += 1;
       }
@@ -406,6 +407,7 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
           entityId: entity.id, gripIndex, type: 'midpoint',
           position: { x: e.point.x, y: e.point.y }, movesEntity: false,
           hatchGripKind: `hatch-edge-midpoint-${e.pathIdx}-${e.edgeIdx}`,
+          gripKind: { on: 'hatch', kind: `hatch-edge-midpoint-${e.pathIdx}-${e.edgeIdx}` },
         });
         gripIndex += 1;
       }
@@ -419,6 +421,7 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
             entityId: entity.id, gripIndex, type: 'vertex',
             position: { x: originPos.x, y: originPos.y }, movesEntity: false,
             hatchGripKind: HATCH_GRADIENT_ORIGIN_KIND,
+            gripKind: { on: 'hatch', kind: HATCH_GRADIENT_ORIGIN_KIND },
           });
           gripIndex += 1;
           // ADR-507 Φ5 A4 — gradient-angle βραχίονας (μετά το origin). Θέση = origin +
@@ -430,6 +433,7 @@ export function computeDxfEntityGrips(entity: DxfEntityUnion): GripInfo[] {
               entityId: entity.id, gripIndex, type: 'vertex',
               position: { x: anglePos.x, y: anglePos.y }, movesEntity: false,
               hatchGripKind: HATCH_GRADIENT_ANGLE_KIND,
+              gripKind: { on: 'hatch', kind: HATCH_GRADIENT_ANGLE_KIND },
             });
             gripIndex += 1;
           }

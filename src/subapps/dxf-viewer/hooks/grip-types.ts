@@ -41,6 +41,7 @@ import type {
   GroupGripKind,
   AnnotationSymbolGripKind,
   TextGripKind,
+  EntityGripKind,
 } from './grip-kinds';
 
 // Re-export the grip-kind unions for backward compatibility (call-sites import
@@ -273,6 +274,13 @@ export interface GripInfo {
    * — ΜΗΔΕΝ bespoke transform. Mirror of `arc-*` (move + rotation, no resize).
    */
   annotationSymbolGripKind?: AnnotationSymbolGripKind;
+  /**
+   * ADR-602 (ADR-587 Φ6) Stage 1 — tagged grip discriminator SSoT. Additive:
+   * κάθεται ΔΙΠΛΑ στα 31 `xxxGripKind?` optionals παραπάνω (μηδέν behavior change).
+   * Producers/hubs/reads θα μεταναστεύσουν σε αυτό (Stages 2-5) ώστε τα 31 optionals
+   * να αφαιρεθούν (Stage 5). Read μέσω `gripKindOf(grip, '<entity.type>')`.
+   */
+  gripKind?: EntityGripKind;
 }
 
 /** Grip drag state */

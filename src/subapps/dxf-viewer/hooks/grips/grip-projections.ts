@@ -194,6 +194,11 @@ export function buildDxfDragPreview(
     // then the render expands the moved group). The rotation handle forwards via
     // `buildRotateReferencePreview` (hot-grip rotate path).
     ...(activeGrip.groupGripKind       ? { groupGripKind:       activeGrip.groupGripKind,       anchorPos } : {}),
+    // ADR-602 (ADR-587 Φ6) Stage 2 — dual-write του tagged grip discriminator SSoT. Inert
+    // μέχρι Stage 3· ΚΛΕΙΝΕΙ by construction το §1.4 Bug 3 (disjoint builders): το ΕΝΑ
+    // `gripKind` προωθείται ΚΑΙ από τους δύο builders, ανεξαρτήτως του legacy subset που
+    // κρατά ο καθένας. `anchorPos` ήδη emitted (πάντα, γραμμή 143).
+    ...(activeGrip.gripKind ? { gripKind: activeGrip.gripKind } : {}),
   };
 }
 
@@ -271,6 +276,10 @@ export function buildRotateReferencePreview(
     // hot-grip flow as the arc/line/group. Without this forward the ghost never
     // receives the discriminator in the rotate flow.
     ...(activeGrip.annotationSymbolGripKind ? { annotationSymbolGripKind: activeGrip.annotationSymbolGripKind } : {}),
+    // ADR-602 (ADR-587 Φ6) Stage 2 — dual-write του tagged grip discriminator SSoT (ίδιο ΕΝΑ
+    // field και στον rotate builder → §1.4 Bug 3 disjoint-subsets κλείνει by construction).
+    // Inert μέχρι Stage 3.
+    ...(activeGrip.gripKind ? { gripKind: activeGrip.gripKind } : {}),
     hotGrip: true as const,
     rotatePivot: pivot,
     delta: { x: 0, y: 0 },

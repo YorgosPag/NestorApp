@@ -507,7 +507,7 @@ Phase 1 ✅ IMPLEMENTED 2026-05-24 (schema + AI enricher + tests + post-finalize
 
 ---
 
-### 🧹 ADR-370/371 DUPLICATE NUMBERING — housekeeping (priorità bassa, ~15min, discovered 2026-05-24 via ADR-373 OQ8)
+### 🧹 ADR-370/371 DUPLICATE NUMBERING — housekeeping (priorità bassa· ⚠️ ΟΧΙ 15min — cross-cutting renumber docs+src+25 memory refs, βλ. SCOPE CORRECTION κάτω· dedicated session· discovered 2026-05-24 via ADR-373 OQ8)
 
 **Discovered**: 2026-05-24 durante ADR-373 Phase 1 Recognition (Glob verification del prossimo ADR libero).
 
@@ -526,12 +526,15 @@ Phase 1 ✅ IMPLEMENTED 2026-05-24 (schema + AI enricher + tests + post-finalize
 4. Grep tutti i riferimenti (`grep -rn "ADR-370\|ADR-371"` in docs/ + src/) e aggiorna.
 5. Re-run auto-script per `adr-index.md`.
 
-**Effort**: ~15min lookup + rename + reference update.
+**⚠️ SCOPE CORRECTION (2026-07-08, Sonnet — blast-radius μετρήθηκε, ΟΧΙ «15min/low-risk»):**
+- **Πραγματική σύγκρουση:** ΔΥΟ docs officially numbered **ADR-371** — `ADR-371-bim-3d-readonly-viewer.md` ΚΑΙ `ADR-370-bim-corner-snap-system.md` (έχει Note «officially numbered ADR-371, filename kept for git-blame»). Το `ADR-371-bim-corner-snap-system.md` = redirect stub (8γρ). Content-equal check: **DIFFERENT** (stub vs 1129γρ real doc).
+- **Canonical:** `ADR-370-bim-readonly-visualization.md` = σωστό ADR-370. Το corner-snap (1129γρ, IMPLEMENTED, το ADR-398 το επεκτείνει) πρέπει να πάρει **μοναδικό ελεύθερο number**.
+- **Blast radius (grep 2026-07-08):** 4 doc refs + **6 src refs** + **25 auto-memory refs** + adr-index 2 sections (γρ.362-365 + 945-947). ⚠️ **Fix proposto στάδια 2-3 STALE:** ADR-374/375 είναι ΠΙΑΣΜΕΝΑ· 600-604 πιασμένα· 605+ mint-άρονται ταυτόχρονα από άλλους agents → επιλογή number απαιτεί coordination (collision risk).
+- **Ετυμηγορία:** cross-cutting docs+src+memory renumber → **dedicated planned session** (ΟΧΙ boy-scout, ΟΧΙ πάνω σε uncommitted work). Priorità bassa — δεν μπλοκάρει τίποτα (τα docs self-document το ADR-371 mapping μέσω Note+redirect).
 
-**Σχέση με ADR-373**: nessuna — domain diverso (BIM viewer vs file metadata). Non blocks ADR-373 implementation.
-
-- [ ] Verifica se i 2 `corner-snap-system` ADRs sono content-equal o distinti
-- [ ] Rinomina + ricerca + sostituzione tutti i riferimenti
+- [x] Verifica se i 2 `corner-snap-system` ADRs sono content-equal o distinti — **DIFFERENT** (redirect stub vs 1129γρ canonical)
+- [ ] Renumber corner-snap → μοναδικό ελεύθερο ADR number (dedicated session· διάλεξε number με coordination) + update note/stub
+- [ ] Update 4 doc + 6 src + 25 memory refs + adr-index 2 sections
 - [ ] Re-run `adr-index.md` auto-script
 
 ---

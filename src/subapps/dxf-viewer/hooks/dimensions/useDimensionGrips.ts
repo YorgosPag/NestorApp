@@ -98,11 +98,11 @@ export function getDimensionGrips(entity: DxfDimension): GripInfo[] {
   const grips: GripInfo[] = [];
 
   if (pts.length >= 1) {
-    grips.push({ entityId: id, gripIndex: 0, type: 'vertex', position: pts[0], movesEntity: false, dimGripKind: 'dim-defpoint-0' });
+    grips.push({ entityId: id, gripIndex: 0, type: 'vertex', position: pts[0], movesEntity: false, dimGripKind: 'dim-defpoint-0', gripKind: { on: 'dimension', kind: 'dim-defpoint-0' } });
   }
 
   if (pts.length >= 2) {
-    grips.push({ entityId: id, gripIndex: 1, type: 'vertex', position: pts[1], movesEntity: false, dimGripKind: 'dim-defpoint-1' });
+    grips.push({ entityId: id, gripIndex: 1, type: 'vertex', position: pts[1], movesEntity: false, dimGripKind: 'dim-defpoint-1', gripKind: { on: 'dimension', kind: 'dim-defpoint-1' } });
   }
 
   // ADR-362 §D9 — linear/aligned dims read their dim-line + text grip positions
@@ -112,23 +112,23 @@ export function getDimensionGrips(entity: DxfDimension): GripInfo[] {
   // Interaction ≡ render ≡ hit-test, all consuming computeDimHitGeometry.
   const hit = computeDimHitGeometry(dim);
   if (hit) {
-    grips.push({ entityId: id, gripIndex: 2, type: 'edge', position: hit.footStart, movesEntity: false, dimGripKind: 'dim-line-ref' });
-    grips.push({ entityId: id, gripIndex: 3, type: 'center', position: hit.textAnchor, movesEntity: false, dimGripKind: 'dim-text' });
-    grips.push({ entityId: id, gripIndex: 4, type: 'edge', position: hit.footEnd, movesEntity: false, dimGripKind: 'dim-extra' });
+    grips.push({ entityId: id, gripIndex: 2, type: 'edge', position: hit.footStart, movesEntity: false, dimGripKind: 'dim-line-ref', gripKind: { on: 'dimension', kind: 'dim-line-ref' } });
+    grips.push({ entityId: id, gripIndex: 3, type: 'center', position: hit.textAnchor, movesEntity: false, dimGripKind: 'dim-text', gripKind: { on: 'dimension', kind: 'dim-text' } });
+    grips.push({ entityId: id, gripIndex: 4, type: 'edge', position: hit.footEnd, movesEntity: false, dimGripKind: 'dim-extra', gripKind: { on: 'dimension', kind: 'dim-extra' } });
     return grips;
   }
 
   // Non-linear variants (radial / angular / ordinate / baseline / continued) keep
   // the raw-param positions — their dim-line ref + 5th grip stay type-specific.
   if (pts.length >= 3) {
-    grips.push({ entityId: id, gripIndex: 2, type: 'edge', position: pts[2], movesEntity: false, dimGripKind: 'dim-line-ref' });
+    grips.push({ entityId: id, gripIndex: 2, type: 'edge', position: pts[2], movesEntity: false, dimGripKind: 'dim-line-ref', gripKind: { on: 'dimension', kind: 'dim-line-ref' } });
   }
 
-  grips.push({ entityId: id, gripIndex: 3, type: 'center', position: resolveTextMidpoint(dim), movesEntity: false, dimGripKind: 'dim-text' });
+  grips.push({ entityId: id, gripIndex: 3, type: 'center', position: resolveTextMidpoint(dim), movesEntity: false, dimGripKind: 'dim-text', gripKind: { on: 'dimension', kind: 'dim-text' } });
 
   const extraPos = extraGripPos(dim);
   if (extraPos) {
-    grips.push({ entityId: id, gripIndex: 4, type: 'vertex', position: extraPos, movesEntity: false, dimGripKind: 'dim-extra' });
+    grips.push({ entityId: id, gripIndex: 4, type: 'vertex', position: extraPos, movesEntity: false, dimGripKind: 'dim-extra', gripKind: { on: 'dimension', kind: 'dim-extra' } });
   }
 
   return grips;
