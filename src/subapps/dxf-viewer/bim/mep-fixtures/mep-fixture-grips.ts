@@ -37,7 +37,7 @@ const adapter = createCentredBoxGripAdapter<MepFixtureEntity, MepFixtureParams, 
   minDimensionMm: MIN_FIXTURE_DIMENSION_MM,
   toBoxParams: (params) => params,
   fromBoxPatch: (original, patch) => ({ ...original, ...patch }),
-  toGripInfo: (base, kind) => ({ ...base, mepFixtureGripKind: kind }),
+  toGripInfo: (base, kind) => ({ ...base, mepFixtureGripKind: kind, gripKind: { on: 'mep-fixture', kind } }),
 });
 
 /** Drag input for a fixture grip (the shared centred-box 5-field shape). */
@@ -68,6 +68,7 @@ export function getMepFixtureGrips(entity: Readonly<MepFixtureEntity>): GripInfo
         position: { x: params.position.x + (params.width / 2) * s, y: params.position.y },
         movesEntity: false,
         mepFixtureGripKind: 'mep-fixture-diameter',
+        gripKind: { on: 'mep-fixture', kind: 'mep-fixture-diameter' },
       },
     ];
   }

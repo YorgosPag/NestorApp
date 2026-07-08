@@ -25,6 +25,7 @@ import type { GripInfo, MepSegmentGripKind } from '../../hooks/grip-types';
 import type { MepSegmentEntity, MepSegmentParams } from '../types/mep-segment-types';
 import { resolveSegmentSection, MIN_SEGMENT_DIMENSION_MM, isSegmentVertical } from '../types/mep-segment-types';
 import { project2D, perpUnit, unitVector, rotateAxisPointsAboutPivot } from '../grips/grip-math';
+import { translatePoint3D } from '../../rendering/entities/shared/geometry-vector-utils';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -82,6 +83,7 @@ export function getMepSegmentGrips(entity: Readonly<MepSegmentEntity>): GripInfo
       position: project2D(params.startPoint),
       movesEntity: true,
       mepSegmentGripKind: 'mep-segment-midpoint',
+      gripKind: { on: 'mep-segment', kind: 'mep-segment-midpoint' },
     }];
   }
 
@@ -98,6 +100,7 @@ export function getMepSegmentGrips(entity: Readonly<MepSegmentEntity>): GripInfo
     position: start,
     movesEntity: false,
     mepSegmentGripKind: 'mep-segment-start',
+    gripKind: { on: 'mep-segment', kind: 'mep-segment-start' },
   });
 
   // 1 — axis end endpoint
@@ -108,6 +111,7 @@ export function getMepSegmentGrips(entity: Readonly<MepSegmentEntity>): GripInfo
     position: end,
     movesEntity: false,
     mepSegmentGripKind: 'mep-segment-end',
+    gripKind: { on: 'mep-segment', kind: 'mep-segment-end' },
   });
 
   // 2 — axis midpoint (whole-entity translate / MOVE). ADR-363 Φ1G.5 Slice 2: no
@@ -128,6 +132,7 @@ export function getMepSegmentGrips(entity: Readonly<MepSegmentEntity>): GripInfo
       position: sectionPos,
       movesEntity: false,
       mepSegmentGripKind: 'mep-segment-section',
+      gripKind: { on: 'mep-segment', kind: 'mep-segment-section' },
     });
   }
 
@@ -144,6 +149,7 @@ export function getMepSegmentGrips(entity: Readonly<MepSegmentEntity>): GripInfo
       },
       movesEntity: false,
       mepSegmentGripKind: 'mep-segment-rotation',
+      gripKind: { on: 'mep-segment', kind: 'mep-segment-rotation' },
     });
   }
 
@@ -205,11 +211,7 @@ function moveStart(input: Readonly<MepSegmentGripDragInput>): MepSegmentParams {
   const { originalParams, delta } = input;
   return {
     ...originalParams,
-    startPoint: {
-      x: originalParams.startPoint.x + delta.x,
-      y: originalParams.startPoint.y + delta.y,
-      z: originalParams.startPoint.z ?? 0,
-    },
+    startPoint: translatePoint3D(originalParams.startPoint, delta),
   };
 }
 
@@ -217,11 +219,7 @@ function moveEnd(input: Readonly<MepSegmentGripDragInput>): MepSegmentParams {
   const { originalParams, delta } = input;
   return {
     ...originalParams,
-    endPoint: {
-      x: originalParams.endPoint.x + delta.x,
-      y: originalParams.endPoint.y + delta.y,
-      z: originalParams.endPoint.z ?? 0,
-    },
+    endPoint: translatePoint3D(originalParams.endPoint, delta),
   };
 }
 
@@ -229,16 +227,8 @@ function moveMidpoint(input: Readonly<MepSegmentGripDragInput>): MepSegmentParam
   const { originalParams, delta } = input;
   return {
     ...originalParams,
-    startPoint: {
-      x: originalParams.startPoint.x + delta.x,
-      y: originalParams.startPoint.y + delta.y,
-      z: originalParams.startPoint.z ?? 0,
-    },
-    endPoint: {
-      x: originalParams.endPoint.x + delta.x,
-      y: originalParams.endPoint.y + delta.y,
-      z: originalParams.endPoint.z ?? 0,
-    },
+    startPoint: translatePoint3D(originalParams.startPoint, delta),
+    endPoint: translatePoint3D(originalParams.endPoint, delta),
   };
 }
 

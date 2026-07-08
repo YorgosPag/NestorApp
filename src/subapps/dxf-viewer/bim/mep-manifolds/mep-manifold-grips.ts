@@ -43,7 +43,7 @@ const adapter = createCentredBoxGripAdapter<
   minDimensionMm: MIN_MANIFOLD_DIMENSION_MM,
   toBoxParams: (params) => params,
   fromBoxPatch: (original, patch) => ({ ...original, ...patch }),
-  toGripInfo: (base, kind) => ({ ...base, mepManifoldGripKind: kind }),
+  toGripInfo: (base, kind) => ({ ...base, mepManifoldGripKind: kind, gripKind: { on: 'mep-manifold', kind } }),
 });
 
 /** Drag input for a manifold grip (the shared centred-box 5-field shape). */
@@ -92,6 +92,7 @@ export function getMepManifoldGrips(entity: Readonly<MepManifoldEntity>): GripIn
       position: outletActionGripWorld(params, OUTLET_ACTION_GRIP_GAP_MM / 2),
       movesEntity: false,
       mepManifoldGripKind: 'mep-manifold-outlet-add',
+      gripKind: { on: 'mep-manifold', kind: 'mep-manifold-outlet-add' },
     });
   }
   if (count > MIN_MANIFOLD_OUTLET_COUNT) {
@@ -102,6 +103,7 @@ export function getMepManifoldGrips(entity: Readonly<MepManifoldEntity>): GripIn
       position: outletActionGripWorld(params, -OUTLET_ACTION_GRIP_GAP_MM / 2),
       movesEntity: false,
       mepManifoldGripKind: 'mep-manifold-outlet-remove',
+      gripKind: { on: 'mep-manifold', kind: 'mep-manifold-outlet-remove' },
     });
   }
   return grips;
