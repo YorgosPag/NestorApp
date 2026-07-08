@@ -50,6 +50,7 @@ import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getColumnGrips } from '../columns/column-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { KIND_STROKE, KIND_FILL } from '../columns/column-render-palette';
 import { isWallColumnKind } from '../columns/column-from-faces';
@@ -229,7 +230,7 @@ export class ColumnRenderer extends BaseEntityRenderer {
       // ADR-397 — icon glyph for the move/rotation handles (column-center →
       // 4-arrow, column-rotation → curved arrow) via the shared registry SSoT,
       // mirror Wall/StairRenderer. Other column grips stay square.
-      shape: gripGlyphShape(g.columnGripKind),
+      shape: gripGlyphShape(gripKindOf(g, 'column')),
     }));
   }
 

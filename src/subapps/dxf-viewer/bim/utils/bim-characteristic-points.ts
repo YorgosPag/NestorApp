@@ -56,6 +56,7 @@ import { getOpeningCornerWorldPoints } from '../walls/opening-corner-anchors';
 import { getColumnCornerWorldPoints } from '../columns/column-corner-anchors';
 import { computeColumnGeometry } from '../geometry/column-geometry';
 import { getFoundationGrips } from '../foundations/foundation-grips';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { getCentredBoxGrips, type CentredBoxParams } from '../grips/centred-box-grips';
 import { polygon2DCentroid, polygon2DAreaCentroid, footprintEdgeMidpoints, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import { isSegmentVertical } from '../types/mep-segment-types';
@@ -233,7 +234,7 @@ function columnPoints(entity: Entity): BimCharPoints {
 
 function foundationPoints(entity: Entity): BimCharPoints {
   if (!isFoundationEntity(entity)) return EMPTY;
-  const corners = getFoundationGrips(entity).filter((g) => isCornerGrip(g.foundationGripKind)).map((g) => g.position);
+  const corners = getFoundationGrips(entity).filter((g) => isCornerGrip(gripKindOf(g, 'foundation'))).map((g) => g.position);
   return footprintPoints(corners, getBimCharacteristicLabelRoot(entity));
 }
 

@@ -35,6 +35,7 @@
 
 import type { Point2D, Point3D } from '../../rendering/types/Types';
 import type { GripInfo, StairGripKind } from '../../hooks/useGripMovement';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import type { GripShape } from '../../rendering/grips/types';
 import type { StairEntity, StairVariantParams } from '../../bim/types/stair-types';
 import {
@@ -146,7 +147,7 @@ export function getStairGrips(entity: Readonly<StairEntity>): GripInfo[] {
   // translates the whole stair (declutter). Filtered here (not un-pushed) so the
   // `grips.length`-based indices above stay intact; the `stair-base` transform +
   // hot-grip move path are retained (just unreachable). gripIndex 0 left unused.
-  return grips.filter((g) => g.stairGripKind !== 'stair-base');
+  return grips.filter((g) => gripKindOf(g, 'stair') !== 'stair-base');
 }
 
 // ─── ADR-358 Phase 5b — axis width + length handles (non-straight variants) ──

@@ -33,6 +33,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo, OpeningGripKind } from '../../hooks/useGripMovement';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import type { OpeningEntity, OpeningParams } from '../types/opening-types';
 import { DEFAULT_FRAME_WIDTH_MM, MIN_OPENING_WIDTH_MM, isHingedKind } from '../types/opening-types';
 import type { WallEntity } from '../types/wall-types';
@@ -163,7 +164,7 @@ export function getOpeningGrips(entity: Readonly<OpeningEntity>): GripInfo[] {
   // here (not un-pushed) so the gripIndex math above — incl. the `opening-facing`
   // `grips.length` index — stays intact; the `opening-move` transform
   // (`moveAlongWall`) is retained but no longer reachable from a grip.
-  return grips.filter((g) => g.openingGripKind !== 'opening-move');
+  return grips.filter((g) => gripKindOf(g, 'opening') !== 'opening-move');
 }
 
 // ─── Drag transforms ─────────────────────────────────────────────────────────

@@ -91,4 +91,33 @@ describe('toEntityModel capability coverage — ζωντανό seam ↔ descript
     expect(model.start).toEqual({ x: 0, y: 0 });
     expect(model.end).toEqual({ x: 10, y: 5 });
   });
+
+  // ─── Fall-through consolidation pins (TIER-C dup audit, ADR-587 Φ5 seam) ───
+  // Group A (quartet) — the 17-case fall-through must carry `validation` through.
+  it('BIM Group A (wall) → quartet {kind,params,geometry,validation} προωθείται όλο', () => {
+    const wall = {
+      id: 'w1', type: 'wall', visible: true,
+      kind: 'straight', params: { thickness: 200 }, geometry: { path: [] }, validation: { ok: true },
+    } as unknown as DxfEntityUnion;
+    const model = buildEntityModelFromDxf(wall, false, RESOLVED) as Record<string, unknown>;
+    expect(model.type).toBe('wall');
+    expect(model.kind).toBe('straight');
+    expect(model.params).toEqual({ thickness: 200 });
+    expect(model.geometry).toEqual({ path: [] });
+    expect(model.validation).toEqual({ ok: true });
+  });
+
+  // Group B (finishes/spaces) — the No-God-shell guarantee: `validation` is NEVER
+  // carried even when present on the source (force-merge with Group A would leak it).
+  it('BIM Group B (floor-finish) → {kind,params,geometry} ΧΩΡΙΣ validation (No-God-shell)', () => {
+    const floorFinish = {
+      id: 'ff1', type: 'floor-finish', visible: true,
+      kind: 'tile', params: { materialId: 'm1' }, geometry: { bbox: {} }, validation: { leaked: true },
+    } as unknown as DxfEntityUnion;
+    const model = buildEntityModelFromDxf(floorFinish, false, RESOLVED) as Record<string, unknown>;
+    expect(model.type).toBe('floor-finish');
+    expect(model.kind).toBe('tile');
+    expect(model.geometry).toEqual({ bbox: {} });
+    expect('validation' in model).toBe(false);
+  });
 });
