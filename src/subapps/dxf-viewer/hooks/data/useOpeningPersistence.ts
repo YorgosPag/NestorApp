@@ -27,9 +27,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { dequal } from 'dequal';
 
-import type { SceneModel } from '../../types/entities';
 import { DXF_TIMING } from '../../config/dxf-timing';
-import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import type { Level } from '../../systems/levels/config';
 import { EventBus } from '../../systems/events/EventBus';
@@ -54,6 +52,7 @@ import {
   type OpeningTypeLink,
 } from '../../bim/family-types/opening-type-resolution';
 import { useOpeningTypeReresolution } from './useOpeningTypeReresolution';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 
 // ============================================================================
 // TYPES
@@ -61,11 +60,8 @@ import { useOpeningTypeReresolution } from './useOpeningTypeReresolution';
 
 export type OpeningSaveState = 'idle' | 'saving' | 'saved' | 'error';
 
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
+interface OpeningLevelManager extends LevelSceneWriter {
   readonly levels: readonly Level[];
-  getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
 }
 
 export interface UseOpeningPersistenceParams {
@@ -76,7 +72,7 @@ export interface UseOpeningPersistenceParams {
   /** ADR-420 — stable building-storey scope key for Firestore query/write. */
   readonly floorId?: string | null;
   readonly userId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: OpeningLevelManager;
   readonly primarySelectedOpening: OpeningEntity | null;
 }
 

@@ -3,23 +3,21 @@
 /**
  * ADR-417 — Roof Firestore persistence React adapter.
  *
- * Bridges `RoofFirestoreService` στο scene model που κατέχει το `LevelsSystem`.
- * Mirrors `useRailingPersistence` (ADR-407) — ίδιο hybrid auto-save,
- * selective-skip diff-merge, και first-save listener wired σε
- * `drawing:entity-created` με `tool === 'roof'`. Η geometry re-derived από
- * params on hydrate (FOOTPRINT ⊥ TYPE → derived geometry, never persisted as truth).
+ * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-594). Behaviour
+ * unchanged: hybrid auto-save + `saveNow`, diff-merge with ADR-412 "type always
+ * wins" (`roofEntityDiffersFromDoc` + family-type link baseline seed), setDoc/
+ * updateDoc split persist, ΑΤΟΕ BOQ auto-feed (create/update only — grossArea m²),
+ * and `useRoofTypeReresolution`. First-save on `drawing:entity-created` (tool 'roof').
  *
  * @see docs/centralized-systems/reference/adrs/ADR-417-bim-roof-element.md
+ * @see docs/centralized-systems/reference/adrs/ADR-594-bim-entity-persistence-hook-ssot.md
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { dequal } from 'dequal';
 
-import type { SceneModel } from '../../types/entities';
-import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { RoofEntity } from '../../bim/types/roof-types';
-import { EventBus } from '../../systems/events/EventBus';
-import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import {
   createRoofFirestoreService,
   entityToSaveInput,
@@ -36,22 +34,17 @@ import {
   type RoofTypeLink,
 } from './roof-persistence-helpers';
 import { useRoofTypeReresolution } from './useRoofTypeReresolution';
-import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
-import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
-import { mergeDocsIntoScene } from './merge-docs-into-scene';
-import { DXF_TIMING } from '../../config/dxf-timing';
+import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
+import type {
+  BimEntityPersistenceParams,
+  BimEntitySaveState,
+} from './bim-entity-persistence-hook-types';
 
 // ============================================================================
-// TYPES
+// PUBLIC API (unchanged)
 // ============================================================================
 
-export type RoofSaveState = 'idle' | 'saving' | 'saved' | 'error';
-
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
-}
+export type RoofSaveState = BimEntitySaveState;
 
 export interface UseRoofPersistenceParams {
   readonly companyId: string | null;
@@ -61,7 +54,7 @@ export interface UseRoofPersistenceParams {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly userId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly primarySelectedRoof: RoofEntity | null;
 }
 
@@ -74,323 +67,127 @@ export interface UseRoofPersistenceResult {
 }
 
 // ============================================================================
-// CONSTANTS
+// FACTORY CONFIG
 // ============================================================================
 
-const AUTO_SAVE_DEBOUNCE_MS = DXF_TIMING.persist.ENTITY_AUTOSAVE; // ADR-516
+type RoofExtra = { readonly lastSavedTypeLink: Map<string, RoofTypeLink> };
+
+const useRoofPersistenceBase = createBimEntityPersistenceHook<
+  RoofFirestoreService,
+  RoofDoc,
+  RoofEntity,
+  RoofEntity['params'],
+  void,
+  RoofExtra
+>({
+  entityType: 'roof',
+  restoreEntityType: 'roof',
+  saveErrorKey: 'ROOF_SAVE_ERROR',
+  restoreErrorKey: 'ROOF_RESTORE_ERROR',
+  entityComparable: (e) => e.params,
+  createExtraRefs: () => ({ lastSavedTypeLink: new Map<string, RoofTypeLink>() }),
+  createService: (scope) => createRoofFirestoreService(scope),
+  service: {
+    save: (svc, e) => svc.saveRoof(entityToSaveInput(e)),
+    // ADR-417 §10 #3 typeId/typeOverrides (null detaches) + ADR-539 Φ3b faceAppearance.
+    update: (svc, e) =>
+      svc.updateRoof(e.id, {
+        params: e.params,
+        validation: e.validation,
+        geometry: e.geometry,
+        layerId: e.layerId,
+        typeId: e.typeId ?? null,
+        typeOverrides: e.typeOverrides ?? null,
+        faceAppearance: e.faceAppearance,
+      }),
+    remove: (svc, id) => svc.deleteRoof(id),
+    subscribe: (svc, onDocs, onErr) =>
+      svc.subscribeRoofs(onDocs as (docs: readonly RoofDoc[]) => void, onErr),
+  },
+  merge: {
+    mode: 'generic',
+    config: (extra) => ({
+      isEntity: isRoof,
+      docToEntity: (doc) => docToEntity(doc),
+      entityComparable: (e) => e.params,
+      docComparable: (d) => d.params,
+      differs: (existing, doc) => roofEntityDiffersFromDoc(existing, doc),
+      seedExtraBaseline: (doc) => {
+        if (!extra.lastSavedTypeLink.has(doc.id)) {
+          extra.lastSavedTypeLink.set(doc.id, { typeId: doc.typeId, typeOverrides: doc.typeOverrides });
+        }
+      },
+    }),
+  },
+  deleteTrigger: {
+    event: 'bim:roof-delete-requested',
+    getId: (p) => (p as { roofId?: string }).roofId,
+  },
+  autoSaveDirty: (entity, lastSaved, extra) => {
+    const linkChanged = roofTypeLinkChanged(extra.lastSavedTypeLink.get(entity.id), entity);
+    return !(lastSaved !== undefined && dequal(lastSaved, entity.params) && !linkChanged);
+  },
+  onPersisted: (entity, { isNew, prevComparable, scope, extra }) => {
+    extra.lastSavedTypeLink.set(entity.id, { typeId: entity.typeId, typeOverrides: entity.typeOverrides });
+    void recordRoofChange(isNew ? 'created' : 'updated', entity, {
+      prevParams: prevComparable ?? undefined,
+    });
+    // ADR-417 — ΑΤΟΕ BOQ auto-feed: roof = grossArea (m²) κεκλιμένης επιφάνειας.
+    if (scope.companyId && scope.projectId && scope.buildingId) {
+      const boqGeom = entity.geometry ? { area: entity.geometry.grossAreaM2 } : undefined;
+      void bimToBoqBridge.upsertBoqItemForBim(
+        'roof',
+        { id: entity.id, kind: entity.kind, geometry: boqGeom },
+        {
+          companyId: scope.companyId,
+          projectId: scope.projectId,
+          buildingId: scope.buildingId,
+          floorId: scope.floorId ?? undefined,
+        },
+        isNew ? 'created' : 'updated',
+      );
+    }
+  },
+  onDeleted: (id, deleted) => {
+    void recordRoofChange(
+      'deleted',
+      deleted
+        ? { id: deleted.id, kind: deleted.kind, layerId: deleted.layerId, params: deleted.params }
+        : { id, kind: 'roof' },
+    );
+  },
+  onDeleteCleanup: (id, extra) => {
+    extra.lastSavedTypeLink.delete(id);
+  },
+  onRestored: (entity, { extra }) => {
+    extra.lastSavedTypeLink.set(entity.id, { typeId: entity.typeId, typeOverrides: entity.typeOverrides });
+    void recordRoofChange('restored', entity);
+  },
+  useExtra: (ctx) => {
+    // ADR-417 §10 #3 — re-flow type edits / late type loads onto placed roofs.
+    useRoofTypeReresolution(ctx.levelManagerRef.current, ctx.dirtyIdsRef);
+  },
+});
 
 // ============================================================================
-// HOOK
+// HOOK (thin wrapper — preserves the public param/result names)
 // ============================================================================
 
 export function useRoofPersistence(
   params: UseRoofPersistenceParams,
 ): UseRoofPersistenceResult {
-  const {
-    companyId,
-    projectId,
-    floorplanId,
-    buildingId,
-    floorId,
-    userId,
-    levelManager,
-    primarySelectedRoof,
-  } = params;
-
-  const [saveState, setSaveState] = useState<RoofSaveState>('idle');
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const serviceRef = useRef<RoofFirestoreService | null>(null);
-  const dirtyIdsRef = useRef<Set<string>>(new Set());
-  const lastSavedParamsRef = useRef<Map<string, RoofEntity['params']>>(new Map());
-  // ADR-417 §10 #3 — last-saved family-type link per roof, so a detach (params
-  // kept, `typeId` cleared) still triggers an auto-save.
-  const lastSavedTypeLinkRef = useRef<Map<string, RoofTypeLink>>(new Map());
-  const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
-  const deletedIdsRef = useRef<Set<string>>(new Set());
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const selectedRoofRef = useRef<RoofEntity | null>(null);
-  selectedRoofRef.current = primarySelectedRoof;
-
-  // ⚡ STABILITY (ca9 fix 2026-06-08): key the Firestore subscription off stable
-  // scope primitives + `currentLevelId`, NOT the per-render `levelManager` object,
-  // so onSnapshot does not unsubscribe/re-subscribe on every render (target removed
-  // before ack → `INTERNAL ASSERTION FAILED ca9 {ve:-1}`). Mirror of the fitting hook.
-  const levelManagerRef = useRef(levelManager);
-  levelManagerRef.current = levelManager;
-  const currentLevelId = levelManager.currentLevelId;
-
-  // Instantiate service when auth + scope ready.
-  useEffect(() => {
-    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
-    if (!scope) {
-      serviceRef.current = null;
-      return;
-    }
-    serviceRef.current = createRoofFirestoreService({
-      companyId: scope.companyId,
-      projectId: scope.projectId,
-      floorplanId: scope.floorplanId,
-      floorId: scope.floorId,
-      userId: scope.userId,
-    });
-  }, [companyId, projectId, floorplanId, floorId, userId]);
-
-  // Subscribe + diff-merge + selective skip locally-dirty roofs.
-  // Keyed on STABLE primitives only (scope + currentLevelId) — NOT the per-render
-  // `levelManager` object — so onSnapshot subscribes once per real scope/level
-  // change (ca9 churn fix).
-  useEffect(() => {
-    const svc = serviceRef.current;
-    const levelId = currentLevelId;
-    if (!svc || !levelId) return;
-
-    const unsubscribe = svc.subscribeRoofs(
-      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`. ADR-412
-      // «type always wins»: `differs` = `roofEntityDiffersFromDoc` (diff vs EFFECTIVE
-      // type-resolved params)· `seedExtraBaseline` seed-άρει το δεύτερο type-link map.
-      // Δεν έχει write-grace.
-      (docs) => {
-        mergeDocsIntoScene<RoofDoc, RoofEntity, RoofEntity['params']>(
-          docs,
-          levelId,
-          levelManagerRef.current,
-          {
-            isEntity: isRoof,
-            docToEntity: (doc) => docToEntity(doc),
-            entityComparable: (e) => e.params, // unused (differs override provided)
-            docComparable: (d) => d.params, // baseline seed = raw cached doc.params
-            differs: (existing, doc) => roofEntityDiffersFromDoc(existing, doc),
-            seedExtraBaseline: (doc) => {
-              if (!lastSavedTypeLinkRef.current.has(doc.id)) {
-                lastSavedTypeLinkRef.current.set(doc.id, {
-                  typeId: doc.typeId,
-                  typeOverrides: doc.typeOverrides,
-                });
-              }
-            },
-          },
-          {
-            dirty: dirtyIdsRef.current,
-            deleted: deletedIdsRef.current,
-            pending: pendingFirstSaveIdsRef.current,
-            isWithinGrace: () => false,
-            lastSavedBaseline: lastSavedParamsRef.current,
-          },
-        );
-      },
-      (err: Error) => {
-        setError(err.message);
-        setSaveState('error');
-      },
-    );
-
-    return () => unsubscribe();
-  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
-
-  // Immediate persist (used by both auto-save flush and explicit button).
-  const persist = useCallback(async (entity: RoofEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
-    const isNew = prevParams === null;
-    setSaveState('saving');
-    setError(null);
-    try {
-      if (isNew) {
-        await svc.saveRoof(entityToSaveInput(entity));
-      } else {
-        await svc.updateRoof(entity.id, {
-          params: entity.params,
-          validation: entity.validation,
-          geometry: entity.geometry,
-          layerId: entity.layerId,
-          // ADR-417 §10 #3 — persist the family-type link; `null` detaches
-          // (deleteField) so the link is removed rather than left stale.
-          typeId: entity.typeId ?? null,
-          typeOverrides: entity.typeOverrides ?? null,
-          // ADR-539 Φ3b — carry the per-«νερό» appearance edit so painted faces persist on
-          // re-edit (faced paint fires `bim:entities-attached` → persist → updateDoc).
-          faceAppearance: entity.faceAppearance,
-        });
-      }
-      lastSavedParamsRef.current.set(entity.id, entity.params);
-      lastSavedTypeLinkRef.current.set(entity.id, {
-        typeId: entity.typeId,
-        typeOverrides: entity.typeOverrides,
-      });
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-      void recordRoofChange(
-        isNew ? 'created' : 'updated',
-        entity,
-        { prevParams: prevParams ?? undefined },
-      );
-      // ADR-417 — ΑΤΟΕ BOQ auto-feed: roof = grossArea (m²) κεκλιμένης επιφάνειας.
-      if (companyId && projectId && buildingId) {
-        const boqGeom = entity.geometry
-          ? { area: entity.geometry.grossAreaM2 }
-          : undefined;
-        void bimToBoqBridge.upsertBoqItemForBim(
-          'roof',
-          { id: entity.id, kind: entity.kind, geometry: boqGeom },
-          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
-          isNew ? 'created' : 'updated',
-        );
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'ROOF_SAVE_ERROR');
-      setSaveState('error');
-    }
-  }, [companyId, projectId, buildingId, floorId]);
-
-  // Auto-save debounce on selected roof params change.
-  useEffect(() => {
-    const roof = primarySelectedRoof;
-    if (!roof || !serviceRef.current) return;
-    const known = lastSavedParamsRef.current.has(roof.id);
-    const pending = pendingFirstSaveIdsRef.current.has(roof.id);
-    if (!known && !pending) return;
-    const lastSaved = lastSavedParamsRef.current.get(roof.id);
-    // ADR-412 — a detach keeps params identical, so OR-in the type-link diff.
-    const linkChanged = roofTypeLinkChanged(lastSavedTypeLinkRef.current.get(roof.id), roof);
-    if (lastSaved && dequal(lastSaved, roof.params) && !linkChanged) return;
-
-    dirtyIdsRef.current.add(roof.id);
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      void persist(roof);
-    }, AUTO_SAVE_DEBOUNCE_MS);
-
-    return () => {
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = null;
-      }
-    };
-  }, [primarySelectedRoof, persist]);
-
-  const saveNow = useCallback(async () => {
-    const roof = selectedRoofRef.current;
-    if (!roof) return;
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-    await persist(roof);
-  }, [persist]);
-
-  // Delete roof: remove from Firestore + scene + audit.
-  const deleteRoof = useCallback(async (roofId: string) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const levelId = levelManager.currentLevelId;
-    if (!levelId) return;
-
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-
-    const scene = levelManager.getLevelScene(levelId);
-    const deletedEntity = scene?.entities.find((e) => e.id === roofId);
-    const deletedRoof = (deletedEntity && isRoof(deletedEntity)) ? deletedEntity : null;
-    try {
-      await svc.deleteRoof(roofId);
-      void recordRoofChange(
-        'deleted',
-        deletedRoof
-          ? { id: deletedRoof.id, kind: deletedRoof.kind, layerId: deletedRoof.layerId, params: deletedRoof.params }
-          : { id: roofId, kind: 'roof' },
-      );
-    } catch {
-      // Non-fatal: deletion failure silent — user retries.
-    }
-
-    if (scene) {
-      const nextEntities = scene.entities.filter((e) => e.id !== roofId);
-      levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
-    }
-
-    dirtyIdsRef.current.delete(roofId);
-    lastSavedParamsRef.current.delete(roofId);
-    lastSavedTypeLinkRef.current.delete(roofId);
-    pendingFirstSaveIdsRef.current.delete(roofId);
-    deletedIdsRef.current.add(roofId);
-  }, [levelManager]);
-
-  // persistRestore: undo→Firestore re-create + audit 'restored'.
-  const persistRestore = useCallback(async (entity: RoofEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    setSaveState('saving');
-    setError(null);
-    try {
-      await svc.saveRoof(entityToSaveInput(entity));
-      lastSavedParamsRef.current.set(entity.id, entity.params);
-      lastSavedTypeLinkRef.current.set(entity.id, {
-        typeId: entity.typeId,
-        typeOverrides: entity.typeOverrides,
-      });
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-      void recordRoofChange('restored', entity);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'ROOF_RESTORE_ERROR');
-      setSaveState('error');
-    }
-  }, []);
-
-  // First-save listener — fires immediately για φρέσκα roofs από το tool.
-  useEffect(() => {
-    const cleanup = EventBus.on('drawing:entity-created', (payload) => {
-      if (payload.tool !== 'roof') return;
-      const entity = payload.entity as RoofEntity | undefined;
-      if (!entity || (entity as { type?: string }).type !== 'roof') return;
-      if (!serviceRef.current) return;
-      pendingFirstSaveIdsRef.current.add(entity.id);
-      dirtyIdsRef.current.add(entity.id);
-      void persist(entity);
-    });
-    return cleanup;
-  }, [persist]);
-
-  // Delete-requested listener (bridge emits after confirm). ADR-417 Φ1-part-2 —
-  // 'bim:roof-delete-requested' wired in drawing-event-map.ts.
-  useEffect(() => {
-    const cleanup = EventBus.on('bim:roof-delete-requested', ({ roofId }) => {
-      void deleteRoof(roofId);
-    });
-    return cleanup;
-  }, [deleteRoof]);
-
-  useBimEntityMovedPersistEffect(isRoof, serviceRef, dirtyIdsRef, persist);
-  useBimEntityRestoredPersistEffect(
-    'roof',
-    isRoof,
-    serviceRef,
-    pendingFirstSaveIdsRef,
-    deletedIdsRef,
-    persistRestore,
-  );
-
-  // ADR-417 §10 #3 — re-flow type edits / late type loads onto placed roofs.
-  useRoofTypeReresolution(levelManager, dirtyIdsRef);
-
-  // Unmount cleanup — flush pending timers.
-  useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, []);
-
+  const { saveState, lastSavedAt, error, saveNow, deleteEntity } = useRoofPersistenceBase({
+    companyId: params.companyId,
+    projectId: params.projectId,
+    floorplanId: params.floorplanId,
+    floorId: params.floorId,
+    buildingId: params.buildingId,
+    userId: params.userId,
+    levelManager: params.levelManager,
+    primarySelected: params.primarySelectedRoof,
+  } as BimEntityPersistenceParams<RoofEntity>);
   return useMemo(
-    () => ({ saveState, lastSavedAt, error, saveNow, deleteRoof }),
-    [saveState, lastSavedAt, error, saveNow, deleteRoof],
+    () => ({ saveState, lastSavedAt, error, saveNow, deleteRoof: deleteEntity }),
+    [saveState, lastSavedAt, error, saveNow, deleteEntity],
   );
 }
