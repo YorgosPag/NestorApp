@@ -52,7 +52,6 @@ export function getMepUnderfloorGrips(entity: Readonly<MepUnderfloorEntity>): Gr
       type: 'vertex',
       position: { x: v.x, y: v.y },
       movesEntity: false,
-      mepUnderfloorGripKind: `mep-underfloor-vertex-${i}`,
       gripKind: { on: 'mep-underfloor', kind: `mep-underfloor-vertex-${i}` },
     });
   }
@@ -67,7 +66,6 @@ export function getMepUnderfloorGrips(entity: Readonly<MepUnderfloorEntity>): Gr
       position: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
       movesEntity: false,
       edgeVertexIndices: [i, (i + 1) % verts.length],
-      mepUnderfloorGripKind: `mep-underfloor-edge-midpoint-${i}`,
       gripKind: { on: 'mep-underfloor', kind: `mep-underfloor-edge-midpoint-${i}` },
     });
   }

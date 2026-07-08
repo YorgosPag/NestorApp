@@ -27,7 +27,7 @@ const adapter = createCentredBoxGripAdapter<MepRadiatorEntity, MepRadiatorParams
   minDimensionMm: MIN_RADIATOR_DIMENSION_MM,
   toBoxParams: (params) => params,
   fromBoxPatch: (original, patch) => ({ ...original, ...patch }),
-  toGripInfo: (base, kind) => ({ ...base, mepRadiatorGripKind: kind, gripKind: { on: 'mep-radiator', kind } }),
+  toGripInfo: (base, kind) => ({ ...base, gripKind: { on: 'mep-radiator', kind } }),
 });
 
 /** Drag input for a radiator grip (the shared centred-box 5-field shape). */

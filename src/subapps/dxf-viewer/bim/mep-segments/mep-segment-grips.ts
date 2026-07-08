@@ -82,7 +82,6 @@ export function getMepSegmentGrips(entity: Readonly<MepSegmentEntity>): GripInfo
       type: 'center',
       position: project2D(params.startPoint),
       movesEntity: true,
-      mepSegmentGripKind: 'mep-segment-midpoint',
       gripKind: { on: 'mep-segment', kind: 'mep-segment-midpoint' },
     }];
   }
@@ -99,7 +98,6 @@ export function getMepSegmentGrips(entity: Readonly<MepSegmentEntity>): GripInfo
     type: 'vertex',
     position: start,
     movesEntity: false,
-    mepSegmentGripKind: 'mep-segment-start',
     gripKind: { on: 'mep-segment', kind: 'mep-segment-start' },
   });
 
@@ -110,7 +108,6 @@ export function getMepSegmentGrips(entity: Readonly<MepSegmentEntity>): GripInfo
     type: 'vertex',
     position: end,
     movesEntity: false,
-    mepSegmentGripKind: 'mep-segment-end',
     gripKind: { on: 'mep-segment', kind: 'mep-segment-end' },
   });
 
@@ -131,7 +128,6 @@ export function getMepSegmentGrips(entity: Readonly<MepSegmentEntity>): GripInfo
       type: 'edge',
       position: sectionPos,
       movesEntity: false,
-      mepSegmentGripKind: 'mep-segment-section',
       gripKind: { on: 'mep-segment', kind: 'mep-segment-section' },
     });
   }
@@ -148,7 +144,6 @@ export function getMepSegmentGrips(entity: Readonly<MepSegmentEntity>): GripInfo
         y: start.y + 0.75 * (end.y - start.y),
       },
       movesEntity: false,
-      mepSegmentGripKind: 'mep-segment-rotation',
       gripKind: { on: 'mep-segment', kind: 'mep-segment-rotation' },
     });
   }
