@@ -66,6 +66,9 @@ import { RECT_CORNERS, rectCornerWorld, type RectFrame } from '../grips/rect-fra
 // ADR-557 (multi-line) — the shared split + line-stacking SSoT: box height = Σ γραμμών,
 // width = max γραμμής. The SAME helper the renderer + 3D use, so the three stay in parity.
 import { splitTextLines, textLineCount, resolveLineSpacingRatio, resolveMultilineExtents, type TextRow, type MultilineExtents } from './text-lines';
+// ADR-557 — the oblique shear SSoT (angle → tan θ). The SAME map the renderer uses, so the
+// box parallelogram leans by exactly what the drawn glyphs lean by (no second `Math.tan`).
+import { obliqueShearFromAngle } from './text-oblique';
 
 const CHAR_WIDTH = TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
 
@@ -233,14 +236,12 @@ function glyphInkOf(text: DxfText): TextGlyphInk {
 
 /**
  * ADR-557 — the box SHEAR (`tan θ`) for the AutoCAD oblique angle, so the grip/hover box
- * is a PARALLELOGRAM that leans with the sheared glyphs. Local +Y = up (cap top), local +X
- * = advance (reading-right): a positive oblique shifts the top RIGHT (forward «/»), matching
- * the renderer's `ctx.transform(1,0,-tanθ,1,0,0)` in the y-DOWN screen frame. 🔴 browser-verify
- * the lean matches the glyphs; flip the sign if the box leans opposite the text.
+ * is a PARALLELOGRAM that leans with the sheared glyphs. Reads the SSoT `obliqueShearFromAngle`
+ * (world y-up: a positive oblique shifts the top RIGHT, forward «/»), the SAME map the renderer
+ * negates for its y-DOWN screen frame — one angle→shear source, so box ≡ glyphs by construction.
  */
 function obliqueShearOf(text: DxfText): number {
-  const angle = text.textStyle?.obliqueAngle;
-  return typeof angle === 'number' && angle !== 0 ? Math.tan((angle * Math.PI) / 180) : 0;
+  return obliqueShearFromAngle(text.textStyle?.obliqueAngle);
 }
 
 /**
@@ -293,17 +294,23 @@ function buildTextBox(text: DxfText, mode: 'visual' | 'em'): RectFrame {
 
   if (mode === 'em') {
     const v = emVerticalRatios(just, extents);
-    const rel = rotateVector({ x: advanceCentreX, y: ((v.top + v.bottom) / 2) * h }, rotationDeg);
+    const centreY = ((v.top + v.bottom) / 2) * h;
+    // ADR-557 — ANCHOR-pivot the shear: `rect-frame` shears about the box CENTRE, but the
+    // renderer shears about the text ANCHOR (`position`). They differ by a constant `shearX·centreY`
+    // horizontal offset; fold it into the centre X so the box pivots on the anchor like the glyphs.
+    const rel = rotateVector({ x: advanceCentreX + shearX * centreY, y: centreY }, rotationDeg);
     return { center: translatePoint(text.position, rel), rotationDeg, halfWidth: w / 2, halfLength: ((v.top - v.bottom) / 2) * h, ...(shearX !== 0 && { shearX }) };
   }
 
   const ink = glyphInkOf(text);
   const v = visualVerticalRatios(ink, just, extents);
   const { left, right } = horizontalInkFractions(text, ink);
+  const centreY = ((v.top + v.bottom) / 2) * h;
   // Inset the advance box by the side bearings: shift the centre toward the wider bearing,
-  // shrink the width by the total inset (`left`/`right` are fractions of the advance `w`).
+  // shrink the width by the total inset (`left`/`right` are fractions of the advance `w`). The
+  // `shearX·centreY` term ANCHOR-pivots the shear (see the em branch) — box ≡ glyphs at the anchor.
   const rel = rotateVector(
-    { x: advanceCentreX + (w * (left - right)) / 2, y: ((v.top + v.bottom) / 2) * h },
+    { x: advanceCentreX + (w * (left - right)) / 2 + shearX * centreY, y: centreY },
     rotationDeg,
   );
   return {
@@ -346,8 +353,10 @@ export function textBoxToPosition(frame: RectFrame, text: DxfText): Point2D {
   // Recover the advance width from the visual half-width (visualWidth = w·(1−left−right)),
   // then reproduce the SAME inset centre offset the forward build applied.
   const w = (frame.halfWidth * 2) / (1 - left - right);
-  const relX = horizontalCenterOffset(just, w) + (w * (left - right)) / 2;
   const relY = frame.halfLength * ((v.top + v.bottom) / (v.top - v.bottom));
+  // Mirror the forward build's ANCHOR-pivot term (`+ shearX·centreY`, relY ≡ centreY) so a
+  // resized/rotated oblique frame re-homes `position` exactly (no jump on release).
+  const relX = horizontalCenterOffset(just, w) + (w * (left - right)) / 2 + obliqueShearOf(text) * relY;
   const rel = rotateVector({ x: relX, y: relY }, frame.rotationDeg);
   return { x: frame.center.x - rel.x, y: frame.center.y - rel.y };
 }

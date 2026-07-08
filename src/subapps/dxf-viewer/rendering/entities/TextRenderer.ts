@@ -54,6 +54,9 @@ import { resolveTextBox, textBoxCornersWorld } from '../../bim/text/text-box';
 // ADR-557 (multi-line) — split flat `text` on `\n` and stack each line at its own y-offset,
 // with the SAME line-spacing + attachment distribution the box SSoT uses (render ≡ box).
 import { splitTextLines, resolveLineSpacingRatio, resolveMultilineExtents, type TextRow } from '../../bim/text/text-lines';
+// ADR-557 — the oblique shear SSoT. The box (`text-box.ts`) reads the SAME map (world y-up);
+// this screen-y-DOWN path negates it ONCE (below) — the only place the y-flip lives.
+import { obliqueShearFromAngle } from '../../bim/text/text-oblique';
 import { projectToLocalFrame } from '../../bim/grips/grip-math';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -179,8 +182,10 @@ export class TextRenderer extends BaseEntityRenderer {
     // so the rotation/zoom math is untouched). Screen-y is DOWN → `-tan(θ)` makes a positive
     // angle lean FORWARD (top-right, like italic «/») for EVERY attachment anchor. `0` (every
     // upright TEXT + legacy path) keeps the original byte-identical paint path — zero regression.
+    // ADR-557 — read the oblique shear from the SSoT (world y-up `+tan θ`) and NEGATE for the
+    // screen y-DOWN frame. The box (`text-box.ts`) reads the same SSoT unnegated → box ≡ glyphs.
     const obliqueAngle = (richStyle && typeof richStyle.obliqueAngle === 'number') ? richStyle.obliqueAngle : 0;
-    const obliqueShear = obliqueAngle !== 0 ? -Math.tan(degToRad(obliqueAngle)) : 0;
+    const obliqueShear = -obliqueShearFromAngle(obliqueAngle);
 
     // AutoCAD `\T` character tracking (spacing factor). `1` (every legacy TEXT + untouched
     // MTEXT) keeps the byte-identical kerned glyph run — zero regression. The ribbon «Διάκενο»
@@ -205,8 +210,11 @@ export class TextRenderer extends BaseEntityRenderer {
     if (normalizedRotation !== 0 || widthFactor !== 1 || obliqueShear !== 0) {
       this.ctx.translate(screenPos.x, screenPos.y);
       if (normalizedRotation !== 0) this.ctx.rotate(degToRad(-normalizedRotation));
-      if (widthFactor !== 1) this.ctx.scale(widthFactor, 1);
+      // ADR-557 — shear BEFORE the widthFactor scale so the lean is `tan θ` per unit height
+      // INDEPENDENT of widthFactor (else `scale(wf,1)` would multiply the shear by `wf` and the
+      // box — which shears the world advance directly — would no longer match for wf ≠ 1).
       if (obliqueShear !== 0) this.ctx.transform(1, 0, obliqueShear, 1, 0, 0);
+      if (widthFactor !== 1) this.ctx.scale(widthFactor, 1);
       paint(0, 0);
     } else {
       paint(screenPos.x, screenPos.y);

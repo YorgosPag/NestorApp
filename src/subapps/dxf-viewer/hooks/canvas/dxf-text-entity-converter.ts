@@ -57,5 +57,9 @@ export function convertTextEntity(entity: SceneEntity, base: DxfBaseFields): Dxf
     ...(finalStyle && { textStyle: finalStyle }),
     ...(mtextWidth != null && { width: mtextWidth }),
     ...(textWidthFactor != null && { widthFactor: textWidthFactor }),
+    // ADR-557 — carry node line-spacing FLAT so the render/box/3D paths read the factor
+    // (the full textNode is flattened away here). Without this the ribbon «Διάστιχο» edit
+    // wrote textNode.lineSpacing but the renderer never saw it (factor stayed 1).
+    ...(withNode.textNode?.lineSpacing && { lineSpacing: withNode.textNode.lineSpacing }),
   } as DxfEntityUnion;
 }

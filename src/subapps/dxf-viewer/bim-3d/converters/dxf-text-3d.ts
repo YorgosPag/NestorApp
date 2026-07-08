@@ -30,6 +30,8 @@ import { resolveTextEmBox } from '../../bim/text/text-box';
 // ADR-557 (multi-line) — the SAME split + line-spacing SSoT the 2D renderer + box use, so the
 // stacked lines in this CanvasTexture match the plan glyphs and fill the (multi-line) em box.
 import { splitTextLines, resolveLineSpacingRatio } from '../../bim/text/text-lines';
+// ADR-557 — the oblique shear SSoT (world y-up); the 3D texture (screen-y-down) negates it.
+import { obliqueShearFromAngle } from '../../bim/text/text-oblique';
 
 /** Texture resolution: canvas pixels per drawing unit of text height (crisp at typical zoom). */
 const TEXTURE_PX_PER_UNIT = 16;
@@ -68,12 +70,12 @@ export function buildDxfTextMesh(entity: DxfText, colorInt: number): DxfTextMesh
   // ADR-557 (multi-line) — split on `\n`; width = max line, height = stacked block.
   const lines = splitTextLines(text);
   const lineSpacingRatio = resolveLineSpacingRatio(entity);
-  // ADR-557 — AutoCAD oblique angle: horizontal shear of the texture glyphs (2D≡3D). Screen-y
-  // is DOWN (same convention as the 2D `TextRenderer`) → `-tan(θ)` leans forward. 🔴 3D slant
-  // direction browser-verify: the CanvasTexture `flipY` + plane `rotateX(-90°)` may invert it;
-  // flip the sign if the 3D lean is opposite the 2D plan.
-  const obliqueAngle = typeof entity.textStyle?.obliqueAngle === 'number' ? entity.textStyle.obliqueAngle : 0;
-  const obliqueShear = obliqueAngle !== 0 ? -Math.tan((obliqueAngle * Math.PI) / 180) : 0;
+  // ADR-557 — AutoCAD oblique angle: horizontal shear of the texture glyphs (2D≡3D). Reads the
+  // SAME shear SSoT (`obliqueShearFromAngle`, world y-up) the 2D renderer + box use; the texture
+  // canvas is screen-y-DOWN so it NEGATES it (like `TextRenderer`) → `-tan(θ)` leans forward.
+  // 🔴 3D slant direction browser-verify: the CanvasTexture `flipY` + plane `rotateX(-90°)` may
+  // invert it; flip the sign if the 3D lean is opposite the 2D plan.
+  const obliqueShear = -obliqueShearFromAngle(entity.textStyle?.obliqueAngle);
 
   const canvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
   const ctx = canvas?.getContext('2d');

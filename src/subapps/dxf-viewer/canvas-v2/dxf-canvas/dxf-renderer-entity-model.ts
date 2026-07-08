@@ -92,6 +92,10 @@ export function buildEntityModelFromDxf(
         // widths after a resize (Giorgio 2026-07-07: right/centre grips + move/rotation lost hover).
         ...(te.widthFactor != null && { widthFactor: te.widthFactor }),
         ...(te.width != null && { width: te.width }),
+        // ADR-557 — carry the node line-spacing factor so `resolveLineSpacingRatio` on the
+        // render EntityModel reads the SAME factor the ribbon «Διάστιχο» wrote. Without this
+        // the multi-line stack always used factor 1 (the edit did nothing on canvas).
+        ...(te.lineSpacing != null && { lineSpacing: te.lineSpacing }),
       } as unknown as Entity;
     }
     case 'angle-measurement':

@@ -44,10 +44,17 @@ export function textLineCount(text: string | undefined | null): number {
   return splitTextLines(text).length;
 }
 
-/** Line-spacing FACTOR carried by the node (default 1.0) — read via cast (flat `DxfText` has no field). */
+/**
+ * Line-spacing FACTOR (default 1.0). ADR-557: read the FLAT `lineSpacing.factor` the
+ * scene→DxfText / EntityModel converters carry (the render + grip box paths see this),
+ * falling back to the nested `textNode.lineSpacing.factor` for callers that pass a raw
+ * scene entity. Either shape → same factor, so render ≡ box ≡ 3D.
+ */
 function lineSpacingFactorOf(text: DxfText): number {
-  const factor = (text as { textNode?: { lineSpacing?: { factor?: number } } })
+  const flat = (text as { lineSpacing?: { factor?: number } }).lineSpacing?.factor;
+  const nested = (text as { textNode?: { lineSpacing?: { factor?: number } } })
     .textNode?.lineSpacing?.factor;
+  const factor = flat ?? nested;
   return typeof factor === 'number' && factor > 0 ? factor : 1;
 }
 

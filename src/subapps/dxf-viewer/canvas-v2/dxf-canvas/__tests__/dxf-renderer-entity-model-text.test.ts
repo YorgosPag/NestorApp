@@ -35,6 +35,18 @@ describe('buildEntityModelFromDxf — text widthFactor / width parity (ADR-557)'
     expect(m.width).toBeUndefined();
   });
 
+  it('carries the node lineSpacing factor onto the render EntityModel (ADR-557 «Διάστιχο»)', () => {
+    const m = buildEntityModelFromDxf(
+      text({ lineSpacing: { mode: 'multiple', factor: 2 } }), false, resolved,
+    ) as unknown as { lineSpacing?: { factor: number } };
+    expect(m.lineSpacing?.factor).toBeCloseTo(2, 9);
+  });
+
+  it('omits lineSpacing when absent (default factor 1 semantics)', () => {
+    const m = buildEntityModelFromDxf(text(), false, resolved) as unknown as { lineSpacing?: unknown };
+    expect(m.lineSpacing).toBeUndefined();
+  });
+
   it('still carries the core text fields (position/text/height/rotation)', () => {
     const m = buildEntityModelFromDxf(text({ rotation: 30 }), false, resolved) as unknown as {
       type: string; text: string; height: number; rotation: number;

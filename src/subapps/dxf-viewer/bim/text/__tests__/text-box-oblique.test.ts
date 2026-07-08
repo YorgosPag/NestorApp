@@ -47,4 +47,20 @@ describe('oblique → sheared (parallelogram) text box', () => {
     const [ne, , , se] = textBoxCornersWorld(t);
     expect(ne.x).toBeLessThan(se.x);
   });
+
+  it('shear pivots on the ANCHOR (position), matching the renderer: cornerX ≡ uprightX + tanθ·(y − posY)', () => {
+    // The renderer shears the glyphs about the text insertion point (`position`); the box must
+    // pivot there too (ADR-557, Giorgio 2026-07-08). So each oblique corner = the same upright
+    // corner displaced by `tan θ × its height ABOVE the anchor` — a constant sideways drift when
+    // the pivot is the box centre instead (the bug this locks out).
+    const angle = 30;
+    const tan = Math.tan((angle * Math.PI) / 180);
+    const posY = 0; // text() anchors at {0,0}
+    const upright = textBoxCornersWorld(text());
+    const sheared = textBoxCornersWorld(text({ textStyle: { ...styleTL, obliqueAngle: angle } }));
+    for (let i = 0; i < 4; i++) {
+      expect(sheared[i].y).toBeCloseTo(upright[i].y, 6); // shear leaves Y untouched
+      expect(sheared[i].x).toBeCloseTo(upright[i].x + tan * (sheared[i].y - posY), 6);
+    }
+  });
 });

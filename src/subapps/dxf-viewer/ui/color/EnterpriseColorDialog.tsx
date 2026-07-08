@@ -1,14 +1,17 @@
 /**
  * 🏢 ENTERPRISE COLOR DIALOG
  *
- * @version 1.0.0
- * @description Modal dialog wrapper for color picker with focus trap
+ * @version 2.0.0
+ * @description Modal dialog wrapper για hex color picker (Ρυθμίσεις DXF).
+ *   Το floating κέλυφος (portal + draggable + focus-trap + backdrop + header/X)
+ *   ζει πλέον στο SSoT `ColorDialogShell` — κοινό με τον text-editor picker
+ *   (`ColorPickerPopover`). Εδώ μένει μόνο η hex-specific λογική: local color
+ *   state, RAF throttle, Apply/Cancel footer. Public API αμετάβλητο.
  *
  * Features:
- * - React Aria overlay hooks
- * - Focus trap
- * - Escape to close
- * - Backdrop click to close
+ * - React Aria overlay hooks (via ColorDialogShell)
+ * - Focus trap / Escape to close / Draggable header (via ColorDialogShell)
+ * - RAF-throttled live onChange + Apply/Cancel commit
  * - ARIA compliant
  *
  * @author Γιώργος Παγωνής + Claude Code (Anthropic AI) + ChatGPT-5
@@ -17,15 +20,10 @@
 
 'use client';
 
-import React, { useRef, useCallback, useState, useEffect, useDeferredValue } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDialog } from '@react-aria/dialog';
-import { useOverlay, usePreventScroll } from '@react-aria/overlays';
-import { FocusScope } from '@react-aria/focus';
-// 🏢 SSoT: centralized draggable hook (same one FloatingPanel uses) — ADR-001/N.12
-import { useDraggable } from '@/hooks/useDraggable';
 import { EnterpriseColorPicker } from './EnterpriseColorPicker';
+import { ColorDialogShell } from './ColorDialogShell';
 import type { EnterpriseColorDialogProps } from './types';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
@@ -33,15 +31,6 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
-// 🏢 ENTERPRISE: Centralized z-index values
-import { MODAL_Z_INDEX } from '../../config/modal-config';
-
-/**
- * Τελευταία θέση που έσυρε ο χρήστης το color dialog — κοινή (module-level) ώστε ΚΑΘΕ
- * color picker να ανοίγει εκεί που το άφησες, όχι ξανά στο κέντρο (persist ανά app-session).
- * In-memory by design· δεν επιβιώνει reload (session-scoped, όπως ζήτησε ο Giorgio).
- */
-let lastDialogPosition: { x: number; y: number } | null = null;
 
 /**
  * Enterprise Color Dialog Component
@@ -69,15 +58,14 @@ export function EnterpriseColorDialog({
   onChangeEnd,
   ...pickerProps
 }: EnterpriseColorDialogProps) {
-  const overlayRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation('dxf-viewer-panels');
   // Local color state: updates immediately for responsive UI
   const [localColor, setLocalColor] = useState(value);
-  const [originalValue, setOriginalValue] = React.useState(value);
+  const [originalValue, setOriginalValue] = useState(value);
   // RAF throttle: limits external onChange to 1 call per animation frame
   const rafRef = useRef<number | null>(null);
   const pendingColorRef = useRef<string>(value);
-  const { quick, getStatusBorder, getDirectionalBorder, radius } = useBorderTokens();
+  const { getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
 
   // Color dialogs default to the horizontal (two-column) layout — wider, no
@@ -88,55 +76,20 @@ export function EnterpriseColorDialog({
       ? PANEL_LAYOUT.LAYOUT_DIMENSIONS.PANEL_MAX_WIDTH_XL
       : PANEL_LAYOUT.LAYOUT_DIMENSIONS.PANEL_MAX_WIDTH_LG;
 
-  // ✅ ENTERPRISE: Draggable functionality — centralized SSoT hook (the same one
-  // FloatingPanel uses). Offset-based: the dialog is flex-centered and `position`
-  // is a translate offset, so bounds are left unconstrained (the header can never
-  // leave the viewport because it starts centered). ADR-001 / N.12 de-duplication.
-  const { position, isDragging, handleMouseDown, setPosition } = useDraggable(isOpen, {
-    initialPosition: { x: 0, y: 0 },
-    autoCenter: false,
-    minPosition: { x: -100000, y: -100000 },
-    maxPosition: { x: 100000, y: 100000 },
-  });
-
-  // Sync local state + recenter when the dialog opens.
-  // ⚠️ deps = [isOpen] ONLY: `setPosition` from the centralized useDraggable is a
-  // fresh function every render (not memoized), and `value`/setters are excluded
-  // intentionally so this runs once per open. Including `setPosition`/`resetPosition`
-  // would re-run every render → setPosition(new {0,0}) → re-render → infinite loop.
-  React.useEffect(() => {
+  // Sync local state when the dialog opens.
+  useEffect(() => {
     if (isOpen) {
       setLocalColor(value);
       setOriginalValue(value);
-      // Άνοιξε στην τελευταία θέση που το έσυρε ο χρήστης (ή στο κέντρο την 1η φορά).
-      setPosition(lastDialogPosition ?? { x: 0, y: 0 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync only when dialog opens
   }, [isOpen]);
-
-  // Θυμήσου τη θέση όσο το dialog είναι ανοιχτό (κάθε drag ενημερώνει το shared module-level
-  // `lastDialogPosition`) → η επόμενη εμφάνιση οποιουδήποτε color picker ανοίγει εκεί.
-  useEffect(() => {
-    if (isOpen) lastDialogPosition = position;
-  }, [isOpen, position]);
 
   // Cleanup pending RAF on unmount
   useEffect(() => {
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
-  }, []);
-
-  // ✅ ENTERPRISE: Stop propagation και prevent default για να μην περνάνε τα events στον canvas
-  const handleContainerEvents = useCallback((e: React.MouseEvent | React.PointerEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-  }, []);
-
-  // ✅ ENTERPRISE: Handle events that should NOT prevent default (like color selection)
-  const handleDialogEvents = useCallback((e: React.MouseEvent | React.PointerEvent) => {
-    e.stopPropagation();
-    // Don't prevent default - allow clicks inside dialog
   }, []);
 
   // Local state updates immediately; external onChange throttled to 1 per RAF frame
@@ -171,130 +124,41 @@ export function EnterpriseColorDialog({
     onClose();
   }, [originalValue, onChange, onClose]);
 
-  // Overlay props (backdrop + escape)
-  // ✅ FIX: isDismissable: false - το dialog κλείνει ΜΟΝΟ με το X button ή Cancel
-  const { overlayProps } = useOverlay(
-    {
-      isOpen,
-      onClose: handleCancel,
-      isDismissable: false, // ✅ FIX: Δεν κλείνει με κλικ εκτός
-      shouldCloseOnBlur: false,
-    },
-    overlayRef
-  );
-
-  // Dialog props (ARIA)
-  const { dialogProps, titleProps } = useDialog({}, overlayRef);
-
-  // Prevent scrolling when modal is open
-  usePreventScroll({ isDisabled: !isOpen });
-
-  if (!isOpen) return null;
-
-  // Render via portal
-  // ✅ FIX: Use maximum z-index (2147483647) to be above canvas crosshair overlays
-  return typeof window !== 'undefined'
-    ? createPortal(
-        <div
-          className={`fixed ${PANEL_LAYOUT.INSET['0']} flex items-center justify-center cursor-default pointer-events-none`}
-          style={{ zIndex: MODAL_Z_INDEX.COLOR_DIALOG_CONTAINER }}
-        >
-          {/* Backdrop — visual dim only (no click handlers). Skipped when
-              `dimBackdrop === false` (canvas color pickers) so το σχέδιο μένει
-              πλήρως ορατό για live σύγκριση χρώματος. */}
-          {dimBackdrop && (
-            <div
-              className={`absolute ${PANEL_LAYOUT.INSET['0']} ${colors.bg.modalBackdrop} pointer-events-none`}
-            />
-          )}
-
-          {/* Dialog - ✅ ENTERPRISE: Draggable + Cursor fix + Max z-index */}
-          <FocusScope contain restoreFocus autoFocus>
-            <div
-              {...overlayProps}
-              {...dialogProps}
-              ref={overlayRef}
-              onMouseDown={handleDialogEvents}
-              onClick={handleDialogEvents}
-              onPointerDown={handleDialogEvents}
-              onMouseMove={handleDialogEvents}
-              style={{
-                transform: `translate(${position.x}px, ${position.y}px)`,
-                cursor: isDragging ? 'grabbing' : 'default',
-                zIndex: MODAL_Z_INDEX.COLOR_DIALOG,
-              }}
-              className={`relative pointer-events-auto isolate ${colors.bg.accent} ${getStatusBorder('default')} ${quick.card} ${PANEL_LAYOUT.SHADOW['2XL']} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.MODAL_MAX_HEIGHT} ${PANEL_LAYOUT.OVERFLOW.Y_AUTO} ${dialogMaxWidth} ${PANEL_LAYOUT.SELECT.NONE}`}
+  return (
+    <ColorDialogShell
+      isOpen={isOpen}
+      onClose={handleCancel}
+      title={title}
+      dimBackdrop={dimBackdrop}
+      maxWidthClass={dialogMaxWidth}
+      footer={
+        showFooter ? (
+          <div className={`flex ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'top')}`}>
+            <button
+              onClick={handleCancel}
+              className={`flex-1 ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted} rounded ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.CURSOR.POINTER}`}
             >
-              {/* Header - ✅ ENTERPRISE: Draggable handle (centralized useDraggable
-                  matches `[data-drag-handle="true"]`) */}
-              <div
-                data-drag-handle="true"
-                onMouseDown={handleMouseDown}
-                className={`flex items-center justify-between ${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'bottom')} ${PANEL_LAYOUT.CURSOR.GRAB} active:${PANEL_LAYOUT.CURSOR.GRABBING}`}
-              >
-                <h2
-                  {...titleProps}
-                  className={`${PANEL_LAYOUT.TYPOGRAPHY.LG} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.primary} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
-                >
-                  {title}
-                </h2>
-                <button
-                  onClick={handleCancel}
-                  className={`${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.CURSOR.POINTER}`}
-                  aria-label="Close"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M15 5L5 15M5 5L15 15"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Content - ✅ FIX: Ensure pointer events work */}
-              <div className={`${PANEL_LAYOUT.SPACING.NONE} cursor-default pointer-events-auto`}>
-                <EnterpriseColorPicker
-                  {...pickerProps}
-                  orientation={effectiveOrientation}
-                  value={localColor}
-                  onChange={handleColorChange}
-                  className="border-0"
-                />
-              </div>
-
-              {/* Footer */}
-              {showFooter && (
-                <div className={`flex ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'top')}`}>
-                  <button
-                    onClick={handleCancel}
-                    className={`flex-1 ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted} rounded ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.CURSOR.POINTER}`}
-                  >
-                    {t('colorPicker.cancel')}
-                  </button>
-                  <button
-                    onClick={handleApply}
-                    className={`flex-1 ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.primary} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.primary} rounded ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.CURSOR.POINTER}`}
-                  >
-                    {t('colorPicker.apply')}
-                  </button>
-                </div>
-              )}
-            </div>
-          </FocusScope>
-        </div>,
-        document.body
-      )
-    : null;
+              {t('colorPicker.cancel')}
+            </button>
+            <button
+              onClick={handleApply}
+              className={`flex-1 ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.primary} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.primary} rounded ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.CURSOR.POINTER}`}
+            >
+              {t('colorPicker.apply')}
+            </button>
+          </div>
+        ) : undefined
+      }
+    >
+      <EnterpriseColorPicker
+        {...pickerProps}
+        orientation={effectiveOrientation}
+        value={localColor}
+        onChange={handleColorChange}
+        className="border-0"
+      />
+    </ColorDialogShell>
+  );
 }
 
 /**
