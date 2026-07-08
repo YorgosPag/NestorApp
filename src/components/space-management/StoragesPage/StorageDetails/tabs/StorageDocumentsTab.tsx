@@ -1,70 +1,29 @@
-/* eslint-disable design-system/prefer-design-system-imports, custom/no-hardcoded-strings */
 /**
- * StorageDocumentsTab — Documents tab for individual storage detail view
+ * StorageDocumentsTab — Documents tab for the storage unit detail view.
  *
- * Uses centralized EntityFilesManager for document management.
- * Shows all file categories EXCEPT photos, videos, and floorplans
- * (those have dedicated tabs).
- *
- * Storage path (ADR-031 canonical):
- * companies/{companyId}/entities/storage/{id}/domains/construction/categories/documents/
+ * Thin binding over the shared {@link EntityMediaFilesTab} shell (ADR-588).
+ * Shows all file categories EXCEPT photos, videos and floorplans (dedicated tabs).
  *
  * @module components/space-management/StoragesPage/StorageDetails/tabs/StorageDocumentsTab
+ * @see ADR-588 — Space Media Tab Shell
  * @see ADR-031 — Canonical File Storage System
  */
 
 'use client';
 
-import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
-import { useAuth } from '@/auth/contexts/AuthContext';
-import { useCompanyId } from '@/hooks/useCompanyId';
+import { EntityMediaFilesTab } from '@/components/space-management/shared/tabs/EntityMediaFilesTab';
+import { storageMediaBinding } from '@/components/space-management/shared/tabs/entity-media-binding';
+import { DOCUMENTS_MEDIA_CONFIG } from '@/components/space-management/shared/tabs/media-tab-configs';
 import type { Storage } from '@/types/storage/contracts';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { cn } from '@/lib/utils';
-
-// ============================================================================
-// TYPES
-// ============================================================================
 
 interface StorageDocumentsTabProps {
   /** Storage data (injected via globalProps as `storage`) */
   storage: Storage;
 }
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
-
 export function StorageDocumentsTab({ storage }: StorageDocumentsTabProps) {
-  const { user } = useAuth();
-  const colors = useSemanticColors();
-
-  const companyId = useCompanyId()?.companyId;
-  const currentUserId = user?.uid;
-
-  if (!companyId || !currentUserId) {
-    return (
-      <p className={cn("p-2 text-center", colors.text.muted)}>
-        Συνδεθείτε για να δείτε τα έγγραφα.
-      </p>
-    );
-  }
-
   return (
-    <section className="p-2">
-      <EntityFilesManager
-        companyId={companyId}
-        currentUserId={currentUserId}
-        entityType="storage"
-        entityId={storage.id}
-        entityLabel={storage.name}
-        projectId={storage.projectId}
-        domain="construction"
-        category="documents"
-        purpose="storage-document"
-        entryPointExcludeCategories={['photos', 'videos', 'floorplans']}
-      />
-    </section>
+    <EntityMediaFilesTab binding={storageMediaBinding(storage)} media={DOCUMENTS_MEDIA_CONFIG} />
   );
 }
 

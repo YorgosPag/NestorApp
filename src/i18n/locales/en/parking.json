@@ -126,7 +126,9 @@
   },
   "auth": {
     "signInToViewPhotos": "Sign in to view photos.",
-    "signInToViewVideos": "Sign in to view videos."
+    "signInToViewVideos": "Sign in to view videos.",
+    "signInToViewDocuments": "Sign in to view documents.",
+    "signInToViewFloorplans": "Sign in to view floorplans."
   },
   "projectTab": {
     "subtabs": {

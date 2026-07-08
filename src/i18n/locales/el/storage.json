@@ -356,6 +356,9 @@
     "parking": "Στάθμευση"
   },
   "auth": {
-    "signInToViewPhotos": "Συνδεθείτε για να δείτε τις φωτογραφίες."
+    "signInToViewPhotos": "Συνδεθείτε για να δείτε τις φωτογραφίες.",
+    "signInToViewVideos": "Συνδεθείτε για να δείτε τα βίντεο.",
+    "signInToViewDocuments": "Συνδεθείτε για να δείτε τα έγγραφα.",
+    "signInToViewFloorplans": "Συνδεθείτε για να δείτε τις κατόψεις."
   }
 }

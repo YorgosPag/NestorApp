@@ -21,6 +21,7 @@ import { RealtimeService } from '@/services/realtime';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useEntityLink } from '@/hooks/useEntityLink';
 import { useCompanyId } from '@/hooks/useCompanyId';
+import { useSaveHandlerRef } from '@/hooks/useSaveHandlerRef';
 // 🏢 ADR-248: Centralized auto-save system
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { AutoSaveStatusIndicator } from '@/components/shared/AutoSaveStatusIndicator';
@@ -390,17 +391,8 @@ export function GeneralTabContent({
     }
   }, [building.id, building.companyId, formData, setEffectiveEditing, isCreateMode, onBuildingCreated, projectLink, t, buildingNotifications]);
 
-  // Register save function for parent header delegation
-  useEffect(() => {
-    if (onSaveRef) {
-      onSaveRef.current = handleSave;
-    }
-    return () => {
-      if (onSaveRef) {
-        onSaveRef.current = null;
-      }
-    };
-  }, [handleSave, onSaveRef]);
+  // Register save function for parent header delegation (SSoT hook)
+  useSaveHandlerRef(onSaveRef, handleSave);
 
   const updateField = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));

@@ -356,6 +356,9 @@
     "parking": "Parking"
   },
   "auth": {
-    "signInToViewPhotos": "Sign in to view photos."
+    "signInToViewPhotos": "Sign in to view photos.",
+    "signInToViewVideos": "Sign in to view videos.",
+    "signInToViewDocuments": "Sign in to view documents.",
+    "signInToViewFloorplans": "Sign in to view floorplans."
   }
 }
