@@ -16,6 +16,7 @@
 // 🏢 Color-Conversion SSoT (ADR-573): tint = blend-toward-white via canonical `mixHex`.
 // color-math is pure (zero cycle) — leaf-safe.
 import { mixHex } from '../../config/color-math';
+import { clamp01 } from '../../utils/scalar-math';
 
 /**
  * Τύπος gradient (DXF group 470, lowercase). LINEAR/CYLINDER → γραμμικό· οι
@@ -77,7 +78,7 @@ export function isRadialGradientType(type: HatchGradientType): boolean {
  * μετατοπίσει τη γεωμετρία του gradient (όχι τα stops → μηδέν degenerate offset).
  */
 export function normalizeGradientShift(shift: number | undefined): number {
-  return Math.min(1, Math.max(0, shift ?? 0));
+  return clamp01(shift ?? 0);
 }
 
 /**
@@ -89,7 +90,7 @@ export function applyTint(hex: string, tint: number): string {
   // (3-digit, rgba, invalid) is returned verbatim — no case change.
   const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
   if (!m) return hex;
-  const t = Math.min(1, Math.max(0, tint));
+  const t = clamp01(tint);
   // blend hex → white by (1 - t): tint=1 → full colour, tint=0 → white. Uppercase to
   // preserve this module's historical output format.
   return mixHex(hex, '#ffffff', 1 - t).toUpperCase();

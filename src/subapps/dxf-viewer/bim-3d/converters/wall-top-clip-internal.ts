@@ -15,6 +15,7 @@ import {
 } from '../../bim/geometry/shared/convex-polygon-difference';
 import type { Ring } from 'polygon-clipping';
 import { projectPointTo2D } from '../../bim/geometry/shared/polygon-utils';
+import { clamp01 } from '../../utils/scalar-math';
 
 /** Όριο εμβαδού (plan units²) κάτω από το οποίο μια περιοχή είναι sliver → skip. */
 export const AREA_EPS = 1e-9;
@@ -130,7 +131,7 @@ export function pointOnSegment(p: Pt2, a: Pt2, b: Pt2, eps: number): boolean {
   if (len2 < eps * eps) return Math.hypot(p.x - a.x, p.y - a.y) < eps;
   let t = ((p.x - a.x) * abx + (p.y - a.y) * aby) / len2;
   if (t < -eps || t > 1 + eps) return false;
-  t = Math.max(0, Math.min(1, t));
+  t = clamp01(t);
   return Math.hypot(p.x - (a.x + t * abx), p.y - (a.y + t * aby)) < eps;
 }
 

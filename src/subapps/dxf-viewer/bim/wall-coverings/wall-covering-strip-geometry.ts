@@ -25,6 +25,9 @@ import type { WallCoveringFaceSide, WallCoveringParams } from '../types/wall-cov
 import { totalCoveringThicknessMm } from '../types/wall-covering-types';
 import { mmScaleFor } from '../../utils/scene-units';
 import type { SceneUnits } from '../../utils/scene-units';
+import { clamp } from '../../utils/scalar-math';
+// ADR-584 — reuse the shared 2D point-array bbox SSoT (avoid a sibling clone of the loop).
+import { bboxOf } from '../geometry/member-column-cutback';
 
 /**
  * Δομικό (structural) minimum που χρειάζεται ο υπολογισμός λωρίδας από τον host τοίχο.
@@ -172,10 +175,6 @@ function orientOutward(wall: WallCoveringHost, faceAnchor: Point2D, left: Vec2):
   return left;
 }
 
-function clamp(v: number, lo: number, hi: number): number {
-  return v < lo ? lo : v > hi ? hi : v;
-}
-
 // ─── Cacheable render geometry (selection / hit-test) ─────────────────────────
 
 /** 2D bbox (z=0) από τα 4 σημεία της λωρίδας. */
@@ -183,17 +182,8 @@ function stripBounds(quad: WallCoveringStrip['quad']): {
   readonly min: { x: number; y: number; z: number };
   readonly max: { x: number; y: number; z: number };
 } {
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  for (const p of quad) {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  }
-  return { min: { x: minX, y: minY, z: 0 }, max: { x: maxX, y: maxY, z: 0 } };
+  const b = bboxOf(quad);
+  return { min: { x: b.minX, y: b.minY, z: 0 }, max: { x: b.maxX, y: b.maxY, z: 0 } };
 }
 
 /** Cacheable render bits (outline + bbox) από host τοίχο + params. SSoT — completion + command. */

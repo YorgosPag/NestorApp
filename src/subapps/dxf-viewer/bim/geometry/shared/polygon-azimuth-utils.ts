@@ -15,6 +15,7 @@
 import type { Point3D } from '../../types/bim-base';
 import { segmentNormalX, segmentNormalY, isPolygonCCW } from './polygon-utils';
 import { normalizeAngleDeg } from '../../../rendering/entities/shared/geometry-angle-utils';
+import { clamp01 } from '../../../utils/scalar-math';
 
 const RAD_TO_DEG = 180 / Math.PI;
 
@@ -50,7 +51,7 @@ function pointSegmentDistanceSq(
   const lenSq = dx * dx + dy * dy;
   if (lenSq <= 1e-12) return (px - ax) ** 2 + (py - ay) ** 2;
   let t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
-  t = Math.max(0, Math.min(1, t));
+  t = clamp01(t);
   const cx = ax + t * dx;
   const cy = ay + t * dy;
   return (px - cx) ** 2 + (py - cy) ** 2;

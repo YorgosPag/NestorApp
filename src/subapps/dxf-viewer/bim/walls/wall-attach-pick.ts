@@ -24,6 +24,7 @@ import type { ColumnAttachTarget } from '../../core/commands/entity-commands/Att
 import type { StairAttachTarget } from '../../core/commands/entity-commands/AttachStairsCommand';
 import type { Point2D } from '../../rendering/types/Types';
 import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 
 /** Selected entity ids → wall attach targets (id + kind). Non-walls skipped. */
 export function resolveWallAttachTargets(
@@ -78,17 +79,6 @@ export function resolveStructuralHostId(
   return isBeamEntity(e) || isSlabEntity(e) || isRoofEntity(e) ? e.id : null;
 }
 
-/** Perpendicular distance from `p` to segment `a→b` (XY). */
-function distPointToSegment(p: Point2D, a: Point2D, b: Point2D): number {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const lenSq = dx * dx + dy * dy;
-  if (lenSq < 1e-9) return Math.hypot(p.x - a.x, p.y - a.y);
-  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
-  t = Math.max(0, Math.min(1, t));
-  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
-}
-
 /**
  * Geometry fallback host pick in **mm space**. `pointMm` and `tolMm` are in mm
  * (the caller converts from scene units). Slab = point inside `outline`; beam =
@@ -112,7 +102,7 @@ export function findStructuralHostAtPoint(
   for (const e of entities) {
     if (!isBeamEntity(e)) continue;
     const half = e.params.width / 2 + tolMm;
-    const d = distPointToSegment(pointMm, e.params.startPoint, e.params.endPoint);
+    const d = pointToLineDistance(pointMm, e.params.startPoint, e.params.endPoint);
     if (d <= half) return e.id;
   }
   return null;

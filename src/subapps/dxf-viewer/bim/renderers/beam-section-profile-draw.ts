@@ -24,6 +24,7 @@ import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
+import { clamp } from '../../utils/scalar-math';
 // ADR-507 Φ7 — material classification ενοποιήθηκε στο MATERIAL_HATCH_MAP SSoT.
 import { normalizeMaterial } from '../hatch/material-hatch-map';
 import {
@@ -123,7 +124,6 @@ export function drawBeamSectionProfile(
     const h = beam.params.depth;
     const tf = ish.flangeThickness ?? DEFAULT_I_FLANGE_THICKNESS_MM;
     const tw = ish.webThickness ?? DEFAULT_I_WEB_THICKNESS_MM;
-    const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
     const realH = symW * clamp(h / b, 0.5, 4);
     const realWebW = symW * clamp(tw / b, 0.05, 0.5);
     const realFlangeT = realH * clamp(tf / h, 0.05, 0.45);

@@ -17,6 +17,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { clamp } from '../../utils/scalar-math';
 import {
   BEZIER_RANGES,
   EASING_PRESET_IDS,
@@ -401,11 +402,6 @@ function PresetGallery({ activePresetId, onPick, t }: PresetGalleryProps) {
 // Pure helpers
 // ──────────────────────────────────────────────────────────────────────────────
 
-function clamp(v: number, lo: number, hi: number): number {
-  if (v < lo) return lo;
-  if (v > hi) return hi;
-  return v;
-}
 
 function round2(v: number): number {
   return Math.round(v * 100) / 100;

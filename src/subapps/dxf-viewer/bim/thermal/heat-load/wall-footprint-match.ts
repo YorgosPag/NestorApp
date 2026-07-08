@@ -16,6 +16,8 @@
  * @see ../../walls/perimeter-from-faces (η πηγή του footprint)
  */
 
+import { pointToLineDistance } from '../../../rendering/entities/shared/geometry-utils';
+
 export interface Vec2 {
   readonly x: number;
   readonly y: number;
@@ -28,22 +30,11 @@ export interface WallFaceSegments {
   readonly segments: readonly (readonly [Vec2, Vec2])[];
 }
 
-/** Απόσταση σημείου από ευθ. τμήμα (clamped) — scene units. */
-function pointToSegmentDistance(p: Vec2, a: Vec2, b: Vec2): number {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const lenSq = dx * dx + dy * dy;
-  if (lenSq <= 1e-12) return Math.hypot(p.x - a.x, p.y - a.y);
-  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
-  t = Math.max(0, Math.min(1, t));
-  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
-}
-
 /** Ελάχιστη απόσταση σημείου από οποιοδήποτε τμήμα ενός τοίχου. */
 function minDistanceToWall(p: Vec2, wall: WallFaceSegments): number {
   let min = Infinity;
   for (const [a, b] of wall.segments) {
-    const d = pointToSegmentDistance(p, a, b);
+    const d = pointToLineDistance(p, a, b);
     if (d < min) min = d;
   }
   return min;
@@ -92,7 +83,7 @@ export function pointToPolygonEdgeDistance(p: Vec2, polygon: readonly Vec2[]): n
   if (n < 2) return Infinity;
   let min = Infinity;
   for (let i = 0; i < n; i++) {
-    const d = pointToSegmentDistance(p, polygon[i], polygon[(i + 1) % n]);
+    const d = pointToLineDistance(p, polygon[i], polygon[(i + 1) % n]);
     if (d < min) min = d;
   }
   return min;

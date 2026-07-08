@@ -31,6 +31,7 @@ import type { HeatLoadBoundaryKind } from './heat-load-types';
 import type { SolarOrientation } from './annual-gains-shading-tables';
 import { SOLAR_ORIENTATIONS } from './annual-gains-shading-tables';
 import { normalizeAngleDeg } from '../../../rendering/entities/shared/geometry-angle-utils';
+import { clamp01 } from '../../../utils/scalar-math';
 
 // Shading tables — surgical split (≤500 γραμμές/αρχείο): L7.3 Slice B/C/D
 // SolarOrientation + SOLAR_ORIENTATIONS ορίζονται στο shading-tables και re-export-άρονται εδώ.
@@ -444,5 +445,5 @@ export function computeGainUtilisation(
     gainLossRatio === 1
       ? a0 / (a0 + 1)
       : (1 - Math.pow(gainLossRatio, a0)) / (1 - Math.pow(gainLossRatio, a0 + 1));
-  return Math.min(1, Math.max(0, eta));
+  return clamp01(eta);
 }

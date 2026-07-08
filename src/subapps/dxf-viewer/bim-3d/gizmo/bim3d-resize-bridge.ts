@@ -66,6 +66,7 @@ import { detachStairSide, isStairSideAttached } from '../../bim/stairs/stair-att
 import { snapTotalRiseToWholeSteps } from '../../bim/geometry/stair-vertical-profile';
 import { directionToUnitVector, perp as stairPerp } from '../../bim/geometry/stairs/stair-geometry-shared';
 import { mmScaleFor, mmToSceneUnits, inferSceneUnitsFromWidth } from '../../utils/scene-units';
+import { clamp } from '../../utils/scalar-math';
 
 /**
  * Floor (mm) for a vertical resize on a field with no dedicated minimum constant
@@ -92,10 +93,6 @@ export function toCanvasDelta(deltaMm: Point2D, sceneScale: number): Point2D {
 
 function clampMin(value: number, min: number): number {
   return Math.max(min, value);
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 // ─── Column ──────────────────────────────────────────────────────────────────
@@ -127,26 +124,42 @@ export function computeColumnResizeParams(
   drag: ResizeDragMm,
 ): ColumnParams | null {
   if (drag.axis === 'y') {
-    if (drag.deltaUpMm === 0) return null;
-    if (drag.mode === 'mirror') {
-      // BASE grip: base += Δ, height -= Δ (keep top fixed).
-      const base = isEntitySideAttached(params, 'base') ? detachEntitySide(params, 'base') : params;
-      const baseOffset = base.baseOffset + drag.deltaUpMm;
-      const height = clampMin(base.height - drag.deltaUpMm, MIN_BIM_HEIGHT_MM);
-      return base === params && baseOffset === params.baseOffset && height === params.height
-        ? null
-        : { ...base, baseOffset, height };
-    }
-    // TOP grip: height += Δ (base fixed).
-    const top = isEntitySideAttached(params, 'top') ? detachEntitySide(params, 'top') : params;
-    const height = clampMin(top.height + drag.deltaUpMm, MIN_BIM_HEIGHT_MM);
-    return top === params && height === params.height ? null : { ...top, height };
+    return resizeVerticalSide(params, drag, { isAttached: isEntitySideAttached, detach: detachEntitySide });
   }
   const gripKind = columnGripFor(drag.axis);
   if (!gripKind) return null;
   const delta = toCanvasDelta(drag.deltaMm, mmScaleFor(params));
   const next = applyColumnGripDrag(gripKind, { originalParams: params, delta });
   return next === params ? null : next;
+}
+
+/**
+ * Κοινός axis-Y resize (SSoT column/wall): TOP grip → `height += Δ`· BASE grip
+ * (mirror) → `baseOffset += Δ, height -= Δ` (top fixed). Dragging an attached side
+ * το detach-άρει πρώτα (Revit "edit breaks attach"). Referential no-op → `null`.
+ */
+function resizeVerticalSide<P extends { baseOffset: number; height: number }>(
+  params: P,
+  drag: ResizeDragMm,
+  sides: {
+    isAttached: (p: P, side: 'base' | 'top') => boolean;
+    detach: (p: P, side: 'base' | 'top') => P;
+  },
+): P | null {
+  if (drag.deltaUpMm === 0) return null;
+  if (drag.mode === 'mirror') {
+    // BASE grip: base += Δ, height -= Δ (keep top fixed).
+    const base = sides.isAttached(params, 'base') ? sides.detach(params, 'base') : params;
+    const baseOffset = base.baseOffset + drag.deltaUpMm;
+    const height = clampMin(base.height - drag.deltaUpMm, MIN_BIM_HEIGHT_MM);
+    return base === params && baseOffset === params.baseOffset && height === params.height
+      ? null
+      : { ...base, baseOffset, height };
+  }
+  // TOP grip: height += Δ (base fixed).
+  const top = sides.isAttached(params, 'top') ? sides.detach(params, 'top') : params;
+  const height = clampMin(top.height + drag.deltaUpMm, MIN_BIM_HEIGHT_MM);
+  return top === params && height === params.height ? null : { ...top, height };
 }
 
 // ─── Wall ────────────────────────────────────────────────────────────────────
@@ -170,20 +183,7 @@ export function computeWallResizeParams(
   drag: ResizeDragMm,
 ): WallParams | null {
   if (drag.axis === 'y') {
-    if (drag.deltaUpMm === 0) return null;
-    if (drag.mode === 'mirror') {
-      // BASE grip: base += Δ, height -= Δ (keep top fixed).
-      const base = isWallSideAttached(params, 'base') ? detachWallSide(params, 'base') : params;
-      const baseOffset = base.baseOffset + drag.deltaUpMm;
-      const height = clampMin(base.height - drag.deltaUpMm, MIN_BIM_HEIGHT_MM);
-      return base === params && baseOffset === params.baseOffset && height === params.height
-        ? null
-        : { ...base, baseOffset, height };
-    }
-    // TOP grip: height += Δ (base fixed).
-    const top = isWallSideAttached(params, 'top') ? detachWallSide(params, 'top') : params;
-    const height = clampMin(top.height + drag.deltaUpMm, MIN_BIM_HEIGHT_MM);
-    return top === params && height === params.height ? null : { ...top, height };
+    return resizeVerticalSide(params, drag, { isAttached: isWallSideAttached, detach: detachWallSide });
   }
   const axis = unitVector(params.start, params.end);
   if (!axis) return null; // degenerate wall (start === end)

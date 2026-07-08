@@ -24,7 +24,7 @@ import * as THREE from 'three';
 import type { Point3D } from '../../bim/types/bim-base';
 import type { EnvelopeChain } from '../../bim/geometry/envelope-perimeter';
 import type { EnvelopeOpeningCut } from '../../bim/geometry/envelope-opening-cuts';
-import { envelopeFaceEdges } from '../../bim/geometry/envelope-opening-cuts';
+import { envelopeFaceEdges, lerp } from '../../bim/geometry/envelope-opening-cuts';
 import type { EnvelopeEdgeTop } from '../../bim/geometry/envelope-wall-top';
 import type { EnvelopeEdgeBase } from '../../bim/geometry/envelope-wall-base';
 import type { WallOpeningPiece } from './wall-opening-pieces';
@@ -41,12 +41,9 @@ import {
   addBandPrism,
   stripPrismGeometry,
 } from './envelope-three-mesh';
+import { clamp01 } from '../../utils/scalar-math';
 
 // ─── ADR-401 B3b / (γ) — μεταβλητή κορυφή ΚΑΙ μεταβλητή βάση κελύφους ──────────
-
-function lerpP(a: Point3D, b: Point3D, t: number): Point3D {
-  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 0 };
-}
 
 /**
  * Κοινό σχήμα top (B3b) / base ((γ)) edge profile: ordered sub-segments σε
@@ -133,10 +130,10 @@ function addProfiledBand(
     if (zT0 - zB0 <= POS_EPS && zT1 - zB1 <= POS_EPS) continue;
     const f0 = (u0 - sStart) / span;
     const f1 = (u1 - sStart) / span;
-    const o0 = lerpP(oStart, oEnd, f0);
-    const o1 = lerpP(oStart, oEnd, f1);
-    const fp0 = lerpP(fStart, fEnd, f0);
-    const fp1 = lerpP(fStart, fEnd, f1);
+    const o0 = lerp(oStart, oEnd, f0);
+    const o1 = lerp(oStart, oEnd, f1);
+    const fp0 = lerp(fStart, fEnd, f0);
+    const fp1 = lerp(fStart, fEnd, f1);
     if (Math.abs(zT0 - zT1) < POS_EPS && Math.abs(zB0 - zB1) < POS_EPS) {
       addBandPrism(group, makeQuad(o0, o1, fp0, fp1), zB0, zT0, baseY, materialId, levelId);
     } else {
@@ -145,6 +142,37 @@ function addProfiledBand(
       if (geo) group.add(makeEnvelopeMesh(geo, materialId, baseY, levelId));
     }
   }
+}
+
+/**
+ * Κοινός walk των edge-cuts (SSoT addFlatEdge/addEdge): για κάθε cut καλεί `onGap`
+ * στο κενό πριν το άνοιγμα (edge-local `[cursor,a]`, corner points cursorO/F→oA/fA)
+ * και `onSpan` στο span του ανοίγματος (`[a,b]`, oA/oB/fA/fB από το `bandQuad`),
+ * + τελικό tail `[cursor,1]`. Ο caller εκπέμπει τη geometry (prism ή profiled band).
+ */
+function walkEdgeCuts(
+  o0: Point3D, o1: Point3D, f0: Point3D, f1: Point3D,
+  edgeCuts: readonly EnvelopeOpeningCut[],
+  onGap: (oL: Point3D, oR: Point3D, fL: Point3D, fR: Point3D, sStart: number, sEnd: number) => void,
+  onSpan: (cut: EnvelopeOpeningCut, oA: Point3D, oB: Point3D, fA: Point3D, fB: Point3D, a: number, b: number) => void,
+): void {
+  const sorted = [...edgeCuts].sort((x, y) => x.tStart - y.tStart);
+  let cursor = 0;
+  let cursorO = o0; // outer σημείο στο cursor (corner ή προηγ. cut boundary — κάθετο)
+  let cursorF = f0;
+  for (const c of sorted) {
+    const a = clamp01(c.tStart);
+    const b = clamp01(c.tEnd);
+    if (b - a < T_EPS) continue;
+    // Κάθετες απολήξεις από το cut.bandQuad = [O_a, O_b, F_b, F_a].
+    const oA = c.bandQuad[0], oB = c.bandQuad[1], fB = c.bandQuad[2], fA = c.bandQuad[3];
+    if (a > cursor + T_EPS) onGap(cursorO, oA, cursorF, fA, cursor, a);
+    onSpan(c, oA, oB, fA, fB, a, b);
+    cursor = Math.max(cursor, b);
+    cursorO = oB;
+    cursorF = fB;
+  }
+  if (cursor < 1 - T_EPS) onGap(cursorO, o1, cursorF, f1, cursor, 1);
 }
 
 /**
@@ -165,31 +193,16 @@ function addFlatEdge(
     addBandPrism(group, makeQuad(o0, o1, f0, f1), 0, heightM, baseY, materialId, levelId);
     return;
   }
-  const sorted = [...edgeCuts].sort((a, b) => a.tStart - b.tStart);
-  let cursor = 0;
-  let cursorO = o0; // outer σημείο στο cursor (corner ή προηγ. cut boundary — κάθετο)
-  let cursorF = f0;
-  for (const c of sorted) {
-    const a = Math.max(0, Math.min(1, c.tStart));
-    const b = Math.max(0, Math.min(1, c.tEnd));
-    if (b - a < T_EPS) continue;
-    // Κάθετες απολήξεις από το cut.bandQuad = [O_a, O_b, F_b, F_a].
-    const oA = c.bandQuad[0], oB = c.bandQuad[1], fB = c.bandQuad[2], fA = c.bandQuad[3];
-    if (a > cursor + T_EPS) {
-      addBandPrism(group, makeQuad(cursorO, oA, cursorF, fA), 0, heightM, baseY, materialId, levelId);
-    }
-    const span = makeQuad(oA, oB, fA, fB);
-    const sill = Math.max(0, Math.min(heightM, c.sillM));
-    const head = Math.max(0, Math.min(heightM, c.headM));
-    if (sill > POS_EPS) addBandPrism(group, span, 0, sill, baseY, materialId, levelId);
-    if (head < heightM - POS_EPS) addBandPrism(group, span, head, heightM, baseY, materialId, levelId);
-    cursor = Math.max(cursor, b);
-    cursorO = oB;
-    cursorF = fB;
-  }
-  if (cursor < 1 - T_EPS) {
-    addBandPrism(group, makeQuad(cursorO, o1, cursorF, f1), 0, heightM, baseY, materialId, levelId);
-  }
+  walkEdgeCuts(o0, o1, f0, f1, edgeCuts,
+    (oL, oR, fL, fR) => addBandPrism(group, makeQuad(oL, oR, fL, fR), 0, heightM, baseY, materialId, levelId),
+    (c, oA, oB, fA, fB) => {
+      const span = makeQuad(oA, oB, fA, fB);
+      const sill = Math.max(0, Math.min(heightM, c.sillM));
+      const head = Math.max(0, Math.min(heightM, c.headM));
+      if (sill > POS_EPS) addBandPrism(group, span, 0, sill, baseY, materialId, levelId);
+      if (head < heightM - POS_EPS) addBandPrism(group, span, head, heightM, baseY, materialId, levelId);
+    },
+  );
 }
 
 /**
@@ -224,28 +237,15 @@ function addEdge(
     addProfiledBand(group, o0, o1, f0, f1, 0, 1, top, base, baseY, materialId, levelId);
     return;
   }
-  const sorted = [...edgeCuts].sort((a, b) => a.tStart - b.tStart);
-  let cursor = 0;
-  let cursorO = o0;
-  let cursorF = f0;
-  for (const c of sorted) {
-    const a = Math.max(0, Math.min(1, c.tStart));
-    const b = Math.max(0, Math.min(1, c.tEnd));
-    if (b - a < T_EPS) continue;
-    const oA = c.bandQuad[0], oB = c.bandQuad[1], fB = c.bandQuad[2], fA = c.bandQuad[3];
-    if (a > cursor + T_EPS) {
-      addProfiledBand(group, cursorO, oA, cursorF, fA, cursor, a, top, base, baseY, materialId, levelId);
-    }
-    // Ποδιά: [base .. sill] (μεταβλητός πάτος αν base-attach). Πρέκι: [head .. top(s)].
-    addProfiledBand(group, oA, oB, fA, fB, a, b, flatProfile(Math.max(0, c.sillM)), base, baseY, materialId, levelId);
-    addProfiledBand(group, oA, oB, fA, fB, a, b, top, Math.max(0, c.headM), baseY, materialId, levelId);
-    cursor = Math.max(cursor, b);
-    cursorO = oB;
-    cursorF = fB;
-  }
-  if (cursor < 1 - T_EPS) {
-    addProfiledBand(group, cursorO, o1, cursorF, f1, cursor, 1, top, base, baseY, materialId, levelId);
-  }
+  walkEdgeCuts(o0, o1, f0, f1, edgeCuts,
+    (oL, oR, fL, fR, sStart, sEnd) =>
+      addProfiledBand(group, oL, oR, fL, fR, sStart, sEnd, top, base, baseY, materialId, levelId),
+    (c, oA, oB, fA, fB, a, b) => {
+      // Ποδιά: [base .. sill] (μεταβλητός πάτος αν base-attach). Πρέκι: [head .. top(s)].
+      addProfiledBand(group, oA, oB, fA, fB, a, b, flatProfile(Math.max(0, c.sillM)), base, baseY, materialId, levelId);
+      addProfiledBand(group, oA, oB, fA, fB, a, b, top, Math.max(0, c.headM), baseY, materialId, levelId);
+    },
+  );
 }
 
 /**

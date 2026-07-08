@@ -18,6 +18,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 import { findClosedPolygonsFromLines } from '../../systems/auto-area/auto-area-geometry';
 import { polygonArea, polygonCentroid } from '../walls/perimeter-polygon-math';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
@@ -73,21 +74,11 @@ function ringPerimeter(ring: readonly Point2D[]): number {
   return p;
 }
 
-/** Απόσταση σημείου από ευθύγραμμο τμήμα [a,b]. */
-function pointSegmentDist(p: Point2D, a: Point2D, b: Point2D): number {
-  const dx = b.x - a.x, dy = b.y - a.y;
-  const len2 = dx * dx + dy * dy;
-  if (len2 <= 0) return Math.hypot(p.x - a.x, p.y - a.y);
-  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
-  t = Math.max(0, Math.min(1, t));
-  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
-}
-
 /** Ελάχιστη απόσταση σημείου από την περίμετρο (όλες τις ακμές) ενός ring. */
 function distToRingBoundary(p: Point2D, ring: readonly Point2D[]): number {
   let best = Infinity;
   for (let i = 0; i < ring.length; i++) {
-    best = Math.min(best, pointSegmentDist(p, ring[i], ring[(i + 1) % ring.length]));
+    best = Math.min(best, pointToLineDistance(p, ring[i], ring[(i + 1) % ring.length]));
   }
   return best;
 }

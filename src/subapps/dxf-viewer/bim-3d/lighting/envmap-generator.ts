@@ -4,6 +4,7 @@ import type { LightPreset } from './lighting-presets';
 import type { BackgroundMode } from '../../config/bim-visual-style';
 import { resolveDxfCanvasBackgroundHex, resolveDxfCanvasGradientStops } from '../../config/color-config';
 import { buildStudioBackgroundTexture } from './studio-background-texture';
+import { clamp01 } from '../../utils/scalar-math';
 
 const ENV_WIDTH = 512;
 const ENV_HEIGHT = 256;
@@ -124,7 +125,7 @@ export class EnvmapGenerator {
 
     for (let row = 0; row < ENV_HEIGHT; row++) {
       const distToHorizon = Math.abs(row - horizonRow);
-      const blendT = Math.max(0, Math.min(1, (distToHorizon - blendPx * 0.5) / (blendPx * 0.5)));
+      const blendT = clamp01((distToHorizon - blendPx * 0.5) / (blendPx * 0.5));
       // `DataTexture` έχει `flipY=false` + `EquirectangularReflectionMapping`: η κατεύθυνση
       // +Y (ζενίθ) αντιστοιχεί στο v≈1 → στις ΤΕΛΕΥΤΑΙΕΣ γραμμές (row→ENV_HEIGHT). Άρα το
       // πάνω ημισφαίριο = `row >= horizonRow`. (Πριν ήταν `row < horizonRow` → ανεστραμμένο:

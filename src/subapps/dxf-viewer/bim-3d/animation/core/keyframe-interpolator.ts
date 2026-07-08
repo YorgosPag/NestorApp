@@ -13,6 +13,7 @@
  */
 
 import { getEasingFunction } from '../presets/animation-presets';
+import { clamp01 } from '../../../utils/scalar-math';
 import type {
   InterpolatedFrame,
   Vec3,
@@ -43,7 +44,7 @@ export interface InterpolateFrameInput {
 }
 
 export function interpolateFrame(input: InterpolateFrameInput): InterpolatedFrame {
-  const clampedT = Math.max(0, Math.min(1, input.t));
+  const clampedT = clamp01(input.t);
   const easing = getEasingFunction(input.from.easingToNext, input.from.customBezier);
 
   if (!input.splitTracks) {

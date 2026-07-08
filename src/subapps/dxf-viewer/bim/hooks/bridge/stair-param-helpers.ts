@@ -35,6 +35,7 @@ import {
   splitTwoFlightsForWinders,
 } from '../../stairs/stair-variant-defaults';
 import { DEFAULT_WAIST_SLAB_THICKNESS_MM } from '../../stairs/stair-boq-quantities';
+import { clamp } from '../../../utils/scalar-math';
 
 // ── Module-private constants ─────────────────────────────────────────────────
 
@@ -463,8 +464,3 @@ function withRecomputedTotals(p: StairParams): StairParams {
   return { ...p, totalRise, totalRun, pitch };
 }
 
-function clamp(v: number, min: number, max: number): number {
-  if (v < min) return min;
-  if (v > max) return max;
-  return v;
-}

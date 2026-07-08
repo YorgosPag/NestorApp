@@ -20,6 +20,7 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
+import { clamp01 } from '../../../utils/scalar-math';
 
 /** Τοπικό πλαίσιο σε σημείο της polyline (όλα στο σύστημα μονάδων του caller). */
 export interface PolylineFrame {
@@ -68,7 +69,7 @@ export function samplePolylineFrame(
     const segLen = Math.hypot(b.x - a.x, b.y - a.y);
     // Τελευταία ακμή ⇒ κρατά το υπόλοιπο (clamp στο τέλος).
     if (acc + segLen >= distance || i === points.length - 1) {
-      const t = segLen <= 1e-12 ? 0 : Math.min(1, Math.max(0, (distance - acc) / segLen));
+      const t = segLen <= 1e-12 ? 0 : clamp01((distance - acc) / segLen);
       const tangent = segmentTangent(a, b);
       return {
         point: { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t },

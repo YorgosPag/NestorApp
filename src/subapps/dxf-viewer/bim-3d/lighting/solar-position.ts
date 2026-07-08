@@ -1,3 +1,5 @@
+import { clamp } from '../../utils/scalar-math';
+
 export interface SolarAngles {
   azimuthDeg: number;
   elevationDeg: number;
@@ -8,10 +10,6 @@ const DEG = Math.PI / 180;
 function dayOfYear(date: Date): number {
   const start = new Date(date.getFullYear(), 0, 0);
   return Math.floor((date.getTime() - start.getTime()) / 86_400_000);
-}
-
-function clamp(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v));
 }
 
 /**

@@ -38,6 +38,7 @@ import { DEFAULT_FRAME_WIDTH_MM, MIN_OPENING_WIDTH_MM, isHingedKind } from '../t
 import type { WallEntity } from '../types/wall-types';
 import { projectPointToWallOffsetMm } from '../geometry/opening-geometry';
 import { rotateVector } from '../grips/grip-math';
+import { clamp } from '../../utils/scalar-math';
 import { ROTATION_HANDLE_OFFSET_MM, type CentredBoxGripRole } from '../grips/centred-box-grips';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -172,8 +173,28 @@ export interface OpeningGripDragInput {
   readonly hostWall: WallEntity;
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
+/** Επιτρεπτά offset bounds `[minOffset,maxOffset]` του opening στον host wall· `null` αν πολύ κοντός. */
+function openingOffsetBounds(
+  params: OpeningParams,
+  hostWall: WallEntity,
+): { minOffset: number; maxOffset: number } | null {
+  const hostLengthMm = hostWall.geometry.length * 1000;
+  const frameWidth = params.frameWidth ?? DEFAULT_FRAME_WIDTH_MM;
+  const minOffset = frameWidth;
+  const maxOffset = hostLengthMm - params.width - frameWidth;
+  if (maxOffset < minOffset) return null; // host too short for opening + jambs
+  return { minOffset, maxOffset };
+}
+
+/** Apply a clamped offset → new params (referential no-op preserved). */
+function withOpeningOffset(
+  params: OpeningParams,
+  rawOffset: number,
+  bounds: { minOffset: number; maxOffset: number },
+): OpeningParams {
+  const clamped = clamp(rawOffset, bounds.minOffset, bounds.maxOffset);
+  if (clamped === params.offsetFromStart) return params;
+  return { ...params, offsetFromStart: clamped };
 }
 
 /** Translate the whole opening along the host wall axis (legacy `opening-offset`). */
@@ -182,15 +203,9 @@ function moveAlongWall(
   currentPos: Point2D,
   hostWall: WallEntity,
 ): OpeningParams {
-  const hostLengthMm = hostWall.geometry.length * 1000;
-  const frameWidth = params.frameWidth ?? DEFAULT_FRAME_WIDTH_MM;
-  const minOffset = frameWidth;
-  const maxOffset = hostLengthMm - params.width - frameWidth;
-  if (maxOffset < minOffset) return params; // host too short for opening + jambs
-
-  const clamped = clamp(projectPointToWallOffsetMm(currentPos, hostWall) - params.width / 2, minOffset, maxOffset);
-  if (clamped === params.offsetFromStart) return params;
-  return { ...params, offsetFromStart: clamped };
+  const bounds = openingOffsetBounds(params, hostWall);
+  if (!bounds) return params;
+  return withOpeningOffset(params, projectPointToWallOffsetMm(currentPos, hostWall) - params.width / 2, bounds);
 }
 
 /**
@@ -210,17 +225,11 @@ function slideAlongWallByDelta(
   currentPos: Point2D,
   hostWall: WallEntity,
 ): OpeningParams {
-  const hostLengthMm = hostWall.geometry.length * 1000;
-  const frameWidth = params.frameWidth ?? DEFAULT_FRAME_WIDTH_MM;
-  const minOffset = frameWidth;
-  const maxOffset = hostLengthMm - params.width - frameWidth;
-  if (maxOffset < minOffset) return params; // host too short for opening + jambs
-
+  const bounds = openingOffsetBounds(params, hostWall);
+  if (!bounds) return params;
   const baseMm = projectPointToWallOffsetMm(basePoint, hostWall);
   const curMm = projectPointToWallOffsetMm(currentPos, hostWall);
-  const newOffset = clamp(params.offsetFromStart + (curMm - baseMm), minOffset, maxOffset);
-  if (newOffset === params.offsetFromStart) return params;
-  return { ...params, offsetFromStart: newOffset };
+  return withOpeningOffset(params, params.offsetFromStart + (curMm - baseMm), bounds);
 }
 
 /** Resize by moving ONE jamb along the wall; the opposite jamb stays pinned. */

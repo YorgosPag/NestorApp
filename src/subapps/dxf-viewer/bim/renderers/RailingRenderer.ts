@@ -23,6 +23,7 @@ import type { Entity } from '../../types/entities';
 import { isRailingEntity } from '../../types/entities';
 import type { RailingEntity } from '../types/railing-types';
 import { buildRailingSymbol, balusterDotRadiusMm } from '../railings/railing-symbol';
+import { clamp01 } from '../../utils/scalar-math';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
@@ -143,8 +144,8 @@ export class RailingRenderer extends BaseEntityRenderer {
 
   // ─── Internal helpers ────────────────────────────────────────────────────
 
-  private strokePolyline(vertices: ReadonlyArray<{ x: number; y: number }>): void {
-    if (vertices.length < 2) return;
+  /** beginPath + moveTo(first) + lineTo each subsequent vertex (world→screen). SSoT trace. */
+  private tracePolyline(vertices: ReadonlyArray<{ x: number; y: number }>): void {
     this.ctx.beginPath();
     const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
     this.ctx.moveTo(first.x, first.y);
@@ -152,18 +153,17 @@ export class RailingRenderer extends BaseEntityRenderer {
       const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
       this.ctx.lineTo(s.x, s.y);
     }
+  }
+
+  private strokePolyline(vertices: ReadonlyArray<{ x: number; y: number }>): void {
+    if (vertices.length < 2) return;
+    this.tracePolyline(vertices);
     this.ctx.stroke();
   }
 
   private drawClosedPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
     if (vertices.length < 3) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
+    this.tracePolyline(vertices);
     this.ctx.closePath();
   }
 }
@@ -179,6 +179,6 @@ function distanceToSegment(
   const lenSq = dx * dx + dy * dy;
   if (lenSq === 0) return Math.hypot(p.x - a.x, p.y - a.y);
   let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
-  t = Math.max(0, Math.min(1, t));
+  t = clamp01(t);
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
 }
