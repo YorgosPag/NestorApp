@@ -16,10 +16,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-369-bim-elevation-convention-revit-alignment.md §9 Q8
  */
 
-import {
-  generateOpeningId,
-  generateIfcGuid,
-} from '@/services/enterprise-id-convenience';
+import { generateOpeningId } from '@/services/enterprise-id-convenience';
 import type {
   OpeningEntity,
   OpeningGeometry,
@@ -27,41 +24,22 @@ import type {
   OpeningParams,
 } from '@/subapps/dxf-viewer/bim/types/opening-types';
 import type { OpeningTypeParams } from '@/subapps/dxf-viewer/bim/types/bim-family-type';
-import { makeBimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
-import type { BimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
-import type { IfcPropertySet } from '@/subapps/dxf-viewer/bim/types/ifc-entity-mixin';
+import {
+  type CreateBimEntityInputBase,
+  assembleBimEntity,
+} from '@/services/factories/bim-entity-factory-base';
 import { resolveOperationType } from '@/subapps/dxf-viewer/bim/types/opening-operation-types';
 import { isWindowKind } from '@/subapps/dxf-viewer/bim/types/opening-types';
 
-export interface CreateOpeningInput {
+export interface CreateOpeningInput extends CreateBimEntityInputBase {
   /** Required: param block. */
   params: OpeningParams;
   /** Required: pre-computed geometry cache (caller responsibility). */
   geometry: OpeningGeometry;
-  /** Required: BaseEntity stable layer id (ADR-358 Phase 9E-6e). */
-  layerId: string;
-  /** Optional `visible` flag (BaseEntity). Default unset. */
-  visible?: boolean;
-  /** Optional override (test-only). Default = enterprise opening ID. */
-  id?: string;
-  /** Optional override (test-only). Default = generateIfcGuid(). */
-  ifcGuid?: string;
-  /** Optional sparse IFC Property Sets payload. */
-  pset?: IfcPropertySet;
-  /** Optional validation block. Default = empty BimValidation. */
-  validation?: BimValidation;
   /** ADR-421 SLICE C — optional Family/Type link (FK → BimFamilyType.id). */
   typeId?: string;
   /** ADR-421 SLICE C — optional per-instance overrides of type-level params. */
   typeOverrides?: Partial<OpeningTypeParams>;
-  /** Optional tenant fields — pass-through. */
-  companyId?: string;
-  projectId?: string;
-  buildingId?: string;
-  floorplanId?: string;
-  floorId?: string;
-  createdBy?: string;
-  updatedBy?: string;
 }
 
 /**
@@ -93,29 +71,22 @@ export function createOpening(input: CreateOpeningInput): OpeningEntity {
       input.params.operationType ??
       resolveOperationType(input.params.kind, input.params.handing),
   };
-  const entity: OpeningEntity = {
-    id: input.id ?? generateOpeningId(),
-    type: 'opening',
-    kind: params.kind,
-    layerId: input.layerId,
-    params,
-    geometry: input.geometry,
-    validation: input.validation ?? makeBimValidation(),
-    ifcGuid: input.ifcGuid ?? generateIfcGuid(),
-    ifcType: inferOpeningIfcType(input.params.kind),
-    ...(input.visible !== undefined && { visible: input.visible }),
-    ...(input.pset !== undefined && { pset: input.pset }),
+  return {
+    ...assembleBimEntity(
+      {
+        type: 'opening',
+        kind: params.kind,
+        layerId: input.layerId,
+        params,
+        geometry: input.geometry,
+        ifcType: inferOpeningIfcType(input.params.kind),
+        generateId: generateOpeningId,
+      },
+      input,
+    ),
     ...(input.typeId !== undefined && { typeId: input.typeId }),
     ...(input.typeOverrides !== undefined && { typeOverrides: input.typeOverrides }),
-    ...(input.companyId !== undefined && { companyId: input.companyId }),
-    ...(input.projectId !== undefined && { projectId: input.projectId }),
-    ...(input.buildingId !== undefined && { buildingId: input.buildingId }),
-    ...(input.floorplanId !== undefined && { floorplanId: input.floorplanId }),
-    ...(input.floorId !== undefined && { floorId: input.floorId }),
-    ...(input.createdBy !== undefined && { createdBy: input.createdBy }),
-    ...(input.updatedBy !== undefined && { updatedBy: input.updatedBy }),
   };
-  return entity;
 }
 
 // Re-export for caller convenience (test ergonomics).

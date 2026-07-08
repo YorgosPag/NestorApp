@@ -17,59 +17,35 @@
 
 import {
   generateMepFittingId,
-  generateIfcGuid,
 } from '@/services/enterprise-id-convenience';
-import { makeBimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
 import {
   mepFittingIfcType,
   type MepFittingEntity,
   type MepFittingGeometry,
   type MepFittingParams,
 } from '@/subapps/dxf-viewer/bim/types/mep-fitting-types';
-import type { BimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
-import type { IfcPropertySet } from '@/subapps/dxf-viewer/bim/types/ifc-entity-mixin';
+import {
+  type CreateBimEntityInputBase,
+  assembleBimEntity,
+} from '@/services/factories/bim-entity-factory-base';
 
-export interface CreateMepFittingInput {
+export interface CreateMepFittingInput extends CreateBimEntityInputBase {
   params: MepFittingParams;
   geometry: MepFittingGeometry;
-  layerId: string;
-  visible?: boolean;
-  /** Optional override (test-only). Default = enterprise MEP-fitting ID. */
-  id?: string;
-  /** Optional override (test-only). Default = generateIfcGuid(). */
-  ifcGuid?: string;
-  pset?: IfcPropertySet;
-  validation?: BimValidation;
-  companyId?: string;
-  projectId?: string;
-  buildingId?: string;
-  floorplanId?: string;
-  floorId?: string;
-  createdBy?: string;
-  updatedBy?: string;
 }
 
 /** Produce a new `MepFittingEntity` with IFC mixin auto-fill. */
 export function createMepFitting(input: CreateMepFittingInput): MepFittingEntity {
-  const entity: MepFittingEntity = {
-    id: input.id ?? generateMepFittingId(),
-    type: 'mep-fitting',
-    kind: input.params.kind,
-    layerId: input.layerId,
-    params: input.params,
-    geometry: input.geometry,
-    validation: input.validation ?? makeBimValidation(),
-    ifcGuid: input.ifcGuid ?? generateIfcGuid(),
-    ifcType: mepFittingIfcType(input.params.domain),
-    ...(input.visible !== undefined && { visible: input.visible }),
-    ...(input.pset !== undefined && { pset: input.pset }),
-    ...(input.companyId !== undefined && { companyId: input.companyId }),
-    ...(input.projectId !== undefined && { projectId: input.projectId }),
-    ...(input.buildingId !== undefined && { buildingId: input.buildingId }),
-    ...(input.floorplanId !== undefined && { floorplanId: input.floorplanId }),
-    ...(input.floorId !== undefined && { floorId: input.floorId }),
-    ...(input.createdBy !== undefined && { createdBy: input.createdBy }),
-    ...(input.updatedBy !== undefined && { updatedBy: input.updatedBy }),
-  };
-  return entity;
+  return assembleBimEntity(
+    {
+      type: 'mep-fitting',
+      kind: input.params.kind,
+      layerId: input.layerId,
+      params: input.params,
+      geometry: input.geometry,
+      ifcType: mepFittingIfcType(input.params.domain),
+      generateId: generateMepFittingId,
+    },
+    input,
+  );
 }
