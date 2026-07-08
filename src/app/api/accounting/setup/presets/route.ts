@@ -7,21 +7,18 @@
  * PUT:  Save entire presets array
  *
  * Auth: withAuth (authenticated users)
- * Rate: withStandardRateLimit (60 req/min)
+ * Rate: standard (60 req/min)
  *
  * @module api/accounting/setup/presets
  * @enterprise ADR-ACC-011 Service Presets
+ * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { defineRoute, ok, badRequest } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type { ServicePreset } from '@/subapps/accounting/types';
-import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // VALIDATION
@@ -69,73 +66,46 @@ function validatePresetsArray(data: unknown): string | null {
 // GET — Fetch Service Presets
 // =============================================================================
 
-async function handleGet(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const presets = await repository.getServicePresets();
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to fetch service presets',
+  handler: async ({ auth }) => {
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const presets = await repository.getServicePresets();
 
-        return NextResponse.json({ success: true, data: presets });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to fetch service presets');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const GET = withStandardRateLimit(handleGet);
+    return ok(presets);
+  },
+});
 
 // =============================================================================
 // PUT — Save Service Presets
 // =============================================================================
 
-async function handlePut(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const body = (await req.json()) as unknown;
+export const PUT = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to save service presets',
+  handler: async ({ req, auth }) => {
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const body = (await req.json()) as unknown;
 
-        const validationError = validatePresetsArray(body);
-        if (validationError) {
-          return NextResponse.json(
-            { success: false, error: validationError },
-            { status: 400 }
-          );
-        }
-
-        const presets = (body as Array<Partial<ServicePreset>>).map((p, i) => ({
-          presetId: p.presetId!,
-          description: p.description!.trim(),
-          unit: p.unit!.trim(),
-          unitPrice: p.unitPrice!,
-          vatRate: p.vatRate!,
-          mydataCode: p.mydataCode!,
-          isActive: p.isActive !== false,
-          sortOrder: typeof p.sortOrder === 'number' ? p.sortOrder : i,
-        }));
-
-        await repository.saveServicePresets(presets);
-
-        return NextResponse.json({ success: true });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to save service presets');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
+    const validationError = validatePresetsArray(body);
+    if (validationError) {
+      badRequest(validationError);
     }
-  );
 
-  return handler(request);
-}
+    const presets = (body as Array<Partial<ServicePreset>>).map((p, i) => ({
+      presetId: p.presetId!,
+      description: p.description!.trim(),
+      unit: p.unit!.trim(),
+      unitPrice: p.unitPrice!,
+      vatRate: p.vatRate!,
+      mydataCode: p.mydataCode!,
+      isActive: p.isActive !== false,
+      sortOrder: typeof p.sortOrder === 'number' ? p.sortOrder : i,
+    }));
 
-export const PUT = withStandardRateLimit(handlePut);
+    await repository.saveServicePresets(presets);
+
+    return ok();
+  },
+});

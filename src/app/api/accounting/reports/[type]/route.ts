@@ -16,91 +16,62 @@
  *   - to (required if preset=custom): ISO 8601 date (e.g. 2026-03-31)
  *
  * Auth: withAuth (authenticated users)
- * Rate: withStandardRateLimit (60 req/min)
+ * Rate: standard (60 req/min)
  *
  * @module api/accounting/reports/[type]
  * @enterprise Phase 2c — DECISIONS-PHASE-2.md Q6-Q10
+ * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { defineRoute, ok, badRequest } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { generateReport, VALID_REPORT_TYPES } from '@/subapps/accounting/services/reports';
 import { resolveReportPeriods, validateDateFilter } from '@/subapps/accounting/services/reports/report-date-utils';
 import type { ReportType, ReportDateFilter, ReportDatePreset } from '@/subapps/accounting/types/reports';
-import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // GET — Generate Report
 // =============================================================================
 
-async function handleGet(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ type: string }> }
-): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        // 1. Validate report type from path
-        const { type: reportTypeParam } = await segmentData!.params;
-        if (!VALID_REPORT_TYPES.includes(reportTypeParam as ReportType)) {
-          return NextResponse.json(
-            {
-              success: false,
-              error: `Invalid report type: ${reportTypeParam}. Valid: ${VALID_REPORT_TYPES.join(', ')}`,
-            },
-            { status: 400 }
-          );
-        }
-        const reportType = reportTypeParam as ReportType;
-
-        // 2. Parse date filter from query params
-        const { searchParams } = new URL(req.url);
-        const preset = searchParams.get('preset');
-        if (!preset) {
-          return NextResponse.json(
-            { success: false, error: 'preset query parameter is required' },
-            { status: 400 }
-          );
-        }
-
-        const dateFilter: ReportDateFilter = {
-          preset: preset as ReportDatePreset,
-          customFrom: searchParams.get('from') ?? undefined,
-          customTo: searchParams.get('to') ?? undefined,
-        };
-
-        // 3. Validate date filter
-        const validationError = validateDateFilter(dateFilter);
-        if (validationError) {
-          return NextResponse.json(
-            { success: false, error: validationError },
-            { status: 400 }
-          );
-        }
-
-        // 4. Resolve periods
-        const periods = resolveReportPeriods(dateFilter);
-
-        // 5. Generate report
-        const { repository, vatEngine, taxEngine } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const result = await generateReport(reportType, { repository, vatEngine, taxEngine }, periods);
-
-        return NextResponse.json({ success: true, data: result });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to generate report');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to generate report',
+  handler: async ({ req, auth, params }) => {
+    // 1. Validate report type from path
+    const { type: reportTypeParam } = params;
+    if (!VALID_REPORT_TYPES.includes(reportTypeParam as ReportType)) {
+      badRequest(`Invalid report type: ${reportTypeParam}. Valid: ${VALID_REPORT_TYPES.join(', ')}`);
     }
-  );
-  return handler(request);
-}
+    const reportType = reportTypeParam as ReportType;
 
-export const GET = withStandardRateLimit(handleGet);
+    // 2. Parse date filter from query params
+    const { searchParams } = new URL(req.url);
+    const preset = searchParams.get('preset');
+    if (!preset) {
+      badRequest('preset query parameter is required');
+    }
+
+    const dateFilter: ReportDateFilter = {
+      preset: preset as ReportDatePreset,
+      customFrom: searchParams.get('from') ?? undefined,
+      customTo: searchParams.get('to') ?? undefined,
+    };
+
+    // 3. Validate date filter
+    const validationError = validateDateFilter(dateFilter);
+    if (validationError) {
+      badRequest(validationError);
+    }
+
+    // 4. Resolve periods
+    const periods = resolveReportPeriods(dateFilter);
+
+    // 5. Generate report
+    const { repository, vatEngine, taxEngine } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const result = await generateReport(reportType, { repository, vatEngine, taxEngine }, periods);
+
+    return ok(result);
+  },
+});
