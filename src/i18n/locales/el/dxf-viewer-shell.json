@@ -2,7 +2,9 @@
   "annotationSymbol": {
     "northArrow": {
       "simple": "Απλός Βορράς",
-      "star": "Ρόδος των Ανέμων"
+      "star": "Ρόδος των Ανέμων",
+      "compass": "Πυξίδα Ν/Α/Ν/Δ",
+      "circledN": "Κυκλωμένο Ν"
     }
   },
   "analyticalModel": {

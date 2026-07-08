@@ -200,6 +200,70 @@ export const ANNOTATION_SYMBOL_CATALOG: Readonly<Record<string, AnnotationSymbol
     ],
     origin: 'builtin',
   },
+
+  /** Compass rose: ring + filled north pointer + N/E/S/W cardinal letters. */
+  northArrowCompass: {
+    id: 'northArrowCompass',
+    kind: 'north-arrow',
+    labelKey: 'annotationSymbol.northArrow.compass',
+    geometry: [
+      // outer ring
+      { kind: 'circle', center: [0, 0], radius: 0.34, solid: false },
+      // filled north pointer (up)
+      {
+        kind: 'polyline',
+        points: [
+          [0, 0.34],
+          [0.09, 0],
+          [-0.09, 0],
+        ],
+        closed: true,
+        solid: true,
+      },
+      // hollow south pointer (down)
+      {
+        kind: 'polyline',
+        points: [
+          [0, -0.34],
+          [0.09, 0],
+          [-0.09, 0],
+        ],
+        closed: true,
+        solid: false,
+      },
+      // cardinal letters (upright, sized as a fraction of the glyph)
+      { kind: 'text', at: [0, 0.46], value: 'N', heightFrac: 0.2, bold: true },
+      { kind: 'text', at: [0.46, 0], value: 'E', heightFrac: 0.16 },
+      { kind: 'text', at: [0, -0.46], value: 'S', heightFrac: 0.16 },
+      { kind: 'text', at: [-0.46, 0], value: 'W', heightFrac: 0.16 },
+    ],
+    origin: 'builtin',
+  },
+
+  /** Minimalist circled "N" with an up arrow — common on modern architectural sheets. */
+  northArrowCircledN: {
+    id: 'northArrowCircledN',
+    kind: 'north-arrow',
+    labelKey: 'annotationSymbol.northArrow.circledN',
+    geometry: [
+      { kind: 'circle', center: [0, 0], radius: 0.4, solid: false },
+      // up arrow through the circle
+      { kind: 'line', from: [0, -0.18], to: [0, 0.26] },
+      {
+        kind: 'polyline',
+        points: [
+          [0, 0.4],
+          [0.11, 0.22],
+          [-0.11, 0.22],
+        ],
+        closed: true,
+        solid: true,
+      },
+      // big centred "N"
+      { kind: 'text', at: [0, -0.02], value: 'N', heightFrac: 0.3, bold: true },
+    ],
+    origin: 'builtin',
+  },
 } as const;
 
 // ──────────────────────────────────────────────────────────────────────────────

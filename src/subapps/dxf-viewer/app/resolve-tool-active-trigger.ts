@@ -49,6 +49,7 @@ import { THERMAL_SPACE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-t
 import { FURNITURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-furniture-tab';
 import { FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-floorplan-symbol-tab';
 import { ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-annotation-symbol-tab';
+import { ANNOTATION_KIND_CONFIGS } from '../config/annotation-kind-registry';
 import { MEP_FIXTURE_LIBRARY_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-fixture-library-tab';
 import { MEP_RISER_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-riser-tab';
 import { GUIDES_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-guides-tab';
@@ -85,7 +86,9 @@ export const TOOL_ACTIVE_TRIGGER: ReadonlyMap<string, string> = new Map<string, 
   // ADR-410 / ADR-415 / ADR-583 — library picker tabs (variant/size for next place).
   ['furniture', FURNITURE_CONTEXTUAL_TRIGGER],
   ['floorplan-symbol', FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER],
-  ['north-arrow', ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER],
+  // ADR-583 Φ1 — every annotation-symbol placement tool (north arrow + future kinds)
+  // opens the SAME contextual tab, derived from the kind registry (no per-kind line).
+  ...ANNOTATION_KIND_CONFIGS.map((c) => [c.toolId, ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER] as [string, string]),
   // ADR-419 / ADR-511 — floor-finish + wall-covering (manual ή room-fill).
   ['floor-finish', FLOOR_FINISH_CONTEXTUAL_TRIGGER],
   ['wall-covering', WALL_COVERING_CONTEXTUAL_TRIGGER],

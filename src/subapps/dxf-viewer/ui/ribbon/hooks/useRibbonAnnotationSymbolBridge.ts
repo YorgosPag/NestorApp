@@ -28,7 +28,7 @@ import {
 } from './bridge/annotation-symbol-command-keys';
 import type { RibbonComboboxState, RibbonToggleState } from '../context/RibbonCommandContext';
 import { listAnnotationSymbolsByKind } from '../../../config/annotation-symbol-catalog';
-import type { AnnotationSymbolEntity } from '../../../types/annotation-symbol';
+import type { AnnotationSymbolEntity, AnnotationSymbolKind } from '../../../types/annotation-symbol';
 import { isAnnotationSymbolEntity } from '../../../types/entities';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
@@ -54,12 +54,14 @@ export interface RibbonAnnotationSymbolBridge {
 
 const NULL_TOGGLE: RibbonToggleState = false;
 
-/** Variant options GENERATED from the catalog SSoT (never hand-listed). */
-const VARIANT_OPTIONS = listAnnotationSymbolsByKind('north-arrow').map((d) => ({
-  value: d.id,
-  labelKey: d.labelKey,
-  isLiteralLabel: false,
-}));
+/** Variant options for a kind, GENERATED from the catalog SSoT (never hand-listed). */
+function variantOptionsForKind(kind: AnnotationSymbolKind) {
+  return listAnnotationSymbolsByKind(kind).map((d) => ({
+    value: d.id,
+    labelKey: d.labelKey,
+    isLiteralLabel: false,
+  }));
+}
 
 export function useRibbonAnnotationSymbolBridge(
   props: UseRibbonAnnotationSymbolBridgeProps,
@@ -67,10 +69,11 @@ export function useRibbonAnnotationSymbolBridge(
   const { levelManager, universalSelection } = props;
   const { execute: executeCommand } = useCommandHistory();
 
-  // Subscribe so the tool-active picker re-renders when the defaults change.
+  // Subscribe so the tool-active picker re-renders when the defaults / kind change.
   const symbolId = useAnnotationSymbolSelectionStore((s) => s.symbolId);
   const sizeMm = useAnnotationSymbolSelectionStore((s) => s.sizeMm);
   const rotationDeg = useAnnotationSymbolSelectionStore((s) => s.rotationDeg);
+  const activeKind = useAnnotationSymbolSelectionStore((s) => s.activeKind);
 
   /** The selected annotation-symbol entity (edit mode), or null (defaults mode). */
   const resolveSelected = useCallback((): AnnotationSymbolEntity | null => {
@@ -100,8 +103,11 @@ export function useRibbonAnnotationSymbolBridge(
       const curSymbolId = selected ? selected.symbolId : symbolId;
       const curSize = selected ? (selected.sizeMm ?? sizeMm) : sizeMm;
       const curRot = selected ? (selected.rotation ?? 0) : rotationDeg;
+      // Variant list follows the edited symbol's family (edit) or the active tool's
+      // family (placement) — one tab serves every kind (mirror MEP-segment).
+      const curKind = selected ? selected.kind : activeKind;
       if (commandKey === ANNOTATION_SYMBOL_RIBBON_KEYS.stringParams.symbolId) {
-        return { value: curSymbolId, options: VARIANT_OPTIONS };
+        return { value: curSymbolId, options: variantOptionsForKind(curKind) };
       }
       if (commandKey === ANNOTATION_SYMBOL_RIBBON_KEYS.params.sizeMm) {
         return { value: String(curSize), options: [] };
@@ -111,7 +117,7 @@ export function useRibbonAnnotationSymbolBridge(
       }
       return null;
     },
-    [resolveSelected, symbolId, sizeMm, rotationDeg],
+    [resolveSelected, symbolId, sizeMm, rotationDeg, activeKind],
   );
 
   const onComboboxChange = useCallback((commandKey: string, value: string): void => {

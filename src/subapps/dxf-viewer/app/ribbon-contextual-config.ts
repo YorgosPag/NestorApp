@@ -59,6 +59,8 @@ import { resolveContextualTrigger } from './resolve-contextual-trigger';
 // ADR-587 Φ3b-2 (Seam 2) — the tool-active (activeTool-only) resolution: static
 // tool→trigger Map + predicate/prefix/sticky escape-hatch (ToolType-keyed, §5.1).
 import { resolveToolActiveTrigger, isLineModifyTool } from './resolve-tool-active-trigger';
+import { annotationKindForTool } from '../config/annotation-kind-registry';
+import { useAnnotationSymbolSelectionStore } from '../state/annotation-symbol-selection-store';
 
 const BIM_KIND_TYPES: ReadonlySet<string> = new Set([
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair', 'roof',
@@ -244,6 +246,13 @@ export function useActiveContextualTrigger({
   React.useEffect(() => {
     if (!isLineModifyTool(activeTool)) lastNonModifyTriggerRef.current = trigger;
   }, [trigger, activeTool]);
+  // ADR-583 Φ1 — keep the annotation-symbol selection store's active kind in sync
+  // with the active placement tool, so the contextual picker shows the right kind's
+  // variants and per-kind defaults never leak across tools (one tab, all kinds).
+  React.useEffect(() => {
+    const kind = annotationKindForTool(activeTool);
+    if (kind) useAnnotationSymbolSelectionStore.getState().setActiveKind(kind);
+  }, [activeTool]);
   return trigger;
 }
 

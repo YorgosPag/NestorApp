@@ -2,7 +2,9 @@
   "annotationSymbol": {
     "northArrow": {
       "simple": "Simple North",
-      "star": "Compass Rose"
+      "star": "Compass Rose",
+      "compass": "Compass (N/E/S/W)",
+      "circledN": "Circled N"
     }
   },
   "analyticalModel": {
