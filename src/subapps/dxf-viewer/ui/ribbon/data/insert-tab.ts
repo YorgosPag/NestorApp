@@ -97,6 +97,71 @@ export const INSERT_TAB: RibbonTab = {
                 shortcut: 'NORTH',
               },
             },
+            {
+              // ADR-583 Φ1b — section mark (single-click annotation-symbol placement).
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'insert.section-mark',
+                labelKey: 'ribbon.commands.sectionMark',
+                tooltipKey: 'ribbon.commands.sectionMarkTooltip',
+                icon: 'section-mark',
+                commandKey: 'section-mark',
+                shortcut: 'SECTION',
+              },
+            },
+            {
+              // ADR-583 Φ1c — grid axis bubble.
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'insert.grid-bubble',
+                labelKey: 'ribbon.commands.gridBubble',
+                tooltipKey: 'ribbon.commands.gridBubbleTooltip',
+                icon: 'grid-bubble',
+                commandKey: 'grid-bubble',
+                shortcut: 'GRID',
+              },
+            },
+            {
+              // ADR-583 Φ1c — elevation mark.
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'insert.elevation-mark',
+                labelKey: 'ribbon.commands.elevationMark',
+                tooltipKey: 'ribbon.commands.elevationMarkTooltip',
+                icon: 'elevation-mark',
+                commandKey: 'elevation-mark',
+                shortcut: 'ELEV',
+              },
+            },
+            {
+              // ADR-583 Φ1c — detail callout.
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'insert.detail-callout',
+                labelKey: 'ribbon.commands.detailCallout',
+                tooltipKey: 'ribbon.commands.detailCalloutTooltip',
+                icon: 'detail-callout',
+                commandKey: 'detail-callout',
+                shortcut: 'CALLOUT',
+              },
+            },
+            {
+              // ADR-583 Φ1c — revision tag.
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'insert.revision-tag',
+                labelKey: 'ribbon.commands.revisionTag',
+                tooltipKey: 'ribbon.commands.revisionTagTooltip',
+                icon: 'revision-tag',
+                commandKey: 'revision-tag',
+                shortcut: 'REVTAG',
+              },
+            },
           ],
         },
       ],

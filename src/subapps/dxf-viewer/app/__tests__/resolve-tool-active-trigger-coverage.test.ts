@@ -66,6 +66,11 @@ describe('resolveToolActiveTrigger — static Map', () => {
   it('golden pins for representative single-tool tabs', () => {
     expect(resolveToolActiveTrigger('stair', null)).toBe(STAIR_CONTEXTUAL_TRIGGER);
     expect(resolveToolActiveTrigger('north-arrow', null)).toBe(ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER);
+    // ADR-583 Φ1b/Φ1c — every annotation-symbol kind opens the SAME shared contextual tab.
+    for (const t of ['section-mark', 'grid-bubble', 'elevation-mark',
+      'detail-callout', 'revision-tag']) {
+      expect(resolveToolActiveTrigger(t, null)).toBe(ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER);
+    }
   });
 });
 

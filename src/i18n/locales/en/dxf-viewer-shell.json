@@ -5,6 +5,26 @@
       "star": "Compass Rose",
       "compass": "Compass (N/E/S/W)",
       "circledN": "Circled N"
+    },
+    "sectionMark": {
+      "arrow": "Section Mark with Arrow",
+      "split": "Split Section Mark"
+    },
+    "gridBubble": {
+      "circle": "Circular Grid Bubble",
+      "hexagon": "Hexagonal Grid Bubble"
+    },
+    "elevationMark": {
+      "level": "Level / Spot Elevation",
+      "tag": "Elevation View Tag"
+    },
+    "detailCallout": {
+      "split": "Detail Callout",
+      "arc": "Detail Callout with Arc"
+    },
+    "revisionTag": {
+      "delta": "Revision Tag (Triangle)",
+      "hexagon": "Revision Tag (Hexagon)"
     }
   },
   "analyticalModel": {
@@ -1387,7 +1407,7 @@
       "analyze": "Analyze",
       "furnitureProperties": "Furniture Properties",
       "floorplanSymbolProperties": "Symbol Properties",
-      "annotationSymbolProperties": "North Arrow",
+      "annotationSymbolProperties": "Annotation Symbol",
       "floorFinishProperties": "Floor Finish Properties",
       "wallCoveringProperties": "Wall Finish Properties",
       "hatchProperties": "Hatch",
@@ -1766,6 +1786,16 @@
       "rayTooltip": "Semi-infinite line from origin in a direction",
       "northArrow": "North Arrow",
       "northArrowTooltip": "Place a North arrow symbol with a single click on the canvas",
+      "sectionMark": "Section Mark",
+      "sectionMarkTooltip": "Place a section mark with a single click on the canvas",
+      "gridBubble": "Grid Bubble",
+      "gridBubbleTooltip": "Place a plan grid axis bubble with a single click on the canvas",
+      "elevationMark": "Elevation Mark",
+      "elevationMarkTooltip": "Place an elevation / level mark with a single click on the canvas",
+      "detailCallout": "Detail Callout",
+      "detailCalloutTooltip": "Place a detail callout with a single click on the canvas",
+      "revisionTag": "Revision Tag",
+      "revisionTagTooltip": "Place a revision tag with a single click on the canvas",
       "xlineModeSelector": "Mode",
       "bim": {
         "wall": {

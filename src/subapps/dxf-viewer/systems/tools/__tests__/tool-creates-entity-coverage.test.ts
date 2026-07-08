@@ -110,6 +110,11 @@ describe('TOOL_CREATES_ENTITY — §5.1 fan-out (one entity ⇐ many tools)', ()
 
   it('tool-id ≠ entity-type cases resolve to the verified target', () => {
     expect(TOOL_CREATES_ENTITY['north-arrow']).toBe('annotation-symbol');
+    // ADR-583 Φ1b/Φ1c — every annotation-symbol kind's tool → the one annotation-symbol entity.
+    for (const t of ['section-mark', 'grid-bubble', 'elevation-mark',
+      'detail-callout', 'revision-tag'] as const) {
+      expect(TOOL_CREATES_ENTITY[t]).toBe('annotation-symbol');
+    }
     expect(TOOL_CREATES_ENTITY['mep-drainage-collector']).toBe('mep-manifold');
     expect(TOOL_CREATES_ENTITY['mep-comms-rack']).toBe('electrical-panel');
     expect(TOOL_CREATES_ENTITY['mtext']).toBe('mtext');

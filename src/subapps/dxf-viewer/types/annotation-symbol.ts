@@ -24,8 +24,19 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { BaseEntity } from './entities';
 
-/** Family of annotation symbol. Extensible — v1 ships `north-arrow`. */
-export type AnnotationSymbolKind = 'north-arrow' | 'scale-bar' | 'section-mark';
+/**
+ * Family of annotation symbol. Extensible. Point-glyph kinds (placed with a single
+ * click) are wired via `config/annotation-kind-registry.ts`; `scale-bar` is a
+ * future linear kind (dynamic length + length grip) not yet wired.
+ */
+export type AnnotationSymbolKind =
+  | 'north-arrow'
+  | 'scale-bar'
+  | 'section-mark'
+  | 'grid-bubble'
+  | 'elevation-mark'
+  | 'detail-callout'
+  | 'revision-tag';
 
 export interface AnnotationSymbolEntity extends BaseEntity {
   type: 'annotation-symbol';

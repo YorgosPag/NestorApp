@@ -118,8 +118,9 @@ export function paintDrawingHoverOverlays(
   // ADR-508 §line-hud — η ΓΡΑΜΜΗ δείχνει το ΙΔΙΟ live HUD μήκους+γωνίας με τον τοίχο, μέσω
   // του ΚΟΙΝΟΥ painter (drawWallHud → paintWallHudCore). Δεν έχει BIM ταυτότητα (πάχος/ύψος)
   // → κενό specLabel (παραλείπεται). Το `liveDimHud` τέθηκε στο applyPreviewStyling (line tool).
-  // Κατ. 2 toggle (status-bar «ΜΗΚΟΣ/ΓΩΝΙΑ») — το `liveDimHud` το θέτουν μόνο line/polyline·
-  // ο τοίχος έχει ξεχωριστό `wallHud` (πάνω) → δεν επηρεάζεται. ADR-508 §line-hud.
+  // Κατ. 2 toggle (status-bar «ΜΗΚΟΣ/ΓΩΝΙΑ») — ΚΑΘΟΛΙΚΟ πλέον (ADR-508 §length-angle-hud-global,
+  // 2026-07-09): το ίδιο `isLengthAngleHudVisible()` gate μπαίνει ΚΑΙ εδώ (line `liveDimHud`) ΚΑΙ
+  // στον κοινό `paintWallHudCore` (wall/beam `wallHud`) → μήκος+γωνία κρύβονται σε ΟΛΕΣ τις οντότητες.
   const lineHud = (previewEntity as { liveDimHud?: WallHudMeta }).liveDimHud;
   // 🌐 toggle «ΜΗΚΟΣ/ΓΩΝΙΑ» — ίδιο SSoT (dimHudOn) μέσω του καθαρού predicate seam
   // αντί απευθείας store call· το lineHud call είναι μόνο length+angle (specLabel='').

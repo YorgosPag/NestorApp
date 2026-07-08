@@ -268,7 +268,12 @@ export type ToolType =
   | 'dim-center-mark'     // AutoCAD CENTERMARK — click circle/arc → CenterMarkEntity
   | 'dim-centerline'      // AutoCAD CENTERLINE — 2-click on 2 circles/arcs → CenterLineEntity
   // ADR-583: Annotation symbol library — single-click placement of a paper decoration
-  | 'north-arrow';        // NORTH — click canvas → AnnotationSymbolEntity (North arrow)
+  | 'north-arrow'         // NORTH — click canvas → AnnotationSymbolEntity (North arrow)
+  | 'section-mark'        // SECTION — click canvas → AnnotationSymbolEntity (section mark)
+  | 'grid-bubble'         // GRID — click canvas → AnnotationSymbolEntity (grid axis bubble)
+  | 'elevation-mark'      // ELEV — click canvas → AnnotationSymbolEntity (elevation mark)
+  | 'detail-callout'      // CALLOUT — click canvas → AnnotationSymbolEntity (detail callout)
+  | 'revision-tag';       // REVTAG — click canvas → AnnotationSymbolEntity (revision tag)
 
 
 export interface ToolDefinition {

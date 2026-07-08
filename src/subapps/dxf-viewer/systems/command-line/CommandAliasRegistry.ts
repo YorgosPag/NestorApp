@@ -199,6 +199,16 @@ const BUILT_IN: ReadonlyArray<readonly [string, ToolType]> = [
   // ── Annotation symbols (ADR-583) ───────────────────────────────────────────
   ['NORTH',       'north-arrow'],
   ['NA',          'north-arrow'],
+  ['SECTION',     'section-mark'],
+  ['SEC',         'section-mark'],
+  ['GRID',        'grid-bubble'],
+  ['GB',          'grid-bubble'],
+  ['ELEV',        'elevation-mark'],
+  ['EL',          'elevation-mark'],
+  ['CALLOUT',     'detail-callout'],
+  ['DETAIL',      'detail-callout'],
+  ['REVTAG',      'revision-tag'],
+  ['REV',         'revision-tag'],
 ] as const;
 
 // Build lookup map (uppercase → toolId). Built-ins loaded once at module init.

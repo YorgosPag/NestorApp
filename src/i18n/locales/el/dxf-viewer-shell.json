@@ -5,6 +5,26 @@
       "star": "Ρόδος των Ανέμων",
       "compass": "Πυξίδα Ν/Α/Ν/Δ",
       "circledN": "Κυκλωμένο Ν"
+    },
+    "sectionMark": {
+      "arrow": "Σημάδι Τομής με Βέλος",
+      "split": "Σημάδι Τομής Διαιρεμένο"
+    },
+    "gridBubble": {
+      "circle": "Κυκλική Φυσαλίδα Άξονα",
+      "hexagon": "Εξαγωνική Φυσαλίδα Άξονα"
+    },
+    "elevationMark": {
+      "level": "Στάθμη Υψομέτρου",
+      "tag": "Ετικέτα Όψης"
+    },
+    "detailCallout": {
+      "split": "Παραπομπή Λεπτομέρειας",
+      "arc": "Παραπομπή Λεπτομέρειας με Τόξο"
+    },
+    "revisionTag": {
+      "delta": "Ετικέτα Αναθεώρησης (Τρίγωνο)",
+      "hexagon": "Ετικέτα Αναθεώρησης (Εξάγωνο)"
     }
   },
   "analyticalModel": {
@@ -1387,7 +1407,7 @@
       "analyze": "Ανάλυση",
       "furnitureProperties": "Ιδιότητες Επίπλου",
       "floorplanSymbolProperties": "Ιδιότητες Συμβόλου",
-      "annotationSymbolProperties": "Σύμβολο Βορρά",
+      "annotationSymbolProperties": "Σύμβολο Σχεδίασης",
       "floorFinishProperties": "Ιδιότητες Επικάλυψης Δαπέδου",
       "wallCoveringProperties": "Ιδιότητες Φινιρίσματος Τοίχου",
       "hatchProperties": "Γραμμοσκίαση",
@@ -1766,6 +1786,16 @@
       "rayTooltip": "Ημι-άπειρη γραμμή από αρχή προς κατεύθυνση",
       "northArrow": "Βορράς",
       "northArrowTooltip": "Τοποθέτηση συμβόλου Βορρά με ένα κλικ στον καμβά",
+      "sectionMark": "Σημάδι Τομής",
+      "sectionMarkTooltip": "Τοποθέτηση σημαδιού τομής με ένα κλικ στον καμβά",
+      "gridBubble": "Φυσαλίδα Άξονα",
+      "gridBubbleTooltip": "Τοποθέτηση φυσαλίδας άξονα κατόψεως με ένα κλικ στον καμβά",
+      "elevationMark": "Σημάδι Υψομέτρου",
+      "elevationMarkTooltip": "Τοποθέτηση σημαδιού υψομέτρου/όψης με ένα κλικ στον καμβά",
+      "detailCallout": "Παραπομπή Λεπτομέρειας",
+      "detailCalloutTooltip": "Τοποθέτηση παραπομπής λεπτομέρειας με ένα κλικ στον καμβά",
+      "revisionTag": "Ετικέτα Αναθεώρησης",
+      "revisionTagTooltip": "Τοποθέτηση ετικέτας αναθεώρησης με ένα κλικ στον καμβά",
       "xlineModeSelector": "Λειτουργία",
       "bim": {
         "wall": {

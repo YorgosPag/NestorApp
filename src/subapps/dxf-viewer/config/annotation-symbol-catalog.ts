@@ -133,6 +133,21 @@ function northLetter(): AnnotationSymbolPolyline {
   };
 }
 
+/**
+ * Regular pointy-top hexagon centred at origin, `r` = circumradius (unit space).
+ * Shared by grid-bubble + revision-tag variants so a hexagonal outline is authored
+ * ONCE, not hand-typed per symbol (N.18). Computed at module load (config, not
+ * per-frame) — `Math.cos/​sin` only, no `Date.now`/`Math.random`.
+ */
+function hexagon(r: number, solid = false): AnnotationSymbolPolyline {
+  const points: AnnotationSymbolPoint[] = [];
+  for (let i = 0; i < 6; i++) {
+    const a = ((90 + i * 60) * Math.PI) / 180;
+    points.push([r * Math.cos(a), r * Math.sin(a)]);
+  }
+  return { kind: 'polyline', points, closed: true, solid };
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Catalog registry
 // ──────────────────────────────────────────────────────────────────────────────
@@ -261,6 +276,217 @@ export const ANNOTATION_SYMBOL_CATALOG: Readonly<Record<string, AnnotationSymbol
       },
       // big centred "N"
       { kind: 'text', at: [0, -0.02], value: 'N', heightFrac: 0.3, bold: true },
+    ],
+    origin: 'builtin',
+  },
+
+  // ── Section marks (ADR-583 Φ1b) ─────────────────────────────────────────────
+  // A section symbol = an identifier bubble + a view-direction arrow. Authored
+  // pointing DOWN (−Y); `entity.rotation` aims it at the cut's view direction.
+  // The identifier letter rides the bubble but stays upright (readable at any
+  // rotation) — mirror the compass cardinal letters.
+
+  /** Revit-style section head: bubble + letter "A" + a filled arrow (view direction). */
+  sectionMarkArrow: {
+    id: 'sectionMarkArrow',
+    kind: 'section-mark',
+    labelKey: 'annotationSymbol.sectionMark.arrow',
+    geometry: [
+      // identifier bubble (upper part of the glyph)
+      { kind: 'circle', center: [0, 0.2], radius: 0.3, solid: false },
+      { kind: 'text', at: [0, 0.2], value: 'A', heightFrac: 0.32, bold: true },
+      // stem from bubble to arrowhead
+      { kind: 'line', from: [0, -0.1], to: [0, -0.26] },
+      // filled arrowhead (tip down = authored view direction)
+      {
+        kind: 'polyline',
+        points: [
+          [0, -0.5],
+          [0.13, -0.26],
+          [-0.13, -0.26],
+        ],
+        closed: true,
+        solid: true,
+      },
+    ],
+    origin: 'builtin',
+  },
+
+  /** AutoCAD-style split callout: bubble halved into detail "A" / sheet "1" + arrow. */
+  sectionMarkSplit: {
+    id: 'sectionMarkSplit',
+    kind: 'section-mark',
+    labelKey: 'annotationSymbol.sectionMark.split',
+    geometry: [
+      // identifier bubble
+      { kind: 'circle', center: [0, 0.15], radius: 0.35, solid: false },
+      // horizontal split (diameter) — detail id above, sheet id below
+      { kind: 'line', from: [-0.35, 0.15], to: [0.35, 0.15] },
+      { kind: 'text', at: [0, 0.31], value: 'A', heightFrac: 0.2, bold: true },
+      { kind: 'text', at: [0, -0.01], value: '1', heightFrac: 0.2 },
+      // stem + filled arrowhead (tip down)
+      { kind: 'line', from: [0, -0.2], to: [0, -0.3] },
+      {
+        kind: 'polyline',
+        points: [
+          [0, -0.5],
+          [0.12, -0.3],
+          [-0.12, -0.3],
+        ],
+        closed: true,
+        solid: true,
+      },
+    ],
+    origin: 'builtin',
+  },
+
+  // ── Grid bubbles (ADR-583 Φ1c) — structural axis reference tags ──────────────
+  // A hollow bubble with the axis id ("1" / "A"). The bubble stays upright so the
+  // id is readable at any rotation (mirror the compass letters).
+
+  /** Circular grid bubble (ISO / most common) — hollow circle + axis id. */
+  gridBubbleCircle: {
+    id: 'gridBubbleCircle',
+    kind: 'grid-bubble',
+    labelKey: 'annotationSymbol.gridBubble.circle',
+    geometry: [
+      { kind: 'circle', center: [0, 0], radius: 0.45, solid: false },
+      { kind: 'text', at: [0, 0], value: '1', heightFrac: 0.5, bold: true },
+    ],
+    origin: 'builtin',
+  },
+
+  /** Hexagonal grid bubble (US National CAD Standard variant) — hollow hex + id. */
+  gridBubbleHexagon: {
+    id: 'gridBubbleHexagon',
+    kind: 'grid-bubble',
+    labelKey: 'annotationSymbol.gridBubble.hexagon',
+    geometry: [
+      hexagon(0.48, false),
+      { kind: 'text', at: [0, 0], value: '1', heightFrac: 0.45, bold: true },
+    ],
+    origin: 'builtin',
+  },
+
+  // ── Elevation marks (ADR-583 Φ1c) — level datum + view marker ────────────────
+
+  /** Level / spot elevation: filled down-triangle on a datum line + value text. */
+  elevationLevel: {
+    id: 'elevationLevel',
+    kind: 'elevation-mark',
+    labelKey: 'annotationSymbol.elevationMark.level',
+    geometry: [
+      // datum line the triangle sits on (the measured level)
+      { kind: 'line', from: [-0.35, -0.2], to: [0.35, -0.2] },
+      // filled triangle, tip down touching the datum line
+      {
+        kind: 'polyline',
+        points: [
+          [0, -0.2],
+          [0.14, 0.05],
+          [-0.14, 0.05],
+        ],
+        closed: true,
+        solid: true,
+      },
+      // sample elevation value (upright)
+      { kind: 'text', at: [0, 0.32], value: '0.00', heightFrac: 0.2 },
+    ],
+    origin: 'builtin',
+  },
+
+  /** Revit-style elevation view marker: bubble + id + filled view-direction pointer. */
+  elevationTag: {
+    id: 'elevationTag',
+    kind: 'elevation-mark',
+    labelKey: 'annotationSymbol.elevationMark.tag',
+    geometry: [
+      { kind: 'circle', center: [0, 0.12], radius: 0.3, solid: false },
+      { kind: 'text', at: [0, 0.12], value: '1', heightFrac: 0.3, bold: true },
+      // filled pointer (tip down = authored view direction)
+      {
+        kind: 'polyline',
+        points: [
+          [0, -0.5],
+          [0.14, -0.18],
+          [-0.14, -0.18],
+        ],
+        closed: true,
+        solid: true,
+      },
+    ],
+    origin: 'builtin',
+  },
+
+  // ── Detail callouts (ADR-583 Φ1c) — detail bubble + leader ───────────────────
+
+  /** Split detail callout: bubble halved into detail "1" / sheet "A" + leader stub. */
+  detailCallout: {
+    id: 'detailCallout',
+    kind: 'detail-callout',
+    labelKey: 'annotationSymbol.detailCallout.split',
+    geometry: [
+      { kind: 'circle', center: [0.08, 0.18], radius: 0.32, solid: false },
+      { kind: 'line', from: [-0.24, 0.18], to: [0.4, 0.18] },
+      { kind: 'text', at: [0.08, 0.34], value: '1', heightFrac: 0.19, bold: true },
+      { kind: 'text', at: [0.08, 0.02], value: 'A', heightFrac: 0.19 },
+      // leader pointing down-left at the detail area
+      { kind: 'line', from: [-0.14, -0.05], to: [-0.45, -0.45] },
+    ],
+    origin: 'builtin',
+  },
+
+  /**
+   * Round-leader detail callout — a hook ARC encircling the detail area with an id
+   * bubble at the free end (exercises the `arc` primitive on a real symbol).
+   */
+  detailCalloutArc: {
+    id: 'detailCalloutArc',
+    kind: 'detail-callout',
+    labelKey: 'annotationSymbol.detailCallout.arc',
+    geometry: [
+      // hook arc around the lower-left detail area (world-CCW degrees)
+      { kind: 'arc', center: [-0.18, -0.18], radius: 0.3, startAngle: 300, endAngle: 150 },
+      // leader connecting the arc's open end to the bubble
+      { kind: 'line', from: [0.03, 0.03], to: [0.24, 0.24] },
+      { kind: 'circle', center: [0.32, 0.32], radius: 0.18, solid: false },
+      { kind: 'text', at: [0.32, 0.32], value: '1', heightFrac: 0.2, bold: true },
+    ],
+    origin: 'builtin',
+  },
+
+  // ── Revision tags (ADR-583 Φ1c) — revision number in a delta / hexagon ───────
+
+  /** Revision delta (triangle) with the revision number — the classic ISO tag. */
+  revisionTagDelta: {
+    id: 'revisionTagDelta',
+    kind: 'revision-tag',
+    labelKey: 'annotationSymbol.revisionTag.delta',
+    geometry: [
+      // equilateral triangle, point up (hollow)
+      {
+        kind: 'polyline',
+        points: [
+          [0, 0.45],
+          [0.42, -0.27],
+          [-0.42, -0.27],
+        ],
+        closed: true,
+        solid: false,
+      },
+      { kind: 'text', at: [0, -0.05], value: '1', heightFrac: 0.28, bold: true },
+    ],
+    origin: 'builtin',
+  },
+
+  /** Hexagonal revision tag (US variant) — hollow hex + revision number. */
+  revisionTagHexagon: {
+    id: 'revisionTagHexagon',
+    kind: 'revision-tag',
+    labelKey: 'annotationSymbol.revisionTag.hexagon',
+    geometry: [
+      hexagon(0.48, false),
+      { kind: 'text', at: [0, 0], value: '1', heightFrac: 0.4, bold: true },
     ],
     origin: 'builtin',
   },

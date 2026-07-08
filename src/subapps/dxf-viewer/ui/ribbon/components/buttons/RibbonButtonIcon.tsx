@@ -357,6 +357,45 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
         <text x="12" y="6.5" textAnchor="middle" fontSize="5" fontWeight="700" stroke="none" fill="currentColor">N</text>
       </>
     ));
+    // ADR-583 Φ1b — section mark: identifier bubble + view-direction arrow (Revit section head).
+    case 'section-mark': return inlineSvg(size, (
+      <>
+        <circle cx="12" cy="8" r="5.5" fill="none" />
+        <text x="12" y="10" textAnchor="middle" fontSize="6" fontWeight="700" stroke="none" fill="currentColor">A</text>
+        <line x1="12" y1="13.5" x2="12" y2="17" />
+        <path d="M12 21 L15 16 L9 16 Z" fill="currentColor" stroke="none" />
+      </>
+    ));
+    // ADR-583 Φ1c — grid bubble: hollow circle + axis id.
+    case 'grid-bubble': return inlineSvg(size, (
+      <>
+        <circle cx="12" cy="12" r="8" fill="none" />
+        <text x="12" y="15" textAnchor="middle" fontSize="9" fontWeight="700" stroke="none" fill="currentColor">1</text>
+      </>
+    ));
+    // ADR-583 Φ1c — elevation mark: filled down-triangle on a datum line + value.
+    case 'elevation-mark': return inlineSvg(size, (
+      <>
+        <line x1="4" y1="15" x2="20" y2="15" />
+        <path d="M12 15 L15 9 L9 9 Z" fill="currentColor" stroke="none" />
+        <text x="12" y="6" textAnchor="middle" fontSize="4.5" stroke="none" fill="currentColor">0.00</text>
+      </>
+    ));
+    // ADR-583 Φ1c — detail callout: bubble + hook leader.
+    case 'detail-callout': return inlineSvg(size, (
+      <>
+        <circle cx="15" cy="9" r="5" fill="none" />
+        <text x="15" y="11" textAnchor="middle" fontSize="5.5" fontWeight="700" stroke="none" fill="currentColor">1</text>
+        <path d="M11 12 A6 6 0 1 0 6 17" fill="none" />
+      </>
+    ));
+    // ADR-583 Φ1c — revision tag: revision number inside a delta triangle.
+    case 'revision-tag': return inlineSvg(size, (
+      <>
+        <path d="M12 3 L20 19 L4 19 Z" fill="none" />
+        <text x="12" y="18" textAnchor="middle" fontSize="7" fontWeight="700" stroke="none" fill="currentColor">1</text>
+      </>
+    ));
     default: return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
   }
 };

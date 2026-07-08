@@ -610,7 +610,7 @@
       "polarDesc": "Polar Tracking",
       "autoAlignDesc": "Auto-align to nearby columns (Revit-style)",
       "dynInputDesc": "Dynamic Input",
-      "dimHudDesc": "Live length & angle readout on the line ghost",
+      "dimHudDesc": "Show length & angle readouts on all entities (drawing & grip editing, 2D & 3D). Does not affect area/perimeter or thickness/height.",
       "dirArcDesc": "Coloured rotation-direction arc while drawing a line (green/red)",
       "listeningDimDesc": "Show cyan distances to neighbouring elements on the line ghost",
       "polarSettingsTitle": "Polar Settings",

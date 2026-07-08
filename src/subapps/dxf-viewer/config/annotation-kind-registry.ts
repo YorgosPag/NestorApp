@@ -31,6 +31,11 @@ export interface AnnotationKindConfig {
  */
 export const ANNOTATION_KIND_CONFIGS: readonly AnnotationKindConfig[] = [
   { kind: 'north-arrow', toolId: 'north-arrow' },
+  { kind: 'section-mark', toolId: 'section-mark' },
+  { kind: 'grid-bubble', toolId: 'grid-bubble' },
+  { kind: 'elevation-mark', toolId: 'elevation-mark' },
+  { kind: 'detail-callout', toolId: 'detail-callout' },
+  { kind: 'revision-tag', toolId: 'revision-tag' },
 ];
 
 const TOOL_TO_KIND: ReadonlyMap<string, AnnotationSymbolKind> = new Map(

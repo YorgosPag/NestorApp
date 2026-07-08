@@ -283,6 +283,13 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // `drawing` category, continuous (place several), the click is consumed in
   // useCanvasClickHandler PRIORITY 1.8 so it never enters the unified drawing accumulator.
   'north-arrow':       { id: 'north-arrow',       category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-583 Φ1b: section mark — same single-click annotation-symbol placement as North arrow.
+  'section-mark':      { id: 'section-mark',      category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-583 Φ1c: further point-glyph annotation kinds — identical placement metadata.
+  'grid-bubble':       { id: 'grid-bubble',       category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'elevation-mark':    { id: 'elevation-mark',    category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'detail-callout':    { id: 'detail-callout',    category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  'revision-tag':      { id: 'revision-tag',      category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
 };
 
 /**
@@ -352,8 +359,10 @@ export const TOOL_CREATES_ENTITY: Partial<Record<ToolType, RenderableEntityType>
   'wall-covering': 'wall-covering', 'wall-covering-room': 'wall-covering',
   'furniture': 'furniture',
   // NB: `floorplan-symbol` deliberately absent — see the JSDoc «surfaced asymmetries» note.
-  // ── Annotation (ADR-583 Βορράς) — tool id ≠ entity type ──
-  'north-arrow': 'annotation-symbol',
+  // ── Annotation (ADR-583) — tool id ≠ entity type (every kind → annotation-symbol) ──
+  'north-arrow': 'annotation-symbol', 'section-mark': 'annotation-symbol',
+  'grid-bubble': 'annotation-symbol', 'elevation-mark': 'annotation-symbol',
+  'detail-callout': 'annotation-symbol', 'revision-tag': 'annotation-symbol',
   // ── MEP fixtures (16 tools → ΕΝΑ entity, discriminated by `kind`) ──
   'mep-fixture': 'mep-fixture', 'mep-socket': 'mep-fixture', 'mep-data-outlet': 'mep-fixture',
   'mep-air-terminal': 'mep-fixture', 'mep-ahu': 'mep-fixture', 'mep-sprinkler': 'mep-fixture',
