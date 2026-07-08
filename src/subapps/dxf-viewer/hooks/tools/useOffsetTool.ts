@@ -13,7 +13,7 @@
  * @module hooks/tools/useOffsetTool
  */
 
-import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useRef, useSyncExternalStore } from 'react';
 import i18next from 'i18next';
 import { generateEntityId } from '@/services/enterprise-id.service';
 import type { Point2D } from '../../rendering/types/Types';
@@ -26,6 +26,8 @@ import { ToolCursorStore } from '../../systems/cursor/ToolCursorStore';
 import { offsetEntity, isOffsettable } from '../../systems/offset/offset-entity-geometry';
 import { resolveSignedOffset } from '../../systems/offset/offset-side';
 import type { Entity } from '../../types/entities';
+import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
+import { useToolHintPrompt } from './useToolHintPrompt';
 
 export interface UseOffsetToolProps {
   activeTool: string;
@@ -48,36 +50,29 @@ const KEYWORDS_UNDO = new Set(['u', 'U']);
 
 export function useOffsetTool(props: UseOffsetToolProps): UseOffsetToolReturn {
   const { activeTool, levelManager, executeCommand, hitTestEntity, onToolChange } = props;
-  const wasActiveRef = useRef(false);
   const lastCommandRef = useRef<OffsetEntityCommand | null>(null);
 
   const isActive = activeTool === 'offset';
   const phase = useSyncExternalStore(OffsetToolStore.subscribe, () => OffsetToolStore.getState().phase);
 
-  // Activation / deactivation lifecycle
-  useEffect(() => {
-    if (isActive && !wasActiveRef.current) {
+  // Activation / deactivation lifecycle (ADR-589 edge-triggered SSoT)
+  useEdgeTriggeredLifecycle(
+    isActive,
+    () => {
       OffsetToolStore.reset();
       ToolCursorStore.set('offset-pickbox');
-    } else if (!isActive && wasActiveRef.current) {
+    },
+    () => {
       ToolCursorStore.reset();
       OffsetToolStore.reset();
-    }
-    wasActiveRef.current = isActive;
-  }, [isActive]);
+    },
+  );
 
-  // Status-bar prompt sync
-  useEffect(() => {
-    if (!isActive) {
-      toolHintOverrideStore.setOverride(null);
-      return;
-    }
-    const key = phase === 'picking-side' ? 'offsetTool.promptSide' : 'offsetTool.promptSource';
-    toolHintOverrideStore.setOverride(i18next.t(`tool-hints:${key}`));
-    return () => {
-      toolHintOverrideStore.setOverride(null);
-    };
-  }, [isActive, phase]);
+  // Status-bar prompt sync (ADR-589 SSoT)
+  useToolHintPrompt(
+    isActive,
+    phase === 'picking-side' ? 'offsetTool.promptSide' : 'offsetTool.promptSource',
+  );
 
   const getSceneManager = useSceneManagerAdapter(levelManager);
 

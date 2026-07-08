@@ -14,12 +14,11 @@
  * @module hooks/tools/useChamferTool
  */
 
-import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import i18next from 'i18next';
 import { generateEntityId } from '@/services/enterprise-id.service';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
-import { CornerEntityCommand, type CornerTrimOp } from '../../core/commands/entity-commands/CornerEntityCommand';
 import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { ChamferToolStore } from '../../systems/corner/ChamferToolStore';
@@ -30,20 +29,15 @@ import {
   isLineEntity,
   isPolylineEntity,
   isLWPolylineEntity,
-  type Entity,
   type LineEntity,
   type PolylineEntity,
   type LWPolylineEntity,
 } from '../../types/entities';
-import type { SceneModel } from '../../types/scene';
+import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
+import { useToolHintPrompt } from './useToolHintPrompt';
+import { resolveCornerTarget, executeCornerCommand, toCornerTrimOps, useCornerCommandRef, type CornerToolProps, CORNER_KEYWORDS_TRIM, CORNER_KEYWORDS_POLYLINE, CORNER_KEYWORDS_UNDO } from './corner-tool-core';
 
-export interface UseChamferToolProps {
-  activeTool: string;
-  levelManager: SceneAdapterLevelManager;
-  executeCommand: (cmd: ICommand) => void;
-  hitTestEntity: (worldPoint: Point2D) => string | null;
-  onToolChange?: (tool: string) => void;
-}
+export type UseChamferToolProps = CornerToolProps;
 
 export interface UseChamferToolReturn {
   isActive: boolean;
@@ -52,137 +46,110 @@ export interface UseChamferToolReturn {
   handleChamferKeyDown: (key: string) => boolean;
 }
 
-const KEYWORDS_TRIM = new Set(['t', 'T', 'τ', 'Τ']);
-const KEYWORDS_POLYLINE = new Set(['p', 'P', 'π', 'Π']);
+// Tool-specific keys; TRIM / POLYLINE / UNDO come from the shared corner-tool-core SSoT.
 const KEYWORDS_DISTANCE = new Set(['d', 'D', 'δ', 'Δ']);
 const KEYWORDS_ANGLE = new Set(['a', 'A', 'γ', 'Γ']);
-const KEYWORDS_UNDO = new Set(['u', 'U']);
-
-function findEntity(scene: SceneModel, id: string): Entity | undefined {
-  return scene.entities.find((e) => e.id === id) as Entity | undefined;
-}
-
-function isLocked(scene: SceneModel, entity: Entity): boolean {
-  const layer = entity.layerId ? (scene.layersById ?? {})[entity.layerId] : undefined;
-  return layer?.locked === true;
-}
 
 export function useChamferTool(props: UseChamferToolProps): UseChamferToolReturn {
   const { activeTool, levelManager, executeCommand, hitTestEntity, onToolChange } = props;
-  const wasActiveRef = useRef(false);
-  const lastCommandRef = useRef<CornerEntityCommand | null>(null);
+  const lastCommandRef = useCornerCommandRef();
 
   const isActive = activeTool === 'chamfer';
   const phase = useSyncExternalStore(ChamferToolStore.subscribe, () => ChamferToolStore.getState().phase);
   const polylineMode = useSyncExternalStore(ChamferToolStore.subscribe, () => ChamferToolStore.getState().polylineMode);
 
-  // Activation / deactivation lifecycle
-  useEffect(() => {
-    if (isActive && !wasActiveRef.current) {
+  // Activation / deactivation lifecycle (ADR-589 edge-triggered SSoT)
+  useEdgeTriggeredLifecycle(
+    isActive,
+    () => {
       ChamferToolStore.reset();
       ToolCursorStore.set('chamfer-pickbox');
-    } else if (!isActive && wasActiveRef.current) {
+    },
+    () => {
       ToolCursorStore.reset();
       ChamferToolStore.reset();
-    }
-    wasActiveRef.current = isActive;
-  }, [isActive]);
+    },
+  );
 
-  // Status-bar prompt sync
-  useEffect(() => {
-    if (!isActive) {
-      toolHintOverrideStore.setOverride(null);
-      return;
-    }
-    const key = polylineMode
+  // Status-bar prompt sync (ADR-589 SSoT)
+  useToolHintPrompt(
+    isActive,
+    polylineMode
       ? 'chamferTool.promptPolyline'
       : phase === 'picking-second'
         ? 'chamferTool.promptSecond'
-        : 'chamferTool.promptFirst';
-    toolHintOverrideStore.setOverride(i18next.t(`tool-hints:${key}`));
-    return () => {
-      toolHintOverrideStore.setOverride(null);
-    };
-  }, [isActive, phase, polylineMode]);
+        : 'chamferTool.promptFirst',
+  );
 
   const getSceneManager = useSceneManagerAdapter(levelManager);
 
+  // Store bookkeeping shared by the two-lines / polyline-corner commits: remember the
+  // distances and loop back to first-pick. Runs only after a command actually executed.
+  const commitTail = useCallback(() => {
+    const st = ChamferToolStore.getState();
+    ChamferToolStore.setLastDistances(st.d1, st.d2);
+    ChamferToolStore.clearFirst();
+  }, []);
+
   const commitPolyline = useCallback(
     (poly: PolylineEntity | LWPolylineEntity, worldPoint: Point2D): void => {
-      const sm = getSceneManager();
-      if (!sm) return;
       const s = ChamferToolStore.getState();
       const result = computeChamferPolyline(poly, s.d1, s.d2);
       if (!result) return;
-      const cmd = new CornerEntityCommand(
+      executeCornerCommand(
+        getSceneManager,
         { kind: 'chamfer', trims: [{ entityId: poly.id, originalGeom: poly, newGeom: result.entity }], addEntity: null, pickPoint: worldPoint },
-        sm,
+        executeCommand, lastCommandRef,
+        () => {
+          ChamferToolStore.setLastDistances(s.d1, s.d2);
+          if (result.skipped > 0) {
+            toolHintOverrideStore.setOverride(
+              i18next.t('tool-hints:chamferTool.polylineDone', { chamfered: result.chamfered, skipped: result.skipped }),
+            );
+          }
+        },
       );
-      executeCommand(cmd);
-      lastCommandRef.current = cmd;
-      ChamferToolStore.setLastDistances(s.d1, s.d2);
-      if (result.skipped > 0) {
-        toolHintOverrideStore.setOverride(
-          i18next.t('tool-hints:chamferTool.polylineDone', { chamfered: result.chamfered, skipped: result.skipped }),
-        );
-      }
     },
     [getSceneManager, executeCommand],
   );
 
   const commitTwoLines = useCallback(
     (first: LineEntity, firstPick: Point2D, second: LineEntity, secondPick: Point2D): void => {
-      const sm = getSceneManager();
-      if (!sm) return;
       const s = ChamferToolStore.getState();
       const result = computeChamferTwoLines(
         first, firstPick, second, secondPick, s.d1, s.d2, s.angle, s.mode, s.trim, generateEntityId(),
       );
       if (!result) return;
-      const trims: CornerTrimOp[] = result.trims.map((tr) => ({
-        entityId: tr.entityId,
-        originalGeom: tr.originalGeom,
-        newGeom: tr.newGeom,
-      }));
-      const cmd = new CornerEntityCommand({ kind: 'chamfer', trims, addEntity: result.bevel, pickPoint: secondPick }, sm);
-      executeCommand(cmd);
-      lastCommandRef.current = cmd;
-      ChamferToolStore.setLastDistances(s.d1, s.d2);
-      ChamferToolStore.clearFirst(); // continuous → back to first-line picking
+      executeCornerCommand(
+        getSceneManager,
+        { kind: 'chamfer', trims: toCornerTrimOps(result.trims), addEntity: result.bevel, pickPoint: secondPick },
+        executeCommand, lastCommandRef, commitTail,
+      );
     },
-    [getSceneManager, executeCommand],
+    [getSceneManager, executeCommand, commitTail],
   );
 
   const commitPolylineCorner = useCallback(
     (poly: PolylineEntity | LWPolylineEntity, firstPick: Point2D, secondPick: Point2D): void => {
-      const sm = getSceneManager();
-      if (!sm) return;
       const cornerIndex = resolveSharedPolylineCorner(poly, firstPick, secondPick);
       if (cornerIndex === null) return; // same or non-adjacent segments — ignore
       const s = ChamferToolStore.getState();
       const result = computeChamferPolylineCorner(poly, cornerIndex, s.d1, s.d2);
       if (!result) return;
-      const cmd = new CornerEntityCommand(
+      executeCornerCommand(
+        getSceneManager,
         { kind: 'chamfer', trims: [{ entityId: poly.id, originalGeom: poly, newGeom: result.entity }], addEntity: null, pickPoint: secondPick },
-        sm,
+        executeCommand, lastCommandRef, commitTail,
       );
-      executeCommand(cmd);
-      lastCommandRef.current = cmd;
-      ChamferToolStore.setLastDistances(s.d1, s.d2);
-      ChamferToolStore.clearFirst();
     },
-    [getSceneManager, executeCommand],
+    [getSceneManager, executeCommand, commitTail],
   );
 
   const performChamferPick = useCallback(
     (worldPoint: Point2D): void => {
-      if (!levelManager.currentLevelId) return;
-      const scene = levelManager.getLevelScene(levelManager.currentLevelId) as SceneModel | null;
-      if (!scene) return;
-      const hitId = hitTestEntity(worldPoint);
-      if (!hitId) return;
-      const target = findEntity(scene, hitId);
-      if (!target || isLocked(scene, target)) return;
+      const resolved = resolveCornerTarget(levelManager, hitTestEntity, worldPoint);
+      if (!resolved) return;
+      const { target } = resolved;
       const s = ChamferToolStore.getState();
 
       // Polyline mode — one pick bevels every fitting corner.
@@ -265,17 +232,17 @@ export function useChamferTool(props: UseChamferToolProps): UseChamferToolReturn
         toolHintOverrideStore.setOverride(i18next.t('tool-hints:chamferTool.angleMode'));
         return true;
       }
-      if (KEYWORDS_TRIM.has(key)) {
+      if (CORNER_KEYWORDS_TRIM.has(key)) {
         ChamferToolStore.toggleTrim();
         const on = ChamferToolStore.getState().trim;
         toolHintOverrideStore.setOverride(i18next.t(`tool-hints:chamferTool.${on ? 'trimOn' : 'trimOff'}`));
         return true;
       }
-      if (KEYWORDS_POLYLINE.has(key)) {
+      if (CORNER_KEYWORDS_POLYLINE.has(key)) {
         ChamferToolStore.togglePolylineMode();
         return true;
       }
-      if (KEYWORDS_UNDO.has(key)) {
+      if (CORNER_KEYWORDS_UNDO.has(key)) {
         lastCommandRef.current?.undo();
         lastCommandRef.current = null;
         return true;

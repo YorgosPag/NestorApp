@@ -30,6 +30,8 @@ import { castExtendIntersection, isExtendable } from '../../systems/extend/exten
 import type { ExtendOperation } from '../../systems/extend/extend-types';
 import type { Entity } from '../../types/entities';
 import { generateEntityId } from '@/services/enterprise-id.service';
+import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
+import { useToolHintPrompt } from './useToolHintPrompt';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -60,7 +62,6 @@ const KEYWORDS_EDGE = new Set(['e', 'E', 'Ε', 'ε']);
 
 export function useExtendTool(props: UseExtendToolProps): UseExtendToolReturn {
   const { activeTool, levelManager, executeCommand, hitTestEntity, onToolChange } = props;
-  const wasActiveRef = useRef(false);
   const lastCommandRef = useRef<ICommand | null>(null);
   const lastHoverMsRef = useRef(0);
   const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -68,34 +69,30 @@ export function useExtendTool(props: UseExtendToolProps): UseExtendToolReturn {
   const isActive = activeTool === 'extend';
   const phase = useSyncExternalStore(ExtendToolStore.subscribe, () => ExtendToolStore.getState().phase);
 
-  // Activation / deactivation lifecycle
-  useEffect(() => {
-    if (isActive && !wasActiveRef.current) {
+  // Activation / deactivation lifecycle (ADR-589 edge-triggered SSoT)
+  useEdgeTriggeredLifecycle(
+    isActive,
+    () => {
       ExtendToolStore.reset();
       ExtendToolStore.setPhase('picking');
       ToolCursorStore.set('extend-arrow');
-    } else if (!isActive && wasActiveRef.current) {
+    },
+    () => {
       flushAggregatedWarnings();
       ToolCursorStore.reset();
       ExtendToolStore.reset();
-    }
-    wasActiveRef.current = isActive;
-  }, [isActive]);
+    },
+  );
 
-  // Status-bar prompt sync
-  useEffect(() => {
-    if (!isActive || phase === 'idle') {
-      toolHintOverrideStore.setOverride(null);
-      return;
-    }
-    const key = phase === 'selectingEdges'
-      ? 'extendTool.promptStandardEdges'
-      : 'extendTool.promptPick';
-    toolHintOverrideStore.setOverride(i18next.t(`tool-hints:${key}`));
-    return () => {
-      toolHintOverrideStore.setOverride(null);
-    };
-  }, [isActive, phase]);
+  // Status-bar prompt sync (ADR-589 SSoT)
+  useToolHintPrompt(
+    isActive,
+    phase === 'idle'
+      ? null
+      : phase === 'selectingEdges'
+        ? 'extendTool.promptStandardEdges'
+        : 'extendTool.promptPick',
+  );
 
   // ── Scene helpers ────────────────────────────────────────────────────────
 

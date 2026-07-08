@@ -20,7 +20,7 @@
  * Default params: count=4, method='divide', alignItems=false, reversed=false.
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import i18next from 'i18next';
 import type { ICommand } from '../../core/commands/interfaces';
 import { CreateArrayCommand } from '../../core/commands/entity-commands/CreateArrayCommand';
@@ -31,6 +31,7 @@ import type { Entity, EntityType } from '../../types/entities';
 import { isArrayEntity } from '../../types/entities';
 import { getHoveredEntity } from '../../systems/hover/HoverStore';
 import { PATH_ENTITY_TYPES } from '../../systems/array/path-pick-controller';
+import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
 
 export interface UseArrayPathToolProps {
   activeTool: string;
@@ -54,7 +55,6 @@ export function useArrayPathTool(props: UseArrayPathToolProps): UseArrayPathTool
   const { activeTool, selectedEntityIds, levelManager, executeCommand, setSelectedEntityIds, onToolChange } = props;
 
   const getSceneManager = useSceneManagerAdapter(levelManager);
-  const wasActiveRef = useRef(false);
   const pendingSourceIdsRef = useRef<string[]>([]);
   const awaitingPathRef = useRef(false);
   const isActive = activeTool === 'array-path';
@@ -70,17 +70,18 @@ export function useArrayPathTool(props: UseArrayPathToolProps): UseArrayPathTool
     onToolChange?.('select');
   }, [onToolChange]);
 
-  useEffect(() => {
-    if (isActive && !wasActiveRef.current) {
+  // Activation / deactivation lifecycle (ADR-589 edge-triggered SSoT)
+  useEdgeTriggeredLifecycle(
+    isActive,
+    () => {
       armPickFromSelection();
-    } else if (!isActive && wasActiveRef.current) {
+    },
+    () => {
       pendingSourceIdsRef.current = [];
       awaitingPathRef.current = false;
       toolHintOverrideStore.setOverride(null);
-    }
-    wasActiveRef.current = isActive;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive]);
+    },
+  );
 
   function armPickFromSelection(): void {
     const levelId = levelManager.currentLevelId;

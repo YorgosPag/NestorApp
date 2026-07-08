@@ -54,6 +54,7 @@ import { EventBus } from '../../systems/events/EventBus';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { mmToSceneUnits, resolveSceneUnits } from '../../utils/scene-units';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
+import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
 
 export interface UseWallAttachToolProps {
   activeTool: string;
@@ -93,14 +94,15 @@ export function useWallAttachTool({
 
   /** Snapshot of attach targets captured on activation — stable for the session. */
   const targetsRef = useRef<WallAttachTarget[] | ColumnAttachTarget[] | StairAttachTarget[]>([]);
-  const wasActiveRef = useRef(false);
 
   const getSceneManager = useSceneManagerAdapter(levelManager);
 
-  // ── Activate / deactivate: snapshot targets + prompt ──────────────────────
-
-  useEffect(() => {
-    if (isActive && !wasActiveRef.current) {
+  // ── Activate / deactivate: snapshot targets + prompt (ADR-589 edge SSoT) ──
+  // entityKind/selectedEntityIds/levelManager/onToolChange are read via closure
+  // at the transition render, matching the previous edge-guarded effect exactly.
+  useEdgeTriggeredLifecycle(
+    isActive,
+    () => {
       const scene = levelManager.currentLevelId
         ? levelManager.getLevelScene(levelManager.currentLevelId)
         : null;
@@ -119,12 +121,12 @@ export function useWallAttachTool({
           i18next.t('attachToStructural.pickHostPrompt', { ns: 'dxf-viewer-shell' }),
         );
       }
-    } else if (!isActive && wasActiveRef.current) {
+    },
+    () => {
       targetsRef.current = [];
       toolHintOverrideStore.setOverride(null);
-    }
-    wasActiveRef.current = isActive;
-  }, [isActive, entityKind, selectedEntityIds, levelManager, onToolChange]);
+    },
+  );
 
   // ── Host pick (hover SSoT first, mm-space geometry fallback) ──────────────
 

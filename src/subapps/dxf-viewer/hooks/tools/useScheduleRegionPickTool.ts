@@ -45,7 +45,7 @@
 
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import i18next from 'i18next';
 
 import type { Point2D } from '../../rendering/types/Types';
@@ -58,6 +58,7 @@ import {
   type RegionPickPhase,
 } from '../../bim/schedule/stores/region-pick-store';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
+import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
 
 // ─── Public tool-name constant ───────────────────────────────────────────────
 
@@ -113,19 +114,19 @@ export function useScheduleRegionPickTool(
   // return value να ανανεώνονται στους consumers.
   const [phase, setPhase] = useState<RegionPickPhase>('idle');
 
-  // ── Activation transitions ────────────────────────────────────────────────
-  const wasActiveRef = useRef(false);
-  useEffect(() => {
-    if (isActive && !wasActiveRef.current) {
+  // ── Activation transitions (ADR-589 edge-triggered SSoT) ──────────────────
+  useEdgeTriggeredLifecycle(
+    isActive,
+    () => {
       setRegionPickFirstCorner(null);
       setRegionPickPhase('awaiting-first-corner');
       setPhase('awaiting-first-corner');
-    } else if (!isActive && wasActiveRef.current) {
+    },
+    () => {
       resetRegionPickStore();
       setPhase('idle');
-    }
-    wasActiveRef.current = isActive;
-  }, [isActive]);
+    },
+  );
 
   // ── Click handler ─────────────────────────────────────────────────────────
   const handleClick = useCallback(

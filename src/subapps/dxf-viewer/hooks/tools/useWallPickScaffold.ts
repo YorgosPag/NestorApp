@@ -5,7 +5,8 @@
  * duplicated byte-for-byte across `useWallMergeTool` (merge/corner-join) and
  * `useWallGapOpeningTool` (bridge + hosted opening): identical scene helpers
  * (`getScene`/`getWallById`/`findWallAtPoint`/`collectSelectedWalls`), identical FSM
- * refs (`pickedARef`/`wasActiveRef`), and the identical two-flow state machine:
+ * refs (`pickedARef` + the ADR-589 edge-triggered lifecycle), and the identical
+ * two-flow state machine:
  *
  *   • Flow B (selection-first) — on activation, if exactly TWO walls are already
  *     selected, run `execute` immediately and exit to 'select'; if ONE, arm it as
@@ -33,7 +34,7 @@
  */
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import i18next from 'i18next';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ISceneManager } from '../../core/commands/interfaces';
@@ -47,6 +48,7 @@ import { calculateDistance } from '../../rendering/entities/shared/geometry-rend
 import { getHoveredEntity } from '../../systems/hover/HoverStore';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
+import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
 
 const NS = 'dxf-viewer-shell';
 
@@ -109,7 +111,6 @@ export function useWallPickScaffold<TLevel extends SceneAdapterLevelManager>({
 
   /** First-picked wall in the command-first flow (null = awaiting the first pick). */
   const pickedARef = useRef<WallEntity | null>(null);
-  const wasActiveRef = useRef(false);
 
   const setHint = useCallback((key: string): void => {
     toolHintOverrideStore.setOverride(i18next.t(key, { ns: NS }));
@@ -175,8 +176,12 @@ export function useWallPickScaffold<TLevel extends SceneAdapterLevelManager>({
 
   // ── Activation: Flow B (selection-first) or enter picking (Flow A) ─────────
 
-  useEffect(() => {
-    if (isActive && !wasActiveRef.current) {
+  // (ADR-589 edge-triggered SSoT — collectSelectedWalls/runExecute et al. are
+  // read via closure at the transition render; the previous effect re-ran on
+  // their identity changes but was edge-guarded, so behaviour is identical.)
+  useEdgeTriggeredLifecycle(
+    isActive,
+    () => {
       pickedARef.current = null;
       const walls = collectSelectedWalls();
       if (walls.length === 2) {
@@ -192,12 +197,12 @@ export function useWallPickScaffold<TLevel extends SceneAdapterLevelManager>({
       } else {
         setHint(hints.pickFirst);
       }
-    } else if (!isActive && wasActiveRef.current) {
+    },
+    () => {
       pickedARef.current = null;
       toolHintOverrideStore.setOverride(null);
-    }
-    wasActiveRef.current = isActive;
-  }, [isActive, collectSelectedWalls, runExecute, onToolChange, selectEntities, setHint, hints]);
+    },
+  );
 
   // ── Click: Flow A picking loop ─────────────────────────────────────────────
 
