@@ -11,57 +11,36 @@
  *   - seriesCode (required): Invoice series code (e.g. 'A', 'B')
  *
  * Auth: withAuth (authenticated users)
- * Rate: withStandardRateLimit (60 req/min)
+ * Rate: standard (60 req/min)
  *
  * @module api/accounting/invoices/next-number
  * @enterprise ADR-ACC-002 Invoicing System
+ * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { defineRoute, ok, badRequest } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // GET — Next Invoice Number (Preview)
 // =============================================================================
 
-async function handleGet(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const { searchParams } = new URL(req.url);
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to get next invoice number',
+  handler: async ({ req, auth }) => {
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const { searchParams } = new URL(req.url);
 
-        const seriesCode = searchParams.get('seriesCode');
-        if (!seriesCode) {
-          return NextResponse.json(
-            { success: false, error: 'seriesCode query parameter is required' },
-            { status: 400 }
-          );
-        }
-
-        const nextNumber = await repository.getNextInvoiceNumber(seriesCode);
-
-        return NextResponse.json({
-          success: true,
-          data: { seriesCode, nextNumber },
-        });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to get next invoice number');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
+    const seriesCode = searchParams.get('seriesCode');
+    if (!seriesCode) {
+      badRequest('seriesCode query parameter is required');
     }
-  );
 
-  return handler(request);
-}
+    const nextNumber = await repository.getNextInvoiceNumber(seriesCode);
 
-export const GET = withStandardRateLimit(handleGet);
+    return ok({ seriesCode, nextNumber });
+  },
+});

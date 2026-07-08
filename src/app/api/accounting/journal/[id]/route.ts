@@ -8,23 +8,21 @@
  * DELETE: Delete journal entry
  *
  * Auth: withAuth (authenticated users)
- * Rate: withStandardRateLimit (60 req/min)
+ * Rate: standard (60 req/min)
  *
  * @module api/accounting/journal/[id]
  * @enterprise ADR-ACC-001 Chart of Accounts
+ * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { withAuth, logAuditEvent, logEntityDeletion } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { logAuditEvent, logEntityDeletion } from '@/lib/auth';
+import { defineRoute, ok, badRequest, notFound, httpError } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type { UpdateJournalEntryInput } from '@/subapps/accounting/types';
-import { getErrorMessage } from '@/lib/error-utils';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { journalEntryOptionalFields } from '../../_shared/journal-entry-fields';
 
 const UpdateJournalEntrySchema = z.object({
   date: z.string().max(30).optional(),
@@ -32,183 +30,98 @@ const UpdateJournalEntrySchema = z.object({
   category: z.string().max(100).optional(),
   description: z.string().max(2000).optional(),
   netAmount: z.number().min(0).max(999_999_999).optional(),
-  vatRate: z.number().min(0).max(100).optional(),
-  vatAmount: z.number().min(0).max(999_999_999).optional(),
-  grossAmount: z.number().min(0).max(999_999_999).optional(),
-  vatDeductible: z.boolean().optional(),
-  paymentMethod: z.string().max(50).optional(),
-  contactId: z.string().max(128).nullable().optional(),
-  contactName: z.string().max(200).nullable().optional(),
-  invoiceId: z.string().max(128).nullable().optional(),
-  notes: z.string().max(5000).nullable().optional(),
+  ...journalEntryOptionalFields,
 }).passthrough();
 
 // =============================================================================
 // GET — Single Journal Entry
 // =============================================================================
 
-async function handleGet(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  const { id } = await segmentData!.params;
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to fetch journal entry',
+  handler: async ({ auth, params }) => {
+    const { id } = params;
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const entry = await repository.getJournalEntry(id);
 
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const entry = await repository.getJournalEntry(id);
-
-        if (!entry) {
-          return NextResponse.json(
-            { success: false, error: 'Journal entry not found' },
-            { status: 404 }
-          );
-        }
-
-        return NextResponse.json({ success: true, data: entry });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to fetch journal entry');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
+    if (!entry) {
+      notFound('Journal entry not found');
     }
-  );
 
-  return handler(request);
-}
-
-export const GET = withStandardRateLimit(handleGet);
+    return ok(entry);
+  },
+});
 
 // =============================================================================
 // PATCH — Update Journal Entry
 // =============================================================================
 
-async function handlePatch(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  const { id } = await segmentData!.params;
+export const PATCH = defineRoute({
+  rateLimit: 'standard',
+  schema: UpdateJournalEntrySchema,
+  fallbackError: 'Failed to update journal entry',
+  handler: async ({ auth, body, params }) => {
+    const { id } = params;
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
 
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const parsed = safeParseBody(UpdateJournalEntrySchema, await req.json());
-        if (parsed.error) return parsed.error;
-        const body = parsed.data;
-
-        if (Object.keys(body).length === 0) {
-          return NextResponse.json(
-            { success: false, error: 'No update fields provided' },
-            { status: 400 }
-          );
-        }
-
-        // Verify entry exists
-        const existing = await repository.getJournalEntry(id);
-        if (!existing) {
-          return NextResponse.json(
-            { success: false, error: 'Journal entry not found' },
-            { status: 404 }
-          );
-        }
-
-        // Phase 1a: Immutability guard — reversed/reversal entries are locked
-        if (existing.status === 'REVERSED') {
-          return NextResponse.json(
-            { success: false, error: 'Cannot edit a reversed journal entry. It has been superseded by a reversal entry.' },
-            { status: 403 }
-          );
-        }
-        if (existing.isReversal) {
-          return NextResponse.json(
-            { success: false, error: 'Cannot edit a reversal journal entry. Reversal entries are immutable.' },
-            { status: 403 }
-          );
-        }
-
-        await repository.updateJournalEntry(id, body as UpdateJournalEntryInput);
-
-        await logAuditEvent(ctx, 'data_updated', id, 'journal_entry', {
-          metadata: { reason: 'Journal entry updated' },
-        }).catch(() => {/* non-blocking */});
-
-        return NextResponse.json({
-          success: true,
-          data: { entryId: id, updated: true },
-        });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to update journal entry');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
+    if (Object.keys(body).length === 0) {
+      badRequest('No update fields provided');
     }
-  );
 
-  return handler(request);
-}
+    // Verify entry exists
+    const existing = await repository.getJournalEntry(id);
+    if (!existing) {
+      notFound('Journal entry not found');
+    }
 
-export const PATCH = withStandardRateLimit(handlePatch);
+    // Phase 1a: Immutability guard — reversed/reversal entries are locked
+    if (existing.status === 'REVERSED') {
+      httpError(403, 'Cannot edit a reversed journal entry. It has been superseded by a reversal entry.');
+    }
+    if (existing.isReversal) {
+      httpError(403, 'Cannot edit a reversal journal entry. Reversal entries are immutable.');
+    }
+
+    await repository.updateJournalEntry(id, body as UpdateJournalEntryInput);
+
+    await logAuditEvent(auth, 'data_updated', id, 'journal_entry', {
+      metadata: { reason: 'Journal entry updated' },
+    }).catch(() => {/* non-blocking */});
+
+    return ok({ entryId: id, updated: true });
+  },
+});
 
 // =============================================================================
 // DELETE — Delete Journal Entry
 // =============================================================================
 
-async function handleDelete(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  const { id } = await segmentData!.params;
+export const DELETE = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to delete journal entry',
+  handler: async ({ auth, params }) => {
+    const { id } = params;
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
 
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-
-        // Verify entry exists
-        const existing = await repository.getJournalEntry(id);
-        if (!existing) {
-          return NextResponse.json(
-            { success: false, error: 'Journal entry not found' },
-            { status: 404 }
-          );
-        }
-
-        // Phase 1a: Immutability guard — reversed/reversal entries cannot be deleted
-        if (existing.status === 'REVERSED' || existing.isReversal) {
-          return NextResponse.json(
-            { success: false, error: 'Cannot delete reversed or reversal journal entries. They form an immutable audit trail.' },
-            { status: 403 }
-          );
-        }
-
-        await logEntityDeletion(ctx, 'journal_entry', id, {
-          type: existing.type ?? 'unknown',
-          category: existing.category ?? 'unknown',
-        }).catch(() => {/* non-blocking */});
-
-        await repository.deleteJournalEntry(id);
-
-        return NextResponse.json({
-          success: true,
-          data: { entryId: id, deleted: true },
-        });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to delete journal entry');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
+    // Verify entry exists
+    const existing = await repository.getJournalEntry(id);
+    if (!existing) {
+      notFound('Journal entry not found');
     }
-  );
 
-  return handler(request);
-}
+    // Phase 1a: Immutability guard — reversed/reversal entries cannot be deleted
+    if (existing.status === 'REVERSED' || existing.isReversal) {
+      httpError(403, 'Cannot delete reversed or reversal journal entries. They form an immutable audit trail.');
+    }
 
-export const DELETE = withStandardRateLimit(handleDelete);
+    await logEntityDeletion(auth, 'journal_entry', id, {
+      type: existing.type ?? 'unknown',
+      category: existing.category ?? 'unknown',
+    }).catch(() => {/* non-blocking */});
+
+    await repository.deleteJournalEntry(id);
+
+    return ok({ entryId: id, deleted: true });
+  },
+});

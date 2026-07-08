@@ -6,44 +6,29 @@
  * Returns all configured invoice series (e.g. 'A', 'B', 'CREDIT').
  *
  * Auth: withAuth (authenticated users)
- * Rate: withStandardRateLimit (60 req/min)
+ * Rate: standard (60 req/min)
  *
  * @module api/accounting/invoices/series
  * @enterprise ADR-ACC-002 Invoicing System
+ * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { defineRoute, ok } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
 // GET — List Invoice Series
 // =============================================================================
 
-async function handleGet(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const series = await repository.getInvoiceSeries();
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to list invoice series',
+  handler: async ({ auth }) => {
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const series = await repository.getInvoiceSeries();
 
-        return NextResponse.json({ success: true, data: series });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to list invoice series');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const GET = withStandardRateLimit(handleGet);
+    return ok(series);
+  },
+});

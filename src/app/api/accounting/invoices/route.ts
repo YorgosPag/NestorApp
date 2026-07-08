@@ -7,19 +7,18 @@
  * POST: Create a new invoice + auto-generate journal entry
  *
  * Auth: withAuth (authenticated users)
- * Rate: withStandardRateLimit (60 req/min)
+ * Rate: standard (60 req/min)
  *
  * @module api/accounting/invoices
  * @enterprise ADR-ACC-002 Invoicing System
+ * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
 import { z } from 'zod';
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { NextResponse } from 'next/server';
+import { defineRoute, ok, created } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import {
   validatePostingAllowed,
@@ -28,8 +27,7 @@ import {
 } from '@/subapps/accounting/services';
 import { getFiscalYearFromDate } from '@/subapps/accounting/services/repository/firestore-helpers';
 import type { InvoiceFilters, InvoiceType, CreateInvoiceInput } from '@/subapps/accounting/types';
-import { getErrorMessage } from '@/lib/error-utils';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { readListContext } from '../_shared/list-request-context';
 
 const VALID_INVOICE_TYPES = [
   'service_invoice', 'sales_invoice', 'retail_receipt',
@@ -51,146 +49,113 @@ const CreateInvoiceSchema = z.object({
 // GET — List Invoices
 // =============================================================================
 
-async function handleGet(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const { searchParams } = new URL(req.url);
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to list invoices',
+  handler: async ({ req, auth }) => {
+    const { repository, searchParams } = readListContext(req, auth);
 
-        const filters: InvoiceFilters = {};
+    const filters: InvoiceFilters = {};
 
-        const type = searchParams.get('type');
-        if (type) {
-          filters.type = type as InvoiceType;
-        }
-
-        const paymentStatus = searchParams.get('paymentStatus');
-        if (paymentStatus === 'unpaid' || paymentStatus === 'partial' || paymentStatus === 'paid') {
-          filters.paymentStatus = paymentStatus;
-        }
-
-        const fiscalYear = searchParams.get('fiscalYear');
-        if (fiscalYear) {
-          filters.fiscalYear = parseInt(fiscalYear, 10);
-        }
-
-        const customerId = searchParams.get('customerId');
-        if (customerId) {
-          filters.customerId = customerId;
-        }
-
-        const projectId = searchParams.get('projectId');
-        if (projectId) {
-          filters.projectId = projectId;
-        }
-
-        const propertyId = searchParams.get('propertyId');
-        if (propertyId) {
-          filters.propertyId = propertyId;
-        }
-
-        const pageSize = searchParams.get('pageSize');
-        const result = await repository.listInvoices(
-          filters,
-          pageSize ? parseInt(pageSize, 10) : undefined
-        );
-
-        return NextResponse.json({ success: true, data: result });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to list invoices');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
+    const type = searchParams.get('type');
+    if (type) {
+      filters.type = type as InvoiceType;
     }
-  );
 
-  return handler(request);
-}
+    const paymentStatus = searchParams.get('paymentStatus');
+    if (paymentStatus === 'unpaid' || paymentStatus === 'partial' || paymentStatus === 'paid') {
+      filters.paymentStatus = paymentStatus;
+    }
 
-export const GET = withStandardRateLimit(handleGet);
+    const fiscalYear = searchParams.get('fiscalYear');
+    if (fiscalYear) {
+      filters.fiscalYear = parseInt(fiscalYear, 10);
+    }
+
+    const customerId = searchParams.get('customerId');
+    if (customerId) {
+      filters.customerId = customerId;
+    }
+
+    const projectId = searchParams.get('projectId');
+    if (projectId) {
+      filters.projectId = projectId;
+    }
+
+    const propertyId = searchParams.get('propertyId');
+    if (propertyId) {
+      filters.propertyId = propertyId;
+    }
+
+    const pageSize = searchParams.get('pageSize');
+    const result = await repository.listInvoices(
+      filters,
+      pageSize ? parseInt(pageSize, 10) : undefined
+    );
+
+    return ok(result);
+  },
+});
 
 // =============================================================================
 // POST — Create Invoice
 // =============================================================================
 
-async function handlePost(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { service, repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const parsed = safeParseBody(CreateInvoiceSchema, await req.json());
-        if (parsed.error) return parsed.error;
-        const body = parsed.data;
+export const POST = defineRoute({
+  rateLimit: 'standard',
+  schema: CreateInvoiceSchema,
+  fallbackError: 'Failed to create invoice',
+  handler: async ({ auth, body }) => {
+    const { service, repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
 
-        // ── Hook 1a: Validate posting allowed (Q4 — fiscal period check) ──
-        const postingCheck = await validatePostingAllowed(repository, body.issueDate);
-        if (!postingCheck.allowed) {
+    // ── Hook 1a: Validate posting allowed (Q4 — fiscal period check) ──
+    const postingCheck = await validatePostingAllowed(repository, body.issueDate);
+    if (!postingCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: postingCheck.reason },
+        { status: 422 }
+      );
+    }
+
+    // ── Hook 1b: Credit limit check (Q4 — SAP KNKK pattern) ──────────
+    const contactId = body.contactId;
+    let creditWarning: string | null = null;
+    if (contactId) {
+      const balance = await repository.getCustomerBalance(contactId);
+      if (balance) {
+        const grossAmount = body.lineItems?.reduce(
+          (sum: number, li: Record<string, unknown>) =>
+            sum + (typeof li.grossAmount === 'number' ? li.grossAmount : 0),
+          0
+        ) ?? 0;
+        const creditCheck = checkCreditLimit(balance, grossAmount);
+        if (!creditCheck.allowed) {
           return NextResponse.json(
-            { success: false, error: postingCheck.reason },
+            { success: false, error: creditCheck.warning },
             { status: 422 }
           );
         }
-
-        // ── Hook 1b: Credit limit check (Q4 — SAP KNKK pattern) ──────────
-        const contactId = body.contactId;
-        let creditWarning: string | null = null;
-        if (contactId) {
-          const balance = await repository.getCustomerBalance(contactId);
-          if (balance) {
-            const grossAmount = body.lineItems?.reduce(
-              (sum: number, li: Record<string, unknown>) =>
-                sum + (typeof li.grossAmount === 'number' ? li.grossAmount : 0),
-              0
-            ) ?? 0;
-            const creditCheck = checkCreditLimit(balance, grossAmount);
-            if (!creditCheck.allowed) {
-              return NextResponse.json(
-                { success: false, error: creditCheck.warning },
-                { status: 422 }
-              );
-            }
-            creditWarning = creditCheck.warning;
-          }
-        }
-
-        // Create the invoice
-        const { id, number } = await repository.createInvoice(body as unknown as CreateInvoiceInput);
-
-        // Auto-generate journal entry from the new invoice
-        const journalEntry = await service.createJournalEntryFromInvoice(id);
-
-        // ── Hook 1c: Update customer balance (Q4 — synchronous, Q6) ───────
-        if (contactId) {
-          const fiscalYear = getFiscalYearFromDate(body.issueDate);
-          await updateCustomerBalance(repository, contactId, fiscalYear);
-        }
-
-        return NextResponse.json(
-          {
-            success: true,
-            data: {
-              invoiceId: id,
-              number,
-              journalEntryId: journalEntry?.entryId ?? null,
-              creditWarning,
-            },
-          },
-          { status: 201 }
-        );
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to create invoice');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
+        creditWarning = creditCheck.warning;
       }
     }
-  );
 
-  return handler(request);
-}
+    // Create the invoice
+    const { id, number } = await repository.createInvoice(body as unknown as CreateInvoiceInput);
 
-export const POST = withStandardRateLimit(handlePost);
+    // Auto-generate journal entry from the new invoice
+    const journalEntry = await service.createJournalEntryFromInvoice(id);
+
+    // ── Hook 1c: Update customer balance (Q4 — synchronous, Q6) ───────
+    if (contactId) {
+      const fiscalYear = getFiscalYearFromDate(body.issueDate);
+      await updateCustomerBalance(repository, contactId, fiscalYear);
+    }
+
+    return created({
+      invoiceId: id,
+      number,
+      journalEntryId: journalEntry?.entryId ?? null,
+      creditWarning,
+    });
+  },
+});
