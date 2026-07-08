@@ -43,7 +43,7 @@ export type {
   ShowcasePdfChromeLabels,
 } from './labels-shared';
 
-export { createShowcaseEmailBuilder } from './email-builder-factory';
+export { createShowcaseEmailBuilder, standardShowcaseEmailLabels } from './email-builder-factory';
 export type {
   BuildShowcaseEmailParams,
   BuiltShowcaseEmail,
@@ -54,6 +54,7 @@ export type {
   ShowcaseEmailLabelAccessors,
   ShowcaseEmailRenderHookParams,
   ShowcaseEmailRenderHooks,
+  StandardShowcaseEmailLabelShape,
 } from './email-builder-factory';
 
 export { DEFAULT_SHOWCASE_PDF_MARGINS, ShowcasePDFService } from './pdf-service';

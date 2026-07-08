@@ -30,21 +30,19 @@ import {
   renderPhotoGrid as renderPhotoGridShared,
   renderSectionTitle,
   renderShareCta as renderShareCtaShared,
+  renderShowcaseHero,
   type ShowcaseKeyValueRow as RowsParam,
 } from './showcase-email-shared';
 
 type SnapshotProperty = PropertyShowcaseSnapshot['property'];
 
 export function renderPropertyHero(p: SnapshotProperty, labels: PropertyShowcasePDFLabels): string {
-  const code = p.code ? `<p style="margin:4px 0 0;font-size:12px;color:${BRAND.grayLight};">${escapeHtml(labels.specs.code)}: ${escapeHtml(p.code)}</p>` : '';
-  const desc = p.description
-    ? `<p style="margin:12px 0 0;font-size:14px;color:${BRAND.navyDark};line-height:1.6;white-space:pre-line;">${escapeHtml(p.description)}</p>`
-    : '';
-  return `<section>
-    <h1 style="margin:0;padding:0;font-size:22px;color:${BRAND.navyDark};">${escapeHtml(p.name)}</h1>
-    ${code}
-    ${desc}
-  </section>`;
+  return renderShowcaseHero({
+    name: p.name,
+    code: p.code,
+    codeLabel: labels.specs.code,
+    description: p.description,
+  });
 }
 
 export function renderPhotoGrid(photos: ShowcaseMedia[], labels: PropertyShowcasePDFLabels): string {

@@ -8,33 +8,30 @@
 import 'server-only';
 
 import {
-  wrapInBrandedTemplate,
   BRAND,
   escapeHtml,
   formatEuro,
   formatDateGreek,
   formatPaymentMethod,
-} from './base-email-template';
+  buildInfoRow,
+  buildTotalRow,
+  buildInfoCard,
+  buildGreeting,
+  buildClosing,
+  assembleConfirmationEmail,
+  splitVat,
+  buildUnitPropertyCardBody,
+  buildUnitPropertyTextLines,
+  textSectionHeader,
+  type ConfirmationEmailResult,
+  type BuyerConfirmationFields,
+} from './confirmation-email-shared';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export interface ReservationEmailData {
-  /** Buyer display name */
-  buyerName: string;
-  /** Unit name (e.g. "Α-101") */
-  propertyName: string;
-  /** Floor number */
-  unitFloor: number | null;
-  /** Building name */
-  buildingName: string | null;
-  /** Project name */
-  projectName: string | null;
-  /** Project address */
-  projectAddress: string | null;
-  /** Company name (κατασκευαστική) */
-  companyName: string | null;
+export interface ReservationEmailData extends BuyerConfirmationFields {
   /** Deposit gross amount (incl. VAT) */
   depositAmount: number;
   /** Payment method */
@@ -57,34 +54,14 @@ export interface ReservationEmailData {
  *
  * @returns { subject, html, text } — subject line, HTML body, plain-text fallback
  */
-export function buildReservationConfirmationEmail(data: ReservationEmailData): {
-  subject: string;
-  html: string;
-  text: string;
-} {
-  const subject = `Επιβεβαίωση κράτησης — ${data.propertyName}`;
-
-  const VAT_DIVISOR = 1.24;
-  const netAmount = data.depositAmount / VAT_DIVISOR;
-  const vatAmount = data.depositAmount - netAmount;
-
-  // Build the inner content HTML
-  const contentHtml = buildContentSection(data, netAmount, vatAmount);
-
-  // Wrap in branded template
-  const html = wrapInBrandedTemplate({
-    contentHtml,
-    companyName: data.companyName ?? 'Pagonis Energo',
-    companyPhone: data.companyPhone,
-    companyEmail: data.companyEmail,
-    companyAddress: data.companyAddress,
-    companyWebsite: data.companyWebsite,
+export function buildReservationConfirmationEmail(data: ReservationEmailData): ConfirmationEmailResult {
+  const { net: netAmount, vat: vatAmount } = splitVat(data.depositAmount);
+  return assembleConfirmationEmail({
+    subject: `Επιβεβαίωση κράτησης — ${data.propertyName}`,
+    contentHtml: buildContentSection(data, netAmount, vatAmount),
+    text: buildPlainText(data, netAmount, vatAmount),
+    data,
   });
-
-  // Plain-text fallback
-  const text = buildPlainText(data, netAmount, vatAmount);
-
-  return { subject, html, text };
 }
 
 // ============================================================================
@@ -96,111 +73,28 @@ function buildContentSection(
   netAmount: number,
   vatAmount: number
 ): string {
-  const floorText = data.unitFloor !== null && data.unitFloor !== undefined
-    ? ` — ${data.unitFloor}ος όροφος`
-    : '';
-
-  return `
-    <!-- Greeting -->
-    <p style="margin:0 0 16px;font-size:16px;color:${BRAND.navyDark};">
-      Αγαπητέ/ή <strong>${escapeHtml(data.buyerName)}</strong>,
-    </p>
-    <p style="margin:0 0 24px;font-size:15px;color:${BRAND.gray};line-height:1.6;">
-      Σας ευχαριστούμε για την εμπιστοσύνη σας. Η κράτησή σας καταχωρήθηκε επιτυχώς.
-      Παρακάτω θα βρείτε τα στοιχεία της συναλλαγής.
-    </p>
-
-    <!-- Info card: Property -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border:1px solid ${BRAND.border};border-radius:6px;overflow:hidden;">
-      <tr>
-        <td style="background-color:${BRAND.navy};padding:10px 16px;">
-          <p style="margin:0;font-size:13px;font-weight:600;color:${BRAND.white};letter-spacing:0.5px;">
-            ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ
-          </p>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:16px;">
-          ${buildInfoRow('Μονάδα', `${escapeHtml(data.propertyName)}${floorText}`)}
-          ${data.buildingName ? buildInfoRow('Κτίριο', escapeHtml(data.buildingName)) : ''}
-          ${data.projectName ? buildInfoRow('Έργο', escapeHtml(data.projectName)) : ''}
-          ${data.projectAddress ? buildInfoRow('Διεύθυνση', escapeHtml(data.projectAddress)) : ''}
-          ${data.companyName ? buildInfoRow('Κατασκευαστική', escapeHtml(data.companyName)) : ''}
-        </td>
-      </tr>
-    </table>
-
-    ${data.depositAmount > 0 ? `
-    <!-- Info card: Financial -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border:1px solid ${BRAND.border};border-radius:6px;overflow:hidden;">
-      <tr>
-        <td style="background-color:${BRAND.navy};padding:10px 16px;">
-          <p style="margin:0;font-size:13px;font-weight:600;color:${BRAND.white};letter-spacing:0.5px;">
-            ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ ΚΡΑΤΗΣΗΣ
-          </p>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:16px;">
+  const financialBody = `
           ${data.invoiceRef ? buildInfoRow('Παραστατικό', escapeHtml(data.invoiceRef)) : ''}
           ${buildInfoRow('Ημερομηνία', formatDateGreek(new Date()))}
           ${buildInfoRow('Καθαρό ποσό', formatEuro(netAmount))}
           ${buildInfoRow('ΦΠΑ 24%', formatEuro(vatAmount))}
           ${buildTotalRow('Σύνολο προκαταβολής', formatEuro(data.depositAmount))}
-          ${buildInfoRow('Τρόπος πληρωμής', formatPaymentMethod(data.paymentMethod))}
-        </td>
-      </tr>
-    </table>
-    ` : `
+          ${buildInfoRow('Τρόπος πληρωμής', formatPaymentMethod(data.paymentMethod))}`;
+
+  return `
+    ${buildGreeting(data.buyerName, 'Σας ευχαριστούμε για την εμπιστοσύνη σας. Η κράτησή σας καταχωρήθηκε επιτυχώς. Παρακάτω θα βρείτε τα στοιχεία της συναλλαγής.')}
+
+    ${buildInfoCard({ title: 'ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ', bodyHtml: buildUnitPropertyCardBody(data) })}
+
+    ${data.depositAmount > 0 ? buildInfoCard({ title: 'ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ ΚΡΑΤΗΣΗΣ', bodyHtml: financialBody }) : `
     <!-- No deposit — reservation without financial details -->
     <p style="margin:0 0 20px;font-size:14px;color:${BRAND.gray};line-height:1.6;padding:12px 16px;background-color:${BRAND.bgLight};border-radius:6px;border:1px solid ${BRAND.border};">
       Η κράτηση δεν συνοδεύεται από προκαταβολή. Τα οικονομικά στοιχεία θα καθοριστούν σε επόμενο στάδιο.
     </p>
     `}
 
-    <!-- Closing -->
-    <p style="margin:0 0 8px;font-size:14px;color:${BRAND.gray};line-height:1.6;">
-      Για οποιαδήποτε απορία ή διευκρίνιση, μη διστάσετε να επικοινωνήσετε μαζί μας.
-    </p>
-    <p style="margin:16px 0 0;font-size:14px;color:${BRAND.navyDark};font-weight:600;">
-      Με εκτίμηση,<br/>
-      ${escapeHtml(data.companyName ?? 'Pagonis Energo')}
-    </p>
+    ${buildClosing('Για οποιαδήποτε απορία ή διευκρίνιση, μη διστάσετε να επικοινωνήσετε μαζί μας.', data.companyName ?? 'Pagonis Energo')}
   `;
-}
-
-// ============================================================================
-// ROW HELPERS
-// ============================================================================
-
-/** Single info row: label + value */
-function buildInfoRow(label: string, value: string): string {
-  return `
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
-      <tr>
-        <td width="45%" style="font-size:13px;color:${BRAND.grayLight};vertical-align:top;">
-          ${label}
-        </td>
-        <td style="font-size:13px;color:${BRAND.navyDark};font-weight:500;">
-          ${value}
-        </td>
-      </tr>
-    </table>`;
-}
-
-/** Total row — highlighted with navy background */
-function buildTotalRow(label: string, value: string): string {
-  return `
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0;background-color:${BRAND.bgLight};border-radius:4px;">
-      <tr>
-        <td width="45%" style="padding:8px 12px;font-size:14px;color:${BRAND.navyDark};font-weight:600;">
-          ${label}
-        </td>
-        <td style="padding:8px 12px;font-size:14px;color:${BRAND.navy};font-weight:700;">
-          ${value}
-        </td>
-      </tr>
-    </table>`;
 }
 
 // ============================================================================
@@ -218,19 +112,14 @@ function buildPlainText(
     `Σας ευχαριστούμε για την εμπιστοσύνη σας.`,
     `Η κράτησή σας καταχωρήθηκε επιτυχώς.`,
     ``,
-    `═══ ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ ═══`,
-    `Μονάδα: ${data.propertyName}${data.unitFloor !== null ? ` — ${data.unitFloor}ος όροφος` : ''}`,
+    textSectionHeader('ΣΤΟΙΧΕΙΑ ΑΚΙΝΗΤΟΥ'),
+    ...buildUnitPropertyTextLines(data),
   ];
-
-  if (data.buildingName) lines.push(`Κτίριο: ${data.buildingName}`);
-  if (data.projectName) lines.push(`Έργο: ${data.projectName}`);
-  if (data.projectAddress) lines.push(`Διεύθυνση: ${data.projectAddress}`);
-  if (data.companyName) lines.push(`Κατασκευαστική: ${data.companyName}`);
 
   if (data.depositAmount > 0) {
     lines.push(
       ``,
-      `═══ ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ ═══`,
+      textSectionHeader('ΟΙΚΟΝΟΜΙΚΑ ΣΤΟΙΧΕΙΑ'),
       `Ημερομηνία: ${formatDateGreek(new Date())}`,
     );
     if (data.invoiceRef) lines.push(`Παραστατικό: ${data.invoiceRef}`);

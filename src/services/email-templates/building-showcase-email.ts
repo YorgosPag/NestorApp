@@ -18,15 +18,17 @@ import type { BuildingShowcaseSnapshot } from '@/types/building-showcase';
 import type { BuildingShowcasePDFLabels } from '@/services/building-showcase/labels';
 import {
   createShowcaseEmailBuilder,
+  standardShowcaseEmailLabels,
   type BuildShowcaseEmailParams,
   type BuiltShowcaseEmail,
   type ShowcaseEmailRenderHookParams,
 } from '@/services/showcase-core';
 import {
-  BRAND,
-  escapeHtml,
   renderKeyValueTable,
   renderSectionTitle,
+  renderShowcaseHero,
+  formatShowcaseMoney,
+  formatShowcasePercent,
   type ShowcaseEmailMedia,
   type ShowcaseKeyValueRow,
 } from './showcase-email-shared';
@@ -35,34 +37,13 @@ type HookParams = ShowcaseEmailRenderHookParams<BuildingShowcaseSnapshot, Buildi
 
 function renderBuildingHero({ snapshot, labels }: HookParams): string {
   const b = snapshot.building;
-  const code = b.code
-    ? `<p style="margin:4px 0 0;font-size:12px;color:${BRAND.grayLight};">${escapeHtml(labels.specs.code)}: ${escapeHtml(b.code)}</p>`
-    : '';
-  const subtitleBits = [b.typeLabel, b.statusLabel].filter(Boolean).join(' · ');
-  const subtitle = subtitleBits
-    ? `<p style="margin:6px 0 0;font-size:13px;color:${BRAND.grayLight};">${escapeHtml(subtitleBits)}</p>`
-    : '';
-  const desc = b.description
-    ? `<p style="margin:12px 0 0;font-size:14px;color:${BRAND.navyDark};line-height:1.6;white-space:pre-line;">${escapeHtml(b.description)}</p>`
-    : '';
-  return `<section>
-    <h1 style="margin:0;padding:0;font-size:22px;color:${BRAND.navyDark};">${escapeHtml(b.name)}</h1>
-    ${code}${subtitle}${desc}
-  </section>`;
-}
-
-function formatProgress(value: number | null | undefined): string | undefined {
-  if (typeof value !== 'number' || Number.isNaN(value)) return undefined;
-  return `${Math.round(value)}%`;
-}
-
-function formatMoneyAmount(value: number | null | undefined): string | undefined {
-  if (typeof value !== 'number' || Number.isNaN(value)) return undefined;
-  return new Intl.NumberFormat('el-GR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
+  return renderShowcaseHero({
+    name: b.name,
+    code: b.code,
+    codeLabel: labels.specs.code,
+    subtitleBits: [b.typeLabel, b.statusLabel].filter(Boolean).join(' · '),
+    description: b.description,
+  });
 }
 
 function composeLocation(b: SnapshotBuilding): string | undefined {
@@ -75,7 +56,7 @@ function renderBuildingSpecs({ snapshot, labels }: HookParams): string {
   const rows: ShowcaseKeyValueRow[] = [
     { label: labels.specs.type,             value: b.typeLabel },
     { label: labels.specs.status,           value: b.statusLabel },
-    { label: labels.specs.progress,         value: formatProgress(b.progress) },
+    { label: labels.specs.progress,         value: formatShowcasePercent(b.progress) },
     { label: labels.specs.totalArea,        value: b.totalArea,  unit: labels.specs.areaUnit },
     { label: labels.specs.builtArea,        value: b.builtArea,  unit: labels.specs.areaUnit },
     { label: labels.specs.floors,           value: b.floors },
@@ -83,7 +64,7 @@ function renderBuildingSpecs({ snapshot, labels }: HookParams): string {
     { label: labels.specs.energyClass,      value: b.energyClassLabel },
     { label: labels.specs.renovation,       value: b.renovationLabel },
     { label: labels.specs.constructionYear, value: b.constructionYear },
-    { label: labels.specs.totalValue,       value: formatMoneyAmount(b.totalValue) },
+    { label: labels.specs.totalValue,       value: formatShowcaseMoney(b.totalValue) },
     { label: labels.specs.startDate,        value: b.startDate },
     { label: labels.specs.completionDate,   value: b.completionDate },
     { label: labels.specs.location,         value: composeLocation(b) },
@@ -109,15 +90,7 @@ export const buildBuildingShowcaseEmail = createShowcaseEmailBuilder<
     };
   },
   getCompany: (snapshot) => snapshot.company,
-  labels: {
-    subjectPrefix:  (l) => l.email.subjectPrefix,
-    introText:      (l) => l.email.introText,
-    ctaLabel:       (l) => l.email.ctaLabel,
-    headerSubtitle: (l) => l.header.subtitle,
-    contactLabels:  (l) => l.header.contacts,
-    photosTitle:    (l) => l.photos.title,
-    floorplansTitle:(l) => l.floorplans.title,
-  },
+  labels: standardShowcaseEmailLabels<BuildingShowcasePDFLabels>(),
   hooks: {
     renderHero:  renderBuildingHero,
     renderSpecs: renderBuildingSpecs,

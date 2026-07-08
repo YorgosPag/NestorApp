@@ -45,6 +45,62 @@ export function renderSectionTitle(text: string): string {
   return `<h2 style="margin:24px 0 12px;padding:0;font-size:16px;color:${BRAND.navyDark};border-left:3px solid ${BRAND.navy};padding-left:10px;">${escapeHtml(text)}</h2>`;
 }
 
+export interface ShowcaseHeroParams {
+  /** Main heading (entity name / number). */
+  name: string;
+  /** Optional code value (rendered only when both value & label present). */
+  code?: string | null;
+  /** Localized label for the code line (e.g. labels.specs.code). */
+  codeLabel?: string;
+  /** Pre-joined subtitle bits (e.g. `[typeLabel, statusLabel].join(' · ')`). */
+  subtitleBits?: string;
+  /** Optional multi-line description. */
+  description?: string | null;
+}
+
+/**
+ * Shared showcase hero block — name heading + optional code / subtitle /
+ * description lines. One SSoT for every per-entity showcase email so the
+ * Pagonis visual identity stays aligned (ADR-590). Entities that lack a
+ * subtitle simply omit `subtitleBits`.
+ */
+export function renderShowcaseHero(params: ShowcaseHeroParams): string {
+  const { name, code, codeLabel, subtitleBits, description } = params;
+  const codeHtml = code && codeLabel
+    ? `<p style="margin:4px 0 0;font-size:12px;color:${BRAND.grayLight};">${escapeHtml(codeLabel)}: ${escapeHtml(code)}</p>`
+    : '';
+  const subtitleHtml = subtitleBits
+    ? `<p style="margin:6px 0 0;font-size:13px;color:${BRAND.grayLight};">${escapeHtml(subtitleBits)}</p>`
+    : '';
+  const descHtml = description
+    ? `<p style="margin:12px 0 0;font-size:14px;color:${BRAND.navyDark};line-height:1.6;white-space:pre-line;">${escapeHtml(description)}</p>`
+    : '';
+  return `<section>
+    <h1 style="margin:0;padding:0;font-size:22px;color:${BRAND.navyDark};">${escapeHtml(name)}</h1>
+    ${codeHtml}${subtitleHtml}${descHtml}
+  </section>`;
+}
+
+/**
+ * Shared showcase money formatter — Greek locale, EUR, whole-euro (no
+ * decimals). Returns `undefined` for non-numeric input so callers can skip
+ * the row entirely. SSoT for every showcase specs table (ADR-590).
+ */
+export function formatShowcaseMoney(value: number | null | undefined): string | undefined {
+  if (typeof value !== 'number' || Number.isNaN(value)) return undefined;
+  return new Intl.NumberFormat('el-GR', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+/** Shared showcase progress formatter — rounded integer percent (ADR-590). */
+export function formatShowcasePercent(value: number | null | undefined): string | undefined {
+  if (typeof value !== 'number' || Number.isNaN(value)) return undefined;
+  return `${Math.round(value)}%`;
+}
+
 export function renderPhotoGrid(
   photos: ShowcaseEmailMedia[] | undefined,
   title: string,

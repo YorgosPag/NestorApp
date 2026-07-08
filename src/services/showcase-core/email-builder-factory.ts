@@ -65,6 +65,38 @@ export interface ShowcaseEmailLabelAccessors<TLabels> {
   floorplansTitle: (l: TLabels) => string;
 }
 
+/**
+ * Canonical label layout shared by the building / parking / project / storage
+ * showcase surfaces — `email.*`, `header.*`, `photos.title`, `floorplans.title`.
+ * Property showcase deviates (`chrome.photosTitle`) and keeps bespoke accessors.
+ */
+export interface StandardShowcaseEmailLabelShape {
+  email: { subjectPrefix: string; introText: string; ctaLabel: string };
+  header: { subtitle: string; contacts: EmailHeaderContactLabels };
+  photos: { title: string };
+  floorplans: { title: string };
+}
+
+/**
+ * SSoT for the identical label-accessor object repeated across every standard
+ * showcase email surface (ADR-590). Surfaces whose labels follow
+ * {@link StandardShowcaseEmailLabelShape} pass `labels: standardShowcaseEmailLabels()`
+ * instead of copy-pasting the seven bridge lambdas.
+ */
+export function standardShowcaseEmailLabels<
+  L extends StandardShowcaseEmailLabelShape,
+>(): ShowcaseEmailLabelAccessors<L> {
+  return {
+    subjectPrefix: (l) => l.email.subjectPrefix,
+    introText: (l) => l.email.introText,
+    ctaLabel: (l) => l.email.ctaLabel,
+    headerSubtitle: (l) => l.header.subtitle,
+    contactLabels: (l) => l.header.contacts,
+    photosTitle: (l) => l.photos.title,
+    floorplansTitle: (l) => l.floorplans.title,
+  };
+}
+
 export interface ShowcaseEmailRenderHookParams<TSnapshot, TLabels> {
   snapshot: TSnapshot;
   labels: TLabels;
