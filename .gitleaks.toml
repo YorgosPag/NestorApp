@@ -1,0 +1,26 @@
+# ADR-598 G12 — gitleaks configuration.
+#
+# Extends gitleaks' built-in ruleset (100+ secret detectors) and only adds
+# repo-specific allowlisting for known-safe paths that produce false positives
+# (test fixtures, mocks, locale JSON, the lockfile). Never disable a detector —
+# scope an allowlist entry to the exact path/regex instead.
+#
+# Used by both layers: the pre-commit CHECK 14 (`gitleaks protect --staged`) and
+# the CI full-history scan (.github/workflows/gitleaks-scan.yml).
+
+title = "Nestor Pagonis — gitleaks (ADR-598 G12)"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Global allowlist — non-production paths with no real secrets"
+paths = [
+  '''(^|/)__mocks__/''',
+  '''(^|/)__tests__/''',
+  '''\.(test|spec)\.[jt]sx?$''',
+  '''(^|/)src/i18n/locales/''',
+  '''(^|/)e2e/''',
+  '''(^|/)playwright-report/''',
+  '''pnpm-lock\.yaml$''',
+]

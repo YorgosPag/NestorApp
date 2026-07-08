@@ -67,6 +67,11 @@ const config = {
     '!src/server/**',
     '!src/app/api/**'
   ],
+  // 🏢 ENTERPRISE: Coverage reporters — json-summary feeds the ADR-598 G3
+  // coverage-floor ratchet (scripts/check-coverage-ratchet.js reads
+  // coverage/coverage-summary.json). text-summary keeps the console readable;
+  // lcov is retained for CI/IDE tooling.
+  coverageReporters: ['json-summary', 'text-summary', 'lcov'],
   // 🏢 ENTERPRISE: Coverage thresholds
   // Phase 1: 0% (current) → Phase 2: 30% → Phase 3: 60%
   // TODO: Increase thresholds as test coverage improves
