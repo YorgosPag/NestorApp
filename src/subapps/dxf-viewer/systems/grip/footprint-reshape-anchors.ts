@@ -29,17 +29,6 @@ const VERTEX_GRIP_RE = /-vertex-\d+$/;
 /** Εισαγωγή ΝΕΑΣ κορυφής στη μέση ακμής (`slab-edge-midpoint-N`, `column-poly-edge-N`, …). */
 const EDGE_MIDPOINT_GRIP_RE = /(-edge-midpoint|-poly-edge)-\d+$/;
 
-/** Τα footprint reshape grip-kind discriminators ενός preview `dp` ή commit `grip`. */
-export interface FootprintGripKinds {
-  readonly columnGripKind?: string;
-  readonly slabGripKind?: string;
-  readonly slabOpeningGripKind?: string;
-  readonly openingGripKind?: string;
-  readonly roofGripKind?: string;
-  readonly floorFinishGripKind?: string;
-  readonly mepUnderfloorGripKind?: string;
-}
-
 /**
  * Το ΕΝΑ ενεργό polygon-footprint reshape grip-kind string (ή `undefined`). Κοινό preview+commit —
  * ώστε τα ίχνη ευθυγράμμισης/POLAR να προκύπτουν από την ΙΔΙΑ πηγή και στα δύο seams (WYSIWYG).
