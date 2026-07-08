@@ -11,7 +11,7 @@
  */
 
 import { tekMetersToScene, metersToScene } from '../../export/core/tek/tek-geometry';
-import { colorHex6 } from '../../export/core/tek/tek-xml-writer';
+import { tekColorToHex } from './tek-color';
 import { generateEntityId } from '@/services/enterprise-id-convenience';
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity, LineEntity, TextEntity } from '../../types/entities';
@@ -29,11 +29,6 @@ import { buildDimensionSymbol } from './tek-dimension-symbol';
  * (σκούρο κόκκινο), ΟΧΙ στο πράσινο `COLOR_2` της γραμμής ούτε στο κίτρινο `COLOR_20` του κειμένου.
  */
 const DIM_ARROW_COLOR = '#800000';
-
-/** Tekton `<color>` (RGB, χωρίς `#`) → `#RRGGBB` (reuse export SSoT `colorHex6`). */
-function tekColorToHex(raw: string): string {
-  return `#${colorHex6(raw)}`;
-}
 
 /** Tekton-μέτρα σημείο → scene (Y-flip + units) μέσω του SSoT. */
 function toScene(p: TekPoint2D, units: SceneUnits): Point2D {

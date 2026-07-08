@@ -198,6 +198,17 @@
       ],
       "tier": 3
     },
+    "tek-color-to-hex": {
+      "ssotFile": "src/subapps/dxf-viewer/io/tek/tek-color.ts",
+      "description": "ADR-526/531 (Tekton .TEK IMPORT) — Tekton `<color>` (RGB hex, no `#`) -> canonical scene `#RRGGBB` lives on tekColorToHex() in io/tek/tek-color.ts. It reuses the export-side SSoT colorHex6 (normalize/uppercase/strip/fallback in export/core/tek/tek-xml-writer.ts) and adds ONLY the import-side `#` prefix the renderer/CSS require (strokeStyle without `#` is invalid -> black/invisible line). The `#${colorHex6(raw)}` wrapper was hand-copied byte-identical as a local tekColorToHex in tek-primitive-to-scene.ts + tek-structural-to-scene.ts. Writing a new inline `#${colorHex6(...)}` re-implements the wrapper — import { tekColorToHex } from './tek-color' instead. (colorHex6 itself stays the export SSoT; this guards only the `#`-prefixed import form.)",
+      "forbiddenPatterns": [
+        "#\\$\\{colorHex6"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/io/tek/tek-color.ts"
+      ],
+      "tier": 3
+    },
     "create-tool-bridge-store": {
       "ssotFile": "src/subapps/dxf-viewer/stores/createToolBridgeStore.ts",
       "description": "ADR-404 Phi5b/5c — drawing-mode <-> ribbon/3D handle bridge stores (a module-level THandle|null cell a tool hook publishes and a ribbon/3D reader consumes via get()/use()) live on the createToolBridgeStore<THandle>() factory. The `let handle: XToolBridgeHandle | null` + Set<Listener> + emit/subscribe/getSnapshot/getServerSnapshot + set/get/use boilerplate was hand-copied byte-identical across 16 stores (column/foundation/railing/furniture/electrical-panel/floorplan-symbol/wall/slab/beam + 7 mep). Declaring a new module-level `let handle: <X>ToolBridgeHandle` re-implements the bridge cell — call createToolBridgeStore<XHandle>() instead (the factory delegates the pub/sub machinery to createExternalStore and bundles the useSyncExternalStore use() binding).",

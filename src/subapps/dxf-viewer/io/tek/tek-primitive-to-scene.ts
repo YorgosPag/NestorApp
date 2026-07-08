@@ -10,22 +10,13 @@
  */
 
 import { tekMetersToScene, metersToScene } from '../../export/core/tek/tek-geometry';
-import { colorHex6 } from '../../export/core/tek/tek-xml-writer';
+import { tekColorToHex } from './tek-color';
 import { radToDeg, normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 import { generateEntityId } from '@/services/enterprise-id-convenience';
 import type { Point2D } from '../../rendering/types/Types';
 import type { LineEntity, CircleEntity, ArcEntity, TextEntity } from '../../types/entities';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { TekLineRecord, TekArcRecord, TekTextRecord, TekXMatrix } from './tek-import-types';
-
-/**
- * Tekton `<color>` (RGB hex, χωρίς `#`) → canonical `#RRGGBB` του Νέστορα. ΑΚΡΙΒΗΣ αντιστροφή
- * του export `colorHex6` (RGB straight, ΟΧΙ BGR swap) + το `#` που περιμένει ο renderer/CSS
- * (χωρίς `#` το `strokeStyle` είναι άκυρο → μαύρη/αόρατη γραμμή). Reuse του SSoT validation/fallback.
- */
-function tekColorToHex(raw: string): string {
-  return `#${colorHex6(raw)}`;
-}
 
 /** Γωνία (μοίρες) σημείου `p` γύρω από κέντρο `c`, κανονικοποιημένη σε [0, 360). */
 function angleDeg(c: Point2D, p: Point2D): number {
