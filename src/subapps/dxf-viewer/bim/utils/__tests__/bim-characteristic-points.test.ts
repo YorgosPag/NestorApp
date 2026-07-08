@@ -1,5 +1,5 @@
 /**
- * ADR-370 — `getBimCharacteristicPoints` SSoT dispatcher tests (Φ1).
+ * ADR-597 — `getBimCharacteristicPoints` SSoT dispatcher tests (Φ1).
  *
  * Verifies, per BIM entity family:
  *   - corners / midpoints / center delegate to the existing geometry SSoT,
@@ -137,7 +137,7 @@ describe('getBimCharacteristicPoints — slab', () => {
     const r = getBimCharacteristicPoints(makeSlab());
     expect(r.corners).toHaveLength(4);
     expect(r.midpoints).toHaveLength(4);
-    // ADR-370 §non-convex-fix: area (shoelace) centroid — για convex ≈ vertex-mean με
+    // ADR-597 §non-convex-fix: area (shoelace) centroid — για convex ≈ vertex-mean με
     // αμελητέο floating error, άρα toBeCloseTo αντί ακριβούς toEqual.
     expect(r.center!.x).toBeCloseTo(500, 6);
     expect(r.center!.y).toBeCloseTo(500, 6);
@@ -196,9 +196,9 @@ describe('getBimCharacteristicPoints — column', () => {
     const minX = Math.min(...xs), maxX = Math.max(...xs);
     const minY = Math.min(...ys), maxY = Math.max(...ys);
     expect(r.corners.some((c) => c.x > minX && c.x < maxX && c.y > minY && c.y < maxY)).toBe(true);
-    // ADR-370 §L-label — μια L κολόνα δείχνει πλέον «Γωνία/Μέσο/Κέντρο κολόνας».
+    // ADR-597 §L-label — μια L κολόνα δείχνει πλέον «Γωνία/Μέσο/Κέντρο κολόνας».
     expect(r.labelRoot).toBe('column');
-    // ADR-370 §non-convex-fix — REGRESSION GUARD: τα midpoints είναι στις ΠΡΑΓΜΑΤΙΚΕΣ ακμές
+    // ADR-597 §non-convex-fix — REGRESSION GUARD: τα midpoints είναι στις ΠΡΑΓΜΑΤΙΚΕΣ ακμές
     // (mid του κάθε ζεύγους διαδοχικών κορυφών), ΟΧΙ angular-sorted στο κενό/notch. Πριν το
     // fix, το angular sort έδινε διαφορετικά (εκτός σχήματος) midpoints → αυτό θα αποτύγχανε.
     const expectedMids = r.corners.map((c, i) => {

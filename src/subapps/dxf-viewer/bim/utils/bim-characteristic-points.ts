@@ -1,5 +1,5 @@
 /**
- * ADR-370 — BIM Characteristic-Point SSoT dispatcher (corner + midpoint + center).
+ * ADR-597 — BIM Characteristic-Point SSoT dispatcher (corner + midpoint + center).
  *
  * ΕΝΑ Single Source of Truth που, για ΚΑΘΕ BIM entity, επιστρέφει τα τρία είδη
  * χαρακτηριστικών σημείων (Revit "snap-to" points):
@@ -21,7 +21,7 @@
  *
  * Pure module: zero React / DOM / Firestore / canvas deps. Idempotent.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-370-bim-corner-snap-system.md
+ * @see docs/centralized-systems/reference/adrs/ADR-597-bim-corner-snap-system.md
  * @see snapping/engines/BimCharacteristicSnapEngine.ts — generic consumer
  */
 
@@ -104,7 +104,7 @@ export function getBimCharacteristicLabelRoot(entity: Entity): string | null {
   if (isSlabOpeningEntity(entity)) return 'slabOpening';
   if (isOpeningEntity(entity)) return 'opening';
   if (isColumnEntity(entity)) {
-    // ADR-370 §L-label (Giorgio 2026-07-05): ΚΑΘΕ πολυγωνική κολόνα (rectangular / shear-wall /
+    // ADR-597 §L-label (Giorgio 2026-07-05): ΚΑΘΕ πολυγωνική κολόνα (rectangular / shear-wall /
     // L / Γ / T / U / I / polygon / composite) δείχνει «Γωνία/Μέσο/Κέντρο κολόνας» — οι γωνίες
     // της είναι πραγματικές δομικές γωνίες, όχι «περίεργο σχήμα». ΜΟΝΟ η circular μένει χωρίς
     // label (δεν έχει γωνίες — μόνο 45° perimeter anchors).
@@ -185,7 +185,7 @@ export function getBimCharacteristicPointsOfCategory(
  */
 /**
  * @param isOrderedPolygon τα `corners` είναι ΗΔΗ σε polygon winding order (footprint vertices).
- *   ADR-370 §non-convex-fix: για ΜΗ-ΚΥΡΤΑ αποτυπώματα (L/Γ/T/U columns, αυθαίρετα slab polygons)
+ *   ADR-597 §non-convex-fix: για ΜΗ-ΚΥΡΤΑ αποτυπώματα (L/Γ/T/U columns, αυθαίρετα slab polygons)
  *   ΠΡΕΠΕΙ true — αλλιώς το angular sort των midpoints + ο μέσος-όρος-κορυφών centroid πέφτουν
  *   ΕΚΤΟΣ σχήματος (στο notch). Convex 4-corner sources (wall/beam/foundation/box) → false.
  */
@@ -227,7 +227,7 @@ function columnPoints(entity: Entity): BimCharPoints {
   // the moving side — not just the 4 bounding-box corners. Rectangular → the 4 real
   // vertices ARE the 4 bbox corners (zero regression).
   const verts = projectVerticesTo2D(computeColumnGeometry(entity.params).footprint.vertices);
-  // ADR-370 §non-convex-fix: το footprint είναι polygon σε winding order → isOrderedPolygon=true
+  // ADR-597 §non-convex-fix: το footprint είναι polygon σε winding order → isOrderedPolygon=true
   // ώστε L/Γ/T/U να μη βγάζουν midpoints/κέντρο στο κενό (notch).
   return footprintPoints(verts, labelRoot, true);
 }
@@ -251,7 +251,7 @@ function centredBoxPoints(entity: Entity): BimCharPoints {
 
 /** Polygon-footprint entity (slab / slab-opening / roof / thermal-space / floor-finish / mep-underfloor). */
 function polygonPoints(entity: Entity, vertices: Point2D[]): BimCharPoints {
-  // ADR-370 §non-convex-fix: polygon outline σε winding order → isOrderedPolygon=true (μπορεί
+  // ADR-597 §non-convex-fix: polygon outline σε winding order → isOrderedPolygon=true (μπορεί
   // να είναι κοίλο — π.χ. slab/roof με notch).
   return footprintPoints(vertices, getBimCharacteristicLabelRoot(entity), true);
 }
@@ -331,7 +331,7 @@ function centroid2D(pts: readonly Point2D[]): Point2D {
 }
 
 /** Area (mass) centroid (XY) για ordered polygon footprints — μένει ΜΕΣΑ στο υλικό για κοίλα
- *  L/Γ/T/U (όπου ο μέσος όρος κορυφών πέφτει στο notch). §non-convex-fix (ADR-370). */
+ *  L/Γ/T/U (όπου ο μέσος όρος κορυφών πέφτει στο notch). §non-convex-fix (ADR-597). */
 function centroidOrdered2D(pts: readonly Point2D[]): Point2D {
   return polygon2DAreaCentroid(pts);
 }

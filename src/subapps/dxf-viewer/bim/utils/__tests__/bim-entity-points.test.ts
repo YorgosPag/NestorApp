@@ -1,5 +1,5 @@
 /**
- * ADR-370 §κεντρικοποίηση (2026-07-05) — bim-entity-points column SSoT unification guard.
+ * ADR-597 §κεντρικοποίηση (2026-07-05) — bim-entity-points column SSoT unification guard.
  *
  * Root cause of «κόκκινα τετράγωνα στο κενό» σε L/Γ κολόνα: `getBimEntityKeyPoints2D` (fed to
  * the ENDPOINT snap via `GeometricCalculations`) returned a column's 9 BBOX anchors — for a
@@ -60,7 +60,7 @@ function makeBeam(): BeamEntity {
   } as unknown as BeamEntity;
 }
 
-describe('getBimEntityKeyPoints2D — column κεντρικοποίηση (ADR-370)', () => {
+describe('getBimEntityKeyPoints2D — column κεντρικοποίηση (ADR-597)', () => {
   it('rectangular column → 4 REAL footprint corners', () => {
     expect(getBimEntityKeyPoints2D(makeColumn('rectangular'))).toHaveLength(4);
   });
@@ -82,7 +82,7 @@ describe('getBimEntityKeyPoints2D — column κεντρικοποίηση (ADR-3
   });
 });
 
-describe('bim-entity-points — polygon entities DELEGATE στο ΕΝΑ characteristic SSoT (ADR-370)', () => {
+describe('bim-entity-points — polygon entities DELEGATE στο ΕΝΑ characteristic SSoT (ADR-597)', () => {
   it('slab key points = characteristic corners (zero duplicate extraction)', () => {
     const slab = makeSlab();
     expect(getBimEntityKeyPoints2D(slab)).toEqual(getBimCharacteristicPointsOfCategory(slab, 'corner'));

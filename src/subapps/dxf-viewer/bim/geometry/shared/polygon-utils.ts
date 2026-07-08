@@ -207,7 +207,7 @@ export function makePolygon3D(vertices: readonly Point3D[]): Polygon3D {
  * (z dropped, fresh object — never aliases the input). SSoT για το ubiquitous idiom
  * `{ x: p.x, y: p.y }` (πρώην private `to2D` σε wall/opening/slab/beam-corner-anchors,
  * hit-test-entity-tests, bim-to-dxf-primitives). Generic επί οποιουδήποτε `{x,y}` source
- * (Point3D geometry vertices, grips), pure & zero-dep (ADR-370 §17.11).
+ * (Point3D geometry vertices, grips), pure & zero-dep (ADR-597 §17.11).
  */
 export function projectPointTo2D(p: { readonly x: number; readonly y: number }): Point2D {
   return { x: p.x, y: p.y };
@@ -221,7 +221,7 @@ export function projectPointTo2D(p: { readonly x: number; readonly y: number }):
  * `member-grip-corner-snap`), στα entity characteristic points (`bim-characteristic-points`),
  * στα snap targets (`member-snap-targets`) & στο placement overlap (`structural-placement-overlap`).
  * Array mirror του {@link projectPointTo2D}. Generic επί οποιουδήποτε `{x,y}` πηγής,
- * pure & zero-dep. Winding order διατηρείται — μηδέν αναδιάταξη κορυφών (ADR-370 §17.11).
+ * pure & zero-dep. Winding order διατηρείται — μηδέν αναδιάταξη κορυφών (ADR-597 §17.11).
  */
 export function projectVerticesTo2D(
   vertices: readonly { readonly x: number; readonly y: number }[],
@@ -375,7 +375,7 @@ export function sortPointsAroundCentroid<T extends { x: number; y: number }>(poi
 /**
  * Per-edge midpoints of a footprint from its corner points — a midpoint for EVERY side.
  *
- * Two modes (ADR-370 §non-convex-fix 2026-07-05):
+ * Two modes (ADR-597 §non-convex-fix 2026-07-05):
  *   - **default** (`preOrdered` falsy): corners are angular-sorted around the centroid first
  *     (via {@link sortPointsAroundCentroid}), so any UNORDERED convex source (grips, diagonal
  *     anchors, 4 bbox corners) yields the same perimeter midpoints. Exact for CONVEX only.

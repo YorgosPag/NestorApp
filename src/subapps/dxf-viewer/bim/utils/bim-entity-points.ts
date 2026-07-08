@@ -3,7 +3,7 @@
  *
  * Καταναλώνεται από GeometricCalculations (snap engine), grips, dimensions.
  *
- * Δύο κατηγορίες (§κεντρικοποίηση ADR-370, 2026-07-05):
+ * Δύο κατηγορίες (§κεντρικοποίηση ADR-597, 2026-07-05):
  *   - **Polygon-footprint** entities (slab/slab-opening/opening/column/floor-finish/thermal/
  *     mep-underfloor) → DELEGATE στο ΕΝΑ characteristic-point SSoT (`bim-characteristic-points`)
  *     αντί για inline `outline/footprint.vertices` extraction — ΜΙΑ πηγή γεωμετρίας, μηδέν
@@ -32,7 +32,7 @@ import {
   isSpaceSeparatorEntity,
   isMepUnderfloorEntity,
 } from '../../types/entities';
-// ADR-370 §κεντρικοποίηση (2026-07-05): οι column key points διαβάζονται από το ΕΝΑ
+// ADR-597 §κεντρικοποίηση (2026-07-05): οι column key points διαβάζονται από το ΕΝΑ
 // characteristic-point SSoT (πραγματικές footprint γωνίες), ΟΧΙ από τα 9 bbox anchors.
 import { getBimCharacteristicPointsOfCategory } from './bim-characteristic-points';
 import { projectPointTo2D, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
@@ -45,7 +45,7 @@ import { projectPointTo2D, projectVerticesTo2D } from '../geometry/shared/polygo
  * - wall           → axis endpoints (straight/curved) OR all spine vertices (polyline)
  * - space-separator → 2 endpoints
  *
- * POLYGON-FOOTPRINT (§κεντρικοποίηση ADR-370 — delegate στο ΕΝΑ characteristic-corner SSoT):
+ * POLYGON-FOOTPRINT (§κεντρικοποίηση ADR-597 — delegate στο ΕΝΑ characteristic-corner SSoT):
  * - slab / slab-opening / opening / column / floor-finish / thermal-space / mep-underfloor
  *   → REAL footprint corners (για L/Γ/T/U τα actual reentrant vertices, ΟΧΙ bbox anchors).
  *
@@ -98,7 +98,7 @@ export function getBimEntityKeyPoints2D(entity: Entity): Point2D[] {
  *
  * - beam / wall (straight) → axis midpoint · wall (polyline) → per-segment midpoints (γραμμικά)
  * - slab / slab-opening / opening → per-edge midpoints via το ΕΝΑ characteristic SSoT
- *   (§κεντρικοποίηση ADR-370 — ordered per-edge, μηδέν copy-paste loop).
+ *   (§κεντρικοποίηση ADR-597 — ordered per-edge, μηδέν copy-paste loop).
  *
  * Column και άλλα BIM types → [] (τα midpoints τους τα δίνει απευθείας το BimCharacteristicSnapEngine).
  */
