@@ -15,6 +15,11 @@
     "Python-2.0"
   ],
   "allowedPackages": {
+    "axe-core": {
+      "license": "MPL-2.0",
+      "reason": "ADR-598 G11 — a11y test engine (via jest-axe). Dev/test-only (never in the production bundle). MPL-2.0 is weak, file-level copyleft: it obliges opening only modified axe-core files, not our code. Approved Giorgio 2026-07-08.",
+      "owner": "giorgio"
+    },
     "@resvg/resvg-js@2.6.2": {
       "license": "MPL-2.0",
       "reason": "Seeded — off-allowlist but non-copyleft; manually vetted permissive/dev-only",
