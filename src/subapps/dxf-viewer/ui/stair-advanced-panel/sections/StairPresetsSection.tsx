@@ -19,19 +19,14 @@ import { useEscapeHandler, ESC_PRIORITY } from '@/subapps/dxf-viewer/systems/esc
 import type { StairEntity } from '../../../types/entities';
 import type { StairPresetDoc, StairPresetScope } from '../../../bim/types/stair-types';
 import { useStairPresets } from '../hooks/useStairPresets';
-import type { useLevels } from '../../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 
 export interface StairPresetsSectionProps {
   readonly stair: StairEntity;
   readonly companyId: string;
   readonly userId: string;
   readonly projectId?: string;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 const SCOPE_ORDER: readonly StairPresetScope[] = ['user', 'company', 'project'];

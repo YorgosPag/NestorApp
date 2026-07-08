@@ -569,6 +569,11 @@
 | **ADR-588** | Space Media Tab Shell SSoT (`EntityMediaFilesTab` + binding + configs) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-588-space-media-tab-shell.md) |
 | **ADR-589** | Edge-triggered Tool Lifecycle SSoT (`useEdgeTriggeredLifecycle`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-589-edge-triggered-tool-lifecycle-ssot.md) |
 | **ADR-590** | Email Template Shared Primitives SSoT (`confirmation-email-shared` + showcase hero/labels) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-590-email-template-shared-primitives.md) |
+| **ADR-591** | Impact-Preview Primitives SSoT (`impact-preview-primitives`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-591-impact-preview-primitives-ssot.md) |
+| **ADR-592** | BIM Entity Factory Base SSoT (`bim-entity-factory-base` + `bim-binding-params`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-592-bim-entity-factory-base-ssot.md) |
+| **ADR-593** | Communication Row Primitives SSoT (`communication-row-primitives`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-593-communication-row-primitives-ssot.md) |
+| **ADR-594** | BIM Entity Persistence Hook Factory SSoT (`createBimEntityPersistenceHook`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-594-bim-entity-persistence-hook-ssot.md) |
+| **ADR-595** | Generic Form Renderer Primitives SSoT (`form-field-primitives` + `form-tabs-shell`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-595-generic-form-renderer-primitives-ssot.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1118,6 +1123,11 @@
 | **ADR-588** | Space Media Tab Shell SSoT (`EntityMediaFilesTab` + binding + configs) | ✅ ACTIVE | [View](./adrs/ADR-588-space-media-tab-shell.md) |
 | **ADR-589** | Edge-triggered Tool Lifecycle SSoT (`useEdgeTriggeredLifecycle`) | ✅ ACTIVE | [View](./adrs/ADR-589-edge-triggered-tool-lifecycle-ssot.md) |
 | **ADR-590** | Email Template Shared Primitives SSoT (`confirmation-email-shared` + showcase hero/labels) | ✅ ACTIVE | [View](./adrs/ADR-590-email-template-shared-primitives.md) |
+| **ADR-591** | Impact-Preview Primitives SSoT (`impact-preview-primitives`) | ✅ ACTIVE | [View](./adrs/ADR-591-impact-preview-primitives-ssot.md) |
+| **ADR-592** | BIM Entity Factory Base SSoT (`bim-entity-factory-base` + `bim-binding-params`) | ✅ ACTIVE | [View](./adrs/ADR-592-bim-entity-factory-base-ssot.md) |
+| **ADR-593** | Communication Row Primitives SSoT (`communication-row-primitives`) | ✅ ACTIVE | [View](./adrs/ADR-593-communication-row-primitives-ssot.md) |
+| **ADR-594** | BIM Entity Persistence Hook Factory SSoT (`createBimEntityPersistenceHook`) | ✅ ACTIVE | [View](./adrs/ADR-594-bim-entity-persistence-hook-ssot.md) |
+| **ADR-595** | Generic Form Renderer Primitives SSoT (`form-field-primitives` + `form-tabs-shell`) | ✅ ACTIVE | [View](./adrs/ADR-595-generic-form-renderer-primitives-ssot.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

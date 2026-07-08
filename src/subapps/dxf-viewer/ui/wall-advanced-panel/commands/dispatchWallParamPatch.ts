@@ -22,15 +22,10 @@ import { UpdateWallParamsCommand } from '../../../core/commands/entity-commands/
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import type { WallEntity, WallParams } from '../../../bim/types/wall-types';
 import { detachSidesAffectedByVerticalEdit } from '../../../bim/walls/wall-attach-detach';
-import type { useLevels } from '../../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 
 export interface UseWallParamsDispatcherProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 export type WallParamsPatch = Partial<WallParams>;

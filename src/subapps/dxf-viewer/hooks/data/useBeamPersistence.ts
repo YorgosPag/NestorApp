@@ -3,34 +3,22 @@
 /**
  * ADR-363 Phase 5 — Beam Firestore persistence React adapter.
  *
- * Bridges `BeamFirestoreService` σε scene model owned by `LevelsSystem`.
- * Mirrors `useColumnPersistence` — same hybrid auto-save pattern, same
- * selective skip diff-merge, same first-save listener wired σε
- * `drawing:entity-created` με tool='beam'.
- *
- * Persistence trigger — hybrid:
- *   - Debounced auto-save 500 ms μετά από `beam.params` change settle.
- *   - `saveNow()` imperative escape hatch.
- *
- * Scene sync — diff-merge με selective skip:
- *   - Κάθε snapshot adds / updates / removes beams στο active scene.
- *   - Beams marked locally-dirty ΠΟΤΕ overwritten από snapshot data.
- *
- * Geometry re-derivation: όταν φτάνει snapshot από Firestore, η γεωμετρία
- * αναπαράγεται client-side από `params`.
+ * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-594). Behaviour
+ * unchanged: hybrid auto-save + `saveNow`, generic diff-merge, serialized persist
+ * (ADR-390 Φ4 — same-tick create+move race), finish-aware BOQ feed
+ * (create/update/delete/restore), `bim:beam-persisted` emit (slab BOQ deduction),
+ * and immediate persist off `bim:beam-params-updated` (grip/ribbon edits bypass the
+ * selection debounce). First-save on `drawing:entity-created` (tool 'beam').
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.10
+ * @see docs/centralized-systems/reference/adrs/ADR-594-bim-entity-persistence-hook-ssot.md
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { dequal } from 'dequal';
+import { useEffect, useMemo } from 'react';
 
-import type { AnySceneEntity, SceneModel } from '../../types/entities';
-import { DXF_TIMING } from '../../config/dxf-timing';
-import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { BeamEntity } from '../../bim/types/beam-types';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import { EventBus } from '../../systems/events/EventBus';
-import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
   createBeamFirestoreService,
   entityToSaveInput,
@@ -40,24 +28,19 @@ import {
 import { recordBeamChange } from '../../bim/beams/beam-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { beamBoqEntity } from './beam-boq-feed';
-// docToEntity → beamDocToEntity moved here on the file-size split (see line ~92 note).
 import { beamDocToEntity } from './beam-persistence-helpers';
-import { createPersistSerializer } from './persist-serializer';
-import { mergeDocsIntoScene } from './merge-docs-into-scene';
-import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
-import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
+import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
+import type {
+  BimEntityPersistenceParams,
+  BimEntitySaveState,
+  BimPersistenceScope,
+} from './bim-entity-persistence-hook-types';
 
 // ============================================================================
-// TYPES
+// PUBLIC API (unchanged)
 // ============================================================================
 
-export type BeamSaveState = 'idle' | 'saving' | 'saved' | 'error';
-
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
-}
+export type BeamSaveState = BimEntitySaveState;
 
 export interface UseBeamPersistenceParams {
   readonly companyId: string | null;
@@ -67,7 +50,7 @@ export interface UseBeamPersistenceParams {
   /** ADR-395 Phase 1 (G7) — floor link for per-floor BOQ grouping. */
   readonly floorId: string | null | undefined;
   readonly userId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly primarySelectedBeam: BeamEntity | null;
 }
 
@@ -80,369 +63,142 @@ export interface UseBeamPersistenceResult {
 }
 
 // ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const AUTO_SAVE_DEBOUNCE_MS = DXF_TIMING.persist.ENTITY_AUTOSAVE; // ADR-516
-
-// ============================================================================
 // HELPERS
 // ============================================================================
 
-function isBeam(entity: AnySceneEntity): entity is BeamEntity {
-  return (entity as { type?: string }).type === 'beam';
+/** ADR-449 Slice 4 — finish-aware BOQ feed (minimal payload = byte-identical pre-Slice-4). */
+function feedBeamBoq(
+  entity: BeamEntity,
+  scope: BimPersistenceScope,
+  action: 'created' | 'updated',
+): void {
+  if (!(scope.companyId && scope.projectId && scope.buildingId)) return;
+  const levelId = scope.levelManager.currentLevelId;
+  const scene = levelId ? scope.levelManager.getLevelScene(levelId) : null;
+  void bimToBoqBridge.upsertBoqItemForBim(
+    'beam',
+    beamBoqEntity(entity, scene),
+    {
+      companyId: scope.companyId,
+      projectId: scope.projectId,
+      buildingId: scope.buildingId,
+      floorId: scope.floorId ?? undefined,
+    },
+    action,
+  );
 }
 
-// docToEntity → beamDocToEntity μετακινήθηκε στο './beam-persistence-helpers' (file-size split).
+function emitBeamPersisted(scope: BimPersistenceScope): void {
+  if (scope.floorplanId) EventBus.emit('bim:beam-persisted', { floorplanId: scope.floorplanId });
+}
 
 // ============================================================================
-// HOOK
+// FACTORY CONFIG
+// ============================================================================
+
+const useBeamPersistenceBase = createBimEntityPersistenceHook<
+  BeamFirestoreService,
+  BeamDoc,
+  BeamEntity,
+  BeamEntity['params']
+>({
+  entityType: 'beam',
+  restoreEntityType: 'beam',
+  saveErrorKey: 'BEAM_SAVE_ERROR',
+  restoreErrorKey: 'BEAM_RESTORE_ERROR',
+  serialize: true,
+  entityComparable: (e) => e.params,
+  createService: (scope) => createBeamFirestoreService(scope),
+  service: {
+    save: (svc, e) => svc.saveBeam(entityToSaveInput(e)),
+    // ADR-441 guideBindings + ADR-539 Φ3d faceAppearance round-trip on every update.
+    update: (svc, e) =>
+      svc.updateBeam(e.id, {
+        params: e.params,
+        validation: e.validation,
+        geometry: e.geometry,
+        layerId: e.layerId,
+        guideBindings: e.guideBindings,
+        faceAppearance: e.faceAppearance,
+      }),
+    remove: (svc, id) => svc.deleteBeam(id),
+    subscribe: (svc, onDocs, onErr) =>
+      svc.subscribeBeams(onDocs as (docs: readonly BeamDoc[]) => void, onErr),
+  },
+  merge: {
+    mode: 'generic',
+    config: {
+      isEntity: (e): e is BeamEntity => (e as { type?: string }).type === 'beam',
+      docToEntity: beamDocToEntity,
+      entityComparable: (e) => e.params,
+      docComparable: (d) => d.params,
+    },
+  },
+  deleteTrigger: {
+    event: 'bim:beam-delete-requested',
+    getId: (p) => (p as { beamId?: string }).beamId,
+  },
+  onPersisted: (entity, { isNew, prevComparable, scope }) => {
+    void recordBeamChange(isNew ? 'created' : 'updated', entity, {
+      prevParams: prevComparable ?? undefined,
+    });
+    feedBeamBoq(entity, scope, isNew ? 'created' : 'updated');
+    emitBeamPersisted(scope);
+  },
+  onDeleted: (id, deleted, { scope }) => {
+    void recordBeamChange(
+      'deleted',
+      deleted
+        ? { id: deleted.id, kind: deleted.kind, layerId: deleted.layerId, params: deleted.params }
+        : { id, kind: 'straight' },
+    );
+    void bimToBoqBridge.deleteBoqItemForBim(id, scope.companyId ?? '');
+    emitBeamPersisted(scope);
+  },
+  onRestored: (entity, { scope }) => {
+    void recordBeamChange('restored', entity);
+    feedBeamBoq(entity, scope, 'created');
+    emitBeamPersisted(scope);
+  },
+  // ADR-390 Φ4 — grip/ribbon param edit emits `bim:beam-params-updated`; persist
+  // immediately (read live from the scene) regardless of selection/debounce timing.
+  useExtra: (ctx) => {
+    useEffect(() => {
+      const cleanup = EventBus.on('bim:beam-params-updated', ({ beamId }) => {
+        if (!ctx.serviceRef.current) return;
+        const lm = ctx.levelManagerRef.current;
+        const levelId = lm.currentLevelId;
+        if (!levelId) return;
+        const entity = lm.getLevelScene(levelId)?.entities.find((e) => e.id === beamId);
+        if (!entity || (entity as { type?: string }).type !== 'beam') return;
+        ctx.dirtyIdsRef.current.add(beamId);
+        void ctx.persist(entity as BeamEntity);
+      });
+      return cleanup;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ctx.persist]);
+  },
+});
+
+// ============================================================================
+// HOOK (thin wrapper — preserves the public param/result names)
 // ============================================================================
 
 export function useBeamPersistence(
   params: UseBeamPersistenceParams,
 ): UseBeamPersistenceResult {
-  const {
-    companyId,
-    projectId,
-    floorplanId,
-    buildingId,
-    floorId,
-    userId,
-    levelManager,
-    primarySelectedBeam,
-  } = params;
-
-  const [saveState, setSaveState] = useState<BeamSaveState>('idle');
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const serviceRef = useRef<BeamFirestoreService | null>(null);
-  const dirtyIdsRef = useRef<Set<string>>(new Set());
-  const lastSavedParamsRef = useRef<Map<string, BeamEntity['params']>>(new Map());
-  // ADR-390 — pending first save (drawn or restored) + tombstone tracking.
-  const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
-  const deletedIdsRef = useRef<Set<string>>(new Set());
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // ADR-390 Φ4 / N.7 — per-id write serializer (mirror useColumnPersistence). A
-  // freshly-drawn beam moved in the SAME tick races: the create `saveBeam` (setDoc)
-  // and the move `updateBeam` run concurrently; if the create lands LAST it clobbers
-  // the move (observed: updatedAt==createdAt, axis reverted to the drawn position).
-  // Serializing per id chains them → create commits, then move updates → DB = moved.
-  const persistSerializerRef = useRef(createPersistSerializer());
-  const selectedBeamRef = useRef<BeamEntity | null>(null);
-  selectedBeamRef.current = primarySelectedBeam;
-
-  // ⚡ STABILITY (ca9 fix 2026-06-08): key the Firestore subscription off stable
-  // scope primitives + `currentLevelId`, NOT the per-render `levelManager` object,
-  // so onSnapshot does not unsubscribe/re-subscribe on every render (target removed
-  // before ack → `INTERNAL ASSERTION FAILED ca9 {ve:-1}`). Mirror of the fitting hook.
-  const levelManagerRef = useRef(levelManager);
-  levelManagerRef.current = levelManager;
-  const currentLevelId = levelManager.currentLevelId;
-
-  // Instantiate service όταν auth + scope ready.
-  useEffect(() => {
-    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
-    if (!scope) {
-      serviceRef.current = null;
-      return;
-    }
-    serviceRef.current = createBeamFirestoreService({
-      companyId: scope.companyId,
-      projectId: scope.projectId,
-      floorplanId: scope.floorplanId,
-      floorId: scope.floorId,
-      userId: scope.userId,
-    });
-  }, [companyId, projectId, floorplanId, floorId, userId]);
-
-  // Subscribe + diff-merge + selective skip locally-dirty beams.
-  // Keyed on STABLE primitives only (scope + currentLevelId) — NOT the per-render
-  // `levelManager` object — so onSnapshot subscribes once per real scope/level
-  // change (ca9 churn fix).
-  useEffect(() => {
-    const svc = serviceRef.current;
-    const levelId = currentLevelId;
-    if (!svc || !levelId) return;
-
-    const unsubscribe = svc.subscribeBeams(
-      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`
-      // (μηδέν copy-pasted loop· mirror column/hatch). Beam δεν έχει write-grace →
-      // `isWithinGrace: () => false`.
-      (docs) => {
-        mergeDocsIntoScene<BeamDoc, BeamEntity, BeamEntity['params']>(
-          docs,
-          levelId,
-          levelManagerRef.current,
-          {
-            isEntity: isBeam,
-            docToEntity: beamDocToEntity,
-            entityComparable: (e) => e.params,
-            docComparable: (d) => d.params,
-          },
-          {
-            dirty: dirtyIdsRef.current,
-            deleted: deletedIdsRef.current,
-            pending: pendingFirstSaveIdsRef.current,
-            isWithinGrace: () => false,
-            lastSavedBaseline: lastSavedParamsRef.current,
-          },
-        );
-      },
-      (err: Error) => {
-        setError(err.message);
-        setSaveState('error');
-      },
-    );
-
-    return () => unsubscribe();
-  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
-
-  // Immediate persist body — one save + one audit per call. Always invoked through
-  // the serialized `persist` wrapper below so concurrent calls for the same id
-  // (e.g. same-tick create + move) run in order instead of clobbering each other.
-  const persistOnce = useCallback(async (entity: BeamEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
-    const isNew = prevParams === null;
-    setSaveState('saving');
-    setError(null);
-    try {
-      // ADR-397 — setDoc (saveBeam) only on first write (stamps immutable
-      // createdAt); existing beams go through updateBeam (updateDoc) so re-edits
-      // persist instead of being silently rejected → snapshot revert. Mirror wall/column.
-      if (isNew) {
-        await svc.saveBeam(entityToSaveInput(entity));
-      } else {
-        await svc.updateBeam(entity.id, {
-          params: entity.params,
-          validation: entity.validation,
-          geometry: entity.geometry,
-          layerId: entity.layerId,
-          // ADR-441 Slice GEN-BEAM — round-trip hosting bindings on every update
-          // (follow-move edits keep the born-bound link persisted).
-          guideBindings: entity.guideBindings,
-          // ADR-539 Φ3d — carry per-face appearance (paint via bim:entities-attached →
-          // useBimEntityMovedPersistEffect → εδώ) ώστε η βαφή να επιβιώνει του reload
-          // (updateDoc gap: χωρίς αυτό, re-edit χάνει το faceAppearance).
-          faceAppearance: entity.faceAppearance,
-        });
-      }
-      lastSavedParamsRef.current.set(entity.id, entity.params);
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-      void recordBeamChange(
-        isNew ? 'created' : 'updated',
-        entity,
-        { prevParams: prevParams ?? undefined },
-      );
-      if (companyId && projectId && buildingId) {
-        // ADR-449 Slice 4 — feed via beamBoqEntity (adds derived σοβά contribution
-        // όταν ενεργό· αλλιώς minimal payload = byte-identical προ-Slice-4).
-        const lm = levelManagerRef.current;
-        const lvlId = lm.currentLevelId;
-        const scene = lvlId ? lm.getLevelScene(lvlId) : null;
-        void bimToBoqBridge.upsertBoqItemForBim(
-          'beam',
-          beamBoqEntity(entity, scene),
-          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
-          isNew ? 'created' : 'updated',
-        );
-      }
-      if (floorplanId) EventBus.emit('bim:beam-persisted', { floorplanId });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'BEAM_SAVE_ERROR');
-      setSaveState('error');
-    }
-  }, [companyId, projectId, buildingId, floorId, floorplanId]);
-
-  // Serialized persist (ADR-390 Φ4 / N.7): chains concurrent saves for the same id
-  // so a same-tick create + move (or grip param-edit) sees the committed baseline →
-  // emits one `created` then an `updated` diff, instead of the create clobbering the
-  // move. Mirror of useColumnPersistence.
-  const persist = useCallback(
-    (entity: BeamEntity) =>
-      persistSerializerRef.current.run(entity.id, () => persistOnce(entity)),
-    [persistOnce],
-  );
-
-  // Auto-save debounce σε selected beam params change.
-  useEffect(() => {
-    const beam = primarySelectedBeam;
-    if (!beam || !serviceRef.current) return;
-    // ADR-390 — Bug A defense-in-depth.
-    const known = lastSavedParamsRef.current.has(beam.id);
-    const pendingBeam = pendingFirstSaveIdsRef.current.has(beam.id);
-    if (!known && !pendingBeam) return;
-    const lastSaved = lastSavedParamsRef.current.get(beam.id);
-    if (lastSaved && dequal(lastSaved, beam.params)) return;
-
-    dirtyIdsRef.current.add(beam.id);
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      void persist(beam);
-    }, AUTO_SAVE_DEBOUNCE_MS);
-
-    return () => {
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = null;
-      }
-    };
-  }, [primarySelectedBeam, persist]);
-
-  const saveNow = useCallback(async () => {
-    const beam = selectedBeamRef.current;
-    if (!beam) return;
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-    await persist(beam);
-  }, [persist]);
-
-  // Phase 5 — Delete beam: remove από Firestore + scene + audit.
-  const deleteBeam = useCallback(async (beamId: string) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const levelId = levelManager.currentLevelId;
-    if (!levelId) return;
-
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-
-    const scene = levelManager.getLevelScene(levelId);
-    const deletedEntity = scene?.entities.find((e) => e.id === beamId);
-
-    const deletedBeam = (deletedEntity && isBeam(deletedEntity)) ? deletedEntity : null;
-    try {
-      await svc.deleteBeam(beamId);
-      void recordBeamChange(
-        'deleted',
-        deletedBeam
-          ? { id: deletedBeam.id, kind: deletedBeam.kind, layerId: deletedBeam.layerId, params: deletedBeam.params }
-          : { id: beamId, kind: 'straight' },
-      );
-      void bimToBoqBridge.deleteBoqItemForBim(beamId, companyId ?? '');
-      if (floorplanId) EventBus.emit('bim:beam-persisted', { floorplanId });
-    } catch {
-      // Non-fatal: deletion failure silent — user retries.
-    }
-
-    if (scene) {
-      const nextEntities = scene.entities.filter((e) => e.id !== beamId);
-      levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
-    }
-
-    dirtyIdsRef.current.delete(beamId);
-    lastSavedParamsRef.current.delete(beamId);
-    pendingFirstSaveIdsRef.current.delete(beamId);
-    deletedIdsRef.current.add(beamId);
-  }, [levelManager, companyId, floorplanId]);
-
-  // ADR-390 — persistRestore: undo→Firestore re-create + audit 'restored'.
-  const persistRestore = useCallback(async (entity: BeamEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    setSaveState('saving');
-    setError(null);
-    try {
-      await svc.saveBeam(entityToSaveInput(entity));
-      lastSavedParamsRef.current.set(entity.id, entity.params);
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-      void recordBeamChange('restored', entity);
-      if (companyId && projectId && buildingId) {
-        // ADR-449 Slice 4 — same finish-aware feed για το restore path.
-        const lm = levelManagerRef.current;
-        const lvlId = lm.currentLevelId;
-        const scene = lvlId ? lm.getLevelScene(lvlId) : null;
-        void bimToBoqBridge.upsertBoqItemForBim(
-          'beam',
-          beamBoqEntity(entity, scene),
-          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
-          'created',
-        );
-      }
-      if (floorplanId) EventBus.emit('bim:beam-persisted', { floorplanId });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'BEAM_RESTORE_ERROR');
-      setSaveState('error');
-    }
-  }, [companyId, projectId, buildingId, floorId, floorplanId]);
-
-  // First-save listener — fires άμεσα για freshly drawn beams.
-  useEffect(() => {
-    const cleanup = EventBus.on('drawing:entity-created', (payload) => {
-      if (payload.tool !== 'beam') return;
-      const entity = payload.entity as BeamEntity | undefined;
-      if (!entity || (entity as { type?: string }).type !== 'beam') return;
-      if (!serviceRef.current) return;
-      pendingFirstSaveIdsRef.current.add(entity.id);
-      dirtyIdsRef.current.add(entity.id);
-      void persist(entity);
-    });
-    return cleanup;
-  }, [persist]);
-
-  // Param-edit persistence (ADR-390 Phase 4 — render==DB SSoT). A beam grip /
-  // ribbon param edit (commitBeamGripDrag etc.) emits `bim:beam-params-updated`
-  // but was persisted ONLY by the fragile 500ms selected-beam debounce — if the
-  // beam was deselected before it fired, the edit landed in the scene + `.scene.json`
-  // snapshot but NEVER in the per-entity doc → on reload the un-edited DB axis
-  // rendered (observed: a face-justified beam snapping back ~half-width). Persist
-  // immediately off the event (entity read from the live scene by id), so the edit
-  // reaches the SSoT regardless of selection/debounce timing. Mirror the first-save
-  // listener; `persist` is idempotent (no-op when params already saved).
-  useEffect(() => {
-    const cleanup = EventBus.on('bim:beam-params-updated', ({ beamId }) => {
-      if (!serviceRef.current) return;
-      const lm = levelManagerRef.current;
-      const levelId = lm.currentLevelId;
-      if (!levelId) return;
-      const entity = lm.getLevelScene(levelId)?.entities.find((e) => e.id === beamId);
-      if (!entity || !isBeam(entity)) return;
-      dirtyIdsRef.current.add(beamId);
-      void persist(entity);
-    });
-    return cleanup;
-  }, [persist]);
-
-  // Delete-requested listener (bridge emits μετά από confirm).
-  useEffect(() => {
-    const cleanup = EventBus.on('bim:beam-delete-requested', ({ beamId }) => {
-      void deleteBeam(beamId);
-    });
-    return cleanup;
-  }, [deleteBeam]);
-
-  useBimEntityMovedPersistEffect(isBeam, serviceRef, dirtyIdsRef, persist);
-  useBimEntityRestoredPersistEffect(
-    'beam',
-    isBeam,
-    serviceRef,
-    pendingFirstSaveIdsRef,
-    deletedIdsRef,
-    persistRestore,
-  );
-
-  // Unmount cleanup — flush pending timers.
-  useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, []);
-
+  const { saveState, lastSavedAt, error, saveNow, deleteEntity } = useBeamPersistenceBase({
+    companyId: params.companyId,
+    projectId: params.projectId,
+    floorplanId: params.floorplanId,
+    floorId: params.floorId,
+    buildingId: params.buildingId,
+    userId: params.userId,
+    levelManager: params.levelManager,
+    primarySelected: params.primarySelectedBeam,
+  } as BimEntityPersistenceParams<BeamEntity>);
   return useMemo(
-    () => ({ saveState, lastSavedAt, error, saveNow, deleteBeam }),
-    [saveState, lastSavedAt, error, saveNow, deleteBeam],
+    () => ({ saveState, lastSavedAt, error, saveNow, deleteBeam: deleteEntity }),
+    [saveState, lastSavedAt, error, saveNow, deleteEntity],
   );
 }

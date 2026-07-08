@@ -3,20 +3,23 @@
 /**
  * ADR-507 — Hatch Firestore persistence React adapter.
  *
- * Simplified mirror of `useFloorFinishPersistence` (ADR-419). The hatch is a FLAT
- * DXF primitive, so this slice handles only what fixes "draw → hard refresh →
- * hatch gone":
+ * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-594). Simplified
+ * mirror of `useFloorFinishPersistence` (ADR-419). The hatch is a FLAT DXF
+ * primitive, so this slice handles only what fixes "draw → hard refresh → hatch
+ * gone":
  *   - subscribe + diff-merge incoming Firestore docs
  *   - first-save on `drawing:complete` (tool: 'hatch')  ← NOT `drawing:entity-created`
  *   - 500ms auto-save debounce on selected hatch payload change
  *   - delete on `bim:hatch-delete-requested` (delete-tool + undo-of-create)
  *   - ADR-390 symmetric undo/redo: `bim:entity-restore-requested` ('hatch') → re-create
  *     doc με ίδιο id (create-redo + delete-undo). Reuse του `persist` ως `persistRestore`
- *     (η `isNew` διαδρομή ξαναγράφει με `setDoc` + ίδιο id) — μηδέν διπλότυπο.
- *   - ADR-507 §8 move/transform re-persist: `bim:entities-moved` (`useBimEntityMovedPersistEffect`,
- *     ίδιο SSoT με wall/beam/slab/column). Το MOVE tool / body-drag εκπέμπει το μετακινημένο
- *     hatch (νέο `boundaryPaths` + pattern anchors) → immediate persist από το payload,
- *     ΑΝΕΞΑΡΤΗΤΑ από selection (belt-and-suspenders με το auto-save-while-selected debounce).
+ *     (η `isNew` διαδρομή ξαναγράφει με `setDoc` + ίδιο id) — μηδέν διπλότυπο, δηλαδή
+ *     `restoreSilent` παραμένει OFF (default persistRestore = reuse persist logic).
+ *   - ADR-507 §8 move/transform re-persist: `bim:entities-moved`
+ *     (`useBimEntityMovedPersistEffect`, ίδιο SSoT με wall/beam/slab/column). Το MOVE
+ *     tool / body-drag εκπέμπει το μετακινημένο hatch (νέο `boundaryPaths` + pattern
+ *     anchors) → immediate persist από το payload, ΑΝΕΞΑΡΤΗΤΑ από selection
+ *     (belt-and-suspenders με το auto-save-while-selected debounce).
  *
  * ⚠️ The create event divergence is deliberate: hatch completes via
  * `completeEntity()` which emits `drawing:complete {tool, entityId, entity}`
@@ -24,17 +27,13 @@
  * `useSpecialTools` emits. Listening to the wrong event = silent never-first-save.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-507-hatch-creation-system.md
+ * @see docs/centralized-systems/reference/adrs/ADR-594-bim-entity-persistence-hook-ssot.md
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { dequal } from 'dequal';
+import { useMemo } from 'react';
 
-import type { SceneModel, HatchEntity } from '../../types/entities';
-import { DXF_TIMING } from '../../config/dxf-timing';
-import type { SceneWriteOrigin } from '../scene/scene-write-origin';
+import type { HatchEntity } from '../../types/entities';
 import { isHatchEntity } from '../../types/entities';
-import { EventBus } from '../../systems/events/EventBus';
-import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
   createHatchFirestoreService,
   hatchEntityToSaveInput,
@@ -44,28 +43,18 @@ import {
   type HatchDoc,
   type HatchDocData,
 } from '../../bim/hatch/hatch-firestore-service';
-import { useBimFirestoreWriteGrace } from './useBimFirestoreWriteGrace';
-import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
-import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
-import { mergeDocsIntoScene } from './merge-docs-into-scene';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
+import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
+import type {
+  BimEntityPersistenceParams,
+  BimEntitySaveState,
+} from './bim-entity-persistence-hook-types';
 
 // ============================================================================
-// CONSTANTS
+// PUBLIC API (unchanged)
 // ============================================================================
 
-const AUTO_SAVE_DEBOUNCE_MS = DXF_TIMING.persist.ENTITY_AUTOSAVE; // ADR-516
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-export type HatchSaveState = 'idle' | 'saving' | 'saved' | 'error';
-
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
-}
+export type HatchSaveState = BimEntitySaveState;
 
 export interface UseHatchPersistenceParams {
   readonly companyId: string | null;
@@ -74,7 +63,7 @@ export interface UseHatchPersistenceParams {
   readonly buildingId?: string;
   readonly floorId?: string;
   readonly userId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly primarySelected: HatchEntity | null;
 }
 
@@ -87,200 +76,60 @@ export interface UseHatchPersistenceResult {
 }
 
 // ============================================================================
-// HOOK
+// FACTORY CONFIG
 // ============================================================================
 
-export function useHatchPersistence(params: UseHatchPersistenceParams): UseHatchPersistenceResult {
-  const { companyId, projectId, floorplanId, floorId, userId, levelManager, primarySelected } = params;
+const useHatchPersistenceBase = createBimEntityPersistenceHook<
+  HatchFirestoreService,
+  HatchDoc,
+  HatchEntity,
+  HatchDocData
+>({
+  entityType: 'hatch',
+  restoreEntityType: 'hatch',
+  saveErrorKey: 'HATCH_SAVE_ERROR',
+  restoreErrorKey: 'HATCH_RESTORE_ERROR',
+  writeGrace: true,
+  typeGuard: isHatchEntity,
+  // ⚠️ hatch completes via `drawing:complete` (completeEntity.ts), NOT the
+  // `drawing:entity-created` default — listening to the wrong event = silent
+  // never-first-save.
+  createTrigger: { event: 'drawing:complete', tool: 'hatch' },
+  entityComparable: (e) => pickHatchData(e),
+  createService: (scope) => createHatchFirestoreService(scope),
+  service: {
+    save: (svc, e) => svc.saveHatch(hatchEntityToSaveInput(e)),
+    update: (svc, e) => svc.updateHatch(e.id, { data: pickHatchData(e), layerId: e.layerId }),
+    remove: (svc, id) => svc.deleteHatch(id),
+    subscribe: (svc, onDocs, onErr) =>
+      svc.subscribeHatches(onDocs as (docs: readonly HatchDoc[]) => void, onErr),
+  },
+  merge: {
+    mode: 'generic',
+    config: {
+      isEntity: isHatchEntity,
+      docToEntity: hatchDocToEntity,
+      entityComparable: (e) => pickHatchData(e),
+      docComparable: (d) => d.data,
+    },
+  },
+  deleteTrigger: {
+    event: 'bim:hatch-delete-requested',
+    getId: (p) => (p as { id?: string }).id,
+  },
+});
 
-  const [saveState, setSaveState] = useState<HatchSaveState>('idle');
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+// ============================================================================
+// HOOK (thin wrapper — preserves the public param/result names)
+// ============================================================================
 
-  const serviceRef = useRef<HatchFirestoreService | null>(null);
-  const dirtyIdsRef = useRef<Set<string>>(new Set());
-  const { recordWrite, isWithinGrace } = useBimFirestoreWriteGrace();
-  const lastSavedDataRef = useRef<Map<string, HatchDocData>>(new Map());
-  const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
-  const deletedIdsRef = useRef<Set<string>>(new Set());
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const selectedRef = useRef<HatchEntity | null>(null);
-  selectedRef.current = primarySelected;
-
-  // ⚡ STABILITY (ca9): key the Firestore subscription off stable scope primitives +
-  // `currentLevelId`, NOT the per-render `levelManager` object (mirror floor-finish).
-  const levelManagerRef = useRef(levelManager);
-  levelManagerRef.current = levelManager;
-  const currentLevelId = levelManager.currentLevelId;
-
-  // Instantiate service when auth + scope ready.
-  useEffect(() => {
-    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
-    if (!scope) {
-      serviceRef.current = null;
-      return;
-    }
-    serviceRef.current = createHatchFirestoreService({
-      companyId: scope.companyId,
-      projectId: scope.projectId,
-      floorplanId: scope.floorplanId,
-      floorId: scope.floorId,
-      userId: scope.userId,
-    });
-  }, [companyId, projectId, floorplanId, floorId, userId]);
-
-  // Subscribe + diff-merge (keyed on STABLE primitives only — ca9 churn fix).
-  useEffect(() => {
-    const svc = serviceRef.current;
-    const levelId = currentLevelId;
-    if (!svc || !levelId) return;
-
-    const unsubscribe = svc.subscribeHatches(
-      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `pickHatchData`
-      // (entity) ⇄ `doc.data` (μηδέν copy-pasted loop· mirror column/wall/…).
-      (docs: readonly HatchDoc[]) => {
-        mergeDocsIntoScene<HatchDoc, HatchEntity, HatchDocData>(
-          docs,
-          levelId,
-          levelManagerRef.current,
-          {
-            isEntity: isHatchEntity,
-            docToEntity: hatchDocToEntity,
-            entityComparable: (e) => pickHatchData(e),
-            docComparable: (d) => d.data,
-          },
-          {
-            dirty: dirtyIdsRef.current,
-            deleted: deletedIdsRef.current,
-            pending: pendingFirstSaveIdsRef.current,
-            isWithinGrace,
-            lastSavedBaseline: lastSavedDataRef.current,
-          },
-        );
-      },
-      (err: Error) => { setError(err.message); setSaveState('error'); },
-    );
-    return () => unsubscribe();
-  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
-
-  // Immediate persist.
-  const persist = useCallback(async (entity: HatchEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const isNew = !lastSavedDataRef.current.has(entity.id);
-    setSaveState('saving');
-    setError(null);
-    try {
-      if (isNew) {
-        await svc.saveHatch(hatchEntityToSaveInput(entity));
-      } else {
-        await svc.updateHatch(entity.id, { data: pickHatchData(entity), layerId: entity.layerId });
-      }
-      lastSavedDataRef.current.set(entity.id, pickHatchData(entity));
-      recordWrite(entity.id);
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'HATCH_SAVE_ERROR');
-      setSaveState('error');
-    }
-  }, []);
-
-  // Auto-save debounce.
-  useEffect(() => {
-    const entity = primarySelected;
-    if (!entity || !serviceRef.current) return;
-    const known = lastSavedDataRef.current.has(entity.id);
-    const pending = pendingFirstSaveIdsRef.current.has(entity.id);
-    if (!known && !pending) return;
-    const lastSaved = lastSavedDataRef.current.get(entity.id);
-    if (lastSaved && dequal(lastSaved, pickHatchData(entity))) return;
-
-    dirtyIdsRef.current.add(entity.id);
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => { void persist(entity); }, AUTO_SAVE_DEBOUNCE_MS);
-    return () => {
-      if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
-    };
-  }, [primarySelected, persist]);
-
-  const saveNow = useCallback(async () => {
-    const entity = selectedRef.current;
-    if (!entity) return;
-    if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
-    await persist(entity);
-  }, [persist]);
-
-  const deleteHatch = useCallback(async (id: string) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const levelId = levelManager.currentLevelId;
-    if (!levelId) return;
-    if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
-
-    try { await svc.deleteHatch(id); } catch { /* non-fatal */ }
-
-    const scene = levelManager.getLevelScene(levelId);
-    if (scene) {
-      const nextEntities = scene.entities.filter((e) => e.id !== id);
-      levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
-    }
-
-    dirtyIdsRef.current.delete(id);
-    lastSavedDataRef.current.delete(id);
-    pendingFirstSaveIdsRef.current.delete(id);
-    deletedIdsRef.current.add(id);
-  }, [levelManager]);
-
-  // First-save listener — `drawing:complete` (NOT `drawing:entity-created`).
-  useEffect(() => {
-    const cleanup = EventBus.on('drawing:complete', (payload) => {
-      if (payload.tool !== 'hatch') return;
-      const entity = payload.entity;
-      if (!entity || entity.type !== 'hatch') return;
-      if (!serviceRef.current) return;
-      pendingFirstSaveIdsRef.current.add(entity.id);
-      dirtyIdsRef.current.add(entity.id);
-      void persist(entity as HatchEntity);
-    });
-    return cleanup;
-  }, [persist]);
-
-  // Delete-requested listener (delete-tool + undo-of-create).
-  useEffect(() => {
-    const cleanup = EventBus.on('bim:hatch-delete-requested', (payload) => {
-      if (payload.id) void deleteHatch(payload.id);
-    });
-    return cleanup;
-  }, [deleteHatch]);
-
-  // ADR-390 — restore-requested listener (create-redo + delete-undo). Reuse `persist`
-  // ως `persistRestore`: μετά από delete/undo το `lastSavedDataRef` δεν έχει το id →
-  // η `isNew` διαδρομή ξαναγράφει το doc με ίδιο id (`setDoc`). Ο effect κάνει ήδη
-  // `pendingFirstSaveIdsRef.add` + `deletedIdsRef.delete` ώστε ο subscribe-loop να μην
-  // πετάξει/μπλοκάρει το entity στο race με το Firestore Watch.
-  useBimEntityRestoredPersistEffect(
-    'hatch',
-    isHatchEntity,
-    serviceRef,
-    pendingFirstSaveIdsRef,
-    deletedIdsRef,
-    persist,
-  );
-
-  // ADR-507 §8 — move/transform re-persist από το `bim:entities-moved` payload (ίδιο SSoT
-  // effect με wall/beam/slab/column). Πιάνει τη μετακίνηση ακόμη κι αν το hatch αποεπιλεγεί
-  // πριν λήξει το auto-save debounce (belt-and-suspenders).
-  useBimEntityMovedPersistEffect(isHatchEntity, serviceRef, dirtyIdsRef, persist);
-
-  useEffect(() => {
-    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
-  }, []);
-
+export function useHatchPersistence(
+  params: UseHatchPersistenceParams,
+): UseHatchPersistenceResult {
+  const { saveState, lastSavedAt, error, saveNow, deleteEntity } =
+    useHatchPersistenceBase(params as BimEntityPersistenceParams<HatchEntity>);
   return useMemo(
-    () => ({ saveState, lastSavedAt, error, saveNow, deleteHatch }),
-    [saveState, lastSavedAt, error, saveNow, deleteHatch],
+    () => ({ saveState, lastSavedAt, error, saveNow, deleteHatch: deleteEntity }),
+    [saveState, lastSavedAt, error, saveNow, deleteEntity],
   );
 }

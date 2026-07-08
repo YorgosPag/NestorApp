@@ -21,15 +21,10 @@ import { UpdateStairParamsCommand } from '../../../core/commands/entity-commands
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import type { StairEntity } from '../../../types/entities';
 import type { StairParams } from '../../../bim/types/stair-types';
-import type { useLevels } from '../../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 
 export interface UseStairParamsDispatcherProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 export type StairParamsPatch = Partial<StairParams>;

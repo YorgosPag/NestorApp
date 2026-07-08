@@ -22,7 +22,7 @@
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { WallEntity } from '../../bim/types/wall-types';
-import type { useLevels } from '../../systems/levels';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import type { UseWallPersistenceResult } from '../../hooks/data/useWallPersistence';
 import { WallWarningsSection } from './sections/WallWarningsSection';
 import { WallPersistenceSection } from './sections/WallPersistenceSection';
@@ -31,16 +31,11 @@ import { WallDnaSection } from './sections/WallDnaSection';
 import type { DispatchWallParamPatch } from './commands/dispatchWallParamPatch';
 import { useDnaMaterialOptions } from './hooks/useDnaMaterialOptions';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface WallAdvancedPanelProps {
   readonly wall: WallEntity;
   readonly dispatchPatch: DispatchWallParamPatch;
   readonly userId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly persistence?: UseWallPersistenceResult;
   readonly containerClassName?: string;
   readonly hideHeader?: boolean;
