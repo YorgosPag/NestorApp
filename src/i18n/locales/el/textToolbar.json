@@ -1,20 +1,7 @@
 {
-  "rootLabel": "Εργαλειοθήκη κειμένου",
   "denyReason": {
     "insufficientRole": "Δεν επιτρέπεται η επεξεργασία κειμένου για τον ρόλο σας",
     "notAuthenticated": "Πρέπει να συνδεθείτε για να επεξεργαστείτε κείμενο"
-  },
-  "section": {
-    "style": "Στυλ",
-    "formatting": "Μορφοποίηση",
-    "paragraph": "Παράγραφος",
-    "layer": "Επίπεδο",
-    "insert": "Εισαγωγή",
-    "tools": "Εργαλεία"
-  },
-  "properties": {
-    "label": "Ιδιότητες κειμένου",
-    "title": "Ιδιότητες"
   },
   "annotationScale": {
     "title": "Κλίμακα Σχολιασμού",
@@ -61,13 +48,6 @@
     "obliqueLabel": "Κλίση",
     "trackingLabel": "Διάστιχο"
   },
-  "style": {
-    "bold": "Έντονα",
-    "italic": "Πλάγια",
-    "underline": "Υπογράμμιση",
-    "overline": "Υπεργράμμιση",
-    "strikethrough": "Διαγράμμιση"
-  },
   "justification": {
     "label": "Στοίχιση",
     "TL": "Πάνω αριστερά",
@@ -94,21 +74,10 @@
       "at-least": "Τουλάχιστον"
     }
   },
-  "layer": {
-    "label": "Επίπεδο",
-    "mixed": "Μεικτό",
-    "placeholder": "Επιλογή επιπέδου…",
-    "zeroFallback": "Επίπεδο 0"
-  },
   "insert": {
     "stack": "Εισαγωγή στοίβας",
     "diameter": "Διάμετρος",
     "degree": "Μοίρες",
     "plusMinus": "Συν-Πλήν"
-  },
-  "tools": {
-    "eyedropper": "Αντιστοίχιση ιδιοτήτων",
-    "findReplace": "Εύρεση / Αντικατάσταση",
-    "voice": "Φωνητική εισαγωγή"
   }
 }
