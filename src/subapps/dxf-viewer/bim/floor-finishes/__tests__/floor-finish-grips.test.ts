@@ -10,6 +10,7 @@ import {
 } from '../floor-finish-grips';
 import type { FloorFinishEntity, FloorFinishParams } from '../../types/floor-finish-types';
 import { DEFAULT_FLOOR_FINISH_LAYER_THICKNESS_MM, DEFAULT_FLOOR_FINISH_MATERIAL_ID } from '../../types/floor-finish-types';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -82,15 +83,15 @@ describe('getFloorFinishGrips()', () => {
   it('vertex grips have correct gripKind', () => {
     const entity = makeSquareEntity();
     const grips = getFloorFinishGrips(entity);
-    expect(grips[0].floorFinishGripKind).toBe('floor-finish-vertex-0');
-    expect(grips[3].floorFinishGripKind).toBe('floor-finish-vertex-3');
+    expect(gripKindOf(grips[0], 'floor-finish')).toBe('floor-finish-vertex-0');
+    expect(gripKindOf(grips[3], 'floor-finish')).toBe('floor-finish-vertex-3');
   });
 
   it('midpoint grips have correct gripKind', () => {
     const entity = makeSquareEntity();
     const grips = getFloorFinishGrips(entity);
-    expect(grips[4].floorFinishGripKind).toBe('floor-finish-edge-midpoint-0');
-    expect(grips[7].floorFinishGripKind).toBe('floor-finish-edge-midpoint-3');
+    expect(gripKindOf(grips[4], 'floor-finish')).toBe('floor-finish-edge-midpoint-0');
+    expect(gripKindOf(grips[7], 'floor-finish')).toBe('floor-finish-edge-midpoint-3');
   });
 });
 

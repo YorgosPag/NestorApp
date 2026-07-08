@@ -108,10 +108,10 @@ export function rectColumnCornerGrips(entity: Readonly<ColumnEntity>): GripInfo[
   const cw = (sx: number, sy: number): Point2D =>
     localToWorld({ x: (sx * params.width) / 2, y: (sy * params.depth) / 2 }, params);
   return [
-    { entityId: entity.id, gripIndex: 4, type: 'vertex', position: cw(1, 1), movesEntity: false, columnGripKind: 'column-corner-ne' },
-    { entityId: entity.id, gripIndex: 5, type: 'vertex', position: cw(-1, 1), movesEntity: false, columnGripKind: 'column-corner-nw' },
-    { entityId: entity.id, gripIndex: 6, type: 'vertex', position: cw(-1, -1), movesEntity: false, columnGripKind: 'column-corner-sw' },
-    { entityId: entity.id, gripIndex: 7, type: 'vertex', position: cw(1, -1), movesEntity: false, columnGripKind: 'column-corner-se' },
+    { entityId: entity.id, gripIndex: 4, type: 'vertex', position: cw(1, 1), movesEntity: false, gripKind: { on: 'column', kind: 'column-corner-ne' } },
+    { entityId: entity.id, gripIndex: 5, type: 'vertex', position: cw(-1, 1), movesEntity: false, gripKind: { on: 'column', kind: 'column-corner-nw' } },
+    { entityId: entity.id, gripIndex: 6, type: 'vertex', position: cw(-1, -1), movesEntity: false, gripKind: { on: 'column', kind: 'column-corner-sw' } },
+    { entityId: entity.id, gripIndex: 7, type: 'vertex', position: cw(1, -1), movesEntity: false, gripKind: { on: 'column', kind: 'column-corner-se' } },
   ];
 }
 
@@ -132,11 +132,11 @@ export function rectColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] {
   return [
     // ADR-518 — center MOVE via shared `columnCenterMoveGrip` SSoT (was inline).
     columnCenterMoveGrip(entity),
-    { entityId: id, gripIndex: 1, type: 'vertex', position: rotationHandleWorld(params), movesEntity: false, columnGripKind: 'column-rotation' },
-    { entityId: id, gripIndex: 2, type: 'edge', position: widthHandleWorld(params), movesEntity: false, columnGripKind: 'column-width' },
-    { entityId: id, gripIndex: 3, type: 'edge', position: depthHandleWorld(params), movesEntity: false, columnGripKind: 'column-depth' },
-    { entityId: id, gripIndex: 8, type: 'edge', position: localToWorld({ x: -params.width / 2, y: 0 }, params), movesEntity: false, columnGripKind: 'column-edge-w' },
-    { entityId: id, gripIndex: 9, type: 'edge', position: localToWorld({ x: 0, y: -params.depth / 2 }, params), movesEntity: false, columnGripKind: 'column-edge-s' },
+    { entityId: id, gripIndex: 1, type: 'vertex', position: rotationHandleWorld(params), movesEntity: false, gripKind: { on: 'column', kind: 'column-rotation' } },
+    { entityId: id, gripIndex: 2, type: 'edge', position: widthHandleWorld(params), movesEntity: false, gripKind: { on: 'column', kind: 'column-width' } },
+    { entityId: id, gripIndex: 3, type: 'edge', position: depthHandleWorld(params), movesEntity: false, gripKind: { on: 'column', kind: 'column-depth' } },
+    { entityId: id, gripIndex: 8, type: 'edge', position: localToWorld({ x: -params.width / 2, y: 0 }, params), movesEntity: false, gripKind: { on: 'column', kind: 'column-edge-w' } },
+    { entityId: id, gripIndex: 9, type: 'edge', position: localToWorld({ x: 0, y: -params.depth / 2 }, params), movesEntity: false, gripKind: { on: 'column', kind: 'column-edge-s' } },
     ...rectColumnCornerGrips(entity),
   ];
 }

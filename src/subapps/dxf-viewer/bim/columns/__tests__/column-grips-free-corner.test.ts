@@ -17,6 +17,7 @@ import { computeColumnGeometry } from '../../geometry/column-geometry';
 import { buildDefaultColumnParams } from '../../../hooks/drawing/column-completion';
 import { computeStructuralFinishSilhouette } from '../../finishes/structural-finish-scene-silhouette';
 import { pointInPolygon } from '../../geometry/shared/polygon-utils';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 import type { ColumnEntity, ColumnParams } from '../../types/column-types';
 
 function makeLshape(): ColumnEntity {
@@ -68,16 +69,16 @@ describe('column free per-corner reshape — emission (T-shape) [PHASE 2]', () =
     const ent = makeTshape();
     const verts = ent.geometry.footprint.vertices;
     const grips = getColumnGrips(ent);
-    expect(grips[0].columnGripKind).toBe('column-center'); // ADR-520 — σταυρός μετακίνησης
-    expect(grips[1].columnGripKind).toBe('column-rotation');
-    expect(grips.slice(2).map((g) => g.columnGripKind)).toEqual([
+    expect(gripKindOf(grips[0], 'column')).toBe('column-center'); // ADR-520 — σταυρός μετακίνησης
+    expect(gripKindOf(grips[1], 'column')).toBe('column-rotation');
+    expect(grips.slice(2).map((g) => gripKindOf(g, 'column'))).toEqual([
       ...verts.map((_, i) => `column-poly-vertex-${i}`),
       ...verts.map((_, i) => `column-poly-edge-${i}`),
     ]);
   });
 
   it('αντικαθιστά τα παραμετρικά T-grips (ΟΧΙ width/depth/flange/web) στο free mode', () => {
-    const kinds = getColumnGrips(makeTshape()).map((g) => g.columnGripKind);
+    const kinds = getColumnGrips(makeTshape()).map((g) => gripKindOf(g, 'column'));
     expect(kinds).not.toContain('column-width');
     expect(kinds).not.toContain('column-depth');
     expect(kinds).not.toContain('column-flange-length');
@@ -97,7 +98,7 @@ describe('column free per-corner reshape — emission (T-shape) [PHASE 2]', () =
 
   it('η λαβή περιστροφής κάθεται σε ΕΣΩΤΕΡΙΚΟ σημείο της διατομής T', () => {
     const ent = makeTshape();
-    const rot = getColumnGrips(ent).find((g) => g.columnGripKind === 'column-rotation');
+    const rot = getColumnGrips(ent).find((g) => gripKindOf(g, 'column') === 'column-rotation');
     const poly3 = ent.geometry.footprint.vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
     expect(rot).toBeDefined();
     expect(pointInPolygon(rot!.position, poly3)).toBe(true);
@@ -109,9 +110,9 @@ describe('column free per-corner reshape — emission (L-shape)', () => {
     const ent = makeLshape();
     const verts = ent.geometry.footprint.vertices;
     const grips = getColumnGrips(ent);
-    expect(grips[0].columnGripKind).toBe('column-center'); // ADR-520 — σταυρός μετακίνησης
-    expect(grips[1].columnGripKind).toBe('column-rotation');
-    expect(grips.slice(2).map((g) => g.columnGripKind)).toEqual([
+    expect(gripKindOf(grips[0], 'column')).toBe('column-center'); // ADR-520 — σταυρός μετακίνησης
+    expect(gripKindOf(grips[1], 'column')).toBe('column-rotation');
+    expect(grips.slice(2).map((g) => gripKindOf(g, 'column'))).toEqual([
       ...verts.map((_, i) => `column-poly-vertex-${i}`),
       ...verts.map((_, i) => `column-poly-edge-${i}`),
     ]);
@@ -121,7 +122,7 @@ describe('column free per-corner reshape — emission (L-shape)', () => {
     const ent = makeLshape();
     const verts = ent.geometry.footprint.vertices;
     const grips = getColumnGrips(ent);
-    const edgeGrips = grips.filter((g) => g.columnGripKind?.startsWith('column-poly-edge-'));
+    const edgeGrips = grips.filter((g) => gripKindOf(g, 'column')?.startsWith('column-poly-edge-'));
     expect(edgeGrips).toHaveLength(verts.length);
     edgeGrips.forEach((g, i) => {
       const w = verts[(i + 1) % verts.length];
@@ -131,7 +132,7 @@ describe('column free per-corner reshape — emission (L-shape)', () => {
   });
 
   it('αντικαθιστά τα παραμετρικά grips (ΟΧΙ width/depth/arm) στο free mode', () => {
-    const kinds = getColumnGrips(makeLshape()).map((g) => g.columnGripKind);
+    const kinds = getColumnGrips(makeLshape()).map((g) => gripKindOf(g, 'column'));
     expect(kinds).not.toContain('column-width');
     expect(kinds).not.toContain('column-depth');
     expect(kinds).not.toContain('column-arm-length');
@@ -150,7 +151,7 @@ describe('column free per-corner reshape — emission (L-shape)', () => {
 
   it('η λαβή περιστροφής κάθεται σε ΕΣΩΤΕΡΙΚΟ σημείο της διατομής (ΟΧΙ στην εγκοπή)', () => {
     const ent = makeLshape();
-    const rot = getColumnGrips(ent).find((g) => g.columnGripKind === 'column-rotation');
+    const rot = getColumnGrips(ent).find((g) => gripKindOf(g, 'column') === 'column-rotation');
     const poly3 = ent.geometry.footprint.vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
     expect(rot).toBeDefined();
     expect(pointInPolygon(rot!.position, poly3)).toBe(true);
@@ -189,7 +190,7 @@ describe('ADR-520 — center MOVE cross on free-reshape / composite columns', ()
   it('composite εκπέμπει τον σταυρό μετακίνησης (column-center, movesEntity) ΜΕΣΑ στο σώμα', () => {
     const ent = makeComposite();
     const grips = getColumnGrips(ent);
-    const center = grips.find((g) => g.columnGripKind === 'column-center');
+    const center = grips.find((g) => gripKindOf(g, 'column') === 'column-center');
     expect(center).toBeDefined();
     expect(center!.type).toBe('center');
     expect(center!.movesEntity).toBe(true);
@@ -200,8 +201,8 @@ describe('ADR-520 — center MOVE cross on free-reshape / composite columns', ()
   it('ο σταυρός μετακίνησης ΔΕΝ συμπίπτει με τη λαβή περιστροφής (χωριστά σημεία)', () => {
     for (const ent of [makeComposite(), makeLshape(), makeTshape()]) {
       const grips = getColumnGrips(ent);
-      const center = grips.find((g) => g.columnGripKind === 'column-center')!;
-      const rot = grips.find((g) => g.columnGripKind === 'column-rotation')!;
+      const center = grips.find((g) => gripKindOf(g, 'column') === 'column-center')!;
+      const rot = grips.find((g) => gripKindOf(g, 'column') === 'column-rotation')!;
       const dist = Math.hypot(center.position.x - rot.position.x, center.position.y - rot.position.y);
       expect(dist).toBeGreaterThan(1); // ξεχωριστά, όχι επικάλυψη
       // Και τα δύο μέσα στο σώμα (η περιστροφή φραγμένη από clearance).

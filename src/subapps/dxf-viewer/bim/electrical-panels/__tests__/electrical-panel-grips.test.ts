@@ -9,6 +9,7 @@
 import { getElectricalPanelGrips, applyElectricalPanelGripDrag } from '../electrical-panel-grips';
 import type { ElectricalPanelEntity, ElectricalPanelParams } from '../../types/electrical-panel-types';
 import { MIN_PANEL_DIMENSION_MM } from '../../types/electrical-panel-types';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 
 const baseParams: ElectricalPanelParams = {
   kind: 'distribution-board',
@@ -34,7 +35,7 @@ describe('getElectricalPanelGrips', () => {
   // ADR-363 Φ1G.5 Slice 2: move grip removed from emission → 5 grips, rotation first.
   it('emits 5 grips for a rectangular panel in stable order', () => {
     const grips = getElectricalPanelGrips(entityWith());
-    expect(grips.map((g) => g.electricalPanelGripKind)).toEqual([
+    expect(grips.map((g) => gripKindOf(g, 'electrical-panel'))).toEqual([
       'electrical-panel-rotation',
       'electrical-panel-corner-ne',
       'electrical-panel-corner-nw',
@@ -46,7 +47,7 @@ describe('getElectricalPanelGrips', () => {
   // ADR-363 Φ1G.5 Slice 2: move grip no longer emitted — assert only corners.
   it('places corners at ±half-extents (rotation 0)', () => {
     const grips = getElectricalPanelGrips(entityWith());
-    const byKind = Object.fromEntries(grips.map((g) => [g.electricalPanelGripKind, g.position]));
+    const byKind = Object.fromEntries(grips.map((g) => [gripKindOf(g, 'electrical-panel'), g.position]));
     expect(byKind['electrical-panel-corner-ne']).toEqual({ x: 1300, y: 2300 });
     expect(byKind['electrical-panel-corner-nw']).toEqual({ x: 700, y: 2300 });
     expect(byKind['electrical-panel-corner-sw']).toEqual({ x: 700, y: 1700 });

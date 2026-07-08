@@ -195,7 +195,6 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
       type: g.type,
       position: g.position,
       movesEntity: false,
-      beamGripKind: BEAM_ROLE_TO_KIND[g.role],
       gripKind: { on: 'beam', kind: BEAM_ROLE_TO_KIND[g.role] },
     }));
 
@@ -213,7 +212,7 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
     grips.push({
       entityId: entity.id, gripIndex: grips.length, type: 'center',
       position: bodyCenter,
-      movesEntity: true, beamGripKind: 'beam-midpoint',
+      movesEntity: true,
       gripKind: { on: 'beam', kind: 'beam-midpoint' },
     });
     return grips;
@@ -226,21 +225,21 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
   const end = project2D(params.endPoint);
   const mid = axisMidpoint2D(params);
 
-  grips.push({ entityId: entity.id, gripIndex: 0, type: 'vertex', position: start, movesEntity: false, beamGripKind: 'beam-start', gripKind: { on: 'beam', kind: 'beam-start' } });
-  grips.push({ entityId: entity.id, gripIndex: 1, type: 'vertex', position: end, movesEntity: false, beamGripKind: 'beam-end', gripKind: { on: 'beam', kind: 'beam-end' } });
+  grips.push({ entityId: entity.id, gripIndex: 0, type: 'vertex', position: start, movesEntity: false, gripKind: { on: 'beam', kind: 'beam-start' } });
+  grips.push({ entityId: entity.id, gripIndex: 1, type: 'vertex', position: end, movesEntity: false, gripKind: { on: 'beam', kind: 'beam-end' } });
 
   // 2 — centre 4-arrow MOVE glyph (column parity, Giorgio 2026-06-20). Moves
   // start + end + curveControl together (see `moveMidpoint`).
-  grips.push({ entityId: entity.id, gripIndex: 2, type: 'center', position: mid, movesEntity: true, beamGripKind: 'beam-midpoint', gripKind: { on: 'beam', kind: 'beam-midpoint' } });
+  grips.push({ entityId: entity.id, gripIndex: 2, type: 'center', position: mid, movesEntity: true, gripKind: { on: 'beam', kind: 'beam-midpoint' } });
 
   // 3 — curve control. Seed στο midpoint όταν undefined.
   const curvePos = params.curveControl ? project2D(params.curveControl) : mid;
-  grips.push({ entityId: entity.id, gripIndex: 3, type: 'vertex', position: curvePos, movesEntity: false, beamGripKind: 'beam-curve', gripKind: { on: 'beam', kind: 'beam-curve' } });
+  grips.push({ entityId: entity.id, gripIndex: 3, type: 'vertex', position: curvePos, movesEntity: false, gripKind: { on: 'beam', kind: 'beam-curve' } });
 
   // 4 — width dimension handle (mid-axis offset κατά width/2). Skip σε degenerate axis.
   const widthPos = beamWidthHandlePosition(params);
   if (widthPos) {
-    grips.push({ entityId: entity.id, gripIndex: 4, type: 'edge', position: widthPos, movesEntity: false, beamGripKind: 'beam-width', gripKind: { on: 'beam', kind: 'beam-width' } });
+    grips.push({ entityId: entity.id, gripIndex: 4, type: 'edge', position: widthPos, movesEntity: false, gripKind: { on: 'beam', kind: 'beam-width' } });
   }
 
   // 5 — rotation handle (axis fraction 0.75, scale-free). Spins start/end/curveControl.
@@ -251,7 +250,6 @@ export function getBeamGrips(entity: Readonly<BeamEntity>): GripInfo[] {
       type: 'vertex',
       position: { x: start.x + 0.75 * (end.x - start.x), y: start.y + 0.75 * (end.y - start.y) },
       movesEntity: false,
-      beamGripKind: 'beam-rotation',
       gripKind: { on: 'beam', kind: 'beam-rotation' },
     });
   }

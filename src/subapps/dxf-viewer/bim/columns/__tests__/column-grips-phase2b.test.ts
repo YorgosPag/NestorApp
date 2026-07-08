@@ -17,6 +17,7 @@ import { applyColumnGripDrag, getColumnGrips } from '../column-grips';
 import { polyVertexHandlePosition } from '../column-poly-vertex-grips';
 import { materializeUshape } from '../column-variant-grips';
 import { buildDefaultColumnParams } from '../../../hooks/drawing/column-completion';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 import type { ColumnEntity, ColumnParams } from '../../types/column-types';
 import type { Point2D } from '../../../rendering/types/Types';
 
@@ -71,7 +72,7 @@ describe('column-grips Phase 2b — emission', () => {
   // ADR-363 Φ1G.5 Slice 2: column-center removed → 5 grips (rotation + width + depth + leg + base)
   it('manual παραμετρικό Π → 5 grips (rotation + width + depth + leg + base thickness)', () => {
     const grips = getColumnGrips(makeUparametric());
-    expect(grips.map((g) => g.columnGripKind)).toEqual([
+    expect(grips.map((g) => gripKindOf(g, 'column'))).toEqual([
       'column-rotation',
       'column-width',
       'column-depth',
@@ -83,7 +84,7 @@ describe('column-grips Phase 2b — emission', () => {
   // ADR-520 — free reshape: center MOVE + rotation + ΜΙΑ λαβή/κορυφή + ΜΙΑ λαβή/μέσο-πλευράς (ΟΧΙ width/depth)
   it('polygon-backed composite → center + rotation + λαβή/κορυφή + λαβή/μέσο-πλευράς', () => {
     const grips = getColumnGrips(makeComposite());
-    expect(grips.map((g) => g.columnGripKind)).toEqual([
+    expect(grips.map((g) => gripKindOf(g, 'column'))).toEqual([
       'column-center', // ADR-520 — σταυρός μετακίνησης (4 αυτόνομα βελάκια)
       'column-rotation',
       'column-poly-vertex-0',
@@ -102,7 +103,7 @@ describe('column-grips Phase 2b — emission', () => {
       ...makeUparametric().params,
       ushape: { polygon: SQUARE },
     });
-    const kinds = getColumnGrips(u).map((g) => g.columnGripKind);
+    const kinds = getColumnGrips(u).map((g) => gripKindOf(g, 'column'));
     expect(kinds).toContain('column-poly-vertex-0');
     expect(kinds).not.toContain('column-width');
     expect(kinds).not.toContain('column-depth');

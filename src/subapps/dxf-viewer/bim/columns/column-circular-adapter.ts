@@ -82,7 +82,7 @@ export function circularColumnGrips(entity: Readonly<ColumnEntity>): GripInfo[] 
     type: 'vertex',
     position: circularQuadrantWorld(params, axis, sign),
     movesEntity: false,
-    columnGripKind,
+    gripKind: { on: 'column', kind: columnGripKind },
   });
   return [
     columnCenterMoveGrip(entity),

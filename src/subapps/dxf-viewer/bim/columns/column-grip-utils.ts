@@ -120,7 +120,7 @@ export function columnCenterMoveGrip(
     type: 'center',
     position: position ?? computeCentroidWorld(entity.params),
     movesEntity: true,
-    columnGripKind: 'column-center',
+    gripKind: { on: 'column', kind: 'column-center' },
   };
 }
 

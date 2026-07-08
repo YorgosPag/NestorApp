@@ -218,7 +218,6 @@ export function freeCornerReshapeGrips(entity: Readonly<ColumnEntity>): GripInfo
     // emission ≡ drag, μηδέν jump). Φράγμα clearance → πάντα μέσα στο σώμα.
     position: n >= 3 ? freeReshapeRotationWorld(entity.params) : rotationHandleWorld(entity.params),
     movesEntity: false,
-    columnGripKind: 'column-rotation',
     gripKind: { on: 'column', kind: 'column-rotation' },
   });
   grips.push(...perVertexAndEdgeGrips(entity, verts));
@@ -245,7 +244,6 @@ function perVertexAndEdgeGrips(
       type: 'corner',
       position: { x: v.x, y: v.y },
       movesEntity: false,
-      columnGripKind: `column-poly-vertex-${i}`,
       gripKind: { on: 'column', kind: `column-poly-vertex-${i}` },
     });
   });
@@ -258,7 +256,6 @@ function perVertexAndEdgeGrips(
       type: 'edge',
       position: { x: (v.x + w.x) / 2, y: (v.y + w.y) / 2 },
       movesEntity: false,
-      columnGripKind: `column-poly-edge-${i}`,
       gripKind: { on: 'column', kind: `column-poly-edge-${i}` },
     });
   });
@@ -288,7 +285,6 @@ export function polygonReshapeGrips(entity: Readonly<ColumnEntity>): GripInfo[] 
       type: 'vertex',
       position: rotationHandleWorld(entity.params),
       movesEntity: false,
-      columnGripKind: 'column-rotation',
       gripKind: { on: 'column', kind: 'column-rotation' },
     },
     ...perVertexAndEdgeGrips(entity, verts),
