@@ -27,6 +27,7 @@ import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
 import type {
   SlabGripKind, RoofGripKind, FloorFinishGripKind, SlabOpeningGripKind,
 } from '../../hooks/grip-types';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { removeVertexFromSlab, applySlabGripDrag } from '../../bim/slabs/slab-grips';
 import { removeVertexFromRoof, applyRoofGripDrag } from '../../bim/roofs/roof-grips';
 import { removeVertexFromFloorFinish, applyFloorFinishGripDrag } from '../../bim/floor-finishes/floor-finish-grips';
@@ -90,41 +91,45 @@ export function buildFootprintVertexOpCommand(
   const raw = sceneManager.getEntity(id);
   if (!raw) return null;
 
-  if (grip.slabGripKind) {
+  const slabKind = gripKindOf(grip, 'slab');
+  if (slabKind) {
     const e = raw as unknown as Partial<SlabEntity>;
     if (e.type !== 'slab' || !e.params) return null;
     return runFootprintOp({
-      kind: grip.slabGripKind, vertexPrefix: 'slab-vertex-', edgePrefix: 'slab-edge-midpoint-',
+      kind: slabKind, vertexPrefix: 'slab-vertex-', edgePrefix: 'slab-edge-midpoint-',
       params: e.params, removeVertex: removeVertexFromSlab,
       insertAtEdge: (k, p) => applySlabGripDrag(k as SlabGripKind, { originalParams: p, delta: ZERO }),
       makeCommand: (next, prev) => new UpdateSlabParamsCommand(id, next, prev, sceneManager, false),
     }, op);
   }
-  if (grip.roofGripKind) {
+  const roofKind = gripKindOf(grip, 'roof');
+  if (roofKind) {
     const e = raw as unknown as Partial<RoofEntity>;
     if (e.type !== 'roof' || !e.params) return null;
     return runFootprintOp({
-      kind: grip.roofGripKind, vertexPrefix: 'roof-vertex-', edgePrefix: 'roof-edge-midpoint-',
+      kind: roofKind, vertexPrefix: 'roof-vertex-', edgePrefix: 'roof-edge-midpoint-',
       params: e.params, removeVertex: removeVertexFromRoof,
       insertAtEdge: (k, p) => applyRoofGripDrag(k as RoofGripKind, { originalParams: p, delta: ZERO }),
       makeCommand: (next, prev) => new UpdateRoofParamsCommand(id, next, prev, sceneManager, false),
     }, op);
   }
-  if (grip.floorFinishGripKind) {
+  const floorFinishKind = gripKindOf(grip, 'floor-finish');
+  if (floorFinishKind) {
     const e = raw as unknown as Partial<FloorFinishEntity>;
     if (e.type !== 'floor-finish' || !e.params) return null;
     return runFootprintOp({
-      kind: grip.floorFinishGripKind, vertexPrefix: 'floor-finish-vertex-', edgePrefix: 'floor-finish-edge-midpoint-',
+      kind: floorFinishKind, vertexPrefix: 'floor-finish-vertex-', edgePrefix: 'floor-finish-edge-midpoint-',
       params: e.params, removeVertex: removeVertexFromFloorFinish,
       insertAtEdge: (k, p) => applyFloorFinishGripDrag(k as FloorFinishGripKind, { originalParams: p, delta: ZERO }),
       makeCommand: (next, prev) => new UpdateFloorFinishParamsCommand(id, next, prev, sceneManager, false),
     }, op);
   }
-  if (grip.slabOpeningGripKind) {
+  const slabOpeningKind = gripKindOf(grip, 'slab-opening');
+  if (slabOpeningKind) {
     const e = raw as unknown as Partial<SlabOpeningEntity>;
     if (e.type !== 'slab-opening' || !e.params) return null;
     return runFootprintOp({
-      kind: grip.slabOpeningGripKind, vertexPrefix: 'slab-opening-vertex-', edgePrefix: 'slab-opening-edge-midpoint-',
+      kind: slabOpeningKind, vertexPrefix: 'slab-opening-vertex-', edgePrefix: 'slab-opening-edge-midpoint-',
       params: e.params, removeVertex: removeVertexFromSlabOpening,
       insertAtEdge: (k, p) => applySlabOpeningGripDrag(k as SlabOpeningGripKind, { originalParams: p, delta: ZERO }),
       makeCommand: (next, prev) => new UpdateSlabOpeningParamsCommand(id, next, prev, sceneManager, false),

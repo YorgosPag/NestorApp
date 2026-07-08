@@ -25,7 +25,7 @@ export function getXLineGrips(entity: XLineEntity): GripInfo[] {
       type: 'center',
       position: entity.basePoint,
       movesEntity: false,
-      xlineGripKind: 'xline-base',
+      gripKind: { on: 'xline', kind: 'xline-base' },
     },
     {
       entityId: entity.id,
@@ -36,7 +36,7 @@ export function getXLineGrips(entity: XLineEntity): GripInfo[] {
         y: entity.basePoint.y + dy * DIR_HANDLE_OFFSET,
       },
       movesEntity: false,
-      xlineGripKind: 'xline-dir',
+      gripKind: { on: 'xline', kind: 'xline-dir' },
     },
   ];
 }

@@ -22,6 +22,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { parseGripKindIndex } from './grip-kind-index';
 import { getPolylineVertexNeighbourIndices } from '../polyline/polyline-grips';
+import { gripKindOf, type EntityGripKind } from '../../hooks/grip-kinds';
 
 /** Μετακίνηση ΥΠΑΡΧΟΥΣΑΣ κορυφής (`slab-vertex-N`, `column-poly-vertex-N`, `roof-vertex-N`, …). */
 const VERTEX_GRIP_RE = /-vertex-\d+$/;
@@ -43,9 +44,15 @@ export interface FootprintGripKinds {
  * Το ΕΝΑ ενεργό polygon-footprint reshape grip-kind string (ή `undefined`). Κοινό preview+commit —
  * ώστε τα ίχνη ευθυγράμμισης/POLAR να προκύπτουν από την ΙΔΙΑ πηγή και στα δύο seams (WYSIWYG).
  */
-export function resolveActiveFootprintGripKind(k: FootprintGripKinds): string | undefined {
-  return k.columnGripKind ?? k.slabGripKind ?? k.slabOpeningGripKind ?? k.openingGripKind
-    ?? k.roofGripKind ?? k.floorFinishGripKind ?? k.mepUnderfloorGripKind;
+export function resolveActiveFootprintGripKind(
+  k: { readonly gripKind?: EntityGripKind },
+): string | undefined {
+  // ADR-602 Stage 4 — read the tagged discriminator (populated beside the legacy fields).
+  // 1:1 chain over the 7 footprint entities keeps the exact semantics (undefined for any
+  // non-footprint grip), NOT a bare `k.gripKind?.kind` collapse (which would leak other kinds).
+  return gripKindOf(k, 'column') ?? gripKindOf(k, 'slab') ?? gripKindOf(k, 'slab-opening')
+    ?? gripKindOf(k, 'opening') ?? gripKindOf(k, 'roof') ?? gripKindOf(k, 'floor-finish')
+    ?? gripKindOf(k, 'mep-underfloor');
 }
 
 /**

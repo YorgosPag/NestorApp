@@ -28,6 +28,7 @@
  */
 
 import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import type { Entity } from '../../types/entities';
 import type { GripMode } from './grip-mode-cycle';
 import { gripModeMeta } from './grip-mode-cycle';
@@ -133,9 +134,9 @@ const BASE_SECTIONS: ReadonlyArray<GripContextSectionMeta> = [
  */
 function buildVertexOpsSection(grip: UnifiedGripInfo): GripContextSectionMeta | null {
   const kind =
-    grip.slabGripKind ??
-    (grip as { slabOpeningGripKind?: string }).slabOpeningGripKind ??
-    grip.roofGripKind;
+    gripKindOf(grip, 'slab') ??
+    gripKindOf(grip, 'slab-opening') ??
+    gripKindOf(grip, 'roof');
   if (!kind) return null;
   if (
     kind.startsWith('slab-vertex-') ||
@@ -171,7 +172,7 @@ function buildVertexOpsSection(grip: UnifiedGripInfo): GripContextSectionMeta | 
  * single menu carries every grip action; the hover menu skips polyline entirely.
  */
 function buildPolylineOpsSection(grip: UnifiedGripInfo): GripContextSectionMeta | null {
-  const kind = grip.polylineGripKind;
+  const kind = gripKindOf(grip, 'polyline');
   if (!kind) return null;
   const titleKey = 'gripContextMenu.section.polylineOps';
   if (kind.startsWith('polyline-vertex-')) {
@@ -216,7 +217,7 @@ function buildPolylineOpsSection(grip: UnifiedGripInfo): GripContextSectionMeta 
  * edge-midpoint grips, Remove on vertex grips — big-player parity (AutoCAD/Revit).
  */
 function buildHatchOpsSection(grip: UnifiedGripInfo): GripContextSectionMeta | null {
-  const kind = grip.hatchGripKind;
+  const kind = gripKindOf(grip, 'hatch');
   if (!kind) return null;
   const titleKey = 'gripContextMenu.section.hatchOps';
   if (kind.startsWith('hatch-vertex-')) {

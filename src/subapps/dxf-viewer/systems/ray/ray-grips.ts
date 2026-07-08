@@ -25,7 +25,7 @@ export function getRayGrips(entity: RayEntity): GripInfo[] {
       type: 'center',
       position: entity.basePoint,
       movesEntity: false,
-      rayGripKind: 'ray-base',
+      gripKind: { on: 'ray', kind: 'ray-base' },
     },
     {
       entityId: entity.id,
@@ -36,7 +36,7 @@ export function getRayGrips(entity: RayEntity): GripInfo[] {
         y: entity.basePoint.y + dy * DIR_HANDLE_OFFSET,
       },
       movesEntity: false,
-      rayGripKind: 'ray-dir',
+      gripKind: { on: 'ray', kind: 'ray-dir' },
     },
   ];
 }
