@@ -7,80 +7,47 @@
  * POST: Trigger batch reconciliation (recalculate all from source)
  *
  * Auth: withAuth (authenticated users)
- * Rate: withStandardRateLimit (60 req/min)
+ * Rate: standard (60 req/min)
  *
  * @module api/accounting/balances
  * @enterprise DECISIONS-PHASE-1b.md Q1-Q4
+ * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { defineRoute, ok } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { reconcileAllBalances } from '@/subapps/accounting/services/balance-service';
-import { getErrorMessage } from '@/lib/error-utils';
+import { resolveFiscalYearParam } from '../_shared/fiscal-year-param';
 
-// ── GET: List customer balances ────��─────────────────────────────────────────
+// ── GET: List customer balances ──────────────────────────────────────────────
 
-async function handleGet(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const url = new URL(req.url);
-        const fiscalYearParam = url.searchParams.get('fiscalYear');
-        const fiscalYear = fiscalYearParam ? parseInt(fiscalYearParam, 10) : new Date().getFullYear();
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to list customer balances',
+  handler: async ({ req, auth }) => {
+    const fiscalYear = resolveFiscalYearParam(req);
 
-        if (isNaN(fiscalYear)) {
-          return NextResponse.json({ success: false, error: 'Invalid fiscalYear' }, { status: 400 });
-        }
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const balances = await repository.listCustomerBalances(fiscalYear);
 
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const balances = await repository.listCustomerBalances(fiscalYear);
+    return ok({ items: balances, total: balances.length, fiscalYear });
+  },
+});
 
-        return NextResponse.json({
-          success: true,
-          data: { items: balances, total: balances.length, fiscalYear },
-        });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to list customer balances');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
+// ── POST: Trigger batch reconciliation ───────────────────────────────────────
 
-  return handler(request);
-}
+export const POST = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to reconcile balances',
+  handler: async ({ req, auth }) => {
+    const body = await req.json() as { fiscalYear?: number };
+    const fiscalYear = body.fiscalYear ?? new Date().getFullYear();
 
-// ── POST: Trigger batch reconciliation ─────────��─────────────────────────────
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const result = await reconcileAllBalances(repository, fiscalYear);
 
-async function handlePost(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const body = await req.json() as { fiscalYear?: number };
-        const fiscalYear = body.fiscalYear ?? new Date().getFullYear();
-
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const result = await reconcileAllBalances(repository, fiscalYear);
-
-        return NextResponse.json({
-          success: true,
-          data: { ...result, fiscalYear },
-        });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to reconcile balances');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-// ── Route exports ────────────────────────────────────────────────────────────
-
-export const GET = withStandardRateLimit(handleGet);
-export const POST = withStandardRateLimit(handlePost);
+    return ok({ ...result, fiscalYear });
+  },
+});

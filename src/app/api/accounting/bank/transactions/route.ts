@@ -7,19 +7,17 @@
  * POST: Create a new bank transaction manually
  *
  * Auth: withAuth (authenticated users)
- * Rate: withStandardRateLimit (60 req/min)
+ * Rate: standard (60 req/min)
  *
  * @module api/accounting/bank/transactions
  * @enterprise ADR-ACC-008 Bank Reconciliation
+ * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
 import { z } from 'zod';
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { defineRoute, ok, created } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type {
   BankTransactionFilters,
@@ -27,8 +25,7 @@ import type {
   TransactionDirection,
   MatchStatus,
 } from '@/subapps/accounting/types';
-import { getErrorMessage } from '@/lib/error-utils';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { readListContext } from '../../_shared/list-request-context';
 
 // ── Zod Schema (Q5 — SAP BAPI / Stripe pattern) ──────────────────────────
 
@@ -48,84 +45,54 @@ const CreateBankTransactionSchema = z.object({
 // GET — List Bank Transactions
 // =============================================================================
 
-async function handleGet(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const { searchParams } = new URL(req.url);
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to list bank transactions',
+  handler: async ({ req, auth }) => {
+    const { repository, searchParams } = readListContext(req, auth);
 
-        const filters: BankTransactionFilters = {};
+    const filters: BankTransactionFilters = {};
 
-        const accountId = searchParams.get('accountId');
-        if (accountId) {
-          filters.accountId = accountId;
-        }
-
-        const direction = searchParams.get('direction');
-        if (direction === 'credit' || direction === 'debit') {
-          filters.direction = direction as TransactionDirection;
-        }
-
-        const matchStatus = searchParams.get('matchStatus');
-        if (matchStatus) {
-          filters.matchStatus = matchStatus as MatchStatus;
-        }
-
-        const pageSize = searchParams.get('pageSize');
-        const result = await repository.listBankTransactions(
-          filters,
-          pageSize ? parseInt(pageSize, 10) : undefined
-        );
-
-        return NextResponse.json({ success: true, data: result });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to list bank transactions');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
+    const accountId = searchParams.get('accountId');
+    if (accountId) {
+      filters.accountId = accountId;
     }
-  );
 
-  return handler(request);
-}
+    const direction = searchParams.get('direction');
+    if (direction === 'credit' || direction === 'debit') {
+      filters.direction = direction as TransactionDirection;
+    }
 
-export const GET = withStandardRateLimit(handleGet);
+    const matchStatus = searchParams.get('matchStatus');
+    if (matchStatus) {
+      filters.matchStatus = matchStatus as MatchStatus;
+    }
+
+    const pageSize = searchParams.get('pageSize');
+    const result = await repository.listBankTransactions(
+      filters,
+      pageSize ? parseInt(pageSize, 10) : undefined
+    );
+
+    return ok(result);
+  },
+});
 
 // =============================================================================
 // POST — Create Bank Transaction
 // =============================================================================
 
-async function handlePost(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const parsed = safeParseBody(CreateBankTransactionSchema, await req.json());
-        if (parsed.error) return parsed.error;
-        const body = parsed.data;
+export const POST = defineRoute({
+  rateLimit: 'standard',
+  schema: CreateBankTransactionSchema,
+  fallbackError: 'Failed to create bank transaction',
+  handler: async ({ auth, body }) => {
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
 
-        const { id } = await repository.createBankTransaction(
-          body as unknown as Omit<BankTransaction, 'transactionId' | 'createdAt' | 'updatedAt'>
-        );
+    const { id } = await repository.createBankTransaction(
+      body as unknown as Omit<BankTransaction, 'transactionId' | 'createdAt' | 'updatedAt'>
+    );
 
-        return NextResponse.json(
-          { success: true, data: { transactionId: id } },
-          { status: 201 }
-        );
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to create bank transaction');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const POST = withStandardRateLimit(handlePost);
+    return created({ transactionId: id });
+  },
+});

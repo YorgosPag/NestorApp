@@ -12,27 +12,20 @@
  *   Requires: type, label, description, mydataCode, e3Code, defaultVatRate, vatDeductiblePercent
  *
  * Auth: withAuth (authenticated users)
- * Rate: GET → withStandardRateLimit | POST → withSensitiveRateLimit
+ * Rate: GET → standard | POST → sensitive
  *
  * @module api/accounting/categories
  * @enterprise ADR-ACC-021 Custom Expense/Income Categories
+ * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
 import { z } from 'zod';
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import {
-  withStandardRateLimit,
-  withSensitiveRateLimit,
-} from '@/lib/middleware/with-rate-limit';
+import { defineRoute, ok, created, badRequest } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import type { CreateCustomCategoryInput } from '@/subapps/accounting/types';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { getErrorMessage } from '@/lib/error-utils';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 const CreateCategorySchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -51,110 +44,59 @@ const CreateCategorySchema = z.object({
 const logger = createModuleLogger('CUSTOM_CATEGORIES');
 
 // =============================================================================
-// TYPES
-// =============================================================================
-
-interface CreateCategoryBody {
-  type: 'income' | 'expense';
-  label: string;
-  description: string;
-  mydataCode: string;
-  e3Code: string;
-  defaultVatRate: number;
-  vatDeductible: boolean;
-  vatDeductiblePercent: 0 | 50 | 100;
-  sortOrder?: number;
-  // Note: Zod validation via CreateCategorySchema replaces manual checks
-  icon?: string;
-  kadCode?: string | null;
-}
-
-// =============================================================================
 // GET — List Custom Categories
 // =============================================================================
 
-async function handleGet(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const url = new URL(req.url);
-        const includeInactive = url.searchParams.get('includeInactive') === 'true';
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to list custom categories',
+  handler: async ({ req, auth }) => {
+    const url = new URL(req.url);
+    const includeInactive = url.searchParams.get('includeInactive') === 'true';
 
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const categories = await repository.listCustomCategories(includeInactive);
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const categories = await repository.listCustomCategories(includeInactive);
 
-        return NextResponse.json({ success: true, data: categories });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to list custom categories');
-        logger.error('Custom categories list error', { error: message });
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
-    }
-  );
-
-  return handler(request);
-}
+    return ok(categories);
+  },
+});
 
 // =============================================================================
 // POST — Create Custom Category
 // =============================================================================
 
-async function handlePost(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const parsed = safeParseBody(CreateCategorySchema, await req.json());
-        if (parsed.error) return parsed.error;
-        const body = parsed.data;
-
-        if (body.type !== 'income' && body.type !== 'expense') {
-          return NextResponse.json(
-            { success: false, error: 'Invalid type — must be "income" or "expense"' },
-            { status: 400 }
-          );
-        }
-
-        if (![0, 50, 100].includes(body.vatDeductiblePercent)) {
-          return NextResponse.json(
-            { success: false, error: 'vatDeductiblePercent must be 0, 50, or 100' },
-            { status: 400 }
-          );
-        }
-
-        const input: CreateCustomCategoryInput = {
-          type: body.type,
-          label: body.label.trim(),
-          description: body.description?.trim() ?? '',
-          mydataCode: body.mydataCode as CreateCustomCategoryInput['mydataCode'],
-          e3Code: body.e3Code,
-          defaultVatRate: body.defaultVatRate ?? 24,
-          vatDeductible: body.vatDeductible ?? body.vatDeductiblePercent > 0,
-          vatDeductiblePercent: body.vatDeductiblePercent ?? 100,
-          sortOrder: body.sortOrder,
-          icon: body.icon,
-          kadCode: body.kadCode ?? null,
-        };
-
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const result = await repository.createCustomCategory(input);
-
-        logger.info('Custom category created', { id: result.id, code: result.code });
-
-        return NextResponse.json({ success: true, data: result }, { status: 201 });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to create custom category');
-        logger.error('Custom category create error', { error: message });
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
+export const POST = defineRoute({
+  rateLimit: 'sensitive',
+  schema: CreateCategorySchema,
+  fallbackError: 'Failed to create custom category',
+  handler: async ({ auth, body }) => {
+    if (body.type !== 'income' && body.type !== 'expense') {
+      badRequest('Invalid type — must be "income" or "expense"');
     }
-  );
 
-  return handler(request);
-}
+    if (![0, 50, 100].includes(body.vatDeductiblePercent)) {
+      badRequest('vatDeductiblePercent must be 0, 50, or 100');
+    }
 
-// =============================================================================
-// EXPORTS
-// =============================================================================
+    const input: CreateCustomCategoryInput = {
+      type: body.type,
+      label: body.label.trim(),
+      description: body.description?.trim() ?? '',
+      mydataCode: body.mydataCode as CreateCustomCategoryInput['mydataCode'],
+      e3Code: body.e3Code,
+      defaultVatRate: body.defaultVatRate ?? 24,
+      vatDeductible: body.vatDeductible ?? body.vatDeductiblePercent > 0,
+      vatDeductiblePercent: body.vatDeductiblePercent ?? 100,
+      sortOrder: body.sortOrder,
+      icon: body.icon,
+      kadCode: body.kadCode ?? null,
+    };
 
-export const GET = withStandardRateLimit(handleGet);
-export const POST = withSensitiveRateLimit(handlePost);
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const result = await repository.createCustomCategory(input);
+
+    logger.info('Custom category created', { id: result.id, code: result.code });
+
+    return created(result);
+  },
+});
