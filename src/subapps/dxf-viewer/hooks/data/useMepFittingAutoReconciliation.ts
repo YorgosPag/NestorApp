@@ -43,7 +43,6 @@ import { dequal } from 'dequal';
 import { DXF_TIMING } from '../../config/dxf-timing';
 
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
-import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { MepFittingEntity, MepFittingDraft } from '../../bim/types/mep-fitting-types';
 import { applySceneOps, buildPipeTopologySignature } from './mep-fitting-reconcile-ops';
 import { resolveDesiredFittings } from '../../bim/mep-fittings/mep-fitting-resolve';
@@ -59,16 +58,11 @@ import {
 import { recordMepFittingChange } from '../../bim/mep-fittings/mep-fitting-audit-client';
 import { mepFittingDocToEntity as docToEntity } from './mep-fitting-persistence-helpers';
 import { createMepFitting } from '@/services/factories/mep-fitting.factory';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 
 // ============================================================================
 // TYPES
 // ============================================================================
-
-export interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
-}
 
 export interface UseMepFittingAutoReconciliationParams {
   readonly companyId: string | null;
@@ -77,7 +71,7 @@ export interface UseMepFittingAutoReconciliationParams {
   /** ADR-420 — stable building-storey scope key (IfcBuildingStorey). */
   readonly floorId?: string | null;
   readonly userId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 // ============================================================================
@@ -266,7 +260,7 @@ interface MergeRefs {
 function mergeDocsIntoScene(
   docs: readonly MepFittingDoc[],
   levelId: string,
-  levelManager: LevelManagerLike,
+  levelManager: LevelSceneWriter,
   refs: MergeRefs,
 ): void {
   const scene = levelManager.getLevelScene(levelId);
@@ -337,7 +331,7 @@ async function runReconcileDiff(
   desired: readonly MepFittingDraft[],
   scene: SceneModel,
   levelId: string,
-  levelManager: LevelManagerLike,
+  levelManager: LevelSceneWriter,
   svc: MepFittingFirestoreService,
   refs: ReconcileRefs,
 ): Promise<void> {

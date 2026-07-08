@@ -31,7 +31,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 import type { SceneModel } from '../../types/scene';
-import type { useLevels } from '../../systems/levels';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import {
   isMepFixtureEntity,
   isElectricalPanelEntity,
@@ -55,14 +55,9 @@ import {
 } from '../../bim/mep-systems/mep-system-coordinator';
 import { seedDefaultConnectors } from '../../bim/mep-systems/mep-connector-seed';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface UseMepConnectorReconciliationParams {
   readonly currentScene: SceneModel | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 /** Re-derive one connector host's `systemId` cache; same ref when unchanged. */
