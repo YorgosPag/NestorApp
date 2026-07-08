@@ -29,6 +29,7 @@ import type {
   SlabOpeningEntity,
   SlabOpeningParams,
 } from '../../types/slab-opening-types';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 
 function makeRectShaft(): SlabOpeningEntity {
   const params: SlabOpeningParams = {
@@ -62,7 +63,7 @@ describe('slab-opening-grips (Phase 3.7a)', () => {
     const opening = makeRectShaft();
     const grips = getSlabOpeningGrips(opening);
     expect(grips).toHaveLength(8);
-    expect(grips.map((g) => g.slabOpeningGripKind)).toEqual([
+    expect(grips.map((g) => gripKindOf(g, 'slab-opening'))).toEqual([
       'slab-opening-vertex-0',
       'slab-opening-vertex-1',
       'slab-opening-vertex-2',
@@ -86,7 +87,7 @@ describe('slab-opening-grips (Phase 3.7a)', () => {
   it('3. vertex grips carry type=vertex + movesEntity=false + entityId', () => {
     const opening = makeRectShaft();
     const grips = getSlabOpeningGrips(opening).filter(
-      (g) => g.slabOpeningGripKind?.startsWith('slab-opening-vertex-'),
+      (g) => gripKindOf(g, 'slab-opening')?.startsWith('slab-opening-vertex-'),
     );
     expect(grips).toHaveLength(4);
     for (const g of grips) {
@@ -183,7 +184,7 @@ describe('slab-opening-grips (Phase 3.7a)', () => {
     const opening = makeRectShaft();
     const grips = getSlabOpeningGrips(opening);
     const mids = grips.filter(
-      (g) => g.slabOpeningGripKind?.startsWith('slab-opening-edge-midpoint-'),
+      (g) => gripKindOf(g, 'slab-opening')?.startsWith('slab-opening-edge-midpoint-'),
     );
     expect(mids).toHaveLength(4);
     expect(mids[0].position).toEqual({ x: 750, y: 0 });     // edge 0→1
@@ -195,7 +196,7 @@ describe('slab-opening-grips (Phase 3.7a)', () => {
   it('12. edge-midpoint grip type=midpoint + edgeVertexIndices populated', () => {
     const opening = makeRectShaft();
     const mids = getSlabOpeningGrips(opening).filter(
-      (g) => g.slabOpeningGripKind?.startsWith('slab-opening-edge-midpoint-'),
+      (g) => gripKindOf(g, 'slab-opening')?.startsWith('slab-opening-edge-midpoint-'),
     );
     expect(mids[0].type).toBe('midpoint');
     expect(mids[0].edgeVertexIndices).toEqual([0, 1]);

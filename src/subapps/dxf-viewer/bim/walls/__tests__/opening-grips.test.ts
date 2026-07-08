@@ -27,6 +27,7 @@ import {
 } from '../../../hooks/drawing/wall-completion';
 import type { OpeningEntity } from '../../types/opening-types';
 import type { WallEntity } from '../../types/wall-types';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 
 function unwrapWall(r: ReturnType<typeof buildWallEntity>): WallEntity {
   if (!r.ok) throw new Error('expected wall ok, hardErrors: ' + r.hardErrors.join(','));
@@ -59,7 +60,7 @@ describe('opening-grips (Phase 2.5 — wall parity)', () => {
     const host = makeHorizontalWall();
     const grips = getOpeningGrips(makeDoor(host, 2000));
     expect(grips).toHaveLength(6);
-    expect(grips.map((g) => g.openingGripKind)).toEqual([
+    expect(grips.map((g) => gripKindOf(g, 'opening'))).toEqual([
       'opening-rotation',
       'opening-corner-ne',
       'opening-corner-nw',
@@ -67,7 +68,7 @@ describe('opening-grips (Phase 2.5 — wall parity)', () => {
       'opening-corner-se',
       'opening-facing',
     ]);
-    expect(grips.map((g) => g.openingGripKind)).not.toContain('opening-move');
+    expect(grips.map((g) => gripKindOf(g, 'opening'))).not.toContain('opening-move');
     expect(grips.every((g) => !g.movesEntity)).toBe(true);
   });
 
@@ -77,21 +78,21 @@ describe('opening-grips (Phase 2.5 — wall parity)', () => {
     const windowOpening = unwrapOpening(buildOpeningEntity(params, host, '0'));
     const grips = getOpeningGrips(windowOpening);
     expect(grips).toHaveLength(5);
-    expect(grips.map((g) => g.openingGripKind)).not.toContain('opening-facing');
-    expect(grips.map((g) => g.openingGripKind)).not.toContain('opening-move');
+    expect(grips.map((g) => gripKindOf(g, 'opening'))).not.toContain('opening-facing');
+    expect(grips.map((g) => gripKindOf(g, 'opening'))).not.toContain('opening-move');
   });
 
   it('2. central move grip (opening-move) is NOT emitted; first grip is rotation', () => {
     const host = makeHorizontalWall();
     const grips = getOpeningGrips(makeDoor(host, 2000));
-    expect(grips.map((g) => g.openingGripKind)).not.toContain('opening-move');
-    expect(grips[0].openingGripKind).toBe('opening-rotation');
+    expect(grips.map((g) => gripKindOf(g, 'opening'))).not.toContain('opening-move');
+    expect(gripKindOf(grips[0], 'opening')).toBe('opening-rotation');
   });
 
   it('3. the 4 corners coincide with the cutout outline vertices', () => {
     const host = makeHorizontalWall();
     const opening = makeDoor(host, 2000);
-    const corners = getOpeningGrips(opening).filter((g) => g.openingGripKind?.startsWith('opening-corner-'));
+    const corners = getOpeningGrips(opening).filter((g) => gripKindOf(g, 'opening')?.startsWith('opening-corner-'));
     const outline = opening.geometry.outline.vertices;
     // Every corner grip must match some outline vertex (set equality up to ε).
     for (const c of corners) {
@@ -240,8 +241,8 @@ describe('opening-grips (Phase 2.5 — wall parity)', () => {
     const host = makeHorizontalWall();
     const opening = makeDoor(host, 2000);
     const grips = getOpeningGrips(opening);
-    const rotationGrip = grips.find((g) => g.openingGripKind === 'opening-rotation')!;
-    const facingGrip = grips.find((g) => g.openingGripKind === 'opening-facing')!;
+    const rotationGrip = grips.find((g) => gripKindOf(g, 'opening') === 'opening-rotation')!;
+    const facingGrip = grips.find((g) => gripKindOf(g, 'opening') === 'opening-facing')!;
     // Both grips should share the same X (axial, centered on opening).
     expect(facingGrip.position.x).toBeCloseTo(rotationGrip.position.x, 3);
     // Y positions should be on opposite sides (sum ≈ 2 × opening center Y).

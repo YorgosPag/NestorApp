@@ -22,6 +22,7 @@ import {
   buildSlabEntity,
 } from '../../../hooks/drawing/slab-completion';
 import type { SlabEntity } from '../../types/slab-types';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 
 function unwrapSlab(r: ReturnType<typeof buildSlabEntity>): SlabEntity {
   if (!r.ok) throw new Error('expected slab ok, hardErrors: ' + r.hardErrors.join(','));
@@ -45,7 +46,7 @@ describe('slab-grips (Phase 3.5 + 3.6)', () => {
     const slab = makeRectSlab();
     const grips = getSlabGrips(slab);
     expect(grips).toHaveLength(8);
-    expect(grips.map((g) => g.slabGripKind)).toEqual([
+    expect(grips.map((g) => gripKindOf(g, 'slab'))).toEqual([
       'slab-vertex-0',
       'slab-vertex-1',
       'slab-vertex-2',
@@ -68,7 +69,7 @@ describe('slab-grips (Phase 3.5 + 3.6)', () => {
 
   it('3. vertex grips carry type=vertex + movesEntity=false', () => {
     const slab = makeRectSlab();
-    const grips = getSlabGrips(slab).filter((g) => g.slabGripKind?.startsWith('slab-vertex-'));
+    const grips = getSlabGrips(slab).filter((g) => gripKindOf(g, 'slab')?.startsWith('slab-vertex-'));
     expect(grips).toHaveLength(4);
     for (const g of grips) {
       expect(g.type).toBe('vertex');
@@ -162,7 +163,7 @@ describe('slab-grips (Phase 3.5 + 3.6)', () => {
   it('11. edge-midpoint grip positions = midpoint of each edge (incl. closing edge)', () => {
     const slab = makeRectSlab();
     const grips = getSlabGrips(slab);
-    const mids = grips.filter((g) => g.slabGripKind?.startsWith('slab-edge-midpoint-'));
+    const mids = grips.filter((g) => gripKindOf(g, 'slab')?.startsWith('slab-edge-midpoint-'));
     expect(mids).toHaveLength(4);
     expect(mids[0].position).toEqual({ x: 2000, y: 0 });    // edge 0→1
     expect(mids[1].position).toEqual({ x: 4000, y: 1500 }); // edge 1→2
@@ -172,7 +173,7 @@ describe('slab-grips (Phase 3.5 + 3.6)', () => {
 
   it('12. edge-midpoint grip type=midpoint + edgeVertexIndices populated', () => {
     const slab = makeRectSlab();
-    const mids = getSlabGrips(slab).filter((g) => g.slabGripKind?.startsWith('slab-edge-midpoint-'));
+    const mids = getSlabGrips(slab).filter((g) => gripKindOf(g, 'slab')?.startsWith('slab-edge-midpoint-'));
     expect(mids[0].type).toBe('midpoint');
     expect(mids[0].edgeVertexIndices).toEqual([0, 1]);
     expect(mids[3].edgeVertexIndices).toEqual([3, 0]); // wraps to closing edge

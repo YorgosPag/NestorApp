@@ -22,6 +22,7 @@ import {
   resolveBoxHeight,
 } from '../text-box';
 import { getTextGrips } from '../text-grips';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 // ADR-557 Φ-attachment — the box now measures the real glyph advance; pin a stub font
 // at the 0.6 monospace ratio so these hand-computed widths stay deterministic (the jest
 // jsdom canvas would otherwise feed machine-dependent metrics into the tier-2 fallback).
@@ -101,7 +102,7 @@ describe('resolveTextBox — corners pin the attachment point', () => {
 describe('2D ≡ 3D parity — the grip move-handle is the SSoT centre the 3D mesh uses', () => {
   it.each(['TL', 'MC', 'BR'])('%s: move grip === resolveTextBox().center', (att) => {
     const t = text({ textStyle: style(att), position: { x: 5, y: -3 } });
-    const move = getTextGrips(t).find((g) => g.textGripKind === 'text-move')!.position;
+    const move = getTextGrips(t).find((g) => gripKindOf(g, 'text') === 'text-move')!.position;
     expect(nearP(move, resolveTextBox(t).center.x, resolveTextBox(t).center.y)).toBe(true);
   });
 });

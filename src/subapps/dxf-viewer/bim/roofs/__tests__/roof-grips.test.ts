@@ -25,6 +25,7 @@
 
 import { applyRoofGripDrag, getRoofGrips, removeVertexFromRoof } from '../roof-grips';
 import { applyRoofShapePreset } from '../../geometry/roof-geometry';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 import type { Point3D, Polygon3D } from '../../types/bim-base';
 import type { RoofEntity, RoofParams } from '../../types/roof-types';
 
@@ -62,7 +63,7 @@ describe('roof-grips (ADR-417 Φ1-part-2 #2)', () => {
   it('1. rectangle roof → 4 vertex + 4 edge-midpoint grips in stable order', () => {
     const grips = getRoofGrips(makeRoof());
     expect(grips).toHaveLength(8);
-    expect(grips.map((g) => g.roofGripKind)).toEqual([
+    expect(grips.map((g) => gripKindOf(g, 'roof'))).toEqual([
       'roof-vertex-0',
       'roof-vertex-1',
       'roof-vertex-2',

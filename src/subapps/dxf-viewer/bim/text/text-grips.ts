@@ -130,16 +130,16 @@ export function getTextGrips(entity: DxfText): GripInfo[] {
   const { id } = entity;
   const rotOffsetY = rotationHandleMidwayOffset(frame.halfLength * 2);
   const grips: GripInfo[] = [
-    { entityId: id, gripIndex: 0, type: 'center', position: frame.center, movesEntity: true, textGripKind: 'text-move', gripKind: { on: 'text', kind: 'text-move' } },
-    { entityId: id, gripIndex: 1, type: 'vertex', position: rectLocalWorld(frame, 0, rotOffsetY), movesEntity: false, textGripKind: 'text-rotation', gripKind: { on: 'text', kind: 'text-rotation' } },
-    { entityId: id, gripIndex: 2, type: 'edge', position: rectEdgeWorld(frame, EDGE_MAP['text-edge-e']!), movesEntity: false, textGripKind: 'text-edge-e', gripKind: { on: 'text', kind: 'text-edge-e' } },
-    { entityId: id, gripIndex: 3, type: 'edge', position: rectEdgeWorld(frame, EDGE_MAP['text-edge-n']!), movesEntity: false, textGripKind: 'text-edge-n', gripKind: { on: 'text', kind: 'text-edge-n' } },
-    { entityId: id, gripIndex: 8, type: 'edge', position: rectEdgeWorld(frame, EDGE_MAP['text-edge-w']!), movesEntity: false, textGripKind: 'text-edge-w', gripKind: { on: 'text', kind: 'text-edge-w' } },
-    { entityId: id, gripIndex: 9, type: 'edge', position: rectEdgeWorld(frame, EDGE_MAP['text-edge-s']!), movesEntity: false, textGripKind: 'text-edge-s', gripKind: { on: 'text', kind: 'text-edge-s' } },
-    { entityId: id, gripIndex: 4, type: 'vertex', position: rectCornerWorld(frame, CORNER_MAP['text-corner-ne']!), movesEntity: false, textGripKind: 'text-corner-ne', gripKind: { on: 'text', kind: 'text-corner-ne' } },
-    { entityId: id, gripIndex: 5, type: 'vertex', position: rectCornerWorld(frame, CORNER_MAP['text-corner-nw']!), movesEntity: false, textGripKind: 'text-corner-nw', gripKind: { on: 'text', kind: 'text-corner-nw' } },
-    { entityId: id, gripIndex: 6, type: 'vertex', position: rectCornerWorld(frame, CORNER_MAP['text-corner-sw']!), movesEntity: false, textGripKind: 'text-corner-sw', gripKind: { on: 'text', kind: 'text-corner-sw' } },
-    { entityId: id, gripIndex: 7, type: 'vertex', position: rectCornerWorld(frame, CORNER_MAP['text-corner-se']!), movesEntity: false, textGripKind: 'text-corner-se', gripKind: { on: 'text', kind: 'text-corner-se' } },
+    { entityId: id, gripIndex: 0, type: 'center', position: frame.center, movesEntity: true, gripKind: { on: 'text', kind: 'text-move' } },
+    { entityId: id, gripIndex: 1, type: 'vertex', position: rectLocalWorld(frame, 0, rotOffsetY), movesEntity: false, gripKind: { on: 'text', kind: 'text-rotation' } },
+    { entityId: id, gripIndex: 2, type: 'edge', position: rectEdgeWorld(frame, EDGE_MAP['text-edge-e']!), movesEntity: false, gripKind: { on: 'text', kind: 'text-edge-e' } },
+    { entityId: id, gripIndex: 3, type: 'edge', position: rectEdgeWorld(frame, EDGE_MAP['text-edge-n']!), movesEntity: false, gripKind: { on: 'text', kind: 'text-edge-n' } },
+    { entityId: id, gripIndex: 8, type: 'edge', position: rectEdgeWorld(frame, EDGE_MAP['text-edge-w']!), movesEntity: false, gripKind: { on: 'text', kind: 'text-edge-w' } },
+    { entityId: id, gripIndex: 9, type: 'edge', position: rectEdgeWorld(frame, EDGE_MAP['text-edge-s']!), movesEntity: false, gripKind: { on: 'text', kind: 'text-edge-s' } },
+    { entityId: id, gripIndex: 4, type: 'vertex', position: rectCornerWorld(frame, CORNER_MAP['text-corner-ne']!), movesEntity: false, gripKind: { on: 'text', kind: 'text-corner-ne' } },
+    { entityId: id, gripIndex: 5, type: 'vertex', position: rectCornerWorld(frame, CORNER_MAP['text-corner-nw']!), movesEntity: false, gripKind: { on: 'text', kind: 'text-corner-nw' } },
+    { entityId: id, gripIndex: 6, type: 'vertex', position: rectCornerWorld(frame, CORNER_MAP['text-corner-sw']!), movesEntity: false, gripKind: { on: 'text', kind: 'text-corner-sw' } },
+    { entityId: id, gripIndex: 7, type: 'vertex', position: rectCornerWorld(frame, CORNER_MAP['text-corner-se']!), movesEntity: false, gripKind: { on: 'text', kind: 'text-corner-se' } },
   ];
   return grips;
 }

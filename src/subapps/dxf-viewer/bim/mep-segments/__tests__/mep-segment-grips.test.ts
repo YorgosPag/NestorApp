@@ -11,6 +11,7 @@
 import { getMepSegmentGrips } from '../mep-segment-grips';
 import { deriveCenterlineElevationMm } from '../../types/mep-segment-types';
 import type { MepSegmentEntity } from '../../types/mep-segment-types';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 
 function segment(
   start: { x: number; y: number; z: number },
@@ -37,7 +38,7 @@ describe('getMepSegmentGrips — vertical riser (ADR-408 Φ15)', () => {
     const grips = getMepSegmentGrips(riser);
 
     expect(grips).toHaveLength(1);
-    expect(grips[0].mepSegmentGripKind).toBe('mep-segment-midpoint');
+    expect(gripKindOf(grips[0], 'mep-segment')).toBe('mep-segment-midpoint');
     expect(grips[0].movesEntity).toBe(true);
     expect(grips[0].position).toEqual({ x: 100, y: 200 });
   });
@@ -49,7 +50,7 @@ describe('getMepSegmentGrips — vertical riser (ADR-408 Φ15)', () => {
 
     // start(0) + end(1) + section(3) + rotation(4) = 4 grips; midpoint removed
     expect(grips).toHaveLength(4);
-    const kinds = grips.map((g) => g.mepSegmentGripKind);
+    const kinds = grips.map((g) => gripKindOf(g, 'mep-segment'));
     expect(kinds).toContain('mep-segment-start');
     expect(kinds).toContain('mep-segment-end');
     expect(kinds).not.toContain('mep-segment-midpoint');

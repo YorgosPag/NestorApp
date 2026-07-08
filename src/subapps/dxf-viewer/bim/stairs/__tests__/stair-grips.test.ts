@@ -25,6 +25,7 @@ import {
 import { applyStairGripDrag, getStairGrips, stairGripGlyphShape } from '../stair-grips';
 import { polylineArcMidpoint } from '../stair-grip-math';
 import type { StairEntity, StairParams } from '../../../bim/types/stair-types';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 
 describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
   const basePoint = { x: 0, y: 0 };
@@ -118,7 +119,7 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
   it('1. straight stair → 5 grips (rotation + 4 corners; ADR-393 v2, stair-base removed)', () => {
     const grips = getStairGrips(makeStraight());
     expect(grips).toHaveLength(5);
-    expect(grips.map((g) => g.stairGripKind)).toEqual([
+    expect(grips.map((g) => gripKindOf(g, 'stair'))).toEqual([
       'stair-direction',
       'stair-corner-start-left',
       'stair-corner-start-right',
@@ -131,16 +132,16 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
   // The transform (applyStairGripDrag 'stair-base') is retained — see test 10.
   it('2. stair-base is absent from getStairGrips output (ADR-363 Φ1G.5 Slice 2)', () => {
     const grips = getStairGrips(makeStraight());
-    const kinds = grips.map((g) => g.stairGripKind);
+    const kinds = grips.map((g) => gripKindOf(g, 'stair'));
     expect(kinds).not.toContain('stair-base');
     // First returned grip is now stair-direction (array index 0, gripIndex field still 1)
-    expect(grips[0].stairGripKind).toBe('stair-direction');
+    expect(gripKindOf(grips[0], 'stair')).toBe('stair-direction');
   });
 
   // ADR-363 Φ1G.5 Slice 2: stair-direction shifts to array index 0 (was 1); gripIndex field = 1 (unchanged)
   it('3. direction ROTATION grip at front-centre (base − 100mm·u, −u side)', () => {
     const grips = getStairGrips(makeStraight());
-    expect(grips[0].stairGripKind).toBe('stair-direction'); // array index 0 (was 1)
+    expect(gripKindOf(grips[0], 'stair')).toBe('stair-direction'); // array index 0 (was 1)
     expect(grips[0].position.x).toBeCloseTo(-100, 6);
     expect(grips[0].position.y).toBeCloseTo(0, 6);
   });
@@ -150,7 +151,7 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
   it('4. straight corners at footprint ±width/2 on front and back edges', () => {
     const grips = getStairGrips(makeStraight());
     // width=1200 → half=600 ; totalRun=280*11=3080 ; direction=0 → p=(0,1).
-    const byKind = Object.fromEntries(grips.map((g) => [g.stairGripKind, g.position]));
+    const byKind = Object.fromEntries(grips.map((g) => [gripKindOf(g, 'stair'), g.position]));
     expect(byKind['stair-corner-start-left']).toEqual({ x: 0, y: 600 });
     expect(byKind['stair-corner-start-right']).toEqual({ x: 0, y: -600 });
     expect(byKind['stair-corner-end-left']).toEqual({ x: 3080, y: 600 });
@@ -158,7 +159,7 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
   });
 
   it('5. straight no longer emits width / length / mid-front grips (ADR-393 v2)', () => {
-    const kinds = getStairGrips(makeStraight()).map((g) => g.stairGripKind);
+    const kinds = getStairGrips(makeStraight()).map((g) => gripKindOf(g, 'stair'));
     expect(kinds).not.toContain('stair-width');
     expect(kinds).not.toContain('stair-length');
     expect(kinds).not.toContain('stair-start-side');
@@ -170,7 +171,7 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
     // 100 mm direction offset must resolve to 0.1 m, NOT 100 m.
     const params = buildDefaultStairParams(basePoint, 0, {}, 'm');
     const grips = getStairGrips(buildStairEntity(params, '0'));
-    const byKind = Object.fromEntries(grips.map((g) => [g.stairGripKind, g.position]));
+    const byKind = Object.fromEntries(grips.map((g) => [gripKindOf(g, 'stair'), g.position]));
     // width=1.2 → half=0.6 ; tread=0.28 → totalRun=3.08
     expect(byKind['stair-direction'].x).toBeCloseTo(-0.1, 6); // front-centre, −u side
     // stair-base is filtered from output per ADR-363 Φ1G.5 Slice 2 — use applyStairGripDrag for transform
@@ -184,7 +185,7 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
 
   it('6. l-shape (landing, sharp) → 4 corners + 2 flight + landing-depth, no width/length (ADR-393 v2 Phase 2)', () => {
     const grips = getStairGrips(makeLShape());
-    const kinds = grips.map((g) => g.stairGripKind);
+    const kinds = grips.map((g) => gripKindOf(g, 'stair'));
     expect(kinds).toContain('stair-flight1-end');
     expect(kinds).toContain('stair-flight2-start');
     expect(kinds).toContain('stair-landing-depth');
@@ -201,12 +202,12 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
   });
 
   it('7. l-shape with fillet corner → also emits landing-corner-radius', () => {
-    const kinds = getStairGrips(makeLShapeFillet()).map((g) => g.stairGripKind);
+    const kinds = getStairGrips(makeLShapeFillet()).map((g) => gripKindOf(g, 'stair'));
     expect(kinds).toContain('stair-landing-corner-radius');
   });
 
   it('8. l-shape winders → flight grips but no landing-depth/corner-radius', () => {
-    const kinds = getStairGrips(makeLShapeWinders()).map((g) => g.stairGripKind);
+    const kinds = getStairGrips(makeLShapeWinders()).map((g) => gripKindOf(g, 'stair'));
     expect(kinds).toContain('stair-flight1-end');
     expect(kinds).toContain('stair-flight2-start');
     expect(kinds).not.toContain('stair-landing-depth');
@@ -214,7 +215,7 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
   });
 
   it('9. gamma → flight grips, no landing-depth (uses landings tuple)', () => {
-    const kinds = getStairGrips(makeGamma()).map((g) => g.stairGripKind);
+    const kinds = getStairGrips(makeGamma()).map((g) => gripKindOf(g, 'stair'));
     expect(kinds).toContain('stair-flight1-end');
     expect(kinds).toContain('stair-flight2-start');
     expect(kinds).not.toContain('stair-landing-depth');
@@ -465,7 +466,7 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
   // ─── ADR-393 v2 Phase 2 — L/U/Γ corners (emit + positions + transforms) ───
 
   it('29. u-shape → 4 corners + no width/length', () => {
-    const kinds = getStairGrips(makeUShape()).map((g) => g.stairGripKind);
+    const kinds = getStairGrips(makeUShape()).map((g) => gripKindOf(g, 'stair'));
     expect(kinds).toContain('stair-corner-start-left');
     expect(kinds).toContain('stair-corner-start-right');
     expect(kinds).toContain('stair-corner-end-left');
@@ -475,7 +476,7 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
   });
 
   it('30. gamma → 4 corners + flight grips, no width/length', () => {
-    const kinds = getStairGrips(makeGamma()).map((g) => g.stairGripKind);
+    const kinds = getStairGrips(makeGamma()).map((g) => gripKindOf(g, 'stair'));
     expect(kinds).toContain('stair-corner-start-left');
     expect(kinds).toContain('stair-corner-end-right');
     expect(kinds).toContain('stair-flight1-end');
@@ -485,7 +486,7 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
 
   it('31. l-shape corner positions read from stringer endpoints', () => {
     const grips = getStairGrips(makeLShape());
-    const byKind = Object.fromEntries(grips.map((g) => [g.stairGripKind, g.position]));
+    const byKind = Object.fromEntries(grips.map((g) => [gripKindOf(g, 'stair'), g.position]));
     // flight-1 entry on ±p1 (width=1200 → ±600); turnDirection right → flight 2
     // descends along −y, its exit endpoints sit on ±x of the last vertex.
     expect(byKind['stair-corner-start-left'].x).toBeCloseTo(0, 4);
@@ -562,7 +563,7 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
       },
     };
     const grips = getStairGrips(buildStairEntity(params, '0'));
-    const byKind = Object.fromEntries(grips.map((g) => [g.stairGripKind, g.position]));
+    const byKind = Object.fromEntries(grips.map((g) => [gripKindOf(g, 'stair'), g.position]));
     expect(byKind['stair-corner-start-left'].y).toBeCloseTo(0.6, 6);
     expect(byKind['stair-corner-start-right'].y).toBeCloseTo(-0.6, 6);
     // Regression guard: positions read from geometry, never raw mm constants.

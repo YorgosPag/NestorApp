@@ -17,6 +17,7 @@ import {
   textToRectFrame,
   applyTextGripDrag,
 } from '../text-grips';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 // ADR-557 Φ-attachment — the box now measures the real glyph advance; pin a stub font
 // at the 0.6 monospace ratio so these hand-computed widths stay deterministic (the jest
 // jsdom canvas would otherwise feed machine-dependent metrics into the tier-2 fallback).
@@ -88,7 +89,7 @@ describe('getTextGrips', () => {
   });
 
   it('emits every expected kind once', () => {
-    const kinds = grips.map(g => g.textGripKind).sort();
+    const kinds = grips.map(g => gripKindOf(g, 'text')).sort();
     expect(kinds).toEqual([
       'text-corner-ne', 'text-corner-nw', 'text-corner-se', 'text-corner-sw',
       'text-edge-e', 'text-edge-n', 'text-edge-s', 'text-edge-w',
@@ -97,7 +98,7 @@ describe('getTextGrips', () => {
   });
 
   it('places corners at the box extremes (lower-left = position)', () => {
-    const by = (k: string) => grips.find(g => g.textGripKind === k)!.position;
+    const by = (k: string) => grips.find(g => gripKindOf(g, 'text') === k)!.position;
     expect(nearP(by('text-corner-sw'), 0, 0)).toBe(true);    // lower-left = position
     expect(nearP(by('text-corner-se'), 18, 0)).toBe(true);   // lower-right
     expect(nearP(by('text-corner-nw'), 0, 10)).toBe(true);   // upper-left
@@ -105,7 +106,7 @@ describe('getTextGrips', () => {
   });
 
   it('places edge midpoints + move on the box centre lines', () => {
-    const by = (k: string) => grips.find(g => g.textGripKind === k)!.position;
+    const by = (k: string) => grips.find(g => gripKindOf(g, 'text') === k)!.position;
     expect(nearP(by('text-edge-e'), 18, 5)).toBe(true);
     expect(nearP(by('text-edge-w'), 0, 5)).toBe(true);
     expect(nearP(by('text-edge-n'), 9, 10)).toBe(true); // top edge
@@ -114,12 +115,12 @@ describe('getTextGrips', () => {
   });
 
   it('rotation handle sits midway between centre and bottom edge (−height/4)', () => {
-    const rot = grips.find(g => g.textGripKind === 'text-rotation')!.position;
+    const rot = grips.find(g => gripKindOf(g, 'text') === 'text-rotation')!.position;
     expect(nearP(rot, 9, 2.5)).toBe(true); // centre (9,5) − height/4 (2.5) → (9, 2.5)
   });
 
   it('the move grip is the only one that moves the entity', () => {
-    expect(grips.filter(g => g.movesEntity).map(g => g.textGripKind)).toEqual(['text-move']);
+    expect(grips.filter(g => g.movesEntity).map(g => gripKindOf(g, 'text'))).toEqual(['text-move']);
   });
 });
 

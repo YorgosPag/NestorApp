@@ -102,7 +102,6 @@ export function getStairGrips(entity: Readonly<StairEntity>): GripInfo[] {
     type: 'center',
     position: moveAnchor,
     movesEntity: true,
-    stairGripKind: 'stair-base',
     gripKind: { on: 'stair', kind: 'stair-base' },
   });
 
@@ -117,7 +116,6 @@ export function getStairGrips(entity: Readonly<StairEntity>): GripInfo[] {
     type: 'vertex',
     position: { x: base.x - handleOffset * u.x, y: base.y - handleOffset * u.y },
     movesEntity: false,
-    stairGripKind: 'stair-direction',
     gripKind: { on: 'stair', kind: 'stair-direction' },
   });
 
@@ -163,7 +161,7 @@ interface StairAxisFrame {
 function pushCornerGrips(
   grips: GripInfo[],
   entity: Readonly<StairEntity>,
-  corners: ReadonlyArray<{ pos: Point2D; kind: GripInfo['stairGripKind'] }>,
+  corners: ReadonlyArray<{ pos: Point2D; kind: StairGripKind }>,
 ): void {
   for (const c of corners) {
     grips.push({
@@ -172,7 +170,6 @@ function pushCornerGrips(
       type: 'vertex',
       position: c.pos,
       movesEntity: false,
-      stairGripKind: c.kind,
       gripKind: { on: 'stair', kind: c.kind },
     });
   }
@@ -202,7 +199,6 @@ function pushAxisWidthLength(
     type: 'vertex',
     position: widthPos,
     movesEntity: false,
-    stairGripKind: 'stair-width',
     gripKind: { on: 'stair', kind: 'stair-width' },
   });
 
@@ -217,7 +213,6 @@ function pushAxisWidthLength(
     type: 'vertex',
     position: lengthPos,
     movesEntity: false,
-    stairGripKind: 'stair-length',
     gripKind: { on: 'stair', kind: 'stair-length' },
   });
 }
@@ -235,7 +230,7 @@ function pushStraightGrips(
   const backX = base.x + params.totalRun * u.x;
   const backY = base.y + params.totalRun * u.y;
 
-  const corners: ReadonlyArray<{ pos: Point2D; kind: GripInfo['stairGripKind'] }> = [
+  const corners: ReadonlyArray<{ pos: Point2D; kind: StairGripKind }> = [
     { pos: { x: base.x + half * p.x, y: base.y + half * p.y }, kind: 'stair-corner-start-left' },
     { pos: { x: base.x - half * p.x, y: base.y - half * p.y }, kind: 'stair-corner-start-right' },
     { pos: { x: backX + half * p.x, y: backY + half * p.y }, kind: 'stair-corner-end-left' },
@@ -296,7 +291,7 @@ function pushFlightBasedCorners(
   const startLeftIsA = sidePerp(startA, startRef, p) >= 0;
   const endLeftIsA = sidePerp(endA, endRef, pLast) >= 0;
 
-  const corners: ReadonlyArray<{ pos: Point2D; kind: GripInfo['stairGripKind'] }> = [
+  const corners: ReadonlyArray<{ pos: Point2D; kind: StairGripKind }> = [
     { pos: startLeftIsA ? startA : startB, kind: 'stair-corner-start-left' },
     { pos: startLeftIsA ? startB : startA, kind: 'stair-corner-start-right' },
     { pos: endLeftIsA ? endA : endB, kind: 'stair-corner-end-left' },
@@ -364,7 +359,6 @@ function pushLandingGrips(
     type: 'vertex',
     position: { x: box.centroid.x - box.halfU * u.x, y: box.centroid.y - box.halfU * u.y },
     movesEntity: false,
-    stairGripKind: 'stair-flight1-end',
     gripKind: { on: 'stair', kind: 'stair-flight1-end' },
   });
 
@@ -375,7 +369,6 @@ function pushLandingGrips(
     type: 'vertex',
     position: { x: box.centroid.x + box.halfU * u.x, y: box.centroid.y + box.halfU * u.y },
     movesEntity: false,
-    stairGripKind: 'stair-flight2-start',
     gripKind: { on: 'stair', kind: 'stair-flight2-start' },
   });
 
@@ -388,7 +381,6 @@ function pushLandingGrips(
     type: 'vertex',
     position: { x: box.centroid.x + box.halfP * p.x, y: box.centroid.y + box.halfP * p.y },
     movesEntity: false,
-    stairGripKind: 'stair-landing-depth',
     gripKind: { on: 'stair', kind: 'stair-landing-depth' },
   });
 
@@ -403,7 +395,6 @@ function pushLandingGrips(
         y: box.centroid.y + box.halfU * u.y + box.halfP * p.y,
       },
       movesEntity: false,
-      stairGripKind: 'stair-landing-corner-radius',
       gripKind: { on: 'stair', kind: 'stair-landing-corner-radius' },
     });
   }
