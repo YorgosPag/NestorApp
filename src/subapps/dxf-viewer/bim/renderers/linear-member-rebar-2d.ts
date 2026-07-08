@@ -19,11 +19,7 @@ import {
   collectLinearMemberRebarPlanGeometry,
   type LinearMemberRebarPlanInput,
 } from '../structural/reinforcement/linear-member-rebar-plan-geometry';
-// ADR-471 Slice 6 — χρώμα οπλισμού από το ΕΝΑ SSoT (πρώην inline literal σε 10 αρχεία).
-import { REBAR_COLOR_HEX as REBAR_COLOR } from '../structural/rebar-catalog';
-
-/** Ελάχιστο πάχος γραμμής οπλισμού (px) ώστε να φαίνεται σε μικρό zoom. */
-const MIN_LINE_PX = 0.6;
+import { drawRebarPlanGeometry } from './draw-rebar-plan-geometry';
 
 /** Είσοδος του 2Δ core (re-export του geometry-SSoT input — ίδιο shape). */
 export type LinearMemberRebar2DInput = LinearMemberRebarPlanInput;
@@ -31,6 +27,9 @@ export type LinearMemberRebar2DInput = LinearMemberRebarPlanInput;
 /**
  * Ζωγραφίζει τη διάταξη οπλισμού ενός γραμμικού μέλους στην κάτοψη. No-op αν ο
  * άξονας είναι εκφυλισμένος (<2 σημεία). `pxPerMm` = scene-units-per-mm × scale.
+ *
+ * ADR-505 — thin consumer: geometry SSoT `collectLinearMemberRebarPlanGeometry` →
+ * κοινός draw loop `drawRebarPlanGeometry` (μόνο paths — το γραμμικό μέλος δεν έχει dots).
  */
 export function drawLinearMemberRebar2D(
   ctx: CanvasRenderingContext2D,
@@ -40,21 +39,5 @@ export function drawLinearMemberRebar2D(
 ): void {
   const geo = collectLinearMemberRebarPlanGeometry(input);
   if (geo.paths.length === 0) return;
-
-  ctx.save();
-  ctx.setLineDash([]);
-  ctx.strokeStyle = REBAR_COLOR;
-
-  for (const path of geo.paths) {
-    const pts = path.points.map(worldToScreen);
-    if (pts.length < 2) continue;
-    ctx.lineWidth = Math.max(MIN_LINE_PX, path.diameterMm * pxPerMm);
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-    if (path.closed) ctx.closePath();
-    ctx.stroke();
-  }
-
-  ctx.restore();
+  drawRebarPlanGeometry(ctx, geo, pxPerMm, worldToScreen);
 }

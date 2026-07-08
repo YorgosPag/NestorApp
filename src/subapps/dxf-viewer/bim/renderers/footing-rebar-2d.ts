@@ -15,14 +15,14 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { FoundationParams } from '../types/foundation-types';
 import { collectFootingRebarPlanGeometry } from '../structural/reinforcement/footing-rebar-plan-geometry';
-// ADR-471 Slice 6 — χρώμα οπλισμού από το ΕΝΑ SSoT (ίδια σύμβαση με κολώνα — crimson).
-import { REBAR_COLOR_HEX as REBAR_COLOR } from '../structural/rebar-catalog';
-
-const MIN_LINE_PX = 0.6;
+import { drawRebarPlanGeometry } from './draw-rebar-plan-geometry';
 
 /**
  * Ζωγραφίζει τον οπλισμό ενός θεμελιακού στοιχείου στην κάτοψη. No-op αν δεν έχει
  * ορισμένο οπλισμό ή εκφυλισμένη γεωμετρία. `pxPerMm` = scene-units-per-mm × scale.
+ *
+ * ADR-505 — thin consumer: geometry SSoT `collectFootingRebarPlanGeometry` → κοινός
+ * draw loop `drawRebarPlanGeometry`.
  */
 export function drawFootingRebar2D(
   ctx: CanvasRenderingContext2D,
@@ -32,22 +32,5 @@ export function drawFootingRebar2D(
 ): void {
   const geo = collectFootingRebarPlanGeometry(p);
   if (!geo) return;
-
-  ctx.save();
-  ctx.setLineDash([]);
-  ctx.strokeStyle = REBAR_COLOR;
-  ctx.fillStyle = REBAR_COLOR;
-
-  for (const path of geo.paths) {
-    const pts = path.points.map(worldToScreen);
-    if (pts.length < 2) continue;
-    ctx.lineWidth = Math.max(MIN_LINE_PX, path.diameterMm * pxPerMm);
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-    if (path.closed) ctx.closePath();
-    ctx.stroke();
-  }
-
-  ctx.restore();
+  drawRebarPlanGeometry(ctx, geo, pxPerMm, worldToScreen);
 }
