@@ -18,10 +18,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-369-bim-elevation-convention-revit-alignment.md §2.2, §9 Q5, §9 Q8
  */
 
-import {
-  generateBeamId,
-  generateIfcGuid,
-} from '@/services/enterprise-id-convenience';
+import { generateBeamId } from '@/services/enterprise-id-convenience';
 import {
   DEFAULT_BEAM_Z_OFFSET_MM,
   type BeamEntity,
@@ -29,9 +26,10 @@ import {
   type BeamKind,
   type BeamParams,
 } from '@/subapps/dxf-viewer/bim/types/beam-types';
-import { makeBimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
-import type { BimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
-import type { IfcPropertySet } from '@/subapps/dxf-viewer/bim/types/ifc-entity-mixin';
+import {
+  type CreateBimEntityInputBase,
+  assembleBimEntity,
+} from '@/services/factories/bim-entity-factory-base';
 
 /**
  * BeamParams caller input — `zOffset` optional (factory defaults σε 0).
@@ -41,31 +39,11 @@ type BeamParamsCallerInput = Omit<BeamParams, 'zOffset'> & {
   zOffset?: number;
 };
 
-export interface CreateBeamInput {
+export interface CreateBeamInput extends CreateBimEntityInputBase {
   /** Required: param block (zOffset optional — factory defaults 0). */
   params: BeamParamsCallerInput;
   /** Required: pre-computed geometry cache (caller responsibility). */
   geometry: BeamGeometry;
-  /** Required: BaseEntity stable layer id (ADR-358 Phase 9E-6e). */
-  layerId: string;
-  /** Optional `visible` flag (BaseEntity). Default unset. */
-  visible?: boolean;
-  /** Optional override (test-only). Default = enterprise beam ID. */
-  id?: string;
-  /** Optional override (test-only). Default = generateIfcGuid(). */
-  ifcGuid?: string;
-  /** Optional sparse IFC Property Sets payload. */
-  pset?: IfcPropertySet;
-  /** Optional validation block. Default = empty BimValidation. */
-  validation?: BimValidation;
-  /** Optional tenant fields — pass-through. */
-  companyId?: string;
-  projectId?: string;
-  buildingId?: string;
-  floorplanId?: string;
-  floorId?: string;
-  createdBy?: string;
-  updatedBy?: string;
 }
 
 function resolveBeamParams(input: BeamParamsCallerInput): BeamParams {
@@ -86,27 +64,18 @@ function resolveBeamParams(input: BeamParamsCallerInput): BeamParams {
  */
 export function createBeam(input: CreateBeamInput): BeamEntity {
   const params = resolveBeamParams(input.params);
-  const entity: BeamEntity = {
-    id: input.id ?? generateBeamId(),
-    type: 'beam',
-    kind: params.kind,
-    layerId: input.layerId,
-    params,
-    geometry: input.geometry,
-    validation: input.validation ?? makeBimValidation(),
-    ifcGuid: input.ifcGuid ?? generateIfcGuid(),
-    ifcType: 'IfcBeam',
-    ...(input.visible !== undefined && { visible: input.visible }),
-    ...(input.pset !== undefined && { pset: input.pset }),
-    ...(input.companyId !== undefined && { companyId: input.companyId }),
-    ...(input.projectId !== undefined && { projectId: input.projectId }),
-    ...(input.buildingId !== undefined && { buildingId: input.buildingId }),
-    ...(input.floorplanId !== undefined && { floorplanId: input.floorplanId }),
-    ...(input.floorId !== undefined && { floorId: input.floorId }),
-    ...(input.createdBy !== undefined && { createdBy: input.createdBy }),
-    ...(input.updatedBy !== undefined && { updatedBy: input.updatedBy }),
-  };
-  return entity;
+  return assembleBimEntity(
+    {
+      type: 'beam',
+      kind: params.kind,
+      layerId: input.layerId,
+      params,
+      geometry: input.geometry,
+      ifcType: 'IfcBeam',
+      generateId: generateBeamId,
+    },
+    input,
+  );
 }
 
 // Re-export BeamKind for caller convenience (test ergonomics).

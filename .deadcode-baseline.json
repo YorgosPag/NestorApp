@@ -6,11 +6,12 @@
     "src/components/contacts/pickers/AdministrativeAddressPicker.tsx",
     "src/components/properties/dialogs/PropertyDeletionGuardDialog.tsx",
     "src/hooks/useDebouncedCallback.ts",
+    "src/lib/api/define-route.ts",
     "src/services/dxf-overlay-item-mutation-gateway.ts",
     "src/subapps/procurement/components/ConflictDialog.tsx",
     "src/subapps/procurement/hooks/useLiveChangeToasts.ts",
     "src/subapps/procurement/hooks/useTradeRegistry.ts",
     "src/subapps/procurement/services/trade-registry.ts"
   ],
-  "fileCount": 9
+  "fileCount": 10
 }

@@ -20,25 +20,22 @@
  * @see docs/centralized-systems/reference/adrs/ADR-369-bim-elevation-convention-revit-alignment.md §9 Q5, Q8
  */
 
+import { generateColumnId } from '@/services/enterprise-id-convenience';
 import {
-  generateColumnId,
-  generateIfcGuid,
-} from '@/services/enterprise-id-convenience';
-import {
-  DEFAULT_COLUMN_BASE_BINDING,
-  DEFAULT_COLUMN_TOP_BINDING,
   type ColumnBaseBinding,
   type ColumnTopBinding,
 } from '@/subapps/dxf-viewer/bim/types/bim-binding';
-import { makeBimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
 import type {
   ColumnEntity,
   ColumnParams,
   ColumnGeometry,
   ColumnKind,
 } from '@/subapps/dxf-viewer/bim/types/column-types';
-import type { BimValidation } from '@/subapps/dxf-viewer/bim/types/bim-base';
-import type { IfcPropertySet } from '@/subapps/dxf-viewer/bim/types/ifc-entity-mixin';
+import {
+  type CreateBimEntityInputBase,
+  assembleBimEntity,
+} from '@/services/factories/bim-entity-factory-base';
+import { resolveBindingParams } from '@/services/factories/bim-binding-params';
 
 type ColumnParamsCallerInput = Omit<
   ColumnParams,
@@ -51,64 +48,15 @@ type ColumnParamsCallerInput = Omit<
   unconnectedHeight?: number;
 };
 
-export interface CreateColumnInput {
+export interface CreateColumnInput extends CreateBimEntityInputBase {
   /** Required: param block (binding fields optional — factory fills defaults). */
   params: ColumnParamsCallerInput;
   /** Required: pre-computed geometry cache (caller responsibility). */
   geometry: ColumnGeometry;
-  /** Required: BaseEntity stable layer id (ADR-358 Phase 9E-6e). */
-  layerId: string;
-  /** Optional `visible` flag (BaseEntity). Default unset. */
-  visible?: boolean;
-  /** Optional override (test-only). Default = enterprise column ID. */
-  id?: string;
-  /** Optional override (test-only). Default = generateIfcGuid(). */
-  ifcGuid?: string;
-  /** Optional sparse IFC Property Sets payload. */
-  pset?: IfcPropertySet;
-  /** Optional validation block. Default = empty BimValidation. */
-  validation?: BimValidation;
-  /** Optional tenant fields — pass-through. */
-  companyId?: string;
-  projectId?: string;
-  buildingId?: string;
-  floorplanId?: string;
-  floorId?: string;
-  createdBy?: string;
-  updatedBy?: string;
 }
 
 function resolveColumnParams(input: ColumnParamsCallerInput): ColumnParams {
-  const topBinding = input.topBinding ?? DEFAULT_COLUMN_TOP_BINDING;
-  if (topBinding === 'unconnected' && input.unconnectedHeight === undefined) {
-    throw new Error(
-      "createColumn: topBinding='unconnected' απαιτεί unconnectedHeight (mm > 0).",
-    );
-  }
-  if (topBinding !== 'unconnected' && input.unconnectedHeight !== undefined) {
-    throw new Error(
-      "createColumn: unconnectedHeight επιτρέπεται μόνο όταν topBinding='unconnected'.",
-    );
-  }
-  const {
-    baseBinding: _bb,
-    topBinding: _tb,
-    baseOffset: _bo,
-    topOffset: _to,
-    ...rest
-  } = input;
-  void _bb;
-  void _tb;
-  void _bo;
-  void _to;
-  return {
-    ...rest,
-    baseBinding: input.baseBinding ?? DEFAULT_COLUMN_BASE_BINDING,
-    topBinding,
-    baseOffset: input.baseOffset ?? 0,
-    topOffset: input.topOffset ?? 0,
-    offsetFromStorey: input.offsetFromStorey ?? 0,
-  };
+  return resolveBindingParams(input, 'createColumn');
 }
 
 /**
@@ -123,27 +71,18 @@ function resolveColumnParams(input: ColumnParamsCallerInput): ColumnParams {
  */
 export function createColumn(input: CreateColumnInput): ColumnEntity {
   const params = resolveColumnParams(input.params);
-  const entity: ColumnEntity = {
-    id: input.id ?? generateColumnId(),
-    type: 'column',
-    kind: params.kind,
-    layerId: input.layerId,
-    params,
-    geometry: input.geometry,
-    validation: input.validation ?? makeBimValidation(),
-    ifcGuid: input.ifcGuid ?? generateIfcGuid(),
-    ifcType: 'IfcColumn',
-    ...(input.visible !== undefined && { visible: input.visible }),
-    ...(input.pset !== undefined && { pset: input.pset }),
-    ...(input.companyId !== undefined && { companyId: input.companyId }),
-    ...(input.projectId !== undefined && { projectId: input.projectId }),
-    ...(input.buildingId !== undefined && { buildingId: input.buildingId }),
-    ...(input.floorplanId !== undefined && { floorplanId: input.floorplanId }),
-    ...(input.floorId !== undefined && { floorId: input.floorId }),
-    ...(input.createdBy !== undefined && { createdBy: input.createdBy }),
-    ...(input.updatedBy !== undefined && { updatedBy: input.updatedBy }),
-  };
-  return entity;
+  return assembleBimEntity(
+    {
+      type: 'column',
+      kind: params.kind,
+      layerId: input.layerId,
+      params,
+      geometry: input.geometry,
+      ifcType: 'IfcColumn',
+      generateId: generateColumnId,
+    },
+    input,
+  );
 }
 
 // Re-export ColumnKind for caller convenience (test ergonomics).
