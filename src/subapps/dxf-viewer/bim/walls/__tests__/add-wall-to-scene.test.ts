@@ -81,7 +81,7 @@ describe('commitWallCopy', () => {
     return {
       id: `dxf_${entityId}_2`, source: 'dxf', gripIndex: 2, type: 'vertex',
       position: { x: 500, y: 0 }, movesEntity: true,
-      entityId, wallGripKind: 'wall-midpoint',
+      entityId, gripKind: { on: 'wall', kind: 'wall-midpoint' },
     };
   }
 
@@ -117,7 +117,7 @@ describe('commitWallCopy', () => {
   it('no-op for a non-midpoint grip kind', () => {
     const original = makeWall({ x: 0, y: 0 }, { x: 1000, y: 0 });
     const scene = { current: { entities: [original] } as unknown as SceneModel };
-    const grip = { ...midpointGrip(original.id), wallGripKind: 'wall-start' as const };
+    const grip = { ...midpointGrip(original.id), gripKind: { on: 'wall', kind: 'wall-start' } as const };
 
     commitWallCopy(grip, { x: 0, y: 300 }, makeDeps(scene));
 

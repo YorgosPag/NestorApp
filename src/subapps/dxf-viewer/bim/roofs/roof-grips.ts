@@ -72,7 +72,7 @@ export function getRoofGrips(entity: Readonly<RoofEntity>): GripInfo[] {
       type: 'vertex',
       position: { x: v.x, y: v.y },
       movesEntity: false,
-      roofGripKind: `roof-vertex-${i}`,
+      gripKind: { on: 'roof', kind: `roof-vertex-${i}` },
     });
   }
   const offset = verts.length;
@@ -86,7 +86,7 @@ export function getRoofGrips(entity: Readonly<RoofEntity>): GripInfo[] {
       position: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
       movesEntity: false,
       edgeVertexIndices: [i, (i + 1) % verts.length],
-      roofGripKind: `roof-edge-midpoint-${i}`,
+      gripKind: { on: 'roof', kind: `roof-edge-midpoint-${i}` },
     });
   }
   return grips;

@@ -1,6 +1,6 @@
 /**
  * Member Grip Corner Projection Snap — generic SSoT for κολόνα · δοκός · θεμέλιο
- * (ADR-398 column → γενίκευση, sibling του ADR-371 wall face-corner).
+ * (ADR-398 column → γενίκευση, sibling του ADR-597 wall face-corner).
  *
  * Όταν σέρνεις ένα φέρον μέλος από λαβή (ή Alt+drag ολόκληρου του σώματος), ο cursor
  * κάθεται στη βάση/λαβή — ΟΧΙ σε γωνία. Αυτό το module προβάλλει τις ΔΙΚΕΣ ΤΟΥ
@@ -21,7 +21,7 @@
  *
  * Pure module: zero React / DOM / Firestore / canvas deps. Idempotent.
  *
- * @see ../walls/wall-face-corner-snap.ts — wall sibling (ADR-371)
+ * @see ../walls/wall-face-corner-snap.ts — wall sibling (ADR-597)
  * @see ../../systems/cursor/corner-projection-snap.ts — shared core + priority resolver
  */
 

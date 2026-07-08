@@ -117,7 +117,6 @@ export function getOpeningGrips(entity: Readonly<OpeningEntity>): GripInfo[] {
       type: 'center',
       position: center,
       movesEntity: true,
-      openingGripKind: 'opening-move',
       gripKind: { on: 'opening', kind: 'opening-move' },
     },
     {
@@ -126,7 +125,6 @@ export function getOpeningGrips(entity: Readonly<OpeningEntity>): GripInfo[] {
       type: 'vertex',
       position: { x: center.x + perp.x * standoff, y: center.y + perp.y * standoff },
       movesEntity: false,
-      openingGripKind: 'opening-rotation',
       gripKind: { on: 'opening', kind: 'opening-rotation' },
     },
   ];
@@ -140,7 +138,6 @@ export function getOpeningGrips(entity: Readonly<OpeningEntity>): GripInfo[] {
         y: center.y + axis.y * sx * halfWidth + perp.y * sy * halfThick,
       },
       movesEntity: false,
-      openingGripKind: ROLE_TO_KIND[role],
       gripKind: { on: 'opening', kind: ROLE_TO_KIND[role] },
     });
   });
@@ -154,7 +151,6 @@ export function getOpeningGrips(entity: Readonly<OpeningEntity>): GripInfo[] {
       type: 'vertex',
       position: { x: center.x - perp.x * standoff, y: center.y - perp.y * standoff },
       movesEntity: false,
-      openingGripKind: 'opening-facing',
       gripKind: { on: 'opening', kind: 'opening-facing' },
     });
   }
