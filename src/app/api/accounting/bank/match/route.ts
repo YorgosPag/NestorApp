@@ -10,16 +10,15 @@
  * @module api/accounting/bank/match
  * @see AUDIT-2026-03-29.md Q1-Q9
  * @compliance SAP/Xero/Sage bank reconciliation patterns
+ * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { NextResponse } from 'next/server';
+import { defineRoute, ok } from '@/lib/api/define-route';
+import type { AuthContext } from '@/lib/auth';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { validatePostingAllowed } from '@/subapps/accounting/services/fiscal-period-service';
 import { logAccountingEvent } from '@/subapps/accounting/services/accounting-audit-service';
 import {
@@ -50,29 +49,22 @@ function problemResponse(problem: BankMatchProblem): NextResponse {
 // POST — Match
 // =============================================================================
 
-async function handlePost(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      const { matchingEngine, repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
+export const POST = defineRoute({
+  rateLimit: 'standard',
+  schema: MatchRequestSchema,
+  fallbackError: 'Failed to match bank transaction',
+  handler: async ({ auth, body }) => {
+    const { matchingEngine, repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
 
-      // ── Parse & Validate ────────────────────────────────────────────
-      const body = await req.json();
-      const parsed = safeParseBody(MatchRequestSchema, body);
-      if (parsed.error) return parsed.error;
-      const data = parsed.data;
-
-      // ── N:M group match ─────────────────────────────────────────────
-      if ('transactionIds' in data) {
-        return handleGroupMatch(data, ctx, repository, matchingEngine);
-      }
-
-      // ── 1:1 match ──────────────────────────────────────────────────
-      return handleSingleMatch(data, ctx, repository, matchingEngine);
+    // ── N:M group match ─────────────────────────────────────────────
+    if ('transactionIds' in body) {
+      return handleGroupMatch(body, auth, repository, matchingEngine);
     }
-  );
 
-  return handler(request);
-}
+    // ── 1:1 match ──────────────────────────────────────────────────
+    return handleSingleMatch(body, auth, repository, matchingEngine);
+  },
+});
 
 // =============================================================================
 // 1:1 MATCH HANDLER
@@ -192,7 +184,7 @@ async function handleSingleMatch(
     },
   });
 
-  return NextResponse.json({ success: true, data: { ...result, version: newVersion } });
+  return ok({ ...result, version: newVersion });
 }
 
 // =============================================================================
@@ -279,7 +271,5 @@ async function handleGroupMatch(
     },
   });
 
-  return NextResponse.json({ success: true, data: results });
+  return ok(results);
 }
-
-export const POST = withStandardRateLimit(handlePost);

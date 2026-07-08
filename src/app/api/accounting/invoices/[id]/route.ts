@@ -12,14 +12,13 @@
  *
  * @module api/accounting/invoices/[id]
  * @enterprise ADR-ACC-002 Invoicing System
+ * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, logAuditEvent, logFinancialTransition } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { defineRoute, ok, badRequest, notFound, conflict, httpError } from '@/lib/api/define-route';
+import { logAuditEvent, logFinancialTransition } from '@/lib/auth';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import {
   reverseJournalEntryForCancelledInvoice,
@@ -28,8 +27,7 @@ import {
 import { updateCustomerBalance } from '@/subapps/accounting/services';
 import { getFiscalYearFromDate } from '@/subapps/accounting/services/repository/firestore-helpers';
 import type { MyDataDocumentStatus, UpdateInvoiceInput, CancellationReasonCode } from '@/subapps/accounting/types';
-import { getErrorMessage } from '@/lib/error-utils';
-import { safeParseBody, safeJsonBody } from '@/lib/validation/shared-schemas';
+import { safeJsonBody } from '@/lib/validation/shared-schemas';
 import {
   UpdateInvoiceSchema,
   CancelInvoiceSchema,
@@ -42,116 +40,67 @@ import {
 // GET — Single Invoice
 // =============================================================================
 
-async function handleGet(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  const { id } = await segmentData!.params;
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to fetch invoice',
+  handler: async ({ auth, params }) => {
+    const { id } = params;
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const invoice = await repository.getInvoice(id);
 
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const invoice = await repository.getInvoice(id);
-
-        if (!invoice) {
-          return NextResponse.json(
-            { success: false, error: 'Invoice not found' },
-            { status: 404 }
-          );
-        }
-
-        return NextResponse.json({ success: true, data: invoice });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to fetch invoice');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
+    if (!invoice) {
+      notFound('Invoice not found');
     }
-  );
 
-  return handler(request);
-}
-
-export const GET = withStandardRateLimit(handleGet);
+    return ok(invoice);
+  },
+});
 
 // =============================================================================
 // PATCH — Update Invoice
 // =============================================================================
 
-async function handlePatch(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  const { id } = await segmentData!.params;
+export const PATCH = defineRoute({
+  rateLimit: 'standard',
+  schema: UpdateInvoiceSchema,
+  fallbackError: 'Failed to update invoice',
+  handler: async ({ auth, body, params }) => {
+    const { id } = params;
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
 
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const parsed = safeParseBody(UpdateInvoiceSchema, await req.json());
-        if (parsed.error) return parsed.error;
-        const body = parsed.data;
-
-        if (Object.keys(body).length === 0) {
-          return NextResponse.json(
-            { success: false, error: 'No update fields provided' },
-            { status: 400 }
-          );
-        }
-
-        // Verify invoice exists
-        const existing = await repository.getInvoice(id);
-        if (!existing) {
-          return NextResponse.json(
-            { success: false, error: 'Invoice not found' },
-            { status: 404 }
-          );
-        }
-
-        // 🛡️ ADR-249 P0-1: Invoice immutability guard
-        const currentStatus = existing.mydata?.status as MyDataDocumentStatus | undefined;
-        if (currentStatus && IMMUTABLE_STATUSES.has(currentStatus)) {
-          return NextResponse.json(
-            { success: false, error: `Cannot edit invoice with myDATA status '${currentStatus}'. Only draft or rejected invoices are editable.` },
-            { status: 403 }
-          );
-        }
-
-        await repository.updateInvoice(id, body as UpdateInvoiceInput);
-
-        // ── Hook 3: Update balance if payments/amounts changed (Q4 — sync) ─
-        const affectsBalance = !!(body.payments || body.lineItems);
-        const contactId = existing.customer?.contactId;
-        if (affectsBalance && contactId) {
-          const fiscalYear = getFiscalYearFromDate(existing.issueDate);
-          await updateCustomerBalance(repository, contactId, fiscalYear);
-        }
-
-        await logAuditEvent(ctx, 'data_updated', id, 'invoice', {
-          metadata: { reason: 'Invoice fields updated' },
-        }).catch(() => {/* non-blocking */});
-
-        return NextResponse.json({
-          success: true,
-          data: { invoiceId: id, updated: true },
-        });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to update invoice');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
+    if (Object.keys(body).length === 0) {
+      badRequest('No update fields provided');
     }
-  );
 
-  return handler(request);
-}
+    // Verify invoice exists
+    const existing = await repository.getInvoice(id);
+    if (!existing) {
+      notFound('Invoice not found');
+    }
 
-export const PATCH = withStandardRateLimit(handlePatch);
+    // 🛡️ ADR-249 P0-1: Invoice immutability guard
+    const currentStatus = existing.mydata?.status as MyDataDocumentStatus | undefined;
+    if (currentStatus && IMMUTABLE_STATUSES.has(currentStatus)) {
+      httpError(403, `Cannot edit invoice with myDATA status '${currentStatus}'. Only draft or rejected invoices are editable.`);
+    }
+
+    await repository.updateInvoice(id, body as UpdateInvoiceInput);
+
+    // ── Hook 3: Update balance if payments/amounts changed (Q4 — sync) ─
+    const affectsBalance = !!(body.payments || body.lineItems);
+    const contactId = existing.customer?.contactId;
+    if (affectsBalance && contactId) {
+      const fiscalYear = getFiscalYearFromDate(existing.issueDate);
+      await updateCustomerBalance(repository, contactId, fiscalYear);
+    }
+
+    await logAuditEvent(auth, 'data_updated', id, 'invoice', {
+      metadata: { reason: 'Invoice fields updated' },
+    }).catch(() => {/* non-blocking */});
+
+    return ok({ invoiceId: id, updated: true });
+  },
+});
 
 // =============================================================================
 // DELETE — Cancel Invoice (Void or Credit Note)
@@ -166,115 +115,84 @@ export const PATCH = withStandardRateLimit(handlePatch);
  * - Cancelled       → 409 Conflict
  */
 
-async function handleDelete(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  const { id } = await segmentData!.params;
+export const DELETE = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to cancel invoice',
+  handler: async ({ req, auth, params }) => {
+    const { id } = params;
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
 
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
+    // Parse cancellation reason from body
+    const parsed = await safeJsonBody(CancelInvoiceSchema, req);
+    if (parsed.error) return parsed.error;
+    const { reasonCode, notes } = parsed.data;
 
-        // Parse cancellation reason from body
-        const parsed = await safeJsonBody(CancelInvoiceSchema, req);
-        if (parsed.error) return parsed.error;
-        const { reasonCode, notes } = parsed.data;
-
-        const existing = await repository.getInvoice(id);
-        if (!existing) {
-          return NextResponse.json(
-            { success: false, error: 'Invoice not found' },
-            { status: 404 }
-          );
-        }
-
-        if (existing.mydata?.status === 'cancelled') {
-          return NextResponse.json(
-            { success: false, error: 'Invoice is already cancelled' },
-            { status: 409 }
-          );
-        }
-
-        const currentStatus = existing.mydata?.status ?? 'draft';
-        const reasonNotes = notes.trim() || null;
-
-        // ── Path A: Draft/Rejected → VOID ─────────────────────────────
-        if (VOIDABLE_STATUSES.has(currentStatus)) {
-          await repository.updateInvoice(id, {
-            mydata: { ...existing.mydata, status: 'cancelled' },
-            cancellationReason: reasonCode as CancellationReasonCode,
-            cancellationNotes: reasonNotes ?? undefined,
-          });
-
-          const reversal = await reverseJournalEntryForCancelledInvoice(
-            repository, id, ctx.uid, reasonCode as CancellationReasonCode, reasonNotes
-          );
-
-          // ── Hook 2: Update balance after void (Q4 — synchronous) ────────
-          const voidContactId = existing.customer?.contactId;
-          if (voidContactId) {
-            const fiscalYear = getFiscalYearFromDate(existing.issueDate);
-            await updateCustomerBalance(repository, voidContactId, fiscalYear);
-          }
-
-          await logFinancialTransition(ctx, 'invoice', id, currentStatus, 'cancelled').catch(() => {/* non-blocking */});
-
-          return NextResponse.json({
-            success: true,
-            data: {
-              invoiceId: id,
-              action: 'voided',
-              cancelled: true,
-              reversalEntryId: reversal?.reversalEntryId ?? null,
-            },
-          });
-        }
-
-        // ── Path B: Sent/Accepted → CREDIT NOTE ──────────────────────
-        if (CREDIT_NOTE_STATUSES.has(currentStatus)) {
-          const result = await createCreditNoteForInvoice(
-            repository, existing, ctx.uid, reasonCode as CancellationReasonCode, reasonNotes
-          );
-
-          // ── Hook 2: Update balance after credit note (Q4 — synchronous) ─
-          const cnContactId = existing.customer?.contactId;
-          if (cnContactId) {
-            const fiscalYear = getFiscalYearFromDate(existing.issueDate);
-            await updateCustomerBalance(repository, cnContactId, fiscalYear);
-          }
-
-          await logFinancialTransition(ctx, 'invoice', id, currentStatus, 'credit_note_issued').catch(() => {/* non-blocking */});
-
-          return NextResponse.json({
-            success: true,
-            data: {
-              invoiceId: id,
-              action: 'credit_note_issued',
-              creditNoteId: result.creditNoteId,
-              creditNoteNumber: result.creditNoteNumber,
-              reversalEntryId: result.reversalEntryId,
-            },
-          });
-        }
-
-        // ── Unknown status → reject ──────────────────────────────────
-        return NextResponse.json(
-          { success: false, error: `Cannot cancel invoice with status '${currentStatus}'` },
-          { status: 400 }
-        );
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to cancel invoice');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
+    const existing = await repository.getInvoice(id);
+    if (!existing) {
+      notFound('Invoice not found');
     }
-  );
 
-  return handler(request);
-}
+    if (existing.mydata?.status === 'cancelled') {
+      conflict('Invoice is already cancelled');
+    }
 
-export const DELETE = withStandardRateLimit(handleDelete);
+    const currentStatus = existing.mydata?.status ?? 'draft';
+    const reasonNotes = notes.trim() || null;
+
+    // ── Path A: Draft/Rejected → VOID ─────────────────────────────
+    if (VOIDABLE_STATUSES.has(currentStatus)) {
+      await repository.updateInvoice(id, {
+        mydata: { ...existing.mydata, status: 'cancelled' },
+        cancellationReason: reasonCode as CancellationReasonCode,
+        cancellationNotes: reasonNotes ?? undefined,
+      });
+
+      const reversal = await reverseJournalEntryForCancelledInvoice(
+        repository, id, auth.uid, reasonCode as CancellationReasonCode, reasonNotes
+      );
+
+      // ── Hook 2: Update balance after void (Q4 — synchronous) ────────
+      const voidContactId = existing.customer?.contactId;
+      if (voidContactId) {
+        const fiscalYear = getFiscalYearFromDate(existing.issueDate);
+        await updateCustomerBalance(repository, voidContactId, fiscalYear);
+      }
+
+      await logFinancialTransition(auth, 'invoice', id, currentStatus, 'cancelled').catch(() => {/* non-blocking */});
+
+      return ok({
+        invoiceId: id,
+        action: 'voided',
+        cancelled: true,
+        reversalEntryId: reversal?.reversalEntryId ?? null,
+      });
+    }
+
+    // ── Path B: Sent/Accepted → CREDIT NOTE ──────────────────────
+    if (CREDIT_NOTE_STATUSES.has(currentStatus)) {
+      const result = await createCreditNoteForInvoice(
+        repository, existing, auth.uid, reasonCode as CancellationReasonCode, reasonNotes
+      );
+
+      // ── Hook 2: Update balance after credit note (Q4 — synchronous) ─
+      const cnContactId = existing.customer?.contactId;
+      if (cnContactId) {
+        const fiscalYear = getFiscalYearFromDate(existing.issueDate);
+        await updateCustomerBalance(repository, cnContactId, fiscalYear);
+      }
+
+      await logFinancialTransition(auth, 'invoice', id, currentStatus, 'credit_note_issued').catch(() => {/* non-blocking */});
+
+      return ok({
+        invoiceId: id,
+        action: 'credit_note_issued',
+        creditNoteId: result.creditNoteId,
+        creditNoteNumber: result.creditNoteNumber,
+        reversalEntryId: result.reversalEntryId,
+      });
+    }
+
+    // ── Unknown status → reject ──────────────────────────────────
+    badRequest(`Cannot cancel invoice with status '${currentStatus}'`);
+  },
+});
