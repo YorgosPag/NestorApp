@@ -41,15 +41,10 @@ import { designGas } from '../../../systems/mep-design/gas';
 import { gasProposalStore } from '../../../systems/mep-design/gas/gas-proposal-store';
 import { buildGasCommit } from '../../../systems/mep-design/gas/commit/build-gas-commit';
 import { GAS_AUTO_RIBBON_ACTIONS } from './bridge/gas-auto-command-keys';
-import type { useLevels } from '../../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 
 export interface UseRibbonGasAutoBridgeProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 export interface RibbonGasAutoBridge {
