@@ -14,12 +14,11 @@
  * @module hooks/tools/useFilletTool
  */
 
-import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import i18next from 'i18next';
 import { generateEntityId } from '@/services/enterprise-id.service';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
-import { CornerEntityCommand, type CornerTrimOp } from '../../core/commands/entity-commands/CornerEntityCommand';
 import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { FilletToolStore } from '../../systems/corner/FilletToolStore';
@@ -39,21 +38,15 @@ import {
   isLineEntity,
   isPolylineEntity,
   isLWPolylineEntity,
-  type Entity,
   type LineEntity,
   type PolylineEntity,
   type LWPolylineEntity,
 } from '../../types/entities';
-import type { SceneModel } from '../../types/scene';
+import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
+import { useToolHintPrompt } from './useToolHintPrompt';
+import { resolveCornerTarget, executeCornerCommand, toCornerTrimOps, useCornerCommandRef, type CornerToolProps, CORNER_KEYWORDS_TRIM, CORNER_KEYWORDS_POLYLINE, CORNER_KEYWORDS_UNDO } from './corner-tool-core';
 
-export interface UseFilletToolProps {
-  activeTool: string;
-  levelManager: SceneAdapterLevelManager;
-  executeCommand: (cmd: ICommand) => void;
-  /** Returns the entity ID hit by `worldPoint` within tolerance (shared with trim/offset). */
-  hitTestEntity: (worldPoint: Point2D) => string | null;
-  onToolChange?: (tool: string) => void;
-}
+export type UseFilletToolProps = CornerToolProps;
 
 export interface UseFilletToolReturn {
   isActive: boolean;
@@ -62,158 +55,125 @@ export interface UseFilletToolReturn {
   handleFilletKeyDown: (key: string) => boolean;
 }
 
-const KEYWORDS_TRIM = new Set(['t', 'T', 'τ', 'Τ']);
-const KEYWORDS_POLYLINE = new Set(['p', 'P', 'π', 'Π']);
+// Tool-specific key; TRIM / POLYLINE / UNDO come from the shared corner-tool-core SSoT.
 const KEYWORDS_RADIUS = new Set(['r', 'R', 'ρ', 'Ρ']);
-const KEYWORDS_UNDO = new Set(['u', 'U']);
-
-function findEntity(scene: SceneModel, id: string): Entity | undefined {
-  return scene.entities.find((e) => e.id === id) as Entity | undefined;
-}
-
-function isLocked(scene: SceneModel, entity: Entity): boolean {
-  const layer = entity.layerId ? (scene.layersById ?? {})[entity.layerId] : undefined;
-  return layer?.locked === true;
-}
 
 export function useFilletTool(props: UseFilletToolProps): UseFilletToolReturn {
   const { activeTool, levelManager, executeCommand, hitTestEntity, onToolChange } = props;
-  const wasActiveRef = useRef(false);
-  const lastCommandRef = useRef<CornerEntityCommand | null>(null);
+  const lastCommandRef = useCornerCommandRef();
 
   const isActive = activeTool === 'fillet';
   const phase = useSyncExternalStore(FilletToolStore.subscribe, () => FilletToolStore.getState().phase);
   const polylineMode = useSyncExternalStore(FilletToolStore.subscribe, () => FilletToolStore.getState().polylineMode);
 
-  // Activation / deactivation lifecycle
-  useEffect(() => {
-    if (isActive && !wasActiveRef.current) {
+  // Activation / deactivation lifecycle (ADR-589 edge-triggered SSoT)
+  useEdgeTriggeredLifecycle(
+    isActive,
+    () => {
       FilletToolStore.reset();
       ToolCursorStore.set('fillet-pickbox');
-    } else if (!isActive && wasActiveRef.current) {
+    },
+    () => {
       ToolCursorStore.reset();
       FilletToolStore.reset();
-    }
-    wasActiveRef.current = isActive;
-  }, [isActive]);
+    },
+  );
 
-  // Status-bar prompt sync
-  useEffect(() => {
-    if (!isActive) {
-      toolHintOverrideStore.setOverride(null);
-      return;
-    }
-    const key = polylineMode
+  // Status-bar prompt sync (ADR-589 SSoT)
+  useToolHintPrompt(
+    isActive,
+    polylineMode
       ? 'filletTool.promptPolyline'
       : phase === 'picking-second'
         ? 'filletTool.promptSecond'
-        : 'filletTool.promptFirst';
-    toolHintOverrideStore.setOverride(i18next.t(`tool-hints:${key}`));
-    return () => {
-      toolHintOverrideStore.setOverride(null);
-    };
-  }, [isActive, phase, polylineMode]);
+        : 'filletTool.promptFirst',
+  );
 
   const getSceneManager = useSceneManagerAdapter(levelManager);
 
+  // Store bookkeeping shared by the two-lines / curve / polyline-corner commits: remember the
+  // radius and loop back to first-pick. Runs only after a command actually executed.
+  const commitTail = useCallback(() => {
+    FilletToolStore.setLastRadius(FilletToolStore.getState().radius);
+    FilletToolStore.clearFirst();
+  }, []);
+
   const commitPolyline = useCallback(
-    (scene: SceneModel, poly: PolylineEntity | LWPolylineEntity, worldPoint: Point2D): void => {
-      const sm = getSceneManager();
-      if (!sm) return;
+    (poly: PolylineEntity | LWPolylineEntity, worldPoint: Point2D): void => {
       const state = FilletToolStore.getState();
       const result = computeFilletPolyline(poly, state.radius);
       if (!result) return;
-      const cmd = new CornerEntityCommand(
+      executeCornerCommand(
+        getSceneManager,
         { kind: 'fillet', trims: [{ entityId: poly.id, originalGeom: poly, newGeom: result.entity }], addEntity: null, pickPoint: worldPoint },
-        sm,
+        executeCommand, lastCommandRef,
+        () => {
+          FilletToolStore.setLastRadius(state.radius);
+          if (result.skipped > 0) {
+            toolHintOverrideStore.setOverride(
+              i18next.t('tool-hints:filletTool.polylineDone', { filleted: result.filleted, skipped: result.skipped }),
+            );
+          }
+        },
       );
-      executeCommand(cmd);
-      lastCommandRef.current = cmd;
-      FilletToolStore.setLastRadius(state.radius);
-      if (result.skipped > 0) {
-        toolHintOverrideStore.setOverride(
-          i18next.t('tool-hints:filletTool.polylineDone', { filleted: result.filleted, skipped: result.skipped }),
-        );
-      }
     },
     [getSceneManager, executeCommand],
   );
 
   const commitTwoLines = useCallback(
     (first: LineEntity, firstPick: Point2D, second: LineEntity, secondPick: Point2D): void => {
-      const sm = getSceneManager();
-      if (!sm) return;
       const state = FilletToolStore.getState();
       const result = computeFilletTwoLines(first, firstPick, second, secondPick, state.radius, state.trim, generateEntityId());
       if (!result) return;
-      const trims: CornerTrimOp[] = result.trims.map((tr) => ({
-        entityId: tr.entityId,
-        originalGeom: tr.originalGeom,
-        newGeom: tr.newGeom,
-      }));
-      const cmd = new CornerEntityCommand({ kind: 'fillet', trims, addEntity: result.arc, pickPoint: secondPick }, sm);
-      executeCommand(cmd);
-      lastCommandRef.current = cmd;
-      FilletToolStore.setLastRadius(state.radius);
-      FilletToolStore.clearFirst(); // continuous → back to first-line picking
+      executeCornerCommand(
+        getSceneManager,
+        { kind: 'fillet', trims: toCornerTrimOps(result.trims), addEntity: result.arc, pickPoint: secondPick },
+        executeCommand, lastCommandRef, commitTail,
+      );
     },
-    [getSceneManager, executeCommand],
+    [getSceneManager, executeCommand, commitTail],
   );
 
   const commitCurve = useCallback(
     (first: FilletCurveEntity, firstPick: Point2D, second: FilletCurveEntity, secondPick: Point2D): void => {
-      const sm = getSceneManager();
-      if (!sm) return;
       const state = FilletToolStore.getState();
       const result = computeFilletCurve(first, firstPick, second, secondPick, state.radius, state.trim, generateEntityId());
       if (!result) return;
-      const cmd = new CornerEntityCommand(
+      executeCornerCommand(
+        getSceneManager,
         { kind: 'fillet', trims: result.trims, addEntity: result.arc, pickPoint: secondPick },
-        sm,
+        executeCommand, lastCommandRef, commitTail,
       );
-      executeCommand(cmd);
-      lastCommandRef.current = cmd;
-      FilletToolStore.setLastRadius(state.radius);
-      FilletToolStore.clearFirst(); // continuous → back to first pick
     },
-    [getSceneManager, executeCommand],
+    [getSceneManager, executeCommand, commitTail],
   );
 
   const commitPolylineCorner = useCallback(
     (poly: PolylineEntity | LWPolylineEntity, firstPick: Point2D, secondPick: Point2D): void => {
-      const sm = getSceneManager();
-      if (!sm) return;
       const cornerIndex = resolveSharedPolylineCorner(poly, firstPick, secondPick);
       if (cornerIndex === null) return; // same or non-adjacent segments — ignore
       const state = FilletToolStore.getState();
       const result = computeFilletPolylineCorner(poly, cornerIndex, state.radius);
       if (!result) return;
-      const cmd = new CornerEntityCommand(
+      executeCornerCommand(
+        getSceneManager,
         { kind: 'fillet', trims: [{ entityId: poly.id, originalGeom: poly, newGeom: result.entity }], addEntity: null, pickPoint: secondPick },
-        sm,
+        executeCommand, lastCommandRef, commitTail,
       );
-      executeCommand(cmd);
-      lastCommandRef.current = cmd;
-      FilletToolStore.setLastRadius(state.radius);
-      FilletToolStore.clearFirst();
     },
-    [getSceneManager, executeCommand],
+    [getSceneManager, executeCommand, commitTail],
   );
 
   const performFilletPick = useCallback(
     (worldPoint: Point2D): void => {
-      if (!levelManager.currentLevelId) return;
-      const scene = levelManager.getLevelScene(levelManager.currentLevelId) as SceneModel | null;
-      if (!scene) return;
-      const hitId = hitTestEntity(worldPoint);
-      if (!hitId) return;
-      const target = findEntity(scene, hitId);
-      if (!target || isLocked(scene, target)) return;
+      const resolved = resolveCornerTarget(levelManager, hitTestEntity, worldPoint);
+      if (!resolved) return;
+      const { target } = resolved;
       const state = FilletToolStore.getState();
 
       // Polyline mode — one pick rounds every fitting corner.
       if (state.polylineMode) {
-        if (isPolylineEntity(target) || isLWPolylineEntity(target)) commitPolyline(scene, target, worldPoint);
+        if (isPolylineEntity(target) || isLWPolylineEntity(target)) commitPolyline(target, worldPoint);
         return;
       }
 
@@ -293,17 +253,17 @@ export function useFilletTool(props: UseFilletToolProps): UseFilletToolReturn {
         toolHintOverrideStore.setOverride(i18next.t('tool-hints:filletTool.radius'));
         return true;
       }
-      if (KEYWORDS_TRIM.has(key)) {
+      if (CORNER_KEYWORDS_TRIM.has(key)) {
         FilletToolStore.toggleTrim();
         const on = FilletToolStore.getState().trim;
         toolHintOverrideStore.setOverride(i18next.t(`tool-hints:filletTool.${on ? 'trimOn' : 'trimOff'}`));
         return true;
       }
-      if (KEYWORDS_POLYLINE.has(key)) {
+      if (CORNER_KEYWORDS_POLYLINE.has(key)) {
         FilletToolStore.togglePolylineMode();
         return true;
       }
-      if (KEYWORDS_UNDO.has(key)) {
+      if (CORNER_KEYWORDS_UNDO.has(key)) {
         lastCommandRef.current?.undo();
         lastCommandRef.current = null;
         return true;
