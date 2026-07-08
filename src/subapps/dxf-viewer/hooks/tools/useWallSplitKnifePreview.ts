@@ -30,19 +30,14 @@ import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 // 🏢 ADR-571: tool-anchor/cut-indicator cyan SSoT
 import { TOOL_ANCHOR_CYAN } from '../../config/color-config';
-import type { useLevels } from '../../systems/levels';
+import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'currentLevelId'
->;
 
 export interface UseWallSplitKnifePreviewProps {
   /** First knife point (world coords), or null while awaiting the first click. */
   firstPoint: Point2D | null;
-  levelManager: LevelManagerLike;
+  levelManager: LevelSceneReader;
   transform: ViewTransform;
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;

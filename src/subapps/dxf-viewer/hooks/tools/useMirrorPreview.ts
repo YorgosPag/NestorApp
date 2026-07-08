@@ -23,7 +23,7 @@ import type { MirrorAxis } from '../../utils/mirror-math';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { useCadToggles } from '../common/useCadToggles';
 import type { MirrorPhase } from './useMirrorTool';
-import type { useLevels } from '../../systems/levels';
+import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
@@ -31,17 +31,12 @@ import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 // TYPES
 // ============================================================================
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'currentLevelId'
->;
-
 export interface UseMirrorPreviewProps {
   phase: MirrorPhase;
   firstPoint: Point2D | null;
   secondPoint: Point2D | null;
   selectedEntityIds: string[];
-  levelManager: LevelManagerLike;
+  levelManager: LevelSceneReader;
   transform: ViewTransform;
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;

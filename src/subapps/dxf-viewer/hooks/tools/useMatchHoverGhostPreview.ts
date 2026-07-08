@@ -29,7 +29,7 @@ import type { ViewTransform } from '../../rendering/types/Types';
 import type { EntityType } from '../../types/entities';
 import type { SceneEntity } from '../../core/commands/interfaces';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { useLevels } from '../../systems/levels';
+import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 import {
   getMatchBrushSource,
   subscribeMatchBrush,
@@ -50,12 +50,9 @@ import { useLevelLayersById } from './useLevelLayersById';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
-/** Minimal level-manager surface needed to read the active level scene. */
-type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene' | 'currentLevelId'>;
-
 export interface UseMatchHoverGhostPreviewProps {
   readonly transform: ViewTransform;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneReader;
   getCanvas(): HTMLCanvasElement | null;
   getViewportElement?(): HTMLElement | null;
 }

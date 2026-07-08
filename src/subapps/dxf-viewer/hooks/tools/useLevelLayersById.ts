@@ -17,13 +17,10 @@
 
 import { useCallback } from 'react';
 import type { SceneLayer } from '../../types/entities';
-import type { useLevels } from '../../systems/levels';
-
-/** The minimal level-manager surface needed to read the active level's layer table. */
-type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene' | 'currentLevelId'>;
+import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 
 export function useLevelLayersById(
-  levelManager: LevelManagerLike,
+  levelManager: LevelSceneReader,
 ): () => Record<string, SceneLayer> | undefined {
   return useCallback((): Record<string, SceneLayer> | undefined => {
     if (!levelManager.currentLevelId) return undefined;

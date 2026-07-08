@@ -37,7 +37,7 @@ import { UpdateWallParamsCommand } from '../core/commands/entity-commands/Update
 import { UpdateSlabParamsCommand } from '../core/commands/entity-commands/UpdateSlabParamsCommand';
 import { UpdateBeamParamsCommand } from '../core/commands/entity-commands/UpdateBeamParamsCommand';
 import { UpdateColumnParamsCommand } from '../core/commands/entity-commands/UpdateColumnParamsCommand';
-import type { useLevels } from '../systems/levels';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../systems/selection';
 
 // ─── Material option lists (mirrors contextual ribbon tab order) ──────────────
@@ -50,18 +50,13 @@ const COLUMN_MATERIALS = ['rc', 'steel', 'masonry', 'wood'] as const;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
   'getPrimaryId'
 >;
 
 export interface UseBimMaterialCyclerProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly universalSelection: UniversalSelectionLike;
 }
 
