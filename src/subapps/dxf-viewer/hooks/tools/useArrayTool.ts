@@ -23,12 +23,13 @@
 
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import i18next from 'i18next';
 import type { ICommand } from '../../core/commands/interfaces';
 import { CreateArrayCommand } from '../../core/commands/entity-commands/CreateArrayCommand';
 import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
+import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
 import { computeSourceGroupBbox, defaultRectSpacing } from '../../systems/array/array-bbox';
 import { validateArrayParams } from '../../systems/array/array-validation';
 import type { RectParams } from '../../systems/array/types';
@@ -62,7 +63,6 @@ export function useArrayTool(props: UseArrayToolProps): UseArrayToolReturn {
     onToolChange,
   } = props;
 
-  const wasActiveRef = useRef(false);
   const isActive = activeTool === 'array-rect';
 
   const getSceneManager = useSceneManagerAdapter(levelManager);
@@ -71,16 +71,17 @@ export function useArrayTool(props: UseArrayToolProps): UseArrayToolReturn {
     toolHintOverrideStore.setOverride(i18next.t(`tool-hints:${key}`));
   }, []);
 
-  useEffect(() => {
-    if (isActive && !wasActiveRef.current) {
+  // Activation / deactivation lifecycle (ADR-589 edge-triggered SSoT)
+  useEdgeTriggeredLifecycle(
+    isActive,
+    () => {
       // Activation edge — try to create the array from the current selection.
       tryCreateFromSelection();
-    } else if (!isActive && wasActiveRef.current) {
+    },
+    () => {
       toolHintOverrideStore.setOverride(null);
-    }
-    wasActiveRef.current = isActive;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive]);
+    },
+  );
 
   function tryCreateFromSelection(): void {
     const levelId = levelManager.currentLevelId;
