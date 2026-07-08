@@ -53,13 +53,8 @@ import { applyDimensionGripDrag, diffDimEntity } from './dimensions/useDimension
 import type { Point2D } from '../rendering/types/Types';
 import type { DimensionEntity, DimensionManualBreaks } from '../types/dimension';
 import { isDimensionEntity, type Entity } from '../types/entities';
-import type { SceneModel } from '../types/scene';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene: (levelId: string) => SceneModel | null;
-  setLevelScene: (levelId: string, scene: SceneModel) => void;
-}
 
 interface ModifyContext {
   readonly entities: readonly Entity[];
@@ -210,7 +205,7 @@ export function buildResetTextPositionCommands(
   return commands;
 }
 
-export function useDimensionModify(props: { levelManager: LevelManagerLike }): void {
+export function useDimensionModify(props: { levelManager: LevelSceneWriter }): void {
   const { levelManager } = props;
   const { execute } = useCommandHistory();
 

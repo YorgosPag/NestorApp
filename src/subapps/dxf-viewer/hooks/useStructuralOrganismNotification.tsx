@@ -40,13 +40,10 @@ import { ReinforceColumnFootingCommand } from '../core/commands/entity-commands/
 import { isFoundationEntity, type Entity } from '../types/entities';
 import type { FoundationEntity } from '../bim/types/foundation-types';
 import type { StructuralCodeProvider } from '../bim/structural/codes/structural-code-types';
-import type { SceneModel } from '../types/scene';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
+interface OrganismNotificationLevelManager extends LevelSceneWriter {
   readonly levels: readonly { id: string; projectId?: string }[];
-  getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel): void;
 }
 
 /** Βρες το footing entity είτε στην ενεργή σκηνή (single-level) είτε στον foundation store. */
@@ -69,7 +66,7 @@ function anyNeedsReinforcement(members: readonly (Entity | undefined)[], provide
   });
 }
 
-export function useStructuralOrganismNotification(props: { levelManager: LevelManagerLike }): void {
+export function useStructuralOrganismNotification(props: { levelManager: OrganismNotificationLevelManager }): void {
   const { levelManager } = props;
   const { execute } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');

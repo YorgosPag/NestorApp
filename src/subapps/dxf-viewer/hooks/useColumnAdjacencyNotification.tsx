@@ -36,16 +36,11 @@ import {
 import { ConfirmationToast } from '../ui/components/layers/components/ConfirmationToast';
 import { isColumnEntity, type Entity } from '../types/entities';
 import type { ColumnEntity } from '../bim/types/column-types';
-import type { SceneModel } from '../types/scene';
 import { resolveSceneUnits } from '../utils/scene-units';
 import { TOLERANCE_CONFIG } from '../config/tolerance-config';
 import { getImmediateTransform } from '../systems/cursor/ImmediateTransformStore';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene: (levelId: string) => SceneModel | null;
-  setLevelScene: (levelId: string, scene: SceneModel) => void;
-}
 
 type ExecuteFn = ReturnType<typeof useCommandHistory>['execute'];
 
@@ -64,7 +59,7 @@ function collectGroupSources(
 /** Χτίζει το composite + τρέχει το undoable `MergeColumnsCommand` (single undo). */
 function runMerge(
   group: ColumnMergeGroup,
-  levelManager: LevelManagerLike,
+  levelManager: LevelSceneWriter,
   levelId: string,
   tol: number,
   execute: ExecuteFn,
@@ -90,7 +85,7 @@ function runMerge(
   });
 }
 
-export function useColumnAdjacencyNotification(props: { levelManager: LevelManagerLike }): void {
+export function useColumnAdjacencyNotification(props: { levelManager: LevelSceneWriter }): void {
   const { levelManager } = props;
   const { execute } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');

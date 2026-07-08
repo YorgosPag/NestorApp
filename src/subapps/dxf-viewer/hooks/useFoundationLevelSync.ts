@@ -52,12 +52,10 @@ import {
   type FoundationLevelRef,
 } from '../systems/levels/building-foundation-level';
 import { isFoundationEntity, type Entity } from '../types/entities';
-import type { SceneModel } from '../types/scene';
+import type { LevelSceneReader } from '../systems/levels/level-scene-accessor';
 
-interface LevelManagerLike {
+interface FoundationSyncLevelManager extends LevelSceneReader {
   readonly levels: readonly FoundationLevelRef[];
-  readonly currentLevelId: string | null;
-  getLevelScene(levelId: string): SceneModel | null;
 }
 
 /** Structural μεταβολές που μπορεί να αλλάξουν τα non-footing entities → refresh base. */
@@ -74,7 +72,7 @@ function stripFootings(entities: readonly Entity[]): readonly Entity[] {
   return entities.filter((e) => !isFoundationEntity(e));
 }
 
-export function useFoundationLevelSync(props: { levelManager: LevelManagerLike }): void {
+export function useFoundationLevelSync(props: { levelManager: FoundationSyncLevelManager }): void {
   const { levelManager } = props;
   const { levels, currentLevelId } = levelManager;
   const { user } = useAuth();

@@ -21,17 +21,12 @@ import { EventBus } from '../systems/events/EventBus';
 import { useCommandHistory } from '../core/commands/useCommandHistory';
 import { createLevelSceneManagerAdapter } from '../systems/entity-creation/LevelSceneManagerAdapter';
 import { SetComponentVisibilityCommand } from '../core/commands/entity-commands/SetComponentVisibilityCommand';
-import type { SceneModel } from '../types/scene';
 // ADR-470 scope (σώμα/σοβά/οπλισμό) = SSoT «δομικά μέλη» (column/beam/wall/slab/stair/foundation).
 import { isStructuralMemberEntity } from '../types/structural-entity-types';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene: (levelId: string) => SceneModel | null;
-  setLevelScene: (levelId: string, scene: SceneModel) => void;
-}
 
-export function useStructuralComponentOverride(props: { levelManager: LevelManagerLike }): void {
+export function useStructuralComponentOverride(props: { levelManager: LevelSceneWriter }): void {
   const { levelManager } = props;
   const { execute } = useCommandHistory();
 

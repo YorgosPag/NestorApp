@@ -24,12 +24,8 @@ import { useFoundationLevelStore } from '../state/foundation-level-store';
 // ADR-500 — ο re-derive πυρήνας βγήκε σε SSoT module ώστε να τον μοιράζονται ο reactive
 // shell (εδώ) ΚΑΙ ο σύγχρονος convergence loop (`runAutoStudy`) — μηδέν διπλότυπο.
 import { runOrganismDiagnostics } from './structural-organism-core';
-import type { SceneModel } from '../types/scene';
+import type { LevelSceneReader } from '../systems/levels/level-scene-accessor';
 
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene: (levelId: string) => SceneModel | null;
-}
 
 /** Structural mutations που επηρεάζουν τον οργανισμό → trigger recompute. */
 const ORGANISM_EVENTS: readonly DrawingEventType[] = [
@@ -55,7 +51,7 @@ const ORGANISM_EVENTS: readonly DrawingEventType[] = [
   'bim:structural-loads-computed',
 ];
 
-export function useStructuralOrganism(props: { levelManager: LevelManagerLike }): void {
+export function useStructuralOrganism(props: { levelManager: LevelSceneReader }): void {
   const { levelManager } = props;
   // ADR-464 Slice 5 — μετρούμενοι όροφοι για τον raft bearing (ref → no re-subscribe).
   const storeyCount = useBuildingStoreyCount();

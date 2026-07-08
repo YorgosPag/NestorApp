@@ -32,15 +32,10 @@ import { detectColumnPromotionsForBeam, resyncPromotedBoundaryArmsForBeam } from
 import { requestColumnPromoteConfirm } from '../bim/columns/column-promote-confirm-store';
 import { isBeamEntity } from '../types/entities';
 import type { Entity } from '../types/entities';
-import type { SceneModel } from '../types/scene';
+import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
 
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene: (levelId: string) => SceneModel | null;
-  setLevelScene: (levelId: string, scene: SceneModel) => void;
-}
 
-export function useColumnBeamPromote(props: { levelManager: LevelManagerLike }): void {
+export function useColumnBeamPromote(props: { levelManager: LevelSceneWriter }): void {
   const { levelManager } = props;
   const { execute } = useCommandHistory();
 
