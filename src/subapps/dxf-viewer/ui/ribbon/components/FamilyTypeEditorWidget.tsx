@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * ADR-603 Φ4 — «Family Type» selector-with-edit/delete ribbon widget (SSoT).
+ * ADR-604 Φ4 — «Family Type» selector-with-edit/delete ribbon widget (SSoT).
  *
  * The Slab and Roof contextual selectors shared one design (Radix `Select` +
  * «Edit Type» / «Delete Type» affordances, built-in → clone-to-edit) differing
@@ -15,20 +15,13 @@
  * merged (that would be a UX change).
  *
  * @see ./create-family-type-selector-widget.tsx — the wall/opening sibling design
- * @see docs/centralized-systems/reference/adrs/ADR-603-generic-family-type-framework.md
+ * @see docs/centralized-systems/reference/adrs/ADR-604-generic-family-type-framework.md
  */
 
 import React, { useCallback } from 'react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 import { isBuiltInType } from '../../../bim/family-types/family-type-ui-helpers';
 import type { BimFamilyType } from '../../../bim/types/bim-family-type';
+import { FamilyTypeSelect, type FamilyTypeWidgetCommon } from './FamilyTypeSelect';
 
 /** Pre-translated labels (resolved by the entity wrapper — keeps i18n static). */
 export interface FamilyTypeEditorLabels {
@@ -40,17 +33,9 @@ export interface FamilyTypeEditorLabels {
   readonly deleteType: string;
 }
 
-export interface FamilyTypeEditorWidgetProps {
+export interface FamilyTypeEditorWidgetProps extends FamilyTypeWidgetCommon {
   /** Whether an entity of this kind is selected (false → self-hide). */
   readonly visible: boolean;
-  /** Entity-category catalog slice (built-in + user), reactive. */
-  readonly types: readonly BimFamilyType[];
-  /** The entity's resolved family type, or `null` when ad-hoc/untyped. */
-  readonly currentType: BimFamilyType | null;
-  /** Can the user create/edit types (auth ready)? Gates Edit/Delete. */
-  readonly canWrite: boolean;
-  readonly assignType: (typeId: string | undefined) => void;
-  readonly duplicateCurrent: (displayName: string) => Promise<string | null>;
   readonly deleteType: (typeId: string) => Promise<void>;
   /** Open the full «Edit {X} Type» dialog for a type id (entity's store fn). */
   readonly openEditType: (typeId: string) => void;
@@ -93,22 +78,14 @@ export function FamilyTypeEditorWidget(props: FamilyTypeEditorWidgetProps): Reac
     <span className="dxf-ribbon-combobox-row flex-col items-start gap-1">
       <span className="flex items-center gap-1">
         <span className="dxf-ribbon-combobox-label">{labels.type}</span>
-        <Select
-          value={currentType?.id ?? SELECT_CLEAR_VALUE}
-          onValueChange={(v) => assignType(v === SELECT_CLEAR_VALUE ? undefined : v)}
-        >
-          <SelectTrigger size="sm" aria-label={labels.type}>
-            <SelectValue placeholder={labels.typeNone} />
-          </SelectTrigger>
-          <SelectContent className="w-auto min-w-[11rem]">
-            <SelectItem value={SELECT_CLEAR_VALUE}>{labels.typeNone}</SelectItem>
-            {types.map((type) => (
-              <SelectItem key={type.id} value={type.id} className="whitespace-nowrap">
-                {resolveDisplayName(type)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <FamilyTypeSelect
+          value={currentType?.id}
+          onAssign={assignType}
+          ariaLabel={labels.type}
+          placeholder={labels.typeNone}
+          clearLabel={labels.typeNone}
+          items={types.map((type) => ({ id: type.id, label: resolveDisplayName(type) }))}
+        />
       </span>
 
       {currentType && canWrite && (

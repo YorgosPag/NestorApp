@@ -3,12 +3,12 @@
 /**
  * ADR-412 Φ4 — controller for the contextual Wall «Family Type» ribbon widgets.
  *
- * Thin binding of the generic `useFamilyTypeController` core (ADR-603 Φ3) to the
+ * Thin binding of the generic `useFamilyTypeController` core (ADR-604 Φ3) to the
  * wall bindings, re-mapped to the wall-named public API the widgets, dialog and
  * draw-tool draft panel consume. The wall-only `saveNewType` (draw-tool «save as
  * new type») stays here — it is not part of the shared surface.
  *
- * @see ./create-family-type-controller.ts — shared core (ADR-603)
+ * @see ./create-family-type-controller.ts — shared core (ADR-604)
  * @see ../components/RibbonWallFamilyTypeWidget.tsx
  * @see docs/centralized-systems/reference/adrs/ADR-412-bim-family-types.md §3.7
  */
@@ -93,8 +93,7 @@ const WALL_CONFIG: FamilyTypeControllerConfig<'wall', WallEntity> = {
 };
 
 export function useWallFamilyTypeController(): WallFamilyTypeController {
-  const core = useFamilyTypeController(WALL_CONFIG);
-  const { service } = core;
+  const { entity, types, countOfType, service, ...rest } = useFamilyTypeController(WALL_CONFIG);
 
   // ADR-363/412 — draw-tool «save as new type»: the composition set before
   // drawing becomes a reusable, persistent type. Wall-only, not in the shared core.
@@ -121,21 +120,6 @@ export function useWallFamilyTypeController(): WallFamilyTypeController {
     [service],
   );
 
-  return {
-    wall: core.entity,
-    wallTypes: core.types,
-    currentType: core.currentType,
-    overriddenKeys: core.overriddenKeys,
-    canWrite: core.canWrite,
-    assignType: core.assignType,
-    setOverride: core.setOverride,
-    clearOverride: core.clearOverride,
-    resetOverrides: core.resetOverrides,
-    duplicateCurrent: core.duplicateCurrent,
-    saveNewType,
-    renameType: core.renameType,
-    updateTypeParams: core.updateTypeParams,
-    deleteType: core.deleteType,
-    countWallsOfType: core.countOfType,
-  };
+  // Spread the shared surface; rename only the wall-named fields + graft saveNewType.
+  return { ...rest, wall: entity, wallTypes: types, countWallsOfType: countOfType, saveNewType };
 }

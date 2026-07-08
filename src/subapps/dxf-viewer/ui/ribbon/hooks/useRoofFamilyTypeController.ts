@@ -3,10 +3,10 @@
 /**
  * ADR-417 §10 #3 — controller for the contextual Roof «Family Type» ribbon widget.
  *
- * Thin binding of the generic `useFamilyTypeController` core (ADR-603 Φ3) to the
+ * Thin binding of the generic `useFamilyTypeController` core (ADR-604 Φ3) to the
  * roof bindings, re-mapped to the roof-named public API the widget consumes.
  *
- * @see ./create-family-type-controller.ts — shared core (ADR-603)
+ * @see ./create-family-type-controller.ts — shared core (ADR-604)
  * @see docs/centralized-systems/reference/adrs/ADR-417-bim-roof-element.md §10 #3
  */
 
@@ -65,21 +65,7 @@ const ROOF_CONFIG: FamilyTypeControllerConfig<'roof', RoofEntity> = {
 };
 
 export function useRoofFamilyTypeController(): RoofFamilyTypeController {
-  const core = useFamilyTypeController(ROOF_CONFIG);
-  return {
-    roof: core.entity,
-    roofTypes: core.types,
-    currentType: core.currentType,
-    overriddenKeys: core.overriddenKeys,
-    canWrite: core.canWrite,
-    assignType: core.assignType,
-    setOverride: core.setOverride,
-    clearOverride: core.clearOverride,
-    resetOverrides: core.resetOverrides,
-    duplicateCurrent: core.duplicateCurrent,
-    renameType: core.renameType,
-    updateTypeParams: core.updateTypeParams,
-    deleteType: core.deleteType,
-    countRoofsOfType: core.countOfType,
-  };
+  // Spread the shared surface; rename only the roof-named fields (zero glue).
+  const { entity, types, countOfType, service: _service, ...rest } = useFamilyTypeController(ROOF_CONFIG);
+  return { ...rest, roof: entity, roofTypes: types, countRoofsOfType: countOfType };
 }

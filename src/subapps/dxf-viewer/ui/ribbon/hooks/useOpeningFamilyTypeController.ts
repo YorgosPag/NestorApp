@@ -4,12 +4,12 @@
  * ADR-421 SLICE C — controller for the contextual Opening «Family Type» ribbon
  * widget.
  *
- * Thin binding of the generic `useFamilyTypeController` core (ADR-603 Φ3) to the
+ * Thin binding of the generic `useFamilyTypeController` core (ADR-604 Φ3) to the
  * opening bindings, re-mapped to the opening-named public API the widget consumes.
  * The opening variant already used the category-agnostic `UpdateFamilyTypeCommand`
  * / `createDeleteFamilyTypeCommand` — kept as-is via the injected command factories.
  *
- * @see ./create-family-type-controller.ts — shared core (ADR-603)
+ * @see ./create-family-type-controller.ts — shared core (ADR-604)
  * @see docs/centralized-systems/reference/adrs/ADR-421-bim-opening-types-revit-grade.md
  */
 
@@ -68,21 +68,7 @@ const OPENING_CONFIG: FamilyTypeControllerConfig<'opening', OpeningEntity> = {
 };
 
 export function useOpeningFamilyTypeController(): OpeningFamilyTypeController {
-  const core = useFamilyTypeController(OPENING_CONFIG);
-  return {
-    opening: core.entity,
-    openingTypes: core.types,
-    currentType: core.currentType,
-    overriddenKeys: core.overriddenKeys,
-    canWrite: core.canWrite,
-    assignType: core.assignType,
-    setOverride: core.setOverride,
-    clearOverride: core.clearOverride,
-    resetOverrides: core.resetOverrides,
-    duplicateCurrent: core.duplicateCurrent,
-    renameType: core.renameType,
-    updateTypeParams: core.updateTypeParams,
-    deleteType: core.deleteType,
-    countOpeningsOfType: core.countOfType,
-  };
+  // Spread the shared surface; rename only the opening-named fields (zero glue).
+  const { entity, types, countOfType, service: _service, ...rest } = useFamilyTypeController(OPENING_CONFIG);
+  return { ...rest, opening: entity, openingTypes: types, countOpeningsOfType: countOfType };
 }
