@@ -3,23 +3,20 @@
 /**
  * ADR-408 Εύρος Β #1 — Heating radiator Firestore persistence React adapter.
  *
- * Bridges `MepRadiatorFirestoreService` to the scene model owned by `LevelsSystem`.
- * Mirrors `useMepManifoldPersistence` — same hybrid auto-save, selective-skip
- * diff-merge, and first-save listener wired to `drawing:entity-created` with
- * `tool === 'mep-radiator'`.
+ * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-594). Behaviour
+ * unchanged: MEP connector projection (`projectMepConnectorsOntoFresh`) on the
+ * merged doc-entity, `differs` on the projected candidate (anti-ping-pong), audit
+ * via `recordMepRadiatorChange`, and the Η-Μ BOQ auto-feed (1 piece, ΗΛΜ-7.01).
+ * First-save on `drawing:entity-created` (tool 'mep-radiator').
  *
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
+ * @see docs/centralized-systems/reference/adrs/ADR-594-bim-entity-persistence-hook-ssot.md
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { dequal } from 'dequal';
+import { useMemo } from 'react';
 
-import type { AnySceneEntity, SceneModel } from '../../types/entities';
-import { DXF_TIMING } from '../../config/dxf-timing';
-import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
-import { EventBus } from '../../systems/events/EventBus';
-import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import {
   createMepRadiatorFirestoreService,
   entityToSaveInput,
@@ -28,23 +25,19 @@ import {
 } from '../../bim/mep-radiators/mep-radiator-firestore-service';
 import { recordMepRadiatorChange } from '../../bim/mep-radiators/mep-radiator-audit-client';
 import { mepRadiatorDocToEntity as docToEntity } from './mep-radiator-persistence-helpers';
-import { projectMepConnectorsOntoFresh } from './mep-connector-projection-merge';
-import { mergeDocsIntoScene } from './merge-docs-into-scene';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
-import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
-import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
+import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
+import { mepConnectorMergeConfig } from './mep-connector-merge-config';
+import type {
+  BimEntityPersistenceParams,
+  BimEntitySaveState,
+} from './bim-entity-persistence-hook-types';
 
 // ============================================================================
-// TYPES
+// PUBLIC API (unchanged)
 // ============================================================================
 
-export type MepRadiatorSaveState = 'idle' | 'saving' | 'saved' | 'error';
-
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
-}
+export type MepRadiatorSaveState = BimEntitySaveState;
 
 export interface UseMepRadiatorPersistenceParams {
   readonly companyId: string | null;
@@ -55,7 +48,7 @@ export interface UseMepRadiatorPersistenceParams {
   /** ADR-408 — building scope for the Η-Μ BOQ auto-feed (BimToBoqBridge). */
   readonly buildingId?: string | null;
   readonly userId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly primarySelectedRadiator: MepRadiatorEntity | null;
 }
 
@@ -68,299 +61,98 @@ export interface UseMepRadiatorPersistenceResult {
 }
 
 // ============================================================================
-// CONSTANTS
+// FACTORY CONFIG
 // ============================================================================
 
-const AUTO_SAVE_DEBOUNCE_MS = DXF_TIMING.persist.ENTITY_AUTOSAVE; // ADR-516
+const useMepRadiatorPersistenceBase = createBimEntityPersistenceHook<
+  MepRadiatorFirestoreService,
+  MepRadiatorDoc,
+  MepRadiatorEntity,
+  MepRadiatorEntity['params']
+>({
+  entityType: 'mep-radiator',
+  restoreEntityType: 'mep-radiator',
+  saveErrorKey: 'MEP_RADIATOR_SAVE_ERROR',
+  restoreErrorKey: 'MEP_RADIATOR_RESTORE_ERROR',
+  entityComparable: (e) => e.params,
+  createService: (scope) => createMepRadiatorFirestoreService(scope),
+  service: {
+    save: (svc, e) => svc.saveRadiator(entityToSaveInput(e)),
+    update: (svc, e) =>
+      svc.updateRadiator(e.id, {
+        params: e.params,
+        validation: e.validation,
+        geometry: e.geometry,
+        layerId: e.layerId,
+      }),
+    remove: (svc, id) => svc.deleteRadiator(id),
+    subscribe: (svc, onDocs, onErr) =>
+      svc.subscribeRadiators(onDocs as (docs: readonly MepRadiatorDoc[]) => void, onErr),
+  },
+  merge: {
+    mode: 'generic',
+    config: mepConnectorMergeConfig(
+      (e): e is MepRadiatorEntity => (e as { type?: string }).type === 'mep-radiator',
+      docToEntity,
+    ),
+  },
+  deleteTrigger: {
+    event: 'bim:mep-radiator-delete-requested',
+    getId: (p) => (p as { radiatorId?: string }).radiatorId,
+  },
+  onPersisted: (entity, { isNew, prevComparable, scope }) => {
+    void recordMepRadiatorChange(isNew ? 'created' : 'updated', entity, {
+      prevParams: prevComparable ?? undefined,
+    });
+    // ADR-408 — Η-Μ BOQ auto-feed: heating radiator = 1 piece (ΗΛΜ-7.01).
+    if (scope.companyId && scope.projectId && scope.buildingId) {
+      void bimToBoqBridge.upsertBoqItemForBim(
+        'mep-radiator',
+        { id: entity.id, kind: entity.kind },
+        {
+          companyId: scope.companyId,
+          projectId: scope.projectId,
+          buildingId: scope.buildingId,
+          floorId: scope.floorId ?? undefined,
+        },
+        isNew ? 'created' : 'updated',
+      );
+    }
+  },
+  onDeleted: (id, deleted, { scope }) => {
+    void recordMepRadiatorChange(
+      'deleted',
+      deleted
+        ? { id: deleted.id, kind: deleted.kind, layerId: deleted.layerId, params: deleted.params }
+        : { id, kind: 'panel-radiator' },
+    );
+    // ADR-408 — remove the auto-fed Η-Μ BOQ row (skips user-detached rows).
+    if (scope.companyId) void bimToBoqBridge.deleteBoqItemForBim(id, scope.companyId);
+  },
+  onRestored: (entity) => {
+    void recordMepRadiatorChange('restored', entity);
+  },
+});
 
 // ============================================================================
-// HELPERS
-// ============================================================================
-
-function isRadiator(entity: AnySceneEntity): entity is MepRadiatorEntity {
-  return (entity as { type?: string }).type === 'mep-radiator';
-}
-
-// ============================================================================
-// HOOK
+// HOOK (thin wrapper — preserves the public param/result names)
 // ============================================================================
 
 export function useMepRadiatorPersistence(
   params: UseMepRadiatorPersistenceParams,
 ): UseMepRadiatorPersistenceResult {
-  const {
-    companyId,
-    projectId,
-    floorplanId,
-    floorId,
-    buildingId,
-    userId,
-    levelManager,
-    primarySelectedRadiator,
-  } = params;
-
-  const [saveState, setSaveState] = useState<MepRadiatorSaveState>('idle');
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const serviceRef = useRef<MepRadiatorFirestoreService | null>(null);
-  const dirtyIdsRef = useRef<Set<string>>(new Set());
-  const lastSavedParamsRef = useRef<Map<string, MepRadiatorEntity['params']>>(new Map());
-  const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
-  const deletedIdsRef = useRef<Set<string>>(new Set());
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const selectedRadiatorRef = useRef<MepRadiatorEntity | null>(null);
-  selectedRadiatorRef.current = primarySelectedRadiator;
-
-  // ⚡ STABILITY (ca9 fix 2026-06-08): key the Firestore subscription off stable
-  // scope primitives + `currentLevelId`, NOT the per-render `levelManager` object,
-  // so onSnapshot does not unsubscribe/re-subscribe on every render (target removed
-  // before ack → `INTERNAL ASSERTION FAILED ca9 {ve:-1}`). Mirror of the fitting hook.
-  const levelManagerRef = useRef(levelManager);
-  levelManagerRef.current = levelManager;
-  const currentLevelId = levelManager.currentLevelId;
-
-  // Instantiate service when auth + scope ready.
-  useEffect(() => {
-    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
-    if (!scope) {
-      serviceRef.current = null;
-      return;
-    }
-    serviceRef.current = createMepRadiatorFirestoreService({
-      companyId: scope.companyId,
-      projectId: scope.projectId,
-      floorplanId: scope.floorplanId,
-      floorId: scope.floorId,
-      userId: scope.userId,
-    });
-  }, [companyId, projectId, floorplanId, floorId, userId]);
-
-  // Subscribe + diff-merge + selective skip locally-dirty radiators.
-  // Keyed on STABLE primitives only (scope + currentLevelId) — NOT the per-render
-  // `levelManager` object — so onSnapshot subscribes once per real scope/level
-  // change (ca9 churn fix).
-  useEffect(() => {
-    const svc = serviceRef.current;
-    const levelId = currentLevelId;
-    if (!svc || !levelId) return;
-
-    const unsubscribe = svc.subscribeRadiators(
-      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`. Το MEP
-      // project-άρει το live systemId πάνω στο fresh doc-entity (ADR-408 anti-ping-pong)
-      // μέσω του `projectMepConnectorsOntoFresh` adapter. Δεν έχει write-grace.
-      (docs) => {
-        mergeDocsIntoScene<MepRadiatorDoc, MepRadiatorEntity, MepRadiatorEntity['params']>(
-          docs,
-          levelId,
-          levelManagerRef.current,
-          {
-            isEntity: isRadiator,
-            docToEntity: (doc, existing) => projectMepConnectorsOntoFresh(docToEntity(doc), existing),
-            entityComparable: (e) => e.params,
-            docComparable: (d) => d.params,
-            differs: (existing, _doc, getCandidate) => {
-              const candidate = getCandidate();
-              return candidate !== null && !dequal(existing.params, candidate.params);
-            },
-          },
-          {
-            dirty: dirtyIdsRef.current,
-            deleted: deletedIdsRef.current,
-            pending: pendingFirstSaveIdsRef.current,
-            isWithinGrace: () => false,
-            lastSavedBaseline: lastSavedParamsRef.current,
-          },
-        );
-      },
-      (err: Error) => {
-        setError(err.message);
-        setSaveState('error');
-      },
-    );
-
-    return () => unsubscribe();
-  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
-
-  // Immediate persist (used by both auto-save flush and explicit button).
-  const persist = useCallback(async (entity: MepRadiatorEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
-    const isNew = prevParams === null;
-    setSaveState('saving');
-    setError(null);
-    try {
-      if (isNew) {
-        await svc.saveRadiator(entityToSaveInput(entity));
-      } else {
-        await svc.updateRadiator(entity.id, {
-          params: entity.params,
-          validation: entity.validation,
-          geometry: entity.geometry,
-          layerId: entity.layerId,
-        });
-      }
-      lastSavedParamsRef.current.set(entity.id, entity.params);
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-      void recordMepRadiatorChange(
-        isNew ? 'created' : 'updated',
-        entity,
-        { prevParams: prevParams ?? undefined },
-      );
-      // ADR-408 — Η-Μ BOQ auto-feed: heating radiator = 1 piece (ΗΛΜ-7.01).
-      if (companyId && projectId && buildingId) {
-        void bimToBoqBridge.upsertBoqItemForBim(
-          'mep-radiator',
-          { id: entity.id, kind: entity.kind },
-          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
-          isNew ? 'created' : 'updated',
-        );
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'MEP_RADIATOR_SAVE_ERROR');
-      setSaveState('error');
-    }
-  }, [companyId, projectId, buildingId, floorId]);
-
-  // Auto-save debounce on selected radiator params change.
-  useEffect(() => {
-    const radiator = primarySelectedRadiator;
-    if (!radiator || !serviceRef.current) return;
-    const known = lastSavedParamsRef.current.has(radiator.id);
-    const pending = pendingFirstSaveIdsRef.current.has(radiator.id);
-    if (!known && !pending) return;
-    const lastSaved = lastSavedParamsRef.current.get(radiator.id);
-    if (lastSaved && dequal(lastSaved, radiator.params)) return;
-
-    dirtyIdsRef.current.add(radiator.id);
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      void persist(radiator);
-    }, AUTO_SAVE_DEBOUNCE_MS);
-
-    return () => {
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = null;
-      }
-    };
-  }, [primarySelectedRadiator, persist]);
-
-  const saveNow = useCallback(async () => {
-    const radiator = selectedRadiatorRef.current;
-    if (!radiator) return;
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-    await persist(radiator);
-  }, [persist]);
-
-  // Delete radiator: remove from Firestore + scene + audit.
-  const deleteRadiator = useCallback(async (radiatorId: string) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const levelId = levelManager.currentLevelId;
-    if (!levelId) return;
-
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-
-    const scene = levelManager.getLevelScene(levelId);
-    const deletedEntity = scene?.entities.find((e) => e.id === radiatorId);
-    const deletedRadiator = (deletedEntity && isRadiator(deletedEntity)) ? deletedEntity : null;
-    try {
-      await svc.deleteRadiator(radiatorId);
-      void recordMepRadiatorChange(
-        'deleted',
-        deletedRadiator
-          ? { id: deletedRadiator.id, kind: deletedRadiator.kind, layerId: deletedRadiator.layerId, params: deletedRadiator.params }
-          : { id: radiatorId, kind: 'panel-radiator' },
-      );
-      // ADR-408 — remove the auto-fed Η-Μ BOQ row (skips user-detached rows).
-      if (companyId) void bimToBoqBridge.deleteBoqItemForBim(radiatorId, companyId);
-    } catch {
-      // Non-fatal: deletion failure silent — user retries.
-    }
-
-    if (scene) {
-      const nextEntities = scene.entities.filter((e) => e.id !== radiatorId);
-      levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
-    }
-
-    dirtyIdsRef.current.delete(radiatorId);
-    lastSavedParamsRef.current.delete(radiatorId);
-    pendingFirstSaveIdsRef.current.delete(radiatorId);
-    deletedIdsRef.current.add(radiatorId);
-  }, [levelManager, companyId]);
-
-  // persistRestore: undo→Firestore re-create + audit 'restored'.
-  const persistRestore = useCallback(async (entity: MepRadiatorEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    setSaveState('saving');
-    setError(null);
-    try {
-      await svc.saveRadiator(entityToSaveInput(entity));
-      lastSavedParamsRef.current.set(entity.id, entity.params);
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-      void recordMepRadiatorChange('restored', entity);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'MEP_RADIATOR_RESTORE_ERROR');
-      setSaveState('error');
-    }
-  }, []);
-
-  // First-save listener — fires immediately for freshly drawn radiators.
-  useEffect(() => {
-    const cleanup = EventBus.on('drawing:entity-created', (payload) => {
-      if (payload.tool !== 'mep-radiator') return;
-      const entity = payload.entity as MepRadiatorEntity | undefined;
-      if (!entity || (entity as { type?: string }).type !== 'mep-radiator') return;
-      if (!serviceRef.current) return;
-      pendingFirstSaveIdsRef.current.add(entity.id);
-      dirtyIdsRef.current.add(entity.id);
-      void persist(entity);
-    });
-    return cleanup;
-  }, [persist]);
-
-  // Delete-requested listener (smart-delete emits after batch filter).
-  useEffect(() => {
-    const cleanup = EventBus.on('bim:mep-radiator-delete-requested', ({ radiatorId }) => {
-      void deleteRadiator(radiatorId);
-    });
-    return cleanup;
-  }, [deleteRadiator]);
-
-  useBimEntityMovedPersistEffect(isRadiator, serviceRef, dirtyIdsRef, persist);
-  useBimEntityRestoredPersistEffect(
-    'mep-radiator',
-    isRadiator,
-    serviceRef,
-    pendingFirstSaveIdsRef,
-    deletedIdsRef,
-    persistRestore,
-  );
-
-  // Unmount cleanup — flush pending timers.
-  useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, []);
-
+  const { saveState, lastSavedAt, error, saveNow, deleteEntity } = useMepRadiatorPersistenceBase({
+    companyId: params.companyId,
+    projectId: params.projectId,
+    floorplanId: params.floorplanId,
+    floorId: params.floorId,
+    buildingId: params.buildingId,
+    userId: params.userId,
+    levelManager: params.levelManager,
+    primarySelected: params.primarySelectedRadiator,
+  } as BimEntityPersistenceParams<MepRadiatorEntity>);
   return useMemo(
-    () => ({ saveState, lastSavedAt, error, saveNow, deleteRadiator }),
-    [saveState, lastSavedAt, error, saveNow, deleteRadiator],
+    () => ({ saveState, lastSavedAt, error, saveNow, deleteRadiator: deleteEntity }),
+    [saveState, lastSavedAt, error, saveNow, deleteEntity],
   );
 }
