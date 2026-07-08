@@ -30,6 +30,7 @@ import { buildFloorplanSymbol } from '../floorplan-symbols/floorplan-symbol-symb
 import { resolveSymbolCategoryConfig } from '../floorplan-symbols/floorplan-symbol-categories';
 import { getFloorplanSymbolGrips } from '../floorplan-symbols/floorplan-symbol-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
@@ -116,7 +117,7 @@ export class FloorplanSymbolRenderer extends BaseEntityRenderer {
       entityId: g.entityId,
       isVisible: true,
       gripIndex: g.gripIndex,
-      shape: gripGlyphShape(g.floorplanSymbolGripKind),
+      shape: gripGlyphShape(gripKindOf(g, 'floorplan-symbol')),
     }));
   }
 

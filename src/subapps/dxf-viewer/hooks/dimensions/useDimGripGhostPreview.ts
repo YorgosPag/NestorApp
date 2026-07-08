@@ -40,6 +40,7 @@ import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 // top of the live dim ghost, so geometry + traces share ONE resolve (WYSIWYG, ADR-357).
 import { paintActionAlignmentTracking } from './dim-alignment-tracking';
 import { getGripAlignmentTracking } from '../../systems/cursor/GripAlignmentTrackingStore';
+import { gripKindOf } from '../grip-kinds';
 
 export interface UseDimGripGhostPreviewProps {
   /** Live grip-drag snapshot (carries `dimGripKind` only when a dim grip is dragged). */
@@ -53,10 +54,13 @@ export interface UseDimGripGhostPreviewProps {
 export function useDimGripGhostPreview(props: UseDimGripGhostPreviewProps): void {
   const { dragPreview, levelManager, transform, getCanvas, getViewportElement } = props;
 
-  const isActive = dragPreview?.dimGripKind != null;
+  const isActive = (dragPreview ? gripKindOf(dragPreview, 'dimension') : undefined) != null;
 
   const draw = useCallback(({ ctx, viewport, transform: t }: GhostDrawFrame) => {
-    if (!dragPreview?.dimGripKind) return;
+    if (!dragPreview) return;
+    // ADR-602 Stage 4 — hoisted once (read ×2 below: the guard + the applyDimensionGripDrag call).
+    const dimKind = gripKindOf(dragPreview, 'dimension');
+    if (!dimKind) return;
     const levelId = levelManager.currentLevelId;
     if (!levelId) return;
     const scene = levelManager.getLevelScene(levelId);
@@ -71,7 +75,7 @@ export function useDimGripGhostPreview(props: UseDimGripGhostPreviewProps): void
     // gripPos = the grip world position at mouseDown (anchorPos) — matches the
     // commit's `grip.position` for the linear rotation handle (preview ≡ commit).
     const gripPos = dragPreview.anchorPos ?? dimEntity.defPoints[0] ?? { x: 0, y: 0 };
-    const newDim = applyDimensionGripDrag(dragPreview.dimGripKind, dimEntity, dragPreview.delta, gripPos);
+    const newDim = applyDimensionGripDrag(dimKind, dimEntity, dragPreview.delta, gripPos);
 
     const sceneUnits = resolveSceneUnits(scene);
     renderPreviewDimension({

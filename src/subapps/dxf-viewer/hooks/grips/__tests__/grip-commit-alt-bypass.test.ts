@@ -56,6 +56,7 @@ function wallGrip(): UnifiedGripInfo {
     type: 'vertex',
     entityId: 'wall_1',
     wallGripKind: 'wall-midpoint',
+    gripKind: { on: 'wall', kind: 'wall-midpoint' },
     position: { x: 0, y: 0 },
     movesEntity: false,
   } as unknown as UnifiedGripInfo;

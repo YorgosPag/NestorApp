@@ -52,8 +52,8 @@ describe('resolveCtrlEndpointRotateCopy (ADR-561 EXT)', () => {
   });
 
   it('a rotation handle (already kinded) → null (keeps its role; its copy is at commit)', () => {
-    expect(resolveCtrlEndpointRotateCopy({ type: 'line' }, grip({ gripIndex: 3, lineGripKind: LINE_ROTATION_KIND }), true)).toBeNull();
-    expect(resolveCtrlEndpointRotateCopy({ type: 'arc' }, grip({ gripIndex: 4, arcGripKind: ARC_ROTATION_KIND }), true)).toBeNull();
+    expect(resolveCtrlEndpointRotateCopy({ type: 'line' }, grip({ gripIndex: 3, lineGripKind: LINE_ROTATION_KIND, gripKind: { on: 'line', kind: LINE_ROTATION_KIND } }), true)).toBeNull();
+    expect(resolveCtrlEndpointRotateCopy({ type: 'arc' }, grip({ gripIndex: 4, arcGripKind: ARC_ROTATION_KIND, gripKind: { on: 'arc', kind: ARC_ROTATION_KIND } }), true)).toBeNull();
   });
 
   it('an EDGE grip (not a vertex) → null', () => {
