@@ -1,0 +1,17 @@
+{
+  "description": "ADR-598 G14 — type-complexity budget policy (SSoT for the ratchet tolerance & severity bands). Mirrors config/quality-gates/ts-error-budget.json (ADR-027). The floor itself lives in .type-complexity-baseline.json; this file only governs how much jitter is tolerated before a rise blocks.",
+  "adr": "ADR-598 G14",
+  "policy": {
+    "tolerancePct": 3,
+    "warnThreshold": 5,
+    "criticalThreshold": 10
+  },
+  "baseline": {
+    "file": ".type-complexity-baseline.json"
+  },
+  "metric": {
+    "primary": "instantiations",
+    "secondary": "types",
+    "source": "tsc --extendedDiagnostics --noEmit"
+  }
+}

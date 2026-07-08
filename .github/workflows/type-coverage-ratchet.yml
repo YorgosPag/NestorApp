@@ -1,0 +1,100 @@
+name: 🔤 Type-Coverage Ratchet (ADR-598 G5)
+
+# =============================================================================
+# ADR-598 ΦΑΣΗ 2 · G5 — type-coverage ratchet (Layer-2 CI, N.17).
+#
+# Runs `type-coverage --strict --ignore-catch` (drives the TS compiler API →
+# heavy → never in the pre-commit hook) and blocks when the typed identifier
+# percentage falls below the committed baseline (.type-coverage-baseline.json).
+# Ratchet UP only. Mirrors eslint-ratchet.yml / ts-error-gate.yml.
+#
+# Seeding (Giorgio decision 2026-07-08): the agent does not run the tool locally.
+# Trigger this workflow via `workflow_dispatch` with seed=true → it writes the
+# baseline, uploads it as an artifact and echoes it to the job summary. Giorgio
+# downloads/copies it and commits the JSON himself (no CI auto-commit — respects
+# N.(-1)). Until then `--check` fails closed with a clear "seed it" message.
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'tsconfig.json'
+      - '.type-coverage-baseline.json'
+      - 'scripts/check-type-coverage-ratchet.js'
+      - 'scripts/lib/ratchet-baseline.js'
+      - '.github/workflows/type-coverage-ratchet.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'tsconfig.json'
+      - '.type-coverage-baseline.json'
+      - 'scripts/check-type-coverage-ratchet.js'
+      - 'scripts/lib/ratchet-baseline.js'
+      - '.github/workflows/type-coverage-ratchet.yml'
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: 'Seed/refresh the baseline (writes JSON, uploads artifact, does NOT commit)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: type-coverage-ratchet-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  type-coverage-ratchet:
+    name: 🔒 Type-Coverage Ratchet (ADR-598 G5)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # No --ignore-scripts: type-coverage needs the full type graph that
+      # postinstall steps (framework/type declarations) materialise.
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔤 Type-coverage ratchet (seed or check)
+        run: |
+          if [ "${{ inputs.seed }}" = "true" ]; then
+            node scripts/check-type-coverage-ratchet.js --write-baseline
+          else
+            node scripts/check-type-coverage-ratchet.js --check
+          fi
+
+      - name: 📤 Upload seeded baseline (seed mode only)
+        if: ${{ inputs.seed == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: type-coverage-baseline
+          path: .type-coverage-baseline.json
+
+      - name: 📝 Echo baseline to summary (seed mode only)
+        if: ${{ inputs.seed == true }}
+        run: |
+          echo '### G5 type-coverage baseline (commit this file)' >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          cat .type-coverage-baseline.json >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: ✅ Summary
+        if: ${{ success() && inputs.seed != true }}
+        run: echo "::notice title=Type-Coverage Ratchet (G5)::typed % held or rose vs .type-coverage-baseline.json"
