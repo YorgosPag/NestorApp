@@ -21,6 +21,7 @@ import type { SceneModel } from '../../types/entities';
 import { dlog } from '../../debug';
 import type { Guide } from '../../systems/guides/guide-types';
 import { pointToSegmentDistance } from '../../systems/guides/guide-types';
+import { clamp01 } from '../../utils/scalar-math';
 
 import type { UseCanvasClickHandlerParams } from './canvas-click-types';
 import {
@@ -252,9 +253,9 @@ function handleGuidePerpendicular(ctx: GuideClickContext, p: UseCanvasClickHandl
         const lenSq = dx * dx + dy * dy;
         if (lenSq > 0) {
           const len = Math.sqrt(lenSq);
-          const t = Math.max(0, Math.min(1,
+          const t = clamp01(
             ((ctx.worldPoint.x - refGuide.startPoint.x) * dx + (ctx.worldPoint.y - refGuide.startPoint.y) * dy) / lenSq,
-          ));
+          );
           const base = { x: refGuide.startPoint.x + t * dx, y: refGuide.startPoint.y + t * dy };
           const nx = -dy / len;
           const ny = dx / len;

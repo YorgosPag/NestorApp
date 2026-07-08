@@ -14,6 +14,9 @@ import { calculateDistance, calculateMidpoint, getUnitVector, getPerpendicularUn
 import { TAU } from '../../primitives/canvasPaths';
 // 🏢 ADR-079: Centralized Geometric Precision Constants & Utility Functions
 import { GEOMETRY_PRECISION } from '../../../config/tolerance-config';
+// 🏢 ADR-071 / scalar-math: canonical clamp family lives in the neutral, dependency-free
+// utils/scalar-math module. Imported here for internal use + re-exported below for backward-compat.
+import { clamp, clamp01, clamp255 } from '../../../utils/scalar-math';
 
 // ===== RE-EXPORTS FROM SPLIT MODULES (ADR-065) =====
 // Zero consumer impact — all names remain accessible from this file
@@ -324,9 +327,7 @@ export function lerpPoint(p1: Point2D, p2: Point2D, t: number): Point2D {
  * clamp(-5, 0, 100)  // → 0
  * clamp(50, 0, 100)  // → 50
  */
-export function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
+export { clamp };
 
 /**
  * 🏢 ENTERPRISE: Clamp value to [0, 1] range
@@ -340,9 +341,7 @@ export function clamp(value: number, min: number, max: number): number {
  * clamp01(-0.2) // → 0
  * clamp01(0.7)  // → 0.7
  */
-export function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
-}
+export { clamp01 };
 
 /**
  * 🏢 ENTERPRISE: Clamp value to [0, 255] range
@@ -356,6 +355,4 @@ export function clamp01(value: number): number {
  * clamp255(-10) // → 0
  * clamp255(128) // → 128
  */
-export function clamp255(value: number): number {
-  return Math.max(0, Math.min(255, value));
-}
+export { clamp255 };

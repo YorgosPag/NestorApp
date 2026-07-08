@@ -3829,3 +3829,10 @@ gesture, ΟΧΙ 60fps). **Bitmap cache key ΑΝΕΓΓΙΧΤΟ** (rule #3): το 
 `|| activeTool === 'match-properties'` στο SSoT `entityPickingActive` (inline prop στο `CanvasSection.tsx:464`,
 η ίδια λίστα με wall-on-entity / dim tools / move-awaiting-entity κ.λπ.). Καμία νέα subscription — απλή
 επέκταση υπάρχοντος derived boolean. Αρχείο: `CanvasSection.tsx`. Staged για CHECK 6B/6D. ΟΧΙ tsc (N.17).
+
+## 2026-07-08: ADR-584 dedup — scalar-math `clamp01` υιοθέτηση σε `guide-click-handlers.ts` (CHECK 6B stage)
+
+**Τι:** καθαρό SSoT dedup (ADR-584 clone-ratchet pass). Το `guide-click-handlers.ts` (micro-leaf) αντικαθιστά
+inline `Math.max(0, Math.min(1, …))` με το κανονικό `clamp01` από `utils/scalar-math.ts`. Καμία αλλαγή
+συμπεριφοράς, subscription ή micro-leaf αρχιτεκτονικής — μόνο ο υπολογισμός του perpendicular-guide
+projection parameter `t` περνά από τον κοινό helper. Staged για CHECK 6B. ΟΧΙ tsc (N.17).

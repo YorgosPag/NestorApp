@@ -6,6 +6,7 @@
  */
 
 import type { Point2D } from '../../types/Types';
+import { clamp01 } from '../../../utils/scalar-math';
 
 // ===== PIXEL-PERFECT RENDERING =====
 // ADR-088: Centralized Pixel-Perfect Alignment
@@ -236,7 +237,7 @@ export function getPolylineSegments(points: Point2D[], isClosed: boolean): Array
 function pointToSegmentDistanceSq(p: Point2D, a: Point2D, b: Point2D): number {
   const dx = b.x - a.x, dy = b.y - a.y;
   const len2 = dx * dx + dy * dy;
-  const t = len2 > 0 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2)) : 0;
+  const t = len2 > 0 ? clamp01(((p.x - a.x) * dx + (p.y - a.y) * dy) / len2) : 0;
   const cx = a.x + t * dx, cy = a.y + t * dy;
   return (p.x - cx) * (p.x - cx) + (p.y - cy) * (p.y - cy);
 }
