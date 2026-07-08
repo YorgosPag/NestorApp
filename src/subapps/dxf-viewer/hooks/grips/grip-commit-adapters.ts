@@ -104,6 +104,7 @@ import {
   commitGroupGizmoRotation,
 } from './grip-parametric-commits';
 import { tryCommitParametricGripDrag } from './grip-parametric-dispatch';
+import { gripKindOf } from '../grip-kinds';
 /**
  * ADR-363 Phase 1G.5 — whole-entity "move from characteristic point" (AutoCAD
  * base-point move). Translates the ENTIRE entity by `delta` via
@@ -155,9 +156,20 @@ export function commitDxfGripDragModeAware(
   deps: DxfCommitDeps,
   mode: GripMode,
 ): void {
+  // ADR-602 Stage 4 — hoisted tagged-kind reads: this dispatcher branches on 8
+  // entity discriminators (several 2-3× each), so each `<obj>.<x>GripKind` legacy
+  // field is read via `gripKindOf` ONCE here and reused below.
+  const openingKind = gripKindOf(grip, 'opening');
+  const mepManifoldKind = gripKindOf(grip, 'mep-manifold');
+  const arcKind = gripKindOf(grip, 'arc');
+  const polylineKind = gripKindOf(grip, 'polyline');
+  const annotationSymbolKind = gripKindOf(grip, 'annotation-symbol');
+  const groupKind = gripKindOf(grip, 'group');
+  const textKind = gripKindOf(grip, 'text');
+  const lineKind = gripKindOf(grip, 'line');
   // Opening flip actions (Revit-style «Flip Hand» + «Flip Facing») are click-to-toggle
   // — they must fire even on zero delta (no drag), so they precede the zero-delta guard.
-  if (grip.openingGripKind === 'opening-rotation' || grip.openingGripKind === 'opening-facing') {
+  if (openingKind === 'opening-rotation' || openingKind === 'opening-facing') {
     commitOpeningGripDrag(grip, delta, deps);
     return;
   }
@@ -170,8 +182,8 @@ export function commitDxfGripDragModeAware(
   // bump — fall through to the Alt branch below so the manifold actually moves.
   if (
     !isActiveGripAltMove() &&
-    (grip.mepManifoldGripKind === 'mep-manifold-outlet-add' ||
-      grip.mepManifoldGripKind === 'mep-manifold-outlet-remove')
+    (mepManifoldKind === 'mep-manifold-outlet-add' ||
+      mepManifoldKind === 'mep-manifold-outlet-remove')
   ) {
     commitMepManifoldOutletCountGrip(grip, deps);
     return;
@@ -195,7 +207,7 @@ export function commitDxfGripDragModeAware(
     // wall instead — base point = grabbed grip, displacement projected onto the
     // wall axis — so Alt+drag from any opening grip moves it the same gesture as a
     // free entity, just constrained to its wall. (Flip grips return earlier.)
-    if (grip.openingGripKind) {
+    if (openingKind) {
       commitOpeningAltMove(grip, delta, deps);
       return;
     }
@@ -214,14 +226,14 @@ export function commitDxfGripDragModeAware(
   // `arcGripKind` too but is a whole-entity TRANSLATE — it must fall through to the
   // move/stretch path below (mirror the line's `'line-move'` gate), so gate to
   // `'arc-rotation'` ONLY.
-  if (grip.arcGripKind === 'arc-rotation') {
+  if (arcKind === 'arc-rotation') {
     commitArcGripDrag(grip, delta, deps);
     return;
   }
   // ADR-561 — polyline ROTATION handle → rotate all vertices (a scene rectangle
   // explodes to a polyline first). Gate to `'polyline-rotation'` ONLY — the
   // `'polyline-move'` cross + the vertex / segment / arc-apex grips fall through.
-  if (grip.polylineGripKind === 'polyline-rotation') {
+  if (polylineKind === 'polyline-rotation') {
     commitPolylineRotationGripDrag(grip, delta, deps);
     return;
   }
@@ -229,7 +241,7 @@ export function commitDxfGripDragModeAware(
   // insertion point via the canonical `RotateEntityCommand`. Gate to
   // `'annotation-symbol-rotation'` ONLY — the `'annotation-symbol-move'` cross is a
   // whole-entity TRANSLATE (`movesEntity`) and must fall through to the move path.
-  if (grip.annotationSymbolGripKind === 'annotation-symbol-rotation') {
+  if (annotationSymbolKind === 'annotation-symbol-rotation') {
     commitAnnotationSymbolGripDrag(grip, delta, deps);
     return;
   }
@@ -237,7 +249,7 @@ export function commitDxfGripDragModeAware(
   // centre via the canonical `RotateEntityCommand` (`rotateEntity` case 'group' recurses
   // members). Gate to `'group-rotation'` ONLY — the `'group-move'` cross is a whole-group
   // TRANSLATE (handled just below).
-  if (grip.groupGripKind === 'group-rotation') {
+  if (groupKind === 'group-rotation') {
     commitGroupGizmoRotation(grip, delta, deps);
     return;
   }
@@ -245,7 +257,7 @@ export function commitDxfGripDragModeAware(
   // (mode-independent, mirror `line-move`) via the whole-entity move SSoT
   // (`deps.moveEntities` → `MoveEntityCommand` → `calculateMovedGeometry` case 'group' →
   // recurse members). Ctrl / «Copy» clones with the same base point.
-  if (grip.groupGripKind === 'group-move') {
+  if (groupKind === 'group-move') {
     commitWholeEntityMove(grip, delta, deps, isGripCopyIntent());
     return;
   }
@@ -254,7 +266,7 @@ export function commitDxfGripDragModeAware(
   // whole-entity move SSoT (`MoveEntityCommand` → `calculateMovedGeometry` case
   // 'annotation-symbol'). The insertion point is not a vertex, so the stretch path
   // (line-move) cannot serve — this position-anchored move is the correct SSoT.
-  if (grip.annotationSymbolGripKind === 'annotation-symbol-move') {
+  if (annotationSymbolKind === 'annotation-symbol-move') {
     commitWholeEntityMove(grip, delta, deps, isGripCopyIntent());
     return;
   }
@@ -262,7 +274,7 @@ export function commitDxfGripDragModeAware(
   // apex follows the cursor). Only the arc-apex grip routes here; vertex +
   // straight-segment-midpoint polyline grips fall through to the standard
   // stretch path below (move vertex / move both edge vertices).
-  if (grip.polylineGripKind?.startsWith('polyline-arc-midpoint-')) {
+  if (polylineKind?.startsWith('polyline-arc-midpoint-')) {
     commitPolylineBulgeGripDrag(grip, delta, deps);
     return;
   }
@@ -270,7 +282,7 @@ export function commitDxfGripDragModeAware(
   // rotation). Bypasses stretch because the box transform is computed by the shared
   // `applyTextGripDrag` and written to the flat top-level fields atomically by
   // `UpdateTextTransformCommand`. Covers BOTH TEXT (`widthFactor`) and MTEXT (`width`).
-  if (grip.textGripKind) {
+  if (textKind) {
     commitTextGripDrag(grip, delta, deps);
     return;
   }
@@ -283,7 +295,7 @@ export function commitDxfGripDragModeAware(
   // edgeVertexIndices [0,1]); it must fall through to the move/stretch path below,
   // exactly like the centre midpoint grip. A bare `if (grip.lineGripKind)` here sent
   // the move grip into rotation → the ¼-west arms produced a swept-angle no-op/spin.
-  if (grip.lineGripKind === 'line-rotation') {
+  if (lineKind === 'line-rotation') {
     commitLineGripDrag(grip, delta, deps);
     return;
   }
@@ -294,7 +306,7 @@ export function commitDxfGripDragModeAware(
   // how the wall's `wallGripKind` branch commits `wall-midpoint` regardless of the
   // active GripMode, so the directional move-by-value always moves (never falls into a
   // rotate/scale/mirror tool-handoff if the user cycled grip mode first).
-  if (grip.lineGripKind === 'line-move') {
+  if (lineKind === 'line-move') {
     commitDxfGripDragViaStretchCommand(grip, delta, deps);
     return;
   }

@@ -19,6 +19,7 @@ import {
   hotGripOpForKind, initialHotGripStep, hotGripKindOf,
 } from './wall-hot-grip-fsm';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { gripKindOf } from '../grip-kinds';
 // ADR-397/363 — mouse-down helpers extracted for the 500-line limit (SOS N.7.1).
 import { runDirectionalMove, beginHotGripSession } from './grip-mouse-down-helpers';
 // ADR-363 §line local-ortho — αποτύπωση του άξονα λοξής γραμμής στην αρχή μετακίνησης μέσου/MOVE-cross.
@@ -208,9 +209,9 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
         applyHotGripHint('rotate', 'rotate-free');
         setActiveDragGrip({
           entityId: nearGrip.entityId!,
-          gripKind: syntheticGrip.lineGripKind ?? syntheticGrip.arcGripKind ?? syntheticGrip.polylineGripKind ?? syntheticGrip.annotationSymbolGripKind ?? null,
+          gripKind: gripKindOf(syntheticGrip, 'line') ?? gripKindOf(syntheticGrip, 'arc') ?? gripKindOf(syntheticGrip, 'polyline') ?? gripKindOf(syntheticGrip, 'annotation-symbol') ?? null,
           gripIndex: nearGrip.gripIndex,
-          lineGripKind: syntheticGrip.lineGripKind ?? null,
+          lineGripKind: gripKindOf(syntheticGrip, 'line') ?? null,
         });
         GripSessionUndoStore.markSessionStart(getGlobalCommandHistory().size());
         return true;
@@ -305,7 +306,7 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
         // ADR-357/363 — line MOVE-cross (`line-move`) hot-grip: expose the kind + index so the
         // whole-line translate lights up the same Object-Snap-Tracking traces (anchor = base).
         gripIndex: nearGrip.gripIndex,
-        lineGripKind: nearGrip.lineGripKind ?? null,
+        lineGripKind: gripKindOf(nearGrip, 'line') ?? null,
         // ADR-557/560 — whole-entity MOVE hot-grip (text/mtext/column/group centre-move): flag it so
         // the base-point AutoAlign (cyan + Polar traces) fires once the base is picked, entity-agnostic.
         // The base point (dragAnchor) arrives later via `setActiveDragGripAnchor` (2nd click).
@@ -328,19 +329,19 @@ export function runGripMouseDown(worldPos: Point2D, isShift: boolean, ctx: GripM
     // position) so the column Body Corner Projection snap can run on press-drag.
     setActiveDragGrip({
       entityId: nearGrip.entityId!,
-      gripKind: nearGrip.wallGripKind ?? nearGrip.columnGripKind ?? null,
+      gripKind: gripKindOf(nearGrip, 'wall') ?? gripKindOf(nearGrip, 'column') ?? null,
       dragAnchor: nearGrip.position,
       // ADR-560 — blur-proof whole-entity Alt-move flag (baked here, survives the Alt→blur that
       // clears the live GripAltMoveStore), so the AutoAlign base-point tracking keeps running.
       altMove,
       // ADR-562 Φ9.2 — expose the dim grip kind so the mouse handlers show the SAME
       // AutoAlign traces during a dimension grip drag as every other tool.
-      dimGripKind: nearGrip.dimGripKind ?? null,
+      dimGripKind: gripKindOf(nearGrip, 'dimension') ?? null,
       // ADR-357/363 — line endpoint (0/1) / centre-move (2) press-drag: the index +
       // kind drive the alignment anchor (`getLineGripAlignmentAnchors`) so the moving
       // end / whole line tracks off the fixed end / base point ⊕ ambient neighbours.
       gripIndex: nearGrip.gripIndex,
-      lineGripKind: nearGrip.lineGripKind ?? null,
+      lineGripKind: gripKindOf(nearGrip, 'line') ?? null,
       // ADR-557/560 — whole-entity MOVE press-drag grip (e.g. circle-center, or any non-line mover):
       // flag it so the base-point AutoAlign traces fire, entity-agnostic. Line midpoint/MOVE-cross
       // (`movesEntity` too) already tracked via the line branch — this keeps every mover consistent.

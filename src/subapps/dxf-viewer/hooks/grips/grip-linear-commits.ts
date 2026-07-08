@@ -19,6 +19,7 @@ import { applyRayGripDrag } from '../../systems/ray/ray-grips';
 import { applyDimensionGripDrag, diffDimEntity } from '../dimensions/useDimensionGrips';
 import { UpdateDimGripCommand } from '../../core/commands/entity-commands/UpdateDimGripCommand';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { gripKindOf } from '../grip-kinds';
 // ADR-363 Slice F — line rotation commit reuses the canonical rotate SSoT.
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 import { sweptAngleDegAboutPivot } from '../../bim/grips/grip-math';
@@ -38,14 +39,15 @@ export function commitXLineGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.xlineGripKind) return;
+  const xlineKind = gripKindOf(grip, 'xline');
+  if (!grip.entityId || !xlineKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
   if (!raw || (raw as Record<string, unknown>).type !== 'xline') return;
   const entity = raw as unknown as XLineEntity;
   const currentPos: Point2D = translatePoint(grip.position, delta);
-  const updates = applyXLineGripDrag(grip.xlineGripKind, { entity, delta, currentPos });
+  const updates = applyXLineGripDrag(xlineKind, { entity, delta, currentPos });
   if (Object.keys(updates).length === 0) return;
   sceneManager.updateEntity(grip.entityId, updates as unknown as Partial<SceneEntity>);
 }
@@ -59,14 +61,15 @@ export function commitRayGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.rayGripKind) return;
+  const rayKind = gripKindOf(grip, 'ray');
+  if (!grip.entityId || !rayKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
   if (!raw || (raw as Record<string, unknown>).type !== 'ray') return;
   const entity = raw as unknown as RayEntity;
   const currentPos: Point2D = translatePoint(grip.position, delta);
-  const updates = applyRayGripDrag(grip.rayGripKind, { entity, delta, currentPos });
+  const updates = applyRayGripDrag(rayKind, { entity, delta, currentPos });
   if (Object.keys(updates).length === 0) return;
   sceneManager.updateEntity(grip.entityId, updates as unknown as Partial<SceneEntity>);
 }
@@ -86,7 +89,7 @@ export function commitLineGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.lineGripKind) return;
+  if (!grip.entityId || !gripKindOf(grip, 'line')) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -115,7 +118,8 @@ export function commitDimensionGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.dimGripKind) return;
+  const dimKind = gripKindOf(grip, 'dimension');
+  if (!grip.entityId || !dimKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -127,7 +131,7 @@ export function commitDimensionGripDrag(
   // wrapper is created only for the rendering pipeline, never persisted back.
   const asWrapper = raw as unknown as DxfDimension;
   const dimEntity: DimensionEntity = asWrapper.dimensionEntity ?? (raw as unknown as DimensionEntity);
-  const newDimEntity = applyDimensionGripDrag(grip.dimGripKind, dimEntity, delta, grip.position);
+  const newDimEntity = applyDimensionGripDrag(dimKind, dimEntity, delta, grip.position);
   if (newDimEntity === dimEntity) return;
   // ADR-362 Round 22 — undoable + drag-coalescing commit via the MergeableUpdateCommand
   // base (replaces the legacy direct sceneManager.updateEntity, which had NO undo). The

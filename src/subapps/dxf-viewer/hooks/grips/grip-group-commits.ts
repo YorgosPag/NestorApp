@@ -29,6 +29,7 @@ import type { GroupEntity } from '../../types/entities';
 import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
 import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
 import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
+import { gripKindOf } from '../grip-kinds';
 import { computeGroupSelectionBounds } from '../../systems/group/group-selection-bounds';
 import { resolveRotation } from './grip-primitive-rotate-commits';
 // ADR-561 EXT — copy intent SSoT (right-click «Copy» toggle OR live Ctrl/⌘), the SAME
@@ -51,7 +52,7 @@ export function commitGroupGizmoRotation(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || grip.groupGripKind !== 'group-rotation') return;
+  if (!grip.entityId || gripKindOf(grip, 'group') !== 'group-rotation') return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId) as GroupSceneShape | undefined;

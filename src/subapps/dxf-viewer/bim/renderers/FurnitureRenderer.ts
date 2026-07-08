@@ -30,6 +30,7 @@ import { bimMeshCache } from '../../bim-3d/library/bim-mesh-library/bim-mesh-cac
 import { drawMeshSilhouette } from './mesh-silhouette-draw';
 import { getFurnitureGrips } from '../furniture/furniture-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
+import { gripKindOf } from '../../hooks/grip-kinds';
 
 /** BIM category → Storage library folder for furniture meshes. */
 const FURNITURE_MESH_CATEGORY = 'furniture';
@@ -123,7 +124,7 @@ export class FurnitureRenderer extends BaseEntityRenderer {
       entityId: g.entityId,
       isVisible: true,
       gripIndex: g.gripIndex,
-      shape: gripGlyphShape(g.furnitureGripKind),
+      shape: gripGlyphShape(gripKindOf(g, 'furniture')),
     }));
   }
 
