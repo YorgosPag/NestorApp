@@ -17,11 +17,12 @@
  *
  * Idempotent (N.7.2 #3) + race-free (#2): store write precedes the BOQ fan-out.
  *
- * NOTE (N.0.2): `UpdateWallFamilyTypeCommand` predates this generic and is a
- * structural duplicate — flagged in `.claude-rules/pending-ratchet-work.md` for
- * migration to this command (deferred: shared working tree).
+ * SSoT (ADR-604): the former per-entity `Update{Wall,Slab,Roof}FamilyTypeCommand`
+ * duplicates were removed — Wall/Slab/Roof/Opening controllers all inject this
+ * single generic via `makeUpdateCommand`. (The wall twin also carried a
+ * `thickness > 0` validate branch; it was dead — `CommandHistory.execute()` never
+ * calls `validate()` — so it is intentionally not reproduced here.)
  *
- * @see core/commands/entity-commands/UpdateWallFamilyTypeCommand.ts — predecessor
  * @see core/commands/entity-commands/AssignOpeningTypeCommand.ts — per-instance sibling
  * @see docs/centralized-systems/reference/adrs/ADR-412-bim-family-types.md §3.5 §5
  */

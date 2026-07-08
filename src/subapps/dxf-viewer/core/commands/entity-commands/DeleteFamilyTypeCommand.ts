@@ -17,11 +17,10 @@
  * params when the type is gone («type always wins», graceful). Cleaned on next
  * per-entity save. Documented (not silent).
  *
- * NOTE (N.0.2): `DeleteWallFamilyTypeCommand` predates this generic and is a
- * structural duplicate — flagged in `.claude-rules/pending-ratchet-work.md` for
- * migration to this command (deferred: shared working tree).
+ * SSoT (ADR-604): the former per-entity `Delete{Wall,Slab,Roof}FamilyTypeCommand`
+ * duplicates were removed — Wall/Slab/Roof/Opening controllers all inject this
+ * single generic via `makeDeleteCommand`, passing their `label`.
  *
- * @see core/commands/entity-commands/DeleteWallFamilyTypeCommand.ts — predecessor
  * @see ../CompoundCommand.ts — single-undo composition
  * @see docs/centralized-systems/reference/adrs/ADR-412-bim-family-types.md §5 Q6
  */

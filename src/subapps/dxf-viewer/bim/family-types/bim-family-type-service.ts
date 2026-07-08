@@ -18,7 +18,7 @@
  *
  * EntityAuditService.recordChange() is NOT called here — this service is a pure
  * data-access layer. Audit is recorded at the COMMAND layer (ADR-412 Φ5):
- * `UpdateWallFamilyTypeCommand` / `DeleteWallFamilyTypeCommand` fire
+ * `UpdateFamilyTypeCommand` / `createDeleteFamilyTypeCommand` fire
  * `recordFamilyTypeChange()` (→ /api/audit-trail/record) alongside the optimistic
  * store update, so undo re-runs it symmetrically. See `bim-family-type-audit-client.ts`.
  *
@@ -38,6 +38,8 @@ import {
   type DocumentData,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore';
+
+import type { ZodError } from 'zod';
 
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -101,6 +103,14 @@ function snapshotToType(snap: QueryDocumentSnapshot<DocumentData>): BimFamilyTyp
 // VALIDATION HELPERS
 // ============================================================================
 
+/** Renders the first few Zod issues into a single-line, human-readable summary. */
+function summarizeZodError(error: ZodError): string {
+  return error.issues
+    .slice(0, 3)
+    .map((i) => `${i.path.join('.')}: ${i.message}`)
+    .join('; ');
+}
+
 /**
  * Validates `typeParams` for the given category before writing to Firestore.
  * Uses the discriminated Zod schemas from `bim-family-type.schemas.ts`.
@@ -121,11 +131,7 @@ function validateTypeParams(
   const schema = schemaByCategory[category];
   const result = schema.safeParse(typeParams);
   if (!result.success) {
-    const summary = result.error.issues
-      .slice(0, 3)
-      .map((i) => `${i.path.join('.')}: ${i.message}`)
-      .join('; ');
-    throw new Error(`BIM_FAMILY_TYPE_INVALID_PARAMS [${category}]: ${summary}`);
+    throw new Error(`BIM_FAMILY_TYPE_INVALID_PARAMS [${category}]: ${summarizeZodError(result.error)}`);
   }
 }
 
@@ -137,12 +143,35 @@ function validateTypeParams(
 function validateDocument(payload: BimFamilyType): void {
   const result = BimFamilyTypeSchema.safeParse(payload);
   if (!result.success) {
-    const summary = result.error.issues
-      .slice(0, 3)
-      .map((i) => `${i.path.join('.')}: ${i.message}`)
-      .join('; ');
-    throw new Error(`BIM_FAMILY_TYPE_INVALID_DOCUMENT: ${summary}`);
+    throw new Error(`BIM_FAMILY_TYPE_INVALID_DOCUMENT: ${summarizeZodError(result.error)}`);
   }
+}
+
+/**
+ * Stamps tenant/timestamp fields (companyId, owner/created/updated) and
+ * attaches `projectId` only when `scope === 'project'` (Firestore rejects
+ * `undefined` fields). Shared by `saveType` and `createTypeWithId`.
+ */
+function stampTenantAndScope<C extends keyof BimTypeParamsByCategory>(
+  config: BimFamilyTypeServiceConfig,
+  entity: Omit<
+    BimFamilyType<C>,
+    'companyId' | 'ownerId' | 'createdBy' | 'createdAt' | 'updatedBy' | 'updatedAt' | 'projectId'
+  >,
+): BimFamilyType<C> {
+  const base: BimFamilyType<C> = {
+    ...entity,
+    companyId: config.companyId,
+    ownerId: config.userId,
+    createdBy: config.userId,
+    createdAt: serverTimestamp() as BimFamilyType['createdAt'],
+    updatedBy: config.userId,
+    updatedAt: serverTimestamp() as BimFamilyType['updatedAt'],
+  } as BimFamilyType<C>;
+
+  return entity.scope === 'project' && config.projectId
+    ? { ...base, projectId: config.projectId }
+    : base;
 }
 
 // ============================================================================
@@ -269,26 +298,14 @@ export class BimFamilyTypeService {
     const id = generateBimFamilyTypeId();
     const ref = this.docRef(id);
 
-    const base: BimFamilyType<C> = {
+    const payload: BimFamilyType<C> = stampTenantAndScope(this.config, {
       id,
       name: input.name.trim(),
       category: input.category,
       scope: input.scope,
       origin: input.origin,
       typeParams: input.typeParams,
-      companyId: this.config.companyId,
-      ownerId: this.config.userId,
-      createdBy: this.config.userId,
-      createdAt: serverTimestamp() as BimFamilyType['createdAt'],
-      updatedBy: this.config.userId,
-      updatedAt: serverTimestamp() as BimFamilyType['updatedAt'],
-    };
-
-    // Firestore rejects `undefined`. projectId only persisted when scope=project.
-    const payload: BimFamilyType<C> =
-      input.scope === 'project' && this.config.projectId
-        ? { ...base, projectId: this.config.projectId }
-        : base;
+    });
 
     validateDocument(payload as BimFamilyType);
 
@@ -369,21 +386,7 @@ export class BimFamilyTypeService {
   ): Promise<BimFamilyType<C>> {
     validateTypeParams(type.category, type.typeParams);
 
-    const base: BimFamilyType<C> = {
-      ...type,
-      companyId: this.config.companyId,
-      ownerId: this.config.userId,
-      createdBy: this.config.userId,
-      createdAt: serverTimestamp() as BimFamilyType['createdAt'],
-      updatedBy: this.config.userId,
-      updatedAt: serverTimestamp() as BimFamilyType['updatedAt'],
-    };
-
-    // Firestore rejects `undefined`. projectId only persisted when scope=project.
-    const payload: BimFamilyType<C> =
-      type.scope === 'project' && this.config.projectId
-        ? { ...base, projectId: this.config.projectId }
-        : base;
+    const payload: BimFamilyType<C> = stampTenantAndScope(this.config, type);
 
     validateDocument(payload as BimFamilyType);
 

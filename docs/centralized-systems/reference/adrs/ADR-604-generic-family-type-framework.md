@@ -47,15 +47,17 @@ draw-tool draft panel, persistence hosts) are untouched (zero blast radius).
 
 ### 2.1 Key design constraints (why it is shaped this way)
 
-- **Zero behavior change on commands.** The generic `UpdateFamilyTypeCommand<TP>` /
-  `createDeleteFamilyTypeCommand` already exist (the Opening controller used them),
-  but Wall/Slab/Roof still use their per-entity `Update{X}FamilyTypeCommand` /
-  `createDelete{X}FamilyTypeCommand` (different `type` serialization string + a
-  `thickness > 0` validate on the wall command). The controller core therefore
+- **Injected command construction → single generic command.** The controller core
   **injects command construction** (`makeAssignCommand` / `makeUpdateCommand` /
-  `makeDeleteCommand`) instead of forcing a migration — each entity keeps its own
-  tested command. Migrating Wall/Slab/Roof onto the generic command stays a
-  separate, deferred ratchet.
+  `makeDeleteCommand`) rather than hard-wiring a command class. As of the follow-up
+  (§4, 2026-07-08), **all four** entities inject the SAME generic
+  `UpdateFamilyTypeCommand<TP>` / `createDeleteFamilyTypeCommand(label, …)` — the
+  per-entity `Update{X}FamilyTypeCommand` / `createDelete{X}FamilyTypeCommand`
+  duplicates were deleted. The catalog-command layer is now fully category-agnostic;
+  only `makeAssignCommand` (per-instance) still absorbs entity quirks. The wall
+  twin's extra `thickness > 0` validate was NOT reproduced: it was dead —
+  `CommandHistory.execute()` never calls `validate()` (domain validation, if wanted,
+  belongs at the edit-dialog input boundary).
 - **`makeAssignCommand` absorbs per-entity quirks** — e.g. the wall assign command
   takes an extra `entity.kind` argument the others do not.
 - **Category-derived params, no casts.** The controller is generic over
@@ -78,6 +80,10 @@ draw-tool draft panel, persistence hosts) are untouched (zero blast radius).
 - A 5th family-typed entity now needs only 4 small wrappers + its config, no new
   algorithm.
 - Tests: `create-edit-type-dialog-store.test.ts` (5) + `create-type-reresolution-hook.test.ts` (2) — GREEN.
+- **Command dedup (follow-up):** 6 per-entity command files deleted; the generic
+  `UpdateFamilyTypeCommand` / `createDeleteFamilyTypeCommand` gain real coverage via
+  the retargeted `UpdateFamilyTypeCommand.test.ts` (7) + `DeleteFamilyTypeCommand.test.ts`
+  (5) + `roof-family-type-commands.test.ts` (Assign kept + Update/Delete on generic).
 
 ## 4. Changelog
 
@@ -86,3 +92,13 @@ draw-tool draft panel, persistence hosts) are untouched (zero blast radius).
   APIs. Command construction injected (no command migration). jscpd 0 / jest GREEN.
   Deferred: migrate Wall/Slab/Roof `Update*/Delete*FamilyTypeCommand` onto the
   generic `UpdateFamilyTypeCommand` / `createDeleteFamilyTypeCommand`.
+- **2026-07-08 — Deferred → DONE (command dedup).** Migrated the Wall/Slab/Roof
+  controllers' `makeUpdateCommand` / `makeDeleteCommand` onto the generic commands
+  (mirroring Opening) and **deleted the 6 per-entity duplicates**
+  (`Update{Wall,Slab,Roof}FamilyTypeCommand.ts`, `Delete{Wall,Slab,Roof}FamilyTypeCommand.ts`).
+  Serialization-string change (`'update-wall-family-type'` → `'update-family-type'`)
+  is safe: these commands are in-memory undo only — none is registered in
+  `CommandRegistry` for deserialize/replay. The wall `thickness > 0` validate was
+  dropped as dead code (`CommandHistory.execute` never calls `validate()`). 3 tests
+  retargeted to the generic (20 assertions GREEN); 4 JSDoc references updated. jscpd
+  0 new clones.
