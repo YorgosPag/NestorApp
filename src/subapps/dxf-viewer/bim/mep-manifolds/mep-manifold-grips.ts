@@ -1,15 +1,18 @@
 /**
  * ADR-408 Φ12 — Plumbing manifold parametric 2D grips (wall-parity).
  *
- * Thin adapter over the shared **centred rotatable-box** grip SSoT
- * (`bim/grips/centred-box-grips.ts`). A manifold is **always rectangular** (no
- * circular / diameter handle), so it delegates 100% to the SSoT and only maps the
- * entity-agnostic grip ROLES (`'move'` / `'rotation'` / `'corner-*'`) to/from the
- * manifold-specific grip-kind strings (`'mep-manifold-move'`, …) that the
- * discriminator unions + glyph / hot-grip / commit registries expect. 1:1 mirror
- * of `electrical-panel-grips.ts`.
+ * The centred rotatable-box part (move / rotation / 4 corners) is a PURE centred-box
+ * consumer, delegated to the shared box grip SSoT via the
+ * `createCentredBoxGripAdapter` factory (ADR-602). On TOP of that the manifold adds
+ * the Revit "array control" ▲/▼ outlet action grips — an affordance OUTSIDE a
+ * centred rectangle — so it composes the adapter as an ESCAPE-HATCH (No-God-shell):
+ * `getMepManifoldGrips` calls `adapter.getGrips` then appends the outlet grips, and
+ * `applyMepManifoldGripDrag` IS `adapter.applyGripDrag` (the outlet kinds have no
+ * box role → the adapter short-circuits to `originalParams`; they are single-click
+ * ACTION grips committed elsewhere via `commitMepManifoldOutletCountGrip`).
  *
- * @see bim/grips/centred-box-grips.ts — the shared box SSoT
+ * @see bim/grips/create-centred-box-grip-adapter.ts — the adapter factory (ADR-602)
+ * @see bim/grips/centred-box-grips.ts — the shared box geometry + drag SSoT
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
@@ -22,36 +25,29 @@ import {
   MAX_MANIFOLD_OUTLET_COUNT,
 } from '../types/mep-manifold-types';
 import {
-  getCentredBoxGrips,
-  applyCentredBoxGripDrag,
-  type CentredBoxGripRole,
-} from '../grips/centred-box-grips';
+  createCentredBoxGripAdapter,
+  buildCentredBoxKindMaps,
+  type CentredBoxAdapterDragInput,
+} from '../grips/create-centred-box-grip-adapter';
 import { clampOutletCount } from './mep-manifold-geometry';
 import { mmScaleFor } from '../../utils/scene-units';
 import { rotateVector } from '../grips/grip-math';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
-// ─── Role ↔ manifold-kind maps ────────────────────────────────────────────────
+const adapter = createCentredBoxGripAdapter<
+  MepManifoldEntity,
+  MepManifoldParams,
+  MepManifoldGripKind
+>({
+  ...buildCentredBoxKindMaps('mep-manifold'),
+  minDimensionMm: MIN_MANIFOLD_DIMENSION_MM,
+  toBoxParams: (params) => params,
+  fromBoxPatch: (original, patch) => ({ ...original, ...patch }),
+  toGripInfo: (base, kind) => ({ ...base, mepManifoldGripKind: kind }),
+});
 
-const ROLE_TO_KIND: Readonly<Record<CentredBoxGripRole, MepManifoldGripKind>> = {
-  'move': 'mep-manifold-move',
-  'rotation': 'mep-manifold-rotation',
-  'corner-ne': 'mep-manifold-corner-ne',
-  'corner-nw': 'mep-manifold-corner-nw',
-  'corner-sw': 'mep-manifold-corner-sw',
-  'corner-se': 'mep-manifold-corner-se',
-};
-// Partial: the outlet add/remove action kinds have NO centred-box role (they are
-// single-click actions, not box drags) — `applyMepManifoldGripDrag` guards on the
-// `undefined` lookup and short-circuits to `originalParams` for them.
-const KIND_TO_ROLE: Readonly<Partial<Record<MepManifoldGripKind, CentredBoxGripRole>>> = {
-  'mep-manifold-move': 'move',
-  'mep-manifold-rotation': 'rotation',
-  'mep-manifold-corner-ne': 'corner-ne',
-  'mep-manifold-corner-nw': 'corner-nw',
-  'mep-manifold-corner-sw': 'corner-sw',
-  'mep-manifold-corner-se': 'corner-se',
-};
+/** Drag input for a manifold grip (the shared centred-box 5-field shape). */
+export type MepManifoldGripDragInput = CentredBoxAdapterDragInput<MepManifoldParams>;
 
 // ─── Outlet action grips (Revit "array control" ▲/▼) ──────────────────────────
 
@@ -76,22 +72,15 @@ function outletActionGripWorld(params: MepManifoldParams, localDyMm: number): Po
 // ─── Grip emission ───────────────────────────────────────────────────────────
 
 /**
- * Compute parametric grip positions for a `MepManifoldEntity`: the 6 centred-box
- * grips (move, rotation, 4 corners) plus the Revit "array control" ▲/▼ outlet
- * action grips. The action grips are hidden at the clamp bounds (the ▲ disappears
- * at `MAX`, the ▼ at `MIN`) so a click is never a no-op — mirroring Revit
- * disabling the array arrow at the limit. Stable grip indices: 6 = add, 7 =
- * remove (independent of which is shown).
+ * Compute parametric grip positions for a `MepManifoldEntity`: the centred-box
+ * grips (rotation + 4 corners) plus the Revit "array control" ▲/▼ outlet action
+ * grips. The action grips are hidden at the clamp bounds (the ▲ disappears at
+ * `MAX`, the ▼ at `MIN`) so a click is never a no-op — mirroring Revit disabling
+ * the array arrow at the limit. Stable grip indices: 6 = add, 7 = remove
+ * (independent of which is shown).
  */
 export function getMepManifoldGrips(entity: Readonly<MepManifoldEntity>): GripInfo[] {
-  const grips: GripInfo[] = getCentredBoxGrips(entity.params).map((g) => ({
-    entityId: entity.id,
-    gripIndex: g.gripIndex,
-    type: g.type,
-    position: g.position,
-    movesEntity: g.movesEntity,
-    mepManifoldGripKind: ROLE_TO_KIND[g.role],
-  }));
+  const grips = adapter.getGrips(entity);
 
   const params = entity.params;
   const count = clampOutletCount(params.outletCount);
@@ -120,39 +109,14 @@ export function getMepManifoldGrips(entity: Readonly<MepManifoldEntity>): GripIn
 
 // ─── Drag transforms ─────────────────────────────────────────────────────────
 
-export interface MepManifoldGripDragInput {
-  /** Original params at drag start (preserves invariants). */
-  readonly originalParams: MepManifoldParams;
-  /** World-space delta from the grip anchor to the current cursor position. */
-  readonly delta: Point2D;
-  /** ORTHO (F8) active → corner resize constrained to the dominant local axis. */
-  readonly ortho?: boolean;
-  /** Rotation centre for the 6-click hot-grip (AutoCAD ROTATE→Reference). */
-  readonly pivot?: Point2D;
-  /** World cursor position (= grip anchor + `delta`). Pivot-rotate path only. */
-  readonly currentPos?: Point2D;
-}
-
 /**
  * Pure transform: manifold grip kind + drag input → new `MepManifoldParams`.
- * Delegates to the shared box SSoT; zero delta / unknown kind → returns
- * `originalParams` referentially unchanged (commit short-circuit).
+ * Delegates to the shared box SSoT; the outlet ▲/▼ kinds have no box role so the
+ * adapter returns `originalParams` referentially unchanged (they are single-click
+ * actions handled by `commitMepManifoldOutletCountGrip`). Zero delta / unknown
+ * kind → `originalParams` unchanged (commit short-circuit).
  */
-export function applyMepManifoldGripDrag(
+export const applyMepManifoldGripDrag: (
   kind: MepManifoldGripKind,
   input: Readonly<MepManifoldGripDragInput>,
-): MepManifoldParams {
-  const { originalParams } = input;
-  const role = KIND_TO_ROLE[kind];
-  if (!role) return originalParams;
-  const patch = applyCentredBoxGripDrag(role, {
-    originalParams,
-    delta: input.delta,
-    minDimensionMm: MIN_MANIFOLD_DIMENSION_MM,
-    ortho: input.ortho,
-    ...(input.pivot ? { pivot: input.pivot } : {}),
-    ...(input.currentPos ? { currentPos: input.currentPos } : {}),
-  });
-  if (!patch) return originalParams;
-  return { ...originalParams, ...patch };
-}
+) => MepManifoldParams = adapter.applyGripDrag;

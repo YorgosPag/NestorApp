@@ -1,59 +1,47 @@
 /**
  * ADR-406 — MEP fixture (light fixture) parametric 2D grips.
  *
- * Thin adapter over the shared **centred rotatable-box** grip SSoT
- * (`bim/grips/centred-box-grips.ts`) for the rectangular shape, PLUS a small
- * fixture-specific `circular` extension (single diameter handle) that has no box
- * equivalent. The rectangular path delegates 100% to the SSoT and only maps the
- * entity-agnostic grip ROLES (`'move'` / `'rotation'` / `'corner-*'`) to/from the
- * fixture grip-kind strings (`'mep-fixture-move'`, …).
+ * The rectangular shape is a PURE centred-box consumer, delegated to the shared box
+ * grip SSoT via the `createCentredBoxGripAdapter` factory (ADR-602). On TOP of that
+ * the fixture adds a `circular` variant with a single diameter handle — an
+ * affordance OUTSIDE a centred rectangle — so it composes the adapter as an
+ * ESCAPE-HATCH (No-God-shell): the circular branch is handled locally, the
+ * rectangular branch delegates to `adapter.getGrips` / `adapter.applyGripDrag`.
  *
- * Rectangular (5 grips): 1 → rotation, 2-5 → corners (ne, nw, sw, se).
- * Circular   (1 grip):   1 → `mep-fixture-diameter` (symmetric 2× resize,
- *                        centre fixed) — the only non-box affordance.
+ * Rectangular: 1 → rotation, 2-5 → corners (ne, nw, sw, se).
+ * Circular   : 1 → `mep-fixture-diameter` (symmetric 2× resize, centre fixed) — the
+ *              only non-box affordance.
  *
- * ADR-363 Φ1G.5 Slice 2 — the central MOVE grip (gripIndex 0) is no longer
- * emitted on either shape (Alt+drag moves the whole fixture); gripIndex 0 is
- * left unused (no reindex).
- *
- * SSoT: all box geometry + rotation math live in the shared box SSoT + `grip-math`
- * (ADR-188 canonical `rotatePoint`) — NO re-implemented cos/sin here.
+ * ADR-363 Φ1G.5 Slice 2 — the central MOVE grip (gripIndex 0) is not emitted on
+ * either shape (Alt+drag moves the whole fixture); gripIndex 0 is left unused.
  * `UpdateMepFixtureParamsCommand` recomputes geometry at commit time; this module
  * returns ONLY new `MepFixtureParams`.
  *
- * @see bim/grips/centred-box-grips.ts — the shared box SSoT (consumed by the panel too)
+ * @see bim/grips/create-centred-box-grip-adapter.ts — the adapter factory (ADR-602)
+ * @see bim/grips/centred-box-grips.ts — the shared box geometry + drag SSoT
  * @see docs/centralized-systems/reference/adrs/ADR-406-point-based-mep-fixture.md
  */
 
-import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo, MepFixtureGripKind } from '../../hooks/grip-types';
 import type { MepFixtureEntity, MepFixtureParams } from '../types/mep-fixture-types';
 import { MIN_FIXTURE_DIMENSION_MM } from '../types/mep-fixture-types';
 import { mmScaleFor } from '../../utils/scene-units';
 import {
-  getCentredBoxGrips,
-  applyCentredBoxGripDrag,
-  type CentredBoxGripRole,
-} from '../grips/centred-box-grips';
+  createCentredBoxGripAdapter,
+  buildCentredBoxKindMaps,
+  type CentredBoxAdapterDragInput,
+} from '../grips/create-centred-box-grip-adapter';
 
-// ─── Role ↔ fixture-kind maps (rectangular grips) ─────────────────────────────
+const adapter = createCentredBoxGripAdapter<MepFixtureEntity, MepFixtureParams, MepFixtureGripKind>({
+  ...buildCentredBoxKindMaps('mep-fixture'),
+  minDimensionMm: MIN_FIXTURE_DIMENSION_MM,
+  toBoxParams: (params) => params,
+  fromBoxPatch: (original, patch) => ({ ...original, ...patch }),
+  toGripInfo: (base, kind) => ({ ...base, mepFixtureGripKind: kind }),
+});
 
-const ROLE_TO_KIND: Readonly<Record<CentredBoxGripRole, MepFixtureGripKind>> = {
-  'move': 'mep-fixture-move',
-  'rotation': 'mep-fixture-rotation',
-  'corner-ne': 'mep-fixture-corner-ne',
-  'corner-nw': 'mep-fixture-corner-nw',
-  'corner-sw': 'mep-fixture-corner-sw',
-  'corner-se': 'mep-fixture-corner-se',
-};
-const KIND_TO_ROLE: Readonly<Partial<Record<MepFixtureGripKind, CentredBoxGripRole>>> = {
-  'mep-fixture-move': 'move',
-  'mep-fixture-rotation': 'rotation',
-  'mep-fixture-corner-ne': 'corner-ne',
-  'mep-fixture-corner-nw': 'corner-nw',
-  'mep-fixture-corner-sw': 'corner-sw',
-  'mep-fixture-corner-se': 'corner-se',
-};
+/** Drag input for a fixture grip (the shared centred-box 5-field shape). */
+export type MepFixtureGripDragInput = CentredBoxAdapterDragInput<MepFixtureParams>;
 
 // ─── Grip emission ───────────────────────────────────────────────────────────
 
@@ -84,40 +72,17 @@ export function getMepFixtureGrips(entity: Readonly<MepFixtureEntity>): GripInfo
     ];
   }
 
-  // Rectangular: delegate 100% to the shared box SSoT, map roles → fixture kinds.
-  return getCentredBoxGrips(params).map((g) => ({
-    entityId: entity.id,
-    gripIndex: g.gripIndex,
-    type: g.type,
-    position: g.position,
-    movesEntity: g.movesEntity,
-    mepFixtureGripKind: ROLE_TO_KIND[g.role],
-  }));
+  // Rectangular: delegate 100% to the shared box SSoT via the adapter.
+  return adapter.getGrips(entity);
 }
 
 // ─── Drag transforms ─────────────────────────────────────────────────────────
 
-export interface MepFixtureGripDragInput {
-  /** Original params at drag start (preserves invariants). */
-  readonly originalParams: MepFixtureParams;
-  /** World-space delta from the grip anchor to the current cursor position. */
-  readonly delta: Point2D;
-  /** ORTHO (F8) active → corner resize constrained to the dominant local axis. */
-  readonly ortho?: boolean;
-  /**
-   * Rotation centre for the `mep-fixture-rotation` 6-click hot-grip
-   * (AutoCAD ROTATE→Reference). With `currentPos`, the fixture orbits this centre.
-   */
-  readonly pivot?: Point2D;
-  /** World cursor position (= grip anchor + `delta`). Pivot-rotate path only. */
-  readonly currentPos?: Point2D;
-}
-
 /**
  * Pure transform: MEP fixture grip kind + drag input → new `MepFixtureParams`.
- * The rectangular grips delegate to the shared box SSoT; `mep-fixture-diameter`
- * (circular only) is handled locally. Zero delta / unknown kind → returns
- * `originalParams` referentially unchanged (commit short-circuit).
+ * The rectangular grips delegate to the shared box SSoT (via the adapter);
+ * `mep-fixture-diameter` (circular only) is handled locally. Zero delta / unknown
+ * kind → returns `originalParams` referentially unchanged (commit short-circuit).
  */
 export function applyMepFixtureGripDrag(
   kind: MepFixtureGripKind,
@@ -126,24 +91,12 @@ export function applyMepFixtureGripDrag(
   const { originalParams } = input;
   if (input.delta.x === 0 && input.delta.y === 0) return originalParams;
   if (kind === 'mep-fixture-diameter') return resizeDiameter(input);
-
-  const role = KIND_TO_ROLE[kind];
-  if (!role) return originalParams;
   // Circular fixtures expose only move + diameter; rotation/corner are never
   // emitted for a circle but guard for safety (pre-SSoT behaviour returned the
   // original params for those on a circular shape).
-  if (originalParams.shape === 'circular' && role !== 'move') return originalParams;
+  if (originalParams.shape === 'circular' && kind !== 'mep-fixture-move') return originalParams;
 
-  const patch = applyCentredBoxGripDrag(role, {
-    originalParams,
-    delta: input.delta,
-    minDimensionMm: MIN_FIXTURE_DIMENSION_MM,
-    ortho: input.ortho,
-    ...(input.pivot ? { pivot: input.pivot } : {}),
-    ...(input.currentPos ? { currentPos: input.currentPos } : {}),
-  });
-  if (!patch) return originalParams;
-  return { ...originalParams, ...patch };
+  return adapter.applyGripDrag(kind, input);
 }
 
 /**
