@@ -497,7 +497,7 @@ export const SNAP_MARKER_COLORS = {
   PARALLEL:         UI_COLORS_BASE.SNAP_PERPENDICULAR,    // #9B59B6 μωβ (reuse)
   CONSTRUCTION:     '#ff4081',                            // pink
   DIM:              '#ff6d00',                            // πορτοκαλί (ADR-378 Step 3 — προσωρινό, υπό αξιολόγηση· εναλλακτικά φουξ #FF00FF, βλ. σχήμα dim_line/dim_def_point για διάκριση από INTERSECTION magenta)
-  // ADR-370 §unified-glyph (2026-07-05): BIM_CORNER/MIDPOINT/CENTER καταργήθηκαν ως ξεχωριστά
+  // ADR-597 §unified-glyph (2026-07-05): BIM_CORNER/MIDPOINT/CENTER καταργήθηκαν ως ξεχωριστά
   // χρώματα — μια BIM γωνία/μέσο/κέντρο είναι το ΙΔΙΟ ΕΙΔΟΣ σημείου με το γεωμετρικό
   // endpoint/midpoint/center και μοιράζεται το ΙΔΙΟ χρώμα (βλ. SNAP_COLORS στο snap-visual-config).
   BIM_WALL_FACE:    '#80d8ff',                            // αν. κυανό

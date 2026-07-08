@@ -83,7 +83,8 @@ export function polarPoint(cx: number, cy: number, r: number, deg: number): Poin
  * Για 90° wedges το large-arc-flag = 0. Καθαρή συνάρτηση (deterministic) → testable.
  */
 export function pieSectorPath(cx: number, cy: number, r: number, a0: number, a1: number): string {
-  const large = (((a1 - a0) % 360) + 360) % 360 > 180 ? 1 : 0;
+  // SSoT `normalizeAngleDeg` (geometry-angle-utils) αντί inline `((x%360)+360)%360` — ταυτόσημο [0,360).
+  const large = normalizeAngleDeg(a1 - a0) > 180 ? 1 : 0;
   const p0 = polarPoint(cx, cy, r, a0);
   const p1 = polarPoint(cx, cy, r, a1);
   return `M ${cx} ${cy} L ${p0.x} ${p0.y} A ${r} ${r} 0 ${large} 1 ${p1.x} ${p1.y} Z`;

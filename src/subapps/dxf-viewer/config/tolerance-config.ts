@@ -496,15 +496,15 @@ export const SNAP_ENGINE_PRIORITIES = {
    *  hidden centreline. Kept low-priority on purpose: zero regression to other tools (the wall-move
    *  flush still works because that path picks by distance across multi-grab probes). */
   BIM_WALL_FACE:      9.5,
-  /** ADR-370: generic BIM structural corner snap — highest structural precision */
+  /** ADR-597: generic BIM structural corner snap — highest structural precision */
   BIM_CORNER:         -2,
-  /** ADR-370: generic BIM edge/axis midpoint. NEGATIVE (below endpoint 0 / generic MIDPOINT 1)
+  /** ADR-597: generic BIM edge/axis midpoint. NEGATIVE (below endpoint 0 / generic MIDPOINT 1)
    *  so a BIM edge midpoint WINS over the coincident raw-DXF line snaps — Revit treats structural
    *  characteristic points as the precise targets. EQUAL to BIM_CENTER on purpose: where both a
    *  face-edge midpoint and the centroid are in range (thin members), the *distance* tiebreak
    *  picks the right one (▲ at the face mid, ⊕ at the centroid) instead of priority hijacking. */
   BIM_MIDPOINT:       -1.7,
-  /** ADR-370: generic BIM centroid — same tier as BIM_MIDPOINT (see note above): negative so it
+  /** ADR-597: generic BIM centroid — same tier as BIM_MIDPOINT (see note above): negative so it
    *  beats generic CENTER (3)/MIDPOINT (1)/ENDPOINT (0), equal to BIM_MIDPOINT so distance decides. */
   BIM_CENTER:         -1.7,
   /** ADR-378 Phase 3: TEXT/MTEXT 8-point snap (insertion + 4 corners + center + 2 edge mids) — same tier as INSERTION */

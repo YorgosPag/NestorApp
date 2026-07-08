@@ -16,7 +16,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { type DisplayUnit, formatDisplayValue } from '../../config/units';
+import { type DisplayUnit, formatDisplayValue, fromDisplay } from '../../config/units';
 import { type SceneUnits, mmToSceneUnits } from '../../utils/scene-units';
 import { DynamicInputLockStore } from './DynamicInputLockStore';
 import { lengthDisplayToSceneLock } from './radial-ring-logic';
@@ -135,4 +135,62 @@ export function angleRingField(labelKey: string): RingFieldDef {
     },
     commitNumeric: (value) => DynamicInputLockStore.lockAngle(normalizeAngleDeg(value)),
   };
+}
+
+// ─── Tool-specific numeric OVERRIDE fields (SSoT: τοίχος πάχος/ύψος, δοκός πλάτος/ύψος) ───
+
+/** Bridge store που ένα ενεργό εργαλείο εκθέτει (`null` όταν δεν τρέχει) — reader + writer overrides. */
+export interface RingOverrideBridge<TOverrides> {
+  get(): { readonly overrides: TOverrides; setParamOverrides(next: TOverrides): void } | null;
+}
+/** Preview store (πάντα παρόν) — fallback source των overrides όταν δεν υπάρχει ενεργό bridge handle. */
+export interface RingOverridePreview<TOverrides> {
+  get(): { readonly overrides: TOverrides };
+}
+/** Ορισμός ενός numeric override-πεδίου: ποιο κλειδί, ετικέτα, και πώς προκύπτει η seed τιμή (mm). */
+export interface NumericOverrideFieldSpec<TOverrides> {
+  readonly key: keyof TOverrides & string;
+  readonly labelKey: string;
+  /** Τρέχουσα τιμή (mm) του πεδίου από τα overrides — π.χ. `resolveWallThicknessMm(o)` ή `o.width ?? DEFAULT`. */
+  readonly resolveSeedMm: (overrides: TOverrides) => number;
+}
+
+/**
+ * SSoT για τα **override-based** numeric πεδία δαχτυλιδιού (τοίχος Πάχος/Ύψος, δοκός Πλάτος/Ύψος).
+ *
+ * Το idiom «bridge-ή-preview reader + bridge writer + numeric `RingFieldDef` builder» ήταν
+ * αντιγραμμένο byte-identical στα `wall-ring-config.ts` + `beam-ring-config.ts` (μόνη διαφορά:
+ * το ζεύγος stores, ο τύπος overrides, και η per-field seed resolver). Εδώ γενικεύεται μία φορά:
+ *   - `currentOverrides()` — bridge handle overrides, αλλιώς preview fallback,
+ *   - `setOverride(key, mm)` — γράψε ένα override στο bridge (no-op χωρίς ενεργό handle),
+ *   - `numericOverrideField(spec)` — δόμησε το `RingFieldDef` (lock = override ορισμένο, seed σε display units, commit = fromDisplay → override).
+ */
+export function createOverrideRingFields<TOverrides>(
+  bridge: RingOverrideBridge<TOverrides>,
+  preview: RingOverridePreview<TOverrides>,
+): {
+  currentOverrides: () => TOverrides;
+  setOverride: (key: keyof TOverrides & string, valueMm: number) => void;
+  numericOverrideField: (spec: NumericOverrideFieldSpec<TOverrides>) => RingFieldDef;
+} {
+  const currentOverrides = (): TOverrides => bridge.get()?.overrides ?? preview.get().overrides;
+
+  const setOverride = (key: keyof TOverrides & string, valueMm: number): void => {
+    const handle = bridge.get();
+    if (!handle) return;
+    // computed-key partial update· `number` ταιριάζει στο πεδίο. Ρητή assertion για το γνωστό TS
+    // widening του computed-key spread (ΟΧΙ `any` — διατηρεί τον συγκεκριμένο τύπο overrides).
+    handle.setParamOverrides({ ...handle.overrides, [key]: valueMm } as TOverrides);
+  };
+
+  const numericOverrideField = (spec: NumericOverrideFieldSpec<TOverrides>): RingFieldDef => ({
+    key: spec.key,
+    labelKey: spec.labelKey,
+    kind: 'numeric',
+    isLocked: () => currentOverrides()[spec.key] !== undefined,
+    seed: (ctx) => formatDisplayValue(spec.resolveSeedMm(currentOverrides()), ctx.displayUnit),
+    commitNumeric: (value, ctx) => setOverride(spec.key, fromDisplay(value, ctx.displayUnit)),
+  });
+
+  return { currentOverrides, setOverride, numericOverrideField };
 }
