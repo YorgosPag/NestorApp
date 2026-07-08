@@ -63,7 +63,7 @@ export function getSlabOpeningGrips(entity: Readonly<SlabOpeningEntity>): GripIn
       type: 'vertex',
       position: { x: v.x, y: v.y },
       movesEntity: false,
-      slabOpeningGripKind: `slab-opening-vertex-${i}`,
+      gripKind: { on: 'slab-opening', kind: `slab-opening-vertex-${i}` },
     });
   }
   const offset = verts.length;
@@ -77,7 +77,7 @@ export function getSlabOpeningGrips(entity: Readonly<SlabOpeningEntity>): GripIn
       position: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
       movesEntity: false,
       edgeVertexIndices: [i, (i + 1) % verts.length],
-      slabOpeningGripKind: `slab-opening-edge-midpoint-${i}`,
+      gripKind: { on: 'slab-opening', kind: `slab-opening-edge-midpoint-${i}` },
     });
   }
   return grips;

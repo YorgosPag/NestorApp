@@ -42,6 +42,7 @@ import { HOVER_HIGHLIGHT } from '../../config/color-config';
 // ADR-509 — background-adaptive entity color (near-black wall visible on dark canvas).
 import { adaptEntityColorForCanvas, adaptStructuralLineColorForCanvas } from '../../config/adaptive-entity-color';
 import { getWallGrips, wallGripGlyphShape } from '../walls/wall-grips';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
@@ -209,7 +210,7 @@ export class WallRenderer extends BaseEntityRenderer {
       gripIndex: g.gripIndex,
       // ADR-363 Phase 1C-ter — carry the icon glyph for the move/rotation handles
       // (midpoint → 4-arrow, wall-rotation → curved arrow), mirror StairRenderer.
-      shape: wallGripGlyphShape(g.wallGripKind),
+      shape: wallGripGlyphShape(gripKindOf(g, 'wall')),
     }));
   }
 

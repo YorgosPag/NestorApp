@@ -1,5 +1,5 @@
 /**
- * `projectVerticesTo2D` — SSoT projection `{x,y}`-vertices → `Point2D[]` (ADR-370 §17.11).
+ * `projectVerticesTo2D` — SSoT projection `{x,y}`-vertices → `Point2D[]` (ADR-597 §17.11).
  * Αντικαθιστά το διάσπαρτο idiom `footprint.vertices.map((v) => ({ x: v.x, y: v.y }))`
  * σε corner-projection snap paths (κολόνα/θεμέλιο/δοκός) + characteristic points.
  */

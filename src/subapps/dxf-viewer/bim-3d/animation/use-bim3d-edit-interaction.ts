@@ -98,7 +98,7 @@ export function useBim3DEditInteraction({ managerRef, canvasEl }: UseBim3DEditIn
     const moveReadout = new TempMoveReadoutOverlay(manager.scene);
     const resolveSnapLabel = (type?: string, description?: string): string => {
       if (!type && !description) return '';
-      // ADR-370: composition-aware (BIM characteristic-point «Γωνία/Μέσο/Κέντρο X» labels).
+      // ADR-597: composition-aware (BIM characteristic-point «Γωνία/Μέσο/Κέντρο X» labels).
       return resolveSnapLabelText(tRef.current, (type ?? '') as ExtendedSnapType, description);
     };
     const ctx: EditInteractionCtx = {

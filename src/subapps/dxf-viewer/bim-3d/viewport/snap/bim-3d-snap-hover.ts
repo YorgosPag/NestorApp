@@ -8,7 +8,7 @@
  *     → raycastWorldPoint (front-most BIM surface under the cursor)         [SSoT raycaster]
  *     → worldToDxfPlan (3D world → DXF-plan mm + elevation)                 [SSoT transforms]
  *     → syncSnapEngineViewport3D (pixel tolerance from the 3D camera zoom)  [SSoT, ADR-402]
- *     → getGlobalSnapEngine().findSnapPoint (same corners/midpoints/labels) [SSoT, ADR-370]
+ *     → getGlobalSnapEngine().findSnapPoint (same corners/midpoints/labels) [SSoT, ADR-597]
  *     → toSnapIndicatorView (the 2D-shared overlay view-model)              [SSoT, ADR-137]
  *
  * The returned `elevMm` is the front-most hit's elevation, so the marker rides the surface the
