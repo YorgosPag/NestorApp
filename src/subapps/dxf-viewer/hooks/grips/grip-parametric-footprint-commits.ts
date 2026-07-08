@@ -37,6 +37,7 @@ import { withGradientPatch, DEFAULT_GRADIENT_DEFAULTS } from '../../bim/hatch/ha
 import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { gripKindOf } from '../grip-kinds';
 
 /**
  * ADR-363 Phase 3.5 — Parametric slab grip commit (per-vertex translate).
@@ -51,7 +52,8 @@ export function commitSlabGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.slabGripKind) return;
+  const slabKind = gripKindOf(grip, 'slab');
+  if (!grip.entityId || !slabKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -65,7 +67,7 @@ export function commitSlabGripDrag(
   // can travel from `keydown` → commit without plumbing through 4 handler
   // layers (mouse-handler-up loses the native event by design).
   const rectilinear = ShiftKeyTracker.getSnapshot();
-  const newParams = applySlabGripDrag(grip.slabGripKind, {
+  const newParams = applySlabGripDrag(slabKind, {
     originalParams,
     delta,
     rectilinear,
@@ -100,7 +102,8 @@ export function commitRoofGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.roofGripKind) return;
+  const roofKind = gripKindOf(grip, 'roof');
+  if (!grip.entityId || !roofKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -110,7 +113,7 @@ export function commitRoofGripDrag(
   const roof = candidate as RoofEntity;
   const originalParams = roof.params;
   const rectilinear = ShiftKeyTracker.getSnapshot();
-  const newParams = applyRoofGripDrag(grip.roofGripKind, {
+  const newParams = applyRoofGripDrag(roofKind, {
     originalParams,
     delta,
     rectilinear,
@@ -143,7 +146,8 @@ export function commitSlabOpeningGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.slabOpeningGripKind) return;
+  const slabOpeningKind = gripKindOf(grip, 'slab-opening');
+  if (!grip.entityId || !slabOpeningKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -153,7 +157,7 @@ export function commitSlabOpeningGripDrag(
   const opening = candidate as SlabOpeningEntity;
   const originalParams = opening.params;
   const rectilinear = ShiftKeyTracker.getSnapshot();
-  const newParams = applySlabOpeningGripDrag(grip.slabOpeningGripKind, {
+  const newParams = applySlabOpeningGripDrag(slabOpeningKind, {
     originalParams,
     delta,
     rectilinear,
@@ -184,7 +188,8 @@ export function commitFloorFinishGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.floorFinishGripKind) return;
+  const floorFinishKind = gripKindOf(grip, 'floor-finish');
+  if (!grip.entityId || !floorFinishKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -194,7 +199,7 @@ export function commitFloorFinishGripDrag(
   const finish = candidate as FloorFinishEntity;
   const originalParams = finish.params;
   const rectilinear = ShiftKeyTracker.getSnapshot();
-  const newParams = applyFloorFinishGripDrag(grip.floorFinishGripKind, {
+  const newParams = applyFloorFinishGripDrag(floorFinishKind, {
     originalParams,
     delta,
     rectilinear,
@@ -226,7 +231,8 @@ export function commitHatchGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || !grip.hatchGripKind) return;
+  const hatchKind = gripKindOf(grip, 'hatch');
+  if (!grip.entityId || !hatchKind) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -236,7 +242,7 @@ export function commitHatchGripDrag(
   const rectilinear = ShiftKeyTracker.getSnapshot();
   // ADR-507 Φ5 A3 — gradient origin/seed grip: patch το patternOrigin (mergeable
   // drag → ΕΝΑ undo), ΟΧΙ το όριο. Default origin = κέντρο bbox (ίδιο SSoT).
-  if (isHatchOriginGripKind(grip.hatchGripKind)) {
+  if (isHatchOriginGripKind(hatchKind)) {
     const current = candidate.patternOrigin ?? hatchBoundsCenter(candidate.boundaryPaths);
     if (!current) return;
     const newOrigin = applyHatchOriginGripDrag(current, { delta, rectilinear });
@@ -250,7 +256,7 @@ export function commitHatchGripDrag(
   }
   // ADR-507 Φ5 A4 — gradient-angle βραχίονας: περιστρέφει το gradient.angleDeg (mergeable
   // drag → ΕΝΑ undo). Η νέα γωνία = atan2(anchor+delta − origin)· anchor = SSoT θέση λαβής.
-  if (isHatchAngleGripKind(grip.hatchGripKind)) {
+  if (isHatchAngleGripKind(hatchKind)) {
     const gradient = candidate.gradient;
     if (!gradient) return;
     const origin = candidate.patternOrigin ?? hatchBoundsCenter(candidate.boundaryPaths);
@@ -269,7 +275,7 @@ export function commitHatchGripDrag(
     return;
   }
   const original = candidate.boundaryPaths;
-  const newBoundaryPaths = applyHatchGripDrag(grip.hatchGripKind, {
+  const newBoundaryPaths = applyHatchGripDrag(hatchKind, {
     originalBoundaryPaths: original,
     delta,
     rectilinear,

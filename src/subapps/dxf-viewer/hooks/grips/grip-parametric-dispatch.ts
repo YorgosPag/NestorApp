@@ -15,6 +15,7 @@
  */
 import type { Point2D } from '../../rendering/types/Types';
 import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
+import { gripKindOf } from '../grip-kinds';
 import {
   commitStairGripDrag,
   commitWallGripDrag,
@@ -55,19 +56,19 @@ export function tryCommitParametricGripDrag(
   deps: DxfCommitDeps,
 ): boolean {
   // ADR-358 Phase 5b — stair parametric grip path (5 kinds, §5.12).
-  if (grip.stairGripKind) {
+  if (gripKindOf(grip, 'stair')) {
     commitStairGripDrag(grip, delta, deps);
     return true;
   }
   // ADR-362 Phase I2 — dimension grip path (defPoints / textMidpoint / rotation).
-  if (grip.dimGripKind) {
+  if (gripKindOf(grip, 'dimension')) {
     commitDimensionGripDrag(grip, delta, deps);
     return true;
   }
   // ADR-363 Phase 1C — wall parametric grip path (endpoint / midpoint /
   // thickness / curve / polyline-vertex). Bypasses stretch because walls are
   // params-driven (geometry recomputed atomically by UpdateWallParamsCommand).
-  if (grip.wallGripKind) {
+  if (gripKindOf(grip, 'wall')) {
     commitWallGripDrag(grip, delta, deps);
     return true;
   }
@@ -75,7 +76,7 @@ export function tryCommitParametricGripDrag(
   // Bypasses stretch because openings are params-driven (offsetFromStart) and
   // their geometry is host-wall-relative; commit recomputes via
   // `UpdateOpeningParamsCommand` after axis projection + clamp.
-  if (grip.openingGripKind) {
+  if (gripKindOf(grip, 'opening')) {
     commitOpeningGripDrag(grip, delta, deps);
     return true;
   }
@@ -83,7 +84,7 @@ export function tryCommitParametricGripDrag(
   // Bypasses stretch because slabs are params-driven (outline polygon) and
   // geometry (area / netArea / volume / perimeter / bbox) is recomputed
   // atomically by UpdateSlabParamsCommand.
-  if (grip.slabGripKind) {
+  if (gripKindOf(grip, 'slab')) {
     commitSlabGripDrag(grip, delta, deps);
     return true;
   }
@@ -92,7 +93,7 @@ export function tryCommitParametricGripDrag(
   // slab-openings are params-driven (outline polygon) και geometry
   // (area / perimeter / bbox) is recomputed atomically by
   // UpdateSlabOpeningParamsCommand.
-  if (grip.slabOpeningGripKind) {
+  if (gripKindOf(grip, 'slab-opening')) {
     commitSlabOpeningGripDrag(grip, delta, deps);
     return true;
   }
@@ -100,7 +101,7 @@ export function tryCommitParametricGripDrag(
   // edge-midpoint insertion). Bypasses stretch because roofs are params-driven
   // (footprint outline + per-edge slopes) and geometry (faces / ridges / areas /
   // bbox) is recomputed atomically by UpdateRoofParamsCommand.
-  if (grip.roofGripKind) {
+  if (gripKindOf(grip, 'roof')) {
     commitRoofGripDrag(grip, delta, deps);
     return true;
   }
@@ -109,7 +110,7 @@ export function tryCommitParametricGripDrag(
   // params-driven (axis endpoints + optional Bezier control) και geometry
   // (axisPolyline / outline / length / area / volume / bbox) is recomputed
   // atomically by UpdateBeamParamsCommand.
-  if (grip.beamGripKind) {
+  if (gripKindOf(grip, 'beam')) {
     commitBeamGripDrag(grip, delta, deps);
     return true;
   }
@@ -118,21 +119,21 @@ export function tryCommitParametricGripDrag(
   // params-driven (position + kind + anchor + width/depth/height/rotation)
   // και geometry (footprint / bbox / area / volume) is recomputed atomically
   // by UpdateColumnParamsCommand.
-  if (grip.columnGripKind) {
+  if (gripKindOf(grip, 'column')) {
     commitColumnGripDrag(grip, delta, deps);
     return true;
   }
   // ADR-436 Slice 1b — foundation pad parametric grip path (rotation + width/length
   // resize + Alt-move). Bypasses stretch because the pad is params-driven; geometry
   // (footprint / bbox / area / volume) recomputed atomically by UpdateFoundationParamsCommand.
-  if (grip.foundationGripKind) {
+  if (gripKindOf(grip, 'foundation')) {
     commitFoundationGripDrag(grip, delta, deps);
     return true;
   }
   // ADR-406 — MEP fixture parametric grip path (center translate + rotation +
   // opposite-corner-anchored width/length resize). Bypasses stretch because the
   // fixture is params-driven; UpdateMepFixtureParamsCommand recomputes geometry.
-  if (grip.mepFixtureGripKind) {
+  if (gripKindOf(grip, 'mep-fixture')) {
     commitMepFixtureGripDrag(grip, delta, deps);
     return true;
   }
@@ -140,7 +141,7 @@ export function tryCommitParametricGripDrag(
   // rotation + opposite-corner-anchored width/length resize). Bypasses stretch
   // because the panel is params-driven; UpdateElectricalPanelParamsCommand
   // recomputes geometry.
-  if (grip.electricalPanelGripKind) {
+  if (gripKindOf(grip, 'electrical-panel')) {
     commitElectricalPanelGripDrag(grip, delta, deps);
     return true;
   }
@@ -148,7 +149,7 @@ export function tryCommitParametricGripDrag(
   // rotation + opposite-corner-anchored width/length resize). Bypasses stretch
   // because the manifold is params-driven; UpdateMepManifoldParamsCommand
   // recomputes geometry.
-  if (grip.mepManifoldGripKind) {
+  if (gripKindOf(grip, 'mep-manifold')) {
     commitMepManifoldGripDrag(grip, delta, deps);
     return true;
   }
@@ -156,7 +157,7 @@ export function tryCommitParametricGripDrag(
   // rotation + opposite-corner-anchored width/length resize). Bypasses stretch
   // because the radiator is params-driven; UpdateMepRadiatorParamsCommand
   // recomputes geometry + re-seeds connectors.
-  if (grip.mepRadiatorGripKind) {
+  if (gripKindOf(grip, 'mep-radiator')) {
     commitMepRadiatorGripDrag(grip, delta, deps);
     return true;
   }
@@ -164,7 +165,7 @@ export function tryCommitParametricGripDrag(
   // rotation + opposite-corner-anchored width/length resize). Bypasses stretch
   // because the boiler is params-driven; UpdateMepBoilerParamsCommand
   // recomputes geometry + re-seeds connectors.
-  if (grip.mepBoilerGripKind) {
+  if (gripKindOf(grip, 'mep-boiler')) {
     commitMepBoilerGripDrag(grip, delta, deps);
     return true;
   }
@@ -172,7 +173,7 @@ export function tryCommitParametricGripDrag(
   // rotation + opposite-corner-anchored width/length resize). Bypasses stretch
   // because the water heater is params-driven; UpdateMepWaterHeaterParamsCommand
   // recomputes geometry + re-seeds connectors.
-  if (grip.mepWaterHeaterGripKind) {
+  if (gripKindOf(grip, 'mep-water-heater')) {
     commitMepWaterHeaterGripDrag(grip, delta, deps);
     return true;
   }
@@ -180,21 +181,21 @@ export function tryCommitParametricGripDrag(
   // translate + section resize + rotation; vertical riser = whole-entity move).
   // Bypasses stretch/move because segments are params-driven (axis endpoints);
   // UpdateMepSegmentParamsCommand recomputes geometry atomically.
-  if (grip.mepSegmentGripKind) {
+  if (gripKindOf(grip, 'mep-segment')) {
     commitMepSegmentGripDrag(grip, delta, deps);
     return true;
   }
   // ADR-410 — furniture parametric grip path (center translate + rotation +
   // opposite-corner-anchored width/depth resize). Bypasses stretch because the
   // furniture is params-driven; UpdateFurnitureParamsCommand recomputes geometry.
-  if (grip.furnitureGripKind) {
+  if (gripKindOf(grip, 'furniture')) {
     commitFurnitureGripDrag(grip, delta, deps);
     return true;
   }
   // ADR-415 — floorplan-symbol parametric grip path (center translate + rotation +
   // opposite-corner-anchored width/depth resize). Bypasses stretch because the
   // symbol is params-driven; UpdateFloorplanSymbolParamsCommand recomputes geometry.
-  if (grip.floorplanSymbolGripKind) {
+  if (gripKindOf(grip, 'floorplan-symbol')) {
     commitFloorplanSymbolGripDrag(grip, delta, deps);
     return true;
   }
@@ -202,14 +203,14 @@ export function tryCommitParametricGripDrag(
   // edge-midpoint insertion). Bypasses stretch because floor-finishes are
   // params-driven (footprint polygon); UpdateFloorFinishParamsCommand recomputes
   // geometry atomically. Mirrors slab/roof path.
-  if (grip.floorFinishGripKind) {
+  if (gripKindOf(grip, 'floor-finish')) {
     commitFloorFinishGripDrag(grip, delta, deps);
     return true;
   }
   // ADR-507 — hatch boundary parametric grip path (per-vertex translate on
   // boundaryPaths). Bypasses stretch; UpdateHatchBoundaryCommand patches the
   // outline + merges drag samples into one undo.
-  if (grip.hatchGripKind) {
+  if (gripKindOf(grip, 'hatch')) {
     commitHatchGripDrag(grip, delta, deps);
     return true;
   }
@@ -218,18 +219,18 @@ export function tryCommitParametricGripDrag(
   // params-driven (footprint polygon + connector re-derivation);
   // UpdateMepUnderfloorParamsCommand recomputes geometry + connectors atomically.
   // Mirrors floor-finish path.
-  if (grip.mepUnderfloorGripKind) {
+  if (gripKindOf(grip, 'mep-underfloor')) {
     commitMepUnderfloorGripDrag(grip, delta, deps);
     return true;
   }
   // ADR-359 Phase 11 — XLine grip path (basePoint translate or direction rotate).
   // Bypasses stretch because XLine has no vertex array.
-  if (grip.xlineGripKind) {
+  if (gripKindOf(grip, 'xline')) {
     commitXLineGripDrag(grip, delta, deps);
     return true;
   }
   // ADR-359 Phase 11 — Ray grip path (basePoint translate or direction rotate).
-  if (grip.rayGripKind) {
+  if (gripKindOf(grip, 'ray')) {
     commitRayGripDrag(grip, delta, deps);
     return true;
   }

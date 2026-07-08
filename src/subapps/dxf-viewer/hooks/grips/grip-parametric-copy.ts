@@ -16,6 +16,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
+import { gripKindOf } from '../grip-kinds';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import { applyWallGripDrag } from '../../bim/walls/wall-grips';
@@ -77,7 +78,7 @@ export function commitWallCopy(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || grip.wallGripKind !== 'wall-midpoint') return;
+  if (!grip.entityId || gripKindOf(grip, 'wall') !== 'wall-midpoint') return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -108,7 +109,7 @@ export function commitColumnCopy(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || grip.columnGripKind !== 'column-center') return;
+  if (!grip.entityId || gripKindOf(grip, 'column') !== 'column-center') return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -138,7 +139,7 @@ export function commitBeamCopy(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || grip.beamGripKind !== 'beam-midpoint') return;
+  if (!grip.entityId || gripKindOf(grip, 'beam') !== 'beam-midpoint') return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -168,7 +169,7 @@ export function commitMepFixtureCopy(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || grip.mepFixtureGripKind !== 'mep-fixture-move') return;
+  if (!grip.entityId || gripKindOf(grip, 'mep-fixture') !== 'mep-fixture-move') return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -197,7 +198,7 @@ export function commitElectricalPanelCopy(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || grip.electricalPanelGripKind !== 'electrical-panel-move') return;
+  if (!grip.entityId || gripKindOf(grip, 'electrical-panel') !== 'electrical-panel-move') return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -226,7 +227,7 @@ export function commitMepManifoldCopy(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || grip.mepManifoldGripKind !== 'mep-manifold-move') return;
+  if (!grip.entityId || gripKindOf(grip, 'mep-manifold') !== 'mep-manifold-move') return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -254,7 +255,7 @@ export function commitMepRadiatorCopy(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || grip.mepRadiatorGripKind !== 'mep-radiator-move') return;
+  if (!grip.entityId || gripKindOf(grip, 'mep-radiator') !== 'mep-radiator-move') return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -282,7 +283,7 @@ export function commitMepBoilerCopy(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || grip.mepBoilerGripKind !== 'mep-boiler-move') return;
+  if (!grip.entityId || gripKindOf(grip, 'mep-boiler') !== 'mep-boiler-move') return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -310,7 +311,7 @@ export function commitMepWaterHeaterCopy(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || grip.mepWaterHeaterGripKind !== 'mep-water-heater-move') return;
+  if (!grip.entityId || gripKindOf(grip, 'mep-water-heater') !== 'mep-water-heater-move') return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -338,7 +339,7 @@ export function commitFurnitureCopy(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || grip.furnitureGripKind !== 'furniture-move') return;
+  if (!grip.entityId || gripKindOf(grip, 'furniture') !== 'furniture-move') return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -366,7 +367,7 @@ export function commitFloorplanSymbolCopy(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || grip.floorplanSymbolGripKind !== 'floorplan-symbol-move') return;
+  if (!grip.entityId || gripKindOf(grip, 'floorplan-symbol') !== 'floorplan-symbol-move') return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId);
@@ -392,47 +393,47 @@ export function commitHotGripCopy(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): boolean {
-  if (grip.wallGripKind === 'wall-midpoint') {
+  if (gripKindOf(grip, 'wall') === 'wall-midpoint') {
     commitWallCopy(grip, delta, deps);
     return true;
   }
-  if (grip.columnGripKind === 'column-center') {
+  if (gripKindOf(grip, 'column') === 'column-center') {
     commitColumnCopy(grip, delta, deps);
     return true;
   }
-  if (grip.beamGripKind === 'beam-midpoint') {
+  if (gripKindOf(grip, 'beam') === 'beam-midpoint') {
     commitBeamCopy(grip, delta, deps);
     return true;
   }
-  if (grip.mepFixtureGripKind === 'mep-fixture-move') {
+  if (gripKindOf(grip, 'mep-fixture') === 'mep-fixture-move') {
     commitMepFixtureCopy(grip, delta, deps);
     return true;
   }
-  if (grip.electricalPanelGripKind === 'electrical-panel-move') {
+  if (gripKindOf(grip, 'electrical-panel') === 'electrical-panel-move') {
     commitElectricalPanelCopy(grip, delta, deps);
     return true;
   }
-  if (grip.mepManifoldGripKind === 'mep-manifold-move') {
+  if (gripKindOf(grip, 'mep-manifold') === 'mep-manifold-move') {
     commitMepManifoldCopy(grip, delta, deps);
     return true;
   }
-  if (grip.mepRadiatorGripKind === 'mep-radiator-move') {
+  if (gripKindOf(grip, 'mep-radiator') === 'mep-radiator-move') {
     commitMepRadiatorCopy(grip, delta, deps);
     return true;
   }
-  if (grip.mepBoilerGripKind === 'mep-boiler-move') {
+  if (gripKindOf(grip, 'mep-boiler') === 'mep-boiler-move') {
     commitMepBoilerCopy(grip, delta, deps);
     return true;
   }
-  if (grip.mepWaterHeaterGripKind === 'mep-water-heater-move') {
+  if (gripKindOf(grip, 'mep-water-heater') === 'mep-water-heater-move') {
     commitMepWaterHeaterCopy(grip, delta, deps);
     return true;
   }
-  if (grip.furnitureGripKind === 'furniture-move') {
+  if (gripKindOf(grip, 'furniture') === 'furniture-move') {
     commitFurnitureCopy(grip, delta, deps);
     return true;
   }
-  if (grip.floorplanSymbolGripKind === 'floorplan-symbol-move') {
+  if (gripKindOf(grip, 'floorplan-symbol') === 'floorplan-symbol-move') {
     commitFloorplanSymbolCopy(grip, delta, deps);
     return true;
   }
