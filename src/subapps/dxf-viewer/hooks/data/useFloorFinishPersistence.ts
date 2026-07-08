@@ -3,7 +3,7 @@
 /**
  * ADR-419 — Floor-finish Firestore persistence React adapter.
  *
- * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-593). Simplified
+ * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-594). Simplified
  * mirror of `useRoofPersistence` (ADR-417) — no family types, no BOQ feed, no audit
  * trail. Handles:
  *   - subscribe + diff-merge incoming Firestore docs (generic `mergeDocsIntoScene`
@@ -15,7 +15,7 @@
  *   - write-grace + lean (silent) restore
  *
  * @see docs/centralized-systems/reference/adrs/ADR-419-floor-finish-per-room.md
- * @see docs/centralized-systems/reference/adrs/ADR-593-bim-entity-persistence-hook-ssot.md
+ * @see docs/centralized-systems/reference/adrs/ADR-594-bim-entity-persistence-hook-ssot.md
  */
 
 import { useMemo } from 'react';

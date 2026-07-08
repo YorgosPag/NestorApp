@@ -3,7 +3,7 @@
 /**
  * ADR-363 Phase 4 — Column Firestore persistence React adapter.
  *
- * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-593). Behaviour
+ * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-594). Behaviour
  * unchanged: hybrid auto-save + `saveNow`, selective-skip diff-merge via the
  * column-specific `mergeColumnDocsIntoScene` helper, serialized persist (ADR-401 —
  * beam-cascade re-persist race), write-grace, profile-aware BOQ feed
@@ -12,7 +12,7 @@
  * selection debounce). First-save on `drawing:entity-created` (tool 'column').
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.10
- * @see docs/centralized-systems/reference/adrs/ADR-593-bim-entity-persistence-hook-ssot.md
+ * @see docs/centralized-systems/reference/adrs/ADR-594-bim-entity-persistence-hook-ssot.md
  */
 
 import { useEffect, useMemo } from 'react';

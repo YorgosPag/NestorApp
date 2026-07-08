@@ -3,18 +3,17 @@
 /**
  * ADR-408 Φ3 — Electrical panel Firestore persistence React adapter.
  *
- * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-593). Behaviour
+ * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-594). Behaviour
  * unchanged: MEP connector projection (`projectMepConnectorsOntoFresh`) on the
  * merged doc-entity, `differs` on the projected candidate (anti-ping-pong), and
  * audit via `recordElectricalPanelChange`. No BOQ feed. First-save on
  * `drawing:entity-created` (tool 'electrical-panel').
  *
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
- * @see docs/centralized-systems/reference/adrs/ADR-593-bim-entity-persistence-hook-ssot.md
+ * @see docs/centralized-systems/reference/adrs/ADR-594-bim-entity-persistence-hook-ssot.md
  */
 
 import { useMemo } from 'react';
-import { dequal } from 'dequal';
 
 import type { ElectricalPanelEntity } from '../../bim/types/electrical-panel-types';
 import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
@@ -26,8 +25,8 @@ import {
 } from '../../bim/electrical-panels/electrical-panel-firestore-service';
 import { recordElectricalPanelChange } from '../../bim/electrical-panels/electrical-panel-audit-client';
 import { electricalPanelDocToEntity as docToEntity } from './electrical-panel-persistence-helpers';
-import { projectMepConnectorsOntoFresh } from './mep-connector-projection-merge';
 import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
+import { mepConnectorMergeConfig } from './mep-connector-merge-config';
 import type {
   BimEntityPersistenceParams,
   BimEntitySaveState,
@@ -89,16 +88,10 @@ const useElectricalPanelPersistenceBase = createBimEntityPersistenceHook<
   },
   merge: {
     mode: 'generic',
-    config: {
-      isEntity: (e): e is ElectricalPanelEntity => (e as { type?: string }).type === 'electrical-panel',
-      docToEntity: (doc, existing) => projectMepConnectorsOntoFresh(docToEntity(doc), existing),
-      entityComparable: (e) => e.params,
-      docComparable: (d) => d.params,
-      differs: (existing, _doc, getCandidate) => {
-        const candidate = getCandidate();
-        return candidate !== null && !dequal(existing.params, candidate.params);
-      },
-    },
+    config: mepConnectorMergeConfig(
+      (e): e is ElectricalPanelEntity => (e as { type?: string }).type === 'electrical-panel',
+      docToEntity,
+    ),
   },
   deleteTrigger: {
     event: 'bim:electrical-panel-delete-requested',

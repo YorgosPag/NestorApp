@@ -3918,7 +3918,8 @@
         "src/subapps/dxf-viewer/bim/types/bim-base.ts",
         "src/subapps/dxf-viewer/bim/types/__tests__/",
         "src/subapps/dxf-viewer/types/entities.ts",
-        "src/services/factories/bim-entity-factory-base.ts"
+        "src/services/factories/bim-entity-factory-base.ts",
+        "src/subapps/dxf-viewer/hooks/data/bim-entity-persistence-hook-types.ts"
       ],
       "addedDate": "2026-05-17",
       "addedByAdr": "ADR-363",

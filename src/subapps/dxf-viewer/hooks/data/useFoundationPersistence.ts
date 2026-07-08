@@ -3,7 +3,7 @@
 /**
  * ADR-436 Slice 1-persist — Foundation Firestore persistence React adapter.
  *
- * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-593). Behaviour
+ * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-594). Behaviour
  * unchanged: subscribe + diff-merge, first-save on `drawing:entity-created` (tool
  * 'foundation'), 500ms auto-save debounce, delete on
  * `bim:foundation-delete-requested`, write-grace, full persistRestore + audit via
@@ -14,7 +14,7 @@
  * αναπαράγεται client-side από `params` (SSoT `createFoundation` factory).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-436-bim-foundation-discipline.md
- * @see docs/centralized-systems/reference/adrs/ADR-593-bim-entity-persistence-hook-ssot.md
+ * @see docs/centralized-systems/reference/adrs/ADR-594-bim-entity-persistence-hook-ssot.md
  */
 
 import { useMemo } from 'react';
