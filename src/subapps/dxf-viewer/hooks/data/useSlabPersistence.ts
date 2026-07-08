@@ -3,33 +3,23 @@
 /**
  * ADR-363 Phase 3 — Slab Firestore persistence React adapter.
  *
- * Bridges `SlabFirestoreService` σε scene model owned by `LevelsSystem`.
- * Mirrors `useOpeningPersistence` — same hybrid auto-save pattern, same
- * selective skip diff-merge, same first-save listener wired σε
- * `drawing:entity-created` με tool='slab'.
- *
- * Persistence trigger — hybrid:
- *   - Debounced auto-save 500 ms μετά από `slab.params` change settle.
- *   - `saveNow()` imperative escape hatch.
- *
- * Scene sync — diff-merge με selective skip:
- *   - Κάθε snapshot adds / updates / removes slabs στο active scene.
- *   - Slabs marked locally-dirty ΠΟΤΕ overwritten από snapshot data.
- *
- * Geometry re-derivation: όταν φτάνει snapshot από Firestore, η γεωμετρία
- * αναπαράγεται client-side από `params`.
+ * Thin config over the `createBimEntityPersistenceHook` SSoT (ADR-593). Behaviour
+ * unchanged: hybrid auto-save + `saveNow`, diff-merge with ADR-412 "type always
+ * wins" (`slabEntityDiffersFromDoc` + family-type link baseline seed), always-save
+ * persist (setDoc, no update path), BOQ feed (create/update/delete/restore), and two
+ * cross-entity re-BOQ listeners (`bim:beam-persisted`, `bim:slab-opening-persisted`)
+ * + `useSlabTypeReresolution`. First-save on `drawing:entity-created` (tool 'slab').
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.10
+ * @see docs/centralized-systems/reference/adrs/ADR-593-bim-entity-persistence-hook-ssot.md
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { dequal } from 'dequal';
 
-import type { SceneModel } from '../../types/entities';
-import type { SceneWriteOrigin } from '../scene/scene-write-origin';
 import type { SlabEntity } from '../../bim/types/slab-types';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import { EventBus } from '../../systems/events/EventBus';
-import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
   createSlabFirestoreService,
   entityToSaveInput,
@@ -38,8 +28,6 @@ import {
 } from '../../bim/slabs/slab-firestore-service';
 import { recordSlabChange } from '../../bim/slabs/slab-audit-client';
 import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
-import { useBimEntityMovedPersistEffect } from './useBimEntityMovedPersistEffect';
-import { useBimEntityRestoredPersistEffect } from './useBimEntityRestoredPersistEffect';
 import { slabBoqGeometry } from './slab-boq-feed';
 import {
   docToEntity,
@@ -49,20 +37,17 @@ import {
   type SlabTypeLink,
 } from './slab-persistence-helpers';
 import { useSlabTypeReresolution } from './useSlabTypeReresolution';
-import { mergeDocsIntoScene } from './merge-docs-into-scene';
-import { DXF_TIMING } from '../../config/dxf-timing';
+import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
+import type {
+  BimEntityPersistenceParams,
+  BimEntitySaveState,
+} from './bim-entity-persistence-hook-types';
 
 // ============================================================================
-// TYPES
+// PUBLIC API (unchanged)
 // ============================================================================
 
-export type SlabSaveState = 'idle' | 'saving' | 'saved' | 'error';
-
-interface LevelManagerLike {
-  readonly currentLevelId: string | null;
-  getLevelScene(levelId: string): SceneModel | null;
-  setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
-}
+export type SlabSaveState = BimEntitySaveState;
 
 export interface UseSlabPersistenceParams {
   readonly companyId: string | null;
@@ -72,7 +57,7 @@ export interface UseSlabPersistenceParams {
   /** ADR-395 Phase 1 (G7) — floor link for per-floor BOQ grouping. */
   readonly floorId: string | null | undefined;
   readonly userId: string | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly primarySelectedSlab: SlabEntity | null;
 }
 
@@ -85,381 +70,178 @@ export interface UseSlabPersistenceResult {
 }
 
 // ============================================================================
-// CONSTANTS
+// HELPERS
 // ============================================================================
 
-const AUTO_SAVE_DEBOUNCE_MS = DXF_TIMING.persist.ENTITY_AUTOSAVE; // ADR-516
+type SlabExtra = { readonly lastSavedTypeLink: Map<string, SlabTypeLink> };
+
+function feedSlabBoq(
+  entity: SlabEntity,
+  scope: { companyId: string | null; projectId: string | null | undefined; buildingId?: string | null; floorId?: string | null; levelManager: LevelSceneWriter },
+  action: 'created' | 'updated',
+): void {
+  if (!(scope.companyId && scope.projectId && scope.buildingId)) return;
+  const levelId = scope.levelManager.currentLevelId;
+  const scene = levelId ? scope.levelManager.getLevelScene(levelId) : null;
+  void bimToBoqBridge.upsertBoqItemForBim(
+    'slab',
+    { id: entity.id, kind: entity.kind, geometry: slabBoqGeometry(entity, scene) },
+    {
+      companyId: scope.companyId,
+      projectId: scope.projectId,
+      buildingId: scope.buildingId,
+      floorId: scope.floorId ?? undefined,
+    },
+    action,
+  );
+}
 
 // ============================================================================
-// HOOK
+// FACTORY CONFIG
+// ============================================================================
+
+const useSlabPersistenceBase = createBimEntityPersistenceHook<
+  SlabFirestoreService,
+  SlabDoc,
+  SlabEntity,
+  SlabEntity['params'],
+  void,
+  SlabExtra
+>({
+  entityType: 'slab',
+  restoreEntityType: 'slab',
+  saveErrorKey: 'SLAB_SAVE_ERROR',
+  restoreErrorKey: 'SLAB_RESTORE_ERROR',
+  neverUpdate: true, // always setDoc via saveSlab (no updateSlab path)
+  entityComparable: (e) => e.params,
+  createExtraRefs: () => ({ lastSavedTypeLink: new Map<string, SlabTypeLink>() }),
+  createService: (scope) => createSlabFirestoreService(scope),
+  service: {
+    save: (svc, e) => svc.saveSlab(entityToSaveInput(e)),
+    update: (svc, e) => svc.saveSlab(entityToSaveInput(e)), // unused (neverUpdate)
+    remove: (svc, id) => svc.deleteSlab(id),
+    subscribe: (svc, onDocs, onErr) =>
+      svc.subscribeSlabs(onDocs as (docs: readonly SlabDoc[]) => void, onErr),
+  },
+  merge: {
+    mode: 'generic',
+    config: (extra) => ({
+      isEntity: isSlab,
+      docToEntity: (doc) => docToEntity(doc),
+      entityComparable: (e) => e.params,
+      docComparable: (d) => d.params,
+      differs: (existing, doc) => slabEntityDiffersFromDoc(existing, doc),
+      seedExtraBaseline: (doc) => {
+        if (!extra.lastSavedTypeLink.has(doc.id)) {
+          extra.lastSavedTypeLink.set(doc.id, { typeId: doc.typeId, typeOverrides: doc.typeOverrides });
+        }
+      },
+    }),
+  },
+  deleteTrigger: {
+    event: 'bim:slab-delete-requested',
+    getId: (p) => (p as { slabId?: string }).slabId,
+  },
+  // ADR-412 — a detach keeps params identical, so OR-in the type-link diff.
+  autoSaveDirty: (entity, lastSaved, extra) => {
+    const linkChanged = slabTypeLinkChanged(extra.lastSavedTypeLink.get(entity.id), entity);
+    return !(lastSaved !== undefined && dequal(lastSaved, entity.params) && !linkChanged);
+  },
+  onPersisted: (entity, { isNew, prevComparable, scope, extra }) => {
+    extra.lastSavedTypeLink.set(entity.id, { typeId: entity.typeId, typeOverrides: entity.typeOverrides });
+    void recordSlabChange(isNew ? 'created' : 'updated', entity, {
+      prevParams: prevComparable ?? undefined,
+    });
+    feedSlabBoq(entity, scope, isNew ? 'created' : 'updated');
+  },
+  onDeleted: (id, deleted, { scope }) => {
+    void recordSlabChange(
+      'deleted',
+      deleted
+        ? { id: deleted.id, kind: deleted.kind, layerId: deleted.layerId, params: deleted.params }
+        : { id, kind: 'floor' },
+    );
+    void bimToBoqBridge.deleteBoqItemForBim(id, scope.companyId ?? '');
+  },
+  onDeleteCleanup: (id, extra) => {
+    extra.lastSavedTypeLink.delete(id);
+  },
+  onRestored: (entity, { scope, extra }) => {
+    extra.lastSavedTypeLink.set(entity.id, { typeId: entity.typeId, typeOverrides: entity.typeOverrides });
+    void recordSlabChange('restored', entity);
+    feedSlabBoq(entity, scope, 'created');
+  },
+  useExtra: (ctx) => {
+    // Phase 5.5i+ — re-BOQ all slabs when a beam changes (move/resize/delete).
+    useEffect(() => {
+      const cleanup = EventBus.on('bim:beam-persisted', () => {
+        const s = ctx.scopeRef.current;
+        if (!s.companyId || !s.projectId || !s.buildingId) return;
+        const levelId = s.levelManager.currentLevelId;
+        const scene = levelId ? s.levelManager.getLevelScene(levelId) : null;
+        if (!scene) return;
+        const boqCtx = { companyId: s.companyId, projectId: s.projectId, buildingId: s.buildingId, floorId: s.floorId ?? undefined };
+        for (const entity of scene.entities) {
+          if ((entity as { type?: string }).type !== 'slab') continue;
+          const slab = entity as SlabEntity;
+          void bimToBoqBridge.upsertBoqItemForBim(
+            'slab',
+            { id: slab.id, kind: slab.kind, geometry: slabBoqGeometry(slab, scene) },
+            boqCtx,
+            'updated',
+          );
+        }
+      });
+      return cleanup;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // ADR-395 G2 — re-feed host slab net volume when a cutout is added/edited/deleted.
+    useEffect(() => {
+      const cleanup = EventBus.on('bim:slab-opening-persisted', ({ slabId }) => {
+        const s = ctx.scopeRef.current;
+        if (!s.companyId || !s.projectId || !s.buildingId) return;
+        if (!ctx.lastSavedParamsRef.current.has(slabId)) return;
+        const levelId = s.levelManager.currentLevelId;
+        const scene = levelId ? s.levelManager.getLevelScene(levelId) : null;
+        if (!scene) return;
+        const host = scene.entities.find((e) => e.id === slabId);
+        if (!host || !isSlab(host)) return;
+        void bimToBoqBridge.upsertBoqItemForBim(
+          'slab',
+          { id: host.id, kind: host.kind, geometry: slabBoqGeometry(host, scene) },
+          { companyId: s.companyId, projectId: s.projectId, buildingId: s.buildingId, floorId: s.floorId ?? undefined },
+          'updated',
+        );
+      });
+      return cleanup;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // ADR-412 — re-flow type edits / late type loads onto placed slabs.
+    useSlabTypeReresolution(ctx.levelManagerRef.current, ctx.dirtyIdsRef);
+  },
+});
+
+// ============================================================================
+// HOOK (thin wrapper — preserves the public param/result names)
 // ============================================================================
 
 export function useSlabPersistence(
   params: UseSlabPersistenceParams,
 ): UseSlabPersistenceResult {
-  const {
-    companyId,
-    projectId,
-    floorplanId,
-    buildingId,
-    floorId,
-    userId,
-    levelManager,
-    primarySelectedSlab,
-  } = params;
-
-  const [saveState, setSaveState] = useState<SlabSaveState>('idle');
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const serviceRef = useRef<SlabFirestoreService | null>(null);
-  const dirtyIdsRef = useRef<Set<string>>(new Set());
-  const lastSavedParamsRef = useRef<Map<string, SlabEntity['params']>>(new Map());
-  // ADR-412 — last-saved family-type link per slab, so a non-destructive detach
-  // (params kept, `typeId` cleared) still triggers an auto-save.
-  const lastSavedTypeLinkRef = useRef<Map<string, SlabTypeLink>>(new Map());
-  // ADR-390 — tracks IDs με in-flight first save (drawn or restored). Replaces
-  // the buggy `neverSaved` guard that kept DXF-JSON-only ghost entities in scene.
-  const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
-  // ADR-390 — tombstone Set που blocks subscribe loop from re-adding entities
-  // that were just deleted (race between Firestore snapshot + local delete).
-  const deletedIdsRef = useRef<Set<string>>(new Set());
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const selectedSlabRef = useRef<SlabEntity | null>(null);
-  selectedSlabRef.current = primarySelectedSlab;
-
-  // ⚡ STABILITY (ca9 fix 2026-06-08): key the Firestore subscription off stable
-  // scope primitives + `currentLevelId`, NOT the per-render `levelManager` object,
-  // so onSnapshot does not unsubscribe/re-subscribe on every render (target removed
-  // before ack → `INTERNAL ASSERTION FAILED ca9 {ve:-1}`). Mirror of the fitting hook.
-  const levelManagerRef = useRef(levelManager);
-  levelManagerRef.current = levelManager;
-  const currentLevelId = levelManager.currentLevelId;
-
-  // Instantiate service όταν auth + scope ready.
-  useEffect(() => {
-    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
-    if (!scope) {
-      serviceRef.current = null;
-      return;
-    }
-    serviceRef.current = createSlabFirestoreService({
-      companyId: scope.companyId,
-      projectId: scope.projectId,
-      floorplanId: scope.floorplanId,
-      floorId: scope.floorId,
-      userId: scope.userId,
-    });
-  }, [companyId, projectId, floorplanId, floorId, userId]);
-
-  // Subscribe + diff-merge + selective skip locally-dirty slabs.
-  // Keyed on STABLE primitives only (scope + currentLevelId) — NOT the per-render
-  // `levelManager` object — so onSnapshot subscribes once per real scope/level
-  // change (ca9 churn fix).
-  useEffect(() => {
-    const svc = serviceRef.current;
-    const levelId = currentLevelId;
-    if (!svc || !levelId) return;
-
-    const unsubscribe = svc.subscribeSlabs(
-      // Diff-merge μέσω του `mergeDocsIntoScene` SSoT — comparable = `params`. ADR-412
-      // «type always wins»: `differs` = `slabEntityDiffersFromDoc` (diff vs EFFECTIVE
-      // type-resolved params)· `seedExtraBaseline` seed-άρει το δεύτερο type-link map.
-      // NOTE: ο generic προσθέτει το ADR-397/412 baseline seed (που έλειπε από το πρώην
-      // inline loop) → loaded slabs route-άρουν UPDATE + auto-save gate αναγνωρίζει το id.
-      // Δεν έχει write-grace.
-      (docs) => {
-        mergeDocsIntoScene<SlabDoc, SlabEntity, SlabEntity['params']>(
-          docs,
-          levelId,
-          levelManagerRef.current,
-          {
-            isEntity: isSlab,
-            docToEntity: (doc) => docToEntity(doc),
-            entityComparable: (e) => e.params, // unused (differs override provided)
-            docComparable: (d) => d.params, // baseline seed = raw cached doc.params
-            differs: (existing, doc) => slabEntityDiffersFromDoc(existing, doc),
-            seedExtraBaseline: (doc) => {
-              if (!lastSavedTypeLinkRef.current.has(doc.id)) {
-                lastSavedTypeLinkRef.current.set(doc.id, {
-                  typeId: doc.typeId,
-                  typeOverrides: doc.typeOverrides,
-                });
-              }
-            },
-          },
-          {
-            dirty: dirtyIdsRef.current,
-            deleted: deletedIdsRef.current,
-            pending: pendingFirstSaveIdsRef.current,
-            isWithinGrace: () => false,
-            lastSavedBaseline: lastSavedParamsRef.current,
-          },
-        );
-      },
-      (err: Error) => {
-        setError(err.message);
-        setSaveState('error');
-      },
-    );
-
-    return () => unsubscribe();
-  }, [currentLevelId, companyId, projectId, floorplanId, floorId, userId]);
-
-  // Immediate persist (used by both auto-save flush and explicit button).
-  const persist = useCallback(async (entity: SlabEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const prevParams = lastSavedParamsRef.current.get(entity.id) ?? null;
-    const isNew = prevParams === null;
-    setSaveState('saving');
-    setError(null);
-    try {
-      await svc.saveSlab(entityToSaveInput(entity));
-      lastSavedParamsRef.current.set(entity.id, entity.params);
-      lastSavedTypeLinkRef.current.set(entity.id, {
-        typeId: entity.typeId,
-        typeOverrides: entity.typeOverrides,
-      });
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-      void recordSlabChange(
-        isNew ? 'created' : 'updated',
-        entity,
-        { prevParams: prevParams ?? undefined },
-      );
-      if (companyId && projectId && buildingId) {
-        const levelId = levelManager.currentLevelId;
-        const scene = levelId ? levelManager.getLevelScene(levelId) : null;
-        void bimToBoqBridge.upsertBoqItemForBim(
-          'slab',
-          { id: entity.id, kind: entity.kind, geometry: slabBoqGeometry(entity, scene) },
-          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
-          isNew ? 'created' : 'updated',
-        );
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'SLAB_SAVE_ERROR');
-      setSaveState('error');
-    }
-  }, [companyId, projectId, buildingId, floorId, levelManager]);
-
-  // Auto-save debounce σε selected slab params change.
-  useEffect(() => {
-    const slab = primarySelectedSlab;
-    if (!slab || !serviceRef.current) return;
-    // ADR-390 — Bug A defense-in-depth: don't auto-persist entities που είναι
-    // στο scene αλλά ΟΥΤΕ έχουν σωθεί ποτέ ΟΥΤΕ είναι pending first save.
-    // Καλύπτει: (a) entities loaded από DXF JSON only (Bug B race), (b) stale
-    // primarySelected ref μετά από delete (Bug A zombie write).
-    const known = lastSavedParamsRef.current.has(slab.id);
-    const pending = pendingFirstSaveIdsRef.current.has(slab.id);
-    if (!known && !pending) return;
-    const lastSaved = lastSavedParamsRef.current.get(slab.id);
-    // ADR-412 — a detach keeps params identical, so OR-in the type-link diff.
-    const linkChanged = slabTypeLinkChanged(lastSavedTypeLinkRef.current.get(slab.id), slab);
-    if (lastSaved && dequal(lastSaved, slab.params) && !linkChanged) return;
-
-    dirtyIdsRef.current.add(slab.id);
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      void persist(slab);
-    }, AUTO_SAVE_DEBOUNCE_MS);
-
-    return () => {
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = null;
-      }
-    };
-  }, [primarySelectedSlab, persist]);
-
-  const saveNow = useCallback(async () => {
-    const slab = selectedSlabRef.current;
-    if (!slab) return;
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-    await persist(slab);
-  }, [persist]);
-
-  // Phase 3 — Delete slab: remove από Firestore + scene + audit.
-  const deleteSlab = useCallback(async (slabId: string) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    const levelId = levelManager.currentLevelId;
-    if (!levelId) return;
-
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-
-    const scene = levelManager.getLevelScene(levelId);
-    const deletedEntity = scene?.entities.find((e) => e.id === slabId);
-
-    const deletedSlab = (deletedEntity && isSlab(deletedEntity)) ? deletedEntity : null;
-    try {
-      await svc.deleteSlab(slabId);
-      void recordSlabChange(
-        'deleted',
-        deletedSlab
-          ? { id: deletedSlab.id, kind: deletedSlab.kind, layerId: deletedSlab.layerId, params: deletedSlab.params }
-          : { id: slabId, kind: 'floor' },
-      );
-      void bimToBoqBridge.deleteBoqItemForBim(slabId, companyId ?? '');
-    } catch {
-      // Non-fatal: deletion failure silent — user retries.
-    }
-
-    if (scene) {
-      const nextEntities = scene.entities.filter((e) => e.id !== slabId);
-      levelManager.setLevelScene(levelId, { ...scene, entities: nextEntities });
-    }
-
-    dirtyIdsRef.current.delete(slabId);
-    lastSavedParamsRef.current.delete(slabId);
-    lastSavedTypeLinkRef.current.delete(slabId);
-    pendingFirstSaveIdsRef.current.delete(slabId);
-    // ADR-390 — tombstone tracking για subscribe loop race protection.
-    deletedIdsRef.current.add(slabId);
-  }, [levelManager, companyId]);
-
-  // ADR-390 — persistRestore writes Firestore με `action='restored'` (όχι
-  // misleading `'created'`). Pre-ADR-390 zombie write went through `persist()`
-  // και επέφερε `'created'` audit row για entity που είχε προηγουμένως διαγραφεί.
-  const persistRestore = useCallback(async (entity: SlabEntity) => {
-    const svc = serviceRef.current;
-    if (!svc) return;
-    setSaveState('saving');
-    setError(null);
-    try {
-      await svc.saveSlab(entityToSaveInput(entity));
-      lastSavedParamsRef.current.set(entity.id, entity.params);
-      lastSavedTypeLinkRef.current.set(entity.id, {
-        typeId: entity.typeId,
-        typeOverrides: entity.typeOverrides,
-      });
-      dirtyIdsRef.current.delete(entity.id);
-      pendingFirstSaveIdsRef.current.delete(entity.id);
-      setSaveState('saved');
-      setLastSavedAt(Date.now());
-      void recordSlabChange('restored', entity);
-      if (companyId && projectId && buildingId) {
-        const levelId = levelManager.currentLevelId;
-        const scene = levelId ? levelManager.getLevelScene(levelId) : null;
-        void bimToBoqBridge.upsertBoqItemForBim(
-          'slab',
-          { id: entity.id, kind: entity.kind, geometry: slabBoqGeometry(entity, scene) },
-          { companyId, projectId, buildingId, floorId: floorId ?? undefined },
-          'created',
-        );
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'SLAB_RESTORE_ERROR');
-      setSaveState('error');
-    }
-  }, [companyId, projectId, buildingId, floorId, levelManager]);
-
-  // First-save listener — fires άμεσα για freshly drawn slabs.
-  useEffect(() => {
-    const cleanup = EventBus.on('drawing:entity-created', (payload) => {
-      if (payload.tool !== 'slab') return;
-      const entity = payload.entity as SlabEntity | undefined;
-      if (!entity || (entity as { type?: string }).type !== 'slab') return;
-      if (!serviceRef.current) return;
-      // ADR-390 — mark pending BEFORE persist so subscribe loop doesn't drop
-      // entity during the race window.
-      pendingFirstSaveIdsRef.current.add(entity.id);
-      dirtyIdsRef.current.add(entity.id);
-      void persist(entity);
-    });
-    return cleanup;
-  }, [persist]);
-
-  // Delete-requested listener (bridge emits μετά από confirm).
-  useEffect(() => {
-    const cleanup = EventBus.on('bim:slab-delete-requested', ({ slabId }) => {
-      void deleteSlab(slabId);
-    });
-    return cleanup;
-  }, [deleteSlab]);
-
-  // Phase 5.5i+ — Re-BOQ all slabs when a beam changes (move/resize/delete).
-  // Reads scene beams from memory — no extra Firestore query.
-  useEffect(() => {
-    if (!companyId || !projectId || !buildingId) return;
-    const ctx = { companyId, projectId, buildingId, floorId: floorId ?? undefined };
-    const cleanup = EventBus.on('bim:beam-persisted', () => {
-      const levelId = levelManager.currentLevelId;
-      const scene = levelId ? levelManager.getLevelScene(levelId) : null;
-      if (!scene) return;
-      for (const entity of scene.entities) {
-        if ((entity as { type?: string }).type !== 'slab') continue;
-        const slab = entity as SlabEntity;
-        void bimToBoqBridge.upsertBoqItemForBim(
-          'slab',
-          { id: slab.id, kind: slab.kind, geometry: slabBoqGeometry(slab, scene) },
-          ctx,
-          'updated',
-        );
-      }
-    });
-    return cleanup;
-  }, [levelManager, companyId, projectId, buildingId, floorId]);
-
-  // ADR-395 G2 — re-feed host slab BOQ net volume when one of its cutouts is
-  // added / edited / deleted (cutout area changes the slab's net m³). Mirror
-  // wall's `bim:opening-persisted` listener. Reads scene from memory — no query.
-  useEffect(() => {
-    if (!companyId || !projectId || !buildingId) return;
-    const ctx = { companyId, projectId, buildingId, floorId: floorId ?? undefined };
-    const cleanup = EventBus.on('bim:slab-opening-persisted', ({ slabId }) => {
-      // Skip slabs whose own first save hasn't landed — their persist feeds net
-      // itself (collects cutouts too), and a premature row would race it.
-      if (!lastSavedParamsRef.current.has(slabId)) return;
-      const levelId = levelManager.currentLevelId;
-      const scene = levelId ? levelManager.getLevelScene(levelId) : null;
-      if (!scene) return;
-      const host = scene.entities.find((e) => e.id === slabId);
-      if (!host || !isSlab(host)) return;
-      void bimToBoqBridge.upsertBoqItemForBim(
-        'slab',
-        { id: host.id, kind: host.kind, geometry: slabBoqGeometry(host, scene) },
-        ctx,
-        'updated',
-      );
-    });
-    return cleanup;
-  }, [levelManager, companyId, projectId, buildingId, floorId]);
-
-  // ADR-412 «type always wins» — re-flow type edits / late type loads onto the
-  // active scene's typed slabs (activates per-layer rendering). Mirrors wall.
-  useSlabTypeReresolution(levelManager, dirtyIdsRef);
-
-  useBimEntityMovedPersistEffect(isSlab, serviceRef, dirtyIdsRef, persist);
-  // ADR-390 — symmetric undo→Firestore restore.
-  useBimEntityRestoredPersistEffect(
-    'slab',
-    isSlab,
-    serviceRef,
-    pendingFirstSaveIdsRef,
-    deletedIdsRef,
-    persistRestore,
-  );
-
-  // Unmount cleanup — flush pending timers.
-  useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, []);
-
+  const { saveState, lastSavedAt, error, saveNow, deleteEntity } = useSlabPersistenceBase({
+    companyId: params.companyId,
+    projectId: params.projectId,
+    floorplanId: params.floorplanId,
+    floorId: params.floorId,
+    buildingId: params.buildingId,
+    userId: params.userId,
+    levelManager: params.levelManager,
+    primarySelected: params.primarySelectedSlab,
+  } as BimEntityPersistenceParams<SlabEntity>);
   return useMemo(
-    () => ({ saveState, lastSavedAt, error, saveNow, deleteSlab }),
-    [saveState, lastSavedAt, error, saveNow, deleteSlab],
+    () => ({ saveState, lastSavedAt, error, saveNow, deleteSlab: deleteEntity }),
+    [saveState, lastSavedAt, error, saveNow, deleteEntity],
   );
 }
