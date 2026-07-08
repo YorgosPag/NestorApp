@@ -29,8 +29,8 @@ import { addCirclePath, TAU } from '../primitives/canvasPaths';
 import { renderCircleAreaText } from './shared/circle-text-utils';
 import { renderContinuousLine, renderLineWithTextCheck } from './shared/line-rendering-utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
-// 🏢 ADR-557 follow-up: center measurement label SSoT (gated painter)
-import { paintMeasurementText } from './shared/measurement-label';
+// 🏢 ADR-557 follow-up: center measurement label SSoT (gated painter + content builder)
+import { paintMeasurementText, buildRadiusLabel } from './shared/measurement-label';
 // 🏢 ADR-091: Centralized UI Fonts, ADR-124: Centralized Label Offsets
 import { buildUIFont, TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
 // 🏢 ADR-090: Centralized Number Formatting
@@ -286,8 +286,8 @@ export class CircleRenderer extends BaseEntityRenderer {
       // Render radius label in the gap
       const labelX = (gapStart + gapEnd) / 2;
       const labelY = screenCenter.y;
-      // 🏢 ADR-090: Centralized number formatting
-      const label = `R: ${formatLengthForDisplay(radius)}`;
+      // 🏢 ADR-557 follow-up (N.11): content via the SSoT builder (kills the `R:` hardcoded literal)
+      const label = buildRadiusLabel(radius);
       // Use centralized styling instead of hardcoded green
       this.ctx.save();
       this.applyDimensionTextStyle();

@@ -1,6 +1,9 @@
 import type { Entity } from './entities';
 import { TEXT_METRICS_RATIOS, TEXT_SIZE_LIMITS } from '../config/text-rendering-config';
 import { EMPTY_SPATIAL_BOUNDS } from '../config/geometry-constants';
+// ADR-583 — annotative model-size SSoT for the North-arrow annotation symbol.
+import { annotationSymbolModelSizeLive } from '../bim/annotation-symbols/annotation-symbol-model-size';
+import { DEFAULT_ANNOTATION_SYMBOL_SIZE_MM } from './annotation-symbol';
 
 export type SpatialBounds = { minX: number; minY: number; maxX: number; maxY: number };
 
@@ -8,6 +11,14 @@ export type SpatialBounds = { minX: number; minY: number; maxX: number; maxY: nu
 // This value is intentionally large — clip-to-viewport (Phase 4.a) limits what
 // actually draws on screen. Extents consumers MUST use getEntityExtentsBounds instead.
 const RENDER_NOMINAL_EXTENT = 10000;
+
+/** AABB over an array of points; empty → EMPTY_SPATIAL_BOUNDS (SSoT for vertex-based bounds). */
+function aabbOf(points: ReadonlyArray<{ x: number; y: number }>): SpatialBounds {
+  if (points.length === 0) return EMPTY_SPATIAL_BOUNDS;
+  const xs = points.map(p => p.x);
+  const ys = points.map(p => p.y);
+  return { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) };
+}
 
 function computeBounds(entity: Entity, forExtents: boolean): SpatialBounds {
   switch (entity.type) {
@@ -20,17 +31,7 @@ function computeBounds(entity: Entity, forExtents: boolean): SpatialBounds {
       };
     case 'polyline':
     case 'lwpolyline':
-      if ('vertices' in entity && entity.vertices && entity.vertices.length > 0) {
-        const xs = entity.vertices.map(v => v.x);
-        const ys = entity.vertices.map(v => v.y);
-        return {
-          minX: Math.min(...xs),
-          minY: Math.min(...ys),
-          maxX: Math.max(...xs),
-          maxY: Math.max(...ys),
-        };
-      }
-      return EMPTY_SPATIAL_BOUNDS;
+      return 'vertices' in entity && entity.vertices ? aabbOf(entity.vertices) : EMPTY_SPATIAL_BOUNDS;
     case 'circle':
       return {
         minX: entity.center.x - entity.radius,
@@ -62,6 +63,21 @@ function computeBounds(entity: Entity, forExtents: boolean): SpatialBounds {
         maxX: entity.position.x,
         maxY: entity.position.y,
       };
+    case 'annotation-symbol': {
+      // ADR-583 — annotative square footprint around the insertion point. The paper
+      // `sizeMm` is folded to model units at the live drawing scale (same SSoT the
+      // renderer uses) so the selection box / zoom-extents track the drawn glyph.
+      const modelSize = annotationSymbolModelSizeLive(
+        ('sizeMm' in entity && typeof entity.sizeMm === 'number' ? entity.sizeMm : DEFAULT_ANNOTATION_SYMBOL_SIZE_MM),
+      );
+      const half = modelSize / 2;
+      return {
+        minX: entity.position.x - half,
+        minY: entity.position.y - half,
+        maxX: entity.position.x + half,
+        maxY: entity.position.y + half,
+      };
+    }
     case 'text': {
       // ADR-557 — honour the TEXT X-scale (`widthFactor`) so bounds (zoom-to-fit /
       // selection extent) track a horizontally-stretched glyph.
@@ -87,29 +103,15 @@ function computeBounds(entity: Entity, forExtents: boolean): SpatialBounds {
       };
     }
     case 'spline':
-      if ('controlPoints' in entity && entity.controlPoints && entity.controlPoints.length > 0) {
-        const xs = entity.controlPoints.map(p => p.x);
-        const ys = entity.controlPoints.map(p => p.y);
-        return { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) };
-      }
-      return EMPTY_SPATIAL_BOUNDS;
+      return 'controlPoints' in entity && entity.controlPoints
+        ? aabbOf(entity.controlPoints)
+        : EMPTY_SPATIAL_BOUNDS;
     case 'leader':
-      if ('vertices' in entity && entity.vertices && entity.vertices.length > 0) {
-        const xs = entity.vertices.map(v => v.x);
-        const ys = entity.vertices.map(v => v.y);
-        return { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) };
-      }
-      return EMPTY_SPATIAL_BOUNDS;
+      return 'vertices' in entity && entity.vertices ? aabbOf(entity.vertices) : EMPTY_SPATIAL_BOUNDS;
     case 'hatch':
-      if ('boundaryPaths' in entity && entity.boundaryPaths && entity.boundaryPaths.length > 0) {
-        const allPoints = entity.boundaryPaths.flat();
-        if (allPoints.length > 0) {
-          const xs = allPoints.map(p => p.x);
-          const ys = allPoints.map(p => p.y);
-          return { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) };
-        }
-      }
-      return EMPTY_SPATIAL_BOUNDS;
+      return 'boundaryPaths' in entity && entity.boundaryPaths
+        ? aabbOf(entity.boundaryPaths.flat())
+        : EMPTY_SPATIAL_BOUNDS;
     case 'xline':
       if (forExtents) return EMPTY_SPATIAL_BOUNDS;
       if ('basePoint' in entity && entity.basePoint) {
@@ -170,11 +172,8 @@ function computeBounds(entity: Entity, forExtents: boolean): SpatialBounds {
       }
       return EMPTY_SPATIAL_BOUNDS;
     default: {
-      if ('vertices' in entity && entity.vertices && Array.isArray(entity.vertices) && entity.vertices.length > 0) {
-        const vertices = entity.vertices as Array<{ x: number; y: number }>;
-        const xs = vertices.map(v => v.x);
-        const ys = vertices.map(v => v.y);
-        return { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) };
+      if ('vertices' in entity && entity.vertices && Array.isArray(entity.vertices)) {
+        return aabbOf(entity.vertices as Array<{ x: number; y: number }>);
       }
       return EMPTY_SPATIAL_BOUNDS;
     }

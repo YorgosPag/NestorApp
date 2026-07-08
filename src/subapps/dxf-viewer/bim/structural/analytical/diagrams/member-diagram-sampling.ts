@@ -22,6 +22,12 @@ import type {
   CombinationResult,
   DiagramStation,
 } from '../solver/solver-types';
+// 🏢 SSoT: canonical clamp01 (ADR-071). Re-exported below so existing consumers
+// (`member-diagram-geometry.ts`, `bim-3d/diagrams/*-diagram-3d-geometry.ts`) keep importing
+// it from this module (unchanged public API).
+import { clamp01 } from '../../../../rendering/entities/shared/geometry-utils';
+
+export { clamp01 };
 
 /** Ποιο εντατικό μέγεθος σχεδιάζεται (ροπή Μ / τέμνουσα V / αξονική Ν). */
 export type DiagramComponent = 'moment' | 'shear' | 'axial';
@@ -30,11 +36,6 @@ export type DiagramComponent = 'moment' | 'shear' | 'axial';
 export interface DiagramSample {
   readonly f: number;
   readonly value: number;
-}
-
-/** Περιορισμός κλάσματος στο [0,1]. */
-export function clamp01(t: number): number {
-  return t < 0 ? 0 : t > 1 ? 1 : t;
 }
 
 /**

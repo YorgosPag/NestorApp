@@ -10,7 +10,6 @@ import {
   isRingFieldLocked,
   computeLiveLengthAngle,
   lengthDisplayToSceneLock,
-  normalizeAngleDeg,
   RING_OPACITY,
   RING_HOVER_OPACITY,
   RING_INNER_R,
@@ -25,6 +24,9 @@ import {
   advanceWheelCenter,
   RING_INSIDE_FOLLOW_RATIO,
 } from '../radial-ring-logic';
+// 🏢 ADR-068: normalizeAngleDeg SSoT centralized in geometry-angle-utils (no longer
+// locally re-declared in radial-ring-logic — see ADR-513 changelog).
+import { normalizeAngleDeg } from '../../../rendering/entities/shared/geometry-angle-utils';
 
 describe('RING_TAB_ORDER', () => {
   it('is Μήκος → Γωνία → Πάχος → Ύψος (locked decision)', () => {

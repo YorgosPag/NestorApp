@@ -12,14 +12,16 @@ import { createQuadrantGrips, createCenterGrip } from './shared/grip-utils';
 import { validateEllipseEntity } from './shared/entity-validation-utils';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from './shared/geometry-rendering-utils';
-// 🏢 ADR-557 follow-up: center measurement label SSoT (gated painter)
-import { paintMeasurementText } from './shared/measurement-label';
+// 🏢 ADR-557 follow-up: center measurement label SSoT (gated painter + stacked-label helper)
+import {
+  buildEllipseAxisLabelLines,
+  buildAreaPerimeterLabelLines,
+  renderStackedCenterMeasurementLabel,
+} from './shared/measurement-label';
 // 🏢 ADR-058: Centralized Canvas Primitives
 import { TAU } from '../primitives/canvasPaths';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 import { degToRad } from './shared/geometry-utils';
-// 🏢 ADR-462: display-unit SSoT — axes/perimeter (length) + area follow the selector
-import { formatLengthForDisplay, formatAreaForDisplay } from '../../config/display-length-format';
 // 🏢 ADR-091: Centralized Text Label Offsets, ADR-124: Dot Radius
 import { TEXT_LABEL_OFFSETS, RENDER_GEOMETRY } from '../../config/text-rendering-config';
 
@@ -105,14 +107,18 @@ export class EllipseRenderer extends BaseEntityRenderer {
     const perimeter = Math.PI * (3 * (majorAxis + minorAxis) - 
       Math.sqrt((3 * majorAxis + minorAxis) * (majorAxis + 3 * minorAxis)));
     
-    this.ctx.save();
-    this.applyCenterMeasurementTextStyle();
+    // 🏢 ADR-557 follow-up (N.11): content via the SSoT builders (kills the
+    // `Ma:`/`Mi:`/`Ε:`/`Περ:` hardcoded Greek/Latin literals), stacked via the
+    // shared centre-label painter (save/style/N-lines/restore SSoT).
+    const [majorLine, minorLine] = buildEllipseAxisLabelLines(majorAxis, minorAxis);
+    const [areaLine, perimeterLine] = buildAreaPerimeterLabelLines({ area, perimeter });
     // 🏢 ADR-091: Χρήση κεντρικοποιημένων text label offsets
-    paintMeasurementText(this.ctx, `Ma: ${formatLengthForDisplay(majorAxis)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER, { gate: true });
-    paintMeasurementText(this.ctx, `Mi: ${formatLengthForDisplay(minorAxis)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.TWO_LINE, { gate: true });
-    paintMeasurementText(this.ctx, `Ε: ${formatAreaForDisplay(area)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.TWO_LINE, { gate: true });
-    paintMeasurementText(this.ctx, `Περ: ${formatLengthForDisplay(perimeter)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER, { gate: true });
-    this.ctx.restore();
+    renderStackedCenterMeasurementLabel(this.ctx, screenCenter, [
+      { text: majorLine, offsetY: -TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER },
+      { text: minorLine, offsetY: -TEXT_LABEL_OFFSETS.TWO_LINE },
+      { text: areaLine, offsetY: TEXT_LABEL_OFFSETS.TWO_LINE },
+      { text: perimeterLine, offsetY: TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER },
+    ]);
   }
 
   private renderEllipseYellowDots(center: Point2D, majorAxis: number, minorAxis: number, rotation: number): void {

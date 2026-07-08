@@ -17,6 +17,16 @@
     "areaPrefix": "Ε",
     "perimeterPrefix": "Περ"
   },
+  "centerMeasureLabel": {
+    "radiusPrefix": "R",
+    "lengthPrefix": "L",
+    "majorAxisPrefix": "Ma",
+    "minorAxisPrefix": "Mi"
+  },
+  "circleMeasureLabel": {
+    "areaPrefix": "Εμβαδόν",
+    "circumferencePrefix": "Περιφέρεια"
+  },
   "staticAnalysis": {
     "diagnostics": {
       "unstable": "Ο φορέας είναι μηχανισμός — η στατική ανάλυση δεν συγκλίνει (ανεπαρκείς στηρίξεις/συνδέσεις).",

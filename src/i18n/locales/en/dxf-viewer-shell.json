@@ -17,6 +17,16 @@
     "areaPrefix": "A",
     "perimeterPrefix": "P"
   },
+  "centerMeasureLabel": {
+    "radiusPrefix": "R",
+    "lengthPrefix": "L",
+    "majorAxisPrefix": "Ma",
+    "minorAxisPrefix": "Mi"
+  },
+  "circleMeasureLabel": {
+    "areaPrefix": "Area",
+    "circumferencePrefix": "Circumference"
+  },
   "staticAnalysis": {
     "diagnostics": {
       "unstable": "The structure is a mechanism — static analysis does not converge (insufficient supports/connections).",

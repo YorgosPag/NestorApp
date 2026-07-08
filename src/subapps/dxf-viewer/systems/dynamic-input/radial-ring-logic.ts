@@ -10,6 +10,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { type DisplayUnit, fromDisplay } from '../../config/units';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 
 /** Κλειδιά πεδίων + TAB-order: Μήκος → Γωνία → Πάχος → Ύψος. */
 export type RingFieldKey = 'length' | 'angle' | 'thickness' | 'height';
@@ -185,7 +186,3 @@ export function lengthDisplayToSceneLock(displayValue: number, unit: DisplayUnit
   return fromDisplay(displayValue, unit) * mmToSceneUnits(sceneUnits);
 }
 
-/** Κανονικοποίηση γωνίας στο [0, 360). */
-export function normalizeAngleDeg(deg: number): number {
-  return ((deg % 360) + 360) % 360;
-}

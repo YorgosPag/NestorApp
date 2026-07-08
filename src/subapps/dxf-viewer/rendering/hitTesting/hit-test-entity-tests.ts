@@ -19,7 +19,11 @@ import {
   isFoundationEntity,
   isSpaceSeparatorEntity,
   isHatchEntity,
+  isAnnotationSymbolEntity,
 } from '../../types/entities';
+// ADR-583 — annotative model-size SSoT for the North-arrow annotation symbol.
+import { annotationSymbolModelSizeLive } from '../../bim/annotation-symbols/annotation-symbol-model-size';
+import { DEFAULT_ANNOTATION_SYMBOL_SIZE_MM } from '../../types/annotation-symbol';
 import type { HitTestResult, SnapResult } from './hit-tester-types';
 import { pointToLineDistance, clamp } from '../entities/shared/geometry-utils';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
@@ -75,8 +79,23 @@ export function performDetailedHitTest(
     // mirror of HatchRenderer.hitTest. Without this it fell to `default` = AABB-only
     // (over-selects non-convex hatches + the gaps between islands).
     case 'hatch': return hitTestHatch(entity, point);
+    // ADR-583 — round annotation symbol (North arrow): distance-to-centre within the
+    // annotative glyph radius (tighter than the default AABB, which over-selects the
+    // bbox corners of a circular mark).
+    case 'annotation-symbol': return hitTestAnnotationSymbol(entity, point, tolerance);
     default: return { hitType: 'entity', hitPoint: point };
   }
+}
+
+function hitTestAnnotationSymbol(
+  entity: Entity, point: Point2D, tolerance: number,
+): Partial<HitTestResult> | null {
+  if (!isAnnotationSymbolEntity(entity)) return null;
+  const modelSize = annotationSymbolModelSizeLive(entity.sizeMm ?? DEFAULT_ANNOTATION_SYMBOL_SIZE_MM);
+  const reach = modelSize / 2 + tolerance;
+  return calculateDistance(point, entity.position) <= reach
+    ? { hitType: 'entity', hitPoint: point }
+    : null;
 }
 
 function hitTestHatch(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
@@ -129,34 +148,41 @@ function hitTestOpening(entity: Entity, point: Point2D, tolerance: number): Part
   return null;
 }
 
+/**
+ * Κοινό polygon-containment hit-test (SSoT): cached outline/footprint vertices
+ * (3D world) → proj(2D) → point-in-polygon. `< 3` σημεία ή absent → null (πέφτει
+ * σε broad-phase bbox). Μοιράζεται από ΟΛΑ τα BIM footprint entities.
+ */
+function hitTestPolygonContainment(
+  verts: readonly { readonly x: number; readonly y: number }[] | undefined,
+  point: Point2D,
+): Partial<HitTestResult> | null {
+  if (!verts || verts.length < 3) return null;
+  return isPointInPolygon(point, projectVerticesTo2D(verts))
+    ? { hitType: 'entity', hitPoint: point }
+    : null;
+}
+
 function hitTestSlabOpening(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
   if (!isSlabOpeningEntity(entity)) return null;
-  const verts = entity.params?.outline?.vertices;
-  if (!verts || verts.length < 3) return null;
-  return isPointInPolygon(point, projectVerticesTo2D(verts)) ? { hitType: 'entity', hitPoint: point } : null;
+  return hitTestPolygonContainment(entity.params?.outline?.vertices, point);
 }
 
 function hitTestSlab(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
   if (!isSlabEntity(entity)) return null;
-  const verts = entity.params?.outline?.vertices;
-  if (!verts || verts.length < 3) return null;
-  return isPointInPolygon(point, projectVerticesTo2D(verts)) ? { hitType: 'entity', hitPoint: point } : null;
+  return hitTestPolygonContainment(entity.params?.outline?.vertices, point);
 }
 
 function hitTestFloorFinish(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
   if (!isFloorFinishEntity(entity)) return null;
-  const verts = entity.params?.footprint?.vertices;
-  if (!verts || verts.length < 3) return null;
-  return isPointInPolygon(point, projectVerticesTo2D(verts)) ? { hitType: 'entity', hitPoint: point } : null;
+  return hitTestPolygonContainment(entity.params?.footprint?.vertices, point);
 }
 
 function hitTestWallCovering(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
   if (!isWallCoveringEntity(entity)) return null;
   // Cached strip outline (4 σημεία) από τον host τοίχο (build/edit time). Absent αν ο host
   // έλειπε στο build → no precise target (πέφτει σε broad-phase bbox μέσω geometry.bbox).
-  const outline = entity.geometry?.outline;
-  if (!outline || outline.length < 3) return null;
-  return isPointInPolygon(point, projectVerticesTo2D(outline)) ? { hitType: 'entity', hitPoint: point } : null;
+  return hitTestPolygonContainment(entity.geometry?.outline, point);
 }
 
 function hitTestSpaceSeparator(
@@ -183,25 +209,19 @@ function hitTestWall(entity: Entity, point: Point2D): Partial<HitTestResult> | n
 
 function hitTestColumn(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
   if (!isColumnEntity(entity)) return null;
-  const verts = entity.geometry?.footprint?.vertices;
-  if (!verts || verts.length < 3) return null;
-  return isPointInPolygon(point, projectVerticesTo2D(verts)) ? { hitType: 'entity', hitPoint: point } : null;
+  return hitTestPolygonContainment(entity.geometry?.footprint?.vertices, point);
 }
 
 // ADR-436 Slice 1b — foundation footprint containment (pad/strip/tie-beam all
 // expose `geometry.footprint.vertices`; identical to column polygon test).
 function hitTestFoundation(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
   if (!isFoundationEntity(entity)) return null;
-  const verts = entity.geometry?.footprint?.vertices;
-  if (!verts || verts.length < 3) return null;
-  return isPointInPolygon(point, projectVerticesTo2D(verts)) ? { hitType: 'entity', hitPoint: point } : null;
+  return hitTestPolygonContainment(entity.geometry?.footprint?.vertices, point);
 }
 
 function hitTestBeam(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
   if (!isBeamEntity(entity)) return null;
-  const verts = entity.geometry?.outline?.vertices;
-  if (!verts || verts.length < 3) return null;
-  return isPointInPolygon(point, projectVerticesTo2D(verts)) ? { hitType: 'entity', hitPoint: point } : null;
+  return hitTestPolygonContainment(entity.geometry?.outline?.vertices, point);
 }
 
 // ===== LINE =====
@@ -247,17 +267,19 @@ function hitTestArc(entity: Entity, point: Point2D, tolerance: number): Partial<
 
 // ===== POLYLINE =====
 
-function hitTestPolyline(entity: Entity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
-  if (!('vertices' in entity)) return null;
-  const polylineEntity = entity as { vertices: Point2D[]; closed?: boolean };
-  const vertices = polylineEntity.vertices;
-  if (!vertices || vertices.length < 2) return null;
-
-  const edgeCount = polylineEntity.closed ? vertices.length : vertices.length - 1;
+/**
+ * Edge-walk hit-test (SSoT polyline/rectangle): για κάθε ακμή `[i,(i+1)%n]` ελέγχει
+ * απόσταση σημείου· hit → `{ edgeIndex, hitPoint=closestPointOnLine }`, αλλιώς null.
+ */
+function hitTestEdges(
+  point: Point2D,
+  vertices: readonly Point2D[],
+  edgeCount: number,
+  tolerance: number,
+): Partial<HitTestResult> | null {
   for (let i = 0; i < edgeCount; i++) {
     const nextIndex = (i + 1) % vertices.length;
     const distance = pointToLineDistance(point, vertices[i], vertices[nextIndex]);
-
     if (distance <= tolerance) {
       return {
         hitType: 'entity',
@@ -266,6 +288,18 @@ function hitTestPolyline(entity: Entity, point: Point2D, tolerance: number): Par
       };
     }
   }
+  return null;
+}
+
+function hitTestPolyline(entity: Entity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
+  if (!('vertices' in entity)) return null;
+  const polylineEntity = entity as { vertices: Point2D[]; closed?: boolean };
+  const vertices = polylineEntity.vertices;
+  if (!vertices || vertices.length < 2) return null;
+
+  const edgeCount = polylineEntity.closed ? vertices.length : vertices.length - 1;
+  const edgeHit = hitTestEdges(point, vertices, edgeCount, tolerance);
+  if (edgeHit) return edgeHit;
 
   // Closed polylines: also detect cursor inside polygon body
   if (polylineEntity.closed && vertices.length >= 3 && isPointInPolygon(point, vertices)) {
@@ -288,19 +322,7 @@ function hitTestRectangle(entity: Entity, point: Point2D, tolerance: number): Pa
     { x: rect.x + rect.width, y: rect.y + rect.height },
     { x: rect.x, y: rect.y + rect.height },
   ];
-
-  for (let i = 0; i < 4; i++) {
-    const nextIndex = (i + 1) % 4;
-    const distance = pointToLineDistance(point, vertices[i], vertices[nextIndex]);
-    if (distance <= tolerance) {
-      return {
-        hitType: 'entity',
-        hitPoint: closestPointOnLine(point, vertices[i], vertices[nextIndex]),
-        edgeIndex: i,
-      };
-    }
-  }
-  return null;
+  return hitTestEdges(point, vertices, 4, tolerance);
 }
 
 // ===== TEXT / ANGLE / DIMENSION =====

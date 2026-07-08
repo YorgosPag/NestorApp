@@ -15,14 +15,14 @@ import {
 // with the interaction path (`computeDxfEntityGrips`) so render ≡ interaction.
 import { getArcGrips } from '../../systems/arc/arc-grips';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
+import { toRenderGripInfo } from './shared/grip-utils';
 import { validateArcEntity } from './shared/entity-validation-utils';
-// 🏢 ADR-557 follow-up: center measurement label SSoT (gated painter)
-import { paintMeasurementText } from './shared/measurement-label';
+// 🏢 ADR-557 follow-up: center measurement label SSoT (gated painter + stacked-label helper)
+import { buildRadiusLabel, buildArcLengthLabel, renderStackedCenterMeasurementLabel } from './shared/measurement-label';
 // 🏢 ADR-058: Centralized Canvas Primitives
 import { addArcPath } from '../primitives/canvasPaths';
-// 🏢 ADR-090: Centralized angle formatting · 🏢 ADR-462: display-unit SSoT for lengths
+// 🏢 ADR-090: Centralized angle formatting
 import { formatAngle } from './shared/distance-label-utils';
-import { formatLengthForDisplay } from '../../config/display-length-format';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 import { degToRad } from './shared/geometry-utils';
 // 🏢 ADR-074: Centralized Point On Circle
@@ -89,14 +89,16 @@ export class ArcRenderer extends BaseEntityRenderer {
     // 🏢 ADR-067: Use centralized angle conversion
     const arcLength = degToRad(arcAngle) * radius;
     
-    this.ctx.save();
-    this.applyCenterMeasurementTextStyle();
-    // 🏢 ADR-090: Centralized number formatting
+    // 🏢 ADR-557 follow-up (N.11): content via the SSoT builders (kills the
+    // `R:`/`L:` hardcoded literals), stacked via the shared centre-label
+    // painter (save/style/N-lines/restore SSoT).
     // 🏢 ADR-091: Χρήση κεντρικοποιημένων text label offsets
-    paintMeasurementText(this.ctx, `R: ${formatLengthForDisplay(radius)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER, { gate: true });
-    paintMeasurementText(this.ctx, formatAngle(arcAngle, 1), screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.TWO_LINE, { gate: true });
-    paintMeasurementText(this.ctx, `L: ${formatLengthForDisplay(arcLength)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.TWO_LINE, { gate: true });
-    this.ctx.restore();
+    renderStackedCenterMeasurementLabel(this.ctx, screenCenter, [
+      { text: buildRadiusLabel(radius), offsetY: -TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER },
+      // 🏢 ADR-090: Centralized number formatting
+      { text: formatAngle(arcAngle, 1), offsetY: -TEXT_LABEL_OFFSETS.TWO_LINE },
+      { text: buildArcLengthLabel(arcLength), offsetY: TEXT_LABEL_OFFSETS.TWO_LINE },
+    ]);
   }
 
   private renderArcYellowDots(center: Point2D, radius: number, startAngle: number, endAngle: number): void {
@@ -129,15 +131,9 @@ export class ArcRenderer extends BaseEntityRenderer {
     // → `getArcGrips`), mapped to the render `GripInfo` shape (mirror `LineRenderer`). The
     // centre → 4-arrow MOVE glyph, the rotation handle → curved ROTATION glyph via the
     // shared `gripGlyphShape` registry; start/end/mid stay 'square'.
-    return getArcGrips(entity.id, center, radius, startAngle, endAngle).map((g) => ({
-      id: `${g.entityId}-grip-${g.gripIndex}`,
-      entityId: g.entityId,
-      type: g.type,
-      gripIndex: g.gripIndex,
-      position: g.position,
-      isVisible: true,
-      shape: gripGlyphShape(g.arcGripKind),
-    }));
+    return getArcGrips(entity.id, center, radius, startAngle, endAngle).map((g) =>
+      toRenderGripInfo(g, gripGlyphShape(g.arcGripKind)),
+    );
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {

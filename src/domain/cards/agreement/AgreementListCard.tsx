@@ -3,36 +3,23 @@
 /**
  * 🏢 ENTERPRISE AGREEMENT LIST CARD - Domain Component
  *
- * Domain-specific card for framework agreements in list views.
- * Extends ListCard with agreement-specific defaults; single-line truncated subtitle
- * "AgreementNumber · Vendor · Validity" + inline status badge.
+ * List card for framework agreements; single-line truncated subtitle
+ * "AgreementNumber · Vendor" + inline status badge. Shared status derivation
+ * comes from useAgreementCardCommon (ADR-585).
  *
  * @fileoverview Agreement domain card using centralized ListCard.
  * @see ListCard for base component
+ * @see useAgreementCardCommon for the shared model (ADR-585)
  */
 
 import React, { useMemo } from 'react';
 import { ScrollText } from 'lucide-react';
 
 import { ListCard } from '@/design-system';
-import type {
-  ListCardBadge,
-  ListCardBadgeVariant,
-} from '@/design-system/components/ListCard/ListCard.types';
 
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { FrameworkAgreement } from '@/subapps/procurement/types/framework-agreement';
 
-import type {
-  FrameworkAgreement,
-  FrameworkAgreementStatus,
-} from '@/subapps/procurement/types/framework-agreement';
-
-const STATUS_BADGE_VARIANTS: Record<FrameworkAgreementStatus, ListCardBadgeVariant> = {
-  draft: 'secondary',
-  active: 'success',
-  expired: 'warning',
-  terminated: 'destructive',
-};
+import { useAgreementCardCommon } from './agreement-card-model';
 
 export interface AgreementListCardProps {
   agreement: FrameworkAgreement;
@@ -49,14 +36,7 @@ export function AgreementListCard({
   onSelect,
   className,
 }: AgreementListCardProps) {
-  const { t } = useTranslation('procurement');
-
-  const statusLabel = t(`hub.frameworkAgreements.status.${agreement.status}`);
-
-  const badges: ListCardBadge[] = useMemo(
-    () => [{ label: statusLabel, variant: STATUS_BADGE_VARIANTS[agreement.status] }],
-    [statusLabel, agreement.status],
-  );
+  const { badges, ariaLabel } = useAgreementCardCommon(agreement);
 
   const subtitle = useMemo(() => {
     const parts: string[] = [agreement.agreementNumber];
@@ -75,10 +55,7 @@ export function AgreementListCard({
       isSelected={isSelected}
       onClick={onSelect}
       className={className}
-      aria-label={t('hub.frameworkAgreements.cardAriaLabel', {
-        number: agreement.agreementNumber,
-        title: agreement.title,
-      })}
+      aria-label={ariaLabel}
     />
   );
 }

@@ -7,7 +7,7 @@
  * - DMS, Grads, Radians, Surveyor (angular)
  */
 
-import { degToRad } from '../rendering/entities/shared/geometry-utils';
+import { degToRad, normalizeAngleDeg } from '../rendering/entities/shared/geometry-utils';
 import type { Precision, FormatTemplate, SupportedLocale } from '../config/number-format-config';
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -135,7 +135,7 @@ export function formatRadians(degrees: number, precision: Precision): string {
  * Surveyor angle (N 45°0'0" E).
  */
 export function formatSurveyor(degrees: number, precision: Precision): string {
-  let angle = ((degrees % 360) + 360) % 360;
+  let angle = normalizeAngleDeg(degrees);
 
   let ns: string;
   let ew: string;

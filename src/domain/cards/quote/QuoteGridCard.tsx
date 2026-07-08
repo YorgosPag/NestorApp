@@ -3,13 +3,14 @@
 /**
  * 📄 ENTERPRISE QUOTE GRID CARD - Domain Component
  *
- * Domain-specific card for vendor quotes in grid/tile views.
- * Extends GridCard with quote-specific defaults: vendor, total, validity, version.
+ * Domain-specific card for vendor quotes in grid/tile views. Shared vendor/
+ * status/date derivation comes from useQuoteCardCommon (ADR-585); this wrapper
+ * owns the Grid-specific StatItems + badge assembly.
  *
  * @fileoverview Quote domain card using centralized GridCard.
  * @see GridCard for base component
  * @see QuoteListCard for list view equivalent
- * @see QUOTE_STATUS_META for status metadata
+ * @see useQuoteCardCommon for the shared model (ADR-585)
  */
 
 import React, { useMemo } from 'react';
@@ -17,40 +18,17 @@ import { FileText, Building2, DollarSign, Calendar } from 'lucide-react';
 
 import { GridCard } from '@/design-system';
 import type { StatItem } from '@/design-system';
-import type {
-  GridCardBadge,
-  GridCardBadgeVariant,
-} from '@/design-system/components/GridCard/GridCard.types';
+import type { GridCardBadge, GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
 
-import type { Quote, QuoteStatus } from '@/subapps/procurement/types/quote';
-import { QUOTE_STATUS_META } from '@/subapps/procurement/types/quote';
-
-import { useContactById } from '@/hooks/useContactById';
-import { getContactDisplayName } from '@/types/contacts/helpers';
+import type { Quote } from '@/subapps/procurement/types/quote';
 import { formatCurrency } from '@/lib/intl-formatting';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   expiryBadgeState,
   daysUntilExpiry,
   formatValidUntilDate,
 } from '@/subapps/procurement/utils/quote-expiration';
 
-const STATUS_BADGE_VARIANTS: Record<QuoteStatus, GridCardBadgeVariant> = {
-  draft: 'secondary',
-  sent_to_vendor: 'info',
-  submitted: 'warning',
-  under_review: 'warning',
-  accepted: 'success',
-  rejected: 'destructive',
-  expired: 'destructive',
-  archived: 'secondary',
-  superseded: 'secondary',
-};
-
-function formatQuoteDate(ts: { seconds: number } | null | undefined): string {
-  if (!ts?.seconds) return '—';
-  return new Date(ts.seconds * 1000).toLocaleDateString('el-GR');
-}
+import { useQuoteCardCommon, formatQuoteDate } from './quote-card-model';
 
 export interface QuoteGridCardProps {
   quote: Quote;
@@ -67,19 +45,7 @@ export function QuoteGridCard({
   compact = false,
   className,
 }: QuoteGridCardProps) {
-  const { t, i18n } = useTranslation(['quotes']);
-  const contact = useContactById(quote.vendorContactId);
-
-  const vendorName = useMemo(() => {
-    const extracted = quote.extractedData?.vendorName?.value;
-    if (extracted) return extracted;
-    if (contact) return getContactDisplayName(contact);
-    return quote.vendorContactId;
-  }, [quote.extractedData, contact, quote.vendorContactId]);
-
-  const statusMeta = QUOTE_STATUS_META[quote.status];
-  const lang = (i18n.language?.startsWith('en') ? 'en' : 'el') as 'el' | 'en';
-  const statusLabel = lang === 'en' ? statusMeta.labelEn : statusMeta.labelEl;
+  const { t, vendorName, statusLabel, statusVariant } = useQuoteCardCommon(quote);
 
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [
@@ -126,9 +92,9 @@ export function QuoteGridCard({
         variant: 'warning' as GridCardBadgeVariant,
       });
     }
-    result.push({ label: statusLabel, variant: STATUS_BADGE_VARIANTS[quote.status] });
+    result.push({ label: statusLabel, variant: statusVariant });
     return result;
-  }, [quote, statusLabel, t]);
+  }, [quote, statusLabel, statusVariant, t]);
 
   return (
     <GridCard

@@ -30,6 +30,7 @@ import type { ThermalSpaceUseType } from '../../types/thermal-space-types';
 import type { HeatLoadBoundaryKind } from './heat-load-types';
 import type { SolarOrientation } from './annual-gains-shading-tables';
 import { SOLAR_ORIENTATIONS } from './annual-gains-shading-tables';
+import { normalizeAngleDeg } from '../../../rendering/entities/shared/geometry-angle-utils';
 
 // Shading tables — surgical split (≤500 γραμμές/αρχείο): L7.3 Slice B/C/D
 // SolarOrientation + SOLAR_ORIENTATIONS ορίζονται στο shading-tables και re-export-άρονται εδώ.
@@ -343,7 +344,7 @@ export function getHeatingSeasonHours(zone: ClimateZone): number {
  * [22.5,67.5)→NE, … wrap-safe (κανονικοποιεί αρνητικά/≥360). Pure, idempotent.
  */
 export function azimuthToOrientation(azimuthDeg: number): SolarOrientation {
-  const normalized = ((azimuthDeg % 360) + 360) % 360;
+  const normalized = normalizeAngleDeg(azimuthDeg);
   const shifted = (normalized + ORIENTATION_SECTOR_DEG / 2) % 360;
   const index = Math.floor(shifted / ORIENTATION_SECTOR_DEG) % SOLAR_ORIENTATIONS.length;
   return SOLAR_ORIENTATIONS[index];

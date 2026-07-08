@@ -1,14 +1,15 @@
-﻿'use client';
+'use client';
 
 /**
  * 🏢 ENTERPRISE VENDOR GRID CARD - Domain Component
  *
- * Domain-specific card for vendors in grid/tile views.
- * Extends GridCard with vendor-specific defaults and supplier metrics stats.
+ * Grid card for vendors. Shared display-name/specialties derivation comes from
+ * useVendorCardCommon (ADR-585); this wrapper owns the Grid StatItems.
  *
  * @fileoverview Vendor domain card using centralized GridCard.
  * @see GridCard for base component
  * @see VendorListCard for list view equivalent
+ * @see useVendorCardCommon for the shared model (ADR-585)
  */
 
 import React, { useMemo } from 'react';
@@ -16,16 +17,12 @@ import { Building2, PackageCheck, DollarSign, TrendingUp, Clock } from 'lucide-r
 
 import { GridCard } from '@/design-system';
 import type { StatItem } from '@/design-system';
-import type {
-  GridCardBadge,
-  GridCardBadgeVariant,
-} from '@/design-system/components/GridCard/GridCard.types';
+import type { GridCardBadge, GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
 
-import { getContactDisplayName } from '@/types/contacts';
 import { formatCurrency, formatDate } from '@/lib/intl-formatting';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import type { VendorCardData } from './vendor-types';
+import { useVendorCardCommon } from './vendor-card-model';
 
 export interface VendorGridCardProps {
   data: VendorCardData;
@@ -42,11 +39,7 @@ export function VendorGridCard({
   compact = false,
   className,
 }: VendorGridCardProps) {
-  const { t } = useTranslation('procurement');
-  const { contact, metrics } = data;
-
-  const displayName = useMemo(() => getContactDisplayName(contact), [contact]);
-  const tradeSpecialties = metrics?.tradeSpecialties ?? [];
+  const { t, metrics, displayName, tradeSpecialties, ariaLabel } = useVendorCardCommon(data);
 
   const subtitle = useMemo(() => {
     if (tradeSpecialties.length === 0) return undefined;
@@ -115,7 +108,7 @@ export function VendorGridCard({
       onClick={onSelect}
       compact={compact}
       className={className}
-      aria-label={t('hub.vendorMaster.cardAriaLabel', { name: displayName })}
+      aria-label={ariaLabel}
     />
   );
 }

@@ -14,6 +14,7 @@
 
 import type { Point3D } from '../../types/bim-base';
 import { segmentNormalX, segmentNormalY, isPolygonCCW } from './polygon-utils';
+import { normalizeAngleDeg } from '../../../rendering/entities/shared/geometry-angle-utils';
 
 const RAD_TO_DEG = 180 / Math.PI;
 
@@ -32,7 +33,7 @@ const DEGENERATE_LENGTH_EPS = 0.001;
 export function directionAzimuthDeg(dx: number, dy: number): number | null {
   if (Math.hypot(dx, dy) < DEGENERATE_LENGTH_EPS) return null;
   const deg = Math.atan2(dx, dy) * RAD_TO_DEG;
-  return ((deg % 360) + 360) % 360;
+  return normalizeAngleDeg(deg);
 }
 
 /** Clamped distance² from point `(px,py)` to segment `a→b` (XY plane). */

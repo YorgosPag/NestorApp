@@ -169,6 +169,16 @@ export function buildEntityModelFromDxf(
       return { ...base, type: 'mep-fitting', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'floorplan-symbol':
       return { ...base, type: 'floorplan-symbol', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
+    case 'annotation-symbol':
+      // ADR-583 — lightweight non-BIM annotation (North arrow). Flat fields carried
+      // to the EntityModel; AnnotationSymbolRenderer reads position/symbolId/sizeMm/
+      // rotation + the catalog glyph. The exhaustive `never` guard below forces this
+      // case whenever the DxfEntityUnion gains the variant.
+      return {
+        ...base, type: 'annotation-symbol',
+        position: entity.position, kind: entity.kind, symbolId: entity.symbolId,
+        sizeMm: entity.sizeMm, rotation: entity.rotation,
+      } as unknown as Entity;
     case 'mep-manifold':
       return { ...base, type: 'mep-manifold', kind: entity.kind, params: entity.params, geometry: entity.geometry, validation: entity.validation } as unknown as Entity;
     case 'mep-radiator':

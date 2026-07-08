@@ -9,9 +9,9 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { AngleUtils, DistanceUtils } from './constraints-geometry';
-import { degToRad } from '../../rendering/entities/shared/geometry-utils';
 // Display-unit SSoT for the tooltip distance (mm → cm/m/… + locale + unit label).
 import { formatSnapTrackingLabel } from '../../rendering/entities/shared/distance-label-utils';
+import { polarPoint } from '../dynamic-input/radial-ring-logic';
 
 export interface PolarTrackingConfig {
   incrementAngle: number;
@@ -104,11 +104,7 @@ export function applyPolar(
   const snappedAngle = AngleUtils.normalizeAngle(snappedRel + baseAngle);
 
   // Project point onto the snapped angle at same distance
-  const rad = degToRad(snappedAngle);
-  const snappedPoint: Point2D = {
-    x: ref.x + distance * Math.cos(rad),
-    y: ref.y + distance * Math.sin(rad),
-  };
+  const snappedPoint: Point2D = polarPoint(ref.x, ref.y, distance, snappedAngle);
 
   return { point: snappedPoint, isSnapped: true, snappedAngle, distance };
 }

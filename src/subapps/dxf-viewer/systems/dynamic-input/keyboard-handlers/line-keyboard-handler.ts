@@ -21,14 +21,14 @@ import type {
 } from './types';
 // 🏢 ADR-098: Centralized Timing Constants
 import { INPUT_TIMING } from '../../../config/timing-config';
-// 🏢 ADR-067: Centralized degrees → radians conversion.
-import { degToRad } from '../../../rendering/entities/shared/geometry-utils';
 // ADR-357 Phase 2b: convert user-typed display-unit length → internal mm.
 import { fromDisplay } from '../../../config/units';
 // ADR-357 Phase 6: coordinate input parser.
 import { parseCoordInput, applyCoordMode } from '../coordinate-parser';
 // ADR-510 Φ1 (E2): math in the length/angle fields (e.g. "1500+300", "3000/2").
 import { evalExpr } from '../numeric-expression';
+// 🏢 ADR-513: Centralized polar point (SSoT for angle+distance → Point2D).
+import { polarPoint } from '../radial-ring-logic';
 
 export const handleLineKeyboard: KeyboardHandler = (
   _e,
@@ -90,6 +90,19 @@ function handleLineEnter(
     dispatchDynamicSubmit, resetForNextPointFirstPhase, CADFeedback, focusSoon,
   } = actions;
 
+  // ADR-357/510 — κοινό post-submit: confirm feedback + anchor + rearm του
+  // first-point cycle (μοιράζεται coordinate-input & length/angle submit paths).
+  const confirmAndRearm = (): void => {
+    CADFeedback.onInputConfirm();
+    setIsCoordinateAnchored({ x: true, y: true });
+    refs.drawingPhaseRef.current = 'first-point';
+    setDrawingPhase('first-point');
+    resetForNextPointFirstPhase();
+    setActiveField('length');
+    setFieldUnlocked(prev => ({ ...prev, length: true, angle: false }));
+    focusSoon(refs.lengthInputRef, INPUT_TIMING.FOCUS_DEFAULT);
+  };
+
   // X / Y are not part of the line Tab cycle — fall through to default handler.
   if (activeField !== 'length' && activeField !== 'angle') {
     return false;
@@ -111,14 +124,7 @@ function handleLineEnter(
       action: 'add-point',
       coordinates: coordPoint,
     });
-    CADFeedback.onInputConfirm();
-    setIsCoordinateAnchored({ x: true, y: true });
-    refs.drawingPhaseRef.current = 'first-point';
-    setDrawingPhase('first-point');
-    resetForNextPointFirstPhase();
-    setActiveField('length');
-    setFieldUnlocked(prev => ({ ...prev, length: true, angle: false }));
-    focusSoon(refs.lengthInputRef, INPUT_TIMING.FOCUS_DEFAULT);
+    confirmAndRearm();
     return true;
   }
 
@@ -148,11 +154,7 @@ function handleLineEnter(
 
   // ADR-357 Phase 2b: user typed in display unit → convert to internal mm for world coords.
   const lengthMm = fromDisplay(lengthDisplay, displayUnit);
-  const angleRad = degToRad(angleNum);
-  const worldPoint = {
-    x: firstClickPoint.x + lengthMm * Math.cos(angleRad),
-    y: firstClickPoint.y + lengthMm * Math.sin(angleRad),
-  };
+  const worldPoint = polarPoint(firstClickPoint.x, firstClickPoint.y, lengthMm, angleNum);
 
   // Dispatch through the drawing pipeline — NO direct entity creation here.
   // Consumer (`useDynamicInputHandler`) maps `add-point` to `onDrawingPoint`.
@@ -164,15 +166,7 @@ function handleLineEnter(
     angle: angleNum,
   });
 
-  CADFeedback.onInputConfirm();
-  setIsCoordinateAnchored({ x: true, y: true });
-
   // Reset for next chain segment — phase tracker rearms first-point logic.
-  refs.drawingPhaseRef.current = 'first-point';
-  setDrawingPhase('first-point');
-  resetForNextPointFirstPhase();
-  setActiveField('length');
-  setFieldUnlocked(prev => ({ ...prev, length: true, angle: false }));
-  focusSoon(refs.lengthInputRef, INPUT_TIMING.FOCUS_DEFAULT);
+  confirmAndRearm();
   return true;
 }

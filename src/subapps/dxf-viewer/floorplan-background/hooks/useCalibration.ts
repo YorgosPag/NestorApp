@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useFloorplanBackgroundStore } from '../stores/floorplanBackgroundStore';
 import type { CalibrationData, CalibrationUnit, BackgroundTransform } from '../providers/types';
 import type { Point2D } from '../providers/types';
+import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 
 // ── Unit conversion ───────────────────────────────────────────────────────────
 
@@ -97,7 +98,7 @@ function _computeTransformPartial(
   if (deriveRotation) {
     // canvas Y-down: positive angle = clockwise. Subtract to make segment horizontal.
     const angleDeg = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
-    partial.rotation = ((current.rotation - angleDeg) % 360 + 360) % 360;
+    partial.rotation = normalizeAngleDeg(current.rotation - angleDeg);
   }
   return partial;
 }

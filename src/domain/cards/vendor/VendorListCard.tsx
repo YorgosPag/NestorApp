@@ -3,30 +3,25 @@
 /**
  * 🏢 ENTERPRISE VENDOR LIST CARD - Domain Component
  *
- * Domain-specific card for vendors (suppliers) in list views.
- * Extends ListCard with vendor-specific defaults; single-line truncated subtitle
- * "Specialties · Total Orders · Total Spend" + inline trade badges.
+ * List card for vendors; single-line truncated subtitle
+ * "Total Orders · Total Spend · On-time" + inline trade badges. Shared
+ * display-name/specialties derivation comes from useVendorCardCommon (ADR-585).
  *
  * @fileoverview Vendor domain card using centralized ListCard.
- * @enterprise Fortune 500 compliant - ZERO hardcoded values
  * @see ListCard for base component
- * @see VendorCardData for payload type
+ * @see useVendorCardCommon for the shared model (ADR-585)
  */
 
 import React, { useMemo } from 'react';
 import { Building2 } from 'lucide-react';
 
 import { ListCard } from '@/design-system';
-import type {
-  ListCardBadge,
-  ListCardBadgeVariant,
-} from '@/design-system/components/ListCard/ListCard.types';
+import type { ListCardBadge, ListCardBadgeVariant } from '@/design-system/components/ListCard/ListCard.types';
 
-import { getContactDisplayName } from '@/types/contacts';
 import { formatCurrency } from '@/lib/intl-formatting';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import type { VendorCardData } from './vendor-types';
+import { useVendorCardCommon } from './vendor-card-model';
 
 export interface VendorListCardProps {
   data: VendorCardData;
@@ -41,11 +36,7 @@ export function VendorListCard({
   onSelect,
   className,
 }: VendorListCardProps) {
-  const { t } = useTranslation('procurement');
-  const { contact, metrics } = data;
-
-  const displayName = useMemo(() => getContactDisplayName(contact), [contact]);
-  const tradeSpecialties = metrics?.tradeSpecialties ?? [];
+  const { t, metrics, displayName, tradeSpecialties, ariaLabel } = useVendorCardCommon(data);
 
   const badges: ListCardBadge[] = useMemo(() => {
     const result: ListCardBadge[] = [];
@@ -84,7 +75,7 @@ export function VendorListCard({
       isSelected={isSelected}
       onClick={onSelect}
       className={className}
-      aria-label={t('hub.vendorMaster.cardAriaLabel', { name: displayName })}
+      aria-label={ariaLabel}
     />
   );
 }

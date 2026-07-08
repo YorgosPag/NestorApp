@@ -1,353 +1,39 @@
-// 🌐 i18n: All labels use i18n keys
 'use client';
 
 /**
  * 🏠 ENTERPRISE PROPERTY GRID CARD - Domain Component
  *
- * Domain-specific card for properties in grid/tile views.
- * Extends GridCard with property-specific defaults and stats.
+ * Thin typed adapter: computes the shared view-model via usePropertyGridModel
+ * (ADR-585) and delegates to the SpotCard grid shell (shift-click multi-select).
  *
  * @fileoverview Property domain card using centralized GridCard.
  * @enterprise Fortune 500 compliant - ZERO hardcoded values
- * @see GridCard for base component
  * @see PropertyListCard for list view equivalent
- * @see NAVIGATION_ENTITIES for entity config
+ * @see usePropertyGridModel for the shared view-model (ADR-585)
  * @author Enterprise Architecture Team
  * @since 2026-01-24
  */
 
-import React, { useMemo } from 'react';
-// 🏢 ENTERPRISE: All icons from centralized NAVIGATION_ENTITIES
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-// 🏢 PHASE 1 & 4: Layout and condition icons (not in NAVIGATION_ENTITIES yet)
-import { Bed, Bath, Wrench } from 'lucide-react';
+import React from 'react';
 
-// 🏢 DESIGN SYSTEM
-import { GridCard } from '@/design-system';
-import type { StatItem } from '@/design-system';
-
-// 🏢 CENTRALIZED FORMATTERS
-import { formatNumber, formatFloorLabel, formatCurrency } from '@/lib/intl-utils';
-import { formatCurrencyWhole } from '@/lib/intl-domain';
-import { buildCardSubtitle } from '@/domain/cards/shared/card-subtitle';
-
-// 🏢 DOMAIN TYPES
 import type { Property } from '@/types/property-viewer';
+import type { SpotCardInteraction } from '../shared/card-model.types';
+import { SpotCard } from '../shared/SpotCard';
+import { usePropertyGridModel } from './usePropertyCardModel';
 
-// 🏢 BADGE VARIANT MAPPING
-import type { GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
-
-// 🏢 ENTERPRISE: i18n support
-import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { ENTITY_TYPES } from '@/config/domain-constants';
-import '@/lib/design-system';
-
-// =============================================================================
-// 🏢 TYPES
-// =============================================================================
-
-export interface PropertyGridCardProps {
+export interface PropertyGridCardProps extends SpotCardInteraction {
   /** Property data */
   property: Property;
-  /** Whether card is selected */
-  isSelected?: boolean;
-  /** Whether item is favorite */
-  isFavorite?: boolean;
-  /** Click handler - supports shift-click for multi-select */
-  onSelect?: (isShiftClick?: boolean) => void;
-  /** Favorite toggle handler */
-  onToggleFavorite?: () => void;
-  /** Compact mode */
-  compact?: boolean;
-  /** Additional className */
-  className?: string;
   /** Show commercial price/sqm stats (sale + rent) — for sales pages */
   showCommercialPrices?: boolean;
 }
 
-// =============================================================================
-// 🏢 OPERATIONAL STATUS TO BADGE VARIANT MAPPING (Physical Truth)
-// =============================================================================
-
 /**
- * ✅ DOMAIN SEPARATION: Operational status mapping (construction/readiness)
- * Shared with PropertyListCard for consistency
+ * 🏠 PropertyGridCard — domain card for properties in grid/tile views.
  */
-const OPERATIONAL_STATUS_VARIANTS: Record<string, GridCardBadgeVariant> = {
-  'ready': 'success',              // Έτοιμο
-  'under-construction': 'warning', // υπό ολοκλήρωση
-  'inspection': 'info',            // σε επιθεώρηση
-  'maintenance': 'secondary',      // υπό συντήρηση
-  'draft': 'default',              // πρόχειρο
-};
-
-// =============================================================================
-// 🏢 OPERATIONAL STATUS LABELS (i18n keys)
-// =============================================================================
-
-const OPERATIONAL_STATUS_LABEL_KEYS: Record<string, string> = {
-  'ready': 'operationalStatus.ready',
-  'under-construction': 'operationalStatus.underConstruction',
-  'inspection': 'operationalStatus.inspection',
-  'maintenance': 'operationalStatus.maintenance',
-  'draft': 'operationalStatus.draft',
-};
-
-const COMMERCIAL_STATUS_BADGE_VARIANTS: Record<string, GridCardBadgeVariant> = {
-  'for-sale': 'info',
-  'for-rent': 'warning',
-  'for-sale-and-rent': 'secondary',
-  'unavailable': 'default',
-};
-
-const COMMERCIAL_STATUS_LABEL_KEYS: Record<string, string> = {
-  'for-sale': 'commercialStatus.for-sale',
-  'for-rent': 'commercialStatus.for-rent',
-  'for-sale-and-rent': 'commercialStatus.for-sale-and-rent',
-  'unavailable': 'commercialStatus.unavailable',
-};
-
-// =============================================================================
-// 🏢 COMPONENT
-// =============================================================================
-
-/**
- * 🏠 PropertyGridCard Component
- *
- * Domain-specific card for properties in grid views.
- * Uses GridCard with property defaults from NAVIGATION_ENTITIES.
- *
- * @example
- * ```tsx
- * <PropertyGridCard
- *   property={property}
- *   isSelected={selectedId === property.id}
- *   onSelect={() => setSelectedId(property.id)}
- *   onToggleFavorite={() => toggleFavorite(property.id)}
- *   isFavorite={favorites.has(property.id)}
- * />
- * ```
- */
-export function PropertyGridCard({
-  property,
-  isSelected = false,
-  isFavorite,
-  onSelect,
-  onToggleFavorite,
-  compact = false,
-  className,
-  showCommercialPrices = false,
-}: PropertyGridCardProps) {
-  const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
-
-  // ==========================================================================
-  // 🏢 COMPUTED VALUES (Memoized)
-  // ==========================================================================
-
-  /** Build stats array for grid view - vertical layout optimized */
-  const stats = useMemo<StatItem[]>(() => {
-    const items: StatItem[] = [];
-
-    // 🏢 ENTERPRISE: Use new areas schema with legacy fallback (Fix 85 vs 5.2 inconsistency)
-    const displayArea = property.areas?.gross || property.areas?.net || property.area;
-
-    // Building with icon
-    if (property.building) {
-      items.push({
-        icon: NAVIGATION_ENTITIES.building.icon,
-        iconColor: NAVIGATION_ENTITIES.building.color,
-        label: t('card.stats.building'),
-        value: property.building,
-      });
-    }
-
-    // Floor with icon
-    if (property.floor !== undefined && property.floor !== null) {
-      items.push({
-        icon: NAVIGATION_ENTITIES.floor.icon,
-        iconColor: NAVIGATION_ENTITIES.floor.color,
-        label: t('card.stats.floor'),
-        value: formatFloorLabel(property.floor),
-      });
-    }
-
-    // Area with icon - 🏢 ENTERPRISE: Use displayArea (areas.gross ?? area)
-    if (displayArea) {
-      items.push({
-        icon: NAVIGATION_ENTITIES.area.icon,
-        iconColor: NAVIGATION_ENTITIES.area.color,
-        label: t('card.stats.area'),
-        value: `${formatNumber(displayArea)} m²`,
-      });
-    }
-
-    // 🛏️ Bedrooms (Phase 1 Property Fields)
-    if (property.layout?.bedrooms !== undefined && property.layout.bedrooms > 0) {
-      items.push({
-        icon: Bed,
-        iconColor: 'text-primary',
-        label: t('card.stats.bedrooms'),
-        value: String(property.layout.bedrooms),
-      });
-    }
-
-    // 🚿 Bathrooms (Phase 1 Property Fields)
-    if (property.layout?.bathrooms !== undefined && property.layout.bathrooms > 0) {
-      items.push({
-        icon: Bath,
-        iconColor: 'text-primary',
-        label: t('card.stats.bathrooms'),
-        value: String(property.layout.bathrooms),
-      });
-    }
-
-    // 🔧 Condition (Phase 4 Property Fields)
-    if (property.condition) {
-      // Color coding based on condition
-      const conditionColors: Record<string, string> = {
-        'new': 'text-[hsl(var(--text-success))]',
-        'excellent': 'text-[hsl(var(--text-success))]',
-        'good': 'text-primary',
-        'needs-renovation': 'text-[hsl(var(--text-warning))]'
-      };
-      items.push({
-        icon: Wrench,
-        iconColor: conditionColors[property.condition] || 'text-muted-foreground',
-        label: t('card.stats.condition'),
-        value: t(`condition.${property.condition}`, { defaultValue: property.condition }),
-      });
-    }
-
-    // 💰 Price — context-aware per commercialStatus (mirrors PropertyListCard logic)
-    {
-      const cs = property.commercialStatus;
-      const salePrice = property.commercial?.askingPrice ?? property.price;
-      const rentPrice = property.commercial?.rentPrice;
-      const fmt = (n: number) => formatCurrency(n, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-
-      if (cs === 'for-rent') {
-        if (rentPrice && rentPrice > 0) {
-          items.push({
-            icon: NAVIGATION_ENTITIES.price.icon,
-            iconColor: NAVIGATION_ENTITIES.price.color,
-            label: t('card.stats.rent'),
-            value: `${fmt(rentPrice)}/μήνα`,
-            valueColor: NAVIGATION_ENTITIES.price.color,
-          });
-        }
-      } else if (cs === 'for-sale-and-rent') {
-        if (salePrice && salePrice > 0) {
-          items.push({
-            icon: NAVIGATION_ENTITIES.price.icon,
-            iconColor: NAVIGATION_ENTITIES.price.color,
-            label: t('card.stats.sale'),
-            value: fmt(salePrice),
-            valueColor: NAVIGATION_ENTITIES.price.color,
-          });
-        }
-        if (rentPrice && rentPrice > 0) {
-          items.push({
-            icon: NAVIGATION_ENTITIES.price.icon,
-            iconColor: NAVIGATION_ENTITIES.price.color,
-            label: t('card.stats.rent'),
-            value: `${fmt(rentPrice)}/μήνα`,
-            valueColor: NAVIGATION_ENTITIES.price.color,
-          });
-        }
-      } else if (salePrice && salePrice > 0) {
-        items.push({
-          icon: NAVIGATION_ENTITIES.price.icon,
-          iconColor: NAVIGATION_ENTITIES.price.color,
-          label: t('card.stats.price'),
-          value: fmt(salePrice),
-          valueColor: NAVIGATION_ENTITIES.price.color,
-        });
-      }
-    }
-
-    // 💰 Commercial prices per sqm — only when showCommercialPrices=true (sales pages)
-    if (showCommercialPrices && displayArea) {
-      const askingPrice = property.commercial?.askingPrice;
-      const rentPrice = property.commercial?.rentPrice;
-
-      if (askingPrice && askingPrice > 0) {
-        items.push({
-          icon: NAVIGATION_ENTITIES.price.icon,
-          iconColor: NAVIGATION_ENTITIES.price.color,
-          label: t('card.stats.salePricePerSqm'),
-          value: `${formatCurrencyWhole(Math.round(askingPrice / displayArea))}/m²`,
-        });
-      }
-
-      if (rentPrice && rentPrice > 0) {
-        items.push({
-          icon: NAVIGATION_ENTITIES.price.icon,
-          iconColor: 'text-[hsl(var(--text-warning))]',
-          label: t('card.stats.rentPricePerSqm'),
-          value: `${formatCurrencyWhole(Math.round(rentPrice / displayArea))}/m²`,
-        });
-      }
-    }
-
-    return items;
-  }, [property.building, property.floor, property.area, property.areas, property.layout, property.condition, property.commercial, property.price, property.commercialStatus, showCommercialPrices, t]);
-
-  /** Build badges from operational status + commercial status */
-  const badges = useMemo(() => {
-    const opStatus = property.operationalStatus || 'ready';
-    const labelKey = OPERATIONAL_STATUS_LABEL_KEYS[opStatus] || 'operationalStatus.ready';
-    const variant = OPERATIONAL_STATUS_VARIANTS[opStatus] || 'success';
-    const result: { label: string; variant: GridCardBadgeVariant }[] = [
-      { label: t(labelKey), variant },
-    ];
-
-    const cs = property.commercialStatus;
-    if (cs && COMMERCIAL_STATUS_LABEL_KEYS[cs]) {
-      result.push({
-        label: t(COMMERCIAL_STATUS_LABEL_KEYS[cs], { ns: 'properties-enums' }),
-        variant: COMMERCIAL_STATUS_BADGE_VARIANTS[cs] ?? 'default',
-      });
-    }
-
-    return result;
-  }, [property.operationalStatus, property.commercialStatus, t]);
-
-  // ==========================================================================
-  // 🏢 HANDLERS
-  // ==========================================================================
-
-  const handleClick = () => {
-    onSelect?.(false);
-  };
-
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      onSelect?.(event.shiftKey || event.metaKey);
-    }
-  };
-
-  // ==========================================================================
-  // 🏢 RENDER
-  // ==========================================================================
-
-  return (
-    <GridCard
-      entityType={ENTITY_TYPES.PROPERTY}
-      title={property.name || property.code || property.id}
-      subtitle={buildCardSubtitle(t(`types.${property.type}`, { defaultValue: property.type }), property.code)}
-      badges={badges}
-      stats={stats}
-      isSelected={isSelected}
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
-      isFavorite={isFavorite}
-      onToggleFavorite={onToggleFavorite}
-      compact={compact}
-      className={className}
-      aria-label={t('card.ariaLabel', { name: property.name || property.code || property.id })}
-    />
-  );
+export function PropertyGridCard({ property, showCommercialPrices = false, ...interaction }: PropertyGridCardProps) {
+  const model = usePropertyGridModel(property, showCommercialPrices);
+  return <SpotCard variant="grid" model={model} {...interaction} />;
 }
 
 PropertyGridCard.displayName = 'PropertyGridCard';

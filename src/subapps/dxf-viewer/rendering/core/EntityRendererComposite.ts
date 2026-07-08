@@ -23,6 +23,8 @@ import { XLineRenderer } from '../entities/XLineRenderer';
 import { RayRenderer } from '../entities/RayRenderer';
 // ADR-507 Φ1a — hatch leaf (solid fill + user-defined lines, AutoCAD HATCH).
 import { HatchRenderer } from '../entities/HatchRenderer';
+// ADR-583 — annotation symbol leaf (North arrow; lightweight non-BIM paper decoration).
+import { AnnotationSymbolRenderer } from '../entities/AnnotationSymbolRenderer';
 // ADR-363 Phase 1B — parametric wall leaf (2D plan view).
 import { WallRenderer, type OpeningsByWall } from '../../bim/renderers/WallRenderer';
 // ADR-363 Phase 2 — opening leaf (door/window/sliding-door/french-door/fixed).
@@ -158,6 +160,8 @@ export class EntityRendererComposite {
     const rayRenderer = new RayRenderer(this.ctx);
     // ADR-507 Φ1a — hatch renderer (solid fill + user-defined lines).
     const hatchRenderer = new HatchRenderer(this.ctx);
+    // ADR-583 — annotation symbol renderer (North arrow; annotative unit-space glyph).
+    const annotationSymbolRenderer = new AnnotationSymbolRenderer(this.ctx);
 
     // Register renderers by entity type
     this.renderers.set('line', lineRenderer);
@@ -201,6 +205,7 @@ export class EntityRendererComposite {
     this.renderers.set('xline', xlineRenderer);
     this.renderers.set('ray', rayRenderer);
     this.renderers.set('hatch', hatchRenderer);
+    this.renderers.set('annotation-symbol', annotationSymbolRenderer);
   }
 
   /**
@@ -236,6 +241,12 @@ export class EntityRendererComposite {
     const dim = this.renderers.get('dimension');
     if (dim instanceof DimensionRenderer) {
       dim.setSceneUnits(units);
+    }
+    // ADR-583 — the annotation symbol renderer folds paper-mm → model units too
+    // (annotative North arrow), so it needs the SAME scene units the dimensions use.
+    const anno = this.renderers.get('annotation-symbol');
+    if (anno instanceof AnnotationSymbolRenderer) {
+      anno.setSceneUnits(units);
     }
   }
 

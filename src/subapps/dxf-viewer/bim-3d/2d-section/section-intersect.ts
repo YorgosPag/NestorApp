@@ -41,6 +41,7 @@ import { slabSlopeOffsetZmm, type SlabPlanPoint } from '../../bim/geometry/slab-
 import { beamSlopeOffsetZmm, isBeamTilted, type BeamPlanPoint } from '../../bim/geometry/beam-slope';
 import { columnCutPlaneShiftMm, wallCutPlaneShiftMm } from '../../bim/geometry/cut-plane-tilt';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { clamp01 } from '../../rendering/entities/shared/geometry-utils';
 
 const MM_TO_M = 0.001;
 
@@ -355,7 +356,7 @@ function wallAxisParamAtCut(w: WallPlan, axis: SectionAxis, pos: number): number
   const d = axis === 'x' ? w.ex - w.sx : w.ey - w.sy;
   if (Math.abs(d) < 1e-9) return null;
   const t = axis === 'x' ? (pos - w.sx) / d : (pos - w.sy) / d;
-  return t < 0 ? 0 : t > 1 ? 1 : t;
+  return clamp01(t);
 }
 
 export function wallSection(w: WallPlan, axis: SectionAxis, pos: number): SectionRect | null {

@@ -16,6 +16,7 @@
  */
 
 import { projectVerticesTo2D } from './polygon-utils';
+import { clamp01 } from '../../../rendering/entities/shared/geometry-utils';
 
 /** Ελάχιστο 2D σημείο (plan space). */
 export interface Pt2 {
@@ -25,8 +26,6 @@ export interface Pt2 {
 
 /** Αριθμητικό όριο για μη-εκφυλισμένο t / non-parallel cross product. */
 const T_EPS = 1e-9;
-
-const clamp01 = (t: number): number => (t < 0 ? 0 : t > 1 ? 1 : t);
 
 /**
  * t-τιμές (0..1, clamped) όπου ο άξονας a→b τέμνει ακμές του πολυγώνου. Standard

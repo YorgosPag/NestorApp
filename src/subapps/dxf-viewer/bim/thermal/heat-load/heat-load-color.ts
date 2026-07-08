@@ -14,6 +14,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-422-bim-heating-mechanical-study.md §3 (L1)
  */
 
+import { clamp01 as clampUnitInterval } from '../../../rendering/entities/shared/geometry-utils';
+
 /** Ψυχρό άκρο (χαμηλό φορτίο) — μπλε. */
 const COLD_RGB: readonly [number, number, number] = [37, 99, 235]; // #2563eb
 /** Θερμό άκρο (υψηλό φορτίο) — κόκκινο. */
@@ -22,9 +24,10 @@ const HOT_RGB: readonly [number, number, number] = [220, 38, 38]; // #dc2626
 /** Αδιαφάνεια fill — αρκετή για να φανεί το χρώμα, διαφανής για να φαίνεται το σχέδιο. */
 export const HEAT_LOAD_FILL_ALPHA = 0.3;
 
+/** [0,1] clamp (SSoT `clamp01`) + NaN guard → μεσαίο t όταν degenerate (μηδέν crash). */
 function clamp01(t: number): number {
   if (!Number.isFinite(t)) return 0.5;
-  return t < 0 ? 0 : t > 1 ? 1 : t;
+  return clampUnitInterval(t);
 }
 
 /** Κανονικοποιημένη θέση `t∈[0,1]` του `value` στο εύρος [min,max] (degenerate → 0.5). */

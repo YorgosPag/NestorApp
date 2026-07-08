@@ -13,7 +13,7 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { LineEntity, ArcEntity } from '../types/entities';
 import { angleBetweenVectors } from '../rendering/entities/shared/geometry-rendering-utils';
-import { degToRad, radToDeg } from '../rendering/entities/shared/geometry-utils';
+import { degToRad, radToDeg, normalizeAngleDeg } from '../rendering/entities/shared/geometry-utils';
 
 // ============================================================================
 // LINE INTERSECTION
@@ -135,9 +135,9 @@ function arcEndpoint(center: Point2D, radius: number, angleDeg: number): Point2D
  */
 function isAngleInArcRange(angleDeg: number, startDeg: number, endDeg: number): boolean {
   // Normalize all to 0-360
-  const a = ((angleDeg % 360) + 360) % 360;
-  const s = ((startDeg % 360) + 360) % 360;
-  const e = ((endDeg % 360) + 360) % 360;
+  const a = normalizeAngleDeg(angleDeg);
+  const s = normalizeAngleDeg(startDeg);
+  const e = normalizeAngleDeg(endDeg);
 
   if (s <= e) {
     return a >= s && a <= e;
@@ -311,18 +311,26 @@ export function angleBetweenTwoArcs(
 // INTERNAL HELPERS
 // ============================================================================
 
-/** Get direction vector from vertex toward the FARTHER endpoint of the line */
-function lineDirectionFromVertex(
+/** Euclidean distances vertex→start and vertex→end (SSoT for the line arm helpers). */
+function vertexEndpointDistances(
   line: Pick<LineEntity, 'start' | 'end'>,
   vertex: Point2D
-): Point2D {
+): { distToStart: number; distToEnd: number } {
   const distToStart = Math.sqrt(
     (line.start.x - vertex.x) ** 2 + (line.start.y - vertex.y) ** 2
   );
   const distToEnd = Math.sqrt(
     (line.end.x - vertex.x) ** 2 + (line.end.y - vertex.y) ** 2
   );
+  return { distToStart, distToEnd };
+}
 
+/** Get direction vector from vertex toward the FARTHER endpoint of the line */
+function lineDirectionFromVertex(
+  line: Pick<LineEntity, 'start' | 'end'>,
+  vertex: Point2D
+): Point2D {
+  const { distToStart, distToEnd } = vertexEndpointDistances(line, vertex);
   // Use the farther endpoint to define arm direction
   const target = distToEnd >= distToStart ? line.end : line.start;
   return normalizeVec({ x: target.x - vertex.x, y: target.y - vertex.y });
@@ -333,12 +341,7 @@ function lineArmLength(
   line: Pick<LineEntity, 'start' | 'end'>,
   vertex: Point2D
 ): number {
-  const distToStart = Math.sqrt(
-    (line.start.x - vertex.x) ** 2 + (line.start.y - vertex.y) ** 2
-  );
-  const distToEnd = Math.sqrt(
-    (line.end.x - vertex.x) ** 2 + (line.end.y - vertex.y) ** 2
-  );
+  const { distToStart, distToEnd } = vertexEndpointDistances(line, vertex);
   return Math.max(distToStart, distToEnd, 20);
 }
 

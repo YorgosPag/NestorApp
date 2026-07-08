@@ -23,7 +23,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { ArcEntity, LineEntity } from '../../types/entities';
-import { clamp01, getLineParameter } from '../../rendering/entities/shared/geometry-utils';
+import { clamp01, getLineParameter, normalizeAngleDeg } from '../../rendering/entities/shared/geometry-utils';
 import {
   calculateDistance,
   dotProduct,
@@ -97,7 +97,7 @@ const perpDist = (p: Point2D, c: DetectCtx): number =>
 
 /** Direction-agnostic γωνία τόξου σε μοίρες, [0,180]. */
 function arcSpanDeg(arc: ArcEntity): number {
-  const raw = (((arc.endAngle - arc.startAngle) % 360) + 360) % 360;
+  const raw = normalizeAngleDeg(arc.endAngle - arc.startAngle);
   return Math.min(raw, 360 - raw);
 }
 

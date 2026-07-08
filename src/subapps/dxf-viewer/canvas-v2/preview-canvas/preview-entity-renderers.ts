@@ -10,8 +10,6 @@ import type { AngleMeasurementEntity } from '../../types/scene';
 import type { PreviewRenderOptions, ArcPreviewEntity, PreviewRenderHelpers } from './preview-renderer-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { calculateWorldDistance, formatAngleLocale } from '../../rendering/entities/shared/distance-label-utils';
-// 🏢 ADR-462: display-unit SSoT — preview length + area labels follow the selector
-import { formatLengthForDisplay, formatAreaForDisplay } from '../../config/display-length-format';
 import { RENDER_LINE_WIDTHS, UI_FONTS, LINE_DASH_PATTERNS, RENDER_GEOMETRY } from '../../config/text-rendering-config';
 import { calculateAngle, rectFromTwoPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
 // ADR-510 Φ1 (Q7): reuse the SSoT angle pipeline (no duplicate atan2/normalise).
@@ -20,7 +18,13 @@ import { bisectorAngle, TAU, degToRad } from '../../rendering/entities/shared/ge
 import { UI_COLORS, OPACITY } from '../../config/color-config';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ADR-557 follow-up: closed-polygon area+perimeter label SSoT (committed/preview/hover parity)
-import { computePolygonAreaMetrics, paintPolygonAreaLabel, buildAreaPerimeterLabelLines } from '../../rendering/entities/shared/measurement-label';
+import {
+  computePolygonAreaMetrics,
+  paintPolygonAreaLabel,
+  buildAreaPerimeterLabelLines,
+  buildAreaLabel,
+  buildArcLengthLabel,
+} from '../../rendering/entities/shared/measurement-label';
 
 // ===== LINE =====
 
@@ -108,10 +112,9 @@ export function renderCircle(
     const circumference = TAU * entity.radius;
     const area = Math.PI * entity.radius * entity.radius;
     // ADR-160 (δ): κοινή σειρά εμβαδόν→περίμετρος παντού (area line πρώτα).
-    h.renderInfoLabel(ctx, center, [
-      `Ε: ${formatAreaForDisplay(area)}`,
-      `Περ: ${formatLengthForDisplay(circumference)}`,
-    ]);
+    // 🏢 ADR-557 follow-up (N.11): content via the SSoT builder (kills the `Ε:`/`Περ:`
+    // hardcoded Greek literals) — same prefixes/order as the rectangle preview below.
+    h.renderInfoLabel(ctx, center, buildAreaPerimeterLabelLines({ area, perimeter: circumference }));
   }
 }
 
@@ -310,9 +313,11 @@ export function renderArc(
       const arcLength = entity.radius * absSweep;
       const sectorArea = 0.5 * entity.radius * entity.radius * absSweep;
       // ADR-160 (δ): κοινή σειρά εμβαδόν→(μήκος/περίμετρος) — area line πρώτα.
+      // 🏢 ADR-557 follow-up (N.11): content via the SSoT builders (kills the `Ε:`/`L:`
+      // hardcoded literals) — same prefixes as the committed ArcRenderer/circle-text-utils.
       h.renderInfoLabel(ctx, center, [
-        `Ε: ${formatAreaForDisplay(sectorArea)}`,
-        `L: ${formatLengthForDisplay(arcLength)}`,
+        buildAreaLabel(sectorArea),
+        buildArcLengthLabel(arcLength),
       ]);
     }
   }

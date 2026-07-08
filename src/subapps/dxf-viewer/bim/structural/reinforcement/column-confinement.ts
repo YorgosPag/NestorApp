@@ -23,6 +23,7 @@ import type { ColumnSectionContext } from '../codes/structural-code-types';
 import type { ColumnReinforcement } from './column-reinforcement-types';
 import { DEFAULT_STIRRUP_TYPE } from './column-reinforcement-types';
 import { computeColumnRebarLayout, type ColumnRebarLayout } from './column-rebar-layout';
+import { clamp01 } from '../../../rendering/entities/shared/geometry-utils';
 
 /** Αποτέλεσμα υπολογισμού περίσφιγξης. */
 export interface ColumnConfinement {
@@ -35,8 +36,6 @@ export interface ColumnConfinement {
   /** True όταν ο τύπος (συγκολλητός) έχει αντισεισμικό περιορισμό πλαστιμότητας. */
   readonly ductilityWarning: boolean;
 }
-
-const clamp01 = (v: number): number => Math.max(0, Math.min(1, v));
 
 /** Ενεργό βήμα για περίσφιγξη = κρίσιμο (αν υπάρχει) αλλιώς βασικό. */
 function effectiveSpacingMm(r: ColumnReinforcement): number {

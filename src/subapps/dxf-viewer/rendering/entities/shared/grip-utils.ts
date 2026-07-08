@@ -100,16 +100,38 @@ export function createEdgeGrip(entityId: string, position: Point2D, gripIndex: n
  * Κοινό pattern για arc entities (center + start + end + mid)
  */
 export function createArcGripPattern(
-  entityId: string, 
-  center: Point2D, 
-  startPoint: Point2D, 
-  endPoint: Point2D, 
+  entityId: string,
+  center: Point2D,
+  startPoint: Point2D,
+  endPoint: Point2D,
   midPoint: Point2D
 ): GripInfo[] {
   return [
     createCenterGrip(entityId, center, 0),
     createVertexGrip(entityId, startPoint, 1),
-    createVertexGrip(entityId, endPoint, 2), 
+    createVertexGrip(entityId, endPoint, 2),
     createEdgeGrip(entityId, midPoint, 3)
   ];
+}
+
+/**
+ * ADR-561/583 — Domain grip (getArcGrips / getAnnotationSymbolGrips / getLineGrips)
+ * → render `GripInfo` (SSoT for the entity renderers' `getGrips`). The `shape` is
+ * resolved at the call-site via `gripGlyphShape(g.<x>GripKind)` — the grip-kind
+ * field name differs per entity type — and passed in, so the common object shape
+ * lives here once instead of being copy-pasted per renderer.
+ */
+export function toRenderGripInfo(
+  grip: { entityId: string; gripIndex: number; type: GripInfo['type']; position: Point2D },
+  shape: GripInfo['shape'],
+): GripInfo {
+  return {
+    id: `${grip.entityId}-grip-${grip.gripIndex}`,
+    entityId: grip.entityId,
+    type: grip.type,
+    gripIndex: grip.gripIndex,
+    position: grip.position,
+    isVisible: true,
+    shape,
+  };
 }

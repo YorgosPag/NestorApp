@@ -22,6 +22,11 @@
  */
 
 import type { WallBaseBinding, WallTopBinding } from '../types/bim-binding';
+// 🏢 SSoT: canonical clamp01 (ADR-071). Re-exported below so `wall-base-profile.ts`
+// keeps importing it from this module (unchanged public API).
+import { clamp01 } from '../../rendering/entities/shared/geometry-utils';
+
+export { clamp01 };
 
 /** Αριθμητικό όριο για να θεωρηθεί ένα t-διάστημα μη-εκφυλισμένο. */
 export const T_EPS = 1e-9;
@@ -176,8 +181,6 @@ export interface TopLine {
   readonly source: WallTopSource;
   readonly hostId?: string;
 }
-
-export const clamp01 = (t: number): number => (t < 0 ? 0 : t > 1 ? 1 : t);
 
 function lineFromHost(h: HostUndersidePlan): TopLine {
   const t0 = clamp01(Math.min(h.t0, h.t1));

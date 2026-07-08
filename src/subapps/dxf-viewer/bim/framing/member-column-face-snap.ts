@@ -58,9 +58,7 @@ import {
   rectDirToWorld,
   type RectFrame,
 } from './rect-frame';
-
-/** Clamp σε [lo,hi] — local leaf (μηδέν cross-layer import από `bim/columns`). */
-const clamp = (v: number, lo: number, hi: number): number => Math.min(Math.max(v, lo), hi);
+import { clamp } from '../../rendering/entities/shared/geometry-utils';
 
 /** Παρειά κολόνας στην οποία κουμπώνει το φάντασμα (world-aligned). SSoT alias `FootprintFace`. */
 export type MemberGhostFace = 'E' | 'W' | 'N' | 'S';

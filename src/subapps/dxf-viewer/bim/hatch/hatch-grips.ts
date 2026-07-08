@@ -20,6 +20,7 @@ import type { HatchGripKind } from '../../hooks/grip-types';
 import { constrainDeltaToDominantAxis } from '../grips/ortho-delta';
 import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
+import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 
 const VERTEX_PREFIX = 'hatch-vertex-';
 const EDGE_MIDPOINT_PREFIX = 'hatch-edge-midpoint-';
@@ -198,7 +199,7 @@ export function applyHatchAngleGripDrag(
   snap: boolean = false,
 ): number {
   const raw = (Math.atan2(cursorWorld.y - origin.y, cursorWorld.x - origin.x) * 180) / Math.PI;
-  const deg = ((raw % 360) + 360) % 360;
+  const deg = normalizeAngleDeg(raw);
   if (!snap) return deg;
   return (Math.round(deg / HATCH_ANGLE_SNAP_DEG) * HATCH_ANGLE_SNAP_DEG) % 360;
 }

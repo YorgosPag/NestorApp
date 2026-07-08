@@ -18,8 +18,8 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { degToRad } from '../../rendering/entities/shared/geometry-utils';
 import { DynamicInputLockStore } from './DynamicInputLockStore';
+import { polarPoint } from './radial-ring-logic';
 
 /** Ελάχιστη απόσταση (world) κάτω από την οποία ο length-scale είναι αριθμητικά ασταθής. */
 const MIN_LOCK_DIST = 0.001;
@@ -53,9 +53,9 @@ export function applyLengthAngleLock(
   }
 
   // Γωνία εμπλέκεται (μόνη της ή μαζί με μήκος): target γωνία = locked· target απόσταση = locked ή τρέχουσα.
-  const rad = degToRad(angle ?? 0);
+  const angleDeg = angle ?? 0;
   const r = length !== null ? length : dist;
-  return { x: ref.x + r * Math.cos(rad), y: ref.y + r * Math.sin(rad) };
+  return polarPoint(ref.x, ref.y, r, angleDeg);
 }
 
 /**

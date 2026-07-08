@@ -3,40 +3,27 @@
 /**
  * 📄 ENTERPRISE QUOTE LIST CARD - Domain Component
  *
- * Domain-specific card for vendor quotes in list views.
- * Extends ListCard with Quote-specific defaults; single-line truncated subtitle
- * "Vendor · Total · ValidUntil/Date" + inline status badge next to displayNumber.
+ * Domain-specific card for vendor quotes in list views; single-line truncated
+ * subtitle "Vendor · Total · ValidUntil/Date" + inline status badge, with a
+ * version-collapse chevron. Shared vendor/status/date derivation comes from
+ * useQuoteCardCommon (ADR-585).
  *
  * @fileoverview Quote domain card using centralized ListCard.
- * @enterprise Fortune 500 compliant - ZERO hardcoded values
  * @see ListCard for base component
- * @see QUOTE_STATUS_META for status metadata
- * @see PurchaseOrderListCard for sibling pattern
+ * @see useQuoteCardCommon for the shared model (ADR-585)
  */
 
 import React, { useMemo } from 'react';
 import { ChevronDown, ChevronRight, FileText } from 'lucide-react';
 
-// 🏢 DESIGN SYSTEM
 import { ListCard } from '@/design-system';
 import type { ListCardBadge, ListCardBadgeVariant } from '@/design-system/components/ListCard/ListCard.types';
 
-// 🏢 DOMAIN TYPES
-import type { Quote, QuoteStatus } from '@/subapps/procurement/types/quote';
-import { QUOTE_STATUS_META } from '@/subapps/procurement/types/quote';
-
-// 🏢 SHARED HOOKS / FORMATTERS
-import { useContactById } from '@/hooks/useContactById';
-import { getContactDisplayName } from '@/types/contacts/helpers';
+import type { Quote } from '@/subapps/procurement/types/quote';
 import { formatCurrency } from '@/lib/intl-formatting';
-
-// 🏢 ENTERPRISE: i18n support
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { expiryBadgeState, daysUntilExpiry, formatValidUntilDate } from '@/subapps/procurement/utils/quote-expiration';
 
-// =============================================================================
-// 🏢 TYPES
-// =============================================================================
+import { useQuoteCardCommon, formatQuoteDate } from './quote-card-model';
 
 export interface QuoteListCardProps {
   quote: Quote;
@@ -49,35 +36,6 @@ export interface QuoteListCardProps {
   onVersionToggle?: (e: React.MouseEvent) => void;
 }
 
-// =============================================================================
-// 🏢 STATUS COLOR → BADGE VARIANT MAPPING
-// =============================================================================
-
-const STATUS_BADGE_VARIANTS: Record<QuoteStatus, ListCardBadgeVariant> = {
-  draft: 'secondary',
-  sent_to_vendor: 'info',
-  submitted: 'warning',
-  under_review: 'warning',
-  accepted: 'success',
-  rejected: 'destructive',
-  expired: 'destructive',
-  archived: 'secondary',
-  superseded: 'secondary',
-};
-
-// =============================================================================
-// 🏢 HELPERS
-// =============================================================================
-
-function formatQuoteDate(ts: { seconds: number } | null | undefined): string {
-  if (!ts?.seconds) return '—';
-  return new Date(ts.seconds * 1000).toLocaleDateString('el-GR');
-}
-
-// =============================================================================
-// 🏢 COMPONENT
-// =============================================================================
-
 export function QuoteListCard({
   quote,
   isSelected = false,
@@ -87,19 +45,7 @@ export function QuoteListCard({
   isVersionExpanded = false,
   onVersionToggle,
 }: QuoteListCardProps) {
-  const { t, i18n } = useTranslation(['quotes']);
-  const contact = useContactById(quote.vendorContactId);
-
-  const vendorName = useMemo(() => {
-    const extracted = quote.extractedData?.vendorName?.value;
-    if (extracted) return extracted;
-    if (contact) return getContactDisplayName(contact);
-    return quote.vendorContactId;
-  }, [quote.extractedData, contact, quote.vendorContactId]);
-
-  const statusMeta = QUOTE_STATUS_META[quote.status];
-  const lang = (i18n.language?.startsWith('en') ? 'en' : 'el') as 'el' | 'en';
-  const statusLabel = lang === 'en' ? statusMeta.labelEn : statusMeta.labelEl;
+  const { t, vendorName, statusLabel, statusVariant } = useQuoteCardCommon(quote);
 
   // 🏢 ENTERPRISE: Single-line subtitle "Vendor · Total · ValidUntil/Date"
   const subtitle = useMemo(() => {
@@ -156,9 +102,9 @@ export function QuoteListCard({
       ...(versionBadge ? [versionBadge] : []),
       ...(expiryBadge ? [expiryBadge] : []),
       ...(notifiedBadge ? [notifiedBadge] : []),
-      { label: statusLabel, variant: STATUS_BADGE_VARIANTS[quote.status] },
+      { label: statusLabel, variant: statusVariant },
     ],
-    [statusLabel, quote.status, versionBadge, expiryBadge, notifiedBadge],
+    [statusLabel, statusVariant, versionBadge, expiryBadge, notifiedBadge],
   );
 
   const VersionChevron = isVersionExpanded ? ChevronDown : ChevronRight;

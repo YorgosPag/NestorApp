@@ -10,6 +10,7 @@ import { CONSTRAINTS_CONFIG } from './config';
 import type { Point2D } from '../../rendering/types/Types';
 import { calculateDistance, vectorMagnitude, calculateAngle, vectorAngle } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { degToRad, radToDeg, normalizeAngleDeg, quantizeToStep, getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
+import { polarPoint } from '../dynamic-input/radial-ring-logic';
 
 // ===== ANGLE UTILITIES =====
 
@@ -126,12 +127,7 @@ export const CoordinateUtils = {
     baseAngle: number = 0
   ): CartesianCoordinates => {
     const totalAngle = polar.angle + baseAngle;
-    const radians = AngleUtils.degreesToRadians(totalAngle);
-
-    return {
-      x: basePoint.x + polar.distance * Math.cos(radians),
-      y: basePoint.y + polar.distance * Math.sin(radians)
-    };
+    return polarPoint(basePoint.x, basePoint.y, polar.distance, totalAngle);
   },
 
   /** Projects point onto the INFINITE line through two points (no segment clamp).

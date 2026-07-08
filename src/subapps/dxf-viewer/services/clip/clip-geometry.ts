@@ -8,6 +8,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { SpatialBounds } from '../../types/entity-bounds';
+import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 
 export interface ClipRect {
   xMin: number;
@@ -19,7 +20,7 @@ export interface ClipRect {
 export const DEG = Math.PI / 180;
 
 export function normAngle(deg: number): number {
-  return ((deg % 360) + 360) % 360;
+  return normalizeAngleDeg(deg);
 }
 
 /** Arc sweep in degrees from start toward end in the arc's direction. */

@@ -8,6 +8,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 import type { Entity } from '../extended-types';
 import type { IntersectionResult } from '../shared/GeometricCalculations';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
@@ -225,9 +226,9 @@ export function cross2D(a: Point2D, b: Point2D): number {
 }
 
 export function isAngleInRange(angleDeg: number, startDeg: number, endDeg: number): boolean {
-  const a = ((angleDeg % 360) + 360) % 360;
-  const s = ((startDeg % 360) + 360) % 360;
-  const e = ((endDeg % 360) + 360) % 360;
+  const a = normalizeAngleDeg(angleDeg);
+  const s = normalizeAngleDeg(startDeg);
+  const e = normalizeAngleDeg(endDeg);
   if (s <= e) return a >= s && a <= e;
   return a >= s || a <= e;
 }
@@ -296,7 +297,7 @@ export function xlineArcIntersection(xline: XLineEntity, arc: ArcEntity): Inters
   for (const t of tValues) {
     if (Math.abs(t) > XLINE_MAX_T) continue;
     const p: Point2D = { x: xline.basePoint.x + t * dir.x, y: xline.basePoint.y + t * dir.y };
-    const angleDeg = (Math.atan2(p.y - arc.center.y, p.x - arc.center.x) * 180 / Math.PI + 360) % 360;
+    const angleDeg = normalizeAngleDeg(Math.atan2(p.y - arc.center.y, p.x - arc.center.x) * 180 / Math.PI);
     if (isAngleInRange(angleDeg, arc.startAngle, arc.endAngle))
       results.push({ point: p, type: 'XLine-Arc' });
   }

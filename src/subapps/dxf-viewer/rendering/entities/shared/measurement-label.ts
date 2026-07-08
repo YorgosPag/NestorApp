@@ -78,6 +78,12 @@ export interface AreaLabelOptions {
   style?: MeasurementLabelStyle;
 }
 
+/** Single "Ε: 12.3 m²"-shaped area line — the AREA half of {@link buildAreaPerimeterLabelLines}. */
+export function buildAreaLabel(area: number): string {
+  const areaPrefix = i18n.t('areaMeasureLabel.areaPrefix', { ns: 'dxf-viewer-shell' });
+  return `${areaPrefix}: ${formatAreaForDisplay(area)}`;
+}
+
 /**
  * Canonical text lines for the label: AREA first, PERIMETER second (only when
  * `includePerimeter !== false`). Prefixes resolve via i18n (N.11 — no
@@ -87,8 +93,7 @@ export function buildAreaPerimeterLabelLines(
   metrics: Pick<PolygonAreaMetrics, 'area' | 'perimeter'>,
   opts?: AreaLabelOptions,
 ): string[] {
-  const areaPrefix = i18n.t('areaMeasureLabel.areaPrefix', { ns: 'dxf-viewer-shell' });
-  const lines = [`${areaPrefix}: ${formatAreaForDisplay(metrics.area)}`];
+  const lines = [buildAreaLabel(metrics.area)];
 
   if (opts?.includePerimeter !== false) {
     const perimeterPrefix = i18n.t('areaMeasureLabel.perimeterPrefix', { ns: 'dxf-viewer-shell' });
@@ -96,6 +101,53 @@ export function buildAreaPerimeterLabelLines(
   }
 
   return lines;
+}
+
+/**
+ * 🏢 ADR-557 follow-up (N.11): i18n-resolved content builders for the remaining
+ * per-entity centre-measurement label lines (radius/length/axis prefixes were
+ * hardcoded Greek/Latin literals at each call site — RectangleRenderer's area+
+ * perimeter pair already went through {@link buildAreaPerimeterLabelLines}
+ * above; these cover Arc/Ellipse/Circle so ALL committed centre-labels resolve
+ * prefixes via i18n, never literals).
+ */
+
+/** "R: 1.20 m" — arc/circle radius line (`centerMeasureLabel.radiusPrefix`). */
+export function buildRadiusLabel(radius: number): string {
+  const radiusPrefix = i18n.t('centerMeasureLabel.radiusPrefix', { ns: 'dxf-viewer-shell' });
+  return `${radiusPrefix}: ${formatLengthForDisplay(radius)}`;
+}
+
+/** "L: 2.40 m" — arc length line (`centerMeasureLabel.lengthPrefix`). */
+export function buildArcLengthLabel(arcLength: number): string {
+  const lengthPrefix = i18n.t('centerMeasureLabel.lengthPrefix', { ns: 'dxf-viewer-shell' });
+  return `${lengthPrefix}: ${formatLengthForDisplay(arcLength)}`;
+}
+
+/** "Ma: …" / "Mi: …" — ellipse major/minor axis lines, in that order. */
+export function buildEllipseAxisLabelLines(majorAxis: number, minorAxis: number): [string, string] {
+  const majorPrefix = i18n.t('centerMeasureLabel.majorAxisPrefix', { ns: 'dxf-viewer-shell' });
+  const minorPrefix = i18n.t('centerMeasureLabel.minorAxisPrefix', { ns: 'dxf-viewer-shell' });
+  return [
+    `${majorPrefix}: ${formatLengthForDisplay(majorAxis)}`,
+    `${minorPrefix}: ${formatLengthForDisplay(minorAxis)}`,
+  ];
+}
+
+/**
+ * "Εμβαδόν: …" / "Περιφέρεια: …" — the committed CIRCLE's full-word area +
+ * circumference pair (`circleMeasureLabel.*`). Deliberately a SEPARATE key
+ * group from `areaMeasureLabel` (abbreviated "Ε"/"Περ") — the circle renderer
+ * has always shown the full words, a pre-existing distinct label, not a
+ * duplicate to merge.
+ */
+export function buildCircleAreaCircumferenceLines(area: number, circumference: number): [string, string] {
+  const areaPrefix = i18n.t('circleMeasureLabel.areaPrefix', { ns: 'dxf-viewer-shell' });
+  const circumferencePrefix = i18n.t('circleMeasureLabel.circumferencePrefix', { ns: 'dxf-viewer-shell' });
+  return [
+    `${areaPrefix}: ${formatAreaForDisplay(area)}`,
+    `${circumferencePrefix}: ${formatLengthForDisplay(circumference)}`,
+  ];
 }
 
 /** Per-line painter options: gated (preview style) vs ungated (fixed style). */
@@ -163,6 +215,43 @@ export function paintStackedMeasurementLabel(
     const y = screenCenter.y + (i - (lines.length - 1) / 2) * lineHeight;
     paintMeasurementText(ctx, line, screenCenter.x, y, { style });
   });
+}
+
+/** One line of a stacked, gated centre-measurement label: text + vertical offset from centre. */
+export interface StackedCenterMeasurementLine {
+  text: string;
+  /** Screen-px vertical offset from the entity's screen centre (negative = above). */
+  offsetY: number;
+}
+
+/**
+ * 🏢 ADR-557 follow-up ("stacked-center-measurement-label" dedup): the
+ * `ctx.save()` → base dimension-text style (mirrors
+ * `BaseEntityRenderer.applyCenterMeasurementTextStyle()`, i.e. the SAME
+ * fuchsia/11px style as {@link DEFAULT_MEASUREMENT_LABEL_STYLE}) → N × GATED
+ * per-line paint → `ctx.restore()` scaffolding hand-rolled in the committed
+ * Rectangle/Ellipse/Arc/Circle renderers. Each call site supplies its own
+ * text + vertical offset — offsets differ by entity (2/3/4-line stacks use
+ * different subsets of `TEXT_LABEL_OFFSETS`), so this helper does NOT
+ * recompute spacing; it is a behaviour-preserving 1:1 replacement for the
+ * previous inline block, not a new layout algorithm.
+ */
+export function renderStackedCenterMeasurementLabel(
+  ctx: CanvasRenderingContext2D,
+  screenCenter: Point2D,
+  lines: StackedCenterMeasurementLine[],
+): void {
+  ctx.save();
+  ctx.fillStyle = DEFAULT_MEASUREMENT_LABEL_STYLE.color;
+  ctx.font = DEFAULT_MEASUREMENT_LABEL_STYLE.font;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  for (const { text, offsetY } of lines) {
+    paintMeasurementText(ctx, text, screenCenter.x, screenCenter.y + offsetY, { gate: true });
+  }
+
+  ctx.restore();
 }
 
 /** Convenience: build the canonical lines + paint them at the screen centroid. */

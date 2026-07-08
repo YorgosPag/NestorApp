@@ -29,6 +29,7 @@ import { projectColumnFootprintOnAxis } from '../../columns/column-face-trim';
 import { beamAxisSceneFrame } from '../../beams/beam-axis-scene-frame';
 import { beamSupportColumnIds } from '../loads/load-path-walk';
 import type { StructuralGraph } from '../organism/structural-organism-types';
+import { clamp01 } from '../../../rendering/entities/shared/geometry-utils';
 
 /** Float-noise ανοχή (scene units) για το «καλύπτει το άκρο» τεστ. */
 const EDGE_TOL = 1;
@@ -39,8 +40,6 @@ export interface BeamInteriorSupport {
   /** Κλάσμα κατά μήκος start→end, αυστηρά εσωτερικό (0 < t < 1). */
   readonly t: number;
 }
-
-const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 /**
  * Οι εσωτερικές στηρίξεις ενός δοκού, ταξινομημένες κατά `t`. Κάθε στηρίζουσα κολώνα

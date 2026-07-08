@@ -43,6 +43,8 @@ import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import type { MepFittingEntity } from '../../bim/types/mep-fitting-types';
 // ADR-415 — floorplan symbol direct entity for DXF render pipeline.
 import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-types';
+// ADR-583 — annotation symbol (North arrow) lightweight entity for DXF render pipeline.
+import type { AnnotationSymbolEntity } from '../../types/annotation-symbol';
 // ADR-408 Φ12 — plumbing manifold direct entity for DXF render pipeline.
 import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
 // ADR-408 Εύρος Β — heating radiator direct entity for DXF render pipeline.
@@ -57,7 +59,7 @@ import type { MepUnderfloorEntity } from '../../bim/types/mep-underfloor-types';
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'foundation' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment' | 'mep-fitting' | 'floorplan-symbol' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'roof' | 'floor-finish' | 'wall-covering' | 'thermal-space' | 'space-separator' | 'hatch';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'foundation' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment' | 'mep-fitting' | 'floorplan-symbol' | 'annotation-symbol' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'roof' | 'floor-finish' | 'wall-covering' | 'thermal-space' | 'space-separator' | 'hatch';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -397,6 +399,21 @@ export interface DxfFloorplanSymbol extends DxfEntity {
 }
 
 /**
+ * ADR-583 — DxfAnnotationSymbol lightweight direct entity (non-BIM). Carries the
+ * flat annotation fields (position / kind / symbolId / sizeMm / rotation) at top
+ * level; `AnnotationSymbolRenderer` reads them + the catalog glyph. No
+ * geometry/params/validation — it is a paper decoration, not a model element.
+ */
+export interface DxfAnnotationSymbol extends DxfEntity {
+  type: 'annotation-symbol';
+  position: AnnotationSymbolEntity['position'];
+  kind: AnnotationSymbolEntity['kind'];
+  symbolId: AnnotationSymbolEntity['symbolId'];
+  sizeMm: AnnotationSymbolEntity['sizeMm'];
+  rotation?: AnnotationSymbolEntity['rotation'];
+}
+
+/**
  * ADR-408 Φ12 — DxfMepManifold direct entity (same pattern as DxfElectricalPanel).
  * MepManifoldRenderer reads geometry.footprint + kind + params at top level.
  */
@@ -547,7 +564,7 @@ export interface DxfRay extends DxfEntity {
   rayEntity: RayEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfWallCovering | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfAnnotationSymbol | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfWallCovering | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay;
 
 // === WRAPPED (SUB-ENTITY) VARIANTS — SSoT ===
 /**

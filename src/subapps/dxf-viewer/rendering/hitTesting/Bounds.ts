@@ -9,6 +9,9 @@ import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 // the generous superset the spatial-index broad phase uses so it always encloses every line.
 import { textBoxAABB } from '../../bim/text/text-box';
 import { calculateXLineBounds, calculateRayBounds } from './bounds-parametric-line';
+// ADR-583 — annotative model-size SSoT for the North-arrow annotation symbol.
+import { annotationSymbolModelSizeLive } from '../../bim/annotation-symbols/annotation-symbol-model-size';
+import { DEFAULT_ANNOTATION_SYMBOL_SIZE_MM } from '../../types/annotation-symbol';
 import type {
   EntityWithLine,
   EntityWithCircle,
@@ -67,6 +70,11 @@ export class BoundsCalculator {
         return this.calculateSplineBounds(entity, tolerance);
       case 'point':
         return this.calculatePointBounds(entity, tolerance);
+      // ADR-583 — annotation symbol (North arrow): annotative square footprint around
+      // the insertion point (no geometry.bbox — lightweight). Without this case it fell
+      // to `default` → null → excluded from the spatial index → unselectable on canvas.
+      case 'annotation-symbol':
+        return this.calculateAnnotationSymbolBounds(entity, tolerance);
       case 'angle-measurement':
         return this.calculateAngleMeasurementBounds(entity, tolerance);
       case 'stair':
@@ -124,6 +132,44 @@ export class BoundsCalculator {
   }
 
   /**
+   * Κοινό SSoT: pre-computed 2D-projected `bbox {min,max}` → `BoundingBox` με
+   * tolerance. Absent/partial bbox (legacy / partially-serialized) → `null` →
+   * ο caller πέφτει gracefully εκτός spatial index. Μοιράζεται από stair/BIM.
+   */
+  private static bboxToBounds(
+    bbox: { min?: { x: number; y: number }; max?: { x: number; y: number } } | undefined,
+    tolerance: number,
+  ): BoundingBox | null {
+    if (!bbox || !bbox.min || !bbox.max) return null;
+    return this.createBoundingBox(
+      bbox.min.x - tolerance,
+      bbox.min.y - tolerance,
+      bbox.max.x + tolerance,
+      bbox.max.y + tolerance,
+    );
+  }
+
+  /**
+   * Κοινό SSoT: AABB πάνω σε ροή σημείων → `BoundingBox` με tolerance. Άδειο/
+   * μη-πεπερασμένο σύνολο → `null`. Μοιράζεται από hatch (boundary paths) και
+   * dimension (defPoints + textMidpoint).
+   */
+  private static pointsToBounds(
+    points: Iterable<{ x: number; y: number }>,
+    tolerance: number,
+  ): BoundingBox | null {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of points) {
+      if (p.x < minX) minX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y > maxY) maxY = p.y;
+    }
+    if (!Number.isFinite(minX)) return null;
+    return this.createBoundingBox(minX - tolerance, minY - tolerance, maxX + tolerance, maxY + tolerance);
+  }
+
+  /**
    * 🪜 ADR-358 Phase 8 — StairEntity bounds via pre-computed `geometry.bbox`.
    * `computeStairGeometry()` populates an axis-aligned 3D bbox at construction
    * time; we project to 2D (XY plane) for hit testing here. Without this case
@@ -144,30 +190,13 @@ export class BoundsCalculator {
       };
     };
     const stair = entity as StairLike;
-    const bbox = stair.geometry?.bbox ?? stair.stairEntity?.geometry?.bbox;
-    if (!bbox || !bbox.min || !bbox.max) return null;
-    return this.createBoundingBox(
-      bbox.min.x - tolerance,
-      bbox.min.y - tolerance,
-      bbox.max.x + tolerance,
-      bbox.max.y + tolerance,
-    );
+    return this.bboxToBounds(stair.geometry?.bbox ?? stair.stairEntity?.geometry?.bbox, tolerance);
   }
 
   /** ADR-507 S2 — Hatch bounds: AABB over all boundary path vertices. */
   private static calculateHatchBounds(entity: EntityModel, tolerance: number): BoundingBox | null {
     const h = entity as { boundaryPaths?: ReadonlyArray<ReadonlyArray<{ x: number; y: number }>> };
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const path of h.boundaryPaths ?? []) {
-      for (const p of path) {
-        if (p.x < minX) minX = p.x;
-        if (p.y < minY) minY = p.y;
-        if (p.x > maxX) maxX = p.x;
-        if (p.y > maxY) maxY = p.y;
-      }
-    }
-    if (!Number.isFinite(minX)) return null;
-    return this.createBoundingBox(minX - tolerance, minY - tolerance, maxX + tolerance, maxY + tolerance);
+    return this.pointsToBounds((h.boundaryPaths ?? []).flat(), tolerance);
   }
 
   /**
@@ -183,16 +212,7 @@ export class BoundsCalculator {
     const dim = entity as DimLike;
     const pts: { x: number; y: number }[] = [...(dim.defPoints ?? [])];
     if (dim.textMidpoint) pts.push(dim.textMidpoint);
-    if (pts.length === 0) return null;
-
-    let minX = pts[0].x, minY = pts[0].y, maxX = pts[0].x, maxY = pts[0].y;
-    for (const p of pts) {
-      if (p.x < minX) minX = p.x;
-      if (p.y < minY) minY = p.y;
-      if (p.x > maxX) maxX = p.x;
-      if (p.y > maxY) maxY = p.y;
-    }
-    return this.createBoundingBox(minX - tolerance, minY - tolerance, maxX + tolerance, maxY + tolerance);
+    return this.pointsToBounds(pts, tolerance);
   }
 
   /**
@@ -207,14 +227,7 @@ export class BoundsCalculator {
       geometry?: { bbox?: { min?: { x: number; y: number }; max?: { x: number; y: number } } };
     };
     const bim = entity as BimLike;
-    const bbox = bim.geometry?.bbox;
-    if (!bbox || !bbox.min || !bbox.max) return null;
-    return this.createBoundingBox(
-      bbox.min.x - tolerance,
-      bbox.min.y - tolerance,
-      bbox.max.x + tolerance,
-      bbox.max.y + tolerance,
-    );
+    return this.bboxToBounds(bim.geometry?.bbox, tolerance);
   }
 
   /**
@@ -379,6 +392,24 @@ export class BoundsCalculator {
   /**
    * 🔺 POINT BOUNDS
    */
+  /**
+   * ADR-583 — annotation symbol (North arrow) spatial bounds. The paper `sizeMm`
+   * is folded to model units at the live drawing scale (same SSoT the renderer +
+   * `entity-bounds` use), giving a square footprint around the insertion point that
+   * the broad-phase index / hover pre-filter can enclose.
+   */
+  private static calculateAnnotationSymbolBounds(entity: EntityModel, tolerance: number): BoundingBox {
+    const e = entity as EntityModel & { position: { x: number; y: number }; sizeMm?: number };
+    const modelSize = annotationSymbolModelSizeLive(e.sizeMm ?? DEFAULT_ANNOTATION_SYMBOL_SIZE_MM);
+    const half = modelSize / 2 + tolerance;
+    return this.createBoundingBox(
+      e.position.x - half,
+      e.position.y - half,
+      e.position.x + half,
+      e.position.y + half,
+    );
+  }
+
   private static calculatePointBounds(entity: EntityModel, tolerance: number): BoundingBox {
     // 🏢 ENTERPRISE: Type-safe casting for PointEntity properties
     const pointEntity = entity as EntityWithPoint;

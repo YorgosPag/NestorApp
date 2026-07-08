@@ -30,6 +30,7 @@ import { beamAxisSceneFrame } from '../../beams/beam-axis-scene-frame';
 import { beamSupportColumnIds } from '../loads/load-path-walk';
 import type { StructuralGraph } from './structural-organism-types';
 import { resolveBeamSupportCondition } from './derive-beam-support';
+import { clamp01 } from '../../../rendering/entities/shared/geometry-utils';
 
 const M_TO_MM = 1000;
 
@@ -45,8 +46,6 @@ export interface BeamSpanModel {
   /** Πλήθος στηριζουσών κολωνών (live `column-bearing`). */
   readonly supportCount: number;
 }
-
-const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 /**
  * Μέγιστο καθαρό υπο-άνοιγμα (mm) μεταξύ διαδοχικών στηρίξεων: προβάλλει το κέντρο κάθε

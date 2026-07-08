@@ -15,7 +15,9 @@ import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { dxfSubEntityPayload } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel, HatchEntity } from '../../types/entities';
-import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isFoundationEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isSpaceSeparatorEntity, isXLineEntity, isRayEntity, isHatchEntity } from '../../types/entities';
+import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isFoundationEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isAnnotationSymbolEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isSpaceSeparatorEntity, isXLineEntity, isRayEntity, isHatchEntity } from '../../types/entities';
+// ADR-583 — annotation symbol (North arrow) lightweight entity for DXF render pipeline.
+import type { AnnotationSymbolEntity } from '../../types/annotation-symbol';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 // ADR-363 Phase 1B — wall wrapper for DXF render pipeline.
 import type { WallEntity } from '../../bim/types/wall-types';
@@ -143,6 +145,25 @@ function rectangleToVertices(e: {
   return null;
 }
 
+/**
+ * ADR-510 Φ3b/Φ3c — κοινό polyline projection (SSoT polyline/lwpolyline): base +
+ * vertices + closed, με optional per-segment bulge/width parallel arrays
+ * (index-aligned) όταν υπάρχουν· absent ⇒ all-straight (back-compat).
+ */
+function toPolylineUnion(
+  base: DxfBaseFields,
+  vertices: Point2D[],
+  closed: boolean,
+  arrays: { bulges?: number[]; startWidths?: number[]; endWidths?: number[] },
+): DxfEntityUnion {
+  return {
+    ...base, type: 'polyline' as const, vertices, closed,
+    ...(arrays.bulges ? { bulges: arrays.bulges } : {}),
+    ...(arrays.startWidths ? { startWidths: arrays.startWidths } : {}),
+    ...(arrays.endWidths ? { endWidths: arrays.endWidths } : {}),
+  } as DxfEntityUnion;
+}
+
 
 export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersById?: SceneLayers): DxfEntityUnion | null {
   const base = buildBase(entity, layers, layersById);
@@ -164,12 +185,7 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
         vertices: Point2D[]; closed: boolean;
         bulges?: number[]; startWidths?: number[]; endWidths?: number[];
       };
-      return {
-        ...base, type: 'polyline' as const, vertices: e.vertices, closed: e.closed,
-        ...(e.bulges ? { bulges: e.bulges } : {}),
-        ...(e.startWidths ? { startWidths: e.startWidths } : {}),
-        ...(e.endWidths ? { endWidths: e.endWidths } : {}),
-      } as DxfEntityUnion;
+      return toPolylineUnion(base, e.vertices, e.closed, e);
     }
     case 'arc': {
       const e = entity as typeof entity & { center: Point2D; radius: number; startAngle: number; endAngle: number; counterclockwise?: boolean };
@@ -190,12 +206,7 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
         vertices: Point2D[]; closed?: boolean;
         bulges?: number[]; startWidths?: number[]; endWidths?: number[];
       };
-      return {
-        ...base, type: 'polyline' as const, vertices: e.vertices, closed: e.closed ?? false,
-        ...(e.bulges ? { bulges: e.bulges } : {}),
-        ...(e.startWidths ? { startWidths: e.startWidths } : {}),
-        ...(e.endWidths ? { endWidths: e.endWidths } : {}),
-      } as DxfEntityUnion;
+      return toPolylineUnion(base, e.vertices, e.closed ?? false, e);
     }
     case 'rectangle': {
       const e = entity as typeof entity & {
@@ -359,6 +370,20 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
       if (!isFloorplanSymbolEntity(entity)) return null;
       const fs = entity as FloorplanSymbolEntity;
       return { ...base, type: 'floorplan-symbol' as const, kind: fs.kind, params: fs.params, geometry: fs.geometry, validation: fs.validation } as DxfEntityUnion;
+    }
+    case 'annotation-symbol': {
+      // ADR-583 — lightweight non-BIM annotation (North arrow). Flat fields spread
+      // at top level (position/kind/symbolId/sizeMm/rotation); AnnotationSymbolRenderer
+      // reads them + the catalog glyph. Without this case the freshly-placed symbol
+      // fell to `default` → null → invisible on the 2D canvas (the same drop trap as
+      // the BIM entities above).
+      if (!isAnnotationSymbolEntity(entity)) return null;
+      const as = entity as AnnotationSymbolEntity;
+      return {
+        ...base, type: 'annotation-symbol' as const,
+        position: as.position, kind: as.kind, symbolId: as.symbolId, sizeMm: as.sizeMm,
+        ...(as.rotation !== undefined ? { rotation: as.rotation } : {}),
+      } as DxfEntityUnion;
     }
     case 'mep-segment': {
       // ADR-408 Φ8 — direct entity (same pattern as beam). MepSegmentRenderer reads

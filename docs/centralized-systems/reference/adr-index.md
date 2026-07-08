@@ -565,6 +565,7 @@
 | **ADR-580** | Προτεραιότητα έλξης στις λαβές της επιλεγμένης οντότητας (Selected-Grip Snap Precedence) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-580-selected-grip-snap-precedence.md) |
 | **ADR-581** | Καθολικός Μηχανισμός «Αντιγραφή / Μεταφορά Ιδιοτήτων» (Universal Match/Transfer Properties Engine) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-581-universal-match-transfer-properties.md) |
 | **ADR-582** | `createPersistedValue` — localStorage-persistence SSoT | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-582-localstorage-persist-value-ssot.md) |
+| **ADR-585** | Domain Card View-Model Hook SSoT (`useXxxCardModel` + `DomainCard`) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-585-domain-card-view-model-hook.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1110,6 +1111,7 @@
 | **ADR-580** | Προτεραιότητα έλξης στις λαβές της επιλεγμένης οντότητας (Selected-Grip Snap Precedence) | ✅ APPROVED | [View](./adrs/ADR-580-selected-grip-snap-precedence.md) |
 | **ADR-581** | Καθολικός Μηχανισμός «Αντιγραφή / Μεταφορά Ιδιοτήτων» (Universal Match/Transfer Properties Engine) | ✅ APPROVED | [View](./adrs/ADR-581-universal-match-transfer-properties.md) |
 | **ADR-582** | `createPersistedValue` — localStorage-persistence SSoT | ✅ APPROVED | [View](./adrs/ADR-582-localstorage-persist-value-ssot.md) |
+| **ADR-585** | Domain Card View-Model Hook SSoT (`useXxxCardModel` + `DomainCard`) | ✅ ACTIVE | [View](./adrs/ADR-585-domain-card-view-model-hook.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

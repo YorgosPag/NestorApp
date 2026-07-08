@@ -13,15 +13,13 @@
  */
 
 import type { TekPoint2D, TekXMatrix, TekOpeningRecord } from './tek-import-types';
+import { clamp, clamp01 } from '../../rendering/entities/shared/geometry-utils';
 
 /** Ευθύγραμμο τμήμα σε Tekton μέτρα. */
 export interface TekSeg {
   readonly a: TekPoint2D;
   readonly b: TekPoint2D;
 }
-
-const clamp01 = (t: number): number => (t < 0 ? 0 : t > 1 ? 1 : t);
-const clamp = (v: number, lo: number, hi: number): number => (v < lo ? lo : v > hi ? hi : v);
 
 /** Frame rail inset (κλάσμα πάχους) όταν λείπει `frame_thickness`. */
 const FRAME_RAIL_FALLBACK_FRAC = 1 / 8;

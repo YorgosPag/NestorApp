@@ -34,6 +34,9 @@ import { completeEntity } from '../drawing/completeEntity';
 import { generateEntityId } from '../../systems/entity-creation/utils';
 // Scene-units SSoT — μετατροπή ακατέργαστων συντεταγμένων (mm) σε m/m² για εμφάνιση.
 import { resolveSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
+// ADR-583 — annotation symbol (North arrow) single-click placement.
+import type { AnnotationSymbolEntity } from '../../types/annotation-symbol';
+import { useAnnotationSymbolSelectionStore } from '../../state/annotation-symbol-selection-store';
 
 // ============================================================================
 // ROTATION ENTITY SELECTION (PRIORITY 1.3)
@@ -200,6 +203,48 @@ export function handleHatchPickPointClick(
   }
 
   commit();
+  return true;
+}
+
+// ============================================================================
+// ANNOTATION SYMBOL PLACEMENT (ADR-583 — North arrow)
+// ============================================================================
+/**
+ * ADR-583 — single-click placement of a lightweight annotation symbol (North
+ * arrow first). Builds an `AnnotationSymbolEntity` at the click point using the
+ * live variant/size from the selection store, then routes through the SAME
+ * `completeEntity` SSoT every drawing tool uses (undo + `drawing:complete` +
+ * persistence). Returns `true` so the click is consumed (no fall-through to the
+ * unified drawing accumulator). Rotation defaults to 0 (authored north / up);
+ * interactive re-orient is the Φ2c grip follow-on.
+ */
+export function handleAnnotationSymbolClick(
+  worldPoint: Point2D,
+  p: UseCanvasClickHandlerParams,
+): boolean {
+  const levelId = p.levelManager.currentLevelId;
+  const setScene = p.levelManager.setLevelScene;
+  if (!levelId || !setScene) return false;
+
+  const { symbolId, sizeMm } = useAnnotationSymbolSelectionStore.getState();
+  const entity: AnnotationSymbolEntity = {
+    id: generateEntityId(),
+    type: 'annotation-symbol',
+    layerId: '',
+    position: { x: worldPoint.x, y: worldPoint.y },
+    kind: 'north-arrow',
+    symbolId,
+    sizeMm,
+    rotation: 0,
+  };
+
+  completeEntity(entity, {
+    tool: 'north-arrow',
+    levelId,
+    getScene: p.levelManager.getLevelScene,
+    setScene,
+  });
+  dlog('handleAnnotationSymbolClick', `placed ${symbolId} @ (${worldPoint.x.toFixed(1)}, ${worldPoint.y.toFixed(1)})`);
   return true;
 }
 

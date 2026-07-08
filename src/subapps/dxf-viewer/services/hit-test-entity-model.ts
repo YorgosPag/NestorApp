@@ -364,6 +364,19 @@ export function convertDxfEntityToEntityModel(entity: DxfEntityUnion): EntityMod
       type HatchLike = { boundaryPaths?: ReadonlyArray<ReadonlyArray<{ x: number; y: number }>> };
       return { ...baseModel, type: 'hatch', boundaryPaths: (entity as unknown as HatchLike).boundaryPaths } as unknown as EntityModel;
     }
+    // ADR-583 — annotation symbol (North arrow): a lightweight DIRECT entity carrying
+    // position + sizeMm at top level. Without this case it fell to `default`, which
+    // strips position → BoundsCalculator.calculateAnnotationSymbolBounds reads
+    // undefined.position → the symbol never enters the spatial index → hover +
+    // click-selection silently fail.
+    case 'annotation-symbol': {
+      type AnnoLike = { position?: { x: number; y: number }; kind?: string; symbolId?: string; sizeMm?: number; rotation?: number };
+      const a = entity as unknown as AnnoLike;
+      return {
+        ...baseModel, type: 'annotation-symbol',
+        position: a.position, kind: a.kind, symbolId: a.symbolId, sizeMm: a.sizeMm, rotation: a.rotation,
+      } as unknown as EntityModel;
+    }
     default: {
       return { ...baseModel } as unknown as EntityModel;
     }

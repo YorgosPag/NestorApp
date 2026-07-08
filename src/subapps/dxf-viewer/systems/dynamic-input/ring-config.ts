@@ -19,10 +19,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import { type DisplayUnit, formatDisplayValue } from '../../config/units';
 import { type SceneUnits, mmToSceneUnits } from '../../utils/scene-units';
 import { DynamicInputLockStore } from './DynamicInputLockStore';
-import {
-  lengthDisplayToSceneLock,
-  normalizeAngleDeg,
-} from './radial-ring-logic';
+import { lengthDisplayToSceneLock } from './radial-ring-logic';
+import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 
 /** Μονάδες την ώρα του commit/seed (display + scene) — περνιούνται από το component. */
 export interface RingUnitContext {

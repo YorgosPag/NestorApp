@@ -17,6 +17,7 @@ import type { DisplayUnit } from '../../config/units';
 // ADR-510 Φ1 (E2) — SSoT arithmetic evaluator so each coordinate component may be
 // typed as a math expression (e.g. "1500+300,2*1000", "@(1+2)m<45").
 import { evalExpr } from './numeric-expression';
+import { polarPoint } from './radial-ring-logic';
 
 export type CoordMode = 'abs' | 'rel' | 'polar';
 
@@ -75,8 +76,7 @@ export function parseCoordInput(
     const dist = parseValue(m1[1]);
     const deg = parseFloat(m1[2]);
     if (!Number.isFinite(dist) || !Number.isFinite(deg) || !lastRef) return null;
-    const rad = (deg * Math.PI) / 180;
-    return { x: lastRef.x + dist * Math.cos(rad), y: lastRef.y + dist * Math.sin(rad) };
+    return polarPoint(lastRef.x, lastRef.y, dist, deg);
   }
 
   // Pattern 2: V<A — absolute polar
@@ -85,8 +85,7 @@ export function parseCoordInput(
     const dist = parseValue(m2[1]);
     const deg = parseFloat(m2[2]);
     if (!Number.isFinite(dist) || !Number.isFinite(deg)) return null;
-    const rad = (deg * Math.PI) / 180;
-    return { x: dist * Math.cos(rad), y: dist * Math.sin(rad) };
+    return polarPoint(0, 0, dist, deg);
   }
 
   // Pattern 3: @V,V — relative cartesian

@@ -26,6 +26,7 @@
 
 import type { DimensionEntity, DimStyle } from '../../types/dimension';
 import type { Point2D } from '../../rendering/types/Types';
+import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 import type { ArrowheadPoint } from './dim-arrowhead-blocks';
 import { getArrowheadBlock, resolveArrowBlockNames } from './dim-arrowhead-blocks';
 import {
@@ -141,7 +142,7 @@ export function buildDimensionBlockPrimitives(
 
 /** Normalise degrees into [0, 360). */
 function norm360(deg: number): number {
-  return ((deg % 360) + 360) % 360;
+  return normalizeAngleDeg(deg);
 }
 
 /**

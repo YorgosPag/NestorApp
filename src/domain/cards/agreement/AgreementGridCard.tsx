@@ -3,12 +3,13 @@
 /**
  * 🏢 ENTERPRISE AGREEMENT GRID CARD - Domain Component
  *
- * Domain-specific card for framework agreements in grid/tile views.
- * Extends GridCard with agreement-specific defaults: validity, commitment, discount type.
+ * Grid card for framework agreements. Shared status derivation comes from
+ * useAgreementCardCommon (ADR-585); this wrapper owns the Grid StatItems.
  *
  * @fileoverview Agreement domain card using centralized GridCard.
  * @see GridCard for base component
  * @see AgreementListCard for list view equivalent
+ * @see useAgreementCardCommon for the shared model (ADR-585)
  */
 
 import React, { useMemo } from 'react';
@@ -16,25 +17,12 @@ import { ScrollText, Calendar, DollarSign, Percent, Building2 } from 'lucide-rea
 
 import { GridCard } from '@/design-system';
 import type { StatItem } from '@/design-system';
-import type {
-  GridCardBadge,
-  GridCardBadgeVariant,
-} from '@/design-system/components/GridCard/GridCard.types';
 
 import { formatCurrency, formatDate } from '@/lib/intl-formatting';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-import type {
-  FrameworkAgreement,
-  FrameworkAgreementStatus,
-} from '@/subapps/procurement/types/framework-agreement';
+import type { FrameworkAgreement } from '@/subapps/procurement/types/framework-agreement';
 
-const STATUS_BADGE_VARIANTS: Record<FrameworkAgreementStatus, GridCardBadgeVariant> = {
-  draft: 'secondary',
-  active: 'success',
-  expired: 'warning',
-  terminated: 'destructive',
-};
+import { useAgreementCardCommon } from './agreement-card-model';
 
 export interface AgreementGridCardProps {
   agreement: FrameworkAgreement;
@@ -53,9 +41,7 @@ export function AgreementGridCard({
   compact = false,
   className,
 }: AgreementGridCardProps) {
-  const { t } = useTranslation('procurement');
-
-  const statusLabel = t(`hub.frameworkAgreements.status.${agreement.status}`);
+  const { t, badges, ariaLabel } = useAgreementCardCommon(agreement);
 
   const stats = useMemo<StatItem[]>(() => {
     const items: StatItem[] = [];
@@ -104,29 +90,19 @@ export function AgreementGridCard({
     return items;
   }, [agreement, vendorName, t]);
 
-  const badges = useMemo<GridCardBadge[]>(
-    () => [{ label: statusLabel, variant: STATUS_BADGE_VARIANTS[agreement.status] }],
-    [statusLabel, agreement.status],
-  );
-
-  const subtitle = agreement.agreementNumber;
-
   return (
     <GridCard
       customIcon={ScrollText}
       customIconColor="text-primary"
       title={agreement.title}
-      subtitle={subtitle}
+      subtitle={agreement.agreementNumber}
       badges={badges}
       stats={stats}
       isSelected={isSelected}
       onClick={onSelect}
       compact={compact}
       className={className}
-      aria-label={t('hub.frameworkAgreements.cardAriaLabel', {
-        number: agreement.agreementNumber,
-        title: agreement.title,
-      })}
+      aria-label={ariaLabel}
     />
   );
 }

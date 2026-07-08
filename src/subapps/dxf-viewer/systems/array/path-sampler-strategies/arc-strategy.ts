@@ -6,12 +6,13 @@
 import type { Entity, ArcEntity } from '../../../types/entities';
 import { isArcEntity } from '../../../types/entities';
 import type { PathSample, PathSamplerStrategy } from '../path-arc-length-sampler';
+import { normalizeAngleDeg } from '../../../rendering/entities/shared/geometry-angle-utils';
 
 const DEG_TO_RAD = Math.PI / 180;
 
 /** Normalize degrees to [0, 360). */
 function positiveSweep(deg: number): number {
-  return ((deg % 360) + 360) % 360;
+  return normalizeAngleDeg(deg);
 }
 
 function sweepDegFor(entity: ArcEntity): number {

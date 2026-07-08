@@ -28,6 +28,7 @@ import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { structuralRevealHeightRangeMm } from '../../bim/geometry/opening-geometry';
+import { clamp01 } from '../../rendering/entities/shared/geometry-utils';
 
 const MM_TO_M = 0.001;
 
@@ -101,10 +102,6 @@ interface Boundary {
   readonly f: number;
   readonly outer: Point3D;
   readonly inner: Point3D;
-}
-
-function clamp01(v: number): number {
-  return v < 0 ? 0 : v > 1 ? 1 : v;
 }
 
 function lerpPt(p: Point3D, q: Point3D, t: number): Point3D {

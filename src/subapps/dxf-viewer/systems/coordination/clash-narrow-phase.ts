@@ -14,6 +14,7 @@
 import type { Aabb3, Vec3 } from './clash-types';
 // SSoT sweep — canonical 3D component-wise sum (ADR-090).
 import { addPoint3D } from '../../rendering/entities/shared/geometry-vector-utils';
+import { clamp01 } from '../../rendering/entities/shared/geometry-utils';
 
 const EPS = 1e-9;
 
@@ -21,7 +22,6 @@ function sub(a: Vec3, b: Vec3): Vec3 { return { x: a.x - b.x, y: a.y - b.y, z: a
 function add(a: Vec3, b: Vec3): Vec3 { return addPoint3D(a, b); }
 function scale(a: Vec3, s: number): Vec3 { return { x: a.x * s, y: a.y * s, z: a.z * s }; }
 function dot(a: Vec3, b: Vec3): number { return a.x * b.x + a.y * b.y + a.z * b.z; }
-function clamp01(v: number): number { return v < 0 ? 0 : v > 1 ? 1 : v; }
 
 /** Midpoint of two points. */
 function mid(a: Vec3, b: Vec3): Vec3 { return scale(add(a, b), 0.5); }

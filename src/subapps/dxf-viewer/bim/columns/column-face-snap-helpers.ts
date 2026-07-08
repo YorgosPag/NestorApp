@@ -30,6 +30,11 @@ import {
   projectPointOnAxis,
   projectPolygonOnAxis,
 } from '../geometry/shared/polygon-axis-projection';
+import { clamp } from '../../rendering/entities/shared/geometry-utils';
+
+// 🏢 SSoT: re-export `clamp` from the canonical geometry-utils source so existing consumers
+// (`column-reference-lines.ts`, `column-face-snap.ts`) keep importing it from this module.
+export { clamp };
 
 /** Παρειά στόχου (world-aligned) στην οποία κουμπώνει η κολώνα. */
 export type ColumnFaceSide = FootprintFace;
@@ -42,8 +47,6 @@ export interface MemberAxisFrame {
   readonly alongMax: number;
   readonly halfThickness: number; // perp ημι-πάχος (max|perp| του outline)
 }
-
-export const clamp = (v: number, lo: number, hi: number): number => Math.min(Math.max(v, lo), hi);
 
 /**
  * ADR-398 §3.11 — κάθετη ζώνη (mm) center-on-axis πάνω σε **ακμή πλάκας**. Σε αντίθεση με τον τοίχο

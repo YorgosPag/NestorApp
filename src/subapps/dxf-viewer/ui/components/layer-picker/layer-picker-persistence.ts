@@ -15,18 +15,10 @@
  */
 
 import { RECENT_LAYERS_MAX } from '../../../stores/LayerStore';
+import { storageGet, storageSet, storageGetString, storageSetString, storageRemove } from '../../../utils/storage-utils';
 
 const CURRENT_KEY_PREFIX = 'dxf:currentLayer';
 const RECENT_KEY_PREFIX = 'dxf:recentLayers';
-
-function safeStorage(): Storage | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
 
 export function currentLayerStorageKey(projectId: string, levelId: string): string {
   return `${CURRENT_KEY_PREFIX}:${projectId}:${levelId}`;
@@ -40,9 +32,8 @@ export function readCurrentLayerLocal(
   projectId: string,
   levelId: string,
 ): string | null {
-  const storage = safeStorage();
-  if (!storage || !projectId || !levelId) return null;
-  return storage.getItem(currentLayerStorageKey(projectId, levelId));
+  if (!projectId || !levelId) return null;
+  return storageGetString(currentLayerStorageKey(projectId, levelId));
 }
 
 export function writeCurrentLayerLocal(
@@ -50,38 +41,29 @@ export function writeCurrentLayerLocal(
   levelId: string,
   layerId: string | null,
 ): void {
-  const storage = safeStorage();
-  if (!storage || !projectId || !levelId) return;
+  if (!projectId || !levelId) return;
   const key = currentLayerStorageKey(projectId, levelId);
   if (layerId === null) {
-    storage.removeItem(key);
+    storageRemove(key);
     return;
   }
-  storage.setItem(key, layerId);
+  storageSetString(key, layerId);
 }
 
 export function readRecentLayersLocal(projectId: string): ReadonlyArray<string> {
-  const storage = safeStorage();
-  if (!storage || !projectId) return [];
-  const raw = storage.getItem(recentLayersStorageKey(projectId));
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((entry): entry is string => typeof entry === 'string').slice(0, RECENT_LAYERS_MAX);
-  } catch {
-    return [];
-  }
+  if (!projectId) return [];
+  const parsed = storageGet<unknown>(recentLayersStorageKey(projectId), []);
+  if (!Array.isArray(parsed)) return [];
+  return parsed.filter((entry): entry is string => typeof entry === 'string').slice(0, RECENT_LAYERS_MAX);
 }
 
 export function writeRecentLayersLocal(
   projectId: string,
   ids: ReadonlyArray<string>,
 ): void {
-  const storage = safeStorage();
-  if (!storage || !projectId) return;
+  if (!projectId) return;
   const trimmed = ids.slice(0, RECENT_LAYERS_MAX);
-  storage.setItem(recentLayersStorageKey(projectId), JSON.stringify(trimmed));
+  storageSet(recentLayersStorageKey(projectId), trimmed);
 }
 
 /**
