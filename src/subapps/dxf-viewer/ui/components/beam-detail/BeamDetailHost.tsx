@@ -15,7 +15,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import type { useLevels } from '../../../systems/levels';
+import type { LevelSceneGetter } from '../../../systems/levels/level-scene-accessor';
 import { useEventGatedDialog } from '../../../app/dialog-hosts/useEventGatedDialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { isBeamEntity, isSlabEntity } from '../../../types/entities';
@@ -38,15 +38,13 @@ const CAPTURE_LONG_EDGE_PX = 1200;
 /** Export file name for the beam reinforcement detail PDF (data, not i18n). */
 const PDF_FILENAME = 'beam-reinforcement-detail.pdf';
 
-type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene'>;
-
 export interface BeamDetailHostProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneGetter;
 }
 
 /** Resolves the target beam entity from a level scene, or `null` if missing. */
 function resolveBeam(
-  levelManager: LevelManagerLike,
+  levelManager: LevelSceneGetter,
   levelId: string | null,
   beamId: string | null,
 ): BeamEntity | null {
@@ -88,7 +86,7 @@ export function BeamDetailHost({
 }
 
 interface BeamDetailBodyProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneGetter;
   readonly beamId: string;
   readonly levelId: string;
   readonly onClose: () => void;

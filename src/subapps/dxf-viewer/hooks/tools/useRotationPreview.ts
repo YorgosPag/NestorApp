@@ -41,16 +41,13 @@ import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-pr
 import { useBimPreviewRenderer } from './useBimPreviewRenderer';
 import { useLevelLayersById } from './useLevelLayersById';
 import type { RotationPhase } from './useRotationTool';
-import type { useLevels } from '../../systems/levels';
+import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
 // ============================================================================
 // TYPES
 // ============================================================================
-
-/** Subset of useLevels return type needed by rotation preview */
-type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene' | 'currentLevelId'>;
 
 export interface UseRotationPreviewProps {
   phase: RotationPhase;
@@ -59,7 +56,7 @@ export interface UseRotationPreviewProps {
   referencePoint: Point2D | null;
   currentAngle: number;
   selectedEntityIds: string[];
-  levelManager: LevelManagerLike;
+  levelManager: LevelSceneReader;
   transform: ViewTransform;
   /** Callback returning the canvas element to draw on (PreviewCanvas) */
   getCanvas: () => HTMLCanvasElement | null;
