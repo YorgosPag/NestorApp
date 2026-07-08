@@ -41,6 +41,11 @@ export function toRawDxfUnifiedGrip(grip: GripInfo): UnifiedGripInfo {
     movesEntity: grip.movesEntity,
     edgeVertexIndices: grip.edgeVertexIndices,
     polylineGripKind: grip.polylineGripKind,
+    // ADR-602 Stage 4 — forward the tagged discriminator, but ONLY when it is the
+    // raw-DXF `polyline` kind. A BIM-tagged `gripKind` must NOT leak onto this raw path
+    // (mirror of the "NO BIM *GripKind" invariant above) — else the commit would route
+    // to a BIM leg instead of the default stretch/bulge path.
+    gripKind: grip.gripKind?.on === 'polyline' ? grip.gripKind : undefined,
   };
 }
 

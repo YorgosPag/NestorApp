@@ -18,23 +18,10 @@
  */
 
 import type { GripInfo } from '../../hooks/grip-types';
-
-/**
- * True when the grip carries a BIM-structural footprint / cross-section discriminator
- * (slab / roof / floor-finish / slab-opening / column / wall / beam). Such grips belong
- * to the BIM 3D edit path (`refreshReshapeGrips` + the gizmo), never to the raw-DXF path.
- */
-function hasBimStructuralGripKind(g: GripInfo): boolean {
-  return (
-    g.slabGripKind !== undefined ||
-    g.roofGripKind !== undefined ||
-    g.floorFinishGripKind !== undefined ||
-    g.slabOpeningGripKind !== undefined ||
-    g.columnGripKind !== undefined ||
-    g.wallGripKind !== undefined ||
-    g.beamGripKind !== undefined
-  );
-}
+// ADR-602 §3.2 Stage 4 — the former local `hasBimStructuralGripKind` was a structural
+// twin of `hasFootprintGripKind` (identical 7-entity family test). Consolidated: reuse
+// the SSoT from `grip-3d-reshape-grips.ts` (raw-DXF strips BIM-structural grips ≡ NOT footprint).
+import { hasFootprintGripKind } from './grip-3d-reshape-grips';
 
 /**
  * Keep every grip of a raw DXF entity (vertices + edge-midpoints + whole-entity move
@@ -43,7 +30,7 @@ function hasBimStructuralGripKind(g: GripInfo): boolean {
  * preserved (stable grip indices for the controller's flat hit-test).
  */
 export function rawDxfReshapeGrips(grips: readonly GripInfo[]): GripInfo[] {
-  return grips.filter((g) => !hasBimStructuralGripKind(g));
+  return grips.filter((g) => !hasFootprintGripKind(g));
 }
 
 /**

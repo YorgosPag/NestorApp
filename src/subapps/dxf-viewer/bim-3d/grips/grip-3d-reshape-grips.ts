@@ -15,6 +15,7 @@
  */
 
 import type { GripInfo } from '../../hooks/grip-types';
+import { gripKindOf } from '../../hooks/grip-kinds';
 
 /**
  * True when the grip carries a footprint / cross-section reshape discriminator.
@@ -25,15 +26,20 @@ import type { GripInfo } from '../../hooks/grip-types';
  * `wall-rotation` / `beam-rotation` are excluded explicitly — all belong to the gizmo, not the
  * reshape grips).
  */
-function hasFootprintGripKind(g: GripInfo): boolean {
+export function hasFootprintGripKind(g: GripInfo): boolean {
+  // ADR-602 Stage 4 — read the tagged discriminator's `on` tag (populated by the
+  // producers alongside the legacy fields) instead of the 7 per-entity legacy fields.
+  // Exported as the SSoT footprint/BIM-structural family test — `grip-3d-dxf-raw-grips.ts`
+  // negates it (raw-DXF strips these), killing the former structural twin (ADR-602 §3.2).
+  const on = g.gripKind?.on;
   return (
-    g.slabGripKind !== undefined ||
-    g.roofGripKind !== undefined ||
-    g.floorFinishGripKind !== undefined ||
-    g.slabOpeningGripKind !== undefined ||
-    g.columnGripKind !== undefined ||
-    g.wallGripKind !== undefined ||
-    g.beamGripKind !== undefined
+    on === 'slab' ||
+    on === 'roof' ||
+    on === 'floor-finish' ||
+    on === 'slab-opening' ||
+    on === 'column' ||
+    on === 'wall' ||
+    on === 'beam'
   );
 }
 
@@ -51,8 +57,8 @@ export function reshapeGripsForFootprint(grips: readonly GripInfo[]): GripInfo[]
     (g) =>
       !g.movesEntity &&
       hasFootprintGripKind(g) &&
-      g.columnGripKind !== 'column-rotation' &&
-      g.wallGripKind !== 'wall-rotation' &&
-      g.beamGripKind !== 'beam-rotation',
+      gripKindOf(g, 'column') !== 'column-rotation' &&
+      gripKindOf(g, 'wall') !== 'wall-rotation' &&
+      gripKindOf(g, 'beam') !== 'beam-rotation',
   );
 }

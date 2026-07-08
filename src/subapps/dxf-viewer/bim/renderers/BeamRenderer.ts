@@ -45,6 +45,7 @@ import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getBeamGrips, beamDepthHandlePosition } from '../beams/beam-grips';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
 import { drawBeamSectionProfile } from './beam-section-profile-draw';
@@ -292,7 +293,7 @@ export class BeamRenderer extends BaseEntityRenderer {
       // ADR-363 Phase 5.5d / ADR-397 — move (midpoint) + rotation handles get
       // their icon glyph from the shared `gripGlyphShape` registry SSoT; all
       // other beam grips render the default 'square' (mirror MepFixtureRenderer).
-      shape: gripGlyphShape(g.beamGripKind),
+      shape: gripGlyphShape(gripKindOf(g, 'beam')),
     }));
   }
 
