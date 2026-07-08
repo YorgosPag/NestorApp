@@ -10,93 +10,27 @@
  *   - year (optional): Fiscal year, defaults to current year
  *
  * Auth: withAuth (authenticated users)
- * Rate: withStandardRateLimit (60 req/min)
+ * Rate: standard (60 req/min)
  *
  * @module api/accounting/efka/summary
  * @enterprise ADR-ACC-006 EFKA Contributions
+ * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
-import { isPartnership, isLlc, isCorporation } from '@/subapps/accounting/utils/entity-guards';
-import { getErrorMessage } from '@/lib/error-utils';
+import { createEntityScopedYearRoute } from '../../_shared/entity-scoped-summary-route';
 
-// =============================================================================
-// GET — EFKA Annual Summary
-// =============================================================================
+// ── GET: EFKA Annual Summary (entity-scoped, ΟΕ/ΕΠΕ/ΑΕ/ατομική) ──────────────
 
-async function handleGet(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { service, repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const { searchParams } = new URL(req.url);
-
-        const yearParam = searchParams.get('year');
-        const year = yearParam
-          ? parseInt(yearParam, 10)
-          : new Date().getFullYear();
-
-        if (Number.isNaN(year) || year < 2000 || year > 2100) {
-          return NextResponse.json(
-            { success: false, error: 'year must be a valid year (2000-2100)' },
-            { status: 400 }
-          );
-        }
-
-        // Check entity type for partnership / corporate path
-        const profile = await repository.getCompanySetup();
-
-        if (profile && isPartnership(profile)) {
-          const partnershipSummary = await service.getPartnershipEfkaSummary(year);
-          return NextResponse.json({
-            success: true,
-            entityType: 'oe',
-            data: partnershipSummary,
-          });
-        }
-
-        if (profile && isLlc(profile)) {
-          const epeSummary = await service.getEPEEfkaSummary(year);
-          return NextResponse.json({
-            success: true,
-            entityType: 'epe',
-            data: epeSummary,
-          });
-        }
-
-        if (profile && isCorporation(profile)) {
-          const aeSummary = await service.getAEEfkaSummary(year);
-          return NextResponse.json({
-            success: true,
-            entityType: 'ae',
-            data: aeSummary,
-          });
-        }
-
-        const summary = await service.getEfkaAnnualSummary(year);
-
-        return NextResponse.json({
-          success: true,
-          entityType: 'sole_proprietor',
-          data: summary,
-        });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to get EFKA summary');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const GET = withStandardRateLimit(handleGet);
+export const GET = createEntityScopedYearRoute({
+  fallbackError: 'Failed to get EFKA summary',
+  param: 'year',
+  label: 'year',
+  buildResolvers: (service, year) => ({
+    partnership: () => service.getPartnershipEfkaSummary(year),
+    llc: () => service.getEPEEfkaSummary(year),
+    corporation: () => service.getAEEfkaSummary(year),
+    soleProprietor: () => service.getEfkaAnnualSummary(year),
+  }),
+});

@@ -7,21 +7,17 @@
  * POST: Create document + trigger AI analysis
  *
  * Auth: withAuth (authenticated users)
- * Rate: withStandardRateLimit (60 req/min)
+ * Rate: standard (60 req/min)
  *
  * @module api/accounting/documents
  * @enterprise ADR-ACC-005 AI Document Processing
+ * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
 import { createModuleLogger } from '@/lib/telemetry';
-
-const logger = createModuleLogger('AccountingDocumentsRoute');
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { defineRoute, ok, created, badRequest } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { isoNow } from '@/subapps/accounting/services/repository/firestore-helpers';
 import type { IDocumentAnalyzer } from '@/subapps/accounting/types/interfaces';
@@ -33,6 +29,9 @@ import type {
   ReceivedExpenseDocument,
 } from '@/subapps/accounting/types';
 import { getErrorMessage } from '@/lib/error-utils';
+import { resolveYearInRange } from '../_shared/fiscal-year-param';
+
+const logger = createModuleLogger('AccountingDocumentsRoute');
 
 // =============================================================================
 // VALID CONSTANTS
@@ -48,47 +47,25 @@ const VALID_DOCUMENT_TYPES: DocumentType[] = [
 // GET — List Expense Documents
 // =============================================================================
 
-async function handleGet(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const { searchParams } = new URL(req.url);
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to list documents',
+  handler: async ({ req, auth }) => {
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const { searchParams } = new URL(req.url);
 
-        const fiscalYearParam = searchParams.get('fiscalYear');
-        const fiscalYear = fiscalYearParam
-          ? parseInt(fiscalYearParam, 10)
-          : new Date().getFullYear();
+    const fiscalYear = resolveYearInRange(req, 'fiscalYear', 'fiscalYear');
 
-        if (Number.isNaN(fiscalYear) || fiscalYear < 2000 || fiscalYear > 2100) {
-          return NextResponse.json(
-            { success: false, error: 'fiscalYear must be a valid year (2000-2100)' },
-            { status: 400 }
-          );
-        }
+    const statusParam = searchParams.get('status');
+    const status = statusParam && VALID_STATUSES.includes(statusParam as DocumentProcessingStatus)
+      ? (statusParam as DocumentProcessingStatus)
+      : undefined;
 
-        const statusParam = searchParams.get('status');
-        const status = statusParam && VALID_STATUSES.includes(statusParam as DocumentProcessingStatus)
-          ? (statusParam as DocumentProcessingStatus)
-          : undefined;
+    const documents = await repository.listExpenseDocuments(fiscalYear, status);
 
-        const documents = await repository.listExpenseDocuments(fiscalYear, status);
-
-        return NextResponse.json({ success: true, data: documents });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to list documents');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
-    }
-  );
-
-  return handler(request);
-}
-
-export const GET = withStandardRateLimit(handleGet);
+    return ok(documents);
+  },
+});
 
 // =============================================================================
 // POST — Create Document + Trigger AI Analysis
@@ -104,97 +81,79 @@ interface CreateDocumentBody {
   notes?: string;
 }
 
-async function handlePost(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const documentAnalyzer: IDocumentAnalyzer = createOpenAIDocumentAnalyzer() ?? new DocumentAnalyzerStub();
-        const body = (await req.json()) as CreateDocumentBody;
+export const POST = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to create document',
+  handler: async ({ req, auth }) => {
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const documentAnalyzer: IDocumentAnalyzer = createOpenAIDocumentAnalyzer() ?? new DocumentAnalyzerStub();
+    const body = (await req.json()) as CreateDocumentBody;
 
-        // Validation
-        if (!body.fileUrl || !body.fileName || !body.mimeType) {
-          return NextResponse.json(
-            { success: false, error: 'fileUrl, fileName, and mimeType are required' },
-            { status: 400 }
-          );
-        }
-
-        const fiscalYear = body.fiscalYear ?? new Date().getFullYear();
-        const documentType: DocumentType = body.documentType && VALID_DOCUMENT_TYPES.includes(body.documentType)
-          ? body.documentType
-          : 'other';
-
-        // Create document in Firestore with status "processing"
-        const docData: Omit<ReceivedExpenseDocument, 'documentId' | 'createdAt' | 'updatedAt'> = {
-          type: documentType,
-          status: 'processing',
-          fileUrl: body.fileUrl,
-          fileName: body.fileName,
-          mimeType: body.mimeType,
-          fileSize: body.fileSize ?? 0,
-          extractedData: {
-            issuerName: null,
-            issuerVatNumber: null,
-            issuerAddress: null,
-            documentNumber: null,
-            issueDate: null,
-            netAmount: null,
-            vatAmount: null,
-            grossAmount: null,
-            vatRate: null,
-            lineItems: [],
-            paymentMethod: null,
-            overallConfidence: 0,
-          },
-          confirmedCategory: null,
-          confirmedNetAmount: null,
-          confirmedVatAmount: null,
-          confirmedDate: null,
-          confirmedIssuerName: null,
-          journalEntryId: null,
-          notes: body.notes ?? null,
-          fiscalYear,
-          suggestedPOId: null,
-          poMatchConfidence: null,
-        };
-
-        const { id } = await repository.createExpenseDocument(docData);
-
-        // Trigger AI analysis (non-blocking — update status when done)
-        processDocumentAsync(id, body.fileUrl, body.mimeType, repository, documentAnalyzer)
-          .catch(async (err) => {
-            logger.error('[documents/route] AI processing failed', { id, error: getErrorMessage(err) });
-            // A7: Prevent zombie — mark document as error status
-            try {
-              await repository.updateExpenseDocument(id, {
-                status: 'review',
-                notes: `AI processing failed: ${getErrorMessage(err)}`,
-                updatedAt: isoNow(),
-              });
-            } catch (statusErr) {
-              logger.error('[documents/route] Failed to set error status', { id, error: getErrorMessage(statusErr) });
-            }
-          });
-
-        return NextResponse.json(
-          { success: true, data: { documentId: id, status: 'processing' } },
-          { status: 201 }
-        );
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to create document');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
+    // Validation
+    if (!body.fileUrl || !body.fileName || !body.mimeType) {
+      badRequest('fileUrl, fileName, and mimeType are required');
     }
-  );
 
-  return handler(request);
-}
+    const fiscalYear = body.fiscalYear ?? new Date().getFullYear();
+    const documentType: DocumentType = body.documentType && VALID_DOCUMENT_TYPES.includes(body.documentType)
+      ? body.documentType
+      : 'other';
 
-export const POST = withStandardRateLimit(handlePost);
+    // Create document in Firestore with status "processing"
+    const docData: Omit<ReceivedExpenseDocument, 'documentId' | 'createdAt' | 'updatedAt'> = {
+      type: documentType,
+      status: 'processing',
+      fileUrl: body.fileUrl,
+      fileName: body.fileName,
+      mimeType: body.mimeType,
+      fileSize: body.fileSize ?? 0,
+      extractedData: {
+        issuerName: null,
+        issuerVatNumber: null,
+        issuerAddress: null,
+        documentNumber: null,
+        issueDate: null,
+        netAmount: null,
+        vatAmount: null,
+        grossAmount: null,
+        vatRate: null,
+        lineItems: [],
+        paymentMethod: null,
+        overallConfidence: 0,
+      },
+      confirmedCategory: null,
+      confirmedNetAmount: null,
+      confirmedVatAmount: null,
+      confirmedDate: null,
+      confirmedIssuerName: null,
+      journalEntryId: null,
+      notes: body.notes ?? null,
+      fiscalYear,
+      suggestedPOId: null,
+      poMatchConfidence: null,
+    };
+
+    const { id } = await repository.createExpenseDocument(docData);
+
+    // Trigger AI analysis (non-blocking — update status when done)
+    processDocumentAsync(id, body.fileUrl, body.mimeType, repository, documentAnalyzer)
+      .catch(async (err) => {
+        logger.error('[documents/route] AI processing failed', { id, error: getErrorMessage(err) });
+        // A7: Prevent zombie — mark document as error status
+        try {
+          await repository.updateExpenseDocument(id, {
+            status: 'review',
+            notes: `AI processing failed: ${getErrorMessage(err)}`,
+            updatedAt: isoNow(),
+          });
+        } catch (statusErr) {
+          logger.error('[documents/route] Failed to set error status', { id, error: getErrorMessage(statusErr) });
+        }
+      });
+
+    return created({ documentId: id, status: 'processing' });
+  },
+});
 
 // =============================================================================
 // AI PROCESSING (async, non-blocking)

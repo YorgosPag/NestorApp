@@ -7,24 +7,21 @@
  * PATCH: Confirm or reject extracted data (creates journal entry on confirm)
  *
  * Auth: withAuth (authenticated users)
- * Rate: withStandardRateLimit (60 req/min)
+ * Rate: standard (60 req/min)
  *
  * @module api/accounting/documents/[id]
  * @enterprise ADR-ACC-005 AI Document Processing
+ * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { withAuth, logFinancialTransition } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { logFinancialTransition } from '@/lib/auth';
+import { defineRoute, ok, notFound } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import { isoToday } from '@/subapps/accounting/services/repository/firestore-helpers';
 import type { AccountCategory, ExpenseCategory } from '@/subapps/accounting/types';
-import { getErrorMessage } from '@/lib/error-utils';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 const PatchDocumentSchema = z.object({
   action: z.enum(['confirm', 'reject']),
@@ -40,133 +37,90 @@ const PatchDocumentSchema = z.object({
 // GET — Single Expense Document
 // =============================================================================
 
-async function handleGet(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  const { id } = await segmentData!.params;
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to get document',
+  handler: async ({ auth, params }) => {
+    const { id } = params;
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
 
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-
-        const document = await repository.getExpenseDocument(id);
-        if (!document) {
-          return NextResponse.json(
-            { success: false, error: 'Document not found' },
-            { status: 404 }
-          );
-        }
-
-        return NextResponse.json({ success: true, data: document });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to get document');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
+    const document = await repository.getExpenseDocument(id);
+    if (!document) {
+      notFound('Document not found');
     }
-  );
 
-  return handler(request);
-}
-
-export const GET = withStandardRateLimit(handleGet);
+    return ok(document);
+  },
+});
 
 // =============================================================================
 // PATCH — Confirm/Reject Document
 // =============================================================================
 
-async function handlePatch(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  const { id } = await segmentData!.params;
+export const PATCH = defineRoute({
+  rateLimit: 'standard',
+  schema: PatchDocumentSchema,
+  fallbackError: 'Failed to update document',
+  handler: async ({ auth, body, params }) => {
+    const { id } = params;
+    const { repository, service } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
 
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const { repository, service } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const parsed = safeParseBody(PatchDocumentSchema, await req.json());
-        if (parsed.error) return parsed.error;
-        const body = parsed.data;
-
-        const document = await repository.getExpenseDocument(id);
-        if (!document) {
-          return NextResponse.json(
-            { success: false, error: 'Document not found' },
-            { status: 404 }
-          );
-        }
-
-        if (body.action === 'reject') {
-          await repository.updateExpenseDocument(id, {
-            status: 'rejected',
-            notes: body.notes ?? document.notes,
-          });
-
-          await logFinancialTransition(ctx, 'invoice', id, document.status ?? 'pending', 'rejected').catch(() => {/* non-blocking */});
-
-          return NextResponse.json({ success: true, data: { documentId: id, status: 'rejected' } });
-        }
-
-        // ── Confirm flow ─────────────────────────────────────────────────
-
-        const confirmedCategory = body.confirmedCategory ?? document.confirmedCategory ?? 'other_expense';
-        const confirmedNetAmount = body.confirmedNetAmount ?? document.extractedData.netAmount ?? 0;
-        const confirmedVatAmount = body.confirmedVatAmount ?? document.extractedData.vatAmount ?? 0;
-        const confirmedDate = body.confirmedDate ?? document.extractedData.issueDate ?? isoToday();
-        const confirmedIssuerName = body.confirmedIssuerName ?? document.extractedData.issuerName ?? null;
-        const journalEntry = await service.createJournalEntryFromExpense({
-          documentId: id,
-          fileName: document.fileName,
-          confirmedNetAmount,
-          confirmedVatAmount,
-          confirmedCategory: confirmedCategory as AccountCategory,
-          confirmedDate,
-          confirmedIssuerName: confirmedIssuerName ?? null,
-          confirmedPaymentMethod: document.extractedData.paymentMethod ?? 'bank_transfer',
-          fiscalYear: document.fiscalYear,
-        });
-        const journalEntryId = journalEntry?.entryId ?? null;
-
-        // Update document with confirmed data
-        await repository.updateExpenseDocument(id, {
-          status: 'confirmed',
-          confirmedCategory: confirmedCategory as ExpenseCategory,
-          confirmedNetAmount,
-          confirmedVatAmount,
-          confirmedDate,
-          confirmedIssuerName: confirmedIssuerName ?? null,
-          journalEntryId,
-          notes: body.notes ?? document.notes,
-        });
-
-        await logFinancialTransition(ctx, 'invoice', id, document.status ?? 'pending', 'confirmed', {
-          journalEntryId,
-        }).catch(() => {/* non-blocking */});
-
-        return NextResponse.json({
-          success: true,
-          data: {
-            documentId: id,
-            status: 'confirmed',
-            journalEntryId,
-          },
-        });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to update document');
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 500 }
-        );
-      }
+    const document = await repository.getExpenseDocument(id);
+    if (!document) {
+      notFound('Document not found');
     }
-  );
 
-  return handler(request);
-}
+    if (body.action === 'reject') {
+      await repository.updateExpenseDocument(id, {
+        status: 'rejected',
+        notes: body.notes ?? document.notes,
+      });
 
-export const PATCH = withStandardRateLimit(handlePatch);
+      await logFinancialTransition(auth, 'invoice', id, document.status ?? 'pending', 'rejected').catch(() => {/* non-blocking */});
+
+      return ok({ documentId: id, status: 'rejected' });
+    }
+
+    // ── Confirm flow ─────────────────────────────────────────────────
+
+    const confirmedCategory = body.confirmedCategory ?? document.confirmedCategory ?? 'other_expense';
+    const confirmedNetAmount = body.confirmedNetAmount ?? document.extractedData.netAmount ?? 0;
+    const confirmedVatAmount = body.confirmedVatAmount ?? document.extractedData.vatAmount ?? 0;
+    const confirmedDate = body.confirmedDate ?? document.extractedData.issueDate ?? isoToday();
+    const confirmedIssuerName = body.confirmedIssuerName ?? document.extractedData.issuerName ?? null;
+    const journalEntry = await service.createJournalEntryFromExpense({
+      documentId: id,
+      fileName: document.fileName,
+      confirmedNetAmount,
+      confirmedVatAmount,
+      confirmedCategory: confirmedCategory as AccountCategory,
+      confirmedDate,
+      confirmedIssuerName: confirmedIssuerName ?? null,
+      confirmedPaymentMethod: document.extractedData.paymentMethod ?? 'bank_transfer',
+      fiscalYear: document.fiscalYear,
+    });
+    const journalEntryId = journalEntry?.entryId ?? null;
+
+    // Update document with confirmed data
+    await repository.updateExpenseDocument(id, {
+      status: 'confirmed',
+      confirmedCategory: confirmedCategory as ExpenseCategory,
+      confirmedNetAmount,
+      confirmedVatAmount,
+      confirmedDate,
+      confirmedIssuerName: confirmedIssuerName ?? null,
+      journalEntryId,
+      notes: body.notes ?? document.notes,
+    });
+
+    await logFinancialTransition(auth, 'invoice', id, document.status ?? 'pending', 'confirmed', {
+      journalEntryId,
+    }).catch(() => {/* non-blocking */});
+
+    return ok({
+      documentId: id,
+      status: 'confirmed',
+      journalEntryId,
+    });
+  },
+});

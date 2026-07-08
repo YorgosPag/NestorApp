@@ -7,103 +7,65 @@
  * POST: Create 13 periods for a new fiscal year
  *
  * Auth: withAuth (authenticated users)
- * Rate: withStandardRateLimit (60 req/min)
+ * Rate: standard (60 req/min)
  *
  * @module api/accounting/fiscal-periods
  * @enterprise DECISIONS-PHASE-1b.md Q5-Q8
+ * @enterprise ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
 import { z } from 'zod';
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { defineRoute, ok, created, badRequest } from '@/lib/api/define-route';
 import { createAccountingServices } from '@/subapps/accounting/services/create-accounting-services';
 import {
   createFiscalYear,
   getYearEndChecklist,
 } from '@/subapps/accounting/services/fiscal-period-service';
-import { getErrorMessage } from '@/lib/error-utils';
+import { resolveFiscalYearParam } from '../_shared/fiscal-year-param';
 
 const CreateFiscalYearSchema = z.object({
   fiscalYear: z.number().int().min(2020).max(2100),
 });
 
-// ── GET: List periods ──────────��─────────────────────────────────────────────
+// ── GET: List periods ────────────────────────────────────────────────────────
 
-async function handleGet(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const url = new URL(req.url);
-        const fiscalYearParam = url.searchParams.get('fiscalYear');
-        const includeChecklist = url.searchParams.get('checklist') === 'true';
-        const fiscalYear = fiscalYearParam ? parseInt(fiscalYearParam, 10) : new Date().getFullYear();
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to list fiscal periods',
+  handler: async ({ req, auth }) => {
+    const includeChecklist = new URL(req.url).searchParams.get('checklist') === 'true';
+    const fiscalYear = resolveFiscalYearParam(req);
 
-        if (isNaN(fiscalYear)) {
-          return NextResponse.json({ success: false, error: 'Invalid fiscalYear' }, { status: 400 });
-        }
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const periods = await repository.listFiscalPeriods(fiscalYear);
 
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const periods = await repository.listFiscalPeriods(fiscalYear);
+    const data: Record<string, unknown> = { items: periods, total: periods.length, fiscalYear };
 
-        const response: Record<string, unknown> = {
-          success: true,
-          data: { items: periods, total: periods.length, fiscalYear },
-        };
-
-        if (includeChecklist) {
-          (response.data as Record<string, unknown>).yearEndChecklist =
-            await getYearEndChecklist(repository, fiscalYear);
-        }
-
-        return NextResponse.json(response);
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to list fiscal periods');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
+    if (includeChecklist) {
+      data.yearEndChecklist = await getYearEndChecklist(repository, fiscalYear);
     }
-  );
 
-  return handler(request);
-}
+    return ok(data);
+  },
+});
 
-// ── POST: Create fiscal year ─────────────────────��───────────────────────────
+// ── POST: Create fiscal year ──────────────────────────────────────────────────
 
-async function handlePost(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const body = await req.json();
-        const parsed = CreateFiscalYearSchema.safeParse(body);
+export const POST = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Failed to create fiscal year',
+  handler: async ({ req, auth }) => {
+    const parsed = CreateFiscalYearSchema.safeParse(await req.json());
 
-        if (!parsed.success) {
-          return NextResponse.json(
-            { success: false, error: 'Validation failed', details: parsed.error.flatten() },
-            { status: 400 }
-          );
-        }
-
-        const { repository } = createAccountingServices({ companyId: ctx.companyId, userId: ctx.uid });
-        const periods = await createFiscalYear(repository, parsed.data.fiscalYear);
-
-        return NextResponse.json({
-          success: true,
-          data: { fiscalYear: parsed.data.fiscalYear, periodsCreated: periods.length },
-        }, { status: 201 });
-      } catch (error) {
-        const message = getErrorMessage(error, 'Failed to create fiscal year');
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
-      }
+    if (!parsed.success) {
+      badRequest('Validation failed', { details: parsed.error.flatten() });
     }
-  );
 
-  return handler(request);
-}
+    const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
+    const periods = await createFiscalYear(repository, parsed.data.fiscalYear);
 
-// ── Route exports ───────────────────────────���───────────────────────────────��
-
-export const GET = withStandardRateLimit(handleGet);
-export const POST = withStandardRateLimit(handlePost);
+    return created({ fiscalYear: parsed.data.fiscalYear, periodsCreated: periods.length });
+  },
+});
