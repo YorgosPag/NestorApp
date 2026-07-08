@@ -5,54 +5,39 @@
  *
  * One-click show/hide of the derived home-run wire annotation
  * (`HomeRunWiresOverlay` 2D + `syncWires` 3D), Revit's "Wires" sub-category in a
- * view. Mirrors {@link HideBimToggle}: it is a thin reader/writer of the single
- * `'mep-wire'` BIM category visibility — no bespoke flag, the existing per-view
- * `objectStyles` machinery is the SSoT (so it is also caught by "Show only DXF"
- * and the electrical discipline filter).
+ * view. A thin reader/writer of the single `'mep-wire'` BIM category visibility —
+ * no bespoke flag, the existing per-view `objectStyles` machinery is the SSoT (so
+ * it is also caught by "Show only DXF" and the electrical discipline filter).
+ *
+ * ADR-599: toggle markup ενοποιήθηκε στο `<RibbonToggleWidget config>` — `value`
+ * μοντελοποιεί το "visible" (aria-pressed = ορατό), οπότε active=κρύψε / inactive=δείξε.
  */
 
-import React, { useCallback } from 'react';
+import React from 'react';
 import { Cable, EyeOff } from 'lucide-react';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useBimRenderSettingsStore } from '../../../state/bim-render-settings-store';
-import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { PANEL_LAYOUT } from '../../../config/panel-tokens';
+import { RibbonToggleWidget, type RibbonToggleConfig } from './RibbonToggleWidget';
 
-export const MepWireToggle: React.FC = () => {
-  const { t } = useTranslation('dxf-viewer-shell');
-  const colors = useSemanticColors();
-
-  const objectStyles = useBimRenderSettingsStore((s) => s.objectStyles);
-  const setObjectStyleVisibility = useBimRenderSettingsStore((s) => s.setObjectStyleVisibility);
-
-  // Default (undefined) = visible, mirroring the renderer's `!== false` gate.
-  const isWiresHidden = objectStyles['mep-wire']?.visible === false;
-
-  const handleToggle = useCallback(() => {
-    setObjectStyleVisibility('mep-wire', isWiresHidden);
-  }, [isWiresHidden, setObjectStyleVisibility]);
-
-  const label = t('ribbon.commands.mepWire.label');
-  const title = isWiresHidden
-    ? t('ribbon.commands.mepWire.tooltipShow')
-    : t('ribbon.commands.mepWire.tooltipHide');
-
-  return (
-    <span className="dxf-ribbon-combobox-row">
-      <span className="dxf-ribbon-combobox-label">{label}</span>
-      <button
-        type="button"
-        onClick={handleToggle}
-        aria-pressed={!isWiresHidden}
-        aria-label={title}
-        className={`flex items-center gap-1 ${PANEL_LAYOUT.SPACING.COMPACT} ${colors.bg.backgroundSecondary} ${isWiresHidden ? colors.text.secondary : colors.text.info} ${PANEL_LAYOUT.TYPOGRAPHY.XS} rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS} select-none`}
-      >
-        {isWiresHidden
-          ? <EyeOff className="w-3 h-3 opacity-60" />
-          : <Cable className="w-3 h-3 opacity-80" />}
-        <span>{isWiresHidden ? t('ribbon.commands.mepWire.show') : t('ribbon.commands.mepWire.hide')}</span>
-      </button>
-    </span>
-  );
+const MEP_WIRE_TOGGLE: RibbonToggleConfig = {
+  useToggleState: () => {
+    const objectStyles = useBimRenderSettingsStore((s) => s.objectStyles);
+    const setObjectStyleVisibility = useBimRenderSettingsStore((s) => s.setObjectStyleVisibility);
+    // Default (undefined) = visible, mirroring the renderer's `!== false` gate.
+    const isHidden = objectStyles['mep-wire']?.visible === false;
+    return {
+      value: !isHidden,
+      toggle: () => setObjectStyleVisibility('mep-wire', isHidden),
+    };
+  },
+  labelKey: 'ribbon.commands.mepWire.label',
+  activeIcon: Cable,
+  inactiveIcon: EyeOff,
+  activeLabelKey: 'ribbon.commands.mepWire.hide',
+  inactiveLabelKey: 'ribbon.commands.mepWire.show',
+  activeTooltipKey: 'ribbon.commands.mepWire.tooltipHide',
+  inactiveTooltipKey: 'ribbon.commands.mepWire.tooltipShow',
 };
+
+export const MepWireToggle: React.FC = () => (
+  <RibbonToggleWidget config={MEP_WIRE_TOGGLE} />
+);

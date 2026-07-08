@@ -18,9 +18,8 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useBimRenderSettingsStore } from '../../../state/bim-render-settings-store';
 import { MODEL_DISCIPLINES, type Discipline } from '../../../bim/discipline/bim-discipline';
-import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { PANEL_LAYOUT } from '../../../config/panel-tokens';
+import { RibbonInlineToggleButton } from './RibbonInlineToggleButton';
 
 /** Static i18n label key per discipline (literal keys → analyzer-reachable). */
 const DISCIPLINE_LABEL_KEY: Readonly<Record<Discipline, string>> = {
@@ -57,19 +56,22 @@ const DisciplineChip: React.FC<DisciplineChipProps> = ({ discipline }) => {
     ? t('ribbon.commands.discipline.tooltipHide')
     : t('ribbon.commands.discipline.tooltipShow');
 
+  // ADR-599: shares the presentational button body with the single-toggle widget;
+  // diverges only in its colour ramp (secondary/muted, not info/secondary) and the
+  // reversed icon opacity (visible=faint Eye, hidden=solid EyeOff).
   return (
-    <button
-      type="button"
+    <RibbonInlineToggleButton
+      pressed={isVisible}
       onClick={handleToggle}
-      aria-pressed={isVisible}
-      aria-label={`${name} — ${title}`}
-      className={`flex items-center gap-1 ${PANEL_LAYOUT.SPACING.COMPACT} ${colors.bg.backgroundSecondary} ${isVisible ? colors.text.secondary : colors.text.muted} ${PANEL_LAYOUT.TYPOGRAPHY.XS} rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS} select-none`}
-    >
-      {isVisible
-        ? <Eye className="w-3 h-3 opacity-60" />
-        : <EyeOff className="w-3 h-3 opacity-80" />}
-      <span>{name}</span>
-    </button>
+      ariaLabel={`${name} — ${title}`}
+      icon={
+        isVisible
+          ? <Eye className="w-3 h-3 opacity-60" />
+          : <EyeOff className="w-3 h-3 opacity-80" />
+      }
+      label={name}
+      colorClass={isVisible ? colors.text.secondary : colors.text.muted}
+    />
   );
 };
 

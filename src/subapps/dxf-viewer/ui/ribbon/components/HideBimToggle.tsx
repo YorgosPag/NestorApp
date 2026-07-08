@@ -10,56 +10,38 @@
  *
  * SSoT: reads/writes `useBimRenderSettingsStore.objectStyles` via the batch
  * `setBimObjectsVisibility` action (single debounced Firestore write).
+ *
+ * ADR-599: toggle markup ενοποιήθηκε στο `<RibbonToggleWidget config>` — `value`
+ * μοντελοποιεί το "BIM κρυμμένο" (active=δείξε BIM / inactive=κρύψε BIM).
  */
 
-import React, { useCallback } from 'react';
+import React from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useBimRenderSettingsStore } from '../../../state/bim-render-settings-store';
 import { STRUCTURAL_BIM_CATEGORIES } from '../../../config/bim-object-styles';
-import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { PANEL_LAYOUT } from '../../../config/panel-tokens';
+import { RibbonToggleWidget, type RibbonToggleConfig } from './RibbonToggleWidget';
 
-export const HideBimToggle: React.FC = () => {
-  const { t } = useTranslation('dxf-viewer-shell');
-  const colors = useSemanticColors();
-
-  const objectStyles = useBimRenderSettingsStore((s) => s.objectStyles);
-  const setBimObjectsVisibility = useBimRenderSettingsStore((s) => s.setBimObjectsVisibility);
-
-  const isBimHidden = STRUCTURAL_BIM_CATEGORIES.every(
-    (cat) => objectStyles[cat].visible === false,
-  );
-
-  const handleToggle = useCallback(() => {
-    setBimObjectsVisibility(isBimHidden);
-  }, [isBimHidden, setBimObjectsVisibility]);
-
-  const label = isBimHidden
-    ? t('ribbon.commands.hideBim.show')
-    : t('ribbon.commands.hideBim.hide');
-  const title = isBimHidden
-    ? t('ribbon.commands.hideBim.tooltipShow')
-    : t('ribbon.commands.hideBim.tooltipHide');
-
-  return (
-    <span className="dxf-ribbon-combobox-row">
-      <span className="dxf-ribbon-combobox-label">
-        {t('ribbon.commands.hideBim.label')}
-      </span>
-      <button
-        type="button"
-        onClick={handleToggle}
-        aria-pressed={isBimHidden}
-        aria-label={title}
-        className={`flex items-center gap-1 ${PANEL_LAYOUT.SPACING.COMPACT} ${colors.bg.backgroundSecondary} ${isBimHidden ? colors.text.info : colors.text.secondary} ${PANEL_LAYOUT.TYPOGRAPHY.XS} rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS} select-none`}
-      >
-        {isBimHidden
-          ? <EyeOff className="w-3 h-3 opacity-80" />
-          : <Eye className="w-3 h-3 opacity-60" />}
-        <span>{label}</span>
-      </button>
-    </span>
-  );
+const HIDE_BIM_TOGGLE: RibbonToggleConfig = {
+  useToggleState: () => {
+    const objectStyles = useBimRenderSettingsStore((s) => s.objectStyles);
+    const setBimObjectsVisibility = useBimRenderSettingsStore((s) => s.setBimObjectsVisibility);
+    const isBimHidden = STRUCTURAL_BIM_CATEGORIES.every(
+      (cat) => objectStyles[cat].visible === false,
+    );
+    return {
+      value: isBimHidden,
+      toggle: () => setBimObjectsVisibility(isBimHidden),
+    };
+  },
+  labelKey: 'ribbon.commands.hideBim.label',
+  activeIcon: EyeOff,
+  inactiveIcon: Eye,
+  activeLabelKey: 'ribbon.commands.hideBim.show',
+  inactiveLabelKey: 'ribbon.commands.hideBim.hide',
+  activeTooltipKey: 'ribbon.commands.hideBim.tooltipShow',
+  inactiveTooltipKey: 'ribbon.commands.hideBim.tooltipHide',
 };
+
+export const HideBimToggle: React.FC = () => (
+  <RibbonToggleWidget config={HIDE_BIM_TOGGLE} />
+);
