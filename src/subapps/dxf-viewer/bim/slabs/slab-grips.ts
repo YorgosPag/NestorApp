@@ -63,7 +63,7 @@ export function getSlabGrips(entity: Readonly<SlabEntity>): GripInfo[] {
       type: 'vertex',
       position: { x: v.x, y: v.y },
       movesEntity: false,
-      slabGripKind: `slab-vertex-${i}`,
+      gripKind: { on: 'slab', kind: `slab-vertex-${i}` },
     });
   }
   const offset = verts.length;
@@ -77,7 +77,7 @@ export function getSlabGrips(entity: Readonly<SlabEntity>): GripInfo[] {
       position: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
       movesEntity: false,
       edgeVertexIndices: [i, (i + 1) % verts.length],
-      slabGripKind: `slab-edge-midpoint-${i}`,
+      gripKind: { on: 'slab', kind: `slab-edge-midpoint-${i}` },
     });
   }
   return grips;

@@ -43,7 +43,7 @@ function centerGrip(entityId: string, pos = { x: 0, y: 0 }): UnifiedGripInfo {
   return {
     id: `dxf_${entityId}_0`, source: 'dxf', gripIndex: 0, type: 'center',
     position: pos, movesEntity: true,
-    entityId, columnGripKind: 'column-center',
+    entityId, gripKind: { on: 'column', kind: 'column-center' },
   };
 }
 
@@ -127,7 +127,7 @@ describe('commitColumnCopy', () => {
   it('no-op for a non-center grip kind', () => {
     const original = makeColumn({ x: 0, y: 0 });
     const scene = { current: { entities: [original] } as unknown as SceneModel };
-    const grip = { ...centerGrip(original.id), columnGripKind: 'column-rotation' as const };
+    const grip = { ...centerGrip(original.id), gripKind: { on: 'column', kind: 'column-rotation' } as const };
 
     commitColumnCopy(grip, { x: 250, y: 0 }, makeDeps(scene));
 
@@ -158,7 +158,7 @@ describe('commitHotGripCopy dispatch', () => {
   it('returns false for a kind with no copy path (no insert)', () => {
     const original = makeColumn({ x: 0, y: 0 });
     const scene = { current: { entities: [original] } as unknown as SceneModel };
-    const grip = { ...centerGrip(original.id), columnGripKind: 'column-width' as const };
+    const grip = { ...centerGrip(original.id), gripKind: { on: 'column', kind: 'column-width' } as const };
 
     const result = commitHotGripCopy(grip, { x: 100, y: 0 }, makeDeps(scene));
 

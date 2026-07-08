@@ -1,5 +1,5 @@
 /**
- * ADR-370 §5.3 — `getSlabCornerWorldPoints` tests.
+ * ADR-597 §5.3 — `getSlabCornerWorldPoints` tests.
  *
  * Verifies:
  *   - Returns one entry per polygon vertex (vertexIndex 0..N-1).

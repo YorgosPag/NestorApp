@@ -1,5 +1,5 @@
 /**
- * ADR-370 §5.3 — Slab polygon-vertex world-point exposure (pure SSoT).
+ * ADR-597 §5.3 — Slab polygon-vertex world-point exposure (pure SSoT).
  *
  * Exposes ALL vertices of the slab outline polygon as world-coordinate
  * snap targets. Unlike walls and beams (which expose only 4 face-end
@@ -17,7 +17,7 @@
  *
  * Pure module: zero React / DOM / Firestore / canvas deps. Idempotent.
  *
- * @see docs/centralized-systems/reference/adrs/ADR-370-bim-corner-snap-system.md §5.3
+ * @see docs/centralized-systems/reference/adrs/ADR-597-bim-corner-snap-system.md §5.3
  * @see bim/types/slab-types.ts  (SlabGeometry.polygon — SSoT vertex source)
  * @see bim/columns/column-anchors.ts  (pattern reference)
  */
