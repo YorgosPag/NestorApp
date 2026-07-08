@@ -11,8 +11,8 @@
  */
 
 import { AssignSlabTypeCommand } from '../../../core/commands/entity-commands/AssignSlabTypeCommand';
-import { UpdateSlabFamilyTypeCommand } from '../../../core/commands/entity-commands/UpdateSlabFamilyTypeCommand';
-import { createDeleteSlabFamilyTypeCommand } from '../../../core/commands/entity-commands/DeleteSlabFamilyTypeCommand';
+import { UpdateFamilyTypeCommand } from '../../../core/commands/entity-commands/UpdateFamilyTypeCommand';
+import { createDeleteFamilyTypeCommand } from '../../../core/commands/entity-commands/DeleteFamilyTypeCommand';
 import { findSlabsByTypeId } from '../../../bim/family-types/family-type-side-effects';
 import { isSlabEntity } from '../../../types/entities';
 import {
@@ -59,9 +59,9 @@ const SLAB_CONFIG: FamilyTypeControllerConfig<'slab', SlabEntity> = {
     return new AssignSlabTypeCommand(entity.id, next, previous, sceneManager);
   },
   makeUpdateCommand: (typeId, next, previous, deps) =>
-    new UpdateSlabFamilyTypeCommand(typeId, next, previous, deps),
+    new UpdateFamilyTypeCommand<SlabTypeParams>(typeId, next, previous, deps),
   makeDeleteCommand: (snapshot, detachCommands, deps) =>
-    createDeleteSlabFamilyTypeCommand(snapshot, detachCommands, deps),
+    createDeleteFamilyTypeCommand('DeleteSlabFamilyType', snapshot, detachCommands, deps),
 };
 
 export function useSlabFamilyTypeController(): SlabFamilyTypeController {

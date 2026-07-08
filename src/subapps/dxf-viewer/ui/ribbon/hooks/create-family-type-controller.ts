@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * ADR-603 Φ3 — generic BIM «Family Type» ribbon controller core (SSoT).
+ * ADR-604 Φ3 — generic BIM «Family Type» ribbon controller core (SSoT).
  *
  * The four `use{Wall,Slab,Roof,Opening}FamilyTypeController` hooks were the same
  * ~290-line algorithm (assign / override / reset / duplicate / rename / count /
@@ -20,7 +20,7 @@
  * (per-entity `Update*/Delete*FamilyTypeCommand`); migrating those to the generic
  * `UpdateFamilyTypeCommand` is a separate, deferred ratchet (shared working tree).
  *
- * @see docs/centralized-systems/reference/adrs/ADR-603-generic-family-type-framework.md
+ * @see docs/centralized-systems/reference/adrs/ADR-604-generic-family-type-framework.md
  * @see ../../../core/commands/entity-commands/UpdateFamilyTypeCommand.ts
  */
 

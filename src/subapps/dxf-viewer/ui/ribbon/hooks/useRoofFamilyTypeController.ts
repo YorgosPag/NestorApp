@@ -11,8 +11,8 @@
  */
 
 import { AssignRoofTypeCommand } from '../../../core/commands/entity-commands/AssignRoofTypeCommand';
-import { UpdateRoofFamilyTypeCommand } from '../../../core/commands/entity-commands/UpdateRoofFamilyTypeCommand';
-import { createDeleteRoofFamilyTypeCommand } from '../../../core/commands/entity-commands/DeleteRoofFamilyTypeCommand';
+import { UpdateFamilyTypeCommand } from '../../../core/commands/entity-commands/UpdateFamilyTypeCommand';
+import { createDeleteFamilyTypeCommand } from '../../../core/commands/entity-commands/DeleteFamilyTypeCommand';
 import { findRoofsByTypeId } from '../../../bim/family-types/family-type-side-effects';
 import { isRoofEntity } from '../../../types/entities';
 import {
@@ -59,9 +59,9 @@ const ROOF_CONFIG: FamilyTypeControllerConfig<'roof', RoofEntity> = {
     return new AssignRoofTypeCommand(entity.id, next, previous, sceneManager);
   },
   makeUpdateCommand: (typeId, next, previous, deps) =>
-    new UpdateRoofFamilyTypeCommand(typeId, next, previous, deps),
+    new UpdateFamilyTypeCommand<RoofTypeParams>(typeId, next, previous, deps),
   makeDeleteCommand: (snapshot, detachCommands, deps) =>
-    createDeleteRoofFamilyTypeCommand(snapshot, detachCommands, deps),
+    createDeleteFamilyTypeCommand('DeleteRoofFamilyType', snapshot, detachCommands, deps),
 };
 
 export function useRoofFamilyTypeController(): RoofFamilyTypeController {

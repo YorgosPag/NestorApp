@@ -1,9 +1,9 @@
 /**
- * ADR-417 §10 #3 — Roof family-type command tests (mirror of the wall command
- * tests). Covers:
+ * ADR-417 §10 #3 / ADR-604 — Roof family-type command tests. Covers:
  *   - `AssignRoofTypeCommand` — per-instance type-link mutation + undo/redo,
- *   - `UpdateRoofFamilyTypeCommand` — optimistic catalog edit + undo + idempotent,
- *   - `createDeleteRoofFamilyTypeCommand` — compound detach-then-delete order.
+ *   - `UpdateFamilyTypeCommand<RoofTypeParams>` — optimistic catalog edit + undo +
+ *     idempotent (the roof catalog edit now runs on the ADR-604 generic command),
+ *   - `createDeleteFamilyTypeCommand` — compound detach-then-delete order (roof).
  */
 
 import {
@@ -11,13 +11,13 @@ import {
   type RoofTypeAssignment,
 } from '../AssignRoofTypeCommand';
 import {
-  UpdateRoofFamilyTypeCommand,
-  type RoofFamilyTypeMutationDeps,
-} from '../UpdateRoofFamilyTypeCommand';
+  UpdateFamilyTypeCommand,
+  type FamilyTypeMutationDeps,
+} from '../UpdateFamilyTypeCommand';
 import {
-  createDeleteRoofFamilyTypeCommand,
-  type RoofFamilyTypeDeleteDeps,
-} from '../DeleteRoofFamilyTypeCommand';
+  createDeleteFamilyTypeCommand,
+  type FamilyTypeDeleteDeps,
+} from '../DeleteFamilyTypeCommand';
 import type { SceneEntity } from '../../interfaces';
 import type { BimFamilyType, RoofTypeParams } from '../../../../bim/types/bim-family-type';
 import type { RoofEntity, RoofParams } from '../../../../bim/types/roof-types';
@@ -143,7 +143,7 @@ function makeType(thickness: number): BimFamilyType<'roof'> {
 
 interface Harness {
   catalog: BimFamilyType[];
-  deps: RoofFamilyTypeMutationDeps;
+  deps: FamilyTypeMutationDeps<RoofTypeParams>;
   persisted: RoofTypeParams[];
   audits: Array<{ from: RoofTypeParams; to: RoofTypeParams }>;
   notifyCount: number;
@@ -155,7 +155,7 @@ function makeHarness(initialThickness = 200): Harness {
     persisted: [],
     audits: [],
     notifyCount: 0,
-    deps: {} as RoofFamilyTypeMutationDeps,
+    deps: {} as FamilyTypeMutationDeps<RoofTypeParams>,
   };
   h.deps = {
     getTypes: () => h.catalog,
@@ -170,10 +170,10 @@ function makeHarness(initialThickness = 200): Harness {
 const NEXT: RoofTypeParams = { thickness: 295 };
 const PREV: RoofTypeParams = { thickness: 200 };
 
-describe('UpdateRoofFamilyTypeCommand', () => {
+describe('UpdateFamilyTypeCommand<RoofTypeParams> (ADR-604 generic)', () => {
   it('execute: optimistic store replace + persist + audit + notify', () => {
     const h = makeHarness();
-    new UpdateRoofFamilyTypeCommand(TYPE_ID, NEXT, PREV, h.deps).execute();
+    new UpdateFamilyTypeCommand<RoofTypeParams>(TYPE_ID, NEXT, PREV, h.deps).execute();
     expect((h.catalog.find((t) => t.id === TYPE_ID) as BimFamilyType<'roof'> | undefined)?.typeParams.thickness).toBe(295);
     expect(h.persisted).toEqual([NEXT]);
     expect(h.audits).toEqual([{ from: PREV, to: NEXT }]);
@@ -182,7 +182,7 @@ describe('UpdateRoofFamilyTypeCommand', () => {
 
   it('undo: restores previous params + reversed audit + re-notify', () => {
     const h = makeHarness();
-    const cmd = new UpdateRoofFamilyTypeCommand(TYPE_ID, NEXT, PREV, h.deps);
+    const cmd = new UpdateFamilyTypeCommand<RoofTypeParams>(TYPE_ID, NEXT, PREV, h.deps);
     cmd.execute();
     cmd.undo();
     expect((h.catalog.find((t) => t.id === TYPE_ID) as BimFamilyType<'roof'> | undefined)?.typeParams.thickness).toBe(200);
@@ -194,37 +194,37 @@ describe('UpdateRoofFamilyTypeCommand', () => {
     const h = makeHarness();
     const other: BimFamilyType = { ...(makeType(999) as BimFamilyType), id: 'bimftype-roof-2' };
     h.catalog = [...h.catalog, other];
-    const cmd = new UpdateRoofFamilyTypeCommand(TYPE_ID, NEXT, PREV, h.deps);
+    const cmd = new UpdateFamilyTypeCommand<RoofTypeParams>(TYPE_ID, NEXT, PREV, h.deps);
     cmd.execute();
     cmd.execute();
     expect((h.catalog.find((t) => t.id === TYPE_ID) as BimFamilyType<'roof'> | undefined)?.typeParams.thickness).toBe(295);
     expect((h.catalog.find((t) => t.id === 'bimftype-roof-2') as BimFamilyType<'roof'> | undefined)?.typeParams.thickness).toBe(999);
   });
 
-  it('validate rejects empty id + non-positive thickness; no scene entities affected', () => {
+  it('validate rejects empty id, accepts a valid id; no scene entities affected', () => {
+    // The retired per-entity command validated `thickness > 0` too, but that
+    // branch was dead (CommandHistory.execute never calls validate) — the generic
+    // guards only the type id (ADR-604).
     const h = makeHarness();
-    expect(new UpdateRoofFamilyTypeCommand('', NEXT, PREV, h.deps).validate()).toMatch(/ID/);
-    expect(
-      new UpdateRoofFamilyTypeCommand(TYPE_ID, { thickness: 0 }, PREV, h.deps).validate(),
-    ).toMatch(/thickness/);
-    const cmd = new UpdateRoofFamilyTypeCommand(TYPE_ID, NEXT, PREV, h.deps);
+    expect(new UpdateFamilyTypeCommand<RoofTypeParams>('', NEXT, PREV, h.deps).validate()).toMatch(/ID/);
+    const cmd = new UpdateFamilyTypeCommand<RoofTypeParams>(TYPE_ID, NEXT, PREV, h.deps);
     expect(cmd.validate()).toBeNull();
-    expect(cmd.serialize().type).toBe('update-roof-family-type');
+    expect(cmd.serialize().type).toBe('update-family-type');
     expect(cmd.getAffectedEntityIds()).toEqual([]);
   });
 });
 
 // ─── createDeleteRoofFamilyTypeCommand ───────────────────────────────────────
 
-describe('createDeleteRoofFamilyTypeCommand', () => {
+describe('createDeleteFamilyTypeCommand (ADR-604 generic, roof payload)', () => {
   function makeDeleteDeps(catalog: BimFamilyType[]): {
-    deps: RoofFamilyTypeDeleteDeps;
+    deps: FamilyTypeDeleteDeps;
     getCatalog: () => BimFamilyType[];
     removed: number[];
   } {
     let cat = [...catalog];
     const removed: number[] = [];
-    const deps: RoofFamilyTypeDeleteDeps = {
+    const deps: FamilyTypeDeleteDeps = {
       getTypes: () => cat,
       setTypes: (types) => { cat = [...types]; },
       removePersist: () => { removed.push(1); },
@@ -243,7 +243,7 @@ describe('createDeleteRoofFamilyTypeCommand', () => {
     const detach = new AssignRoofTypeCommand(
       roof.id, assignment(roof.params, undefined), assignment(roof.params, TYPE_ID), sm);
 
-    const cmd = createDeleteRoofFamilyTypeCommand(snapshot, [detach], deps);
+    const cmd = createDeleteFamilyTypeCommand('DeleteRoofFamilyType', snapshot, [detach], deps);
     cmd.execute();
     expect(getCatalog().find((t) => t.id === TYPE_ID)).toBeUndefined();
     cmd.undo();
