@@ -6,36 +6,27 @@
  *
  * Auth: withAuth | Rate: standard
  * @see ADR-267 Phase C (Supplier Metrics)
+ * @see ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { defineRoute, ok, badRequest } from '@/lib/api/define-route';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { getErrorMessage } from '@/lib/error-utils';
 import {
   calculateSupplierMetrics,
   getSupplierPriceTrend,
 } from '@/services/procurement/supplier-metrics-service';
 
-async function handleGet(
-  request: NextRequest,
-  ctx: AuthContext
-): Promise<NextResponse> {
-  try {
-    const { searchParams } = new URL(request.url);
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Unknown error',
+  handler: async ({ req, auth }) => {
+    const { searchParams } = new URL(req.url);
     const supplierId = searchParams.get('supplierId');
 
-    if (!supplierId) {
-      return NextResponse.json(
-        { success: false, error: 'supplierId query param is required' },
-        { status: 400 }
-      );
-    }
+    if (!supplierId) badRequest('supplierId query param is required');
 
     // Fetch supplier name
     const db = getAdminFirestore();
@@ -50,7 +41,7 @@ async function handleGet(
       : supplierId;
 
     const metrics = await calculateSupplierMetrics(
-      ctx.companyId,
+      auth.companyId,
       supplierId,
       supplierName
     );
@@ -58,19 +49,9 @@ async function handleGet(
     // Optional price trend
     const categoryCode = searchParams.get('categoryCode');
     const priceTrend = categoryCode
-      ? await getSupplierPriceTrend(ctx.companyId, supplierId, categoryCode)
+      ? await getSupplierPriceTrend(auth.companyId, supplierId, categoryCode)
       : null;
 
-    return NextResponse.json({
-      success: true,
-      data: { metrics, priceTrend },
-    });
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: getErrorMessage(error) },
-      { status: 500 }
-    );
-  }
-}
-
-export const GET = withStandardRateLimit(withAuth(handleGet));
+    return ok({ metrics, priceTrend });
+  },
+});

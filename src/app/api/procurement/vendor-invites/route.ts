@@ -5,41 +5,24 @@
  * Powers the Vendor 360° contact tab (ADR-327 §18).
  *
  * Auth: withAuth | Rate: standard
+ * @see ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getErrorMessage } from '@/lib/error-utils';
+import { defineRoute, ok, badRequest } from '@/lib/api/define-route';
 import { listVendorInvitesByVendor } from '@/subapps/procurement/services/vendor-invite-service';
 
-async function handleGet(
-  request: NextRequest,
-  ctx: AuthContext
-): Promise<NextResponse> {
-  try {
-    const { searchParams } = new URL(request.url);
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Unknown error',
+  handler: async ({ req, auth }) => {
+    const { searchParams } = new URL(req.url);
     const vendorContactId = searchParams.get('vendorContactId');
 
-    if (!vendorContactId) {
-      return NextResponse.json(
-        { success: false, error: 'vendorContactId query param is required' },
-        { status: 400 }
-      );
-    }
+    if (!vendorContactId) badRequest('vendorContactId query param is required');
 
-    const invites = await listVendorInvitesByVendor(ctx.companyId, vendorContactId);
-
-    return NextResponse.json({ success: true, data: invites });
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: getErrorMessage(error) },
-      { status: 500 }
-    );
-  }
-}
-
-export const GET = withStandardRateLimit(withAuth(handleGet));
+    const invites = await listVendorInvitesByVendor(auth.companyId, vendorContactId);
+    return ok(invites);
+  },
+});

@@ -5,34 +5,16 @@
  *
  * Auth: withAuth | Rate: standard
  * @see ADR-267 Phase C (Supplier Comparison)
+ * @see ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getErrorMessage } from '@/lib/error-utils';
+import { defineRoute, ok } from '@/lib/api/define-route';
 import { getSupplierComparison } from '@/services/procurement/supplier-metrics-service';
 
-async function handleGet(
-  _request: NextRequest,
-  ctx: AuthContext
-): Promise<NextResponse> {
-  try {
-    const comparison = await getSupplierComparison(ctx.companyId);
-
-    return NextResponse.json({
-      success: true,
-      data: comparison,
-    });
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: getErrorMessage(error) },
-      { status: 500 }
-    );
-  }
-}
-
-export const GET = withStandardRateLimit(withAuth(handleGet));
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Unknown error',
+  handler: async ({ auth }) => ok(await getSupplierComparison(auth.companyId)),
+});

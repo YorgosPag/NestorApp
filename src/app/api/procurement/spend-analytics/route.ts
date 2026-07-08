@@ -16,13 +16,10 @@ import 'server-only';
  *   status           — comma-separated PO statuses (empty = all)
  *
  * @see ADR-331 §4 D3, D10, D11, D15, D25
+ * @see ADR-603 API Route-Handler Factory SSoT
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getErrorMessage } from '@/lib/error-utils';
+import { defineRoute, ok, httpError } from '@/lib/api/define-route';
 import {
   computeSpendAnalytics,
   type SpendAnalyticsFilters,
@@ -35,36 +32,24 @@ import { parseFilterArray } from '@/lib/url-filters/multi-value';
 // GET
 // ============================================================================
 
-async function handleGet(
-  request: NextRequest,
-  ctx: AuthContext,
-  _cache: PermissionCache,
-): Promise<NextResponse> {
-  if (!canViewSpendAnalytics(ctx.globalRole)) {
-    return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
-  }
+export const GET = defineRoute({
+  rateLimit: 'heavy',
+  fallbackError: 'Unknown error',
+  handler: async ({ req, auth }) => {
+    if (!canViewSpendAnalytics(auth.globalRole)) httpError(403, 'Forbidden');
 
-  const p = request.nextUrl.searchParams;
-  const defaultRange = getCurrentQuarterRange(new Date());
+    const p = req.nextUrl.searchParams;
+    const defaultRange = getCurrentQuarterRange(new Date());
 
-  const filters: SpendAnalyticsFilters = {
-    from: p.get('from') ?? defaultRange.from,
-    to: p.get('to') ?? defaultRange.to,
-    projectId: parseFilterArray(p.get('projectId')),
-    supplierId: parseFilterArray(p.get('supplierId')),
-    categoryCode: parseFilterArray(p.get('categoryCode')),
-    status: parseFilterArray(p.get('status')),
-  };
+    const filters: SpendAnalyticsFilters = {
+      from: p.get('from') ?? defaultRange.from,
+      to: p.get('to') ?? defaultRange.to,
+      projectId: parseFilterArray(p.get('projectId')),
+      supplierId: parseFilterArray(p.get('supplierId')),
+      categoryCode: parseFilterArray(p.get('categoryCode')),
+      status: parseFilterArray(p.get('status')),
+    };
 
-  try {
-    const data = await computeSpendAnalytics(ctx.companyId, filters);
-    return NextResponse.json({ success: true, data });
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: getErrorMessage(error) },
-      { status: 500 },
-    );
-  }
-}
-
-export const GET = withHeavyRateLimit(withAuth(handleGet));
+    return ok(await computeSpendAnalytics(auth.companyId, filters));
+  },
+});
