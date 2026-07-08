@@ -1,0 +1,7 @@
+{
+  "description": "ADR-598 G14 — type-complexity ratchet baseline. instantiations/types from tsc --extendedDiagnostics --noEmit. Ratchet DOWN only: instantiations rising above baseline*(1+tolerancePct/100) (tolerance from config/quality-gates/type-complexity-budget.json) blocks the PR. Reseed via CI seed dispatch.",
+  "generatedBy": "scripts/check-type-complexity-ratchet.js --write-baseline",
+  "adr": "ADR-598 G14",
+  "instantiations": 3453474,
+  "types": 1386098
+}

@@ -1,0 +1,10 @@
+{
+  "description": "ADR-598 G9 — dependency-cruiser ratchet baseline for gate \"cycles\". Counts violations of rules [no-circular] over src/ (config: .dependency-cruiser.cjs). Ratchet DOWN only: a rise blocks the PR. Reseed via CI seed dispatch after a legitimate reduction.",
+  "generatedBy": "scripts/check-depcruise-ratchet.js --gate cycles --write-baseline",
+  "adr": "ADR-598 G9",
+  "gate": "cycles",
+  "total": 421,
+  "perRule": {
+    "no-circular": 421
+  }
+}

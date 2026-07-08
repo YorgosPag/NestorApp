@@ -83,6 +83,7 @@ jobs:
         with:
           name: a11y-coverage-baseline
           path: .a11y-coverage-baseline.json
+          include-hidden-files: true # dotfile baseline — v4 excludes hidden by default
 
       - name: ✅ Summary
         if: ${{ success() && inputs.seed != true }}

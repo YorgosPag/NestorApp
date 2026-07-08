@@ -84,6 +84,7 @@ jobs:
         with:
           name: knip-deps-baseline
           path: .knip-deps-baseline.json
+          include-hidden-files: true # dotfile baseline — v4 excludes hidden by default
 
       - name: 📝 Echo baseline to summary (seed mode only)
         if: ${{ inputs.seed == true }}

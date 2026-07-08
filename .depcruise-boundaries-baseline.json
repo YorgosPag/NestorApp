@@ -1,0 +1,12 @@
+{
+  "description": "ADR-598 G10 — dependency-cruiser ratchet baseline for gate \"boundaries\". Counts violations of rules [services-not-to-components, not-to-dxf-internals, no-test-utils-in-prod] over src/ (config: .dependency-cruiser.cjs). Ratchet DOWN only: a rise blocks the PR. Reseed via CI seed dispatch after a legitimate reduction.",
+  "generatedBy": "scripts/check-depcruise-ratchet.js --gate boundaries --write-baseline",
+  "adr": "ADR-598 G10",
+  "gate": "boundaries",
+  "total": 327,
+  "perRule": {
+    "no-test-utils-in-prod": 6,
+    "not-to-dxf-internals": 301,
+    "services-not-to-components": 20
+  }
+}

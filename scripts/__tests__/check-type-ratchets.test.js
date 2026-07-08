@@ -115,6 +115,11 @@ describe('G5 type-coverage: parseTypeCoverageOutput', () => {
   test('parses the summary line', () => {
     expect(parseTypeCoverageOutput('9500 / 9600 98.96%')).toEqual({ typedCount: 9500, totalCount: 9600, percent: 98.96 });
   });
+  test('parses the parenthesised fraction format (type-coverage 2.29.x)', () => {
+    // Real output that broke the seed run: "(1817536 / 1828437) 99.40%".
+    expect(parseTypeCoverageOutput('(1817536 / 1828437) 99.40%\ntype-coverage success.'))
+      .toEqual({ typedCount: 1817536, totalCount: 1828437, percent: 99.4 });
+  });
   test('picks the LAST summary line (ignores --detail noise above)', () => {
     const out = ['src/a.ts:1:2: any', '10 / 20 50.00%', 'src/b.ts:3:4: any', '9500 / 9600 98.96%'].join('\n');
     expect(parseTypeCoverageOutput(out).percent).toBe(98.96);
