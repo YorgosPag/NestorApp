@@ -2,10 +2,9 @@ import React from 'react';
 import type { SceneModel } from '../types/scene';
 import type { Entity } from '../types/entities';
 import { isColumnRegionTool, isWallDrawingTool } from '../systems/tools/region-tool-ids';
-import { CONTEXTUAL_TEXT_EDITOR_TAB, TEXT_EDITOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-text-editor-tab';
+import { CONTEXTUAL_TEXT_EDITOR_TAB } from '../ui/ribbon/data/contextual-text-editor-tab';
 import {
   CONTEXTUAL_ARRAY_RECT_TAB, CONTEXTUAL_ARRAY_POLAR_TAB, CONTEXTUAL_ARRAY_PATH_TAB,
-  ARRAY_RECT_CONTEXTUAL_TRIGGER, ARRAY_POLAR_CONTEXTUAL_TRIGGER, ARRAY_PATH_CONTEXTUAL_TRIGGER,
 } from '../ui/ribbon/data/contextual-array-tab';
 import { CONTEXTUAL_STAIR_TAB, STAIR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-stair-tab';
 import { CONTEXTUAL_WALL_TAB, WALL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-wall-tab';
@@ -22,22 +21,18 @@ import { CONTEXTUAL_XLINE_MODE_TAB, XLINE_MODE_CONTEXTUAL_TRIGGER } from '../ui/
 import { CONTEXTUAL_MULTI_SELECTION_TAB, MULTI_SELECTION_CONTEXTUAL_TRIGGER, CONTEXTUAL_TRIGGER_SEPARATOR } from '../ui/ribbon/data/contextual-multi-selection-tab';
 import { CONTEXTUAL_MEP_CIRCUIT_TAB, MEP_CIRCUIT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-circuit-tab';
 import { CONTEXTUAL_MEP_PIPE_NETWORK_TAB, MEP_PIPE_NETWORK_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-pipe-network-tab';
-import { CONTEXTUAL_MEP_FIXTURE_TAB, MEP_FIXTURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-fixture-tab';
-import { CONTEXTUAL_MEP_FLOOR_DRAIN_TAB, MEP_FLOOR_DRAIN_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-floor-drain-tab';
-import { CONTEXTUAL_MEP_SANITARY_FIXTURE_TAB, MEP_SANITARY_FIXTURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-sanitary-fixture-tab';
-import { CONTEXTUAL_MEP_APPLIANCE_FIXTURE_TAB, MEP_APPLIANCE_FIXTURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-appliance-fixture-tab';
-import { CONTEXTUAL_MEP_SOCKET_TAB, MEP_SOCKET_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-socket-tab';
-import { CONTEXTUAL_MEP_DATA_OUTLET_TAB, MEP_DATA_OUTLET_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-data-outlet-tab';
-import { isSanitaryKind } from '../bim/sanitary/sanitary-symbol-spec';
-import { isApplianceKind } from '../bim/appliances/appliance-symbol-spec';
-import { isSocketKind } from '../bim/mep-fixtures/socket-symbol-spec';
-import { isDataOutletKind } from '../bim/mep-fixtures/data-outlet-symbol-spec';
-import { CONTEXTUAL_MEP_MANIFOLD_TAB, MEP_MANIFOLD_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-manifold-tab';
-import { CONTEXTUAL_DRAINAGE_COLLECTOR_TAB, DRAINAGE_COLLECTOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-drainage-collector-tab';
-import { CONTEXTUAL_MEP_RADIATOR_TAB, MEP_RADIATOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-radiator-tab';
-import { CONTEXTUAL_MEP_BOILER_TAB, MEP_BOILER_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-boiler-tab';
-import { CONTEXTUAL_MEP_WATER_HEATER_TAB, MEP_WATER_HEATER_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-water-heater-tab';
-import { CONTEXTUAL_MEP_UNDERFLOOR_TAB, MEP_UNDERFLOOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-underfloor-tab';
+import { CONTEXTUAL_MEP_FIXTURE_TAB } from '../ui/ribbon/data/contextual-mep-fixture-tab';
+import { CONTEXTUAL_MEP_FLOOR_DRAIN_TAB } from '../ui/ribbon/data/contextual-mep-floor-drain-tab';
+import { CONTEXTUAL_MEP_SANITARY_FIXTURE_TAB } from '../ui/ribbon/data/contextual-mep-sanitary-fixture-tab';
+import { CONTEXTUAL_MEP_APPLIANCE_FIXTURE_TAB } from '../ui/ribbon/data/contextual-mep-appliance-fixture-tab';
+import { CONTEXTUAL_MEP_SOCKET_TAB } from '../ui/ribbon/data/contextual-mep-socket-tab';
+import { CONTEXTUAL_MEP_DATA_OUTLET_TAB } from '../ui/ribbon/data/contextual-mep-data-outlet-tab';
+import { CONTEXTUAL_MEP_MANIFOLD_TAB } from '../ui/ribbon/data/contextual-mep-manifold-tab';
+import { CONTEXTUAL_DRAINAGE_COLLECTOR_TAB } from '../ui/ribbon/data/contextual-drainage-collector-tab';
+import { CONTEXTUAL_MEP_RADIATOR_TAB } from '../ui/ribbon/data/contextual-mep-radiator-tab';
+import { CONTEXTUAL_MEP_BOILER_TAB } from '../ui/ribbon/data/contextual-mep-boiler-tab';
+import { CONTEXTUAL_MEP_WATER_HEATER_TAB } from '../ui/ribbon/data/contextual-mep-water-heater-tab';
+import { CONTEXTUAL_MEP_UNDERFLOOR_TAB } from '../ui/ribbon/data/contextual-mep-underfloor-tab';
 import { CONTEXTUAL_FLOOR_FINISH_TAB, FLOOR_FINISH_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-floor-finish-tab';
 import { CONTEXTUAL_WALL_COVERING_TAB, WALL_COVERING_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-wall-covering-tab';
 import { CONTEXTUAL_HATCH_TAB, HATCH_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-hatch-tab';
@@ -45,6 +40,7 @@ import { CONTEXTUAL_THERMAL_SPACE_TAB, THERMAL_SPACE_CONTEXTUAL_TRIGGER } from '
 import { CONTEXTUAL_MEP_SEGMENT_TAB, MEP_SEGMENT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-segment-tab';
 import { CONTEXTUAL_FURNITURE_TAB, FURNITURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-furniture-tab';
 import { CONTEXTUAL_FLOORPLAN_SYMBOL_TAB, FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-floorplan-symbol-tab';
+import { CONTEXTUAL_ANNOTATION_SYMBOL_TAB, ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-annotation-symbol-tab';
 import { CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB, MEP_FIXTURE_LIBRARY_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-fixture-library-tab';
 import { CONTEXTUAL_MEP_RISER_TAB, MEP_RISER_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-riser-tab';
 import { ANIMATION_CONTEXTUAL_TAB, ANIMATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-animation-tab';
@@ -53,12 +49,14 @@ import { CONTEXTUAL_DIMENSIONS_TAB, DIMENSIONS_CONTEXTUAL_TRIGGER } from '../ui/
 import { selectAnimationToolActive, useAnimationStore } from '../bim-3d/animation/AnimationStore';
 import { useMepSystemStore } from '../bim/mep-systems/mep-system-store';
 import { useMepCircuitEditorStore } from '../bim/mep-systems/mep-circuit-editor-store';
-import { CONTEXTUAL_ELECTRICAL_PANEL_TAB, ELECTRICAL_PANEL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-electrical-panel-tab';
+import { CONTEXTUAL_ELECTRICAL_PANEL_TAB } from '../ui/ribbon/data/contextual-electrical-panel-tab';
 import { isPipeNetworkSourceEntity } from '../bim/mep-systems/pipe-network-source';
 import { isMepSegmentEntity } from '../types/entities';
 import { useFoundationLevelStore } from '../state/foundation-level-store';
 import { resolveSelectedEntityFrom } from '../systems/selection/resolve-selected-entity';
-import { isStyleEditablePrimitiveType } from '../types/style-editable-primitives';
+// ADR-587 Φ3a — the entity-keyed selection→contextual-tab resolver moved to a pure
+// module (SSoT `ENTITY_CONTEXTUAL_TRIGGER` map + coverage test, testable χωρίς stores).
+import { resolveContextualTrigger } from './resolve-contextual-trigger';
 
 const BIM_KIND_TYPES: ReadonlySet<string> = new Set([
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair', 'roof',
@@ -102,6 +100,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_MEP_RISER_TAB,
   CONTEXTUAL_FURNITURE_TAB,
   CONTEXTUAL_FLOORPLAN_SYMBOL_TAB,
+  CONTEXTUAL_ANNOTATION_SYMBOL_TAB,
   CONTEXTUAL_FLOOR_FINISH_TAB,
   CONTEXTUAL_WALL_COVERING_TAB,
   CONTEXTUAL_HATCH_TAB,
@@ -110,42 +109,6 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_GUIDES_TAB,
   CONTEXTUAL_DIMENSIONS_TAB,
 ] as const;
-
-type EntityLike = { readonly type: string; readonly params?: unknown };
-
-function readArrayKind(params: unknown): string | undefined {
-  if (params && typeof params === 'object' && 'kind' in params) {
-    const k = (params as { kind?: unknown }).kind;
-    return typeof k === 'string' ? k : undefined;
-  }
-  return undefined;
-}
-
-/**
- * ADR-408 Φ14 — read a manifold's `kind` from its params. A `drainage-collector`
- * (φρεάτιο) surfaces its own contextual tab; a `floor-manifold` (συλλέκτης) the
- * water-manifold tab. Both are `mep-manifold` entities sharing one bridge.
- */
-function readManifoldKind(params: unknown): string | undefined {
-  if (params && typeof params === 'object' && 'kind' in params) {
-    const k = (params as { kind?: unknown }).kind;
-    return typeof k === 'string' ? k : undefined;
-  }
-  return undefined;
-}
-
-/**
- * ADR-408 Φ14 — read a fixture's `kind` from its params. A `floor-drain` (σιφώνι)
- * surfaces «Ιδιότητες Σιφωνιού»; a `light-fixture` the «Ιδιότητες Φωτιστικού» tab.
- * Both are `mep-fixture` entities sharing one bridge (the bridge is kind-agnostic).
- */
-function readFixtureKind(params: unknown): string | undefined {
-  if (params && typeof params === 'object' && 'kind' in params) {
-    const k = (params as { kind?: unknown }).kind;
-    return typeof k === 'string' ? k : undefined;
-  }
-  return undefined;
-}
 
 // ADR-510 Φ4i — line-modify tools (Revit «Modify | Lines»: Trim/Extend/Offset/
 // Fillet/Chamfer). They are TAB-NEUTRAL: pressing one must NOT switch the ribbon
@@ -315,6 +278,9 @@ export function useActiveContextualTrigger({
     if (activeTool === 'furniture') return FURNITURE_CONTEXTUAL_TRIGGER;
     // ADR-415 — floorplan-symbol tool active → show the symbol library picker tab.
     if (activeTool === 'floorplan-symbol') return FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER;
+    // ADR-583 — North arrow tool active → show the annotation-symbol picker tab
+    // (variant / size / initial rotation for the next placement).
+    if (activeTool === 'north-arrow') return ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER;
     // ADR-419 — floor-finish tool active → show the floor-finish property tab.
     if (activeTool === 'floor-finish') return FLOOR_FINISH_CONTEXTUAL_TRIGGER;
     // ADR-511 — wall-covering tool active (manual ή room-fill) → show the property tab.
@@ -386,82 +352,6 @@ export function useActiveContextualTrigger({
   return trigger;
 }
 
-export function resolveContextualTrigger(entity: EntityLike): string | null {
-  if (entity.type === 'dimension') return DIMENSION_CONTEXTUAL_TRIGGER;
-  if (entity.type === 'stair') return STAIR_CONTEXTUAL_TRIGGER;
-  if (entity.type === 'wall') return WALL_CONTEXTUAL_TRIGGER;
-  if (entity.type === 'opening') return OPENING_CONTEXTUAL_TRIGGER;
-  if (entity.type === 'slab') return SLAB_CONTEXTUAL_TRIGGER;
-  // ADR-417 — κεκλιμένη στέγη (parametric roof) → contextual properties tab.
-  if (entity.type === 'roof') return ROOF_CONTEXTUAL_TRIGGER;
-  if (entity.type === 'column') return COLUMN_CONTEXTUAL_TRIGGER;
-  if (entity.type === 'beam') return BEAM_CONTEXTUAL_TRIGGER;
-  // ADR-436 — structural foundation (pad/strip/tie-beam) → contextual properties tab.
-  if (entity.type === 'foundation') return FOUNDATION_CONTEXTUAL_TRIGGER;
-  if (entity.type === 'slab-opening') return SLAB_OPENING_CONTEXTUAL_TRIGGER;
-  // ADR-406 / ADR-408 Φ14 — point-based MEP fixture. A floor-drain (σιφώνι)
-  // surfaces «Ιδιότητες Σιφωνιού»; a light-fixture the «Ιδιότητες Φωτιστικού» tab.
-  // Both are `mep-fixture` entities sharing one (kind-agnostic) bridge.
-  if (entity.type === 'mep-fixture') {
-    const fixtureKind = readFixtureKind(entity.params);
-    if (fixtureKind === 'floor-drain') return MEP_FLOOR_DRAIN_CONTEXTUAL_TRIGGER;
-    // ADR-408 Δρόμος B — an appliance (washing machine, …) surfaces «Ιδιότητες
-    // Συσκευής» (checked BEFORE sanitary: distinct family, same kind-agnostic bridge).
-    if (fixtureKind && isApplianceKind(fixtureKind)) return MEP_APPLIANCE_FIXTURE_CONTEXTUAL_TRIGGER;
-    // ADR-408 Φ14 — a sanitary terminal (WC/basin/…) surfaces «Ιδιότητες Είδους
-    // Υγιεινής»; same kind-agnostic bridge, richer geometry presets + rotation.
-    if (fixtureKind && isSanitaryKind(fixtureKind)) return MEP_SANITARY_FIXTURE_CONTEXTUAL_TRIGGER;
-    // ADR-430 — a power socket (πρίζα, Revit "Electrical Fixtures", IfcOutlet) surfaces
-    // «Ιδιότητες Πρίζας»; ADR-431 — a data outlet (πρίζα δικτύου, Revit "Communication
-    // Devices") surfaces «Ιδιότητες Πρίζας Δικτύου». Distinct Revit categories → distinct
-    // tabs (both reuse the kind-agnostic fixture bridge). Checked BEFORE the light-fixture
-    // default so an electrical device never mislabels as «Ιδιότητες Φωτιστικού».
-    if (fixtureKind && isSocketKind(fixtureKind)) return MEP_SOCKET_CONTEXTUAL_TRIGGER;
-    if (fixtureKind && isDataOutletKind(fixtureKind)) return MEP_DATA_OUTLET_CONTEXTUAL_TRIGGER;
-    return MEP_FIXTURE_CONTEXTUAL_TRIGGER;
-  }
-  // ADR-408 Φ12 / Φ14 — point-based manifold. A drainage-collector (φρεάτιο)
-  // surfaces «Ιδιότητες Φρεατίου» (N inlets + 1 outlet); a floor-manifold the
-  // water «Ιδιότητες Συλλέκτη». Both fold in pipe-network management.
-  if (entity.type === 'mep-manifold') {
-    return readManifoldKind(entity.params) === 'drainage-collector'
-      ? DRAINAGE_COLLECTOR_CONTEXTUAL_TRIGGER
-      : MEP_MANIFOLD_CONTEXTUAL_TRIGGER;
-  }
-  // ADR-408 Φ3/Φ6 — electrical panel (πίνακας διανομής, Revit "Electrical
-  // Equipment") → «Ιδιότητες Ηλεκτρικού Πίνακα». Its own identity tab (geometry) +
-  // a folded self-hiding «Κυκλώματα» management panel; NOT the circuit tab (a panel
-  // feeds many circuits). Mirrors the manifold/boiler equipment-tab fold-in.
-  if (entity.type === 'electrical-panel') return ELECTRICAL_PANEL_CONTEXTUAL_TRIGGER;
-  // ADR-408 Εύρος Β — καλοριφέρ (heating radiator, terminal) → «Ιδιότητες Καλοριφέρ».
-  if (entity.type === 'mep-radiator') return MEP_RADIATOR_CONTEXTUAL_TRIGGER;
-  // ADR-408 Εύρος Β #2 — λέβητας (hydronic boiler, source) → «Ιδιότητες Λέβητα».
-  if (entity.type === 'mep-boiler') return MEP_BOILER_CONTEXTUAL_TRIGGER;
-  // ADR-408 DHW — θερμοσίφωνας (domestic hot water heater, DHW source) → «Ιδιότητες Θερμοσίφωνα».
-  if (entity.type === 'mep-water-heater') return MEP_WATER_HEATER_CONTEXTUAL_TRIGGER;
-  // ADR-408 Εύρος Β #3 — ενδοδαπέδια (hydronic area terminal) → «Ιδιότητες Ενδοδαπέδιας».
-  if (entity.type === 'mep-underfloor') return MEP_UNDERFLOOR_CONTEXTUAL_TRIGGER;
-  // ADR-419 — floor-finish (IfcCovering FLOORING) → «Ιδιότητες Επικάλυψης Δαπέδου».
-  if (entity.type === 'floor-finish') return FLOOR_FINISH_CONTEXTUAL_TRIGGER;
-  // ADR-511 — wall-covering (IfcCovering CLADDING/INTERIOR) → «Ιδιότητες Φινιρίσματος Τοίχου».
-  if (entity.type === 'wall-covering') return WALL_COVERING_CONTEXTUAL_TRIGGER;
-  // ADR-507 S2 — γραμμοσκίαση (hatch) → «Γραμμοσκίαση» tab.
-  if (entity.type === 'hatch') return HATCH_CONTEXTUAL_TRIGGER;
-  // ADR-422 — thermal-space (IfcSpace) → «Ιδιότητες Θερμικού Χώρου».
-  if (entity.type === 'thermal-space') return THERMAL_SPACE_CONTEXTUAL_TRIGGER;
-  // ADR-408 Φ8 — σωλήνας / αεραγωγός (MEP segment, one tab for both domains).
-  if (entity.type === 'mep-segment') return MEP_SEGMENT_CONTEXTUAL_TRIGGER;
-  if (entity.type === 'text' || entity.type === 'mtext') return TEXT_EDITOR_CONTEXTUAL_TRIGGER;
-  if (entity.type === 'array') {
-    const kind = readArrayKind(entity.params);
-    if (kind === 'polar') return ARRAY_POLAR_CONTEXTUAL_TRIGGER;
-    if (kind === 'path') return ARRAY_PATH_CONTEXTUAL_TRIGGER;
-    return ARRAY_RECT_CONTEXTUAL_TRIGGER;
-  }
-  // ADR-510 Φ2E — μια επιλεγμένη «καθαρή» γεωμετρική οντότητα (γραμμή/πολυγραμμή/
-  // κύκλος/τόξο/έλλειψη/spline/ορθογώνιο) εμφανίζει το ΙΔΙΟ Line-Tool style tab με
-  // τη σχεδίαση (mirror του hatch: ΕΝΑ trigger, δύο modes). Ο `useRibbonLineToolBridge`
-  // διακρίνει selected-edit vs draw-defaults μέσω του ίδιου SSoT predicate.
-  if (isStyleEditablePrimitiveType(entity.type)) return LINE_TOOL_CONTEXTUAL_TRIGGER;
-  return null;
-}
+// ADR-587 Φ3a — re-export ώστε το public API να παραμείνει σταθερό (ο resolver
+// μετακόμισε στο `./resolve-contextual-trigger` ως καθαρό, entity-keyed SSoT module).
+export { resolveContextualTrigger } from './resolve-contextual-trigger';
