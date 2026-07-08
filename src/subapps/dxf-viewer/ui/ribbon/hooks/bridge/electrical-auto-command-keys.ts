@@ -9,6 +9,8 @@
  * the proposal ghost; `accept` commits the circuits as MepSystems; `reject` discards them.
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const ELECTRICAL_AUTO_RIBBON_ACTIONS = {
   /** Recognize the storey + auto-design the lighting/socket circuits → proposal ghost. */
   generate: 'electricalAuto.actions.generate',
@@ -18,11 +20,7 @@ export const ELECTRICAL_AUTO_RIBBON_ACTIONS = {
   reject: 'electricalAuto.actions.reject',
 } as const;
 
-const ELECTRICAL_AUTO_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
+/** Type guard used by the `useRibbonCommands` composer. */
+export const isElectricalAutoActionKey = makeKeySetGuard(
   Object.values(ELECTRICAL_AUTO_RIBBON_ACTIONS),
 );
-
-/** Type guard used by the `useRibbonCommands` composer. */
-export function isElectricalAutoActionKey(action: string): boolean {
-  return ELECTRICAL_AUTO_ACTION_KEY_SET.has(action);
-}

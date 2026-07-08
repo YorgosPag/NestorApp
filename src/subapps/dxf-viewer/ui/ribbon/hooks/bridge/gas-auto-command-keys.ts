@@ -9,6 +9,8 @@
  * proposal ghost; `accept` commits it to real entities; `reject` discards it.
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const GAS_AUTO_RIBBON_ACTIONS = {
   /** Recognize the storey + auto-design the fuel-gas supply network → proposal ghost. */
   generate: 'gasAuto.actions.generate',
@@ -18,11 +20,5 @@ export const GAS_AUTO_RIBBON_ACTIONS = {
   reject: 'gasAuto.actions.reject',
 } as const;
 
-const GAS_AUTO_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
-  Object.values(GAS_AUTO_RIBBON_ACTIONS),
-);
-
 /** Type guard used by the `useRibbonCommands` composer. */
-export function isGasAutoActionKey(action: string): boolean {
-  return GAS_AUTO_ACTION_KEY_SET.has(action);
-}
+export const isGasAutoActionKey = makeKeySetGuard(Object.values(GAS_AUTO_RIBBON_ACTIONS));

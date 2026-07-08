@@ -9,6 +9,8 @@
  * the proposal ghost; `accept` commits the channels as MepSystems; `reject` discards them.
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const ELECTRICAL_WEAK_AUTO_RIBBON_ACTIONS = {
   /** Recognize the storey + auto-design the data/controls channels → proposal ghost. */
   generate: 'electricalWeakAuto.actions.generate',
@@ -18,11 +20,7 @@ export const ELECTRICAL_WEAK_AUTO_RIBBON_ACTIONS = {
   reject: 'electricalWeakAuto.actions.reject',
 } as const;
 
-const ELECTRICAL_WEAK_AUTO_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
+/** Type guard used by the `useRibbonCommands` composer. */
+export const isElectricalWeakAutoActionKey = makeKeySetGuard(
   Object.values(ELECTRICAL_WEAK_AUTO_RIBBON_ACTIONS),
 );
-
-/** Type guard used by the `useRibbonCommands` composer. */
-export function isElectricalWeakAutoActionKey(action: string): boolean {
-  return ELECTRICAL_WEAK_AUTO_ACTION_KEY_SET.has(action);
-}

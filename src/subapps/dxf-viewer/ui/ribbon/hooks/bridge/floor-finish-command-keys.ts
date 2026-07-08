@@ -8,6 +8,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-419-floor-finish-per-room.md
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const FLOOR_FINISH_RIBBON_KEYS = {
   stringParams: {
     /** Material selector (FloorFinishMaterialId). */
@@ -48,34 +50,21 @@ export type FloorFinishRibbonActionKey =
   | typeof FLOOR_FINISH_RIBBON_KEYS.actions.close
   | typeof FLOOR_FINISH_RIBBON_KEYS.actions.delete;
 
-const NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isFloorFinishRibbonNumberKey = makeKeySetGuard<FloorFinishRibbonNumberCommandKey>([
   FLOOR_FINISH_RIBBON_KEYS.params.thicknessMm,
   FLOOR_FINISH_RIBBON_KEYS.params.tileLengthMm,
   FLOOR_FINISH_RIBBON_KEYS.params.tileWidthMm,
 ]);
-const TOGGLE_KEY_SET: ReadonlySet<string> = new Set<string>([
+
+export const isFloorFinishRibbonToggleKey = makeKeySetGuard<FloorFinishRibbonToggleKey>([
   FLOOR_FINISH_RIBBON_KEYS.toggles.tileRotate90,
 ]);
-const STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
+
+export const isFloorFinishRibbonStringKey = makeKeySetGuard<FloorFinishRibbonStringCommandKey>([
   FLOOR_FINISH_RIBBON_KEYS.stringParams.materialId,
 ]);
-const ACTION_KEY_SET: ReadonlySet<string> = new Set<string>([
+
+export const isFloorFinishRibbonActionKey = makeKeySetGuard<FloorFinishRibbonActionKey>([
   FLOOR_FINISH_RIBBON_KEYS.actions.close,
   FLOOR_FINISH_RIBBON_KEYS.actions.delete,
 ]);
-
-export function isFloorFinishRibbonNumberKey(commandKey: string): commandKey is FloorFinishRibbonNumberCommandKey {
-  return NUMBER_KEY_SET.has(commandKey);
-}
-
-export function isFloorFinishRibbonToggleKey(commandKey: string): commandKey is FloorFinishRibbonToggleKey {
-  return TOGGLE_KEY_SET.has(commandKey);
-}
-
-export function isFloorFinishRibbonStringKey(commandKey: string): commandKey is FloorFinishRibbonStringCommandKey {
-  return STRING_KEY_SET.has(commandKey);
-}
-
-export function isFloorFinishRibbonActionKey(commandKey: string): commandKey is FloorFinishRibbonActionKey {
-  return ACTION_KEY_SET.has(commandKey);
-}

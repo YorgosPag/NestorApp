@@ -8,6 +8,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-507-hatch-creation-system.md
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const HATCH_RIBBON_KEYS = {
   stringParams: {
     /** Τύπος γεμίσματος: 'solid' | 'user-defined' | 'predefined'. */
@@ -106,7 +108,7 @@ export type HatchRibbonActionKey =
 export type HatchRibbonVisibilityKey =
   | typeof HATCH_RIBBON_KEYS.visibility.gradient;
 
-const NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isHatchRibbonNumberKey = makeKeySetGuard<HatchRibbonNumberCommandKey>([
   HATCH_RIBBON_KEYS.params.lineAngle,
   HATCH_RIBBON_KEYS.params.lineSpacing,
   HATCH_RIBBON_KEYS.params.patternScale,
@@ -114,7 +116,7 @@ const NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.params.gradientShift,
   HATCH_RIBBON_KEYS.params.gapTolerance,
 ]);
-const STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isHatchRibbonStringKey = makeKeySetGuard<HatchRibbonStringCommandKey>([
   HATCH_RIBBON_KEYS.stringParams.fillType,
   HATCH_RIBBON_KEYS.stringParams.fillColor,
   HATCH_RIBBON_KEYS.stringParams.islandStyle,
@@ -124,39 +126,20 @@ const STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
   HATCH_RIBBON_KEYS.stringParams.gradientColor1,
   HATCH_RIBBON_KEYS.stringParams.gradientColor2,
 ]);
-const TOGGLE_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isHatchRibbonToggleKey = makeKeySetGuard<HatchRibbonToggleKey>([
   HATCH_RIBBON_KEYS.toggles.doubleCrossHatch,
   HATCH_RIBBON_KEYS.toggles.gradientSingleColor,
   HATCH_RIBBON_KEYS.toggles.selectExisting,
   HATCH_RIBBON_KEYS.toggles.methodPickPoint,
   HATCH_RIBBON_KEYS.toggles.methodBoundary,
 ]);
-const READOUT_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isHatchRibbonReadoutKey = makeKeySetGuard<HatchRibbonReadoutKey>([
   HATCH_RIBBON_KEYS.readouts.area,
 ]);
-const ACTION_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isHatchRibbonActionKey = makeKeySetGuard<HatchRibbonActionKey>([
   HATCH_RIBBON_KEYS.actions.close,
   HATCH_RIBBON_KEYS.actions.delete,
 ]);
-const VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isHatchRibbonVisibilityKey = makeKeySetGuard<HatchRibbonVisibilityKey>([
   HATCH_RIBBON_KEYS.visibility.gradient,
 ]);
-
-export function isHatchRibbonNumberKey(key: string): key is HatchRibbonNumberCommandKey {
-  return NUMBER_KEY_SET.has(key);
-}
-export function isHatchRibbonStringKey(key: string): key is HatchRibbonStringCommandKey {
-  return STRING_KEY_SET.has(key);
-}
-export function isHatchRibbonToggleKey(key: string): key is HatchRibbonToggleKey {
-  return TOGGLE_KEY_SET.has(key);
-}
-export function isHatchRibbonReadoutKey(key: string): key is HatchRibbonReadoutKey {
-  return READOUT_KEY_SET.has(key);
-}
-export function isHatchRibbonActionKey(key: string): key is HatchRibbonActionKey {
-  return ACTION_KEY_SET.has(key);
-}
-export function isHatchRibbonVisibilityKey(key: string): key is HatchRibbonVisibilityKey {
-  return VISIBILITY_KEY_SET.has(key);
-}

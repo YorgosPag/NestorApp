@@ -8,6 +8,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-436-bim-foundation-discipline.md §6
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const FOUNDATION_RIBBON_KEYS = {
   stringParams: {
     kind: 'foundation.params.kind',
@@ -173,28 +175,13 @@ export const FOUNDATION_STRUCTURAL_READOUT_KEYS = {
   tieSeismicForce: 'foundation.structural.readout.tieSeismicForce',
 } as const;
 
+export const isFoundationStructuralKey = makeKeySetGuard(Object.values(FOUNDATION_STRUCTURAL_KEYS));
+
 /** String/select structural keys (κανονισμός + on/off toggles). */
-const FOUNDATION_STRUCTURAL_STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isFoundationStructuralStringKey = makeKeySetGuard([
   FOUNDATION_STRUCTURAL_KEYS.code,
   FOUNDATION_STRUCTURAL_KEYS.padTopEnabled,
   FOUNDATION_STRUCTURAL_KEYS.stripStirrupEnabled,
 ]);
 
-const FOUNDATION_STRUCTURAL_KEY_SET: ReadonlySet<string> = new Set<string>(
-  Object.values(FOUNDATION_STRUCTURAL_KEYS),
-);
-const FOUNDATION_STRUCTURAL_READOUT_KEY_SET: ReadonlySet<string> = new Set<string>(
-  Object.values(FOUNDATION_STRUCTURAL_READOUT_KEYS),
-);
-
-export function isFoundationStructuralKey(commandKey: string): boolean {
-  return FOUNDATION_STRUCTURAL_KEY_SET.has(commandKey);
-}
-
-export function isFoundationStructuralStringKey(commandKey: string): boolean {
-  return FOUNDATION_STRUCTURAL_STRING_KEY_SET.has(commandKey);
-}
-
-export function isFoundationStructuralReadoutKey(commandKey: string): boolean {
-  return FOUNDATION_STRUCTURAL_READOUT_KEY_SET.has(commandKey);
-}
+export const isFoundationStructuralReadoutKey = makeKeySetGuard(Object.values(FOUNDATION_STRUCTURAL_READOUT_KEYS));

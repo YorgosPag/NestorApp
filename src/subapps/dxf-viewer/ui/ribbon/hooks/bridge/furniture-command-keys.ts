@@ -8,6 +8,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-410-cc0-mesh-furniture-import.md
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const FURNITURE_RIBBON_KEYS = {
   stringParams: {
     /** Catalog asset selector (which furniture model to place). */
@@ -45,27 +47,10 @@ export const FURNITURE_RIBBON_KEYS_ACTIONS = {
   close: 'furniture.actions.close',
 } as const;
 
-const FURNITURE_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
-  Object.values(FURNITURE_RIBBON_KEYS_ACTIONS),
-);
-
-export function isFurnitureActionKey(action: string): boolean {
-  return FURNITURE_ACTION_KEY_SET.has(action);
-}
+export const isFurnitureActionKey = makeKeySetGuard(Object.values(FURNITURE_RIBBON_KEYS_ACTIONS));
 
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────
 
-const FURNITURE_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(
-  FURNITURE_RIBBON_NUMBER_KEYS,
-);
-const FURNITURE_STRING_KEY_SET: ReadonlySet<string> = new Set<string>(
-  FURNITURE_RIBBON_STRING_KEYS,
-);
+export const isFurnitureRibbonKey = makeKeySetGuard(FURNITURE_RIBBON_NUMBER_KEYS);
 
-export function isFurnitureRibbonKey(commandKey: string): boolean {
-  return FURNITURE_NUMBER_KEY_SET.has(commandKey);
-}
-
-export function isFurnitureRibbonStringKey(commandKey: string): boolean {
-  return FURNITURE_STRING_KEY_SET.has(commandKey);
-}
+export const isFurnitureRibbonStringKey = makeKeySetGuard(FURNITURE_RIBBON_STRING_KEYS);

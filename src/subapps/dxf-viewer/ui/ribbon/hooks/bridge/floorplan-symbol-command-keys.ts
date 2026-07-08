@@ -8,6 +8,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-415-2d-floorplan-symbol-library.md
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const FLOORPLAN_SYMBOL_RIBBON_KEYS = {
   stringParams: {
     /** Catalog asset selector (which symbol to place). */
@@ -25,17 +27,10 @@ export type FloorplanSymbolRibbonNumberCommandKey =
 export type FloorplanSymbolRibbonStringCommandKey =
   | typeof FLOORPLAN_SYMBOL_RIBBON_KEYS.stringParams.assetId;
 
-const NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isFloorplanSymbolRibbonKey = makeKeySetGuard([
   FLOORPLAN_SYMBOL_RIBBON_KEYS.params.rotation,
 ]);
-const STRING_KEY_SET: ReadonlySet<string> = new Set<string>([
+
+export const isFloorplanSymbolRibbonStringKey = makeKeySetGuard([
   FLOORPLAN_SYMBOL_RIBBON_KEYS.stringParams.assetId,
 ]);
-
-export function isFloorplanSymbolRibbonKey(commandKey: string): boolean {
-  return NUMBER_KEY_SET.has(commandKey);
-}
-
-export function isFloorplanSymbolRibbonStringKey(commandKey: string): boolean {
-  return STRING_KEY_SET.has(commandKey);
-}

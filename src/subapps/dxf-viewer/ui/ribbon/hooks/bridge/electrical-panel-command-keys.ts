@@ -13,6 +13,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const ELECTRICAL_PANEL_RIBBON_KEYS = {
   params: {
     /** mm — footprint width (panel face along the wall). */
@@ -48,13 +50,9 @@ export const ELECTRICAL_PANEL_RIBBON_KEYS_ACTIONS = {
   delete: 'electricalPanel.actions.delete',
 } as const;
 
-const ELECTRICAL_PANEL_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
+export const isElectricalPanelActionKey = makeKeySetGuard(
   Object.values(ELECTRICAL_PANEL_RIBBON_KEYS_ACTIONS),
 );
-
-export function isElectricalPanelActionKey(action: string): boolean {
-  return ELECTRICAL_PANEL_ACTION_KEY_SET.has(action);
-}
 
 /**
  * Panel visibility keys.
@@ -68,22 +66,12 @@ export const ELECTRICAL_PANEL_RIBBON_VISIBILITY_KEYS = {
 export type ElectricalPanelRibbonVisibilityKey =
   typeof ELECTRICAL_PANEL_RIBBON_VISIBILITY_KEYS.hasCircuits;
 
-const ELECTRICAL_PANEL_VISIBILITY_KEY_SET: ReadonlySet<string> = new Set<string>([
+export const isElectricalPanelVisibilityKey = makeKeySetGuard<ElectricalPanelRibbonVisibilityKey>([
   ELECTRICAL_PANEL_RIBBON_VISIBILITY_KEYS.hasCircuits,
 ]);
 
-export function isElectricalPanelVisibilityKey(
-  key: string,
-): key is ElectricalPanelRibbonVisibilityKey {
-  return ELECTRICAL_PANEL_VISIBILITY_KEY_SET.has(key);
-}
-
 // ─── Type guards (used by useRibbonCommands composer) ────────────────────────
 
-const ELECTRICAL_PANEL_NUMBER_KEY_SET: ReadonlySet<string> = new Set<string>(
+export const isElectricalPanelRibbonKey = makeKeySetGuard(
   ELECTRICAL_PANEL_RIBBON_NUMBER_KEYS,
 );
-
-export function isElectricalPanelRibbonKey(commandKey: string): boolean {
-  return ELECTRICAL_PANEL_NUMBER_KEY_SET.has(commandKey);
-}

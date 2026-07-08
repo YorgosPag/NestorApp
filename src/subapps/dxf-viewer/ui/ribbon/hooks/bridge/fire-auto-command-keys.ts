@@ -9,6 +9,8 @@
  * proposal ghost; `accept` commits it to real entities; `reject` discards it.
  */
 
+import { makeKeySetGuard } from './make-key-set-guard';
+
 export const FIRE_AUTO_RIBBON_ACTIONS = {
   /** Recognize the storey + auto-design the wet-pipe sprinkler network → proposal ghost. */
   generate: 'fireAuto.actions.generate',
@@ -18,11 +20,7 @@ export const FIRE_AUTO_RIBBON_ACTIONS = {
   reject: 'fireAuto.actions.reject',
 } as const;
 
-const FIRE_AUTO_ACTION_KEY_SET: ReadonlySet<string> = new Set<string>(
+/** Type guard used by the `useRibbonCommands` composer. */
+export const isFireAutoActionKey = makeKeySetGuard(
   Object.values(FIRE_AUTO_RIBBON_ACTIONS),
 );
-
-/** Type guard used by the `useRibbonCommands` composer. */
-export function isFireAutoActionKey(action: string): boolean {
-  return FIRE_AUTO_ACTION_KEY_SET.has(action);
-}
