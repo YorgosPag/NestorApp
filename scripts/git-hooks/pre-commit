@@ -655,5 +655,36 @@ if [[ -n "$TS_FILES" ]]; then
     fi
 fi
 
+# CHECK 14: Secret Scanning (gitleaks) — ADR-598 G12
+# Scans the STAGED changes for committed secrets (API keys, tokens, private keys).
+# gitleaks is a Go binary (MIT), not an npm dep — so this is belt-and-suspenders:
+# if the binary is present locally it BLOCKS on a leak here (fast feedback); if it
+# is absent it warns (no hard dependency on a weak dev machine) and the
+# authoritative full-history scan runs in CI (.github/workflows/gitleaks-scan.yml).
+if command -v gitleaks >/dev/null 2>&1; then
+    echo -e "${YELLOW}🔍 Scanning staged changes for secrets (gitleaks, CLAUDE.md N.5/G12)...${NC}"
+    GITLEAKS_ARGS="protect --staged --redact --no-banner"
+    if [[ -f ".gitleaks.toml" ]]; then GITLEAKS_ARGS="$GITLEAKS_ARGS --config .gitleaks.toml"; fi
+    if ! gitleaks $GITLEAKS_ARGS 2>/tmp/gitleaks.err; then
+        echo ""
+        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+        echo -e "${RED}  🚫 COMMIT BLOCKED — CHECK 14: potential secret detected (gitleaks)${NC}"
+        echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
+        echo ""
+        cat /tmp/gitleaks.err 2>/dev/null | head -30
+        echo ""
+        echo -e "${YELLOW}  Remove the secret from the staged change. If it is a false positive,${NC}"
+        echo -e "${YELLOW}  add a scoped allowlist rule to .gitleaks.toml (never disable the gate).${NC}"
+        echo ""
+        rm -f /tmp/gitleaks.err
+        exit 1
+    fi
+    rm -f /tmp/gitleaks.err
+    echo -e "${GREEN}  ✅ No secrets detected in staged changes${NC}"
+else
+    echo -e "${YELLOW}  ⓘ CHECK 14: gitleaks not installed — skipping local secret scan${NC}"
+    echo -e "${YELLOW}    (CI full-history scan is authoritative. Install: https://github.com/gitleaks/gitleaks)${NC}"
+fi
+
 echo -e "${GREEN}✅ Pre-commit checks passed${NC}"
 exit 0
