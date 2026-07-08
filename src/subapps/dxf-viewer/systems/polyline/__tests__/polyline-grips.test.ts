@@ -12,6 +12,7 @@ import {
   POLYLINE_MOVE_KIND,
   POLYLINE_ROTATION_KIND,
 } from '../polyline-grips';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 
 describe('polylineMoveRotateStartIndex', () => {
   it('closed ring: vertices + N edges', () => {
@@ -27,8 +28,10 @@ describe('getPolylineMoveRotateGrips (ADR-561)', () => {
     const verts = [{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 20 }, { x: 0, y: 20 }];
     const grips = getPolylineMoveRotateGrips('P1', verts, true, 8);
     expect(grips).toHaveLength(2);
-    expect(grips[0]).toMatchObject({ gripIndex: 8, type: 'center', movesEntity: true, polylineGripKind: POLYLINE_MOVE_KIND });
-    expect(grips[1]).toMatchObject({ gripIndex: 9, type: 'vertex', movesEntity: false, polylineGripKind: POLYLINE_ROTATION_KIND });
+    expect(grips[0]).toMatchObject({ gripIndex: 8, type: 'center', movesEntity: true });
+    expect(gripKindOf(grips[0], 'polyline')).toBe(POLYLINE_MOVE_KIND);
+    expect(grips[1]).toMatchObject({ gripIndex: 9, type: 'vertex', movesEntity: false });
+    expect(gripKindOf(grips[1], 'polyline')).toBe(POLYLINE_ROTATION_KIND);
   });
 
   it('RECTANGLE → rect-box parity: move at box centre, rotation midway below on the box axis', () => {
