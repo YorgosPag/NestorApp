@@ -1,0 +1,200 @@
+/**
+ * ADR-583 — Annotation Symbol catalog SSoT (Βιβλιοθήκη Συμβόλων Σχεδίασης).
+ *
+ * Static, code-shipped registry of drawing-annotation glyphs (North arrow first;
+ * scale bar / section mark to follow). Modelled 1:1 on the dimension arrowhead
+ * catalog (`systems/dimensions/dim-arrowhead-blocks.ts`): each definition is
+ * **unit-space** vector geometry stamped by a uniform draw loop — no per-symbol
+ * special-case render code.
+ *
+ * ## Unit space
+ * - `1.0` = the symbol's nominal paper height (`AnnotationSymbolEntity.sizeMm`).
+ * - `+Y` points to the glyph's authored "north" (up); `entity.rotation` rotates
+ *   the whole glyph at render time.
+ * - `[0, 0]` = the glyph centre (the entity's anchor / insertion reference).
+ *
+ * Catalog ids are stable camelCase strings (e.g. `northArrowSimple`) — NEVER
+ * enterprise ids (those are reserved for mutable, persisted Firestore docs, N.6).
+ *
+ * @see config/linetype-iso-catalog.ts — sibling static catalog pattern
+ * @see systems/dimensions/dim-arrowhead-blocks.ts — the unit-space glyph template
+ * @see docs/centralized-systems/reference/adrs/ADR-583-annotation-symbol-library-north-arrow.md
+ */
+
+import type { AnnotationSymbolKind } from '../types/annotation-symbol';
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Geometry primitives (unit space)
+// ──────────────────────────────────────────────────────────────────────────────
+
+export type AnnotationSymbolPoint = readonly [x: number, y: number];
+
+export interface AnnotationSymbolLine {
+  readonly kind: 'line';
+  readonly from: AnnotationSymbolPoint;
+  readonly to: AnnotationSymbolPoint;
+}
+
+export interface AnnotationSymbolPolyline {
+  readonly kind: 'polyline';
+  readonly points: readonly AnnotationSymbolPoint[];
+  /** Close the path back to the first point. */
+  readonly closed: boolean;
+  /** True = fill the closed area; false = stroke-only. Ignored when `!closed`. */
+  readonly solid: boolean;
+}
+
+export interface AnnotationSymbolCircle {
+  readonly kind: 'circle';
+  readonly center: AnnotationSymbolPoint;
+  readonly radius: number;
+  readonly solid: boolean;
+}
+
+export type AnnotationSymbolPrimitive =
+  | AnnotationSymbolLine
+  | AnnotationSymbolPolyline
+  | AnnotationSymbolCircle;
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Definition
+// ──────────────────────────────────────────────────────────────────────────────
+
+export interface AnnotationSymbolDefinition {
+  /** Stable catalog id (camelCase). Referenced by `AnnotationSymbolEntity.symbolId`. */
+  readonly id: string;
+  /** Symbol family. */
+  readonly kind: AnnotationSymbolKind;
+  /** i18n key for the UI label (ribbon picker / properties). No hardcoded text (N.11). */
+  readonly labelKey: string;
+  /** Unit-space glyph geometry (1.0 = nominal paper height). */
+  readonly geometry: readonly AnnotationSymbolPrimitive[];
+  /** Provenance (built-in vs future user/import). */
+  readonly origin: 'builtin';
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Geometry factory helpers (keep definitions readable)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** The letter "N" as three vector strokes (language-neutral CAD convention). */
+function northLetter(): AnnotationSymbolPolyline {
+  return {
+    kind: 'polyline',
+    // bottom-left → top-left → bottom-right → top-right
+    points: [
+      [-0.1, 0.4],
+      [-0.1, 0.5],
+      [0.1, 0.4],
+      [0.1, 0.5],
+    ],
+    closed: false,
+    solid: false,
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Catalog registry
+// ──────────────────────────────────────────────────────────────────────────────
+
+export const ANNOTATION_SYMBOL_CATALOG: Readonly<Record<string, AnnotationSymbolDefinition>> = {
+  /** Classic surveyor's north arrow: filled arrowhead on a shaft, "N" on top. */
+  northArrowSimple: {
+    id: 'northArrowSimple',
+    kind: 'north-arrow',
+    labelKey: 'annotationSymbol.northArrow.simple',
+    geometry: [
+      // shaft
+      { kind: 'line', from: [0, -0.5], to: [0, 0.06] },
+      // filled arrowhead (tip up)
+      {
+        kind: 'polyline',
+        points: [
+          [0, 0.34],
+          [0.12, 0.06],
+          [-0.12, 0.06],
+        ],
+        closed: true,
+        solid: true,
+      },
+      northLetter(),
+    ],
+    origin: 'builtin',
+  },
+
+  /** 4-point compass rose: hollow star, filled north petal, centre hub. */
+  northArrowStar: {
+    id: 'northArrowStar',
+    kind: 'north-arrow',
+    labelKey: 'annotationSymbol.northArrow.star',
+    geometry: [
+      // full 4-point star outline (hollow)
+      {
+        kind: 'polyline',
+        points: [
+          [0, 0.5],
+          [0.11, 0.11],
+          [0.5, 0],
+          [0.11, -0.11],
+          [0, -0.5],
+          [-0.11, -0.11],
+          [-0.5, 0],
+          [-0.11, 0.11],
+        ],
+        closed: true,
+        solid: false,
+      },
+      // filled north petal
+      {
+        kind: 'polyline',
+        points: [
+          [0, 0.5],
+          [0.11, 0.11],
+          [-0.11, 0.11],
+        ],
+        closed: true,
+        solid: true,
+      },
+      // centre hub
+      { kind: 'circle', center: [0, 0], radius: 0.05, solid: false },
+    ],
+    origin: 'builtin',
+  },
+} as const;
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Lookup with fallback
+// ──────────────────────────────────────────────────────────────────────────────
+
+const FALLBACK_SYMBOL_ID = 'northArrowSimple';
+
+/**
+ * Resolve an annotation symbol definition by id. Unknown ids fall back to
+ * `northArrowSimple` so a stale/renamed reference still renders something.
+ */
+export function getAnnotationSymbol(id: string): AnnotationSymbolDefinition {
+  const found = ANNOTATION_SYMBOL_CATALOG[id];
+  if (found) return found;
+  const fallback = ANNOTATION_SYMBOL_CATALOG[FALLBACK_SYMBOL_ID];
+  if (!fallback) {
+    throw new Error('ANNOTATION_SYMBOL_FALLBACK_MISSING');
+  }
+  return fallback;
+}
+
+/** All catalog definitions (for UI enumeration). */
+export function listAnnotationSymbols(): readonly AnnotationSymbolDefinition[] {
+  return Object.values(ANNOTATION_SYMBOL_CATALOG);
+}
+
+/** Catalog definitions of one family (e.g. all north arrows) — ribbon picker source. */
+export function listAnnotationSymbolsByKind(
+  kind: AnnotationSymbolKind,
+): readonly AnnotationSymbolDefinition[] {
+  return Object.values(ANNOTATION_SYMBOL_CATALOG).filter((d) => d.kind === kind);
+}
+
+/** Default catalog id for a family (first entry) — used when a tool starts. */
+export function defaultAnnotationSymbolId(kind: AnnotationSymbolKind): string {
+  return listAnnotationSymbolsByKind(kind)[0]?.id ?? FALLBACK_SYMBOL_ID;
+}

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | 🟡 **Φ1 RECOGNITION DONE + DECISION** — 2026-07-08, Opus 4.8 (orchestrator-approved deep research, 8 parallel readers). Επιλογή αρχιτεκτονικής κλειδωμένη. Υλοποίηση σε εξέλιξη (Βορράς = reference kind). |
+| Status | 🟡 **Φ1 DONE + Φ2a (core) DONE** — 2026-07-08, Opus 4.8 (orchestrator-approved deep research, 8 parallel readers). Έτοιμα: entity model + catalog SSoT (2 north-arrow variants) + declaration layer (EntityType/union/guard/export-map). Εκκρεμεί Φ2b: renderer + render-pipeline wiring + grips + hit-test + tool/ribbon/i18n. Βορράς = reference kind. |
 | Date | 2026-07-08 |
 | Owner | Giorgio / Claude (Opus 4.8) |
 | Related | **ADR-362** (center-mark — lightweight non-BIM annotation, το βασικό template)· **ADR-415** (floorplan-symbol — pipeline tool/ribbon precedent)· **ADR-344/375** (annotation-scale SSoT `paperHeightToModel`)· **ADR-406** (pure-vector 2D symbol)· **ADR-397** (`appendEntityToScene` SSoT)· **ADR-040** (canvas micro-leaf)· **ADR-550** (renderable-entity-type contract)· **ADR-017/210/294** (enterprise IDs N.6)· **ADR-557** (render vs scene converter parity) |
@@ -145,4 +145,5 @@ Single-click placement + rotation preview. Ribbon button σε panel «Σημει
 
 | Ημ/νία | Model | Αλλαγή |
 |---|---|---|
-| 2026-07-08 | Opus 4.8 | Φ1 recognition (8 parallel readers) + διαδικτυακή έρευνα + απόφαση αρχιτεκτονικής (D1–D6). ADR δημιουργήθηκε. Υλοποίηση ξεκινά (Βορράς reference kind). |
+| 2026-07-08 | Opus 4.8 | Φ1 recognition (8 parallel readers) + διαδικτυακή έρευνα + απόφαση αρχιτεκτονικής (D1–D6). ADR δημιουργήθηκε. |
+| 2026-07-08 | Opus 4.8 | Φ2a core: `types/annotation-symbol.ts` (entity + guard) + `config/annotation-symbol-catalog.ts` (2 north-arrow variants, unit-space primitives, resolvers) + declaration layer: EntityType union (`base-entity.ts`), `Entity` union + import/guard re-export (`entities.ts`), `ENTITY_TYPE_MAPPING` key (`dxf-export.types.ts`). Καθαρό checkpoint (μη compile-forcing). |

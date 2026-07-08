@@ -20,7 +20,7 @@ import { bisectorAngle, TAU, degToRad } from '../../rendering/entities/shared/ge
 import { UI_COLORS, OPACITY } from '../../config/color-config';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ADR-557 follow-up: closed-polygon area+perimeter label SSoT (committed/preview/hover parity)
-import { computePolygonAreaMetrics, paintPolygonAreaLabel } from '../../rendering/entities/shared/measurement-label';
+import { computePolygonAreaMetrics, paintPolygonAreaLabel, buildAreaPerimeterLabelLines } from '../../rendering/entities/shared/measurement-label';
 
 // ===== LINE =====
 
@@ -107,9 +107,10 @@ export function renderCircle(
     renderCircleMeasurementLine(ctx, entity, transform, center, h);
     const circumference = TAU * entity.radius;
     const area = Math.PI * entity.radius * entity.radius;
+    // ADR-160 (δ): κοινή σειρά εμβαδόν→περίμετρος παντού (area line πρώτα).
     h.renderInfoLabel(ctx, center, [
-      `Περ: ${formatLengthForDisplay(circumference)}`,
       `Ε: ${formatAreaForDisplay(area)}`,
+      `Περ: ${formatLengthForDisplay(circumference)}`,
     ]);
   }
 }
@@ -187,10 +188,9 @@ export function renderRectangle(
     const perimeter = 2 * (worldWidth + worldHeight);
     const area = worldWidth * worldHeight;
     const centerScreen: Point2D = { x: x + width / 2, y: y + height / 2 };
-    h.renderInfoLabel(ctx, centerScreen, [
-      `Περ: ${formatLengthForDisplay(perimeter)}`,
-      `Ε: ${formatAreaForDisplay(area)}`,
-    ]);
+    // ADR-160 (δ): rectangle preview περνά από τον ΚΟΙΝΟ content builder (area→perimeter,
+    // i18n prefixes) — ίδια σειρά & περιεχόμενο με το committed rectangle/polygon.
+    h.renderInfoLabel(ctx, centerScreen, buildAreaPerimeterLabelLines({ area, perimeter }));
   }
 }
 
@@ -309,9 +309,10 @@ export function renderArc(
     if (absSweep > 0.001) {
       const arcLength = entity.radius * absSweep;
       const sectorArea = 0.5 * entity.radius * entity.radius * absSweep;
+      // ADR-160 (δ): κοινή σειρά εμβαδόν→(μήκος/περίμετρος) — area line πρώτα.
       h.renderInfoLabel(ctx, center, [
-        `L: ${formatLengthForDisplay(arcLength)}`,
         `Ε: ${formatAreaForDisplay(sectorArea)}`,
+        `L: ${formatLengthForDisplay(arcLength)}`,
       ]);
     }
   }

@@ -532,6 +532,11 @@ import type { CenterMarkEntity, CenterLineEntity } from './center-mark';
 export type { CenterMarkEntity, CenterLineEntity, CenterMarkStyle, CenterLineKind } from './center-mark';
 export { isCenterMarkEntity, isCenterLineEntity } from './center-mark';
 
+// ADR-583: standalone Annotation Symbol (North arrow / scale bar / section mark).
+import type { AnnotationSymbolEntity } from './annotation-symbol';
+export type { AnnotationSymbolEntity, AnnotationSymbolKind } from './annotation-symbol';
+export { isAnnotationSymbolEntity, DEFAULT_ANNOTATION_SYMBOL_SIZE_MM } from './annotation-symbol';
+
 // ✅ ENTERPRISE: Additional entity types from scene.ts integration
 export interface BlockEntity extends BaseEntity {
   type: 'block';
@@ -696,6 +701,7 @@ export type Entity = (
   | StairEntity              // ADR-358: Parametric stair (11 kinds)
   | CenterMarkEntity         // ADR-362 Phase A1: standalone center mark (D13)
   | CenterLineEntity         // ADR-362 Phase A1: standalone centerline (D13)
+  | AnnotationSymbolEntity   // ADR-583: standalone annotation symbol (North arrow first)
   // ADR-363 BIM Drawing Mode (Phase 0 — renderers/tools Phase 1+):
   | WallEntity
   | OpeningEntity

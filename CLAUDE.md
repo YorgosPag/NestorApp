@@ -512,6 +512,29 @@ Giorgio κάνει commits μέσω agent (ποτέ χειροκίνητα). Hai
 
 ---
 
+## 🚨🚨🚨 SOS. SOS. N.18 — ANTI-DUPLICATION SELF-GUARD (jscpd, ADR-584, CHECK 3.28)
+
+**ΠΡΙΝ δηλώσεις «κεντρικοποίηση done» / «τελείωσα το SSoT»**, τρέξε token-based clone check στα ΔΙΚΑ σου staged αρχεία:
+
+```
+npm run jscpd:diff <τα staged src αρχεία σου>
+```
+
+- ✅ Καθαρό → μπορείς να πεις «done».
+- ❌ Βρήκε clone → **ΜΗΝ** το πεις done. Έφτιαξες sibling clone (το κλασικό λάθος: κεντρικοποιείς το Α, γράφεις Β+Γ ως δίδυμα). Εξήγαγε το κοινό σε **ΕΝΑ** module και κάνε import και στα δύο.
+
+**Γιατί υπάρχει (ADR-584):** το `ssot:discover` (CHECK 3.18) είναι name/regex-based → **τυφλό** σε structural clones με άλλο όνομα (π.χ. `clipHatch` vs `clipHatchByPoly`). Το jscpd (token-based, MIT) τα πιάνει **ανεξάρτητα ονόματος, ακόμα και εντός ενός diff**.
+
+**Δύο layers (mirror CHECK 3.22):**
+- **Layer 1 — pre-commit (CHECK 3.28, Phase 0.6):** `jscpd --diff` στα staged src αρχεία → ΜΠΛΟΚ σε νέα same-commit sibling clones. Escape: `SKIP_JSCPD_DIFF=1` (justify to Giorgio).
+- **Layer 2 — CI (`jscpd-ratchet.yml`):** full `src/` scan → ratchet του συνολικού clone count vs `.jscpd-baseline.json`. Duplication **μόνο μειώνεται**.
+
+**Config SSoT:** `.jscpdrc.json` (min-tokens **50**, formats, ignores). **ΜΗΝ** hardcode-άρεις δεύτερο threshold. **ΜΗΝ** φτιάξεις νέο ratchet engine — υπάρχει `scripts/check-jscpd-ratchet.js` (μιμείται το `check-ssot-discover-ratchet.js`).
+
+**Μετά από νόμιμο de-duplication:** `npm run jscpd:baseline` (κλείδωσε την πρόοδο προς τα κάτω). Baseline: 4548 clones (2026-07-08).
+
+---
+
 # HONESTY & TRANSPARENCY
 
 **100% honesty.** If you don't know, say "I don't know". Never mislead Giorgio.

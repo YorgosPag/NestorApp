@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CHECK 3.28 — Token-based Copy/Paste Clone Ratchet (jscpd) — ADR-583
+ * CHECK 3.28 — Token-based Copy/Paste Clone Ratchet (jscpd) — ADR-584
  *
  * Closes the blind spot in CHECK 3.18 (SSoT Discover). That scanner is
  * name/regex-based, so it cannot see a *structural* clone that carries a
@@ -86,7 +86,7 @@ function parseArgs(argv) {
 }
 
 function printHelp() {
-  console.log(`CHECK 3.28 — jscpd Clone Ratchet (ADR-583)
+  console.log(`CHECK 3.28 — jscpd Clone Ratchet (ADR-584)
 
 Usage:
   node scripts/check-jscpd-ratchet.js                       # smoke (baseline presence)
@@ -178,10 +178,10 @@ function loadBaseline(filePath = getBaselineFile()) {
 function writeBaseline(counts, filePath = getBaselineFile()) {
   const payload = {
     description:
-      'CHECK 3.28 — jscpd Clone Ratchet baseline (ADR-583). Tracks the total token-based clone count over src/. Ratchet down only: a rise blocks the commit/PR. Refresh via `npm run jscpd:baseline` after legitimate de-duplication.',
+      'CHECK 3.28 — jscpd Clone Ratchet baseline (ADR-584). Tracks the total token-based clone count over src/. Ratchet down only: a rise blocks the commit/PR. Refresh via `npm run jscpd:baseline` after legitimate de-duplication.',
     generatedAt: new Date().toISOString(),
     generatedBy: 'scripts/check-jscpd-ratchet.js --write-baseline',
-    adr: 'ADR-583',
+    adr: 'ADR-584',
     check: 'CHECK 3.28',
     clones: counts.clones,
     duplicatedLines: counts.duplicatedLines,

@@ -85,7 +85,9 @@ export type EntityType =
   // ADR-422 — analytical thermal space / θερμικός χώρος (IfcSpace).
   | 'thermal-space'
   // ADR-437 — space separator / γραμμή διαχωρισμού χώρου (IfcVirtualElement).
-  | 'space-separator';
+  | 'space-separator'
+  // ADR-583 — non-BIM drawing annotation symbol (North arrow / scale bar / section mark).
+  | 'annotation-symbol';
 
 export interface BaseEntity {
   id: string;
