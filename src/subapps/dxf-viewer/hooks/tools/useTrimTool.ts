@@ -30,6 +30,8 @@ import { computeIntersectionPoints } from '../../systems/trim/trim-intersection-
 import { trimEntity } from '../../systems/trim/trim-entity-cutter';
 import type { TrimOperation } from '../../systems/trim/trim-types';
 import type { Entity } from '../../types/entities';
+import { useEdgeTriggeredLifecycle } from './useEdgeTriggeredLifecycle';
+import { useToolHintPrompt } from './useToolHintPrompt';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -62,40 +64,36 @@ const KEYWORDS_EDGE = new Set(['e', 'E', 'Ε', 'ε']);
 
 export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
   const { activeTool, levelManager, executeCommand, hitTestEntity, onToolChange } = props;
-  const wasActiveRef = useRef(false);
   const lastCommandRef = useRef<TrimEntityCommand | null>(null);
   const lastHoverMsRef = useRef(0);
 
   const isActive = activeTool === 'trim';
   const phase = useSyncExternalStore(TrimToolStore.subscribe, () => TrimToolStore.getState().phase);
 
-  // Activation / deactivation lifecycle
-  useEffect(() => {
-    if (isActive && !wasActiveRef.current) {
+  // Activation / deactivation lifecycle (ADR-589 edge-triggered SSoT)
+  useEdgeTriggeredLifecycle(
+    isActive,
+    () => {
       TrimToolStore.reset();
       TrimToolStore.setPhase('picking');
       ToolCursorStore.set('trim-pickbox');
-    } else if (!isActive && wasActiveRef.current) {
+    },
+    () => {
       flushAggregatedWarnings();
       ToolCursorStore.reset();
       TrimToolStore.reset();
-    }
-    wasActiveRef.current = isActive;
-  }, [isActive]);
+    },
+  );
 
-  // Status-bar prompt sync (G13)
-  useEffect(() => {
-    if (!isActive || phase === 'idle') {
-      toolHintOverrideStore.setOverride(null);
-      return;
-    }
-    const key =
-      phase === 'selectingEdges' ? 'trimTool.promptStandardEdges' : 'trimTool.promptPick';
-    toolHintOverrideStore.setOverride(i18next.t(`tool-hints:${key}`));
-    return () => {
-      toolHintOverrideStore.setOverride(null);
-    };
-  }, [isActive, phase]);
+  // Status-bar prompt sync (ADR-589 SSoT)
+  useToolHintPrompt(
+    isActive,
+    phase === 'idle'
+      ? null
+      : phase === 'selectingEdges'
+        ? 'trimTool.promptStandardEdges'
+        : 'trimTool.promptPick',
+  );
 
   // ── Scene + edge helpers ─────────────────────────────────────────────────
 
@@ -186,20 +184,32 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
     };
   }, [isActive, performTrimPick]);
 
-  // Fence trim: batch-trim all entities crossed by the drag fence segment (Phase 4).
-  const performFenceTrim = useCallback(
-    (fenceStart: Point2D, fenceEnd: Point2D, shiftKey: boolean): void => {
-      const sm = getSceneManager();
-      if (!sm || !levelManager.currentLevelId) return;
+  // Shared scene + tool-state + fence-hit resolution for fence trim and its live
+  // preview. Returns null when no active level/scene; empty `hits` is a valid result
+  // each caller handles differently (trim skips, preview clears).
+  const resolveFenceHits = useCallback(
+    (fenceStart: Point2D, fenceEnd: Point2D) => {
+      if (!levelManager.currentLevelId) return null;
       const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-      if (!scene) return;
-
+      if (!scene) return null;
       const state = TrimToolStore.getState();
       const hits = detectFenceHits({
         fenceStart, fenceEnd, scene,
         mode: state.mode, cuttingEdgeIds: state.cuttingEdgeIds,
       });
-      if (hits.length === 0) return;
+      return { scene, state, hits };
+    },
+    [levelManager],
+  );
+
+  // Fence trim: batch-trim all entities crossed by the drag fence segment (Phase 4).
+  const performFenceTrim = useCallback(
+    (fenceStart: Point2D, fenceEnd: Point2D, shiftKey: boolean): void => {
+      const sm = getSceneManager();
+      if (!sm) return;
+      const resolved = resolveFenceHits(fenceStart, fenceEnd);
+      if (!resolved || resolved.hits.length === 0) return;
+      const { scene, state, hits } = resolved;
 
       const edges = resolveCuttingEdges({
         mode: state.mode, scene,
@@ -232,7 +242,7 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
       executeCommand(cmd);
       lastCommandRef.current = cmd;
     },
-    [getSceneManager, levelManager, executeCommand],
+    [getSceneManager, resolveFenceHits, executeCommand],
   );
 
   useEffect(() => {
@@ -247,14 +257,9 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
   // Called throttled from useTrimDragCapture; scene access is only available here.
   const computeFencePreview = useCallback(
     (fenceStart: Point2D, fenceEnd: Point2D): void => {
-      if (!levelManager.currentLevelId) return;
-      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-      if (!scene) return;
-      const state = TrimToolStore.getState();
-      const hits = detectFenceHits({
-        fenceStart, fenceEnd, scene,
-        mode: state.mode, cuttingEdgeIds: state.cuttingEdgeIds,
-      });
+      const resolved = resolveFenceHits(fenceStart, fenceEnd);
+      if (!resolved) return;
+      const { scene, hits } = resolved;
       if (hits.length === 0) {
         TrimToolStore.setDragPreview(null);
         return;
@@ -266,7 +271,7 @@ export function useTrimTool(props: UseTrimToolProps): UseTrimToolReturn {
       });
       TrimToolStore.setDragPreview({ previews });
     },
-    [levelManager],
+    [resolveFenceHits],
   );
 
   useEffect(() => {
