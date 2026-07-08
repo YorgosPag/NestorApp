@@ -6,17 +6,16 @@
  * PATCH actions via ?action= query param:
  *   approve, order, close, cancel, record-delivery, link-invoice, duplicate, update
  *
- * Auth: withAuth | Rate: standard
+ * Auth: withAuth | Rate: standard (GET), sensitive (PATCH/DELETE)
  * @see ADR-267 §Phase A
+ * @see ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
 import { z } from 'zod';
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit, withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { NextResponse } from 'next/server';
+import { defineRoute, ok, created, notFound, httpError } from '@/lib/api/define-route';
 import {
   getPO,
   updatePO,
@@ -32,37 +31,13 @@ import {
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import type { POCancellationReason, POVatRate } from '@/types/procurement';
+import { UpdatePOSchema } from '../_shared/po-schema';
+
+type PoParams = { poId: string };
 
 // ============================================================================
-// SCHEMAS
+// SCHEMAS — per-action (not shared; single-use)
 // ============================================================================
-
-const UpdatePOItemSchema = z.object({
-  description: z.string().min(1).max(500),
-  quantity: z.number().positive(),
-  unit: z.string().min(1).max(20),
-  unitPrice: z.number().min(0),
-  total: z.number().min(0),
-  boqItemId: z.string().nullable().default(null),
-  categoryCode: z.string().min(1).max(20),
-});
-
-const UpdatePOSchema = z.object({
-  projectId: z.string().min(1).optional(),
-  buildingId: z.string().nullable().optional(),
-  supplierId: z.string().min(1).optional(),
-  items: z.array(UpdatePOItemSchema).min(1).max(100).optional(),
-  taxRate: z.union([z.literal(24), z.literal(13), z.literal(6), z.literal(0)]).optional(),
-  dateNeeded: z.string().nullable().optional(),
-  deliveryAddress: z.string().max(500).nullable().optional(),
-  paymentTermsDays: z.number().int().min(0).max(365).nullable().optional(),
-  supplierNotes: z.string().max(2000).nullable().optional(),
-  internalNotes: z.string().max(2000).nullable().optional(),
-  appliedFaId: z.string().nullable().optional(),
-  faDiscountPercent: z.number().min(0).max(100).nullable().optional(),
-  faDiscountAmount: z.number().min(0).nullable().optional(),
-  netTotal: z.number().min(0).nullable().optional(),
-});
 
 const CancelSchema = z.object({
   reason: z.enum([
@@ -87,170 +62,110 @@ const LinkInvoiceSchema = z.object({
 // GET — Single PO
 // ============================================================================
 
-async function handleGet(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ poId: string }> }
-): Promise<NextResponse> {
-  const { poId } = await segmentData!.params;
+export const GET = defineRoute<z.ZodTypeAny, PoParams>({
+  rateLimit: 'standard',
+  // 1-arg getErrorMessage default in the original 500 path — preserved verbatim.
+  fallbackError: 'Unknown error',
+  handler: async ({ params }) => {
+    const po = await getPO(params.poId);
+    if (!po) return notFound('Purchase order not found');
+    return ok(po);
+  },
+});
 
-  const handler = withAuth(
-    async (
-      _req: NextRequest,
-      _ctx: AuthContext,
-      _cache: PermissionCache
-    ): Promise<NextResponse> => {
-      try {
-        const po = await getPO(poId);
-        if (!po) {
-          return NextResponse.json(
-            { success: false, error: 'Purchase order not found' },
-            { status: 404 }
+// ============================================================================
+// PATCH — Update / Status actions (action-switch, all failures → 400)
+// ============================================================================
+
+export const PATCH = defineRoute<z.ZodTypeAny, PoParams>({
+  rateLimit: 'sensitive',
+  handler: async ({ req, auth, params }) => {
+    const { poId } = params;
+    try {
+      const url = new URL(req.url);
+      const action = url.searchParams.get('action') ?? 'update';
+      const body = await req.json();
+
+      switch (action) {
+        case 'approve': {
+          await approvePO(auth, poId);
+          return NextResponse.json({ success: true, message: 'PO approved' });
+        }
+
+        case 'order': {
+          await markOrdered(auth, poId);
+          return NextResponse.json({ success: true, message: 'PO marked as ordered' });
+        }
+
+        case 'close': {
+          await closePO(auth, poId);
+          return NextResponse.json({ success: true, message: 'PO closed' });
+        }
+
+        case 'cancel': {
+          const parsed = safeParseBody(CancelSchema, body);
+          if (parsed.error) return parsed.error;
+          await cancelPO(
+            auth,
+            poId,
+            parsed.data.reason as POCancellationReason,
+            parsed.data.comment
           );
+          return NextResponse.json({ success: true, message: 'PO cancelled' });
         }
-        return NextResponse.json({ success: true, data: po });
-      } catch (error) {
-        return NextResponse.json(
-          { success: false, error: getErrorMessage(error) },
-          { status: 500 }
-        );
-      }
-    }
-  );
-  return handler(request);
-}
 
-// ============================================================================
-// PATCH — Update / Status actions
-// ============================================================================
-
-async function handlePatch(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ poId: string }> }
-): Promise<NextResponse> {
-  const { poId } = await segmentData!.params;
-
-  const handler = withAuth(
-    async (
-      req: NextRequest,
-      ctx: AuthContext,
-      _cache: PermissionCache
-    ): Promise<NextResponse> => {
-      try {
-        const url = new URL(req.url);
-        const action = url.searchParams.get('action') ?? 'update';
-        const body = await req.json();
-
-        switch (action) {
-          case 'approve': {
-            await approvePO(ctx, poId);
-            return NextResponse.json({ success: true, message: 'PO approved' });
-          }
-
-          case 'order': {
-            await markOrdered(ctx, poId);
-            return NextResponse.json({ success: true, message: 'PO marked as ordered' });
-          }
-
-          case 'close': {
-            await closePO(ctx, poId);
-            return NextResponse.json({ success: true, message: 'PO closed' });
-          }
-
-          case 'cancel': {
-            const parsed = safeParseBody(CancelSchema, body);
-            if (parsed.error) return parsed.error;
-            await cancelPO(
-              ctx,
-              poId,
-              parsed.data.reason as POCancellationReason,
-              parsed.data.comment
-            );
-            return NextResponse.json({ success: true, message: 'PO cancelled' });
-          }
-
-          case 'record-delivery': {
-            const parsed = safeParseBody(DeliverySchema, body);
-            if (parsed.error) return parsed.error;
-            const result = await recordPODelivery(ctx, poId, parsed.data);
-            return NextResponse.json({
-              success: true,
-              message: 'Delivery recorded',
-              data: { newStatus: result.newStatus },
-            });
-          }
-
-          case 'link-invoice': {
-            const parsed = safeParseBody(LinkInvoiceSchema, body);
-            if (parsed.error) return parsed.error;
-            await linkInvoiceToPO(ctx, poId, parsed.data.invoiceId);
-            return NextResponse.json({ success: true, message: 'Invoice linked' });
-          }
-
-          case 'duplicate': {
-            const result = await duplicatePO(ctx, poId);
-            return NextResponse.json(
-              { success: true, data: result },
-              { status: 201 }
-            );
-          }
-
-          case 'update':
-          default: {
-            const parsed = safeParseBody(UpdatePOSchema, body);
-            if (parsed.error) return parsed.error;
-            await updatePO(ctx, poId, {
-              ...parsed.data,
-              taxRate: parsed.data.taxRate as POVatRate | undefined,
-            });
-            return NextResponse.json({ success: true, message: 'PO updated' });
-          }
+        case 'record-delivery': {
+          const parsed = safeParseBody(DeliverySchema, body);
+          if (parsed.error) return parsed.error;
+          const result = await recordPODelivery(auth, poId, parsed.data);
+          return NextResponse.json({
+            success: true,
+            message: 'Delivery recorded',
+            data: { newStatus: result.newStatus },
+          });
         }
-      } catch (error) {
-        const message = getErrorMessage(error);
-        return NextResponse.json(
-          { success: false, error: message },
-          { status: 400 }
-        );
+
+        case 'link-invoice': {
+          const parsed = safeParseBody(LinkInvoiceSchema, body);
+          if (parsed.error) return parsed.error;
+          await linkInvoiceToPO(auth, poId, parsed.data.invoiceId);
+          return NextResponse.json({ success: true, message: 'Invoice linked' });
+        }
+
+        case 'duplicate': {
+          const result = await duplicatePO(auth, poId);
+          return created(result);
+        }
+
+        case 'update':
+        default: {
+          const parsed = safeParseBody(UpdatePOSchema, body);
+          if (parsed.error) return parsed.error;
+          await updatePO(auth, poId, {
+            ...parsed.data,
+            taxRate: parsed.data.taxRate as POVatRate | undefined,
+          });
+          return NextResponse.json({ success: true, message: 'PO updated' });
+        }
       }
+    } catch (error) {
+      httpError(400, getErrorMessage(error));
     }
-  );
-  return handler(request);
-}
+  },
+});
 
 // ============================================================================
-// DELETE — Soft delete
+// DELETE — Soft delete (failures → 400)
 // ============================================================================
 
-async function handleDelete(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ poId: string }> }
-): Promise<NextResponse> {
-  const { poId } = await segmentData!.params;
-
-  const handler = withAuth(
-    async (
-      _req: NextRequest,
-      ctx: AuthContext,
-      _cache: PermissionCache
-    ): Promise<NextResponse> => {
-      try {
-        await deletePO(ctx, poId);
-        return NextResponse.json({ success: true, message: 'PO deleted' });
-      } catch (error) {
-        return NextResponse.json(
-          { success: false, error: getErrorMessage(error) },
-          { status: 400 }
-        );
-      }
+export const DELETE = defineRoute<z.ZodTypeAny, PoParams>({
+  rateLimit: 'sensitive',
+  handler: async ({ auth, params }) => {
+    try {
+      await deletePO(auth, params.poId);
+      return NextResponse.json({ success: true, message: 'PO deleted' });
+    } catch (error) {
+      httpError(400, getErrorMessage(error));
     }
-  );
-  return handler(request);
-}
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export const GET = withStandardRateLimit(handleGet);
-export const PATCH = withSensitiveRateLimit(handlePatch);
-export const DELETE = withSensitiveRateLimit(handleDelete);
+  },
+});
