@@ -1,11 +1,11 @@
 /**
  * ADR-412 Φ5 — «Edit Wall Type» dialog open/close handshake store.
  *
- * Thin binding of the shared `createEditTypeDialogStore` factory (ADR-603 Φ2).
+ * Thin binding of the shared `createEditTypeDialogStore` factory (ADR-604 Φ2).
  * Re-exports the four handles under the wall-named identifiers so existing
  * consumers (EditWallTypeDialog, RibbonWallTypePropertiesWidget) are unchanged.
  *
- * @see ./create-edit-type-dialog-store.ts — shared factory (ADR-603)
+ * @see ./create-edit-type-dialog-store.ts — shared factory (ADR-604)
  * @see ../../ui/ribbon/components/EditWallTypeDialog.tsx
  */
 

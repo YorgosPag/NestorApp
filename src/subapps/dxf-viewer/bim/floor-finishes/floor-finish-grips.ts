@@ -48,6 +48,7 @@ export function getFloorFinishGrips(entity: Readonly<FloorFinishEntity>): GripIn
       position: { x: v.x, y: v.y },
       movesEntity: false,
       floorFinishGripKind: `floor-finish-vertex-${i}`,
+      gripKind: { on: 'floor-finish', kind: `floor-finish-vertex-${i}` },
     });
   }
   const offset = verts.length;
@@ -62,6 +63,7 @@ export function getFloorFinishGrips(entity: Readonly<FloorFinishEntity>): GripIn
       movesEntity: false,
       edgeVertexIndices: [i, (i + 1) % verts.length],
       floorFinishGripKind: `floor-finish-edge-midpoint-${i}`,
+      gripKind: { on: 'floor-finish', kind: `floor-finish-edge-midpoint-${i}` },
     });
   }
   return grips;

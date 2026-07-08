@@ -33,7 +33,7 @@ const adapter = createCentredBoxGripAdapter<
   minDimensionMm: MIN_FLOORPLAN_SYMBOL_DIMENSION_MM,
   // Field names differ (`rotationDeg`/`widthMm`/`depthMm`) → shared mm-suffixed bridge.
   ...mmSuffixedBoxBridge<FloorplanSymbolParams>(),
-  toGripInfo: (base, kind) => ({ ...base, floorplanSymbolGripKind: kind }),
+  toGripInfo: (base, kind) => ({ ...base, floorplanSymbolGripKind: kind, gripKind: { on: 'floorplan-symbol', kind } }),
 });
 
 /** Drag input for a floorplan-symbol grip (the shared centred-box 5-field shape). */

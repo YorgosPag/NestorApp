@@ -153,6 +153,7 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       position: computeCentroidWorld(params),
       movesEntity: true,
       foundationGripKind: 'foundation-center',
+      gripKind: { on: 'foundation', kind: 'foundation-center' },
     },
     {
       entityId: entity.id,
@@ -161,6 +162,7 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       position: rotationHandleWorld(params),
       movesEntity: false,
       foundationGripKind: 'foundation-rotation',
+      gripKind: { on: 'foundation', kind: 'foundation-rotation' },
     },
     {
       entityId: entity.id,
@@ -169,6 +171,7 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       position: widthHandleWorld(params),
       movesEntity: false,
       foundationGripKind: 'foundation-width',
+      gripKind: { on: 'foundation', kind: 'foundation-width' },
     },
     {
       entityId: entity.id,
@@ -177,6 +180,7 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       position: lengthHandleWorld(params),
       movesEntity: false,
       foundationGripKind: 'foundation-length',
+      gripKind: { on: 'foundation', kind: 'foundation-length' },
     },
     {
       entityId: entity.id,
@@ -185,6 +189,7 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       position: edgeWHandleWorld(params),
       movesEntity: false,
       foundationGripKind: 'foundation-edge-w',
+      gripKind: { on: 'foundation', kind: 'foundation-edge-w' },
     },
     {
       entityId: entity.id,
@@ -193,6 +198,7 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       position: edgeSHandleWorld(params),
       movesEntity: false,
       foundationGripKind: 'foundation-edge-s',
+      gripKind: { on: 'foundation', kind: 'foundation-edge-s' },
     },
     {
       entityId: entity.id,
@@ -201,6 +207,7 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       position: cornerHandleWorld(params, +1, +1),
       movesEntity: false,
       foundationGripKind: 'foundation-corner-ne',
+      gripKind: { on: 'foundation', kind: 'foundation-corner-ne' },
     },
     {
       entityId: entity.id,
@@ -209,6 +216,7 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       position: cornerHandleWorld(params, -1, +1),
       movesEntity: false,
       foundationGripKind: 'foundation-corner-nw',
+      gripKind: { on: 'foundation', kind: 'foundation-corner-nw' },
     },
     {
       entityId: entity.id,
@@ -217,6 +225,7 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       position: cornerHandleWorld(params, -1, -1),
       movesEntity: false,
       foundationGripKind: 'foundation-corner-sw',
+      gripKind: { on: 'foundation', kind: 'foundation-corner-sw' },
     },
     {
       entityId: entity.id,
@@ -225,6 +234,7 @@ export function getFoundationGrips(entity: Readonly<FoundationEntity>): GripInfo
       position: cornerHandleWorld(params, +1, -1),
       movesEntity: false,
       foundationGripKind: 'foundation-corner-se',
+      gripKind: { on: 'foundation', kind: 'foundation-corner-se' },
     },
   ];
 }
@@ -246,6 +256,7 @@ function getLineFoundationGrips(
     position: g.position,
     movesEntity: false,
     foundationGripKind: FOUNDATION_LINE_ROLE_TO_KIND[g.role],
+    gripKind: { on: 'foundation', kind: FOUNDATION_LINE_ROLE_TO_KIND[g.role] },
   }));
 }
 
