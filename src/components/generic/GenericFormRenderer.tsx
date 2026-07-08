@@ -1,11 +1,17 @@
 'use client';
 
 import React from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ClearableSelectSection, shouldAllowClearForField, wrapClearableSelectHandler } from './form-select-helpers';
-import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
-import { UniversalClickableField } from '@/components/ui/form/UniversalClickableField';
+import {
+  createFieldRenderer,
+  type FieldRenderStrategy,
+  type FormFieldChangeHandler,
+  type FormFieldDataRecord,
+  type FormFieldBlurHandler,
+  type FormPhotoData,
+  type FormSelectChangeHandler,
+} from './form-field-primitives';
+import { resolveI18nKeyLabel } from './form-tabs-shell';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
@@ -23,23 +29,19 @@ const logger = createModuleLogger('GenericFormRenderer');
 // ============================================================================
 
 /** Form data type - flexible string values for form fields */
-export type FormDataRecord = Record<string, string | number | boolean | null | undefined>;
+export type FormDataRecord = FormFieldDataRecord;
 
 /** Change handler type for input/textarea elements */
-export type FormChangeHandler = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+export type FormChangeHandler = FormFieldChangeHandler;
 
 /** Select change handler type */
-export type SelectChangeHandler = (name: string, value: string) => void;
+export type SelectChangeHandler = FormSelectChangeHandler;
 
 /** Field blur handler type */
-export type FieldBlurHandler = (fieldName: string) => void;
+export type FieldBlurHandler = FormFieldBlurHandler;
 
 /** Photo data type */
-export interface PhotoData {
-  url: string;
-  name?: string;
-  size?: number;
-}
+export type PhotoData = FormPhotoData;
 
 /** Custom renderer function type */
 export type CustomRendererFn = (
@@ -74,261 +76,26 @@ export interface GenericFormRendererProps {
 }
 
 // ============================================================================
-// FIELD RENDERER FUNCTIONS
+// FIELD STRATEGY
 // ============================================================================
+// Field JSX + type dispatch are delegated to the shared `renderFormField`
+// dispatcher (ADR-595). Only the GEMI-specific i18n behaviour lives here:
+// placeholders/labels are resolved via the "dot → t() → last-segment" helper.
 
-/**
- * Renders an input field - NOW USING UNIVERSAL CLICKABLE FIELD
- */
-function renderInputField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean, fieldError?: string, onFieldBlur?: FieldBlurHandler): React.ReactNode {
-  const value = formData[field.id] || '';
-
-  // 🏢 ENTERPRISE: Use Universal Clickable Field - ZERO διασπορά!
-  return (
-    <UniversalClickableField
-      id={field.id}
-      name={field.id}
-      type={field.type}
-      value={toStringValue(value)}
-      onChange={onChange}
-      disabled={disabled}
-      required={field.required}
-      placeholder={field.placeholder}
-      maxLength={field.maxLength}
-      className={field.className}
-      onBlur={onFieldBlur ? () => onFieldBlur(field.id) : undefined}
-      error={fieldError}
-    />
-  );
-}
-
-/**
- * 🏢 ENTERPRISE: Helper function to translate text if it's an i18n key
- * Used for option labels that may be i18n keys (contain '.')
- */
-function translateText(text: string, t: (key: string) => string): string {
-  if (!text) return '';
-  // i18n keys contain dots (e.g., 'options.legalForms.ae')
-  if (text.includes('.')) {
-    const translated = t(text);
-    // If translation returns the key itself, use the last part as fallback
-    if (translated === text) {
-      const parts = text.split('.');
-      return parts[parts.length - 1];
-    }
-    return translated;
-  }
-  return text;
-}
-
-/**
- * 🏢 ENTERPRISE: Helper to convert form data value to string for input fields
- * Handles string | number | boolean | true types safely
- */
-function toStringValue(value: unknown): string {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number') return String(value);
-  if (typeof value === 'boolean') return value ? 'true' : 'false';
-  return String(value);
-}
-
-/**
- * Renders a select field
- * 🏢 ENTERPRISE: Now accepts translate function for i18n option labels
- */
-function renderSelectField(
-  field: FieldConfig,
-  formData: FormDataRecord,
-  onSelectChange: SelectChangeHandler,
-  disabled: boolean,
-  t: (key: string) => string
-): React.ReactNode {
-  if (!field.options || field.options.length === 0) {
-    logger.warn('Select field has no options defined', { fieldId: field.id });
-    return renderInputField(field, formData, () => {}, disabled);
-  }
-
-  // Translate placeholder if it's an i18n key
-  const placeholder = field.placeholder
-    ? translateText(field.placeholder, t)
-    : translateText(field.label, t).toLowerCase();
-
-  const allowClear = shouldAllowClearForField(field);
-
-  return (
-    <Select
-      name={field.id}
-      value={toStringValue(formData[field.id] || field.initialValue)}
-      onValueChange={wrapClearableSelectHandler((value) => onSelectChange(field.id, value))}
-      disabled={disabled}
-    >
-      <SelectTrigger>
-        <SelectValue placeholder={`${translateText('common.select', t)} ${placeholder}`} />
-      </SelectTrigger>
-      <SelectContent>
-        <ClearableSelectSection shouldAllowClear={allowClear} />
-        {field.options.map(option => (
-          <SelectItem key={option.value} value={option.value}>
-            {translateText(option.label, t)}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
-/**
- * Renders a textarea field
- */
-function renderTextareaField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean): React.ReactNode {
-  return (
-    <Textarea
-      id={field.id}
-      name={field.id}
-      value={toStringValue(formData[field.id])}
-      onChange={onChange}
-      disabled={disabled}
-      required={field.required}
-      placeholder={field.placeholder}
-      className={field.className}
-      rows={3}
-    />
-  );
-}
-
-/**
- * Renders a date field - NOW USING UNIVERSAL CLICKABLE FIELD
- */
-function renderDateField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean, fieldError?: string, onFieldBlur?: FieldBlurHandler): React.ReactNode {
-  const value = toStringValue(formData[field.id]);
-
-  return (
-    <UniversalClickableField
-      id={field.id}
-      name={field.id}
-      type="date"
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      required={field.required}
-      className={field.className}
-      onBlur={onFieldBlur ? () => onFieldBlur(field.id) : undefined}
-      error={fieldError}
-    />
-  );
-}
-
-/**
- * Renders a number field - NOW USING UNIVERSAL CLICKABLE FIELD
- */
-function renderNumberField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean, fieldError?: string, onFieldBlur?: FieldBlurHandler): React.ReactNode {
-  const value = toStringValue(formData[field.id]);
-
-  return (
-    <UniversalClickableField
-      id={field.id}
-      name={field.id}
-      type="number"
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      required={field.required}
-      placeholder={field.placeholder}
-      className={field.className}
-      onBlur={onFieldBlur ? () => onFieldBlur(field.id) : undefined}
-      error={fieldError}
-    />
-  );
-}
-
-/**
- * Renders an email field - NOW USING UNIVERSAL CLICKABLE FIELD
- */
-function renderEmailField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean, fieldError?: string, onFieldBlur?: FieldBlurHandler): React.ReactNode {
-  const value = toStringValue(formData[field.id]);
-
-  return (
-    <UniversalClickableField
-      id={field.id}
-      name={field.id}
-      type="email"
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      required={field.required}
-      placeholder={field.placeholder}
-      className={field.className}
-      onBlur={onFieldBlur ? () => onFieldBlur(field.id) : undefined}
-      error={fieldError}
-    />
-  );
-}
-
-/**
- * Renders a tel field - NOW USING UNIVERSAL CLICKABLE FIELD
- */
-function renderTelField(field: FieldConfig, formData: FormDataRecord, onChange: FormChangeHandler, disabled: boolean, fieldError?: string, onFieldBlur?: FieldBlurHandler): React.ReactNode {
-  const value = toStringValue(formData[field.id]);
-
-  return (
-    <UniversalClickableField
-      id={field.id}
-      name={field.id}
-      type="tel"
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      required={field.required}
-      placeholder={field.placeholder}
-      maxLength={field.maxLength}
-      className={field.className}
-      onBlur={onFieldBlur ? () => onFieldBlur(field.id) : undefined}
-      error={fieldError}
-    />
-  );
-}
-
-/**
- * Main field renderer function
- * 🏢 ENTERPRISE: Now accepts translate function for i18n support
- */
-function renderField(
-  field: FieldConfig,
-  formData: FormDataRecord,
-  onChange: FormChangeHandler,
-  onSelectChange: SelectChangeHandler,
-  disabled: boolean,
+function buildGenericFieldStrategy(
   t: (key: string) => string,
-  customRenderers?: Record<string, CustomRendererFn>,
-  fieldErrors?: Record<string, string>,
-  onFieldBlur?: FieldBlurHandler
-): React.ReactNode {
-  // Check for custom renderer first
-  if (customRenderers && customRenderers[field.id]) {
-    return customRenderers[field.id](field, formData, onChange, onSelectChange, disabled);
-  }
-
-  // Use built-in renderers based on field type
-  switch (field.type) {
-    case 'input':
-      return renderInputField(field, formData, onChange, disabled, fieldErrors?.[field.id], onFieldBlur);
-    case 'select':
-      return renderSelectField(field, formData, onSelectChange, disabled, t);
-    case 'textarea':
-      return renderTextareaField(field, formData, onChange, disabled);
-    case 'date':
-      return renderDateField(field, formData, onChange, disabled, fieldErrors?.[field.id], onFieldBlur);
-    case 'number':
-      return renderNumberField(field, formData, onChange, disabled, fieldErrors?.[field.id], onFieldBlur);
-    case 'email':
-      return renderEmailField(field, formData, onChange, disabled, fieldErrors?.[field.id], onFieldBlur);
-    case 'tel':
-      return renderTelField(field, formData, onChange, disabled, fieldErrors?.[field.id], onFieldBlur);
-    default:
-      logger.warn('Unknown field type', { fieldType: field.type, fieldId: field.id });
-      return renderInputField(field, formData, onChange, disabled, fieldErrors?.[field.id], onFieldBlur);
-  }
+): FieldRenderStrategy<FieldConfig> {
+  return {
+    selectPlaceholder: (field) => {
+      const placeholder = field.placeholder
+        ? resolveI18nKeyLabel(field.placeholder, t)
+        : resolveI18nKeyLabel(field.label, t).toLowerCase();
+      return `${resolveI18nKeyLabel('common.select', t)} ${placeholder}`;
+    },
+    optionLabel: (label) => resolveI18nKeyLabel(label, t),
+    selectFallbackValue: (field) => field.initialValue,
+    textareaRows: 3,
+  };
 }
 
 // ============================================================================
@@ -372,6 +139,16 @@ export function GenericFormRenderer({
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n - Direct translation with forms namespace
   const { t, isNamespaceReady } = useTranslation('forms');
+  const renderField = createFieldRenderer({
+    formData,
+    onChange,
+    onSelectChange,
+    disabled,
+    strategy: buildGenericFieldStrategy(t),
+    customRenderers,
+    fieldErrors,
+    onFieldBlur,
+  });
 
   /**
    * Translate a string if it's an i18n key (contains '.')
@@ -444,7 +221,7 @@ export function GenericFormRenderer({
                   errorText={fieldErrors?.[field.id] ? t(fieldErrors[field.id]) : undefined}
                 >
                   <FormInput>
-                    {renderField(field, formData, onChange, onSelectChange, disabled, t, customRenderers, fieldErrors, onFieldBlur)}
+                    {renderField(field)}
                   </FormInput>
                   {field.helpText && (
                     <p className={cn("text-xs mt-1 whitespace-nowrap overflow-hidden text-ellipsis", colors.text.muted)}>{translate(field.helpText)}</p>

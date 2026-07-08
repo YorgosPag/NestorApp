@@ -5,6 +5,29 @@
  * που διαβάζουν από centralized configurations
  */
 
+// Shared Form SSoT primitives (ADR-595)
+export {
+  FormSelectField,
+  FormTextAreaField,
+  FormTextField,
+  toStringValue,
+} from './form-field-primitives';
+export type {
+  FormFieldDescriptor,
+  FormFieldValue,
+  FormFieldDataRecord,
+  FormFieldChangeHandler,
+  FormSelectChangeHandler,
+  FormFieldBlurHandler,
+  FormPhotoData,
+} from './form-field-primitives';
+export {
+  FormTabsShell,
+  FormLogoUploadSection,
+  resolveI18nKeyLabel,
+} from './form-tabs-shell';
+export type { FormTabsShellProps, FormLogoUploadSectionProps } from './form-tabs-shell';
+
 // Form Components
 export { GenericFormRenderer } from './GenericFormRenderer';
 export type { GenericFormRendererProps } from './GenericFormRenderer';

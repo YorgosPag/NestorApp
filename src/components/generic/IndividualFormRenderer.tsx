@@ -1,35 +1,36 @@
 'use client';
 
 import React from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ClearableSelectSection, shouldAllowClearForField, wrapClearableSelectHandler } from './form-select-helpers';
-import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
-import { UniversalClickableField } from '@/components/ui/form/UniversalClickableField';
+import {
+  buildSectionFormRenderer,
+  type FieldRenderStrategy,
+  type FormFieldChangeHandler,
+  type FormFieldDataRecord,
+  type FormFieldBlurHandler,
+  type FormSelectChangeHandler,
+} from './form-field-primitives';
 import type { IndividualFieldConfig, IndividualSectionConfig } from '@/config/individual-config';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
-
-const logger = createModuleLogger('IndividualFormRenderer');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
 // ============================================================================
 
 /** Form data type for individual forms */
-export type IndividualFormData = Record<string, string | number | boolean | null | undefined>;
+export type IndividualFormData = FormFieldDataRecord;
 
 /** Input change handler type */
-export type InputChangeHandler = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+export type InputChangeHandler = FormFieldChangeHandler;
 
 /** Select change handler type */
-export type SelectChangeHandler = (name: string, value: string) => void;
+export type SelectChangeHandler = FormSelectChangeHandler;
 
 /** Field blur handler type */
-export type FieldBlurHandler = (fieldName: string) => void;
+export type FieldBlurHandler = FormFieldBlurHandler;
 
 /** Custom field renderer function type */
 export type CustomFieldRenderer = (
@@ -66,154 +67,22 @@ export interface IndividualFormRendererProps {
 }
 
 // ============================================================================
-// HELPER FUNCTIONS
+// FIELD STRATEGY
 // ============================================================================
+// Field JSX + type dispatch are delegated to the shared `renderFormField`
+// dispatcher (ADR-595). Only the Individual-specific i18n behaviour lives here:
+// placeholder + option labels are translated inline via `t`.
 
-/**
- * 🏢 ENTERPRISE: Helper to convert form data value to string for input fields
- * Handles string | number | boolean types safely
- */
-function toStringValue(value: unknown): string {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number') return String(value);
-  if (typeof value === 'boolean') return value ? 'true' : 'false';
-  return String(value);
-}
-
-// ============================================================================
-// FIELD RENDERER FUNCTIONS
-// ============================================================================
-
-/**
- * Renders an input field for individuals
- */
-function renderInputField(
-  field: IndividualFieldConfig,
-  formData: IndividualFormData,
-  onChange: InputChangeHandler,
-  disabled: boolean,
-  t: TFunction, // 🏢 ENTERPRISE: i18n translation function
-  fieldError?: string,
-  onFieldBlur?: FieldBlurHandler
-): React.ReactNode {
-  const value = toStringValue(formData[field.id]);
-
-  // 🏢 ENTERPRISE: Use Universal Clickable Field - ZERO διασπορά!
-  return (
-    <UniversalClickableField
-      id={field.id}
-      name={field.id}
-      type={field.type}
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      required={field.required}
-      placeholder={field.placeholder ? t(field.placeholder) : undefined} // 🏢 ENTERPRISE: Translate placeholder if exists
-      maxLength={field.maxLength}
-      className={field.className}
-      onBlur={onFieldBlur ? () => onFieldBlur(field.id) : undefined}
-      error={fieldError}
-    />
-  );
-}
-
-/**
- * Renders a textarea field for individuals
- */
-function renderTextareaField(
-  field: IndividualFieldConfig,
-  formData: IndividualFormData,
-  onChange: InputChangeHandler,
-  disabled: boolean
-): React.ReactNode {
-  return (
-    <Textarea
-      id={field.id}
-      name={field.id}
-      value={toStringValue(formData[field.id])}
-      onChange={onChange}
-      disabled={disabled}
-      required={field.required}
-      placeholder={field.placeholder}
-      rows={4}
-      className={field.className}
-    />
-  );
-}
-
-/**
- * Renders a select field for individuals
- */
-function renderSelectField(
-  field: IndividualFieldConfig,
-  formData: IndividualFormData,
-  onSelectChange: SelectChangeHandler,
-  disabled: boolean,
-  t: TFunction // 🏢 ENTERPRISE: i18n translation function
-): React.ReactNode {
-  const currentValue = formData[field.id];
-  const valueStr = currentValue !== null && currentValue !== undefined ? String(currentValue) : (field.defaultValue ?? '');
-  const allowClear = shouldAllowClearForField(field);
-
-  return (
-    <Select
-      name={field.id}
-      value={valueStr}
-      onValueChange={wrapClearableSelectHandler((value) => onSelectChange(field.id, value))}
-      disabled={disabled}
-      required={field.required}
-    >
-      <SelectTrigger>
-        <SelectValue placeholder={field.placeholder ? t(field.placeholder) : `${t('common.select')} ${t(field.label)}`} />
-      </SelectTrigger>
-      <SelectContent>
-        <ClearableSelectSection shouldAllowClear={allowClear} />
-        {field.options?.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
-            {t(option.label)}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
-/**
- * Renders a field based on its type
- */
-function renderField(
-  field: IndividualFieldConfig,
-  formData: IndividualFormData,
-  onChange: InputChangeHandler,
-  onSelectChange: SelectChangeHandler,
-  disabled: boolean,
-  t: TFunction, // 🏢 ENTERPRISE: i18n translation function
-  customRenderers?: Record<string, CustomFieldRenderer>,
-  fieldErrors?: Record<string, string>,
-  onFieldBlur?: FieldBlurHandler
-): React.ReactNode {
-  // Check for custom renderer first
-  if (customRenderers && customRenderers[field.id]) {
-    return customRenderers[field.id](field, formData, onChange, onSelectChange, disabled);
-  }
-
-  // Default rendering based on field type
-  switch (field.type) {
-    case 'input':
-    case 'email':
-    case 'tel':
-    case 'date':
-    case 'number':
-      return renderInputField(field, formData, onChange, disabled, t, fieldErrors?.[field.id], onFieldBlur);
-    case 'textarea':
-      return renderTextareaField(field, formData, onChange, disabled);
-    case 'select':
-      return renderSelectField(field, formData, onSelectChange, disabled, t);
-    default:
-      logger.warn('Unknown field type', { fieldType: field.type, fieldId: field.id });
-      return renderInputField(field, formData, onChange, disabled, t, fieldErrors?.[field.id], onFieldBlur);
-  }
+function buildIndividualFieldStrategy(
+  t: TFunction,
+): FieldRenderStrategy<IndividualFieldConfig> {
+  return {
+    inputPlaceholder: (field) => (field.placeholder ? t(field.placeholder) : undefined),
+    selectPlaceholder: (field) =>
+      field.placeholder ? t(field.placeholder) : `${t('common.select')} ${t(field.label)}`,
+    optionLabel: (label) => t(label),
+    selectFallbackValue: (field) => field.defaultValue,
+  };
 }
 
 // ============================================================================
@@ -239,11 +108,11 @@ export function IndividualFormRenderer({
 }: IndividualFormRendererProps) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
-
-  if (!sections || sections.length === 0) {
-    logger.warn('No sections provided');
-    return null;
-  }
+  const { renderField, hasSections } = buildSectionFormRenderer(
+    { formData, onChange, onSelectChange, disabled, strategy: buildIndividualFieldStrategy(t), customRenderers, fieldErrors, onFieldBlur },
+    sections,
+  );
+  if (!hasSections) return null;
 
   return (
     <div className="space-y-8 md:space-y-6">
@@ -274,7 +143,7 @@ export function IndividualFormRenderer({
                   className={section.id === 'communication' ? "w-full max-w-none block" : "w-full"}
                 >
                   <FormInput>
-                    {renderField(field, formData, onChange, onSelectChange, disabled, t, customRenderers, fieldErrors, onFieldBlur)}
+                    {renderField(field)}
                   </FormInput>
                 </FormField>
               ))

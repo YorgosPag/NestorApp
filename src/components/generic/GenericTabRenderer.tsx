@@ -174,44 +174,54 @@ function DisplayField({
   );
 }
 
-/**
- * Renders a section in compact mode (inline)
- */
-function CompactSectionRenderer({
-  section,
-  data,
-  customRenderers,
-  valueFormatters,
-  formatLabels
-}: {
+/** Shared props for the compact / full section renderers. */
+interface SectionRendererProps {
   section: SectionConfig;
   data: TabDataRecord;
   customRenderers?: Record<string, CustomFieldRenderer>;
   valueFormatters?: Record<string, ValueFormatter>;
   formatLabels: FormatLabels;
-}) {
+}
+
+/** Grid of DisplayFields for a section — shared by the compact and full renderers. */
+function SectionFieldsGrid({
+  section,
+  data,
+  customRenderers,
+  valueFormatters,
+  formatLabels,
+  gridClassName,
+}: SectionRendererProps & { gridClassName: string }): React.ReactNode {
+  return (
+    <div className={gridClassName}>
+      {section.fields.map(field => (
+        <DisplayField
+          key={field.id}
+          field={field}
+          data={data}
+          customRenderers={customRenderers}
+          valueFormatters={valueFormatters}
+          formatLabels={formatLabels}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Renders a section in compact mode (inline)
+ */
+function CompactSectionRenderer(props: SectionRendererProps) {
   const iconSizes = useIconSizes();
-  const _colors = useSemanticColors();
-  const IconComponent = getIconComponent(section.icon);
+  const IconComponent = getIconComponent(props.section.icon);
 
   return (
     <div className="space-y-2">
       <h5 className="font-medium text-sm flex items-center gap-2">
         <IconComponent className={iconSizes.sm} />
-        {section.title}
+        {props.section.title}
       </h5>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        {section.fields.map(field => (
-          <DisplayField
-            key={field.id}
-            field={field}
-            data={data}
-            customRenderers={customRenderers}
-            valueFormatters={valueFormatters}
-            formatLabels={formatLabels}
-          />
-        ))}
-      </div>
+      <SectionFieldsGrid {...props} gridClassName="grid grid-cols-1 md:grid-cols-2 gap-2" />
     </div>
   );
 }
@@ -219,44 +229,21 @@ function CompactSectionRenderer({
 /**
  * Renders a section in full display mode
  */
-function FullSectionRenderer({
-  section,
-  data,
-  customRenderers,
-  valueFormatters,
-  formatLabels
-}: {
-  section: SectionConfig;
-  data: TabDataRecord;
-  customRenderers?: Record<string, CustomFieldRenderer>;
-  valueFormatters?: Record<string, ValueFormatter>;
-  formatLabels: FormatLabels;
-}) {
+function FullSectionRenderer(props: SectionRendererProps) {
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
-  const IconComponent = getIconComponent(section.icon);
+  const IconComponent = getIconComponent(props.section.icon);
 
   return (
     <div className="p-4 border rounded-lg space-y-4">
       <h4 className="font-semibold mb-3 flex items-center gap-2">
         <IconComponent className={iconSizes.md} />
-        {section.title}
+        {props.section.title}
       </h4>
-      {section.description && (
-        <p className={cn("text-sm mb-4", colors.text.muted)}>{section.description}</p>
+      {props.section.description && (
+        <p className={cn("text-sm mb-4", colors.text.muted)}>{props.section.description}</p>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {section.fields.map(field => (
-          <DisplayField
-            key={field.id}
-            field={field}
-            data={data}
-            customRenderers={customRenderers}
-            valueFormatters={valueFormatters}
-            formatLabels={formatLabels}
-          />
-        ))}
-      </div>
+      <SectionFieldsGrid {...props} gridClassName="grid grid-cols-1 md:grid-cols-2 gap-4" />
     </div>
   );
 }

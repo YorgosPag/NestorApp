@@ -2,11 +2,14 @@
 
 import React from 'react';
 import { FormGrid } from '@/components/ui/form/FormComponents';
-import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
-import { TabsContent } from '@/components/ui/tabs';
 import { getIconComponent } from './utils/IconMapping';
 import { GenericFormRenderer, type FormDataRecord, type PhotoData, type CustomRendererFn } from './GenericFormRenderer';
-import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
+import {
+  FormLogoUploadSection,
+  FormTabsShell,
+  resolveI18nKeyLabel,
+} from './form-tabs-shell';
+import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { SectionConfig } from '@/config/company-gemi';
 // 🏢 ENTERPRISE: i18n support for tab labels
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -71,47 +74,31 @@ export interface GenericFormTabRendererProps {
 // ============================================================================
 
 /**
- * 🏢 ENTERPRISE: Translate i18n key to localized string
- * Keys containing '.' are treated as i18n keys (e.g., 'sections.basicInfoGemi')
- */
-function translateLabel(text: string, t: (key: string) => string): string {
-  if (!text) return '';
-  // i18n keys contain dots
-  if (text.includes('.')) {
-    const translated = t(text);
-    // If translation returns the key itself, extract the last part as fallback
-    if (translated === text) {
-      const parts = text.split('.');
-      return parts[parts.length - 1];
-    }
-    return translated;
-  }
-  return text;
-}
-
-/**
  * Creates form tabs from configuration sections
  * 🏢 ENTERPRISE: Now accepts translate function for i18n support
  */
 function createFormTabsFromConfig(
-  sections: SectionConfig[],
-  formData: ContactFormData,
-  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
-  onSelectChange: (name: string, value: string) => void,
-  disabled: boolean,
+  props: GenericFormTabRendererProps,
   t: (key: string) => string,
-  onPhotosChange?: (photos: PhotoSlotData[]) => void,
-  customRenderers?: Record<string, FieldRendererFn | CustomRendererFn>,
-  sectionFooterRenderers?: Record<string, FieldRendererFn>,
-  fieldErrors?: Record<string, string>,
-  onFieldBlur?: (fieldName: string) => void
 ) {
+  const {
+    sections,
+    formData,
+    onChange,
+    onSelectChange,
+    disabled = false,
+    onPhotosChange,
+    customRenderers,
+    sectionFooterRenderers,
+    fieldErrors,
+    onFieldBlur,
+  } = props;
   return sections.map(section => {
     // ========================================================================
     // 🏢 ENTERPRISE: Translate section title using i18n
     // ========================================================================
 
-    let displayLabel = translateLabel(section.title, t);
+    let displayLabel = resolveI18nKeyLabel(section.title, t);
 
     // Αν είναι relationships section και υπάρχει custom renderer, προσθέτουμε indicator
     if (section.id === 'relationships' && customRenderers?.relationships) {
@@ -161,22 +148,16 @@ function createFormTabsFromConfig(
       }
 
       if (section.id === 'logo') {
-        // 🏢 ENTERPRISE CENTRALIZED: Logo upload using MultiplePhotosUpload (1 slot)
-        const multiplePhotos = (formData.multiplePhotos as PhotoSlotData[] | undefined) || [];
+        // 🏢 ENTERPRISE CENTRALIZED: Logo upload (single slot) — shared SSoT primitive
+        const multiplePhotos = (formData.multiplePhotos as PhotoSlot[] | undefined) || [];
         return (
-          <div className="flex flex-col items-center space-y-4 p-6 min-h-[360px]">
-            <MultiplePhotosUpload
-              key="company-logo-upload"
-              photos={multiplePhotos}
-              maxPhotos={1} // For service logos, we use exactly 1 slot
-              onPhotosChange={onPhotosChange as ((photos: import('@/components/ui/MultiplePhotosUpload').PhotoSlot[]) => void) | undefined}
-              disabled={disabled}
-              purpose="logo" // For services
-              contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService
-              compact // Use compact mode for better layout
-              className=""
-            />
-          </div>
+          <FormLogoUploadSection
+            uploadKey="company-logo-upload"
+            photos={multiplePhotos}
+            onPhotosChange={onPhotosChange as ((photos: PhotoSlot[]) => void) | undefined}
+            disabled={disabled}
+            contactData={formData}
+          />
         );
       }
 
@@ -228,58 +209,25 @@ function createFormTabsFromConfig(
  * }
  * ```
  */
-export function GenericFormTabRenderer({
-  sections,
-  formData,
-  onChange,
-  onSelectChange,
-  disabled = false,
-  onPhotosChange,
-  customRenderers,
-  sectionFooterRenderers,
-  fieldErrors,
-  onFieldBlur,
-  onActiveTabChange,
-  initialTab
-}: GenericFormTabRendererProps) {
+export function GenericFormTabRenderer(props: GenericFormTabRendererProps) {
   // 🏢 ENTERPRISE: i18n support for tab labels
   const { t } = useTranslation('forms');
 
-  if (!sections || sections.length === 0) {
+  if (!props.sections || props.sections.length === 0) {
     logger.warn('No sections provided');
     return null;
   }
 
   // Create tabs from sections - 🏢 ENTERPRISE: Pass translate function
-  const tabs = createFormTabsFromConfig(
-    sections,
-    formData,
-    onChange,
-    onSelectChange,
-    disabled,
-    t,
-    onPhotosChange,
-    customRenderers,
-    sectionFooterRenderers,
-    fieldErrors,
-    onFieldBlur
-  );
+  const tabs = createFormTabsFromConfig(props, t);
 
   return (
-    <div className="w-full">
-      <TabsOnlyTriggers
-        tabs={tabs}
-        defaultTab={initialTab || tabs[0]?.id || "basicInfo"}
-        theme="clean"
-        onTabChange={onActiveTabChange}
-      >
-        {tabs.map((tab) => (
-          <TabsContent key={tab.id} value={tab.id} className="mt-4">
-            {tab.content}
-          </TabsContent>
-        ))}
-      </TabsOnlyTriggers>
-    </div>
+    <FormTabsShell
+      tabs={tabs}
+      initialTab={props.initialTab}
+      onActiveTabChange={props.onActiveTabChange}
+      contentClassName="mt-4"
+    />
   );
 }
 

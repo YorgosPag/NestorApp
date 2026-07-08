@@ -2,10 +2,9 @@
 
 import React, { useMemo } from 'react';
 import { FormGrid } from '@/components/ui/form/FormComponents';
-import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
-import { TabsContent } from '@/components/ui/tabs';
 import { getIconComponent } from './utils/IconMapping';
 import { IndividualFormRenderer, type IndividualFormData, type CustomFieldRenderer } from './IndividualFormRenderer';
+import { FormTabsShell, type TabFieldCustomRenderer } from './form-tabs-shell';
 import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
 import type { IndividualSectionConfig } from '@/config/individual-config';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
@@ -23,24 +22,8 @@ const logger = createModuleLogger('IndividualFormTabRenderer');
 // INTERFACES
 // ============================================================================
 
-/** Form field interface */
-interface FormField {
-  name: string;
-  type: string;
-  label?: string;
-  placeholder?: string;
-  required?: boolean;
-  [key: string]: unknown;
-}
-
-/** Custom renderer function type */
-type IndividualCustomRendererFn = (
-  field: FormField,
-  formData: ContactFormData,
-  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
-  onSelectChange: (name: string, value: string) => void,
-  disabled: boolean
-) => React.ReactNode;
+/** Custom renderer function type (shared tab contract). */
+type IndividualCustomRendererFn = TabFieldCustomRenderer;
 
 export interface IndividualFormTabRendererProps {
   /** Sections configuration from individual config file */
@@ -100,6 +83,24 @@ function createIndividualFormTabsFromConfig(
   fieldErrors?: Record<string, string>,
   onFieldBlur?: (fieldName: string) => void
 ) {
+  // Single-section form body — shared by the photo tab (below its uploader) and
+  // every regular tab, so the IndividualFormRenderer invocation lives once.
+  const renderSectionForm = (section: IndividualSectionConfig): React.ReactNode => (
+    <FormGrid>
+      <IndividualFormRenderer
+        sections={[section]} // Single section per tab
+        formData={formData as unknown as IndividualFormData} // 🏢 ENTERPRISE: Type assertion
+        onChange={onChange}
+        onSelectChange={onSelectChange}
+        disabled={disabled}
+        customRenderers={customRenderers as Record<string, CustomFieldRenderer> | undefined} // 🏢 ENTERPRISE: Type assertion
+        sectionFooterRenderers={sectionFooterRenderers as Record<string, CustomFieldRenderer> | undefined}
+        fieldErrors={fieldErrors}
+        onFieldBlur={onFieldBlur}
+      />
+    </FormGrid>
+  );
+
   return sections.map(section => ({
     id: section.id,
     label: t(section.title), // 🏢 ENTERPRISE: Translate section title
@@ -130,35 +131,11 @@ function createIndividualFormTabsFromConfig(
           }}
         />
 
-        <FormGrid>
-          <IndividualFormRenderer
-            sections={[section]} // Regular fields (like description)
-            formData={formData as unknown as IndividualFormData} // 🏢 ENTERPRISE: Type assertion
-            onChange={onChange}
-            onSelectChange={onSelectChange}
-            disabled={disabled}
-            customRenderers={customRenderers as Record<string, CustomFieldRenderer> | undefined} // 🏢 ENTERPRISE: Type assertion
-            sectionFooterRenderers={sectionFooterRenderers as Record<string, CustomFieldRenderer> | undefined}
-            fieldErrors={fieldErrors}
-            onFieldBlur={onFieldBlur}
-          />
-        </FormGrid>
+        {renderSectionForm(section)}
       </div>
     ) : (
       // Regular rendering for other sections
-      <FormGrid>
-        <IndividualFormRenderer
-          sections={[section]} // Single section per tab
-          formData={formData as unknown as IndividualFormData} // 🏢 ENTERPRISE: Type assertion
-          onChange={onChange}
-          onSelectChange={onSelectChange}
-          disabled={disabled}
-          customRenderers={customRenderers as Record<string, CustomFieldRenderer> | undefined} // 🏢 ENTERPRISE: Type assertion
-          sectionFooterRenderers={sectionFooterRenderers as Record<string, CustomFieldRenderer> | undefined}
-          fieldErrors={fieldErrors}
-          onFieldBlur={onFieldBlur}
-        />
-      </FormGrid>
+      renderSectionForm(section)
     )
   }));
 }
@@ -245,20 +222,11 @@ export function IndividualFormTabRenderer({
   ), [sections, formData, disabled, fieldErrors]);
 
   return (
-    <div className="w-full">
-      <TabsOnlyTriggers
-        tabs={tabs}
-        defaultTab={initialTab || tabs[0]?.id || "basicInfo"}
-        theme="clean"
-        onTabChange={onActiveTabChange}
-      >
-        {tabs.map((tab) => (
-          <TabsContent key={tab.id} value={tab.id} className="">
-            {tab.content}
-          </TabsContent>
-        ))}
-      </TabsOnlyTriggers>
-    </div>
+    <FormTabsShell
+      tabs={tabs}
+      initialTab={initialTab}
+      onActiveTabChange={onActiveTabChange}
+    />
   );
 }
 

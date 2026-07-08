@@ -1,11 +1,10 @@
 'use client';
 
 import React from 'react';
-import { TabsOnlyTriggers } from '@/components/ui/navigation/TabsComponents';
-import { TabsContent } from '@/components/ui/tabs';
 import { getIconComponent } from './utils/IconMapping';
 import { ServiceFormRenderer, type ServiceFormData, type PhotoData, type CustomFieldRenderer } from './ServiceFormRenderer';
-import { MultiplePhotosUpload } from '@/components/ui/MultiplePhotosUpload';
+import { FormLogoUploadSection, FormTabsShell, type TabFieldCustomRenderer } from './form-tabs-shell';
+import type { PhotoSlot as UploadPhotoSlot } from '@/components/ui/MultiplePhotosUpload';
 import type { ServiceSectionConfig } from '@/config/service-config';
 // 🏢 ENTERPRISE: i18n support for tab labels
 import { useTranslation } from 'react-i18next';
@@ -32,24 +31,8 @@ interface PhotoSlot {
   [key: string]: unknown;
 }
 
-/** Form field data structure */
-interface FormField {
-  name: string;
-  type: string;
-  label?: string;
-  placeholder?: string;
-  required?: boolean;
-  [key: string]: unknown;
-}
-
-/** Custom renderer function type */
-type CustomRendererFn = (
-  field: FormField,
-  formData: ContactFormData,
-  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
-  onSelectChange: (name: string, value: string) => void,
-  disabled: boolean
-) => React.ReactNode;
+/** Custom renderer function type (shared tab contract). */
+type CustomRendererFn = TabFieldCustomRenderer;
 
 export interface ServiceFormTabRendererProps {
   /** Sections configuration from service config file */
@@ -84,18 +67,21 @@ export interface ServiceFormTabRendererProps {
  * 🔧 FIX: Now accepts t function parameter for translating tab labels (2026-01-19)
  */
 function createServiceFormTabsFromConfig(
-  sections: ServiceSectionConfig[],
-  formData: ContactFormData,
-  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
-  onSelectChange: (name: string, value: string) => void,
-  disabled: boolean,
+  props: ServiceFormTabRendererProps,
   t: FieldTranslator,
-  onPhotosChange?: (photos: PhotoSlot[]) => void,
-  customRenderers?: Record<string, CustomRendererFn | (() => React.ReactNode)>,
-  sectionFooterRenderers?: Record<string, CustomRendererFn>,
-  fieldErrors?: Record<string, string>,
-  onFieldBlur?: (fieldName: string) => void
 ) {
+  const {
+    sections,
+    formData,
+    onChange,
+    onSelectChange,
+    disabled = false,
+    onPhotosChange,
+    customRenderers,
+    sectionFooterRenderers,
+    fieldErrors,
+    onFieldBlur,
+  } = props;
   return sections.map(section => {
     // Shared multi-namespace resolver — same contract as ServiceFormRenderer.
     let displayLabel = translateFieldValue(section.title, t) ?? section.title;
@@ -129,28 +115,22 @@ function createServiceFormTabsFromConfig(
       }
 
       if (section.id === 'logo') {
-        // 🏢 ENTERPRISE CENTRALIZED: Logo upload using MultiplePhotosUpload (1 slot)
-        const multiplePhotos = (formData.multiplePhotos as PhotoSlot[] | undefined) || [];
+        // 🏢 ENTERPRISE CENTRALIZED: Logo upload (single slot) — shared SSoT primitive
+        const multiplePhotos = (formData.multiplePhotos as UploadPhotoSlot[] | undefined) || [];
         logger.info('Rendering LOGO section with MultiplePhotosUpload', {
           photosCount: multiplePhotos.length,
           hasOnPhotosChange: !!onPhotosChange,
           disabled
         });
         return (
-          <div className="flex flex-col items-center space-y-4 p-6 min-h-[360px]">
-            <MultiplePhotosUpload
-              key="service-logo-upload"
-              photos={multiplePhotos}
-              maxPhotos={1} // For service logos, we use exactly 1 slot
-              onPhotosChange={onPhotosChange as ((photos: import('@/components/ui/MultiplePhotosUpload').PhotoSlot[]) => void) | undefined}
-              disabled={disabled}
-              purpose="logo" // For services
-              contactData={formData} // 🏢 ENTERPRISE: Pass contact data for FileNamingService
-              compact // Use compact mode for better layout
-              showPhotosWhenDisabled // 🔧 FIX: Show upload slot even in disabled/read-only mode (2026-01-19)
-              className=""
-            />
-          </div>
+          <FormLogoUploadSection
+            uploadKey="service-logo-upload"
+            photos={multiplePhotos}
+            onPhotosChange={onPhotosChange as ((photos: UploadPhotoSlot[]) => void) | undefined}
+            disabled={disabled}
+            contactData={formData}
+            showPhotosWhenDisabled // 🔧 FIX: Show upload slot even in disabled/read-only mode
+          />
         );
       }
 
@@ -205,58 +185,25 @@ function createServiceFormTabsFromConfig(
  * }
  * ```
  */
-export function ServiceFormTabRenderer({
-  sections,
-  formData,
-  onChange,
-  onSelectChange,
-  disabled = false,
-  onPhotosChange,
-  customRenderers,
-  sectionFooterRenderers,
-  fieldErrors,
-  onFieldBlur,
-  onActiveTabChange,
-  initialTab
-}: ServiceFormTabRendererProps) {
+export function ServiceFormTabRenderer(props: ServiceFormTabRendererProps) {
   // 🏢 ENTERPRISE: i18n hook for translating tab labels
   const { t } = useTranslation(SERVICE_FORM_NAMESPACES as unknown as string[]);
 
-  if (!sections || sections.length === 0) {
+  if (!props.sections || props.sections.length === 0) {
     logger.warn('No sections provided');
     return null;
   }
 
   // Create tabs from service sections
-  const tabs = createServiceFormTabsFromConfig(
-    sections,
-    formData,
-    onChange,
-    onSelectChange,
-    disabled,
-    t,
-    onPhotosChange,
-    customRenderers,
-    sectionFooterRenderers,
-    fieldErrors,
-    onFieldBlur
-  );
+  const tabs = createServiceFormTabsFromConfig(props, t);
 
   return (
-    <div className="w-full">
-      <TabsOnlyTriggers
-        tabs={tabs}
-        defaultTab={initialTab || tabs[0]?.id || "basicInfo"}
-        theme="clean"
-        onTabChange={onActiveTabChange}
-      >
-        {tabs.map((tab) => (
-          <TabsContent key={tab.id} value={tab.id} className="mt-4">
-            {tab.content}
-          </TabsContent>
-        ))}
-      </TabsOnlyTriggers>
-    </div>
+    <FormTabsShell
+      tabs={tabs}
+      initialTab={props.initialTab}
+      onActiveTabChange={props.onActiveTabChange}
+      contentClassName="mt-4"
+    />
   );
 }
 

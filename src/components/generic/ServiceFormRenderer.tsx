@@ -1,11 +1,16 @@
 'use client';
 
 import React from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ClearableSelectSection, shouldAllowClearForField, wrapClearableSelectHandler } from './form-select-helpers';
-import { Textarea } from '@/components/ui/textarea';
 import { FormField, FormInput } from '@/components/ui/form/FormComponents';
-import { UniversalClickableField } from '@/components/ui/form/UniversalClickableField';
+import {
+  buildSectionFormRenderer,
+  type FieldRenderStrategy,
+  type FormFieldChangeHandler,
+  type FormFieldDataRecord,
+  type FormFieldBlurHandler,
+  type FormPhotoData,
+  type FormSelectChangeHandler,
+} from './form-field-primitives';
 import { useIconSizes } from '@/hooks/useIconSizes';
 // 🏢 ENTERPRISE: i18n support for service forms
 import { useTranslation } from 'react-i18next';
@@ -16,33 +21,26 @@ import {
 } from './i18n/translate-field-value';
 import type { ServiceFieldConfig, ServiceSectionConfig } from '@/config/service-config';
 import { getIconComponent } from './utils/IconMapping';
-import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
-
-const logger = createModuleLogger('ServiceFormRenderer');
 
 // ============================================================================
 // 🏢 ENTERPRISE: Type Definitions (ADR-compliant - NO any)
 // ============================================================================
 
 /** Form data type for service forms */
-export type ServiceFormData = Record<string, string | number | boolean | null | undefined>;
+export type ServiceFormData = FormFieldDataRecord;
 
 /** Photo data structure */
-export interface PhotoData {
-  url: string;
-  name?: string;
-  size?: number;
-}
+export type PhotoData = FormPhotoData;
 
 /** Input change handler type */
-export type InputChangeHandler = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+export type InputChangeHandler = FormFieldChangeHandler;
 
 /** Select change handler type */
-export type SelectChangeHandler = (name: string, value: string) => void;
+export type SelectChangeHandler = FormSelectChangeHandler;
 
 /** Field blur handler type */
-export type FieldBlurHandler = (fieldName: string) => void;
+export type FieldBlurHandler = FormFieldBlurHandler;
 
 /** Custom field renderer function type */
 export type CustomFieldRenderer = (
@@ -52,22 +50,6 @@ export type CustomFieldRenderer = (
   onSelectChange: SelectChangeHandler,
   disabled: boolean
 ) => React.ReactNode;
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * 🏢 ENTERPRISE: Helper to convert form data value to string for input fields
- * Handles string | number | boolean types safely
- */
-function toStringValue(value: unknown): string {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number') return String(value);
-  if (typeof value === 'boolean') return value ? 'true' : 'false';
-  return String(value);
-}
 
 // ============================================================================
 // INTERFACES
@@ -104,154 +86,21 @@ export interface ServiceFormRendererProps {
 type TFunction = FieldTranslator;
 
 // ============================================================================
-// FIELD RENDERER FUNCTIONS
+// FIELD STRATEGY
 // ============================================================================
+// Field JSX + type dispatch are delegated to the shared `renderFormField`
+// dispatcher (ADR-595). Service forms pre-translate placeholders in the parent,
+// so raw `field.placeholder` passes through; option labels use the shared
+// multi-namespace resolver.
 
-/**
- * Renders an input field for services - NOW USING UNIVERSAL CLICKABLE FIELD
- */
-function renderInputField(
-  field: ServiceFieldConfig,
-  formData: ServiceFormData,
-  onChange: InputChangeHandler,
-  disabled: boolean,
-  fieldError?: string,
-  onFieldBlur?: FieldBlurHandler
-): React.ReactNode {
-  const value = toStringValue(formData[field.id]);
-
-  // 🎯 DEBUG: Log για contact fields
-  if (['phone', 'email', 'website'].includes(field.id)) {
-    logger.info('Contact field debug', { fieldId: field.id, fieldType: field.type, value, disabled });
-  }
-
-  // 🏢 ENTERPRISE: Use Universal Clickable Field - ZERO διασπορά!
-  return (
-    <UniversalClickableField
-      id={field.id}
-      name={field.id}
-      type={field.type}
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      required={field.required}
-      placeholder={field.placeholder}
-      maxLength={field.maxLength}
-      className={field.className}
-      onBlur={onFieldBlur ? () => onFieldBlur(field.id) : undefined}
-      error={fieldError}
-    />
-  );
-}
-
-/**
- * Renders a textarea field for services
- */
-function renderTextareaField(
-  field: ServiceFieldConfig,
-  formData: ServiceFormData,
-  onChange: InputChangeHandler,
-  disabled: boolean,
-  fieldError?: string,
-  onFieldBlur?: FieldBlurHandler
-): React.ReactNode {
-  return (
-    <Textarea
-      id={field.id}
-      name={field.id}
-      value={toStringValue(formData[field.id])}
-      onChange={onChange}
-      disabled={disabled}
-      required={field.required}
-      placeholder={field.placeholder}
-      rows={4}
-      className={field.className}
-    />
-  );
-}
-
-/**
- * Renders a select field for services
- * 🏢 ENTERPRISE: Uses translated placeholder and option labels
- * 🔧 FIX: Now translates option labels (2026-01-19)
- */
-function renderSelectField(
-  field: ServiceFieldConfig,
-  formData: ServiceFormData,
-  onSelectChange: SelectChangeHandler,
-  disabled: boolean,
-  t: TFunction
-): React.ReactNode {
-  const currentValue = formData[field.id];
-  const valueStr = currentValue !== null && currentValue !== undefined ? String(currentValue) : (field.defaultValue ?? '');
-  const allowClear = shouldAllowClearForField(field);
-
-  // 🌐 Use translated placeholder from field (already translated by parent)
-  const placeholder = field.placeholder || field.label;
-
-  return (
-    <Select
-      name={field.id}
-      value={valueStr}
-      onValueChange={wrapClearableSelectHandler((value) => onSelectChange(field.id, value))}
-      disabled={disabled}
-      required={field.required}
-    >
-      <SelectTrigger>
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        <ClearableSelectSection shouldAllowClear={allowClear} />
-        {field.options?.map((option) => {
-          // 🔧 FIX: Translate option labels using the same logic as field labels
-          const translatedLabel = translateFieldValue(option.label, t) || option.label;
-          return (
-            <SelectItem key={option.value} value={option.value}>
-              {translatedLabel}
-            </SelectItem>
-          );
-        })}
-      </SelectContent>
-    </Select>
-  );
-}
-
-/**
- * Renders a field based on its type
- * 🔧 FIX: Added t parameter for translating select options (2026-01-19)
- */
-function renderField(
-  field: ServiceFieldConfig,
-  formData: ServiceFormData,
-  onChange: InputChangeHandler,
-  onSelectChange: SelectChangeHandler,
-  disabled: boolean,
+function buildServiceFieldStrategy(
   t: TFunction,
-  customRenderers?: Record<string, CustomFieldRenderer>,
-  fieldErrors?: Record<string, string>,
-  onFieldBlur?: FieldBlurHandler
-): React.ReactNode {
-  // Check for custom renderer first
-  if (customRenderers && customRenderers[field.id]) {
-    return customRenderers[field.id](field, formData, onChange, onSelectChange, disabled);
-  }
-
-  // Default rendering based on field type
-  switch (field.type) {
-    case 'input':
-    case 'email':
-    case 'tel':
-    case 'date':
-    case 'number':
-    case 'url':
-      return renderInputField(field, formData, onChange, disabled, fieldErrors?.[field.id], onFieldBlur);
-    case 'textarea':
-      return renderTextareaField(field, formData, onChange, disabled);
-    case 'select':
-      return renderSelectField(field, formData, onSelectChange, disabled, t);
-    default:
-      return renderInputField(field, formData, onChange, disabled, fieldErrors?.[field.id], onFieldBlur);
-  }
+): FieldRenderStrategy<ServiceFieldConfig> {
+  return {
+    selectPlaceholder: (field) => field.placeholder || field.label,
+    optionLabel: (label) => translateFieldValue(label, t) || label,
+    selectFallbackValue: (field) => field.defaultValue,
+  };
 }
 
 
@@ -283,10 +132,11 @@ export function ServiceFormRenderer({
   // `contacts` (field names), `contacts-form` (option catalogs) and `forms`
   // (shared section titles). i18next cascades through them in order.
   const { t } = useTranslation(SERVICE_FORM_NAMESPACES as unknown as string[]);
-
-  if (!sections || sections.length === 0) {
-    return null;
-  }
+  const { renderField, hasSections } = buildSectionFormRenderer(
+    { formData, onChange, onSelectChange, disabled, strategy: buildServiceFieldStrategy(t), customRenderers, fieldErrors, onFieldBlur },
+    sections,
+  );
+  if (!hasSections) return null;
 
   return (
     <div className="space-y-8 md:space-y-6">
@@ -311,7 +161,7 @@ export function ServiceFormRenderer({
                 const translatedHelpText = translateFieldValue(field.helpText, t) || field.helpText;
 
                 // Create translated field config for rendering.
-                // `label` is translated too so that renderSelectField's placeholder
+                // `label` is translated too so that the select placeholder
                 // fallback (`field.placeholder || field.label`) does not leak the
                 // raw i18n key when the select has no explicit placeholder.
                 const translatedField: ServiceFieldConfig = {
@@ -331,7 +181,7 @@ export function ServiceFormRenderer({
                     errorText={fieldErrors?.[field.id] ? t(fieldErrors[field.id]) : undefined}
                   >
                     <FormInput>
-                      {renderField(translatedField, formData, onChange, onSelectChange, disabled, t, customRenderers, fieldErrors, onFieldBlur)}
+                      {renderField(translatedField)}
                     </FormInput>
                   </FormField>
                 );
