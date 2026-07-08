@@ -12,7 +12,7 @@ import { isPolylineEntity, isLWPolylineEntity } from '../../types/entities';
 import { UI_COLORS } from '../../config/color-config';
 import { hitTestLineSegments, createEdgeGrips } from './shared/line-utils';
 // 🏢 ADR-557 follow-up: closed-polygon area+perimeter label SSoT (committed/preview/hover parity)
-import { computePolygonAreaMetrics, paintPolygonAreaLabel } from './shared/polygon-measurement-label';
+import { computePolygonAreaMetrics, paintPolygonAreaLabel } from './shared/measurement-label';
 // ADR-561 — whole-polyline MOVE cross + rotation handle SSoT, shared with the
 // interaction path (`computeDxfEntityGrips`) so render ≡ interaction.
 import { getPolylineMoveRotateGrips, polylineMoveRotateStartIndex } from '../../systems/polyline/polyline-grips';
@@ -191,7 +191,7 @@ export class PolylineRenderer extends BaseEntityRenderer {
     // περιμέτρου στο κέντρο της περιοχής (παρακάτω). Τα τόξα ορθογωνίου ζουν στον RectangleRenderer.
 
     // If closed polygon, show area and perimeter at centroid.
-    // 🏢 ADR-557 follow-up: SSoT painter (`polygon-measurement-label.ts`) — ALWAYS renders
+    // 🏢 ADR-557 follow-up: SSoT painter (`measurement-label.ts`) — ALWAYS renders
     // (measurement RESULT, not a gated preview-text overlay). Fixes the bug where the
     // committed measure-area entity's area text silently disappeared behind the "Κείμενο"
     // preview toggle, while preview mode (a separate, ungated draw path) still showed it.

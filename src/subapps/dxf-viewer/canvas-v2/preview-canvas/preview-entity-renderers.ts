@@ -20,7 +20,7 @@ import { bisectorAngle, TAU, degToRad } from '../../rendering/entities/shared/ge
 import { UI_COLORS, OPACITY } from '../../config/color-config';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ADR-557 follow-up: closed-polygon area+perimeter label SSoT (committed/preview/hover parity)
-import { computePolygonAreaMetrics, paintPolygonAreaLabel } from '../../rendering/entities/shared/polygon-measurement-label';
+import { computePolygonAreaMetrics, paintPolygonAreaLabel } from '../../rendering/entities/shared/measurement-label';
 
 // ===== LINE =====
 

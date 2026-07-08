@@ -1,0 +1,76 @@
+name: 🧬 jscpd Clone Ratchet (CHECK 3.28)
+
+# =============================================================================
+# Layer 2 of Defense in Depth — CI-authoritative token-based clone gate.
+#
+# Why this exists
+# ---------------
+# CHECK 3.18 (SSoT Discover) is name/regex-based: it cannot see a structural
+# clone that carries a different name (e.g. `clipHatch` copy-pasted as
+# `clipHatchByPoly`). CHECK 3.28 adds a token-based detector (jscpd, MIT).
+#
+# The local pre-commit hook (Layer 1, Phase 0.6) runs jscpd only over the
+# STAGED src files — fast, catches same-commit sibling clones. It cannot see a
+# new file cloning already-committed code. This workflow re-runs the FULL src/
+# scan on every PR / push to main and ratchets the total clone count against
+# .jscpd-baseline.json, so duplication can only ever decrease.
+#
+# Pattern mirrors .github/workflows/ssot-discover.yml (CHECK 3.18) and
+# .github/workflows/deadcode-ratchet.yml (CHECK 3.22).
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - '.jscpdrc.json'
+      - 'scripts/check-jscpd-ratchet.js'
+      - '.jscpd-baseline.json'
+      - '.github/workflows/jscpd-ratchet.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - '.jscpdrc.json'
+      - 'scripts/check-jscpd-ratchet.js'
+      - '.jscpd-baseline.json'
+      - '.github/workflows/jscpd-ratchet.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: jscpd-ratchet-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  jscpd:
+    name: 🔒 jscpd Clone Ratchet (CHECK 3.28)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies (jscpd)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: 🧬 CHECK 3.28 — jscpd clone ratchet (full src/ scan)
+        run: node scripts/check-jscpd-ratchet.js --full
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=jscpd Clone Ratchet::Token-based clone total did not rise vs .jscpd-baseline.json"

@@ -12,7 +12,8 @@ import { createQuadrantGrips, createCenterGrip } from './shared/grip-utils';
 import { validateEllipseEntity } from './shared/entity-validation-utils';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from './shared/geometry-rendering-utils';
-import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
+// 🏢 ADR-557 follow-up: center measurement label SSoT (gated painter)
+import { paintMeasurementText } from './shared/measurement-label';
 // 🏢 ADR-058: Centralized Canvas Primitives
 import { TAU } from '../primitives/canvasPaths';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
@@ -107,10 +108,10 @@ export class EllipseRenderer extends BaseEntityRenderer {
     this.ctx.save();
     this.applyCenterMeasurementTextStyle();
     // 🏢 ADR-091: Χρήση κεντρικοποιημένων text label offsets
-    renderStyledTextWithOverride(this.ctx, `Ma: ${formatLengthForDisplay(majorAxis)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER);
-    renderStyledTextWithOverride(this.ctx, `Mi: ${formatLengthForDisplay(minorAxis)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.TWO_LINE);
-    renderStyledTextWithOverride(this.ctx, `Ε: ${formatAreaForDisplay(area)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.TWO_LINE);
-    renderStyledTextWithOverride(this.ctx, `Περ: ${formatLengthForDisplay(perimeter)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER);
+    paintMeasurementText(this.ctx, `Ma: ${formatLengthForDisplay(majorAxis)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER, { gate: true });
+    paintMeasurementText(this.ctx, `Mi: ${formatLengthForDisplay(minorAxis)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.TWO_LINE, { gate: true });
+    paintMeasurementText(this.ctx, `Ε: ${formatAreaForDisplay(area)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.TWO_LINE, { gate: true });
+    paintMeasurementText(this.ctx, `Περ: ${formatLengthForDisplay(perimeter)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER, { gate: true });
     this.ctx.restore();
   }
 

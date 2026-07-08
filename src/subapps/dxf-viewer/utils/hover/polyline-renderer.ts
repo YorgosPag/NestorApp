@@ -8,7 +8,7 @@ import { renderHoverEdgeWithDistance } from './edge-utils';
 import type { HoverRenderContext } from './types';
 import { isPolylineEntity } from '../../types/entities';
 // 🏢 ADR-557 follow-up: closed-polygon area label SSoT (committed/preview/hover parity)
-import { computePolygonAreaMetrics, paintPolygonAreaLabel } from '../../rendering/entities/shared/polygon-measurement-label';
+import { computePolygonAreaMetrics, paintPolygonAreaLabel } from '../../rendering/entities/shared/measurement-label';
 
 export function renderPolylineHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
   // ✅ ENTERPRISE FIX: Use type guard to ensure entity is PolylineEntity

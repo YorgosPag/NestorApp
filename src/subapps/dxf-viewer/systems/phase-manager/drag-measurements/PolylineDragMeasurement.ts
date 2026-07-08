@@ -16,7 +16,7 @@ import { MIN_POLY_POINTS } from '../../../config/tolerance-config';
 // 🏢 ADR-557 follow-up: closed-polygon area/perimeter/centroid SSoT (shared with
 // committed/preview/hover). Reuse the trio calculator ONLY — this renderer keeps its
 // own MeasurementData/renderMeasurementsAtCenter contract (no SSoT painter here).
-import { computePolygonAreaMetrics } from '../../../rendering/entities/shared/polygon-measurement-label';
+import { computePolygonAreaMetrics } from '../../../rendering/entities/shared/measurement-label';
 
 /**
  * Polyline-specific drag measurement renderer

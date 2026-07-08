@@ -29,6 +29,8 @@ import { addCirclePath, TAU } from '../primitives/canvasPaths';
 import { renderCircleAreaText } from './shared/circle-text-utils';
 import { renderContinuousLine, renderLineWithTextCheck } from './shared/line-rendering-utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
+// 🏢 ADR-557 follow-up: center measurement label SSoT (gated painter)
+import { paintMeasurementText } from './shared/measurement-label';
 // 🏢 ADR-091: Centralized UI Fonts, ADR-124: Centralized Label Offsets
 import { buildUIFont, TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
 // 🏢 ADR-090: Centralized Number Formatting
@@ -111,17 +113,8 @@ export class CircleRenderer extends BaseEntityRenderer {
     const screenCenter = this.worldToScreen(center);
     const screenRadius = radius * this.transform.scale;
     
-    // Calculate measurements
-    const area = Math.PI * radius * radius;
-    const circumference = TAU * radius;
-    
-    // Render measurements with centralized styling
-    this.ctx.save();
-    this.applyDimensionTextStyle(); // Use centralized fuchsia color and styling
-    
-    renderCircleAreaText(this.ctx, screenCenter, screenRadius, area, circumference);
-    
-    this.ctx.restore();
+    // Render area & circumference measurements (shared SSoT helper)
+    this.paintCircleAreaCircumference(screenCenter, screenRadius, radius);
     
     // Add radius/diameter indicators based on mode with phase-aware positioning
     const extendedEntity = entity as ExtendedCircleEntity;
@@ -227,9 +220,9 @@ export class CircleRenderer extends BaseEntityRenderer {
       // Use centralized styling instead of hardcoded green
       this.ctx.save();
       this.applyDimensionTextStyle();
-      renderStyledTextWithOverride(this.ctx, label, labelX, labelY);
+      paintMeasurementText(this.ctx, label, labelX, labelY, { gate: true });
       this.ctx.restore();
-      
+
     } else if (isDiameterMode) {
       // ✅ ΔΙΑΜΕΤΡΟΣ MODE: Χωρίς κοπή στη μέση + κίτρινες μπαλίτσες στα άκρα
       const { leftPoint, rightPoint, screenLeft, screenRight } = this.calculateDiameterPoints(center, radius);
@@ -249,7 +242,7 @@ export class CircleRenderer extends BaseEntityRenderer {
       // Use centralized styling instead of hardcoded green
       this.ctx.save();
       this.applyDimensionTextStyle();
-      renderStyledTextWithOverride(this.ctx, label, labelX, labelY);
+      paintMeasurementText(this.ctx, label, labelX, labelY, { gate: true });
       this.ctx.restore();
       
     } else {
@@ -298,21 +291,12 @@ export class CircleRenderer extends BaseEntityRenderer {
       // Use centralized styling instead of hardcoded green
       this.ctx.save();
       this.applyDimensionTextStyle();
-      renderStyledTextWithOverride(this.ctx, label, labelX, labelY);
+      paintMeasurementText(this.ctx, label, labelX, labelY, { gate: true });
       this.ctx.restore();
     }
     
-    // Calculate and render area and circumference
-    const area = Math.PI * radius * radius;
-    const circumference = TAU * radius;
-    
-    // Render area and circumference labels with centralized styling
-    this.ctx.save();
-    this.applyDimensionTextStyle(); // Use centralized fuchsia color
-    
-    renderCircleAreaText(this.ctx, screenCenter, screenRadius, area, circumference);
-    
-    this.ctx.restore();
+    // Render area & circumference measurements (shared SSoT helper)
+    this.paintCircleAreaCircumference(screenCenter, screenRadius, radius);
     
     // Cleanup style
     this.cleanupStyle();
@@ -326,6 +310,21 @@ export class CircleRenderer extends BaseEntityRenderer {
     const screenLeft = this.worldToScreen(leftPoint);
     const screenRight = this.worldToScreen(rightPoint);
     return { leftPoint, rightPoint, screenLeft, screenRight };
+  }
+
+  /**
+   * Paints the area + circumference labels for a circle using the centralized
+   * dimension text style. Extracted SSoT to eliminate the two identical render
+   * blocks (preview + measurement paths) flagged by the jscpd clone ratchet
+   * (CHECK 3.28 / ADR-583).
+   */
+  private paintCircleAreaCircumference(screenCenter: Point2D, screenRadius: number, radius: number): void {
+    const area = Math.PI * radius * radius;
+    const circumference = TAU * radius;
+    this.ctx.save();
+    this.applyDimensionTextStyle(); // Use centralized fuchsia color and styling
+    renderCircleAreaText(this.ctx, screenCenter, screenRadius, area, circumference);
+    this.ctx.restore();
   }
 
   // ΔΙΑΓΡΑΜΜΕΝΗ FUNCTION: renderYellowEndpointDots - αφαιρέθηκε για εξάλειψη κίτρινων grips

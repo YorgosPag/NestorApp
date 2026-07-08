@@ -16,7 +16,8 @@ import {
 import { getArcGrips } from '../../systems/arc/arc-grips';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import { validateArcEntity } from './shared/entity-validation-utils';
-import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
+// 🏢 ADR-557 follow-up: center measurement label SSoT (gated painter)
+import { paintMeasurementText } from './shared/measurement-label';
 // 🏢 ADR-058: Centralized Canvas Primitives
 import { addArcPath } from '../primitives/canvasPaths';
 // 🏢 ADR-090: Centralized angle formatting · 🏢 ADR-462: display-unit SSoT for lengths
@@ -92,9 +93,9 @@ export class ArcRenderer extends BaseEntityRenderer {
     this.applyCenterMeasurementTextStyle();
     // 🏢 ADR-090: Centralized number formatting
     // 🏢 ADR-091: Χρήση κεντρικοποιημένων text label offsets
-    renderStyledTextWithOverride(this.ctx, `R: ${formatLengthForDisplay(radius)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER);
-    renderStyledTextWithOverride(this.ctx, formatAngle(arcAngle, 1), screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.TWO_LINE);
-    renderStyledTextWithOverride(this.ctx, `L: ${formatLengthForDisplay(arcLength)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.TWO_LINE);
+    paintMeasurementText(this.ctx, `R: ${formatLengthForDisplay(radius)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.MULTI_LINE_OUTER, { gate: true });
+    paintMeasurementText(this.ctx, formatAngle(arcAngle, 1), screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.TWO_LINE, { gate: true });
+    paintMeasurementText(this.ctx, `L: ${formatLengthForDisplay(arcLength)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.TWO_LINE, { gate: true });
     this.ctx.restore();
   }
 

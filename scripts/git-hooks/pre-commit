@@ -106,6 +106,32 @@ if [[ -n "$TS_FILES" ]]; then
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 0.6: SYNC — CHECK 3.28 jscpd clone diff gate (ADR-583)
+# Token-based copy/paste detector on the STAGED src files only. Blocks
+# same-commit sibling clones ("centralize A, write B+C as twins") that the
+# name/regex-based CHECK 3.18 is structurally blind to. Run sequentially here
+# (not inside run-checks-parallel.js) because jscpd spawns child processes,
+# which deadlock inside the Node worker_threads pool — same reason as Phase 0.5.
+# Full-repo ratchet (total clone count) is the authoritative Layer 2 in CI.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+if [[ -z "${SKIP_JSCPD_DIFF:-}" ]] && [[ -f "scripts/check-jscpd-ratchet.js" ]] && [[ -f ".jscpd-baseline.json" ]]; then
+    JSCPD_DIFF_FILES=$(echo "$SRC_TS_FILES" \
+        | grep -v '__tests__' | grep -v '\.test\.' | grep -v '\.spec\.' | grep -v '\.d\.ts' \
+        | grep -v '\.stories\.' || true)
+    if [[ -n "$JSCPD_DIFF_FILES" ]]; then
+        node scripts/check-jscpd-ratchet.js --diff $JSCPD_DIFF_FILES
+        if [[ $? -ne 0 ]]; then
+            echo ""
+            echo -e "${YELLOW}  CHECK 3.28 — token-based clone(s) introduced by this commit (ADR-583).${NC}"
+            echo -e "${YELLOW}  Diagnose the whole repo: npm run jscpd:scan${NC}"
+            echo -e "${YELLOW}  Emergency skip (justify to Giorgio): SKIP_JSCPD_DIFF=1 git commit ...${NC}"
+            exit 1
+        fi
+    fi
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 1: Node.js worker_threads orchestrator
 # — one node process, all checks run in parallel threads (JS) or processes (.sh)
 # ═══════════════════════════════════════════════════════════════════════════════

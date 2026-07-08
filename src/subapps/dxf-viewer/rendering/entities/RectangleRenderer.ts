@@ -13,10 +13,8 @@ import { hitTestLineSegments, createEdgeGrips } from './shared/line-utils';
 import { createVertexGrip } from './shared/grip-utils';
 import { drawVerticesPath } from './shared/geometry-rendering-utils';
 import { getRectangleVertices } from '../../systems/selection/utils';
-import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
-// 🏢 ADR-090: Centralized Number Formatting
-// 🏢 ADR-462: display-unit SSoT — area + perimeter follow the status-bar unit selector
-import { formatLengthForDisplay, formatAreaForDisplay } from '../../config/display-length-format';
+// 🏢 ADR-557 follow-up: center measurement label SSoT (content + gated painter)
+import { buildAreaPerimeterLabelLines, paintMeasurementText } from './shared/measurement-label';
 // 🏢 ADR-091: Centralized Text Label Offsets
 import { TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
 
@@ -87,9 +85,12 @@ export class RectangleRenderer extends BaseEntityRenderer {
     const centerX = (vertices[0].x + vertices[2].x) / 2;
     const centerY = (vertices[0].y + vertices[2].y) / 2;
     const screenCenter = this.worldToScreen({ x: centerX, y: centerY });
+    // 🏢 ADR-557 follow-up: content via the SSoT builder (kills the `Ε:`/`Περ:` string
+    // duplicate + removes hardcoded Greek literals), gated painter keeps preview behaviour.
     // 🏢 ADR-091: Χρήση κεντρικοποιημένων text label offsets
-    renderStyledTextWithOverride(this.ctx, `Ε: ${formatAreaForDisplay(area)}`, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.TWO_LINE);
-    renderStyledTextWithOverride(this.ctx, `Περ: ${formatLengthForDisplay(perimeter)}`, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.TWO_LINE);
+    const [areaLine, perimeterLine] = buildAreaPerimeterLabelLines({ area, perimeter });
+    paintMeasurementText(this.ctx, areaLine, screenCenter.x, screenCenter.y - TEXT_LABEL_OFFSETS.TWO_LINE, { gate: true });
+    paintMeasurementText(this.ctx, perimeterLine, screenCenter.x, screenCenter.y + TEXT_LABEL_OFFSETS.TWO_LINE, { gate: true });
     
     // 🔺 ΔΙΑΣΤΑΣΕΙΣ ΠΛΕΥΡΩΝ - Εσωτερικές στο ορθογώνιο (αρνητικό offset)
     
