@@ -30,6 +30,7 @@ import { buildDefaultBeamParams } from '../../../hooks/drawing/beam-completion';
 import { MIN_BEAM_WIDTH_MM, MIN_BEAM_DEPTH_MM } from '../../types/beam-types';
 import type { BeamEntity, BeamParams } from '../../types/beam-types';
 import type { BeamGripKind } from '../../../hooks/grip-types';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 
 function makeBeamEntity(params: BeamParams): BeamEntity {
   // Lightweight stub — `beam-grips` reads only `id`, `kind`, `params`. Geometry
@@ -84,7 +85,7 @@ describe('beam-grips (Phase 5.5a)', () => {
     const beam = makeStraight();
     const grips = getBeamGrips(beam);
     expect(grips).toHaveLength(10);
-    expect(grips.map((g) => g.beamGripKind)).toEqual([
+    expect(grips.map((g) => gripKindOf(g, 'beam'))).toEqual([
       'beam-width',
       'beam-edge-length',
       'beam-corner-start-pos',
@@ -102,7 +103,7 @@ describe('beam-grips (Phase 5.5a)', () => {
     const beam = makeCantilever();
     const grips = getBeamGrips(beam);
     expect(grips).toHaveLength(10);
-    expect(grips.map((g) => g.beamGripKind)).toEqual([
+    expect(grips.map((g) => gripKindOf(g, 'beam'))).toEqual([
       'beam-width',
       'beam-edge-length',
       'beam-corner-start-pos',
@@ -122,7 +123,7 @@ describe('beam-grips (Phase 5.5a)', () => {
     const beam = makeCurvedWithControl();
     const grips = getBeamGrips(beam);
     expect(grips).toHaveLength(6);
-    expect(grips.map((g) => g.beamGripKind)).toEqual([
+    expect(grips.map((g) => gripKindOf(g, 'beam'))).toEqual([
       'beam-start',
       'beam-end',
       'beam-midpoint',
@@ -138,7 +139,7 @@ describe('beam-grips (Phase 5.5a)', () => {
     const grips = getBeamGrips(beam);
     expect(grips[0].position).toEqual({ x: 0, y: 0 });
     expect(grips[1].position).toEqual({ x: 4000, y: 0 });
-    expect(grips[3].beamGripKind).toBe('beam-curve');
+    expect(gripKindOf(grips[3], 'beam')).toBe('beam-curve');
     expect(grips[3].position).toEqual({ x: 2000, y: 800 });
   });
 
@@ -147,11 +148,11 @@ describe('beam-grips (Phase 5.5a)', () => {
     const beam = makeCurvedWithoutControl();
     const grips = getBeamGrips(beam);
     expect(grips).toHaveLength(6);
-    expect(grips[3].beamGripKind).toBe('beam-curve');
+    expect(gripKindOf(grips[3], 'beam')).toBe('beam-curve');
     // Axis midpoint of (0,0)→(4000,0) is (2000,0).
     expect(grips[3].position).toEqual({ x: 2000, y: 0 });
-    expect(grips[4].beamGripKind).toBe('beam-width');
-    expect(grips[5].beamGripKind).toBe('beam-rotation');
+    expect(gripKindOf(grips[4], 'beam')).toBe('beam-width');
+    expect(gripKindOf(grips[5], 'beam')).toBe('beam-rotation');
   });
 
   it('6. beam-midpoint centre MOVE glyph is emitted with movesEntity=true; all others false', () => {
@@ -161,7 +162,7 @@ describe('beam-grips (Phase 5.5a)', () => {
     const grips = getBeamGrips(beam);
     const moveGrips = grips.filter((g) => g.movesEntity === true);
     expect(moveGrips).toHaveLength(1);
-    expect(moveGrips[0].beamGripKind).toBe('beam-midpoint');
+    expect(gripKindOf(moveGrips[0], 'beam')).toBe('beam-midpoint');
     expect(moveGrips[0].type).toBe('center');
   });
 
@@ -171,7 +172,7 @@ describe('beam-grips (Phase 5.5a)', () => {
     const beam = makeStraight(); // (0,0)→(4000,0), width default
     const grips = getBeamGrips(beam);
     const w = beam.params.width;
-    const byKind = (k: string) => grips.find((g) => g.beamGripKind === k)!.position;
+    const byKind = (k: string) => grips.find((g) => gripKindOf(g, 'beam') === k)!.position;
     // +perp / −perp long faces at the axial midpoint, opposite Y signs.
     expect(byKind('beam-width')).toEqual({ x: 2000, y: w / 2 });
     expect(byKind('beam-width-far')).toEqual({ x: 2000, y: -w / 2 });
@@ -314,7 +315,7 @@ describe('beam-grips (Phase 5.5a)', () => {
     const params: BeamParams = { ...base, width: 300 };
     const beam = makeBeamEntity(params);
     const grips = getBeamGrips(beam);
-    const widthGrip = grips.find((g) => g.beamGripKind === 'beam-width');
+    const widthGrip = grips.find((g) => gripKindOf(g, 'beam') === 'beam-width');
     expect(widthGrip).toBeDefined();
     // Axis = (0,0)→(4000,0). perp = rot90(unit) = (0,1). mid = (2000,0).
     // Handle = mid + (width/2) × perp = (2000, 150).
@@ -369,7 +370,7 @@ describe('beam-grips (Phase 5.5a)', () => {
     const params: BeamParams = { ...base, width: 300 };
     const beam = makeBeamEntity(params);
     const grips = getBeamGrips(beam);
-    expect(grips.some((g) => g.beamGripKind === 'beam-depth')).toBe(false);
+    expect(grips.some((g) => gripKindOf(g, 'beam') === 'beam-depth')).toBe(false);
     // axis horizontal → perp = (0,1). mid = (2000,0). offset = -(150 + 250) = -400.
     const expectedY = -(params.width / 2 + DEPTH_GRIP_OFFSET_MM);
     expect(beamDepthHandlePosition(params)).toEqual({ x: 2000, y: expectedY });
@@ -440,8 +441,8 @@ describe('beam-grips (Phase 5.5a)', () => {
     const params: BeamParams = { ...base, width: 300 };
     const beam = makeBeamEntity(params);
     const grips = getBeamGrips(beam);
-    const rot = grips.find((g) => g.beamGripKind === 'beam-rotation')!;
-    const widthEdge = grips.find((g) => g.beamGripKind === 'beam-width')!;
+    const rot = grips.find((g) => gripKindOf(g, 'beam') === 'beam-rotation')!;
+    const widthEdge = grips.find((g) => gripKindOf(g, 'beam') === 'beam-width')!;
     expect(widthEdge.position).toEqual({ x: 2000, y: 150 }); // +perp face midpoint
     // Same axial x; opposite perpendicular side; exactly a quarter of the width
     // (= half the width-edge offset) from the centreline.
@@ -463,7 +464,7 @@ describe('beam-grips (Phase 5.5a)', () => {
     const params: BeamParams = { ...base, width: 300, justification: 'left' };
     const beam = makeBeamEntity(params);
     const grips = getBeamGrips(beam);
-    const move = grips.find((g) => g.beamGripKind === 'beam-midpoint')!;
+    const move = grips.find((g) => gripKindOf(g, 'beam') === 'beam-midpoint')!;
     expect(move.type).toBe('center');
     expect(move.movesEntity).toBe(true);
     expect(move.position.x).toBeCloseTo(2000, 6);
@@ -475,7 +476,7 @@ describe('beam-grips (Phase 5.5a)', () => {
       buildDefaultBeamParams({ x: 1000, y: 1000 }, { x: 1000, y: 1000 }, 'straight'),
     );
     const grips = getBeamGrips(beam);
-    expect(grips.some((g) => g.beamGripKind === 'beam-rotation')).toBe(false);
+    expect(grips.some((g) => gripKindOf(g, 'beam') === 'beam-rotation')).toBe(false);
   });
 
   it('28. beam-rotation 90° CCW about the axis midpoint spins both endpoints', () => {

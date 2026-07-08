@@ -11,6 +11,7 @@
 import type { LevelsHookReturn } from '../../../systems/levels/useLevels';
 import type { GripInfo } from '../../../hooks/grip-types';
 import type { DxfCommitDeps, UnifiedGripInfo } from '../../../hooks/grips/unified-grip-types';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 
 const mockHistoryExecute = jest.fn();
 const mockCommit = jest.fn();
@@ -35,7 +36,7 @@ const LEVELS = {} as unknown as LevelsHookReturn;
 function slabVertexGrip(): GripInfo {
   return {
     entityId: 's1', gripIndex: 0, type: 'vertex',
-    position: { x: 100, y: 200 }, movesEntity: false, slabGripKind: 'slab-vertex-0',
+    position: { x: 100, y: 200 }, movesEntity: false, gripKind: { on: 'slab', kind: 'slab-vertex-0' },
   };
 }
 
@@ -59,7 +60,7 @@ describe('commitGrip3DReshape', () => {
     expect(mockCommit).toHaveBeenCalledTimes(1);
     const [unified, delta, , mode] = mockCommit.mock.calls[0] as [UnifiedGripInfo, unknown, unknown, string];
     expect(unified.source).toBe('dxf');
-    expect(unified.slabGripKind).toBe('slab-vertex-0');
+    expect(gripKindOf(unified, 'slab')).toBe('slab-vertex-0');
     expect(unified.type).toBe('vertex');
     expect(delta).toEqual({ x: 50, y: 0 });
     expect(mode).toBe('stretch');
@@ -73,7 +74,7 @@ describe('commitGrip3DReshape', () => {
     const midpoint: GripInfo = {
       entityId: 's1', gripIndex: 4, type: 'midpoint',
       position: { x: 0, y: 0 }, movesEntity: false,
-      edgeVertexIndices: [0, 1], slabGripKind: 'slab-edge-midpoint-0',
+      edgeVertexIndices: [0, 1], gripKind: { on: 'slab', kind: 'slab-edge-midpoint-0' },
     };
     commitGrip3DReshape(midpoint, { x: 10, y: 10 }, LEVELS, 'L1');
     const [unified] = mockCommit.mock.calls[0] as [UnifiedGripInfo];
@@ -85,22 +86,22 @@ describe('commitGrip3DReshape', () => {
     mockCommit.mockImplementation(() => {});
     const roof: GripInfo = {
       entityId: 'r1', gripIndex: 0, type: 'vertex',
-      position: { x: 0, y: 0 }, movesEntity: false, roofGripKind: 'roof-vertex-0',
+      position: { x: 0, y: 0 }, movesEntity: false, gripKind: { on: 'roof', kind: 'roof-vertex-0' },
     };
     commitGrip3DReshape(roof, { x: 25, y: 0 }, LEVELS, 'L1');
     const [unified] = mockCommit.mock.calls[0] as [UnifiedGripInfo];
-    expect(unified.roofGripKind).toBe('roof-vertex-0');
-    expect(unified.slabGripKind).toBeUndefined();
+    expect(gripKindOf(unified, 'roof')).toBe('roof-vertex-0');
+    expect(gripKindOf(unified, 'slab')).toBeUndefined();
   });
 
   it('forwards a floor-finish gripKind (ADR-535 Φ3)', () => {
     mockCommit.mockImplementation(() => {});
     const ff: GripInfo = {
       entityId: 'f1', gripIndex: 0, type: 'vertex',
-      position: { x: 0, y: 0 }, movesEntity: false, floorFinishGripKind: 'floor-finish-vertex-0',
+      position: { x: 0, y: 0 }, movesEntity: false, gripKind: { on: 'floor-finish', kind: 'floor-finish-vertex-0' },
     };
     commitGrip3DReshape(ff, { x: 25, y: 0 }, LEVELS, 'L1');
     const [unified] = mockCommit.mock.calls[0] as [UnifiedGripInfo];
-    expect(unified.floorFinishGripKind).toBe('floor-finish-vertex-0');
+    expect(gripKindOf(unified, 'floor-finish')).toBe('floor-finish-vertex-0');
   });
 });

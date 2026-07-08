@@ -18,21 +18,19 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
-import { getGlobalCommandHistory } from '../../core/commands';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
 import type { GripInfo } from '../../hooks/grip-types';
-import type { UnifiedGripInfo, DxfCommitDeps } from '../../hooks/grips/unified-grip-types';
-import { commitDxfGripDragModeAware } from '../../hooks/grips/grip-commit-adapters';
-import { buildDeps } from '../animation/bim3d-edit-interaction-helpers';
+import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
+import { commit3DGripViaHistory } from './grip-3d-commit-shared';
 
 /**
- * Map a 2D `GripInfo` onto the unified shape the commit adapters consume. The reshape
- * discriminators are forwarded 1:1 — `commitDxfGripDragModeAware` routes on whichever
- * `*GripKind` is present (`commitSlabGripDrag` / `commitRoofGripDrag` /
+ * Map a 2D `GripInfo` onto the unified shape the commit adapters consume. The tagged
+ * `gripKind` discriminator is forwarded 1:1 — `commitDxfGripDragModeAware` routes on its
+ * `on` tag via `gripKindOf` (`commitSlabGripDrag` / `commitRoofGripDrag` /
  * `commitFloorFinishGripDrag` / `commitSlabOpeningGripDrag` / `commitColumnGripDrag` /
- * `commitWallGripDrag` / `commitBeamGripDrag`), so the bridge stays type-agnostic. ADR-535
- * Φ7/Φ8/Φ9 — `columnGripKind` + `wallGripKind` + `beamGripKind` are forwarded too; dropping any
- * makes the grip fall through to the wrong stretch path.
+ * `commitWallGripDrag` / `commitBeamGripDrag`), so the bridge stays type-agnostic. ADR-602
+ * Stage 5 — the 7 legacy per-entity `*GripKind` forwards were deleted; the one `gripKind`
+ * carries slab/roof/floor-finish/slab-opening/column/wall/beam, so none can fall through.
  */
 export function toUnifiedGrip(grip: GripInfo): UnifiedGripInfo {
   return {
@@ -45,15 +43,8 @@ export function toUnifiedGrip(grip: GripInfo): UnifiedGripInfo {
     position: grip.position,
     movesEntity: grip.movesEntity,
     edgeVertexIndices: grip.edgeVertexIndices,
-    slabGripKind: grip.slabGripKind,
-    roofGripKind: grip.roofGripKind,
-    floorFinishGripKind: grip.floorFinishGripKind,
-    slabOpeningGripKind: grip.slabOpeningGripKind,
-    columnGripKind: grip.columnGripKind,
-    wallGripKind: grip.wallGripKind,
-    beamGripKind: grip.beamGripKind,
-    // ADR-602 Stage 4 — forward the tagged discriminator too (dual-write beside the
-    // 7 legacy fields above). `commitDxfGripDragModeAware` reads via `gripKindOf`.
+    // ADR-602 Stage 5 — forward ONLY the tagged discriminator SSoT (the 7 legacy
+    // `xxxGripKind` forwards were deleted). `commitDxfGripDragModeAware` reads via `gripKindOf`.
     gripKind: grip.gripKind,
   };
 }
@@ -70,15 +61,5 @@ export function commitGrip3DReshape(
   levelId: string,
 ): ICommand | null {
   if (deltaMm.x === 0 && deltaMm.y === 0) return null;
-  let executed: ICommand | null = null;
-  const deps: DxfCommitDeps = {
-    ...buildDeps(levels, levelId),
-    // ADR-535 §6.1 — real history-backed dispatcher (buildDeps.execute is a no-op).
-    execute: (command) => {
-      executed = command;
-      getGlobalCommandHistory().execute(command);
-    },
-  };
-  commitDxfGripDragModeAware(toUnifiedGrip(grip), deltaMm, deps, 'stretch');
-  return executed;
+  return commit3DGripViaHistory(toUnifiedGrip(grip), deltaMm, levels, levelId);
 }

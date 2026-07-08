@@ -9,6 +9,7 @@ import type { LevelsHookReturn } from '../../../systems/levels/useLevels';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { GripInfo } from '../../../hooks/grip-types';
 import type { DxfCommitDeps, UnifiedGripInfo } from '../../../hooks/grips/unified-grip-types';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 
 const mockHistoryExecute = jest.fn();
 const mockCommit = jest.fn();
@@ -60,21 +61,21 @@ describe('commitDxfGrip3D', () => {
   it('does NOT forward BIM gripKinds (raw DXF lands on the default stretch path)', () => {
     mockCommit.mockImplementation(() => {});
     // Defensive: even if a BIM kind sneaks in, the raw commit must strip it.
-    const grip = { entityId: 'x', gripIndex: 0, type: 'vertex', position: { x: 0, y: 0 }, movesEntity: false, slabGripKind: 'slab-vertex-0' } as unknown as GripInfo;
+    const grip = { entityId: 'x', gripIndex: 0, type: 'vertex', position: { x: 0, y: 0 }, movesEntity: false, gripKind: { on: 'slab', kind: 'slab-vertex-0' } } as unknown as GripInfo;
     commitDxfGrip3D(grip, { x: 1, y: 0 }, LEVELS, 'L1');
     const [unified] = mockCommit.mock.calls[0] as [UnifiedGripInfo];
-    expect(unified.slabGripKind).toBeUndefined();
+    expect(gripKindOf(unified, 'slab')).toBeUndefined();
   });
 
   it('forwards polylineGripKind (raw-DXF arc-apex bulge vs vertex stretch)', () => {
     mockCommit.mockImplementation(() => {});
     const grip: GripInfo = {
       entityId: 'p1', gripIndex: 3, type: 'edge', position: { x: 0, y: 0 }, movesEntity: false,
-      edgeVertexIndices: [0, 1], polylineGripKind: 'polyline-arc-midpoint-0',
+      edgeVertexIndices: [0, 1], gripKind: { on: 'polyline', kind: 'polyline-arc-midpoint-0' },
     };
     commitDxfGrip3D(grip, { x: 0, y: 10 }, LEVELS, 'L1');
     const [unified] = mockCommit.mock.calls[0] as [UnifiedGripInfo];
-    expect(unified.polylineGripKind).toBe('polyline-arc-midpoint-0');
+    expect(gripKindOf(unified, 'polyline')).toBe('polyline-arc-midpoint-0');
     expect(unified.type).toBe('edge');
   });
 

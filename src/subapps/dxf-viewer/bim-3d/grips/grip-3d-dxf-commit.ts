@@ -16,18 +16,16 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands/interfaces';
-import { getGlobalCommandHistory } from '../../core/commands';
 import type { LevelsHookReturn } from '../../systems/levels/useLevels';
 import type { GripInfo } from '../../hooks/grip-types';
-import type { UnifiedGripInfo, DxfCommitDeps } from '../../hooks/grips/unified-grip-types';
-import { commitDxfGripDragModeAware } from '../../hooks/grips/grip-commit-adapters';
-import { buildDeps } from '../animation/bim3d-edit-interaction-helpers';
+import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
+import { commit3DGripViaHistory } from './grip-3d-commit-shared';
 
 /**
  * Map a raw-DXF `GripInfo` onto the unified shape the commit adapters consume. Forwards
- * ONLY the raw-DXF-relevant fields (NO BIM `*GripKind`), so the commit routes through the
- * stretch / bulge default path. `polylineGripKind` IS forwarded (raw-DXF discriminator —
- * arc-apex bulge vs vertex/segment stretch).
+ * the tagged `gripKind` ONLY when its `on` tag is `'polyline'` (the raw-DXF discriminator —
+ * arc-apex bulge vs vertex/segment stretch); any BIM-tagged `gripKind` is dropped so the
+ * commit routes through the stretch / bulge default path (NO BIM leg).
  */
 export function toRawDxfUnifiedGrip(grip: GripInfo): UnifiedGripInfo {
   return {
@@ -40,8 +38,7 @@ export function toRawDxfUnifiedGrip(grip: GripInfo): UnifiedGripInfo {
     position: grip.position,
     movesEntity: grip.movesEntity,
     edgeVertexIndices: grip.edgeVertexIndices,
-    polylineGripKind: grip.polylineGripKind,
-    // ADR-602 Stage 4 — forward the tagged discriminator, but ONLY when it is the
+    // ADR-602 Stage 5 — forward the tagged discriminator, but ONLY when it is the
     // raw-DXF `polyline` kind. A BIM-tagged `gripKind` must NOT leak onto this raw path
     // (mirror of the "NO BIM *GripKind" invariant above) — else the commit would route
     // to a BIM leg instead of the default stretch/bulge path.
@@ -69,15 +66,5 @@ export function commitDxfGrip3D(
 ): ICommand | null {
   if (deltaMm.x === 0 && deltaMm.y === 0) return null;
   const delta = unitToMm === 1 ? deltaMm : { x: deltaMm.x / unitToMm, y: deltaMm.y / unitToMm };
-  let executed: ICommand | null = null;
-  const deps: DxfCommitDeps = {
-    ...buildDeps(levels, levelId),
-    // Real history-backed dispatcher (buildDeps.execute is a no-op) — mirror ADR-535 §6.1.
-    execute: (command) => {
-      executed = command;
-      getGlobalCommandHistory().execute(command);
-    },
-  };
-  commitDxfGripDragModeAware(toRawDxfUnifiedGrip(grip), delta, deps, 'stretch');
-  return executed;
+  return commit3DGripViaHistory(toRawDxfUnifiedGrip(grip), delta, levels, levelId);
 }

@@ -26,17 +26,17 @@ describe('rawDxfReshapeGrips', () => {
 
   it('keeps polyline grips (polylineGripKind is a raw-DXF discriminator, not BIM)', () => {
     const grips = [
-      g({ gripIndex: 0, type: 'vertex', polylineGripKind: 'polyline-vertex-0' }),
-      g({ gripIndex: 1, type: 'edge', polylineGripKind: 'polyline-arc-midpoint-0', edgeVertexIndices: [0, 1] }),
+      g({ gripIndex: 0, type: 'vertex', gripKind: { on: 'polyline', kind: 'polyline-vertex-0' } }),
+      g({ gripIndex: 1, type: 'edge', gripKind: { on: 'polyline', kind: 'polyline-arc-midpoint-0' }, edgeVertexIndices: [0, 1] }),
     ];
     expect(rawDxfReshapeGrips(grips)).toHaveLength(2);
   });
 
   it('drops BIM-structural grips defensively (slab / wall / column …)', () => {
     const grips = [
-      g({ gripIndex: 0, slabGripKind: 'slab-vertex-0', gripKind: { on: 'slab', kind: 'slab-vertex-0' } }),
-      g({ gripIndex: 1, wallGripKind: 'wall-start', gripKind: { on: 'wall', kind: 'wall-start' } }),
-      g({ gripIndex: 2, columnGripKind: 'column-rotation', gripKind: { on: 'column', kind: 'column-rotation' } }),
+      g({ gripIndex: 0, gripKind: { on: 'slab', kind: 'slab-vertex-0' } }),
+      g({ gripIndex: 1, gripKind: { on: 'wall', kind: 'wall-start' } }),
+      g({ gripIndex: 2, gripKind: { on: 'column', kind: 'column-rotation' } }),
       g({ gripIndex: 3, type: 'vertex' }), // raw — kept
     ];
     const out = rawDxfReshapeGrips(grips);

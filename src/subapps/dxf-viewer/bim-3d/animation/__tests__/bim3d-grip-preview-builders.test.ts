@@ -23,6 +23,7 @@ import { applyRoofShapePreset, computeRoofGeometry } from '../../../bim/geometry
 import { computeSlabOpeningGeometry } from '../../../bim/geometry/slab-opening-geometry';
 import { computeBeamGeometry } from '../../../bim/geometry/beam-geometry';
 import { buildDefaultBeamParams } from '../../../hooks/drawing/beam-completion';
+import { gripKindOf } from '../../../hooks/grip-kinds';
 import { roofToMesh } from '../../converters/roof-to-three';
 import { floorFinishToMesh } from '../../converters/floor-finish-to-three';
 import { slabToMesh, beamToMesh } from '../../converters/BimToThreeConverter';
@@ -300,7 +301,7 @@ describe('buildBeamReshapePreviewObject (ADR-535 Φ9)', () => {
 
   it('width drag === the commit transform (applyBeamGripDrag + computeBeamGeometry + beamToMesh) — ghost === commit', () => {
     const beam = makeBeam();
-    const widthGrip = getBeamGrips(beam).find((g) => g.beamGripKind === 'beam-width');
+    const widthGrip = getBeamGrips(beam).find((g) => gripKindOf(g, 'beam') === 'beam-width');
     expect(widthGrip).toBeDefined();
     const delta = { x: 0, y: 300 };
     const originPos = widthGrip!.position;
@@ -323,7 +324,7 @@ describe('buildBeamReshapePreviewObject (ADR-535 Φ9)', () => {
   });
 
   it('returns null for a zero-delta no-op', () => {
-    const originPos = getBeamGrips(makeBeam()).find((g) => g.beamGripKind === 'beam-width')!.position;
+    const originPos = getBeamGrips(makeBeam()).find((g) => gripKindOf(g, 'beam') === 'beam-width')!.position;
     expect(buildBeamReshapePreviewObject('bm', 'beam-width', { x: 0, y: 0 }, originPos)).toBeNull();
   });
 
@@ -333,7 +334,7 @@ describe('buildBeamReshapePreviewObject (ADR-535 Φ9)', () => {
 
   it('falls back to commit-on-release for the multi-floor scope', () => {
     useViewMode3DStore.getState().setFloor3DScope('all');
-    const originPos = getBeamGrips(makeBeam()).find((g) => g.beamGripKind === 'beam-width')!.position;
+    const originPos = getBeamGrips(makeBeam()).find((g) => gripKindOf(g, 'beam') === 'beam-width')!.position;
     expect(buildBeamReshapePreviewObject('bm', 'beam-width', { x: 0, y: 300 }, originPos)).toBeNull();
   });
 });
