@@ -37,7 +37,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import type { DxfGripDragPreview } from '../grip-computation';
-import type { useLevels } from '../../systems/levels';
+import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 import { applyTextGripDrag, type TextGripDragInput } from '../../bim/text/text-grips';
 import { projectSceneTextToDxf, type TextSceneShape } from '../../bim/text/project-scene-text';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
@@ -49,12 +49,10 @@ import { reconcileTextToolbarFromSelection } from '../../ui/text-toolbar/hooks/u
 // «Περιστροφή» preview byte-identical to `commitTextGripDrag` (preview ≡ commit).
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
 
-type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene' | 'currentLevelId'>;
-
 export interface UseTextGripRibbonSyncProps {
   /** Live grip-drag snapshot (carries `textGripKind` only when a text grip is dragged). */
   readonly dragPreview: DxfGripDragPreview | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneReader;
 }
 
 export function useTextGripRibbonSync(props: UseTextGripRibbonSyncProps): void {

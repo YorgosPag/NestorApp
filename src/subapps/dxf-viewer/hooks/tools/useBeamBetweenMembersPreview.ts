@@ -25,7 +25,7 @@ import type { Entity } from '../../types/entities';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
-import type { useLevels } from '../../systems/levels';
+import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 import type { BeamBetweenAnchor } from '../../systems/beam-between-members/BeamBetweenMembersStore';
 import { pickStructuralMemberAt, computeBeamAxisBetweenMembers } from '../../bim/beams/beam-between-members';
 // 🏢 ADR-571: tool-anchor cyan SSoT + hexToRgba SSoT (color-math.ts)
@@ -38,12 +38,10 @@ import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene' | 'currentLevelId'>;
-
 export interface UseBeamBetweenMembersPreviewProps {
   /** Anchor member (last picked), or null while awaiting the first click. */
   anchor: BeamBetweenAnchor | null;
-  levelManager: LevelManagerLike;
+  levelManager: LevelSceneReader;
   transform: ViewTransform;
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;

@@ -37,7 +37,7 @@ import type { DxfGripDragPreview } from '../grip-computation';
 import type { MovePhase } from '../tools/useMoveTool';
 import type { RotationPhase } from '../tools/useRotationTool';
 import type { MirrorPhase } from '../tools/useMirrorTool';
-import type { useLevels } from '../../systems/levels';
+import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 import { applyEntityPreview, makeTranslationPreview } from '../../rendering/ghost';
 import { toEntityPreviewTransform } from '../tools/grip-drag-preview-transform';
 // ADR-363 — ORTHO (F8) axis-lock for the live destination, mirroring useMovePreview
@@ -54,8 +54,6 @@ import { buildTransformedHosts } from '../../systems/dimensions/dim-transform-li
 import { useCanvasGhostPreview } from '../tools/useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
-type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene' | 'currentLevelId'>;
-
 export interface UseDimAssociationGhostPreviewProps {
   /** Move-tool phase (only `awaiting-destination` actually moves geometry). */
   readonly movePhase: MovePhase;
@@ -71,7 +69,7 @@ export interface UseDimAssociationGhostPreviewProps {
   readonly mirrorPhase: MirrorPhase;
   readonly mirrorFirstPoint: Point2D | null;
   readonly mirrorSecondPoint: Point2D | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneReader;
   readonly transform: ViewTransform;
   readonly getCanvas: () => HTMLCanvasElement | null;
   readonly getViewportElement?: () => HTMLElement | null;

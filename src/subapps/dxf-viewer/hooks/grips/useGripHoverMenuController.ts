@@ -30,7 +30,7 @@ import { useEffect, useRef } from 'react';
 import type { ICommand, ISceneManager } from '../../core/commands/interfaces';
 import type { UnifiedGripInfo, UnifiedGripPhase } from './unified-grip-types';
 import type { PromptDialogOptions } from '../../systems/prompt-dialog';
-import type { useLevels } from '../../systems/levels';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import { DXF_TIMING } from '../../config/dxf-timing';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { GripHoverMenuStore, type GripMenuOption } from '../../systems/grip/GripHoverMenuStore';
@@ -46,16 +46,11 @@ const MENU_HOLD_MS = DXF_TIMING.gesture.MENU_HOLD; // ADR-516
 /** Menu offset from cursor (viewport px), down-right like Windows context menu. */
 const MENU_OFFSET_PX = { x: 14, y: 14 } as const;
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface UseGripHoverMenuControllerParams {
   readonly hoveredGrip: UnifiedGripInfo | null;
   readonly phase: UnifiedGripPhase;
   readonly activeTool: string;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly executeCommand: (cmd: ICommand) => void;
   readonly showPromptDialog: (opts: PromptDialogOptions) => Promise<string | null>;
   readonly t: (key: string, params?: Record<string, unknown>) => string;

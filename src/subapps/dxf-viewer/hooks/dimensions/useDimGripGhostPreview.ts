@@ -28,7 +28,7 @@
 import React, { useCallback } from 'react';
 import type { ViewTransform } from '../../rendering/types/Types';
 import type { DxfGripDragPreview } from '../grip-computation';
-import type { useLevels } from '../../systems/levels';
+import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 import { applyDimensionGripDrag, toDimensionEntity } from './useDimensionGrips';
 import { renderPreviewDimension } from '../../canvas-v2/preview-canvas/preview-dimension-renderer';
 import { resolveDimStyle } from '../../systems/dimensions/dim-style-resolver';
@@ -41,12 +41,10 @@ import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 import { paintActionAlignmentTracking } from './dim-alignment-tracking';
 import { getGripAlignmentTracking } from '../../systems/cursor/GripAlignmentTrackingStore';
 
-type LevelManagerLike = Pick<ReturnType<typeof useLevels>, 'getLevelScene' | 'currentLevelId'>;
-
 export interface UseDimGripGhostPreviewProps {
   /** Live grip-drag snapshot (carries `dimGripKind` only when a dim grip is dragged). */
   readonly dragPreview: DxfGripDragPreview | null;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneReader;
   readonly transform: ViewTransform;
   readonly getCanvas: () => HTMLCanvasElement | null;
   readonly getViewportElement?: () => HTMLElement | null;

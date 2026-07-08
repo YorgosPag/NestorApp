@@ -29,7 +29,7 @@
 
 import { useEffect, useRef } from 'react';
 import type { UnifiedGripInfo, UnifiedGripPhase } from './unified-grip-types';
-import type { useLevels } from '../../systems/levels';
+import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import { GripContextMenuStore, type GripContextMenuSection } from '../../systems/grip/GripContextMenuStore';
 import { GripModeStore } from '../../systems/grip/GripModeStore';
 import { resolveContextMenuSections, type GripContextActionMeta } from '../../systems/grip/grip-context-menu-resolver';
@@ -45,11 +45,6 @@ import { buildPolylineVertexOpCommand, type PolylineVertexMenuOp } from '../../s
 // ADR-507 — hatch boundary vertex ops (add on edge-midpoint / remove on vertex) → SSoT builder.
 import { buildHatchVertexOpCommand, type HatchVertexMenuOp } from '../../systems/grip/hatch-grip-ops';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 export interface UseGripContextMenuControllerParams {
   /** Grip currently under the cursor (hovering / warm phases). */
   readonly hoveredGrip: UnifiedGripInfo | null;
@@ -57,7 +52,7 @@ export interface UseGripContextMenuControllerParams {
   readonly activeGrip: UnifiedGripInfo | null;
   readonly phase: UnifiedGripPhase;
   readonly activeTool: string;
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   /** Cancel the active drag — mirrored from `useUnifiedGripInteraction.handleEscape`. */
   readonly handleEscape: () => void;
 }

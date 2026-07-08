@@ -36,7 +36,7 @@
 import { useCallback } from 'react';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
-import type { useLevels } from '../../systems/levels';
+import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 import type { DxfGripDragPreview } from '../grip-computation';
 import type { BeamParams } from '../../bim/types/beam-types';
 import type { FoundationParams } from '../../bim/types/foundation-types';
@@ -60,14 +60,9 @@ import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'currentLevelId'
->;
-
 export interface UseGripDimAnnotationProps {
   dragPreview: DxfGripDragPreview | null;
-  levelManager: LevelManagerLike;
+  levelManager: LevelSceneReader;
   transform: ViewTransform;
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
