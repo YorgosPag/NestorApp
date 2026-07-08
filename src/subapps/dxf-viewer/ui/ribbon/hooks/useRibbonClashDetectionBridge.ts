@@ -26,15 +26,10 @@ import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
 import { detectClashes } from '../../../systems/coordination/detect-clashes';
 import { clashReportStore } from '../../../systems/coordination/clash-report-store';
 import { CLASH_DETECTION_RIBBON_ACTIONS } from './bridge/clash-detection-command-keys';
-import type { useLevels } from '../../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 
 export interface UseRibbonClashDetectionBridgeProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 export interface RibbonClashDetectionBridge {

@@ -26,7 +26,7 @@
 import { useCallback, useMemo } from 'react';
 import { useCommandHistory } from '../../../core/commands';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
-import type { useLevels } from '../../../systems/levels';
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
 import type { EntityType } from '../../../types/entities';
 import type { SelectionEntry } from '../../../systems/selection/types';
@@ -44,11 +44,6 @@ import {
   type BimBulkEditPatch,
 } from '../../../bim/cascade/bim-bulk-update-builder';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
-
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
   'getAll' | 'selectMultiple'
@@ -65,7 +60,7 @@ export interface BimSelectionEntry {
 }
 
 export interface UseMultiSelectionRibbonBridgeProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly universalSelection: UniversalSelectionLike;
 }
 

@@ -22,13 +22,8 @@ import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation
 import { isExplodable } from '../../../systems/explode/explode-entity';
 import { toolHintOverrideStore } from '../../../hooks/toolHintOverrideStore';
 import type { Entity } from '../../../types/entities';
-import type { useLevels } from '../../../systems/levels';
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
@@ -36,7 +31,7 @@ type UniversalSelectionLike = Pick<
 >;
 
 export interface UseExplodeRibbonActionProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly universalSelection: UniversalSelectionLike;
   readonly handleToolChange: (tool: ToolType) => void;
   /** Fall-through for non-explode actions. */

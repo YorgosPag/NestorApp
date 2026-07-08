@@ -56,20 +56,16 @@ import type {
 } from '../context/RibbonCommandContext';
 import type { RibbonComboboxOption } from '../types/ribbon-types';
 import { DIM_RIBBON_KEYS, isDimRibbonKey, isDimVisibilityKey } from './bridge/dim-command-keys';
-import type { useLevels } from '../../../systems/levels';
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
 
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
   'getPrimaryId'
 >;
 
 export interface UseRibbonDimBridgeProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly universalSelection: UniversalSelectionLike;
 }
 

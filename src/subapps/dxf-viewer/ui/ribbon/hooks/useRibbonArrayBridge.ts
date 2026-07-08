@@ -41,13 +41,8 @@ import type {
 import type { ArrayEntity } from '../../../types/entities';
 import { isArrayEntity } from '../../../types/entities';
 import type { ArrayParams, PathParams, PolarParams, RectParams } from '../../../systems/array/types';
-import type { useLevels } from '../../../systems/levels';
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
@@ -55,7 +50,7 @@ type UniversalSelectionLike = Pick<
 >;
 
 export interface UseRibbonArrayBridgeProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly universalSelection: UniversalSelectionLike;
 }
 

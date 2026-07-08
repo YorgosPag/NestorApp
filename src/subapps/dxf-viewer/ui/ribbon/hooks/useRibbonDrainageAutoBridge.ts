@@ -42,15 +42,10 @@ import { designDrainage } from '../../../systems/mep-design/drainage';
 import { drainageProposalStore } from '../../../systems/mep-design/drainage/drainage-proposal-store';
 import { buildDrainageCommit } from '../../../systems/mep-design/drainage/commit/build-drainage-commit';
 import { DRAINAGE_AUTO_RIBBON_ACTIONS } from './bridge/drainage-auto-command-keys';
-import type { useLevels } from '../../../systems/levels';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 
 export interface UseRibbonDrainageAutoBridgeProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
 }
 
 export interface RibbonDrainageAutoBridge {
