@@ -19,6 +19,8 @@ import { radToDeg, normalizeAngleDeg } from '../../rendering/entities/shared/geo
 import { bisectorAngle, TAU, degToRad } from '../../rendering/entities/shared/geometry-utils';
 import { UI_COLORS, OPACITY } from '../../config/color-config';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// 🏢 ADR-557 follow-up: closed-polygon area+perimeter label SSoT (committed/preview/hover parity)
+import { computePolygonAreaMetrics, paintPolygonAreaLabel } from '../../rendering/entities/shared/polygon-measurement-label';
 
 // ===== LINE =====
 
@@ -140,26 +142,9 @@ export function renderPolyline(
     }
 
     if (entity.vertices.length >= 3) {
-      const verts = entity.vertices;
-      let perimeter = 0;
-      for (let i = 1; i < verts.length; i++) perimeter += calculateWorldDistance(verts[i - 1], verts[i]);
-      perimeter += calculateWorldDistance(verts[verts.length - 1], verts[0]);
-
-      let area = 0;
-      for (let i = 0; i < verts.length; i++) {
-        const j = (i + 1) % verts.length;
-        area += verts[i].x * verts[j].y;
-        area -= verts[j].x * verts[i].y;
-      }
-      area = Math.abs(area) / 2;
-
-      const cx = verts.reduce((s, v) => s + v.x, 0) / verts.length;
-      const cy = verts.reduce((s, v) => s + v.y, 0) / verts.length;
-      const centroidScreen = CoordinateTransforms.worldToScreen({ x: cx, y: cy }, transform, h.viewport);
-      h.renderInfoLabel(ctx, centroidScreen, [
-        `Περ: ${formatLengthForDisplay(perimeter)}`,
-        `Ε: ${formatAreaForDisplay(area)}`,
-      ]);
+      const metrics = computePolygonAreaMetrics(entity.vertices, !!entity.closed);
+      const centroidScreen = CoordinateTransforms.worldToScreen(metrics.centroid, transform, h.viewport);
+      paintPolygonAreaLabel(ctx, centroidScreen, metrics);
     }
   }
 }

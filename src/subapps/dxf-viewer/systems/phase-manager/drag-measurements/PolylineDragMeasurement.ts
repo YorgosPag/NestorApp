@@ -13,6 +13,10 @@ import type { DragMeasurementContext, MeasurementData } from '../types';
 import { BaseDragMeasurementRenderer } from './BaseDragMeasurementRenderer';
 // 🏢 ADR-145: Centralized MIN_POLY_POINTS constant
 import { MIN_POLY_POINTS } from '../../../config/tolerance-config';
+// 🏢 ADR-557 follow-up: closed-polygon area/perimeter/centroid SSoT (shared with
+// committed/preview/hover). Reuse the trio calculator ONLY — this renderer keeps its
+// own MeasurementData/renderMeasurementsAtCenter contract (no SSoT painter here).
+import { computePolygonAreaMetrics } from '../../../rendering/entities/shared/polygon-measurement-label';
 
 /**
  * Polyline-specific drag measurement renderer
@@ -39,67 +43,25 @@ export class PolylineDragMeasurement extends BaseDragMeasurementRenderer {
     const newVertices = [...vertices];
     newVertices[gripIndex] = currentPos;
 
-    // Calculate total length
-    const totalLength = this.calculateTotalLength(newVertices);
+    // 🏢 ADR-557 follow-up: length + area + centroid from the ONE SSoT. Thread the
+    // ACTUAL closed flag so open polylines keep the open length and only closed ones
+    // now include the closing edge (fixes the prior omit-closing-edge length bug).
+    const closed = entity.closed ?? false;
+    const metrics = computePolygonAreaMetrics(newVertices, closed);
 
-    // Calculate area if closed (🏢 ADR-145: centralized MIN_POLY_POINTS)
-    const area = entity.closed && newVertices.length >= MIN_POLY_POINTS
-      ? this.calculatePolygonArea(newVertices)
-      : 0;
+    // Show area only for closed polylines with enough points (🏢 ADR-145: MIN_POLY_POINTS).
+    const showArea = closed && newVertices.length >= MIN_POLY_POINTS && metrics.area > 0;
 
-    // Define measurements to display
+    // Define measurements to display (same labels/order/units as before).
     const measurements: MeasurementData[] = [
-      { label: 'L', value: totalLength }
+      { label: 'L', value: metrics.perimeter }
     ];
 
-    if (area > 0) {
-      measurements.push({ label: 'A', value: area });
+    if (showArea) {
+      measurements.push({ label: 'A', value: metrics.area });
     }
 
-    // Calculate center for measurement display
-    const center = this.calculateCentroid(newVertices);
-    this.renderMeasurementsAtCenter(center, measurements);
-  }
-
-  /**
-   * Calculate total length of polyline segments
-   */
-  private calculateTotalLength(vertices: Point2D[]): number {
-    let totalLength = 0;
-
-    for (let i = 0; i < vertices.length - 1; i++) {
-      totalLength += this.calculateDistance(vertices[i], vertices[i + 1]);
-    }
-
-    return totalLength;
-  }
-
-  /**
-   * Calculate polygon area using the Shoelace formula
-   * Only valid for closed polylines with 3+ vertices
-   */
-  private calculatePolygonArea(vertices: Point2D[]): number {
-    let area = 0;
-
-    for (let i = 0; i < vertices.length; i++) {
-      const j = (i + 1) % vertices.length;
-      area += vertices[i].x * vertices[j].y;
-      area -= vertices[j].x * vertices[i].y;
-    }
-
-    return Math.abs(area) / 2;
-  }
-
-  /**
-   * Calculate centroid of vertex set for measurement positioning
-   */
-  private calculateCentroid(vertices: Point2D[]): Point2D {
-    const sumX = vertices.reduce((sum, v) => sum + v.x, 0);
-    const sumY = vertices.reduce((sum, v) => sum + v.y, 0);
-
-    return {
-      x: sumX / vertices.length,
-      y: sumY / vertices.length
-    };
+    // Area-weighted centroid (SSoT) for label placement.
+    this.renderMeasurementsAtCenter(metrics.centroid, measurements);
   }
 }

@@ -19,6 +19,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useLevelsOptional } from '../../../systems/levels/useLevels';
+import { useCurrentLevelScene } from '../../../systems/levels';
 import { useThermalStudyReport } from '../../../hooks/data/useThermalStudyReport';
 import { downloadThermalStudyAsPdf } from '../../../bim/thermal/report/thermal-study-pdf-exporter';
 import type { ThermalStudyLookups } from '../../../bim/thermal/report/thermal-study-report';
@@ -36,8 +37,8 @@ export const ExportThermalStudyButton: React.FC = () => {
   const getLevelScene = levelsCtx?.getLevelScene;
   const currentLevel = levelsCtx?.levels.find((l) => l.id === currentLevelId) ?? null;
 
-  const scene =
-    armed && currentLevelId && getLevelScene ? getLevelScene(currentLevelId) : null;
+  const liveScene = useCurrentLevelScene();
+  const scene = armed ? liveScene : null;
   const active = armed && !!scene;
 
   const lookups = useMemo<ThermalStudyLookups>(

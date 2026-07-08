@@ -8,7 +8,7 @@
 import { useEffect, useCallback } from 'react';
 import type { SceneModel, AnySceneEntity } from '../../types/scene';
 import { EventBus } from '../../systems/events';
-import { useLevels } from '../../systems/levels';
+import { useLevels, useCurrentLevelScene } from '../../systems/levels';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 // ✅ ΦΑΣΗ 7: useDxfImport μεταφέρθηκε στο hooks/ folder
 import { useDxfImport } from '../useDxfImport';
@@ -43,10 +43,10 @@ export function useSceneState() {
   const { currentLevelId, getLevelScene, setLevelScene, addLevel, levels, setCurrentLevel } = levelsSystem;
   const { importDxfFile, error: importError } = useDxfImport();
 
-  // Derived current scene
-  // 🔧 FIX (2026-01-31): Remove useMemo - getLevelScene reference changes cause issues
-  // Direct call ensures fresh scene on every render
-  const currentScene = currentLevelId ? getLevelScene(currentLevelId) : null;
+  // Derived current scene — ADR-557 SSoT (was an inline `getLevelScene(currentLevelId)`; the
+  // 2026-01-31 "remove useMemo, direct call" fix now lives in `useCurrentLevelScene`, so every
+  // render-time consumer shares ONE live-scene derivation instead of hand-copying it).
+  const currentScene = useCurrentLevelScene();
 
   // 🔍 DEBUG (2026-01-31): Log currentScene for circle debugging — guarded (fires on every render)
   if (DEBUG_SCENE_STATE) dlog('SceneState', '📊 [useSceneState] currentScene computed', {

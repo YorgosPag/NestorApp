@@ -3,27 +3,12 @@
  * Basic rendering utilities for hover display
  */
 
-import { HOVER_CONFIG } from './config';
 import type { Point2D } from '../../rendering/types/Types';
 import { UI_COLORS } from '../../config/color-config';
-// 🏢 ADR-462: display-unit SSoT — area label follows the status-bar unit selector
-import { formatAreaForDisplay } from '../../config/display-length-format';
 
-export function renderAreaLabel(ctx: CanvasRenderingContext2D, x: number, y: number, area: number): void {
-  const text = formatAreaForDisplay(area);
-  
-  ctx.save();
-  ctx.translate(x, y);
-  
-  // Set text style 
-  ctx.fillStyle = HOVER_CONFIG.colors.area;
-  ctx.font = HOVER_CONFIG.fonts.area;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  
-  ctx.fillText(text, 0, 0);
-  ctx.restore();
-}
+// 🏢 ADR-557 follow-up: the polygon area label moved to the SSoT painter
+// (`rendering/entities/shared/polygon-measurement-label.ts`) — `renderAreaLabel`
+// (screen-space-only, area-only) is no longer referenced by any call site.
 
 export function renderGreenDots(ctx: CanvasRenderingContext2D, points: Point2D[]): void {
   const originalFillStyle = ctx.fillStyle;

@@ -14,7 +14,7 @@
 
 import { useMemo, useSyncExternalStore } from 'react';
 import { useViewMode3DStore } from '../../../bim-3d/stores/ViewMode3DStore';
-import { useLevelsOptional } from '../../../systems/levels/useLevels';
+import { useCurrentLevelScene } from '../../../systems/levels';
 import { StructuralDiagnosticsStore } from '../../../bim/structural/organism/structural-diagnostics-store';
 import { AnalysisDiagnosticsStore } from '../../../bim/structural/analytical/analysis-diagnostics-store';
 import {
@@ -107,12 +107,10 @@ export function useStructuralWarningPainter(): AnalyticalPainter | null {
   );
   const active = mode === '2d';
 
-  // Active-floor scene — read DIRECTLY (mirror utilization/heat-load) ώστε μια
-  // αντικατάσταση σκηνής να εντοπίζεται. Τα entities φέρουν το footprint geometry.
-  const levelsCtx = useLevelsOptional();
-  const currentLevelId = levelsCtx?.currentLevelId ?? null;
-  const getLevelScene = levelsCtx?.getLevelScene;
-  const scene = active && currentLevelId && getLevelScene ? getLevelScene(currentLevelId) : null;
+  // Active-floor scene — SSoT hook (ADR-557) ώστε μια αντικατάσταση σκηνής να
+  // εντοπίζεται. Τα entities φέρουν το footprint geometry.
+  const liveScene = useCurrentLevelScene();
+  const scene = active ? liveScene : null;
 
   const marks = useMemo<readonly WarningMark[]>(() => {
     if (!active || !scene) return [];

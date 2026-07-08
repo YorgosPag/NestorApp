@@ -9,10 +9,10 @@ import type { Point2D } from '../types/Types';
 import type { PolylineEntity, Entity } from '../../types/entities';
 // 🏢 ADR-102: Centralized Entity Type Guards
 import { isPolylineEntity, isLWPolylineEntity } from '../../types/entities';
-import { calculatePolygonArea, calculatePolygonCentroid } from './shared/geometry-utils';
-import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { UI_COLORS } from '../../config/color-config';
-import { hitTestLineSegments, createEdgeGrips, calculatePerimeter } from './shared/line-utils';
+import { hitTestLineSegments, createEdgeGrips } from './shared/line-utils';
+// 🏢 ADR-557 follow-up: closed-polygon area+perimeter label SSoT (committed/preview/hover parity)
+import { computePolygonAreaMetrics, paintPolygonAreaLabel } from './shared/polygon-measurement-label';
 // ADR-561 — whole-polyline MOVE cross + rotation handle SSoT, shared with the
 // interaction path (`computeDxfEntityGrips`) so render ≡ interaction.
 import { getPolylineMoveRotateGrips, polylineMoveRotateStartIndex } from '../../systems/polyline/polyline-grips';
@@ -21,16 +21,7 @@ import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import { hasAnyBulge, expandPolyline, bulgeToPolyline } from './shared/geometry-bulge-utils';
 // 🏢 ADR-510 Φ3d: wide / tapered polyline (per-segment width) geometry SSoT
 import { hasAnyWidth, resolveSegmentWidth, buildSegmentWidthBand } from './shared/geometry-polyline-width';
-// 🏢 ADR-070: Centralized Vector Magnitude
-// 🏢 ADR-072: Centralized Dot Product
-// 🏢 ADR-090: Centralized Point Vector Operations
-import { drawVerticesPath, vectorMagnitude, dotProduct, subtractPoints } from './shared/geometry-rendering-utils';
-import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
-// 🏢 ADR-090: Centralized Number Formatting
-// 🏢 ADR-462: display-unit SSoT — area + perimeter follow the status-bar unit selector
-import { formatLengthForDisplay, formatAreaForDisplay } from '../../config/display-length-format';
-// 🏢 ADR-091: Centralized Text Label Offsets
-import { TEXT_LABEL_OFFSETS } from '../../config/text-rendering-config';
+import { drawVerticesPath } from './shared/geometry-rendering-utils';
 
 export class PolylineRenderer extends BaseEntityRenderer {
 
@@ -194,22 +185,19 @@ export class PolylineRenderer extends BaseEntityRenderer {
       this.renderDistanceTextPhaseAware(start, end, screenStart, screenEnd, entity, options);
     }
     
-    // 🔺 Προσθήκη τόξων γωνιών κατά τη φάση προεπισκόπησης
-    this.renderPolygonAngles(vertices, screenVertices, closed);
-    
-    // If closed polygon, show area and perimeter at centroid
+    // Giorgio 2026-07-08: αφαιρέθηκαν τα τόξα + μοίρες γωνιών (renderPolygonAngles) από την
+    // προεπισκόπηση/μέτρηση πολυγράμμης & από το εργαλείο ΕΜΒΑΔΟΝ («δεν θέλω να εμφανίζονται»).
+    // Κατά τη σχεδίαση φαίνονται μόνο οι γραμμές· στην ολοκλήρωση μένει το κείμενο εμβαδού/
+    // περιμέτρου στο κέντρο της περιοχής (παρακάτω). Τα τόξα ορθογωνίου ζουν στον RectangleRenderer.
+
+    // If closed polygon, show area and perimeter at centroid.
+    // 🏢 ADR-557 follow-up: SSoT painter (`polygon-measurement-label.ts`) — ALWAYS renders
+    // (measurement RESULT, not a gated preview-text overlay). Fixes the bug where the
+    // committed measure-area entity's area text silently disappeared behind the "Κείμενο"
+    // preview toggle, while preview mode (a separate, ungated draw path) still showed it.
     if (closed) {
-      const area = calculatePolygonArea(vertices);
-      const perimeter = calculatePerimeter(vertices, closed);
-      const centroid = calculatePolygonCentroid(vertices);
-      const screenCentroid = this.worldToScreen(centroid);
-      
-      this.ctx.save();
-      this.applyCenterMeasurementTextStyle();
-      // 🏢 ADR-091: Χρήση κεντρικοποιημένων text label offsets
-      renderStyledTextWithOverride(this.ctx, `Ε: ${formatAreaForDisplay(area)}`, screenCentroid.x, screenCentroid.y - TEXT_LABEL_OFFSETS.TWO_LINE);
-      renderStyledTextWithOverride(this.ctx, `Περ: ${formatLengthForDisplay(perimeter)}`, screenCentroid.x, screenCentroid.y + TEXT_LABEL_OFFSETS.TWO_LINE);
-      this.ctx.restore();
+      const metrics = computePolygonAreaMetrics(vertices, closed);
+      paintPolygonAreaLabel(this.ctx, this.worldToScreen(metrics.centroid), metrics);
     }
   }
   
@@ -272,103 +260,9 @@ export class PolylineRenderer extends BaseEntityRenderer {
 
 
 
-  /**
-   * 🔺 Νέα μέθοδος για τόξα γωνιών στη φάση προεπισκόπησης - κεντρικοποιημένη
-   */
-  private renderPolygonAngles(worldVertices: Point2D[], screenVertices: Point2D[], closed: boolean): void {
-    if (worldVertices.length < 3) return;
-    
-    // Check if this is a rectangle - skip angle rendering for rectangles (they use RectangleRenderer)
-    const isRectangle = this.isRectangleShape(worldVertices);
-    if (isRectangle) return;
-    
-    // Draw angle arcs and labels (starting from the second vertex)
-    for (let i = 1; i < worldVertices.length - 1; i++) {
-      const prevVertex = worldVertices[i - 1];
-      const currentVertex = worldVertices[i];
-      const nextVertex = worldVertices[i + 1];
-      
-      const prevScreen = screenVertices[i - 1];
-      const currentScreen = screenVertices[i];
-      const nextScreen = screenVertices[i + 1];
-      
-      this.renderAngleAtVertex(prevVertex, currentVertex, nextVertex, prevScreen, currentScreen, nextScreen);
-    }
-    
-    // If closed, draw angles for first and last vertices
-    if (closed && worldVertices.length >= 3) {
-      // First vertex angle (last -> first -> second)
-      const lastVertex = worldVertices[worldVertices.length - 1];
-      const firstVertex = worldVertices[0];
-      const secondVertex = worldVertices[1];
-      
-      const lastScreen = screenVertices[screenVertices.length - 1];
-      const firstScreen = screenVertices[0];
-      const secondScreen = screenVertices[1];
-      
-      this.renderAngleAtVertex(lastVertex, firstVertex, secondVertex, lastScreen, firstScreen, secondScreen);
-      
-      // Last vertex angle (second-to-last -> last -> first)
-      if (worldVertices.length > 3) {
-        const secondToLastVertex = worldVertices[worldVertices.length - 2];
-        const lastVertexAgain = worldVertices[worldVertices.length - 1];
-        const firstVertexAgain = worldVertices[0];
-        
-        const secondToLastScreen = screenVertices[screenVertices.length - 2];
-        const lastScreenAgain = screenVertices[screenVertices.length - 1];
-        const firstScreenAgain = screenVertices[0];
-        
-        this.renderAngleAtVertex(secondToLastVertex, lastVertexAgain, firstVertexAgain, secondToLastScreen, lastScreenAgain, firstScreenAgain);
-      }
-    }
-  }
-
-
-
-
   // Helper methods to eliminate duplications - now using shared utility
   private drawPath(screenVertices: Point2D[], closed = false): void {
     drawVerticesPath(this.ctx, screenVertices, closed);
-  }
-
-  private isRectangleShape(vertices: Point2D[]): boolean {
-    // A rectangle must have exactly 4 vertices
-    if (vertices.length !== 4) return false;
-    
-    // Check if vertices form a rectangle by verifying:
-    // 1. Opposite sides are parallel and equal
-    // 2. Adjacent sides are perpendicular
-    const [p1, p2, p3, p4] = vertices;
-    
-    // 🏢 ADR-090: Use centralized point subtraction for side vectors
-    const side1 = subtractPoints(p2, p1); // p1 -> p2
-    const side2 = subtractPoints(p3, p2); // p2 -> p3
-    const side3 = subtractPoints(p4, p3); // p3 -> p4
-    const side4 = subtractPoints(p1, p4); // p4 -> p1
-    
-    // Check if opposite sides are parallel and equal
-    const tolerance = TOLERANCE_CONFIG.POLYLINE_PRECISION;
-    // 🏢 ADR-070: Use centralized vector magnitude
-    const side1Length = vectorMagnitude(side1);
-    const side3Length = vectorMagnitude(side3);
-    const side2Length = vectorMagnitude(side2);
-    const side4Length = vectorMagnitude(side4);
-    
-    // Opposite sides should be equal in length
-    if (Math.abs(side1Length - side3Length) > tolerance || Math.abs(side2Length - side4Length) > tolerance) {
-      return false;
-    }
-    
-    // Adjacent sides should be perpendicular (dot product = 0)
-    // 🏢 ADR-072: Use centralized dot product
-    const dot1 = dotProduct(side1, side2); // side1 · side2
-    const dot2 = dotProduct(side2, side3); // side2 · side3
-    
-    if (Math.abs(dot1) > tolerance || Math.abs(dot2) > tolerance) {
-      return false;
-    }
-    
-    return true;
   }
 
   // ✅ ENTERPRISE FIX: Implement abstract hitTest method

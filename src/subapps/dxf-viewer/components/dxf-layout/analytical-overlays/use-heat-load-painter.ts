@@ -14,7 +14,7 @@
 import { useMemo } from 'react';
 import { useViewMode3DStore } from '../../../bim-3d/stores/ViewMode3DStore';
 import { useBimRenderSettingsStore } from '../../../state/bim-render-settings-store';
-import { useLevelsOptional } from '../../../systems/levels/useLevels';
+import { useCurrentLevelScene } from '../../../systems/levels';
 import { useSpaceHeatLoads } from '../../../hooks/data/useSpaceHeatLoads';
 import { heatLoadFillColor } from '../../../bim/thermal/heat-load/heat-load-color';
 import { CoordinateTransforms } from '../../../rendering/core/CoordinateTransforms';
@@ -101,13 +101,10 @@ export function useHeatLoadPainter(): AnalyticalPainter | null {
   const showHeatLoad = useBimRenderSettingsStore((s) => s.showHeatLoad);
   const active = showHeatLoad && mode === '2d';
 
-  // Active-floor BIM scene — read DIRECTLY (no memo) so a scene replacement
+  // Active-floor BIM scene — SSoT hook (ADR-557) so a scene replacement
   // (setLevelScene after a Ti/geometry edit) is picked up.
-  const levelsCtx = useLevelsOptional();
-  const currentLevelId = levelsCtx?.currentLevelId ?? null;
-  const getLevelScene = levelsCtx?.getLevelScene;
-  const scene =
-    active && currentLevelId && getLevelScene ? getLevelScene(currentLevelId) : null;
+  const liveScene = useCurrentLevelScene();
+  const scene = active ? liveScene : null;
 
   const data = useSpaceHeatLoads(scene, active);
 

@@ -53,3 +53,33 @@
 | **Fix** | Αλλαγή `dCCW < Math.PI` → `dCCW > Math.PI` — μία γραμμή, ένα χαρακτήρα |
 | **File** | `src/subapps/dxf-viewer/rendering/entities/BaseEntityRenderer.ts` (γραμμή ~721) |
 | **Impact** | Διορθώνει ΟΛΑ τα τόξα γωνιών: standalone angle-measurement, polygon vertex angles, area measurement angles — όλα περνούν από τη μοναδική `drawInternalArc()` |
+
+### 2026-07-08 — Απόσυρση τόξων+μοιρών γωνιών από πολύγραμμη & εργαλείο ΕΜΒΑΔΟΝ (Giorgio)
+
+| Field | Value |
+|-------|-------|
+| **Αίτημα** | Ο Giorgio: κατά τη σχεδίαση πολυγώνου / χρήση του εργαλείου «ΕΜΒΑΔΟΝ» (measure-area) **δεν** θέλει να εμφανίζονται τα τόξα και οι μοίρες στις κορυφές — μόνο οι γραμμές. Στην ολοκλήρωση θέλει ένα κείμενο με το εμβαδόν μέσα στην περιοχή. |
+| **Root Cause** | Δύο render paths ζωγράφιζαν per-vertex εσωτερικές γωνίες: (1) `PolylineRenderer.renderPolygonAngles()` στη φάση measurements (preview polygon/polyline/measure-area + committed measurement:true), (2) `renderHoverAngleAtVertex()` στο hover/selection overlay (`utils/hover/polyline-renderer.ts`). |
+| **Fix** | (1) Αφαιρέθηκε η κλήση `renderPolygonAngles` + οι νεκρές πλέον `renderPolygonAngles`/`isRectangleShape` από τον `PolylineRenderer` (μαζί με τα μη-χρησιμοποιούμενα imports). Το κείμενο εμβαδού/περιμέτρου στο centroid **παραμένει** (measurement:true → πάντα render). (2) Αφαιρέθηκε το `renderHoverAngleAtVertex` από το `renderPolylineHover`. |
+| **Files** | `rendering/entities/PolylineRenderer.ts`, `utils/hover/polyline-renderer.ts` |
+| **Impact** | Οι εσωτερικές γωνίες κορυφών δεν εμφανίζονται πλέον σε πολύγραμμη/πολύγωνο/measure-area (preview + committed + hover). Το `drawInternalArc()` SSoT μένει ενεργό μόνο για standalone angle-measurement + rectangle. Το εμβαδόν εξακολουθεί να εμφανίζεται ως κείμενο στο κέντρο της κλειστής περιοχής. |
+
+### 2026-07-08 (β) — Fix: το κείμενο εμβαδού δεν εμφανιζόταν στην ΟΛΟΚΛΗΡΩΜΕΝΗ μέτρηση
+
+| Field | Value |
+|-------|-------|
+| **Bug** | Ο Giorgio: μετά την ολοκλήρωση του εργαλείου ΕΜΒΑΔΟΝ (measure-area) **δεν** εμφανιζόταν κείμενο με το εμβαδόν μέσα στο πολύγωνο — ενώ κατά τη σχεδίαση (preview) φαινόταν. |
+| **Root Cause** | Στον `PolylineRenderer.renderPolylineMeasurements` το κείμενο εμβαδού/περιμέτρου σχεδιαζόταν μέσω `renderStyledTextWithOverride`, που έχει `if (!style.enabled) return` δεμένο στο γενικό «Κείμενο» preview toggle (`getTextPreviewStyleWithOverride().enabled`). Στην committed οντότητα αυτό το gate έκρυβε το κείμενο. Το preview (canvas-v2 `preview-entity-renderers`) σχεδιάζει με ξεχωριστό ungated path → γι' αυτό φαινόταν μόνο εκεί. Αποδεικτικό: τα τόξα (ungated stroke) φαίνονταν, το εμβαδόν (gated text) όχι. |
+| **Fix** | Το εμβαδόν είναι ΑΠΟΤΕΛΕΣΜΑ μέτρησης, όχι preview text → σχεδιάζεται πλέον ΑΠΕΥΘΕΙΑΣ με `ctx.fillText` (μετά `applyCenterMeasurementTextStyle` για font/χρώμα dimension style), ανεξάρτητα από το preview toggle. Αφαιρέθηκε το import `renderStyledTextWithOverride`. |
+| **File** | `src/subapps/dxf-viewer/rendering/entities/PolylineRenderer.ts` |
+| **Impact** | Το εμβαδόν (+περίμετρος) εμφανίζεται πάντα στο κέντρο της κλειστής μέτρησης/πολυγώνου. Εκκρεμεί απόφαση Giorgio αν θα μείνει μόνο το εμβαδόν (χωρίς περίμετρο/αποστάσεις ακμών). |
+
+### 2026-07-08 (γ) — SSoT κεντρικοποίηση του label εμβαδού/περιμέτρου (Giorgio: «όπως οι μεγάλοι παίχτες»)
+
+| Field | Value |
+|-------|-------|
+| **Αίτημα** | Ο Giorgio: full-enterprise / full-SSoT υλοποίηση όπως Revit / Maxon (Cinema 4D) / Figma. |
+| **Πρόβλημα (root)** | Το label «εμβαδόν + περίμετρος» της κλειστής πολυγράμμης ήταν ξαναγραμμένο σε **3+ σημεία** με drift: committed (`PolylineRenderer`, area-weighted centroid), preview (`preview-entity-renderers`, inline shoelace + **λάθος** vertex-average centroid + **αντίστροφη** σειρά Περ→Ε + gated στο «Κείμενο» toggle), hover (`utils/hover`, area-only). Το drift ήταν ακριβώς η αιτία του bug (β). |
+| **SSoT** | Νέο module `rendering/entities/shared/polygon-measurement-label.ts`: `computePolygonAreaMetrics()` (συνθέτει ΜΟΝΟ τους υπάρχοντες SSoT calculators `calculatePolygonArea`/`calculatePolygonCentroid`/`calculatePerimeter`), `buildAreaPerimeterLabelLines()` (canonical σειρά Ε→Περ, prefixes μέσω i18n `areaMeasureLabel.*`), `paintStackedMeasurementLabel()` / `paintPolygonAreaLabel()` (ΕΝΑΣ ungated painter, κοινό style ADR-159). |
+| **Call sites** | committed + preview + hover καλούν πλέον το SSoT. Διαγράφηκε το `utils/hover/render-utils.ts#renderAreaLabel` (dead). Προστέθηκαν i18n keys σε el+en `dxf-viewer-shell.json`. |
+| **4ος duplicate — ΕΝΟΠΟΙΗΘΗΚΕ** | `systems/phase-manager/drag-measurements/PolylineDragMeasurement.ts` (live label στο grip-drag) χρησιμοποιεί πλέον `computePolygonAreaMetrics` για μήκος/εμβαδόν/κέντρο (κρατά το δικό του `MeasurementData`/`renderMeasurementsAtCenter` contract — όχι ο SSoT painter). Διαγράφηκαν 3 τοπικοί helpers (inline shoelace/length/vertex-average centroid). **Latent bug fixed**: το «μήκος» (L) τώρα μετρά την κλείνουσα ακμή ΜΟΝΟ σε closed (threaded actual `closed` flag· open μένει open). Placement → area-weighted centroid. Ίδια labels/σειρά/μονάδες. |

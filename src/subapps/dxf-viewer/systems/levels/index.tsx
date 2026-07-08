@@ -32,3 +32,7 @@ export {
 
 // Re-export main system component for convenience
 export { LevelsSystem, useLevelsContext } from './LevelsSystem';
+
+// ADR-557 — SSoT for the live current-level scene (replaces the ~15 hand-copied
+// `currentLevelId ? getLevelScene(currentLevelId) ?? null : null` derivations).
+export { useCurrentLevelScene } from './useCurrentLevelScene';

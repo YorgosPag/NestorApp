@@ -15,7 +15,7 @@ import { useMemo, useSyncExternalStore } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useViewMode3DStore } from '../../../bim-3d/stores/ViewMode3DStore';
 import { useAnalysisDiagramViewStore } from '../../../state/analysis-diagram-view-store';
-import { useLevelsOptional } from '../../../systems/levels/useLevels';
+import { useCurrentLevelScene } from '../../../systems/levels';
 import { AnalysisResultsStore } from '../../../bim/structural/analytical/solver/analysis-results-store';
 import { AnalyticalModelStore } from '../../../bim/structural/analytical/analytical-model-store';
 import {
@@ -103,12 +103,10 @@ export function useStructuralDiagramPainter(): AnalyticalPainter | null {
   );
   const active = showDiagrams && mode === '2d';
 
-  // Active-floor scene only to resolve units + read beam line-loads (4b arrows). Read
-  // directly (mirror heat-load painter) so a scene replacement is picked up.
-  const levelsCtx = useLevelsOptional();
-  const currentLevelId = levelsCtx?.currentLevelId ?? null;
-  const getLevelScene = levelsCtx?.getLevelScene;
-  const scene = active && currentLevelId && getLevelScene ? getLevelScene(currentLevelId) : null;
+  // Active-floor scene only to resolve units + read beam line-loads (4b arrows).
+  // SSoT hook (ADR-557) so a scene replacement is picked up.
+  const liveScene = useCurrentLevelScene();
+  const scene = active ? liveScene : null;
   const units = resolveSceneUnits(scene);
 
   const diagramSet = useMemo<MemberDiagramSet | null>(() => {

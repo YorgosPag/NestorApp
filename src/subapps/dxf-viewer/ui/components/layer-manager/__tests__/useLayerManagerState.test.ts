@@ -39,8 +39,14 @@ const MOCK_SCENE = {
 
 const mockGetLevelScene = jest.fn(() => MOCK_SCENE);
 
+// ADR-557 — the hook now reads the scene via the `useCurrentLevelScene` SSoT, which internally
+// calls `useLevelsOptional`. Mock BOTH exports of this module (same shape) so the SSoT resolves.
 jest.mock('../../../../systems/levels/useLevels', () => ({
   useLevels: () => ({
+    currentLevelId: 'level_1',
+    getLevelScene: mockGetLevelScene,
+  }),
+  useLevelsOptional: () => ({
     currentLevelId: 'level_1',
     getLevelScene: mockGetLevelScene,
   }),

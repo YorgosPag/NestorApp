@@ -8,8 +8,8 @@ import {
   // ADR-358 Phase 9D-5a: id-first reader SSoT (LayerStore lookup + legacy name fallback).
   resolveEntityLayerName,
 } from '../../../stores/LayerStore';
-// ADR-358 Phase 9D-5b-ii Sub-E — scene access via `getLevelScene(levelId)` SSoT action (Level interface has no `scene` field; storage lives in `LevelsSystem.sceneManagerRef`).
-import { useLevels } from '../../../systems/levels/useLevels';
+// ADR-557 — live current-level scene via the `useCurrentLevelScene()` SSoT hook (Level interface has no `scene` field; storage lives in `LevelsSystem.sceneManagerRef`).
+import { useCurrentLevelScene } from '../../../systems/levels/useCurrentLevelScene';
 import type { SceneLayer, AecLayerCategory, AnySceneEntity } from '../../../types/entities';
 import type { Layer, Category, LayerManagerState, LayerManagerActions } from './types';
 
@@ -53,12 +53,11 @@ export function useLayerManagerState(): LayerManagerStateHook {
     getLayerStoreSnapshot,
   );
 
-  const { currentLevelId, getLevelScene } = useLevels();
+  const scene = useCurrentLevelScene();
 
   const layers = useMemo<Layer[]>(() => {
     if (storeSnapshot.layers.length === 0) return [];
 
-    const scene = currentLevelId ? getLevelScene(currentLevelId) : null;
     return storeSnapshot.layers.map((layer) => {
       const elementCount = scene
         // ADR-358 Phase 9D-5a: id-first resolution via LayerStore (post-rename stale-name guard).
@@ -67,7 +66,7 @@ export function useLayerManagerState(): LayerManagerStateHook {
       const isCurrent = storeSnapshot.currentLayerId === (layer.id ?? layer.name);
       return sceneLayerToUi(layer, isCurrent, elementCount);
     });
-  }, [storeSnapshot.layers, storeSnapshot.currentLayerId, currentLevelId, getLevelScene]);
+  }, [storeSnapshot.layers, storeSnapshot.currentLayerId, scene]);
 
   const categories = useMemo<Category[]>(() => {
     const uniqueCats = getUniqueCategories(storeSnapshot.layers);

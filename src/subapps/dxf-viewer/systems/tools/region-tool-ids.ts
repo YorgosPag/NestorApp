@@ -87,6 +87,21 @@ export function isRegionBoxSelectTool(tool: string | null | undefined): boolean 
 }
 
 /**
+ * Εργαλεία που οπλίζουν το ΟΡΘΟΓΩΝΙΟ drag-marquee (mousedown arm → mousemove
+ * `startSelection` → preview πλαίσιο + world rect στο mouseUp): οι region box-select
+ * («με πλαίσιο» + περίγραμμα) ΣΥΝ το `crop-window` («Περικοπή Περιοχής»).
+ *
+ * ΓΙΑΤΙ ξεχωριστό από `isRegionBoxSelectTool`: στο `mouse-handler-up-marquee.ts` ο
+ * έλεγχος `isRegionBoxSelectTool` ΠΡΟΗΓΕΙΤΑΙ του `crop-window` branch — αν το crop-window
+ * ανήκε εκεί, θα εξέπεμπε `bim:wall-region-box-select` αντί για `crop:marquee-rect`. Έτσι
+ * το arming (down/move) χρησιμοποιεί αυτό το ευρύ predicate, ενώ το mouseUp routing κρατά
+ * το στενό `isRegionBoxSelectTool` για να πέσει σωστά το crop-window στο δικό του branch.
+ */
+export function isRectMarqueeDragTool(tool: string | null | undefined): boolean {
+  return isRegionBoxSelectTool(tool) || tool === 'crop-window';
+}
+
+/**
  * Όλα τα BIM region/perimeter εργαλεία (region 3-way + outer/discrete perimeter).
  * Χρήση για contextual-tab visibility, gripsAllowed, click routing.
  */

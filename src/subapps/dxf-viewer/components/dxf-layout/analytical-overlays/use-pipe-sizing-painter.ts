@@ -14,7 +14,7 @@
 import { useMemo } from 'react';
 import { useViewMode3DStore } from '../../../bim-3d/stores/ViewMode3DStore';
 import { usePipeSizingViewStore } from '../../../state/pipe-sizing-view-store';
-import { useLevelsOptional } from '../../../systems/levels/useLevels';
+import { useCurrentLevelScene } from '../../../systems/levels';
 import { usePipeSizing } from '../../../hooks/data/usePipeSizing';
 import { isMepSegmentEntity } from '../../../types/entities';
 import { CoordinateTransforms } from '../../../rendering/core/CoordinateTransforms';
@@ -81,12 +81,9 @@ export function usePipeSizingPainter(): AnalyticalPainter | null {
   const showPipeSizing = usePipeSizingViewStore((s) => s.showPipeSizing);
   const active = showPipeSizing && mode === '2d';
 
-  // Active-floor BIM scene — read DIRECTLY (no memo), mirror heat-load painter.
-  const levelsCtx = useLevelsOptional();
-  const currentLevelId = levelsCtx?.currentLevelId ?? null;
-  const getLevelScene = levelsCtx?.getLevelScene;
-  const scene =
-    active && currentLevelId && getLevelScene ? getLevelScene(currentLevelId) : null;
+  // Active-floor BIM scene — SSoT hook (ADR-557).
+  const liveScene = useCurrentLevelScene();
+  const scene = active ? liveScene : null;
 
   const sizing = usePipeSizing(scene, active);
 

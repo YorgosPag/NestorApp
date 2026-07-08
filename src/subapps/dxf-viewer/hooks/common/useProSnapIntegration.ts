@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { useSceneManager } from '../scene/useSceneManager';
-import { useLevels } from '../../systems/levels';
+import { useCurrentLevelScene } from '../../systems/levels';
 import { ExtendedSnapType } from '../../snapping/extended-types';
 import { useSnapContext } from '../../snapping/context/SnapContext';
 
@@ -15,8 +14,7 @@ interface ProSnapIntegrationState {
 }
 
 export function useProSnapIntegration(parentSnapEnabled?: boolean): ProSnapIntegrationState {
-  const { getLevelScene } = useSceneManager();
-  const { currentLevelId } = useLevels();
+  const scene = useCurrentLevelScene();
 
   // Χρήση του ενοποιημένου SnapContext
   const snapContext = useSnapContext();
@@ -41,10 +39,7 @@ export function useProSnapIntegration(parentSnapEnabled?: boolean): ProSnapInteg
   });
 
   // Get current entities - memoized properly
-  const entities = useMemo(() => {
-    const scene = currentLevelId ? getLevelScene(currentLevelId) : null;
-    return scene?.entities ?? [];
-  }, [currentLevelId, getLevelScene]);
+  const entities = useMemo(() => scene?.entities ?? [], [scene]);
 
   // Create stable stats object
   // ✅ ENTERPRISE: Explicit typing to prevent 'never[]' inference

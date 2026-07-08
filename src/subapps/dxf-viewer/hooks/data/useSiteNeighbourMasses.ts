@@ -23,6 +23,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
+import { useCurrentLevelScene } from '../../systems/levels/useCurrentLevelScene';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
 import { DxfFirestoreService } from '../../services/dxf-firestore.service';
 import { isWallEntity } from '../../types/entities';
@@ -75,6 +76,9 @@ export function useSiteNeighbourMasses(active: boolean): readonly HorizonObstacl
   const levels = levelsCtx?.levels;
   const currentLevelId = levelsCtx?.currentLevelId ?? null;
   const getLevelScene = levelsCtx?.getLevelScene;
+  // ADR-557 SSoT — the live active-level scene (the other `getLevelScene(t.levelId)` reads below
+  // target SPECIFIC neighbour levels, so `getLevelScene`/`currentLevelId` stay for those).
+  const currentLevelScene = useCurrentLevelScene();
   const { buildings } = useFirestoreBuildings();
 
   const activeBuildingId = useMemo(
@@ -143,12 +147,12 @@ export function useSiteNeighbourMasses(active: boolean): readonly HorizonObstacl
 
   // Active placement + κλίμακα (από τη σκηνή του ενεργού ορόφου· fallback mm).
   const activePlacement = useMemo<BuildingPlacement>(() => {
-    const activeScene = currentLevelId ? getLevelScene?.(currentLevelId) ?? null : null;
+    const activeScene = currentLevelScene;
     const sceneToM = activeScene ? sceneUnitsToMeters(resolveSceneUnits(activeScene)) : sceneUnitsToMeters('mm');
     const building = buildings.find((b) => b.id === activeBuildingId);
     return placementOf(building, sceneToM);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buildings, activeBuildingId, currentLevelId, getLevelScene, loaded]);
+  }, [buildings, activeBuildingId, currentLevelScene, loaded]);
 
   return useMemo<readonly HorizonObstacle[]>(() => {
     if (!active || !levels) return [];

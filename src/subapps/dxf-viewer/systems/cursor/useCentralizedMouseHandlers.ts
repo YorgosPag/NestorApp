@@ -17,7 +17,7 @@ import {
 } from '../../rendering/core/CoordinateTransforms';
 import { canvasEventBus } from '../../rendering/canvas/core/CanvasEventSystem';
 import { isInDrawingMode } from '../tools/ToolStateManager';
-import { isRegionBoxSelectTool } from '../tools/region-tool-ids';
+import { isRectMarqueeDragTool } from '../tools/region-tool-ids';
 import { clamp } from '../../rendering/entities/shared/geometry-utils';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { TRANSFORM_SCALE_LIMITS } from '../../config/transform-config';
@@ -249,7 +249,7 @@ export function useCentralizedMouseHandlers(
     if (
       e.button === 0 &&
       !isGripDragging &&
-      ((activeTool === 'select' && !isToolInteractive) || isRegionBoxSelectTool(activeTool))
+      ((activeTool === 'select' && !isToolInteractive) || isRectMarqueeDragTool(activeTool))
     ) {
       lassoDownRef.current = { pos: screenPos, buttonHeld: true };
     }

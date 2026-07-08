@@ -4,12 +4,11 @@
  */
 
 import { HOVER_CONFIG } from './config';
-import { calculatePolygonArea, calculatePolygonCentroid } from '../../rendering/entities/shared/geometry-utils';
-import { renderAreaLabel } from './render-utils';
 import { renderHoverEdgeWithDistance } from './edge-utils';
-import { renderHoverAngleAtVertex } from './angle-utils';
 import type { HoverRenderContext } from './types';
 import { isPolylineEntity } from '../../types/entities';
+// 🏢 ADR-557 follow-up: closed-polygon area label SSoT (committed/preview/hover parity)
+import { computePolygonAreaMetrics, paintPolygonAreaLabel } from '../../rendering/entities/shared/polygon-measurement-label';
 
 export function renderPolylineHover({ entity, ctx, worldToScreen, options }: HoverRenderContext): void {
   // ✅ ENTERPRISE FIX: Use type guard to ensure entity is PolylineEntity
@@ -45,43 +44,15 @@ export function renderPolylineHover({ entity, ctx, worldToScreen, options }: Hov
   }
   
   ctx.restore(); // Restore line dash
-  
-  // Draw angle arcs and labels at interior vertices
-  if (vertices.length >= 3) {
-    if (isClosed) {
-      // For closed polylines, all vertices have angles
-      for (let i = 0; i < vertices.length; i++) {
-        const prevVertex = vertices[(i - 1 + vertices.length) % vertices.length];
-        const currentVertex = vertices[i];
-        const nextVertex = vertices[(i + 1) % vertices.length];
-        
-        const prevScreen = screenVertices[(i - 1 + screenVertices.length) % screenVertices.length];
-        const currentScreen = screenVertices[i];
-        const nextScreen = screenVertices[(i + 1) % screenVertices.length];
-        
-        renderHoverAngleAtVertex(ctx, prevVertex, currentVertex, nextVertex, prevScreen, currentScreen, nextScreen);
-      }
-    } else {
-      // For open polylines, only interior vertices have angles (skip first and last)
-      for (let i = 1; i < vertices.length - 1; i++) {
-        renderHoverAngleAtVertex(
-          ctx,
-          vertices[i - 1], 
-          vertices[i], 
-          vertices[i + 1],
-          screenVertices[i - 1], 
-          screenVertices[i], 
-          screenVertices[i + 1]
-        );
-      }
-    }
-  }
-  
-  // For closed polylines, show area measurement
+
+  // Giorgio 2026-07-08: το πολύγωνο κατά τη σχεδίαση/επιλογή ΔΕΝ δείχνει πλέον τόξα +
+  // μοίρες στις κορυφές («θέλω μόνον τις γραμμές του πολυγώνου»). Η ένδειξη εσωτερικής
+  // γωνίας ανά κορυφή (renderHoverAngleAtVertex) αφαιρέθηκε από το hover/selection overlay.
+
+  // For closed polylines, show area measurement (AREA-ONLY — no perimeter line in hover)
   if (isClosed && vertices.length >= 3) {
-    const area = calculatePolygonArea(vertices);
-    const centroid = calculatePolygonCentroid(screenVertices);
-    renderAreaLabel(ctx, centroid.x, centroid.y, area);
+    const metrics = computePolygonAreaMetrics(vertices, true);
+    paintPolygonAreaLabel(ctx, worldToScreen(metrics.centroid), metrics, { includePerimeter: false });
   }
   
   ctx.restore();

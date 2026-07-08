@@ -45,8 +45,7 @@ export type {
   DrawingState,
 } from './drawing-types';
 import type { DrawingTool, ExtendedSceneEntity, DrawingState } from './drawing-types';
-import { useLevels } from '../../systems/levels';
-import { calculateDistance } from '../../rendering/entities/shared';
+import { useLevels, useCurrentLevelScene } from '../../systems/levels';
 import { usePreviewMode } from '../usePreviewMode';
 import { useLineStyles } from '../../settings-provider';
 import { completeEntity } from './completeEntity';
@@ -65,42 +64,12 @@ import { applyPreviewSettingsToEntity } from './apply-preview-settings';
 // `useRef(1)` counter that minted reusable `entity_${n}` ids and produced scene
 // duplicate-id corruption (`entity_8` ×2) across remounts / multiple hook instances.
 import { generateEntityId } from '../../systems/entity-creation/utils';
-
-// ─── Module-level helpers ───────────────────────────────────────────────────
-
-/** Measurement tools that create overlay entities */
-const MEASUREMENT_TOOLS: ReadonlySet<DrawingTool> = new Set([
-  'measure-distance', 'measure-distance-continuous', 'measure-angle', 'measure-area',
-  'measure-angle-measuregeom',
-]);
-
-/** Drawing tools that create persistent entities */
-const ENTITY_TOOLS: ReadonlySet<DrawingTool> = new Set([
-  'line', 'line-perpendicular', 'rectangle', 'circle', 'circle-diameter', 'circle-2p-diameter',
-  'circle-3p', 'circle-chord-sagitta', 'circle-2p-radius', 'circle-best-fit',
-  'polyline', 'polygon', 'arc-3p', 'arc-cse', 'arc-sce',
-  // ADR-507 S2 — γραμμοσκίαση (κλειστό όριο → HatchEntity).
-  'hatch',
-]);
-
-/** Resolves the level ID for entity placement (fallback to "0" for known tools) */
-function getEffectiveLevelId(tool: DrawingTool, currentLevelId: string | null): string | null {
-  if (currentLevelId) return currentLevelId;
-  return (MEASUREMENT_TOOLS.has(tool) || ENTITY_TOOLS.has(tool)) ? '0' : null;
-}
-
-/** Removes the last point if it duplicates the previous one (distance < 1px from double-click) */
-function removeDuplicateEndPoint(points: readonly Point2D[]): Point2D[] {
-  const cleaned = [...points];
-  if (cleaned.length >= 2) {
-    const last = cleaned[cleaned.length - 1];
-    const prev = cleaned[cleaned.length - 2];
-    if (calculateDistance(last, prev) < 1.0) {
-      cleaned.pop();
-    }
-  }
-  return cleaned;
-}
+// Pure tool-classification helpers extracted to keep this hook under the
+// 500-line cap (N.7.1): tool sets + effective level-id + duplicate-endpoint cleanup.
+import {
+  getEffectiveLevelId,
+  removeDuplicateEndPoint,
+} from './drawing-tool-classification';
 
 export function useUnifiedDrawing() {
   const {
@@ -147,6 +116,9 @@ export function useUnifiedDrawing() {
     getLevelScene,
     setLevelScene
   } = useLevels();
+  // ADR-557 — SSoT for the live current-level scene (replaces the hand-copied
+  // `currentLevelId ? getLevelScene(currentLevelId) ?? null : null` derivation below).
+  const liveScene = useCurrentLevelScene();
 
   const { setMode } = usePreviewMode();
   const linePreviewStyles = useLineStyles('preview');
@@ -313,7 +285,7 @@ export function useUnifiedDrawing() {
     const previewEntity = isWallOnEntity
       ? generateWallOnEntityPreview(
           mousePoint,
-          currentLevelId ? getLevelScene(currentLevelId)?.entities ?? [] : [],
+          liveScene?.entities ?? [],
           sceneUnitsForPreview,
         )
       : generatePreviewEntity(
@@ -333,7 +305,7 @@ export function useUnifiedDrawing() {
     }
 
     previewEntityRef.current = previewEntity;
-  }, [machineContext.toolType, machineContext.points, localState.isOverlayMode, createEntityFromTool, applyPreviewSettings, currentLevelId, getLevelScene]);
+  }, [machineContext.toolType, machineContext.points, localState.isOverlayMode, createEntityFromTool, applyPreviewSettings, currentLevelId, getLevelScene, liveScene]);
 
   const startDrawing = useCallback((tool: DrawingTool) => {
     setMode('preview');

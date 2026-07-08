@@ -14,7 +14,7 @@
 import { useMemo } from 'react';
 import { useViewMode3DStore } from '../../../bim-3d/stores/ViewMode3DStore';
 import { useHydraulicBalancingViewStore } from '../../../state/hydraulic-balancing-view-store';
-import { useLevelsOptional } from '../../../systems/levels/useLevels';
+import { useCurrentLevelScene } from '../../../systems/levels';
 import { useHydraulicBalancing } from '../../../hooks/data/useHydraulicBalancing';
 import { isMepRadiatorEntity } from '../../../types/entities';
 import { isPipeNetworkSourceEntity } from '../../../bim/mep-systems/pipe-network-source';
@@ -114,12 +114,9 @@ export function useHydraulicBalancingPainter(): AnalyticalPainter | null {
   const showBalancing = useHydraulicBalancingViewStore((s) => s.showBalancing);
   const active = showBalancing && mode === '2d';
 
-  // Active-floor BIM scene — read DIRECTLY (no memo), mirror pipe-sizing painter.
-  const levelsCtx = useLevelsOptional();
-  const currentLevelId = levelsCtx?.currentLevelId ?? null;
-  const getLevelScene = levelsCtx?.getLevelScene;
-  const scene =
-    active && currentLevelId && getLevelScene ? getLevelScene(currentLevelId) : null;
+  // Active-floor BIM scene — SSoT hook (ADR-557).
+  const liveScene = useCurrentLevelScene();
+  const scene = active ? liveScene : null;
 
   const result = useHydraulicBalancing(scene, active);
 

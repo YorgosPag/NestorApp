@@ -17,7 +17,7 @@ import { useViewMode3DStore } from '../../../bim-3d/stores/ViewMode3DStore';
 import { useAnalysisDiagramViewStore } from '../../../state/analysis-diagram-view-store';
 import { AnalysisResultsStore } from '../../../bim/structural/analytical/solver/analysis-results-store';
 import { useStructuralSettingsStore } from '../../../state/structural-settings-store';
-import { useLevelsOptional } from '../../../systems/levels/useLevels';
+import { useCurrentLevelScene } from '../../../systems/levels';
 import { isColumnEntity, isBeamEntity } from '../../../types/entities';
 import {
   beamUtilization,
@@ -121,12 +121,10 @@ export function useStructuralUtilizationPainter(): AnalyticalPainter | null {
     AnalysisResultsStore.get,
   );
 
-  // Active-floor scene — read DIRECTLY (mirror heat-load painter) so a scene replacement
-  // is picked up. Members carry geometry footprint + reinforcement intent.
-  const levelsCtx = useLevelsOptional();
-  const currentLevelId = levelsCtx?.currentLevelId ?? null;
-  const getLevelScene = levelsCtx?.getLevelScene;
-  const scene = active && currentLevelId && getLevelScene ? getLevelScene(currentLevelId) : null;
+  // Active-floor scene — SSoT hook (ADR-557) so a scene replacement is picked up.
+  // Members carry geometry footprint + reinforcement intent.
+  const liveScene = useCurrentLevelScene();
+  const scene = active ? liveScene : null;
 
   const fills = useMemo<readonly UtilizationFill[]>(() => {
     if (!active || !scene) return [];

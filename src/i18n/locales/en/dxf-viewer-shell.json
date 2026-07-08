@@ -13,6 +13,10 @@
       "slsCharacteristic": "Serviceability limit state — characteristic (G + Q)"
     }
   },
+  "areaMeasureLabel": {
+    "areaPrefix": "A",
+    "perimeterPrefix": "P"
+  },
   "staticAnalysis": {
     "diagnostics": {
       "unstable": "The structure is a mechanism — static analysis does not converge (insufficient supports/connections).",

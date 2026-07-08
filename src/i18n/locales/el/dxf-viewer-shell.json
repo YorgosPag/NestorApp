@@ -13,6 +13,10 @@
       "slsCharacteristic": "Οριακή κατάσταση λειτουργικότητας — χαρακτηριστικός (G + Q)"
     }
   },
+  "areaMeasureLabel": {
+    "areaPrefix": "Ε",
+    "perimeterPrefix": "Περ"
+  },
   "staticAnalysis": {
     "diagnostics": {
       "unstable": "Ο φορέας είναι μηχανισμός — η στατική ανάλυση δεν συγκλίνει (ανεπαρκείς στηρίξεις/συνδέσεις).",

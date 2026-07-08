@@ -1,23 +1,16 @@
 'use client';
 
 /**
- * ADR-344 Phase 6.D — Current scene selector.
+ * ADR-344 Phase 6.D — Current scene selector (panel-side alias).
  *
- * Resolves the active level's SceneModel via the LevelsSystem. Returns
- * `null` when no level is selected or no scene is loaded yet. Kept as
- * a dedicated hook so panel-side consumers do not pull in the full
- * `useSceneState` surface (which depends on canvas ops, notifications,
- * i18n, clipboard, …).
+ * Thin alias over the levels SSoT `useCurrentLevelScene` (ADR-557). Kept as a named
+ * panel-side hook so text-toolbar consumers (and their `__mocks__`) keep a stable import,
+ * but the derivation itself lives in ONE place. Returns `null` when no level is active.
  */
 
-import { useMemo } from 'react';
-import { useLevels } from '../../../systems/levels';
+import { useCurrentLevelScene } from '../../../systems/levels';
 import type { SceneModel } from '../../../types/scene';
 
 export function useCurrentSceneModel(): SceneModel | null {
-  const { currentLevelId, getLevelScene } = useLevels();
-  return useMemo(() => {
-    if (!currentLevelId) return null;
-    return getLevelScene(currentLevelId) ?? null;
-  }, [currentLevelId, getLevelScene]);
+  return useCurrentLevelScene();
 }

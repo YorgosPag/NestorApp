@@ -12,7 +12,7 @@ import {
 } from '../../rendering/core/CoordinateTransforms';
 import { canvasEventBus, CANVAS_EVENTS } from '../../rendering/canvas/core/CanvasEventSystem';
 import { isInDrawingMode } from '../tools/ToolStateManager';
-import { isRegionBoxSelectTool } from '../tools/region-tool-ids';
+import { isRectMarqueeDragTool } from '../tools/region-tool-ids';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { setImmediatePosition, setRealtimeWorldCursor } from './ImmediatePositionStore';
 import { setColumnPolarShiftFractions } from './ColumnPolarStore';
@@ -315,15 +315,19 @@ export function useMouseMoveHandler({
       }
     }
 
-    // ADR-363 Phase 1K Mode C — wall-in-region box-select: a button-held drag past
-    // threshold arms a RECTANGLE marquee (window/crossing), NOT a lasso. A plain
-    // click (no drag) leaves `isSelecting` false → falls through to the tool's
-    // pick pipeline (Mode A/B). Mutually exclusive with an in-progress selection.
+    // ADR-363 Phase 1K Mode C — rectangle drag-marquee (`isRectMarqueeDragTool`:
+    // wall/column region box-select ΚΑΙ `crop-window` «Περικοπή Περιοχής»): a
+    // button-held drag past threshold arms a RECTANGLE marquee (window/crossing),
+    // NOT a lasso. `startSelection` → `isSelecting=true` → το preview πλαίσιο
+    // ζωγραφίζεται· στο mouseUp `processMarqueeSelection` κάνει το routing (region
+    // box-select vs `crop:marquee-rect`). A plain click (no drag) leaves
+    // `isSelecting` false → falls through to the tool's pick pipeline (Mode A/B).
+    // Mutually exclusive with an in-progress selection.
     const REGION_BOX_ACTIVATE_PX = 5;
     const regionDown = refs.lassoDownRef.current;
     if (
       regionDown.buttonHeld && regionDown.pos &&
-      isRegionBoxSelectTool(activeTool) &&
+      isRectMarqueeDragTool(activeTool) &&
       !cursor.isSelecting
     ) {
       const rdx = screenPos.x - regionDown.pos.x;
