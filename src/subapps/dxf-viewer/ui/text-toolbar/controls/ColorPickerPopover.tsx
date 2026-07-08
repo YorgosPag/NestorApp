@@ -46,7 +46,25 @@ export function ColorPickerPopover({
   const { t } = useTranslation(['textToolbar']);
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>(trueColorSupported ? 'true' : 'aci');
+  // Το χρώμα πριν ανοίξει ο picker — για σωστό «Ακύρωση» (η επιλογή εφαρμόζεται live
+  // στο κείμενο για WYSIWYG preview· «Ακύρωση» επαναφέρει αυτό το αρχικό).
+  const [originalValue, setOriginalValue] = useState<MixedValue<DxfColor>>(value);
   const swatch = value === null ? '#cccccc' : dxfColorToHex(value);
+
+  const handleOpen = useCallback(() => {
+    setOriginalValue(value);
+    setOpen(true);
+  }, [value]);
+
+  // «Εφαρμογή»: το χρώμα έχει ήδη εφαρμοστεί live → απλώς κλείσε.
+  const handleApply = useCallback(() => setOpen(false), []);
+
+  // «Ακύρωση» (+ X/Escape): επανάφερε το αρχικό χρώμα (αν ήταν συγκεκριμένο· αν ήταν
+  // «Ανάμεικτο»/null δεν επαναφέρεται — κρατιέται η live επιλογή) και κλείσε.
+  const handleCancel = useCallback(() => {
+    if (originalValue !== null) onChange(originalValue);
+    setOpen(false);
+  }, [originalValue, onChange]);
 
   const handleEyedropper = useCallback(async () => {
     try {
@@ -67,7 +85,7 @@ export function ColorPickerPopover({
         variant="outline"
         size="sm"
         disabled={disabled}
-        onClick={() => setOpen(true)}
+        onClick={handleOpen}
         aria-label={t('textToolbar:color.label')}
         className="min-h-[44px] sm:min-h-[36px] gap-2"
         data-state={value === null ? 'indeterminate' : 'determinate'}
@@ -84,9 +102,13 @@ export function ColorPickerPopover({
           `dimBackdrop={false}` → το σχέδιο μένει ορατό για live σύγκριση χρώματος. */}
       <ColorDialogShell
         isOpen={open}
-        onClose={() => setOpen(false)}
+        onClose={handleCancel}
         title={t('textToolbar:color.label')}
         dimBackdrop={false}
+        maxWidthClass={PANEL_LAYOUT.LAYOUT_DIMENSIONS.PANEL_MAX_WIDTH_XL}
+        showFooter
+        onCancel={handleCancel}
+        onApply={handleApply}
       >
         <div className={PANEL_LAYOUT.SPACING.SM}>
           <nav className="mb-2 flex gap-1" role="tablist" aria-label={t('textToolbar:color.tabsLabel')}>
@@ -146,8 +168,8 @@ export function ColorPickerPopover({
                 palettes={['dxf', 'semantic', 'material']}
                 recent
                 eyedropper={false}
-                orientation="vertical"
-                className="w-[320px]"
+                orientation="horizontal"
+                className="border-0"
               />
             </div>
           )}

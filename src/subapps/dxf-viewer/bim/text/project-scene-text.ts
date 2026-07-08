@@ -71,5 +71,9 @@ export function projectSceneTextToDxf(e: TextSceneShape, id: string): DxfText {
     rotation: e.rotation,
     ...(finalStyle ? { textStyle: finalStyle } : {}),
     ...(e.type === 'mtext' ? { width: e.width } : { widthFactor: e.widthFactor }),
+    // ADR-557 — carry the node line-spacing so the grip/ghost box (`resolveLineSpacingRatio`)
+    // reads the SAME factor the renderer does. Previously absent here → grip-drag box math for
+    // a custom-line-spacing MTEXT silently assumed factor 1 (drift vs `convertTextEntity`).
+    ...(e.textNode?.lineSpacing ? { lineSpacing: e.textNode.lineSpacing } : {}),
   };
 }

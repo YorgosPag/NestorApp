@@ -21,7 +21,6 @@
 'use client';
 
 import React, { useRef, useCallback, useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { EnterpriseColorPicker } from './EnterpriseColorPicker';
 import { ColorDialogShell } from './ColorDialogShell';
 import type { EnterpriseColorDialogProps } from './types';
@@ -52,21 +51,21 @@ export function EnterpriseColorDialog({
   onClose,
   title = 'Color Picker',
   showFooter = true,
-  dimBackdrop = true,
+  // Χωρίς σκοτεινό πέπλο (backdrop) by default — ο Giorgio θέλει το σχέδιο πλήρως
+  // ορατό κατά την επιλογή χρώματος (live WYSIWYG σύγκριση), όπως ήδη κάνουν οι
+  // ribbon/text pickers. Callers μπορούν να ζητήσουν `dimBackdrop` ρητά αν χρειαστεί.
+  dimBackdrop = false,
   value,
   onChange,
   onChangeEnd,
   ...pickerProps
 }: EnterpriseColorDialogProps) {
-  const { t } = useTranslation('dxf-viewer-panels');
   // Local color state: updates immediately for responsive UI
   const [localColor, setLocalColor] = useState(value);
   const [originalValue, setOriginalValue] = useState(value);
   // RAF throttle: limits external onChange to 1 call per animation frame
   const rafRef = useRef<number | null>(null);
   const pendingColorRef = useRef<string>(value);
-  const { getDirectionalBorder } = useBorderTokens();
-  const colors = useSemanticColors();
 
   // Color dialogs default to the horizontal (two-column) layout — wider, no
   // scroll. Callers can still force vertical via `orientation="vertical"`.
@@ -131,24 +130,9 @@ export function EnterpriseColorDialog({
       title={title}
       dimBackdrop={dimBackdrop}
       maxWidthClass={dialogMaxWidth}
-      footer={
-        showFooter ? (
-          <div className={`flex ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'top')}`}>
-            <button
-              onClick={handleCancel}
-              className={`flex-1 ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted} rounded ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.CURSOR.POINTER}`}
-            >
-              {t('colorPicker.cancel')}
-            </button>
-            <button
-              onClick={handleApply}
-              className={`flex-1 ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.primary} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.primary} rounded ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.CURSOR.POINTER}`}
-            >
-              {t('colorPicker.apply')}
-            </button>
-          </div>
-        ) : undefined
-      }
+      showFooter={showFooter}
+      onCancel={handleCancel}
+      onApply={handleApply}
     >
       <EnterpriseColorPicker
         {...pickerProps}

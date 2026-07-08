@@ -1,5 +1,7 @@
 import type { DxfEntityUnion, DxfText, DxfOpening } from './dxf-types';
 import type { Entity } from '../../types/entities';
+// ADR-557 — the single TEXT_RENDER_FIELDS passthrough SSoT (anti-drift; see text-render-fields.ts).
+import { pickTextRenderFields } from '../../bim/text/text-render-fields';
 
 function mapDxfLineTypeToEnterprise(
   dxfLineType: string | undefined,
@@ -77,25 +79,16 @@ export function buildEntityModelFromDxf(
       };
     case 'text': {
       const te = entity as DxfText;
+      // ADR-557 (Giorgio 2026-07-08) — copy EVERY flat text render field through the single
+      // `TEXT_RENDER_FIELDS` list instead of hand-enumerating position/text/height/rotation/
+      // textStyle/widthFactor/width/lineSpacing here. Previously this was a third hand-written
+      // list that had to be kept in sync with the scene→DxfText converter + `DxfText` type; a
+      // forgotten field (widthFactor, lineSpacing…) meant the ribbon wrote it but the renderer
+      // never saw it. The contract test locks render ≡ scene projection.
       return {
         ...base,
         type: 'text',
-        position: te.position,
-        text: te.text,
-        height: te.height,
-        rotation: te.rotation,
-        ...(te.textStyle && { textStyle: te.textStyle }),
-        // ADR-557 — carry the AutoCAD X-scale `widthFactor` + the MTEXT `width` frame onto the
-        // render EntityModel, so the drawn glyphs + grip box apply the SAME horizontal scale the
-        // interaction/hover path reads from the scene entity. Without this the render box stayed
-        // wide (widthFactor dropped) while hover-test narrowed → grips drew/hit-tested at different
-        // widths after a resize (Giorgio 2026-07-07: right/centre grips + move/rotation lost hover).
-        ...(te.widthFactor != null && { widthFactor: te.widthFactor }),
-        ...(te.width != null && { width: te.width }),
-        // ADR-557 — carry the node line-spacing factor so `resolveLineSpacingRatio` on the
-        // render EntityModel reads the SAME factor the ribbon «Διάστιχο» wrote. Without this
-        // the multi-line stack always used factor 1 (the edit did nothing on canvas).
-        ...(te.lineSpacing != null && { lineSpacing: te.lineSpacing }),
+        ...pickTextRenderFields(te),
       } as unknown as Entity;
     }
     case 'angle-measurement':

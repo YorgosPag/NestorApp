@@ -22,6 +22,7 @@
 
 import React, { useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { useDialog } from '@react-aria/dialog';
 import { useOverlay, usePreventScroll } from '@react-aria/overlays';
 import { FocusScope } from '@react-aria/focus';
@@ -59,8 +60,16 @@ export interface ColorDialogShellProps {
   readonly maxWidthClass?: string;
   /** Το περιεχόμενο του dialog (picker / tabs). */
   readonly children: React.ReactNode;
-  /** Προαιρετικό footer (π.χ. Apply/Cancel) — αν παραλειφθεί, δεν renderάρεται footer. */
-  readonly footer?: React.ReactNode;
+  /**
+   * Εμφάνιση του κοινού footer «Ακύρωση / Εφαρμογή» (default: false).
+   * SSoT footer — ίδιο markup + i18n keys (`dxf-viewer-panels:colorPicker.*`) για
+   * ΚΑΘΕ color picker (ρυθμίσεις + κείμενο). Απαιτεί `onCancel` + `onApply`.
+   */
+  readonly showFooter?: boolean;
+  /** Handler του κουμπιού «Ακύρωση» (και του X/Escape μέσω `onClose`). */
+  readonly onCancel?: () => void;
+  /** Handler του κουμπιού «Εφαρμογή». */
+  readonly onApply?: () => void;
 }
 
 /**
@@ -73,9 +82,12 @@ export function ColorDialogShell({
   dimBackdrop = true,
   maxWidthClass = '',
   children,
-  footer,
+  showFooter = false,
+  onCancel,
+  onApply,
 }: ColorDialogShellProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation('dxf-viewer-panels');
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
 
@@ -203,8 +215,23 @@ export function ColorDialogShell({
                 {children}
               </div>
 
-              {/* Footer (προαιρετικό) */}
-              {footer}
+              {/* Footer — SSoT «Ακύρωση / Εφαρμογή» (κοινό για ρυθμίσεις + κείμενο) */}
+              {showFooter && (
+                <div className={`flex ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.LG} ${getDirectionalBorder('muted', 'top')}`}>
+                  <button
+                    onClick={onCancel}
+                    className={`flex-1 ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.secondary} ${INTERACTIVE_PATTERNS.BUTTON_SECONDARY_HOVER} ${colors.text.inverted} rounded ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.CURSOR.POINTER}`}
+                  >
+                    {t('colorPicker.cancel')}
+                  </button>
+                  <button
+                    onClick={onApply}
+                    className={`flex-1 ${PANEL_LAYOUT.BUTTON.PADDING_LG} ${colors.bg.primary} ${INTERACTIVE_PATTERNS.BUTTON_PRIMARY_HOVER} ${colors.text.primary} rounded ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.CURSOR.POINTER}`}
+                  >
+                    {t('colorPicker.apply')}
+                  </button>
+                </div>
+              )}
             </div>
           </FocusScope>
         </div>,

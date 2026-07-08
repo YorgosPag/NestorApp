@@ -262,9 +262,9 @@ export interface EnterpriseColorDialogProps extends EnterpriseColorPickerProps {
   showFooter?: boolean;
 
   /**
-   * Dim/blur the backdrop behind the dialog (default: true).
-   * Set `false` for canvas color pickers (ribbon color fields) so the drawing
-   * stays fully visible while choosing a colour — live WYSIWYG comparison.
+   * Dim/blur the backdrop behind the dialog (default: false).
+   * Ο Giorgio θέλει το σχέδιο πλήρως ορατό κατά την επιλογή χρώματος (live WYSIWYG
+   * σύγκριση) → κανένα σκοτεινό πέπλο. Set `true` ρητά αν κάποιος caller θέλει dim.
    */
   dimBackdrop?: boolean;
 }
