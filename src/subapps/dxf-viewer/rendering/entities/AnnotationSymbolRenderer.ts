@@ -41,8 +41,11 @@ import { gripKindOf } from '../../hooks/grip-kinds';
 import { toRenderGripInfo } from './shared/grip-utils';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import type { SceneUnits } from '../../utils/scene-units';
+import { buildUIFont } from '../../config/text-rendering-config';
 
 const DEG_TO_RAD = Math.PI / 180;
+/** Below this on-screen cap height a baked label is unreadable — skip drawing it. */
+const MIN_LABEL_SCREEN_PX = 4;
 
 export class AnnotationSymbolRenderer extends BaseEntityRenderer {
   /**
@@ -91,7 +94,7 @@ export class AnnotationSymbolRenderer extends BaseEntityRenderer {
     this.ctx.fillStyle = this.ctx.strokeStyle;
 
     for (const prim of def.geometry) {
-      this.stampPrimitive(prim, toScreen, modelSize);
+      this.stampPrimitive(prim, toScreen, modelSize, rot);
     }
   }
 
@@ -99,6 +102,7 @@ export class AnnotationSymbolRenderer extends BaseEntityRenderer {
     prim: AnnotationSymbolPrimitive,
     toScreen: (p: AnnotationSymbolPoint) => Point2D,
     modelSize: number,
+    rot: number,
   ): void {
     const ctx = this.ctx;
     switch (prim.kind) {
@@ -133,6 +137,42 @@ export class AnnotationSymbolRenderer extends BaseEntityRenderer {
         ctx.arc(c.x, c.y, Math.abs(radiusPx), 0, Math.PI * 2);
         if (prim.solid) ctx.fill();
         else ctx.stroke();
+        return;
+      }
+      case 'arc': {
+        // World-CCW angles rotate with the glyph (+ rot), then negate for the
+        // canvas Y-flip and drop the counterclockwise flag (mirror ArcRenderer:
+        // world-CCW sweep → screen-CW, so `counterclockwise = false`).
+        const c = toScreen(prim.center);
+        const radiusPx = Math.abs(prim.radius * modelSize * this.transform.scale);
+        const startWorld = prim.startAngle * DEG_TO_RAD + rot;
+        const endWorld = prim.endAngle * DEG_TO_RAD + rot;
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, radiusPx, -startWorld, -endWorld, false);
+        ctx.stroke();
+        return;
+      }
+      case 'text': {
+        // Anchor rides the glyph rotate+scale; the label itself stays upright by
+        // default (readable numbers/letters) — set uprightOnRotate:false to spin
+        // it with the glyph, negating the angle for the Y-flip (mirror TextRenderer).
+        const anchor = toScreen(prim.at);
+        const screenHeight = Math.abs(prim.heightFrac * modelSize * this.transform.scale);
+        if (screenHeight < MIN_LABEL_SCREEN_PX) return;
+        ctx.font = buildUIFont(screenHeight, 'arial', prim.bold ? 'bold' : 'normal');
+        ctx.textAlign = prim.align ?? 'center';
+        ctx.textBaseline = prim.baseline ?? 'middle';
+        // fillStyle was set to the phase stroke colour in drawGlyph → label tints
+        // with hover/selection like the rest of the symbol.
+        if ((prim.uprightOnRotate ?? true) || rot === 0) {
+          ctx.fillText(prim.value, anchor.x, anchor.y);
+        } else {
+          ctx.save();
+          ctx.translate(anchor.x, anchor.y);
+          ctx.rotate(-rot);
+          ctx.fillText(prim.value, 0, 0);
+          ctx.restore();
+        }
         return;
       }
       default: {

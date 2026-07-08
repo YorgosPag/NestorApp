@@ -37,6 +37,8 @@ import { resolveSceneUnits, sceneUnitsToMeters } from '../../utils/scene-units';
 // ADR-583 — annotation symbol (North arrow) single-click placement.
 import type { AnnotationSymbolEntity } from '../../types/annotation-symbol';
 import { useAnnotationSymbolSelectionStore } from '../../state/annotation-symbol-selection-store';
+import { getAnnotationSymbol } from '../../config/annotation-symbol-catalog';
+import type { ToolType } from '../../ui/toolbar/types';
 
 // ============================================================================
 // ROTATION ENTITY SELECTION (PRIORITY 1.3)
@@ -220,6 +222,7 @@ export function handleHatchPickPointClick(
  */
 export function handleAnnotationSymbolClick(
   worldPoint: Point2D,
+  activeTool: ToolType,
   p: UseCanvasClickHandlerParams,
 ): boolean {
   const levelId = p.levelManager.currentLevelId;
@@ -227,19 +230,22 @@ export function handleAnnotationSymbolClick(
   if (!levelId || !setScene) return false;
 
   const { symbolId, sizeMm, rotationDeg } = useAnnotationSymbolSelectionStore.getState();
+  // The variant IS the source of truth for its family — derive `kind` from the
+  // catalog def, never a per-tool literal (so every kind flows through one path).
+  const kind = getAnnotationSymbol(symbolId).kind;
   const entity: AnnotationSymbolEntity = {
     id: generateEntityId(),
     type: 'annotation-symbol',
     layerId: '',
     position: { x: worldPoint.x, y: worldPoint.y },
-    kind: 'north-arrow',
+    kind,
     symbolId,
     sizeMm,
     rotation: rotationDeg,
   };
 
   completeEntity(entity, {
-    tool: 'north-arrow',
+    tool: activeTool,
     levelId,
     getScene: p.levelManager.getLevelScene,
     setScene,

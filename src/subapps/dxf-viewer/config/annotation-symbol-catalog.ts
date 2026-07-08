@@ -51,10 +51,50 @@ export interface AnnotationSymbolCircle {
   readonly solid: boolean;
 }
 
+/**
+ * A circular arc segment (unit space). Angles are DXF-style **world-CCW degrees**
+ * (0° = +X, 90° = +Y), matching the `circle` primitive's world frame — the
+ * renderer negates them for the canvas Y-flip (mirror `ArcRenderer`). Used for
+ * revision-cloud scallops and rounded callout leaders.
+ */
+export interface AnnotationSymbolArc {
+  readonly kind: 'arc';
+  readonly center: AnnotationSymbolPoint;
+  readonly radius: number;
+  /** Start angle, world-CCW degrees. */
+  readonly startAngle: number;
+  /** End angle, world-CCW degrees (swept CCW from `startAngle`). */
+  readonly endAngle: number;
+}
+
+/**
+ * A text label baked into the glyph (unit space) — e.g. the letter in a grid
+ * bubble, the number in a callout, the elevation value. `heightFrac` is a
+ * fraction of the glyph's nominal paper height (`sizeMm`), so the label stays
+ * proportional and annotative together with the geometry (never a second,
+ * drifting `paperHeightToModel` call). Text is drawn upright by default so
+ * numbers/letters stay readable even when the whole symbol is rotated
+ * (`uprightOnRotate`); set it `false` to let the label rotate with the glyph.
+ */
+export interface AnnotationSymbolText {
+  readonly kind: 'text';
+  readonly at: AnnotationSymbolPoint;
+  readonly value: string;
+  /** Cap height as a fraction of the glyph's nominal paper height (0–1). */
+  readonly heightFrac: number;
+  readonly align?: CanvasTextAlign;
+  readonly baseline?: CanvasTextBaseline;
+  readonly bold?: boolean;
+  /** Keep the label horizontal even when the entity is rotated (default true). */
+  readonly uprightOnRotate?: boolean;
+}
+
 export type AnnotationSymbolPrimitive =
   | AnnotationSymbolLine
   | AnnotationSymbolPolyline
-  | AnnotationSymbolCircle;
+  | AnnotationSymbolCircle
+  | AnnotationSymbolArc
+  | AnnotationSymbolText;
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Definition

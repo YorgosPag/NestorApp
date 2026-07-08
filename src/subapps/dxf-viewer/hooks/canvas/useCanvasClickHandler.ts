@@ -32,6 +32,7 @@ import {
 } from './entity-pick-handlers';
 import type { EntityPickContext } from './entity-pick-handlers';
 import { handleRotationEntitySelection, handleAutoAreaClick, handleHatchPickPointClick, handleOverlayDrawClick, handleAnnotationSymbolClick } from './canvas-click-tool-handlers';
+import { isAnnotationSymbolTool } from '../../config/annotation-kind-registry';
 // ADR-581 — Match Properties σταγονόμετρο/σύριγγα (Alt pick / Ctrl+Alt inject / πινέλο).
 import { handleMatchBrushClick } from './match-click-handlers';
 // ADR-507 Φ3 — pick-mode SSoT (Τρόπος Α boundary ⇄ Τρόπος Β pick-point).
@@ -281,10 +282,11 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
       handleHatchPickPointClick(worldPoint, params);
       return;
     }
-    // PRIORITY 1.8: ADR-583 — annotation symbol (North arrow) single-click placement.
+    // PRIORITY 1.8: ADR-583 — annotation symbol single-click placement (North arrow +
+    // any future kind). The registry predicate keeps this ONE branch as kinds grow.
     // Consumes the click so it does NOT fall through to the unified drawing accumulator.
-    if (activeTool === 'north-arrow') {
-      handleAnnotationSymbolClick(worldPoint, params);
+    if (isAnnotationSymbolTool(activeTool)) {
+      handleAnnotationSymbolClick(worldPoint, activeTool, params);
       return;
     }
     // PRIORITY 1.9-4: Entity picking tools (angle, circle-ttt, parallel).
