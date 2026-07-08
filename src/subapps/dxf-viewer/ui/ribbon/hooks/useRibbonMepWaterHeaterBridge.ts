@@ -42,13 +42,8 @@ import { EventBus } from '../../../systems/events/EventBus';
 import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
 import { resolveManagedSystems } from '../../../bim/mep-systems/mep-circuit-editor';
 import type { RibbonComboboxState } from '../context/RibbonCommandContext';
-import type { useLevels } from '../../../systems/levels';
+import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
-
-type LevelManagerLike = Pick<
-  ReturnType<typeof useLevels>,
-  'getLevelScene' | 'setLevelScene' | 'currentLevelId'
->;
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
@@ -56,7 +51,7 @@ type UniversalSelectionLike = Pick<
 >;
 
 export interface UseRibbonMepWaterHeaterBridgeProps {
-  readonly levelManager: LevelManagerLike;
+  readonly levelManager: LevelSceneWriter;
   readonly universalSelection: UniversalSelectionLike;
 }
 
