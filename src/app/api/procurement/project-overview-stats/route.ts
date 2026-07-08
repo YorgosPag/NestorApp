@@ -11,13 +11,10 @@ import 'server-only';
  *   5 — boqCoverage
  *
  * @see ADR-330 §5.1 S3, D11
+ * @see ADR-603 API Route-Handler Factory SSoT
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getErrorMessage } from '@/lib/error-utils';
+import { defineRoute, ok, badRequest } from '@/lib/api/define-route';
 import { computeProjectBasicStats } from '@/services/procurement/aggregators/projectProcurementStats';
 import { computeBoqCoverageStats } from '@/services/procurement/aggregators/projectBoqCoverageStats';
 
@@ -45,49 +42,30 @@ export interface ProjectProcurementStats {
 // GET
 // ============================================================================
 
-async function handleGet(request: NextRequest): Promise<NextResponse> {
-  const handler = withAuth(
-    async (
-      req: NextRequest,
-      ctx: AuthContext,
-      _cache: PermissionCache,
-    ): Promise<NextResponse> => {
-      const projectId = req.nextUrl.searchParams.get('projectId');
-      if (!projectId) {
-        return NextResponse.json(
-          { success: false, error: 'projectId is required' },
-          { status: 400 },
-        );
-      }
+export const GET = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Unknown error',
+  handler: async ({ req, auth }) => {
+    const projectId = req.nextUrl.searchParams.get('projectId');
+    if (!projectId) badRequest('projectId is required');
 
-      try {
-        const [basic, coverage] = await Promise.all([
-          computeProjectBasicStats(ctx.companyId, projectId),
-          computeBoqCoverageStats(ctx.companyId, projectId),
-        ]);
+    const [basic, coverage] = await Promise.all([
+      computeProjectBasicStats(auth.companyId, projectId),
+      computeBoqCoverageStats(auth.companyId, projectId),
+    ]);
 
-        const stats: ProjectProcurementStats = {
-          openRfqCount: basic.openRfqCount,
-          pendingApprovalPoCount: basic.pendingApprovalPoCount,
-          totalCommittedSpend: basic.totalCommittedSpend,
-          budgetVsCommitted: coverage.budgetVsCommitted,
-          boqCoverage: {
-            coveredCount: coverage.coveredBoqItemCount,
-            totalCount: coverage.totalBoqItemCount,
-            percentage: coverage.coveragePercentage,
-          },
-        };
+    const stats: ProjectProcurementStats = {
+      openRfqCount: basic.openRfqCount,
+      pendingApprovalPoCount: basic.pendingApprovalPoCount,
+      totalCommittedSpend: basic.totalCommittedSpend,
+      budgetVsCommitted: coverage.budgetVsCommitted,
+      boqCoverage: {
+        coveredCount: coverage.coveredBoqItemCount,
+        totalCount: coverage.totalBoqItemCount,
+        percentage: coverage.coveragePercentage,
+      },
+    };
 
-        return NextResponse.json({ success: true, data: stats });
-      } catch (error) {
-        return NextResponse.json(
-          { success: false, error: getErrorMessage(error) },
-          { status: 500 },
-        );
-      }
-    },
-  );
-  return handler(request);
-}
-
-export const GET = withStandardRateLimit(handleGet);
+    return ok(stats);
+  },
+});

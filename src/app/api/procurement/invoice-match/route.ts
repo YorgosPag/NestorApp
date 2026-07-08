@@ -7,18 +7,15 @@
  *
  * Auth: withAuth | Rate: standard
  * @see ADR-267 Phase C (AI Invoice Matching)
+ * @see ADR-603 API Route-Handler Factory SSoT
  */
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { defineRoute, ok, badRequest, notFound } from '@/lib/api/define-route';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { getErrorMessage } from '@/lib/error-utils';
 import { matchInvoiceToPO } from '@/services/procurement/po-invoice-matcher';
 import type { ReceivedExpenseDocument } from '@/subapps/accounting/types/documents';
 import { nowISO } from '@/lib/date-local';
@@ -29,44 +26,28 @@ const logger = createModuleLogger('PO_INVOICE_MATCH');
 // POST — Match invoice to PO
 // ============================================================================
 
-async function handlePost(
-  request: NextRequest,
-  ctx: AuthContext
-): Promise<NextResponse> {
-  try {
-    const body = await request.json() as { expenseDocId?: string };
+export const POST = defineRoute({
+  rateLimit: 'standard',
+  fallbackError: 'Unknown error',
+  handler: async ({ req, auth }) => {
+    const body = (await req.json()) as { expenseDocId?: string };
     const expenseDocId = typeof body.expenseDocId === 'string' ? body.expenseDocId.trim() : '';
 
-    if (!expenseDocId) {
-      return NextResponse.json(
-        { success: false, error: 'expenseDocId is required' },
-        { status: 400 }
-      );
-    }
+    if (!expenseDocId) badRequest('expenseDocId is required');
 
     // Fetch expense document
     const db = getAdminFirestore();
     const docRef = db.collection(COLLECTIONS.ACCOUNTING_EXPENSE_DOCUMENTS).doc(expenseDocId);
     const docSnap = await docRef.get();
 
-    if (!docSnap.exists) {
-      return NextResponse.json(
-        { success: false, error: 'Expense document not found' },
-        { status: 404 }
-      );
-    }
+    if (!docSnap.exists) notFound('Expense document not found');
 
     const expenseDoc = docSnap.data() as ReceivedExpenseDocument;
 
-    if (!expenseDoc.extractedData) {
-      return NextResponse.json(
-        { success: false, error: 'Document has no extracted data yet' },
-        { status: 400 }
-      );
-    }
+    if (!expenseDoc.extractedData) badRequest('Document has no extracted data yet');
 
     // Run matching
-    const result = await matchInvoiceToPO(ctx.companyId, expenseDoc.extractedData);
+    const result = await matchInvoiceToPO(auth.companyId, expenseDoc.extractedData);
 
     // If auto-matched, write suggestion to document
     if (result.autoMatched && result.bestMatch) {
@@ -83,23 +64,10 @@ async function handlePost(
       });
     }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        candidates: result.candidates,
-        bestMatch: result.bestMatch,
-        autoMatched: result.autoMatched,
-      },
+    return ok({
+      candidates: result.candidates,
+      bestMatch: result.bestMatch,
+      autoMatched: result.autoMatched,
     });
-  } catch (error) {
-    logger.error('Invoice-to-PO matching failed', {
-      error: getErrorMessage(error),
-    });
-    return NextResponse.json(
-      { success: false, error: getErrorMessage(error) },
-      { status: 500 }
-    );
-  }
-}
-
-export const POST = withStandardRateLimit(withAuth(handlePost));
+  },
+});
