@@ -38,6 +38,7 @@ import { CreateEntityCommand } from '../../core/commands/entity-commands/CreateE
 import type { SceneEntity } from '../../core/commands/interfaces';
 import { polylineBboxCenter, rectOrPolylineVertices } from '../../systems/polyline/rectangle-detect';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { gripKindOf } from '../grip-kinds';
 // ADR-561 EXT (Ctrl-rotate-copy) — copy intent SSoT (the right-click «Copy» toggle OR live
 // Ctrl/⌘), the SAME predicate the move-copy + line rotate-copy commits use.
 import { isGripCopyIntent } from '../../systems/grip/grip-copy-intent';
@@ -124,7 +125,7 @@ export function commitArcGripDrag(
 ): void {
   commitRotationAboutAnchorPoint(
     grip, delta, deps,
-    grip.arcGripKind === 'arc-rotation', 'arc', (raw) => raw.center,
+    gripKindOf(grip, 'arc') === 'arc-rotation', 'arc', (raw) => raw.center,
   );
 }
 
@@ -142,7 +143,7 @@ export function commitAnnotationSymbolGripDrag(
 ): void {
   commitRotationAboutAnchorPoint(
     grip, delta, deps,
-    grip.annotationSymbolGripKind === 'annotation-symbol-rotation', 'annotation-symbol', (raw) => raw.position,
+    gripKindOf(grip, 'annotation-symbol') === 'annotation-symbol-rotation', 'annotation-symbol', (raw) => raw.position,
   );
 }
 
@@ -157,7 +158,7 @@ export function commitPolylineRotationGripDrag(
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || grip.polylineGripKind !== 'polyline-rotation') return;
+  if (!grip.entityId || gripKindOf(grip, 'polyline') !== 'polyline-rotation') return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId) as PrimitiveSceneShape | undefined;

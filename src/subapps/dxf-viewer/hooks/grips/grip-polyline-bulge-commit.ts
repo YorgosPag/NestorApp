@@ -21,6 +21,7 @@ import { SetBulgeCommand } from '../../core/commands/entity-commands/SetBulgeCom
 import { bulgeFromApexPoint } from '../../rendering/entities/shared/geometry-bulge-utils';
 import { parsePolylineSegIndex } from '../../systems/grip/polyline-grip-ops';
 import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { gripKindOf } from '../grip-kinds';
 // SSoT polyline shape (same canonical type PolylineVertexCommand uses — no ad-hoc duplicate).
 import type { PolylineEntity, LWPolylineEntity } from '../../types/entities';
 
@@ -39,8 +40,9 @@ export function commitPolylineBulgeGripDrag(
   deps: DxfCommitDeps,
 ): void {
   if (delta.x === 0 && delta.y === 0) return;
-  if (!grip.entityId || !grip.polylineGripKind) return;
-  const segIdx = parsePolylineSegIndex(grip.polylineGripKind);
+  const polylineKind = gripKindOf(grip, 'polyline');
+  if (!grip.entityId || !polylineKind) return;
+  const segIdx = parsePolylineSegIndex(polylineKind);
   if (segIdx == null) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;

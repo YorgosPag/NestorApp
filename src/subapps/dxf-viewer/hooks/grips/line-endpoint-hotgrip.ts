@@ -27,6 +27,7 @@
  */
 
 import type { UnifiedGripInfo } from './unified-grip-types';
+import { gripKindOf } from '../grip-kinds';
 
 /** Minimal structural view of the grabbed entity — keeps the resolver decoupled + pure. */
 interface EndpointHotGripEntity {
@@ -48,6 +49,6 @@ export function resolveLineEndpointHotGrip(
   if (entity.type !== 'line') return false;
   // A PLAIN endpoint / vertex only: a moving handle (movesEntity) or the rotation/move
   // handle (carries `lineGripKind`) must keep its own role.
-  if (grip.type !== 'vertex' || grip.movesEntity === true || grip.lineGripKind) return false;
+  if (grip.type !== 'vertex' || grip.movesEntity === true || gripKindOf(grip, 'line')) return false;
   return grip.gripIndex === 0 || grip.gripIndex === 1;
 }

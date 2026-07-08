@@ -48,6 +48,7 @@ import { reconcileTextToolbarFromSelection } from '../../ui/text-toolbar/hooks/u
 // anchor), published during a `text-rotation` spin. Reading it here makes the LIVE
 // «Περιστροφή» preview byte-identical to `commitTextGripDrag` (preview ≡ commit).
 import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store';
+import { gripKindOf } from '../grip-kinds';
 
 export interface UseTextGripRibbonSyncProps {
   /** Live grip-drag snapshot (carries `textGripKind` only when a text grip is dragged). */
@@ -74,11 +75,9 @@ export function useTextGripRibbonSync(props: UseTextGripRibbonSyncProps): void {
   const wasPreviewingRef = useRef(false);
 
   useEffect(() => {
-    // Only a TEXT/MTEXT resize/move/rotation grip carries `textGripKind`. When the drag
-    // ends (or an unrelated grip is dragged) `dragPreview` loses `textGripKind`: if we were
-    // previewing, reconcile the ribbon to the FINAL committed values (commit OR cancel/Esc)
-    // via the shared SSoT, then reset the guards.
-    if (!dragPreview?.textGripKind) {
+    // ADR-602 Stage 4 — shared reset (was duplicated across the two early-return guards
+    // below when hoisting the `textGripKind` read — extracted instead of copy-pasting).
+    const resetTextPreview = () => {
       lastRef.current = null;
       if (wasPreviewingRef.current) {
         wasPreviewingRef.current = false;
@@ -86,6 +85,20 @@ export function useTextGripRibbonSync(props: UseTextGripRibbonSyncProps): void {
         const scene = currentLevelId ? levelManager.getLevelScene(currentLevelId) ?? null : null;
         reconcileTextToolbarFromSelection(selectionRef.current.getIds(), scene);
       }
+    };
+    // Only a TEXT/MTEXT resize/move/rotation grip carries `textGripKind`. When the drag
+    // ends (or an unrelated grip is dragged) `dragPreview` loses `textGripKind`: if we were
+    // previewing, reconcile the ribbon to the FINAL committed values (commit OR cancel/Esc)
+    // via the shared SSoT, then reset the guards.
+    if (!dragPreview) {
+      resetTextPreview();
+      return;
+    }
+    // ADR-602 Stage 4 — hoisted once (read ×3 below: this guard + the `useRotateCtx` check
+    // + the `applyTextGripDrag` call).
+    const textKind = gripKindOf(dragPreview, 'text');
+    if (!textKind) {
+      resetTextPreview();
       return;
     }
     const { currentLevelId } = levelManager;
@@ -105,7 +118,7 @@ export function useTextGripRibbonSync(props: UseTextGripRibbonSyncProps): void {
     // to the dragPreview anchor/pivot (which the ghost uses) → live ≡ ghost ≡ commit either way.
     const rotateCtx = BimRotateHotGripStore.getSnapshot();
     const useRotateCtx =
-      dragPreview.textGripKind === 'text-rotation' &&
+      textKind === 'text-rotation' &&
       rotateCtx.pivot !== null &&
       rotateCtx.anchor !== null;
     const anchor = useRotateCtx ? rotateCtx.anchor : anchorPos;
@@ -118,7 +131,7 @@ export function useTextGripRibbonSync(props: UseTextGripRibbonSyncProps): void {
       currentPos,
       ...(pivot ? { pivot } : {}),
     };
-    const patch = applyTextGripDrag(dragPreview.textGripKind, input);
+    const patch = applyTextGripDrag(textKind, input);
     // Map ONLY the fields this grip actually changed → «Ύψος» / «Πλάτος» / «Περιστροφή»:
     //   resize corner/edge → height (+ widthFactor for TEXT / hugging MTEXT);
     //   rotate            → rotation;

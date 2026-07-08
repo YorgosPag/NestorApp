@@ -49,24 +49,10 @@ export function isTransformGlyphShape(shape: GripShape | undefined | null): bool
  * move/rotation glyph are coalesced — every other kind resolves to `'square'`.
  */
 export function dataGripGlyphShape(grip: GripInfo): GripShape {
-  const kind =
-    grip.wallGripKind ??
-    grip.beamGripKind ??
-    grip.columnGripKind ??
-    grip.foundationGripKind ??
-    grip.stairGripKind ??
-    grip.mepFixtureGripKind ??
-    grip.electricalPanelGripKind ??
-    grip.mepManifoldGripKind ??
-    grip.mepRadiatorGripKind ??
-    grip.mepBoilerGripKind ??
-    grip.mepWaterHeaterGripKind ??
-    grip.mepSegmentGripKind ??
-    grip.furnitureGripKind ??
-    grip.floorplanSymbolGripKind ??
-    grip.openingGripKind ??
-    grip.textGripKind ??
-    grip.lineGripKind;
+  // ADR-602 Stage 4 — the entity-agnostic coalesce collapses to the ONE tagged
+  // discriminator. `gripGlyphShape` maps any non-move/rotation kind to `'square'`, so
+  // widening to all 31 entities is result-equivalent to the previous 17-field chain.
+  const kind = grip.gripKind?.kind;
   return gripGlyphShape(kind);
 }
 
