@@ -3,72 +3,23 @@
  *
  * Restore `visible: true` on every currently-invisible layer (`LAYON`
  * AutoCAD). Shortcut `Ctrl+Shift+O`. Replay-safe.
+ *
+ * ADR-616 — mutate-all lifecycle inherited from {@link MutateAllLayersCommand}.
  */
 
-import type { ICommand, SerializedCommand } from '../interfaces';
-import { getAllLayers, upsertLayer } from '../../../stores/LayerStore';
-import {
-  makeLayerCommandKey,
-  mutateAllLayersFlag,
-  restoreLayersSnapshot,
-  type UnisolateSnapshotEntry
-} from './layer-command-utils';
+import { MutateAllLayersCommand } from './layer-command-base';
 
-export class LayerOnAllCommand implements ICommand {
-  readonly id: string;
+export class LayerOnAllCommand extends MutateAllLayersCommand {
   readonly name = 'LayerOnAll';
   readonly type = 'layer-on-all';
-  readonly timestamp: number;
-
-  private mutatedSnapshot: ReadonlyArray<UnisolateSnapshotEntry> | null = null;
-  private wasExecuted = false;
+  protected readonly flag = 'visible' as const;
+  protected readonly targetValue = true;
 
   constructor() {
-    this.id = makeLayerCommandKey('layer-on-all');
-    this.timestamp = Date.now();
-  }
-
-  execute(): void {
-    if (!this.wasExecuted) {
-      this.mutatedSnapshot = mutateAllLayersFlag('visible', true);
-      this.wasExecuted = true;
-      return;
-    }
-    this.replayExecute();
-  }
-
-  undo(): void {
-    if (!this.mutatedSnapshot) return;
-    restoreLayersSnapshot(this.mutatedSnapshot);
-  }
-
-  redo(): void {
-    this.replayExecute();
+    super('layer-on-all');
   }
 
   getDescription(): string {
     return 'Turn on all layers';
-  }
-
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {},
-      version: 1
-    };
-  }
-
-  getAffectedEntityIds(): string[] {
-    return [];
-  }
-
-  private replayExecute(): void {
-    for (const layer of getAllLayers()) {
-      if (layer.visible) continue;
-      upsertLayer({ ...layer, visible: true });
-    }
   }
 }

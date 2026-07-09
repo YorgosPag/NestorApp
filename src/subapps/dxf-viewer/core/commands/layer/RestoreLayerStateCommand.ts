@@ -17,9 +17,11 @@
  *
  * Pre-commit ratchet `layer-state-system` allowlists this file for direct
  * `applyLayerSnapshotEntries` invocation.
+ *
+ * ADR-616 — id/timestamp/affected-ids boilerplate inherited from
+ * {@link LayerCommandBase}; schema `version` is 2 (migrated payload).
  */
 
-import type { ICommand, SerializedCommand } from '../interfaces';
 import {
   applyLayerSnapshotEntries,
   upsertLayer,
@@ -33,8 +35,8 @@ import {
   captureCurrentSnapshot,
 } from '../../../stores/LayerStateStore';
 import type { LayerStateEntry } from '../../../types/layer-state';
-import { makeLayerCommandKey } from './layer-command-utils';
 import { createSceneLayer } from '../../../types/entities';
+import { LayerCommandBase } from './layer-command-base';
 
 export interface RestoreLayerStateOptions {
   /** When true, snapshot entries with no live match are created as new layers. Default: false. */
@@ -48,23 +50,20 @@ export interface RestoreLayerStateInput {
   readonly options?: RestoreLayerStateOptions;
 }
 
-export class RestoreLayerStateCommand implements ICommand {
-  readonly id: string;
+export class RestoreLayerStateCommand extends LayerCommandBase {
   readonly name = 'RestoreLayerState';
   readonly type = 'layer-state-restore';
-  readonly timestamp: number;
+  protected readonly version = 2;
 
   private capturedPreState: ReadonlyArray<LayerStateEntry> | null = null;
   private previousCurrentStateId: string | null = null;
   private unmatchedLayerNames: ReadonlyArray<string> = [];
   private createdLayerIds: ReadonlyArray<string> = [];
-  private wasExecuted = false;
 
   private readonly opts: RestoreLayerStateOptions;
 
   constructor(private readonly input: RestoreLayerStateInput) {
-    this.id = makeLayerCommandKey('layer-state-restore');
-    this.timestamp = Date.now();
+    super('layer-state-restore');
     this.opts = input.options ?? { createMissingLayers: false };
   }
 
@@ -108,22 +107,11 @@ export class RestoreLayerStateCommand implements ICommand {
     return `Restore layer state — ${target?.name ?? this.input.stateId}`;
   }
 
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        stateId: this.input.stateId,
-        options: { createMissingLayers: this.opts.createMissingLayers },
-      },
-      version: 2,
+      stateId: this.input.stateId,
+      options: { createMissingLayers: this.opts.createMissingLayers },
     };
-  }
-
-  getAffectedEntityIds(): string[] {
-    return [];
   }
 
   /** Names of snapshot entries the live LayerStore could not match. */

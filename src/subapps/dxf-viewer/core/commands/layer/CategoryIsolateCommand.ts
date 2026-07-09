@@ -11,17 +11,13 @@
  * lives purely in `IsolateEffectsStore.isolatedCategories` (session-only,
  * undo-safe). Teardown is shared with the other isolate scopes:
  * `LayerUnisolateCommand`, the status-bar badge, and Ctrl+Shift+U.
+ *
+ * ADR-616 — snapshot/apply/restore lifecycle inherited from {@link IsolateEffectsCommand}.
  */
 
-import type { ICommand, SerializedCommand } from '../interfaces';
 import type { BimCategory } from '../../../config/bim-object-styles';
-import {
-  clearIsolateEffects,
-  getIsolateEffectsSnapshot,
-  setIsolateEffects,
-  type IsolateEffectsSnapshot
-} from '../../../systems/isolate/IsolateEffectsStore';
-import { makeLayerCommandKey } from './layer-command-utils';
+import { setIsolateEffects } from '../../../systems/isolate/IsolateEffectsStore';
+import { IsolateEffectsCommand } from './layer-command-base';
 
 export interface CategoryIsolateInput {
   /** Categories kept visible — every other category is hidden (freeze) / dimmed (dim). */
@@ -34,79 +30,34 @@ export interface CategoryIsolateInput {
   category?: string | null;
 }
 
-export class CategoryIsolateCommand implements ICommand {
-  readonly id: string;
+export class CategoryIsolateCommand extends IsolateEffectsCommand<CategoryIsolateInput> {
   readonly name = 'CategoryIsolate';
   readonly type = 'category-isolate';
-  readonly timestamp: number;
 
-  private effectsBeforeExecute: IsolateEffectsSnapshot | null = null;
-  private wasExecuted = false;
-
-  constructor(private readonly input: CategoryIsolateInput) {
-    this.id = makeLayerCommandKey('category-isolate');
-    this.timestamp = Date.now();
+  constructor(input: CategoryIsolateInput) {
+    super('category-isolate', input);
   }
 
-  execute(): void {
-    if (!this.wasExecuted) {
-      this.effectsBeforeExecute = getIsolateEffectsSnapshot();
-      this.wasExecuted = true;
-    }
-    this.applyEffects();
-  }
-
-  undo(): void {
-    const prev = this.effectsBeforeExecute;
-    if (prev && prev.active) {
-      setIsolateEffects({
-        mode: prev.mode,
-        isolatedLayerIds: prev.isolatedLayerIds,
-        isolatedEntityIds: prev.isolatedEntityIds,
-        isolatedCategories: prev.isolatedCategories,
-        dimOpacityPercent: prev.dimOpacityPercent,
-        category: prev.category
-      });
-      return;
-    }
-    clearIsolateEffects();
-  }
-
-  redo(): void {
-    this.applyEffects();
+  protected applyEffects(): void {
+    setIsolateEffects({
+      mode: this.input.mode ?? 'freeze',
+      isolatedLayerIds: [],
+      isolatedCategories: new Set(this.input.targetCategories),
+      dimOpacityPercent: this.input.dimOpacityPercent ?? 30,
+      category: this.input.category ?? null,
+    });
   }
 
   getDescription(): string {
     return `Isolate ${this.input.targetCategories.length} category(ies) — ${this.input.mode ?? 'freeze'}`;
   }
 
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        targetCategories: [...this.input.targetCategories],
-        mode: this.input.mode ?? 'freeze',
-        dimOpacityPercent: this.input.dimOpacityPercent ?? 30,
-        category: this.input.category ?? null
-      },
-      version: 1
-    };
-  }
-
-  getAffectedEntityIds(): string[] {
-    return [];
-  }
-
-  private applyEffects(): void {
-    setIsolateEffects({
+      targetCategories: [...this.input.targetCategories],
       mode: this.input.mode ?? 'freeze',
-      isolatedLayerIds: [],
-      isolatedCategories: new Set(this.input.targetCategories),
       dimOpacityPercent: this.input.dimOpacityPercent ?? 30,
-      category: this.input.category ?? null
-    });
+      category: this.input.category ?? null,
+    };
   }
 }

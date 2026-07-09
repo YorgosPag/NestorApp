@@ -12,31 +12,30 @@
  *
  * Replay-safety: snapshot captured on first `execute()` only; redo applies
  * the same snapshot delta without re-capturing.
+ *
+ * ADR-616 — id/timestamp/affected-ids boilerplate inherited from
+ * {@link LayerCommandBase}; the isolate lifecycle stays bespoke here.
  */
 
 import type {
-  ICommand,
-  SerializedCommand
-} from '../interfaces';
-import type {
   LayerIsolateMode,
-  LayerIsolateSettings
+  LayerIsolateSettings,
 } from '../../../services/layer-isolate-resolver';
 import {
   setIsolateEffects,
-  clearIsolateEffects
+  clearIsolateEffects,
 } from '../../../systems/isolate/IsolateEffectsStore';
 import { getAllLayers } from '../../../stores/LayerStore';
 import {
   captureAllLayersSnapshot,
   dropUnisolateSnapshot,
   freezeNonIsolatedLayers,
-  makeLayerCommandKey,
   persistUnisolateSnapshot,
   readUnisolateSnapshot,
   restoreLayersSnapshot,
-  type UnisolateSnapshotEntry
+  type UnisolateSnapshotEntry,
 } from './layer-command-utils';
+import { LayerCommandBase } from './layer-command-base';
 
 export interface LayerIsolateInput {
   /** Layers kept fully visible/un-dimmed. */
@@ -47,19 +46,28 @@ export interface LayerIsolateInput {
   category?: string | null;
 }
 
-export class LayerIsolateCommand implements ICommand {
-  readonly id: string;
+/**
+ * Serialized `data` payload for a `LayerIsolateInput`. Shared by
+ * `LayerIsolateCommand` and its inverse wrapper so the serialize shape lives in
+ * one place (ADR-616).
+ */
+export function serializeLayerIsolateInput(input: LayerIsolateInput): Record<string, unknown> {
+  return {
+    targetLayerIds: [...input.targetLayerIds],
+    settings: { ...input.settings },
+    category: input.category ?? null,
+  };
+}
+
+export class LayerIsolateCommand extends LayerCommandBase {
   readonly name = 'LayerIsolate';
   readonly type = 'layer-isolate';
-  readonly timestamp: number;
 
   private capturedSnapshot: ReadonlyArray<UnisolateSnapshotEntry> | null = null;
   private wasOverwrite = false;
-  private wasExecuted = false;
 
   constructor(private readonly input: LayerIsolateInput) {
-    this.id = makeLayerCommandKey('layer-isolate');
-    this.timestamp = Date.now();
+    super('layer-isolate');
   }
 
   execute(): void {
@@ -93,23 +101,8 @@ export class LayerIsolateCommand implements ICommand {
     return `Isolate ${this.input.targetLayerIds.length} layer(s) — ${mode}`;
   }
 
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        targetLayerIds: [...this.input.targetLayerIds],
-        settings: { ...this.input.settings },
-        category: this.input.category ?? null
-      },
-      version: 1
-    };
-  }
-
-  getAffectedEntityIds(): string[] {
-    return [];
+  protected serializeData(): Record<string, unknown> {
+    return serializeLayerIsolateInput(this.input);
   }
 
   private applyEffects(): void {
@@ -121,7 +114,7 @@ export class LayerIsolateCommand implements ICommand {
       mode: this.input.settings.mode,
       isolatedLayerIds: keepSet,
       dimOpacityPercent: this.input.settings.dimOpacityPercent,
-      category: this.input.category ?? null
+      category: this.input.category ?? null,
     });
   }
 }

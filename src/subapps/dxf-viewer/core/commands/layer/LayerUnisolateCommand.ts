@@ -8,39 +8,37 @@
  * `undo()` re-applies the snapshot conserved in the command instance (replay
  * safe — restores both layer flags and the isolate effects state captured at
  * execute time).
+ *
+ * ADR-616 — id/timestamp/affected-ids boilerplate inherited from
+ * {@link LayerCommandBase}; the teardown lifecycle stays bespoke here.
  */
 
-import type { ICommand, SerializedCommand } from '../interfaces';
 import {
   clearIsolateEffects,
   getIsolateEffectsSnapshot,
   setIsolateEffects,
-  type IsolateEffectsSnapshot
+  type IsolateEffectsSnapshot,
 } from '../../../systems/isolate/IsolateEffectsStore';
 import {
   captureAllLayersSnapshot,
   dropUnisolateSnapshot,
-  makeLayerCommandKey,
   persistUnisolateSnapshot,
   readUnisolateSnapshot,
   restoreLayersSnapshot,
-  type UnisolateSnapshotEntry
+  type UnisolateSnapshotEntry,
 } from './layer-command-utils';
+import { LayerCommandBase } from './layer-command-base';
 
-export class LayerUnisolateCommand implements ICommand {
-  readonly id: string;
+export class LayerUnisolateCommand extends LayerCommandBase {
   readonly name = 'LayerUnisolate';
   readonly type = 'layer-unisolate';
-  readonly timestamp: number;
 
   private restoredSnapshot: ReadonlyArray<UnisolateSnapshotEntry> | null = null;
   private preUndoSnapshot: ReadonlyArray<UnisolateSnapshotEntry> | null = null;
   private isolateEffectsAtExecute: IsolateEffectsSnapshot | null = null;
-  private wasExecuted = false;
 
   constructor() {
-    this.id = makeLayerCommandKey('layer-unisolate');
-    this.timestamp = Date.now();
+    super('layer-unisolate');
   }
 
   execute(): void {
@@ -84,6 +82,18 @@ export class LayerUnisolateCommand implements ICommand {
     this.reapplyIsolateEffectsAtExecute();
   }
 
+  redo(): void {
+    this.replayExecute();
+  }
+
+  getDescription(): string {
+    return 'Unisolate layers';
+  }
+
+  protected serializeData(): Record<string, unknown> {
+    return {};
+  }
+
   private reapplyIsolateEffectsAtExecute(): void {
     const effects = this.isolateEffectsAtExecute;
     if (effects && effects.active) {
@@ -93,32 +103,9 @@ export class LayerUnisolateCommand implements ICommand {
         isolatedEntityIds: effects.isolatedEntityIds,
         isolatedCategories: effects.isolatedCategories,
         dimOpacityPercent: effects.dimOpacityPercent,
-        category: effects.category
+        category: effects.category,
       });
     }
-  }
-
-  redo(): void {
-    this.replayExecute();
-  }
-
-  getDescription(): string {
-    return 'Unisolate layers';
-  }
-
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {},
-      version: 1
-    };
-  }
-
-  getAffectedEntityIds(): string[] {
-    return [];
   }
 
   private replayExecute(): void {

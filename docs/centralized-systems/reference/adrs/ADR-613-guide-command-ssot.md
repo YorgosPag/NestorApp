@@ -58,3 +58,4 @@ All class names, constructor signatures, the `EntityGuideParams` export and the 
 
 ## Changelog
 - **2026-07-09** — Initial. Created `BaseCommand` (core) + `CreatedGuidesCommand`/`BatchRotateGuidesCommand` (guides) + `guide-command-geometry.ts`; migrated all 7 guide command files to thin subclasses; added parity test suite. jscpd 3590 → 3560.
+- **2026-07-09** — `BaseCommand` ctor gained an optional `id` param (`constructor(id?: string)` → `this.id = id ?? generateEntityId()`) so the layer command family (ADR-616) can preserve its `makeLayerCommandKey` history-key format while adopting the shared root. Additive/backward-compatible — every existing `super()` call is unaffected.
