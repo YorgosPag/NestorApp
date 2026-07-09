@@ -107,6 +107,24 @@ annotation symbols into vector geometry on export; we do the same, mirroring the
   scale-bar numerals) are dropped from `.tek` (geometry — arrows/bubbles/ticks — exports fine); PDF/DXF
   keep the text.
 
+### Tekton symbol identification — IMPORT round-trip (Φ-import)
+
+Ο export χάρτης (πάνω) είναι μονόδρομος (δικό μας σύμβολο → `type_res`). Για **πλήρη
+ταυτοποίηση** στο **φόρτωμα `.tek`**, ο `tek-symbol-catalog.ts` έγινε **αμφίδρομο SSoT**:
+ΕΝΑ `MATCHED_SYMBOLS` array παράγει και τις δύο κατευθύνσεις — `tekSymbolTypeRes` (export,
+ανέπαφο) **και** `tekSymbolFromTypeRes` (import: `type_res` → `{symbolId, kind}`). Προστέθηκε
+`TEKTON_SYMBOL_NAMES` (index↔Ελληνικό όνομα και για τα 53 `obj/symbols` του `Obj.inf` — **μόνο
+ονόματα, καμία ιδιόκτητη `.asc` γεωμετρία LH**· index round-trip = interoperability, νομικά καθαρό).
+
+Import pipeline (καθρέφτης του export, additive πάνω στους υπάρχοντες extractors): νέος
+`io/tek/tek-object-extract.ts` (`extractObjectRecords` — type-7 `<object>`, ο `type_res` = το
+**2ο** `<type>` του record) → `TekObjectRecord` → νέος mapper `io/tek/tek-object-to-scene.ts`
+(`tekObjectToEntity`: reverse-map → `AnnotationSymbolEntity`, θέση/περιστροφή από `<xmatrix>`
+με το ΙΔΙΟ Y-flip convention του text mapper). `type_res` **χωρίς** δικό μας equivalent
+(άνθρωποι/αυτοκίνητα/βέλη — 43 από τα 53) → **ονομαστικό warning** (`tektonSymbolName`) αντί
+σιωπηλής απώλειας (πριν: τα type-7 objects αγνοούνταν εντελώς στο import). Wiring:
+`tek-scene-extract.ts` (+`objects`) + `tek-scene-builder.ts` (objects → entities + warnings).
+
 ## Reuse (no duplicate)
 
 `flattenSceneEntitiesForDxf`, `stampRenderedColors` (exported from `dxf-export-adapter.ts`),
