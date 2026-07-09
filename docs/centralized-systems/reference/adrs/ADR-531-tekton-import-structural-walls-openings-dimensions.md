@@ -240,3 +240,7 @@ ground truth. Αποκωδικοποίηση επιβεβαίωσε/διόρθω
   NESTOR style έχει `dimtad: 'above'` (κείμενο πάνω από τη γραμμή). Override `dimtad: 'centered'` στον mapper →
   κείμενο κεντραρισμένο στον άξονα της γραμμής διάστασης (DIMTAD=0). Μόνο αυτό. Test κλειδώνει `dimtad`.
   **11/11 mapper GREEN** · jscpd clean.
+- **2026-07-09** — **ADR-608: μείωση ΜΟΝΟ του κειμένου** (Giorgio: «τα κείμενα είναι τεράστια, ~300% μικρότερα»).
+  Το `dimscale` (300) κλιμακώνει text+βέλη μαζί· για μείωση μόνο του κειμένου → override `dimtxt = ενεργό
+  style dimtxt ÷ TEK_DIM_TEXT_REDUCE(3)` (τα βέλη/`dimasz` ανέπαφα). Text 750mm→250mm. Tunable divisor
+  (browser-βαθμονομούμενος). Test κλειδώνει `dimtxt = styleTxt/3`. **12/12 mapper GREEN** · jscpd clean.

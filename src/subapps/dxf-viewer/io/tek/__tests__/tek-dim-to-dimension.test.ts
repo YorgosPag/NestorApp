@@ -93,6 +93,11 @@ describe('tekDimToDimensionEntities (ADR-608)', () => {
     expect(dims[0].overrides?.dimtad).toBe('centered');
   });
 
+  it('dimtxt = ύψος ενεργού style ÷ 3 → μειωμένο κείμενο (μόνο text, τα βέλη μένουν)', () => {
+    const styleTxt = getDimStyleRegistry().getActiveStyle().dimtxt;
+    expect(dims[0].overrides?.dimtxt).toBeCloseTo(styleTxt / 3, 6);
+  });
+
   it('χρώματα κενά → fallback στη γραμμή· άγνωστο end_style → κληρονομεί dimblk (χωρίς override)', () => {
     const bare = tekDimToDimensionEntities(
       { ...DIM, endsColor: '', drvColor: '', endStyle: 0 }, 'mm',

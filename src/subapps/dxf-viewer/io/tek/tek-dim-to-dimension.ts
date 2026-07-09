@@ -52,6 +52,14 @@ const TEK_END_STYLE_ARROW_BLOCK: Readonly<Record<number, string>> = {
 const TEK_DIM_ANNOTATION_MAG = 3;
 
 /**
+ * ADR-608 — μείωση ΜΟΝΟ του κειμένου (Giorgio 2026-07-09: «τα κείμενα είναι τεράστια, ~300%
+ * μικρότερα»). Το `dimscale` κλιμακώνει text+βέλη μαζί· για να μικρύνει ΜΟΝΟ το κείμενο, κάνουμε
+ * override το `dimtxt` = ύψος ενεργού style ÷ `TEK_DIM_TEXT_REDUCE` (τα βέλη μένουν, `dimasz`
+ * ανέπαφο). Browser-βαθμονομούμενος: νέα προτίμηση Giorgio → άλλαξε ΜΟΝΟ αυτόν τον διαιρέτη.
+ */
+const TEK_DIM_TEXT_REDUCE = 3;
+
+/**
  * Μέγεθος βέλους «Βέλος 2» — **ΡΗΤΗ browser-βαθμονόμηση** (Giorgio 2026-07-09, step-by-step). Δύο
  * ανεξάρτητες διαστάσεις (γι' αυτό custom `tektonArrow2` block, όχι `closedFilled`):
  *  - **ΜΗΚΟΣ** (μέσο βάσης → κορυφή, εκεί που συγκλίνουν οι πλάγιες) = `TEK_ARROW_LENGTH_M` (0.120m)
@@ -80,7 +88,7 @@ function resolveArrowSizeMm(): number {
  * παίρνει truecolor (ακριβές hex, wins στο render) + ACI companion (nearest-match, DXF round-trip).
  * Absent κανάλι → line color.
  */
-function dimOverrides(rec: TekDimRecord): DimensionOverride {
+function dimOverrides(rec: TekDimRecord, refTextHeightMm: number): DimensionOverride {
   const lineHex = tekColorToHex(rec.color);
   const textHex = rec.dtextColor ? tekColorToHex(rec.dtextColor) : lineHex;
   const arrowHex = rec.endsColor ? tekColorToHex(rec.endsColor) : lineHex;
@@ -95,6 +103,8 @@ function dimOverrides(rec: TekDimRecord): DimensionOverride {
     dimscale: TEK_RENDER_DIMSCALE * TEK_DIM_ANNOTATION_MAG,
     // Κείμενο ΟΜΟΑΞΩΝΙΚΟ με τη γραμμή διάστασης (κεντραρισμένο στον άξονα, όχι «above») — Giorgio.
     dimtad: 'centered',
+    // Μείωση ΜΟΝΟ του κειμένου (τα βέλη μένουν) — βλ. `TEK_DIM_TEXT_REDUCE`.
+    dimtxt: refTextHeightMm / TEK_DIM_TEXT_REDUCE,
     ...(arrowBlock ? { dimblk: arrowBlock } : {}),
   };
 }
@@ -124,7 +134,7 @@ export function tekDimToDimensionEntities(
   rec: TekDimRecord, units: SceneUnits,
 ): LinearDimensionEntity[] {
   const activeStyle = getDimStyleRegistry().getActiveStyle();
-  const overrides = dimOverrides(rec);
+  const overrides = dimOverrides(rec, activeStyle.dimtxt);
   return rec.segs.map((seg) => {
     const { defPoints, rotationDeg } = segDefPoints(seg, rec.refPoints, units);
     return {
