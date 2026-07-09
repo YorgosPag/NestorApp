@@ -146,13 +146,17 @@ function emitText(
   const p = toPaper(t.position);
   const heightWorld = t.height || DEFAULT_TEXT_HEIGHT_WORLD;
   pdf.setFontSize(heightWorld * scale * PT_PER_MM);
-  // Decomposed annotation labels carry alignment (`TextEntity.alignment` + the
-  // vector baseline hint) so centred glyph letters / scale-bar numerals land on
-  // their anchor; scene text omits both → default left / alphabetic (unchanged).
-  const align = mapHAlign((e as TextEntity).alignment);
-  const baseline = (e as VectorTextBaselineHint).vBaseline ?? 'alphabetic';
+  // A decomposed annotation label is marked by the `vBaseline` hint and its
+  // `position` IS the alignment anchor → honour `alignment` + baseline (centred
+  // glyph letters / scale-bar numerals land on their anchor). Scene text carries
+  // no hint → keep the exact previous behaviour (left / alphabetic), so imported
+  // text whose insertion-point semantics we don't own is never mis-placed.
+  const baseline = (e as VectorTextBaselineHint).vBaseline;
+  const align = baseline !== undefined ? mapHAlign((e as TextEntity).alignment) : 'left';
   // World rotation is CCW in a Y-up frame; on the Y-down page it reads as CW → negate.
-  pdf.text(sanitizeText(t.text), p.x, p.y, { align, baseline, angle: -(t.rotation ?? 0) });
+  pdf.text(sanitizeText(t.text), p.x, p.y, {
+    align, baseline: baseline ?? 'alphabetic', angle: -(t.rotation ?? 0),
+  });
 }
 
 /** Horizontal alignment (`TextEntity.alignment`) → jsPDF text align. Default left. */

@@ -65,6 +65,43 @@ exactly to the printable area, canvas px map 1:1 into that area — so the vecto
 **identical** paper coordinates the raster path would have rasterised. `worldToPaperScale =
 pxToMm(transform.scale, effectiveDpi)`.
 
+### Annotation-symbol & scale-bar decomposition (Φ-annotations)
+
+`annotation-symbol` (north-arrow / section-mark / grid-bubble / elevation-mark / detail-callout /
+revision-tag) and `scale-bar` are **non-BIM** scene entities, so `flattenSceneEntitiesForDxf` passes
+them through untouched — but the emitter has no `case` for them → they hit `default` and were silently
+**dropped from the vector PDF *and* the `.dxf`**. Big players (Revit / AutoCAD / ArchiCAD) **explode**
+annotation symbols into vector geometry on export; we do the same, mirroring the BIM→lwpolyline flatten
+(one decompose, two backends).
+
+- **NEW `export/core/annotation-to-primitives.ts`** — `expandAnnotationsToPrimitives(entities, {drawingScale, sceneUnits})`
+  replaces each symbol/bar with neutral `Entity[]` the emitter already draws (line / lwpolyline / circle /
+  arc / text / solid-fill `hatch`). Geometry is read from the EXISTING SSoT — the catalog glyph
+  (`ANNOTATION_SYMBOL_CATALOG`, unit space) folded via `annotationSymbolModelSize`, and the scale-bar
+  layout via `buildScaleBarPrimitives`. The unit→world / frame→world maps mirror the on-screen renderers
+  exactly, so the export matches the canvas pixel-for-pixel. NO geometry re-derived (N.18).
+- **NEW `bim/scale-bar/scale-bar-primitives.ts`** — `buildScaleBarPrimitives(entity, drawingScale, sceneUnits)`
+  is the **EXTRACTED** frame-space layout SSoT (body cells + ticks + subdivisions + numerals in `(s,t)`
+  frame space). `ScaleBarRenderer` was **rewritten thin** to consume it (via the new
+  `rendering/entities/scale-bar/stamp-scale-bar-primitives.ts` canvas stamper, replacing
+  `draw-scale-bar-labels.ts`), so the renderer and the export decomposer can never drift — the previous
+  structural clone between "draw the bar on canvas" and "explode the bar for export" is eliminated.
+- **NEW `export/core/neutral-primitive-factory.ts`** — the single builder path (line/polyline/circle/arc/
+  solid-fill/text) both decomposers use, inheriting the source colour/ACI/lineweight/layer. Solid fills
+  reuse the ADR-505 §C `hatch` + `dxfFaces` carrier (z = 0 planar faces) → the emitter fills them and the
+  DXF writer emits `3DFACE`, no new code path.
+- **Emitter text alignment** — `scene-vector-emitter.emitText` now honours `TextEntity.alignment` +
+  a `vBaseline` hint so centred glyph letters / scale-bar numerals land on their anchor. Scene text omits
+  both → default left / alphabetic (unchanged).
+- **Wiring** — the visible fix is a one-line pre-pass in `capture-2d-vector.ts` AFTER the flatten:
+  `expandAnnotationsToPrimitives(flat, {drawingScale: liveDrawingScale, sceneUnits})`. The emitter is
+  untouched (already knows line/arc/circle/lwpolyline/text/hatch).
+- **⏳ DXF parity (DEFER):** `buildDxfExportRequest` is documented **Pure**; threading the live
+  `drawingScale` store-read into it (and its floor-merge sibling + public options) would break that
+  contract and widen scope across the export UI. The decomposer already accepts an explicit
+  `{drawingScale, sceneUnits}` ctx, so wiring the same pre-pass into the DXF path is a one-line follow-up
+  once `drawingScale` is threaded through `DxfExportOptions`. Primary fix = vector-PDF.
+
 ## Reuse (no duplicate)
 
 `flattenSceneEntitiesForDxf`, `stampRenderedColors` (exported from `dxf-export-adapter.ts`),
@@ -85,6 +122,9 @@ pxToMm(transform.scale, effectiveDpi)`.
   (e) heavy hatched drawings → large/slow vector PDF → keep raster fallback.
 - ⏳ **Φ3 (future):** Export-dialog PDF slot (`export/formats/pdf-export-adapter.ts` + paper controls,
   remove the `export-service.ts` `EXPORT_FORMAT_NOT_READY:pdf` throw), reusing the same emitter.
+- ✅ **Annotation symbols + scale-bars now export as vector** (previously dropped): the same neutral
+  primitives feed the emitter, and the scale-bar layout is now a shared SSoT (`buildScaleBarPrimitives`)
+  consumed by BOTH the on-screen renderer and the export decomposer.
 
 ## Changelog
 
@@ -96,3 +136,18 @@ pxToMm(transform.scale, effectiveDpi)`.
   Browser-verified GREEN by Giorgio (vector import works). Follow-up fix: emitter now sets round
   `setLineCap`/`setLineJoin` so stroked corners close without the butt-cap/miter notch visible at high
   zoom. (Confirmed: mm lineweights scaling with zoom is correct/desired — model-space pen width.)
+- **2026-07-09** — Φ-annotations: annotation-symbol + scale-bar decomposition (Opus). `annotation-symbol`
+  (6 kinds) + `scale-bar` were silently dropped from the vector PDF (emitter `default` case) — now
+  exploded to neutral primitives via NEW `export/core/annotation-to-primitives.ts` +
+  `export/core/neutral-primitive-factory.ts`. Scale-bar layout EXTRACTED to NEW
+  `bim/scale-bar/scale-bar-primitives.ts` (frame-space SSoT); `ScaleBarRenderer` rewritten thin over the
+  new `stamp-scale-bar-primitives.ts` (replaces `draw-scale-bar-labels.ts`), killing the renderer↔export
+  clone. `emitText` now honours `alignment` + a `vBaseline` hint. Wired into `capture-2d-vector.ts`
+  (post-flatten pre-pass, live `drawingScale` + scene units). Tests: +12 (scale-bar-primitives 12,
+  annotation-to-primitives 12, emitter +3, capture-2d-vector repaired 4→5) — 300 print/export/scale-bar
+  jest GREEN; jscpd:diff clean; files <500 / functions <40; no `any`/inline-styles/hardcoded strings.
+  DXF-export parity deferred (purity of `buildDxfExportRequest`; decomposer is DXF-ready). UNCOMMITTED.
+  🔴 browser-verify: place north arrow + scale-bar + section mark → Print 2D vector → PDF shows them as
+  vector (zoom без θόλωμα); AutoCAD PDFIMPORT → lines/arcs/text entities.
+  ⚠️ Pre-existing (NOT this change): `ScaleBarRenderer.test.ts` `getGrips` expects 3 grips while a
+  concurrent `scale-bar-grips.ts` edit now returns 5 — stale test in another agent's uncommitted work.
