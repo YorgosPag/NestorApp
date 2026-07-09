@@ -46,8 +46,17 @@ export function circleQuadrantPoints(center: Point2D, radius: number): Point2D[]
  * The 5 grips of a plain DXF circle — the SSoT both grip paths consume:
  *   0     → centre (whole-circle translate; `'circle-move'` → 4-arrow MOVE glyph +
  *           per-arm directional distance prompt). `movesEntity` keeps it ORTHO-eligible.
- *   1..4  → quadrant handles (radius edit), typed `'quadrant'` so the «Εμφάνιση
- *           Quadrants» toggle gates them in BOTH render + hit-test (ADR-559).
+ *   1..4  → radius-edit handles at the E/N/W/S cardinal points, typed `'vertex'`
+ *           (STRUCTURAL) so — like a wall's corners or a circular column's quadrant
+ *           handles (ADR-519, `column-circular-adapter`) — they are ALWAYS shown on a
+ *           selected circle (Giorgio 2026-07-09): `isGripTypeVisible` never gates the
+ *           `'vertex'` type, so they survive both the «Εμφάνιση Quadrants» toggle AND
+ *           the multi-select transform-glyph hide. The `'vertex'` type is ALSO what
+ *           unlocks the radius drag: `grip-to-vertex-refs.refsForCircle` maps
+ *           `type==='vertex'` + gripIndex 1-4 → `'circle-quadrant'` → `stretchCircle`;
+ *           with the previous `'quadrant'` type that resolver returned `[]` and the
+ *           handles were inert. OSNAP quadrant snapping is unaffected (a separate
+ *           geometry-driven `QuadrantSnapEngine`, not the grip type).
  *
  * Returns the hooks `GripInfo`; the 2D renderer maps each to its render `GripInfo`
  * (+`shape` via `gripGlyphShape`) — see `CircleRenderer.getGrips`.
@@ -61,7 +70,7 @@ export function getCircleGrips(entityId: string, center: Point2D, radius: number
     },
   ];
   circleQuadrantPoints(center, radius).forEach((position, i) => {
-    grips.push({ entityId, gripIndex: i + 1, type: 'quadrant', position, movesEntity: false });
+    grips.push({ entityId, gripIndex: i + 1, type: 'vertex', position, movesEntity: false });
   });
   return grips;
 }

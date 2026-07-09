@@ -29,11 +29,17 @@ describe('getCircleGrips (ADR-561)', () => {
     expect(grips.filter((g) => gripKindOf(g, 'circle')).map((g) => gripKindOf(g, 'circle'))).toEqual(['circle-move']);
   });
 
-  it('quadrants are typed "quadrant" (radius edit), not entity-moving', () => {
+  // The 4 radius-edit handles are typed 'vertex' (STRUCTURAL) so they are ALWAYS shown
+  // on a selected circle (Giorgio 2026-07-09) — `isGripTypeVisible` never gates 'vertex',
+  // so they survive the «Εμφάνιση Quadrants» toggle AND the multi-select transform-glyph
+  // hide (wall-corner / circular-column parity, ADR-519). The 'vertex' type ALSO unlocks
+  // the radius drag: `grip-to-vertex-refs.refsForCircle` maps type==='vertex' + gripIndex
+  // 1-4 → 'circle-quadrant' (the previous 'quadrant' type made that resolver return []).
+  it('radius handles are typed "vertex" (structural, radius edit), not entity-moving', () => {
     const quads = getCircleGrips('C1', center, radius).slice(1);
     expect(quads).toHaveLength(4);
     for (const q of quads) {
-      expect(q.type).toBe('quadrant');
+      expect(q.type).toBe('vertex');
       expect(q.movesEntity).toBe(false);
       expect(gripKindOf(q, 'circle')).toBeUndefined();
     }

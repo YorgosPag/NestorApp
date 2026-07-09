@@ -92,6 +92,27 @@ export function detachEntitySide<T extends AttachBindingParams>(
     : { ...params, baseBinding: defaults.base, attachBaseToIds: undefined };
 }
 
+/**
+ * Set the side-specific binding to `'attached'` + append `hostId` to its host list
+ * (dedup). The inverse of `detachEntitySide` — the SSoT «Attach» mutation the batch
+ * `Attach{Columns,Stairs,Walls}*Command`s apply per target. Returns a fresh object
+ * preserving `T` (wall/column/stair params all satisfy `AttachBindingParams`).
+ */
+export function attachEntitySide<T extends AttachBindingParams>(
+  params: T,
+  side: EntityAttachSide,
+  hostId: string,
+): T {
+  if (side === 'top') {
+    const ids = params.attachTopToIds ?? [];
+    const nextIds = ids.includes(hostId) ? ids : [...ids, hostId];
+    return { ...params, topBinding: 'attached', attachTopToIds: nextIds };
+  }
+  const ids = params.attachBaseToIds ?? [];
+  const nextIds = ids.includes(hostId) ? ids : [...ids, hostId];
+  return { ...params, baseBinding: 'attached', attachBaseToIds: nextIds };
+}
+
 /** True when the entity's given vertical side is currently attached to a structural host. */
 export function isEntitySideAttached(params: AttachBindingParams, side: EntityAttachSide): boolean {
   return side === 'top' ? params.topBinding === 'attached' : params.baseBinding === 'attached';
