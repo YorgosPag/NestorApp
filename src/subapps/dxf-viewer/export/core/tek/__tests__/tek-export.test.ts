@@ -16,9 +16,10 @@ import {
   tekNum, escapeXml, colorHex6, xmatrixXml, buildWallRecordXml, injectTekEntities,
   buildOpenRecordXml, buildOpenXml, buildPlaneRecordXml, buildPlanePointsXml,
   buildAutoroofRecordXml, buildRoofPointsXml, buildRoofV3ListXml, buildTagVisibilityXml,
-  buildObjectRecordXml, buildSymbolObjectXMatrix,
+  buildObjectRecordXml, buildSymbolObjectXMatrix, buildTextRecordXml,
 } from '../tek-xml-writer';
 import { collectTekWalls, collectTekPlanes, collectTekRoofs } from '../bim-to-tek';
+import { collectTekTexts } from '../dxf-to-tek';
 import type { TekOpening, TekPlane, TekRoof, TekRoofPoint } from '../tek-types';
 import type { Entity } from '../../../../types/entities';
 
@@ -94,7 +95,7 @@ describe('buildWallRecordXml', () => {
 });
 
 describe('injectTekEntities', () => {
-  const TPL = 'A<!--TEK_WALL_RECORDS-->B<!--TEK_OBJECT_RECORDS-->C<!--TEK_PLANE_RECORDS-->D<!--TEK_AUTOROOF_RECORDS-->E<!--TEK_LINE_RECORDS-->F<!--TEK_ARC_RECORDS-->G<!--TEK_STAIR_RECORDS-->H';
+  const TPL = 'A<!--TEK_WALL_RECORDS-->B<!--TEK_OBJECT_RECORDS-->C<!--TEK_PLANE_RECORDS-->D<!--TEK_AUTOROOF_RECORDS-->E<!--TEK_LINE_RECORDS-->F<!--TEK_ARC_RECORDS-->G<!--TEK_STAIR_RECORDS-->H<!--TEK_TEXT_RECORDS-->I';
   it('εγχέει walls/objects/planes/autoroofs/lines/arcs/stairs στους markers', () => {
     expect(injectTekEntities(TPL, 'WALLS', 'OBJ', 'PLANES', 'ROOFS', 'LINES', 'ARCS', 'STAIRS'))
       .toBe('AWALLSBOBJCPLANESDROOFSELINESFARCSGSTAIRSH');
@@ -652,5 +653,58 @@ describe('signedAreaXY / reverseRoofFootprint', () => {
     expect(rev[0]).toEqual({ x: 0, y: 4, angleRad: 0.5 });
     // διπλή αντιστροφή = ταυτότητα (ίδιες κορυφές+κλίσεις).
     expect(reverseRoofFootprint(rev)).toEqual(pts);
+  });
+});
+
+describe('ADR-608 Φ-texts — type-3 <text> (ελεύθερη ετικέτα)', () => {
+  it('buildTextRecordXml: γεμίζει type/n/s/color/hallign/ptsize/xmatrix (κανένα {{…}} leftover)', () => {
+    const xml = buildTextRecordXml({
+      id: 2, content: 'N', hAlign: 1, ptSize: 14,
+      xmatrix: { x00: 1, x01: -0, x10: 0, x11: 1, x20: 6, x21: -8 }, colorHex: '00FF00',
+    });
+    expect(xml).not.toMatch(/\{\{/);
+    expect(xml).toContain('<type>3</type><n>2</n>'); // text entity type + id
+    expect(xml).toContain('<s>N</s>');
+    expect(xml).toContain('<color>00FF00</color>');
+    expect(xml).toContain('<hallign>1</hallign>');
+    expect(xml).toContain('<ptsize>14</ptsize>');
+    expect(xml).toContain('<x20>6</x20><x21>-8</x21>');
+  });
+  it('buildTextRecordXml: XML-escape του περιεχομένου + grouping tag στο <taglist>', () => {
+    const xml = buildTextRecordXml({
+      id: 1, content: 'Ε = 7 & 8', hAlign: 0, ptSize: 10,
+      xmatrix: { x00: 1, x01: 0, x10: 0, x11: 1, x20: 0, x21: 0 }, colorHex: 'FFFFFF', tag: 'ann_9',
+    });
+    expect(xml).toContain('<s>Ε = 7 &amp; 8</s>');
+    expect(xml).toContain('<taglist>\n<s>ann_9</s></taglist>');
+  });
+
+  it('collectTekTexts: text entity → ένα <text> record (Y-flip θέσης, alignment→hallign)', () => {
+    const text = {
+      id: 't1', type: 'text', position: { x: 1000, y: 2000 }, text: 'A',
+      height: 500, alignment: 'center', rotation: 0, color: '#00FF00',
+    } as unknown as Entity;
+    const res = collectTekTexts([text], 0.001); // f = 1mm→m
+    expect(res.textCount).toBe(1);
+    expect(res.textsXml).toContain('<type>3</type>');
+    expect(res.textsXml).toContain('<s>A</s>');
+    expect(res.textsXml).toContain('<hallign>1</hallign>'); // center
+    // Y-flip: y=2000mm → −2.0m (sceneXYToTekMeters)· x=1000mm → 1.0m.
+    expect(res.textsXml).toContain('<x20>1</x20><x21>-2</x21>');
+  });
+  it('collectTekTexts: κενό/whitespace text → παραλείπεται· μη-text entity αγνοείται', () => {
+    const blank = { id: 'b', type: 'text', position: { x: 0, y: 0 }, text: '   ' } as unknown as Entity;
+    const line = { id: 'l', type: 'line', start: { x: 0, y: 0 }, end: { x: 1, y: 1 } } as unknown as Entity;
+    expect(collectTekTexts([blank, line], 0.001).textCount).toBe(0);
+  });
+  it('collectTekTexts: groupId → κοινό tag (ομαδοποίηση + registry)', () => {
+    const text = {
+      id: 't', type: 'text', position: { x: 0, y: 0 }, text: '1',
+      height: 300, alignment: 'right', color: '#FFFFFF', groupId: 'sym_7',
+    } as unknown as Entity;
+    const res = collectTekTexts([text], 0.001);
+    expect(res.tags).toEqual(['sym_7']);
+    expect(res.textsXml).toContain('<taglist>\n<s>sym_7</s></taglist>');
+    expect(res.textsXml).toContain('<hallign>2</hallign>'); // right
   });
 });

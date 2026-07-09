@@ -15,9 +15,15 @@
 
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { Entity, HatchEntity } from '../../types/entities';
+import { isWallEntity } from '../../types/entities';
+import type { WallEntity } from '../../bim/types/wall-types';
 import type { DxfGripDragPreview } from '../grip-computation';
 import type { SceneUnits } from '../../utils/scene-units';
 import { gripKindOf } from '../grip-kinds';
+// ADR-397 §15b — SECOND direction-arc SSoT (live corner angle vs a joined neighbour).
+import { resolveNeighborAxisAngle } from '../../bim/walls/wall-rotation-neighbor-angle';
+import { paintDirectionArc } from '../../canvas-v2/preview-canvas/direction-arc-paint';
+import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { hatchBoundsCenter, hatchGradientAngleGripPos } from '../../bim/hatch/hatch-grips';
 import { paintPolarTrackingLine } from '../../canvas-v2/preview-canvas/polar-tracking-line-paint';
@@ -169,5 +175,41 @@ export function paintGripActionAlignmentTraces(
   );
   if (actionTracking) {
     paintActionAlignmentTracking(ctx, actionTracking, t, vp, sceneUnits);
+  }
+}
+
+/**
+ * ADR-397 §15b — SECOND direction arc while ROTATING a wall JOINED to a neighbour:
+ * the LIVE corner angle between the two walls' axes (Giorgio, στιγμιότυπο 153825).
+ * Same green/red SSoT paint as the rotation arc, but the reference edge is the
+ * NEIGHBOUR axis (fixed) instead of the wall's original orientation → the value is
+ * the actual corner the two walls form right now. Radius = 35% of the live wall length
+ * so the arc is proportional & distinct from the primary arc. No-op when the wall is
+ * free (no joined neighbour) or not rotating. Reuses the SSoT `JOIN_THRESHOLD_MM`
+ * neighbour detection. Gate «ΤΟΞΟ ΦΟΡΑΣ» (Giorgio 2026-07-09): κρύβεται OFF.
+ */
+export function paintWallJoinCornerArc(
+  ctx: CanvasRenderingContext2D,
+  isRotation: boolean,
+  dp: DxfGripDragPreview,
+  transformed: Entity,
+  sceneEntities: readonly Entity[],
+  sceneUnits: SceneUnits,
+  t: ViewTransform,
+  vp: Viewport,
+): void {
+  if (!isRotation || !dp.rotatePivot || !cadToggleState.isDirArcOn()) return;
+  if ((transformed as { type?: string }).type !== 'wall') return;
+  const liveWall = transformed as unknown as WallEntity;
+  const cornerWalls = sceneEntities.filter(isWallEntity);
+  const wallLen = Math.hypot(
+    liveWall.params.end.x - liveWall.params.start.x,
+    liveWall.params.end.y - liveWall.params.start.y,
+  );
+  const cornerArc = resolveNeighborAxisAngle(
+    liveWall, cornerWalls, sceneUnits, 0.35 * wallLen, dp.rotatePivot,
+  );
+  if (cornerArc) {
+    paintDirectionArc(ctx, cornerArc.pivotW, cornerArc.anchorW, cornerArc.cursorW, cornerArc.sweepDeg, t, vp);
   }
 }

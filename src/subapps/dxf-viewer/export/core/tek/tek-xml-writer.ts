@@ -20,10 +20,11 @@ import {
   STAIR_RECORD_HEAD,
   STAIR_RECORD_TAIL,
   OBJECT_RECORD_TEMPLATE,
+  TEXT_RECORD_TEMPLATE,
 } from './tek-record-templates';
 import type {
   TekArc, TekLine, TekObject, TekOpening, TekPlane, TekPlanePoint, TekRoof, TekRoofFace,
-  TekRoofPoint, TekStair, TekStairPoint, TekWall, TekXMatrix,
+  TekRoofPoint, TekStair, TekStairPoint, TekText, TekWall, TekXMatrix,
 } from './tek-types';
 
 export { escapeXml }; // SSoT στο src/lib/xml — re-export για consumers/tests του TEK module.
@@ -36,6 +37,7 @@ const TEK_AUTOROOF_MARKER = '<!--TEK_AUTOROOF_RECORDS-->';
 const TEK_LINE_MARKER = '<!--TEK_LINE_RECORDS-->';
 const TEK_ARC_MARKER = '<!--TEK_ARC_RECORDS-->';
 const TEK_STAIR_MARKER = '<!--TEK_STAIR_RECORDS-->';
+const TEK_TEXT_MARKER = '<!--TEK_TEXT_RECORDS-->';
 
 /** Tekton-friendly αριθμός: δεκαδικά, χωρίς εκθετική μορφή, trimmed. */
 export function tekNum(n: number): string {
@@ -234,6 +236,21 @@ export function buildSymbolObjectXMatrix(
   };
 }
 
+/**
+ * ADR-608 Φ-texts — γεμίζει το type-3 text record template (ελεύθερη ετικέτα → `<text><record>`).
+ * `<s>` escaped· `ptSize` στρογγυλοποιείται· grouping tag στο κενό `<taglist>` (SSoT `injectTag`).
+ */
+export function buildTextRecordXml(t: TekText): string {
+  const xml = TEXT_RECORD_TEMPLATE
+    .replace('{{N}}', String(t.id))
+    .replace('{{S}}', escapeXml(t.content))
+    .replace('{{COLOR}}', colorHex6(t.colorHex))
+    .replace('{{HALLIGN}}', String(t.hAlign))
+    .replace('{{PTSIZE}}', String(Math.round(t.ptSize)))
+    .replace('{{XMATRIX}}', xmatrixXml(t.xmatrix));
+  return injectTag(xml, t.tag); // ADR-608 — grouping tag στο κενό <taglist>
+}
+
 /** Γεμίζει το type-7 object record template (built-in σύμβολο → ΕΝΑ `<object><record>`). */
 export function buildObjectRecordXml(o: TekObject): string {
   return OBJECT_RECORD_TEMPLATE
@@ -315,6 +332,7 @@ export function injectTekEntities(
   arcsXml = '',
   stairsXml = '',
   tagVisibilityXml = '',
+  textsXml = '',
 ): string {
   if (
     !template.includes(TEK_WALL_MARKER) ||
@@ -323,9 +341,10 @@ export function injectTekEntities(
     !template.includes(TEK_AUTOROOF_MARKER) ||
     !template.includes(TEK_LINE_MARKER) ||
     !template.includes(TEK_ARC_MARKER) ||
-    !template.includes(TEK_STAIR_MARKER)
+    !template.includes(TEK_STAIR_MARKER) ||
+    !template.includes(TEK_TEXT_MARKER)
   ) {
-    throw new Error('TEK skeleton template: missing wall/object/plane/autoroof/line/arc/stair marker');
+    throw new Error('TEK skeleton template: missing wall/object/plane/autoroof/line/arc/stair/text marker');
   }
   // ADR-608 — αν υπάρχουν tags, γέμισε το κενό top-level `<tag_visibility>` registry.
   // Απουσία tags ⇒ αμετάβλητο (κρατά το κενό block του skeleton). Throw αν το registry
@@ -343,5 +362,6 @@ export function injectTekEntities(
     .replace(TEK_AUTOROOF_MARKER, autoroofsXml)
     .replace(TEK_LINE_MARKER, linesXml)
     .replace(TEK_ARC_MARKER, arcsXml)
-    .replace(TEK_STAIR_MARKER, stairsXml);
+    .replace(TEK_STAIR_MARKER, stairsXml)
+    .replace(TEK_TEXT_MARKER, textsXml);
 }

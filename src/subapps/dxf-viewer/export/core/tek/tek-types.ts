@@ -187,6 +187,29 @@ export interface TekObject {
   readonly xmatrix: TekXMatrix;
 }
 
+/**
+ * ADR-608 Φ-texts — ένα ελεύθερο κείμενο (annotation label / scale-bar νούμερο) έτοιμο
+ * για `<text><record>` (entity **type 3**). Θέση/περιστροφή/κλίμακα γλύφου μέσω `<xmatrix>`
+ * (μέτρα, Y-flipped — ίδιο convention με το type-7 object). Το `ptSize` οδηγεί το ορατό
+ * μέγεθος (native ttfont). Το `tag` ομαδοποιεί μαζί με τις γραμμές/τόξα του ίδιου συμβόλου.
+ */
+export interface TekText {
+  /** Ακέραιο id (1-based, `<n>`). */
+  readonly id: number;
+  /** Το κείμενο αυτούσιο (inline `<s>`). */
+  readonly content: string;
+  /** Οριζόντια στοίχιση — `<hallign>`: 0=αριστερά, 1=κέντρο, 2=δεξιά. */
+  readonly hAlign: number;
+  /** Μέγεθος γραμματοσειράς — `<ttfont><ptsize>` (points). */
+  readonly ptSize: number;
+  /** 2D affine θέσης/περιστροφής/κλίμακας γλύφου (μέτρα, Y-flipped). */
+  readonly xmatrix: TekXMatrix;
+  /** Χρώμα 6-ψήφιο hex ΧΩΡΙΣ `#`. */
+  readonly colorHex: string;
+  /** ADR-608 — grouping tag (κοινό με τις γραμμές/τόξα του συμβόλου). Absent ⇒ κενό `<taglist>`. */
+  readonly tag?: string;
+}
+
 /** Μία 2D κορυφή πολυγραμμής σκάλας σε world μέτρα (Y-flipped) — `<point2d><record>`. */
 export interface TekStairPoint {
   /** X (world μέτρα). */

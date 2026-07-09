@@ -17,7 +17,7 @@ import { DEFAULT_DRAWING_SCALE } from '../../config/bim-render-settings-types';
 import { resolveExportEntities } from '../core/export-entity-scope';
 import { expandAnnotationsToPrimitives } from '../core/annotation-to-primitives';
 import { collectTekWalls, collectTekPlanes, collectTekRoofs, collectTekStairs } from '../core/tek/bim-to-tek';
-import { collectTekLines, collectTekArcs, collectTekObjects } from '../core/tek/dxf-to-tek';
+import { collectTekLines, collectTekArcs, collectTekObjects, collectTekTexts } from '../core/tek/dxf-to-tek';
 import { injectTekEntities, buildTagVisibilityXml } from '../core/tek/tek-xml-writer';
 import type { TekSymbolMode } from '../types';
 import { buildFloorFilename } from './dxf-export-adapter';
@@ -71,7 +71,7 @@ export function assembleTekDocument(
     : selected;
   // ADR-583/608 — explode annotation symbols + scale-bars into neutral primitives
   // (lines/lwpolylines/circles/arcs) so `collectTekLines`/`collectTekArcs` pick them up.
-  // Solid fills → outline; baked labels DEFER (no Tekton free-text collector). BIM passes through.
+  // Solid fills → outline (Φ-fill follow-up)· baked labels → `<text>` (type 3, Φ-texts). BIM passes through.
   const decomposed = expandAnnotationsToPrimitives(forDecompose, {
     drawingScale,
     sceneUnits: resolveSceneUnits({ units: scene.units }),
@@ -81,15 +81,17 @@ export function assembleTekDocument(
   const { autoroofsXml } = collectTekRoofs(decomposed);
   const lines = collectTekLines(decomposed, f);
   const arcs = collectTekArcs(decomposed, f);
+  // ADR-608 Φ-texts — ελεύθερες ετικέτες (N/A/1/0.00 + scale-bar νούμερα) → `<text>` (type 3).
+  const texts = collectTekTexts(decomposed, f);
   // Σκάλες → native `<stair>` (type 21, ADR-526 Φ3). Ίδιο scene→μέτρα convention.
   const { stairsXml } = collectTekStairs(selected, f);
   // ADR-608 — τα αποδομημένα σύμβολα (geometry path) έχουν κοινό `groupId` → κοινό tag στα
-  // line/arc τους. Ένωση distinct tags → `<tag_visibility>` registry (ομαδοποίηση +Tags).
-  const tagVisibilityXml = buildTagVisibilityXml([...new Set([...lines.tags, ...arcs.tags])]);
+  // line/arc/text τους. Ένωση distinct tags → `<tag_visibility>` registry (ομαδοποίηση +Tags).
+  const tagVisibilityXml = buildTagVisibilityXml([...new Set([...lines.tags, ...arcs.tags, ...texts.tags])]);
   return {
     xml: injectTekEntities(
       template, wallsXml, objects.objectsXml, planesXml, autoroofsXml,
-      lines.linesXml, arcs.arcsXml, stairsXml, tagVisibilityXml,
+      lines.linesXml, arcs.arcsXml, stairsXml, tagVisibilityXml, texts.textsXml,
     ),
     warnings,
   };

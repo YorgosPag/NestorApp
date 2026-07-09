@@ -68,6 +68,8 @@ import { mepWaterHeaterDocToEntity } from '../../hooks/data/mep-water-heater-per
 import { mepUnderfloorDocToEntity } from '../../hooks/data/mep-underfloor-persistence-helpers';
 // opening — special-case (host-wall dependency, see loadFloorOpenings below).
 import { openingDocToEntity } from '../walls/opening-doc-hydration';
+// ADR-615 — self-hosted (free-standing) openings hydrate without a host wall.
+import { isSelfHostedOpening } from '../types/opening-types';
 
 // Doc types ────────────────────────────────────────────────────────────────────
 import type { ColumnDoc } from '../columns/column-firestore-service';
@@ -164,9 +166,12 @@ async function loadFloorWalls(constraints: QueryConstraint[]): Promise<WallEntit
 }
 
 /**
- * Fetch openings + hydrate each against its host wall (`params.wallId`). An
- * opening whose host wall is absent hydrates to `null` (converter contract) and
- * is dropped — it re-appears once the host wall is present.
+ * Fetch openings + hydrate each against its host. Wall-hosted openings resolve
+ * against `params.wallId` (absent host → `null`, dropped, re-appears once the
+ * wall is present). ADR-615 self-hosted (free-standing) openings have no
+ * `wallId`: they hydrate via the synthetic host (units default to `'mm'` — a
+ * non-active floor has no SceneModel to resolve units from; matches the placement
+ * default), so a free-standing κούφωμα shows on the «all floors» 2Δ/3Δ views too.
  */
 async function loadFloorOpenings(
   constraints: QueryConstraint[],
@@ -176,7 +181,9 @@ async function loadFloorOpenings(
   const wallsById = new Map<string, WallEntity>(walls.map((w) => [w.id, w]));
   const out: Entity[] = [];
   for (const doc of res.documents) {
-    const entity = openingDocToEntity(doc, wallsById.get(doc.params.wallId) ?? null);
+    const entity = isSelfHostedOpening(doc.params)
+      ? openingDocToEntity(doc, null, 'mm')
+      : openingDocToEntity(doc, wallsById.get(doc.params.wallId ?? '') ?? null);
     if (entity) out.push(entity);
   }
   return out;

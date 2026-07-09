@@ -17,20 +17,34 @@
 
 import type { Entity } from '../../../types/entities';
 import type {
-  ArcEntity, CircleEntity, LineEntity, LWPolylineEntity, PolylineEntity,
+  ArcEntity, CircleEntity, LineEntity, LWPolylineEntity, PolylineEntity, TextEntity,
 } from '../../../types/entities';
 import { pointOnCircle } from '../../../rendering/entities/shared/geometry-vector-utils';
 import { degToRad } from '../../../rendering/entities/shared/geometry-angle-utils';
 import { isAnnotationSymbolEntity } from '../../../types/annotation-symbol';
 import {
   buildLineRecordXml, buildArcRecordXml, buildObjectRecordXml, buildSymbolObjectXMatrix,
+  buildTextRecordXml,
 } from './tek-xml-writer';
 import { sceneXYToTekMeters } from './tek-geometry';
 import { tekSymbolTypeRes } from './tek-symbol-catalog';
-import type { TekArc, TekLine } from './tek-types';
+import type { TekArc, TekLine, TekText } from './tek-types';
 
 /** Default χρώμα DXF primitive (Τέκτων line/arc) όταν λείπει — από το δείγμα. */
 const DEFAULT_PRIMITIVE_COLOR = 'FC8000';
+
+// ── ADR-608 Φ-texts — text sizing ────────────────────────────────────────────
+// Ο Τέκτων ζωγραφίζει native ttfont text με μέγεθος `<ptsize>` (font=30, abssize=0),
+// xmatrix κλίμακα γλύφου = 1 (όπως ΟΛΑ τα verified real records). Χαρτογραφούμε το
+// ύψος (μέτρα) → ptsize μέσω σταθεράς calibration (verified label ~0.25 m ≈ 11 pt).
+// Το ακριβές model-height ανά drawing-scale = tunable follow-up (όπως το object scale=1).
+const TEK_TEXT_PT_PER_M = 44;
+const TEK_TEXT_MIN_PT = 6;
+const TEK_TEXT_MAX_PT = 60;
+/** Fallback ύψος (scene units) όταν το text entity δεν φέρει height/fontSize. */
+const DEFAULT_TEXT_HEIGHT = 2.5;
+/** hallign του Τέκτονα από το alignment του κειμένου. */
+const H_ALIGN: Record<'left' | 'center' | 'right', number> = { left: 0, center: 1, right: 2 };
 
 interface Pt { readonly x: number; readonly y: number }
 
@@ -190,4 +204,47 @@ export function collectTekObjects(entities: readonly Entity[], f: number): TekOb
     id += 1;
   }
   return { objectsXml: records.join('\n'), objectCount: records.length, consumedIds };
+}
+
+export interface TekTextCollectResult {
+  readonly textsXml: string;
+  readonly textCount: number;
+  /** ADR-608 — distinct tag/ετικέτα ονόματα (για το `<tag_visibility>` registry). */
+  readonly tags: readonly string[];
+}
+
+/** Clamp helper για το ptsize (χωρίς εξάρτηση σε util). */
+function clampPt(pt: number): number {
+  return Math.min(TEK_TEXT_MAX_PT, Math.max(TEK_TEXT_MIN_PT, pt));
+}
+
+/**
+ * ADR-608 Φ-texts — συλλέγει τα ελεύθερα κείμενα (annotation labels N/A/1/0.00 +
+ * scale-bar νούμερα, αποδομημένα σε `text` primitives) ως `<text>` records (type 3).
+ * Θέση Y-flipped (SSoT `sceneXYToTekMeters`) + περιστροφή μέσω του SSoT `buildSymbolObjectXMatrix`
+ * (κλίμακα γλύφου 1, όπως τα real records)· μέγεθος → `ptsize`. `f` = μέτρα ανά scene unit.
+ */
+export function collectTekTexts(entities: readonly Entity[], f: number): TekTextCollectResult {
+  const records: string[] = [];
+  const tags = new Set<string>();
+  let id = 1;
+  for (const e of entities) {
+    if (e.type !== 'text') continue;
+    const t = e as TextEntity;
+    const content = (t.text ?? '').trim();
+    if (content === '') continue; // κενή ετικέτα → χωρίς record
+    const pos = sceneXYToTekMeters(t.position.x, t.position.y, f);
+    const heightMeters = (t.height ?? t.fontSize ?? DEFAULT_TEXT_HEIGHT) * f;
+    const ptSize = clampPt(Math.round(heightMeters * TEK_TEXT_PT_PER_M));
+    // Κλίμακα γλύφου 1 (native ttfont· μέγεθος από ptsize) — καθρέφτης real records.
+    const xmatrix = buildSymbolObjectXMatrix(pos.x, pos.y, degToRad(t.rotation ?? 0), 1);
+    const tag = entityTag(e);
+    records.push(buildTextRecordXml({
+      id, content, hAlign: H_ALIGN[t.alignment ?? 'left'], ptSize, xmatrix,
+      colorHex: entityColor(e), tag,
+    } satisfies TekText));
+    if (tag) tags.add(tag);
+    id += 1;
+  }
+  return { textsXml: records.join('\n'), textCount: records.length, tags: [...tags] };
 }

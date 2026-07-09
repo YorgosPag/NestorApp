@@ -7,10 +7,13 @@
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import type { SceneWriteOrigin } from '../../hooks/scene/scene-write-origin';
 import type { OpeningEntity } from '../types/opening-types';
+import { isSelfHostedOpening } from '../types/opening-types';
 import type { WallEntity } from '../types/wall-types';
 import { computeOpeningGeometry } from '../geometry/opening-geometry';
+import { selfOpeningHost } from '../geometry/opening-host';
 import { validateOpeningParams } from '../validators/opening-validator';
 import { inferOpeningIfcType } from '@/services/factories/opening.factory';
+import { resolveSceneUnits, type SceneUnits } from '../../utils/scene-units';
 // ADR-421 SLICE C — «type always wins» resolution at hydrate time.
 import { resolveOpeningEffective, openingEntityDiffersFromDoc, type OpeningTypeLink } from '../family-types/opening-type-resolution';
 import { resolveAutoOpeningTypeId } from '../family-types/auto-opening-type';
@@ -26,15 +29,29 @@ export function isWall(entity: AnySceneEntity): entity is WallEntity {
 }
 
 /**
- * Build a scene-side `OpeningEntity` από persisted `OpeningDoc` + host wall.
- * Returns `null` όταν ο host wall δεν είναι ακόμα στο scene — caller skips
- * την snapshot entry μέχρι το επόμενο round-trip (re-hydrate).
+ * Build a scene-side `OpeningEntity` από persisted `OpeningDoc` + host.
+ *
+ * WALL-HOSTED (`params.wallId` set): returns `null` όταν ο host wall δεν είναι
+ * ακόμα στο scene — caller skips την snapshot entry μέχρι το επόμενο round-trip.
+ *
+ * SELF-HOSTED (ADR-615, `params.selfHost` set, no `wallId`): NEVER returns null
+ * for a missing wall — synthesizes a straight host axis via `selfOpeningHost()`
+ * (§Decision 1) and feeds the SAME `computeOpeningGeometry` engine. Without this
+ * branch a free-standing κούφωμα hydrated to `null` on every Firestore snapshot →
+ * vanished on reload (the host wall it never had could never be found).
+ *
+ * @param sceneUnits scene coordinate units — used ONLY for the self-hosted axis
+ *   synthesis (wall-hosted derives units from `hostWall.params.sceneUnits`).
  */
 export function openingDocToEntity(
   doc: OpeningDoc,
   hostWall: WallEntity | null,
+  sceneUnits: SceneUnits = 'mm',
 ): OpeningEntity | null {
-  if (!hostWall) return null;
+  const selfHosted = isSelfHostedOpening(doc.params);
+  // Wall-hosted: the host wall MUST already be in the scene (retry next snapshot).
+  // Self-hosted: no BIM wall exists — the host is synthesized below, never awaited.
+  if (!selfHosted && !hostWall) return null;
   // ADR-421 SLICE C follow-up — auto-type-on-load (Revit «Generic»): a legacy
   // untyped opening whose nominal kind+width+height equal the kind default self-
   // links to the read-only built-in opening type on hydrate (custom-dimensioned
@@ -47,13 +64,19 @@ export function openingDocToEntity(
   // unchanged (legacy fast-path = zero regression). For typed openings the
   // type-governed fields (kind/width/height/frame/glazing) + re-derived
   // operationType flow in, so a stale drift-cache doc self-heals on hydrate.
+  // `selfHost` (instance-level, outside OpeningTypeParams) survives the merge, so
+  // a self-hosted opening stays self-hosted even after auto-type resolution.
   const params = resolveOpeningEffective(doc.params, {
     typeId,
     typeOverrides: doc.typeOverrides,
   });
   const typeResolved = params !== doc.params;
+  // ADR-615 §Decision 1 — one geometry/validation engine, two host providers.
+  // Self-hosted → synthetic straight axis; wall-hosted → the real WallEntity.
+  const host = selfHosted ? selfOpeningHost(params, sceneUnits) : hostWall!;
+  const units = selfHosted ? sceneUnits : (hostWall!.params.sceneUnits ?? 'mm');
   const validation = (!typeResolved && doc.geometry ? doc.validation : undefined)
-    ?? validateOpeningParams(params, hostWall).bimValidation;
+    ?? validateOpeningParams(params, selfHosted ? null : hostWall).bimValidation;
   // ADR-363 §5.4 — `params.kind` is the SINGLE source of truth; top-level `kind`
   // (+ `ifcType`) are DERIVED mirrors. Legacy docs whose top-level `doc.kind`
   // diverged self-heal here.
@@ -69,7 +92,7 @@ export function openingDocToEntity(
     geometry:
       !typeResolved && doc.geometry
         ? doc.geometry
-        : computeOpeningGeometry(params, hostWall, hostWall.params.sceneUnits ?? 'mm'),
+        : computeOpeningGeometry(params, host, units),
     validation,
     ifcType: inferOpeningIfcType(kind),
     visible: true,
@@ -84,6 +107,17 @@ export function openingDocToEntity(
 export interface OpeningMergeLevelManager {
   getLevelScene(levelId: string): SceneModel | null;
   setLevelScene(levelId: string, scene: SceneModel, origin?: SceneWriteOrigin): void;
+}
+
+/**
+ * Per-snapshot merge context built once by `prepareContext`: the host-wall
+ * lookup (wall-hosted openings) + the resolved scene units (ADR-615 self-hosted
+ * axis synthesis). Replaces the bare `Map<string, WallEntity>` context so the
+ * self-hosted branch can synthesize its host without a wall.
+ */
+interface OpeningMergeContext {
+  readonly wallsById: Map<string, WallEntity>;
+  readonly sceneUnits: SceneUnits;
 }
 
 /** Mutable bookkeeping the opening snapshot merge consults (owned by hook refs). */
@@ -113,7 +147,7 @@ export function mergeOpeningDocsIntoScene(
   lm: OpeningMergeLevelManager,
   refs: OpeningMergeRefs,
 ): void {
-  mergeDocsIntoScene<OpeningDoc, OpeningEntity, OpeningEntity['params'], Map<string, WallEntity>>(
+  mergeDocsIntoScene<OpeningDoc, OpeningEntity, OpeningEntity['params'], OpeningMergeContext>(
     docs,
     levelId,
     lm,
@@ -122,10 +156,15 @@ export function mergeOpeningDocsIntoScene(
       prepareContext: (scene) => {
         const wallsById = new Map<string, WallEntity>();
         for (const e of scene.entities) if (isWall(e)) wallsById.set(e.id, e);
-        return wallsById;
+        // ADR-615 — sceneUnits resolved once per snapshot (self-hosted axis synth).
+        return { wallsById, sceneUnits: resolveSceneUnits(scene) };
       },
-      docToEntity: (doc, _existing, wallsById) =>
-        openingDocToEntity(doc, wallsById.get(doc.params.wallId) ?? null),
+      // ADR-615 — self-hosted openings have no `wallId`: skip the (undefined) wall
+      // lookup and hydrate them via the synthetic host, so they survive reload.
+      docToEntity: (doc, _existing, ctx) =>
+        isSelfHostedOpening(doc.params)
+          ? openingDocToEntity(doc, null, ctx.sceneUnits)
+          : openingDocToEntity(doc, ctx.wallsById.get(doc.params.wallId ?? '') ?? null, ctx.sceneUnits),
       entityComparable: (e) => e.params, // unused (differs override provided)
       docComparable: (d) => d.params, // baseline seed = raw cached doc.params
       differs: (existing, doc) => openingEntityDiffersFromDoc(existing, doc),

@@ -62,7 +62,7 @@ import { toEntityPreviewTransform } from './grip-drag-preview-transform';
 import { sceneDistanceToMeters, formatMoveAngle } from '../../bim/labels/move-readout';
 import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-363 — line endpoint RESHAPE readout (length + angle, AutoCAD dynamic input).
-import { isLineEntity, isWallEntity } from '../../types/entities';
+import { isLineEntity } from '../../types/entities';
 import type { LineEntity } from '../../types/entities';
 // ADR-508/362 — full ISO perpendicular offset dimension (αρχική↔φάντασμα) στη whole-line MOVE της
 // κεντρικής λαβής· ΙΔΙΟΣ overlay dim SSoT με το body-drag → μία όψη, μηδέν διπλότυπο. ORTHO-gated.
@@ -76,9 +76,11 @@ import { paintPolarTrackingLine } from '../../canvas-v2/preview-canvas/polar-tra
 // ADR-397 / ADR-357 — POLAR + AutoAlign ίχνη κατά την περιστροφή (ΙΔΙΑ SSoT με τη σχεδίαση).
 import { resolveRotationTracking, paintRotationTracking, type RotationTracking } from './rotation-tracking-overlay';
 import { paintDirectionArc } from '../../canvas-v2/preview-canvas/direction-arc-paint';
+// SSoT gate «ΤΟΞΟ ΦΟΡΑΣ» (status-bar toggle, `cadToggleState.dirArc`) — το τόξο φοράς περιστροφής
+// είναι ΞΕΧΩΡΙΣΤΟ σύστημα (Giorgio 2026-07-09): OFF ⇒ κρύβεται σε ΚΑΘΕ περιστροφή grip-drag.
+import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 // ADR-397 §15b — SECOND direction arc: the LIVE corner angle between the rotating wall
 // and the neighbour it is joined to (same 🟢/🔴 SSoT paint as the rotation arc).
-import { resolveNeighborAxisAngle } from '../../bim/walls/wall-rotation-neighbor-angle';
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
@@ -109,6 +111,7 @@ import {
   paintGripActionAlignmentTraces,
   paintGripMoveClearanceDims,
   drawHatchGradientHandleMarker,
+  paintWallJoinCornerArc,
 } from './grip-ghost-preview-overlay-helpers';
 import { gripKindOf } from '../grip-kinds';
 
@@ -246,7 +249,9 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // προς τον κέρσορα (rotateReadoutAnchor). Το πρόσημο/χρώμα οδηγείται από το signed `rotateSweepDeg`
     // (ως προς τον άξονα αναφοράς, όχι world-X). Αντικαθιστά το παλιό λευκό readout pill (Giorgio
     // 2026-07-01: «σβήσε το λευκό label, γράψε τις μοίρες κόκκινες/πράσινες»).
-    if (dp.rotatePivot && dp.anchorPos && dp.rotateReadoutAnchor && dp.rotateSweepDeg !== undefined) {
+    // Gate «ΤΟΞΟ ΦΟΡΑΣ» (Giorgio 2026-07-09): OFF ⇒ κανένα τόξο φοράς στην περιστροφή.
+    if (dp.rotatePivot && dp.anchorPos && dp.rotateReadoutAnchor && dp.rotateSweepDeg !== undefined
+      && cadToggleState.isDirArcOn()) {
       paintDirectionArc(ctx, dp.rotatePivot, dp.anchorPos, dp.rotateReadoutAnchor, dp.rotateSweepDeg, t, vp);
     }
 
@@ -287,27 +292,15 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
       return;
     }
 
-    // ADR-397 §15b — SECOND direction arc while ROTATING a wall JOINED to a neighbour:
-    // the LIVE corner angle between the two walls' axes (Giorgio, στιγμιότυπο 153825).
-    // Same green/red SSoT paint as the rotation arc (#1 above), but the reference edge is
-    // the NEIGHBOUR axis (fixed) instead of the wall's original orientation → the value is
-    // the actual corner the two walls form right now. Radius = 35% of the live wall length
-    // so the arc is proportional & distinct from #1. No-op when the wall is free (no joined
-    // neighbour) or not rotating. Reuses the SSoT `JOIN_THRESHOLD_MM` neighbour detection.
-    if (isRotation && dp.rotatePivot && (transformed as { type?: string }).type === 'wall') {
-      const liveWall = transformed as unknown as WallEntity;
+    // ADR-397 §15b — SECOND direction arc while ROTATING a wall JOINED to a neighbour (SSoT
+    // helper, file-size SRP N.7.1): LIVE corner angle vs the fixed neighbour axis. Gate/no-op
+    // logic lives inside the helper. Wall corner-detection uses the SSoT `JOIN_THRESHOLD_MM`.
+    {
       const cornerScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
-      const cornerWalls = (cornerScene?.entities ?? []).filter(isWallEntity);
-      const wallLen = Math.hypot(
-        liveWall.params.end.x - liveWall.params.start.x,
-        liveWall.params.end.y - liveWall.params.start.y,
+      paintWallJoinCornerArc(
+        ctx, isRotation, dp, transformed as unknown as Entity,
+        (cornerScene?.entities ?? []) as unknown as readonly Entity[], resolveSceneUnits(cornerScene), t, vp,
       );
-      const cornerArc = resolveNeighborAxisAngle(
-        liveWall, cornerWalls, resolveSceneUnits(cornerScene), 0.35 * wallLen, dp.rotatePivot,
-      );
-      if (cornerArc) {
-        paintDirectionArc(ctx, cornerArc.pivotW, cornerArc.anchorW, cornerArc.cursorW, cornerArc.sweepDeg, t, vp);
-      }
     }
 
     // ADR-363 Phase 1G.3 — rotate-reference (6-click) guide segments. Drawn for

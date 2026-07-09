@@ -106,6 +106,14 @@ bim-ortho-reference face-relative)· ✅ μηδέν regression στο world pola
 
 ## Changelog
 
+- **2026-07-09 (§dir-arc-rotation-gate — το τόξο φοράς περιστροφής σέβεται πλέον το «ΤΟΞΟ ΦΟΡΑΣ»)**
+  - **Αίτημα Giorgio**: με «ΤΟΞΟ ΦΟΡΑΣ» OFF, το χρωματιστό τόξο φοράς (🟢/🔴 sweep arc + baseline + ζωντανή γωνία) εξακολουθούσε να εμφανίζεται στην περιστροφή grip-drag.
+  - **Αιτία**: ο rotation-drag painter (`hooks/tools/useGripGhostPreview.ts` → `paintDirectionArc`, 2 call sites: κύριο rotation + wall-neighbour δευτερεύον) ΔΕΝ είχε gate — μόνο το line/polyline **draw** dir-arc (`drawing-hover-overlays.ts`) περνούσε από `cadToggleState.isDirArcOn()`.
+  - **Fix**: και τα 2 `paintDirectionArc` call sites στο grip-drag gated με `cadToggleState.isDirArcOn()`. Ο μακρύς άξονας αναφοράς (rotate-reference guide segments) + ο pivot marker (⊙) ΜΕΝΟΥΝ (διακριτά affordances). Καθολικό (κάθε οντότητα που περιστρέφεται).
+- **2026-07-09 (§cyan-clearance-gate — οι κυανές clearance/listening dims αποσυνδέθηκαν από το «ΜΗΚΟΣ/ΓΩΝΙΑ»)**
+  - **Αίτημα Giorgio**: «δύο διαφορετικά συστήματα». Το «ΜΗΚΟΣ/ΓΩΝΙΑ» toggle πρέπει να κρύβει **ΜΟΝΟ τις λευκές** length/angle HUD ενδείξεις· οι **κυανές αποστάσεις** (neighbor-clearance/listening dims) ελέγχονται **ΑΠΟΚΛΕΙΣΤΙΚΑ** από το «Αποστάσεις» (OSNAP-popover sub-toggle).
+  - **ΔΙΟΡΘΩΝΕΙ** το §length-angle-hud-global (παρακάτω): εκεί το `paintGhostFaceDimensions` είχε μπει σκόπιμα κάτω από το `isLengthAngleHudVisible()`. **ΠΛΕΟΝ** το `canvas-v2/preview-canvas/ghost-face-dim-paint.ts:paintGhostFaceDimensions` gate-άρεται από `cadToggleState.isListeningDimOn()` («Αποστάσεις»), ΙΔΙΟ SSoT με το line-tool (`line-preview-helpers.ts:resolveLineFaceDims`). Οι λευκές (`wall-hud-paint`/`column-hud`/§line-hud) ΜΕΝΟΥΝ στο `isLengthAngleHudVisible()`.
+  - **Επίπτωση**: καθολικό (κάθε move/grip-drag clearance dim, 2D+3D). Regression guards: `canvas-v2/preview-canvas/__tests__/ghost-face-dim-paint.test.ts` (gate ON/OFF ανά toggle).
 - **2026-07-09 (§length-angle-hud-global — το status-bar toggle «ΜΗΚΟΣ/ΓΩΝΙΑ» έγινε ΚΑΘΟΛΙΚΟ)** — owner τεκμηρίωσης UI: **ADR-357**
   - **Αίτημα Giorgio**: το toggle «ΜΗΚΟΣ/ΓΩΝΙΑ» (κάτω CAD status bar) **δεν** αφορά πλέον ΜΟΝΟ το line/polyline draw HUD (§line-hud, `drawing-hover-overlays.ts`). Πρέπει να κρύβει τις ενδείξεις **ΜΗΚΟΥΣ + ΓΩΝΙΑΣ** σε **ΟΛΕΣ** τις οντότητες — DXF + BIM, τόσο κατά τη **ΣΧΕΔΙΑΣΗ** όσο και κατά το **GRIP-DRAG/επεξεργασία**, **2D + 3D**.
   - **SSoT predicate (ΝΕΟ):** `isLengthAngleHudVisible()` στο `systems/constraints/length-angle-hud-gate.ts` — ΕΝΑ σημείο που καθρεφτίζει το `cadToggleState.isDimHudOn()`. ΟΛΑ τα length/angle preview/HUD call sites ρωτούν αυτό το predicate. Tests: `systems/constraints/__tests__/length-angle-hud-gate.test.ts`.

@@ -29,8 +29,10 @@ import {
   MIN_OPENING_WIDTH_MM,
   MIN_SELF_HOST_THICKNESS_MM,
   MAX_SELF_HOST_THICKNESS_MM,
-  DEFAULT_SELF_HOST_THICKNESS_MM,
 } from '../types/opening-types';
+// ADR-615 — `DEFAULT_SELF_HOST_THICKNESS_MM` canonical home is `opening-host.ts` (SSoT), the SAME
+// source `opening-completion.ts` imports it from — NOT `opening-types.ts` (μηδέν διπλότυπη σταθερά, N.18).
+import { DEFAULT_SELF_HOST_THICKNESS_MM } from '../geometry/opening-host';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { clamp } from '../../utils/scalar-math';
 import {

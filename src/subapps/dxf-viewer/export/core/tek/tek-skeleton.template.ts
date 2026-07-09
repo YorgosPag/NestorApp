@@ -24160,7 +24160,7 @@ export const TEK_SKELETON_TEMPLATE = `<?xml version="1.0" encoding="UTF-8"?>
 <param><name>fp_param-&gt;with_lamda_check</name><value>1 </value></param>
 </parameters>
 <text>
-</text>
+<!--TEK_TEXT_RECORDS--></text>
 <line>
 <!--TEK_LINE_RECORDS--></line>
 <arc>

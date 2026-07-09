@@ -14,7 +14,7 @@ import type { SceneModel } from '../../../types/scene-types';
 
 // Includes the empty `<tag_visibility>` block the real skeleton carries, so the
 // ADR-608 tag registry injection has its target (mirror of the v9.1 skeleton).
-const FAKE_TPL = 'HEAD<tag_visibility>\n</tag_visibility><!--TEK_WALL_RECORDS--><!--TEK_OBJECT_RECORDS--><!--TEK_PLANE_RECORDS--><!--TEK_AUTOROOF_RECORDS--><!--TEK_LINE_RECORDS--><!--TEK_ARC_RECORDS--><!--TEK_STAIR_RECORDS-->TAIL';
+const FAKE_TPL = 'HEAD<tag_visibility>\n</tag_visibility><!--TEK_WALL_RECORDS--><!--TEK_OBJECT_RECORDS--><!--TEK_PLANE_RECORDS--><!--TEK_AUTOROOF_RECORDS--><!--TEK_LINE_RECORDS--><!--TEK_ARC_RECORDS--><!--TEK_STAIR_RECORDS--><!--TEK_TEXT_RECORDS-->TAIL';
 
 function wall(): Entity {
   return {
