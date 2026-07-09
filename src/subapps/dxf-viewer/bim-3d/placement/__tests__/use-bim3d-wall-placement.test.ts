@@ -74,6 +74,7 @@ const mockResolvePlacementSnap = resolvePlacementSnapWithView as jest.MockedFunc
 jest.mock('../../viewport/coordinate-transforms', () => ({
   // ADR-543 COL-traces-3D: camera-derived scene-units-per-pixel for the ambient screen scale.
   getPixelWorldSize: jest.fn(() => 0.01),
+  cameraSceneUnitsPerPixel: jest.fn(() => 0.01),
 }));
 jest.mock('../placement-cursor', () => ({
   acquirePlacementCursor: jest.fn(),

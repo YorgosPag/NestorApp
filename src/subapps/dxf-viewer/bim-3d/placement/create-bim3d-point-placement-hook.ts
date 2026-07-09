@@ -5,47 +5,41 @@
  *
  * The 7 `use-bim3d-*-placement.ts` point-placement hooks (electrical-panel,
  * furniture, mep-boiler, mep-fixture, mep-manifold, mep-radiator,
- * mep-water-heater) repeated the SAME ~120-line body verbatim, differing ΜΟΝΟ σε
- * 5 παραμέτρους: the ghost kind, the arming tool id(s), the tool-bridge store, the
+ * mep-water-heater) repeated the SAME body verbatim, differing ΜΟΝΟ σε 5
+ * παραμέτρους: the ghost kind, the arming tool id(s), the tool-bridge store, the
  * default mounting elevation, and the `bim:place-*-3d` EventBus event. This factory
- * is that single source — one `useEffect` + AbortController-gated DOM listeners on
- * the renderer canvas, no `useSyncExternalStore` (store reads at event time,
- * ADR-040). Mirror of the 2D `createSingleClickPlacementTool` (ADR-600).
+ * is that single source — it builds a {@link PlacementInteractionController} (ghost +
+ * shared `PlacementSnapMarker` on a mounting-elevation work-plane) and delegates the
+ * whole interaction lifecycle to the `usePlacementInteractionEffect` primitive
+ * (ADR-618), so the AbortController listeners / orbit-drag guard / cursor / arm-FSM are
+ * owned in ONE place. No `useSyncExternalStore` (store reads at event time, ADR-040).
+ * Mirror of the 2D `createSingleClickPlacementTool` (ADR-600).
  *
- * Armed only while one of the config tools is active AND the viewport is in 3D —
- * the SAME `activeTool` the 2D pipeline uses, so the existing per-tool FSM stays the
- * single source of truth. On click the screen point is projected onto the active
- * mounting-elevation work-plane, converted to scene units, and handed to the 2D tool
- * via the `bim:place-*-3d` EventBus bridge — reusing the whole commit path.
+ * Armed only while one of the config tools is active AND the viewport is in 3D. On
+ * click the screen point is projected onto the active mounting-elevation work-plane,
+ * converted to scene units, and handed to the 2D tool via the `bim:place-*-3d` EventBus
+ * bridge — reusing the whole commit path.
  *
- * OSNAP: when snap is ON the floor point is resolved against the shared snap engine
- * in plan mm before conversion; the SAME snap runs on move and click so ghost ==
- * commit (WYSIWYG).
+ * OSNAP: when snap is ON the floor point is resolved against the shared snap engine in
+ * plan mm before conversion; the SAME snap runs on move and click so ghost == commit.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-605-bim3d-point-placement-hook-ssot.md
+ * @see ./use-placement-interaction-effect.ts — the interaction lifecycle primitive (ADR-618)
  */
 
-import { useEffect, type MutableRefObject } from 'react';
+import { type MutableRefObject } from 'react';
 import { EventBus } from '../../systems/events/EventBus';
-import { toolStateStore } from '../../stores/ToolStateStore';
-import { useViewMode3DStore, selectIs3D } from '../stores/ViewMode3DStore';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
-import { useSelection3DStore } from '../stores/Selection3DStore';
 import type { ToolType } from '../../ui/toolbar/types';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
-import { dxfPlanToWorld } from '../viewport/coordinate-transforms';
 import {
   PLACEMENT_GHOST_3D_FACTORIES,
   type GhostBimType,
 } from './placement-ghost-3d-contracts';
-import { PlacementSnapMarker } from './PlacementSnapMarker';
-import { raycastFloorPoint, resolveActiveFloorElevationMm } from './raycast-floor-point';
-import { worldToPlanMm, planMmToScenePoint } from './world-to-scene-point';
-import { resolvePlacementSnap } from './placement-snap';
-import { acquirePlacementCursor, releasePlacementCursor } from './placement-cursor';
+import { planMmToScenePoint } from './world-to-scene-point';
+import { usePlacementInteractionEffect, type PlacementInteractionContext } from './use-placement-interaction-effect';
+import { createSnapMarkerPlacementController } from './snap-marker-placement-controller';
 import type { SceneUnits } from '../../utils/scene-units';
-
-const ORBIT_DRAG_PX = 5;
 
 /**
  * The `bim:place-*-3d` EventBus events routed by point-placement hooks. All share
@@ -102,132 +96,35 @@ export function createBim3DPointPlacementHook(
 ): (params: UseBim3DPointPlacementParams) => void {
   const { ghostKind, tools, bridgeStore, defaultMountingElevationMm, placeEvent } = config;
 
-  return function useBim3DPointPlacement(
-    { managerRef, canvasEl }: UseBim3DPointPlacementParams,
-  ): void {
-    useEffect(() => {
-      const manager = managerRef.current;
-      if (!canvasEl || !manager) return;
+  return function useBim3DPointPlacement({ managerRef, canvasEl }: UseBim3DPointPlacementParams): void {
+    usePlacementInteractionEffect({
+      managerRef,
+      canvasEl,
+      tools,
+      createController: (ctx: PlacementInteractionContext) => {
+        const ghost = PLACEMENT_GHOST_3D_FACTORIES[ghostKind](ctx.manager.scene);
+        const unitsNow = (): SceneUnits => bridgeStore.get()?.getSceneUnits() ?? 'mm';
+        // The box is centred on `mountingElevationMm`, so the cursor projects onto that
+        // work-plane. The SAME elevation feeds the raycast and `*ToMesh` (FFL + mounting)
+        // so ghost == cursor (WYSIWYG).
+        const mountingElevationMmNow = (): number =>
+          bridgeStore.get()?.overrides.mountingElevationMm ?? defaultMountingElevationMm;
 
-      const ghost = PLACEMENT_GHOST_3D_FACTORIES[ghostKind](manager.scene);
-      const snapMarker = new PlacementSnapMarker(manager.scene);
-      let abort: AbortController | null = null;
-      let downPos: { x: number; y: number } | null = null;
-
-      // The visible cursor is owned by the viewport interaction surface (the
-      // `role="application"` overlay carries the Tailwind `cursor-grab`), NOT the
-      // renderer <canvas> underneath it (ADR-406 fixture lesson).
-      const cursorEl = (canvasEl.closest('[role="application"]') as HTMLElement | null) ?? canvasEl;
-
-      const unitsNow = (): SceneUnits => bridgeStore.get()?.getSceneUnits() ?? 'mm';
-
-      // The box is centred on `mountingElevationMm`, so the cursor projects onto
-      // that work-plane. The SAME elevation feeds the raycast and `*ToMesh` (FFL +
-      // mounting) so ghost == cursor (WYSIWYG).
-      const mountingElevationMmNow = (): number =>
-        bridgeStore.get()?.overrides.mountingElevationMm ?? defaultMountingElevationMm;
-
-      const resolveWorkPlaneMm = (
-        clientX: number,
-        clientY: number,
-        planeElevMm: number,
-      ): { planMm: { x: number; y: number }; markerMm: { x: number; y: number } | null } | null => {
-        const world = raycastFloorPoint(manager.getCamera(), canvasEl, clientX, clientY, planeElevMm);
-        if (!world) return null;
-        const rawMm = worldToPlanMm(world);
-        const snap = resolvePlacementSnap(rawMm);
-        return snap
-          ? { planMm: snap.snappedMm, markerMm: snap.markerMm }
-          : { planMm: rawMm, markerMm: null };
-      };
-
-      const onMove = (e: PointerEvent): void => {
-        const floorElev = resolveActiveFloorElevationMm();
-        const planeElev = floorElev + mountingElevationMmNow();
-        const hit = resolveWorkPlaneMm(e.clientX, e.clientY, planeElev);
-        if (!hit) {
-          ghost.setVisible(false);
-          snapMarker.hide();
-          manager.markSceneDirty();
-          return;
-        }
-        const levelId = useBim3DEntitiesStore.getState().activeLevelId ?? undefined;
-        // Pass the FLOOR elevation — `*ToMesh` re-adds `mountingElevationMm` and
-        // centres the box, so the ghost lands back on the work-plane the cursor was
-        // raycast against.
-        ghost.update(planMmToScenePoint(hit.planMm, unitsNow()), floorElev, levelId);
-        ghost.setVisible(true);
-        if (hit.markerMm) snapMarker.show(dxfPlanToWorld(hit.markerMm.x, hit.markerMm.y, planeElev), manager.getCamera());
-        else snapMarker.hide();
-        manager.markSceneDirty();
-      };
-
-      const onLeave = (): void => {
-        ghost.setVisible(false);
-        snapMarker.hide();
-        manager.markSceneDirty();
-      };
-
-      const onDown = (e: PointerEvent): void => {
-        if (e.button === 0) downPos = { x: e.clientX, y: e.clientY };
-      };
-
-      const onClick = (e: MouseEvent): void => {
-        const moved = downPos ? Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y) : 0;
-        downPos = null;
-        if (moved > ORBIT_DRAG_PX) return;
-        const floorElev = resolveActiveFloorElevationMm();
-        const planeElev = floorElev + mountingElevationMmNow();
-        const hit = resolveWorkPlaneMm(e.clientX, e.clientY, planeElev);
-        if (!hit) return;
-        e.preventDefault();
-        e.stopPropagation();
-        EventBus.emit(placeEvent, { point: planMmToScenePoint(hit.planMm, unitsNow()) });
-      };
-
-      const setup = (): void => {
-        if (abort) return;
-        useSelection3DStore.getState().clearSelection();
-        abort = new AbortController();
-        const { signal } = abort;
-        canvasEl.addEventListener('pointermove', onMove, { signal });
-        canvasEl.addEventListener('pointerleave', onLeave, { signal });
-        canvasEl.addEventListener('pointerdown', onDown, { signal });
-        canvasEl.addEventListener('click', onClick, { signal });
-        acquirePlacementCursor(cursorEl);
-      };
-
-      const teardown = (): void => {
-        const wasActive = abort !== null;
-        abort?.abort();
-        abort = null;
-        downPos = null;
-        ghost.setVisible(false);
-        snapMarker.hide();
-        // Release the placement cursor ONLY if we held it (balanced acquire/release).
-        if (wasActive) releasePlacementCursor(cursorEl);
-        manager.markSceneDirty();
-      };
-
-      const apply = (): void => {
-        const active =
-          tools.includes(toolStateStore.get().activeTool) &&
-          selectIs3D(useViewMode3DStore.getState());
-        if (active) setup();
-        else teardown();
-      };
-
-      apply();
-      const unsubTool = toolStateStore.subscribe(apply);
-      const unsubView = useViewMode3DStore.subscribe(apply);
-
-      return () => {
-        unsubTool();
-        unsubView();
-        teardown();
-        ghost.dispose();
-        snapMarker.dispose();
-      };
-    }, [canvasEl, managerRef]);
+        return createSnapMarkerPlacementController(ctx, {
+          offsetMm: mountingElevationMmNow,
+          showGhost: (hit) => {
+            const levelId = useBim3DEntitiesStore.getState().activeLevelId ?? undefined;
+            // Pass the FLOOR elevation — `*ToMesh` re-adds `mountingElevationMm` and centres
+            // the box, so the ghost lands back on the work-plane the cursor was raycast against.
+            ghost.update(planMmToScenePoint(hit.planMm, unitsNow()), hit.floorElev, levelId);
+            ghost.setVisible(true);
+            return hit.planeElev; // the marker sits on the mounting work-plane
+          },
+          hideGhost: () => ghost.setVisible(false),
+          commit: (hit) => EventBus.emit(placeEvent, { point: planMmToScenePoint(hit.planMm, unitsNow()) }),
+          disposeGhost: () => ghost.dispose(),
+        });
+      },
+    });
   };
 }
