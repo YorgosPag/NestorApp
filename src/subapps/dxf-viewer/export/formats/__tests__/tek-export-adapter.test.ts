@@ -116,6 +116,20 @@ describe('assembleTekDocument', () => {
     expect(xml).not.toMatch(/TEK_STAIR_RECORDS/);       // marker καταναλώθηκε
   });
 
+  it('ADR-512 Φ-areas — measure-area → native area (<hatch> boundary=1 + <text> «Ε=..τμ»), ΟΧΙ γραμμές', () => {
+    // measure-area entity = κλειστό polyline (10m×8m=80m²) με measurement:true.
+    const area = {
+      id: 'area1', type: 'polyline', closed: true, measurement: true,
+      vertices: [{ x: 0, y: 0 }, { x: 10000, y: 0 }, { x: 10000, y: 8000 }, { x: 0, y: 8000 }],
+    } as unknown as Entity;
+    const { xml } = assembleTekDocument(FAKE_TPL, scene([area]), 'both');
+    expect(xml).toContain('<type>6</type>');         // γεμισμένη περιοχή (hatch)
+    expect(xml).toContain('<boundary>1</boundary>'); // native area (user hatch = 0)
+    expect(xml).toContain('<s>Ε = 80.00 τμ</s>');    // ετικέτα εμβαδού (type 3)
+    // ΟΧΙ Ν ξεχωριστές <line> records (το `<render_color>1717FF` είναι line-specific marker).
+    expect(xml).not.toContain('<render_color>1717FF</render_color>');
+  });
+
   it('ADR-583/608 — annotation-symbol αποδομείται σε <line> records (type 4)', () => {
     const arrow = {
       id: 'na', type: 'annotation-symbol', layerId: 'lyr_a', color: '#00ff00',

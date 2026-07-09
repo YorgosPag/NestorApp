@@ -153,3 +153,71 @@ ground truth. Αποκωδικοποίηση επιβεβαίωσε/διόρθω
   (+test) — μηδέν διπλό dimension mapping (SSoT). scene-builder swap σε `tekDimToDimensionEntities`. Tests:
   νέο `tek-dim-to-dimension.test.ts` (6) + ενημέρωση structural/import integration· **82/82 GREEN** (io/tek)·
   jscpd:diff clean. ⏳ Εκκρεμεί browser-verify Giorgio (import → διάσταση ως ενιαίος οργανισμός).
+- **2026-07-09** — **ADR-608: Τέκτων-parity χρωμάτων/βελών διάστασης (4 ξεχωριστά χρώματα + τύπος άκρου)**
+  (Opus, Giorgio: «η εισαγόμενη διάσταση να είναι πανομοιότυπη με τον Τέκτονα»). Το `<dim><record>` κρατά
+  **4 ΞΕΧΩΡΙΣΤΑ** χρώματα (panel «Εμφάνιση», ground-truth από `DIASTASI.tek`): γραμμή `<color>` (πράσινη
+  `00FF00`), κείμενο `<dtext_color>` (κίτρινο `FFFF80`) — ήδη σωστά· **βέλη/άκρα `<ends_color>` (μπορντώ
+  `A40050`)** + **οδηγοί/witness `<drv_color>` (μπλε `809CFC`)** — έλειπαν (τα witness έβγαιναν πράσινα =
+  line color, τα βέλη πράσινα). **Fix (SSoT audit πρώτα, μηδέν διπλότυπα):** `TekDimRecord` +`endsColor`/
+  `drvColor` (direct children του record, μετά τα `<seg>`/`<inter>`)· `extractDimRecords` διαβάζει
+  `ends_color`/`drv_color`· `dimOverrides` χαρτογραφεί → `arrowColor`/`arrowTrueColor` = ends (μπορντώ),
+  `dimclre`/`dimclreTrueColor` = drv (μπλε, όχι πια line color). **Τύπος άκρου:** `end_style=8` = «Βέλος 2»
+  (τριγωνικό γεμάτο, panel-verified) → `dimblk='closedFilled'` μέσω named map `TEK_END_STYLE_ARROW_BLOCK`
+  (μόνο verified τιμές· άγνωστο style → κληρονομεί το ενεργό DimStyle, μηδέν μαντεψιά). Reuse hex→χρώμα SSoT
+  (`tekColorToHex`/`hexToAci`/`hexToTrueColor`) + arrowhead block SSoT (`ARROWHEAD_BLOCKS`). Ο renderer
+  τα τιμά ήδη (γρ.183 witness `dimclreTrueColor`, γρ.259-262 arrows `arrowTrueColor` truecolor-wins). **84/84
+  GREEN** (io/tek, +2 mapper tests) · jscpd:diff clean.
+- **2026-07-09** — **ADR-608: μέγεθος βέλους από GROUND-TRUTH explode** (Giorgio: εξήγαγε τα βέλη σε
+  `DIASTASI-ΒΕΛΗ.dxf` — στην πραγματικότητα Tekton XML με το «Βέλος 2» σπασμένο σε `<line>` primitives).
+  **Μέτρηση:** κάθε τρίγωνο βέλους = **μήκος 0.12m** (κατά τον άξονα) × **πλάτος βάσης 0.05m**. Κρίσιμο:
+  το `arrow_len` (λ=0.3) **ΔΕΝ** είναι μήκος-σε-μέτρα — το σχεδιασμένο μήκος = **0.4 × λ** (0.3→0.12).
+  Η προηγούμενη υπόθεση (arrow_len=μέτρα) ήταν λάθος· η μέτρηση τη διόρθωσε → το Τέκτων-βέλος είναι
+  **μικρότερο** (1.89mm) από το style default (2.5mm), όχι μεγαλύτερο. **Fix (scale-independent):** νέο
+  `arrowLenM` (extractor `arrow_len`) + `resolveArrowSizeMm` → κρατά την ΑΝΑΛΟΓΙΑ σχεδιασμένου-βέλους-
+  προς-ύψος-κειμένου (`0.4·arrowLenM / textSizeM`) και την εφαρμόζει στο ενεργό `dimtxt` (text & arrow
+  περνούν από το ΙΔΙΟ dimscale/pxPerMm → αρκεί η αναλογία)· clamp [1,8]mm ώστε να μη βγει τεράστιο/
+  μικροσκοπικό. `dimasz` override στον mapper. Named consts `TEK_ARROW_DRAWN_PER_MARK=0.4`. **85/85 GREEN**
+  (io/tek, +1 dimasz test) · jscpd:diff clean. ⏳ Εκκρεμή: (α) browser-verify Giorgio (μπορντώ βέλη / μπλε
+  οδηγοί / μέγεθος)· (β) πλάτος βέλους — το SSoT `closedFilled` έχει half-width 0.15 vs Τέκτων 0.21 (κοινό
+  block, δεν πειράχτηκε)· (γ) πορτοκαλί ομοαξωνική γραμμή στην κορυφή βέλους — κανένα πεδίο στο record.
+- **2026-07-09** — **ADR-608: μέγεθος βέλους → ΡΗΤΗ browser-βαθμονόμηση (step-by-step, Giorgio)** — το
+  proportional (αναλογία βέλους/κειμένου) έβγαζε λάθος μέγεθος στη δοκιμή. Νέα προσέγγιση: ο Giorgio δίνει
+  ρητές διαστάσεις & βαθμονομούμε. **Βήμα 1:** η κάθετη γραμμή/βάση του «Βέλος 2» = **0.050m** (drawing units,
+  ταιριάζει τη ground-truth μέτρηση). Formula: ο renderer σχεδιάζει base = `0.3 × dimasz × dimscale × mmToScene`
+  (`closedFilled` half-width 0.15→ratio 0.3· dimscale=`DEFAULT_DRAWING_SCALE` 100· scene=mm) → `dimasz =
+  base_mm/(0.3×100) = 1.667mm`. Named consts `TEK_ARROW_BASE_M=0.05`/`ARROW_BASE_RATIO=0.3`/`TEK_RENDER_DIMSCALE=100`
+  — ο συντ. βαθμονόμησης απορροφά απόκλιση κλίμακας (νέα μέτρηση Giorgio → αλλάζω ΜΟΝΟ το `TEK_ARROW_BASE_M`).
+  Αφαιρέθηκε το proportional `resolveArrowSizeMm(rec,dimtxt)`. **85/85 GREEN** · jscpd clean. ⚠️ `closedFilled`
+  δένει base↔length (ratio 0.3): αν ο Giorgio ζητήσει ανεξάρτητο μήκος → Tekton-specific arrowhead block (επόμενο).
+- **2026-07-09** — **ADR-608: custom `tektonArrow2` arrowhead block (base 0.050 + μήκος 0.120 ανεξάρτητα)**.
+  Ο Giorgio επιβεβαίωσε base 0.050m (η κάθετη γραμμή) και όρισε **μήκος** (μέσο βάσης→κορυφή, όπου συγκλίνουν
+  οι πλάγιες) = **0.120m**. Το `closedFilled` (half-width 0.15, base:length σταθερό 0.3) ΔΕΝ μπορεί και τα δύο →
+  νέο block `tektonArrow2` στο SSoT `dim-arrowhead-blocks.ts` με `TEKTON_ARROW2_HALF_WIDTH = 0.025/0.120 ≈ 0.208`
+  (γεμάτο τρίγωνο, Τέκτων αναλογία). `end_style=8`→`tektonArrow2`. `dimasz` οδηγεί πλέον το ΜΗΚΟΣ (block length
+  = 1 unit): `dimasz = 0.120·1000/100 = 1.2mm` (`TEK_ARROW_LENGTH_M`). Η βάση 0.050 προκύπτει από το half-width
+  του block × dimasz. Νέα μέτρηση → `TEK_ARROW_LENGTH_M` (μήκος) ή `TEKTON_ARROW2_HALF_WIDTH` (βάση). Επίσης:
+  ο Giorgio διέγνωσε ×2 στο δικό του σχέδιο Τέκτονα (γεωμετρία μισή της ετικέτας)· διορθώθηκε με restart Τέκτονα
+  (δεν ήταν δικό μας bug· το βέλος μετρήθηκε από ωμές συντεταγμένες, ανεπηρέαστο). **Tests: dimasz 1.2 + block
+  half-width 0.208 (no silent fallback)· 595/595 GREEN** (dimensions+io/tek) · jscpd clean.
+- **2026-07-09** — **ADR-608: annotation scale (κείμενο+βέλη «σαν Τέκτονας»)**. Giorgio: μετρημένα σωστά (βέλος
+  0.050/0.120, δim 2.00) αλλά **μικροσκοπικά** στον καμβά. Root: οι διαστάσεις σχεδιάζονται σε ΠΡΑΓΜΑΤΙΚΟ μέγεθος
+  (model-space) → μικρές σε προβολή κτιρίου (ο Τέκτων κλιμακώνει σημάνσεις). Απόφαση Giorgio (AskUserQuestion):
+  «annotation scale, ρυθμιζόμενος συντελεστής, το βέλος μεγαλώνει». Fix: override `dimscale = TEK_RENDER_DIMSCALE
+  × TEK_DIM_ANNOTATION_MAG` (100×3=300) → κλιμακώνει ΟΜΟΙΟΜΟΡΦΑ κείμενο+βέλος+κενά+προεκτάσεις (γνήσιο annotation
+  scale, `resolveEffectiveDimscale` παίρνει το >1 override, αγνοεί το global drawingScale). Όλες οι αναλογίες
+  (base:length, text:arrow) ανέπαφες. `TEK_DIM_ANNOTATION_MAG=3` = starting guess· browser-βαθμονομείται (νέα
+  προτίμηση Giorgio → άλλαξε ΜΟΝΟ το MAG). **Tests: dimscale 300· 10/10 mapper GREEN** · jscpd clean.
+- **2026-07-09** — **ADR-608: mirror βέλους Τέκτονα** (Giorgio screenshot: «τα βέλη είναι εκτός των 2 μέτρων»).
+  Τα μπορντώ βέλη είχαν το ΣΩΜΑ (βάση) εκτός του μήκους διάστασης (μύτη προς κέντρο). Fix: mirror ΜΟΝΟ το
+  `tektonArrow2` block (base `[-1,±hw]`→`[+1,±hw]`, apex/tip παραμένει στο [0,0]) → σώμα ΜΕΣΑ στο μήκος, μύτη
+  έξω (στάνταρ). Targeted (το block είναι Tekton-only)· μηδέν αλλαγή σε χρώματα/κείμενο/witness/γραμμή/μέγεθος/
+  γεωμετρία. Test κλειδώνει `v2[0]=1`. **19/19 GREEN** (mapper+arrowhead-pair) · jscpd clean.
+- **2026-07-09** — **ADR-608: βέλος Τέκτονα outline-only** (Giorgio: «όχι γεμάτα/συμπαγές μπορντώ, μόνο περίγραμμα»).
+  `tektonArrow2` `solid: true`→`false` (triangle + block flag) → ο renderer κάνει `stroke` αντί `fill`. Μόνο αυτό·
+  μηδέν άλλη αλλαγή. Test κλειδώνει `solid=false`. **27/27 GREEN** (mapper+arrowhead+block-primitives) · jscpd clean.
+- **2026-07-09** — **ADR-608: 2 επιπλέον γραμμές στο «Βέλος 2»** (Giorgio Tekton screenshot). Σε unit space
+  (1 unit = μήκος 0.120m → κλιμακώνονται αναλογικά): (α) κάθετη παύλα στη ΜΥΤΗ 0.16m (`TIP_TICK_HALF=0.16/0.12/2`,
+  centered· line `[0,∓h]`), (β) οριζόντια ομοαξονική 0.30m από μύτη→κέντρο (`LEADER_LEN=0.30/0.12=2.5`· line
+  `[0,0]→[+2.5,0]`, +X=εσωτερικά μετά το mirror). Named consts + `TEKTON_ARROW2_LEN_M` SSoT. Κληρονομούν το
+  μπορντώ χρώμα του βέλους (arrowhead single-color). Test κλειδώνει geometry length 3 + tick/leader coords.
+  **27/27 GREEN** · jscpd clean.

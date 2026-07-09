@@ -58,6 +58,9 @@ export function extractDimRecords(root: Element): { dims: TekDimRecord[]; warnin
       dtextColor: childText(record, 'dtext_color') ?? '',
       textSizeM: childNumber(record, 'size', 0),
       endStyle: Math.round(childNumber(record, 'end_style', 0)),
+      endsColor: childText(record, 'ends_color') ?? '',
+      drvColor: childText(record, 'drv_color') ?? '',
+      arrowLenM: childNumber(record, 'arrow_len', 0),
       refPoints,
     });
   }

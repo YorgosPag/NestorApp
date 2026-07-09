@@ -8,16 +8,14 @@
 import type { Point2D } from '../../../rendering/types/Types';
 import type { DxfScene } from '../../../canvas-v2/dxf-canvas/dxf-types';
 import type { ColorLayer } from '../../../canvas-v2/layer-canvas/layer-types';
-// 🏢 ADR-107: Centralized UI Size Defaults and Text Metrics Ratios
-// 🏢 ADR-142: Centralized Default Font Size
-import { TEXT_METRICS_RATIOS, TEXT_SIZE_LIMITS } from '../../../config/text-rendering-config';
 import { calculateBoundingBox } from '../../../rendering/entities/shared/geometry-utils';
 import { EMPTY_BOUNDS } from '../../../config/geometry-constants';
 import { isValidPointStrict } from '../../../rendering/entities/shared/entity-validation-utils';
 import { SpatialUtils } from '../../../core/spatial/SpatialUtils';
-// ADR-436/ADR-363 — BIM 2D bounds SSoT (geometry.bbox → {min,max}). Reused here so
-// Home/Shift+1 zoom-extents frames BIM entities, not just DXF primitives.
-import { calculateBimEntity2DBounds } from '../../../bim/utils/bim-bounds';
+// ADR-587 Φ9 / ADR-010 — canonical per-type 2D bounds SSoT (the SAME table the
+// hit-test / marquee / viewport-culling use). Reused here so Home/Shift+1
+// zoom-extents frames EVERY renderable type, not a hardcoded DXF+BIM subset.
+import { resolveEntityBounds } from '../../../rendering/hitTesting/entity-bounds-ssot';
 import type { Entity } from '../../../types/entities';
 
 // ============================================================================
@@ -88,74 +86,27 @@ export function createBoundsFromDxfScene(
     return scene.bounds;
   }
 
-  // Calculate bounds from entities
+  // Calculate bounds from entities.
+  //
+  // 🏢 SSoT (ADR-587 Φ9 / ADR-010): delegate each entity's 2D extent to the
+  // canonical `resolveEntityBounds` — the SAME per-type table the click hit-test,
+  // marquee selection and viewport-culling already use. Previously this was a
+  // hand-rolled switch covering only line/circle/arc/polyline/text + a BIM-only
+  // default, so `dimension` (and ellipse/spline/hatch/rect/scale-bar/
+  // opening-info-tag/annotation-symbol) contributed ZERO points → Home/Shift+1
+  // silently ignored them. A lone dimension gave null bounds → no zoom at all;
+  // it "worked" only when a covered entity was co-present. One resolver now frames
+  // every renderable type the rest of the app already knows how to bound.
   const allPoints: Point2D[] = [];
 
   for (const entity of scene.entities) {
-    switch (entity.type) {
-      case 'line':
-        // 🛡️ GUARD: Ensure start/end exist and have valid finite coordinates
-        // 🏢 ADR: Use centralized isValidPointStrict for bounds calculations
-        if (isValidPointStrict(entity.start) && isValidPointStrict(entity.end)) {
-          allPoints.push(entity.start, entity.end);
-        }
-        break;
-      case 'circle':
-        // 🛡️ GUARD: Ensure center/radius exist and are finite
-        // 🏢 ADR: Use centralized isValidPointStrict for bounds calculations
-        // 🏢 ADR-161: Use Number.isFinite() for strict type checking (no coercion)
-        if (isValidPointStrict(entity.center) && Number.isFinite(entity.radius)) {
-          allPoints.push(
-            { x: entity.center.x - entity.radius, y: entity.center.y - entity.radius },
-            { x: entity.center.x + entity.radius, y: entity.center.y + entity.radius }
-          );
-        }
-        break;
-      case 'arc':
-        // 🛡️ GUARD: Ensure center/radius exist and are finite
-        // 🏢 ADR: Use centralized isValidPointStrict for bounds calculations
-        // 🏢 ADR-161: Use Number.isFinite() for strict type checking (no coercion)
-        if (isValidPointStrict(entity.center) && Number.isFinite(entity.radius)) {
-          allPoints.push(
-            { x: entity.center.x - entity.radius, y: entity.center.y - entity.radius },
-            { x: entity.center.x + entity.radius, y: entity.center.y + entity.radius }
-          );
-        }
-        break;
-      case 'polyline':
-        // 🛡️ GUARD: Ensure vertices exist and are valid
-        // 🏢 ADR: Use centralized isValidPointStrict for bounds calculations
-        if (entity.vertices && Array.isArray(entity.vertices)) {
-          const validVertices = entity.vertices.filter(isValidPointStrict);
-          allPoints.push(...validVertices);
-        }
-        break;
-      case 'text':
-        // 🛡️ GUARD: Ensure position exists and is finite
-        // 🏢 ADR: Use centralized isValidPointStrict for bounds calculations
-        if (isValidPointStrict(entity.position)) {
-          allPoints.push(entity.position);
-          // 🏢 ADR-107: Use centralized text metrics ratio for width estimation
-          // 🏢 ADR-142: Use centralized DEFAULT_FONT_SIZE for fallback
-          const textWidth = (entity.text?.length || 1) * (entity.height || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE) * TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
-          allPoints.push({
-            x: entity.position.x + textWidth,
-            y: entity.position.y + (entity.height || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE)
-          });
-        }
-        break;
-      default: {
-        // 🏢 ADR-436/ADR-363 — BIM entities (wall/column/beam/foundation/slab/opening/
-        // mep-*/…) expose no DXF primitive points; their 2D extent lives in
-        // geometry.bbox. Project it via the BIM bounds SSoT so Home/Shift+1
-        // zoom-extents includes them. Previously the switch had no BIM cases →
-        // every BIM entity was ignored → fit-to-view framed only raw DXF geometry.
-        const bimBounds = calculateBimEntity2DBounds(entity as unknown as Entity);
-        if (bimBounds && isValidPointStrict(bimBounds.min) && isValidPointStrict(bimBounds.max)) {
-          allPoints.push(bimBounds.min, bimBounds.max);
-        }
-        break;
-      }
+    const box = resolveEntityBounds(entity as unknown as Entity);
+    if (!box) continue;
+    const min: Point2D = { x: box.minX, y: box.minY };
+    const max: Point2D = { x: box.maxX, y: box.maxY };
+    // 🛡️ GUARD: Skip providers that yielded NaN/Infinity (ADR-161 strict finite).
+    if (isValidPointStrict(min) && isValidPointStrict(max)) {
+      allPoints.push(min, max);
     }
   }
 

@@ -64,3 +64,63 @@ describe('ADR-436 — createBoundsFromDxfScene includes BIM entities', () => {
     });
   });
 });
+
+/**
+ * Zoom-extents (Home / Shift+1) now delegates each entity's 2D extent to the
+ * canonical `resolveEntityBounds` SSoT. Regression guard for the bug where a lone
+ * `dimension` on the canvas gave NULL bounds (the old hand-rolled switch had no
+ * `dimension` case → it fell to the BIM-only default → null) so Home did nothing.
+ */
+describe('createBoundsFromDxfScene frames a lone dimension (SSoT delegation)', () => {
+  it('frames a single wrapped linear dimension by its rendered world bounds', () => {
+    const scene = sceneOf([
+      {
+        id: 'd1',
+        type: 'dimension',
+        dimensionEntity: {
+          id: 'd1',
+          type: 'dimension',
+          dimensionType: 'linear',
+          rotation: 0,
+          defPoints: [
+            { x: 100, y: 500 },
+            { x: 900, y: 500 },
+            { x: 100, y: 460 }, // dim-line definition point (offset below)
+          ],
+        },
+      },
+    ]);
+    // Non-null bounds spanning at least the feature points → Home has something to frame.
+    expect(createBoundsFromDxfScene(scene, true)).toEqual({
+      min: { x: 100, y: 460 },
+      max: { x: 900, y: 500 },
+    });
+  });
+
+  it('unions a dimension with a DXF primitive', () => {
+    const scene = sceneOf([
+      { id: 'l1', type: 'line', start: { x: 0, y: 0 }, end: { x: 50, y: 50 } },
+      {
+        id: 'd1',
+        type: 'dimension',
+        dimensionEntity: {
+          id: 'd1',
+          type: 'dimension',
+          dimensionType: 'linear',
+          rotation: 0,
+          defPoints: [
+            { x: 200, y: 300 },
+            { x: 600, y: 300 },
+            { x: 200, y: 260 },
+          ],
+        },
+      },
+    ]);
+    const b = createBoundsFromDxfScene(scene, true);
+    expect(b).not.toBeNull();
+    expect(b!.min.x).toBe(0);
+    expect(b!.min.y).toBe(0);
+    expect(b!.max.x).toBe(600);
+    expect(b!.max.y).toBe(300);
+  });
+});

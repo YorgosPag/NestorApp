@@ -33,17 +33,67 @@ function toScene(p: TekPoint2D, units: SceneUnits): Point2D {
 }
 
 /**
- * Style override από τα χρώματα του Τέκτονα: πράσινη γραμμή/βοηθητικές (`<color>`), κίτρινο
- * κείμενο (`<dtext_color>`). Κάθε κανάλι παίρνει truecolor (ακριβές hex, wins στο render) +
- * ACI companion (nearest-match, για DXF export round-trip). Absent dtext → fallback στο line color.
+ * `end_style_res` του Τέκτονα → arrowhead block name του SSoT (`ARROWHEAD_BLOCKS`). ΜΟΝΟ
+ * panel-verified τιμές — 8 = «Βέλος 2» = τριγωνικό γεμάτο = custom `tektonArrow2` (base 0.050 :
+ * μήκος 0.120). Άγνωστο style → `undefined` (κληρονομεί το `dimblk` του ενεργού DimStyle).
+ */
+const TEK_END_STYLE_ARROW_BLOCK: Readonly<Record<number, string>> = {
+  8: 'tektonArrow2',
+};
+
+/**
+ * ADR-608 — **Annotation scale** (Giorgio 2026-07-09: «σαν Τέκτονας»). Οι διαστάσεις Τέκτονα
+ * σχεδιάζονται σε ΠΡΑΓΜΑΤΙΚΟ μέγεθος (βέλος 0.120m, κείμενο ~0.25m) → μικροσκοπικές σε προβολή
+ * κτιρίου (model-space, μικραίνουν στο zoom-out). Λύση: override `dimscale` = `TEK_RENDER_DIMSCALE
+ * × TEK_DIM_ANNOTATION_MAG` → κλιμακώνει ΟΜΟΙΟΜΟΡΦΑ κείμενο + βέλος + κενά + προεκτάσεις (γνήσιο
+ * annotation scale), κρατώντας ΟΛΕΣ τις αναλογίες (βάση:μήκος, text:arrow). Καθολικός συντελεστής
+ * μεγέθυνσης — browser-βαθμονομούμενος: νέα προτίμηση Giorgio → άλλαξε ΜΟΝΟ το `TEK_DIM_ANNOTATION_MAG`.
+ */
+const TEK_DIM_ANNOTATION_MAG = 3;
+
+/**
+ * Μέγεθος βέλους «Βέλος 2» — **ΡΗΤΗ browser-βαθμονόμηση** (Giorgio 2026-07-09, step-by-step). Δύο
+ * ανεξάρτητες διαστάσεις (γι' αυτό custom `tektonArrow2` block, όχι `closedFilled`):
+ *  - **ΜΗΚΟΣ** (μέσο βάσης → κορυφή, εκεί που συγκλίνουν οι πλάγιες) = `TEK_ARROW_LENGTH_M` (0.120m)
+ *    → εδώ, μέσω `dimasz` (block length = 1.0 unit).
+ *  - **ΒΑΣΗ** (κάθετη γραμμή) = 0.050m → κωδικοποιημένη στο `TEKTON_ARROW2_HALF_WIDTH` του block
+ *    (`dim-arrowhead-blocks.ts`), ΟΧΙ εδώ.
+ *
+ * Ο renderer: length = `dimasz × dimscale × mmToSceneUnits` (scene = mm, `dimscale` = drawing scale
+ * default `TEK_RENDER_DIMSCALE` 1:100, βλ. `resolveEffectiveDimscale`+`DEFAULT_DRAWING_SCALE`). Άρα
+ * `dimasz(paper-mm) = length_mm / dimscale`. Νέα μέτρηση Giorgio → άλλαξε `TEK_ARROW_LENGTH_M` (μήκος)
+ * ή το `TEKTON_ARROW2_HALF_WIDTH` του block (βάση).
+ */
+const TEK_ARROW_LENGTH_M = 0.12;
+const TEK_RENDER_DIMSCALE = 100;
+const M_TO_MM = 1000;
+
+function resolveArrowSizeMm(): number {
+  return (TEK_ARROW_LENGTH_M * M_TO_MM) / TEK_RENDER_DIMSCALE;
+}
+
+/**
+ * Style override από τα **4 ξεχωριστά** χρώματα + βέλος του Τέκτονα (panel «Εμφάνιση»):
+ * γραμμή διάστασης (`<color>`), κείμενο (`<dtext_color>`), βέλη/άκρα (`<ends_color>`, μπορντώ),
+ * οδηγοί/witness (`<drv_color>`, μπλε), τύπος άκρου (`<end_style>`→`dimblk`), μέγεθος βέλους (`dimasz`
+ * = ρητή βαθμονόμηση) + **annotation scale** (`dimscale`, βλ. `TEK_DIM_ANNOTATION_MAG`). Κάθε χρώμα
+ * παίρνει truecolor (ακριβές hex, wins στο render) + ACI companion (nearest-match, DXF round-trip).
+ * Absent κανάλι → line color.
  */
 function dimOverrides(rec: TekDimRecord): DimensionOverride {
   const lineHex = tekColorToHex(rec.color);
   const textHex = rec.dtextColor ? tekColorToHex(rec.dtextColor) : lineHex;
+  const arrowHex = rec.endsColor ? tekColorToHex(rec.endsColor) : lineHex;
+  const witnessHex = rec.drvColor ? tekColorToHex(rec.drvColor) : lineHex;
+  const arrowBlock = TEK_END_STYLE_ARROW_BLOCK[rec.endStyle];
   return {
     dimclrd: hexToAci(lineHex), dimclrdTrueColor: hexToTrueColor(lineHex),
-    dimclre: hexToAci(lineHex), dimclreTrueColor: hexToTrueColor(lineHex),
+    dimclre: hexToAci(witnessHex), dimclreTrueColor: hexToTrueColor(witnessHex),
     dimclrt: hexToAci(textHex), dimclrtTrueColor: hexToTrueColor(textHex),
+    arrowColor: hexToAci(arrowHex), arrowTrueColor: hexToTrueColor(arrowHex),
+    dimasz: resolveArrowSizeMm(),
+    dimscale: TEK_RENDER_DIMSCALE * TEK_DIM_ANNOTATION_MAG,
+    ...(arrowBlock ? { dimblk: arrowBlock } : {}),
   };
 }
 
@@ -71,7 +121,7 @@ function segDefPoints(
 export function tekDimToDimensionEntities(
   rec: TekDimRecord, units: SceneUnits,
 ): LinearDimensionEntity[] {
-  const styleId = getDimStyleRegistry().getActiveStyleId();
+  const activeStyle = getDimStyleRegistry().getActiveStyle();
   const overrides = dimOverrides(rec);
   return rec.segs.map((seg) => {
     const { defPoints, rotationDeg } = segDefPoints(seg, rec.refPoints, units);
@@ -80,7 +130,7 @@ export function tekDimToDimensionEntities(
       type: 'dimension',
       layerId: '',
       dimensionType: 'linear',
-      styleId,
+      styleId: activeStyle.id,
       defPoints,
       rotation: rotationDeg,
       userText: seg.text || '<>', // έτοιμο string Τέκτονα· κενό → measured token

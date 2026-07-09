@@ -409,8 +409,26 @@ function emitPath(
 
 // ─── Geometry helpers ─────────────────────────────────────────────────────────
 
-function rectVertices(x: number, y: number, w: number, h: number): Point2D[] {
+// ADR-512 Φ-rect — εξαγώγιμο ώστε ο TEK exporter (`dxf-to-tek.ts`) να μοιράζεται ΤΟ ΙΔΙΟ
+// rect→4-κορυφές SSoT (μηδέν διπλότυπο formula). Ίδια σειρά κορυφών (CCW: κάτω-αριστ. → …).
+export function rectVertices(x: number, y: number, w: number, h: number): Point2D[] {
   return [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];
+}
+
+/**
+ * ADR-512 Φ-rect — `RectangleEntity`/`RectEntity` → 4 κορυφές, χειριζόμενο ΚΑΙ τις ΔΥΟ
+ * αναπαραστάσεις: `corner1/corner2` (το εργαλείο «Ορθογώνιο» παράγει ΑΥΤΟ) **Ή** `x/y/width/height`.
+ * Ίδιος fallback με το `rectangleVertices` (`overlay-persistence-utils`)· reuse του `rectVertices`
+ * για τη σειρά κορυφών (μηδέν διπλότυπο). Κοινό entity-level SSoT για DXF/TEK exporters.
+ */
+export function rectangleEntityVertices(e: {
+  x?: number; y?: number; width?: number; height?: number;
+  corner1?: Point2D; corner2?: Point2D;
+}): Point2D[] {
+  if (e.corner1 && e.corner2) {
+    return rectVertices(e.corner1.x, e.corner1.y, e.corner2.x - e.corner1.x, e.corner2.y - e.corner1.y);
+  }
+  return rectVertices(e.x ?? 0, e.y ?? 0, e.width ?? 0, e.height ?? 0);
 }
 
 /** Tessellate an arc (degrees, CCW start→end) into a polyline of points. */

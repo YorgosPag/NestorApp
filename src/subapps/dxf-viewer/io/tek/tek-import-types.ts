@@ -10,6 +10,8 @@
  * γίνονται εδώ· γίνονται στους mappers (`tek-*-to-bim.ts`) μέσω του SSoT.
  */
 
+import type { TekStairScalars } from './tek-stair-scalars';
+
 /** Σημείο κάτοψης του Τέκτονα — **μέτρα**, Y προς τα πάνω (όπως γράφεται στο XML). */
 export interface TekPoint2D {
   readonly x: number;
@@ -24,7 +26,7 @@ export interface TekPoint2D {
  * (ακμές βαθμίδων, εσωτερικό/εξωτερικό περίγραμμα, γραμμή πορείας). Διατηρούνται ΟΛΕΣ
  * ώστε ο mapper να παράγει είτε πιστή 2D αναπαράσταση είτε παραμετρική σκάλα.
  */
-export interface TekStairRecord {
+export interface TekStairRecord extends TekStairScalars {
   /**
    * Το **αυθεντικό `<record>` XML** της σκάλας (ADR-526 Φ3 — preserve-and-replay). Διατηρείται
    * αυτούσιο ώστε στο export μιας μη-τροποποιημένης εισαγόμενης σκάλας να εκπέμπεται **verbatim**
@@ -34,28 +36,6 @@ export interface TekStairRecord {
   readonly rawXml: string;
   /** Όλες οι `<point2d>` πολυγραμμές (μέτρα), με σειρά εμφάνισης· κενές παραλείπονται. */
   readonly polylines: readonly (readonly TekPoint2D[])[];
-  /** `<start_elevation>` — στάθμη βάσης (μέτρα). */
-  readonly startElevationM: number;
-  /** `<end_elevation>` — στάθμη κορυφής (μέτρα). Ύψος = end − start. */
-  readonly endElevationM: number;
-  /** `<steps>` — πλήθος βαθμίδων (πατημάτων) όπως το μετρά ο Τέκτων. */
-  readonly steps: number;
-  /** `<landings>` — πλήθος πλατύσκαλων. */
-  readonly landings: number;
-  /** `<stair_width>` — καθαρό πλάτος σκάλας (μέτρα). */
-  readonly stairWidthM: number;
-  /** `<horiz_b>` — πάτημα/going ανά βαθμίδα (μέτρα). */
-  readonly treadGoingM: number;
-  /** `<vert_b>` — ρίχτι/riser ανά βαθμίδα (μέτρα). */
-  readonly riserHeightM: number;
-  /** `<slope_h>` — πάχος πλάκας/μηρού της κλίσης (μέτρα). */
-  readonly waistThicknessM: number;
-  /** `<wlength>` — ανάπτυγμα γραμμής πορείας (μέτρα). Πληροφοριακό. */
-  readonly walklineLengthM: number;
-  /** `<min_step_width>` — ελάχιστο πλάτος ελικοειδούς βαθμίδας (μέτρα). > 0 ⇒ winders. */
-  readonly minStepWidthM: number;
-  /** `<steps_numbering>` — 1 αν ο Τέκτων αριθμεί τις βαθμίδες. */
-  readonly stepsNumbering: boolean;
 }
 
 /**
@@ -206,8 +186,24 @@ export interface TekDimRecord {
   readonly dtextColor: string;
   /** `<size>` — ύψος κειμένου τιμής (μέτρα). Το seg xmatrix είναι identity για διαστάσεις. */
   readonly textSizeM: number;
-  /** `<end_style>` — στυλ άκρου (βελάκι/πλάγια παύλα· 8 = πλάγια παύλα). */
+  /** `<end_style>` — στυλ άκρου (`end_style_res`)· 8 = «Βέλος 2» (τριγωνικό γεμάτο). */
   readonly endStyle: number;
+  /**
+   * `<ends_color>` RGB hex των **άκρων/βελών** (π.χ. `A40050` = μπορντώ). Ο Τέκτων χρωματίζει
+   * τα βελάκια ΞΕΧΩΡΙΣΤΑ από τη γραμμή — κενό → fallback στο `color`. (ADR-531/608 calibration.)
+   */
+  readonly endsColor: string;
+  /**
+   * `<drv_color>` RGB hex των **οδηγών/βοηθητικών (witness) γραμμών** (π.χ. `809CFC` = μπλε).
+   * Ξεχωριστό από τη γραμμή διάστασης — κενό → fallback στο `color`. (ADR-531/608 calibration.)
+   */
+  readonly drvColor: string;
+  /**
+   * `<arrow_len>` — συντελεστής μεγέθους σήμανσης άκρων λ (π.χ. 0.3). ΠΡΟΣΟΧΗ: **δεν** είναι
+   * το μήκος σε μέτρα — GROUND-TRUTH από explode (`DIASTASI-ΒΕΛΗ.dxf`, Giorgio 2026-07-09): το
+   * πραγματικά σχεδιασμένο «Βέλος 2» έχει μήκος ≈ 0.4 × λ (λ=0.3 → 0.12m σχεδιασμένο). 0 → default.
+   */
+  readonly arrowLenM: number;
   /** Σημεία αναφοράς από `<inter>` (pX/pY) — οι βάσεις των βοηθητικών γραμμών· κενό αν λείπουν. */
   readonly refPoints: readonly TekPoint2D[];
 }

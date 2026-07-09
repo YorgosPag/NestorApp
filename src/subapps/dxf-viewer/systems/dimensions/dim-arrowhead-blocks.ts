@@ -70,6 +70,18 @@ export interface ArrowheadBlockDefinition {
 
 /** Half-width of standard mechanical arrowheads (15° half-angle equivalent). */
 const ARROW_HALF_WIDTH = 0.15;
+/**
+ * ADR-608 — Tekton «Βέλος 2» γεωμετρία (Giorgio browser-calibrated), σε **unit space όπου
+ * 1 unit = μήκος βέλους** (`TEKTON_ARROW2_LEN_M` 0.120m· το `dimasz` το οδηγεί στο render, ώστε
+ * όλα να κλιμακώνονται μαζί):
+ *  - `HALF_WIDTH` = base (κάθετη γραμμή) 0.050m ÷ 2 ÷ μήκος → 0.208 (πλατύτερο από το std 0.15).
+ *  - `TIP_TICK_HALF` = κάθετη παύλα στη ΜΥΤΗ, μήκος 0.16m (centered στη μύτη → ±μισό).
+ *  - `LEADER_LEN` = οριζόντια γραμμή 0.30m από τη μύτη προς το ΚΕΝΤΡΟ (+X = εσωτερικά μετά το mirror).
+ */
+const TEKTON_ARROW2_LEN_M = 0.12;
+const TEKTON_ARROW2_HALF_WIDTH = 0.025 / TEKTON_ARROW2_LEN_M;
+const TEKTON_ARROW2_TIP_TICK_HALF = 0.16 / TEKTON_ARROW2_LEN_M / 2;
+const TEKTON_ARROW2_LEADER_LEN = 0.3 / TEKTON_ARROW2_LEN_M;
 /** Dot/origin marker radius. */
 const DOT_RADIUS = 0.18;
 const DOT_SMALL_RADIUS = 0.09;
@@ -128,6 +140,31 @@ export const ARROWHEAD_BLOCKS: Readonly<Record<string, ArrowheadBlockDefinition>
     name: 'closedBlank',
     displayName: { en: 'Closed Blank', el: 'Κενό Κλειστό' },
     geometry: [closedTriangle(false)],
+    flipOnSecondArrow: false,
+    solid: false,
+  },
+
+  // ADR-608 — Tekton «Βέλος 2»: γεμάτο τρίγωνο με τις ΑΚΡΙΒΕΙΣ αναλογίες του Τέκτονα
+  // (base 0.050 : μήκος 0.120, Giorgio browser-calibrated). Πλατύτερο από το closedFilled.
+  // MIRRORED (base στο +X, όχι -X όπως τα standard blocks): οι διαστάσεις Τέκτονα σχεδιάζουν το
+  // βέλος με το ΣΩΜΑ ΠΡΟΣ ΤΑ ΜΕΣΑ (εντός του μήκους) και τη μύτη προς τα έξω — Giorgio 2026-07-09.
+  // OUTLINE-only (solid: false → stroke, όχι fill): ο Giorgio θέλει ΜΟΝΟ περίγραμμα, όχι συμπαγές μπορντώ.
+  tektonArrow2: {
+    name: 'tektonArrow2',
+    displayName: { en: 'Tekton Arrow 2', el: 'Τέκτων Βέλος 2' },
+    geometry: [
+      {
+        kind: 'triangle',
+        v1: [0, 0],
+        v2: [1, TEKTON_ARROW2_HALF_WIDTH],
+        v3: [1, -TEKTON_ARROW2_HALF_WIDTH],
+        solid: false,
+      },
+      // Κάθετη παύλα στη μύτη (0.16m, centered) — Giorgio 2026-07-09.
+      { kind: 'line', from: [0, -TEKTON_ARROW2_TIP_TICK_HALF], to: [0, TEKTON_ARROW2_TIP_TICK_HALF] },
+      // Οριζόντια ομοαξονική γραμμή από τη μύτη προς το κέντρο (0.30m, +X = εσωτερικά).
+      { kind: 'line', from: [0, 0], to: [TEKTON_ARROW2_LEADER_LEN, 0] },
+    ],
     flipOnSecondArrow: false,
     solid: false,
   },

@@ -2,7 +2,9 @@
  * ADR-512 ΦΑΣΗ D — DXF primitives → Tekton `<line>`/`<arc>` (γραμμές/τόξα/κύκλοι).
  */
 
-import { collectTekLines, collectTekArcs, collectTekObjects } from '../dxf-to-tek';
+import {
+  collectTekLines, collectTekArcs, collectTekObjects, collectTekAreas,
+} from '../dxf-to-tek';
 import type { Entity } from '../../../types/entities';
 
 /** Minimal annotation-symbol entity (mirror `isAnnotationSymbolEntity`). */
@@ -66,6 +68,49 @@ describe('collectTekLines (γραμμές/polylines → <line>)', () => {
 
   it('αγνοεί non-γραμμικά (circle/arc/wall)', () => {
     expect(collectTekLines([circle({ x: 0, y: 0 }, 100)], F).lineCount).toBe(0);
+  });
+
+  // ── ADR-512 Φ-rect — «Ορθογώνιο» tool (RectangleEntity) → 4 κλειστές <line> ────
+  it('rectangle (corner1/corner2 — ΤΟ output του εργαλείου) → 4 <line> σε ΣΩΣΤΕΣ coords', () => {
+    // Το drawing-entity-builders παράγει {type:'rectangle', corner1, corner2} — ΟΧΙ x/y/w/h.
+    const rect = {
+      id: 'r1', type: 'rectangle',
+      corner1: { x: 0, y: 0 }, corner2: { x: 5000, y: 3000 },
+    } as unknown as Entity;
+    const r = collectTekLines([rect], F);
+    expect(r.lineCount).toBe(4); // 4 πλευρές (closed)
+    expect(r.linesXml).toContain('<type>4</type>');
+    // REGRESSION GUARD: όχι όλα (0,0) (bug: rectVertices(undefined)→NaN→tekNum→'0').
+    expect(r.linesXml).toContain('<v1X>5</v1X><v1Y>0</v1Y>'); // κάτω πλευρά → (5,0)
+    expect(r.linesXml).toContain('<v0X>5</v0X><v0Y>-3</v0Y>'); // δεξιά κορυφή (5000,3000) Y-flip
+  });
+
+  it('rectangle (x/y/width/height αναπαράσταση) → 4 <line>, coords Y-flipped', () => {
+    const rect = {
+      id: 'r1b', type: 'rectangle', x: 0, y: 0, width: 5000, height: 3000,
+    } as unknown as Entity;
+    const r = collectTekLines([rect], F);
+    expect(r.lineCount).toBe(4);
+    expect(r.linesXml).toContain('<v0X>0</v0X><v0Y>0</v0Y>');
+    expect(r.linesXml).toContain('<v1X>5</v1X><v1Y>0</v1Y>');
+    expect(r.linesXml).toContain('<v0X>5</v0X><v0Y>-3</v0Y>');
+  });
+
+  it('rect (alias) → 4 <line>· χρώμα entity → <color>', () => {
+    const rect = {
+      id: 'r2', type: 'rect', x: 1000, y: 1000, width: 2000, height: 2000, color: '#00FF80',
+    } as unknown as Entity;
+    const r = collectTekLines([rect], F);
+    expect(r.lineCount).toBe(4);
+    expect(r.linesXml).toContain('<color>00FF80</color>');
+  });
+
+  it('rectangle μηδενικού πλάτους → 2 πλευρές μηδενικού μήκους παραλείπονται', () => {
+    const degenerate = {
+      id: 'r3', type: 'rectangle', x: 0, y: 0, width: 0, height: 3000,
+    } as unknown as Entity;
+    // Πλάτος 0 → 2 κάθετες ακμές (μήκους 3) + 2 οριζόντιες μηδενικού μήκους (skip) = 2.
+    expect(collectTekLines([degenerate], F).lineCount).toBe(2);
   });
 });
 
@@ -168,5 +213,55 @@ describe('ADR-608 — collectTekObjects (native built-in σύμβολα → type
 
   it('non-annotation entity (line) → αγνοείται', () => {
     expect(collectTekObjects([line({ x: 0, y: 0 }, { x: 1, y: 0 })], F).objectCount).toBe(0);
+  });
+});
+
+/** measure-area entity: κλειστό polyline με `measurement:true` (mirror drawing-entity-builders). */
+function areaPolyline(vertices: Array<{ x: number; y: number }>): Entity {
+  return { id: 'area1', type: 'polyline', vertices, closed: true, measurement: true } as unknown as Entity;
+}
+/** Ορθογώνιο 10m × 8m (mm) → εμβαδόν 80 m². */
+const RECT_10x8 = [{ x: 0, y: 0 }, { x: 10000, y: 0 }, { x: 10000, y: 8000 }, { x: 0, y: 8000 }];
+
+describe('collectTekAreas (μέτρηση εμβαδού → native <hatch> + ετικέτα)', () => {
+  it('area → ΕΝΑ hatch (type 6, boundary=1, πράσινο γέμισμα σε λευκό φόντο)', () => {
+    const r = collectTekAreas([areaPolyline(RECT_10x8)], F);
+    expect(r.areaCount).toBe(1);
+    expect(r.hatchesXml).toContain('<type>6</type>');
+    expect(r.hatchesXml).toContain('<boundary>1</boundary>');
+    expect(r.hatchesXml).toContain('<color>C0DCC0</color>');
+    expect(r.hatchesXml).toContain('<raster_bgcolor>FFFFFF</raster_bgcolor>');
+    // 4 κορυφές (closed) → 4 ακμές· Y-flip: (10000,8000)mm → (10,−8)m.
+    expect((r.hatchesXml.match(/<record>/g) ?? []).length).toBe(4);
+    expect(r.hatchesXml).toContain('<v0X>10</v0X><v0Y>0</v0Y><v1X>10</v1X><v1Y>-8</v1Y>');
+  });
+
+  it('area → ΕΝΑ label «Ε = {εμβαδόν} τμ» (m² μέσω f², κυανό, στο κεντροειδές Y-flipped)', () => {
+    const r = collectTekAreas([areaPolyline(RECT_10x8)], F);
+    expect(r.labelsXml).toContain('<type>3</type>');
+    expect(r.labelsXml).toContain('<s>Ε = 80.00 τμ</s>'); // 10m·8m = 80 m²
+    expect(r.labelsXml).toContain('<color>00FFFF</color>');
+    expect(r.labelsXml).toContain('<ptsize>11</ptsize>');
+    // κεντροειδές ορθογωνίου (5000,4000)mm → (5,−4)m.
+    expect(r.labelsXml).toContain('<x20>5</x20><x21>-4</x21>');
+  });
+
+  it('startLabelId συνεχίζει την αρίθμηση <n> των ετικετών (κοινός <text> container)', () => {
+    const r = collectTekAreas([areaPolyline(RECT_10x8)], F, 7);
+    expect(r.labelsXml).toContain('<type>3</type><n>7</n>');
+    // hatch <n> = πλήθος ακμών (σύμβαση writer), ανεξάρτητο του startLabelId.
+    expect(r.hatchesXml).toContain('<type>6</type><n>4</n>');
+  });
+
+  it('κλειστό polyline ΧΩΡΙΣ measurement → ΔΕΝ είναι area (αγνοείται)', () => {
+    expect(collectTekAreas([polyline(RECT_10x8, true)], F).areaCount).toBe(0);
+  });
+
+  it('area polyline ΔΕΝ βγαίνει ΚΑΙ ως <line> (exclusion από collectTekLines)', () => {
+    expect(collectTekLines([areaPolyline(RECT_10x8)], F).lineCount).toBe(0);
+  });
+
+  it('γενικό (μη-area) polyline εξακολουθεί να βγαίνει ως <line>', () => {
+    expect(collectTekLines([polyline(RECT_10x8, true)], F).lineCount).toBe(4);
   });
 });

@@ -5,6 +5,8 @@
  * μέσω 2D affine `<xmatrix>`. Εδώ ζουν τα ενδιάμεσα (mapper → writer) σχήματα.
  */
 
+import type { TekStairScalars } from '../../../io/tek/tek-stair-scalars';
+
 /** 2D affine matrix του Τέκτονα: μοναδιαίο ορθογώνιο → οντότητα (μέτρα). */
 export interface TekXMatrix {
   /** Διάνυσμα μήκους X (E−S). */
@@ -202,6 +204,17 @@ export interface TekHatch {
    * από αποδόμηση). Absent ⇒ κενό `<taglist>` (αταξινόμητο).
    */
   readonly tag?: string;
+  /**
+   * ADR-512 — `<boundary>` flag: `0` = γέμισμα χωρίς ορατό περίγραμμα (default, user hatches),
+   * `1` = γεμισμένη περιοχή ΜΕ περίγραμμα (native Tekton area/εμβαδό). Absent ⇒ `0`.
+   */
+  readonly boundary?: number;
+  /**
+   * ADR-512 — `<raster_bgcolor>` (χρώμα φόντου μοτίβου). Absent ⇒ ίδιο με `colorHex`
+   * (μονόχρωμο γέμισμα, user hatches). Το native area το θέτει λευκό (`FFFFFF`) ώστε
+   * το μοτίβο να φαίνεται πάνω σε λευκό φόντο, όπως το ground-truth δείγμα.
+   */
+  readonly bgColorHex?: string;
 }
 
 /**
@@ -261,31 +274,9 @@ export interface TekStairPoint {
  * Αντίστροφο του import (ADR-526 Φ1): εκεί `TekStairRecord` → `StairEntity`· εδώ
  * `StairEntity` → `TekStair`. Winder intlist (τόξα) + pixel-perfect ελικοειδές footprint = Φ3b.
  */
-export interface TekStair {
+export interface TekStair extends TekStairScalars {
   /** Ακέραιο id (1-based, `<n>`). */
   readonly id: number;
-  /** Στάθμη βάσης — `<start_elevation>` (μέτρα). */
-  readonly startElevationM: number;
-  /** Στάθμη άφιξης (= βάση + συνολικό ύψος) — `<end_elevation>` (μέτρα). */
-  readonly endElevationM: number;
-  /** Πλήθος πατημάτων (Τέκτων `<steps>` = ρίχτια − 1). */
-  readonly steps: number;
-  /** Πλήθος πλατύσκαλων — `<landings>`. */
-  readonly landings: number;
-  /** Καθαρό πλάτος — `<stair_width>` (μέτρα). */
-  readonly stairWidthM: number;
-  /** Πάτημα / going — `<horiz_b>` (μέτρα). */
-  readonly treadGoingM: number;
-  /** Ρίχτι / riser — `<vert_b>` (μέτρα). */
-  readonly riserHeightM: number;
-  /** Πάχος πλάκας/μηρού — `<slope_h>` (μέτρα). */
-  readonly waistThicknessM: number;
-  /** Μήκος γραμμής πορείας — `<wlength>` (μέτρα). */
-  readonly walklineLengthM: number;
-  /** Minimum winder width (>0 means spiral) — `<min_step_width>` (meters). */
-  readonly minStepWidthM: number;
-  /** Αρίθμηση βαθμίδων — `<steps_numbering>` (1/0). */
-  readonly stepsNumbering: boolean;
   /**
    * Ορατό περίγραμμα (slot 1): 3 ανεξάρτητες ευθείες (δεξιά παρειά + βάση + αριστερή παρειά,
    * ανοιχτό στην κορυφή/άφιξη) = 6 σημεία, intlist `2 2 2`. Δίνει στον Τέκτονα ορατό 2Δ

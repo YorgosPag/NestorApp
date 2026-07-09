@@ -12,7 +12,7 @@ const XMATRIX = (x00: number, x11: number, x20: number, x21: number) =>
 const TEK = `<?xml version="1.0" encoding="UTF-8"?>
 <tekton><head><numfloors>1</numfloors></head><body><building><floor>
 <dim><record>
-<type>0</type><color>00FF00</color><dtext_color>FFFF80</dtext_color><size>0.15875</size><end_style>8</end_style>
+<type>0</type><color>00FF00</color><dtext_color>FFFF80</dtext_color><size>0.15875</size><end_style>8</end_style><ends_color>A40050</ends_color><drv_color>809CFC</drv_color><arrow_len>0.3</arrow_len>
 <seg><record>
 <end0X>-2.21</end0X><end0Y>6.98</end0Y><end1X>-0.11</end1X><end1Y>6.98</end1Y>
 <gap0X>-1.32</gap0X><gap0Y>6.98</gap0Y><gap1X>-1.0</gap1X><gap1Y>6.98</gap1Y>
@@ -55,6 +55,9 @@ describe('extractDimRecords (ADR-531)', () => {
     expect(dim.dtextColor).toBe('FFFF80');
     expect(dim.textSizeM).toBeCloseTo(0.15875, 5);
     expect(dim.endStyle).toBe(8);
+    expect(dim.endsColor).toBe('A40050');
+    expect(dim.drvColor).toBe('809CFC');
+    expect(dim.arrowLenM).toBeCloseTo(0.3, 5);
     expect(dim.refPoints).toHaveLength(2);
     expect(dim.refPoints[0]).toEqual({ x: -2.21, y: 6.98 });
   });
