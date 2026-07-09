@@ -47,9 +47,11 @@ const TEK_END_STYLE_ARROW_BLOCK: Readonly<Record<number, string>> = {
  * κτιρίου (model-space, μικραίνουν στο zoom-out). Λύση: override `dimscale` = `TEK_RENDER_DIMSCALE
  * × TEK_DIM_ANNOTATION_MAG` → κλιμακώνει ΟΜΟΙΟΜΟΡΦΑ κείμενο + βέλος + κενά + προεκτάσεις (γνήσιο
  * annotation scale), κρατώντας ΟΛΕΣ τις αναλογίες (βάση:μήκος, text:arrow). Καθολικός συντελεστής
- * μεγέθυνσης — browser-βαθμονομούμενος: νέα προτίμηση Giorgio → άλλαξε ΜΟΝΟ το `TEK_DIM_ANNOTATION_MAG`.
+ * μεγέθους ΟΛΟΥ ΤΟΥ ΣΥΣΤΗΜΑΤΟΣ σήμανσης — η **μετρούμενη διάσταση (γεωμετρία/defPoints) ΔΕΝ
+ * επηρεάζεται** (ο dimscale κλιμακώνει μόνο τη σήμανση). Giorgio 2026-07-09: «μίκρυνε όλο το σύστημα
+ * χωρίς να αλλάξει το μήκος» → μείωση MAG. Browser-βαθμονομούμενος: άλλαξε ΜΟΝΟ το `TEK_DIM_ANNOTATION_MAG`.
  */
-const TEK_DIM_ANNOTATION_MAG = 3;
+const TEK_DIM_ANNOTATION_MAG = 1.5;
 
 /**
  * ADR-608 — μείωση ΜΟΝΟ του κειμένου (Giorgio 2026-07-09: «τα κείμενα είναι τεράστια, ~300%

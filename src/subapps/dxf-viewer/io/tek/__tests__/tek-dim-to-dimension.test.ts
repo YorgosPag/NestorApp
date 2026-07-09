@@ -84,9 +84,9 @@ describe('tekDimToDimensionEntities (ADR-608)', () => {
     expect(dims[0].overrides?.dimasz).toBeCloseTo((0.12 * 1000) / 100, 5);
   });
 
-  it('dimscale = annotation scale (100 × MAG 3 = 300) → κείμενο+βέλος διαβάζονται (σαν Τέκτονας)', () => {
-    // Giorgio: οι διαστάσεις σε πραγματικό μέγεθος = μικροσκοπικές· uniform annotation magnification.
-    expect(dims[0].overrides?.dimscale).toBe(300);
+  it('dimscale = annotation scale (100 × MAG 1.5 = 150) → όλο το σύστημα σήμανσης, όχι το μήκος', () => {
+    // Giorgio: μίκρυνε ΟΛΟ το σύστημα (βέλη/κείμενο/leaders) χωρίς αλλαγή μετρούμενης διάστασης.
+    expect(dims[0].overrides?.dimscale).toBe(150);
   });
 
   it('dimtad = centered → κείμενο ομοαξωνικό με τη γραμμή διάστασης (όχι έκκεντρο/above)', () => {
