@@ -396,6 +396,15 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
         <text x="12" y="18" textAnchor="middle" fontSize="7" fontWeight="700" stroke="none" fill="currentColor">1</text>
       </>
     ));
+    // ADR-583 Φ2 — graphic scale-bar: classic alternating checker bar (cartographic glyph).
+    case 'scale-bar': return inlineSvg(size, (
+      <>
+        <rect x="3" y="10" width="4.5" height="4" fill="currentColor" stroke="none" />
+        <rect x="7.5" y="10" width="4.5" height="4" fill="none" />
+        <rect x="12" y="10" width="4.5" height="4" fill="currentColor" stroke="none" />
+        <rect x="16.5" y="10" width="4.5" height="4" fill="none" />
+      </>
+    ));
     default: return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
   }
 };

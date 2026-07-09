@@ -46,6 +46,7 @@ import {
   commitXLineGripDrag,
   commitRayGripDrag,
   commitDimensionGripDrag,
+  commitScaleBarGripDrag,
 } from './grip-parametric-commits';
 
 /** Commit-handler shape shared by every parametric kind (behavior-preserving). */
@@ -60,7 +61,7 @@ type ParametricCommitHandler = (
  * handler** (ADR-587 Φ7 SEAM B). The key is `gripKind.on` (the `EntityGripKind`
  * discriminator tag); each params-driven entity recomputes its geometry
  * atomically inside a dedicated `UpdateXxxParamsCommand`, bypassing the generic
- * vertex-stretch path. `Partial` because only the 24 parametric kinds route here
+ * vertex-stretch path. `Partial` because only the 25 parametric kinds route here
  * — the 7 primitive / editor kinds (line / circle / arc / polyline / text /
  * group / annotation-symbol) fall through to `commitDxfGripDragModeAware`.
  *
@@ -89,6 +90,7 @@ type ParametricCommitHandler = (
  *   - mep-underfloor   → ADR-408 Εύρος Β #3 (footprint + connector re-derivation)
  *   - xline            → ADR-359 Phase 11 (basePoint translate / direction rotate)
  *   - ray              → ADR-359 Phase 11 (basePoint translate / direction rotate)
+ *   - scale-bar        → ADR-583 Φ2.4 (move / rotation / length; geometry DERIVED)
  */
 export const PARAMETRIC_COMMIT_HANDLERS: Partial<
   Record<EntityGripKind['on'], ParametricCommitHandler>
@@ -117,12 +119,14 @@ export const PARAMETRIC_COMMIT_HANDLERS: Partial<
   'mep-underfloor': commitMepUnderfloorGripDrag,
   xline: commitXLineGripDrag,
   ray: commitRayGripDrag,
+  // ADR-583 Φ2.4 — graphic scale-bar (move / rotation / length; geometry DERIVED).
+  'scale-bar': commitScaleBarGripDrag,
 };
 
 /**
- * Runtime completeness anchor — the 24 parametric-commit kinds routed by
+ * Runtime completeness anchor — the 25 parametric-commit kinds routed by
  * `PARAMETRIC_COMMIT_HANDLERS`. Bound to the grip discriminator domain
- * (`GRIP_KIND_ENTITIES`, 31) by `grip-parametric-dispatch-coverage.test.ts`, so
+ * (`GRIP_KIND_ENTITIES`, 32) by `grip-parametric-dispatch-coverage.test.ts`, so
  * the seam cannot silently diverge from the descriptor domain (ADR-587 Φ7).
  */
 export const PARAMETRIC_COMMIT_SUPPORTED_KINDS = Object.keys(

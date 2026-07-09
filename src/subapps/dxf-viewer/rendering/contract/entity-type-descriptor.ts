@@ -56,6 +56,8 @@ export type EntityCategory = 'dxf-primitive' | 'bim' | 'annotation';
  */
 export const ANNOTATION_RENDERABLE_TYPES: readonly RenderableEntityType[] = [
   'annotation-symbol',
+  // ADR-583 Φ2 — graphic scale-bar (dedicated sibling of dimension/center-mark).
+  'scale-bar',
 ];
 
 const BIM_TYPE_SET: ReadonlySet<string> = new Set(BIM_RENDERABLE_TYPES);

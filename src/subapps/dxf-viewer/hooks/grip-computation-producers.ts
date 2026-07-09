@@ -64,6 +64,8 @@ import { getMepWaterHeaterGrips } from '../bim/mep-water-heaters/mep-water-heate
 import { getFurnitureGrips } from '../bim/furniture/furniture-grips';
 import { getFloorplanSymbolGrips } from '../bim/floorplan-symbols/floorplan-symbol-grips';
 import { getAnnotationSymbolGrips } from '../bim/annotation-symbols/annotation-symbol-grips';
+import { getScaleBarGrips } from '../bim/scale-bar/scale-bar-grips';
+import type { ScaleBarEntity } from '../types/scale-bar';
 import { getMepSegmentGrips } from '../bim/mep-segments/mep-segment-grips';
 import { getRoofGrips } from '../bim/roofs/roof-grips';
 import { getFloorFinishGrips } from '../bim/floor-finishes/floor-finish-grips';
@@ -352,6 +354,10 @@ export const GRIP_PRODUCERS: Partial<Record<DxfEntityUnion['type'], (e: DxfEntit
     const a = e as Extract<DxfEntityUnion, { type: 'annotation-symbol' }>;
     return getAnnotationSymbolGrips(a.id, a.position, a.sizeMm, a.rotation);
   },
+
+  // ADR-583 Φ2.4 — graphic scale-bar: MOVE (axis midpoint) + ROTATION (perp handle) +
+  // LENGTH (derived endPosition). All positions read from the DERIVED geometry SSoT.
+  'scale-bar': (e) => getScaleBarGrips(e as unknown as ScaleBarEntity),
 
   // ADR-417 Φ1-part-2 #2 — parametric roof grips (per-vertex translate + edge-midpoint insertion).
   roof: (e) => getRoofGrips(e as unknown as RoofEntity),

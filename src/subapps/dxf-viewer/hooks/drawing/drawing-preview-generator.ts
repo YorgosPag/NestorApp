@@ -34,7 +34,10 @@ import { getTextRotationOrigin, isTextEditingActive } from '../../systems/cursor
 import { generateSlabPreview } from './slab-preview-helpers';
 // ADR-514 Φ6 — face-snap κορυφών στο preview (flush + edge-slide): ΙΔΙΟΣ resolver + ΙΔΙΟ store με
 // το commit (`useSlabTool`/`useRoofTool.onCanvasClick`) → preview ≡ commit by construction.
-import { resolveEffectivePreviewCursor } from './wysiwyg-preview-shared';
+import { resolveEffectivePreviewCursor, toWysiwygPreviewEntity } from './wysiwyg-preview-shared';
+// ADR-583 Φ2.3 — scale-bar WYSIWYG rubber-band ghost: SAME builder as commit (SSoT
+// mapping lives in the store module — N.18, never cloned).
+import { buildScaleBarEntityFromLiveOptions } from '../../state/scale-bar-options-store';
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolvePolygonVertexSnap } from '../../bim/placement/polygon-vertex-snap';
 import { polygonVertexLockStore } from '../../bim/placement/polygon-vertex-lock-store';
@@ -271,6 +274,23 @@ export function generatePreviewEntity(
   if (tool === 'text' || tool === 'mtext') {
     return generateTextPreview(cursorPoint, sceneUnits);
   }
+  // ── ADR-583 Φ2.3 — Scale-bar WYSIWYG rubber-band ghost («origin» κλειδωμένο,
+  //    live cursor = axis angle + dragged length). Πριν το 1ο κλικ
+  //    (`tempPoints.length === 0`) πέφτει στο κοινό start-dot branch παρακάτω
+  //    (`needsStartDot`). Εδώ χτίζεται η ΠΛΗΡΗΣ `ScaleBarEntity` μέσω του ΙΔΙΟΥ
+  //    builder με το commit (`buildScaleBarEntityFromLiveOptions`, preview≡commit
+  //    ADR-574) + flag `wysiwygPreview` ώστε ο `PreviewCanvas` να τη ζωγραφίσει
+  //    μέσω του πραγματικού `ScaleBarRenderer` — ζωντανό nice-number μήκος +
+  //    checkerboard/hollow/ticks + ετικέτες, όχι σχηματικό περίγραμμα. ──────────
+  if (tool === 'scale-bar' && tempPoints.length >= 1) {
+    const scaleBarGhost = buildScaleBarEntityFromLiveOptions(
+      tempPoints[0],
+      cursorPoint,
+      'preview_scale_bar_ghost',
+      getDefaultLayerId(),
+    );
+    return toWysiwygPreviewEntity(scaleBarGhost, 'preview_scale_bar_ghost');
+  }
   // ── Zero-point preview: show start indicator ─────────────────────────────
   if (tempPoints.length === 0) {
     const isMeasurementTool =
@@ -287,7 +307,8 @@ export function generatePreviewEntity(
       tool === 'circle-2p-radius' || tool === 'polygon' || tool === 'polyline' ||
       tool === 'measure-area' || tool === 'measure-angle' ||
       tool === 'measure-angle-measuregeom' ||
-      tool === 'arc-3p' || tool === 'arc-cse' || tool === 'arc-sce';
+      tool === 'arc-3p' || tool === 'arc-cse' || tool === 'arc-sce' ||
+      tool === 'scale-bar'; // ADR-583 Φ2 — 2-click tool, mirror 'line'
     if (needsStartDot) {
       return {
         id: 'preview_start',

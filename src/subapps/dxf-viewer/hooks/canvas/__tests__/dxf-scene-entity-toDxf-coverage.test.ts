@@ -52,9 +52,9 @@ describe('toDxf capability coverage — ζωντανό seam ↔ descriptor domai
     const withToDxf = RENDERABLE_ENTITY_TYPES.filter((t) => supportedSet.has(t));
     expect(asSorted(withToDxf)).toEqual(
       asSorted([
-        // DXF primitives (14)
+        // DXF primitives (15)
         'line', 'polyline', 'lwpolyline', 'circle', 'arc', 'text', 'mtext', 'rectangle',
-        'dimension', 'angle-measurement', 'hatch', 'xline', 'ray', 'annotation-symbol',
+        'dimension', 'angle-measurement', 'hatch', 'xline', 'ray', 'annotation-symbol', 'scale-bar',
         // BIM (23 — όλα εκτός wall-covering)
         'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair',
         'railing', 'roof', 'floor-finish', 'thermal-space', 'space-separator', 'furniture',

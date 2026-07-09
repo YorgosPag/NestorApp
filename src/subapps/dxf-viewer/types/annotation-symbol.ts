@@ -26,12 +26,22 @@ import type { BaseEntity } from './entities';
 
 /**
  * Family of annotation symbol. Extensible. Point-glyph kinds (placed with a single
- * click) are wired via `config/annotation-kind-registry.ts`; `scale-bar` is a
- * future linear kind (dynamic length + length grip) not yet wired.
+ * click) are wired via `config/annotation-kind-registry.ts`.
+ *
+ * NOTE (ADR-583 Φ2.5, 2026-07-09): `'scale-bar'` was RESERVED here in Φ0/Φ1 as a
+ * future *linear* kind of this family, but Giorgio's Φ2 decision built it as a
+ * fully separate, dedicated scene-entity type instead — `type: 'scale-bar'`
+ * (sibling of `dimension` / `center-mark`), NOT `type: 'annotation-symbol'` with
+ * `kind: 'scale-bar'`. Reason: a scale bar has a dynamic real-world `length` +
+ * a length-resize grip (see `types/scale-bar.ts`), which does not fit this
+ * family's fixed-ratio move+rotation-only glyph model (D5 below). The literal
+ * was NEVER wired into `config/annotation-symbol-catalog.ts` or
+ * `config/annotation-kind-registry.ts` (confirmed dead), so it is deliberately
+ * removed here — do NOT re-add `'scale-bar'` to this union; a real scale bar
+ * already exists at `types/scale-bar.ts` / `ScaleBarEntity`.
  */
 export type AnnotationSymbolKind =
   | 'north-arrow'
-  | 'scale-bar'
   | 'section-mark'
   | 'grid-bubble'
   | 'elevation-mark'

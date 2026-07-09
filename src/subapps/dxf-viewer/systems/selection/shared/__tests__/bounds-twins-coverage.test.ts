@@ -23,12 +23,18 @@
  * Καρφωμένες ασυμμετρίες (ΜΗΝ τις «διορθώσεις» σιωπηλά — convergence = χωριστό verified βήμα):
  *  - `arc`/`dimension`/`angle-measurement` = handled στο B, **EMPTY στο A** (κανένα case → default,
  *    το A-default απαιτεί top-level `vertices`).
- *  - `annotation-symbol` = handled στο A (model-size square), **null στο B** (κανένα case → default).
+ *  - `annotation-symbol` = handled στο A (model-size square)· **ΗΤΑΝ null στο B** — ΔΙΟΡΘΩΘΗΚΕ στη Φ9.
  *  - 7 BIM `railing`/`wall-covering`/`thermal-space`/`space-separator`/`mep-boiler`/`mep-water-heater`/
- *    `mep-underfloor` = **EMPTY στο A** (μη enumerated → default αγνοεί το `geometry.bbox`)· απ' αυτά τα
- *    4 (wall-covering, mep-boiler, mep-water-heater, mep-underfloor) = handled στο B, ενώ railing/
- *    thermal-space/space-separator = **null ΚΑΙ στο B** (το B δεν δρομολογεί thermal-space/space-
- *    separator στο `calculateBimEntity2DBounds`, παρότι ΕΚΕΙΝΟ τα υποστηρίζει — γνήσιο routing gap).
+ *    `mep-underfloor` = **EMPTY στο A** (μη enumerated → default αγνοεί το `geometry.bbox`)· όλα πλέον
+ *    handled στο B (Φ9 Slice 1 έκλεισε railing/thermal-space/space-separator routing + wall-covering delegate).
+ *
+ * **ADR-587 Φ9 Slice 1 (2026-07-09):** το Twin B `calculateEntityBounds` έγινε thin adapter πάνω στον
+ * canonical `resolveEntityBounds` (`rendering/hitTesting/entity-bounds-ssot.ts`). Οι 6 τύποι που γύριζαν
+ * `null` (`annotation-symbol`, `railing`, `thermal-space`, `space-separator`, `wall-covering` [+ το
+ * κρυμμένο πίσω από αισιόδοξη `B_HANDLED` κατάταξη]) δίνουν πλέον real bounds → επιλέξιμοι με window/
+ * crossing marquee. `B_NULL_FALLBACK` = **κενό**. NEW: non-null assertion για τους 5 fixed + provider
+ * completeness (`ENTITY_BOUNDS_SUPPORTED_TYPES ⊇ RENDERABLE_ENTITY_TYPES`). Twin A παραμένει ανέγγιχτο
+ * (A/C convergence = επόμενα app-verify slices).
  */
 
 // Firebase auth mock — τα type barrels (text-box/bim projections) αγγίζουν auth στο import path.
@@ -45,6 +51,7 @@ jest.mock('firebase/auth', () => ({
 import { getEntityRenderBounds, getEntityExtentsBounds } from '../../../../types/entity-bounds';
 import { calculateEntityBounds } from '../selection-duplicate-utils';
 import { RENDERABLE_ENTITY_TYPES } from '../../../../rendering/contract/renderable-entity-type';
+import { ENTITY_BOUNDS_SUPPORTED_TYPES } from '../../../../rendering/hitTesting/entity-bounds-ssot';
 import { EMPTY_SPATIAL_BOUNDS } from '../../../../config/geometry-constants';
 import type { Entity } from '../../../../types/entities';
 import type { AnySceneEntity } from '../../../../types/scene';
@@ -57,9 +64,9 @@ const BBOX = { geometry: { bbox: { min: { x: 1, y: 2 }, max: { x: 3, y: 4 } } } 
 // ─── Twin A `computeBounds` (getEntityRenderBounds) — SpatialBounds, EMPTY default ───
 /** Renderable types με ρητό non-EMPTY case στο `computeBounds`. */
 const A_HANDLED = [
-  // DXF (15)
+  // DXF (16)
   'line', 'polyline', 'lwpolyline', 'circle', 'ellipse', 'rectangle', 'rect', 'point',
-  'annotation-symbol', 'text', 'mtext', 'spline', 'hatch', 'xline', 'ray',
+  'annotation-symbol', 'scale-bar', 'text', 'mtext', 'spline', 'hatch', 'xline', 'ray',
   // BIM με enumerated `geometry.bbox` case (17)
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair', 'roof',
   'floor-finish', 'furniture', 'mep-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator',
@@ -72,21 +79,27 @@ const A_EMPTY_FALLBACK = [
   'mep-boiler', 'mep-water-heater', 'mep-underfloor',
 ] as const;
 
-// ─── Twin B `calculateEntityBounds` — {min,max} | null ───────────────────────────────
-/** Renderable types με ρητό non-null case στο `calculateEntityBounds`. */
+// ─── Twin B `calculateEntityBounds` — {min,max} | null (Φ9 Slice 1: adapter πάνω στο resolveEntityBounds) ─
+/** Renderable types με ρητό non-null bounds στο `calculateEntityBounds` (= ΟΛΑ μετά τη Φ9 Slice 1). */
 const B_HANDLED = [
-  // DXF (17 — όλα εκτός annotation-symbol)
+  // DXF (19 — ΟΛΑ, incl. annotation-symbol που ήταν null πριν τη Φ9 Slice 1)
   'line', 'polyline', 'lwpolyline', 'circle', 'arc', 'ellipse', 'text', 'mtext', 'spline',
   'rectangle', 'rect', 'point', 'dimension', 'angle-measurement', 'hatch', 'xline', 'ray',
-  // BIM via calculateBimEntity2DBounds (21)
+  'annotation-symbol', 'scale-bar',
+  // BIM via calculateBimEntity2DBounds (24 — incl. railing/thermal-space/space-separator, Φ9 routing fix)
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair', 'roof',
   'floor-finish', 'wall-covering', 'furniture', 'mep-fixture', 'electrical-panel', 'mep-manifold',
   'mep-radiator', 'mep-boiler', 'mep-water-heater', 'mep-segment', 'mep-fitting', 'mep-underfloor',
+  'railing', 'thermal-space', 'space-separator',
 ] as const;
-/** Renderable types που πέφτουν στο B-default → `null` (κανένα case· δεν δρομολογούνται). */
-const B_NULL_FALLBACK = [
-  'annotation-symbol', // A το κάνει model-size square· B δεν έχει case → null
-  'railing', 'thermal-space', 'space-separator', // ούτε στο B routing προς calculateBimEntity2DBounds
+/**
+ * Renderable types που πέφτουν στο B → `null`. **ΚΕΝΟ μετά τη Φ9 Slice 1** — κάθε renderable type έχει
+ * πλέον bounds provider (`resolveEntityBounds`), άρα το window/crossing marquee πιάνει ΟΛΩΝ των ειδών.
+ */
+const B_NULL_FALLBACK = [] as const;
+/** Οι 5 τύποι που η Φ9 Slice 1 γύρισε από `null` → real bounds (το wall-covering ήταν κρυμμένο B_HANDLED). */
+const B_FIXED_IN_SLICE1 = [
+  'annotation-symbol', 'railing', 'thermal-space', 'space-separator', 'wall-covering',
 ] as const;
 
 describe('Bounds-twins coverage — δύο twins ↔ descriptor domain (ADR-587 Φ5, coverage+pin)', () => {
@@ -107,8 +120,27 @@ describe('Bounds-twins coverage — δύο twins ↔ descriptor domain (ADR-587 
     expect(getEntityRenderBounds(mk(type, BBOX))).toEqual(EMPTY_SPATIAL_BOUNDS);
   });
 
-  it.each(B_NULL_FALLBACK)('Twin B fallback πιν: "%s" (ακόμη & με geometry.bbox) → null', (type) => {
-    expect(calculateEntityBounds(mk(type, { ...BBOX, position: { x: 0, y: 0 } }) as unknown as AnySceneEntity)).toBeNull();
+  it('Twin B: B_NULL_FALLBACK είναι ΚΕΝΟ μετά τη Φ9 Slice 1 (κανένας renderable δεν γυρίζει null)', () => {
+    expect(B_NULL_FALLBACK).toHaveLength(0);
+  });
+
+  it.each(B_FIXED_IN_SLICE1)('Φ9 Slice 1 gap-fix: "%s" → NON-null (ήταν null στο Twin B, τώρα marquee-selectable)', (type) => {
+    // annotation-symbol → C (BoundsCalculator, position-based)· railing/thermal-space/space-separator/
+    // wall-covering → calculateBimEntity2DBounds (geometry.bbox). ΕΝΑ fixture καλύπτει και τα δύο paths.
+    const bounds = calculateEntityBounds(
+      mk(type, { ...BBOX, position: { x: 0, y: 0 } }) as unknown as AnySceneEntity,
+    );
+    expect(bounds).not.toBeNull();
+  });
+
+  it('provider completeness: ENTITY_BOUNDS_SUPPORTED_TYPES ⊇ RENDERABLE_ENTITY_TYPES', () => {
+    // Κάθε renderable type ΠΡΕΠΕΙ να έχει bounds provider (αλλιώς σιωπηλά μη-marquee-selectable).
+    const supported = new Set<string>(ENTITY_BOUNDS_SUPPORTED_TYPES);
+    const missing = RENDERABLE_ENTITY_TYPES.filter((t) => !supported.has(t));
+    expect(missing).toEqual([]);
+    // Deliberate extra (ΟΧΙ σε RENDERABLE_ENTITY_TYPES): `floorplan-symbol` αποδίδεται μέσω entity-model
+    // path (ADR-583/Φ2b surfaced asymmetry) αλλά το Twin B το δρομολογούσε → κρατιέται για parity.
+    expect(supported.has('floorplan-symbol')).toBe(true);
   });
 
   it('asymmetry — SHAPE: ίδιο line, A→{minX..maxY}, B→{min,max}', () => {
@@ -123,13 +155,14 @@ describe('Bounds-twins coverage — δύο twins ↔ descriptor domain (ADR-587 
     expect(calculateEntityBounds(mk('totally-unknown') as unknown as AnySceneEntity)).toBeNull();
   });
 
-  it('asymmetry — DOMAIN flip: arc → A EMPTY / B center±radius· annotation-symbol → B null (A το κάνει)', () => {
+  it('asymmetry — DOMAIN flip: arc → A EMPTY / B center±radius (annotation-symbol πλέον handled ΚΑΙ στα δύο)', () => {
     const arc = mk('arc', { center: { x: 100, y: 50 }, radius: 40 });
     expect(getEntityRenderBounds(arc)).toEqual(EMPTY_SPATIAL_BOUNDS); // A: κανένα case
     expect(calculateEntityBounds(arc as unknown as AnySceneEntity)) // B: explicit
       .toEqual({ min: { x: 60, y: 10 }, max: { x: 140, y: 90 } });
+    // Φ9 Slice 1: annotation-symbol handled στο A (model-size square) ΚΑΙ στο B (→ C, ΗΤΑΝ null).
     expect(calculateEntityBounds(mk('annotation-symbol', { position: { x: 0, y: 0 } }) as unknown as AnySceneEntity))
-      .toBeNull(); // B: κανένα case (A: model-size square, στο A_HANDLED golden)
+      .not.toBeNull();
   });
 
   it('asymmetry — BIM math/shape: wall από ΙΔΙΟ geometry.bbox, A raw {minX..}, B {min,max}', () => {

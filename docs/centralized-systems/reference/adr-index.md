@@ -581,6 +581,11 @@
 | **ADR-603** | API Route-Handler Factory SSoT (`defineRoute` + envelope helpers) | 🔵 ACTIVE (Φ0 pilot) | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-603-api-route-handler-factory-ssot.md) |
 | **ADR-602** | Grip Field-Bag Unification (ΕΝΑ `EntityGripKind` αντί 31 optionals × 4 bags· ADR-587 Φ6) | 🔵 RECOGNITION+DESIGN | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-602-grip-field-bag-unification.md) |
 | **ADR-604** | Generic BIM Family-Type Framework SSoT (reresolution-hook + edit-store + controller + widget factories· Wall/Slab/Roof/Opening) | ✅ ACTIVE | 2026-07-08 | Uncategorized | [📄](./adrs/ADR-604-generic-family-type-framework.md) |
+| **ADR-605** | BIM 3D point-placement hook factory SSoT (`createBim3DPointPlacementHook`· 7 `use-bim3d-*-placement` hooks· −763 jscpd) | ✅ ACTIVE | 2026-07-09 | Uncategorized | [📄](./adrs/ADR-605-bim3d-point-placement-hook-ssot.md) |
+| **ADR-606** | MEP network commit-builder factory SSoT (`createMepNetworkCommitBuilder`· 6 `build-*-commit` builders· presets· −14 jscpd) | ✅ ACTIVE | 2026-07-09 | Uncategorized | [📄](./adrs/ADR-606-mep-network-commit-builder-ssot.md) |
+| **ADR-607** | Batch-create entities command factory SSoT (`createBatchEntitiesCommand`· 6 `Create*Command` grid-gen· −7 jscpd/−600 LOC) | ✅ ACTIVE | 2026-07-09 | Uncategorized | [📄](./adrs/ADR-607-batch-entities-command-ssot.md) |
+| **ADR-608** | Vector-PDF backend (print & export· `scene-vector-emitter` SSoT· `CaptureResult` raster\|vector union· 2D vector default + raster fallback) | ✅ ACTIVE | 2026-07-09 | DXF Viewer | [📄](./adrs/ADR-608-vector-pdf-export.md) |
+| **ADR-609** | Ribbon MEP auto-design bridge factory SSoT (`createRibbonMepAutoBridge`· 6 `useRibbon*AutoBridge` network hooks· typed emit thunks· −14 jscpd) | ✅ ACTIVE | 2026-07-09 | Uncategorized | [📄](./adrs/ADR-609-ribbon-mep-auto-bridge-ssot.md) |
 | **ADR-598** | Production-Readiness Quality Gates (big-player parity roadmap — 15 gaps, 4 phases) | 📋 PROPOSED | 2026-07-08 | CI/Infra | [📄](./adrs/ADR-598-production-readiness-quality-gates.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 

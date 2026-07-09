@@ -7,6 +7,7 @@ import { projectSceneTextToDxf } from '../bim/text/project-scene-text';
 // ADR-583 — annotative model-size SSoT for the North-arrow annotation symbol.
 import { annotationSymbolModelSizeLive } from '../bim/annotation-symbols/annotation-symbol-model-size';
 import { DEFAULT_ANNOTATION_SYMBOL_SIZE_MM } from './annotation-symbol';
+import { computeScaleBarGeometry } from '../bim/geometry/scale-bar-geometry';
 
 export type SpatialBounds = { minX: number; minY: number; maxX: number; maxY: number };
 
@@ -80,6 +81,13 @@ function computeBounds(entity: Entity, forExtents: boolean): SpatialBounds {
         maxX: entity.position.x + half,
         maxY: entity.position.y + half,
       };
+    }
+    case 'scale-bar': {
+      // ADR-583 Φ2.4 — DERIVED length-extent bbox (span scale-invariant → `(1,'mm')`).
+      // Without a case the bar fell to `default` → EMPTY bounds → culled in the 2D viewport
+      // whenever scrolled off origin (the same trap as foundation/mep-fixture above).
+      const { bbox } = computeScaleBarGeometry(entity, 1, 'mm');
+      return { minX: bbox.minX, minY: bbox.minY, maxX: bbox.maxX, maxY: bbox.maxY };
     }
     case 'text':
     case 'mtext': {

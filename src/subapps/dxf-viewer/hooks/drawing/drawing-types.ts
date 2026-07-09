@@ -170,7 +170,9 @@ export type DrawingTool =
   | 'space-separator'
   // ADR-508 §text-parity — annotation single-click tools (ghost-word + placement indicators).
   | 'text'
-  | 'mtext';
+  | 'mtext'
+  // ADR-583 Φ2 — Graphic scale-bar: generic 2-click accumulator tool (mirror 'line').
+  | 'scale-bar';
 
 export interface DrawingState {
   currentTool: DrawingTool;

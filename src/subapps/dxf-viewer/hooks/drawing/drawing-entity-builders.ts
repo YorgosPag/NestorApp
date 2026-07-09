@@ -20,6 +20,10 @@ import type { XLineEntity, RayEntity } from '../../types/entities';
 import { getXLineModeState } from '../../systems/tools/xline-mode-store';
 // ADR-507 S2 — γραμμοσκίαση: boundary points → HatchEntity (με τα draw-defaults).
 import { buildHatchEntityFromBoundary } from '../../bim/hatch/hatch-completion';
+// ADR-583 Φ2 — graphic scale-bar: 2-click points → ScaleBarEntity (draw-context options SSoT).
+// Φ2.3 — shared "live store → entity" mapping lives in the store module itself (N.18: one
+// mapping, consumed here AND by the Φ2.3 WYSIWYG preview ghost — never cloned).
+import { buildScaleBarEntityFromLiveOptions } from '../../state/scale-bar-options-store';
 import type {
   DrawingTool,
   ExtendedSceneEntity,
@@ -47,6 +51,26 @@ function normalizeDir(dx: number, dy: number): { x: number; y: number } {
   const len = Math.sqrt(dx * dx + dy * dy);
   if (len < 1e-10) return { x: 1, y: 0 };
   return { x: dx / len, y: dy / len };
+}
+// Shared by arc-3p/arc-cse/arc-sce (ADR-059) — same ArcEntity shape, only the
+// point-order → arcResult calculation differs per tool.
+function buildArcEntity(
+  id: string,
+  arcResult: { center: Point2D; radius: number; startAngle: number; endAngle: number; counterclockwise: boolean },
+  defaultLayerId: string,
+  arcFlipped: boolean
+): ArcEntity {
+  return {
+    id,
+    type: 'arc',
+    center: arcResult.center,
+    radius: arcResult.radius,
+    startAngle: arcResult.startAngle,
+    endAngle: arcResult.endAngle,
+    visible: true,
+    layerId: defaultLayerId,
+    counterclockwise: arcFlipped ? !arcResult.counterclockwise : arcResult.counterclockwise,
+  } as ArcEntity;
 }
 /**
  * Creates a scene entity from a drawing tool and a set of world-space points.
@@ -328,6 +352,15 @@ export function createEntityFromTool(
     // ADR-507 S2 — γραμμοσκίαση (Τρόπος Α: κλειστό όριο, N-click + Enter).
     case 'hatch':
       return buildHatchEntityFromBoundary(points, id, defaultLayerId);
+    // ADR-583 Φ2 — graphic scale-bar: click 1 = '0' origin, click 2 = axis angle +
+    // dragged length (snapped to a nice 1-2-5 round number inside the builder).
+    // Options (unit/divisions/style/…) read live from the draw-context SSoT store
+    // (mirror the annotation-symbol-selection-store event-time read pattern).
+    case 'scale-bar':
+      if (points.length >= 2) {
+        return buildScaleBarEntityFromLiveOptions(points[0], points[1], id, defaultLayerId);
+      }
+      break;
     // Arc drawing tools - ADR-059
     case 'arc-3p':
       // 3-Point Arc: Start -> Point on Arc -> End
@@ -335,20 +368,7 @@ export function createEntityFromTool(
         const [start, mid, end] = points;
         const arcResult = arcFrom3Points(start, mid, end);
         if (arcResult) {
-          const finalCounterclockwise = arcFlipped
-            ? !arcResult.counterclockwise
-            : arcResult.counterclockwise;
-          return {
-            id,
-            type: 'arc',
-            center: arcResult.center,
-            radius: arcResult.radius,
-            startAngle: arcResult.startAngle,
-            endAngle: arcResult.endAngle,
-            visible: true,
-            layerId: defaultLayerId,
-            counterclockwise: finalCounterclockwise,
-          } as ArcEntity;
+          return buildArcEntity(id, arcResult, defaultLayerId, arcFlipped);
         }
       }
       break;
@@ -357,20 +377,7 @@ export function createEntityFromTool(
       if (points.length >= 3) {
         const [center, start, end] = points;
         const arcResult = arcFromCenterStartEnd(center, start, end);
-        const finalCounterclockwise = arcFlipped
-          ? !arcResult.counterclockwise
-          : arcResult.counterclockwise;
-        return {
-          id,
-          type: 'arc',
-          center: arcResult.center,
-          radius: arcResult.radius,
-          startAngle: arcResult.startAngle,
-          endAngle: arcResult.endAngle,
-          visible: true,
-          layerId: defaultLayerId,
-          counterclockwise: finalCounterclockwise,
-        } as ArcEntity;
+        return buildArcEntity(id, arcResult, defaultLayerId, arcFlipped);
       }
       break;
     case 'arc-sce':
@@ -378,20 +385,7 @@ export function createEntityFromTool(
       if (points.length >= 3) {
         const [start, center, end] = points;
         const arcResult = arcFromStartCenterEnd(start, center, end);
-        const finalCounterclockwise = arcFlipped
-          ? !arcResult.counterclockwise
-          : arcResult.counterclockwise;
-        return {
-          id,
-          type: 'arc',
-          center: arcResult.center,
-          radius: arcResult.radius,
-          startAngle: arcResult.startAngle,
-          endAngle: arcResult.endAngle,
-          visible: true,
-          layerId: defaultLayerId,
-          counterclockwise: finalCounterclockwise,
-        } as ArcEntity;
+        return buildArcEntity(id, arcResult, defaultLayerId, arcFlipped);
       }
       break;
     case 'xline': {
@@ -467,6 +461,7 @@ export function isEntityComplete(tool: DrawingTool, pointCount: number): boolean
     case 'circle-diameter':
     case 'circle-2p-diameter':
     case 'ray':
+    case 'scale-bar': // ADR-583 Φ2 — 2 σημεία (origin + axis/length), mirror 'line'
       return pointCount >= 2;
     case 'measure-angle':
     case 'measure-angle-measuregeom':

@@ -184,6 +184,7 @@ function cursorStepColor(tool: DrawingTool, clickedCount: number): string {
     'circle-2p-diameter': 1, 'polygon': 1,
     'arc-3p': 2, 'arc-cse': 2, 'arc-sce': 2,
     'circle-3p': 2, 'circle-chord-sagitta': 2, 'circle-2p-radius': 2,
+    'scale-bar': 1, // ADR-583 Φ2 — 2-click tool, mirror 'line'
   };
   const final = FINAL_STEP[tool];
   if (final === undefined) return ICON_CLICK_COLORS.SECOND; // polyline/variable → always yellow

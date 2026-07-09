@@ -92,6 +92,23 @@ export type LineGripKind = 'line-rotation' | 'line-move';
 export type AnnotationSymbolGripKind = 'annotation-symbol-move' | 'annotation-symbol-rotation';
 
 /**
+ * ADR-583 Φ2.4 — Graphic scale-bar grip kind (dedicated non-BIM annotation, NOT a BIM
+ * params entity). The bar has an intrinsic orientation AND a real-world span, so it gets
+ * THREE grips (mirror `arc-*` + a dedicated span handle):
+ *   - `scale-bar-move`     → κεντρικό grip στο μέσο του άξονα· 4-arrow MOVE glyph +
+ *                            whole-entity translate (`movesEntity` → `calculateMovedGeometry`
+ *                            case 'scale-bar' → μεταφορά του `position`).
+ *   - `scale-bar-rotation` → λαβή περιστροφής (κάθετο offset κάτω από το '0' tick)· γράφει
+ *                            ΜΟΝΟ το `angleRad` (swept angle SSoT, `applyScaleBarGripDrag`).
+ *   - `scale-bar-length`   → λαβή στο παράγωγο `endPosition`· το drag ξαναϋπολογίζει
+ *                            `angleRad` + snapped `length` (`deriveScaleBarAxis`, live 1-2-5
+ *                            quantization)· το `endPosition` μένει DERIVED.
+ * Και τα τρία δρομολογούνται στο `commitScaleBarGripDrag` (PARAMETRIC_COMMIT_HANDLERS,
+ * key `gripKind.on === 'scale-bar'`) που ξαναχτίζει μέσω `applyScaleBarGripDrag`.
+ */
+export type ScaleBarGripKind = 'scale-bar-move' | 'scale-bar-rotation' | 'scale-bar-length';
+
+/**
  * ADR-575 §8 — GROUP gizmo grip kind (composite `type:'group'` container, ΟΧΙ
  * BIM params entity). Το επιλεγμένο group εμφανίζει ΕΝΑ κοινό βελάκι στο κέντρο του
  * bounding box (Revit / Cinema 4D gizmo), αντί per-member λαβές:

@@ -49,17 +49,17 @@ describe('Parametric-commit dispatch coverage — ζωντανό seam ↔ grip d
     expect(asSorted(PARAMETRIC_COMMIT_SUPPORTED_KINDS)).toEqual(
       asSorted(Object.keys(PARAMETRIC_COMMIT_HANDLERS)),
     );
-    expect(PARAMETRIC_COMMIT_SUPPORTED_KINDS).toHaveLength(24);
+    expect(PARAMETRIC_COMMIT_SUPPORTED_KINDS).toHaveLength(25);
   });
 
-  it('grip kinds με parametric commit = καρφωμένο golden set (24)', () => {
+  it('grip kinds με parametric commit = καρφωμένο golden set (25)', () => {
     expect(asSorted(PARAMETRIC_COMMIT_SUPPORTED_KINDS)).toEqual(
       asSorted([
         'stair', 'dimension', 'wall', 'opening', 'slab', 'slab-opening', 'roof',
         'beam', 'column', 'foundation', 'mep-fixture', 'electrical-panel',
         'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater',
         'mep-segment', 'furniture', 'floorplan-symbol', 'floor-finish', 'hatch',
-        'mep-underfloor', 'xline', 'ray',
+        'mep-underfloor', 'xline', 'ray', 'scale-bar',
       ]),
     );
   });
@@ -69,10 +69,10 @@ describe('Parametric-commit dispatch coverage — ζωντανό seam ↔ grip d
     expect(asSorted(noParametric)).toEqual(asSorted([...NON_PARAMETRIC_KINDS]));
   });
 
-  it('golden ∪ complement === GRIP_KIND_ENTITIES (domain closure, 24 + 7 = 31)', () => {
+  it('golden ∪ complement === GRIP_KIND_ENTITIES (domain closure, 25 + 7 = 32)', () => {
     const union = [...PARAMETRIC_COMMIT_SUPPORTED_KINDS, ...NON_PARAMETRIC_KINDS];
     expect(asSorted(union)).toEqual(asSorted([...GRIP_KIND_ENTITIES]));
-    expect(GRIP_KIND_ENTITIES).toHaveLength(31);
+    expect(GRIP_KIND_ENTITIES).toHaveLength(32);
   });
 
   it('κανένα supported kind δεν είναι εκτός domain (seam ⊆ discriminator)', () => {

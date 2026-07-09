@@ -162,6 +162,22 @@ export const INSERT_TAB: RibbonTab = {
                 shortcut: 'REVTAG',
               },
             },
+            {
+              // ADR-583 Φ2 — graphic scale-bar: DEDICATED entity type (NOT an
+              // annotation-symbol kind). commandKey routes to the generic 2-point
+              // drawing tool (RibbonLargeButton → onToolChange), same dispatch as
+              // every other tool button — no bespoke annotation-symbol handler.
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'insert.scale-bar',
+                labelKey: 'ribbon.commands.scaleBar',
+                tooltipKey: 'ribbon.commands.scaleBarTooltip',
+                icon: 'scale-bar',
+                commandKey: 'scale-bar',
+                shortcut: 'SCALEBAR',
+              },
+            },
           ],
         },
       ],

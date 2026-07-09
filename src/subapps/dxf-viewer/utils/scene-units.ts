@@ -75,6 +75,24 @@ export function canvasToMmScaleFor(params: { readonly sceneUnits?: SceneUnits | 
 }
 
 /**
+ * REAL-WORLD distance → canonical-mm model distance (ADR-583 Φ2, graphic scale-bar).
+ *
+ * Converts a distance expressed in real-world `units` (e.g. `10` metres) into the
+ * canonical millimetres the scene stores geometry in (ADR-462). It is the scalar
+ * inverse of `mmToSceneUnits` — `realDistanceToModelMm(10, 'm') = 10000` — and is
+ * intentionally **scale-INVARIANT**: the drawing/plot scale (1:N) never enters here.
+ * A scale bar's span ("this bar IS 10 m") therefore measures the same model
+ * distance at 1:50 and 1:100; only its *annotative* thickness/labels change (those
+ * ride `paperHeightToModel`). Reuses the `mmToSceneUnits` table — no 1000 / 304.8
+ * magic numbers inlined.
+ *
+ *   `realDistanceToModelMm = distanceInUnits / mmToSceneUnits(units)`
+ */
+export function realDistanceToModelMm(distance: number, units: SceneUnits): number {
+  return distance / mmToSceneUnits(units);
+}
+
+/**
  * Bounds-diagonal heuristic used as a fallback when the DXF carries no
  * explicit unit information (`$INSUNITS = 0`). A typical building floorplan
  * has a footprint diagonal of:

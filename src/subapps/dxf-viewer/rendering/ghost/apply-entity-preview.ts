@@ -38,6 +38,8 @@ import { computeGroupSelectionBounds } from '../../systems/group/group-selection
 import { calculateMovedGeometry } from '../../core/commands/entity-commands/move-entity-geometry';
 import type { SceneEntity } from '../../core/commands/interfaces';
 import { applyTextGripDrag } from '../../bim/text/text-grips';
+import { applyScaleBarGripDrag } from '../../bim/scale-bar/scale-bar-grips';
+import type { ScaleBarEntity } from '../../types/scale-bar';
 // ADR-557 Φ-attachment — scene→DxfText projection SSoT (shared with the commit): resolves
 // the raw entity's textNode height/text/style so the ghost box math ≡ the commit's.
 import { projectSceneTextToDxf, type TextSceneShape } from '../../bim/text/project-scene-text';
@@ -159,7 +161,23 @@ export function applyEntityPreview(
   const polylineGripKind = gripKindOf(preview, 'polyline');
   const groupGripKind = gripKindOf(preview, 'group');
   const annotationSymbolGripKind = gripKindOf(preview, 'annotation-symbol');
+  const scaleBarGripKind = gripKindOf(preview, 'scale-bar');
   if (delta.x === 0 && delta.y === 0) return entity;
+
+  // ── ADR-583 Φ2.4 — graphic scale-bar live ghost (move / rotation / length) ──
+  // The bar is params-driven (geometry DERIVED); route move/rotation/length through the
+  // SAME `applyScaleBarGripDrag` SSoT the commit runs → preview ≡ commit by identity.
+  // `anchorPos` = the grabbed grip's world anchor (move ignores it). The derived
+  // `endPosition`/geometry recompute on render, so the flat-field patch is enough.
+  if (scaleBarGripKind && entity.type === 'scale-bar') {
+    const patch = applyScaleBarGripDrag(
+      scaleBarGripKind,
+      entity as unknown as ScaleBarEntity,
+      anchorPos ?? (entity as unknown as ScaleBarEntity).position,
+      delta,
+    );
+    return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
+  }
 
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
   if (wallGripKind && anchorPos && entity.type === 'wall') {

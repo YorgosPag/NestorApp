@@ -290,6 +290,9 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   'elevation-mark':    { id: 'elevation-mark',    category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'detail-callout':    { id: 'detail-callout',    category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'revision-tag':      { id: 'revision-tag',      category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-583 Φ2: Graphic scale-bar — generic 2-click line-style tool (mirror 'line'),
+  // NOT single-click annotation placement. allowsContinuous: place several in a row.
+  'scale-bar':         { id: 'scale-bar',         category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
 };
 
 /**
@@ -379,6 +382,8 @@ export const TOOL_CREATES_ENTITY: Partial<Record<ToolType, RenderableEntityType>
   // ── MEP linear segments (duct/pipe/drain/riser → ΕΝΑ entity) ──
   'mep-duct': 'mep-segment', 'mep-pipe': 'mep-segment', 'mep-drain-pipe': 'mep-segment',
   'mep-drain-riser': 'mep-segment',
+  // ── Graphic scale-bar (ADR-583 Φ2) — dedicated non-BIM entity, own tool ──
+  'scale-bar': 'scale-bar',
 };
 
 // ADR-587 Φ2b — project the SSoT map onto each `ToolInfo.createsEntityType` (DERIVED, mirror

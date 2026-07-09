@@ -1796,6 +1796,8 @@
       "detailCalloutTooltip": "Τοποθέτηση παραπομπής λεπτομέρειας με ένα κλικ στον καμβά",
       "revisionTag": "Ετικέτα Αναθεώρησης",
       "revisionTagTooltip": "Τοποθέτηση ετικέτας αναθεώρησης με ένα κλικ στον καμβά",
+      "scaleBar": "Γραφική Κλίμακα",
+      "scaleBarTooltip": "Σχεδίαση γραφικής κλίμακας: κλικ στην αρχή, μετά κλικ για ορισμό άξονα και μήκους",
       "xlineModeSelector": "Λειτουργία",
       "bim": {
         "wall": {
@@ -4457,6 +4459,25 @@
         "variant": "Στυλ",
         "size": "Μέγεθος (mm)",
         "rotation": "Περιστροφή"
+      },
+      "scaleBarEditor": {
+        "style": "Στυλ",
+        "styleOptions": {
+          "alternating": "Εναλλασσόμενο",
+          "hollow": "Κενό",
+          "lineTicks": "Γραμμή με Υποδιαιρέσεις",
+          "double": "Διπλό"
+        },
+        "unit": "Μονάδα",
+        "divisions": "Τμήματα",
+        "subdivisions": "Υποδιαιρέσεις",
+        "barHeight": "Πάχος Γραμμής (mm)",
+        "labelHeight": "Μέγεθος Ετικέτας (mm)",
+        "labelPlacement": "Θέση Ετικέτας",
+        "labelPlacementOptions": {
+          "below": "Κάτω",
+          "above": "Πάνω"
+        }
       },
       "furnitureEditor": {
         "asset": "Μοντέλο",

@@ -24,6 +24,8 @@ export const ENTITY_TOOLS: ReadonlySet<DrawingTool> = new Set([
   'polyline', 'polygon', 'arc-3p', 'arc-cse', 'arc-sce',
   // ADR-507 S2 — γραμμοσκίαση (κλειστό όριο → HatchEntity).
   'hatch',
+  // ADR-583 Φ2 — graphic scale-bar (2-click, mirror 'line').
+  'scale-bar',
 ]);
 
 /** Resolves the level ID for entity placement (fallback to "0" for known tools) */

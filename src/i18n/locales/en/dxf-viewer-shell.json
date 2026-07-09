@@ -1796,6 +1796,8 @@
       "detailCalloutTooltip": "Place a detail callout with a single click on the canvas",
       "revisionTag": "Revision Tag",
       "revisionTagTooltip": "Place a revision tag with a single click on the canvas",
+      "scaleBar": "Scale Bar",
+      "scaleBarTooltip": "Draw a graphic scale bar: click the origin, then click to set the axis and length",
       "xlineModeSelector": "Mode",
       "bim": {
         "wall": {
@@ -4457,6 +4459,25 @@
         "variant": "Style",
         "size": "Size (mm)",
         "rotation": "Rotation"
+      },
+      "scaleBarEditor": {
+        "style": "Style",
+        "styleOptions": {
+          "alternating": "Alternating",
+          "hollow": "Hollow",
+          "lineTicks": "Line + Ticks",
+          "double": "Double"
+        },
+        "unit": "Unit",
+        "divisions": "Divisions",
+        "subdivisions": "Subdivisions",
+        "barHeight": "Bar Thickness (mm)",
+        "labelHeight": "Label Size (mm)",
+        "labelPlacement": "Label Placement",
+        "labelPlacementOptions": {
+          "below": "Below",
+          "above": "Above"
+        }
       },
       "furnitureEditor": {
         "asset": "Model",

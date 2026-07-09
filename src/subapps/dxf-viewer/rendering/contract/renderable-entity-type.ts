@@ -40,6 +40,9 @@ export const DXF_RENDERABLE_TYPES = [
   // ADR-583 — annotation symbol (North arrow): lightweight non-BIM paper decoration,
   // rendered on the 2D canvas only (no per-type 3D mesh).
   'annotation-symbol',
+  // ADR-583 Φ2 — graphic scale-bar: dedicated non-BIM annotation (sibling of
+  // dimension/center-mark), 2D canvas only (no per-type 3D mesh).
+  'scale-bar',
 ] as const;
 
 /** BIM (parametric model) renderable types — 2D κάτοψη ± 3D solid. */

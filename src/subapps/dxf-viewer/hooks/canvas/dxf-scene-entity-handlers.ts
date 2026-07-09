@@ -26,9 +26,10 @@ import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { dxfSubEntityPayload } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { HatchEntity } from '../../types/entities';
-import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isFoundationEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isAnnotationSymbolEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isSpaceSeparatorEntity, isXLineEntity, isRayEntity, isHatchEntity } from '../../types/entities';
+import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isFoundationEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isAnnotationSymbolEntity, isScaleBarEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isSpaceSeparatorEntity, isXLineEntity, isRayEntity, isHatchEntity } from '../../types/entities';
 // ADR-583 — annotation symbol (North arrow) lightweight entity for DXF render pipeline.
 import type { AnnotationSymbolEntity } from '../../types/annotation-symbol';
+import type { ScaleBarEntity } from '../../types/scale-bar';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 // ADR-363 Phase 1B — wall wrapper for DXF render pipeline.
 import type { WallEntity } from '../../bim/types/wall-types';
@@ -339,6 +340,20 @@ export const TO_DXF_HANDLERS: Partial<Record<EntityType, ToDxfHandler>> = {
       ...base, type: 'annotation-symbol' as const,
       position: as.position, kind: as.kind, symbolId: as.symbolId, sizeMm: as.sizeMm,
       ...(as.rotation !== undefined ? { rotation: as.rotation } : {}),
+    } as DxfEntityUnion;
+  },
+  'scale-bar': (entity, base) => {
+    // ADR-583 Φ2 — lightweight non-BIM graphic scale-bar (sibling of annotation-symbol).
+    // Flat params spread at top level; ScaleBarRenderer reads them + computeScaleBarGeometry.
+    // The DERIVED `geometry` cache is intentionally NOT forwarded (recomputed at render).
+    // Without this case the freshly-placed bar fell to `default` → null → invisible + un-grippable.
+    if (!isScaleBarEntity(entity)) return null;
+    const sb = entity as ScaleBarEntity;
+    return {
+      ...base, type: 'scale-bar' as const,
+      position: sb.position, angleRad: sb.angleRad, length: sb.length, unit: sb.unit,
+      divisions: sb.divisions, subdivisions: sb.subdivisions, style: sb.style,
+      barHeightMm: sb.barHeightMm, labelHeightMm: sb.labelHeightMm, labelPlacement: sb.labelPlacement,
     } as DxfEntityUnion;
   },
   'mep-segment': (entity, base) => {

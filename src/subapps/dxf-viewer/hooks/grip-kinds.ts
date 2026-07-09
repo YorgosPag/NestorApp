@@ -40,6 +40,7 @@ import type {
   LineGripKind,
   GroupGripKind,
   AnnotationSymbolGripKind,
+  ScaleBarGripKind,
 } from './grip-kinds-primitives';
 import type { TextGripKind } from './grip-kinds-text';
 import type {
@@ -293,6 +294,7 @@ export type {
   LineGripKind,
   GroupGripKind,
   AnnotationSymbolGripKind,
+  ScaleBarGripKind,
 } from './grip-kinds-primitives';
 
 // ADR-557 — Text / MText grip kinds live in the sibling module
@@ -372,6 +374,7 @@ export interface GripKindByEntity {
   line: LineGripKind;
   group: GroupGripKind;
   'annotation-symbol': AnnotationSymbolGripKind;
+  'scale-bar': ScaleBarGripKind;
   text: TextGripKind;
 }
 
@@ -411,5 +414,5 @@ export const GRIP_KIND_ENTITIES = [
   'floor-finish', 'hatch', 'mep-underfloor', 'beam', 'column', 'foundation',
   'mep-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator', 'mep-boiler',
   'mep-water-heater', 'furniture', 'floorplan-symbol', 'mep-segment', 'xline',
-  'ray', 'polyline', 'circle', 'arc', 'line', 'group', 'annotation-symbol', 'text',
+  'ray', 'polyline', 'circle', 'arc', 'line', 'group', 'annotation-symbol', 'scale-bar', 'text',
 ] as const satisfies readonly (keyof GripKindByEntity)[];

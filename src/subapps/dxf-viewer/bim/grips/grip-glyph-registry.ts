@@ -109,6 +109,10 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   // glyph vocabulary as the arc / line (no resize, D5).
   'annotation-symbol-move': 'move',
   'annotation-symbol-rotation': 'rotation',
+  // Graphic scale-bar (ADR-583 Φ2.4) — midpoint move cross + rotation handle; the
+  // length handle (`scale-bar-length`) renders the default 'square'.
+  'scale-bar-move': 'move',
+  'scale-bar-rotation': 'rotation',
 } as const;
 
 /**

@@ -161,6 +161,22 @@ export function calculateBoundingBox(points: Point2D[]): BoundingBox | null {
 }
 
 /**
+ * Create rectangle vertices from two opposite corners (CCW quad).
+ * Canonical home (ADR-587 Φ9 Slice 1): moved here from `selection-duplicate-utils`
+ * so the bounds SSoT (`entity-bounds-ssot.ts`) can reuse it without a cycle
+ * (that module is imported BY `selection-duplicate-utils`). Re-exported there for
+ * back-compat, so existing importers keep the same path.
+ */
+export function createRectangleVertices(corner1: Point2D, corner2: Point2D): Point2D[] {
+  return [
+    corner1,
+    { x: corner2.x, y: corner1.y },
+    corner2,
+    { x: corner1.x, y: corner2.y }
+  ];
+}
+
+/**
  * Expand bounding box to include a point
  */
 export function expandBoundingBox(bbox: BoundingBox, point: Point2D): BoundingBox {

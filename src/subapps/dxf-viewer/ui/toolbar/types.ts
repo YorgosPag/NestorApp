@@ -273,7 +273,13 @@ export type ToolType =
   | 'grid-bubble'         // GRID — click canvas → AnnotationSymbolEntity (grid axis bubble)
   | 'elevation-mark'      // ELEV — click canvas → AnnotationSymbolEntity (elevation mark)
   | 'detail-callout'      // CALLOUT — click canvas → AnnotationSymbolEntity (detail callout)
-  | 'revision-tag';       // REVTAG — click canvas → AnnotationSymbolEntity (revision tag)
+  | 'revision-tag'        // REVTAG — click canvas → AnnotationSymbolEntity (revision tag)
+  // ADR-583 Φ2: Graphic scale-bar — a DEDICATED entity type (sibling of dimension/
+  // center-mark), NOT an annotation-symbol kind. 2-click generic accumulator tool
+  // (mirror 'line'): click 1 = '0' tick origin, click 2 = axis angle + dragged length
+  // (snapped to a nice 1-2-5 round number). Deliberately absent from
+  // `ANNOTATION_KIND_CONFIGS` so the single-click annotation handler never claims it.
+  | 'scale-bar';          // SCALEBAR — 2-click → ScaleBarEntity
 
 
 export interface ToolDefinition {

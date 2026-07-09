@@ -83,6 +83,10 @@ export {
   commitAnnotationSymbolGripDrag,
 } from './grip-primitive-rotate-commits';
 
+// ADR-583 Φ2.4 — graphic scale-bar grip commit (move / rotation / length) lives in
+// grip-scale-bar-commit.ts (N.7.1 file-size split). Re-exported so the commit API stays one import.
+export { commitScaleBarGripDrag } from './grip-scale-bar-commit';
+
 // ADR-575 §8 — GROUP gizmo rotation commit (whole-group rotate about bbox centre) lives
 // in grip-group-commits.ts. Re-exported here so the commit API stays one import.
 export { commitGroupGizmoRotation } from './grip-group-commits';

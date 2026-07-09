@@ -274,6 +274,9 @@ export const TOOL_POINT_REQUIREMENTS: Record<string, ToolPointRequirements> = {
 
   // Selection (no points needed)
   select: { minPoints: 0, maxPoints: 0, allowsContinuous: false },
+
+  // ADR-583 Φ2 — Graphic scale-bar: 2-click (origin + axis/length), mirror `line`.
+  'scale-bar': { minPoints: 2, maxPoints: 2, allowsContinuous: false },
 };
 
 // ============================================================================

@@ -25,6 +25,8 @@ import { RayRenderer } from '../entities/RayRenderer';
 import { HatchRenderer } from '../entities/HatchRenderer';
 // ADR-583 — annotation symbol leaf (North arrow; lightweight non-BIM paper decoration).
 import { AnnotationSymbolRenderer } from '../entities/AnnotationSymbolRenderer';
+// ADR-583 Φ2 — graphic scale-bar leaf (dedicated non-BIM annotation; two-formula split).
+import { ScaleBarRenderer } from '../entities/ScaleBarRenderer';
 // ADR-363 Phase 1B — parametric wall leaf (2D plan view).
 import { WallRenderer, type OpeningsByWall } from '../../bim/renderers/WallRenderer';
 // ADR-363 Phase 2 — opening leaf (door/window/sliding-door/french-door/fixed).
@@ -162,6 +164,8 @@ export class EntityRendererComposite {
     const hatchRenderer = new HatchRenderer(this.ctx);
     // ADR-583 — annotation symbol renderer (North arrow; annotative unit-space glyph).
     const annotationSymbolRenderer = new AnnotationSymbolRenderer(this.ctx);
+    // ADR-583 Φ2 — graphic scale-bar renderer (real-span axis + annotative thickness/labels).
+    const scaleBarRenderer = new ScaleBarRenderer(this.ctx);
 
     // Register renderers by entity type
     this.renderers.set('line', lineRenderer);
@@ -206,6 +210,7 @@ export class EntityRendererComposite {
     this.renderers.set('ray', rayRenderer);
     this.renderers.set('hatch', hatchRenderer);
     this.renderers.set('annotation-symbol', annotationSymbolRenderer);
+    this.renderers.set('scale-bar', scaleBarRenderer);
   }
 
   /**
@@ -247,6 +252,12 @@ export class EntityRendererComposite {
     const anno = this.renderers.get('annotation-symbol');
     if (anno instanceof AnnotationSymbolRenderer) {
       anno.setSceneUnits(units);
+    }
+    // ADR-583 Φ2 — the scale-bar renderer folds paper-mm → model units for its
+    // annotative thickness/labels (two-formula split), so it needs the same units.
+    const scaleBar = this.renderers.get('scale-bar');
+    if (scaleBar instanceof ScaleBarRenderer) {
+      scaleBar.setSceneUnits(units);
     }
   }
 

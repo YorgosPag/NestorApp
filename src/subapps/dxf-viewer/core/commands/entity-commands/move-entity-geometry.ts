@@ -135,6 +135,13 @@ export function calculateMovedGeometry(entity: SceneEntity, delta: Point3D): Par
     return { position: translatePoint((e as unknown as { position: Point2D }).position, delta) };
   }
 
+  // ADR-583 Φ2.4 — graphic scale-bar: lightweight position-anchored decoration ('0' tick).
+  // Rigid translate of the origin (mirror annotation-symbol); the derived span/endPosition
+  // follow. Covers the Alt «move-from-point» whole-entity path + the MOVE tool.
+  if (entity.type === 'scale-bar' && 'position' in e) {
+    return { position: translatePoint((e as unknown as { position: Point2D }).position, delta) };
+  }
+
   // ADR-575 — GROUP container: moving the group moves every member. Recurse the
   // SAME geometry SSoT per member (handles nested groups too), so the container
   // never needs to know each primitive's geometry shape.

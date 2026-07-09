@@ -315,6 +315,7 @@ export const ENTITY_TYPE_MAPPING: Record<EntityType, EzdxfEntityType | null> = {
   'center-mark': null,     // ADR-362 — center mark annotation, exported via composite
   'centerline': null,      // ADR-362 — centerline annotation, exported via composite
   'annotation-symbol': null, // ADR-583 — annotation symbol (North arrow) — exported via composite
+  'scale-bar': null,       // ADR-583 Φ2 — graphic scale-bar annotation — exported via composite
   'wall': null,            // BIM wall — exported via composite
   'opening': null,         // BIM opening — exported via composite
   'slab': null,            // BIM slab — exported via composite

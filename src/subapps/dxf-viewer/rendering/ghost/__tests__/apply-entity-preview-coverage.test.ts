@@ -66,10 +66,10 @@ const asSorted = (xs: readonly string[]): string[] => [...xs].sort();
 const renderableSet = new Set<string>(RENDERABLE_ENTITY_TYPES);
 
 // ─── Partition A — renderable types με ρητό parametric ghost branch ───────────────────
-/** `apply-entity-preview.ts` renderable branches (14). */
+/** `apply-entity-preview.ts` renderable branches (15). */
 const PREVIEW_GHOST_MAIN_TYPES = [
   'wall', 'slab', 'slab-opening', 'roof', 'floor-finish', 'hatch',
-  'text', 'mtext', 'line', 'arc', 'polyline', 'annotation-symbol',
+  'text', 'mtext', 'line', 'arc', 'polyline', 'annotation-symbol', 'scale-bar',
   'stair', 'opening',
 ] as const;
 /** `apply-parametric-box-preview.ts` branches (8) — box-like BIM (asymmetry α). */

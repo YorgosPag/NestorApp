@@ -87,7 +87,9 @@ export type EntityType =
   // ADR-437 — space separator / γραμμή διαχωρισμού χώρου (IfcVirtualElement).
   | 'space-separator'
   // ADR-583 — non-BIM drawing annotation symbol (North arrow / scale bar / section mark).
-  | 'annotation-symbol';
+  | 'annotation-symbol'
+  // ADR-583 Φ2 — non-BIM graphic scale-bar (dedicated sibling of dimension/center-mark).
+  | 'scale-bar';
 
 export interface BaseEntity {
   id: string;

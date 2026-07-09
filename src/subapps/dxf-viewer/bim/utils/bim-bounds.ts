@@ -51,6 +51,12 @@ export function calculateBimEntity2DBounds(entity: Entity): { min: Point2D; max:
     case 'thermal-space':
     // ADR-437 — space separator (IfcVirtualElement) segment bbox projects to 2D (same).
     case 'space-separator':
+    // ADR-407 — standalone path-based railing (IfcRailing); geometry.bbox from computeRailingGeometry().
+    // ADR-587 Φ9 Slice 1: was falling to default → null → NOT marquee-selectable though click-selectable.
+    case 'railing':
+    // ADR-511 — wall-covering face strip (cached bbox). ADR-587 Φ9 Slice 1: Twin B ROUTED it here but
+    // this delegate had no case → null (hidden behind the coverage test's optimistic B_HANDLED); now real.
+    case 'wall-covering':
     // ADR-408 Φ12 — plumbing manifold projects geometry.bbox to 2D (same).
     case 'mep-manifold':
     // ADR-408 Εύρος Β — heating radiator projects geometry.bbox to 2D (same).
@@ -65,14 +71,9 @@ export function calculateBimEntity2DBounds(entity: Entity): { min: Point2D; max:
     // ADR-436 — foundation (pad/strip/tie-beam) projects geometry.bbox to 2D (same).
     // Without this case window/crossing marquee silently skipped foundations even
     // though click hit-test (Bounds.ts) and Ctrl+A already selected them.
-    case 'foundation': {
-      const bbox = entity.geometry?.bbox;
-      if (!bbox) return null;
-      return {
-        min: { x: bbox.min.x, y: bbox.min.y },
-        max: { x: bbox.max.x, y: bbox.max.y },
-      };
-    }
+    case 'foundation':
+    // ADR-358 — stair projects its pre-computed geometry.bbox to 2D (same fall-through;
+    // merged with the shared block in ADR-587 Φ9 Slice 1 — the bodies were byte-identical).
     case 'stair': {
       const bbox = entity.geometry?.bbox;
       if (!bbox) return null;

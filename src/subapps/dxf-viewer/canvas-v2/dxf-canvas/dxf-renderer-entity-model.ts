@@ -170,6 +170,17 @@ export function buildEntityModelFromDxf(
         position: entity.position, kind: entity.kind, symbolId: entity.symbolId,
         sizeMm: entity.sizeMm, rotation: entity.rotation,
       } as unknown as Entity;
+    case 'scale-bar':
+      // ADR-583 Φ2 — lightweight non-BIM graphic scale-bar. Flat params forwarded
+      // (position/angleRad/length/unit/divisions/subdivisions/style + annotative sizes);
+      // ScaleBarRenderer reads them + computeScaleBarGeometry (span DERIVED at render).
+      return {
+        ...base, type: 'scale-bar',
+        position: entity.position, angleRad: entity.angleRad, length: entity.length,
+        unit: entity.unit, divisions: entity.divisions, subdivisions: entity.subdivisions,
+        style: entity.style, barHeightMm: entity.barHeightMm, labelHeightMm: entity.labelHeightMm,
+        labelPlacement: entity.labelPlacement,
+      } as unknown as Entity;
     case 'xline':
       return { ...base, type: 'xline', basePoint: entity.xlineEntity.basePoint, direction: entity.xlineEntity.direction } as unknown as Entity;
     case 'ray':
@@ -223,7 +234,7 @@ export const TO_ENTITY_MODEL_SUPPORTED_TYPES = [
   'slab', 'slab-opening', 'opening', 'wall', 'beam', 'column', 'foundation', 'mep-fixture',
   'electrical-panel', 'railing', 'furniture', 'roof', 'floor-finish', 'thermal-space',
   'wall-covering', 'space-separator', 'mep-segment', 'mep-fitting', 'floorplan-symbol',
-  'annotation-symbol', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater',
+  'annotation-symbol', 'scale-bar', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater',
   'mep-underfloor', 'xline', 'ray', 'hatch',
 ] as const;
 

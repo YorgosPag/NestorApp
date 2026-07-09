@@ -537,6 +537,27 @@ import type { AnnotationSymbolEntity } from './annotation-symbol';
 export type { AnnotationSymbolEntity, AnnotationSymbolKind } from './annotation-symbol';
 export { isAnnotationSymbolEntity, DEFAULT_ANNOTATION_SYMBOL_SIZE_MM } from './annotation-symbol';
 
+// ADR-583 Φ2: standalone graphic Scale-Bar (dedicated sibling of dimension/center-mark).
+import type { ScaleBarEntity } from './scale-bar';
+export type {
+  ScaleBarEntity,
+  ScaleBarGeometry,
+  ScaleBarBoundaryLabel,
+  ScaleBarBBox,
+  ScaleBarStyle,
+  ScaleBarLabelPlacement,
+} from './scale-bar';
+export {
+  isScaleBarEntity,
+  DEFAULT_SCALE_BAR_DIVISIONS,
+  DEFAULT_SCALE_BAR_SUBDIVISIONS,
+  DEFAULT_SCALE_BAR_HEIGHT_MM,
+  DEFAULT_SCALE_BAR_LABEL_MM,
+  DEFAULT_SCALE_BAR_UNIT,
+  DEFAULT_SCALE_BAR_STYLE,
+  DEFAULT_SCALE_BAR_LABEL_PLACEMENT,
+} from './scale-bar';
+
 // ✅ ENTERPRISE: Additional entity types from scene.ts integration
 export interface BlockEntity extends BaseEntity {
   type: 'block';
@@ -702,6 +723,7 @@ export type Entity = (
   | CenterMarkEntity         // ADR-362 Phase A1: standalone center mark (D13)
   | CenterLineEntity         // ADR-362 Phase A1: standalone centerline (D13)
   | AnnotationSymbolEntity   // ADR-583: standalone annotation symbol (North arrow first)
+  | ScaleBarEntity           // ADR-583 Φ2: standalone graphic scale-bar
   // ADR-363 BIM Drawing Mode (Phase 0 — renderers/tools Phase 1+):
   | WallEntity
   | OpeningEntity
