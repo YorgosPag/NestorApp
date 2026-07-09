@@ -17,90 +17,51 @@
  * @see docs/centralized-systems/reference/adrs/ADR-477-tie-beam-reinforcement-unification.md §Slice 3
  */
 
-import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
+import type { ISceneManager } from '../interfaces';
 import type { Entity } from '../../../types/entities';
 import { isFoundationEntity } from '../../../types/entities';
 import type { TieBeamParams } from '../../../bim/types/foundation-types';
 import type { TieBeamTieForcePatch } from '../../../bim/structural/loads/tie-beam-tie-force';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { signalEntitiesAttached } from './attach-persist-signal';
+import {
+  BatchEntityPatchCommand,
+  type BatchPatchEntry,
+} from './batch-entity-patch-command';
 
 /** Ανοχή ισότητας N_tie (kN) — κάτω από αυτή θεωρείται no-op (idempotent skip). */
 const TIE_FORCE_EQUAL_TOL_KN = 0.05;
 
-interface TieForcePatchEntry {
-  readonly entityId: string;
-  readonly prev: TieBeamParams;
-  readonly next: TieBeamParams;
-}
-
-export class ComputeTieBeamTieForcesCommand implements ICommand {
-  readonly id: string;
+export class ComputeTieBeamTieForcesCommand extends BatchEntityPatchCommand<TieBeamParams> {
   readonly name = 'ComputeTieBeamTieForces';
   readonly type = 'compute-tie-beam-tie-forces';
-  readonly timestamp: number;
-
-  private patches: TieForcePatchEntry[] = [];
-  private wasExecuted = false;
 
   constructor(
     private readonly forces: readonly TieBeamTieForcePatch[],
-    private readonly sceneManager: ISceneManager,
+    sceneManager: ISceneManager,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
-  }
-
-  execute(): void {
-    if (this.patches.length === 0) this.buildPatches();
-    for (const p of this.patches) this.applyPatch(p.entityId, p.next);
-    this.wasExecuted = this.patches.length > 0;
-    this.signalPersist();
-  }
-
-  undo(): void {
-    if (!this.wasExecuted) return;
-    for (const p of this.patches) this.applyPatch(p.entityId, p.prev);
-    this.signalPersist();
-  }
-
-  redo(): void {
-    for (const p of this.patches) this.applyPatch(p.entityId, p.next);
-    this.signalPersist();
+    super(sceneManager, true);
   }
 
   /** Snapshot live params per συνδετήρια → {prev, next}. Skip όταν N_tie αμετάβλητο. */
-  private buildPatches(): void {
+  protected buildPatches(): BatchPatchEntry<TieBeamParams>[] {
+    const out: BatchPatchEntry<TieBeamParams>[] = [];
     for (const { tieBeamId, seismicTieForceKn } of this.forces) {
       const entity = this.sceneManager.getEntity(tieBeamId) as unknown as Entity | undefined;
       if (!entity || !isFoundationEntity(entity) || entity.params.kind !== 'tie-beam') continue;
       const prev = entity.params;
       if (Math.abs((prev.seismicTieForceKn ?? 0) - seismicTieForceKn) < TIE_FORCE_EQUAL_TOL_KN) continue;
-      this.patches.push({ entityId: tieBeamId, prev, next: { ...prev, seismicTieForceKn } });
+      out.push({ entityId: tieBeamId, prev, next: { ...prev, seismicTieForceKn } });
     }
+    return out;
   }
 
   /** Geometry-neutral apply — seismicTieForceKn είναι input, geometry/validation αμετάβλητα. */
-  private applyPatch(entityId: string, params: TieBeamParams): void {
-    this.sceneManager.updateEntity(entityId, {
-      kind: params.kind,
-      params,
-    } as unknown as Partial<SceneEntity>);
-  }
-
-  /** ADR-401 — broadcast τις patched δοκούς ώστε το persistence layer να τις σώσει. */
-  private signalPersist(): void {
-    signalEntitiesAttached(this.sceneManager, this.patches.map((p) => p.entityId));
+  protected applyState(entry: BatchPatchEntry<TieBeamParams>, params: TieBeamParams): void {
+    this.writeParamsOnly(entry.entityId, params);
   }
 
   /** Ids που πράγματι άλλαξαν N_tie (μετά το build) — για emit/toast count. */
   getChangedTieBeamIds(): string[] {
-    if (this.patches.length === 0) this.buildPatches();
-    return this.patches.map((p) => p.entityId);
-  }
-
-  canMergeWith(): boolean {
-    return false;
+    return this.patchedEntityIds();
   }
 
   getDescription(): string {
@@ -116,14 +77,7 @@ export class ComputeTieBeamTieForcesCommand implements ICommand {
     return null;
   }
 
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: { entityIds: this.forces.map((f) => f.tieBeamId) },
-      version: 1,
-    };
+  protected serializeData(): Record<string, unknown> {
+    return { entityIds: this.forces.map((f) => f.tieBeamId) };
   }
 }

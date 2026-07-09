@@ -23,12 +23,12 @@
  * @see docs/centralized-systems/reference/adrs/ADR-412-bim-family-types.md §3.3 §3.4
  */
 
-import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
+import type { ISceneManager } from '../interfaces';
 import type { WallGeometry, WallKind, WallParams } from '../../../bim/types/wall-types';
 import type { WallTypeParams } from '../../../bim/types/bim-family-type';
 import { computeWallGeometry } from '../../../bim/geometry/wall-geometry';
 import { validateWallParams } from '../../../bim/validators/wall-validator';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
+import { AssignTypeCommandBase } from './assign-type-command-base';
 // ADR-363 §5.4 — after the wall geometry is patched, every hosted opening is
 // recomputed atomically so it follows the wall (same SSoT as the param command).
 import { cascadeHostedOpeningsForWalls } from '../../../bim/walls/wall-opening-coordinator';
@@ -40,53 +40,25 @@ export interface WallTypeAssignment {
   readonly params: WallParams;
 }
 
-export class AssignWallTypeCommand implements ICommand {
-  readonly id: string;
+export class AssignWallTypeCommand extends AssignTypeCommandBase<WallTypeAssignment> {
   readonly name = 'AssignWallType';
   readonly type = 'assign-wall-type';
-  readonly timestamp: number;
-
-  private wasExecuted = false;
 
   constructor(
-    private readonly wallId: string,
-    private readonly next: WallTypeAssignment,
-    private readonly previous: WallTypeAssignment,
-    private readonly sceneManager: ISceneManager,
+    wallId: string,
+    next: WallTypeAssignment,
+    previous: WallTypeAssignment,
+    sceneManager: ISceneManager,
     private readonly kind: WallKind = 'straight',
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(wallId, next, previous, sceneManager);
   }
 
-  execute(): void {
-    this.applyState(this.next);
-    this.wasExecuted = true;
-  }
-
-  undo(): void {
-    if (!this.wasExecuted) return;
-    this.applyState(this.previous);
-  }
-
-  redo(): void {
-    this.applyState(this.next);
-  }
-
-  private applyState(state: WallTypeAssignment): void {
+  protected applyState(state: WallTypeAssignment): void {
     const geometry: WallGeometry = computeWallGeometry(state.params, this.kind);
-    const validation = validateWallParams(state.params).bimValidation;
-    // `typeId`/`typeOverrides` are set explicitly (incl. to `undefined`) so undo
-    // can restore the untyped/ad-hoc state — a spread merge cannot delete a key.
-    this.sceneManager.updateEntity(this.wallId, {
-      typeId: state.typeId,
-      typeOverrides: state.typeOverrides,
-      params: state.params,
-      geometry,
-      validation,
-    } as unknown as Record<string, unknown>);
+    this.applyResolvedState(state, geometry, validateWallParams(state.params).bimValidation);
     // ADR-363 §5.4 — recompute hosted openings against the now-updated wall.
-    cascadeHostedOpeningsForWalls([this.wallId], this.sceneManager);
+    cascadeHostedOpeningsForWalls([this.entityId], this.sceneManager);
   }
 
   getDescription(): string {
@@ -95,30 +67,14 @@ export class AssignWallTypeCommand implements ICommand {
       : 'Clear wall type';
   }
 
-  getAffectedEntityIds(): string[] {
-    return [this.wallId];
-  }
-
   validate(): string | null {
-    if (!this.wallId) return 'Wall entity ID is required';
+    if (!this.entityId) return 'Wall entity ID is required';
     if (this.next.params.thickness <= 0) return 'thickness must be > 0';
     if (this.next.params.height <= 0) return 'height must be > 0';
     return null;
   }
 
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        wallId: this.wallId,
-        next: this.next,
-        previous: this.previous,
-        kind: this.kind,
-      },
-      version: 1,
-    };
+  protected serializeData(): Record<string, unknown> {
+    return this.assignData('wallId', { kind: this.kind });
   }
 }

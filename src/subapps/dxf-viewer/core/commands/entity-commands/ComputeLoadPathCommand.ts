@@ -16,7 +16,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-467-load-path-engine.md
  */
 
-import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
+import type { ISceneManager } from '../interfaces';
 import type { Entity } from '../../../types/entities';
 import {
   isLoadPathMember,
@@ -25,87 +25,48 @@ import {
   type MemberLoadPatch,
 } from '../../../bim/structural/loads/load-path-takedown';
 import { isTakedownWritable } from '../../../bim/structural/loads/structural-loads-types';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { signalEntitiesAttached } from './attach-persist-signal';
+import {
+  BatchEntityPatchCommand,
+  type BatchPatchEntry,
+} from './batch-entity-patch-command';
 
 type MemberParams = LoadPathMember['params'];
 
-interface LoadPathPatchEntry {
-  readonly entityId: string;
-  readonly prev: MemberParams;
-  readonly next: MemberParams;
-}
-
-export class ComputeLoadPathCommand implements ICommand {
-  readonly id: string;
+export class ComputeLoadPathCommand extends BatchEntityPatchCommand<MemberParams> {
   readonly name = 'ComputeLoadPath';
   readonly type = 'compute-load-path';
-  readonly timestamp: number;
-
-  private patches: LoadPathPatchEntry[] = [];
-  private wasExecuted = false;
 
   constructor(
     private readonly loads: readonly MemberLoadPatch[],
-    private readonly sceneManager: ISceneManager,
+    sceneManager: ISceneManager,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
-  }
-
-  execute(): void {
-    if (this.patches.length === 0) this.buildPatches();
-    for (const p of this.patches) this.applyPatch(p.entityId, p.next);
-    this.wasExecuted = this.patches.length > 0;
-    this.signalPersist();
-  }
-
-  undo(): void {
-    if (!this.wasExecuted) return;
-    for (const p of this.patches) this.applyPatch(p.entityId, p.prev);
-    this.signalPersist();
-  }
-
-  redo(): void {
-    for (const p of this.patches) this.applyPatch(p.entityId, p.next);
-    this.signalPersist();
+    super(sceneManager, true);
   }
 
   /** Snapshot live params per μέλος → {prev, next}. Re-checks member + writability. */
-  private buildPatches(): void {
+  protected buildPatches(): BatchPatchEntry<MemberParams>[] {
+    const out: BatchPatchEntry<MemberParams>[] = [];
     for (const { entityId, appliedLoad } of this.loads) {
       const entity = this.sceneManager.getEntity(entityId) as unknown as Entity | undefined;
       if (!entity || !isLoadPathMember(entity)) continue;
       if (!isTakedownWritable(memberAppliedLoad(entity))) continue;
-      this.patches.push({
+      out.push({
         entityId,
         prev: entity.params,
         next: { ...entity.params, appliedLoad } as MemberParams,
       });
     }
+    return out;
   }
 
   /** Geometry-neutral apply — appliedLoad είναι input, geometry/validation αμετάβλητα. */
-  private applyPatch(entityId: string, params: MemberParams): void {
-    this.sceneManager.updateEntity(entityId, {
-      kind: params.kind,
-      params,
-    } as unknown as Partial<SceneEntity>);
-  }
-
-  /** ADR-401 — broadcast τα patched μέλη ώστε το persistence layer να τα σώσει. */
-  private signalPersist(): void {
-    signalEntitiesAttached(this.sceneManager, this.patches.map((p) => p.entityId));
+  protected applyState(entry: BatchPatchEntry<MemberParams>, params: MemberParams): void {
+    this.writeParamsOnly(entry.entityId, params);
   }
 
   /** Ids που πράγματι έλαβαν φορτίο (μετά το build) — για toast/emit count. */
   getLoadedMemberIds(): string[] {
-    if (this.patches.length === 0) this.buildPatches();
-    return this.patches.map((p) => p.entityId);
-  }
-
-  canMergeWith(): boolean {
-    return false;
+    return this.patchedEntityIds();
   }
 
   getDescription(): string {
@@ -121,14 +82,7 @@ export class ComputeLoadPathCommand implements ICommand {
     return null;
   }
 
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: { entityIds: this.loads.map((l) => l.entityId) },
-      version: 1,
-    };
+  protected serializeData(): Record<string, unknown> {
+    return { entityIds: this.loads.map((l) => l.entityId) };
   }
 }

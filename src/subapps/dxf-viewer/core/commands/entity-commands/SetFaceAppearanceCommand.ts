@@ -18,10 +18,10 @@
  * @see docs/centralized-systems/reference/adrs/ADR-539-cinema4d-polygon-mode-per-face-appearance.md
  */
 
-import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
+import type { ISceneManager } from '../interfaces';
 import type { FaceAppearance, FaceAppearanceMap } from '../../../bim/types/face-appearance-types';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { signalEntitiesAttached } from './attach-persist-signal';
+import { FaceAppearanceFieldCommand } from './face-appearance-field-command';
+import { validateFaceKeyOverride, faceKeyOverrideData } from './entity-field-override-command';
 
 /** Συνθέτει νέο map θέτοντας/καθαρίζοντας ΜΙΑ όψη. Firestore-safe (κανένα explicit undefined). */
 function withFaceAppearance(
@@ -35,78 +35,32 @@ function withFaceAppearance(
   return next;
 }
 
-export class SetFaceAppearanceCommand implements ICommand {
-  readonly id: string;
+export class SetFaceAppearanceCommand extends FaceAppearanceFieldCommand {
   readonly name = 'SetFaceAppearance';
   readonly type = 'set-face-appearance';
-  readonly timestamp: number;
-
-  private prev: FaceAppearanceMap | undefined;
-  private next: FaceAppearanceMap | undefined;
-  private wasExecuted = false;
 
   constructor(
-    private readonly entityId: string,
+    entityId: string,
     private readonly faceKey: string,
     private readonly value: FaceAppearance | null,
-    private readonly sceneManager: ISceneManager,
+    sceneManager: ISceneManager,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(entityId, sceneManager);
   }
 
-  execute(): void {
-    if (!this.wasExecuted) {
-      const entity = this.sceneManager.getEntity(this.entityId) as unknown as
-        { faceAppearance?: FaceAppearanceMap } | undefined;
-      if (!entity) return;
-      this.prev = entity.faceAppearance;
-      this.next = withFaceAppearance(this.prev, this.faceKey, this.value);
-      this.wasExecuted = true;
-    }
-    this.apply(this.next);
-  }
-
-  undo(): void {
-    if (!this.wasExecuted) return;
-    this.apply(this.prev);
-  }
-
-  redo(): void {
-    this.apply(this.next);
-  }
-
-  private apply(faceAppearance: FaceAppearanceMap | undefined): void {
-    this.sceneManager.updateEntity(this.entityId, { faceAppearance } as unknown as Partial<SceneEntity>);
-    signalEntitiesAttached(this.sceneManager, [this.entityId]);
-  }
-
-  canMergeWith(): boolean {
-    return false;
+  protected computeNextMap(prev: FaceAppearanceMap | undefined): FaceAppearanceMap {
+    return withFaceAppearance(prev, this.faceKey, this.value);
   }
 
   getDescription(): string {
     return `Set face appearance (${this.faceKey}) on ${this.entityId}`;
   }
 
-  getAffectedEntityIds(): string[] {
-    return [this.entityId];
-  }
-
   validate(): string | null {
-    if (!this.entityId) return 'Entity id is required';
-    if (!this.faceKey) return 'faceKey is required';
-    return null;
+    return validateFaceKeyOverride(this.entityId, this.faceKey);
   }
 
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: { entityId: this.entityId, faceKey: this.faceKey, value: this.value },
-      version: 1,
-    };
+  protected serializeData(): Record<string, unknown> {
+    return faceKeyOverrideData(this.entityId, this.faceKey, this.value);
   }
 }

@@ -19,12 +19,15 @@
  * @see docs/centralized-systems/reference/adrs/ADR-449-structural-finish-skin.md §PART B
  */
 
-import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
+import type { ISceneManager, SceneEntity } from '../interfaces';
 import type { FinishFaceOverride, StructuralFinishSpec } from '../../../bim/finishes/structural-finish-types';
 import { isFinishActive } from '../../../bim/finishes/structural-finish-types';
 import { finishFaceRefForFaceKey, withFinishFaceOverride } from '../../../bim/finishes/finish-face-override-ops';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { signalEntitiesAttached } from './attach-persist-signal';
+import {
+  EntityFieldOverrideCommand,
+  validateFaceKeyOverride,
+  faceKeyOverrideData,
+} from './entity-field-override-command';
 
 /** Minimal shape: stored footprint (κολόνα) ή outline (δοκάρι) + params.finish. */
 interface FinishPaintableEntity {
@@ -40,90 +43,51 @@ function finishFootprintVertices(entity: FinishPaintableEntity): readonly { x: n
   return entity.geometry?.footprint?.vertices ?? entity.geometry?.outline?.vertices;
 }
 
-export class SetFinishFaceOverrideCommand implements ICommand {
-  readonly id: string;
+export class SetFinishFaceOverrideCommand extends EntityFieldOverrideCommand<StructuralFinishSpec> {
   readonly name = 'SetFinishFaceOverride';
   readonly type = 'set-finish-face-override';
-  readonly timestamp: number;
-
-  private prev: StructuralFinishSpec | undefined;
-  private next: StructuralFinishSpec | undefined;
-  private resolved = false;
-  private wasExecuted = false;
 
   constructor(
-    private readonly entityId: string,
+    entityId: string,
     private readonly faceKey: string,
     private readonly value: FinishFaceOverride | null,
-    private readonly sceneManager: ISceneManager,
+    sceneManager: ISceneManager,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(entityId, sceneManager);
   }
 
-  execute(): void {
-    if (!this.resolved) {
-      this.resolved = true;
-      const entity = this.sceneManager.getEntity(this.entityId) as unknown as FinishPaintableEntity | undefined;
-      const spec = entity?.params?.finish;
-      const verts = entity ? finishFootprintVertices(entity) : undefined;
-      // Χωρίς ενεργό σοβά ή έγκυρο footprint → τίποτα να βαφτεί (no-op, μηδέν history entry effect).
-      if (!isFinishActive(spec) || !verts) return;
-      const ref = finishFaceRefForFaceKey(verts, this.faceKey);
-      if (!ref) return; // top/bottom/hole → όχι κάθετη όψη σοβά
-      this.prev = spec;
-      this.next = withFinishFaceOverride(spec, ref, this.value);
-      this.wasExecuted = true;
-    }
-    if (this.wasExecuted) this.apply(this.next);
+  protected snapshotStates(): { prev: StructuralFinishSpec | undefined; next: StructuralFinishSpec | undefined } | null {
+    const entity = this.sceneManager.getEntity(this.entityId) as unknown as FinishPaintableEntity | undefined;
+    const spec = entity?.params?.finish;
+    const verts = entity ? finishFootprintVertices(entity) : undefined;
+    // Χωρίς ενεργό σοβά ή έγκυρο footprint → τίποτα να βαφτεί (no-op, μηδέν history entry effect).
+    if (!isFinishActive(spec) || !verts) return null;
+    const ref = finishFaceRefForFaceKey(verts, this.faceKey);
+    if (!ref) return null; // top/bottom/hole → όχι κάθετη όψη σοβά
+    return { prev: spec, next: withFinishFaceOverride(spec, ref, this.value) };
   }
 
-  undo(): void {
-    if (this.wasExecuted) this.apply(this.prev);
-  }
-
-  redo(): void {
-    if (this.wasExecuted) this.apply(this.next);
-  }
-
-  /** Merge του (νέου/παλιού) finish spec στα params του τρέχοντος entity + persist. */
-  private apply(spec: StructuralFinishSpec | undefined): void {
+  /** Merge του (νέου/παλιού) finish spec στα params του τρέχοντος entity. */
+  protected writeValue(spec: StructuralFinishSpec | undefined): boolean {
     const entity = this.sceneManager.getEntity(this.entityId) as unknown as
       { params?: Record<string, unknown> } | undefined;
-    if (!entity || !spec) return;
+    if (!entity || !spec) return false;
     this.sceneManager.updateEntity(
       this.entityId,
       { params: { ...entity.params, finish: spec } } as unknown as Partial<SceneEntity>,
     );
-    signalEntitiesAttached(this.sceneManager, [this.entityId]);
+    return true;
   }
 
-  canMergeWith(): boolean {
-    return false;
+  validate(): string | null {
+    return validateFaceKeyOverride(this.entityId, this.faceKey);
   }
 
   getDescription(): string {
     return `Set finish face override (${this.faceKey}) on ${this.entityId}`;
   }
 
-  getAffectedEntityIds(): string[] {
-    return [this.entityId];
-  }
-
-  validate(): string | null {
-    if (!this.entityId) return 'Entity id is required';
-    if (!this.faceKey) return 'faceKey is required';
-    return null;
-  }
-
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: { entityId: this.entityId, faceKey: this.faceKey, value: this.value },
-      version: 1,
-    };
+  protected serializeData(): Record<string, unknown> {
+    return faceKeyOverrideData(this.entityId, this.faceKey, this.value);
   }
 }

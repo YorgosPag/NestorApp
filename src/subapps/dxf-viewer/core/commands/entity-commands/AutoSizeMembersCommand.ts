@@ -23,7 +23,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-475-auto-member-sizing.md
  */
 
-import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
+import type { ISceneManager, SceneEntity } from '../interfaces';
 import type { Entity } from '../../../types/entities';
 import { isBeamEntity, isSlabEntity, isColumnEntity } from '../../../types/entities';
 import type { BeamGeometry, BeamParams } from '../../../bim/types/beam-types';
@@ -47,50 +47,28 @@ import { computeColumnGeometry } from '../../../bim/geometry/column-geometry';
 import { validateBeamParams } from '../../../bim/validators/beam-validator';
 import { validateSlabParams } from '../../../bim/validators/slab-validator';
 import { validateColumnParams } from '../../../bim/validators/column-validator';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
+import {
+  EntityIdsBatchPatchCommand,
+  type BatchPatchEntry,
+} from './batch-entity-patch-command';
 
 /** Διατομικά params μέλους που διαστασιολογείται (ύψος δοκαριού / πάχος πλάκας / διατομή κολώνας). */
 type MemberSizeParams = BeamParams | SlabParams | ColumnParams;
 
-interface SizePatchEntry {
-  readonly entityId: string;
+interface SizePatchEntry extends BatchPatchEntry<MemberSizeParams> {
   readonly entityType: 'beam' | 'slab' | 'column';
-  readonly prev: MemberSizeParams;
-  readonly next: MemberSizeParams;
 }
 
-export class AutoSizeMembersCommand implements ICommand {
-  readonly id: string;
+export class AutoSizeMembersCommand extends EntityIdsBatchPatchCommand<MemberSizeParams, SizePatchEntry> {
   readonly name = 'AutoSizeMembers';
   readonly type = 'auto-size-members';
-  readonly timestamp: number;
-
-  /** Built once on first execute() from live scene; reused by undo/redo. */
-  private patches: SizePatchEntry[] = [];
-  private wasExecuted = false;
 
   constructor(
-    private readonly entityIds: readonly string[],
-    private readonly sceneManager: ISceneManager,
+    entityIds: readonly string[],
+    sceneManager: ISceneManager,
     private readonly provider: StructuralCodeProvider,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
-  }
-
-  execute(): void {
-    if (this.patches.length === 0) this.buildPatches();
-    for (const p of this.patches) this.applyPatch(p, p.next);
-    this.wasExecuted = this.patches.length > 0;
-  }
-
-  undo(): void {
-    if (!this.wasExecuted) return;
-    for (const p of this.patches) this.applyPatch(p, p.prev);
-  }
-
-  redo(): void {
-    for (const p of this.patches) this.applyPatch(p, p.next);
+    super(entityIds, sceneManager);
   }
 
   /**
@@ -98,7 +76,8 @@ export class AutoSizeMembersCommand implements ICommand {
    * (ύψος, ADR-475) + πλάκα-πρόβολος (πάχος, ADR-499). Skips non-sizeable / locked /
    * converged μέσω του null-return κάθε patch builder.
    */
-  private buildPatches(): void {
+  protected buildPatches(): SizePatchEntry[] {
+    const out: SizePatchEntry[] = [];
     for (const entityId of this.entityIds) {
       const entity = this.sceneManager.getEntity(entityId) as unknown as Entity | undefined;
       if (!entity) continue;
@@ -116,23 +95,24 @@ export class AutoSizeMembersCommand implements ICommand {
           resolveActiveBeamSupportType(entityId), resolveActiveBeamTorsion(entityId),
           resolveActiveBeamSpanMm(entityId), resolveActiveBeamSizingLimits(entityId),
         );
-        if (patch) this.patches.push({ entityId, entityType: 'beam', prev: patch.prev, next: patch.next });
+        if (patch) out.push({ entityId, entityType: 'beam', prev: patch.prev, next: patch.next });
       } else if (isSlabEntity(entity)) {
         // ADR-498/499 — πρόβολος-πλάκα: το πάχος αυτο-μεγαλώνει ώστε M_Ed≤M_Rd,lim + L/d≤όριο.
         const patch = buildSlabSizePatch(entity, this.provider, resolveActiveSlabSupportCondition(entityId));
-        if (patch) this.patches.push({ entityId, entityType: 'slab', prev: patch.prev, next: patch.next });
+        if (patch) out.push({ entityId, entityType: 'slab', prev: patch.prev, next: patch.next });
       } else if (isColumnEntity(entity)) {
         // ADR-499 §B2 / ADR-502 §Slice2 — στηρίζουσα κολώνα προβόλου: η διατομή αυτο-μεγαλώνει
         // ώστε As,req≤ρ_max·A_c + λυγηρότητα, με τη ροπή σχεδιασμού (engaged FEM ?? static wL²/2·
         // ίδιο SSoT με τον οπλισμό → live always-on, μηδέν διπλή αλήθεια).
         const patch = buildColumnSizePatch(entity, this.provider, resolveActiveColumnDesignMoment(entityId));
-        if (patch) this.patches.push({ entityId, entityType: 'column', prev: patch.prev, next: patch.next });
+        if (patch) out.push({ entityId, entityType: 'column', prev: patch.prev, next: patch.next });
       }
     }
+    return out;
   }
 
   /** Geometry-mutating apply — διατομή αλλάζει → recompute geometry+validation atomically per kind. */
-  private applyPatch(entry: SizePatchEntry, params: MemberSizeParams): void {
+  protected applyState(entry: SizePatchEntry, params: MemberSizeParams): void {
     if (entry.entityType === 'slab') {
       const slabParams = params as SlabParams;
       const geometry: SlabGeometry = computeSlabGeometry(slabParams);
@@ -163,35 +143,11 @@ export class AutoSizeMembersCommand implements ICommand {
 
   /** Ids που πράγματι διαστασιολογήθηκαν (μετά το build) — για emit/persist. */
   getResizedEntityIds(): string[] {
-    if (this.patches.length === 0) this.buildPatches();
-    return this.patches.map((p) => p.entityId);
-  }
-
-  canMergeWith(): boolean {
-    return false;
+    return this.patchedEntityIds();
   }
 
   getDescription(): string {
     return `Auto-size ${this.patches.length} member(s)`;
   }
-
-  getAffectedEntityIds(): string[] {
-    return [...this.entityIds];
-  }
-
-  validate(): string | null {
-    if (this.entityIds.length === 0) return 'At least one entity id is required';
-    return null;
-  }
-
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: { entityIds: [...this.entityIds] },
-      version: 1,
-    };
-  }
+  // getAffectedEntityIds / validate / serializeData inherited (EntityIdsBatchPatchCommand).
 }

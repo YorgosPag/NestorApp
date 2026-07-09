@@ -21,34 +21,24 @@
  * @see docs/centralized-systems/reference/adrs/ADR-459-structural-organism-connectivity.md §Phase 4d
  */
 
-import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
+import type { ISceneManager } from '../interfaces';
 import type { Entity } from '../../../types/entities';
 import type { StructuralCodeProvider } from '../../../bim/structural/codes/structural-code-types';
 import type { BeamSupportType } from '../../../bim/types/beam-types';
 import type { SlabSupportCondition } from '../../../bim/structural/loads/slab-beam-support';
 import { buildReinforcePatch, type ReinforceableParams } from '../../../bim/structural/reinforce-patch';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { signalEntitiesAttached } from './attach-persist-signal';
+import {
+  EntityIdsBatchPatchCommand,
+  type BatchPatchEntry,
+} from './batch-entity-patch-command';
 
-interface ReinforcePatchEntry {
-  readonly entityId: string;
-  readonly prev: ReinforceableParams;
-  readonly next: ReinforceableParams;
-}
-
-export class AutoReinforceOrganismCommand implements ICommand {
-  readonly id: string;
+export class AutoReinforceOrganismCommand extends EntityIdsBatchPatchCommand<ReinforceableParams> {
   readonly name = 'AutoReinforceOrganism';
   readonly type = 'auto-reinforce-organism';
-  readonly timestamp: number;
-
-  /** Built once on first execute() from live scene; reused by undo/redo. */
-  private patches: ReinforcePatchEntry[] = [];
-  private wasExecuted = false;
 
   constructor(
-    private readonly entityIds: readonly string[],
-    private readonly sceneManager: ISceneManager,
+    entityIds: readonly string[],
+    sceneManager: ISceneManager,
     private readonly provider: StructuralCodeProvider,
     // ADR-486 — DERIVED topology-aware τύπος στήριξης ανά δοκάρι (πρόβολος → wL²/2).
     private readonly supportTypeByBeamId?: ReadonlyMap<string, BeamSupportType>,
@@ -62,30 +52,12 @@ export class AutoReinforceOrganismCommand implements ICommand {
     // ADR-504 Φ2 — DERIVED υπο-άνοιγμα συνεχούς δοκού ανά δοκάρι (wL_sub²/10 + συμμετρικός χάλυβας).
     private readonly beamSpanByBeamId?: ReadonlyMap<string, number>,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
-  }
-
-  execute(): void {
-    if (this.patches.length === 0) this.buildPatches();
-    for (const p of this.patches) this.applyPatch(p.entityId, p.next);
-    this.wasExecuted = this.patches.length > 0;
-    this.signalPersist();
-  }
-
-  undo(): void {
-    if (!this.wasExecuted) return;
-    for (const p of this.patches) this.applyPatch(p.entityId, p.prev);
-    this.signalPersist();
-  }
-
-  redo(): void {
-    for (const p of this.patches) this.applyPatch(p.entityId, p.next);
-    this.signalPersist();
+    super(entityIds, sceneManager, true);
   }
 
   /** Snapshot live params per member → {prev, next}. Skips non-structural & already-reinforced. */
-  private buildPatches(): void {
+  protected buildPatches(): BatchPatchEntry<ReinforceableParams>[] {
+    const out: BatchPatchEntry<ReinforceableParams>[] = [];
     for (const entityId of this.entityIds) {
       const entity = this.sceneManager.getEntity(entityId) as unknown as Entity | undefined;
       if (!entity) continue;
@@ -99,56 +71,23 @@ export class AutoReinforceOrganismCommand implements ICommand {
         this.beamSpanByBeamId?.get(entityId),
       );
       if (!patch) continue; // idempotent: non-structural ή ήδη οπλισμένο
-      this.patches.push({ entityId, prev: patch.prev, next: patch.next });
+      out.push({ entityId, prev: patch.prev, next: patch.next });
     }
+    return out;
   }
 
   /** Geometry-neutral apply — reinforcement είναι additive, geometry/validation αμετάβλητα. */
-  private applyPatch(entityId: string, params: ReinforceableParams): void {
-    this.sceneManager.updateEntity(entityId, {
-      kind: params.kind,
-      params,
-    } as unknown as Partial<SceneEntity>);
-  }
-
-  /** ADR-401 — broadcast the patched members so the persistence layer saves them. */
-  private signalPersist(): void {
-    signalEntitiesAttached(this.sceneManager, this.patches.map((p) => p.entityId));
+  protected applyState(entry: BatchPatchEntry<ReinforceableParams>, params: ReinforceableParams): void {
+    this.writeParamsOnly(entry.entityId, params);
   }
 
   /** Ids που πράγματι οπλίστηκαν (μετά το build) — για toast/emit count. */
   getReinforcedEntityIds(): string[] {
-    if (this.patches.length === 0) this.buildPatches();
-    return this.patches.map((p) => p.entityId);
-  }
-
-  canMergeWith(): boolean {
-    return false;
+    return this.patchedEntityIds();
   }
 
   getDescription(): string {
     return `Auto-reinforce ${this.patches.length} structural member(s)`;
   }
-
-  getAffectedEntityIds(): string[] {
-    return [...this.entityIds];
-  }
-
-  validate(): string | null {
-    if (this.entityIds.length === 0) return 'At least one entity id is required';
-    return null;
-  }
-
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        entityIds: [...this.entityIds],
-      },
-      version: 1,
-    };
-  }
+  // getAffectedEntityIds / validate / serializeData inherited (EntityIdsBatchPatchCommand).
 }

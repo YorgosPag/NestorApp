@@ -17,17 +17,16 @@
  * @see docs/centralized-systems/reference/adrs/ADR-470-structural-component-visibility.md
  */
 
-import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
+import type { ISceneManager, SceneEntity } from '../interfaces';
 import type { BimElementStyleOverride } from '../../../config/bim-object-styles';
 import type { StructuralComponent } from '../../../config/bim-structural-components';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { signalEntitiesAttached } from './attach-persist-signal';
+import {
+  EntityIdsBatchPatchCommand,
+  type BatchPatchEntry,
+} from './batch-entity-patch-command';
 
-interface ComponentVisibilityPatch {
-  readonly entityId: string;
-  readonly prev: BimElementStyleOverride | undefined;
-  readonly next: BimElementStyleOverride;
-}
+/** Per-entity styleOverride snapshot — `prev` may be undefined (no prior override). */
+type ComponentVisibilityState = BimElementStyleOverride | undefined;
 
 /** Συνθέτει το νέο styleOverride θέτοντας/καθαρίζοντας ΕΝΑ component. Firestore-safe
  *  (κανένα explicit `undefined` — άδειο componentVisibility ⇒ key αφαιρείται). */
@@ -46,90 +45,42 @@ function withComponentVisibility(
   return next;
 }
 
-export class SetComponentVisibilityCommand implements ICommand {
-  readonly id: string;
+export class SetComponentVisibilityCommand extends EntityIdsBatchPatchCommand<ComponentVisibilityState> {
   readonly name = 'SetComponentVisibility';
   readonly type = 'set-component-visibility';
-  readonly timestamp: number;
-
-  private patches: ComponentVisibilityPatch[] = [];
-  private wasExecuted = false;
 
   constructor(
-    private readonly entityIds: readonly string[],
+    entityIds: readonly string[],
     private readonly component: StructuralComponent,
     private readonly value: boolean | undefined,
-    private readonly sceneManager: ISceneManager,
+    sceneManager: ISceneManager,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(entityIds, sceneManager, true);
   }
 
-  execute(): void {
-    if (this.patches.length === 0) this.buildPatches();
-    for (const p of this.patches) this.applyPatch(p.entityId, p.next);
-    this.wasExecuted = this.patches.length > 0;
-    this.signalPersist();
-  }
-
-  undo(): void {
-    if (!this.wasExecuted) return;
-    for (const p of this.patches) this.applyPatch(p.entityId, p.prev ?? {});
-    this.signalPersist();
-  }
-
-  redo(): void {
-    for (const p of this.patches) this.applyPatch(p.entityId, p.next);
-    this.signalPersist();
-  }
-
-  private buildPatches(): void {
+  protected buildPatches(): BatchPatchEntry<ComponentVisibilityState>[] {
+    const out: BatchPatchEntry<ComponentVisibilityState>[] = [];
     for (const entityId of this.entityIds) {
       const entity = this.sceneManager.getEntity(entityId) as unknown as
         { styleOverride?: BimElementStyleOverride } | undefined;
       if (!entity) continue;
       const prev = entity.styleOverride;
-      this.patches.push({
-        entityId,
-        prev,
-        next: withComponentVisibility(prev, this.component, this.value),
-      });
+      out.push({ entityId, prev, next: withComponentVisibility(prev, this.component, this.value) });
     }
+    return out;
   }
 
-  private applyPatch(entityId: string, styleOverride: BimElementStyleOverride): void {
-    this.sceneManager.updateEntity(entityId, { styleOverride } as unknown as Partial<SceneEntity>);
-  }
-
-  private signalPersist(): void {
-    signalEntitiesAttached(this.sceneManager, this.patches.map((p) => p.entityId));
-  }
-
-  canMergeWith(): boolean {
-    return false;
+  protected applyState(entry: BatchPatchEntry<ComponentVisibilityState>, styleOverride: ComponentVisibilityState): void {
+    // undo may restore an entity that had no prior override → write an empty map.
+    this.sceneManager.updateEntity(entry.entityId, { styleOverride: styleOverride ?? {} } as unknown as Partial<SceneEntity>);
   }
 
   getDescription(): string {
     return `Set ${this.component} visibility on ${this.entityIds.length} element(s)`;
   }
+  // getAffectedEntityIds / validate inherited (EntityIdsBatchPatchCommand).
 
-  getAffectedEntityIds(): string[] {
-    return [...this.entityIds];
-  }
-
-  validate(): string | null {
-    if (this.entityIds.length === 0) return 'At least one entity id is required';
-    return null;
-  }
-
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: { entityIds: this.entityIds, component: this.component, value: this.value ?? null },
-      version: 1,
-    };
+  protected serializeData(): Record<string, unknown> {
+    return { entityIds: this.entityIds, component: this.component, value: this.value ?? null };
   }
 }

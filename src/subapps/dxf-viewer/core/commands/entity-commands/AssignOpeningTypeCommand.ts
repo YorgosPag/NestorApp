@@ -29,7 +29,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-421-bim-opening-types-revit-grade.md
  */
 
-import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
+import type { SceneEntity } from '../interfaces';
 import type { OpeningGeometry, OpeningParams } from '../../../bim/types/opening-types';
 import type { OpeningTypeParams } from '../../../bim/types/bim-family-type';
 import type { WallEntity } from '../../../bim/types/wall-types';
@@ -37,7 +37,7 @@ import { computeOpeningGeometry } from '../../../bim/geometry/opening-geometry';
 import { validateOpeningParams } from '../../../bim/validators/opening-validator';
 import { resolveOperationType } from '../../../bim/types/opening-operation-types';
 import { inferOpeningIfcType } from '@/services/factories/opening.factory';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
+import { AssignTypeCommandBase } from './assign-type-command-base';
 
 /** Immutable snapshot of an opening's family-type link + cached params. */
 export interface OpeningTypeAssignment {
@@ -46,39 +46,11 @@ export interface OpeningTypeAssignment {
   readonly params: OpeningParams;
 }
 
-export class AssignOpeningTypeCommand implements ICommand {
-  readonly id: string;
+export class AssignOpeningTypeCommand extends AssignTypeCommandBase<OpeningTypeAssignment> {
   readonly name = 'AssignOpeningType';
   readonly type = 'assign-opening-type';
-  readonly timestamp: number;
 
-  private wasExecuted = false;
-
-  constructor(
-    private readonly openingId: string,
-    private readonly next: OpeningTypeAssignment,
-    private readonly previous: OpeningTypeAssignment,
-    private readonly sceneManager: ISceneManager,
-  ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
-  }
-
-  execute(): void {
-    this.applyState(this.next);
-    this.wasExecuted = true;
-  }
-
-  undo(): void {
-    if (!this.wasExecuted) return;
-    this.applyState(this.previous);
-  }
-
-  redo(): void {
-    this.applyState(this.next);
-  }
-
-  private applyState(state: OpeningTypeAssignment): void {
+  protected applyState(state: OpeningTypeAssignment): void {
     // Re-derive the IFC operation from the (possibly type-governed) kind +
     // instance handing — a family swap via the Type must re-flow operationType.
     const params: OpeningParams = {
@@ -108,7 +80,7 @@ export class AssignOpeningTypeCommand implements ICommand {
       // Soft-orphan: intrinsic validation only (no host-relative checks).
       patch.validation = validateOpeningParams(params, null).bimValidation;
     }
-    this.sceneManager.updateEntity(this.openingId, patch as Partial<SceneEntity>);
+    this.sceneManager.updateEntity(this.entityId, patch as Partial<SceneEntity>);
   }
 
   private resolveHostWall(wallId: string): WallEntity | null {
@@ -125,30 +97,15 @@ export class AssignOpeningTypeCommand implements ICommand {
       : 'Clear opening type';
   }
 
-  getAffectedEntityIds(): string[] {
-    return [this.openingId];
-  }
-
   validate(): string | null {
-    if (!this.openingId) return 'Opening entity ID is required';
+    if (!this.entityId) return 'Opening entity ID is required';
     if (!this.next.params.wallId) return 'Opening params.wallId is required';
     if (this.next.params.width <= 0) return 'width must be > 0';
     if (this.next.params.height <= 0) return 'height must be > 0';
     return null;
   }
 
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        openingId: this.openingId,
-        next: this.next,
-        previous: this.previous,
-      },
-      version: 1,
-    };
+  protected serializeData(): Record<string, unknown> {
+    return this.assignData('openingId');
   }
 }
