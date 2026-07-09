@@ -43,12 +43,16 @@ import {
   getDimStyleRegistry,
   type DimStyleRegistry,
 } from '../../systems/dimensions/dim-style-registry';
-import { resolveArrowBlockNames, getArrowheadBlock } from '../../systems/dimensions/dim-arrowhead-blocks';
+import { resolveArrowBlockNames } from '../../systems/dimensions/dim-arrowhead-blocks';
 import { renderDimArrowheadPair } from './dimension/dim-arrowhead-renderer';
 import { renderDimensionText } from './dimension/dim-text-renderer';
 import {
-  addPoints, scalePoint, getUnitVector, dotProduct, subtractPoints, calculateDistance,
-} from './shared/geometry-vector-utils';
+  hasLeaderArrows,
+  resolveDimLineInsets,
+  insetDimLineSegments,
+  resolveLeaderArrowDir,
+} from './dimension/dim-leader-arrow';
+import { addPoints, scalePoint } from './shared/geometry-vector-utils';
 import { resolveDimColorTC } from './dimension/dim-color-resolver';
 import { CoordinateTransforms } from '../core/CoordinateTransforms';
 import {
@@ -72,41 +76,6 @@ import {
   type DimFitRender,
 } from './dimension/dimension-renderer-support';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
-
-/** Below this projected span (world units) an inset segment is dropped as degenerate. */
-const DIM_LINE_INSET_EPSILON = 1e-6;
-
-/**
- * ADR-608 — pull the dim line back from each anchor by `inset1`/`inset2` (world units), so a
- * leader-carrying arrow (Tekton «Βέλος 2») leaves a gap its leader fills. Clamps each segment's
- * projection onto the axis to `[inset1, length − inset2]`; segments fully inside the leader zone
- * drop out. Both insets 0 → segments returned unchanged (all standard arrowheads).
- */
-export function insetDimLineSegments(
-  segs: readonly DimLineSegment[],
-  start: Point2D,
-  end: Point2D,
-  inset1: number,
-  inset2: number,
-): DimLineSegment[] {
-  if (inset1 <= 0 && inset2 <= 0) return [...segs];
-  const length = calculateDistance(start, end);
-  const lo = inset1;
-  const hi = length - inset2;
-  if (hi <= lo) return []; // leaders cover the whole span → no central line
-  const axis = getUnitVector(start, end);
-  const out: DimLineSegment[] = [];
-  for (const s of segs) {
-    const t0 = dotProduct(subtractPoints(s.start, start), axis);
-    const t1 = dotProduct(subtractPoints(s.end, start), axis);
-    const a = Math.max(Math.min(t0, t1), lo);
-    const b = Math.min(Math.max(t0, t1), hi);
-    if (b - a > DIM_LINE_INSET_EPSILON) {
-      out.push({ start: addPoints(start, scalePoint(axis, a)), end: addPoints(start, scalePoint(axis, b)) });
-    }
-  }
-  return out;
-}
 
 export class DimensionRenderer extends BaseEntityRenderer {
   private dimensionLookup: DimensionLookup = () => undefined;
@@ -239,7 +208,7 @@ export class DimensionRenderer extends BaseEntityRenderer {
         if (!r.style.suppressDimLine1 && !r.style.suppressDimLine2) {
           // ADR-608 — leader-carrying arrows (Tekton «Βέλος 2») pull the dim line back so it
           // starts/ends where their leaders end; standard arrowheads inset 0 (unchanged).
-          const { inset1, inset2 } = this.resolveDimLineInsets(r);
+          const { inset1, inset2 } = resolveDimLineInsets(r.style, this.sceneUnits);
           const hasLeader = inset1 > 0 || inset2 > 0;
           // ADR-362 Phase M — suppress the inside dim line only when BOTH text and arrows go
           // outside and DIMTOFL is off. ADR-608 — leader arrows ALWAYS draw the inset line.
@@ -291,19 +260,6 @@ export class DimensionRenderer extends BaseEntityRenderer {
     }
   }
 
-  /**
-   * ADR-608 — per-anchor dim-line pull-back (world units) = each side's arrowhead
-   * `dimLineInset` (unit space) × the arrow world-unit length. Standard blocks → 0.
-   */
-  private resolveDimLineInsets(r: ResolvedDimensionRender): { inset1: number; inset2: number } {
-    const { block1, block2 } = resolveArrowBlockNames(r.style);
-    const worldUnit = paperHeightToModel(r.style.dimasz, r.style.dimscale, this.sceneUnits);
-    return {
-      inset1: (getArrowheadBlock(block1).dimLineInset ?? 0) * worldUnit,
-      inset2: (getArrowheadBlock(block2).dimLineInset ?? 0) * worldUnit,
-    };
-  }
-
   private drawArrowheads(r: ResolvedDimensionRender, lf?: DimFitRender | null): void {
     const { block1, block2 } = resolveArrowBlockNames(r.style);
     // Arrowhead unit length: paper dimasz → model (× dimscale × mmToSceneUnits via
@@ -321,6 +277,9 @@ export class DimensionRenderer extends BaseEntityRenderer {
     );
     // ADR-362 Phase M — when DIMATFIT moves arrows outside, the placement flips the
     // outward directions so the heads sit outside the ext lines pointing inward.
+    // ADR-608 — leader arrows (Tekton «Βέλος 2») use a DETERMINISTIC inward direction (the negated
+    // geometric outward), immune to the fit flip (else a text-size change silently flips a head).
+    const hasLeader = hasLeaderArrows(r.style);
     // ADR-362 §7 — the block-pair resolution, per-side suppress gate, and stamping
     // loop live in the shared `renderDimArrowheadPair` SSoT (main ≡ preview).
     renderDimArrowheadPair(this.ctx, {
@@ -328,8 +287,12 @@ export class DimensionRenderer extends BaseEntityRenderer {
       block2Name: block2,
       anchor1Screen: this.toScreen(r.geometry.arrowAnchor1),
       anchor2Screen: this.toScreen(r.geometry.arrowAnchor2),
-      dir1: lf?.placement.arrowDirection1 ?? r.geometry.arrowDirection1,
-      dir2: lf?.placement.arrowDirection2 ?? r.geometry.arrowDirection2,
+      dir1: resolveLeaderArrowDir(
+        hasLeader, r.geometry.arrowDirection1, lf?.placement.arrowDirection1 ?? r.geometry.arrowDirection1,
+      ),
+      dir2: resolveLeaderArrowDir(
+        hasLeader, r.geometry.arrowDirection2, lf?.placement.arrowDirection2 ?? r.geometry.arrowDirection2,
+      ),
       unitPx,
       color: colour,
       suppress1: r.style.suppressArrow1,

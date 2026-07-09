@@ -244,3 +244,21 @@ ground truth. Αποκωδικοποίηση επιβεβαίωσε/διόρθω
   Το `dimscale` (300) κλιμακώνει text+βέλη μαζί· για μείωση μόνο του κειμένου → override `dimtxt = ενεργό
   style dimtxt ÷ TEK_DIM_TEXT_REDUCE(3)` (τα βέλη/`dimasz` ανέπαφα). Text 750mm→250mm. Tunable divisor
   (browser-βαθμονομούμενος). Test κλειδώνει `dimtxt = styleTxt/3`. **12/12 mapper GREEN** · jscpd clean.
+- **2026-07-09** — **ADR-608: leader arrows immune στο fit-flip** (Giorgio: «άλλαξε φορά το ένα βέλος μετά τη
+  μείωση κειμένου»). Root: το μικρότερο `dimtxt` άλλαξε το text-width → άλλαξε το `resolveTextFit` (DIMATFIT)
+  → το `lf.placement.arrowDirection` αναποδογύρισε ασύμμετρα ένα βέλος. Fix (`drawArrowheads`): `hasLeader` →
+  τα leader arrows κρατούν ΠΑΝΤΑ τη γεωμετρική (outward) φορά `r.geometry.arrowDirection{1,2}`, αγνοώντας το
+  fit-flip. Standard dims αμετάβλητα. **41/41 GREEN** · jscpd clean.
+  **Διόρθωση (ίδια μέρα):** το γεωμετρικό (outward) αντέστρεψε ΚΑΙ ΤΑ ΔΥΟ (το mirrored block είναι βαθμονομημένο
+  για την inward φορά). Σωστό: leader arrows → **ντετερμινιστική inward** φορά = `scalePoint(geometry.arrowDir, -1)`
+  (μύτη έξω + leader προς κέντρο, όπως το επιβεβαιωμένο mirror-step· immune στο fit-flip). **41/41 GREEN** ·
+  jscpd clean · DimensionRenderer **499 γρ** (⚠️ 1 από το 500 — ΠΡΙΝ οποιαδήποτε επόμενη αλλαγή renderer → extract
+  ADR-608 leader helpers σε ξεχωριστό module).
+- **2026-07-09** — **ADR-608: STATE LOCK + extract leader helpers** (Giorgio: «κλείδωσε την κατάσταση, θα
+  συνεχίσουμε ρυθμίσεις»). Νέο pure module `rendering/entities/dimension/dim-leader-arrow.ts` (105 γρ):
+  `hasLeaderArrows` / `resolveDimLineInsets` / `insetDimLineSegments` / `resolveLeaderArrowDir` — μεταφορά από
+  τον renderer (→ **DimensionRenderer 499→456 γρ**, headroom για επόμενες ρυθμίσεις· μηδέν αλλαγή συμπεριφοράς).
+  Νέο `dim-leader-arrow.test.ts` (12 tests) κλειδώνει: leader detection, inset world-units, segment clamp/gap/
+  drop, inward-direction immunity. **Συνολικό regression lock: 633/633 GREEN** (55 suites) · jscpd clean. Καλυμμένες
+  βαθμονομήσεις: 4 χρώματα, tektonArrow2 (mirror v2[0]=1 / outline solid=false / tick 0.16 / leader 0.30 /
+  dimLineInset 2.5), dimasz 1.2, dimscale 300 (MAG 3), dimtad centered, dimtxt ÷3, inset/no-stubs/inward-dir.
