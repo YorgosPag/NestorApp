@@ -22,26 +22,35 @@ function tenMetreBar(overrides: Partial<ScaleBarEntity> = {}): ScaleBarEntity {
   return { ...base, ...overrides };
 }
 
-describe('getScaleBarGrips — 3 grips from derived geometry', () => {
-  it('emits move (midpoint), rotation, length (endPosition) with distinct kinds', () => {
+describe('getScaleBarGrips — 5 grips from derived geometry', () => {
+  it('emits move, rotation, length(far), length-start(0-tick), height with distinct kinds', () => {
     const e = tenMetreBar();
     const geo = computeScaleBarGeometry(e, 1, 'mm');
     const grips = getScaleBarGrips(e);
 
-    expect(grips).toHaveLength(3);
+    expect(grips).toHaveLength(5);
     expect(grips.map((g) => g.gripKind?.kind)).toEqual([
       'scale-bar-move', 'scale-bar-rotation', 'scale-bar-length',
+      'scale-bar-length-start', 'scale-bar-height',
     ]);
     expect(grips.every((g) => g.gripKind?.on === 'scale-bar')).toBe(true);
+    // All non-move handles are STRUCTURAL 'vertex' → always shown on a selected bar (survive
+    // the grip-type toggles + the multi-select transform-glyph hide, Giorgio 2026-07-09).
+    expect(grips.slice(1).every((g) => g.type === 'vertex')).toBe(true);
 
-    // MOVE @ axis midpoint (movesEntity), LENGTH @ derived endPosition.
+    // MOVE @ axis midpoint (movesEntity), LENGTH @ derived endPosition, LENGTH-START @ '0' tick.
     expect(grips[0].movesEntity).toBe(true);
     expect(grips[0].position.x).toBeCloseTo(geo.endPosition.x / 2, 6);
     expect(grips[2].position.x).toBeCloseTo(geo.endPosition.x, 6);
     expect(grips[2].position.y).toBeCloseTo(geo.endPosition.y, 6);
-    // Rotation handle sits OFF the axis (perpendicular offset), not on the baseline.
+    expect(grips[3].position).toEqual(e.position); // left-end handle = the '0' tick
+    // Rotation + height sit OFF the axis (perpendicular offset), not on the baseline; the
+    // height handle rides the +perp face at the axis-midpoint x (horizontal bar → straight up).
     expect(grips[1].movesEntity).toBe(false);
     expect(Math.abs(grips[1].position.y)).toBeGreaterThan(0);
+    expect(grips[4].position.x).toBeCloseTo(geo.endPosition.x / 2, 6);
+    expect(grips[4].position.y).toBeGreaterThan(0);
+    expect(grips[4].movesEntity).toBe(false);
   });
 });
 
@@ -100,5 +109,32 @@ describe('applyScaleBarGripDrag — the three transforms', () => {
     const patch = applyScaleBarGripDrag('scale-bar-length', e, end, { x: -10_000, y: 10_000 });
     expect(patch.angleRad).toBeCloseTo(Math.PI / 2, 6);
     expect(patch.length).toBe(10);
+  });
+
+  it('length-start → moves the 0-tick origin, keeps the far end, rederives angle + snapped length', () => {
+    const e = tenMetreBar(); // position (0,0), far (10 000,0), length 10 m
+    // Drag the origin LEFT by 13 000 mm → far-to-origin span = 23 000 mm (23 m) → snaps to 20 m.
+    const patch = applyScaleBarGripDrag('scale-bar-length-start', e, e.position, { x: -13_000, y: 0 });
+    expect(patch.position).toEqual({ x: -13_000, y: 0 });
+    expect(patch.length).toBe(20);           // 23 → nearest 1-2-5 = 20
+    expect(patch.angleRad).toBeCloseTo(0, 9); // axis still points +X (origin → far)
+  });
+
+  it('height → rescales barHeightMm by the perpendicular ratio (scale-free), clamped positive', () => {
+    const e = tenMetreBar(); // horizontal bar, barHeightMm = default 4
+    const heightHandle = getScaleBarGrips(e)[4].position; // top-mid, perp offset = live thickness
+    const oldPerp = heightHandle.y;          // horizontal bar → perpendicular is +Y
+    expect(oldPerp).toBeGreaterThan(0);
+
+    // Drag the handle out by exactly its own perpendicular distance → thickness doubles.
+    const patch = applyScaleBarGripDrag('scale-bar-height', e, heightHandle, { x: 0, y: oldPerp });
+    expect(patch.barHeightMm).toBeCloseTo(e.barHeightMm * 2, 6);
+    expect(patch.position).toBeUndefined();
+    expect(patch.length).toBeUndefined();
+    expect(patch.angleRad).toBeUndefined();
+
+    // Drag far inward (past the baseline) → clamps to a readable minimum, never ≤ 0.
+    const clamped = applyScaleBarGripDrag('scale-bar-height', e, heightHandle, { x: 0, y: -1e9 });
+    expect(clamped.barHeightMm).toBeGreaterThan(0);
   });
 });

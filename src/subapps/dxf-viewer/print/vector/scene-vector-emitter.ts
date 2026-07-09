@@ -26,7 +26,8 @@
  */
 
 import type { jsPDF } from 'jspdf';
-import type { Entity, HatchEntity } from '../../types/entities';
+import type { Entity, HatchEntity, TextEntity } from '../../types/entities';
+import type { VectorTextBaselineHint } from '../../export/core/annotation-to-primitives';
 import type { Point2D } from '../../rendering/types/Types';
 import type { DimensionEntity } from '../../types/dimension';
 import { applyPlotColor, type PrintColorPolicy } from '../../config/print-color-policy';
@@ -145,8 +146,18 @@ function emitText(
   const p = toPaper(t.position);
   const heightWorld = t.height || DEFAULT_TEXT_HEIGHT_WORLD;
   pdf.setFontSize(heightWorld * scale * PT_PER_MM);
+  // Decomposed annotation labels carry alignment (`TextEntity.alignment` + the
+  // vector baseline hint) so centred glyph letters / scale-bar numerals land on
+  // their anchor; scene text omits both → default left / alphabetic (unchanged).
+  const align = mapHAlign((e as TextEntity).alignment);
+  const baseline = (e as VectorTextBaselineHint).vBaseline ?? 'alphabetic';
   // World rotation is CCW in a Y-up frame; on the Y-down page it reads as CW → negate.
-  pdf.text(sanitizeText(t.text), p.x, p.y, { baseline: 'alphabetic', angle: -(t.rotation ?? 0) });
+  pdf.text(sanitizeText(t.text), p.x, p.y, { align, baseline, angle: -(t.rotation ?? 0) });
+}
+
+/** Horizontal alignment (`TextEntity.alignment`) → jsPDF text align. Default left. */
+function mapHAlign(alignment: TextEntity['alignment']): 'left' | 'center' | 'right' {
+  return alignment === 'center' ? 'center' : alignment === 'right' ? 'right' : 'left';
 }
 
 // ─── Hatch (v1: solid-fill faces + boundary outline; pattern lines deferred) ──

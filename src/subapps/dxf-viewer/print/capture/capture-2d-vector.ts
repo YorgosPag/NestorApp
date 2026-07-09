@@ -25,7 +25,10 @@
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { flattenSceneEntitiesForDxf } from '../../export/core/bim-to-dxf-primitives';
+import { expandAnnotationsToPrimitives } from '../../export/core/annotation-to-primitives';
 import { stampRenderedColors } from '../../export/formats/dxf-export-adapter';
+import { useDrawingScaleStore } from '../../state/drawing-scale-store';
+import { resolveSceneUnits } from '../../utils/scene-units';
 import type { PrintColorPolicy } from '../../config/print-color-policy';
 import { pxToMm } from '../config/paper-math';
 import { emitSceneToPdf } from '../vector/scene-vector-emitter';
@@ -74,7 +77,15 @@ export function captureCurrent2dViewVector(input: Capture2dInput): CaptureResult
   const sceneEntities = input.scene?.entities ?? [];
   const layersById = input.scene?.layersById ?? {};
   const colored = stampRenderedColors(sceneEntities, layersById);
-  const { entities } = flattenSceneEntitiesForDxf(colored);
+  const { entities: flat } = flattenSceneEntitiesForDxf(colored);
+
+  // ADR-583/608 — explode annotation symbols + scale-bars into neutral primitives
+  // the emitter draws (Revit/AutoCAD "explode annotation on export"). Without this
+  // pre-pass the emitter's `default` case silently drops them from the vector PDF.
+  // Annotative sizing needs the live drawing scale (1:N) + the scene's units.
+  const drawingScale = useDrawingScaleStore.getState().drawingScale;
+  const sceneUnits = input.userDrawingUnits ?? resolveSceneUnits({ units: dxfScene.units });
+  const entities = expandAnnotationsToPrimitives(flat, { drawingScale, sceneUnits });
 
   const colorPolicy: PrintColorPolicy = {
     style: input.plotStyle ?? 'colour',

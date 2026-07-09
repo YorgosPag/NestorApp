@@ -144,3 +144,36 @@ describe('scene-vector-emitter — plot colour policy', () => {
     expect(draw[0].args).toEqual([255, 0, 0]);
   });
 });
+
+describe('scene-vector-emitter — annotation label + solid fill (ADR-608)', () => {
+  it('decomposed label honours alignment + vertical baseline', () => {
+    const e = {
+      id: 't1', type: 'text', layerId: '0', position: { x: 2, y: 8 },
+      text: 'N', height: 2.5, rotation: 0, alignment: 'center', vBaseline: 'middle',
+    };
+    const text = only(emit([e as unknown as Entity]), 'text');
+    expect(text).toHaveLength(1);
+    const opts = text[0].args[3] as { align?: string; baseline?: string };
+    expect(opts.align).toBe('center');
+    expect(opts.baseline).toBe('middle');
+  });
+
+  it('scene text without hints → default left / alphabetic (unchanged)', () => {
+    const e = { id: 't2', type: 'text', layerId: '0', position: { x: 0, y: 0 }, text: 'A', height: 2.5 };
+    const opts = only(emit([e as unknown as Entity]), 'text')[0].args[3] as {
+      align?: string; baseline?: string;
+    };
+    expect(opts.align).toBe('left');
+    expect(opts.baseline).toBe('alphabetic');
+  });
+
+  it('solid-fill hatch (dxfFaces) → filled pdf.lines (style F)', () => {
+    const e = {
+      id: 'h1', type: 'hatch', layerId: '0',
+      dxfFaces: [[{ x: 0, y: 0, zMm: 0 }, { x: 5, y: 0, zMm: 0 }, { x: 5, y: 5, zMm: 0 }]],
+    };
+    const lines = only(emit([e as unknown as Entity]), 'lines');
+    expect(lines).toHaveLength(1);
+    expect(lines[0].args[4]).toBe('F');
+  });
+});

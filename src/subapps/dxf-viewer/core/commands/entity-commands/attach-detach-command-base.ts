@@ -81,6 +81,30 @@ export abstract class AttachDetachCommandBase<
     this.signalPersist();
   }
 
+  /**
+   * The shared snapshot loop behind every `buildPatches`: read each entry's live
+   * params, skip absent entities, compute `next` (return `null` to skip an idempotent
+   * no-op), and build the patch. Keeps the per-command `buildPatches` a one-liner.
+   */
+  protected snapshotPatches<TEntry>(
+    entries: readonly TEntry[],
+    entityIdOf: (entry: TEntry) => string,
+    computeNext: (prev: TParams, entry: TEntry) => TParams | null,
+    toPatch: (entityId: string, prev: TParams, next: TParams, entry: TEntry) => TPatch,
+  ): TPatch[] {
+    const patches: TPatch[] = [];
+    for (const entry of entries) {
+      const entityId = entityIdOf(entry);
+      const entity = this.sceneManager.getEntity(entityId) as unknown as { params?: TParams } | undefined;
+      const prev = entity?.params;
+      if (!prev) continue;
+      const next = computeNext(prev, entry);
+      if (next === null) continue;
+      patches.push(toPatch(entityId, prev, next, entry));
+    }
+    return patches;
+  }
+
   /** ADR-401 — broadcast the patched entities so the persistence layer saves them. */
   protected signalPersist(): void {
     signalEntitiesAttached(this.sceneManager, this.patches.map((p) => p.entityId));

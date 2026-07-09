@@ -94,19 +94,33 @@ export type AnnotationSymbolGripKind = 'annotation-symbol-move' | 'annotation-sy
 /**
  * ADR-583 Φ2.4 — Graphic scale-bar grip kind (dedicated non-BIM annotation, NOT a BIM
  * params entity). The bar has an intrinsic orientation AND a real-world span, so it gets
- * THREE grips (mirror `arc-*` + a dedicated span handle):
- *   - `scale-bar-move`     → κεντρικό grip στο μέσο του άξονα· 4-arrow MOVE glyph +
- *                            whole-entity translate (`movesEntity` → `calculateMovedGeometry`
- *                            case 'scale-bar' → μεταφορά του `position`).
- *   - `scale-bar-rotation` → λαβή περιστροφής (κάθετο offset κάτω από το '0' tick)· γράφει
- *                            ΜΟΝΟ το `angleRad` (swept angle SSoT, `applyScaleBarGripDrag`).
- *   - `scale-bar-length`   → λαβή στο παράγωγο `endPosition`· το drag ξαναϋπολογίζει
- *                            `angleRad` + snapped `length` (`deriveScaleBarAxis`, live 1-2-5
- *                            quantization)· το `endPosition` μένει DERIVED.
- * Και τα τρία δρομολογούνται στο `commitScaleBarGripDrag` (PARAMETRIC_COMMIT_HANDLERS,
+ * FIVE grips (mirror `arc-*` + dedicated span/height handles — Giorgio 2026-07-09 «έξυπνες
+ * λαβές: 2 άκρα→μήκος, 1 πάνω→ύψος», Φ2 του «αύξηση λαβών»):
+ *   - `scale-bar-move`         → κεντρικό grip στο μέσο του άξονα· 4-arrow MOVE glyph +
+ *                                whole-entity translate (`movesEntity` → `calculateMovedGeometry`
+ *                                case 'scale-bar' → μεταφορά του `position`).
+ *   - `scale-bar-rotation`     → λαβή περιστροφής (κάθετο offset κάτω από το '0' tick)· γράφει
+ *                                ΜΟΝΟ το `angleRad` (swept angle SSoT, `applyScaleBarGripDrag`).
+ *   - `scale-bar-length`       → λαβή στο ΔΕΞΙ άκρο (παράγωγο `endPosition`)· το drag κρατά το
+ *                                '0' tick σταθερό, ξαναϋπολογίζει `angleRad` + snapped `length`
+ *                                (`deriveScaleBarAxis`, live 1-2-5)· το `endPosition` DERIVED.
+ *   - `scale-bar-length-start` → λαβή στο ΑΡΙΣΤΕΡΟ άκρο (το '0' tick `position`)· το drag κρατά
+ *                                το ΔΕΞΙ άκρο σταθερό, μετακινεί το `position` + ξαναϋπολογίζει
+ *                                `angleRad`/`length` (ίδιο `deriveScaleBarAxis` SSoT, αντίστροφη
+ *                                φορά). Τα δύο άκρα = συμμετρικά length handles.
+ *   - `scale-bar-height`       → λαβή στο μέσο της ΠΑΝΩ ακμής· το drag αλλάζει ΜΟΝΟ το annotative
+ *                                `barHeightMm` μέσω SCALE-FREE λόγου (newPerp/oldPerp ακυρώνει τον
+ *                                drawingScale factor → κανένα store read στο drag). Type `'vertex'`
+ *                                (STRUCTURAL) ώστε να επιβιώνει multi-select + grip-type toggles.
+ * Και τα πέντε δρομολογούνται στο `commitScaleBarGripDrag` (PARAMETRIC_COMMIT_HANDLERS,
  * key `gripKind.on === 'scale-bar'`) που ξαναχτίζει μέσω `applyScaleBarGripDrag`.
  */
-export type ScaleBarGripKind = 'scale-bar-move' | 'scale-bar-rotation' | 'scale-bar-length';
+export type ScaleBarGripKind =
+  | 'scale-bar-move'
+  | 'scale-bar-rotation'
+  | 'scale-bar-length'
+  | 'scale-bar-length-start'
+  | 'scale-bar-height';
 
 /**
  * ADR-575 §8 — GROUP gizmo grip kind (composite `type:'group'` container, ΟΧΙ

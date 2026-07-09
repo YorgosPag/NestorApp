@@ -1,31 +1,24 @@
 /**
- * DETACH STAIRS COMMAND — ADR-401 Phase G.3 (manual detach UX).
+ * DETACH STAIRS COMMAND — ADR-401 (manual/host-delete detach UX).
  *
  * Batch, undoable «Detach Top/Base» for N stairs — the inverse of
- * `AttachStairsCommand`. Restores the stair's side binding to its stair-honest
- * default (`unconnected` for top / `storey-floor` for base) and clears the host
- * list (`attachTopToIds` / `attachBaseToIds`) via the shared `detachStairSide`
- * SSoT, then recomputes `geometry` + `validation` atomically. One command = ONE
- * undo entry (Revit «Detach Top/Base»).
+ * `AttachStairsCommand`. Resets the side binding to its stair default + clears the host
+ * list via the shared `detachStairSide` SSoT (stair top default = 'unconnected', Phase G),
+ * then recomputes geometry + validation.
  *
- * Single generic command (`side: 'top' | 'base'`), mirror of `DetachColumnsCommand`.
- * Stairs do NOT host openings → no opening-cascade. Per-stair snapshots are built
- * ONCE on first `execute()`, so `undo()`/`redo()` are pure re-applies.
+ * Thin subclass of the `StairAttachDetachCommand` base (ADR-610).
  *
- * @see core/commands/entity-commands/AttachStairsCommand.ts — the attach twin
- * @see core/commands/entity-commands/DetachColumnsCommand.ts — the column mirror
+ * @see ./attach-detach-domain-commands.ts — the stair base (recompute + snapshot)
+ * @see ./AttachStairsCommand.ts — the attach twin
  * @see bim/stairs/stair-attach-detach.ts — detachStairSide SSoT (stair defaults)
  */
 
-import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
-import type { StairGeometry, StairKind, StairParams } from '../../../bim/types/stair-types';
-import { computeStairGeometry } from '../../../bim/geometry/stairs/StairGeometryService';
-import { validateStairParams } from '../../../bim/stairs/stair-validator';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
+import type { ISceneManager, SerializedCommand } from '../interfaces';
+import type { StairKind, StairParams } from '../../../bim/types/stair-types';
 import { detachStairSide } from '../../../bim/stairs/stair-attach-detach';
 import type { EntityAttachSide } from '../../../bim/entities/entity-attach-detach';
-// ADR-401 — persist the binding change (detach-on-host-delete targets non-selected stairs).
-import { signalEntitiesAttached } from './attach-persist-signal';
+import { StairAttachDetachCommand } from './attach-detach-domain-commands';
+import type { AttachDetachPatch } from './attach-detach-command-base';
 
 export type StairDetachSide = EntityAttachSide;
 
@@ -35,75 +28,22 @@ export interface StairDetachTarget {
   readonly kind: StairKind;
 }
 
-interface StairDetachPatch {
-  readonly stairId: string;
-  readonly prev: StairParams;
-  readonly next: StairParams;
-}
-
-export class DetachStairsCommand implements ICommand {
-  readonly id: string;
+export class DetachStairsCommand extends StairAttachDetachCommand {
   readonly name = 'DetachStairs';
   readonly type = 'detach-stairs';
-  readonly timestamp: number;
-
-  private patches: StairDetachPatch[] = [];
-  private wasExecuted = false;
 
   constructor(
     private readonly side: StairDetachSide,
     private readonly targets: readonly StairDetachTarget[],
-    private readonly sceneManager: ISceneManager,
+    sceneManager: ISceneManager,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(sceneManager);
   }
 
-  execute(): void {
-    if (this.patches.length === 0) this.buildPatches();
-    for (const p of this.patches) this.applyPatch(p.stairId, p.next);
-    this.wasExecuted = this.patches.length > 0;
-    this.signalPersist();
-  }
-
-  undo(): void {
-    if (!this.wasExecuted) return;
-    for (const p of this.patches) this.applyPatch(p.stairId, p.prev);
-    this.signalPersist();
-  }
-
-  redo(): void {
-    for (const p of this.patches) this.applyPatch(p.stairId, p.next);
-    this.signalPersist();
-  }
-
-  /** Snapshot live params per target → {prev, next} (binding reset + ids cleared). */
-  private buildPatches(): void {
-    for (const { stairId } of this.targets) {
-      const entity = this.sceneManager.getEntity(stairId) as unknown as { params?: StairParams } | undefined;
-      const prev = entity?.params;
-      if (!prev) continue;
-      this.patches.push({ stairId, prev, next: detachStairSide(prev, this.side) });
-    }
-  }
-
-  private applyPatch(stairId: string, params: StairParams): void {
-    const geometry: StairGeometry = computeStairGeometry(params);
-    const validation = validateStairParams(params);
-    this.sceneManager.updateEntity(stairId, {
-      params,
-      geometry,
-      validation,
-    } as unknown as Record<string, unknown>);
-  }
-
-  /** ADR-401 — broadcast the patched stairs so the persistence layer saves them. */
-  private signalPersist(): void {
-    signalEntitiesAttached(this.sceneManager, this.patches.map((p) => p.stairId));
-  }
-
-  canMergeWith(): boolean {
-    return false;
+  protected buildPatches(): AttachDetachPatch<StairParams>[] {
+    return this.buildStairPatches(this.targets, (t) => t.stairId, (prev) =>
+      detachStairSide(prev, this.side),
+    );
   }
 
   getDescription(): string {
@@ -119,17 +59,7 @@ export class DetachStairsCommand implements ICommand {
     return null;
   }
 
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        side: this.side,
-        targets: this.targets,
-      },
-      version: 1,
-    };
+  protected serializedData(): SerializedCommand['data'] {
+    return { side: this.side, targets: this.targets };
   }
 }

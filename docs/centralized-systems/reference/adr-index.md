@@ -586,6 +586,7 @@
 | **ADR-607** | Batch-create entities command factory SSoT (`createBatchEntitiesCommand`· 6 `Create*Command` grid-gen· −7 jscpd/−600 LOC) | ✅ ACTIVE | 2026-07-09 | Uncategorized | [📄](./adrs/ADR-607-batch-entities-command-ssot.md) |
 | **ADR-608** | Vector-PDF backend (print & export· `scene-vector-emitter` SSoT· `CaptureResult` raster\|vector union· 2D vector default + raster fallback) | ✅ ACTIVE | 2026-07-09 | DXF Viewer | [📄](./adrs/ADR-608-vector-pdf-export.md) |
 | **ADR-609** | Ribbon MEP auto-design bridge factory SSoT (`createRibbonMepAutoBridge`· 6 `useRibbon*AutoBridge` network hooks· typed emit thunks· −14 jscpd) | ✅ ACTIVE | 2026-07-09 | Uncategorized | [📄](./adrs/ADR-609-ribbon-mep-auto-bridge-ssot.md) |
+| **ADR-610** | Attach/Detach command factory SSoT (`AttachDetachCommandBase` Template-Method· 9 structural binding commands· domain+shape bases· −30 jscpd) | ✅ ACTIVE | 2026-07-09 | Uncategorized | [📄](./adrs/ADR-610-attach-detach-command-ssot.md) |
 | **ADR-598** | Production-Readiness Quality Gates (big-player parity roadmap — 15 gaps, 4 phases) | 📋 PROPOSED | 2026-07-08 | CI/Infra | [📄](./adrs/ADR-598-production-readiness-quality-gates.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
