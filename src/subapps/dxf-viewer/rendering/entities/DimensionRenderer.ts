@@ -43,10 +43,12 @@ import {
   getDimStyleRegistry,
   type DimStyleRegistry,
 } from '../../systems/dimensions/dim-style-registry';
-import { resolveArrowBlockNames } from '../../systems/dimensions/dim-arrowhead-blocks';
+import { resolveArrowBlockNames, getArrowheadBlock } from '../../systems/dimensions/dim-arrowhead-blocks';
 import { renderDimArrowheadPair } from './dimension/dim-arrowhead-renderer';
 import { renderDimensionText } from './dimension/dim-text-renderer';
-import { addPoints, scalePoint } from './shared/geometry-vector-utils';
+import {
+  addPoints, scalePoint, getUnitVector, dotProduct, subtractPoints, calculateDistance,
+} from './shared/geometry-vector-utils';
 import { resolveDimColorTC } from './dimension/dim-color-resolver';
 import { CoordinateTransforms } from '../core/CoordinateTransforms';
 import {
@@ -70,6 +72,41 @@ import {
   type DimFitRender,
 } from './dimension/dimension-renderer-support';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
+
+/** Below this projected span (world units) an inset segment is dropped as degenerate. */
+const DIM_LINE_INSET_EPSILON = 1e-6;
+
+/**
+ * ADR-608 — pull the dim line back from each anchor by `inset1`/`inset2` (world units), so a
+ * leader-carrying arrow (Tekton «Βέλος 2») leaves a gap its leader fills. Clamps each segment's
+ * projection onto the axis to `[inset1, length − inset2]`; segments fully inside the leader zone
+ * drop out. Both insets 0 → segments returned unchanged (all standard arrowheads).
+ */
+export function insetDimLineSegments(
+  segs: readonly DimLineSegment[],
+  start: Point2D,
+  end: Point2D,
+  inset1: number,
+  inset2: number,
+): DimLineSegment[] {
+  if (inset1 <= 0 && inset2 <= 0) return [...segs];
+  const length = calculateDistance(start, end);
+  const lo = inset1;
+  const hi = length - inset2;
+  if (hi <= lo) return []; // leaders cover the whole span → no central line
+  const axis = getUnitVector(start, end);
+  const out: DimLineSegment[] = [];
+  for (const s of segs) {
+    const t0 = dotProduct(subtractPoints(s.start, start), axis);
+    const t1 = dotProduct(subtractPoints(s.end, start), axis);
+    const a = Math.max(Math.min(t0, t1), lo);
+    const b = Math.min(Math.max(t0, t1), hi);
+    if (b - a > DIM_LINE_INSET_EPSILON) {
+      out.push({ start: addPoints(start, scalePoint(axis, a)), end: addPoints(start, scalePoint(axis, b)) });
+    }
+  }
+  return out;
+}
 
 export class DimensionRenderer extends BaseEntityRenderer {
   private dimensionLookup: DimensionLookup = () => undefined;
@@ -200,14 +237,22 @@ export class DimensionRenderer extends BaseEntityRenderer {
     switch (r.geometry.kind) {
       case 'linear':
         if (!r.style.suppressDimLine1 && !r.style.suppressDimLine2) {
-          // ADR-362 Phase M — suppress the inside dim line only when BOTH text and
-          // arrows go outside and DIMTOFL is off (else draw it as before).
-          if (!lf || lf.fit.drawDimLineInside) {
+          // ADR-608 — leader-carrying arrows (Tekton «Βέλος 2») pull the dim line back so it
+          // starts/ends where their leaders end; standard arrowheads inset 0 (unchanged).
+          const { inset1, inset2 } = this.resolveDimLineInsets(r);
+          const hasLeader = inset1 > 0 || inset2 > 0;
+          // ADR-362 Phase M — suppress the inside dim line only when BOTH text and arrows go
+          // outside and DIMTOFL is off. ADR-608 — leader arrows ALWAYS draw the inset line.
+          if (hasLeader || !lf || lf.fit.drawDimLineInside) {
             const segs = breaks?.dimLineSegments ?? [r.geometry.dimLine];
-            for (const s of segs) this.strokeSegment(s);
+            const insetSegs = insetDimLineSegments(
+              segs, r.geometry.dimLine.start, r.geometry.dimLine.end, inset1, inset2,
+            );
+            for (const s of insetSegs) this.strokeSegment(s);
           }
-          // Outside stubs give the flipped arrowheads a line to rest on.
-          if (lf?.fit.arrowsOutside) {
+          // Outside stubs give the flipped arrowheads a line to rest on — but NEVER for leader
+          // arrows (their leaders already bridge to the tips; a stub would exceed them).
+          if (lf?.fit.arrowsOutside && !hasLeader) {
             const g = r.geometry;
             this.drawOutsideStubs(
               g.dimLine.start, g.arrowDirection1,
@@ -244,6 +289,19 @@ export class DimensionRenderer extends BaseEntityRenderer {
         throw new Error(`[DimensionRenderer] Unknown geometry kind: ${JSON.stringify(_exhaustive)}`);
       }
     }
+  }
+
+  /**
+   * ADR-608 — per-anchor dim-line pull-back (world units) = each side's arrowhead
+   * `dimLineInset` (unit space) × the arrow world-unit length. Standard blocks → 0.
+   */
+  private resolveDimLineInsets(r: ResolvedDimensionRender): { inset1: number; inset2: number } {
+    const { block1, block2 } = resolveArrowBlockNames(r.style);
+    const worldUnit = paperHeightToModel(r.style.dimasz, r.style.dimscale, this.sceneUnits);
+    return {
+      inset1: (getArrowheadBlock(block1).dimLineInset ?? 0) * worldUnit,
+      inset2: (getArrowheadBlock(block2).dimLineInset ?? 0) * worldUnit,
+    };
   }
 
   private drawArrowheads(r: ResolvedDimensionRender, lf?: DimFitRender | null): void {

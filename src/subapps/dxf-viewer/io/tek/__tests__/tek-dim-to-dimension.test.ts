@@ -75,6 +75,8 @@ describe('tekDimToDimensionEntities (ADR-608)', () => {
       expect(leader.to[0]).toBeCloseTo(0.3 / 0.12, 6);
       expect(leader.to[1]).toBe(0);
     }
+    // Η κεντρική γραμμή διάστασης κάνει inset κατά το μήκος του leader (= LEADER_LEN).
+    expect(getArrowheadBlock(name ?? '').dimLineInset).toBeCloseTo(0.3 / 0.12, 6);
   });
 
   it('dimasz = ρητή βαθμονόμηση: μήκος βέλους 0.120m → length_mm/(100 dimscale) = 1.2mm', () => {
@@ -85,6 +87,10 @@ describe('tekDimToDimensionEntities (ADR-608)', () => {
   it('dimscale = annotation scale (100 × MAG 3 = 300) → κείμενο+βέλος διαβάζονται (σαν Τέκτονας)', () => {
     // Giorgio: οι διαστάσεις σε πραγματικό μέγεθος = μικροσκοπικές· uniform annotation magnification.
     expect(dims[0].overrides?.dimscale).toBe(300);
+  });
+
+  it('dimtad = centered → κείμενο ομοαξωνικό με τη γραμμή διάστασης (όχι έκκεντρο/above)', () => {
+    expect(dims[0].overrides?.dimtad).toBe('centered');
   });
 
   it('χρώματα κενά → fallback στη γραμμή· άγνωστο end_style → κληρονομεί dimblk (χωρίς override)', () => {

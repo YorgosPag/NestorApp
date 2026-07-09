@@ -221,3 +221,22 @@ ground truth. Αποκωδικοποίηση επιβεβαίωσε/διόρθω
   `[0,0]→[+2.5,0]`, +X=εσωτερικά μετά το mirror). Named consts + `TEKTON_ARROW2_LEN_M` SSoT. Κληρονομούν το
   μπορντώ χρώμα του βέλους (arrowhead single-color). Test κλειδώνει geometry length 3 + tick/leader coords.
   **27/27 GREEN** · jscpd clean.
+- **2026-07-09** — **ADR-608: κεντρική γραμμή διάστασης ξεκινά/τελειώνει στα leader ends** (Giorgio). Νέα
+  προαιρετική ιδιότητα block `dimLineInset` (unit space) — το `tektonArrow2` την ορίζει = `LEADER_LEN` (2.5).
+  `DimensionRenderer` (linear): pure helper `insetDimLineSegments` τραβάει τη dim line προς μέσα κατά
+  `blockInset × paperHeightToModel(dimasz,dimscale,units)` σε κάθε anchor (world units, ίδια κλίμακα με τον
+  leader → ευθυγραμμίζονται) — clamp προβολής στον άξονα σε `[inset1, length−inset2]`, διατηρεί το κενό
+  κειμένου (2 segments), drop όταν leaders καλύπτουν όλο το μήκος. Standard blocks (`dimLineInset` απόν) → 0,
+  αμετάβλητα. Targeted (μόνο Tekton dims). **48/48 GREEN** (mapper+DimensionRenderer+arrowhead· 4 νέα inset
+  unit tests + block property) · jscpd clean · DimensionRenderer 491 γρ (<500).
+- **2026-07-09** — **ADR-608: leader arrows χωρίς outside-stubs / πάντα inset κεντρική** (Giorgio: «η κεντρική
+  γραμμή βγαίνει έξω από τις μύτες»). Root: με MAG×3, βέλη+κείμενο δεν χωράνε σε δim 2m → `resolveTextFit`
+  `arrowsOutside=true` → `drawOutsideStubs` ζωγράφιζε γραμμές ΕΞΩ από τα foot1/foot2 (πέρα από τις μύτες). Fix
+  (`DimensionRenderer.drawDimLineOrArc` linear): `hasLeader = inset1|inset2 > 0` → (α) **πάντα** σχεδίασε την
+  inset κεντρική γραμμή (αγνόησε το `drawDimLineInside=false` του fit)· (β) **ΠΟΤΕ** outside stubs για leader
+  arrows (ο leader ήδη γεφυρώνει ως τη μύτη). Standard dims αμετάβλητα (hasLeader=false). **39/39 GREEN** ·
+  jscpd clean · 493 γρ.
+- **2026-07-09** — **ADR-608: κείμενο ομοαξωνικό με τη γραμμή** (Giorgio: «το κείμενο είναι έκκεντρο»). Το
+  NESTOR style έχει `dimtad: 'above'` (κείμενο πάνω από τη γραμμή). Override `dimtad: 'centered'` στον mapper →
+  κείμενο κεντραρισμένο στον άξονα της γραμμής διάστασης (DIMTAD=0). Μόνο αυτό. Test κλειδώνει `dimtad`.
+  **11/11 mapper GREEN** · jscpd clean.

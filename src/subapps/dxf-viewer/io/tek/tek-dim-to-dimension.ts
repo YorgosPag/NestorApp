@@ -93,6 +93,8 @@ function dimOverrides(rec: TekDimRecord): DimensionOverride {
     arrowColor: hexToAci(arrowHex), arrowTrueColor: hexToTrueColor(arrowHex),
     dimasz: resolveArrowSizeMm(),
     dimscale: TEK_RENDER_DIMSCALE * TEK_DIM_ANNOTATION_MAG,
+    // Κείμενο ΟΜΟΑΞΩΝΙΚΟ με τη γραμμή διάστασης (κεντραρισμένο στον άξονα, όχι «above») — Giorgio.
+    dimtad: 'centered',
     ...(arrowBlock ? { dimblk: arrowBlock } : {}),
   };
 }

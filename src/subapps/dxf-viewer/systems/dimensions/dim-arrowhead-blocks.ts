@@ -62,6 +62,12 @@ export interface ArrowheadBlockDefinition {
   readonly flipOnSecondArrow: boolean;
   /** Convenience flag = block has at least one solid primitive. */
   readonly solid: boolean;
+  /**
+   * ADR-608 — προαιρετικό pull-back (unit space, 1 = `dimasz`) της ΓΡΑΜΜΗΣ ΔΙΑΣΤΑΣΗΣ από το
+   * anchor αυτού του βέλους: ένα βέλος που «κουβαλάει» leader (Tekton «Βέλος 2») αφήνει κενό
+   * που το γεμίζει ο leader. Απόν/0 → η dim line φτάνει ως το anchor κανονικά (όλα τα std blocks).
+   */
+  readonly dimLineInset?: number;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -167,6 +173,8 @@ export const ARROWHEAD_BLOCKS: Readonly<Record<string, ArrowheadBlockDefinition>
     ],
     flipOnSecondArrow: false,
     solid: false,
+    // Η κεντρική γραμμή διάστασης ξεκινά/τελειώνει εκεί που τελειώνει ο leader (Giorgio 2026-07-09).
+    dimLineInset: TEKTON_ARROW2_LEADER_LEN,
   },
 
   closed: {
