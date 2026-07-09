@@ -21,22 +21,18 @@
  */
 
 import { offsetPolyline } from '../../../rendering/entities/shared/geometry-offset-utils';
-import type { StairGeometry, StairParams, Polygon3D, Polyline3D, Segment3D } from '../../../bim/types/stair-types';
+import type { StairGeometry, StairParams, Polyline3D } from '../../../bim/types/stair-types';
 import {
   DEFAULT_CUT_PLANE_HEIGHT,
   type Vec2,
-  perp,
   directionToUnitVector,
   point,
-  rectangleAt,
   arrowSymbol,
-  bboxOfPolygons,
   splitTreadsByCutPlane,
   buildCutLine,
   buildStringersFromWalkline,
-  buildHandrailsFromParams,
 } from './stair-geometry-shared';
-import { buildTreadLabels } from './stair-geometry-labels';
+import { assembleStairGeometry, buildRectilinearFlight } from './stair-geometry-generators';
 import { computeLShape } from './stair-geometry-lshape';
 import { computeUShape } from './stair-geometry-ushape';
 import { computeGamma } from './stair-geometry-gamma';
@@ -106,8 +102,10 @@ export function computeWalkline(centerline: Polyline3D, offset: number): Polylin
 function computeStraight(params: Readonly<StairParams>): StairGeometry {
   const { basePoint, direction, rise, tread, nosing, width, stepCount, upDirection } = params;
   const u = directionToUnitVector(direction);
-  const treads = buildStraightTreads(basePoint, u, rise, tread, nosing, width, stepCount);
-  const risers = buildStraightRisers(basePoint, u, rise, tread, width, stepCount);
+  // ADR-611 — flight treads/risers (rectilinear, centreline origin) from the
+  // shared `buildRectilinearFlight` generator. Risers keep the ADR-370 Phase
+  // 5.3 diagonal Segment3D encoding the generator implements.
+  const flight = buildRectilinearFlight(basePoint, u, rise, tread, nosing, width, stepCount);
   const walkline = buildStraightWalkline(basePoint, u, tread, rise, stepCount);
   const stringers = buildStringersFromWalkline(walkline, width);
   const totalRun = tread * (stepCount - 1);
@@ -117,89 +115,20 @@ function computeStraight(params: Readonly<StairParams>): StairGeometry {
     upDirection,
   );
   const cutPlaneHeight = params.cutPlaneHeight ?? DEFAULT_CUT_PLANE_HEIGHT;
-  const split = splitTreadsByCutPlane(treads, cutPlaneHeight);
+  const split = splitTreadsByCutPlane(flight.treads, cutPlaneHeight);
   const cutLine =
     split.below.length > 0 && split.above.length > 0
       ? buildCutLine(split.above[0], u, width, cutPlaneHeight)
       : undefined;
-  const treadLabels = buildTreadLabels(
-    treads,
-    [stepCount],
-    params.treadLabelDisplay,
-    params.treadLabelEveryN,
-    params.treadLabelRestartPerFlight,
-    params.treadNumberStart,
-  );
-  return {
-    treads: split.below,
-    treadsBelowCut: split.below,
-    treadsAboveCut: split.above,
-    risers,
+  return assembleStairGeometry(params, {
+    treads: flight.treads,
+    risers: flight.risers,
     stringers,
     walkline,
-    handrails: buildHandrailsFromParams(walkline, params.width, params.handrails),
-    landings: [],
-    arrowSymbol: arrow,
     cutLine,
-    treadLabels,
-    bbox: bboxOfPolygons(treads),
-  };
-}
-
-function buildStraightTreads(
-  basePoint: Readonly<{ x: number; y: number; z: number }>,
-  u: Vec2,
-  rise: number,
-  tread: number,
-  nosing: number,
-  width: number,
-  stepCount: number,
-): readonly Polygon3D[] {
-  const v = perp(u);
-  const halfW = width * 0.5;
-  const depth = tread + nosing;
-  const out: Polygon3D[] = new Array(stepCount);
-  for (let i = 0; i < stepCount; i++) {
-    const baseAlong = tread * i;
-    const corner: Vec2 = {
-      x: basePoint.x + u.x * baseAlong - v.x * halfW,
-      y: basePoint.y + u.y * baseAlong - v.y * halfW,
-    };
-    out[i] = rectangleAt(corner, u, depth, width, basePoint.z + rise * i);
-  }
-  return out;
-}
-
-function buildStraightRisers(
-  basePoint: Readonly<{ x: number; y: number; z: number }>,
-  u: Vec2,
-  rise: number,
-  tread: number,
-  width: number,
-  stepCount: number,
-): readonly Segment3D[] {
-  // ADR-370 Phase 5.3 (2026-05-25) — diagonal Segment3D encoding for risers:
-  // start = corner A @zLow on one width edge, end = OPPOSITE corner B @zHigh on
-  // the other width edge. The xy diagonal carries midpoint, width axis, and
-  // width magnitude in one segment — letting the 3D converter orient + size
-  // the riser box without consulting `params.direction` or `params.width`.
-  // Replaces the legacy "vertical line at one edge" convention that broke 3D
-  // rendering for direction ≠ 0 and offset the riser by halfW even at 0°.
-  const v = perp(u);
-  const halfW = width * 0.5;
-  const out: Segment3D[] = [];
-  for (let i = 0; i < stepCount - 1; i++) {
-    const along = tread * (i + 1);
-    const cx = basePoint.x + u.x * along;
-    const cy = basePoint.y + u.y * along;
-    const zLow = basePoint.z + rise * i;
-    const zHigh = basePoint.z + rise * (i + 1);
-    out.push({
-      start: point(cx - v.x * halfW, cy - v.y * halfW, zLow),
-      end: point(cx + v.x * halfW, cy + v.y * halfW, zHigh),
-    });
-  }
-  return out;
+    arrowSymbol: arrow,
+    flightSplit: [stepCount],
+  });
 }
 
 function buildStraightWalkline(

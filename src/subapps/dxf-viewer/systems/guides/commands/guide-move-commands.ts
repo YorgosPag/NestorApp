@@ -3,14 +3,14 @@
  * @description Command for moving construction guides
  *
  * @see ADR-189 B5 (Guide Drag & Drop)
+ * @see ADR-613 (Guide command SSoT — BaseCommand base)
  * @since 2026-02-19
  */
 
-import type { ICommand, SerializedCommand } from '../../../core/commands/interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { GridAxis } from '../../../ai-assistant/grid-types';
 import type { GuideStore } from '../guide-store';
-import { generateEntityId } from '../../entity-creation/utils';
+import { BaseCommand } from '../../../core/commands/base-command';
 
 // ============================================================================
 // MOVE GUIDE COMMAND
@@ -23,11 +23,9 @@ import { generateEntityId } from '../../entity-creation/utils';
  *
  * @see ADR-189 B5 (Guide Drag & Drop)
  */
-export class MoveGuideCommand implements ICommand {
-  readonly id: string;
+export class MoveGuideCommand extends BaseCommand {
   readonly name = 'MoveGuide';
   readonly type = 'move-guide';
-  readonly timestamp: number;
 
   constructor(
     private readonly store: GuideStore,
@@ -40,8 +38,7 @@ export class MoveGuideCommand implements ICommand {
     private readonly newStartPoint: Point2D | undefined,
     private readonly newEndPoint: Point2D | undefined,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super();
   }
 
   execute(): void {
@@ -60,10 +57,6 @@ export class MoveGuideCommand implements ICommand {
     }
   }
 
-  redo(): void {
-    this.execute();
-  }
-
   getDescription(): string {
     if (this.axis === 'XZ') {
       return `Move diagonal guide ${this.guideId}`;
@@ -71,27 +64,16 @@ export class MoveGuideCommand implements ICommand {
     return `Move ${this.axis} guide from ${this.oldOffset.toFixed(1)} to ${this.newOffset.toFixed(1)}`;
   }
 
-  canMergeWith(): boolean {
-    return false;
-  }
-
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        guideId: this.guideId,
-        axis: this.axis,
-        oldOffset: this.oldOffset,
-        newOffset: this.newOffset,
-        oldStartPoint: this.oldStartPoint,
-        oldEndPoint: this.oldEndPoint,
-        newStartPoint: this.newStartPoint,
-        newEndPoint: this.newEndPoint,
-      },
-      version: 1,
+      guideId: this.guideId,
+      axis: this.axis,
+      oldOffset: this.oldOffset,
+      newOffset: this.newOffset,
+      oldStartPoint: this.oldStartPoint,
+      oldEndPoint: this.oldEndPoint,
+      newStartPoint: this.newStartPoint,
+      newEndPoint: this.newEndPoint,
     };
   }
 

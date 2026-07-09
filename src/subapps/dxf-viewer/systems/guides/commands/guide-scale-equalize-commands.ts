@@ -3,14 +3,14 @@
  * @description Commands for scaling and equalizing construction guides
  *
  * @see ADR-189 B32 (Scale), B33 (Equalize)
+ * @see ADR-613 (Guide command SSoT — BaseCommand base)
  * @since 2026-02-19
  */
 
-import type { ICommand, SerializedCommand } from '../../../core/commands/interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { Guide } from '../guide-types';
 import type { GuideStore } from '../guide-store';
-import { generateEntityId } from '../../entity-creation/utils';
+import { BaseCommand } from '../../../core/commands/base-command';
 
 // ============================================================================
 // EQUALIZE GUIDES COMMAND (B33)
@@ -29,11 +29,9 @@ import { generateEntityId } from '../../entity-creation/utils';
  *
  * @see ADR-189 B33 (Smart Equalize — ισαπόσταση παράλληλων οδηγών)
  */
-export class EqualizeGuidesCommand implements ICommand {
-  readonly id: string;
+export class EqualizeGuidesCommand extends BaseCommand {
   readonly name = 'EqualizeGuides';
   readonly type = 'equalize-guides';
-  readonly timestamp: number;
 
   /** Original offsets keyed by guide.id (for undo) */
   private readonly originalOffsets: Map<string, number> = new Map();
@@ -46,8 +44,7 @@ export class EqualizeGuidesCommand implements ICommand {
     private readonly store: GuideStore,
     guideIds: readonly string[],
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super();
     this.spacing = 0;
 
     const guides: Guide[] = [];
@@ -59,7 +56,7 @@ export class EqualizeGuidesCommand implements ICommand {
     if (guides.length < 3) return;
 
     const firstAxis = guides[0].axis;
-    if (!guides.every(g => g.axis === firstAxis)) return;
+    if (!guides.every((g) => g.axis === firstAxis)) return;
 
     const sorted = [...guides].sort((a, b) => a.offset - b.offset);
     const firstOffset = sorted[0].offset;
@@ -89,30 +86,15 @@ export class EqualizeGuidesCommand implements ICommand {
     }
   }
 
-  redo(): void {
-    this.execute();
-  }
-
   getDescription(): string {
     return `Equalize ${this.newOffsets.size} guides (equal spacing)`;
   }
 
-  canMergeWith(): boolean {
-    return false;
-  }
-
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        guideCount: this.newOffsets.size,
-        originalOffsets: Object.fromEntries(this.originalOffsets),
-        newOffsets: Object.fromEntries(this.newOffsets),
-      },
-      version: 1,
+      guideCount: this.newOffsets.size,
+      originalOffsets: Object.fromEntries(this.originalOffsets),
+      newOffsets: Object.fromEntries(this.newOffsets),
     };
   }
 
@@ -136,11 +118,9 @@ export class EqualizeGuidesCommand implements ICommand {
  *
  * @see ADR-189 B32 (Κλιμάκωση κάνναβου — Scale)
  */
-export class ScaleAllGuidesCommand implements ICommand {
-  readonly id: string;
+export class ScaleAllGuidesCommand extends BaseCommand {
   readonly name = 'ScaleAllGuides';
   readonly type = 'scale-all-guides';
-  readonly timestamp: number;
 
   /** Original guide snapshots for undo */
   private readonly originalSnapshots: Guide[] = [];
@@ -152,8 +132,7 @@ export class ScaleAllGuidesCommand implements ICommand {
     private readonly origin: Point2D,
     private readonly scaleFactor: number,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super();
 
     const guides = store.getGuides();
     for (const guide of guides) {
@@ -217,36 +196,15 @@ export class ScaleAllGuidesCommand implements ICommand {
     }
   }
 
-  redo(): void {
-    for (const [guideId, values] of this.scaledValues) {
-      if (values.offset !== undefined) {
-        this.store.moveGuideById(guideId, values.offset);
-      } else if (values.start && values.end) {
-        this.store.moveDiagonalGuideById(guideId, values.start, values.end);
-      }
-    }
-  }
-
   getDescription(): string {
     return `Scale all guides (${this.scaledValues.size}) by ${this.scaleFactor}x from (${this.origin.x.toFixed(1)}, ${this.origin.y.toFixed(1)})`;
   }
 
-  canMergeWith(): boolean {
-    return false;
-  }
-
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        origin: this.origin,
-        scaleFactor: this.scaleFactor,
-        guideCount: this.scaledValues.size,
-      },
-      version: 1,
+      origin: this.origin,
+      scaleFactor: this.scaleFactor,
+      guideCount: this.scaledValues.size,
     };
   }
 

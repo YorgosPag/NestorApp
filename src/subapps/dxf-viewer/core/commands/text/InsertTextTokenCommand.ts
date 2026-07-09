@@ -6,21 +6,14 @@
  * and mirrors the change to the flat `text` field for legacy renderer compatibility.
  *
  * AutoCAD parity: equivalent to MTEXT inline code insertion (%%C / %%D / %%P) + \S stack trigger.
+ *
+ * ADR-614 — boilerplate inherited from {@link DxfTextCommandBase}; the flat-text
+ * mirror requires a richer snapshot, so execute/undo are bespoke here.
  */
 
-import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
 import type { DxfTextNode, TextParagraph, TextRun, TextStack } from '../../../text-engine/types';
-import {
-  noopAuditRecorder,
-  type DxfTextSceneEntity,
-  type IDxfTextAuditRecorder,
-  type ILayerAccessProvider,
-} from './types';
-import { assertCanEditLayer } from './CanEditLayerGuard';
-// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
-import { resolveEntityLayerName } from '../../../stores/LayerStore';
 import { ensureTextNode } from '../../../text-engine/edit/ensure-text-node';
+import { DxfTextCommandBase } from './dxf-text-command-base';
 
 export interface InsertTextTokenCommandInput {
   readonly entityId: string;
@@ -67,30 +60,15 @@ interface TokenInsertSnapshot {
   readonly flatText: string | undefined;
 }
 
-export class InsertTextTokenCommand implements ICommand {
-  readonly id: string;
+export class InsertTextTokenCommand extends DxfTextCommandBase<InsertTextTokenCommandInput> {
   readonly name = 'InsertTextToken';
   readonly type = 'insert-text-token';
-  readonly timestamp: number;
 
   private snapshot: TokenInsertSnapshot | null = null;
-  private wasExecuted = false;
-
-  constructor(
-    private readonly input: InsertTextTokenCommandInput,
-    private readonly sceneManager: ISceneManager,
-    private readonly layerProvider: ILayerAccessProvider,
-    private readonly auditRecorder: IDxfTextAuditRecorder = noopAuditRecorder,
-  ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
-  }
 
   execute(): void {
-    const entity = this.sceneManager.getEntity(this.input.entityId) as DxfTextSceneEntity | undefined;
+    const entity = this.resolveEntity();
     if (!entity) return;
-    // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
-    assertCanEditLayer({ layerName: resolveEntityLayerName(entity) ?? '', provider: this.layerProvider });
 
     const char = resolveToken(this.input.token);
     if (!char) return;
@@ -105,31 +83,18 @@ export class InsertTextTokenCommand implements ICommand {
     const updates: Record<string, unknown> = { textNode: nextNode };
     if (flatText !== undefined) updates['text'] = flatText + char;
 
-    this.sceneManager.updateEntity(this.input.entityId, updates);
+    this.sceneManager.updateEntity(this.entityId, updates);
     this.wasExecuted = true;
-
-    this.auditRecorder.record({
-      entityId: this.input.entityId,
-      action: 'updated',
-      changes: [{ field: 'textContent', oldValue: this.snapshot.textNode, newValue: nextNode }],
-      commandName: this.name,
-      timestamp: Date.now(),
-    });
+    this.recordAudit('updated', [
+      { field: 'textContent', oldValue: this.snapshot.textNode, newValue: nextNode },
+    ]);
   }
 
   undo(): void {
     if (!this.snapshot || !this.wasExecuted) return;
     const updates: Record<string, unknown> = { textNode: this.snapshot.textNode };
     if (this.snapshot.flatText !== undefined) updates['text'] = this.snapshot.flatText;
-    this.sceneManager.updateEntity(this.input.entityId, updates);
-  }
-
-  redo(): void {
-    this.execute();
-  }
-
-  canMergeWith(): boolean {
-    return false;
+    this.sceneManager.updateEntity(this.entityId, updates);
   }
 
   getDescription(): string {
@@ -137,24 +102,12 @@ export class InsertTextTokenCommand implements ICommand {
     return `Insert "${char}" into text entity`;
   }
 
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: { entityId: this.input.entityId, token: this.input.token },
-      version: 1,
-    };
-  }
-
-  validate(): string | null {
-    if (!this.input.entityId) return 'entityId is required';
+  protected validatePayload(): string | null {
     if (!resolveToken(this.input.token)) return `Unknown token "${this.input.token}"`;
     return null;
   }
 
-  getAffectedEntityIds(): string[] {
-    return [this.input.entityId];
+  protected serializeData(): Record<string, unknown> {
+    return { entityId: this.entityId, token: this.input.token };
   }
 }

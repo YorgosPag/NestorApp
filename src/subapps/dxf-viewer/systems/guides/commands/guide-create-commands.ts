@@ -3,15 +3,16 @@
  * @description Commands for creating construction guides — single, parallel, diagonal, grid preset
  *
  * @see ADR-189 (Construction Grid & Guide System)
+ * @see ADR-613 (Guide command SSoT — CreatedGuidesCommand / BaseCommand bases)
  * @since 2026-02-19
  */
 
-import type { ICommand, SerializedCommand } from '../../../core/commands/interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { GridAxis } from '../../../ai-assistant/grid-types';
 import type { Guide } from '../guide-types';
 import type { GuideStore } from '../guide-store';
-import { generateEntityId } from '../../entity-creation/utils';
+import { BaseCommand } from '../../../core/commands/base-command';
+import { CreatedGuidesCommand } from './guide-command-base';
 
 // ============================================================================
 // CREATE GUIDE COMMAND
@@ -21,77 +22,37 @@ import { generateEntityId } from '../../entity-creation/utils';
  * Command for creating a new construction guide.
  * Supports undo (remove) and redo (re-add).
  */
-export class CreateGuideCommand implements ICommand {
-  readonly id: string;
+export class CreateGuideCommand extends CreatedGuidesCommand {
   readonly name = 'CreateGuide';
   readonly type = 'create-guide';
-  readonly timestamp: number;
-
-  private createdGuide: Guide | null = null;
 
   constructor(
-    private readonly store: GuideStore,
+    store: GuideStore,
     private readonly axis: GridAxis,
     private readonly offset: number,
     private readonly label: string | null = null,
     private readonly parentId: string | null = null,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(store);
   }
 
-  execute(): void {
-    if (this.createdGuide) {
-      // Re-execute (redo) — restore the exact same guide
-      this.store.restoreGuide(this.createdGuide);
-    } else {
-      // First execution
-      this.createdGuide = this.store.addGuideRaw(this.axis, this.offset, this.label, this.parentId) ?? null;
-    }
-  }
-
-  undo(): void {
-    if (this.createdGuide) {
-      this.store.removeGuideById(this.createdGuide.id);
-    }
-  }
-
-  redo(): void {
-    this.execute();
+  protected buildGuides(): Guide[] {
+    const guide = this.store.addGuideRaw(this.axis, this.offset, this.label, this.parentId);
+    return guide ? [guide] : [];
   }
 
   getDescription(): string {
     return `Create ${this.axis} guide at offset ${this.offset}`;
   }
 
-  canMergeWith(): boolean {
-    return false;
-  }
-
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        axis: this.axis,
-        offset: this.offset,
-        label: this.label,
-        parentId: this.parentId,
-        guideId: this.createdGuide?.id ?? null,
-      },
-      version: 1,
+      axis: this.axis,
+      offset: this.offset,
+      label: this.label,
+      parentId: this.parentId,
+      guideId: this.getCreatedGuide()?.id ?? null,
     };
-  }
-
-  getAffectedEntityIds(): string[] {
-    return this.createdGuide ? [this.createdGuide.id] : [];
-  }
-
-  /** Get the created guide (after execution) */
-  getCreatedGuide(): Guide | null {
-    return this.createdGuide;
   }
 }
 
@@ -104,99 +65,60 @@ export class CreateGuideCommand implements ICommand {
  * Reads the reference guide's axis and offset, then creates a new guide
  * at reference.offset + offsetDistance.
  */
-export class CreateParallelGuideCommand implements ICommand {
-  readonly id: string;
+export class CreateParallelGuideCommand extends CreatedGuidesCommand {
   readonly name = 'CreateParallelGuide';
   readonly type = 'create-parallel-guide';
-  readonly timestamp: number;
-
-  private createdGuide: Guide | null = null;
 
   constructor(
-    private readonly store: GuideStore,
+    store: GuideStore,
     private readonly referenceGuideId: string,
     private readonly offsetDistance: number,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(store);
   }
 
-  execute(): void {
-    if (this.createdGuide) {
-      // Redo — restore exact guide
-      this.store.restoreGuide(this.createdGuide);
-      return;
-    }
-
+  protected buildGuides(): Guide[] {
     const reference = this.store.getGuideById(this.referenceGuideId);
-    if (!reference) return;
+    if (!reference) return [];
 
     if (reference.axis === 'XZ' && reference.startPoint && reference.endPoint) {
       // Parallel to diagonal: shift start/end perpendicularly
       const dx = reference.endPoint.x - reference.startPoint.x;
       const dy = reference.endPoint.y - reference.startPoint.y;
       const len = Math.sqrt(dx * dx + dy * dy);
-      if (len === 0) return;
-      // Normal vector (perpendicular, unit length)
-      const nx = -dy / len;
+      if (len === 0) return [];
+      const nx = -dy / len; // Normal vector (perpendicular, unit length)
       const ny = dx / len;
       const shift = this.offsetDistance; // Already signed from step 2
       const newStart = { x: reference.startPoint.x + nx * shift, y: reference.startPoint.y + ny * shift };
       const newEnd = { x: reference.endPoint.x + nx * shift, y: reference.endPoint.y + ny * shift };
-      this.createdGuide = this.store.addDiagonalGuideRaw(newStart, newEnd, null, reference.style) ?? null;
-    } else {
-      const newOffset = reference.offset + this.offsetDistance;
-      this.createdGuide = this.store.addGuideRaw(
-        reference.axis,
-        newOffset,
-        null,
-        this.referenceGuideId,
-        null,
-        false,
-        reference.style,
-      ) ?? null;
+      const created = this.store.addDiagonalGuideRaw(newStart, newEnd, null, reference.style);
+      return created ? [created] : [];
     }
-  }
 
-  undo(): void {
-    if (this.createdGuide) {
-      this.store.removeGuideById(this.createdGuide.id);
-    }
-  }
-
-  redo(): void {
-    this.execute();
-  }
-
-  getCreatedGuide(): Guide | null {
-    return this.createdGuide;
+    const newOffset = reference.offset + this.offsetDistance;
+    const created = this.store.addGuideRaw(
+      reference.axis,
+      newOffset,
+      null,
+      this.referenceGuideId,
+      null,
+      false,
+      reference.style,
+    );
+    return created ? [created] : [];
   }
 
   getDescription(): string {
     return `Create parallel guide (offset ${this.offsetDistance} from ${this.referenceGuideId})`;
   }
 
-  canMergeWith(): boolean {
-    return false;
-  }
-
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        referenceGuideId: this.referenceGuideId,
-        offsetDistance: this.offsetDistance,
-        guideId: this.createdGuide?.id ?? null,
-      },
-      version: 1,
+      referenceGuideId: this.referenceGuideId,
+      offsetDistance: this.offsetDistance,
+      guideId: this.getCreatedGuide()?.id ?? null,
     };
-  }
-
-  getAffectedEntityIds(): string[] {
-    return this.createdGuide ? [this.createdGuide.id] : [];
   }
 }
 
@@ -210,42 +132,22 @@ export class CreateParallelGuideCommand implements ICommand {
  *
  * @see ADR-189 §3.3 (Οδηγός XZ — 3-click diagonal guide)
  */
-export class CreateDiagonalGuideCommand implements ICommand {
-  readonly id: string;
+export class CreateDiagonalGuideCommand extends CreatedGuidesCommand {
   readonly name = 'CreateDiagonalGuide';
   readonly type = 'create-diagonal-guide';
-  readonly timestamp: number;
-
-  private createdGuide: Guide | null = null;
 
   constructor(
-    private readonly store: GuideStore,
+    store: GuideStore,
     private readonly startPoint: Point2D,
     private readonly endPoint: Point2D,
     private readonly label: string | null = null,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(store);
   }
 
-  execute(): void {
-    if (this.createdGuide) {
-      this.store.restoreGuide(this.createdGuide);
-    } else {
-      this.createdGuide = this.store.addDiagonalGuideRaw(
-        this.startPoint, this.endPoint, this.label,
-      ) ?? null;
-    }
-  }
-
-  undo(): void {
-    if (this.createdGuide) {
-      this.store.removeGuideById(this.createdGuide.id);
-    }
-  }
-
-  redo(): void {
-    this.execute();
+  protected buildGuides(): Guide[] {
+    const guide = this.store.addDiagonalGuideRaw(this.startPoint, this.endPoint, this.label);
+    return guide ? [guide] : [];
   }
 
   getDescription(): string {
@@ -256,33 +158,13 @@ export class CreateDiagonalGuideCommand implements ICommand {
     return `Create diagonal guide from (${sx}, ${sy}) to (${ex}, ${ey})`;
   }
 
-  canMergeWith(): boolean {
-    return false;
-  }
-
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        startPoint: this.startPoint,
-        endPoint: this.endPoint,
-        label: this.label,
-        guideId: this.createdGuide?.id ?? null,
-      },
-      version: 1,
+      startPoint: this.startPoint,
+      endPoint: this.endPoint,
+      label: this.label,
+      guideId: this.getCreatedGuide()?.id ?? null,
     };
-  }
-
-  getAffectedEntityIds(): string[] {
-    return this.createdGuide ? [this.createdGuide.id] : [];
-  }
-
-  /** Get the created guide (after execution) */
-  getCreatedGuide(): Guide | null {
-    return this.createdGuide;
   }
 }
 
@@ -293,12 +175,14 @@ export class CreateDiagonalGuideCommand implements ICommand {
 /**
  * Creates a structural grid from a preset or custom spacings.
  * Creates a GuideGroup and adds X + Y guides at specified offsets.
+ *
+ * Group-aware lifecycle (guides + a GuideGroup) → extends the generic
+ * {@link BaseCommand} rather than CreatedGuidesCommand.
  */
-export class CreateGridFromPresetCommand implements ICommand {
-  readonly id: string;
+export class CreateGridFromPresetCommand extends BaseCommand {
   readonly name = 'CreateGridFromPreset';
   readonly type = 'create-grid-from-preset';
-  readonly timestamp: number;
+
   private createdGuides: Guide[] = [];
   private createdGroupId: string | null = null;
 
@@ -310,8 +194,7 @@ export class CreateGridFromPresetCommand implements ICommand {
     private readonly yLabels: readonly string[] | null = null,
     private readonly groupName: string = 'Structural Grid',
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super();
   }
 
   execute(): void {
@@ -350,28 +233,20 @@ export class CreateGridFromPresetCommand implements ICommand {
     }
   }
 
-  redo(): void { this.execute(); }
-
   getDescription(): string {
     return `Structural grid: ${this.xOffsets.length}x${this.yOffsets.length} (${this.groupName})`;
   }
 
-  canMergeWith(): boolean { return false; }
-
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type, id: this.id, name: this.name, timestamp: this.timestamp,
-      data: {
-        xOffsets: [...this.xOffsets],
-        yOffsets: [...this.yOffsets],
-        groupName: this.groupName,
-        createdCount: this.createdGuides.length,
-      },
-      version: 1,
+      xOffsets: [...this.xOffsets],
+      yOffsets: [...this.yOffsets],
+      groupName: this.groupName,
+      createdCount: this.createdGuides.length,
     };
   }
 
   getAffectedEntityIds(): string[] {
-    return this.createdGuides.map(g => g.id);
+    return this.createdGuides.map((g) => g.id);
   }
 }

@@ -7,23 +7,22 @@
  *
  * Merge: consecutive geometry updates on the same entity within the
  * default merge window collapse into one command — smooth drag undo.
+ *
+ * ADR-614 — boilerplate inherited from {@link DxfTextCommandBase}; the geometry
+ * snapshot spans flat fields + node, so execute/undo are bespoke here.
  */
 
-import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
+import type { ICommand } from '../interfaces';
 import type { DxfTextNode } from '../../../text-engine/types';
 import type { Point2D } from '../../../rendering/types/Types';
-import {
-  noopAuditRecorder,
-  type DxfTextSceneEntity,
-  type IDxfTextAuditRecorder,
-  type ILayerAccessProvider,
-} from './types';
-import { assertCanEditLayer } from './CanEditLayerGuard';
-// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
-import { resolveEntityLayerName } from '../../../stores/LayerStore';
 import { buildShallowDiff } from './diff-helpers';
 import { ensureTextNode } from '../../../text-engine/edit/ensure-text-node';
+import {
+  DxfTextCommandBase,
+  mergePatchInputs,
+  validateNonEmptyPatch,
+  describePatchFields,
+} from './dxf-text-command-base';
 
 export interface GeometryPatch {
   /** Absolute insertion point (drawing units). */
@@ -46,32 +45,15 @@ interface GeometrySnapshot {
   textNode: DxfTextNode;
 }
 
-export class UpdateTextGeometryCommand implements ICommand {
-  readonly id: string;
+export class UpdateTextGeometryCommand extends DxfTextCommandBase<UpdateTextGeometryCommandInput> {
   readonly name = 'UpdateTextGeometry';
   readonly type = 'update-text-geometry';
-  readonly timestamp: number;
 
   private snapshot: GeometrySnapshot | null = null;
-  private wasExecuted = false;
-
-  constructor(
-    private readonly input: UpdateTextGeometryCommandInput,
-    private readonly sceneManager: ISceneManager,
-    private readonly layerProvider: ILayerAccessProvider,
-    private readonly auditRecorder: IDxfTextAuditRecorder = noopAuditRecorder,
-  ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
-  }
 
   execute(): void {
-    const entity = this.sceneManager.getEntity(this.input.entityId) as
-      | DxfTextSceneEntity
-      | undefined;
+    const entity = this.resolveEntity();
     if (!entity) return;
-    // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
-    assertCanEditLayer({ layerName: resolveEntityLayerName(entity) ?? '', provider: this.layerProvider });
 
     const safeNode = ensureTextNode(entity);
     // ADR-557 — rotation SSoT is the FLAT `entity.rotation` (the converter reads
@@ -98,7 +80,7 @@ export class UpdateTextGeometryCommand implements ICommand {
         : safeNode.columns,
     };
     const nextPosition = patch.position ?? entity.position;
-    this.sceneManager.updateEntity(this.input.entityId, {
+    this.sceneManager.updateEntity(this.entityId, {
       position: nextPosition,
       // Flat rotation = the field the renderer/converter/read-selector all read (ADR-557).
       rotation: nextRotation,
@@ -106,29 +88,23 @@ export class UpdateTextGeometryCommand implements ICommand {
     });
     this.wasExecuted = true;
 
-    this.auditRecorder.record({
-      entityId: this.input.entityId,
-      action: 'updated',
-      changes: buildShallowDiff(
-        {
-          position: this.snapshot.position,
-          rotation: this.snapshot.rotation,
-          width: this.snapshot.width,
-        },
-        {
-          position: nextPosition,
-          rotation: nextNode.rotation,
-          width: nextNode.columns?.width,
-        },
-      ),
-      commandName: this.name,
-      timestamp: Date.now(),
-    });
+    this.recordAudit('updated', buildShallowDiff(
+      {
+        position: this.snapshot.position,
+        rotation: this.snapshot.rotation,
+        width: this.snapshot.width,
+      },
+      {
+        position: nextPosition,
+        rotation: nextNode.rotation,
+        width: nextNode.columns?.width,
+      },
+    ));
   }
 
   undo(): void {
     if (!this.snapshot || !this.wasExecuted) return;
-    this.sceneManager.updateEntity(this.input.entityId, {
+    this.sceneManager.updateEntity(this.entityId, {
       position: this.snapshot.position,
       // Restore the flat rotation SSoT (ADR-557) alongside the textNode.
       rotation: this.snapshot.rotation,
@@ -136,53 +112,25 @@ export class UpdateTextGeometryCommand implements ICommand {
     });
   }
 
-  redo(): void {
-    this.execute();
-  }
-
   canMergeWith(other: ICommand): boolean {
     if (other.type !== this.type) return false;
-    const o = other as UpdateTextGeometryCommand;
-    return o.input.entityId === this.input.entityId;
+    return (other as UpdateTextGeometryCommand).input.entityId === this.input.entityId;
   }
 
   mergeWith(other: ICommand): ICommand {
-    const o = other as UpdateTextGeometryCommand;
-    return new UpdateTextGeometryCommand(
-      {
-        entityId: this.input.entityId,
-        patch: { ...this.input.patch, ...o.input.patch },
-      },
-      this.sceneManager,
-      this.layerProvider,
-      this.auditRecorder,
-    );
+    const merged = mergePatchInputs(this.input, (other as UpdateTextGeometryCommand).input);
+    return new UpdateTextGeometryCommand(merged, this.sceneManager, this.layerProvider, this.auditRecorder);
+  }
+
+  protected validatePayload(): string | null {
+    return validateNonEmptyPatch(this.input.patch);
   }
 
   getDescription(): string {
-    return `Update text geometry (${Object.keys(this.input.patch).join(', ') || 'no fields'})`;
+    return describePatchFields('Update text geometry', this.input.patch);
   }
 
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: { entityId: this.input.entityId, patch: this.input.patch },
-      version: 1,
-    };
-  }
-
-  validate(): string | null {
-    if (!this.input.entityId) return 'entityId is required';
-    if (!this.input.patch || Object.keys(this.input.patch).length === 0) {
-      return 'patch must not be empty';
-    }
-    return null;
-  }
-
-  getAffectedEntityIds(): string[] {
-    return [this.input.entityId];
+  protected serializeData(): Record<string, unknown> {
+    return { entityId: this.entityId, patch: this.input.patch };
   }
 }

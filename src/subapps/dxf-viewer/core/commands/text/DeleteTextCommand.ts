@@ -5,103 +5,49 @@
  * before deletion so undo can restore the exact entity (id preserved,
  * AST preserved). Audit records DELETE on execute and CREATE-like on
  * undo so the trail captures both directions.
+ *
+ * ADR-614 — boilerplate (resolve+guard, audit, affected-ids, validate) is
+ * inherited from {@link DxfTextCommandBase}; only the delete/restore behaviour
+ * lives here.
  */
 
-import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
-import {
-  noopAuditRecorder,
-  type DxfTextSceneEntity,
-  type IDxfTextAuditRecorder,
-  type ILayerAccessProvider,
-} from './types';
-import { assertCanEditLayer } from './CanEditLayerGuard';
-// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
-import { resolveEntityLayerName } from '../../../stores/LayerStore';
+import { DxfTextCommandBase } from './dxf-text-command-base';
+import type { DxfTextSceneEntity } from './types';
 
 export interface DeleteTextCommandInput {
   readonly entityId: string;
 }
 
-export class DeleteTextCommand implements ICommand {
-  readonly id: string;
+export class DeleteTextCommand extends DxfTextCommandBase<DeleteTextCommandInput> {
   readonly name = 'DeleteText';
   readonly type = 'delete-text';
-  readonly timestamp: number;
 
   private snapshot: DxfTextSceneEntity | null = null;
-  private wasExecuted = false;
-
-  constructor(
-    private readonly input: DeleteTextCommandInput,
-    private readonly sceneManager: ISceneManager,
-    private readonly layerProvider: ILayerAccessProvider,
-    private readonly auditRecorder: IDxfTextAuditRecorder = noopAuditRecorder,
-  ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
-  }
 
   execute(): void {
-    const entity = this.sceneManager.getEntity(this.input.entityId) as
-      | DxfTextSceneEntity
-      | undefined;
+    const entity = this.resolveEntity();
     if (!entity) return;
-    // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
-    assertCanEditLayer({ layerName: resolveEntityLayerName(entity) ?? '', provider: this.layerProvider });
     if (!this.snapshot) this.snapshot = entity;
-    this.sceneManager.removeEntity(this.input.entityId);
+    this.sceneManager.removeEntity(this.entityId);
     this.wasExecuted = true;
-    this.auditRecorder.record({
-      entityId: this.input.entityId,
-      action: 'deleted',
-      changes: [{ field: 'entity', oldValue: entity.type, newValue: null }],
-      commandName: this.name,
-      timestamp: Date.now(),
-    });
+    this.recordAudit('deleted', [{ field: 'entity', oldValue: entity.type, newValue: null }]);
   }
 
   undo(): void {
     if (!this.snapshot || !this.wasExecuted) return;
     this.sceneManager.addEntity(this.snapshot);
-    this.auditRecorder.record({
-      entityId: this.snapshot.id,
-      action: 'created',
-      changes: [{ field: 'entity', oldValue: null, newValue: this.snapshot.type }],
-      commandName: this.name,
-      timestamp: Date.now(),
-    });
-  }
-
-  redo(): void {
-    this.execute();
-  }
-
-  canMergeWith(): boolean {
-    return false;
+    this.recordAudit(
+      'created',
+      [{ field: 'entity', oldValue: null, newValue: this.snapshot.type }],
+      this.snapshot.id,
+    );
   }
 
   getDescription(): string {
     return `Delete ${this.snapshot?.type.toUpperCase() ?? 'text'}`;
   }
 
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: { entityId: this.input.entityId },
-      version: 1,
-    };
-  }
-
-  validate(): string | null {
-    if (!this.input.entityId) return 'entityId is required';
-    return null;
-  }
-
-  getAffectedEntityIds(): string[] {
-    return [this.input.entityId];
+  protected serializeData(): Record<string, unknown> {
+    return { entityId: this.entityId };
   }
 }

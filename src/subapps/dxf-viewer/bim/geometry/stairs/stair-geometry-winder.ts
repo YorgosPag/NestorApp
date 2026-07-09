@@ -25,6 +25,12 @@
  *   - Risers within each straight flight only — winder risers degenerate at
  *     pivot and are omitted.
  *
+ * ADR-611 — the two rectilinear flights delegate to shared generators
+ * (`buildRectilinearFlight` / `buildFlightFromEdge`) and the `StairGeometry`
+ * assembly tail comes from `stair-geometry-generators.ts`. The winder-zone
+ * helpers stay local (fan geometry is unique to this kind) and remain exported
+ * for the l-shape-with-winders variant.
+ *
  * @see docs/centralized-systems/reference/adrs/ADR-358-dxf-stair-tool-google-level.md §5.1 §6.2 §6.3
  */
 
@@ -33,25 +39,25 @@ import type {
   Polygon3D,
   Polyline3D,
   Segment3D,
+  StairArrowSymbol,
   StairGeometry,
   StairParams,
   StairVariantWinder,
   StairWinderMethod,
 } from '../../../bim/types/stair-types';
 import {
-  DEFAULT_CUT_PLANE_HEIGHT,
   type Vec2,
   perp,
   directionToUnitVector,
   point,
   arrowSymbol,
-  bboxOfPolygons,
-  splitTreadsByCutPlane,
-  buildCutLineForFlights,
-  buildStringersFromWalkline,
-  buildHandrailsFromParams,
 } from './stair-geometry-shared';
-import { buildTreadLabels } from './stair-geometry-labels';
+import {
+  type FlightGeometry,
+  assembleMultiFlight,
+  buildFlightFromEdge,
+  buildRectilinearFlight,
+} from './stair-geometry-generators';
 
 const DEG2RAD = Math.PI / 180;
 
@@ -86,8 +92,24 @@ export function computeWinder(
   const n1 = Math.floor(remaining / 2);
   const n2 = remaining - n1;
   const layout = buildWinderLayout(params, variant.turnAngle, variant.winderCount, n1, n2);
+  return assembleWinderRun(params, layout, variant.winderMethod,
+    (wl) => arrowSymbol(params.basePoint, wl[wl.length - 1], params.upDirection));
+}
+
+/**
+ * ADR-611 SSoT — assemble a full winder-zone `StairGeometry` from a
+ * `WinderLayout`. Shared by the winder kind (arrow = base→top) and
+ * l-shape-with-winders (arrow = first walkline segment); the caller supplies
+ * the up-arrow via `arrow(walkline)`.
+ */
+export function assembleWinderRun(
+  params: Readonly<StairParams>,
+  layout: WinderLayout,
+  winderMethod: StairWinderMethod,
+  arrow: (walkline: Polyline3D) => StairArrowSymbol,
+): StairGeometry {
   const flight1 = buildWinderFlight1(params, layout);
-  const winders = buildWinderTreads(params, variant.winderMethod, layout);
+  const winders = buildWinderTreads(params, winderMethod, layout);
   const flight2 = buildWinderFlight2(params, layout);
   const allTreads: readonly Polygon3D[] = [
     ...flight1.treads,
@@ -96,41 +118,16 @@ export function computeWinder(
   ];
   const risers: readonly Segment3D[] = [...flight1.risers, ...flight2.risers];
   const walkline = buildWinderWalkline(params, layout);
-  const stringers = buildStringersFromWalkline(walkline, params.width);
-  const arrow = arrowSymbol(params.basePoint, walkline[walkline.length - 1], params.upDirection);
-  const cutPlaneHeight = params.cutPlaneHeight ?? DEFAULT_CUT_PLANE_HEIGHT;
-  const split = splitTreadsByCutPlane(allTreads, cutPlaneHeight);
   const midRay = rotateVec(layout.ray0, (layout.winderCount / 2) * layout.signedSweepRad);
   const midTangent = winderTangentAt(midRay, layout.turnSign);
-  const cutLine = buildCutLineForFlights(
-    allTreads,
-    [layout.n1, layout.winderCount, layout.n2],
-    [layout.u1, midTangent, layout.u2],
-    params.width,
-    cutPlaneHeight,
-  );
-  const treadLabels = buildTreadLabels(
-    allTreads,
-    [layout.n1, layout.winderCount, layout.n2],
-    params.treadLabelDisplay,
-    params.treadLabelEveryN,
-    params.treadLabelRestartPerFlight,
-    params.treadNumberStart,
-  );
-  return {
-    treads: split.below,
-    treadsBelowCut: split.below,
-    treadsAboveCut: split.above,
+  return assembleMultiFlight(params, {
+    treads: allTreads,
     risers,
-    stringers,
     walkline,
-    handrails: buildHandrailsFromParams(walkline, params.width, params.handrails),
-    landings: [],
-    arrowSymbol: arrow,
-    cutLine,
-    treadLabels,
-    bbox: bboxOfPolygons(allTreads),
-  };
+    cutDirs: [layout.u1, midTangent, layout.u2],
+    flightSplit: [layout.n1, layout.winderCount, layout.n2],
+    arrowSymbol: arrow(walkline),
+  });
 }
 
 // ─── WINDER private helpers ───────────────────────────────────────────────────
@@ -180,38 +177,23 @@ export function buildWinderLayout(
   };
 }
 
+/**
+ * Flight 1: rectilinear treads from the centreline base point along `u1`.
+ * ADR-611 — delegates to the shared `buildRectilinearFlight` generator.
+ */
 export function buildWinderFlight1(
   params: Readonly<StairParams>,
   layout: WinderLayout,
-): { readonly treads: readonly Polygon3D[]; readonly risers: readonly Segment3D[] } {
-  const { basePoint, rise, tread, nosing, width } = params;
-  const { u1, v1, n1 } = layout;
-  const halfW = width * 0.5;
-  const depth = tread + nosing;
-  const treads: Polygon3D[] = new Array(n1);
-  for (let i = 0; i < n1; i++) {
-    const ox = basePoint.x + u1.x * (tread * i) - v1.x * halfW;
-    const oy = basePoint.y + u1.y * (tread * i) - v1.y * halfW;
-    const tz = basePoint.z + rise * i;
-    treads[i] = [
-      point(ox, oy, tz),
-      point(ox + u1.x * depth, oy + u1.y * depth, tz),
-      point(ox + u1.x * depth + v1.x * width, oy + u1.y * depth + v1.y * width, tz),
-      point(ox + v1.x * width, oy + v1.y * width, tz),
-    ];
-  }
-  const risers: Segment3D[] = [];
-  for (let i = 0; i < n1 - 1; i++) {
-    const along = tread * (i + 1);
-    const cx = basePoint.x + u1.x * along - v1.x * halfW;
-    const cy = basePoint.y + u1.y * along - v1.y * halfW;
-    // ADR-370 Phase 5.3 — diagonal Segment3D (see StairGeometryService.buildStraightRisers).
-    risers.push({
-      start: point(cx, cy, basePoint.z + rise * i),
-      end: point(cx + v1.x * width, cy + v1.y * width, basePoint.z + rise * (i + 1)),
-    });
-  }
-  return { treads, risers };
+): FlightGeometry {
+  return buildRectilinearFlight(
+    params.basePoint,
+    layout.u1,
+    params.rise,
+    params.tread,
+    params.nosing,
+    params.width,
+    layout.n1,
+  );
 }
 
 export function buildWinderTreads(
@@ -240,41 +222,30 @@ export function buildWinderTreads(
   return out;
 }
 
+/**
+ * Flight 2: rectilinear treads from the pivot edge along `u2`, width spanning
+ * the trailing winder boundary direction. ADR-611 — delegates to the shared
+ * `buildFlightFromEdge` generator.
+ */
 export function buildWinderFlight2(
   params: Readonly<StairParams>,
   layout: WinderLayout,
-): { readonly treads: readonly Polygon3D[]; readonly risers: readonly Segment3D[] } {
-  const { basePoint, rise, tread, nosing, width } = params;
-  const { u2, pivotXY, ray0, signedSweepRad, n1, n2, winderCount } = layout;
-  const depth = tread + nosing;
+): FlightGeometry {
+  const { pivotXY, u2, ray0, signedSweepRad, n1, n2, winderCount } = layout;
   // Width axis = ray_winderCount (trailing winder boundary direction).
   // 90° turn → widthAxis ≈ u1; 180° turn → widthAxis = ±v1.
   const widthAxis = rotateVec(ray0, signedSweepRad * winderCount);
-  const treads: Polygon3D[] = new Array(n2);
-  for (let i = 0; i < n2; i++) {
-    const ox = pivotXY.x + u2.x * (tread * i);
-    const oy = pivotXY.y + u2.y * (tread * i);
-    const tz = basePoint.z + rise * (n1 + winderCount + i);
-    treads[i] = [
-      point(ox, oy, tz),
-      point(ox + u2.x * depth, oy + u2.y * depth, tz),
-      point(ox + u2.x * depth + widthAxis.x * width, oy + u2.y * depth + widthAxis.y * width, tz),
-      point(ox + widthAxis.x * width, oy + widthAxis.y * width, tz),
-    ];
-  }
-  const risers: Segment3D[] = [];
-  for (let i = 0; i < n2 - 1; i++) {
-    const along = (i + 1) * tread;
-    const cx = pivotXY.x + u2.x * along;
-    const cy = pivotXY.y + u2.y * along;
-    // ADR-370 Phase 5.3 — diagonal Segment3D. Flight 2 width axis = widthAxis
-    // (trailing winder boundary), pivotXY is the near edge, far edge at +widthAxis·width.
-    risers.push({
-      start: point(cx, cy, basePoint.z + rise * (n1 + winderCount + i)),
-      end: point(cx + widthAxis.x * width, cy + widthAxis.y * width, basePoint.z + rise * (n1 + winderCount + i + 1)),
-    });
-  }
-  return { treads, risers };
+  return buildFlightFromEdge(
+    pivotXY,
+    u2,
+    widthAxis,
+    params.rise,
+    params.tread,
+    params.nosing,
+    params.width,
+    n2,
+    params.basePoint.z + params.rise * (n1 + winderCount),
+  );
 }
 
 export function buildWinderWalkline(

@@ -6,21 +6,26 @@
  * emit an audit entry (BULK undo is a UI-level operation, not a separate
  * historical event). Idempotent: stored snapshots per entity guarantee
  * exact restore on undo.
+ *
+ * ADR-614 — a multi-entity outlier: extends the generic {@link BaseCommand}
+ * (id/timestamp/redo/serialize envelope) and reuses the shared guarded-resolve
+ * + audit-envelope free helpers, rather than the single-entity text bases.
  */
 
-import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
+import type { ISceneManager } from '../interfaces';
 import type { DxfTextNode } from '../../../text-engine/types';
+import { BaseCommand } from '../base-command';
+import { replaceAll, type MatchOptions } from './text-match-engine';
+import {
+  resolveEditableTextEntity,
+  recordTextAudit,
+} from './dxf-text-command-base';
 import {
   noopAuditRecorder,
   type DxfTextSceneEntity,
   type IDxfTextAuditRecorder,
   type ILayerAccessProvider,
 } from './types';
-import { assertCanEditLayer } from './CanEditLayerGuard';
-// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
-import { resolveEntityLayerName } from '../../../stores/LayerStore';
-import { replaceAll, type MatchOptions } from './text-match-engine';
 
 export interface ReplaceAllTextCommandInput {
   readonly entityIds: readonly string[];
@@ -35,11 +40,9 @@ interface EntitySnapshot {
   readonly replacements: number;
 }
 
-export class ReplaceAllTextCommand implements ICommand {
-  readonly id: string;
+export class ReplaceAllTextCommand extends BaseCommand {
   readonly name = 'ReplaceAllText';
   readonly type = 'replace-all-text';
-  readonly timestamp: number;
 
   private snapshots: EntitySnapshot[] = [];
   private wasExecuted = false;
@@ -50,8 +53,7 @@ export class ReplaceAllTextCommand implements ICommand {
     private readonly layerProvider: ILayerAccessProvider,
     private readonly auditRecorder: IDxfTextAuditRecorder = noopAuditRecorder,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super();
   }
 
   execute(): void {
@@ -75,12 +77,8 @@ export class ReplaceAllTextCommand implements ICommand {
 
     const snapshots: EntitySnapshot[] = [];
     for (const entityId of this.input.entityIds) {
-      const entity = this.sceneManager.getEntity(entityId) as
-        | DxfTextSceneEntity
-        | undefined;
+      const entity = resolveEditableTextEntity(entityId, this.sceneManager, this.layerProvider);
       if (!entity) continue;
-      // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
-      assertCanEditLayer({ layerName: resolveEntityLayerName(entity) ?? '', provider: this.layerProvider });
       const { node, count } = replaceAll(
         entity.textNode,
         this.input.pattern,
@@ -94,21 +92,13 @@ export class ReplaceAllTextCommand implements ICommand {
     this.snapshots = snapshots;
     this.wasExecuted = true;
 
-    const totalReplacements = snapshots.reduce((sum, s) => sum + s.replacements, 0);
     for (const snap of snapshots) {
-      this.auditRecorder.record({
-        entityId: snap.entityId,
-        action: 'updated',
-        changes: [
-          { field: 'pattern', oldValue: null, newValue: this.input.pattern },
-          { field: 'replacement', oldValue: null, newValue: this.input.replacement },
-          { field: 'replacements', oldValue: 0, newValue: snap.replacements },
-        ],
-        commandName: this.name,
-        timestamp: Date.now(),
-      });
+      recordTextAudit(this.auditRecorder, this.name, snap.entityId, 'updated', [
+        { field: 'pattern', oldValue: null, newValue: this.input.pattern },
+        { field: 'replacement', oldValue: null, newValue: this.input.replacement },
+        { field: 'replacements', oldValue: 0, newValue: snap.replacements },
+      ]);
     }
-    void totalReplacements;
   }
 
   undo(): void {
@@ -118,33 +108,9 @@ export class ReplaceAllTextCommand implements ICommand {
     }
   }
 
-  redo(): void {
-    this.execute();
-  }
-
-  canMergeWith(): boolean {
-    return false;
-  }
-
   getDescription(): string {
     const total = this.snapshots.reduce((s, x) => s + x.replacements, 0);
     return `Replace all "${this.input.pattern}" → "${this.input.replacement}" (${total} replacement${total === 1 ? '' : 's'})`;
-  }
-
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        entityIds: [...this.input.entityIds],
-        pattern: this.input.pattern,
-        replacement: this.input.replacement,
-        matchOptions: this.input.matchOptions as unknown as Record<string, unknown>,
-      },
-      version: 1,
-    };
   }
 
   validate(): string | null {
@@ -157,5 +123,14 @@ export class ReplaceAllTextCommand implements ICommand {
 
   getAffectedEntityIds(): string[] {
     return this.snapshots.map((s) => s.entityId);
+  }
+
+  protected serializeData(): Record<string, unknown> {
+    return {
+      entityIds: [...this.input.entityIds],
+      pattern: this.input.pattern,
+      replacement: this.input.replacement,
+      matchOptions: this.input.matchOptions as unknown as Record<string, unknown>,
+    };
   }
 }

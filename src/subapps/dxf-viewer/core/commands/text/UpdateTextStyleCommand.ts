@@ -7,24 +7,21 @@
  * applied uniformly. Selection-aware partial updates are produced by
  * the TipTap editor and serialized through Phase 4, not here.
  *
- * Pre-execute: assertCanEditLayer (Q8). Audit (Q12) fires on success.
- * Idempotent: undo restores the snapshot captured on first execute().
+ * ADR-614 — lifecycle (resolve → guard → snapshot → commit → audit / undo)
+ * is inherited from {@link DxfTextNodeMutationCommand}; only the run-style
+ * patch + merge behaviour live here.
  */
 
-import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
+import type { ICommand } from '../interfaces';
 import type { TextRunStyle, DxfTextNode, TextParagraph, TextRun, TextStack } from '../../../text-engine/types';
-import {
-  noopAuditRecorder,
-  type DxfTextSceneEntity,
-  type IDxfTextAuditRecorder,
-  type ILayerAccessProvider,
-} from './types';
-import { assertCanEditLayer } from './CanEditLayerGuard';
-// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
-import { resolveEntityLayerName } from '../../../stores/LayerStore';
 import { buildShallowDiff } from './diff-helpers';
-import { ensureTextNode } from '../../../text-engine/edit/ensure-text-node';
+import {
+  DxfTextNodeMutationCommand,
+  mergePatchInputs,
+  validateNonEmptyPatch,
+  describePatchFields,
+  type TextNodeMutationResult,
+} from './dxf-text-command-base';
 
 export type TextStylePatch = Partial<TextRunStyle>;
 
@@ -50,103 +47,47 @@ function applyToRuns(
   }));
 }
 
-export class UpdateTextStyleCommand implements ICommand {
-  readonly id: string;
+export class UpdateTextStyleCommand extends DxfTextNodeMutationCommand<UpdateTextStyleCommandInput> {
   readonly name = 'UpdateTextStyle';
   readonly type = 'update-text-style';
-  readonly timestamp: number;
 
-  private snapshot: DxfTextNode | null = null;
-  private wasExecuted = false;
-
-  constructor(
-    private readonly input: UpdateTextStyleCommandInput,
-    private readonly sceneManager: ISceneManager,
-    private readonly layerProvider: ILayerAccessProvider,
-    private readonly auditRecorder: IDxfTextAuditRecorder = noopAuditRecorder,
-  ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
-  }
-
-  execute(): void {
-    const entity = this.sceneManager.getEntity(this.input.entityId) as
-      | DxfTextSceneEntity
-      | undefined;
-    if (!entity) return;
-    // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
-    assertCanEditLayer({ layerName: resolveEntityLayerName(entity) ?? '', provider: this.layerProvider });
-
-    const safeNode = ensureTextNode(entity);
-    if (!this.snapshot) this.snapshot = safeNode;
+  protected applyMutation(
+    _entity: unknown,
+    node: DxfTextNode,
+    snapshot: DxfTextNode,
+  ): TextNodeMutationResult {
     const nextNode: DxfTextNode = {
-      ...safeNode,
-      paragraphs: applyToRuns(safeNode.paragraphs, this.input.patch),
+      ...node,
+      paragraphs: applyToRuns(node.paragraphs, this.input.patch),
     };
-    this.sceneManager.updateEntity(this.input.entityId, { textNode: nextNode });
-    this.wasExecuted = true;
-
-    this.auditRecorder.record({
-      entityId: this.input.entityId,
-      action: 'updated',
+    return {
+      updates: { textNode: nextNode },
       changes: buildShallowDiff(
-        this.snapshot as unknown as Record<string, unknown>,
+        snapshot as unknown as Record<string, unknown>,
         nextNode as unknown as Record<string, unknown>,
       ),
-      commandName: this.name,
-      timestamp: Date.now(),
-    });
-  }
-
-  undo(): void {
-    if (!this.snapshot || !this.wasExecuted) return;
-    this.sceneManager.updateEntity(this.input.entityId, { textNode: this.snapshot });
-  }
-
-  redo(): void {
-    this.execute();
+    };
   }
 
   canMergeWith(other: ICommand): boolean {
     if (other.type !== this.type) return false;
-    const o = other as UpdateTextStyleCommand;
-    return o.input.entityId === this.input.entityId;
+    return (other as UpdateTextStyleCommand).input.entityId === this.input.entityId;
   }
 
   mergeWith(other: ICommand): ICommand {
-    const o = other as UpdateTextStyleCommand;
-    return new UpdateTextStyleCommand(
-      { entityId: this.input.entityId, patch: { ...this.input.patch, ...o.input.patch } },
-      this.sceneManager,
-      this.layerProvider,
-      this.auditRecorder,
-    );
+    const merged = mergePatchInputs(this.input, (other as UpdateTextStyleCommand).input);
+    return new UpdateTextStyleCommand(merged, this.sceneManager, this.layerProvider, this.auditRecorder);
+  }
+
+  protected validatePayload(): string | null {
+    return validateNonEmptyPatch(this.input.patch);
   }
 
   getDescription(): string {
-    return `Update text style (${Object.keys(this.input.patch).join(', ') || 'no fields'})`;
+    return describePatchFields('Update text style', this.input.patch);
   }
 
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: { entityId: this.input.entityId, patch: this.input.patch },
-      version: 1,
-    };
-  }
-
-  validate(): string | null {
-    if (!this.input.entityId) return 'entityId is required';
-    if (!this.input.patch || Object.keys(this.input.patch).length === 0) {
-      return 'patch must not be empty';
-    }
-    return null;
-  }
-
-  getAffectedEntityIds(): string[] {
-    return [this.input.entityId];
+  protected serializeData(): Record<string, unknown> {
+    return { entityId: this.entityId, patch: this.input.patch };
   }
 }

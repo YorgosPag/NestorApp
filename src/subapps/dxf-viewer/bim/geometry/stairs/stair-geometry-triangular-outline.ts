@@ -25,6 +25,9 @@
  *     the next tread, i.e. corner on the V_a-V_c edge).
  *   - cutLine perpendicular to walkline at first tread crossing the cut plane.
  *
+ * ADR-611 — the `StairGeometry` assembly tail now comes from
+ * `stair-geometry-generators.ts`.
+ *
  * @see docs/centralized-systems/reference/adrs/ADR-358-dxf-stair-tool-google-level.md §5.1 §6.2 §6.3
  */
 
@@ -41,14 +44,10 @@ import {
   DEFAULT_CUT_PLANE_HEIGHT,
   type Vec2,
   point,
-  arrowSymbol,
-  bboxOfPolygons,
-  splitTreadsByCutPlane,
   buildCutLine,
   buildStringersFromWalkline,
-  buildHandrailsFromParams,
 } from './stair-geometry-shared';
-import { buildTreadLabels } from './stair-geometry-labels';
+import { assembleSingleFlightWalkline } from './stair-geometry-generators';
 
 interface OutlineLayout {
   readonly Va: Readonly<Point3D>;
@@ -85,32 +84,9 @@ export function computeTriangularOutline(
   const walkline = buildOutlineWalkline(params, layout);
   const risers = buildOutlineRisers(params, layout);
   const stringers = buildStringersFromWalkline(walkline, params.width);
-  const arrow = arrowSymbol(walkline[0], walkline[walkline.length - 1], params.upDirection);
   const cutPlaneHeight = params.cutPlaneHeight ?? DEFAULT_CUT_PLANE_HEIGHT;
-  const split = splitTreadsByCutPlane(treads, cutPlaneHeight);
   const cutLine = buildOutlineCutLine(treads, layout, params.width, cutPlaneHeight);
-  const treadLabels = buildTreadLabels(
-    treads,
-    [params.stepCount],
-    params.treadLabelDisplay,
-    params.treadLabelEveryN,
-    params.treadLabelRestartPerFlight,
-    params.treadNumberStart,
-  );
-  return {
-    treads: split.below,
-    treadsBelowCut: split.below,
-    treadsAboveCut: split.above,
-    risers,
-    stringers,
-    walkline,
-    handrails: buildHandrailsFromParams(walkline, params.width, params.handrails),
-    landings: [],
-    arrowSymbol: arrow,
-    cutLine,
-    treadLabels,
-    bbox: bboxOfPolygons(treads),
-  };
+  return assembleSingleFlightWalkline(params, { treads, risers, stringers, walkline, cutLine });
 }
 
 // ─── TRIANGULAR-OUTLINE private helpers ───────────────────────────────────────

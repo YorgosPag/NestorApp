@@ -3,13 +3,13 @@
  * @description Commands for deleting construction guides — single and batch
  *
  * @see ADR-189 (Construction Grid & Guide System)
+ * @see ADR-613 (Guide command SSoT — BaseCommand base)
  * @since 2026-02-19
  */
 
-import type { ICommand, SerializedCommand } from '../../../core/commands/interfaces';
 import type { Guide } from '../guide-types';
 import type { GuideStore } from '../guide-store';
-import { generateEntityId } from '../../entity-creation/utils';
+import { BaseCommand } from '../../../core/commands/base-command';
 
 // ============================================================================
 // DELETE GUIDE COMMAND
@@ -19,11 +19,9 @@ import { generateEntityId } from '../../entity-creation/utils';
  * Command for deleting a construction guide.
  * Stores a snapshot for undo (restore).
  */
-export class DeleteGuideCommand implements ICommand {
-  readonly id: string;
+export class DeleteGuideCommand extends BaseCommand {
   readonly name = 'DeleteGuide';
   readonly type = 'delete-guide';
-  readonly timestamp: number;
 
   private deletedGuide: Guide | null = null;
 
@@ -31,8 +29,7 @@ export class DeleteGuideCommand implements ICommand {
     private readonly store: GuideStore,
     private readonly guideId: string,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super();
   }
 
   execute(): void {
@@ -48,29 +45,14 @@ export class DeleteGuideCommand implements ICommand {
     }
   }
 
-  redo(): void {
-    this.execute();
-  }
-
   getDescription(): string {
     return `Delete guide ${this.guideId}`;
   }
 
-  canMergeWith(): boolean {
-    return false;
-  }
-
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        guideId: this.guideId,
-        deletedGuide: this.deletedGuide,
-      },
-      version: 1,
+      guideId: this.guideId,
+      deletedGuide: this.deletedGuide,
     };
   }
 
@@ -87,19 +69,17 @@ export class DeleteGuideCommand implements ICommand {
  * Deletes multiple guides at once. Skips locked guides.
  * Stores snapshots for full undo/redo.
  */
-export class BatchDeleteGuidesCommand implements ICommand {
-  readonly id: string;
+export class BatchDeleteGuidesCommand extends BaseCommand {
   readonly name = 'BatchDeleteGuides';
   readonly type = 'batch-delete-guides';
-  readonly timestamp: number;
+
   private deletedGuides: Guide[] = [];
 
   constructor(
     private readonly store: GuideStore,
     private readonly guideIds: readonly string[],
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super();
   }
 
   execute(): void {
@@ -121,23 +101,18 @@ export class BatchDeleteGuidesCommand implements ICommand {
     }
   }
 
-  redo(): void { this.execute(); }
-
   getDescription(): string {
     return `Batch delete ${this.deletedGuides.length} guides`;
   }
 
-  canMergeWith(): boolean { return false; }
-
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type, id: this.id, name: this.name, timestamp: this.timestamp,
-      data: { guideIds: [...this.guideIds], deletedCount: this.deletedGuides.length },
-      version: 1,
+      guideIds: [...this.guideIds],
+      deletedCount: this.deletedGuides.length,
     };
   }
 
   getAffectedEntityIds(): string[] {
-    return this.deletedGuides.map(g => g.id);
+    return this.deletedGuides.map((g) => g.id);
   }
 }

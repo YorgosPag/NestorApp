@@ -21,6 +21,10 @@
  * `landingCornerStyle: 'chamfer' | 'fillet'` throws with a `/Phase 3c/`
  * sentinel — square corners only in Phase 3b.
  *
+ * ADR-611 — flight 1 (rectilinear) and flight 2 (edge-origin) delegate to the
+ * shared generators; the `StairGeometry` assembly tail (incl. the cut-plane
+ * split that was a local duplicate here) comes from `stair-geometry-generators.ts`.
+ *
  * @see docs/centralized-systems/reference/adrs/ADR-358-dxf-stair-tool-google-level.md §5.1 §6.2
  */
 
@@ -28,75 +32,45 @@ import type { Point3D } from '../../../rendering/types/Types';
 import type {
   Polygon3D,
   Polyline3D,
-  Segment3D,
   StairGeometry,
   StairParams,
   StairVariantUShape,
 } from '../../../bim/types/stair-types';
 import {
-  DEFAULT_CUT_PLANE_HEIGHT,
   type Vec2,
-  perp,
-  directionToUnitVector,
   point,
-  arrowSymbol,
-  bboxOfPolygons,
-  buildCutLineForFlights,
-  buildStringersFromWalkline,
-  buildHandrailsFromParams,
 } from './stair-geometry-shared';
-import { buildTreadLabelsWithLandings } from './stair-geometry-labels';
+import {
+  type FlightGeometry,
+  assembleTwoFlightLanding,
+  buildFlightFromEdge,
+  buildRectilinearFlight,
+  resolveSwitchbackBase,
+} from './stair-geometry-generators';
 
 export function computeUShape(
   params: Readonly<StairParams>,
   variant: StairVariantUShape,
 ): StairGeometry {
   assertUShapeCornerSupported(variant);
-  const { basePoint, direction, rise, tread, nosing, width, upDirection } = params;
-  const u1 = directionToUnitVector(direction);
-  const v1 = perp(u1);
-  const [n1, n2] = variant.flightSplit;
-  const landingDepth = variant.landingDepth === 'auto' ? width : variant.landingDepth;
-  const turnSign: 1 | -1 = variant.turnDirection === 'right' ? -1 : 1;
+  const { basePoint, rise, tread, nosing, width } = params;
+  const { u1, v1, n1, n2, landingDepth, turnSign } = resolveSwitchbackBase(params, variant);
+  // Flight 2 is anti-parallel (180° switchback) — u2 = −u1 (vs l-shape's 90°).
   const u2: Vec2 = { x: -u1.x, y: -u1.y };
-
-  const flight1 = buildUShapeFlight1(basePoint, u1, v1, rise, tread, nosing, width, n1);
+  const flight1 = buildRectilinearFlight(basePoint, u1, rise, tread, nosing, width, n1);
   const landing = buildUShapeLanding(basePoint, u1, v1, turnSign, rise, tread, width, landingDepth, n1);
   const flight2 = buildUShapeFlight2(
     basePoint, u1, v1, u2, turnSign, rise, tread, nosing, width, landingDepth, n1, n2,
   );
-  const allTreads: readonly Polygon3D[] = [...flight1.treads, ...flight2.treads];
-  const risers: readonly Segment3D[] = [...flight1.risers, ...flight2.risers];
   const walkline = buildUShapeWalkline(basePoint, u1, v1, u2, turnSign, rise, tread, width, n1, n2);
-  const stringers = buildStringersFromWalkline(walkline, width);
-  // ADR-358 Phase 3d hotfix — arrow on FIRST flight segment (see lshape rationale).
-  const arrow = arrowSymbol(walkline[0], walkline[1], upDirection);
-  const cutPlaneHeight = params.cutPlaneHeight ?? DEFAULT_CUT_PLANE_HEIGHT;
-  const split = splitTreadsByCutPlaneUShape(allTreads, cutPlaneHeight);
-  const cutLine = buildCutLineForFlights(allTreads, [n1, n2], [u1, u2], width, cutPlaneHeight);
-  const treadLabels = buildTreadLabelsWithLandings(
-    allTreads,
-    [landing],
-    [n1, n2],
-    params.treadLabelDisplay,
-    params.treadLabelEveryN,
-    params.treadLabelRestartPerFlight,
-    params.treadNumberStart,
-  );
-  return {
-    treads: split.below,
-    treadsBelowCut: split.below,
-    treadsAboveCut: split.above,
-    risers,
-    stringers,
+  return assembleTwoFlightLanding(params, {
+    flight1,
+    flight2,
     walkline,
-    handrails: buildHandrailsFromParams(walkline, params.width, params.handrails),
-    landings: [landing],
-    arrowSymbol: arrow,
-    cutLine,
-    treadLabels,
-    bbox: bboxOfPolygons([...allTreads, landing]),
-  };
+    landing,
+    dirs: [u1, u2],
+    split: [n1, n2],
+  });
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -108,59 +82,6 @@ function assertUShapeCornerSupported(variant: StairVariantUShape): void {
       `StairGeometryService: landingCornerStyle '${style}' requires Phase 3c (chamfer/fillet not implemented)`,
     );
   }
-}
-
-function splitTreadsByCutPlaneUShape(
-  treads: readonly Polygon3D[],
-  cutPlaneHeight: number,
-): { readonly below: readonly Polygon3D[]; readonly above: readonly Polygon3D[] } {
-  const below: Polygon3D[] = [];
-  const above: Polygon3D[] = [];
-  for (const t of treads) {
-    const z = t[0]?.z ?? 0;
-    if (z < cutPlaneHeight) below.push(t); else above.push(t);
-  }
-  return { below, above };
-}
-
-function buildUShapeFlight1(
-  basePoint: Readonly<Point3D>,
-  u: Vec2,
-  v: Vec2,
-  rise: number,
-  tread: number,
-  nosing: number,
-  width: number,
-  n1: number,
-): { readonly treads: readonly Polygon3D[]; readonly risers: readonly Segment3D[] } {
-  const halfW = width * 0.5;
-  const depth = tread + nosing;
-  const treads: Polygon3D[] = new Array(n1);
-  for (let i = 0; i < n1; i++) {
-    const along = tread * i;
-    const ox = basePoint.x + u.x * along - v.x * halfW;
-    const oy = basePoint.y + u.y * along - v.y * halfW;
-    const tz = basePoint.z + rise * i;
-    treads[i] = [
-      point(ox, oy, tz),
-      point(ox + u.x * depth, oy + u.y * depth, tz),
-      point(ox + u.x * depth + v.x * width, oy + u.y * depth + v.y * width, tz),
-      point(ox + v.x * width, oy + v.y * width, tz),
-    ];
-  }
-  const risers: Segment3D[] = [];
-  for (let i = 0; i < n1 - 1; i++) {
-    const along = tread * (i + 1);
-    const cx = basePoint.x + u.x * along - v.x * halfW;
-    const cy = basePoint.y + u.y * along - v.y * halfW;
-    // ADR-370 Phase 5.3 — diagonal Segment3D (see StairGeometryService.buildStraightRisers).
-    // Flight 1 width axis = v, near edge at cx,cy (cy already − v·halfW), far edge at +v·width.
-    risers.push({
-      start: point(cx, cy, basePoint.z + rise * i),
-      end: point(cx + v.x * width, cy + v.y * width, basePoint.z + rise * (i + 1)),
-    });
-  }
-  return { treads, risers };
 }
 
 function buildUShapeLanding(
@@ -191,6 +112,11 @@ function buildUShapeLanding(
   ];
 }
 
+/**
+ * Flight 2 inner edge (shared with the landing, closest to flight 1) at
+ * `v1·(turnSign·halfW)`; outer direction `vOut = turnSign·v1`. ADR-611 —
+ * treads/risers via the shared `buildFlightFromEdge`.
+ */
 function buildUShapeFlight2(
   basePoint: Readonly<Point3D>,
   u1: Vec2,
@@ -204,45 +130,16 @@ function buildUShapeFlight2(
   landingDepth: number,
   n1: number,
   n2: number,
-): { readonly treads: readonly Polygon3D[]; readonly risers: readonly Segment3D[] } {
+): FlightGeometry {
   const halfW = width * 0.5;
-  const depth = tread + nosing;
-  // Flight 2 lateral inner edge (the edge shared with the landing, closest to
-  // flight 1): v1·(turnSign·halfW). For turnRight (turnSign=-1) → −halfW;
-  // for turnLeft (+1) → +halfW.
   const innerEdge: Vec2 = {
     x: basePoint.x + u1.x * (n1 * tread + landingDepth) + v1.x * (turnSign * halfW),
     y: basePoint.y + u1.y * (n1 * tread + landingDepth) + v1.y * (turnSign * halfW),
   };
-  // vOut = direction from inner edge to outer edge of flight 2. For turnRight:
-  // outer is further negative on v1 → vOut = −v1. For turnLeft: outer further
-  // positive → vOut = +v1. Compactly: vOut = turnSign·v1.
   const vOut: Vec2 = { x: turnSign * v1.x, y: turnSign * v1.y };
-  const treads: Polygon3D[] = new Array(n2);
-  for (let i = 0; i < n2; i++) {
-    const ox = innerEdge.x + u2.x * (tread * i);
-    const oy = innerEdge.y + u2.y * (tread * i);
-    const tz = basePoint.z + rise * (n1 + 1 + i);
-    treads[i] = [
-      point(ox, oy, tz),
-      point(ox + u2.x * depth, oy + u2.y * depth, tz),
-      point(ox + u2.x * depth + vOut.x * width, oy + u2.y * depth + vOut.y * width, tz),
-      point(ox + vOut.x * width, oy + vOut.y * width, tz),
-    ];
-  }
-  const risers: Segment3D[] = [];
-  for (let i = 0; i < n2 - 1; i++) {
-    const along = (i + 1) * tread;
-    const cx = innerEdge.x + u2.x * along;
-    const cy = innerEdge.y + u2.y * along;
-    // ADR-370 Phase 5.3 — diagonal Segment3D. Flight 2 width axis = vOut,
-    // innerEdge is the near width edge, far edge at +vOut·width.
-    risers.push({
-      start: point(cx, cy, basePoint.z + rise * (n1 + 1 + i)),
-      end: point(cx + vOut.x * width, cy + vOut.y * width, basePoint.z + rise * (n1 + 2 + i)),
-    });
-  }
-  return { treads, risers };
+  return buildFlightFromEdge(
+    innerEdge, u2, vOut, rise, tread, nosing, width, n2, basePoint.z + rise * (n1 + 1),
+  );
 }
 
 function buildUShapeWalkline(

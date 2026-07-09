@@ -10,16 +10,20 @@
  * round-trips do not regenerate the ID. Audit (Q12): fire-and-forget on
  * successful execute() and redo(). Undo emits a 'deleted' audit entry so
  * the trail captures both directions.
+ *
+ * ADR-614 — a no-layer-provider outlier: extends the generic {@link BaseCommand}
+ * (id/timestamp/redo→execute/serialize envelope) and reuses the shared
+ * audit-envelope free helper. Its `redo` is BaseCommand's default (re-run
+ * execute), which — since the entity is built once and cached — replays the
+ * add + 'created' audit identically to the legacy bespoke redo.
  */
 
-import type {
-  ICommand,
-  ISceneManager,
-  SerializedCommand,
-} from '../interfaces';
+import type { ISceneManager } from '../interfaces';
+import { BaseCommand } from '../base-command';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import type { DxfTextNode } from '../../../text-engine/types';
 import type { Point2D } from '../../../rendering/types/Types';
+import { recordTextAudit } from './dxf-text-command-base';
 import {
   noopAuditRecorder,
   type DxfTextSceneEntity,
@@ -58,11 +62,9 @@ function pickEntityType(node: DxfTextNode): 'text' | 'mtext' {
 
 // ── Command ───────────────────────────────────────────────────────────────────
 
-export class CreateTextCommand implements ICommand {
-  readonly id: string;
+export class CreateTextCommand extends BaseCommand {
   readonly name = 'CreateText';
   readonly type = 'create-text';
-  readonly timestamp: number;
 
   private entity: DxfTextSceneEntity | null = null;
   private wasExecuted = false;
@@ -72,8 +74,22 @@ export class CreateTextCommand implements ICommand {
     private readonly sceneManager: ISceneManager,
     private readonly auditRecorder: IDxfTextAuditRecorder = noopAuditRecorder,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super();
+  }
+
+  /** Audit the created entity in either direction (created on add, deleted on remove). */
+  private recordEntityAudit(action: 'created' | 'deleted'): void {
+    if (!this.entity) return;
+    const { id, type } = this.entity;
+    recordTextAudit(
+      this.auditRecorder,
+      this.name,
+      id,
+      action,
+      action === 'created'
+        ? [{ field: 'entity', oldValue: null, newValue: type }]
+        : [{ field: 'entity', oldValue: type, newValue: null }],
+    );
   }
 
   execute(): void {
@@ -93,41 +109,13 @@ export class CreateTextCommand implements ICommand {
     }
     this.sceneManager.addEntity(this.entity);
     this.wasExecuted = true;
-    this.auditRecorder.record({
-      entityId: this.entity.id,
-      action: 'created',
-      changes: [{ field: 'entity', oldValue: null, newValue: this.entity.type }],
-      commandName: this.name,
-      timestamp: Date.now(),
-    });
+    this.recordEntityAudit('created');
   }
 
   undo(): void {
     if (!this.entity || !this.wasExecuted) return;
     this.sceneManager.removeEntity(this.entity.id);
-    this.auditRecorder.record({
-      entityId: this.entity.id,
-      action: 'deleted',
-      changes: [{ field: 'entity', oldValue: this.entity.type, newValue: null }],
-      commandName: this.name,
-      timestamp: Date.now(),
-    });
-  }
-
-  redo(): void {
-    if (!this.entity) return;
-    this.sceneManager.addEntity(this.entity);
-    this.auditRecorder.record({
-      entityId: this.entity.id,
-      action: 'created',
-      changes: [{ field: 'entity', oldValue: null, newValue: this.entity.type }],
-      commandName: this.name,
-      timestamp: Date.now(),
-    });
-  }
-
-  canMergeWith(): boolean {
-    return false;
+    this.recordEntityAudit('deleted');
   }
 
   getDescription(): string {
@@ -137,22 +125,6 @@ export class CreateTextCommand implements ICommand {
 
   getCreatedEntity(): DxfTextSceneEntity | null {
     return this.entity;
-  }
-
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        position: this.input.position,
-        layer: this.input.layer,
-        textNode: this.input.textNode as unknown as Record<string, unknown>,
-        entityId: this.entity?.id,
-      },
-      version: 1,
-    };
   }
 
   validate(): string | null {
@@ -165,5 +137,14 @@ export class CreateTextCommand implements ICommand {
 
   getAffectedEntityIds(): string[] {
     return this.entity ? [this.entity.id] : [];
+  }
+
+  protected serializeData(): Record<string, unknown> {
+    return {
+      position: this.input.position,
+      layer: this.input.layer,
+      textNode: this.input.textNode as unknown as Record<string, unknown>,
+      entityId: this.entity?.id,
+    };
   }
 }

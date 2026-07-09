@@ -9,78 +9,32 @@
  * AutoCAD parity: equivalent to selecting a scale from the OBJECTSCALE
  * dialog's "Add Current Scale" / "Current Scale" combobox — the entity's
  * preferred scale is updated; the viewport scale is synced separately.
+ *
+ * ADR-614 — command lifecycle inherited from {@link DxfTextNodeMutationCommand}.
  */
 
-import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
+import type { ICommand } from '../interfaces';
 import type { DxfTextNode } from '../../../text-engine/types';
 import {
-  noopAuditRecorder,
-  type DxfTextSceneEntity,
-  type IDxfTextAuditRecorder,
-  type ILayerAccessProvider,
-} from './types';
-import { assertCanEditLayer } from './CanEditLayerGuard';
-// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
-import { resolveEntityLayerName } from '../../../stores/LayerStore';
-import { ensureTextNode } from '../../../text-engine/edit/ensure-text-node';
+  DxfTextNodeMutationCommand,
+  type TextNodeMutationResult,
+} from './dxf-text-command-base';
 
 export interface UpdateTextCurrentScaleCommandInput {
   readonly entityId: string;
   readonly scaleName: string;
 }
 
-export class UpdateTextCurrentScaleCommand implements ICommand {
-  readonly id: string;
+export class UpdateTextCurrentScaleCommand extends DxfTextNodeMutationCommand<UpdateTextCurrentScaleCommandInput> {
   readonly name = 'UpdateTextCurrentScale';
   readonly type = 'update-text-current-scale';
-  readonly timestamp: number;
 
-  private snapshot: DxfTextNode | null = null;
-  private wasExecuted = false;
-
-  constructor(
-    private readonly input: UpdateTextCurrentScaleCommandInput,
-    private readonly sceneManager: ISceneManager,
-    private readonly layerProvider: ILayerAccessProvider,
-    private readonly auditRecorder: IDxfTextAuditRecorder = noopAuditRecorder,
-  ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
-  }
-
-  execute(): void {
-    const entity = this.sceneManager.getEntity(this.input.entityId) as DxfTextSceneEntity | undefined;
-    if (!entity) return;
-    // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
-    assertCanEditLayer({ layerName: resolveEntityLayerName(entity) ?? '', provider: this.layerProvider });
-
-    const safeNode = ensureTextNode(entity);
-    if (!this.snapshot) this.snapshot = safeNode;
-
-    const nextNode: DxfTextNode = {
-      ...safeNode,
-      currentScale: this.input.scaleName,
+  protected applyMutation(_entity: unknown, node: DxfTextNode): TextNodeMutationResult {
+    const nextNode: DxfTextNode = { ...node, currentScale: this.input.scaleName };
+    return {
+      updates: { textNode: nextNode },
+      changes: [{ field: 'currentScale', oldValue: node.currentScale, newValue: this.input.scaleName }],
     };
-    this.sceneManager.updateEntity(this.input.entityId, { textNode: nextNode });
-    this.wasExecuted = true;
-
-    this.auditRecorder.record({
-      entityId: this.input.entityId,
-      action: 'updated',
-      changes: [{ field: 'currentScale', oldValue: safeNode.currentScale, newValue: this.input.scaleName }],
-      commandName: this.name,
-      timestamp: Date.now(),
-    });
-  }
-
-  undo(): void {
-    if (!this.snapshot || !this.wasExecuted) return;
-    this.sceneManager.updateEntity(this.input.entityId, { textNode: this.snapshot });
-  }
-
-  redo(): void {
-    this.execute();
   }
 
   canMergeWith(other: ICommand): boolean {
@@ -96,24 +50,12 @@ export class UpdateTextCurrentScaleCommand implements ICommand {
     return `Set annotation scale to ${this.input.scaleName}`;
   }
 
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: { entityId: this.input.entityId, scaleName: this.input.scaleName },
-      version: 1,
-    };
-  }
-
-  validate(): string | null {
-    if (!this.input.entityId) return 'entityId is required';
+  protected validatePayload(): string | null {
     if (!this.input.scaleName) return 'scaleName is required';
     return null;
   }
 
-  getAffectedEntityIds(): string[] {
-    return [this.input.entityId];
+  protected serializeData(): Record<string, unknown> {
+    return { entityId: this.input.entityId, scaleName: this.input.scaleName };
   }
 }

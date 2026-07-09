@@ -12,6 +12,9 @@
  *
  * Imported only by `StairGeometryService.ts` — treat as private impl detail.
  *
+ * ADR-611 — each arm is a shared `buildRectilinearFlight`; the `StairGeometry`
+ * assembly tail comes from `stair-geometry-generators.ts`.
+ *
  * @see docs/centralized-systems/reference/adrs/ADR-358-dxf-stair-tool-google-level.md §5.3 §6.3
  */
 
@@ -25,20 +28,12 @@ import type {
   StairVariantVShape,
 } from '../../../bim/types/stair-types';
 import {
-  DEFAULT_CUT_PLANE_HEIGHT,
   type Vec2,
-  perp,
   directionToUnitVector,
   point,
-  rectangleAt,
   arrowSymbol,
-  bboxOfPolygons,
-  splitTreadsByCutPlane,
-  buildCutLineForFlights,
-  buildStringersFromWalkline,
-  buildHandrailsFromParams,
 } from './stair-geometry-shared';
-import { buildTreadLabels } from './stair-geometry-labels';
+import { assembleMultiFlight, buildRectilinearFlight } from './stair-geometry-generators';
 
 const MIN_ARM_ANGLE_DEG = 15;
 const MAX_ARM_ANGLE_DEG = 170;
@@ -54,40 +49,19 @@ export function computeVShape(
   const [n1, n2] = variant.armSplit;
   const u1 = directionToUnitVector(direction);
   const u2 = directionToUnitVector(direction + variant.armAngleDeg);
-  const arm1 = buildVShapeArm(basePoint, u1, rise, tread, nosing, width, n1);
-  const arm2 = buildVShapeArm(basePoint, u2, rise, tread, nosing, width, n2);
+  const arm1 = buildRectilinearFlight(basePoint, u1, rise, tread, nosing, width, n1);
+  const arm2 = buildRectilinearFlight(basePoint, u2, rise, tread, nosing, width, n2);
   const allTreads: readonly Polygon3D[] = [...arm1.treads, ...arm2.treads];
   const risers: readonly Segment3D[] = [...arm1.risers, ...arm2.risers];
   const walkline = buildVShapeWalkline(basePoint, u1, u2, rise, tread, n1, n2);
-  const stringers = buildStringersFromWalkline(walkline, width);
-  const arrow = arrowSymbol(basePoint, walkline[0], upDirection);
-  const cutPlaneHeight = params.cutPlaneHeight ?? DEFAULT_CUT_PLANE_HEIGHT;
-  const split = splitTreadsByCutPlane(allTreads, cutPlaneHeight);
-  const cutLine = buildCutLineForFlights(
-    allTreads, [n1, n2], [u1, u2], width, cutPlaneHeight,
-  );
-  const treadLabels = buildTreadLabels(
-    allTreads,
-    [n1, n2],
-    params.treadLabelDisplay,
-    params.treadLabelEveryN,
-    params.treadLabelRestartPerFlight,
-    params.treadNumberStart,
-  );
-  return {
-    treads: split.below,
-    treadsBelowCut: split.below,
-    treadsAboveCut: split.above,
+  return assembleMultiFlight(params, {
+    treads: allTreads,
     risers,
-    stringers,
     walkline,
-    handrails: buildHandrailsFromParams(walkline, params.width, params.handrails),
-    landings: [],
-    arrowSymbol: arrow,
-    cutLine,
-    treadLabels,
-    bbox: bboxOfPolygons(allTreads),
-  };
+    cutDirs: [u1, u2],
+    flightSplit: [n1, n2],
+    arrowSymbol: arrowSymbol(basePoint, walkline[0], upDirection),
+  });
 }
 
 // ─── V-SHAPE private helpers ──────────────────────────────────────────────────
@@ -105,41 +79,6 @@ function assertVShapeConstraints(variant: StairVariantVShape): void {
       `StairGeometryService: v-shape armSplit [${armSplit[0]}, ${armSplit[1]}] must satisfy armSplit[i] ≥ 1`,
     );
   }
-}
-
-function buildVShapeArm(
-  basePoint: Readonly<Point3D>,
-  u: Vec2,
-  rise: number,
-  tread: number,
-  nosing: number,
-  width: number,
-  n: number,
-): { readonly treads: readonly Polygon3D[]; readonly risers: readonly Segment3D[] } {
-  const v = perp(u);
-  const halfW = width * 0.5;
-  const depth = tread + nosing;
-  const treads: Polygon3D[] = new Array(n);
-  for (let i = 0; i < n; i++) {
-    const along = tread * i;
-    const corner: Vec2 = {
-      x: basePoint.x + u.x * along - v.x * halfW,
-      y: basePoint.y + u.y * along - v.y * halfW,
-    };
-    treads[i] = rectangleAt(corner, u, depth, width, basePoint.z + rise * i);
-  }
-  const risers: Segment3D[] = [];
-  for (let i = 0; i < n - 1; i++) {
-    const along = tread * (i + 1);
-    const cx = basePoint.x + u.x * along;
-    const cy = basePoint.y + u.y * along;
-    // ADR-370 Phase 5.3 — diagonal Segment3D (see StairGeometryService.buildStraightRisers).
-    risers.push({
-      start: point(cx - v.x * halfW, cy - v.y * halfW, basePoint.z + rise * i),
-      end: point(cx + v.x * halfW, cy + v.y * halfW, basePoint.z + rise * (i + 1)),
-    });
-  }
-  return { treads, risers };
 }
 
 /**

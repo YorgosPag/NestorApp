@@ -3,14 +3,20 @@
  * @description Commands for creating guides from DXF entities
  *
  * @see ADR-189 B8 (Guide from entity), B24 (Offset from entity), B37 (Batch from entities)
+ * @see ADR-613 (Guide command SSoT — CreatedGuidesCommand + geometry helpers)
  * @since 2026-02-19
  */
 
-import type { ICommand, SerializedCommand } from '../../../core/commands/interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { Guide } from '../guide-types';
 import type { GuideStore } from '../guide-store';
-import { generateEntityId } from '../../entity-creation/utils';
+import { CreatedGuidesCommand } from './guide-command-base';
+import {
+  buildGuidesFromEntityParams,
+  extendThroughPoint,
+  unitDirection,
+  GUIDE_ENTITY_EXTENT,
+} from './guide-command-geometry';
 
 /** Entity type info passed from entity picking to GuideFromEntityCommand */
 export interface EntityGuideParams {
@@ -35,89 +41,31 @@ export interface EntityGuideParams {
  * - CIRCLE -> X + Y guides through center
  * - ARC -> XZ radial guide from center through click point
  */
-export class GuideFromEntityCommand implements ICommand {
-  readonly id: string;
+export class GuideFromEntityCommand extends CreatedGuidesCommand {
   readonly name = 'GuideFromEntity';
   readonly type = 'guide-from-entity';
-  readonly timestamp: number;
-  private createdGuides: Guide[] = [];
 
   constructor(
-    private readonly store: GuideStore,
+    store: GuideStore,
     private readonly params: EntityGuideParams,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(store);
   }
 
-  execute(): void {
-    if (this.createdGuides.length > 0) {
-      for (const guide of this.createdGuides) {
-        this.store.restoreGuide(guide);
-      }
-      return;
-    }
-
-    const { entityType, lineStart, lineEnd, center, clickPoint } = this.params;
-    const extent = 10_000;
-
-    if ((entityType === 'LINE' || entityType === 'POLYLINE') && lineStart && lineEnd) {
-      const dx = lineEnd.x - lineStart.x;
-      const dy = lineEnd.y - lineStart.y;
-      const len = Math.sqrt(dx * dx + dy * dy);
-      if (len > 0.001) {
-        const nx = dx / len;
-        const ny = dy / len;
-        const mid: Point2D = { x: (lineStart.x + lineEnd.x) / 2, y: (lineStart.y + lineEnd.y) / 2 };
-        const start: Point2D = { x: mid.x - nx * extent, y: mid.y - ny * extent };
-        const end: Point2D = { x: mid.x + nx * extent, y: mid.y + ny * extent };
-        const guide = this.store.addDiagonalGuideRaw(start, end);
-        if (guide) this.createdGuides.push(guide);
-      }
-    } else if (entityType === 'CIRCLE' && center) {
-      const gx = this.store.addGuideRaw('X', center.x);
-      if (gx) this.createdGuides.push(gx);
-      const gy = this.store.addGuideRaw('Y', center.y);
-      if (gy) this.createdGuides.push(gy);
-    } else if (entityType === 'ARC' && center && clickPoint) {
-      const dx = clickPoint.x - center.x;
-      const dy = clickPoint.y - center.y;
-      const len = Math.sqrt(dx * dx + dy * dy);
-      if (len > 0.001) {
-        const nx = dx / len;
-        const ny = dy / len;
-        const start: Point2D = { x: center.x - nx * extent, y: center.y - ny * extent };
-        const end: Point2D = { x: center.x + nx * extent, y: center.y + ny * extent };
-        const guide = this.store.addDiagonalGuideRaw(start, end);
-        if (guide) this.createdGuides.push(guide);
-      }
-    }
+  protected buildGuides(): Guide[] {
+    return buildGuidesFromEntityParams(this.store, this.params);
   }
-
-  undo(): void {
-    for (const guide of this.createdGuides) {
-      this.store.removeGuideById(guide.id);
-    }
-  }
-
-  redo(): void { this.execute(); }
 
   getDescription(): string {
-    return `Guide from ${this.params.entityType} entity (${this.createdGuides.length} guide${this.createdGuides.length !== 1 ? 's' : ''})`;
+    const n = this.createdGuides.length;
+    return `Guide from ${this.params.entityType} entity (${n} guide${n !== 1 ? 's' : ''})`;
   }
 
-  canMergeWith(): boolean { return false; }
-
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type, id: this.id, name: this.name, timestamp: this.timestamp,
-      data: { entityType: this.params.entityType, createdGuideIds: this.createdGuides.map(g => g.id) },
-      version: 1,
+      entityType: this.params.entityType,
+      createdGuideIds: this.createdGuides.map((g) => g.id),
     };
-  }
-
-  getAffectedEntityIds(): string[] {
-    return this.createdGuides.map(g => g.id);
   }
 }
 
@@ -130,86 +78,58 @@ export class GuideFromEntityCommand implements ICommand {
  * - LINE/POLYLINE -> shifted parallel lines (normal vector offset, both sides)
  * - CIRCLE -> 4 guides at center +/- offset on each axis
  */
-export class GuideOffsetFromEntityCommand implements ICommand {
-  readonly id: string;
+export class GuideOffsetFromEntityCommand extends CreatedGuidesCommand {
   readonly name = 'GuideOffsetFromEntity';
   readonly type = 'guide-offset-entity';
-  readonly timestamp: number;
-  private createdGuides: Guide[] = [];
 
   constructor(
-    private readonly store: GuideStore,
+    store: GuideStore,
     private readonly params: EntityGuideParams,
     private readonly offsetDistance: number,
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(store);
   }
 
-  execute(): void {
-    if (this.createdGuides.length > 0) {
-      for (const guide of this.createdGuides) {
-        this.store.restoreGuide(guide);
-      }
-      return;
-    }
-
+  protected buildGuides(): Guide[] {
     const { entityType, lineStart, lineEnd, center } = this.params;
     const offset = this.offsetDistance;
-    const extent = 10_000;
+    const created: Guide[] = [];
 
     if ((entityType === 'LINE' || entityType === 'POLYLINE') && lineStart && lineEnd) {
-      const dx = lineEnd.x - lineStart.x;
-      const dy = lineEnd.y - lineStart.y;
-      const len = Math.sqrt(dx * dx + dy * dy);
-      if (len > 0.001) {
-        const nx = -dy / len;
-        const ny = dx / len;
-        const dir = { x: dx / len, y: dy / len };
+      const dir = unitDirection(lineStart, lineEnd);
+      if (dir) {
+        const normal: Point2D = { x: -dir.y, y: dir.x };
         const mid: Point2D = { x: (lineStart.x + lineEnd.x) / 2, y: (lineStart.y + lineEnd.y) / 2 };
 
         for (const sign of [1, -1]) {
-          const shiftedMid: Point2D = { x: mid.x + nx * offset * sign, y: mid.y + ny * offset * sign };
-          const start: Point2D = { x: shiftedMid.x - dir.x * extent, y: shiftedMid.y - dir.y * extent };
-          const end: Point2D = { x: shiftedMid.x + dir.x * extent, y: shiftedMid.y + dir.y * extent };
+          const shiftedMid: Point2D = { x: mid.x + normal.x * offset * sign, y: mid.y + normal.y * offset * sign };
+          const { start, end } = extendThroughPoint(shiftedMid, dir, GUIDE_ENTITY_EXTENT);
           const guide = this.store.addDiagonalGuideRaw(start, end);
-          if (guide) this.createdGuides.push(guide);
+          if (guide) created.push(guide);
         }
       }
     } else if (entityType === 'CIRCLE' && center) {
       for (const sign of [1, -1]) {
         const gx = this.store.addGuideRaw('X', center.x + offset * sign);
-        if (gx) this.createdGuides.push(gx);
+        if (gx) created.push(gx);
         const gy = this.store.addGuideRaw('Y', center.y + offset * sign);
-        if (gy) this.createdGuides.push(gy);
+        if (gy) created.push(gy);
       }
     }
-  }
 
-  undo(): void {
-    for (const guide of this.createdGuides) {
-      this.store.removeGuideById(guide.id);
-    }
+    return created;
   }
-
-  redo(): void { this.execute(); }
 
   getDescription(): string {
     return `Offset ${this.offsetDistance}m from ${this.params.entityType} (${this.createdGuides.length} guides)`;
   }
 
-  canMergeWith(): boolean { return false; }
-
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type, id: this.id, name: this.name, timestamp: this.timestamp,
-      data: { entityType: this.params.entityType, offset: this.offsetDistance, createdGuideIds: this.createdGuides.map(g => g.id) },
-      version: 1,
+      entityType: this.params.entityType,
+      offset: this.offsetDistance,
+      createdGuideIds: this.createdGuides.map((g) => g.id),
     };
-  }
-
-  getAffectedEntityIds(): string[] {
-    return this.createdGuides.map(g => g.id);
   }
 }
 
@@ -221,91 +141,29 @@ export class GuideOffsetFromEntityCommand implements ICommand {
  * Creates guides from multiple selected entities (batch version of B8).
  * Reuses the same entity -> guide logic as GuideFromEntityCommand.
  */
-export class BatchGuideFromEntitiesCommand implements ICommand {
-  readonly id: string;
+export class BatchGuideFromEntitiesCommand extends CreatedGuidesCommand {
   readonly name = 'BatchGuideFromEntities';
   readonly type = 'batch-guide-from-entities';
-  readonly timestamp: number;
-  private createdGuides: Guide[] = [];
 
   constructor(
-    private readonly store: GuideStore,
+    store: GuideStore,
     private readonly entityParamsList: readonly EntityGuideParams[],
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(store);
   }
 
-  execute(): void {
-    if (this.createdGuides.length > 0) {
-      for (const guide of this.createdGuides) {
-        this.store.restoreGuide(guide);
-      }
-      return;
-    }
-
-    const extent = 10_000;
-
-    for (const params of this.entityParamsList) {
-      const { entityType, lineStart, lineEnd, center, clickPoint } = params;
-
-      if ((entityType === 'LINE' || entityType === 'POLYLINE') && lineStart && lineEnd) {
-        const dx = lineEnd.x - lineStart.x;
-        const dy = lineEnd.y - lineStart.y;
-        const len = Math.sqrt(dx * dx + dy * dy);
-        if (len > 0.001) {
-          const nx = dx / len;
-          const ny = dy / len;
-          const mid: Point2D = { x: (lineStart.x + lineEnd.x) / 2, y: (lineStart.y + lineEnd.y) / 2 };
-          const start: Point2D = { x: mid.x - nx * extent, y: mid.y - ny * extent };
-          const end: Point2D = { x: mid.x + nx * extent, y: mid.y + ny * extent };
-          const guide = this.store.addDiagonalGuideRaw(start, end);
-          if (guide) this.createdGuides.push(guide);
-        }
-      } else if (entityType === 'CIRCLE' && center) {
-        const gx = this.store.addGuideRaw('X', center.x);
-        if (gx) this.createdGuides.push(gx);
-        const gy = this.store.addGuideRaw('Y', center.y);
-        if (gy) this.createdGuides.push(gy);
-      } else if (entityType === 'ARC' && center && clickPoint) {
-        const dx = clickPoint.x - center.x;
-        const dy = clickPoint.y - center.y;
-        const len = Math.sqrt(dx * dx + dy * dy);
-        if (len > 0.001) {
-          const nx = dx / len;
-          const ny = dy / len;
-          const start: Point2D = { x: center.x - nx * extent, y: center.y - ny * extent };
-          const end: Point2D = { x: center.x + nx * extent, y: center.y + ny * extent };
-          const guide = this.store.addDiagonalGuideRaw(start, end);
-          if (guide) this.createdGuides.push(guide);
-        }
-      }
-    }
+  protected buildGuides(): Guide[] {
+    return this.entityParamsList.flatMap((params) => buildGuidesFromEntityParams(this.store, params));
   }
-
-  undo(): void {
-    for (const guide of this.createdGuides) {
-      this.store.removeGuideById(guide.id);
-    }
-  }
-
-  redo(): void { this.execute(); }
 
   getDescription(): string {
     return `Guides from ${this.entityParamsList.length} entities (${this.createdGuides.length} guides)`;
   }
 
-  canMergeWith(): boolean { return false; }
-
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type, id: this.id, name: this.name, timestamp: this.timestamp,
-      data: { entityCount: this.entityParamsList.length, createdCount: this.createdGuides.length },
-      version: 1,
+      entityCount: this.entityParamsList.length,
+      createdCount: this.createdGuides.length,
     };
-  }
-
-  getAffectedEntityIds(): string[] {
-    return this.createdGuides.map(g => g.id);
   }
 }

@@ -8,21 +8,14 @@
  *
  * AutoCAD parity: equivalent to OBJECTSCALE Add/Delete. Setting a non-empty
  * list automatically marks the entity as annotative.
+ *
+ * ADR-614 — boilerplate inherited from {@link DxfTextCommandBase}; the flat
+ * mirror fields require a richer snapshot, so execute/undo are bespoke here.
  */
 
-import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
 import type { DxfTextNode, AnnotationScale } from '../../../text-engine/types';
-import {
-  noopAuditRecorder,
-  type DxfTextSceneEntity,
-  type IDxfTextAuditRecorder,
-  type ILayerAccessProvider,
-} from './types';
-import { assertCanEditLayer } from './CanEditLayerGuard';
-// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
-import { resolveEntityLayerName } from '../../../stores/LayerStore';
 import { ensureTextNode } from '../../../text-engine/edit/ensure-text-node';
+import { DxfTextCommandBase } from './dxf-text-command-base';
 
 export interface UpdateTextAnnotationScalesCommandInput {
   readonly entityId: string;
@@ -35,30 +28,15 @@ interface ScalesSnapshot {
   readonly annotationScales: readonly AnnotationScale[] | undefined;
 }
 
-export class UpdateTextAnnotationScalesCommand implements ICommand {
-  readonly id: string;
+export class UpdateTextAnnotationScalesCommand extends DxfTextCommandBase<UpdateTextAnnotationScalesCommandInput> {
   readonly name = 'UpdateTextAnnotationScales';
   readonly type = 'update-text-annotation-scales';
-  readonly timestamp: number;
 
   private snapshot: ScalesSnapshot | null = null;
-  private wasExecuted = false;
-
-  constructor(
-    private readonly input: UpdateTextAnnotationScalesCommandInput,
-    private readonly sceneManager: ISceneManager,
-    private readonly layerProvider: ILayerAccessProvider,
-    private readonly auditRecorder: IDxfTextAuditRecorder = noopAuditRecorder,
-  ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
-  }
 
   execute(): void {
-    const entity = this.sceneManager.getEntity(this.input.entityId) as DxfTextSceneEntity | undefined;
+    const entity = this.resolveEntity();
     if (!entity) return;
-    // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
-    assertCanEditLayer({ layerName: resolveEntityLayerName(entity) ?? '', provider: this.layerProvider });
 
     const safeNode = ensureTextNode(entity);
     if (!this.snapshot) {
@@ -77,69 +55,38 @@ export class UpdateTextAnnotationScalesCommand implements ICommand {
       annotationScales: this.input.annotationScales,
     };
 
-    this.sceneManager.updateEntity(this.input.entityId, {
+    this.sceneManager.updateEntity(this.entityId, {
       textNode: nextNode,
       isAnnotative,
       annotationScales: this.input.annotationScales,
     });
     this.wasExecuted = true;
-
-    this.auditRecorder.record({
-      entityId: this.input.entityId,
-      action: 'updated',
-      changes: [
-        {
-          field: 'annotationScales',
-          oldValue: this.snapshot.annotationScales ?? [],
-          newValue: this.input.annotationScales,
-        },
-      ],
-      commandName: this.name,
-      timestamp: Date.now(),
-    });
+    this.recordAudit('updated', [
+      {
+        field: 'annotationScales',
+        oldValue: this.snapshot.annotationScales ?? [],
+        newValue: this.input.annotationScales,
+      },
+    ]);
   }
 
   undo(): void {
     if (!this.snapshot || !this.wasExecuted) return;
-    this.sceneManager.updateEntity(this.input.entityId, {
+    this.sceneManager.updateEntity(this.entityId, {
       textNode: this.snapshot.textNode,
       isAnnotative: this.snapshot.isAnnotative,
       annotationScales: this.snapshot.annotationScales,
     });
   }
 
-  redo(): void {
-    this.execute();
-  }
-
-  canMergeWith(): boolean {
-    return false;
-  }
-
   getDescription(): string {
     return `Update annotation scales (${this.input.annotationScales.length})`;
   }
 
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        entityId: this.input.entityId,
-        annotationScales: this.input.annotationScales as unknown as Record<string, unknown>[],
-      },
-      version: 1,
+      entityId: this.entityId,
+      annotationScales: this.input.annotationScales as unknown as Record<string, unknown>[],
     };
-  }
-
-  validate(): string | null {
-    if (!this.input.entityId) return 'entityId is required';
-    return null;
-  }
-
-  getAffectedEntityIds(): string[] {
-    return [this.input.entityId];
   }
 }

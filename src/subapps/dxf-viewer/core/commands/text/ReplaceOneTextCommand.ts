@@ -4,21 +4,19 @@
  * Replaces a single match at a specific location inside one entity.
  * Used by the Find&Replace UI when the user presses "Replace" (not
  * "Replace All"). Exactly one audit entry per execution.
+ *
+ * ADR-614 — command lifecycle inherited from {@link DxfTextNodeMutationCommand}.
+ * The snapshot is the RAW `entity.textNode` (no `ensureTextNode`), so
+ * {@link readNode} is overridden.
  */
 
-import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
+import type { DxfTextSceneEntity } from './types';
 import type { DxfTextNode } from '../../../text-engine/types';
-import {
-  noopAuditRecorder,
-  type DxfTextSceneEntity,
-  type IDxfTextAuditRecorder,
-  type ILayerAccessProvider,
-} from './types';
-import { assertCanEditLayer } from './CanEditLayerGuard';
-// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
-import { resolveEntityLayerName } from '../../../stores/LayerStore';
 import { replaceAt, type MatchLocation } from './text-match-engine';
+import {
+  DxfTextNodeMutationCommand,
+  type TextNodeMutationResult,
+} from './dxf-text-command-base';
 
 export interface ReplaceOneTextCommandInput {
   readonly entityId: string;
@@ -28,98 +26,48 @@ export interface ReplaceOneTextCommandInput {
   readonly originalText: string;
 }
 
-export class ReplaceOneTextCommand implements ICommand {
-  readonly id: string;
+export class ReplaceOneTextCommand extends DxfTextNodeMutationCommand<ReplaceOneTextCommandInput> {
   readonly name = 'ReplaceOneText';
   readonly type = 'replace-one-text';
-  readonly timestamp: number;
 
-  private snapshot: DxfTextNode | null = null;
-  private wasExecuted = false;
-
-  constructor(
-    private readonly input: ReplaceOneTextCommandInput,
-    private readonly sceneManager: ISceneManager,
-    private readonly layerProvider: ILayerAccessProvider,
-    private readonly auditRecorder: IDxfTextAuditRecorder = noopAuditRecorder,
-  ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+  protected readNode(entity: DxfTextSceneEntity): DxfTextNode {
+    return entity.textNode;
   }
 
-  execute(): void {
-    const entity = this.sceneManager.getEntity(this.input.entityId) as
-      | DxfTextSceneEntity
-      | undefined;
-    if (!entity) return;
-    // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
-    assertCanEditLayer({ layerName: resolveEntityLayerName(entity) ?? '', provider: this.layerProvider });
-    if (!this.snapshot) this.snapshot = entity.textNode;
-
-    const { node, replaced } = replaceAt(
-      entity.textNode,
+  protected applyMutation(_entity: unknown, node: DxfTextNode): TextNodeMutationResult | null {
+    const { node: nextNode, replaced } = replaceAt(
+      node,
       this.input.location,
       this.input.replacement,
     );
-    if (!replaced) return;
-    this.sceneManager.updateEntity(this.input.entityId, { textNode: node });
-    this.wasExecuted = true;
-
-    this.auditRecorder.record({
-      entityId: this.input.entityId,
-      action: 'updated',
+    if (!replaced) return null;
+    return {
+      updates: { textNode: nextNode },
       changes: [
         { field: 'text', oldValue: this.input.originalText, newValue: this.input.replacement },
         { field: 'paragraph', oldValue: null, newValue: this.input.location.paragraphIndex },
         { field: 'run', oldValue: null, newValue: this.input.location.runIndex },
       ],
-      commandName: this.name,
-      timestamp: Date.now(),
-    });
-  }
-
-  undo(): void {
-    if (!this.snapshot || !this.wasExecuted) return;
-    this.sceneManager.updateEntity(this.input.entityId, { textNode: this.snapshot });
-  }
-
-  redo(): void {
-    this.execute();
-  }
-
-  canMergeWith(): boolean {
-    return false;
+    };
   }
 
   getDescription(): string {
     return `Replace "${this.input.originalText}" → "${this.input.replacement}"`;
   }
 
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        entityId: this.input.entityId,
-        location: this.input.location as unknown as Record<string, unknown>,
-        replacement: this.input.replacement,
-        originalText: this.input.originalText,
-      },
-      version: 1,
-    };
-  }
-
-  validate(): string | null {
-    if (!this.input.entityId) return 'entityId is required';
+  protected validatePayload(): string | null {
     if (this.input.location.start >= this.input.location.end) {
       return 'location end must be greater than start';
     }
     return null;
   }
 
-  getAffectedEntityIds(): string[] {
-    return [this.input.entityId];
+  protected serializeData(): Record<string, unknown> {
+    return {
+      entityId: this.input.entityId,
+      location: this.input.location as unknown as Record<string, unknown>,
+      replacement: this.input.replacement,
+      originalText: this.input.originalText,
+    };
   }
 }

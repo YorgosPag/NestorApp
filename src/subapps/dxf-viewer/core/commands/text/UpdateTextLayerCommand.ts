@@ -13,22 +13,17 @@
  * provenance. Reuse for non-text entities (a generic PROPERTIES "move to layer") is a
  * documented follow-up.
  *
- * Guards (mirror `DeleteTextCommand`): the SOURCE layer must be editable, AND the TARGET layer
- * must resolve and be editable too (belt-and-suspenders — the dropdown already hides frozen +
- * disables locked layers). Discrete action (no merge). Undo restores the previous `layerId`.
+ * Guards: the SOURCE layer must be editable (inherited resolve via {@link DxfTextCommandBase}),
+ * AND the TARGET layer must resolve and be editable too (belt-and-suspenders — the dropdown
+ * already hides frozen + disables locked layers). Discrete action (no merge). Undo restores
+ * the previous `layerId`. ADR-614 — boilerplate inherited from the base.
  */
 
-import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
-import {
-  noopAuditRecorder,
-  type DxfTextSceneEntity,
-  type IDxfTextAuditRecorder,
-  type ILayerAccessProvider,
-} from './types';
+import type { SceneEntity } from '../interfaces';
+import { DxfTextCommandBase } from './dxf-text-command-base';
 import { assertCanEditLayer } from './CanEditLayerGuard';
-// 🏢 ADR-358 — id-first LayerStore readers: source name (audit/guard) + target layer lookup.
-import { resolveEntityLayerName, getLayer } from '../../../stores/LayerStore';
+// 🏢 ADR-358 — id-first LayerStore reader: target layer lookup.
+import { getLayer } from '../../../stores/LayerStore';
 
 export interface UpdateTextLayerCommandInput {
   readonly entityId: string;
@@ -36,33 +31,17 @@ export interface UpdateTextLayerCommandInput {
   readonly layerId: string;
 }
 
-export class UpdateTextLayerCommand implements ICommand {
-  readonly id: string;
+export class UpdateTextLayerCommand extends DxfTextCommandBase<UpdateTextLayerCommandInput> {
   readonly name = 'UpdateTextLayer';
   readonly type = 'update-text-layer';
-  readonly timestamp: number;
 
   private previousLayerId: string | undefined;
   private captured = false;
-  private wasExecuted = false;
-
-  constructor(
-    private readonly input: UpdateTextLayerCommandInput,
-    private readonly sceneManager: ISceneManager,
-    private readonly layerProvider: ILayerAccessProvider,
-    private readonly auditRecorder: IDxfTextAuditRecorder = noopAuditRecorder,
-  ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
-  }
 
   execute(): void {
-    const entity = this.sceneManager.getEntity(this.input.entityId) as
-      | DxfTextSceneEntity
-      | undefined;
+    // Source resolve + editability (mirror DeleteTextCommand: id-first name via LayerStore).
+    const entity = this.resolveEntity();
     if (!entity) return;
-    // Source must be editable (mirror DeleteTextCommand: id-first name via LayerStore).
-    assertCanEditLayer({ layerName: resolveEntityLayerName(entity) ?? '', provider: this.layerProvider });
     // Target must resolve AND be editable — no dropping onto an unknown / locked / frozen layer.
     const targetLayer = getLayer(this.input.layerId);
     if (!targetLayer) return;
@@ -75,64 +54,36 @@ export class UpdateTextLayerCommand implements ICommand {
     if (this.previousLayerId === this.input.layerId) return; // already on the target layer
 
     this.sceneManager.updateEntity(
-      this.input.entityId,
+      this.entityId,
       { layerId: this.input.layerId } as unknown as Partial<SceneEntity>,
     );
     this.wasExecuted = true;
-    this.auditRecorder.record({
-      entityId: this.input.entityId,
-      action: 'updated',
-      changes: [{ field: 'layerId', oldValue: this.previousLayerId ?? null, newValue: this.input.layerId }],
-      commandName: this.name,
-      timestamp: Date.now(),
-    });
+    this.recordAudit('updated', [
+      { field: 'layerId', oldValue: this.previousLayerId ?? null, newValue: this.input.layerId },
+    ]);
   }
 
   undo(): void {
     if (!this.wasExecuted) return;
     this.sceneManager.updateEntity(
-      this.input.entityId,
+      this.entityId,
       { layerId: this.previousLayerId } as unknown as Partial<SceneEntity>,
     );
-    this.auditRecorder.record({
-      entityId: this.input.entityId,
-      action: 'updated',
-      changes: [{ field: 'layerId', oldValue: this.input.layerId, newValue: this.previousLayerId ?? null }],
-      commandName: this.name,
-      timestamp: Date.now(),
-    });
-  }
-
-  redo(): void {
-    this.execute();
-  }
-
-  canMergeWith(): boolean {
-    return false;
+    this.recordAudit('updated', [
+      { field: 'layerId', oldValue: this.input.layerId, newValue: this.previousLayerId ?? null },
+    ]);
   }
 
   getDescription(): string {
     return 'Move text to layer';
   }
 
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: { entityId: this.input.entityId, layerId: this.input.layerId },
-      version: 1,
-    };
-  }
-
-  validate(): string | null {
-    if (!this.input.entityId) return 'entityId is required';
+  protected validatePayload(): string | null {
     if (!this.input.layerId) return 'layerId is required';
     return null;
   }
 
-  getAffectedEntityIds(): string[] {
-    return [this.input.entityId];
+  protected serializeData(): Record<string, unknown> {
+    return { entityId: this.entityId, layerId: this.input.layerId };
   }
 }

@@ -10,111 +10,45 @@
  *
  * AutoCAD parity: equivalent to the `MTEXTEDIT` undo entry — one entry
  * regardless of how many characters changed inside the editor session.
+ *
+ * ADR-614 — command lifecycle inherited from {@link DxfTextNodeMutationCommand}.
  */
 
-import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
 import type { DxfTextNode } from '../../../text-engine/types';
 import {
-  noopAuditRecorder,
-  type DxfTextSceneEntity,
-  type IDxfTextAuditRecorder,
-  type ILayerAccessProvider,
-} from './types';
-import { assertCanEditLayer } from './CanEditLayerGuard';
-// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
-import { resolveEntityLayerName } from '../../../stores/LayerStore';
-import { ensureTextNode } from '../../../text-engine/edit/ensure-text-node';
+  DxfTextNodeMutationCommand,
+  type TextNodeMutationResult,
+} from './dxf-text-command-base';
 
 export interface ReplaceTextNodeCommandInput {
   readonly entityId: string;
   readonly nextNode: DxfTextNode;
 }
 
-export class ReplaceTextNodeCommand implements ICommand {
-  readonly id: string;
+export class ReplaceTextNodeCommand extends DxfTextNodeMutationCommand<ReplaceTextNodeCommandInput> {
   readonly name = 'ReplaceTextNode';
   readonly type = 'replace-text-node';
-  readonly timestamp: number;
 
-  private snapshot: DxfTextNode | null = null;
-  private wasExecuted = false;
-
-  constructor(
-    private readonly input: ReplaceTextNodeCommandInput,
-    private readonly sceneManager: ISceneManager,
-    private readonly layerProvider: ILayerAccessProvider,
-    private readonly auditRecorder: IDxfTextAuditRecorder = noopAuditRecorder,
-  ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
-  }
-
-  execute(): void {
-    const entity = this.sceneManager.getEntity(this.input.entityId) as
-      | DxfTextSceneEntity
-      | undefined;
-    if (!entity) return;
-    // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
-    assertCanEditLayer({ layerName: resolveEntityLayerName(entity) ?? '', provider: this.layerProvider });
-
-    if (!this.snapshot) this.snapshot = ensureTextNode(entity);
-    this.sceneManager.updateEntity(this.input.entityId, {
-      textNode: this.input.nextNode,
-    });
-    this.wasExecuted = true;
-
-    this.auditRecorder.record({
-      entityId: this.input.entityId,
-      action: 'updated',
-      changes: [
-        {
-          field: 'textNode',
-          oldValue: 'replaced',
-          newValue: 'replaced',
-        },
-      ],
-      commandName: this.name,
-      timestamp: Date.now(),
-    });
-  }
-
-  undo(): void {
-    if (!this.snapshot || !this.wasExecuted) return;
-    this.sceneManager.updateEntity(this.input.entityId, {
-      textNode: this.snapshot,
-    });
-  }
-
-  redo(): void {
-    this.execute();
+  protected applyMutation(): TextNodeMutationResult {
+    return {
+      updates: { textNode: this.input.nextNode },
+      changes: [{ field: 'textNode', oldValue: 'replaced', newValue: 'replaced' }],
+    };
   }
 
   getDescription(): string {
     return `Replace text node (${this.input.entityId})`;
   }
 
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        entityId: this.input.entityId,
-        nextNode: this.input.nextNode as unknown as Record<string, unknown>,
-      },
-      version: 1,
-    };
-  }
-
-  validate(): string | null {
-    if (!this.input.entityId) return 'entityId is required';
+  protected validatePayload(): string | null {
     if (!this.input.nextNode) return 'nextNode is required';
     return null;
   }
 
-  getAffectedEntityIds(): string[] {
-    return [this.input.entityId];
+  protected serializeData(): Record<string, unknown> {
+    return {
+      entityId: this.input.entityId,
+      nextNode: this.input.nextNode as unknown as Record<string, unknown>,
+    };
   }
 }

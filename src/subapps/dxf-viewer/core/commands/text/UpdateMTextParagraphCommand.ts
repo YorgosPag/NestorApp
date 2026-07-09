@@ -8,22 +8,16 @@
  * `patch.paragraphIndex` selects a single paragraph; omit to apply the
  * patch to every paragraph (uniform). Columns live on the node, not the
  * paragraph, and are patched separately via `patch.columns`.
+ *
+ * ADR-614 — command lifecycle inherited from {@link DxfTextNodeMutationCommand}.
  */
 
-import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
 import type { DxfTextNode, TextParagraph, TextJustification, LineSpacingMode } from '../../../text-engine/types';
-import {
-  noopAuditRecorder,
-  type DxfTextSceneEntity,
-  type IDxfTextAuditRecorder,
-  type ILayerAccessProvider,
-} from './types';
-import { assertCanEditLayer } from './CanEditLayerGuard';
-// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
-import { resolveEntityLayerName } from '../../../stores/LayerStore';
 import { buildShallowDiff } from './diff-helpers';
-import { ensureTextNode } from '../../../text-engine/edit/ensure-text-node';
+import {
+  DxfTextNodeMutationCommand,
+  type TextNodeMutationResult,
+} from './dxf-text-command-base';
 
 type ParagraphFields = Omit<TextParagraph, 'runs'>;
 export type ParagraphPatch = Partial<ParagraphFields>;
@@ -58,72 +52,33 @@ function applyParagraphPatch(
   });
 }
 
-export class UpdateMTextParagraphCommand implements ICommand {
-  readonly id: string;
+export class UpdateMTextParagraphCommand extends DxfTextNodeMutationCommand<UpdateMTextParagraphCommandInput> {
   readonly name = 'UpdateMTextParagraph';
   readonly type = 'update-mtext-paragraph';
-  readonly timestamp: number;
 
-  private snapshot: DxfTextNode | null = null;
-  private wasExecuted = false;
-
-  constructor(
-    private readonly input: UpdateMTextParagraphCommandInput,
-    private readonly sceneManager: ISceneManager,
-    private readonly layerProvider: ILayerAccessProvider,
-    private readonly auditRecorder: IDxfTextAuditRecorder = noopAuditRecorder,
-  ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
-  }
-
-  execute(): void {
-    const entity = this.sceneManager.getEntity(this.input.entityId) as
-      | DxfTextSceneEntity
-      | undefined;
-    if (!entity) return;
-    // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
-    assertCanEditLayer({ layerName: resolveEntityLayerName(entity) ?? '', provider: this.layerProvider });
-    const safeNode = ensureTextNode(entity);
-    if (!this.snapshot) this.snapshot = safeNode;
-
+  protected applyMutation(
+    _entity: unknown,
+    node: DxfTextNode,
+    snapshot: DxfTextNode,
+  ): TextNodeMutationResult {
     const nextNode: DxfTextNode = {
-      ...safeNode,
+      ...node,
       paragraphs: applyParagraphPatch(
-        safeNode.paragraphs,
+        node.paragraphs,
         this.input.patch,
         this.input.paragraphIndex,
       ),
-      columns: this.input.columns ?? safeNode.columns,
+      columns: this.input.columns ?? node.columns,
       ...(this.input.attachment !== undefined && { attachment: this.input.attachment }),
       ...(this.input.lineSpacing !== undefined && { lineSpacing: this.input.lineSpacing }),
     };
-    this.sceneManager.updateEntity(this.input.entityId, { textNode: nextNode });
-    this.wasExecuted = true;
-
-    this.auditRecorder.record({
-      entityId: this.input.entityId,
-      action: 'updated',
+    return {
+      updates: { textNode: nextNode },
       changes: buildShallowDiff(
-        this.snapshot as unknown as Record<string, unknown>,
+        snapshot as unknown as Record<string, unknown>,
         nextNode as unknown as Record<string, unknown>,
       ),
-      commandName: this.name,
-      timestamp: Date.now(),
-    });
-  }
-
-  undo(): void {
-    if (!this.snapshot || !this.wasExecuted) return;
-    this.sceneManager.updateEntity(this.input.entityId, { textNode: this.snapshot });
-  }
-
-  redo(): void {
-    this.execute();
-  }
-
-  canMergeWith(): boolean {
-    return false;
+    };
   }
 
   getDescription(): string {
@@ -134,26 +89,7 @@ export class UpdateMTextParagraphCommand implements ICommand {
     return `Update MTEXT ${target}`;
   }
 
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        entityId: this.input.entityId,
-        patch: this.input.patch as unknown as Record<string, unknown>,
-        columns: this.input.columns as unknown as Record<string, unknown> | undefined,
-        attachment: this.input.attachment,
-        lineSpacing: this.input.lineSpacing as unknown as Record<string, unknown> | undefined,
-        paragraphIndex: this.input.paragraphIndex,
-      },
-      version: 1,
-    };
-  }
-
-  validate(): string | null {
-    if (!this.input.entityId) return 'entityId is required';
+  protected validatePayload(): string | null {
     const hasParaPatch = this.input.patch && Object.keys(this.input.patch).length > 0;
     const hasColumns = this.input.columns !== undefined;
     const hasAttachment = this.input.attachment !== undefined;
@@ -164,7 +100,14 @@ export class UpdateMTextParagraphCommand implements ICommand {
     return null;
   }
 
-  getAffectedEntityIds(): string[] {
-    return [this.input.entityId];
+  protected serializeData(): Record<string, unknown> {
+    return {
+      entityId: this.input.entityId,
+      patch: this.input.patch as unknown as Record<string, unknown>,
+      columns: this.input.columns as unknown as Record<string, unknown> | undefined,
+      attachment: this.input.attachment,
+      lineSpacing: this.input.lineSpacing as unknown as Record<string, unknown> | undefined,
+      paragraphIndex: this.input.paragraphIndex,
+    };
   }
 }
