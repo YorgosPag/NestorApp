@@ -83,9 +83,24 @@ export const STAIR_RECORD_TAIL = "<start_elevation>{{START}}</start_elevation><e
  * `<text>` record του «Θέρμη 2. Κτίρια Α & Δ.tek» (καθαρισμένο σε plain label: χωρίς
  * leader `arrow`, χωρίς margins). font=30 (native ttfont), abssize=0. Placeholders:
  * {{N}}(id) {{S}}(κείμενο inline) {{COLOR}}(hex) {{HALLIGN}}(0/1/2) {{PTSIZE}}(μέγεθος)
- * {{XMATRIX}}(θέση+κλίμακα γλύφου, μέτρα). data file (N.7.1). ΜΗΝ το γράφεις στο χέρι.
+ * {{XMATRIX}}(θέση+κλίμακα γλύφου, μέτρα) {{VALLIGN}}(0/1/2). data file (N.7.1). ΜΗΝ το γράφεις στο χέρι.
  */
-export const TEXT_RECORD_TEMPLATE = "<record>\n<type>3</type><n>{{N}}</n><taglist>\n</taglist>\n<font>30</font><s>{{S}}</s><color>{{COLOR}}</color><abssize>0</abssize><hallign>{{HALLIGN}}</hallign><vallign>1</vallign><pen>2</pen><longl>3</longl>\n<ttfont><ptsize>{{PTSIZE}}</ptsize><width>0</width><weight>400</weight><italic>0</italic><underline>0</underline><strikeout>0</strikeout><charset>161</charset><pitchandfamily>34</pitchandfamily><name>Arial</name></ttfont>\n\n{{XMATRIX}}\n<outline_left>0</outline_left><outline_right>0</outline_right><outline_top>0</outline_top><outline_bottom>0</outline_bottom><outline_all>1</outline_all><margin_type>0</margin_type><margin_density>0</margin_density><margin_left>0</margin_left><margin_right>0</margin_right><margin_top>0</margin_top><margin_bottom>0</margin_bottom><margin_color>80DCFC</margin_color><margin_pen>1</margin_pen><cnct_depend>0</cnct_depend><begin_depend_ptX>0</begin_depend_ptX><begin_depend_ptY>0</begin_depend_ptY><end_depend_ptX>0</end_depend_ptX><end_depend_ptY>0</end_depend_ptY><cnct_depend_pt_type>0</cnct_depend_pt_type><arrow>0</arrow></record>";
+export const TEXT_RECORD_TEMPLATE = "<record>\n<type>3</type><n>{{N}}</n><taglist>\n</taglist>\n<font>30</font><s>{{S}}</s><color>{{COLOR}}</color><abssize>0</abssize><hallign>{{HALLIGN}}</hallign><vallign>{{VALLIGN}}</vallign><pen>2</pen><longl>3</longl>\n<ttfont><ptsize>{{PTSIZE}}</ptsize><width>0</width><weight>400</weight><italic>0</italic><underline>0</underline><strikeout>0</strikeout><charset>161</charset><pitchandfamily>34</pitchandfamily><name>Arial</name></ttfont>\n\n{{XMATRIX}}\n<outline_left>0</outline_left><outline_right>0</outline_right><outline_top>0</outline_top><outline_bottom>0</outline_bottom><outline_all>1</outline_all><margin_type>0</margin_type><margin_density>0</margin_density><margin_left>0</margin_left><margin_right>0</margin_right><margin_top>0</margin_top><margin_bottom>0</margin_bottom><margin_color>80DCFC</margin_color><margin_pen>1</margin_pen><cnct_depend>0</cnct_depend><begin_depend_ptX>0</begin_depend_ptX><begin_depend_ptY>0</begin_depend_ptY><end_depend_ptX>0</end_depend_ptX><end_depend_ptY>0</end_depend_ptY><cnct_depend_pt_type>0</cnct_depend_pt_type><arrow>0</arrow></record>";
+
+/**
+ * ADR-512 — Tekton **hatch <record>** (primitive type 6, μέσα στο top-level `<hatch>`).
+ * Κλειδωμένο από το verified «ΓΡΑΜΜΟΣΚΙΑΣΕΙΣ.tek» δείγμα (fileversion 516). Παραμετρικά:
+ * {{N}}(=πλήθος ακμών) {{SCALEX}} {{SCALEY}} {{TYPE}}(=αριθμός μοτίβου pattern.inf)
+ * {{COLOR}}(hex) {{VECTOR}}(=<record> ακμές). Τα raster/pen/quality σταθερά από το δείγμα.
+ * Το κενό `<taglist>` γεμίζει μέσω του SSoT `injectTag`. data file (N.7.1). ΜΗΝ το γράφεις στο χέρι.
+ */
+export const HATCH_RECORD_TEMPLATE = "<type>6</type><n>{{N}}</n><taglist>\n</taglist>\n<elevation>0</elevation><rotation>0</rotation><scaleX>{{SCALEX}}</scaleX><scaleY>{{SCALEY}}</scaleY><type>{{TYPE}}</type><color>{{COLOR}}</color><raster_type>22</raster_type><raster_bgcolor>FFFFFF</raster_bgcolor><raster_bgpen>1</raster_bgpen><boundary>0</boundary><pattern>1</pattern><local_origin>1</local_origin><pen>1</pen><quality>1</quality><visible>1</visible><longl>3</longl><vector>\n{{VECTOR}}\n</vector>";
+
+/**
+ * ADR-512 — μία ακμή περιγράμματος γραμμοσκίασης μέσα στο `<vector>` (μέτρα, Y-flipped).
+ * Placeholders: {{V0X}} {{V0Y}} {{V1X}} {{V1Y}}.
+ */
+export const HATCH_EDGE_TEMPLATE = "<record>\n<v0X>{{V0X}}</v0X><v0Y>{{V0Y}}</v0Y><v1X>{{V1X}}</v1X><v1Y>{{V1Y}}</v1Y></record>";
 
 /**
  * ADR-608 Φ-grouping — Tekton **type-7 <object>** record (built-in σύμβολο από

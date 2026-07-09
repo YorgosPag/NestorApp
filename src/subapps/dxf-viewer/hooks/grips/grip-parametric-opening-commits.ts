@@ -49,15 +49,21 @@ function resolveSelfHostedOpeningSceneUnits(deps: DxfCommitDeps): SceneUnits {
   return deps.getLevelScene(deps.currentLevelId)?.units ?? 'mm';
 }
 
-/** Shared commit tail: build + validate + execute `UpdateOpeningParamsCommand`, emit params-updated. */
+/**
+ * Shared commit tail: build + validate + execute `UpdateOpeningParamsCommand`,
+ * emit params-updated. ADR-615 — `sceneUnits` is threaded to the command so a
+ * self-hosted opening re-derives geometry from its synthetic host with the right
+ * mm↔scene factor (wall-hosted ignores it; it reads the host wall's own units).
+ */
 function commitOpeningParamsPatch(
   entityId: string,
   newParams: OpeningParams,
   originalParams: OpeningParams,
   sceneManager: ISceneManager,
   deps: DxfCommitDeps,
+  sceneUnits: SceneUnits = 'mm',
 ): void {
-  const command = new UpdateOpeningParamsCommand(entityId, newParams, originalParams, sceneManager, true);
+  const command = new UpdateOpeningParamsCommand(entityId, newParams, originalParams, sceneManager, true, sceneUnits);
   if (command.validate() !== null) return;
   deps.execute(command);
   emitBimEntityParamsUpdated('opening', entityId);
@@ -114,14 +120,15 @@ export function commitOpeningGripDrag(
     // ADR-615 — free-standing opening = centred-box drag (move / rotate / resize).
     // Pass the world `delta` (grip → cursor); the box SSoT consumes deltas, not the
     // wall-axis-projected `currentPos`.
+    const sceneUnits = resolveSelfHostedOpeningSceneUnits(deps);
     const newParams = applyOpeningGripDrag(openingKind, {
       originalParams,
       currentPos,
       delta,
-      sceneUnits: resolveSelfHostedOpeningSceneUnits(deps),
+      sceneUnits,
     });
     if (newParams === originalParams) return;
-    commitOpeningParamsPatch(grip.entityId, newParams, originalParams, sceneManager, deps);
+    commitOpeningParamsPatch(grip.entityId, newParams, originalParams, sceneManager, deps, sceneUnits);
     return;
   }
 
@@ -163,14 +170,15 @@ export function commitOpeningAltMove(
   const originalParams = opening.params;
 
   if (isSelfHostedOpening(originalParams)) {
+    const sceneUnits = resolveSelfHostedOpeningSceneUnits(deps);
     const newParams = applyOpeningAltSlide({
       originalParams,
       basePoint: grip.position,
       currentPos: translatePoint(grip.position, delta),
-      sceneUnits: resolveSelfHostedOpeningSceneUnits(deps),
+      sceneUnits,
     });
     if (newParams === originalParams) return;
-    commitOpeningParamsPatch(grip.entityId, newParams, originalParams, sceneManager, deps);
+    commitOpeningParamsPatch(grip.entityId, newParams, originalParams, sceneManager, deps, sceneUnits);
     return;
   }
 

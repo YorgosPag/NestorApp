@@ -659,7 +659,7 @@ describe('signedAreaXY / reverseRoofFootprint', () => {
 describe('ADR-608 Φ-texts — type-3 <text> (ελεύθερη ετικέτα)', () => {
   it('buildTextRecordXml: γεμίζει type/n/s/color/hallign/ptsize/xmatrix (κανένα {{…}} leftover)', () => {
     const xml = buildTextRecordXml({
-      id: 2, content: 'N', hAlign: 1, ptSize: 14,
+      id: 2, content: 'N', hAlign: 1, vAlign: 1, ptSize: 14,
       xmatrix: { x00: 1, x01: -0, x10: 0, x11: 1, x20: 6, x21: -8 }, colorHex: '00FF00',
     });
     expect(xml).not.toMatch(/\{\{/);
@@ -667,30 +667,48 @@ describe('ADR-608 Φ-texts — type-3 <text> (ελεύθερη ετικέτα)',
     expect(xml).toContain('<s>N</s>');
     expect(xml).toContain('<color>00FF00</color>');
     expect(xml).toContain('<hallign>1</hallign>');
+    expect(xml).toContain('<vallign>1</vallign>');
     expect(xml).toContain('<ptsize>14</ptsize>');
     expect(xml).toContain('<x20>6</x20><x21>-8</x21>');
   });
   it('buildTextRecordXml: XML-escape του περιεχομένου + grouping tag στο <taglist>', () => {
     const xml = buildTextRecordXml({
-      id: 1, content: 'Ε = 7 & 8', hAlign: 0, ptSize: 10,
+      id: 1, content: 'Ε = 7 & 8', hAlign: 0, vAlign: 2, ptSize: 10,
       xmatrix: { x00: 1, x01: 0, x10: 0, x11: 1, x20: 0, x21: 0 }, colorHex: 'FFFFFF', tag: 'ann_9',
     });
     expect(xml).toContain('<s>Ε = 7 &amp; 8</s>');
     expect(xml).toContain('<taglist>\n<s>ann_9</s></taglist>');
   });
 
-  it('collectTekTexts: text entity → ένα <text> record (Y-flip θέσης, alignment→hallign)', () => {
+  it('collectTekTexts: left/top label → anchor χωρίς offset (καθαρό Y-flip)', () => {
     const text = {
       id: 't1', type: 'text', position: { x: 1000, y: 2000 }, text: 'A',
-      height: 500, alignment: 'center', rotation: 0, color: '#00FF00',
+      height: 500, alignment: 'left', vBaseline: 'top', rotation: 0, color: '#00FF00',
     } as unknown as Entity;
     const res = collectTekTexts([text], 0.001); // f = 1mm→m
     expect(res.textCount).toBe(1);
     expect(res.textsXml).toContain('<type>3</type>');
     expect(res.textsXml).toContain('<s>A</s>');
-    expect(res.textsXml).toContain('<hallign>1</hallign>'); // center
-    // Y-flip: y=2000mm → −2.0m (sceneXYToTekMeters)· x=1000mm → 1.0m.
+    expect(res.textsXml).toContain('<hallign>0</hallign>'); // left
+    // left/top → top-left = anchor· Y-flip: (1000,2000)mm → (1, −2)m.
     expect(res.textsXml).toContain('<x20>1</x20><x21>-2</x21>');
+  });
+  it('collectTekTexts: center/middle label → top-left offset (κατά −W/2, +H/2)', () => {
+    const text = {
+      id: 't', type: 'text', position: { x: 1000, y: 2000 }, text: 'A',
+      height: 500, alignment: 'center', color: '#00FF00', // vBaseline default 'middle'
+    } as unknown as Entity;
+    const res = collectTekTexts([text], 0.001);
+    // H=0.5m· W='A'(1)×0.5×0.62=0.31· anchor=(1,−2)· top-left=(1−0.155, −2+0.25)=(0.845,−1.75).
+    expect(res.textsXml).toContain('<hallign>1</hallign>'); // center (info only — Τέκτων αγνοεί για θέση)
+    expect(res.textsXml).toContain('<x20>0.845</x20><x21>-1.75</x21>');
+  });
+  it('collectTekTexts: vBaseline hint → vallign (top→0)', () => {
+    const text = {
+      id: 't', type: 'text', position: { x: 0, y: 0 }, text: 'T',
+      height: 300, alignment: 'left', vBaseline: 'top', color: '#FFFFFF',
+    } as unknown as Entity;
+    expect(collectTekTexts([text], 0.001).textsXml).toContain('<vallign>0</vallign>');
   });
   it('collectTekTexts: κενό/whitespace text → παραλείπεται· μη-text entity αγνοείται', () => {
     const blank = { id: 'b', type: 'text', position: { x: 0, y: 0 }, text: '   ' } as unknown as Entity;

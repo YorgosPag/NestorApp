@@ -43,8 +43,24 @@ const TEK_TEXT_MIN_PT = 6;
 const TEK_TEXT_MAX_PT = 60;
 /** Fallback ύψος (scene units) όταν το text entity δεν φέρει height/fontSize. */
 const DEFAULT_TEXT_HEIGHT = 2.5;
-/** hallign του Τέκτονα από το alignment του κειμένου. */
+// ── ADR-608 Φ-texts — text ANCHOR (browser-calibrated) ──────────────────────
+// Ο Τέκτων αγκυρώνει το κείμενο στην ΠΑΝΩ-ΑΡΙΣΤΕΡΗ γωνία του box στο (x20,x21) —
+// ΔΕΝ τιμά hallign/vallign για τη θέση (browser-verify: κείμενο έπεφτε ΚΑΤΩ-ΔΕΞΙΑ
+// του σωστού κέντρου). Άρα υπολογίζουμε ΕΜΕΙΣ την πάνω-αριστερή γωνία από το
+// `position` (=alignment anchor) + `alignment`/`vBaseline` + εκτίμηση πλάτους/ύψους.
+// Advance ανά χαρακτήρα ≈ 0.62 × cap-height (Arial digits/caps) — tunable.
+const TEK_CHAR_ADVANCE_PER_CAP = 0.62;
+/** hallign του Τέκτονα από το alignment του κειμένου (validated round-trip με import). */
 const H_ALIGN: Record<'left' | 'center' | 'right', number> = { left: 0, center: 1, right: 2 };
+/**
+ * vallign του Τέκτονα από το `vBaseline` hint του decomposed label (0=πάνω/1=μέση/2=κάτω).
+ * Τα σύμβολα/scale-bar labels είναι `'middle'` (κατακόρυφο κέντρο στο anchor) → 1. Tunable
+ * αν ο Τέκτων ερμηνεύει διαφορετικά τους ακέραιους (καλιμπράρισμα από browser-verify).
+ */
+const V_ALIGN: Record<'top' | 'middle' | 'bottom' | 'alphabetic', number> = {
+  top: 0, middle: 1, bottom: 2, alphabetic: 2,
+};
+type TextBaseline = keyof typeof V_ALIGN;
 
 interface Pt { readonly x: number; readonly y: number }
 
@@ -218,6 +234,26 @@ function clampPt(pt: number): number {
   return Math.min(TEK_TEXT_MAX_PT, Math.max(TEK_TEXT_MIN_PT, pt));
 }
 
+/** Εκτίμηση πλάτους κειμένου (μέτρα) από πλήθος χαρακτήρων × cap-height. */
+function estimateTextWidthMeters(content: string, capHeightMeters: number): number {
+  return content.length * capHeightMeters * TEK_CHAR_ADVANCE_PER_CAP;
+}
+
+/**
+ * Πάνω-αριστερή γωνία του text box (Tekton μέτρα) από το alignment anchor.
+ * Ο Τέκτων εκεί αγκυρώνει. `anchor` = Y-flipped θέση· `+X`=δεξιά, `+Y`=πάνω (Y-up).
+ *  - οριζόντια: left→0, center→W/2, right→W προς τα αριστερά του anchor.
+ *  - κατακόρυφα: top→0, middle→H/2, bottom/alphabetic→H προς τα πάνω του anchor.
+ */
+function textTopLeft(
+  anchor: { x: number; y: number }, hAlignKey: 'left' | 'center' | 'right',
+  vBaseline: TextBaseline, widthM: number, heightM: number,
+): { x: number; y: number } {
+  const leftDist = hAlignKey === 'center' ? widthM / 2 : hAlignKey === 'right' ? widthM : 0;
+  const topDist = vBaseline === 'top' ? 0 : vBaseline === 'middle' ? heightM / 2 : heightM;
+  return { x: anchor.x - leftDist, y: anchor.y + topDist };
+}
+
 /**
  * ADR-608 Φ-texts — συλλέγει τα ελεύθερα κείμενα (annotation labels N/A/1/0.00 +
  * scale-bar νούμερα, αποδομημένα σε `text` primitives) ως `<text>` records (type 3).
@@ -233,14 +269,20 @@ export function collectTekTexts(entities: readonly Entity[], f: number): TekText
     const t = e as TextEntity;
     const content = (t.text ?? '').trim();
     if (content === '') continue; // κενή ετικέτα → χωρίς record
-    const pos = sceneXYToTekMeters(t.position.x, t.position.y, f);
+    const anchor = sceneXYToTekMeters(t.position.x, t.position.y, f);
     const heightMeters = (t.height ?? t.fontSize ?? DEFAULT_TEXT_HEIGHT) * f;
     const ptSize = clampPt(Math.round(heightMeters * TEK_TEXT_PT_PER_M));
+    const align = t.alignment ?? 'left';
+    const vBaseline = (e as { vBaseline?: TextBaseline }).vBaseline ?? 'middle';
+    // Ο Τέκτων αγκυρώνει στην πάνω-αριστερή γωνία → την υπολογίζουμε εμείς ώστε το
+    // κείμενο να πέσει στο σωστό σημείο (browser-calibrated ΚΑΤΩ-ΔΕΞΙΑ διόρθωση).
+    const widthMeters = estimateTextWidthMeters(content, heightMeters);
+    const tl = textTopLeft(anchor, align, vBaseline, widthMeters, heightMeters);
     // Κλίμακα γλύφου 1 (native ttfont· μέγεθος από ptsize) — καθρέφτης real records.
-    const xmatrix = buildSymbolObjectXMatrix(pos.x, pos.y, degToRad(t.rotation ?? 0), 1);
+    const xmatrix = buildSymbolObjectXMatrix(tl.x, tl.y, degToRad(t.rotation ?? 0), 1);
     const tag = entityTag(e);
     records.push(buildTextRecordXml({
-      id, content, hAlign: H_ALIGN[t.alignment ?? 'left'], ptSize, xmatrix,
+      id, content, hAlign: H_ALIGN[align], vAlign: V_ALIGN[vBaseline], ptSize, xmatrix,
       colorHex: entityColor(e), tag,
     } satisfies TekText));
     if (tag) tags.add(tag);

@@ -100,7 +100,15 @@ export function buildSelfOpeningResolvers(levelManager: LevelManagerLike): SelfO
     },
     onOpeningCreated: (openingEntity) => {
       // ADR-615 — no host wall to mirror; plain append + broadcast (SSoT).
-      appendEntityToScene(levelManager, openingEntity, 'self-opening');
+      // ⚠️ The tool tag MUST be 'opening' (the entity type), NOT 'self-opening':
+      // it becomes `drawing:entity-created`'s `tool` field, which the opening
+      // persistence hook's first-save listener matches against
+      // `createTrigger.tool === entityType === 'opening'`
+      // (create-bim-entity-persistence-hook.ts). A 'self-opening' tag silently
+      // fails that guard → the free-standing κούφωμα is NEVER saved → vanishes on
+      // reload. The ribbon/activeTool identity ('self-opening') is a SEPARATE key
+      // (SELF_OPENING_TOOL_COMMAND_KEY) and is unaffected.
+      appendEntityToScene(levelManager, openingEntity, 'opening');
     },
   };
 }

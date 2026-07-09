@@ -173,6 +173,37 @@ export interface TekArc {
   readonly tag?: string;
 }
 
+/** Μία ακμή περιγράμματος γραμμοσκίασης (μέτρα, Y-flipped) — `<record><v0../><v1../>`. */
+export interface TekHatchEdge {
+  readonly v0: { readonly x: number; readonly y: number };
+  readonly v1: { readonly x: number; readonly y: number };
+}
+
+/**
+ * ADR-512 — μία γραμμοσκίαση (hatch) έτοιμη για σειριοποίηση σε `<hatch>` primitive
+ * type 6. Ο Τέκτων ζωγραφίζει το μοτίβο `tektonNum` (index στο master `pattern.inf`:
+ * 22=solid, 72=ANSI-31, …) μέσα στο κλειστό περίγραμμα που ορίζουν οι `edges` (μία ακμή
+ * ανά `<record>`). Όλες οι συντεταγμένες σε **μέτρα** (Y-flipped, ίδιο convention με line/arc).
+ */
+export interface TekHatch {
+  /** Ακέραιο id (1-based, μοναδικό ανά αρχείο). */
+  readonly id: number;
+  /** Αριθμός μοτίβου Τέκτονα (`pattern.inf` index) — το δεύτερο `<type>` του record. */
+  readonly tektonNum: number;
+  /** Κλίμακα μοτίβου X/Y (`<scaleX>`/`<scaleY>`)· default 0.15 (verified δείγμα). */
+  readonly scaleX: number;
+  readonly scaleY: number;
+  /** Χρώμα 6-ψήφιο hex ΧΩΡΙΣ `#`. */
+  readonly colorHex: string;
+  /** Οι ακμές του κλειστού περιγράμματος (μέτρα, Y-flipped). `<n>` = πλήθος `edges`. */
+  readonly edges: readonly TekHatchEdge[];
+  /**
+   * ADR-608 — grouping tag (κοινό με τις γραμμές/τόξα του ίδιου συμβόλου, αν προέρχεται
+   * από αποδόμηση). Absent ⇒ κενό `<taglist>` (αταξινόμητο).
+   */
+  readonly tag?: string;
+}
+
 /**
  * ADR-608 Φ-grouping — ένα Tekton built-in σύμβολο ως **type-7 `<object>`** record:
  * ΕΝΑ επιλέξιμο πακέτο (ο Τέκτων ζωγραφίζει το σύμβολο `typeRes` από τη βιβλιοθήκη
@@ -198,8 +229,10 @@ export interface TekText {
   readonly id: number;
   /** Το κείμενο αυτούσιο (inline `<s>`). */
   readonly content: string;
-  /** Οριζόντια στοίχιση — `<hallign>`: 0=αριστερά, 1=κέντρο, 2=δεξιά. */
+  /** Οριζόντια στοίχιση — `<hallign>`: 0=αριστερά, 1=κέντρο, 2=δεξιά (validated round-trip). */
   readonly hAlign: number;
+  /** Κατακόρυφη στοίχιση — `<vallign>`: 0=πάνω, 1=μέση, 2=κάτω/baseline. */
+  readonly vAlign: number;
   /** Μέγεθος γραμματοσειράς — `<ttfont><ptsize>` (points). */
   readonly ptSize: number;
   /** 2D affine θέσης/περιστροφής/κλίμακας γλύφου (μέτρα, Y-flipped). */

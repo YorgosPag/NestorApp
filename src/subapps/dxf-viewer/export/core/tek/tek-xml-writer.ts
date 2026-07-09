@@ -246,6 +246,7 @@ export function buildTextRecordXml(t: TekText): string {
     .replace('{{S}}', escapeXml(t.content))
     .replace('{{COLOR}}', colorHex6(t.colorHex))
     .replace('{{HALLIGN}}', String(t.hAlign))
+    .replace('{{VALLIGN}}', String(t.vAlign))
     .replace('{{PTSIZE}}', String(Math.round(t.ptSize)))
     .replace('{{XMATRIX}}', xmatrixXml(t.xmatrix));
   return injectTag(xml, t.tag); // ADR-608 — grouping tag στο κενό <taglist>

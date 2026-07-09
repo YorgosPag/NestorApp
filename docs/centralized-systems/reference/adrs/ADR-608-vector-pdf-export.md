@@ -224,4 +224,24 @@ annotation symbols into vector geometry on export; we do the same, mirroring the
   `format='tek'` → εμφανίζει «Σύμβολα»· `dxf` → DXF rows + κρύβει tek· `ifc` → κανένα. Πιθανότερη αιτία της
   αναφοράς: stale dev build / HMR δεν πήρε το νέο conditional όταν προστέθηκε (source σωστό ΤΩΡΑ).
   ➡️ Giorgio: hard-refresh / restart `npm run dev` και re-verify· αν ΞΑΝΑ δεν φανεί → χρειάζεται ακριβές
-  repro (καθαρό build). UNCOMMITTED.
+  repro (καθαρό build). UNCOMMITTED. **ΕΠΙΒΕΒΑΙΩΘΗΚΕ** browser: το «Σύμβολα» εμφανίζεται σωστά (native/geometry).
+- **2026-07-09** — Φ-texts (TEK **type-3 `<text>` export**, Opus, follow-up: «στον Τέκτονα δεν φαίνονται
+  τα κείμενα N/A/1/0.00 + scale-bar νούμερα»). **Ground-truth:** ο Τέκτων ΕΧΕΙ text primitive (entity
+  type 3)· εξήχθη verified standalone `<text>` record από `Θέρμη 2.tek` (`<font>30`, `<s>` inline,
+  `<color>`, `<abssize>0`, `<hallign>`, `<vallign>`, `<ttfont><ptsize>`, `<xmatrix>`). Το προηγούμενο
+  «no free-text collector» ήταν deferral, ΟΧΙ αδυναμία format. **Υλοποίηση (SSoT):** νέο marker
+  `<!--TEK_TEXT_RECORDS-->` στο κενό `<text>` container του skeleton· νέο `TEXT_RECORD_TEMPLATE`
+  (καθαρό label: χωρίς leader/margins)· `TekText` type· `buildTextRecordXml` (escape + grouping tag στο
+  `<taglist>`, SSoT `injectTag`)· `collectTekTexts` (text primitives → records, θέση Y-flip μέσω SSoT
+  `sceneXYToTekMeters`, περιστροφή μέσω SSoT `buildSymbolObjectXMatrix` scale=1 όπως real records,
+  `alignment`→`hallign` [validated round-trip με import], `vBaseline`→`vallign`, ptsize από ύψος)·
+  `injectTekEntities` +`textsXml`· adapter wiring + merge tags στο registry. Tests: +6 (writer+collector),
+  όλα GREEN (εκτός 6 pre-existing κουφώματα)· jscpd clean· files<500/fns<40· no `any`/inline/hardcoded.
+  UNCOMMITTED. **Anchor fix (same day, browser-calibrated):** ο Giorgio ανέφερε ότι τα κείμενα έπεφταν
+  **ΚΑΤΩ-ΔΕΞΙΑ** του σωστού κέντρου → ο Τέκτων αγκυρώνει το text box στην **πάνω-αριστερή γωνία** στο
+  (x20,x21) και **ΔΕΝ** τιμά hallign/vallign για τη θέση. Διόρθωση: το `collectTekTexts` υπολογίζει ΕΜΕΙΣ
+  την πάνω-αριστερή γωνία από `position`(=alignment anchor) + `alignment`/`vBaseline` + εκτίμηση
+  πλάτους/ύψους (`textTopLeft` + `estimateTextWidthMeters`, advance ≈0.62×cap-height, tunable). +2 tests.
+  🔴 re-verify browser. Μέγεθος (ptsize↔μέτρα ανά drawing-scale) + char-advance factor = tunable.
+  **Φ-fill (συμπαγή τρίγωνα + scale-bar εναλλαγή) = επόμενο increment** (Tekton δεν έχει solid-fill
+  primitive → scanline line-hatch).
