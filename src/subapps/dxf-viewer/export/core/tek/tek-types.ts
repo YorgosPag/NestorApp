@@ -137,6 +137,12 @@ export interface TekLine {
   readonly elevation1: number;
   /** Χρώμα 6-ψήφιο hex ΧΩΡΙΣ `#`. */
   readonly colorHex: string;
+  /**
+   * ADR-608 — Tekton tag/ετικέτα name (grouping). Όλα τα `<line>`/`<arc>` ενός
+   * συμβόλου μοιράζονται το ίδιο tag → ο Τέκτων τα διαχειρίζεται ως ΜΙΑ ομάδα
+   * (+Tags επιλογή / show-hide μαζί). Absent ⇒ κενό `<taglist>` (αταξινόμητο).
+   */
+  readonly tag?: string;
 }
 
 /**
@@ -160,6 +166,25 @@ export interface TekArc {
   readonly elevation: number;
   /** Χρώμα 6-ψήφιο hex ΧΩΡΙΣ `#`. */
   readonly colorHex: string;
+  /**
+   * ADR-608 — Tekton tag/ετικέτα name (grouping). Ίδια σημασιολογία με `TekLine.tag`:
+   * κοινό tag ανά σύμβολο → ομαδοποίηση στον Τέκτονα. Absent ⇒ κενό `<taglist>`.
+   */
+  readonly tag?: string;
+}
+
+/**
+ * ADR-608 Φ-grouping — ένα Tekton built-in σύμβολο ως **type-7 `<object>`** record:
+ * ΕΝΑ επιλέξιμο πακέτο (ο Τέκτων ζωγραφίζει το σύμβολο `typeRes` από τη βιβλιοθήκη
+ * `obj/symbols`). Θέση/περιστροφή/κλίμακα μέσω `<xmatrix>` (μέτρα, Y-flipped).
+ */
+export interface TekObject {
+  /** Ακέραιο id (1-based, `<n>`). */
+  readonly id: number;
+  /** Catalog index του built-in συμβόλου (`type_res`): 51=Βορράς 1, 123=Σήμα στάθμης, 383=Σύμβολο τομής. */
+  readonly typeRes: number;
+  /** 2D affine θέσης/περιστροφής/κλίμακας (μέτρα, Y-flipped). */
+  readonly xmatrix: TekXMatrix;
 }
 
 /** Μία 2D κορυφή πολυγραμμής σκάλας σε world μέτρα (Y-flipped) — `<point2d><record>`. */

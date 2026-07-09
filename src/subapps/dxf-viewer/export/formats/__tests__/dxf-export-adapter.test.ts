@@ -55,6 +55,23 @@ describe('buildDxfExportRequest', () => {
     expect(request.scene.layersById['lyr_a']).toBeDefined();
   });
 
+  it('ADR-583/608 — annotation-symbol αποδομείται σε primitives (όχι raw στο .dxf)', () => {
+    const arrow = {
+      id: 'na', type: 'annotation-symbol', layerId: 'lyr_a', color: '#00ff00',
+      position: { x: 0, y: 0 }, kind: 'north-arrow', symbolId: 'northArrowSimple', sizeMm: 15,
+    } as unknown as Entity;
+    const { request } = buildDxfExportRequest(scene([arrow]), {
+      entityScope: 'both',
+      drawingScale: 100,
+    });
+    const types = request.scene.entities.map((e) => e.type);
+    // ΚΑΝΕΝΑ raw annotation-symbol — έγινε shaft line + arrowhead (hatch + outline) + "N".
+    expect(types).not.toContain('annotation-symbol');
+    expect(types).toContain('line');
+    expect(types).toContain('hatch');
+    expect(types).toContain('lwpolyline');
+  });
+
   it('περνά version/unit overrides στα settings', () => {
     const { request } = buildDxfExportRequest(scene([native('line', 'l')]), {
       entityScope: 'both',

@@ -30,6 +30,7 @@ import {
   type DxfExportOptions,
 } from './formats/dxf-export-adapter';
 import { exportFloorToTek, type TekExportOptions } from './formats/tek-export-adapter';
+import { useDrawingScaleStore } from '../state/drawing-scale-store';
 import type { ExportArtifact, ExportDeps, ExportRequest, ExportResult } from './types';
 
 export async function runExport(
@@ -58,7 +59,14 @@ async function runTekExport(
   deps: ExportDeps,
 ): Promise<ExportResult> {
   const floors = resolveExportFloors(deps.levelScenes, deps.activeLevelId, request.floorScope);
-  const opts: TekExportOptions = { entityScope: request.entityScope, baseName: deps.projectName };
+  const opts: TekExportOptions = {
+    entityScope: request.entityScope,
+    baseName: deps.projectName,
+    // ADR-583/608 — live annotation scale so exported symbols keep their printed size.
+    drawingScale: useDrawingScaleStore.getState().drawingScale,
+    // ADR-608 — native Tekton objects vs αυτούσια γεωμετρία (default native στον adapter).
+    symbolMode: request.tekSymbolMode,
+  };
   const warnings: string[] = [];
   if (request.floorScope === 'all-single') {
     warnings.push('TEK: ενοποίηση ορόφων σε ένα αρχείο δεν υποστηρίζεται ακόμη — ένα .tek ανά όροφο.');
@@ -71,6 +79,19 @@ async function runTekExport(
     warnings.push(...out.warnings);
   }
 
+  return packageArtifacts(artifacts, deps, warnings);
+}
+
+/**
+ * Deliver per-floor artifacts: a single one downloads directly; several pack into
+ * one `.zip`. Shared by every multi-floor format path (DXF/TEK) so the pack/
+ * download logic lives in ONE place (N.18 anti-clone).
+ */
+async function packageArtifacts(
+  artifacts: ExportArtifact[],
+  deps: ExportDeps,
+  warnings: string[],
+): Promise<ExportResult> {
   if (artifacts.length === 1) {
     triggerExportDownload({ blob: artifacts[0].blob, filename: artifacts[0].filename });
     return { filename: artifacts[0].filename, fileCount: 1, warnings };
@@ -96,6 +117,8 @@ async function runDxfExport(
     unit: request.dxfUnit,
     lineMode: request.dxfLineMode,
     baseName: deps.projectName,
+    // ADR-583/608 — live annotation scale so exported symbols keep their printed size.
+    drawingScale: useDrawingScaleStore.getState().drawingScale,
   };
 
   // all-single → one merged DXF across every floor.
@@ -117,17 +140,5 @@ async function runDxfExport(
     warnings.push(...out.warnings);
   }
 
-  if (artifacts.length === 1) {
-    triggerExportDownload({ blob: artifacts[0].blob, filename: artifacts[0].filename });
-    return { filename: artifacts[0].filename, fileCount: 1, warnings };
-  }
-
-  // Multiple floors → zip.
-  const zipFiles: ZipFile[] = await Promise.all(
-    artifacts.map(async (a) => ({ name: a.filename, data: await blobToUint8(a.blob) })),
-  );
-  const zipBlob = createStoredZip(zipFiles);
-  const zipName = buildFloorFilename(deps.projectName, 'floors', 'zip');
-  triggerExportDownload({ blob: zipBlob, filename: zipName });
-  return { filename: zipName, fileCount: artifacts.length, warnings };
+  return packageArtifacts(artifacts, deps, warnings);
 }

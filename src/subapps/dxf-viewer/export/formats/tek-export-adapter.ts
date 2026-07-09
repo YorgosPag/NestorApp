@@ -12,11 +12,14 @@
  */
 
 import type { SceneModel } from '../../types/scene-types';
-import { sceneUnitsToMeters } from '../../utils/scene-units';
+import { sceneUnitsToMeters, resolveSceneUnits } from '../../utils/scene-units';
+import { DEFAULT_DRAWING_SCALE } from '../../config/bim-render-settings-types';
 import { resolveExportEntities } from '../core/export-entity-scope';
+import { expandAnnotationsToPrimitives } from '../core/annotation-to-primitives';
 import { collectTekWalls, collectTekPlanes, collectTekRoofs, collectTekStairs } from '../core/tek/bim-to-tek';
-import { collectTekLines, collectTekArcs } from '../core/tek/dxf-to-tek';
-import { injectTekEntities } from '../core/tek/tek-xml-writer';
+import { collectTekLines, collectTekArcs, collectTekObjects } from '../core/tek/dxf-to-tek';
+import { injectTekEntities, buildTagVisibilityXml } from '../core/tek/tek-xml-writer';
+import type { TekSymbolMode } from '../types';
 import { buildFloorFilename } from './dxf-export-adapter';
 import type { ResolvedExportFloor } from '../core/export-floor-scope';
 import type { ExportArtifact, ExportEntityScope } from '../types';
@@ -25,6 +28,18 @@ export interface TekExportOptions {
   readonly entityScope: ExportEntityScope;
   /** Base name αρχείου (όνομα έργου). */
   readonly baseName: string;
+  /**
+   * ADR-583/608 — annotation-scale denominator (1:N) για annotative συμβόλων/scale-bar
+   * κατά την αποδόμηση σε Tekton primitives. Το δίνει το export service (live
+   * `drawingScale` SSoT) ώστε ο assembler να μένει pure. Default `DEFAULT_DRAWING_SCALE`.
+   */
+  readonly drawingScale?: number;
+  /**
+   * ADR-608 — πώς μεταφέρονται τα annotation symbols: `'native'` (built-in Tekton
+   * type-7 objects, ενιαίο πακέτο) ή `'geometry'` (αυτούσια γεωμετρία + tags).
+   * Default `'native'`.
+   */
+  readonly symbolMode?: TekSymbolMode;
 }
 
 export interface AssembledTek {
@@ -40,22 +55,41 @@ export function assembleTekDocument(
   template: string,
   scene: SceneModel,
   entityScope: ExportEntityScope,
+  drawingScale: number = DEFAULT_DRAWING_SCALE,
+  symbolMode: TekSymbolMode = 'native',
 ): AssembledTek {
   const selected = resolveExportEntities(scene.entities, entityScope);
-  const { wallsXml, warnings } = collectTekWalls(selected);
-  const { planesXml } = collectTekPlanes(selected);
-  const { autoroofsXml } = collectTekRoofs(selected);
-  // DXF primitives (γραμμές/τόξα/κύκλοι) → native `<line>`/`<arc>` (Φ-D). Μέτρα/scene unit
-  // από το scene-level units (τα primitives δεν έχουν per-entity sceneUnits όπως τα BIM params).
   const f = sceneUnitsToMeters(scene.units);
-  const { linesXml } = collectTekLines(selected, f);
-  const { arcsXml } = collectTekArcs(selected, f);
-  // Σκάλες → native `<stair>` (type 21, ADR-526 Φ3). Ίδιο scene→μέτρα convention με lines/arcs
-  // (οι σκάλες δεν φέρουν per-entity sceneUnits· οι διαστάσεις ζουν σε scene units).
+  // ADR-608 «native» — σύμβολα με built-in Tekton equivalent → ΕΝΑ type-7 `<object>`
+  // (ενιαίο πακέτο). Τα `consumedIds` εξαιρούνται από την αποδόμηση παρακάτω ώστε να ΜΗΝ
+  // βγουν και ως γεωμετρία. «geometry» mode → κανένα object (όλα ως αυτούσια γεωμετρία).
+  const objects = symbolMode === 'native'
+    ? collectTekObjects(selected, f)
+    : { objectsXml: '', consumedIds: new Set<string>() as ReadonlySet<string> };
+  const forDecompose = objects.consumedIds.size
+    ? selected.filter((e) => !objects.consumedIds.has(e.id))
+    : selected;
+  // ADR-583/608 — explode annotation symbols + scale-bars into neutral primitives
+  // (lines/lwpolylines/circles/arcs) so `collectTekLines`/`collectTekArcs` pick them up.
+  // Solid fills → outline; baked labels DEFER (no Tekton free-text collector). BIM passes through.
+  const decomposed = expandAnnotationsToPrimitives(forDecompose, {
+    drawingScale,
+    sceneUnits: resolveSceneUnits({ units: scene.units }),
+  });
+  const { wallsXml, warnings } = collectTekWalls(decomposed);
+  const { planesXml } = collectTekPlanes(decomposed);
+  const { autoroofsXml } = collectTekRoofs(decomposed);
+  const lines = collectTekLines(decomposed, f);
+  const arcs = collectTekArcs(decomposed, f);
+  // Σκάλες → native `<stair>` (type 21, ADR-526 Φ3). Ίδιο scene→μέτρα convention.
   const { stairsXml } = collectTekStairs(selected, f);
+  // ADR-608 — τα αποδομημένα σύμβολα (geometry path) έχουν κοινό `groupId` → κοινό tag στα
+  // line/arc τους. Ένωση distinct tags → `<tag_visibility>` registry (ομαδοποίηση +Tags).
+  const tagVisibilityXml = buildTagVisibilityXml([...new Set([...lines.tags, ...arcs.tags])]);
   return {
     xml: injectTekEntities(
-      template, wallsXml, '', planesXml, autoroofsXml, linesXml, arcsXml, stairsXml,
+      template, wallsXml, objects.objectsXml, planesXml, autoroofsXml,
+      lines.linesXml, arcs.arcsXml, stairsXml, tagVisibilityXml,
     ),
     warnings,
   };
@@ -65,9 +99,11 @@ export function assembleTekDocument(
 export async function buildTekDocument(
   scene: SceneModel,
   entityScope: ExportEntityScope,
+  drawingScale?: number,
+  symbolMode?: TekSymbolMode,
 ): Promise<AssembledTek> {
   const { TEK_SKELETON_TEMPLATE } = await import('../core/tek/tek-skeleton.template');
-  return assembleTekDocument(TEK_SKELETON_TEMPLATE, scene, entityScope);
+  return assembleTekDocument(TEK_SKELETON_TEMPLATE, scene, entityScope, drawingScale, symbolMode);
 }
 
 /** Εξάγει έναν resolved όροφο σε `.tek` artifact (ένα blob). */
@@ -75,7 +111,9 @@ export async function exportFloorToTek(
   floor: ResolvedExportFloor,
   options: TekExportOptions,
 ): Promise<{ artifact: ExportArtifact; warnings: string[] }> {
-  const { xml, warnings } = await buildTekDocument(floor.scene, options.entityScope);
+  const { xml, warnings } = await buildTekDocument(
+    floor.scene, options.entityScope, options.drawingScale, options.symbolMode,
+  );
   const filename = buildFloorFilename(options.baseName, floor.level.name, 'tek');
   return {
     artifact: { filename, blob: new Blob([xml], { type: 'application/xml' }) },

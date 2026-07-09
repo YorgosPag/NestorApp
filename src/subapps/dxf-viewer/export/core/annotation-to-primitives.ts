@@ -146,8 +146,13 @@ function mapSymbolPrimitive(
       return [makeLine(source, idFor(), toWorld(prim.from), toWorld(prim.to))];
     case 'polyline': {
       const verts = prim.points.map(toWorld);
-      // Renderer: closed+solid → fill only (no stroke); otherwise → stroke.
-      if (prim.closed && prim.solid) return [makeSolidFill(source, idFor(), verts)];
+      // Solid closed → fill (hatch) + a closed outline. The outline is same-colour
+      // (invisible in PDF/DXF where the fill already covers it) but is essential for
+      // backends without solid-fill support (Tekton `.tek` renders it as lines) —
+      // uniform with the scale-bar filled cells (fill + outline).
+      if (prim.closed && prim.solid) {
+        return [makeSolidFill(source, idFor(), verts), makePolyline(source, idFor(), verts, true)];
+      }
       return [makePolyline(source, idFor(), verts, prim.closed)];
     }
     case 'circle': {

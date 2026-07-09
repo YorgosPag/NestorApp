@@ -96,11 +96,16 @@ annotation symbols into vector geometry on export; we do the same, mirroring the
 - **Wiring** — the visible fix is a one-line pre-pass in `capture-2d-vector.ts` AFTER the flatten:
   `expandAnnotationsToPrimitives(flat, {drawingScale: liveDrawingScale, sceneUnits})`. The emitter is
   untouched (already knows line/arc/circle/lwpolyline/text/hatch).
-- **⏳ DXF parity (DEFER):** `buildDxfExportRequest` is documented **Pure**; threading the live
-  `drawingScale` store-read into it (and its floor-merge sibling + public options) would break that
-  contract and widen scope across the export UI. The decomposer already accepts an explicit
-  `{drawingScale, sceneUnits}` ctx, so wiring the same pre-pass into the DXF path is a one-line follow-up
-  once `drawingScale` is threaded through `DxfExportOptions`. Primary fix = vector-PDF.
+- **✅ DXF + TEK parity (implemented):** the same decomposer runs in the `.dxf` path
+  (`buildDxfExportRequest`, covering active / per-floor / merged) and the Tekton `.tek` path
+  (`assembleTekDocument`, before `collectTekLines`/`collectTekArcs`). Purity is preserved by threading the
+  live `drawingScale` as an explicit option (`DxfExportOptions.drawingScale` / `TekExportOptions.drawingScale`),
+  resolved once in `export-service.ts` from the store — the pure request builders never read it. Solid
+  fills carry BOTH a `hatch` (PDF fill / DXF `3DFACE`) AND a closed outline polyline, so fill-less backends
+  (Tekton renders the outline as `<line>` records) still show the triangle. **TEK limitation (DEFER):**
+  Tekton has no free-text primitive collector yet, so baked symbol labels (the "N"/"A"/"1" letters,
+  scale-bar numerals) are dropped from `.tek` (geometry — arrows/bubbles/ticks — exports fine); PDF/DXF
+  keep the text.
 
 ## Reuse (no duplicate)
 
@@ -147,7 +152,76 @@ annotation symbols into vector geometry on export; we do the same, mirroring the
   annotation-to-primitives 12, emitter +3, capture-2d-vector repaired 4→5) — 300 print/export/scale-bar
   jest GREEN; jscpd:diff clean; files <500 / functions <40; no `any`/inline-styles/hardcoded strings.
   DXF-export parity deferred (purity of `buildDxfExportRequest`; decomposer is DXF-ready). UNCOMMITTED.
-  🔴 browser-verify: place north arrow + scale-bar + section mark → Print 2D vector → PDF shows them as
-  vector (zoom без θόλωμα); AutoCAD PDFIMPORT → lines/arcs/text entities.
+  Browser-verified by Giorgio: symbols now export (circles/text/lines/arcs on PDFIMPORT). **Follow-up fix
+  (same day):** the solid-filled triangles (arrowheads / elevation triangle) were still missing —
+  `makeSolidFill` built `dxfFaces` as a FLAT `Corner[]` instead of an array-OF-faces `Corner[][]`, so
+  `emitHatch`'s `for (const f of faces) if (f.length >= 3)` read `undefined` per corner and painted
+  nothing. Wrapped as `[ring]`; added a factory-structure guard + an end-to-end decompose→emit test that
+  asserts a real filled `pdf.lines(…, 'F')`. 302 jest GREEN.
   ⚠️ Pre-existing (NOT this change): `ScaleBarRenderer.test.ts` `getGrips` expects 3 grips while a
   concurrent `scale-bar-grips.ts` edit now returns 5 — stale test in another agent's uncommitted work.
+- **2026-07-09** — DXF + TEK export parity (Opus, follow-up after Giorgio: «στα αρχεία του Τέκτονα δεν
+  εξάγονται τα σύμβολα»). The annotation decomposer is now wired into `buildDxfExportRequest` (`.dxf`,
+  active/floor/merged) and `assembleTekDocument` (`.tek`, before the line/arc collectors), threading the
+  live `drawingScale` via `DxfExportOptions`/`TekExportOptions` (pure builders — the store is read once in
+  `export-service.ts`). Solid fills now emit fill + closed outline so Tekton (no solid-fill primitive)
+  renders the triangle as `<line>` records. Extracted the duplicated multi-floor `packageArtifacts`
+  helper in `export-service.ts` (jscpd:diff flagged the pre-existing twin once the file was touched).
+  Tests: +2 (dxf-export-adapter annotation decomposition, tek-export-adapter `<line>` type-4). 315
+  export/print/scale-bar jest GREEN; jscpd:diff clean. TEK baked-label text DEFER (no Tekton text
+  collector). UNCOMMITTED. 🔴 browser-verify: export `.tek` → Tekton shows north/scale-bar/section-mark
+  geometry; export `.dxf` → symbols present.
+- **2026-07-09** — Φ-grouping (TEK tags): κάθε σύμβολο = ΜΙΑ ομαδοποιημένη οντότητα στον Τέκτονα, όχι
+  σκόρπιες γραμμές (Opus, follow-up after Giorgio). **Έρευνα (ground-truth):** το native Tekton manual
+  (`Tekton_Manual.pdf` §18.6 «Δημιουργία αντικειμένου από το χρήστη» + εντολή «Φύλαξη σε γραμμές ως…») +
+  verified sample `LIB/Χαρτί σχεδίασης Α0.tek` έδειξαν ότι ο Τέκτων ομαδοποιεί γραμμές σχεδίου με **tags/
+  ετικέτες**: registry `<tag_visibility><tag><name>…</name><visible>1</visible></tag>…` + per-record
+  `<taglist><s>ΟΝΟΜΑ</s></taglist>`. (Το `<object>` type-7 είναι catalog-reference σε εσωτερική
+  βιβλιοθήκη «Χρήστης» — ΔΕΝ self-contained, θα έσπαγε στο άνοιγμα· απορρίφθηκε.) **Υλοποίηση (SSoT):**
+  νέο `groupId?` provenance στο `BaseEntity`· ο `neutral-primitive-factory.inheritStyle` σφραγίζει
+  `groupId: source.id` σε ΚΑΘΕ decomposed primitive (ΕΝΑ σημείο)· `TekLine/TekArc` απέκτησαν `tag?`·
+  `collectTekLines/collectTekArcs` διαβάζουν το `groupId`, γεμίζουν το κενό `<taglist>` (μέσω
+  `injectTag`) και επιστρέφουν distinct `tags`· νέο `buildTagVisibilityXml` + registry injection στο
+  `injectTekEntities` (throw αν λείπει το block ενώ υπάρχουν tags)· ο `tek-export-adapter` ενώνει τα
+  distinct tags → registry. Αποτέλεσμα: όλα τα line/arc ενός συμβόλου μοιράζονται ΕΝΑ tag → +Tags
+  επιλογή / show-hide ως ΜΙΑ ομάδα (AutoCAD GROUP parity), κρατώντας crisp 2D vector. Tests: +11
+  (dxf-to-tek grouping 5, tek-export registry 6). jscpd:diff clean· files <500 / functions <40· no
+  `any`/inline-styles/hardcoded strings. DXF anonymous BLOCK/INSERT parity (AutoCAD) = επόμενο increment.
+  UNCOMMITTED. 🔴 browser-verify: export `.tek` → στον Τέκτονα +Tags επιλέγει/κρύβει όλο το σύμβολο μαζί.
+  ⚠️ Pre-existing (NOT this change): 4 `collectTekWalls — κουφώματα` tests αποτυγχάνουν
+  (`wall.geometry.length` undefined) — concurrent opening-geometry WIP άλλου agent, όχι tag files.
+- **2026-07-09** — Φ-grouping v2 (NATIVE Tekton objects + export toggle): ο Giorgio ζήτησε «ΕΝΙΑΙΟ ΠΑΚΕΤΟ»,
+  όχι tags-πάνω-σε-σκόρπιες-γραμμές. **Ground-truth (τοπική εγκατάσταση Fespa-Tekton v9.1):** το manual
+  `Tekton_Manual.pdf` §18 «Αντικείμενα» + ο κατάλογος `Obj.inf` (`obj/symbols/`) αποκάλυψαν ότι ο Τέκτων
+  έχει **built-in βιβλιοθήκη 2D συμβόλων**· κάθε σύμβολο = ΕΝΑ **type-7 `<object>`** που δείχνει στο catalog
+  index (`type_res`). Τα type_res **51**/**125** του δείγματος ΣΥΜΒΟΛΑ.tek = «Βορράς 1»/«Σήμα στάθμης 2» —
+  δηλ. ο Giorgio ΕΙΧΕ βάλει built-in objects. **Mapping (SSoT `tek-symbol-catalog.ts`):** north-arrow→51
+  (variants 124/127/137), section-mark→383 «Σύμβολο τομής», elevation-mark→123/125· grid-bubble/
+  detail-callout/revision-tag/scale-bar → κανένα equivalent → αυτούσια γεωμετρία. **Υλοποίηση:** νέο
+  `OBJECT_RECORD_TEMPLATE` (AUTO-GEN από ΣΥΜΒΟΛΑ.tek record n=4, placeholders N/TYPE_RES/XMATRIX)·
+  `TekObject` type· `buildSymbolObjectXMatrix` (θέση+περιστροφή+scale, Y-flipped· rotation 0 == δείγμα)·
+  `buildObjectRecordXml`· `collectTekObjects` (annotation-symbol→object + `consumedIds`)· ο
+  `assembleTekDocument` εξαιρεί τα consumed από την αποδόμηση και εγχέει objects στον `<object>` marker.
+  **Export toggle (industry-standard native-map vs explode):** νέο `TekSymbolMode = 'native' | 'geometry'`
+  (ExportRequest/TekExportOptions, default **native**)· export-service το περνά· `useExportDialogState` +
+  `ExportDialog` προσθέτουν dropdown «Σύμβολα: Σύμβολα Τέκτονα (ενιαίο αντικείμενο) / Αυτούσια γεωμετρία
+  (ομαδοποιημένη)» (i18n el+en `export.tekSymbolMode(s)`). Tests: +14 (collectTekObjects 5, object writer 3,
+  adapter native/geometry 2, + earlier tag 11 stay). ΟΛΑ πράσινα εκτός των 4 pre-existing opening tests·
+  jscpd:diff clean (11 files)· files <500 / functions <40· no `any`/inline-styles/hardcoded strings
+  (tag/symbol ονόματα = ascii catalog ids / i18n keys). Scale μεγέθους από sizeMm = follow-up (άγνωστη η
+  βάση μεγέθους των Tekton συμβόλων· scale=1 = native default). UNCOMMITTED. 🔴 browser-verify: export
+  `.tek` (native) → κάθε βορράς/τομή/στάθμη = ΕΝΑ επιλέξιμο αντικείμενο· (geometry) → αυτούσιο + tags.
+- **2026-07-09** — Έρευνα «λείπει το πεδίο Σύμβολα (tekSymbolMode) στον Export οδηγό» (Opus, follow-up).
+  **Πόρισμα: ΔΕΝ υπάρχει defect στον κώδικα.** SSoT audit (grep όλου του `dxf-viewer`): ένας μόνο
+  `ExportDialog` + ένας `ExportHost` + ένα trigger (`open-export-dialog`)· καμία δεύτερη/παλιά dialog ή
+  wizard-step wrapper· το native tek export τρέχει ΑΠΟΚΛΕΙΣΤΙΚΑ μέσα από αυτόν τον dialog (⇒ `format='tek'`
+  ήταν true κατά το verified export ⇒ το `isTek` block render-άρεται). Επιβεβαίωση: το `{isTek && …
+  tekSymbolMode …}` είναι δομικά ίδιο με τα δουλεύοντα `{isDxf && …}`, σωστά μέσα στο `<section>`· i18n
+  keys `export.tekSymbolMode(s)` υπάρχουν σε el+en· τύποι σωστοί (`ExportFormat` έχει `'tek'`,
+  `TekSymbolMode` exported)· ο `DialogContent size="lg"` ΔΕΝ έχει fixed-height/overflow (κανένα οπτικό
+  κόψιμο — το tek έχει ΛΙΓΟΤΕΡΑ πεδία από το dxf). **Regression test (νέο):**
+  `ui/components/export/__tests__/ExportDialog-format-fields.test.tsx` (3 tests, GREEN) αποδεικνύει:
+  `format='tek'` → εμφανίζει «Σύμβολα»· `dxf` → DXF rows + κρύβει tek· `ifc` → κανένα. Πιθανότερη αιτία της
+  αναφοράς: stale dev build / HMR δεν πήρε το νέο conditional όταν προστέθηκε (source σωστό ΤΩΡΑ).
+  ➡️ Giorgio: hard-refresh / restart `npm run dev` και re-verify· αν ΞΑΝΑ δεν φανεί → χρειάζεται ακριβές
+  repro (καθαρό build). UNCOMMITTED.

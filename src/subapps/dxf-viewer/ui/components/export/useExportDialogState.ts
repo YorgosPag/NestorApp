@@ -24,6 +24,7 @@ import type {
   ExportFloorScope,
   ExportRequest,
   DxfLineMode,
+  TekSymbolMode,
 } from '../../../export/types';
 import { scopeIncludesBim } from '../../../export/core/export-entity-scope';
 
@@ -40,6 +41,8 @@ export interface ExportDialogState {
   setDxfUnit: (u: DxfUnit) => void;
   dxfLineMode: DxfLineMode;
   setDxfLineMode: (m: DxfLineMode) => void;
+  tekSymbolMode: TekSymbolMode;
+  setTekSymbolMode: (m: TekSymbolMode) => void;
   /** True when current format requires BIM content (IFC) but scope excludes it. */
   readonly scopeConflictsWithFormat: boolean;
   buildRequest: () => ExportRequest;
@@ -54,6 +57,9 @@ export function useExportDialogState(): ExportDialogState {
   // Default 'polyline' (AutoCAD/standard — proper objects). Switch to 'lines'
   // for Τέκτονας/FESPA, whose basic parser reads only LINE/TEXT/CIRCLE.
   const [dxfLineMode, setDxfLineMode] = React.useState<DxfLineMode>('polyline');
+  // Default 'native' — annotation symbols → ΕΝΑ built-in Tekton object (ενιαίο πακέτο).
+  // Switch to 'geometry' to keep our exact glyph geometry (grouped with tags).
+  const [tekSymbolMode, setTekSymbolMode] = React.useState<TekSymbolMode>('native');
 
   // IFC/TEK carry only BIM elements → a `dxf-only` scope produces an empty model.
   const scopeConflictsWithFormat =
@@ -67,8 +73,9 @@ export function useExportDialogState(): ExportDialogState {
       dxfVersion: format === 'dxf' ? dxfVersion : undefined,
       dxfUnit: format === 'dxf' ? dxfUnit : undefined,
       dxfLineMode: format === 'dxf' ? dxfLineMode : undefined,
+      tekSymbolMode: format === 'tek' ? tekSymbolMode : undefined,
     }),
-    [format, entityScope, floorScope, dxfVersion, dxfUnit, dxfLineMode],
+    [format, entityScope, floorScope, dxfVersion, dxfUnit, dxfLineMode, tekSymbolMode],
   );
 
   return {
@@ -84,6 +91,8 @@ export function useExportDialogState(): ExportDialogState {
     setDxfUnit,
     dxfLineMode,
     setDxfLineMode,
+    tekSymbolMode,
+    setTekSymbolMode,
     scopeConflictsWithFormat,
     buildRequest,
   };

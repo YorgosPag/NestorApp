@@ -56,11 +56,12 @@ function scaleBar(overrides: Partial<ScaleBarEntity> = {}): ScaleBarEntity {
 const byType = (out: Entity[], type: string) => out.filter((e) => e.type === type);
 
 describe('decompose — annotation symbol (north arrow)', () => {
-  it('northArrowSimple → shaft line + filled arrowhead (hatch) + "N" polyline', () => {
+  it('northArrowSimple → shaft line + filled arrowhead (hatch + outline) + "N" polyline', () => {
     const out = decomposeAnnotationEntity(symbol(), CTX) ?? [];
     expect(byType(out, 'line')).toHaveLength(1);   // shaft
-    expect(byType(out, 'hatch')).toHaveLength(1);  // solid arrowhead
-    expect(byType(out, 'lwpolyline')).toHaveLength(1); // the "N"
+    expect(byType(out, 'hatch')).toHaveLength(1);  // solid arrowhead FILL
+    // 2 polylines: the arrowhead OUTLINE (for fill-less backends) + the "N".
+    expect(byType(out, 'lwpolyline')).toHaveLength(2);
   });
 
   it('folds paper size through the drawing scale (annotative)', () => {
@@ -85,6 +86,21 @@ describe('decompose — annotation symbol (north arrow)', () => {
     const fill = byType(out, 'hatch')[0] as HatchEntity;
     expect(fill.fillColor).toBe('#abcdef');
     expect(fill.patternType).toBe('solid');
+  });
+
+  it('solid fill emits dxfFaces as an array-OF-faces (each face ≥3 corners)', () => {
+    // Regression guard: `dxfFaces` must be Face[] (Corner[][]), NOT a flat Corner[].
+    // A flat ring makes `emitHatch`'s `f.length >= 3` read `undefined` → no fill.
+    const out = decomposeAnnotationEntity(symbol(), CTX) ?? [];
+    const fill = byType(out, 'hatch')[0] as HatchEntity & {
+      dxfFaces?: ReadonlyArray<ReadonlyArray<{ x: number; y: number; zMm: number }>>;
+    };
+    expect(Array.isArray(fill.dxfFaces)).toBe(true);
+    expect(fill.dxfFaces).toHaveLength(1); // one triangle face
+    const face = fill.dxfFaces?.[0];
+    expect(Array.isArray(face)).toBe(true);
+    expect(face?.length).toBeGreaterThanOrEqual(3); // the emitter's fill gate
+    expect(face?.[0]).toMatchObject({ zMm: 0 });
   });
 
   it('grid bubble text → centred, middle-baseline, upright label', () => {

@@ -51,6 +51,13 @@ interface InheritedStyle {
   readonly colorAci?: number;
   readonly lineweightMm?: number;
   readonly visible: boolean;
+  /**
+   * ADR-608 — grouping provenance: the SOURCE annotation/scale-bar id. Every
+   * primitive of ONE symbol shares it so the TEK writer emits ONE shared
+   * `<taglist>` tag (and the DXF writer ONE anonymous BLOCK) per symbol → the
+   * symbol re-assembles as a single selectable unit in Tekton / AutoCAD.
+   */
+  readonly groupId: string;
 }
 
 /** Snapshot the source entity's plot style so each primitive renders identically. */
@@ -61,6 +68,7 @@ function inheritStyle(source: Entity): InheritedStyle {
     colorAci: source.colorAci,
     lineweightMm: source.lineweightMm,
     visible: source.visible ?? true,
+    groupId: source.id,
   };
 }
 
@@ -100,8 +108,11 @@ export function makeSolidFill(source: Entity, id: string, ring: readonly Point2D
     patternType: 'solid',
     patternName: 'SOLID',
     boundaryPaths: [boundary],
-    // Planar (z = 0) faces — same carrier as ADR-505 §C poché; x/y in scene mm.
-    dxfFaces: ring.map((p) => ({ x: p.x, y: p.y, zMm: 0 })),
+    // ONE planar (z = 0) face — same carrier as ADR-505 §C poché; x/y in scene mm.
+    // `dxfFaces` is an array OF faces (each face = a corner ring), so a single
+    // polygon must be wrapped: `[ring]`, NOT the bare `ring` (else `emitHatch`
+    // iterates corners, `corner.length` is undefined, and nothing fills).
+    dxfFaces: [ring.map((p) => ({ x: p.x, y: p.y, zMm: 0 }))],
   } as HatchEntity;
 }
 

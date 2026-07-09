@@ -15,7 +15,8 @@ import type { FurnitureParams } from '../../../../bim/types/furniture-types';
 import {
   tekNum, escapeXml, colorHex6, xmatrixXml, buildWallRecordXml, injectTekEntities,
   buildOpenRecordXml, buildOpenXml, buildPlaneRecordXml, buildPlanePointsXml,
-  buildAutoroofRecordXml, buildRoofPointsXml, buildRoofV3ListXml,
+  buildAutoroofRecordXml, buildRoofPointsXml, buildRoofV3ListXml, buildTagVisibilityXml,
+  buildObjectRecordXml, buildSymbolObjectXMatrix,
 } from '../tek-xml-writer';
 import { collectTekWalls, collectTekPlanes, collectTekRoofs } from '../bim-to-tek';
 import type { TekOpening, TekPlane, TekRoof, TekRoofPoint } from '../tek-types';
@@ -103,6 +104,56 @@ describe('injectTekEntities', () => {
   });
   it('throw αν λείπει marker (π.χ. autoroof)', () => {
     expect(() => injectTekEntities('A<!--TEK_WALL_RECORDS-->B<!--TEK_OBJECT_RECORDS-->C<!--TEK_PLANE_RECORDS-->D', 'x', 'y')).toThrow();
+  });
+
+  // ADR-608 — tag_visibility registry injection
+  const TPL_TAGS = `${TPL}<tag_visibility>\n</tag_visibility>Z`;
+  it('εγχέει το tag_visibility registry στο κενό block', () => {
+    const out = injectTekEntities(TPL_TAGS, 'W', 'O', '', '', '', '', '', '<tag_visibility>\nREG\n</tag_visibility>');
+    expect(out).toContain('<tag_visibility>\nREG\n</tag_visibility>');
+    expect(out.endsWith('Z')).toBe(true);
+  });
+  it('κενό tagVisibility → αφήνει το block αμετάβλητο', () => {
+    expect(injectTekEntities(TPL_TAGS, 'W', 'O')).toContain('<tag_visibility>\n</tag_visibility>');
+  });
+  it('throw αν υπάρχουν tags αλλά λείπει το tag_visibility block', () => {
+    expect(() => injectTekEntities(TPL, 'W', 'O', '', '', '', '', '', '<tag_visibility>\nX\n</tag_visibility>')).toThrow();
+  });
+});
+
+describe('ADR-608 — type-7 object (built-in σύμβολο)', () => {
+  it('buildSymbolObjectXMatrix rotation 0 → μοναδιαίο·scale + μετάθεση (== δείγμα)', () => {
+    const m = buildSymbolObjectXMatrix(6.19, 8.59, 0, 1);
+    expect(m).toEqual({ x00: 1, x01: -0, x10: 0, x11: 1, x20: 6.19, x21: 8.59 });
+  });
+  it('buildSymbolObjectXMatrix: ορθογώνιο + διατηρεί κλίμακα σε περιστροφή/scale', () => {
+    const m = buildSymbolObjectXMatrix(0, 0, Math.PI / 3, 2);
+    expect(m.x00 * m.x10 + m.x01 * m.x11).toBeCloseTo(0);   // ορθογωνιότητα
+    expect(Math.hypot(m.x00, m.x01)).toBeCloseTo(2);        // κλίμακα 2
+  });
+  it('buildObjectRecordXml: γεμίζει N/type_res/xmatrix (κανένα {{…}} leftover)', () => {
+    const xml = buildObjectRecordXml({
+      id: 3, typeRes: 51, xmatrix: { x00: 1, x01: 0, x10: 0, x11: 1, x20: 6, x21: -8 },
+    });
+    expect(xml).not.toMatch(/\{\{/);
+    expect(xml).toContain('<type>7</type><n>3</n>'); // object entity type + id
+    expect(xml).toContain('<type>51</type>');        // type_res
+    expect(xml).toContain('<x20>6</x20><x21>-8</x21>');
+  });
+});
+
+describe('buildTagVisibilityXml (ADR-608 tag registry)', () => {
+  it('κενή λίστα → "" (κρατά το κενό skeleton block)', () => {
+    expect(buildTagVisibilityXml([])).toBe('');
+  });
+  it('ένα tag → registry με <name> + <visible>1', () => {
+    expect(buildTagVisibilityXml(['ann_1']))
+      .toBe('<tag_visibility>\n<tag>\n<name>ann_1</name><visible>1</visible></tag>\n</tag_visibility>');
+  });
+  it('πολλά tags → μία <tag> σειρά ανά όνομα, XML-escaped', () => {
+    const xml = buildTagVisibilityXml(['a', 'b&c']);
+    expect((xml.match(/<tag>/g) ?? []).length).toBe(2);
+    expect(xml).toContain('<name>b&amp;c</name>');
   });
 });
 

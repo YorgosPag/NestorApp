@@ -19,10 +19,11 @@ import {
   ARC_RECORD_TEMPLATE,
   STAIR_RECORD_HEAD,
   STAIR_RECORD_TAIL,
+  OBJECT_RECORD_TEMPLATE,
 } from './tek-record-templates';
 import type {
-  TekArc, TekLine, TekOpening, TekPlane, TekPlanePoint, TekRoof, TekRoofFace, TekRoofPoint,
-  TekStair, TekStairPoint, TekWall, TekXMatrix,
+  TekArc, TekLine, TekObject, TekOpening, TekPlane, TekPlanePoint, TekRoof, TekRoofFace,
+  TekRoofPoint, TekStair, TekStairPoint, TekWall, TekXMatrix,
 } from './tek-types';
 
 export { escapeXml }; // SSoT στο src/lib/xml — re-export για consumers/tests του TEK module.
@@ -46,6 +47,36 @@ export function tekNum(n: number): string {
 export function colorHex6(hex: string): string {
   const h = hex.replace('#', '').toUpperCase();
   return /^[0-9A-F]{6}$/.test(h) ? h : '80BCFC';
+}
+
+// ── ADR-608 — Tekton tags/ετικέτες (grouping) ────────────────────────────────
+// Το κενό `<taglist>` κάθε record (auto-generated template) + το κενό top-level
+// `<tag_visibility>` του skeleton. Verified schema από «Χαρτί σχεδίασης Α0.tek»:
+//   record:   <taglist>\n<s>ΟΝΟΜΑ</s></taglist>
+//   registry: <tag_visibility>\n<tag>\n<name>ΟΝΟΜΑ</name><visible>1</visible></tag>…</tag_visibility>
+const EMPTY_TAGLIST = '<taglist>\n</taglist>';
+const EMPTY_TAG_VISIBILITY = '<tag_visibility>\n</tag_visibility>';
+
+/**
+ * Εγχέει ένα tag στο κενό `<taglist>` ενός record. `tag` absent ⇒ αμετάβλητο
+ * (μένει κενό). Έτσι μόνο τα σύμβολα (που φέρουν `groupId`) ταξινομούνται.
+ */
+function injectTag(recordXml: string, tag?: string): string {
+  if (!tag) return recordXml;
+  return recordXml.replace(EMPTY_TAGLIST, `<taglist>\n<s>${escapeXml(tag)}</s></taglist>`);
+}
+
+/**
+ * Το top-level `<tag_visibility>` registry: ΚΑΘΕ tag που χρησιμοποιείται πρέπει να
+ * δηλωθεί εδώ (αλλιώς ο Τέκτων το αγνοεί). Όλα ορατά (`<visible>1</visible>`).
+ * Κενή λίστα ⇒ `''` (ο caller κρατά το κενό skeleton block).
+ */
+export function buildTagVisibilityXml(tags: readonly string[]): string {
+  if (tags.length === 0) return '';
+  const rows = tags
+    .map((t) => `<tag>\n<name>${escapeXml(t)}</name><visible>1</visible></tag>`)
+    .join('\n');
+  return `<tag_visibility>\n${rows}\n</tag_visibility>`;
 }
 
 /** `<xmatrix>` element (σειρά x00,x01,x10,x11,x20,x21 όπως το δείγμα). */
@@ -157,7 +188,7 @@ export function buildAutoroofRecordXml(r: TekRoof): string {
 
 /** Γεμίζει το line record template (DXF line / polyline segment → `<line><record>`). */
 export function buildLineRecordXml(l: TekLine): string {
-  return LINE_RECORD_TEMPLATE
+  const xml = LINE_RECORD_TEMPLATE
     .replace('{{N}}', String(l.id))
     .replace('{{V0X}}', tekNum(l.v0.x))
     .replace('{{V0Y}}', tekNum(l.v0.y))
@@ -166,11 +197,12 @@ export function buildLineRecordXml(l: TekLine): string {
     .replace('{{V1Y}}', tekNum(l.v1.y))
     .replace('{{ELEV1}}', tekNum(l.elevation1))
     .replace('{{COLOR}}', colorHex6(l.colorHex));
+  return injectTag(xml, l.tag); // ADR-608 — grouping tag στο κενό <taglist>
 }
 
 /** Γεμίζει το arc record template (DXF arc / circle → `<arc><record>`). */
 export function buildArcRecordXml(a: TekArc): string {
-  return ARC_RECORD_TEMPLATE
+  const xml = ARC_RECORD_TEMPLATE
     .replace('{{N}}', String(a.id))
     .replace('{{CIRCLE}}', a.isCircle ? '1' : '0')
     .replace('{{CX}}', tekNum(a.centre.x))
@@ -181,6 +213,33 @@ export function buildArcRecordXml(a: TekArc): string {
     .replace('{{P1Y}}', tekNum(a.p1.y))
     .replace('{{ELEV}}', tekNum(a.elevation))
     .replace('{{COLOR}}', colorHex6(a.colorHex));
+  return injectTag(xml, a.tag); // ADR-608 — grouping tag στο κενό <taglist>
+}
+
+/**
+ * ADR-608 — `<xmatrix>` ενός built-in συμβόλου (type-7 object): θέση (μέτρα,
+ * ήδη Y-flipped) + περιστροφή + ομοιόμορφη κλίμακα. Ο Τέκτων (Y-up) αντιστρέφει
+ * τη φορά περιστροφής του καμβά (Y-down) → `θ_tekton = −rotationRad`, που δίνει
+ * τους παρακάτω όρους. `rotationRad=0` → μοναδιαίο·scale + μετάθεση (== δείγμα).
+ */
+export function buildSymbolObjectXMatrix(
+  xMeters: number, yMeters: number, rotationRad: number, scale: number,
+): TekXMatrix {
+  const c = Math.cos(rotationRad);
+  const s = Math.sin(rotationRad);
+  return {
+    x00: scale * c, x01: -scale * s,
+    x10: scale * s, x11: scale * c,
+    x20: xMeters, x21: yMeters,
+  };
+}
+
+/** Γεμίζει το type-7 object record template (built-in σύμβολο → ΕΝΑ `<object><record>`). */
+export function buildObjectRecordXml(o: TekObject): string {
+  return OBJECT_RECORD_TEMPLATE
+    .replace('{{N}}', String(o.id))
+    .replace('{{TYPE_RES}}', String(o.typeRes))
+    .replace('{{XMATRIX}}', xmatrixXml(o.xmatrix));
 }
 
 /** Serializes a stair polyline into `<point2d>` (empty -> `<point2d>\n</point2d>`). */
@@ -255,6 +314,7 @@ export function injectTekEntities(
   linesXml = '',
   arcsXml = '',
   stairsXml = '',
+  tagVisibilityXml = '',
 ): string {
   if (
     !template.includes(TEK_WALL_MARKER) ||
@@ -267,7 +327,16 @@ export function injectTekEntities(
   ) {
     throw new Error('TEK skeleton template: missing wall/object/plane/autoroof/line/arc/stair marker');
   }
-  return template
+  // ADR-608 — αν υπάρχουν tags, γέμισε το κενό top-level `<tag_visibility>` registry.
+  // Απουσία tags ⇒ αμετάβλητο (κρατά το κενό block του skeleton). Throw αν το registry
+  // δεν βρεθεί ενώ υπάρχουν tags (αλλαγμένο skeleton → σιωπηλά αταξινόμητα σύμβολα).
+  if (tagVisibilityXml && !template.includes(EMPTY_TAG_VISIBILITY)) {
+    throw new Error('TEK skeleton template: missing empty <tag_visibility> block for tag registry');
+  }
+  const withTags = tagVisibilityXml
+    ? template.replace(EMPTY_TAG_VISIBILITY, tagVisibilityXml)
+    : template;
+  return withTags
     .replace(TEK_WALL_MARKER, wallsXml)
     .replace(TEK_OBJECT_MARKER, objectsXml)
     .replace(TEK_PLANE_MARKER, planesXml)

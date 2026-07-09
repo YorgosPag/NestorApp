@@ -46,6 +46,16 @@ export type ExportFloorScope = 'active' | 'all-zip' | 'all-single';
  */
 export type DxfLineMode = 'polyline' | 'lines';
 
+/**
+ * ADR-608 — πώς μεταφέρονται τα annotation symbols στο `.tek`:
+ *   'native'   → σύμβολα με built-in Tekton equivalent γίνονται ΕΝΑ type-7 `<object>`
+ *                (ενιαίο επιλέξιμο πακέτο, native εμφάνιση Τέκτονα, portable).
+ *   'geometry' → η ακριβής δική μας γεωμετρία, αποδομημένη σε γραμμές/τόξα και
+ *                ομαδοποιημένη με tags (ίδιο σχέδιο με την οθόνη, ανά-γραμμή οντότητες).
+ * Σύμβολα χωρίς equivalent (scale-bar κ.λπ.) μένουν πάντα ως γεωμετρία.
+ */
+export type TekSymbolMode = 'native' | 'geometry';
+
 // ============================================================================
 // REQUEST (built by the dialog, consumed by the service facade)
 // ============================================================================
@@ -60,6 +70,9 @@ export interface ExportRequest {
   readonly dxfUnit?: DxfUnit;
   /** DXF geometry mode (POLYLINE vs exploded LINEs). */
   readonly dxfLineMode?: DxfLineMode;
+
+  /** TEK-specific — annotation symbol transfer mode (native objects vs geometry). */
+  readonly tekSymbolMode?: TekSymbolMode;
 }
 
 // ============================================================================

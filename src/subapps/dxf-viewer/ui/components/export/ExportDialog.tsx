@@ -41,6 +41,7 @@ const ENTITY_SCOPE_OPTIONS = ['both', 'dxf-only', 'bim-only'] as const;
 const FLOOR_SCOPE_OPTIONS = ['active', 'all-zip', 'all-single'] as const;
 const UNIT_OPTIONS = ['millimeters', 'centimeters', 'meters'] as const;
 const LINE_MODE_OPTIONS = ['polyline', 'lines'] as const;
+const TEK_SYMBOL_MODE_OPTIONS = ['native', 'geometry'] as const;
 const VERSION_OPTIONS = Object.keys(DXF_VERSION_NAMES) as DxfVersion[];
 
 export interface ExportDialogProps {
@@ -73,6 +74,7 @@ export function ExportDialog({ open, onOpenChange, onSubmit }: ExportDialogProps
   }, [onSubmit, state, onOpenChange]);
 
   const isDxf = state.format === 'dxf';
+  const isTek = state.format === 'tek';
   const blocked = state.scopeConflictsWithFormat;
 
   return (
@@ -150,6 +152,19 @@ export function ExportDialog({ open, onOpenChange, onSubmit }: ExportDialogProps
                 <SelectContent>
                   {LINE_MODE_OPTIONS.map((m) => (
                     <SelectItem key={m} value={m}>{t(`export.lineModes.${m}`)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
+
+          {isTek && (
+            <Field label={t('export.tekSymbolMode')}>
+              <Select value={state.tekSymbolMode} onValueChange={(v) => state.setTekSymbolMode(v as NonNullable<ExportRequest['tekSymbolMode']>)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TEK_SYMBOL_MODE_OPTIONS.map((m) => (
+                    <SelectItem key={m} value={m}>{t(`export.tekSymbolModes.${m}`)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

@@ -7,8 +7,10 @@
  */
 
 import type { Entity } from '../../../types/entities';
+import type { AnnotationSymbolEntity } from '../../../types/annotation-symbol';
 import type { Point2D } from '../../../rendering/types/Types';
 import { emitSceneToPdf } from '../scene-vector-emitter';
+import { decomposeAnnotationEntity } from '../../../export/core/annotation-to-primitives';
 
 interface Call { fn: string; args: readonly unknown[]; }
 
@@ -175,5 +177,18 @@ describe('scene-vector-emitter — annotation label + solid fill (ADR-608)', () 
     const lines = only(emit([e as unknown as Entity]), 'lines');
     expect(lines).toHaveLength(1);
     expect(lines[0].args[4]).toBe('F');
+  });
+
+  // End-to-end guard: the REAL decomposer output (not a hand-written face) must
+  // actually paint a fill. This is what would have caught the flat-dxfFaces bug —
+  // the siloed unit tests each passed while the wired pipeline drew no arrowhead.
+  it('decomposed north arrow → emits a filled triangle (pdf.lines style F)', () => {
+    const arrow = {
+      id: 'na', type: 'annotation-symbol', layerId: '0', color: '#00ff00',
+      position: { x: 0, y: 0 }, kind: 'north-arrow', symbolId: 'northArrowSimple', sizeMm: 15,
+    } as unknown as AnnotationSymbolEntity;
+    const primitives = decomposeAnnotationEntity(arrow as Entity, { drawingScale: 100, sceneUnits: 'mm' }) ?? [];
+    const fills = only(emit(primitives), 'lines').filter((c) => c.args[4] === 'F');
+    expect(fills.length).toBeGreaterThanOrEqual(1); // the filled arrowhead
   });
 });

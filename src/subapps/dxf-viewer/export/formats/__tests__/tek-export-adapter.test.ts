@@ -12,7 +12,9 @@ import type { FurnitureParams } from '../../../bim/types/furniture-types';
 import type { Entity } from '../../../types/entities';
 import type { SceneModel } from '../../../types/scene-types';
 
-const FAKE_TPL = 'HEAD<!--TEK_WALL_RECORDS--><!--TEK_OBJECT_RECORDS--><!--TEK_PLANE_RECORDS--><!--TEK_AUTOROOF_RECORDS--><!--TEK_LINE_RECORDS--><!--TEK_ARC_RECORDS--><!--TEK_STAIR_RECORDS-->TAIL';
+// Includes the empty `<tag_visibility>` block the real skeleton carries, so the
+// ADR-608 tag registry injection has its target (mirror of the v9.1 skeleton).
+const FAKE_TPL = 'HEAD<tag_visibility>\n</tag_visibility><!--TEK_WALL_RECORDS--><!--TEK_OBJECT_RECORDS--><!--TEK_PLANE_RECORDS--><!--TEK_AUTOROOF_RECORDS--><!--TEK_LINE_RECORDS--><!--TEK_ARC_RECORDS--><!--TEK_STAIR_RECORDS-->TAIL';
 
 function wall(): Entity {
   return {
@@ -86,7 +88,8 @@ describe('assembleTekDocument', () => {
   it('dxf-only → BIM τοίχος αποκλείεται (κανένα record)', () => {
     const { xml } = assembleTekDocument(FAKE_TPL, scene([wall()]), 'dxf-only');
     expect(xml).not.toContain('<x00>');
-    expect(xml).toBe('HEADTAIL');
+    // Χωρίς σύμβολα → κανένα tag· το κενό `<tag_visibility>` block μένει αμετάβλητο.
+    expect(xml).toBe('HEAD<tag_visibility>\n</tag_visibility>TAIL');
   });
 
   it('both → το έπιπλο εγχέεται στον plane marker ως <plane> record (2×2m κουτί)', () => {
@@ -111,5 +114,39 @@ describe('assembleTekDocument', () => {
     expect(xml).toContain('<stair_width>0.8</stair_width>'); // 800mm → 0.8m
     expect(xml).toContain('<horiz_b>0.274</horiz_b>');  // πάτημα 274mm → 0.274m
     expect(xml).not.toMatch(/TEK_STAIR_RECORDS/);       // marker καταναλώθηκε
+  });
+
+  it('ADR-583/608 — annotation-symbol αποδομείται σε <line> records (type 4)', () => {
+    const arrow = {
+      id: 'na', type: 'annotation-symbol', layerId: 'lyr_a', color: '#00ff00',
+      position: { x: 0, y: 0 }, kind: 'north-arrow', symbolId: 'northArrowSimple', sizeMm: 15,
+    } as unknown as Entity;
+    // Χωρίς το σύμβολο → κανένα line record· με το σύμβολο → shaft/«N»/περίγραμμα βέλους ως lines.
+    const empty = assembleTekDocument(FAKE_TPL, scene([]), 'both', 100).xml;
+    const withArrow = assembleTekDocument(FAKE_TPL, scene([arrow]), 'both', 100).xml;
+    expect(empty).not.toContain('<type>4</type>');
+    expect(withArrow).toContain('<type>4</type>'); // line record type 4
+  });
+
+  it('ADR-608 native (default) — north-arrow → ΕΝΑ type-7 object, ΟΧΙ γραμμές', () => {
+    const arrow = {
+      id: 'na', type: 'annotation-symbol', layerId: 'lyr_a', color: '#00ff00',
+      position: { x: 0, y: 0 }, kind: 'north-arrow', symbolId: 'northArrowSimple', sizeMm: 15,
+    } as unknown as Entity;
+    const xml = assembleTekDocument(FAKE_TPL, scene([arrow]), 'both', 100).xml; // default native
+    expect(xml).toContain('<type>7</type>');   // object record
+    expect(xml).toContain('<type>51</type>');  // Βορράς 1 type_res
+    expect(xml).not.toContain('<v0X>');        // ΟΧΙ αποδομημένες γραμμές (line records)
+  });
+
+  it('ADR-608 geometry mode — north-arrow → γραμμές + tag (ΟΧΙ object)', () => {
+    const arrow = {
+      id: 'na', type: 'annotation-symbol', layerId: 'lyr_a', color: '#00ff00',
+      position: { x: 0, y: 0 }, kind: 'north-arrow', symbolId: 'northArrowSimple', sizeMm: 15,
+    } as unknown as Entity;
+    const xml = assembleTekDocument(FAKE_TPL, scene([arrow]), 'both', 100, 'geometry').xml;
+    expect(xml).toContain('<v0X>');            // αποδομημένες γραμμές (line records)
+    expect(xml).toContain('<taglist>\n<s>na</s></taglist>'); // ομαδοποιημένες με tag
+    expect(xml).not.toContain('<type>7</type>'); // ΟΧΙ object
   });
 });

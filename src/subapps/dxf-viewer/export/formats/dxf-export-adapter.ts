@@ -23,12 +23,14 @@ import {
   type DxfVersion,
   type DxfUnit,
 } from '../../types/dxf-export.types';
-import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { mmToSceneUnits, resolveSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { DEFAULT_DRAWING_SCALE } from '../../config/bim-render-settings-types';
 import type { DimStyle } from '../../types/dimension';
 import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
 import { resolveEntityColorHex } from '../../systems/selection/select-similar-by-color';
 import { resolveExportEntities } from '../core/export-entity-scope';
 import { flattenSceneEntitiesForDxf } from '../core/bim-to-dxf-primitives';
+import { expandAnnotationsToPrimitives } from '../core/annotation-to-primitives';
 import { collectOverlayDxfEntities } from '../core/overlay-dxf-collector';
 import { usedCategoryLayerDefs } from '../core/dxf-category-layers';
 import { writeDxfAscii } from '../core/dxf-ascii-writer';
@@ -74,6 +76,13 @@ export interface DxfExportOptions {
   readonly lineMode?: DxfLineMode;
   /** Base name for the generated file (project name). */
   readonly baseName: string;
+  /**
+   * ADR-583/608 — annotation-scale denominator (1:N) used to size annotative
+   * symbols/scale-bars when decomposing them to DXF primitives. Passed in by the
+   * export service (live `drawingScale` SSoT) so `buildDxfExportRequest` stays
+   * pure (no store read). Defaults to `DEFAULT_DRAWING_SCALE`.
+   */
+  readonly drawingScale?: number;
 }
 
 export interface BuiltDxfRequest {
@@ -87,11 +96,19 @@ export interface BuiltDxfRequest {
  */
 export function buildDxfExportRequest(
   scene: SceneModel,
-  options: Pick<DxfExportOptions, 'entityScope' | 'version' | 'unit' | 'lineMode'>,
+  options: Pick<DxfExportOptions, 'entityScope' | 'version' | 'unit' | 'lineMode' | 'drawingScale'>,
 ): BuiltDxfRequest {
   const selected = resolveExportEntities(scene.entities, options.entityScope);
   const colored = stampRenderedColors(selected, scene.layersById);
-  const { entities, warnings } = flattenSceneEntitiesForDxf(colored);
+  const { entities: flat, warnings } = flattenSceneEntitiesForDxf(colored);
+
+  // ADR-583/608 — explode annotation symbols + scale-bars into neutral primitives
+  // so they land in the `.dxf` (Tekton/AutoCAD), mirroring the vector-PDF path.
+  // Annotative sizing uses the caller-provided drawing scale → stays pure (no store).
+  const entities = expandAnnotationsToPrimitives(flat, {
+    drawingScale: options.drawingScale ?? DEFAULT_DRAWING_SCALE,
+    sceneUnits: resolveSceneUnits({ units: scene.units }),
+  });
 
   // ADR-505 (finish/rebar + §C fill) — σοβάδες/οπλισμός/γέμισμα είναι derived overlays
   // (όχι entities) → ξεχωριστός collector παράγει extra DXF primitives, gated «what's
