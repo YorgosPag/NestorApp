@@ -274,10 +274,15 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // ADR-363 Φ1G.5 Slice 2 — for a hosted-opening Alt-move ghost, supply the
     // level's walls so the preview can slide / re-host the opening and recompute
     // its full door symbol (swing arc + leaf) against the resolved host wall.
-    let previewCtx: { walls: readonly WallEntity[] } | undefined;
+    let previewCtx: { walls: readonly WallEntity[]; sceneUnits: ReturnType<typeof resolveSceneUnits> } | undefined;
     if (entity.type === 'opening' && levelManager.currentLevelId) {
-      const sceneEntities = levelManager.getLevelScene(levelManager.currentLevelId)?.entities ?? [];
-      previewCtx = { walls: sceneEntities.filter((e) => e.type === 'wall') as unknown as readonly WallEntity[] };
+      const openingScene = levelManager.getLevelScene(levelManager.currentLevelId);
+      const sceneEntities = openingScene?.entities ?? [];
+      previewCtx = {
+        walls: sceneEntities.filter((e) => e.type === 'wall') as unknown as readonly WallEntity[],
+        // ADR-615 — self-hosted opening live ghost needs the scene mm↔scene factor.
+        sceneUnits: resolveSceneUnits(openingScene),
+      };
     }
 
     const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview, previewCtx);

@@ -13,6 +13,23 @@
 import type { Point2D } from '../types/Types';
 // ADR-602 (ADR-587 Φ6) Stage 5 — tagged grip discriminator SSoT (canonical module).
 import type { EntityGripKind } from '../../hooks/grip-kinds';
+import type { WallEntity } from '../../bim/types/wall-types';
+import type { SceneUnits } from '../../utils/scene-units';
+
+/**
+ * Optional scene context for previews that need neighbours. The hosted-opening
+ * Alt-move ghost uses `walls` (resolve slide / re-host + recompute the full door
+ * symbol); a SELF-HOSTED opening (ADR-615) uses `sceneUnits` (no host wall to read
+ * the mm↔scene factor from). Omitted by callers that preview self-contained entities.
+ */
+export interface ApplyEntityPreviewContext {
+  readonly walls?: readonly WallEntity[];
+  /**
+   * ADR-615 — scene mm↔scene-units factor for a SELF-HOSTED opening live ghost
+   * (no host wall to read it from). Defaults to `'mm'` when omitted.
+   */
+  readonly sceneUnits?: SceneUnits;
+}
 
 /**
  * Per-entity preview transform. Structurally compatible with `DxfGripDragPreview`

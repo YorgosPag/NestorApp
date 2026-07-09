@@ -17,18 +17,25 @@
 
 import type { Entity } from '../../../types/entities';
 import type {
-  ArcEntity, CircleEntity, LineEntity, LWPolylineEntity, PolylineEntity, TextEntity,
+  ArcEntity, CircleEntity, HatchEntity, LineEntity, LWPolylineEntity, PolylineEntity, TextEntity,
 } from '../../../types/entities';
 import { pointOnCircle } from '../../../rendering/entities/shared/geometry-vector-utils';
 import { degToRad } from '../../../rendering/entities/shared/geometry-angle-utils';
 import { isAnnotationSymbolEntity } from '../../../types/annotation-symbol';
+import { isSolidHatch } from '../../../bim/hatch/hatch-properties';
+import {
+  resolveTektonHatchNumber, TEKTON_SOLID_HATCH_NUM,
+} from '../../../data/tekton-hatch-catalog';
 import {
   buildLineRecordXml, buildArcRecordXml, buildObjectRecordXml, buildSymbolObjectXMatrix,
-  buildTextRecordXml,
+  buildTextRecordXml, buildHatchRecordXml,
 } from './tek-xml-writer';
 import { sceneXYToTekMeters } from './tek-geometry';
 import { tekSymbolTypeRes } from './tek-symbol-catalog';
-import type { TekArc, TekLine, TekText } from './tek-types';
+import type { TekArc, TekHatch, TekHatchEdge, TekLine, TekText } from './tek-types';
+
+/** Default κλίμακα μοτίβου γραμμοσκίασης (`<scaleX>`/`<scaleY>`) — verified δείγμα Τέκτονα. */
+const DEFAULT_HATCH_SCALE = 0.15;
 
 /** Default χρώμα DXF primitive (Τέκτων line/arc) όταν λείπει — από το δείγμα. */
 const DEFAULT_PRIMITIVE_COLOR = 'FC8000';
@@ -50,6 +57,9 @@ const DEFAULT_TEXT_HEIGHT = 2.5;
 // `position` (=alignment anchor) + `alignment`/`vBaseline` + εκτίμηση πλάτους/ύψους.
 // Advance ανά χαρακτήρα ≈ 0.62 × cap-height (Arial digits/caps) — tunable.
 const TEK_CHAR_ADVANCE_PER_CAP = 0.62;
+// 🎛️ CALIBRATION KNOB — κατακόρυφη ανύψωση insertion για `vBaseline:'middle'` labels,
+// ως πολλαπλάσιο του ύψους (μεγαλύτερο = πιο ΠΑΝΩ το κείμενο). browser-loop με Giorgio.
+const TEK_TEXT_VMID_FACTOR = 1.0;
 /** hallign του Τέκτονα από το alignment του κειμένου (validated round-trip με import). */
 const H_ALIGN: Record<'left' | 'center' | 'right', number> = { left: 0, center: 1, right: 2 };
 /**
@@ -250,7 +260,8 @@ function textTopLeft(
   vBaseline: TextBaseline, widthM: number, heightM: number,
 ): { x: number; y: number } {
   const leftDist = hAlignKey === 'center' ? widthM / 2 : hAlignKey === 'right' ? widthM : 0;
-  const topDist = vBaseline === 'top' ? 0 : vBaseline === 'middle' ? heightM / 2 : heightM;
+  const topDist = vBaseline === 'top' ? 0
+    : vBaseline === 'middle' ? heightM * TEK_TEXT_VMID_FACTOR : heightM;
   return { x: anchor.x - leftDist, y: anchor.y + topDist };
 }
 
@@ -289,4 +300,54 @@ export function collectTekTexts(entities: readonly Entity[], f: number): TekText
     id += 1;
   }
   return { textsXml: records.join('\n'), textCount: records.length, tags: [...tags] };
+}
+
+export interface TekHatchCollectResult {
+  readonly hatchesXml: string;
+  readonly hatchCount: number;
+  /** ADR-608 — distinct tag/ετικέτα ονόματα (για το `<tag_visibility>` registry). */
+  readonly tags: readonly string[];
+}
+
+/** Ακμές ενός κλειστού boundaryPath (scene units) → `TekHatchEdge[]` (μέτρα, Y-flip SSoT). */
+function hatchPathEdges(path: readonly Pt[], f: number): TekHatchEdge[] {
+  const edges: TekHatchEdge[] = [];
+  for (const [a, b] of polylineSegments(path, true)) {
+    if (a.x === b.x && a.y === b.y) continue; // μηδενικού μήκους ακμή → skip
+    edges.push({ v0: sceneXYToTekMeters(a.x, a.y, f), v1: sceneXYToTekMeters(b.x, b.y, f) });
+  }
+  return edges;
+}
+
+/**
+ * ADR-512 — συλλέγει τις γραμμοσκιάσεις (`hatch`) ως Tekton `<hatch>` records (primitive
+ * type 6). Κάθε κλειστό `boundaryPath` → ΕΝΑ record (μία ακμή ανά `<record>`, μέσω του SSoT
+ * `polylineSegments(path, true)` + `sceneXYToTekMeters`). Ο αριθμός μοτίβου προκύπτει από το
+ * `data/tekton-hatch-catalog` (solid → 22, αλλιώς `patternName` → native `pattern.inf` index).
+ * Islands (τρύπες) βγαίνουν ως ξεχωριστά records (γεμιστά) — pixel-perfect even-odd = follow-up.
+ * `f` = μέτρα ανά scene unit.
+ */
+export function collectTekHatches(entities: readonly Entity[], f: number): TekHatchCollectResult {
+  const records: string[] = [];
+  const tags = new Set<string>();
+  let id = 1;
+  for (const e of entities) {
+    if (e.type !== 'hatch') continue;
+    const h = e as HatchEntity;
+    const tektonNum = isSolidHatch(h) ? TEKTON_SOLID_HATCH_NUM : resolveTektonHatchNumber(h.patternName);
+    const colorHex = h.fillColor ?? entityColor(e);
+    const tag = entityTag(e);
+    for (const path of h.boundaryPaths ?? []) {
+      if (path.length < 3) continue; // δεν σχηματίζει κλειστή επιφάνεια
+      const edges = hatchPathEdges(path, f);
+      if (edges.length < 3) continue;
+      records.push(buildHatchRecordXml({
+        id, tektonNum, scaleX: DEFAULT_HATCH_SCALE, scaleY: DEFAULT_HATCH_SCALE,
+        colorHex, edges, tag,
+      } satisfies TekHatch));
+      if (tag) tags.add(tag);
+      id += 1;
+    }
+  }
+  return { hatchesXml: records.join('\n'), hatchCount: records.length, tags: [...tags] };
 }

@@ -72,26 +72,15 @@ import {
 } from '../../bim/hatch/hatch-grips';
 import { withGradientPatch, DEFAULT_GRADIENT_DEFAULTS } from '../../bim/hatch/hatch-gradient-build';
 import type { HatchEntity } from '../../types/entities';
-import type { OpeningEntity } from '../../bim/types/opening-types';
-import { resolveOpeningAltMove, openingRehostToleranceWorld } from '../../bim/walls/opening-grips';
-import { computeOpeningGeometry } from '../../bim/geometry/opening-geometry';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
-import type { EntityPreviewTransform } from './entity-preview-types';
+import type { EntityPreviewTransform, ApplyEntityPreviewContext } from './entity-preview-types';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import { unwrapStair, applyClassicEntityPreview } from './apply-entity-preview-helpers';
 import { applyParametricBoxPreview } from './apply-parametric-box-preview';
+// ADR-615/363 — opening live ghosts (self-hosted + hosted Alt-move) extracted (N.7.1).
+import { applyOpeningPreview } from './apply-opening-preview';
 
-export type { EntityPreviewTransform };
-
-/**
- * Optional scene context for previews that need neighbours. Currently only the
- * hosted-opening Alt-move ghost uses it (`walls` → resolve slide / re-host +
- * recompute the full door symbol). Omitted by callers that preview self-contained
- * entities; the opening ghost then falls back to an outline-only axis slide.
- */
-export interface ApplyEntityPreviewContext {
-  readonly walls?: readonly WallEntity[];
-}
+export type { EntityPreviewTransform, ApplyEntityPreviewContext };
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
@@ -438,46 +427,12 @@ export function applyEntityPreview(
     } as unknown as DxfEntityUnion;
   }
 
-  // ── ADR-363 Φ1G.5 Slice 2 — hosted-opening Alt-move ghost (slide / re-host) ──
-  // A hosted opening slides along its wall — or RE-HOSTS to another wall (Revit
-  // «Pick New Host»). With the scene `walls` (ctx) + the grabbed base point
-  // (`anchorPos`), resolve the move through the SAME SSoT as the commit
-  // (`resolveOpeningAltMove`) and recompute the FULL geometry against the resolved
-  // host (`computeOpeningGeometry`) — so the ghost shows the door symbol (swing
-  // arc + leaf) on the new wall, auto-rotated + auto-thickness, matching the commit.
-  if (movesEntity && entity.type === 'opening') {
-    const opening = entity as unknown as OpeningEntity;
-    const walls = ctx?.walls;
-    if (walls && walls.length > 0 && anchorPos) {
-      const currentHost = walls.find((w) => w.id === opening.params.wallId);
-      if (currentHost) {
-        const resolved = resolveOpeningAltMove({
-          originalParams: opening.params,
-          basePoint: anchorPos,
-          currentPos: translatePoint(anchorPos, delta),
-          currentHost,
-          candidateWalls: walls,
-          rehostToleranceWorld: openingRehostToleranceWorld(currentHost),
-        });
-        if (!resolved) return entity;
-        const geometry = computeOpeningGeometry(
-          resolved.params,
-          resolved.host,
-          resolved.host.params.sceneUnits ?? 'mm',
-        );
-        return { ...(entity as object), params: resolved.params, geometry } as unknown as DxfEntityUnion;
-      }
-    }
-    // Fallback (no scene walls supplied): outline-only slide constrained to the
-    // opening's own axis (geometry.rotation, radians) so the ghost never flies
-    // off the wall even without a host-wall lookup.
-    const rot = opening.geometry?.rotation;
-    if (rot === undefined) return entity;
-    const axis: Point2D = { x: Math.cos(rot), y: Math.sin(rot) };
-    const along = delta.x * axis.x + delta.y * axis.y;
-    const slideVec: Point2D = { x: axis.x * along, y: axis.y * along };
-    return applyClassicEntityPreview(entity, slideVec, gripIndex, true, edgeVertexIndices);
-  }
+  // ── Opening live ghosts (self-hosted ADR-615 + hosted Alt-move ADR-363) ──────
+  // Extracted to `apply-opening-preview` (SOS N.7.1). Each routes through the SAME
+  // grip-drag / alt-move SSoT the commit runs (preview ≡ commit); returns null when
+  // the preview is not an opening branch → fall through to the classic path below.
+  const openingPreview = applyOpeningPreview(entity, preview, ctx);
+  if (openingPreview) return openingPreview;
 
   // ── ADR-363 Phase 1G.5 — Alt «move-from-characteristic-point» whole-entity ghost ──
   // Reached when the preview carries `movesEntity` + `delta` but NO parametric

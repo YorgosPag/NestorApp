@@ -212,6 +212,20 @@ export interface TekDimRecord {
   readonly refPoints: readonly TekPoint2D[];
 }
 
+/**
+ * ADR-608 — ένα type-7 `<object>` record (built-in σύμβολο Τέκτονα). Το `typeRes` είναι ο
+ * catalog index (`Obj.inf`) — το ΔΕΥΤΕΡΟ `<type>` του record (το 1ο = entity type 7). Θέση/
+ * περιστροφή/κλίμακα στο `<xmatrix>` (μέτρα, Y-up). Καθρέφτης του export `OBJECT_RECORD_TEMPLATE`.
+ */
+export interface TekObjectRecord {
+  /** `type_res` — catalog index του built-in συμβόλου (π.χ. 51=Βορράς 1, 383=Σύμβολο τομής). */
+  readonly typeRes: number;
+  /** `<xmatrix>` — θέση + περιστροφή + κλίμακα (μέτρα, Y-up). */
+  readonly matrix: TekXMatrix;
+  /** `<color>` RGB hex (γενικό material color· cosmetic). */
+  readonly color: string;
+}
+
 /** Αποτέλεσμα parse ενός ολόκληρου `.tek` αρχείου (stair-first scope — Φ1). */
 export interface TekParseResult {
   /** Έκδοση αρχείου (`<fileversion>`) — π.χ. 516. */
@@ -242,4 +256,6 @@ export interface TekSceneParseResult extends TekParseResult {
   readonly dims: readonly TekDimRecord[];
   /** ADR-531 Φ5b — όλοι οι 3Δ τοίχοι (`<wall>` type 1) μαζί με τα ανοίγματά τους. */
   readonly walls: readonly TekWallRecord[];
+  /** ADR-608 — όλα τα type-7 `<object>` records (built-in σύμβολα Τέκτονα). */
+  readonly objects: readonly TekObjectRecord[];
 }

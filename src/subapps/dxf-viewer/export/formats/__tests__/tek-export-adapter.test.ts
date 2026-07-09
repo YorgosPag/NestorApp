@@ -14,7 +14,7 @@ import type { SceneModel } from '../../../types/scene-types';
 
 // Includes the empty `<tag_visibility>` block the real skeleton carries, so the
 // ADR-608 tag registry injection has its target (mirror of the v9.1 skeleton).
-const FAKE_TPL = 'HEAD<tag_visibility>\n</tag_visibility><!--TEK_WALL_RECORDS--><!--TEK_OBJECT_RECORDS--><!--TEK_PLANE_RECORDS--><!--TEK_AUTOROOF_RECORDS--><!--TEK_LINE_RECORDS--><!--TEK_ARC_RECORDS--><!--TEK_STAIR_RECORDS--><!--TEK_TEXT_RECORDS-->TAIL';
+const FAKE_TPL = 'HEAD<tag_visibility>\n</tag_visibility><!--TEK_WALL_RECORDS--><!--TEK_OBJECT_RECORDS--><!--TEK_PLANE_RECORDS--><!--TEK_AUTOROOF_RECORDS--><!--TEK_LINE_RECORDS--><!--TEK_ARC_RECORDS--><!--TEK_STAIR_RECORDS--><!--TEK_TEXT_RECORDS--><!--TEK_HATCH_RECORDS-->TAIL';
 
 function wall(): Entity {
   return {
@@ -137,6 +137,19 @@ describe('assembleTekDocument', () => {
     expect(xml).toContain('<type>7</type>');   // object record
     expect(xml).toContain('<type>51</type>');  // Βορράς 1 type_res
     expect(xml).not.toContain('<v0X>');        // ΟΧΙ αποδομημένες γραμμές (line records)
+  });
+
+  it('ADR-512 — γραμμοσκίαση εγχέεται στον hatch marker ως <hatch> record (type 6)', () => {
+    const hatch = {
+      id: 'hx', type: 'hatch', patternName: 'ANSI31', fillType: 'predefined', color: '#00ff00',
+      boundaryPaths: [[{ x: 0, y: 0 }, { x: 2000, y: 0 }, { x: 2000, y: 2000 }]],
+    } as unknown as Entity;
+    const empty = assembleTekDocument(FAKE_TPL, scene([]), 'both').xml;
+    const withHatch = assembleTekDocument(FAKE_TPL, scene([hatch]), 'both').xml;
+    expect(empty).not.toMatch(/<type>6<\/type>/);
+    expect(withHatch).toContain('<type>6</type>'); // hatch primitive
+    expect(withHatch).toContain('<type>72</type>'); // ANSI31 → pattern 72
+    expect(withHatch).not.toMatch(/TEK_HATCH_RECORDS/); // marker καταναλώθηκε
   });
 
   it('ADR-608 geometry mode — north-arrow → γραμμές + tag (ΟΧΙ object)', () => {

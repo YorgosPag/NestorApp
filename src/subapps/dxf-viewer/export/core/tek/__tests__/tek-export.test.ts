@@ -16,10 +16,10 @@ import {
   tekNum, escapeXml, colorHex6, xmatrixXml, buildWallRecordXml, injectTekEntities,
   buildOpenRecordXml, buildOpenXml, buildPlaneRecordXml, buildPlanePointsXml,
   buildAutoroofRecordXml, buildRoofPointsXml, buildRoofV3ListXml, buildTagVisibilityXml,
-  buildObjectRecordXml, buildSymbolObjectXMatrix, buildTextRecordXml,
+  buildObjectRecordXml, buildSymbolObjectXMatrix, buildTextRecordXml, buildHatchRecordXml,
 } from '../tek-xml-writer';
 import { collectTekWalls, collectTekPlanes, collectTekRoofs } from '../bim-to-tek';
-import { collectTekTexts } from '../dxf-to-tek';
+import { collectTekTexts, collectTekHatches } from '../dxf-to-tek';
 import type { TekOpening, TekPlane, TekRoof, TekRoofPoint } from '../tek-types';
 import type { Entity } from '../../../../types/entities';
 
@@ -95,16 +95,24 @@ describe('buildWallRecordXml', () => {
 });
 
 describe('injectTekEntities', () => {
-  const TPL = 'A<!--TEK_WALL_RECORDS-->B<!--TEK_OBJECT_RECORDS-->C<!--TEK_PLANE_RECORDS-->D<!--TEK_AUTOROOF_RECORDS-->E<!--TEK_LINE_RECORDS-->F<!--TEK_ARC_RECORDS-->G<!--TEK_STAIR_RECORDS-->H<!--TEK_TEXT_RECORDS-->I';
+  const TPL = 'A<!--TEK_WALL_RECORDS-->B<!--TEK_OBJECT_RECORDS-->C<!--TEK_PLANE_RECORDS-->D<!--TEK_AUTOROOF_RECORDS-->E<!--TEK_LINE_RECORDS-->F<!--TEK_ARC_RECORDS-->G<!--TEK_STAIR_RECORDS-->H<!--TEK_TEXT_RECORDS-->I<!--TEK_HATCH_RECORDS-->J';
   it('εγχέει walls/objects/planes/autoroofs/lines/arcs/stairs στους markers', () => {
     expect(injectTekEntities(TPL, 'WALLS', 'OBJ', 'PLANES', 'ROOFS', 'LINES', 'ARCS', 'STAIRS'))
-      .toBe('AWALLSBOBJCPLANESDROOFSELINESFARCSGSTAIRSH');
+      .toBe('AWALLSBOBJCPLANESDROOFSELINESFARCSGSTAIRSHIJ');
   });
-  it('planes/autoroofs/lines/arcs/stairs default κενά όταν παραλείπονται', () => {
-    expect(injectTekEntities(TPL, 'WALLS', 'OBJ')).toBe('AWALLSBOBJCDEFGH');
+  it('εγχέει texts + hatches (ADR-608/512) στους markers', () => {
+    expect(injectTekEntities(TPL, 'WALLS', 'OBJ', 'PLANES', 'ROOFS', 'LINES', 'ARCS', 'STAIRS', '', 'TEXTS', 'HATCHES'))
+      .toBe('AWALLSBOBJCPLANESDROOFSELINESFARCSGSTAIRSHTEXTSIHATCHESJ');
+  });
+  it('planes/autoroofs/lines/arcs/stairs/texts/hatches default κενά όταν παραλείπονται', () => {
+    expect(injectTekEntities(TPL, 'WALLS', 'OBJ')).toBe('AWALLSBOBJCDEFGHIJ');
   });
   it('throw αν λείπει marker (π.χ. autoroof)', () => {
     expect(() => injectTekEntities('A<!--TEK_WALL_RECORDS-->B<!--TEK_OBJECT_RECORDS-->C<!--TEK_PLANE_RECORDS-->D', 'x', 'y')).toThrow();
+  });
+  it('throw αν λείπει ο hatch marker (ADR-512)', () => {
+    const noHatch = 'A<!--TEK_WALL_RECORDS-->B<!--TEK_OBJECT_RECORDS-->C<!--TEK_PLANE_RECORDS-->D<!--TEK_AUTOROOF_RECORDS-->E<!--TEK_LINE_RECORDS-->F<!--TEK_ARC_RECORDS-->G<!--TEK_STAIR_RECORDS-->H<!--TEK_TEXT_RECORDS-->I';
+    expect(() => injectTekEntities(noHatch, 'W', 'O')).toThrow();
   });
 
   // ADR-608 — tag_visibility registry injection
@@ -699,9 +707,9 @@ describe('ADR-608 Φ-texts — type-3 <text> (ελεύθερη ετικέτα)',
       height: 500, alignment: 'center', color: '#00FF00', // vBaseline default 'middle'
     } as unknown as Entity;
     const res = collectTekTexts([text], 0.001);
-    // H=0.5m· W='A'(1)×0.5×0.62=0.31· anchor=(1,−2)· top-left=(1−0.155, −2+0.25)=(0.845,−1.75).
+    // H=0.5m· W='A'(1)×0.5×0.62=0.31· anchor=(1,−2)· top-left=(1−0.155, −2+0.5×VMID)=(0.845,−1.5).
     expect(res.textsXml).toContain('<hallign>1</hallign>'); // center (info only — Τέκτων αγνοεί για θέση)
-    expect(res.textsXml).toContain('<x20>0.845</x20><x21>-1.75</x21>');
+    expect(res.textsXml).toContain('<x20>0.845</x20><x21>-1.5</x21>');
   });
   it('collectTekTexts: vBaseline hint → vallign (top→0)', () => {
     const text = {
@@ -724,5 +732,91 @@ describe('ADR-608 Φ-texts — type-3 <text> (ελεύθερη ετικέτα)',
     expect(res.tags).toEqual(['sym_7']);
     expect(res.textsXml).toContain('<taglist>\n<s>sym_7</s></taglist>');
     expect(res.textsXml).toContain('<hallign>2</hallign>'); // right
+  });
+});
+
+// ── γραμμοσκιάσεις → native <hatch> (ADR-512) ──
+// Ο Τέκτων ζωγραφίζει primitive type 6 με μοτίβο `<type>` (pattern.inf index) μέσα στο
+// κλειστό περίγραμμα `<vector>` (μία ακμή ανά <record>, μέτρα Y-flipped).
+describe('ADR-512 — hatch (γραμμοσκίαση → <hatch> primitive type 6)', () => {
+  it('buildHatchRecordXml: type 6 + <n> ακμών + pattern number + color + vector (κανένα {{…}} leftover)', () => {
+    const xml = buildHatchRecordXml({
+      id: 1, tektonNum: 72, scaleX: 0.15, scaleY: 0.15, colorHex: '#c0dcc0',
+      edges: [
+        { v0: { x: 0, y: 0 }, v1: { x: 2, y: 0 } },
+        { v0: { x: 2, y: 0 }, v1: { x: 2, y: 2 } },
+        { v0: { x: 2, y: 2 }, v1: { x: 0, y: 0 } },
+      ],
+    });
+    expect(xml).not.toMatch(/\{\{/);
+    expect(xml).toContain('<type>6</type><n>3</n>'); // hatch primitive + πλήθος ακμών
+    expect(xml).toContain('<type>72</type>');         // αριθμός μοτίβου (ANSI-31)
+    expect(xml).toContain('<color>C0DCC0</color>');
+    expect(xml).toContain('<scaleX>0.15</scaleX><scaleY>0.15</scaleY>');
+    expect(xml).toContain('<v0X>0</v0X><v0Y>0</v0Y><v1X>2</v1X><v1Y>0</v1Y>');
+    expect((xml.match(/<record>/g) ?? []).length).toBe(3);
+  });
+
+  it('collectTekHatches: user-drawn ANSI31 → pattern 72, Y-flip, μία ακμή ανά record', () => {
+    const hatch = {
+      id: 'h1', type: 'hatch', patternName: 'ANSI31', fillType: 'predefined',
+      boundaryPaths: [[{ x: 0, y: 0 }, { x: 2000, y: 0 }, { x: 2000, y: 2000 }]],
+      color: '#00FF00',
+    } as unknown as Entity;
+    const res = collectTekHatches([hatch], 0.001); // f = 1mm→m
+    expect(res.hatchCount).toBe(1);
+    expect(res.hatchesXml).toContain('<type>6</type>');
+    expect(res.hatchesXml).toContain('<type>72</type>');            // ANSI31 → 72
+    expect(res.hatchesXml).toContain('<color>00FF00</color>');
+    // 3 κορυφές (closed) → 3 ακμές· Y-flip: (2000,2000)mm → (2,−2)m.
+    expect((res.hatchesXml.match(/<record>/g) ?? []).length).toBe(3);
+    expect(res.hatchesXml).toContain('<v1X>2</v1X><v1Y>-2</v1Y>');
+  });
+
+  it('collectTekHatches: solid fill → pattern 22 (Raster), fillColor', () => {
+    const solid = {
+      id: 'h2', type: 'hatch', fillType: 'solid', fillColor: '#808080',
+      boundaryPaths: [[{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }, { x: 0, y: 1000 }]],
+    } as unknown as Entity;
+    const res = collectTekHatches([solid], 0.001);
+    expect(res.hatchCount).toBe(1);
+    expect(res.hatchesXml).toContain('<type>22</type>'); // solid → Raster 22
+    expect(res.hatchesXml).toContain('<color>808080</color>');
+    expect((res.hatchesXml.match(/<record>/g) ?? []).length).toBe(4); // τετράγωνο = 4 ακμές
+  });
+
+  it('collectTekHatches: άγνωστο pattern → default 72· islands = ξεχωριστά records', () => {
+    const withIsland = {
+      id: 'h3', type: 'hatch', patternName: 'UNKNOWN_XYZ', fillType: 'predefined',
+      boundaryPaths: [
+        [{ x: 0, y: 0 }, { x: 4000, y: 0 }, { x: 4000, y: 4000 }, { x: 0, y: 4000 }], // outer
+        [{ x: 1000, y: 1000 }, { x: 2000, y: 1000 }, { x: 2000, y: 2000 }],            // island
+      ],
+      color: '#FFFFFF',
+    } as unknown as Entity;
+    const res = collectTekHatches([withIsland], 0.001);
+    expect(res.hatchCount).toBe(2); // outer + island = 2 records
+    expect(res.hatchesXml).toContain('<type>72</type>'); // default
+  });
+
+  it('collectTekHatches: εκφυλισμένο boundary (<3 κορυφές) → skip· μη-hatch αγνοείται', () => {
+    const degenerate = {
+      id: 'h4', type: 'hatch', patternName: 'BRICK',
+      boundaryPaths: [[{ x: 0, y: 0 }, { x: 1000, y: 0 }]], // 2 κορυφές → δεν κλείνει
+    } as unknown as Entity;
+    const line = { id: 'l', type: 'line', start: { x: 0, y: 0 }, end: { x: 1, y: 1 } } as unknown as Entity;
+    expect(collectTekHatches([degenerate, line], 0.001).hatchCount).toBe(0);
+  });
+
+  it('collectTekHatches: groupId → κοινό tag (ομαδοποίηση + registry)', () => {
+    const hatch = {
+      id: 'h5', type: 'hatch', patternName: 'EARTH', fillType: 'predefined',
+      boundaryPaths: [[{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }]],
+      color: '#FFFFFF', groupId: 'sym_3',
+    } as unknown as Entity;
+    const res = collectTekHatches([hatch], 0.001);
+    expect(res.tags).toEqual(['sym_3']);
+    expect(res.hatchesXml).toContain('<taglist>\n<s>sym_3</s></taglist>');
+    expect(res.hatchesXml).toContain('<type>31</type>'); // EARTH → 31
   });
 });

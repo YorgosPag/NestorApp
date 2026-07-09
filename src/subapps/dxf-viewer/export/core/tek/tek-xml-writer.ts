@@ -21,10 +21,12 @@ import {
   STAIR_RECORD_TAIL,
   OBJECT_RECORD_TEMPLATE,
   TEXT_RECORD_TEMPLATE,
+  HATCH_RECORD_TEMPLATE,
+  HATCH_EDGE_TEMPLATE,
 } from './tek-record-templates';
 import type {
-  TekArc, TekLine, TekObject, TekOpening, TekPlane, TekPlanePoint, TekRoof, TekRoofFace,
-  TekRoofPoint, TekStair, TekStairPoint, TekText, TekWall, TekXMatrix,
+  TekArc, TekHatch, TekHatchEdge, TekLine, TekObject, TekOpening, TekPlane, TekPlanePoint, TekRoof,
+  TekRoofFace, TekRoofPoint, TekStair, TekStairPoint, TekText, TekWall, TekXMatrix,
 } from './tek-types';
 
 export { escapeXml }; // SSoT στο src/lib/xml — re-export για consumers/tests του TEK module.
@@ -38,6 +40,7 @@ const TEK_LINE_MARKER = '<!--TEK_LINE_RECORDS-->';
 const TEK_ARC_MARKER = '<!--TEK_ARC_RECORDS-->';
 const TEK_STAIR_MARKER = '<!--TEK_STAIR_RECORDS-->';
 const TEK_TEXT_MARKER = '<!--TEK_TEXT_RECORDS-->';
+const TEK_HATCH_MARKER = '<!--TEK_HATCH_RECORDS-->';
 
 /** Tekton-friendly αριθμός: δεκαδικά, χωρίς εκθετική μορφή, trimmed. */
 export function tekNum(n: number): string {
@@ -260,6 +263,35 @@ export function buildObjectRecordXml(o: TekObject): string {
     .replace('{{XMATRIX}}', xmatrixXml(o.xmatrix));
 }
 
+/** Σειριοποιεί τις ακμές περιγράμματος μιας γραμμοσκίασης σε `<record>` (μέτρα, Y-flipped). */
+export function buildHatchVectorXml(edges: readonly TekHatchEdge[]): string {
+  return edges
+    .map((e) =>
+      HATCH_EDGE_TEMPLATE
+        .replace('{{V0X}}', tekNum(e.v0.x))
+        .replace('{{V0Y}}', tekNum(e.v0.y))
+        .replace('{{V1X}}', tekNum(e.v1.x))
+        .replace('{{V1Y}}', tekNum(e.v1.y)),
+    )
+    .join('\n');
+}
+
+/**
+ * ADR-512 — γεμίζει το hatch record template (γραμμοσκίαση → `<hatch>` primitive type 6).
+ * `<n>` = πλήθος ακμών· `<type>` = αριθμός μοτίβου Τέκτονα (`tektonNum`)· grouping tag μέσω
+ * του SSoT `injectTag` (κοινό με line/arc/text). Χρώμα/scale μέσω των SSoT `colorHex6`/`tekNum`.
+ */
+export function buildHatchRecordXml(h: TekHatch): string {
+  const xml = HATCH_RECORD_TEMPLATE
+    .replace('{{N}}', String(h.edges.length))
+    .replace('{{SCALEX}}', tekNum(h.scaleX))
+    .replace('{{SCALEY}}', tekNum(h.scaleY))
+    .replace('{{TYPE}}', String(Math.round(h.tektonNum)))
+    .replace('{{COLOR}}', colorHex6(h.colorHex))
+    .replace('{{VECTOR}}', buildHatchVectorXml(h.edges));
+  return injectTag(xml, h.tag); // ADR-608 — grouping tag στο κενό <taglist>
+}
+
 /** Serializes a stair polyline into `<point2d>` (empty -> `<point2d>\n</point2d>`). */
 export function buildStairPoint2dXml(points: readonly TekStairPoint[]): string {
   if (points.length === 0) return '<point2d>\n</point2d>';
@@ -334,6 +366,7 @@ export function injectTekEntities(
   stairsXml = '',
   tagVisibilityXml = '',
   textsXml = '',
+  hatchesXml = '',
 ): string {
   if (
     !template.includes(TEK_WALL_MARKER) ||
@@ -343,9 +376,10 @@ export function injectTekEntities(
     !template.includes(TEK_LINE_MARKER) ||
     !template.includes(TEK_ARC_MARKER) ||
     !template.includes(TEK_STAIR_MARKER) ||
-    !template.includes(TEK_TEXT_MARKER)
+    !template.includes(TEK_TEXT_MARKER) ||
+    !template.includes(TEK_HATCH_MARKER)
   ) {
-    throw new Error('TEK skeleton template: missing wall/object/plane/autoroof/line/arc/stair/text marker');
+    throw new Error('TEK skeleton template: missing wall/object/plane/autoroof/line/arc/stair/text/hatch marker');
   }
   // ADR-608 — αν υπάρχουν tags, γέμισε το κενό top-level `<tag_visibility>` registry.
   // Απουσία tags ⇒ αμετάβλητο (κρατά το κενό block του skeleton). Throw αν το registry
@@ -364,5 +398,6 @@ export function injectTekEntities(
     .replace(TEK_LINE_MARKER, linesXml)
     .replace(TEK_ARC_MARKER, arcsXml)
     .replace(TEK_STAIR_MARKER, stairsXml)
-    .replace(TEK_TEXT_MARKER, textsXml);
+    .replace(TEK_TEXT_MARKER, textsXml)
+    .replace(TEK_HATCH_MARKER, hatchesXml);
 }

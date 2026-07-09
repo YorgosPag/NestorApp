@@ -24166,7 +24166,7 @@ export const TEK_SKELETON_TEMPLATE = `<?xml version="1.0" encoding="UTF-8"?>
 <arc>
 <!--TEK_ARC_RECORDS--></arc>
 <hatch>
-</hatch>
+<!--TEK_HATCH_RECORDS--></hatch>
 <dim>
 </dim>
 <grid>

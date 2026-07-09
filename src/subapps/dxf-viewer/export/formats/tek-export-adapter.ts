@@ -17,7 +17,9 @@ import { DEFAULT_DRAWING_SCALE } from '../../config/bim-render-settings-types';
 import { resolveExportEntities } from '../core/export-entity-scope';
 import { expandAnnotationsToPrimitives } from '../core/annotation-to-primitives';
 import { collectTekWalls, collectTekPlanes, collectTekRoofs, collectTekStairs } from '../core/tek/bim-to-tek';
-import { collectTekLines, collectTekArcs, collectTekObjects, collectTekTexts } from '../core/tek/dxf-to-tek';
+import {
+  collectTekLines, collectTekArcs, collectTekObjects, collectTekTexts, collectTekHatches,
+} from '../core/tek/dxf-to-tek';
 import { injectTekEntities, buildTagVisibilityXml } from '../core/tek/tek-xml-writer';
 import type { TekSymbolMode } from '../types';
 import { buildFloorFilename } from './dxf-export-adapter';
@@ -83,15 +85,21 @@ export function assembleTekDocument(
   const arcs = collectTekArcs(decomposed, f);
   // ADR-608 Φ-texts — ελεύθερες ετικέτες (N/A/1/0.00 + scale-bar νούμερα) → `<text>` (type 3).
   const texts = collectTekTexts(decomposed, f);
+  // ADR-512 — γραμμοσκιάσεις (user-drawn + solid-fills συμβόλων) → `<hatch>` (primitive type 6),
+  // με native ταυτοποίηση μοτίβου (data/tekton-hatch-catalog). Χωρίς αυτό έπεφταν σιωπηλά.
+  const hatches = collectTekHatches(decomposed, f);
   // Σκάλες → native `<stair>` (type 21, ADR-526 Φ3). Ίδιο scene→μέτρα convention.
   const { stairsXml } = collectTekStairs(selected, f);
   // ADR-608 — τα αποδομημένα σύμβολα (geometry path) έχουν κοινό `groupId` → κοινό tag στα
-  // line/arc/text τους. Ένωση distinct tags → `<tag_visibility>` registry (ομαδοποίηση +Tags).
-  const tagVisibilityXml = buildTagVisibilityXml([...new Set([...lines.tags, ...arcs.tags, ...texts.tags])]);
+  // line/arc/text/hatch τους. Ένωση distinct tags → `<tag_visibility>` registry (ομαδοποίηση +Tags).
+  const tagVisibilityXml = buildTagVisibilityXml(
+    [...new Set([...lines.tags, ...arcs.tags, ...texts.tags, ...hatches.tags])],
+  );
   return {
     xml: injectTekEntities(
       template, wallsXml, objects.objectsXml, planesXml, autoroofsXml,
       lines.linesXml, arcs.arcsXml, stairsXml, tagVisibilityXml, texts.textsXml,
+      hatches.hatchesXml,
     ),
     warnings,
   };

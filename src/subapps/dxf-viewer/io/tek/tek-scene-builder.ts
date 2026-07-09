@@ -20,6 +20,8 @@ import { tekStairToEntity } from './tek-stair-to-bim';
 import { tekLineToEntity, tekArcToEntity, tekTextToEntity } from './tek-primitive-to-scene';
 // ADR-531 Φ5b.1 — 2Δ mappers για διαστάσεις + τοίχους (+ ανοίγματα). Φ5b.2 θα προσθέσει BIM mappers.
 import { tekWallToEntities, tekDimToEntities } from './tek-structural-to-scene';
+// ADR-608 — native σύμβολα Τέκτονα (type-7 <object>) → AnnotationSymbolEntity.
+import { tekObjectToEntity } from './tek-object-to-scene';
 import type { TekSceneParseResult } from './tek-import-types';
 
 /** Default bounds όταν δεν υπάρχει καμία σκάλα (κενή σκηνή). */
@@ -81,6 +83,14 @@ export function buildSceneFromTekScene(
   levelId: string,
   units: SceneUnits = 'mm',
 ): TekSceneBuildResult {
+  const warnings = [...parsed.warnings];
+  // ADR-608 — native σύμβολα: κάθε <object> → δικό μας σύμβολο ή ονομαστικό warning (χωρίς equivalent).
+  const symbolEntities: Entity[] = [];
+  for (const rec of parsed.objects) {
+    const { entity, warning } = tekObjectToEntity(rec, units);
+    if (entity) symbolEntities.push(entity);
+    if (warning) warnings.push(warning);
+  }
   const entities: Entity[] = [
     ...parsed.stairs.map((rec) => tekStairToEntity(rec, levelId, units)),
     ...parsed.lines.map((rec) => tekLineToEntity(rec, units)),
@@ -89,8 +99,8 @@ export function buildSceneFromTekScene(
     // ADR-531 Φ5b.1 — κάθε wall/dim παράγει ΠΟΛΛΑ 2Δ primitives (footprint/jambs/seg-lines).
     ...parsed.walls.flatMap((rec) => tekWallToEntities(rec, units)),
     ...parsed.dims.flatMap((rec) => tekDimToEntities(rec, units)),
+    ...symbolEntities,
   ];
-  const warnings = [...parsed.warnings];
   if (entities.length === 0) {
     warnings.push('Δεν βρέθηκε καμία οντότητα στο .tek αρχείο.');
   }
