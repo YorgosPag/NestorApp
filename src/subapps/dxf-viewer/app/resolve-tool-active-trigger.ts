@@ -30,30 +30,35 @@
  */
 
 import { isColumnRegionTool, isWallDrawingTool } from '../systems/tools/region-tool-ids';
-import { STAIR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-stair-tab';
-import { WALL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-wall-tab';
-import { OPENING_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-opening-tab';
-import { SLAB_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-slab-tab';
-import { ROOF_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-roof-tab';
-import { COLUMN_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-column-tab';
-import { BEAM_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-beam-tab';
-import { FOUNDATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-foundation-tab';
-import { SLAB_OPENING_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-slab-opening-tab';
-import { LINE_TOOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-line-tool-tab';
-import { XLINE_MODE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-xline-mode-tab';
-import { MEP_SEGMENT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-segment-tab';
-import { FLOOR_FINISH_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-floor-finish-tab';
-import { WALL_COVERING_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-wall-covering-tab';
-import { HATCH_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-hatch-tab';
-import { THERMAL_SPACE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-thermal-space-tab';
-import { FURNITURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-furniture-tab';
-import { FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-floorplan-symbol-tab';
-import { ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-annotation-symbol-tab';
+// ADR-587 — every contextual-tab trigger token via the shared barrel (N.18: one import instead
+// of ~24 parallel `contextual-*-tab` lines duplicated with `resolve-contextual-trigger.ts`).
+import {
+  STAIR_CONTEXTUAL_TRIGGER,
+  WALL_CONTEXTUAL_TRIGGER,
+  OPENING_CONTEXTUAL_TRIGGER,
+  SLAB_CONTEXTUAL_TRIGGER,
+  ROOF_CONTEXTUAL_TRIGGER,
+  COLUMN_CONTEXTUAL_TRIGGER,
+  BEAM_CONTEXTUAL_TRIGGER,
+  FOUNDATION_CONTEXTUAL_TRIGGER,
+  SLAB_OPENING_CONTEXTUAL_TRIGGER,
+  LINE_TOOL_CONTEXTUAL_TRIGGER,
+  XLINE_MODE_CONTEXTUAL_TRIGGER,
+  MEP_SEGMENT_CONTEXTUAL_TRIGGER,
+  FLOOR_FINISH_CONTEXTUAL_TRIGGER,
+  WALL_COVERING_CONTEXTUAL_TRIGGER,
+  HATCH_CONTEXTUAL_TRIGGER,
+  THERMAL_SPACE_CONTEXTUAL_TRIGGER,
+  FURNITURE_CONTEXTUAL_TRIGGER,
+  FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER,
+  ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER,
+  SCALE_BAR_CONTEXTUAL_TRIGGER,
+  MEP_FIXTURE_LIBRARY_CONTEXTUAL_TRIGGER,
+  MEP_RISER_CONTEXTUAL_TRIGGER,
+  GUIDES_CONTEXTUAL_TRIGGER,
+  DIMENSIONS_CONTEXTUAL_TRIGGER,
+} from '../ui/ribbon/data/contextual-triggers';
 import { ANNOTATION_KIND_CONFIGS } from '../config/annotation-kind-registry';
-import { MEP_FIXTURE_LIBRARY_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-fixture-library-tab';
-import { MEP_RISER_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-riser-tab';
-import { GUIDES_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-guides-tab';
-import { DIMENSIONS_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-dimensions-tab';
 
 /**
  * Static tool-id → contextual-tab trigger. Πολλαπλά tool ids → ΤΟ ΙΔΙΟ trigger όταν
@@ -89,6 +94,9 @@ export const TOOL_ACTIVE_TRIGGER: ReadonlyMap<string, string> = new Map<string, 
   // ADR-583 Φ1 — every annotation-symbol placement tool (north arrow + future kinds)
   // opens the SAME contextual tab, derived from the kind registry (no per-kind line).
   ...ANNOTATION_KIND_CONFIGS.map((c) => [c.toolId, ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER] as [string, string]),
+  // ADR-583 Φ3e — graphic scale-bar tool active → «Γραφική Κλίμακα» tab (defaults for
+  // the next bar: style / unit / divisions / annotative heights / label placement).
+  ['scale-bar', SCALE_BAR_CONTEXTUAL_TRIGGER],
   // ADR-419 / ADR-511 — floor-finish + wall-covering (manual ή room-fill).
   ['floor-finish', FLOOR_FINISH_CONTEXTUAL_TRIGGER],
   ['wall-covering', WALL_COVERING_CONTEXTUAL_TRIGGER],

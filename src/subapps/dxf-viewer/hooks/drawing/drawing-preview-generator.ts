@@ -38,6 +38,9 @@ import { resolveEffectivePreviewCursor, toWysiwygPreviewEntity } from './wysiwyg
 // ADR-583 Φ2.3 — scale-bar WYSIWYG rubber-band ghost: SAME builder as commit (SSoT
 // mapping lives in the store module — N.18, never cloned).
 import { buildScaleBarEntityFromLiveOptions } from '../../state/scale-bar-options-store';
+// ADR-612 — opening info tag SINGLE-CLICK WYSIWYG ghost: SAME builder as commit (SSoT
+// mapping lives in the store module — N.18, never cloned).
+import { buildOpeningInfoTagEntityFromLiveOptions } from '../../state/opening-info-tag-options-store';
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolvePolygonVertexSnap } from '../../bim/placement/polygon-vertex-snap';
 import { polygonVertexLockStore } from '../../bim/placement/polygon-vertex-lock-store';
@@ -49,20 +52,15 @@ import { generateColumnPreview } from './column-preview-helpers';
 // ADR-436 Slice 2 — foundation line-tool preview (strip / tie-beam band ghost).
 // ADR-514 Φ6c — foundation pad live ghost (flush σε παρειά κολόνας ζωντανά).
 import { generateFoundationPreview, generateFoundationPadPreview } from './foundation-preview-helpers';
+// N.7.1 — arc-tool preview builder extracted to drawing-preview-arc.ts (file-size SRP).
+import { generateArcPreview } from './drawing-preview-arc';
 import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
 import {
-  arcFrom3Points,
-  arcFromCenterStartEnd,
-  arcFromStartCenterEnd,
   circleFrom3Points,
   circleFromChordAndSagitta,
   circleFrom2PointsAndRadius,
   circleBestFit,
-  calculateDistance,
-  calculateAngle,
-  pointOnCircle,
 } from '../../rendering/entities/shared';
-import { GEOMETRY_PRECISION } from '../../config/tolerance-config';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { getDefaultLayerId } from '../../stores/LayerStore';
 // ADR-359 Phase 3 — XLine / Ray preview helpers (extracted).
@@ -291,6 +289,20 @@ export function generatePreviewEntity(
     );
     return toWysiwygPreviewEntity(scaleBarGhost, 'preview_scale_bar_ghost');
   }
+  // ── ADR-612 — Opening info tag SINGLE-CLICK WYSIWYG ghost (mirror annotation-symbol's
+  //    click-count, scale-bar's ghost plumbing): no locked origin to rubber-band from — the
+  //    whole box follows the live cursor as its CENTRE, pre-click (`tempPoints.length === 0`,
+  //    the tool completes on point 1 so it never accumulates further). SAME builder as commit
+  //    (`buildOpeningInfoTagEntityFromLiveOptions`, preview≡commit) → real default 3:2 box +
+  //    empty cells, rendered via the real `OpeningInfoTagRenderer` (full fidelity). ──────────
+  if (tool === 'opening-info-tag' && tempPoints.length === 0) {
+    const openingInfoTagGhost = buildOpeningInfoTagEntityFromLiveOptions(
+      cursorPoint,
+      'preview_opening_info_tag_ghost',
+      getDefaultLayerId(),
+    );
+    return toWysiwygPreviewEntity(openingInfoTagGhost, 'preview_opening_info_tag_ghost');
+  }
   // ── Zero-point preview: show start indicator ─────────────────────────────
   if (tempPoints.length === 0) {
     const isMeasurementTool =
@@ -414,77 +426,10 @@ export function generatePreviewEntity(
     }
     return makeRubberBandPolyline('preview_bestfit_rubberband', worldPoints);
   }
-  // ── Arc tools (arc-3p, arc-cse, arc-sce) ─────────────────────────────────
+  // ── Arc tools (arc-3p, arc-cse, arc-sce) — extracted to drawing-preview-arc.ts (N.7.1) ──
   if (tool === 'arc-3p' || tool === 'arc-cse' || tool === 'arc-sce') {
-    if (tempPoints.length === 1) {
-      return makeRubberBandPolyline('preview_arc_rubberband', worldPoints);
-    }
-    if (tempPoints.length >= 2) {
-      // Calculate arc based on tool type
-      let arcResult: {
-        center: Point2D;
-        radius: number;
-        startAngle: number;
-        endAngle: number;
-        counterclockwise?: boolean;
-      } | null = null;
-      if (tool === 'arc-3p') {
-        arcResult = arcFrom3Points(worldPoints[0], worldPoints[1], worldPoints[2]);
-      } else if (tool === 'arc-cse') {
-        arcResult = arcFromCenterStartEnd(worldPoints[0], worldPoints[1], worldPoints[2]);
-      } else if (tool === 'arc-sce') {
-        arcResult = arcFromStartCenterEnd(worldPoints[0], worldPoints[1], worldPoints[2]);
-      }
-      if (arcResult) {
-        // Calculate construction vertices based on tool type
-        let constructionVerts: Point2D[];
-        if (tool === 'arc-cse') {
-          const center = worldPoints[0];
-          const start = worldPoints[1];
-          const cursor = worldPoints[2];
-          const dist = calculateDistance(center, cursor);
-          const projectedEnd = dist > GEOMETRY_PRECISION.POINT_MATCH
-            ? pointOnCircle(center, arcResult.radius, calculateAngle(center, cursor))
-            : start;
-          constructionVerts = [center, start, projectedEnd];
-        } else if (tool === 'arc-sce') {
-          const start = worldPoints[0];
-          const center = worldPoints[1];
-          const cursor = worldPoints[2];
-          const dist = calculateDistance(center, cursor);
-          const projectedEnd = dist > GEOMETRY_PRECISION.POINT_MATCH
-            ? pointOnCircle(center, arcResult.radius, calculateAngle(center, cursor))
-            : start;
-          constructionVerts = [start, center, projectedEnd];
-        } else {
-          // arc-3p: all points define the circumference
-          constructionVerts = worldPoints;
-        }
-        const finalCounterclockwise = arcFlipped
-          ? !arcResult.counterclockwise
-          : arcResult.counterclockwise;
-        const arcPreview: ExtendedArcEntity = {
-          id: 'preview_arc',
-          type: 'arc',
-          center: arcResult.center,
-          radius: arcResult.radius,
-          startAngle: arcResult.startAngle,
-          endAngle: arcResult.endAngle,
-          visible: true,
-          layerId: getDefaultLayerId(),
-          preview: true,
-          showPreviewGrips: true,
-          constructionVertices: constructionVerts,
-          showConstructionLines: true,
-          showEdgeDistances: true,
-          counterclockwise: finalCounterclockwise,
-          constructionLineMode: tool === 'arc-3p' ? 'polyline' : 'radial',
-        };
-        return arcPreview;
-      }
-      // Arc calculation failed (collinear) — show polyline fallback
-      return makeRubberBandPolyline('preview_arc_rubberband', worldPoints);
-    }
+    const arcPreview = generateArcPreview(tool, tempPoints, worldPoints, arcFlipped, makeRubberBandPolyline);
+    if (arcPreview) return arcPreview;
   }
   // ── All other tools: delegate to createEntity ────────────────────────────
   return createEntity(tool, worldPoints);

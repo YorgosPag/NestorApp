@@ -26,10 +26,12 @@ import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { dxfSubEntityPayload } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { HatchEntity } from '../../types/entities';
-import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isFoundationEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isAnnotationSymbolEntity, isScaleBarEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isSpaceSeparatorEntity, isXLineEntity, isRayEntity, isHatchEntity } from '../../types/entities';
+import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isFoundationEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isAnnotationSymbolEntity, isScaleBarEntity, isOpeningInfoTagEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isSpaceSeparatorEntity, isXLineEntity, isRayEntity, isHatchEntity } from '../../types/entities';
 // ADR-583 — annotation symbol (North arrow) lightweight entity for DXF render pipeline.
 import type { AnnotationSymbolEntity } from '../../types/annotation-symbol';
 import type { ScaleBarEntity } from '../../types/scale-bar';
+// ADR-612 — opening info tag lightweight entity for DXF render pipeline.
+import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 // ADR-363 Phase 1B — wall wrapper for DXF render pipeline.
 import type { WallEntity } from '../../bim/types/wall-types';
@@ -354,6 +356,19 @@ export const TO_DXF_HANDLERS: Partial<Record<EntityType, ToDxfHandler>> = {
       position: sb.position, angleRad: sb.angleRad, length: sb.length, unit: sb.unit,
       divisions: sb.divisions, subdivisions: sb.subdivisions, style: sb.style,
       barHeightMm: sb.barHeightMm, labelHeightMm: sb.labelHeightMm, labelPlacement: sb.labelPlacement,
+    } as DxfEntityUnion;
+  },
+  'opening-info-tag': (entity, base) => {
+    // ADR-612 — lightweight non-BIM opening info tag (sibling of scale-bar). Flat params
+    // spread at top level; OpeningInfoTagRenderer reads them + computeOpeningInfoTagGeometry.
+    // The DERIVED `geometry` cache is intentionally NOT forwarded (recomputed at render).
+    // Without this case the freshly-placed tag fell to `default` → null → invisible + un-grippable.
+    if (!isOpeningInfoTagEntity(entity)) return null;
+    const oit = entity as OpeningInfoTagEntity;
+    return {
+      ...base, type: 'opening-info-tag' as const,
+      position: oit.position, angleRad: oit.angleRad, widthMm: oit.widthMm,
+      topText: oit.topText, bottomLeftText: oit.bottomLeftText, bottomRightText: oit.bottomRightText,
     } as DxfEntityUnion;
   },
   'mep-segment': (entity, base) => {

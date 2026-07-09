@@ -265,6 +265,12 @@ export interface OpeningTypeParams {
   readonly height: number;
   /** mm. Frame (κάσα) width. Default 50 when omitted. */
   readonly frameWidth?: number;
+  /**
+   * ADR-611 — type-default frame profile ID (FK → `FRAME_PROFILE_CATALOG`).
+   * Superseded per-instance by `OpeningParams.frameProfileId`. Resolved via
+   * `resolveOpeningFrameProfile()`. Absent → instance / catalog default.
+   */
+  readonly frameProfileId?: string;
   /** Material library key for the frame/finish. */
   readonly material?: string;
   /** Glazing panes — 1 single / 2 double / 3 triple. Glazed kinds only. */

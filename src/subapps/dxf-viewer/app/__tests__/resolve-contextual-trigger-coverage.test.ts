@@ -38,6 +38,7 @@ import { STYLE_EDITABLE_PRIMITIVE_TYPES } from '../../types/style-editable-primi
 import { WALL_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-wall-tab';
 import { HATCH_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-hatch-tab';
 import { ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-annotation-symbol-tab';
+import { SCALE_BAR_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-scale-bar-tab';
 import { TEXT_EDITOR_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-text-editor-tab';
 import { LINE_TOOL_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-line-tool-tab';
 import { MEP_FIXTURE_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-mep-fixture-tab';
@@ -71,6 +72,9 @@ const NO_SELECTION_TAB_TYPES = [
   'space-separator',
   'furniture',
   'mep-fitting',
+  // ADR-612 — η πινακίδα ανοίγματος επεξεργάζεται μέσω double-click editor overlay
+  // (`OpeningInfoTagEditorOverlay`) + grips, ΟΧΙ per-selection ribbon tab → null στην επιλογή.
+  'opening-info-tag',
 ];
 
 describe('Selection contextual-trigger coverage — map ↔ resolver ↔ descriptor domain (ADR-587 Φ3a)', () => {
@@ -145,6 +149,8 @@ describe('Selection contextual-trigger coverage — map ↔ resolver ↔ descrip
       expect(resolveContextualTrigger({ type: 'annotation-symbol' })).toBe(
         ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER,
       );
+      // ADR-583 Φ3e — a selected graphic scale-bar surfaces the «Γραφική Κλίμακα» tab.
+      expect(resolveContextualTrigger({ type: 'scale-bar' })).toBe(SCALE_BAR_CONTEXTUAL_TRIGGER);
       expect(resolveContextualTrigger({ type: 'text' })).toBe(TEXT_EDITOR_CONTEXTUAL_TRIGGER);
       expect(resolveContextualTrigger({ type: 'mtext' })).toBe(TEXT_EDITOR_CONTEXTUAL_TRIGGER);
     });

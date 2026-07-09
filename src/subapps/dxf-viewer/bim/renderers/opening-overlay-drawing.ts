@@ -77,6 +77,31 @@ export function drawOpeningPlanOverlay(opening: OpeningEntity, dc: OverlayDrawCo
   }
 }
 
+// ─── κάσα frame outlines (ADR-611) ────────────────────────────────────────────
+
+/**
+ * Draw the constant-cross-section κάσα jamb outlines (ADR-611). Each frame
+ * outline is a plan-view rectangle (4 CCW vertices, world coords) produced by
+ * `computeOpeningGeometry` — one jamb at each end of the opening. Stroked with
+ * the caller's resolved opening style (no hardcoded colour; caller sets
+ * `ctx.strokeStyle` + `dc.lineWidth`). Additive + zero-regression: legacy
+ * openings whose geometry has no `frameOutlines` draw nothing.
+ */
+export function drawOpeningFrameOutlines(opening: OpeningEntity, dc: OverlayDrawContext): void {
+  const frames = opening.geometry?.frameOutlines;
+  if (!frames || frames.length === 0) return;
+  const { ctx } = dc;
+  ctx.save();
+  ctx.lineWidth = dc.lineWidth;
+  ctx.setLineDash([]);
+  for (const poly of frames) {
+    const vtx = poly.vertices;
+    if (!vtx || vtx.length < 3) continue;
+    worldPolyline(dc, [...vtx, vtx[0]]);
+  }
+  ctx.restore();
+}
+
 // ─── Frame helper ────────────────────────────────────────────────────────────
 
 function frameOf(opening: OpeningEntity): OutlineFrame | null {

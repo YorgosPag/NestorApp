@@ -34,6 +34,8 @@ import type { RibbonButton, RibbonCommand, RibbonTab } from '../types/ribbon-typ
 import type { ColumnKind } from '../../../bim/types/column-types';
 import { columnDrawKindAction } from '../hooks/bridge/column-command-keys';
 import { COLUMN_KIND_OPTIONS } from './contextual-column-tab';
+// ADR-615 — free-standing (self-hosted) opening placement tool commandKey SSoT.
+import { SELF_OPENING_TOOL_COMMAND_KEY } from '../hooks/bridge/opening-command-keys';
 // SSoT — LARGE ribbon-button factories (πρώην local· εξήχθησαν αφού τα wall tools
 // μοιράζονται τους ίδιους helpers με το contextual-wall-tab, ADR-443 §wall-entry-split).
 import { toolBtn, actionBtn, actionVariant, splitActionBtn } from './ribbon-large-button-helpers';
@@ -165,6 +167,11 @@ export const STRUCTURAL_TAB: RibbonTab = {
             toolBtn('structuralTab.slab', 'ribbon.commands.bim.slab.label', 'bim-slab', 'slab', 'SL'),
             toolBtn('structuralTab.slabOpening', 'ribbon.commands.bim.slabOpening.label', 'bim-slab-opening', 'slab-opening', 'SO'),
             toolBtn('structuralTab.opening', 'ribbon.commands.bim.opening.label', 'bim-opening', 'opening', 'OP'),
+            // ADR-615 — «Ελεύθερη τοποθέτηση κουφώματος»: self-hosted opening (no BIM
+            // wall required) — sibling entry point next to the wall-hosted «Κούφωμα»
+            // above. Activates the (later-track) `useSelfOpeningTool` FSM via the SAME
+            // `activeTool`/commandKey gate as every other structural tool here.
+            toolBtn('structuralTab.selfOpening', 'ribbon.commands.bim.selfOpening.label', 'bim-opening-freestanding', SELF_OPENING_TOOL_COMMAND_KEY),
             // ADR-441 Slice GEN-SLAB — «Πλάκες από κάναβο»: one-shot actions. Εδαφόπλακα =
             // ΕΝΑ ενιαίο σε όλο το αποτύπωμα· δάπεδα/οροφές = ΠΟΛΛΑ (ένα ανά φάτνωμα).
             actionBtn('structuralTab.slabMatFromGrid', 'ribbon.commands.bim.slabMatFromGrid.label', 'bim-slab-mat-from-grid', 'slab.actions.fromGridMat', 'slab.actions.fromGridMat'),

@@ -74,6 +74,7 @@ export function useRibbonCommands({
   furnitureBridge,
   floorplanSymbolBridge,
   annotationSymbolBridge,
+  scaleBarBridge,
   mepFixtureLibraryBridge,
   mepRiserBridge,
   lineToolBridge,
@@ -103,7 +104,7 @@ export function useRibbonCommands({
     foundationBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge,
     electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge,
     mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge,
-    annotationSymbolBridge, mepFixtureLibraryBridge, mepRiserBridge, arrayBridge,
+    annotationSymbolBridge, scaleBarBridge, mepFixtureLibraryBridge, mepRiserBridge, arrayBridge,
     lineToolBridge, dimBridge, xlineModeBridge,
   };
   const routeTables = React.useMemo(

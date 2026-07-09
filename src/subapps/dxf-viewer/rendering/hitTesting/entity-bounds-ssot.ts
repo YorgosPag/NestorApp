@@ -39,6 +39,9 @@ import { projectSceneTextToDxf, type TextSceneShape } from '../../bim/text/proje
 import { resolveTextBox } from '../../bim/text/text-box';
 import { computeScaleBarGeometry } from '../../bim/geometry/scale-bar-geometry';
 import type { ScaleBarEntity } from '../../types/scale-bar';
+// ADR-612 — opening info tag broad-phase bbox SSoT (sibling of scale-bar).
+import { calculateOpeningInfoTagBounds } from '../../bim/opening-info-tag/opening-info-tag-hit';
+import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
 import { RECT_CORNERS, rectCornerWorld } from '../../bim/grips/rect-frame';
 
 /** Axis-aligned 2D bounding box (the canonical hit-test/bounds shape). */
@@ -177,6 +180,16 @@ function scaleBarBounds(entity: Entity): BoundingBox2D | null {
 }
 
 /**
+ * ADR-612 — opening info tag: the rotation-aware world-mm box AABB
+ * (`computeOpeningInfoTagGeometry`, sibling of `scaleBarBounds`). Makes the
+ * tag window/crossing-marquee selectable.
+ */
+function openingInfoTagBounds(entity: Entity): BoundingBox2D | null {
+  const bbox = calculateOpeningInfoTagBounds(entity as unknown as OpeningInfoTagEntity);
+  return { minX: bbox.minX, minY: bbox.minY, maxX: bbox.maxX, maxY: bbox.maxY };
+}
+
+/**
  * Per-type bounds provider registry — ONE canonical dispatch table for the whole
  * bounds/hit-test layer. Keyed by `EntityType`; a missing key ⇒ genuinely
  * unbounded (resolver returns `null`, no console noise).
@@ -204,6 +217,8 @@ export const ENTITY_BOUNDS_PROVIDERS: Partial<Record<EntityType, (entity: Entity
   'annotation-symbol': viaBoundsCalculator,
   // ── ADR-583 Φ2.4 — graphic scale-bar: derived length-extent bbox (marquee-selectable) ──
   'scale-bar': scaleBarBounds,
+  // ── ADR-612 — opening info tag: rotation-aware world-mm box AABB (marquee-selectable) ──
+  'opening-info-tag': openingInfoTagBounds,
   // ── BIM parametric (via calculateBimEntity2DBounds) ──
   wall: bimBounds,
   opening: bimBounds,

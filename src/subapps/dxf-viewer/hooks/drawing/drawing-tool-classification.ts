@@ -28,10 +28,23 @@ export const ENTITY_TOOLS: ReadonlySet<DrawingTool> = new Set([
   'scale-bar',
 ]);
 
+/**
+ * ADR-612 — SINGLE-CLICK entity-creating tools that still ride the unified drawing
+ * accumulator (`isEntityComplete` in drawing-entity-builders.ts completes them after
+ * exactly 1 point). Kept SEPARATE from `ENTITY_TOOLS` (multi-click tools like
+ * scale-bar/line/hatch) purely for click-count documentation — both sets feed the
+ * SAME `getEffectiveLevelId` fallback below.
+ */
+export const SINGLE_CLICK_ENTITY_TOOLS: ReadonlySet<DrawingTool> = new Set([
+  'opening-info-tag',
+]);
+
 /** Resolves the level ID for entity placement (fallback to "0" for known tools) */
 export function getEffectiveLevelId(tool: DrawingTool, currentLevelId: string | null): string | null {
   if (currentLevelId) return currentLevelId;
-  return (MEASUREMENT_TOOLS.has(tool) || ENTITY_TOOLS.has(tool)) ? '0' : null;
+  return (MEASUREMENT_TOOLS.has(tool) || ENTITY_TOOLS.has(tool) || SINGLE_CLICK_ENTITY_TOOLS.has(tool))
+    ? '0'
+    : null;
 }
 
 /** Removes the last point if it duplicates the previous one (distance < 1px from double-click) */

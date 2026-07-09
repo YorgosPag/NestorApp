@@ -104,17 +104,42 @@ export function resolveMoveGlyphFrame(entity: Entity): MoveGlyphFrame | null {
     return fromAxis(line.end.x - line.start.x, line.end.y - line.start.y);
   }
 
-  // ADR-557 — Text / MText: no `params`; the planar orientation lives in the
-  // TOP-LEVEL `rotation` field (degrees, world CCW), like a box entity. So the
-  // 4-arrow MOVE cross rotates with the text AND the per-arm directional
-  // move-by-value runs along the text's local axes — parity with the column's
-  // centre MOVE. Default 0 → identity (world-aligned), matching un-rotated text.
-  // NOTE: this same frame's major axis also seeds the deterministic rotation
-  // reference baseline via `resolveRotateReferenceAnchor` (one SSoT, two uses).
+  // ADR-557 / ADR-583 — Text / MText / annotation-symbol: no `params`; the planar
+  // orientation lives in the TOP-LEVEL `rotation` field (degrees, world CCW), like a box
+  // entity. So the 4-arrow MOVE cross rotates with the glyph AND the per-arm directional
+  // move-by-value runs along its local axes — parity with the column's centre MOVE. Default
+  // 0 → identity (world-aligned), matching an un-rotated glyph. NOTE: this same frame's major
+  // axis ALSO seeds the deterministic rotation reference baseline via
+  // `resolveRotateReferenceAnchor` (one SSoT, two uses) — so an annotation-symbol rotated about
+  // a picked centre draws its ghost reference axis COAXIAL with the symbol's faces (its local
+  // ±X), never the arbitrary first-move baseline (Giorgio 2026-07-09: «ο άξονας-φάντασμα πάντα
+  // στοιχισμένος οριζόντια/κάθετα με τις παρειές, να μην αποκλίνει»).
   const txt = entity as { type?: string; rotation?: number };
-  if (txt.type === 'text' || txt.type === 'mtext') {
+  if (txt.type === 'text' || txt.type === 'mtext' || txt.type === 'annotation-symbol') {
     const rot = typeof txt.rotation === 'number' && Number.isFinite(txt.rotation) ? txt.rotation : 0;
     return fromAngleRad(rot * DEG_TO_RAD);
+  }
+
+  // ADR-583 Φ3 — graphic scale-bar: no `params`; its planar orientation is the TOP-LEVEL
+  // `angleRad` (RADIANS, world CCW — not degrees). A frame from it keeps the rotation-about-a-
+  // picked-centre ghost reference axis COAXIAL with the bar's length (its faces), the SAME SSoT
+  // the annotation-symbol/text use (`resolveRotateReferenceAnchor`). Default 0 → identity.
+  const bar = entity as { type?: string; angleRad?: number };
+  if (bar.type === 'scale-bar') {
+    const rad = typeof bar.angleRad === 'number' && Number.isFinite(bar.angleRad) ? bar.angleRad : 0;
+    return fromAngleRad(rad);
+  }
+
+  // ADR-612 Φ2 — opening-info-tag: no `params`; its planar orientation is the TOP-LEVEL `angleRad`
+  // (RADIANS, world CCW), exactly like the scale-bar. A frame from it (a) rotates the 4-arrow MOVE
+  // cross with the box AND (b) keeps the rotation-about-a-picked-centre ghost reference axis COAXIAL
+  // with the box's edges (its faces) via `resolveRotateReferenceAnchor` — the SAME SSoT text/scale-bar
+  // use — so the axis-ghost is ALWAYS in full alignment with the sides, never at an arbitrary angle
+  // (Giorgio 2026-07-09: «ο άξονας-φάντασμα πάντα σε πλήρη ταύτιση με τις πλευρές»). Default 0 → identity.
+  const tag = entity as { type?: string; angleRad?: number };
+  if (tag.type === 'opening-info-tag') {
+    const rad = typeof tag.angleRad === 'number' && Number.isFinite(tag.angleRad) ? tag.angleRad : 0;
+    return fromAngleRad(rad);
   }
 
   // ADR-561 — plain DXF primitives (circle / arc / polyline; rectangle/rect/lwpolyline

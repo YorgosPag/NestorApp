@@ -60,9 +60,9 @@ describe('Grip-producer capability coverage — ζωντανό seam ↔ descript
     const withProducer = RENDERABLE_ENTITY_TYPES.filter((t) => supportedSet.has(t));
     expect(asSorted(withProducer)).toEqual(
       asSorted([
-        // DXF primitives (12)
+        // DXF primitives (13)
         'line', 'polyline', 'circle', 'arc', 'text', 'dimension', 'angle-measurement',
-        'hatch', 'xline', 'ray', 'annotation-symbol', 'scale-bar',
+        'hatch', 'xline', 'ray', 'annotation-symbol', 'scale-bar', 'opening-info-tag',
         // BIM (19 — όλα εκτός railing/wall-covering/thermal-space/space-separator/mep-fitting)
         'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair',
         'roof', 'floor-finish', 'furniture', 'mep-fixture', 'electrical-panel', 'mep-manifold',

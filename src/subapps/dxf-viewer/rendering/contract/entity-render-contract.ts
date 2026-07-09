@@ -98,6 +98,8 @@ export const ENTITY_RENDER_CONTRACTS: Readonly<
   'annotation-symbol': dxf('annotation-symbol'),
   // ADR-583 Φ2 — graphic scale-bar: dedicated non-BIM annotation, 2D canvas only.
   'scale-bar': dxf('scale-bar'),
+  // ADR-612 — opening info tag: dedicated non-BIM annotation, 2D canvas only.
+  'opening-info-tag': dxf('opening-info-tag'),
 
   // ── BIM — bespoke 3D (cross-entity host context) ──
   wall: bespoke('wall', true), // 3D placement ghost: WallPlacementGhost

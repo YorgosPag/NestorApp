@@ -405,6 +405,27 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
         <rect x="16.5" y="10" width="4.5" height="4" fill="none" />
       </>
     ));
+    // ADR-612 — opening info tag: 3-cell box glyph (outer rect + full-width mid divider +
+    // bottom-half vertical divider) — mirrors the on-canvas layout (top cell full width,
+    // bottom split in two).
+    case 'opening-info-tag': return inlineSvg(size, (
+      <>
+        <rect x="4" y="5" width="16" height="14" fill="none" />
+        <line x1="4" y1="12" x2="20" y2="12" />
+        <line x1="12" y1="12" x2="12" y2="19" />
+      </>
+    ));
+    // ADR-615 — free-standing (self-hosted) opening placement: a door-leaf glyph
+    // sitting on a DASHED baseline (vs the solid host-wall baseline implied by the
+    // regular `bim-opening` DoorOpen icon) — visually communicates "no BIM wall".
+    case 'bim-opening-freestanding': return inlineSvg(size, (
+      <>
+        <path d="M5 20 L5 4 L15 6 L15 20" fill="none" />
+        <path d="M15 12.5 A4 4 0 0 0 11 8.5" fill="none" />
+        <line x1="2" y1="20" x2="9" y2="20" strokeDasharray="2.5 2" />
+        <line x1="15" y1="20" x2="22" y2="20" strokeDasharray="2.5 2" />
+      </>
+    ));
     default: return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
   }
 };

@@ -396,6 +396,22 @@ export function convertDxfEntityToEntityModel(entity: DxfEntityUnion): EntityMod
         barHeightMm: s.barHeightMm, labelHeightMm: s.labelHeightMm, labelPlacement: s.labelPlacement,
       } as unknown as EntityModel;
     }
+    // ADR-612 — opening info tag (sibling of scale-bar): a lightweight DIRECT
+    // entity carrying the flat position/angle/width/text params at top level.
+    // Without this case it fell to `default`, which strips them → the tag never
+    // enters the spatial index → hover-highlight + click-selection silently fail.
+    case 'opening-info-tag': {
+      type OpeningInfoTagLike = {
+        position?: { x: number; y: number }; angleRad?: number; widthMm?: number;
+        topText?: string; bottomLeftText?: string; bottomRightText?: string;
+      };
+      const o = entity as unknown as OpeningInfoTagLike;
+      return {
+        ...baseModel, type: 'opening-info-tag',
+        position: o.position, angleRad: o.angleRad, widthMm: o.widthMm,
+        topText: o.topText, bottomLeftText: o.bottomLeftText, bottomRightText: o.bottomRightText,
+      } as unknown as EntityModel;
+    }
     default: {
       return { ...baseModel } as unknown as EntityModel;
     }

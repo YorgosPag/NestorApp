@@ -142,6 +142,13 @@ export function calculateMovedGeometry(entity: SceneEntity, delta: Point3D): Par
     return { position: translatePoint((e as unknown as { position: Point2D }).position, delta) };
   }
 
+  // ADR-612 — opening info tag (πινακίδα ανοίγματος): lightweight position-anchored box
+  // (position = box centre). Rigid translate of the centre (mirror scale-bar); the derived
+  // cell rects / worldCorners / bbox follow. Covers the MOVE tool + the 4-arrow MOVE grip.
+  if (entity.type === 'opening-info-tag' && 'position' in e) {
+    return { position: translatePoint((e as unknown as { position: Point2D }).position, delta) };
+  }
+
   // ADR-575 — GROUP container: moving the group moves every member. Recurse the
   // SAME geometry SSoT per member (handles nested groups too), so the container
   // never needs to know each primitive's geometry shape.

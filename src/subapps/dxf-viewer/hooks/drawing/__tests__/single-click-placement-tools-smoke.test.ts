@@ -1,5 +1,5 @@
 /**
- * ADR-600 — Import smoke for the 8 single-click placement tools migrated to the
+ * ADR-600 — Import smoke for the single-click placement tools built on the
  * `createSingleClickPlacementTool` factory.
  *
  * Cheap module-graph guard: every migrated call-site must still export its named
@@ -17,6 +17,8 @@ import { useMepFixtureTool } from '../useMepFixtureTool';
 import { useElectricalPanelTool } from '../useElectricalPanelTool';
 import { useFurnitureTool } from '../useFurnitureTool';
 import { useFloorplanSymbolTool } from '../useFloorplanSymbolTool';
+// ADR-615 — self-hosted (free-standing) opening tool, built on the same factory.
+import { useSelfOpeningTool } from '../useSelfOpeningTool';
 
 const MIGRATED_TOOLS = {
   useMepRadiatorTool,
@@ -27,12 +29,13 @@ const MIGRATED_TOOLS = {
   useElectricalPanelTool,
   useFurnitureTool,
   useFloorplanSymbolTool,
+  useSelfOpeningTool,
 };
 
 describe('ADR-600 — migrated placement tools export their named hook', () => {
-  it('exposes all 8 call-sites as functions', () => {
+  it('exposes all 9 call-sites as functions', () => {
     const entries = Object.entries(MIGRATED_TOOLS);
-    expect(entries).toHaveLength(8);
+    expect(entries).toHaveLength(9);
     for (const [name, hook] of entries) {
       expect(typeof hook).toBe('function');
       expect(name.startsWith('use')).toBe(true);

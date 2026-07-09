@@ -43,6 +43,9 @@ export const DXF_RENDERABLE_TYPES = [
   // ADR-583 Φ2 — graphic scale-bar: dedicated non-BIM annotation (sibling of
   // dimension/center-mark), 2D canvas only (no per-type 3D mesh).
   'scale-bar',
+  // ADR-612 — opening info tag: dedicated non-BIM annotation (sibling of scale-bar),
+  // 2D canvas only (no per-type 3D mesh).
+  'opening-info-tag',
 ] as const;
 
 /** BIM (parametric model) renderable types — 2D κάτοψη ± 3D solid. */

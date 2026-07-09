@@ -472,6 +472,10 @@
       "duplicateWarning": "Το Mark υπάρχει ήδη σε άλλο άνοιγμα του ορόφου.",
       "markLabel": "Mark",
       "layerName": "Ταμπελάκια Ανοιγμάτων"
+    },
+    "infoTag": {
+      "entityName": "Πινακίδα Ανοίγματος",
+      "editorPlaceholder": ""
     }
   }
 }

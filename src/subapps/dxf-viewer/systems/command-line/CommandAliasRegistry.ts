@@ -212,6 +212,9 @@ const BUILT_IN: ReadonlyArray<readonly [string, ToolType]> = [
   // ── Graphic scale-bar (ADR-583 Φ2) — dedicated entity, generic 2-click tool ──
   ['SCALEBAR',    'scale-bar'],
   ['SB',          'scale-bar'],
+  // ── Opening info tag (ADR-612) — dedicated entity, generic single-click tool ──
+  ['OPENINGTAG',  'opening-info-tag'],
+  ['OTAG',        'opening-info-tag'],
 ] as const;
 
 // Build lookup map (uppercase → toolId). Built-ins loaded once at module init.

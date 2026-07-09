@@ -21,9 +21,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isOpeningEntity } from '../../../types/entities';
 import type { OpeningEntity, OpeningKind, OpeningParams } from '../../../bim/types/opening-types';
-import { useCommandHistory } from '../../../core/commands';
-import { UpdateOpeningParamsCommand } from '../../../core/commands/entity-commands/UpdateOpeningParamsCommand';
-import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import { markAllCanvasDirty } from '../../../rendering/core/UnifiedFrameScheduler';
 import {
   OPENING_RIBBON_KEYS,
@@ -34,7 +31,13 @@ import {
   isOpeningRibbonStringKey,
   isOpeningTagStyleComboboxKey,
   isOpeningTypeGovernedComboboxKey,
+  isOpeningFrameProfileKey,
 } from './bridge/opening-command-keys';
+import {
+  resolveOpeningFrameProfileComboboxState,
+  buildOpeningFrameProfileParamsPatch,
+} from './bridge/opening-frame-profile-bridge';
+import { useOpeningParamsDispatcher } from './bridge/useOpeningParamsDispatcher';
 import { PSET_RIBBON_ACTION } from './bridge/pset-action-keys';
 import {
   getOpeningTagStyleService,
@@ -48,6 +51,7 @@ import type {
   RibbonComboboxState,
   RibbonToggleState,
 } from '../context/RibbonCommandContext';
+import type { RibbonBridgeCore } from './bridge/ribbon-bridge-core';
 import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
 
@@ -61,15 +65,9 @@ export interface UseRibbonOpeningBridgeProps {
   readonly universalSelection: UniversalSelectionLike;
 }
 
-export interface RibbonOpeningBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
-  readonly getToggleState: (commandKey: string) => RibbonToggleState;
+export interface RibbonOpeningBridge extends RibbonBridgeCore {
   /** Returns `true` when the currently selected opening has code violations. */
   readonly getBadgeState: (badgeKey: string) => boolean;
-  /** Handles ribbon simple-button actions (close / delete). */
-  readonly onAction: (action: string) => void;
 }
 
 const OPENING_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
@@ -95,9 +93,9 @@ export function useRibbonOpeningBridge(
   props: UseRibbonOpeningBridgeProps,
 ): RibbonOpeningBridge {
   const { levelManager, universalSelection } = props;
-  const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
   const ribbonDelete = useRibbonEntityDelete({ levelManager, universalSelection });
+  const dispatchOpeningParams = useOpeningParamsDispatcher({ levelManager });
 
   // React state mirror of leaderVisible — causes ribbon toggle button to
   // re-render when the service changes (sidebar dialog / ribbon both write).
@@ -122,25 +120,20 @@ export function useRibbonOpeningBridge(
   }, [levelManager, universalSelection]);
 
   /**
-   * Dispatch the params patch through `UpdateOpeningParamsCommand` so the
-   * change is undoable + geometry/validation recompute atomically against
-   * the live host wall. `useOpeningPersistence` picks up the patched entity
-   * via debounced auto-save.
+   * Dispatch the params patch through `UpdateOpeningParamsCommand` (via the
+   * shared `useOpeningParamsDispatcher` SSoT) so the change is undoable +
+   * geometry/validation recompute atomically against the live host wall.
+   * `useOpeningPersistence` picks up the patched entity via debounced
+   * auto-save. The `bim:opening-params-updated` emit is this bridge's own
+   * concern (drives ribbon-adjacent listeners), kept here rather than in the
+   * shared dispatcher.
    */
   const dispatchParams = useCallback(
     (opening: OpeningEntity, nextParams: OpeningParams): void => {
-      if (!levelManager.currentLevelId) return;
-      const sm = createLevelSceneManagerAdapter(
-        levelManager.getLevelScene,
-        levelManager.setLevelScene,
-        levelManager.currentLevelId,
-      );
-      executeCommand(
-        new UpdateOpeningParamsCommand(opening.id, nextParams, opening.params, sm, false),
-      );
+      dispatchOpeningParams(opening, nextParams);
       EventBus.emit('bim:opening-params-updated', { openingId: opening.id });
     },
-    [executeCommand, levelManager],
+    [dispatchOpeningParams],
   );
 
   const getComboboxState = useCallback(
@@ -152,6 +145,12 @@ export function useRibbonOpeningBridge(
       // editable only via «Edit type». Untyped openings stay fully editable.
       const disabled =
         opening.typeId != null && isOpeningTypeGovernedComboboxKey(commandKey);
+      // ADR-611 — frame profile editor (manufacturer/profile/faceWidth/depth).
+      // Instance-owned (never type-governed) — stays editable regardless of
+      // `opening.typeId`, mirroring `sillHeight`/`handing`.
+      if (isOpeningFrameProfileKey(commandKey)) {
+        return resolveOpeningFrameProfileComboboxState(commandKey, opening);
+      }
       if (isOpeningRibbonStringKey(commandKey)) {
         const field = STRING_KEY_TO_FIELD[commandKey];
         const raw = opening.params[field];
@@ -205,6 +204,13 @@ export function useRibbonOpeningBridge(
       // («type wins»), silently dropping the user's edit. UI gating already
       // disables these comboboxes; this guards against programmatic calls.
       if (opening.typeId != null && isOpeningTypeGovernedComboboxKey(commandKey)) {
+        return;
+      }
+
+      // ADR-611 — frame profile editor writes (see resolver comment above).
+      if (isOpeningFrameProfileKey(commandKey)) {
+        const nextParams = buildOpeningFrameProfileParamsPatch(commandKey, value, opening);
+        if (nextParams) dispatchParams(opening, nextParams);
         return;
       }
 

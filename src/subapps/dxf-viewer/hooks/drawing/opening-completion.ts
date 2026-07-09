@@ -19,10 +19,11 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimValidation, Point3D } from '../../bim/types/bim-base';
 import { quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap'; // scalar round-to-increment SSoT
 import type {
   OpeningEntity,
+  OpeningGeometry,
   OpeningKind,
   OpeningParams,
 } from '../../bim/types/opening-types';
@@ -38,6 +39,7 @@ import { validateOpeningParams } from '../../bim/validators/opening-validator';
 import { createOpening } from '@/services/factories/opening.factory';
 import { resolveAutoOpeningTypeId } from '../../bim/family-types/auto-opening-type';
 import type { SceneUnits } from '../../utils/scene-units';
+import { DEFAULT_SELF_HOST_THICKNESS_MM, selfOpeningHost } from '../../bim/geometry/opening-host';
 
 export type { SceneUnits };
 
@@ -59,9 +61,56 @@ export interface OpeningParamOverrides {
   readonly handing?: OpeningParams['handing'];
   readonly openDirection?: OpeningParams['openDirection'];
   readonly glazingPanes?: OpeningParams['glazingPanes'];
+  /**
+   * ADR-615 — "wall thickness" a self-hosted (free-standing) opening symbol
+   * shows. Ignored for wall-hosted builders. Defaults to
+   * `DEFAULT_SELF_HOST_THICKNESS_MM`.
+   */
+  readonly hostThicknessMm?: number;
 }
 
 // ─── Defaults factory ────────────────────────────────────────────────────────
+
+/**
+ * Resolve kind + width/height/sill from `OPENING_KIND_DEFAULTS` + overrides.
+ * SSoT shared by `buildDefaultOpeningParams` (wall-hosted) AND
+ * `buildDefaultSelfOpeningParams` (ADR-615 self-hosted) — both kind-default
+ * resolution AND the resulting param field OVERLAY (frameWidth / handing /
+ * openDirection / glazingPanes) are byte-identical regardless of host.
+ */
+function resolveOpeningKindDimensions(
+  overrides: OpeningParamOverrides,
+): { kind: OpeningKind; width: number; height: number; sillHeight: number } {
+  const kind = overrides.kind ?? 'door';
+  const defaults = OPENING_KIND_DEFAULTS[kind];
+  return {
+    kind,
+    width: overrides.width ?? defaults.width,
+    height: overrides.height ?? defaults.height,
+    sillHeight: overrides.sillHeight ?? defaults.sillHeight,
+  };
+}
+
+/**
+ * Field overlay shared by every opening builder regardless of host
+ * (wall-hosted or self-hosted, ADR-615): frame width default + hinged-kind
+ * handing/openDirection defaults + optional glazingPanes.
+ */
+function buildOpeningFieldOverlay(
+  kind: OpeningKind,
+  overrides: OpeningParamOverrides,
+): Pick<OpeningParams, 'frameWidth' | 'handing' | 'openDirection' | 'glazingPanes'> {
+  return {
+    frameWidth: DEFAULT_FRAME_WIDTH_MM,
+    ...(isHingedKind(kind)
+      ? {
+          handing: overrides.handing ?? 'left',
+          openDirection: overrides.openDirection ?? 'inward',
+        }
+      : {}),
+    ...(overrides.glazingPanes !== undefined ? { glazingPanes: overrides.glazingPanes } : {}),
+  };
+}
 
 /**
  * Build `OpeningParams` από host wall + click point + optional overrides.
@@ -79,11 +128,7 @@ export function buildDefaultOpeningParams(
   overrides: OpeningParamOverrides = {},
   sceneUnits: SceneUnits = 'mm',
 ): OpeningParams {
-  const kind = overrides.kind ?? 'door';
-  const defaults = OPENING_KIND_DEFAULTS[kind];
-  const width = overrides.width ?? defaults.width;
-  const height = overrides.height ?? defaults.height;
-  const sillHeight = overrides.sillHeight ?? defaults.sillHeight;
+  const { kind, width, height, sillHeight } = resolveOpeningKindDimensions(overrides);
 
   // ADR-370 — host-relative offset in mm (`offsetFromStart` contract). The SSoT
   // `projectPointToWallOffsetMm` normalises the scene-unit projection → mm, so
@@ -93,23 +138,15 @@ export function buildDefaultOpeningParams(
   const wallLengthMm = hostWall.geometry.length * 1000;
   const clampedOffset = clampOffset(snappedOffset, width, wallLengthMm);
 
-  const params: OpeningParams = {
+  return {
     kind,
     wallId: hostWall.id,
     offsetFromStart: clampedOffset,
     width,
     height,
     sillHeight,
-    frameWidth: DEFAULT_FRAME_WIDTH_MM,
-    ...(isHingedKind(kind)
-      ? {
-          handing: overrides.handing ?? 'left',
-          openDirection: overrides.openDirection ?? 'inward',
-        }
-      : {}),
-    ...(overrides.glazingPanes !== undefined ? { glazingPanes: overrides.glazingPanes } : {}),
+    ...buildOpeningFieldOverlay(kind, overrides),
   };
-  return params;
 }
 
 // ─── Entity builder ──────────────────────────────────────────────────────────
@@ -117,6 +154,30 @@ export function buildDefaultOpeningParams(
 export type BuildOpeningEntityResult =
   | { readonly ok: true; readonly entity: OpeningEntity }
   | { readonly ok: false; readonly hardErrors: readonly string[] };
+
+/**
+ * Assemble the final `OpeningEntity` from already-computed `params + geometry
+ * + validation`. SSoT shared by `buildOpeningEntity` (wall-hosted) AND
+ * `buildSelfOpeningEntity` (ADR-615 self-hosted) — `createOpening()` +
+ * auto-type-on-create resolution (`resolveAutoOpeningTypeId`) is identical
+ * regardless of host; only geometry/validation computation differs upstream.
+ */
+function assembleOpeningEntity(
+  params: Readonly<OpeningParams>,
+  geometry: OpeningGeometry,
+  layerId: string,
+  bimValidation: BimValidation,
+): BuildOpeningEntityResult {
+  const entity = createOpening({ params, geometry, layerId, validation: bimValidation, visible: true });
+  // ADR-421 SLICE C follow-up — auto-type-on-create (Revit «Generic»): an opening
+  // whose nominal kind+width+height equal the kind default links to the read-only
+  // built-in opening type, so it gains «Edit Type» + «type always wins» for free.
+  // Custom-dimensioned openings stay ad-hoc (`undefined`) and flow through the
+  // legacy fast-path of `resolveEffectiveOpeningParams` (non-destructive, zero
+  // regression). Resolution + persistence already carry `typeId` — no extra wiring.
+  const typeId = resolveAutoOpeningTypeId(params);
+  return { ok: true, entity: typeId ? { ...entity, typeId } : entity };
+}
 
 /**
  * Build an `OpeningEntity` από `OpeningParams + hostWall`. Geometry computed
@@ -133,15 +194,7 @@ export function buildOpeningEntity(
     return { ok: false, hardErrors: validation.hardErrors };
   }
   const geometry = computeOpeningGeometry(params, hostWall, sceneUnits);
-  const entity = createOpening({ params, geometry, layerId, validation: validation.bimValidation, visible: true });
-  // ADR-421 SLICE C follow-up — auto-type-on-create (Revit «Generic»): an opening
-  // whose nominal kind+width+height equal the kind default links to the read-only
-  // built-in opening type, so it gains «Edit Type» + «type always wins» for free.
-  // Custom-dimensioned openings stay ad-hoc (`undefined`) and flow through the
-  // legacy fast-path of `resolveEffectiveOpeningParams` (non-destructive, zero
-  // regression). Resolution + persistence already carry `typeId` — no extra wiring.
-  const typeId = resolveAutoOpeningTypeId(params);
-  return { ok: true, entity: typeId ? { ...entity, typeId } : entity };
+  return assembleOpeningEntity(params, geometry, layerId, validation.bimValidation);
 }
 
 // ─── Click-to-place completion helper ────────────────────────────────────────
@@ -160,6 +213,76 @@ export function completeOpeningFromHostClick(
 ): BuildOpeningEntityResult {
   const params = buildDefaultOpeningParams(hostWall, clickPoint, overrides, sceneUnits);
   return buildOpeningEntity(params, hostWall, layerId, sceneUnits);
+}
+
+// ─── Self-hosted (free-standing) builders — ADR-615 ──────────────────────────
+
+/**
+ * Build `OpeningParams` for a **self-hosted** (free-standing, no BIM wall)
+ * opening — placed directly on imported DXF lines. Mirrors
+ * `buildDefaultOpeningParams` (kind/width/height/sill defaults, frame width,
+ * handing/openDirection/glazingPanes overrides) but sets `selfHost` instead
+ * of `wallId`, and `offsetFromStart` is always 0 (the host IS the opening —
+ * ADR-615 §Decision 2).
+ */
+export function buildDefaultSelfOpeningParams(
+  anchor: Point3D,
+  rotationRad: number,
+  overrides: OpeningParamOverrides = {},
+): OpeningParams {
+  const { kind, width, height, sillHeight } = resolveOpeningKindDimensions(overrides);
+
+  return {
+    kind,
+    selfHost: {
+      anchor,
+      rotationRad,
+      hostThicknessMm: overrides.hostThicknessMm ?? DEFAULT_SELF_HOST_THICKNESS_MM,
+    },
+    offsetFromStart: 0,
+    width,
+    height,
+    sillHeight,
+    ...buildOpeningFieldOverlay(kind, overrides),
+  };
+}
+
+/**
+ * Build an `OpeningEntity` for a self-hosted opening from `OpeningParams`
+ * alone — no `WallEntity` involved. Geometry via the SAME SSoT
+ * `computeOpeningGeometry()`, fed a synthetic `OpeningHost`
+ * (`selfOpeningHost()`, ADR-615 §Decision 1). Validation uses `hostWall =
+ * null` (`validateAgainstHost` already early-returns for the host-less case).
+ */
+export function buildSelfOpeningEntity(
+  params: Readonly<OpeningParams>,
+  layerId: string,
+  sceneUnits: SceneUnits = 'mm',
+): BuildOpeningEntityResult {
+  const validation = validateOpeningParams(params, null);
+  if (validation.hardErrors.length > 0) {
+    return { ok: false, hardErrors: validation.hardErrors };
+  }
+  const geometry = computeOpeningGeometry(params, selfOpeningHost(params, sceneUnits), sceneUnits);
+  return assembleOpeningEntity(params, geometry, layerId, validation.bimValidation);
+}
+
+/**
+ * High-level helper bridging the self-host placement tool (ADR-615 §Decision 3,
+ * `createSingleClickPlacementTool`) and the builder pipeline. Pure — no side
+ * effects. `rotationRad` is the snapped orientation from the underlying DXF
+ * line (or ribbon override / 0 fallback) — resolved by the caller.
+ */
+export function completeSelfOpeningFromClick(
+  clickPoint: Readonly<Point2D>,
+  rotationRad: number,
+  layerId: string,
+  overrides: OpeningParamOverrides = {},
+  sceneUnits: SceneUnits = 'mm',
+): BuildOpeningEntityResult {
+  const anchor: Point3D = { x: clickPoint.x, y: clickPoint.y, z: 0 };
+  const params = buildDefaultSelfOpeningParams(anchor, rotationRad, overrides);
+  return buildSelfOpeningEntity(params, layerId, sceneUnits);
 }
 
 // ─── Internal helpers ────────────────────────────────────────────────────────

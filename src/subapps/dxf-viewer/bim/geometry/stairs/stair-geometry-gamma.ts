@@ -20,6 +20,11 @@
  * `landingCornerStyle: 'chamfer' | 'fillet'` throws with a `/Phase 3c/`
  * sentinel — square corners only in Phase 3b.
  *
+ * ADR-611 — flight 1 (rectilinear) and the two intermediate flights
+ * (edge-origin) delegate to the shared generators; the `StairGeometry`
+ * assembly tail (incl. the cut-plane split that was a local duplicate here)
+ * comes from `stair-geometry-generators.ts`.
+ *
  * @see docs/centralized-systems/reference/adrs/ADR-358-dxf-stair-tool-google-level.md §5.1 §6.2
  */
 
@@ -34,18 +39,17 @@ import type {
   StairVariantGamma,
 } from '../../../bim/types/stair-types';
 import {
-  DEFAULT_CUT_PLANE_HEIGHT,
   type Vec2,
   perp,
   directionToUnitVector,
   point,
   arrowSymbol,
-  bboxOfPolygons,
-  buildCutLineForFlights,
-  buildStringersFromWalkline,
-  buildHandrailsFromParams,
 } from './stair-geometry-shared';
-import { buildTreadLabelsWithLandings } from './stair-geometry-labels';
+import {
+  assembleMultiFlight,
+  buildFlightFromEdge,
+  buildRectilinearFlight,
+} from './stair-geometry-generators';
 
 export function computeGamma(
   params: Readonly<StairParams>,
@@ -65,7 +69,7 @@ export function computeGamma(
   const v2 = perp(u2);
   const u3: Vec2 = { x: turnSign2 * v2.x, y: turnSign2 * v2.y };
 
-  const flight1 = buildGammaFlight1(basePoint, u1, v1, rise, tread, nosing, width, n1);
+  const flight1 = buildRectilinearFlight(basePoint, u1, rise, tread, nosing, width, n1);
   const landing1 = buildGammaLanding(
     { x: basePoint.x + u1.x * (n1 * tread), y: basePoint.y + u1.y * (n1 * tread) },
     u1, perp(u1), width, landing1Depth, basePoint.z + rise * n1, /* centered = */ true,
@@ -74,7 +78,7 @@ export function computeGamma(
     x: basePoint.x + u1.x * (n1 * tread) + v1.x * (turnSign1 * width * 0.5),
     y: basePoint.y + u1.y * (n1 * tread) + v1.y * (turnSign1 * width * 0.5),
   };
-  const flight2 = buildGammaIntermediateFlight(
+  const flight2 = buildFlightFromEdge(
     flight2Origin, u2, u1, rise, tread, nosing, width, n2, basePoint.z + rise * (n1 + 1),
   );
   const landing2Origin: Vec2 = {
@@ -89,7 +93,7 @@ export function computeGamma(
     x: landing2Origin.x + v2.x * (turnSign2 * width * 0.5),
     y: landing2Origin.y + v2.y * (turnSign2 * width * 0.5),
   };
-  const flight3 = buildGammaIntermediateFlight(
+  const flight3 = buildFlightFromEdge(
     flight3Origin, u3, u2, rise, tread, nosing, width, n3,
     basePoint.z + rise * (n1 + n2 + 2),
   );
@@ -103,37 +107,16 @@ export function computeGamma(
   const walkline = buildGammaWalkline(
     basePoint, u1, u2, u3, rise, tread, width, n1, n2, n3,
   );
-  const stringers = buildStringersFromWalkline(walkline, width);
   // ADR-358 Phase 3d hotfix — arrow on FIRST flight segment (see lshape rationale).
-  const arrow = arrowSymbol(walkline[0], walkline[1], upDirection);
-  const cutPlaneHeight = params.cutPlaneHeight ?? DEFAULT_CUT_PLANE_HEIGHT;
-  const split = splitByCutPlane(allTreads, cutPlaneHeight);
-  const cutLine = buildCutLineForFlights(
-    allTreads, [n1, n2, n3], [u1, u2, u3], width, cutPlaneHeight,
-  );
-  const treadLabels = buildTreadLabelsWithLandings(
-    allTreads,
-    [landing1, landing2],
-    [n1, n2, n3],
-    params.treadLabelDisplay,
-    params.treadLabelEveryN,
-    params.treadLabelRestartPerFlight,
-    params.treadNumberStart,
-  );
-  return {
-    treads: split.below,
-    treadsBelowCut: split.below,
-    treadsAboveCut: split.above,
+  return assembleMultiFlight(params, {
+    treads: allTreads,
     risers,
-    stringers,
     walkline,
-    handrails: buildHandrailsFromParams(walkline, params.width, params.handrails),
+    cutDirs: [u1, u2, u3],
+    flightSplit: [n1, n2, n3],
+    arrowSymbol: arrowSymbol(walkline[0], walkline[1], upDirection),
     landings: [landing1, landing2],
-    arrowSymbol: arrow,
-    cutLine,
-    treadLabels,
-    bbox: bboxOfPolygons([...allTreads, landing1, landing2]),
-  };
+  });
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -153,58 +136,6 @@ function assertGammaCornerSupported(variant: StairVariantGamma): void {
       `StairGeometryService: landingCornerStyle '${style}' requires Phase 3c (chamfer/fillet not implemented)`,
     );
   }
-}
-
-function splitByCutPlane(
-  treads: readonly Polygon3D[],
-  cutPlaneHeight: number,
-): { readonly below: readonly Polygon3D[]; readonly above: readonly Polygon3D[] } {
-  const below: Polygon3D[] = [];
-  const above: Polygon3D[] = [];
-  for (const t of treads) {
-    const z = t[0]?.z ?? 0;
-    if (z < cutPlaneHeight) below.push(t); else above.push(t);
-  }
-  return { below, above };
-}
-
-function buildGammaFlight1(
-  basePoint: Readonly<Point3D>,
-  u: Vec2,
-  v: Vec2,
-  rise: number,
-  tread: number,
-  nosing: number,
-  width: number,
-  n1: number,
-): { readonly treads: readonly Polygon3D[]; readonly risers: readonly Segment3D[] } {
-  const halfW = width * 0.5;
-  const depth = tread + nosing;
-  const treads: Polygon3D[] = new Array(n1);
-  for (let i = 0; i < n1; i++) {
-    const along = tread * i;
-    const ox = basePoint.x + u.x * along - v.x * halfW;
-    const oy = basePoint.y + u.y * along - v.y * halfW;
-    const tz = basePoint.z + rise * i;
-    treads[i] = [
-      point(ox, oy, tz),
-      point(ox + u.x * depth, oy + u.y * depth, tz),
-      point(ox + u.x * depth + v.x * width, oy + u.y * depth + v.y * width, tz),
-      point(ox + v.x * width, oy + v.y * width, tz),
-    ];
-  }
-  const risers: Segment3D[] = [];
-  for (let i = 0; i < n1 - 1; i++) {
-    const along = tread * (i + 1);
-    const cx = basePoint.x + u.x * along - v.x * halfW;
-    const cy = basePoint.y + u.y * along - v.y * halfW;
-    // ADR-370 Phase 5.3 — diagonal Segment3D (see StairGeometryService.buildStraightRisers).
-    risers.push({
-      start: point(cx, cy, basePoint.z + rise * i),
-      end: point(cx + v.x * width, cy + v.y * width, basePoint.z + rise * (i + 1)),
-    });
-  }
-  return { treads, risers };
 }
 
 function buildGammaLanding(
@@ -236,49 +167,6 @@ function buildGammaLanding(
     ),
     point(originXY.x + vWidth.x * vHigh, originXY.y + vWidth.y * vHigh, z),
   ];
-}
-
-function buildGammaIntermediateFlight(
-  originXY: Vec2,
-  uAlong: Vec2,
-  vWidth: Vec2,
-  rise: number,
-  tread: number,
-  nosing: number,
-  width: number,
-  n: number,
-  zFirstTread: number,
-): { readonly treads: readonly Polygon3D[]; readonly risers: readonly Segment3D[] } {
-  const depth = tread + nosing;
-  const treads: Polygon3D[] = new Array(n);
-  for (let i = 0; i < n; i++) {
-    const ox = originXY.x + uAlong.x * (tread * i);
-    const oy = originXY.y + uAlong.y * (tread * i);
-    const tz = zFirstTread + rise * i;
-    treads[i] = [
-      point(ox, oy, tz),
-      point(ox + uAlong.x * depth, oy + uAlong.y * depth, tz),
-      point(
-        ox + uAlong.x * depth + vWidth.x * width,
-        oy + uAlong.y * depth + vWidth.y * width,
-        tz,
-      ),
-      point(ox + vWidth.x * width, oy + vWidth.y * width, tz),
-    ];
-  }
-  const risers: Segment3D[] = [];
-  for (let i = 0; i < n - 1; i++) {
-    const along = (i + 1) * tread;
-    const cx = originXY.x + uAlong.x * along;
-    const cy = originXY.y + uAlong.y * along;
-    // ADR-370 Phase 5.3 — diagonal Segment3D. Width axis = vWidth, origin on
-    // one width edge, opposite edge at +vWidth·width.
-    risers.push({
-      start: point(cx, cy, zFirstTread + rise * i),
-      end: point(cx + vWidth.x * width, cy + vWidth.y * width, zFirstTread + rise * (i + 1)),
-    });
-  }
-  return { treads, risers };
 }
 
 function buildGammaWalkline(

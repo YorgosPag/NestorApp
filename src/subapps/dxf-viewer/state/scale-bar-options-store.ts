@@ -17,7 +17,7 @@
  */
 
 import { create } from 'zustand';
-import type { ScaleBarStyle, ScaleBarEntity } from '../types/scale-bar';
+import type { ScaleBarStyle, ScaleBarLabelPlacement, ScaleBarEntity } from '../types/scale-bar';
 import {
   DEFAULT_SCALE_BAR_DIVISIONS,
   DEFAULT_SCALE_BAR_SUBDIVISIONS,
@@ -25,6 +25,7 @@ import {
   DEFAULT_SCALE_BAR_LABEL_MM,
   DEFAULT_SCALE_BAR_UNIT,
   DEFAULT_SCALE_BAR_STYLE,
+  DEFAULT_SCALE_BAR_LABEL_PLACEMENT,
 } from '../types/scale-bar';
 import type { SceneUnits } from '../utils/scene-units';
 import type { Point2D } from '../rendering/types/Types';
@@ -37,12 +38,15 @@ interface ScaleBarOptionsState {
   readonly style: ScaleBarStyle;
   readonly barHeightMm: number;
   readonly labelHeightMm: number;
+  /** ADR-583 Φ3e — numeral side default (ribbon contextual tab, dual-mode). */
+  readonly labelPlacement: ScaleBarLabelPlacement;
   setUnit(unit: SceneUnits): void;
   setDivisions(divisions: number): void;
   setSubdivisions(subdivisions: number): void;
   setStyle(style: ScaleBarStyle): void;
   setBarHeightMm(barHeightMm: number): void;
   setLabelHeightMm(labelHeightMm: number): void;
+  setLabelPlacement(labelPlacement: ScaleBarLabelPlacement): void;
 }
 
 export const useScaleBarOptionsStore = create<ScaleBarOptionsState>((set) => ({
@@ -52,12 +56,14 @@ export const useScaleBarOptionsStore = create<ScaleBarOptionsState>((set) => ({
   style: DEFAULT_SCALE_BAR_STYLE,
   barHeightMm: DEFAULT_SCALE_BAR_HEIGHT_MM,
   labelHeightMm: DEFAULT_SCALE_BAR_LABEL_MM,
+  labelPlacement: DEFAULT_SCALE_BAR_LABEL_PLACEMENT,
   setUnit: (unit) => set({ unit }),
   setDivisions: (divisions) => set({ divisions }),
   setSubdivisions: (subdivisions) => set({ subdivisions }),
   setStyle: (style) => set({ style }),
   setBarHeightMm: (barHeightMm) => set({ barHeightMm }),
   setLabelHeightMm: (labelHeightMm) => set({ labelHeightMm }),
+  setLabelPlacement: (labelPlacement) => set({ labelPlacement }),
 }));
 
 /**
@@ -84,5 +90,6 @@ export function buildScaleBarEntityFromLiveOptions(
     style: opts.style,
     barHeightMm: opts.barHeightMm,
     labelHeightMm: opts.labelHeightMm,
+    labelPlacement: opts.labelPlacement,
   });
 }

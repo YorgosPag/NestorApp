@@ -472,6 +472,10 @@
       "duplicateWarning": "Mark already exists on another opening of this floor.",
       "markLabel": "Mark",
       "layerName": "Opening Tags"
+    },
+    "infoTag": {
+      "entityName": "Opening Info Tag",
+      "editorPlaceholder": ""
     }
   }
 }

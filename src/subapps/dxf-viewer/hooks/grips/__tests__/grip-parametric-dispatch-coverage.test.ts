@@ -2,9 +2,9 @@
  * Parametric-commit dispatch coverage (ADR-587 Φ7 — TIER-2 grip seam B).
  *
  * Δένει το ζωντανό `PARAMETRIC_COMMIT_HANDLERS` seam (`grip-parametric-dispatch.ts`)
- * με το grip discriminator domain (`GRIP_KIND_ENTITIES`, 31), ώστε να μην μπορεί να
+ * με το grip discriminator domain (`GRIP_KIND_ENTITIES`, 33), ώστε να μην μπορεί να
  * αποκλίνει σιωπηλά (mirror του `rotate-entity-coverage.test.ts`):
- *  1. Golden — οι 24 params-driven kinds που δρομολογούνται εδώ (bypass vertex-stretch).
+ *  1. Golden — οι 26 params-driven kinds που δρομολογούνται εδώ (bypass vertex-stretch).
  *  2. Complement — οι 7 non-parametric kinds που ΔΕΝ δρομολογούνται εδώ
  *     (line / circle / arc / polyline / text / group / annotation-symbol) — πέφτουν
  *     στο `commitDxfGripDragModeAware` primitive/whole-entity path. Ασυμμετρία
@@ -45,21 +45,21 @@ const NON_PARAMETRIC_KINDS = [
 ] as const;
 
 describe('Parametric-commit dispatch coverage — ζωντανό seam ↔ grip discriminator domain (ADR-587 Φ7)', () => {
-  it('τα SUPPORTED_KINDS ταυτίζονται με τα keys του HANDLERS (24 params-driven kinds)', () => {
+  it('τα SUPPORTED_KINDS ταυτίζονται με τα keys του HANDLERS (26 params-driven kinds)', () => {
     expect(asSorted(PARAMETRIC_COMMIT_SUPPORTED_KINDS)).toEqual(
       asSorted(Object.keys(PARAMETRIC_COMMIT_HANDLERS)),
     );
-    expect(PARAMETRIC_COMMIT_SUPPORTED_KINDS).toHaveLength(25);
+    expect(PARAMETRIC_COMMIT_SUPPORTED_KINDS).toHaveLength(26);
   });
 
-  it('grip kinds με parametric commit = καρφωμένο golden set (25)', () => {
+  it('grip kinds με parametric commit = καρφωμένο golden set (26)', () => {
     expect(asSorted(PARAMETRIC_COMMIT_SUPPORTED_KINDS)).toEqual(
       asSorted([
         'stair', 'dimension', 'wall', 'opening', 'slab', 'slab-opening', 'roof',
         'beam', 'column', 'foundation', 'mep-fixture', 'electrical-panel',
         'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater',
         'mep-segment', 'furniture', 'floorplan-symbol', 'floor-finish', 'hatch',
-        'mep-underfloor', 'xline', 'ray', 'scale-bar',
+        'mep-underfloor', 'xline', 'ray', 'scale-bar', 'opening-info-tag',
       ]),
     );
   });
@@ -69,10 +69,10 @@ describe('Parametric-commit dispatch coverage — ζωντανό seam ↔ grip d
     expect(asSorted(noParametric)).toEqual(asSorted([...NON_PARAMETRIC_KINDS]));
   });
 
-  it('golden ∪ complement === GRIP_KIND_ENTITIES (domain closure, 25 + 7 = 32)', () => {
+  it('golden ∪ complement === GRIP_KIND_ENTITIES (domain closure, 26 + 7 = 33)', () => {
     const union = [...PARAMETRIC_COMMIT_SUPPORTED_KINDS, ...NON_PARAMETRIC_KINDS];
     expect(asSorted(union)).toEqual(asSorted([...GRIP_KIND_ENTITIES]));
-    expect(GRIP_KIND_ENTITIES).toHaveLength(32);
+    expect(GRIP_KIND_ENTITIES).toHaveLength(33);
   });
 
   it('κανένα supported kind δεν είναι εκτός domain (seam ⊆ discriminator)', () => {

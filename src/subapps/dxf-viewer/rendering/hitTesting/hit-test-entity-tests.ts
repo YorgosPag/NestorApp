@@ -21,12 +21,15 @@ import {
   isHatchEntity,
   isAnnotationSymbolEntity,
   isScaleBarEntity,
+  isOpeningInfoTagEntity,
 } from '../../types/entities';
 // ADR-583 — annotative model-size SSoT for the North-arrow annotation symbol.
 import { annotationSymbolModelSizeLive } from '../../bim/annotation-symbols/annotation-symbol-model-size';
 import { DEFAULT_ANNOTATION_SYMBOL_SIZE_MM } from '../../types/annotation-symbol';
 // ADR-583 Φ2 — graphic scale-bar precise axis pick SSoT (shared with ScaleBarRenderer.hitTest).
 import { hitTestScaleBarAxis } from '../../bim/scale-bar/scale-bar-hit';
+// ADR-612 — opening info tag precise rotated point-in-box pick SSoT (sibling of scale-bar).
+import { hitTestOpeningInfoTag } from '../../bim/opening-info-tag/opening-info-tag-hit';
 import type { HitTestResult, SnapResult } from './hit-tester-types';
 import { pointToLineDistance, clamp } from '../entities/shared/geometry-utils';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
@@ -92,6 +95,13 @@ export function performDetailedHitTest(
     case 'scale-bar':
       return isScaleBarEntity(entity)
         ? (hitTestScaleBarAxis(entity, point, tolerance) ? { hitType: 'entity', hitPoint: point } : null)
+        : null;
+    // ADR-612 — opening info tag: precise rotated point-in-box pick (SSoT shared with
+    // the renderer / inline cell editor). Tighter than the default AABB, which would
+    // highlight the empty corners of a rotated tag's bbox.
+    case 'opening-info-tag':
+      return isOpeningInfoTagEntity(entity)
+        ? (hitTestOpeningInfoTag(entity, point, tolerance) ? { hitType: 'entity', hitPoint: point } : null)
         : null;
     default: return { hitType: 'entity', hitPoint: point };
   }

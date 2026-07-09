@@ -47,6 +47,8 @@ import type { FloorplanSymbolEntity } from '../../bim/types/floorplan-symbol-typ
 import type { AnnotationSymbolEntity } from '../../types/annotation-symbol';
 // ADR-583 Φ2 — graphic scale-bar lightweight entity for DXF render pipeline.
 import type { ScaleBarEntity } from '../../types/scale-bar';
+// ADR-612 — opening info tag lightweight entity for DXF render pipeline.
+import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
 // ADR-408 Φ12 — plumbing manifold direct entity for DXF render pipeline.
 import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
 // ADR-408 Εύρος Β — heating radiator direct entity for DXF render pipeline.
@@ -61,7 +63,7 @@ import type { MepUnderfloorEntity } from '../../bim/types/mep-underfloor-types';
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'foundation' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment' | 'mep-fitting' | 'floorplan-symbol' | 'annotation-symbol' | 'scale-bar' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'roof' | 'floor-finish' | 'wall-covering' | 'thermal-space' | 'space-separator' | 'hatch';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'foundation' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment' | 'mep-fitting' | 'floorplan-symbol' | 'annotation-symbol' | 'scale-bar' | 'opening-info-tag' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'roof' | 'floor-finish' | 'wall-covering' | 'thermal-space' | 'space-separator' | 'hatch';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -438,6 +440,25 @@ export interface DxfScaleBar extends DxfEntity {
 }
 
 /**
+ * ADR-612 — DxfOpeningInfoTag lightweight direct entity (non-BIM, sibling of DxfScaleBar).
+ * Carries the flat opening-info-tag params (position / angleRad / widthMm / the 3
+ * numeral texts) at top level; `OpeningInfoTagRenderer` reads them +
+ * `computeOpeningInfoTagGeometry`. No geometry/params/validation quartet — it is a
+ * WORLD-unit box whose cell rects are DERIVED, not stored. Without this variant +
+ * its TO_DXF handler the freshly-placed tag would fall to `convertEntity`'s `null`
+ * default → invisible + un-grippable (the ADR-583 trap).
+ */
+export interface DxfOpeningInfoTag extends DxfEntity {
+  type: 'opening-info-tag';
+  position: OpeningInfoTagEntity['position'];
+  angleRad: OpeningInfoTagEntity['angleRad'];
+  widthMm: OpeningInfoTagEntity['widthMm'];
+  topText: OpeningInfoTagEntity['topText'];
+  bottomLeftText: OpeningInfoTagEntity['bottomLeftText'];
+  bottomRightText: OpeningInfoTagEntity['bottomRightText'];
+}
+
+/**
  * ADR-408 Φ12 — DxfMepManifold direct entity (same pattern as DxfElectricalPanel).
  * MepManifoldRenderer reads geometry.footprint + kind + params at top level.
  */
@@ -588,7 +609,7 @@ export interface DxfRay extends DxfEntity {
   rayEntity: RayEntity;
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfAnnotationSymbol | DxfScaleBar | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfWallCovering | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfAnnotationSymbol | DxfScaleBar | DxfOpeningInfoTag | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfWallCovering | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay;
 
 // === WRAPPED (SUB-ENTITY) VARIANTS — SSoT ===
 /**

@@ -73,7 +73,7 @@ const SEAM_B_PARAMETRIC = [
   'stair', 'dimension', 'wall', 'slab', 'slab-opening', 'roof', 'beam', 'column',
   'foundation', 'mep-fixture', 'electrical-panel', 'mep-radiator', 'mep-boiler',
   'mep-water-heater', 'mep-segment', 'furniture', 'floorplan-symbol', 'floor-finish',
-  'hatch', 'mep-underfloor', 'xline', 'ray', 'scale-bar',
+  'hatch', 'mep-underfloor', 'xline', 'ray', 'scale-bar', 'opening-info-tag',
 ] as const;
 
 /**
@@ -157,11 +157,11 @@ const domainSet = new Set<string>(GRIP_KIND_ENTITIES);
 
 describe('Mode-aware grip-commit routing coverage — Seam C ↔ grip discriminator domain (ADR-587 Φ7)', () => {
   // ── Domain closure & disjointness ─────────────────────────────────────────
-  it('(A)∪(B)∪(C) === GRIP_KIND_ENTITIES (domain closure, 8 + 23 + 1 = 32)', () => {
+  it('(A)∪(B)∪(C) === GRIP_KIND_ENTITIES (domain closure, 8 + 24 + 1 = 33)', () => {
     const union = [...SEAM_C_GATED, ...SEAM_B_PARAMETRIC, ...GENERIC_DISPATCH_ONLY];
     expect(asSorted(union)).toEqual(asSorted([...GRIP_KIND_ENTITIES]));
-    expect(GRIP_KIND_ENTITIES).toHaveLength(32);
-    expect(union).toHaveLength(32); // καμία επικάλυψη → κάθε entity σε ΑΚΡΙΒΩΣ 1 partition
+    expect(GRIP_KIND_ENTITIES).toHaveLength(33);
+    expect(union).toHaveLength(33); // καμία επικάλυψη → κάθε entity σε ΑΚΡΙΒΩΣ 1 partition
   });
 
   it('οι 3 partitions είναι pairwise disjoint', () => {
@@ -189,8 +189,8 @@ describe('Mode-aware grip-commit routing coverage — Seam C ↔ grip discrimina
     expect(SEAM_C_GATED).toHaveLength(8);
   });
 
-  it('(B) SEAM_B_PARAMETRIC = 23 (οι 25 Seam-B ΜΕΙΟΝ opening + mep-manifold)', () => {
-    expect(SEAM_B_PARAMETRIC).toHaveLength(23);
+  it('(B) SEAM_B_PARAMETRIC = 24 (οι 26 Seam-B ΜΕΙΟΝ opening + mep-manifold)', () => {
+    expect(SEAM_B_PARAMETRIC).toHaveLength(24);
     // opening + mep-manifold ΔΕΝ ανήκουν εδώ — ανεβαίνουν στο (A) λόγω action gates
     expect(SEAM_B_PARAMETRIC).not.toContain('opening');
     expect(SEAM_B_PARAMETRIC).not.toContain('mep-manifold');

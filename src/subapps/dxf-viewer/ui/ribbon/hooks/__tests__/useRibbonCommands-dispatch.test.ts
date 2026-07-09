@@ -57,7 +57,7 @@ function comboboxMock(tag: string): ComboboxMock {
   };
 }
 
-/** All 30 combobox bridges, each a tagged mock keyed by the bridge prop name. */
+/** All 31 combobox bridges, each a tagged mock keyed by the bridge prop name. */
 function comboboxDeps(): Record<string, ComboboxMock> {
   const names = [
     'stairBridge', 'wallBridge', 'openingBridge', 'slabBridge', 'roofBridge', 'floorFinishBridge',
@@ -65,7 +65,7 @@ function comboboxDeps(): Record<string, ComboboxMock> {
     'foundationBridge', 'slabOpeningBridge', 'mepFixtureBridge', 'mepManifoldBridge',
     'electricalPanelBridge', 'mepRadiatorBridge', 'mepBoilerBridge', 'mepWaterHeaterBridge',
     'mepUnderfloorBridge', 'mepSegmentBridge', 'furnitureBridge', 'floorplanSymbolBridge',
-    'annotationSymbolBridge', 'mepFixtureLibraryBridge', 'mepRiserBridge', 'arrayBridge',
+    'annotationSymbolBridge', 'scaleBarBridge', 'mepFixtureLibraryBridge', 'mepRiserBridge', 'arrayBridge',
     'lineToolBridge', 'dimBridge', 'xlineModeBridge',
   ];
   const out: Record<string, ComboboxMock> = {};
@@ -85,9 +85,9 @@ function boolDeps(method: 'getBadgeState' | 'getPanelVisibility', names: readonl
 }
 
 describe('dispatch tables — completeness', () => {
-  it('combobox = 31 routes (30 bridges + storey module-handler), badge = 9, visibility = 15', () => {
+  it('combobox = 32 routes (31 bridges + storey module-handler), badge = 9, visibility = 15', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(buildComboboxRoutes(comboboxDeps() as any)).toHaveLength(31);
+    expect(buildComboboxRoutes(comboboxDeps() as any)).toHaveLength(32);
     expect(buildBadgeRoutes(boolDeps('getBadgeState',
       ['stairBridge', 'wallBridge', 'openingBridge', 'slabBridge', 'roofBridge', 'columnBridge',
         'beamBridge', 'foundationBridge', 'slabOpeningBridge']) as never)).toHaveLength(9);
@@ -109,7 +109,7 @@ describe('dispatch tables — no-drift invariant (write ≡ read except readouts
 
   it('every other route shares ONE matcher for write & read (cannot drift)', () => {
     const same = routes.filter((r) => r.matchWrite === r.matchRead);
-    expect(same).toHaveLength(27); // 31 total − 4 readout routes
+    expect(same).toHaveLength(28); // 32 total − 4 readout routes
   });
 });
 

@@ -43,6 +43,7 @@ import { LINE_TOOL_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-li
 import { GUIDES_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-guides-tab';
 import { DIMENSIONS_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-dimensions-tab';
 import { ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-annotation-symbol-tab';
+import { SCALE_BAR_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-scale-bar-tab';
 
 describe('resolveToolActiveTrigger — static Map', () => {
   it('every map entry resolves to its registered trigger', () => {
@@ -66,6 +67,8 @@ describe('resolveToolActiveTrigger — static Map', () => {
   it('golden pins for representative single-tool tabs', () => {
     expect(resolveToolActiveTrigger('stair', null)).toBe(STAIR_CONTEXTUAL_TRIGGER);
     expect(resolveToolActiveTrigger('north-arrow', null)).toBe(ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER);
+    // ADR-583 Φ3e — graphic scale-bar tool active → «Γραφική Κλίμακα» placement-defaults tab.
+    expect(resolveToolActiveTrigger('scale-bar', null)).toBe(SCALE_BAR_CONTEXTUAL_TRIGGER);
     // ADR-583 Φ1b/Φ1c — every annotation-symbol kind opens the SAME shared contextual tab.
     for (const t of ['section-mark', 'grid-bubble', 'elevation-mark',
       'detail-callout', 'revision-tag']) {

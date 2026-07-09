@@ -40,6 +40,7 @@ import { CONTEXTUAL_MEP_SEGMENT_TAB } from '../ui/ribbon/data/contextual-mep-seg
 import { CONTEXTUAL_FURNITURE_TAB } from '../ui/ribbon/data/contextual-furniture-tab';
 import { CONTEXTUAL_FLOORPLAN_SYMBOL_TAB } from '../ui/ribbon/data/contextual-floorplan-symbol-tab';
 import { CONTEXTUAL_ANNOTATION_SYMBOL_TAB } from '../ui/ribbon/data/contextual-annotation-symbol-tab';
+import { CONTEXTUAL_SCALE_BAR_TAB } from '../ui/ribbon/data/contextual-scale-bar-tab';
 import { CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB } from '../ui/ribbon/data/contextual-mep-fixture-library-tab';
 import { CONTEXTUAL_MEP_RISER_TAB } from '../ui/ribbon/data/contextual-mep-riser-tab';
 import { ANIMATION_CONTEXTUAL_TAB, ANIMATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-animation-tab';
@@ -105,6 +106,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_FURNITURE_TAB,
   CONTEXTUAL_FLOORPLAN_SYMBOL_TAB,
   CONTEXTUAL_ANNOTATION_SYMBOL_TAB,
+  CONTEXTUAL_SCALE_BAR_TAB,
   CONTEXTUAL_FLOOR_FINISH_TAB,
   CONTEXTUAL_WALL_COVERING_TAB,
   CONTEXTUAL_HATCH_TAB,

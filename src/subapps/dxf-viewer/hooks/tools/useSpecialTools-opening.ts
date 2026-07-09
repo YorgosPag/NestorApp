@@ -1,4 +1,6 @@
 // 🏢 ADR-363 Phase 2 — Opening tool resolver helpers
+// ADR-615 — self-hosted (free-standing) opening resolvers added (additive,
+// wall-hosted path untouched below).
 // Extracted from useSpecialTools.ts to keep that file ≤500 LOC (Google SRP).
 
 import { isWallEntity } from '../../types/entities';
@@ -9,6 +11,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import { EventBus } from '../../systems/events/EventBus';
 import type { LevelsHookReturn } from '../../systems/levels';
 import { resolveSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { appendEntityToScene } from '../../bim/scene/append-entity-to-scene';
 
 type LevelManagerLike = LevelsHookReturn;
 
@@ -69,6 +72,35 @@ export function buildOpeningResolvers(levelManager: LevelManagerLike): OpeningTo
         entities: [...nextEntities, openingEntity],
       });
       EventBus.emit('drawing:entity-created', { entity: openingEntity, tool: 'opening' });
+    },
+  };
+}
+
+// ─── ADR-615 — Self-hosted (free-standing) opening resolvers ────────────────
+
+/**
+ * Resolver shape consumed by `useSelfOpeningTool` (ADR-615). Mirrors
+ * `OpeningToolResolvers` minus the host-wall lookups — a self-hosted opening
+ * has no `WallEntity` to resolve/mirror, so `onOpeningCreated` is a plain
+ * `appendEntityToScene` (SSoT — no `hostedOpeningIds` mirror needed).
+ */
+export interface SelfOpeningToolResolvers {
+  currentLevelId: string;
+  getSceneUnits: () => SceneUnits;
+  onOpeningCreated: (openingEntity: OpeningEntity) => void;
+}
+
+export function buildSelfOpeningResolvers(levelManager: LevelManagerLike): SelfOpeningToolResolvers {
+  return {
+    currentLevelId: levelManager.currentLevelId || '0',
+    getSceneUnits: () => {
+      const levelId = levelManager.currentLevelId;
+      if (!levelId) return 'mm';
+      return resolveSceneUnits(levelManager.getLevelScene(levelId));
+    },
+    onOpeningCreated: (openingEntity) => {
+      // ADR-615 — no host wall to mirror; plain append + broadcast (SSoT).
+      appendEntityToScene(levelManager, openingEntity, 'self-opening');
     },
   };
 }

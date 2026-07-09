@@ -27,6 +27,8 @@ import { HatchRenderer } from '../entities/HatchRenderer';
 import { AnnotationSymbolRenderer } from '../entities/AnnotationSymbolRenderer';
 // ADR-583 Φ2 — graphic scale-bar leaf (dedicated non-BIM annotation; two-formula split).
 import { ScaleBarRenderer } from '../entities/ScaleBarRenderer';
+// ADR-612 — opening info tag leaf (dedicated non-BIM annotation; world-mm box, sibling of scale-bar).
+import { OpeningInfoTagRenderer } from '../entities/OpeningInfoTagRenderer';
 // ADR-363 Phase 1B — parametric wall leaf (2D plan view).
 import { WallRenderer, type OpeningsByWall } from '../../bim/renderers/WallRenderer';
 // ADR-363 Phase 2 — opening leaf (door/window/sliding-door/french-door/fixed).
@@ -166,6 +168,8 @@ export class EntityRendererComposite {
     const annotationSymbolRenderer = new AnnotationSymbolRenderer(this.ctx);
     // ADR-583 Φ2 — graphic scale-bar renderer (real-span axis + annotative thickness/labels).
     const scaleBarRenderer = new ScaleBarRenderer(this.ctx);
+    // ADR-612 — opening info tag renderer (world-mm box, 3 editable numeral cells).
+    const openingInfoTagRenderer = new OpeningInfoTagRenderer(this.ctx);
 
     // Register renderers by entity type
     this.renderers.set('line', lineRenderer);
@@ -211,6 +215,7 @@ export class EntityRendererComposite {
     this.renderers.set('hatch', hatchRenderer);
     this.renderers.set('annotation-symbol', annotationSymbolRenderer);
     this.renderers.set('scale-bar', scaleBarRenderer);
+    this.renderers.set('opening-info-tag', openingInfoTagRenderer);
   }
 
   /**

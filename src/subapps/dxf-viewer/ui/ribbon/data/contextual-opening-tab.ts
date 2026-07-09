@@ -116,6 +116,32 @@ const SILL_MM_OPTIONS = [
   { value: '1100', labelKey: '1100', isLiteralLabel: true },
 ] as const;
 
+// ─── ADR-611 — Frame profile (διατομή κάσας) preset dims ────────────────────
+// Editable presets for the two CONSTANT cross-section dims (mm). Free typing
+// is still allowed (RibbonEditableCombobox) — these are just the dropdown
+// shortcuts, spanning the seed catalog's face-width/depth range.
+const FRAME_PROFILE_FACE_WIDTH_MM_OPTIONS = [
+  { value: '50', labelKey: '50', isLiteralLabel: true },
+  { value: '60', labelKey: '60', isLiteralLabel: true },
+  { value: '65', labelKey: '65', isLiteralLabel: true },
+  { value: '68', labelKey: '68', isLiteralLabel: true },
+  { value: '70', labelKey: '70', isLiteralLabel: true },
+  { value: '72', labelKey: '72', isLiteralLabel: true },
+  { value: '74', labelKey: '74', isLiteralLabel: true },
+  { value: '78', labelKey: '78', isLiteralLabel: true },
+  { value: '84', labelKey: '84', isLiteralLabel: true },
+] as const;
+
+const FRAME_PROFILE_DEPTH_MM_OPTIONS = [
+  { value: '50', labelKey: '50', isLiteralLabel: true },
+  { value: '55', labelKey: '55', isLiteralLabel: true },
+  { value: '58', labelKey: '58', isLiteralLabel: true },
+  { value: '60', labelKey: '60', isLiteralLabel: true },
+  { value: '62', labelKey: '62', isLiteralLabel: true },
+  { value: '70', labelKey: '70', isLiteralLabel: true },
+  { value: '75', labelKey: '75', isLiteralLabel: true },
+] as const;
+
 // ─── Tab definition ──────────────────────────────────────────────────────────
 
 export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
@@ -275,6 +301,70 @@ export const CONTEXTUAL_OPENING_TAB: RibbonTab = {
                 commandKey: OPENING_RIBBON_KEYS.params.sillHeight,
                 comboboxWidthPx: 80,
                 options: SILL_MM_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-611 — Frame Profile (διατομή κάσας): manufacturer + profile/series
+      // Radix Selects (cascading — profile options filter by the manufacturer
+      // value) plus the two editable, CONSTANT cross-section dims. Instance-
+      // owned (never type-governed, unlike kind/width/height above).
+      id: 'opening-frame-profile',
+      labelKey: 'ribbon.panels.openingFrameProfile',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'opening.frameProfile.manufacturer',
+                labelKey: 'ribbon.commands.openingEditor.frameProfile.manufacturer',
+                commandKey: OPENING_RIBBON_KEYS.frameProfile.manufacturer,
+                comboboxWidthPx: 110,
+                options: [],
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'opening.frameProfile.profile',
+                labelKey: 'ribbon.commands.openingEditor.frameProfile.profile',
+                commandKey: OPENING_RIBBON_KEYS.frameProfile.profile,
+                comboboxWidthPx: 170,
+                options: [],
+              },
+            },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'opening.frameProfile.faceWidth',
+                labelKey: 'ribbon.commands.openingEditor.frameProfile.faceWidth',
+                commandKey: OPENING_RIBBON_KEYS.frameProfile.faceWidth,
+                comboboxWidthPx: 70,
+                options: FRAME_PROFILE_FACE_WIDTH_MM_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'opening.frameProfile.depth',
+                labelKey: 'ribbon.commands.openingEditor.frameProfile.depth',
+                commandKey: OPENING_RIBBON_KEYS.frameProfile.depth,
+                comboboxWidthPx: 70,
+                options: FRAME_PROFILE_DEPTH_MM_OPTIONS,
               },
             },
           ],

@@ -10,12 +10,18 @@
  *   - widthExceedsThicknessRatio fires for width > 2× wall thickness
  *   - doorWithSill code violation fires only when kind=door & sill > 0
  *   - Valid params produce zero hard errors and empty violation list
+ *
+ * ADR-615 — self-hosted (host-less) opening coverage:
+ *   - a self-hosted opening (no wallId, well-formed selfHost) is valid
+ *     against a `null` host without missingHostWall firing
+ *   - selfHostAnchorInvalid / selfHostThicknessInvalid / selfHostRotationInvalid
+ *     fire for malformed selfHost fields
  */
 
 import { validateOpeningParams } from '../opening-validator';
 import { computeWallGeometry } from '../../geometry/wall-geometry';
 import type { WallEntity, WallParams } from '../../types/wall-types';
-import type { OpeningParams } from '../../types/opening-types';
+import type { OpeningParams, OpeningSelfHost } from '../../types/opening-types';
 
 function makeWall(overrides?: Partial<WallParams>): WallEntity {
   const params: WallParams = {
@@ -47,6 +53,26 @@ function makeOpening(overrides?: Partial<OpeningParams>): OpeningParams {
     width: 900,
     height: 2100,
     sillHeight: 0,
+    ...overrides,
+  };
+}
+
+function makeSelfHost(overrides?: Partial<OpeningSelfHost>): OpeningSelfHost {
+  return {
+    anchor: { x: 1000, y: 2000, z: 0 },
+    rotationRad: 0,
+    hostThicknessMm: 100,
+    ...overrides,
+  };
+}
+
+/** ADR-615 — self-hosted opening: no wallId, offsetFromStart always 0. */
+function makeSelfHostedOpening(overrides?: Partial<OpeningParams>): OpeningParams {
+  const { wallId: _wallId, ...base } = makeOpening();
+  return {
+    ...base,
+    offsetFromStart: 0,
+    selfHost: makeSelfHost(),
     ...overrides,
   };
 }
@@ -123,5 +149,49 @@ describe('validateOpeningParams — happy path', () => {
     const r = validateOpeningParams(makeOpening(), makeWall({ thickness: 500 }));
     expect(r.hardErrors).toHaveLength(0);
     expect(r.codeViolations).toHaveLength(0);
+  });
+});
+
+describe('validateOpeningParams — ADR-615 self-hosted (host-less) opening', () => {
+  it('is valid against a null host: no missingHostWall, no self-host errors', () => {
+    const r = validateOpeningParams(makeSelfHostedOpening(), null);
+    expect(r.hardErrors).not.toContain('opening.validation.hardErrors.missingHostWall');
+    expect(r.hardErrors).toHaveLength(0);
+  });
+
+  it('still runs intrinsic checks (widthTooSmall) for a self-hosted opening', () => {
+    const r = validateOpeningParams(makeSelfHostedOpening({ width: 150 }), null);
+    expect(r.hardErrors).toContain('opening.validation.hardErrors.widthTooSmall');
+  });
+
+  it('flags selfHostThicknessInvalid when hostThicknessMm <= 0', () => {
+    const r = validateOpeningParams(
+      makeSelfHostedOpening({ selfHost: makeSelfHost({ hostThicknessMm: 0 }) }),
+      null,
+    );
+    expect(r.hardErrors).toContain('opening.validation.hardErrors.selfHostThicknessInvalid');
+  });
+
+  it('flags selfHostRotationInvalid when rotationRad is non-finite', () => {
+    const r = validateOpeningParams(
+      makeSelfHostedOpening({ selfHost: makeSelfHost({ rotationRad: Number.NaN }) }),
+      null,
+    );
+    expect(r.hardErrors).toContain('opening.validation.hardErrors.selfHostRotationInvalid');
+  });
+
+  it('flags selfHostAnchorInvalid when anchor coords are non-finite', () => {
+    const r = validateOpeningParams(
+      makeSelfHostedOpening({
+        selfHost: makeSelfHost({ anchor: { x: Number.NaN, y: 0, z: 0 } }),
+      }),
+      null,
+    );
+    expect(r.hardErrors).toContain('opening.validation.hardErrors.selfHostAnchorInvalid');
+  });
+
+  it('a wall-hosted opening (has wallId) still requires it — unchanged behaviour', () => {
+    const r = validateOpeningParams(makeOpening({ wallId: '' }), null);
+    expect(r.hardErrors).toContain('opening.validation.hardErrors.missingHostWall');
   });
 });

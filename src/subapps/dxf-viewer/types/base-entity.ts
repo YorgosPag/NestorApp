@@ -89,7 +89,9 @@ export type EntityType =
   // ADR-583 — non-BIM drawing annotation symbol (North arrow / scale bar / section mark).
   | 'annotation-symbol'
   // ADR-583 Φ2 — non-BIM graphic scale-bar (dedicated sibling of dimension/center-mark).
-  | 'scale-bar';
+  | 'scale-bar'
+  // ADR-612 — non-BIM opening info tag (πινακίδα ανοίγματος: 3 editable numeric cells).
+  | 'opening-info-tag';
 
 export interface BaseEntity {
   id: string;
@@ -107,6 +109,16 @@ export interface BaseEntity {
   visible?: boolean;
   locked?: boolean;
   metadata?: Record<string, unknown>;
+
+  /**
+   * ADR-608 — grouping provenance. When an annotation symbol / scale-bar is
+   * decomposed into neutral primitives (`neutral-primitive-factory.ts`), every
+   * child primitive inherits the SOURCE entity id here so backends that support
+   * grouping can re-assemble the symbol as ONE selectable unit: Tekton `<taglist>`
+   * (one shared tag per symbol) and DXF anonymous BLOCK/INSERT. Absent ⇒ the
+   * primitive is standalone (no group). SSoT: the source annotation entity id.
+   */
+  groupId?: string;
 
   /**
    * ADR-405 — per-instance Discipline override (Firestore-persisted). Absent ⇒

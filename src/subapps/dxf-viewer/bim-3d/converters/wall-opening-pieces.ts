@@ -218,7 +218,11 @@ export function computeWallOpeningPieces(
     }
   };
 
-  const sorted = [...openings].sort((a, b) => a.params.offsetFromStart - b.params.offsetFromStart);
+  // ADR-615 cascade guard — self-hosted openings (no wallId) don't belong to this
+  // wall's cut path; skip them so a free-standing opening can never punch a hole
+  // in an unrelated wall solid (host-driven behavior below is unchanged).
+  const hosted = openings.filter((op) => op.params.wallId);
+  const sorted = [...hosted].sort((a, b) => a.params.offsetFromStart - b.params.offsetFromStart);
   let cursor: Boundary = lerpBoundary(0);
 
   for (const op of sorted) {

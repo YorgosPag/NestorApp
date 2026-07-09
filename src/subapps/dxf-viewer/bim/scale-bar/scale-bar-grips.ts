@@ -11,9 +11,11 @@
  * geometry, ADR-587):
  *   0 → MOVE cross @ axis midpoint (`'scale-bar-move'`, `movesEntity` → whole-entity
  *       translate of `position`; the 4-arrow MOVE glyph via `grip-glyph-registry`).
- *   1 → ROTATION handle @ perpendicular offset below the '0' tick (`'scale-bar-rotation'`,
- *       curved glyph). Placement mirrors the annotation-symbol / column rotation handle
- *       (`rotationHandleMidwayOffset` + `rotatePoint`). Drag writes `angleRad` ONLY.
+ *   1 → ROTATION handle @ the ¼-point of the axis, ON the baseline (`'scale-bar-rotation'`) —
+ *       the midpoint between the MOVE cross (axis centre) and the LEFT length handle
+ *       (`position`), i.e. `position + ¼·(endPosition − position)`. On-axis so it sits right on
+ *       the line through the two length handles + the move cross (Giorgio 2026-07-09). Drag opts
+ *       into the shared hot-grip rotate flow (Φ3c): the bar orbits a picked centre.
  *   2 → LENGTH handle @ the derived `endPosition` (`'scale-bar-length'`). Drag recomputes
  *       `angleRad` + snapped `length` via the shared `deriveScaleBarAxis` SSoT; the
  *       `endPosition` stays DERIVED (never stored).
@@ -35,8 +37,7 @@ import { computeScaleBarGeometry } from '../geometry/scale-bar-geometry';
 import { deriveScaleBarAxis } from './build-scale-bar-entity';
 import { calculateMidpoint } from '../../rendering/entities/shared/geometry-utils';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
-import { rotatePoint } from '../../utils/rotation-math';
-import { rotationHandleMidwayOffset } from '../grips/rotation-handle-policy';
+import { rotateEntityGripDrag } from '../grips/grip-math';
 import { paperHeightToModel } from '../../utils/annotation-scale';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 
@@ -52,25 +53,6 @@ export const SCALE_BAR_HEIGHT_KIND: ScaleBarGripKind = 'scale-bar-height';
 
 /** Minimum annotative bar thickness (paper mm) — the height drag clamps to this. */
 const MIN_SCALE_BAR_HEIGHT_MM = 0.5;
-
-/**
- * World position of the rotation handle: below the '0' tick (local −Y, midway offset
- * of the model span) rotated by the bar's own `angleRad` so it always sits perpendicular
- * to the axis. Reuses the `rotationHandleMidwayOffset` + `rotatePoint` SSoT (annotation-
- * symbol / column parity). Purely visual — the drag math (swept angle) is placement-agnostic.
- */
-export function scaleBarRotationHandlePos(
-  position: Point2D,
-  totalModelLengthMm: number,
-  angleRad: number,
-): Point2D {
-  const offY = rotationHandleMidwayOffset(totalModelLengthMm); // negative (convex) ⇒ −span/4
-  return rotatePoint(
-    { x: position.x, y: position.y + offY },
-    position,
-    (angleRad * 180) / Math.PI,
-  );
-}
 
 /**
  * The 3 grips of a scale bar — the SSoT both grip paths consume. Positions derive from
@@ -100,9 +82,13 @@ export function getScaleBarGrips(entity: ScaleBarEntity): GripInfo[] {
       position: midpoint, movesEntity: true,
       gripKind: { on: 'scale-bar', kind: SCALE_BAR_MOVE_KIND },
     },
+    // ROTATION handle @ the ¼-point of the axis — ON the baseline (the line through the two
+    // length handles + the move cross), at the midpoint between the move cross (`midpoint`, the
+    // axis centre) and the LEFT length handle (`entity.position`). Giorgio 2026-07-09: «να πέφτει
+    // πάνω στην ευθεία, στο μέσον του σημαδιού μετακίνησης και της αριστερής λαβής».
     {
       entityId: entity.id, gripIndex: 1, type: 'vertex',
-      position: scaleBarRotationHandlePos(entity.position, geo.totalModelLengthMm, entity.angleRad),
+      position: calculateMidpoint(midpoint, entity.position),
       movesEntity: false,
       gripKind: { on: 'scale-bar', kind: SCALE_BAR_ROTATION_KIND },
     },
@@ -132,8 +118,12 @@ export function getScaleBarGrips(entity: ScaleBarEntity): GripInfo[] {
  * AND the live ghost both run, so preview ≡ commit by identity). `gripWorldPos` = the
  * grabbed grip's world anchor; `delta` = the cursor displacement.
  *   - move     → translate the whole bar (`position += delta`).
- *   - rotation → swept angle about `position` (placement-agnostic: the angle CHANGE of the
- *                dragged handle, no-op at zero delta) → `angleRad` only.
+ *   - rotation → ADR-583 Φ3 (Giorgio 2026-07-09 «όπως τα άλλα»): when a rotation centre is
+ *                picked (hot-grip flow → `rotate` ctx), the bar ORBITS that pivot — BOTH
+ *                `position` and `angleRad` sweep by the same angle via the shared
+ *                `sweptAngleDegAboutPivot` SSoT (parity με arc/annotation-symbol). With no picked
+ *                centre (`rotate` absent) it falls back to the legacy swept angle about the bar's
+ *                own origin (`position`), placement-agnostic, no-op at zero delta → `angleRad` only.
  *   - length   → the far point follows the cursor → recompute `angleRad` + snapped `length`
  *                via the shared `deriveScaleBarAxis` (the SAME formula creation uses).
  * The DERIVED `geometry` cache is never written — it is recomputed on the next render.
@@ -143,17 +133,16 @@ export function applyScaleBarGripDrag(
   entity: ScaleBarEntity,
   gripWorldPos: Point2D,
   delta: Point2D,
+  rotate?: { readonly pivot: Point2D; readonly anchor: Point2D },
 ): Partial<ScaleBarEntity> {
   switch (kind) {
     case 'scale-bar-move':
       return { position: translatePoint(entity.position, delta) };
-    case 'scale-bar-rotation': {
-      const { position } = entity;
-      const initAngle = Math.atan2(gripWorldPos.y - position.y, gripWorldPos.x - position.x);
-      const newHandle = translatePoint(gripWorldPos, delta);
-      const newAngle = Math.atan2(newHandle.y - position.y, newHandle.x - position.x);
-      return { angleRad: entity.angleRad + (newAngle - initAngle) };
-    }
+    case 'scale-bar-rotation':
+      // ADR-583 Φ3 (Giorgio 2026-07-09 «όπως τα άλλα») — hot-grip orbit about a picked centre,
+      // else legacy own-origin spin. Shared with opening-info-tag via the `rotateEntityGripDrag`
+      // SSoT (N.18) so the two annotation rotations can never diverge.
+      return rotateEntityGripDrag(entity, gripWorldPos, delta, rotate);
     case 'scale-bar-length':
       return deriveScaleBarAxis(entity.position, translatePoint(gripWorldPos, delta), entity.unit);
     case 'scale-bar-length-start': {

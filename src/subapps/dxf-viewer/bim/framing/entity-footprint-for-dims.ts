@@ -20,7 +20,8 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { isColumnEntity, isBeamEntity, isWallEntity, isTextEntity, isMTextEntity, type Entity } from '../../types/entities';
+import { isColumnEntity, isBeamEntity, isWallEntity, isTextEntity, isMTextEntity, isOpeningInfoTagEntity, type Entity } from '../../types/entities';
+import { computeOpeningInfoTagGeometry } from '../opening-info-tag/opening-info-tag-geometry';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { resolveMemberFootprintVertices } from '../structural/member-footprint-2d';
 import { wallFootprintPolygon } from '../finishes/wall-footprint-union';
@@ -78,6 +79,13 @@ export function resolveEntityFootprintForDims(entity: Entity): ReadonlyArray<Poi
       ARC_FOOTPRINT_SEGMENTS,
     );
     if (curve.length >= 2) return curve;
+  }
+  // ADR-612 §move-clearance (Giorgio 2026-07-09 «όπως ο τοίχος») — opening-info-tag: το ΠΡΑΓΜΑΤΙΚΟ
+  // (rotation-aware) footprint του κουτιού = τα 4 `worldCorners` του geometry SSoT, ώστε μια κινούμενη
+  // πινακίδα να δείχνει κυανές clearance dims προς τους γείτονες (parity με text/mtext visual box).
+  // Μηδέν νέα γεωμετρία — reuse του `computeOpeningInfoTagGeometry`.
+  if (isOpeningInfoTagEntity(entity)) {
+    return computeOpeningInfoTagGeometry(entity).worldCorners;
   }
   // Γενικό fallback (Giorgio: «οποιαδήποτε οντότητα BIM ή DXF»): axis-aligned bounding box ως footprint
   // — γραμμή/πολυγραμμή/ορθογώνιο/κύκλος/τόξο + λοιπά. Προσέγγιση αρκετή για clearance dims (bbox παρειές).

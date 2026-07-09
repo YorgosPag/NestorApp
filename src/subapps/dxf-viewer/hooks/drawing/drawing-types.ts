@@ -172,7 +172,10 @@ export type DrawingTool =
   | 'text'
   | 'mtext'
   // ADR-583 Φ2 — Graphic scale-bar: generic 2-click accumulator tool (mirror 'line').
-  | 'scale-bar';
+  | 'scale-bar'
+  // ADR-612 — Opening info tag: generic SINGLE-CLICK accumulator tool (mirror 'annotation-symbol'
+  // click-count, scale-bar's accumulator plumbing).
+  | 'opening-info-tag';
 
 export interface DrawingState {
   currentTool: DrawingTool;

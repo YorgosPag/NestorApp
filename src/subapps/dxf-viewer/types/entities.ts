@@ -558,6 +558,24 @@ export {
   DEFAULT_SCALE_BAR_LABEL_PLACEMENT,
 } from './scale-bar';
 
+// ADR-612 Φ1: standalone Opening Info Tag (πινακίδα ανοίγματος — 3 editable numeric cells).
+import type { OpeningInfoTagEntity } from './opening-info-tag';
+export type {
+  OpeningInfoTagEntity,
+  OpeningInfoTagGeometry,
+  OpeningInfoTagCellRect,
+  OpeningInfoTagCellId,
+  OpeningInfoTagFramePoint,
+  OpeningInfoTagBBox,
+} from './opening-info-tag';
+export {
+  isOpeningInfoTagEntity,
+  OPENING_INFO_TAG_ASPECT,
+  OPENING_INFO_TAG_TEXT_HEIGHT_RATIO,
+  DEFAULT_OPENING_INFO_TAG_WIDTH_MM,
+  DEFAULT_OPENING_INFO_TAG_TEXT,
+} from './opening-info-tag';
+
 // ✅ ENTERPRISE: Additional entity types from scene.ts integration
 export interface BlockEntity extends BaseEntity {
   type: 'block';
@@ -724,6 +742,7 @@ export type Entity = (
   | CenterLineEntity         // ADR-362 Phase A1: standalone centerline (D13)
   | AnnotationSymbolEntity   // ADR-583: standalone annotation symbol (North arrow first)
   | ScaleBarEntity           // ADR-583 Φ2: standalone graphic scale-bar
+  | OpeningInfoTagEntity     // ADR-612: standalone opening info tag (3 editable numeric cells)
   // ADR-363 BIM Drawing Mode (Phase 0 — renderers/tools Phase 1+):
   | WallEntity
   | OpeningEntity

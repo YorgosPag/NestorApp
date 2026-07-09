@@ -21,6 +21,7 @@ import { clearAutoAreaPreview } from '../../systems/auto-area/AutoAreaPreviewSto
 import { useStairTool } from '../drawing/useStairTool';
 import { useWallTool } from '../drawing/useWallTool';
 import { useOpeningTool } from '../drawing/useOpeningTool';
+import { useSelfOpeningTool } from '../drawing/useSelfOpeningTool';
 import { useColumnTool } from '../drawing/useColumnTool';
 import { useFoundationTool } from '../drawing/useFoundationTool';
 import { useBeamTool } from '../drawing/useBeamTool';
@@ -28,7 +29,10 @@ import { useBeamBetweenMembersTool } from '../drawing/useBeamBetweenMembersTool'
 import { useSlabOpeningTool } from '../drawing/useSlabOpeningTool';
 import { buildSlabOpeningResolvers } from './useSpecialTools-slab-opening';
 import { useWallRetrimEffect } from './useSpecialTools-wall-retrim';
-import { buildOpeningResolvers } from './useSpecialTools-opening';
+import { buildOpeningResolvers, buildSelfOpeningResolvers } from './useSpecialTools-opening';
+// ADR-615 — free-standing (self-hosted) opening tool commandKey SSoT (shared
+// with the ribbon `structural-tab.ts` descriptor).
+import { SELF_OPENING_TOOL_COMMAND_KEY } from '../../ui/ribbon/hooks/bridge/opening-command-keys';
 import { useToolLifecycle } from './useToolLifecycle';
 // ADR-419 — region tool-id → method SSoT (split του «σε περιοχή» σε 3 εντολές).
 import {
@@ -84,6 +88,7 @@ export interface UseSpecialToolsReturn extends SelectionToolsReturn, PlacementTo
   stairTool: ReturnType<typeof useStairTool>;
   wallTool: ReturnType<typeof useWallTool>;
   openingTool: ReturnType<typeof useOpeningTool>;
+  selfOpeningTool: ReturnType<typeof useSelfOpeningTool>;
   columnTool: ReturnType<typeof useColumnTool>;
   foundationTool: ReturnType<typeof useFoundationTool>; // ADR-436
   beamTool: ReturnType<typeof useBeamTool>;
@@ -121,6 +126,21 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   const floorIdForStair = levelManager.saveContext?.floorId ?? null;
   const floorForStair = useFloorMetadata(floorIdForStair);
 
+  // ADR-397/419 — the scene-units resolver + live-entities reader every tool config below
+  // needs, defined ONCE (N.18) instead of copy-pasted as an inline arrow per tool. Both close
+  // over `levelManager`; `resolveSceneUnits` prefers the real `$INSUNITS` units and falls back
+  // to the bounds heuristic. Recreated each render exactly like the former inline callbacks.
+  const getSceneUnitsForLevel = () => {
+    const levelId = levelManager.currentLevelId;
+    if (!levelId) return 'mm';
+    return resolveSceneUnits(levelManager.getLevelScene(levelId));
+  };
+  const getSceneEntitiesForLevel = () => {
+    const levelId = levelManager.currentLevelId;
+    if (!levelId) return [];
+    return levelManager.getLevelScene(levelId)?.entities ?? [];
+  };
+
   // Selection-based geometry tools (CircleTTT / LineParallel / AngleEntityMeasurement)
   // — extracted to useSpecialTools-selection-tools.ts (N.7.1). ADR-060: «κάθετη γραμμή» → drawing tool.
   const { circleTTT, lineParallel, angleEntityMeasurement } =
@@ -140,11 +160,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     // `resolveSceneUnits` (utils/scene-units SSoT) prefers the real
     // `$INSUNITS`-propagated `scene.units` and falls back to the bounds
     // heuristic for legacy / unitless scenes.
-    getSceneUnits: () => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return 'mm';
-      return resolveSceneUnits(levelManager.getLevelScene(levelId));
-    },
+    getSceneUnits: getSceneUnitsForLevel,
     // ADR-358 Phase 9 — Q17 floor link bridge. Returns a snapshot of the
     // floor in scope so the stair builder seeds `multiStoryConfig`.
     getFloorLink: (): StairFloorLinkInput | null => {
@@ -198,18 +214,10 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
    */
   const wallTool = useWallTool({
     currentLevelId: levelManager.currentLevelId || '0',
-    getSceneUnits: () => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return 'mm';
-      return resolveSceneUnits(levelManager.getLevelScene(levelId));
-    },
+    getSceneUnits: getSceneUnitsForLevel,
     // ADR-363 Phase 1J — live scene entities for the on-entity placement mode
     // (hit-test of existing 2D lines/rectangles under the click).
-    getSceneEntities: () => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return [];
-      return levelManager.getLevelScene(levelId)?.entities ?? [];
-    },
+    getSceneEntities: getSceneEntitiesForLevel,
     // ADR-363 Phase 1G.4 — append + trim + broadcast via the shared SSoT
     // (`addWallToScene`) so the DRAW path and the Ctrl-COPY hot-grip path use
     // ONE insertion routine (N.0.2 — no copy-paste of the persistence trigger).
@@ -243,6 +251,16 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   // ADR-363 Phase 2 — OPENING TOOL (resolvers extracted: useSpecialTools-opening.ts)
   const openingTool = useOpeningTool(buildOpeningResolvers(levelManager));
   useToolLifecycle(activeTool === 'opening', openingTool.activate, openingTool.deactivate);
+  // ADR-615 — FREE-STANDING (self-hosted) OPENING TOOL. Mirrors the wall-hosted
+  // opening tool wiring above (resolvers extracted: useSpecialTools-opening.ts),
+  // but built on `createSingleClickPlacementTool` (ADR-600) instead of a bespoke
+  // FSM — activation gate is the shared `SELF_OPENING_TOOL_COMMAND_KEY` literal.
+  const selfOpeningTool = useSelfOpeningTool(buildSelfOpeningResolvers(levelManager));
+  useToolLifecycle(
+    activeTool === SELF_OPENING_TOOL_COMMAND_KEY,
+    selfOpeningTool.activate,
+    selfOpeningTool.deactivate,
+  );
   // ADR-417/419/422/437 — slab / roof / floor-finish / underfloor / thermal-space /
   // space-separator area & space tools (footprint-polygon + click-in-region + 2-click
   // line). Extracted to a sub-hook (N.7.1); each shares the scene-units resolver +
@@ -272,18 +290,10 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     // ΕΝΟΣ adapter (`addColumnsToScene`): N× single-add → stale-scene race → χάνονται
     // κολόνες + σπάει το auto-foundation. Batch = όλες μαζί + ΕΝΑ undo.
     onColumnsCreated: (columnEntities) => addColumnsToScene(columnEntities, levelManager),
-    getSceneUnits: () => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return 'mm';
-      return resolveSceneUnits(levelManager.getLevelScene(levelId));
-    },
+    getSceneUnits: getSceneUnitsForLevel,
     // ADR-363 Φάση 3 — live scene entities για το «Τοιχίο από περίγραμμα» (ανάλυση
     // των παρειών στο box-select / click-inside).
-    getSceneEntities: () => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return [];
-      return levelManager.getLevelScene(levelId)?.entities ?? [];
-    },
+    getSceneEntities: getSceneEntitiesForLevel,
   });
   // ADR-363 Φ3/3c — freehand + «από περίγραμμα» (outer/discrete) μοιράζονται ΕΝΑ
   // useColumnTool· το placement mode οδηγείται από το active tool id.
@@ -326,17 +336,9 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
       const scope = buildFoundationWriteScope(user, levelManager.levels, levelManager.currentLevelId);
       addFoundationToScene(foundationEntity, levelManager, scope);
     },
-    getSceneUnits: () => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return 'mm';
-      return resolveSceneUnits(levelManager.getLevelScene(levelId));
-    },
+    getSceneUnits: getSceneUnitsForLevel,
     // ADR-436 Slice 2 «Πεδιλοδοκός από τοίχο» — live scene entities for the from-wall pick.
-    getSceneEntities: () => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return [];
-      return levelManager.getLevelScene(levelId)?.entities ?? [];
-    },
+    getSceneEntities: getSceneEntitiesForLevel,
   });
   // ADR-436 — the 3 freehand foundation tools + the from-wall variant share ONE
   // useFoundationTool instance; the `kind` is fixed by the active tool id (Revit
@@ -385,17 +387,9 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
    */
   const beamTool = useBeamTool({
     currentLevelId: levelManager.currentLevelId || '0',
-    getSceneUnits: () => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return 'mm';
-      return resolveSceneUnits(levelManager.getLevelScene(levelId));
-    },
+    getSceneUnits: getSceneUnitsForLevel,
     // ADR-363 «Δοκάρι από τοίχο» — live scene entities for the from-wall pick.
-    getSceneEntities: () => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return [];
-      return levelManager.getLevelScene(levelId)?.entities ?? [];
-    },
+    getSceneEntities: getSceneEntitiesForLevel,
     onBeamCreated: (beamEntity) => appendEntityToScene(levelManager, beamEntity, 'beam'),
   });
   // ADR-363 — the freehand beam ('beam') and the from-wall variant
@@ -416,16 +410,8 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   // + ADR-567 overlap guard). Αντίστροφη ροή: ≥2 προεπιλεγμένα μέλη → άμεσο δοκάρι στην ενεργοποίηση.
   const beamBetweenMembersTool = useBeamBetweenMembersTool({
     currentLevelId: levelManager.currentLevelId || '0',
-    getSceneUnits: () => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return 'mm';
-      return resolveSceneUnits(levelManager.getLevelScene(levelId));
-    },
-    getSceneEntities: () => {
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return [];
-      return levelManager.getLevelScene(levelId)?.entities ?? [];
-    },
+    getSceneUnits: getSceneUnitsForLevel,
+    getSceneEntities: getSceneEntitiesForLevel,
     onBeamCreated: (beamEntity) => appendEntityToScene(levelManager, beamEntity, 'beam'),
   });
   useToolLifecycle(activeTool === 'beam-between-members', beamBetweenMembersTool.activate, beamBetweenMembersTool.deactivate);
@@ -452,6 +438,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     stairTool,
     wallTool,
     openingTool,
+    selfOpeningTool,
     slabTool,
     roofTool,
     floorFinishTool,

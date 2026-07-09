@@ -8,6 +8,18 @@
 
 import { makeKeySetGuard } from './make-key-set-guard';
 
+/**
+ * ADR-615 — commandKey / `activeTool` literal for the free-standing (self-hosted)
+ * opening placement tool («Ελεύθερη τοποθέτηση κουφώματος»). Mirrors the plain
+ * `'opening'` / `'slab-opening'` tool-activation literals already inlined in
+ * `structural-tab.ts` (`toolBtn(...)`) — this is the ONE string shared between
+ * the ribbon descriptor (consumer: `structural-tab.ts`) and the future placement
+ * tool's activation gate (`useSpecialTools`, `activeTool === SELF_OPENING_TOOL_COMMAND_KEY`),
+ * so `useSelfOpeningTool` wiring imports it instead of retyping the literal.
+ * Foundation-only here — the FSM/hook itself is a later track (see ADR-615 §File plan).
+ */
+export const SELF_OPENING_TOOL_COMMAND_KEY = 'self-opening' as const;
+
 export const OPENING_RIBBON_KEYS = {
   stringParams: {
     /** Opening kind selector (5 options: door/window/sliding-door/french-door/fixed). */
@@ -27,6 +39,23 @@ export const OPENING_RIBBON_KEYS = {
     /** mm — sill height above floor. */
     sillHeight: 'opening.params.sillHeight',
   },
+  /**
+   * ADR-611 — Frame profile (διατομή κάσας) editor. Cascading manufacturer →
+   * profile/series selects plus the two editable, CONSTANT cross-section
+   * dims. Kept as its own group (not merged into `params`/`stringParams`)
+   * because these keys route through the dedicated
+   * `opening-frame-profile-bridge.ts` resolver, not the flat field maps below.
+   */
+  frameProfile: {
+    /** Manufacturer brand select — cascading filter for `profile` below (not itself persisted). */
+    manufacturer: 'opening.params.frameProfileManufacturer',
+    /** Catalog profile/series select — writes `params.frameProfileId`. */
+    profile: 'opening.params.frameProfileId',
+    /** mm — visible frame face width (elevation). CONSTANT vs opening size. */
+    faceWidth: 'opening.params.frameProfileFaceWidth',
+    /** mm — frame depth through the wall thickness. INDEPENDENT of wall.thickness. */
+    depth: 'opening.params.frameProfileDepth',
+  },
 } as const;
 
 export type OpeningRibbonNumberCommandKey =
@@ -40,6 +69,12 @@ export type OpeningRibbonStringCommandKey =
   | typeof OPENING_RIBBON_KEYS.stringParams.openDirection
   | typeof OPENING_RIBBON_KEYS.stringParams.mark;
 
+export type OpeningFrameProfileCommandKey =
+  | typeof OPENING_RIBBON_KEYS.frameProfile.manufacturer
+  | typeof OPENING_RIBBON_KEYS.frameProfile.profile
+  | typeof OPENING_RIBBON_KEYS.frameProfile.faceWidth
+  | typeof OPENING_RIBBON_KEYS.frameProfile.depth;
+
 export const OPENING_RIBBON_NUMBER_KEYS: readonly OpeningRibbonNumberCommandKey[] = [
   OPENING_RIBBON_KEYS.params.width,
   OPENING_RIBBON_KEYS.params.height,
@@ -51,6 +86,14 @@ export const OPENING_RIBBON_STRING_KEYS: readonly OpeningRibbonStringCommandKey[
   OPENING_RIBBON_KEYS.stringParams.handing,
   OPENING_RIBBON_KEYS.stringParams.openDirection,
   OPENING_RIBBON_KEYS.stringParams.mark,
+];
+
+/** ADR-611 — the 4 frame-profile editor keys (manufacturer/profile/faceWidth/depth). */
+export const OPENING_FRAME_PROFILE_KEYS: readonly OpeningFrameProfileCommandKey[] = [
+  OPENING_RIBBON_KEYS.frameProfile.manufacturer,
+  OPENING_RIBBON_KEYS.frameProfile.profile,
+  OPENING_RIBBON_KEYS.frameProfile.faceWidth,
+  OPENING_RIBBON_KEYS.frameProfile.depth,
 ];
 
 /** ADR-376 Phase C.2+ — Per-project tag style keys (combobox + toggle). */
@@ -108,6 +151,9 @@ export const OPENING_RIBBON_BADGE_KEYS = {
 
 export const isOpeningRibbonKey = makeKeySetGuard(OPENING_RIBBON_NUMBER_KEYS);
 export const isOpeningRibbonStringKey = makeKeySetGuard(OPENING_RIBBON_STRING_KEYS);
+
+/** ADR-611 — guard for the frame-profile editor's 4 commandKeys. */
+export const isOpeningFrameProfileKey = makeKeySetGuard(OPENING_FRAME_PROFILE_KEYS);
 
 // ─── ADR-421 SLICE C follow-up (a): type-aware gating ────────────────────────
 

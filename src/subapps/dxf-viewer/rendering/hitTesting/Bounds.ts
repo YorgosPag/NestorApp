@@ -9,13 +9,13 @@ import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 // the generous superset the spatial-index broad phase uses so it always encloses every line.
 import { textBoxAABB } from '../../bim/text/text-box';
 import { calculateXLineBounds, calculateRayBounds } from './bounds-parametric-line';
-// ADR-583 — annotative model-size SSoT for the North-arrow annotation symbol.
-import { annotationSymbolModelSizeLive } from '../../bim/annotation-symbols/annotation-symbol-model-size';
-import { DEFAULT_ANNOTATION_SYMBOL_SIZE_MM } from '../../types/annotation-symbol';
-// ADR-583 Φ2 — graphic scale-bar axis-extent bbox + live annotative half-thickness SSoT.
-import { computeScaleBarGeometry } from '../../bim/geometry/scale-bar-geometry';
-import { scaleBarModelHalfThicknessLive } from '../../bim/scale-bar/scale-bar-hit';
-import type { ScaleBarEntity } from '../../types/scale-bar';
+// ADR-583/612 follow-up — annotation-family (annotation-symbol/scale-bar/opening-info-tag)
+// bounds extracted to sibling module to keep this file within the 500-line budget (N.7.1).
+import {
+  calculateAnnotationSymbolBounds,
+  calculateScaleBarBounds,
+  calculateOpeningInfoTagBounds,
+} from './bounds-annotation';
 import type {
   EntityWithLine,
   EntityWithCircle,
@@ -78,13 +78,18 @@ export class BoundsCalculator {
       // the insertion point (no geometry.bbox — lightweight). Without this case it fell
       // to `default` → null → excluded from the spatial index → unselectable on canvas.
       case 'annotation-symbol':
-        return this.calculateAnnotationSymbolBounds(entity, tolerance);
+        return calculateAnnotationSymbolBounds(entity, tolerance);
       // ADR-583 Φ2 — graphic scale-bar: the scale-invariant axis-extent bbox
       // (computeScaleBarGeometry) padded by the live annotative half-thickness so the
       // broad phase encloses the ±half-thickness pick corridor (else the narrow phase
       // never runs when hovering the drawn band above the axis). Mirror annotation-symbol.
       case 'scale-bar':
-        return this.calculateScaleBarBounds(entity, tolerance);
+        return calculateScaleBarBounds(entity, tolerance);
+      // ADR-612 — opening info tag: the rotation-aware world-mm box AABB
+      // (`computeOpeningInfoTagGeometry`), padded by `tolerance`. No annotative
+      // half-thickness term (unlike scale-bar) — the whole box is world-space.
+      case 'opening-info-tag':
+        return calculateOpeningInfoTagBounds(entity, tolerance);
       case 'angle-measurement':
         return this.calculateAngleMeasurementBounds(entity, tolerance);
       case 'stair':
@@ -402,44 +407,6 @@ export class BoundsCalculator {
   /**
    * 🔺 POINT BOUNDS
    */
-  /**
-   * ADR-583 — annotation symbol (North arrow) spatial bounds. The paper `sizeMm`
-   * is folded to model units at the live drawing scale (same SSoT the renderer +
-   * `entity-bounds` use), giving a square footprint around the insertion point that
-   * the broad-phase index / hover pre-filter can enclose.
-   */
-  private static calculateAnnotationSymbolBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    const e = entity as EntityModel & { position: { x: number; y: number }; sizeMm?: number };
-    const modelSize = annotationSymbolModelSizeLive(e.sizeMm ?? DEFAULT_ANNOTATION_SYMBOL_SIZE_MM);
-    const half = modelSize / 2 + tolerance;
-    return this.createBoundingBox(
-      e.position.x - half,
-      e.position.y - half,
-      e.position.x + half,
-      e.position.y + half,
-    );
-  }
-
-  /**
-   * ADR-583 Φ2 — graphic scale-bar spatial bounds. The DERIVED axis-extent bbox
-   * (scale-invariant canonical-mm from `computeScaleBarGeometry`, hence the `(1,'mm')`
-   * placeholders) padded on all sides by the LIVE annotative half-thickness — the same
-   * `±halfThickness` corridor `hitTestScaleBarAxis` gates on — so the broad phase always
-   * encloses the narrow phase. Without this the axis bbox is a zero-height line and the
-   * candidate is dropped whenever the cursor sits on the drawn band (mirror annotation-symbol).
-   */
-  private static calculateScaleBarBounds(entity: EntityModel, tolerance: number): BoundingBox {
-    const e = entity as unknown as ScaleBarEntity;
-    const { bbox } = computeScaleBarGeometry(e, 1, 'mm');
-    const pad = scaleBarModelHalfThicknessLive(e) + tolerance;
-    return this.createBoundingBox(
-      bbox.minX - pad,
-      bbox.minY - pad,
-      bbox.maxX + pad,
-      bbox.maxY + pad,
-    );
-  }
-
   private static calculatePointBounds(entity: EntityModel, tolerance: number): BoundingBox {
     // 🏢 ENTERPRISE: Type-safe casting for PointEntity properties
     const pointEntity = entity as EntityWithPoint;

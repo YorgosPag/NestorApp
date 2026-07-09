@@ -34,7 +34,9 @@ const EXPECTED_COMMAND_KEYS = [
   // beams (ADR-569 «Δοκάρι ανάμεσα σε μέλη»· last = ADR-441 «Δοκάρια από κάναβο» action)
   'beam', 'beam-from-wall', 'beam-between-members', 'beam.actions.fromGrid',
   // floors & openings (+ ADR-441 «Πλάκες από κάναβο» grid actions)
-  'slab', 'slab-opening', 'opening',
+  // ADR-615 — 'self-opening' = free-standing (self-hosted) opening placement, sibling
+  // of the wall-hosted 'opening' entry-point above.
+  'slab', 'slab-opening', 'opening', 'self-opening',
   'slab.actions.fromGridMat', 'slab.actions.fromGridFloor', 'slab.actions.fromGridRoof',
   'slab.actions.fromStructureCeiling',
   // foundation (last two = «Εσχάρα από κάναβο» + «Συνδετήριες από κάναβο» actions)
@@ -156,6 +158,9 @@ describe('ADR-443 — STRUCTURAL_TAB (permanent «Δομικά» tab)', () => {
     expect(iconByKey.get('slab')).toBe('bim-slab');
     expect(iconByKey.get('slab-opening')).toBe('bim-slab-opening');
     expect(iconByKey.get('opening')).toBe('bim-opening');
+    // ADR-615 — free-standing opening keeps its OWN distinct token (dashed-baseline
+    // glyph) — never shares 'bim-opening' (icon-uniqueness regression guard above).
+    expect(iconByKey.get('self-opening')).toBe('bim-opening-freestanding');
     expect(iconByKey.get('stair')).toBe('stair');
     expect(iconByKey.get('railing')).toBe('bim-railing');
   });

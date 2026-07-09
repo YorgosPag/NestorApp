@@ -31,6 +31,9 @@ import { resolvePolylineHudSegments, type GripAlignmentRole, type GripAlignmentE
 // καλύπτει slab/opening/roof/floor-finish/thermal/mep-underfloor) για τις live περιμετρικές διαστάσεις
 // ΚΑΘΕ πολυγωνικής BIM οντότητας κατά το reshape λαβής.
 import { getBimCharacteristicPointsOfCategory } from '../../bim/utils/bim-characteristic-points';
+// ADR-612 §resize-hud — opening-info-tag box edges via its own geometry SSoT (μηδέν νέα γεωμετρία).
+import { computeOpeningInfoTagGeometry } from '../../bim/opening-info-tag/opening-info-tag-geometry';
+import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
 import { buildWallHudSpecLabel } from '../drawing/wall-hud-spec-label';
 import { buildColumnHudSpecLabel } from '../drawing/column-hud-spec-label';
 import { gripKindOf } from '../grip-kinds';
@@ -104,6 +107,18 @@ export function drawMemberGripHud(
       for (let i = 0; i < n; i++) {
         paintWallHud(ctx, buildSegmentHudMeta(outline[i], outline[(i + 1) % n], sceneUnits), '', t, vp);
       }
+    }
+    return;
+  }
+  // ADR-612 §resize-hud (Giorgio 2026-07-09 «όπως ο τοίχος») — opening-info-tag SIZE grip: λευκές
+  // περιμετρικές ενδείξεις (μήκος + ∠γωνία) στις 4 ακμές του κουτιού κατά το resize, ΙΔΙΟ SSoT με
+  // polygon/wall/line (`buildSegmentHudMeta`+`paintWallHud`, `specLabel=''` — annotation χωρίς BIM
+  // ταυτότητα). ΜΟΝΟ η λαβή μεγέθους· move/rotation έχουν δικό τους overlay (clearance / rotation arc).
+  // Το ghost `transformed` είναι ΗΔΗ ενημερωμένο (`applyOpeningInfoTagGripDrag`→worldCorners) → WYSIWYG.
+  if (type === 'opening-info-tag' && gripKindOf(dp, 'opening-info-tag') === 'opening-info-tag-size') {
+    const c = computeOpeningInfoTagGeometry(transformed as unknown as OpeningInfoTagEntity).worldCorners;
+    for (let i = 0; i < c.length; i++) {
+      paintWallHud(ctx, buildSegmentHudMeta(c[i], c[(i + 1) % c.length], sceneUnits), '', t, vp);
     }
     return;
   }

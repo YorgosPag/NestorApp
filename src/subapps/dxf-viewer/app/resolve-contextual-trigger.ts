@@ -24,42 +24,45 @@
  */
 
 import type { EntityType } from '../types/base-entity';
-import { TEXT_EDITOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-text-editor-tab';
+// ADR-587 — every contextual-tab trigger token via the shared barrel (N.18: one import instead
+// of ~30 parallel `contextual-*-tab` lines duplicated with `resolve-tool-active-trigger.ts`).
 import {
+  TEXT_EDITOR_CONTEXTUAL_TRIGGER,
   ARRAY_RECT_CONTEXTUAL_TRIGGER,
   ARRAY_POLAR_CONTEXTUAL_TRIGGER,
   ARRAY_PATH_CONTEXTUAL_TRIGGER,
-} from '../ui/ribbon/data/contextual-array-tab';
-import { STAIR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-stair-tab';
-import { WALL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-wall-tab';
-import { OPENING_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-opening-tab';
-import { SLAB_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-slab-tab';
-import { ROOF_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-roof-tab';
-import { COLUMN_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-column-tab';
-import { BEAM_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-beam-tab';
-import { FOUNDATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-foundation-tab';
-import { SLAB_OPENING_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-slab-opening-tab';
-import { DIMENSION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-dimension-tab';
-import { LINE_TOOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-line-tool-tab';
-import { MEP_FIXTURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-fixture-tab';
-import { MEP_FLOOR_DRAIN_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-floor-drain-tab';
-import { MEP_SANITARY_FIXTURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-sanitary-fixture-tab';
-import { MEP_APPLIANCE_FIXTURE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-appliance-fixture-tab';
-import { MEP_SOCKET_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-socket-tab';
-import { MEP_DATA_OUTLET_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-data-outlet-tab';
-import { MEP_MANIFOLD_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-manifold-tab';
-import { DRAINAGE_COLLECTOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-drainage-collector-tab';
-import { MEP_RADIATOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-radiator-tab';
-import { MEP_BOILER_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-boiler-tab';
-import { MEP_WATER_HEATER_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-water-heater-tab';
-import { MEP_UNDERFLOOR_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-underfloor-tab';
-import { FLOOR_FINISH_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-floor-finish-tab';
-import { WALL_COVERING_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-wall-covering-tab';
-import { HATCH_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-hatch-tab';
-import { THERMAL_SPACE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-thermal-space-tab';
-import { MEP_SEGMENT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-segment-tab';
-import { ELECTRICAL_PANEL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-electrical-panel-tab';
-import { ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-annotation-symbol-tab';
+  STAIR_CONTEXTUAL_TRIGGER,
+  WALL_CONTEXTUAL_TRIGGER,
+  OPENING_CONTEXTUAL_TRIGGER,
+  SLAB_CONTEXTUAL_TRIGGER,
+  ROOF_CONTEXTUAL_TRIGGER,
+  COLUMN_CONTEXTUAL_TRIGGER,
+  BEAM_CONTEXTUAL_TRIGGER,
+  FOUNDATION_CONTEXTUAL_TRIGGER,
+  SLAB_OPENING_CONTEXTUAL_TRIGGER,
+  DIMENSION_CONTEXTUAL_TRIGGER,
+  LINE_TOOL_CONTEXTUAL_TRIGGER,
+  MEP_FIXTURE_CONTEXTUAL_TRIGGER,
+  MEP_FLOOR_DRAIN_CONTEXTUAL_TRIGGER,
+  MEP_SANITARY_FIXTURE_CONTEXTUAL_TRIGGER,
+  MEP_APPLIANCE_FIXTURE_CONTEXTUAL_TRIGGER,
+  MEP_SOCKET_CONTEXTUAL_TRIGGER,
+  MEP_DATA_OUTLET_CONTEXTUAL_TRIGGER,
+  MEP_MANIFOLD_CONTEXTUAL_TRIGGER,
+  DRAINAGE_COLLECTOR_CONTEXTUAL_TRIGGER,
+  MEP_RADIATOR_CONTEXTUAL_TRIGGER,
+  MEP_BOILER_CONTEXTUAL_TRIGGER,
+  MEP_WATER_HEATER_CONTEXTUAL_TRIGGER,
+  MEP_UNDERFLOOR_CONTEXTUAL_TRIGGER,
+  FLOOR_FINISH_CONTEXTUAL_TRIGGER,
+  WALL_COVERING_CONTEXTUAL_TRIGGER,
+  HATCH_CONTEXTUAL_TRIGGER,
+  THERMAL_SPACE_CONTEXTUAL_TRIGGER,
+  MEP_SEGMENT_CONTEXTUAL_TRIGGER,
+  ELECTRICAL_PANEL_CONTEXTUAL_TRIGGER,
+  ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER,
+  SCALE_BAR_CONTEXTUAL_TRIGGER,
+} from '../ui/ribbon/data/contextual-triggers';
 import { isSanitaryKind } from '../bim/sanitary/sanitary-symbol-spec';
 import { isApplianceKind } from '../bim/appliances/appliance-symbol-spec';
 import { isSocketKind } from '../bim/mep-fixtures/socket-symbol-spec';
@@ -130,6 +133,9 @@ export const ENTITY_CONTEXTUAL_TRIGGER: Partial<Record<EntityType, string>> = {
   mtext: TEXT_EDITOR_CONTEXTUAL_TRIGGER,
   // ADR-583 — a selected North arrow surfaces the «Σύμβολο Βορρά» tab (dual mode: edit/place).
   'annotation-symbol': ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER,
+  // ADR-583 Φ3e — a selected graphic scale-bar surfaces the «Γραφική Κλίμακα» tab
+  // (dual mode: edit selected live ↔ placement defaults), mirror annotation-symbol.
+  'scale-bar': SCALE_BAR_CONTEXTUAL_TRIGGER,
 };
 
 /**

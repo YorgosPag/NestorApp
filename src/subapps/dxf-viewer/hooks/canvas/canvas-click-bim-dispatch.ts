@@ -42,6 +42,7 @@ export function dispatchBimToolClick(
     spaceSeparatorTool,
     slabOpeningTool,
     openingTool,
+    selfOpeningTool,
     universalSelection,
   } = params;
 
@@ -200,6 +201,12 @@ export function dispatchBimToolClick(
   // PRIORITY 4.96: ADR-363 Phase 2 — Opening tool 2-click (host wall + position along axis).
   if (activeTool === 'opening' && openingTool?.isActive) {
     openingTool.onCanvasClick(worldPoint);
+    return true;
+  }
+  // PRIORITY 4.97: ADR-615 — Free-standing (self-hosted) opening single-click.
+  // Uses the RAW worldPoint (hit-tests / snaps to existing 2D DXF lines — ORTHO/POLAR must NOT shift the pick).
+  if (activeTool === 'self-opening' && selfOpeningTool?.isActive) {
+    selfOpeningTool.onCanvasClick(worldPoint);
     return true;
   }
   return false;

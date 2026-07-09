@@ -50,9 +50,9 @@ describe('toEntityModel capability coverage — ζωντανό seam ↔ descript
     const modelable = RENDERABLE_ENTITY_TYPES.filter((t) => variantSet.has(t));
     expect(asSorted(modelable)).toEqual(
       asSorted([
-        // DXF primitives με variant (12)
+        // DXF primitives με variant (13)
         'line', 'polyline', 'circle', 'arc', 'text', 'dimension', 'angle-measurement',
-        'hatch', 'xline', 'ray', 'annotation-symbol', 'scale-bar',
+        'hatch', 'xline', 'ray', 'annotation-symbol', 'scale-bar', 'opening-info-tag',
         // BIM (24 — όλα)
         'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair',
         'railing', 'roof', 'floor-finish', 'wall-covering', 'thermal-space', 'space-separator',

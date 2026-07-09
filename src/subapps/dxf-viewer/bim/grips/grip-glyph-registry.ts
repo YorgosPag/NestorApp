@@ -113,6 +113,10 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   // length handle (`scale-bar-length`) renders the default 'square'.
   'scale-bar-move': 'move',
   'scale-bar-rotation': 'rotation',
+  // Opening info tag (ADR-612) — centre move cross + rotation handle; the size handle
+  // (`opening-info-tag-size`) renders the default 'square'.
+  'opening-info-tag-move': 'move',
+  'opening-info-tag-rotation': 'rotation',
 } as const;
 
 /**

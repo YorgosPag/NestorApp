@@ -32,9 +32,11 @@ import { applyOverlayLineStyle, OVERLAY_LINE_COLORS, strokeOverlaySegment } from
 // πέρα από τη dim line (η ΚΟΝΤΙΝΗ ακμή του, όχι το κέντρο) — ίδιο contract για όλα τα overlay numbers.
 import { measureOverlayLabelBox, clearanceForBox } from './overlay-label-layout';
 import type { OverlayProjector } from './overlay-projector';
-// SSoT gate «ΜΗΚΟΣ/ΓΩΝΙΑ» (status-bar toggle) — οι listening/clearance dims είναι αμιγώς
-// ενδείξεις μήκους/γωνίας. Gate ΣΤΟ dispatch (call site), όχι μέσα στον shared painter.
-import { isLengthAngleHudVisible } from '../../systems/constraints/length-angle-hud-gate';
+// SSoT gate «Αποστάσεις» (OSNAP-popover toggle, `cadToggleState.listeningDim`). Οι κυανές
+// listening/clearance dims είναι ΞΕΧΩΡΙΣΤΟ σύστημα από τις λευκές length/angle HUD ενδείξεις
+// (Giorgio 2026-07-09): το «ΜΗΚΟΣ/ΓΩΝΙΑ» toggle κρύβει ΜΟΝΟ τις λευκές· οι κυανές αποστάσεις
+// ελέγχονται ΑΠΟΚΛΕΙΣΤΙΚΑ από το «Αποστάσεις». Ίδιο SSoT με το line-tool (`line-preview-helpers`).
+import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
 
 /** Projection helper: ο 3D projector όταν δίνεται (ADR-544), αλλιώς το 2D `worldToScreen`. */
 function resolveToScreen(
@@ -77,7 +79,7 @@ export function paintGhostFaceDimensions(
   viewport: { readonly width: number; readonly height: number },
   project?: OverlayProjector,
 ): void {
-  if (!isLengthAngleHudVisible()) return; // Gate ΜΗΚΟΣ/ΓΩΝΙΑ: όλες οι listening dims κρύβονται καθολικά.
+  if (!cadToggleState.isListeningDimOn()) return; // Gate «Αποστάσεις»: κυανές clearance dims κρύβονται καθολικά (ΟΧΙ το ΜΗΚΟΣ/ΓΩΝΙΑ, που αφορά ΜΟΝΟ τις λευκές).
   const textColor = OVERLAY_LINE_COLORS.listeningDim; // CYAN — distinct mechanism colour
   const labelMode = meta.labelMode ?? 'length'; // ADR-398 §3.12 — μήκος / γωνία / και τα δύο (arc gaps)
   for (const d of meta.dims) {

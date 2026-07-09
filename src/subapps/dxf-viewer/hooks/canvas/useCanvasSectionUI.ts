@@ -7,6 +7,9 @@ import type { Overlay } from '../../overlays/types';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
 import { useTextDoubleClickEditor } from '../../ui/text-toolbar/hooks/useTextDoubleClickEditor';
+// ADR-612 — opening-info-tag inline numeric cell editor: sibling of the text
+// double-click editor, opens a store-driven numeric input over the clicked cell.
+import { useOpeningInfoTagDoubleClick } from './use-opening-info-tag-double-click';
 import { useAutoAreaMouseMove } from './useAutoAreaMouseMove';
 import { useRegionPerimeterMouseMove } from './useRegionPerimeterMouseMove';
 import { QuickPropertiesMiniPanelStore } from '../../systems/properties/QuickPropertiesMiniPanelStore';
@@ -46,6 +49,7 @@ export function useCanvasSectionUI({
     return () => window.removeEventListener('keydown', handler, { capture: true });
   }, []);
   const textEditor = useTextDoubleClickEditor({ transformRef, containerRef, executeCommand, getSelectedEntityIds });
+  const openingTagEditor = useOpeningInfoTagDoubleClick({ transformRef, containerRef, getSelectedEntityIds });
   const handleDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (activeTool === 'select') {
       const ids = getSelectedEntityIds();
@@ -65,8 +69,11 @@ export function useCanvasSectionUI({
         }
       }
     }
+    // ADR-612 — opening-info-tag cell editor claims the double-click when it lands on
+    // a cell of the single selected tag; otherwise fall through to the text editor.
+    if (openingTagEditor.handleDoubleClick(e)) return;
     textEditor.handleDoubleClick(e);
-  }, [activeTool, getSelectedEntityIds, dxfScene, containerRef, textEditor, levelManager]);
+  }, [activeTool, getSelectedEntityIds, dxfScene, containerRef, textEditor, openingTagEditor, levelManager]);
   const { handleMouseMoveWithAutoArea } = useAutoAreaMouseMove({ handleMouseMove, activeTool, levelManager, currentOverlays, transformScale });
   // ADR-419 Layer 3 — αλυσίδωση: region/perimeter hover preview πάνω από το auto-area.
   const { handleMouseMoveWithRegionPreview } = useRegionPerimeterMouseMove({ handleMouseMove: handleMouseMoveWithAutoArea, activeTool, levelManager });

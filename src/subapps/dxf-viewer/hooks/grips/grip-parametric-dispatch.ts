@@ -47,6 +47,7 @@ import {
   commitRayGripDrag,
   commitDimensionGripDrag,
   commitScaleBarGripDrag,
+  commitOpeningInfoTagGripDrag,
 } from './grip-parametric-commits';
 
 /** Commit-handler shape shared by every parametric kind (behavior-preserving). */
@@ -121,6 +122,8 @@ export const PARAMETRIC_COMMIT_HANDLERS: Partial<
   ray: commitRayGripDrag,
   // ADR-583 Φ2.4 — graphic scale-bar (move / rotation / length; geometry DERIVED).
   'scale-bar': commitScaleBarGripDrag,
+  // ADR-612 — opening-info-tag (move / rotation / size; geometry DERIVED).
+  'opening-info-tag': commitOpeningInfoTagGripDrag,
 };
 
 /**

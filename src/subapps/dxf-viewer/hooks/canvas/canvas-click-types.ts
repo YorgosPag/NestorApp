@@ -123,6 +123,8 @@ export interface UseCanvasClickHandlerParams {
   slabOpeningTool?: SlabOpeningToolLike;
   /** ADR-363 Phase 2 — Opening tool click pipeline. */
   openingTool?: OpeningToolLike;
+  /** ADR-615 — Free-standing (self-hosted) opening tool click pipeline (single-click). */
+  selfOpeningTool?: OpeningToolLike;
 
   // ── ADR-188: Rotation tool ────────────────────────────────────────────
   /** Whether the rotation tool is active and collecting input */

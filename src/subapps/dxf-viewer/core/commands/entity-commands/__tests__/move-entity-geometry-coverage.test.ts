@@ -53,9 +53,10 @@ const renderableSet = new Set<string>(RENDERABLE_ENTITY_TYPES);
 
 /** Renderable types που παράγουν μη-κενό move patch (CAD guard match ή BIM switch case). */
 const MOVE_GOLDEN = [
-  // CAD movers (15)
+  // CAD movers (16)
   'line', 'polyline', 'lwpolyline', 'circle', 'arc', 'ellipse', 'text', 'mtext',
   'rectangle', 'rect', 'point', 'angle-measurement', 'hatch', 'annotation-symbol', 'scale-bar',
+  'opening-info-tag',
   // BIM movers — έχουν `case` στο `calculateBimMovedGeometry` switch (19)
   'wall', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair', 'roof',
   'floor-finish', 'space-separator', 'furniture', 'mep-fixture', 'electrical-panel',

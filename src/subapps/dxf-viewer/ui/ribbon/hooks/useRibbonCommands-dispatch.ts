@@ -52,6 +52,7 @@ import { isMepSegmentRibbonKey, isMepSegmentRibbonStringKey } from './bridge/mep
 import { isFurnitureRibbonKey, isFurnitureRibbonStringKey } from './bridge/furniture-command-keys';
 import { isFloorplanSymbolRibbonKey, isFloorplanSymbolRibbonStringKey } from './bridge/floorplan-symbol-command-keys';
 import { isAnnotationSymbolRibbonKey, isAnnotationSymbolRibbonStringKey } from './bridge/annotation-symbol-command-keys';
+import { isScaleBarRibbonKey, isScaleBarRibbonStringKey } from './bridge/scale-bar-command-keys';
 import { isMepFixtureLibraryKey, isMepFixtureLibraryStringKey } from './bridge/mep-fixture-library-command-keys';
 import { isMepRiserKey, isMepRiserStringKey } from './bridge/mep-riser-command-keys';
 import { isArrayRibbonKey, isArrayRibbonStringKey } from './bridge/array-command-keys';
@@ -132,6 +133,7 @@ export interface ComboboxRouteDeps {
   readonly furnitureBridge: ComboboxCapable;
   readonly floorplanSymbolBridge: ComboboxCapable;
   readonly annotationSymbolBridge: ComboboxCapable;
+  readonly scaleBarBridge: ComboboxCapable;
   readonly mepFixtureLibraryBridge: ComboboxCapable;
   readonly mepRiserBridge: ComboboxCapable;
   readonly arrayBridge: ComboboxCapable;
@@ -209,6 +211,7 @@ export function buildComboboxRoutes(d: ComboboxRouteDeps): readonly ComboboxRout
   const furnitureG = anyOf(isFurnitureRibbonKey, isFurnitureRibbonStringKey);
   const floorplanSymbolG = anyOf(isFloorplanSymbolRibbonKey, isFloorplanSymbolRibbonStringKey);
   const annotationSymbolG = anyOf(isAnnotationSymbolRibbonKey, isAnnotationSymbolRibbonStringKey);
+  const scaleBarG = anyOf(isScaleBarRibbonKey, isScaleBarRibbonStringKey);
   const mepFixtureLibraryG = anyOf(isMepFixtureLibraryKey, isMepFixtureLibraryStringKey);
   const mepRiserG = anyOf(isMepRiserKey, isMepRiserStringKey);
   const arrayG = anyOf(isArrayRibbonKey, isArrayRibbonStringKey);
@@ -248,6 +251,7 @@ export function buildComboboxRoutes(d: ComboboxRouteDeps): readonly ComboboxRout
     { ...both(furnitureG), ...boundCombobox(d.furnitureBridge) },
     { ...both(floorplanSymbolG), ...boundCombobox(d.floorplanSymbolBridge) },
     { ...both(annotationSymbolG), ...boundCombobox(d.annotationSymbolBridge) },
+    { ...both(scaleBarG), ...boundCombobox(d.scaleBarBridge) },
     { ...both(mepFixtureLibraryG), ...boundCombobox(d.mepFixtureLibraryBridge) },
     { ...both(mepRiserG), ...boundCombobox(d.mepRiserBridge) },
     { ...both(arrayG), ...boundCombobox(d.arrayBridge) },

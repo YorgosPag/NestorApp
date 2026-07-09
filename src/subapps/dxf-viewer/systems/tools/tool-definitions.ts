@@ -293,6 +293,9 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // ADR-583 Φ2: Graphic scale-bar — generic 2-click line-style tool (mirror 'line'),
   // NOT single-click annotation placement. allowsContinuous: place several in a row.
   'scale-bar':         { id: 'scale-bar',         category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-612: Opening info tag — SINGLE-CLICK placement (mirror annotation-symbol's
+  // click-count), NOT the scale-bar 2-click drag. allowsContinuous: place several in a row.
+  'opening-info-tag':  { id: 'opening-info-tag',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
 };
 
 /**
@@ -384,6 +387,8 @@ export const TOOL_CREATES_ENTITY: Partial<Record<ToolType, RenderableEntityType>
   'mep-drain-riser': 'mep-segment',
   // ── Graphic scale-bar (ADR-583 Φ2) — dedicated non-BIM entity, own tool ──
   'scale-bar': 'scale-bar',
+  // ── Opening info tag (ADR-612) — dedicated non-BIM entity, own single-click tool ──
+  'opening-info-tag': 'opening-info-tag',
 };
 
 // ADR-587 Φ2b — project the SSoT map onto each `ToolInfo.createsEntityType` (DERIVED, mirror

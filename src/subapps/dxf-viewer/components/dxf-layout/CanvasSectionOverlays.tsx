@@ -27,6 +27,9 @@ import { PropertiesPalette } from '../../systems/properties/PropertiesPalette';
 import { EntityContextMenuHost, type EntityContextMenuHostProps } from './EntityContextMenuHost';
 import { MirrorConfirmOverlay } from '../../ui/components/MirrorConfirmOverlay';
 import { TextEditorOverlay } from '../../ui/text-toolbar/TextEditorOverlay';
+// ADR-612 — inline numeric cell editor for opening-info-tag (self-contained: reads
+// its own store, dispatches UpdateEntityCommand via useCommandHistory). No props.
+import { OpeningInfoTagEditorOverlay } from '../../ui/opening-info-tag/OpeningInfoTagEditorOverlay';
 import { SelectionCyclingPopover } from '../../systems/selection/SelectionCyclingPopover';
 
 type QuickHoverProps = React.ComponentProps<typeof QuickPropertiesHoverPopover>;
@@ -77,6 +80,8 @@ export const CanvasSectionOverlays: React.FC<CanvasSectionOverlaysProps> = (p) =
       {p.mirrorOverlay && <MirrorConfirmOverlay {...p.mirrorOverlay} />}
       {p.textEditorOverlay && <TextEditorOverlay {...p.textEditorOverlay} />}
       {p.textCreationOverlay && <TextEditorOverlay {...p.textCreationOverlay} />}
+      {/* ADR-612 — opening-info-tag inline numeric cell editor (store-driven, no props). */}
+      <OpeningInfoTagEditorOverlay />
       {/* ADR-357 Phase 15 — G13 Selection Cycling popover (portal, micro-leaf, ADR-040) */}
       <SelectionCyclingPopover {...p.selectionCycling} />
     </>

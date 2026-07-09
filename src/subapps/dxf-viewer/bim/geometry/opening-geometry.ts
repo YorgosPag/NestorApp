@@ -24,8 +24,11 @@ import type { Point3D, Polyline3D, Polygon3D, BoundingBox3D } from '../types/bim
 import type { OpeningParams, OpeningGeometry, OpeningKind } from '../types/opening-types';
 import { isHingedKind, isDoubleLeafKind } from '../types/opening-types';
 import type { WallEntity } from '../types/wall-types';
-import { getWallAxisVertices } from './wall-geometry';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { resolveOpeningFrameProfile } from '../family-types/resolve-opening-frame-profile';
+import { buildFrameJambOutlines } from './opening-frame-outlines';
+import { resolveOpeningHost, type OpeningHost } from './opening-host';
+import { walkPolylineToDistance, projectPointToPolylineOffset } from './opening-axis-walk';
 
 const MM_TO_M = 1 / 1000;
 /**
@@ -39,27 +42,33 @@ const HALF_PI = Math.PI / 2;
 const BAY_BBOX_PROJECTION_RATIO = 0.4;
 
 /**
- * Compute `OpeningGeometry` from `OpeningParams + hostWall`. SSoT για
- * όλη την opening-derived γεωμετρία. Caller MUST ensure `hostWall.id === params.wallId`.
+ * Compute `OpeningGeometry` from `OpeningParams + host`. SSoT για
+ * όλη την opening-derived γεωμετρία. Caller MUST ensure `hostWall.id === params.wallId`
+ * (wall-hosted) — self-hosted openings (ADR-615) pass `selfOpeningHost(params, sceneUnits)`.
+ *
+ * ADR-615 §Decision 1 — zero-ripple normalize: accepts `WallEntity | OpeningHost`
+ * so all ~40 existing wall call-sites keep compiling unchanged; `resolveOpeningHost()`
+ * normalizes both providers to a single `OpeningHost` shape at entry.
  *
  * Throws nothing: invalid params (e.g. width = 0, offset out of bounds) still
  * produce a geometry — validation σε `validateOpeningParams()`.
  */
 export function computeOpeningGeometry(
   params: OpeningParams,
-  hostWall: WallEntity,
+  hostOrWall: WallEntity | OpeningHost,
   sceneUnits: SceneUnits = 'mm',
 ): OpeningGeometry {
+  const host = resolveOpeningHost(hostOrWall);
   // ADR-370 — axisVertices ζουν σε scene-units. `params.offsetFromStart` και
   // `params.width` είναι σε mm (Nestor convention). Με `mmToSceneUnits()`
   // ευθυγραμμίζουμε mm→scene ώστε το walk να διασχίζει τη σωστή απόσταση και
   // το outline να συμπίπτει με το ghost preview στο canvas.
   const mmFactor = mmToSceneUnits(sceneUnits);
-  const axisVertices = getWallAxisVertices(hostWall.params, hostWall.kind);
+  const axisVertices = host.axisVerticesScene;
   const centerOffsetMm = Math.max(0, params.offsetFromStart + params.width / 2);
   const centerOffsetScene = centerOffsetMm * mmFactor;
   const widthScene = params.width * mmFactor;
-  const thicknessScene = hostWall.params.thickness * mmFactor;
+  const thicknessScene = host.thicknessMm * mmFactor;
   const { point: center, ux, uy, rotation } = walkPolylineToDistance(axisVertices, centerOffsetScene);
   // Perpendicular (CCW 90°): (-uy, ux).
   const px = -uy;
@@ -76,8 +85,8 @@ export function computeOpeningGeometry(
   const endAxis = { x: center.x + ux * halfW, y: center.y + uy * halfW };
   const outline = buildOutline(
     startAxis, endAxis, px, py, halfT,
-    hostWall.geometry?.outerEdge?.points,
-    hostWall.geometry?.innerEdge?.points,
+    host.outerEdgePoints,
+    host.innerEdgePoints,
   );
   // ADR-396 — structural reveal outline: το ΕΛΕΥΘΕΡΟ άνοιγμα διευρυμένο κατά το πάχος
   // της περιμετρικής μόνωσης (Z4) σε κάθε άκρο ΚΑΤΑ ΤΟΝ ΑΞΟΝΑ. Η μόνωση τρώει τον
@@ -91,10 +100,19 @@ export function computeOpeningGeometry(
     const sEnd = { x: endAxis.x + ux * revealThkScene, y: endAxis.y + uy * revealThkScene };
     revealOutline = buildOutline(
       sStart, sEnd, px, py, halfT,
-      hostWall.geometry?.outerEdge?.points,
-      hostWall.geometry?.innerEdge?.points,
+      host.outerEdgePoints,
+      host.innerEdgePoints,
     );
   }
+  // ADR-611 — constant-cross-section κάσα jambs (Revit swept-profile parity). The
+  // frame member `faceWidth × depth` (mm) is resolved from the opening's frame
+  // profile and is CONSTANT regardless of `params.width/height` or wall thickness.
+  // (Pure fn → no family-type params available; params-only resolution is correct.)
+  const frameProfile = resolveOpeningFrameProfile(params);
+  const frameOutlines = buildFrameJambOutlines(
+    startAxis, endAxis, ux, uy, px, py,
+    frameProfile.faceWidth * mmFactor, frameProfile.depth * mmFactor,
+  );
   const hingeResult = isHingedKind(params.kind)
     ? buildHingeArc(params.kind, center, ux, uy, px, py, params, widthScene)
     : undefined;
@@ -123,6 +141,7 @@ export function computeOpeningGeometry(
     rotation,
     outline,
     revealOutline,
+    frameOutlines,
     hingeArc: hingeResult?.arc,
     hingeAnchor: hingeResult?.hingeAnchor,
     hingeAnchor2: hingeResult?.hingeAnchor2,
@@ -148,87 +167,7 @@ export function structuralRevealHeightRangeMm(
 }
 
 // ─── Polyline axis helpers ────────────────────────────────────────────────────
-
-/**
- * Walk `vertices` from the start by `distanceMm` mm and return the world
- * position + local tangent direction at that point. Clamps past the end.
- */
-function walkPolylineToDistance(
-  vertices: readonly Point3D[],
-  distanceMm: number,
-): { point: Point3D; ux: number; uy: number; rotation: number } {
-  let remaining = distanceMm;
-  for (let i = 0; i < vertices.length - 1; i++) {
-    const a = vertices[i];
-    const b = vertices[i + 1];
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const segLen = Math.hypot(dx, dy);
-    if (segLen < 1e-6) continue;
-    const ux = dx / segLen;
-    const uy = dy / segLen;
-    if (remaining <= segLen) {
-      const t = remaining / segLen;
-      return {
-        point: { x: a.x + dx * t, y: a.y + dy * t, z: 0 },
-        ux,
-        uy,
-        rotation: Math.atan2(dy, dx),
-      };
-    }
-    remaining -= segLen;
-  }
-  // Past end — clamp to last vertex, use last segment tangent.
-  const n = vertices.length;
-  const a = vertices[n - 2];
-  const b = vertices[n - 1];
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const segLen = Math.hypot(dx, dy) || 1;
-  return {
-    point: { x: b.x, y: b.y, z: b.z ?? 0 },
-    ux: dx / segLen,
-    uy: dy / segLen,
-    rotation: Math.atan2(dy, dx),
-  };
-}
-
-/**
- * Project `point` onto the polyline `vertices`, returning the cumulative arc
- * offset (mm) of the closest foot, clamped to `[0, totalArcLength]`.
- */
-function projectPointToPolylineOffset(
-  point: { readonly x: number; readonly y: number },
-  vertices: readonly Point3D[],
-): number {
-  let arcOffset = 0;
-  let bestOffset = 0;
-  let bestDist2 = Infinity;
-
-  for (let i = 0; i < vertices.length - 1; i++) {
-    const a = vertices[i];
-    const b = vertices[i + 1];
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const segLen = Math.hypot(dx, dy);
-    if (segLen < 1e-6) continue;
-    const ux = dx / segLen;
-    const uy = dy / segLen;
-    const vx = point.x - a.x;
-    const vy = point.y - a.y;
-    const t = Math.max(0, Math.min(vx * ux + vy * uy, segLen));
-    const ex = point.x - (a.x + ux * t);
-    const ey = point.y - (a.y + uy * t);
-    const dist2 = ex * ex + ey * ey;
-    if (dist2 < bestDist2) {
-      bestDist2 = dist2;
-      bestOffset = arcOffset + t;
-    }
-    arcOffset += segLen;
-  }
-
-  return Math.max(0, Math.min(bestOffset, arcOffset));
-}
+// Extracted to `opening-axis-walk.ts` (ADR-615 file-size split, N.7.1).
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
@@ -425,10 +364,10 @@ function buildHingeArc(
  * Consumed by the 3D temporary-dimension overlay (ADR-363 Φ1G.5 Slice 2f) to anchor
  * witness lines on the wall axis without re-deriving the walk.
  */
-export function wallAxisPointAtOffsetMm(hostWall: WallEntity, offsetMm: number): Point3D {
-  const mmFactor = mmToSceneUnits(hostWall.params.sceneUnits ?? 'mm');
-  const axisVertices = getWallAxisVertices(hostWall.params, hostWall.kind);
-  return walkPolylineToDistance(axisVertices, Math.max(0, offsetMm) * mmFactor).point;
+export function wallAxisPointAtOffsetMm(hostOrWall: WallEntity | OpeningHost, offsetMm: number): Point3D {
+  const host = resolveOpeningHost(hostOrWall);
+  const mmFactor = mmToSceneUnits(host.sceneUnits);
+  return walkPolylineToDistance(host.axisVerticesScene, Math.max(0, offsetMm) * mmFactor).point;
 }
 
 /**
@@ -445,10 +384,10 @@ export function wallAxisPointAtOffsetMm(hostWall: WallEntity, offsetMm: number):
  */
 export function projectPointToWallOffset(
   point: { readonly x: number; readonly y: number },
-  hostWall: WallEntity,
+  hostOrWall: WallEntity | OpeningHost,
 ): number {
-  const axisVertices = getWallAxisVertices(hostWall.params, hostWall.kind);
-  return projectPointToPolylineOffset(point, axisVertices);
+  const host = resolveOpeningHost(hostOrWall);
+  return projectPointToPolylineOffset(point, host.axisVerticesScene);
 }
 
 /**
@@ -461,8 +400,9 @@ export function projectPointToWallOffset(
  */
 export function projectPointToWallOffsetMm(
   point: { readonly x: number; readonly y: number },
-  hostWall: WallEntity,
+  hostOrWall: WallEntity | OpeningHost,
 ): number {
-  const mmFactor = mmToSceneUnits(hostWall.params.sceneUnits ?? 'mm');
-  return projectPointToWallOffset(point, hostWall) / (mmFactor || 1);
+  const host = resolveOpeningHost(hostOrWall);
+  const mmFactor = mmToSceneUnits(host.sceneUnits);
+  return projectPointToWallOffset(point, host) / (mmFactor || 1);
 }

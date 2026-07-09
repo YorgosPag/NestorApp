@@ -178,6 +178,22 @@ export const INSERT_TAB: RibbonTab = {
                 shortcut: 'SCALEBAR',
               },
             },
+            {
+              // ADR-612 — opening info tag: DEDICATED entity type (NOT an
+              // annotation-symbol kind). commandKey routes to the generic SINGLE-CLICK
+              // drawing tool (RibbonLargeButton → onToolChange), same dispatch as
+              // every other tool button — no bespoke annotation-symbol handler.
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'insert.opening-info-tag',
+                labelKey: 'ribbon.commands.openingInfoTag',
+                tooltipKey: 'ribbon.commands.openingInfoTagTooltip',
+                icon: 'opening-info-tag',
+                commandKey: 'opening-info-tag',
+                shortcut: 'OPENINGTAG',
+              },
+            },
           ],
         },
       ],

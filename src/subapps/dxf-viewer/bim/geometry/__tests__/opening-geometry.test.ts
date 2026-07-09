@@ -21,6 +21,7 @@ import {
   structuralRevealHeightRangeMm,
 } from '../opening-geometry';
 import { computeWallGeometry } from '../wall-geometry';
+import { selfOpeningHost } from '../opening-host';
 import type { WallEntity, WallParams } from '../../types/wall-types';
 import type { OpeningParams } from '../../types/opening-types';
 
@@ -450,5 +451,149 @@ describe('structuralRevealHeightRangeMm', () => {
   it('χωρίς reveal → αμετάβλητο (door [0..head], window [sill..head])', () => {
     expect(structuralRevealHeightRangeMm(makeOpening({ kind: 'door', sillHeight: 0, height: 2100 }))).toEqual({ bottomMm: 0, topMm: 2100 });
     expect(structuralRevealHeightRangeMm(makeOpening({ kind: 'window', sillHeight: 900, height: 1400 }))).toEqual({ bottomMm: 900, topMm: 2300 });
+  });
+});
+
+// ─── ADR-615 — self-hosted (free-standing, no WallEntity) opening ────────────
+
+describe('computeOpeningGeometry — self-hosted (ADR-615, WallEntity | OpeningHost union)', () => {
+  it('resolves position from the selfOpeningHost anchor when there is NO WallEntity', () => {
+    const anchor = { x: 2000, y: 500, z: 0 };
+    const params = makeOpening({
+      wallId: undefined,
+      selfHost: { anchor, rotationRad: 0, hostThicknessMm: 100 },
+      offsetFromStart: 0,
+      width: 900,
+    });
+    const host = selfOpeningHost(params, 'mm');
+    const g = computeOpeningGeometry(params, host, 'mm');
+    // offsetFromStart=0 + width/2=450 walks exactly to the synthetic axis
+    // midpoint (halfLength = width/2) → position === anchor.
+    expect(g.position.x).toBeCloseTo(anchor.x, EDGE_TOL);
+    expect(g.position.y).toBeCloseTo(anchor.y, EDGE_TOL);
+    expect(g.rotation).toBeCloseTo(0, EDGE_TOL);
+    // No outer/inner edges on a self-host → axis ± thicknessMm/2 fallback.
+    const ys = g.outline.vertices.map((v) => v.y);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeCloseTo(100, EDGE_TOL);
+  });
+
+  it('rotationRad orients the synthesized axis (π/2 → vertical opening)', () => {
+    const anchor = { x: 0, y: 0, z: 0 };
+    const params = makeOpening({
+      wallId: undefined,
+      selfHost: { anchor, rotationRad: Math.PI / 2, hostThicknessMm: 100 },
+      offsetFromStart: 0,
+      width: 900,
+    });
+    const host = selfOpeningHost(params, 'mm');
+    const g = computeOpeningGeometry(params, host, 'mm');
+    expect(g.rotation).toBeCloseTo(Math.PI / 2, 5);
+  });
+
+  it('WallEntity call-sites keep working unchanged (zero-ripple normalize)', () => {
+    // Same call as the wall-hosted describe blocks above — passing a raw
+    // WallEntity (not an OpeningHost) must still resolve via wallAsOpeningHost.
+    const g = computeOpeningGeometry(makeOpening(), makeWall());
+    expect(g.position.x).toBeCloseTo(1450, EDGE_TOL);
+  });
+});
+
+// ─── ADR-611 — constant-cross-section κάσα frame jambs ────────────────────────
+
+/**
+ * A jamb rectangle's edges (CCW `[start−perp, end−perp, end+perp, start+perp]`):
+ *   - faceWidth edge = along the wall axis = dist(v0, v1)
+ *   - depth edge     = across the axis     = dist(v1, v2)
+ * On a horizontal host wall these are axis-aligned; measuring edge lengths is
+ * therefore rotation-independent and captures the swept-profile cross-section.
+ */
+function jambCrossSection(poly: { vertices: readonly { x: number; y: number }[] }): { faceWidth: number; depth: number } {
+  const v = poly.vertices;
+  const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(b.x - a.x, b.y - a.y);
+  return { faceWidth: dist(v[0], v[1]), depth: dist(v[1], v[2]) };
+}
+
+describe('computeOpeningGeometry — frameOutlines (ADR-611 constant cross-section)', () => {
+  it('emits exactly two jamb outlines (one per opening end), each a 4-vertex rect', () => {
+    const g = computeOpeningGeometry(makeOpening({ kind: 'window' }), makeWall());
+    expect(g.frameOutlines).toBeDefined();
+    expect(g.frameOutlines!).toHaveLength(2);
+    for (const poly of g.frameOutlines!) expect(poly.vertices).toHaveLength(4);
+  });
+
+  it('κάσα cross-section stays CONSTANT across 6 widths (Revit swept-profile invariant)', () => {
+    // Default resolve (no frameProfileId / no legacy frameWidth) → catalog GENERIC-70x70.
+    const widths = [600, 900, 1200, 1500, 2000, 3000];
+    for (const width of widths) {
+      const g = computeOpeningGeometry(makeOpening({ kind: 'window', width }), makeWall());
+      const left = jambCrossSection(g.frameOutlines![0]);
+      const right = jambCrossSection(g.frameOutlines![1]);
+      // Both jambs, every width → identical 70 × 70 cross-section.
+      expect(left.faceWidth).toBeCloseTo(70, EDGE_TOL);
+      expect(left.depth).toBeCloseTo(70, EDGE_TOL);
+      expect(right.faceWidth).toBeCloseTo(70, EDGE_TOL);
+      expect(right.depth).toBeCloseTo(70, EDGE_TOL);
+    }
+  });
+
+  it('depth is INDEPENDENT of wall thickness (70mm profile in 150 vs 400 wall)', () => {
+    const thin = computeOpeningGeometry(makeOpening({ kind: 'window' }), makeWall({ thickness: 150 }));
+    const thick = computeOpeningGeometry(makeOpening({ kind: 'window' }), makeWall({ thickness: 400 }));
+    expect(jambCrossSection(thin.frameOutlines![0]).depth).toBeCloseTo(70, EDGE_TOL);
+    expect(jambCrossSection(thick.frameOutlines![0]).depth).toBeCloseTo(70, EDGE_TOL);
+  });
+
+  it('explicit catalog profile → non-square faceWidth ≠ depth, depth ≠ wall thickness', () => {
+    // ALUMIL M9660 frame = 72 × 60; host wall thickness = 250.
+    const g = computeOpeningGeometry(
+      makeOpening({ kind: 'window', frameProfileId: 'ALUMIL-M9660-frame' }),
+      makeWall({ thickness: 250 }),
+    );
+    const cs = jambCrossSection(g.frameOutlines![0]);
+    expect(cs.faceWidth).toBeCloseTo(72, EDGE_TOL);
+    expect(cs.depth).toBeCloseTo(60, EDGE_TOL);
+    expect(cs.depth).not.toBeCloseTo(250, 0); // decoupled from wall
+  });
+
+  it('per-instance overrides win (faceWidth/depth hand-edit) and stay constant vs width', () => {
+    for (const width of [700, 1100, 1800]) {
+      const g = computeOpeningGeometry(
+        makeOpening({ kind: 'window', width, frameProfileOverrides: { faceWidth: 90, depth: 45 } }),
+        makeWall(),
+      );
+      const cs = jambCrossSection(g.frameOutlines![0]);
+      expect(cs.faceWidth).toBeCloseTo(90, EDGE_TOL);
+      expect(cs.depth).toBeCloseTo(45, EDGE_TOL);
+    }
+  });
+
+  it('legacy frameWidth (no profileId) → square cross-section = frameWidth (zero regression)', () => {
+    const g = computeOpeningGeometry(
+      makeOpening({ kind: 'window', frameWidth: 50 }),
+      makeWall(),
+    );
+    const cs = jambCrossSection(g.frameOutlines![0]);
+    expect(cs.faceWidth).toBeCloseTo(50, EDGE_TOL);
+    expect(cs.depth).toBeCloseTo(50, EDGE_TOL);
+  });
+
+  it("scales the κάσα cross-section to scene units when host wall is in 'm'", () => {
+    const wall = makeWall({ sceneUnits: 'm', start: { x: 0, y: 0, z: 0 }, end: { x: 5, y: 0, z: 0 } });
+    const g = computeOpeningGeometry(makeOpening({ kind: 'window' }), wall, 'm');
+    const cs = jambCrossSection(g.frameOutlines![0]);
+    // 70mm face/depth → 0.07m in a metres scene.
+    expect(cs.faceWidth).toBeCloseTo(0.07, 5);
+    expect(cs.depth).toBeCloseTo(0.07, 5);
+  });
+
+  it('left jamb sits at the opening start, right jamb at the opening end (axis order)', () => {
+    // Horizontal wall, offset 1000 + width 900 → x∈[1000,1900]. faceWidth 70.
+    const g = computeOpeningGeometry(makeOpening({ kind: 'window', offsetFromStart: 1000, width: 900 }), makeWall());
+    const leftXs = g.frameOutlines![0].vertices.map((v) => v.x);
+    const rightXs = g.frameOutlines![1].vertices.map((v) => v.x);
+    expect(Math.min(...leftXs)).toBeCloseTo(1000, EDGE_TOL);   // start jamb outer edge
+    expect(Math.max(...leftXs)).toBeCloseTo(1070, EDGE_TOL);   // start + faceWidth
+    expect(Math.max(...rightXs)).toBeCloseTo(1900, EDGE_TOL);  // end jamb inner edge
+    expect(Math.min(...rightXs)).toBeCloseTo(1830, EDGE_TOL);  // end − faceWidth
   });
 });

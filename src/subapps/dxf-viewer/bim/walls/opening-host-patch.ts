@@ -31,6 +31,12 @@ export function applyOpeningHostPatch(
   openingId: string,
   params: OpeningParams,
 ): void {
+  // ADR-615 cascade guard — self-hosted openings (no wallId) have no host wall
+  // to re-host onto; write the params patch only, mirroring the soft-orphan path.
+  if (!params.wallId) {
+    sceneManager.updateEntity(openingId, { params } as Partial<SceneEntity>);
+    return;
+  }
   const hostRaw = sceneManager.getEntity(params.wallId);
   const hostCandidate = hostRaw as unknown as Partial<WallEntity>;
   const patch: Record<string, unknown> = { params };

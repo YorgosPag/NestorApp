@@ -66,6 +66,8 @@ import { getFloorplanSymbolGrips } from '../bim/floorplan-symbols/floorplan-symb
 import { getAnnotationSymbolGrips } from '../bim/annotation-symbols/annotation-symbol-grips';
 import { getScaleBarGrips } from '../bim/scale-bar/scale-bar-grips';
 import type { ScaleBarEntity } from '../types/scale-bar';
+import { getOpeningInfoTagGrips } from '../bim/opening-info-tag/opening-info-tag-grips';
+import type { OpeningInfoTagEntity } from '../types/opening-info-tag';
 import { getMepSegmentGrips } from '../bim/mep-segments/mep-segment-grips';
 import { getRoofGrips } from '../bim/roofs/roof-grips';
 import { getFloorFinishGrips } from '../bim/floor-finishes/floor-finish-grips';
@@ -358,6 +360,10 @@ export const GRIP_PRODUCERS: Partial<Record<DxfEntityUnion['type'], (e: DxfEntit
   // ADR-583 Φ2.4 — graphic scale-bar: MOVE (axis midpoint) + ROTATION (perp handle) +
   // LENGTH (derived endPosition). All positions read from the DERIVED geometry SSoT.
   'scale-bar': (e) => getScaleBarGrips(e as unknown as ScaleBarEntity),
+
+  // ADR-612 — opening-info-tag: MOVE (box centre) + ROTATION (top-edge perp handle) +
+  // SIZE (top-right corner, locked 3:2). All positions read from the DERIVED geometry SSoT.
+  'opening-info-tag': (e) => getOpeningInfoTagGrips(e as unknown as OpeningInfoTagEntity),
 
   // ADR-417 Φ1-part-2 #2 — parametric roof grips (per-vertex translate + edge-midpoint insertion).
   roof: (e) => getRoofGrips(e as unknown as RoofEntity),

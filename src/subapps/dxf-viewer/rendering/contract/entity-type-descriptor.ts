@@ -58,6 +58,8 @@ export const ANNOTATION_RENDERABLE_TYPES: readonly RenderableEntityType[] = [
   'annotation-symbol',
   // ADR-583 Φ2 — graphic scale-bar (dedicated sibling of dimension/center-mark).
   'scale-bar',
+  // ADR-612 — opening info tag (dedicated sibling of scale-bar).
+  'opening-info-tag',
 ];
 
 const BIM_TYPE_SET: ReadonlySet<string> = new Set(BIM_RENDERABLE_TYPES);

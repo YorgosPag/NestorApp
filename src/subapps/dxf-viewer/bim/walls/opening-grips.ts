@@ -26,23 +26,46 @@
  * host wall axis (`projectPointToWallOffset`). Geometry is NOT recomputed here —
  * `UpdateOpeningParamsCommand` re-derives it via `computeOpeningGeometry()`.
  *
+ * ADR-615 — SELF-HOSTED branch (additive, guarded by `isSelfHostedOpening`): a
+ * free-standing opening has no `WallEntity` to slide/clamp/rehost against, so it
+ * behaves like every other free-standing box (furniture parity) — MOVE (free 2D
+ * anchor translate), ROTATION (real drag-rotate of `selfHost.rotationRad`) and
+ * CORNER resize (μήκος `width` + πλάτος `hostThicknessMm`, max-clamped) are ALL
+ * delegated to the shared centred-box grip SSoT (`applySelfHostedBoxGripDrag`,
+ * ADR-602). Only `opening-facing` (hinged swing side) stays a local host-agnostic
+ * click-toggle. Rehost is N/A (no wall to pick). The wall-hosted path is byte-identical.
+ *
  * @see bim/grips/centred-box-grips.ts — the shared box grip SSoT (role vocabulary)
  * @see bim/furniture/furniture-grips.ts — the canonical thin-adapter template
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.4 §6 Phase 2.5
+ * @see docs/centralized-systems/reference/adrs/ADR-615-free-standing-self-hosted-opening.md §Decision 4
  */
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo, OpeningGripKind } from '../../hooks/useGripMovement';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import type { OpeningEntity, OpeningParams } from '../types/opening-types';
-import { DEFAULT_FRAME_WIDTH_MM, MIN_OPENING_WIDTH_MM, isHingedKind } from '../types/opening-types';
+import { DEFAULT_FRAME_WIDTH_MM, MIN_OPENING_WIDTH_MM, isHingedKind, isSelfHostedOpening } from '../types/opening-types';
 import type { WallEntity } from '../types/wall-types';
 import { projectPointToWallOffsetMm } from '../geometry/opening-geometry';
 import { rotateVector } from '../grips/grip-math';
 import { clamp } from '../../utils/scalar-math';
 import { ROTATION_HANDLE_OFFSET_MM, type CentredBoxGripRole } from '../grips/centred-box-grips';
-import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
-import { mmToSceneUnits } from '../../utils/scene-units';
+import type { SceneUnits } from '../../utils/scene-units';
+import { applySelfHostedBoxGripDrag } from './opening-grips-self-host';
+import { openingOffsetBounds, withOpeningOffset, slideAlongWallByDelta } from './opening-grips-wall-move';
+
+// ADR-363 Φ1G.5 Slice 2 / N.7.1 file-size split — re-export the wall-hosted
+// "Pick New Host" resolver so existing consumers keep importing it from this
+// module's public path (`bim/walls/opening-grips`); the implementation lives
+// in `opening-grips-wall-move.ts` (WALL-HOSTED ONLY — see that file's header).
+export {
+  OPENING_REHOST_SNAP_TOLERANCE_MM,
+  openingRehostToleranceWorld,
+  resolveOpeningAltMove,
+  type OpeningAltMoveInput,
+  type OpeningAltMoveResult,
+} from './opening-grips-wall-move';
 
 const RAD_TO_DEG = 180 / Math.PI;
 
@@ -154,12 +177,16 @@ export function getOpeningGrips(entity: Readonly<OpeningEntity>): GripInfo[] {
       gripKind: { on: 'opening', kind: 'opening-facing' },
     });
   }
-  // ADR-363 Φ1G.5 Slice 2 — drop the central MOVE marker (`opening-move`, 4-way
-  // arrow): redundant now that Alt+drag from any opening grip (corner / rotation)
-  // slides the WHOLE opening along the host wall (`applyOpeningAltSlide`). Filtered
-  // here (not un-pushed) so the gripIndex math above — incl. the `opening-facing`
-  // `grips.length` index — stays intact; the `opening-move` transform
-  // (`moveAlongWall`) is retained but no longer reachable from a grip.
+  // ADR-615 — a SELF-HOSTED opening moves FREELY on the plan (no wall to slide
+  // along), so it KEEPS the central MOVE handle (4-way arrow) — the user relocates
+  // it by dragging that glyph (→ `applySelfHostedBoxGripDrag('opening-move')`).
+  if (isSelfHostedOpening(entity.params)) return grips;
+  // ADR-363 Φ1G.5 Slice 2 — a WALL-HOSTED opening drops the central MOVE marker
+  // (`opening-move`, 4-way arrow): redundant now that Alt+drag from any opening
+  // grip (corner / rotation) slides the WHOLE opening along the host wall
+  // (`applyOpeningAltSlide`). Filtered here (not un-pushed) so the gripIndex math
+  // above — incl. the `opening-facing` `grips.length` index — stays intact; the
+  // `opening-move` transform (`moveAlongWall`) is retained but no longer reachable.
   return grips.filter((g) => gripKindOf(g, 'opening') !== 'opening-move');
 }
 
@@ -170,32 +197,27 @@ export interface OpeningGripDragInput {
   readonly originalParams: OpeningParams;
   /** Current world cursor position — projected onto host wall axis. */
   readonly currentPos: Point2D;
-  /** Host wall — required for axis projection + length clamp. */
-  readonly hostWall: WallEntity;
-}
-
-/** Επιτρεπτά offset bounds `[minOffset,maxOffset]` του opening στον host wall· `null` αν πολύ κοντός. */
-function openingOffsetBounds(
-  params: OpeningParams,
-  hostWall: WallEntity,
-): { minOffset: number; maxOffset: number } | null {
-  const hostLengthMm = hostWall.geometry.length * 1000;
-  const frameWidth = params.frameWidth ?? DEFAULT_FRAME_WIDTH_MM;
-  const minOffset = frameWidth;
-  const maxOffset = hostLengthMm - params.width - frameWidth;
-  if (maxOffset < minOffset) return null; // host too short for opening + jambs
-  return { minOffset, maxOffset };
-}
-
-/** Apply a clamped offset → new params (referential no-op preserved). */
-function withOpeningOffset(
-  params: OpeningParams,
-  rawOffset: number,
-  bounds: { minOffset: number; maxOffset: number },
-): OpeningParams {
-  const clamped = clamp(rawOffset, bounds.minOffset, bounds.maxOffset);
-  if (clamped === params.offsetFromStart) return params;
-  return { ...params, offsetFromStart: clamped };
+  /**
+   * Host wall — required for axis projection + length clamp on a WALL-HOSTED
+   * opening. ADR-615: absent for a self-hosted opening (`isSelfHostedOpening`
+   * guards the branch that doesn't need it — never fabricate a `WallEntity`).
+   */
+  readonly hostWall?: WallEntity;
+  /**
+   * ADR-615 — mm↔scene conversion for the self-hosted grip math (`selfHost.anchor`
+   * is stored in mm; the box drag works in scene units). Defaults to `'mm'` (the
+   * canonical-mm scene these openings live on, ADR-462). Unused on the wall-hosted
+   * path (the host wall carries its own sceneUnits).
+   */
+  readonly sceneUnits?: SceneUnits;
+  /**
+   * ADR-615 — world-space drag delta (grip anchor → cursor). Drives the
+   * self-hosted centred-box drag (move / rotate / resize). Unused on the
+   * wall-hosted path (which reads `currentPos` and projects onto the wall axis).
+   */
+  readonly delta?: Point2D;
+  /** ADR-615 — ORTHO (F8) → self-hosted corner resize constrained to one local axis. */
+  readonly ortho?: boolean;
 }
 
 /** Translate the whole opening along the host wall axis (legacy `opening-offset`). */
@@ -207,30 +229,6 @@ function moveAlongWall(
   const bounds = openingOffsetBounds(params, hostWall);
   if (!bounds) return params;
   return withOpeningOffset(params, projectPointToWallOffsetMm(currentPos, hostWall) - params.width / 2, bounds);
-}
-
-/**
- * ADR-363 Φ1G.5 Slice 2 — Alt-drag «move-from-characteristic-point» for a hosted
- * opening: translate the WHOLE opening ALONG the host wall by the world `delta`,
- * keeping the grabbed point (`basePoint`) under the cursor. Unlike the free
- * whole-entity move (walls/columns/…), a hosted opening can only slide on its
- * wall, so the displacement is the component of `delta` along the wall axis —
- * computed via the projection SSoT (`projectPointToWallOffsetMm`) as the offset
- * difference between `basePoint` and `basePoint + delta`. Base-point semantics
- * (offset += Δ), NOT center-on-cursor, so grabbing any corner slides 1:1.
- * Clamped to the same [frame, hostLength − width − frame] bounds as `moveAlongWall`.
- */
-function slideAlongWallByDelta(
-  params: OpeningParams,
-  basePoint: Point2D,
-  currentPos: Point2D,
-  hostWall: WallEntity,
-): OpeningParams {
-  const bounds = openingOffsetBounds(params, hostWall);
-  if (!bounds) return params;
-  const baseMm = projectPointToWallOffsetMm(basePoint, hostWall);
-  const curMm = projectPointToWallOffsetMm(currentPos, hostWall);
-  return withOpeningOffset(params, params.offsetFromStart + (curMm - baseMm), bounds);
 }
 
 /** Resize by moving ONE jamb along the wall; the opposite jamb stays pinned. */
@@ -291,12 +289,20 @@ function flipOpeningFacing(params: OpeningParams): OpeningParams {
  * is NOT recomputed here — `UpdateOpeningParamsCommand.execute` re-derives it via
  * `computeOpeningGeometry()`. Returns `originalParams` referentially unchanged on
  * any no-op (foreign kind / out-of-range / identity) so the commit short-circuits.
+ *
+ * ADR-615: self-hosted openings (`isSelfHostedOpening`) branch to
+ * `applySelfHostedGripDrag` — no host wall involved. The wall-hosted switch
+ * below is unchanged (byte-identical).
  */
 export function applyOpeningGripDrag(
   gripKind: OpeningGripKind,
   input: Readonly<OpeningGripDragInput>,
 ): OpeningParams {
-  const { originalParams, currentPos, hostWall } = input;
+  const { originalParams, currentPos, hostWall, sceneUnits, delta, ortho } = input;
+  if (isSelfHostedOpening(originalParams)) {
+    return applySelfHostedGripDrag(gripKind, originalParams, delta ?? { x: 0, y: 0 }, sceneUnits ?? 'mm', ortho);
+  }
+  if (!hostWall) return originalParams; // defensive: wall-hosted params require a host
   switch (gripKind) {
     case 'opening-move':
       return moveAlongWall(originalParams, currentPos, hostWall);
@@ -315,6 +321,33 @@ export function applyOpeningGripDrag(
   }
 }
 
+// ─── ADR-615 self-hosted branch (additive — no WallEntity involved) ──────────
+// The centred-box drag math (move / rotate / resize) lives in the shared box SSoT
+// via `applySelfHostedBoxGripDrag` (`opening-grips-self-host.ts`); only the
+// `opening-facing` click-toggle stays local (host-agnostic, shared with the
+// wall-hosted switch above).
+
+/**
+ * ADR-615 — self-hosted grip-drag dispatch. The free-standing opening behaves as
+ * a centred box (furniture parity): MOVE = free anchor translate, ROTATION =
+ * real drag-rotate (`selfHost.rotationRad`), CORNER = two-direction resize
+ * (μήκος `width` + πλάτος `hostThicknessMm`, max-clamped) — ALL delegated to the
+ * centred-box grip SSoT (`applySelfHostedBoxGripDrag`, ADR-602). The `opening-facing`
+ * grip (hinged kinds) stays a host-agnostic click-toggle so the user can flip the
+ * swing side without a wall. Handing/left-right no longer needs a dedicated flip —
+ * the whole symbol rotates.
+ */
+function applySelfHostedGripDrag(
+  gripKind: OpeningGripKind,
+  originalParams: OpeningParams,
+  delta: Point2D,
+  sceneUnits: SceneUnits,
+  ortho?: boolean,
+): OpeningParams {
+  if (gripKind === 'opening-facing') return flipOpeningFacing(originalParams);
+  return applySelfHostedBoxGripDrag(gripKind, { originalParams, delta, sceneUnits, ortho });
+}
+
 // ─── Alt-drag whole-opening slide (ADR-363 Φ1G.5 Slice 2) ────────────────────
 
 export interface OpeningAltSlideInput {
@@ -324,8 +357,17 @@ export interface OpeningAltSlideInput {
   readonly basePoint: Point2D;
   /** Current world cursor position (= basePoint + drag delta). */
   readonly currentPos: Point2D;
-  /** Host wall — required for axis projection + length clamp. */
-  readonly hostWall: WallEntity;
+  /**
+   * Host wall — required for axis projection + length clamp on a WALL-HOSTED
+   * opening. ADR-615: absent for a self-hosted opening.
+   */
+  readonly hostWall?: WallEntity;
+  /**
+   * ADR-615 — mm↔scene conversion for the self-hosted anchor translate.
+   * Defaults to `'mm'` (canonical-mm scene, ADR-462). Unused on the
+   * wall-hosted path.
+   */
+  readonly sceneUnits?: SceneUnits;
 }
 
 /**
@@ -334,108 +376,20 @@ export interface OpeningAltSlideInput {
  * delta). Returns `originalParams` referentially unchanged on any no-op (host too
  * short / out-of-range / identity) so the commit short-circuits. Geometry is NOT
  * recomputed here — `UpdateOpeningParamsCommand` re-derives it.
+ *
+ * ADR-615: a self-hosted opening (`isSelfHostedOpening`) has no wall axis to
+ * slide along — Alt-drag instead translates `selfHost.anchor` by the raw world
+ * delta via the centred-box MOVE SSoT (`applySelfHostedBoxGripDrag`), a free 2D
+ * whole-object move. The wall-hosted branch below is unchanged.
  */
 export function applyOpeningAltSlide(input: Readonly<OpeningAltSlideInput>): OpeningParams {
-  const { originalParams, basePoint, currentPos, hostWall } = input;
+  const { originalParams, basePoint, currentPos, hostWall, sceneUnits } = input;
+  if (isSelfHostedOpening(originalParams)) {
+    // Alt-drag from a characteristic point = free 2D whole-object move → same
+    // centred-box MOVE SSoT as the primary move grip (delta = base → cursor).
+    const delta: Point2D = { x: currentPos.x - basePoint.x, y: currentPos.y - basePoint.y };
+    return applySelfHostedBoxGripDrag('opening-move', { originalParams, delta, sceneUnits: sceneUnits ?? 'mm' });
+  }
+  if (!hostWall) return originalParams; // defensive: wall-hosted params require a host
   return slideAlongWallByDelta(originalParams, basePoint, currentPos, hostWall);
-}
-
-// ─── Re-host «Pick New Host» (ADR-363 Φ1G.5 Slice 2) ─────────────────────────
-
-/**
- * mm — how close the cursor must come to ANOTHER wall's axis for the Alt-drag to
- * re-host the opening onto it (Revit «Pick New Host»). Below this → stays on the
- * current wall and slides. Converted to world units per scene via the host's units.
- */
-export const OPENING_REHOST_SNAP_TOLERANCE_MM = 600;
-
-/** World-unit re-host snap tolerance for a given host wall (scene-unit aware). */
-export function openingRehostToleranceWorld(host: WallEntity): number {
-  return OPENING_REHOST_SNAP_TOLERANCE_MM * mmToSceneUnits(host.params.sceneUnits ?? 'mm');
-}
-
-/** Nearest wall to `point` by axis distance, within `tolerance` (world units). null if none. */
-function nearestWallTo(
-  point: Point2D,
-  walls: readonly WallEntity[],
-  tolerance: number,
-): WallEntity | null {
-  let best: WallEntity | null = null;
-  let bestDist = tolerance;
-  for (const w of walls) {
-    const d = pointToLineDistance(
-      point,
-      { x: w.params.start.x, y: w.params.start.y },
-      { x: w.params.end.x, y: w.params.end.y },
-    );
-    if (d <= bestDist) { bestDist = d; best = w; }
-  }
-  return best;
-}
-
-export interface OpeningAltMoveInput {
-  readonly originalParams: OpeningParams;
-  /** The grabbed characteristic point (grip world position) = move base point. */
-  readonly basePoint: Point2D;
-  /** Current world cursor position (= basePoint + drag delta). */
-  readonly currentPos: Point2D;
-  /** The opening's current host wall (`params.wallId`). */
-  readonly currentHost: WallEntity;
-  /** All walls on the level — candidate re-host targets. */
-  readonly candidateWalls: readonly WallEntity[];
-  /** World-unit distance under which the cursor re-hosts onto another wall. */
-  readonly rehostToleranceWorld: number;
-  /**
-   * Explicit re-host target wall (overrides the `nearestWallTo` proximity scan).
-   * Used by the 3D path, where the wall UNDER THE CURSOR at release (raycast) is a
-   * far more reliable target than the proximity of the gizmo-constrained end point.
-   * When set, it IS the host (slide if it equals the current wall, else re-host).
-   */
-  readonly forcedHost?: WallEntity;
-}
-
-export interface OpeningAltMoveResult {
-  /** New params (wallId + offsetFromStart). Spread over the original on commit. */
-  readonly params: OpeningParams;
-  /** The wall the new geometry must be computed against (current or new host). */
-  readonly host: WallEntity;
-}
-
-/**
- * ADR-363 Φ1G.5 Slice 2 — resolve an Alt-drag «move-from-characteristic-point» of
- * a hosted opening, the SINGLE SSoT shared by the live ghost AND the commit:
- *   · cursor nearest the CURRENT host → slide along it (base-point delta).
- *   · cursor nearest a DIFFERENT wall (within tolerance) → RE-HOST (Revit «Pick
- *     New Host»): change `wallId` + drop at the cursor projection. Auto-rotation
- *     and auto-thickness follow for free because the opening's geometry is derived
- *     from its host wall (`computeOpeningGeometry`).
- * Returns `null` for a no-op (identity slide / degenerate target wall) so the
- * caller short-circuits. NEVER recomputes geometry here (the caller does, against
- * `result.host`) — keeps the geometry SSoT in one place.
- */
-export function resolveOpeningAltMove(
-  input: Readonly<OpeningAltMoveInput>,
-): OpeningAltMoveResult | null {
-  const { originalParams, basePoint, currentPos, currentHost, candidateWalls, rehostToleranceWorld, forcedHost } = input;
-  const host = forcedHost ?? nearestWallTo(currentPos, candidateWalls, rehostToleranceWorld) ?? currentHost;
-
-  // ── Same wall → base-point slide ──────────────────────────────────────────
-  if (host.id === originalParams.wallId) {
-    const slid = slideAlongWallByDelta(originalParams, basePoint, currentPos, host);
-    if (slid === originalParams) return null;
-    return { params: slid, host };
-  }
-
-  // ── Different wall → RE-HOST (drop at the cursor projection, centre-on-cursor) ─
-  const hostLengthMm = host.geometry.length * 1000;
-  const frameWidth = originalParams.frameWidth ?? DEFAULT_FRAME_WIDTH_MM;
-  const minOffset = frameWidth;
-  const maxOffset = hostLengthMm - originalParams.width - frameWidth;
-  if (maxOffset < minOffset) return null; // new wall too short for opening + jambs
-  const offset = clamp(
-    projectPointToWallOffsetMm(currentPos, host) - originalParams.width / 2,
-    minOffset,
-    maxOffset,
-  );
-  return { params: { ...originalParams, wallId: host.id, offsetFromStart: offset }, host };
 }

@@ -16,10 +16,12 @@
  */
 
 import { applyOpeningGripDrag, applyOpeningAltSlide, resolveOpeningAltMove, getOpeningGrips } from '../opening-grips';
-import { DEFAULT_FRAME_WIDTH_MM } from '../../types/opening-types';
+import { DEFAULT_FRAME_WIDTH_MM, MAX_SELF_HOST_THICKNESS_MM } from '../../types/opening-types';
 import {
   buildDefaultOpeningParams,
   buildOpeningEntity,
+  buildDefaultSelfOpeningParams,
+  buildSelfOpeningEntity,
 } from '../../../hooks/drawing/opening-completion';
 import {
   buildDefaultWallParams,
@@ -301,6 +303,86 @@ describe('opening-grips (Phase 2.5 — wall parity)', () => {
       hostWall: shortHost,
     });
     expect(next).toBe(originalParams);
+  });
+});
+
+// ─── ADR-615 — self-hosted (free-standing) opening grip behaviour ────────────
+describe('opening-grips — ADR-615 self-hosted (free-standing, centred-box parity)', () => {
+  function makeSelfDoor(anchor = { x: 2000, y: 1000, z: 0 }, rotationRad = 0): OpeningEntity {
+    const params = buildDefaultSelfOpeningParams(anchor, rotationRad, { kind: 'door' });
+    const r = buildSelfOpeningEntity(params, '0');
+    if (!r.ok) throw new Error('expected self-opening ok: ' + r.hardErrors.join(','));
+    return r.entity;
+  }
+
+  it('S1. KEEPS the central move handle (4-way arrow) that the wall-hosted opening drops', () => {
+    const grips = getOpeningGrips(makeSelfDoor());
+    const kinds = grips.map((g) => gripKindOf(g, 'opening'));
+    expect(kinds).toContain('opening-move');
+    expect(kinds).toContain('opening-rotation');
+    expect(kinds.filter((k) => k?.startsWith('opening-corner'))).toHaveLength(4);
+    const moveGrip = grips.find((g) => gripKindOf(g, 'opening') === 'opening-move');
+    expect(moveGrip?.movesEntity).toBe(true);
+  });
+
+  it('S2. opening-move freely translates selfHost.anchor by the world delta', () => {
+    const door = makeSelfDoor({ x: 2000, y: 1000, z: 0 });
+    const next = applyOpeningGripDrag('opening-move', {
+      originalParams: door.params,
+      currentPos: { x: 0, y: 0 },
+      delta: { x: 300, y: -120 },
+      sceneUnits: 'mm',
+    });
+    expect(next.selfHost?.anchor.x).toBeCloseTo(2300, 0);
+    expect(next.selfHost?.anchor.y).toBeCloseTo(880, 0);
+  });
+
+  it('S3. corner resize changes BOTH μήκος (width) and πλάτος (hostThicknessMm)', () => {
+    const door = makeSelfDoor();
+    const w0 = door.params.width;
+    const t0 = door.params.selfHost!.hostThicknessMm;
+    const next = applyOpeningGripDrag('opening-corner-ne', {
+      originalParams: door.params,
+      currentPos: { x: 0, y: 0 },
+      delta: { x: 400, y: 400 },
+      sceneUnits: 'mm',
+    });
+    expect(next.width).toBeGreaterThan(w0);
+    expect(next.selfHost!.hostThicknessMm).toBeGreaterThan(t0);
+  });
+
+  it('S4. πλάτος (thickness) is clamped to MAX_SELF_HOST_THICKNESS_MM (no 1-metre openings)', () => {
+    const door = makeSelfDoor();
+    const next = applyOpeningGripDrag('opening-corner-ne', {
+      originalParams: door.params,
+      currentPos: { x: 0, y: 0 },
+      delta: { x: 100, y: 100000 }, // absurd across-drag
+      sceneUnits: 'mm',
+    });
+    expect(next.selfHost!.hostThicknessMm).toBeLessThanOrEqual(MAX_SELF_HOST_THICKNESS_MM);
+  });
+
+  it('S5. opening-rotation is a REAL rotate (changes selfHost.rotationRad, not a handing flip)', () => {
+    const door = makeSelfDoor({ x: 2000, y: 1000, z: 0 }, 0);
+    const next = applyOpeningGripDrag('opening-rotation', {
+      originalParams: door.params,
+      currentPos: { x: 0, y: 0 },
+      delta: { x: 220, y: 180 },
+      sceneUnits: 'mm',
+    });
+    expect(next.selfHost?.rotationRad).not.toBe(0);
+  });
+
+  it('S6. opening-facing still flips the swing side (host-agnostic click-toggle)', () => {
+    const door = makeSelfDoor();
+    const inward = { ...door.params, openDirection: 'inward' as const };
+    const next = applyOpeningGripDrag('opening-facing', {
+      originalParams: inward,
+      currentPos: { x: 0, y: 0 },
+      delta: { x: 0, y: 0 },
+      sceneUnits: 'mm',
+    });
+    expect(next.openDirection).toBe('outward');
   });
 });
 

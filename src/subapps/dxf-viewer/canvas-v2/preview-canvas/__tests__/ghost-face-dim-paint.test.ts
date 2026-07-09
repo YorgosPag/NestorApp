@@ -19,6 +19,7 @@ jest.mock('firebase/auth', () => ({
 import { paintGhostFaceDimensions } from '../ghost-face-dim-paint';
 import { resolveGhostFaceDimensions } from '../../../bim/framing/ghost-face-dim-references';
 import type { GhostFaceFrame } from '../../../bim/framing/linear-member-face-snap';
+import { cadToggleState } from '../../../systems/constraints/cad-toggle-state';
 
 interface MockCtxCall { fn: string; args: readonly unknown[]; }
 interface MockCtx { calls: MockCtxCall[]; ctx: CanvasRenderingContext2D; }
@@ -123,5 +124,35 @@ describe('paintGhostFaceDimensions', () => {
     );
     const texts = mock.calls.filter((c) => c.fn === 'fillText').map((c) => String(c.args[0]));
     expect(texts.some((t) => t.includes('°'))).toBe(true);
+  });
+
+  // ── Gate wiring (Giorgio 2026-07-09): κυανές clearance dims = «Αποστάσεις» toggle ΜΟΝΟ ──
+  // Δύο ΞΕΧΩΡΙΣΤΑ συστήματα: το «ΜΗΚΟΣ/ΓΩΝΙΑ» (`isDimHudOn`) κρύβει ΜΟΝΟ τις λευκές HUD ενδείξεις·
+  // οι κυανές αποστάσεις ελέγχονται ΑΠΟΚΛΕΙΣΤΙΚΑ από το «Αποστάσεις» (`isListeningDimOn`).
+  describe('gating', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    it('is hidden when «Αποστάσεις» (isListeningDimOn) is OFF', () => {
+      jest.spyOn(cadToggleState, 'isListeningDimOn').mockReturnValue(false);
+      const dims = resolveGhostFaceDimensions(FRAME, { gapOffsetScene: 24, centerOffsetScene: 52 });
+      const mock = createMockCtx();
+      paintGhostFaceDimensions(
+        mock.ctx, { sceneUnits: 'mm', dims }, { scale: 1, offsetX: 0, offsetY: 0 }, { width: 800, height: 600 },
+      );
+      expect(countCalls(mock, 'stroke')).toBe(0);
+      expect(countCalls(mock, 'fillText')).toBe(0);
+    });
+
+    it('stays visible when «ΜΗΚΟΣ/ΓΩΝΙΑ» (isDimHudOn) is OFF — that toggle gates ONLY the white HUD', () => {
+      jest.spyOn(cadToggleState, 'isListeningDimOn').mockReturnValue(true);
+      jest.spyOn(cadToggleState, 'isDimHudOn').mockReturnValue(false);
+      const dims = resolveGhostFaceDimensions(FRAME, { gapOffsetScene: 24, centerOffsetScene: 52 });
+      const mock = createMockCtx();
+      paintGhostFaceDimensions(
+        mock.ctx, { sceneUnits: 'mm', dims }, { scale: 1, offsetX: 0, offsetY: 0 }, { width: 800, height: 600 },
+      );
+      expect(countCalls(mock, 'stroke')).toBeGreaterThan(0);
+      expect(countCalls(mock, 'fillText')).toBeGreaterThan(0);
+    });
   });
 });

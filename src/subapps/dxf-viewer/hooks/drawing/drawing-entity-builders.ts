@@ -24,6 +24,9 @@ import { buildHatchEntityFromBoundary } from '../../bim/hatch/hatch-completion';
 // Φ2.3 — shared "live store → entity" mapping lives in the store module itself (N.18: one
 // mapping, consumed here AND by the Φ2.3 WYSIWYG preview ghost — never cloned).
 import { buildScaleBarEntityFromLiveOptions } from '../../state/scale-bar-options-store';
+// ADR-612 — opening info tag: SINGLE-CLICK point → OpeningInfoTagEntity (mirror scale-bar's
+// live-options SSoT mapping, sibling module — N.18: one mapping, never cloned).
+import { buildOpeningInfoTagEntityFromLiveOptions } from '../../state/opening-info-tag-options-store';
 import type {
   DrawingTool,
   ExtendedSceneEntity,
@@ -361,6 +364,14 @@ export function createEntityFromTool(
         return buildScaleBarEntityFromLiveOptions(points[0], points[1], id, defaultLayerId);
       }
       break;
+    // ADR-612 — opening info tag: SINGLE click = box CENTRE (mirror annotation-symbol's
+    // click-count). Default 120×80 (3:2) size + empty cells read live from the draw-context
+    // options store (mirror the scale-bar event-time read pattern).
+    case 'opening-info-tag':
+      if (points.length >= 1) {
+        return buildOpeningInfoTagEntityFromLiveOptions(points[0], id, defaultLayerId);
+      }
+      break;
     // Arc drawing tools - ADR-059
     case 'arc-3p':
       // 3-Point Arc: Start -> Point on Arc -> End
@@ -451,43 +462,5 @@ export function createEntityFromTool(
  * @param pointCount - Number of points currently collected (including the one just added)
  * @returns true if the entity can be completed (auto-finish), false if more points are needed
  */
-export function isEntityComplete(tool: DrawingTool, pointCount: number): boolean {
-  switch (tool) {
-    case 'line':
-    case 'line-perpendicular': // ADR-060 — 2 σημεία (βάση + κλειδωμένο κάθετο άκρο)
-    case 'measure-distance':
-    case 'rectangle':
-    case 'circle':
-    case 'circle-diameter':
-    case 'circle-2p-diameter':
-    case 'ray':
-    case 'scale-bar': // ADR-583 Φ2 — 2 σημεία (origin + axis/length), mirror 'line'
-      return pointCount >= 2;
-    case 'measure-angle':
-    case 'measure-angle-measuregeom':
-    case 'arc-3p':
-    case 'arc-cse':
-    case 'arc-sce':
-    case 'circle-3p':
-    case 'circle-chord-sagitta':
-    case 'circle-2p-radius':
-      return pointCount >= 3;
-    case 'xline': {
-      const state = getXLineModeState();
-      if (state.mode === 'horizontal' || state.mode === 'vertical') return pointCount >= 1;
-      if (state.mode === 'angle') return state.angleValue !== null ? pointCount >= 1 : pointCount >= 2;
-      if (state.mode === 'bisect') return pointCount >= 3;
-      if (state.mode === 'offset') return false;
-      return pointCount >= 2; // through default
-    }
-    case 'measure-distance-continuous':
-    case 'polyline':
-    case 'polygon':
-    case 'measure-area':
-    case 'hatch': // ADR-507 S2 — closed boundary, N-click + Enter
-    case 'circle-best-fit':
-      return false; // These tools continue until manually finished
-    default:
-      return false;
-  }
-}
+// N.7.1 — `isEntityComplete` extracted to drawing-entity-complete.ts; re-exported for callers.
+export { isEntityComplete } from './drawing-entity-complete';

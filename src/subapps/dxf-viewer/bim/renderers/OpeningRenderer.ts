@@ -45,7 +45,7 @@ import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import { OPENING_KIND_STROKE } from './opening-kind-style';
-import { drawOpeningPlanOverlay } from './opening-overlay-drawing';
+import { drawOpeningPlanOverlay, drawOpeningFrameOutlines } from './opening-overlay-drawing';
 import {
   OpeningTagRenderer,
   computeTagCenter,
@@ -126,6 +126,9 @@ export class OpeningRenderer extends BaseEntityRenderer {
     );
     if (_outlineS.color !== null) this.ctx.strokeStyle = _outlineS.color;
     this.drawOutline(opening);
+    // ADR-611 — constant-cross-section κάσα jambs, drawn with the resolved opening
+    // outline style (reuse — no dedicated frame subcategory). Cut symbol only.
+    if (_isCut) this.drawFrameOutlines(opening, _outlineS.lineWidthPx);
     // Plan symbol (swing arc / glazing / slide track) only when actually cut.
     if (_isCut) this.drawKindOverlay(opening, _overlayS.lineWidthPx);
 
@@ -231,6 +234,20 @@ export class OpeningRenderer extends BaseEntityRenderer {
     }
     this.ctx.closePath();
     this.ctx.stroke();
+  }
+
+  /**
+   * ADR-611 — κάσα frame jambs (constant cross-section). Delegates to the pure
+   * `opening-overlay-drawing` SSoT; the renderer supplies the resolved outline
+   * line width + world→screen mapper. `strokeStyle` is already set to the resolved
+   * opening outline colour by `render()`.
+   */
+  private drawFrameOutlines(opening: OpeningEntity, lineWidth: number): void {
+    drawOpeningFrameOutlines(opening, {
+      ctx: this.ctx,
+      toScreen: (p) => this.worldToScreen({ x: p.x, y: p.y }),
+      lineWidth,
+    });
   }
 
   /**

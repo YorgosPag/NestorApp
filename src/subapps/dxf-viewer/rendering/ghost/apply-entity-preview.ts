@@ -38,8 +38,12 @@ import { computeGroupSelectionBounds } from '../../systems/group/group-selection
 import { calculateMovedGeometry } from '../../core/commands/entity-commands/move-entity-geometry';
 import type { SceneEntity } from '../../core/commands/interfaces';
 import { applyTextGripDrag } from '../../bim/text/text-grips';
-import { applyScaleBarGripDrag } from '../../bim/scale-bar/scale-bar-grips';
-import type { ScaleBarEntity } from '../../types/scale-bar';
+// ADR-583/612 — params-driven annotation live ghosts (scale-bar + opening-info-tag) extracted to
+// apply-parametric-annotation-preview (N.7.1). Each routes through its commit-side grip-drag SSoT.
+import { applyParametricAnnotationPreview } from './apply-parametric-annotation-preview';
+// ADR-583 Φ3 — annotation-symbol corner UNIFORM-resize live ghost (the SAME pure SSoT the commit runs).
+import { applyAnnotationSymbolGripDrag, isAnnotationSymbolCornerKind } from '../../bim/annotation-symbols/annotation-symbol-grips';
+import type { AnnotationSymbolEntity } from '../../types/annotation-symbol';
 // ADR-557 Φ-attachment — scene→DxfText projection SSoT (shared with the commit): resolves
 // the raw entity's textNode height/text/style so the ghost box math ≡ the commit's.
 import { projectSceneTextToDxf, type TextSceneShape } from '../../bim/text/project-scene-text';
@@ -161,23 +165,13 @@ export function applyEntityPreview(
   const polylineGripKind = gripKindOf(preview, 'polyline');
   const groupGripKind = gripKindOf(preview, 'group');
   const annotationSymbolGripKind = gripKindOf(preview, 'annotation-symbol');
-  const scaleBarGripKind = gripKindOf(preview, 'scale-bar');
   if (delta.x === 0 && delta.y === 0) return entity;
 
-  // ── ADR-583 Φ2.4 — graphic scale-bar live ghost (move / rotation / length) ──
-  // The bar is params-driven (geometry DERIVED); route move/rotation/length through the
-  // SAME `applyScaleBarGripDrag` SSoT the commit runs → preview ≡ commit by identity.
-  // `anchorPos` = the grabbed grip's world anchor (move ignores it). The derived
-  // `endPosition`/geometry recompute on render, so the flat-field patch is enough.
-  if (scaleBarGripKind && entity.type === 'scale-bar') {
-    const patch = applyScaleBarGripDrag(
-      scaleBarGripKind,
-      entity as unknown as ScaleBarEntity,
-      anchorPos ?? (entity as unknown as ScaleBarEntity).position,
-      delta,
-    );
-    return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
-  }
+  // ── ADR-583/612 — params-driven annotation live ghosts (scale-bar / opening-info-tag) ──
+  // Extracted to apply-parametric-annotation-preview (N.7.1). Each routes through the SAME
+  // grip-drag SSoT the commit runs → preview ≡ commit; returns null when not an annotation.
+  const annotationPreview = applyParametricAnnotationPreview(entity, preview);
+  if (annotationPreview) return annotationPreview;
 
   // ── ADR-363 Phase 1C — parametric wall live preview ───────────────────────
   if (wallGripKind && anchorPos && entity.type === 'wall') {
@@ -383,6 +377,20 @@ export function applyEntityPreview(
   // ADR-583 — pivot = insertion point (`rotateEntity` case 'annotation-symbol').
   if (annotationSymbolGripKind === 'annotation-symbol-rotation' && anchorPos && entity.type === 'annotation-symbol') {
     return rotationGhost(entity, anchorPos, delta, rotatePivot ?? (entity as unknown as { position: Point2D }).position);
+  }
+  // ADR-583 Φ3 — annotation-symbol CORNER resize live ghost: UNIFORM `sizeMm` scale about the
+  // insertion point via the SAME `applyAnnotationSymbolGripDrag` SSoT the commit runs (preview ≡
+  // commit by identity). `anchorPos` = the grabbed corner's world anchor; the flat `{ sizeMm }`
+  // patch is enough (the renderer folds it back through `paperHeightToModel` at draw time).
+  if (
+    annotationSymbolGripKind &&
+    isAnnotationSymbolCornerKind(annotationSymbolGripKind) &&
+    entity.type === 'annotation-symbol'
+  ) {
+    const sym = entity as unknown as AnnotationSymbolEntity;
+    const patch = applyAnnotationSymbolGripDrag(annotationSymbolGripKind, sym, anchorPos ?? sym.position, delta);
+    if (Object.keys(patch).length === 0) return entity;
+    return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
   }
   // ADR-575 §8 — GROUP gizmo: pivot = bbox centre (`rotateEntity` case 'group' recurses members).
   if (groupGripKind === 'group-rotation' && anchorPos && entity.type === 'group') {

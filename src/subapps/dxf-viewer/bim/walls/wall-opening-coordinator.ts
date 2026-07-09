@@ -90,6 +90,9 @@ export function recomputeHostedOpeningGeometry(
     const raw = sceneManager.getEntity(openingId);
     const candidate = raw as unknown as Partial<OpeningEntity> | undefined;
     if (!candidate || candidate.type !== 'opening' || !candidate.params) continue;
+    // ADR-615 cascade guard — self-hosted openings (no wallId) have no host wall
+    // to recompute against; this cascade only concerns wall-hosted geometry.
+    if (!candidate.params.wallId) continue;
     const geometry = computeOpeningGeometry(candidate.params, newWall, sceneUnits);
     patches.push({ openingId, geometry });
   }

@@ -20,37 +20,27 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
-import type { ScaleBarEntity } from '../../types/scale-bar';
 import { gripKindOf } from '../grip-kinds';
-import { applyScaleBarGripDrag } from '../../bim/scale-bar/scale-bar-grips';
-import { UpdateEntityCommand, type EntityPatch } from '../../core/commands/entity-commands/UpdateEntityCommand';
-import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { applyScaleBarGripDrag, SCALE_BAR_ROTATION_KIND } from '../../bim/scale-bar/scale-bar-grips';
+import { commitParametricAnnotationGripDrag } from './grip-parametric-annotation-commit';
 
 /**
  * ADR-583 Φ2.4 — parametric scale-bar grip commit. Bypasses the generic stretch / move
  * path because the bar is params-driven (geometry recomputed at render). Routes the move /
  * rotation / length drag through `applyScaleBarGripDrag` → `UpdateEntityCommand` (a partial
- * flat-field patch). Idempotent + undo/redo-safe.
+ * flat-field patch) via the shared `commitParametricAnnotationGripDrag` SSoT. Idempotent +
+ * undo/redo-safe.
  */
 export function commitScaleBarGripDrag(
   grip: UnifiedGripInfo,
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  const kind = gripKindOf(grip, 'scale-bar');
-  if (!grip.entityId || !kind) return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw || (raw as { type?: string }).type !== 'scale-bar') return;
-  const entity = raw as unknown as ScaleBarEntity;
-  const patch = applyScaleBarGripDrag(kind, entity, grip.position, delta);
-  const command = new UpdateEntityCommand(
-    grip.entityId,
-    patch as unknown as EntityPatch,
-    sceneManager,
-    'Edit scale bar',
-  );
-  if (command.validate() !== null) return;
-  deps.execute(command);
+  commitParametricAnnotationGripDrag(grip, delta, deps, {
+    kind: gripKindOf(grip, 'scale-bar'),
+    entityType: 'scale-bar',
+    rotationKind: SCALE_BAR_ROTATION_KIND,
+    apply: applyScaleBarGripDrag,
+    label: 'Edit scale bar',
+  });
 }

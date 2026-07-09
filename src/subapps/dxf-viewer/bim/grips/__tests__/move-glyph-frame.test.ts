@@ -136,6 +136,26 @@ describe('resolveMoveGlyphFrame (ADR-397)', () => {
     expect(f.axisX.x).toBeCloseTo(1, 6);
     expect(f.axisX.y).toBeCloseTo(0, 6);
   });
+
+  // ADR-583 — an annotation symbol (point-glyph, no `params`) orients from its TOP-LEVEL
+  // `rotation`, exactly like text: the MOVE cross rotates with it AND its rotation ghost
+  // reference axis stays coaxial with the symbol's faces (Giorgio 2026-07-09).
+  it('annotation symbol at rotation 45° → axisX along the 45° diagonal (never null)', () => {
+    const s = { id: 'S1', type: 'annotation-symbol', rotation: 45, position: { x: 0, y: 0 } } as unknown as Entity;
+    const f = resolveMoveGlyphFrame(s)!;
+    const h = Math.SQRT1_2;
+    expect(f).not.toBeNull();
+    expect(f.axisX.x).toBeCloseTo(h, 6);
+    expect(f.axisX.y).toBeCloseTo(h, 6);
+  });
+
+  it('annotation symbol with missing rotation → identity frame (0°), never null', () => {
+    const s = { id: 'S2', type: 'annotation-symbol', position: { x: 0, y: 0 } } as unknown as Entity;
+    const f = resolveMoveGlyphFrame(s)!;
+    expect(f).not.toBeNull();
+    expect(f.axisX.x).toBeCloseTo(1, 6);
+    expect(f.axisX.y).toBeCloseTo(0, 6);
+  });
 });
 
 describe('withMoveGlyphRotation (ADR-397)', () => {

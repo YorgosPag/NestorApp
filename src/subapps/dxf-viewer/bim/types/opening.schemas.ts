@@ -78,6 +78,17 @@ export const OpeningParamsSchema = z
     height: z.number().positive(),
     sillHeight: z.number().finite().nonnegative(),
     frameWidth: z.number().positive().optional(),
+    // ─── ADR-611 — frame profile (διατομή κάσας, constant cross-section) ──────
+    frameProfileId: z.string().min(1).optional(),
+    frameProfileOverrides: z
+      .object({
+        faceWidth: z.number().positive().optional(),
+        depth: z.number().positive().optional(),
+        manufacturer: z.string().min(1).optional(),
+        series: z.string().min(1).optional(),
+      })
+      .strict()
+      .optional(),
     handing: OpeningHandingSchema.optional(),
     openDirection: OpeningSwingSchema.optional(),
     material: z.string().min(1).optional(),
@@ -106,6 +117,8 @@ export const OpeningTypeParamsSchema = z
     width: z.number().positive(),
     height: z.number().positive(),
     frameWidth: z.number().positive().optional(),
+    // ─── ADR-611 — type-default frame profile ID ─────────────────────────────
+    frameProfileId: z.string().min(1).optional(),
     material: z.string().min(1).optional(),
     glazingPanes: OpeningGlazingPanesSchema.optional(),
     fireRating: z.string().min(1).optional(),

@@ -77,8 +77,28 @@ interface DimsView {
 
 /** Entity centre (world) for the «toward the body» direction flip. */
 function entityCentre(entity: Entity): Point2D | null {
+  // ADR-583 Φ3 — graphic scale-bar: its DERIVED `geometry.bbox` uses the flat
+  // `{minX,minY,maxX,maxY}` shape (NOT the `{min,max}` shape the generic check below reads), so
+  // it MUST be handled first — otherwise `bbox.min.x` throws. Centre = midpoint of the span
+  // extent; fall back to the '0'-tick `position` before geometry is first derived.
+  const bar = entity as {
+    type?: string; position?: { x: number; y: number };
+    geometry?: { bbox?: { minX: number; minY: number; maxX: number; maxY: number } };
+  };
+  if (bar.type === 'scale-bar') {
+    const b = bar.geometry?.bbox;
+    if (b) return { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 };
+    return bar.position ? { x: bar.position.x, y: bar.position.y } : null;
+  }
   const bbox = (entity as { geometry?: { bbox?: BBoxView } }).geometry?.bbox;
   if (bbox) return { x: (bbox.min.x + bbox.max.x) / 2, y: (bbox.min.y + bbox.max.y) / 2 };
+  // ADR-583 — a point-glyph annotation symbol (north arrow / elevation mark / …) has no
+  // geometry.bbox and no params: its body sits at the TOP-LEVEL `position`, so use it as the
+  // centre so the reference axis is oriented from the pivot toward the symbol body (box parity).
+  const sym = entity as { type?: string; position?: { x: number; y: number } };
+  if (sym.type === 'annotation-symbol' && sym.position) {
+    return { x: sym.position.x, y: sym.position.y };
+  }
   // Plain DXF line: top-level start/end midpoint.
   const ln = entity as { type?: string; start?: { x: number; y: number }; end?: { x: number; y: number } };
   if (ln.type === 'line' && ln.start && ln.end) {

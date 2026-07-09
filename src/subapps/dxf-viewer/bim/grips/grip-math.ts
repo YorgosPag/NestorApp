@@ -21,6 +21,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../types/bim-base';
 import { rotatePoint } from '../../utils/rotation-math';
+import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
 /** Below this length a direction vector is treated as degenerate (no axis). */
 export const DEGENERATE_EPS = 0.001;
@@ -148,5 +149,40 @@ export function rotateAxisPointsAboutPivot(
   const sweptDeg = sweptAngleDegAboutPivot(opts.pivot, opts.anchor, opts.currentPos);
   if (sweptDeg === null) return null;
   return points.map((p) => rotatePoint(p, opts.pivot, sweptDeg));
+}
+
+/**
+ * ADR-583/612 — the shared "rotation grip drag" transform for params-driven annotation
+ * entities (scale-bar ↔ opening-info-tag). Given the entity's `position` + `angleRad`, the
+ * grabbed handle world pos, the cursor `delta` and (optionally) a picked hot-grip rotation
+ * `{pivot, anchor}`, returns the flat params patch — the SINGLE source both annotation grip
+ * helpers consume so their rotation can never diverge (N.18):
+ *   - hot-grip (`rotate` present): the box ORBITS `pivot` — `position` rotates about it AND
+ *     `angleRad` accumulates the SAME swept angle (`sweptAngleDegAboutPivot` SSoT). A
+ *     degenerate sweep (cursor on the pivot) is a no-op (`{}`).
+ *   - legacy (no picked centre): swept angle about the entity's own origin (`position`) →
+ *     `angleRad` only, placement-agnostic, no-op at zero delta.
+ */
+export function rotateEntityGripDrag(
+  entity: { readonly position: Point2D; readonly angleRad: number },
+  gripWorldPos: Point2D,
+  delta: Point2D,
+  rotate?: { readonly pivot: Point2D; readonly anchor: Point2D },
+): { position?: Point2D; angleRad?: number } {
+  if (rotate) {
+    const currentPos = translatePoint(rotate.anchor, delta);
+    const sweptDeg = sweptAngleDegAboutPivot(rotate.pivot, rotate.anchor, currentPos);
+    if (sweptDeg === null) return {};
+    return {
+      position: rotatePoint(entity.position, rotate.pivot, sweptDeg),
+      angleRad: entity.angleRad + (sweptDeg * Math.PI) / 180,
+    };
+  }
+  // Legacy own-origin swept angle (no picked centre — any non-hot-grip caller).
+  const { position } = entity;
+  const initAngle = Math.atan2(gripWorldPos.y - position.y, gripWorldPos.x - position.x);
+  const newHandle = translatePoint(gripWorldPos, delta);
+  const newAngle = Math.atan2(newHandle.y - position.y, newHandle.x - position.x);
+  return { angleRad: entity.angleRad + (newAngle - initAngle) };
 }
 

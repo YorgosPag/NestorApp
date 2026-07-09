@@ -902,6 +902,9 @@
         "hostMissing": "Ο τοίχος δεν υπάρχει πλέον — δοκίμασε άλλον"
       }
     },
+    "selfOpening": {
+      "statusPosition": "Κλικ για τοποθέτηση ελεύθερου κουφώματος"
+    },
     "slab": {
       "statusFirstVertex": "Κλικ για πρώτη κορυφή πλάκας",
       "statusNextVertex": "Κλικ για επόμενη κορυφή — Enter για κλείσιμο",
@@ -1408,6 +1411,7 @@
       "furnitureProperties": "Ιδιότητες Επίπλου",
       "floorplanSymbolProperties": "Ιδιότητες Συμβόλου",
       "annotationSymbolProperties": "Σύμβολο Σχεδίασης",
+      "scaleBarProperties": "Γραφική Κλίμακα",
       "floorFinishProperties": "Ιδιότητες Επικάλυψης Δαπέδου",
       "wallCoveringProperties": "Ιδιότητες Φινιρίσματος Τοίχου",
       "hatchProperties": "Γραμμοσκίαση",
@@ -1472,6 +1476,7 @@
       "openingKind": "Τύπος",
       "openingFamilyType": "Τύπος Οικογένειας",
       "openingSize": "Διαστάσεις",
+      "openingFrameProfile": "Διατομή Κάσας",
       "openingActions": "Ενέργειες",
       "openingRenumber": "Επαναρίθμηση",
       "openingTagStyle": "Στυλ Ταμπελακίου",
@@ -1684,6 +1689,9 @@
       "floorplanSymbolGeometry": "Γεωμετρία",
       "annotationSymbolCatalog": "Στυλ",
       "annotationSymbolGeometry": "Γεωμετρία",
+      "scaleBarStyle": "Στυλ",
+      "scaleBarDivisions": "Τμήματα",
+      "scaleBarLabels": "Ετικέτες",
       "mepFixtureLibrary": "Βιβλιοθήκη",
       "mepFixtureLibraryPlacement": "Τοποθέτηση",
       "mepRiser": "Στήλη",
@@ -1798,6 +1806,8 @@
       "revisionTagTooltip": "Τοποθέτηση ετικέτας αναθεώρησης με ένα κλικ στον καμβά",
       "scaleBar": "Γραφική Κλίμακα",
       "scaleBarTooltip": "Σχεδίαση γραφικής κλίμακας: κλικ στην αρχή, μετά κλικ για ορισμό άξονα και μήκους",
+      "openingInfoTag": "Πινακίδα Ανοίγματος",
+      "openingInfoTagTooltip": "Τοποθέτηση πινακίδας ανοίγματος με ένα κλικ (Μήκος/Ποδιά/Ύψος)",
       "xlineModeSelector": "Λειτουργία",
       "bim": {
         "wall": {
@@ -1862,6 +1872,10 @@
           "slidingDoor": "Συρόμενη Θύρα",
           "frenchDoor": "Γαλλική Θύρα",
           "fixed": "Σταθερό Άνοιγμα"
+        },
+        "selfOpening": {
+          "label": "Ελεύθερο κούφωμα (χωρίς τοίχο)",
+          "tooltip": "Ελεύθερη τοποθέτηση κουφώματος πάνω σε γραμμές σχεδίου, χωρίς να απαιτείται τοίχος BIM"
         },
         "slab": {
           "label": "Πλάκα",
@@ -2900,6 +2914,15 @@
         "width": "Πλάτος",
         "height": "Ύψος",
         "sillHeight": "Ύψος Ποδιάς",
+        "frameProfile": {
+          "manufacturer": "Κατασκευαστής",
+          "profile": "Διατομή",
+          "faceWidth": "Πλάτος Όψης",
+          "depth": "Βάθος",
+          "custom": "Προσαρμοσμένη",
+          "faceWidthTooltip": "Ορατό πλάτος της κάσας στην όψη (mm) — σταθερό, ανεξάρτητο από τις διαστάσεις του ανοίγματος.",
+          "depthTooltip": "Βάθος της κάσας μέσα στο πάχος του τοίχου (mm) — σταθερό, ανεξάρτητο από το πάχος του τοίχου."
+        },
         "close": "Κλείσιμο",
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή ανοίγματος; Η ενέργεια δεν μπορεί να αναιρεθεί.",
@@ -5673,6 +5696,11 @@
     "lineModes": {
       "polyline": "Polyline (AutoCAD / standard)",
       "lines": "Γραμμές (Τέκτονας / FESPA)"
+    },
+    "tekSymbolMode": "Σύμβολα",
+    "tekSymbolModes": {
+      "native": "Σύμβολα Τέκτονα (ενιαίο αντικείμενο)",
+      "geometry": "Αυτούσια γεωμετρία (ομαδοποιημένη)"
     },
     "scopeConflict": "Το IFC περιέχει μόνο οντότητες BIM. Επιλέξτε «DXF & BIM» ή «Μόνο BIM».",
     "submit": "Εξαγωγή",

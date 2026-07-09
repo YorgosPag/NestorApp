@@ -149,6 +149,17 @@ export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
   // NO resize (fixed aspect, D5).
   'annotation-symbol-move': 'move',
   'annotation-symbol-rotation': 'rotate',
+  // Graphic scale-bar (ADR-583 Φ2/Φ3) — the ROTATION handle opts into the SAME hot-grip
+  // rotate flow as the arc/annotation-symbol (Giorgio 2026-07-09: «να λειτουργεί όπως τα άλλα»
+  // — click → armed/κόκκινο → όρισε κέντρο → free spin, ΟΧΙ press-drag). The bar orbits the
+  // picked centre (position + angleRad) via the pivot-aware `applyScaleBarGripDrag`. The
+  // move/length/length-start/height handles stay press-drag (absent here).
+  'scale-bar-rotation': 'rotate',
+  // Opening info tag (ADR-612, Giorgio 2026-07-09 «όπως ο τοίχος») — the rotation handle opts into
+  // the SAME click-armed hot-grip rotate flow (click → armed/κόκκινο → όρισε κέντρο → free spin, ΟΧΙ
+  // press-drag). The box orbits the picked centre (position + angleRad) via the pivot-aware
+  // `applyOpeningInfoTagGripDrag`. The move/size handles stay press-drag (absent here).
+  'opening-info-tag-rotation': 'rotate',
 } as const;
 
 /** Map any grip kind to its hot-grip operation, or null if it stays drag. */

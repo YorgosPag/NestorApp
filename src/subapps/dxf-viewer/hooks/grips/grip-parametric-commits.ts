@@ -87,6 +87,14 @@ export {
 // grip-scale-bar-commit.ts (N.7.1 file-size split). Re-exported so the commit API stays one import.
 export { commitScaleBarGripDrag } from './grip-scale-bar-commit';
 
+// ADR-612 — opening-info-tag grip commit (move / rotation / size) lives in
+// grip-opening-info-tag-commit.ts (N.7.1 file-size split). Re-exported so the commit API stays one import.
+export { commitOpeningInfoTagGripDrag } from './grip-opening-info-tag-commit';
+
+// ADR-583 Φ3 — annotation-symbol corner UNIFORM-resize commit lives in
+// grip-annotation-symbol-commit.ts (N.7.1 file-size split). Re-exported so the commit API stays one import.
+export { commitAnnotationSymbolResizeGripDrag } from './grip-annotation-symbol-commit';
+
 // ADR-575 §8 — GROUP gizmo rotation commit (whole-group rotate about bbox centre) lives
 // in grip-group-commits.ts. Re-exported here so the commit API stays one import.
 export { commitGroupGizmoRotation } from './grip-group-commits';

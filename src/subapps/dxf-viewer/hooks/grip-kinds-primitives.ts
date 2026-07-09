@@ -77,19 +77,34 @@ export type ArcGripKind = 'arc-move' | 'arc-rotation';
 export type LineGripKind = 'line-rotation' | 'line-move';
 
 /**
- * ADR-583 — Annotation symbol grip kind (lightweight non-BIM North arrow, NOT a
- * BIM params entity). Mirror of `arc-*`: the glyph has an intrinsic orientation
- * so it gets BOTH a move cross AND a rotation handle, but NO resize (fixed aspect,
- * D5 — μέγεθος αλλάζει από το contextual tab):
- *   - `annotation-symbol-move`     → κεντρικό grip, 4-arrow MOVE glyph + directional
- *                                    prompt + whole-entity translate (`movesEntity` →
- *                                    `calculateMovedGeometry` case 'annotation-symbol').
- *   - `annotation-symbol-rotation` → λαβή περιστροφής· commit μέσω της canonical
- *                                    `RotateEntityCommand` (pivot = θέση) → `rotateEntity`
- *                                    case 'annotation-symbol'. Ίδιο shared hot-grip flow
- *                                    με `arc-rotation` / `text-rotation`.
+ * ADR-583 — Annotation symbol grip kind (lightweight non-BIM point-glyph — north
+ * arrow / section-mark / grid-bubble / elevation-mark / detail-callout /
+ * revision-tag — NOT a BIM params entity). Mirror of `arc-*`: the glyph has an
+ * intrinsic orientation so it gets a move cross AND a rotation handle; ADR-583 Φ3
+ * («αύξηση λαβών», Giorgio 2026-07-09) ADDS 4 UNIFORM-scale corner resize handles:
+ *   - `annotation-symbol-move`      → κεντρικό grip, 4-arrow MOVE glyph + directional
+ *                                     prompt + whole-entity translate (`movesEntity` →
+ *                                     `calculateMovedGeometry` case 'annotation-symbol').
+ *   - `annotation-symbol-rotation`  → λαβή περιστροφής· commit μέσω της canonical
+ *                                     `RotateEntityCommand` (pivot = θέση) → `rotateEntity`
+ *                                     case 'annotation-symbol'. Ίδιο shared hot-grip flow
+ *                                     με `arc-rotation` / `text-rotation`.
+ *   - `annotation-symbol-corner-*`  → 4 γωνιακές λαβές (ne/nw/sw/se) UNIFORM scale του
+ *                                     annotative `sizeMm` γύρω από το σημείο εισαγωγής
+ *                                     (Revit/Figma annotative standard· κρατά αναλογία —
+ *                                     fixed-aspect glyph). `type:'vertex'` → πάντα ορατές
+ *                                     (single ΚΑΙ multi-select — λύνει το multi-select
+ *                                     highlight bug). Render default 'square' glyph (absent
+ *                                     from `grip-glyph-registry`). Commit/ghost μέσω του
+ *                                     shared `applyAnnotationSymbolGripDrag` SCALE-FREE ratio.
  */
-export type AnnotationSymbolGripKind = 'annotation-symbol-move' | 'annotation-symbol-rotation';
+export type AnnotationSymbolGripKind =
+  | 'annotation-symbol-move'
+  | 'annotation-symbol-rotation'
+  | 'annotation-symbol-corner-ne'
+  | 'annotation-symbol-corner-nw'
+  | 'annotation-symbol-corner-sw'
+  | 'annotation-symbol-corner-se';
 
 /**
  * ADR-583 Φ2.4 — Graphic scale-bar grip kind (dedicated non-BIM annotation, NOT a BIM
@@ -121,6 +136,25 @@ export type ScaleBarGripKind =
   | 'scale-bar-length'
   | 'scale-bar-length-start'
   | 'scale-bar-height';
+
+/**
+ * ADR-612 — Opening Info Tag grip kind (dedicated non-BIM annotation, SIBLING of
+ * `scale-bar`, NOT a BIM params entity). The 120×80 (3:2-locked) box has an intrinsic
+ * orientation AND a single sizing DOF, so it gets THREE grips (mirror `scale-bar-*`):
+ *   - `opening-info-tag-move`     → κεντρικό grip στο CENTRE του κουτιού· 4-arrow MOVE glyph +
+ *                                   whole-entity translate (`movesEntity` → μεταφορά του `position`).
+ *   - `opening-info-tag-rotation` → λαβή περιστροφής (κάθετο offset πάνω από την ΠΑΝΩ ακμή)· γράφει
+ *                                   ΜΟΝΟ το `angleRad` (swept-angle SSoT, `applyOpeningInfoTagGripDrag`).
+ *   - `opening-info-tag-size`     → λαβή στην ΠΑΝΩ-ΔΕΞΙΑ γωνία· το drag ξαναϋπολογίζει το `widthMm`
+ *                                   από το τοπικό `u` της γωνίας (κλειδωμένη αναλογία 3:2 → το ύψος
+ *                                   παράγεται)· render default 'square' glyph.
+ * Και τα τρία δρομολογούνται στο `commitOpeningInfoTagGripDrag` (PARAMETRIC_COMMIT_HANDLERS,
+ * key `gripKind.on === 'opening-info-tag'`) που ξαναχτίζει μέσω `applyOpeningInfoTagGripDrag`.
+ */
+export type OpeningInfoTagGripKind =
+  | 'opening-info-tag-move'
+  | 'opening-info-tag-rotation'
+  | 'opening-info-tag-size';
 
 /**
  * ADR-575 §8 — GROUP gizmo grip kind (composite `type:'group'` container, ΟΧΙ

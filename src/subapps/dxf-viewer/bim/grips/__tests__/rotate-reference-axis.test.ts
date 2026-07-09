@@ -179,6 +179,65 @@ describe('resolveRotateReferenceAnchor — GENERIC polyline (2 lines joined at a
   });
 });
 
+describe('resolveRotateReferenceAnchor — annotation symbol (axis = glyph rotation, ADR-583)', () => {
+  // Point-glyph: no params / no geometry.bbox; orientation lives in the top-level `rotation`.
+  const symbol = (rotation: number, position = { x: 0, y: 0 }) =>
+    ({
+      id: 'S1', type: 'annotation-symbol', position, rotation,
+      kind: 'north-arrow', symbolId: 'northArrowSimple', sizeMm: 20,
+    } as unknown as Entity);
+
+  it('unrotated symbol → reference axis is horizontal (coaxial with the local +X face)', () => {
+    // Body at origin, pivot to the EAST → axis runs back toward the body (−X), purely horizontal.
+    const anchor = resolveRotateReferenceAnchor(symbol(0), { x: 100, y: 0 })!;
+    expect(anchor).not.toBeNull();
+    near(anchor.x - 100, -1);
+    near(anchor.y - 0, 0);
+  });
+
+  it('rotated symbol → reference axis follows the glyph rotation exactly (never diverges from the faces)', () => {
+    const rad = (30 * Math.PI) / 180;
+    const anchor = resolveRotateReferenceAnchor(symbol(30), { x: 100, y: 0 })!;
+    const dir = { x: anchor.x - 100, y: anchor.y - 0 };
+    // Collinear with the rotated local ±X (cos30, sin30): cross product ≈ 0, and a UNIT step.
+    near(dir.x * Math.sin(rad) - dir.y * Math.cos(rad), 0);
+    near(Math.hypot(dir.x, dir.y), 1);
+  });
+
+  it('reference points from the pivot toward the symbol body (top-level position)', () => {
+    // Body at (500,0), pivot to its RIGHT → axis points LEFT (toward body), still along ±X.
+    const anchor = resolveRotateReferenceAnchor(symbol(0, { x: 500, y: 0 }), { x: 900, y: 0 })!;
+    near(anchor.x - 900, -1);
+    near(anchor.y, 0);
+  });
+});
+
+describe('resolveRotateReferenceAnchor — graphic scale-bar (axis = angleRad, ADR-583 Φ3)', () => {
+  // DERIVED geometry.bbox uses the FLAT {minX,minY,maxX,maxY} shape — entityCentre must read it
+  // without throwing (the generic {min,max} path would crash on `bbox.min.x`).
+  const bar = (angleRad: number, position = { x: 0, y: 0 }) =>
+    ({
+      id: 'B1', type: 'scale-bar', position, angleRad, length: 10, unit: 'm',
+      geometry: { bbox: { minX: 0, minY: 0, maxX: 10_000, maxY: 0 }, endPosition: { x: 10_000, y: 0 } },
+    } as unknown as Entity);
+
+  it('horizontal bar → reference axis is horizontal (coaxial with the bar length, no crash on flat bbox)', () => {
+    // Body spans x∈[0,10000] (centre 5000,0); pivot EAST of the centre → axis points −X (toward body).
+    const anchor = resolveRotateReferenceAnchor(bar(0), { x: 9_000, y: 0 })!;
+    expect(anchor).not.toBeNull();
+    near(anchor.x - 9_000, -1);
+    near(anchor.y, 0);
+  });
+
+  it('tilted bar → reference axis follows angleRad exactly (never diverges from the faces)', () => {
+    const rad = Math.PI / 6;
+    const anchor = resolveRotateReferenceAnchor(bar(rad, { x: 0, y: 0 }), { x: 100, y: 0 })!;
+    const dir = { x: anchor.x - 100, y: anchor.y };
+    near(dir.x * Math.sin(rad) - dir.y * Math.cos(rad), 0); // collinear with (cos,sin)
+    near(Math.hypot(dir.x, dir.y), 1);
+  });
+});
+
 describe('resolveRotateReferenceAnchor — no orientation → null (legacy fallback)', () => {
   it('params-less non-line primitive (circle) → null', () => {
     const circle = { id: 'X', type: 'circle', center: { x: 0, y: 0 }, radius: 50 } as unknown as Entity;

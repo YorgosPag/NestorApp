@@ -7,7 +7,11 @@
  *
  * Phase 2 scope:
  *   - **Hard errors** (block creation):
- *       · wallId missing / empty
+ *       · wallId missing / empty — ONLY for wall-hosted openings (ADR-615:
+ *         self-hosted openings, i.e. `isSelfHostedOpening(params)`, skip this
+ *         check and instead require a well-formed `selfHost` — see
+ *         `validateSelfHost`: finite anchor, hostThicknessMm > 0, finite
+ *         rotationRad).
  *       · width < MIN_OPENING_WIDTH_MM
  *       · height < MIN_OPENING_HEIGHT_MM
  *       · offsetFromStart < 0
@@ -19,6 +23,7 @@
  *       · door με sillHeight > 0 (typically zero — possible auth user error)
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.4
+ * @see docs/centralized-systems/reference/adrs/ADR-615-free-standing-self-hosted-opening.md
  */
 
 import { nowTimestamp } from '@/lib/firestore-now';
@@ -26,7 +31,9 @@ import type { BimValidation } from '../types/bim-base';
 import {
   MIN_OPENING_WIDTH_MM,
   MIN_OPENING_HEIGHT_MM,
+  isSelfHostedOpening,
   type OpeningParams,
+  type OpeningSelfHost,
 } from '../types/opening-types';
 import type { WallEntity } from '../types/wall-types';
 
@@ -73,8 +80,35 @@ export function validateOpeningParams(
 // ─── Internal checks ────────────────────────────────────────────────────────
 
 function validateHostRef(params: OpeningParams, hardErrors: string[]): void {
+  // ADR-615 — self-hosted openings carry no `wallId`; they are valid as long
+  // as `selfHost` itself is well-formed. `isSelfHostedOpening` already
+  // guarantees `selfHost` is present (discriminator: !wallId && !!selfHost);
+  // the `&& params.selfHost` re-check below is a pure type-narrow, no `as`.
+  if (isSelfHostedOpening(params) && params.selfHost) {
+    validateSelfHost(params.selfHost, hardErrors);
+    return;
+  }
   if (!params.wallId || params.wallId.trim() === '') {
     hardErrors.push('opening.validation.hardErrors.missingHostWall');
+  }
+}
+
+/** ADR-615 — intrinsic sanity of the synthesized self-host params. */
+function validateSelfHost(selfHost: OpeningSelfHost, hardErrors: string[]): void {
+  const { anchor, hostThicknessMm, rotationRad } = selfHost;
+  const anchorValid =
+    !!anchor &&
+    Number.isFinite(anchor.x) &&
+    Number.isFinite(anchor.y) &&
+    Number.isFinite(anchor.z);
+  if (!anchorValid) {
+    hardErrors.push('opening.validation.hardErrors.selfHostAnchorInvalid');
+  }
+  if (!(hostThicknessMm > 0)) {
+    hardErrors.push('opening.validation.hardErrors.selfHostThicknessInvalid');
+  }
+  if (!Number.isFinite(rotationRad)) {
+    hardErrors.push('opening.validation.hardErrors.selfHostRotationInvalid');
   }
 }
 

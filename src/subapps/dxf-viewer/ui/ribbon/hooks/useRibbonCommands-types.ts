@@ -44,6 +44,7 @@ import type { RibbonMepSegmentBridge } from './useRibbonMepSegmentBridge';
 import type { RibbonFurnitureBridge } from './useRibbonFurnitureBridge';
 import type { RibbonFloorplanSymbolBridge } from './useRibbonFloorplanSymbolBridge';
 import type { RibbonAnnotationSymbolBridge } from './useRibbonAnnotationSymbolBridge';
+import type { RibbonScaleBarBridge } from './useRibbonScaleBarBridge';
 import type { RibbonMepFixtureLibraryBridge } from './useRibbonMepFixtureLibraryBridge';
 import type { RibbonMepRiserBridge } from './useRibbonMepRiserBridge';
 import type { RibbonLineToolBridge } from './useRibbonLineToolBridge';
@@ -104,6 +105,7 @@ export interface UseRibbonCommandsProps {
   furnitureBridge: RibbonFurnitureBridge;
   floorplanSymbolBridge: RibbonFloorplanSymbolBridge;
   annotationSymbolBridge: RibbonAnnotationSymbolBridge;
+  scaleBarBridge: RibbonScaleBarBridge;
   mepFixtureLibraryBridge: RibbonMepFixtureLibraryBridge;
   mepRiserBridge: RibbonMepRiserBridge;
   lineToolBridge: RibbonLineToolBridge;

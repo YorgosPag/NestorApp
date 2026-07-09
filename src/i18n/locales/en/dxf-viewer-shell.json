@@ -902,6 +902,9 @@
         "hostMissing": "Host wall no longer exists — try another"
       }
     },
+    "selfOpening": {
+      "statusPosition": "Click to place a free-standing opening"
+    },
     "slab": {
       "statusFirstVertex": "Click for first slab vertex",
       "statusNextVertex": "Click for next vertex — Enter to close",
@@ -1408,6 +1411,7 @@
       "furnitureProperties": "Furniture Properties",
       "floorplanSymbolProperties": "Symbol Properties",
       "annotationSymbolProperties": "Annotation Symbol",
+      "scaleBarProperties": "Scale Bar",
       "floorFinishProperties": "Floor Finish Properties",
       "wallCoveringProperties": "Wall Finish Properties",
       "hatchProperties": "Hatch",
@@ -1472,6 +1476,7 @@
       "openingKind": "Type",
       "openingFamilyType": "Family Type",
       "openingSize": "Size",
+      "openingFrameProfile": "Frame Profile",
       "openingActions": "Actions",
       "openingRenumber": "Renumber",
       "openingTagStyle": "Tag Style",
@@ -1684,6 +1689,9 @@
       "floorplanSymbolGeometry": "Geometry",
       "annotationSymbolCatalog": "Style",
       "annotationSymbolGeometry": "Geometry",
+      "scaleBarStyle": "Style",
+      "scaleBarDivisions": "Divisions",
+      "scaleBarLabels": "Labels",
       "mepFixtureLibrary": "Library",
       "mepFixtureLibraryPlacement": "Placement",
       "mepRiser": "Stack",
@@ -1798,6 +1806,8 @@
       "revisionTagTooltip": "Place a revision tag with a single click on the canvas",
       "scaleBar": "Scale Bar",
       "scaleBarTooltip": "Draw a graphic scale bar: click the origin, then click to set the axis and length",
+      "openingInfoTag": "Opening Info Tag",
+      "openingInfoTagTooltip": "Place an opening info tag with a single click (Length/Sill/Height)",
       "xlineModeSelector": "Mode",
       "bim": {
         "wall": {
@@ -1862,6 +1872,10 @@
           "slidingDoor": "Sliding Door",
           "frenchDoor": "French Door",
           "fixed": "Fixed Opening"
+        },
+        "selfOpening": {
+          "label": "Free-standing opening (no wall)",
+          "tooltip": "Free-standing opening placement over drawing lines, no BIM wall required"
         },
         "slab": {
           "label": "Slab",
@@ -2900,6 +2914,15 @@
         "width": "Width",
         "height": "Height",
         "sillHeight": "Sill Height",
+        "frameProfile": {
+          "manufacturer": "Manufacturer",
+          "profile": "Profile",
+          "faceWidth": "Face Width",
+          "depth": "Depth",
+          "custom": "Custom",
+          "faceWidthTooltip": "Visible frame width across the elevation face (mm) — constant, independent of the opening size.",
+          "depthTooltip": "Frame depth through the wall thickness (mm) — constant, independent of the wall thickness."
+        },
         "close": "Close",
         "delete": "Delete",
         "deleteConfirm": "Delete opening? This action cannot be undone.",
@@ -5673,6 +5696,11 @@
     "lineModes": {
       "polyline": "Polyline (AutoCAD / standard)",
       "lines": "Lines (Tekton / FESPA)"
+    },
+    "tekSymbolMode": "Symbols",
+    "tekSymbolModes": {
+      "native": "Tekton symbols (single object)",
+      "geometry": "Exact geometry (grouped)"
     },
     "scopeConflict": "IFC contains BIM entities only. Choose “DXF & BIM” or “BIM only”.",
     "submit": "Export",

@@ -44,10 +44,12 @@ describe('getScaleBarGrips — 5 grips from derived geometry', () => {
     expect(grips[2].position.x).toBeCloseTo(geo.endPosition.x, 6);
     expect(grips[2].position.y).toBeCloseTo(geo.endPosition.y, 6);
     expect(grips[3].position).toEqual(e.position); // left-end handle = the '0' tick
-    // Rotation + height sit OFF the axis (perpendicular offset), not on the baseline; the
-    // height handle rides the +perp face at the axis-midpoint x (horizontal bar → straight up).
+    // ROTATION sits ON the axis at the ¼-point (midpoint of the move cross ↔ the left length
+    // handle) — Giorgio 2026-07-09. Height stays OFF the axis (perpendicular offset) at the
+    // axis-midpoint x (horizontal bar → straight up).
     expect(grips[1].movesEntity).toBe(false);
-    expect(Math.abs(grips[1].position.y)).toBeGreaterThan(0);
+    expect(grips[1].position.x).toBeCloseTo(geo.endPosition.x / 4, 6);
+    expect(grips[1].position.y).toBeCloseTo(0, 6);
     expect(grips[4].position.x).toBeCloseTo(geo.endPosition.x / 2, 6);
     expect(grips[4].position.y).toBeGreaterThan(0);
     expect(grips[4].movesEntity).toBe(false);
@@ -84,6 +86,31 @@ describe('applyScaleBarGripDrag — the three transforms', () => {
     expect(patch.angleRad).toBeCloseTo(Math.PI / 2, 6);
     expect(patch.length).toBeUndefined();
     expect(patch.position).toBeUndefined();
+  });
+
+  it('rotation about a PICKED centre → orbits the pivot (position + angleRad sweep together)', () => {
+    const e = tenMetreBar(); // horizontal, position (0,0), angleRad 0
+    const pivot = { x: 5_000, y: 0 };  // a picked rotation centre on the axis
+    const anchor = { x: 10_000, y: 0 }; // reference anchor (e.g. the far end), east of the pivot
+    // Drag the anchor a quarter turn (+90°) about the pivot: (10000,0) → (5000,5000).
+    const patch = applyScaleBarGripDrag(
+      'scale-bar-rotation', e, anchor, { x: 5_000 - 10_000, y: 5_000 - 0 },
+      { pivot, anchor },
+    );
+    expect(patch.angleRad).toBeCloseTo(Math.PI / 2, 6);
+    // The '0'-tick origin (0,0) ORBITS the pivot (5000,0) by +90° → (5000, −5000).
+    expect(patch.position!.x).toBeCloseTo(5_000, 6);
+    expect(patch.position!.y).toBeCloseTo(-5_000, 6);
+    expect(patch.length).toBeUndefined();
+  });
+
+  it('rotation about a picked centre → no-op when the reference anchor sits on the pivot', () => {
+    const e = tenMetreBar();
+    const pivot = { x: 5_000, y: 0 };
+    const patch = applyScaleBarGripDrag(
+      'scale-bar-rotation', e, pivot, { x: 100, y: 0 }, { pivot, anchor: pivot },
+    );
+    expect(patch).toEqual({}); // degenerate reference vector → shared swept-angle SSoT returns null
   });
 
   it('length → recomputes angleRad + snaps length to a nice 1-2-5 number', () => {

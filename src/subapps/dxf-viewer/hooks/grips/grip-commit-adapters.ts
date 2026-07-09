@@ -101,6 +101,7 @@ import {
   commitArcGripDrag,
   commitPolylineRotationGripDrag,
   commitAnnotationSymbolGripDrag,
+  commitAnnotationSymbolResizeGripDrag,
   commitGroupGizmoRotation,
 } from './grip-parametric-commits';
 import { tryCommitParametricGripDrag } from './grip-parametric-dispatch';
@@ -243,6 +244,15 @@ export function commitDxfGripDragModeAware(
   // whole-entity TRANSLATE (`movesEntity`) and must fall through to the move path.
   if (annotationSymbolKind === 'annotation-symbol-rotation') {
     commitAnnotationSymbolGripDrag(grip, delta, deps);
+    return;
+  }
+  // ADR-583 Φ3 — annotation symbol CORNER resize handle → UNIFORM scale of the annotative
+  // `sizeMm` about the insertion point via `applyAnnotationSymbolGripDrag` → `UpdateEntityCommand`
+  // (flat `{ sizeMm }` patch, preview ≡ commit). Gate to the 4 corner kinds ONLY — the move
+  // cross + rotation handle are handled above; a symbol has no vertices, so the stretch path
+  // cannot serve this parametric resize.
+  if (annotationSymbolKind?.startsWith('annotation-symbol-corner-')) {
+    commitAnnotationSymbolResizeGripDrag(grip, delta, deps);
     return;
   }
   // ADR-575 §8 — GROUP gizmo ROTATION handle → rotate the whole group about its bbox

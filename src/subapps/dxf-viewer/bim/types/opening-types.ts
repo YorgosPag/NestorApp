@@ -76,9 +76,14 @@ export type OpeningSwing = 'inward' | 'outward';
  * orphan policy (ADR-363 §5.4): wall deletion does NOT cascade openings; user
  * is prompted "Διαγραφή και των N κουφωμάτων;".
  *
+ * ADR-615 — `wallId` is now OPTIONAL: absent ⇒ the opening is **self-hosted**
+ * (free-standing, no BIM wall) and `selfHost` MUST be set instead. Exactly
+ * one of `wallId` / `selfHost` is set — see `isSelfHostedOpening()`.
+ *
  * Positioning along host wall:
  *   - `offsetFromStart` (mm) is measured along the wall axis from `wall.start`.
  *   - `offsetFromStart + width ≤ wall.length` (validator hard error otherwise).
+ *   - Self-hosted: `offsetFromStart` is always 0 (the host IS the opening).
  *
  * Optional fields:
  *   - `frameWidth` — κάσα width (mm). Default 50mm για doors / windows.
@@ -86,10 +91,34 @@ export type OpeningSwing = 'inward' | 'outward';
  *   - `glazingPanes` — number of glass panes (1 single / 2 double / 3 triple).
  *   - `material` — material library ID (Phase 6+).
  */
+
+/**
+ * ADR-615 — Free-standing host synthesis parameters. Present iff `wallId` is
+ * absent on `OpeningParams` (discriminator). Feeds `selfOpeningHost()` to
+ * synthesize a straight 2-vertex `OpeningHost` axis so the opening geometry
+ * engine can run without a BIM wall.
+ */
+export interface OpeningSelfHost {
+  /** mm world coords — centre of the opening (self-host axis midpoint). */
+  readonly anchor: Point3D;
+  /** rad — axis orientation, typically snapped to the underlying DXF line. */
+  readonly rotationRad: number;
+  /** mm — "wall thickness" the free-standing symbol shows. */
+  readonly hostThicknessMm: number;
+}
+
 export interface OpeningParams {
   readonly kind: OpeningKind;
-  /** Foreign key — host wall id (required). */
-  readonly wallId: string;
+  /** Foreign key — host wall id. ADR-615: absent ⇒ self-hosted (see `selfHost`). */
+  readonly wallId?: string;
+  /**
+   * ADR-615 — Free-standing host synthesis params. Present ⇔ `wallId` is
+   * absent (discriminator, see `isSelfHostedOpening()`). Synthesizes a
+   * straight 2-vertex axis (via `selfOpeningHost()`) so the opening does not
+   * require a BIM wall — used when placing a κούφωμα directly on imported
+   * DXF lines.
+   */
+  readonly selfHost?: OpeningSelfHost;
   /** mm. Offset along host wall axis from `wall.start`. */
   readonly offsetFromStart: number;
   /** mm. Opening width along wall axis. */
@@ -98,8 +127,33 @@ export interface OpeningParams {
   readonly height: number;
   /** mm. Sill height above floor (0 για doors, ~900 για windows). */
   readonly sillHeight: number;
-  /** mm. Κάσα width — default 50mm when undefined. */
+  /**
+   * @deprecated ADR-611 — use `frameProfileId` + `resolveOpeningFrameProfile`.
+   * mm. Legacy κάσα width (square cross-section). Kept for zero-regression: a
+   * legacy opening with no `frameProfileId` resolves faceWidth = depth = this.
+   */
   readonly frameWidth?: number;
+  /**
+   * ADR-611 — FK → `FRAME_PROFILE_CATALOG` entry id (e.g. 'ALUMIL-M9660-frame'),
+   * or the `CATALOG_CUSTOM_SENTINEL` when the user hand-edits a dimension. The
+   * frame member cross-section (faceWidth × depth, mm) is CONSTANT vs the opening
+   * width/height. Resolved via `resolveOpeningFrameProfile()`. Absent on legacy
+   * openings → falls back to `frameWidth` / catalog default (zero regression).
+   */
+  readonly frameProfileId?: string;
+  /**
+   * ADR-611 — per-instance overrides of the resolved frame profile fields. Set
+   * alongside `frameProfileId = CATALOG_CUSTOM_SENTINEL` when a dimension is
+   * hand-edited. Win LAST over any catalog dims in `resolveOpeningFrameProfile`.
+   */
+  readonly frameProfileOverrides?: {
+    /** mm across the opening FACE (visible κάσα width). */
+    readonly faceWidth?: number;
+    /** mm through the wall thickness (INDEPENDENT of wall.thickness). */
+    readonly depth?: number;
+    readonly manufacturer?: string;
+    readonly series?: string;
+  };
   /** Door swing hinge side. Door-only — undefined για window/fixed. */
   readonly handing?: OpeningHanding;
   /** Door swing direction. Door / french-door only. */
@@ -158,6 +212,18 @@ export interface OpeningParams {
   readonly revealInsulation?: EnvelopeLayer;
 }
 
+/**
+ * ADR-615 — Type-guard SSoT discriminating self-hosted vs wall-hosted
+ * openings. Exactly one of `wallId` / `selfHost` is expected to be set;
+ * this returns `true` only for the well-formed self-hosted shape (no
+ * `wallId`, `selfHost` present).
+ */
+export function isSelfHostedOpening(
+  params: Pick<OpeningParams, 'wallId' | 'selfHost'>,
+): boolean {
+  return !params.wallId && !!params.selfHost;
+}
+
 // ─── Geometry cache (derivable from params + host wall; SSoT = params) ──────
 
 /**
@@ -197,6 +263,14 @@ export interface OpeningGeometry {
    * the second leaf line.
    */
   readonly hingeAnchor2?: Point3D;
+  /**
+   * mm. ADR-611 — constant-cross-section frame members (κάσα) in PLAN, world
+   * coords. Populated by the geometry phase as TWO jamb rectangles (one at each
+   * end of the opening along the wall axis), each a Polygon3D of 4 CCW vertices.
+   * Their faceWidth × depth stay CONSTANT regardless of `params.width/height`
+   * (Revit swept-profile invariant). Absent → renderer draws no frame members.
+   */
+  readonly frameOutlines?: readonly Polygon3D[];
   readonly bbox: BoundingBox3D;
   /** m². Opening face area (width × height in mm → m²). */
   readonly area: number;
@@ -246,6 +320,16 @@ export const MIN_OPENING_WIDTH_MM = 200;
 
 /** Minimum allowable opening height (mm). */
 export const MIN_OPENING_HEIGHT_MM = 200;
+
+/**
+ * ADR-615 — self-hosted (free-standing) opening «host thickness» bounds (mm).
+ * The thickness is the ACROSS dimension the symbol shows (the notional wall the
+ * opening sits in). A grip resize clamps it to `[MIN, MAX]` so it can never blow
+ * up to an absurd width (Giorgio 2026-07-09: «δεν μπορεί να έχουμε πλάτος ένα
+ * μέτρο»). MIN keeps a visible cross-section; MAX caps at a very thick wall.
+ */
+export const MIN_SELF_HOST_THICKNESS_MM = 50;
+export const MAX_SELF_HOST_THICKNESS_MM = 600;
 
 /**
  * Per-kind default `width × height × sillHeight` (mm). Source: ADR-363 §5.4

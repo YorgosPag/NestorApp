@@ -279,7 +279,12 @@ export type ToolType =
   // (mirror 'line'): click 1 = '0' tick origin, click 2 = axis angle + dragged length
   // (snapped to a nice 1-2-5 round number). Deliberately absent from
   // `ANNOTATION_KIND_CONFIGS` so the single-click annotation handler never claims it.
-  | 'scale-bar';          // SCALEBAR — 2-click → ScaleBarEntity
+  | 'scale-bar'           // SCALEBAR — 2-click → ScaleBarEntity
+  // ADR-612: Opening info tag — a DEDICATED entity type (sibling of scale-bar),
+  // NOT an annotation-symbol kind. SINGLE-CLICK generic accumulator tool (mirror
+  // 'annotation-symbol' click-count, scale-bar's ribbon/options/builder plumbing):
+  // 1 click = box centre, default 120×80 (3:2) size, 3 empty cells (edited later).
+  | 'opening-info-tag';   // OPENINGTAG — 1-click → OpeningInfoTagEntity
 
 
 export interface ToolDefinition {
