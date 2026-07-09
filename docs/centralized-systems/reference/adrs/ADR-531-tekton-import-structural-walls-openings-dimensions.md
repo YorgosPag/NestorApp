@@ -267,3 +267,33 @@ ground truth. Αποκωδικοποίηση επιβεβαίωσε/διόρθω
   η γεωμετρία (defPoints/foot1-foot2) ΔΕΝ επηρεάζεται. Fix: `TEK_DIM_ANNOTATION_MAG` 3 → **1.5** (dimscale
   300→150) → όλο το σύστημα στο μισό, ίδιες αναλογίες, ίδιο μήκος. Tunable (πρώτη δοκιμή). Test dimscale 150.
   **12/12 mapper GREEN** · jscpd clean.
+- **2026-07-09** — **ADR-608: μάσκα κειμένου = φόντο σχεδίου + fix ribbon mask-color picker** (Giorgio 2026-07-10).
+  (Α) Import: override `dimtfill: 'backgroundColor'` → η εισαγόμενη διάσταση «κόβει» τη γραμμή με το φόντο του
+  καμβά Nestor 2Δ. (Β) UI bug: στο ribbon ο picker «Χρώμα Μάσκας» (`dim.text.tfillColor`) ήταν πάντα ενεργός —
+  αλλά το χρώμα τιμάται ΜΟΝΟ σε «Δικό μου χρώμα». Fix (`useRibbonDimBridge.getComboboxState`): `disabled =
+  spec.field==='dimtfillclr' && style.dimtfill!=='customColor'` → απενεργοποιείται σε «Καμία»/«Φόντο σχεδίου»
+  (το panel `TextSection` ήδη το ΚΡΥΒΕΙ — συνεπές). **69/69 GREEN** (mapper+bridge+tab· 4 disabled + 1 dimtfill
+  tests) · jscpd clean.
+- **2026-07-10** — **ADR-608: dimtxt=0.8 + ΠΡΑΓΜΑΤΙΚΟ fix mask-color disable** (Giorgio). (1) `dimtxt` ρητό
+  **0.8** (ήταν styleTxt÷3=0.833· `TEK_DIM_TEXT_HEIGHT`). (2) Ο προηγούμενος disable δεν λειτουργούσε στον
+  browser: το control «Χρώμα Μάσκας» είναι `comboboxVariant:'dxf-color'` → render μέσω `RibbonDxfColorPickerWidget`
+  → `RibbonColorField` → `ColorDialogTrigger`, ΚΑΝΕΝΑ δεν περνούσε το `state.disabled` (μόνο ο default
+  `RibbonComboboxDefault` το τιμούσε). Fix: `RibbonColorField` +optional `disabled` → `ColorDialogTrigger`
+  (ήδη υποστηρίζει disabled: opacity-50 + not-allowed)· `RibbonDxfColorPickerWidget` περνά `state?.disabled`.
+  Πλέον «Καμία» **και** «Φόντο σχεδίου» → picker ανενεργός. **50/50 GREEN** (mapper+bridge) · jscpd clean.
+- **2026-07-10** — **ADR-608: μάσκα κειμένου — 2 root-cause fixes** (Giorgio: «μαύρο→καφέ» + «πάντα AutoCAD Dark»).
+  (1) **customColor black→brown**: το `dimtfillclr` ήταν ACI-only → `findClosestAci('#000000')` = **ACI 18
+  (#4C0000)** (το AutoCAD palette δεν έχει καθαρό μαύρο· τα σκούρα γκρι είναι πιο μακριά). Fix: true-color
+  companion **`dimtfillclrTrueColor`** (Φ7 pattern) στο `DimStyle` + bridge (`trueColorField`) + mask renderer
+  (`resolveDimColorTC`) → ακριβές hex round-trips. (2) **«Φόντο σχεδίου» πάντα #1a1a1a**: το `setCanvasBackground`
+  **δεν καλείται ΠΟΤΕ** → η μάσκα έπεφτε πάντα στο hardcoded `CANVAS_BG_DEFAULT=#1a1a1a`, ενώ ο πραγματικός
+  καμβάς = `#000000` → ορατό ανοιχτό κουτί. Fix: fallback → **`resolveDxfCanvasBackgroundHex()`** (SSoT CSS var
+  `--canvas-background-dxf`, ίδιο που διαβάζει το 3D «σαν 2Δ» — full parity, theme-dynamic). Bonus: extract
+  `beginDimTextFrame` (καθάρισε προϋπάρχον clone). **63/63 GREEN** (text-renderer+bridge+mapper) · jscpd clean.
+- **2026-07-10** — **ADR-608: μάσκα ακολουθεί αλλαγή φόντου + νέο θέμα «Nestor App»** (Giorgio). (1) Η μάσκα
+  «Φόντο σχεδίου» έψηνε το φόντο στο bitmap cache· αλλαγή θέματος δεν το invalidate-άρε (χρειαζόταν toggle mode).
+  Fix: pub-sub `subscribeCanvasBackgroundChange` (SSoT `canvas-theme.ts`, notify στο `applyCanvasTheme`) +
+  subscription στον `dxf-canvas-renderer` → `bitmapCacheRef.invalidate()` (ADR-040 pattern, ίδιο με LWDISPLAY·
+  ADR-040 changelog updated). (2) Νέα θέματα καμβά **«Nestor App #1» (#1d283a, DEFAULT_THEME) + «Nestor App #2»
+  (#161a22)** — πρώτα στη λίστα (solid hex → μάσκα ταιριάζει ακριβώς). i18n el+en. ⚠️ gradient themes (Cinema 4D) — solid μάσκα δεν ταιριάζει
+  gradient (γνωστό όριο). **390/390 GREEN** (config+canvas) · jscpd clean.

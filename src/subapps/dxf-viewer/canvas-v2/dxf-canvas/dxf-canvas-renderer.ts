@@ -35,6 +35,7 @@ import { subscribeLayerStore } from '../../stores/LayerStore';
 // ADR-510 Φ2G — global LWDISPLAY toggle: read at entity-paint time (not the cache
 // key), so a flip must invalidate the normal-state bitmap (same contract as LayerStore).
 import { subscribeLineweightDisplay } from '../../stores/LineweightDisplayStore';
+import { subscribeCanvasBackgroundChange } from '../../config/canvas-theme';
 // ADR-375 Phase B — re-render on BIM render-settings changes (drawingScale / viewRange / objectStyles).
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 // ADR-530 — preload CAD glyph fonts + rebuild the bitmap layer once they land.
@@ -477,6 +478,15 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
   // → getShowLineweight), NOT baked into the bitmap cache key → invalidate to rebuild.
   useEffect(() => {
     return subscribeLineweightDisplay(() => {
+      bitmapCacheRef.current?.invalidate();
+      isDirtyRef.current = true;
+    });
+  }, []);
+
+  // ADR-608 — invalidate on canvas background/theme change: dim-text «Φόντο σχεδίου» masks bake the
+  // LIVE background (`resolveDxfCanvasBackgroundHex`), which is NOT in the cache key. Same as LWDISPLAY.
+  useEffect(() => {
+    return subscribeCanvasBackgroundChange(() => {
       bitmapCacheRef.current?.invalidate();
       isDirtyRef.current = true;
     });

@@ -41,5 +41,12 @@ export const RibbonDxfColorPickerWidget: React.FC<RibbonDxfColorPickerWidgetProp
     [onComboboxChange, command.commandKey],
   );
 
-  return <RibbonColorField label={t(command.labelKey)} value={hex} onChange={handleChange} />;
+  return (
+    <RibbonColorField
+      label={t(command.labelKey)}
+      value={hex}
+      onChange={handleChange}
+      disabled={state?.disabled === true}
+    />
+  );
 };

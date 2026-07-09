@@ -36,9 +36,9 @@ import {
   RADIAL_RADIUS_PREFIX,
   type FullDimText,
 } from '../../../systems/dimensions/dim-text-formatter';
-import { resolveDimColor, resolveDimColorTC } from './dim-color-resolver';
+import { resolveDimColorTC } from './dim-color-resolver';
 import { buildUIFont } from '../../../config/text-rendering-config';
-import { UI_COLORS, HOVER_HIGHLIGHT } from '../../../config/color-config';
+import { HOVER_HIGHLIGHT, resolveDxfCanvasBackgroundHex } from '../../../config/color-config';
 import type { Point2D, ViewTransform } from '../../types/Types';
 import { CoordinateTransforms } from '../../core/CoordinateTransforms';
 // ADR-362 Round 5 — paper-mm DIMSTYLE values must be converted to scene world
@@ -48,7 +48,6 @@ import { type SceneUnits } from '../../../utils/scene-units';
 import { paperHeightToModel } from '../../../utils/annotation-scale';
 
 /** Screen-px canvas background used for DIMTFILL='backgroundColor'. */
-const CANVAS_BG_DEFAULT = UI_COLORS.CANVAS_BACKGROUND_AUTOCAD_DARK;
 
 interface DimTextRenderParams {
   readonly entity: DimensionEntity;
@@ -137,6 +136,27 @@ export function measureDimPrimaryText(
   return { text, widthPx };
 }
 
+/**
+ * Shared canvas frame for dim text (both angular + linear paths): save → place at the anchor
+ * (rotated + DIMTAD vertical offset) → font + centre-align. Extracted (ADR-608) to kill the
+ * duplicate transform block. Caller sets any extra state (e.g. angular `textBaseline`) after.
+ */
+function beginDimTextFrame(
+  ctx: CanvasRenderingContext2D,
+  anchor: Point2D,
+  rotation: number,
+  tadOffsetY: number,
+  heightPx: number,
+  fontFamily: string,
+): void {
+  ctx.save();
+  ctx.translate(anchor.x, anchor.y);
+  ctx.rotate(rotation);
+  ctx.translate(0, tadOffsetY); // DIMTAD vertical placement (above/centered/below)
+  ctx.font = buildUIFont(heightPx, fontFamily);
+  ctx.textAlign = 'center';
+}
+
 export function renderDimensionText(
   ctx: CanvasRenderingContext2D,
   params: DimTextRenderParams,
@@ -168,12 +188,7 @@ export function renderDimensionText(
   if (params.geometry.kind === 'angular') {
     const text = resolveDimensionText(params.geometry, params.style, params.entity.userText);
     if (!text) return;
-    ctx.save();
-    ctx.translate(screenAnchor.x, screenAnchor.y);
-    ctx.rotate(screenRotation);
-    ctx.translate(0, tadOffsetY); // DIMTAD vertical placement (above/centered/below)
-    ctx.font = buildUIFont(primaryHeight, fontFamily);
-    ctx.textAlign = 'center';
+    beginDimTextFrame(ctx, screenAnchor, screenRotation, tadOffsetY, primaryHeight, fontFamily);
     ctx.textBaseline = 'middle';
     drawTextBackgroundMask(ctx, text, primaryHeight, params.style, params.layerColour, params.canvasBackground);
     ctx.fillStyle = colour;
@@ -185,12 +200,7 @@ export function renderDimensionText(
   const full = buildFullText(params.geometry, params.style, params.entity.userText);
   if (!full.primary && !full.limitsUpper) return;
 
-  ctx.save();
-  ctx.translate(screenAnchor.x, screenAnchor.y);
-  ctx.rotate(screenRotation);
-  ctx.translate(0, tadOffsetY); // DIMTAD vertical placement (above/centered/below)
-  ctx.font = buildUIFont(primaryHeight, fontFamily);
-  ctx.textAlign = 'center';
+  beginDimTextFrame(ctx, screenAnchor, screenRotation, tadOffsetY, primaryHeight, fontFamily);
   // ADR-362 Phase K3 — DIMTFILL background mask drawn before text + arrowheads.
   if (full.primary) {
     drawTextBackgroundMask(ctx, full.primary, primaryHeight, params.style, params.layerColour, params.canvasBackground);
@@ -425,8 +435,12 @@ function drawTextBackgroundMask(
 
   const fillColor =
     style.dimtfill === 'customColor'
-      ? resolveDimColor(style.dimtfillclr, layerColour)
-      : (canvasBackground ?? CANVAS_BG_DEFAULT);
+      // ADR-608 — true-color companion wins (exact hex); ACI is the DXF degrade. Fixes
+      // pure black snapping to ACI 18 (#4C0000) when stored ACI-only.
+      ? resolveDimColorTC(style.dimtfillclrTrueColor, style.dimtfillclr, layerColour)
+      // ADR-608 — «Φόντο σχεδίου»: το ΖΩΝΤΑΝΟ χρώμα καμβά Nestor 2Δ (SSoT, default #000000), ΟΧΙ
+      // hardcoded #1a1a1a — αλλιώς η μάσκα δεν ταιριάζει το φόντο (ορατό κουτί). Full parity με 3D.
+      : (canvasBackground ?? resolveDxfCanvasBackgroundHex());
 
   const textWidth = ctx.measureText ? ctx.measureText(text).width : text.length * primaryHeight * 0.6;
   const gapPx = style.dimgap * primaryHeight * 0.15;

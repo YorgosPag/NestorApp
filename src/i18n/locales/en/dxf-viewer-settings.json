@@ -775,6 +775,8 @@
   "backgroundCategory": {
     "themeLabel": "Canvas theme",
     "themes": {
+      "nestorApp1": "Nestor App #1",
+      "nestorApp2": "Nestor App #2",
       "autocadClassic": "AutoCAD Classic",
       "autocadDark": "AutoCAD Dark",
       "solidworks": "SolidWorks",

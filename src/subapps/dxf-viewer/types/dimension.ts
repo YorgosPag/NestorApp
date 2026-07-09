@@ -231,6 +231,14 @@ export interface DimStyle {
   dimtfill: DimTextFillMode;
   /** DIMTFILLCLR — explicit background color when `dimtfill='customColor'` (ACI). */
   dimtfillclr: number;
+  /**
+   * ADR-608 — mask true-color companion (packed `0xRRGGBB`), the true-color sibling of
+   * `dimtfillclr` (mirrors the Φ7 pattern of every other dim colour). Exceeds AutoCAD (whose
+   * DIMTFILLCLR is ACI-only) — needed because pure black/white have no ACI slot and snap to the
+   * nearest index (black → ACI 18 `#4C0000`). When set, wins at render; `dimtfillclr` keeps the
+   * nearest-ACI degrade for DXF export. null/absent → use `dimtfillclr`.
+   */
+  dimtfillclrTrueColor?: number | null;
   /** Font family for dim text (resolves through ADR-344 text engine). */
   textFontFamily: string;
 

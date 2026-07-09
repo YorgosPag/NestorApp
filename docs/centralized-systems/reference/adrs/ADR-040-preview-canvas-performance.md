@@ -3842,3 +3842,13 @@ gesture, ΟΧΙ 60fps). **Bitmap cache key ΑΝΕΓΓΙΧΤΟ** (rule #3): το 
 inline `Math.max(0, Math.min(1, …))` με το κανονικό `clamp01` από `utils/scalar-math.ts`. Καμία αλλαγή
 συμπεριφοράς, subscription ή micro-leaf αρχιτεκτονικής — μόνο ο υπολογισμός του perpendicular-guide
 projection parameter `t` περνά από τον κοινό helper. Staged για CHECK 6B. ΟΧΙ tsc (N.17).
+
+## 2026-07-10: ADR-608 — canvas-background invalidation του bitmap cache (`dxf-canvas-renderer.ts`, CHECK 6B/6D stage)
+
+**Τι:** νέο imperative invalidation subscription στον `dxf-canvas-renderer` — όταν αλλάζει το θέμα/χρώμα φόντου
+(`subscribeCanvasBackgroundChange`, SSoT `config/canvas-theme.ts`), καλείται `bitmapCacheRef.current?.invalidate()`
++ `isDirtyRef=true`. **Γιατί:** οι μάσκες κειμένου διαστάσεων «Φόντο σχεδίου» ψήνουν στο cache το ΖΩΝΤΑΝΟ χρώμα
+καμβά (`resolveDxfCanvasBackgroundHex`), το οποίο **ΔΕΝ** είναι μέρος του bitmap cache key (ένα per-frame
+`getComputedStyle` θα κόστιζε) → χωρίς invalidation η μάσκα κράταγε το παλιό χρώμα μέχρι toggle του mode. Ίδιο
+ακριβώς shape με τα υπάρχοντα LWDISPLAY/IsolateStore/LayerStore invalidations. Καμία αλλαγή micro-leaf
+αρχιτεκτονικής/subscription στα high-freq stores. Staged για CHECK 6B/6D. ΟΧΙ tsc (N.17).

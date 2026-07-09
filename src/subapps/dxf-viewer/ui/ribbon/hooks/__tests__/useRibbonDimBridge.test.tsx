@@ -290,14 +290,46 @@ describe('useRibbonDimBridge — DIMTFILL text mask', () => {
     expect(patchOf()).toEqual({ overrides: { dimtfill: 'backgroundColor' } });
   });
 
-  it('mask colour (hex picker) writes ONLY the nearest ACI dimtfillclr — no true-color companion', () => {
-    // DIMTFILLCLR is ACI-only in AutoCAD (the renderer resolves it via ACI), so unlike
-    // the Φ7 line/text colours there is NO `dimtfillclrTrueColor` — the exact toEqual
-    // guards that no companion field leaks into the patch.
+  it('mask colour (hex picker) writes nearest ACI + true-color companion (ADR-608 Φ7 pattern)', () => {
+    // ADR-608 — dimtfillclr gained a true-color companion so the exact hex round-trips
+    // (pure black no longer snaps to ACI 18 #4C0000). ACI kept for the DXF degrade.
     const HEX = '#ffff00'; // pure yellow → ACI 2
     renderWith(dimPlain, 'dim-2').current.onComboboxChange(TFILL_COLOR, HEX);
-    expect(patchOf()).toEqual({ overrides: { dimtfillclr: findClosestAci(HEX) } });
+    expect(patchOf()).toEqual({
+      overrides: { dimtfillclr: findClosestAci(HEX), dimtfillclrTrueColor: hexToTrueColor(HEX) },
+    });
     expect(findClosestAci(HEX)).toBe(2); // sanity: pure yellow → ACI 2
+  });
+
+  it('πραγματικό BUG-fix: μαύρο round-trips (δεν γίνεται #4C0000 = ACI 18)', () => {
+    // Το picker γράφει true-color· ο reader (colorToHex) το κερδίζει → μαύρο μένει μαύρο.
+    renderWith(dimPlain, 'dim-2').current.onComboboxChange(TFILL_COLOR, '#000000');
+    expect(patchOf()).toEqual({
+      overrides: { dimtfillclr: findClosestAci('#000000'), dimtfillclrTrueColor: hexToTrueColor('#000000') },
+    });
+    expect(hexToTrueColor('#000000')).toBe(0); // packed 0x000000
+    const masked = { ...dimPlain, id: 'dim-b', overrides: { dimtfill: 'customColor', dimtfillclr: findClosestAci('#000000'), dimtfillclrTrueColor: 0 } };
+    // reader: true-color companion wins → επιστρέφει καθαρό μαύρο, ΟΧΙ #4C0000.
+    expect(renderWith(masked, 'dim-b').current.getComboboxState(TFILL_COLOR)?.value).toBe('#000000');
+  });
+
+  // ADR-608 (Giorgio 2026-07-10) — mask colour picker meaningful ONLY for «Δικό μου χρώμα».
+  const dimFill = (dimtfill: string) => ({ ...dimPlain, id: 'dim-f', overrides: { dimtfill } });
+
+  it('customColor → picker ενεργός (disabled=false)', () => {
+    expect(renderWith(dimFill('customColor'), 'dim-f').current.getComboboxState(TFILL_COLOR)?.disabled).toBe(false);
+  });
+
+  it('backgroundColor (Φόντο σχεδίου) → picker ΑΠΕΝΕΡΓΟΠΟΙΗΜΕΝΟΣ (disabled=true)', () => {
+    expect(renderWith(dimFill('backgroundColor'), 'dim-f').current.getComboboxState(TFILL_COLOR)?.disabled).toBe(true);
+  });
+
+  it('none (Καμία) → picker επίσης απενεργοποιημένος (δεν υπάρχει χρώμα)', () => {
+    expect(renderWith(dimFill('none'), 'dim-f').current.getComboboxState(TFILL_COLOR)?.disabled).toBe(true);
+  });
+
+  it('η mode-dropdown (dim.text.tfill) ΔΕΝ απενεργοποιείται (πάντα editable)', () => {
+    expect(renderWith(dimFill('backgroundColor'), 'dim-f').current.getComboboxState(TFILL)?.disabled).toBe(false);
   });
 });
 

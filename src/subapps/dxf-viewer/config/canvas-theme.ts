@@ -22,11 +22,14 @@
  * live on pick (it has the RulersGrid context).
  */
 
+import { createExternalStore } from '../stores/createExternalStore';
 import { storageGet, STORAGE_KEYS } from '../utils/storage-utils';
 
 // ─── Theme definitions ────────────────────────────────────────────────────────
 
 export type ThemeKey =
+  | 'nestorApp1'
+  | 'nestorApp2'
   | 'autocadClassic'
   | 'autocadDark'
   | 'solidworks'
@@ -52,6 +55,10 @@ export interface ThemeConfig {
 }
 
 export const PRESET_THEMES: ThemeConfig[] = [
+  // Nestor App #1/#2 — enterprise defaults (Giorgio 2026-07-10). Solid hex → η μάσκα κειμένου «Φόντο
+  // σχεδίου» (`resolveDxfCanvasBackgroundHex`) ταιριάζει ακριβώς. Πρώτα στη λίστα· #1 = DEFAULT_THEME.
+  { key: 'nestorApp1',     cssValue: '#1d283a',                              swatchClass: 'bg-[#1d283a] border-border',          textClass: 'text-muted-foreground' },
+  { key: 'nestorApp2',     cssValue: '#161a22',                              swatchClass: 'bg-[#161a22] border-border',          textClass: 'text-muted-foreground' },
   { key: 'autocadClassic', cssValue: 'var(--canvas-themes-autocad-classic)', swatchClass: 'bg-black border-border',             textClass: 'text-muted-foreground' },
   { key: 'autocadDark',    cssValue: 'var(--canvas-themes-autocad-dark)',    swatchClass: 'bg-[#1a1a1a] border-border',          textClass: 'text-muted-foreground' },
   { key: 'solidworks',     cssValue: 'var(--canvas-themes-solidworks)',      swatchClass: 'bg-[#2d3748] border-border',          textClass: 'text-muted-foreground' },
@@ -70,7 +77,7 @@ export const PRESET_THEMES: ThemeConfig[] = [
   },
 ];
 
-export const DEFAULT_THEME: ThemeKey = 'autocadClassic';
+export const DEFAULT_THEME: ThemeKey = 'nestorApp1';
 export const DEFAULT_CUSTOM_COLOR = '#1e293b';
 
 /** Active canvas-theme CSS variables (set on `:root` by the theme switch). */
@@ -92,6 +99,20 @@ function setOrClear(root: CSSStyleDeclaration, name: string, value?: string): vo
  * gradient vars (→ flat background). Grid colours are applied separately into the RulersGrid
  * context (Canvas2D `ctx.strokeStyle` cannot read CSS vars).
  */
+// ADR-608 — imperative notify on background/theme change. The DXF bitmap cache bakes dim-text
+// masks that read the LIVE canvas background (`resolveDxfCanvasBackgroundHex`); the background is
+// NOT in the cache key (a per-frame `getComputedStyle` would cost), so a one-shot signal on change
+// lets the renderer invalidate the cache — mirrors the IsolateStore/LayerStore pattern (ADR-040).
+// Notify-only signal: a monotonically bumped tick whose value is irrelevant — every `set`
+// notifies (no `equals`), mirroring the old `listeners.forEach(cb => cb())`. SSoT store
+// primitive (create-external-store) instead of a hand-rolled listener Set.
+const canvasBackgroundStore = createExternalStore(0);
+
+/** Subscribe to canvas background/theme CSS changes (returns an unsubscribe). */
+export function subscribeCanvasBackgroundChange(cb: () => void): () => void {
+  return canvasBackgroundStore.subscribe(cb);
+}
+
 export function applyCanvasTheme(
   theme: Pick<ThemeConfig, 'cssValue' | 'gradientImage' | 'gradientTop' | 'gradientBottom'>,
 ): void {
@@ -101,6 +122,7 @@ export function applyCanvasTheme(
   root.setProperty(CANVAS_THEME_VARS.image, theme.gradientImage ?? 'none');
   setOrClear(root, CANVAS_THEME_VARS.gradientTop, theme.gradientTop);
   setOrClear(root, CANVAS_THEME_VARS.gradientBottom, theme.gradientBottom);
+  canvasBackgroundStore.set(canvasBackgroundStore.get() + 1);
 }
 
 /**

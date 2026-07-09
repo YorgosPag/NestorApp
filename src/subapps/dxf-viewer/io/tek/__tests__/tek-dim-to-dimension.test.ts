@@ -93,9 +93,12 @@ describe('tekDimToDimensionEntities (ADR-608)', () => {
     expect(dims[0].overrides?.dimtad).toBe('centered');
   });
 
-  it('dimtxt = ύψος ενεργού style ÷ 3 → μειωμένο κείμενο (μόνο text, τα βέλη μένουν)', () => {
-    const styleTxt = getDimStyleRegistry().getActiveStyle().dimtxt;
-    expect(dims[0].overrides?.dimtxt).toBeCloseTo(styleTxt / 3, 6);
+  it('dimtxt = 0.8 (ρητό ύψος κειμένου, μόνο text· τα βέλη μένουν)', () => {
+    expect(dims[0].overrides?.dimtxt).toBe(0.8);
+  });
+
+  it('dimtfill = backgroundColor → μάσκα κειμένου = φόντο σχεδίου (καμβάς Nestor 2Δ)', () => {
+    expect(dims[0].overrides?.dimtfill).toBe('backgroundColor');
   });
 
   it('χρώματα κενά → fallback στη γραμμή· άγνωστο end_style → κληρονομεί dimblk (χωρίς override)', () => {

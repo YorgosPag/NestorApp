@@ -29,10 +29,12 @@ interface RibbonColorFieldProps {
   readonly onChange: (hex: string) => void;
   /** Trigger-button caption (default: the hex value). */
   readonly buttonLabel?: string;
+  /** ADR-608 — read-only when the colour is governed elsewhere (e.g. mask under «Φόντο σχεδίου»). */
+  readonly disabled?: boolean;
 }
 
 /** Ribbon color control — label + central floating EnterpriseColorDialog (DXF preset). */
-export function RibbonColorField({ label, value, onChange, buttonLabel }: RibbonColorFieldProps) {
+export function RibbonColorField({ label, value, onChange, buttonLabel, disabled }: RibbonColorFieldProps) {
   return (
     <span className="dxf-ribbon-combobox-row">
       <span className="dxf-ribbon-combobox-label">{label}</span>
@@ -40,6 +42,7 @@ export function RibbonColorField({ label, value, onChange, buttonLabel }: Ribbon
         <ColorDialogTrigger
           value={value}
           onChange={onChange}
+          disabled={disabled}
           label={buttonLabel ?? value}
           title={label}
           alpha={false}

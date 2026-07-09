@@ -54,12 +54,11 @@ const TEK_END_STYLE_ARROW_BLOCK: Readonly<Record<number, string>> = {
 const TEK_DIM_ANNOTATION_MAG = 1.5;
 
 /**
- * ADR-608 — μείωση ΜΟΝΟ του κειμένου (Giorgio 2026-07-09: «τα κείμενα είναι τεράστια, ~300%
- * μικρότερα»). Το `dimscale` κλιμακώνει text+βέλη μαζί· για να μικρύνει ΜΟΝΟ το κείμενο, κάνουμε
- * override το `dimtxt` = ύψος ενεργού style ÷ `TEK_DIM_TEXT_REDUCE` (τα βέλη μένουν, `dimasz`
- * ανέπαφο). Browser-βαθμονομούμενος: νέα προτίμηση Giorgio → άλλαξε ΜΟΝΟ αυτόν τον διαιρέτη.
+ * ADR-608 — ΡΗΤΟ ύψος κειμένου διάστασης (`dimtxt`, paper-mm· Giorgio 2026-07-10: «ύψος κειμένου
+ * = 0.8»). Ξεχωριστό από τα βέλη (`dimasz` ανέπαφο)· κλιμακώνεται με το `dimscale` όπως όλα.
+ * Browser-βαθμονομούμενο: νέα προτίμηση Giorgio → άλλαξε ΜΟΝΟ αυτή την τιμή.
  */
-const TEK_DIM_TEXT_REDUCE = 3;
+const TEK_DIM_TEXT_HEIGHT = 0.8;
 
 /**
  * Μέγεθος βέλους «Βέλος 2» — **ΡΗΤΗ browser-βαθμονόμηση** (Giorgio 2026-07-09, step-by-step). Δύο
@@ -90,7 +89,7 @@ function resolveArrowSizeMm(): number {
  * παίρνει truecolor (ακριβές hex, wins στο render) + ACI companion (nearest-match, DXF round-trip).
  * Absent κανάλι → line color.
  */
-function dimOverrides(rec: TekDimRecord, refTextHeightMm: number): DimensionOverride {
+function dimOverrides(rec: TekDimRecord): DimensionOverride {
   const lineHex = tekColorToHex(rec.color);
   const textHex = rec.dtextColor ? tekColorToHex(rec.dtextColor) : lineHex;
   const arrowHex = rec.endsColor ? tekColorToHex(rec.endsColor) : lineHex;
@@ -105,8 +104,10 @@ function dimOverrides(rec: TekDimRecord, refTextHeightMm: number): DimensionOver
     dimscale: TEK_RENDER_DIMSCALE * TEK_DIM_ANNOTATION_MAG,
     // Κείμενο ΟΜΟΑΞΩΝΙΚΟ με τη γραμμή διάστασης (κεντραρισμένο στον άξονα, όχι «above») — Giorgio.
     dimtad: 'centered',
-    // Μείωση ΜΟΝΟ του κειμένου (τα βέλη μένουν) — βλ. `TEK_DIM_TEXT_REDUCE`.
-    dimtxt: refTextHeightMm / TEK_DIM_TEXT_REDUCE,
+    // Ρητό ύψος κειμένου (τα βέλη μένουν) — βλ. `TEK_DIM_TEXT_HEIGHT`.
+    dimtxt: TEK_DIM_TEXT_HEIGHT,
+    // Μάσκα κειμένου = ΦΟΝΤΟ ΣΧΕΔΙΟΥ (καμβάς Nestor 2Δ), ώστε το κείμενο να «κόβει» τη γραμμή — Giorgio.
+    dimtfill: 'backgroundColor',
     ...(arrowBlock ? { dimblk: arrowBlock } : {}),
   };
 }
@@ -136,7 +137,7 @@ export function tekDimToDimensionEntities(
   rec: TekDimRecord, units: SceneUnits,
 ): LinearDimensionEntity[] {
   const activeStyle = getDimStyleRegistry().getActiveStyle();
-  const overrides = dimOverrides(rec, activeStyle.dimtxt);
+  const overrides = dimOverrides(rec);
   return rec.segs.map((seg) => {
     const { defPoints, rotationDeg } = segDefPoints(seg, rec.refPoints, units);
     return {

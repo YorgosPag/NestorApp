@@ -150,15 +150,15 @@ const DIM_KEY_MAP: Readonly<Record<string, DimKeySpec>> = {
   [DIM_RIBBON_KEYS.text.height]: { field: 'dimtxt', kind: 'number' },
   // Vertical text placement (DIMTAD) — a DIMSTYLE override (above/centered/below/…).
   [DIM_RIBBON_KEYS.text.position]: { field: 'dimtad', kind: 'enum' },
-  // ADR-362 Phase K3 — DIMTFILL text-background mask. Mode = enum (none /
-  // backgroundColor / customColor); custom color = ACI `dimtfillclr`. The mask
-  // renderer (`drawTextBackgroundMask`) already reads BOTH fields, so setting
-  // them here makes the mask appear immediately (commit + preview). Unlike the
-  // Φ7 line/text colours, DIMTFILLCLR has NO true-color companion (AutoCAD stores
-  // it as ACI only, and the renderer resolves it via `resolveDimColor(ACI)`), so
-  // the picker degrades to the nearest ACI on write — no `trueColorField`.
+  // ADR-362 Phase K3 / ADR-608 — DIMTFILL text-background mask. Mode = enum (none /
+  // backgroundColor / customColor); custom color = ACI `dimtfillclr` + true-color
+  // companion `dimtfillclrTrueColor` (Φ7 pattern — the exact hex wins at render, ACI
+  // is the DXF degrade). Without the companion the picker snapped to the nearest ACI
+  // (pure black → ACI 18 #4C0000), so black rendered as dark red — now round-trips.
   [DIM_RIBBON_KEYS.text.tfill]:      { field: 'dimtfill', kind: 'enum' },
-  [DIM_RIBBON_KEYS.text.tfillColor]: { field: 'dimtfillclr', kind: 'color' },
+  [DIM_RIBBON_KEYS.text.tfillColor]: {
+    field: 'dimtfillclr', kind: 'color', trueColorField: 'dimtfillclrTrueColor',
+  },
 };
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -349,7 +349,11 @@ export function useRibbonDimBridge(props: UseRibbonDimBridgeProps): RibbonDimBri
       const entity = resolveSelectedDim();
       if (!entity) return { value: '', options: optionsFor(spec.kind) };
       const style = resolveDimStyle(entity, getDimStyleRegistry());
-      return { value: readValue(spec, style), options: optionsFor(spec.kind) };
+      // ADR-608 (Giorgio 2026-07-10) — the mask-colour picker (`dimtfillclr`) is meaningful ONLY
+      // for «Δικό μου χρώμα» (customColor). For «Καμία»/«Φόντο σχεδίου» there is no user colour
+      // (the drawing background is used), so disable it — value stays visible, read-only.
+      const disabled = spec.field === 'dimtfillclr' && style.dimtfill !== 'customColor';
+      return { value: readValue(spec, style), options: optionsFor(spec.kind), disabled };
     },
     [resolveSelectedDim, optionsFor, styleOptions, layerOptions],
   );
