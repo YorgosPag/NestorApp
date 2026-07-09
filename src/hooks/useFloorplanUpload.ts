@@ -21,6 +21,7 @@
 import { useState, useCallback } from 'react';
 import { uploadFileWithPolicy } from '@/services/filesystem/upload-orchestrator-gateway';
 import { isFloorplanFile } from '@/services/floorplans/FloorplanProcessor';
+import { isTekFileName } from '@/subapps/dxf-viewer/io/tek/tek-filename';
 import { processFloorplanWithPolicy } from '@/services/floorplans/floorplan-processing-mutation-gateway';
 import type { FileRecord } from '@/types/file-record';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
@@ -147,8 +148,12 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
 
     try {
       // Phase 1: Validate file (pre-check before any network calls)
+      // ADR-526 Φ5 — Tekton `.tek`/`.tek.txt` είναι έγκυρη κάτοψη: ανεβαίνει από την ΙΔΙΑ
+      // διαδρομή με το DXF (FileRecord + Storage) ώστε να παράγεται canonical `fileId` και η
+      // scene να σώζεται/συνδέεται στο επίπεδο (αλλιώς έμενε in-memory → χανόταν σε refresh).
       const ext = getFileExtension(file.name);
-      if (!isFloorplanFile(file.type, ext)) {
+      const isTek = isTekFileName(file.name);
+      if (!isFloorplanFile(file.type, ext) && !isTek) {
         setError(ERROR_MESSAGES.FILE_INVALID_TYPE);
         setErrorCode('FILE_INVALID_TYPE');
         return { success: false, error: ERROR_MESSAGES.FILE_INVALID_TYPE, errorCode: 'FILE_INVALID_TYPE' };
@@ -176,10 +181,14 @@ export function useFloorplanUpload(config: FloorplanUploadConfig): UseFloorplanU
         onProgress: (p) => setProgress(p.percent),
       });
 
-      // Phase 3: Fire-and-forget DXF/PDF processing
-      processFloorplanWithPolicy({ fileId: result.fileId, forceReprocess: false })
-        .then(() => logger.info('Floorplan processing started', { fileId: result.fileId }))
-        .catch((err) => logger.warn('Processing request failed', { fileId: result.fileId, error: String(err) }));
+      // Phase 3: Fire-and-forget DXF/PDF processing. ADR-526 Φ5 — ΟΧΙ για Tekton: το `.tek`
+      // parse-άρεται client-side (`importTekFile`) και η scene σώζεται ως derived blob μέσω
+      // auto-save· ο server DXF/PDF processor δεν καταλαβαίνει `.tek` (raw file = μόνο αρχείο).
+      if (!isTek) {
+        processFloorplanWithPolicy({ fileId: result.fileId, forceReprocess: false })
+          .then(() => logger.info('Floorplan processing started', { fileId: result.fileId }))
+          .catch((err) => logger.warn('Processing request failed', { fileId: result.fileId, error: String(err) }));
+      }
 
       const finalFileRecord: FileRecord = {
         ...result.fileRecord,

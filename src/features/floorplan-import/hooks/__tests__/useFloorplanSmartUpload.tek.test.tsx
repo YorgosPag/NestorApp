@@ -1,12 +1,14 @@
 /**
- * ADR-526 Φ4 (Wizard Tekton import wiring) — covers the smart-upload changes
- * that let `.tek` files flow through the «Εισαγωγή Κάτοψης (Wizard)» pipeline:
+ * ADR-526 Φ4/Φ5 (Wizard Tekton import wiring + persistence) — covers the smart-upload
+ * behaviour that lets `.tek` files flow through the «Εισαγωγή Κάτοψης (Wizard)» pipeline:
  *
  *   1. `detectFloorplanFormat` classifies `.tek` / `.tek.txt` as `'tek'`
  *      (reusing the `isTekFileName` SSoT, not a new ext check).
- *   2. `uploadSmart` short-circuits the `'tek'` format with a success result and
- *      NEVER touches the legacy DXF uploader — the scene is rendered client-side
- *      by `handleFileImport` → `importTekFile` once `onSceneImported` fires.
+ *   2. Φ5 — `uploadSmart` routes `'tek'` through the SAME legacy uploader as DXF so a
+ *      canonical FileRecord `fileId` flows downstream → `handleFileImport` fires
+ *      `linkSceneToLevel` + auto-saves the derived scene blob → the plan survives a
+ *      hard refresh (Φ4 was render-only with no `fileId` → the scene was lost on reload).
+ *      The SceneModel parse stays client-side (`handleFileImport` → `importTekFile`).
  */
 
 import { renderHook } from '@testing-library/react';
@@ -17,7 +19,7 @@ import {
 import type { FloorplanUploadConfig } from '@/hooks/useFloorplanUpload';
 import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
 
-// Legacy DXF uploader — must stay untouched for `.tek`.
+// Legacy uploader — Φ5: `.tek` now rides the SAME path as DXF (FileRecord + Storage).
 const uploadFloorplanSpy = jest.fn();
 jest.mock('@/hooks/useFloorplanUpload', () => ({
   useFloorplanUpload: () => ({
@@ -49,9 +51,9 @@ describe('detectFloorplanFormat — ADR-526 Φ4 Tekton', () => {
   });
 });
 
-describe('useFloorplanSmartUpload.uploadSmart — ADR-526 Φ4 Tekton branch', () => {
+describe('useFloorplanSmartUpload.uploadSmart — ADR-526 Φ5 Tekton persistence', () => {
   // entityType 'building' → resolveFloorId() === null → no wipe pre-flight, so
-  // the test exercises the pure `'tek'` short-circuit in isolation.
+  // the test exercises the `'tek'` upload branch in isolation.
   const config: FloorplanUploadConfig = {
     companyId: 'co_test',
     entityType: ENTITY_TYPES.BUILDING,
@@ -63,13 +65,25 @@ describe('useFloorplanSmartUpload.uploadSmart — ADR-526 Φ4 Tekton branch', ()
 
   beforeEach(() => uploadFloorplanSpy.mockClear());
 
-  it('returns { success: true, format: "tek" } without calling the DXF uploader', async () => {
+  it('Φ5 — routes `.tek` through the legacy uploader and returns its canonical fileId', async () => {
+    uploadFloorplanSpy.mockResolvedValueOnce({ success: true, fileRecord: { id: 'file_tek' } });
     const { result } = renderHook(() => useFloorplanSmartUpload(config));
 
     const res = await result.current.uploadSmart(makeFile('ΣΚΑΛΑ.tek.txt'));
 
-    expect(res).toEqual({ success: true, format: 'tek' });
-    expect(uploadFloorplanSpy).not.toHaveBeenCalled();
+    // fileId flows downstream → linkSceneToLevel + scene-blob auto-save → survives refresh.
+    expect(res).toEqual({ success: true, fileId: 'file_tek', format: 'tek' });
+    expect(uploadFloorplanSpy).toHaveBeenCalledTimes(1);
+    expect(uploadFloorplanSpy).toHaveBeenCalledWith(expect.any(File));
+  });
+
+  it('propagates a `.tek` upload failure (no phantom fileId)', async () => {
+    uploadFloorplanSpy.mockResolvedValueOnce({ success: false, error: 'boom' });
+    const { result } = renderHook(() => useFloorplanSmartUpload(config));
+
+    const res = await result.current.uploadSmart(makeFile('PLAN.TEK'));
+
+    expect(res).toEqual({ success: false, fileId: undefined, format: 'tek', error: 'boom' });
   });
 
   it('still routes `.dxf` to the legacy uploader (no regression)', async () => {

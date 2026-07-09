@@ -137,3 +137,19 @@ ground truth. Αποκωδικοποίηση επιβεβαίωσε/διόρθω
   (γραμμή πράσινη / κείμενο κίτρινο / βέλη μπορντώ `COLOR_241`), βέλος = κλειστό τρίγωνο (DXF αναλογίες).
   **Άνοιγμα #1=πόρτα (νέο `buildDoorSymbolSegments` τόξο, DXF-validated) / #2=παράθυρο** — διαχωρισμός
   ανά `style` (`isDoorStyle`). Απόφαση Giorgio: faithful πόρτα+παράθυρο. **56 jest GREEN** (io/tek).
+- **2026-07-09** — **ADR-608: `<dim>` → native `DimensionEntity` (ενιαίος οργανισμός, όχι exploded
+  primitives)** (Opus, Giorgio browser: «στον Τέκτονα οι διαστάσεις μετακινούνται σαν ένας οργανισμός·
+  σε εμάς εισάγονται σαν μεμονωμένες οντότητες»). **Root cause:** το `<dim>` διαβαζόταν σωστά
+  (`extractDimRecords` → `TekDimRecord`), αλλά το `tekDimToEntities` το **εκρήγνυε** σε dumb
+  `LineEntity`+`TextEntity` → χάνονταν associativity/style/grips (μεμονωμένες γραμμές/κείμενα).
+  **Fix:** νέος SSoT mapper `tek-dim-to-dimension.ts` `tekDimToDimensionEntities` → κάθε `<seg>` = ΕΝΑ
+  native `LinearDimensionEntity` (`defPoints` από end0/end1 ή `<inter>` refPoints· `rotation` από την
+  κατεύθυνση γραμμής· styleId = ενεργό dim style· overrides χρωμάτων truecolor+ACI: πράσινη γραμμή/ext
+  `<color>`, κίτρινο κείμενο `<dtext_color>`). Ο δικός μας `buildDimensionGeometry` (SSoT) κάνει **δωρεάν**
+  το gap (πράσινη γραμμή σπάει πριν τα σύμβολα) + κεντράρισμα κειμένου στον άξονα — τα 2 παρατηρήματα
+  Giorgio. **×scale caveat:** τα end0/end1 είναι paper-scaled (μήκος 2.6) ενώ η ετικέτα δείχνει το
+  πραγματικό (5.20) → το έτοιμο `<s>` string μπαίνει ως `userText` override (preserve-and-replay, όχι
+  re-measured). **Dead-code sweep same-commit:** αφαιρέθηκαν `tekDimToEntities` + `tek-dimension-symbol.ts`
+  (+test) — μηδέν διπλό dimension mapping (SSoT). scene-builder swap σε `tekDimToDimensionEntities`. Tests:
+  νέο `tek-dim-to-dimension.test.ts` (6) + ενημέρωση structural/import integration· **82/82 GREEN** (io/tek)·
+  jscpd:diff clean. ⏳ Εκκρεμεί browser-verify Giorgio (import → διάσταση ως ενιαίος οργανισμός).

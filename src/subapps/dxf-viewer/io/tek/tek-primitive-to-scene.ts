@@ -10,6 +10,7 @@
  */
 
 import { tekMetersToScene, metersToScene } from '../../export/core/tek/tek-geometry';
+import { tekHAlignToKey } from '../../export/core/tek/tek-text-alignment';
 import { tekColorToHex } from './tek-color';
 import { radToDeg, normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 import { generateEntityId } from '@/services/enterprise-id-convenience';
@@ -81,11 +82,6 @@ function textHeightMeters(m: TekXMatrix): number {
   return scale < TEK_NATIVE_SCALE_MIN ? scale * TEK_OUTLINE_GLYPH_EM : scale;
 }
 
-/** `<hallign>` (0/1/2) → TextEntity alignment. */
-function alignmentOf(hAlign: number): TextEntity['alignment'] {
-  return hAlign === 1 ? 'center' : hAlign === 2 ? 'right' : 'left';
-}
-
 /**
  * `<text>` record → `TextEntity`. Περιεχόμενο inline από `<s>`· θέση από xmatrix translation
  * (Y-flipped μέσω SSoT)· ύψος από το vertical scale· περιστροφή = γωνία u-άξονα (Y-flipped).
@@ -103,7 +99,7 @@ export function tekTextToEntity(rec: TekTextRecord, units: SceneUnits): TextEnti
     text: rec.content,
     height,
     fontSize: height,
-    alignment: alignmentOf(rec.hAlign),
+    alignment: tekHAlignToKey(rec.hAlign),
     rotation,
     // Διατηρεί τη γραμματοσειρά του Τέκτονα (π.χ. Arial)· αλλιώς ο renderer βάζει default.
     ...(rec.fontFamily ? { fontFamily: rec.fontFamily } : {}),

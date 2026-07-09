@@ -45,6 +45,13 @@ const MATCHED_SYMBOLS: readonly TekSymbolMatch[] = [
   { symbolId: 'sectionMarkSplit', kind: 'section-mark', typeRes: 383 }, // Σύμβολο τομής (ίδιο native)
   { symbolId: 'elevationLevel', kind: 'elevation-mark', typeRes: 123 }, // Σήμα στάθμης 1
   { symbolId: 'elevationTag', kind: 'elevation-mark', typeRes: 125 }, // Σήμα στάθμης 2
+  // ADR-608 Φ-import-glyphs — βέλη (δικά μας «πιστά» σύμβολα· import fidelity).
+  { symbolId: 'directionArrowSingle', kind: 'direction-arrow', typeRes: 380 }, // Βέλος φοράς 1
+  { symbolId: 'directionArrowDouble', kind: 'direction-arrow', typeRes: 381 }, // Βέλος φοράς 2
+  { symbolId: 'directionArrowOutline', kind: 'direction-arrow', typeRes: 382 }, // Βέλος φοράς 3
+  { symbolId: 'entranceArrow', kind: 'direction-arrow', typeRes: 126 }, // Βέλος εισόδου
+  // ADR-608 Φ-import-svg — άνθρωποι (SVG glyphs· πρωτότυπα σχέδια χρήστη).
+  { symbolId: 'personFamily', kind: 'person', typeRes: 52 }, // Άνθρωποι 1 → οικογένεια
 ];
 
 /** Ανά-`symbolId` override (πιο συγκεκριμένο του kind· παράγεται από το SSoT). */

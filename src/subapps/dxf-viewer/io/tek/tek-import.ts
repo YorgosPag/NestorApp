@@ -11,6 +11,10 @@ import type { SceneModel } from '../../types/scene-types';
 import { parseTekScene } from './tek-scene-extract';
 import { buildSceneFromTekScene } from './tek-scene-builder';
 import { TekParseError } from './tek-xml-reader';
+// ADR-526 — το pure filename predicate ζει σε δικό του light module (bundle-safe για
+// generic consumers). Re-export ώστε τα υπάρχοντα `import { isTekFileName } from './tek-import'`
+// να μείνουν αμετάβλητα (SSoT· μηδέν διπλότυπο).
+export { isTekFileName } from './tek-filename';
 
 export interface TekImportResult {
   readonly success: boolean;
@@ -33,11 +37,6 @@ export interface TekImportResult {
     readonly openingCount: number;
     readonly parseTimeMs: number;
   };
-}
-
-/** Αναγνωρίζει `.tek` / `.tek.txt` ονόματα αρχείων (case-insensitive). */
-export function isTekFileName(name: string): boolean {
-  return /\.tek(\.txt)?$/i.test(name.trim());
 }
 
 /**

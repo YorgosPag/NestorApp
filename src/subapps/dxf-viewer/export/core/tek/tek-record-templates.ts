@@ -94,7 +94,7 @@ export const TEXT_RECORD_TEMPLATE = "<record>\n<type>3</type><n>{{N}}</n><taglis
  * {{COLOR}}(hex) {{VECTOR}}(=<record> ακμές). Τα raster/pen/quality σταθερά από το δείγμα.
  * Το κενό `<taglist>` γεμίζει μέσω του SSoT `injectTag`. data file (N.7.1). ΜΗΝ το γράφεις στο χέρι.
  */
-export const HATCH_RECORD_TEMPLATE = "<type>6</type><n>{{N}}</n><taglist>\n</taglist>\n<elevation>0</elevation><rotation>0</rotation><scaleX>{{SCALEX}}</scaleX><scaleY>{{SCALEY}}</scaleY><type>{{TYPE}}</type><color>{{COLOR}}</color><raster_type>22</raster_type><raster_bgcolor>FFFFFF</raster_bgcolor><raster_bgpen>1</raster_bgpen><boundary>0</boundary><pattern>1</pattern><local_origin>1</local_origin><pen>1</pen><quality>1</quality><visible>1</visible><longl>3</longl><vector>\n{{VECTOR}}\n</vector>";
+export const HATCH_RECORD_TEMPLATE = "<type>6</type><n>{{N}}</n><taglist>\n</taglist>\n<elevation>0</elevation><rotation>0</rotation><scaleX>{{SCALEX}}</scaleX><scaleY>{{SCALEY}}</scaleY><type>{{TYPE}}</type><color>{{COLOR}}</color><raster_type>22</raster_type><raster_bgcolor>{{BGCOLOR}}</raster_bgcolor><raster_bgpen>1</raster_bgpen><boundary>0</boundary><pattern>1</pattern><local_origin>1</local_origin><pen>1</pen><quality>1</quality><visible>1</visible><longl>3</longl><vector>\n{{VECTOR}}\n</vector>";
 
 /**
  * ADR-512 — μία ακμή περιγράμματος γραμμοσκίασης μέσα στο `<vector>` (μέτρα, Y-flipped).

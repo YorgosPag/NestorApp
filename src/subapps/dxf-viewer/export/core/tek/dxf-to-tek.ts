@@ -32,6 +32,9 @@ import {
 } from './tek-xml-writer';
 import { sceneXYToTekMeters } from './tek-geometry';
 import { tekSymbolTypeRes } from './tek-symbol-catalog';
+import {
+  TEK_HALLIGN, TEK_VALLIGN, type TekHAlignKey, type TekVAlignKey,
+} from './tek-text-alignment';
 import type { TekArc, TekHatch, TekHatchEdge, TekLine, TekText } from './tek-types';
 
 /** Default κλίμακα μοτίβου γραμμοσκίασης (`<scaleX>`/`<scaleY>`) — verified δείγμα Τέκτονα. */
@@ -51,26 +54,17 @@ const TEK_TEXT_MAX_PT = 60;
 /** Fallback ύψος (scene units) όταν το text entity δεν φέρει height/fontSize. */
 const DEFAULT_TEXT_HEIGHT = 2.5;
 // ── ADR-608 Φ-texts — text ANCHOR (browser-calibrated) ──────────────────────
-// Ο Τέκτων αγκυρώνει το κείμενο στην ΠΑΝΩ-ΑΡΙΣΤΕΡΗ γωνία του box στο (x20,x21) —
-// ΔΕΝ τιμά hallign/vallign για τη θέση (browser-verify: κείμενο έπεφτε ΚΑΤΩ-ΔΕΞΙΑ
-// του σωστού κέντρου). Άρα υπολογίζουμε ΕΜΕΙΣ την πάνω-αριστερή γωνία από το
-// `position` (=alignment anchor) + `alignment`/`vBaseline` + εκτίμηση πλάτους/ύψους.
-// Advance ανά χαρακτήρα ≈ 0.62 × cap-height (Arial digits/caps) — tunable.
-const TEK_CHAR_ADVANCE_PER_CAP = 0.62;
-// 🎛️ CALIBRATION KNOB — κατακόρυφη ανύψωση insertion για `vBaseline:'middle'` labels,
-// ως πολλαπλάσιο του ύψους (μεγαλύτερο = πιο ΠΑΝΩ το κείμενο). browser-loop με Giorgio.
-const TEK_TEXT_VMID_FACTOR = 1.0;
-/** hallign του Τέκτονα από το alignment του κειμένου (validated round-trip με import). */
-const H_ALIGN: Record<'left' | 'center' | 'right', number> = { left: 0, center: 1, right: 2 };
-/**
- * vallign του Τέκτονα από το `vBaseline` hint του decomposed label (0=πάνω/1=μέση/2=κάτω).
- * Τα σύμβολα/scale-bar labels είναι `'middle'` (κατακόρυφο κέντρο στο anchor) → 1. Tunable
- * αν ο Τέκτων ερμηνεύει διαφορετικά τους ακέραιους (καλιμπράρισμα από browser-verify).
- */
-const V_ALIGN: Record<'top' | 'middle' | 'bottom' | 'alphabetic', number> = {
-  top: 0, middle: 1, bottom: 2, alphabetic: 2,
-};
-type TextBaseline = keyof typeof V_ALIGN;
+// Browser-verify (Giorgio 2026-07-09): ο Τέκτων ΔΕΝ τιμά το `hallign` για κέντρο —
+// αγκυρώνει το type-3 text στην ΑΡΙΣΤΕΡΗ ακμή στο (x20,x21), οπότε τα κεντραρισμένα
+// labels (N/E/S/W σε πυξίδα/ρόδα ανέμων) πέφτουν ΔΕΞΙΑ κατά ~μισό πλάτος γράμματος.
+// Διόρθωση: μετατοπίζουμε ΕΜΕΙΣ το anchor οριζόντια αριστερά κατά `factor × ύψος`
+// (center → μισό πλάτος, right → ολόκληρο). 🎛️ CALIBRATION KNOB (οριζόντιο· μισό
+// πλάτος κεφαλαίου Arial ≈ 0.35 × cap-height).
+const TEK_TEXT_HSHIFT_PER_HEIGHT = 0.35;
+// Ο Τέκτων αγκυρώνει επίσης το `vallign:middle` text στην ΚΟΡΥΦΗ → τα σύμβολα (N/E/S/W)
+// κρέμονται κάτω από το κέντρο. Ανεβάζουμε ΕΜΕΙΣ κατά `factor × ύψος` (Y-up) ώστε η μέση
+// του γράμματος να πέσει στο anchor. 🎛️ CALIBRATION KNOB (κάθετο· μισό cap-height ≈ 0.5).
+const TEK_TEXT_VSHIFT_PER_HEIGHT = 0.5;
 
 interface Pt { readonly x: number; readonly y: number }
 
@@ -244,32 +238,26 @@ function clampPt(pt: number): number {
   return Math.min(TEK_TEXT_MAX_PT, Math.max(TEK_TEXT_MIN_PT, pt));
 }
 
-/** Εκτίμηση πλάτους κειμένου (μέτρα) από πλήθος χαρακτήρων × cap-height. */
-function estimateTextWidthMeters(content: string, capHeightMeters: number): number {
-  return content.length * capHeightMeters * TEK_CHAR_ADVANCE_PER_CAP;
-}
-
 /**
- * Πάνω-αριστερή γωνία του text box (Tekton μέτρα) από το alignment anchor.
- * Ο Τέκτων εκεί αγκυρώνει. `anchor` = Y-flipped θέση· `+X`=δεξιά, `+Y`=πάνω (Y-up).
- *  - οριζόντια: left→0, center→W/2, right→W προς τα αριστερά του anchor.
- *  - κατακόρυφα: top→0, middle→H/2, bottom/alphabetic→H προς τα πάνω του anchor.
+ * Faithful στοίχιση κειμένου (καθρέφτης `scene-vector-emitter` γρ. 154-158): μόνο ένα
+ * decomposed label (φέρει `vBaseline` hint) έχει το `position` = alignment anchor → τιμούμε
+ * `alignment`+`vBaseline`. Το «σκέτο» scene text (χωρίς hint) κρατά left/baseline ώστε
+ * imported κείμενο με insertion-semantics που δεν κατέχουμε να μη μετατοπίζεται.
  */
-function textTopLeft(
-  anchor: { x: number; y: number }, hAlignKey: 'left' | 'center' | 'right',
-  vBaseline: TextBaseline, widthM: number, heightM: number,
-): { x: number; y: number } {
-  const leftDist = hAlignKey === 'center' ? widthM / 2 : hAlignKey === 'right' ? widthM : 0;
-  const topDist = vBaseline === 'top' ? 0
-    : vBaseline === 'middle' ? heightM * TEK_TEXT_VMID_FACTOR : heightM;
-  return { x: anchor.x - leftDist, y: anchor.y + topDist };
+function resolveTextAlign(e: Entity): { hAlignKey: TekHAlignKey; vAlignKey: TekVAlignKey } {
+  const hint = (e as { vBaseline?: TekVAlignKey }).vBaseline;
+  if (hint === undefined) return { hAlignKey: 'left', vAlignKey: 'alphabetic' };
+  return { hAlignKey: (e as TextEntity).alignment ?? 'left', vAlignKey: hint };
 }
 
 /**
  * ADR-608 Φ-texts — συλλέγει τα ελεύθερα κείμενα (annotation labels N/A/1/0.00 +
  * scale-bar νούμερα, αποδομημένα σε `text` primitives) ως `<text>` records (type 3).
- * Θέση Y-flipped (SSoT `sceneXYToTekMeters`) + περιστροφή μέσω του SSoT `buildSymbolObjectXMatrix`
- * (κλίμακα γλύφου 1, όπως τα real records)· μέγεθος → `ptsize`. `f` = μέτρα ανά scene unit.
+ * Θέση = anchor Y-flipped ΑΚΡΙΒΩΣ στο (x20,x21) (SSoT `sceneXYToTekMeters`) — καμία εκτίμηση
+ * πλάτους/ύψους· η στοίχιση δηλώνεται με `hallign`/`vallign` (SSoT `tek-text-alignment`) και
+ * ο Τέκτων κεντράρει το glyph box μόνος του (καθρέφτης `scene-vector-emitter` declare-and-anchor).
+ * Περιστροφή/κλίμακα γλύφου (1, όπως τα real records) μέσω `buildSymbolObjectXMatrix`· μέγεθος →
+ * `ptsize`. `f` = μέτρα ανά scene unit.
  */
 export function collectTekTexts(entities: readonly Entity[], f: number): TekTextCollectResult {
   const records: string[] = [];
@@ -283,17 +271,21 @@ export function collectTekTexts(entities: readonly Entity[], f: number): TekText
     const anchor = sceneXYToTekMeters(t.position.x, t.position.y, f);
     const heightMeters = (t.height ?? t.fontSize ?? DEFAULT_TEXT_HEIGHT) * f;
     const ptSize = clampPt(Math.round(heightMeters * TEK_TEXT_PT_PER_M));
-    const align = t.alignment ?? 'left';
-    const vBaseline = (e as { vBaseline?: TextBaseline }).vBaseline ?? 'middle';
-    // Ο Τέκτων αγκυρώνει στην πάνω-αριστερή γωνία → την υπολογίζουμε εμείς ώστε το
-    // κείμενο να πέσει στο σωστό σημείο (browser-calibrated ΚΑΤΩ-ΔΕΞΙΑ διόρθωση).
-    const widthMeters = estimateTextWidthMeters(content, heightMeters);
-    const tl = textTopLeft(anchor, align, vBaseline, widthMeters, heightMeters);
-    // Κλίμακα γλύφου 1 (native ttfont· μέγεθος από ptsize) — καθρέφτης real records.
-    const xmatrix = buildSymbolObjectXMatrix(tl.x, tl.y, degToRad(t.rotation ?? 0), 1);
+    const { hAlignKey, vAlignKey } = resolveTextAlign(e);
+    // Ο Τέκτων αγκυρώνει αριστερά (δεν κεντράρει με hallign) → μετατοπίζουμε το anchor
+    // αριστερά: center = μισό πλάτος, right = ολόκληρο (× TEK_TEXT_HSHIFT_PER_HEIGHT × ύψος).
+    const hShiftUnits = hAlignKey === 'center' ? 1 : hAlignKey === 'right' ? 2 : 0;
+    const xShift = heightMeters * TEK_TEXT_HSHIFT_PER_HEIGHT * hShiftUnits;
+    // Κάθετα: το middle-anchored σύμβολο κρέμεται κάτω → ανεβάζουμε κατά μισό ύψος ώστε η
+    // μέση του γράμματος να πέσει στο anchor. Y-flip: «πάνω» στον Τέκτονα = ΑΦΑΙΡΕΣΗ. Μόνο 'middle'.
+    const yShift = vAlignKey === 'middle' ? heightMeters * TEK_TEXT_VSHIFT_PER_HEIGHT : 0;
+    // Anchor στο (x20,x21)· κλίμακα γλύφου 1 (native ttfont, μέγεθος από ptsize).
+    const xmatrix = buildSymbolObjectXMatrix(
+      anchor.x - xShift, anchor.y - yShift, degToRad(t.rotation ?? 0), 1,
+    );
     const tag = entityTag(e);
     records.push(buildTextRecordXml({
-      id, content, hAlign: H_ALIGN[align], vAlign: V_ALIGN[vBaseline], ptSize, xmatrix,
+      id, content, hAlign: TEK_HALLIGN[hAlignKey], vAlign: TEK_VALLIGN[vAlignKey], ptSize, xmatrix,
       colorHex: entityColor(e), tag,
     } satisfies TekText));
     if (tag) tags.add(tag);

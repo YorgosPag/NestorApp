@@ -37,6 +37,11 @@ describe('ADR-608 — round-trip annotation-symbol → .tek → annotation-symbo
     ['section-mark', 'sectionMarkArrow'],
     ['elevation-mark', 'elevationLevel'],
     ['elevation-mark', 'elevationTag'],
+    // ADR-608 Φ-import-glyphs — βέλη
+    ['direction-arrow', 'directionArrowSingle'],
+    ['direction-arrow', 'directionArrowDouble'],
+    ['direction-arrow', 'directionArrowOutline'],
+    ['direction-arrow', 'entranceArrow'],
   ])('%s / %s ταυτοποιείται πίσω στο ίδιο σύμβολο', (kind, symbolId) => {
     const { objectsXml } = collectTekObjects([annSymbol(kind, symbolId, { x: 0, y: 0 })], F);
     const parsed = parseTekScene(wrapScene(objectsXml));

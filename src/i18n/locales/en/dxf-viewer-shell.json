@@ -25,6 +25,15 @@
     "revisionTag": {
       "delta": "Revision Tag (Triangle)",
       "hexagon": "Revision Tag (Hexagon)"
+    },
+    "directionArrow": {
+      "single": "Direction Arrow",
+      "double": "Double Direction Arrow",
+      "outline": "Direction Arrow (Outline)",
+      "entrance": "Entrance Arrow"
+    },
+    "person": {
+      "family": "Family"
     }
   },
   "analyticalModel": {

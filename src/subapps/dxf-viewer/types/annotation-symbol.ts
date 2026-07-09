@@ -46,7 +46,13 @@ export type AnnotationSymbolKind =
   | 'grid-bubble'
   | 'elevation-mark'
   | 'detail-callout'
-  | 'revision-tag';
+  | 'revision-tag'
+  // ADR-608 Φ-import-glyphs — δικά μας «πιστά» σύμβολα για ταύτιση με native σύμβολα
+  // Τέκτονα κατά το import. Δεν έχουν (ακόμη) placement tool — υπάρχουν για την
+  // αναγνώριση type-7 <object> (βλ. export/core/tek/tek-symbol-catalog.ts).
+  | 'direction-arrow'
+  // ADR-608 Φ-import-svg — άνθρωποι/φιγούρες ως SVG glyphs (πρωτότυπα σχέδια χρήστη).
+  | 'person';
 
 export interface AnnotationSymbolEntity extends BaseEntity {
   type: 'annotation-symbol';

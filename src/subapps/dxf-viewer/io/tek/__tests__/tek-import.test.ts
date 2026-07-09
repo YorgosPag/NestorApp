@@ -124,17 +124,20 @@ describe('importTekContent', () => {
     expect(b && b.max.x).toBeGreaterThanOrEqual(3000);
   });
 
-  it('ADR-531 Φ5b.1++ — εισάγει διάσταση + τοίχο + 2 κουφώματα ως 2Δ primitives', () => {
+  it('ADR-608 — εισάγει διάσταση ως native DimensionEntity + τοίχο/κουφώματα ως 2Δ primitives', () => {
     const result = importTekContent(TEK_STRUCT, 'level-1');
     expect(result.success).toBe(true);
     expect(result.stats.dimCount).toBe(1);
     expect(result.stats.wallCount).toBe(1);
     expect(result.stats.openingCount).toBe(2);
-    // faithful: τοίχος-με-κουφώματα 12 + πόρτα 13 + παράθυρο 7 = 32· διάσταση 2 γραμμές + 8 markers = 10· κείμενο 1.
+    // τοίχος-με-κουφώματα 12 + πόρτα 13 + παράθυρο 7 = 32 γραμμές· η διάσταση ΔΕΝ σπάει σε γραμμές/κείμενα.
     const lines = result.scene?.entities.filter((e) => e.type === 'line') ?? [];
-    const texts = result.scene?.entities.filter((e) => e.type === 'text') ?? [];
-    expect(lines).toHaveLength(42);
-    expect(texts).toHaveLength(1);
-    expect(texts[0] && 'text' in texts[0] && texts[0].text).toBe('2.10');
+    const dims = result.scene?.entities.filter((e) => e.type === 'dimension') ?? [];
+    expect(lines).toHaveLength(32);
+    expect(dims).toHaveLength(1);
+    // native παραμετρική διάσταση (ενιαίος οργανισμός) με το έτοιμο κείμενο του Τέκτονα.
+    const dim = dims[0];
+    expect(dim && 'dimensionType' in dim && dim.dimensionType).toBe('linear');
+    expect(dim && 'userText' in dim && dim.userText).toBe('2.10');
   });
 });

@@ -34,6 +34,7 @@ import {
   type AnnotationSymbolPrimitive,
   type AnnotationSymbolPoint,
 } from '../../config/annotation-symbol-catalog';
+import type { AnnotationSymbolSvg } from '../../config/annotation-symbol-svg-types';
 import { annotationSymbolModelSize } from '../../bim/annotation-symbols/annotation-symbol-model-size';
 import { getAnnotationSymbolGrips } from '../../bim/annotation-symbols/annotation-symbol-grips';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
@@ -175,11 +176,66 @@ export class AnnotationSymbolRenderer extends BaseEntityRenderer {
         }
         return;
       }
+      case 'svg': {
+        this.stampSvgGlyph(prim, toScreen);
+        return;
+      }
       default: {
         const _exhaustive: never = prim;
         void _exhaustive;
       }
     }
+  }
+
+  /**
+   * ADR-608 Φ-import-svg — ζωγραφίζει ένα SVG glyph (Bézier paths + circles + lines) με
+   * native `Path2D`. Ο affine viewBox→(toScreen output space) υπολογίζεται **εμπειρικά** από
+   * τρία σημεία (`toScreen` σε [0,0]/[1,0]/[0,1]) → δουλεύει με ΟΠΟΙΟΔΗΠΟΤΕ `worldToScreen`
+   * (Y-flip/rotation/scale) χωρίς να αναπαράγει την εσωτερική του μορφή. Εφαρμόζεται ως
+   * ΣΧΕΤΙΚΟΣ πολλαπλασιασμός (`ctx.transform`) ώστε να συνθέτει με το τρέχον ctx matrix (DPR).
+   */
+  private stampSvgGlyph(
+    prim: AnnotationSymbolSvg,
+    toScreen: (p: AnnotationSymbolPoint) => Point2D,
+  ): void {
+    if (typeof Path2D === 'undefined') return; // guard (SSR/test env χωρίς canvas)
+    const ctx = this.ctx;
+    // Βάση unit→output-space (affine· διανύσματα +X/+Y από το σημείο εισαγωγής).
+    const o = toScreen([0, 0]);
+    const xAxis = toScreen([1, 0]);
+    const yAxis = toScreen([0, 1]);
+    const exx = xAxis.x - o.x, exy = xAxis.y - o.y;
+    const eyx = yAxis.x - o.x, eyy = yAxis.y - o.y;
+    const [minX, minY, w, h] = prim.viewBox;
+    if (h === 0) return;
+    const cx = minX + w / 2, cy = minY + h / 2; // viewBox κέντρο → σημείο εισαγωγής
+    // svg→output: (Y-flip του SVG-down μέσω −eY· κέντρο viewBox στην αρχή). Βλ. σχόλιο τύπου.
+    const a = exx / h, b = exy / h, c = -eyx / h, d = -eyy / h;
+    const e = o.x - (cx / h) * exx + (cy / h) * eyx;
+    const f = o.y - (cx / h) * exy + (cy / h) * eyy;
+    const svgScale = Math.hypot(a, b) || 1;
+
+    ctx.save();
+    ctx.transform(a, b, c, d, e, f);
+    ctx.lineWidth = ctx.lineWidth / svgScale; // κράτα σταθερό ορατό πάχος (screen px)
+    for (const el of prim.elements) {
+      if (el.el === 'path') {
+        const path = new Path2D(el.d);
+        if (el.fill) ctx.fill(path);
+        else ctx.stroke(path);
+      } else if (el.el === 'circle') {
+        ctx.beginPath();
+        ctx.arc(el.cx, el.cy, el.r, 0, Math.PI * 2);
+        if (el.fill) ctx.fill();
+        else ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(el.x1, el.y1);
+        ctx.lineTo(el.x2, el.y2);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
   }
 
   /**

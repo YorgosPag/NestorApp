@@ -288,6 +288,9 @@ export function buildHatchRecordXml(h: TekHatch): string {
     .replace('{{SCALEY}}', tekNum(h.scaleY))
     .replace('{{TYPE}}', String(Math.round(h.tektonNum)))
     .replace('{{COLOR}}', colorHex6(h.colorHex))
+    // Το raster background = ίδιο χρώμα (όχι άσπρο) → ο Τέκτων γεμίζει ΜΟΝΟ πράσινο,
+    // χωρίς άσπρα κενά ανάμεσα στο μοτίβο (verify: solid τρίγωνα Βορρά μονόχρωμα).
+    .replace('{{BGCOLOR}}', colorHex6(h.colorHex))
     .replace('{{VECTOR}}', buildHatchVectorXml(h.edges));
   return injectTag(xml, h.tag); // ADR-608 — grouping tag στο κενό <taglist>
 }

@@ -25,6 +25,15 @@
     "revisionTag": {
       "delta": "Ετικέτα Αναθεώρησης (Τρίγωνο)",
       "hexagon": "Ετικέτα Αναθεώρησης (Εξάγωνο)"
+    },
+    "directionArrow": {
+      "single": "Βέλος Φοράς",
+      "double": "Διπλό Βέλος Φοράς",
+      "outline": "Βέλος Φοράς (Κενό)",
+      "entrance": "Βέλος Εισόδου"
+    },
+    "person": {
+      "family": "Οικογένεια"
     }
   },
   "analyticalModel": {

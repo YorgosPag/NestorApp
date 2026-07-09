@@ -701,15 +701,18 @@ describe('ADR-608 Φ-texts — type-3 <text> (ελεύθερη ετικέτα)',
     // left/top → top-left = anchor· Y-flip: (1000,2000)mm → (1, −2)m.
     expect(res.textsXml).toContain('<x20>1</x20><x21>-2</x21>');
   });
-  it('collectTekTexts: center/middle label → top-left offset (κατά −W/2, +H/2)', () => {
+  it('collectTekTexts: center/middle label → anchor μετατοπισμένο αριστερά κατά μισό πλάτος', () => {
     const text = {
       id: 't', type: 'text', position: { x: 1000, y: 2000 }, text: 'A',
-      height: 500, alignment: 'center', color: '#00FF00', // vBaseline default 'middle'
+      height: 500, alignment: 'center', vBaseline: 'middle', color: '#00FF00',
     } as unknown as Entity;
     const res = collectTekTexts([text], 0.001);
-    // H=0.5m· W='A'(1)×0.5×0.62=0.31· anchor=(1,−2)· top-left=(1−0.155, −2+0.5×VMID)=(0.845,−1.5).
-    expect(res.textsXml).toContain('<hallign>1</hallign>'); // center (info only — Τέκτων αγνοεί για θέση)
-    expect(res.textsXml).toContain('<x20>0.845</x20><x21>-1.5</x21>');
+    // Ο Τέκτων αγκυρώνει αριστερά+κάτω → center/middle label: αριστερά μισό πλάτος + πάνω μισό ύψος.
+    // H=0.5m· xShift=0.5×0.35=0.175· yShift=0.5×0.5=0.25· anchor Y-flip (1000,2000)mm→(1,−2).
+    // x20=1−0.175=0.825· x21=−2−0.25=−2.25 (Y-flip: «πάνω»=αφαίρεση).
+    expect(res.textsXml).toContain('<hallign>1</hallign>'); // center
+    expect(res.textsXml).toContain('<vallign>1</vallign>'); // middle
+    expect(res.textsXml).toContain('<x20>0.825</x20><x21>-2.25</x21>');
   });
   it('collectTekTexts: vBaseline hint → vallign (top→0)', () => {
     const text = {
@@ -717,6 +720,15 @@ describe('ADR-608 Φ-texts — type-3 <text> (ελεύθερη ετικέτα)',
       height: 300, alignment: 'left', vBaseline: 'top', color: '#FFFFFF',
     } as unknown as Entity;
     expect(collectTekTexts([text], 0.001).textsXml).toContain('<vallign>0</vallign>');
+  });
+  it('collectTekTexts: scene text ΧΩΡΙΣ vBaseline → left/alphabetic (καθρέφτης emitter, δεν τιμά alignment)', () => {
+    const text = {
+      id: 't', type: 'text', position: { x: 0, y: 0 }, text: 'X',
+      height: 300, alignment: 'center', color: '#FFFFFF', // κανένα vBaseline hint
+    } as unknown as Entity;
+    const res = collectTekTexts([text], 0.001);
+    expect(res.textsXml).toContain('<hallign>0</hallign>'); // left (insertion-semantics που δεν κατέχουμε)
+    expect(res.textsXml).toContain('<vallign>2</vallign>'); // alphabetic → baseline
   });
   it('collectTekTexts: κενό/whitespace text → παραλείπεται· μη-text entity αγνοείται', () => {
     const blank = { id: 'b', type: 'text', position: { x: 0, y: 0 }, text: '   ' } as unknown as Entity;
@@ -726,12 +738,12 @@ describe('ADR-608 Φ-texts — type-3 <text> (ελεύθερη ετικέτα)',
   it('collectTekTexts: groupId → κοινό tag (ομαδοποίηση + registry)', () => {
     const text = {
       id: 't', type: 'text', position: { x: 0, y: 0 }, text: '1',
-      height: 300, alignment: 'right', color: '#FFFFFF', groupId: 'sym_7',
+      height: 300, alignment: 'right', vBaseline: 'middle', color: '#FFFFFF', groupId: 'sym_7',
     } as unknown as Entity;
     const res = collectTekTexts([text], 0.001);
     expect(res.tags).toEqual(['sym_7']);
     expect(res.textsXml).toContain('<taglist>\n<s>sym_7</s></taglist>');
-    expect(res.textsXml).toContain('<hallign>2</hallign>'); // right
+    expect(res.textsXml).toContain('<hallign>2</hallign>'); // right (honored: φέρει vBaseline hint)
   });
 });
 
@@ -752,6 +764,9 @@ describe('ADR-512 — hatch (γραμμοσκίαση → <hatch> primitive type
     expect(xml).toContain('<type>6</type><n>3</n>'); // hatch primitive + πλήθος ακμών
     expect(xml).toContain('<type>72</type>');         // αριθμός μοτίβου (ANSI-31)
     expect(xml).toContain('<color>C0DCC0</color>');
+    // raster background = ίδιο χρώμα (όχι άσπρο FFFFFF) → ο Τέκτων γεμίζει μόνο πράσινο.
+    expect(xml).toContain('<raster_bgcolor>C0DCC0</raster_bgcolor>');
+    expect(xml).not.toContain('<raster_bgcolor>FFFFFF</raster_bgcolor>');
     expect(xml).toContain('<scaleX>0.15</scaleX><scaleY>0.15</scaleY>');
     expect(xml).toContain('<v0X>0</v0X><v0Y>0</v0Y><v1X>2</v1X><v1Y>0</v1Y>');
     expect((xml.match(/<record>/g) ?? []).length).toBe(3);

@@ -22,6 +22,8 @@
  */
 
 import type { AnnotationSymbolKind } from '../types/annotation-symbol';
+import type { AnnotationSymbolSvg } from './annotation-symbol-svg-types';
+import { FAMILY_GLYPH } from './annotation-symbol-svg/family-glyph';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Geometry primitives (unit space)
@@ -94,7 +96,9 @@ export type AnnotationSymbolPrimitive =
   | AnnotationSymbolPolyline
   | AnnotationSymbolCircle
   | AnnotationSymbolArc
-  | AnnotationSymbolText;
+  | AnnotationSymbolText
+  // ADR-608 Φ-import-svg — πλούσιο SVG glyph (Bézier paths· δικά μας πρωτότυπα σχέδια).
+  | AnnotationSymbolSvg;
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Definition
@@ -146,6 +150,20 @@ function hexagon(r: number, solid = false): AnnotationSymbolPolyline {
     points.push([r * Math.cos(a), r * Math.sin(a)]);
   }
   return { kind: 'polyline', points, closed: true, solid };
+}
+
+/**
+ * Οριζόντια κεφαλή βέλους (unit space) με μύτη στο `tipX` (+X) και βάση στο `baseX`.
+ * `solid=true` → γεμάτη· `false` → κενή (outline). Κοινή SSoT για τα direction-arrow
+ * σύμβολα ώστε το τρίγωνο κεφαλής να γράφεται ΜΙΑ φορά, όχι ανά βέλος (N.18).
+ */
+function rightArrowHead(tipX: number, baseX: number, halfW: number, solid: boolean): AnnotationSymbolPolyline {
+  return {
+    kind: 'polyline',
+    points: [[tipX, 0], [baseX, halfW], [baseX, -halfW]],
+    closed: true,
+    solid,
+  };
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -488,6 +506,72 @@ export const ANNOTATION_SYMBOL_CATALOG: Readonly<Record<string, AnnotationSymbol
       hexagon(0.48, false),
       { kind: 'text', at: [0, 0], value: '1', heightFrac: 0.4, bold: true },
     ],
+    origin: 'builtin',
+  },
+
+  // ── Direction arrows (ADR-608 Φ-import-glyphs) — βέλη φοράς/εισόδου, οριζόντια ──
+  // Δικές μας «πιστές» εκδοχές των native συμβόλων Τέκτονα (τυποποιημένα, IP-καθαρά).
+  // Authored οριζόντια προς +X (σύμβαση CAD flow-arrow· `velos1.asc` = οριζόντιο)· το
+  // `entity.rotation` (από το xmatrix του import) δίνει την τελική φορά.
+
+  /** Απλό βέλος φοράς: άξονας + γεμάτη μύτη (Τέκτων «Βέλος φοράς 1»). */
+  directionArrowSingle: {
+    id: 'directionArrowSingle',
+    kind: 'direction-arrow',
+    labelKey: 'annotationSymbol.directionArrow.single',
+    geometry: [
+      { kind: 'line', from: [-0.5, 0], to: [0.3, 0] },
+      rightArrowHead(0.5, 0.28, 0.13, true),
+    ],
+    origin: 'builtin',
+  },
+
+  /** Διπλό βέλος φοράς: άξονας + δύο chevron (Τέκτων «Βέλος φοράς 2»). */
+  directionArrowDouble: {
+    id: 'directionArrowDouble',
+    kind: 'direction-arrow',
+    labelKey: 'annotationSymbol.directionArrow.double',
+    geometry: [
+      { kind: 'line', from: [-0.5, 0], to: [0.4, 0] },
+      { kind: 'polyline', points: [[0.18, 0.15], [0.5, 0], [0.18, -0.15]], closed: false, solid: false },
+      { kind: 'polyline', points: [[0.0, 0.15], [0.32, 0], [0.0, -0.15]], closed: false, solid: false },
+    ],
+    origin: 'builtin',
+  },
+
+  /** Βέλος φοράς με κενή (outline) μύτη (Τέκτων «Βέλος φοράς 3»). */
+  directionArrowOutline: {
+    id: 'directionArrowOutline',
+    kind: 'direction-arrow',
+    labelKey: 'annotationSymbol.directionArrow.outline',
+    geometry: [
+      { kind: 'line', from: [-0.5, 0], to: [0.28, 0] },
+      rightArrowHead(0.5, 0.28, 0.13, false),
+    ],
+    origin: 'builtin',
+  },
+
+  /** Βέλος εισόδου: εγκάρσια μπάρα (κατώφλι) στην ουρά + βέλος (Τέκτων «Βέλος εισόδου»). */
+  entranceArrow: {
+    id: 'entranceArrow',
+    kind: 'direction-arrow',
+    labelKey: 'annotationSymbol.directionArrow.entrance',
+    geometry: [
+      { kind: 'line', from: [-0.5, 0.22], to: [-0.5, -0.22] },
+      { kind: 'line', from: [-0.5, 0], to: [0.3, 0] },
+      rightArrowHead(0.5, 0.28, 0.13, true),
+    ],
+    origin: 'builtin',
+  },
+
+  // ── People (ADR-608 Φ-import-svg) — SVG glyphs από πρωτότυπα σχέδια χρήστη ──────
+
+  /** Οικογένεια (άνδρας/γυναίκα/παιδί) — SVG glyph· ταιριάζει σε σύμβολα «ανθρώπων» Τέκτονα. */
+  personFamily: {
+    id: 'personFamily',
+    kind: 'person',
+    labelKey: 'annotationSymbol.person.family',
+    geometry: [FAMILY_GLYPH],
     origin: 'builtin',
   },
 } as const;

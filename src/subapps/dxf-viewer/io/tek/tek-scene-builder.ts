@@ -19,7 +19,8 @@ import { calculateBimEntity2DBounds } from '../../bim/utils/bim-bounds';
 import { tekStairToEntity } from './tek-stair-to-bim';
 import { tekLineToEntity, tekArcToEntity, tekTextToEntity } from './tek-primitive-to-scene';
 // ADR-531 Φ5b.1 — 2Δ mappers για διαστάσεις + τοίχους (+ ανοίγματα). Φ5b.2 θα προσθέσει BIM mappers.
-import { tekWallToEntities, tekDimToEntities } from './tek-structural-to-scene';
+import { tekWallToEntities } from './tek-structural-to-scene';
+import { tekDimToDimensionEntities } from './tek-dim-to-dimension';
 // ADR-608 — native σύμβολα Τέκτονα (type-7 <object>) → AnnotationSymbolEntity.
 import { tekObjectToEntity } from './tek-object-to-scene';
 import type { TekSceneParseResult } from './tek-import-types';
@@ -96,9 +97,10 @@ export function buildSceneFromTekScene(
     ...parsed.lines.map((rec) => tekLineToEntity(rec, units)),
     ...parsed.arcs.map((rec) => tekArcToEntity(rec, units)),
     ...parsed.texts.map((rec) => tekTextToEntity(rec, units)),
-    // ADR-531 Φ5b.1 — κάθε wall/dim παράγει ΠΟΛΛΑ 2Δ primitives (footprint/jambs/seg-lines).
+    // ADR-531 Φ5b.1 — κάθε wall παράγει ΠΟΛΛΑ 2Δ primitives (footprint/jambs).
     ...parsed.walls.flatMap((rec) => tekWallToEntities(rec, units)),
-    ...parsed.dims.flatMap((rec) => tekDimToEntities(rec, units)),
+    // ADR-608 — κάθε <dim> → native παραμετρικό DimensionEntity (ενιαίος οργανισμός, όπως ο Τέκτων).
+    ...parsed.dims.flatMap((rec) => tekDimToDimensionEntities(rec, units)),
     ...symbolEntities,
   ];
   if (entities.length === 0) {

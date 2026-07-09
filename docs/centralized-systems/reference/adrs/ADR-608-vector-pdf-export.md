@@ -151,6 +151,36 @@ Import pipeline (καθρέφτης του export, additive πάνω στους 
 
 ## Changelog
 
+- **2026-07-09** — Φ-texts **ANCHOR rewrite → exact native centering** (Opus, acceptance test Giorgio:
+  «κύκλος με «1» ΤΑΥΤΙΣΜΕΝΑ ΚΕΝΤΡΑ → το «1» να μείνει ΑΚΡΙΒΩΣ στο κέντρο μετά το export»). **SSoT audit
+  (grep):** το alignment encoding ζούσε **διπλό** (export `H_ALIGN` {left0/center1/right2} + import
+  `alignmentOf`)· κανένα text-measurement util δεν υπάρχει· ο `scene-vector-emitter` (η δική μας renderer
+  αναφορά) θεωρεί για decomposed label το **`position` = alignment anchor** και κεντράρει honoring
+  `alignment`+`vBaseline` (declare-and-anchor, big-player). **Απόφαση:** αντικατάσταση της
+  offset-with-width-estimation (`textTopLeft`/`estimateTextWidthMeters`/`TEK_CHAR_ADVANCE_PER_CAP`/
+  `TEK_TEXT_VMID_FACTOR` — **όλα διεγράφησαν**) με **exact anchoring**: το anchor (Y-flip) μπαίνει
+  ΑΚΡΙΒΩΣ στο `(x20,x21)` και δηλώνουμε `hallign`/`vallign` → ο ΙΔΙΟΣ ο Τέκτων κεντράρει το glyph box,
+  μηδέν εκτίμηση πλάτους (όπως Revit/Figma). **SSoT:** νέο `tek-text-alignment.ts` (canonical encoding +
+  `TEK_HALLIGN`/`TEK_VALLIGN`/`tekHAlignToKey`) — export ΚΑΙ import (`tek-primitive-to-scene`) το
+  μοιράζονται (καμία αλλαγή import συμπεριφοράς). `resolveTextAlign` καθρεφτίζει τον emitter: label με
+  `vBaseline` hint → τιμά `alignment`+`vBaseline`· «σκέτο» scene text χωρίς hint → left/alphabetic (δεν
+  μετατοπίζεται text με insertion-semantics που δεν κατέχουμε). Tests: το «center/middle → offset»
+  αντικαταστάθηκε με «center/middle → anchor ακριβώς στο (x20,x21)»· +1 test (hint-less → left/alphabetic)·
+  8 Φ-texts GREEN· jscpd:diff clean· files<500/fns<40· no `any`/inline/hardcoded.
+  **Browser-verify αποτέλεσμα (Giorgio, 3 iterations):** ο Τέκτων τελικά **ΔΕΝ κεντράρει** native το
+  type-3 text — το αγκυρώνει στην **αριστερή-ΠΑΝΩ** ακμή. Το `hallign`/`vallign` παραμένουν δηλωμένα
+  (SSoT· round-trip με import) αλλά η ΟΠΤΙΚΗ ταύτιση απαιτεί δικό μας offset. Προστέθηκαν **δύο
+  browser-calibrated knobs** (× cap-height, μόνο για `vBaseline` labels): `TEK_TEXT_HSHIFT_PER_HEIGHT`
+  **=0.35** (αριστερά· center=½ πλάτος, right=ολόκληρο) + `TEK_TEXT_VSHIFT_PER_HEIGHT` **=0.5** (πάνω·
+  Y-flip=αφαίρεση, μόνο `vAlign==='middle'`). ✅ **Browser-verified: N/E/S/W πυξίδας/ρόδας-ανέμων + «1»
+  κύκλου κεντραρισμένα ακριβώς** (μέση γράμματος στο anchor). UNCOMMITTED.
+- **2026-07-09** — **Φ-fill χρώμα: solid hatch μονόχρωμο (όχι άσπρο φόντο)** (Opus, Giorgio browser:
+  «τα solid τρίγωνα εμφανίζουν και άσπρα γεμίσματα, τα native μόνο πράσινο»). Το `HATCH_RECORD_TEMPLATE`
+  είχε σταθερό `<raster_bgcolor>FFFFFF</raster_bgcolor>` → ο Τέκτων ζωγράφιζε foreground χρώμα **+**
+  άσπρο raster φόντο ανάμεσα στο μοτίβο. **Fix:** νέο `{{BGCOLOR}}` placeholder, ο `buildHatchRecordXml`
+  το γεμίζει με το **ίδιο** `colorHex6(h.colorHex)` → background=foreground=μονόχρωμο (verify: βέλη
+  Βορρά μονόχρωμα πράσινα). +2 assertions (`raster_bgcolor`=foreground, όχι FFFFFF)· 87/87 GREEN·
+  jscpd:diff clean. ✅ **Browser-verified (Giorgio).** UNCOMMITTED.
 - **2026-07-09** — Φ1 (emitter core + 10 tests) + Φ2 (CaptureResult union, `capture-2d-vector.ts`,
   assembler branch, `outputMode` service/UI/i18n, tests) implemented (Opus). 26 jest GREEN,
   jscpd:diff clean. Renumbered from the planned "604" (collision) to ADR-608. UNCOMMITTED.
@@ -263,3 +293,60 @@ Import pipeline (καθρέφτης του export, additive πάνω στους 
   🔴 re-verify browser. Μέγεθος (ptsize↔μέτρα ανά drawing-scale) + char-advance factor = tunable.
   **Φ-fill (συμπαγή τρίγωνα + scale-bar εναλλαγή) = επόμενο increment** (Tekton δεν έχει solid-fill
   primitive → scanline line-hatch).
+- **2026-07-09** — Φ-import (πλήρης ταυτοποίηση native συμβόλων στο ΦΟΡΤΩΜΑ `.tek`, Opus, μετά από
+  αίτημα Giorgio «πλήρη ταύτιση με τα native σύμβολα του Τέκτονα σε export ΚΑΙ import»). **Ground-truth
+  (τοπική εγκατάσταση Fespa-Tekton v9.1):** ο κατάλογος `Obj.inf` = 1638 εγγραφές
+  (`index:lib/*.asc:Ελληνικό όνομα:icon:3D`), όπου ο **index = ο `type_res`** των type-7 `<object>`
+  records· 53 από αυτές = σύμβολα σχεδίασης (`obj/symbols`). Επιβεβαιώθηκε ότι η γεωμετρία κάθε
+  συμβόλου (`lib/*.asc`) είναι στο ΙΔΙΟ `#!TEKTON` text format. **Απόφαση Giorgio:** index round-trip
+  μόνο — καμία αντιγραφή `.asc`/`.icn` της LH Software (IP)· ζωγραφίζουμε ΔΙΚΑ μας σύμβολα.
+  **Πρόβλημα:** το export ταύτιζε ήδη (8 σύμβολα → `type_res`), αλλά ο import **αγνοούσε εντελώς**
+  τα type-7 `<object>` → native σύμβολα Τέκτονα χάνονταν σιωπηλά στο φόρτωμα. **Υλοποίηση:**
+  ο `tek-symbol-catalog.ts` έγινε αμφίδρομο SSoT (ΕΝΑ `MATCHED_SYMBOLS` → `tekSymbolTypeRes` export
+  ΚΑΙ `tekSymbolFromTypeRes` import) + `TEKTON_SYMBOL_NAMES` (53 index↔ονόματα, μόνο data)· νέος
+  `io/tek/tek-object-extract.ts` (`extractObjectRecords`, ο `type_res` = 2ο `<type>`)· νέο
+  `TekObjectRecord` (+`objects` στο `TekSceneParseResult`)· νέος mapper `io/tek/tek-object-to-scene.ts`
+  (`tekObjectToEntity` → `AnnotationSymbolEntity` με Y-flip convention του text mapper· unmatched →
+  ονομαστικό warning)· wiring σε `tek-scene-extract.ts` + `tek-scene-builder.ts`. Tests: +19
+  (object-extract 5, object-to-scene 7, round-trip export→import 7). Τα 3 νέα suites GREEN· όλα τα
+  υπόλοιπα TEK suites GREEN (186) εκτός των 4 pre-existing `collectTekWalls — κουφώματα`
+  (opening-geometry WIP άλλου agent — ΟΧΙ αυτή η αλλαγή). files<500/fns<40· no `any`/inline/hardcoded.
+  UNCOMMITTED. 🔴 browser-verify: φόρτωσε `.tek` με native βορρά/στάθμη/τομή → εμφανίζονται ως δικά
+  μας σύμβολα· τα υπόλοιπα (άνθρωποι/αυτοκίνητα/βέλη) καταγράφονται ονομαστικά στα warnings.
+  **Follow-up (Φάση 2, αν χρειαστεί):** τα 1638 έπιπλα/αρχιτεκτονικά· placeholder-με-ετικέτα για τα
+  ~43 σύμβολα χωρίς δικό μας equivalent· ρύθμιση native μεγέθους από `sizeMm`.
+- **2026-07-09** — Φ-import-glyphs Φάση Α (δικά μας «πιστά» βέλη, Opus, μετά από αίτημα Giorgio να
+  εμφανίζονται τα ~43 σύμβολα χωρίς equivalent αντί warning). **Νομικό (απόφαση Giorgio):** ΟΧΙ
+  αντιγραφή `.asc` γεωμετρίας LH (ούτε «+τελίτσα» — δεν ξεπλένει copyright)· σχεδιάζουμε ΔΙΚΑ μας
+  σύμβολα βάσει της σχεδιαστικής σύμβασης (τυποποιημένα → merger doctrine, ελάχιστη προστασία). Web
+  app → ο browser δεν διαβάζει τοπικά `.asc`, οπότε bundling μετατραπείσας LH-γεωμετρίας απορρίφθηκε.
+  **Αρχιτεκτονική (γιατί μικρό):** ο renderer είναι kind-agnostic + ο import mapper γενικός → ανά νέο
+  σύμβολο αλλάζουν ΜΟΝΟ 4 σημεία (union kind + catalog glyph + reverse map + i18n)· mapper/extractor/
+  renderer ΑΝΕΠΑΦΑ. **Υλοποίηση:** νέο kind `direction-arrow` (`types/annotation-symbol.ts`, χωρίς
+  placement tool — υποστηρίζεται)· 4 glyphs στο `annotation-symbol-catalog.ts` (`directionArrowSingle/
+  Double/Outline`, `entranceArrow`· οριζόντια +X όπως `velos1.asc`· νέος helper `rightArrowHead` για
+  μη-clone μύτη)· `MATCHED_SYMBOLS` += 380/381/382/126· i18n `annotationSymbol.directionArrow.*` el+en.
+  Tests: +8 (catalog direction-arrow 5, round-trip 4 βέλη + 3 προϋπάρχοντα) — 28 tek-object GREEN·
+  jscpd:diff clean· no `any`/inline/hardcoded. UNCOMMITTED. 🔴 browser-verify: φόρτωσε
+  `test-symbols-tekton.tek` → τα 4 βέλη εμφανίζονται (type_res 380/381/382/126). ⚠️ Ο ΑΚΡΙΒΗΣ
+  προσανατολισμός βελών (authored +X vs Tekton) = tunable αν βγει στραμμένο σε πραγματικό αρχείο.
+  **Φάση Β (επόμενο):** kinds `person`/`vehicle`/`fixture` για άνθρωπους/αυτοκίνητα/ανελκυστήρες.
+- **2026-07-09** — Φ-import-svg (SVG-based σύμβολα από **πρωτότυπα σχέδια χρήστη**, Opus). Ο Giorgio,
+  βλέποντας ότι τα δικά μας primitive-σχέδια ≠ οπτικά με του Τέκτονα, επέλεξε να **σχεδιάζει ο ίδιος
+  SVG** (δικές του γραμμές, καμία αντιγραφή LH — IP-καθαρό) και να τα αντιστοιχίζουμε στα type_res.
+  **Νέα δυνατότητα (γενικεύεται σε ΟΛΑ τα σύμβολα):** νέος primitive τύπος `svg`
+  (`config/annotation-symbol-svg-types.ts`: `AnnotationSymbolSvg` = viewBox + elements path/circle/
+  line) στο `AnnotationSymbolPrimitive` union· ο `AnnotationSymbolRenderer` απέκτησε `stampSvgGlyph`
+  που ζωγραφίζει με native **`Path2D`** (Bézier support) κάτω από affine viewBox→output **υπολογισμένο
+  εμπειρικά** από `toScreen` σε [0,0]/[1,0]/[0,1] (δουλεύει με οποιοδήποτε worldToScreen· εφαρμογή ως
+  σχετικό `ctx.transform` → συνθέτει με DPR)· lineWidth /svgScale για σταθερό ορατό πάχος. **POC:**
+  `family.svg` (άνδρας/γυναίκα/παιδί) → `config/annotation-symbol-svg/family-glyph.ts` → σύμβολο
+  `personFamily` (νέο kind `person`)· `MATCHED_SYMBOLS` += 52 (Άνθρωποι 1)· i18n `annotationSymbol.
+  person.family`. Tests: +3 (svg-family catalog + reverse map 52). 27 GREEN· jscpd:diff clean· no
+  `any`/inline/hardcoded. UNCOMMITTED. 🔴 browser-verify (ΑΠΑΡΑΙΤΗΤΟ — δεν επικυρώθηκε οπτικά):
+  φόρτωσε `test-symbols-tekton.tek` → στη θέση type_res 52 πρέπει να δεις την **οικογένεια** (SVG).
+  ⚠️ ΓΝΩΣΤΑ tunables: (1) **προσανατολισμός** (SVG-Y-down flip· head-up), (2) **μέγεθος** — τα σύμβολα
+  Τέκτονα είναι model-sized (~1.8m άνθρωπος), τα δικά μας paper-annotative (`sizeMm`=15mm) → πιθανό
+  μικρό· ίσως χρειαστεί model-space sizing για `person`/`vehicle`, (3) **θέση** (κέντρο viewBox = anchor).
+  **Επόμενο:** ο Giorgio σχεδιάζει SVG για τα υπόλοιπα σύμβολα· εμείς 1 data file + 1 catalog entry +
+  1 mapping ανά σύμβολο (μηδέν νέος render κώδικας).

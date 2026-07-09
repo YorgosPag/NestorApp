@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tekton>
+<head><numfloors>1</numfloors><version>9.1.0.46</version></head>
+<body><building><floor>
+<object>
+<record><type>7</type><n>1</n><taglist></taglist><type>51</type><color>A8A8A8</color><xmatrix><x00>1</x00><x01>0</x01><x10>0</x10><x11>1</x11><x20>1</x20><x21>-1</x21></xmatrix></record>
+<record><type>7</type><n>2</n><taglist></taglist><type>123</type><color>A8A8A8</color><xmatrix><x00>1</x00><x01>0</x01><x10>0</x10><x11>1</x11><x20>3</x20><x21>-1</x21></xmatrix></record>
+<record><type>7</type><n>3</n><taglist></taglist><type>383</type><color>A8A8A8</color><xmatrix><x00>1</x00><x01>0</x01><x10>0</x10><x11>1</x11><x20>5</x20><x21>-1</x21></xmatrix></record>
+<record><type>7</type><n>4</n><taglist></taglist><type>129</type><color>A8A8A8</color><xmatrix><x00>1</x00><x01>0</x01><x10>0</x10><x11>1</x11><x20>7</x20><x21>-1</x21></xmatrix></record>
+<record><type>7</type><n>5</n><taglist></taglist><type>380</type><color>A8A8A8</color><xmatrix><x00>1</x00><x01>0</x01><x10>0</x10><x11>1</x11><x20>1</x20><x21>-3</x21></xmatrix></record>
+<record><type>7</type><n>6</n><taglist></taglist><type>381</type><color>A8A8A8</color><xmatrix><x00>1</x00><x01>0</x01><x10>0</x10><x11>1</x11><x20>3</x20><x21>-3</x21></xmatrix></record>
+<record><type>7</type><n>7</n><taglist></taglist><type>382</type><color>A8A8A8</color><xmatrix><x00>1</x00><x01>0</x01><x10>0</x10><x11>1</x11><x20>5</x20><x21>-3</x21></xmatrix></record>
+<record><type>7</type><n>8</n><taglist></taglist><type>126</type><color>A8A8A8</color><xmatrix><x00>1</x00><x01>0</x01><x10>0</x10><x11>1</x11><x20>7</x20><x21>-3</x21></xmatrix></record>
+<record><type>7</type><n>9</n><taglist></taglist><type>52</type><color>A8A8A8</color><xmatrix><x00>1</x00><x01>0</x01><x10>0</x10><x11>1</x11><x20>3</x20><x21>-5</x21></xmatrix></record>
+</object>
+</floor></building></body>
+</tekton>

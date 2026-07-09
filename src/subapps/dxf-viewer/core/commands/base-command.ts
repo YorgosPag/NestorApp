@@ -33,8 +33,14 @@ export abstract class BaseCommand implements ICommand {
   /** Serialization schema version — override for migrated payloads. */
   protected readonly version: number = 1;
 
-  constructor() {
-    this.id = generateEntityId();
+  /**
+   * @param id Optional pre-built command id. When omitted a fresh
+   * `generateEntityId()` is used (guide/text commands). Families that mint
+   * their own history key — e.g. layer commands via `makeLayerCommandKey` —
+   * pass it here so the exact key format is preserved (ADR-616).
+   */
+  constructor(id?: string) {
+    this.id = id ?? generateEntityId();
     this.timestamp = Date.now();
   }
 

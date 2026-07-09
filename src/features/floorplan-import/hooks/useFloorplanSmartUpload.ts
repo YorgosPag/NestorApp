@@ -41,7 +41,7 @@ import type {
   FloorplanUploadResult,
 } from '@/hooks/useFloorplanUpload';
 // ADR-526 Φ4 — reuse the Tekton filename SSoT (no duplicate ext check).
-import { isTekFileName } from '@/subapps/dxf-viewer/io/tek/tek-import';
+import { isTekFileName } from '@/subapps/dxf-viewer/io/tek/tek-filename';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -243,8 +243,14 @@ export function useFloorplanSmartUpload(
       // `handleFileImport` (→ `importTekFile`) once `onSceneImported` fires,
       // and the stairs persist themselves via StairPersistenceHost. The wipe
       // pre-flight above already cleared any prior floor content (mirror DXF).
+      // ADR-526 Φ5 — Tekton ανεβαίνει από την ΙΔΙΑ διαδρομή με το DXF (legacy uploader →
+      // FileRecord + Storage) ώστε να ρέει canonical `fileId` προς το `handleFileImport`:
+      // ΤΟΤΕ πυροδοτείται το `linkSceneToLevel` + auto-save του derived scene blob → η κάτοψη
+      // επιβιώνει hard-refresh. (Φ4 έκανε render-only χωρίς `fileId` → έμενε in-memory, χανόταν.)
+      // Το parse σε SceneModel παραμένει client-side (`handleFileImport` → `importTekFile`).
       if (format === 'tek') {
-        return { success: true, format };
+        const r: FloorplanUploadResult = await legacy.uploadFloorplan(file);
+        return { success: r.success, fileId: r.fileRecord?.id, format, error: r.error };
       }
 
       // ── DXF branch (legacy pipeline) ────────────────────────────────────

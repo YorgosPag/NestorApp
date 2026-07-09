@@ -57,16 +57,31 @@ export interface OpeningHost {
  * call-sites.
  */
 export function wallAsOpeningHost(wall: WallEntity): OpeningHost {
+  const axisVerticesScene = getWallAxisVertices(wall.params, wall.kind);
+  const sceneUnits = wall.params.sceneUnits ?? 'mm';
   return {
-    axisVerticesScene: getWallAxisVertices(wall.params, wall.kind),
+    axisVerticesScene,
     thicknessMm: wall.params.thickness,
-    sceneUnits: wall.params.sceneUnits ?? 'mm',
+    sceneUnits,
     outerEdgePoints: wall.geometry?.outerEdge?.points,
     innerEdgePoints: wall.geometry?.innerEdge?.points,
-    // WallGeometry.length is in METRES (m) — geometry engine works in mm.
-    lengthMm: wall.geometry.length * 1000,
+    // WallGeometry.length is in METRES (m); when geometry has not been computed
+    // yet, fall back to the axis polyline length (scene units → mm) — mirrors the
+    // optional-chaining already guarding outer/innerEdge above.
+    lengthMm: wall.geometry
+      ? wall.geometry.length * 1000
+      : axisLengthScene(axisVerticesScene) / mmToSceneUnits(sceneUnits),
     hostId: wall.id,
   };
+}
+
+/** Polyline length (scene units) of an axis vertex list. */
+function axisLengthScene(vertices: readonly Point3D[]): number {
+  let total = 0;
+  for (let i = 1; i < vertices.length; i += 1) {
+    total += Math.hypot(vertices[i].x - vertices[i - 1].x, vertices[i].y - vertices[i - 1].y);
+  }
+  return total;
 }
 
 /**
