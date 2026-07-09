@@ -595,7 +595,9 @@ describe('DimensionRenderer — grips + hitTest (Phase I)', () => {
     expect(grips.length).toBeGreaterThanOrEqual(3);
     expect(grips[0].position).toEqual({ x: 0, y: 0 });
     expect(grips[1].position).toEqual({ x: 100, y: 0 });
-    expect(grips[2].position).toEqual({ x: 50, y: 20 });
+    // grips[2] = dim-line end 1 (linear/aligned → hit.footStart, NOT raw defPoints[2]):
+    // the foot of the extension from defPoints[0] up to the dim line at y=20 → {0,20}.
+    expect(grips[2].position).toEqual({ x: 0, y: 20 });
   });
 
   it('hitTest returns false for point far from dim geometry', () => {

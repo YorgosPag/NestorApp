@@ -1,179 +1,103 @@
 import type { Entity } from './entities';
+import type { EntityType } from './base-entity';
 import { EMPTY_SPATIAL_BOUNDS } from '../config/geometry-constants';
-// ADR-557 Φ-attachment (Φάση B) — attachment/rotation/widthFactor-aware text-box SSoT (the SAME
-// box the grips, hover frame, 3D mesh and culling read) + the scene→flat projection it consumes.
+// ADR-587 Φ9 Slice 2 — canonical per-type bounds SSoT (the marquee/pick resolver, seeded from
+// the hit-test `BoundsCalculator`). Twin A (render/culling bounds) DELEGATES to it for every type
+// whose culling box equals the pick box; only the culling-SPECIFIC overrides below stay local.
+import { resolveEntityBounds } from '../rendering/hitTesting/entity-bounds-ssot';
+// ADR-557 — text CULLING uses the generous NOMINAL em box (`textBoxAABB`), a superset of the tight
+// VISUAL box the pick resolver returns (`resolveTextBox`). Delegating would pop text at the viewport
+// edge + break the 3-site parity contract (`text-bounds-sites-parity.test.ts`).
 import { textBoxAABB } from '../bim/text/text-box';
 import { projectSceneTextToDxf } from '../bim/text/project-scene-text';
-// ADR-583 — annotative model-size SSoT for the North-arrow annotation symbol.
-import { annotationSymbolModelSizeLive } from '../bim/annotation-symbols/annotation-symbol-model-size';
-import { DEFAULT_ANNOTATION_SYMBOL_SIZE_MM } from './annotation-symbol';
-import { computeScaleBarGeometry } from '../bim/geometry/scale-bar-geometry';
 
 export type SpatialBounds = { minX: number; minY: number; maxX: number; maxY: number };
 
-// XLINE/RAY render as ±NOMINAL world-units for viewport culling.
-// This value is intentionally large — clip-to-viewport (Phase 4.a) limits what
-// actually draws on screen. Extents consumers MUST use getEntityExtentsBounds instead.
+type XY = { x: number; y: number };
+
+// XLINE/RAY render as ±NOMINAL world-units for viewport culling — an infinite construction line
+// must appear across the viewport. This value is intentionally large; clip-to-viewport (Phase 4.a)
+// limits what actually draws. Extents consumers (zoom) get EMPTY instead — see `forExtents`.
 const RENDER_NOMINAL_EXTENT = 10000;
 
-/** AABB over an array of points; empty → EMPTY_SPATIAL_BOUNDS (SSoT for vertex-based bounds). */
-function aabbOf(points: ReadonlyArray<{ x: number; y: number }>): SpatialBounds {
+/** AABB over an array of points; empty → EMPTY_SPATIAL_BOUNDS. Generic fallback for the few
+ *  non-provider types that still carry top-level `vertices` (e.g. leader). */
+function aabbOf(points: ReadonlyArray<XY>): SpatialBounds {
   if (points.length === 0) return EMPTY_SPATIAL_BOUNDS;
   const xs = points.map(p => p.x);
   const ys = points.map(p => p.y);
   return { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) };
 }
 
+/** XLINE culling box: ±NOMINAL square around the base point (infinite line spans the viewport). */
+function xlineRenderBounds(entity: Entity): SpatialBounds {
+  const bp = ('basePoint' in entity ? (entity as { basePoint?: XY }).basePoint : undefined);
+  if (!bp) return EMPTY_SPATIAL_BOUNDS;
+  return {
+    minX: bp.x - RENDER_NOMINAL_EXTENT, minY: bp.y - RENDER_NOMINAL_EXTENT,
+    maxX: bp.x + RENDER_NOMINAL_EXTENT, maxY: bp.y + RENDER_NOMINAL_EXTENT,
+  };
+}
+
+/** RAY culling box: from the base point ±NOMINAL along the ray direction (default +X). */
+function rayRenderBounds(entity: Entity): SpatialBounds {
+  const e = entity as { basePoint?: XY; direction?: XY };
+  if (!e.basePoint) return EMPTY_SPATIAL_BOUNDS;
+  const tipX = e.basePoint.x + (e.direction?.x ?? 1) * RENDER_NOMINAL_EXTENT;
+  const tipY = e.basePoint.y + (e.direction?.y ?? 0) * RENDER_NOMINAL_EXTENT;
+  return {
+    minX: Math.min(e.basePoint.x, tipX), minY: Math.min(e.basePoint.y, tipY),
+    maxX: Math.max(e.basePoint.x, tipX), maxY: Math.max(e.basePoint.y, tipY),
+  };
+}
+
+/** ELLIPSE culling box: scene shape carries `majorAxis`/`minorAxis`. The pick resolver routes
+ *  ellipse through `BoundsCalculator` which reads `radiusX`/`radiusY` (fields the SCENE entity
+ *  lacks → NaN), so this stays local; Slice 3 reconciles the resolver's ellipse provider. */
+function ellipseRenderBounds(entity: Entity): SpatialBounds {
+  const e = entity as { center: XY; majorAxis: number; minorAxis: number };
+  const r = Math.max(e.majorAxis, e.minorAxis);
+  return { minX: e.center.x - r, minY: e.center.y - r, maxX: e.center.x + r, maxY: e.center.y + r };
+}
+
+/** POINT culling box: degenerate box at the position (pick adds ±1 selection padding; culling
+ *  doesn't need it). */
+function pointRenderBounds(entity: Entity): SpatialBounds {
+  const p = (entity as { position: XY }).position;
+  return { minX: p.x, minY: p.y, maxX: p.x, maxY: p.y };
+}
+
+const textRenderBounds = (entity: Entity): SpatialBounds =>
+  textBoxAABB(projectSceneTextToDxf(entity, (entity as { id: string }).id));
+
+/**
+ * Culling-specific overrides — the ONLY types whose render/culling bounds intentionally differ
+ * from the pick resolver (`resolveEntityBounds`). Mirror of `ENTITY_BOUNDS_PROVIDERS`; any type
+ * NOT listed here delegates to the resolver (byte-identical math, or a genuine gain for the types
+ * Twin A previously ignored — arc/dimension/angle-measurement + BIM footprint bbox). `forExtents`
+ * (zoom-to-fit) drops infinite construction lines so they never affect zoom-extents.
+ */
+const CULLING_BOUNDS_OVERRIDES: Partial<Record<EntityType, (entity: Entity, forExtents: boolean) => SpatialBounds>> = {
+  xline: (entity, forExtents) => (forExtents ? EMPTY_SPATIAL_BOUNDS : xlineRenderBounds(entity)),
+  ray: (entity, forExtents) => (forExtents ? EMPTY_SPATIAL_BOUNDS : rayRenderBounds(entity)),
+  text: textRenderBounds,
+  mtext: textRenderBounds,
+  ellipse: ellipseRenderBounds,
+  point: pointRenderBounds,
+};
+
 function computeBounds(entity: Entity, forExtents: boolean): SpatialBounds {
-  switch (entity.type) {
-    case 'line':
-      return {
-        minX: Math.min(entity.start.x, entity.end.x),
-        minY: Math.min(entity.start.y, entity.end.y),
-        maxX: Math.max(entity.start.x, entity.end.x),
-        maxY: Math.max(entity.start.y, entity.end.y),
-      };
-    case 'polyline':
-    case 'lwpolyline':
-      return 'vertices' in entity && entity.vertices ? aabbOf(entity.vertices) : EMPTY_SPATIAL_BOUNDS;
-    case 'circle':
-      return {
-        minX: entity.center.x - entity.radius,
-        minY: entity.center.y - entity.radius,
-        maxX: entity.center.x + entity.radius,
-        maxY: entity.center.y + entity.radius,
-      };
-    case 'ellipse': {
-      const maxAxisRadius = Math.max(entity.majorAxis, entity.minorAxis);
-      return {
-        minX: entity.center.x - maxAxisRadius,
-        minY: entity.center.y - maxAxisRadius,
-        maxX: entity.center.x + maxAxisRadius,
-        maxY: entity.center.y + maxAxisRadius,
-      };
-    }
-    case 'rectangle':
-    case 'rect':
-      return {
-        minX: entity.x,
-        minY: entity.y,
-        maxX: entity.x + entity.width,
-        maxY: entity.y + entity.height,
-      };
-    case 'point':
-      return {
-        minX: entity.position.x,
-        minY: entity.position.y,
-        maxX: entity.position.x,
-        maxY: entity.position.y,
-      };
-    case 'annotation-symbol': {
-      // ADR-583 — annotative square footprint around the insertion point. The paper
-      // `sizeMm` is folded to model units at the live drawing scale (same SSoT the
-      // renderer uses) so the selection box / zoom-extents track the drawn glyph.
-      const modelSize = annotationSymbolModelSizeLive(
-        ('sizeMm' in entity && typeof entity.sizeMm === 'number' ? entity.sizeMm : DEFAULT_ANNOTATION_SYMBOL_SIZE_MM),
-      );
-      const half = modelSize / 2;
-      return {
-        minX: entity.position.x - half,
-        minY: entity.position.y - half,
-        maxX: entity.position.x + half,
-        maxY: entity.position.y + half,
-      };
-    }
-    case 'scale-bar': {
-      // ADR-583 Φ2.4 — DERIVED length-extent bbox (span scale-invariant → `(1,'mm')`).
-      // Without a case the bar fell to `default` → EMPTY bounds → culled in the 2D viewport
-      // whenever scrolled off origin (the same trap as foundation/mep-fixture above).
-      const { bbox } = computeScaleBarGeometry(entity, 1, 'mm');
-      return { minX: bbox.minX, minY: bbox.minY, maxX: bbox.maxX, maxY: bbox.maxY };
-    }
-    case 'text':
-    case 'mtext': {
-      // ADR-557 Φ-attachment (Φάση B) — bounds via the attachment/rotation/widthFactor-aware
-      // text-box SSoT, replacing the bespoke monospace-upward approximation (attachment-blind,
-      // rotation-blind, wrong Y convention). `projectSceneTextToDxf` discriminates TEXT
-      // (widthFactor) vs MTEXT (explicit frame width); `textBoxAABB` returns the same AABB the
-      // culling path uses — so selection-extent / zoom-to-fit and culling now agree.
-      return textBoxAABB(projectSceneTextToDxf(entity, entity.id));
-    }
-    case 'spline':
-      return 'controlPoints' in entity && entity.controlPoints
-        ? aabbOf(entity.controlPoints)
-        : EMPTY_SPATIAL_BOUNDS;
-    case 'leader':
-      return 'vertices' in entity && entity.vertices ? aabbOf(entity.vertices) : EMPTY_SPATIAL_BOUNDS;
-    case 'hatch':
-      return 'boundaryPaths' in entity && entity.boundaryPaths
-        ? aabbOf(entity.boundaryPaths.flat())
-        : EMPTY_SPATIAL_BOUNDS;
-    case 'xline':
-      if (forExtents) return EMPTY_SPATIAL_BOUNDS;
-      if ('basePoint' in entity && entity.basePoint) {
-        return {
-          minX: entity.basePoint.x - RENDER_NOMINAL_EXTENT,
-          minY: entity.basePoint.y - RENDER_NOMINAL_EXTENT,
-          maxX: entity.basePoint.x + RENDER_NOMINAL_EXTENT,
-          maxY: entity.basePoint.y + RENDER_NOMINAL_EXTENT,
-        };
-      }
-      return EMPTY_SPATIAL_BOUNDS;
-    case 'ray':
-      if (forExtents) return EMPTY_SPATIAL_BOUNDS;
-      if ('basePoint' in entity && entity.basePoint) {
-        const dirX = entity.direction?.x ?? 1;
-        const dirY = entity.direction?.y ?? 0;
-        return {
-          minX: Math.min(entity.basePoint.x, entity.basePoint.x + dirX * RENDER_NOMINAL_EXTENT),
-          minY: Math.min(entity.basePoint.y, entity.basePoint.y + dirY * RENDER_NOMINAL_EXTENT),
-          maxX: Math.max(entity.basePoint.x, entity.basePoint.x + dirX * RENDER_NOMINAL_EXTENT),
-          maxY: Math.max(entity.basePoint.y, entity.basePoint.y + dirY * RENDER_NOMINAL_EXTENT),
-        };
-      }
-      return EMPTY_SPATIAL_BOUNDS;
-    case 'stair':
-    case 'wall':
-    case 'opening':
-    case 'slab':
-    case 'slab-opening':
-    case 'column':
-    case 'beam':
-    // ADR-436 — foundation uses pre-computed geometry.bbox for spatial bounds
-    // (without this it falls to default → EMPTY bounds → culled in 2D viewport).
-    case 'foundation':
-    // ADR-406 — MEP fixture uses pre-computed geometry.bbox for spatial bounds.
-    case 'mep-fixture':
-    // ADR-408 Φ3 — electrical panel uses pre-computed geometry.bbox (same).
-    case 'electrical-panel':
-    // ADR-408 Φ12 — plumbing manifold uses pre-computed geometry.bbox (same).
-    case 'mep-manifold':
-    // ADR-408 Εύρος Β — heating radiator uses pre-computed geometry.bbox (same).
-    case 'mep-radiator':
-    // ADR-410 — furniture uses pre-computed geometry.bbox (same).
-    case 'furniture':
-    // ADR-408 Φ8 — MEP segment uses pre-computed geometry.bbox (same).
-    case 'mep-segment':
-    // ADR-408 Φ11 — MEP fitting uses pre-computed geometry.bbox (same).
-    case 'mep-fitting':
-    // ADR-415 — floorplan symbol uses pre-computed geometry.bbox (same).
-    case 'floorplan-symbol':
-    // ADR-417 — roof uses pre-computed geometry.bbox (same).
-    case 'roof':
-    // ADR-419 — floor finish uses pre-computed geometry.bbox (same).
-    case 'floor-finish':
-      if ('geometry' in entity && entity.geometry && entity.geometry.bbox) {
-        const { min, max } = entity.geometry.bbox;
-        return { minX: min.x, minY: min.y, maxX: max.x, maxY: max.y };
-      }
-      return EMPTY_SPATIAL_BOUNDS;
-    default: {
-      if ('vertices' in entity && entity.vertices && Array.isArray(entity.vertices)) {
-        return aabbOf(entity.vertices as Array<{ x: number; y: number }>);
-      }
-      return EMPTY_SPATIAL_BOUNDS;
-    }
+  const override = CULLING_BOUNDS_OVERRIDES[entity.type as EntityType];
+  if (override) return override(entity, forExtents);
+
+  // Canonical per-type bounds SSoT (ADR-587 Φ9). `null` ⇒ no provider (or missing data) ⇒ fall to
+  // the generic top-level-vertices box (leader + atypical shapes), else EMPTY (Twin A default).
+  const resolved = resolveEntityBounds(entity);
+  if (resolved) return resolved;
+  if ('vertices' in entity && Array.isArray((entity as { vertices?: unknown }).vertices)) {
+    return aabbOf((entity as { vertices: XY[] }).vertices);
   }
+  return EMPTY_SPATIAL_BOUNDS;
 }
 
 /** For render culling: XLINE/RAY use NOMINAL_EXTENT so they appear across the viewport. */
@@ -190,7 +114,7 @@ export const getEntityBounds = getEntityRenderBounds;
 /**
  * Union of BIM entity type strings that use pre-computed `geometry.bbox` for
  * spatial bounds. Used for type-narrowing in downstream consumers.
- * Mirror of the `case 'electrical-panel':` / `case 'mep-manifold':` branch.
+ * Mirror of the `calculateBimEntity2DBounds` supported set.
  */
 export type BimEntityWithBounds =
   | 'wall' | 'opening' | 'slab' | 'slab-opening' | 'column' | 'beam' | 'stair'

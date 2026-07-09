@@ -5,6 +5,7 @@
 
 import { runPrint, type PrintDeps } from '../print-service';
 import { captureCurrent2dView } from '../capture/capture-2d';
+import { captureCurrent2dViewVector } from '../capture/capture-2d-vector';
 import { assemblePrintPdf } from '../assemble/pdf-assembler';
 import { triggerExportDownload, openBlobInNewTab } from '@/lib/exports/trigger-export-download';
 import type { CaptureResult } from '../capture/capture-types';
@@ -12,6 +13,9 @@ import type { PrintRequest } from '../config/paper-types';
 
 jest.mock('../capture/capture-2d', () => ({
   captureCurrent2dView: jest.fn(),
+}));
+jest.mock('../capture/capture-2d-vector', () => ({
+  captureCurrent2dViewVector: jest.fn(),
 }));
 jest.mock('../assemble/pdf-assembler', () => ({
   assemblePrintPdf: jest.fn(),
@@ -21,8 +25,9 @@ jest.mock('@/lib/exports/trigger-export-download', () => ({
   openBlobInNewTab: jest.fn(),
 }));
 
-const CAPTURE_2D: CaptureResult = { dataUrl: 'd2', widthPx: 10, heightPx: 10, appliedScaleDenominator: null };
-const CAPTURE_3D: CaptureResult = { dataUrl: 'd3', widthPx: 10, heightPx: 10, appliedScaleDenominator: null };
+const CAPTURE_2D: CaptureResult = { kind: 'raster', dataUrl: 'd2', widthPx: 10, heightPx: 10, appliedScaleDenominator: null };
+const CAPTURE_2D_VECTOR: CaptureResult = { kind: 'vector', draw: jest.fn(), appliedScaleDenominator: null };
+const CAPTURE_3D: CaptureResult = { kind: 'raster', dataUrl: 'd3', widthPx: 10, heightPx: 10, appliedScaleDenominator: null };
 const PDF_BLOB = new Blob(['pdf'], { type: 'application/pdf' });
 
 const baseDeps: PrintDeps = {
@@ -45,18 +50,31 @@ function req(overrides: Partial<PrintRequest>): PrintRequest {
 beforeEach(() => {
   jest.clearAllMocks();
   (captureCurrent2dView as jest.Mock).mockReturnValue(CAPTURE_2D);
+  (captureCurrent2dViewVector as jest.Mock).mockReturnValue(CAPTURE_2D_VECTOR);
   (assemblePrintPdf as jest.Mock).mockResolvedValue(PDF_BLOB);
 });
 
 describe('runPrint — source routing', () => {
-  it('uses the 2D adapter for source=2d and downloads with a built filename', async () => {
+  // ADR-608 — 2D defaults to the vector adapter (no outputMode set).
+  it('uses the 2D VECTOR adapter by default and downloads with a built filename', async () => {
     await runPrint(req({ source: '2d', target: 'save-pdf' }), baseDeps);
-    expect(captureCurrent2dView).toHaveBeenCalledTimes(1);
+    expect(captureCurrent2dViewVector).toHaveBeenCalledTimes(1);
+    expect(captureCurrent2dView).not.toHaveBeenCalled();
     expect(assemblePrintPdf).toHaveBeenCalledWith(
-      expect.objectContaining({ capture: CAPTURE_2D, paper: { size: 'A3', orientation: 'landscape' } }),
+      expect.objectContaining({ capture: CAPTURE_2D_VECTOR, paper: { size: 'A3', orientation: 'landscape' } }),
     );
     expect(triggerExportDownload).toHaveBeenCalledWith(
       expect.objectContaining({ blob: PDF_BLOB, filename: 'Demo_A3_2026-06-14.pdf' }),
+    );
+  });
+
+  // ADR-608 — the raster fallback keeps the legacy PNG-into-PDF path.
+  it('uses the 2D RASTER adapter when outputMode=raster', async () => {
+    await runPrint(req({ source: '2d', outputMode: 'raster' }), baseDeps);
+    expect(captureCurrent2dView).toHaveBeenCalledTimes(1);
+    expect(captureCurrent2dViewVector).not.toHaveBeenCalled();
+    expect(assemblePrintPdf).toHaveBeenCalledWith(
+      expect.objectContaining({ capture: CAPTURE_2D }),
     );
   });
 
@@ -85,8 +103,9 @@ describe('runPrint — output routing', () => {
 
 describe('title block composition', () => {
   it('passes a composed title block when includeTitleBlock + deps.titleBlock', async () => {
-    (captureCurrent2dView as jest.Mock).mockReturnValue({
-      ...CAPTURE_2D,
+    // Default 2D routing is vector (ADR-608) → stub the vector adapter's scale.
+    (captureCurrent2dViewVector as jest.Mock).mockReturnValue({
+      ...CAPTURE_2D_VECTOR,
       appliedScaleDenominator: 100,
     });
     await runPrint(
@@ -120,7 +139,7 @@ describe('SSoT convergence', () => {
     await runPrint(req({ source: '2d' }), baseDeps);
     await runPrint(req({ source: '3d' }), { ...baseDeps, capture3d });
     expect(assemblePrintPdf).toHaveBeenCalledTimes(2);
-    expect((assemblePrintPdf as jest.Mock).mock.calls[0][0].capture).toBe(CAPTURE_2D);
+    expect((assemblePrintPdf as jest.Mock).mock.calls[0][0].capture).toBe(CAPTURE_2D_VECTOR);
     expect((assemblePrintPdf as jest.Mock).mock.calls[1][0].capture).toBe(CAPTURE_3D);
   });
 });

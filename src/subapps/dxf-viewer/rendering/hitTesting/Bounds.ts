@@ -12,6 +12,10 @@ import { calculateXLineBounds, calculateRayBounds } from './bounds-parametric-li
 // ADR-583 — annotative model-size SSoT for the North-arrow annotation symbol.
 import { annotationSymbolModelSizeLive } from '../../bim/annotation-symbols/annotation-symbol-model-size';
 import { DEFAULT_ANNOTATION_SYMBOL_SIZE_MM } from '../../types/annotation-symbol';
+// ADR-583 Φ2 — graphic scale-bar axis-extent bbox + live annotative half-thickness SSoT.
+import { computeScaleBarGeometry } from '../../bim/geometry/scale-bar-geometry';
+import { scaleBarModelHalfThicknessLive } from '../../bim/scale-bar/scale-bar-hit';
+import type { ScaleBarEntity } from '../../types/scale-bar';
 import type {
   EntityWithLine,
   EntityWithCircle,
@@ -75,6 +79,12 @@ export class BoundsCalculator {
       // to `default` → null → excluded from the spatial index → unselectable on canvas.
       case 'annotation-symbol':
         return this.calculateAnnotationSymbolBounds(entity, tolerance);
+      // ADR-583 Φ2 — graphic scale-bar: the scale-invariant axis-extent bbox
+      // (computeScaleBarGeometry) padded by the live annotative half-thickness so the
+      // broad phase encloses the ±half-thickness pick corridor (else the narrow phase
+      // never runs when hovering the drawn band above the axis). Mirror annotation-symbol.
+      case 'scale-bar':
+        return this.calculateScaleBarBounds(entity, tolerance);
       case 'angle-measurement':
         return this.calculateAngleMeasurementBounds(entity, tolerance);
       case 'stair':
@@ -407,6 +417,26 @@ export class BoundsCalculator {
       e.position.y - half,
       e.position.x + half,
       e.position.y + half,
+    );
+  }
+
+  /**
+   * ADR-583 Φ2 — graphic scale-bar spatial bounds. The DERIVED axis-extent bbox
+   * (scale-invariant canonical-mm from `computeScaleBarGeometry`, hence the `(1,'mm')`
+   * placeholders) padded on all sides by the LIVE annotative half-thickness — the same
+   * `±halfThickness` corridor `hitTestScaleBarAxis` gates on — so the broad phase always
+   * encloses the narrow phase. Without this the axis bbox is a zero-height line and the
+   * candidate is dropped whenever the cursor sits on the drawn band (mirror annotation-symbol).
+   */
+  private static calculateScaleBarBounds(entity: EntityModel, tolerance: number): BoundingBox {
+    const e = entity as unknown as ScaleBarEntity;
+    const { bbox } = computeScaleBarGeometry(e, 1, 'mm');
+    const pad = scaleBarModelHalfThicknessLive(e) + tolerance;
+    return this.createBoundingBox(
+      bbox.minX - pad,
+      bbox.minY - pad,
+      bbox.maxX + pad,
+      bbox.maxY + pad,
     );
   }
 

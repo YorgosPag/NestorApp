@@ -20,10 +20,13 @@ import {
   isSpaceSeparatorEntity,
   isHatchEntity,
   isAnnotationSymbolEntity,
+  isScaleBarEntity,
 } from '../../types/entities';
 // ADR-583 — annotative model-size SSoT for the North-arrow annotation symbol.
 import { annotationSymbolModelSizeLive } from '../../bim/annotation-symbols/annotation-symbol-model-size';
 import { DEFAULT_ANNOTATION_SYMBOL_SIZE_MM } from '../../types/annotation-symbol';
+// ADR-583 Φ2 — graphic scale-bar precise axis pick SSoT (shared with ScaleBarRenderer.hitTest).
+import { hitTestScaleBarAxis } from '../../bim/scale-bar/scale-bar-hit';
 import type { HitTestResult, SnapResult } from './hit-tester-types';
 import { pointToLineDistance, clamp } from '../entities/shared/geometry-utils';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
@@ -83,6 +86,13 @@ export function performDetailedHitTest(
     // annotative glyph radius (tighter than the default AABB, which over-selects the
     // bbox corners of a circular mark).
     case 'annotation-symbol': return hitTestAnnotationSymbol(entity, point, tolerance);
+    // ADR-583 Φ2 — graphic scale-bar: precise distance-to-axis-segment within the live
+    // annotative half-thickness (SSoT shared with ScaleBarRenderer.hitTest). Tighter than
+    // the default AABB, which would highlight the empty corners of a rotated bar's bbox.
+    case 'scale-bar':
+      return isScaleBarEntity(entity)
+        ? (hitTestScaleBarAxis(entity, point, tolerance) ? { hitType: 'entity', hitPoint: point } : null)
+        : null;
     default: return { hitType: 'entity', hitPoint: point };
   }
 }

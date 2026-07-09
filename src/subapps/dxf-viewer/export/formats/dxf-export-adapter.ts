@@ -42,7 +42,7 @@ import type { ExportArtifact, ExportEntityScope, DxfLineMode } from '../types';
  * the colour must be resolved here, on the original. Reuses the renderer's SSoT
  * (`resolveEntityColorHex`) — exported lines match what the canvas paints.
  */
-function stampRenderedColors(
+export function stampRenderedColors(
   entities: readonly Entity[],
   layersById: Record<string, SceneLayer>,
 ): Entity[] {

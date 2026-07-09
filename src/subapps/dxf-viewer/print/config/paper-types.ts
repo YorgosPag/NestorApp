@@ -33,6 +33,15 @@ export type FitMode = 'fit-to-page' | 'drawing-scale';
 export type PrintSource = '2d' | '3d';
 
 /**
+ * ADR-608 — how the 2D drawing is encoded into the PDF.
+ * - `vector` — native jsPDF primitives (selectable text, zoom-safe, AutoCAD
+ *              PDF-Import → real entities). The 2D default.
+ * - `raster` — a rendered PNG image (the legacy path; kept as a fallback).
+ * Ignored for 3D (always raster).
+ */
+export type PrintOutputMode = 'vector' | 'raster';
+
+/**
  * Final destination of the assembled PDF.
  * - `save-pdf`    — download the .pdf file.
  * - `open-print`  — open in a new tab and trigger the OS print dialog
@@ -83,6 +92,11 @@ export interface PrintRequest {
   includeTitleBlock: boolean;
   /** Real-world denominator N for `drawing-scale` mode (e.g. 100 → 1:100). */
   scaleDenominator?: number;
+  /**
+   * ADR-608 — 2D output encoding. Defaults to `'vector'` when omitted (2D);
+   * ignored for 3D. `'raster'` reproduces the legacy PNG-into-PDF behaviour.
+   */
+  outputMode?: PrintOutputMode;
   /**
    * ADR-454 — plot style for 2D source (white-safe colour / monochrome / grayscale /
    * by-pen). Ignored for 3D (WYSIWYG real materials). Defaults to `'colour'`.

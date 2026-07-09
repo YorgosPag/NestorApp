@@ -17,6 +17,7 @@ import { EXPORT_DPI, DEFAULT_PAGE_MARGIN_MM } from './config/paper-constants';
 import { computePaperRasterPx } from './config/paper-math';
 import type { CaptureResult } from './capture/capture-types';
 import { captureCurrent2dView } from './capture/capture-2d';
+import { captureCurrent2dViewVector } from './capture/capture-2d-vector';
 import { assemblePrintPdf } from './assemble/pdf-assembler';
 import type { TitleBlockContent, TitleBlockInput } from './assemble/title-block-types';
 import { buildPrintFilename } from './print-filename';
@@ -71,16 +72,22 @@ async function captureSource(
     if (!deps.capture3d) {
       throw new Error('3D capture provider unavailable');
     }
+    // 3D has no vector representation (real materials/shading) → always raster.
     return deps.capture3d(raster);
   }
-  return captureCurrent2dView({
+  const capture2dInput = {
     scene: deps.scene,
     userDrawingUnits: deps.userDrawingUnits,
     raster,
     fitMode: request.fitMode,
     scaleDenominator: request.scaleDenominator,
     plotStyle: request.plotStyle,
-  });
+  };
+  // ADR-608 — vector is the 2D default (selectable entities, zoom-safe); raster
+  // fallback stays byte-for-byte the previous behaviour.
+  return request.outputMode === 'raster'
+    ? captureCurrent2dView(capture2dInput)
+    : captureCurrent2dViewVector(capture2dInput);
 }
 
 /** Route the assembled blob to download or OS print dialog. */

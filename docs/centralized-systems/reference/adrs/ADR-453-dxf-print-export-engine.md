@@ -73,3 +73,8 @@ Ribbon **Ανάλυση → «Εκτύπωση»** (`analyze-tab.ts` PRINT_PANEL
 
 - **2026-06-14** — Slices 0-5 implemented (Opus). 30 jest GREEN, tsc clean. UNCOMMITTED.
   🔴 browser-verify (Analyze→Εκτύπωση→A3/landscape→Save PDF 2Δ· 3Δ source· Open&Print) + commit.
+- **2026-07-09** — **ADR-608 vector-PDF backend** wired into the print engine (Opus). `CaptureResult`
+  is now a discriminated union (`raster`|`vector`); 2D print defaults to a native-vector PDF via the
+  shared `scene-vector-emitter`, with the previous raster path kept as `outputMode:'raster'` fallback.
+  `resolvePrintTransform` exported from `capture-2d.ts` for SSoT transform reuse. Assembler branches on
+  `capture.kind`; title block / caption / routing unchanged. See ADR-608 for the full design.

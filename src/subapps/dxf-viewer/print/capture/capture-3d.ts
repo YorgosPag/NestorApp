@@ -48,6 +48,7 @@ export function captureCurrent3dView(
     renderer.render(sceneManager.scene, camera);
 
     return {
+      kind: 'raster',
       dataUrl: renderer.domElement.toDataURL('image/png'),
       widthPx,
       heightPx,

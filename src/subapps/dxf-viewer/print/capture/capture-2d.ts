@@ -39,8 +39,12 @@ export interface Capture2dInput {
 
 const IDENTITY_TRANSFORM: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
 
-/** Resolve the print transform for the requested fit mode. */
-function resolvePrintTransform(
+/**
+ * Resolve the print transform for the requested fit mode. Exported so the vector
+ * capture path (ADR-608) shares the EXACT same fit/centering math as the raster
+ * render — the two outputs must land the drawing on identical paper coordinates.
+ */
+export function resolvePrintTransform(
   dxfScene: DxfScene,
   viewport: Viewport,
   input: Capture2dInput,
@@ -59,9 +63,14 @@ function resolvePrintTransform(
 }
 
 /**
- * Capture the current 2D scene to a paper-resolution PNG `CaptureResult`.
+ * Convert the scene to DXF-shape, hydrate the LayerStore SSoT, and resolve the
+ * print viewport. Shared by the raster (`captureCurrent2dView`) and vector
+ * (ADR-608 `captureCurrent2dViewVector`) capture paths so both start from the
+ * identical scene/layer/viewport state.
  */
-export function captureCurrent2dView(input: Capture2dInput): CaptureResult {
+export function prepareScene2dCapture(
+  input: Capture2dInput,
+): { dxfScene: DxfScene; viewport: Viewport } {
   const dxfScene = convertSceneToDxf(input.scene, input.userDrawingUnits);
   // Hydrate the LayerStore SSoT so the renderer resolves layer
   // visibility/frozen/colour exactly as the live canvas does (the pure
@@ -69,8 +78,15 @@ export function captureCurrent2dView(input: Capture2dInput): CaptureResult {
   if (dxfScene.layersById) {
     setLayers(Object.values(dxfScene.layersById));
   }
-
   const viewport = rasterToViewport(input.raster);
+  return { dxfScene, viewport };
+}
+
+/**
+ * Capture the current 2D scene to a paper-resolution PNG `CaptureResult`.
+ */
+export function captureCurrent2dView(input: Capture2dInput): CaptureResult {
+  const { dxfScene, viewport } = prepareScene2dCapture(input);
   const { canvas, renderer } = createOffscreen2dTarget(input.raster.widthPx, input.raster.heightPx);
   const transform = resolvePrintTransform(dxfScene, viewport, input);
 
@@ -95,6 +111,7 @@ export function captureCurrent2dView(input: Capture2dInput): CaptureResult {
   }
 
   return {
+    kind: 'raster',
     dataUrl: canvas.toDataURL('image/png'),
     widthPx: input.raster.widthPx,
     heightPx: input.raster.heightPx,

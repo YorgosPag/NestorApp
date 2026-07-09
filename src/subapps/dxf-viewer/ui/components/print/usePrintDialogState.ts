@@ -15,6 +15,7 @@ import type {
   OutputTarget,
   PaperOrientation,
   PaperSize,
+  PrintOutputMode,
   PrintPlotStyle,
   PrintRequest,
   PrintSource,
@@ -33,6 +34,8 @@ export interface PrintDialogState {
   setScaleDenominator: (n: number) => void;
   plotStyle: PrintPlotStyle;
   setPlotStyle: (p: PrintPlotStyle) => void;
+  outputMode: PrintOutputMode;
+  setOutputMode: (m: PrintOutputMode) => void;
   target: OutputTarget;
   setTarget: (t: OutputTarget) => void;
   includeTitleBlock: boolean;
@@ -48,6 +51,8 @@ export function usePrintDialogState(canPrint3d: boolean): PrintDialogState {
   const [scaleDenominator, setScaleDenominator] = React.useState<number>(100);
   // ADR-454 — default 'colour' (white-safe: keeps BIM category colours, white→black).
   const [plotStyle, setPlotStyle] = React.useState<PrintPlotStyle>('colour');
+  // ADR-604 — default 'vector' (selectable entities, zoom-safe PDF Import).
+  const [outputMode, setOutputMode] = React.useState<PrintOutputMode>('vector');
   const [target, setTarget] = React.useState<OutputTarget>('save-pdf');
   const [includeTitleBlock, setIncludeTitleBlock] = React.useState<boolean>(true);
 
@@ -68,8 +73,10 @@ export function usePrintDialogState(canPrint3d: boolean): PrintDialogState {
       scaleDenominator: fit === 'drawing-scale' ? scaleDenominator : undefined,
       // ADR-454 — plot style applies to 2D only (3D is WYSIWYG real materials).
       plotStyle: src === '2d' ? plotStyle : undefined,
+      // ADR-604 — output encoding applies to 2D only (3D is always raster).
+      outputMode: src === '2d' ? outputMode : undefined,
     };
-  }, [source, canPrint3d, fitMode, size, orientation, target, scaleDenominator, plotStyle, includeTitleBlock]);
+  }, [source, canPrint3d, fitMode, size, orientation, target, scaleDenominator, plotStyle, outputMode, includeTitleBlock]);
 
   return {
     source: effectiveSource,
@@ -84,6 +91,8 @@ export function usePrintDialogState(canPrint3d: boolean): PrintDialogState {
     setScaleDenominator,
     plotStyle,
     setPlotStyle,
+    outputMode,
+    setOutputMode,
     target,
     setTarget,
     includeTitleBlock,

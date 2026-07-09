@@ -96,6 +96,8 @@ export function PrintDialog({
             onScaleChange={state.setScaleDenominator}
             plotStyle={state.plotStyle}
             onPlotStyleChange={state.setPlotStyle}
+            outputMode={state.outputMode}
+            onOutputModeChange={state.setOutputMode}
             target={state.target}
             onTargetChange={state.setTarget}
             includeTitleBlock={state.includeTitleBlock}

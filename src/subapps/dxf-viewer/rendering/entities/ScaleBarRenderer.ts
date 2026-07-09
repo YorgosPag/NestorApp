@@ -35,12 +35,11 @@ import {
   DEFAULT_SCALE_BAR_HEIGHT_MM,
   DEFAULT_SCALE_BAR_LABEL_MM,
 } from '../../types/entities';
-import type { ScaleBarGeometry } from '../../types/scale-bar';
 import { computeScaleBarGeometry } from '../../bim/geometry/scale-bar-geometry';
 import { paperHeightToModel } from '../../utils/annotation-scale';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import type { SceneUnits } from '../../utils/scene-units';
-import { pointToSegmentDistance } from '../../systems/guides/guide-types';
+import { hitTestScaleBarAxis } from '../../bim/scale-bar/scale-bar-hit';
 import { drawScaleBarLabels } from './scale-bar/draw-scale-bar-labels';
 import { getScaleBarGrips } from '../../bim/scale-bar/scale-bar-grips';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
@@ -248,17 +247,12 @@ export class ScaleBarRenderer extends BaseEntityRenderer {
   /**
    * Precise pick: distance from the click to the bar AXIS segment (position →
    * derived endPosition), gated by the live annotative half-thickness + tolerance.
-   * All world-space (broad-phase already filtered by entity-bounds).
+   * All world-space (broad-phase already filtered by entity-bounds). Delegates to the
+   * `hitTestScaleBarAxis` SSoT so the leaf renderer, the spatial-index narrow phase
+   * (`performDetailedHitTest`) and the broad-phase bounds all agree (N.18 anti-clone).
    */
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
     if (!isScaleBarEntity(entity as Entity)) return false;
-    const e = entity as unknown as ScaleBarEntity;
-    const drawingScale = useDrawingScaleStore.getState().drawingScale;
-    const geo: ScaleBarGeometry = computeScaleBarGeometry(e, drawingScale, this._sceneUnits);
-    const thickness = paperHeightToModel(
-      e.barHeightMm ?? DEFAULT_SCALE_BAR_HEIGHT_MM, drawingScale, this._sceneUnits,
-    );
-    const band = thickness / 2 + tolerance;
-    return pointToSegmentDistance(point, e.position, geo.endPosition) <= band;
+    return hitTestScaleBarAxis(entity as unknown as ScaleBarEntity, point, tolerance, this._sceneUnits);
   }
 }

@@ -9,32 +9,29 @@
  *  - Twin B `calculateEntityBounds` (`selection-duplicate-utils.ts`) → `{min,max} | **null**`, χωρίς
  *    `forExtents`. BIM = `calculateBimEntity2DBounds`. text/dimension/ellipse/point via ξεχωριστά SSoT.
  *
- * **ΔΕΝ κάνουμε computational merge** (=behavior change=regression σε culling/zoom/marquee· οι μεγάλοι
- * ΕΠΙΣΗΣ δεν κάνουν big-bang σε geometry). Η υπολογιστική σύγκλιση σε ΕΝΑ core = χωριστό **verified**
- * βήμα (app-verify). Εδώ Φ5 = **coverage binding + ρητό pin των ασυμμετριών** (shape/default/domain):
+ * **Φ9 = σταδιακό computational convergence σε ΕΝΑ core** (`resolveEntityBounds`), ένα slice τη φορά με
+ * app-verify ανάμεσα (οι μεγάλοι ΕΠΙΣΗΣ δεν κάνουν big-bang σε geometry). Το test κρατά:
  *  1. Exhaustive/disjoint partition ΑΝΑ twin: κάθε renderable → handled ή fallback (ρητός λόγος).
  *     `handled ∪ fallback === RENDERABLE_ENTITY_TYPES` = ο completeness anchor (νέος τύπος → σπάει
- *     ΚΑΙ τα δύο partitions → συνειδητή απόφαση σε ΑΜΦΟΤΕΡΑ τα twins).
- *  2. Live fallback pins: όλο το A-EMPTY set → `EMPTY_SPATIAL_BOUNDS`, όλο το B-NULL set → `null`
- *     (ασφαλές — κανένα fallback δεν φτάνει σε text/annotation projection). Πιάνει σιωπηλό regression.
- *  3. Cross-twin asymmetry pins: shape, default, arc/annotation-symbol domain flip, BIM-math shape,
- *     forExtents (xline render±NOMINAL vs extents EMPTY).
- *
- * Καρφωμένες ασυμμετρίες (ΜΗΝ τις «διορθώσεις» σιωπηλά — convergence = χωριστό verified βήμα):
- *  - `arc`/`dimension`/`angle-measurement` = handled στο B, **EMPTY στο A** (κανένα case → default,
- *    το A-default απαιτεί top-level `vertices`).
- *  - `annotation-symbol` = handled στο A (model-size square)· **ΗΤΑΝ null στο B** — ΔΙΟΡΘΩΘΗΚΕ στη Φ9.
- *  - 7 BIM `railing`/`wall-covering`/`thermal-space`/`space-separator`/`mep-boiler`/`mep-water-heater`/
- *    `mep-underfloor` = **EMPTY στο A** (μη enumerated → default αγνοεί το `geometry.bbox`)· όλα πλέον
- *    handled στο B (Φ9 Slice 1 έκλεισε railing/thermal-space/space-separator routing + wall-covering delegate).
+ *     ΚΑΙ τα δύο partitions → συνειδητή απόφαση σε ΑΜΦΟΤΕΡΑ τα twins). Μετά τις Slices 1+2 και τα δύο
+ *     fallback sets είναι **κενά** — κάθε renderable type έχει bounds.
+ *  2. Live gain pins: οι τύποι που απέκτησαν bounds (B: `B_FIXED_IN_SLICE1`· A: `A_FIXED_IN_SLICE2` +
+ *     arc/dimension/angle-measurement) → NON-EMPTY/NON-null. Πιάνει σιωπηλό regression σε delegate.
+ *  3. Cross-twin asymmetry pins που ΕΠΙΒΙΩΝΟΥΝ του convergence: shape ({minX..} vs {min,max}), default
+ *     (EMPTY vs null), BIM-math shape, forExtents (xline render±NOMINAL vs extents EMPTY).
  *
  * **ADR-587 Φ9 Slice 1 (2026-07-09):** το Twin B `calculateEntityBounds` έγινε thin adapter πάνω στον
  * canonical `resolveEntityBounds` (`rendering/hitTesting/entity-bounds-ssot.ts`). Οι 6 τύποι που γύριζαν
- * `null` (`annotation-symbol`, `railing`, `thermal-space`, `space-separator`, `wall-covering` [+ το
- * κρυμμένο πίσω από αισιόδοξη `B_HANDLED` κατάταξη]) δίνουν πλέον real bounds → επιλέξιμοι με window/
- * crossing marquee. `B_NULL_FALLBACK` = **κενό**. NEW: non-null assertion για τους 5 fixed + provider
- * completeness (`ENTITY_BOUNDS_SUPPORTED_TYPES ⊇ RENDERABLE_ENTITY_TYPES`). Twin A παραμένει ανέγγιχτο
- * (A/C convergence = επόμενα app-verify slices).
+ * `null` (`annotation-symbol`, `railing`, `thermal-space`, `space-separator`, `wall-covering`) δίνουν
+ * πλέον real bounds → marquee-selectable. `B_NULL_FALLBACK` = **κενό**.
+ *
+ * **ADR-587 Φ9 Slice 2 (2026-07-09):** και το Twin A `computeBounds` έγινε adapter πάνω στον ίδιο
+ * `resolveEntityBounds`, ΜΕ **culling-specific overrides** (text/mtext = γενναιόδωρο em box ADR-557·
+ * xline/ray = ±NOMINAL render + forExtents=EMPTY· ellipse = major/minor scene shape· point = degenerate).
+ * Οι 10 τύποι που έπεφταν σε A-default → EMPTY (`arc`/`dimension`/`angle-measurement` + τα 7 BIM του
+ * `A_FIXED_IN_SLICE2`) απέκτησαν bounds → σωστό culling/clip/array. `A_EMPTY_FALLBACK` = **κενό**.
+ * Η ellipse ΜΕΝΕΙ στο A (ο resolver δρομολογεί ellipse→BoundsCalculator που διαβάζει radiusX/radiusY,
+ * πεδία που το scene `EllipseEntity` δεν έχει → NaN)· reconcile στο Slice 3 (Twin C).
  */
 
 // Firebase auth mock — τα type barrels (text-box/bim projections) αγγίζουν auth στο import path.
@@ -62,20 +59,35 @@ const mk = (type: string, extra: Record<string, unknown> = {}): Entity =>
 const BBOX = { geometry: { bbox: { min: { x: 1, y: 2 }, max: { x: 3, y: 4 } } } };
 
 // ─── Twin A `computeBounds` (getEntityRenderBounds) — SpatialBounds, EMPTY default ───
-/** Renderable types με ρητό non-EMPTY case στο `computeBounds`. */
+/**
+ * Renderable types με bounds στο `computeBounds`. **Φ9 Slice 2:** το Twin A έγινε adapter πάνω στον
+ * canonical `resolveEntityBounds` (+ culling-specific overrides text/mtext/xline/ray/ellipse/point),
+ * άρα ΟΛΑ τα renderable types έχουν πλέον bounds — όπως το Twin B. Οι 10 τύποι που πριν έπεφταν στο
+ * A-default → EMPTY (arc/dimension/angle-measurement + 7 BIM) απέκτησαν bounds (βλ. `A_FIXED_IN_SLICE2`).
+ */
 const A_HANDLED = [
-  // DXF (16)
-  'line', 'polyline', 'lwpolyline', 'circle', 'ellipse', 'rectangle', 'rect', 'point',
+  // DXF (19 — ΟΛΑ, incl. arc/dimension/angle-measurement που ήταν EMPTY πριν τη Φ9 Slice 2)
+  'line', 'polyline', 'lwpolyline', 'circle', 'arc', 'ellipse', 'rectangle', 'rect', 'point',
   'annotation-symbol', 'scale-bar', 'text', 'mtext', 'spline', 'hatch', 'xline', 'ray',
-  // BIM με enumerated `geometry.bbox` case (17)
+  'dimension', 'angle-measurement',
+  // BIM via resolver `calculateBimEntity2DBounds` (24 — incl. railing/wall-covering/thermal-space/
+  // space-separator/mep-boiler/mep-water-heater/mep-underfloor, Φ9 Slice 2 GAIN)
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair', 'roof',
   'floor-finish', 'furniture', 'mep-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator',
-  'mep-segment', 'mep-fitting',
+  'mep-segment', 'mep-fitting', 'railing', 'wall-covering', 'thermal-space', 'space-separator',
+  'mep-boiler', 'mep-water-heater', 'mep-underfloor',
 ] as const;
-/** Renderable types που πέφτουν στο A-default → `EMPTY_SPATIAL_BOUNDS` (μη enumerated). */
-const A_EMPTY_FALLBACK = [
-  'arc', 'dimension', 'angle-measurement', // DXF: κανένα case, default απαιτεί top-level vertices
-  'railing', 'wall-covering', 'thermal-space', 'space-separator', // BIM: μη enumerated → αγνοεί bbox
+/**
+ * Renderable types που πέφτουν στο A-default → `EMPTY_SPATIAL_BOUNDS`. **ΚΕΝΟ μετά τη Φ9 Slice 2** —
+ * κάθε renderable type έχει πλέον bounds (resolver provider ή culling override), όπως το Twin B.
+ */
+const A_EMPTY_FALLBACK = [] as const;
+/**
+ * Οι 10 τύποι που η Φ9 Slice 2 γύρισε από `EMPTY` (A-default) → real bounds (convergence πάνω στον
+ * resolver). arc/dimension/angle-measurement = DXF providers· τα 7 BIM = `geometry.bbox` footprint.
+ */
+const A_FIXED_IN_SLICE2 = [
+  'railing', 'wall-covering', 'thermal-space', 'space-separator',
   'mep-boiler', 'mep-water-heater', 'mep-underfloor',
 ] as const;
 
@@ -115,9 +127,29 @@ describe('Bounds-twins coverage — δύο twins ↔ descriptor domain (ADR-587 
     expect(asSorted(partition)).toEqual(asSorted([...RENDERABLE_ENTITY_TYPES]));
   });
 
-  it.each(A_EMPTY_FALLBACK)('Twin A fallback πιν: "%s" (ακόμη & με geometry.bbox) → EMPTY_SPATIAL_BOUNDS', (type) => {
-    // Το bbox περνιέται σκόπιμα: αποδεικνύει ότι το A-default το ΑΓΝΟΕΙ (γνήσιο gap, ΟΧΙ merge).
-    expect(getEntityRenderBounds(mk(type, BBOX))).toEqual(EMPTY_SPATIAL_BOUNDS);
+  it('Twin A: A_EMPTY_FALLBACK είναι ΚΕΝΟ μετά τη Φ9 Slice 2 (κανένας renderable δεν πέφτει σε A-default)', () => {
+    expect(A_EMPTY_FALLBACK).toHaveLength(0);
+  });
+
+  it.each(A_FIXED_IN_SLICE2)('Φ9 Slice 2 gain: BIM "%s" (geometry.bbox) → NON-EMPTY στο Twin A (ήταν EMPTY)', (type) => {
+    // Πριν τη Slice 2 τα 7 αυτά BIM δεν ήταν enumerated → A-default αγνοούσε το bbox → EMPTY (culled).
+    // Τώρα delegate στον resolver (`calculateBimEntity2DBounds`) → real footprint bounds.
+    expect(getEntityRenderBounds(mk(type, BBOX))).not.toEqual(EMPTY_SPATIAL_BOUNDS);
+  });
+
+  it('Φ9 Slice 2 gain: arc converged — Twin A = resolver center±radius (ήταν EMPTY)', () => {
+    const arc = mk('arc', { center: { x: 100, y: 50 }, radius: 40 });
+    expect(getEntityRenderBounds(arc)).toEqual({ minX: 60, minY: 10, maxX: 140, maxY: 90 });
+  });
+
+  it('Φ9 Slice 2 gain: angle-measurement converged — Twin A = AABB(vertex,point1,point2) (ήταν EMPTY)', () => {
+    const am = mk('angle-measurement', { vertex: { x: 0, y: 0 }, point1: { x: 5, y: 0 }, point2: { x: 0, y: 5 } });
+    expect(getEntityRenderBounds(am)).toEqual({ minX: 0, minY: 0, maxX: 5, maxY: 5 });
+  });
+
+  it('Φ9 Slice 2 gain: dimension converged — Twin A NON-EMPTY από defPoints (ήταν EMPTY)', () => {
+    const dim = mk('dimension', { defPoints: [{ x: 0, y: 0 }, { x: 10, y: 5 }] });
+    expect(getEntityRenderBounds(dim)).not.toEqual(EMPTY_SPATIAL_BOUNDS);
   });
 
   it('Twin B: B_NULL_FALLBACK είναι ΚΕΝΟ μετά τη Φ9 Slice 1 (κανένας renderable δεν γυρίζει null)', () => {
@@ -155,12 +187,12 @@ describe('Bounds-twins coverage — δύο twins ↔ descriptor domain (ADR-587 
     expect(calculateEntityBounds(mk('totally-unknown') as unknown as AnySceneEntity)).toBeNull();
   });
 
-  it('asymmetry — DOMAIN flip: arc → A EMPTY / B center±radius (annotation-symbol πλέον handled ΚΑΙ στα δύο)', () => {
+  it('convergence — arc: Twin A & B συμφωνούν center±radius (Φ9 Slice 2 έκλεισε το domain flip· shape διαφέρει)', () => {
     const arc = mk('arc', { center: { x: 100, y: 50 }, radius: 40 });
-    expect(getEntityRenderBounds(arc)).toEqual(EMPTY_SPATIAL_BOUNDS); // A: κανένα case
-    expect(calculateEntityBounds(arc as unknown as AnySceneEntity)) // B: explicit
+    expect(getEntityRenderBounds(arc)).toEqual({ minX: 60, minY: 10, maxX: 140, maxY: 90 }); // A: converged (ήταν EMPTY)
+    expect(calculateEntityBounds(arc as unknown as AnySceneEntity)) // B: {min,max}
       .toEqual({ min: { x: 60, y: 10 }, max: { x: 140, y: 90 } });
-    // Φ9 Slice 1: annotation-symbol handled στο A (model-size square) ΚΑΙ στο B (→ C, ΗΤΑΝ null).
+    // annotation-symbol handled ΚΑΙ στα δύο (Φ9 Slice 1 στο B· delegate → C στο A).
     expect(calculateEntityBounds(mk('annotation-symbol', { position: { x: 0, y: 0 } }) as unknown as AnySceneEntity))
       .not.toBeNull();
   });

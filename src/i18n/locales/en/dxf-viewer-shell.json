@@ -5617,6 +5617,12 @@
       "by-pen": "By pen (CTB)",
       "hint": "White/by-layer lines become black on white paper; lineweights at the real print DPI."
     },
+    "outputMode": {
+      "label": "Output format",
+      "vector": "Vector (selectable entities)",
+      "raster": "Image (raster)",
+      "hint": "Vector: AutoCAD imports separate entities + zoom without blur. Image: a single flattened picture (maximum compatibility)."
+    },
     "target": {
       "label": "Output",
       "savePdf": "Save PDF",

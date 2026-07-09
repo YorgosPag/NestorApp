@@ -122,7 +122,7 @@ export class UnifiedEntitySelection {
     const isCrossing = startPoint.x > endPoint.x;
     
     const selectedIds: string[] = [];
-    
+
     for (const entity of entities) {
       if (isCrossing) {
         // Crossing: select if any part of the entity is inside
@@ -136,7 +136,7 @@ export class UnifiedEntitySelection {
         }
       }
     }
-    
+
     return selectedIds;
   }
   

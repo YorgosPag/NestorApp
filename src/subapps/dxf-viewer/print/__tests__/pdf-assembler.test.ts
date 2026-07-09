@@ -20,6 +20,7 @@ jest.mock('jspdf', () => {
 });
 
 const CAPTURE: CaptureResult = {
+  kind: 'raster',
   dataUrl: 'data:image/png;base64,AAAA',
   widthPx: 1000,
   heightPx: 700,
@@ -75,5 +76,35 @@ describe('assemblePrintPdf', () => {
       'FAST',
     );
     expect(blob).toBeInstanceOf(Blob);
+  });
+
+  // ADR-608 — vector capture invokes its draw closure with the printable area
+  // instead of rasterising a PNG.
+  it('draws a vector capture into the printable area and skips addImage', async () => {
+    const draw = jest.fn();
+    const vectorCapture: CaptureResult = {
+      kind: 'vector',
+      appliedScaleDenominator: 50,
+      draw,
+    };
+    await assemblePrintPdf({
+      capture: vectorCapture,
+      paper: { size: 'A3', orientation: 'landscape' },
+      marginMm: 10,
+      includeTitleBlock: false,
+    });
+    const ctor = jsPDF as unknown as jest.Mock;
+    const instance = ctor.mock.results[0].value;
+    expect(draw).toHaveBeenCalledTimes(1);
+    expect(draw).toHaveBeenCalledWith(
+      instance,
+      expect.objectContaining({
+        xMm: expect.any(Number),
+        yMm: expect.any(Number),
+        widthMm: expect.any(Number),
+        heightMm: expect.any(Number),
+      }),
+    );
+    expect(instance.addImage).not.toHaveBeenCalled();
   });
 });

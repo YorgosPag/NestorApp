@@ -18,6 +18,7 @@ import {
 import type {
   FitMode,
   OutputTarget,
+  PrintOutputMode,
   PrintPlotStyle,
   PrintSource,
 } from '../../../print/config/paper-types';
@@ -26,6 +27,9 @@ import { PrintRadioGroup } from './PrintRadioGroup';
 
 /** ADR-454 — plot-style options offered in the dialog (2D only). */
 const PLOT_STYLES: readonly PrintPlotStyle[] = ['colour', 'monochrome', 'grayscale', 'by-pen'];
+
+/** ADR-604 — output-encoding options offered in the dialog (2D only). */
+const OUTPUT_MODES: readonly PrintOutputMode[] = ['vector', 'raster'];
 
 interface PrintOutputControlsProps {
   source: PrintSource;
@@ -37,6 +41,8 @@ interface PrintOutputControlsProps {
   onScaleChange: (n: number) => void;
   plotStyle: PrintPlotStyle;
   onPlotStyleChange: (p: PrintPlotStyle) => void;
+  outputMode: PrintOutputMode;
+  onOutputModeChange: (m: PrintOutputMode) => void;
   target: OutputTarget;
   onTargetChange: (t: OutputTarget) => void;
   includeTitleBlock: boolean;
@@ -49,6 +55,7 @@ export function PrintOutputControls(props: PrintOutputControlsProps): React.JSX.
     source, onSourceChange, canPrint3d,
     fitMode, onFitModeChange, scaleDenominator, onScaleChange,
     plotStyle, onPlotStyleChange,
+    outputMode, onOutputModeChange,
     target, onTargetChange,
     includeTitleBlock, onIncludeTitleBlockChange,
   } = props;
@@ -124,6 +131,32 @@ export function PrintOutputControls(props: PrintOutputControlsProps): React.JSX.
           </Select>
           <p className="text-xs text-muted-foreground">
             {t('print.plotStyle.hint')}
+          </p>
+        </div>
+      )}
+
+      {!is3d && (
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">
+            {t('print.outputMode.label')}
+          </label>
+          <Select
+            value={outputMode}
+            onValueChange={(v) => onOutputModeChange(v as PrintOutputMode)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {OUTPUT_MODES.map((mode) => (
+                <SelectItem key={mode} value={mode}>
+                  {t(`print.outputMode.${mode}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {t('print.outputMode.hint')}
           </p>
         </div>
       )}

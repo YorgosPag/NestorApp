@@ -377,6 +377,25 @@ export function convertDxfEntityToEntityModel(entity: DxfEntityUnion): EntityMod
         position: a.position, kind: a.kind, symbolId: a.symbolId, sizeMm: a.sizeMm, rotation: a.rotation,
       } as unknown as EntityModel;
     }
+    // ADR-583 Φ2 — graphic scale-bar (sibling of annotation-symbol): a lightweight
+    // DIRECT entity carrying the flat span/annotative params at top level. Without this
+    // case it fell to `default`, which strips them → BoundsCalculator.calculateScaleBarBounds
+    // reads undefined.position → the bar never enters the spatial index → hover-highlight +
+    // click-selection silently fail (it stayed only MARQUEE-selectable via the Twin-B bounds).
+    case 'scale-bar': {
+      type ScaleBarLike = {
+        position?: { x: number; y: number }; angleRad?: number; length?: number; unit?: string;
+        divisions?: number; subdivisions?: number; style?: string;
+        barHeightMm?: number; labelHeightMm?: number; labelPlacement?: string;
+      };
+      const s = entity as unknown as ScaleBarLike;
+      return {
+        ...baseModel, type: 'scale-bar',
+        position: s.position, angleRad: s.angleRad, length: s.length, unit: s.unit,
+        divisions: s.divisions, subdivisions: s.subdivisions, style: s.style,
+        barHeightMm: s.barHeightMm, labelHeightMm: s.labelHeightMm, labelPlacement: s.labelPlacement,
+      } as unknown as EntityModel;
+    }
     default: {
       return { ...baseModel } as unknown as EntityModel;
     }

@@ -47,8 +47,14 @@ export async function assemblePrintPdf(input: PrintAssemblyInput): Promise<Blob>
   await registerGreekFont(pdf);
 
   const area = resolvePrintableAreaMm(paper, marginMm);
-  const rect = computeImagePlacementMm(capture.widthPx, capture.heightPx, area);
-  pdf.addImage(capture.dataUrl, 'PNG', rect.x, rect.y, rect.w, rect.h, undefined, 'FAST');
+  // ADR-608 — vector capture emits native jsPDF primitives into the area; raster
+  // capture places its PNG. Both land the drawing in the same printable rectangle.
+  if (capture.kind === 'vector') {
+    capture.draw(pdf, area);
+  } else {
+    const rect = computeImagePlacementMm(capture.widthPx, capture.heightPx, area);
+    pdf.addImage(capture.dataUrl, 'PNG', rect.x, rect.y, rect.w, rect.h, undefined, 'FAST');
+  }
 
   // Title block overlays the bottom-right corner (drawing untouched → 1:N safe).
   if (input.includeTitleBlock && input.titleBlock) {
