@@ -262,3 +262,8 @@ ground truth. Αποκωδικοποίηση επιβεβαίωσε/διόρθω
   drop, inward-direction immunity. **Συνολικό regression lock: 633/633 GREEN** (55 suites) · jscpd clean. Καλυμμένες
   βαθμονομήσεις: 4 χρώματα, tektonArrow2 (mirror v2[0]=1 / outline solid=false / tick 0.16 / leader 0.30 /
   dimLineInset 2.5), dimasz 1.2, dimscale 300 (MAG 3), dimtad centered, dimtxt ÷3, inset/no-stubs/inward-dir.
+- **2026-07-09** — **ADR-608: μίκρυνση ΟΛΟΥ του συστήματος σήμανσης** (Giorgio: «μίκρυνε όλο το σύστημα χωρίς
+  να αλλάξει το μήκος/μετρούμενη διάσταση»). Ο `dimscale` κλιμακώνει μόνο τη σήμανση (βέλη/κείμενο/leaders/κενά)·
+  η γεωμετρία (defPoints/foot1-foot2) ΔΕΝ επηρεάζεται. Fix: `TEK_DIM_ANNOTATION_MAG` 3 → **1.5** (dimscale
+  300→150) → όλο το σύστημα στο μισό, ίδιες αναλογίες, ίδιο μήκος. Tunable (πρώτη δοκιμή). Test dimscale 150.
+  **12/12 mapper GREEN** · jscpd clean.
