@@ -187,6 +187,7 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // ADR-189 B37: Batch guide from selection
   'guide-from-selection': { id: 'guide-from-selection', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false },
   'stair': { id: 'stair', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false }, // ADR-358 Phase 0
+  'stair-from-region': { id: 'stair-from-region', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: false, preservesOverlayMode: false }, // ADR-619 — «Σκάλα από περιοχή»: free closed polygon sketch → shape-driven stair type (mirror 'stair')
   'wall':  { id: 'wall',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true,  preservesOverlayMode: false }, // ADR-363 Phase 1 — continuous draw (chain walls)
   'wall-on-entity': { id: 'wall-on-entity', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-363 Phase 1J — wall on existing 2D entity (pick line/rectangle)
   'wall-region-lines': { id: 'wall-region-lines', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-419 — «Τοίχος από 4 γραμμές» (split του wall-in-region)
@@ -346,7 +347,7 @@ export const TOOL_CREATES_ENTITY: Partial<Record<ToolType, RenderableEntityType>
   'text': 'text', 'mtext': 'mtext',
   'xline': 'xline', 'ray': 'ray',
   // ── BIM structural ──
-  'stair': 'stair',
+  'stair': 'stair', 'stair-from-region': 'stair',
   'wall': 'wall', 'wall-on-entity': 'wall', 'wall-region-lines': 'wall',
   'wall-region-inside': 'wall', 'wall-region-box': 'wall', 'wall-from-perimeter': 'wall',
   'column': 'column', 'column-from-perimeter': 'column', 'column-discrete-from-perimeter': 'column',

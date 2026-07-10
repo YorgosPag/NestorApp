@@ -22,6 +22,14 @@ import { hexToTrueColor } from '../../utils/dxf-true-color';
 import { hexToAci } from '../../ui/text-toolbar/controls/aci-palette';
 import { radToDeg, normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
+import {
+  NESTOR_DIM_ANNOTATION_SCALE,
+  NESTOR_DIM_TEXT_HEIGHT,
+  NESTOR_DIM_ARROW_SIZE,
+  NESTOR_DIM_ARROW_BLOCK,
+  NESTOR_DIM_TEXT_PLACEMENT,
+  NESTOR_DIM_TEXT_FILL,
+} from '../../systems/dimensions/nestor-dim-appearance';
 import type { DimensionOverride, LinearDimensionEntity } from '../../types/dimension';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -33,61 +41,23 @@ function toScene(p: TekPoint2D, units: SceneUnits): Point2D {
 }
 
 /**
- * `end_style_res` του Τέκτονα → arrowhead block name του SSoT (`ARROWHEAD_BLOCKS`). ΜΟΝΟ
- * panel-verified τιμές — 8 = «Βέλος 2» = τριγωνικό γεμάτο = custom `tektonArrow2` (base 0.050 :
- * μήκος 0.120). Άγνωστο style → `undefined` (κληρονομεί το `dimblk` του ενεργού DimStyle).
+ * `end_style_res` του Τέκτονα → arrowhead block name (SSoT `ARROWHEAD_BLOCKS`). ΜΟΝΟ panel-verified
+ * τιμές — 8 = «Βέλος 2» = `NESTOR_DIM_ARROW_BLOCK` (tektonArrow2). Άγνωστο style → `undefined`
+ * (κληρονομεί το `dimblk` του ενεργού DimStyle).
  */
 const TEK_END_STYLE_ARROW_BLOCK: Readonly<Record<number, string>> = {
-  8: 'tektonArrow2',
+  8: NESTOR_DIM_ARROW_BLOCK,
 };
 
 /**
- * ADR-608 — **Annotation scale** (Giorgio 2026-07-09: «σαν Τέκτονας»). Οι διαστάσεις Τέκτονα
- * σχεδιάζονται σε ΠΡΑΓΜΑΤΙΚΟ μέγεθος (βέλος 0.120m, κείμενο ~0.25m) → μικροσκοπικές σε προβολή
- * κτιρίου (model-space, μικραίνουν στο zoom-out). Λύση: override `dimscale` = `TEK_RENDER_DIMSCALE
- * × TEK_DIM_ANNOTATION_MAG` → κλιμακώνει ΟΜΟΙΟΜΟΡΦΑ κείμενο + βέλος + κενά + προεκτάσεις (γνήσιο
- * annotation scale), κρατώντας ΟΛΕΣ τις αναλογίες (βάση:μήκος, text:arrow). Καθολικός συντελεστής
- * μεγέθους ΟΛΟΥ ΤΟΥ ΣΥΣΤΗΜΑΤΟΣ σήμανσης — η **μετρούμενη διάσταση (γεωμετρία/defPoints) ΔΕΝ
- * επηρεάζεται** (ο dimscale κλιμακώνει μόνο τη σήμανση). Giorgio 2026-07-09: «μίκρυνε όλο το σύστημα
- * χωρίς να αλλάξει το μήκος» → μείωση MAG. Browser-βαθμονομούμενος: άλλαξε ΜΟΝΟ το `TEK_DIM_ANNOTATION_MAG`.
- */
-const TEK_DIM_ANNOTATION_MAG = 1.5;
-
-/**
- * ADR-608 — ΡΗΤΟ ύψος κειμένου διάστασης (`dimtxt`, paper-mm· Giorgio 2026-07-10: «ύψος κειμένου
- * = 0.8»). Ξεχωριστό από τα βέλη (`dimasz` ανέπαφο)· κλιμακώνεται με το `dimscale` όπως όλα.
- * Browser-βαθμονομούμενο: νέα προτίμηση Giorgio → άλλαξε ΜΟΝΟ αυτή την τιμή.
- */
-const TEK_DIM_TEXT_HEIGHT = 0.8;
-
-/**
- * Μέγεθος βέλους «Βέλος 2» — **ΡΗΤΗ browser-βαθμονόμηση** (Giorgio 2026-07-09, step-by-step). Δύο
- * ανεξάρτητες διαστάσεις (γι' αυτό custom `tektonArrow2` block, όχι `closedFilled`):
- *  - **ΜΗΚΟΣ** (μέσο βάσης → κορυφή, εκεί που συγκλίνουν οι πλάγιες) = `TEK_ARROW_LENGTH_M` (0.120m)
- *    → εδώ, μέσω `dimasz` (block length = 1.0 unit).
- *  - **ΒΑΣΗ** (κάθετη γραμμή) = 0.050m → κωδικοποιημένη στο `TEKTON_ARROW2_HALF_WIDTH` του block
- *    (`dim-arrowhead-blocks.ts`), ΟΧΙ εδώ.
+ * Style override από τα **4 ξεχωριστά** χρώματα του Τέκτονα (panel «Εμφάνιση»): γραμμή (`<color>`),
+ * κείμενο (`<dtext_color>`), βέλη (`<ends_color>`, μπορντώ), witness (`<drv_color>`, μπλε) + τύπο άκρου
+ * (`<end_style>`→`dimblk`). Κάθε χρώμα: truecolor (ακριβές hex, wins στο render) + ACI companion
+ * (nearest-match, DXF round-trip)· absent → line color.
  *
- * Ο renderer: length = `dimasz × dimscale × mmToSceneUnits` (scene = mm, `dimscale` = drawing scale
- * default `TEK_RENDER_DIMSCALE` 1:100, βλ. `resolveEffectiveDimscale`+`DEFAULT_DRAWING_SCALE`). Άρα
- * `dimasz(paper-mm) = length_mm / dimscale`. Νέα μέτρηση Giorgio → άλλαξε `TEK_ARROW_LENGTH_M` (μήκος)
- * ή το `TEKTON_ARROW2_HALF_WIDTH` του block (βάση).
- */
-const TEK_ARROW_LENGTH_M = 0.12;
-const TEK_RENDER_DIMSCALE = 100;
-const M_TO_MM = 1000;
-
-function resolveArrowSizeMm(): number {
-  return (TEK_ARROW_LENGTH_M * M_TO_MM) / TEK_RENDER_DIMSCALE;
-}
-
-/**
- * Style override από τα **4 ξεχωριστά** χρώματα + βέλος του Τέκτονα (panel «Εμφάνιση»):
- * γραμμή διάστασης (`<color>`), κείμενο (`<dtext_color>`), βέλη/άκρα (`<ends_color>`, μπορντώ),
- * οδηγοί/witness (`<drv_color>`, μπλε), τύπος άκρου (`<end_style>`→`dimblk`), μέγεθος βέλους (`dimasz`
- * = ρητή βαθμονόμηση) + **annotation scale** (`dimscale`, βλ. `TEK_DIM_ANNOTATION_MAG`). Κάθε χρώμα
- * παίρνει truecolor (ακριβές hex, wins στο render) + ACI companion (nearest-match, DXF round-trip).
- * Absent κανάλι → line color.
+ * Το **μέγεθος/διάταξη/μάσκα** (dimscale/dimtxt/dimasz/dimtad/dimtfill) έρχεται από την κοινή SSoT
+ * `nestor-dim-appearance` — **ΙΔΙΟ** με τις app-created διαστάσεις (μηδέν απόκλιση app ↔ Tekton).
+ * Μόνο τα ΧΡΩΜΑΤΑ διαφέρουν (εδώ ανά-record του Τέκτονα· app = πράσινη ταυτότητα Nestor).
  */
 function dimOverrides(rec: TekDimRecord): DimensionOverride {
   const lineHex = tekColorToHex(rec.color);
@@ -100,14 +70,11 @@ function dimOverrides(rec: TekDimRecord): DimensionOverride {
     dimclre: hexToAci(witnessHex), dimclreTrueColor: hexToTrueColor(witnessHex),
     dimclrt: hexToAci(textHex), dimclrtTrueColor: hexToTrueColor(textHex),
     arrowColor: hexToAci(arrowHex), arrowTrueColor: hexToTrueColor(arrowHex),
-    dimasz: resolveArrowSizeMm(),
-    dimscale: TEK_RENDER_DIMSCALE * TEK_DIM_ANNOTATION_MAG,
-    // Κείμενο ΟΜΟΑΞΩΝΙΚΟ με τη γραμμή διάστασης (κεντραρισμένο στον άξονα, όχι «above») — Giorgio.
-    dimtad: 'centered',
-    // Ρητό ύψος κειμένου (τα βέλη μένουν) — βλ. `TEK_DIM_TEXT_HEIGHT`.
-    dimtxt: TEK_DIM_TEXT_HEIGHT,
-    // Μάσκα κειμένου = ΦΟΝΤΟ ΣΧΕΔΙΟΥ (καμβάς Nestor 2Δ), ώστε το κείμενο να «κόβει» τη γραμμή — Giorgio.
-    dimtfill: 'backgroundColor',
+    dimasz: NESTOR_DIM_ARROW_SIZE,
+    dimscale: NESTOR_DIM_ANNOTATION_SCALE,
+    dimtad: NESTOR_DIM_TEXT_PLACEMENT,
+    dimtxt: NESTOR_DIM_TEXT_HEIGHT,
+    dimtfill: NESTOR_DIM_TEXT_FILL,
     ...(arrowBlock ? { dimblk: arrowBlock } : {}),
   };
 }

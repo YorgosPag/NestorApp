@@ -112,6 +112,10 @@ export type ToolType =
   | 'lasso-crop'              // Crop scene to freehand drawn polygon
   // ADR-358: Stair drawing tool (Phase 0 stub — ribbon button + hotkey wire-up only)
   | 'stair'
+  // ADR-619: «Σκάλα από περιοχή» — draw a free closed polygon around a stairwell,
+  // the polygon SHAPE determines the stair TYPE (rect→straight, L→quarter-turn/
+  // winder, U→switchback, circle→spiral). ΙΔΙΟ vertex-chain engine με το slab/column-from-polygon.
+  | 'stair-from-region'
   // ADR-363 Phase 1: BIM Wall drawing tool (parametric wall με WallDna composition)
   | 'wall'
   // ADR-363 Phase 1J: BIM Wall on existing 2D entity (pick line/rectangle → wall(s))

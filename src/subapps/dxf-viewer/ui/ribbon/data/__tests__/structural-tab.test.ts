@@ -42,8 +42,8 @@ const EXPECTED_COMMAND_KEYS = [
   // foundation (last two = «Εσχάρα από κάναβο» + «Συνδετήριες από κάναβο» actions)
   'foundation-pad', 'foundation-strip', 'foundation-tie-beam', 'foundation-strip-from-wall',
   'foundation.actions.fromGrid', 'foundation.actions.tieBeamsFromGrid',
-  // circulation
-  'stair', 'railing',
+  // circulation (ADR-619 — «Σκάλα από περιοχή»: shape-driven stair from a sketched polygon)
+  'stair', 'stair-from-region', 'railing',
   // finishes (ADR-449 PART B Slice C — «Βαφή σοβά» 2D paintbrush tool)
   'finish-paint',
 ] as const;
@@ -162,13 +162,16 @@ describe('ADR-443 — STRUCTURAL_TAB (permanent «Δομικά» tab)', () => {
     // glyph) — never shares 'bim-opening' (icon-uniqueness regression guard above).
     expect(iconByKey.get('self-opening')).toBe('bim-opening-freestanding');
     expect(iconByKey.get('stair')).toBe('stair');
+    // ADR-619 — reuses the pre-existing (previously unused) 'stair-ushape' token,
+    // distinct from the line-based 'stair' tool's glyph (icon-uniqueness guard above).
+    expect(iconByKey.get('stair-from-region')).toBe('stair-ushape');
     expect(iconByKey.get('railing')).toBe('bim-railing');
   });
 
   it('keeps shortcuts unique across the panels', () => {
     const shortcuts = allCommands().map((c) => c.shortcut).filter((s): s is string => !!s);
     expect(new Set(shortcuts).size).toBe(shortcuts.length);
-    expect(shortcuts).toEqual(expect.arrayContaining(['W', 'CL', 'BM', 'SL', 'SO', 'OP', 'FP', 'FS', 'ST', 'RL']));
+    expect(shortcuts).toEqual(expect.arrayContaining(['W', 'CL', 'BM', 'SL', 'SO', 'OP', 'FP', 'FS', 'ST', 'SR', 'RL']));
   });
 
   it('wires the «… από κάναβο» one-shots as action buttons, not tools (foundation/column/beam)', () => {

@@ -225,6 +225,13 @@ export const STRUCTURAL_TAB: RibbonTab = {
           isInFlyout: false,
           buttons: [
             toolBtn('structuralTab.stair', 'ribbon.commands.stair', 'stair', 'stair', 'ST'),
+            // ADR-619 — «Σκάλα από περιοχή»: σχεδίαση ελεύθερου κλειστού πολυγώνου γύρω
+            // από το κλιμακοστάσιο· το ΣΧΗΜΑ του πολυγώνου καθορίζει τον ΤΥΠΟ της σκάλας
+            // (ορθογώνιο→ευθεία, Γ→με πλατύσκαλο, Π→με αναστροφή, κύκλος→ελικοειδής).
+            // Icon: 'stair-ushape' (ήδη registered, ΑΧΡΗΣΙΜΟΠΟΙΗΤΟ πριν) — reuse, όχι νέο SVG·
+            // το plain 'stair' icon παραμένει στο line-based tool ακριβώς από πάνω
+            // (icon-uniqueness guard, structural-tab.test.ts).
+            toolBtn('structuralTab.stairFromRegion', 'ribbon.commands.bim.stairFromRegion', 'stair-ushape', 'stair-from-region', 'SR'),
             toolBtn('structuralTab.railing', 'ribbon.commands.bim.railing.label', 'bim-railing', 'railing', 'RL'),
           ],
         },

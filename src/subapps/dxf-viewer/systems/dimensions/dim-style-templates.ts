@@ -16,6 +16,14 @@
  */
 
 import type { DimStyle } from '../../types/dimension';
+import {
+  NESTOR_DIM_ANNOTATION_SCALE,
+  NESTOR_DIM_TEXT_HEIGHT,
+  NESTOR_DIM_ARROW_SIZE,
+  NESTOR_DIM_ARROW_BLOCK,
+  NESTOR_DIM_TEXT_PLACEMENT,
+  NESTOR_DIM_TEXT_FILL,
+} from './nestor-dim-appearance';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Stable built-in IDs
@@ -192,6 +200,15 @@ export const NESTOR_DEFAULT_TEMPLATE: DimStyle = makeBuiltInTemplate(
     // Greek architectural: witness lines flush at the feature point, ΔΙΑΣΤΑΣΕΙΣ layer.
     dimexo: 0,
     targetLayer: 'ΔΙΑΣΤΑΣΕΙΣ',
+    // ADR-608 (Giorgio 2026-07-10) — app-created dims ΙΔΙΟ μέγεθος/σχήμα/διάταξη με τα Tekton-imported:
+    // κοινή SSoT `nestor-dim-appearance` (annotation scale/text/arrow/placement/mask). Μόνο το ΧΡΩΜΑ
+    // μένει η πράσινη ταυτότητα Nestor (πάνω). Έτσι μηδέν απόκλιση app ↔ Tekton, χωρίς διπλά magic numbers.
+    dimscale: NESTOR_DIM_ANNOTATION_SCALE,
+    dimtxt: NESTOR_DIM_TEXT_HEIGHT,
+    dimasz: NESTOR_DIM_ARROW_SIZE,
+    dimblk: NESTOR_DIM_ARROW_BLOCK,
+    dimtad: NESTOR_DIM_TEXT_PLACEMENT,
+    dimtfill: NESTOR_DIM_TEXT_FILL,
   },
 );
 

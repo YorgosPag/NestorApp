@@ -2002,6 +2002,7 @@
           "label": "Railing",
           "tooltip": "Draw a railing with 2 clicks (shortcut RL)"
         },
+        "stairFromRegion": "Stair from region",
         "finishPaint": {
           "label": "Paint Plaster",
           "tooltip": "Per-face plaster paint (Revit «Paint» pattern): activate the tool, pick a material/colour from the palette and click plaster faces of columns/beams in plan"

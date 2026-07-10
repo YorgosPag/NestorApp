@@ -295,5 +295,19 @@ ground truth. Αποκωδικοποίηση επιβεβαίωσε/διόρθω
   Fix: pub-sub `subscribeCanvasBackgroundChange` (SSoT `canvas-theme.ts`, notify στο `applyCanvasTheme`) +
   subscription στον `dxf-canvas-renderer` → `bitmapCacheRef.invalidate()` (ADR-040 pattern, ίδιο με LWDISPLAY·
   ADR-040 changelog updated). (2) Νέα θέματα καμβά **«Nestor App #1» (#1d283a, DEFAULT_THEME) + «Nestor App #2»
-  (#161a22)** — πρώτα στη λίστα (solid hex → μάσκα ταιριάζει ακριβώς). i18n el+en. ⚠️ gradient themes (Cinema 4D) — solid μάσκα δεν ταιριάζει
+  (#161a22)** — πρώτα στη λίστα (solid hex → μάσκα ταιριάζει ακριβώς). i18n el+en.
+- **2026-07-10** — **ADR-608: νέες διαστάσεις readable (default dimscale 1:100)** (Giorgio: «γιατί 0.8 Tekton
+  φαίνεται καλά αλλά 2.5 νέα μικροσκοπικό;»). Root: μέγεθος = `dimtxt × dimscale`. Tekton = baked `dimscale=150`
+  (0.8×150=120)· νέες = effective dimscale από το flaky auto drawing-scale (~5) → 2.5×5=~13 (μικροσκοπικό).
+  Πρόταση (Giorgio delegated): bake `dimscale: 100` στο `NESTOR_DEFAULT_TEMPLATE` → `resolveEffectiveDimscale`
+  το τιμά άμεσα (>1 wins), νέες = 2.5×100=250mm readable, ανεξάρτητο auto. Tekton ΑΜΕΤΑΒΛΗΤΕΣ (override 150 κερδίζει).
+  Single-field, εύκολο revert· tune αν θέλει άλλο μέγεθος. **42/42 GREEN** · jscpd clean.
+- **2026-07-10** — **ADR-608: app-created dims ΙΔΙΑ με Tekton (shared appearance SSoT)** (Giorgio: «να έρθουν
+  πιο κοντά οι διαστάσεις της εφαρμογής στις Tekton — επαγγελματική λύση, όχι μπακάλικο»). Νέα SSoT
+  `systems/dimensions/nestor-dim-appearance.ts` με τις βαθμονομημένες ΔΟΜΙΚΕΣ τιμές (dimscale 150, dimtxt 0.8,
+  dimasz 1.2, dimblk `tektonArrow2`, dimtad `centered`, dimtfill `backgroundColor`). Την καταναλώνουν **ΚΑΙ** το
+  `NESTOR_DEFAULT_TEMPLATE` (app dims) **ΚΑΙ** ο `tek-dim-to-dimension` mapper (Tekton dims) → μηδέν απόκλιση,
+  μηδέν διπλά magic numbers (SSoT· jscpd εξάλειψε το duplication). Μόνο το ΧΡΩΜΑ μένει ανά-πηγή: app = πράσινη
+  ταυτότητα Nestor (πρότερη απόφαση 2026-07-07)· Tekton = ανά-record 4-χρωμα. Regression test κλειδώνει template↔SSoT.
+  **15/15 GREEN** · jscpd clean. ⏳ Αν ο Giorgio θέλει και τα Tekton χρώματα (κίτρινο/μπορντώ/μπλε) στο default → follow-up. ⚠️ gradient themes (Cinema 4D) — solid μάσκα δεν ταιριάζει
   gradient (γνωστό όριο). **390/390 GREEN** (config+canvas) · jscpd clean.
