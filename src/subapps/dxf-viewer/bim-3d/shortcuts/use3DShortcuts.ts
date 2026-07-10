@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import { useBim3DEditStore } from '../stores/Bim3DEditStore';
+import { useStairSubElementSelectionStore } from '../../bim/stairs/stair-sub-element-selection-store';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { isTypingInFormField } from '../ui/is-typing-in-form-field';
 import {
@@ -84,6 +85,14 @@ export function use3DShortcuts({ getManager, active, onCropRegionToggle }: Use3D
         },
         onEditEscape3D: () => useBim3DEditStore.getState().deactivate(),
         onEditAxisLock3D: (axis) => useBim3DEditStore.getState().toggleAxisLock(axis),
+        // ADR-358 Q19 — stair «click-into» sub-element keys (read the store at keydown time).
+        hasStairSubSelection: useStairSubElementSelectionStore.getState().selected !== null,
+        onStairSubCycle: () => {
+          const sub = useStairSubElementSelectionStore.getState().selected;
+          if (!sub) return;
+          useStairSubElementSelectionStore.getState().cycleNext(manager.countStairSubElements(sub.stairId, sub.part));
+        },
+        onStairSubClear: () => useStairSubElementSelectionStore.getState().clear(),
       };
 
       const result = dispatchShortcut(event, ctx);

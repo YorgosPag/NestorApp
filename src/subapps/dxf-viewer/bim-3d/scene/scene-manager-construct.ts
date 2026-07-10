@@ -23,6 +23,9 @@ import { SectionSceneController } from './section-scene-controller';
 import type { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
 import { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
 import { FaceSelectionHighlighter } from '../systems/selection/FaceSelectionHighlighter'; // ADR-539 per-face overlay
+import { StairSubElementHighlighter } from '../systems/selection/StairSubElementHighlighter'; // ADR-358 Q19 per-tread/riser overlay
+import { useStairSubElementSelectionStore } from '../../bim/stairs/stair-sub-element-selection-store';
+import { useSelection3DStore } from '../stores/Selection3DStore';
 import type { ViewportCamera } from '../viewport/viewport-types';
 import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
 import { createCanonicalViewService, type CanonicalViewService } from '../viewport/CanonicalViewService';
@@ -58,6 +61,10 @@ export interface SceneManagerParts {
   readonly hoverHighlighter: BimSelectionHighlighter;
   readonly faceHighlighter: FaceSelectionHighlighter;
   readonly faceHoverHighlighter: FaceSelectionHighlighter;
+  /** ADR-358 Q19 — per-tread/riser overlay (click-into components). */
+  readonly stairSubElementHighlighter: StairSubElementHighlighter;
+  /** Teardown for the two ADR-358 store subscriptions (selection-reflect + host-lifecycle clear). */
+  readonly stairSubUnsub: () => void;
   readonly poi: ReturnType<typeof createPoi>;
   readonly gridFloor: Cinema4DGridFloor;
   readonly animationManager: AnimationManager;
@@ -89,6 +96,24 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
   const hoverHighlighter = new BimSelectionHighlighter(bimLayer.group, selectionOutlinePass, (p, o) => p.setHovered(o));
   const faceHighlighter = new FaceSelectionHighlighter(bimLayer.group);
   const faceHoverHighlighter = new FaceSelectionHighlighter(bimLayer.group, 0xffd400, 0.3); // ADR-539 Φ2 hover
+  // ADR-358 Q19 — per-tread/riser overlay. The selection SSoT is the low-freq
+  // `useStairSubElementSelectionStore`; ONE imperative subscription reflects it here (ADR-040
+  // leaf, not an orchestrator React subscription), so every mutation source (3D click, Tab/Esc,
+  // 2D canvas, lifecycle-clear) drives the visual through the single store.
+  const stairSubElementHighlighter = new StairSubElementHighlighter(bimLayer.group);
+  const stairSubReflectUnsub = useStairSubElementSelectionStore.subscribe((s) => {
+    stairSubElementHighlighter.setTarget(s.selected);
+    markDirty();
+  });
+  // ADR-358 Q19 §2γ — drop the sub-selection when its host stair leaves the whole-entity
+  // selection from ANY source (2D canvas, ribbon, 3D). clear() then re-fires the reflect sub.
+  const stairSubLifecycleUnsub = useSelection3DStore.subscribe((s) => {
+    const sub = useStairSubElementSelectionStore.getState().selected;
+    if (sub && !s.selectedBimIds.includes(sub.stairId)) {
+      useStairSubElementSelectionStore.getState().clear();
+    }
+  });
+  const stairSubUnsub = (): void => { stairSubReflectUnsub(); stairSubLifecycleUnsub(); };
 
   const poi = createPoi();
   scene.add(poi.root);
@@ -148,6 +173,7 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
 
   return {
     selectionHighlighter, hoverHighlighter, faceHighlighter, faceHoverHighlighter,
+    stairSubElementHighlighter, stairSubUnsub,
     poi, gridFloor, animationManager, canonicalViewService,
     keyboardFocusManager, focusOutlineRenderer, focusUnsub, viewCube,
     envStoreUnsub, bgModeUnsub, sectionController, waypointDragHandleRenderer,

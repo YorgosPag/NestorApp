@@ -23,6 +23,7 @@ import { useViewMode3DStore } from '../stores/ViewMode3DStore';
 import type { FloorVisMode } from '../utils/floor-visibility-state';
 import type { BuildingVisMode } from '../utils/building-visibility-state';
 import type { FaceSelectionHighlighter } from '../systems/selection/FaceSelectionHighlighter';
+import type { StairSubElementHighlighter } from '../systems/selection/StairSubElementHighlighter';
 import type { SSAOModulator } from '../lighting/ssao-modulator';
 import type { ShadowModulator } from '../lighting/shadow-modulator';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -32,6 +33,8 @@ import type { DxfOverlayFloorEntry } from '../converters/DxfToThreeConverter';
 export interface SceneSyncSideEffects {
   readonly faceHighlighter: FaceSelectionHighlighter;
   readonly faceHoverHighlighter: FaceSelectionHighlighter;
+  /** ADR-358 Q19 — re-attach the per-tread/riser overlay after the mesh rebuild. */
+  readonly stairSubElementHighlighter: StairSubElementHighlighter;
   readonly ssaoModulator: SSAOModulator;
   readonly shadowModulator: ShadowModulator;
   readonly camera: THREE.Camera;
@@ -57,12 +60,13 @@ export function buildBimSyncDeps(
 export function buildSceneSyncSideEffects(
   faceHighlighter: SceneSyncSideEffects['faceHighlighter'],
   faceHoverHighlighter: SceneSyncSideEffects['faceHoverHighlighter'],
+  stairSubElementHighlighter: SceneSyncSideEffects['stairSubElementHighlighter'],
   ssaoModulator: SceneSyncSideEffects['ssaoModulator'],
   shadowModulator: SceneSyncSideEffects['shadowModulator'],
   viewport: { readonly camera: THREE.Camera },
   markDirty: () => void,
 ): SceneSyncSideEffects {
-  return { faceHighlighter, faceHoverHighlighter, ssaoModulator, shadowModulator, camera: viewport.camera, markDirty };
+  return { faceHighlighter, faceHoverHighlighter, stairSubElementHighlighter, ssaoModulator, shadowModulator, camera: viewport.camera, markDirty };
 }
 
 /** Assemble the DXF-overlay deps bundle (converter + path-tracer + section + viewport). */
@@ -75,10 +79,11 @@ export function buildSyncDxfOverlayDeps(
   return { dxfConverter, pathTracerRenderer, sectionController, viewport };
 }
 
-/** ADR-539 — re-attach both per-face overlays after the geometry rebuild. */
+/** ADR-539 / ADR-358 Q19 — re-attach both per-face overlays + the stair sub-element overlay after rebuild. */
 function refreshFaceOverlays(fx: SceneSyncSideEffects): void {
   fx.faceHighlighter.refresh();
   fx.faceHoverHighlighter.refresh();
+  fx.stairSubElementHighlighter.refresh();
 }
 
 /** Single-floor BIM sync + ADR-366 §B.5 warm-up/shadow/dirty bookkeeping. */

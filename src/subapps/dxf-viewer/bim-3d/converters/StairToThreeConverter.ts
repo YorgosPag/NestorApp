@@ -57,15 +57,45 @@ function shapeFromPolygon(poly: Polygon3D, sceneToM: number): THREE.Shape | null
   return shape;
 }
 
+/**
+ * Build one horizontal extruded slab mesh (tread OR landing) from a flat polygon
+ * whose `z` is the walkable TOP-face elevation. ExtrudeGeometry grows local +Z →
+ * world +Y after the -90°X rotation, so the mesh occupies `[y, y + thickness]`;
+ * we drop it by `thicknessM` to seat the top face at `topZ`. Returns null for a
+ * degenerate (<3 vertex) polygon. Shared SSoT for treads + landings (ADR-584).
+ */
+function extrudeFlatSlab(
+  poly: Polygon3D,
+  sceneToM: number,
+  thicknessM: number,
+  mat: THREE.MeshStandardMaterial,
+  baseY: number,
+): THREE.Mesh | null {
+  const shape = shapeFromPolygon(poly, sceneToM);
+  if (!shape) return null;
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: thicknessM, bevelEnabled: false });
+  geo.applyMatrix4(ROT_X_NEG_90);
+  ensureWorldUvs(geo); // ADR-413 — aoMap uv2.
+  const mesh = new THREE.Mesh(geo, mat);
+  const topZ = poly[0]!.z * sceneToM;
+  mesh.position.y = baseY + topZ - thicknessM;
+  return mesh;
+}
+
 function tagMesh(
   mesh: THREE.Mesh,
   stair: StairEntity,
   component: string,
   levelId?: string,
+  componentIndex?: number,
 ): THREE.Mesh {
   mesh.userData['bimId'] = stair.id;
   mesh.userData['bimType'] = 'stair';
   mesh.userData['stairComponent'] = component;
+  // ADR-358 Q19 — per-tread/per-riser sub-element picking (click-into). 0-based index
+  // into the component's geometry array; MATCHES `resolveStairMaterial`'s `treadIndex`
+  // convention, so a picked tread and its material override read the SAME key.
+  if (componentIndex !== undefined) mesh.userData['stairComponentIndex'] = componentIndex;
   if (levelId !== undefined) mesh.userData['levelId'] = levelId;
   mesh.castShadow = true;
   mesh.receiveShadow = true;
@@ -89,21 +119,10 @@ function buildTreadMeshes(
     ...stair.geometry.treadsAboveCut,
   ];
   for (let i = 0; i < allTreads.length; i++) {
-    const poly = allTreads[i]!;
-    const shape = shapeFromPolygon(poly, sceneToM);
-    if (!shape) continue;
-    const geo = new THREE.ExtrudeGeometry(shape, { depth: thicknessM, bevelEnabled: false });
-    geo.applyMatrix4(ROT_X_NEG_90);
-    ensureWorldUvs(geo); // ADR-413 — aoMap uv2.
     const mat = resolveStairMaterial(stair, 'stair-tread', i);
-    const mesh = new THREE.Mesh(geo, mat);
-    // Polygon z = top-face elevation (walkable surface). ExtrudeGeometry extrudes
-    // in local +Z; after -90° X rotation this becomes world +Y. So mesh occupies
-    // [position.y, position.y + thicknessM]. To put the top face at topZ we
-    // translate the mesh DOWN by thicknessM.
-    const topZ = poly[0]!.z * sceneToM;
-    mesh.position.y = baseY + topZ - thicknessM;
-    const tagged = tagMesh(mesh, stair, 'tread', levelId);
+    const mesh = extrudeFlatSlab(allTreads[i]!, sceneToM, thicknessM, mat, baseY);
+    if (!mesh) continue;
+    const tagged = tagMesh(mesh, stair, 'tread', levelId, i);
     attachStairEdges(tagged, 'treads');
     out.push(tagged);
   }
@@ -123,10 +142,11 @@ function buildRiserMeshes(
   const riseM = stair.params.rise * sceneToM;
   const thicknessM = DEFAULT_RISER_THICKNESS_MM * MM_TO_M;
   const mat = resolveStairMaterial(stair, 'stair-riser');
-  for (const seg of stair.geometry.risers) {
-    const mesh = buildRiserBox(seg, sceneToM, riseM, thicknessM, mat, baseY);
+  const risers = stair.geometry.risers;
+  for (let i = 0; i < risers.length; i++) {
+    const mesh = buildRiserBox(risers[i]!, sceneToM, riseM, thicknessM, mat, baseY);
     if (mesh) {
-      const tagged = tagMesh(mesh, stair, 'riser', levelId);
+      const tagged = tagMesh(mesh, stair, 'riser', levelId, i);
       attachStairEdges(tagged, 'risers');
       out.push(tagged);
     }
@@ -289,15 +309,9 @@ function buildLandingMeshes(
   const thicknessM = DEFAULT_LANDING_THICKNESS_MM * MM_TO_M;
   const mat = resolveStairMaterial(stair, 'stair-landing');
   for (const poly of stair.geometry.landings) {
-    const shape = shapeFromPolygon(poly, sceneToM);
-    if (!shape) continue;
-    const geo = new THREE.ExtrudeGeometry(shape, { depth: thicknessM, bevelEnabled: false });
-    geo.applyMatrix4(ROT_X_NEG_90);
-    ensureWorldUvs(geo); // ADR-413 — aoMap uv2.
-    const mesh = new THREE.Mesh(geo, mat);
-    // Same convention as treads: poly.z = walkable top face. Translate DOWN.
-    const topZ = poly[0]!.z * sceneToM;
-    mesh.position.y = baseY + topZ - thicknessM;
+    // Same convention as treads: poly.z = walkable top face (shared SSoT extrude, ADR-584).
+    const mesh = extrudeFlatSlab(poly, sceneToM, thicknessM, mat, baseY);
+    if (!mesh) continue;
     const tagged = tagMesh(mesh, stair, 'landing', levelId);
     // landing has no canonical subcategory in ADR-377 taxonomy → parent stair style.
     attachStairEdges(tagged);

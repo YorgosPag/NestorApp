@@ -19,6 +19,18 @@ export interface RaycastHit {
    * `userData.faceKeyByMaterialIndex`. Absent on legacy single-material meshes.
    */
   readonly faceKey?: string;
+  /**
+   * ADR-358 Q19 — present only on a STAIR sub-element hit (tread/riser/stringer/…):
+   * `userData.stairComponent` of the picked mesh. Enables «click-into components»
+   * per-tread selection without exploding the stair into entities.
+   */
+  readonly stairPart?: string;
+  /**
+   * ADR-358 Q19 — 0-based index of the picked stair sub-element within its geometry
+   * array (`userData.stairComponentIndex`), matching `resolveStairMaterial`'s
+   * `treadIndex`. Present with `stairPart` on tread/riser hits.
+   */
+  readonly stairSubIndex?: number;
 }
 
 const _raycaster = new THREE.Raycaster();
@@ -51,6 +63,45 @@ export function clientToNdc(domElement: HTMLElement, clientX: number, clientY: n
 }
 
 /**
+ * SSoT preamble for every cursor raycast: client px → NDC → set the shared
+ * `_raycaster` from the camera → return the depth-sorted intersections against
+ * `group`'s children. Returns null ONLY when the dom rect has zero area (element
+ * not laid out); a valid-but-empty ray yields `[]`. Reuses the module singletons
+ * (`_raycaster`, `_ndc`) — no per-call allocation — and leaves `_raycaster.ray`
+ * set for callers that need the plane-fallback ray afterwards.
+ */
+function castThroughCursor(
+  group: THREE.Group,
+  camera: THREE.Camera,
+  domElement: HTMLElement,
+  clientX: number,
+  clientY: number,
+): THREE.Intersection[] | null {
+  const ndc = clientToNdc(domElement, clientX, clientY);
+  if (!ndc) return null;
+  _raycaster.setFromCamera(ndc, camera);
+  return _raycaster.intersectObjects(group.children, true);
+}
+
+/**
+ * Walk up the parent chain from a hit object to the mesh tagged (by `tagMesh`)
+ * with both `bimId` and `bimType`; returns the tagged object + ids, or null when
+ * no ancestor is a BIM entity (helper / untagged mesh).
+ */
+function resolveTaggedBim(
+  from: THREE.Object3D,
+): { readonly obj: THREE.Object3D; readonly bimId: string; readonly bimType: string } | null {
+  let obj: THREE.Object3D | null = from;
+  while (obj) {
+    const bimId = obj.userData['bimId'] as string | undefined;
+    const bimType = obj.userData['bimType'] as string | undefined;
+    if (bimId && bimType) return { obj, bimId, bimType };
+    obj = obj.parent;
+  }
+  return null;
+}
+
+/**
  * Raycast against all direct children of `group` (BimSceneLayer meshes).
  * Uses the renderer domElement bounding rect for client → NDC conversion.
  */
@@ -61,23 +112,30 @@ export function raycastBimGroup(
   clientX: number,
   clientY: number,
 ): RaycastHit | null {
-  const ndc = clientToNdc(domElement, clientX, clientY);
-  if (!ndc) return null;
-
-  _raycaster.setFromCamera(ndc, camera);
-  const hits = _raycaster.intersectObjects(group.children, true);
-
+  const hits = castThroughCursor(group, camera, domElement, clientX, clientY);
+  if (!hits) return null;
   for (const hit of hits) {
-    // Walk up to the mesh that was tagged by BimToThreeConverter.tagMesh()
-    let obj: THREE.Object3D | null = hit.object;
-    while (obj) {
-      const bimId = obj.userData['bimId'] as string | undefined;
-      const bimType = obj.userData['bimType'] as string | undefined;
-      if (bimId && bimType) return { bimId, bimType };
-      obj = obj.parent;
+    const tagged = resolveTaggedBim(hit.object);
+    if (tagged) {
+      return { bimId: tagged.bimId, bimType: tagged.bimType, ...stairSubElementFields(tagged.obj) };
     }
   }
   return null;
+}
+
+/**
+ * ADR-358 Q19 — read the optional stair sub-element tag (`stairComponent` +
+ * `stairComponentIndex`) off the tagged mesh, enabling «click-into components»
+ * per-tread picking. Returns `{}` for non-stair meshes (no keys spread onto the
+ * `RaycastHit`).
+ */
+function stairSubElementFields(
+  obj: THREE.Object3D,
+): { stairPart?: string; stairSubIndex?: number } {
+  const stairPart = obj.userData['stairComponent'] as string | undefined;
+  if (stairPart === undefined) return {};
+  const idx = obj.userData['stairComponentIndex'] as number | undefined;
+  return idx === undefined ? { stairPart } : { stairPart, stairSubIndex: idx };
 }
 
 /** ADR-040 Φ-3D-pointer — one-pass result: hover entity (nullable) + front-most world point. */
@@ -106,12 +164,8 @@ export function raycastBimHitAndWorld(
   clientX: number,
   clientY: number,
 ): BimHitAndWorld | null {
-  const ndc = clientToNdc(domElement, clientX, clientY);
-  if (!ndc) return null;
-
-  _raycaster.setFromCamera(ndc, camera);
-  const hits = _raycaster.intersectObjects(group.children, true);
-  if (hits.length === 0) return null;
+  const hits = castThroughCursor(group, camera, domElement, clientX, clientY);
+  if (!hits || hits.length === 0) return null;
 
   // Front-most hit point (intersectObjects is distance-sorted ascending).
   const worldPoint = hits[0].point.clone();
@@ -120,14 +174,8 @@ export function raycastBimHitAndWorld(
   let bimId: string | null = null;
   let bimType: string | null = null;
   for (const hit of hits) {
-    let obj: THREE.Object3D | null = hit.object;
-    while (obj) {
-      const id = obj.userData['bimId'] as string | undefined;
-      const type = obj.userData['bimType'] as string | undefined;
-      if (id && type) { bimId = id; bimType = type; break; }
-      obj = obj.parent;
-    }
-    if (bimId) break;
+    const tagged = resolveTaggedBim(hit.object);
+    if (tagged) { bimId = tagged.bimId; bimType = tagged.bimType; break; }
   }
   return { bimId, bimType, worldPoint };
 }
@@ -151,25 +199,13 @@ export function raycastBimFace(
   clientX: number,
   clientY: number,
 ): RaycastHit | null {
-  const ndc = clientToNdc(domElement, clientX, clientY);
-  if (!ndc) return null;
-
-  _raycaster.setFromCamera(ndc, camera);
-  const hits = _raycaster.intersectObjects(group.children, true);
-
   let entityFallback: RaycastHit | null = null;
-  for (const hit of hits) {
+  // `?? []` — a bad dom rect (null) yields no hits, so we return the null fallback below.
+  for (const hit of castThroughCursor(group, camera, domElement, clientX, clientY) ?? []) {
     // Walk up to the tagged mesh (mirror raycastBimGroup) to resolve bimId/bimType.
-    let obj: THREE.Object3D | null = hit.object;
-    let bimId: string | undefined;
-    let bimType: string | undefined;
-    while (obj) {
-      const id = obj.userData['bimId'] as string | undefined;
-      const type = obj.userData['bimType'] as string | undefined;
-      if (id && type) { bimId = id; bimType = type; break; }
-      obj = obj.parent;
-    }
-    if (!bimId || !bimType) continue;
+    const tagged = resolveTaggedBim(hit.object);
+    if (!tagged) continue;
+    const { bimId, bimType } = tagged;
     // ADR-539 — faceKey from the hit mesh's group→materialIndex map (faced prism only).
     const faceKeys = hit.object.userData['faceKeyByMaterialIndex'] as readonly string[] | undefined;
     const matIndex = hit.face?.materialIndex;
@@ -194,11 +230,8 @@ export function raycastWorldPoint(
   clientX: number,
   clientY: number,
 ): THREE.Vector3 | null {
-  const ndc = clientToNdc(domElement, clientX, clientY);
-  if (!ndc) return null;
-
-  _raycaster.setFromCamera(ndc, camera);
-  const hits = _raycaster.intersectObjects(group.children, true);
+  const hits = castThroughCursor(group, camera, domElement, clientX, clientY);
+  if (!hits) return null;
   // intersectObjects returns hits sorted by distance ascending — first = closest.
   return hits.length > 0 ? hits[0].point.clone() : null;
 }
@@ -225,11 +258,9 @@ export function raycastWorldPointOrPlane(
   fallbackThrough: THREE.Vector3,
   groundY: number | null = null,
 ): THREE.Vector3 | null {
-  const ndc = clientToNdc(domElement, clientX, clientY);
-  if (!ndc) return null;
-
-  _raycaster.setFromCamera(ndc, camera);
-  const hits = _raycaster.intersectObjects(group.children, true);
+  // castThroughCursor also leaves `_raycaster.ray` set for the plane fallbacks below.
+  const hits = castThroughCursor(group, camera, domElement, clientX, clientY);
+  if (!hits) return null;
   if (hits.length > 0) return hits[0].point.clone();
 
   // (1) DXF / floor-plan click → intersect the real horizontal floor plane.

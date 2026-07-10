@@ -16,6 +16,8 @@ import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
 import { raycastBimGroup, raycastBimFace, raycastWorldPointOrPlane, type RaycastHit } from '../systems/raycaster/BimEntityRaycaster';
 import { BimSelectionHighlighter } from '../systems/selection/BimSelectionHighlighter';
 import { FaceSelectionHighlighter } from '../systems/selection/FaceSelectionHighlighter'; // ADR-539 per-face overlay
+import { StairSubElementHighlighter, countStairSubElementMeshes } from '../systems/selection/StairSubElementHighlighter'; // ADR-358 Q19 per-tread/riser overlay
+import type { StairSubPart } from '../../bim/stairs/stair-sub-element-selection-store';
 import { useSelection3DStore } from '../stores/Selection3DStore';
 import type { FloorVisMode } from '../utils/floor-visibility-state';
 import type { BuildingVisMode } from '../utils/building-visibility-state';
@@ -70,6 +72,10 @@ export class ThreeJsSceneManager {
   readonly hoverHighlighter: BimSelectionHighlighter;
   readonly faceHighlighter: FaceSelectionHighlighter;
   readonly faceHoverHighlighter: FaceSelectionHighlighter;
+  /** ADR-358 Q19 — per-tread/riser overlay (click-into components). */
+  readonly stairSubElementHighlighter: StairSubElementHighlighter;
+  /** ADR-358 Q19 — teardown for the two sub-element store subscriptions. */
+  private readonly stairSubUnsub: () => void;
   private readonly viewCube: ViewCubeEngine;
   private readonly poi: ReturnType<typeof createPoi>;
   private readonly sun: THREE.DirectionalLight;
@@ -162,6 +168,7 @@ export class ThreeJsSceneManager {
     });
     this.selectionHighlighter = parts.selectionHighlighter; this.hoverHighlighter = parts.hoverHighlighter;
     this.faceHighlighter = parts.faceHighlighter; this.faceHoverHighlighter = parts.faceHoverHighlighter;
+    this.stairSubElementHighlighter = parts.stairSubElementHighlighter; this.stairSubUnsub = parts.stairSubUnsub;
     this.poi = parts.poi; this.gridFloor = parts.gridFloor;
     this.animationManager = parts.animationManager; this.canonicalViewService = parts.canonicalViewService;
     this.keyboardFocusManager = parts.keyboardFocusManager; this.focusOutlineRenderer = parts.focusOutlineRenderer;
@@ -303,7 +310,7 @@ export class ThreeJsSceneManager {
 
   /** ADR-366 §B.5 — post-sync side-effect subsystems handed to scene-manager-sync. */
   private syncSideEffects(): SceneSyncSideEffects {
-    return buildSceneSyncSideEffects(this.faceHighlighter, this.faceHoverHighlighter, this.ssaoModulator, this.shadowModulator, this.viewport, () => this.markSceneDirty());
+    return buildSceneSyncSideEffects(this.faceHighlighter, this.faceHoverHighlighter, this.stairSubElementHighlighter, this.ssaoModulator, this.shadowModulator, this.viewport, () => this.markSceneDirty());
   }
 
   /** ADR-399 Phase B — build the whole building stacked by elevation ("Όλοι οι όροφοι"). */
@@ -382,6 +389,9 @@ export class ThreeJsSceneManager {
   /** ADR-539 Φ2 — yellow hover preview on the face under the cursor / drag (Polygon Mode). */
   setHoveredFace(bimId: string | null, faceKey: string | null): void { if (!this.disposed) { this.faceHoverHighlighter.setTarget(bimId, faceKey); this.markSceneDirty(); } }
 
+  /** ADR-358 Q19 — number of tagged tread/riser meshes of a stair (Tab-cycle wraparound). */
+  countStairSubElements(stairId: string, part: StairSubPart): number { return this.disposed ? 0 : countStairSubElementMeshes(this.bimLayer.group, stairId, part); }
+
   /**
    * DXF overlay floor elevation (Y, metres) or null when no DXF is loaded — the horizontal
    * plane where the DXF wireframe lives. SSoT for both the wheel-zoom anchor (`resolveSurfacePoint`)
@@ -458,6 +468,7 @@ export class ThreeJsSceneManager {
     if (this.disposed) return;
     this.disposed = true;
     this.faceHighlighter.dispose(); this.faceHoverHighlighter.dispose(); this.dxfBackdrop.dispose(); // ADR-539 + ADR-516 Phase 2 — release face overlays + backdrop cache.
+    this.stairSubUnsub(); this.stairSubElementHighlighter.dispose(); // ADR-358 Q19 — drop store subs + release the sub-element overlay.
     this.gridFloor.dispose(); // ADR-558 — unregister overlay + free grid geometry/material.
     // ADR-040 Phase XXIII — no rafHandle: scheduler unregister happens in BimViewport3D
     // BEFORE dispose() is invoked, guaranteeing no in-flight tick can race with teardown.

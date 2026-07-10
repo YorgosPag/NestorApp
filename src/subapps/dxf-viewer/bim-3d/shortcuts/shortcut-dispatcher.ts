@@ -72,6 +72,12 @@ export interface ShortcutDispatchContext {
   readonly onEditEscape3D?: () => void;
   /** ADR-402 §Sub-Phase 2 — X/Z toggle the floor-plane axis lock during edit. */
   readonly onEditAxisLock3D?: (axis: 'X' | 'Z') => void;
+  /** ADR-358 Q19 — true while a stair tread/riser sub-element is selected (click-into). */
+  readonly hasStairSubSelection?: boolean;
+  /** ADR-358 Q19 — Tab cycles to the next tread/riser of the drilled-into stair. */
+  readonly onStairSubCycle?: () => void;
+  /** ADR-358 Q19 — Escape steps OUT of the sub-element (back to the whole stair). */
+  readonly onStairSubClear?: () => void;
 }
 
 export interface DispatchResult {
@@ -106,6 +112,11 @@ export function dispatchShortcut(
   if (ctx.is3D) {
     const edit = dispatchEditKeys(event, ctx);
     if (edit) return edit;
+    // ADR-358 Q19 — while drilled INTO a stair sub-element, Tab cycles treads/risers and
+    // Escape steps back out. Runs BEFORE the focus branch so it wins Tab (`focusNext`) and
+    // Escape (`focusClear`); with no sub-selection it falls through unchanged.
+    const stairSub = dispatchStairSubKeys(event, ctx);
+    if (stairSub) return stairSub;
   }
 
   // ── Branch 1: 3D shortcut match ───────────────────────────────────────────
@@ -234,6 +245,36 @@ function dispatchEditKeys(
 }
 
 // ============================================================================
+// 🪜 INTERNAL — STAIR SUB-ELEMENT KEYS (ADR-358 Q19 «click-into components»)
+// ============================================================================
+
+/**
+ * Route the sub-element keys while a stair tread/riser is selected (all plain, no modifier
+ * except Tab which ignores Shift — the sub-store cycles forward only):
+ *   Tab      → cycle to the next tread/riser of the drilled-into stair.
+ *   Escape   → step OUT one level (back to the whole stair).
+ *
+ * Returns a DispatchResult when consumed, or null to fall through (no sub-selection, or a
+ * modifier the sub-element mode does not own). Uses `event.code` (layout-independent).
+ */
+function dispatchStairSubKeys(
+  event: KeyboardEvent,
+  ctx: ShortcutDispatchContext,
+): DispatchResult | null {
+  if (!ctx.hasStairSubSelection) return null;
+  if (event.ctrlKey || event.altKey || event.metaKey) return null;
+  if (event.code === 'Tab') {
+    ctx.onStairSubCycle?.();
+    return HANDLED;
+  }
+  if (event.code === 'Escape' && !event.shiftKey) {
+    ctx.onStairSubClear?.();
+    return HANDLED;
+  }
+  return null;
+}
+
+// ============================================================================
 // 🖐️ PAN STEP HELPER (exposed for ThreeJsSceneManager direction → dx/dy)
 // ============================================================================
 
@@ -287,4 +328,5 @@ export const _internals = {
   match2DOnlyDrawingTool,
   dispatchMatched3D,
   dispatchEditKeys,
+  dispatchStairSubKeys,
 } as const;

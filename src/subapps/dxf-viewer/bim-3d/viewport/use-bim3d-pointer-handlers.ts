@@ -26,6 +26,11 @@ import { pickDxfEntityAcrossFloors } from '../grips/dxf-wireframe-hit-test';
 // ADR-537 δ — pick over the active floor scope (single active floor, or every stacked floor).
 import { getDxfFloorScope } from '../scene/dxf-3d-floor-scope';
 import { applyBimHover } from '../scene/scene-manager-actions';
+// ADR-358 Q19 — per-tread/per-riser «click-into» sub-element selection (SSoT store, 2D+3D).
+import {
+  useStairSubElementSelectionStore,
+  isStairSubPart,
+} from '../../bim/stairs/stair-sub-element-selection-store';
 import type { ThreeJsSceneManager } from '../scene/ThreeJsSceneManager';
 import { DXF_TIMING } from '../../config/dxf-timing';
 // ADR-040 Φ-3D-pointer — hover+snap pick decoupled to a RAF slot (mirror the 2D snap-scheduler).
@@ -110,8 +115,29 @@ export function useBim3DPointerHandlers(
       // ADR-537 — a BIM pick wins; clear any unified DXF selection so the single grip
       // overlay is exclusively BIM's.
       SelectedEntitiesStore.clearByType('dxf-entity');
-      if (e.shiftKey) manager.toggleBimEntity(hit.bimId);
-      else manager.selectBimEntity(hit.bimId);
+      const subStore = useStairSubElementSelectionStore.getState();
+      if (e.shiftKey) {
+        subStore.clear(); // ADR-358 — multi-select never enters a sub-element.
+        manager.toggleBimEntity(hit.bimId);
+        return;
+      }
+      // ADR-358 Q19 — «click-into»: a 2nd plain click on the ALREADY-sole-selected stair,
+      // over a tagged tread/riser, selects that sub-element instead of re-selecting the
+      // whole stair (Revit component selection). The stair stays the selected host.
+      const sole = useSelection3DStore.getState().selectedBimIds;
+      const alreadySole = sole.length === 1 && sole[0] === hit.bimId;
+      if (
+        hit.bimType === 'stair' &&
+        alreadySole &&
+        isStairSubPart(hit.stairPart) &&
+        hit.stairSubIndex !== undefined
+      ) {
+        subStore.selectSub({ stairId: hit.bimId, part: hit.stairPart, index: hit.stairSubIndex });
+        return;
+      }
+      // 1st click (or a different entity) → whole-entity select; drop any stale sub-selection.
+      subStore.clear();
+      manager.selectBimEntity(hit.bimId);
       return;
     }
     // ADR-537 — BIM miss → try a RAW DXF entity (plan-space pick over the floor wireframe).
@@ -123,6 +149,7 @@ export function useBim3DPointerHandlers(
       ? pickDxfEntityAcrossFloors(getDxfFloorScope(), camera, dom, e.clientX, e.clientY)?.entityId ?? null
       : null;
     if (dxfId) {
+      useStairSubElementSelectionStore.getState().clear(); // ADR-358 — DXF pick exits any stair sub-selection.
       // ADR-543 — only clear the BIM selection when it actually holds something. Calling
       // clearSelection() when already empty fires the universal bridge → replaceEntitySelection([])
       // which WIPES the accumulated DXF multi-selection on every click (blocked 3D multi-select).
@@ -140,7 +167,8 @@ export function useBim3DPointerHandlers(
       });
       return;
     }
-    // Empty space → clear both selections.
+    // Empty space → clear both selections (+ any stair sub-selection).
+    useStairSubElementSelectionStore.getState().clear();
     manager.selectBimEntity(null);
     SelectedEntitiesStore.clearByType('dxf-entity');
   }, [managerRef]);
