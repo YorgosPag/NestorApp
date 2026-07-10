@@ -115,6 +115,59 @@ export function buildOpeningXMatrix(
 }
 
 /**
+ * ADR-531 Φ5b.2 — **ΑΝΤΙΣΤΡΟΦΟ** του {@link buildWallXMatrix} (import). Αποκωδικοποιεί ένα
+ * `<wall>` xmatrix → centerline άκρα + πάχος, στο **matrix-frame** (Tekton μέτρα, Y-up — ΟΧΙ
+ * scene): ο caller περνά τα start/end από το SSoT {@link tekMetersToScene} (Y-flip) όπως ΟΛΟ το
+ * υπόλοιπο import (mirror του `localPoint` στο `tek-window-symbol`). Καθαρή αντιστροφή:
+ *   (x00,x01) = διάνυσμα μήκους (E−S)·  |(x10,x11)| = πάχος·  n̂ = (x10,x11)/πάχος
+ *   start = (x20,x21) + n̂·(t/2)  (παρειά-origin → centerline)·  end = start + (E−S)
+ * Round-trip-verified έναντι του `buildWallXMatrix` (identity σε λοξό τοίχο).
+ */
+export function decodeWallXMatrix(
+  m: TekXMatrix,
+): { start: Point2D; end: Point2D; thicknessM: number } {
+  const dx = m.x00;
+  const dy = m.x01;
+  const thicknessM = Math.hypot(m.x10, m.x11) || 0;
+  const nx = thicknessM > 0 ? m.x10 / thicknessM : 0;
+  const ny = thicknessM > 0 ? m.x11 / thicknessM : 0;
+  const half = thicknessM / 2;
+  const start: Point2D = { x: m.x20 + nx * half, y: m.x21 + ny * half };
+  const end: Point2D = { x: start.x + dx, y: start.y + dy };
+  return { start, end, thicknessM };
+}
+
+/**
+ * ADR-531 Φ5b.2 — **ΑΝΤΙΣΤΡΟΦΟ** του {@link buildOpeningXMatrix} (import). Αποκωδικοποιεί ένα
+ * `<open>` xmatrix → **κέντρο** ανοίγματος + **πλάτος**, στο matrix-frame (Tekton μέτρα, Y-up):
+ *   πλάτος = |(x00,x01)| (u-άξονας)·  κέντρο = midpoint του u-span = origin + (u/2).
+ * Ο caller περνά το κέντρο από το {@link tekMetersToScene} (Y-flip) όπως το wall decode.
+ */
+export function decodeOpeningXMatrix(m: TekXMatrix): { center: Point2D; widthM: number } {
+  const widthM = Math.hypot(m.x00, m.x01) || 0;
+  const center: Point2D = { x: m.x20 + m.x00 / 2, y: m.x21 + m.x01 / 2 };
+  return { center, widthM };
+}
+
+/**
+ * ADR-531 Φ5b.5 — αποκωδικοποιεί ένα `<pillar>` (κολώνα/τοιχίο) xmatrix → **κέντρο** +
+ * **πλάτος** (u-άξονας) + **βάθος** (v-άξονας) + **γωνία** u-άξονα, στο matrix-frame (Tekton
+ * μέτρα, Y-up). Σε αντίθεση με τον τοίχο (line + πάχος), η κολώνα είναι **centered box/circle**:
+ *   width = |(x00,x01)| (u-extent)·  depth = |(x10,x11)| (v-extent)·  angle = atan2(x01,x00)
+ *   κέντρο = origin(u=0,v=0 γωνία) + u/2 + v/2   (ΙΔΙΑ [0,1]² σύμβαση με wall/opening origin)
+ * Ο caller περνά το κέντρο από το {@link tekMetersToScene} (Y-flip) και αρνείται τη γωνία (Y-down).
+ */
+export function decodePillarXMatrix(
+  m: TekXMatrix,
+): { center: Point2D; widthM: number; depthM: number; rotationRad: number } {
+  const widthM = Math.hypot(m.x00, m.x01) || 0;
+  const depthM = Math.hypot(m.x10, m.x11) || 0;
+  const center: Point2D = { x: m.x20 + (m.x00 + m.x10) / 2, y: m.x21 + (m.x01 + m.x11) / 2 };
+  const rotationRad = Math.atan2(m.x01, m.x00);
+  return { center, widthM, depthM, rotationRad };
+}
+
+/**
  * Footprint ring ενός BIM entity (κορυφές σε **scene units**, από τον γενικό export
  * extractor `extractEntityFootprintRing` — ΙΔΙΟ που τρέφει DXF/IFC) → `<point3d>` κορυφές
  * σε **world μέτρα**. Το X/Y μετατρέπεται με `metersPerSceneUnit` (ο ΙΔΙΟΣ παράγοντας με

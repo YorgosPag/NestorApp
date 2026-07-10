@@ -146,6 +146,12 @@ export interface BimRenderSettingsState extends ResolvedBimSettings {
   setAxisCutPosition: (axis: AxisCutKey, position: number) => void;
   /** ADR-455 — flip a vertical section cut's viewing side (+1/−1). Idempotent, debounced. */
   setAxisCutSign: (axis: AxisCutKey, sign: 1 | -1) => void;
+  /**
+   * ADR-531 Φ5b.3 — master view toggle «Μόνο κάτοψη DXF» (plan-lines). `true` ⇒
+   * τοίχοι/κουφώματα ζωγραφίζονται ως καθαρές γραμμές (χωρίς fill/hatch/λαβές),
+   * όπως το top-view του Τέκτονα· `false` ⇒ κανονική BIM όψη. Per-view, debounced.
+   */
+  setPlanLinesOnly: (planLinesOnly: boolean) => void;
   /** Override projection or cut color for a category (null = canvas token). */
   setObjectStyleVgColor: (
     category: BimCategory,

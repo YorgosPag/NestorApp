@@ -174,6 +174,14 @@ export interface BimRenderSettings {
   xAxisCut?: Partial<AxisCutSetting>;
   /** ADR-455 — vertical section cut along world DXF Y. Absent ⇒ off. Per-view. */
   yAxisCut?: Partial<AxisCutSetting>;
+  /**
+   * ADR-531 Φ5b.3 — «Μόνο κάτοψη DXF» (plan-lines) master view toggle. Absent ⇒
+   * `false` (OFF: οι BIM οντότητες ζωγραφίζονται κανονικά με γέμισμα/διαγράμμιση).
+   * `true` ⇒ τοίχοι/κουφώματα ζωγραφίζονται ως **καθαρές γραμμές** (περίγραμμα
+   * παρειών κομμένο στα ανοίγματα + σύμβολο πόρτας/παραθύρου), όπως το top-view του
+   * Τέκτονα — χωρίς fill/hatch/λαβές. ΜΙΑ οντότητα, δύο όψεις (Revit-grade). Per-view.
+   */
+  planLinesOnly?: boolean;
 }
 
 export interface ResolvedBimSettings {
@@ -208,6 +216,8 @@ export interface ResolvedBimSettings {
   xAxisCut: AxisCutSetting;
   /** ADR-455 — resolved vertical Y-axis section cut (default off). */
   yAxisCut: AxisCutSetting;
+  /** ADR-531 Φ5b.3 — resolved «Μόνο κάτοψη DXF» plan-lines toggle (default OFF). */
+  planLinesOnly: boolean;
 }
 
 /** ADR-455 — merge a persisted partial axis cut with the default (off). */
@@ -271,6 +281,8 @@ export function resolveBimSettings(s?: BimRenderSettings | null): ResolvedBimSet
     // ADR-455 — absent ⇒ off (vertical X/Y section cuts are opt-in sliders).
     xAxisCut: resolveAxisCut(s?.xAxisCut),
     yAxisCut: resolveAxisCut(s?.yAxisCut),
+    // ADR-531 Φ5b.3 — absent ⇒ false (plan-lines «μόνο κάτοψη DXF» opt-in).
+    planLinesOnly: s?.planLinesOnly ?? false,
   };
 }
 

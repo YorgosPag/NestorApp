@@ -96,6 +96,19 @@ const HIDE_BIM_BUTTON: RibbonButton = {
   },
 };
 
+/** ADR-531 Φ5b.3 — «Μόνο κάτοψη DXF» plan-lines όψη (καθαρές γραμμές όπως Τέκτονας). */
+const PLAN_LINES_BUTTON: RibbonButton = {
+  type: 'widget',
+  size: 'small',
+  widgetId: 'plan-lines',
+  command: {
+    id: 'view.planLines',
+    labelKey: 'ribbon.commands.planLines.label',
+    icon: '',
+    commandKey: 'plan-lines',
+  },
+};
+
 /** ADR-408 Φ7 — show/hide derived home-run circuit wires (Revit "Wires" sub-cat). */
 const MEP_WIRE_BUTTON: RibbonButton = {
   type: 'widget',
@@ -276,7 +289,7 @@ export const BIM_GRAPHICS_PANEL: RibbonPanelDef = {
       // ADR-470 — τα «Σοβατισμένη όψη» (FINISH_SKIN_BUTTON) + «Οπλισμός»
       // (REINFORCEMENT_BUTTON) subsumed από το ενοποιημένο «Ορατότητα στοιχείων»
       // control στο VIEW_VISUAL_STYLES_PANEL (σώμα/σοβάς/οπλισμός + per-element).
-      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, MEP_WIRE_BUTTON, DRAIN_PIPE_BUTTON, COLOR_BY_SYSTEM_BUTTON, HEAT_LOAD_BUTTON, PIPE_SIZING_BUTTON, BALANCING_BUTTON, ANALYSIS_DIAGRAMS_BUTTON, DIAGRAM_COMPONENT_BUTTON, UTILIZATION_BUTTON, THERMAL_STUDY_BUTTON, DISCIPLINE_BUTTON],
+      buttons: [VISIBILITY_GRAPHICS_BUTTON, HIDE_BIM_BUTTON, PLAN_LINES_BUTTON, MEP_WIRE_BUTTON, DRAIN_PIPE_BUTTON, COLOR_BY_SYSTEM_BUTTON, HEAT_LOAD_BUTTON, PIPE_SIZING_BUTTON, BALANCING_BUTTON, ANALYSIS_DIAGRAMS_BUTTON, DIAGRAM_COMPONENT_BUTTON, UTILIZATION_BUTTON, THERMAL_STUDY_BUTTON, DISCIPLINE_BUTTON],
     },
   ],
 };

@@ -22,9 +22,12 @@ import { ShowAnalysisDiagramsToggle } from '../ShowAnalysisDiagramsToggle';
 import { ShowUtilizationToggle } from '../ShowUtilizationToggle';
 import { DisciplineVisibilityToggle } from '../DisciplineVisibilityToggle';
 import { DimRowHandlesToggle } from '../DimRowHandlesToggle';
+// ADR-531 Φ5b.3 — «Μόνο κάτοψη DXF» plan-lines toggle (ίδιο RibbonToggleWidget SSoT).
+import { PlanLinesToggle } from '../PlanLinesToggle';
 
 const MIGRATED_TOGGLES = {
   HideBimToggle,
+  PlanLinesToggle,
   MepWireToggle,
   DrainPipeToggle,
   ColorBySystemToggle,
@@ -40,9 +43,9 @@ const MIGRATED_TOGGLES = {
 };
 
 describe('ADR-599 — migrated ribbon toggles export their named component', () => {
-  it('exposes all 13 call-sites as function components', () => {
+  it('exposes all 14 call-sites as function components', () => {
     const entries = Object.entries(MIGRATED_TOGGLES);
-    expect(entries).toHaveLength(13);
+    expect(entries).toHaveLength(14);
     for (const [name, component] of entries) {
       expect(typeof component).toBe('function');
       expect(name.length).toBeGreaterThan(0);

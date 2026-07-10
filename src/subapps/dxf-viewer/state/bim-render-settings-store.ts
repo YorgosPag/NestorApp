@@ -93,6 +93,8 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       // ADR-455 — persist the vertical X/Y section cuts per-view.
       xAxisCut: state.xAxisCut,
       yAxisCut: state.yAxisCut,
+      // ADR-531 Φ5b.3 — persist the «Μόνο κάτοψη DXF» plan-lines toggle per-view.
+      planLinesOnly: state.planLinesOnly,
     };
   }
 
@@ -138,6 +140,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         cutPlaneActive: resolved.cutPlaneActive,
         xAxisCut: resolved.xAxisCut,
         yAxisCut: resolved.yAxisCut,
+        planLinesOnly: resolved.planLinesOnly,
         lastLocalMutationAt: 0,
         bimVisibilitySnapshot: null,
       });
@@ -185,23 +188,13 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
     },
 
     setObjectStyleField(category, key, pen) {
-      const state = get();
-      const prev = state.objectStyles[category];
-      const nextCat: ObjectStyle = { ...prev, [key]: pen };
-      const nextStyles = { ...state.objectStyles, [category]: nextCat };
-      set({ objectStyles: nextStyles, lastLocalMutationAt: Date.now() });
-      if (state.currentLevelId)
-        debounceWrite(state.currentLevelId, buildRaw({ ...get(), objectStyles: nextStyles }));
+      const prev = get().objectStyles[category];
+      commitObjectStyle(set, get, buildRaw, category, { ...prev, [key]: pen });
     },
 
     setObjectStyleVisibility(category, visible) {
-      const state = get();
-      const prev = state.objectStyles[category];
-      const nextCat: ObjectStyle = { ...prev, visible };
-      const nextStyles = { ...state.objectStyles, [category]: nextCat };
-      set({ objectStyles: nextStyles, lastLocalMutationAt: Date.now() });
-      if (state.currentLevelId)
-        debounceWrite(state.currentLevelId, buildRaw({ ...get(), objectStyles: nextStyles }));
+      const prev = get().objectStyles[category];
+      commitObjectStyle(set, get, buildRaw, category, { ...prev, visible });
     },
 
     setBimObjectsVisibility(visible) {
@@ -340,24 +333,22 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       commitAxisCut(set, get, buildRaw, axis, { ...prev, sign });
     },
 
-    setObjectStyleVgColor(category, key, color) {
+    setPlanLinesOnly(planLinesOnly) {
       const state = get();
-      const prev = state.objectStyles[category];
-      const nextCat: ObjectStyle = { ...prev, [key]: color };
-      const nextStyles = { ...state.objectStyles, [category]: nextCat };
-      set({ objectStyles: nextStyles, lastLocalMutationAt: Date.now() });
+      if (state.planLinesOnly === planLinesOnly) return; // idempotent — no-op write
+      set({ planLinesOnly, lastLocalMutationAt: Date.now() });
       if (state.currentLevelId)
-        debounceWrite(state.currentLevelId, buildRaw({ ...get(), objectStyles: nextStyles }));
+        debounceWrite(state.currentLevelId, buildRaw({ ...get(), planLinesOnly }));
+    },
+
+    setObjectStyleVgColor(category, key, color) {
+      const prev = get().objectStyles[category];
+      commitObjectStyle(set, get, buildRaw, category, { ...prev, [key]: color });
     },
 
     setObjectStyleVgPattern(category, key, pattern) {
-      const state = get();
-      const prev = state.objectStyles[category];
-      const nextCat: ObjectStyle = { ...prev, [key]: pattern };
-      const nextStyles = { ...state.objectStyles, [category]: nextCat };
-      set({ objectStyles: nextStyles, lastLocalMutationAt: Date.now() });
-      if (state.currentLevelId)
-        debounceWrite(state.currentLevelId, buildRaw({ ...get(), objectStyles: nextStyles }));
+      const prev = get().objectStyles[category];
+      commitObjectStyle(set, get, buildRaw, category, { ...prev, [key]: pattern });
     },
 
     setSubcategoryStyleField(category, subcategoryKey, field, value) {
@@ -409,6 +400,22 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
 // ── ADR-377 Phase D — subcategory mutation helpers (module-level, pure-ish) ──
 
 /** Commit a new objectStyles map: single state update + single debounced write. */
+/** Commit ONE category's object style (immutable update + debounced write) — the
+ *  get→set→debounceWrite flow the per-field setters inlined identically (N.18). */
+function commitObjectStyle(
+  set: (partial: Partial<BimRenderSettingsState>) => void,
+  get: () => BimRenderSettingsState,
+  buildRaw: (state: BimRenderSettingsState) => BimRenderSettings,
+  category: BimCategory,
+  nextCat: ObjectStyle,
+): void {
+  const state = get();
+  const nextStyles = { ...state.objectStyles, [category]: nextCat };
+  set({ objectStyles: nextStyles, lastLocalMutationAt: Date.now() });
+  if (state.currentLevelId)
+    debounceWrite(state.currentLevelId, buildRaw({ ...get(), objectStyles: nextStyles }));
+}
+
 function commitObjectStyles(
   set: (partial: Partial<BimRenderSettingsState>) => void,
   get: () => BimRenderSettingsState,

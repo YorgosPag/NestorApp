@@ -124,16 +124,18 @@ describe('importTekContent', () => {
     expect(b && b.max.x).toBeGreaterThanOrEqual(3000);
   });
 
-  it('ADR-608 — εισάγει διάσταση ως native DimensionEntity + τοίχο/κουφώματα ως 2Δ primitives', () => {
+  it('ADR-531 Φ5b.2 — διάσταση→DimensionEntity + τοίχος→BIM WallEntity + 2 κουφώματα→OpeningEntity', () => {
     const result = importTekContent(TEK_STRUCT, 'level-1');
     expect(result.success).toBe(true);
     expect(result.stats.dimCount).toBe(1);
     expect(result.stats.wallCount).toBe(1);
     expect(result.stats.openingCount).toBe(2);
-    // τοίχος-με-κουφώματα 12 + πόρτα 13 + παράθυρο 7 = 32 γραμμές· η διάσταση ΔΕΝ σπάει σε γραμμές/κείμενα.
-    const lines = result.scene?.entities.filter((e) => e.type === 'line') ?? [];
+    // Φ5b.2 — ο 3Δ τοίχος + κουφώματα γίνονται native BIM οντότητες (αντί για 2Δ γραμμές).
+    const walls = result.scene?.entities.filter((e) => e.type === 'wall') ?? [];
+    const openings = result.scene?.entities.filter((e) => e.type === 'opening') ?? [];
     const dims = result.scene?.entities.filter((e) => e.type === 'dimension') ?? [];
-    expect(lines).toHaveLength(32);
+    expect(walls).toHaveLength(1);
+    expect(openings).toHaveLength(2);
     expect(dims).toHaveLength(1);
     // native παραμετρική διάσταση (ενιαίος οργανισμός) με το έτοιμο κείμενο του Τέκτονα.
     const dim = dims[0];

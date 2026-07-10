@@ -873,7 +873,11 @@
       "perpendicularLabel": "Perpendicular line command ring",
       "endpointLabel": "Endpoint command ring",
       "rotationAngle": "Angle",
-      "rotationLabel": "Rotation command ring"
+      "rotationLabel": "Rotation command ring",
+      "rectWidth": "Width",
+      "rectHeight": "Height",
+      "rectAngle": "Angle",
+      "rectLabel": "Rectangle command ring"
     },
     "wall": {
       "statusStart": "Pick wall start point",
@@ -4180,6 +4184,13 @@
         "show": "Show BIM",
         "tooltipHide": "Hide all structural BIM elements — only the imported DXF entities remain visible",
         "tooltipShow": "Restore visibility of structural BIM elements"
+      },
+      "planLines": {
+        "label": "Plan Lines",
+        "lines": "Lines Only",
+        "full": "Full BIM",
+        "tooltipLines": "Show only the plan-view lines (wall faces outline + door/window symbols), like Tekton — no fill/hatch/grips",
+        "tooltipFull": "Restore the full BIM appearance (fill/hatch/grips)"
       },
       "mepWire": {
         "label": "Wires",

@@ -18,8 +18,13 @@ import type { Point2D } from '../../rendering/types/Types';
 import { calculateBimEntity2DBounds } from '../../bim/utils/bim-bounds';
 import { tekStairToEntity } from './tek-stair-to-bim';
 import { tekLineToEntity, tekArcToEntity, tekTextToEntity } from './tek-primitive-to-scene';
-// ADR-531 Φ5b.1 — 2Δ mappers για διαστάσεις + τοίχους (+ ανοίγματα). Φ5b.2 θα προσθέσει BIM mappers.
-import { tekWallToEntities } from './tek-structural-to-scene';
+// ADR-531 Φ5b.2 — 3Δ τοίχοι/κουφώματα → native BIM WallEntity/OpeningEntity (αντικατέστησε τον
+// 2Δ-lines δρόμο `tekWallToEntities`· «μία οντότητα, δύο όψεις»).
+import { tekWallToBimEntities } from './tek-wall-to-bim';
+// ADR-531 Φ5b.4 — πλάκες (`<plane>` type 10) → native BIM SlabEntity.
+import { tekPlaneToSlabEntity } from './tek-plane-to-slab';
+// ADR-531 Φ5b.5 — κολώνες/τοιχία (`<pillar>1` records) → native BIM ColumnEntity.
+import { tekPillarToColumnEntity } from './tek-pillar-to-column';
 import { tekDimToDimensionEntities } from './tek-dim-to-dimension';
 // ADR-608 — native σύμβολα Τέκτονα (type-7 <object>) → AnnotationSymbolEntity.
 import { tekObjectToEntity } from './tek-object-to-scene';
@@ -92,13 +97,39 @@ export function buildSceneFromTekScene(
     if (entity) symbolEntities.push(entity);
     if (warning) warnings.push(warning);
   }
+  // ADR-531 Φ5b.2 — κάθε <wall> → BIM WallEntity + hosted OpeningEntity[] (πόρτες/παράθυρα).
+  const wallEntities: Entity[] = [];
+  for (const rec of parsed.walls) {
+    const { wall, openings, warnings: wallWarnings } = tekWallToBimEntities(rec, levelId, units);
+    if (wall) wallEntities.push(wall);
+    wallEntities.push(...openings);
+    warnings.push(...wallWarnings);
+  }
+  // ADR-531 Φ5b.4 — κάθε <plane> (type 10) → BIM SlabEntity.
+  const slabEntities: Entity[] = [];
+  for (const rec of parsed.planes) {
+    const { slab, warnings: slabWarnings } = tekPlaneToSlabEntity(rec, levelId, units);
+    if (slab) slabEntities.push(slab);
+    warnings.push(...slabWarnings);
+  }
+  // ADR-531 Φ5b.5 — κάθε <pillar>1 record → BIM ColumnEntity (κολώνα ή τοιχίο κατά σχέση πλευρών).
+  const columnEntities: Entity[] = [];
+  for (const rec of parsed.pillars) {
+    const { column, warnings: colWarnings } = tekPillarToColumnEntity(rec, levelId, units);
+    if (column) columnEntities.push(column);
+    warnings.push(...colWarnings);
+  }
   const entities: Entity[] = [
     ...parsed.stairs.map((rec) => tekStairToEntity(rec, levelId, units)),
     ...parsed.lines.map((rec) => tekLineToEntity(rec, units)),
     ...parsed.arcs.map((rec) => tekArcToEntity(rec, units)),
     ...parsed.texts.map((rec) => tekTextToEntity(rec, units)),
-    // ADR-531 Φ5b.1 — κάθε wall παράγει ΠΟΛΛΑ 2Δ primitives (footprint/jambs).
-    ...parsed.walls.flatMap((rec) => tekWallToEntities(rec, units)),
+    // ADR-531 Φ5b.2 — BIM τοίχοι + κουφώματα (αντί για 2Δ primitives).
+    ...wallEntities,
+    // ADR-531 Φ5b.4 — BIM πλάκες.
+    ...slabEntities,
+    // ADR-531 Φ5b.5 — BIM κολώνες/τοιχία.
+    ...columnEntities,
     // ADR-608 — κάθε <dim> → native παραμετρικό DimensionEntity (ενιαίος οργανισμός, όπως ο Τέκτων).
     ...parsed.dims.flatMap((rec) => tekDimToDimensionEntities(rec, units)),
     ...symbolEntities,

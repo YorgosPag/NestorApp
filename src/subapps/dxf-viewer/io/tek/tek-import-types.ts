@@ -155,6 +155,26 @@ export interface TekWallRecord {
   readonly openings: readonly TekOpeningRecord[];
 }
 
+/**
+ * ADR-531 Φ5b.5 — μια **κολώνα / τοιχίο** `<pillar><record>`. ΠΡΟΣΟΧΗ: ζει ΜΕΣΑ στο `<wall>`
+ * container (entity type 1, ΟΠΩΣ ο τοίχος) — διακρίνεται από τον τοίχο με το flag `<pillar>1`.
+ * MATRIX-PLACED centered box/circle (ΟΧΙ line+πάχος σαν τοίχος): u-άξονας (x00,x01)=πλάτος,
+ * v-άξονας (x10,x11)=βάθος, origin(x20,x21)=γωνία u=v=0. `<round>`1=κυκλική / 0=ορθογώνια
+ * (η διάκριση κολώνα↔τοιχίο γίνεται στον mapper από τη σχέση πλευρών — EC8 §5.4.2.4). Y-up, μέτρα.
+ */
+export interface TekPillarRecord {
+  /** `<xmatrix>` — τοποθέτηση unit-box κολώνας σε world (μέτρα). */
+  readonly matrix: TekXMatrix;
+  /** `<round>` — `true` (1) κυκλική διατομή, `false` (0) ορθογώνια/τοιχίο. */
+  readonly round: boolean;
+  /** `<height>` — ύψος κολώνας (μέτρα). */
+  readonly heightM: number;
+  /** `<elevation>` — στάθμη βάσης (μέτρα). */
+  readonly elevationM: number;
+  /** `<color>` RGB hex. */
+  readonly color: string;
+}
+
 /** ADR-531 Φ5b — μία «πατιά» διάστασης (`<seg><record>`): η ζωγραφισμένη γραμμή + το κείμενο. */
 export interface TekDimSeg {
   /** `<end0X/Y>`–`<end1X/Y>` — άκρα της γραμμής διάστασης (μέτρα, Y-up). */
@@ -222,6 +242,22 @@ export interface TekObjectRecord {
   readonly color: string;
 }
 
+/**
+ * ADR-531 Φ5b.4 — μία **πλάκα** `<plane><record>` (entity type 10). Footprint polygon (`<point3d>`
+ * κορυφές, μέτρα Y-up) + `<width>` (πάχος εξώθησης) + `<elev1>` (στάθμη βάσης). Ο Τέκτων εξάγει τη
+ * δομική πλάκα ΚΑΙ τα έπιπλα ως `<plane>` type 10 (ίδια δομή footprint+extrusion)· εδώ = δομική πλάκα.
+ */
+export interface TekPlaneRecord {
+  /** Footprint κορυφές (μέτρα, Y-up) — `<point3d><record>` pointX/pointY. */
+  readonly vertices: readonly TekPoint2D[];
+  /** `<width>` — πάχος πλάκας / εξώθηση (μέτρα). */
+  readonly widthM: number;
+  /** `<elev1>` — στάθμη βάσης (μέτρα). */
+  readonly elevationM: number;
+  /** `<color>` RGB hex. */
+  readonly color: string;
+}
+
 /** Αποτέλεσμα parse ενός ολόκληρου `.tek` αρχείου (stair-first scope — Φ1). */
 export interface TekParseResult {
   /** Έκδοση αρχείου (`<fileversion>`) — π.χ. 516. */
@@ -252,6 +288,10 @@ export interface TekSceneParseResult extends TekParseResult {
   readonly dims: readonly TekDimRecord[];
   /** ADR-531 Φ5b — όλοι οι 3Δ τοίχοι (`<wall>` type 1) μαζί με τα ανοίγματά τους. */
   readonly walls: readonly TekWallRecord[];
+  /** ADR-531 Φ5b.5 — κολώνες & τοιχία: type-1 records με flag pillar=1, στο ίδιο container με τους τοίχους. */
+  readonly pillars: readonly TekPillarRecord[];
   /** ADR-608 — όλα τα type-7 `<object>` records (built-in σύμβολα Τέκτονα). */
   readonly objects: readonly TekObjectRecord[];
+  /** ADR-531 Φ5b.4 — όλες οι πλάκες (`<plane>` type 10). */
+  readonly planes: readonly TekPlaneRecord[];
 }

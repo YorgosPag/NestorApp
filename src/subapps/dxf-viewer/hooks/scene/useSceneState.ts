@@ -147,6 +147,23 @@ export function useSceneState() {
       if (resolvedFileRecordId && levelsSystem.setFileRecordId) {
         levelsSystem.setFileRecordId(resolvedFileRecordId);
       }
+      // 🛡️ ADR-526 Φ5a / ADR-399 — link the level to its canonical FileRecord NOW
+      // (deterministic, not the 2s debounced round-trip) so the scene blob survives a
+      // hard-refresh, and trash the level's PREVIOUS scene file on replace (FILE-LESS
+      // levels never run the wizard floor-wipe → otherwise each replace orphans the old
+      // FileRecord + Storage blob; moveToTrash is soft/recoverable, cron purge frees Storage).
+      // Idempotent; skips when there is no canonical id. Shared by BOTH the Tekton and DXF
+      // import branches (N.18 — one copy instead of two twins).
+      const linkSceneFileToLevel = (): void => {
+        if (!(resolvedFileRecordId && levelsSystem.linkSceneToLevel)) return;
+        const prevFileId = levels.find((l) => l.id === targetLevelId)?.sceneFileId;
+        if (prevFileId && prevFileId !== resolvedFileRecordId && user?.uid) {
+          void FileRecordService.moveToTrash(prevFileId, user.uid).catch(() => {
+            /* non-blocking: already deleted by floor-wipe, or permission no-op */
+          });
+        }
+        void levelsSystem.linkSceneToLevel(targetLevelId, resolvedFileRecordId, file.name);
+      };
       // 🏢 ADR-240: Inject save context from Wizard (entityType/floorId/purpose)
       if (levelsSystem.setSaveContext) {
         levelsSystem.setSaveContext(saveContext ?? null);
@@ -166,24 +183,27 @@ export function useSceneState() {
         }
         setLevelScene(targetLevelId, result.scene);
         // BIM entities → PersistenceHost first-save (Firestore). 2Δ primitives (line/arc/
-        // circle) ΔΕΝ έχουν host → ΟΧΙ emit· σώζονται με το scene blob (linkSceneToLevel πιο κάτω).
+        // circle/text/dimension) ΔΕΝ έχουν host → ΟΧΙ emit· σώζονται με το scene blob (linkSceneToLevel).
+        // ADR-531 Φ5b.2 — ΚΡΙΣΙΜΟ: χωρίς first-save, το Firestore reconciliation snapshot αφαιρεί τα
+        // wall/opening από το scene (ο τοίχος «εμφανίζεται & εξαφανίζεται»). tool = entity.type
+        // (default createTrigger, ADR-594). Τοίχος ΠΡΙΝ το κούφωμα (host-first, opening.wallId ref).
         for (const entity of result.scene.entities) {
           if (entity.type === 'stair') {
             EventBus.emit('drawing:entity-created', { entity, tool: 'stair' });
+          } else if (entity.type === 'wall') {
+            EventBus.emit('drawing:entity-created', { entity, tool: 'wall' });
+          } else if (entity.type === 'opening') {
+            EventBus.emit('drawing:entity-created', { entity, tool: 'opening' });
+          } else if (entity.type === 'slab') {
+            EventBus.emit('drawing:entity-created', { entity, tool: 'slab' });
+          } else if (entity.type === 'column') {
+            // ADR-531 Φ5b.5 — κολώνα/τοιχίο: first-save (tool 'column') αλλιώς το Firestore
+            // reconciliation snapshot την αφαιρεί (ίδιο bug με τον τοίχο).
+            EventBus.emit('drawing:entity-created', { entity, tool: 'column' });
           }
         }
-        // 🛡️ ADR-526 Φ5a — link το level στο canonical FileRecord ΤΩΡΑ (ίδιο με το DXF branch
-        // γρ.190-205), ώστε το scene blob (2Δ γραμμές/τόξα) να επιβιώνει σε hard-refresh αντί να
-        // βασίζεται στο 2s debounced round-trip. Idempotent· skip όταν δεν υπάρχει canonical id.
-        if (resolvedFileRecordId && levelsSystem.linkSceneToLevel) {
-          const prevFileId = levels.find((l) => l.id === targetLevelId)?.sceneFileId;
-          if (prevFileId && prevFileId !== resolvedFileRecordId && user?.uid) {
-            void FileRecordService.moveToTrash(prevFileId, user.uid).catch(() => {
-              /* non-blocking: already deleted by floor-wipe, or permission no-op */
-            });
-          }
-          void levelsSystem.linkSceneToLevel(targetLevelId, resolvedFileRecordId, file.name);
-        }
+        // 🛡️ ADR-526 Φ5a — persist the level↔FileRecord link now (shared helper, N.18).
+        linkSceneFileToLevel();
         setTimeout(() => EventBus.emit('canvas-fit-to-view', { source: 'auto' }), PANEL_LAYOUT.TIMING.FIT_TO_VIEW_DELAY);
         return;
       }
@@ -202,23 +222,7 @@ export function useSceneState() {
         // linkSceneToLevel is idempotent (skips if already linked to this id), so the later
         // onSceneSaved callback is a harmless no-op. Skipped when no canonical id (non-wizard
         // drag-drop import has no FileRecord). Raster (non-dxf) never reaches here.
-        if (resolvedFileRecordId && levelsSystem.linkSceneToLevel) {
-          // 🧹 REPLACE CLEANUP (ADR-399): trash the level's PREVIOUS scene file when
-          // it's being replaced by a different one. Floor-level imports already
-          // hard-delete the old file via the wizard pre-flight floor-wipe (which
-          // also nulls sceneFileId, so prevFileId is null here → no-op). This path
-          // closes the gap for FILE-LESS levels (e.g. the default "Επίπεδο 1",
-          // floorId=null) that never run the floor-wipe → otherwise each replace
-          // orphans the old FileRecord + Storage blob. moveToTrash is soft +
-          // recoverable; the cron purge (/api/files/purge) removes Storage later.
-          const prevFileId = levels.find((l) => l.id === targetLevelId)?.sceneFileId;
-          if (prevFileId && prevFileId !== resolvedFileRecordId && user?.uid) {
-            void FileRecordService.moveToTrash(prevFileId, user.uid).catch(() => {
-              /* non-blocking: already deleted by floor-wipe, or permission no-op */
-            });
-          }
-          void levelsSystem.linkSceneToLevel(targetLevelId, resolvedFileRecordId, file.name);
-        }
+        linkSceneFileToLevel();
         // Scene rendering is handled by Canvas V2 system
         setTimeout(() => EventBus.emit('canvas-fit-to-view', { source: 'auto' }), PANEL_LAYOUT.TIMING.FIT_TO_VIEW_DELAY);
       } else {

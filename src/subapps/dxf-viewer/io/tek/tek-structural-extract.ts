@@ -11,11 +11,14 @@
 
 import { directChildren, firstChild, childNumber, childText } from './tek-xml-reader';
 import { recordsInFloors, isEntityType, readXMatrix } from './tek-primitive-extract';
-import type { TekDimRecord, TekDimSeg, TekWallRecord, TekOpeningRecord } from './tek-import-types';
+import type {
+  TekDimRecord, TekDimSeg, TekWallRecord, TekOpeningRecord, TekPlaneRecord, TekPillarRecord,
+} from './tek-import-types';
 
 const DIM_ENTITY_TYPE = 0;
 const WALL_ENTITY_TYPE = 1;
 const OPENING_ENTITY_TYPE = 2;
+const PLANE_ENTITY_TYPE = 10;
 
 // ─── Dimensions ────────────────────────────────────────────────────────────────
 
@@ -98,6 +101,15 @@ function readWallOpenings(wallRecord: Element): TekOpeningRecord[] {
   return out;
 }
 
+/**
+ * ADR-531 Φ5b.5 — flag `<pillar>1` ⇒ το record είναι **κολώνα/τοιχίο** (ΟΧΙ αρχιτεκτονικός τοίχος).
+ * Ο Τέκτων αποθηκεύει κολώνες & τοίχους στο ΙΔΙΟ `<wall>` container (και τα δύο type 1)· η μόνη
+ * διάκριση είναι αυτό το flag. `<pillar>0`/απόν = αρχιτεκτονικός τοίχος.
+ */
+function isPillarRecord(record: Element): boolean {
+  return Math.round(childNumber(record, 'pillar', 0)) === 1;
+}
+
 /** Εξάγει όλους τους 3Δ τοίχους (`<wall>` type 1) μαζί με τα ανοίγματά τους. */
 export function extractWallRecords(root: Element): { walls: TekWallRecord[]; warnings: string[] } {
   const walls: TekWallRecord[] = [];
@@ -107,6 +119,10 @@ export function extractWallRecords(root: Element): { walls: TekWallRecord[]; war
       warnings.push('wall record χωρίς type=1 — παραλείφθηκε.');
       continue;
     }
+    // ADR-531 Φ5b.5 — τα `<pillar>1` records ΔΕΝ είναι τοίχοι· τα χειρίζεται το
+    // `extractPillarRecords` → BIM κολώνα/τοιχίο. Χωρίς αυτό, η κολώνα θα εισαγόταν ως
+    // στραβός τοίχος (decode wall-centerline από pillar-box matrix).
+    if (isPillarRecord(record)) continue;
     walls.push({
       matrix: readXMatrix(record),
       heightM: childNumber(record, 'height', 0),
@@ -117,4 +133,60 @@ export function extractWallRecords(root: Element): { walls: TekWallRecord[]; war
     });
   }
   return { walls, warnings };
+}
+
+// ─── Pillars (columns / shear walls) ────────────────────────────────────────
+
+/**
+ * ADR-531 Φ5b.5 — εξάγει όλες τις **κολώνες/τοιχία** (`<pillar>1` records μέσα στο `<wall>`
+ * container, type 1). Reuse `recordsInFloors('wall')` + `isEntityType(1)` (ίδια διαδρομή με τον
+ * τοίχο)· φιλτράρει με το `<pillar>` flag. Καθαρή εξαγωγή — η μετατροπή geometry/units/χρώματος
+ * + η διάκριση κολώνα↔τοιχίο (σχέση πλευρών) γίνονται στον mapper `tek-pillar-to-column`.
+ */
+export function extractPillarRecords(root: Element): { pillars: TekPillarRecord[]; warnings: string[] } {
+  const pillars: TekPillarRecord[] = [];
+  const warnings: string[] = [];
+  for (const record of recordsInFloors(root, 'wall')) {
+    if (!isEntityType(record, WALL_ENTITY_TYPE)) continue;
+    if (!isPillarRecord(record)) continue;
+    pillars.push({
+      matrix: readXMatrix(record),
+      round: Math.round(childNumber(record, 'round', 0)) === 1,
+      heightM: childNumber(record, 'height', 0),
+      elevationM: childNumber(record, 'elevation', 0),
+      color: childText(record, 'color') ?? '',
+    });
+  }
+  return { pillars, warnings };
+}
+
+// ─── Slabs (planes) ──────────────────────────────────────────────────────────
+
+/** Εξάγει όλες τις πλάκες (`<plane>` type 10) — footprint polygon + πάχος εξώθησης. */
+export function extractPlaneRecords(root: Element): { planes: TekPlaneRecord[]; warnings: string[] } {
+  const planes: TekPlaneRecord[] = [];
+  const warnings: string[] = [];
+  for (const record of recordsInFloors(root, 'plane')) {
+    if (!isEntityType(record, PLANE_ENTITY_TYPE)) {
+      warnings.push('plane record χωρίς type=10 — παραλείφθηκε.');
+      continue;
+    }
+    const ptContainer = firstChild(record, 'point3d');
+    const vertices = ptContainer
+      ? directChildren(ptContainer, 'record').map((r) => ({
+        x: childNumber(r, 'pointX', 0), y: childNumber(r, 'pointY', 0),
+      }))
+      : [];
+    if (vertices.length < 3) {
+      warnings.push('plane record με <3 κορυφές — παραλείφθηκε.');
+      continue;
+    }
+    planes.push({
+      vertices,
+      widthM: childNumber(record, 'width', 0),
+      elevationM: childNumber(record, 'elev1', 0),
+      color: childText(record, 'color') ?? '',
+    });
+  }
+  return { planes, warnings };
 }

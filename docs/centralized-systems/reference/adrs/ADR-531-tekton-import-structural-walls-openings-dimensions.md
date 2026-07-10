@@ -1,6 +1,6 @@
 # ADR-531 — Tekton .TEK import Φ5b: 3Δ τοίχοι, κουφώματα & διαστάσεις
 
-**Status:** ✅ APPROVED (Φ5b.1 υλοποιημένο, browser-verify pending· Φ5b.2 επόμενη φάση)
+**Status:** ✅ APPROVED (Φ5b.1 υλοποιημένο· **Φ5b.2 τοίχοι/κουφώματα BIM + Φ5b.3 plan-lines + Φ5b.4 πλάκες BIM + Φ5b.5 κολώνες/τοιχία BIM** — τοίχοι browser-verified 2026-07-10, πλάκες + κολώνες browser-verify pending)
 **Date:** 2026-06-25
 **Domains:** io/tek (extract + 2Δ map)
 **Related:** ADR-526 (Tekton import Φ1–Φ5a: σκάλες + 2Δ primitives), ADR-363 (BIM wall/opening),
@@ -82,8 +82,14 @@ Browser-verify του Φ5b.1 (export round-trip) έδειξε ότι οι **ωμ
 `style`/`side`· χρώμα/μήκος tick διάστασης· πάχος band (v-scale 0.25 vs inner_width 0.09).
 
 ## 7. Scope / Follow-up
-- **BIM (αναβλήθηκε):** `createWall`/`createOpening`/`DimensionEntity` — μόνο αν ζητηθεί ρητά
-  (ο Giorgio προτίμησε faithful replay τώρα).
+- **BIM (✅ ΥΛΟΠΟΙΗΘΗΚΕ Φ5b.2, 2026-07-10):** `<wall>`→`WallEntity`, `<open>`→`OpeningEntity`,
+  `<dim>`→`DimensionEntity` (ADR-608). Απόφαση Giorgio 2026-07-10: Α — μία BIM οντότητα, δύο όψεις
+  (3Δ όγκος + 2Δ κάτοψη)· plan-lines toggle «μόνο κάτοψη DXF» (Φ5b.3).
+- **Cleanup follow-up:** ο 2Δ-lines mapper `tek-structural-to-scene::tekWallToEntities` +
+  `tek-window-symbol` geometry (πλην `isDoorStyle`, που reused) είναι πλέον αχρησιμοποίητα στο
+  production path — να αφαιρεθούν σε ξεχωριστό dead-code sweep (δεν διαγράφηκαν τώρα για ασφάλεια).
+- **Plan-lines scope:** straight walls + hosted openings· curved/polyline → fallback πλήρες
+  περίγραμμα (μελλοντικά). Άλλες BIM κατηγορίες (columns/slabs) στο plan-lines → follow-up αν ζητηθεί.
 - Slabs/roofs Tekton → μελλοντικά.
 
 ## 6b. Φ5b.1++ — Calibration συμβόλου (data-driven, target screenshots `221240`/`221306`)
@@ -311,3 +317,63 @@ ground truth. Αποκωδικοποίηση επιβεβαίωσε/διόρθω
   ταυτότητα Nestor (πρότερη απόφαση 2026-07-07)· Tekton = ανά-record 4-χρωμα. Regression test κλειδώνει template↔SSoT.
   **15/15 GREEN** · jscpd clean. ⏳ Αν ο Giorgio θέλει και τα Tekton χρώματα (κίτρινο/μπορντώ/μπλε) στο default → follow-up. ⚠️ gradient themes (Cinema 4D) — solid μάσκα δεν ταιριάζει
   gradient (γνωστό όριο). **390/390 GREEN** (config+canvas) · jscpd clean.
+- **2026-07-10** — **Φ5b.2: 3Δ τοίχοι/κουφώματα → native BIM `WallEntity`+`OpeningEntity`** (Opus, Giorgio:
+  «οι 3Δ οντότητες του Τέκτονα να αντικαθίστανται από τις δικές μας BIM· απόφαση Α — μία οντότητα, δύο όψεις»).
+  Αντικαθιστά τον 2Δ-lines δρόμο (`tekWallToEntities`). **Νέα SSoT:** inverse matrix helpers
+  `decodeWallXMatrix`/`decodeOpeningXMatrix` (`export/core/tek/tek-geometry.ts`, καθρέφτης του export
+  `buildWallXMatrix`/`buildOpeningXMatrix`· round-trip-verified σε λοξό τοίχο) + mapper `io/tek/tek-wall-to-bim.ts`
+  `tekWallToBimEntities` (μοτίβο `tek-stair-to-bim`): decode→`tekMetersToScene`→`buildDefaultWallParams`+
+  `buildWallEntity` (πάχος/ύψος mm, `elevation`→`baseOffset`, χρώμα `tekColorToHex`)· κάθε `<open>` →
+  `completeOpeningFromHostClick` (project center→offset + build σε ΕΝΑ βήμα, `isDoorStyle`→kind door/window,
+  top−sill→height, hosted `wallId`+`hostedOpeningIds` mirror). **Μηδέν builder/geometry duplication.**
+  scene-builder swap σε `tekWallToBimEntities`. (Ο 2Δ `tek-structural-to-scene`+`tek-window-symbol` μένουν
+  ζωντανά — `isDoorStyle` reused· ο 2Δ mapper πλέον αχρησιμοποίητος στο production, cleanup follow-up.)
+- **2026-07-10** — **Φ5b.3: «Μόνο κάτοψη DXF» plan-lines view mode** (Giorgio: «ταυτόχρονα να βλέπω μόνο τις
+  γραμμές κάτοψης, όπως στον Τέκτονα»· απόφαση Α — ίδια BIM οντότητα, δεύτερη όψη). Νέο per-view flag
+  `planLinesOnly` (`bim-render-settings-types` + store setter/persist/load, μοτίβο `showStructuralCore`). Νέα
+  pure SSoT `bim/walls/wall-plan-line-segments.ts` (`wallPlanLineSegments`): παρειές outer/inner **κομμένες
+  στα ανοίγματα** (offsetFromStart/width→intervals) + ακραία caps + jamb returns (straight-wall· curved →
+  fallback πλήρες περίγραμμα). `WallRenderer` branch: όταν on → μόνο bare γραμμές (helper
+  `strokePlanLineSegments` στο `wall-render-paths`), skip fill/hatch/άξονα/λαβές· `OpeningRenderer` κρύβει την
+  πινακίδα (το σύμβολο τόξου/τζαμιών είναι ήδη γραμμές). Ribbon toggle `PlanLinesToggle` (mirror `HideBimToggle`,
+  δίπλα του στο View tab) + i18n el/en `ribbon.commands.planLines.*`. **Tests:** νέο `tek-wall-to-bim.test.ts`
+  (matrix round-trip + wall/opening mapping + door/window + elevation→baseOffset) + ενημέρωση `tek-import`
+  integration. **95/95 GREEN** (io/tek). ⏳ Εκκρεμεί browser-verify Giorgio (import → BIM τοίχος editable +
+  toggle → καθαρές γραμμές όπως top-view Τέκτονα).
+- **2026-07-10** — **Φ5b.2 bugfix: BIM τοίχος «εμφανιζόταν & εξαφανιζόταν»** (Giorgio browser). Root
+  cause: το import loop (`useSceneState`) έκανε first-save (`drawing:entity-created`) **μόνο για σκάλες**
+  → οι νέοι `WallEntity`/`OpeningEntity` έμπαιναν στο scene αλλά χωρίς Firestore save· το reconciliation
+  snapshot (ADR-594 persistence hook) τους αφαιρούσε αμέσως. Fix: το loop εκπέμπει `drawing:entity-created`
+  ΚΑΙ για `wall` (host-first) ΚΑΙ για `opening` (tool = entity.type, default createTrigger) → WallPersistenceHost/
+  OpeningPersistenceHost first-save + write-grace κρατούν τα entities στο scene. 2Δ primitives (line/arc/text/
+  dimension) αμετάβλητα (χωρίς host, ζουν στο scene blob). ✅ Browser-verified Giorgio (τοίχος+πόρτα μένουν + toggle).
+- **2026-07-10** — **Φ5b.4: πλάκες `<plane>` (type 10) → native BIM `SlabEntity`** (Giorgio: «το ίδιο και με
+  τις πλάκες»). Ο Τέκτων εξάγει τη δομική πλάκα ως `<plane>` type 10 (footprint `<point3d>` + `<width>` πάχος
+  + `<elev1>` βάση· το `<slab>` tag είναι κενό). **Νέα:** `extractPlaneRecords` (`tek-structural-extract`,
+  reuse `recordsInFloors`/`isEntityType`) + `TekPlaneRecord` type + mapper `io/tek/tek-plane-to-slab.ts`
+  `tekPlaneToSlabEntity` (μοτίβο `tek-wall-to-bim`): footprint→`tekMetersToScene`→`completeSlabFromPolygonClicks`
+  (`buildDefaultSlabParams`+`buildSlabEntity`, πάχος `width`·1000 mm, `elev1`→`levelElevation`, χρώμα
+  `tekColorToHex`). Wire σε `tek-scene-extract`/`tek-scene-builder` (planes→slabs) + persistence
+  (`useSceneState` emit `tool:'slab'`, SlabPersistenceHost first-save). Plan-lines (Φ5b.3): `SlabRenderer`
+  branch → μόνο περίγραμμα (χωρίς fill/hatch/οπλισμό). **Tests:** νέο `tek-plane-to-slab.test.ts` (πάχος/
+  footprint/Y-flip/χρώμα). **98/98 GREEN** (io/tek). ⏳ Εκκρεμεί browser-verify Giorgio (πλάκα ως BIM + toggle).
+- **2026-07-10** — **Φ5b.5: κολώνες & τοιχία `<pillar>` → native BIM `ColumnEntity`** (Giorgio: «το ίδιο και
+  με τις κολώνες/τοιχία»). **🔑 SCHEMA DISCOVERY (ανατρέπει την αρχική υπόθεση):** ο Τέκτων ΔΕΝ αποθηκεύει τις
+  κολώνες σε `<pillar>` container (αυτό είναι **κενό**) — τις αποθηκεύει **μέσα στο `<wall>` container ως type-1
+  records** με flag `<pillar>1` (κοινό container με τους αρχιτεκτονικούς τοίχους `<pillar>0`). Επιβεβαιωμένο στο
+  `ΚΟΛΩΝΕΣ_ΤΟΙΧΙΑ.tek`: 3 records, όλα `<pillar>1`, μηδέν `<pillar>0`. **Συνέπεια-bug που διορθώθηκε:** το
+  `extractWallRecords` έπιανε ΟΛΑ τα type-1 → οι κολώνες εισάγονταν ως στραβοί τοίχοι· προστέθηκε guard
+  `isPillarRecord` (skip). **Γεωμετρία:** η κολώνα είναι **centered box/circle** (ΟΧΙ line+πάχος σαν τοίχος):
+  u-άξονας (x00,x01)=πλάτος, v-άξονας (x10,x11)=βάθος, `<round>`1=κυκλική. **Νέα:** `decodePillarXMatrix`
+  (`tek-geometry`, SSoT· κέντρο+width+depth+γωνία) + `extractPillarRecords` (`tek-structural-extract`, φίλτρο
+  `<pillar>1` στο `<wall>` container) + `TekPillarRecord` type + mapper `io/tek/tek-pillar-to-column.ts`
+  `tekPillarToColumnEntity` (μοτίβο `tek-plane-to-slab`): κέντρο→`tekMetersToScene`→`buildDefaultColumnParams`+
+  `buildColumnEntity`, width/depth·1000 mm, γωνία u→μοίρες (Y-flip αρνημένη), `height`·1000, `elevation`→
+  `baseOffset`, `autoSized:false` (ADR-398 §3.17 — διατομή ΑΚΡΙΒΩΣ όση εισήχθη), χρώμα `tekColorToHex`.
+  **Ταξινόμηση κολώνα↔τοιχίο (απόφαση Giorgio):** `<round>1`→`circular`· αλλιώς σχέση μεγάλης/μικρής πλευράς
+  μέσω SSoT `roundedRectAspect`+`isShearWallAspect` (EC8 §5.4.2.4 / EC2 §9.6.1, κατώφλι > 4 → `shear-wall`,
+  αλλιώς `rectangular`· μηδέν νέο threshold). Wire σε `tek-scene-extract`/`tek-scene-builder` (pillars→columns)
+  + persistence (`useSceneState` emit `tool:'column'`, ColumnPersistenceHost first-save — αλλιώς «εμφ/εξαφ»).
+  Plan-lines (Φ5b.3): `ColumnRenderer` branch → μόνο περίγραμμα (χωρίς fill/hatch/οπλισμό). **Tests:** νέο
+  `tek-pillar-to-column.test.ts` (kind rect/circular/shear-wall· διαστάσεις· Y-flip· διάμετρος). **102/102
+  GREEN** (io/tek). ⏳ Εκκρεμεί browser-verify Giorgio (κολώνα/τοιχίο ως BIM + toggle).
