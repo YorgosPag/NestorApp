@@ -42,4 +42,16 @@ describe('buildEntityModelFromDxf — hatch passthrough', () => {
     const model = buildEntityModelFromDxf(makeHatch({}), false, RESOLVED);
     expect((model as unknown as HatchEntity).lineweightMm).toBeUndefined();
   });
+
+  it('διατηρεί το backgroundColor (Φ5b.6 AutoCAD DXF 63· Τέκτων raster_bgcolor)', () => {
+    const model = buildEntityModelFromDxf(
+      makeHatch({ fillType: 'user-defined', backgroundColor: '#FFFFFF' } as Partial<DxfEntityUnion>), false, RESOLVED,
+    );
+    expect((model as unknown as HatchEntity).backgroundColor).toBe('#FFFFFF');
+  });
+
+  it('backgroundColor absent → undefined (όχι σφάλμα· ο renderer παραλείπει το φόντο)', () => {
+    const model = buildEntityModelFromDxf(makeHatch({}), false, RESOLVED);
+    expect((model as unknown as HatchEntity).backgroundColor).toBeUndefined();
+  });
 });

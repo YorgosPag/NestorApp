@@ -81,15 +81,19 @@ export function tekHatchToEntity(
 ): TekHatchResult {
   const warnings: string[] = [];
   const boundary: Point2D[] = rec.boundary.map((v) => tekMetersToScene(v.x, v.y, sceneUnits));
-  const hatch = buildHatchEntityFromBoundary(
+  const built = buildHatchEntityFromBoundary(
     boundary,
     generateEntityId(),
     layerId,
     resolveHatchAppearance(rec),
   );
-  if (!hatch) {
+  if (!built) {
     warnings.push('Γραμμοσκίαση .tek παραλείφθηκε: ανεπαρκές όριο (<3 κορυφές).');
     return { hatch: null, warnings };
   }
+  // ADR-531 Φ5b.6 — background color πίσω από τις γραμμές (ο Τέκτων: raster_bgcolor, π.χ. λευκό).
+  const hatch: HatchEntity = rec.bgColor
+    ? { ...built, backgroundColor: tekColorToHex(rec.bgColor) }
+    : built;
   return { hatch, warnings };
 }

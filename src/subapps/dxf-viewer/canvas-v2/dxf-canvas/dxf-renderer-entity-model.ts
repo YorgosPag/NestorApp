@@ -209,6 +209,9 @@ export function buildEntityModelFromDxf(
         patternScale: entity.patternScale,
         patternAngle: entity.patternAngle,
         patternOrigin: entity.patternOrigin,
+        // ADR-531 Φ5b.6 — background color (AutoCAD DXF 63· ο Τέκτων raster_bgcolor, π.χ. λευκό).
+        // Χωρίς αυτό το passthrough ο HatchRenderer βλέπει backgroundColor:undefined → μόνο γραμμές.
+        backgroundColor: entity.backgroundColor,
         lineAngle: entity.lineAngle,
         lineSpacing: entity.lineSpacing,
         doubleCrossHatch: entity.doubleCrossHatch,

@@ -26,6 +26,10 @@ import { hatchBoundsCenter, hatchGradientAngleGripPos, getHatchBoundaryGrips, ge
 import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
 import { buildHatchEntitySegments, hatchMinWorldSpacing } from '../../bim/geometry/shared/hatch-pattern-geometry';
 import { isSolidHatch, resolveHatchLineWidthPx } from '../../bim/hatch/hatch-properties';
+// ADR-509 / ADR-531 Φ5b.6 — contrast-aware line color SSoT. Όταν το hatch έχει αδιαφανές
+// background fill (π.χ. Τέκτων λευκό), οι γραμμές μοτίβου ζωγραφίζονται ΠΑΝΩ του → πρέπει να
+// έχουν ελάχιστο contrast με ΤΟ ΦΟΝΤΟ (όχι τον καμβά). Reuse του adaptive-color SSoT (μηδέν νέα math).
+import { adaptColorToBackground, MIN_ENTITY_CONTRAST } from '../../config/adaptive-entity-color';
 import type { HatchGradient } from '../../bim/hatch/hatch-gradient';
 // ADR-507 Φ5 / A3 — pure gradient paint SSoT (κοινό με το live grip-drag ghost,
 // `draw-ghost-entity` case 'hatch'· preview === commit, μηδέν δεύτερη gradient math).
@@ -109,7 +113,26 @@ export class HatchRenderer extends BaseEntityRenderer {
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
 
-    const color = hatch.fillColor ?? entity.color ?? CAD_UI_COLORS.entity.default;
+    const rawColor = hatch.fillColor ?? entity.color ?? CAD_UI_COLORS.entity.default;
+    // ADR-531 Φ5b.6 — όταν υπάρχει αδιαφανές background fill, οι γραμμές/περίγραμμα ζωγραφίζονται
+    // ΠΑΝΩ του· προσάρμοσε το χρώμα τους ώστε να έχει ελάχιστο contrast με ΤΟ ΦΟΝΤΟ (Τέκτων: χλωμό
+    // πράσινο C0DCC0 σε λευκό = 1.44:1 → αόρατο). Το adaptColorToBackground κρατά το hue, σκουραίνει
+    // ελάχιστα ώς 3:1 (κορεσμένα χρώματα με ήδη επαρκές contrast μένουν αυτούσια). Χωρίς φόντο →
+    // αυτούσιο (γραμμές στον σκούρο καμβά — καμία αλλαγή στην υπάρχουσα συμπεριφορά).
+    const color = hatch.backgroundColor
+      ? adaptColorToBackground(rawColor, hatch.backgroundColor, MIN_ENTITY_CONTRAST)
+      : rawColor;
+
+    // ADR-507 / ADR-531 Φ5b.6 — «Background color» (AutoCAD DXF 63): γεμίζει την περιοχή ΠΙΣΩ από
+    // τις γραμμές μοτίβου (π.χ. ο Τέκτων δίνει λευκό raster_bgcolor → λευκό φόντο + πράσινες γραμμές).
+    // Μόνο για pattern/user-defined· solid/gradient γεμίζουν ήδη πλήρως. even-odd → νησίδες = τρύπες.
+    if (hatch.backgroundColor && !isSolidHatch(hatch) && hatch.fillType !== 'gradient') {
+      this.ctx.save();
+      this.ctx.fillStyle = hatch.backgroundColor;
+      this.drawBoundaryPath(paths);
+      this.ctx.fill('evenodd');
+      this.ctx.restore();
+    }
 
     if (hatch.fillType === 'gradient' && hatch.gradient) {
       this.fillGradient(paths, hatch.gradient, hatch.patternOrigin);

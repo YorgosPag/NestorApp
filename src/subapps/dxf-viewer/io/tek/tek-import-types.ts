@@ -190,8 +190,10 @@ export interface TekHatchRecord {
   readonly scaleX: number;
   /** `<rotation>` — γωνία μοτίβου (μοίρες). */
   readonly rotationDeg: number;
-  /** `<color>` RGB hex. */
+  /** `<color>` RGB hex — χρώμα γραμμών μοτίβου. */
   readonly color: string;
+  /** `<raster_bgcolor>` RGB hex — χρώμα φόντου ΠΙΣΩ από τις γραμμές (π.χ. FFFFFF λευκό). */
+  readonly bgColor: string;
 }
 
 /** ADR-531 Φ5b — μία «πατιά» διάστασης (`<seg><record>`): η ζωγραφισμένη γραμμή + το κείμενο. */

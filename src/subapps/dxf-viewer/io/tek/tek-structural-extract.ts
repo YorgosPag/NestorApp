@@ -226,6 +226,7 @@ export function extractHatchRecords(root: Element): { hatches: TekHatchRecord[];
         scaleX: elemNumber(groupFind(group, 'scaleX'), 1),
         rotationDeg: elemNumber(groupFind(group, 'rotation'), 0),
         color: groupFind(group, 'color')?.textContent?.trim() ?? '',
+        bgColor: groupFind(group, 'raster_bgcolor')?.textContent?.trim() ?? '',
       });
     }
   }

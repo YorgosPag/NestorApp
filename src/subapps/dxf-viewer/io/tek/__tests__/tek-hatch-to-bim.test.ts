@@ -16,6 +16,7 @@ const SOLID_HATCH: TekHatchRecord = {
   scaleX: 0.15,
   rotationDeg: 0,
   color: 'C0DCC0',
+  bgColor: 'FFFFFF',
 };
 
 // Συνθετικό predefined (ANSI31 = tek 72) πάνω σε τετράγωνο όριο.
@@ -25,6 +26,7 @@ const PATTERN_HATCH: TekHatchRecord = {
   scaleX: 0.5,
   rotationDeg: 30,
   color: 'FF0000',
+  bgColor: 'FFFFFF',
 };
 
 describe('tekHatchToEntity (ADR-531 Φ5b.6)', () => {
@@ -37,6 +39,7 @@ describe('tekHatchToEntity (ADR-531 Φ5b.6)', () => {
     expect(hatch?.lineAngle).toBe(45);
     expect(hatch?.lineSpacing).toBeCloseTo(150, 0); // scaleX 0.15m → 150mm
     expect(hatch?.fillColor).toBe('#C0DCC0');
+    expect(hatch?.backgroundColor).toBe('#FFFFFF'); // λευκό φόντο πίσω από τις γραμμές
     expect(hatch?.boundaryPaths[0]).toHaveLength(7);
     // Y-flip: 4.75m→4750, 10.3m Y-up → −10300 canvas Y-down.
     expect(hatch?.boundaryPaths[0][0].x).toBeCloseTo(4750, 0);

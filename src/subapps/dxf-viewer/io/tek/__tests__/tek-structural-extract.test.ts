@@ -108,8 +108,8 @@ const HATCH_EDGE = (v0x: number, v0y: number, v1x: number, v1y: number) =>
 const HATCH_PRIMITIVE = (patternNum: number, color: string, edges: string) =>
   `<type>6</type><n>1</n><taglist>\n</taglist>\n<elevation>0</elevation><rotation>0</rotation>` +
   `<scaleX>0.15</scaleX><scaleY>0.15</scaleY><type>${patternNum}</type><color>${color}</color>` +
-  `<raster_type>22</raster_type><boundary>0</boundary><pattern>1</pattern><visible>1</visible>` +
-  `<vector>\n${edges}\n</vector>`;
+  `<raster_type>22</raster_type><raster_bgcolor>FFFFFF</raster_bgcolor><boundary>0</boundary>` +
+  `<pattern>1</pattern><visible>1</visible><vector>\n${edges}\n</vector>`;
 const SQUARE_EDGES =
   HATCH_EDGE(0, 0, 5, 0) + HATCH_EDGE(5, 0, 5, 5) + HATCH_EDGE(5, 5, 0, 5) + HATCH_EDGE(0, 5, 0, 0);
 
@@ -124,6 +124,7 @@ describe('extractHatchRecords (ADR-531 Φ5b.6)', () => {
     expect(hatches).toHaveLength(1);
     expect(hatches[0].patternNum).toBe(22);
     expect(hatches[0].color).toBe('C0DCC0');
+    expect(hatches[0].bgColor).toBe('FFFFFF');
     expect(hatches[0].boundary).toHaveLength(4);
     expect(hatches[0].boundary[0]).toEqual({ x: 0, y: 0 });
     expect(warnings).toHaveLength(0);

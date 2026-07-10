@@ -413,3 +413,37 @@ ground truth. Αποκωδικοποίηση επιβεβαίωσε/διόρθω
   απόσταση `scaleX`·1000 mm → 150mm στο δείγμα), ΠΟΤΕ `solid`. Επαλήθευση στο πραγματικό αρχείο: fillType=
   user-defined, color=#C0DCC0, angle=45°, spacing=150mm. **108/108 GREEN**. ⏳ Εκκρεμεί browser-verify Giorgio
   (γραμμές + πυκνότητα/γωνία· ίσως χρειαστεί calibration του mapping scaleX→spacing ή single vs cross-hatch).
+- **2026-07-10** — **Φ5b.6 FIX #3 (έφυγε το λευκό φόντο): background color πίσω από τις γραμμές.** Μετά το FIX #2
+  φαίνονταν μόνο οι πράσινες γραμμές σε διαφανές φόντο· ο Τέκτων έχει **λευκό φόντο** (`raster_bgcolor=FFFFFF`)
+  πίσω από τις γραμμές. Το `HatchEntity.backgroundColor` **υπήρχε ως πεδίο αλλά ΔΕΝ ζωγραφιζόταν ποτέ** (ADR-507).
+  **Fix:** (1) ο `HatchRenderer` γεμίζει το `backgroundColor` (even-odd) ΠΡΙΝ τις γραμμές μοτίβου — AutoCAD
+  «Background color»/DXF 63· μόνο για pattern/user-defined (solid/gradient γεμίζουν ήδη). (2) νέο πεδίο
+  `TekHatchRecord.bgColor` (`<raster_bgcolor>`) → ο mapper το βάζει `backgroundColor` (`tekColorToHex`).
+  Επαλήθευση δεδομένων στο πραγματικό αρχείο: lines=#C0DCC0, bg=#FFFFFF. **108/108 GREEN**.
+- **2026-07-10** — **Φ5b.6 FIX #3b (το λευκό ΑΚΟΜΑ δεν φαινόταν): passthrough του `backgroundColor` στο render
+  model.** Ο πραγματικός κρίκος που έλειπε: ο mapper `toEntityModel` (`canvas-v2/dxf-canvas/dxf-renderer-entity-
+  model.ts`, case 'hatch') αντέγραφε boundaryPaths/fill/pattern πεδία στο render EntityModel αλλά **ΟΧΙ το
+  `backgroundColor`** → ο HatchRenderer έβλεπε `backgroundColor:undefined` (το FIX #3 στον renderer + mapper ήταν
+  σωστό, αλλά το πεδίο χανόταν στη μετάβαση scene→render). Fix: +`backgroundColor: entity.backgroundColor` στο
+  passthrough. ⚠️ Canvas render — δεν καλύπτεται από jest· χρειάζεται browser-verify Giorgio.
+- **2026-07-10** — **Φ5b.6 FIX #3c (ΟΡΙΣΤΙΚΟ — οι 2 κρίκοι που έλειπαν στο committed path): scene→`DxfHatch`
+  handler + `DxfHatch` type.** Clue Giorgio: «το λευκό φαινόταν ΜΟΝΟ σε grip-drag». Ο ghost (grip-drag)
+  διαβάζει το ζωντανό scene `HatchEntity` → είχε `backgroundColor` ✅· το committed render περνά από τον
+  scene→Dxf handler → **έχανε το πεδίο**. Static trace της αλυσίδας βρήκε 2 σπασμένους κρίκους: (1) ο hatch
+  handler (`hooks/canvas/dxf-scene-entity-handlers.ts`, case 'hatch') αντέγραφε fillColor/patternName/gradient
+  αλλά **ΟΧΙ `backgroundColor`**· (2) το `interface DxfHatch` (`canvas-v2/dxf-canvas/dxf-types.ts`) **ΔΕΝ
+  δήλωνε `backgroundColor`** → το read του FIX #3b (`entity.backgroundColor`) ήταν σιωπηρό TS error. **Fix:**
+  +`backgroundColor?: HatchEntity['backgroundColor']` στο `DxfHatch` type + `backgroundColor: h.backgroundColor`
+  στον handler — ΙΔΙΟ μονοπάτι με gradient/lineweightMm σε κάθε κρίκο (type → scene→Dxf handler → toEntityModel
+  → renderer → persistence), κανένας νέος μηχανισμός. Regression test: `dxf-renderer-entity-model-hatch.test.ts`
+  (backgroundColor passthrough + absent→undefined). ⚠️ Canvas render — browser-verify Giorgio.
+- **2026-07-10** — **Φ5b.6 FIX #3d (μετά το #3c: «φαίνεται μόνο το λευκό, οι πράσινες γραμμές χάθηκαν»):
+  contrast-aware χρώμα γραμμών.** Το FIX #3c ζωγράφισε σωστά λευκό+γραμμές, αλλά το `<color>C0DCC0` (χλωμό
+  sage πράσινο, 192/220/192) πάνω στο λευκό `<raster_bgcolor>FFFFFF` = αντίθεση **1.47:1** → πρακτικά αόρατο
+  (πριν, σε σκούρο καμβά, ~11:1 → ολοκάθαρο). Επαλήθευση με στατικό+jest probe: `buildHatchEntitySegments`
+  παράγει 55 γραμμές (ζωγραφίζονται σωστά), άρα αμιγώς θέμα αντίθεσης — όχι σειρά/branch. **Απόφαση Giorgio:
+  «λευκό + ορατές γραμμές» (όπως ο Τέκτων δείχνει και τα δύο).** Fix: ο `HatchRenderer` προσαρμόζει το χρώμα
+  γραμμών/περιγράμματος ενάντια στο `backgroundColor` (όχι τον καμβά) μέσω του SSoT `adaptColorToBackground`
+  (ADR-509) → `#C0DCC0`→`#869A86` (contrast 3.01:1, πράσινο κανάλι κυρίαρχο = hue-safe). Χωρίς φόντο → αυτούσιο
+  (καμία αλλαγή στον σκούρο καμβά). Μηδέν νέα math (reuse adaptive-entity-color). Regression test στο
+  `adaptive-entity-color.test.ts` (Τέκτων C0DCC0/λευκό → ορατό + πράσινο). ⚠️ Canvas render — browser-verify.

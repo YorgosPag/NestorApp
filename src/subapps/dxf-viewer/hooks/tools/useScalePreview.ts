@@ -1,38 +1,29 @@
 /**
  * USE SCALE PREVIEW — ADR-348
  *
- * Renders semi-transparent ghost entities scaled around the base point.
- * Live preview at 60fps via requestAnimationFrame — zero React re-renders.
- *
- * Migrated to the shared `useCanvasGhostPreview` harness (ADR-398 §4): RAF
- * lifecycle + DPR-clear + canonical viewport/transform + clear-on-exit ζουν
- * πλέον ΜΙΑ φορά στο harness· εδώ μένει ΜΟΝΟ η draw logic.
- *
- * ⚠️ Σημείωση: η `phase` subscription (useSyncExternalStore → ScaleToolStore)
- * παραμένει στο top του hook — χρησιμοποιείται ως isActive gate + redraw trigger
- * για το harness.
+ * Renders semi-transparent ghost entities scaled around the base point. Thin
+ * binding over the shared {@link useTransformGhostPreview} draw-skeleton (Cluster
+ * #16 SSoT, ADR-625): the base-point crosshair, rubber-band and tooltip chrome
+ * live in the primitive. Here we bind only the SCALE specifics — the live scale
+ * factor (from cursor distance) and the per-entity `scaleEntity` copies rendered
+ * through the REAL entity renderer (ADR-550, incl. circle → ellipse).
  *
  * @module hooks/tools/useScalePreview
+ * @see hooks/tools/use-transform-ghost-preview — shared transform draw-skeleton (ADR-625)
  */
 
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { AnySceneEntity, Entity } from '../../types/entities';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
-import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import { ScaleToolStore } from '../../systems/scale/ScaleToolStore';
+import { ScaleToolStore, type ScaleToolState } from '../../systems/scale/ScaleToolStore';
 // ADR-348 SSoT — the SAME per-entity scale the commit (`ScaleEntityCommand`) applies, so the
 // WYSIWYG preview cannot diverge from the committed result (incl. circle → ellipse).
 import { scaleEntity } from '../../systems/scale/scale-entity-transform';
 // ADR-550 (WYSIWYG) — moving copies render through the REAL entity renderer (full fidelity).
 import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
-import { useBimPreviewRenderer } from './useBimPreviewRenderer';
-import { useLevelLayersById } from './useLevelLayersById';
 import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
-import { useCanvasGhostPreview } from './useCanvasGhostPreview';
-import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
-
-// ── Types ─────────────────────────────────────────────────────────────────────
+import { useTransformGhostPreview, type TransformGhostFrame } from './use-transform-ghost-preview';
 
 export interface UseScalePreviewProps {
   levelManager: LevelSceneReader;
@@ -41,14 +32,15 @@ export interface UseScalePreviewProps {
   getViewportElement?: () => HTMLElement | null;
 }
 
-// ── Hook ──────────────────────────────────────────────────────────────────────
+/** Live uniform scale factor from cursor distance (SSoT — same value tooltip + copies use). */
+function computeLiveScale(s: ScaleToolState, cursor: Point2D, basePoint: Point2D): number {
+  if (s.subPhase !== 'direct') return s.currentSx;
+  const dist = Math.hypot(cursor.x - basePoint.x, cursor.y - basePoint.y);
+  return dist > 0.001 ? dist / 100 : 1;
+}
 
 export function useScalePreview(props: UseScalePreviewProps): void {
   const { levelManager, transform, getCanvas, getViewportElement } = props;
-
-  // Reactive phase read — triggers harness re-schedule when phase changes.
-  // ⚠️ ΚΡΑΤΕΙΤΑΙ εδώ: isActive gate υπολογίζεται από αυτή.
-  const phase = useSyncExternalStore(ScaleToolStore.subscribe, () => ScaleToolStore.getState().phase);
 
   const getEntity = useCallback((id: string): AnySceneEntity | null => {
     if (!levelManager.currentLevelId) return null;
@@ -56,75 +48,32 @@ export function useScalePreview(props: UseScalePreviewProps): void {
     return scene?.entities.find(e => e.id === id) ?? null;
   }, [levelManager]);
 
-  // ADR-550 — lazy real-entity renderer + level layer-table getter (shared SSoT hooks).
-  const getBimPreview = useBimPreviewRenderer();
-  const layersById = useLevelLayersById(levelManager);
+  const renderCopies = useCallback(
+    ({ state: s, cursor, basePoint, transform: t, viewport, bimPreview, layers }: TransformGhostFrame<ScaleToolState>) => {
+      const live = computeLiveScale(s, cursor, basePoint);
+      for (const entityId of s.selectedEntityIds) {
+        const entity = getEntity(entityId);
+        if (!entity) continue;
+        const scaled = {
+          ...(entity as object),
+          ...scaleEntity(entity as Entity, basePoint, live, live),
+        } as unknown as DxfEntityUnion;
+        drawRealEntityPreview(bimPreview, scaled, layers, t, viewport);
+      }
+    },
+    [getEntity],
+  );
 
-  const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
-    const s = ScaleToolStore.getState();
-    if (s.phase !== 'scale_input' || !s.basePoint || !effectiveCursor) return;
-
-    const toScreen = (p: Point2D) => CoordinateTransforms.worldToScreen(p, t, viewport);
-
-    // Base point marker
-    const basePt = toScreen(s.basePoint);
-    ctx.save();
-    ctx.strokeStyle = '#FF4444';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(basePt.x - 8, basePt.y); ctx.lineTo(basePt.x + 8, basePt.y);
-    ctx.moveTo(basePt.x, basePt.y - 8); ctx.lineTo(basePt.x, basePt.y + 8);
-    ctx.stroke();
-    ctx.restore();
-
-    // Compute live scale factor from cursor distance
-    const dx = effectiveCursor.x - s.basePoint.x;
-    const dy = effectiveCursor.y - s.basePoint.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const liveSx = s.subPhase === 'direct' ? (dist > 0.001 ? dist / 100 : 1) : s.currentSx;
-    const liveSy = liveSx;
-
-    // Rubber-band line from base to cursor
-    const cursorPt = toScreen(effectiveCursor);
-    ctx.save();
-    ctx.strokeStyle = '#FFD700';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([6, 4]);
-    ctx.beginPath();
-    ctx.moveTo(basePt.x, basePt.y);
-    ctx.lineTo(cursorPt.x, cursorPt.y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.restore();
-
-    // Scale factor tooltip
-    ctx.save();
-    ctx.font = '12px monospace';
-    ctx.fillStyle = '#FFD700';
-    ctx.fillText(`×${liveSx.toFixed(3)}`, cursorPt.x + 12, cursorPt.y - 8);
-    ctx.restore();
-
-    // Real WYSIWYG copies (full fidelity) — originals dim to ghosts at their source.
-    ctx.save();
-    const bimPreview = getBimPreview(ctx);
-    const layers = layersById();
-    for (const entityId of s.selectedEntityIds) {
-      const entity = getEntity(entityId);
-      if (!entity) continue;
-      const scaled = {
-        ...(entity as object),
-        ...scaleEntity(entity as Entity, s.basePoint, liveSx, liveSy),
-      } as unknown as DxfEntityUnion;
-      drawRealEntityPreview(bimPreview, scaled, layers, t, viewport);
-    }
-    ctx.restore();
-  }, [getEntity, getBimPreview, layersById]);
-
-  useCanvasGhostPreview({
-    isActive: phase !== 'idle',
+  useTransformGhostPreview<ScaleToolState>({
+    store: ScaleToolStore,
+    levelManager,
+    transform,
     getCanvas,
     getViewportElement,
-    transform,
-    draw,
+    isActivePhase: (phase) => phase !== 'idle',
+    isDrawPhase: (s) => s.phase === 'scale_input',
+    getBasePoint: (s) => s.basePoint,
+    buildTooltip: (s, cursor, basePoint) => `×${computeLiveScale(s, cursor, basePoint).toFixed(3)}`,
+    renderCopies,
   });
 }
