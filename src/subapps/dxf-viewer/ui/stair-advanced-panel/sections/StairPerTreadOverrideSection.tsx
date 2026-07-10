@@ -1,13 +1,21 @@
 'use client';
 
 /**
- * ADR-358 Phase 7b2a — Stream G item 2: Per-tread overrides (table editor).
+ * ADR-358 Phase 7b2a + Q19 Φ5 — Per-tread overrides (table editor + click-into).
  *
- * Q19 hybrid: table editor here, click-on-canvas Phase 8+ (carryover).
- * Each row maps `treadIndex → { material?, nosing? }`. Rows added/removed
- * via `+ / −` buttons. Index input is bounded `[1, stepCount]`; out-of-range
- * entries are silently dropped on next render (defensive — geometry compute
- * also ignores out-of-range keys).
+ * Each row maps `treadIndex → { material?, nosing? }`. Rows added/removed via the
+ * `+ / −` buttons, OR opened by **clicking a tread in 2D/3D** (Q19 «click-into»):
+ * the sub-element selection SSoT (`useStairSubElementSelectionStore`) points at a
+ * tread of THIS stair → that tread's row becomes ACTIVE (highlighted + scrolled
+ * into view). If it has no override yet the row renders TRANSIENTLY (no persisted
+ * data, no command) and materialises on the first material/nosing edit — so Tab-
+ * cycling through steps never spams empty rows.
+ *
+ * INDEX CONVENTION (Q19 Φ5 reconcile): keys are **0-based**, matching the 3D tag
+ * (`userData.stairComponentIndex`), the sub-selection store, and `resolveStairMaterial`'s
+ * `treadIndex`. The UI DISPLAYS `index + 1` (humans count treads from 1). The pre-Φ5 UI
+ * stored 1-based keys — a genuine off-by-one that made tread #0 unreachable and shifted
+ * every override by one step; unified here (no migration — test data wiped pre-production).
  *
  * Patch shape:
  *   add/update: { perTreadOverrides: { ...prev, [index]: { material, nosing } } }
@@ -16,7 +24,7 @@
  * Material picker mirrors `StairMaterialsSection` (preset + custom).
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { StairEntity } from '../../../types/entities';
 import type { StairPerTreadOverride } from '../../../bim/types/stair-types';
@@ -26,6 +34,9 @@ import {
   STAIR_MATERIAL_CUSTOM_ID,
   type StairMaterialOption,
 } from '../../../bim/stairs/stair-material-catalog';
+// ADR-358 Q19 Φ5 — the click-into sub-element SSoT (shared 2D + 3D). Reactive read: low-freq
+// (only on click / Tab / Esc), so subscribing here never causes hover-rate re-renders (ADR-040).
+import { useStairSubElementSelectionStore } from '../../../bim/stairs/stair-sub-element-selection-store';
 import type { DispatchStairParamPatch } from '../commands/dispatchStairParamPatch';
 
 export interface StairPerTreadOverrideSectionProps {
@@ -43,7 +54,20 @@ export function StairPerTreadOverrideSection({
   const overrides = stair.params.perTreadOverrides ?? {};
   const stepCount = stair.params.stepCount;
   const options = defaultStairMaterialCatalog.listMaterialIds();
-  const rows = useMemo(() => sortedIndices(overrides), [overrides]);
+
+  // ADR-358 Q19 Φ5 — the tread the user clicked-into (0-based), or null. Only treads of THIS
+  // stair open a row (risers are highlighted in 3D but have no per-riser override data model).
+  const selectedSub = useStairSubElementSelectionStore((s) => s.selected);
+  const activeIndex =
+    selectedSub && selectedSub.stairId === stair.id && selectedSub.part === 'tread'
+      ? selectedSub.index
+      : null;
+
+  // Persisted override rows PLUS the active tread (transient if not yet overridden).
+  const rows = useMemo(
+    () => withActiveIndex(sortedIndices(overrides), activeIndex),
+    [overrides, activeIndex],
+  );
 
   const onAdd = useCallback(() => {
     const nextIndex = pickNextFreeIndex(overrides, stepCount);
@@ -95,7 +119,7 @@ export function StairPerTreadOverrideSection({
         <OverrideTable
           rows={rows}
           overrides={overrides}
-          stepCount={stepCount}
+          activeIndex={activeIndex}
           materialOptions={options}
           onRemove={onRemove}
           onUpdate={onUpdate}
@@ -108,7 +132,7 @@ export function StairPerTreadOverrideSection({
 interface OverrideTableProps {
   readonly rows: readonly number[];
   readonly overrides: OverrideRecord;
-  readonly stepCount: number;
+  readonly activeIndex: number | null;
   readonly materialOptions: readonly StairMaterialOption[];
   readonly onRemove: (index: number) => void;
   readonly onUpdate: (index: number, patch: Partial<StairPerTreadOverride>) => void;
@@ -117,7 +141,7 @@ interface OverrideTableProps {
 function OverrideTable({
   rows,
   overrides,
-  stepCount,
+  activeIndex,
   materialOptions,
   onRemove,
   onUpdate,
@@ -145,7 +169,8 @@ function OverrideTable({
             key={index}
             index={index}
             override={overrides[index] ?? {}}
-            stepCount={stepCount}
+            persisted={overrides[index] !== undefined}
+            isActive={index === activeIndex}
             materialOptions={materialOptions}
             onRemove={onRemove}
             onUpdate={onUpdate}
@@ -159,7 +184,10 @@ function OverrideTable({
 interface OverrideRowProps {
   readonly index: number;
   readonly override: StairPerTreadOverride;
-  readonly stepCount: number;
+  /** True when this index is a real override in `perTreadOverrides` (vs a transient active row). */
+  readonly persisted: boolean;
+  /** ADR-358 Q19 Φ5 — the clicked-into tread: highlighted + scrolled into view. */
+  readonly isActive: boolean;
   readonly materialOptions: readonly StairMaterialOption[];
   readonly onRemove: (index: number) => void;
   readonly onUpdate: (index: number, patch: Partial<StairPerTreadOverride>) => void;
@@ -168,12 +196,19 @@ interface OverrideRowProps {
 function OverrideRow({
   index,
   override,
-  stepCount,
+  persisted,
+  isActive,
   materialOptions,
   onRemove,
   onUpdate,
 }: OverrideRowProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
+  const rowRef = useRef<HTMLTableRowElement>(null);
+  // Bring the clicked-into tread's row into view (2D/3D click may target a row scrolled away).
+  useEffect(() => {
+    if (isActive) rowRef.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [isActive]);
+
   const materialKind = classifyStairMaterial(override.material);
   const selectValue =
     materialKind === 'custom'
@@ -219,9 +254,21 @@ function OverrideRow({
     [index, onUpdate],
   );
 
+  // Display is 1-based (humans count from 1); the key stays 0-based (geometry/tag/resolver SSoT).
+  const displayIndex = index + 1;
   return (
-    <tr aria-label={t('stairAdvancedPanel.sections.perTread.rowAriaLabel', { index })}>
-      <td className="py-1 align-middle">{index}</td>
+    <tr
+      ref={rowRef}
+      aria-current={isActive ? 'true' : undefined}
+      aria-label={t(
+        isActive
+          ? 'stairAdvancedPanel.sections.perTread.selectedRowAriaLabel'
+          : 'stairAdvancedPanel.sections.perTread.rowAriaLabel',
+        { index: displayIndex },
+      )}
+      className={isActive ? 'bg-accent/60 ring-1 ring-primary' : undefined}
+    >
+      <td className="py-1 align-middle font-medium">{displayIndex}</td>
       <td className="py-1 align-middle">
         <div className="flex items-center gap-1">
           <select
@@ -258,14 +305,18 @@ function OverrideRow({
         />
       </td>
       <td className="py-1 text-right align-middle">
-        <button
-          type="button"
-          onClick={() => onRemove(index)}
-          aria-label={t('stairAdvancedPanel.sections.perTread.removeOverride')}
-          className="rounded border border-border bg-card px-1.5 py-0.5 text-xs text-foreground hover:bg-accent"
-        >
-          −
-        </button>
+        {/* Transient active rows (not yet persisted) have nothing to remove — the − appears
+            once the override materialises on first edit. */}
+        {persisted ? (
+          <button
+            type="button"
+            onClick={() => onRemove(index)}
+            aria-label={t('stairAdvancedPanel.sections.perTread.removeOverride')}
+            className="rounded border border-border bg-card px-1.5 py-0.5 text-xs text-foreground hover:bg-accent"
+          >
+            −
+          </button>
+        ) : null}
       </td>
     </tr>
   );
@@ -278,8 +329,18 @@ function sortedIndices(overrides: OverrideRecord): readonly number[] {
     .sort((a, b) => a - b);
 }
 
+/** Merge the clicked-into tread into the row list (transient if not persisted), kept sorted. */
+function withActiveIndex(
+  indices: readonly number[],
+  activeIndex: number | null,
+): readonly number[] {
+  if (activeIndex === null || indices.includes(activeIndex)) return indices;
+  return [...indices, activeIndex].sort((a, b) => a - b);
+}
+
 function pickNextFreeIndex(overrides: OverrideRecord, stepCount: number): number | null {
-  for (let i = 1; i <= stepCount; i += 1) {
+  // 0-based keys (aligned with the 3D tag + resolver). `stepCount` treads → indices [0, stepCount-1].
+  for (let i = 0; i < stepCount; i += 1) {
     if (overrides[i] === undefined) return i;
   }
   return null;

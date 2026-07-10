@@ -4706,7 +4706,8 @@
           "material": "Υλικό",
           "nosing": "Μύτη (χιλ.)"
         },
-        "rowAriaLabel": "Βαθμίδα {index}"
+        "rowAriaLabel": "Βαθμίδα {index}",
+        "selectedRowAriaLabel": "Βαθμίδα {index} (επιλεγμένη)"
       },
       "cutPlane": {
         "title": "Επίπεδο Τομής",
