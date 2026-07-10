@@ -73,6 +73,33 @@ modules split the concern:
   fill the corner (no hole). The band occupies exactly the footprint of the
   `k+W+k` treads it replaces → the pure flights are untouched (zero ripple).
 
+### Phase 2c — newel / min-inner boundary (no acute miter, no hole)
+
+Phase 2b reached the pivot P but the arc wedges converged to an **acute
+zero-going miter** — Giorgio rejected it (2026-07-11 screenshot). Phase 2c adopts
+the big-player construction (Revit **"Minimum Width on Inside Boundary"**,
+ArchiCAD newel): the arc risers stop on a small inner circle instead of P, and the
+central polygon is filled solid.
+
+- **`BalancedBandInput.minInnerGoing`** — the code narrow-end going
+  (`resolveWinderMinimums(codeProfile, width).minInnerGoing`, ΝΟΚ 130 mm), in
+  `width`'s units. `0` (profile `none`) → legacy reach-P apex (full back-compat).
+- **Inner boundary radius** `r_in = minInnerGoing · halfW / g` (`innerBoundaryRadius`):
+  in the arc the risers are radial with equal walkline going `g` at radius `halfW`,
+  so the going at radius `r` is `r·g/halfW`; solving for `minInnerGoing` gives
+  `r_in`. Capped at `0.98·halfW`. The arc riser inner end moves from `P` to
+  `P + ray·r_in` → the wedges become **trapezoids** (narrow end = `minInnerGoing`,
+  no acute tip).
+- **`newelCore`** (`buildNewelCore`) — the filled sector bounded by the two flight
+  inner edges, the two transition chords and the `r_in` arc; every edge shared with
+  a band tread or the stair outline (watertight). `null` when `r_in ≈ 0`.
+- **Render channel** — the core is **appended to the `treads` list past
+  `Σ flightSplit`** (in `assembleWinderRun`), NOT to `landings`: the 2D
+  `StairRenderer` fills only `treads*Cut`, and `buildTreadLabels` stops at
+  `Σ flightSplit` so the core stays **unnumbered** (winder steps 1..N intact). 3D
+  `StairToThreeConverter` extrudes it as a corner slab. Result: no hole, no acute
+  miter, corner filled up to P, numbering unchanged.
+
 ### Consumers wired
 
 | Consumer | File | Change |
@@ -120,6 +147,19 @@ absorbed by an inserted seam vertex.
 
 ## Changelog
 
+- **2026-07-11** — Phase 2c: **newel / min-inner boundary** (no acute miter, no
+  hole). `BalancedBandInput.minInnerGoing` (from `resolveWinderMinimums`) drives
+  `r_in = minInnerGoing·halfW/g`; arc riser inner end moves `P → P+ray·r_in`
+  (`innerBoundaryRadius`) → trapezoidal wedges. `buildNewelCore` fills the central
+  sector; `assembleWinderRun` **appends it to `treads` past `Σ flightSplit`** (the
+  only channel the 2D `StairRenderer` fills) so it renders as corner fill (+3D
+  slab) while staying **unnumbered**. `codeProfile 'none'` → `r_in=0` → legacy
+  reach-P (back-compat). Tests: `stair-winder-balanced-band` (+5 newel cases),
+  `StairGeometryService-lshape-winders` Test 4b (nok integration). **283/283 stairs
+  + 10 renderer/converter green**, jscpd clean. Pending: browser verify + the
+  **hover perimeter outline** at the winder inner corner (inner stringer =
+  `offsetPolyline(walkline,−halfW)` collapses at the arc where offset = curvature
+  radius → cusp; pre-existing, separate follow-up).
 - **2026-07-11** — Phase 2b: **auto-widening balanced band (dancing steps, k≥2)**.
   New SSoT `stair-winder-balanced-band.ts`: `computeBalancedBandPlan` (auto `k`,
   cap 2) + `buildBalancedWinderRun` (equal-going marks, swung risers, wedges reach
