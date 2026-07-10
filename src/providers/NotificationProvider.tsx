@@ -274,25 +274,20 @@ export function NotificationProvider({
     }
   ): Promise<boolean> => {
     return new Promise((resolve) => {
-      const confirmText = options?.confirmText || t('confirm', 'Confirm');
-      const cancelText = options?.cancelText || t('cancel', 'Cancel');
+      const confirmText = options?.confirmText || t('buttons.confirm');
+      const cancelText = options?.cancelText || t('buttons.cancel');
       const type = options?.type || 'warning';
 
+      // Sonner renders exactly ONE primary `action` + ONE `cancel` button.
+      // The confirm button MUST be the primary `action` (notify reads actions[0]);
+      // the cancel button MUST go in the `cancel` slot — otherwise the confirm
+      // action is silently dropped and both visible buttons cancel the dialog.
       const id = notify(
         options?.title ? `${options.title}\n${message}` : message,
         {
           type,
           duration: 0, // Persistent
           actions: [
-            {
-              label: cancelText,
-              onClick: () => {
-                dismiss(id);
-                onCancel?.();
-                resolve(false);
-              },
-              variant: 'outline'
-            },
             {
               label: confirmText,
               onClick: () => {
@@ -303,6 +298,14 @@ export function NotificationProvider({
               variant: 'default'
             }
           ],
+          cancel: {
+            label: cancelText,
+            onClick: () => {
+              dismiss(id);
+              onCancel?.();
+              resolve(false);
+            }
+          },
           dismissible: true,
           onCancel: () => {
             onCancel?.();
