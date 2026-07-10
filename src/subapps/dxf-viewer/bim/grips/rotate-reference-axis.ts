@@ -34,6 +34,8 @@ import { translatePoint } from '../../rendering/entities/shared/geometry-vector-
 import { resolveMoveGlyphFrame } from './move-glyph-frame';
 import { rotateVector } from './grip-math';
 import { rectOrPolylineVertices, asOrientedRect, longestPolylineSegment, polylineBboxCenter } from '../../systems/polyline/rectangle-detect';
+// ADR-627 — hatch boundary bbox SSoT (centre + extent) for the hatch reference-axis body flip.
+import { hatchBounds, hatchBoundsCenter } from '../hatch/hatch-grips';
 
 /**
  * World-unit threshold separating a pivot that sits OFF the axis of symmetry (so the
@@ -178,6 +180,68 @@ function polylineReferenceAnchor(entity: Entity, pivot: Point2D): Point2D | null
   return anchorTowardBody(pivot, major, polylineBboxCenter(vertices));
 }
 
+/** Segment |unit.y| below this ⇒ treated as world-HORIZONTAL for the hatch reference. */
+const HATCH_HORIZONTAL_UNIT_Y_EPS = 1e-3;
+
+/** A straight boundary segment + its cached unit direction and length. */
+interface HatchSeg { readonly start: Point2D; readonly end: Point2D; readonly unit: Point2D; readonly len: number; }
+
+/** Every non-degenerate straight edge of the hatch boundary rings (closed loops, modulo-wrap). */
+function collectHatchBoundarySegments(paths: ReadonlyArray<ReadonlyArray<Point2D>>): HatchSeg[] {
+  const segs: HatchSeg[] = [];
+  for (const ring of paths) {
+    const n = ring.length;
+    if (n < 2) continue;
+    for (let i = 0; i < n; i++) {
+      const a = ring[i];
+      const b = ring[(i + 1) % n]; // wrap — hatch rings are closed loops
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const len = Math.hypot(dx, dy);
+      if (len < MAJOR_AXIS_PROJ_EPS) continue;
+      segs.push({ start: a, end: b, unit: { x: dx / len, y: dy / len }, len });
+    }
+  }
+  return segs;
+}
+
+/**
+ * ADR-627 — the HATCH sibling of `polylineReferenceAnchor`. The dashed rotation-reference
+ * baseline of a hatch aligns with a STRAIGHT boundary edge, PREFERRING a horizontal one
+ * (Giorgio 2026-07-10: «η οδηγός να ταυτίζεται με ευθύγραμμο — κατά προτίμηση οριζόντιο τμήμα·
+ * αν κάνω κλικ στο άκρο μιας ευθείας για κέντρο, να ταυτίζεται με τον άξονα εκείνης»). Priority:
+ *   1. ΥΠΑΡΧΕΙ οριζόντια ακμή → world +X άξονας (ταυτίζεται όταν το pivot κάθεται σε οριζόντια
+ *      ακμή, π.χ. στο άκρο της).
+ *   2. αλλιώς ευθεία ακμή INCIDENT στο pivot (pivot ≈ ένα άκρο της) → ταύτιση με την ακμή που κλίκαρε.
+ *   3. αλλιώς ο άξονας της ΜΕΓΑΛΥΤΕΡΗΣ ακμής (align with lines — polyline parity).
+ * Κατεύθυνση προς το σώμα (bbox centre) μέσω του κοινού `anchorTowardBody` SSoT. `null` για
+ * non-hatch / κενό όριο (⇒ ο caller πέφτει στο legacy first-move baseline).
+ */
+function hatchReferenceAnchor(entity: Entity, pivot: Point2D): Point2D | null {
+  if ((entity as { type?: string }).type !== 'hatch') return null;
+  const paths = (entity as { boundaryPaths?: ReadonlyArray<ReadonlyArray<Point2D>> }).boundaryPaths;
+  if (!paths || paths.length === 0) return null;
+  const segs = collectHatchBoundarySegments(paths);
+  if (segs.length === 0) return null;
+  const centre = hatchBoundsCenter(paths);
+
+  // 1) prefer a HORIZONTAL edge → world +X (coincides when the pivot lies on that edge).
+  if (segs.some((s) => Math.abs(s.unit.y) < HATCH_HORIZONTAL_UNIT_Y_EPS)) {
+    return anchorTowardBody(pivot, { x: 1, y: 0 }, centre);
+  }
+  // 2) a straight edge whose endpoint ≈ the pivot → coincide with the clicked edge. Endpoint
+  //    tolerance scales with the hatch size (a snapped pivot is exact; a near-click still matches).
+  const bounds = hatchBounds(paths);
+  const diag = bounds ? Math.hypot(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY) : 0;
+  const endpointEps = Math.max(MAJOR_AXIS_PROJ_EPS, diag * 1e-4);
+  const near = (p: Point2D): boolean => Math.hypot(p.x - pivot.x, p.y - pivot.y) < endpointEps;
+  const incident = segs.find((s) => near(s.start) || near(s.end));
+  if (incident) return anchorTowardBody(pivot, incident.unit, centre);
+  // 3) fallback: the longest edge's axis (align with lines).
+  const longest = segs.reduce((a, b) => (b.len > a.len ? b : a));
+  return anchorTowardBody(pivot, longest.unit, centre);
+}
+
 /**
  * Resolve the free-rotate reference baseline anchor (`pivot + majorAxisUnit`,
  * oriented toward the entity body) for `entity`, or `null` when the entity has no
@@ -208,6 +272,12 @@ export function resolveRotateReferenceAnchor(entity: Entity, pivot: Point2D): Po
   // and the dashed reference baseline would be horizontal (Giorgio 2026-07-05).
   const polyAnchor = polylineReferenceAnchor(entity, pivot);
   if (polyAnchor) return polyAnchor;
+
+  // ADR-627 — a HATCH aligns its reference baseline with a straight boundary edge (preferring a
+  // horizontal one, else the edge under the pivot, else the longest), so the dashed rotation guide
+  // coincides with a hatch edge — mirror of the polyline longest-segment axis (Giorgio 2026-07-10).
+  const hatchAnchor = hatchReferenceAnchor(entity, pivot);
+  if (hatchAnchor) return hatchAnchor;
 
   const frame = resolveMoveGlyphFrame(entity);
   if (!frame) return null;

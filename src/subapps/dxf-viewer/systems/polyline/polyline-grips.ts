@@ -62,11 +62,57 @@ export function polylineMoveRotateStartIndex(vertexCount: number, closed: boolea
   return vertexCount + edgeCount;
 }
 
+/** The world positions of the 2 whole-entity handles (MOVE cross + rotation). */
+export interface MoveRotateHandleWorld {
+  readonly move: Point2D;
+  readonly rotation: Point2D;
+}
+
 /**
- * The 2 whole-polyline handles (MOVE cross + rotation), placed with rect-box parity
- * for a rectangle or bbox-relative for a generic polyline. Returns the hooks
- * `GripInfo`; the 2D renderer maps each to its render `GripInfo` (+`shape`).
- * Degenerate rings (<2 vertices) get no handles.
+ * ADR-561/627 — THE single placement SSoT for the whole-entity MOVE cross + rotation
+ * handle of ANY closed/open vertex ring: a plain polyline (`getPolylineMoveRotateGrips`)
+ * AND a hatch boundary ring (`getHatchMoveRotateGrips`, ADR-627) derive their two handle
+ * POSITIONS from here, so the two entity families can never place them differently
+ * («όλα ΙΔΙΑ με το περίγραμμα εμβαδού»). Only the grip-kind tagging differs per caller.
+ *
+ *   - RECTANGLE (closed, oriented rect-box) → move at the box centre, rotation midway on
+ *     a fixed side (tilts with the shape) via the shared `rect-frame` + `rotationHandleMidwayOffset`.
+ *   - GENERIC ring → both handles on the LONGEST segment's axis at its ¼ points (move ¼-west
+ *     / rotation ¼-east) via the SAME `axisQuarter{Move,Rotation}HandleWorld` the plain DXF
+ *     line uses — lands them ON a drawn edge (an axis-aligned-bbox centre falls in empty space
+ *     for an open corner, Giorgio 2026-07-05 «στο μεγαλύτερο κομμάτι, ¼ & ¾, πάνω στη γεωμετρία»).
+ *   - DEGENERATE ring (every point coincident) → no axis; both fall back to the bbox centre.
+ *
+ * `null` for <2 vertices (no handles). Pure — zero React / DOM / store deps.
+ */
+export function resolveMoveRotateHandleWorld(
+  vertices: readonly Point2D[],
+  closed: boolean,
+): MoveRotateHandleWorld | null {
+  if (vertices.length < 2) return null;
+
+  const rect = closed ? asOrientedRect(vertices) : null;
+  if (rect) {
+    const rotOffsetY = rotationHandleMidwayOffset(rect.halfLength * 2); // −halfLength/2
+    return { move: rect.center, rotation: rectLocalWorld(rect, 0, rotOffsetY) };
+  }
+
+  const seg = longestPolylineSegment(vertices, closed);
+  if (seg) {
+    const frame = axisToRectFrame({ start: seg.start, end: seg.end, width: 0 });
+    return { move: axisQuarterMoveHandleWorld(frame), rotation: axisQuarterRotationHandleWorld(frame) };
+  }
+
+  const center = polylineBboxCenter(vertices);
+  return { move: center, rotation: center };
+}
+
+/**
+ * The 2 whole-polyline handles (MOVE cross + rotation), placed via the shared
+ * {@link resolveMoveRotateHandleWorld} placement SSoT (rect-box parity for a rectangle,
+ * longest-segment ¼-points for a generic polyline). Returns the hooks `GripInfo`; the 2D
+ * renderer maps each to its render `GripInfo` (+`shape`). Degenerate rings (<2 vertices)
+ * get no handles.
  */
 export function getPolylineMoveRotateGrips(
   entityId: string,
@@ -74,63 +120,17 @@ export function getPolylineMoveRotateGrips(
   closed: boolean,
   startIndex: number,
 ): GripInfo[] {
-  if (vertices.length < 2) return [];
-
-  // RECTANGLE → oriented rect-box placement (rotation handle tilts with the shape).
-  const rect = closed ? asOrientedRect(vertices) : null;
-  if (rect) {
-    const rotOffsetY = rotationHandleMidwayOffset(rect.halfLength * 2); // −halfLength/2
-    return [
-      {
-        entityId, gripIndex: startIndex, type: 'center',
-        position: rect.center, movesEntity: true,
-        gripKind: { on: 'polyline', kind: POLYLINE_MOVE_KIND },
-      },
-      {
-        entityId, gripIndex: startIndex + 1, type: 'vertex',
-        position: rectLocalWorld(rect, 0, rotOffsetY), movesEntity: false,
-        gripKind: { on: 'polyline', kind: POLYLINE_ROTATION_KIND },
-      },
-    ];
-  }
-
-  // GENERIC polyline → both whole-entity handles on the LONGEST segment's axis, at
-  // its ¼ points, via the SAME `axisQuarter{Rotation,Move}HandleWorld` placement SSoT
-  // the plain DXF line uses (`systems/line/line-grips.ts`) — a polyline and a line can
-  // never diverge, ZERO new placement formula. This lands the handles ON a drawn edge:
-  // for an open corner (2 lines joined at an angle) the axis-aligned-bbox CENTRE fell in
-  // empty space and the move cross + rotation handle floated (Giorgio 2026-07-05 «στο
-  // μεγαλύτερο κομμάτι, ¼ & ¾, πάνω στη γεωμετρία»). Rotation = ¼-east / move = ¼-west of
-  // that segment (line parity; the compass tie-break puts them symmetrically about the
-  // segment centre). Degenerate ring (no non-zero edge) → keep the bbox centre.
-  const seg = longestPolylineSegment(vertices, closed);
-  if (seg) {
-    const frame = axisToRectFrame({ start: seg.start, end: seg.end, width: 0 });
-    return [
-      {
-        entityId, gripIndex: startIndex, type: 'center',
-        position: axisQuarterMoveHandleWorld(frame), movesEntity: true,
-        gripKind: { on: 'polyline', kind: POLYLINE_MOVE_KIND },
-      },
-      {
-        entityId, gripIndex: startIndex + 1, type: 'vertex',
-        position: axisQuarterRotationHandleWorld(frame), movesEntity: false,
-        gripKind: { on: 'polyline', kind: POLYLINE_ROTATION_KIND },
-      },
-    ];
-  }
-
-  // Degenerate ring (every point coincident) → no axis to place on; keep the centre.
-  const center = polylineBboxCenter(vertices);
+  const pos = resolveMoveRotateHandleWorld(vertices, closed);
+  if (!pos) return [];
   return [
     {
       entityId, gripIndex: startIndex, type: 'center',
-      position: center, movesEntity: true,
+      position: pos.move, movesEntity: true,
       gripKind: { on: 'polyline', kind: POLYLINE_MOVE_KIND },
     },
     {
       entityId, gripIndex: startIndex + 1, type: 'vertex',
-      position: center, movesEntity: false,
+      position: pos.rotation, movesEntity: false,
       gripKind: { on: 'polyline', kind: POLYLINE_ROTATION_KIND },
     },
   ];

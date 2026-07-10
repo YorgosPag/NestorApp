@@ -23,6 +23,11 @@ import type { Entity, HatchEntity } from '../../types/entities';
 import { isHatchEntity } from '../../types/entities';
 import { createVertexGrip, createEdgeGrip } from './shared/grip-utils';
 import { hatchBoundsCenter, hatchGradientAngleGripPos, getHatchBoundaryGrips, getHatchEdgeMidpointGrips } from '../../bim/hatch/hatch-grips';
+// ADR-627 — whole-hatch MOVE cross + rotation handle (area/polyline parity). The SAME
+// `getHatchMoveRotateGrips` SSoT the interaction path emits → drawn ≡ pickable.
+import { getHatchMoveRotateGrips } from '../../bim/hatch/hatch-move-rotate-grips';
+import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
+import { gripKindOf } from '../../hooks/grip-kinds';
 import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
 import { buildHatchEntitySegments, hatchMinWorldSpacing } from '../../bim/geometry/shared/hatch-pattern-geometry';
 import { isSolidHatch, resolveHatchLineWidthPx } from '../../bim/hatch/hatch-properties';
@@ -253,18 +258,34 @@ export class HatchRenderer extends BaseEntityRenderer {
     // → θα έμενε «παγωμένη». Το live marker την ακολουθεί στο preview (`useGripGhostPreview`).
     if (hatch.fillType === 'gradient') {
       const active = this.gripInteraction.active;
-      const originIdx = gi;
-      const angleIdx = gi + 1;
       const originPos = hatch.patternOrigin ?? hatchBoundsCenter(hatch.boundaryPaths ?? []);
       if (originPos) {
+        const originIdx = gi;
         const originActive = active?.entityId === entity.id && active.gripIndex === originIdx;
         if (!originActive) grips.push(createVertexGrip(entity.id, originPos, originIdx));
+        gi += 1; // advance even when suppressed → ADR-627 handles keep interaction indices
         const anglePos = hatchGradientAngleGripPos(originPos, hatch.gradient?.angleDeg ?? 0, hatch.boundaryPaths ?? []);
         if (anglePos) {
+          const angleIdx = gi;
           const angleActive = active?.entityId === entity.id && active.gripIndex === angleIdx;
           if (!angleActive) grips.push(createVertexGrip(entity.id, anglePos, angleIdx));
+          gi += 1;
         }
       }
+    }
+    // ADR-627 — whole-hatch MOVE cross + rotation handle, appended LAST via the SAME
+    // `getHatchMoveRotateGrips` SSoT the interaction path uses (drawn ≡ pickable). Move →
+    // 4-arrow MOVE glyph, rotation → curved ROTATION glyph via the `gripGlyphShape` registry.
+    for (const g of getHatchMoveRotateGrips(entity.id, hatch.boundaryPaths?.[0] ?? [], gi)) {
+      grips.push({
+        id: `${g.entityId}-grip-${g.gripIndex}`,
+        entityId: g.entityId,
+        type: g.type,
+        gripIndex: g.gripIndex,
+        position: g.position,
+        isVisible: true,
+        shape: gripGlyphShape(gripKindOf(g, 'hatch')),
+      });
     }
     return grips;
   }

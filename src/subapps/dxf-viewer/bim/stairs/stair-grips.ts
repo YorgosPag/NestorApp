@@ -51,6 +51,12 @@ import {
 } from './stair-grip-math';
 import { mmFactorFromWidth } from './stair-floor-link';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
+// ADR-393 Phase C (2026-07-10) — straight-stair grip EMISSION is the shared axis-box
+// SSoT (same code as straight wall + beam + foundation strip). The role↔kind map +
+// AxisBoxParams adapter live in `stair-rect-adapter` so emission + drag read ONE
+// mapping (no cycle: the adapter does not import this module).
+import { getAxisBoxGrips } from '../grips/axis-box-grips';
+import { STAIR_ROLE_TO_KIND, stairAxisBoxParams, stairAxisMidpoint } from './stair-rect-adapter';
 
 // Public API re-exports (consumers import from this module).
 export { applyStairGripDrag } from './stair-grip-transforms';
@@ -73,25 +79,35 @@ export function stairGripGlyphShape(kind: StairGripKind | undefined): GripShape 
  */
 export function getStairGrips(entity: Readonly<StairEntity>): GripInfo[] {
   const { params, geometry } = entity;
+
+  // ── STRAIGHT → full wall parity via the shared axis-box SSoT (ADR-393 Phase C) ──
+  // 8 shape handles (4 corners + 4 mid-edges) + rotation + centre MOVE cross, the
+  // IDENTICAL emission the straight wall uses (positions / glyphs / roles from
+  // `getAxisBoxGrips`). Self-contained + early-return: it does NOT pre-push the
+  // ADR-393 v2 base/direction handles, so `stair-base` here IS the move cross (kept,
+  // NOT filtered) and `stair-direction` is the axis-quarter rotation handle (wall parity).
+  if (params.variant.kind === 'straight') {
+    const grips: GripInfo[] = [];
+    pushStraightGrips(grips, entity);
+    return grips;
+  }
+
+  // ── Non-straight (curved / L / U / Γ) → ADR-393 v2 base + direction pre-push ──
   const u = unitVectorFromDirection(params.direction);
   const p = perpUnit(u);
   const base = project2D(params.basePoint);
   // The 100 mm handle offset is a physical distance; convert it to scene units
   // via the same SSoT factor the length grip uses (`mmFactorFromWidth`) so the
   // direction + mid-front handles do not land 1000× away in metre/cm scenes.
-  // See feedback: BIM grip positions must stay scene-unit-correct.
   const handleOffset = DIRECTION_GRIP_OFFSET_MM / mmFactorFromWidth(params.width);
 
   const grips: GripInfo[] = [];
 
-  // 0 — basePoint (MOVE handle). ADR-393 v2: displayed at the walkline
-  // arc-midpoint (centre of the climbing path) instead of the front edge so it
-  // reads as "grab here to move the whole stair". Drag is delta-based, so the
-  // display position does not affect the transform.
+  // 0 — basePoint (MOVE handle). ADR-393 v2: displayed at the walkline arc-midpoint.
   // ADR-363 Φ1G.5 Slice 2: still PUSHED (the ADR-393 grips below key gripIndex off
-  // `grips.length`, so un-pushing would shift/collide them with the direction grip
-  // at hardcoded gripIndex 1) but FILTERED OUT of the returned set at the end — see
-  // the `stair-base` filter on return. Alt+drag from any remaining grip moves the stair.
+  // `grips.length`, so un-pushing would collide them with the direction grip at
+  // hardcoded gripIndex 1) but FILTERED OUT of the returned set on return. Alt+drag
+  // from any remaining grip moves the stair.
   const moveAnchor: Point2D = polylineArcMidpoint(geometry.walkline) ?? {
     x: base.x + (params.totalRun / 2) * u.x,
     y: base.y + (params.totalRun / 2) * u.y,
@@ -105,11 +121,9 @@ export function getStairGrips(entity: Readonly<StairEntity>): GripInfo[] {
     gripKind: { on: 'stair', kind: 'stair-base' },
   });
 
-  // 1 — direction handle (ROTATION). ADR-393 v2: displayed at the front-centre
-  // (one scene-scaled handle offset ahead of the first riser, −u side). The
-  // rotation pivot stays `basePoint` (= front-edge centre); `rotateDirection`
-  // is anchor-relative so grabbing the handle off the +u axis no longer flips
-  // the stair on mousedown.
+  // 1 — direction handle (ROTATION), front-centre (one scene-scaled offset ahead of
+  // the first riser, −u side). `rotateStair` is anchor-relative so grabbing the handle
+  // off the +u axis no longer flips the stair on mousedown.
   grips.push({
     entityId: entity.id,
     gripIndex: 1,
@@ -119,32 +133,20 @@ export function getStairGrips(entity: Readonly<StairEntity>): GripInfo[] {
     gripKind: { on: 'stair', kind: 'stair-direction' },
   });
 
-  if (params.variant.kind === 'straight') {
-    // ADR-393 v2: width + length + mid-front grips are SUPPRESSED for straight
-    // stairs — the 4 corner grips own both resize axes (perp→width,
-    // axial→length, opposite face anchored). The transforms + union members are
-    // kept (the corners reuse them); they are simply not emitted here.
-    pushStraightGrips(grips, entity, { base, u, p });
-  } else if (hasSplitGrip(params.variant)) {
-    // ADR-393 v2 Phase 2 — L/U/Γ: the on-axis width + length handles are
-    // SUPPRESSED here too; 4 corner grips (positions READ from the computed
-    // stringer endpoints, SSoT) own width + per-flight length. Landing grips
-    // stay. The end corner sits on the LAST flight (a different direction than
-    // the start corner — the stair bends at the landing).
+  if (hasSplitGrip(params.variant)) {
+    // ADR-393 v2 Phase 2 — L/U/Γ: 4 corner grips (positions READ from the computed
+    // stringer endpoints, SSoT) own width + per-flight length. Landing grips stay.
     pushFlightBasedCorners(grips, entity, { base, u, p });
     pushLandingGrips(grips, entity, { base, u, p });
   } else {
     // Curved (spiral/helical/elliptical/winder/triangular×2/sketch/v-shape):
-    // no rectangular footprint → keep the on-axis width + length handles
-    // permanently (no corners make sense on an arc).
+    // no rectangular footprint → keep the on-axis width + length handles.
     pushAxisWidthLength(grips, entity, { base, u, p });
   }
 
-  // ADR-363 Φ1G.5 Slice 2 — drop the central MOVE marker (`stair-base`, 4-way
-  // arrow at the walkline midpoint): redundant now that Alt+drag from any grip
-  // translates the whole stair (declutter). Filtered here (not un-pushed) so the
-  // `grips.length`-based indices above stay intact; the `stair-base` transform +
-  // hot-grip move path are retained (just unreachable). gripIndex 0 left unused.
+  // ADR-363 Φ1G.5 Slice 2 — drop the central MOVE marker (`stair-base`) from the
+  // non-straight output (declutter; Alt+drag from any grip translates the stair). The
+  // transform + hot-grip move path are retained (just unreachable here).
   return grips.filter((g) => gripKindOf(g, 'stair') !== 'stair-base');
 }
 
@@ -217,9 +219,52 @@ function pushAxisWidthLength(
   });
 }
 
-// ─── ADR-393 Phase A1 + A2 — straight corner + mid-front grips ───────────────
+// ─── ADR-393 Phase C — straight grips via the shared axis-box SSoT ────────────
 
-function pushStraightGrips(
+/**
+ * Emit the STRAIGHT stair grips through the SAME `getAxisBoxGrips` SSoT the straight
+ * wall / beam / foundation strip use: 8 shape handles (width-edge + length-edge + 4
+ * corners + the 2 opposite mid-edges) + the axis-quarter rotation handle, mapped
+ * `role → kind` via `STAIR_ROLE_TO_KIND`, then the centre 4-arrow MOVE cross
+ * (`stair-base`) at the axis midpoint. `rotationPlacement: 'axis-quarter'` = wall
+ * parity (the handle sits on the centreline at ¼ run toward the east end, off the
+ * edge midpoints). Every position / glyph / role is the shared engine — zero stair-
+ * only geometry, «ίδιες ακριβώς λαβές με τον τοίχο, μηδέν διπλότυπα».
+ */
+function pushStraightGrips(grips: GripInfo[], entity: Readonly<StairEntity>): void {
+  for (const g of getAxisBoxGrips(stairAxisBoxParams(entity.params), {
+    extraMidEdges: true,
+    rotationPlacement: 'axis-quarter',
+  })) {
+    grips.push({
+      entityId: entity.id,
+      gripIndex: grips.length,
+      type: g.type,
+      position: g.position,
+      movesEntity: false,
+      gripKind: { on: 'stair', kind: STAIR_ROLE_TO_KIND[g.role] },
+    });
+  }
+  // Centre 4-arrow MOVE cross (`stair-base`) — the shared move-glyph render / per-arm
+  // hover-zone / click→dialog SSoT activates the moment the kind is emitted (registered
+  // in the glyph registry + hot-grip FSM + `resolveMoveGlyphFrame`).
+  grips.push({
+    entityId: entity.id,
+    gripIndex: grips.length,
+    type: 'center',
+    position: stairAxisMidpoint(entity.params),
+    movesEntity: true,
+    gripKind: { on: 'stair', kind: 'stair-base' },
+  });
+}
+
+/**
+ * Defensive 4-corner fallback for a SPLIT variant whose geometry is not computed yet
+ * (the `pushFlightBasedCorners` degenerate branch). Reads the straight footprint from
+ * `params` (base ± width/2 on the front/back edges). Not the main straight path — that
+ * goes through the axis-box SSoT above.
+ */
+function pushStraightCornerGrips(
   grips: GripInfo[],
   entity: Readonly<StairEntity>,
   frame: StairAxisFrame,
@@ -237,10 +282,6 @@ function pushStraightGrips(
     { pos: { x: backX - half * p.x, y: backY - half * p.y }, kind: 'stair-corner-end-right' },
   ];
   pushCornerGrips(grips, entity, corners);
-  // ADR-393 v2: the legacy `stair-start-side` mid-front grip is no longer
-  // emitted — the rotation handle now occupies the front-centre slot, and the
-  // start corners cover the front-edge resize. The transform + union member are
-  // retained for backward-compat / Phase-2 reuse.
 }
 
 // ─── ADR-393 v2 Phase 2 — flight-based corners (L/U/Γ) ───────────────────────
@@ -275,7 +316,7 @@ function pushFlightBasedCorners(
 
   // Defensive: geometry not computed yet → fall back to flight-1 footprint.
   if (walk.length < 2 || outer.length < 1 || inner.length < 1) {
-    pushStraightGrips(grips, entity, { base: project2D(params.basePoint), u, p });
+    pushStraightCornerGrips(grips, entity, { base: project2D(params.basePoint), u, p });
     return;
   }
 

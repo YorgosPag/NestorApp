@@ -175,6 +175,23 @@ const ROTATE_HANDLERS: Partial<Record<EntityType, RotateHandler>> = {
     }));
     return { members } as unknown as Partial<Entity>;
   },
+  // ADR-627 — HATCH: rotate every boundary-ring vertex about the pivot so the fill spins
+  // WITH its boundary (+ seed points, pattern origin, and the pattern/gradient angle so the
+  // hatching keeps its visual orientation). Previously a test-pinned no-op — this unlocks
+  // BOTH the toolbar Rotate tool AND the `hatch-rotation` grip (which route through here via
+  // `RotateEntityCommand` / `applyPrimitiveRotationDrag`, exactly like the polyline/area outline).
+  hatch: (entity, pivot, angleDeg) => {
+    const e = entity as Extract<Entity, { type: 'hatch' }>;
+    return {
+      boundaryPaths: e.boundaryPaths.map((path) => path.map((v) => rotatePoint(v, pivot, angleDeg))),
+      ...(e.seedPoints ? { seedPoints: e.seedPoints.map((v) => rotatePoint(v, pivot, angleDeg)) } : {}),
+      ...(e.patternOrigin ? { patternOrigin: rotatePoint(e.patternOrigin, pivot, angleDeg) } : {}),
+      ...(e.patternAngle !== undefined ? { patternAngle: normalizeAngleDeg(e.patternAngle + angleDeg) } : {}),
+      ...(e.gradient
+        ? { gradient: { ...e.gradient, angleDeg: normalizeAngleDeg((e.gradient.angleDeg ?? 0) + angleDeg) } }
+        : {}),
+    } as Partial<Entity>;
+  },
 };
 
 /**

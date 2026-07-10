@@ -26,7 +26,7 @@ import { buildSegmentHudMeta, paintWallHud } from '../../canvas-v2/preview-canva
 import { paintColumnHud } from '../../canvas-v2/preview-canvas/column-hud-paint';
 // ADR-537/561/508 — polyline HUD-segment selection (which incident segment(s) change length) lives
 // in the SHARED 2D↔3D SSoT; this helper is a thin adapter (`dp`→role).
-import { resolvePolylineHudSegments, type GripAlignmentRole, type GripAlignmentEntityView } from '../../systems/grip/grip-drag-alignment-role';
+import { resolvePolylineHudSegments, resolveHatchHudSegments, type GripAlignmentRole, type GripAlignmentEntityView } from '../../systems/grip/grip-drag-alignment-role';
 // ADR-508 §polygon-hud (Giorgio 2026-07-06) — ordered polygon-footprint corners (ΕΝΑ characteristic SSoT,
 // καλύπτει slab/opening/roof/floor-finish/thermal/mep-underfloor) για τις live περιμετρικές διαστάσεις
 // ΚΑΘΕ πολυγωνικής BIM οντότητας κατά το reshape λαβής.
@@ -153,6 +153,32 @@ export function drawMemberGripHud(
     if (segments.length > 0) {
       for (const [a, b] of segments) {
         paintWallHud(ctx, buildSegmentHudMeta(poly.vertices[a], poly.vertices[b], sceneUnits), '', t, vp);
+      }
+      return;
+    }
+  }
+  // ADR-627 §hatch-hud — hatch boundary VERTEX reshape parity με το περίγραμμα εμβαδού: κάθε ring
+  // segment που αλλάζει μήκος παίρνει τις ΙΔΙΕΣ λευκές ενδείξεις (μήκος + ∠γωνία) μέσω του ΚΟΙΝΟΥ
+  // `buildSegmentHudMeta`+`paintWallHud` (`specLabel=''` — το hatch δεν έχει BIM ταυτότητα). Τα ring
+  // + vertex indices αποκωδικοποιούνται από το grip kind (`resolveHatchHudSegments`, closed ring →
+  // reuse του polyline incident-segment SSoT)· η μέτρηση από το reshaped `transformed.boundaryPaths`
+  // ghost (WYSIWYG). Move/rotation/gradient/edge-midpoint → null → κανένα HUD (δικό τους overlay).
+  if (type === 'hatch' && !dp.movesEntity && !dp.rotatePivot) {
+    const role: GripAlignmentRole = {
+      movesEntity: dp.movesEntity === true,
+      isRotation: dp.rotatePivot != null,
+      gripIndex: dp.gripIndex,
+      anchorPos: dp.anchorPos ?? null,
+      edgeVertexIndices: dp.edgeVertexIndices,
+      hatchGripKind: gripKindOf(dp, 'hatch'),
+    };
+    const res = resolveHatchHudSegments(transformed as unknown as GripAlignmentEntityView, role);
+    if (res) {
+      const ring = (transformed as unknown as { boundaryPaths?: Point2D[][] }).boundaryPaths?.[res.pathIdx];
+      if (ring) {
+        for (const [a, b] of res.segments) {
+          paintWallHud(ctx, buildSegmentHudMeta(ring[a], ring[b], sceneUnits), '', t, vp);
+        }
       }
       return;
     }

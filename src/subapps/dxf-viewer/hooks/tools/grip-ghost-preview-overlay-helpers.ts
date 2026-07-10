@@ -137,6 +137,8 @@ export function paintGripActionAlignmentTraces(
     anchorPos: dp.anchorPos ?? null,
     edgeVertexIndices: dp.edgeVertexIndices,
     lineGripKind: gripKindOf(dp, 'line'),
+    // ADR-627 — hatch boundary vertex grip → its ring+index feed the polyline adjacency SSoT.
+    hatchGripKind: gripKindOf(dp, 'hatch'),
   };
   // ── ADR-557 — WHOLE-ENTITY MOVE: paint resolve #1's PUBLISHED store, NOT a local re-resolve ──
   // The snap pass (`applyGripDragAlignmentTracking`, mouse-handler-move) already resolved the ambient

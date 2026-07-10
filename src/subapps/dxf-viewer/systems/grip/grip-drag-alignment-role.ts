@@ -25,7 +25,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { gripKindOf, type LineGripKind } from '../../hooks/grip-kinds';
+import { gripKindOf, type LineGripKind, type HatchGripKind } from '../../hooks/grip-kinds';
 import type { GripInfo } from '../../hooks/grip-types';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import { getLineGripAlignmentAnchors } from '../line/line-grips';
@@ -35,6 +35,8 @@ import {
   getPolylineEdgeSlideIncidentSegments,
   isPolylineStraightEdgeSlide,
 } from '../polyline/polyline-grips';
+// ADR-627 — hatch boundary vertex grip decode (ring + vertex indices from the kind string).
+import { decodeHatchVertexGripKind } from '../../bim/hatch/hatch-grips';
 
 /**
  * The minimal per-grip view shared by the 2D `DxfGripDragPreview` and the 3D `GripInfo`
@@ -45,6 +47,8 @@ import {
  *   - `anchorPos`    — the grabbed point (2D `dp.anchorPos`; 3D `grip.position`).
  *   - `edgeVertexIndices` — present on a polyline segment-midpoint slide grip (`[i, next]`).
  *   - `lineGripKind` — line rotation discriminator (excludes the rotation handle).
+ *   - `hatchGripKind` — hatch boundary grip discriminator (ADR-627); carries ring+vertex
+ *     indices in its string (`role.gripIndex` is a FLAT counter for hatch, not `pathIdx`).
  */
 export interface GripAlignmentRole {
   readonly movesEntity: boolean;
@@ -53,6 +57,7 @@ export interface GripAlignmentRole {
   readonly anchorPos: Point2D | null;
   readonly edgeVertexIndices?: readonly [number, number];
   readonly lineGripKind?: LineGripKind | null;
+  readonly hatchGripKind?: HatchGripKind | null;
 }
 
 /**
@@ -68,7 +73,8 @@ export function gripInfoToAlignmentRole(grip: GripInfo, anchorPos: Point2D | nul
   // bare `grip.gripKind?.kind` collapse: this adapter is raw-DXF-only, and a defensive BIM
   // grip must still resolve to `undefined` here (else a BIM rotation kind would flip isRotation).
   const kind = gripKindOf(grip, 'line') ?? gripKindOf(grip, 'arc')
-    ?? gripKindOf(grip, 'polyline') ?? gripKindOf(grip, 'circle');
+    ?? gripKindOf(grip, 'polyline') ?? gripKindOf(grip, 'circle')
+    ?? gripKindOf(grip, 'hatch'); // ADR-627 — hatch rotation handle → isRotation via registry
   return {
     movesEntity: grip.movesEntity,
     isRotation: gripGlyphShape(kind) === 'rotation',
@@ -76,6 +82,7 @@ export function gripInfoToAlignmentRole(grip: GripInfo, anchorPos: Point2D | nul
     anchorPos,
     edgeVertexIndices: grip.edgeVertexIndices,
     lineGripKind: gripKindOf(grip, 'line'),
+    hatchGripKind: gripKindOf(grip, 'hatch'),
   };
 }
 
@@ -91,6 +98,9 @@ export interface GripAlignmentEntityView {
   readonly vertices?: readonly Point2D[];
   readonly closed?: boolean;
   readonly bulges?: readonly number[];
+  // ADR-627 — hatch boundary rings (outer + islands); the dragged vertex's ring+index are
+  // decoded from `role.hatchGripKind`, then this ring feeds the SAME polyline adjacency SSoT.
+  readonly boundaryPaths?: readonly (readonly Point2D[])[];
 }
 
 /**
@@ -124,6 +134,18 @@ export function resolveGripAlignmentAnchors(
       ? (role.anchorPos ? [role.anchorPos] : null)
       : getPolylineGripAlignmentAnchors(role.gripIndex, entity.vertices, entity.closed ?? false);
   }
+  // ADR-627 — hatch boundary VERTEX reshape → the fixed neighbour vertices of its ring, via
+  // the SAME polyline adjacency SSoT (a hatch boundary ring IS a closed polyline ring). The
+  // ring + vertex indices come from the grip-kind string (`role.gripIndex` is a flat counter
+  // across all hatch grips, not `pathIdx`), decoded via `decodeHatchVertexGripKind`.
+  if (entity.type === 'hatch' && entity.boundaryPaths && role.hatchGripKind) {
+    const decoded = decodeHatchVertexGripKind(role.hatchGripKind);
+    if (!decoded) return null;
+    const [pathIdx, vertexIdx] = decoded;
+    const ring = entity.boundaryPaths[pathIdx];
+    if (!ring) return null;
+    return getPolylineGripAlignmentAnchors(vertexIdx, ring, true);
+  }
   return null;
 }
 
@@ -148,4 +170,26 @@ export function resolvePolylineHudSegments(
   return isPolylineStraightEdgeSlide(role.edgeVertexIndices, entity.bulges) && role.edgeVertexIndices
     ? getPolylineEdgeSlideIncidentSegments(role.edgeVertexIndices, n, closed)
     : getPolylineVertexIncidentSegments(role.gripIndex, n, closed);
+}
+
+/**
+ * ADR-627 — the boundary-ring index + segment-index pair(s) whose length/angle the white HUD
+ * must dimension while a hatch boundary VERTEX grip is dragged, or `null` when the grip is not
+ * a hatch boundary-vertex reshape (move / rotation / edge-midpoint insert / gradient → no HUD).
+ * A hatch ring is a closed loop, so it reuses the SAME entity-agnostic
+ * {@link getPolylineVertexIncidentSegments} the polyline HUD uses (`closed=true`). The caller
+ * maps each index pair onto ITS OWN reshaped `transformed.boundaryPaths[pathIdx]` ghost ring
+ * before `buildSegmentHudMeta` — exactly like the polyline HUD maps onto the ghost vertices.
+ */
+export function resolveHatchHudSegments(
+  entity: GripAlignmentEntityView,
+  role: GripAlignmentRole,
+): { readonly pathIdx: number; readonly segments: Array<readonly [number, number]> } | null {
+  if (entity.type !== 'hatch' || !entity.boundaryPaths || !role.hatchGripKind) return null;
+  const decoded = decodeHatchVertexGripKind(role.hatchGripKind);
+  if (!decoded) return null;
+  const [pathIdx, vertexIdx] = decoded;
+  const ring = entity.boundaryPaths[pathIdx];
+  if (!ring) return null;
+  return { pathIdx, segments: getPolylineVertexIncidentSegments(vertexIdx, ring.length, true) };
 }

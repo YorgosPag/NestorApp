@@ -65,6 +65,15 @@ export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
   'wall-corner-end-neg': 'corner',
   'wall-midpoint': 'move',
   'wall-rotation': 'rotate',
+  // Stairs (ADR-393 Phase C, 2026-07-10) — full wall parity for the STRAIGHT variant:
+  // the centre `stair-base` cross = MOVE (3-click move + per-arm directional),
+  // `stair-direction` = ROTATION (6-click reference / free spin around a picked pivot).
+  // Without these rows the move-popup + rotation flow never arm (they stay press-drag).
+  // The 4 corners + 4 mid-edges resize via the shared axis-box engine on press-drag
+  // (absent here on purpose — resize is a plain drag, like the wall corners' 2-click is
+  // opt-in only where asymmetric-anchor matters; the stair keeps them press-drag).
+  'stair-base': 'move',
+  'stair-direction': 'rotate',
   // Beams (ADR-363 Phase 5.5d) — axis-based wall parity: midpoint MOVE (3-click),
   // rotation REFERENCE (6-click). Start/end/curve/width/depth stay press-drag.
   'beam-midpoint': 'move',
@@ -134,6 +143,11 @@ export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
   'arc-rotation': 'rotate',
   'polyline-move': 'move',
   'polyline-rotation': 'rotate',
+  // Hatch (ADR-627) — whole-hatch handles on the outer boundary ring, FULL parity με το
+  // περίγραμμα εμβαδού / polyline: move MOVE (3-click + per-arm directional) + rotation
+  // (6-click reference / free spin). Vertex / edge-midpoint / gradient grips stay press-drag.
+  'hatch-move': 'move',
+  'hatch-rotation': 'rotate',
   // Text / MText (ADR-557) — full rect-box parity with the column: centre MOVE
   // (3-click move + per-arm directional) + rotation (6-click reference / free
   // spin). The 4 corners + 4 edge midpoints stay press-drag (absent here).

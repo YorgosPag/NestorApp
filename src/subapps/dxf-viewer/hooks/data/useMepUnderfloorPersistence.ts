@@ -18,7 +18,6 @@
 import { useMemo } from 'react';
 
 import type { MepUnderfloorEntity } from '../../bim/types/mep-underfloor-types';
-import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import {
   createMepUnderfloorFirestoreService,
   entityToSaveInput,
@@ -27,11 +26,12 @@ import {
 } from '../../bim/mep-underfloor/mep-underfloor-firestore-service';
 import { recordMepUnderfloorChange } from '../../bim/mep-underfloor/mep-underfloor-audit-client';
 import { mepUnderfloorDocToEntity as docToEntity } from './mep-underfloor-persistence-helpers';
-import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
+import { createBimBoqAuditLifecycle } from './create-bim-boq-audit-lifecycle';
 import { mepConnectorMergeConfig } from './mep-connector-merge-config';
 import type {
   BimEntityPersistenceParams,
+  BimEntityPersistencePublicScope,
   BimEntitySaveState,
 } from './bim-entity-persistence-hook-types';
 
@@ -41,16 +41,7 @@ import type {
 
 export type MepUnderfloorSaveState = BimEntitySaveState;
 
-export interface UseMepUnderfloorPersistenceParams {
-  readonly companyId: string | null;
-  readonly projectId: string | null | undefined;
-  readonly floorplanId: string | null | undefined;
-  /** ADR-420 — stable building-storey id. Forwarded to service config. */
-  readonly floorId?: string | null;
-  /** ADR-408 — building scope for the Η-Μ BOQ auto-feed (BimToBoqBridge). */
-  readonly buildingId?: string | null;
-  readonly userId: string | null;
-  readonly levelManager: LevelSceneWriter;
+export interface UseMepUnderfloorPersistenceParams extends BimEntityPersistencePublicScope {
   readonly primarySelectedUnderfloor: MepUnderfloorEntity | null;
 }
 
@@ -105,39 +96,18 @@ const useMepUnderfloorPersistenceBase = createBimEntityPersistenceHook<
     event: 'bim:mep-underfloor-delete-requested',
     getId: (p) => (p as { underfloorId?: string }).underfloorId,
   },
-  onPersisted: (entity, { isNew, prevComparable, scope }) => {
-    void recordMepUnderfloorChange(isNew ? 'created' : 'updated', entity, {
-      prevParams: prevComparable ?? undefined,
-    });
-    // ADR-408 — Η-Μ BOQ auto-feed: underfloor loop = developed serpentine pipe
-    // length (m, ΗΛΜ-7.04). totalLengthM → BimEntityForBoq.geometry.lengthM.
-    if (scope.companyId && scope.projectId && scope.buildingId) {
-      void bimToBoqBridge.upsertBoqItemForBim(
-        'mep-underfloor',
-        { id: entity.id, kind: entity.kind, geometry: { lengthM: entity.geometry.totalLengthM } },
-        {
-          companyId: scope.companyId,
-          projectId: scope.projectId,
-          buildingId: scope.buildingId,
-          floorId: scope.floorId ?? undefined,
-        },
-        isNew ? 'created' : 'updated',
-      );
-    }
-  },
-  onDeleted: (id, deleted, { scope }) => {
-    void recordMepUnderfloorChange(
-      'deleted',
-      deleted
-        ? { id: deleted.id, kind: deleted.kind, layerId: deleted.layerId, params: deleted.params }
-        : { id, kind: 'hydronic-loop' },
-    );
-    // ADR-408 — remove the auto-fed Η-Μ BOQ row (skips user-detached rows).
-    if (scope.companyId) void bimToBoqBridge.deleteBoqItemForBim(id, scope.companyId);
-  },
-  onRestored: (entity) => {
-    void recordMepUnderfloorChange('restored', entity);
-  },
+  // ADR-628 — audit + Η-Μ BOQ auto-feed lifecycle. Underfloor loop = developed
+  // serpentine pipe length (m, ΗΛΜ-7.04): totalLengthM → BimEntityForBoq.geometry.lengthM.
+  ...createBimBoqAuditLifecycle<MepUnderfloorEntity>({
+    boqType: 'mep-underfloor',
+    recordChange: recordMepUnderfloorChange,
+    deletedFallbackKind: 'hydronic-loop',
+    boqPayload: (entity) => ({
+      id: entity.id,
+      kind: entity.kind,
+      geometry: { lengthM: entity.geometry.totalLengthM },
+    }),
+  }),
 });
 
 // ============================================================================

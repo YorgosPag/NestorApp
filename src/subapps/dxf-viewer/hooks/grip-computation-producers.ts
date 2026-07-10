@@ -77,6 +77,8 @@ import {
   hatchBoundsCenter, hatchGradientAngleGripPos, getHatchBoundaryGrips, getHatchEdgeMidpointGrips,
   HATCH_GRADIENT_ORIGIN_KIND, HATCH_GRADIENT_ANGLE_KIND,
 } from '../bim/hatch/hatch-grips';
+// ADR-627 — whole-hatch MOVE cross + rotation handle (area/polyline parity, shared placement SSoT).
+import { getHatchMoveRotateGrips } from '../bim/hatch/hatch-move-rotate-grips';
 import { getDimensionGrips } from './dimensions/useDimensionGrips';
 import { getXLineGrips } from '../systems/xline/xline-grips';
 import { getRayGrips } from '../systems/ray/ray-grips';
@@ -236,8 +238,13 @@ function buildHatchGrips(entity: HatchDxf): GripInfo[] {
     gripIndex += 1;
   }
   // ADR-507 Φ5 — append the optional gradient origin/angle grips (mutates `grips`,
-  // continues the running `gripIndex`); no-op unless `fillType==='gradient'`.
-  pushHatchGradientGrips(grips, gripIndex, hatchLike, paths, entity.id);
+  // continues the running `gripIndex`); no-op unless `fillType==='gradient'`. Returns
+  // the next running index so the ADR-627 handles land right after (render ≡ interaction).
+  gripIndex = pushHatchGradientGrips(grips, gripIndex, hatchLike, paths, entity.id);
+  // ADR-627 — whole-hatch MOVE cross + rotation handle on the outer boundary ring, via
+  // the SHARED `getHatchMoveRotateGrips` SSoT (area/polyline parity). Appended LAST so the
+  // pre-existing vertex/edge/gradient grip indices stay unchanged.
+  grips.push(...getHatchMoveRotateGrips(entity.id, paths[0] ?? [], gripIndex));
   return grips;
 }
 

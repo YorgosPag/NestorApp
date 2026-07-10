@@ -156,6 +156,24 @@ describe('resolveMoveGlyphFrame (ADR-397)', () => {
     expect(f.axisX.x).toBeCloseTo(1, 6);
     expect(f.axisX.y).toBeCloseTo(0, 6);
   });
+
+  // ADR-393 Phase C — the stair has no axis endpoints; its orientation is `params.basePoint`
+  // + `params.direction` (deg). A frame from `direction` rotates the MOVE cross with the
+  // stair AND seeds the rotation-reference axis coaxial with the run direction (wall parity).
+  it('stair (basePoint + direction) → axisX along the run direction, never null', () => {
+    const f = resolveMoveGlyphFrame(ent('stair', { basePoint: { x: 0, y: 0 }, direction: 0 }))!;
+    expect(f).not.toBeNull();
+    expect(f.axisX.x).toBeCloseTo(1, 6);
+    expect(f.axisX.y).toBeCloseTo(0, 6);
+    expect(f.axisY.x).toBeCloseTo(0, 6);
+    expect(f.axisY.y).toBeCloseTo(1, 6);
+  });
+
+  it('stair at direction 90° → axisX points +Y (world CCW)', () => {
+    const f = resolveMoveGlyphFrame(ent('stair', { basePoint: { x: 3, y: 7 }, direction: 90 }))!;
+    expect(f.axisX.x).toBeCloseTo(0, 6);
+    expect(f.axisX.y).toBeCloseTo(1, 6);
+  });
 });
 
 describe('withMoveGlyphRotation (ADR-397)', () => {

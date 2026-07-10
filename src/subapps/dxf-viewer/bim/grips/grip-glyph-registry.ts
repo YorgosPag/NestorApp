@@ -117,6 +117,10 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   // (`opening-info-tag-size`) renders the default 'square'.
   'opening-info-tag-move': 'move',
   'opening-info-tag-rotation': 'rotation',
+  // Hatch (ADR-627) — whole-hatch move cross + rotation handle on the outer boundary ring
+  // (area/polyline parity); the boundary vertex / edge-midpoint / gradient grips render 'square'.
+  'hatch-move': 'move',
+  'hatch-rotation': 'rotation',
 } as const;
 
 /**

@@ -16,7 +16,6 @@
 import { useMemo } from 'react';
 
 import type { MepWaterHeaterEntity } from '../../bim/types/mep-water-heater-types';
-import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import {
   createMepWaterHeaterFirestoreService,
   entityToSaveInput,
@@ -25,11 +24,12 @@ import {
 } from '../../bim/mep-water-heaters/mep-water-heater-firestore-service';
 import { recordMepWaterHeaterChange } from '../../bim/mep-water-heaters/mep-water-heater-audit-client';
 import { mepWaterHeaterDocToEntity as docToEntity } from './mep-water-heater-persistence-helpers';
-import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
+import { createBimBoqAuditLifecycle } from './create-bim-boq-audit-lifecycle';
 import { mepConnectorMergeConfig } from './mep-connector-merge-config';
 import type {
   BimEntityPersistenceParams,
+  BimEntityPersistencePublicScope,
   BimEntitySaveState,
 } from './bim-entity-persistence-hook-types';
 
@@ -39,16 +39,7 @@ import type {
 
 export type MepWaterHeaterSaveState = BimEntitySaveState;
 
-export interface UseMepWaterHeaterPersistenceParams {
-  readonly companyId: string | null;
-  readonly projectId: string | null | undefined;
-  readonly floorplanId: string | null | undefined;
-  /** ADR-420 — stable building-storey id. Forwarded to service config. */
-  readonly floorId?: string | null;
-  /** ADR-408 — building scope for the Η-Μ BOQ auto-feed (BimToBoqBridge). */
-  readonly buildingId?: string | null;
-  readonly userId: string | null;
-  readonly levelManager: LevelSceneWriter;
+export interface UseMepWaterHeaterPersistenceParams extends BimEntityPersistencePublicScope {
   readonly primarySelectedWaterHeater: MepWaterHeaterEntity | null;
 }
 
@@ -100,38 +91,12 @@ const useMepWaterHeaterPersistenceBase = createBimEntityPersistenceHook<
     event: 'bim:mep-water-heater-delete-requested',
     getId: (p) => (p as { waterHeaterId?: string }).waterHeaterId,
   },
-  onPersisted: (entity, { isNew, prevComparable, scope }) => {
-    void recordMepWaterHeaterChange(isNew ? 'created' : 'updated', entity, {
-      prevParams: prevComparable ?? undefined,
-    });
-    // ADR-408 — Η-Μ BOQ auto-feed: domestic hot water heater = 1 piece.
-    if (scope.companyId && scope.projectId && scope.buildingId) {
-      void bimToBoqBridge.upsertBoqItemForBim(
-        'mep-water-heater',
-        { id: entity.id, kind: entity.kind },
-        {
-          companyId: scope.companyId,
-          projectId: scope.projectId,
-          buildingId: scope.buildingId,
-          floorId: scope.floorId ?? undefined,
-        },
-        isNew ? 'created' : 'updated',
-      );
-    }
-  },
-  onDeleted: (id, deleted, { scope }) => {
-    void recordMepWaterHeaterChange(
-      'deleted',
-      deleted
-        ? { id: deleted.id, kind: deleted.kind, layerId: deleted.layerId, params: deleted.params }
-        : { id, kind: 'electric-water-heater' },
-    );
-    // ADR-408 — remove the auto-fed Η-Μ BOQ row (skips user-detached rows).
-    if (scope.companyId) void bimToBoqBridge.deleteBoqItemForBim(id, scope.companyId);
-  },
-  onRestored: (entity) => {
-    void recordMepWaterHeaterChange('restored', entity);
-  },
+  // ADR-628 — audit + Η-Μ BOQ auto-feed lifecycle (domestic hot water heater = 1 piece).
+  ...createBimBoqAuditLifecycle<MepWaterHeaterEntity>({
+    boqType: 'mep-water-heater',
+    recordChange: recordMepWaterHeaterChange,
+    deletedFallbackKind: 'electric-water-heater',
+  }),
 });
 
 // ============================================================================

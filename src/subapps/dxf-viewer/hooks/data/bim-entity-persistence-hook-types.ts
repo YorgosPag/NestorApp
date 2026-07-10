@@ -62,7 +62,13 @@ export interface BimPersistenceScope {
 // CANONICAL HOOK PARAMS + RESULT (thin per-entity wrappers re-map the names)
 // ============================================================================
 
-export interface BimEntityPersistenceParams<TEntity extends AnySceneEntity> {
+/**
+ * Public param SCOPE surface shared by every thin persistence-hook wrapper (ADR-628).
+ * Each wrapper extends this and adds its named `primarySelected<X>` field; the internal
+ * canonical `BimEntityPersistenceParams` adds the generic `primarySelected`. Collapses
+ * the ~identical 7-field scope block that was copy-pasted into every wrapper interface.
+ */
+export interface BimEntityPersistencePublicScope {
   readonly companyId: string | null;
   readonly projectId: string | null | undefined;
   readonly floorplanId: string | null | undefined;
@@ -70,6 +76,10 @@ export interface BimEntityPersistenceParams<TEntity extends AnySceneEntity> {
   readonly buildingId?: string | null;
   readonly userId: string | null;
   readonly levelManager: LevelSceneWriter;
+}
+
+export interface BimEntityPersistenceParams<TEntity extends AnySceneEntity>
+  extends BimEntityPersistencePublicScope {
   readonly primarySelected: TEntity | null;
 }
 

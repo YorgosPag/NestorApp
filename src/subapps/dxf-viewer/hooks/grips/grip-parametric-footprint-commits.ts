@@ -32,12 +32,18 @@ import { applyFloorFinishGripDrag } from '../../bim/floor-finishes/floor-finish-
 import {
   applyHatchGripDrag, applyHatchOriginGripDrag, isHatchOriginGripKind, hatchBoundsCenter,
   isHatchAngleGripKind, hatchGradientAngleGripPos, applyHatchAngleGripDrag,
+  isHatchMoveKind, isHatchRotationKind,
 } from '../../bim/hatch/hatch-grips';
 import { withGradientPatch, DEFAULT_GRADIENT_DEFAULTS } from '../../bim/hatch/hatch-gradient-build';
 import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
-import { createSceneManagerAdapter } from './grip-commit-adapters';
+import { createSceneManagerAdapter, commitWholeEntityMove } from './grip-commit-adapters';
 import { gripKindOf } from '../grip-kinds';
+// ADR-627 — whole-hatch ROTATION reuses the SHARED pivot/anchor/swept-angle resolver + the
+// canonical RotateEntityCommand (rotateEntity case 'hatch'), exactly like the polyline/area outline.
+import { resolveRotation } from './grip-primitive-rotate-commits';
+import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
+import { isGripCopyIntent } from '../../systems/grip/grip-copy-intent';
 
 /**
  * ADR-363 Phase 3.5 — Parametric slab grip commit (per-vertex translate).
@@ -239,6 +245,32 @@ export function commitHatchGripDrag(
   if (!raw) return;
   const candidate = raw as unknown as Partial<HatchEntity>;
   if (candidate.type !== 'hatch' || !candidate.boundaryPaths) return;
+  // ADR-627 — whole-hatch MOVE cross → translate the whole hatch (boundaryPaths + seed
+  // points via `calculateMovedGeometry` case 'hatch') through the SHARED whole-entity move
+  // SSoT (the SAME `commitWholeEntityMove` the group / annotation-symbol move crosses use;
+  // Ctrl/«Copy» clones with the same base point). Handled HERE because
+  // `tryCommitParametricGripDrag` routes EVERY `on:'hatch'` grip to this handler first.
+  if (isHatchMoveKind(hatchKind)) {
+    commitWholeEntityMove(grip, delta, deps, isGripCopyIntent());
+    return;
+  }
+  // ADR-627 — whole-hatch ROTATION handle → rotate the boundaryPaths about the pivot via the
+  // canonical `RotateEntityCommand` (`rotateEntity` case 'hatch'), exactly like the polyline/
+  // area outline (`commitPolylineRotationGripDrag`). Pivot = the hot-grip picked centre
+  // (published in `BimRotateHotGripStore`, resolved by the SHARED `resolveRotation`) or the
+  // boundary bbox centre. Ctrl/«Copy» → rotate a CLONE (`RotateEntityCommand.copyMode`).
+  if (isHatchRotationKind(hatchKind)) {
+    const pivotFallback = hatchBoundsCenter(candidate.boundaryPaths);
+    if (!pivotFallback) return;
+    const res = resolveRotation(grip, delta, pivotFallback);
+    if (!res) return;
+    const command = new RotateEntityCommand(
+      [grip.entityId], res.pivot, res.sweptDeg, sceneManager, false, isGripCopyIntent(),
+    );
+    if (command.validate() !== null) return;
+    deps.execute(command);
+    return;
+  }
   const rectilinear = ShiftKeyTracker.getSnapshot();
   // ADR-507 Φ5 A3 — gradient origin/seed grip: patch το patternOrigin (mergeable
   // drag → ΕΝΑ undo), ΟΧΙ το όριο. Default origin = κέντρο bbox (ίδιο SSoT).

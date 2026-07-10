@@ -162,12 +162,49 @@ export function minWidthFloorFor(currentWidth: number): number {
 }
 
 /**
+ * ADR-393 — SSoT for the straight-run "snap to a whole number of treads" invariant:
+ * a raw run length → the clamped `stepCount` (≥ MIN_STEP_COUNT), the snapped
+ * `totalRun` (`tread·(stepCount−1)`) and the derived `totalRise` (`rise·stepCount`).
+ * Extracted from the corner transform (N.0.2 Boy-Scout de-duplication) so the corner
+ * drag AND the shared axis-box adapter (`stair-rect-adapter`) recompute steps ONE way.
+ */
+export function recomputeRunSteps(
+  params: { readonly tread: number; readonly rise: number },
+  rawRun: number,
+): { stepCount: number; totalRun: number; totalRise: number } {
+  const clampedRun = Math.max(params.tread, rawRun);
+  const stepCount = Math.max(MIN_STEP_COUNT, Math.floor(clampedRun / params.tread) + 1);
+  const totalRun = params.tread * (stepCount - 1);
+  const totalRise = params.rise * stepCount;
+  return { stepCount, totalRun, totalRise };
+}
+
+/**
+ * Axial projection of a world cursor onto the stair run direction: `(cursor − base)·u`.
+ * SSoT for the several grip transforms that measure "how far along the run" the cursor
+ * sits (length / flight-split / landing-depth), so the `u`/`dx`/`dy`/`dot` idiom lives once.
+ */
+export function projectCursorAxial(
+  params: { readonly basePoint: { readonly x: number; readonly y: number }; readonly direction: number },
+  cursor: Point2D,
+): number {
+  const u = unitVectorFromDirection(params.direction);
+  return (cursor.x - params.basePoint.x) * u.x + (cursor.y - params.basePoint.y) * u.y;
+}
+
+/**
  * ADR-358 Phase 3d hotfix — convert split-grip ratio into integer step counts.
  * Geometry builders interpret `flightSplit` as `[stepCount1, stepCount2(, 3)]`
  * and call `new Array(n_i)`; a float ratio threw `RangeError: invalid array
  * length`. Round-trip stays for clamping continuity; the persisted shape uses
  * integers summing to the corner-conserving budget.
  */
+/** Shared ratio→2-flight split (l-shape / u-shape): n1 clamped to [1, total−1], n2 = rest. */
+function twoFlightSplit(r: number, total: number): readonly [number, number] {
+  const n1 = Math.max(1, Math.min(total - 1, Math.round(r * total)));
+  return [n1, total - n1] as const;
+}
+
 export function withFlightSplitStepCounts(
   variant: StairVariantParams,
   r: number,
@@ -176,16 +213,10 @@ export function withFlightSplitStepCounts(
   if (variant.kind === 'l-shape') {
     const consumed =
       variant.cornerStyle === 'winders' ? Math.max(1, variant.winderCount) : 1;
-    const total = Math.max(2, stepCount - consumed);
-    const n1 = Math.max(1, Math.min(total - 1, Math.round(r * total)));
-    const n2 = total - n1;
-    return { ...variant, flightSplit: [n1, n2] as const };
+    return { ...variant, flightSplit: twoFlightSplit(r, Math.max(2, stepCount - consumed)) };
   }
   if (variant.kind === 'u-shape') {
-    const total = Math.max(2, stepCount - 1); // 1 landing
-    const n1 = Math.max(1, Math.min(total - 1, Math.round(r * total)));
-    const n2 = total - n1;
-    return { ...variant, flightSplit: [n1, n2] as const };
+    return { ...variant, flightSplit: twoFlightSplit(r, Math.max(2, stepCount - 1)) }; // 1 landing
   }
   if (variant.kind === 'gamma') {
     const total = Math.max(3, stepCount - 2); // 2 landings

@@ -16,7 +16,6 @@
 import { useMemo } from 'react';
 
 import type { MepBoilerEntity } from '../../bim/types/mep-boiler-types';
-import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import {
   createMepBoilerFirestoreService,
   entityToSaveInput,
@@ -25,11 +24,12 @@ import {
 } from '../../bim/mep-boilers/mep-boiler-firestore-service';
 import { recordMepBoilerChange } from '../../bim/mep-boilers/mep-boiler-audit-client';
 import { mepBoilerDocToEntity as docToEntity } from './mep-boiler-persistence-helpers';
-import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
+import { createBimBoqAuditLifecycle } from './create-bim-boq-audit-lifecycle';
 import { mepConnectorMergeConfig } from './mep-connector-merge-config';
 import type {
   BimEntityPersistenceParams,
+  BimEntityPersistencePublicScope,
   BimEntitySaveState,
 } from './bim-entity-persistence-hook-types';
 
@@ -39,14 +39,7 @@ import type {
 
 export type MepBoilerSaveState = BimEntitySaveState;
 
-export interface UseMepBoilerPersistenceParams {
-  readonly companyId: string | null;
-  readonly projectId: string | null | undefined;
-  readonly floorplanId: string | null | undefined;
-  readonly floorId?: string | null;
-  readonly buildingId?: string | null;
-  readonly userId: string | null;
-  readonly levelManager: LevelSceneWriter;
+export interface UseMepBoilerPersistenceParams extends BimEntityPersistencePublicScope {
   readonly primarySelectedBoiler: MepBoilerEntity | null;
 }
 
@@ -98,38 +91,12 @@ const useMepBoilerPersistenceBase = createBimEntityPersistenceHook<
     event: 'bim:mep-boiler-delete-requested',
     getId: (p) => (p as { boilerId?: string }).boilerId,
   },
-  onPersisted: (entity, { isNew, prevComparable, scope }) => {
-    void recordMepBoilerChange(isNew ? 'created' : 'updated', entity, {
-      prevParams: prevComparable ?? undefined,
-    });
-    // ADR-408 — Η-Μ BOQ auto-feed: heating boiler = 1 piece (ΗΛΜ-7.02).
-    if (scope.companyId && scope.projectId && scope.buildingId) {
-      void bimToBoqBridge.upsertBoqItemForBim(
-        'mep-boiler',
-        { id: entity.id, kind: entity.kind },
-        {
-          companyId: scope.companyId,
-          projectId: scope.projectId,
-          buildingId: scope.buildingId,
-          floorId: scope.floorId ?? undefined,
-        },
-        isNew ? 'created' : 'updated',
-      );
-    }
-  },
-  onDeleted: (id, deleted, { scope }) => {
-    void recordMepBoilerChange(
-      'deleted',
-      deleted
-        ? { id: deleted.id, kind: deleted.kind, layerId: deleted.layerId, params: deleted.params }
-        : { id, kind: 'wall-boiler' },
-    );
-    // ADR-408 — remove the auto-fed Η-Μ BOQ row (skips user-detached rows).
-    if (scope.companyId) void bimToBoqBridge.deleteBoqItemForBim(id, scope.companyId);
-  },
-  onRestored: (entity) => {
-    void recordMepBoilerChange('restored', entity);
-  },
+  // ADR-628 — audit + Η-Μ BOQ auto-feed lifecycle (heating boiler = 1 piece, ΗΛΜ-7.02).
+  ...createBimBoqAuditLifecycle<MepBoilerEntity>({
+    boqType: 'mep-boiler',
+    recordChange: recordMepBoilerChange,
+    deletedFallbackKind: 'wall-boiler',
+  }),
 });
 
 // ============================================================================

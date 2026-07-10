@@ -91,6 +91,22 @@ export const HATCH_GRADIENT_ORIGIN_KIND = 'hatch-gradient-origin' as const;
 /** Grip kind για τον gradient-angle βραχίονα (ADR-507 Φ5 A4). */
 export const HATCH_GRADIENT_ANGLE_KIND = 'hatch-gradient-angle' as const;
 
+/** ADR-627 — grip kind για τον σταυρό μετακίνησης ολόκληρου του hatch (parity polyline). */
+export const HATCH_MOVE_KIND = 'hatch-move' as const;
+
+/** ADR-627 — grip kind για τη λαβή περιστροφής ολόκληρου του hatch (parity polyline). */
+export const HATCH_ROTATION_KIND = 'hatch-rotation' as const;
+
+/** True όταν το grip kind είναι ο σταυρός μετακίνησης ολόκληρου του hatch (ADR-627). */
+export function isHatchMoveKind(gripKind: HatchGripKind): boolean {
+  return gripKind === HATCH_MOVE_KIND;
+}
+
+/** True όταν το grip kind είναι η λαβή περιστροφής ολόκληρου του hatch (ADR-627). */
+export function isHatchRotationKind(gripKind: HatchGripKind): boolean {
+  return gripKind === HATCH_ROTATION_KIND;
+}
+
 export interface HatchGripDragInput {
   readonly originalBoundaryPaths: ReadonlyArray<ReadonlyArray<Point2D>>;
   readonly delta: Point2D;

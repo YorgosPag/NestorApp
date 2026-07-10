@@ -238,6 +238,61 @@ describe('resolveRotateReferenceAnchor — graphic scale-bar (axis = angleRad, A
   });
 });
 
+describe('resolveRotateReferenceAnchor — HATCH boundary edge alignment (ADR-627)', () => {
+  // Axis-aligned square hatch → bottom/top edges are HORIZONTAL, centre (50,50).
+  const square = {
+    type: 'hatch',
+    boundaryPaths: [[{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }]],
+  } as unknown as Entity;
+
+  it('horizontal edge exists + pivot at its endpoint → reference COINCIDES with it (world +X, toward body)', () => {
+    const anchor = resolveRotateReferenceAnchor(square, { x: 0, y: 0 })!; // SW corner, on the bottom edge
+    expect(anchor).not.toBeNull();
+    near(anchor.x - 0, 1); // +X → coaxial with the bottom edge, toward the far end / body
+    near(anchor.y - 0, 0);
+  });
+
+  it('horizontal edge exists → axis stays horizontal, orientation flips toward the body', () => {
+    const anchor = resolveRotateReferenceAnchor(square, { x: 100, y: 0 })!; // SE corner
+    near(anchor.x - 100, -1); // −X toward the body (west)
+    near(anchor.y - 0, 0);
+  });
+
+  it('NO horizontal edge (45° diamond) + pivot on a vertex → reference coincides with the clicked edge', () => {
+    // Diamond edges are all ±45°; ring order makes (0,10)→(10,0) the first edge incident to (0,10).
+    const diamond = {
+      type: 'hatch',
+      boundaryPaths: [[{ x: 0, y: 10 }, { x: 10, y: 0 }, { x: 20, y: 10 }, { x: 10, y: 20 }]],
+    } as unknown as Entity;
+    const anchor = resolveRotateReferenceAnchor(diamond, { x: 0, y: 10 })!;
+    const dir = { x: anchor.x - 0, y: anchor.y - 10 };
+    near(dir.x, Math.SQRT1_2);   // +45° down-right, coaxial with the incident edge toward the body
+    near(dir.y, -Math.SQRT1_2);
+    near(Math.hypot(dir.x, dir.y), 1);
+  });
+
+  it('NO horizontal edge + pivot NOT on a vertex → reference aligns with the LONGEST edge', () => {
+    // Triangle: longest edge (0,0)→(100,50); pivot at the centroid (not near any vertex).
+    const tri = {
+      type: 'hatch',
+      boundaryPaths: [[{ x: 0, y: 0 }, { x: 100, y: 50 }, { x: 20, y: 80 }]],
+    } as unknown as Entity;
+    const anchor = resolveRotateReferenceAnchor(tri, { x: 40, y: 130 / 3 })!;
+    const dir = { x: anchor.x - 40, y: anchor.y - 130 / 3 };
+    const ux = 100 / Math.hypot(100, 50);
+    const uy = 50 / Math.hypot(100, 50);
+    near(dir.x * uy - dir.y * ux, 0); // collinear with the longest edge's axis
+    near(Math.hypot(dir.x, dir.y), 1);
+  });
+
+  it('empty / degenerate boundary → null (legacy first-move fallback)', () => {
+    expect(resolveRotateReferenceAnchor({ type: 'hatch', boundaryPaths: [] } as unknown as Entity, { x: 0, y: 0 })).toBeNull();
+    expect(
+      resolveRotateReferenceAnchor({ type: 'hatch', boundaryPaths: [[{ x: 1, y: 1 }]] } as unknown as Entity, { x: 0, y: 0 }),
+    ).toBeNull();
+  });
+});
+
 describe('resolveRotateReferenceAnchor — no orientation → null (legacy fallback)', () => {
   it('params-less non-line primitive (circle) → null', () => {
     const circle = { id: 'X', type: 'circle', center: { x: 0, y: 0 }, radius: 50 } as unknown as Entity;

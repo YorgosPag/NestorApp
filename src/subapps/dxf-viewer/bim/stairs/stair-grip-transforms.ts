@@ -31,11 +31,20 @@ import {
   unitVectorFromDirection,
   perpUnit,
   minWidthFloorFor,
+  recomputeRunSteps,
+  projectCursorAxial,
   flightCount,
   setFlightSplitCount,
   lastSegmentDir,
   withFlightSplitStepCounts,
 } from './stair-grip-math';
+// ADR-393 Phase C — straight-stair corners + width/length edges resize via the shared
+// axis-box engine (opposite-element-fixed, ίδιος κώδικας με τοίχο/δοκό/πεδιλοδοκό).
+import { applyRectStairGrip } from './stair-rect-adapter';
+// ADR-393 Phase C / ADR-397 §D3 — pivot-aware rotation is the shared SSoT
+// `rotateAxisPointsAboutPivot` (swept angle + canonical rotatePoint), the SAME
+// primitive the wall/beam/column rotation grips use. No re-implemented cos/sin.
+import { rotateAxisPointsAboutPivot } from '../grips/grip-math';
 
 export interface StairGripDragInput {
   /** Original params at drag start (preserves invariants when needed). */
@@ -51,6 +60,14 @@ export interface StairGripDragInput {
    * builders own). Optional: straight corners + the ADR-358 base grips ignore it.
    */
   readonly geometry?: StairGeometry;
+  /**
+   * ADR-393 Phase C — optional rotation pivot for `stair-direction`. When set (the
+   * 6-click hot-grip rotate flow published in `BimRotateHotGripStore`) the stair
+   * rotates around this picked centre — both `basePoint` and `direction` change,
+   * mirror of the wall. Undefined → pivot defaults to `basePoint` (legacy behaviour:
+   * spin about the front-edge centre, `direction` only).
+   */
+  readonly pivot?: Point2D;
 }
 
 /**
@@ -60,15 +77,27 @@ export function applyStairGripDrag(
   gripKind: StairGripKind,
   input: Readonly<StairGripDragInput>,
 ): StairParams {
+  // ADR-393 Phase C — straight-stair corners + width/length edges (incl. the 2
+  // opposite mid-edges) resize through the shared axis-box engine (opposite-element-
+  // fixed, wall parity). Returns null for non-straight stairs, non-rect kinds, OR
+  // `stair-direction` (rotation stays bespoke) → fall through to the handlers below.
+  const rect = applyRectStairGrip(gripKind, input.originalParams, input.delta);
+  if (rect) return rect;
   switch (gripKind) {
     case 'stair-base':
       return moveBasePoint(input);
     case 'stair-direction':
-      return rotateDirection(input);
+      return rotateStair(input);
     case 'stair-width':
       return resizeWidth(input);
     case 'stair-length':
       return resizeLength(input);
+    // ADR-393 Phase C — the 2 opposite mid-edges are STRAIGHT-only, always caught by
+    // the shared axis-box path above. Non-straight can never emit them → no-op here
+    // (keeps the exhaustive discriminant complete).
+    case 'stair-width-far':
+    case 'stair-length-start':
+      return input.originalParams;
     case 'stair-corner-start-left':
       return moveCornerDispatch(input, 'start', +1);
     case 'stair-corner-start-right':
@@ -105,30 +134,45 @@ function moveBasePoint(input: Readonly<StairGripDragInput>): StairParams {
   return { ...originalParams, basePoint: newBase };
 }
 
-function rotateDirection(input: Readonly<StairGripDragInput>): StairParams {
-  const { originalParams, currentPos, delta } = input;
-  const pivotX = originalParams.basePoint.x;
-  const pivotY = originalParams.basePoint.y;
-  const curDx = currentPos.x - pivotX;
-  const curDy = currentPos.y - pivotY;
-  if (curDx === 0 && curDy === 0) return originalParams;
-
-  // ADR-393 v2 — anchor-relative rotation. The rotation handle is now drawn at
-  // the front-centre (base − offset·u), OFF the pivot→direction axis. Using the
-  // absolute atan2 of the cursor would snap `direction` to the cursor bearing
-  // and flip the stair the instant the handle is grabbed (anchor at angle 180°).
-  // Instead rotate by the angle SWEPT from the anchor (the grip world position
-  // at mousedown = currentPos − delta), pivoting around `basePoint`.
-  const anchorX = currentPos.x - delta.x - pivotX;
-  const anchorY = currentPos.y - delta.y - pivotY;
-  if (Math.hypot(anchorX, anchorY) < 1e-9) {
-    // Degenerate anchor (e.g. direct unit-test input fed relative to pivot):
-    // fall back to absolute bearing.
+/**
+ * ADR-393 Phase C — rotate the whole straight stair about a picked pivot (wall
+ * parity), unifying the legacy ADR-393 v2 `rotateDirection`. The swept angle is
+ * anchor-relative (`currentPos − delta` → `currentPos`), so grabbing the handle OFF
+ * the axis does not snap the stair. When no `pivot` is supplied the centre defaults
+ * to `basePoint`: rotating the axis `[base, base+run·u]` about `base` leaves `base`
+ * put and only changes `direction` — EXACTLY the old front-centre spin. When a pivot
+ * is picked, both `basePoint` and `direction` change (the stair orbits the centre).
+ *
+ * ADR-397 §D3 — the swept angle + point rotation are the shared
+ * `rotateAxisPointsAboutPivot` SSoT (same primitive as the wall/beam/column rotation
+ * grips). No re-implemented cos/sin. Falls back to the absolute cursor bearing when
+ * the anchor coincides with the pivot (degenerate; e.g. a unit-test input fed
+ * relative to the pivot), so a direct drag still rotates.
+ */
+function rotateStair(input: Readonly<StairGripDragInput>): StairParams {
+  const { originalParams, currentPos, delta, pivot } = input;
+  const u = unitVectorFromDirection(originalParams.direction);
+  const bx = originalParams.basePoint.x;
+  const by = originalParams.basePoint.y;
+  const centre: Point2D = pivot ?? { x: bx, y: by };
+  const anchor: Point2D = { x: currentPos.x - delta.x, y: currentPos.y - delta.y };
+  const start: Point2D = { x: bx, y: by };
+  const end: Point2D = { x: bx + originalParams.totalRun * u.x, y: by + originalParams.totalRun * u.y };
+  const rotated = rotateAxisPointsAboutPivot([start, end], { pivot: centre, anchor, currentPos });
+  if (!rotated) {
+    // Degenerate anchor (anchor === pivot): fall back to the absolute cursor bearing
+    // about the centre (legacy `rotateDirection` behaviour) so a direct drag rotates.
+    const curDx = currentPos.x - centre.x;
+    const curDy = currentPos.y - centre.y;
+    if (curDx === 0 && curDy === 0) return originalParams;
     return { ...originalParams, direction: Math.atan2(curDy, curDx) * RAD_TO_DEG };
   }
-  const sweptDeg =
-    (Math.atan2(curDy, curDx) - Math.atan2(anchorY, anchorX)) * RAD_TO_DEG;
-  return { ...originalParams, direction: originalParams.direction + sweptDeg };
+  const [ns, ne] = rotated;
+  return {
+    ...originalParams,
+    basePoint: { x: ns.x, y: ns.y, z: originalParams.basePoint.z },
+    direction: Math.atan2(ne.y - ns.y, ne.x - ns.x) * RAD_TO_DEG,
+  };
 }
 
 function resizeWidth(input: Readonly<StairGripDragInput>): StairParams {
@@ -145,10 +189,7 @@ function resizeWidth(input: Readonly<StairGripDragInput>): StairParams {
 
 function resizeLength(input: Readonly<StairGripDragInput>): StairParams {
   const { originalParams, currentPos } = input;
-  const u = unitVectorFromDirection(originalParams.direction);
-  const dx = currentPos.x - originalParams.basePoint.x;
-  const dy = currentPos.y - originalParams.basePoint.y;
-  const projOnDir = dx * u.x + dy * u.y;
+  const projOnDir = projectCursorAxial(originalParams, currentPos);
 
   // ADR-358 Phase 9B-2 — clamp + magnet snap when linked to a floor.
   const cfg = originalParams.multiStoryConfig;
@@ -184,96 +225,26 @@ function resizeLength(input: Readonly<StairGripDragInput>): StairParams {
     }
   }
 
-  const newRunMm = Math.max(originalParams.tread, projOnDir);
-  const newStepCount = Math.max(MIN_STEP_COUNT, Math.floor(newRunMm / originalParams.tread) + 1);
-  const newTotalRun = originalParams.tread * (newStepCount - 1);
-  const newTotalRise = originalParams.rise * newStepCount;
-  return {
-    ...originalParams,
-    stepCount: newStepCount,
-    totalRun: newTotalRun,
-    totalRise: newTotalRise,
-  };
-}
-
-// ─── ADR-393 Phase A1 — asymmetric corner grips (straight) ───────────────────
-
-/**
- * Decompose the cursor delta into axial (along direction) + perpendicular
- * components. Mirror of `wall-grips.ts:moveCorner`:
- *   - axial → `start` corner moves basePoint while keeping the back edge fixed
- *     (run shrinks/grows + stepCount recomputed); `end` corner grows/shrinks the
- *     run only (basePoint fixed).
- *   - perpendicular → grows/shrinks `width` symmetrically (Q2 decision: stairs
- *     keep a single scalar width) while the axis re-centers by half the
- *     displacement so the rectangular footprint is preserved.
- */
-function moveCorner(
-  input: Readonly<StairGripDragInput>,
-  side: 'start' | 'end',
-  perpSign: 1 | -1,
-): StairParams {
-  const { originalParams, delta } = input;
-  const u = unitVectorFromDirection(originalParams.direction);
-  const p = perpUnit(u);
-  const axialD = delta.x * u.x + delta.y * u.y;
-  const perpD = delta.x * p.x + delta.y * p.y;
-
-  // Width change (mirror wall thickness). No upper ceiling for stair width.
-  const rawWidth = originalParams.width + perpSign * perpD;
-  const minWidth = minWidthFloorFor(originalParams.width);
-  const clampedWidth = Math.max(minWidth, rawWidth);
-  const actualPerpD = perpSign * (clampedWidth - originalParams.width);
-  const axisShiftPerp = actualPerpD / 2;
-  const axisShiftX = axisShiftPerp * p.x;
-  const axisShiftY = axisShiftPerp * p.y;
-
-  // Axial → run change + stepCount snapping.
-  const rawRun = side === 'start'
-    ? originalParams.totalRun - axialD
-    : originalParams.totalRun + axialD;
-  const clampedRun = Math.max(originalParams.tread, rawRun);
-  const newStepCount = Math.max(MIN_STEP_COUNT, Math.floor(clampedRun / originalParams.tread) + 1);
-  const snappedRun = originalParams.tread * (newStepCount - 1);
-  const newTotalRise = originalParams.rise * newStepCount;
-
-  // For the start corner, derive the basePoint axial shift from the snapped run
-  // so the back edge (base + run·u) stays exactly fixed. The end corner leaves
-  // basePoint at its axial position.
-  const axialShift = side === 'start' ? originalParams.totalRun - snappedRun : 0;
-  const newBase: Point3D = {
-    x: originalParams.basePoint.x + axialShift * u.x + axisShiftX,
-    y: originalParams.basePoint.y + axialShift * u.y + axisShiftY,
-    z: originalParams.basePoint.z,
-  };
-
-  return {
-    ...originalParams,
-    basePoint: newBase,
-    width: clampedWidth,
-    stepCount: newStepCount,
-    totalRun: snappedRun,
-    totalRise: newTotalRise,
-  };
+  const { stepCount, totalRun, totalRise } = recomputeRunSteps(originalParams, projOnDir);
+  return { ...originalParams, stepCount, totalRun, totalRise };
 }
 
 // ─── ADR-393 v2 Phase 2 — multi-flight corner grips (L/U/Γ) ──────────────────
 
 /**
- * Dispatch a corner drag to the right transform. `straight` keeps the original
- * single-axis `moveCorner` (footprint = `base + totalRun·u`); the split
- * variants (l-shape / u-shape / gamma) route to `moveCornerMultiFlight`, where
- * the start corner lives on flight-1's frame and the end corner on the last
- * flight's frame (directions differ — the stair bends at the landing(s)).
+ * Dispatch a corner drag. ADR-393 Phase C (2026-07-10): STRAIGHT corners are now
+ * handled UPSTREAM by the shared axis-box engine (`applyRectStairGrip` in
+ * `applyStairGripDrag`, opposite-element-fixed wall parity), so this dispatch is
+ * only ever reached for the split variants (l-shape / u-shape / gamma) → their
+ * flight-frame transform. The corner lives on flight-1's frame (start) or the last
+ * flight's frame (end), read from the walkline (the stair bends at the landing(s)).
  */
 function moveCornerDispatch(
   input: Readonly<StairGripDragInput>,
   side: 'start' | 'end',
   perpSign: 1 | -1,
 ): StairParams {
-  return input.originalParams.variant.kind === 'straight'
-    ? moveCorner(input, side, perpSign)
-    : moveCornerMultiFlight(input, side, perpSign);
+  return moveCornerMultiFlight(input, side, perpSign);
 }
 
 /**
@@ -356,22 +327,14 @@ function moveStartSide(input: Readonly<StairGripDragInput>): StairParams {
   const u = unitVectorFromDirection(originalParams.direction);
   const axialD = delta.x * u.x + delta.y * u.y;
   const rawRun = originalParams.totalRun - axialD;
-  const clampedRun = Math.max(originalParams.tread, rawRun);
-  const newStepCount = Math.max(MIN_STEP_COUNT, Math.floor(clampedRun / originalParams.tread) + 1);
-  const snappedRun = originalParams.tread * (newStepCount - 1);
-  const axialShift = originalParams.totalRun - snappedRun;
+  const { stepCount, totalRun, totalRise } = recomputeRunSteps(originalParams, rawRun);
+  const axialShift = originalParams.totalRun - totalRun;
   const newBase: Point3D = {
     x: originalParams.basePoint.x + axialShift * u.x,
     y: originalParams.basePoint.y + axialShift * u.y,
     z: originalParams.basePoint.z,
   };
-  return {
-    ...originalParams,
-    basePoint: newBase,
-    stepCount: newStepCount,
-    totalRun: snappedRun,
-    totalRise: originalParams.rise * newStepCount,
-  };
+  return { ...originalParams, basePoint: newBase, stepCount, totalRun, totalRise };
 }
 
 // ─── ADR-393 Phase B1 — per-flight landing edges (L/U/Γ) ─────────────────────
@@ -388,10 +351,7 @@ function adjustFlightSplit(input: Readonly<StairGripDragInput>): StairParams {
   const variant = originalParams.variant;
   if (!hasSplitGrip(variant)) return originalParams;
 
-  const u = unitVectorFromDirection(originalParams.direction);
-  const dx = currentPos.x - originalParams.basePoint.x;
-  const dy = currentPos.y - originalParams.basePoint.y;
-  const projOnDir = dx * u.x + dy * u.y;
+  const projOnDir = projectCursorAxial(originalParams, currentPos);
   const denom = originalParams.totalRun || 1;
   const rawRatio = projOnDir / denom;
   const r = Math.min(MAX_FLIGHT_SPLIT_RATIO, Math.max(MIN_FLIGHT_SPLIT_RATIO, rawRatio));
@@ -415,10 +375,7 @@ function resizeLandingDepth(input: Readonly<StairGripDragInput>): StairParams {
   const variant = originalParams.variant;
   if (!variantHasLandingDepth(variant)) return originalParams;
 
-  const u = unitVectorFromDirection(originalParams.direction);
-  const dx = currentPos.x - originalParams.basePoint.x;
-  const dy = currentPos.y - originalParams.basePoint.y;
-  const projOnDir = dx * u.x + dy * u.y;
+  const projOnDir = projectCursorAxial(originalParams, currentPos);
   const flight1Run = variant.flightSplit[0] * originalParams.tread;
   const newDepth = Math.max(originalParams.tread, projOnDir - flight1Run);
 

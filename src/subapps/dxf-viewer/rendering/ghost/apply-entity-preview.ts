@@ -69,6 +69,7 @@ import { computeFloorFinishGeometry, type FloorFinishEntity } from '../../bim/ty
 import {
   applyHatchGripDrag, applyHatchOriginGripDrag, isHatchOriginGripKind, hatchBoundsCenter,
   isHatchAngleGripKind, hatchGradientAngleGripPos, applyHatchAngleGripDrag,
+  isHatchMoveKind, isHatchRotationKind,
 } from '../../bim/hatch/hatch-grips';
 import { withGradientPatch, DEFAULT_GRADIENT_DEFAULTS } from '../../bim/hatch/hatch-gradient-build';
 import type { HatchEntity } from '../../types/entities';
@@ -245,6 +246,19 @@ export function applyEntityPreview(
   // the fill-pattern math.
   if (hatchGripKind && entity.type === 'hatch') {
     const hatch = entity as unknown as HatchEntity;
+    // ADR-627 — whole-hatch ROTATION live ghost: spin the boundaryPaths about the pivot via
+    // the SAME `rotationGhost` → `applyPrimitiveRotationDrag` → `rotateEntity` case 'hatch'
+    // the commit runs (preview ≡ commit by identity). Pivot = the picked hot-grip centre or
+    // the boundary bbox centre — mirror of the polyline/area rotation ghost branch below.
+    if (isHatchRotationKind(hatchGripKind) && anchorPos) {
+      return rotationGhost(entity, anchorPos, delta, rotatePivot ?? hatchBoundsCenter(hatch.boundaryPaths) ?? undefined);
+    }
+    // ADR-627 — whole-hatch MOVE cross live ghost: translate every ring by `delta` via the
+    // SAME `calculateMovedGeometry` case 'hatch' the commit runs (boundaryPaths + seed points).
+    if (isHatchMoveKind(hatchGripKind)) {
+      const patch = calculateMovedGeometry(entity as unknown as SceneEntity, delta);
+      return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
+    }
     // ADR-507 Φ5 A3 — gradient origin/seed grip: μετακινεί το patternOrigin, ΟΧΙ όριο.
     if (isHatchOriginGripKind(hatchGripKind)) {
       const current = hatch.patternOrigin ?? hatchBoundsCenter(hatch.boundaryPaths);

@@ -115,38 +115,47 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
 
   // ─── getStairGrips: layout (ADR-358 base) ─────────────────────────────────
 
-  // ADR-363 Φ1G.5 Slice 2: stair-base filtered out → 5 grips (rotation + 4 corners)
-  it('1. straight stair → 5 grips (rotation + 4 corners; ADR-393 v2, stair-base removed)', () => {
+  // ADR-393 Phase C (2026-07-10): straight → FULL wall parity via the shared axis-box
+  // SSoT: 8 shape handles (width/length + 4 corners + 2 opposite mid-edges) + rotation
+  // + centre MOVE cross = 10 grips, IDENTICAL emission to the straight wall.
+  it('1. straight stair → 10 grips (8 handles + rotation + move; shared axis-box, ADR-393 Phase C)', () => {
     const grips = getStairGrips(makeStraight());
-    expect(grips).toHaveLength(5);
+    expect(grips).toHaveLength(10);
     expect(grips.map((g) => gripKindOf(g, 'stair'))).toEqual([
-      'stair-direction',
+      'stair-width',
+      'stair-length',
       'stair-corner-start-left',
       'stair-corner-start-right',
       'stair-corner-end-left',
       'stair-corner-end-right',
+      'stair-direction',
+      'stair-width-far',
+      'stair-length-start',
+      'stair-base',
     ]);
   });
 
-  // ADR-363 Φ1G.5 Slice 2: stair-base is NOT present in the returned array.
-  // The transform (applyStairGripDrag 'stair-base') is retained — see test 10.
-  it('2. stair-base is absent from getStairGrips output (ADR-363 Φ1G.5 Slice 2)', () => {
-    const grips = getStairGrips(makeStraight());
-    const kinds = grips.map((g) => gripKindOf(g, 'stair'));
-    expect(kinds).not.toContain('stair-base');
-    // First returned grip is now stair-direction (array index 0, gripIndex field still 1)
-    expect(gripKindOf(grips[0], 'stair')).toBe('stair-direction');
+  // ADR-393 Phase C: `stair-base` is now the centre MOVE cross (kept, not filtered),
+  // `stair-direction` the rotation handle — both present (wall parity).
+  it('2. straight emits the centre MOVE cross (stair-base) + rotation handle (ADR-393 Phase C)', () => {
+    const kinds = getStairGrips(makeStraight()).map((g) => gripKindOf(g, 'stair'));
+    expect(kinds).toContain('stair-base');
+    expect(kinds).toContain('stair-direction');
   });
 
-  // ADR-363 Φ1G.5 Slice 2: stair-direction shifts to array index 0 (was 1); gripIndex field = 1 (unchanged)
-  it('3. direction ROTATION grip at front-centre (base − 100mm·u, −u side)', () => {
-    const grips = getStairGrips(makeStraight());
-    expect(gripKindOf(grips[0], 'stair')).toBe('stair-direction'); // array index 0 (was 1)
-    expect(grips[0].position.x).toBeCloseTo(-100, 6);
-    expect(grips[0].position.y).toBeCloseTo(0, 6);
+  // ADR-393 Phase C: rotation handle at the axis-quarter (¼ run toward east, on the
+  // centreline) — wall parity, off the edge midpoints. Move cross at the axis midpoint.
+  it('3. rotation handle at axis-quarter + MOVE cross at axis midpoint (wall parity)', () => {
+    const byKind = Object.fromEntries(
+      getStairGrips(makeStraight()).map((g) => [gripKindOf(g, 'stair'), g.position]),
+    );
+    // centre=(1540,0), halfWidth=1540 → ¼ east = 1540 + 770 = 2310, on centreline (y=0)
+    expect(byKind['stair-direction'].x).toBeCloseTo(2310, 4);
+    expect(byKind['stair-direction'].y).toBeCloseTo(0, 4);
+    expect(byKind['stair-base']).toEqual({ x: 1540, y: 0 });
   });
 
-  // ─── getStairGrips: ADR-393 Phase A1 corners (straight) ───────────────────
+  // ─── getStairGrips: ADR-393 Phase C corners + mid-edges (straight) ─────────
 
   it('4. straight corners at footprint ±width/2 on front and back edges', () => {
     const grips = getStairGrips(makeStraight());
@@ -158,27 +167,28 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
     expect(byKind['stair-corner-end-right']).toEqual({ x: 3080, y: -600 });
   });
 
-  it('5. straight no longer emits width / length / mid-front grips (ADR-393 v2)', () => {
+  it('5. straight emits width/length + the 2 opposite mid-edges (shared axis-box, ADR-393 Phase C)', () => {
     const kinds = getStairGrips(makeStraight()).map((g) => gripKindOf(g, 'stair'));
-    expect(kinds).not.toContain('stair-width');
-    expect(kinds).not.toContain('stair-length');
-    expect(kinds).not.toContain('stair-start-side');
+    expect(kinds).toContain('stair-width');
+    expect(kinds).toContain('stair-length');
+    expect(kinds).toContain('stair-width-far');
+    expect(kinds).toContain('stair-length-start');
   });
 
-  // ADR-363 Φ1G.5 Slice 2: stair-base absent from output → removed byKind['stair-base'] assertion
-  it('5b. metre-scene: handle offsets stay scene-scaled (not 1000× off-screen)', () => {
-    // Rule: BIM grip positions must be scene-unit-correct. In a metre scene the
-    // 100 mm direction offset must resolve to 0.1 m, NOT 100 m.
+  it('5b. metre-scene: axis-box handles stay scene-scaled (not 1000× off-screen)', () => {
+    // Rule: BIM grip positions must be scene-unit-correct. The stair stores width/run
+    // in SCENE units, so the axis-box adapter runs at the identity scale — the footprint
+    // must land at ±0.6 m, NOT 1000× off.
     const params = buildDefaultStairParams(basePoint, 0, {}, 'm');
     const grips = getStairGrips(buildStairEntity(params, '0'));
     const byKind = Object.fromEntries(grips.map((g) => [gripKindOf(g, 'stair'), g.position]));
-    // width=1.2 → half=0.6 ; tread=0.28 → totalRun=3.08
-    expect(byKind['stair-direction'].x).toBeCloseTo(-0.1, 6); // front-centre, −u side
-    // stair-base is filtered from output per ADR-363 Φ1G.5 Slice 2 — use applyStairGripDrag for transform
+    // width=1.2 → half=0.6 ; tread=0.28 → totalRun=3.08 ; centre=(1.54,0)
     expect(byKind['stair-corner-start-left']).toEqual({ x: 0, y: 0.6 });
     expect(byKind['stair-corner-end-left'].x).toBeCloseTo(3.08, 6);
-    // Regression guard: the old mm-constant bug placed these at ±100 (metres).
-    expect(Math.abs(byKind['stair-direction'].x)).toBeLessThan(1);
+    expect(byKind['stair-base'].x).toBeCloseTo(1.54, 6);
+    expect(byKind['stair-direction'].x).toBeCloseTo(2.31, 6); // ¼ east on centreline
+    // Regression guard: scene-scaled, never raw mm (the old bug placed these at ±600 metres).
+    expect(Math.abs(byKind['stair-corner-start-left'].y)).toBeLessThan(1);
   });
 
   // ─── getStairGrips: ADR-393 Phase B (L/U/Γ) ───────────────────────────────
@@ -244,25 +254,54 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
     expect(next.direction).toBeCloseTo(90, 4);
   });
 
-  it('12. stair-width drag → width = 2·|projection on perp|', () => {
+  // ADR-393 Phase C — straight width/length edges resize via the shared axis-box engine
+  // (opposite-face-fixed, delta-based, wall parity), NOT the legacy symmetric currentPos.
+  it('12. stair-width edge drag → opposite-face-fixed width grow + axis recenter (wall parity)', () => {
     const entity = makeStraight();
     const next = applyStairGripDrag('stair-width', {
       originalParams: entity.params,
-      delta: { x: 0, y: 600 },
-      currentPos: { x: 0, y: 600 },
+      delta: { x: 0, y: 600 }, // pull the +perp face outward; −perp face fixed
+      currentPos: { x: 1540, y: 1200 },
     });
-    expect(next.width).toBeCloseTo(1200, 4);
+    expect(next.width).toBeCloseTo(1800, 4);      // 1200 + 600 (far face fixed)
+    expect(next.basePoint.y).toBeCloseTo(300, 4); // axis recenters by half toward +perp
   });
 
-  it('13. stair-length drag → derives stepCount from projection / tread', () => {
+  it('13. stair-length edge drag → run grows by the axial delta, snapped to whole treads', () => {
     const entity = makeStraight();
     const next = applyStairGripDrag('stair-length', {
       originalParams: entity.params,
-      delta: { x: 1000, y: 0 },
-      currentPos: { x: 1000, y: 0 },
+      delta: { x: 280, y: 0 }, // grow one tread past the END edge; base fixed
+      currentPos: { x: 3360, y: 0 },
     });
-    expect(next.stepCount).toBe(4); // floor(1000/280)+1
-    expect(next.totalRun).toBeCloseTo(280 * 3, 4);
+    expect(next.stepCount).toBe(13); // floor(3360/280)+1
+    expect(next.totalRun).toBeCloseTo(3080 + 280, 4);
+    expect(next.basePoint.x).toBeCloseTo(0, 4); // back edge grows, base fixed
+  });
+
+  // ADR-393 Phase C — the 2 opposite mid-edges (straight-only, shared axis-box).
+  it('12b. stair-width-far edge drag → opposite-face-fixed grow on the −perp face', () => {
+    const entity = makeStraight();
+    const next = applyStairGripDrag('stair-width-far', {
+      originalParams: entity.params,
+      delta: { x: 0, y: -600 }, // pull the −perp face outward; +perp face fixed
+      currentPos: { x: 1540, y: -1200 },
+    });
+    expect(next.width).toBeCloseTo(1800, 4);
+    expect(next.basePoint.y).toBeCloseTo(-300, 4); // recenters toward −perp
+  });
+
+  it('13b. stair-length-start edge drag → run grows from the START, back edge fixed', () => {
+    const entity = makeStraight();
+    const next = applyStairGripDrag('stair-length-start', {
+      originalParams: entity.params,
+      delta: { x: -280, y: 0 }, // pull the START edge back one tread; end fixed
+      currentPos: { x: -280, y: 0 },
+    });
+    expect(next.stepCount).toBe(13);
+    expect(next.totalRun).toBeCloseTo(3080 + 280, 4);
+    expect(next.basePoint.x).toBeCloseTo(-280, 4);            // start moved back
+    expect(next.basePoint.x + next.totalRun).toBeCloseTo(3080, 4); // back edge fixed
   });
 
   // ─── applyStairGripDrag: ADR-393 Phase A1 corners ─────────────────────────
@@ -587,5 +626,34 @@ describe('stair-grips (ADR-358 Phase 5b + ADR-393)', () => {
       expect(next.variant.flightSplit[0]).toBe(6);
     }
     expect(next.stepCount).toBe(entity.params.stepCount + 1);
+  });
+
+  // ─── ADR-393 Phase C — pivot-aware rotation (wall parity) ─────────────────
+
+  it('37. stair-direction with a picked pivot → the stair ORBITS the centre (base + direction)', () => {
+    // base=(0,0), direction 0, run 3080. Pivot at the run end (3080,0); rotate the
+    // anchor (angle 0 from pivot) 90° CCW to the +Y ray → the base swings to (3080,−3080).
+    const entity = makeStraight();
+    const next = applyStairGripDrag('stair-direction', {
+      originalParams: entity.params,
+      delta: { x: -1, y: 1 },        // anchor = currentPos − delta = (3081, 0)
+      currentPos: { x: 3080, y: 1 }, // 90° CCW from the anchor about the pivot
+      pivot: { x: 3080, y: 0 },
+    });
+    expect(next.direction).toBeCloseTo(90, 4);
+    expect(next.basePoint.x).toBeCloseTo(3080, 4);
+    expect(next.basePoint.y).toBeCloseTo(-3080, 4);
+  });
+
+  it('38. stair-direction with NO pivot → spins about basePoint (legacy behaviour preserved)', () => {
+    const entity = makeStraight(); // base (0,0)
+    const next = applyStairGripDrag('stair-direction', {
+      originalParams: entity.params,
+      delta: { x: 0, y: 100 },
+      currentPos: { x: 0, y: 100 },
+    });
+    expect(next.direction).toBeCloseTo(90, 4);
+    expect(next.basePoint.x).toBeCloseTo(0, 4); // base unchanged (pivot = base)
+    expect(next.basePoint.y).toBeCloseTo(0, 4);
   });
 });

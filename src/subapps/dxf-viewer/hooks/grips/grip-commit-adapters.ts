@@ -113,8 +113,13 @@ import { gripKindOf } from '../grip-kinds';
  * clones it with the same displacement when `copy` is set (CopyEntityCommand,
  * copy-with-base-point). Shared SSoT for the `mode === 'move'` branch AND the
  * Alt-modifier bypass so both routes stay byte-identical.
+ *
+ * ADR-627 — exported so the hatch MOVE cross (`commitHatchGripDrag`) reuses the EXACT
+ * same whole-entity translate + copy-with-base-point path (the hatch grip is intercepted
+ * by `tryCommitParametricGripDrag` on `on:'hatch'` before this file's own move gate runs,
+ * so it cannot fall through here — it calls this SSoT directly instead of duplicating it).
  */
-function commitWholeEntityMove(
+export function commitWholeEntityMove(
   grip: UnifiedGripInfo,
   delta: Point2D,
   deps: DxfCommitDeps,

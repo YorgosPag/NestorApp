@@ -17,13 +17,11 @@ import type { StairEntity } from '../../bim/types/stair-types';
 import type { WallEntity, WallKind } from '../../bim/types/wall-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import type { ColumnEntity, ColumnParams } from '../../bim/types/column-types';
-import type { FoundationEntity } from '../../bim/types/foundation-types';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import { UpdateStairParamsCommand } from '../../core/commands/entity-commands/UpdateStairParamsCommand';
 import { UpdateWallParamsCommand } from '../../core/commands/entity-commands/UpdateWallParamsCommand';
 import { UpdateBeamParamsCommand } from '../../core/commands/entity-commands/UpdateBeamParamsCommand';
 import { UpdateColumnParamsCommand } from '../../core/commands/entity-commands/UpdateColumnParamsCommand';
-import { UpdateFoundationParamsCommand } from '../../core/commands/entity-commands/UpdateFoundationParamsCommand';
 import { UpdateMepSegmentParamsCommand } from '../../core/commands/entity-commands/UpdateMepSegmentParamsCommand';
 import { applyStairGripDrag } from '../../bim/stairs/stair-grips';
 import { applyWallGripDrag } from '../../bim/walls/wall-grips';
@@ -31,15 +29,12 @@ import { BimRotateHotGripStore } from '../../bim/grips/bim-rotate-hotgrip-store'
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
 import { runColumnEditGuards } from '../../bim/columns/column-edit-guard-flow';
-import { applyFoundationGripDrag } from '../../bim/foundations/foundation-grips';
 import { applyMepSegmentGripDrag } from '../../bim/mep-segments/mep-segment-grips';
 import { executeSegmentMoveWithConnectedPipes } from '../../bim/mep-segments/build-connectivity-host-update';
 import { emitBimEntityParamsUpdated } from '../../systems/events/emit-bim-entity-params-updated';
 import { EventBus } from '../../systems/events/EventBus';
-import type { Entity } from '../../types/entities';
 import { resolveColumnSectionLock } from '../../bim/structural/sizing/column-size-patch';
 import { resolveBeamSectionLock } from '../../bim/structural/sizing/beam-size-patch';
-import { buildPadSizingInput, resolvePadSectionLock } from '../../bim/structural/sizing/pad-size-patch';
 import {
   resolveActiveColumnDesignMoment,
   resolveActiveBeamSupportType,
@@ -140,6 +135,11 @@ export {
 // (N.7.1 file-size split). Re-exported so the commit API stays one import.
 export { commitPolylineBulgeGripDrag } from './grip-polyline-bulge-commit';
 
+// ADR-436 Slice 1b — parametric foundation-pad grip commit lives in
+// grip-parametric-foundation-commit.ts (N.7.1 file-size split). Re-exported here
+// so the commit API stays one import.
+export { commitFoundationGripDrag } from './grip-parametric-foundation-commit';
+
 /**
  * ADR-358 Phase 5b — Parametric stair grip commit. Bypasses the standard
  * stretch / move / rotate strategies because `StairEntity` is parametric:
@@ -162,7 +162,16 @@ export function commitStairGripDrag(
   if (candidate.type !== 'stair' || !candidate.params) return;
   const stair = candidate as StairEntity;
   const originalParams = stair.params;
-  const currentPos: Point2D = translatePoint(grip.position, delta);
+  // ADR-393 Phase C — the `stair-direction` 6-click hot-grip rotates around a picked
+  // centre. The hook publishes {pivot, anchor} in BimRotateHotGripStore; the delta
+  // passed here is `cursor − anchor`, so `currentPos = anchor + delta` is the live
+  // cursor and `pivot` is the rotation centre (mirror commitWallGripDrag). All other
+  // stair grips (and the legacy rotation drag) use the grip position as the anchor.
+  const rotateCtx = BimRotateHotGripStore.getSnapshot();
+  const useRotatePivot =
+    stairKind === 'stair-direction' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
+  const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
+  const currentPos: Point2D = translatePoint(anchor, delta);
   const newParams = applyStairGripDrag(stairKind, {
     originalParams,
     delta,
@@ -170,6 +179,7 @@ export function commitStairGripDrag(
     // ADR-393 v2 Phase 2 — multi-flight corner transforms read the last flight's
     // direction from the walkline; supply the drag-start geometry as that SSoT.
     geometry: stair.geometry,
+    ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
   });
   const command = new UpdateStairParamsCommand(
     grip.entityId,
@@ -423,77 +433,4 @@ export function commitColumnGripDrag(
   // ADR-363 §5.6/§5.6b — edit-time guards (grip resize) ΣΤΟ RELEASE (το grip commit τρέχει
   // ήδη μία φορά στο mouse-up· ΕΝΑ SSoT με το αριθμητικό path μέσω `runColumnEditGuards`).
   runColumnEditGuards(originalParams, newParams, finalize);
-}
-
-/**
- * ADR-436 Slice 1b — parametric foundation pad grip commit via
- * `UpdateFoundationParamsCommand`. 1:1 mirror of `commitColumnGripDrag`: routes
- * through `applyFoundationGripDrag()` (rotation + width/length resize + Alt-move)
- * — NOT the generic stretch/move — because the pad is params-driven (geometry
- * recomputed atomically). The `foundation-rotation` 6-click hot-grip rotates
- * around a picked centre published in `BimRotateHotGripStore`; all other grips
- * use the grip position as the anchor. Merge window enabled (isDragging=true)
- * collapses a continuous drag into one undo (ADR-031).
- */
-export function commitFoundationGripDrag(
-  grip: UnifiedGripInfo,
-  delta: Point2D,
-  deps: DxfCommitDeps,
-): void {
-  const foundationKind = gripKindOf(grip, 'foundation');
-  if (!grip.entityId || !foundationKind) return;
-  const sceneManager = createSceneManagerAdapter(deps);
-  if (!sceneManager) return;
-  const raw = sceneManager.getEntity(grip.entityId);
-  if (!raw) return;
-  const candidate = raw as unknown as Partial<FoundationEntity>;
-  if (candidate.type !== 'foundation' || !candidate.params) return;
-  const foundation = candidate as FoundationEntity;
-  const originalParams = foundation.params;
-  const rotateCtx = BimRotateHotGripStore.getSnapshot();
-  const useRotatePivot =
-    foundationKind === 'foundation-rotation' && rotateCtx.pivot !== null && rotateCtx.anchor !== null;
-  const anchor: Point2D = useRotatePivot ? rotateCtx.anchor! : grip.position;
-  const currentPos: Point2D = translatePoint(anchor, delta);
-  const newParams = applyFoundationGripDrag(foundationKind, {
-    originalParams,
-    delta,
-    currentPos,
-    ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
-  });
-  if (newParams === originalParams) return;
-  // ADR-503 Slice 3 — pad width/length resize = χειροκίνητη διάσταση → safety-gated lock (mirror
-  // κολώνας/δοκού· lock-flag = `autoDesigned`, ο reconciler ξαναδιαστασιολογεί μόνο autoDesigned).
-  // ≥ επαρκές → lock· < επαρκές → ΜΠΛΟΚ (clamp στην ελάχιστη επαρκή). strip/tie-beam → pass-through.
-  let finalParams = newParams;
-  let padRejection: { w: number; l: number; minW: number; minL: number } | null = null;
-  if (newParams.kind === 'pad' && originalParams.kind === 'pad') {
-    // `getEntities` είναι optional στο ISceneManager (interfaces.ts) — ο adapter πάντα το παρέχει,
-    // αλλά guard-άρουμε με fallback `[]` (buildPadSizingInput → null σε άδειο → no-op παρακάτω).
-    const input = buildPadSizingInput(
-      foundation,
-      (sceneManager.getEntities?.() ?? []) as unknown as readonly Entity[],
-      useStructuralSettingsStore.getState().soilBearingCapacityKpa,
-    );
-    if (input) {
-      const lock = resolvePadSectionLock(input, originalParams, newParams);
-      finalParams = lock.params;
-      if (lock.rejected) {
-        padRejection = { w: newParams.width, l: newParams.length, minW: lock.minWidthMm, minL: lock.minLengthMm };
-      }
-    }
-  }
-  const command = new UpdateFoundationParamsCommand(
-    grip.entityId,
-    finalParams,
-    originalParams,
-    sceneManager,
-    true,
-  );
-  if (command.validate() !== null) return;
-  deps.execute(command);
-  emitBimEntityParamsUpdated('foundation', grip.entityId);
-  if (padRejection) {
-    EventBus.emit('bim:foundation-section-rejected', { foundationId: grip.entityId, ...padRejection });
-  }
 }

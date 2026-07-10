@@ -6,7 +6,8 @@
  * `entity-descriptor-coverage.test.ts`):
  *  1. Golden — ποιοι renderable types ΕΧΟΥΝ ρητή rotation υλοποίηση.
  *  2. No-op set — ποιοι renderable types πέφτουν στο `{}` default (BIM + point/dimension/
- *     hatch/xline/ray). Ασύμμετρο per-site default καρφωμένο ρητά (ADR-587 §4.6).
+ *     xline/ray). Ασύμμετρο per-site default καρφωμένο ρητά (ADR-587 §4.6). (ADR-627: το
+ *     `hatch` ΒΓΗΚΕ από το no-op set — περιστρέφει πλέον τα boundaryPaths.)
  *  3. Editor-only extra — ο ΜΟΝΟΣ non-renderable handler είναι το `group` (container).
  *  4/5. Behavioral pins — no-op default επιστρέφει `{}`· ένας supported τύπος όντως περιστρέφει.
  *
@@ -45,13 +46,19 @@ describe('Rotate capability coverage — ζωντανό seam ↔ descriptor doma
       asSorted([
         'line', 'circle', 'arc', 'polyline', 'lwpolyline', 'rectangle', 'rect',
         'ellipse', 'text', 'mtext', 'spline', 'angle-measurement', 'annotation-symbol',
+        // ADR-627 — hatch περιστρέφει τα boundaryPaths (parity με το περίγραμμα εμβαδού).
+        'hatch',
       ]),
     );
   });
 
-  it('renderable types χωρίς handler = no-op set (BIM + point/dimension/hatch/xline/ray)', () => {
+  it('renderable types χωρίς handler = no-op set (BIM + point/dimension/xline/ray + annotations)', () => {
     const noRotate = RENDERABLE_ENTITY_TYPES.filter((t) => !supportedSet.has(t));
-    const expected = ['point', 'dimension', 'hatch', 'xline', 'ray', ...BIM_RENDERABLE_TYPES];
+    // scale-bar / opening-info-tag (ADR-583/612): renderable non-BIM annotations που
+    // περιστρέφονται με parametric `angleRad` (ΟΧΙ μέσω `rotateEntity`) → σωστά no-op εδώ.
+    const expected = [
+      'point', 'dimension', 'xline', 'ray', 'scale-bar', 'opening-info-tag', ...BIM_RENDERABLE_TYPES,
+    ];
     expect(asSorted(noRotate)).toEqual(asSorted(expected));
   });
 
@@ -75,5 +82,17 @@ describe('Rotate capability coverage — ζωντανό seam ↔ descriptor doma
     expect(r.start.y).toBeCloseTo(1);
     expect(r.end.x).toBeCloseTo(0);
     expect(r.end.y).toBeCloseTo(2);
+  });
+
+  it('ADR-627 — hatch handler περιστρέφει κάθε boundary vertex κατά 90° CCW περί την αρχή', () => {
+    const hatch = {
+      type: 'hatch', id: 'h', layerId: 'l',
+      boundaryPaths: [[{ x: 1, y: 0 }, { x: 2, y: 0 }]],
+    } as unknown as Entity;
+    const r = rotateEntity(hatch, { x: 0, y: 0 }, 90) as { boundaryPaths: Point2D[][] };
+    expect(r.boundaryPaths[0][0].x).toBeCloseTo(0);
+    expect(r.boundaryPaths[0][0].y).toBeCloseTo(1);
+    expect(r.boundaryPaths[0][1].x).toBeCloseTo(0);
+    expect(r.boundaryPaths[0][1].y).toBeCloseTo(2);
   });
 });

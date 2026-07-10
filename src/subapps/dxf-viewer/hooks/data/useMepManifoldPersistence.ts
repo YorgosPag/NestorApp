@@ -17,7 +17,6 @@
 import { useMemo } from 'react';
 
 import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
-import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import {
   createMepManifoldFirestoreService,
   entityToSaveInput,
@@ -26,11 +25,12 @@ import {
 } from '../../bim/mep-manifolds/mep-manifold-firestore-service';
 import { recordMepManifoldChange } from '../../bim/mep-manifolds/mep-manifold-audit-client';
 import { mepManifoldDocToEntity as docToEntity } from './mep-manifold-persistence-helpers';
-import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
+import { createBimBoqAuditLifecycle } from './create-bim-boq-audit-lifecycle';
 import { mepConnectorMergeConfig } from './mep-connector-merge-config';
 import type {
   BimEntityPersistenceParams,
+  BimEntityPersistencePublicScope,
   BimEntitySaveState,
 } from './bim-entity-persistence-hook-types';
 
@@ -40,16 +40,7 @@ import type {
 
 export type MepManifoldSaveState = BimEntitySaveState;
 
-export interface UseMepManifoldPersistenceParams {
-  readonly companyId: string | null;
-  readonly projectId: string | null | undefined;
-  readonly floorplanId: string | null | undefined;
-  /** ADR-420 — stable building-storey scope key (IfcBuildingStorey). */
-  readonly floorId?: string | null;
-  /** ADR-408 — building scope for the Η-Μ BOQ auto-feed (BimToBoqBridge). */
-  readonly buildingId?: string | null;
-  readonly userId: string | null;
-  readonly levelManager: LevelSceneWriter;
+export interface UseMepManifoldPersistenceParams extends BimEntityPersistencePublicScope {
   readonly primarySelectedManifold: MepManifoldEntity | null;
 }
 
@@ -101,39 +92,13 @@ const useMepManifoldPersistenceBase = createBimEntityPersistenceHook<
     event: 'bim:mep-manifold-delete-requested',
     getId: (p) => (p as { manifoldId?: string }).manifoldId,
   },
-  onPersisted: (entity, { isNew, prevComparable, scope }) => {
-    void recordMepManifoldChange(isNew ? 'created' : 'updated', entity, {
-      prevParams: prevComparable ?? undefined,
-    });
-    // ADR-408 — Η-Μ BOQ auto-feed: manifold body = 1 piece (ΗΛΜ-7.03 συλλέκτης
-    // θέρμανσης / ΗΛΜ-6.02 φρεάτιο αποχέτευσης, keyed by kind).
-    if (scope.companyId && scope.projectId && scope.buildingId) {
-      void bimToBoqBridge.upsertBoqItemForBim(
-        'mep-manifold',
-        { id: entity.id, kind: entity.kind },
-        {
-          companyId: scope.companyId,
-          projectId: scope.projectId,
-          buildingId: scope.buildingId,
-          floorId: scope.floorId ?? undefined,
-        },
-        isNew ? 'created' : 'updated',
-      );
-    }
-  },
-  onDeleted: (id, deleted, { scope }) => {
-    void recordMepManifoldChange(
-      'deleted',
-      deleted
-        ? { id: deleted.id, kind: deleted.kind, layerId: deleted.layerId, params: deleted.params }
-        : { id, kind: 'floor-manifold' },
-    );
-    // ADR-408 — remove the auto-fed Η-Μ BOQ row (skips user-detached rows).
-    if (scope.companyId) void bimToBoqBridge.deleteBoqItemForBim(id, scope.companyId);
-  },
-  onRestored: (entity) => {
-    void recordMepManifoldChange('restored', entity);
-  },
+  // ADR-628 — audit + Η-Μ BOQ auto-feed lifecycle (manifold body = 1 piece,
+  // ΗΛΜ-7.03 συλλέκτης θέρμανσης / ΗΛΜ-6.02 φρεάτιο αποχέτευσης, keyed by kind).
+  ...createBimBoqAuditLifecycle<MepManifoldEntity>({
+    boqType: 'mep-manifold',
+    recordChange: recordMepManifoldChange,
+    deletedFallbackKind: 'floor-manifold',
+  }),
 });
 
 // ============================================================================

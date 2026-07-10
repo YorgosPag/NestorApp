@@ -16,7 +16,6 @@
 import { useMemo } from 'react';
 
 import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
-import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 import {
   createMepRadiatorFirestoreService,
   entityToSaveInput,
@@ -25,11 +24,12 @@ import {
 } from '../../bim/mep-radiators/mep-radiator-firestore-service';
 import { recordMepRadiatorChange } from '../../bim/mep-radiators/mep-radiator-audit-client';
 import { mepRadiatorDocToEntity as docToEntity } from './mep-radiator-persistence-helpers';
-import { bimToBoqBridge } from '../../bim/services/BimToBoqBridge';
 import { createBimEntityPersistenceHook } from './create-bim-entity-persistence-hook';
+import { createBimBoqAuditLifecycle } from './create-bim-boq-audit-lifecycle';
 import { mepConnectorMergeConfig } from './mep-connector-merge-config';
 import type {
   BimEntityPersistenceParams,
+  BimEntityPersistencePublicScope,
   BimEntitySaveState,
 } from './bim-entity-persistence-hook-types';
 
@@ -39,16 +39,7 @@ import type {
 
 export type MepRadiatorSaveState = BimEntitySaveState;
 
-export interface UseMepRadiatorPersistenceParams {
-  readonly companyId: string | null;
-  readonly projectId: string | null | undefined;
-  readonly floorplanId: string | null | undefined;
-  /** ADR-420 — stable building-storey id. Forwarded to service config. */
-  readonly floorId?: string | null;
-  /** ADR-408 — building scope for the Η-Μ BOQ auto-feed (BimToBoqBridge). */
-  readonly buildingId?: string | null;
-  readonly userId: string | null;
-  readonly levelManager: LevelSceneWriter;
+export interface UseMepRadiatorPersistenceParams extends BimEntityPersistencePublicScope {
   readonly primarySelectedRadiator: MepRadiatorEntity | null;
 }
 
@@ -100,38 +91,12 @@ const useMepRadiatorPersistenceBase = createBimEntityPersistenceHook<
     event: 'bim:mep-radiator-delete-requested',
     getId: (p) => (p as { radiatorId?: string }).radiatorId,
   },
-  onPersisted: (entity, { isNew, prevComparable, scope }) => {
-    void recordMepRadiatorChange(isNew ? 'created' : 'updated', entity, {
-      prevParams: prevComparable ?? undefined,
-    });
-    // ADR-408 — Η-Μ BOQ auto-feed: heating radiator = 1 piece (ΗΛΜ-7.01).
-    if (scope.companyId && scope.projectId && scope.buildingId) {
-      void bimToBoqBridge.upsertBoqItemForBim(
-        'mep-radiator',
-        { id: entity.id, kind: entity.kind },
-        {
-          companyId: scope.companyId,
-          projectId: scope.projectId,
-          buildingId: scope.buildingId,
-          floorId: scope.floorId ?? undefined,
-        },
-        isNew ? 'created' : 'updated',
-      );
-    }
-  },
-  onDeleted: (id, deleted, { scope }) => {
-    void recordMepRadiatorChange(
-      'deleted',
-      deleted
-        ? { id: deleted.id, kind: deleted.kind, layerId: deleted.layerId, params: deleted.params }
-        : { id, kind: 'panel-radiator' },
-    );
-    // ADR-408 — remove the auto-fed Η-Μ BOQ row (skips user-detached rows).
-    if (scope.companyId) void bimToBoqBridge.deleteBoqItemForBim(id, scope.companyId);
-  },
-  onRestored: (entity) => {
-    void recordMepRadiatorChange('restored', entity);
-  },
+  // ADR-628 — audit + Η-Μ BOQ auto-feed lifecycle (heating radiator = 1 piece, ΗΛΜ-7.01).
+  ...createBimBoqAuditLifecycle<MepRadiatorEntity>({
+    boqType: 'mep-radiator',
+    recordChange: recordMepRadiatorChange,
+    deletedFallbackKind: 'panel-radiator',
+  }),
 });
 
 // ============================================================================

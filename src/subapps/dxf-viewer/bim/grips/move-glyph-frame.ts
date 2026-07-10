@@ -73,6 +73,12 @@ interface OrientedParams {
   readonly end?: { readonly x: number; readonly y: number };
   readonly startPoint?: { readonly x: number; readonly y: number };
   readonly endPoint?: { readonly x: number; readonly y: number };
+  // ADR-393 — the stair has no axis endpoints: its orientation is `basePoint`
+  // (front-edge centre) + `direction` (degrees, world CCW). Read so the 4-arrow
+  // MOVE cross rotates with the stair AND `resolveRotateReferenceAnchor` draws the
+  // dashed reference axis coaxial with the run direction (wall parity).
+  readonly basePoint?: { readonly x: number; readonly y: number };
+  readonly direction?: number;
 }
 
 /**
@@ -90,6 +96,14 @@ export function resolveMoveGlyphFrame(entity: Entity): MoveGlyphFrame | null {
     // Box / point entities: explicit rotation (degrees, world CCW).
     if (typeof params.rotation === 'number' && Number.isFinite(params.rotation)) {
       return fromAngleRad(params.rotation * DEG_TO_RAD);
+    }
+    // ADR-393 — stair: no axis endpoints; orientation = `basePoint` + `direction`
+    // (degrees, world CCW). A frame from `direction` (a) rotates the 4-arrow MOVE
+    // cross with the stair AND (b) seeds `resolveRotateReferenceAnchor` so the
+    // dashed rotation-reference axis is coaxial with the run direction (its major
+    // axis) — the SAME single-axis wall behaviour, never an arbitrary baseline.
+    if (params.basePoint && typeof params.direction === 'number' && Number.isFinite(params.direction)) {
+      return fromAngleRad(params.direction * DEG_TO_RAD);
     }
     return null;
   }

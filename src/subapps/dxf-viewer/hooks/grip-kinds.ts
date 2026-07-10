@@ -91,6 +91,14 @@ export type StairGripKind =
   | 'stair-corner-start-right'
   | 'stair-corner-end-left'
   | 'stair-corner-end-right'
+  // ADR-393 Phase C (2026-07-10) — full wall-parity via the shared axis-box SSoT:
+  // the 2 OPPOSITE mid-edge handles so ALL 4 faces carry a midpoint grip (mirror
+  // of wall `wall-thickness-far` / `wall-edge-length-start`). Emitted for STRAIGHT
+  // only; the drag resizes width/run via `applyAxisBoxGripDrag` (opposite-face fixed).
+  //   - `stair-width-far`    → resize width on the −perp face (near face fixed).
+  //   - `stair-length-start` → resize run at the START short edge (back edge fixed).
+  | 'stair-width-far'
+  | 'stair-length-start'
   // ADR-393 Phase A2 — mid-front start grip (straight)
   | 'stair-start-side'
   // ADR-393 Phase B1 — per-flight landing edges (L/U/Γ) — replace 'stair-split'
@@ -276,7 +284,13 @@ export type HatchGripKind =
   // `UpdateHatchBoundaryCommand`). Mirror of `floor-finish-edge-midpoint-N`.
   | `hatch-edge-midpoint-${number}-${number}`
   | 'hatch-gradient-origin'
-  | 'hatch-gradient-angle';
+  | 'hatch-gradient-angle'
+  // ADR-627 — whole-hatch handles (parity με το περίγραμμα εμβαδού / polyline ADR-561):
+  // σταυρός μετακίνησης (4-arrow glyph + whole-entity translate των boundaryPaths) και
+  // σημάδι περιστροφής (curved glyph + RotateEntityCommand → rotateEntity case 'hatch').
+  // Θέση = shared `resolveMoveRotateHandleWorld` στο εξωτερικό όριο (`boundaryPaths[0]`).
+  | 'hatch-move'
+  | 'hatch-rotation';
 
 // ADR-363/436 — beam / column / foundation (structural-frame-element) grip kinds
 // live in the sibling module `grip-kinds-structural.ts` (SRP / N.7.1) and are
