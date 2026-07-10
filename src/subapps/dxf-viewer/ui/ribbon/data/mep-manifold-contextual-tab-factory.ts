@@ -20,6 +20,7 @@
  */
 
 import type { RibbonTab, RibbonComboboxOption } from '../types/ribbon-types';
+import { literalNumberOptions } from './ribbon-numeric-options';
 import {
   MEP_MANIFOLD_RIBBON_KEYS,
   MEP_MANIFOLD_RIBBON_KEYS_ACTIONS,
@@ -27,19 +28,14 @@ import {
 } from '../hooks/bridge/mep-manifold-command-keys';
 import { MEP_PIPE_NETWORK_RIBBON_ACTIONS } from '../hooks/bridge/mep-pipe-network-command-keys';
 
-/** Build an mm-preset option whose label is the literal number (no t()). */
-function mmOption(value: number): RibbonComboboxOption {
-  return { value: String(value), labelKey: String(value), isLiteralLabel: true };
-}
-
-/** Build a list of literal mm presets. */
+/** Build a list of literal mm presets (delegates to the numeric-options SSoT). */
 export function mmOptions(values: readonly number[]): readonly RibbonComboboxOption[] {
-  return values.map(mmOption);
+  return literalNumberOptions(values);
 }
 
-/** Build a list of literal integer presets (outlet/inlet count). */
+/** Build a list of literal integer presets (outlet/inlet count) — same SSoT. */
 export function countOptions(values: readonly number[]): readonly RibbonComboboxOption[] {
-  return values.map((v) => ({ value: String(v), labelKey: String(v), isLiteralLabel: true }));
+  return literalNumberOptions(values);
 }
 
 /**

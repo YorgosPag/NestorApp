@@ -178,6 +178,10 @@
     "confirm": "Confirm",
     "cancel": "Cancel"
   },
+  "stairAddTurn": {
+    "pickParietaPrompt": "Click a side of the stair to add a turn.",
+    "branchTooShort": "The flight is too short to turn — at least 2 treads are needed on each side."
+  },
   "attachToStructural": {
     "hostMissing": "Wall lost its top structural support (the supporting element was deleted).",
     "autoAttached": "Walls auto-attached their top to the structural element.",
@@ -1473,6 +1477,7 @@
       "stairMultiStory": "Multi-Story",
       "stairMultiStoryHeight": "Story Height",
       "stairMultiFlight": "Multi-Flight",
+      "stairShapeEdit": "Shape Editing",
       "stairStructuralAttach": "Structural Attach",
       "stairActions": "Actions",
       "wallTools": "Wall Tools",
@@ -2538,6 +2543,7 @@
         "flight3TurnDirection": "Flight 3 Turn",
         "turnDirectionLeft": "Left",
         "turnDirectionRight": "Right",
+        "addTurn": "Add Turn",
         "attachTop": "Attach Top",
         "attachBase": "Attach Base",
         "detachTop": "Detach Top",

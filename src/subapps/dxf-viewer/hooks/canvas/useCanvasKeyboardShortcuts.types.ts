@@ -123,6 +123,10 @@ export interface UseCanvasKeyboardShortcutsParams {
   handleWallAttachEscape?: () => void;
   /** ADR-401 Phase E.1: Whether the wall-attach pick-host tool is active */
   wallAttachIsActive?: boolean;
+  /** ADR-633 1b-ii: Stair Add-Turn ESC handler */
+  handleStairAddTurnEscape?: () => void;
+  /** ADR-633 1b-ii: Whether the stair add-turn pick tool is active */
+  stairAddTurnIsActive?: boolean;
   /** ADR-566: Wall Merge ESC handler */
   handleWallMergeEscape?: () => void;
   /** ADR-566: Whether the wall-merge tool is active */

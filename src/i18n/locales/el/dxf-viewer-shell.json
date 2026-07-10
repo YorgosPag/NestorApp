@@ -178,6 +178,10 @@
     "confirm": "Επιβεβαίωση",
     "cancel": "Ακύρωση"
   },
+  "stairAddTurn": {
+    "pickParietaPrompt": "Κάντε κλικ σε μια παρειά της σκάλας για να προσθέσετε στροφή.",
+    "branchTooShort": "Ο κλάδος είναι πολύ κοντός για στροφή — χρειάζονται τουλάχιστον 2 σκαλιά σε κάθε πλευρά."
+  },
   "attachToStructural": {
     "hostMissing": "Ο τοίχος έχασε το δομικό στήριγμα κορυφής (διαγράφηκε το στοιχείο στήριξης).",
     "autoAttached": "Οι τοίχοι κόλλησαν αυτόματα την κορυφή τους στο δομικό στοιχείο.",
@@ -1473,6 +1477,7 @@
       "stairMultiStory": "Πολυώροφα",
       "stairMultiStoryHeight": "Ύψος Ορόφου",
       "stairMultiFlight": "Πολλαπλά Σκέλη",
+      "stairShapeEdit": "Επεξεργασία Σχήματος",
       "stairStructuralAttach": "Σύνδεση δομικού",
       "stairActions": "Ενέργειες",
       "wallTools": "Εργαλεία τοίχου",
@@ -2538,6 +2543,7 @@
         "flight3TurnDirection": "Στροφή Σκέλους 3",
         "turnDirectionLeft": "Αριστερά",
         "turnDirectionRight": "Δεξιά",
+        "addTurn": "Προσθήκη Στροφής",
         "attachTop": "Σύνδεση Κορυφής",
         "attachBase": "Σύνδεση Βάσης",
         "detachTop": "Αποσύνδεση Κορυφής",

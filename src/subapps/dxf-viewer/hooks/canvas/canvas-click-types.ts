@@ -196,6 +196,12 @@ export interface UseCanvasClickHandlerParams {
   /** Click handler — picks the structural host (beam/slab) under the cursor. */
   handleWallAttachClick?: (worldPoint: Point2D) => void;
 
+  // ── ADR-633 Sub-phase 1b-ii: Stair Add-Turn tool ──────────────────────
+  /** Whether the stair add-turn pick tool is active (click parieta → angle → commit). */
+  stairAddTurnIsActive?: boolean;
+  /** Click handler — hit-tests the parieta of the selected stair under the cursor. */
+  handleStairAddTurnClick?: (worldPoint: Point2D) => void;
+
   // ── ADR-566: Wall Merge tool ──────────────────────────────────────────
   /** Whether the wall-merge tool is active (continuous pick loop, ESC to exit). */
   wallMergeIsActive?: boolean;

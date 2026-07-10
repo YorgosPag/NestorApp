@@ -24,6 +24,7 @@ import { useWallSplitTool } from './useWallSplitTool';
 import { useWallMergeTool } from './useWallMergeTool';
 import { useWallGapOpeningTool } from './useWallGapOpeningTool';
 import { useWallAttachTool } from './useWallAttachTool';
+import { useStairAddTurnTool } from './useStairAddTurnTool';
 import { useCopyTool } from './useCopyTool';
 import { useEntityClipboard } from './useEntityClipboard';
 import { useEntityBodyDragCommit } from './useEntityBodyDragCommit';
@@ -140,6 +141,21 @@ export function useModifyTools({
     executeCommand,
     transformScale: getImmediateTransform().scale,
     onToolChange,
+  });
+
+  // ADR-633 Sub-phase 1b-ii — Stair Add-Turn Tool (multi-flight turn points).
+  // Pick-on-selected modify tool (mirror του wall-attach): επιλεγμένη ευθύγραμμη /
+  // multi-flight σκάλα → κλικ σε παρειά → prompt γωνίας (default 90°) → η σκάλα
+  // στρίβει (landing corner). Reuse των καθαρών SSoT `pickStairParieta` /
+  // `insertTurnAtParieta` + του κοινού `showPromptDialog` (rotation-style angle).
+  const stairAddTurnTool = useStairAddTurnTool({
+    activeTool,
+    selectedEntityIds,
+    levelManager,
+    executeCommand,
+    onToolChange,
+    showPromptDialog,
+    t,
   });
 
   // ADR-566 — Wall Merge Tool (AutoCAD JOIN for walls). Dual-flow: command-first
@@ -303,6 +319,7 @@ export function useModifyTools({
     arrayPathTool,
     wallSplitTool,
     wallAttachTool,
+    stairAddTurnTool,
     wallMergeTool,
     wallGapOpeningTool,
     copyTool,

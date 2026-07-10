@@ -3805,6 +3805,24 @@ gesture, ΟΧΙ 60fps). **Bitmap cache key ΑΝΕΓΓΙΧΤΟ** (rule #3): το 
 `grip-scene-manager-adapter.ts`, `grip-registry.ts`, `canvas-layer-stack-leaves.tsx`,
 `GripRegistryPublisher.tsx`, `useActiveGroup.ts`. Staged για CHECK 6B/6D. ΟΧΙ tsc (N.17).
 
+## 2026-07-11: ADR-633 Sub-phase 1b-ii — Stair Add-Turn pick tool click-routing wiring (CHECK 6B/6D stage)
+
+**Τι:** νέο modify-tool «Προσθήκη στροφής» (`'stair-add-turn'`) — με επιλεγμένη ευθύγραμμη /
+multi-flight σκάλα, κλικ σε παρειά → prompt γωνίας (default 90°) → η σκάλα στρίβει (multi-flight
+turn point, ADR-633). Καθαρός mirror του `useWallAttachTool` (pick-on-selected). Η καθαρή λογική
+(`pickStairParieta` / `insertTurnAtParieta`, ADR-633 1a/1b-i) reused ως έχει· εδώ **μόνο wiring**.
+
+**ADR-040 συμμόρφωση:** το tool ζει στο `useModifyTools` και το click routing περνά μέσω του
+υπάρχοντος `useCanvasClickHandler` (νέο priority-block, mirror wall-attach)· ο orchestrator
+`CanvasSection` **δεν αποκτά νέα subscription** — απλώς προωθεί `stairAddTurnTool.isActive` +
+`handleStairAddTurnClick`/`handleStairAddTurnEscape` (props pass-through, ίδιο pattern με τα ~15
+άλλα modify tools). **Καμία νέα `useSyncExternalStore` σε orchestrator (CHECK 6C safe)**· ο κέρσορας
+διαβάζεται event-time μέσω `getImmediateTransform()` (getter, όχι snapshot). Bitmap cache **άθικτο**
+(rule #3 N/A). Αρχεία: `useStairAddTurnTool.ts` (NEW), `useModifyTools.ts`, `CanvasSection.tsx`,
+`canvas-click-types.ts`, `useCanvasClickHandler.ts`, `useCanvasKeyboardShortcuts(.types).ts`,
+`useCanvasEscapeRegistrations.ts`, `tool-definitions.ts`, `toolbar/types.ts`, `contextual-stair-tab.ts`,
+stair ribbon bridge/keys, i18n el+en. Staged για CHECK 6B/6D. ΟΧΙ tsc (N.17). 48 stair jest GREEN· jscpd clean.
+
 ## 2026-07-07 (c): ADR-581 Φ6 — «σύριγγα» live hover ghost (νέο micro-leaf, CHECK 6B/6D stage)
 
 **Τι:** νέο preview leaf `MatchHoverGhostPreviewMount` (`canvas-layer-stack-match-ghost.tsx`) που

@@ -113,6 +113,13 @@ export const STAIR_RIBBON_VISIBILITY_KEYS = {
    * Surfaces the winderCount + winderMethod editors only when relevant.
    */
   lShapeWindersParams: 'stair.visibility.lShapeWindersParams',
+  /**
+   * ADR-633 1b-ii — «Επεξεργασία Σχήματος» panel («Προσθήκη στροφής»). Visible
+   * iff the turn tool can act on the variant: `straight` or `multi-flight`. The
+   * legacy l-shape/u-shape/gamma/spiral variants have their own editors and are
+   * not handled by `insertTurnAtParieta`, so the button is hidden for them.
+   */
+  shapeEdit: 'stair.visibility.shapeEdit',
 } as const;
 
 export type StairRibbonComboKey =
@@ -139,7 +146,8 @@ export type StairRibbonVisibilityKey =
   | typeof STAIR_RIBBON_VISIBILITY_KEYS.multiFlight
   | typeof STAIR_RIBBON_VISIBILITY_KEYS.multiStoryHeightEditor
   | typeof STAIR_RIBBON_VISIBILITY_KEYS.lShapeCorner
-  | typeof STAIR_RIBBON_VISIBILITY_KEYS.lShapeWindersParams;
+  | typeof STAIR_RIBBON_VISIBILITY_KEYS.lShapeWindersParams
+  | typeof STAIR_RIBBON_VISIBILITY_KEYS.shapeEdit;
 
 const ALL_STAIR_COMBO_KEYS: ReadonlySet<string> = new Set<string>([
   STAIR_RIBBON_KEYS.params.rise,
@@ -168,6 +176,7 @@ const ALL_STAIR_VISIBILITY_KEYS: ReadonlySet<string> = new Set<string>([
   STAIR_RIBBON_VISIBILITY_KEYS.multiStoryHeightEditor,
   STAIR_RIBBON_VISIBILITY_KEYS.lShapeCorner,
   STAIR_RIBBON_VISIBILITY_KEYS.lShapeWindersParams,
+  STAIR_RIBBON_VISIBILITY_KEYS.shapeEdit,
 ]);
 
 export function isStairRibbonKey(key: string): key is StairRibbonComboKey {

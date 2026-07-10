@@ -216,6 +216,11 @@ export function useRibbonStairBridge(
       const kind = stair.params.variant.kind;
       return kind === 'l-shape' || kind === 'u-shape' || kind === 'gamma';
     }
+    // ADR-633 1b-ii — «Προσθήκη στροφής» acts only on straight / multi-flight runs.
+    if (visibilityKey === STAIR_RIBBON_VISIBILITY_KEYS.shapeEdit) {
+      const kind = stair.params.variant.kind;
+      return kind === 'straight' || kind === 'multi-flight';
+    }
     if (visibilityKey === STAIR_RIBBON_VISIBILITY_KEYS.multiStoryHeightEditor) {
       return stair.params.multiStoryConfig?.linkedToFloor !== true;
     }

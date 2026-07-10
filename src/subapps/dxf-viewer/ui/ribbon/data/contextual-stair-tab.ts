@@ -22,6 +22,7 @@ import {
   STAIR_RIBBON_VISIBILITY_KEYS,
 } from '../hooks/bridge/stair-command-keys';
 import { STAIR_RIBBON_BADGE_KEYS } from '../../../bim/hooks/use-ribbon-stair-bridge';
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 export const STAIR_CONTEXTUAL_TRIGGER = 'stair-selected';
 
@@ -54,13 +55,7 @@ const WINDER_METHOD_OPTIONS = [
   { value: 'pie', labelKey: 'ribbon.commands.stairEditor.winderMethod.pie', isLiteralLabel: false },
 ] as const;
 
-const WINDER_COUNT_OPTIONS = [
-  { value: '1', labelKey: '1', isLiteralLabel: true },
-  { value: '2', labelKey: '2', isLiteralLabel: true },
-  { value: '3', labelKey: '3', isLiteralLabel: true },
-  { value: '4', labelKey: '4', isLiteralLabel: true },
-  { value: '5', labelKey: '5', isLiteralLabel: true },
-] as const;
+const WINDER_COUNT_OPTIONS = literalNumberOptions([1, 2, 3, 4, 5]);
 
 // ADR-358 Phase 7c — structureType + riserType options route through i18n.
 // Keys live under `ribbon.commands.stairEditor.structureType.*` /
@@ -94,90 +89,20 @@ const NOK_SUB_TYPE_OPTIONS = [
   { value: 'auxiliary', labelKey: 'ribbon.commands.stairEditor.nokSubType.auxiliary', isLiteralLabel: false },
 ] as const;
 
-const RISE_MM_OPTIONS = [
-  { value: '140', labelKey: '140', isLiteralLabel: true },
-  { value: '150', labelKey: '150', isLiteralLabel: true },
-  { value: '160', labelKey: '160', isLiteralLabel: true },
-  { value: '170', labelKey: '170', isLiteralLabel: true },
-  { value: '175', labelKey: '175', isLiteralLabel: true },
-  { value: '180', labelKey: '180', isLiteralLabel: true },
-  { value: '185', labelKey: '185', isLiteralLabel: true },
-  { value: '190', labelKey: '190', isLiteralLabel: true },
-  { value: '200', labelKey: '200', isLiteralLabel: true },
-  { value: '210', labelKey: '210', isLiteralLabel: true },
-  { value: '220', labelKey: '220', isLiteralLabel: true },
-] as const;
+const RISE_MM_OPTIONS = literalNumberOptions([140, 150, 160, 170, 175, 180, 185, 190, 200, 210, 220]);
 
-const TREAD_MM_OPTIONS = [
-  { value: '220', labelKey: '220', isLiteralLabel: true },
-  { value: '240', labelKey: '240', isLiteralLabel: true },
-  { value: '250', labelKey: '250', isLiteralLabel: true },
-  { value: '260', labelKey: '260', isLiteralLabel: true },
-  { value: '270', labelKey: '270', isLiteralLabel: true },
-  { value: '280', labelKey: '280', isLiteralLabel: true },
-  { value: '290', labelKey: '290', isLiteralLabel: true },
-  { value: '300', labelKey: '300', isLiteralLabel: true },
-  { value: '320', labelKey: '320', isLiteralLabel: true },
-  { value: '350', labelKey: '350', isLiteralLabel: true },
-] as const;
+const TREAD_MM_OPTIONS = literalNumberOptions([220, 240, 250, 260, 270, 280, 290, 300, 320, 350]);
 
-const WIDTH_MM_OPTIONS = [
-  { value: '800', labelKey: '800', isLiteralLabel: true },
-  { value: '900', labelKey: '900', isLiteralLabel: true },
-  { value: '1000', labelKey: '1000', isLiteralLabel: true },
-  { value: '1100', labelKey: '1100', isLiteralLabel: true },
-  { value: '1200', labelKey: '1200', isLiteralLabel: true },
-  { value: '1400', labelKey: '1400', isLiteralLabel: true },
-  { value: '1600', labelKey: '1600', isLiteralLabel: true },
-  { value: '1800', labelKey: '1800', isLiteralLabel: true },
-  { value: '2000', labelKey: '2000', isLiteralLabel: true },
-] as const;
+const WIDTH_MM_OPTIONS = literalNumberOptions([800, 900, 1000, 1100, 1200, 1400, 1600, 1800, 2000]);
 
-const STEP_COUNT_OPTIONS = [
-  { value: '3', labelKey: '3', isLiteralLabel: true },
-  { value: '4', labelKey: '4', isLiteralLabel: true },
-  { value: '5', labelKey: '5', isLiteralLabel: true },
-  { value: '6', labelKey: '6', isLiteralLabel: true },
-  { value: '7', labelKey: '7', isLiteralLabel: true },
-  { value: '8', labelKey: '8', isLiteralLabel: true },
-  { value: '9', labelKey: '9', isLiteralLabel: true },
-  { value: '10', labelKey: '10', isLiteralLabel: true },
-  { value: '11', labelKey: '11', isLiteralLabel: true },
-  { value: '12', labelKey: '12', isLiteralLabel: true },
-  { value: '13', labelKey: '13', isLiteralLabel: true },
-  { value: '14', labelKey: '14', isLiteralLabel: true },
-  { value: '15', labelKey: '15', isLiteralLabel: true },
-  { value: '16', labelKey: '16', isLiteralLabel: true },
-  { value: '18', labelKey: '18', isLiteralLabel: true },
-  { value: '20', labelKey: '20', isLiteralLabel: true },
-] as const;
+const STEP_COUNT_OPTIONS = literalNumberOptions([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20]);
 
 // ADR-395 G1 — RC waist-slab thickness (mm) options feeding the concrete BOQ
 // row. Industry-typical residential/commercial RC flight thicknesses; default
 // 150 mm (`DEFAULT_WAIST_SLAB_THICKNESS_MM`). Plain mm (not scene-scaled).
-const WAIST_THICKNESS_MM_OPTIONS = [
-  { value: '120', labelKey: '120', isLiteralLabel: true },
-  { value: '140', labelKey: '140', isLiteralLabel: true },
-  { value: '150', labelKey: '150', isLiteralLabel: true },
-  { value: '160', labelKey: '160', isLiteralLabel: true },
-  { value: '180', labelKey: '180', isLiteralLabel: true },
-  { value: '200', labelKey: '200', isLiteralLabel: true },
-  { value: '220', labelKey: '220', isLiteralLabel: true },
-  { value: '250', labelKey: '250', isLiteralLabel: true },
-] as const;
+const WAIST_THICKNESS_MM_OPTIONS = literalNumberOptions([120, 140, 150, 160, 180, 200, 220, 250]);
 
-const STORY_COUNT_OPTIONS = [
-  { value: '1', labelKey: '1', isLiteralLabel: true },
-  { value: '2', labelKey: '2', isLiteralLabel: true },
-  { value: '3', labelKey: '3', isLiteralLabel: true },
-  { value: '4', labelKey: '4', isLiteralLabel: true },
-  { value: '5', labelKey: '5', isLiteralLabel: true },
-  { value: '6', labelKey: '6', isLiteralLabel: true },
-  { value: '7', labelKey: '7', isLiteralLabel: true },
-  { value: '8', labelKey: '8', isLiteralLabel: true },
-  { value: '9', labelKey: '9', isLiteralLabel: true },
-  { value: '10', labelKey: '10', isLiteralLabel: true },
-] as const;
+const STORY_COUNT_OPTIONS = literalNumberOptions([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 
 // ADR-358 Phase 7b2b-β Stream F — turn direction options for flight2/3.
 const TURN_DIRECTION_OPTIONS = [
@@ -185,16 +110,7 @@ const TURN_DIRECTION_OPTIONS = [
   { value: 'right', labelKey: 'ribbon.commands.stairEditor.turnDirectionRight', isLiteralLabel: false },
 ] as const;
 
-const STORY_HEIGHT_MM_OPTIONS = [
-  { value: '2400', labelKey: '2400', isLiteralLabel: true },
-  { value: '2500', labelKey: '2500', isLiteralLabel: true },
-  { value: '2600', labelKey: '2600', isLiteralLabel: true },
-  { value: '2700', labelKey: '2700', isLiteralLabel: true },
-  { value: '2800', labelKey: '2800', isLiteralLabel: true },
-  { value: '3000', labelKey: '3000', isLiteralLabel: true },
-  { value: '3200', labelKey: '3200', isLiteralLabel: true },
-  { value: '3500', labelKey: '3500', isLiteralLabel: true },
-] as const;
+const STORY_HEIGHT_MM_OPTIONS = literalNumberOptions([2400, 2500, 2600, 2700, 2800, 3000, 3200, 3500]);
 
 export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
   id: 'stair-editor',
@@ -539,6 +455,32 @@ export const CONTEXTUAL_STAIR_TAB: RibbonTab = {
                 commandKey: STAIR_RIBBON_KEYS.stringParams.flight3TurnDirection,
                 comboboxWidthPx: 110,
                 options: TURN_DIRECTION_OPTIONS,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-633 1b-ii — «Επεξεργασία Σχήματος». «Προσθήκη στροφής»: pick-tool που
+      // ενεργοποιείται στην επιλεγμένη σκάλα (commandKey = ToolType 'stair-add-turn',
+      // no `action`, mirror των attach buttons) → κλικ σε παρειά → γωνία → η ευθύγραμμη
+      // σκάλα γίνεται πολυκλαδική (L/Z/U). Πάντα ορατό (straight + multi-flight).
+      id: 'stair-shape-edit',
+      labelKey: 'ribbon.panels.stairShapeEdit',
+      visibilityKey: STAIR_RIBBON_VISIBILITY_KEYS.shapeEdit,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'stair.addTurn',
+                labelKey: 'ribbon.commands.stairEditor.addTurn',
+                icon: 'stair-ushape',
+                commandKey: 'stair-add-turn',
               },
             },
           ],

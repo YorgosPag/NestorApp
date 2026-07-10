@@ -91,6 +91,7 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     extendIsActive = false, handleExtendClick,
     wallSplitIsActive = false, handleWallSplitClick,
     wallAttachIsActive = false, handleWallAttachClick,
+    stairAddTurnIsActive = false, handleStairAddTurnClick,
     wallMergeIsActive = false, handleWallMergeClick,
     wallGapOpeningIsActive = false, handleWallGapOpeningClick,
     copyIsActive = false, handleCopyClick,
@@ -232,6 +233,11 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // PRIORITY 1.615: ADR-401 Phase E.1 — Wall Attach Top/Base pick-host click
     if (wallAttachIsActive && handleWallAttachClick) {
       handleWallAttachClick(worldPoint);
+      return;
+    }
+    // PRIORITY 1.616: ADR-633 1b-ii — Stair Add-Turn click (pick parieta → angle → commit)
+    if (stairAddTurnIsActive && handleStairAddTurnClick) {
+      handleStairAddTurnClick(worldPoint);
       return;
     }
     // PRIORITY 1.617: ADR-566 — Wall Merge tool click (pick wall 1 → wall 2)
