@@ -17,7 +17,6 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
 import {
   DEFAULT_PANEL_BODY_HEIGHT_MM,
   DEFAULT_PANEL_LENGTH_MM,
@@ -38,6 +37,12 @@ import {
 } from '../../bim/types/mep-connector-types';
 import { createElectricalPanel } from '@/services/factories/electrical-panel.factory';
 import type { SceneUnits } from '../../utils/scene-units';
+import type { PlacementBuildResult } from './create-single-click-placement-tool';
+import {
+  buildBimPointEntity,
+  resolveBodyPlacement,
+  type BodyPlacementParamOverrides,
+} from './point-completion-builders';
 
 export type { SceneUnits };
 
@@ -46,21 +51,11 @@ export type { SceneUnits };
 /**
  * Field overrides for `buildDefaultElectricalPanelParams`. The ribbon supplies
  * kind / width / length / body height / mounting elevation / rotation / material.
+ * Footprint/pose fields are inherited from {@link BodyPlacementParamOverrides}.
  */
-export interface ElectricalPanelParamOverrides {
+export interface ElectricalPanelParamOverrides extends BodyPlacementParamOverrides {
   readonly kind?: ElectricalPanelKind;
   readonly shape?: ElectricalPanelShape;
-  /** mm. Footprint width. */
-  readonly width?: number;
-  /** mm. Footprint length (depth). */
-  readonly length?: number;
-  /** mm. Body height. */
-  readonly bodyHeightMm?: number;
-  /** mm. Mounting elevation (vertical centre) above FFL. */
-  readonly mountingElevationMm?: number;
-  /** Degrees CCW. */
-  readonly rotation?: number;
-  readonly material?: string;
 }
 
 // ─── Defaults factory ──────────────────────────────────────────────────────────
@@ -75,13 +70,16 @@ export function buildDefaultElectricalPanelParams(
 ): ElectricalPanelParams {
   const kind: ElectricalPanelKind = overrides.kind ?? 'distribution-board';
   const shape: ElectricalPanelShape = overrides.shape ?? 'rectangular';
-  const width = overrides.width ?? DEFAULT_PANEL_WIDTH_MM;
-  const length = overrides.length ?? DEFAULT_PANEL_LENGTH_MM;
-  const bodyHeightMm = overrides.bodyHeightMm ?? DEFAULT_PANEL_BODY_HEIGHT_MM;
-  const mountingElevationMm = overrides.mountingElevationMm ?? DEFAULT_PANEL_MOUNTING_ELEVATION_MM;
-  const rotation = overrides.rotation ?? 0;
-
-  const position: Point3D = { x: clickPoint.x, y: clickPoint.y, z: 0 };
+  const { position, rotation, width, length, bodyHeightMm, mountingElevationMm } = resolveBodyPlacement(
+    clickPoint,
+    overrides,
+    {
+      width: DEFAULT_PANEL_WIDTH_MM,
+      length: DEFAULT_PANEL_LENGTH_MM,
+      bodyHeightMm: DEFAULT_PANEL_BODY_HEIGHT_MM,
+      mountingElevationMm: DEFAULT_PANEL_MOUNTING_ELEVATION_MM,
+    },
+  );
 
   return {
     kind,
@@ -108,9 +106,7 @@ export function buildDefaultElectricalPanelParams(
 
 // ─── Entity builder ──────────────────────────────────────────────────────────
 
-export type BuildElectricalPanelEntityResult =
-  | { readonly ok: true; readonly entity: ElectricalPanelEntity }
-  | { readonly ok: false; readonly hardErrors: readonly string[] };
+export type BuildElectricalPanelEntityResult = PlacementBuildResult<ElectricalPanelEntity>;
 
 /**
  * Build an `ElectricalPanelEntity` from `ElectricalPanelParams`. Geometry
@@ -121,17 +117,9 @@ export function buildElectricalPanelEntity(
   params: Readonly<ElectricalPanelParams>,
   layerId: string,
 ): BuildElectricalPanelEntityResult {
-  const validation = validateElectricalPanelParams(params);
-  if (validation.hardErrors.length > 0) {
-    return { ok: false, hardErrors: validation.hardErrors };
-  }
-  const geometry = computeElectricalPanelGeometry(params);
-  const entity = createElectricalPanel({
-    params,
-    geometry,
-    layerId,
-    visible: true,
-    validation: validation.bimValidation,
+  return buildBimPointEntity(params, layerId, {
+    validate: validateElectricalPanelParams,
+    computeGeometry: computeElectricalPanelGeometry,
+    createEntity: createElectricalPanel,
   });
-  return { ok: true, entity };
 }

@@ -17,7 +17,6 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
 import {
   DEFAULT_WATER_HEATER_BODY_HEIGHT_MM,
   DEFAULT_WATER_HEATER_CONNECTOR_DIAMETER_MM,
@@ -36,6 +35,13 @@ import {
 } from '../../bim/mep-water-heaters/mep-water-heater-geometry';
 import { createMepWaterHeater } from '@/services/factories/mep-water-heater.factory';
 import type { SceneUnits } from '../../utils/scene-units';
+import type { PlacementBuildResult } from './create-single-click-placement-tool';
+import {
+  assembleMepApplianceBodyParams,
+  buildBimPointEntity,
+  resolveBodyPlacement,
+  type BodyPlacementParamOverrides,
+} from './point-completion-builders';
 
 export type { SceneUnits };
 
@@ -44,28 +50,18 @@ export type { SceneUnits };
 /**
  * Field overrides for `buildDefaultMepWaterHeaterParams`. The ribbon supplies kind /
  * width / length / body height / mounting elevation / rotation / connector diameter /
- * thermal output / tank capacity.
+ * thermal output / tank capacity. Footprint/pose fields are inherited from
+ * {@link BodyPlacementParamOverrides}.
  */
-export interface MepWaterHeaterParamOverrides {
+export interface MepWaterHeaterParamOverrides extends BodyPlacementParamOverrides {
   readonly kind?: MepWaterHeaterKind;
   readonly shape?: MepWaterHeaterShape;
-  /** mm. Tank width. */
-  readonly width?: number;
-  /** mm. Tank depth. */
-  readonly length?: number;
-  /** mm. Body vertical height. */
-  readonly bodyHeightMm?: number;
-  /** mm. Mounting elevation (vertical centre) above FFL. */
-  readonly mountingElevationMm?: number;
-  /** Degrees CCW. */
-  readonly rotation?: number;
   /** mm. Cold-inlet / hot-outlet connector diameter. */
   readonly connectorDiameterMm?: number;
   /** W. Catalogue heating element power. */
   readonly thermalOutputW?: number;
   /** L. Catalogue storage tank capacity. */
   readonly tankCapacityL?: number;
-  readonly material?: string;
 }
 
 // ─── Defaults factory ──────────────────────────────────────────────────────────
@@ -83,30 +79,19 @@ export function buildDefaultMepWaterHeaterParams(
 ): MepWaterHeaterParams {
   const kind: MepWaterHeaterKind = overrides.kind ?? 'electric-water-heater';
   const shape: MepWaterHeaterShape = overrides.shape ?? 'rectangular';
-  const width = overrides.width ?? DEFAULT_WATER_HEATER_WIDTH_MM;
-  const length = overrides.length ?? DEFAULT_WATER_HEATER_LENGTH_MM;
-  const bodyHeightMm = overrides.bodyHeightMm ?? DEFAULT_WATER_HEATER_BODY_HEIGHT_MM;
-  const mountingElevationMm = overrides.mountingElevationMm ?? DEFAULT_WATER_HEATER_MOUNTING_ELEVATION_MM;
-  const rotation = overrides.rotation ?? 0;
-  const connectorDiameterMm = overrides.connectorDiameterMm ?? DEFAULT_WATER_HEATER_CONNECTOR_DIAMETER_MM;
+  const placement = resolveBodyPlacement(clickPoint, overrides, {
+    width: DEFAULT_WATER_HEATER_WIDTH_MM,
+    length: DEFAULT_WATER_HEATER_LENGTH_MM,
+    bodyHeightMm: DEFAULT_WATER_HEATER_BODY_HEIGHT_MM,
+    mountingElevationMm: DEFAULT_WATER_HEATER_MOUNTING_ELEVATION_MM,
+  });
 
-  const position: Point3D = { x: clickPoint.x, y: clickPoint.y, z: 0 };
-
-  const base: MepWaterHeaterParams = {
-    kind,
-    shape,
-    position,
-    rotation,
-    width,
-    length,
-    bodyHeightMm,
-    mountingElevationMm,
-    connectorDiameterMm,
-    sceneUnits,
-    ...(overrides.thermalOutputW !== undefined ? { thermalOutputW: overrides.thermalOutputW } : {}),
-    ...(overrides.tankCapacityL !== undefined ? { tankCapacityL: overrides.tankCapacityL } : {}),
-    ...(overrides.material !== undefined ? { material: overrides.material } : {}),
-  };
+  const base: MepWaterHeaterParams = assembleMepApplianceBodyParams(kind, shape, placement, sceneUnits, {
+    connectorDiameterMm: overrides.connectorDiameterMm ?? DEFAULT_WATER_HEATER_CONNECTOR_DIAMETER_MM,
+    thermalOutputW: overrides.thermalOutputW,
+    tankCapacityL: overrides.tankCapacityL,
+    material: overrides.material,
+  });
 
   // ADR-408 DHW — a water heater is the domestic-hot-water SOURCE: carry derived cold +
   // hot connectors so pipes can snap and the heater can source/join the networks.
@@ -115,9 +100,7 @@ export function buildDefaultMepWaterHeaterParams(
 
 // ─── Entity builder ──────────────────────────────────────────────────────────
 
-export type BuildMepWaterHeaterEntityResult =
-  | { readonly ok: true; readonly entity: MepWaterHeaterEntity }
-  | { readonly ok: false; readonly hardErrors: readonly string[] };
+export type BuildMepWaterHeaterEntityResult = PlacementBuildResult<MepWaterHeaterEntity>;
 
 /**
  * Build a `MepWaterHeaterEntity` from `MepWaterHeaterParams`. Geometry computed via SSoT
@@ -127,17 +110,9 @@ export function buildMepWaterHeaterEntity(
   params: Readonly<MepWaterHeaterParams>,
   layerId: string,
 ): BuildMepWaterHeaterEntityResult {
-  const validation = validateMepWaterHeaterParams(params);
-  if (validation.hardErrors.length > 0) {
-    return { ok: false, hardErrors: validation.hardErrors };
-  }
-  const geometry = computeMepWaterHeaterGeometry(params);
-  const entity = createMepWaterHeater({
-    params,
-    geometry,
-    layerId,
-    visible: true,
-    validation: validation.bimValidation,
+  return buildBimPointEntity(params, layerId, {
+    validate: validateMepWaterHeaterParams,
+    computeGeometry: computeMepWaterHeaterGeometry,
+    createEntity: createMepWaterHeater,
   });
-  return { ok: true, entity };
 }

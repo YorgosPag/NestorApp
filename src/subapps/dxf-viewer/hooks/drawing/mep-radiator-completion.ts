@@ -17,7 +17,6 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
 import {
   DEFAULT_RADIATOR_BODY_HEIGHT_MM,
   DEFAULT_RADIATOR_CONNECTOR_DIAMETER_MM,
@@ -36,6 +35,13 @@ import {
 } from '../../bim/mep-radiators/mep-radiator-geometry';
 import { createMepRadiator } from '@/services/factories/mep-radiator.factory';
 import type { SceneUnits } from '../../utils/scene-units';
+import type { PlacementBuildResult } from './create-single-click-placement-tool';
+import {
+  assembleMepApplianceBodyParams,
+  buildBimPointEntity,
+  resolveBodyPlacement,
+  type BodyPlacementParamOverrides,
+} from './point-completion-builders';
 
 export type { SceneUnits };
 
@@ -44,26 +50,16 @@ export type { SceneUnits };
 /**
  * Field overrides for `buildDefaultMepRadiatorParams`. The ribbon supplies kind /
  * width / length / body height / mounting elevation / rotation / connector diameter
- * / thermal output.
+ * / thermal output. Footprint/pose fields are inherited from
+ * {@link BodyPlacementParamOverrides}.
  */
-export interface MepRadiatorParamOverrides {
+export interface MepRadiatorParamOverrides extends BodyPlacementParamOverrides {
   readonly kind?: MepRadiatorKind;
   readonly shape?: MepRadiatorShape;
-  /** mm. Body width (run along the wall). */
-  readonly width?: number;
-  /** mm. Depth. */
-  readonly length?: number;
-  /** mm. Panel body height. */
-  readonly bodyHeightMm?: number;
-  /** mm. Mounting elevation (vertical centre) above FFL. */
-  readonly mountingElevationMm?: number;
-  /** Degrees CCW. */
-  readonly rotation?: number;
   /** mm. Supply/return connector diameter. */
   readonly connectorDiameterMm?: number;
   /** W. Catalogue thermal output. */
   readonly thermalOutputW?: number;
-  readonly material?: string;
 }
 
 // ─── Defaults factory ──────────────────────────────────────────────────────────
@@ -81,29 +77,18 @@ export function buildDefaultMepRadiatorParams(
 ): MepRadiatorParams {
   const kind: MepRadiatorKind = overrides.kind ?? 'panel-radiator';
   const shape: MepRadiatorShape = overrides.shape ?? 'rectangular';
-  const width = overrides.width ?? DEFAULT_RADIATOR_WIDTH_MM;
-  const length = overrides.length ?? DEFAULT_RADIATOR_LENGTH_MM;
-  const bodyHeightMm = overrides.bodyHeightMm ?? DEFAULT_RADIATOR_BODY_HEIGHT_MM;
-  const mountingElevationMm = overrides.mountingElevationMm ?? DEFAULT_RADIATOR_MOUNTING_ELEVATION_MM;
-  const rotation = overrides.rotation ?? 0;
-  const connectorDiameterMm = overrides.connectorDiameterMm ?? DEFAULT_RADIATOR_CONNECTOR_DIAMETER_MM;
+  const placement = resolveBodyPlacement(clickPoint, overrides, {
+    width: DEFAULT_RADIATOR_WIDTH_MM,
+    length: DEFAULT_RADIATOR_LENGTH_MM,
+    bodyHeightMm: DEFAULT_RADIATOR_BODY_HEIGHT_MM,
+    mountingElevationMm: DEFAULT_RADIATOR_MOUNTING_ELEVATION_MM,
+  });
 
-  const position: Point3D = { x: clickPoint.x, y: clickPoint.y, z: 0 };
-
-  const base: MepRadiatorParams = {
-    kind,
-    shape,
-    position,
-    rotation,
-    width,
-    length,
-    bodyHeightMm,
-    mountingElevationMm,
-    connectorDiameterMm,
-    sceneUnits,
-    ...(overrides.thermalOutputW !== undefined ? { thermalOutputW: overrides.thermalOutputW } : {}),
-    ...(overrides.material !== undefined ? { material: overrides.material } : {}),
-  };
+  const base: MepRadiatorParams = assembleMepApplianceBodyParams(kind, shape, placement, sceneUnits, {
+    connectorDiameterMm: overrides.connectorDiameterMm ?? DEFAULT_RADIATOR_CONNECTOR_DIAMETER_MM,
+    thermalOutputW: overrides.thermalOutputW,
+    material: overrides.material,
+  });
 
   // ADR-408 Εύρος Β — a radiator is a hydronic TERMINAL: carry derived supply +
   // return connectors so pipes can snap and join the supply/return networks.
@@ -112,9 +97,7 @@ export function buildDefaultMepRadiatorParams(
 
 // ─── Entity builder ──────────────────────────────────────────────────────────
 
-export type BuildMepRadiatorEntityResult =
-  | { readonly ok: true; readonly entity: MepRadiatorEntity }
-  | { readonly ok: false; readonly hardErrors: readonly string[] };
+export type BuildMepRadiatorEntityResult = PlacementBuildResult<MepRadiatorEntity>;
 
 /**
  * Build a `MepRadiatorEntity` from `MepRadiatorParams`. Geometry computed via SSoT
@@ -124,17 +107,9 @@ export function buildMepRadiatorEntity(
   params: Readonly<MepRadiatorParams>,
   layerId: string,
 ): BuildMepRadiatorEntityResult {
-  const validation = validateMepRadiatorParams(params);
-  if (validation.hardErrors.length > 0) {
-    return { ok: false, hardErrors: validation.hardErrors };
-  }
-  const geometry = computeMepRadiatorGeometry(params);
-  const entity = createMepRadiator({
-    params,
-    geometry,
-    layerId,
-    visible: true,
-    validation: validation.bimValidation,
+  return buildBimPointEntity(params, layerId, {
+    validate: validateMepRadiatorParams,
+    computeGeometry: computeMepRadiatorGeometry,
+    createEntity: createMepRadiator,
   });
-  return { ok: true, entity };
 }

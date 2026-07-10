@@ -17,7 +17,6 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
 import {
   DEFAULT_BOILER_BODY_HEIGHT_MM,
   DEFAULT_BOILER_CONNECTOR_DIAMETER_MM,
@@ -36,6 +35,13 @@ import {
 } from '../../bim/mep-boilers/mep-boiler-geometry';
 import { createMepBoiler } from '@/services/factories/mep-boiler.factory';
 import type { SceneUnits } from '../../utils/scene-units';
+import type { PlacementBuildResult } from './create-single-click-placement-tool';
+import {
+  assembleMepApplianceBodyParams,
+  buildBimPointEntity,
+  resolveBodyPlacement,
+  type BodyPlacementParamOverrides,
+} from './point-completion-builders';
 
 export type { SceneUnits };
 
@@ -44,26 +50,16 @@ export type { SceneUnits };
 /**
  * Field overrides for `buildDefaultMepBoilerParams`. The ribbon supplies kind /
  * width / length / body height / mounting elevation / rotation / connector diameter
- * / thermal output.
+ * / thermal output. Footprint/pose fields are inherited from
+ * {@link BodyPlacementParamOverrides}.
  */
-export interface MepBoilerParamOverrides {
+export interface MepBoilerParamOverrides extends BodyPlacementParamOverrides {
   readonly kind?: MepBoilerKind;
   readonly shape?: MepBoilerShape;
-  /** mm. Cabinet width (run along the wall). */
-  readonly width?: number;
-  /** mm. Cabinet depth. */
-  readonly length?: number;
-  /** mm. Cabinet vertical height. */
-  readonly bodyHeightMm?: number;
-  /** mm. Mounting elevation (vertical centre) above FFL. */
-  readonly mountingElevationMm?: number;
-  /** Degrees CCW. */
-  readonly rotation?: number;
   /** mm. Supply/return connector diameter. */
   readonly connectorDiameterMm?: number;
   /** W. Catalogue thermal output. */
   readonly thermalOutputW?: number;
-  readonly material?: string;
 }
 
 // ─── Defaults factory ──────────────────────────────────────────────────────────
@@ -81,29 +77,18 @@ export function buildDefaultMepBoilerParams(
 ): MepBoilerParams {
   const kind: MepBoilerKind = overrides.kind ?? 'wall-boiler';
   const shape: MepBoilerShape = overrides.shape ?? 'rectangular';
-  const width = overrides.width ?? DEFAULT_BOILER_WIDTH_MM;
-  const length = overrides.length ?? DEFAULT_BOILER_LENGTH_MM;
-  const bodyHeightMm = overrides.bodyHeightMm ?? DEFAULT_BOILER_BODY_HEIGHT_MM;
-  const mountingElevationMm = overrides.mountingElevationMm ?? DEFAULT_BOILER_MOUNTING_ELEVATION_MM;
-  const rotation = overrides.rotation ?? 0;
-  const connectorDiameterMm = overrides.connectorDiameterMm ?? DEFAULT_BOILER_CONNECTOR_DIAMETER_MM;
+  const placement = resolveBodyPlacement(clickPoint, overrides, {
+    width: DEFAULT_BOILER_WIDTH_MM,
+    length: DEFAULT_BOILER_LENGTH_MM,
+    bodyHeightMm: DEFAULT_BOILER_BODY_HEIGHT_MM,
+    mountingElevationMm: DEFAULT_BOILER_MOUNTING_ELEVATION_MM,
+  });
 
-  const position: Point3D = { x: clickPoint.x, y: clickPoint.y, z: 0 };
-
-  const base: MepBoilerParams = {
-    kind,
-    shape,
-    position,
-    rotation,
-    width,
-    length,
-    bodyHeightMm,
-    mountingElevationMm,
-    connectorDiameterMm,
-    sceneUnits,
-    ...(overrides.thermalOutputW !== undefined ? { thermalOutputW: overrides.thermalOutputW } : {}),
-    ...(overrides.material !== undefined ? { material: overrides.material } : {}),
-  };
+  const base: MepBoilerParams = assembleMepApplianceBodyParams(kind, shape, placement, sceneUnits, {
+    connectorDiameterMm: overrides.connectorDiameterMm ?? DEFAULT_BOILER_CONNECTOR_DIAMETER_MM,
+    thermalOutputW: overrides.thermalOutputW,
+    material: overrides.material,
+  });
 
   // ADR-408 Εύρος Β — a boiler is a hydronic SOURCE: carry derived supply +
   // return connectors so pipes can snap and join the supply/return networks.
@@ -112,9 +97,7 @@ export function buildDefaultMepBoilerParams(
 
 // ─── Entity builder ──────────────────────────────────────────────────────────
 
-export type BuildMepBoilerEntityResult =
-  | { readonly ok: true; readonly entity: MepBoilerEntity }
-  | { readonly ok: false; readonly hardErrors: readonly string[] };
+export type BuildMepBoilerEntityResult = PlacementBuildResult<MepBoilerEntity>;
 
 /**
  * Build a `MepBoilerEntity` from `MepBoilerParams`. Geometry computed via SSoT
@@ -124,17 +107,9 @@ export function buildMepBoilerEntity(
   params: Readonly<MepBoilerParams>,
   layerId: string,
 ): BuildMepBoilerEntityResult {
-  const validation = validateMepBoilerParams(params);
-  if (validation.hardErrors.length > 0) {
-    return { ok: false, hardErrors: validation.hardErrors };
-  }
-  const geometry = computeMepBoilerGeometry(params);
-  const entity = createMepBoiler({
-    params,
-    geometry,
-    layerId,
-    visible: true,
-    validation: validation.bimValidation,
+  return buildBimPointEntity(params, layerId, {
+    validate: validateMepBoilerParams,
+    computeGeometry: computeMepBoilerGeometry,
+    createEntity: createMepBoiler,
   });
-  return { ok: true, entity };
 }

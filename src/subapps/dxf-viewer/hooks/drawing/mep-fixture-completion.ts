@@ -116,6 +116,8 @@ import {
 } from '../../bim/mep-fixtures/plumbing-fixture-spec';
 import { createMepFixture } from '@/services/factories/mep-fixture.factory';
 import type { SceneUnits } from '../../utils/scene-units';
+import type { PlacementBuildResult } from './create-single-click-placement-tool';
+import { buildBimPointEntity } from './point-completion-builders';
 
 export type { SceneUnits };
 
@@ -345,9 +347,7 @@ export function buildDefaultMepFixtureParams(
 
 // ─── Entity builder ──────────────────────────────────────────────────────────
 
-export type BuildMepFixtureEntityResult =
-  | { readonly ok: true; readonly entity: MepFixtureEntity }
-  | { readonly ok: false; readonly hardErrors: readonly string[] };
+export type BuildMepFixtureEntityResult = PlacementBuildResult<MepFixtureEntity>;
 
 /**
  * Build a `MepFixtureEntity` from `MepFixtureParams`. Geometry computed via SSoT
@@ -357,17 +357,9 @@ export function buildMepFixtureEntity(
   params: Readonly<MepFixtureParams>,
   layerId: string,
 ): BuildMepFixtureEntityResult {
-  const validation = validateMepFixtureParams(params);
-  if (validation.hardErrors.length > 0) {
-    return { ok: false, hardErrors: validation.hardErrors };
-  }
-  const geometry = computeMepFixtureGeometry(params);
-  const entity = createMepFixture({
-    params,
-    geometry,
-    layerId,
-    visible: true,
-    validation: validation.bimValidation,
+  return buildBimPointEntity(params, layerId, {
+    validate: validateMepFixtureParams,
+    computeGeometry: computeMepFixtureGeometry,
+    createEntity: createMepFixture,
   });
-  return { ok: true, entity };
 }

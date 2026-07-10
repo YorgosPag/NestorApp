@@ -44,6 +44,8 @@ import {
 } from '../../bim/mep-manifolds/mep-manifold-geometry';
 import { createMepManifold } from '@/services/factories/mep-manifold.factory';
 import type { SceneUnits } from '../../utils/scene-units';
+import type { PlacementBuildResult } from './create-single-click-placement-tool';
+import { buildBimPointEntity } from './point-completion-builders';
 
 export type { SceneUnits };
 
@@ -145,9 +147,7 @@ export function buildDefaultMepManifoldParams(
 
 // ─── Entity builder ──────────────────────────────────────────────────────────
 
-export type BuildMepManifoldEntityResult =
-  | { readonly ok: true; readonly entity: MepManifoldEntity }
-  | { readonly ok: false; readonly hardErrors: readonly string[] };
+export type BuildMepManifoldEntityResult = PlacementBuildResult<MepManifoldEntity>;
 
 /**
  * Build a `MepManifoldEntity` from `MepManifoldParams`. Geometry computed via
@@ -157,17 +157,9 @@ export function buildMepManifoldEntity(
   params: Readonly<MepManifoldParams>,
   layerId: string,
 ): BuildMepManifoldEntityResult {
-  const validation = validateMepManifoldParams(params);
-  if (validation.hardErrors.length > 0) {
-    return { ok: false, hardErrors: validation.hardErrors };
-  }
-  const geometry = computeMepManifoldGeometry(params);
-  const entity = createMepManifold({
-    params,
-    geometry,
-    layerId,
-    visible: true,
-    validation: validation.bimValidation,
+  return buildBimPointEntity(params, layerId, {
+    validate: validateMepManifoldParams,
+    computeGeometry: computeMepManifoldGeometry,
+    createEntity: createMepManifold,
   });
-  return { ok: true, entity };
 }

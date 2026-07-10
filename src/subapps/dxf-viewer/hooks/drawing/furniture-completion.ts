@@ -38,6 +38,8 @@ import {
 } from '../../bim/furniture/furniture-catalog';
 import { createFurniture } from '@/services/factories/furniture.factory';
 import type { SceneUnits } from '../../utils/scene-units';
+import type { PlacementBuildResult } from './create-single-click-placement-tool';
+import { buildBimPointEntity } from './point-completion-builders';
 
 export type { SceneUnits };
 
@@ -106,9 +108,7 @@ export function buildDefaultFurnitureParams(
 
 // ─── Entity builder ──────────────────────────────────────────────────────────
 
-export type BuildFurnitureEntityResult =
-  | { readonly ok: true; readonly entity: FurnitureEntity }
-  | { readonly ok: false; readonly hardErrors: readonly string[] };
+export type BuildFurnitureEntityResult = PlacementBuildResult<FurnitureEntity>;
 
 /**
  * Build a `FurnitureEntity` from `FurnitureParams`. Geometry computed via SSoT
@@ -118,17 +118,9 @@ export function buildFurnitureEntity(
   params: Readonly<FurnitureParams>,
   layerId: string,
 ): BuildFurnitureEntityResult {
-  const validation = validateFurnitureParams(params);
-  if (validation.hardErrors.length > 0) {
-    return { ok: false, hardErrors: validation.hardErrors };
-  }
-  const geometry = computeFurnitureGeometry(params);
-  const entity = createFurniture({
-    params,
-    geometry,
-    layerId,
-    visible: true,
-    validation: validation.bimValidation,
+  return buildBimPointEntity(params, layerId, {
+    validate: validateFurnitureParams,
+    computeGeometry: computeFurnitureGeometry,
+    createEntity: createFurniture,
   });
-  return { ok: true, entity };
 }

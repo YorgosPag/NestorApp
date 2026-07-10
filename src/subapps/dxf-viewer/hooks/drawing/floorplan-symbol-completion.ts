@@ -37,6 +37,8 @@ import {
 } from '../../bim/floorplan-symbols/floorplan-symbol-catalog';
 import { createFloorplanSymbol } from '@/services/factories/floorplan-symbol.factory';
 import type { SceneUnits } from '../../utils/scene-units';
+import type { PlacementBuildResult } from './create-single-click-placement-tool';
+import { buildBimPointEntity } from './point-completion-builders';
 
 export type { SceneUnits };
 
@@ -89,9 +91,7 @@ export function buildDefaultFloorplanSymbolParams(
 
 // ─── Entity builder ──────────────────────────────────────────────────────────
 
-export type BuildFloorplanSymbolEntityResult =
-  | { readonly ok: true; readonly entity: FloorplanSymbolEntity }
-  | { readonly ok: false; readonly hardErrors: readonly string[] };
+export type BuildFloorplanSymbolEntityResult = PlacementBuildResult<FloorplanSymbolEntity>;
 
 /**
  * Build a `FloorplanSymbolEntity` from params. Geometry computed via SSoT
@@ -101,17 +101,9 @@ export function buildFloorplanSymbolEntity(
   params: Readonly<FloorplanSymbolParams>,
   layerId: string,
 ): BuildFloorplanSymbolEntityResult {
-  const validation = validateFloorplanSymbolParams(params);
-  if (validation.hardErrors.length > 0) {
-    return { ok: false, hardErrors: validation.hardErrors };
-  }
-  const geometry = computeFloorplanSymbolGeometry(params);
-  const entity = createFloorplanSymbol({
-    params,
-    geometry,
-    layerId,
-    visible: true,
-    validation: validation.bimValidation,
+  return buildBimPointEntity(params, layerId, {
+    validate: validateFloorplanSymbolParams,
+    computeGeometry: computeFloorplanSymbolGeometry,
+    createEntity: createFloorplanSymbol,
   });
-  return { ok: true, entity };
 }
