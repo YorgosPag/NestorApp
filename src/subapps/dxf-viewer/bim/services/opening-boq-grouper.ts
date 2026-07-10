@@ -18,11 +18,11 @@
  */
 
 import type { BOQItem } from '@/types/boq';
-import { nowISO } from '@/lib/date-local';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import type { OpeningKind, OpeningParams } from '../types/opening-types';
 import type { OpeningTypeParams } from '../types/bim-family-type';
 import type { AtoeMappingEntry } from '../config/bim-to-atoe-mapping';
+import { buildBoqBaseRow } from './boq-base-row';
 
 // ────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -326,7 +326,6 @@ export interface BuildGroupPayloadArgs {
  */
 export function buildOpeningGroupPayload(args: BuildGroupPayloadArgs): BuiltOpeningGroupRow {
   const { context, signature, members, mapping, existingCreatedAt } = args;
-  const now = nowISO();
   const id = signatureGroupBoqId(context.floorplanId, signature);
 
   const marks = members
@@ -340,47 +339,19 @@ export function buildOpeningGroupPayload(args: BuildGroupPayloadArgs): BuiltOpen
     ? `Marks: ${markRange}`
     : null;
 
+  // NOTE: entityId param below (`id`) is a placeholder — a signature group
+  // aggregates many openings, so there is no single source entity. Overridden
+  // to `sourceEntityId: null` right after the spread (matches pre-migration
+  // behaviour byte-for-byte).
+  const base = buildBoqBaseRow(id, context, id, 'opening', existingCreatedAt);
   const item: BOQItem = {
-    id,
-    companyId: context.companyId,
-    projectId: context.projectId,
-    buildingId: context.buildingId,
-    scope: context.floorId ? 'floor' : 'building',
-    linkedFloorId: context.floorId ?? null,
-    linkedUnitId: null,
-    linkedUnitIds: null,
-    costAllocationMethod: 'by_area',
-    customAllocations: null,
+    ...base,
     categoryCode: mapping.categoryCode,
-    subCategoryCode: null,
     title: enrichedTitle,
     description,
     unit: mapping.unit,
     estimatedQuantity: members.length,
-    actualQuantity: null,
-    wasteFactor: 0,
-    wastePolicy: 'inherited',
-    materialUnitCost: 0,
-    laborUnitCost: 0,
-    equipmentUnitCost: 0,
-    priceAuthority: 'master',
-    linkedPhaseId: null,
-    linkedTaskId: null,
-    linkedInvoiceId: null,
-    linkedContractorId: null,
-    source: 'bim-auto',
-    measurementMethod: 'bim',
-    status: 'draft',
-    qaStatus: 'pending',
-    notes: null,
-    createdBy: null,
-    approvedBy: null,
-    createdAt: existingCreatedAt ?? now,
-    updatedAt: now,
-    sourceType: 'bim-auto',
     sourceEntityId: null,
-    sourceEntityType: 'opening',
-    detached: null,
     parentBoqItemId: null,
     isGroupParent: null,
     layerIndex: null,

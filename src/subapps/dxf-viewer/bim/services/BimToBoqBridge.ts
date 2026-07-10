@@ -26,12 +26,10 @@
  * @see .ssot-registry.json (module: bim-to-boq-bridge, Tier 3)
  */
 
-import { deleteDoc, doc, getDoc, getDocs, query, setDoc, where, collection } from 'firebase/firestore';
+import { doc, getDoc, getDocs, query, setDoc, where, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
-import { nowISO } from '@/lib/date-local';
-import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import type { BOQItem } from '@/types/boq';
 import {
   resolveAtoeMapping,
@@ -53,6 +51,8 @@ import {
   hasFinishContribution,
   type FinishBoqContribution,
 } from './structural-finish-boq';
+import { buildSingleEntityBoqRow } from './boq-base-row';
+import { deleteManagedBoqRow } from './boq-firestore-sync';
 
 const logger = createModuleLogger('BimToBoqBridge');
 
@@ -119,55 +119,8 @@ function buildSingleEntryPayload(
   mapping: AtoeMappingEntry,
   existingCreatedAt: string | null,
 ): Record<string, unknown> {
-  const now = nowISO();
   const quantity = deriveAtoeQuantity(mapping.unit, entity.geometry);
-  const payload: BOQItem = {
-    id: deterministicId,
-    companyId: context.companyId,
-    projectId: context.projectId,
-    buildingId: context.buildingId,
-    scope: context.floorId ? 'floor' : 'building',
-    linkedFloorId: context.floorId ?? null,
-    linkedUnitId: null,
-    linkedUnitIds: null,
-    costAllocationMethod: 'by_area',
-    customAllocations: null,
-    categoryCode: mapping.categoryCode,
-    subCategoryCode: null,
-    title: mapping.titleEL,
-    description: null,
-    unit: mapping.unit,
-    estimatedQuantity: quantity,
-    actualQuantity: null,
-    wasteFactor: 0,
-    wastePolicy: 'inherited',
-    materialUnitCost: 0,
-    laborUnitCost: 0,
-    equipmentUnitCost: 0,
-    priceAuthority: 'master',
-    linkedPhaseId: null,
-    linkedTaskId: null,
-    linkedInvoiceId: null,
-    linkedContractorId: null,
-    source: 'bim-auto',
-    measurementMethod: 'bim',
-    status: 'draft',
-    qaStatus: 'pending',
-    notes: null,
-    createdBy: null,
-    approvedBy: null,
-    createdAt: existingCreatedAt ?? now,
-    updatedAt: now,
-    sourceType: 'bim-auto',
-    sourceEntityId: entity.id,
-    sourceEntityType: entityType,
-    detached: null,
-    parentBoqItemId: null,
-    isGroupParent: null,
-    layerIndex: null,
-    materialId: null,
-  };
-  return stripUndefinedDeep(payload as unknown as Record<string, unknown>);
+  return buildSingleEntityBoqRow(deterministicId, context, entity.id, entityType, mapping, quantity, existingCreatedAt);
 }
 
 // ============================================================================
@@ -237,6 +190,43 @@ async function upsertBoqRow(
   }
 }
 
+const NO_ROW_STATE: RowFetchResult = { exists: false, detached: false, createdAt: null };
+
+/**
+ * Resolve the ATOE mapping for an entity, narrowing the index-typed
+ * `sectionKind` (ADR-363 Φ2 beam-steel discriminator) + `classification`
+ * (ADR-408 MEP pipe plumbing) params to `string`. Shared prologue of the
+ * single-entry + finish upsert paths.
+ */
+function resolveEntityAtoeMapping(
+  entityType: BimEntityType,
+  entity: BimEntityForBoq,
+): AtoeMappingEntry | undefined {
+  const category = entity.params?.category;
+  const rawSectionKind = entity.params?.['sectionKind'];
+  const sectionKind = typeof rawSectionKind === 'string' ? rawSectionKind : undefined;
+  const rawClassification = entity.params?.['classification'];
+  const classification = typeof rawClassification === 'string' ? rawClassification : undefined;
+  return resolveAtoeMapping(entityType, entity.kind, category, sectionKind, classification);
+}
+
+/**
+ * Upsert a group parent + its per-layer/finish children, each with its own
+ * detach guard via the pre-fetched `states` map. Shared tail of the
+ * multi-layer-wall and finish paths.
+ */
+async function upsertRowGroup(
+  parent: BuiltBoqRow,
+  children: readonly BuiltBoqRow[],
+  states: ReadonlyMap<string, RowFetchResult>,
+  action: 'created' | 'updated',
+): Promise<void> {
+  await upsertBoqRow(parent, states.get(parent.id) ?? NO_ROW_STATE, action);
+  await Promise.all(
+    children.map((child) => upsertBoqRow(child, states.get(child.id) ?? NO_ROW_STATE, action)),
+  );
+}
+
 // ============================================================================
 // BRIDGE CLASS
 // ============================================================================
@@ -298,12 +288,7 @@ class BimToBoqBridgeImpl {
     context: BimBoqContext,
     action: 'created' | 'updated',
   ): Promise<void> {
-    const category = entity.params?.category;
-    const rawSectionKind = entity.params?.['sectionKind'];
-    const sectionKind = typeof rawSectionKind === 'string' ? rawSectionKind : undefined;
-    const rawClassification = entity.params?.['classification'];
-    const classification = typeof rawClassification === 'string' ? rawClassification : undefined;
-    const coreMapping = resolveAtoeMapping(entityType, entity.kind, category, sectionKind, classification);
+    const coreMapping = resolveEntityAtoeMapping(entityType, entity);
     if (!coreMapping) return;
     const finish = entity.finishContribution;
     if (!hasFinishContribution(finish)) return;
@@ -319,12 +304,7 @@ class BimToBoqBridgeImpl {
       existingCreatedAt,
     );
 
-    const parentState = states.get(parent.id) ?? { exists: false, detached: false, createdAt: null };
-    await upsertBoqRow(parent, parentState, action);
-    await Promise.all(children.map((child) => {
-      const state = states.get(child.id) ?? { exists: false, detached: false, createdAt: null };
-      return upsertBoqRow(child, state, action);
-    }));
+    await upsertRowGroup(parent, children, states, action);
   }
 
   private async upsertSingleEntry(
@@ -333,14 +313,7 @@ class BimToBoqBridgeImpl {
     context: BimBoqContext,
     action: 'created' | 'updated',
   ): Promise<void> {
-    const category = entity.params?.category;
-    // ADR-363 Φ2 — beam steel discriminator (params index-typed → narrow to string).
-    const rawSectionKind = entity.params?.['sectionKind'];
-    const sectionKind = typeof rawSectionKind === 'string' ? rawSectionKind : undefined;
-    // ADR-408 — MEP pipe plumbing classification (per-System BOQ takeoff discriminator).
-    const rawClassification = entity.params?.['classification'];
-    const classification = typeof rawClassification === 'string' ? rawClassification : undefined;
-    const mapping = resolveAtoeMapping(entityType, entity.kind, category, sectionKind, classification);
+    const mapping = resolveEntityAtoeMapping(entityType, entity);
     if (!mapping) return;
 
     const deterministicId = parentBoqId(entity.id);
@@ -399,14 +372,7 @@ class BimToBoqBridgeImpl {
       existingCreatedAt,
     );
 
-    const parentState = states.get(parent.id) ?? { exists: false, detached: false, createdAt: null };
-    await upsertBoqRow(parent, parentState, action);
-
-    // Children: per-layer detach guard via individual state lookup
-    await Promise.all(children.map((child) => {
-      const state = states.get(child.id) ?? { exists: false, detached: false, createdAt: null };
-      return upsertBoqRow(child, state, action);
-    }));
+    await upsertRowGroup(parent, children, states, action);
   }
 
   /**
@@ -435,17 +401,7 @@ class BimToBoqBridgeImpl {
     }
 
     const allIds = [parentId, ...childIds];
-    await Promise.all(allIds.map(async (id) => {
-      const ref = doc(db, COLLECTIONS.BOQ_ITEMS, id);
-      try {
-        const snap = await getDoc(ref);
-        if (!snap.exists()) return;
-        if ((snap.data() as Record<string, unknown>).detached === true) return;
-        await deleteDoc(ref);
-      } catch (err) {
-        logger.error('BimToBoqBridge: delete failed', { rowId: id, err });
-      }
-    }));
+    await Promise.all(allIds.map((id) => deleteManagedBoqRow(id, 'BimToBoqBridge')));
   }
 
   /** Look up the BOQ summary item που δημιουργήθηκε για ένα BIM entity (read-only). */

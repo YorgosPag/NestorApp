@@ -25,12 +25,12 @@ import { resolveMaterialAtoeMapping } from '../config/material-to-atoe-mapping';
 // builder να ΜΗΝ εισάγει value από εδώ (αποφυγή κυκλικής εξάρτησης finishes↔services).
 import type { FinishMaterialBucket } from '../finishes/structural-finish-area';
 import {
-  buildBaseRow,
   parentBoqId,
   type BuiltBoqRow,
   type MultiLayerBuildContext,
   type ExistingCreatedAtMap,
 } from './boq-multi-layer-builder';
+import { buildBoqBaseRow, buildGroupParentBoqRow } from './boq-base-row';
 
 export type { FinishMaterialBucket } from '../finishes/structural-finish-area';
 
@@ -89,7 +89,7 @@ function buildFinishChild(
   const mapping = resolveMaterialAtoeMapping(bucket.materialId);
   if (!mapping) return null; // άγνωστο υλικό → skip (parent παραμένει)
   const childId = finishChildBoqId(entityId, bucket.materialId);
-  const base = buildBaseRow(childId, context, entityId, entityType, existingCreatedAt.get(childId) ?? null);
+  const base = buildBoqBaseRow(childId, context, entityId, entityType, existingCreatedAt.get(childId) ?? null);
   const item: BOQItem = {
     ...base,
     categoryCode: mapping.categoryCode,
@@ -115,22 +115,15 @@ export function buildFinishBoqPayloads(
   const { entityId, entityType, coreMapping, coreQuantity, finish, context } = input;
 
   const parentId = parentBoqId(entityId);
-  const parentBase = buildBaseRow(parentId, context, entityId, entityType, existingCreatedAt.get(parentId) ?? null);
-  const parentItem: BOQItem = {
-    ...parentBase,
-    categoryCode: coreMapping.categoryCode,
-    title: coreMapping.titleEL,
-    unit: coreMapping.unit,
-    estimatedQuantity: coreQuantity,
-    parentBoqItemId: null,
-    isGroupParent: true,
-    layerIndex: null,
-    materialId: null,
-  };
-  const parent: BuiltBoqRow = {
-    id: parentId,
-    payload: stripUndefinedDeep(parentItem as unknown as Record<string, unknown>),
-  };
+  const parent = buildGroupParentBoqRow(
+    parentId,
+    context,
+    entityId,
+    entityType,
+    coreMapping,
+    coreQuantity,
+    existingCreatedAt.get(parentId) ?? null,
+  );
 
   const children: BuiltBoqRow[] = [];
   finish.byMaterial.forEach((bucket, i) => {

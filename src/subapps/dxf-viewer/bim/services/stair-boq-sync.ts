@@ -28,13 +28,6 @@
  * @see docs/centralized-systems/reference/adrs/ADR-395-bim-quantities-building-measurements.md §4.1
  */
 
-import { deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { createModuleLogger } from '@/lib/telemetry';
-import { nowISO } from '@/lib/date-local';
-import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
-import type { BOQItem } from '@/types/boq';
 import {
   resolveStairComponentMapping,
   type AtoeMappingEntry,
@@ -44,8 +37,8 @@ import type { StairKind, StairParams } from '../types/stair-types';
 import { computeStairBoqQuantities } from '../stairs/stair-boq-quantities';
 import { resolveEffectiveStairParams } from '../geometry/stairs/stair-effective-params';
 import type { HostFootprintInput } from '../geometry/wall-host-plan-builder';
-
-const logger = createModuleLogger('StairBoqSync');
+import { buildSingleEntityBoqRow } from './boq-base-row';
+import { syncManagedBoqRow, deleteManagedBoqRow } from './boq-firestore-sync';
 
 // ============================================================================
 // PUBLIC TYPES
@@ -100,54 +93,7 @@ function buildStairComponentPayload(
   quantity: number,
   existingCreatedAt: string | null,
 ): Record<string, unknown> {
-  const now = nowISO();
-  const payload: BOQItem = {
-    id,
-    companyId: context.companyId,
-    projectId: context.projectId,
-    buildingId: context.buildingId,
-    scope: context.floorId ? 'floor' : 'building',
-    linkedFloorId: context.floorId ?? null,
-    linkedUnitId: null,
-    linkedUnitIds: null,
-    costAllocationMethod: 'by_area',
-    customAllocations: null,
-    categoryCode: mapping.categoryCode,
-    subCategoryCode: null,
-    title: mapping.titleEL,
-    description: null,
-    unit: mapping.unit,
-    estimatedQuantity: quantity,
-    actualQuantity: null,
-    wasteFactor: 0,
-    wastePolicy: 'inherited',
-    materialUnitCost: 0,
-    laborUnitCost: 0,
-    equipmentUnitCost: 0,
-    priceAuthority: 'master',
-    linkedPhaseId: null,
-    linkedTaskId: null,
-    linkedInvoiceId: null,
-    linkedContractorId: null,
-    source: 'bim-auto',
-    measurementMethod: 'bim',
-    status: 'draft',
-    qaStatus: 'pending',
-    notes: null,
-    createdBy: null,
-    approvedBy: null,
-    createdAt: existingCreatedAt ?? now,
-    updatedAt: now,
-    sourceType: 'bim-auto',
-    sourceEntityId: stair.id,
-    sourceEntityType: 'stair',
-    detached: null,
-    parentBoqItemId: null,
-    isGroupParent: null,
-    layerIndex: null,
-    materialId: null,
-  };
-  return stripUndefinedDeep(payload as unknown as Record<string, unknown>);
+  return buildSingleEntityBoqRow(id, context, stair.id, 'stair', mapping, quantity, existingCreatedAt);
 }
 
 async function syncComponentRow(
@@ -157,37 +103,21 @@ async function syncComponentRow(
   context: StairBoqContext,
 ): Promise<void> {
   const id = stairComponentBoqId(stair.id, component);
-  const ref = doc(db, COLLECTIONS.BOQ_ITEMS, id);
-
-  const snap = await getDoc(ref).catch(() => null);
-  if (snap === null) return;
-
-  // Detach guard: a user-owned row is never auto-touched (no overwrite, no
-  // zero-delete).
-  if (snap.exists() && (snap.data() as Record<string, unknown>).detached === true) return;
-
-  if (quantity <= 0) {
-    if (snap.exists()) {
-      try {
-        await deleteDoc(ref);
-      } catch (err) {
-        logger.error('StairBoqSync: zero-quantity delete failed', { rowId: id, err });
-      }
-    }
-    return;
-  }
-
-  const existingCreatedAt = snap.exists()
-    ? ((snap.data() as Record<string, unknown>).createdAt as string | undefined) ?? null
-    : null;
-  const mapping = resolveStairComponentMapping(component);
-  const payload = buildStairComponentPayload(id, stair, context, mapping, quantity, existingCreatedAt);
-
-  try {
-    await setDoc(ref, payload);
-  } catch (err) {
-    logger.error('StairBoqSync: component upsert failed', { rowId: id, component, err });
-  }
+  await syncManagedBoqRow({
+    id,
+    quantity,
+    buildPayload: (existingCreatedAt) =>
+      buildStairComponentPayload(
+        id,
+        stair,
+        context,
+        resolveStairComponentMapping(component),
+        quantity,
+        existingCreatedAt,
+      ),
+    logLabel: 'StairBoqSync',
+    logContext: { component },
+  });
 }
 
 // ============================================================================
@@ -229,16 +159,11 @@ export async function upsertStairBoq(
 /** Delete all three component rows when a stair is deleted (skip detached). */
 export async function deleteStairBoq(stairId: string): Promise<void> {
   await Promise.all(
-    STAIR_COMPONENTS.map(async (component) => {
-      const ref = doc(db, COLLECTIONS.BOQ_ITEMS, stairComponentBoqId(stairId, component));
-      try {
-        const snap = await getDoc(ref);
-        if (!snap.exists()) return;
-        if ((snap.data() as Record<string, unknown>).detached === true) return;
-        await deleteDoc(ref);
-      } catch (err) {
-        logger.error('StairBoqSync: delete failed', { stairId, component, err });
-      }
-    }),
+    STAIR_COMPONENTS.map((component) =>
+      deleteManagedBoqRow(stairComponentBoqId(stairId, component), 'StairBoqSync', {
+        stairId,
+        component,
+      }),
+    ),
   );
 }

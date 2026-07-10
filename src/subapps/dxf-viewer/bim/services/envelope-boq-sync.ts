@@ -27,13 +27,10 @@
  * @see ./stair-boq-sync (mirror multi-row deterministic pattern)
  */
 
-import { deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { createModuleLogger } from '@/lib/telemetry';
-import { nowISO } from '@/lib/date-local';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import type { BOQItem } from '@/types/boq';
+import { buildBoqBaseRow } from './boq-base-row';
+import { syncManagedBoqRow } from './boq-firestore-sync';
 
 import type { AnySceneEntity } from '../../types/entities';
 import {
@@ -70,7 +67,6 @@ import { filterExposedSlabs, type SlabForZoneClassification } from '../geometry/
 import { computeRevealContributionArea } from '../types/envelope-contribution';
 import { resolveMaterialAtoeMapping, type MaterialAtoeMapping } from '../config/material-to-atoe-mapping';
 
-const logger = createModuleLogger('EnvelopeBoqSync');
 const MM_PER_M = 1000;
 const ZONES: readonly EnvelopeZoneId[] = ['Z1', 'Z2', 'Z3', 'Z4'];
 
@@ -251,49 +247,17 @@ function buildEnvelopeZonePayload(
   mapping: MaterialAtoeMapping,
   existingCreatedAt: string | null,
 ): Record<string, unknown> {
-  const now = nowISO();
+  const base = buildBoqBaseRow(id, context, id, 'envelope', existingCreatedAt);
   const payload: BOQItem = {
-    id,
-    companyId: context.companyId,
-    projectId: context.projectId,
-    buildingId: context.buildingId,
+    ...base,
+    // Envelope zones are always floor-scoped (per-floor thermal aggregation).
     scope: 'floor',
     linkedFloorId: context.floorId,
-    linkedUnitId: null,
-    linkedUnitIds: null,
-    costAllocationMethod: 'by_area',
-    customAllocations: null,
     categoryCode: mapping.categoryCode,
-    subCategoryCode: null,
     // `(${zone})` = ζώνη discriminator· ΟΧΙ νέο hardcoded Greek (zone codes).
     title: `${mapping.titleEL} (${zone})`,
-    description: null,
     unit: mapping.unit,
     estimatedQuantity: area,
-    actualQuantity: null,
-    wasteFactor: 0,
-    wastePolicy: 'inherited',
-    materialUnitCost: 0,
-    laborUnitCost: 0,
-    equipmentUnitCost: 0,
-    priceAuthority: 'master',
-    linkedPhaseId: null,
-    linkedTaskId: null,
-    linkedInvoiceId: null,
-    linkedContractorId: null,
-    source: 'bim-auto',
-    measurementMethod: 'bim',
-    status: 'draft',
-    qaStatus: 'pending',
-    notes: null,
-    createdBy: null,
-    approvedBy: null,
-    createdAt: existingCreatedAt ?? now,
-    updatedAt: now,
-    sourceType: 'bim-auto',
-    sourceEntityId: id,
-    sourceEntityType: 'envelope',
-    detached: null,
     parentBoqItemId: null,
     isGroupParent: null,
     layerIndex: null,
@@ -311,33 +275,14 @@ async function syncZoneRow(
   mapping: MaterialAtoeMapping,
 ): Promise<void> {
   const id = envelopeZoneBoqId(context.floorId, zone);
-  const ref = doc(db, COLLECTIONS.BOQ_ITEMS, id);
-
-  const snap = await getDoc(ref).catch(() => null);
-  if (snap === null) return;
-  if (snap.exists() && (snap.data() as Record<string, unknown>).detached === true) return;
-
-  if (area <= 0) {
-    if (snap.exists()) {
-      try {
-        await deleteDoc(ref);
-      } catch (err) {
-        logger.error('EnvelopeBoqSync: zero-area delete failed', { rowId: id, err });
-      }
-    }
-    return;
-  }
-
-  const existingCreatedAt = snap.exists()
-    ? ((snap.data() as Record<string, unknown>).createdAt as string | undefined) ?? null
-    : null;
-  const payload = buildEnvelopeZonePayload(id, zone, area, spec, context, mapping, existingCreatedAt);
-
-  try {
-    await setDoc(ref, payload);
-  } catch (err) {
-    logger.error('EnvelopeBoqSync: zone upsert failed', { rowId: id, zone, err });
-  }
+  await syncManagedBoqRow({
+    id,
+    quantity: area,
+    buildPayload: (existingCreatedAt) =>
+      buildEnvelopeZonePayload(id, zone, area, spec, context, mapping, existingCreatedAt),
+    logLabel: 'EnvelopeBoqSync',
+    logContext: { zone },
+  });
 }
 
 // ============================================================================

@@ -22,7 +22,6 @@
  */
 
 import type { BOQItem } from '@/types/boq';
-import { nowISO } from '@/lib/date-local';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import type { WallDna, WallDnaLayer } from '../types/wall-dna-types';
 import type { AtoeMappingEntry, BimEntityType } from '../config/bim-to-atoe-mapping';
@@ -30,6 +29,9 @@ import {
   resolveMaterialAtoeMapping,
   type MaterialAtoeMapping,
 } from '../config/material-to-atoe-mapping';
+import { buildBoqBaseRow, buildGroupParentBoqRow, type BuiltBoqRow } from './boq-base-row';
+
+export type { BuiltBoqRow };
 
 // ============================================================================
 // TYPES
@@ -52,12 +54,6 @@ export interface MultiLayerBuildInput {
   /** Parent summary mapping (πχ wall.exterior → OIK-3.05). */
   readonly parentMapping: AtoeMappingEntry;
   readonly context: MultiLayerBuildContext;
-}
-
-export interface BuiltBoqRow {
-  readonly id: string;
-  /** Sanitized for Firestore setDoc (no undefined). */
-  readonly payload: Record<string, unknown>;
 }
 
 export interface MultiLayerBuildResult {
@@ -88,74 +84,15 @@ function deriveLayerQuantity(layer: WallDnaLayer, wallNetArea: number, kind: Mat
   return wallNetArea;
 }
 
-/**
- * Base BOQ row (όλα τα default πεδία πλην category/quantity/grouping). Εξάγεται
- * ώστε να το μοιράζεται ΚΑΙ ο `structural-finish-boq` (ADR-449 σοβάς) — ΕΝΑ SSoT
- * για τα ~40 default πεδία (N.0.2, αποφυγή διπλασιασμού).
- */
-export function buildBaseRow(
-  id: string,
-  context: MultiLayerBuildContext,
-  entityId: string,
-  entityType: BimEntityType,
-  existingCreatedAt: string | null,
-): Pick<BOQItem,
-  'id' | 'companyId' | 'projectId' | 'buildingId' | 'scope' |
-  'linkedFloorId' | 'linkedUnitId' | 'linkedUnitIds' |
-  'costAllocationMethod' | 'customAllocations' |
-  'subCategoryCode' | 'description' |
-  'actualQuantity' | 'wasteFactor' | 'wastePolicy' |
-  'materialUnitCost' | 'laborUnitCost' | 'equipmentUnitCost' | 'priceAuthority' |
-  'linkedPhaseId' | 'linkedTaskId' | 'linkedInvoiceId' | 'linkedContractorId' |
-  'source' | 'measurementMethod' | 'status' | 'qaStatus' |
-  'notes' | 'createdBy' | 'approvedBy' |
-  'createdAt' | 'updatedAt' |
-  'sourceType' | 'sourceEntityId' | 'sourceEntityType' | 'detached'
-> {
-  const now = nowISO();
-  return {
-    id,
-    companyId: context.companyId,
-    projectId: context.projectId,
-    buildingId: context.buildingId,
-    scope: context.floorId ? 'floor' : 'building',
-    linkedFloorId: context.floorId ?? null,
-    linkedUnitId: null,
-    linkedUnitIds: null,
-    costAllocationMethod: 'by_area',
-    customAllocations: null,
-    subCategoryCode: null,
-    description: null,
-    actualQuantity: null,
-    wasteFactor: 0,
-    wastePolicy: 'inherited',
-    materialUnitCost: 0,
-    laborUnitCost: 0,
-    equipmentUnitCost: 0,
-    priceAuthority: 'master',
-    linkedPhaseId: null,
-    linkedTaskId: null,
-    linkedInvoiceId: null,
-    linkedContractorId: null,
-    source: 'bim-auto',
-    measurementMethod: 'bim',
-    status: 'draft',
-    qaStatus: 'pending',
-    notes: null,
-    createdBy: null,
-    approvedBy: null,
-    createdAt: existingCreatedAt ?? now,
-    updatedAt: now,
-    sourceType: 'bim-auto',
-    sourceEntityId: entityId,
-    sourceEntityType: entityType,
-    detached: null,
-  };
-}
-
 // ============================================================================
 // BUILDER
 // ============================================================================
+// Base row (default fields) SSoT: buildBoqBaseRow (./boq-base-row.ts) — shared
+// with structural-finish-boq / BimToBoqBridge / opening-boq-grouper /
+// stair-boq-sync (N.0.2, avoids duplicated block). envelope-boq-sync.ts still
+// inlines its own copy — `entityType` there is `'envelope'`, not part of
+// `BimEntityType`, so it can't call buildBoqBaseRow without widening that
+// param's type (out of scope for this migration — flagged for follow-up).
 
 /**
  * Build parent + per-layer child BOQ payloads για multi-layer wall.
@@ -175,22 +112,15 @@ export function buildMultiLayerBoqPayloads(
 
   // ── Parent (group summary) ────────────────────────────────────────────────
   const parentId = parentBoqId(entityId);
-  const parentBase = buildBaseRow(parentId, context, entityId, entityType, existingCreatedAt.get(parentId) ?? null);
-  const parentItem: BOQItem = {
-    ...parentBase,
-    categoryCode: parentMapping.categoryCode,
-    title: parentMapping.titleEL,
-    unit: parentMapping.unit,
-    estimatedQuantity: wallNetArea,
-    parentBoqItemId: null,
-    isGroupParent: true,
-    layerIndex: null,
-    materialId: null,
-  };
-  const parent: BuiltBoqRow = {
-    id: parentId,
-    payload: stripUndefinedDeep(parentItem as unknown as Record<string, unknown>),
-  };
+  const parent = buildGroupParentBoqRow(
+    parentId,
+    context,
+    entityId,
+    entityType,
+    parentMapping,
+    wallNetArea,
+    existingCreatedAt.get(parentId) ?? null,
+  );
 
   // ── Children (per layer) ──────────────────────────────────────────────────
   const children: BuiltBoqRow[] = [];
@@ -205,7 +135,7 @@ export function buildMultiLayerBoqPayloads(
       continue;
     }
     const childId = layerChildBoqId(entityId, layer.id);
-    const childBase = buildBaseRow(childId, context, entityId, entityType, existingCreatedAt.get(childId) ?? null);
+    const childBase = buildBoqBaseRow(childId, context, entityId, entityType, existingCreatedAt.get(childId) ?? null);
     const childItem: BOQItem = {
       ...childBase,
       categoryCode: matMapping.categoryCode,
