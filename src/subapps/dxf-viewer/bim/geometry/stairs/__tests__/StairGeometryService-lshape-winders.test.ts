@@ -100,16 +100,17 @@ describe('StairGeometryService — L-shape with winders (Phase 3f)', () => {
     }
   });
 
-  it('Test 4: winders (3 wedges, equal-going) span 90° from u1 to u2', () => {
+  it('Test 4: winders (3 wedges) fan from a shared apex at the pivot (ADR-630, codeProfile none)', () => {
     const g = computeStairGeometry(makeLShapeWinders({ cutPlaneHeight: 10000 }));
     const all: readonly Polygon3D[] = [...g.treadsBelowCut, ...g.treadsAboveCut];
-    // Indices 7,8,9 are winder treads. Each is a 4-vertex equal-going polygon
-    // (apex repeated as last vertex). Verify first ≠ last vertex offset (= apex
-    // duplicated → distance 0).
+    // Indices 7,8,9 are winder treads. With codeProfile 'none' there is no apex
+    // cut, so each wedge is a 3-vertex triangle whose first vertex is the shared
+    // pivot apex. Verify all three share the same xy apex (the fan pivot).
+    const apex0 = all[7][0];
     for (let i = 7; i < 10; i++) {
-      const v0 = all[i][0];
-      const v3 = all[i][3];
-      expect(Math.hypot(v3.x - v0.x, v3.y - v0.y)).toBeLessThan(COORD_TOL);
+      expect(all[i]).toHaveLength(3);
+      const apex = all[i][0];
+      expect(Math.hypot(apex.x - apex0.x, apex.y - apex0.y)).toBeLessThan(COORD_TOL);
     }
   });
 

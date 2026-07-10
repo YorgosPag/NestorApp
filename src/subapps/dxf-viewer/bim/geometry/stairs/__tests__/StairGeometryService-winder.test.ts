@@ -119,13 +119,18 @@ describe('StairGeometryService — winder', () => {
     }
   });
 
-  it("Test 4: 'pie' → 3-vertex wedges; 'equal-going' → 4-vertex degenerate wedges", () => {
+  it("Test 4: with codeProfile 'none' both methods emit 3-vertex triangle wedges (ADR-630)", () => {
+    // ADR-630 — the winder method no longer changes the wedge vertex count; the
+    // apex cut is driven by the code profile. With 'none' (this factory) there
+    // is no cut, so both 'pie' and 'equal-going' are legacy 3-vertex triangles.
+    // The code-compliant 4-vertex trapezoid is covered in
+    // stair-winder-walkline-rule.test.ts.
     const pie = computeStairGeometry(makeWinderParams({ winderMethod: 'pie' }));
     const eq = computeStairGeometry(makeWinderParams({ winderMethod: 'equal-going' }));
     const pieTreads = allTreads(pie);
     const eqTreads = allTreads(eq);
     for (let k = 5; k < 9; k++) expect(pieTreads[k]).toHaveLength(3);
-    for (let k = 5; k < 9; k++) expect(eqTreads[k]).toHaveLength(4);
+    for (let k = 5; k < 9; k++) expect(eqTreads[k]).toHaveLength(3);
   });
 
   it('Test 5: flight 2 advances along u2 = rotate(u1, +90°) = (0,1)', () => {

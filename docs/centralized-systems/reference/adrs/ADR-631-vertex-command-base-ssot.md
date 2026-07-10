@@ -1,4 +1,4 @@
-# ADR-630: Vertex/overlay command base SSoT (`core/commands`)
+# ADR-631: Vertex/overlay command base SSoT (`core/commands`)
 
 ## Status
 ✅ **ACTIVE — 2026-07-10** — Cluster #20 **Stage 1** of the jscpd de-duplication sweep (ADR-584 / N.18), targeting `src/subapps/dxf-viewer/core/commands/`. The vertex-edit + overlay command families adopt the existing `BaseCommand` and two new thin family bases — **identical public APIs**, **1:1 behaviour**.
