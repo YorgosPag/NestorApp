@@ -39,6 +39,7 @@
  */
 
 import type { ISceneManager, SceneEntity } from '../../core/commands/interfaces';
+import { isSlabEntity, isStairEntity, type Entity } from '../../types/entities';
 import { cascadeHostedOpeningsForWalls } from '../walls/wall-opening-coordinator';
 import { cascadeBeamReframe } from '../beams/beam-column-reframe-cascade';
 import { cascadeStairwellOpenings } from '../stairs/stairwell-opening-coordinator';
@@ -104,4 +105,43 @@ export function reconcileAssociativeGeometry(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   EventBus.emit('bim:entities-moved', { movedEntities: [...byId.values()] as any });
+}
+
+/**
+ * ADR-632 Φ4.1 — CREATE-time associative trigger (SSoT).
+ *
+ * Το {@link reconcileAssociativeGeometry} τρέχει μόνο σε **αλλαγή** host (params-edit /
+ * transform command bases) — ΟΧΙ σε **δημιουργία** entity. Έτσι το πρωτεύον σενάριο
+ * «σχεδιάζω πλάκα οροφής πάνω από **υπάρχουσα** σκάλα → η τρύπα κλιμακοστασίου εμφανίζεται
+ * ΑΜΕΣΩΣ» (και το συμμετρικό «σκάλα κάτω από υπάρχουσα πλάκα») δεν πυροδοτούνταν: η τρύπα
+ * φαινόταν μόνο αφού μετακινηθεί/επεξεργαστεί η πλάκα. Οι μεγάλοι (Revit/ArchiCAD)
+ * regenerate τα associative floor/stair openings **και on creation**, όχι μόνο on
+ * host-change — αυτό εδώ κλείνει το κενό, industry-correct.
+ *
+ * Καλείται από τα **δύο** creation SSoTs (mirror των δύο edit/transform command bases):
+ *  · `CreateBimEntityCommand` (execute/redo/undo) — undoable slab/beam/… create path
+ *  · `addStairToScene` — ιστορικό raw-`setLevelScene` stair create path (μη-undoable)
+ *
+ * **Type-gated:** μόνο **σκάλα ή πλάκα** ξεκινούν τον stairwell cascade — κάθε άλλο create
+ * (κολόνα / δοκάρι / έπιπλο / διάσταση …) κάνει no-op στην πρώτη γραμμή (μηδέν κόστος).
+ *
+ * **Full recompute (χωρίς `changedIds` gate):** ο gate εδώ έγινε ήδη με τον τύπο του
+ * δημιουργημένου entity (πάντα διαθέσιμος, ανεξάρτητα scene membership), οπότε ο cascade
+ * τρέχει idempotent σε ΟΛΗ τη σκηνή — ώστε να συγκλίνει ΚΑΙ στο **undo**, όπου το νέο
+ * entity μόλις αφαιρέθηκε από τη σκηνή (planner → σβήνει το orphan «well» opening).
+ *
+ * **Zero-loop (ADR-492 §4):** ο cascade προσθέτει το opening με raw `addEntity` (ΟΧΙ νέα
+ * command) και τα lifecycle emits του είναι deferred (`queueMicrotask`) → κανένα
+ * re-entrant create/geometry-moved event· ο planner επιστρέφει άδειο diff στο 2ο run.
+ *
+ * @see core/commands/entity-commands/CreateBimEntityCommand.ts — undoable create call site
+ * @see bim/stairs/add-stair-to-scene.ts — raw stair create call site
+ * @see bim/stairs/stairwell-opening-coordinator.ts — `cascadeStairwellOpenings` (reused)
+ */
+export function reconcileAssociativeGeometryOnCreate(
+  createdEntity: Entity,
+  sceneManager: CascadeSceneManager,
+): void {
+  if (!isStairEntity(createdEntity) && !isSlabEntity(createdEntity)) return;
+  cascadeStairwellOpenings(sceneManager);
 }

@@ -23,17 +23,29 @@
  * auto-foundation, Revit-grade). Precedent: `CreateColumnsCommand` /
  * `CreateFoundationsCommand`.
  *
+ * ADR-632 Φ4.1 (2026-07-11) — CREATE-time associative reconcile. After the scene
+ * mutation (execute/redo add, undo remove) the command runs
+ * `reconcileAssociativeGeometryOnCreate` (mirror of `MergeableUpdateCommand` running
+ * `reconcileAssociativeGeometry`): a freshly-drawn ceiling slab over an existing stair
+ * (or vice-versa) opens the auto stairwell «well» opening IMMEDIATELY, and undo removes
+ * it again (idempotent re-run against the reverted scene). Type-gated → no-op for
+ * non slab/stair creates (column/beam/furniture/…).
+ *
  * @see ../../../bim/scene/append-entity-to-scene.ts — the SSoT caller (draw + copy)
+ * @see ../../../bim/cascade/associative-geometry-reconcile.ts — create-time reconcile SSoT
  * @see ../../../systems/events/bim-entity-lifecycle-events.ts — create + undo delete-event SSoT
  * @see ./CreateColumnsCommand.ts — batch grid-gen precedent (deferred-Firestore pattern)
  * @see docs/centralized-systems/reference/adrs/ADR-390-symmetric-bim-delete-undo.md
+ * @see docs/centralized-systems/reference/adrs/ADR-632-stairwell-auto-opening-ssot.md §8
  */
 
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 import type { AnySceneEntity } from '../../../types/scene';
+import type { Entity } from '../../../types/entities';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { deepClone } from '../../../utils/clone-utils';
 import { emitBimEntityCreated, emitBimEntityDeleteRequested } from '../../../systems/events/bim-entity-lifecycle-events';
+import { reconcileAssociativeGeometryOnCreate } from '../../../bim/cascade/associative-geometry-reconcile';
 
 export class CreateBimEntityCommand implements ICommand {
   readonly id: string;
@@ -61,17 +73,24 @@ export class CreateBimEntityCommand implements ICommand {
   execute(): void {
     this.applyScene();
     this.wasExecuted = true;
+    // ADR-632 Φ4.1 — create-time reconcile BEFORE the deferred emit, ώστε ο planner να
+    // δει το νέο entity ήδη στη σκηνή. No-op για μη σκάλα/πλάκα creates.
+    reconcileAssociativeGeometryOnCreate(this.entity as unknown as Entity, this.sceneManager);
     this.deferEvents('apply');
   }
 
   redo(): void {
     this.applyScene();
+    reconcileAssociativeGeometryOnCreate(this.entity as unknown as Entity, this.sceneManager);
     this.deferEvents('apply');
   }
 
   undo(): void {
     if (!this.wasExecuted) return;
     this.sceneManager.removeEntity(this.entity.id);
+    // ADR-632 Φ4.1 — μετά την αφαίρεση του host, ο idempotent cascade σβήνει το πλέον
+    // orphan auto «well» opening (σύγκλιση προς τη σωστή προ-create κατάσταση).
+    reconcileAssociativeGeometryOnCreate(this.entity as unknown as Entity, this.sceneManager);
     this.deferEvents('revert');
   }
 
