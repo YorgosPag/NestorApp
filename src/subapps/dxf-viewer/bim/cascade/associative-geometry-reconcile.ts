@@ -118,9 +118,11 @@ export function reconcileAssociativeGeometry(
  * regenerate τα associative floor/stair openings **και on creation**, όχι μόνο on
  * host-change — αυτό εδώ κλείνει το κενό, industry-correct.
  *
- * Καλείται από τα **δύο** creation SSoTs (mirror των δύο edit/transform command bases):
- *  · `CreateBimEntityCommand` (execute/redo/undo) — undoable slab/beam/… create path
- *  · `addStairToScene` — ιστορικό raw-`setLevelScene` stair create path (μη-undoable)
+ * Καλείται από το create SSoT `CreateBimEntityCommand` (execute/redo/undo) — το ΕΝΑ
+ * undoable create path για ΟΛΑ τα BIM entities (slab/beam/…) **και τη σκάλα** (ADR-632
+ * Φ5: το `addStairToScene` δεν καλεί πλέον απευθείας τον reconcile — περνά μέσω
+ * `appendEntityToScene` → `CreateBimEntityCommand`, οπότε ο cascade έρχεται από
+ * execute/redo/undo σαν κάθε άλλο create· κανένα χειροκίνητο/διπλό call site).
  *
  * **Type-gated:** μόνο **σκάλα ή πλάκα** ξεκινούν τον stairwell cascade — κάθε άλλο create
  * (κολόνα / δοκάρι / έπιπλο / διάσταση …) κάνει no-op στην πρώτη γραμμή (μηδέν κόστος).
@@ -134,8 +136,8 @@ export function reconcileAssociativeGeometry(
  * command) και τα lifecycle emits του είναι deferred (`queueMicrotask`) → κανένα
  * re-entrant create/geometry-moved event· ο planner επιστρέφει άδειο diff στο 2ο run.
  *
- * @see core/commands/entity-commands/CreateBimEntityCommand.ts — undoable create call site
- * @see bim/stairs/add-stair-to-scene.ts — raw stair create call site
+ * @see core/commands/entity-commands/CreateBimEntityCommand.ts — undoable create call site (slab/beam/stair/…)
+ * @see bim/stairs/add-stair-to-scene.ts — stair wrapper → appendEntityToScene → command (ADR-632 Φ5)
  * @see bim/stairs/stairwell-opening-coordinator.ts — `cascadeStairwellOpenings` (reused)
  */
 export function reconcileAssociativeGeometryOnCreate(
