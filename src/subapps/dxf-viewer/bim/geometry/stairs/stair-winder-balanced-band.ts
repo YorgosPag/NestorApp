@@ -1,5 +1,6 @@
 /**
- * Balanced winder band — SSoT for the k≥1 "dancing steps" turn (ADR-630 Phase 2b).
+ * Balanced winder band — SSoT for the k≥1 "dancing steps" turn (ADR-630 Phase 2b;
+ * newel / min-inner boundary added in Phase 2c).
  *
  * The turn region (last `k` treads of flight 1 + `W` winders + first `k` treads
  * of flight 2) is rebuilt as ONE balanced band of `M = W + 2k` treads that all
@@ -62,6 +63,15 @@ export interface BalancedBandInput {
   readonly n1: number;
   readonly n2: number;
   readonly winderCount: number;
+  /**
+   * Minimum going at the narrow (inner) end, in the SAME units as `width`
+   * (`resolveWinderMinimums(codeProfile, width).minInnerGoing`). Drives the inner
+   * boundary radius `r_in = minInnerGoing · (width/2) / g` so the arc risers stop
+   * on a small inner circle (newel core) instead of collapsing to the pivot P —
+   * trapezoidal wedges (no acute miter), central polygon filled (no hole).
+   * `0` (codeProfile `none`) → `r_in = 0` → legacy reach-P apex.
+   */
+  readonly minInnerGoing: number;
 }
 
 export interface BalancedBandPlan {
@@ -79,7 +89,26 @@ export interface BalancedWinderRunGeometry {
   /** `[n1−k, M, n2−k]` for label numbering + cut-line flight boundaries. */
   readonly flightSplit: readonly [number, number, number];
   readonly plan: BalancedBandPlan;
+  /**
+   * Filled central polygon (newel core) around the pivot P — the region between
+   * the inner `r_in` arc and the corner, sealed so the trapezoidal wedges leave
+   * no hole. `null` when `minInnerGoing = 0` (legacy reach-P apex, nothing to
+   * fill). The caller appends it to the `treads` list PAST `Σ flightSplit`, so it
+   * renders as fill (2D `StairRenderer` draws only treads; 3D extrudes a slab)
+   * WITHOUT being numbered as a step (`buildTreadLabels` stops at `Σ flightSplit`).
+   */
+  readonly newelCore: Polygon3D | null;
 }
+
+// ─── Newel / min-inner boundary (ADR-630 Phase 2c) ────────────────────────────
+//
+// Phase 2b let the arc risers pass through the pivot P → the wedges reached the
+// corner (no hole) but converged to an ACUTE zero-going miter. Phase 2c stops the
+// arc risers on a small inner circle of radius `r_in = minInnerGoing · halfW / g`
+// (Revit "Minimum Width on Inside Boundary" / ArchiCAD newel): the wedges become
+// TRAPEZOIDS with a `minInnerGoing`-deep narrow end (no acute miter), and the
+// central polygon [0..r_in] around P is filled as a solid `newelCore` (no hole).
+// `minInnerGoing = 0` (codeProfile `none`) → `r_in = 0` → legacy reach-P apex.
 
 /**
  * Choose `k` and the equal going. Widen from 1 to `MAX_BAND_STEPS_PER_SIDE` until
@@ -161,6 +190,7 @@ export function buildBalancedWinderRun(input: BalancedBandInput): BalancedWinder
     risers: [...flight1.risers, ...band.risers, ...flight2.risers],
     flightSplit: [n1 - k, plan.totalBandSteps, n2 - k],
     plan,
+    newelCore: band.newelCore,
   };
 }
 
@@ -170,22 +200,23 @@ function buildBand(
   input: BalancedBandInput,
   plan: BalancedBandPlan,
   widthAxis: Vec2,
-): FlightGeometry {
+): FlightGeometry & { readonly newelCore: Polygon3D | null } {
   const { basePoint, width, tread, rise, n1 } = input;
   const k = plan.bandStepsPerSide;
   const m = plan.totalBandSteps;
-  if (m <= 0) return { treads: [], risers: [] };
+  if (m <= 0) return { treads: [], risers: [], newelCore: null };
   const halfW = width * 0.5;
   const bandStartAlong = (n1 - k) * tread;
   const zoneAEnd = k * tread;
   const zoneBEnd = zoneAEnd + halfW * Math.abs(input.turnRad);
   const g = plan.walklineGoing;
+  const rIn = innerBoundaryRadius(input.minInnerGoing, halfW, g);
   const t1Outer = add(input.pivotXY, input.ray0, width); // outer tangent (arc start)
   const t2Outer = add(input.pivotXY, widthAxis, width);  // outer tangent (arc end)
 
   const samples: RiserSample[] = [];
   for (let j = 0; j <= m; j++) {
-    samples.push(sampleRiser(input, widthAxis, j * g, bandStartAlong, zoneAEnd, zoneBEnd, halfW));
+    samples.push(sampleRiser(input, widthAxis, j * g, bandStartAlong, zoneAEnd, zoneBEnd, halfW, rIn));
   }
 
   const treads: Polygon3D[] = [];
@@ -206,7 +237,48 @@ function buildBand(
       end: point(samples[j].outer.x, samples[j].outer.y, basePoint.z + rise * (n1 - k + j)),
     });
   }
-  return { treads, risers };
+  // Newel core sits at the top band tread's level (highest winder) so it caps the
+  // filled pillar from above in both plan (fill) and 3D (extruded slab).
+  const coreZ = basePoint.z + rise * (n1 - k + Math.max(0, m - 1));
+  return { treads, risers, newelCore: buildNewelCore(samples, input.pivotXY, coreZ, rIn) };
+}
+
+/**
+ * Inner boundary radius `r_in` such that the narrow (inner) end going equals
+ * `minInnerGoing`. In the arc zone the risers are radial with equal walkline
+ * going `g` at radius `halfW`, so the per-riser angle is `g / halfW` and the
+ * going at radius `r` is `r · g / halfW`; solving for `minInnerGoing` gives
+ * `r_in = minInnerGoing · halfW / g`. Capped just inside the walkline so the
+ * inner boundary never crosses it (degenerate/inverted wedges).
+ */
+function innerBoundaryRadius(minInnerGoing: number, halfW: number, g: number): number {
+  if (minInnerGoing <= BAND_EPS || g <= BAND_EPS) return 0;
+  const raw = (minInnerGoing * halfW) / g;
+  return Math.min(Math.max(0, raw), halfW * 0.98);
+}
+
+/**
+ * Filled sector around the pivot P bounded by the two flight inner edges, the two
+ * transition chords and the inner `r_in` arc — every edge shared with a band tread
+ * or the stair outline, so the fill is watertight. Returns `null` when `r_in ≈ 0`
+ * (legacy reach-P apex — the arc wedges still meet at P, there is no hole to fill).
+ */
+function buildNewelCore(
+  samples: readonly RiserSample[],
+  pivot: Vec2,
+  z: number,
+  rIn: number,
+): Polygon3D | null {
+  const last = samples.length - 1;
+  if (rIn <= BAND_EPS || last < 1) return null;
+  let lo = 0;
+  let hi = last;
+  for (let j = 0; j <= last; j++) if (samples[j].zone === 'A') lo = j; // last zone-A sample
+  for (let j = last; j >= 0; j--) if (samples[j].zone === 'C') hi = j; // first zone-C sample
+  const ring: Vec2[] = [pivot];
+  for (let j = lo; j <= hi; j++) ring.push(samples[j].inner);
+  const deduped = dedupe(ring);
+  return deduped.length >= 3 ? liftCCW(deduped, z) : null;
 }
 
 function sampleRiser(
@@ -217,6 +289,7 @@ function sampleRiser(
   zoneAEnd: number,
   zoneBEnd: number,
   halfW: number,
+  rIn: number,
 ): RiserSample {
   const { basePoint, u1, u2, v1, ray0, pivotXY, turnSign, width } = input;
   if (zoneAEnd > BAND_EPS && s <= zoneAEnd + BAND_EPS) {
@@ -231,7 +304,7 @@ function sampleRiser(
   if (s <= zoneBEnd + BAND_EPS) {
     const angle = ((s - zoneAEnd) / halfW) * turnSign;
     const ray = rotateVec(ray0, angle);
-    return { inner: pivotXY, outer: add(pivotXY, ray, width), zone: 'B' };
+    return { inner: add(pivotXY, ray, rIn), outer: add(pivotXY, ray, width), zone: 'B' };
   }
   const sC = s - zoneBEnd;
   const t2: Vec2 = add(pivotXY, widthAxis, halfW);

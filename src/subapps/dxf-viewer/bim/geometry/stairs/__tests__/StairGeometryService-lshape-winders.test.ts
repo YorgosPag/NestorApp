@@ -12,6 +12,7 @@
 import { computeStairGeometry } from '../StairGeometryService';
 import type {
   Polygon3D,
+  StairCodeProfile,
   StairParams,
   StairTreadLabelDisplay,
   StairTurnDirectionLR,
@@ -31,6 +32,7 @@ function makeLShapeWinders(overrides?: {
   cutPlaneHeight?: number;
   rise?: number;
   stepCount?: number;
+  codeProfile?: StairCodeProfile;
 }): StairParams {
   const winderCount = overrides?.winderCount ?? 3;
   const flightSplit = overrides?.flightSplit ?? ([7, 7] as const);
@@ -69,7 +71,7 @@ function makeLShapeWinders(overrides?: {
     treadNumberStart: 1,
     treadLabelDisplay: overrides?.treadLabelDisplay ?? 'none',
     treadLabelRestartPerFlight: false,
-    codeProfile: 'none',
+    codeProfile: overrides?.codeProfile ?? 'none',
   };
 }
 
@@ -110,6 +112,27 @@ describe('StairGeometryService — L-shape with winders (Phase 3f)', () => {
       t.some((v) => Math.hypot(v.x - pivot.x, v.y - pivot.y) < COORD_TOL),
     );
     expect(atPivot.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('Test 4b (ADR-630 Φ2c): codeProfile nok → newel core fills the corner, no acute apex, numbering intact', () => {
+    const g = computeStairGeometry(
+      makeLShapeWinders({ cutPlaneHeight: 10000, codeProfile: 'nok', treadLabelDisplay: 'all' }),
+    );
+    const all: readonly Polygon3D[] = [...g.treadsBelowCut, ...g.treadsAboveCut];
+    const pivot = { x: 7 * 280, y: -500 };
+    // (a) 17 numbered wedges + 1 unnumbered newel core = 18 filled polygons.
+    expect(all).toHaveLength(18);
+    // (b) The corner is filled up to P — exactly one polygon (the core) reaches it,
+    //     so the numbered wedges keep a min-inner width (no acute miter, no hole).
+    const atPivot = all.filter((t) =>
+      t.some((v) => Math.hypot(v.x - pivot.x, v.y - pivot.y) < COORD_TOL),
+    );
+    expect(atPivot).toHaveLength(1);
+    // (c) The core rides the treads channel (2D fill), NOT landings.
+    expect(g.landings).toHaveLength(0);
+    // (d) Numbering is unaffected by the out-of-band core (1..17).
+    expect(g.treadLabels).toHaveLength(17);
+    expect(g.treadLabels?.[16].text).toBe('17');
   });
 
   it('Test 5: pure flight2 advances along u2 (turnDirection=right → -Y)', () => {

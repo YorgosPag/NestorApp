@@ -39,8 +39,14 @@ function makeInput(overrides?: Partial<BalancedBandInput>): BalancedBandInput {
     n1,
     n2: 7,
     winderCount: 3,
+    minInnerGoing: 0, // default = legacy reach-P apex; newel tests override
     ...overrides,
   };
+}
+
+/** Distance of a 2-D point from the pivot. */
+function distFromPivot(v: { x: number; y: number }, pivot: { x: number; y: number }): number {
+  return Math.hypot(v.x - pivot.x, v.y - pivot.y);
 }
 
 describe('computeBalancedBandPlan', () => {
@@ -89,13 +95,14 @@ describe('buildBalancedWinderRun', () => {
     expect(a + b + c).toBe(17);
   });
 
-  it('wedges reach the pivot P — several turn treads share it (no hole)', () => {
+  it('minInnerGoing 0 (legacy) — wedges reach the pivot P, no newel core', () => {
     const input = makeInput();
     const run = buildBalancedWinderRun(input);
     const atPivot = run.treads.filter((t) =>
-      t.some((v) => Math.hypot(v.x - input.pivotXY.x, v.y - input.pivotXY.y) < 1e-6),
+      t.some((v) => distFromPivot(v, input.pivotXY) < 1e-6),
     );
     expect(atPivot.length).toBeGreaterThanOrEqual(2);
+    expect(run.newelCore).toBeNull();
   });
 
   it('every tread is a simple polygon at a single contiguous elevation z = i·rise', () => {
@@ -114,9 +121,64 @@ describe('buildBalancedWinderRun', () => {
     });
     const run = buildBalancedWinderRun(input);
     const atPivot = run.treads.filter((t) =>
-      t.some((v) => Math.hypot(v.x - input.pivotXY.x, v.y - input.pivotXY.y) < 1e-6),
+      t.some((v) => distFromPivot(v, input.pivotXY) < 1e-6),
     );
     expect(atPivot.length).toBeGreaterThanOrEqual(2);
     expect(run.treads).toHaveLength(17);
+  });
+});
+
+// ─── ADR-630 Φ2c — newel / min-inner boundary ─────────────────────────────────
+
+describe('buildBalancedWinderRun — newel core (minInnerGoing > 0)', () => {
+  // width 1000 → halfW 500, k=2 → g = (2·2·280 + 500·π/2)/7 ≈ 272.2.
+  const G = (2 * 2 * 280 + 500 * HALF_PI) / 7;
+  const MIN_INNER = 130;
+  const R_IN = (MIN_INNER * 500) / G; // ≈ 238.8
+
+  it('no tread converges to the pivot P — the acute miter is gone', () => {
+    const input = makeInput({ minInnerGoing: MIN_INNER });
+    const run = buildBalancedWinderRun(input);
+    const atPivot = run.treads.filter((t) =>
+      t.some((v) => distFromPivot(v, input.pivotXY) < 1e-6),
+    );
+    expect(atPivot).toHaveLength(0);
+  });
+
+  it('emits a filled newel core polygon that contains P (no hole)', () => {
+    const input = makeInput({ minInnerGoing: MIN_INNER });
+    const run = buildBalancedWinderRun(input);
+    expect(run.newelCore).not.toBeNull();
+    const core = run.newelCore ?? [];
+    expect(core.length).toBeGreaterThanOrEqual(3);
+    expect(core.some((v) => distFromPivot(v, input.pivotXY) < 1e-6)).toBe(true);
+  });
+
+  it('arc risers stop on the inner circle r_in = minInnerGoing·halfW/g', () => {
+    const input = makeInput({ minInnerGoing: MIN_INNER });
+    const run = buildBalancedWinderRun(input);
+    const core = run.newelCore ?? [];
+    // The core's farthest vertices from P are the arc samples at radius r_in (the
+    // two transition endpoints sit closer, on the flight edges). The resulting
+    // inner-end going (r_in·g/halfW) equals the code minimum.
+    const radii = core.map((v) => distFromPivot(v, input.pivotXY));
+    const rIn = Math.max(...radii);
+    expect(rIn).toBeCloseTo(R_IN, 3);
+    expect((rIn * G) / 500).toBeCloseTo(MIN_INNER, 3);
+  });
+
+  it('preserves the tread count + numbering split (core is out-of-band)', () => {
+    const run = buildBalancedWinderRun(makeInput({ minInnerGoing: MIN_INNER }));
+    expect(run.treads).toHaveLength(17);
+    const [a, b, c] = run.flightSplit;
+    expect(a + b + c).toBe(17);
+  });
+
+  it('caps r_in just inside the walkline for an oversized minInnerGoing', () => {
+    // minInnerGoing ≥ g would push r_in past halfW → clamp to 0.98·halfW.
+    const run = buildBalancedWinderRun(makeInput({ minInnerGoing: 10_000 }));
+    const core = run.newelCore ?? [];
+    const maxR = Math.max(...core.map((v) => distFromPivot(v, { x: 7 * 280, y: 500 })));
+    expect(maxR).toBeLessThanOrEqual(500 * 0.98 + 1e-6);
   });
 });

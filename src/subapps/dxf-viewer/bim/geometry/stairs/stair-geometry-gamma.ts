@@ -47,6 +47,7 @@ import {
 } from './stair-geometry-shared';
 import {
   assembleMultiFlight,
+  buildCornerLanding,
   buildFlightFromEdge,
   buildRectilinearFlight,
 } from './stair-geometry-generators';
@@ -70,7 +71,7 @@ export function computeGamma(
   const u3: Vec2 = { x: turnSign2 * v2.x, y: turnSign2 * v2.y };
 
   const flight1 = buildRectilinearFlight(basePoint, u1, rise, tread, nosing, width, n1);
-  const landing1 = buildGammaLanding(
+  const landing1 = buildCornerLanding(
     { x: basePoint.x + u1.x * (n1 * tread), y: basePoint.y + u1.y * (n1 * tread) },
     u1, perp(u1), width, landing1Depth, basePoint.z + rise * n1, /* centered = */ true,
   );
@@ -85,7 +86,7 @@ export function computeGamma(
     x: flight2Origin.x + u2.x * (n2 * tread),
     y: flight2Origin.y + u2.y * (n2 * tread),
   };
-  const landing2 = buildGammaLanding(
+  const landing2 = buildCornerLanding(
     landing2Origin, u2, u1, width, landing2Depth,
     basePoint.z + rise * (n1 + n2 + 1), /* centered = */ false,
   );
@@ -136,37 +137,6 @@ function assertGammaCornerSupported(variant: StairVariantGamma): void {
       `StairGeometryService: landingCornerStyle '${style}' requires Phase 3c (chamfer/fillet not implemented)`,
     );
   }
-}
-
-function buildGammaLanding(
-  originXY: Vec2,
-  uAlong: Vec2,
-  vWidth: Vec2,
-  width: number,
-  depth: number,
-  z: number,
-  centered: boolean,
-): Polygon3D {
-  // When `centered`, the landing spans v · [−halfW, +halfW] from origin
-  // (flight 1 layout: origin is on flight centerline). When not centered the
-  // landing spans v · [0, width] (flight 2 layout: origin is at one v-edge).
-  const halfW = width * 0.5;
-  const vLow = centered ? -halfW : 0;
-  const vHigh = centered ? halfW : width;
-  return [
-    point(originXY.x + vWidth.x * vLow, originXY.y + vWidth.y * vLow, z),
-    point(
-      originXY.x + uAlong.x * depth + vWidth.x * vLow,
-      originXY.y + uAlong.y * depth + vWidth.y * vLow,
-      z,
-    ),
-    point(
-      originXY.x + uAlong.x * depth + vWidth.x * vHigh,
-      originXY.y + uAlong.y * depth + vWidth.y * vHigh,
-      z,
-    ),
-    point(originXY.x + vWidth.x * vHigh, originXY.y + vWidth.y * vHigh, z),
-  ];
 }
 
 function buildGammaWalkline(

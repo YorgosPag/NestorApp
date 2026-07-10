@@ -32,11 +32,11 @@ import type {
 import {
   type Vec2,
   perp,
-  point,
   arrowSymbol,
 } from './stair-geometry-shared';
 import {
   assembleMultiFlight,
+  buildCornerLanding,
   buildRectilinearFlight,
 } from './stair-geometry-generators';
 import { walkMultiFlight } from '../../stairs/stair-multiflight-centerline';
@@ -47,7 +47,6 @@ export function computeMultiFlight(
 ): StairGeometry {
   assertMultiFlightBuildable(variant);
   const { rise, tread, nosing, width, upDirection } = params;
-  const halfW = width * 0.5;
 
   const treads: Polygon3D[] = [];
   const risers: Segment3D[] = [];
@@ -64,7 +63,20 @@ export function computeMultiFlight(
     cutDirs.push(step.dir);
     walkline.push(step.end);
     if (step.next) {
-      landings.push(buildTurnLanding(step.end, step.next.start, step.dir, step.next.dir, halfW));
+      // Quarter-turn landing = clean `depth × width` square aligned to the
+      // incoming flight (gamma SSoT). Replaces the old skewed centreline-to-
+      // centreline quad that degenerated to a triangle at 90° (ADR-633).
+      landings.push(
+        buildCornerLanding(
+          { x: step.end.x, y: step.end.y },
+          step.dir,
+          perp(step.dir),
+          width,
+          step.next.landingDepth,
+          step.end.z,
+          /* centered = */ true,
+        ),
+      );
       walkline.push(step.next.start);
     }
   }
@@ -81,30 +93,6 @@ export function computeMultiFlight(
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
-
-/**
- * Landing quad filling the corner between flight `k` (ends at `pk`, dir `u`) and
- * flight `k+1` (starts at `cNext`, dir `uNext`). Traced outer wall (−perp) then
- * inner wall (+perp) so the polygon is simple for any convex turn and coincides
- * with the width-`2·halfW` corridor the stringer offset produces.
- */
-function buildTurnLanding(
-  pk: Readonly<Point3D>,
-  cNext: Readonly<Point3D>,
-  u: Vec2,
-  uNext: Vec2,
-  halfW: number,
-): Polygon3D {
-  const vk = perp(u);
-  const vn = perp(uNext);
-  const z = pk.z;
-  return [
-    point(pk.x - vk.x * halfW, pk.y - vk.y * halfW, z),
-    point(cNext.x - vn.x * halfW, cNext.y - vn.y * halfW, z),
-    point(cNext.x + vn.x * halfW, cNext.y + vn.y * halfW, z),
-    point(pk.x + vk.x * halfW, pk.y + vk.y * halfW, z),
-  ];
-}
 
 function assertMultiFlightBuildable(variant: StairVariantMultiFlight): void {
   if (variant.flights.length < 1) {

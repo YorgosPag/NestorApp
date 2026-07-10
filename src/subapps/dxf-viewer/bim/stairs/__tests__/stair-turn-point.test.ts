@@ -79,8 +79,10 @@ describe('ADR-633 — parieta pick', () => {
       flightIndex: 0, param: 0.5, side: 'right', turnAngleDeg: 90,
     });
     if (!turned) throw new Error('expected turn');
-    // Flight 2 runs from (840,-1000) downward (dir (0,-1)); click on its side.
-    const pick = pickStairParieta({ x: 840, y: -1200 }, turned);
+    // Quarter-turn corner (gamma SSoT): flight-2 centreline starts at
+    // pk(840,0) + u·halfW(500,0) + uNext·halfW(0,-500) = (1340,-500), running
+    // downward (dir (0,-1)); click on its side.
+    const pick = pickStairParieta({ x: 1600, y: -900 }, turned);
     expect(pick?.flightIndex).toBe(1);
   });
 });

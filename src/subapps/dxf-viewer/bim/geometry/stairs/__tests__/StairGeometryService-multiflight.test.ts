@@ -208,4 +208,31 @@ describe('StairGeometryService — Multi-flight (turn points, ADR-633)', () => {
     expect(g.landings).toHaveLength(0);
     expect(g.walkline).toHaveLength(2);
   });
+
+  it('Test 16: 90° landing is a clean width×width square, area = width² (not a degenerate quad)', () => {
+    const g = computeStairGeometry(makeParams([3, 3], [landingTurn('right', 90)]));
+    const poly = g.landings[0];
+    expect(poly).toHaveLength(4);
+    // Shoelace area in the XY plane. The old skewed centreline-to-centreline
+    // quad collapsed toward a triangle (area ≪ width²); the corner square is
+    // exactly width·depth = width² (auto depth = width).
+    let area2 = 0;
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i];
+      const b = poly[(i + 1) % poly.length];
+      area2 += a.x * b.y - b.x * a.y;
+    }
+    expect(Math.abs(area2) / 2).toBeCloseTo(WIDTH * WIDTH, 3);
+  });
+
+  it('Test 17: flight-2 does NOT overlap flight-1 (quarter-turn corner advances past pk)', () => {
+    const g = computeStairGeometry(makeParams([3, 3], [landingTurn('right', 90)]));
+    const t = allTreads(g);
+    const pkX = TREAD * 3; // flight-1 centreline end x (840)
+    // Every flight-2 tread must sit at/beyond the corner in +X (≥ pk + halfW),
+    // i.e. never drawn back over flight-1's tail (the ADR-633 overlap bug).
+    for (let i = 3; i < 6; i++) {
+      expect(centroidXY(t[i]).x).toBeGreaterThan(pkX);
+    }
+  });
 });

@@ -84,9 +84,15 @@ export function walkMultiFlight(
       dirDeg += (turn.turnDirection === 'left' ? 1 : -1) * turn.turnAngleDeg;
       const uNext = directionToUnitVector(dirDeg);
       const depth = resolveTurnLandingDepth(turn, width);
+      // Next-flight CENTRELINE start = quarter-turn corner construction (matches
+      // gamma flight-2 exactly, ADR-611): advance halfW along the INCOMING dir to
+      // the landing centre, then halfW along the OUTGOING dir to the exit edge.
+      // (The prior `end + uNext·width` slid the flight sideways by a full width
+      // without advancing → it overlapped the incoming flight's tail, ADR-633.)
+      const halfW = width * 0.5;
       const nextStart = point(
-        end.x + uNext.x * depth,
-        end.y + uNext.y * depth,
+        end.x + flightDir.x * halfW + uNext.x * halfW,
+        end.y + flightDir.y * halfW + uNext.y * halfW,
         end.z + rise,
       );
       next = { start: nextStart, dir: uNext, landingDepth: depth };
