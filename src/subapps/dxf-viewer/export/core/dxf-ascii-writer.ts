@@ -24,6 +24,10 @@
 import type { Entity, HatchEntity } from '../../types/entities';
 import type { DimensionEntity, DimStyle } from '../../types/dimension';
 import type { Point2D } from '../../rendering/types/Types';
+// rotated-rectangle entity-level SSoT (corner1/corner2 ή x/y/w/h + rotation, pivot=corner1). Re-export
+// ώστε ο TEK exporter (`dxf-to-tek.ts`) να κρατά το ίδιο import path (μηδέν διπλότυπο formula).
+import { rectangleEntityVertices } from '../../rendering/entities/shared/geometry-utils';
+export { rectangleEntityVertices };
 // ADR-362 Round 24/25 — native DIMENSION + DIMSTYLE emission reuse the dimension
 // group-code SSoT (utils/dxf-dimension-writer + dxf-dimstyle-writer) so the
 // in-process writers + production export stay in lockstep. Before Round 24,
@@ -198,7 +202,10 @@ function writeEntity(
       break;
     case 'rectangle':
     case 'rect':
-      emitPath(rectVertices(e.x, e.y, e.width, e.height), true, layer, aci, s, explode, pair);
+      // SSoT `rectangleEntityVertices`: χειρίζεται ΚΑΙ corner1/corner2 (drawn rects — x/y/w/h undefined)
+      // ΚΑΙ x/y/w/h, ΚΑΙ το `rotation` (pivot=corner1). Πριν: raw rectVertices(e.x,...) → NaN για drawn +
+      // αγνοούσε rotation.
+      emitPath(rectangleEntityVertices(e), true, layer, aci, s, explode, pair);
       break;
     case 'polyline':
     case 'lwpolyline': {
@@ -408,28 +415,6 @@ function emitPath(
 }
 
 // ─── Geometry helpers ─────────────────────────────────────────────────────────
-
-// ADR-512 Φ-rect — εξαγώγιμο ώστε ο TEK exporter (`dxf-to-tek.ts`) να μοιράζεται ΤΟ ΙΔΙΟ
-// rect→4-κορυφές SSoT (μηδέν διπλότυπο formula). Ίδια σειρά κορυφών (CCW: κάτω-αριστ. → …).
-export function rectVertices(x: number, y: number, w: number, h: number): Point2D[] {
-  return [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];
-}
-
-/**
- * ADR-512 Φ-rect — `RectangleEntity`/`RectEntity` → 4 κορυφές, χειριζόμενο ΚΑΙ τις ΔΥΟ
- * αναπαραστάσεις: `corner1/corner2` (το εργαλείο «Ορθογώνιο» παράγει ΑΥΤΟ) **Ή** `x/y/width/height`.
- * Ίδιος fallback με το `rectangleVertices` (`overlay-persistence-utils`)· reuse του `rectVertices`
- * για τη σειρά κορυφών (μηδέν διπλότυπο). Κοινό entity-level SSoT για DXF/TEK exporters.
- */
-export function rectangleEntityVertices(e: {
-  x?: number; y?: number; width?: number; height?: number;
-  corner1?: Point2D; corner2?: Point2D;
-}): Point2D[] {
-  if (e.corner1 && e.corner2) {
-    return rectVertices(e.corner1.x, e.corner1.y, e.corner2.x - e.corner1.x, e.corner2.y - e.corner1.y);
-  }
-  return rectVertices(e.x ?? 0, e.y ?? 0, e.width ?? 0, e.height ?? 0);
-}
 
 /** Tessellate an arc (degrees, CCW start→end) into a polyline of points. */
 function arcPoints(c: Point2D, r: number, startDeg: number, endDeg: number): Point2D[] {

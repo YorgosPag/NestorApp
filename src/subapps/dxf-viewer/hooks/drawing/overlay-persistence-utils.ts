@@ -21,6 +21,7 @@
  */
 
 import type { Entity } from '../../types/entities';
+import { rectangleEntityVertices } from '../../rendering/entities/shared/geometry-utils';
 import type { DrawingTool } from './drawing-types';
 import type { OverlayGeometry } from '@/types/floorplan-overlays';
 
@@ -69,17 +70,6 @@ function polygonArea(vertices: Array<{ x: number; y: number }>): number {
   return Math.abs(sum) / 2;
 }
 
-function rectangleVertices(e: Extract<Entity, { type: 'rectangle' }>): Array<{ x: number; y: number }> {
-  const c1 = e.corner1 ?? { x: e.x, y: e.y };
-  const c2 = e.corner2 ?? { x: e.x + e.width, y: e.y + e.height };
-  return [
-    { x: c1.x, y: c1.y },
-    { x: c2.x, y: c1.y },
-    { x: c2.x, y: c2.y },
-    { x: c1.x, y: c2.y },
-  ];
-}
-
 /**
  * Map a (tool, entity) pair to a canonical `OverlayGeometry`. Returns `null`
  * for unsupported / malformed inputs (caller skips persistence).
@@ -106,7 +96,9 @@ export function entityToGeometry(
   }
 
   if (tool === 'rectangle' && entity.type === 'rectangle') {
-    return { type: 'polygon', vertices: rectangleVertices(entity), closed: true };
+    // rotated-rectangle: το entity-level SSoT χειρίζεται corner1/corner2 (+ rotation, pivot=corner1)
+    // → persisted polygon κάνει σωστό round-trip (Firestore).
+    return { type: 'polygon', vertices: rectangleEntityVertices(entity), closed: true };
   }
 
   if (tool === 'polyline' && entity.type === 'polyline') {

@@ -33,6 +33,7 @@ import type { DimensionEntity } from '../../types/dimension';
 import { applyPlotColor, type PrintColorPolicy } from '../../config/print-color-policy';
 import { parseHex, type Rgb } from '../../config/color-math';
 import { tessellateArcDegrees } from '../../rendering/entities/shared/geometry-arc-utils';
+import { rectangleEntityVertices } from '../../rendering/entities/shared/geometry-utils';
 import {
   buildDimensionBlockPrimitives,
   type DimBlockPrimitive,
@@ -99,7 +100,9 @@ function emitEntity(
       return;
     case 'rectangle':
     case 'rect':
-      strokePolyline(pdf, rectVertices(e.x, e.y, e.width, e.height), true, toPaper);
+      // rotated-rectangle entity-level SSoT: χειρίζεται corner1/corner2 (drawn rects — x/y/w/h undefined)
+      // ΚΑΙ x/y/w/h ΚΑΙ rotation (pivot=corner1). Πριν: raw rectVertices(e.x,...) → NaN για drawn + αγνόει rotation.
+      strokePolyline(pdf, rectangleEntityVertices(e), true, toPaper);
       return;
     case 'polyline':
     case 'lwpolyline':
@@ -276,10 +279,6 @@ function polylineDeltas(
 }
 
 // ─── Geometry helpers ─────────────────────────────────────────────────────────
-
-function rectVertices(x: number, y: number, w: number, h: number): Point2D[] {
-  return [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];
-}
 
 /** Arc entity → world-space vertices along its visible sweep (reuse the arc SSoT). */
 function arcVertices(e: {

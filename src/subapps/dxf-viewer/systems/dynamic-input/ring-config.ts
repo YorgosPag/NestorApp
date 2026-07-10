@@ -73,6 +73,11 @@ export interface RingConfig {
    * 3 → 3×120°· 4 → cardinal. (Άρα η σειρά εδώ ορίζει τη διάταξη — μηδέν σταθερή cardinal θέση.)
    */
   readonly fields: readonly RingFieldDef[];
+  /**
+   * ADR-513 §rectangle — ποιο πεδίο ανοίγει το heads-up direct-numeric typing (πρώτο ψηφίο →
+   * αυτόματο popup). Default `'length'` (γραμμή/τοίχος/δοκός)· το ορθογώνιο το θέτει `'width'`.
+   */
+  readonly headsUpFieldKey?: string;
   /** Συνδρομή στα stores που τρέφουν highlight/seed — ένα re-render σε κάθε αλλαγή. */
   subscribe(cb: () => void): () => void;
 }
@@ -97,26 +102,67 @@ export function combineSubscribers(
   };
 }
 
+// ─── Injectable lock target: γενικεύει το «πεδίο δαχτυλιδιού που κλειδώνει σε store» ───
+// SSoT ώστε ΓΡΑΜΜΗ/ΤΟΙΧΟΣ (DynamicInputLockStore) ΚΑΙ ΟΡΘΟΓΩΝΙΟ (RectLockStore) να μοιράζονται
+// ΤΟΝ ΙΔΙΟ builder — μηδέν sibling clone (N.18). Η διαφορά ζει μόνο στο injected target.
+
+/** Αφηρημένος στόχος κλειδώματος ενός numeric πεδίου (ποιο store, πώς διαβάζεται/γράφεται). */
+export interface RingLockTarget {
+  isLocked(): boolean;
+  /** Τρέχουσα locked τιμή (scene units για length-like, μοίρες για angle-like) ή null. */
+  read(): number | null;
+  /** Καταχώρηση της raw display τιμής (η μετατροπή/normalize γίνεται μέσα στο target). */
+  lock(value: number, ctx: RingUnitContext): void;
+  /** Προαιρετικό one-shot reset μετά την τοποθέτηση. */
+  clearOnPlace?(): void;
+}
+
+/** Length-like πεδίο (seed: scene→display formatted). Reuse για Μήκος (γραμμή) & Πλάτος/Ύψος (ορθογώνιο). */
+export function sceneLengthRingField(key: string, labelKey: string, target: RingLockTarget): RingFieldDef {
+  return {
+    key,
+    labelKey,
+    kind: 'numeric',
+    isLocked: target.isLocked,
+    seed: (ctx) => {
+      const v = target.read();
+      return v !== null ? formatDisplayValue(v / mmToSceneUnits(ctx.sceneUnits), ctx.displayUnit) : '';
+    },
+    commitNumeric: (value, ctx) => target.lock(value, ctx),
+    clearOnPlace: target.clearOnPlace,
+  };
+}
+
+/** Angle-like πεδίο (seed: μοίρες toFixed(2)). Reuse για Γωνία (γραμμή) & Γωνία κλίσης (ορθογώνιο). */
+export function degreeRingField(key: string, labelKey: string, target: RingLockTarget): RingFieldDef {
+  return {
+    key,
+    labelKey,
+    kind: 'numeric',
+    isLocked: target.isLocked,
+    seed: () => {
+      const a = target.read();
+      return a !== null ? a.toFixed(2) : '';
+    },
+    commitNumeric: (value, ctx) => target.lock(value, ctx),
+    clearOnPlace: target.clearOnPlace,
+  };
+}
+
 /**
  * ΚΟΙΝΟ πεδίο Μήκους — κλειδώνει στο `DynamicInputLockStore` (ίδιο για τοίχο & γραμμή).
  * Κρατά την κατεύθυνση, σταθεροποιεί την απόσταση (preview≡commit μέσω `applyLengthAngleLock`).
  */
 export function lengthRingField(labelKey: string): RingFieldDef {
-  return {
-    key: 'length',
-    labelKey,
-    kind: 'numeric',
+  return sceneLengthRingField('length', labelKey, {
     isLocked: () => DynamicInputLockStore.getLocked().length !== null,
-    seed: (ctx) => {
-      const l = DynamicInputLockStore.getLocked().length;
-      return l !== null ? formatDisplayValue(l / mmToSceneUnits(ctx.sceneUnits), ctx.displayUnit) : '';
-    },
-    commitNumeric: (value, ctx) =>
+    read: () => DynamicInputLockStore.getLocked().length,
+    lock: (value, ctx) =>
       DynamicInputLockStore.lockLength(lengthDisplayToSceneLock(value, ctx.displayUnit, ctx.sceneUnits)),
     // ADR-513 §direct-distance-entry — το Μήκος είναι one-shot: μετά την τοποθέτηση ξεκλειδώνει
     // (η Γωνία μένει, polar-like) ώστε το επόμενο segment να είναι ελεύθερο κατά μήκος.
     clearOnPlace: () => DynamicInputLockStore.unlockLength(),
-  };
+  });
 }
 
 /**
@@ -124,17 +170,11 @@ export function lengthRingField(labelKey: string): RingFieldDef {
  * Κρατά την απόσταση, σταθεροποιεί τη γωνία (μοίρες, 0..360).
  */
 export function angleRingField(labelKey: string): RingFieldDef {
-  return {
-    key: 'angle',
-    labelKey,
-    kind: 'numeric',
+  return degreeRingField('angle', labelKey, {
     isLocked: () => DynamicInputLockStore.getLocked().angle !== null,
-    seed: () => {
-      const a = DynamicInputLockStore.getLocked().angle;
-      return a !== null ? a.toFixed(2) : '';
-    },
-    commitNumeric: (value) => DynamicInputLockStore.lockAngle(normalizeAngleDeg(value)),
-  };
+    read: () => DynamicInputLockStore.getLocked().angle,
+    lock: (value) => DynamicInputLockStore.lockAngle(normalizeAngleDeg(value)),
+  });
 }
 
 // ─── Tool-specific numeric OVERRIDE fields (SSoT: τοίχος πάχος/ύψος, δοκός πλάτος/ύψος) ───

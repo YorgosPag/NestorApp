@@ -57,19 +57,32 @@ const rotatePolylineLike: RotateHandler = (entity, pivot, angleDeg) => {
   return { vertices: e.vertices.map((v) => rotatePoint(v, pivot, angleDeg)) };
 };
 
-/** RECTANGLE/RECT — rotate origin + accumulate rotation + recompute corners (grip interaction). */
+/**
+ * RECTANGLE/RECT — canonical rotated-rect model: `corner1/corner2` = γωνίες στο ΤΟΠΙΚΟ (unrotated)
+ * frame· η γωνία ζει ΜΟΝΟ στο `rotation` (το vertex SSoT `createRectangleVertices` περιστρέφει γύρω
+ * από corner1). Άρα εδώ ο anchor (corner1/origin) ακολουθεί τον pivot και το corner2 **ΜΕΤΑΚΙΝΕΙΤΑΙ
+ * (translate) μαζί** — ΔΕΝ περιστρέφεται (αλλιώς double-rotation με τον rotation-aware render).
+ * (Μαθηματικά ισοδύναμο με πλήρη περιστροφή του σχήματος — βλ. ADR rotated-rectangle.)
+ */
 const rotateRectangleLike: RotateHandler = (entity, pivot, angleDeg) => {
   const e = entity as Extract<Entity, { type: 'rectangle' | 'rect' }>;
   const currentRotation = e.rotation ?? 0;
-  const origin = rotatePoint({ x: e.x, y: e.y }, pivot, angleDeg);
   const updates: Partial<Entity> = {
-    x: origin.x,
-    y: origin.y,
     rotation: normalizeAngleDeg(currentRotation + angleDeg),
   };
   if (e.corner1 && e.corner2) {
-    updates.corner1 = rotatePoint(e.corner1, pivot, angleDeg);
-    updates.corner2 = rotatePoint(e.corner2, pivot, angleDeg);
+    const c1 = rotatePoint(e.corner1, pivot, angleDeg);
+    const dx = c1.x - e.corner1.x;
+    const dy = c1.y - e.corner1.y;
+    updates.corner1 = c1;
+    updates.corner2 = { x: e.corner2.x + dx, y: e.corner2.y + dy };
+    updates.x = c1.x;
+    updates.y = c1.y;
+  } else {
+    // x/y/w/h αναπαράσταση (χωρίς corner1/corner2): ο origin {x,y} ακολουθεί τον pivot· w/h αναλλοίωτα.
+    const origin = rotatePoint({ x: e.x, y: e.y }, pivot, angleDeg);
+    updates.x = origin.x;
+    updates.y = origin.y;
   }
   return updates;
 };

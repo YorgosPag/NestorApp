@@ -37,8 +37,10 @@ export function getRectangleVertices(entity: Entity): Point2D[] | null {
   } else if (isRectangleEntity(entity)) {
     // Try to get vertices from rectangle entity or create from corners
     const rectEntity = entity; // Now properly typed as RectangleEntity
+    // rotated-rectangle: πέρασε το `rotation` ώστε render/hit-test/grips να διαβάζουν τις
+    // περιστραμμένες (γύρω από corner1) κορυφές. Χωρίς rotation → identity (axis-aligned).
     vertices = rectEntity.corner1 && rectEntity.corner2
-      ? createRectangleVertices(rectEntity.corner1, rectEntity.corner2)
+      ? createRectangleVertices(rectEntity.corner1, rectEntity.corner2, rectEntity.rotation)
       : undefined;
   } else if (isLineEntity(entity)) {
     // For line entities, try to create rectangle from start/end points

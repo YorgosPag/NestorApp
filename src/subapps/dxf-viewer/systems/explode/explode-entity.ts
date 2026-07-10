@@ -12,7 +12,6 @@
  * FULL SSoT reuse — zero re-implemented geometry:
  *   - `bulgeToArc` / `isStraightSegment` → rendering/entities/shared/geometry-bulge-utils
  *   - `radToDeg` → geometry-angle-utils (ArcEntity stores DEGREES, bulge math is radians)
- *   - `rotatePoint` → utils/rotation-math
  *   - `inheritEntityStyle` → systems/entity-creation/inherit-entity-style
  *   - `generateEntityId` → systems/entity-creation/utils
  *
@@ -23,10 +22,9 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Entity, LineEntity, ArcEntity, RectangleEntity, RectEntity, GroupEntity } from '../../types/entities';
 import { bulgeToArc, isStraightSegment } from '../../rendering/entities/shared/geometry-bulge-utils';
 import { radToDeg } from '../../rendering/entities/shared/geometry-angle-utils';
-import { rotatePoint } from '../../utils/rotation-math';
 import { inheritEntityStyle } from '../entity-creation/inherit-entity-style';
 import { generateEntityId } from '../entity-creation/utils';
-import { createRectangleVertices } from '../selection/shared/selection-duplicate-utils';
+import { rectangleEntityVertices } from '../../rendering/entities/shared/geometry-utils';
 // ADR-575 — UNGROUP «Κατάργηση Ομαδοποίησης»: exploding a GROUP container restores
 // its members. Single SSoT unwrap lives in the group engine.
 import { ungroupGroup } from '../group/group-entity';
@@ -101,18 +99,12 @@ function explodePolyline(source: Entity): Entity[] {
   return out;
 }
 
-/** Rectangle → 4 boundary lines (rotation-aware, about the rect centre). */
+/** Rectangle → 4 boundary lines (rotation-aware, γύρω από corner1 = canonical pivot). */
 function explodeRectangle(source: RectangleEntity | RectEntity): Entity[] {
-  // A DRAWN rectangle persists ONLY corner1/corner2 (drawing-entity-builders); the
-  // x/y/width/height fields are optional/computed and stay `undefined`. Read corners
-  // defensively so BOTH models work — reading x/y/w/h blindly gave NaN → invisible
-  // rectangle (ADR-510 Φ5 Bug 1). Corner→vertices via the canonical SSoT, no re-math.
-  const c1: Point2D = source.corner1 ?? { x: source.x, y: source.y };
-  const c2: Point2D = source.corner2 ?? { x: source.x + source.width, y: source.y + source.height };
-  const verts = createRectangleVertices(c1, c2);
-  const rotation = source.rotation ?? 0;
-  const pivot: Point2D = { x: (c1.x + c2.x) / 2, y: (c1.y + c2.y) / 2 };
-  const pts = rotation ? verts.map((v) => rotatePoint(v, pivot, rotation)) : verts;
+  // Entity-level SSoT: χειρίζεται ΚΑΙ corner1/corner2 (το εργαλείο «Ορθογώνιο» — x/y/w/h undefined,
+  // reading blindly gave NaN → invisible rect, ADR-510 Φ5 Bug 1) ΚΑΙ x/y/w/h, ΚΑΙ το `rotation`
+  // (pivot=corner1) ώστε το exploded polyline να ταιριάζει ΑΚΡΙΒΩΣ με το render (ίδιος pivot παντού).
+  const pts = rectangleEntityVertices(source);
   const out: Entity[] = [];
   for (let i = 0; i < 4; i += 1) {
     const a = pts[i];

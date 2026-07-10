@@ -101,7 +101,9 @@ function rectBounds(entity: Entity): BoundingBox2D | null {
   if (!vertices || vertices.length === 0) {
     const corner1 = ('corner1' in entity ? (entity as { corner1?: Point2D }).corner1 : 'start' in entity ? (entity as { start?: Point2D }).start : undefined);
     const corner2 = ('corner2' in entity ? (entity as { corner2?: Point2D }).corner2 : 'end' in entity ? (entity as { end?: Point2D }).end : undefined);
-    if (corner1 && corner2) vertices = createRectangleVertices(corner1, corner2);
+    // rotated-rectangle: τα bounds πρέπει να καλύπτουν τις ΠΕΡΙΣΤΡΑΜΜΕΝΕΣ κορυφές (viewport cull + marquee).
+    const rotation = ('rotation' in entity ? (entity as { rotation?: number }).rotation : undefined);
+    if (corner1 && corner2) vertices = createRectangleVertices(corner1, corner2, rotation);
   }
   return vertices ? box2D(calculateVerticesBounds(vertices)) : null;
 }

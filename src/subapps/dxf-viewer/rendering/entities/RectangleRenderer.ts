@@ -11,7 +11,7 @@ import type { RectangleEntity, RectEntity, Entity } from '../../types/entities';
 import { isRectangleEntity, isRectEntity } from '../../types/entities';
 import { hitTestLineSegments, createEdgeGrips } from './shared/line-utils';
 import { createVertexGrip } from './shared/grip-utils';
-import { drawVerticesPath } from './shared/geometry-rendering-utils';
+import { drawVerticesPath, calculateDistance } from './shared/geometry-rendering-utils';
 import { getRectangleVertices } from '../../systems/selection/utils';
 // 🏢 ADR-557 follow-up: center measurement label SSoT (content + gated painter)
 import { buildAreaPerimeterLabelLines, paintMeasurementText } from './shared/measurement-label';
@@ -72,9 +72,10 @@ export class RectangleRenderer extends BaseEntityRenderer {
   }
 
   private renderRectangleMeasurements(vertices: Point2D[], entity: EntityModel, options: RenderOptions): void {
-    // Calculate rectangle dimensions
-    const width = Math.abs(vertices[1].x - vertices[0].x);
-    const height = Math.abs(vertices[2].y - vertices[1].y);
+    // Calculate rectangle dimensions — ΜΗΚΗ ΑΚΜΩΝ (απόσταση κορυφών), όχι x/y διαφορές: σε
+    // περιστραμμένο ορθογώνιο (rotation ≠ 0) οι x/y διαφορές δίνουν λάθος (projected) εμβαδόν/περίμετρο.
+    const width = calculateDistance(vertices[0], vertices[1]);
+    const height = calculateDistance(vertices[1], vertices[2]);
     const area = width * height;
     const perimeter = 2 * (width + height);
     

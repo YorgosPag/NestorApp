@@ -10,6 +10,9 @@ import type { Point2D, BoundingBox } from '../../types/Types';
 // 🏢 ADR-090: Centralized Point Vector Operations
 // 🏢 ADR-164: Added getPerpendicularUnitVector for line direction normalization
 import { calculateDistance, calculateMidpoint, getUnitVector, getPerpendicularUnitVector } from './geometry-rendering-utils';
+// rotated-rectangle geometry: rotatePoint (radians, leaf module — no cycle) + degToRad.
+import { rotatePoint } from './geometry-vector-utils';
+import { degToRad } from './geometry-angle-utils';
 // 🏢 ADR-077: Centralized TAU Constant (TAU)
 import { TAU } from '../../primitives/canvasPaths';
 // 🏢 ADR-079: Centralized Geometric Precision Constants & Utility Functions
@@ -167,13 +170,44 @@ export function calculateBoundingBox(points: Point2D[]): BoundingBox | null {
  * (that module is imported BY `selection-duplicate-utils`). Re-exported there for
  * back-compat, so existing importers keep the same path.
  */
-export function createRectangleVertices(corner1: Point2D, corner2: Point2D): Point2D[] {
-  return [
+export function createRectangleVertices(
+  corner1: Point2D,
+  corner2: Point2D,
+  rotationDeg = 0,
+): Point2D[] {
+  // Axis-aligned κορυφές στο ΤΟΠΙΚΟ (unrotated) frame — CCW σειρά.
+  const verts: Point2D[] = [
     corner1,
     { x: corner2.x, y: corner1.y },
     corner2,
     { x: corner1.x, y: corner2.y }
   ];
+  // Identity fast-path: μη-περιστραμμένα ορθογώνια → byte-identical με πριν (μηδέν regression).
+  if (!rotationDeg) return verts;
+  // Πλήρης γωνία (ADR rotated-rectangle): περιστροφή γύρω από corner1 (AutoCAD anchor).
+  // reuse `rotatePoint` (radians) από το leaf geometry-vector-utils — αποφεύγει value-import
+  // cycle με το utils/rotation-math (που κάνει value-import από εδώ).
+  const rad = degToRad(rotationDeg);
+  return verts.map(v => rotatePoint(v, corner1, rad));
+}
+
+/**
+ * Entity-level rect → 4 κορυφές SSoT (rotation-aware). Χειρίζεται ΚΑΙ τις ΔΥΟ αναπαραστάσεις
+ * του `RectangleEntity`/`RectEntity`: `corner1/corner2` (το εργαλείο «Ορθογώνιο» παράγει ΑΥΤΟ —
+ * x/y/w/h μένουν undefined) **Ή** `x/y/width/height`. Reuse του `createRectangleVertices`
+ * (pivot=corner1) → ίδια σειρά κορυφών + rotation με το render. ΕΝΑ SSoT για render/export/print/
+ * persistence/explode — αντικαθιστά 3+ διπλότυπα (dxf-writer/scene-vector-emitter/overlay-persistence).
+ */
+export function rectangleEntityVertices(e: {
+  x?: number; y?: number; width?: number; height?: number;
+  corner1?: Point2D; corner2?: Point2D; rotation?: number;
+}): Point2D[] {
+  // Missing coords → NaN (ΟΧΙ 0): ένα εντελώς degenerate rect (ούτε corner1/corner2 ούτε x/y/w/h)
+  // παράγει NaN κορυφές ώστε τα downstream finite-guards (π.χ. explode) να το απορρίπτουν αντί να
+  // εφευρίσκουν ένα zero-size rect στο (0,0). Drawn (corner1/corner2) & x/y/w/h rects → πλήρως finite.
+  const c1: Point2D = e.corner1 ?? { x: e.x ?? NaN, y: e.y ?? NaN };
+  const c2: Point2D = e.corner2 ?? { x: (e.x ?? NaN) + (e.width ?? NaN), y: (e.y ?? NaN) + (e.height ?? NaN) };
+  return createRectangleVertices(c1, c2, e.rotation);
 }
 
 /**

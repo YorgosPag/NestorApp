@@ -11,10 +11,10 @@ import type { PreviewRenderOptions, ArcPreviewEntity, PreviewRenderHelpers } fro
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { calculateWorldDistance, formatAngleLocale } from '../../rendering/entities/shared/distance-label-utils';
 import { RENDER_LINE_WIDTHS, UI_FONTS, LINE_DASH_PATTERNS, RENDER_GEOMETRY } from '../../config/text-rendering-config';
-import { calculateAngle, rectFromTwoPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { calculateAngle } from '../../rendering/entities/shared/geometry-rendering-utils';
 // ADR-510 Φ1 (Q7): reuse the SSoT angle pipeline (no duplicate atan2/normalise).
 import { radToDeg, normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
-import { bisectorAngle, TAU, degToRad } from '../../rendering/entities/shared/geometry-utils';
+import { bisectorAngle, TAU, degToRad, createRectangleVertices } from '../../rendering/entities/shared/geometry-utils';
 import { UI_COLORS, OPACITY } from '../../config/color-config';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // 🏢 ADR-557 follow-up: closed-polygon area+perimeter label SSoT (committed/preview/hover parity)
@@ -170,44 +170,44 @@ export function renderPolyline(
 
 export function renderRectangle(
   ctx: CanvasRenderingContext2D,
-  entity: { corner1?: Point2D; corner2?: Point2D; showPreviewMeasurements?: boolean },
+  entity: { corner1?: Point2D; corner2?: Point2D; rotation?: number; showPreviewMeasurements?: boolean },
   transform: ViewTransform, opts: Required<PreviewRenderOptions>, h: PreviewRenderHelpers,
 ): void {
   if (!entity.corner1 || !entity.corner2) return;
 
-  const c1 = CoordinateTransforms.worldToScreen(entity.corner1, transform, h.viewport);
-  const c2 = CoordinateTransforms.worldToScreen(entity.corner2, transform, h.viewport);
-  const { x, y, width, height } = rectFromTwoPoints(c1, c2);
+  // rotated-rectangle (ADR-620): σχεδίασε τις 4 ΠΕΡΙΣΤΡΑΜΜΕΝΕΣ κορυφές (pivot=corner1) μέσω του SSoT ως
+  // path — το ghost preview στρίβει όπως το committed. (`ctx.strokeRect` ΔΕΝ μπορεί να σχεδιάσει
+  // περιστραμμένο ορθογώνιο· rotation=0 → identity verts → πανομοιότυπο με πριν.)
+  const worldVerts = createRectangleVertices(entity.corner1, entity.corner2, entity.rotation);
+  const sv = worldVerts.map(v => CoordinateTransforms.worldToScreen(v, transform, h.viewport));
 
-  ctx.strokeRect(x, y, width, height);
+  ctx.beginPath();
+  ctx.moveTo(sv[0].x, sv[0].y);
+  for (let i = 1; i < sv.length; i += 1) ctx.lineTo(sv[i].x, sv[i].y);
+  ctx.closePath();
+  ctx.stroke();
 
   if (opts.showGrips) {
-    h.renderGrip(ctx, { x, y }, opts);
-    h.renderGrip(ctx, { x: x + width, y }, opts);
-    h.renderGrip(ctx, { x, y: y + height }, opts);
-    h.renderGrip(ctx, { x: x + width, y: y + height }, opts);
+    for (const p of sv) h.renderGrip(ctx, p, opts);
   }
 
   if (entity.showPreviewMeasurements) {
-    const wc1 = entity.corner1;
-    const wc2 = entity.corner2;
-    const topRight: Point2D = { x: wc2.x, y: wc1.y };
-    const bottomLeft: Point2D = { x: wc1.x, y: wc2.y };
-    const screenTopRight = CoordinateTransforms.worldToScreen(topRight, transform, h.viewport);
-    const screenBottomLeft = CoordinateTransforms.worldToScreen(bottomLeft, transform, h.viewport);
+    // Τοπικές πλευρές μετά την περιστροφή: πλάτος = κορυφή0→1, ύψος = κορυφή0→3.
+    const [v0, v1, , v3] = worldVerts;
 
     // 🌐 toggle «ΜΗΚΟΣ/ΓΩΝΙΑ»: κρύψε ΜΟΝΟ πλάτος/ύψος (γεωμετρικές διαστάσεις) όταν OFF·
     // το εμβαδόν+περίμετρος (renderInfoLabel παρακάτω) ΜΕΝΕΙ πάντα ορατό.
     if (isLengthAngleHudVisible()) {
-      h.renderDistanceLabelFromWorld(ctx, wc1, topRight, c1, screenTopRight);
-      h.renderDistanceLabelFromWorld(ctx, wc1, bottomLeft, c1, screenBottomLeft);
+      h.renderDistanceLabelFromWorld(ctx, v0, v1, sv[0], sv[1]);
+      h.renderDistanceLabelFromWorld(ctx, v0, v3, sv[0], sv[3]);
     }
 
-    const worldWidth = calculateWorldDistance(wc1, topRight);
-    const worldHeight = calculateWorldDistance(wc1, bottomLeft);
+    const worldWidth = calculateWorldDistance(v0, v1);
+    const worldHeight = calculateWorldDistance(v0, v3);
     const perimeter = 2 * (worldWidth + worldHeight);
     const area = worldWidth * worldHeight;
-    const centerScreen: Point2D = { x: x + width / 2, y: y + height / 2 };
+    // Κέντρο = μέσο της διαγωνίου (κορυφή0↔κορυφή2) — σωστό ΚΑΙ για περιστραμμένο.
+    const centerScreen: Point2D = { x: (sv[0].x + sv[2].x) / 2, y: (sv[0].y + sv[2].y) / 2 };
     // ADR-160 (δ): rectangle preview περνά από τον ΚΟΙΝΟ content builder (area→perimeter,
     // i18n prefixes) — ίδια σειρά & περιεχόμενο με το committed rectangle/polygon.
     h.renderInfoLabel(ctx, centerScreen, buildAreaPerimeterLabelLines({ area, perimeter }));

@@ -18,6 +18,7 @@ import type {
 } from '../../types/scene';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 import { getXLineModeState } from '../../systems/tools/xline-mode-store';
+import { buildRectangleCornersFromLock } from '../../systems/dynamic-input/rect-lock';
 // ADR-507 S2 — γραμμοσκίαση: boundary points → HatchEntity (με τα draw-defaults).
 import { buildHatchEntityFromBoundary } from '../../bim/hatch/hatch-completion';
 // ADR-583 Φ2 — graphic scale-bar: 2-click points → ScaleBarEntity (draw-context options SSoT).
@@ -147,11 +148,17 @@ export function createEntityFromTool(
     case 'rectangle':
       if (points.length >= 2) {
         const [p1, p2] = points;
+        // ADR-513 §rectangle — ΜΟΝΑΔΙΚΟ σημείο γέννησης corner2/rotation: διαβάζει τα ζωντανά
+        // Πλάτος/Ύψος/Γωνία locks (RectLockStore) και σέβεται το ποντίκι (Απόφαση A). Χωρίς lock →
+        // `corner2 = p2, rotation = 0` (σημερινή συμπεριφορά). Επειδή ΚΑΙ το preview περνά από αυτόν
+        // τον builder (generic createEntity fallback), preview ≡ commit αυτόματα.
+        const { corner2, rotation } = buildRectangleCornersFromLock(p1, p2);
         return {
           id,
           type: 'rectangle',
           corner1: p1,
-          corner2: p2,
+          corner2,
+          rotation,
           visible: true,
           layerId: defaultLayerId,
         } as RectangleEntity;

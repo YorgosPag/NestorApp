@@ -90,11 +90,15 @@ describe('ADR-510 Φ5 — explodeEntity: rectangle', () => {
     expect(out[3].end).toEqual({ x: 0, y: 0 }); // closes back to origin
   });
 
-  it('rotated rectangle → 4 lines whose corners are no longer axis-aligned', () => {
+  it('rotated rectangle → 4 lines, περιστροφή ΓΥΡΩ από corner1 (canonical pivot, ADR-620)', () => {
     const out = explodeEntity(mkRect({ rotation: 90 })) as LineEntity[];
     expect(out).toHaveLength(4);
-    // rotation applied → first corner moved off (0,0)
-    expect(out[0].start).not.toEqual({ x: 0, y: 0 });
+    // canonical model: pivot = corner1 → η αρχική γωνία (anchor) ΜΕΝΕΙ στο (0,0)...
+    expect(out[0].start.x).toBeCloseTo(0);
+    expect(out[0].start.y).toBeCloseTo(0);
+    // ...ενώ η απέναντι πλευρά περιστρέφεται: (10,0) γύρω από (0,0) κατά 90° → (0,10).
+    expect(out[0].end.x).toBeCloseTo(0);
+    expect(out[0].end.y).toBeCloseTo(10);
   });
 
   // 🔴 Bug 1 (ADR-510 Φ5): a drawn rectangle has corner1/corner2, NOT x/y/w/h.

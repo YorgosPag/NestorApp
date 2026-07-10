@@ -37,6 +37,8 @@ import { BEAM_RING_CONFIG } from '../../systems/dynamic-input/beam-ring-config';
 import { LINE_RING_CONFIG } from '../../systems/dynamic-input/line-ring-config';
 // ADR-060 — «Κάθετη Γραμμή»: μετά το 1ο σημείο, length-only δαχτυλίδι (direction ήδη κλειδωμένη).
 import { PERPENDICULAR_LINE_RING_CONFIG } from '../../systems/dynamic-input/perpendicular-line-ring-config';
+import { RECTANGLE_RING_CONFIG } from '../../systems/dynamic-input/rectangle-ring-config';
+import { RectLockStore } from '../../systems/dynamic-input/RectLockStore';
 import { ringStartKey } from '../../systems/dynamic-input/ring-config';
 // ADR-513 §grip-parity — press-drag άκρου γραμμής δείχνει το ΙΔΙΟ δαχτυλίδι (lock-only).
 import { GRIP_LINEAR_RING_CONFIG } from '../../systems/dynamic-input/grip-linear-ring-config';
@@ -104,6 +106,8 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
       // ADR-513 §rotation-ring — καθάρισε και τυχόν πληκτρολογημένη γωνία περιστροφής ώστε το ghost
       // να μη «κολλήσει» σε stale γωνία όταν σβήσει η Δυναμική Εισαγωγή μεσα σε rotate-free.
       RotationRingStore.clearAngle();
+      // ADR-513 §rectangle — ίδιος κανόνας για τα rectangle locks (Πλάτος/Ύψος/Γωνία).
+      RectLockStore.unlockAll();
     }
   }, [dynInput.on]);
 
@@ -253,6 +257,24 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
         startKey={ringStartKey(tempPoints[0], 'line-perp-pending')}
         sceneUnits={getSceneUnits()}
         getCanvasEl={getCanvasEl}
+      />
+    );
+  }
+
+  // ADR-513 §rectangle — parity με τη ΓΡΑΜΜΗ: το «Δαχτυλίδι Εντολών» ορθογωνίου (Πλάτος/Ύψος/Γωνία)
+  // δείχνεται **ΠΑΝΤΑ** όσο είναι ενεργό το εργαλείο (ΟΧΙ gate `tempPoints.length>=1`) — αλλιώς πριν το
+  // 1ο κλικ πέφταμε στο legacy `<DynamicInputSystem>` και φλασάριζε το παλιό DOM overlay. Πριν το 1ο κλικ →
+  // startKey `'rect-pending'` (χωρίς anchor)· μετά → με anchor `tempPoints[0]`. Πληκτρολόγηση → heads-up
+  // «Πλάτος», TAB → «Ύψος»/«Γωνία», Enter/κλικ → commit σεβόμενο τα locks (Απόφαση A· preview≡commit μέσω
+  // builder που διαβάζει το RectLockStore). `onDeactivate=unlockAll` → επόμενο ορθογώνιο ξεκινά ελεύθερο.
+  if (activeTool === 'rectangle' && getSceneUnits) {
+    return (
+      <RadialCommandRing
+        config={RECTANGLE_RING_CONFIG}
+        startKey={ringStartKey(tempPoints[0], 'rect-pending')}
+        sceneUnits={getSceneUnits()}
+        getCanvasEl={getCanvasEl}
+        onDeactivate={RectLockStore.unlockAll}
       />
     );
   }

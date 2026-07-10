@@ -161,17 +161,20 @@ export function RadialCommandRing({
       if (openField !== null) return; // popup ανοιχτό → το input χειρίζεται την πληκτρολόγηση
       if (!isHeadsUpNumericKey(e)) return;
       if (isEditableTarget(typeof document !== 'undefined' ? document.activeElement : null)) return;
-      const lengthField = fieldByKey.get('length');
-      if (!lengthField || lengthField.kind !== 'numeric') return; // δεν υπάρχει «Μήκος» → no-op
+      // ADR-513 §rectangle — το heads-up πεδίο είναι tool-agnostic (γραμμή/τοίχος → «Μήκος»,
+      // ορθογώνιο → «Πλάτος»), μέσω `config.headsUpFieldKey` (default 'length').
+      const headsUpKey = config.headsUpFieldKey ?? 'length';
+      const headsUpField = fieldByKey.get(headsUpKey);
+      if (!headsUpField || headsUpField.kind !== 'numeric') return; // δεν υπάρχει numeric heads-up → no-op
       e.preventDefault();
       e.stopPropagation();
-      setOpenField('length');
+      setOpenField(headsUpKey);
       setDraft(e.key);
       setTimeout(() => { inputRef.current?.focus(); }, 0);
     };
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [fieldByKey, openField]);
+  }, [fieldByKey, openField, config.headsUpFieldKey]);
 
   // Νέο segment → re-init κέντρο δαχτυλιδιού στον τρέχοντα κέρσορα, κλείσε popup.
   useEffect(() => {
