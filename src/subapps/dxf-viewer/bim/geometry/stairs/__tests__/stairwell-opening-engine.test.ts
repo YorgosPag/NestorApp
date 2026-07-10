@@ -159,6 +159,30 @@ describe('planStairwellOpenings', () => {
     expect(plan.creates).toHaveLength(0);
     expect(plan.updates).toHaveLength(0);
   });
+
+  // ── Φ5 Override / detach (lock semantics) ───────────────────────────────────
+
+  it('Φ5 — detached existing → ΚΑΝΕΝΑ regenerate (μηδέν διπλό) παρά την παράβαση', () => {
+    // Ο χρήστης έκανε Override· το outline είναι εντελώς διαφορετικό. Ο engine ΔΕΝ
+    // πρέπει ούτε να δημιουργήσει δεύτερο (pair identity κρατιέται) ούτε να το update-άρει.
+    const existing: StairwellManagedOpening[] = [
+      { openingId: 'op-user', autoStairId: 'stair-1', slabId: 'slab-1', outline: makeRect(0, 0, 10, 10), detached: true },
+    ];
+    const plan = planStairwellOpenings([planStair()], [ceilingCandidate()], existing);
+    expect(plan.creates).toHaveLength(0);
+    expect(plan.updates).toHaveLength(0);
+    expect(plan.deletes).toHaveLength(0);
+  });
+
+  it('Φ5 — detached existing χωρίς παράβαση (σκάλα έφυγε) → ΟΧΙ delete (user-owned)', () => {
+    const existing: StairwellManagedOpening[] = [
+      { openingId: 'op-user', autoStairId: 'stair-1', slabId: 'slab-1', outline: makeRect(300, 0, 1200, 1000), detached: true },
+    ];
+    const plan = planStairwellOpenings([planStair()], [ceilingCandidate(6000)], existing);
+    expect(plan.deletes).toHaveLength(0);
+    expect(plan.creates).toHaveLength(0);
+    expect(plan.updates).toHaveLength(0);
+  });
 });
 
 // ─── Input builders ──────────────────────────────────────────────────────────
@@ -252,6 +276,16 @@ describe('stairwell-opening-inputs', () => {
     expect(result).toHaveLength(1);
     expect(result[0].openingId).toBe('op-auto');
   });
+
+  it('collectManagedStairwellOpenings — Φ5 detached flag propagates', () => {
+    const detached = {
+      id: 'op-user',
+      type: 'slab-opening',
+      params: { slabId: 'slab-1', outline: makeRect(0, 0, 10, 10), autoStairId: 'stair-1', autoStairDetached: true },
+    } as unknown as Entity;
+    const [row] = collectManagedStairwellOpenings([detached]);
+    expect(row.detached).toBe(true); // ακόμη συλλέγεται (pair identity), αλλά flagged
+  });
 });
 
 // ─── Coordinator (lifecycle σε mock σκηνή) ───────────────────────────────────
@@ -328,6 +362,62 @@ describe('cascadeStairwellOpenings', () => {
     const res = cascadeStairwellOpenings(mgr, { sceneUnits: 'mm', changedIds: ['stair-1'] });
     expect(res.created).toHaveLength(1);
   });
+
+  // ── Φ5 edge-touching (preview-tolerant commit) ──────────────────────────────
+  it('opening που ακουμπά ακμή πλάκας → commit-άρεται με soft warning (Φ5)', () => {
+    // Slab με δεξιά ακμή στο x=800, τέμνει το violating union [300,1200]×[0,1000]
+    // → outline [300,800]×[0,1000] με κορυφές ΠΑΝΩ στην ακμή slab (outside-slab).
+    // Πριν το Φ5: hard-reject → κανένα opening (σιωπηλά). Τώρα: opening + warning.
+    const edgeSlab = {
+      id: 'slab-1',
+      type: 'slab',
+      layerId: 'layer-bim',
+      geometry: { polygon: makeRect(-500, -500, 800, 1500, 3000) },
+      params: {
+        kind: 'floor',
+        outline: makeRect(-500, -500, 800, 1500, 3000),
+        levelElevation: 3000,
+        thickness: 200,
+      },
+    } as unknown as Entity;
+
+    const mgr = makeSceneManager([fakeStair() as unknown as Entity, edgeSlab]);
+    const res = cascadeStairwellOpenings(mgr, { sceneUnits: 'mm' });
+    expect(res.created).toHaveLength(1);
+
+    const created = mgr.map.get(res.created[0]) as unknown as {
+      kind: string;
+      validation: { hasCodeViolations: boolean; violationKeys: readonly string[] };
+    };
+    expect(created.kind).toBe('well');
+    expect(created.validation.hasCodeViolations).toBe(true);
+    expect(created.validation.violationKeys).toContain(
+      'slabOpening.validation.codeViolations.outlineAtSlabEdge',
+    );
+  });
+
+  it('opening καθαρά εντός πλάκας → κανένα edge warning (badge off, μη-regression)', () => {
+    const mgr = makeSceneManager([fakeStair() as unknown as Entity, fakeSlab() as unknown as Entity]);
+    const res = cascadeStairwellOpenings(mgr, { sceneUnits: 'mm' });
+    const created = mgr.map.get(res.created[0]) as unknown as {
+      validation: { hasCodeViolations: boolean };
+    };
+    expect(created.validation.hasCodeViolations).toBe(false);
+  });
+
+  it('Φ5 — detached (Override) opening επιβιώνει re-run: engine hands-off, μηδέν διπλό', () => {
+    const mgr = makeSceneManager([fakeStair() as unknown as Entity, fakeSlab() as unknown as Entity]);
+    const first = cascadeStairwellOpenings(mgr, { sceneUnits: 'mm' });
+    const openingId = first.created[0];
+    // Ο χρήστης κάνει Override → detached flag στα params.
+    const op = mgr.map.get(openingId) as unknown as { params: Record<string, unknown> };
+    mgr.map.set(openingId, { ...op, params: { ...op.params, autoStairDetached: true } } as unknown as Entity);
+
+    const after = cascadeStairwellOpenings(mgr, { sceneUnits: 'mm' });
+    expect(after).toEqual({ created: [], updated: [], deleted: [] });
+    expect(mgr.map.has(openingId)).toBe(true); // δεν σβήστηκε, δεν διπλασιάστηκε
+    expect([...mgr.map.values()].filter((e) => (e as { type?: string }).type === 'slab-opening')).toHaveLength(1);
+  });
 });
 
 // ─── Φ4 — lifecycle events (persistence + BOQ trigger) ───────────────────────
@@ -400,6 +490,15 @@ describe('findHostedStairwellOpenings', () => {
 
   it('αγνοεί χειροκίνητα openings (χωρίς autoStairId)', () => {
     expect(findHostedStairwellOpenings(new Set(['stair-1']), [manual])).toEqual([]);
+  });
+
+  it('Φ5 — αγνοεί detached (Override) openings: delete σκάλας δεν σαρώνει user-owned', () => {
+    const detached = {
+      id: 'detached-1',
+      type: 'slab-opening',
+      params: { slabId: 'slab-1', outline: makeRect(0, 0, 10, 10), autoStairId: 'stair-1', autoStairDetached: true },
+    } as unknown as Entity;
+    expect(findHostedStairwellOpenings(new Set(['stair-1']), [auto1, detached])).toEqual(['auto-1']);
   });
 
   it('exclude set + κενό stairIds → κενό', () => {

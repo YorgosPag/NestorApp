@@ -38,6 +38,7 @@ import type {
 } from '../types/slab-opening-types';
 import type { Entity } from '../../types/entities';
 import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
+import { isManagedOpeningParams } from '../stairs/managed-slab-opening-lock';
 
 // ─── Grip position computation (ADR-363 §6 Phase 3.7a) ───────────────────────
 
@@ -52,6 +53,10 @@ import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';
  * Returns empty array όταν polygon degenerate (<3 vertices).
  */
 export function getSlabOpeningGrips(entity: Readonly<SlabOpeningEntity>): GripInfo[] {
+  // ADR-632 Φ5 — managed (engine-owned) opening = κλειδωμένο: μηδέν grip handles
+  // (Revit locked/hosted family instance). Ο χρήστης κάνει Override για να το
+  // επεξεργαστεί. Detached (μετά το Override) → κανονικά grips.
+  if (isManagedOpeningParams(entity.params)) return [];
   const verts = getBimEntityKeyPoints2D(entity as Entity);
   if (verts.length < 3) return [];
   const grips: GripInfo[] = [];

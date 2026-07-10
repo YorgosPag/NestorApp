@@ -76,6 +76,19 @@ export interface SlabOpeningParams {
    * engine καθαρίζει το orphan auto-opening (Phase 4).
    */
   readonly autoStairId?: string;
+  /**
+   * ADR-632 Φ5 (lock/override) — «detach» flag ενός managed auto-opening. Όσο
+   * απόν/false → **managed**: ο `StairwellOpeningEngine` το κατέχει (grips
+   * κλειδωμένα, edit/direct-delete μπλοκαρισμένα). Όταν `true` → ο χρήστης έκανε
+   * ρητό **Override / Reset** (Revit "Edit"): γίνεται πλήρως χειροκίνητο —
+   * ξεκλειδώνει για edit/grips/delete ΚΑΙ ο engine σταματά να το πειράζει.
+   *
+   * ⚠️ Κρατά ΤΑΥΤΟΧΡΟΝΑ το `autoStairId` (pair identity) ώστε ο planner να
+   * αναγνωρίζει το ζεύγος (σκάλα, πλάκα) ως «ήδη καλυμμένο» και να **ΜΗΝ**
+   * ξαναδημιουργεί διπλό auto opening. Καθαρή αφαίρεση του `autoStairId` ΔΕΝ
+   * αρκεί (ο planner θα regenerate). SSoT predicates: `managed-slab-opening-lock.ts`.
+   */
+  readonly autoStairDetached?: boolean;
   /** Minutes fire rating (60 / 90 / 120). */
   readonly fireRating?: 60 | 90 | 120;
   /** Material library ID (Phase 6+). */

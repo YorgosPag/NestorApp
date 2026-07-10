@@ -74,6 +74,12 @@ export interface StairwellManagedOpening {
   readonly autoStairId: string;
   readonly slabId: string;
   readonly outline: Polygon3D;
+  /**
+   * ADR-632 Φ5 — true αν ο χρήστης έκανε **Override** (detached). Μετρά ακόμη ως
+   * «υπάρχον» για το pair identity (ο planner ΔΕΝ regenerate διπλό opening), αλλά
+   * ο engine ΔΕΝ το ενημερώνει/σβήνει πλέον — είναι πλήρως χειροκίνητο.
+   */
+  readonly detached?: boolean;
 }
 
 // ─── Plan ────────────────────────────────────────────────────────────────────
@@ -183,6 +189,11 @@ function sameOutline(a: Polygon3D, b: Polygon3D, eps: number): boolean {
  * Διαφορά επιθυμητών vs υπαρχόντων managed openings → creates / updates / deletes.
  * Duplicate managed keys (θεωρητικά αδύνατο· belt-and-suspenders): κρατά το πρώτο,
  * τα υπόλοιπα → deletes. Idempotency: αμετάβλητο outline → ούτε update.
+ *
+ * ADR-632 Φ5 (Override/detach): ένα **detached** opening μετρά ως «υπάρχον» για το
+ * pair identity (καταστέλλει το create — μηδέν διπλό opening), αλλά ο engine ΔΕΝ το
+ * ενημερώνει (skip update) ούτε το σβήνει (skip delete, ακόμη κι αν η σκάλα φύγει):
+ * ανήκει πλέον στον χρήστη.
  */
 function diffPlan(
   desired: ReadonlyMap<string, StairwellDesiredOpening>,
@@ -193,8 +204,10 @@ function diffPlan(
   const deletes: { openingId: string }[] = [];
   for (const managed of existing) {
     const key = stairwellOpeningPairKey(managed.autoStairId, managed.slabId);
-    if (existingByKey.has(key)) deletes.push({ openingId: managed.openingId });
-    else existingByKey.set(key, managed);
+    // Duplicate key → σβήσε το πλεόνασμα, ΕΚΤΟΣ αν είναι detached (user-owned).
+    if (existingByKey.has(key)) {
+      if (!managed.detached) deletes.push({ openingId: managed.openingId });
+    } else existingByKey.set(key, managed);
   }
 
   const creates: StairwellDesiredOpening[] = [];
@@ -202,12 +215,12 @@ function diffPlan(
   for (const [key, want] of desired) {
     const have = existingByKey.get(key);
     if (!have) creates.push(want);
-    else if (!sameOutline(have.outline, want.outline, eps)) {
+    else if (!have.detached && !sameOutline(have.outline, want.outline, eps)) {
       updates.push({ openingId: have.openingId, outline: want.outline });
     }
   }
   for (const [key, managed] of existingByKey) {
-    if (!desired.has(key)) deletes.push({ openingId: managed.openingId });
+    if (!desired.has(key) && !managed.detached) deletes.push({ openingId: managed.openingId });
   }
   return { creates, updates, deletes };
 }

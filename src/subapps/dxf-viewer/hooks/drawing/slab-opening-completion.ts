@@ -131,6 +131,45 @@ export type BuildSlabOpeningEntityResult =
 const OUTLINE_OUTSIDE_SLAB_KEY = 'slabOpening.validation.hardErrors.outlineOutsideSlab';
 
 /**
+ * ADR-632 Φ5 — soft-warning key όταν auto/managed opening ακουμπά/φτάνει ως το
+ * χείλος του host slab. Το χειροκίνητο commit παραμένει hard-reject· το auto
+ * opening υποβιβάζει το outside-slab σε αυτό το code-violation (red badge, mirror
+ * big-player: Revit δείχνει opening + warning, δεν το σβήνει). i18n στο locale.
+ */
+const OUTLINE_AT_SLAB_EDGE_WARNING_KEY =
+  'slabOpening.validation.codeViolations.outlineAtSlabEdge';
+
+/**
+ * Χωρίζει τα hard errors μιας validation σε πραγματικά-blocking (self-intersecting /
+ * zero-area / missing host / tooFewVertices) + το ΕΝΑ tolerable `outlineOutsideSlab`
+ * flag. SSoT για «ποιο hard error ανέχεται το boundary» — shared από τον preview
+ * ghost ΚΑΙ το auto-opening tolerant commit (N.0.2/N.18 dedup).
+ */
+function partitionOutsideSlabTolerance(hardErrors: readonly string[]): {
+  readonly blocking: readonly string[];
+  readonly isOutsideSlab: boolean;
+} {
+  return {
+    blocking: hardErrors.filter((k) => k !== OUTLINE_OUTSIDE_SLAB_KEY),
+    isOutsideSlab: hardErrors.includes(OUTLINE_OUTSIDE_SLAB_KEY),
+  };
+}
+
+/**
+ * Επιστρέφει νέο `BimValidation` με προσθήκη ενός soft-warning key. Idempotent
+ * (δεν διπλογράφει)· ενεργοποιεί `hasCodeViolations` → red badge μέσω του
+ * κοινού `useViolationBadgeState` badge path (μηδέν renderer/canvas αλλαγή).
+ */
+function withSoftWarning(base: BimValidation, key: string): BimValidation {
+  if (base.violationKeys.includes(key)) return base;
+  return {
+    ...base,
+    hasCodeViolations: true,
+    violationKeys: [...base.violationKeys, key],
+  };
+}
+
+/**
  * Assemble the final `SlabOpeningEntity` από validated params + geometry (SSoT
  * `computeSlabOpeningGeometry`) + enterprise id. Shared από τον strict commit
  * builder (`buildSlabOpeningEntity`) ΚΑΙ τον preview-tolerant builder
@@ -157,23 +196,57 @@ function assembleSlabOpeningEntity(
 }
 
 /**
+ * Options για τον commit builder (ADR-632 Φ5). Και τα δύο default → η ιστορική
+ * strict συμπεριφορά (χειροκίνητο placement, αμετάβλητο backward-compat).
+ */
+export interface BuildSlabOpeningEntityOptions {
+  /**
+   * Deterministic id για derived/managed openings (auto stairwell). Απόν →
+   * random enterprise id (χειροκίνητο placement).
+   */
+  readonly idOverride?: string;
+  /**
+   * ADR-632 Φ5 — auto/managed openings ΜΟΝΟ: αν το outline ακουμπά/φτάνει ως το
+   * χείλος του slab (safeIntersection → shared edge), ΜΗΝ hard-reject· υποβίβασε
+   * το `outlineOutsideSlab` σε soft warning badge (big-player: Revit δείχνει
+   * opening + warning). Κάθε ΑΛΛΟ hard error ακόμη μπλοκάρει. Default false.
+   */
+  readonly allowOutsideSlab?: boolean;
+}
+
+/**
  * Build `SlabOpeningEntity` από `SlabOpeningParams + hostSlab`. Geometry
  * recomputed via SSoT pure functions. Hard errors short-circuit creation.
  *
- * `idOverride` (ADR-632 Φ5): deterministic id για derived/managed openings (auto
- * stairwell). Απόν → random enterprise id (χειροκίνητο placement, αμετάβλητη συμπεριφορά).
+ * Default (strict, χειροκίνητο commit): ΚΑΘΕ hard error — incl. `outlineOutsideSlab`
+ * — μπλοκάρει. Με `allowOutsideSlab` (auto/managed opening): το outside-slab
+ * υποβιβάζεται σε soft warning· τα υπόλοιπα hard errors παραμένουν block.
  */
 export function buildSlabOpeningEntity(
   params: Readonly<SlabOpeningParams>,
   hostSlab: SlabEntity,
   layerId: string,
-  idOverride?: string,
+  options: BuildSlabOpeningEntityOptions = {},
 ): BuildSlabOpeningEntityResult {
+  const { idOverride, allowOutsideSlab = false } = options;
   const validation = validateSlabOpeningParams(params, hostSlab);
-  if (validation.hardErrors.length > 0) {
-    return { ok: false, hardErrors: validation.hardErrors };
+
+  if (!allowOutsideSlab) {
+    if (validation.hardErrors.length > 0) {
+      return { ok: false, hardErrors: validation.hardErrors };
+    }
+    return { ok: true, entity: assembleSlabOpeningEntity(params, layerId, validation.bimValidation, idOverride) };
   }
-  return { ok: true, entity: assembleSlabOpeningEntity(params, layerId, validation.bimValidation, idOverride) };
+
+  // Tolerant (ADR-632 Φ5): outside-slab → soft warning· κάθε άλλο hard error block.
+  const { blocking, isOutsideSlab } = partitionOutsideSlabTolerance(validation.hardErrors);
+  if (blocking.length > 0) {
+    return { ok: false, hardErrors: blocking };
+  }
+  const bimValidation = isOutsideSlab
+    ? withSoftWarning(validation.bimValidation, OUTLINE_AT_SLAB_EDGE_WARNING_KEY)
+    : validation.bimValidation;
+  return { ok: true, entity: assembleSlabOpeningEntity(params, layerId, bimValidation, idOverride) };
 }
 
 // ─── Preview-tolerant builder (ADR-574 Σ2b) ─────────────────────────────────
@@ -199,10 +272,10 @@ export function buildSlabOpeningPreviewEntity(
   layerId: string,
 ): SlabOpeningPreviewBuild | null {
   const validation = validateSlabOpeningParams(params, hostSlab);
-  const blocking = validation.hardErrors.filter((k) => k !== OUTLINE_OUTSIDE_SLAB_KEY);
+  const { blocking, isOutsideSlab } = partitionOutsideSlabTolerance(validation.hardErrors);
   if (blocking.length > 0) return null;
   const entity = assembleSlabOpeningEntity(params, layerId, validation.bimValidation);
-  return { entity, isOutsideSlab: validation.hardErrors.includes(OUTLINE_OUTSIDE_SLAB_KEY) };
+  return { entity, isOutsideSlab };
 }
 
 // ─── Click-to-place completion helper ───────────────────────────────────────

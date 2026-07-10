@@ -125,6 +125,10 @@ export function buildStairwellPlanStairs(
  * Τα ήδη-υπάρχοντα auto («autoStairId») stairwell openings της σκηνής — υποψήφια
  * για update/delete από τον engine. Χειροκίνητα openings (χωρίς `autoStairId`)
  * ΔΕΝ αγγίζονται.
+ *
+ * ADR-632 Φ5 — τα **detached** (Override) openings ΣΥΛΛΕΓΟΝΤΑΙ κι αυτά (με το
+ * `detached` flag) ώστε ο planner να τα μετρά ως «υπάρχον» για το pair identity
+ * (μηδέν διπλό regenerate)· ο diff τα «παγώνει» (skip update/delete).
  */
 export function collectManagedStairwellOpenings(
   entities: readonly Entity[],
@@ -134,7 +138,13 @@ export function collectManagedStairwellOpenings(
     if (!isSlabOpeningEntity(e)) continue;
     const autoStairId = e.params.autoStairId;
     if (!autoStairId) continue;
-    out.push({ openingId: e.id, autoStairId, slabId: e.params.slabId, outline: e.params.outline });
+    out.push({
+      openingId: e.id,
+      autoStairId,
+      slabId: e.params.slabId,
+      outline: e.params.outline,
+      detached: e.params.autoStairDetached === true,
+    });
   }
   return out;
 }

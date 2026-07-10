@@ -30,6 +30,8 @@ export const SLAB_OPENING_RIBBON_KEYS_ACTIONS = {
   close: 'slabOpening.actions.close',
   delete: 'slabOpening.actions.delete',
   copyToFloors: 'slabOpening.actions.copyToFloors',
+  /** ADR-632 Φ5 — Override/Reset ενός managed (auto stairwell) opening → χειροκίνητο. */
+  override: 'slabOpening.actions.override',
 } as const;
 
 export const isSlabOpeningActionKey = makeKeySetGuard(Object.values(SLAB_OPENING_RIBBON_KEYS_ACTIONS));

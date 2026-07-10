@@ -43,6 +43,7 @@ import { isSlabEntity, isSlabOpeningEntity, isStairEntity } from '../../types/en
 import { computeSlabOpeningGeometry } from '../geometry/slab-opening-geometry';
 import { buildSlabOpeningEntity } from '../../hooks/drawing/slab-opening-completion';
 import { generateDeterministicSlabOpeningId } from '@/services/enterprise-id-convenience';
+import { createModuleLogger } from '@/lib/telemetry';
 import {
   emitBimEntityCreated,
   emitBimEntityDeleteRequested,
@@ -93,6 +94,8 @@ export interface StairwellCascadeResult {
 
 const EMPTY_RESULT: StairwellCascadeResult = { created: [], updated: [], deleted: [] };
 
+const logger = createModuleLogger('stairwell-opening-coordinator');
+
 /** True αν έστω ένα `changedIds` entity είναι σκάλα ή πλάκα (perf gate). */
 function touchesStairOrSlab(
   entities: readonly Entity[],
@@ -125,8 +128,23 @@ function applyCreate(
   const stableId = generateDeterministicSlabOpeningId(
     stairwellOpeningPairKey(desired.autoStairId, desired.slabId),
   );
-  const built = buildSlabOpeningEntity(params, host, host.layerId, stableId);
-  if (!built.ok) return null;
+  // ADR-632 Φ5 edge-touching — auto «well» opening: το outline του (safeIntersection με
+  // το slab) συχνά ακουμπά το χείλος του slab· `allowOutsideSlab` το commit-άρει με soft
+  // warning badge αντί για σιωπηλό hard-reject (big-player: Revit δείχνει opening + warning).
+  const built = buildSlabOpeningEntity(params, host, host.layerId, {
+    idOverride: stableId,
+    allowOutsideSlab: true,
+  });
+  if (!built.ok) {
+    // N.7.2 — όχι silent skip: πραγματικά hard errors (self-intersecting / zero-area /
+    // missing host) εξακολουθούν να μπλοκάρουν, αλλά καταγράφονται (δεν εξαφανίζονται σιωπηλά).
+    logger.warn('stairwell-opening: auto «well» opening skipped (genuine hard errors)', {
+      slabId: desired.slabId,
+      autoStairId: desired.autoStairId,
+      hardErrors: built.hardErrors,
+    });
+    return null;
+  }
   sceneManager.addEntity(built.entity as unknown as SceneEntity);
   return built.entity;
 }

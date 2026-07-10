@@ -18,7 +18,7 @@
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { isWallEntity, isStairEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity } from '../../types/entities';
+import { isWallEntity, isStairEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity, isSlabOpeningEntity } from '../../types/entities';
 import { isWallDrawingTool } from '../../systems/tools/region-tool-ids';
 import { useResolvedSelectedEntity } from '../../hooks/selection/useResolvedSelectedEntity';
 import { StairPropertiesTab } from '../stair-advanced-panel/StairPropertiesTab';
@@ -27,6 +27,7 @@ import { ColumnPropertiesTab } from '../column-advanced-panel/ColumnPropertiesTa
 import { BeamPropertiesTab } from '../beam-advanced-panel/BeamPropertiesTab';
 import { FoundationPropertiesTab } from '../foundation-advanced-panel/FoundationPropertiesTab';
 import { SlabPropertiesTab } from '../slab-advanced-panel/SlabPropertiesTab';
+import { SlabOpeningPropertiesTab } from '../slab-opening-advanced-panel/SlabOpeningPropertiesTab';
 import type { SceneModel } from '../../types/scene';
 
 export interface BimPropertiesRouterProps {
@@ -80,6 +81,12 @@ export function BimPropertiesRouter(
   // ADR-476 — slab Properties palette (δομοστατικά/οπλισμός σχάρας πλάκας).
   if (selected && isSlabEntity(selected)) {
     return <SlabPropertiesTab {...props} />;
+  }
+
+  // ADR-632 Φ5 — slab-opening Properties palette (info + validation warnings +
+  // managed/lock status). Surfacing του soft warning ως κείμενο, όχι μόνο badge.
+  if (selected && isSlabOpeningEntity(selected)) {
+    return <SlabOpeningPropertiesTab {...props} />;
   }
 
   if (selected && isStairEntity(selected)) {

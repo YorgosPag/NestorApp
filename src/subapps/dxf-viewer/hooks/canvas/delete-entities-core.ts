@@ -42,11 +42,15 @@ import {
   findHostedSlabOpenings,
   findHostedStairwellOpenings,
 } from '../../bim/cascade/bim-cascade-resolver';
+import { isManagedSlabOpening } from '../../bim/stairs/managed-slab-opening-lock';
+import { createModuleLogger } from '@/lib/telemetry';
 import { requestWallCascadeDelete } from '../../bim/walls/wall-cascade-delete-store';
 import { resolveMepCascadeOnDelete } from '../../bim/mep-systems/mep-system-coordinator';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import { UpdateMepSystemParamsCommand } from '../../core/commands/entity-commands/UpdateMepSystemParamsCommand';
 import { DissolveMepSystemCommand } from '../../core/commands/entity-commands/DissolveMepSystemCommand';
+
+const logger = createModuleLogger('delete-entities-core');
 
 export interface DeleteEntitiesCoreDeps {
   /** Level-scoped scene manager (the delete commands mutate the scene through it). */
@@ -76,15 +80,34 @@ export async function deleteEntitiesById(
   const { adapter, sceneEntities, executeCommand } = deps;
   if (ids.length === 0) return false;
 
+  // ADR-632 Φ5 — managed (engine-owned) stairwell openings είναι κλειδωμένα:
+  // η ΑΠΕΥΘΕΙΑΣ επιλογή τους για delete τα προστατεύει (hard-block) — ο engine ή
+  // το ρητό Override τα διαχειρίζεται, ΠΟΤΕ σιωπηλή απώλεια. Δεν εξαφανίζονται
+  // αθόρυβα (N.7.2 → log). Τα cascade-added σε delete ΣΚΑΛΑΣ ΔΕΝ επηρεάζονται
+  // (προστίθενται χωριστά παρακάτω, δεν είναι στο `ids`).
+  const protectedManagedIds = ids.filter((id) => {
+    const e = adapter.getEntity(id);
+    return e ? isManagedSlabOpening(e as unknown as Entity) : false;
+  });
+  const effectiveIds = protectedManagedIds.length === 0
+    ? ids
+    : ids.filter((id) => !protectedManagedIds.includes(id));
+  if (protectedManagedIds.length > 0) {
+    logger.warn('delete: skipped managed stairwell opening(s) — locked; delete the stair or Override first', {
+      count: protectedManagedIds.length,
+    });
+  }
+  if (effectiveIds.length === 0) return false;
+
   // ADR-363 Φ7A — BIM cascade via the centralized resolver (SSoT). wall→opening
   // prompts the user (existing wall-cascade-delete dialog); slab→slab-opening
   // cascades automatically (orphan prevention, no prompt).
-  const deletingWallIds = new Set(ids.filter((id) => adapter.getEntity(id)?.type === 'wall'));
-  const deletingSlabIds = new Set(ids.filter((id) => adapter.getEntity(id)?.type === 'slab'));
+  const deletingWallIds = new Set(effectiveIds.filter((id) => adapter.getEntity(id)?.type === 'wall'));
+  const deletingSlabIds = new Set(effectiveIds.filter((id) => adapter.getEntity(id)?.type === 'slab'));
   // ADR-632 Φ4 — σκάλα → auto stairwell openings (marker `autoStairId`) που
   // κατέχει· cascade σιωπηλά (auto-derived, όχι user-authored).
-  const deletingStairIds = new Set(ids.filter((id) => adapter.getEntity(id)?.type === 'stair'));
-  const selectionSet = new Set(ids);
+  const deletingStairIds = new Set(effectiveIds.filter((id) => adapter.getEntity(id)?.type === 'stair'));
+  const selectionSet = new Set(effectiveIds);
   const orphanedOpeningIds = findHostedOpenings(deletingWallIds, sceneEntities, selectionSet);
   const orphanedSlabOpeningIds = findHostedSlabOpenings(deletingSlabIds, sceneEntities, selectionSet);
   const orphanedStairwellOpeningIds = findHostedStairwellOpenings(
@@ -93,7 +116,7 @@ export async function deleteEntitiesById(
     selectionSet,
   );
 
-  let idsToDelete: string[] = [...ids];
+  let idsToDelete: string[] = [...effectiveIds];
   if (orphanedOpeningIds.length > 0) {
     const action = await requestWallCascadeDelete(orphanedOpeningIds.length);
     if (action === 'cancel') return false;

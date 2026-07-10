@@ -17,6 +17,10 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isSlabOpeningEntity } from '../../../types/entities';
 import type { SlabOpeningEntity, SlabOpeningKind, SlabOpeningParams } from '../../../bim/types/slab-opening-types';
+import {
+  buildStairwellOverridePatch,
+  isManagedOpeningParams,
+} from '../../../bim/stairs/managed-slab-opening-lock';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateSlabOpeningParamsCommand } from '../../../core/commands/entity-commands/UpdateSlabOpeningParamsCommand';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -111,25 +115,31 @@ export function useRibbonSlabOpeningBridge(
     (commandKey: string, value: string): void => {
       const opening = resolveOpening();
       if (!opening) return;
-      if (isSlabOpeningRibbonStringKey(commandKey)) {
-        const field = STRING_KEY_TO_FIELD[commandKey];
-        if (field === 'kind') {
-          const nextParams: SlabOpeningParams = { ...opening.params, kind: value as SlabOpeningKind };
-          dispatchParams(opening, nextParams);
-          return;
-        }
-        if (field === 'fireRating') {
-          const parsed =
+      if (!isSlabOpeningRibbonStringKey(commandKey)) return;
+      const field = STRING_KEY_TO_FIELD[commandKey];
+      let changes: Partial<SlabOpeningParams>;
+      if (field === 'kind') {
+        changes = { kind: value as SlabOpeningKind };
+      } else if (field === 'fireRating') {
+        changes = {
+          fireRating:
             value === SELECT_CLEAR_VALUE || value === ''
               ? undefined
-              : (Number(value) as 60 | 90 | 120);
-          const nextParams: SlabOpeningParams = { ...opening.params, fireRating: parsed };
-          dispatchParams(opening, nextParams);
-          return;
-        }
+              : (Number(value) as 60 | 90 | 120),
+        };
+      } else {
+        return;
       }
+      // ADR-632 Φ5 — managed (engine-owned) opening: κλειδωμένο. Ζήτα ρητό Override·
+      // αν το εγκρίνει ο χρήστης, ξεκλείδωμα + εφαρμογή της αλλαγής σε ΕΝΑ command.
+      if (isManagedOpeningParams(opening.params)) {
+        if (!window.confirm(t('ribbon.commands.slabOpeningEditor.managedLockPrompt'))) return;
+        dispatchParams(opening, buildStairwellOverridePatch(opening.params, changes));
+        return;
+      }
+      dispatchParams(opening, { ...opening.params, ...changes });
     },
-    [resolveOpening, dispatchParams],
+    [resolveOpening, dispatchParams, t],
   );
 
   const { onToggle, getToggleState } = useNoopToggles();
@@ -142,22 +152,43 @@ export function useRibbonSlabOpeningBridge(
 
   const onAction = useCallback(
     (action: string): void => {
+      const opening = resolveOpening();
+      if (!opening) return;
+      const managed = isManagedOpeningParams(opening.params);
+
+      if (action === SLAB_OPENING_RIBBON_KEYS_ACTIONS.override) {
+        // ADR-632 Φ5 — ρητό Override/Reset: ξεκλειδώνει το managed opening →
+        // χειροκίνητο (ο engine σταματά να το ενημερώνει/σβήνει). No-op αν είναι
+        // ήδη χειροκίνητο/detached.
+        if (!managed) return;
+        dispatchParams(opening, buildStairwellOverridePatch(opening.params));
+        return;
+      }
+
       if (action === SLAB_OPENING_RIBBON_KEYS_ACTIONS.delete) {
-        const opening = resolveOpening();
-        if (!opening) return;
-        const confirmed = window.confirm(
-          t('ribbon.commands.slabOpeningEditor.deleteConfirm'),
-        );
-        if (!confirmed) return;
+        // ADR-632 Φ5 — hard-block direct delete managed opening· πρόσφερε Override.
+        if (managed) {
+          if (window.confirm(t('ribbon.commands.slabOpeningEditor.managedLockPrompt'))) {
+            dispatchParams(opening, buildStairwellOverridePatch(opening.params));
+          }
+          return;
+        }
+        if (!window.confirm(t('ribbon.commands.slabOpeningEditor.deleteConfirm'))) return;
         EventBus.emit('bim:slab-opening-delete-requested', { slabOpeningId: opening.id });
         return;
       }
+
       if (action === SLAB_OPENING_RIBBON_KEYS_ACTIONS.copyToFloors) {
-        const opening = resolveOpening();
-        if (opening) EventBus.emit('bim:slab-opening-stack-requested', { opening });
+        if (managed) {
+          if (window.confirm(t('ribbon.commands.slabOpeningEditor.managedLockPrompt'))) {
+            dispatchParams(opening, buildStairwellOverridePatch(opening.params));
+          }
+          return;
+        }
+        EventBus.emit('bim:slab-opening-stack-requested', { opening });
       }
     },
-    [resolveOpening, t],
+    [resolveOpening, dispatchParams, t],
   );
 
   return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction });

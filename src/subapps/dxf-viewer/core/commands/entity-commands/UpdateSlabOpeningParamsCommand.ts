@@ -27,6 +27,10 @@ import type {
 import type { SlabEntity } from '../../../bim/types/slab-types';
 import { computeSlabOpeningGeometry } from '../../../bim/geometry/slab-opening-geometry';
 import { validateSlabOpeningParams } from '../../../bim/validators/slab-opening-validator';
+import {
+  isManagedOpeningParams,
+  isStairwellOverridePatch,
+} from '../../../bim/stairs/managed-slab-opening-lock';
 import { MergeableUpdateCommand } from './MergeableUpdateCommand';
 
 export class UpdateSlabOpeningParamsCommand extends MergeableUpdateCommand<SlabOpeningParams> {
@@ -86,6 +90,13 @@ export class UpdateSlabOpeningParamsCommand extends MergeableUpdateCommand<SlabO
     if (!this.patch.slabId) return 'Slab-opening params.slabId is required';
     if (!this.patch.outline || this.patch.outline.vertices.length < 3) {
       return 'Slab-opening outline must have >= 3 vertices';
+    }
+    // ADR-632 Φ5 — managed (engine-owned) opening: κλειδωμένο για χειροκίνητο
+    // edit. Ο ΜΟΝΟΣ επιτρεπτός μετασχηματισμός είναι το ρητό Override/Reset
+    // (`autoStairDetached: true`). Safety-net για ΚΑΘΕ path (grip commit / ribbon
+    // combobox / bulk) — τα call sites δίνουν επίσης immediate UX feedback.
+    if (isManagedOpeningParams(this.previousPatch) && !isStairwellOverridePatch(this.previousPatch, this.patch)) {
+      return 'Slab-opening is managed by a stair (locked) — override (Reset) it first';
     }
     return null;
   }

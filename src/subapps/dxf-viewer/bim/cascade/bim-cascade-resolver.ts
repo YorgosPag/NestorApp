@@ -31,6 +31,7 @@
  */
 import type { Entity } from '../../types/entities';
 import type { SceneModel } from '../../types/scene-types';
+import type { SlabOpeningEntity } from '../types/slab-opening-types';
 import {
   isOpeningEntity,
   isSlabOpeningEntity,
@@ -68,6 +69,26 @@ export function findHostedOpenings(
 }
 
 /**
+ * SSoT loop για «σάρωσε slab-openings, μάζεψε ids όσων περνούν το `predicate`
+ * (και δεν είναι ήδη στο `exclude`)». Ένα σημείο για ΟΛΕΣ τις hosted/derived
+ * slab-opening σαρώσεις (host-slab FK / stairwell autoStairId) — N.0.2/N.18: όχι
+ * παράλληλα δίδυμα loops.
+ */
+function collectSlabOpeningIdsWhere(
+  entities: readonly Entity[],
+  exclude: ReadonlySet<string>,
+  predicate: (opening: SlabOpeningEntity) => boolean,
+): string[] {
+  const out: string[] = [];
+  for (const e of entities) {
+    if (!isSlabOpeningEntity(e)) continue;
+    if (exclude.has(e.id)) continue;
+    if (predicate(e)) out.push(e.id);
+  }
+  return out;
+}
+
+/**
  * Finds slab-opening ids that would be orphaned by deleting the given slab ids,
  * OR that share independent world coords with the slabs being moved.
  */
@@ -77,13 +98,7 @@ export function findHostedSlabOpenings(
   exclude: ReadonlySet<string> = new Set(),
 ): string[] {
   if (slabIds.size === 0) return [];
-  const out: string[] = [];
-  for (const e of entities) {
-    if (!isSlabOpeningEntity(e)) continue;
-    if (exclude.has(e.id)) continue;
-    if (slabIds.has(e.params.slabId)) out.push(e.id);
-  }
-  return out;
+  return collectSlabOpeningIdsWhere(entities, exclude, (o) => slabIds.has(o.params.slabId));
 }
 
 /**
@@ -93,6 +108,10 @@ export function findHostedSlabOpenings(
  * deletion set. Mirror of {@link findHostedSlabOpenings}, but keyed on the
  * derived `autoStairId` marker (the stair→stairwell-opening soft link) instead
  * of the `slabId` host FK — a stair delete must sweep the auto openings it owns.
+ *
+ * ADR-632 Φ5 — **detached** (Override) openings ΕΞΑΙΡΟΥΝΤΑΙ: μόλις ο χρήστης τα
+ * ξεκλειδώσει γίνονται πλήρως χειροκίνητα, οπότε delete της σκάλας ΔΕΝ πρέπει να
+ * σβήσει τη ρητή χειροκίνητη δουλειά του χρήστη.
  */
 export function findHostedStairwellOpenings(
   stairIds: ReadonlySet<string>,
@@ -100,14 +119,13 @@ export function findHostedStairwellOpenings(
   exclude: ReadonlySet<string> = new Set(),
 ): string[] {
   if (stairIds.size === 0) return [];
-  const out: string[] = [];
-  for (const e of entities) {
-    if (!isSlabOpeningEntity(e)) continue;
-    if (exclude.has(e.id)) continue;
-    const autoStairId = e.params.autoStairId;
-    if (autoStairId && stairIds.has(autoStairId)) out.push(e.id);
-  }
-  return out;
+  return collectSlabOpeningIdsWhere(
+    entities,
+    exclude,
+    (o) => o.params.autoStairDetached !== true
+      && o.params.autoStairId != null
+      && stairIds.has(o.params.autoStairId),
+  );
 }
 
 /** Any BIM entity whose vertical extent can attach to a structural host (ADR-401). */

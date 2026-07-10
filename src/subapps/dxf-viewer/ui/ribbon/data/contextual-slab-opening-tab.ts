@@ -124,6 +124,19 @@ export const CONTEXTUAL_SLAB_OPENING_TAB: RibbonTab = {
                 action: SLAB_OPENING_RIBBON_KEYS_ACTIONS.copyToFloors,
               },
             },
+            {
+              // ADR-632 Φ5 — Override/Reset: ξεκλειδώνει ένα managed (auto
+              // stairwell) opening ώστε να γίνει χειροκίνητο (Revit "Edit").
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'slab-opening.override',
+                labelKey: 'ribbon.commands.slabOpeningEditor.override',
+                icon: 'grip-edit',
+                commandKey: SLAB_OPENING_RIBBON_KEYS_ACTIONS.override,
+                action: SLAB_OPENING_RIBBON_KEYS_ACTIONS.override,
+              },
+            },
           ],
         },
       ],
