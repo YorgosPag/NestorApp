@@ -23,6 +23,8 @@ import { tekLineToEntity, tekArcToEntity, tekTextToEntity } from './tek-primitiv
 import { tekWallToBimEntities } from './tek-wall-to-bim';
 // ADR-531 Φ5b.4 — πλάκες (`<plane>` type 10) → native BIM SlabEntity.
 import { tekPlaneToSlabEntity } from './tek-plane-to-slab';
+// ADR-526 Φ6c — καθαρισμός stair-generated πλακών (μπετόν σκαλοπατιών): drop τριγωνικών + κατέβασμα ορθογώνιων.
+import { refineStairMeshPlanes } from './tek-stair-plane-refine';
 // ADR-531 Φ5b.5 — κολώνες/τοιχία (`<pillar>1` records) → native BIM ColumnEntity.
 import { tekPillarToColumnEntity } from './tek-pillar-to-column';
 // ADR-531 Φ5b.6 — γραμμοσκιάσεις (`<hatch>` type 6) → native HatchEntity.
@@ -147,9 +149,10 @@ export function buildSceneFromTekScene(
     wallEntities.push(...openings);
     warnings.push(...wallWarnings);
   }
-  // ADR-531 Φ5b.4 — κάθε <plane> (type 10) → BIM SlabEntity.
+  // ADR-531 Φ5b.4 — κάθε <plane> (type 10) → BIM SlabEntity. ADR-526 Φ6c: πρώτα καθαρισμός των
+  // stair-generated πλακών (drop τριγωνικών διπλότυπων + κατέβασμα ορθογώνιων στο ύψος καθίσματος).
   const slabEntities: Entity[] = [];
-  for (const rec of parsed.planes) {
+  for (const rec of refineStairMeshPlanes(parsed.planes, parsed.stairs)) {
     const { slab, warnings: slabWarnings } = tekPlaneToSlabEntity(rec, levelId, units);
     if (slab) slabEntities.push(slab);
     warnings.push(...slabWarnings);

@@ -14,6 +14,7 @@ import {
   generateOpeningId,
   generateSlabId,
   generateSlabOpeningId,
+  generateDeterministicSlabOpeningId,
   generateColumnId,
   generateBeamId,
   generateBimPresetId,
@@ -67,5 +68,24 @@ describe('ADR-363 BIM ID Generators', () => {
   it('generateBimPresetId produces bpst_ prefix (ADR-363 §5.9.1 BimPreset)', () => {
     const id = generateBimPresetId();
     expect(id).toMatch(/^bpst_/);
+  });
+});
+
+describe('ADR-632 Φ5 — deterministic slab-opening id', () => {
+  it('ίδιο seed → ΙΔΙΟ id (σταθερό ανά (stair, slab))', () => {
+    const seed = 'stair-1::slab-1';
+    expect(generateDeterministicSlabOpeningId(seed)).toBe(generateDeterministicSlabOpeningId(seed));
+  });
+
+  it('διαφορετικό seed → διαφορετικό id', () => {
+    expect(generateDeterministicSlabOpeningId('stair-1::slab-1')).not.toBe(
+      generateDeterministicSlabOpeningId('stair-1::slab-2'),
+    );
+  });
+
+  it('σωστό prefix (slbopn_) + uuid-shape', () => {
+    const id = generateDeterministicSlabOpeningId('stair-9::slab-9');
+    expect(id.startsWith('slbopn_')).toBe(true);
+    expect(id).toMatch(/^slbopn_[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12}$/);
   });
 });

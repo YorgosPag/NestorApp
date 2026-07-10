@@ -88,12 +88,12 @@ describe('StairGeometryService — L-shape with winders (Phase 3f)', () => {
     }
   });
 
-  it('Test 3: flight1 straight treads rectilinear along u1 (+X)', () => {
+  it('Test 3: pure flight1 straight treads rectilinear along u1 (+X)', () => {
     const g = computeStairGeometry(makeLShapeWinders({ cutPlaneHeight: 10000 }));
     const all: readonly Polygon3D[] = [...g.treadsBelowCut, ...g.treadsAboveCut];
-    // The first n1-1 = 6 treads are pure rectangles; the last flight-1 tread
-    // (index 6) is the balanced transition trapezoid (checked in Test 4).
-    for (let i = 0; i < 6; i++) {
+    // The balanced band borrows ≤2 treads per side (n1=7), so the first 5 treads
+    // are always pure rectangles advancing +X by one tread each.
+    for (let i = 0; i < 5; i++) {
       const c0 = all[0][0];
       const ci = all[i][0];
       expect(ci.x - c0.x).toBeCloseTo(280 * i, 5);
@@ -101,33 +101,25 @@ describe('StairGeometryService — L-shape with winders (Phase 3f)', () => {
     }
   });
 
-  it('Test 4: balanced winders reach the pivot; flight-end treads are transition trapezoids', () => {
+  it('Test 4: balanced band reaches the pivot P — several turn treads share it (no hole)', () => {
     const g = computeStairGeometry(makeLShapeWinders({ cutPlaneHeight: 10000 }));
     const all: readonly Polygon3D[] = [...g.treadsBelowCut, ...g.treadsAboveCut];
-    // ADR-630 Phase 2 — indices 7,8,9 are winder triangles sharing the pivot
-    // apex P (fill to the corner, no hole). Verify all three share the apex.
-    const apex0 = all[7][0];
-    for (let i = 7; i < 10; i++) {
-      expect(all[i]).toHaveLength(3);
-      const apex = all[i][0];
-      expect(Math.hypot(apex.x - apex0.x, apex.y - apex0.y)).toBeLessThan(COORD_TOL);
-    }
-    // Last flight-1 tread (6) and first flight-2 tread (10) are 4-vertex
-    // trapezoids, each carrying the pivot P as a vertex → the turn tiles to P.
-    for (const i of [6, 10]) {
-      expect(all[i]).toHaveLength(4);
-      expect(all[i].some((v) => Math.hypot(v.x - apex0.x, v.y - apex0.y) < COORD_TOL)).toBe(true);
-    }
+    // turnDirection 'right' → pivot at basePoint + u1·(n1·t) + v1·(−halfW).
+    const pivot = { x: 7 * 280, y: -500 };
+    const atPivot = all.filter((t) =>
+      t.some((v) => Math.hypot(v.x - pivot.x, v.y - pivot.y) < COORD_TOL),
+    );
+    expect(atPivot.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('Test 5: flight2 advances along u2 (turnDirection=right → -Y)', () => {
+  it('Test 5: pure flight2 advances along u2 (turnDirection=right → -Y)', () => {
     const g = computeStairGeometry(makeLShapeWinders({ cutPlaneHeight: 10000 }));
     const all: readonly Polygon3D[] = [...g.treadsBelowCut, ...g.treadsAboveCut];
-    // Indices 10..16 are flight2 (7 treads).
-    const c10 = all[10][0];
-    const c11 = all[11][0];
-    expect(c11.y - c10.y).toBeCloseTo(-280, 5); // right turn → -Y
-    expect(Math.abs(c11.x - c10.x)).toBeLessThan(COORD_TOL);
+    // Last two treads are always pure flight 2.
+    const last = all[all.length - 1][0];
+    const prev = all[all.length - 2][0];
+    expect(last.y - prev.y).toBeCloseTo(-280, 5); // right turn → -Y
+    expect(Math.abs(last.x - prev.x)).toBeLessThan(COORD_TOL);
   });
 
   it('Test 6: landings array is empty (winders replace landing)', () => {
@@ -168,15 +160,15 @@ describe('StairGeometryService — L-shape with winders (Phase 3f)', () => {
     }
   });
 
-  it('Test 11: turnDirection="left" → flight2 along +Y (mirror of right)', () => {
+  it('Test 11: turnDirection="left" → pure flight2 along +Y (mirror of right)', () => {
     const g = computeStairGeometry(makeLShapeWinders({
       turnDirection: 'left',
       cutPlaneHeight: 10000,
     }));
     const all: readonly Polygon3D[] = [...g.treadsBelowCut, ...g.treadsAboveCut];
-    const c10 = all[10][0];
-    const c11 = all[11][0];
-    expect(c11.y - c10.y).toBeCloseTo(280, 5); // left turn → +Y
+    const last = all[all.length - 1][0];
+    const prev = all[all.length - 2][0];
+    expect(last.y - prev.y).toBeCloseTo(280, 5); // left turn → +Y
   });
 
   it('Test 12: winderCount=2 → factory split correctly handles minimum (e.g. stepCount=10 → [4,4])', () => {
@@ -189,15 +181,17 @@ describe('StairGeometryService — L-shape with winders (Phase 3f)', () => {
     expect(g.treadsBelowCut.length + g.treadsAboveCut.length).toBe(10);
   });
 
-  it('Test 13: winderMethod="pie" → 3-vertex polygon treads at corner', () => {
+  it('Test 13: winderMethod="pie" also builds the balanced band reaching P', () => {
     const g = computeStairGeometry(makeLShapeWinders({
       winderMethod: 'pie',
       cutPlaneHeight: 10000,
     }));
     const all: readonly Polygon3D[] = [...g.treadsBelowCut, ...g.treadsAboveCut];
-    for (let i = 7; i < 10; i++) {
-      expect(all[i]).toHaveLength(3); // pie = triangle
-    }
+    const pivot = { x: 7 * 280, y: -500 };
+    const atPivot = all.filter((t) =>
+      t.some((v) => Math.hypot(v.x - pivot.x, v.y - pivot.y) < COORD_TOL),
+    );
+    expect(atPivot.length).toBeGreaterThanOrEqual(2);
   });
 
   it('Test 14: bbox covers flight1 + winders + flight2', () => {

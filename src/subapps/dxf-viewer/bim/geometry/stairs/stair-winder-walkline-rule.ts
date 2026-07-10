@@ -10,19 +10,14 @@
  * abrupt jump, and — for a monolithic RC stair — the wedges reach the inner
  * corner P (no gap / "hole", no zero-going miter left visible).
  *
- * Balanced model (ADR-630 Phase 2), plan view, pivot P at the inner corner:
- *   - Straight going target = `tread`. Walkline arc radius `R = width/2` about P
- *     (the geometric centreline path, tangent to both flight centrelines).
- *   - The turn Θ is shared by the `winderCount` wedges **plus one transition
- *     tread on each side** (band = W + 2). Every band tread gets the SAME
- *     walkline going `g = (2·tread + R·Θ) / (W + 2)`.
- *   - Each winder wedge sweeps `φ = g/R`; the fan spans `W·φ` centred on Θ, so
- *     it encroaches `δ = (W·φ − Θ)/2` into each flight. The two flight-end
- *     treads become **trapezoids** (perpendicular back edge, radial front edge
- *     from P) that share their P→outer edge with the neighbouring wedge — the
- *     turn tiles cleanly, filling to P.
- *   - The code minimum going stays a **validator WARNING**
- *     (`winderWalklineWarnings`), never a geometric cut that would re-open a gap.
+ * This module owns the **code minimums** (per `StairCodeProfile`) and the
+ * **validator warning** for direction-changing stairs. The balanced geometry
+ * itself (wedges reaching P + swung transition treads, equal walkline going)
+ * lives in `stair-winder-balanced-band.ts`; `computeBalancedBandPlan` there is
+ * the single source of the walkline going `g` that this validator checks.
+ *
+ * The code minimum going stays a **warning** (`winderWalklineWarnings`), never a
+ * geometric cut — the narrow inner tip reaching P is intentional RC fill.
  *
  * UNIT-AGNOSTIC: every length input shares ONE unit system; results come back in
  * that same system. `resolveWinderMinimums` derives the code minimums in
@@ -30,20 +25,16 @@
  * pipeline, mm in the code-profile validator) by keying off the width magnitude.
  *
  * Consumers (ADR-630):
- *   - `stair-geometry-winder.ts` `assembleWinderRun` — balanced wedges + the two
- *     transition trapezoids (winder kind + l-shape-with-winders share it).
+ *   - `stair-winder-balanced-band.ts` — the balanced geometry (via the minimums).
  *   - `services/building-code/engines/gate-stair-checker.ts` — going warnings.
- *   - (future) `stair-region-walkline.ts` reflex arcs, gamma-with-winders.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-630-winder-walkline-rule.md
  */
 
-import type { Polygon3D } from '../../types/stair-types';
 import type { StairCodeProfile } from '../../types/stair-types';
-import { type Vec2, point } from './stair-geometry-shared';
 import { inferSceneUnitsFromWidth, mmToSceneUnits } from '../../../utils/scene-units';
 
-/** Below this inner radius the wedge is emitted as a plain triangle (apex). */
+/** Numerical epsilon for going comparisons (same unit system as the input). */
 export const WINDER_INNER_EPS = 1e-6;
 
 // ─── Code minimums (mm, per profile) ─────────────────────────────────────────
@@ -104,136 +95,25 @@ export function resolveWinderMinimums(
   };
 }
 
-// ─── Balanced winder rule ─────────────────────────────────────────────────────
-
-export interface BalancedWinderInput {
-  /** Signed total turn of the stair at the corner (radians). */
-  readonly turnRad: number;
-  /** Number of winder wedges at the corner. */
-  readonly winderCount: number;
-  /** Straight-flight going (`params.tread`) — the balance target. */
-  readonly tread: number;
-  /** Walkline arc radius about the pivot = `width/2`. */
-  readonly walklineRadius: number;
-}
+// ─── Validator warnings ───────────────────────────────────────────────────────
 
 export type WinderRuleWarningCode =
   | 'winder-inner-going-below-min'
   | 'winder-walkline-going-below-min'
   | 'winder-walkline-offset-clamped';
 
-export interface BalancedWinderRule {
-  /** Signed sweep per winder wedge (equal walkline going). */
-  readonly winderSweepRad: number;
-  /** Signed angle of the winder-0 back edge from `ray0` (= −δ·sign(turn)). */
-  readonly startAngleRad: number;
-  /** Encroachment half-angle δ into each flight (>0 = wedges steal from flights). */
-  readonly encroachRad: number;
-  /** Equal going produced on the walkline for every band tread. */
-  readonly walklineGoing: number;
-  /** Transition treads per side that share the turn (Phase 2 = 1). */
-  readonly bandStepsPerSide: number;
-}
-
 /**
- * Compute the balanced-winder angles for one corner. Pure, deterministic,
- * unit-agnostic (see module header). The band = `winderCount` wedges + one
- * transition tread per side; all get equal walkline going `g`.
- */
-export function computeBalancedWinderRule(input: BalancedWinderInput): BalancedWinderRule {
-  const turnMag = Math.abs(input.turnRad);
-  const sign = input.turnRad >= 0 ? 1 : -1;
-  const w = Math.max(0, Math.floor(input.winderCount));
-  const r = Math.max(WINDER_INNER_EPS, input.walklineRadius);
-  const t = Math.max(0, input.tread);
-  if (w === 0 || turnMag < WINDER_INNER_EPS) {
-    return {
-      winderSweepRad: 0,
-      startAngleRad: 0,
-      encroachRad: 0,
-      walklineGoing: t,
-      bandStepsPerSide: 1,
-    };
-  }
-  // Equal walkline going across the band (W wedges + 2 transition treads).
-  const walklineGoing = (2 * t + r * turnMag) / (w + 2);
-  const sweepMag = walklineGoing / r;
-  const encroachRad = (w * sweepMag - turnMag) / 2;
-  return {
-    winderSweepRad: sweepMag * sign,
-    startAngleRad: -encroachRad * sign,
-    encroachRad,
-    walklineGoing,
-    bandStepsPerSide: 1,
-  };
-}
-
-/**
- * Validator-facing warnings for a balanced winder corner. The equal walkline
- * going must stay ≥ the code minimum; the narrow inner tip reaching P is
- * intentional (RC fill) and NOT flagged as a geometric error.
+ * Validator-facing warning for a balanced winder corner: the equal walkline
+ * going (from `computeBalancedBandPlan`) must stay ≥ the code minimum. The narrow
+ * inner tip reaching the pivot P is intentional (RC fill), NOT a geometric error,
+ * so only the walkline going is checked.
  */
 export function winderWalklineWarnings(
-  rule: BalancedWinderRule,
+  walklineGoing: number,
   minWalklineGoing: number,
 ): readonly WinderRuleWarningCode[] {
-  if (minWalklineGoing > 0 && rule.walklineGoing + WINDER_INNER_EPS < minWalklineGoing) {
+  if (minWalklineGoing > 0 && walklineGoing + WINDER_INNER_EPS < minWalklineGoing) {
     return ['winder-walkline-going-below-min'];
   }
   return [];
-}
-
-/**
- * Intersection of the ray `pivot + s·dir` with the infinite line
- * `edgePt + r·edgeDir` (2-D). Falls back to `edgePt` when the two directions are
- * parallel. Used to land a winder wedge / transition trapezoid outer vertex
- * exactly on a straight flight edge so the corner tiles with no sliver.
- */
-export function radialEdgeIntersect(
-  pivot: Vec2,
-  dir: Vec2,
-  edgePt: Vec2,
-  edgeDir: Vec2,
-): Vec2 {
-  const denom = dir.x * edgeDir.y - dir.y * edgeDir.x;
-  if (Math.abs(denom) < WINDER_INNER_EPS) return { x: edgePt.x, y: edgePt.y };
-  const wx = edgePt.x - pivot.x;
-  const wy = edgePt.y - pivot.y;
-  const s = (wx * edgeDir.y - wy * edgeDir.x) / denom;
-  return { x: pivot.x + dir.x * s, y: pivot.y + dir.y * s };
-}
-
-// ─── Wedge polygon (the geometric expression of the rule) ─────────────────────
-
-/**
- * Build one winder tread polygon (CCW) between rays `rayA` and `rayB` from the
- * `pivotXY`, spanning `innerRadius`→`outerRadius`. When `innerRadius` is ~0 the
- * apex is a single point (plain triangle, back-compat); otherwise the apex is
- * cut into an inner edge and the tread is a trapezoid `[innerA, outerA, outerB,
- * innerB]`. Winding follows `turnSign` (CCW for +1, reversed for −1) to match
- * the existing winder fan orientation.
- *
- * SSoT wedge shape — reused by the winder kind, l-shape-with-winders, and
- * (future) the stair-from-region reflex arcs.
- */
-export function buildWinderWedge(
-  pivotXY: Vec2,
-  rayA: Vec2,
-  rayB: Vec2,
-  innerRadius: number,
-  outerRadius: number,
-  z: number,
-  turnSign: 1 | -1,
-): Polygon3D {
-  const outerA = point(pivotXY.x + outerRadius * rayA.x, pivotXY.y + outerRadius * rayA.y, z);
-  const outerB = point(pivotXY.x + outerRadius * rayB.x, pivotXY.y + outerRadius * rayB.y, z);
-  if (innerRadius <= WINDER_INNER_EPS) {
-    const apex = point(pivotXY.x, pivotXY.y, z);
-    return turnSign === 1 ? [apex, outerA, outerB] : [apex, outerB, outerA];
-  }
-  const innerA = point(pivotXY.x + innerRadius * rayA.x, pivotXY.y + innerRadius * rayA.y, z);
-  const innerB = point(pivotXY.x + innerRadius * rayB.x, pivotXY.y + innerRadius * rayB.y, z);
-  return turnSign === 1
-    ? [innerA, outerA, outerB, innerB]
-    : [innerB, outerB, outerA, innerA];
 }

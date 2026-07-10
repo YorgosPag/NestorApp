@@ -36,9 +36,7 @@
 
 import type { Point3D } from '../../../rendering/types/Types';
 import type {
-  Polygon3D,
   Polyline3D,
-  Segment3D,
   StairArrowSymbol,
   StairGeometry,
   StairParams,
@@ -51,18 +49,10 @@ import {
   directionToUnitVector,
   point,
   arrowSymbol,
+  rotateVec,
 } from './stair-geometry-shared';
-import {
-  type FlightGeometry,
-  assembleMultiFlight,
-  buildFlightFromEdge,
-  buildRectilinearFlight,
-} from './stair-geometry-generators';
-import {
-  type BalancedWinderRule,
-  computeBalancedWinderRule,
-  radialEdgeIntersect,
-} from './stair-winder-walkline-rule';
+import { assembleMultiFlight } from './stair-geometry-generators';
+import { buildBalancedWinderRun } from './stair-winder-balanced-band';
 
 const DEG2RAD = Math.PI / 180;
 
@@ -107,43 +97,44 @@ export function computeWinder(
  * l-shape-with-winders (arrow = first walkline segment); the caller supplies
  * the up-arrow via `arrow(walkline)`.
  *
- * ADR-630 Phase 2 — **balanced / dancing winders**. `computeBalancedWinderRule`
- * distributes the turn so every band tread keeps equal walkline going; the
- * wedges reach the inner corner P (no gap) and the two flight-end treads become
- * transition trapezoids that share their P→outer edge with the neighbouring
- * wedge (`junctionOuters`). Winder method is validated by the callers via
- * `assertWinderMethodSupported`; it no longer changes the wedge shape.
+ * ADR-630 Phase 2 — **balanced / dancing winders**. `buildBalancedWinderRun`
+ * distributes the turn over the winders + `k` transition treads per side (auto,
+ * "dancing steps") so every band tread keeps equal walkline going; the wedges
+ * reach the inner corner P (no gap) and the transition treads swing their risers
+ * gradually from perpendicular to radial. Winder method is validated by the
+ * callers via `assertWinderMethodSupported`; it no longer changes the shape.
  */
 export function assembleWinderRun(
   params: Readonly<StairParams>,
   layout: WinderLayout,
   arrow: (walkline: Polyline3D) => StairArrowSymbol,
 ): StairGeometry {
-  const rule = computeBalancedWinderRule({
+  const run = buildBalancedWinderRun({
+    basePoint: params.basePoint,
+    u1: layout.u1,
+    v1: layout.v1,
+    u2: layout.u2,
+    ray0: layout.ray0,
+    pivotXY: layout.pivotXY,
+    turnSign: layout.turnSign,
     turnRad: layout.signedSweepRad * layout.winderCount,
-    winderCount: layout.winderCount,
+    width: params.width,
     tread: params.tread,
-    walklineRadius: params.width * 0.5,
+    nosing: params.nosing,
+    rise: params.rise,
+    n1: layout.n1,
+    n2: layout.n2,
+    winderCount: layout.winderCount,
   });
-  const junctions = computeJunctionOuters(params, layout, rule);
-  const flight1 = buildWinderFlight1(params, layout, rule, junctions.flight1);
-  const winders = buildWinderTreads(params, layout, rule, junctions);
-  const flight2 = buildWinderFlight2(params, layout, rule, junctions.flight2);
-  const allTreads: readonly Polygon3D[] = [
-    ...flight1.treads,
-    ...winders,
-    ...flight2.treads,
-  ];
-  const risers: readonly Segment3D[] = [...flight1.risers, ...flight2.risers];
   const walkline = buildWinderWalkline(params, layout);
   const midRay = rotateVec(layout.ray0, (layout.winderCount / 2) * layout.signedSweepRad);
   const midTangent = winderTangentAt(midRay, layout.turnSign);
   return assembleMultiFlight(params, {
-    treads: allTreads,
-    risers,
+    treads: run.treads,
+    risers: run.risers,
     walkline,
     cutDirs: [layout.u1, midTangent, layout.u2],
-    flightSplit: [layout.n1, layout.winderCount, layout.n2],
+    flightSplit: run.flightSplit,
     arrowSymbol: arrow(walkline),
   });
 }
@@ -195,156 +186,6 @@ export function buildWinderLayout(
   };
 }
 
-/**
- * ADR-630 Phase 2 — the two junction outer points where the balanced winder fan
- * meets the straight flight outer edges. Both the wedges and the transition
- * trapezoids anchor their shared P→outer edge here, so the corner tiles with no
- * sliver regardless of the encroachment sign.
- */
-interface JunctionOuters {
-  readonly flight1: Vec2;
-  readonly flight2: Vec2;
-}
-
-export function computeJunctionOuters(
-  params: Readonly<StairParams>,
-  layout: WinderLayout,
-  rule: BalancedWinderRule,
-): JunctionOuters {
-  const { basePoint, width } = params;
-  const { u1, u2, v1, ray0, pivotXY, turnSign, signedSweepRad, winderCount } = layout;
-  const halfW = width * 0.5;
-  const dirBack1 = rotateVec(ray0, rule.startAngleRad);
-  const dirFront2 = rotateVec(ray0, rule.startAngleRad + winderCount * rule.winderSweepRad);
-  // Flight-1 outer edge = the width edge opposite the pivot (−turnSign·v1 side).
-  const f1OuterPt: Vec2 = {
-    x: basePoint.x - v1.x * turnSign * halfW,
-    y: basePoint.y - v1.y * turnSign * halfW,
-  };
-  // Flight-2 outer edge = the far corner of the pivot edge along u2.
-  const widthAxis = rotateVec(ray0, signedSweepRad * winderCount);
-  const f2OuterPt: Vec2 = {
-    x: pivotXY.x + widthAxis.x * width,
-    y: pivotXY.y + widthAxis.y * width,
-  };
-  return {
-    flight1: radialEdgeIntersect(pivotXY, dirBack1, f1OuterPt, u1),
-    flight2: radialEdgeIntersect(pivotXY, dirFront2, f2OuterPt, u2),
-  };
-}
-
-/**
- * Flight 1: rectilinear treads from the centreline base point along `u1`; the
- * LAST tread is reshaped into a balanced transition trapezoid (perpendicular
- * back edge, radial front edge from the pivot P). ADR-611 — the straight treads
- * delegate to the shared `buildRectilinearFlight` generator.
- */
-export function buildWinderFlight1(
-  params: Readonly<StairParams>,
-  layout: WinderLayout,
-  rule: BalancedWinderRule,
-  frontOuter: Vec2,
-): FlightGeometry {
-  const flight = buildRectilinearFlight(
-    params.basePoint, layout.u1, params.rise, params.tread, params.nosing, params.width, layout.n1,
-  );
-  if (layout.n1 <= 0 || layout.winderCount <= 0 || rule.winderSweepRad === 0) return flight;
-  const { basePoint, rise, tread, width } = params;
-  const { u1, v1, pivotXY, turnSign, n1 } = layout;
-  const halfW = width * 0.5;
-  const along = tread * (n1 - 1);
-  const z = basePoint.z + rise * (n1 - 1);
-  const backOuter: Vec2 = {
-    x: basePoint.x + u1.x * along - v1.x * turnSign * halfW,
-    y: basePoint.y + u1.y * along - v1.y * turnSign * halfW,
-  };
-  const backInner: Vec2 = {
-    x: basePoint.x + u1.x * along + v1.x * turnSign * halfW,
-    y: basePoint.y + u1.y * along + v1.y * turnSign * halfW,
-  };
-  const treads = [...flight.treads];
-  treads[n1 - 1] = liftCCW([backOuter, frontOuter, pivotXY, backInner], z);
-  return { treads, risers: flight.risers };
-}
-
-/**
- * ADR-630 Phase 2 — balanced winder wedges. Each wedge is a triangle from the
- * pivot P (reaching the inner corner, no gap). The two end wedges land their
- * encroaching outer vertex on the flight edge (`junctions`) so the P→outer edge
- * is shared with the neighbouring transition trapezoid.
- */
-export function buildWinderTreads(
-  params: Readonly<StairParams>,
-  layout: WinderLayout,
-  rule: BalancedWinderRule,
-  junctions: JunctionOuters,
-): readonly Polygon3D[] {
-  const { basePoint, rise, width } = params;
-  const { pivotXY, ray0, turnSign, n1, winderCount } = layout;
-  const out: Polygon3D[] = new Array(winderCount);
-  for (let i = 0; i < winderCount; i++) {
-    const rayA = rotateVec(ray0, rule.startAngleRad + i * rule.winderSweepRad);
-    const rayB = rotateVec(ray0, rule.startAngleRad + (i + 1) * rule.winderSweepRad);
-    const outerA: Vec2 = i === 0
-      ? junctions.flight1
-      : { x: pivotXY.x + width * rayA.x, y: pivotXY.y + width * rayA.y };
-    const outerB: Vec2 = i === winderCount - 1
-      ? junctions.flight2
-      : { x: pivotXY.x + width * rayB.x, y: pivotXY.y + width * rayB.y };
-    const z = basePoint.z + rise * (n1 + i);
-    out[i] = turnSign === 1
-      ? liftPoly([pivotXY, outerA, outerB], z)
-      : liftPoly([pivotXY, outerB, outerA], z);
-  }
-  return out;
-}
-
-/**
- * Flight 2: rectilinear treads from the pivot edge along `u2`; the FIRST tread
- * is reshaped into a balanced transition trapezoid (its pivot-edge outer corner
- * moves onto the last winder's front radial). ADR-611 — the straight treads
- * delegate to the shared `buildFlightFromEdge` generator.
- */
-export function buildWinderFlight2(
-  params: Readonly<StairParams>,
-  layout: WinderLayout,
-  rule: BalancedWinderRule,
-  backOuter: Vec2,
-): FlightGeometry {
-  const { pivotXY, u2, ray0, signedSweepRad, n1, n2, winderCount } = layout;
-  // Width axis = ray_winderCount (trailing winder boundary direction).
-  // 90° turn → widthAxis ≈ u1; 180° turn → widthAxis = ±v1.
-  const widthAxis = rotateVec(ray0, signedSweepRad * winderCount);
-  const flight = buildFlightFromEdge(
-    pivotXY, u2, widthAxis, params.rise, params.tread, params.nosing, params.width, n2,
-    params.basePoint.z + params.rise * (n1 + winderCount),
-  );
-  if (n2 <= 0 || winderCount <= 0 || rule.winderSweepRad === 0) return flight;
-  const first = flight.treads[0];
-  const z = first[0].z;
-  const treads = [...flight.treads];
-  // Replace the pivot-edge outer corner (index 3) with the balanced front radial.
-  treads[0] = [first[0], first[1], first[2], point(backOuter.x, backOuter.y, z)];
-  return { treads, risers: flight.risers };
-}
-
-/** Lift 2-D vertices to a `Polygon3D` at fixed `z` (winding preserved). */
-function liftPoly(pts: readonly Vec2[], z: number): Polygon3D {
-  return pts.map((p) => point(p.x, p.y, z));
-}
-
-/** Lift 2-D vertices to a `Polygon3D` at fixed `z`, forcing CCW winding. */
-function liftCCW(pts: readonly Vec2[], z: number): Polygon3D {
-  let area2 = 0;
-  for (let i = 0; i < pts.length; i++) {
-    const a = pts[i];
-    const b = pts[(i + 1) % pts.length];
-    area2 += a.x * b.y - b.x * a.y;
-  }
-  const ordered = area2 < 0 ? [...pts].reverse() : pts;
-  return liftPoly(ordered, z);
-}
-
 export function buildWinderWalkline(
   params: Readonly<StairParams>,
   layout: WinderLayout,
@@ -375,12 +216,6 @@ export function buildWinderWalkline(
 }
 
 // ─── Vec utilities ────────────────────────────────────────────────────────────
-
-export function rotateVec(v: Vec2, angleRad: number): Vec2 {
-  const c = Math.cos(angleRad);
-  const s = Math.sin(angleRad);
-  return { x: v.x * c - v.y * s, y: v.x * s + v.y * c };
-}
 
 export function winderTangentAt(ray: Vec2, turnSign: 1 | -1): Vec2 {
   // d/dθ rotate(ray_0, θ) = rotate(ray_0, θ + π/2). Sign flips for cw sweep.

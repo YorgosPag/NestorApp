@@ -140,9 +140,12 @@ function assembleSlabOpeningEntity(
   params: Readonly<SlabOpeningParams>,
   layerId: string,
   bimValidation: BimValidation,
+  idOverride?: string,
 ): SlabOpeningEntity {
   return {
-    id: generateSlabOpeningId(),
+    // ADR-632 Φ5 — auto stairwell openings περνούν deterministic-stable id (σταθερό ανά
+    // (autoStairId, slabId)) ώστε undo→redo να μην αλλάζει doc id· χειροκίνητα → random.
+    id: idOverride ?? generateSlabOpeningId(),
     type: 'slab-opening',
     kind: params.kind,
     layerId,
@@ -156,17 +159,21 @@ function assembleSlabOpeningEntity(
 /**
  * Build `SlabOpeningEntity` από `SlabOpeningParams + hostSlab`. Geometry
  * recomputed via SSoT pure functions. Hard errors short-circuit creation.
+ *
+ * `idOverride` (ADR-632 Φ5): deterministic id για derived/managed openings (auto
+ * stairwell). Απόν → random enterprise id (χειροκίνητο placement, αμετάβλητη συμπεριφορά).
  */
 export function buildSlabOpeningEntity(
   params: Readonly<SlabOpeningParams>,
   hostSlab: SlabEntity,
   layerId: string,
+  idOverride?: string,
 ): BuildSlabOpeningEntityResult {
   const validation = validateSlabOpeningParams(params, hostSlab);
   if (validation.hardErrors.length > 0) {
     return { ok: false, hardErrors: validation.hardErrors };
   }
-  return { ok: true, entity: assembleSlabOpeningEntity(params, layerId, validation.bimValidation) };
+  return { ok: true, entity: assembleSlabOpeningEntity(params, layerId, validation.bimValidation, idOverride) };
 }
 
 // ─── Preview-tolerant builder (ADR-574 Σ2b) ─────────────────────────────────

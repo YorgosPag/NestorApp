@@ -103,8 +103,12 @@ export interface StairwellPlanOptions extends StairSlabOverlapOptions {
 
 const DEFAULT_OUTLINE_EPS = 1e-6;
 
-/** Σταθερό key ενός managed opening: ένα ανά (σκάλα, πλάκα). */
-function pairKey(autoStairId: string, slabId: string): string {
+/**
+ * Σταθερό key/identity ενός managed opening: ένα ανά (σκάλα, πλάκα). SSoT — το ίδιο
+ * string χρησιμεύει και ως **seed** για το deterministic-stable doc id (ADR-632 Φ5:
+ * `generateDeterministicSlabOpeningId`), ώστε undo→redo να παράγει το ΙΔΙΟ id.
+ */
+export function stairwellOpeningPairKey(autoStairId: string, slabId: string): string {
   return `${autoStairId}::${slabId}`;
 }
 
@@ -156,7 +160,7 @@ function computeDesiredOpenings(
     };
     for (const overlap of findSlabsAboveStair(footprint, slabs, options)) {
       const desired = computeOpeningForPair(stair, overlap, margin);
-      if (desired) out.set(pairKey(desired.autoStairId, desired.slabId), desired);
+      if (desired) out.set(stairwellOpeningPairKey(desired.autoStairId, desired.slabId), desired);
     }
   }
   return out;
@@ -188,7 +192,7 @@ function diffPlan(
   const existingByKey = new Map<string, StairwellManagedOpening>();
   const deletes: { openingId: string }[] = [];
   for (const managed of existing) {
-    const key = pairKey(managed.autoStairId, managed.slabId);
+    const key = stairwellOpeningPairKey(managed.autoStairId, managed.slabId);
     if (existingByKey.has(key)) deletes.push({ openingId: managed.openingId });
     else existingByKey.set(key, managed);
   }

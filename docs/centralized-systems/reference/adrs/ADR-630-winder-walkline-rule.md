@@ -30,18 +30,20 @@ The building-code rule (IRC R311.7.5.2.1 / ΝΟΚ Άρθρο 13 / DIN 18065) is:
 
 ## Decision
 
-Introduce a single SSoT module
-**`bim/geometry/stairs/stair-winder-walkline-rule.ts`** owning both rules for
-**every** direction-changing stair, and wire the existing consumers to it.
+Introduce SSoT modules under `bim/geometry/stairs/` owning the balanced
+construction for **every** direction-changing stair — the geometry in
+**`stair-winder-balanced-band.ts`** and the code minimums/warning in
+**`stair-winder-walkline-rule.ts`** — and wire the existing consumers to them.
 
-### The module
+### The modules
 
 **Phase 2 supersedes the Phase-1 "inner-radius cut" with the balanced /
 dancing-winder construction** (Revit default, continental-EU / ΝΟΚ practice).
 Cutting the wedges to a `minInnerGoing` radius left a visible **hole** at the
-corner and the treads no longer reached the inner corner P — rejected. The
-balanced construction keeps equal walkline going *and* fills to P.
+corner and the treads no longer reached the inner corner P — rejected. Two
+modules split the concern:
 
+**`stair-winder-walkline-rule.ts`** — code minimums + validator warning only:
 - `WINDER_CODE_MINIMUMS_MM` — per-`StairCodeProfile` mm table (nok/ibc/eurocode/
   nbc/nfpa/as1657/din/ada/none). `none` = `0` → validator warning disabled.
 - `resolveWinderMinimums(codeProfile, sampleWidth)` — scales the mm table into
@@ -49,29 +51,34 @@ balanced construction keeps equal walkline going *and* fills to P.
   (`inferSceneUnitsFromWidth` + `mmToSceneUnits`, the units SSoT — **no**
   `mmFactorFromWidth` clone). Serves both the scene-unit geometry pipeline
   **and** the mm-normalised validator.
-- `computeBalancedWinderRule(input)` — pure, unit-agnostic. Given
-  `{ turnRad, winderCount W, tread, walklineRadius R = width/2 }` returns
-  `{ winderSweepRad, startAngleRad, encroachRad δ, walklineGoing g, bandStepsPerSide }`.
-  - Equal walkline going across the band (W wedges + 1 transition tread per
-    side): `g = (2·tread + R·Θ) / (W + 2)`.
-  - Wedge sweep `φ = g/R`; the fan spans `W·φ` centred on Θ, encroaching
-    `δ = (W·φ − Θ)/2` into each flight (δ>0 = wedges steal from flights on a
-    narrow stair; δ<0 = wedges give on a wide stair — both tile cleanly).
-- `winderWalklineWarnings(rule, minWalklineGoing)` — validator warning: fires
-  `winder-walkline-going-below-min` when the equal going `g` is below the code
-  minimum. The inner tip reaching P is **intentional RC fill**, not flagged.
-- `radialEdgeIntersect(pivot, dir, edgePt, edgeDir)` — lands a wedge / trapezoid
-  outer vertex exactly on a straight flight edge so the corner tiles with no
-  sliver (the wedges and the transition trapezoids share the P→outer edge).
-- `buildWinderWedge(...)` — retained wedge builder (triangle when `innerRadius ≈
-  0`); still exported for future reflex-arc consumers.
+- `winderWalklineWarnings(walklineGoing, minWalklineGoing)` — fires
+  `winder-walkline-going-below-min` when the equal going is below the minimum.
+  The inner tip reaching P is **intentional RC fill**, not flagged.
+
+**`stair-winder-balanced-band.ts`** — the balanced geometry (SSoT):
+- `computeBalancedBandPlan({ turnRad, winderCount W, tread, walklineRadius R =
+  width/2, n1, n2 })` → `{ bandStepsPerSide k, walklineGoing g, totalBandSteps M }`.
+  The turn region = the last `k` treads of flight 1 + `W` winders + the first `k`
+  of flight 2, rebuilt as `M = W + 2k` treads that all share equal walkline going
+  `g = (2·k·t + R·Θ)/(W + 2k)`. `k` **auto-widens** 1→2 (cap
+  `MAX_BAND_STEPS_PER_SIDE`) while `g` is >3 % off the straight tread — the
+  "spread the turn onto steps 6 & 12" case; `k = 0` (short flights) → pure fan
+  `R·Θ/W`, still reaching P.
+- `buildBalancedWinderRun(input)` — the full run (pure flight 1 + band + pure
+  flight 2). The band walkline (straight tail + arc about P + straight head) is
+  cut at equal-going marks; each riser is ⟂ to the walkline tangent and spans the
+  inner boundary (flight edge → **P** → flight edge) to the outer boundary (flight
+  edge → circle radius `width` → flight edge). Risers **swing gradually** from
+  perpendicular to radial → dancing steps; the arc risers pass through P → wedges
+  fill the corner (no hole). The band occupies exactly the footprint of the
+  `k+W+k` treads it replaces → the pure flights are untouched (zero ripple).
 
 ### Consumers wired
 
 | Consumer | File | Change |
 |---|---|---|
-| Winder kind **+** L-shape-with-winders (σκάλα Γ) | `stair-geometry-winder.ts` | `assembleWinderRun` computes the balanced rule + `computeJunctionOuters` once; `buildWinderTreads` emits W triangles reaching P; `buildWinderFlight1/2` reshape the flight-end treads into transition trapezoids sharing the P→outer edge. Both variants share `assembleWinderRun` → both fixed at once. |
-| Code validator | `gate-stair-checker.ts` | `checkWinderGeometry` uses `computeBalancedWinderRule` + `winderWalklineWarnings` → the equal-going warning folds into `codeViolations` (universal except `'none'`). |
+| Winder kind **+** L-shape-with-winders (σκάλα Γ) | `stair-geometry-winder.ts` | `assembleWinderRun` delegates the whole turn to `buildBalancedWinderRun`; `flightSplit = [n1−k, M, n2−k]`. Both variants share `assembleWinderRun` → both fixed at once. `rotateVec` centralised to `stair-geometry-shared.ts`. |
+| Code validator | `gate-stair-checker.ts` | `checkWinderGeometry` uses `computeBalancedBandPlan` (unconstrained flights) + `winderWalklineWarnings` → the equal-going warning folds into `codeViolations` (universal except `'none'`). |
 | Walkline default | `stair-completion.ts` | `DEFAULT_WALKLINE_OFFSET_MM` fixed `600 → 300` (Phase 1, retained). |
 
 ### Scope note
@@ -83,43 +90,46 @@ The balancing uses that same `R = width/2` arc as its going-measurement line.
 ## Consequences
 
 - The corner "hole" and the zero-going miter are both gone for the σκάλα Γ and
-  the winder kind: the wedges fill to P and the two flight-end treads become
-  balanced transition trapezoids sharing their edges with the wedges.
-- Every band tread (wedges + 2 transitions) keeps **equal walkline going** → the
-  turn is uniform and gradual (no abrupt going jump) — the Revit/textbook
-  "balanced/dancing" result.
+  the winder kind: the band fills to P and the turn tiles cleanly.
+- Every band tread keeps **equal walkline going** and the risers swing gradually
+  → the turn is uniform and smooth (no abrupt going jump) — the Revit/textbook
+  "balanced/dancing" result. `k` auto-widens onto the neighbouring steps when the
+  turn is tight.
 - The balance is **geometric** (applies for every profile incl. `'none'`); the
   code minimum stays a validator warning only.
-- The rule is generic: future consumers (stair-from-region reflex arcs,
-  gamma-with-winders) call the same `computeBalancedWinderRule` — no re-derivation.
+- The band is footprint-preserving → labels (`stepCount` unchanged), stringers
+  and the geometric walkline are unaffected.
 
 ### Known limitation (follow-up)
 
-The band is fixed at **1 transition tread per side** (`bandStepsPerSide = 1`).
-Spreading the turn over more steps (Revit "wider balance", `k ≥ 2`) needs swung —
-not purely radial — risers and flight-tread repositioning; deferred to a
-follow-up. With `k = 1` the equal going already stays within a few mm of the
-straight tread for typical stairs, so the visible transition is smooth.
+`k` is capped at **2** transition treads per side (`MAX_BAND_STEPS_PER_SIDE`) — it
+covers the "steps 6 & 12" case and keeps the result predictable. Raising the cap
+is a one-constant change; the construction already generalises to any `k`. A tiny
+tangent-corner approximation at the straight↔arc seam (sub-mm for real dims) is
+absorbed by an inserted seam vertex.
 
 ## Testing
 
-- `stair-winder-walkline-rule.test.ts` — balanced rule solver (equal going, δ
-  sign both ways, cw/ccw mirror, degenerate), `winderWalklineWarnings`,
-  `radialEdgeIntersect`, mm/scene resolver, wedge shape + winding.
-- Regression: `StairGeometryService-winder` / `-lshape-winders` assert wedges
-  reach the shared pivot apex (no hole) + flight-end transition trapezoids.
+- `stair-winder-balanced-band.test.ts` — auto-`k` plan (equal going, widen-to-
+  tolerance, `k=0` fallback, degenerate) + assembled run (tread count, wedges
+  reaching P = no hole, contiguous z, cw/ccw mirror).
+- `stair-winder-walkline-rule.test.ts` — mm/scene resolver + `winderWalklineWarnings`.
+- Regression: `StairGeometryService-winder` / `-lshape-winders` assert the band
+  reaches the shared pivot P (no hole), pure flights rectilinear, count conserved.
   Full stairs dir: **268/268 green**. jscpd: clean.
 
 ## Changelog
 
-- **2026-07-10** — Phase 2: **balanced / dancing winders**. Replaced the Phase-1
-  inner-radius cut (`computeWinderWalklineRule`) with `computeBalancedWinderRule`
-  — wedges reach the inner corner P (no hole), the two flight-end treads become
-  equal-going transition trapezoids, corner tiles via shared P→outer edges
-  (`computeJunctionOuters` + `radialEdgeIntersect`). Validator switched to
-  `winderWalklineWarnings`. Fixed at `bandStepsPerSide = 1` (k≥2 wider balance =
-  follow-up). Pending: browser verification of the render; stair-from-region
-  reflex-arc + gamma-with-winders consumers.
-- **2026-07-10** — Phase 1: SSoT module + geometry wiring (winder kind &
-  L-shape-with-winders) + validator check + i18n (el/en) + `walklineOffset`
-  default fix. *Superseded by Phase 2 (the cut left a corner hole).*
+- **2026-07-11** — Phase 2b: **auto-widening balanced band (dancing steps, k≥2)**.
+  New SSoT `stair-winder-balanced-band.ts`: `computeBalancedBandPlan` (auto `k`,
+  cap 2) + `buildBalancedWinderRun` (equal-going marks, swung risers, wedges reach
+  P, footprint-preserving). `stair-geometry-winder.ts` delegates the whole turn;
+  the k=1-only helpers (`buildWinderTreads`/`buildWinderFlight1/2`/
+  `computeJunctionOuters`/`buildWinderWedge`/`radialEdgeIntersect`/
+  `computeBalancedWinderRule`) removed. Rule module trimmed to minimums +
+  `winderWalklineWarnings`. `rotateVec` centralised to `stair-geometry-shared.ts`.
+  Validator uses `computeBalancedBandPlan`. Pending: browser verification.
+- **2026-07-10** — Phase 2: balanced winders, k=1 (wedges reach P + 2 transition
+  trapezoids). *Generalised by Phase 2b to auto k≥2.*
+- **2026-07-10** — Phase 1: SSoT module + geometry wiring + validator + i18n +
+  `walklineOffset` default fix. *Superseded (the cut left a corner hole).*

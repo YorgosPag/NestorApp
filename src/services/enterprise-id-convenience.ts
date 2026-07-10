@@ -275,6 +275,9 @@ export const generateHatchId = () => enterpriseIdService.generateHatchId();
 export const generateThermalSpaceId = () => enterpriseIdService.generateThermalSpaceId();
 export const generateSpaceSeparatorId = () => enterpriseIdService.generateSpaceSeparatorId();
 export const generateSlabOpeningId = () => enterpriseIdService.generateSlabOpeningId();
+// ADR-632 Φ5 — deterministic slab-opening id (σταθερό ανά seed· auto stairwell opening).
+export const generateDeterministicSlabOpeningId = (seed: string) =>
+  enterpriseIdService.generateDeterministicSlabOpeningId(seed);
 export const generateBimStackGroupId = () => enterpriseIdService.generateBimStackGroupId();
 export const generateColumnId = () => enterpriseIdService.generateColumnId();
 export const generateBeamId = () => enterpriseIdService.generateBeamId();

@@ -30,6 +30,7 @@ import {
   type EnterpriseId,
   type IdGenerationConfig,
 } from './enterprise-id-prefixes';
+import { deterministicUuid } from './enterprise-id-deterministic';
 
 // Alias for compact generator methods
 const P = ENTERPRISE_ID_PREFIXES;
@@ -65,6 +66,15 @@ export class EnterpriseIdService {
 
     const hex = Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
     return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+  }
+
+  /**
+   * ADR-632 Φ5 — deterministic id (`prefix_<seededUuid>`). Δεν περνά από το
+   * uniqueness-retry loop του {@link generateId} (σκόπιμα επαναλήψιμο). Ο pure
+   * seeded-hash ζει στο `./enterprise-id-deterministic` (SRP/N.7.1).
+   */
+  private generateDeterministicId(prefix: EnterpriseIdPrefix, seed: string): string {
+    return `${prefix}_${deterministicUuid(seed)}`;
   }
 
   private generateId(prefix: EnterpriseIdPrefix): EnterpriseId {
@@ -346,6 +356,8 @@ export class EnterpriseIdService {
   generateOpeningId(): string { return this.generateId(P.OPENING).id; }
   generateSlabId(): string { return this.generateId(P.SLAB).id; }
   generateSlabOpeningId(): string { return this.generateId(P.SLAB_OPENING).id; }
+  /** ADR-632 Φ5 — σταθερό slab-opening id ανά seed (auto stairwell opening: `stairId::slabId`). */
+  generateDeterministicSlabOpeningId(seed: string): string { return this.generateDeterministicId(P.SLAB_OPENING, seed); }
   generateBimStackGroupId(): string { return this.generateId(P.BIM_STACK_GROUP).id; }
   generateColumnId(): string { return this.generateId(P.COLUMN).id; }
   generateBeamId(): string { return this.generateId(P.BEAM).id; }

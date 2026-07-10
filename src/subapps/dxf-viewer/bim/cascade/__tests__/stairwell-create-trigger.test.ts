@@ -52,12 +52,16 @@ const TREADS: Polygon3D[] = [
   makeTread(900, 300, 1200),
 ];
 
+/** Bare `Point3D[]` per tread — το πραγματικό `StairGeometry.treads` σχήμα (ADR-358·
+ * `buildStairInput` το adaptάρει σε `{ vertices }` στο boundary). */
+const GEOM_TREADS = TREADS.map((t) => t.vertices);
+
 function fakeStair(id = 'stair-1'): StairEntity {
   return {
     id,
     type: 'stair',
     geometry: {
-      treads: TREADS,
+      treads: GEOM_TREADS,
       bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 1200, y: 1000, z: 1200 } },
     },
     params: {
@@ -168,6 +172,21 @@ describe('CreateBimEntityCommand — ADR-632 Φ4.1 create-trigger', () => {
     cmd.redo();
     expect(sm.store.has('slab-1')).toBe(true);
     expect(autoOpeningCount(sm.store)).toBe(1);
+  });
+
+  it('ADR-632 Φ5 — deterministic id: undo→redo ξαναφτιάχνει το ΙΔΙΟ opening id', () => {
+    const sm = createMockSceneManager([fakeStair() as unknown as AnySceneEntity]);
+    const cmd = new CreateBimEntityCommand(fakeSlab() as unknown as AnySceneEntity, 'slab', sm);
+    cmd.execute();
+    const firstId = [...sm.store.values()].find(
+      (e) => (e as { type?: string }).type === 'slab-opening',
+    ) as { id: string };
+    cmd.undo();
+    cmd.redo();
+    const secondId = [...sm.store.values()].find(
+      (e) => (e as { type?: string }).type === 'slab-opening',
+    ) as { id: string };
+    expect(secondId.id).toBe(firstId.id);
   });
 
   it('create μη-δομικού (κολόνα) → κανένα stairwell opening (gate)', () => {

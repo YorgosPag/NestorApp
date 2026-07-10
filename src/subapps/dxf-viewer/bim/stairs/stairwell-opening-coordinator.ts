@@ -42,6 +42,7 @@ import type { SlabOpeningEntity, SlabOpeningParams } from '../types/slab-opening
 import { isSlabEntity, isSlabOpeningEntity, isStairEntity } from '../../types/entities';
 import { computeSlabOpeningGeometry } from '../geometry/slab-opening-geometry';
 import { buildSlabOpeningEntity } from '../../hooks/drawing/slab-opening-completion';
+import { generateDeterministicSlabOpeningId } from '@/services/enterprise-id-convenience';
 import {
   emitBimEntityCreated,
   emitBimEntityDeleteRequested,
@@ -49,6 +50,7 @@ import {
 import { STAIRWELL_AUTO_OPENING_KIND } from '../geometry/stairs/stairwell-opening-config';
 import {
   planStairwellOpenings,
+  stairwellOpeningPairKey,
   type StairwellDesiredOpening,
   type StairwellOpeningPlan,
   type StairwellPlanOptions,
@@ -118,7 +120,12 @@ function applyCreate(
     autoStairId: desired.autoStairId,
     ...(sceneUnits ? { sceneUnits } : {}),
   };
-  const built = buildSlabOpeningEntity(params, host, host.layerId);
+  // ADR-632 Φ5 — deterministic-stable id ανά (autoStairId, slabId): idempotent re-run
+  // (undo→redo) ξαναφτιάχνει το ΙΔΙΟ doc id → setDoc idempotent, μηδέν Firestore churn.
+  const stableId = generateDeterministicSlabOpeningId(
+    stairwellOpeningPairKey(desired.autoStairId, desired.slabId),
+  );
+  const built = buildSlabOpeningEntity(params, host, host.layerId, stableId);
   if (!built.ok) return null;
   sceneManager.addEntity(built.entity as unknown as SceneEntity);
   return built.entity;

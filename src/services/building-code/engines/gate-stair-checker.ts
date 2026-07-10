@@ -27,10 +27,10 @@ import type {
 import { isLShapeWindersVariant } from '@/subapps/dxf-viewer/bim/types/stair-types';
 import {
   type WinderRuleWarningCode,
-  computeBalancedWinderRule,
   resolveWinderMinimums,
   winderWalklineWarnings,
 } from '@/subapps/dxf-viewer/bim/geometry/stairs/stair-winder-walkline-rule';
+import { computeBalancedBandPlan } from '@/subapps/dxf-viewer/bim/geometry/stairs/stair-winder-balanced-band';
 
 // ─── Public input / output shapes ────────────────────────────────────────────
 
@@ -228,7 +228,7 @@ function winderSweep(variant: StairVariantParams): { sweepRad: number; count: nu
 /**
  * ADR-630 Phase 2 — going compliance at a winder corner. The balanced walkline
  * going must stay ≥ the code minimum. Consumes the geometry SSoT
- * (`computeBalancedWinderRule`) so validator and renderer never diverge. Params
+ * (`computeBalancedBandPlan`) so validator and renderer never diverge. Params
  * arrive mm-normalised (`paramsToMmForCodeCheck`), so the mm code minimums apply
  * directly.
  */
@@ -242,14 +242,18 @@ function checkWinderGeometry(
   const mins = resolveWinderMinimums(codeProfile, params.width);
   // ADR-630 Phase 2 — the balanced winder keeps equal walkline going; warn when
   // that shared going drops below the code minimum (the inner tip reaching the
-  // pivot is intentional RC fill, not a geometric error).
-  const rule = computeBalancedWinderRule({
+  // pivot is intentional RC fill, not a geometric error). Flights unconstrained
+  // (large n1/n2) → the plan picks the auto-widened going the renderer uses.
+  const plan = computeBalancedBandPlan({
     turnRad: w.sweepRad * w.count,
     winderCount: w.count,
     tread: params.tread,
     walklineRadius: params.width * 0.5,
+    n1: Number.MAX_SAFE_INTEGER,
+    n2: Number.MAX_SAFE_INTEGER,
   });
-  return winderWalklineWarnings(rule, mins.minWalklineGoing).map((code) => WINDER_WARNING_KEYS[code]);
+  return winderWalklineWarnings(plan.walklineGoing, mins.minWalklineGoing)
+    .map((code) => WINDER_WARNING_KEYS[code]);
 }
 
 // ─── Public dispatcher ───────────────────────────────────────────────────────

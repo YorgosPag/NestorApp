@@ -39,6 +39,13 @@ export function perp(u: Vec2): Vec2 {
   return { x: -u.y, y: u.x };
 }
 
+/** Rotate a 2-D vector by `angleRad` (CCW positive). SSoT for the winder fan. */
+export function rotateVec(v: Vec2, angleRad: number): Vec2 {
+  const c = Math.cos(angleRad);
+  const s = Math.sin(angleRad);
+  return { x: v.x * c - v.y * s, y: v.x * s + v.y * c };
+}
+
 export function point(x: number, y: number, z: number): Point3D {
   return { x, y, z };
 }

@@ -83,7 +83,14 @@ function buildStairInput(
   sceneToMm: number,
 ): StairwellPlanStair {
   const profile = resolveStairVerticalProfile(stair.params, ctx);
-  const treads = stair.geometry.treads;
+  // ADR-632 vs ADR-358 tread shape adapter (SSoT boundary). The stairwell planner
+  // represents each tread as a `{ vertices }` `Polygon3D`, but the stair geometry
+  // SSoT (`StairGeometry.treads`) is a BARE `Point3D[]` per tread. Wrap ONCE here —
+  // this file is the scene→planner translation boundary — so both tread consumers
+  // (`computeStairNosings` + `computeStairwellOpeningOutline`) read `.vertices`
+  // safely. Without it any stair with real geometry crashed at `tread.vertices`
+  // (`undefined`), first surfaced by a multi-flight turn commit (ADR-633).
+  const treads: Polygon3D[] = stair.geometry.treads.map((vertices) => ({ vertices: [...vertices] }));
   const nosingsZmm = computeStairNosings(treads, stair.params.direction).map((n) => ({
     treadIndex: n.treadIndex,
     zMm: n.point.z * sceneToMm,

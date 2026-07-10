@@ -51,13 +51,18 @@ function makeRect(x0: number, y0: number, x1: number, y1: number, z = 0): Polygo
   };
 }
 
-/** 4 ανοδικά treads (z 300/600/900/1200), footprint [0,1200]×[0,1000]. */
+/** 4 ανοδικά treads (z 300/600/900/1200), footprint [0,1200]×[0,1000]. Planner
+ * (`StairwellPlanStair.treads`) shape = `{ vertices }` Polygon3D. */
 const TREADS: Polygon3D[] = [
   makeTread(0, 300, 300),
   makeTread(300, 300, 600),
   makeTread(600, 300, 900),
   makeTread(900, 300, 1200),
 ];
+
+/** Ίδια treads ως BARE `Point3D[]` — το πραγματικό `StairGeometry.treads` σχήμα
+ * (ADR-358). `buildStairInput` τα adaptάρει σε `{ vertices }` στο boundary. */
+const GEOM_TREADS = TREADS.map((t) => t.vertices);
 
 /** Πλάκα οροφής αυστηρά μεγαλύτερη από τα treads (opening μένει εντός). */
 function ceilingCandidate(topZmm = 3000, thickness = 200): StairwellSlabCandidate {
@@ -163,7 +168,7 @@ function fakeStair(id = 'stair-1'): StairEntity {
     id,
     type: 'stair',
     geometry: {
-      treads: TREADS,
+      treads: GEOM_TREADS,
       bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 1200, y: 1000, z: 1200 } },
     },
     params: {
@@ -212,13 +217,24 @@ describe('stairwell-opening-inputs', () => {
   });
 
   it('buildStairwellPlanStairs — meter scene: nosing z ×1000 → mm', () => {
-    const meterTreads = TREADS.map((t) => ({
-      vertices: t.vertices.map((v) => ({ ...v, z: v.z / 1000 })),
-    }));
+    const meterTreads = GEOM_TREADS.map((verts) => verts.map((v) => ({ ...v, z: v.z / 1000 })));
     const stair = fakeStair();
-    (stair as unknown as { geometry: { treads: Polygon3D[] } }).geometry.treads = meterTreads;
+    (stair as unknown as { geometry: { treads: unknown } }).geometry.treads = meterTreads;
     const [s] = buildStairwellPlanStairs([stair], { sceneUnits: 'm' });
     expect(s.nosingsZmm.map((n) => Math.round(n.zMm))).toEqual([300, 600, 900, 1200]);
+  });
+
+  it('buildStairwellPlanStairs — bare-array StairGeometry.treads δεν σκάει στο nosing (regression ADR-633)', () => {
+    // Το πραγματικό `StairGeometry.treads` είναι BARE `Point3D[]` (ADR-358), ΟΧΙ
+    // `{ vertices }`. Ένα multi-flight turn commit ανέδειξε πρώτο το crash όπου ο
+    // planner διάβαζε `tread.vertices` (undefined). Ο boundary adapter στο
+    // `buildStairInput` τα wrap-άρει σε `{ vertices }` για τον planner.
+    expect(GEOM_TREADS[0]).toBeInstanceOf(Array); // fixture όντως bare-array (όχι { vertices })
+    expect(() => buildStairwellPlanStairs([fakeStair()], { sceneUnits: 'mm' })).not.toThrow();
+    const [s] = buildStairwellPlanStairs([fakeStair()], { sceneUnits: 'mm' });
+    expect(s.nosingsZmm).toHaveLength(4);
+    expect(s.treads).toHaveLength(4);
+    expect(s.treads[0].vertices).toHaveLength(4); // adapter output = planner { vertices }
   });
 
   it('collectManagedStairwellOpenings — μόνο openings με autoStairId', () => {
