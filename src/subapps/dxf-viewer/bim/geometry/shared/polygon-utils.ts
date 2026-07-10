@@ -12,7 +12,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5
  */
 
-import type { MultiPolygon, Pair } from 'polygon-clipping';
+import type { MultiPolygon, Pair, Polygon } from 'polygon-clipping';
 import type { BoundingBox3D, Point3D, Polygon3D } from '../../types/bim-base';
 import type { Point2D } from '../../../rendering/types/Types';
 import { segmentsIntersect } from '../../../utils/geometry/GeometryUtils';
@@ -59,6 +59,18 @@ export function multiPolygonArea(mp: MultiPolygon): number {
     }
   }
   return Math.max(0, total);
+}
+
+/**
+ * `Polygon3D` → single-ring `polygon-clipping` `Polygon` (XY μόνο, z αγνοείται).
+ * SSoT converter για boolean ops σε footprints — πριν ήταν private duplicate στο
+ * `stairs/stairwell-opening-outline.ts` (N.0.2/N.18 dedup). Επιστρέφει `null` για
+ * degenerate (<3 κορυφές) polygon.
+ */
+export function polygon3dToClipPolygon(poly: Polygon3D): Polygon | null {
+  const vs = poly.vertices;
+  if (vs.length < 3) return null;
+  return [vs.map((p): Pair => [p.x, p.y])];
 }
 
 /** True αν το πολύγωνο είναι CCW (positive signed area). */

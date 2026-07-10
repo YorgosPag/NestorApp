@@ -38,18 +38,11 @@ import type {
   StairValidationState,
 } from '../../bim/types/stair-types';
 // ─── Headroom thresholds (cheap 2D proxy, Phase 6) ───────────────────────────
-
-const MIN_HEADROOM_MM: Readonly<Record<StairCodeProfile, number>> = {
-  nok: 2030,
-  ibc: 2030,
-  eurocode: 2030,
-  ada: 2032,
-  nbc: 2030,
-  nfpa: 2030,
-  as1657: 2030,
-  din: 2030,
-  none: 0,
-};
+//
+// SSoT: `stair-headroom-constants.ts` (κοινό με τον StairwellOpeningEngine,
+// ADR-632). Η τιμή nok=2200 (Κτιριοδομικός Άρθρο 13) ζει εκεί — μην την
+// ξαναγράψεις εδώ.
+import { MIN_HEADROOM_MM } from './stair-headroom-constants';
 
 const CEILING_LAYER_RE = /ceiling|slab|roof/i;
 

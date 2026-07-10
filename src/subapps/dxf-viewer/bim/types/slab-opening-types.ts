@@ -67,6 +67,15 @@ export interface SlabOpeningParams {
   readonly elevationOverride?: number;
   /** Bulk-edit group id για multi-storey stacked openings. */
   readonly multiStoreyStackGroupId?: string;
+  /**
+   * ADR-632 — όταν το opening παρήχθη ΑΥΤΟΜΑΤΑ από τον `StairwellOpeningEngine`
+   * (τρύπα κλιμακοστασίου πάνω από σκάλα, βάσει ελάχιστου ελεύθερου ύψους),
+   * κρατά το FK id της σκάλας-πηγής. Παρόν → derived/managed entity: ο engine
+   * το ξαναϋπολογίζει / σβήνει, δεν το πειράζει χειροκίνητα ο χρήστης. Absent →
+   * κανονικό χειροκίνητο opening (ως σήμερα). Soft link: delete σκάλας → ο
+   * engine καθαρίζει το orphan auto-opening (Phase 4).
+   */
+  readonly autoStairId?: string;
   /** Minutes fire rating (60 / 90 / 120). */
   readonly fireRating?: 60 | 90 | 120;
   /** Material library ID (Phase 6+). */
