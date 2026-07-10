@@ -58,6 +58,11 @@ import {
   buildFlightFromEdge,
   buildRectilinearFlight,
 } from './stair-geometry-generators';
+import {
+  buildWinderWedge,
+  computeWinderWalklineRule,
+  resolveWinderMinimums,
+} from './stair-winder-walkline-rule';
 
 const DEG2RAD = Math.PI / 180;
 
@@ -92,7 +97,7 @@ export function computeWinder(
   const n1 = Math.floor(remaining / 2);
   const n2 = remaining - n1;
   const layout = buildWinderLayout(params, variant.turnAngle, variant.winderCount, n1, n2);
-  return assembleWinderRun(params, layout, variant.winderMethod,
+  return assembleWinderRun(params, layout,
     (wl) => arrowSymbol(params.basePoint, wl[wl.length - 1], params.upDirection));
 }
 
@@ -101,15 +106,27 @@ export function computeWinder(
  * `WinderLayout`. Shared by the winder kind (arrow = base→top) and
  * l-shape-with-winders (arrow = first walkline segment); the caller supplies
  * the up-arrow via `arrow(walkline)`.
+ *
+ * ADR-630 — the corner wedges are cut back to a code-compliant inner radius
+ * (`computeWinderWalklineRule`) so the narrow end is never a zero-going miter.
+ * Winder method (`equal-going`/`pie`) is validated by the callers via
+ * `assertWinderMethodSupported`; it no longer changes the wedge shape.
  */
 export function assembleWinderRun(
   params: Readonly<StairParams>,
   layout: WinderLayout,
-  winderMethod: StairWinderMethod,
   arrow: (walkline: Polyline3D) => StairArrowSymbol,
 ): StairGeometry {
+  const mins = resolveWinderMinimums(params.codeProfile, params.width);
+  const rule = computeWinderWalklineRule({
+    sweepPerTreadRad: layout.signedSweepRad,
+    outerRadius: params.width,
+    walklineOffset: params.walklineOffset > 0 ? params.walklineOffset : mins.walklineOffset,
+    minInnerGoing: mins.minInnerGoing,
+    minWalklineGoing: mins.minWalklineGoing,
+  });
   const flight1 = buildWinderFlight1(params, layout);
-  const winders = buildWinderTreads(params, winderMethod, layout);
+  const winders = buildWinderTreads(params, layout, rule.innerRadius);
   const flight2 = buildWinderFlight2(params, layout);
   const allTreads: readonly Polygon3D[] = [
     ...flight1.treads,
@@ -196,10 +213,16 @@ export function buildWinderFlight1(
   );
 }
 
+/**
+ * ADR-630 — winder tread polygons cut back to `innerRadius` (from
+ * `computeWinderWalklineRule`) so the narrow inner end keeps a code-compliant
+ * going instead of collapsing to a zero-width apex. When `innerRadius` is ~0
+ * (code profile `'none'`) `buildWinderWedge` falls back to the legacy triangle.
+ */
 export function buildWinderTreads(
   params: Readonly<StairParams>,
-  winderMethod: StairWinderMethod,
   layout: WinderLayout,
+  innerRadius: number,
 ): readonly Polygon3D[] {
   const { basePoint, rise, width } = params;
   const { pivotXY, ray0, signedSweepRad, turnSign, n1, winderCount } = layout;
@@ -208,16 +231,7 @@ export function buildWinderTreads(
     const rayA = rotateVec(ray0, i * signedSweepRad);
     const rayB = rotateVec(ray0, (i + 1) * signedSweepRad);
     const tz = basePoint.z + rise * (n1 + i);
-    const apex = point(pivotXY.x, pivotXY.y, tz);
-    const outerA = point(pivotXY.x + width * rayA.x, pivotXY.y + width * rayA.y, tz);
-    const outerB = point(pivotXY.x + width * rayB.x, pivotXY.y + width * rayB.y, tz);
-    if (winderMethod === 'pie') {
-      out[i] = turnSign === 1 ? [apex, outerA, outerB] : [apex, outerB, outerA];
-    } else {
-      out[i] = turnSign === 1
-        ? [apex, outerA, outerB, apex]
-        : [apex, outerB, outerA, apex];
-    }
+    out[i] = buildWinderWedge(pivotXY, rayA, rayB, innerRadius, width, tz, turnSign);
   }
   return out;
 }

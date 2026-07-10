@@ -100,7 +100,7 @@ function computeLShapeWithWinders(
   // ADR-358 Phase 3d hotfix — arrow on FIRST flight segment (consistent with
   // landing variant industry convention: AutoCAD/Revit plan view).
   // Winders are numbered as 'tread' (NOT landings) — they ARE walkable steps.
-  return assembleWinderRun(params, layout, variant.winderMethod,
+  return assembleWinderRun(params, layout,
     (wl) => arrowSymbol(wl[0], wl[1], params.upDirection));
 }
 

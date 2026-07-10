@@ -22,7 +22,14 @@ import type {
   StairCodeProfile,
   StairNokSubType,
   StairParams,
+  StairVariantParams,
 } from '@/subapps/dxf-viewer/bim/types/stair-types';
+import { isLShapeWindersVariant } from '@/subapps/dxf-viewer/bim/types/stair-types';
+import {
+  type WinderRuleWarningCode,
+  computeWinderWalklineRule,
+  resolveWinderMinimums,
+} from '@/subapps/dxf-viewer/bim/geometry/stairs/stair-winder-walkline-rule';
 
 // ─── Public input / output shapes ────────────────────────────────────────────
 
@@ -195,6 +202,54 @@ function checkEgress(
     : [];
 }
 
+// ─── Winder corner going (ADR-630 — direction-changing stairs) ───────────────
+
+const WINDER_DEG2RAD = Math.PI / 180;
+
+const WINDER_WARNING_KEYS: Readonly<Record<WinderRuleWarningCode, string>> = {
+  'winder-inner-going-below-min': 'tools.stair.validator.winder.innerGoingBelowMin',
+  'winder-walkline-going-below-min': 'tools.stair.validator.winder.walklineGoingBelowMin',
+  'winder-walkline-offset-clamped': 'tools.stair.validator.winder.walklineOffsetClamped',
+};
+
+/** Absolute per-tread angular sweep + wedge count for the direction-changing variants. */
+function winderSweep(variant: StairVariantParams): { sweepRad: number; count: number } | null {
+  if (variant.kind === 'winder' && variant.winderCount > 0) {
+    return { sweepRad: Math.abs(variant.turnAngle) * WINDER_DEG2RAD / variant.winderCount, count: variant.winderCount };
+  }
+  if (isLShapeWindersVariant(variant) && variant.winderCount > 0) {
+    // L-shape-with-winders is a fixed 90° quarter-turn (see computeLShapeWithWinders).
+    return { sweepRad: (90 * WINDER_DEG2RAD) / variant.winderCount, count: variant.winderCount };
+  }
+  return null;
+}
+
+/**
+ * ADR-630 — going compliance at a winder corner. The narrow inner end and the
+ * walkline must each keep their code minimum going. Consumes the geometry SSoT
+ * (`computeWinderWalklineRule`) so validator and renderer never diverge. Params
+ * arrive mm-normalised (`paramsToMmForCodeCheck`), so the mm code minimums apply
+ * directly; `params.walklineOffset` is skipped here (not mm-normalised) in favour
+ * of the profile default.
+ */
+function checkWinderGeometry(
+  params: Readonly<StairParams>,
+  codeProfile: StairCodeProfile,
+): readonly string[] {
+  if (codeProfile === 'none') return [];
+  const w = winderSweep(params.variant);
+  if (!w) return [];
+  const mins = resolveWinderMinimums(codeProfile, params.width);
+  const rule = computeWinderWalklineRule({
+    sweepPerTreadRad: w.sweepRad,
+    outerRadius: params.width,
+    walklineOffset: mins.walklineOffset,
+    minInnerGoing: mins.minInnerGoing,
+    minWalklineGoing: mins.minWalklineGoing,
+  });
+  return rule.warnings.map((code) => WINDER_WARNING_KEYS[code]);
+}
+
 // ─── Public dispatcher ───────────────────────────────────────────────────────
 
 function dispatchProfile(input: GateStairCheckerInput): {
@@ -243,5 +298,14 @@ export function gateStairChecker(input: GateStairCheckerInput): GateStairChecker
   const { codeViolations, adaViolations, comfortViolations } = dispatchProfile(input);
   const egressViolations =
     input.codeProfile === 'none' ? [] : checkEgress(input.params, input.occupancyLoad);
-  return { hardErrors, codeViolations, adaViolations, egressViolations, comfortViolations };
+  // ADR-630 — winder corner going warnings, universal (except 'none'), folded
+  // into the code-violation bucket alongside the profile checks.
+  const winderViolations = checkWinderGeometry(input.params, input.codeProfile);
+  return {
+    hardErrors,
+    codeViolations: [...codeViolations, ...winderViolations],
+    adaViolations,
+    egressViolations,
+    comfortViolations,
+  };
 }

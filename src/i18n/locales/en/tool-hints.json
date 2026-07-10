@@ -166,6 +166,11 @@
         "egress": {
           "widthBelowOccupancy": "Insufficient stair width for declared occupancy load ({occupancyLoad} persons)."
         },
+        "winder": {
+          "innerGoingBelowMin": "Winder corner: the going at the inner corner is too small — the winder treads cannot fit without a zero-width miter.",
+          "walklineGoingBelowMin": "Winder corner: the going at the walkline is below the code minimum.",
+          "walklineOffsetClamped": "Winder corner: the walkline does not fit the width — moved to the middle of the stair."
+        },
         "headroomBelowMin": "Headroom clearance is below the code minimum.",
         "singleFlightOverLimit": "Too many risers in one flight — code requires a landing.",
         "totalRiseOverStoryHeight": "Total rise exceeds the declared story height.",

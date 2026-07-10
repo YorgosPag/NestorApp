@@ -242,24 +242,47 @@ export class StairRenderer extends BaseEntityRenderer {
   // ─── Internal drawing helpers ───────────────────────────────────────────
 
   /**
-   * Glow halo for hover/highlight (ADR-358 Phase 8). Computes a tight
-   * Oriented Bounding Box (OBB) by projecting every tread + stringer vertex
-   * into the stair's local frame (rotated by `direction`), taking
-   * `min/max` in that frame, and projecting the four OBB corners back to
-   * world space.
+   * Glow halo for hover/highlight (ADR-358 Phase 8, Giorgio 2026-07-10 revision).
    *
-   * Why include treads + stringers (not stringers alone): stringers end at
-   * the throat of the top tread — the top riser sticks out beyond the
-   * stringer endpoint. Excluding the tread vertices leaves the top tread
-   * outside the halo (regression observed 2026-05-17). Folding every
-   * vertex into the bbox guarantees the halo wraps the full visible
-   * footprint regardless of variant kind.
+   * Follows the ACTUAL stair footprint — for an L / U / Γ / curved stair the halo is
+   * an L / U / Γ / curved outline that COINCIDES with the shape, NOT a rectangular
+   * bounding box that engulfs the empty inner corner (the exact bug Giorgio flagged:
+   * «να μην είναι τετράγωνο»). The footprint boundary is `outer stringer forward +
+   * inner stringer reversed` — both stringers are the walkline offset by ±width/2
+   * (`buildStringersFromWalkline`), so the closed loop hugs the run for EVERY variant
+   * (straight → rectangle, L/U/Γ → the bent shape, spiral/sketch → the curved band).
    *
-   * Industry pattern (AutoCAD/Revit blocks): hover halo on composite
-   * entities is a tight OBB along the entity's local frame, not the
-   * axis-aligned bbox.
+   * Falls back to the local-frame OBB only when the stringers are degenerate (< 2
+   * points) — e.g. a not-yet-computed geometry.
    */
   private drawPerimeterOutline(stair: StairEntity): void {
+    const { outer, inner } = stair.geometry.stringers;
+    if (outer.length >= 2 && inner.length >= 2) {
+      this.ctx.beginPath();
+      const first = this.worldToScreen({ x: outer[0].x, y: outer[0].y });
+      this.ctx.moveTo(first.x, first.y);
+      for (let i = 1; i < outer.length; i++) {
+        const s = this.worldToScreen({ x: outer[i].x, y: outer[i].y });
+        this.ctx.lineTo(s.x, s.y);
+      }
+      // inner stringer reversed → closes the band along the OTHER long edge.
+      for (let i = inner.length - 1; i >= 0; i--) {
+        const s = this.worldToScreen({ x: inner[i].x, y: inner[i].y });
+        this.ctx.lineTo(s.x, s.y);
+      }
+      this.ctx.closePath();
+      this.ctx.stroke();
+      return;
+    }
+    this.drawPerimeterOutlineObb(stair);
+  }
+
+  /**
+   * Fallback halo: a tight Oriented Bounding Box (OBB) in the stair's local frame,
+   * used only when the stringers are degenerate. Folds every tread + stringer vertex
+   * into `min/max` along the `direction` axes so it wraps the full footprint.
+   */
+  private drawPerimeterOutlineObb(stair: StairEntity): void {
     const params = stair.params;
     const dirRad = (params.direction * Math.PI) / 180;
     const cos = Math.cos(dirRad);

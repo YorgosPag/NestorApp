@@ -43,7 +43,9 @@ const DEFAULT_WIDTH_MM = 1200;
 const DEFAULT_NOSING_MM = 20;
 const DEFAULT_STEP_COUNT = 12;
 const DEFAULT_HANDRAIL_HEIGHT_MM = 900;
-const DEFAULT_WALKLINE_OFFSET_MM = 600;
+// ADR-630 — walkline sits ~300mm from the inner edge (NOK/IRC), NOT at width/2.
+// Was a dead 600 default until the winder rule revived the field.
+const DEFAULT_WALKLINE_OFFSET_MM = 300;
 const DEFAULT_TREAD_LABEL_HEIGHT_MM = 80;
 const RAD_TO_DEG = 180 / Math.PI;
 
