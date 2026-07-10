@@ -88,29 +88,35 @@ describe('StairGeometryService — L-shape with winders (Phase 3f)', () => {
     }
   });
 
-  it('Test 3: flight1 treads rectilinear along u1 (+X)', () => {
+  it('Test 3: flight1 straight treads rectilinear along u1 (+X)', () => {
     const g = computeStairGeometry(makeLShapeWinders({ cutPlaneHeight: 10000 }));
     const all: readonly Polygon3D[] = [...g.treadsBelowCut, ...g.treadsAboveCut];
-    for (let i = 0; i < 7; i++) {
+    // The first n1-1 = 6 treads are pure rectangles; the last flight-1 tread
+    // (index 6) is the balanced transition trapezoid (checked in Test 4).
+    for (let i = 0; i < 6; i++) {
       const c0 = all[0][0];
       const ci = all[i][0];
-      // Flight 1 first vertex lies on the inner edge at z=0 + along +X.
       expect(ci.x - c0.x).toBeCloseTo(280 * i, 5);
       expect(ci.y - c0.y).toBeCloseTo(0, 5);
     }
   });
 
-  it('Test 4: winders (3 wedges) fan from a shared apex at the pivot (ADR-630, codeProfile none)', () => {
+  it('Test 4: balanced winders reach the pivot; flight-end treads are transition trapezoids', () => {
     const g = computeStairGeometry(makeLShapeWinders({ cutPlaneHeight: 10000 }));
     const all: readonly Polygon3D[] = [...g.treadsBelowCut, ...g.treadsAboveCut];
-    // Indices 7,8,9 are winder treads. With codeProfile 'none' there is no apex
-    // cut, so each wedge is a 3-vertex triangle whose first vertex is the shared
-    // pivot apex. Verify all three share the same xy apex (the fan pivot).
+    // ADR-630 Phase 2 — indices 7,8,9 are winder triangles sharing the pivot
+    // apex P (fill to the corner, no hole). Verify all three share the apex.
     const apex0 = all[7][0];
     for (let i = 7; i < 10; i++) {
       expect(all[i]).toHaveLength(3);
       const apex = all[i][0];
       expect(Math.hypot(apex.x - apex0.x, apex.y - apex0.y)).toBeLessThan(COORD_TOL);
+    }
+    // Last flight-1 tread (6) and first flight-2 tread (10) are 4-vertex
+    // trapezoids, each carrying the pivot P as a vertex → the turn tiles to P.
+    for (const i of [6, 10]) {
+      expect(all[i]).toHaveLength(4);
+      expect(all[i].some((v) => Math.hypot(v.x - apex0.x, v.y - apex0.y) < COORD_TOL)).toBe(true);
     }
   });
 

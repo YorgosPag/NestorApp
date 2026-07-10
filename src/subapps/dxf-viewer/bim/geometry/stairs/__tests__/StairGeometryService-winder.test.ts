@@ -97,34 +97,53 @@ describe('StairGeometryService — winder', () => {
     }
   });
 
-  it("Test 3: 'equal-going' winder treads have equal angular sweep = 22.5°", () => {
+  it('Test 3: balanced winders reach the pivot apex (no hole) with equal interior sweep', () => {
+    // ADR-630 Phase 2 — winders are triangles from the shared inner corner P.
     const g = computeStairGeometry(makeWinderParams());
     const treads = allTreads(g);
     // Winder treads occupy indices [n1, n1+winderCount) = [5, 9).
-    const expectedDot = Math.cos(22.5 * DEG2RAD);
+    const apex = treads[5][0];
     for (let k = 5; k < 9; k++) {
+      expect(treads[k]).toHaveLength(3);
+      // every wedge's first vertex is the SAME pivot apex → fills to the corner.
+      expect(Math.hypot(treads[k][0].x - apex.x, treads[k][0].y - apex.y)).toBeLessThan(1e-6);
+    }
+    // Interior wedges (not the two junction wedges) sweep the balanced equal
+    // angle g/R where g = (2·tread + R·Θ)/(W+2), R = width/2.
+    const R = 1000 / 2;
+    const g0 = (2 * 250 + R * (90 * DEG2RAD)) / (4 + 2);
+    const expectedSweep = g0 / R;
+    for (const k of [6, 7]) {
       const t = treads[k];
-      // equal-going polygon = [apex, outerA, outerB, apex] (sign=+1 ccw).
-      const apex = t[0];
-      const outerA = t[1];
-      const outerB = t[2];
-      const dx1 = outerA.x - apex.x;
-      const dy1 = outerA.y - apex.y;
-      const dx2 = outerB.x - apex.x;
-      const dy2 = outerB.y - apex.y;
-      const len1 = Math.hypot(dx1, dy1);
-      const len2 = Math.hypot(dx2, dy2);
-      const dot = (dx1 * dx2 + dy1 * dy2) / (len1 * len2);
-      expect(dot).toBeCloseTo(expectedDot, 6);
+      const a1 = { x: t[1].x - apex.x, y: t[1].y - apex.y };
+      const a2 = { x: t[2].x - apex.x, y: t[2].y - apex.y };
+      const ang = Math.acos(
+        (a1.x * a2.x + a1.y * a2.y) / (Math.hypot(a1.x, a1.y) * Math.hypot(a2.x, a2.y)),
+      );
+      expect(ang).toBeCloseTo(expectedSweep, 4);
     }
   });
 
-  it("Test 4: with codeProfile 'none' both methods emit 3-vertex triangle wedges (ADR-630)", () => {
-    // ADR-630 — the winder method no longer changes the wedge vertex count; the
-    // apex cut is driven by the code profile. With 'none' (this factory) there
-    // is no cut, so both 'pie' and 'equal-going' are legacy 3-vertex triangles.
-    // The code-compliant 4-vertex trapezoid is covered in
-    // stair-winder-walkline-rule.test.ts.
+  it('Test 3b: flight-end treads are transition trapezoids that reach the pivot', () => {
+    const g = computeStairGeometry(makeWinderParams());
+    const treads = allTreads(g);
+    const apex = treads[5][0]; // pivot (shared by the winders)
+    // Last flight-1 tread (index n1-1 = 4) and first flight-2 tread (index 9)
+    // are 4-vertex trapezoids, each carrying the pivot P as one vertex.
+    for (const k of [4, 9]) {
+      expect(treads[k]).toHaveLength(4);
+      const hasPivot = treads[k].some(
+        (v) => Math.hypot(v.x - apex.x, v.y - apex.y) < 1e-6,
+      );
+      expect(hasPivot).toBe(true);
+    }
+  });
+
+  it("Test 4: both winder methods emit 3-vertex triangle wedges (ADR-630 Phase 2)", () => {
+    // ADR-630 Phase 2 — balanced winders are always triangles reaching the pivot
+    // P (independent of code profile); the winder method (`pie`/`equal-going`)
+    // no longer changes the wedge vertex count. The transition trapezoids are
+    // the flight-end treads (covered by Test 3b), not the wedges.
     const pie = computeStairGeometry(makeWinderParams({ winderMethod: 'pie' }));
     const eq = computeStairGeometry(makeWinderParams({ winderMethod: 'equal-going' }));
     const pieTreads = allTreads(pie);

@@ -27,8 +27,9 @@ import type {
 import { isLShapeWindersVariant } from '@/subapps/dxf-viewer/bim/types/stair-types';
 import {
   type WinderRuleWarningCode,
-  computeWinderWalklineRule,
+  computeBalancedWinderRule,
   resolveWinderMinimums,
+  winderWalklineWarnings,
 } from '@/subapps/dxf-viewer/bim/geometry/stairs/stair-winder-walkline-rule';
 
 // ─── Public input / output shapes ────────────────────────────────────────────
@@ -225,12 +226,11 @@ function winderSweep(variant: StairVariantParams): { sweepRad: number; count: nu
 }
 
 /**
- * ADR-630 — going compliance at a winder corner. The narrow inner end and the
- * walkline must each keep their code minimum going. Consumes the geometry SSoT
- * (`computeWinderWalklineRule`) so validator and renderer never diverge. Params
+ * ADR-630 Phase 2 — going compliance at a winder corner. The balanced walkline
+ * going must stay ≥ the code minimum. Consumes the geometry SSoT
+ * (`computeBalancedWinderRule`) so validator and renderer never diverge. Params
  * arrive mm-normalised (`paramsToMmForCodeCheck`), so the mm code minimums apply
- * directly; `params.walklineOffset` is skipped here (not mm-normalised) in favour
- * of the profile default.
+ * directly.
  */
 function checkWinderGeometry(
   params: Readonly<StairParams>,
@@ -240,14 +240,16 @@ function checkWinderGeometry(
   const w = winderSweep(params.variant);
   if (!w) return [];
   const mins = resolveWinderMinimums(codeProfile, params.width);
-  const rule = computeWinderWalklineRule({
-    sweepPerTreadRad: w.sweepRad,
-    outerRadius: params.width,
-    walklineOffset: mins.walklineOffset,
-    minInnerGoing: mins.minInnerGoing,
-    minWalklineGoing: mins.minWalklineGoing,
+  // ADR-630 Phase 2 — the balanced winder keeps equal walkline going; warn when
+  // that shared going drops below the code minimum (the inner tip reaching the
+  // pivot is intentional RC fill, not a geometric error).
+  const rule = computeBalancedWinderRule({
+    turnRad: w.sweepRad * w.count,
+    winderCount: w.count,
+    tread: params.tread,
+    walklineRadius: params.width * 0.5,
   });
-  return rule.warnings.map((code) => WINDER_WARNING_KEYS[code]);
+  return winderWalklineWarnings(rule, mins.minWalklineGoing).map((code) => WINDER_WARNING_KEYS[code]);
 }
 
 // ─── Public dispatcher ───────────────────────────────────────────────────────

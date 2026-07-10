@@ -1,9 +1,10 @@
 /**
- * ADR-630 — winder walkline rule SSoT tests.
+ * ADR-630 Phase 2 — balanced winder rule SSoT tests.
  *
- * Covers the two code rules for direction-changing stairs: the inner-corner
- * cut (no zero-going miter) and the walkline going compliance, plus the
- * unit-agnostic minimum resolver and the wedge polygon shape.
+ * Covers the balanced-going angle solver (`computeBalancedWinderRule`), the
+ * validator warning helper (`winderWalklineWarnings`), the radial↔edge
+ * intersection used to tile the corner, the unit-agnostic minimum resolver and
+ * the wedge polygon shape.
  *
  * @see ../stair-winder-walkline-rule.ts
  */
@@ -12,13 +13,17 @@ import type { StairCodeProfile } from '../../../../bim/types/stair-types';
 import {
   WINDER_CODE_MINIMUMS_MM,
   buildWinderWedge,
-  computeWinderWalklineRule,
+  computeBalancedWinderRule,
+  radialEdgeIntersect,
   resolveWinderMinimums,
+  winderWalklineWarnings,
 } from '../stair-winder-walkline-rule';
 
 const ALL_PROFILES: readonly StairCodeProfile[] = [
   'nok', 'ibc', 'eurocode', 'nbc', 'nfpa', 'as1657', 'din', 'ada', 'none',
 ];
+
+const HALF_PI = Math.PI / 2;
 
 describe('WINDER_CODE_MINIMUMS_MM', () => {
   it('covers every code profile', () => {
@@ -57,88 +62,89 @@ describe('resolveWinderMinimums', () => {
   });
 });
 
-describe('computeWinderWalklineRule', () => {
-  // 90° quarter-turn split into 3 winders → sweep = 30° per tread.
-  const sweep30 = (30 * Math.PI) / 180;
-
-  it('cuts the apex so the inner going reaches the minimum', () => {
-    const rule = computeWinderWalklineRule({
-      sweepPerTreadRad: sweep30,
-      outerRadius: 1200,
-      walklineOffset: 300,
-      minInnerGoing: 130,
-      minWalklineGoing: 250,
+describe('computeBalancedWinderRule', () => {
+  it('keeps equal walkline going g = (2·tread + R·Θ)/(W+2)', () => {
+    const rule = computeBalancedWinderRule({
+      turnRad: HALF_PI, winderCount: 3, tread: 280, walklineRadius: 500,
     });
-    // innerRadius = minInnerGoing / sweep
-    expect(rule.innerRadius).toBeCloseTo(130 / sweep30, 6);
-    // going at the inner edge is exactly the requested minimum
-    expect(rule.innerGoing).toBeCloseTo(130, 6);
-    expect(rule.innerRadius).toBeGreaterThan(0);
+    const g = (2 * 280 + 500 * HALF_PI) / 5;
+    expect(rule.walklineGoing).toBeCloseTo(g, 6);
+    expect(rule.winderSweepRad).toBeCloseTo(g / 500, 9);
+    // δ = (W·φ − Θ)/2 ; the fan spans W·φ centred on Θ.
+    expect(rule.encroachRad).toBeCloseTo((3 * (g / 500) - HALF_PI) / 2, 9);
+    expect(rule.startAngleRad).toBeCloseTo(-rule.encroachRad, 9);
+    expect(rule.bandStepsPerSide).toBe(1);
   });
 
-  it('places the walkline at inner edge + offset and measures its going', () => {
-    const rule = computeWinderWalklineRule({
-      sweepPerTreadRad: sweep30,
-      outerRadius: 1200,
-      walklineOffset: 300,
-      minInnerGoing: 130,
-      minWalklineGoing: 250,
+  it('narrow stair (R·Θ/W < tread) → wedges steal from flights (δ > 0)', () => {
+    // width 1000 → R 500; pure-fan going 262 < tread 280 → encroach positive.
+    const rule = computeBalancedWinderRule({
+      turnRad: HALF_PI, winderCount: 3, tread: 280, walklineRadius: 500,
     });
-    expect(rule.walklineRadius).toBeCloseTo(rule.innerRadius + 300, 6);
-    expect(rule.walklineGoing).toBeCloseTo((rule.innerRadius + 300) * sweep30, 6);
-    // (248 + 300) * 0.523 ≈ 287 ≥ 250 → compliant, no warning
-    expect(rule.warnings).not.toContain('winder-walkline-going-below-min');
+    expect(rule.encroachRad).toBeGreaterThan(0);
+    expect(rule.startAngleRad).toBeLessThan(0); // winder-0 back edge into flight 1
   });
 
-  it('keeps innerRadius 0 for the disabled ("none") profile inputs', () => {
-    const rule = computeWinderWalklineRule({
-      sweepPerTreadRad: sweep30,
-      outerRadius: 1200,
-      walklineOffset: 0,
-      minInnerGoing: 0,
-      minWalklineGoing: 0,
+  it('wide stair (R·Θ/W > tread) → wedges give to flights (δ < 0)', () => {
+    // width 1200 → R 600; pure-fan going 314 > tread 280 → encroach negative.
+    const rule = computeBalancedWinderRule({
+      turnRad: HALF_PI, winderCount: 3, tread: 280, walklineRadius: 600,
     });
-    expect(rule.innerRadius).toBe(0);
-    expect(rule.innerGoing).toBe(0);
-    expect(rule.warnings).toHaveLength(0);
+    expect(rule.encroachRad).toBeLessThan(0);
+    expect(rule.startAngleRad).toBeGreaterThan(0);
   });
 
-  it('warns when too many winders crush the walkline going', () => {
-    // 90° into 8 winders → sweep 11.25°; small radius → tiny going.
-    const sweep = (90 * Math.PI) / 180 / 8;
-    const rule = computeWinderWalklineRule({
-      sweepPerTreadRad: sweep,
-      outerRadius: 1000,
-      walklineOffset: 300,
-      minInnerGoing: 130,
-      minWalklineGoing: 250,
+  it('mirrors the sweep sign for a clockwise turn', () => {
+    const ccw = computeBalancedWinderRule({
+      turnRad: HALF_PI, winderCount: 3, tread: 280, walklineRadius: 500,
     });
-    expect(rule.warnings).toContain('winder-walkline-going-below-min');
+    const cw = computeBalancedWinderRule({
+      turnRad: -HALF_PI, winderCount: 3, tread: 280, walklineRadius: 500,
+    });
+    expect(cw.winderSweepRad).toBeCloseTo(-ccw.winderSweepRad, 9);
+    expect(cw.startAngleRad).toBeCloseTo(-ccw.startAngleRad, 9);
+    expect(cw.walklineGoing).toBeCloseTo(ccw.walklineGoing, 9);
   });
 
-  it('clamps the walkline to mid-width and warns when the offset exceeds the tread', () => {
-    const rule = computeWinderWalklineRule({
-      sweepPerTreadRad: sweep30,
-      outerRadius: 400,      // narrow
-      walklineOffset: 900,   // way past the outer edge
-      minInnerGoing: 130,
-      minWalklineGoing: 250,
+  it('degenerates safely for winderCount 0 (going = tread, no sweep)', () => {
+    const rule = computeBalancedWinderRule({
+      turnRad: HALF_PI, winderCount: 0, tread: 280, walklineRadius: 500,
     });
-    expect(rule.warnings).toContain('winder-walkline-offset-clamped');
-    expect(rule.walklineRadius).toBeLessThanOrEqual(400);
-    expect(rule.walklineRadius).toBeGreaterThan(rule.innerRadius);
+    expect(rule.winderSweepRad).toBe(0);
+    expect(rule.startAngleRad).toBe(0);
+    expect(rule.walklineGoing).toBe(280);
+  });
+});
+
+describe('winderWalklineWarnings', () => {
+  const rule = computeBalancedWinderRule({
+    turnRad: HALF_PI, winderCount: 3, tread: 280, walklineRadius: 500,
   });
 
-  it('caps the inner radius and warns when the minimum cannot fit the width', () => {
-    const rule = computeWinderWalklineRule({
-      sweepPerTreadRad: (90 * Math.PI) / 180, // one 90° wedge → inner radius demand 82.8
-      outerRadius: 80, // maxInner = 72 < 82.8 → cannot fit
-      walklineOffset: 100,
-      minInnerGoing: 130,
-      minWalklineGoing: 250,
-    });
-    expect(rule.warnings).toContain('winder-inner-going-below-min');
-    expect(rule.innerRadius).toBeCloseTo(80 * 0.9, 6); // capped at 90% of outer
+  it('is silent when the equal going meets the code minimum', () => {
+    expect(winderWalklineWarnings(rule, 250)).toHaveLength(0); // g ≈ 269 ≥ 250
+  });
+
+  it('warns when the equal going drops below the code minimum', () => {
+    expect(winderWalklineWarnings(rule, 300)).toContain('winder-walkline-going-below-min');
+  });
+
+  it('never warns when the minimum is disabled (profile "none" → 0)', () => {
+    expect(winderWalklineWarnings(rule, 0)).toHaveLength(0);
+  });
+});
+
+describe('radialEdgeIntersect', () => {
+  it('lands the radial on a perpendicular edge line', () => {
+    // ray from origin along +x, edge is the vertical line x = 5 (dir +y).
+    const p = radialEdgeIntersect({ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 5, y: 3 }, { x: 0, y: 1 });
+    expect(p.x).toBeCloseTo(5, 9);
+    expect(p.y).toBeCloseTo(0, 9);
+  });
+
+  it('falls back to the edge point when ray and edge are parallel', () => {
+    const p = radialEdgeIntersect({ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 5, y: 3 }, { x: 2, y: 0 });
+    expect(p).toEqual({ x: 5, y: 3 });
   });
 });
 
@@ -153,22 +159,10 @@ describe('buildWinderWedge', () => {
     expect(poly[0]).toEqual({ x: 0, y: 0, z: 5 }); // apex at pivot
   });
 
-  it('emits a trapezoid (no apex point) when innerRadius > 0', () => {
-    const poly = buildWinderWedge(pivot, rayA, rayB, 200, 1000, 5, 1);
-    expect(poly).toHaveLength(4);
-    // [innerA, outerA, outerB, innerB]
-    expect(poly[0]).toEqual({ x: 200, y: 0, z: 5 });
-    expect(poly[1]).toEqual({ x: 1000, y: 0, z: 5 });
-    expect(poly[2]).toEqual({ x: 0, y: 1000, z: 5 });
-    expect(poly[3]).toEqual({ x: 0, y: 200, z: 5 });
-    // no vertex sits on the pivot → the miter is gone
-    expect(poly.some((p) => p.x === 0 && p.y === 0)).toBe(false);
-  });
-
   it('reverses winding for a clockwise turn (turnSign = -1)', () => {
-    const ccw = buildWinderWedge(pivot, rayA, rayB, 200, 1000, 5, 1);
-    const cw = buildWinderWedge(pivot, rayA, rayB, 200, 1000, 5, -1);
-    expect(cw[0]).toEqual(ccw[3]);
-    expect(cw[3]).toEqual(ccw[0]);
+    const ccw = buildWinderWedge(pivot, rayA, rayB, 0, 1000, 5, 1);
+    const cw = buildWinderWedge(pivot, rayA, rayB, 0, 1000, 5, -1);
+    expect(cw[1]).toEqual(ccw[2]);
+    expect(cw[2]).toEqual(ccw[1]);
   });
 });
