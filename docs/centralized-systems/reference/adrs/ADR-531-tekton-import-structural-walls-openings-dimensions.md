@@ -1,6 +1,6 @@
 # ADR-531 — Tekton .TEK import Φ5b: 3Δ τοίχοι, κουφώματα & διαστάσεις
 
-**Status:** ✅ APPROVED (Φ5b.1 υλοποιημένο· **Φ5b.2 τοίχοι/κουφώματα BIM + Φ5b.3 plan-lines + Φ5b.4 πλάκες BIM + Φ5b.5 κολώνες/τοιχία BIM** — τοίχοι browser-verified 2026-07-10, πλάκες + κολώνες browser-verify pending)
+**Status:** ✅ APPROVED (Φ5b.1 υλοποιημένο· **Φ5b.2 τοίχοι/κουφώματα BIM + Φ5b.3 plan-lines + Φ5b.4 πλάκες BIM + Φ5b.5 κολώνες/τοιχία BIM + Φ5b.6 γραμμοσκιάσεις BIM** — τοίχοι browser-verified 2026-07-10, πλάκες + κολώνες + γραμμοσκιάσεις browser-verify pending)
 **Date:** 2026-06-25
 **Domains:** io/tek (extract + 2Δ map)
 **Related:** ADR-526 (Tekton import Φ1–Φ5a: σκάλες + 2Δ primitives), ADR-363 (BIM wall/opening),
@@ -377,3 +377,39 @@ ground truth. Αποκωδικοποίηση επιβεβαίωσε/διόρθω
   Plan-lines (Φ5b.3): `ColumnRenderer` branch → μόνο περίγραμμα (χωρίς fill/hatch/οπλισμό). **Tests:** νέο
   `tek-pillar-to-column.test.ts` (kind rect/circular/shear-wall· διαστάσεις· Y-flip· διάμετρος). **102/102
   GREEN** (io/tek). ⏳ Εκκρεμεί browser-verify Giorgio (κολώνα/τοιχίο ως BIM + toggle).
+- **2026-07-10** — **Φ5b.6: γραμμοσκιάσεις `<hatch>` (type 6) → native `HatchEntity`** (Giorgio: «το ίδιο και
+  με τις γραμμοσκιάσεις — αυτή του δείγματος δεν έρχεται»). **Root cause:** το io/tek δεν είχε ΚΑΘΟΛΟΥ hatch
+  import (οι «hatches που έρχονταν» ήταν fills τοίχων/πλακών, ΟΧΙ standalone). **Schema:** `<hatch>` (sibling
+  των line/arc σε floors)· κλειστό όριο στο `<vector>` container (segments `v0→v1`, κρατάμε τα `v0`)· το μοτίβο
+  είναι το **2ο** `<type>` (pattern index `pattern.inf`· 22=solid)· `<scaleX>`/`<rotation>` = κλίμακα/γωνία.
+  Το δείγμα = solid fill C0DCC0. **Νέα:** `readSecondType` SSoT στο `tek-primitive-extract` (κεντρικοποίηση
+  του object `readTypeRes` — N.0.2, χρησιμοποιείται από object+hatch) + `extractHatchRecords`
+  (`tek-structural-extract`) + `TekHatchRecord` type + mapper `io/tek/tek-hatch-to-bim.ts` `tekHatchToEntity`
+  (μοτίβο `tek-plane-to-slab`): όριο→`tekMetersToScene`→`buildHatchEntityFromBoundary`. **Reuse SSoT:**
+  ο pattern number→name μέσω `TEKTON_HATCH_NUMBER_TO_NAME`/`TEKTON_SOLID_HATCH_NUM` (`tekton-hatch-catalog`,
+  ο ΙΔΙΟΣ bidirectional χάρτης του export)· appearance base = `DEFAULT_HATCH_DRAW_DEFAULTS` (deterministic).
+  **Builder extension:** `buildHatchEntityFromBoundary`/`buildHatchEntityFromPaths` δέχονται optional `defaults`
+  (import → explicit solid/predefined appearance αντί live UI draw-defaults). **Persistence (ADR-594 additive):**
+  νέο optional `extraCreateTriggers` στον SSoT persistence hook — το hatch first-save-άρει σε `drawing:complete`
+  (interactive) **ΚΑΙ** `drawing:entity-created` (import). ΚΡΙΣΙΜΟ: το import ΔΕΝ εκπέμπει `drawing:complete`
+  γιατί οι listeners του κάνουν auto-guide **prompt** + scene-resync ανά hatch (side-effects στο bulk import).
+  Wire σε `tek-scene-extract`/`tek-scene-builder` + `useSceneState` emit `tool:'hatch'`. **Tests:** νέο
+  `tek-hatch-to-bim.test.ts` (solid/predefined/Y-flip/κλίμακα-γωνία/degenerate) + object-extract regression +
+  153/153 persistence hooks GREEN. **123/123 GREEN** (io/tek). ⏳ Εκκρεμεί browser-verify Giorgio (η hatch του
+  δείγματος να εμφανίζεται ως solid C0DCC0 + να επιβιώνει hard-refresh).
+- **2026-07-10** — **Φ5b.6 FIX (δεν εμφανιζόταν): το `<hatch>` ΔΕΝ τυλίγει σε `<record>`.** Το πρώτο cut
+  χρησιμοποιούσε `recordsInFloors('hatch')` (όπως wall/plane) → **0 hatches** (κανένα direct `<record>` child).
+  Ο Τέκτων βάζει τα hatch primitives **flat μέσα στο `<hatch>` container**, το καθένα ξεκινά με `<type>6`
+  (επιβεβαιωμένο από το `HATCH_RECORD_TEMPLATE` του export — ΧΩΡΙΣ `<record>` prefix· πολλαπλά = joined). Το όριο
+  ζει στο `<vector>` της κάθε ομάδας. **Fix:** νέο `containersInFloors` (SSoT) + `segmentHatchGroups` (τεμαχισμός
+  ανά `<type>6`, robust για πολλαπλά hatches στο ίδιο container)· το pattern = 2ο `<type>` της ομάδας. Επαλήθευση
+  στο ΠΡΑΓΜΑΤΙΚΟ `ΓΡΑΜΜΟΣΚΙΑΣΗ.tek`: hatches=1, entity=1, color=#C0DCC0, 7 κορυφές. **Tests:**
+  +3 extraction tests (flat δομή· multi-hatch segmentation· degenerate). **108/108 GREEN** (io/tek).
+- **2026-07-10** — **Φ5b.6 FIX #2 (φαινόταν συμπαγές): tek pattern 22 = ΓΡΑΜΜΕΣ, ΟΧΙ solid.** Το πρώτο cut
+  χαρτογραφούσε το tek μοτίβο 22 (`TEKTON_SOLID_HATCH_NUM`, catalog: «raster:solid») σε `fillType:'solid'` →
+  όλη η περιοχή γέμιζε πράσινη. Ground truth (Giorgio, από τον ίδιο τον Τέκτονα): το 22 ζωγραφίζεται ως
+  **διαγώνια γραμμοσκίαση** (πράσινες γραμμές + λευκά κενά ανάμεσα). **Fix (`resolveHatchAppearance`):** γνωστό
+  PAT μοτίβο catalog → `predefined`· 22/άγνωστο → **`user-defined` διαγώνιες γραμμές 45°** (χρώμα από `color`,
+  απόσταση `scaleX`·1000 mm → 150mm στο δείγμα), ΠΟΤΕ `solid`. Επαλήθευση στο πραγματικό αρχείο: fillType=
+  user-defined, color=#C0DCC0, angle=45°, spacing=150mm. **108/108 GREEN**. ⏳ Εκκρεμεί browser-verify Giorgio
+  (γραμμές + πυκνότητα/γωνία· ίσως χρειαστεί calibration του mapping scaleX→spacing ή single vs cross-hatch).

@@ -13,7 +13,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5 §11.Q3
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isSlabOpeningEntity } from '../../../types/entities';
 import type { SlabOpeningEntity, SlabOpeningKind, SlabOpeningParams } from '../../../bim/types/slab-opening-types';
@@ -28,10 +28,16 @@ import {
 } from './bridge/slab-opening-command-keys';
 import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 import { EventBus } from '../../../systems/events/EventBus';
+import {
+  useResolveSelectedEntity,
+  useNoopToggles,
+  useViolationBadgeState,
+  useStableBridge,
+} from './ribbon-entity-bridge-shared';
 import type {
   RibbonComboboxState,
-  RibbonToggleState,
 } from '../context/RibbonCommandContext';
+import type { RibbonBridgeCore } from './bridge/ribbon-bridge-core';
 import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
 
@@ -45,20 +51,13 @@ export interface UseRibbonSlabOpeningBridgeProps {
   readonly universalSelection: UniversalSelectionLike;
 }
 
-export interface RibbonSlabOpeningBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
-  readonly getToggleState: (commandKey: string) => RibbonToggleState;
+export interface RibbonSlabOpeningBridge extends RibbonBridgeCore {
   readonly getBadgeState: (badgeKey: string) => boolean;
-  readonly onAction: (action: string) => void;
 }
 
 const SLAB_OPENING_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
   SLAB_OPENING_RIBBON_BADGE_KEYS.violations,
 ]);
-
-const NULL_TOGGLE: RibbonToggleState = false;
 
 const STRING_KEY_TO_FIELD: Readonly<Record<string, keyof SlabOpeningParams>> = {
   [SLAB_OPENING_RIBBON_KEYS.stringParams.kind]:       'kind',
@@ -72,15 +71,7 @@ export function useRibbonSlabOpeningBridge(
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
 
-  const resolveOpening = useCallback((): SlabOpeningEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isSlabOpeningEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveOpening = useResolveSelectedEntity(levelManager, universalSelection, isSlabOpeningEntity);
 
   const dispatchParams = useCallback(
     (opening: SlabOpeningEntity, nextParams: SlabOpeningParams): void => {
@@ -141,21 +132,13 @@ export function useRibbonSlabOpeningBridge(
     [resolveOpening, dispatchParams],
   );
 
-  const onToggle = useCallback((_key: string, _next: boolean): void => {
-    /* no-op Phase 3.7 */
-  }, []);
+  const { onToggle, getToggleState } = useNoopToggles();
 
-  const getToggleState = useCallback((_key: string): RibbonToggleState => NULL_TOGGLE, []);
-
-  const getBadgeState = useCallback((badgeKey: string): boolean => {
-    if (!SLAB_OPENING_OWNED_BADGE_KEYS.has(badgeKey)) return false;
-    const opening = resolveOpening();
-    if (!opening) return false;
-    if (badgeKey === SLAB_OPENING_RIBBON_BADGE_KEYS.violations) {
-      return opening.validation.hasCodeViolations;
-    }
-    return false;
-  }, [resolveOpening]);
+  const getBadgeState = useViolationBadgeState(
+    resolveOpening,
+    SLAB_OPENING_OWNED_BADGE_KEYS,
+    SLAB_OPENING_RIBBON_BADGE_KEYS.violations,
+  );
 
   const onAction = useCallback(
     (action: string): void => {
@@ -177,10 +160,7 @@ export function useRibbonSlabOpeningBridge(
     [resolveOpening, t],
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction });
 }
 
 /** Type guard used by `useRibbonCommands` composer. */

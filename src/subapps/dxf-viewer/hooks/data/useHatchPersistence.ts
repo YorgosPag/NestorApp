@@ -95,6 +95,10 @@ const useHatchPersistenceBase = createBimEntityPersistenceHook<
   // `drawing:entity-created` default — listening to the wrong event = silent
   // never-first-save.
   createTrigger: { event: 'drawing:complete', tool: 'hatch' },
+  // ADR-531 Φ5b.6 — ο .tek import εκπέμπει `drawing:entity-created` (tool 'hatch') όπως wall/slab/
+  // column· χρειάζεται 2ος trigger ώστε η εισαγόμενη hatch να first-save-άρει χωρίς τα side-effects
+  // του `drawing:complete` (auto-guide prompt / scene-resync ανά hatch).
+  extraCreateTriggers: [{ event: 'drawing:entity-created', tool: 'hatch' }],
   entityComparable: (e) => pickHatchData(e),
   createService: (scope) => createHatchFirestoreService(scope),
   service: {

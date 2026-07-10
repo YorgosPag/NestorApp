@@ -25,7 +25,7 @@
  * @see ui/ribbon/hooks/useRibbonSlabBridge.ts — το πρότυπο
  */
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isRoofEntity } from '../../../types/entities';
 import {
@@ -63,10 +63,16 @@ import { EventBus } from '../../../systems/events/EventBus';
 // ADR-032/390/401 — «Διαγραφή» routes through the canonical command-based delete
 // (undoable + cascades), shared with the keyboard Delete. No more raw event emit.
 import { useRibbonEntityDelete } from './useRibbonEntityDelete';
+import {
+  useResolveSelectedEntity,
+  useViolationBadgeState,
+  useStableBridge,
+} from './ribbon-entity-bridge-shared';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
 } from '../context/RibbonCommandContext';
+import type { RibbonBridgeCore } from './bridge/ribbon-bridge-core';
 import type { RibbonComboboxOption } from '../types/ribbon-types';
 import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
@@ -81,15 +87,9 @@ export interface UseRibbonRoofBridgeProps {
   readonly universalSelection: UniversalSelectionLike;
 }
 
-export interface RibbonRoofBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
-  readonly getToggleState: (commandKey: string) => RibbonToggleState;
+export interface RibbonRoofBridge extends RibbonBridgeCore {
   /** Returns `true` όταν το currently selected roof έχει code violations. */
   readonly getBadgeState: (badgeKey: string) => boolean;
-  /** Handles ribbon simple-button actions (close / delete). */
-  readonly onAction: (action: string) => void;
 }
 
 const ROOF_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
@@ -133,15 +133,7 @@ export function useRibbonRoofBridge(
   const { t } = useTranslation('dxf-viewer-shell');
   const ribbonDelete = useRibbonEntityDelete({ levelManager, universalSelection });
 
-  const resolveRoof = useCallback((): RoofEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isRoofEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveRoof = useResolveSelectedEntity(levelManager, universalSelection, isRoofEntity);
 
   /**
    * Dispatch the params patch through `UpdateRoofParamsCommand` so the change is
@@ -323,17 +315,10 @@ export function useRibbonRoofBridge(
     [resolveRoof],
   );
 
-  const getBadgeState = useCallback(
-    (badgeKey: string): boolean => {
-      if (!ROOF_OWNED_BADGE_KEYS.has(badgeKey)) return false;
-      const roof = resolveRoof();
-      if (!roof) return false;
-      if (badgeKey === ROOF_RIBBON_BADGE_KEYS.violations) {
-        return roof.validation.hasCodeViolations;
-      }
-      return false;
-    },
-    [resolveRoof],
+  const getBadgeState = useViolationBadgeState(
+    resolveRoof,
+    ROOF_OWNED_BADGE_KEYS,
+    ROOF_RIBBON_BADGE_KEYS.violations,
   );
 
   const onAction = useCallback(
@@ -348,10 +333,7 @@ export function useRibbonRoofBridge(
     [resolveRoof, t, ribbonDelete],
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction });
 }
 
 /** Type guard used by `useRibbonCommands` composer. */

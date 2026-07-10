@@ -12,9 +12,10 @@ import { extractStairRecords, extractTekHead } from './tek-stair-extract';
 import {
   extractLineRecords, extractArcRecords, extractTextRecords,
 } from './tek-primitive-extract';
-// ADR-531 Φ5b — διαστάσεις + 3Δ τοίχοι (+ ανοίγματα) + πλάκες + κολώνες/τοιχία.
+// ADR-531 Φ5b — διαστάσεις + 3Δ τοίχοι (+ ανοίγματα) + πλάκες + κολώνες/τοιχία + γραμμοσκιάσεις.
 import {
   extractDimRecords, extractWallRecords, extractPlaneRecords, extractPillarRecords,
+  extractHatchRecords,
 } from './tek-structural-extract';
 // ADR-608 — native σύμβολα Τέκτονα (type-7 <object>).
 import { extractObjectRecords } from './tek-object-extract';
@@ -33,6 +34,7 @@ export function parseTekScene(content: string): TekSceneParseResult {
   const { dims, warnings: dimWarnings } = extractDimRecords(root);
   const { walls, warnings: wallWarnings } = extractWallRecords(root);
   const { pillars, warnings: pillarWarnings } = extractPillarRecords(root);
+  const { hatches, warnings: hatchWarnings } = extractHatchRecords(root);
   const { objects, warnings: objectWarnings } = extractObjectRecords(root);
   const { planes, warnings: planeWarnings } = extractPlaneRecords(root);
   return {
@@ -44,11 +46,13 @@ export function parseTekScene(content: string): TekSceneParseResult {
     dims,
     walls,
     pillars,
+    hatches,
     objects,
     planes,
     warnings: [
       ...stairWarnings, ...lineWarnings, ...arcWarnings, ...textWarnings,
-      ...dimWarnings, ...wallWarnings, ...pillarWarnings, ...objectWarnings, ...planeWarnings,
+      ...dimWarnings, ...wallWarnings, ...pillarWarnings, ...hatchWarnings,
+      ...objectWarnings, ...planeWarnings,
     ],
   };
 }

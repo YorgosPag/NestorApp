@@ -25,6 +25,8 @@ import { tekWallToBimEntities } from './tek-wall-to-bim';
 import { tekPlaneToSlabEntity } from './tek-plane-to-slab';
 // ADR-531 Φ5b.5 — κολώνες/τοιχία (`<pillar>1` records) → native BIM ColumnEntity.
 import { tekPillarToColumnEntity } from './tek-pillar-to-column';
+// ADR-531 Φ5b.6 — γραμμοσκιάσεις (`<hatch>` type 6) → native HatchEntity.
+import { tekHatchToEntity } from './tek-hatch-to-bim';
 import { tekDimToDimensionEntities } from './tek-dim-to-dimension';
 // ADR-608 — native σύμβολα Τέκτονα (type-7 <object>) → AnnotationSymbolEntity.
 import { tekObjectToEntity } from './tek-object-to-scene';
@@ -119,6 +121,13 @@ export function buildSceneFromTekScene(
     if (column) columnEntities.push(column);
     warnings.push(...colWarnings);
   }
+  // ADR-531 Φ5b.6 — κάθε <hatch> (type 6) → native HatchEntity (solid/predefined από το record).
+  const hatchEntities: Entity[] = [];
+  for (const rec of parsed.hatches) {
+    const { hatch, warnings: hatchWarnings } = tekHatchToEntity(rec, undefined, units);
+    if (hatch) hatchEntities.push(hatch);
+    warnings.push(...hatchWarnings);
+  }
   const entities: Entity[] = [
     ...parsed.stairs.map((rec) => tekStairToEntity(rec, levelId, units)),
     ...parsed.lines.map((rec) => tekLineToEntity(rec, units)),
@@ -130,6 +139,8 @@ export function buildSceneFromTekScene(
     ...slabEntities,
     // ADR-531 Φ5b.5 — BIM κολώνες/τοιχία.
     ...columnEntities,
+    // ADR-531 Φ5b.6 — BIM γραμμοσκιάσεις.
+    ...hatchEntities,
     // ADR-608 — κάθε <dim> → native παραμετρικό DimensionEntity (ενιαίος οργανισμός, όπως ο Τέκτων).
     ...parsed.dims.flatMap((rec) => tekDimToDimensionEntities(rec, units)),
     ...symbolEntities,

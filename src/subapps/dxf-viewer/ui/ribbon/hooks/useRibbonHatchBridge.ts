@@ -16,7 +16,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-507-hatch-creation-system.md
  */
 
-import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isHatchEntity } from '../../../types/entities';
 import type { HatchEntity, LineweightMm } from '../../../types/entities';
@@ -76,6 +76,7 @@ import type {
 } from '../context/RibbonCommandContext';
 import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
+import { useResolveSelectedEntity, useStableBridge, type RibbonEntityBridgeCore } from './ribbon-entity-bridge-shared';
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
@@ -87,14 +88,7 @@ export interface UseRibbonHatchBridgeProps {
   readonly universalSelection: UniversalSelectionLike;
 }
 
-export interface RibbonHatchBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
-  readonly getToggleState: (commandKey: string) => RibbonToggleState;
-  readonly onAction: (action: string) => void;
-  readonly getPanelVisibility: (visibilityKey: string) => boolean;
-}
+export type RibbonHatchBridge = RibbonEntityBridgeCore;
 
 const NULL_TOGGLE: RibbonToggleState = false;
 
@@ -141,15 +135,7 @@ export function useRibbonHatchBridge(
     isHatchSelectArmed,
   );
 
-  const resolveHatch = useCallback((): HatchEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isHatchEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveHatch = useResolveSelectedEntity(levelManager, universalSelection, isHatchEntity);
 
   const patchHatch = useCallback(
     (hatch: HatchEntity, patch: Record<string, unknown>): void => {
@@ -448,10 +434,7 @@ export function useRibbonHatchBridge(
     [resolveHatch, defaults],
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility });
 }
 
 /** Type guard — exposed ώστε ο `routeRibbonAction` να δρομολογεί hatch action keys. */

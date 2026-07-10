@@ -19,7 +19,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-406-point-based-mep-fixture.md
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isMepFixtureEntity } from '../../../types/entities';
 import type {
@@ -51,10 +51,15 @@ import { useMepCircuitEditorStore } from '../../../bim/mep-systems/mep-circuit-e
 import { resolveManagedSystems } from '../../../bim/mep-systems/mep-circuit-editor';
 import type {
   RibbonComboboxState,
-  RibbonToggleState,
 } from '../context/RibbonCommandContext';
 import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
+import {
+  useResolveSelectedEntity,
+  useNoopToggles,
+  useStableBridge,
+  type RibbonEntityBridgeCore,
+} from './ribbon-entity-bridge-shared';
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
@@ -66,20 +71,7 @@ export interface UseRibbonMepFixtureBridgeProps {
   readonly universalSelection: UniversalSelectionLike;
 }
 
-export interface RibbonMepFixtureBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
-  readonly getToggleState: (commandKey: string) => RibbonToggleState;
-  /** Handles ribbon simple-button actions (close / delete). */
-  readonly onAction: (action: string) => void;
-  /**
-   * Panel visibility resolver. Returns `true` όταν το panel πρέπει να
-   * εμφανίζεται. `rectangularParams` → shape === 'rectangular'. Keys εκτός
-   * `MEP_FIXTURE_RIBBON_VISIBILITY_KEYS` επιστρέφουν `true` (no-op).
-   */
-  readonly getPanelVisibility: (visibilityKey: string) => boolean;
-}
+export type RibbonMepFixtureBridge = RibbonEntityBridgeCore;
 
 /** commandKey → numeric `MepFixtureParams` field. */
 const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof MepFixtureParams>> = {
@@ -90,8 +82,6 @@ const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof MepFixtureParams>> = {
   [MEP_FIXTURE_RIBBON_KEYS.params.mountingElevation]: 'mountingElevationMm',
 };
 
-const NULL_TOGGLE: RibbonToggleState = false;
-
 export function useRibbonMepFixtureBridge(
   props: UseRibbonMepFixtureBridgeProps,
 ): RibbonMepFixtureBridge {
@@ -99,15 +89,7 @@ export function useRibbonMepFixtureBridge(
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
 
-  const resolveFixture = useCallback((): MepFixtureEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isMepFixtureEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveFixture = useResolveSelectedEntity(levelManager, universalSelection, isMepFixtureEntity);
 
   /**
    * Dispatch the params patch through `UpdateMepFixtureParamsCommand` so the
@@ -222,11 +204,7 @@ export function useRibbonMepFixtureBridge(
   );
 
   // Toggles unused — included για interface parity με τα υπόλοιπα bridges.
-  const onToggle = useCallback((_key: string, _next: boolean): void => {
-    /* no-op */
-  }, []);
-
-  const getToggleState = useCallback((_key: string): RibbonToggleState => NULL_TOGGLE, []);
+  const { onToggle, getToggleState } = useNoopToggles();
 
   // ADR-408 Φ7 — the circuit the selected fixture belongs to (Revit single-
   // circuit ⇒ at most one). Honours the synced `activeSystemId` so it matches the
@@ -290,10 +268,7 @@ export function useRibbonMepFixtureBridge(
     [resolveFixture, resolveFixtureCircuit],
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility });
 }
 
 /** Type guard used by `useRibbonCommands` composer (panel visibility). */

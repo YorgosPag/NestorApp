@@ -14,20 +14,11 @@
  * @see io/tek/tek-object-to-scene.ts — tekObjectToEntity (καταναλωτής)
  */
 
-import { directChildren, childText } from './tek-xml-reader';
-import { recordsInFloors, isEntityType, readXMatrix } from './tek-primitive-extract';
+import { childText } from './tek-xml-reader';
+import { recordsInFloors, isEntityType, readXMatrix, readSecondType } from './tek-primitive-extract';
 import type { TekObjectRecord } from './tek-import-types';
 
 const OBJECT_ENTITY_TYPE = 7;
-
-/** Ο `type_res` = το ΔΕΥΤΕΡΟ άμεσο `<type>` του record (το 1ο είναι το entity type 7). */
-function readTypeRes(record: Element): number | null {
-  const typeEls = directChildren(record, 'type');
-  if (typeEls.length < 2) return null;
-  const raw = typeEls[1].textContent?.trim() ?? '';
-  const n = Number.parseFloat(raw);
-  return Number.isFinite(n) ? Math.round(n) : null;
-}
 
 /** Εξάγει όλα τα `<object>` records (type 7) → `TekObjectRecord[]` (type_res + xmatrix + color). */
 export function extractObjectRecords(
@@ -40,7 +31,7 @@ export function extractObjectRecords(
       warnings.push('object record χωρίς type=7 — παραλείφθηκε.');
       continue;
     }
-    const typeRes = readTypeRes(record);
+    const typeRes = readSecondType(record);
     if (typeRes === null) {
       warnings.push('object record χωρίς έγκυρο type_res (2ο <type>) — παραλείφθηκε.');
       continue;

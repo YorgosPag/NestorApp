@@ -13,7 +13,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-511-wall-finish-per-room.md
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isWallCoveringEntity } from '../../../types/entities';
 import type {
@@ -38,16 +38,17 @@ import {
   isWallCoveringRibbonActionKey,
 } from './bridge/wall-covering-command-keys';
 import { EventBus } from '../../../systems/events/EventBus';
-import type { RibbonComboboxState } from '../context/RibbonCommandContext';
-import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
-import type { useUniversalSelection } from '../../../systems/selection';
-import { useResolveSelectedEntity } from './ribbon-entity-bridge-shared';
-
-type UniversalSelectionLike = Pick<ReturnType<typeof useUniversalSelection>, 'getPrimaryId'>;
+import {
+  useResolveSelectedEntity,
+  useStableBridge,
+  type RibbonComboboxState,
+  type LevelSceneWriter,
+  type PrimaryIdSelection,
+} from './ribbon-entity-bridge-shared';
 
 export interface UseRibbonWallCoveringBridgeProps {
   readonly levelManager: LevelSceneWriter;
-  readonly universalSelection: UniversalSelectionLike;
+  readonly universalSelection: PrimaryIdSelection;
 }
 
 export interface RibbonWallCoveringBridge {
@@ -167,10 +168,7 @@ export function useRibbonWallCoveringBridge(
     [resolveWallCovering, t],
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onAction }),
-    [onComboboxChange, getComboboxState, onAction],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onAction });
 }
 
 /** Type guard — exposed so `useRibbonCommands` can route wall-covering action keys. */

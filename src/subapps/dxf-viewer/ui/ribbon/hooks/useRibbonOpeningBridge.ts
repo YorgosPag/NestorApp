@@ -17,7 +17,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.4 §6
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isOpeningEntity } from '../../../types/entities';
 import type { OpeningEntity, OpeningKind, OpeningParams } from '../../../bim/types/opening-types';
@@ -47,6 +47,11 @@ import { EventBus } from '../../../systems/events/EventBus';
 // ADR-032/390/401 — «Διαγραφή» routes through the canonical command-based delete
 // (undoable + cascades), shared with the keyboard Delete. No more raw event emit.
 import { useRibbonEntityDelete } from './useRibbonEntityDelete';
+import {
+  useResolveSelectedEntity,
+  useViolationBadgeState,
+  useStableBridge,
+} from './ribbon-entity-bridge-shared';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -109,15 +114,7 @@ export function useRibbonOpeningBridge(
     [],
   );
 
-  const resolveOpening = useCallback((): OpeningEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isOpeningEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveOpening = useResolveSelectedEntity(levelManager, universalSelection, isOpeningEntity);
 
   /**
    * Dispatch the params patch through `UpdateOpeningParamsCommand` (via the
@@ -251,15 +248,11 @@ export function useRibbonOpeningBridge(
     return NULL_TOGGLE;
   }, [leaderVisible]);
 
-  const getBadgeState = useCallback((badgeKey: string): boolean => {
-    if (!OPENING_OWNED_BADGE_KEYS.has(badgeKey)) return false;
-    const opening = resolveOpening();
-    if (!opening) return false;
-    if (badgeKey === OPENING_RIBBON_BADGE_KEYS.violations) {
-      return opening.validation.hasCodeViolations;
-    }
-    return false;
-  }, [resolveOpening]);
+  const getBadgeState = useViolationBadgeState(
+    resolveOpening,
+    OPENING_OWNED_BADGE_KEYS,
+    OPENING_RIBBON_BADGE_KEYS.violations,
+  );
 
   const onAction = useCallback(
     (action: string): void => {
@@ -319,10 +312,7 @@ export function useRibbonOpeningBridge(
     [resolveOpening, levelManager, t, ribbonDelete],
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction });
 }
 
 /** Type guard used by `useRibbonCommands` composer. */

@@ -29,7 +29,11 @@ export function computeSketch(
   variant: StairVariantSketch,
 ): StairGeometry {
   assertWalklineLength(params.stepCount, variant.walklinePath.length);
-  const walkline = enforceLinearRise(variant.walklinePath, params);
+  // ADR-619 — multi-flight «από περιοχή»: το path φέρει ήδη μεικτά z (πατήματα +
+  // επίπεδα πλατύσκαλα)· ΜΗΝ επιβάλλεις uniform rise. Αλλιώς κλασικό ενιαίο riser.
+  const walkline = variant.preserveZ
+    ? variant.walklinePath.map((p) => point(p.x, p.y, p.z))
+    : enforceLinearRise(variant.walklinePath, params);
   return computeWalklineStair(params, walkline, 1);
 }
 

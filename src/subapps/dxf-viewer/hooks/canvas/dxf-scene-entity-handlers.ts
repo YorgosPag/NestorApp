@@ -25,6 +25,8 @@ import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 // nested payload field). Shared with the drag-preview wrapper (draw-real-entity-preview).
 import { dxfSubEntityPayload } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
+// rotated-rectangle entity-level SSoT (corner1/corner2 ή x/y/w/h + rotation, pivot=corner1).
+import { rectangleEntityVertices } from '../../rendering/entities/shared/geometry-utils';
 import type { HatchEntity } from '../../types/entities';
 import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isFoundationEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isAnnotationSymbolEntity, isScaleBarEntity, isOpeningInfoTagEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isSpaceSeparatorEntity, isXLineEntity, isRayEntity, isHatchEntity } from '../../types/entities';
 // ADR-583 — annotation symbol (North arrow) lightweight entity for DXF render pipeline.
@@ -79,21 +81,15 @@ export type ToDxfHandler = (entity: SceneEntity, base: DxfBaseFields) => DxfEnti
 function rectangleToVertices(e: {
   corner1?: Point2D; corner2?: Point2D;
   x?: number; y?: number; width?: number; height?: number;
+  rotation?: number;
 }): Point2D[] | null {
-  if (e.corner1 && e.corner2) {
-    return [
-      e.corner1,
-      { x: e.corner2.x, y: e.corner1.y },
-      e.corner2,
-      { x: e.corner1.x, y: e.corner2.y },
-    ];
-  }
-  if (e.x !== undefined && e.y !== undefined && e.width !== undefined && e.height !== undefined) {
-    const c1: Point2D = { x: e.x, y: e.y };
-    const c2: Point2D = { x: e.x + e.width, y: e.y + e.height };
-    return [c1, { x: c2.x, y: c1.y }, c2, { x: c1.x, y: c2.y }];
-  }
-  return null;
+  // rotated-rectangle (ADR-620): το committed ορθογώνιο μετατρέπεται σε polyline για τον κύριο καμβά
+  // — ΠΡΕΠΕΙ να σέβεται το `rotation` (pivot=corner1), αλλιώς η πληκτρολογημένη γωνία κλίσης χάνεται.
+  // Entity-level SSoT (χειρίζεται corner1/corner2 ΚΑΙ x/y/w/h + rotation) — ΟΧΙ 4ο axis-aligned duplicate.
+  const hasCorners = !!(e.corner1 && e.corner2);
+  const hasXywh = e.x !== undefined && e.y !== undefined && e.width !== undefined && e.height !== undefined;
+  if (!hasCorners && !hasXywh) return null; // πραγματικά κενή γεωμετρία → warn + skip (όπως πριν)
+  return rectangleEntityVertices(e);
 }
 
 /**
@@ -171,6 +167,7 @@ export const TO_DXF_HANDLERS: Partial<Record<EntityType, ToDxfHandler>> = {
     const e = entity as typeof entity & {
       corner1?: Point2D; corner2?: Point2D;
       x?: number; y?: number; width?: number; height?: number;
+      rotation?: number;
     };
     const verts = rectangleToVertices(e);
     if (!verts) {

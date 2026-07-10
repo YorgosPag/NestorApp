@@ -18,7 +18,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-422-bim-heating-mechanical-study.md
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isThermalSpaceEntity } from '../../../types/entities';
 import type {
@@ -56,18 +56,17 @@ import {
 } from './bridge/thermal-space-command-keys';
 import { useSpaceHeatLoads } from '../../../hooks/data/useSpaceHeatLoads';
 import { EventBus } from '../../../systems/events/EventBus';
-import type { RibbonComboboxState } from '../context/RibbonCommandContext';
-import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
-import type { useUniversalSelection } from '../../../systems/selection';
-
-type UniversalSelectionLike = Pick<
-  ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId'
->;
+import {
+  useResolveSelectedEntity,
+  useStableBridge,
+  type RibbonComboboxState,
+  type LevelSceneWriter,
+  type PrimaryIdSelection,
+} from './ribbon-entity-bridge-shared';
 
 export interface UseRibbonThermalSpaceBridgeProps {
   readonly levelManager: LevelSceneWriter;
-  readonly universalSelection: UniversalSelectionLike;
+  readonly universalSelection: PrimaryIdSelection;
 }
 
 export interface RibbonThermalSpaceBridge {
@@ -83,15 +82,7 @@ export function useRibbonThermalSpaceBridge(
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
 
-  const resolveThermalSpace = useCallback((): ThermalSpaceEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isThermalSpaceEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveThermalSpace = useResolveSelectedEntity(levelManager, universalSelection, isThermalSpaceEntity);
 
   // ADR-422 L1 — heat-load readout for the selected space. Computed only when a
   // thermal space is selected (the contextual tab is active). Reuses the same
@@ -228,10 +219,7 @@ export function useRibbonThermalSpaceBridge(
     [resolveThermalSpace, t],
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onAction }),
-    [onComboboxChange, getComboboxState, onAction],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onAction });
 }
 
 /** Type guard — exposed so `useRibbonCommands` can route thermal-space action keys. */

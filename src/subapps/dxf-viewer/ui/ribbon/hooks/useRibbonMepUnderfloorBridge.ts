@@ -23,7 +23,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isMepUnderfloorEntity } from '../../../types/entities';
 import type {
@@ -34,7 +34,6 @@ import type {
 import { buildUnderfloorConnectors } from '../../../bim/mep-underfloor/mep-underfloor-geometry';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateMepUnderfloorParamsCommand } from '../../../core/commands/entity-commands/UpdateMepUnderfloorParamsCommand';
-import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   MEP_UNDERFLOOR_RIBBON_KEYS,
   MEP_UNDERFLOOR_RIBBON_KEYS_ACTIONS,
@@ -44,28 +43,24 @@ import {
   isMepUnderfloorVisibilityKey,
 } from './bridge/mep-underfloor-command-keys';
 import { EventBus } from '../../../systems/events/EventBus';
-import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
-import { resolveManagedSystems } from '../../../bim/mep-systems/mep-circuit-editor';
-import type { RibbonComboboxState } from '../context/RibbonCommandContext';
-import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
-import type { useUniversalSelection } from '../../../systems/selection';
-
-type UniversalSelectionLike = Pick<
-  ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId'
->;
+import {
+  useActiveSceneManager,
+  useResolveSelectedEntity,
+  useStableBridge,
+  readNumericParamState,
+  type RibbonComboboxState,
+  type LevelSceneWriter,
+  type PrimaryIdSelection,
+  type RibbonEntityBridgeCoreNoToggles,
+} from './ribbon-entity-bridge-shared';
+import { useManagedNetworkVisibility } from './ribbon-mep-network-visibility';
 
 export interface UseRibbonMepUnderfloorBridgeProps {
   readonly levelManager: LevelSceneWriter;
-  readonly universalSelection: UniversalSelectionLike;
+  readonly universalSelection: PrimaryIdSelection;
 }
 
-export interface RibbonMepUnderfloorBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onAction: (action: string) => void;
-  readonly getPanelVisibility: (visibilityKey: string) => boolean;
-}
+export type RibbonMepUnderfloorBridge = RibbonEntityBridgeCoreNoToggles;
 
 /** Editable numeric commandKey → `MepUnderfloorParams` field. */
 const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof MepUnderfloorParams>> = {
@@ -89,15 +84,8 @@ export function useRibbonMepUnderfloorBridge(
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
 
-  const resolveUnderfloor = useCallback((): MepUnderfloorEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isMepUnderfloorEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveUnderfloor = useResolveSelectedEntity(levelManager, universalSelection, isMepUnderfloorEntity);
+  const buildSceneManager = useActiveSceneManager(levelManager);
 
   /**
    * Dispatch the params patch through `UpdateMepUnderfloorParamsCommand`. The two
@@ -106,21 +94,17 @@ export function useRibbonMepUnderfloorBridge(
    */
   const dispatchParams = useCallback(
     (underfloor: MepUnderfloorEntity, nextParams: MepUnderfloorParams): void => {
-      if (!levelManager.currentLevelId) return;
+      const sm = buildSceneManager();
+      if (!sm) return;
       const withConnectors: MepUnderfloorParams = {
         ...nextParams,
         connectors: buildUnderfloorConnectors(nextParams),
       };
-      const sm = createLevelSceneManagerAdapter(
-        levelManager.getLevelScene,
-        levelManager.setLevelScene,
-        levelManager.currentLevelId,
-      );
       executeCommand(
         new UpdateMepUnderfloorParamsCommand(underfloor.id, withConnectors, underfloor.params, sm, false),
       );
     },
-    [executeCommand, levelManager],
+    [executeCommand, buildSceneManager],
   );
 
   const getComboboxState = useCallback(
@@ -140,11 +124,8 @@ export function useRibbonMepUnderfloorBridge(
         return { value: underfloor.params.patternType, options: [] };
       }
 
-      const field = NUMBER_KEY_TO_FIELD[commandKey];
-      const raw = underfloor.params[field];
       // `thermalOutputW` is optional — absent ⇒ blank combobox (unspecified).
-      if (typeof raw !== 'number') return null;
-      return { value: String(Math.round(raw)), options: [] };
+      return readNumericParamState(underfloor.params, commandKey, NUMBER_KEY_TO_FIELD);
     },
     [resolveUnderfloor],
   );
@@ -188,27 +169,16 @@ export function useRibbonMepUnderfloorBridge(
     [resolveUnderfloor, universalSelection, t],
   );
 
-  const getPanelVisibility = useCallback(
-    (visibilityKey: string): boolean => {
-      if (!isMepUnderfloorVisibilityKey(visibilityKey)) return true;
-      const underfloor = resolveUnderfloor();
-      if (!underfloor) return false;
-      if (visibilityKey === MEP_UNDERFLOOR_RIBBON_VISIBILITY_KEYS.hasNetwork) {
-        // Fold-in «Δίκτυο» panel shows iff the loop is a member of ≥1 hydronic
-        // network (Revit "System Properties" from the terminal). Mirror of the
-        // boiler/manifold `hasNetwork` panel (ADR-408 Φ13).
-        const systems = useMepSystemStore.getState().getSystems();
-        return resolveManagedSystems([underfloor], systems).length > 0;
-      }
-      return false;
-    },
-    [resolveUnderfloor],
+  // Fold-in «Δίκτυο» panel shows iff the loop is a member of ≥1 hydronic network
+  // (Revit "System Properties" from the terminal). Mirror of the boiler/manifold
+  // `hasNetwork` panel (ADR-408 Φ13).
+  const getPanelVisibility = useManagedNetworkVisibility(
+    resolveUnderfloor,
+    isMepUnderfloorVisibilityKey,
+    MEP_UNDERFLOOR_RIBBON_VISIBILITY_KEYS.hasNetwork,
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onAction, getPanelVisibility }),
-    [onComboboxChange, getComboboxState, onAction, getPanelVisibility],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onAction, getPanelVisibility });
 }
 
 /** Type guard used by `useRibbonCommands` composer (panel visibility). */

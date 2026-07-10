@@ -21,27 +21,29 @@
  * @see docs/centralized-systems/reference/adrs/ADR-583-annotation-symbol-library-north-arrow.md
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useScaleBarOptionsStore } from '../../../state/scale-bar-options-store';
 import {
   SCALE_BAR_RIBBON_KEYS,
   isScaleBarRibbonKey,
   isScaleBarRibbonStringKey,
 } from './bridge/scale-bar-command-keys';
-import type { RibbonComboboxState, RibbonToggleState } from '../context/RibbonCommandContext';
+import type { RibbonComboboxState } from '../context/RibbonCommandContext';
 import type { RibbonBridgeCore } from './bridge/ribbon-bridge-core';
 import type {
-  ScaleBarEntity,
   ScaleBarStyle,
   ScaleBarLabelPlacement,
 } from '../../../types/scale-bar';
 import { isScaleBarEntity } from '../../../types/scale-bar';
 import type { SceneUnits } from '../../../utils/scene-units';
-import { useCommandHistory } from '../../../core/commands';
-import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
-import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
+import {
+  useInertBridgeExtras,
+  useStableBridge,
+  useResolveSelectedEntity,
+  useUpdateEntityPatch,
+} from './ribbon-entity-bridge-shared';
 
 type UniversalSelectionLike = Pick<ReturnType<typeof useUniversalSelection>, 'getPrimaryId'>;
 
@@ -54,13 +56,10 @@ export interface RibbonScaleBarBridge extends RibbonBridgeCore {
   readonly getPanelVisibility: (visibilityKey: string) => boolean;
 }
 
-const NULL_TOGGLE: RibbonToggleState = false;
-
 export function useRibbonScaleBarBridge(
   props: UseRibbonScaleBarBridgeProps,
 ): RibbonScaleBarBridge {
   const { levelManager, universalSelection } = props;
-  const { execute: executeCommand } = useCommandHistory();
 
   // Subscribe so the tool-active picker re-renders when the placement defaults change.
   const style = useScaleBarOptionsStore((s) => s.style);
@@ -72,26 +71,9 @@ export function useRibbonScaleBarBridge(
   const labelPlacement = useScaleBarOptionsStore((s) => s.labelPlacement);
 
   /** The selected scale-bar entity (edit mode), or null (defaults mode). */
-  const resolveSelected = useCallback((): ScaleBarEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    const e = scene?.entities.find((x) => x.id === id);
-    return e && isScaleBarEntity(e) ? (e as ScaleBarEntity) : null;
-  }, [levelManager, universalSelection]);
+  const resolveSelected = useResolveSelectedEntity(levelManager, universalSelection, isScaleBarEntity);
 
-  const patchEntity = useCallback(
-    (entity: ScaleBarEntity, patch: Record<string, unknown>): void => {
-      if (!levelManager.currentLevelId) return;
-      const sm = createLevelSceneManagerAdapter(
-        levelManager.getLevelScene,
-        levelManager.setLevelScene,
-        levelManager.currentLevelId,
-      );
-      executeCommand(new UpdateEntityCommand(entity.id, patch, sm, 'Edit scale bar'));
-    },
-    [executeCommand, levelManager],
-  );
+  const patchEntity = useUpdateEntityPatch(levelManager, 'Edit scale bar');
 
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {
@@ -125,19 +107,19 @@ export function useRibbonScaleBarBridge(
       // ── String params (enum pickers) ────────────────────────────────────────
       if (commandKey === SCALE_BAR_RIBBON_KEYS.stringParams.style) {
         const v = value as ScaleBarStyle;
-        if (selected) patchEntity(selected, { style: v });
+        if (selected) patchEntity(selected.id, { style: v });
         else store.setStyle(v);
         return;
       }
       if (commandKey === SCALE_BAR_RIBBON_KEYS.stringParams.unit) {
         const v = value as SceneUnits;
-        if (selected) patchEntity(selected, { unit: v });
+        if (selected) patchEntity(selected.id, { unit: v });
         else store.setUnit(v);
         return;
       }
       if (commandKey === SCALE_BAR_RIBBON_KEYS.stringParams.labelPlacement) {
         const v = value as ScaleBarLabelPlacement;
-        if (selected) patchEntity(selected, { labelPlacement: v });
+        if (selected) patchEntity(selected.id, { labelPlacement: v });
         else store.setLabelPlacement(v);
         return;
       }
@@ -147,45 +129,35 @@ export function useRibbonScaleBarBridge(
       if (commandKey === SCALE_BAR_RIBBON_KEYS.params.divisions) {
         if (numeric < 1) return;
         const n = Math.round(numeric);
-        if (selected) patchEntity(selected, { divisions: n });
+        if (selected) patchEntity(selected.id, { divisions: n });
         else store.setDivisions(n);
         return;
       }
       if (commandKey === SCALE_BAR_RIBBON_KEYS.params.subdivisions) {
         if (numeric < 0) return;
         const n = Math.round(numeric);
-        if (selected) patchEntity(selected, { subdivisions: n });
+        if (selected) patchEntity(selected.id, { subdivisions: n });
         else store.setSubdivisions(n);
         return;
       }
       if (commandKey === SCALE_BAR_RIBBON_KEYS.params.barHeightMm) {
         if (numeric <= 0) return;
-        if (selected) patchEntity(selected, { barHeightMm: numeric });
+        if (selected) patchEntity(selected.id, { barHeightMm: numeric });
         else store.setBarHeightMm(numeric);
         return;
       }
       if (commandKey === SCALE_BAR_RIBBON_KEYS.params.labelHeightMm) {
         if (numeric <= 0) return;
-        if (selected) patchEntity(selected, { labelHeightMm: numeric });
+        if (selected) patchEntity(selected.id, { labelHeightMm: numeric });
         else store.setLabelHeightMm(numeric);
       }
     },
     [resolveSelected, patchEntity],
   );
 
-  const onToggle = useCallback((_key: string, _next: boolean): void => {
-    /* no-op — included for interface parity */
-  }, []);
-  const getToggleState = useCallback((_key: string): RibbonToggleState => NULL_TOGGLE, []);
-  const onAction = useCallback((_action: string): void => {
-    /* no-op — the tab auto-hides when neither a scale-bar is selected nor the tool active */
-  }, []);
-  const getPanelVisibility = useCallback((_visibilityKey: string): boolean => true, []);
+  const { onToggle, getToggleState, onAction, getPanelVisibility } = useInertBridgeExtras();
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility });
 }
 
 /** Type guard used by `useRibbonCommands` composer (no visibility keys). */

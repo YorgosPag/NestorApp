@@ -67,7 +67,7 @@ export interface HatchDrawDefaults {
  * (Giorgio 2026-07-07, ADR-507): η συνηθέστερη αρχιτεκτονική γραμμοσκίαση ξεκινά ως
  * παράλληλες διαγώνιες γραμμές, όχι συμπαγές γέμισμα.
  */
-const DEFAULT_HATCH_DRAW_DEFAULTS: HatchDrawDefaults = {
+export const DEFAULT_HATCH_DRAW_DEFAULTS: HatchDrawDefaults = {
   fillType: 'user-defined',
   fillColor: '#808080',
   lineAngle: 45,

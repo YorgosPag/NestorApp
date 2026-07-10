@@ -200,6 +200,10 @@ export function useSceneState() {
             // ADR-531 Φ5b.5 — κολώνα/τοιχίο: first-save (tool 'column') αλλιώς το Firestore
             // reconciliation snapshot την αφαιρεί (ίδιο bug με τον τοίχο).
             EventBus.emit('drawing:entity-created', { entity, tool: 'column' });
+          } else if (entity.type === 'hatch') {
+            // ADR-531 Φ5b.6 — γραμμοσκίαση: first-save μέσω του extraCreateTrigger του hatch
+            // persistence (drawing:entity-created), ΟΧΙ drawing:complete (αποφυγή auto-guide prompt).
+            EventBus.emit('drawing:entity-created', { entity, tool: 'hatch' });
           }
         }
         // 🛡️ ADR-526 Φ5a — persist the level↔FileRecord link now (shared helper, N.18).

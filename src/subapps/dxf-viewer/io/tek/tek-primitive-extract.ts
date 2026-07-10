@@ -37,22 +37,42 @@ function floorContainerOf(root: Element): Element | null {
   return firstChild(body, 'building') ?? body;
 }
 
-/** Όλα τα `<record>` ενός δοσμένου container-tag (π.χ. 'line'/'arc') σε όλους τους ορόφους. */
-export function recordsInFloors(root: Element, containerTag: string): Element[] {
+/**
+ * Τα `<tag>` **CONTAINERS** ανά όροφο (π.χ. `<hatch>`) — για containers που ΔΕΝ τυλίγουν κάθε
+ * entity σε `<record>` (ο Τέκτων βάζει τα hatch primitives flat μέσα στο `<hatch>`, delimited ανά
+ * `<type>6`). SSoT της floor-traversal — το {@link recordsInFloors} χτίζει πάνω σε αυτό.
+ */
+export function containersInFloors(root: Element, containerTag: string): Element[] {
   const floorContainer = floorContainerOf(root);
   if (!floorContainer) return [];
   const out: Element[] = [];
   for (const floor of directChildren(floorContainer, 'floor')) {
     const container = firstChild(floor, containerTag);
-    if (!container) continue;
-    out.push(...directChildren(container, 'record'));
+    if (container) out.push(container);
   }
   return out;
+}
+
+/** Όλα τα `<record>` ενός δοσμένου container-tag (π.χ. 'line'/'arc') σε όλους τους ορόφους. */
+export function recordsInFloors(root: Element, containerTag: string): Element[] {
+  return containersInFloors(root, containerTag).flatMap((c) => directChildren(c, 'record'));
 }
 
 /** `true` αν το record έχει την αναμενόμενη 1η `<type>` (entity type, ΟΧΙ το nested line-style). */
 export function isEntityType(record: Element, expected: number): boolean {
   return Math.round(childNumber(record, 'type', -1)) === expected;
+}
+
+/**
+ * Το **ΔΕΥΤΕΡΟ** άμεσο `<type>` ενός record (SSoT). Ορισμένα Tekton records έχουν δύο άμεσα
+ * `<type>` παιδιά: το 1ο = entity type (π.χ. 7=object, 6=hatch)· το 2ο = ο catalog/pattern index
+ * (object `type_res` στο `Obj.inf`, hatch pattern number στο `pattern.inf`). `null` αν λείπει.
+ */
+export function readSecondType(record: Element): number | null {
+  const typeEls = directChildren(record, 'type');
+  if (typeEls.length < 2) return null;
+  const n = Number.parseFloat(typeEls[1].textContent?.trim() ?? '');
+  return Number.isFinite(n) ? Math.round(n) : null;
 }
 
 /** Εξάγει όλα τα `<line>` records (type 4). */

@@ -325,6 +325,13 @@ export interface CreateBimEntityPersistenceHookConfig<
   readonly onAfterOptimisticRemoval?: (id: string, extra: TExtra) => void;
   /** First-save trigger. Default `{ event: 'drawing:entity-created', tool: entityType }`. */
   readonly createTrigger?: { readonly event: CreateTriggerEvent; readonly tool: string };
+  /**
+   * ADR-531 Φ5b.6 — ΕΠΙΠΛΕΟΝ first-save triggers (ίδιος handler με το `createTrigger`). Για entities
+   * που first-save-άρουν σε ΔΙΑΦΟΡΕΤΙΚΟ event ανά διαδρομή: π.χ. hatch = `drawing:complete`
+   * (interactive, via `completeEntity`) **ΚΑΙ** `drawing:entity-created` (import `.tek`, ώστε να
+   * αποφευχθούν τα side-effects του `drawing:complete` — auto-guides/scene-resync — στο bulk import).
+   */
+  readonly extraCreateTriggers?: readonly { readonly event: CreateTriggerEvent; readonly tool: string }[];
   /** Delete-requested listener. Omit for entities with no in-app delete yet
    *  (floorplan-symbol). */
   readonly deleteTrigger?: DeleteTrigger;

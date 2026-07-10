@@ -18,7 +18,7 @@ import type { ICommand, ISceneManager } from '../../core/commands/interfaces';
 import { ReorderEntityCommand } from '../../core/commands/entity-commands/ReorderEntityCommand';
 import { HatchLifecycleSignalCommand } from '../../core/commands/entity-commands/HatchLifecycleSignalCommand';
 import { calculatePolygonArea } from '../../rendering/entities/shared/geometry-polyline-utils';
-import { getHatchDrawDefaults } from './hatch-draw-defaults-store';
+import { getHatchDrawDefaults, type HatchDrawDefaults } from './hatch-draw-defaults-store';
 import { buildGradientFromDefaults } from './hatch-gradient-build';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
@@ -37,10 +37,12 @@ function buildHatchEntityFromPaths(
   boundaryPaths: Point2D[][],
   id: string,
   layerId: string | undefined,
+  // ADR-531 Φ5b.6 — ο import (.tek) περνά explicit appearance (solid/pattern + χρώμα/κλίμακα από
+  // το record) αντί για τα live draw-defaults του UI· default = τα τρέχοντα defaults (interactive).
+  d = getHatchDrawDefaults(),
 ): HatchEntity | null {
   const outer = boundaryPaths[0];
   if (!outer || outer.length < HATCH_MIN_BOUNDARY_POINTS) return null;
-  const d = getHatchDrawDefaults();
   const isSolid = d.fillType === 'solid';
   const isPredefined = d.fillType === 'predefined';
   const isGradient = d.fillType === 'gradient';
@@ -85,9 +87,11 @@ export function buildHatchEntityFromBoundary(
   points: Point2D[],
   id: string,
   layerId: string | undefined,
+  // ADR-531 Φ5b.6 — optional explicit appearance (import path)· default = live UI draw-defaults.
+  defaults: HatchDrawDefaults = getHatchDrawDefaults(),
 ): HatchEntity | null {
   if (points.length < HATCH_MIN_BOUNDARY_POINTS) return null;
-  return buildHatchEntityFromPaths([points], id, layerId);
+  return buildHatchEntityFromPaths([points], id, layerId, defaults);
 }
 
 /**

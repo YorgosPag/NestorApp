@@ -87,6 +87,8 @@ export function createBimEntityPersistenceHook<
       (e as { type?: string }).type === config.entityType);
   const createTrigger =
     config.createTrigger ?? { event: 'drawing:entity-created' as const, tool: config.entityType };
+  // ADR-531 Φ5b.6 — primary + optional extra first-save triggers (ίδιος handler).
+  const allCreateTriggers = [createTrigger, ...(config.extraCreateTriggers ?? [])];
   const movedEffectDisabled = config.enableMovedEffect === false;
   const useExtraHook = config.useExtra;
 
@@ -425,19 +427,21 @@ export function createBimEntityPersistenceHook<
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // ---- First-save listener (drawing:entity-created | drawing:complete) ---
+    // ---- First-save listener (drawing:entity-created | drawing:complete [+ extras]) ---
     useEffect(() => {
-      const cleanup = EventBus.on(createTrigger.event, (payload) => {
-        const p = payload as { tool?: string; entity?: AnySceneEntity };
-        if (p.tool !== createTrigger.tool) return;
-        const entity = p.entity as TEntity | undefined;
-        if (!entity || (entity as { type?: string }).type !== config.entityType) return;
-        if (!serviceRef.current) return;
-        pendingFirstSaveIdsRef.current.add(entity.id);
-        dirtyIdsRef.current.add(entity.id);
-        void persist(entity);
-      });
-      return cleanup;
+      const cleanups = allCreateTriggers.map((trigger) =>
+        EventBus.on(trigger.event, (payload) => {
+          const p = payload as { tool?: string; entity?: AnySceneEntity };
+          if (p.tool !== trigger.tool) return;
+          const entity = p.entity as TEntity | undefined;
+          if (!entity || (entity as { type?: string }).type !== config.entityType) return;
+          if (!serviceRef.current) return;
+          pendingFirstSaveIdsRef.current.add(entity.id);
+          dirtyIdsRef.current.add(entity.id);
+          void persist(entity);
+        }),
+      );
+      return () => { for (const c of cleanups) c(); };
     }, [persist]);
 
     // ---- Delete-requested listener (optional — floorplan-symbol has none) --

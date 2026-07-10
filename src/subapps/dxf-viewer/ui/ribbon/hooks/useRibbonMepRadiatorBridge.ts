@@ -25,7 +25,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isMepRadiatorEntity } from '../../../types/entities';
 import type {
@@ -51,6 +51,10 @@ import { EventBus } from '../../../systems/events/EventBus';
 import type { RibbonComboboxState } from '../context/RibbonCommandContext';
 import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
+import {
+  useResolveSelectedEntity,
+  useStableBridge,
+} from './ribbon-entity-bridge-shared';
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
@@ -85,15 +89,7 @@ export function useRibbonMepRadiatorBridge(
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
 
-  const resolveRadiator = useCallback((): MepRadiatorEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isMepRadiatorEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveRadiator = useResolveSelectedEntity(levelManager, universalSelection, isMepRadiatorEntity);
 
   // ADR-422 L2 — sizing read-model for the selected radiator. Computed only when a
   // radiator is selected (contextual tab active). Reuses the L1 heat-load SSoT.
@@ -203,8 +199,5 @@ export function useRibbonMepRadiatorBridge(
     [resolveRadiator, universalSelection, t],
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onAction }),
-    [onComboboxChange, getComboboxState, onAction],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onAction });
 }

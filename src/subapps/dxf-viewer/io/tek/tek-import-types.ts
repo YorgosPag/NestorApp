@@ -175,6 +175,25 @@ export interface TekPillarRecord {
   readonly color: string;
 }
 
+/**
+ * ADR-531 Φ5b.6 — μια **γραμμοσκίαση** `<hatch><record>` (entity type 6). Το όριο ζει στο
+ * `<vector>` container ως λίστα segments (`v0X/v0Y`→`v1X/v1Y`, μέτρα Y-up)· το μοτίβο είναι το
+ * **ΔΕΥΤΕΡΟ** `<type>` (pattern index `pattern.inf`· 22=solid). `scaleX`/`rotation` = κλίμακα/γωνία
+ * μοτίβου. Y-up, μέτρα — καμία μετατροπή εδώ (γίνεται στον mapper `tek-hatch-to-bim`).
+ */
+export interface TekHatchRecord {
+  /** Κορυφές ορίου (μέτρα, Y-up) — τα `v0` κάθε `<vector><record>` segment, με σειρά (κλειστό loop). */
+  readonly boundary: readonly TekPoint2D[];
+  /** Το 2ο `<type>` — pattern index (`pattern.inf`)· 22 = solid. */
+  readonly patternNum: number;
+  /** `<scaleX>` — κλίμακα μοτίβου. */
+  readonly scaleX: number;
+  /** `<rotation>` — γωνία μοτίβου (μοίρες). */
+  readonly rotationDeg: number;
+  /** `<color>` RGB hex. */
+  readonly color: string;
+}
+
 /** ADR-531 Φ5b — μία «πατιά» διάστασης (`<seg><record>`): η ζωγραφισμένη γραμμή + το κείμενο. */
 export interface TekDimSeg {
   /** `<end0X/Y>`–`<end1X/Y>` — άκρα της γραμμής διάστασης (μέτρα, Y-up). */
@@ -290,6 +309,8 @@ export interface TekSceneParseResult extends TekParseResult {
   readonly walls: readonly TekWallRecord[];
   /** ADR-531 Φ5b.5 — κολώνες & τοιχία: type-1 records με flag pillar=1, στο ίδιο container με τους τοίχους. */
   readonly pillars: readonly TekPillarRecord[];
+  /** ADR-531 Φ5b.6 — όλες οι γραμμοσκιάσεις (`<hatch>` type 6). */
+  readonly hatches: readonly TekHatchRecord[];
   /** ADR-608 — όλα τα type-7 `<object>` records (built-in σύμβολα Τέκτονα). */
   readonly objects: readonly TekObjectRecord[];
   /** ADR-531 Φ5b.4 — όλες οι πλάκες (`<plane>` type 10). */

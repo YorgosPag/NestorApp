@@ -20,7 +20,7 @@
  * `useRibbonCommands`.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateArrayParamsCommand } from '../../../core/commands/entity-commands/UpdateArrayParamsCommand';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -43,6 +43,7 @@ import { isArrayEntity } from '../../../types/entities';
 import type { ArrayParams, PathParams, PolarParams, RectParams } from '../../../systems/array/types';
 import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
+import { useResolveSelectedEntity, useStableBridge } from './ribbon-entity-bridge-shared';
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
@@ -80,15 +81,7 @@ export function useRibbonArrayBridge(
 
   const lastPrimaryRef = useRef<string | null>(null);
 
-  const resolveArray = useCallback((): ArrayEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isArrayEntity(e)) return null;
-    return e as ArrayEntity;
-  }, [universalSelection, levelManager]);
+  const resolveArray = useResolveSelectedEntity(levelManager, universalSelection, isArrayEntity);
 
   // Clear the in-progress override when the selected array changes,
   // so we don't apply stale "user typed" values to a different entity.
@@ -247,11 +240,7 @@ export function useRibbonArrayBridge(
     [resolveArray, dispatchParams],
   );
 
-  // ADR-040 Phase XIX: memoize return so RibbonCommandProvider deps stay stable.
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState });
 }
 
 // ── Path helpers ──────────────────────────────────────────────────────────────

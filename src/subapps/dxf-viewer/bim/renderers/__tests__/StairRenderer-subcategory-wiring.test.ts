@@ -176,3 +176,57 @@ describe('StairRenderer — handrails subcategory wiring (Phase C.3)', () => {
     expect(lineDashCalls(mock.calls)).toContain('[]');
   });
 });
+
+// ADR-619 Bug #4/#5 — uniform treads + section-slider clip.
+function fillTexts(calls: MockCall[]): string[] {
+  return calls.filter((c) => c.fn === 'fillText').map((c) => String(c.args[0]));
+}
+
+/** Stair with an above-internal-cut tread (z=1800) + its label numbered '9'. */
+function makeStairWithAboveCutLabel(): StairEntity {
+  const base = makeStair();
+  return {
+    ...base,
+    params: { ...base.params, treadLabelDisplay: 'all' },
+    geometry: {
+      ...base.geometry,
+      treadsBelowCut: [[
+        { x: 0, y: 0, z: 0 }, { x: 900, y: 0, z: 0 },
+        { x: 900, y: 270, z: 0 }, { x: 0, y: 270, z: 0 },
+      ]],
+      treadsAboveCut: [[
+        { x: 0, y: 600, z: 1800 }, { x: 900, y: 600, z: 1800 },
+        { x: 900, y: 870, z: 1800 }, { x: 0, y: 870, z: 1800 },
+      ]],
+      treadLabels: [
+        { treadIndex: 0, position: { x: 450, y: 135, z: 0 }, text: '1', kind: 'tread' },
+        { treadIndex: 8, position: { x: 450, y: 735, z: 1800 }, text: '9', kind: 'tread' },
+      ],
+    },
+  } as unknown as StairEntity;
+}
+
+describe('StairRenderer — uniform treads + section clip (ADR-619 Bug #4/#5)', () => {
+  it('6. slider OFF → EVERY tread numbered, incl. above the internal 1200 cut', () => {
+    mockGetState.mockReturnValue(makeStoreState()); // cutPlaneActive undefined → identity
+    const { renderer, mock } = makeRenderer();
+    renderer.render(makeStairWithAboveCutLabel() as unknown as EntityModel, {});
+    const texts = fillTexts(mock.calls);
+    expect(texts).toContain('1');
+    expect(texts).toContain('9'); // z=1800 label no longer suppressed by the 1200 cut
+  });
+
+  it('7. slider active below the upper tread → that tread number is clipped away', () => {
+    mockGetState.mockReturnValue({
+      drawingScale: 100,
+      viewRange: { ...BASE_VIEW_RANGE, cutPlaneMm: 1000 },
+      objectStyles: {},
+      cutPlaneActive: true,
+    });
+    const { renderer, mock } = makeRenderer();
+    renderer.render(makeStairWithAboveCutLabel() as unknown as EntityModel, {});
+    const texts = fillTexts(mock.calls);
+    expect(texts).toContain('1');      // z=0 below the 1000 mm section plane → kept
+    expect(texts).not.toContain('9');  // z=1800 above the plane → clipped
+  });
+});

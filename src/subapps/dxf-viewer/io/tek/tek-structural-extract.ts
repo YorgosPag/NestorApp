@@ -10,14 +10,16 @@
  */
 
 import { directChildren, firstChild, childNumber, childText } from './tek-xml-reader';
-import { recordsInFloors, isEntityType, readXMatrix } from './tek-primitive-extract';
+import { recordsInFloors, isEntityType, readXMatrix, containersInFloors } from './tek-primitive-extract';
 import type {
   TekDimRecord, TekDimSeg, TekWallRecord, TekOpeningRecord, TekPlaneRecord, TekPillarRecord,
+  TekHatchRecord,
 } from './tek-import-types';
 
 const DIM_ENTITY_TYPE = 0;
 const WALL_ENTITY_TYPE = 1;
 const OPENING_ENTITY_TYPE = 2;
+const HATCH_ENTITY_TYPE = 6;
 const PLANE_ENTITY_TYPE = 10;
 
 // ─── Dimensions ────────────────────────────────────────────────────────────────
@@ -158,6 +160,76 @@ export function extractPillarRecords(root: Element): { pillars: TekPillarRecord[
     });
   }
   return { pillars, warnings };
+}
+
+// ─── Hatches (γραμμοσκιάσεις) ────────────────────────────────────────────────
+
+/** Αριθμητικό κείμενο ενός element (trimmed) → number, ή `fallback`. */
+function elemNumber(el: Element | undefined, fallback: number): number {
+  const n = el ? Number.parseFloat(el.textContent?.trim() ?? '') : NaN;
+  return Number.isFinite(n) ? n : fallback;
+}
+
+/**
+ * Τεμαχίζει το flat `<hatch>` container σε ομάδες ανά γραμμοσκίαση. Ο Τέκτων ΔΕΝ τυλίγει κάθε hatch
+ * σε `<record>` (αντίθετα με wall/plane): τα primitives ζουν flat μέσα στο `<hatch>`, κάθε ένα
+ * ξεκινά με `<type>6`. Κάθε ομάδα = τα elements από ένα `<type>6` μέχρι το επόμενο.
+ */
+function segmentHatchGroups(hatchContainer: Element): Element[][] {
+  const groups: Element[][] = [];
+  let current: Element[] | null = null;
+  for (const child of Array.from(hatchContainer.children)) {
+    if (child.tagName === 'type' && Math.round(elemNumber(child, -1)) === HATCH_ENTITY_TYPE) {
+      current = [];
+      groups.push(current);
+    }
+    current?.push(child);
+  }
+  return groups;
+}
+
+/** Πρώτο element μιας ομάδας με δοσμένο tag. */
+function groupFind(group: Element[], tag: string): Element | undefined {
+  return group.find((e) => e.tagName === tag);
+}
+
+/** Το **2ο** `<type>` της ομάδας = pattern index (`pattern.inf`)· το 1ο είναι ο delimiter 6. */
+function groupPatternNum(group: Element[]): number {
+  const types = group.filter((e) => e.tagName === 'type');
+  return types.length >= 2 ? Math.round(elemNumber(types[1], 0)) : 0;
+}
+
+/**
+ * ADR-531 Φ5b.6 — εξάγει όλες τις **γραμμοσκιάσεις** (`<hatch>` primitives type 6). Το κλειστό όριο
+ * ζει στο `<vector>` της κάθε ομάδας ως segments (`v0`→`v1`)· κρατάμε τα `v0` (η σειρά κλείνει το
+ * loop). Το μοτίβο = το 2ο `<type>` της ομάδας. Καθαρή εξαγωγή — units/Y-flip/χρώμα + pattern-name
+ * lookup γίνονται στον mapper.
+ */
+export function extractHatchRecords(root: Element): { hatches: TekHatchRecord[]; warnings: string[] } {
+  const hatches: TekHatchRecord[] = [];
+  const warnings: string[] = [];
+  for (const container of containersInFloors(root, 'hatch')) {
+    for (const group of segmentHatchGroups(container)) {
+      const vector = groupFind(group, 'vector');
+      const boundary = vector
+        ? directChildren(vector, 'record').map((seg) => ({
+          x: childNumber(seg, 'v0X', 0), y: childNumber(seg, 'v0Y', 0),
+        }))
+        : [];
+      if (boundary.length < 3) {
+        warnings.push('hatch με <3 κορυφές ορίου — παραλείφθηκε.');
+        continue;
+      }
+      hatches.push({
+        boundary,
+        patternNum: groupPatternNum(group),
+        scaleX: elemNumber(groupFind(group, 'scaleX'), 1),
+        rotationDeg: elemNumber(groupFind(group, 'rotation'), 0),
+        color: groupFind(group, 'color')?.textContent?.trim() ?? '',
+      });
+    }
+  }
+  return { hatches, warnings };
 }
 
 // ─── Slabs (planes) ──────────────────────────────────────────────────────────

@@ -22,7 +22,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type {
   MepWaterHeaterEntity,
@@ -30,7 +30,6 @@ import type {
 } from '../../../bim/types/mep-water-heater-types';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateMepWaterHeaterParamsCommand } from '../../../core/commands/entity-commands/UpdateMepWaterHeaterParamsCommand';
-import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   MEP_WATER_HEATER_RIBBON_KEYS,
   MEP_WATER_HEATER_RIBBON_KEYS_ACTIONS,
@@ -39,28 +38,24 @@ import {
   isMepWaterHeaterVisibilityKey,
 } from './bridge/mep-water-heater-command-keys';
 import { EventBus } from '../../../systems/events/EventBus';
-import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
-import { resolveManagedSystems } from '../../../bim/mep-systems/mep-circuit-editor';
-import type { RibbonComboboxState } from '../context/RibbonCommandContext';
-import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
-import type { useUniversalSelection } from '../../../systems/selection';
-
-type UniversalSelectionLike = Pick<
-  ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId'
->;
+import {
+  useActiveSceneManager,
+  useResolveSelectedEntity,
+  useStableBridge,
+  readNumericParamState,
+  type RibbonComboboxState,
+  type LevelSceneWriter,
+  type PrimaryIdSelection,
+  type RibbonEntityBridgeCoreNoToggles,
+} from './ribbon-entity-bridge-shared';
+import { useManagedNetworkVisibility } from './ribbon-mep-network-visibility';
 
 export interface UseRibbonMepWaterHeaterBridgeProps {
   readonly levelManager: LevelSceneWriter;
-  readonly universalSelection: UniversalSelectionLike;
+  readonly universalSelection: PrimaryIdSelection;
 }
 
-export interface RibbonMepWaterHeaterBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onAction: (action: string) => void;
-  readonly getPanelVisibility: (visibilityKey: string) => boolean;
-}
+export type RibbonMepWaterHeaterBridge = RibbonEntityBridgeCoreNoToggles;
 
 /** commandKey → numeric `MepWaterHeaterParams` field. */
 const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof MepWaterHeaterParams>> = {
@@ -89,15 +84,8 @@ export function useRibbonMepWaterHeaterBridge(
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
 
-  const resolveWaterHeater = useCallback((): MepWaterHeaterEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isMepWaterHeaterEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveWaterHeater = useResolveSelectedEntity(levelManager, universalSelection, isMepWaterHeaterEntity);
+  const buildSceneManager = useActiveSceneManager(levelManager);
 
   /**
    * Dispatch the params patch through `UpdateMepWaterHeaterParamsCommand`. The command
@@ -106,12 +94,8 @@ export function useRibbonMepWaterHeaterBridge(
    */
   const dispatchParams = useCallback(
     (waterHeater: MepWaterHeaterEntity, nextParams: MepWaterHeaterParams): void => {
-      if (!levelManager.currentLevelId) return;
-      const sm = createLevelSceneManagerAdapter(
-        levelManager.getLevelScene,
-        levelManager.setLevelScene,
-        levelManager.currentLevelId,
-      );
+      const sm = buildSceneManager();
+      if (!sm) return;
       executeCommand(
         new UpdateMepWaterHeaterParamsCommand(
           waterHeater.id,
@@ -122,7 +106,7 @@ export function useRibbonMepWaterHeaterBridge(
         ),
       );
     },
-    [executeCommand, levelManager],
+    [executeCommand, buildSceneManager],
   );
 
   const getComboboxState = useCallback(
@@ -130,11 +114,8 @@ export function useRibbonMepWaterHeaterBridge(
       if (!isMepWaterHeaterRibbonKey(commandKey)) return null;
       const waterHeater = resolveWaterHeater();
       if (!waterHeater) return null;
-      const field = NUMBER_KEY_TO_FIELD[commandKey];
-      const raw = waterHeater.params[field];
       // `thermalOutputW` and `tankCapacityL` are optional — absent ⇒ blank combobox.
-      if (typeof raw !== 'number') return null;
-      return { value: String(Math.round(raw)), options: [] };
+      return readNumericParamState(waterHeater.params, commandKey, NUMBER_KEY_TO_FIELD);
     },
     [resolveWaterHeater],
   );
@@ -170,26 +151,15 @@ export function useRibbonMepWaterHeaterBridge(
     [resolveWaterHeater, universalSelection, t],
   );
 
-  const getPanelVisibility = useCallback(
-    (visibilityKey: string): boolean => {
-      if (!isMepWaterHeaterVisibilityKey(visibilityKey)) return true;
-      const waterHeater = resolveWaterHeater();
-      if (!waterHeater) return false;
-      if (visibilityKey === MEP_WATER_HEATER_RIBBON_VISIBILITY_KEYS.hasNetwork) {
-        // ADR-408 DHW fold-in — «Δίκτυο» panel εμφανίζεται iff ο θερμοσίφωνας
-        // τροφοδοτεί ≥1 domestic-hot-water δίκτυο. Mirror του boiler `hasNetwork`.
-        const systems = useMepSystemStore.getState().getSystems();
-        return resolveManagedSystems([waterHeater], systems).length > 0;
-      }
-      return false;
-    },
-    [resolveWaterHeater],
+  // ADR-408 DHW fold-in — «Δίκτυο» panel εμφανίζεται iff ο θερμοσίφωνας τροφοδοτεί
+  // ≥1 domestic-hot-water δίκτυο. Mirror του boiler `hasNetwork`.
+  const getPanelVisibility = useManagedNetworkVisibility(
+    resolveWaterHeater,
+    isMepWaterHeaterVisibilityKey,
+    MEP_WATER_HEATER_RIBBON_VISIBILITY_KEYS.hasNetwork,
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onAction, getPanelVisibility }),
-    [onComboboxChange, getComboboxState, onAction, getPanelVisibility],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onAction, getPanelVisibility });
 }
 
 /** Type guard used by `useRibbonCommands` composer (panel visibility). */

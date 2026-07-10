@@ -4,6 +4,7 @@
  * 2D plan-view renderer for a `StairEntity`. Reads `entity.geometry`
  * (populated by `computeStairGeometry()` — the SSoT) and draws:
  *   - treads (solid polygons, below-cut)
+ *   - treadsAboveCut (dashed outline, no fill — hidden-line convention)
  *   - walkline (dashed polyline)
  *   - inner / outer stringers (solid bold)
  *   - handrails (dashed thin, with ADA extensions when codeProfile === 'ada')
@@ -14,8 +15,8 @@
  * ADA-driven extensions (305mm top horizontal, one-tread bottom) extend
  * the handrail polyline beyond the stringer ends along the local tangent.
  *
- * Risers, treadsAboveCut (dashed), cutLine zigzag, and tread labels still
- * land in later phases when the full §6.2 pipeline is wired.
+ * Risers, cutLine zigzag land in later phases when the full §6.2 pipeline is
+ * wired. Above-cut treads now render (dashed hidden-line, 2026-07-10, ADR-619).
  *
  * ADR-363 Phase 0.5 — moved from rendering/entities/StairRenderer.ts to
  * bim/renderers/StairRenderer.ts. Backward-compat barrel stub kept at old path.
@@ -30,14 +31,14 @@ import type { Entity } from '../../types/entities';
 import { isStairEntity } from '../../types/entities';
 import { getStairGrips, stairGripGlyphShape } from '../stairs/stair-grips';
 import { gripKindOf } from '../../hooks/grip-kinds';
-import { DEFAULT_CUT_PLANE_HEIGHT } from '../geometry/stairs/stair-geometry-shared';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
 import { resolveVgFillTint } from '../utils/bim-vg-fill-tint';
 import { type LinePatternKey } from '../../config/bim-line-patterns';
 import { bimDashPx } from '../../config/bim-dash-resolver';
-import { resolveCutState } from '../../config/bim-view-range';
+import { type CutState } from '../../config/bim-view-range';
+import { clipStairGeometryAtSection } from '../geometry/stairs/stair-section-clip';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
@@ -51,13 +52,17 @@ import {
   renderTreadsForStructure,
   type StairStyleContext,
 } from './stair-render-structure-style';
+// ADR-358 Phase 7b1 — pure handrail-extension helpers live in a sibling module so
+// this file stays under the 500-line SRP limit (N.7.1 / ADR-623 Φ2).
+import {
+  pickTopExtensionMm,
+  pickBottomExtensionMm,
+  extendPolylineEnds,
+} from './stair-handrail-extension';
 
 const ARROW_HEAD_PX = 10;
 const ARROW_HEAD_HALF_WIDTH_PX = 5;
 const LABEL_OFFSET_PX = 8;
-
-/** ADR-358 §3.6 + §5.1 — ADA top handrail extension is 305 mm horizontal. */
-const ADA_TOP_EXTENSION_MM = 305;
 
 export class StairRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -137,16 +142,15 @@ export class StairRenderer extends BaseEntityRenderer {
     // All stair plan lines (treads, stringers, walkline, handrails, arrow)
     // share the same resolver-computed width. Visual differentiation stays
     // via dash patterns (walkline / handrails / suspended stringers); pixel
-    // width itself is scale + viewRange + objectStyles reactive.
+    // width itself is scale + objectStyles reactive (NOT section-slider reactive —
+    // the stair convention is fixed, ADR-619 Bug #4).
     const ds = useDrawingScaleStore.getState();
-    const cutState = resolveCutState(
-      {
-        zBottomMm: stair.params.basePoint.z,
-        zTopMm: stair.params.basePoint.z + stair.params.totalRise,
-        category: 'stair',
-      },
-      ds.viewRange,
-    );
+    // ADR-619 Bug #4 — Decouple the stair plan CONVENTION from the section slider.
+    // Plan symbology is resolved at a FIXED 'cut' state (a stair is a cut element
+    // in plan by Revit convention), so moving the «Επίπεδο τομής» slider never
+    // restyles the stair — lineweight / color / pattern stay stable. The slider
+    // acts ONLY as a visibility clip (applied to the geometry below).
+    const cutState: CutState = 'cut';
     const _stairLayerOverride = _stairLayer ? {
       lineweightMm: isConcreteLineweight(_stairLayer.lineweight) ? _stairLayer.lineweight : undefined,
       color: _stairLayer.color ?? undefined,
@@ -173,17 +177,35 @@ export class StairRenderer extends BaseEntityRenderer {
       // ADR-375 v2.12 — V/G category color tints stair treads (SSoT helper).
       vgFillTint: resolveVgFillTint('stair', cutState, ds.objectStyles),
     };
-    renderTreadsForStructure(scx, stair.params.structureType, geometry.treadsBelowCut);
-    renderStringersForStructure(scx, stair.params.structureType, geometry);
-    this.drawHandrails(stair, _handrailsS.lineWidthPx, _handrailsS.linePattern);
-    this.drawWalkline(geometry.walkline, _walklineS.lineWidthPx, _walklineS.linePattern);
+    // ADR-619 Bug #5 (Giorgio) — ΟΛΑ τα σκαλιά ΙΔΙΑ: solid + γεμάτα + με νούμερα.
+    // Το εσωτερικό cut plane (1200 mm, `splitTreadsByCutPlane`) ΔΕΝ διαφοροποιεί
+    // πλέον την εμφάνιση — ενοποιούμε below+above σε ΕΝΑ solid+fill πέρασμα (τέλος
+    // το hidden-line διακεκομμένο των πάνω πατημάτων).
+    const allTreads = [...geometry.treadsBelowCut, ...(geometry.treadsAboveCut ?? [])];
+    // ADR-619 Bug #4 — Section slider = καθαρό visibility clip (Giorgio Option B):
+    // κόβει σκαλιά / stringers / walkline πάνω από τη στάθμη τομής, ανά-σκαλί, χωρίς
+    // restyle. Ανενεργός → Infinity → identity (πλήρης σκάλα, μηδέν κόστος).
+    const sectionMaxZMm = ds.cutPlaneActive ? ds.viewRange.cutPlaneMm : Infinity;
+    const clipped = clipStairGeometryAtSection(
+      { treads: allTreads, stringers: geometry.stringers, walkline: geometry.walkline },
+      sectionMaxZMm,
+    );
+
+    renderTreadsForStructure(scx, stair.params.structureType, clipped.treads);
+    renderStringersForStructure(
+      scx,
+      stair.params.structureType,
+      { ...geometry, stringers: clipped.stringers, walkline: clipped.walkline },
+    );
+    this.drawHandrails(stair, clipped.stringers, _handrailsS.lineWidthPx, _handrailsS.linePattern);
+    this.drawWalkline(clipped.walkline, _walklineS.lineWidthPx, _walklineS.linePattern);
     this.drawArrow(
       geometry.arrowSymbol.start,
       geometry.arrowSymbol.end,
       _arrowLabel,
       _arrowS.lineWidthPx,
     );
-    this.drawTreadLabels(stair);
+    this.drawTreadLabels(stair, sectionMaxZMm);
 
     this.finalizeRender(entity, options);
   }
@@ -308,10 +330,14 @@ export class StairRenderer extends BaseEntityRenderer {
    * Geometry SSoT promotion (compute handrail polylines inside
    * StairGeometryService per kind) deferred to Phase 7b2/9.
    */
-  private drawHandrails(stair: StairEntity, lineWidthPx: number, linePattern: LinePatternKey): void {
+  private drawHandrails(
+    stair: StairEntity,
+    stringers: StairEntity['geometry']['stringers'],
+    lineWidthPx: number,
+    linePattern: LinePatternKey,
+  ): void {
     const { handrails } = stair.params;
     if (!handrails.inner && !handrails.outer) return;
-    const { stringers } = stair.geometry;
     const treadStepMm = stair.params.tread;
     const isAda = stair.params.codeProfile === 'ada';
     const topExtMm = pickTopExtensionMm(handrails.topExtension, isAda);
@@ -341,17 +367,20 @@ export class StairRenderer extends BaseEntityRenderer {
    * ADR-358 G21 — tread + landing numbering (Phase 3e, 2026-05-17). Reads
    * the SSoT `geometry.treadLabels` populated by `computeStairGeometry()`
    * — text, position, kind ('tread' | 'landing') and display/'nth' filter
-   * already resolved by the factory. Convention α: labels above the cut
-   * plane are not rendered (AutoCAD / Revit standard). `fillStyle`
-   * inherits the upstream phase style (normal entity color / hover glow).
+   * already resolved by the factory. `fillStyle` inherits the upstream phase
+   * style (normal entity color / hover glow).
+   *
+   * ADR-619 Bug #5 (Giorgio) — EVERY tread carries its number (the internal
+   * 1200 mm cut no longer hides the upper labels). The only gate is the section
+   * slider (`sectionMaxZMm`): a label above the active cut elevation is hidden
+   * in lock-step with its (clipped-away) tread.
    */
-  private drawTreadLabels(stair: StairEntity): void {
+  private drawTreadLabels(stair: StairEntity, sectionMaxZMm: number): void {
     const params = stair.params;
     if (params.treadLabelDisplay === 'none') return;
     const labels = stair.geometry.treadLabels;
     if (!labels || labels.length === 0) return;
 
-    const cutPlane = params.cutPlaneHeight ?? DEFAULT_CUT_PLANE_HEIGHT;
     const heightWorld = params.treadLabelHeight ?? 0.08;
     const fontPx = Math.max(8, Math.min(64, heightWorld * this.transform.scale));
 
@@ -362,7 +391,7 @@ export class StairRenderer extends BaseEntityRenderer {
     this.ctx.fillStyle = this.ctx.strokeStyle;
 
     for (const label of labels) {
-      if (label.position.z >= cutPlane) continue;
+      if (label.position.z > sectionMaxZMm) continue;
       const screen = this.worldToScreen({ x: label.position.x, y: label.position.y });
       this.ctx.fillText(label.text, screen.x, screen.y);
     }
@@ -425,71 +454,4 @@ export class StairRenderer extends BaseEntityRenderer {
     }
     this.ctx.stroke();
   }
-}
-
-// ─── ADR-358 Phase 7b1 — Handrail extension pure helpers ──────────────────────
-
-function pickTopExtensionMm(
-  override: number | undefined,
-  isAda: boolean,
-): number {
-  if (typeof override === 'number' && override > 0) return override;
-  return isAda ? ADA_TOP_EXTENSION_MM : 0;
-}
-
-function pickBottomExtensionMm(
-  override: 'one-tread' | number | undefined,
-  treadStepMm: number,
-  isAda: boolean,
-): number {
-  if (typeof override === 'number' && override > 0) return override;
-  if (override === 'one-tread') return treadStepMm;
-  return isAda ? treadStepMm : 0;
-}
-
-/**
- * Extends a polyline past its first and last vertices along the local
- * tangent of the adjacent segment. Returns a NEW array; input untouched.
- * No-op when `front`/`back` are 0 or the polyline has < 2 points.
- */
-function extendPolylineEnds(
-  poly: ReadonlyArray<Point3D>,
-  topMm: number,
-  bottomMm: number,
-): ReadonlyArray<Point3D> {
-  if (poly.length < 2) return poly;
-  const head = poly[0];
-  const next = poly[1];
-  const tail = poly[poly.length - 1];
-  const prev = poly[poly.length - 2];
-
-  const result: Point3D[] = [];
-  if (bottomMm > 0) {
-    const ext = extendOutward(next, head, bottomMm);
-    if (ext) result.push(ext);
-  }
-  for (const p of poly) result.push(p);
-  if (topMm > 0) {
-    const ext = extendOutward(prev, tail, topMm);
-    if (ext) result.push(ext);
-  }
-  return result;
-}
-
-function extendOutward(
-  inside: Point3D,
-  edge: Point3D,
-  distanceMm: number,
-): Point3D | null {
-  const dx = edge.x - inside.x;
-  const dy = edge.y - inside.y;
-  const len = Math.hypot(dx, dy);
-  if (len < 1e-6) return null;
-  const ux = dx / len;
-  const uy = dy / len;
-  return {
-    x: edge.x + ux * distanceMm,
-    y: edge.y + uy * distanceMm,
-    z: edge.z,
-  };
 }

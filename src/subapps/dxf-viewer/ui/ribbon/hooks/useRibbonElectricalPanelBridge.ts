@@ -24,7 +24,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isElectricalPanelEntity } from '../../../types/entities';
 import type {
@@ -33,7 +33,6 @@ import type {
 } from '../../../bim/types/electrical-panel-types';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateElectricalPanelParamsCommand } from '../../../core/commands/entity-commands/UpdateElectricalPanelParamsCommand';
-import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   ELECTRICAL_PANEL_RIBBON_KEYS,
   ELECTRICAL_PANEL_RIBBON_KEYS_ACTIONS,
@@ -42,30 +41,25 @@ import {
   isElectricalPanelVisibilityKey,
 } from './bridge/electrical-panel-command-keys';
 import { EventBus } from '../../../systems/events/EventBus';
-import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
-import { resolveManagedSystems } from '../../../bim/mep-systems/mep-circuit-editor';
-import type { RibbonComboboxState, RibbonToggleState } from '../context/RibbonCommandContext';
-import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
-import type { useUniversalSelection } from '../../../systems/selection';
-
-type UniversalSelectionLike = Pick<
-  ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId'
->;
+import {
+  useActiveSceneManager,
+  useResolveSelectedEntity,
+  useNoopToggles,
+  useStableBridge,
+  readNumericParamState,
+  type RibbonEntityBridgeCore,
+  type RibbonComboboxState,
+  type LevelSceneWriter,
+  type PrimaryIdSelection,
+} from './ribbon-entity-bridge-shared';
+import { useManagedNetworkVisibility } from './ribbon-mep-network-visibility';
 
 export interface UseRibbonElectricalPanelBridgeProps {
   readonly levelManager: LevelSceneWriter;
-  readonly universalSelection: UniversalSelectionLike;
+  readonly universalSelection: PrimaryIdSelection;
 }
 
-export interface RibbonElectricalPanelBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
-  readonly getToggleState: (commandKey: string) => RibbonToggleState;
-  readonly onAction: (action: string) => void;
-  readonly getPanelVisibility: (visibilityKey: string) => boolean;
-}
+export type RibbonElectricalPanelBridge = RibbonEntityBridgeCore;
 
 /** commandKey → numeric `ElectricalPanelParams` field. */
 const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof ElectricalPanelParams>> = {
@@ -76,8 +70,6 @@ const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof ElectricalPanelParams>>
   [ELECTRICAL_PANEL_RIBBON_KEYS.params.mountingElevation]: 'mountingElevationMm',
 };
 
-const NULL_TOGGLE: RibbonToggleState = false;
-
 export function useRibbonElectricalPanelBridge(
   props: UseRibbonElectricalPanelBridgeProps,
 ): RibbonElectricalPanelBridge {
@@ -85,15 +77,8 @@ export function useRibbonElectricalPanelBridge(
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
 
-  const resolvePanel = useCallback((): ElectricalPanelEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isElectricalPanelEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolvePanel = useResolveSelectedEntity(levelManager, universalSelection, isElectricalPanelEntity);
+  const buildSceneManager = useActiveSceneManager(levelManager);
 
   /**
    * Dispatch the params patch through `UpdateElectricalPanelParamsCommand` so the
@@ -102,18 +87,14 @@ export function useRibbonElectricalPanelBridge(
    */
   const dispatchParams = useCallback(
     (panel: ElectricalPanelEntity, nextParams: ElectricalPanelParams): void => {
-      if (!levelManager.currentLevelId) return;
-      const sm = createLevelSceneManagerAdapter(
-        levelManager.getLevelScene,
-        levelManager.setLevelScene,
-        levelManager.currentLevelId,
-      );
+      const sm = buildSceneManager();
+      if (!sm) return;
       executeCommand(
         new UpdateElectricalPanelParamsCommand(panel.id, nextParams, panel.params, sm, false),
       );
       EventBus.emit('bim:electrical-panel-params-updated', { panelId: panel.id });
     },
-    [executeCommand, levelManager],
+    [executeCommand, buildSceneManager],
   );
 
   const getComboboxState = useCallback(
@@ -121,10 +102,7 @@ export function useRibbonElectricalPanelBridge(
       const panel = resolvePanel();
       if (!panel) return null;
       if (isElectricalPanelRibbonKey(commandKey)) {
-        const field = NUMBER_KEY_TO_FIELD[commandKey];
-        const raw = panel.params[field];
-        if (typeof raw !== 'number') return null;
-        return { value: String(Math.round(raw)), options: [] };
+        return readNumericParamState(panel.params, commandKey, NUMBER_KEY_TO_FIELD);
       }
       return null;
     },
@@ -146,10 +124,7 @@ export function useRibbonElectricalPanelBridge(
   );
 
   // Toggles unused — interface parity με τα υπόλοιπα bridges.
-  const onToggle = useCallback((_key: string, _next: boolean): void => {
-    /* no-op */
-  }, []);
-  const getToggleState = useCallback((_key: string): RibbonToggleState => NULL_TOGGLE, []);
+  const { onToggle, getToggleState } = useNoopToggles();
 
   const onAction = useCallback(
     (action: string): void => {
@@ -164,26 +139,15 @@ export function useRibbonElectricalPanelBridge(
     [resolvePanel, universalSelection, t],
   );
 
-  const getPanelVisibility = useCallback(
-    (visibilityKey: string): boolean => {
-      if (!isElectricalPanelVisibilityKey(visibilityKey)) return true;
-      const panel = resolvePanel();
-      if (!panel) return false;
-      if (visibilityKey === ELECTRICAL_PANEL_RIBBON_VISIBILITY_KEYS.hasCircuits) {
-        // Revit "Edit Circuits" — the «Κυκλώματα» panel surfaces iff the panel
-        // sources ≥1 circuit (mirrors the manifold's folded «Δίκτυο» panel).
-        const systems = useMepSystemStore.getState().getSystems();
-        return resolveManagedSystems([panel], systems).length > 0;
-      }
-      return false;
-    },
-    [resolvePanel],
+  // Revit "Edit Circuits" — the «Κυκλώματα» panel surfaces iff the panel sources
+  // ≥1 circuit (mirrors the manifold's folded «Δίκτυο» panel).
+  const getPanelVisibility = useManagedNetworkVisibility(
+    resolvePanel,
+    isElectricalPanelVisibilityKey,
+    ELECTRICAL_PANEL_RIBBON_VISIBILITY_KEYS.hasCircuits,
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility });
 }
 
 /** Type guard used by `useRibbonCommands` composer (panel visibility). */

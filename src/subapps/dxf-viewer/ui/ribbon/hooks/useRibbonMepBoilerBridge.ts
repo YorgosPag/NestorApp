@@ -75,6 +75,7 @@ import {
 import type { RibbonComboboxState, RibbonToggleState } from '../context/RibbonCommandContext';
 import {
   useResolveSelectedEntity,
+  useStableBridge,
   type RibbonEntityBridgeCore,
 } from './ribbon-entity-bridge-shared';
 import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
@@ -335,10 +336,7 @@ export function useRibbonMepBoilerBridge(
     [resolveBoiler],
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility });
 }
 
 /** Type guard used by `useRibbonCommands` composer (panel visibility). */

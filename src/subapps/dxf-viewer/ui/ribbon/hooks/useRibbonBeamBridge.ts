@@ -18,7 +18,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.7 §6 Phase 5.5a
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isBeamEntity } from '../../../types/entities';
 import type {
@@ -75,10 +75,12 @@ import { warnIfGridJustificationConflict } from '../../../bim/grid/grid-justific
 import { resolveSceneUnits } from '../../../utils/scene-units';
 import type {
   RibbonComboboxState,
-  RibbonToggleState,
 } from '../context/RibbonCommandContext';
 import {
   useResolveSelectedEntity,
+  useNoopToggles,
+  useViolationBadgeState,
+  useStableBridge,
   type RibbonEntityBridgeCore,
 } from './ribbon-entity-bridge-shared';
 import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
@@ -101,8 +103,6 @@ export interface RibbonBeamBridge extends RibbonEntityBridgeCore {
 const BEAM_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
   BEAM_RIBBON_BADGE_KEYS.violations,
 ]);
-
-const NULL_TOGGLE: RibbonToggleState = false;
 
 const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof BeamParams>> = {
   [BEAM_RIBBON_KEYS.params.width]:           'width',
@@ -311,21 +311,13 @@ export function useRibbonBeamBridge(
     [resolveBeam, dispatchParams],
   );
 
-  const onToggle = useCallback((_key: string, _next: boolean): void => {
-    /* no-op Phase 5 */
-  }, []);
+  const { onToggle, getToggleState } = useNoopToggles();
 
-  const getToggleState = useCallback((_key: string): RibbonToggleState => NULL_TOGGLE, []);
-
-  const getBadgeState = useCallback((badgeKey: string): boolean => {
-    if (!BEAM_OWNED_BADGE_KEYS.has(badgeKey)) return false;
-    const beam = resolveBeam();
-    if (!beam) return false;
-    if (badgeKey === BEAM_RIBBON_BADGE_KEYS.violations) {
-      return beam.validation.hasCodeViolations;
-    }
-    return false;
-  }, [resolveBeam]);
+  const getBadgeState = useViolationBadgeState(
+    resolveBeam,
+    BEAM_OWNED_BADGE_KEYS,
+    BEAM_RIBBON_BADGE_KEYS.violations,
+  );
 
   // ADR-441 Slice GEN-BEAM / 3-mode — «Δοκάρια από κάναβο»: born-bound δοκός σε κάθε
   // segment άξονα (idempotent), με περιμετρική έδραση (center/inner/outer). Το mode
@@ -411,10 +403,7 @@ export function useRibbonBeamBridge(
     [resolveBeam],
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility });
 }
 
 /** Type guard used by `useRibbonCommands` composer. */

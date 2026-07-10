@@ -16,31 +16,24 @@
  * @see docs/centralized-systems/reference/adrs/ADR-410-cc0-mesh-furniture-import.md
  */
 
-import { useCallback, useEffect, useMemo } from 'react';
 import { furnitureToolBridgeStore } from './bridge/furniture-tool-bridge-store';
 import {
   FURNITURE_RIBBON_KEYS,
   FURNITURE_RIBBON_KEYS_ACTIONS,
-  isFurnitureRibbonKey,
 } from './bridge/furniture-command-keys';
-import type {
-  RibbonComboboxState,
-  RibbonToggleState,
-} from '../context/RibbonCommandContext';
 import { FURNITURE_CATALOG } from '../../../bim/furniture/furniture-catalog';
 import { bimMeshThumbnailStore } from '../../../bim-3d/library/bim-mesh-library/bim-mesh-thumbnail-cache';
+import type { RibbonEntityBridgeCore } from './ribbon-entity-bridge-shared';
+import {
+  useToolHandleBridge,
+  useThumbnailPreload,
+  buildMeshCatalogOptions,
+} from './ribbon-tool-handle-bridge-shared';
 
 /** BIM category → Storage library folder for furniture meshes. */
 const FURNITURE_MESH_CATEGORY = 'furniture';
 
-export interface RibbonFurnitureBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
-  readonly getToggleState: (commandKey: string) => RibbonToggleState;
-  readonly onAction: (action: string) => void;
-  readonly getPanelVisibility: (visibilityKey: string) => boolean;
-}
+export type RibbonFurnitureBridge = RibbonEntityBridgeCore;
 
 /** commandKey → numeric override field on FurnitureParamOverrides. */
 const NUMBER_KEY_TO_OVERRIDE: Readonly<Record<string, 'rotationDeg' | 'scaleOverride' | 'mountingElevationMm'>> = {
@@ -55,8 +48,6 @@ const NUMBER_KEY_DEFAULT: Readonly<Record<string, number>> = {
   [FURNITURE_RIBBON_KEYS.params.mountingElevation]: 0,
 };
 
-const NULL_TOGGLE: RibbonToggleState = false;
-
 export function useRibbonFurnitureBridge(): RibbonFurnitureBridge {
   // Subscribe to the tool handle so the ribbon re-renders on tool state changes.
   const toolHandle = furnitureToolBridgeStore.use();
@@ -65,64 +56,17 @@ export function useRibbonFurnitureBridge(): RibbonFurnitureBridge {
   const thumbVersion = bimMeshThumbnailStore.use();
 
   const isActive = !!toolHandle && toolHandle.isActive;
-  useEffect(() => {
-    if (isActive) {
-      bimMeshThumbnailStore.preloadMany(FURNITURE_MESH_CATEGORY, FURNITURE_CATALOG.map((p) => p.id));
-    }
-  }, [isActive]);
+  useThumbnailPreload(isActive, FURNITURE_MESH_CATEGORY, FURNITURE_CATALOG.map((p) => p.id));
 
-  const getComboboxState = useCallback(
-    (commandKey: string): RibbonComboboxState | null => {
-      if (!toolHandle || !toolHandle.isActive) return null;
-      if (commandKey === FURNITURE_RIBBON_KEYS.stringParams.assetId) {
-        // Dynamic options carrying preview thumbnails (overrides the static list).
-        const options = FURNITURE_CATALOG.map((p) => ({
-          value: p.id,
-          labelKey: p.labelKey,
-          isLiteralLabel: false,
-          imageUrl: bimMeshThumbnailStore.get(FURNITURE_MESH_CATEGORY, p.id),
-        }));
-        return { value: toolHandle.assetId, options };
-      }
-      if (isFurnitureRibbonKey(commandKey)) {
-        const field = NUMBER_KEY_TO_OVERRIDE[commandKey];
-        const raw = toolHandle.overrides[field];
-        const val = typeof raw === 'number' ? raw : NUMBER_KEY_DEFAULT[commandKey];
-        return { value: String(val), options: [] };
-      }
-      return null;
-    },
-    [toolHandle, thumbVersion],
-  );
-
-  const onComboboxChange = useCallback((commandKey: string, value: string): void => {
-    const handle = furnitureToolBridgeStore.get();
-    if (!handle || !handle.isActive) return;
-    if (commandKey === FURNITURE_RIBBON_KEYS.stringParams.assetId) {
-      handle.setAssetId(value);
-      return;
-    }
-    if (isFurnitureRibbonKey(commandKey)) {
-      const numeric = Number.parseFloat(value);
-      if (Number.isNaN(numeric)) return;
-      const field = NUMBER_KEY_TO_OVERRIDE[commandKey];
-      handle.setParamOverrides({ [field]: numeric });
-    }
-  }, []);
-
-  const onToggle = useCallback((_key: string, _next: boolean): void => {
-    /* no-op — included for interface parity */
-  }, []);
-  const getToggleState = useCallback((_key: string): RibbonToggleState => NULL_TOGGLE, []);
-  const onAction = useCallback((_action: string): void => {
-    /* no-op — the tool-active tab auto-hides when the tool changes */
-  }, []);
-  const getPanelVisibility = useCallback((_visibilityKey: string): boolean => true, []);
-
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility],
-  );
+  return useToolHandleBridge({
+    toolHandle,
+    readImperative: () => furnitureToolBridgeStore.get(),
+    assetIdKey: FURNITURE_RIBBON_KEYS.stringParams.assetId,
+    buildOptions: () => buildMeshCatalogOptions(FURNITURE_CATALOG, FURNITURE_MESH_CATEGORY),
+    numberKeyToField: NUMBER_KEY_TO_OVERRIDE,
+    numberKeyDefault: NUMBER_KEY_DEFAULT,
+    optionsDeps: [thumbVersion],
+  });
 }
 
 /** Type guard used by `useRibbonCommands` composer (no furniture visibility keys). */

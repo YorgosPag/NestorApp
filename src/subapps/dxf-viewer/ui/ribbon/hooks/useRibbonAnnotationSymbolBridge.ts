@@ -19,22 +19,26 @@
  * @see docs/centralized-systems/reference/adrs/ADR-583-annotation-symbol-library-north-arrow.md
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useAnnotationSymbolSelectionStore } from '../../../state/annotation-symbol-selection-store';
 import {
   ANNOTATION_SYMBOL_RIBBON_KEYS,
   isAnnotationSymbolRibbonKey,
   isAnnotationSymbolRibbonStringKey,
 } from './bridge/annotation-symbol-command-keys';
-import type { RibbonComboboxState, RibbonToggleState } from '../context/RibbonCommandContext';
+import type { RibbonComboboxState } from '../context/RibbonCommandContext';
 import { listAnnotationSymbolsByKind } from '../../../config/annotation-symbol-catalog';
-import type { AnnotationSymbolEntity, AnnotationSymbolKind } from '../../../types/annotation-symbol';
+import type { AnnotationSymbolKind } from '../../../types/annotation-symbol';
 import { isAnnotationSymbolEntity } from '../../../types/entities';
-import { useCommandHistory } from '../../../core/commands';
-import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
-import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
+import {
+  useInertBridgeExtras,
+  useStableBridge,
+  useResolveSelectedEntity,
+  useUpdateEntityPatch,
+  type RibbonEntityBridgeCore,
+} from './ribbon-entity-bridge-shared';
 
 type UniversalSelectionLike = Pick<ReturnType<typeof useUniversalSelection>, 'getPrimaryId'>;
 
@@ -43,16 +47,7 @@ export interface UseRibbonAnnotationSymbolBridgeProps {
   readonly universalSelection: UniversalSelectionLike;
 }
 
-export interface RibbonAnnotationSymbolBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
-  readonly getToggleState: (commandKey: string) => RibbonToggleState;
-  readonly onAction: (action: string) => void;
-  readonly getPanelVisibility: (visibilityKey: string) => boolean;
-}
-
-const NULL_TOGGLE: RibbonToggleState = false;
+export type RibbonAnnotationSymbolBridge = RibbonEntityBridgeCore;
 
 /** Variant options for a kind, GENERATED from the catalog SSoT (never hand-listed). */
 function variantOptionsForKind(kind: AnnotationSymbolKind) {
@@ -67,7 +62,6 @@ export function useRibbonAnnotationSymbolBridge(
   props: UseRibbonAnnotationSymbolBridgeProps,
 ): RibbonAnnotationSymbolBridge {
   const { levelManager, universalSelection } = props;
-  const { execute: executeCommand } = useCommandHistory();
 
   // Subscribe so the tool-active picker re-renders when the defaults / kind change.
   const symbolId = useAnnotationSymbolSelectionStore((s) => s.symbolId);
@@ -76,26 +70,9 @@ export function useRibbonAnnotationSymbolBridge(
   const activeKind = useAnnotationSymbolSelectionStore((s) => s.activeKind);
 
   /** The selected annotation-symbol entity (edit mode), or null (defaults mode). */
-  const resolveSelected = useCallback((): AnnotationSymbolEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    const e = scene?.entities.find((x) => x.id === id);
-    return e && isAnnotationSymbolEntity(e) ? (e as AnnotationSymbolEntity) : null;
-  }, [levelManager, universalSelection]);
+  const resolveSelected = useResolveSelectedEntity(levelManager, universalSelection, isAnnotationSymbolEntity);
 
-  const patchEntity = useCallback(
-    (entity: AnnotationSymbolEntity, patch: Record<string, unknown>): void => {
-      if (!levelManager.currentLevelId) return;
-      const sm = createLevelSceneManagerAdapter(
-        levelManager.getLevelScene,
-        levelManager.setLevelScene,
-        levelManager.currentLevelId,
-      );
-      executeCommand(new UpdateEntityCommand(entity.id, patch, sm, 'Update annotation symbol'));
-    },
-    [executeCommand, levelManager],
-  );
+  const patchEntity = useUpdateEntityPatch(levelManager, 'Update annotation symbol');
 
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {
@@ -124,7 +101,7 @@ export function useRibbonAnnotationSymbolBridge(
     const selected = resolveSelected();
     const store = useAnnotationSymbolSelectionStore.getState();
     if (commandKey === ANNOTATION_SYMBOL_RIBBON_KEYS.stringParams.symbolId) {
-      if (selected) patchEntity(selected, { symbolId: value });
+      if (selected) patchEntity(selected.id, { symbolId: value });
       else store.setSymbolId(value);
       return;
     }
@@ -132,29 +109,19 @@ export function useRibbonAnnotationSymbolBridge(
     if (Number.isNaN(numeric)) return;
     if (commandKey === ANNOTATION_SYMBOL_RIBBON_KEYS.params.sizeMm) {
       if (numeric <= 0) return;
-      if (selected) patchEntity(selected, { sizeMm: numeric });
+      if (selected) patchEntity(selected.id, { sizeMm: numeric });
       else store.setSizeMm(numeric);
       return;
     }
     if (commandKey === ANNOTATION_SYMBOL_RIBBON_KEYS.params.rotation) {
-      if (selected) patchEntity(selected, { rotation: numeric });
+      if (selected) patchEntity(selected.id, { rotation: numeric });
       else store.setRotationDeg(numeric);
     }
   }, [resolveSelected, patchEntity]);
 
-  const onToggle = useCallback((_key: string, _next: boolean): void => {
-    /* no-op — included for interface parity */
-  }, []);
-  const getToggleState = useCallback((_key: string): RibbonToggleState => NULL_TOGGLE, []);
-  const onAction = useCallback((_action: string): void => {
-    /* no-op — the tab auto-hides when neither a symbol is selected nor the tool active */
-  }, []);
-  const getPanelVisibility = useCallback((_visibilityKey: string): boolean => true, []);
+  const { onToggle, getToggleState, onAction, getPanelVisibility } = useInertBridgeExtras();
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility });
 }
 
 /** Type guard used by `useRibbonCommands` composer (no visibility keys). */

@@ -19,7 +19,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6 §6 Phase 4.5
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isColumnEntity } from '../../../types/entities';
 import type {
@@ -56,11 +56,15 @@ import type { GridPerimeterMode } from '../../../bim/grid/grid-justification';
 import { columnGridSettingsStore } from './bridge/grid-perimeter-mode-stores';
 import { warnIfGridJustificationConflict } from '../../../bim/grid/grid-justification-consistency';
 import { emitColumnsFromGridToast } from './bridge/column-grid-toast';
-import type {
-  RibbonComboboxState,
-  RibbonToggleState,
-} from '../context/RibbonCommandContext';
-import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
+import {
+  useResolveSelectedEntity,
+  useNoopToggles,
+  useViolationBadgeState,
+  useStableBridge,
+  type RibbonEntityBridgeCore,
+  type RibbonComboboxState,
+  type LevelSceneWriter,
+} from './ribbon-entity-bridge-shared';
 import type { useUniversalSelection } from '../../../systems/selection';
 
 type UniversalSelectionLike = Pick<
@@ -73,30 +77,14 @@ export interface UseRibbonColumnBridgeProps {
   readonly universalSelection: UniversalSelectionLike;
 }
 
-export interface RibbonColumnBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
-  readonly getToggleState: (commandKey: string) => RibbonToggleState;
+export interface RibbonColumnBridge extends RibbonEntityBridgeCore {
   /** Returns `true` όταν το currently selected column έχει code violations. */
   readonly getBadgeState: (badgeKey: string) => boolean;
-  /** Handles ribbon simple-button actions (close / delete). */
-  readonly onAction: (action: string) => void;
-  /**
-   * ADR-363 Phase 8D — panel visibility resolver. Returns `true` όταν το panel
-   * πρέπει να εμφανίζεται.
-   *   - polygonParams → kind === 'polygon'
-   *   - ishapeParams  → kind === 'I-shape'
-   * Keys εκτός `COLUMN_RIBBON_VISIBILITY_KEYS` επιστρέφουν `true` (no-op).
-   */
-  readonly getPanelVisibility: (visibilityKey: string) => boolean;
 }
 
 const COLUMN_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
   COLUMN_RIBBON_BADGE_KEYS.violations,
 ]);
-
-const NULL_TOGGLE: RibbonToggleState = false;
 
 export function useRibbonColumnBridge(
   props: UseRibbonColumnBridgeProps,
@@ -111,15 +99,7 @@ export function useRibbonColumnBridge(
   // entity). Selected-entity reads are driven by `useUniversalSelection`.
   const toolHandle = columnToolBridgeStore.use();
 
-  const resolveColumn = useCallback((): ColumnEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isColumnEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveColumn = useResolveSelectedEntity(levelManager, universalSelection, isColumnEntity);
 
   /**
    * Dispatch the params patch — SSoT writer shared με το docked Properties panel
@@ -143,21 +123,13 @@ export function useRibbonColumnBridge(
   );
 
   // Toggles unused Phase 4 — included για interface parity.
-  const onToggle = useCallback((_key: string, _next: boolean): void => {
-    /* no-op Phase 4 */
-  }, []);
+  const { onToggle, getToggleState } = useNoopToggles();
 
-  const getToggleState = useCallback((_key: string): RibbonToggleState => NULL_TOGGLE, []);
-
-  const getBadgeState = useCallback((badgeKey: string): boolean => {
-    if (!COLUMN_OWNED_BADGE_KEYS.has(badgeKey)) return false;
-    const column = resolveColumn();
-    if (!column) return false;
-    if (badgeKey === COLUMN_RIBBON_BADGE_KEYS.violations) {
-      return column.validation.hasCodeViolations;
-    }
-    return false;
-  }, [resolveColumn]);
+  const getBadgeState = useViolationBadgeState(
+    resolveColumn,
+    COLUMN_OWNED_BADGE_KEYS,
+    COLUMN_RIBBON_BADGE_KEYS.violations,
+  );
 
   // ADR-401 Phase F.3 — manual detach of ALL selected columns' top/base from their
   // structural host(s). Restores default binding + clears attach ids (one undo).
@@ -269,10 +241,7 @@ export function useRibbonColumnBridge(
     [resolveColumn, toolHandle],
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility });
 }
 
 /** Type guard used by `useRibbonCommands` composer. */

@@ -16,7 +16,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-419-floor-finish-per-room.md
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isFloorFinishEntity } from '../../../types/entities';
 import type { FloorFinishEntity, FloorFinishMaterialId, FloorFinishParams } from '../../../bim/types/floor-finish-types';
@@ -35,8 +35,10 @@ import type {
   RibbonComboboxState,
   RibbonToggleState,
 } from '../context/RibbonCommandContext';
+import type { RibbonBridgeCore } from './bridge/ribbon-bridge-core';
 import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
+import { useResolveSelectedEntity, useStableBridge } from './ribbon-entity-bridge-shared';
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
@@ -48,13 +50,7 @@ export interface UseRibbonFloorFinishBridgeProps {
   readonly universalSelection: UniversalSelectionLike;
 }
 
-export interface RibbonFloorFinishBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
-  readonly getToggleState: (commandKey: string) => RibbonToggleState;
-  readonly onAction: (action: string) => void;
-}
+export type RibbonFloorFinishBridge = RibbonBridgeCore;
 
 const NULL_TOGGLE: RibbonToggleState = false;
 
@@ -65,15 +61,7 @@ export function useRibbonFloorFinishBridge(
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
 
-  const resolveFloorFinish = useCallback((): FloorFinishEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isFloorFinishEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveFloorFinish = useResolveSelectedEntity(levelManager, universalSelection, isFloorFinishEntity);
 
   const dispatchParams = useCallback(
     (ff: FloorFinishEntity, nextParams: FloorFinishParams): void => {
@@ -176,10 +164,7 @@ export function useRibbonFloorFinishBridge(
     [resolveFloorFinish, t],
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, onAction],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction });
 }
 
 /** Type guard — exposed so `useRibbonCommands` can route floor-finish action keys. */

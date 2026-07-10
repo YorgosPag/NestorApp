@@ -18,14 +18,13 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5 §6 Phase 3.5
  */
 
-import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isSlabEntity } from '../../../types/entities';
 import type { SlabEntity, SlabKind, SlabParams, SlabReinforcement } from '../../../bim/types/slab-types';
 import type { WallCoveringMaterialId } from '../../../bim/types/wall-covering-types';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateSlabParamsCommand } from '../../../core/commands/entity-commands/UpdateSlabParamsCommand';
-import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   SLAB_RIBBON_KEYS,
   SLAB_RIBBON_KEYS_ACTIONS,
@@ -59,11 +58,16 @@ import { commitCeilingSlabsFromStructure } from '../../../bim/slabs/ceiling-slab
 import { getGlobalGuideStore } from '../../../systems/guides/guide-store';
 import { shouldWarnFoundationOnStorey } from '../../../systems/levels/storey-creation-defaults';
 import { resolveSceneUnits } from '../../../utils/scene-units';
-import type {
-  RibbonComboboxState,
-  RibbonToggleState,
-} from '../context/RibbonCommandContext';
-import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
+import {
+  useResolveSelectedEntity,
+  useNoopToggles,
+  useViolationBadgeState,
+  useStableBridge,
+  useActiveSceneManager,
+  type RibbonEntityBridgeCore,
+  type RibbonComboboxState,
+  type LevelSceneWriter,
+} from './ribbon-entity-bridge-shared';
 import type { useUniversalSelection } from '../../../systems/selection';
 
 type UniversalSelectionLike = Pick<
@@ -76,24 +80,14 @@ export interface UseRibbonSlabBridgeProps {
   readonly universalSelection: UniversalSelectionLike;
 }
 
-export interface RibbonSlabBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
-  readonly getToggleState: (commandKey: string) => RibbonToggleState;
+export interface RibbonSlabBridge extends RibbonEntityBridgeCore {
   /** Returns `true` όταν το currently selected slab έχει code violations. */
   readonly getBadgeState: (badgeKey: string) => boolean;
-  /** Handles ribbon simple-button actions (close / delete / autoReinforce). */
-  readonly onAction: (action: string) => void;
-  /** ADR-476 — panel visibility (structural reinforcement panel = RC slab μόνο). */
-  readonly getPanelVisibility: (visibilityKey: string) => boolean;
 }
 
 const SLAB_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
   SLAB_RIBBON_BADGE_KEYS.violations,
 ]);
-
-const NULL_TOGGLE: RibbonToggleState = false;
 
 /**
  * ADR-441 Slice GEN-SLAB — toast μετά το «Πλάκες από κάναβο». Το `up-to-date` (υπάρχει
@@ -131,15 +125,9 @@ export function useRibbonSlabBridge(
   // Ο bridge ζει στο DxfViewerContent (ΟΧΙ ADR-040 high-freq leaf) → useSyncExternalStore OK.
   const slopeUnit = useSyncExternalStore(slabSlopeUnitStore.subscribe, slabSlopeUnitStore.get);
 
-  const resolveSlab = useCallback((): SlabEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isSlabEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveSlab = useResolveSelectedEntity(levelManager, universalSelection, isSlabEntity);
+
+  const buildSceneManager = useActiveSceneManager(levelManager);
 
   /**
    * Dispatch the params patch through `UpdateSlabParamsCommand` so the change
@@ -148,18 +136,14 @@ export function useRibbonSlabBridge(
    */
   const dispatchParams = useCallback(
     (slab: SlabEntity, nextParams: SlabParams): void => {
-      if (!levelManager.currentLevelId) return;
-      const sm = createLevelSceneManagerAdapter(
-        levelManager.getLevelScene,
-        levelManager.setLevelScene,
-        levelManager.currentLevelId,
-      );
+      const sm = buildSceneManager();
+      if (!sm) return;
       executeCommand(
         new UpdateSlabParamsCommand(slab.id, nextParams, slab.params, sm, false),
       );
       EventBus.emit('bim:slab-params-updated', { slabId: slab.id });
     },
-    [executeCommand, levelManager],
+    [executeCommand, buildSceneManager],
   );
 
   const getComboboxState = useCallback(
@@ -248,21 +232,13 @@ export function useRibbonSlabBridge(
   );
 
   // Toggles unused Phase 3 — included για interface parity.
-  const onToggle = useCallback((_key: string, _next: boolean): void => {
-    /* no-op Phase 3 */
-  }, []);
+  const { onToggle, getToggleState } = useNoopToggles();
 
-  const getToggleState = useCallback((_key: string): RibbonToggleState => NULL_TOGGLE, []);
-
-  const getBadgeState = useCallback((badgeKey: string): boolean => {
-    if (!SLAB_OWNED_BADGE_KEYS.has(badgeKey)) return false;
-    const slab = resolveSlab();
-    if (!slab) return false;
-    if (badgeKey === SLAB_RIBBON_BADGE_KEYS.violations) {
-      return slab.validation.hasCodeViolations;
-    }
-    return false;
-  }, [resolveSlab]);
+  const getBadgeState = useViolationBadgeState(
+    resolveSlab,
+    SLAB_OWNED_BADGE_KEYS,
+    SLAB_RIBBON_BADGE_KEYS.violations,
+  );
 
   // ADR-441 Slice GEN-SLAB — one-shot «Εδαφόπλακα από κάναβο»: ΕΝΑ ενιαίο slab
   // kind='foundation' σε όλο το αποτύπωμα (idempotent). Δεν θέλει επιλεγμένη πλάκα.
@@ -381,10 +357,7 @@ export function useRibbonSlabBridge(
     [resolveSlab],
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility });
 }
 
 /** Type guard used by `useRibbonCommands` composer. */

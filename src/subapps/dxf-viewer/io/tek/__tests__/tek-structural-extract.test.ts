@@ -3,7 +3,7 @@
  */
 
 import { parseTektonXml } from '../tek-xml-reader';
-import { extractDimRecords, extractWallRecords } from '../tek-structural-extract';
+import { extractDimRecords, extractWallRecords, extractHatchRecords } from '../tek-structural-extract';
 
 const XMATRIX = (x00: number, x11: number, x20: number, x21: number) =>
   `<xmatrix><x00>${x00}</x00><x01>0</x01><x10>0</x10><x11>${x11}</x11><x20>${x20}</x20><x21>${x21}</x21></xmatrix>`;
@@ -98,5 +98,49 @@ describe('extractWallRecords (ADR-531)', () => {
     const { walls, warnings } = extractWallRecords(bad);
     expect(walls).toHaveLength(0);
     expect(warnings.join(' ')).toMatch(/type=1/);
+  });
+});
+
+// ADR-531 Φ5b.6 — hatch: flat δομή (ΧΩΡΙΣ <record> wrapper· τα primitives ζουν direct μέσα στο
+// <hatch>, delimited ανά <type>6). Μοντελοποίηση του πραγματικού «ΓΡΑΜΜΟΣΚΙΑΣΗ.tek».
+const HATCH_EDGE = (v0x: number, v0y: number, v1x: number, v1y: number) =>
+  `<record><v0X>${v0x}</v0X><v0Y>${v0y}</v0Y><v1X>${v1x}</v1X><v1Y>${v1y}</v1Y></record>`;
+const HATCH_PRIMITIVE = (patternNum: number, color: string, edges: string) =>
+  `<type>6</type><n>1</n><taglist>\n</taglist>\n<elevation>0</elevation><rotation>0</rotation>` +
+  `<scaleX>0.15</scaleX><scaleY>0.15</scaleY><type>${patternNum}</type><color>${color}</color>` +
+  `<raster_type>22</raster_type><boundary>0</boundary><pattern>1</pattern><visible>1</visible>` +
+  `<vector>\n${edges}\n</vector>`;
+const SQUARE_EDGES =
+  HATCH_EDGE(0, 0, 5, 0) + HATCH_EDGE(5, 0, 5, 5) + HATCH_EDGE(5, 5, 0, 5) + HATCH_EDGE(0, 5, 0, 0);
+
+const hatchRoot = (inner: string): Element => parseTektonXml(
+  `<?xml version="1.0" encoding="UTF-8"?><tekton><head><numfloors>1</numfloors></head>` +
+  `<body><building><floor><hatch>${inner}</hatch></floor></building></body></tekton>`,
+);
+
+describe('extractHatchRecords (ADR-531 Φ5b.6)', () => {
+  it('εξάγει hatch flat μέσα στο <hatch> (ΧΩΡΙΣ record wrapper) — solid 22', () => {
+    const { hatches, warnings } = extractHatchRecords(hatchRoot(HATCH_PRIMITIVE(22, 'C0DCC0', SQUARE_EDGES)));
+    expect(hatches).toHaveLength(1);
+    expect(hatches[0].patternNum).toBe(22);
+    expect(hatches[0].color).toBe('C0DCC0');
+    expect(hatches[0].boundary).toHaveLength(4);
+    expect(hatches[0].boundary[0]).toEqual({ x: 0, y: 0 });
+    expect(warnings).toHaveLength(0);
+  });
+
+  it('τεμαχίζει ΠΟΛΛΑΠΛΑ hatches flat-concatenated στο ίδιο <hatch> container', () => {
+    const inner = HATCH_PRIMITIVE(22, 'C0DCC0', SQUARE_EDGES) + '\n' + HATCH_PRIMITIVE(72, 'FF0000', SQUARE_EDGES);
+    const { hatches } = extractHatchRecords(hatchRoot(inner));
+    expect(hatches).toHaveLength(2);
+    expect(hatches[0].patternNum).toBe(22);
+    expect(hatches[1].patternNum).toBe(72);
+    expect(hatches[1].color).toBe('FF0000');
+  });
+
+  it('παραλείπει hatch με <3 κορυφές', () => {
+    const { hatches, warnings } = extractHatchRecords(hatchRoot(HATCH_PRIMITIVE(22, 'C0DCC0', HATCH_EDGE(0, 0, 1, 1))));
+    expect(hatches).toHaveLength(0);
+    expect(warnings).toHaveLength(1);
   });
 });

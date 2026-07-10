@@ -22,7 +22,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isMepManifoldEntity } from '../../../types/entities';
 import type {
@@ -47,30 +47,24 @@ import {
 } from './bridge/mep-manifold-command-keys';
 import type { PlumbingSystemClassification } from '../../../bim/types/mep-connector-types';
 import { EventBus } from '../../../systems/events/EventBus';
-import { useMepSystemStore } from '../../../bim/mep-systems/mep-system-store';
-import { resolveManagedSystems } from '../../../bim/mep-systems/mep-circuit-editor';
-import type { RibbonComboboxState, RibbonToggleState } from '../context/RibbonCommandContext';
-import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
-import type { useUniversalSelection } from '../../../systems/selection';
-
-type UniversalSelectionLike = Pick<
-  ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId'
->;
+import {
+  useResolveSelectedEntity,
+  useNoopToggles,
+  useStableBridge,
+  readNumericParamState,
+  type RibbonEntityBridgeCore,
+  type RibbonComboboxState,
+  type LevelSceneWriter,
+  type PrimaryIdSelection,
+} from './ribbon-entity-bridge-shared';
+import { useManagedNetworkVisibility } from './ribbon-mep-network-visibility';
 
 export interface UseRibbonMepManifoldBridgeProps {
   readonly levelManager: LevelSceneWriter;
-  readonly universalSelection: UniversalSelectionLike;
+  readonly universalSelection: PrimaryIdSelection;
 }
 
-export interface RibbonMepManifoldBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
-  readonly getToggleState: (commandKey: string) => RibbonToggleState;
-  readonly onAction: (action: string) => void;
-  readonly getPanelVisibility: (visibilityKey: string) => boolean;
-}
+export type RibbonMepManifoldBridge = RibbonEntityBridgeCore;
 
 /** commandKey → numeric `MepManifoldParams` field. */
 const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof MepManifoldParams>> = {
@@ -83,8 +77,6 @@ const NUMBER_KEY_TO_FIELD: Readonly<Record<string, keyof MepManifoldParams>> = {
   [MEP_MANIFOLD_RIBBON_KEYS.params.outletDiameter]: 'outletDiameterMm',
 };
 
-const NULL_TOGGLE: RibbonToggleState = false;
-
 export function useRibbonMepManifoldBridge(
   props: UseRibbonMepManifoldBridgeProps,
 ): RibbonMepManifoldBridge {
@@ -92,15 +84,7 @@ export function useRibbonMepManifoldBridge(
   const { execute: executeCommand } = useCommandHistory();
   const { t } = useTranslation('dxf-viewer-shell');
 
-  const resolveManifold = useCallback((): MepManifoldEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isMepManifoldEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveManifold = useResolveSelectedEntity(levelManager, universalSelection, isMepManifoldEntity);
 
   /**
    * Dispatch the params patch through the shared `buildManifoldParamUpdate` SSoT
@@ -137,10 +121,7 @@ export function useRibbonMepManifoldBridge(
       const manifold = resolveManifold();
       if (!manifold) return null;
       if (isMepManifoldRibbonKey(commandKey)) {
-        const field = NUMBER_KEY_TO_FIELD[commandKey];
-        const raw = manifold.params[field];
-        if (typeof raw !== 'number') return null;
-        return { value: String(Math.round(raw)), options: [] };
+        return readNumericParamState(manifold.params, commandKey, NUMBER_KEY_TO_FIELD);
       }
       // ADR-408 Φ-heating — string-enum classification (ύδρευση/θέρμανση).
       if (isMepManifoldClassificationKey(commandKey)) {
@@ -185,10 +166,7 @@ export function useRibbonMepManifoldBridge(
   );
 
   // Toggles unused — interface parity με τα υπόλοιπα bridges.
-  const onToggle = useCallback((_key: string, _next: boolean): void => {
-    /* no-op */
-  }, []);
-  const getToggleState = useCallback((_key: string): RibbonToggleState => NULL_TOGGLE, []);
+  const { onToggle, getToggleState } = useNoopToggles();
 
   const onAction = useCallback(
     (action: string): void => {
@@ -208,26 +186,15 @@ export function useRibbonMepManifoldBridge(
     [resolveManifold, universalSelection, t],
   );
 
-  const getPanelVisibility = useCallback(
-    (visibilityKey: string): boolean => {
-      if (!isMepManifoldVisibilityKey(visibilityKey)) return true;
-      const manifold = resolveManifold();
-      if (!manifold) return false;
-      if (visibilityKey === MEP_MANIFOLD_RIBBON_VISIBILITY_KEYS.hasNetwork) {
-        // ADR-408 Φ13 fold-in — «Δίκτυο» panel visible iff the manifold sources ≥1
-        // plumbing network (Revit "System Properties" from the equipment).
-        const systems = useMepSystemStore.getState().getSystems();
-        return resolveManagedSystems([manifold], systems).length > 0;
-      }
-      return false;
-    },
-    [resolveManifold],
+  // ADR-408 Φ13 fold-in — «Δίκτυο» panel visible iff the manifold sources ≥1
+  // plumbing network (Revit "System Properties" from the equipment).
+  const getPanelVisibility = useManagedNetworkVisibility(
+    resolveManifold,
+    isMepManifoldVisibilityKey,
+    MEP_MANIFOLD_RIBBON_VISIBILITY_KEYS.hasNetwork,
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility });
 }
 
 /** Type guard used by `useRibbonCommands` composer (panel visibility). */

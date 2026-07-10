@@ -19,7 +19,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.9 §5.14
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useCommandHistory } from '../../../core/commands';
 import { UpdateWallParamsCommand } from '../../../core/commands/entity-commands/UpdateWallParamsCommand';
 import { DetachWallsCommand, type WallDetachSide } from '../../../core/commands/entity-commands/DetachWallsCommand';
@@ -54,13 +54,19 @@ import {
 import type { GridPerimeterMode } from '../../../bim/grid/grid-justification';
 import { wallGridSettingsStore } from './bridge/grid-perimeter-mode-stores';
 import { warnIfGridJustificationConflict } from '../../../bim/grid/grid-justification-consistency';
-import type {
-  RibbonComboboxState,
-  RibbonToggleState,
-} from '../context/RibbonCommandContext';
-import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
+import {
+  useResolveSelectedEntity,
+  useViolationBadgeState,
+  useStableBridge,
+  useSceneUnitsScale,
+  useActiveSceneManager,
+  type RibbonComboboxState,
+  type LevelSceneWriter,
+} from './ribbon-entity-bridge-shared';
+import type { RibbonToggleState } from '../context/RibbonCommandContext';
+import type { RibbonBridgeCore } from './bridge/ribbon-bridge-core';
 import type { useUniversalSelection } from '../../../systems/selection';
-import { mmToSceneUnits, resolveSceneUnits } from '../../../utils/scene-units';
+import { resolveSceneUnits } from '../../../utils/scene-units';
 import {
   type WallPatchContext,
   readWallStringField,
@@ -79,15 +85,9 @@ export interface UseRibbonWallBridgeProps {
   readonly universalSelection: UniversalSelectionLike;
 }
 
-export interface RibbonWallBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
-  readonly getToggleState: (commandKey: string) => RibbonToggleState;
+export interface RibbonWallBridge extends RibbonBridgeCore {
   /** Returns `true` when the currently selected wall has code violations. */
   readonly getBadgeState: (badgeKey: string) => boolean;
-  /** Handles ribbon simple-button actions (e.g. delete). */
-  readonly onAction: (action: string) => void;
 }
 
 const WALL_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
@@ -115,39 +115,24 @@ export function useRibbonWallBridge(
   const { levelManager, universalSelection } = props;
   const { execute: executeCommand } = useCommandHistory();
   const ribbonDelete = useRibbonEntityDelete({ levelManager, universalSelection });
-  const resolveWall = useCallback((): WallEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isWallEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveWall = useResolveSelectedEntity(levelManager, universalSelection, isWallEntity);
 
   // Scene-units scale: ribbon I/O normalized to mm so the hardcoded
   // combobox options always line up with the displayed current value
   // (mirrors stair Phase 9 bridge contract).
-  const getSceneUnitsScale = useCallback((): number => {
-    const lid = levelManager.currentLevelId;
-    if (!lid) return mmToSceneUnits('mm');
-    const scene = levelManager.getLevelScene(lid);
-    return mmToSceneUnits(resolveSceneUnits(scene));
-  }, [levelManager]);
+  const getSceneUnitsScale = useSceneUnitsScale(levelManager);
+
+  const buildSceneManager = useActiveSceneManager(levelManager);
 
   const dispatchParams = useCallback(
     (wall: WallEntity, next: WallEntity['params']): void => {
-      if (!levelManager.currentLevelId) return;
-      const sm = createLevelSceneManagerAdapter(
-        levelManager.getLevelScene,
-        levelManager.setLevelScene,
-        levelManager.currentLevelId,
-      );
+      const sm = buildSceneManager();
+      if (!sm) return;
       executeCommand(
         new UpdateWallParamsCommand(wall.id, next, wall.params, sm, false, wall.kind),
       );
     },
-    [executeCommand, levelManager],
+    [executeCommand, buildSceneManager],
   );
 
   const getComboboxState = useCallback(
@@ -223,15 +208,11 @@ export function useRibbonWallBridge(
     [resolveWall],
   );
 
-  const getBadgeState = useCallback((badgeKey: string): boolean => {
-    if (!WALL_OWNED_BADGE_KEYS.has(badgeKey)) return false;
-    const wall = resolveWall();
-    if (!wall) return false;
-    if (badgeKey === WALL_RIBBON_BADGE_KEYS.violations) {
-      return wall.validation.hasCodeViolations;
-    }
-    return false;
-  }, [resolveWall]);
+  const getBadgeState = useViolationBadgeState(
+    resolveWall,
+    WALL_OWNED_BADGE_KEYS,
+    WALL_RIBBON_BADGE_KEYS.violations,
+  );
 
   // ADR-401 Phase E.1 — manual detach of ALL selected walls' top/base from their
   // structural host(s). Restores default binding + clears attach ids (one undo).
@@ -302,11 +283,7 @@ export function useRibbonWallBridge(
     [resolveWall, levelManager, handleDetach, handleWallsFromGrid, ribbonDelete],
   );
 
-  // Memoize return so RibbonCommandProvider deps stay stable (ADR-040 Phase XIX).
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction });
 }
 
 /** Type guard used by `useRibbonCommands` composer. */

@@ -186,9 +186,11 @@ export function renderStringersForStructure(
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
-function tracePolygon(
+/** Trace a world-space path to the canvas (SSoT for polygon/polyline). `close` → `closePath`. */
+function tracePath(
   scx: StairStyleContext,
   poly: ReadonlyArray<Point3D>,
+  close: boolean,
 ): void {
   const { ctx } = scx;
   ctx.beginPath();
@@ -198,7 +200,11 @@ function tracePolygon(
     const s = scx.worldToScreen({ x: poly[i].x, y: poly[i].y });
     ctx.lineTo(s.x, s.y);
   }
-  ctx.closePath();
+  if (close) ctx.closePath();
+}
+
+function tracePolygon(scx: StairStyleContext, poly: ReadonlyArray<Point3D>): void {
+  tracePath(scx, poly, true);
 }
 
 function drawSolidPolyline(
@@ -234,15 +240,8 @@ function strokePolyline(
   scx: StairStyleContext,
   poly: ReadonlyArray<Point3D>,
 ): void {
-  const { ctx } = scx;
-  ctx.beginPath();
-  const first = scx.worldToScreen({ x: poly[0].x, y: poly[0].y });
-  ctx.moveTo(first.x, first.y);
-  for (let i = 1; i < poly.length; i++) {
-    const s = scx.worldToScreen({ x: poly[i].x, y: poly[i].y });
-    ctx.lineTo(s.x, s.y);
-  }
-  ctx.stroke();
+  tracePath(scx, poly, false);
+  scx.ctx.stroke();
 }
 
 /**

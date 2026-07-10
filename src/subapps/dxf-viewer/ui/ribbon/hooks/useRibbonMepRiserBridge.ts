@@ -30,6 +30,7 @@ import {
   resolveFloorDatumRelativeElevationMm,
 } from '../../../bim-3d/scene/floor-stack-elevation';
 import { DEFAULT_RISER_HEIGHT_MM } from '../../../bim/types/mep-segment-types';
+import { useStableBridge } from './ribbon-entity-bridge-shared';
 
 export interface RibbonMepRiserBridge {
   readonly onComboboxChange: (commandKey: string, value: string) => void;
@@ -134,8 +135,5 @@ export function useRibbonMepRiserBridge(): RibbonMepRiserBridge {
     [floorsAbove, currentFloorBaseMm],
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState }),
-    [onComboboxChange, getComboboxState],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState });
 }

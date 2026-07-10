@@ -299,6 +299,12 @@ export interface StairVariantTriangularOutline {
 export interface StairVariantSketch {
   readonly kind: 'sketch';
   readonly walklinePath: readonly Point3D[];
+  /**
+   * ADR-619 — όταν `true`, το `walklinePath` φέρει ΗΔΗ το σωστό z ανά σημείο (μεικτά
+   * z: ανοδικά πατήματα + επίπεδα πλατύσκαλα multi-flight) και το `computeSketch`
+   * ΔΕΝ επιβάλλει uniform rise. Απόν/false = κλασικό ενιαίο riser (z_i = i·rise).
+   */
+  readonly preserveZ?: boolean;
 }
 
 /**

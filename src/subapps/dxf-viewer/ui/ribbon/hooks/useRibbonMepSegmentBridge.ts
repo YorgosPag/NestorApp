@@ -19,7 +19,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ8
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isMepSegmentEntity } from '../../../types/entities';
 import type {
@@ -50,30 +50,22 @@ import {
   isMepSegmentVisibilityKey,
 } from './bridge/mep-segment-command-keys';
 import { EventBus } from '../../../systems/events/EventBus';
-import type { RibbonComboboxState, RibbonToggleState } from '../context/RibbonCommandContext';
-import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
-import type { useUniversalSelection } from '../../../systems/selection';
-
-type UniversalSelectionLike = Pick<
-  ReturnType<typeof useUniversalSelection>,
-  'getPrimaryId'
->;
+import {
+  useResolveSelectedEntity,
+  useNoopToggles,
+  useStableBridge,
+  type RibbonEntityBridgeCore,
+  type RibbonComboboxState,
+  type LevelSceneWriter,
+  type PrimaryIdSelection,
+} from './ribbon-entity-bridge-shared';
 
 export interface UseRibbonMepSegmentBridgeProps {
   readonly levelManager: LevelSceneWriter;
-  readonly universalSelection: UniversalSelectionLike;
+  readonly universalSelection: PrimaryIdSelection;
 }
 
-export interface RibbonMepSegmentBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
-  readonly getToggleState: (commandKey: string) => RibbonToggleState;
-  readonly onAction: (action: string) => void;
-  readonly getPanelVisibility: (visibilityKey: string) => boolean;
-}
-
-const NULL_TOGGLE: RibbonToggleState = false;
+export type RibbonMepSegmentBridge = RibbonEntityBridgeCore;
 
 /** Effective section kind: a pipe is always round regardless of stored value. */
 function effectiveSectionKind(params: MepSegmentParams): MepSegmentSectionKind {
@@ -92,15 +84,7 @@ export function useRibbonMepSegmentBridge(
   // selected. Ribbon-level subscription (not a canvas micro-leaf) — ΕΚΤΟΣ ADR-040.
   const toolHandle = mepSegmentToolBridgeStore.use();
 
-  const resolveSegment = useCallback((): MepSegmentEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isMepSegmentEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveSegment = useResolveSelectedEntity(levelManager, universalSelection, isMepSegmentEntity);
 
   const dispatchParams = useCallback(
     (segment: MepSegmentEntity, nextParams: MepSegmentParams): void => {
@@ -286,10 +270,7 @@ export function useRibbonMepSegmentBridge(
     [resolveSegment, dispatchParams, dispatchElevationEdit],
   );
 
-  const onToggle = useCallback((_key: string, _next: boolean): void => {
-    /* no-op */
-  }, []);
-  const getToggleState = useCallback((_key: string): RibbonToggleState => NULL_TOGGLE, []);
+  const { onToggle, getToggleState } = useNoopToggles();
 
   const onAction = useCallback(
     (action: string): void => {
@@ -338,10 +319,7 @@ export function useRibbonMepSegmentBridge(
     [resolveSegment, toolHandle],
   );
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState, onAction, getPanelVisibility });
 }
 
 /** commandKey → numeric `MepSegmentParams` field (section dims only). */

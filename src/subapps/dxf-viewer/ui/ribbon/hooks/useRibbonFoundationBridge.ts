@@ -17,7 +17,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-436-bim-foundation-discipline.md §6
  */
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isFoundationEntity } from '../../../types/entities';
 import type { Entity } from '../../../types/entities';
@@ -77,9 +77,16 @@ import {
   readNumberField,
   writeNumberField,
 } from './useRibbonFoundationBridge-fields';
+import {
+  useResolveSelectedEntity,
+  useNoopToggles,
+  useStableBridge,
+  useViolationBadgeState,
+  type RibbonEntityBridgeCore,
+} from './ribbon-entity-bridge-shared';
+import { writeToolOverrideNumber } from './ribbon-tool-handle-bridge-shared';
 import type {
   RibbonComboboxState,
-  RibbonToggleState,
 } from '../context/RibbonCommandContext';
 import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
@@ -94,14 +101,8 @@ export interface UseRibbonFoundationBridgeProps {
   readonly universalSelection: UniversalSelectionLike;
 }
 
-export interface RibbonFoundationBridge {
-  readonly onComboboxChange: (commandKey: string, value: string) => void;
-  readonly getComboboxState: (commandKey: string) => RibbonComboboxState | null;
-  readonly onToggle: (commandKey: string, nextValue: boolean) => void;
-  readonly getToggleState: (commandKey: string) => RibbonToggleState;
+export interface RibbonFoundationBridge extends RibbonEntityBridgeCore {
   readonly getBadgeState: (badgeKey: string) => boolean;
-  readonly onAction: (action: string) => void;
-  readonly getPanelVisibility: (visibilityKey: string) => boolean;
 }
 
 /** command-key → override field name (matches FoundationParamOverrides keys). */
@@ -116,8 +117,6 @@ const NUMBER_KEY_TO_OVERRIDE: Readonly<Record<string, string>> = {
 const FOUNDATION_OWNED_BADGE_KEYS: ReadonlySet<string> = new Set<string>([
   FOUNDATION_RIBBON_BADGE_KEYS.violations,
 ]);
-
-const NULL_TOGGLE: RibbonToggleState = false;
 
 /**
  * ADR-441 Slice 8 — όταν αλλάζει η έδραση/πλάτος μιας grid-managed λωρίδας, ανα-υπολογίζει
@@ -175,15 +174,7 @@ export function useRibbonFoundationBridge(
 
   const toolHandle = foundationToolBridgeStore.use();
 
-  const resolveFoundation = useCallback((): FoundationEntity | null => {
-    const id = universalSelection.getPrimaryId();
-    if (!id || !levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene) return null;
-    const e = scene.entities.find((x) => x.id === id);
-    if (!e || !isFoundationEntity(e)) return null;
-    return e;
-  }, [levelManager, universalSelection]);
+  const resolveFoundation = useResolveSelectedEntity(levelManager, universalSelection, isFoundationEntity);
 
   const dispatchParams = useCallback(
     (foundation: FoundationEntity, nextParams: FoundationParams): void => {
@@ -285,27 +276,19 @@ export function useRibbonFoundationBridge(
         return;
       }
       if (isFoundationRibbonKey(commandKey)) {
-        const numeric = Number.parseFloat(value);
-        if (Number.isNaN(numeric)) return;
-        const field = NUMBER_KEY_TO_OVERRIDE[commandKey];
-        handle.setParamOverrides({ [field]: numeric });
+        writeToolOverrideNumber(handle, commandKey, value, NUMBER_KEY_TO_OVERRIDE);
       }
     },
     [resolveFoundation, dispatchParams],
   );
 
-  const onToggle = useCallback((_key: string, _next: boolean): void => {
-    /* no-op Slice 1 */
-  }, []);
+  const { onToggle, getToggleState } = useNoopToggles();
 
-  const getToggleState = useCallback((_key: string): RibbonToggleState => NULL_TOGGLE, []);
-
-  const getBadgeState = useCallback((badgeKey: string): boolean => {
-    if (!FOUNDATION_OWNED_BADGE_KEYS.has(badgeKey)) return false;
-    const foundation = resolveFoundation();
-    if (!foundation) return false;
-    return foundation.validation.hasCodeViolations;
-  }, [resolveFoundation]);
+  const getBadgeState = useViolationBadgeState(
+    resolveFoundation,
+    FOUNDATION_OWNED_BADGE_KEYS,
+    FOUNDATION_RIBBON_BADGE_KEYS.violations,
+  );
 
   // ADR-441 Slice 2+6 — managed reconcile εσχάρας από τον κάναβο (atomic, 1 undo).
   // SSoT call: χρησιμοποιείται από το κουμπί «Εσχάρα» ΚΑΙ από το auto-trigger (Slice 7).
@@ -470,10 +453,7 @@ export function useRibbonFoundationBridge(
     return true;
   }, [resolveFoundation, toolHandle]);
 
-  return useMemo(
-    () => ({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility }),
-    [onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility],
-  );
+  return useStableBridge({ onComboboxChange, getComboboxState, onToggle, getToggleState, getBadgeState, onAction, getPanelVisibility });
 }
 
 /** Type guards used by `useRibbonCommands` composer. */
