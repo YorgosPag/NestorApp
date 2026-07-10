@@ -33,4 +33,16 @@ describe('tekPlaneToSlabEntity (ADR-531 Φ5b.4)', () => {
     expect(v0?.x).toBeCloseTo(3700, 1); // 3.7m → 3700mm
     expect(v0?.y).toBeCloseTo(-8600, 1); // 8.6m Y-up → −8600 canvas Y-down
   });
+
+  // ADR-526 Φ6 — οι stair-generated πλάκες («ψωμιά» μπετού) έχουν elev1=0 αλλά πραγματικό Z στις
+  // κορυφές· χωρίς fallback καταρρέουν όλες στο z=0.
+  it('elev1=0 + baseElevationM → στάθμη από το πραγματικό Z του polygon', () => {
+    const res = tekPlaneToSlabEntity({ ...PLANE, elevationM: 0, baseElevationM: 2.6735 }, 'level-0', 'mm');
+    expect(res.slab?.params.levelElevation).toBeCloseTo(2673.5, 0);
+  });
+
+  it('elev1 ορισμένο υπερισχύει του baseElevationM (κανονική πλάκα αμετάβλητη)', () => {
+    const res = tekPlaneToSlabEntity({ ...PLANE, elevationM: 3, baseElevationM: 0 }, 'level-0', 'mm');
+    expect(res.slab?.params.levelElevation).toBeCloseTo(3000, 0);
+  });
 });

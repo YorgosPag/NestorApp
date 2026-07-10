@@ -275,6 +275,12 @@ export interface TekPlaneRecord {
   readonly widthM: number;
   /** `<elev1>` — στάθμη βάσης (μέτρα). */
   readonly elevationM: number;
+  /**
+   * Ελάχιστο `<pointZ>` των κορυφών (μέτρα) — η πραγματική στάθμη του polygon. Ο Τέκτων αφήνει
+   * `elev1=0` στις πλάκες που παράγει από 3Δ αντικείμενα (π.χ. οι όψεις μπετού κάθε σκαλοπατιού),
+   * κρατώντας το ύψος ΜΟΝΟ στα `<point3d>` Z· fallback στάθμης όταν `elev1≈0` (αλλιώς καταρρέουν στο 0).
+   */
+  readonly baseElevationM?: number;
   /** `<color>` RGB hex. */
   readonly color: string;
 }

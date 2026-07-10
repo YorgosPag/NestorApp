@@ -41,10 +41,13 @@ export function tekPlaneToSlabEntity(
 ): TekSlabResult {
   const warnings: string[] = [];
   const vertices: Point2D[] = rec.vertices.map((v) => tekMetersToScene(v.x, v.y, sceneUnits));
+  // Στάθμη: `elev1` όταν ορίζεται· αλλιώς (stair-generated πλάκες με elev1=0) το πραγματικό Z του
+  // polygon — ώστε τα «ψωμιά» μπετού κάθε σκαλοπατιού να κάθονται στο ύψος τους, όχι στο z=0.
+  const elevationM = Math.abs(rec.elevationM) > 1e-6 ? rec.elevationM : (rec.baseElevationM ?? 0);
   const overrides: SlabParamOverrides = {
     kind: 'floor',
     ...(rec.widthM > 1e-6 ? { thickness: rec.widthM * 1000 } : {}),
-    levelElevation: rec.elevationM * 1000,
+    levelElevation: elevationM * 1000,
   };
   const res = completeSlabFromPolygonClicks(vertices, levelId, overrides, sceneUnits);
   if (!res.ok) {

@@ -245,19 +245,22 @@ export function extractPlaneRecords(root: Element): { planes: TekPlaneRecord[]; 
       continue;
     }
     const ptContainer = firstChild(record, 'point3d');
-    const vertices = ptContainer
-      ? directChildren(ptContainer, 'record').map((r) => ({
-        x: childNumber(r, 'pointX', 0), y: childNumber(r, 'pointY', 0),
-      }))
-      : [];
+    const vertexEls = ptContainer ? directChildren(ptContainer, 'record') : [];
+    const vertices = vertexEls.map((r) => ({
+      x: childNumber(r, 'pointX', 0), y: childNumber(r, 'pointY', 0),
+    }));
     if (vertices.length < 3) {
       warnings.push('plane record με <3 κορυφές — παραλείφθηκε.');
       continue;
     }
+    // Πραγματική στάθμη polygon = ελάχιστο <pointZ> (ο Τέκτων κρατά το ύψος των stair-generated
+    // πλακών ΜΟΝΟ εδώ, με elev1=0). Ο mapper το χρησιμοποιεί ως fallback όταν elev1≈0.
+    const zs = vertexEls.map((r) => childNumber(r, 'pointZ', 0));
     planes.push({
       vertices,
       widthM: childNumber(record, 'width', 0),
       elevationM: childNumber(record, 'elev1', 0),
+      baseElevationM: zs.length > 0 ? Math.min(...zs) : 0,
       color: childText(record, 'color') ?? '',
     });
   }
