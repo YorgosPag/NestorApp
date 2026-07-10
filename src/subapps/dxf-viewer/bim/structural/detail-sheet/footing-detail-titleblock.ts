@@ -22,28 +22,10 @@ import {
   type FootingReinforcement,
 } from '../reinforcement/footing-reinforcement-types';
 import type { DetailPrimitive, FootingTitleBlockLabels, RectMm } from './detail-sheet-types';
-
-const TOP_PAD_MM = 11;
-const SIDE_PAD_MM = 4;
-const ROW_H_MM = 7;
-const TEXT_MM = 2.6;
-const LABEL_HEX = '#555555';
-const VALUE_HEX = '#111111';
+import { buildFieldBlock, roundMm, type FieldRow } from './detail-sheet-field-block';
 
 export interface FootingTitleBlockResult {
   readonly primitives: readonly DetailPrimitive[];
-}
-
-interface FieldRow {
-  readonly label: string;
-  readonly value: string;
-}
-
-function fieldText(x: number, rowTop: number, text: string, right: boolean): DetailPrimitive {
-  return {
-    kind: 'text', position: { x, y: rowTop + TEXT_MM }, text, heightMm: TEXT_MM,
-    colorHex: right ? VALUE_HEX : LABEL_HEX, align: right ? 'right' : 'left', bold: right,
-  };
 }
 
 /** Ετικέτα δευτερεύοντος οπλισμού (άνω σχάρα / διαμήκεις / άνω ράβδοι) ή κενό. */
@@ -66,34 +48,24 @@ export function buildFootingTitleBlockRegion(
   const r = resolveActiveFootingReinforcementForParams(foundation.params);
   if (!r) return { primitives: [] };
   const ctx = buildFootingSectionContext(foundation);
-  const round = (n: number): string => String(Math.round(n));
   const thicknessMm = ctx.kind === 'tie-beam' ? ctx.depthMm : ctx.thicknessMm;
   // Διατομή: pad → W×L (ίχνος)· strip/tie-beam → W×H (band διατομή).
   const sectionLabel = ctx.kind === 'pad'
-    ? `${round(ctx.widthMm)}×${round(ctx.lengthMm)}`
-    : `${round(ctx.widthMm)}×${round(thicknessMm)}`;
+    ? `${roundMm(ctx.widthMm)}×${roundMm(ctx.lengthMm)}`
+    : `${roundMm(ctx.widthMm)}×${roundMm(thicknessMm)}`;
 
   const concrete = foundation.params.catalogProfile ?? DEFAULT_CONCRETE_GRADE;
   const rows: FieldRow[] = [
     { label: labels.kind, value: kindValue },
     { label: labels.section, value: sectionLabel },
-    { label: labels.thickness, value: round(thicknessMm) },
+    { label: labels.thickness, value: roundMm(thicknessMm) },
     { label: labels.concrete, value: concrete },
     { label: labels.steel, value: REBAR_GRADE },
-    { label: labels.cover, value: round(r.coverMm) },
+    { label: labels.cover, value: roundMm(r.coverMm) },
     { label: labels.main, value: formatFootingMainLabel(r) },
   ];
   const secondary = secondaryLabel(r);
   if (secondary) rows.push({ label: labels.secondary, value: secondary });
 
-  const x0 = region.x + SIDE_PAD_MM;
-  const xR = region.x + region.w - SIDE_PAD_MM;
-  const out: DetailPrimitive[] = [];
-  let y = region.y + TOP_PAD_MM;
-  for (const row of rows) {
-    out.push(fieldText(x0, y, row.label, false));
-    if (row.value) out.push(fieldText(xR, y, row.value, true));
-    y += ROW_H_MM;
-  }
-  return { primitives: out };
+  return { primitives: buildFieldBlock(region, rows) };
 }

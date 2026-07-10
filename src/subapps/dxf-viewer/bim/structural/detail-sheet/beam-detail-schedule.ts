@@ -8,7 +8,7 @@
  *
  * Geometry-is-SSoT: οι ποσότητες προέρχονται από `computeBeamReinforcementQuantities`
  * (το ίδιο pure compute που τροφοδοτεί το live BOQ) — ΠΟΤΕ ξανα-υπολογισμένες εδώ.
- * Στήλες: Στοιχείο | Οπλισμός | Μήκος | Βάρος.
+ * Στήλες: Στοιχείο | Οπλισμός | Μήκος | Βάρος (ADR-622 shared table SSoT).
  *
  * @module subapps/dxf-viewer/bim/structural/detail-sheet/beam-detail-schedule
  * @see docs/centralized-systems/reference/adrs/ADR-471-unified-member-reinforcement.md §3
@@ -21,40 +21,11 @@ import {
   formatBeamStirrupsLabel,
 } from '../reinforcement/beam-reinforcement-compute';
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
-import type { BeamScheduleLabels, DetailPrimitive, RectMm, TextAlign } from './detail-sheet-types';
-
-const TOP_PAD_MM = 11;
-const SIDE_PAD_MM = 4;
-const ROW_H_MM = 7.5;
-const TEXT_MM = 2.6;
-const RULE_HEX = '#999999';
-const TEXT_HEX = '#222222';
-const RULE_WIDTH_MM = 0.15;
-
-interface ColAnchors { item: number; description: number; length: number; weight: number; }
-interface RowCells { item: string; description: string; length: string; weight: string; }
+import type { BeamScheduleLabels, DetailPrimitive, RectMm } from './detail-sheet-types';
+import { buildReinforcementSchedule, fmt1 } from './detail-sheet-schedule-table';
 
 export interface BeamScheduleResult {
   readonly primitives: readonly DetailPrimitive[];
-}
-
-function fmt1(n: number): string {
-  return n.toFixed(1);
-}
-
-function cell(x: number, rowTop: number, text: string, align: TextAlign, bold: boolean): DetailPrimitive {
-  return { kind: 'text', position: { x, y: rowTop + TEXT_MM }, text, heightMm: TEXT_MM, colorHex: TEXT_HEX, align, bold };
-}
-
-function rule(x1: number, x2: number, y: number): DetailPrimitive {
-  return { kind: 'line', a: { x: x1, y }, b: { x: x2, y }, stroke: { colorHex: RULE_HEX, widthMm: RULE_WIDTH_MM } };
-}
-
-function pushRow(out: DetailPrimitive[], cols: ColAnchors, rowTop: number, cells: RowCells, bold: boolean): void {
-  if (cells.item) out.push(cell(cols.item, rowTop, cells.item, 'left', bold));
-  if (cells.description) out.push(cell(cols.description, rowTop, cells.description, 'left', bold));
-  if (cells.length) out.push(cell(cols.length, rowTop, cells.length, 'right', bold));
-  if (cells.weight) out.push(cell(cols.weight, rowTop, cells.weight, 'right', bold));
 }
 
 /** Ετικέτα διαμήκων μιας στρώσης («3Ø16»). */
@@ -76,46 +47,16 @@ export function buildBeamScheduleRegion(
   const ctx = buildBeamSectionContext(beam);
   const q = computeBeamReinforcementQuantities(ctx, r);
 
-  const cw = region.w - 2 * SIDE_PAD_MM;
-  const x0 = region.x + SIDE_PAD_MM;
-  const cols: ColAnchors = { item: x0, description: x0 + cw * 0.40, length: x0 + cw * 0.78, weight: x0 + cw };
-
-  const out: DetailPrimitive[] = [];
-  let y = region.y + TOP_PAD_MM;
-
-  pushRow(out, cols, y, { item: labels.item, description: labels.description, length: labels.length, weight: labels.weight }, true);
-  y += ROW_H_MM;
-  out.push(rule(x0, cols.weight, y - ROW_H_MM * 0.2));
-
+  const rows: string[][] = [];
   if (q.bottomWeightKg > 0) {
-    pushRow(out, cols, y, {
-      item: labels.bottomLongitudinal, description: barLayerLabel(r.bottom),
-      length: fmt1(q.bottomLengthM), weight: fmt1(q.bottomWeightKg),
-    }, false);
-    y += ROW_H_MM;
+    rows.push([labels.bottomLongitudinal, barLayerLabel(r.bottom), fmt1(q.bottomLengthM), fmt1(q.bottomWeightKg)]);
   }
-
   if (q.topWeightKg > 0) {
-    pushRow(out, cols, y, {
-      item: labels.topLongitudinal, description: barLayerLabel(r.top),
-      length: fmt1(q.topLengthM), weight: fmt1(q.topWeightKg),
-    }, false);
-    y += ROW_H_MM;
+    rows.push([labels.topLongitudinal, barLayerLabel(r.top), fmt1(q.topLengthM), fmt1(q.topWeightKg)]);
   }
-
   if (q.stirrupCount > 0) {
-    pushRow(out, cols, y, {
-      item: labels.stirrups, description: formatBeamStirrupsLabel(r),
-      length: fmt1(q.stirrupTotalLengthM), weight: fmt1(q.stirrupWeightKg),
-    }, false);
-    y += ROW_H_MM;
+    rows.push([labels.stirrups, formatBeamStirrupsLabel(r), fmt1(q.stirrupTotalLengthM), fmt1(q.stirrupWeightKg)]);
   }
 
-  out.push(rule(x0, cols.weight, y - ROW_H_MM * 0.2));
-  pushRow(out, cols, y, { item: labels.total, description: '', length: '', weight: fmt1(q.totalSteelWeightKg) }, true);
-  y += ROW_H_MM * 1.5;
-
-  out.push(cell(x0, y, `${labels.ratio} = ${(q.ratio * 100).toFixed(2)}%`, 'left', false));
-
-  return { primitives: out };
+  return { primitives: buildReinforcementSchedule(region, labels, rows, fmt1(q.totalSteelWeightKg), q.ratio) };
 }

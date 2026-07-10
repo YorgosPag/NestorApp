@@ -7,7 +7,7 @@
  * perspective region then draws those projections as ordinary 2D `dim` primitives
  * → the 3D annotations share the EXACT dimension SSoT with the plan/section views.
  * Mirror του `column-detail-3d-capture.ts`, reusing the shared
- * `detail-3d-capture-core` scaffolding (camera / prism / render / dispose).
+ * `detail-3d-capture-core` scaffolding (camera / prism / bbox dims / capture flow).
  *
  * geometry-is-SSoT: cage from `buildFootingRebarCage`, prism + dims from a
  * CANONICAL un-rotated copy of the footing (rotation/anchor/axis zeroed) so the
@@ -21,8 +21,6 @@
  * @see docs/centralized-systems/reference/adrs/ADR-463-foundation-reinforcement-ux.md
  */
 
-import * as THREE from 'three';
-import { finiteBox3FromObject } from '../../../../bim-3d/scene/finite-bounds';
 import type {
   FoundationEntity,
   FoundationParams,
@@ -30,7 +28,6 @@ import type {
   StripFootingParams,
   TieBeamParams,
 } from '../../../types/foundation-types';
-import type { Point2D } from '../../../../rendering/types/Types';
 import { computeFoundationGeometry } from '../../../geometry/foundation-geometry';
 import { buildFootingSectionContext } from '../../section-context';
 import { sceneUnitsToMeters } from '../../../../utils/scene-units';
@@ -38,9 +35,11 @@ import { scalePoints } from '../../../../rendering/entities/shared/geometry-vect
 import { buildFootingRebarCage } from '../../../../bim-3d/converters/footing-rebar-3d';
 import type { ColumnDetail3dCapture } from './column-detail-3d-capture';
 import {
-  MM_TO_M, SCENE_BG_HEX, CAMERA_AZIMUTH_RAD,
-  buildConcretePrism, disposeOwned, disposeCageGeometry, frameCamera, projectNorm,
-  renderSceneToDataUrl,
+  MM_TO_M,
+  bboxDimSpecs,
+  buildConcretePrism,
+  captureDetail3d,
+  projectDims,
 } from './detail-3d-capture-core';
 
 /** Re-export: the capture shape is generic (raster + projected annotations). */
@@ -51,9 +50,6 @@ export interface FootingDetail3dCaptureOptions {
   readonly widthPx: number;
   readonly heightPx: number;
 }
-
-/** World direction that projects to screen-right in the iso view (camera-right). */
-const SCREEN_RIGHT = new THREE.Vector3(Math.cos(CAMERA_AZIMUTH_RAD), 0, -Math.sin(CAMERA_AZIMUTH_RAD)).normalize();
 
 /** Plan dims (mm) of the footing along its canonical X / Y axes + height. */
 interface FootingPlanDimsMm { xMm: number; yMm: number; hMm: number; }
@@ -83,36 +79,6 @@ function planDimsMm(foundation: FoundationEntity): FootingPlanDimsMm {
   return { xMm: ctx.spanMm, yMm: ctx.widthMm, hMm: ctx.depthMm };
 }
 
-/** Bounding box (metre coords) of a plan vertex set (XY footprint). */
-function planBbox(verts: readonly Point2D[]): { minX: number; maxX: number; minY: number; maxY: number } {
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-  for (const v of verts) {
-    if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
-    if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
-  }
-  return { minX, maxX, minY, maxY };
-}
-
-/** W/L/H dimension specs as measured 3D points (world metres) + value text (mm). */
-function dimSpecs(vertsM: readonly Point2D[], dims: FootingPlanDimsMm, heightM: number): {
-  a: THREE.Vector3; b: THREE.Vector3; text: string;
-}[] {
-  const bb = planBbox(vertsM);
-  // AXIS_FLIP: plan (x, y) → three (x, 0, −y). Base corners of the footprint bbox.
-  const bl = new THREE.Vector3(bb.minX, 0, -bb.minY);
-  const br = new THREE.Vector3(bb.maxX, 0, -bb.minY);
-  const tr = new THREE.Vector3(bb.maxX, 0, -bb.maxY);
-  const tl = new THREE.Vector3(bb.minX, 0, -bb.maxY);
-  const rightCorner = [bl, br, tr, tl].reduce(
-    (best, p) => (p.dot(SCREEN_RIGHT) > best.dot(SCREEN_RIGHT) ? p : best), bl,
-  );
-  return [
-    { a: bl, b: br, text: String(Math.round(dims.xMm)) },
-    { a: br, b: tr, text: String(Math.round(dims.yMm)) },
-    { a: rightCorner.clone(), b: rightCorner.clone().setY(heightM), text: String(Math.round(dims.hMm)) },
-  ];
-}
-
 /**
  * Captures the footing reinforcement as an isometric PNG plus the projected
  * W/L/H dimension anchors (normalised raster space), or `null` when there is no
@@ -129,31 +95,15 @@ export function captureFootingDetail3d(
   const sceneToM = sceneUnitsToMeters(canonical.params.sceneUnits ?? 'mm');
   const vertsM = scalePoints(canonical.geometry.footprint.vertices, sceneToM);
   const heightM = Math.max(0, canonical.params.thicknessMm) * MM_TO_M;
-  const prism = buildConcretePrism(vertsM, heightM);
+  const dims = planDimsMm(foundation);
 
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(SCENE_BG_HEX);
-  if (prism) scene.add(prism);
-  scene.add(cage);
-
-  const { widthPx, heightPx } = options;
-  try {
-    const box = finiteBox3FromObject(scene);
-    if (!box) return null;
-    const camera = frameCamera(box, widthPx / heightPx);
-    const dataUrl = renderSceneToDataUrl(scene, camera, widthPx, heightPx);
-    if (!dataUrl) return null;
-
-    const dims = dimSpecs(vertsM, planDimsMm(foundation), heightM).map((d) => ({
-      a: projectNorm(d.a, camera), b: projectNorm(d.b, camera), text: d.text,
-    }));
-    return {
-      dataUrl, widthPx, heightPx,
-      centroid: projectNorm(box.getCenter(new THREE.Vector3()), camera),
-      dims, marks: [],
-    };
-  } finally {
-    disposeOwned(prism);
-    disposeCageGeometry(cage);
-  }
+  return captureDetail3d(
+    { cage, prism: buildConcretePrism(vertsM, heightM) },
+    options.widthPx,
+    options.heightPx,
+    (camera) => ({
+      dims: projectDims(bboxDimSpecs(vertsM, { x: dims.xMm, y: dims.yMm, h: dims.hMm }, heightM), camera),
+      marks: [],
+    }),
+  );
 }

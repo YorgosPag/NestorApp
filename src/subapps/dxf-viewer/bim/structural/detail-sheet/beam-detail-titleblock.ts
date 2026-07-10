@@ -21,28 +21,10 @@ import {
 } from '../reinforcement/beam-reinforcement-compute';
 import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-types';
 import type { BeamTitleBlockLabels, DetailPrimitive, RectMm } from './detail-sheet-types';
-
-const TOP_PAD_MM = 11;
-const SIDE_PAD_MM = 4;
-const ROW_H_MM = 7;
-const TEXT_MM = 2.6;
-const LABEL_HEX = '#555555';
-const VALUE_HEX = '#111111';
+import { buildFieldBlock, roundMm, type FieldRow } from './detail-sheet-field-block';
 
 export interface BeamTitleBlockResult {
   readonly primitives: readonly DetailPrimitive[];
-}
-
-interface FieldRow {
-  readonly label: string;
-  readonly value: string;
-}
-
-function fieldText(x: number, rowTop: number, text: string, right: boolean): DetailPrimitive {
-  return {
-    kind: 'text', position: { x, y: rowTop + TEXT_MM }, text, heightMm: TEXT_MM,
-    colorHex: right ? VALUE_HEX : LABEL_HEX, align: right ? 'right' : 'left', bold: right,
-  };
 }
 
 /**
@@ -60,29 +42,19 @@ export function buildBeamTitleBlockRegion(
   // ADR-534 Φ3b — host περνά το DERIVED b_eff (καλύπτουσα πλάκα → T-beam)· buildBeamSectionContext
   // το κρατά μόνο όταν > b_w. Absent → καμία γραμμή «b_eff» (γυμνή ορθογώνια δοκός).
   const ctx = buildBeamSectionContext(beam, undefined, undefined, undefined, undefined, effectiveFlangeWidthMm);
-  const round = (n: number): string => String(Math.round(n));
 
   const rows: FieldRow[] = [
-    { label: labels.section, value: `${round(ctx.widthMm)}×${round(ctx.depthMm)}` },
+    { label: labels.section, value: `${roundMm(ctx.widthMm)}×${roundMm(ctx.depthMm)}` },
     ...(ctx.effectiveFlangeWidthMm !== undefined
-      ? [{ label: labels.effectiveFlangeWidth, value: round(ctx.effectiveFlangeWidthMm) }]
+      ? [{ label: labels.effectiveFlangeWidth, value: roundMm(ctx.effectiveFlangeWidthMm) }]
       : []),
-    { label: labels.span, value: round(ctx.spanMm) },
+    { label: labels.span, value: roundMm(ctx.spanMm) },
     { label: labels.concrete, value: DEFAULT_CONCRETE_GRADE },
     { label: labels.steel, value: REBAR_GRADE },
-    { label: labels.cover, value: round(r.coverMm) },
+    { label: labels.cover, value: roundMm(r.coverMm) },
     { label: labels.longitudinal, value: formatBeamLongitudinalLabel(r) },
     { label: labels.stirrups, value: formatBeamStirrupsLabel(r) },
   ];
 
-  const x0 = region.x + SIDE_PAD_MM;
-  const xR = region.x + region.w - SIDE_PAD_MM;
-  const out: DetailPrimitive[] = [];
-  let y = region.y + TOP_PAD_MM;
-  for (const row of rows) {
-    out.push(fieldText(x0, y, row.label, false));
-    if (row.value) out.push(fieldText(xR, y, row.value, true));
-    y += ROW_H_MM;
-  }
-  return { primitives: out };
+  return { primitives: buildFieldBlock(region, rows) };
 }

@@ -16,12 +16,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-476-unified-slab-reinforcement.md
  */
 
-import {
-  computeDetailSheetLayout,
-  DEFAULT_DETAIL_SHEET_LAYOUT_INPUT,
-  DETAIL_SHEET_PAPER,
-  type DetailSheetLayoutInput,
-} from './detail-sheet-layout';
+import { assembleDetailSheet, standardSheetRegions } from './detail-sheet-assemble';
+import type { DetailSheetLayoutInput } from './detail-sheet-layout';
 import { buildSlabPlanRegion } from './slab-detail-plan';
 import { buildSlabSectionRegion } from './slab-detail-section';
 import { buildColumnPerspectiveRegion } from './column-detail-perspective';
@@ -31,7 +27,6 @@ import type { SlabDetail3dCapture } from './render/slab-detail-3d-capture';
 import type { SlabEntity } from '../../types/slab-types';
 import type {
   DetailSheetModel,
-  SheetRegion,
   SlabDetailSheetLabels,
 } from './detail-sheet-types';
 
@@ -53,31 +48,20 @@ export interface SlabDetailSheetInput {
  * host-injected `kindValues` map (5 kinds: floor/ceiling/roof/ground/foundation).
  */
 export function buildSlabDetailSheet(input: SlabDetailSheetInput): DetailSheetModel {
-  const layoutInput = input.layoutInput ?? DEFAULT_DETAIL_SHEET_LAYOUT_INPUT;
-  const layout = computeDetailSheetLayout(layoutInput);
-  const { regions } = layout;
   const { labels, slab } = input;
+  return assembleDetailSheet(input.layoutInput, (regions) => {
+    const plan = buildSlabPlanRegion(slab, regions.plan);
+    const section = buildSlabSectionRegion(slab, regions.elevation);
+    const perspective = buildColumnPerspectiveRegion(regions.perspective, input.perspective3d ?? null);
+    const schedule = buildSlabScheduleRegion(slab, regions.schedule, labels.scheduleTable);
+    const titleBlock = buildSlabTitleBlockRegion(
+      slab, regions['title-block'], labels.titleFields, labels.kindValues[slab.kind],
+    );
 
-  const plan = buildSlabPlanRegion(slab, regions.plan);
-  const section = buildSlabSectionRegion(slab, regions.elevation);
-  const perspective = buildColumnPerspectiveRegion(regions.perspective, input.perspective3d ?? null);
-  const schedule = buildSlabScheduleRegion(slab, regions.schedule, labels.scheduleTable);
-  const titleBlock = buildSlabTitleBlockRegion(
-    slab, regions['title-block'], labels.titleFields, labels.kindValues[slab.kind],
-  );
-
-  const sheetRegions: readonly SheetRegion[] = [
-    { id: 'elevation', rectMm: regions.elevation, title: labels.section, caption: section.caption, primitives: section.primitives },
-    { id: 'plan', rectMm: regions.plan, title: labels.plan, caption: plan.caption, primitives: plan.primitives },
-    { id: 'schedule', rectMm: regions.schedule, title: labels.schedule, primitives: schedule.primitives },
-    { id: 'perspective', rectMm: regions.perspective, title: labels.perspective, primitives: perspective.primitives },
-    { id: 'title-block', rectMm: regions['title-block'], title: labels.titleBlock, primitives: titleBlock.primitives },
-  ];
-
-  return {
-    paper: layoutInput.paper ?? DETAIL_SHEET_PAPER,
-    sheetWidthMm: layout.sheetWidthMm,
-    sheetHeightMm: layout.sheetHeightMm,
-    regions: sheetRegions,
-  };
+    return standardSheetRegions(regions, {
+      elevation: { title: labels.section, caption: section.caption, primitives: section.primitives },
+      plan: { title: labels.plan, caption: plan.caption, primitives: plan.primitives },
+      schedule, perspective, titleBlock, labels,
+    });
+  });
 }

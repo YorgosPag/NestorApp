@@ -15,12 +15,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-457-column-reinforcement-detail-sheet.md
  */
 
-import {
-  computeDetailSheetLayout,
-  DEFAULT_DETAIL_SHEET_LAYOUT_INPUT,
-  DETAIL_SHEET_PAPER,
-  type DetailSheetLayoutInput,
-} from './detail-sheet-layout';
+import { assembleDetailSheet, standardSheetRegions } from './detail-sheet-assemble';
+import type { DetailSheetLayoutInput } from './detail-sheet-layout';
 import { buildColumnPlanRegion } from './column-detail-plan';
 import { buildColumnElevationRegion } from './column-detail-elevation';
 import { buildColumnPerspectiveRegion } from './column-detail-perspective';
@@ -31,7 +27,6 @@ import type { ColumnParams } from '../../types/column-types';
 import type {
   DetailSheetLabels,
   DetailSheetModel,
-  SheetRegion,
 } from './detail-sheet-types';
 
 export interface ColumnDetailSheetInput {
@@ -55,29 +50,18 @@ export interface ColumnDetailSheetInput {
  * dimensions (Slice 1).
  */
 export function buildColumnDetailSheet(input: ColumnDetailSheetInput): DetailSheetModel {
-  const layoutInput = input.layoutInput ?? DEFAULT_DETAIL_SHEET_LAYOUT_INPUT;
-  const layout = computeDetailSheetLayout(layoutInput);
-  const { regions } = layout;
   const { labels } = input;
+  return assembleDetailSheet(input.layoutInput, (regions) => {
+    const plan = buildColumnPlanRegion(input.params, regions.plan);
+    const elevation = buildColumnElevationRegion(input.params, regions.elevation);
+    const perspective = buildColumnPerspectiveRegion(regions.perspective, input.perspective3d ?? null);
+    const schedule = buildColumnScheduleRegion(input.params, regions.schedule, labels.scheduleTable);
+    const titleBlock = buildColumnTitleBlockRegion(input.params, regions['title-block'], labels.titleFields);
 
-  const plan = buildColumnPlanRegion(input.params, regions.plan);
-  const elevation = buildColumnElevationRegion(input.params, regions.elevation);
-  const perspective = buildColumnPerspectiveRegion(regions.perspective, input.perspective3d ?? null);
-  const schedule = buildColumnScheduleRegion(input.params, regions.schedule, labels.scheduleTable);
-  const titleBlock = buildColumnTitleBlockRegion(input.params, regions['title-block'], labels.titleFields);
-
-  const sheetRegions: readonly SheetRegion[] = [
-    { id: 'elevation', rectMm: regions.elevation, title: labels.elevation, caption: elevation.caption, primitives: elevation.primitives },
-    { id: 'plan', rectMm: regions.plan, title: labels.plan, caption: plan.caption, primitives: plan.primitives },
-    { id: 'schedule', rectMm: regions.schedule, title: labels.schedule, primitives: schedule.primitives },
-    { id: 'perspective', rectMm: regions.perspective, title: labels.perspective, primitives: perspective.primitives },
-    { id: 'title-block', rectMm: regions['title-block'], title: labels.titleBlock, primitives: titleBlock.primitives },
-  ];
-
-  return {
-    paper: layoutInput.paper ?? DETAIL_SHEET_PAPER,
-    sheetWidthMm: layout.sheetWidthMm,
-    sheetHeightMm: layout.sheetHeightMm,
-    regions: sheetRegions,
-  };
+    return standardSheetRegions(regions, {
+      elevation: { title: labels.elevation, caption: elevation.caption, primitives: elevation.primitives },
+      plan: { title: labels.plan, caption: plan.caption, primitives: plan.primitives },
+      schedule, perspective, titleBlock, labels,
+    });
+  });
 }

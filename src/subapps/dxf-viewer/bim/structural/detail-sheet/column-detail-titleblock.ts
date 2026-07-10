@@ -22,34 +22,10 @@ import {
   formatStirrupsLabel,
 } from '../reinforcement/column-reinforcement-compute';
 import type { DetailPrimitive, DetailTitleBlockLabels, RectMm } from './detail-sheet-types';
-
-const TOP_PAD_MM = 11;       // clears the region heading
-const SIDE_PAD_MM = 4;
-const ROW_H_MM = 7;
-const TEXT_MM = 2.6;
-const LABEL_HEX = '#555555';
-const VALUE_HEX = '#111111';
+import { buildFieldBlock, roundMm, type FieldRow } from './detail-sheet-field-block';
 
 export interface ColumnTitleBlockResult {
   readonly primitives: readonly DetailPrimitive[];
-}
-
-/** A label : value field row (value omitted → not rendered). */
-interface FieldRow {
-  readonly label: string;
-  readonly value: string;
-}
-
-/** A text primitive whose baseline sits `TEXT_MM` below the row top. */
-function fieldText(x: number, rowTop: number, text: string, right: boolean): DetailPrimitive {
-  return {
-    kind: 'text',
-    position: { x, y: rowTop + TEXT_MM },
-    text, heightMm: TEXT_MM,
-    colorHex: right ? VALUE_HEX : LABEL_HEX,
-    align: right ? 'right' : 'left',
-    bold: right,
-  };
 }
 
 /**
@@ -62,32 +38,22 @@ export function buildColumnTitleBlockRegion(
   labels: DetailTitleBlockLabels,
 ): ColumnTitleBlockResult {
   const r = params.reinforcement;
-  const round = (n: number): string => String(Math.round(n));
   // ADR-460 — ετικέτα διατομής ανά σχήμα: κυκλική → Ø{d}· αλλιώς {W}×{D} (bbox).
   const sectionLabel = params.kind === 'circular'
-    ? `Ø${round(params.width)}`
-    : `${round(params.width)}×${round(params.depth)}`;
+    ? `Ø${roundMm(params.width)}`
+    : `${roundMm(params.width)}×${roundMm(params.depth)}`;
 
   const rows: FieldRow[] = [
     { label: labels.section, value: sectionLabel },
-    { label: labels.height, value: round(params.height) },
+    { label: labels.height, value: roundMm(params.height) },
     { label: labels.concrete, value: params.concreteGrade ?? DEFAULT_CONCRETE_GRADE },
     { label: labels.steel, value: REBAR_GRADE },
   ];
   if (r) {
-    rows.push({ label: labels.cover, value: round(r.coverMm) });
+    rows.push({ label: labels.cover, value: roundMm(r.coverMm) });
     rows.push({ label: labels.longitudinal, value: formatLongitudinalLabel(r) });
     rows.push({ label: labels.stirrups, value: formatStirrupsLabel(r) });
   }
 
-  const x0 = region.x + SIDE_PAD_MM;
-  const xR = region.x + region.w - SIDE_PAD_MM;
-  const out: DetailPrimitive[] = [];
-  let y = region.y + TOP_PAD_MM;
-  for (const row of rows) {
-    out.push(fieldText(x0, y, row.label, false));
-    if (row.value) out.push(fieldText(xR, y, row.value, true));
-    y += ROW_H_MM;
-  }
-  return { primitives: out };
+  return { primitives: buildFieldBlock(region, rows) };
 }

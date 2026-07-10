@@ -18,12 +18,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-463-foundation-reinforcement-ux.md
  */
 
-import {
-  computeDetailSheetLayout,
-  DEFAULT_DETAIL_SHEET_LAYOUT_INPUT,
-  DETAIL_SHEET_PAPER,
-  type DetailSheetLayoutInput,
-} from './detail-sheet-layout';
+import { assembleDetailSheet, standardSheetRegions } from './detail-sheet-assemble';
+import type { DetailSheetLayoutInput } from './detail-sheet-layout';
 import { buildFootingPlanRegion } from './footing-detail-plan';
 import { buildFootingElevationRegion } from './footing-detail-elevation';
 import { buildColumnPerspectiveRegion } from './column-detail-perspective';
@@ -44,7 +40,6 @@ import type {
   DetailSheetModel,
   FootingDetailSheetLabels,
   RectMm,
-  SheetRegion,
 } from './detail-sheet-types';
 
 export interface FootingDetailSheetInput {
@@ -131,40 +126,30 @@ function resolvePlanAndElevation(
  * headings, populated from the per-region builders (geometry-is-SSoT).
  */
 export function buildFootingDetailSheet(input: FootingDetailSheetInput): DetailSheetModel {
-  const layoutInput = input.layoutInput ?? DEFAULT_DETAIL_SHEET_LAYOUT_INPUT;
-  const layout = computeDetailSheetLayout(layoutInput);
-  const { regions } = layout;
   const { labels, foundation } = input;
-
-  // ADR-477 Slice 2b — kind-aware όψεις: tie-beam → beam-style (όψη/τομή)· αλλιώς footing.
-  const { elevation, plan } = resolvePlanAndElevation(input, regions.elevation, regions.plan);
-  const perspective = buildColumnPerspectiveRegion(regions.perspective, input.perspective3d ?? null);
-  const schedule = buildFootingScheduleRegion(foundation, regions.schedule, labels.scheduleTable);
-  const titleBlock = buildFootingTitleBlockRegion(
-    foundation, regions['title-block'], labels.titleFields, labels.kindValues[foundation.kind],
-  );
-
-  // ADR-464 Slice 5 — πίνακας ελέγχων σχεδιασμού στο κάτω μέρος της ζώνης οπλισμού.
-  const summaryPrimitives: DetailPrimitive[] = [];
-  if (input.design && labels.designSummary) {
-    const { primitives } = buildFootingDesignSummaryRegion(
-      input.design, designSummaryRect(regions.schedule), labels.designSummary,
+  return assembleDetailSheet(input.layoutInput, (regions) => {
+    // ADR-477 Slice 2b — kind-aware όψεις: tie-beam → beam-style (όψη/τομή)· αλλιώς footing.
+    const { elevation, plan } = resolvePlanAndElevation(input, regions.elevation, regions.plan);
+    const perspective = buildColumnPerspectiveRegion(regions.perspective, input.perspective3d ?? null);
+    const schedule = buildFootingScheduleRegion(foundation, regions.schedule, labels.scheduleTable);
+    const titleBlock = buildFootingTitleBlockRegion(
+      foundation, regions['title-block'], labels.titleFields, labels.kindValues[foundation.kind],
     );
-    summaryPrimitives.push(...primitives);
-  }
 
-  const sheetRegions: readonly SheetRegion[] = [
-    { id: 'elevation', rectMm: regions.elevation, title: elevation.title, caption: elevation.caption, primitives: elevation.primitives },
-    { id: 'plan', rectMm: regions.plan, title: plan.title, caption: plan.caption, primitives: plan.primitives },
-    { id: 'schedule', rectMm: regions.schedule, title: labels.schedule, primitives: [...schedule.primitives, ...summaryPrimitives] },
-    { id: 'perspective', rectMm: regions.perspective, title: labels.perspective, primitives: perspective.primitives },
-    { id: 'title-block', rectMm: regions['title-block'], title: labels.titleBlock, primitives: titleBlock.primitives },
-  ];
+    // ADR-464 Slice 5 — πίνακας ελέγχων σχεδιασμού στο κάτω μέρος της ζώνης οπλισμού.
+    const summaryPrimitives: DetailPrimitive[] = [];
+    if (input.design && labels.designSummary) {
+      const { primitives } = buildFootingDesignSummaryRegion(
+        input.design, designSummaryRect(regions.schedule), labels.designSummary,
+      );
+      summaryPrimitives.push(...primitives);
+    }
 
-  return {
-    paper: layoutInput.paper ?? DETAIL_SHEET_PAPER,
-    sheetWidthMm: layout.sheetWidthMm,
-    sheetHeightMm: layout.sheetHeightMm,
-    regions: sheetRegions,
-  };
+    return standardSheetRegions(regions, {
+      elevation: { title: elevation.title, caption: elevation.caption, primitives: elevation.primitives },
+      plan: { title: plan.title, caption: plan.caption, primitives: plan.primitives },
+      schedule: { primitives: [...schedule.primitives, ...summaryPrimitives] },
+      perspective, titleBlock, labels,
+    });
+  });
 }

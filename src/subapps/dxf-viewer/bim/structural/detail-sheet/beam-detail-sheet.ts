@@ -19,12 +19,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-471-unified-member-reinforcement.md §2-3
  */
 
-import {
-  computeDetailSheetLayout,
-  DEFAULT_DETAIL_SHEET_LAYOUT_INPUT,
-  DETAIL_SHEET_PAPER,
-  type DetailSheetLayoutInput,
-} from './detail-sheet-layout';
+import { assembleDetailSheet, standardSheetRegions } from './detail-sheet-assemble';
+import type { DetailSheetLayoutInput } from './detail-sheet-layout';
 import { buildBeamSectionRegion } from './beam-detail-section';
 import { buildBeamElevationRegion } from './beam-detail-elevation';
 import { buildColumnPerspectiveRegion } from './column-detail-perspective';
@@ -36,7 +32,6 @@ import type { BeamReinforcement } from '../reinforcement/beam-reinforcement-type
 import type {
   BeamDetailSheetLabels,
   DetailSheetModel,
-  SheetRegion,
 } from './detail-sheet-types';
 
 export interface BeamDetailSheetInput {
@@ -73,29 +68,18 @@ export interface BeamDetailSheetInput {
  * headings, populated from the per-region builders (geometry-is-SSoT).
  */
 export function buildBeamDetailSheet(input: BeamDetailSheetInput): DetailSheetModel {
-  const layoutInput = input.layoutInput ?? DEFAULT_DETAIL_SHEET_LAYOUT_INPUT;
-  const layout = computeDetailSheetLayout(layoutInput);
-  const { regions } = layout;
   const { labels, beam, reinforcement: r, supportType } = input;
+  return assembleDetailSheet(input.layoutInput, (regions) => {
+    const section = buildBeamSectionRegion(beam, r, regions.plan, supportType);
+    const elevation = buildBeamElevationRegion(beam, r, regions.elevation, supportType);
+    const perspective = buildColumnPerspectiveRegion(regions.perspective, input.perspective3d ?? null);
+    const schedule = buildBeamScheduleRegion(beam, r, regions.schedule, labels.scheduleTable);
+    const titleBlock = buildBeamTitleBlockRegion(beam, r, regions['title-block'], labels.titleFields, input.effectiveFlangeWidthMm);
 
-  const section = buildBeamSectionRegion(beam, r, regions.plan, supportType);
-  const elevation = buildBeamElevationRegion(beam, r, regions.elevation, supportType);
-  const perspective = buildColumnPerspectiveRegion(regions.perspective, input.perspective3d ?? null);
-  const schedule = buildBeamScheduleRegion(beam, r, regions.schedule, labels.scheduleTable);
-  const titleBlock = buildBeamTitleBlockRegion(beam, r, regions['title-block'], labels.titleFields, input.effectiveFlangeWidthMm);
-
-  const sheetRegions: readonly SheetRegion[] = [
-    { id: 'elevation', rectMm: regions.elevation, title: labels.elevation, caption: elevation.caption, primitives: elevation.primitives },
-    { id: 'plan', rectMm: regions.plan, title: labels.plan, caption: section.caption, primitives: section.primitives },
-    { id: 'schedule', rectMm: regions.schedule, title: labels.schedule, primitives: schedule.primitives },
-    { id: 'perspective', rectMm: regions.perspective, title: labels.perspective, primitives: perspective.primitives },
-    { id: 'title-block', rectMm: regions['title-block'], title: labels.titleBlock, primitives: titleBlock.primitives },
-  ];
-
-  return {
-    paper: layoutInput.paper ?? DETAIL_SHEET_PAPER,
-    sheetWidthMm: layout.sheetWidthMm,
-    sheetHeightMm: layout.sheetHeightMm,
-    regions: sheetRegions,
-  };
+    return standardSheetRegions(regions, {
+      elevation: { title: labels.elevation, caption: elevation.caption, primitives: elevation.primitives },
+      plan: { title: labels.plan, caption: section.caption, primitives: section.primitives },
+      schedule, perspective, titleBlock, labels,
+    });
+  });
 }

@@ -9,7 +9,7 @@
  * Geometry-is-SSoT: the quantities come straight from
  * `computeColumnReinforcementQuantities` / `computeColumnConfinement` (the same
  * pure compute that drives the live BOQ) — never re-derived here. The table is
- * laid out purely with `text` + `line` primitives (no new primitive kind).
+ * laid out with the shared 5-column schedule SSoT (ADR-622); no new primitive kind.
  *
  * v1: rectangular column with `reinforcement`. Other kinds → empty.
  *
@@ -24,53 +24,25 @@ import { computeColumnConfinement } from '../reinforcement/column-confinement';
 import { resolveColumnRebarLayout } from '../reinforcement/column-rebar-layout-resolve';
 import { resolveColumnReinforcementSection } from '../reinforcement/column-section-outline';
 import { DEFAULT_STIRRUP_TYPE } from '../reinforcement/column-reinforcement-types';
-import type { DetailPrimitive, DetailScheduleLabels, RectMm, TextAlign } from './detail-sheet-types';
-
-const TOP_PAD_MM = 11;       // clears the region heading
-const SIDE_PAD_MM = 4;
-const ROW_H_MM = 7.5;
-const TEXT_MM = 2.6;
-const RULE_HEX = '#999999';
-const TEXT_HEX = '#222222';
-const RULE_WIDTH_MM = 0.15;
-
-/** Column anchor x-positions (sheet-mm): mark is left-aligned, the rest right. */
-interface ColAnchors { mark: number; diameter: number; count: number; length: number; weight: number; }
-
-/** One schedule row's five cell strings (empty cells are skipped). */
-interface RowCells { mark: string; diameter: string; count: string; length: string; weight: string; }
+import type { DetailPrimitive, DetailScheduleLabels, RectMm } from './detail-sheet-types';
+import {
+  buildScheduleTable,
+  fmt1,
+  type ScheduleColumn,
+} from './detail-sheet-schedule-table';
 
 export interface ColumnScheduleResult {
   readonly primitives: readonly DetailPrimitive[];
 }
 
-/** One decimal place — lengths (m) and weights (kg) on the steel schedule. */
-function fmt1(n: number): string {
-  return n.toFixed(1);
-}
-
-/** A text primitive whose baseline sits `TEXT_MM` below the row top. */
-function cell(x: number, rowTop: number, text: string, align: TextAlign, bold: boolean): DetailPrimitive {
-  return {
-    kind: 'text',
-    position: { x, y: rowTop + TEXT_MM },
-    text, heightMm: TEXT_MM, colorHex: TEXT_HEX, align, bold,
-  };
-}
-
-/** A faint horizontal rule spanning the table width. */
-function rule(x1: number, x2: number, y: number): DetailPrimitive {
-  return { kind: 'line', a: { x: x1, y }, b: { x: x2, y }, stroke: { colorHex: RULE_HEX, widthMm: RULE_WIDTH_MM } };
-}
-
-/** Appends a full table row (mark left, the four numeric cells right-aligned). */
-function pushRow(out: DetailPrimitive[], cols: ColAnchors, rowTop: number, cells: RowCells, bold: boolean): void {
-  if (cells.mark) out.push(cell(cols.mark, rowTop, cells.mark, 'left', bold));
-  if (cells.diameter) out.push(cell(cols.diameter, rowTop, cells.diameter, 'right', bold));
-  if (cells.count) out.push(cell(cols.count, rowTop, cells.count, 'right', bold));
-  if (cells.length) out.push(cell(cols.length, rowTop, cells.length, 'right', bold));
-  if (cells.weight) out.push(cell(cols.weight, rowTop, cells.weight, 'right', bold));
-}
+/** Στοιχείο | Ø | n | Μήκος | Βάρος — the column schedule's 5-column layout (mark left, the rest right). */
+const COLUMN_SCHEDULE_COLUMNS: readonly ScheduleColumn[] = [
+  { frac: 0, align: 'left' },
+  { frac: 0.52, align: 'right' },
+  { frac: 0.68, align: 'right' },
+  { frac: 0.84, align: 'right' },
+  { frac: 1, align: 'right' },
+];
 
 /**
  * Builds the schedule-region primitives for a rectangular reinforced column.
@@ -97,47 +69,24 @@ export function buildColumnScheduleRegion(
   const conf = computeColumnConfinement(ctx, r, resolveColumnRebarLayout(r, section));
   const isSpiral = (r.stirrups.type ?? DEFAULT_STIRRUP_TYPE) === 'spiral';
 
-  const cw = region.w - 2 * SIDE_PAD_MM;
-  const x0 = region.x + SIDE_PAD_MM;
-  const cols: ColAnchors = {
-    mark: x0,
-    diameter: x0 + cw * 0.52,
-    count: x0 + cw * 0.68,
-    length: x0 + cw * 0.84,
-    weight: x0 + cw,
-  };
+  const rows: string[][] = [
+    [labels.longitudinal, `Ø${r.longitudinal.diameterMm}`, String(r.longitudinal.count),
+      fmt1(q.longitudinalLengthM), fmt1(q.longitudinalWeightKg)],
+    [isSpiral ? labels.spiral : labels.stirrups, `Ø${r.stirrups.diameterMm}`,
+      String(q.stirrupCount), fmt1(q.stirrupTotalLengthM), fmt1(q.stirrupWeightKg)],
+  ];
 
-  const out: DetailPrimitive[] = [];
-  let y = region.y + TOP_PAD_MM;
+  const primitives = buildScheduleTable({
+    region,
+    columns: COLUMN_SCHEDULE_COLUMNS,
+    header: [labels.mark, labels.diameter, labels.count, labels.length, labels.weight],
+    rows,
+    total: [labels.total, '', '', '', fmt1(q.totalSteelWeightKg)],
+    footers: [
+      `${labels.ratio} = ${(q.ratio * 100).toFixed(2)}%`,
+      `${labels.confinement} = ${conf.alpha.toFixed(2)}`,
+    ],
+  });
 
-  pushRow(out, cols, y, {
-    mark: labels.mark, diameter: labels.diameter, count: labels.count,
-    length: labels.length, weight: labels.weight,
-  }, true);
-  y += ROW_H_MM;
-  out.push(rule(x0, cols.weight, y - ROW_H_MM * 0.2));
-
-  pushRow(out, cols, y, {
-    mark: labels.longitudinal, diameter: `Ø${r.longitudinal.diameterMm}`, count: String(r.longitudinal.count),
-    length: fmt1(q.longitudinalLengthM), weight: fmt1(q.longitudinalWeightKg),
-  }, false);
-  y += ROW_H_MM;
-
-  pushRow(out, cols, y, {
-    mark: isSpiral ? labels.spiral : labels.stirrups, diameter: `Ø${r.stirrups.diameterMm}`,
-    count: String(q.stirrupCount), length: fmt1(q.stirrupTotalLengthM), weight: fmt1(q.stirrupWeightKg),
-  }, false);
-  y += ROW_H_MM;
-  out.push(rule(x0, cols.weight, y - ROW_H_MM * 0.2));
-
-  pushRow(out, cols, y, {
-    mark: labels.total, diameter: '', count: '', length: '', weight: fmt1(q.totalSteelWeightKg),
-  }, true);
-  y += ROW_H_MM * 1.5;
-
-  out.push(cell(x0, y, `${labels.ratio} = ${(q.ratio * 100).toFixed(2)}%`, 'left', false));
-  y += ROW_H_MM;
-  out.push(cell(x0, y, `${labels.confinement} = ${conf.alpha.toFixed(2)}`, 'left', false));
-
-  return { primitives: out };
+  return { primitives };
 }

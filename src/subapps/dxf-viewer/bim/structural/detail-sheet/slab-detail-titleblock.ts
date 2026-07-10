@@ -22,28 +22,10 @@ import {
   formatSlabFoundationTopLabel,
 } from '../reinforcement/slab-foundation-reinforcement-types';
 import type { DetailPrimitive, RectMm, SlabTitleBlockLabels } from './detail-sheet-types';
-
-const TOP_PAD_MM = 11;
-const SIDE_PAD_MM = 4;
-const ROW_H_MM = 7;
-const TEXT_MM = 2.6;
-const LABEL_HEX = '#555555';
-const VALUE_HEX = '#111111';
+import { buildFieldBlock, roundMm, type FieldRow } from './detail-sheet-field-block';
 
 export interface SlabTitleBlockResult {
   readonly primitives: readonly DetailPrimitive[];
-}
-
-interface FieldRow {
-  readonly label: string;
-  readonly value: string;
-}
-
-function fieldText(x: number, rowTop: number, text: string, right: boolean): DetailPrimitive {
-  return {
-    kind: 'text', position: { x, y: rowTop + TEXT_MM }, text, heightMm: TEXT_MM,
-    colorHex: right ? VALUE_HEX : LABEL_HEX, align: right ? 'right' : 'left', bold: right,
-  };
 }
 
 /**
@@ -59,37 +41,27 @@ export function buildSlabTitleBlockRegion(
   const r = resolveActiveSlabReinforcementForEntity(slab);
   if (!r) return { primitives: [] };
   const ctx = buildSlabFoundationSectionContext(slab);
-  const round = (n: number): string => String(Math.round(n));
 
   const concrete = slab.params.concreteGrade ?? DEFAULT_CONCRETE_GRADE;
   const rows: FieldRow[] = [
     { label: labels.kind, value: kindValue },
-    { label: labels.section, value: `${round(ctx.widthMm)}×${round(ctx.lengthMm)}` },
-    { label: labels.thickness, value: round(ctx.thicknessMm) },
+    { label: labels.section, value: `${roundMm(ctx.widthMm)}×${roundMm(ctx.lengthMm)}` },
+    { label: labels.thickness, value: roundMm(ctx.thicknessMm) },
     { label: labels.concrete, value: concrete },
     { label: labels.steel, value: REBAR_GRADE },
-    { label: labels.cover, value: round(r.coverMm) },
+    { label: labels.cover, value: roundMm(r.coverMm) },
     { label: labels.bottomMesh, value: formatSlabFoundationMainLabel(r) },
     { label: labels.topMesh, value: formatSlabFoundationTopLabel(r) },
   ];
   // Άνοιγμα + φορτίο σχεδιασμού: μόνο αναρτημένες πλάκες (η εδαφόπλακα αγνοεί το q).
   if (ctx.kind === 'suspended') {
     if (ctx.maxFreeSpanMm && ctx.maxFreeSpanMm > 0) {
-      rows.push({ label: labels.span, value: round(ctx.maxFreeSpanMm) });
+      rows.push({ label: labels.span, value: roundMm(ctx.maxFreeSpanMm) });
     }
     if (ctx.designLoadKpa && ctx.designLoadKpa > 0) {
       rows.push({ label: labels.designLoad, value: ctx.designLoadKpa.toFixed(1) });
     }
   }
 
-  const x0 = region.x + SIDE_PAD_MM;
-  const xR = region.x + region.w - SIDE_PAD_MM;
-  const out: DetailPrimitive[] = [];
-  let y = region.y + TOP_PAD_MM;
-  for (const row of rows) {
-    out.push(fieldText(x0, y, row.label, false));
-    if (row.value) out.push(fieldText(xR, y, row.value, true));
-    y += ROW_H_MM;
-  }
-  return { primitives: out };
+  return { primitives: buildFieldBlock(region, rows) };
 }

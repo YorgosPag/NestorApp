@@ -18,6 +18,7 @@
 
 import * as THREE from 'three';
 import type { Point2D } from '../../../../rendering/types/Types';
+import { finiteBox3FromObject } from '../../../../bim-3d/scene/finite-bounds';
 
 /** mm → metres (the vertical convention shared with the rebar cages). */
 export const MM_TO_M = 0.001;
@@ -163,5 +164,135 @@ export function renderSceneToDataUrl(
     return null;
   } finally {
     renderer?.dispose();
+  }
+}
+
+// ── Projected annotations + capture orchestration (ADR-622) ───────────────────
+
+/** A dimension projected to normalised raster space (measured endpoints + text). */
+export interface ProjectedDim {
+  readonly a: NormPoint;
+  readonly b: NormPoint;
+  readonly text: string;
+}
+
+/** A bar mark projected to normalised raster space. */
+export interface ProjectedMark {
+  readonly pos: NormPoint;
+  readonly text: string;
+}
+
+/** A detail-sheet 3D capture: the raster + its 2D-overlay annotation projections. */
+export interface Detail3dCapture {
+  readonly dataUrl: string;
+  readonly widthPx: number;
+  readonly heightPx: number;
+  /** Projected scene centre — used to offset each dimension outward. */
+  readonly centroid: NormPoint;
+  readonly dims: readonly ProjectedDim[];
+  readonly marks: readonly ProjectedMark[];
+}
+
+/** A dimension spec measured in world metres (3D endpoints + value text). */
+export interface DimSpec3d {
+  readonly a: THREE.Vector3;
+  readonly b: THREE.Vector3;
+  readonly text: string;
+}
+
+/** A bar-mark spec measured in world metres (3D position + text). */
+export interface MarkSpec3d {
+  readonly pos: THREE.Vector3;
+  readonly text: string;
+}
+
+/** Project measured dimension specs through the capture camera into raster space. */
+export function projectDims(specs: readonly DimSpec3d[], camera: THREE.Camera): ProjectedDim[] {
+  return specs.map((d) => ({ a: projectNorm(d.a, camera), b: projectNorm(d.b, camera), text: d.text }));
+}
+
+/** Project measured bar-mark specs through the capture camera into raster space. */
+export function projectMarks(specs: readonly MarkSpec3d[], camera: THREE.Camera): ProjectedMark[] {
+  return specs.map((m) => ({ pos: projectNorm(m.pos, camera), text: m.text }));
+}
+
+/** World direction that projects to screen-right in the iso view (camera-right). */
+const SCREEN_RIGHT = new THREE.Vector3(
+  Math.cos(CAMERA_AZIMUTH_RAD), 0, -Math.sin(CAMERA_AZIMUTH_RAD),
+).normalize();
+
+/** Bounding box (metre coords) of a plan vertex set (XY footprint). */
+function planBbox(verts: readonly Point2D[]): { minX: number; maxX: number; minY: number; maxY: number } {
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const v of verts) {
+    if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
+    if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
+  }
+  return { minX, maxX, minY, maxY };
+}
+
+/**
+ * The three footprint dimension specs (X along the base front, Y along the base
+ * side, H up the screen-right corner) as measured 3D points — shared by the
+ * beam / footing / slab captures. AXIS_FLIP: plan (x, y) → three (x, 0, −y).
+ */
+export function bboxDimSpecs(
+  vertsM: readonly Point2D[],
+  dimsMm: { readonly x: number; readonly y: number; readonly h: number },
+  heightM: number,
+): DimSpec3d[] {
+  const bb = planBbox(vertsM);
+  const bl = new THREE.Vector3(bb.minX, 0, -bb.minY);
+  const br = new THREE.Vector3(bb.maxX, 0, -bb.minY);
+  const tr = new THREE.Vector3(bb.maxX, 0, -bb.maxY);
+  const tl = new THREE.Vector3(bb.minX, 0, -bb.maxY);
+  const rightCorner = [bl, br, tr, tl].reduce(
+    (best, p) => (p.dot(SCREEN_RIGHT) > best.dot(SCREEN_RIGHT) ? p : best), bl,
+  );
+  return [
+    { a: bl, b: br, text: String(Math.round(dimsMm.x)) },
+    { a: br, b: tr, text: String(Math.round(dimsMm.y)) },
+    { a: rightCorner.clone(), b: rightCorner.clone().setY(heightM), text: String(Math.round(dimsMm.h)) },
+  ];
+}
+
+/**
+ * Assemble the offscreen mini-scene (faint concrete prism + rebar cage), frame it
+ * isometrically, render it to a paper-resolution PNG, and project the annotations
+ * `project` returns through the SAME camera — the shared capture flow for every
+ * detail sheet. Returns `null` on degenerate bounds / render failure. Disposes the
+ * prism fully + the cage's geometry only (its material is a shared singleton).
+ */
+export function captureDetail3d(
+  objects: { readonly cage: THREE.Group; readonly prism: THREE.Group | null },
+  widthPx: number,
+  heightPx: number,
+  project: (camera: THREE.Camera) => { dims: readonly ProjectedDim[]; marks: readonly ProjectedMark[] },
+): Detail3dCapture | null {
+  const { cage, prism } = objects;
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(SCENE_BG_HEX);
+  if (prism) scene.add(prism);
+  scene.add(cage);
+
+  try {
+    const box = finiteBox3FromObject(scene);
+    if (!box) return null;
+    const camera = frameCamera(box, widthPx / heightPx);
+    const dataUrl = renderSceneToDataUrl(scene, camera, widthPx, heightPx);
+    if (!dataUrl) return null;
+
+    const { dims, marks } = project(camera);
+    return {
+      dataUrl,
+      widthPx,
+      heightPx,
+      centroid: projectNorm(box.getCenter(new THREE.Vector3()), camera),
+      dims,
+      marks,
+    };
+  } finally {
+    disposeOwned(prism);
+    disposeCageGeometry(cage);
   }
 }
