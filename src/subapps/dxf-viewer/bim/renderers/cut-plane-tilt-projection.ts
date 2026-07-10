@@ -41,6 +41,23 @@ export function cutPlaneShiftScreenDelta(
 }
 
 /**
+ * SSoT (N.18) — apply a cut-plane tilt shift to the canvas as a `save`+`translate`
+ * so the full (cut-styled) body is drawn on the cut plane. No-op (and NO save) when
+ * `shift` is null/undefined, so the caller's matching `if (shift) ctx.restore()`
+ * stays balanced. Column/Wall renderers inlined this identically.
+ */
+export function applyCutPlaneTranslate(
+  ctx: CanvasRenderingContext2D,
+  shift: { readonly dx: number; readonly dy: number } | null | undefined,
+  worldToScreen: (p: Vec2) => Vec2,
+): void {
+  if (!shift) return;
+  const d = cutPlaneShiftScreenDelta(shift, worldToScreen);
+  ctx.save();
+  ctx.translate(d.x, d.y);
+}
+
+/**
  * Σχεδιάζει το **λεπτό** outline της **βάσης** (στο πραγματικό `ring`) + τις
  * connecting lines από κάθε γωνία της βάσης στην αντίστοιχη γωνία του cut plane
  * (`ring + shift`). Το **cut-plane footprint** (παχύ/cut στυλ) ζωγραφίζεται χωριστά

@@ -53,10 +53,14 @@ import {
   MATERIAL_HATCH_STROKE_RGBA,
 } from './shared/material-hatch-paint';
 import { wallCutPlaneShiftCanvas } from '../geometry/cut-plane-tilt';
-import { drawCutPlaneTiltProjection, cutPlaneShiftScreenDelta } from './cut-plane-tilt-projection';
+import { drawCutPlaneTiltProjection, applyCutPlaneTranslate } from './cut-plane-tilt-projection';
+import { fillPolygonScreen } from './bim-polygon-render';
 import { wallLayerBoundaryPolylines } from '../walls/wall-layer-lines-2d';
 // N.7.1 split — pure Canvas2D path-tracing helpers extracted to keep this renderer <500 lines.
-import { traceWallBody, strokePerimeterOutline, strokePolyline } from './wall-render-paths';
+import { traceWallBody, strokePerimeterOutline, strokePolyline, strokePlanLineSegments } from './wall-render-paths';
+// ADR-531 Φ5b.3 — «Μόνο κάτοψη DXF» plan-lines όψη (view flag + κομμένες παρειές SSoT).
+import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
+import { wallPlanLineSegments } from '../walls/wall-plan-line-segments';
 // ADR-509 §axis-clip — κόβει τον άξονα στην παρειά κολώνας (reuse segment-polygon-coverage SSoT).
 import { clipPolylineOutsidePolygons } from '../walls/wall-axis-clip';
 
@@ -119,6 +123,15 @@ export class WallRenderer extends BaseEntityRenderer {
 
     if (!wall.geometry || !wall.params) return;
 
+    // ADR-531 Φ5b.3 — «Μόνο κάτοψη DXF»: καθαρές γραμμές (κομμένες παρειές + caps + jamb
+    // returns), χωρίς fill/hatch/άξονα/λαβές — όπως το top-view του Τέκτονα. ΜΙΑ οντότητα,
+    // δύο όψεις. Το σύμβολο πόρτας/παραθύρου το ζωγραφίζει ο OpeningRenderer (ίδιο flag).
+    if (useBimRenderSettingsStore.getState().planLinesOnly) {
+      this.drawPlanLines(wall);
+      this.finalizeRender(entity, options);
+      return;
+    }
+
     // ADR-470 — core (σώμα τοίχου) component gate. Κρυμμένο → παραλείπουμε το σχέδιο
     // του σώματος· ο σοβάς (scene-level silhouette) προβάλλεται ανεξάρτητα.
     if (!isStructuralComponentVisible('core', wall)) {
@@ -134,11 +147,7 @@ export class WallRenderer extends BaseEntityRenderer {
       wall.params,
       useDrawingScaleStore.getState().viewRange.cutPlaneMm,
     );
-    if (_tiltShift) {
-      const d = cutPlaneShiftScreenDelta(_tiltShift, (p) => this.worldToScreen(p));
-      this.ctx.save();
-      this.ctx.translate(d.x, d.y);
-    }
+    applyCutPlaneTranslate(this.ctx, _tiltShift, (p) => this.worldToScreen(p));
 
     // Hover halo via OBB outline (stair pattern). Per-edge glow loses to the
     // category fill rectangle in the main pass, so a dedicated outline pass
@@ -231,6 +240,23 @@ export class WallRenderer extends BaseEntityRenderer {
   }
 
   // ─── Internal drawing helpers ──────────────────────────────────────────────
+
+  /**
+   * ADR-531 Φ5b.3 — «Μόνο κάτοψη DXF» όψη: bare καθαρές γραμμές (παρειές κομμένες στα
+   * ανοίγματα + caps + jamb returns, SSoT `wallPlanLineSegments`), background-adaptive
+   * χρώμα — χωρίς γέμισμα/διαγράμμιση/άξονα. Το σύμβολο ανοίγματος → OpeningRenderer.
+   */
+  private drawPlanLines(wall: WallEntity): void {
+    const openings = this.openingsByWall.get(wall.id) ?? [];
+    const segs = wallPlanLineSegments(wall, openings);
+    if (segs.length === 0) return;
+    this.ctx.save();
+    this.ctx.setLineDash([]);
+    this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
+    this.ctx.strokeStyle = adaptStructuralLineColorForCanvas(wall.color ?? '#000000', WALL_LINE_CONTRAST);
+    strokePlanLineSegments(this.ctx, (p) => this.worldToScreen(p), segs);
+    this.ctx.restore();
+  }
 
   /**
    * Draws the outer + inner edges as a closed polygon, filled translucent
@@ -342,15 +368,7 @@ export class WallRenderer extends BaseEntityRenderer {
       // τοίχο. Χωρίς reveal → revealOutline undefined → free outline (αμετάβλητο).
       const verts = opening.geometry?.revealOutline?.vertices ?? opening.geometry?.outline.vertices;
       if (!verts || verts.length < 3) continue;
-      this.ctx.beginPath();
-      const start = this.worldToScreen({ x: verts[0].x, y: verts[0].y });
-      this.ctx.moveTo(start.x, start.y);
-      for (let i = 1; i < verts.length; i++) {
-        const s = this.worldToScreen({ x: verts[i].x, y: verts[i].y });
-        this.ctx.lineTo(s.x, s.y);
-      }
-      this.ctx.closePath();
-      this.ctx.fill();
+      fillPolygonScreen(this.ctx, (p) => this.worldToScreen(p), verts);
     }
     this.ctx.restore();
   }
@@ -382,17 +400,28 @@ export class WallRenderer extends BaseEntityRenderer {
   }
 
   /**
+   * Wall body edges (outer/inner polylines) with the shared skip guards: extreme
+   * zoom-out (perf) + degenerate (<2 pts) → null. Owns the guard `drawMaterialHatch`
+   * and `drawDnaLayerLines` inlined identically (N.18); each keeps its own dna gate.
+   */
+  private wallBodyEdges(wall: WallEntity) {
+    if (this.transform.scale < 0.001) return null;
+    const outer = wall.geometry.outerEdge.points;
+    const inner = wall.geometry.innerEdge.points;
+    if (outer.length < 2 || inner.length < 2) return null;
+    return { outer, inner };
+  }
+
+  /**
    * Phase 4.5e-B — per-material hatch inside wall body clip.
    * Skip for DNA-bearing walls (per-layer DNA rendering governs materials).
    * Skip at extreme zoom-out (scale < 0.001, perf saver).
    */
   private drawMaterialHatch(wall: WallEntity, layerOverride?: BimLayerOverride): void {
     if (wall.params.dna) return;
-    if (this.transform.scale < 0.001) return;
-
-    const outer = wall.geometry.outerEdge.points;
-    const inner = wall.geometry.innerEdge.points;
-    if (outer.length < 2 || inner.length < 2) return;
+    const edges = this.wallBodyEdges(wall);
+    if (!edges) return;
+    const { outer, inner } = edges;
 
     const _hatchCutState = resolveCutState(
       { zBottomMm: wall.params.baseOffset ?? 0, zTopMm: (wall.params.baseOffset ?? 0) + wall.params.height, category: 'wall' },
@@ -437,10 +466,9 @@ export class WallRenderer extends BaseEntityRenderer {
    */
   private drawDnaLayerLines(wall: WallEntity): void {
     if (!wall.params.dna) return;
-    if (this.transform.scale < 0.001) return;
-    const outer = wall.geometry.outerEdge.points;
-    const inner = wall.geometry.innerEdge.points;
-    if (outer.length < 2 || inner.length < 2) return;
+    const edges = this.wallBodyEdges(wall);
+    if (!edges) return;
+    const { outer, inner } = edges;
     const lines = wallLayerBoundaryPolylines(outer, inner, wall.params.dna);
     if (lines.length === 0) return;
 

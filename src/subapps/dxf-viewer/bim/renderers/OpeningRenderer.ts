@@ -28,16 +28,15 @@ import type { Entity } from '../../types/entities';
 import { isOpeningEntity } from '../../types/entities';
 import type { OpeningEntity, OpeningKind } from '../types/opening-types';
 import { isWindowKind, isSlidingKind } from '../types/opening-types';
-import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getOpeningGrips } from '../walls/opening-grips';
+import { paintPolygonHoverHalo, mapBimGrips, tracePolygonScreenPath } from './bim-polygon-render';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { gripGlyphShape } from '../grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
@@ -53,6 +52,8 @@ import {
   TAG_INITIAL_SCREEN_PX,
 } from './OpeningTagRenderer';
 import { isOpeningTagLayerVisible } from '../../systems/layers/opening-tag-layer';
+// ADR-531 Φ5b.3 — «Μόνο κάτοψη DXF»: gate την πινακίδα (tag) ώστε να μένουν μόνο καθαρές γραμμές.
+import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 
 /** ADR-375 — dashed outline for an opening projected as "<Beyond>" (not cut). */
 const BEYOND_DASH: readonly number[] = [6, 4];
@@ -93,15 +94,10 @@ export class OpeningRenderer extends BaseEntityRenderer {
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
     // Hover halo: outline thicker + glow colour.
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.drawOutline(opening);
-      this.ctx.restore();
-    }
+    paintPolygonHoverHalo(
+      this.ctx, (p) => this.worldToScreen(p),
+      opening.geometry.outline.vertices, phaseState.phase === 'highlighted',
+    );
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.strokeStyle = OPENING_KIND_STROKE[opening.kind];
@@ -135,13 +131,16 @@ export class OpeningRenderer extends BaseEntityRenderer {
     // ADR-376 Phase A — paint instance Mark tag overlay (canvas-pill SSoT).
     // Layer toggle gating is read μέσω the dedicated module; tag renderer
     // itself enforces per-opening + zoom + mark-present checks.
-    OpeningRenderer.tagRenderer.render({
-      ctx: this.ctx,
-      transform: this.transform,
-      viewport: this.tagViewport(),
-      opening,
-      layerVisible: isOpeningTagLayerVisible(),
-    });
+    // ADR-531 Φ5b.3 — στο «Μόνο κάτοψη DXF» η πινακίδα κρύβεται (μόνο καθαρές γραμμές).
+    if (!useBimRenderSettingsStore.getState().planLinesOnly) {
+      OpeningRenderer.tagRenderer.render({
+        ctx: this.ctx,
+        transform: this.transform,
+        viewport: this.tagViewport(),
+        opening,
+        layerVisible: isOpeningTagLayerVisible(),
+      });
+    }
 
     // Revit-style centred dimension pill (hover/select) — shared SSoT. The Mark
     // tag (above) is offset along the wall normal; the dim pill is bbox-centred,
@@ -167,15 +166,7 @@ export class OpeningRenderer extends BaseEntityRenderer {
     // corners stay square. Commit routed through `applyOpeningGripDrag()` +
     // `UpdateOpeningParamsCommand` by `commitOpeningGripDrag`.
     if (!isOpeningEntity(entity)) return [];
-    return getOpeningGrips(entity as OpeningEntity).map((g) => ({
-      id: `${g.entityId}-grip-${g.gripIndex}`,
-      position: g.position,
-      type: g.type === 'center' ? ('center' as const) : ('vertex' as const),
-      entityId: g.entityId,
-      isVisible: true,
-      gripIndex: g.gripIndex,
-      shape: gripGlyphShape(gripKindOf(g, 'opening')),
-    }));
+    return mapBimGrips(getOpeningGrips(entity as OpeningEntity), (g) => gripGlyphShape(gripKindOf(g, 'opening')));
   }
 
   hitTest(entity: EntityModel, point: Point2D, _tolerance: number): boolean {
@@ -223,16 +214,8 @@ export class OpeningRenderer extends BaseEntityRenderer {
   // ─── Internal drawing helpers ──────────────────────────────────────────────
 
   private drawOutline(opening: OpeningEntity): void {
-    const vertices = opening.geometry.outline.vertices;
-    if (vertices.length < 3) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
+    if (opening.geometry.outline.vertices.length < 3) return;
+    tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), opening.geometry.outline.vertices);
     this.ctx.stroke();
   }
 

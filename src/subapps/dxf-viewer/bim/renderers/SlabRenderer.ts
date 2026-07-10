@@ -30,14 +30,12 @@
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  */
 
-import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
+import { BimFootprintRenderer } from './bim-footprint-renderer';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isSlabEntity } from '../../types/entities';
 import type { SlabEntity, SlabReinforcement } from '../types/slab-types';
 import type { SlabOpeningEntity } from '../types/slab-opening-types';
-import { pointInPolygon } from '../geometry/shared/polygon-utils';
-import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
@@ -46,11 +44,15 @@ import { topFacePlanFill } from '../utils/bim-face-plan-fill';
 import { bimDashPx } from '../../config/bim-dash-resolver';
 import { resolveCutState } from '../../config/bim-view-range';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
 import { getSlabGrips } from '../slabs/slab-grips';
+import {
+  strokePolygonOutline, polygonBboxHitTest, mapBimGrips, fillPolygonScreen,
+} from './bim-polygon-render';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { KIND_STROKE, KIND_FILL } from '../slabs/slab-render-palette';
+// ADR-531 Φ5b.4 — «Μόνο κάτοψη DXF» plan-lines όψη (view flag).
+import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { getWallCoveringColor } from '../wall-coverings/wall-covering-material-catalog';
 import { hexToRgba } from '../utils/bim-vg-fill-tint';
 import { adaptFillTintForCanvas } from '../../config/adaptive-entity-color';
@@ -74,7 +76,7 @@ const HATCH_SPACING_MM: Readonly<Record<SlabReinforcement, number>> = {
 /** ADR-363 Phase 3.7 — per-frame slab-opening index keyed by host slab id. */
 export type SlabOpeningsBySlab = ReadonlyMap<string, ReadonlyArray<SlabOpeningEntity>>;
 
-export class SlabRenderer extends BaseEntityRenderer {
+export class SlabRenderer extends BimFootprintRenderer {
   /**
    * ADR-363 Phase 3.7 — per-frame map of slab-openings keyed by host slab id.
    * Forwarded by `EntityRendererComposite.setSlabOpeningsBySlab()` ώστε ο
@@ -111,6 +113,14 @@ export class SlabRenderer extends BaseEntityRenderer {
     const verts = slab.geometry.polygon.vertices;
     if (verts.length < 3) return;
 
+    // ADR-531 Φ5b.4 — «Μόνο κάτοψη DXF»: μόνο το περίγραμμα της πλάκας (καθαρή γραμμή),
+    // χωρίς γέμισμα/διαγράμμιση/οπλισμό — όπως το top-view του Τέκτονα.
+    if (useBimRenderSettingsStore.getState().planLinesOnly) {
+      strokePolygonOutline(this.ctx, (p) => this.worldToScreen(p), verts, slab.color ?? KIND_STROKE[slab.kind]);
+      this.finalizeRender(entity, options);
+      return;
+    }
+
     // ADR-470 — core (σώμα πλάκας) component gate. Κρυμμένο → παραλείπουμε το σχέδιο.
     if (!isStructuralComponentVisible('core', slab)) {
       this.finalizeRender(entity, options);
@@ -120,16 +130,7 @@ export class SlabRenderer extends BaseEntityRenderer {
     const phaseState = this.phaseManager.determinePhase(entity as Entity, options);
 
     // Hover halo via outline thicker glow.
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.drawPolygonPath(verts);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
+    this.paintHoverHalo(verts, phaseState.phase === 'highlighted');
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
@@ -209,15 +210,7 @@ export class SlabRenderer extends BaseEntityRenderer {
     for (const opening of openings) {
       const verts = opening.geometry?.polygon.vertices;
       if (!verts || verts.length < 3) continue;
-      this.ctx.beginPath();
-      const start = this.worldToScreen({ x: verts[0].x, y: verts[0].y });
-      this.ctx.moveTo(start.x, start.y);
-      for (let i = 1; i < verts.length; i++) {
-        const s = this.worldToScreen({ x: verts[i].x, y: verts[i].y });
-        this.ctx.lineTo(s.x, s.y);
-      }
-      this.ctx.closePath();
-      this.ctx.fill();
+      fillPolygonScreen(this.ctx, (p) => this.worldToScreen(p), verts);
     }
     this.ctx.restore();
   }
@@ -228,14 +221,7 @@ export class SlabRenderer extends BaseEntityRenderer {
     // `applySlabGripDrag()` + `UpdateSlabParamsCommand` by `commitSlabGripDrag`
     // (grip-commit-adapter), with Shift driving rectilinear quantization.
     if (!isSlabEntity(entity)) return [];
-    return getSlabGrips(entity as SlabEntity).map((g) => ({
-      id: `${g.entityId}-grip-${g.gripIndex}`,
-      position: g.position,
-      type: g.type === 'midpoint' ? ('midpoint' as const) : ('vertex' as const),
-      entityId: g.entityId,
-      isVisible: true,
-      gripIndex: g.gripIndex,
-    }));
+    return mapBimGrips(getSlabGrips(entity as SlabEntity));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
@@ -243,33 +229,11 @@ export class SlabRenderer extends BaseEntityRenderer {
     const slab = entity as SlabEntity;
     const bb = slab.geometry?.bbox;
     if (!bb) return false;
-    // Bbox quick-reject με tolerance.
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) {
-      return false;
-    }
-    // Detailed point-in-polygon test (ray casting).
-    const verts = slab.geometry.polygon.vertices;
-    return pointInPolygon(point, verts);
+    // Bbox quick-reject (tolerance) + ray-cast point-in-polygon — shared SSoT.
+    return polygonBboxHitTest(bb, slab.geometry.polygon.vertices, point, tolerance);
   }
 
   // ─── Internal helpers ────────────────────────────────────────────────────
-
-  private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
-    if (vertices.length < 3) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
-  }
 
   /**
    * Phase 3.6 — light hatch hint per reinforcement family. Drawn in world
@@ -305,6 +269,16 @@ export class SlabRenderer extends BaseEntityRenderer {
     this.ctx.restore();
   }
 
+  /** Stroke ενός world-space τμήματος (SSoT — κοινό για τα δύο orientations, N.0.2 anti-dup). */
+  private strokeWorldSegment(ax: number, ay: number, bx: number, by: number): void {
+    const a = this.worldToScreen({ x: ax, y: ay });
+    const b = this.worldToScreen({ x: bx, y: by });
+    this.ctx.beginPath();
+    this.ctx.moveTo(a.x, a.y);
+    this.ctx.lineTo(b.x, b.y);
+    this.ctx.stroke();
+  }
+
   private drawParallelLines(
     bbox: SlabEntity['geometry']['bbox'],
     spacingMm: number,
@@ -313,23 +287,13 @@ export class SlabRenderer extends BaseEntityRenderer {
     if (orientation === 'horizontal') {
       const startY = Math.ceil(bbox.min.y / spacingMm) * spacingMm;
       for (let y = startY; y <= bbox.max.y; y += spacingMm) {
-        const a = this.worldToScreen({ x: bbox.min.x, y });
-        const b = this.worldToScreen({ x: bbox.max.x, y });
-        this.ctx.beginPath();
-        this.ctx.moveTo(a.x, a.y);
-        this.ctx.lineTo(b.x, b.y);
-        this.ctx.stroke();
+        this.strokeWorldSegment(bbox.min.x, y, bbox.max.x, y);
       }
       return;
     }
     const startX = Math.ceil(bbox.min.x / spacingMm) * spacingMm;
     for (let x = startX; x <= bbox.max.x; x += spacingMm) {
-      const a = this.worldToScreen({ x, y: bbox.min.y });
-      const b = this.worldToScreen({ x, y: bbox.max.y });
-      this.ctx.beginPath();
-      this.ctx.moveTo(a.x, a.y);
-      this.ctx.lineTo(b.x, b.y);
-      this.ctx.stroke();
+      this.strokeWorldSegment(x, bbox.min.y, x, bbox.max.y);
     }
   }
 

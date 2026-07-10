@@ -12,6 +12,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Point3D } from '../types/bim-base';
+import type { PlanLineSeg } from '../walls/wall-plan-line-segments';
 
 /** Projects a world-space point to screen (canvas) space. */
 type WorldToScreen = (p: Point2D) => Point2D;
@@ -80,6 +81,26 @@ export function strokePerimeterOutline(
 ): void {
   if (outer.length < 2 || inner.length < 2) return;
   traceFootprintRing(ctx, toScreen, outer, inner);
+  ctx.stroke();
+}
+
+/**
+ * ADR-531 Φ5b.3 — «Μόνο κάτοψη DXF» plan-lines: strokes disjoint 2-point segments (κομμένες
+ * παρειές + caps + jamb returns από {@link wallPlanLineSegments}). Caller sets stroke style/width.
+ */
+export function strokePlanLineSegments(
+  ctx: CanvasRenderingContext2D,
+  toScreen: WorldToScreen,
+  segs: readonly PlanLineSeg[],
+): void {
+  if (segs.length === 0) return;
+  ctx.beginPath();
+  for (const s of segs) {
+    const a = toScreen(s.a);
+    const b = toScreen(s.b);
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+  }
   ctx.stroke();
 }
 

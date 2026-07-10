@@ -31,13 +31,11 @@
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  */
 
-import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
+import { BimFootprintRenderer } from './bim-footprint-renderer';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isColumnEntity } from '../../types/entities';
 import type { ColumnEntity } from '../types/column-types';
-import { pointInPolygon } from '../geometry/shared/polygon-utils';
-import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
@@ -45,7 +43,7 @@ import { resolveCutState } from '../../config/bim-view-range';
 import { resolveBimBodyFill } from '../utils/bim-body-fill';
 import { topFacePlanFill } from '../utils/bim-face-plan-fill';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
-import { HOVER_HIGHLIGHT } from '../../config/color-config';
+import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { getLayer } from '../../stores/LayerStore';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { getColumnGrips } from '../columns/column-grips';
@@ -55,7 +53,8 @@ import { drawEntityDimLabel } from '../labels/bim-dim-labels';
 import { KIND_STROKE, KIND_FILL } from '../columns/column-render-palette';
 import { isWallColumnKind } from '../columns/column-from-faces';
 import { columnCutPlaneShiftCanvas } from '../geometry/cut-plane-tilt';
-import { drawCutPlaneTiltProjection, cutPlaneShiftScreenDelta } from './cut-plane-tilt-projection';
+import { drawCutPlaneTiltProjection, applyCutPlaneTranslate } from './cut-plane-tilt-projection';
+import { strokePolygonOutline, polygonBboxHitTest, mapBimGrips } from './bim-polygon-render';
 import {
   drawColumnMaterialHatch,
   drawColumnVariantDimensionLabels,
@@ -66,7 +65,7 @@ import {
 // `FinishFacesByColumn`) αφαιρέθηκε: ο σοβάς σχεδιάζεται ως ΕΝΑ scene-level merged-silhouette
 // pass στον `DxfRenderer` (κοινή SSoT με 3Δ). Ο πυρήνας της κολόνας εδώ είναι αμετάβλητος.
 
-export class ColumnRenderer extends BaseEntityRenderer {
+export class ColumnRenderer extends BimFootprintRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isColumnEntity(entity)) return;
     const column = entity as ColumnEntity;
@@ -85,6 +84,14 @@ export class ColumnRenderer extends BaseEntityRenderer {
     if (!column.geometry || !column.params) return;
     const verts = column.geometry.footprint.vertices;
     if (verts.length < 3) return;
+
+    // ADR-531 Φ5b.5 — «Μόνο κάτοψη DXF»: μόνο το περίγραμμα της κολώνας/τοιχίου (καθαρή γραμμή),
+    // χωρίς γέμισμα/διαγράμμιση/οπλισμό — όπως το top-view του Τέκτονα (mirror SlabRenderer/WallRenderer).
+    if (useBimRenderSettingsStore.getState().planLinesOnly) {
+      strokePolygonOutline(this.ctx, (p) => this.worldToScreen(p), verts, column.color ?? KIND_STROKE[column.kind]);
+      this.finalizeRender(entity, options);
+      return;
+    }
 
     // ADR-470 — core (σώμα σκυροδέματος) component gate. Όταν κρυμμένο (per-view ή
     // per-element override), παραλείπουμε ΟΛΟ το σχέδιο του σώματος (fill/hatch/
@@ -105,23 +112,10 @@ export class ColumnRenderer extends BaseEntityRenderer {
       column.params,
       useDrawingScaleStore.getState().viewRange.cutPlaneMm,
     );
-    if (_tiltShift) {
-      const d = cutPlaneShiftScreenDelta(_tiltShift, (p) => this.worldToScreen(p));
-      this.ctx.save();
-      this.ctx.translate(d.x, d.y);
-    }
+    applyCutPlaneTranslate(this.ctx, _tiltShift, (p) => this.worldToScreen(p));
 
     // Hover halo via outline thicker glow.
-    if (phaseState.phase === 'highlighted') {
-      this.ctx.save();
-      this.ctx.strokeStyle = HOVER_HIGHLIGHT.ENTITY.glowColor;
-      this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL + HOVER_HIGHLIGHT.ENTITY.glowExtraWidth;
-      this.ctx.globalAlpha = HOVER_HIGHLIGHT.ENTITY.glowOpacity;
-      this.ctx.setLineDash([]);
-      this.drawPolygonPath(verts);
-      this.ctx.stroke();
-      this.ctx.restore();
-    }
+    this.paintHoverHalo(verts, phaseState.phase === 'highlighted');
 
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
@@ -220,18 +214,10 @@ export class ColumnRenderer extends BaseEntityRenderer {
     // by `commitColumnGripDrag` (grip-parametric-commits). Phase 4.5c+ will
     // add hatch patterns, anchor-cycle preview, snap-to-wall corners.
     if (!isColumnEntity(entity)) return [];
-    return getColumnGrips(entity as ColumnEntity).map((g) => ({
-      id: `${g.entityId}-grip-${g.gripIndex}`,
-      position: g.position,
-      type: g.type === 'center' ? ('center' as const) : ('vertex' as const),
-      entityId: g.entityId,
-      isVisible: true,
-      gripIndex: g.gripIndex,
-      // ADR-397 — icon glyph for the move/rotation handles (column-center →
-      // 4-arrow, column-rotation → curved arrow) via the shared registry SSoT,
-      // mirror Wall/StairRenderer. Other column grips stay square.
-      shape: gripGlyphShape(gripKindOf(g, 'column')),
-    }));
+    // ADR-397 — move/rotation handles (column-center → 4-arrow, column-rotation →
+    // curved arrow) get their icon glyph from the shared registry SSoT; other grips
+    // stay square. Mapping itself is the shared BIM SSoT (mapBimGrips).
+    return mapBimGrips(getColumnGrips(entity as ColumnEntity), (g) => gripGlyphShape(gripKindOf(g, 'column')));
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {
@@ -239,31 +225,8 @@ export class ColumnRenderer extends BaseEntityRenderer {
     const column = entity as ColumnEntity;
     const bb = column.geometry?.bbox;
     if (!bb) return false;
-    // Bbox quick-reject με tolerance.
-    if (
-      point.x < bb.min.x - tolerance ||
-      point.x > bb.max.x + tolerance ||
-      point.y < bb.min.y - tolerance ||
-      point.y > bb.max.y + tolerance
-    ) {
-      return false;
-    }
-    // Detailed point-in-polygon test (ray casting).
-    const verts = column.geometry.footprint.vertices;
-    return pointInPolygon(point, verts);
+    // Bbox quick-reject (tolerance) + ray-cast point-in-polygon — shared SSoT.
+    return polygonBboxHitTest(bb, column.geometry.footprint.vertices, point, tolerance);
   }
 
-  // ─── Internal helpers ────────────────────────────────────────────────────
-
-  private drawPolygonPath(vertices: ReadonlyArray<{ x: number; y: number }>): void {
-    if (vertices.length < 3) return;
-    this.ctx.beginPath();
-    const first = this.worldToScreen({ x: vertices[0].x, y: vertices[0].y });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < vertices.length; i++) {
-      const s = this.worldToScreen({ x: vertices[i].x, y: vertices[i].y });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
-  }
 }
