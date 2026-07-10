@@ -85,6 +85,12 @@ function mirrorVariant(
           flipLR(v.turnSequence[1]),
         ] as const,
       };
+    case 'multi-flight':
+      // Each turn's chirality flips across the mirror axis (anti-Revit-bug Q23).
+      return {
+        ...v,
+        turns: v.turns.map((t) => ({ ...t, turnDirection: flipLR(t.turnDirection) })),
+      };
     case 'spiral':
     case 'helical':
       return {
@@ -151,6 +157,7 @@ function rotateVariant(
     case 'l-shape':
     case 'u-shape':
     case 'gamma':
+    case 'multi-flight':
     case 'winder':
     case 'v-shape':
       return v;
@@ -199,6 +206,7 @@ function copyVariant(
     case 'l-shape':
     case 'u-shape':
     case 'gamma':
+    case 'multi-flight':
     case 'winder':
     case 'v-shape':
       return v;

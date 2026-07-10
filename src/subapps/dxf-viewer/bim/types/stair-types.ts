@@ -61,6 +61,7 @@ export type StairKind =
   | 'l-shape'
   | 'u-shape'
   | 'gamma'
+  | 'multi-flight'
   | 'spiral'
   | 'helical'
   | 'elliptical'
@@ -179,6 +180,7 @@ export type StairVariantParams =
   | StairVariantLShape
   | StairVariantUShape
   | StairVariantGamma
+  | StairVariantMultiFlight
   | StairVariantSpiral
   | StairVariantHelical
   | StairVariantElliptical
@@ -245,6 +247,52 @@ export interface StairVariantGamma {
   readonly landings: readonly ['auto' | number, 'auto' | number];
   readonly landingCornerStyle?: StairLandingCornerStyle;
   readonly flightSplit: readonly [number, number, number];
+}
+
+/**
+ * ADR-633 — Multi-flight stair with user-authored turn points on the parieta.
+ *
+ * Generalizes l-shape (1 turn, 90°) / gamma (2 turns, 90°) to an ARBITRARY
+ * number of turns, each at an arbitrary plan-view angle and side. The user
+ * clicks a side (parieta) of a straight run in plan view; the clicked side
+ * decides the turn direction (right parieta → `'right'`, left → `'left'`) and
+ * the click position splits the run into consecutive `flights`. Each junction
+ * carries a `StairTurnNode` (angle + landing/winders corner style).
+ *
+ * z-model (matches gamma): each turn's landing consumes one rise — flight `k`
+ * top tread at `z = zStart_k + rise·(n_k−1)`, landing at `zStart_k + rise·n_k`,
+ * flight `k+1` first tread at `zStart_k + rise·(n_k+1)`.
+ *
+ * The turn tool always authors this variant (single SSoT); l-shape/gamma remain
+ * as ribbon presets. Geometry: `stair-geometry-multiflight.ts` (ADR-611 reuse).
+ */
+export interface StairTurnNode {
+  /** Side clicked → turn direction. `'left'` = ccw (+angle), `'right'` = cw (−angle). */
+  readonly turnDirection: StairTurnDirectionLR;
+  /** Plan-view direction change in degrees (default 90). The pitch is unchanged. */
+  readonly turnAngleDeg: number;
+  /** Corner detail — Phase 1 supports `'landing'`; Phase 2 adds `'winders'`. */
+  readonly cornerStyle: 'landing' | 'winders';
+  /** Landing depth for `cornerStyle: 'landing'`. `'auto'` → `params.width`. */
+  readonly landingDepth?: 'auto' | number;
+  /** Winder tread count for `cornerStyle: 'winders'` (Phase 2). */
+  readonly winderCount?: number;
+  /** Winder distribution method for `cornerStyle: 'winders'` (Phase 2). */
+  readonly winderMethod?: StairWinderMethod;
+}
+
+export interface StairVariantMultiFlight {
+  readonly kind: 'multi-flight';
+  /** Per-flight tread counts. `length = turns.length + 1`, each `≥ 1`. */
+  readonly flights: readonly number[];
+  /** One turn node between consecutive flights `k` and `k+1`. */
+  readonly turns: readonly StairTurnNode[];
+}
+
+export function isMultiFlightVariant(
+  v: StairVariantParams,
+): v is StairVariantMultiFlight {
+  return v.kind === 'multi-flight';
 }
 
 export interface StairVariantSpiral {

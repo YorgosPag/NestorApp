@@ -67,6 +67,19 @@ export function buildDefaultVariantFor(
         landings: ['auto', 'auto'] as const,
         flightSplit: splitThreeFlightsWithLandings(prev.stepCount),
       };
+    case 'multi-flight':
+      return {
+        kind: 'multi-flight',
+        flights: splitTwoFlightsWithLanding(prev.stepCount),
+        turns: [
+          {
+            turnDirection: 'right',
+            turnAngleDeg: 90,
+            cornerStyle: 'landing',
+            landingDepth: 'auto',
+          },
+        ],
+      };
     case 'spiral':
       return {
         kind: 'spiral',

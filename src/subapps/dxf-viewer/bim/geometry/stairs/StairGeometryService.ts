@@ -36,6 +36,7 @@ import { assembleStairGeometry, buildRectilinearFlight } from './stair-geometry-
 import { computeLShape } from './stair-geometry-lshape';
 import { computeUShape } from './stair-geometry-ushape';
 import { computeGamma } from './stair-geometry-gamma';
+import { computeMultiFlight } from './stair-geometry-multiflight';
 import { computeSpiral } from './stair-geometry-spiral';
 import { computeHelical } from './stair-geometry-helical';
 import { computeElliptical } from './stair-geometry-elliptical';
@@ -63,6 +64,8 @@ export function computeStairGeometry(params: Readonly<StairParams>): StairGeomet
       return computeUShape(params, variant);
     case 'gamma':
       return computeGamma(params, variant);
+    case 'multi-flight':
+      return computeMultiFlight(params, variant);
     case 'spiral':
       return computeSpiral(params, variant);
     case 'helical':
