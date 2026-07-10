@@ -214,6 +214,10 @@ export function generatePreviewEntity(
   if (tool === 'column-from-polygon') {
     return generateSlabPreview(tempPoints, resolvePolygonPreviewCursor(cursorPoint, sceneUnits));
   }
+  // NOTE (ADR-619): «Σκάλα από περιοχή» δεν έχει δικό της branch εδώ — το `updatePreview`
+  // route-άρει το currentTool σε 'slab' (βλ. `isStairRegion`), οπότε το κλειστό πολύγωνο
+  // κλιμακοστασίου ζωγραφίζεται από το `tool === 'slab'` branch παραπάνω (ΙΔΙΟ rubber-band,
+  // vertices από το `stairRegionPreviewStore`). Ο τύπος σκάλας ταξινομείται στο commit.
   // ── ADR-398 §3.8 — Column tool WYSIWYG preview branch ─────────────────────
   //    Single-click member → no rubber-band tempPoints; the ghost is built from
   //    the snapped cursor + the live column-tool bridge/face-snap SSoT (preview

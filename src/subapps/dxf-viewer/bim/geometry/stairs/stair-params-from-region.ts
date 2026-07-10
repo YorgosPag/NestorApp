@@ -1,165 +1,161 @@
 /**
- * ADR-619 — `StairParams` builder από ταξινόμηση περιοχής (stair-from-region).
+ * ADR-619 v2 — `StairParams` builder από τη walkline της περιοχής (STEP 3+5).
  *
- * Παίρνει το `StairRegionClassification` (stair-region-classifier.ts) και παράγει
- * ΕΓΚΥΡΟ `StairParams`, επαναχρησιμοποιώντας το SSoT `buildDefaultStairParams`
- * (stair-completion.ts) — ΜΗΔΕΝ αναπαραγωγή geometry/defaults εδώ. Το downstream
- * `buildStairEntity` υπολογίζει τη γεωμετρία μέσω `computeStairGeometry`.
+ * Παίρνει το `StairRegionClassification` (walkline + πλάτος + βάση) και παράγει
+ * ΕΓΚΥΡΟ walkline-driven `StairParams` (variant `'sketch'`), επαναχρησιμοποιώντας
+ * το SSoT `buildDefaultStairParams` ως seed (rise/tread/width/handrails/…) — ΜΗΔΕΝ
+ * αναπαραγωγή geometry/defaults. Το downstream `computeStairGeometry` (variant
+ * `'sketch'` → `computeWalklineStair`) υπολογίζει treads/risers/stringers.
  *
- * Ανά kind:
- *   - 'straight'     → buildDefaultStairParams (variant 'straight'), stepCount από run/tread.
- *   - 'lWithWinders' → variant 'l-shape' cornerStyle 'winders' (τεταρτοστροφική).
- *   - 'switchback'   → variant 'u-shape' (ημιστροφική, 180° mid-landing).
- *   - 'spiral'       → variant 'spiral' (κεντρικός κίονας, outerRadius = params.width).
+ * FIT CHECK (STEP 3, Google-level, ΠΟΤΕ throw):
+ *   - H = ύψος ορόφου (floorLink / default 3000mm)· r = default riser.
+ *   - N_risers = round(H/r)· r_actual = H/N_risers· N_goings = N_risers − 1.
+ *   - required = N_goings × going_default.
+ *   - required ≤ L → going_effective = going_default (χωράει).
+ *   - required > L → COMPRESS: going_effective = L / N_goings (+warning) ώστε ΟΛΑ
+ *     τα πατήματα να χωρέσουν στο διαθέσιμο μήκος (επιλογή Giorgio: πυκνότερο πάτημα).
  *
- * ΠΟΤΕ δεν παράγει άκυρο `StairParams` και ΠΟΤΕ δεν κρασάρει: όταν ένα kind δεν
- * μπορεί να παραχθεί με σιγουριά (π.χ. πολύ λίγα σκαλοπάτια για winders/switchback)
- * κάνει fallback σε 'straight' προσαρμοσμένο στο bbox.
+ * MAP (STEP 5): stepCount = N_goings (⇒ walklinePath.length = N_goings+1 = N_risers,
+ * όσο απαιτεί το sketch variant)· rise = r_actual· tread = going_effective·
+ * width = **type default** (`seed.width`, SSoT «Κεντρικό Κλιμακοστάσιο» = 1200mm) —
+ * ΑΠΟΣΥΝΔΕΔΕΜΕΝΟ από το μετρημένο πλάτος διαδρόμου (Revit-style type parameter: ο
+ * διάδρομος περιορίζει, δεν ΟΡΙΖΕΙ το πλάτος· η σκάλα κεντράρεται στη walkline)·
+ * basePoint/direction από τη βάση. Η walkline δειγματοληπτείται σε ίσα τόξα-μήκη
+ * (arc sampling μέσα στα winder τόξα). Δεν κρατάμε floor-link ώστε το
+ * `reconcileLinkedStair` να ΜΗΝ ξαναϋπολογίσει το stepCount (θα έσπαγε το invariant).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-619-stair-from-region.md
  */
 
 import type {
   StairParams,
-  StairVariantLShapeWinders,
-  StairVariantSpiral,
-  StairVariantUShape,
-  Point3D,
+  StairVariantSketch,
 } from '../../types/stair-types';
 import {
   buildDefaultStairParams,
   type StairFloorLinkInput,
 } from '../../../hooks/drawing/stair-completion';
-import type { SceneUnits } from '../../../utils/scene-units';
+import { mmToSceneUnits, type SceneUnits } from '../../../utils/scene-units';
 import type { Vec2 } from './stair-geometry-shared';
 import type { StairRegionClassification } from './stair-region-classifier';
+import { buildSerialFillWalklinePath, flightLength } from './stair-region-fill';
 
 const RAD_TO_DEG = 180 / Math.PI;
-const MIN_STEP_COUNT = 3;
-/** NOK quarter-turn: 3 winder treads στη γωνία. */
-const DEFAULT_WINDER_COUNT = 3;
-/** Ελάχιστα σκαλοπάτια για να «χωρέσει» winder τεταρτοστροφική (n1≥1 + 3 + n2≥1). */
-const MIN_STEPS_L_WINDERS = DEFAULT_WINDER_COUNT + 2;
-/** Ελάχιστα σκαλοπάτια για switchback (n1≥1 + n2≥1, ουσιαστικά ≥4 για δύο κλάδους). */
-const MIN_STEPS_SWITCHBACK = 4;
-/** Πλήρης στροφή για ελικοειδή. */
-const SPIRAL_SWEEP_DEG = 360;
+/** Default ύψος ορόφου όταν λείπει floor link (mm). */
+const DEFAULT_FLOOR_HEIGHT_MM = 3000;
+
+export const WARNING_GOING_COMPRESSED = 'going-compressed';
+
+// ─── Fit check (STEP 3) ───────────────────────────────────────────────────────
+
+/** Αποτέλεσμα ελέγχου «χωράει η σκάλα;» — όλα σε scene units. */
+export interface WalklineStairFit {
+  readonly nRisers: number;
+  readonly nGoings: number;
+  readonly riseActual: number;
+  readonly goingEffective: number;
+  /** Μήκος walkline που καταλαμβάνει η σκάλα (≤ L). */
+  readonly occupiedLength: number;
+  readonly compressed: boolean;
+  readonly warnings: readonly string[];
+}
+
+/**
+ * Έλεγχος fit + (αν χρειάζεται) συμπίεση πατήματος. Καθαρή, ντετερμινιστική, ΠΟΤΕ
+ * throw. `walklineLength`,`floorHeight`,`targetRise`,`goingDefault` σε scene units.
+ */
+export function computeWalklineStairFit(
+  walklineLength: number,
+  floorHeight: number,
+  targetRise: number,
+  goingDefault: number,
+): WalklineStairFit {
+  const H = floorHeight > 0 ? floorHeight : DEFAULT_FLOOR_HEIGHT_MM;
+  const r = targetRise > 0 ? targetRise : H;
+  const nRisers = Math.max(2, Math.round(H / r));
+  const riseActual = H / nRisers;
+  const nGoings = Math.max(1, nRisers - 1);
+  const required = nGoings * goingDefault;
+  const L = walklineLength > 0 ? walklineLength : 0;
+  const fits = L <= 0 ? true : required <= L;
+  const goingEffective = fits || L <= 0 ? goingDefault : L / nGoings;
+  const occupiedLength = Math.min(nGoings * goingEffective, L > 0 ? L : nGoings * goingEffective);
+  return {
+    nRisers,
+    nGoings,
+    riseActual,
+    goingEffective,
+    occupiedLength,
+    compressed: !fits && L > 0,
+    warnings: !fits && L > 0 ? [WARNING_GOING_COMPRESSED] : [],
+  };
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function directionDeg(dir: Vec2): number {
   return Math.atan2(dir.y, dir.x) * RAD_TO_DEG;
 }
 
-/** stepCount από το μήκος διαδρομής / βάθος πατήματος (SSoT tread), clamp min. */
-function resolveStepCount(run: number, tread: number): number {
-  if (!(tread > 0) || !(run > 0)) return MIN_STEP_COUNT;
-  return Math.max(MIN_STEP_COUNT, Math.round(run / tread));
+/** Ύψος ορόφου (scene units) από floor link (μέτρα → mm → scene) ή default. */
+function resolveFloorHeight(floorLink: StairFloorLinkInput | null, s: number): number {
+  const mm = floorLink && typeof floorLink.height === 'number' && floorLink.height > 0
+    ? floorLink.height * 1000
+    : DEFAULT_FLOOR_HEIGHT_MM;
+  return mm * s;
 }
 
+// ─── Public builder (STEP 5) ──────────────────────────────────────────────────
+
 /**
- * Χτίζει `StairParams` για την περιοχή. `sceneUnits`/`floorLink` περνούν αυτούσια
- * στο `buildDefaultStairParams`.
+ * Χτίζει walkline-driven (variant `'sketch'`) `StairParams` για την περιοχή.
+ * `sceneUnits` περνά στο seed· `floorLink` δίνει ΜΟΝΟ το ύψος ορόφου (δεν κρατιέται
+ * ως link στα τελικά params — βλ. module doc).
  */
 export function buildStairParamsFromRegion(
   classification: StairRegionClassification,
   sceneUnits: SceneUnits = 'mm',
   floorLink: StairFloorLinkInput | null = null,
 ): StairParams {
+  const s = mmToSceneUnits(sceneUnits);
   const dirDeg = directionDeg(classification.direction);
-  const width = classification.width > 0 ? classification.width : undefined;
+  // Seed defaults (rise/tread/width/handrails…) — ΧΩΡΙΣ floor link ώστε το seed να
+  // ΜΗΝ φέρει multiStoryConfig (reconcile θα ξαναϋπολόγιζε το stepCount).
+  const seed = buildDefaultStairParams(classification.basePoint, dirDeg, {}, sceneUnits, null);
 
-  // Seed default → διαβάζουμε το SSoT default tread (χωρίς hardcoded 280mm).
-  const seed = buildDefaultStairParams(
-    classification.basePoint,
-    dirDeg,
-    width !== undefined ? { width } : {},
-    sceneUnits,
-    floorLink,
+  const floorHeight = resolveFloorHeight(floorLink, s);
+  // Fit στο ΑΘΡΟΙΣΜΑ ΜΗΚΩΝ ΤΩΝ ΚΛΑΔΩΝ (ευθείες), όχι στο συνολικό μήκος walkline: τα
+  // πατήματα κάθονται ΜΟΝΟ στους κλάδους — τα τόξα (στροφές) γίνονται πλατύσκαλα. Έτσι
+  // η συμπίεση πατήματος ενεργοποιείται μόνο όταν οι ΚΛΑΔΟΙ δεν χωρούν τα πατήματα.
+  const flights = flightLength(classification.walkline);
+  const fit = computeWalklineStairFit(flights, floorHeight, seed.rise, seed.tread);
+  // Πλάτος = type default (SSoT «Κεντρικό Κλιμακοστάσιο», 1200mm scene-scaled) — ΠΟΤΕ το
+  // μετρημένο `classification.width`. Ο διάδρομος περιορίζει (warning `below-min-width`
+  // όταν στενότερος), δεν ΟΡΙΖΕΙ το πλάτος (Revit-style type parameter). Η σκάλα
+  // κεντράρεται στη walkline. `seed.width` προέρχεται από `DEFAULT_WIDTH_MM` (SSoT).
+  const width = seed.width;
+
+  const z = seed.basePoint.z;
+  // ΣΕΙΡΙΑΚΟ γέμισμα από τη βάση: πατήματα (goingEffective) στους κλάδους + επίπεδα
+  // πλατύσκαλα στις στροφές (μεικτά z). `preserveZ` ⇒ το computeSketch δεν ξαναγράφει z.
+  const walklinePath = buildSerialFillWalklinePath(
+    classification.walkline, fit.goingEffective, fit.riseActual, fit.nGoings, z,
   );
-  const stepCount = resolveStepCount(classification.run, seed.tread);
+  const variant: StairVariantSketch = { kind: 'sketch', walklinePath, preserveZ: true };
 
-  const straight = buildDefaultStairParams(
-    classification.basePoint,
-    dirDeg,
-    { ...(width !== undefined ? { width } : {}), stepCount },
-    sceneUnits,
-    floorLink,
-  );
-
-  switch (classification.kind) {
-    case 'straight':
-      return straight;
-    case 'lWithWinders':
-      return buildLWinders(straight);
-    case 'switchback':
-      return buildSwitchback(straight);
-    case 'spiral':
-      return buildSpiral(classification, straight);
-    default: {
-      const _exhaustive: never = classification.kind;
-      return straight;
-    }
-  }
-}
-
-// ─── Per-kind variant overrides ───────────────────────────────────────────────
-
-/**
- * L-shape με winders (τεταρτοστροφική). flightSplit `[n1, n2]` ώστε
- * `n1 + winderCount + n2 = stepCount`. Πολύ λίγα σκαλοπάτια → fallback straight.
- */
-function buildLWinders(straight: Readonly<StairParams>): StairParams {
-  if (straight.stepCount < MIN_STEPS_L_WINDERS) return straight;
-  const remaining = straight.stepCount - DEFAULT_WINDER_COUNT;
-  const n1 = Math.floor(remaining / 2);
-  const n2 = remaining - n1;
-  const variant: StairVariantLShapeWinders = {
-    kind: 'l-shape',
-    cornerStyle: 'winders',
-    turnDirection: 'left',
-    winderCount: DEFAULT_WINDER_COUNT,
-    winderMethod: 'equal-going',
-    flightSplit: [n1, n2],
+  return {
+    ...seed,
+    basePoint: { x: classification.basePoint.x, y: classification.basePoint.y, z },
+    direction: dirDeg,
+    rise: fit.riseActual,
+    tread: fit.goingEffective,
+    width,
+    // stepCount = ζεύγη walklinePath (πατήματα + πλατύσκαλα)· κρατά το invariant του
+    // sketch variant (`walklinePath.length === stepCount + 1`).
+    stepCount: Math.max(1, walklinePath.length - 1),
+    totalRise: fit.riseActual * fit.nRisers,
+    totalRun: fit.goingEffective * fit.nGoings,
+    pitch: Math.atan2(fit.riseActual, fit.goingEffective) * RAD_TO_DEG,
+    variant,
   };
-  return { ...straight, variant };
-}
-
-/**
- * U-shape (switchback, 180° mid-landing). flightSplit `[n1, n2]` με
- * `n1 + n2 = stepCount`. Πολύ λίγα σκαλοπάτια → fallback straight.
- */
-function buildSwitchback(straight: Readonly<StairParams>): StairParams {
-  if (straight.stepCount < MIN_STEPS_SWITCHBACK) return straight;
-  const n1 = Math.ceil(straight.stepCount / 2);
-  const n2 = straight.stepCount - n1;
-  const variant: StairVariantUShape = {
-    kind: 'u-shape',
-    turnDirection: 'left',
-    landingDepth: 'auto',
-    flightSplit: [n1, n2],
-  };
-  return { ...straight, variant };
-}
-
-/**
- * Spiral (κεντρικός κίονας). `centerPoint` = classification.basePoint (area
- * centroid), outerRadius = `params.width` (ήδη = ακτίνα short/2 από τον
- * classifier). Πλήρης στροφή 360°.
- */
-function buildSpiral(
-  classification: StairRegionClassification,
-  straight: Readonly<StairParams>,
-): StairParams {
-  const centerPoint: Point3D = {
-    x: classification.basePoint.x,
-    y: classification.basePoint.y,
-    z: straight.basePoint.z,
-  };
-  const variant: StairVariantSpiral = {
-    kind: 'spiral',
-    centerPoint,
-    innerRadius: 0,
-    sweepAngle: SPIRAL_SWEEP_DEG,
-    turnDirection: 'ccw',
-  };
-  return { ...straight, variant };
 }

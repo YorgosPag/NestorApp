@@ -1,21 +1,23 @@
 /**
- * ADR-619 — Ταξινομητής «Σκάλα από περιοχή» (stair-from-region).
+ * ADR-619 v2 — «Σκάλα από περιοχή»: ιχνηλάτης walkline (γραμμή ανάβασης).
  *
- * Καθαρή συνάρτηση: παίρνει ένα ΚΛΕΙΣΤΟ ελεύθερο πολύγωνο (το κλιμακοστάσιο που
- * σχεδίασε ο χρήστης) και αποφασίζει ΤΙ ΤΥΠΟ σκάλας «χωράει» μέσα του, με βάση
- * το ΣΧΗΜΑ του αποτυπώματος:
+ * ΑΝΤΙΚΑΘΙΣΤΑ τον v1 bbox-bucket ταξινομητή (straight/L/U/spiral). Πλέον ο χρήστης
+ * σχεδιάζει το ΚΛΕΙΣΤΟ ΟΡΘΟΓΩΝΙΟ ΟΡΙΟ του κλιμακοστασίου (το «λούκι»/corridor) και
+ * η συνάρτηση επιστρέφει τη ΣΥΝΕΧΗ walkline (κεντρική γραμμή του διαδρόμου με
+ * ακτινωτά τόξα στις στροφές) + το πλάτος w + τη βάση (STEP 1-4 του ADR).
  *
- *   - ~ορθογώνιο (γεμάτο)            → 'straight'      (ευθεία)
- *   - ~Γ / L (δύο ορθογώνια)         → 'lWithWinders'  (τεταρτοστροφική)
- *   - ~Π / U (switchback)            → 'switchback'    (ημιστροφική)
- *   - ~κύκλος (υψηλή κυκλικότητα)    → 'spiral'        (ελικοειδής)
+ * Ροή:
+ *   1. Normalise (dedupe closing/consecutive, CCW, simplify collinear).
+ *   2. `traceCorridorWalkline` (STEP 1: parallel-pair centreline + winder arcs).
+ *   3. width = min pair distance· warning `below-min-width` όταν < 1200mm.
+ *   4. base = ελεύθερο άκρο ΠΙΟ ΚΟΝΤΑ στην ΠΡΩΤΗ κορυφή σχεδίασης.
  *
- * ΠΟΤΕ δεν πετάει exception: εκφυλισμένα/ανεπαρκή πολύγωνα (<3 κορυφές ή μηδενικό
- * εμβαδόν) επιστρέφουν low-confidence 'straight' fallback με `warning`.
+ * ΠΟΤΕ δεν πετάει: εκφυλισμένο (<3 κορυφές / μηδέν εμβαδόν / χωρίς ζεύγος διαδρόμου)
+ * → minimal ευθεία walkline κατά τον ΜΑΚΡΥ άξονα του bbox + warning.
  *
- * SSoT γεωμετρίας: επαναχρησιμοποιεί ΟΛΑ τα polygon helpers από
- * `bim/geometry/shared/polygon-utils.ts` (shoelace/area/perimeter/bbox/centroid)
- * — μηδέν διπλότυπο shoelace/centroid (N.0.2). Vec2 από το stair shared SSoT.
+ * SSoT: polygon helpers από `shared/polygon-utils.ts` (area/bbox), vector helpers
+ * από `geometry-vector-utils`, walkline geometry από `stair-region-walkline.ts`.
+ * Τα warnings είναι ΚΩΔΙΚΟΙ (όχι user-facing strings) — το UI τα μεταφράζει αργότερα.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-619-stair-from-region.md
  */
@@ -24,74 +26,46 @@ import type { Point2D, Point3D } from '../../../rendering/types/Types';
 import type { SceneUnits } from '../../../utils/scene-units';
 import { mmToSceneUnits } from '../../../utils/scene-units';
 import type { Vec2 } from './stair-geometry-shared';
+import { polygonArea, polygonBbox } from '../shared/polygon-utils';
 import {
-  polygonArea,
-  polygonPerimeter,
-  polygonBbox,
-  polygonAreaCentroid,
-} from '../shared/polygon-utils';
+  type CorridorWalkline,
+  type WalklineSegment,
+  traceCorridorWalkline,
+} from './stair-region-walkline';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
-/** Τύπος σκάλας που προκύπτει από το σχήμα της περιοχής. */
-export type StairRegionKind = 'straight' | 'lWithWinders' | 'switchback' | 'spiral';
+/** Κάτω από αυτό το πλάτος (mm) → warning «κάτω από ελάχιστο κεντρικού κλιμακοστασίου». */
+export const MIN_CENTRAL_STAIRWELL_WIDTH_MM = 1200;
+
+export const WARNING_BELOW_MIN_WIDTH = 'below-min-width';
+export const WARNING_DEGENERATE = 'degenerate-region';
+export const WARNING_NO_CORRIDOR = 'no-corridor-pair';
 
 /**
- * Αποτέλεσμα ταξινόμησης της περιοχής. `direction` = ΜΟΝΑΔΙΑΙΟ διάνυσμα κατά τον
- * ΜΑΚΡΥ άξονα (module B το μετατρέπει σε μοίρες). Όλα τα μήκη σε scene units του
- * input πολυγώνου. Για 'spiral': `basePoint` = κέντρο (area centroid), `width` =
- * ακτίνα (short/2).
+ * Αποτέλεσμα «Σκάλα από περιοχή» v2 — η walkline + οι μετρήσεις που τροφοδοτούν τον
+ * `buildStairParamsFromRegion`. Όλα τα μήκη σε scene units του input πολυγώνου.
  */
 export interface StairRegionClassification {
-  readonly kind: StairRegionKind;
-  readonly basePoint: Point2D;
-  readonly direction: Vec2;
+  /** Συνεχής walkline (ευθείες + τόξα), ταξινομημένη από ΒΑΣΗ προς κορυφή. */
+  readonly walkline: readonly WalklineSegment[];
+  /** Συνολικό μήκος τόξου L της walkline. */
+  readonly length: number;
+  /** Πλάτος διαδρόμου w = μετρημένη απόσταση ζεύγους (offset = w/2). */
   readonly width: number;
-  /** Μήκος κατά τον μακρύ άξονα (bbox long). */
-  readonly run: number;
+  /** Βάση (κάτω σκαλί, αφετηρία βέλους ΑΝΩ) — ελεύθερο άκρο κοντά στην 1η κορυφή. */
+  readonly basePoint: Point2D;
+  /** Κορυφή (άλλο ελεύθερο άκρο). */
+  readonly topPoint: Point2D;
+  /** Μοναδιαία διεύθυνση ανάβασης στη βάση. */
+  readonly direction: Vec2;
   /** Το input αποτύπωμα (αμετάβλητο αντίγραφο). */
   readonly footprint: readonly Point2D[];
-  readonly circularity: number;
-  readonly fillRatio: number;
-  readonly cornerCount: number;
-  /** Εμπιστοσύνη 0..1. */
-  readonly confidence: number;
-  /** Κωδικός προειδοποίησης (internal, όχι user-facing) όταν έγινε fallback. */
-  readonly warning?: string;
+  /** Δομημένοι κωδικοί προειδοποίησης (internal — όχι user-facing). */
+  readonly warnings: readonly string[];
 }
 
-// ─── Decision thresholds ──────────────────────────────────────────────────────
-
-const FILL_STRAIGHT_MIN = 0.85;
-const FILL_L_MIN = 0.45;
-const FILL_L_MAX = 0.85;
-const CIRC_SPIRAL_MIN = 0.7;
-/** Ημίτονο μέγιστης απόκλισης για «συγγραμμικό» (≈5°) στο simplify. */
-const COLLINEAR_SIN_TOL = 0.08;
-/** Ανοχή για «σχεδόν 90°» γωνία κορυφής. */
-const NEAR_90_TOL_DEG = 22;
-const RAD_TO_DEG = 180 / Math.PI;
-
-const WARNING_DEGENERATE = 'degenerate-region';
-const WARNING_LOW_CONFIDENCE = 'low-confidence-fallback';
-
-// ─── Small vector helpers (τοπικά, zero-dep) ──────────────────────────────────
-
-function sub(a: Point2D, b: Point2D): Vec2 {
-  return { x: a.x - b.x, y: a.y - b.y };
-}
-
-function normalize(v: Vec2): Vec2 | null {
-  const len = Math.hypot(v.x, v.y);
-  if (len < 1e-12) return null;
-  return { x: v.x / len, y: v.y / len };
-}
-
-function lift(v: Point2D): Point3D {
-  return { x: v.x, y: v.y, z: 0 };
-}
-
-// ─── Normalisation + metrics ──────────────────────────────────────────────────
+// ─── Normalisation helpers ────────────────────────────────────────────────────
 
 /** Αφαιρεί διαδοχικά διπλά + το closing duplicate (last === first). */
 function dedupe(vertices: readonly Point2D[], eps: number): Point2D[] {
@@ -109,7 +83,23 @@ function dedupe(vertices: readonly Point2D[], eps: number): Point2D[] {
   return out;
 }
 
-/** Απλοποίηση συγγραμμικών κορυφών (unit-edge cross < sinTol). */
+function lift(v: Point2D): Point3D {
+  return { x: v.x, y: v.y, z: 0 };
+}
+
+/** True όταν η κορυφή `i` είναι ~συγγραμμική (μοναδιαίο cross < sinTol). */
+function isCollinear(a: Point2D, b: Point2D, c: Point2D, sinTol: number): boolean {
+  const ux = b.x - a.x;
+  const uy = b.y - a.y;
+  const vx = c.x - b.x;
+  const vy = c.y - b.y;
+  const du = Math.hypot(ux, uy);
+  const dv = Math.hypot(vx, vy);
+  if (du < 1e-9 || dv < 1e-9) return true;
+  return Math.abs((ux * vy - uy * vx) / (du * dv)) < sinTol;
+}
+
+/** Απλοποίηση συγγραμμικών κορυφών. */
 function simplifyCollinear(pts: readonly Point2D[]): Point2D[] {
   let ring = [...pts];
   let changed = true;
@@ -118,10 +108,10 @@ function simplifyCollinear(pts: readonly Point2D[]): Point2D[] {
     const out: Point2D[] = [];
     const n = ring.length;
     for (let i = 0; i < n; i++) {
-      const a = normalize(sub(ring[i], ring[(i - 1 + n) % n]));
-      const b = normalize(sub(ring[(i + 1) % n], ring[i]));
-      if (!a || !b) { changed = true; continue; }
-      if (Math.abs(a.x * b.y - a.y * b.x) < COLLINEAR_SIN_TOL) { changed = true; continue; }
+      if (isCollinear(ring[(i - 1 + n) % n], ring[i], ring[(i + 1) % n], 0.02)) {
+        changed = true;
+        continue;
+      }
       out.push(ring[i]);
     }
     if (out.length < 3) break;
@@ -130,177 +120,87 @@ function simplifyCollinear(pts: readonly Point2D[]): Point2D[] {
   return ring;
 }
 
-/** Πλήθος κορυφών με γωνία ≈90° (winding-agnostic). */
-function countNear90(corners: readonly Point2D[]): number {
-  const n = corners.length;
-  if (n < 3) return 0;
-  let count = 0;
-  for (let i = 0; i < n; i++) {
-    const a = normalize(sub(corners[(i - 1 + n) % n], corners[i]));
-    const b = normalize(sub(corners[(i + 1) % n], corners[i]));
-    if (!a || !b) continue;
-    const dot = Math.max(-1, Math.min(1, a.x * b.x + a.y * b.y));
-    const angDeg = Math.acos(dot) * RAD_TO_DEG;
-    if (Math.abs(angDeg - 90) < NEAR_90_TOL_DEG) count += 1;
+/** Εξασφαλίζει CCW winding (θετικό signed area) — απαιτείται από reflex detection. */
+function ensureCCW(ring: readonly Point2D[]): Point2D[] {
+  const v3 = ring.map(lift);
+  let signed = 0;
+  for (let i = 0; i < v3.length; i++) {
+    const a = v3[i];
+    const b = v3[(i + 1) % v3.length];
+    signed += a.x * b.y - b.x * a.y;
   }
-  return count;
+  return signed < 0 ? [...ring].reverse() : [...ring];
 }
 
-interface RegionMetrics {
-  readonly area: number;
-  readonly fillRatio: number;
-  readonly circularity: number;
-  readonly cornerCount: number;
-  readonly near90Count: number;
-  readonly basePoint: Point2D;
-  readonly direction: Vec2;
-  readonly run: number;
-  readonly width: number;
-  readonly centroid: Point2D;
-  readonly short: number;
-}
+// ─── Degenerate fallback ──────────────────────────────────────────────────────
 
-/** bbox-fit άξονας: basePoint = μέσο της ΚΟΝΤΗΣ ακμής, direction κατά τον ΜΑΚΡΥ. */
-function computeMetrics(ring2d: readonly Point2D[]): RegionMetrics {
-  const v3 = ring2d.map(lift);
-  const bbox = polygonBbox(v3);
-  const W = bbox.max.x - bbox.min.x;
-  const H = bbox.max.y - bbox.min.y;
-  const long = Math.max(W, H);
-  const short = Math.min(W, H);
-  const area = polygonArea(v3);
-  const perimeter = polygonPerimeter(v3);
-  const fillRatio = W * H > 0 ? area / (W * H) : 0;
-  const circularity = perimeter > 0 ? (4 * Math.PI * area) / (perimeter * perimeter) : 0;
-  const corners = simplifyCollinear(ring2d);
-  const centroidRaw = polygonAreaCentroid(v3);
-  const centroid: Point2D = { x: centroidRaw.x, y: centroidRaw.y };
+/** Minimal ευθεία walkline κατά τον ΜΑΚΡΥ άξονα του bbox + warning. */
+function degenerateFallback(
+  footprint: readonly Point2D[],
+  ring: readonly Point2D[],
+  reason: string,
+): StairRegionClassification {
+  const bbox = polygonBbox(ring.map(lift));
+  const w = bbox.max.x - bbox.min.x;
+  const h = bbox.max.y - bbox.min.y;
+  const alongX = w >= h;
+  const long = Math.max(w, h);
+  const short = Math.min(w, h);
   const cx = (bbox.min.x + bbox.max.x) / 2;
   const cy = (bbox.min.y + bbox.max.y) / 2;
-  const alongX = W >= H;
-  const basePoint: Point2D = alongX
-    ? { x: bbox.min.x, y: cy }
-    : { x: cx, y: bbox.min.y };
-  const direction: Vec2 = alongX ? { x: 1, y: 0 } : { x: 0, y: 1 };
+  const base: Point2D = alongX ? { x: bbox.min.x, y: cy } : { x: cx, y: bbox.min.y };
+  const top: Point2D = alongX ? { x: bbox.max.x, y: cy } : { x: cx, y: bbox.max.y };
   return {
-    area,
-    fillRatio,
-    circularity,
-    cornerCount: corners.length,
-    near90Count: countNear90(corners),
-    basePoint,
-    direction,
-    run: long,
+    walkline: [{ type: 'line', start: base, end: top }],
+    length: long,
     width: short,
-    centroid,
-    short,
+    basePoint: base,
+    topPoint: top,
+    direction: alongX ? { x: 1, y: 0 } : { x: 0, y: 1 },
+    footprint,
+    warnings: [reason],
   };
-}
-
-// ─── Kind decision ────────────────────────────────────────────────────────────
-
-function decideKind(m: RegionMetrics): StairRegionKind | null {
-  // Spiral ΠΡΩΤΑ: υψηλή κυκλικότητα + ελάχιστες ορθές γωνίες (αποκλείει τετράγωνο,
-  // που έχει circularity ~0.785 αλλά 4 ορθές γωνίες).
-  if (m.circularity > CIRC_SPIRAL_MIN && m.near90Count <= 2 && m.cornerCount >= 6) {
-    return 'spiral';
-  }
-  if (m.fillRatio > FILL_STRAIGHT_MIN && m.cornerCount <= 5) {
-    return 'straight';
-  }
-  if (m.cornerCount >= 5 && m.cornerCount <= 7 && m.fillRatio >= FILL_L_MIN && m.fillRatio <= FILL_L_MAX) {
-    return 'lWithWinders';
-  }
-  if (m.cornerCount >= 7 && m.cornerCount <= 10) {
-    return 'switchback';
-  }
-  return null;
-}
-
-function confidenceFor(kind: StairRegionKind, m: RegionMetrics): number {
-  switch (kind) {
-    case 'straight': return Math.min(1, 0.55 + 0.45 * m.fillRatio);
-    case 'lWithWinders': return 0.72;
-    case 'switchback': return 0.66;
-    case 'spiral': return Math.min(1, m.circularity);
-  }
 }
 
 // ─── Public entry ─────────────────────────────────────────────────────────────
 
 /**
- * Ταξινομεί ένα κλειστό πολύγωνο περιοχής σε τύπο σκάλας. ΠΟΤΕ δεν πετάει —
- * εκφυλισμένη είσοδος → 'straight' fallback με `warning`.
+ * Ιχνηλατεί τη walkline ενός κλειστού ορθογώνιου corridor-πολυγώνου. ΠΟΤΕ δεν
+ * πετάει — εκφυλισμένη είσοδος → minimal ευθεία fallback με `warnings`.
  */
 export function classifyStairRegion(
   vertices: readonly Point2D[],
   sceneUnits: SceneUnits = 'mm',
 ): StairRegionClassification {
   const footprint: Point2D[] = vertices.map((p) => ({ x: p.x, y: p.y }));
-  // 1mm σε scene units → κατώφλι εκφυλισμού (unit-aware).
-  const eps = mmToSceneUnits(sceneUnits);
+  const s = mmToSceneUnits(sceneUnits);
+  const eps = s; // 1mm σε scene units (unit-aware degeneracy threshold)
   const ring = dedupe(footprint, eps);
 
   if (ring.length < 3) {
-    return degenerateFallback(footprint, ring);
+    return degenerateFallback(footprint, ring.length ? ring : [{ x: 0, y: 0 }], WARNING_DEGENERATE);
+  }
+  const ccw = ensureCCW(simplifyCollinear(ring));
+  if (polygonArea(ccw.map(lift)) <= eps * eps) {
+    return degenerateFallback(footprint, ccw, WARNING_DEGENERATE);
   }
 
-  const m = computeMetrics(ring);
-  if (m.area <= eps * eps || m.run <= eps) {
-    return degenerateFallback(footprint, ring, m);
+  const traced: CorridorWalkline | null = traceCorridorWalkline(ccw, footprint[0], eps);
+  if (!traced) {
+    return degenerateFallback(footprint, ccw, WARNING_NO_CORRIDOR);
   }
 
-  const kind = decideKind(m);
-  if (kind === null) {
-    return {
-      kind: 'straight',
-      basePoint: m.basePoint,
-      direction: m.direction,
-      width: m.width,
-      run: m.run,
-      footprint,
-      circularity: m.circularity,
-      fillRatio: m.fillRatio,
-      cornerCount: m.cornerCount,
-      confidence: 0.3,
-      warning: WARNING_LOW_CONFIDENCE,
-    };
-  }
+  const warnings: string[] = [];
+  if (traced.width < MIN_CENTRAL_STAIRWELL_WIDTH_MM * s) warnings.push(WARNING_BELOW_MIN_WIDTH);
 
-  // spiral: κέντρο = area centroid, width = ακτίνα (short/2).
-  const basePoint = kind === 'spiral' ? m.centroid : m.basePoint;
-  const width = kind === 'spiral' ? m.short / 2 : m.width;
   return {
-    kind,
-    basePoint,
-    direction: m.direction,
-    width,
-    run: m.run,
+    walkline: traced.segments,
+    length: traced.length,
+    width: traced.width,
+    basePoint: traced.basePoint,
+    topPoint: traced.topPoint,
+    direction: traced.direction,
     footprint,
-    circularity: m.circularity,
-    fillRatio: m.fillRatio,
-    cornerCount: m.cornerCount,
-    confidence: confidenceFor(kind, m),
-  };
-}
-
-/** Low-confidence 'straight' fallback για εκφυλισμένα πολύγωνα (μηδέν crash). */
-function degenerateFallback(
-  footprint: readonly Point2D[],
-  ring: readonly Point2D[],
-  m?: RegionMetrics,
-): StairRegionClassification {
-  return {
-    kind: 'straight',
-    basePoint: m?.basePoint ?? ring[0] ?? { x: 0, y: 0 },
-    direction: m?.direction ?? { x: 1, y: 0 },
-    width: m?.width ?? 0,
-    run: m?.run ?? 0,
-    footprint,
-    circularity: m?.circularity ?? 0,
-    fillRatio: m?.fillRatio ?? 0,
-    cornerCount: m?.cornerCount ?? ring.length,
-    confidence: 0.1,
-    warning: WARNING_DEGENERATE,
+    warnings,
   };
 }

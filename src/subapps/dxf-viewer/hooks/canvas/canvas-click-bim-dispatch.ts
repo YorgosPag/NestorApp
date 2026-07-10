@@ -28,6 +28,7 @@ export function dispatchBimToolClick(
   const {
     activeTool,
     stairTool,
+    stairRegionTool,
     wallTool,
     slabTool,
     roofTool,
@@ -49,6 +50,13 @@ export function dispatchBimToolClick(
   // PRIORITY 4.5: ADR-358 Phase 5a — Stair tool 2-click placement.
   if (activeTool === 'stair' && stairTool?.isActive) {
     stairTool.onCanvasClick(bimPoint);
+    return true;
+  }
+  // PRIORITY 4.55: ADR-619 — «Σκάλα από περιοχή»: N-click vertex chain (Enter/auto-close
+  // to commit → shape classify → auto stair). ΙΔΙΟ engine με το slab/column-from-polygon →
+  // bimPoint (ORTHO/POLAR-constrained· οι κορυφές θέλουν directional snap).
+  if (activeTool === 'stair-from-region' && stairRegionTool?.isActive) {
+    stairRegionTool.onCanvasClick(bimPoint);
     return true;
   }
   // PRIORITY 4.6: ADR-363 Phase 1B — Wall tool 2-click placement (continuous).

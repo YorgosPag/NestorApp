@@ -73,6 +73,8 @@ export interface UseCanvasClickHandlerParams {
   dxfGripInteraction: DxfGripInteractionLike;
   /** ADR-358 Phase 5a — Stair tool click pipeline. */
   stairTool?: StairToolLike;
+  /** ADR-619 — «Σκάλα από περιοχή» polygon-sketch click pipeline (same shape as stair). */
+  stairRegionTool?: StairToolLike;
   /** ADR-363 Phase 1B — Wall tool click pipeline. */
   wallTool?: WallToolLike;
   /** ADR-363 Phase 3 — Slab tool click pipeline. */

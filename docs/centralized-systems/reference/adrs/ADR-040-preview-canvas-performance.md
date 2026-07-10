@@ -3852,3 +3852,18 @@ projection parameter `t` περνά από τον κοινό helper. Staged γι
 `getComputedStyle` θα κόστιζε) → χωρίς invalidation η μάσκα κράταγε το παλιό χρώμα μέχρι toggle του mode. Ίδιο
 ακριβώς shape με τα υπάρχοντα LWDISPLAY/IsolateStore/LayerStore invalidations. Καμία αλλαγή micro-leaf
 αρχιτεκτονικής/subscription στα high-freq stores. Staged για CHECK 6B/6D. ΟΧΙ tsc (N.17).
+
+## 2026-07-10 (b): ADR-513 §rectangle / ADR-620 — rotated-rectangle + dynamic input (CHECK 6B/6D stage)
+
+**Τι:** το εργαλείο «Ορθογώνιο» απέκτησε (α) AutoCAD-style dynamic input (Πλάτος/Ύψος/Γωνία μέσω Radial Command
+Ring — βλ. ADR-513 §rectangle) και (β) **πλήρη περιστροφή** σε όλο το pipeline (βλ. ADR-620). Αρχεία στη λίστα
+CHECK 6B/6D που άγγιξα: `RectangleRenderer.ts` (measurements = μήκη ακμών αντί x/y-διαφορές, για rotated),
+`entity-bounds-ssot.ts` (`rectBounds` rotation-aware → viewport cull + marquee), `DynamicInputSubscriber.tsx`
+(νέο rectangle ring branch **always-on** + `RectLockStore.unlockAll()` στο dynInput-off effect), `geometry-utils.ts`
+(`createRectangleVertices(c1,c2,rotationDeg)` + entity-level `rectangleEntityVertices` SSoT), **`preview-canvas/
+preview-entity-renderers.ts` `renderRectangle`** (ghost preview = 4 περιστραμμένες κορυφές ως path αντί axis-aligned
+`ctx.strokeRect` → το ghost στρίβει με το typed angle· ήταν το «δεν αναγνωρίζει τη γωνία» bug). **Γιατί δεν σπάει
+την αρχιτεκτονική:** μηδέν νέα subscription σε high-freq store· ο rectangle ring είναι ΕΝΑ επιπλέον low-freq
+branch (mirror line/wall/beam)· η rotation-awareness ζει στο pure vertex SSoT (identity fast-path για
+rotation=0 → μηδέν regression σε μη-περιστραμμένα). `DynamicInputSubscriber` παραμένει leaf (δεν προάγει
+subscription σε orchestrator). Staged για CHECK 6B/6D. ΟΧΙ tsc (N.17). 🔴 commit (Giorgio).

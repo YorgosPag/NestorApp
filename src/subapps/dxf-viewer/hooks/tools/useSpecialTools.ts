@@ -15,10 +15,11 @@
  * Extracted from: CanvasSection.tsx
  */
 import { useEffect } from 'react';
-import { EventBus } from '../../systems/events/EventBus';
 import { clearAutoAreaState } from '../../systems/auto-area/AutoAreaResultStore';
 import { clearAutoAreaPreview } from '../../systems/auto-area/AutoAreaPreviewStore';
 import { useStairTool } from '../drawing/useStairTool';
+// ADR-619 — «Σκάλα από περιοχή»: ελεύθερο πολύγωνο → auto BIM σκάλα (shape → type).
+import { useStairRegionSketch } from '../drawing/use-stair-region-sketch';
 import { useWallTool } from '../drawing/useWallTool';
 import { useOpeningTool } from '../drawing/useOpeningTool';
 import { useSelfOpeningTool } from '../drawing/useSelfOpeningTool';
@@ -54,6 +55,8 @@ import { addWallToScene } from '../../bim/walls/add-wall-to-scene';
 import { useRegionGapClose } from '../drawing/use-region-gap-close';
 import { useWallAutoTyping } from '../../bim/family-types/useWallAutoTyping';
 import { addColumnToScene, addColumnsToScene } from '../../bim/columns/add-column-to-scene';
+// ADR-619 — shared stair append+broadcast SSoT (line-based 'stair' + 'stair-from-region').
+import { addStairToScene } from '../../bim/stairs/add-stair-to-scene';
 import { addFoundationToScene } from '../../bim/foundations/add-foundation-to-scene';
 import { buildFoundationWriteScope } from '../../bim/foundations/foundation-write-scope';
 import { useAuth } from '@/auth/hooks/useAuth';
@@ -86,6 +89,8 @@ export interface UseSpecialToolsReturn extends SelectionToolsReturn, PlacementTo
   // AreaToolsReturn provides: slabTool, roofTool, floorFinishTool, mepUnderfloorTool,
   // thermalSpaceTool, spaceSeparatorTool (extracted to useSpecialTools-area-tools.ts).
   stairTool: ReturnType<typeof useStairTool>;
+  /** ADR-619 — «Σκάλα από περιοχή» polygon-sketch tool (shape → stair type). */
+  stairRegionTool: ReturnType<typeof useStairRegionSketch>;
   wallTool: ReturnType<typeof useWallTool>;
   openingTool: ReturnType<typeof useOpeningTool>;
   selfOpeningTool: ReturnType<typeof useSelfOpeningTool>;
@@ -153,6 +158,21 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
    * State machine in `useStairTool`. Variant fixed to 'straight' Phase 5a;
    * contextual ribbon variant selector lands Phase 7a.
    */
+  // ADR-358 Phase 9 — Q17 floor link bridge (SSoT shared by BOTH the line-based
+  // stair tool and «Σκάλα από περιοχή», ADR-619). Returns a snapshot of the floor
+  // in scope so the stair builder seeds `multiStoryConfig`.
+  const getStairFloorLink = (): StairFloorLinkInput | null => {
+    if (!floorForStair) return null;
+    return {
+      floorId: floorForStair.id,
+      name: floorForStair.name,
+      height: floorForStair.height,
+    };
+  };
+  // ADR-358 Phase 9C — floor stamp (floorId + buildingId) που κολλάει στη σκάλα για
+  // το Firestore link (required για Plan B batch update). Κοινό και στα δύο tools.
+  const stairFloorStamp = { floorId: floorIdForStair, buildingId: floorForStair?.buildingId };
+
   const stairTool = useStairTool({
     currentLevelId: levelManager.currentLevelId || '0',
     // ADR-358 Phase 8 unit-aware builder — convert mm defaults into the active
@@ -161,45 +181,34 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     // `$INSUNITS`-propagated `scene.units` and falls back to the bounds
     // heuristic for legacy / unitless scenes.
     getSceneUnits: getSceneUnitsForLevel,
-    // ADR-358 Phase 9 — Q17 floor link bridge. Returns a snapshot of the
-    // floor in scope so the stair builder seeds `multiStoryConfig`.
-    getFloorLink: (): StairFloorLinkInput | null => {
-      if (!floorForStair) return null;
-      return {
-        floorId: floorForStair.id,
-        name: floorForStair.name,
-        height: floorForStair.height,
-      };
-    },
-    onStairCreated: (stairEntity) => {
-      // ADR-358 Phase 9C — stamp floorId + buildingId so Firestore persistence
-      // can link the stair to its floor (required for Plan B batch update).
-      const enriched = floorIdForStair
-        ? { ...stairEntity, floorId: floorIdForStair, buildingId: floorForStair?.buildingId }
-        : stairEntity;
-      const levelId = levelManager.currentLevelId;
-      if (!levelId) return;
-      const scene = levelManager.getLevelScene(levelId);
-      if (!scene) return;
-      const updatedScene = {
-        ...scene,
-        entities: [...(scene.entities || []), enriched],
-      };
-      levelManager.setLevelScene(levelId, updatedScene);
-      console.debug('[StairTool] Stair added to scene:', enriched.id);
-      // ADR-358 Phase Q17 9B-6 — broadcast creation so persistence layer
-      // can immediately schedule the Firestore save. Without this, a freshly
-      // drawn stair is local-only until the user explicitly selects + edits
-      // it, and a Firestore snapshot in between drops it from the scene
-      // (see useStairPersistence diff-merge guard).
-      EventBus.emit('drawing:entity-created', {
-        entity: enriched,
-        tool: 'stair',
-      });
-    },
+    getFloorLink: getStairFloorLink,
+    // ADR-397/619 — append + broadcast via the shared `addStairToScene` SSoT (ίδιο
+    // path με το «Σκάλα από περιοχή»· floorId/buildingId stamp + setLevelScene + emit).
+    onStairCreated: (stairEntity) =>
+      addStairToScene(stairEntity, levelManager, stairFloorStamp, 'stair'),
   });
 
   useToolLifecycle(activeTool === 'stair', stairTool.activate, stairTool.deactivate);
+
+  // ADR-619 — «ΣΚΑΛΑ ΑΠΟ ΠΕΡΙΟΧΗ» (stair-from-region)
+  //
+  // Ο χρήστης σχεδιάζει ελεύθερα κλειστό πολύγωνο γύρω από το κλιμακοστάσιο (κοινό
+  // vertex-chain FSM με slab/column-from-polygon)· στο commit το ΣΧΗΜΑ ταξινομείται
+  // (ευθεία/τεταρτοστροφική/ημιστροφική/ελικοειδής) και χτίζεται αυτόματα BIM σκάλα
+  // «χωμένη» στην περιοχή. Ίδιο append+broadcast path με το line-based tool.
+  const stairRegionTool = useStairRegionSketch({
+    currentLevelId: levelManager.currentLevelId || '0',
+    getSceneUnits: getSceneUnitsForLevel,
+    getSceneEntities: getSceneEntitiesForLevel,
+    getFloorLink: getStairFloorLink,
+    onStairCreated: (stairEntity) =>
+      addStairToScene(stairEntity, levelManager, stairFloorStamp, 'stair-from-region'),
+  });
+  useToolLifecycle(
+    activeTool === 'stair-from-region',
+    stairRegionTool.activate,
+    stairRegionTool.deactivate,
+  );
   // ADR-412 — auto-type-on-create (Revit «Generic Wall»): give every freshly
   // drawn wall a shared family type before it lands in the scene (SSoT host).
   const { ensureAutoWallType } = useWallAutoTyping();
@@ -436,6 +445,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     lineParallel,
     angleEntityMeasurement,
     stairTool,
+    stairRegionTool,
     wallTool,
     openingTool,
     selfOpeningTool,

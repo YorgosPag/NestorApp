@@ -256,8 +256,13 @@ export function useUnifiedDrawing() {
     // ώστε να παραχθεί το ghost-φάντασμα + οι ενδείξεις τοποθέτησης (λευκά ίχνη + κυανές + OSNAP).
     const isText = activeTool === 'text';
     const isMText = activeTool === 'mtext';
-    const currentTool: DrawingTool = isStair ? 'stair' : (isWall || isWallOnEntity) ? 'wall' : isSlab ? 'slab' : isBeam ? 'beam' : isRoof ? 'roof' : isColumn ? 'column' : isFoundationPad ? 'foundation-pad' : isText ? 'text' : isMText ? 'mtext' : machineTool;
-    if (!isStair && !isWall && !isWallOnEntity && !isSlab && !isBeam && !isRoof && !isColumn && !isFoundationPad && !isText && !isMText && (!machineTool || machineTool === 'select')) return;
+    // ADR-619 — «Σκάλα από περιοχή»: δικό του N-click polygon FSM κρατά το `machineTool` στο
+    // 'select', οπότε το route-άρουμε ως 'slab' (ΙΔΙΟ tool-agnostic rubber-band footprint outline
+    // με slab/roof/hatch· τα vertices έρχονται από το `stairRegionPreviewStore` μέσω
+    // `resolveBimToolTempPoints(activeTool)` — όχι από το currentTool).
+    const isStairRegion = activeTool === 'stair-from-region';
+    const currentTool: DrawingTool = isStair ? 'stair' : (isWall || isWallOnEntity) ? 'wall' : isSlab ? 'slab' : isBeam ? 'beam' : isRoof ? 'roof' : isColumn ? 'column' : isFoundationPad ? 'foundation-pad' : isText ? 'text' : isMText ? 'mtext' : isStairRegion ? 'slab' : machineTool;
+    if (!isStair && !isWall && !isWallOnEntity && !isSlab && !isBeam && !isRoof && !isColumn && !isFoundationPad && !isText && !isMText && !isStairRegion && (!machineTool || machineTool === 'select')) return;
 
     // machineMoveCursor intentionally removed — it updated cursorPosition in machine context
     // (never read by any component) and notified React useSyncExternalStore subscribers on
@@ -273,7 +278,7 @@ export function useUnifiedDrawing() {
     // `$INSUNITS` propagated by dxf-scene-builder, falls back to bounds
     // heuristic for legacy / unitless scenes.
     const sceneUnitsForPreview = (() => {
-      if (!isStair && !isWall && !isWallOnEntity && !isSlab && !isBeam && !isRoof && !isColumn && !isFoundationPad) return 'mm' as const;
+      if (!isStair && !isWall && !isWallOnEntity && !isSlab && !isBeam && !isRoof && !isColumn && !isFoundationPad && !isStairRegion) return 'mm' as const;
       const levelId = currentLevelId;
       if (!levelId) return 'mm' as const;
       return resolveSceneUnits(getLevelScene(levelId));
@@ -413,39 +418,34 @@ export function useUnifiedDrawing() {
     return null;
   }, [machineContext.toolType, machineContext.points, createEntityFromTool, currentLevelId, getLevelScene, setLevelScene, cancelDrawing, setMode]);
 
+  // Shared stop-handle for the free-sketch starters (polyline/polygon): snapshot the
+  // machine points, reset mode, run any per-tool cleanup, cancel, then fire onComplete
+  // (>=3 pts) / onCancel. Owns the flow both starters inlined identically (N.18).
+  const buildSketchStop = useCallback((
+    options: { onComplete?: (points: Point2D[]) => void; onCancel?: () => void },
+    cleanup?: () => void,
+  ) => () => {
+    const points = [...machineContext.points];
+    setMode('normal');
+    cleanup?.();
+    cancelDrawing();
+    if (options.onComplete && points.length >= 3) {
+      options.onComplete(points);
+    } else if (options.onCancel) {
+      options.onCancel();
+    }
+  }, [machineContext.points, setMode, cancelDrawing]);
+
   const startPolyline = useCallback((options: { onComplete?: (points: Point2D[]) => void; onCancel?: () => void } = {}) => {
     startDrawing('polyline');
-    return {
-      stop: () => {
-        const points = [...machineContext.points];
-        setMode('normal');
-        cancelDrawing();
-        if (options.onComplete && points.length >= 3) {
-          options.onComplete(points);
-        } else if (options.onCancel) {
-          options.onCancel();
-        }
-      }
-    };
-  }, [startDrawing, cancelDrawing, machineContext.points, setMode]);
+    return { stop: buildSketchStop(options) };
+  }, [startDrawing, buildSketchStop]);
 
   const startPolygon = useCallback((options: { onComplete?: (points: Point2D[]) => void; onCancel?: () => void; isOverlay?: boolean } = {}) => {
     setLocalState(prev => ({ ...prev, isOverlayMode: options.isOverlay || false }));
     startDrawing('polygon');
-    return {
-      stop: () => {
-        const points = [...machineContext.points];
-        setMode('normal');
-        setLocalState(prev => ({ ...prev, isOverlayMode: false }));
-        cancelDrawing();
-        if (options.onComplete && points.length >= 3) {
-          options.onComplete(points);
-        } else if (options.onCancel) {
-          options.onCancel();
-        }
-      }
-    };
-  }, [startDrawing, cancelDrawing, machineContext.points, setMode]);
+    return { stop: buildSketchStop(options, () => setLocalState(prev => ({ ...prev, isOverlayMode: false }))) };
+  }, [startDrawing, buildSketchStop]);
 
   const getLatestPreviewEntity = useCallback(() => previewEntityRef.current, []);
 

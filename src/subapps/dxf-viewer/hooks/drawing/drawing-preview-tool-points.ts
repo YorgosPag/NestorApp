@@ -24,6 +24,8 @@ import { mepUnderfloorPreviewStore } from '../../bim/mep-underfloor/mep-underflo
 import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
 // ADR-363 §column-polygon-sketch — «Κολώνα από σχεδιασμένο πολύγωνο» footprint preview SSoT.
 import { columnPolygonPreviewStore } from '../../bim/columns/column-polygon-preview-store';
+// ADR-619 — «Σκάλα από περιοχή» footprint preview SSoT (ίδιο rubber-band με column-from-polygon).
+import { stairRegionPreviewStore } from '../../bim/geometry/stairs/stair-region-preview-store';
 // ADR-436 Slice 2 — foundation line preview SSoT (strip / tie-beam).
 import { foundationPreviewStore } from '../../bim/foundations/foundation-preview-store';
 
@@ -65,6 +67,8 @@ export function resolveBimToolTempPoints(
   if (activeTool === 'mep-underfloor') return mepUnderfloorPreviewStore.get().vertices;
   // ADR-363 §column-polygon-sketch — «Κολώνα από σχεδιασμένο πολύγωνο» footprint vertices.
   if (activeTool === 'column-from-polygon') return columnPolygonPreviewStore.get().vertices;
+  // ADR-619 — «Σκάλα από περιοχή» footprint vertices (rubber-band περίγραμμα κλιμακοστασίου).
+  if (activeTool === 'stair-from-region') return stairRegionPreviewStore.get().vertices;
   if (activeTool === 'beam') {
     // ADR-363 Phase 5.5P — beam tempPoints from store.
     const bp = beamPreviewStore.get();
