@@ -41,10 +41,18 @@
 import type { ISceneManager, SceneEntity } from '../../core/commands/interfaces';
 import { cascadeHostedOpeningsForWalls } from '../walls/wall-opening-coordinator';
 import { cascadeBeamReframe } from '../beams/beam-column-reframe-cascade';
+import { cascadeStairwellOpenings } from '../stairs/stairwell-opening-coordinator';
 import { EventBus } from '../../systems/events/EventBus';
 
-/** Minimal scene-manager surface (union των δύο reused cascades). */
-type CascadeSceneManager = Pick<ISceneManager, 'getEntity' | 'updateEntities'> & {
+/**
+ * Minimal scene-manager surface (union των reused cascades). `addEntity`/
+ * `removeEntity` για το stairwell lifecycle cascade (ADR-632 Φ4 — create/delete
+ * auto openings)· τα υπάρχοντα callers (`ISceneManager`) τα έχουν ήδη όλα.
+ */
+type CascadeSceneManager = Pick<
+  ISceneManager,
+  'getEntity' | 'updateEntities' | 'addEntity' | 'removeEntity'
+> & {
   getEntities?(): readonly SceneEntity[];
 };
 
@@ -75,6 +83,12 @@ export function reconcileAssociativeGeometry(
 ): void {
   // (1) openings → wall: μόνο derived geometry (offsetFromStart αμετάβλητο) → χωρίς persist/emit.
   cascadeHostedOpeningsForWalls(changedIds, sceneManager);
+
+  // (1b) stairwell openings → σκάλα/πλάκα (ADR-632 Φ4): lifecycle (create/update/delete)
+  //      auto «well» openings όταν μια πλάκα καπακώνει σκάλα κάτω από το ελεύθερο ύψος.
+  //      Idempotent + changedIds gate (skip αν το command δεν άγγιξε σκάλα/πλάκα)· εκπέμπει
+  //      μόνο του τα `drawing:entity-created`/`bim:slab-opening-delete-requested` (persist+BOQ).
+  cascadeStairwellOpenings(sceneManager, { changedIds });
 
   // (2) beams → column faces: τα `startPoint/endPoint` (persisted params) αλλάζουν → πρέπει να
   //     ταξιδέψουν σε `bim:entities-moved` (per-entity Firestore persist + organism re-derive).

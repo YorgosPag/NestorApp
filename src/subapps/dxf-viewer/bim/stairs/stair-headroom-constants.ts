@@ -45,3 +45,16 @@ export const DEFAULT_MIN_HEADROOM_MM = MIN_HEADROOM_MM.nok;
 export function resolveMinHeadroomMm(profile: StairCodeProfile): number {
   return MIN_HEADROOM_MM[profile];
 }
+
+/**
+ * Ελάχιστο headroom (mm) που ΕΠΙΒΑΛΛΕΙ ο `StairwellOpeningEngine` (ADR-632).
+ * Ίδιο με `resolveMinHeadroomMm`, ΕΚΤΟΣ από το `'none'` (free-form CAD, κατώφλι 0):
+ * εκεί πέφτει στο `DEFAULT_MIN_HEADROOM_MM` (NOK 2200), γιατί η φυσική ανάγκη
+ * διέλευσης χωρίς χτύπημα υπάρχει ανεξάρτητα από επιλογή κανονισμού — ένα κατώφλι 0
+ * θα άφηνε κάθε σκάλα «καπακωμένη» χωρίς τρύπα. Ο validator (soft 2D proxy)
+ * εξακολουθεί να χρησιμοποιεί `resolveMinHeadroomMm` (0 = μηδέν warning σε 'none').
+ */
+export function effectiveMinHeadroomMm(profile: StairCodeProfile): number {
+  const threshold = MIN_HEADROOM_MM[profile];
+  return threshold > 0 ? threshold : DEFAULT_MIN_HEADROOM_MM;
+}

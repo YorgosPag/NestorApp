@@ -37,7 +37,11 @@ import {
 import type { LevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import type { Entity } from '../../types/entities';
 import { collectBimDeleteIds, emitBimDeleteEvents } from './smart-delete-bim-events';
-import { findHostedOpenings, findHostedSlabOpenings } from '../../bim/cascade/bim-cascade-resolver';
+import {
+  findHostedOpenings,
+  findHostedSlabOpenings,
+  findHostedStairwellOpenings,
+} from '../../bim/cascade/bim-cascade-resolver';
 import { requestWallCascadeDelete } from '../../bim/walls/wall-cascade-delete-store';
 import { resolveMepCascadeOnDelete } from '../../bim/mep-systems/mep-system-coordinator';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
@@ -77,9 +81,17 @@ export async function deleteEntitiesById(
   // cascades automatically (orphan prevention, no prompt).
   const deletingWallIds = new Set(ids.filter((id) => adapter.getEntity(id)?.type === 'wall'));
   const deletingSlabIds = new Set(ids.filter((id) => adapter.getEntity(id)?.type === 'slab'));
+  // ADR-632 Φ4 — σκάλα → auto stairwell openings (marker `autoStairId`) που
+  // κατέχει· cascade σιωπηλά (auto-derived, όχι user-authored).
+  const deletingStairIds = new Set(ids.filter((id) => adapter.getEntity(id)?.type === 'stair'));
   const selectionSet = new Set(ids);
   const orphanedOpeningIds = findHostedOpenings(deletingWallIds, sceneEntities, selectionSet);
   const orphanedSlabOpeningIds = findHostedSlabOpenings(deletingSlabIds, sceneEntities, selectionSet);
+  const orphanedStairwellOpeningIds = findHostedStairwellOpenings(
+    deletingStairIds,
+    sceneEntities,
+    selectionSet,
+  );
 
   let idsToDelete: string[] = [...ids];
   if (orphanedOpeningIds.length > 0) {
@@ -89,6 +101,9 @@ export async function deleteEntitiesById(
   }
   if (orphanedSlabOpeningIds.length > 0) {
     idsToDelete = [...idsToDelete, ...orphanedSlabOpeningIds];
+  }
+  if (orphanedStairwellOpeningIds.length > 0) {
+    idsToDelete = [...idsToDelete, ...orphanedStairwellOpeningIds];
   }
 
   // Collect BIM IDs by type BEFORE executeCommand removes them from the scene

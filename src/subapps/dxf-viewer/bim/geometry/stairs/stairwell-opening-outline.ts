@@ -15,6 +15,7 @@ import type { MultiPolygon, Pair, Polygon } from 'polygon-clipping';
 import type { Point3D, Polygon3D } from '../../types/bim-base';
 import { safeIntersection, safeUnion } from '../shared/safe-polygon-boolean';
 import { polygon3dToClipPolygon, polygonArea } from '../shared/polygon-utils';
+import { stripClosingDuplicate } from '../shared/polygon-offset-utils';
 
 export interface StairwellOutlineResult {
   readonly outline: Polygon3D;
@@ -68,5 +69,9 @@ function largestOuterRing(mp: MultiPolygon, z: number): Polygon3D | null {
     }
   }
   if (!best) return null;
-  return { vertices: best.map((pr): Point3D => ({ x: pr[0], y: pr[1], z })) };
+  // polygon-clipping rings are CLOSED (first === last)· αφαιρούμε το closing-duplicate
+  // ώστε το outline να ακολουθεί την ίδια σύμβαση με τα χειροκίνητα openings
+  // (open ring, CCW) — αλλιώς ο slab-opening validator το βλέπει self-intersecting.
+  const ring = best.map((pr): Point3D => ({ x: pr[0], y: pr[1], z }));
+  return { vertices: [...stripClosingDuplicate(ring)] };
 }

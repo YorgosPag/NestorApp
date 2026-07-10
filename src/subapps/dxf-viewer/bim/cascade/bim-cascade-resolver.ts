@@ -86,6 +86,30 @@ export function findHostedSlabOpenings(
   return out;
 }
 
+/**
+ * Finds auto («well») slab-opening ids that would be orphaned by deleting the
+ * given stair ids (ADR-632 Φ4). "Orphaned" = `slab-opening.params.autoStairId`
+ * references one of the deleted stairs AND the opening is not already in the
+ * deletion set. Mirror of {@link findHostedSlabOpenings}, but keyed on the
+ * derived `autoStairId` marker (the stair→stairwell-opening soft link) instead
+ * of the `slabId` host FK — a stair delete must sweep the auto openings it owns.
+ */
+export function findHostedStairwellOpenings(
+  stairIds: ReadonlySet<string>,
+  entities: readonly Entity[],
+  exclude: ReadonlySet<string> = new Set(),
+): string[] {
+  if (stairIds.size === 0) return [];
+  const out: string[] = [];
+  for (const e of entities) {
+    if (!isSlabOpeningEntity(e)) continue;
+    if (exclude.has(e.id)) continue;
+    const autoStairId = e.params.autoStairId;
+    if (autoStairId && stairIds.has(autoStairId)) out.push(e.id);
+  }
+  return out;
+}
+
 /** Any BIM entity whose vertical extent can attach to a structural host (ADR-401). */
 function isAttachableEntity(e: Entity): boolean {
   return isWallEntity(e) || isColumnEntity(e) || isStairEntity(e);

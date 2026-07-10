@@ -1,6 +1,6 @@
 # ADR-632 — Αυτόματο άνοιγμα κλιμακοστασίου σε πλάκα (Stairwell Auto-Opening)
 
-- **Status**: In progress (Phase 0–2 DONE)
+- **Status**: In progress (Phase 0–4 DONE· Φ4.1 create-trigger + Φ5 pending)
 - **Date**: 2026-07-10
 - **Related**: ADR-358 (Stair tool) §9.2 Q29 · ADR-363 (BIM drawing mode, slab-opening) · ADR-401 (attach-to-structural) · ADR-396 (safe polygon boolean) · ADR-594 (BIM persistence factory)
 
@@ -87,6 +87,24 @@ clearance(i) = Zu − z_nosing(i)
   - Types: `StairFootprintInput` (footprint + baseZmm/topZmm από `resolveStairVerticalProfile`), `StairwellSlabCandidate` (outline + top/underside Zmm), `StairSlabOverlap`.
 - `bim/geometry/shared/polygon-utils.ts` — **NEW SSoT** `polygon3dToClipPolygon` (`Polygon3D` → clip `Polygon`). Αφαιρέθηκε το private duplicate από `stairwell-opening-outline.ts` (N.0.2/N.18 dedup)· το χρησιμοποιούν και outline (Φ1) και overlap (Φ2).
 
+### Νέα modules (Phase 3 — `StairwellOpeningEngine`)
+
+**Audit (N.0.1/N.0.2):** ο derived-cascade υπάρχει ήδη για walls/slabs, αλλά ΜΟΝΟ ως
+**geometry-recompute** υπαρχόντων openings (`wall-opening-coordinator.recomputeHostedOpeningGeometry`,
+`cascade-transformed-slab-openings`, `associative-geometry-reconcile`). **Κανένα** engine δεν έκανε
+**lifecycle** (create/delete) derived openings. Άρα φτιάχτηκε νέο, με **ακριβώς** το σχήμα του
+`wall-opening-coordinator` (pure core + thin apply που διαβάζει την τρέχουσα σκηνή).
+
+- `bim/geometry/stairs/stairwell-opening-plan.ts` — **pure planner (engine core)**. `planStairwellOpenings(stairs, slabs, existing, opts)` → `StairwellOpeningPlan { creates, updates, deletes }`. Ενώνει Φ1–Φ2 (`findSlabsAboveStair` → `evaluateStairHeadroom` → `expandViolatingRange` → `computeStairwellOpeningOutline`) και κάνει diff έναντι των υπαρχόντων managed openings. **Idempotent**: key = `autoStairId + slabId`· αμετάβλητο outline (ανοχή) → κανένα churn· duplicate managed → κρατά ένα, σβήνει τα υπόλοιπα. Μηδέν scene/entities/React — όλα τα z σε mm (in).
+- `bim/stairs/stairwell-opening-inputs.ts` — **pure input builders**: `buildStairwellSlabCandidates` (top/underside σε mm από `levelElevation`), `buildStairwellPlanStairs` (profile από `resolveStairVerticalProfile` + nosings από `computeStairNosings`, **μία** scene→mm μετατροπή του nosing z μέσω `dxfUnitToMm`, footprint από `geometry.bbox`), `collectManagedStairwellOpenings` (φίλτρο `params.autoStairId`).
+- `bim/stairs/stairwell-opening-coordinator.ts` — **thin coordinator** (mirror `wall-opening-coordinator`): `cascadeStairwellOpenings(sceneManager, opts)` = read scene → inputs → `planStairwellOpenings` → `applyStairwellOpeningPlan` (add/update/remove μέσω `ISceneManager`, enterprise-id via `buildSlabOpeningEntity`, geometry via `computeSlabOpeningGeometry`). Idempotent· no-op χωρίς `getEntities`.
+- `bim/stairs/stair-headroom-constants.ts` — **+** `effectiveMinHeadroomMm(profile)`: ίδιο με `resolveMinHeadroomMm` ΕΚΤΟΣ `'none'` → `DEFAULT_MIN_HEADROOM_MM` (η φυσική ανάγκη διέλευσης υπάρχει ανεξάρτητα κανονισμού· ο validator κρατά `resolveMinHeadroomMm`).
+- `bim/geometry/stairs/stairwell-opening-outline.ts` — **fix**: αφαίρεση closing-duplicate vertex (`stripClosingDuplicate`) από το ring που επιστρέφει το `polygon-clipping` (first===last), ώστε το auto outline να ακολουθεί την ίδια σύμβαση open-ring/CCW με τα χειροκίνητα openings — αλλιώς ο `validateSlabOpeningParams` το βλέπει self-intersecting.
+
+**Scope Φ3:** engine + apply στη **σκηνή** (in-memory). Το βαθύ persistence/audit/BOQ, το undo-command
+wrapping, ο orphan-cleanup σε delete σκάλας, και η **κλήση** του coordinator από τα geometry commands
+(mirror `reconcileAssociativeGeometry` call-site) → **Φ4**.
+
 ## 6. Phase plan
 
 | Φ | Τι | Status |
@@ -94,9 +112,12 @@ clearance(i) = Zu − z_nosing(i)
 | **0** | Θεμέλια: headroom SSoT (nok→2200), config, `autoStairId` marker | ✅ DONE |
 | **1** | Καθαρή γεωμετρία (nosing / headroom / outline) + jest (15 tests) | ✅ DONE |
 | **2** | Ανίχνευση ζεύγους σκάλα↔πλάκα-από-πάνω (`stair-slab-overlap.ts`) | ✅ DONE |
-| **3** | `StairwellOpeningEngine` — derived cascade, reactive lifecycle wiring | ⏳ |
-| **4** | Persistence/audit/BOQ + μη-καταστροφική συνύπαρξη + cleanup orphans | ⏳ |
-| **5** | 3D + UX (badge/override/lock) + ADR finalize | ⏳ |
+| **3** | `StairwellOpeningEngine` — derived cascade, lifecycle wiring (engine + apply στη σκηνή) | ✅ DONE |
+| **4** | Reactive call-site (`reconcileAssociativeGeometry`) + persistence/BOQ/audit (lifecycle events) + orphan-cleanup σε delete σκάλας | ✅ DONE¹ |
+| **4.1** | Trigger σε **δημιουργία** πλάκας/σκάλας (draw ceiling → τρύπα εμφανίζεται αμέσως) — βλ. §8 gaps | ⏳ |
+| **5** | 3D + UX (badge/override/lock) + stable id σε undo/redo + ADR finalize | ⏳ |
+
+¹ Καλύπτει: μετακίνηση/περιστροφή/κλίμακα (`SnapshotTransformCommand`) + params-edit (`MergeableUpdateCommand`, π.χ. ύψος σκάλας / στάθμη-πάχος πλάκας) σκάλας ή πλάκας, + delete σκάλας. **ΔΕΝ** καλύπτει ακόμη το πρώτο-σχεδίασμα πλάκας πάνω από υπάρχουσα σκάλα (Φ4.1).
 
 ## 7. Google-level
 
@@ -105,7 +126,53 @@ clearance(i) = Zu − z_nosing(i)
 - **SSoT** (Q5): ένα headroom map, ένα boolean lib, ένα opening entity type.
 - Phase 0–1: καθαρές pure συναρτήσεις, μηδέν side-effects, 15/15 jest.
 
-## 8. Changelog
+## 8. Αρχιτεκτονική Φ4 + γνωστά κενά
 
+**Reactive wiring (SSoT reuse):** ο `cascadeStairwellOpenings` καλείται inline μέσα στο
+`reconcileAssociativeGeometry` (bim/cascade), δίπλα στο `cascadeHostedOpeningsForWalls` —
+άρα τρέχει αυτόματα από τα **δύο** command bases που το καλούν (`MergeableUpdateCommand`
+execute/undo/redo + `SnapshotTransformCommand` executeInPlace/undoInPlace/redoInPlace),
+χωρίς να αγγιχτεί κάθε command ξεχωριστά. `changedIds` gate: skip όταν το command δεν
+άγγιξε σκάλα/πλάκα (μηδέν κόστος σε άσχετα edits).
+
+**Undo/redo (χωρίς snapshots):** ο planner είναι **idempotent full-lifecycle diff** — στο
+undo ξανα-τρέχει πάνω στον επαναφερμένο host και παράγει το σωστό σύνολο (create/delete),
+mirror του `cascadeHostedOpeningsForWalls` (ADR-540). Καμία ξεχωριστή command/undo-stack
+εγγραφή.
+
+**Persistence + BOQ + audit (μηδέν παράκαμψη):** ο coordinator εκπέμπει τα ΙΔΙΑ lifecycle
+events με το χειροκίνητο opening — `drawing:entity-created` (tool `'slab-opening'`, μέσω
+`emitBimEntityCreated`) σε create/update, `bim:slab-opening-delete-requested` (μέσω
+`emitBimEntityDeleteRequested`) σε delete — deferred σε `queueMicrotask`. Το
+`useSlabOpeningPersistence` (ADR-594) κάνει Firestore setDoc/deleteDoc + audit
+(`recordSlabOpeningChange`) + BOQ re-feed (`bim:slab-opening-persisted` → host slab
+net-volume) **αυτόματα**. `neverUpdate:true` → setDoc idempotent στο ίδιο id.
+
+**Orphan-cleanup σε delete σκάλας:** νέο `findHostedStairwellOpenings(stairIds, entities)`
+(bim-cascade-resolver, mirror `findHostedSlabOpenings` αλλά keyed στο `autoStairId`)· το
+`delete-entities-core.ts` προσθέτει τα auto openings της σκάλας στο **ίδιο** delete command
+(σιωπηλά, auto-derived) → atomic undo (snapshot restore) + Firestore deleteDoc μέσω του
+υπάρχοντος `emitBimDeleteEvents`. (Delete **πλάκας** καλύπτεται ήδη από το προϋπάρχον
+slab→slab-opening orphan cascade.)
+
+### Γνωστά κενά (honesty)
+- **Φ4.1 — create trigger:** το `reconcileAssociativeGeometry` τρέχει σε params-edit/transform,
+  **όχι** σε δημιουργία entity (`CreateBimEntityCommand`/batch creates δεν το καλούν). Άρα το
+  πρωτεύον σενάριο «σχεδιάζω την πλάκα οροφής πάνω από υπάρχουσα σκάλα → τρύπα εμφανίζεται
+  αμέσως» **δεν** πυροδοτείται ακόμη (η τρύπα εμφανίζεται μόλις μετακινηθεί/επεξεργαστεί η πλάκα).
+  Πρόταση Φ4.1: thin reactive listener στο `drawing:entity-created` (φίλτρο tool ∈ {slab,stair})
+  → `cascadeStairwellOpenings` (idempotent convergence σπάει το loop, ασφαλές έναντι ADR-492 §4
+  αφού το create-event δεν ξανα-εκπέμπει geometry-moved), Ή κλήση στο slab/stair creation path.
+- **id churn σε undo→redo:** το idempotent re-run παράγει **νέο** `generateSlabOpeningId` κάθε
+  recreate (delete X → create Y). Καθαρό αποτέλεσμα (deleteDoc X + setDoc Y, μηδέν orphan doc)
+  αλλά αλλάζει doc id ανά undo/redo κύκλο. Φ5: deterministic-stable id ανά (autoStairId, slabId).
+- **opening στην άκρη πλάκας:** αν το outline ακουμπά ακμή slab, ο `buildSlabOpeningEntity`
+  hard-reject → `applyCreate` skip. Φ5: χρήση του preview-tolerant `buildSlabOpeningPreviewEntity`
+  (Revit: δείχνει opening + warning) ή relax του point-in-polygon boundary.
+
+## 9. Changelog
+
+- **2026-07-10** — Phase 4 DONE (core). Reactive wiring: `cascadeStairwellOpenings` inline στο `reconcileAssociativeGeometry` (καλύπτει `MergeableUpdate`+`SnapshotTransform`, με `changedIds` perf-gate). Persistence/BOQ/audit: ο coordinator εκπέμπει `drawing:entity-created`(tool slab-opening)/`bim:slab-opening-delete-requested` (deferred microtask, mirror `CreateBimEntityCommand`) → `useSlabOpeningPersistence` κάνει Firestore + audit + BOQ αυτόματα (μηδέν παράκαμψη· `neverUpdate` setDoc idempotent). Orphan-cleanup: νέο `findHostedStairwellOpenings` (bim-cascade-resolver) + stair-branch στο `delete-entities-core.ts` → auto openings της σκάλας μπαίνουν στο ίδιο delete command (atomic undo). Undo/redo δωρεάν από idempotent re-run (mirror ADR-540). +7 jest (47/47 stairwell + 42/42 regression green: reconcile/resolver/wall-coordinator/delete-core), jscpd diff clean. **Gaps (§9):** Φ4.1 create-trigger, id churn undo/redo, edge-touching opening → Φ5.
+- **2026-07-10** — Phase 3 DONE. `StairwellOpeningEngine`: pure planner (`stairwell-opening-plan.ts` — create/update/delete diff, idempotent key=`autoStairId+slabId`, dedup) + pure input builders (`stairwell-opening-inputs.ts` — slab candidates, plan stairs με μία scene→mm nosing μετατροπή, managed-opening φίλτρο) + thin coordinator (`stairwell-opening-coordinator.ts` — `cascadeStairwellOpenings` read→plan→apply, mirror `wall-opening-coordinator`). Audit: κανένα υπάρχον engine δεν έκανε lifecycle derived openings (μόνο geometry-recompute) → νέο με ίδιο σχήμα. +`effectiveMinHeadroomMm` ('none'→NOK default). Fix: `stripClosingDuplicate` στο Φ1 outline (polygon-clipping closed-ring → open-ring σαν τα manual, αλλιώς validator=self-intersecting). +13 jest (40/40 συνολικά green), jscpd diff clean. Reuse: Φ1–Φ2 pure functions, `resolveStairVerticalProfile`, `computeStairNosings`, `buildSlabOpeningEntity`, `computeSlabOpeningGeometry`, `dxfUnitToMm`. Persistence/audit/BOQ/undo/orphan-cleanup/call-site → Φ4.
 - **2026-07-10** — Phase 2 DONE. Pure ανιχνευτής `stair-slab-overlap.ts` (footprint overlap + κατακόρυφο-πάνω-από-βάση φίλτρο, sorted nearest-ceiling-first, cross-product convenience). Εξήχθη κοινό `polygon3dToClipPolygon` στο `polygon-utils.ts` (SSoT· αφαιρέθηκε private duplicate από outline module, N.0.2/N.18). +12 jest (27/27 συνολικά green), jscpd diff clean. Reuse: `safeIntersection`/`multiPolygonArea` (ADR-396), `HOST_Z_EPS` (`host-footprint-eval`), inputs από `resolveStairVerticalProfile`.
 - **2026-07-10** — Phase 0 + Phase 1 DONE. Headroom SSoT (`stair-headroom-constants.ts`, nok 2030→2200), feature config, `autoStairId` marker, τρία pure geometry modules (nosing / headroom / outline), 15 jest tests (all green), jscpd clean. ADR created.

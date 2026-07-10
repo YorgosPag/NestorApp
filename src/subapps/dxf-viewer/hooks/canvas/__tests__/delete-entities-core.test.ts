@@ -32,6 +32,7 @@ jest.mock('../smart-delete-bim-events', () => ({
 jest.mock('../../../bim/cascade/bim-cascade-resolver', () => ({
   findHostedOpenings: jest.fn(() => [] as string[]),
   findHostedSlabOpenings: jest.fn(() => [] as string[]),
+  findHostedStairwellOpenings: jest.fn(() => [] as string[]),
 }));
 
 jest.mock('../../../bim/walls/wall-cascade-delete-store', () => ({
