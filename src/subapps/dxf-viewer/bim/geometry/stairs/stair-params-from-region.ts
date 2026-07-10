@@ -2,10 +2,15 @@
  * ADR-619 v2 — `StairParams` builder από τη walkline της περιοχής (STEP 3+5).
  *
  * Παίρνει το `StairRegionClassification` (walkline + πλάτος + βάση) και παράγει
- * ΕΓΚΥΡΟ walkline-driven `StairParams` (variant `'sketch'`), επαναχρησιμοποιώντας
- * το SSoT `buildDefaultStairParams` ως seed (rise/tread/width/handrails/…) — ΜΗΔΕΝ
- * αναπαραγωγή geometry/defaults. Το downstream `computeStairGeometry` (variant
- * `'sketch'` → `computeWalklineStair`) υπολογίζει treads/risers/stringers.
+ * ΕΓΚΥΡΟ `StairParams`, επαναχρησιμοποιώντας το SSoT `buildDefaultStairParams` ως seed
+ * (rise/tread/width/handrails/…) — ΜΗΔΕΝ αναπαραγωγή geometry/defaults.
+ *
+ * ADR-619 §straight-region (Giorgio 2026-07-10, «όπως οι μεγάλοι — Revit»): ένα
+ * ΟΡΘΟΓΩΝΙΟ αποτύπωμα (ευθύγραμμη walkline, χωρίς στροφές/τόξα) βγαίνει ΚΑΝΟΝΙΚΗ
+ * παραμετρική σκάλα (variant `'straight'`) — παίρνει το πλήρες grip set του τοίχου
+ * (8 λαβές + μετακίνηση + περιστροφή) + αληθινό parametric resize, ΟΧΙ «παγωμένο»
+ * walkline. Τα Γ/U/καμπύλα αποτυπώματα μένουν walkline-driven `'sketch'` (downstream
+ * `computeStairGeometry` variant `'sketch'` → `computeWalklineStair`).
  *
  * FIT CHECK (STEP 3, Google-level, ΠΟΤΕ throw):
  *   - H = ύψος ορόφου (floorLink / default 3000mm)· r = default riser.
@@ -31,6 +36,7 @@ import type {
   StairParams,
   StairVariantSketch,
 } from '../../types/stair-types';
+import type { Point2D } from '../../../rendering/types/Types';
 import {
   buildDefaultStairParams,
   type StairFloorLinkInput,
@@ -97,6 +103,26 @@ function directionDeg(dir: Vec2): number {
   return Math.atan2(dir.y, dir.x) * RAD_TO_DEG;
 }
 
+/**
+ * ADR-619 §straight-region (Giorgio 2026-07-10) — true when the traced corridor is a
+ * SINGLE STRAIGHT RUN: no arcs (winders/turns) AND the base→top straight-line distance
+ * ≈ the full walkline arc length (a bent L/U path is meaningfully shorter than its arc
+ * length). Such a region becomes a REAL parametric `'straight'` stair (Revit: a
+ * rectangular sketch = a standard run) — full 8-handle + move + rotation grips + true
+ * resize — instead of a frozen walkline `'sketch'`.
+ */
+function isStraightRun(
+  walkline: readonly { readonly type: 'line' | 'arc' }[],
+  basePoint: Point2D,
+  topPoint: Point2D,
+  length: number,
+): boolean {
+  if (length <= 0) return false;
+  if (walkline.some((seg) => seg.type === 'arc')) return false;
+  const straightDist = Math.hypot(topPoint.x - basePoint.x, topPoint.y - basePoint.y);
+  return straightDist >= length * 0.999;
+}
+
 /** Ύψος ορόφου (scene units) από floor link (μέτρα → mm → scene) ή default. */
 function resolveFloorHeight(floorLink: StairFloorLinkInput | null, s: number): number {
   const mm = floorLink && typeof floorLink.height === 'number' && floorLink.height > 0
@@ -136,6 +162,31 @@ export function buildStairParamsFromRegion(
   const width = seed.width;
 
   const z = seed.basePoint.z;
+  const pitch = Math.atan2(fit.riseActual, fit.goingEffective) * RAD_TO_DEG;
+
+  // ── Straight (rectangular) region → REAL parametric 'straight' stair ─────────
+  // Revit-style: a rectangular sketch is a standard run, so it gets the full wall-
+  // parity grip set (8 handles + move + rotation) + true parametric resize — NOT a
+  // frozen walkline. `stepCount = nRisers` keeps the straight invariant
+  // `totalRun = tread·(stepCount−1) = goingEffective·nGoings`. Bent/winder regions
+  // fall through to the walkline-driven 'sketch' below (unchanged).
+  if (isStraightRun(classification.walkline, classification.basePoint, classification.topPoint, classification.length)) {
+    return {
+      ...seed,
+      basePoint: { x: classification.basePoint.x, y: classification.basePoint.y, z },
+      direction: dirDeg,
+      rise: fit.riseActual,
+      tread: fit.goingEffective,
+      width,
+      stepCount: fit.nRisers,
+      totalRise: fit.riseActual * fit.nRisers,
+      totalRun: fit.goingEffective * fit.nGoings,
+      pitch,
+      variant: { kind: 'straight' },
+    };
+  }
+
+  // ── Bent / winder region → walkline-driven 'sketch' (unchanged) ─────────────
   // ΣΕΙΡΙΑΚΟ γέμισμα από τη βάση: πατήματα (goingEffective) στους κλάδους + επίπεδα
   // πλατύσκαλα στις στροφές (μεικτά z). `preserveZ` ⇒ το computeSketch δεν ξαναγράφει z.
   const walklinePath = buildSerialFillWalklinePath(
@@ -155,7 +206,7 @@ export function buildStairParamsFromRegion(
     stepCount: Math.max(1, walklinePath.length - 1),
     totalRise: fit.riseActual * fit.nRisers,
     totalRun: fit.goingEffective * fit.nGoings,
-    pitch: Math.atan2(fit.riseActual, fit.goingEffective) * RAD_TO_DEG,
+    pitch,
     variant,
   };
 }
