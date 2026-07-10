@@ -36,59 +36,90 @@ Introduce a single SSoT module
 
 ### The module
 
+**Phase 2 supersedes the Phase-1 "inner-radius cut" with the balanced /
+dancing-winder construction** (Revit default, continental-EU / ΝΟΚ practice).
+Cutting the wedges to a `minInnerGoing` radius left a visible **hole** at the
+corner and the treads no longer reached the inner corner P — rejected. The
+balanced construction keeps equal walkline going *and* fills to P.
+
 - `WINDER_CODE_MINIMUMS_MM` — per-`StairCodeProfile` mm table (nok/ibc/eurocode/
-  nbc/nfpa/as1657/din/ada/none). `none` = `0` → rule disabled (legacy triangle).
+  nbc/nfpa/as1657/din/ada/none). `none` = `0` → validator warning disabled.
 - `resolveWinderMinimums(codeProfile, sampleWidth)` — scales the mm table into
   the caller's unit system by keying off the `width` magnitude
   (`inferSceneUnitsFromWidth` + `mmToSceneUnits`, the units SSoT — **no**
-  `mmFactorFromWidth` clone). This is what lets the SAME rule serve the
-  scene-unit geometry pipeline **and** the mm-normalised validator.
-- `computeWinderWalklineRule(input)` — pure, unit-agnostic. Returns
-  `{ innerRadius, walklineRadius, innerGoing, walklineGoing, warnings }`.
-  - `innerRadius = minInnerGoing / sweep`, capped at `0.9 · outerRadius`
-    (warns `winder-inner-going-below-min` when it cannot fit).
-  - `walklineRadius = innerRadius + walklineOffset`, clamped inside the tread
-    (warns `winder-walkline-offset-clamped`).
-  - warns `winder-walkline-going-below-min` when `walklineRadius · sweep` is
-    below the code minimum.
-- `buildWinderWedge(pivot, rayA, rayB, innerRadius, outerRadius, z, turnSign)` —
-  the geometric expression of the rule: triangle when `innerRadius ≈ 0`
-  (back-compat), else trapezoid `[innerA, outerA, outerB, innerB]`.
+  `mmFactorFromWidth` clone). Serves both the scene-unit geometry pipeline
+  **and** the mm-normalised validator.
+- `computeBalancedWinderRule(input)` — pure, unit-agnostic. Given
+  `{ turnRad, winderCount W, tread, walklineRadius R = width/2 }` returns
+  `{ winderSweepRad, startAngleRad, encroachRad δ, walklineGoing g, bandStepsPerSide }`.
+  - Equal walkline going across the band (W wedges + 1 transition tread per
+    side): `g = (2·tread + R·Θ) / (W + 2)`.
+  - Wedge sweep `φ = g/R`; the fan spans `W·φ` centred on Θ, encroaching
+    `δ = (W·φ − Θ)/2` into each flight (δ>0 = wedges steal from flights on a
+    narrow stair; δ<0 = wedges give on a wide stair — both tile cleanly).
+- `winderWalklineWarnings(rule, minWalklineGoing)` — validator warning: fires
+  `winder-walkline-going-below-min` when the equal going `g` is below the code
+  minimum. The inner tip reaching P is **intentional RC fill**, not flagged.
+- `radialEdgeIntersect(pivot, dir, edgePt, edgeDir)` — lands a wedge / trapezoid
+  outer vertex exactly on a straight flight edge so the corner tiles with no
+  sliver (the wedges and the transition trapezoids share the P→outer edge).
+- `buildWinderWedge(...)` — retained wedge builder (triangle when `innerRadius ≈
+  0`); still exported for future reflex-arc consumers.
 
 ### Consumers wired
 
 | Consumer | File | Change |
 |---|---|---|
-| Winder kind **+** L-shape-with-winders (σκάλα Γ) | `stair-geometry-winder.ts` | `assembleWinderRun` computes the rule once; `buildWinderTreads` builds trapezoids via `buildWinderWedge`. Both variants share `assembleWinderRun`, so both are fixed at once. |
-| Code validator | `gate-stair-checker.ts` | new `checkWinderGeometry` folds winder going warnings into `codeViolations` (universal except `'none'`). |
-| Walkline default | `stair-completion.ts` | `DEFAULT_WALKLINE_OFFSET_MM` fixed `600 → 300` (correct NOK offset now that the field is live). |
+| Winder kind **+** L-shape-with-winders (σκάλα Γ) | `stair-geometry-winder.ts` | `assembleWinderRun` computes the balanced rule + `computeJunctionOuters` once; `buildWinderTreads` emits W triangles reaching P; `buildWinderFlight1/2` reshape the flight-end treads into transition trapezoids sharing the P→outer edge. Both variants share `assembleWinderRun` → both fixed at once. |
+| Code validator | `gate-stair-checker.ts` | `checkWinderGeometry` uses `computeBalancedWinderRule` + `winderWalklineWarnings` → the equal-going warning folds into `codeViolations` (universal except `'none'`). |
+| Walkline default | `stair-completion.ts` | `DEFAULT_WALKLINE_OFFSET_MM` fixed `600 → 300` (Phase 1, retained). |
 
 ### Scope note
 
 The **geometric walkline** (`buildWinderWalkline`, used for stringers/handrails)
 is intentionally **left at width/2** — moving it would break stringer offsets.
-The code walkline of this ADR is a **measurement** concept (rule + validator),
-not the stored centreline.
+The balancing uses that same `R = width/2` arc as its going-measurement line.
 
 ## Consequences
 
-- The visible "miter" is gone for the L-shape-with-winders stair (σκάλα Γ) and
-  the winder kind: corner treads keep a code-compliant inner going.
-- `codeProfile: 'none'` preserves the legacy triangle exactly (zero behaviour
-  change for stairs that opt out).
+- The corner "hole" and the zero-going miter are both gone for the σκάλα Γ and
+  the winder kind: the wedges fill to P and the two flight-end treads become
+  balanced transition trapezoids sharing their edges with the wedges.
+- Every band tread (wedges + 2 transitions) keeps **equal walkline going** → the
+  turn is uniform and gradual (no abrupt going jump) — the Revit/textbook
+  "balanced/dancing" result.
+- The balance is **geometric** (applies for every profile incl. `'none'`); the
+  code minimum stays a validator warning only.
 - The rule is generic: future consumers (stair-from-region reflex arcs,
-  gamma-with-winders) call the same `computeWinderWalklineRule` — no re-derivation.
+  gamma-with-winders) call the same `computeBalancedWinderRule` — no re-derivation.
+
+### Known limitation (follow-up)
+
+The band is fixed at **1 transition tread per side** (`bandStepsPerSide = 1`).
+Spreading the turn over more steps (Revit "wider balance", `k ≥ 2`) needs swung —
+not purely radial — risers and flight-tread repositioning; deferred to a
+follow-up. With `k = 1` the equal going already stays within a few mm of the
+straight tread for typical stairs, so the visible transition is smooth.
 
 ## Testing
 
-- `stair-winder-walkline-rule.test.ts` — 14 tests (mm/scene resolver, apex cut,
-  walkline going, clamps/caps, wedge shape + winding).
-- Regression: `StairGeometryService-winder` / `-lshape-winders` updated to the
-  unified wedge behaviour. Full stairs dir: **202/202 green**. jscpd: clean.
+- `stair-winder-walkline-rule.test.ts` — balanced rule solver (equal going, δ
+  sign both ways, cw/ccw mirror, degenerate), `winderWalklineWarnings`,
+  `radialEdgeIntersect`, mm/scene resolver, wedge shape + winding.
+- Regression: `StairGeometryService-winder` / `-lshape-winders` assert wedges
+  reach the shared pivot apex (no hole) + flight-end transition trapezoids.
+  Full stairs dir: **268/268 green**. jscpd: clean.
 
 ## Changelog
 
-- **2026-07-10** — Phase 1 (this ADR): SSoT module + geometry wiring (winder kind
-  & L-shape-with-winders) + validator check + i18n (el/en) + `walklineOffset`
-  default fix. Pending (Phase 2): stair-from-region reflex-arc consumer,
-  gamma-with-winders corner style, browser verification of the trapezoid render.
+- **2026-07-10** — Phase 2: **balanced / dancing winders**. Replaced the Phase-1
+  inner-radius cut (`computeWinderWalklineRule`) with `computeBalancedWinderRule`
+  — wedges reach the inner corner P (no hole), the two flight-end treads become
+  equal-going transition trapezoids, corner tiles via shared P→outer edges
+  (`computeJunctionOuters` + `radialEdgeIntersect`). Validator switched to
+  `winderWalklineWarnings`. Fixed at `bandStepsPerSide = 1` (k≥2 wider balance =
+  follow-up). Pending: browser verification of the render; stair-from-region
+  reflex-arc + gamma-with-winders consumers.
+- **2026-07-10** — Phase 1: SSoT module + geometry wiring (winder kind &
+  L-shape-with-winders) + validator check + i18n (el/en) + `walklineOffset`
+  default fix. *Superseded by Phase 2 (the cut left a corner hole).*
