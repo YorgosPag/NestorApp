@@ -14,6 +14,7 @@
 
 import * as THREE from 'three';
 import { SECTION_CUT_SURFACE } from '../../../config/color-config';
+import { createCutCapMaterial } from './section-stencil-materials';
 
 export type SectionHatchKey = 'rc' | 'steel' | 'masonry' | 'wood' | 'insulation';
 
@@ -70,38 +71,41 @@ export function resolveHatchKey(raw: string | undefined): SectionHatchKey | null
 
 // ── Canvas texture builders ───────────────────────────────────────────────────
 
-function buildRcTexture(): HTMLCanvasElement {
-  const c = document.createElement('canvas');
-  c.width = SZ; c.height = SZ;
-  const ctx = c.getContext('2d')!;
+/**
+ * ADR-621 — SSoT preamble for every hatch texture: an `SZ`×`SZ` canvas pre-filled
+ * with the cut-surface background. Each builder then draws only its own pattern.
+ */
+function createHatchCanvas(): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
+  const canvas = document.createElement('canvas');
+  canvas.width = SZ; canvas.height = SZ;
+  const ctx = canvas.getContext('2d')!;
   ctx.fillStyle = BG; ctx.fillRect(0, 0, SZ, SZ);
+  return { canvas, ctx };
+}
+
+function buildRcTexture(): HTMLCanvasElement {
+  const { canvas, ctx } = createHatchCanvas();
   ctx.fillStyle = STROKE;
   for (let x = STEP / 2; x < SZ; x += STEP) {
     for (let y = STEP / 2; y < SZ; y += STEP) {
       ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
     }
   }
-  return c;
+  return canvas;
 }
 
 function buildSteelTexture(): HTMLCanvasElement {
-  const c = document.createElement('canvas');
-  c.width = SZ; c.height = SZ;
-  const ctx = c.getContext('2d')!;
-  ctx.fillStyle = BG; ctx.fillRect(0, 0, SZ, SZ);
+  const { canvas, ctx } = createHatchCanvas();
   ctx.strokeStyle = STROKE; ctx.lineWidth = 1.2;
   for (let i = -SZ; i < SZ * 2; i += STEP) {
     ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + SZ, SZ); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(i, SZ); ctx.lineTo(i + SZ, 0); ctx.stroke();
   }
-  return c;
+  return canvas;
 }
 
 function buildMasonryTexture(): HTMLCanvasElement {
-  const c = document.createElement('canvas');
-  c.width = SZ; c.height = SZ;
-  const ctx = c.getContext('2d')!;
-  ctx.fillStyle = BG; ctx.fillRect(0, 0, SZ, SZ);
+  const { canvas, ctx } = createHatchCanvas();
   ctx.strokeStyle = STROKE; ctx.lineWidth = 1;
   const brickH = 20; const brickW = 40;
   for (let row = 0; row * brickH < SZ + brickH; row++) {
@@ -112,19 +116,16 @@ function buildMasonryTexture(): HTMLCanvasElement {
       ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + brickH); ctx.stroke();
     }
   }
-  return c;
+  return canvas;
 }
 
 function buildWoodTexture(): HTMLCanvasElement {
-  const c = document.createElement('canvas');
-  c.width = SZ; c.height = SZ;
-  const ctx = c.getContext('2d')!;
-  ctx.fillStyle = BG; ctx.fillRect(0, 0, SZ, SZ);
+  const { canvas, ctx } = createHatchCanvas();
   ctx.strokeStyle = STROKE; ctx.lineWidth = 1;
   for (let i = -SZ; i < SZ * 2; i += STEP - 2) {
     ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + SZ, SZ); ctx.stroke();
   }
-  return c;
+  return canvas;
 }
 
 /**
@@ -133,10 +134,7 @@ function buildWoodTexture(): HTMLCanvasElement {
  * "thermal/acoustic insulation" in a section cut (ADR-416 composite slab layers).
  */
 function buildInsulationTexture(): HTMLCanvasElement {
-  const c = document.createElement('canvas');
-  c.width = SZ; c.height = SZ;
-  const ctx = c.getContext('2d')!;
-  ctx.fillStyle = BG; ctx.fillRect(0, 0, SZ, SZ);
+  const { canvas, ctx } = createHatchCanvas();
   ctx.strokeStyle = STROKE; ctx.lineWidth = 1.2;
   const rowH = 24; const amp = rowH * 0.4; const step = 8;
   for (let y = rowH / 2; y < SZ + rowH; y += rowH) {
@@ -147,7 +145,7 @@ function buildInsulationTexture(): HTMLCanvasElement {
     }
     ctx.stroke();
   }
-  return c;
+  return canvas;
 }
 
 const BUILDERS: Readonly<Record<SectionHatchKey, () => HTMLCanvasElement>> = {
@@ -179,19 +177,9 @@ function getHatchTexture(key: SectionHatchKey): THREE.CanvasTexture {
 export function getHatchCapMaterial(key: SectionHatchKey): THREE.MeshBasicMaterial {
   let mat = MAT_CACHE.get(key);
   if (!mat) {
-    const tex = getHatchTexture(key);
-    mat = new THREE.MeshBasicMaterial({
-      map: tex,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-      depthTest: false,
-    });
-    mat.stencilWrite = true;
-    mat.stencilRef = 0;
-    mat.stencilFunc = THREE.NotEqualStencilFunc;
-    mat.stencilFail = THREE.ReplaceStencilOp;
-    mat.stencilZFail = THREE.ReplaceStencilOp;
-    mat.stencilZPass = THREE.ReplaceStencilOp;
+    // Same NotEqual(0)→Replace cap mask as the solid caps (SSoT), textured with the
+    // per-material hatch pattern; depthTest off like the box `createCapMaterial`.
+    mat = createCutCapMaterial({ map: getHatchTexture(key), depthTest: false });
     MAT_CACHE.set(key, mat);
   }
   return mat;

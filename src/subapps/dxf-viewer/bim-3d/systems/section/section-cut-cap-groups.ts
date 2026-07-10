@@ -9,6 +9,7 @@
 
 import * as THREE from 'three';
 import { type SectionHatchKey, resolveHatchKey } from './section-hatch-cap';
+import { createCutCapMaterial } from './section-stencil-materials';
 
 /**
  * The colour a cut face should be painted = the colour the user SEES on the solid.
@@ -75,28 +76,12 @@ export function getColorCapMaterial(
 ): THREE.MeshBasicMaterial {
   let mat = cache.get(hex);
   if (!mat) {
-    mat = new THREE.MeshBasicMaterial({
-      color: hex,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-      // ADR-452 v2.18 — depth-test the VISIBLE per-material cut cap (same fix as the opaque
-      // base in `createOpaqueCutCapMaterial`): without it the coloured cut faces drew on top
-      // regardless of the camera, so the roof poché stayed in the foreground from below.
-      depthTest: true,
-      // ADR-452 v2.22 — negative polygonOffset (same as the opaque base): the coloured cap
-      // quad is coplanar with the cut, so bias it a hair toward the camera to win the rim
-      // z-fight on heavy / large-extent scenes (coarser depth precision) without changing
-      // which geometry occludes it.
-      polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits: -1,
-    });
-    mat.stencilWrite = true;
-    mat.stencilRef = 0;
-    mat.stencilFunc = THREE.NotEqualStencilFunc;
-    mat.stencilFail = THREE.ReplaceStencilOp;
-    mat.stencilZFail = THREE.ReplaceStencilOp;
-    mat.stencilZPass = THREE.ReplaceStencilOp;
+    // Same NotEqual(0)→Replace cap as the opaque grey base (SSoT `createCutCapMaterial`),
+    // in this material's colour. ADR-452 v2.18 — depthTest ON so the coloured cut faces
+    // are occluded by nearer geometry (else the roof poché stays foreground from below);
+    // v2.22 — negative polygonOffset so the coplanar cap quad wins the rim z-fight on
+    // heavy / large-extent scenes without changing which geometry occludes it.
+    mat = createCutCapMaterial({ color: hex, depthTest: true, polygonOffset: -1 });
     cache.set(hex, mat);
   }
   return mat;

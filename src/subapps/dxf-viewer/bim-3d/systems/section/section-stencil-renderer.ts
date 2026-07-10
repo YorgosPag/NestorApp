@@ -54,10 +54,15 @@ import {
 } from './section-cut-cap-groups';
 import {
   type SecondaryCapContext,
+  type PlaneCapPass,
   renderEmphasisCapForPlane,
   renderHatchOverlaysForPlane,
 } from './section-stencil-secondary-passes';
-import { isSectionParityOverlay } from './section-parity-overlay';
+import {
+  hideNonParityMeshes,
+  restoreHidden,
+  withSectionCapRenderState,
+} from './section-parity-scene';
 import { SECTION_CUT_SURFACE } from '../../../config/color-config';
 import {
   resolveEffectiveBounds,
@@ -205,60 +210,40 @@ export class SectionStencilRenderer {
     const parityClip = [cutPlane, ...boundPlanes] as THREE.Plane[];
     const others = boundPlanes as THREE.Plane[];
 
-    const savedAutoClear = renderer.autoClear;
-    const savedAutoClearColor = renderer.autoClearColor;
-    const savedAutoClearDepth = renderer.autoClearDepth;
-    const savedAutoClearStencil = renderer.autoClearStencil;
-    const savedBackground = mainScene.background;
-    renderer.autoClear = false;
-    renderer.autoClearColor = false;
-    renderer.autoClearDepth = false;
-    renderer.autoClearStencil = false;
-    // ADR-452 — the caller already painted the scene background (autoClear=true pass).
-    // Null it for the cap passes: with autoClear* all false, three.js' WebGLBackground
-    // would still force a clear() for a Color/Texture background → gl.clear(0) (zero
-    // bitmask) → "no buffers in bitmask" warning every frame × every parity pass
-    // (console flood + RAF jank). Nulling skips that path entirely. Restored below.
-    mainScene.background = null;
+    withSectionCapRenderState(renderer, mainScene, () => {
+      // ADR-452 v2.22 — dev-only diagnostic (magenta flood, see `applyCapDebugState`). No-op unless
+      // `dxf-section-cap-debug=1`; reset to the real render state every frame so the flag is live.
+      applyCapDebugState(this.cutCapMat, SECTION_CUT_SURFACE.color, quality);
 
-    // ADR-452 v2.22 — dev-only diagnostic (magenta flood, see `applyCapDebugState`). No-op unless
-    // `dxf-section-cap-debug=1`; reset to the real render state every frame so the flag is live.
-    applyCapDebugState(this.cutCapMat, SECTION_CUT_SURFACE.color, quality);
+      // 1) OPAQUE grey base poché over ALL cut geometry — crisp, no bleed-through. ADR-452 v2.22 —
+      //    the ALWAYS-SOLID layer uses the ROBUST explicit 2-pass parity (no cache-desync trick),
+      //    so it can never read hollow on a heavy scene; colours below keep the cheap single-pass.
+      this.capCutSection(
+        renderer, mainScene, camera, cutPlane, parityClip, others, capSize, capCenter,
+        this.cutCapMesh, this.cutCapScene, this.cutCapMat, null, 'twopass',
+      );
 
-    // 1) OPAQUE grey base poché over ALL cut geometry — crisp, no bleed-through. ADR-452 v2.22 —
-    //    the ALWAYS-SOLID layer uses the ROBUST explicit 2-pass parity (no cache-desync trick),
-    //    so it can never read hollow on a heavy scene; colours below keep the cheap single-pass.
-    this.capCutSection(
-      renderer, mainScene, camera, cutPlane, parityClip, others, capSize, capCenter,
-      this.cutCapMesh, this.cutCapScene, this.cutCapMat, null, 'twopass',
-    );
-
-    // 2) Per-MATERIAL-COLOUR opaque cut faces — each cut section painted in its
-    //    own material colour (concrete core vs plaster finish, etc.) so the layers
-    //    read distinctly and cleanly (a busy hatch looked cheap; the clipped per-
-    //    layer edges + the true material colour are the crisp, Revit-grade signal).
-    //    ADR-452 v2.7/v2.9 — this loop costs 2×N full scene renders + 2×N traversals.
-    //    It runs on 'colors' (camera motion: keep the coloured section visible while
-    //    navigating) AND 'full' (settled), and is skipped ONLY on 'fast' (cut-slider
-    //    drag) where the geometry changes every frame — there the grey base is the live
-    //    preview and the refine-on-idle timer restores colours once the slider settles.
-    if (quality !== 'fast') {
-      const colorGroups = collectColorGroups(mainScene);
-      for (const [hex, meshes] of colorGroups) {
-        const mat = getColorCapMaterial(this.colorCapCache, hex);
-        this.hatchCapMesh.material = mat;
-        this.capCutSection(
-          renderer, mainScene, camera, cutPlane, parityClip, others, capSize, capCenter,
-          this.hatchCapMesh, this.hatchCapScene, mat, meshes, 'single',
-        );
+      // 2) Per-MATERIAL-COLOUR opaque cut faces — each cut section painted in its
+      //    own material colour (concrete core vs plaster finish, etc.) so the layers
+      //    read distinctly and cleanly (a busy hatch looked cheap; the clipped per-
+      //    layer edges + the true material colour are the crisp, Revit-grade signal).
+      //    ADR-452 v2.7/v2.9 — this loop costs 2×N full scene renders + 2×N traversals.
+      //    It runs on 'colors' (camera motion: keep the coloured section visible while
+      //    navigating) AND 'full' (settled), and is skipped ONLY on 'fast' (cut-slider
+      //    drag) where the geometry changes every frame — there the grey base is the live
+      //    preview and the refine-on-idle timer restores colours once the slider settles.
+      if (quality !== 'fast') {
+        const colorGroups = collectColorGroups(mainScene);
+        for (const [hex, meshes] of colorGroups) {
+          const mat = getColorCapMaterial(this.colorCapCache, hex);
+          this.hatchCapMesh.material = mat;
+          this.capCutSection(
+            renderer, mainScene, camera, cutPlane, parityClip, others, capSize, capCenter,
+            this.hatchCapMesh, this.hatchCapScene, mat, meshes, 'single',
+          );
+        }
       }
-    }
-
-    mainScene.background = savedBackground;
-    renderer.autoClear = savedAutoClear;
-    renderer.autoClearColor = savedAutoClearColor;
-    renderer.autoClearDepth = savedAutoClearDepth;
-    renderer.autoClearStencil = savedAutoClearStencil;
+    });
   }
 
   /**
@@ -289,30 +274,15 @@ export class SectionStencilRenderer {
     isolate: THREE.Object3D[] | null,
     parityMode: ParityMode,
   ): void {
-    // Hide objects that must NOT contribute to the stencil parity, restored after.
-    //  • Fat-line edge overlays (ADR-375) are `LineSegments2`, which extend
-    //    THREE.Mesh — so `instanceof Mesh` does NOT skip them. The cut parity
-    //    material is a Mesh material (colorWrite off, depthTest off); rendered over
-    //    a `LineSegmentsGeometry` it draws that geometry's base `position` template
-    //    quad (instancing ignored) and writes stray stencil → the cap quad then
-    //    fills a phantom sliver at the world origin. Visible ONLY with edges on +
-    //    cut active (no overlays = no contamination). Exclude them from the parity.
+    // Hide objects that must NOT contribute to the stencil parity, restored after
+    // (SSoT `hideNonParityMeshes`, ADR-452/483):
+    //  • Always-on-top overlays (edge fat-lines `LineSegments2` extend THREE.Mesh;
+    //    M/V/N diagrams/labels) draw the parity Mesh material's template quad and
+    //    write stray stencil → a phantom sliver at the cut. Always excluded.
     //  • Isolate path: additionally hide every OTHER bimId solid so a per-material
     //    cap stencils only its own sections (mirrors the box hatch path).
-    const hidden: THREE.Object3D[] = [];
     const keep = isolate ? new Set(isolate) : null;
-    mainScene.traverse((obj) => {
-      // Only hide currently-visible objects — restore sets `visible = true`, so pushing
-      // an already-hidden overlay (e.g. one the edge-cut trim hid above the cut) would
-      // wrongly re-show it as a phantom cage.
-      if (!obj.visible) return;
-      // ADR-452/483 — edge overlays + always-on-top analysis diagrams/labels (Mesh AND
-      // Sprite) write stray stencil → exclude them from the parity FIRST.
-      if (isSectionParityOverlay(obj)) { hidden.push(obj); obj.visible = false; return; }
-      if (!(obj instanceof THREE.Mesh)) return;
-      const ud = obj.userData as Record<string, unknown>;
-      if (keep && ud['bimId'] !== undefined && !keep.has(obj)) { hidden.push(obj); obj.visible = false; }
-    });
+    const hidden = hideNonParityMeshes(mainScene, keep ? (obj) => keep.has(obj) : undefined);
 
     // ADR-452 v2.22 — parity strategy (grey base = robust 'twopass', colours = 'single'), see
     // `runCutParityPass`. Leaves stencil != 0 at the cut cross-section.
@@ -323,7 +293,7 @@ export class SectionStencilRenderer {
       warmupScene: this.warmupScene,
     });
 
-    for (const obj of hidden) obj.visible = true;
+    restoreHidden(hidden);
 
     // Cap quad ON the cut plane, masked to stencil != 0. Bounded by the section /
     // crop planes but NOT the cut plane itself (the quad sits on that plane).
@@ -358,30 +328,13 @@ export class SectionStencilRenderer {
     const capCenter = computeCapCenter(bounds);
     // ADR-452 v2.7 — hatch overlays are full-quality only (collect skipped on drafts).
     const hatchGroups = quality === 'full' ? collectHatchGroups(mainScene) : new Map<SectionHatchKey, THREE.Object3D[]>();
-    const savedAutoClear = renderer.autoClear;
-    const savedAutoClearColor = renderer.autoClearColor;
-    const savedAutoClearDepth = renderer.autoClearDepth;
-    const savedAutoClearStencil = renderer.autoClearStencil;
-    const savedBackground = mainScene.background;
-    renderer.autoClear = false;
-    renderer.autoClearColor = false;
-    renderer.autoClearDepth = false;
-    renderer.autoClearStencil = false;
-    // ADR-452 — see renderAxisCutCap: null the (already-painted) scene background
-    // for the cap passes so three.js' WebGLBackground doesn't force a zero-bitmask
-    // gl.clear() ("no buffers in bitmask" warning flood). Restored below.
-    mainScene.background = null;
 
-    for (let i = 0; i < planes.length; i++) {
-      this.renderCapForPlane(renderer, mainScene, camera, planes, i, capSize, capCenter, hatchGroups, quality);
-    }
-
-    mainScene.overrideMaterial = null;
-    mainScene.background = savedBackground;
-    renderer.autoClear = savedAutoClear;
-    renderer.autoClearColor = savedAutoClearColor;
-    renderer.autoClearDepth = savedAutoClearDepth;
-    renderer.autoClearStencil = savedAutoClearStencil;
+    withSectionCapRenderState(renderer, mainScene, () => {
+      for (let i = 0; i < planes.length; i++) {
+        this.renderCapForPlane(renderer, mainScene, camera, planes, i, capSize, capCenter, hatchGroups, quality);
+      }
+      mainScene.overrideMaterial = null;
+    });
   }
 
   private renderCapForPlane(
@@ -416,12 +369,11 @@ export class SectionStencilRenderer {
     // Back-facing fragments keep IncrementWrap (entering solid). Parity → NotEqual(0) → cap.
     gl.stencilOpSeparate(gl.FRONT, gl.KEEP, gl.KEEP, gl.DECR_WRAP);
 
-    const hidden: THREE.Object3D[] = [];
-    this.hideEdgeOverlaysForParity(mainScene, hidden);
+    const hidden = hideNonParityMeshes(mainScene);
     mainScene.overrideMaterial = this.singlePassStencilMat;
     renderer.render(mainScene, camera);
     mainScene.overrideMaterial = null;
-    for (const obj of hidden) obj.visible = true;
+    restoreHidden(hidden);
 
     positionCapMesh(this.capMesh, currentPlane, capSize, capCenter);
     renderer.render(this.capScene, camera);
@@ -429,41 +381,18 @@ export class SectionStencilRenderer {
     // ADR-452 v2.7 — hatch overlays + selection emphasis are full-quality only; on
     // draft (drag/orbit) frames the base cap above is the live preview, and the
     // refine-on-idle pass restores these once motion settles.
+    const pass: PlaneCapPass = {
+      renderer, mainScene, camera, gl, otherPlanes: others, currentPlane, capSize, capCenter,
+    };
     if (quality === 'full' && hatchGroups.size > 0) {
-      renderHatchOverlaysForPlane(
-        this.secondaryCtx, renderer, mainScene, camera, gl, others, currentPlane, capSize, capCenter, hatchGroups,
-      );
+      renderHatchOverlaysForPlane(this.secondaryCtx, pass, hatchGroups);
     }
 
     const selectedBimIds = useSelection3DStore.getState().selectedBimIds;
     if (quality === 'full' && selectedBimIds.length > 0) {
-      renderEmphasisCapForPlane(
-        this.secondaryCtx, renderer, mainScene, camera, gl, others, currentPlane, capSize, capCenter, selectedBimIds,
-      );
+      renderEmphasisCapForPlane(this.secondaryCtx, pass, selectedBimIds);
     }
   }
-
-  /**
-   * Hide every fat-line edge overlay (ADR-375) in `mainScene` for a stencil parity
-   * pass, collecting them into `hidden` for the caller to restore. SSoT for the rule
-   * the four parity passes share: a `LineSegments2` edge overlay extends THREE.Mesh,
-   * so it survives `instanceof Mesh` guards and the Mesh parity material (colorWrite
-   * off, depthTest off) draws its `LineSegmentsGeometry` base `position` template
-   * quad — instancing ignored — writing stray stencil that the cap quad then fills as
-   * a phantom sliver at the world origin. Visible only with edges on + a cut/section
-   * active; excluding the overlays from the parity removes it without touching solids.
-   */
-  private hideEdgeOverlaysForParity(mainScene: THREE.Scene, hidden: THREE.Object3D[]): void {
-    mainScene.traverse((obj) => {
-      // ADR-452/483 — edge overlays AND always-on-top M/V/N diagrams (depthTest:false)
-      // must skip the parity (both write stray stencil → phantom recolour at the cut).
-      if (obj.visible && isSectionParityOverlay(obj)) {
-        hidden.push(obj);
-        obj.visible = false;
-      }
-    });
-  }
-
 
   dispose(): void {
     if (this.disposed) return;

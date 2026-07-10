@@ -5,10 +5,85 @@
  * the stencil/cap THREE materials + warmup scene; none depend on renderer instance
  * state, so they live here as free functions. See ADR-366 §A.3 / ADR-452 for the
  * stencil-parity capping algorithm they support.
+ *
+ * ADR-621 — the seven public builders are thin wrappers over TWO SSoT constructors:
+ *   • {@link createParityStencilMaterial} — the four colour-less parity materials
+ *     (they differ ONLY in `side` / `depthTest` / `stencilZPass`).
+ *   • {@link createCutCapMaterial} — the NotEqual(0)→Replace cap materials (box cap,
+ *     opaque View-Range cap, selection emphasis; also reused by the hatch + colour
+ *     cap caches) — they differ in colour/opacity/texture, `depthTest`, polygonOffset.
  */
 
 import * as THREE from 'three';
 import { SECTION_CUT_SURFACE } from '../../../config/color-config';
+
+interface ParityStencilOptions {
+  readonly side: THREE.Side;
+  readonly depthTest: boolean;
+  readonly zPass: THREE.StencilOp;
+}
+
+/**
+ * SSoT for the colour-less stencil-PARITY materials. All four share the same
+ * skeleton — colorWrite OFF, depthWrite OFF, `Always`/`Keep`/`Keep` stencil ops —
+ * and vary ONLY in `side`, `depthTest`, and the `stencilZPass` (Increment vs
+ * Decrement). Callers document the per-material ADR rationale.
+ */
+function createParityStencilMaterial(opts: ParityStencilOptions): THREE.MeshBasicMaterial {
+  const mat = new THREE.MeshBasicMaterial();
+  mat.side = opts.side;
+  mat.colorWrite = false;
+  mat.depthWrite = false;
+  mat.depthTest = opts.depthTest;
+  mat.stencilWrite = true;
+  mat.stencilFunc = THREE.AlwaysStencilFunc;
+  mat.stencilFail = THREE.KeepStencilOp;
+  mat.stencilZFail = THREE.KeepStencilOp;
+  mat.stencilZPass = opts.zPass;
+  return mat;
+}
+
+interface CutCapOptions {
+  readonly color?: THREE.ColorRepresentation;
+  readonly opacity?: number;
+  readonly map?: THREE.Texture;
+  readonly depthTest: boolean;
+  /** Negative polygon offset (factor = units = value) to win the coplanar rim z-fight. */
+  readonly polygonOffset?: number;
+}
+
+/**
+ * SSoT for the NotEqual(0)→Replace stencil CAP materials. All share the same
+ * stencil mask (ref 0, `NotEqual`, `Replace`×3) + DoubleSide / depthWrite-off
+ * skeleton, and vary in colour/opacity/texture, `depthTest`, and the optional
+ * coplanar `polygonOffset`. Callers document the per-material ADR rationale.
+ */
+function createCutCapMaterial(opts: CutCapOptions): THREE.MeshBasicMaterial {
+  const params: THREE.MeshBasicMaterialParameters = {
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    depthTest: opts.depthTest,
+  };
+  if (opts.color !== undefined) params.color = opts.color;
+  if (opts.map !== undefined) params.map = opts.map;
+  if (opts.opacity !== undefined) {
+    params.opacity = opts.opacity;
+    params.transparent = opts.opacity < 1;
+  }
+  if (opts.polygonOffset !== undefined) {
+    params.polygonOffset = true;
+    params.polygonOffsetFactor = opts.polygonOffset;
+    params.polygonOffsetUnits = opts.polygonOffset;
+  }
+  const mat = new THREE.MeshBasicMaterial(params);
+  mat.stencilWrite = true;
+  mat.stencilRef = 0;
+  mat.stencilFunc = THREE.NotEqualStencilFunc;
+  mat.stencilFail = THREE.ReplaceStencilOp;
+  mat.stencilZFail = THREE.ReplaceStencilOp;
+  mat.stencilZPass = THREE.ReplaceStencilOp;
+  return mat;
+}
 
 /**
  * 1-pass DoubleSide stencil material (Phase 7.0b). BACK face → IncrementWrap via
@@ -16,17 +91,11 @@ import { SECTION_CUT_SURFACE } from '../../../config/color-config';
  * `gl.stencilOpSeparate` override the renderer applies at draw time.
  */
 export function createSinglePassMaterial(): THREE.MeshBasicMaterial {
-  const mat = new THREE.MeshBasicMaterial();
-  mat.side = THREE.DoubleSide;
-  mat.colorWrite = false;
-  mat.depthWrite = false;
-  mat.depthTest = true;
-  mat.stencilWrite = true;
-  mat.stencilFunc = THREE.AlwaysStencilFunc;
-  mat.stencilFail = THREE.KeepStencilOp;
-  mat.stencilZFail = THREE.KeepStencilOp;
-  mat.stencilZPass = THREE.IncrementWrapStencilOp;
-  return mat;
+  return createParityStencilMaterial({
+    side: THREE.DoubleSide,
+    depthTest: true,
+    zPass: THREE.IncrementWrapStencilOp,
+  });
 }
 
 /**
@@ -44,21 +113,11 @@ export function createWarmupScene(singlePassMat: THREE.MeshBasicMaterial): THREE
 }
 
 export function createCapMaterial(): THREE.MeshBasicMaterial {
-  const mat = new THREE.MeshBasicMaterial({
+  return createCutCapMaterial({
     color: SECTION_CUT_SURFACE.color,
     opacity: SECTION_CUT_SURFACE.opacity,
-    transparent: SECTION_CUT_SURFACE.opacity < 1,
-    side: THREE.DoubleSide,
-    depthWrite: false,
     depthTest: false,
   });
-  mat.stencilWrite = true;
-  mat.stencilRef = 0;
-  mat.stencilFunc = THREE.NotEqualStencilFunc;
-  mat.stencilFail = THREE.ReplaceStencilOp;
-  mat.stencilZFail = THREE.ReplaceStencilOp;
-  mat.stencilZPass = THREE.ReplaceStencilOp;
-  return mat;
 }
 
 /**
@@ -87,42 +146,20 @@ export function createCapMaterial(): THREE.MeshBasicMaterial {
  * tiny relative to the walls/columns that must still hide a roof cut from below, v2.19).
  */
 export function createOpaqueCutCapMaterial(): THREE.MeshBasicMaterial {
-  const mat = new THREE.MeshBasicMaterial({
+  return createCutCapMaterial({
     color: SECTION_CUT_SURFACE.color,
     opacity: 1,
-    transparent: false,
-    side: THREE.DoubleSide,
-    depthWrite: false,
     depthTest: true,
-    polygonOffset: true,
-    polygonOffsetFactor: -1,
-    polygonOffsetUnits: -1,
+    polygonOffset: -1,
   });
-  mat.stencilWrite = true;
-  mat.stencilRef = 0;
-  mat.stencilFunc = THREE.NotEqualStencilFunc;
-  mat.stencilFail = THREE.ReplaceStencilOp;
-  mat.stencilZFail = THREE.ReplaceStencilOp;
-  mat.stencilZPass = THREE.ReplaceStencilOp;
-  return mat;
 }
 
 export function createSelectedCapMaterial(): THREE.MeshBasicMaterial {
-  const mat = new THREE.MeshBasicMaterial({
+  return createCutCapMaterial({
     color: SECTION_CUT_SURFACE.selectedCapColor,
     opacity: SECTION_CUT_SURFACE.selectedCapOpacity,
-    transparent: SECTION_CUT_SURFACE.selectedCapOpacity < 1,
-    side: THREE.DoubleSide,
-    depthWrite: false,
     depthTest: false,
   });
-  mat.stencilWrite = true;
-  mat.stencilRef = 0;
-  mat.stencilFunc = THREE.NotEqualStencilFunc;
-  mat.stencilFail = THREE.ReplaceStencilOp;
-  mat.stencilZFail = THREE.ReplaceStencilOp;
-  mat.stencilZPass = THREE.ReplaceStencilOp;
-  return mat;
 }
 
 /**
@@ -146,17 +183,11 @@ export function createSelectedCapMaterial(): THREE.MeshBasicMaterial {
  * the `depthTest:true` `singlePassStencilMat`) still seeds the right op here.
  */
 export function createSinglePassCutParityMaterial(): THREE.MeshBasicMaterial {
-  const mat = new THREE.MeshBasicMaterial();
-  mat.side = THREE.DoubleSide;
-  mat.colorWrite = false;
-  mat.depthWrite = false;
-  mat.depthTest = false;
-  mat.stencilWrite = true;
-  mat.stencilFunc = THREE.AlwaysStencilFunc;
-  mat.stencilFail = THREE.KeepStencilOp;
-  mat.stencilZFail = THREE.KeepStencilOp;
-  mat.stencilZPass = THREE.IncrementWrapStencilOp;
-  return mat;
+  return createParityStencilMaterial({
+    side: THREE.DoubleSide,
+    depthTest: false,
+    zPass: THREE.IncrementWrapStencilOp,
+  });
 }
 
 /**
@@ -182,30 +213,20 @@ export function createSinglePassCutParityMaterial(): THREE.MeshBasicMaterial {
  * over the whole sliced solid, independent of the already-clipped depth buffer).
  */
 export function createBackParityMaterial(): THREE.MeshBasicMaterial {
-  const mat = new THREE.MeshBasicMaterial();
-  mat.side = THREE.BackSide;
-  mat.colorWrite = false;
-  mat.depthWrite = false;
-  mat.depthTest = false;
-  mat.stencilWrite = true;
-  mat.stencilFunc = THREE.AlwaysStencilFunc;
-  mat.stencilFail = THREE.KeepStencilOp;
-  mat.stencilZFail = THREE.KeepStencilOp;
-  mat.stencilZPass = THREE.IncrementWrapStencilOp;
-  return mat;
+  return createParityStencilMaterial({
+    side: THREE.BackSide,
+    depthTest: false,
+    zPass: THREE.IncrementWrapStencilOp,
+  });
 }
 
 /** ADR-452 v2.22 — FRONT-face decrement pass of the robust 2-pass grey-base parity. */
 export function createFrontParityMaterial(): THREE.MeshBasicMaterial {
-  const mat = new THREE.MeshBasicMaterial();
-  mat.side = THREE.FrontSide;
-  mat.colorWrite = false;
-  mat.depthWrite = false;
-  mat.depthTest = false;
-  mat.stencilWrite = true;
-  mat.stencilFunc = THREE.AlwaysStencilFunc;
-  mat.stencilFail = THREE.KeepStencilOp;
-  mat.stencilZFail = THREE.KeepStencilOp;
-  mat.stencilZPass = THREE.DecrementWrapStencilOp;
-  return mat;
+  return createParityStencilMaterial({
+    side: THREE.FrontSide,
+    depthTest: false,
+    zPass: THREE.DecrementWrapStencilOp,
+  });
 }
+
+export { createCutCapMaterial };
