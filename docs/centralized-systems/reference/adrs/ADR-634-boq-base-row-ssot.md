@@ -1,4 +1,4 @@
-# ADR-633: BIM BOQ base-row SSoT (`bim/services`)
+# ADR-634: BIM BOQ base-row SSoT (`bim/services`)
 
 ## Status
 ✅ **ACTIVE — 2026-07-10** — Cluster #21 of the jscpd de-duplication sweep (ADR-584 / N.18), targeting `src/subapps/dxf-viewer/bim/services/`. The ~30 constant default fields every BIM-generated BOQ row stamped are centralised into one factory (plus a single-entity row helper) — **1:1 values**, verified field-by-field.
@@ -54,5 +54,5 @@ The Firestore upsert/delete lifecycle every managed BOQ row shares — **detach 
 ---
 
 ## Changelog
-- **2026-07-10** — Created. Cluster #21. New `boq-base-row.ts` (`buildBoqBaseRow` + `buildSingleEntityBoqRow` + `BoqBaseRowContext`/`BoqSourceEntityType`); 6 BOQ writers migrated; ADR + adr-index + memory pointer. Firestore-sync SSoT noted as follow-up. Renumbered ADR-632 → ADR-633 (ADR-632 collision with stairwell-auto-opening).
+- **2026-07-10** — Created. Cluster #21. New `boq-base-row.ts` (`buildBoqBaseRow` + `buildSingleEntityBoqRow` + `BoqBaseRowContext`/`BoqSourceEntityType`); 6 BOQ writers migrated; ADR + adr-index + memory pointer. Firestore-sync SSoT noted as follow-up. Numbered ADR-634 (ADR-632 = stairwell-auto-opening, ADR-633 = multi-flight stair geometry — both concurrent).
 - **2026-07-10** — Firestore-sync follow-up landed: `boq-firestore-sync.ts` (`syncManagedBoqRow` + `deleteManagedBoqRow`) adopted by `stair`/`envelope`/bridge; `buildGroupParentBoqRow` (+ `BuiltBoqRow` moved to `boq-base-row`) for multi-layer/finish parents; bridge-local `resolveEntityAtoeMapping`/`upsertRowGroup`. 6 co-staged clones eliminated → `jscpd:diff` clean, 132 BOQ jest green, no skip.

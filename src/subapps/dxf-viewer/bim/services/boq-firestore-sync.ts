@@ -3,7 +3,7 @@
 /**
  * @module bim/services/boq-firestore-sync
  * @description SSoT for the Firestore upsert/delete lifecycle every managed
- * BIM-generated BOQ row shares (ADR-633 follow-up).
+ * BIM-generated BOQ row shares (ADR-634 follow-up).
  *
  * A "managed" row is one the BIM auto-sync owns via a deterministic id. Its
  * lifecycle is identical across sources (stair components, envelope zones, …):
@@ -24,7 +24,7 @@
  * different contract, so it keeps its bespoke lifecycle.
  *
  * @see ./boq-base-row.ts (the row-payload SSoT)
- * @see docs/centralized-systems/reference/adrs/ADR-633-boq-base-row-ssot.md
+ * @see docs/centralized-systems/reference/adrs/ADR-634-boq-base-row-ssot.md
  */
 
 import { deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
