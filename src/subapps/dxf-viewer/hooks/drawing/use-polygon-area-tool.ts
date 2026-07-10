@@ -110,6 +110,12 @@ export function usePolygonAreaTool<TOverrides extends object, TEntity>(
   const [overrides, setOverrides] = useState<TOverrides>(initialOverrides);
   const overridesRef = useRef(overrides);
   overridesRef.current = overrides;
+  // Latest initial-overrides read via ref so `deactivate` stays reference-stable
+  // even when the caller passes a fresh object literal each render (the default
+  // `{}` does). Without this, `deactivate`'s identity churns → useToolLifecycle's
+  // effect re-fires every render → setOverrides(new {}) → infinite update loop.
+  const initialOverridesRef = useRef(initialOverrides);
+  initialOverridesRef.current = initialOverrides;
   const [error, setError] = useState<string | null>(null);
 
   // ── commit closure → FSM `onCommit` (false keeps awaitingNextVertex for a fix) ──
@@ -147,9 +153,9 @@ export function usePolygonAreaTool<TOverrides extends object, TEntity>(
   const activate = useCallback(() => { setError(null); chain.activate(); }, [chain.activate]);
   const deactivate = useCallback(() => {
     setError(null);
-    setOverrides(initialOverrides);
+    setOverrides(initialOverridesRef.current);
     chain.deactivate();
-  }, [chain.deactivate, initialOverrides]);
+  }, [chain.deactivate]);
   const reset = useCallback(() => { setError(null); chain.reset(); }, [chain.reset]);
 
   const onCanvasClick = useCallback(
