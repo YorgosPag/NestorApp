@@ -10,9 +10,8 @@
  * Firestore updates will be reflected via real-time listeners.
  */
 
-import type { ICommand, SerializedCommand } from '../interfaces';
 import type { Overlay } from '../../../overlays/types';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
+import { BaseCommand } from '../base-command';
 import { deepClone } from '../../../utils/clone-utils';
 import { dlog, derr } from '../../../debug';
 
@@ -32,11 +31,9 @@ interface OverlayStoreOperations {
 /**
  * Command for deleting a single overlay with undo support
  */
-export class DeleteOverlayCommand implements ICommand {
-  readonly id: string;
+export class DeleteOverlayCommand extends BaseCommand {
   readonly name = 'DeleteOverlay';
   readonly type = 'delete-overlay';
-  readonly timestamp: number;
 
   private overlaySnapshot: Overlay | null = null;
   private wasExecuted = false;
@@ -45,8 +42,7 @@ export class DeleteOverlayCommand implements ICommand {
     private readonly overlayId: string,
     private readonly overlayStore: OverlayStoreOperations
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super();
   }
 
   /**
@@ -110,26 +106,12 @@ export class DeleteOverlayCommand implements ICommand {
   }
 
   /**
-   * Delete commands cannot be merged
+   * 🏢 ENTERPRISE: Serialized `data` payload.
    */
-  canMergeWith(): boolean {
-    return false;
-  }
-
-  /**
-   * 🏢 ENTERPRISE: Serialize for persistence
-   */
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        overlayId: this.overlayId,
-        overlaySnapshot: this.overlaySnapshot,
-      },
-      version: 1,
+      overlayId: this.overlayId,
+      overlaySnapshot: this.overlaySnapshot,
     };
   }
 
@@ -165,11 +147,9 @@ export class DeleteOverlayCommand implements ICommand {
  * Command for deleting multiple overlays at once with undo support
  * 🏢 ENTERPRISE: Batch delete with atomic undo
  */
-export class DeleteMultipleOverlaysCommand implements ICommand {
-  readonly id: string;
+export class DeleteMultipleOverlaysCommand extends BaseCommand {
   readonly name = 'DeleteMultipleOverlays';
   readonly type = 'delete-multiple-overlays';
-  readonly timestamp: number;
 
   private overlaySnapshots: Overlay[] = [];
   private wasExecuted = false;
@@ -178,8 +158,7 @@ export class DeleteMultipleOverlaysCommand implements ICommand {
     private readonly overlayIds: string[],
     private readonly overlayStore: OverlayStoreOperations
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super();
   }
 
   /**
@@ -243,26 +222,12 @@ export class DeleteMultipleOverlaysCommand implements ICommand {
   }
 
   /**
-   * Delete commands cannot be merged
+   * 🏢 ENTERPRISE: Serialized `data` payload.
    */
-  canMergeWith(): boolean {
-    return false;
-  }
-
-  /**
-   * 🏢 ENTERPRISE: Serialize for persistence
-   */
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        overlayIds: this.overlayIds,
-        overlaySnapshots: this.overlaySnapshots,
-      },
-      version: 1,
+      overlayIds: this.overlayIds,
+      overlaySnapshots: this.overlaySnapshots,
     };
   }
 

@@ -10,9 +10,9 @@
  * Firestore updates will be reflected via real-time listeners.
  */
 
-import type { ICommand, SerializedCommand } from '../interfaces';
 import type { Overlay } from '../../../overlays/types';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
+import { BaseCommand } from '../base-command';
+import { OverlayVertexCommand } from '../overlay-vertex-command';
 import { dlog, derr } from '../../../debug';
 import { compareByLocale } from '@/lib/intl-formatting';
 
@@ -32,22 +32,15 @@ interface OverlayStoreVertexOperations {
 /**
  * Command for deleting a single vertex from an overlay with undo support
  */
-export class DeleteOverlayVertexCommand implements ICommand {
-  readonly id: string;
+export class DeleteOverlayVertexCommand extends OverlayVertexCommand<OverlayStoreVertexOperations> {
   readonly name = 'DeleteOverlayVertex';
   readonly type = 'delete-overlay-vertex';
-  readonly timestamp: number;
 
   private removedVertex: [number, number] | null = null;
   private wasExecuted = false;
 
-  constructor(
-    private readonly overlayId: string,
-    private readonly vertexIndex: number,
-    private readonly overlayStore: OverlayStoreVertexOperations
-  ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+  constructor(overlayId: string, vertexIndex: number, overlayStore: OverlayStoreVertexOperations) {
+    super(overlayId, vertexIndex, overlayStore);
   }
 
   /**
@@ -116,63 +109,30 @@ export class DeleteOverlayVertexCommand implements ICommand {
   }
 
   /**
-   * Delete commands cannot be merged
+   * 🏢 ENTERPRISE: Serialized `data` payload.
    */
-  canMergeWith(): boolean {
-    return false;
-  }
-
-  /**
-   * 🏢 ENTERPRISE: Serialize for persistence
-   */
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        overlayId: this.overlayId,
-        vertexIndex: this.vertexIndex,
-        removedVertex: this.removedVertex,
-      },
-      version: 1,
+      overlayId: this.overlayId,
+      vertexIndex: this.vertexIndex,
+      removedVertex: this.removedVertex,
     };
-  }
-
-  /**
-   * 🏢 ENTERPRISE: Get affected entity IDs
-   */
-  getAffectedEntityIds(): string[] {
-    return [this.overlayId];
   }
 
   /**
    * Validate command can be executed
    */
   validate(): string | null {
-    if (!this.overlayId) {
-      return 'Overlay ID is required';
-    }
-    if (this.vertexIndex < 0) {
-      return 'Vertex index must be non-negative';
-    }
-    const overlay = this.overlayStore.overlays[this.overlayId];
-    if (!overlay) {
-      return `Overlay ${this.overlayId} not found`;
+    const targetError = this.validateVertexTarget();
+    if (targetError) {
+      return targetError;
     }
     // Minimum 3 vertices for a valid polygon
-    if (overlay.polygon && overlay.polygon.length <= 3) {
+    const overlay = this.overlayStore.overlays[this.overlayId];
+    if (overlay?.polygon && overlay.polygon.length <= 3) {
       return 'Cannot delete vertex - minimum 3 vertices required for polygon';
     }
     return null;
-  }
-
-  /**
-   * Get the removed vertex position (for debugging/inspection)
-   */
-  getRemovedVertex(): [number, number] | null {
-    return this.removedVertex ? [...this.removedVertex] as [number, number] : null;
   }
 }
 
@@ -183,11 +143,9 @@ export class DeleteOverlayVertexCommand implements ICommand {
  * IMPORTANT: Vertices must be sorted by index DESCENDING before passing to this command
  * to avoid index shifting issues during deletion.
  */
-export class DeleteMultipleOverlayVerticesCommand implements ICommand {
-  readonly id: string;
+export class DeleteMultipleOverlayVerticesCommand extends BaseCommand {
   readonly name = 'DeleteMultipleOverlayVertices';
   readonly type = 'delete-multiple-overlay-vertices';
-  readonly timestamp: number;
 
   /** Stored vertex data for undo: { overlayId, vertexIndex, position } */
   private removedVertices: Array<{
@@ -202,8 +160,7 @@ export class DeleteMultipleOverlayVerticesCommand implements ICommand {
     private readonly vertices: Array<{ overlayId: string; vertexIndex: number }>,
     private readonly overlayStore: OverlayStoreVertexOperations
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super();
   }
 
   /**
@@ -284,26 +241,12 @@ export class DeleteMultipleOverlayVerticesCommand implements ICommand {
   }
 
   /**
-   * Delete commands cannot be merged
+   * 🏢 ENTERPRISE: Serialized `data` payload.
    */
-  canMergeWith(): boolean {
-    return false;
-  }
-
-  /**
-   * 🏢 ENTERPRISE: Serialize for persistence
-   */
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        vertices: this.vertices,
-        removedVertices: this.removedVertices,
-      },
-      version: 1,
+      vertices: this.vertices,
+      removedVertices: this.removedVertices,
     };
   }
 

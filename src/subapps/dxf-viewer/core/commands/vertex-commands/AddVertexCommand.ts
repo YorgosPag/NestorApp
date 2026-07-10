@@ -5,18 +5,16 @@
  * Used when clicking on edge midpoint grips to insert new vertices.
  */
 
-import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
+import type { ISceneManager } from '../interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
+import { BaseCommand } from '../base-command';
 
 /**
  * Command for adding a vertex to an entity
  */
-export class AddVertexCommand implements ICommand {
-  readonly id: string;
+export class AddVertexCommand extends BaseCommand {
   readonly name = 'AddVertex';
   readonly type = 'add-vertex';
-  readonly timestamp: number;
 
   private wasExecuted = false;
 
@@ -26,8 +24,7 @@ export class AddVertexCommand implements ICommand {
     private readonly position: Point2D,
     private readonly sceneManager: ISceneManager
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super();
   }
 
   /**
@@ -48,24 +45,10 @@ export class AddVertexCommand implements ICommand {
   }
 
   /**
-   * Redo: Re-insert the vertex
-   */
-  redo(): void {
-    this.sceneManager.insertVertex(this.entityId, this.insertIndex, this.position);
-  }
-
-  /**
    * Get description for UI
    */
   getDescription(): string {
     return `Add vertex at index ${this.insertIndex}`;
-  }
-
-  /**
-   * Add vertex commands cannot be merged
-   */
-  canMergeWith(): boolean {
-    return false;
   }
 
   /**
@@ -90,24 +73,6 @@ export class AddVertexCommand implements ICommand {
   }
 
   /**
-   * 🏢 ENTERPRISE: Serialize for persistence
-   */
-  serialize(): SerializedCommand {
-    return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        entityId: this.entityId,
-        insertIndex: this.insertIndex,
-        position: this.position,
-      },
-      version: 1,
-    };
-  }
-
-  /**
    * 🏢 ENTERPRISE: Get affected entity IDs
    */
   getAffectedEntityIds(): string[] {
@@ -125,5 +90,14 @@ export class AddVertexCommand implements ICommand {
       return 'Insert index must be non-negative';
     }
     return null;
+  }
+
+  /** 🏢 ENTERPRISE: Serialized `data` payload. */
+  protected serializeData(): Record<string, unknown> {
+    return {
+      entityId: this.entityId,
+      insertIndex: this.insertIndex,
+      position: this.position,
+    };
   }
 }

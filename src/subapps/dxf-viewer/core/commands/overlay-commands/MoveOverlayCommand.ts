@@ -16,10 +16,9 @@
  * @date 2027-01-27
  */
 
-import type { ICommand, SerializedCommand } from '../interfaces';
+import type { ICommand } from '../interfaces';
 import type { Overlay } from '../../../overlays/types';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
-import { isWithinMergeWindow } from '../merge-window';
+import { DragVertexEditCommand } from '../drag-vertex-edit-command';
 import { deepClone } from '../../../utils/clone-utils';
 import { dlog, dwarn, derr } from '../../../debug';
 
@@ -57,11 +56,9 @@ interface OverlayStoreMoveOperations {
  * executeCommand(command);
  * ```
  */
-export class MoveOverlayCommand implements ICommand {
-  readonly id: string;
+export class MoveOverlayCommand extends DragVertexEditCommand<MoveOverlayCommand> {
   readonly name = 'MoveOverlay';
   readonly type = 'move-overlay';
-  readonly timestamp: number;
 
   private originalPolygon: Array<[number, number]> | null = null;
   private wasExecuted = false;
@@ -78,10 +75,9 @@ export class MoveOverlayCommand implements ICommand {
     private readonly overlayId: string,
     private readonly delta: Point2D,
     private readonly overlayStore: OverlayStoreMoveOperations,
-    private readonly isDragging: boolean = false
+    isDragging: boolean = false
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(isDragging);
   }
 
   /**
@@ -136,47 +132,18 @@ export class MoveOverlayCommand implements ICommand {
   }
 
   /**
-   * Redo: Move overlay again with the same delta
-   */
-  redo(): void {
-    this.execute();
-  }
-
-  /**
    * Get description for UI
    */
   getDescription(): string {
     return `Move overlay by (${this.delta.x.toFixed(2)}, ${this.delta.y.toFixed(2)})`;
   }
 
-  /**
-   * Check if can merge with another command
-   * Merges consecutive moves of the same overlay within time window
-   *
-   * MERGE LOGIC:
-   * - Same overlay ID
-   * - Both commands are "dragging" operations
-   * - Within merge time window (500ms)
-   *
-   * RESULT: Combines deltas for smooth drag with single undo
-   */
-  canMergeWith(other: ICommand): boolean {
-    if (!(other instanceof MoveOverlayCommand)) {
-      return false;
-    }
+  protected isSameCommand(other: ICommand): other is MoveOverlayCommand {
+    return other instanceof MoveOverlayCommand;
+  }
 
-    // Must be same overlay
-    if (other.overlayId !== this.overlayId) {
-      return false;
-    }
-
-    // Both must be dragging operations
-    if (!this.isDragging || !other.isDragging) {
-      return false;
-    }
-
-    // Within the canonical merge window → coalesce into one undo step.
-    return isWithinMergeWindow(this, other);
+  protected sameTarget(other: MoveOverlayCommand): boolean {
+    return other.overlayId === this.overlayId;
   }
 
   /**
@@ -188,16 +155,11 @@ export class MoveOverlayCommand implements ICommand {
    * - Command 2: Move by (5, 10)
    * - Merged: Move by (15, 10) - Single undo!
    */
-  mergeWith(other: ICommand): ICommand {
-    if (!(other instanceof MoveOverlayCommand)) {
-      throw new Error('Cannot merge with non-MoveOverlayCommand');
-    }
-    const otherMove = other;
-
+  protected cloneForMerge(latest: MoveOverlayCommand): ICommand {
     // Combine deltas
     const combinedDelta: Point2D = {
-      x: this.delta.x + otherMove.delta.x,
-      y: this.delta.y + otherMove.delta.y
+      x: this.delta.x + latest.delta.x,
+      y: this.delta.y + latest.delta.y
     };
 
     // Create merged command
@@ -237,21 +199,14 @@ export class MoveOverlayCommand implements ICommand {
   }
 
   /**
-   * Serialize command for persistence/audit trail
+   * Serialized `data` payload for persistence/audit trail
    */
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      id: this.id,
-      name: this.name,
-      type: this.type,
-      timestamp: this.timestamp,
-      version: 1, // Command version for future compatibility
-      data: {
-        overlayId: this.overlayId,
-        delta: this.delta,
-        isDragging: this.isDragging,
-        originalPolygon: this.originalPolygon
-      }
+      overlayId: this.overlayId,
+      delta: this.delta,
+      isDragging: this.isDragging,
+      originalPolygon: this.originalPolygon
     };
   }
 
@@ -276,11 +231,9 @@ export class MoveOverlayCommand implements ICommand {
  * );
  * ```
  */
-export class MoveMultipleOverlaysCommand implements ICommand {
-  readonly id: string;
+export class MoveMultipleOverlaysCommand extends DragVertexEditCommand<MoveMultipleOverlaysCommand> {
   readonly name = 'MoveMultipleOverlays';
   readonly type = 'move-multiple-overlays';
-  readonly timestamp: number;
 
   private commands: MoveOverlayCommand[] = [];
 
@@ -288,10 +241,9 @@ export class MoveMultipleOverlaysCommand implements ICommand {
     private readonly overlayIds: string[],
     private readonly delta: Point2D,
     private readonly overlayStore: OverlayStoreMoveOperations,
-    private readonly isDragging: boolean = false
+    isDragging: boolean = false
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(isDragging);
 
     // Create individual move commands for each overlay
     this.commands = overlayIds.map(id =>
@@ -308,19 +260,15 @@ export class MoveMultipleOverlaysCommand implements ICommand {
     this.commands.forEach(cmd => cmd.undo());
   }
 
-  redo(): void {
-    this.commands.forEach(cmd => cmd.redo());
-  }
-
   getDescription(): string {
     return `Move ${this.overlayIds.length} overlays by (${this.delta.x.toFixed(2)}, ${this.delta.y.toFixed(2)})`;
   }
 
-  canMergeWith(other: ICommand): boolean {
-    if (!(other instanceof MoveMultipleOverlaysCommand)) {
-      return false;
-    }
+  protected isSameCommand(other: ICommand): other is MoveMultipleOverlaysCommand {
+    return other instanceof MoveMultipleOverlaysCommand;
+  }
 
+  protected sameTarget(other: MoveMultipleOverlaysCommand): boolean {
     // Must be same set of overlays
     if (this.overlayIds.length !== other.overlayIds.length) {
       return false;
@@ -335,24 +283,13 @@ export class MoveMultipleOverlaysCommand implements ICommand {
       }
     }
 
-    // Both must be dragging
-    if (!this.isDragging || !other.isDragging) {
-      return false;
-    }
-
-    // Within the canonical merge window → coalesce into one undo step.
-    return isWithinMergeWindow(this, other);
+    return true;
   }
 
-  mergeWith(other: ICommand): ICommand {
-    if (!(other instanceof MoveMultipleOverlaysCommand)) {
-      throw new Error('Cannot merge with non-MoveMultipleOverlaysCommand');
-    }
-    const otherMove = other;
-
+  protected cloneForMerge(latest: MoveMultipleOverlaysCommand): ICommand {
     const combinedDelta: Point2D = {
-      x: this.delta.x + otherMove.delta.x,
-      y: this.delta.y + otherMove.delta.y
+      x: this.delta.x + latest.delta.x,
+      y: this.delta.y + latest.delta.y
     };
 
     return new MoveMultipleOverlaysCommand(
@@ -363,18 +300,14 @@ export class MoveMultipleOverlaysCommand implements ICommand {
     );
   }
 
-  serialize(): SerializedCommand {
+  /**
+   * Serialized `data` payload for persistence/audit trail
+   */
+  protected serializeData(): Record<string, unknown> {
     return {
-      id: this.id,
-      name: this.name,
-      type: this.type,
-      timestamp: this.timestamp,
-      version: 1, // Command version for future compatibility
-      data: {
-        overlayIds: this.overlayIds,
-        delta: this.delta,
-        isDragging: this.isDragging
-      }
+      overlayIds: this.overlayIds,
+      delta: this.delta,
+      isDragging: this.isDragging
     };
   }
 

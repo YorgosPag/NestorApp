@@ -8,26 +8,24 @@
  * This provides smooth undo for drag operations (Autodesk/Figma pattern)
  */
 
-import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
+import type { ICommand, ISceneManager } from '../interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
+import { EntityVertexCommand } from '../entity-vertex-command';
 import { canMergeDragSamples } from '../merge-window';
 
 /**
  * Command for moving a single vertex
  */
-export class MoveVertexCommand implements ICommand {
-  readonly id: string;
+export class MoveVertexCommand extends EntityVertexCommand {
   readonly name = 'MoveVertex';
   readonly type = 'move-vertex';
-  readonly timestamp: number;
 
   constructor(
-    private readonly entityId: string,
-    private readonly vertexIndex: number,
+    entityId: string,
+    vertexIndex: number,
     private readonly oldPosition: Point2D,
     private readonly newPosition: Point2D,
-    private readonly sceneManager: ISceneManager,
+    sceneManager: ISceneManager,
     /**
      * True only for per-frame samples of a live drag. Two DISTINCT edits of the
      * same vertex (both `false`) must NOT coalesce — mirrors the transform
@@ -35,8 +33,7 @@ export class MoveVertexCommand implements ICommand {
      */
     private readonly isDragging: boolean = false
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(entityId, vertexIndex, sceneManager);
   }
 
   /**
@@ -68,26 +65,20 @@ export class MoveVertexCommand implements ICommand {
   }
 
   /**
-   * Check if can merge with another command
-   * Merges consecutive moves of the same vertex
+   * Merge consecutive live-drag samples of the same vertex — distinct edits stay
+   * separate. SSoT gate via `canMergeDragSamples`.
    */
   canMergeWith(other: ICommand): boolean {
-    if (!(other instanceof MoveVertexCommand)) {
-      return false;
-    }
-
-    // Must be same entity and vertex
-    if (other.entityId !== this.entityId || other.vertexIndex !== this.vertexIndex) {
-      return false;
-    }
-
-    // Coalesce only live-drag samples within the merge window — distinct edits stay separate. SSoT.
-    return canMergeDragSamples(this, other, this.isDragging, other.isDragging);
+    return (
+      other instanceof MoveVertexCommand &&
+      other.entityId === this.entityId &&
+      other.vertexIndex === this.vertexIndex &&
+      canMergeDragSamples(this, other, this.isDragging, other.isDragging)
+    );
   }
 
   /**
-   * Merge with another move command
-   * Keeps original old position, uses new position from other command
+   * Merge: keep the original old position, adopt the latest new position.
    */
   mergeWith(other: ICommand): ICommand {
     const otherMove = other as MoveVertexCommand;
@@ -101,71 +92,14 @@ export class MoveVertexCommand implements ICommand {
     );
   }
 
-  /**
-   * Get the entity ID
-   */
-  getEntityId(): string {
-    return this.entityId;
-  }
-
-  /**
-   * Get the vertex index
-   */
-  getVertexIndex(): number {
-    return this.vertexIndex;
-  }
-
-  /**
-   * Get old position
-   */
-  getOldPosition(): Point2D {
-    return { ...this.oldPosition };
-  }
-
-  /**
-   * Get new position
-   */
-  getNewPosition(): Point2D {
-    return { ...this.newPosition };
-  }
-
-  /**
-   * 🏢 ENTERPRISE: Serialize for persistence
-   */
-  serialize(): SerializedCommand {
+  /** 🏢 ENTERPRISE: Serialized `data` payload. */
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        entityId: this.entityId,
-        vertexIndex: this.vertexIndex,
-        oldPosition: this.oldPosition,
-        newPosition: this.newPosition,
-        isDragging: this.isDragging,
-      },
-      version: 1,
+      entityId: this.entityId,
+      vertexIndex: this.vertexIndex,
+      oldPosition: this.oldPosition,
+      newPosition: this.newPosition,
+      isDragging: this.isDragging,
     };
-  }
-
-  /**
-   * 🏢 ENTERPRISE: Get affected entity IDs
-   */
-  getAffectedEntityIds(): string[] {
-    return [this.entityId];
-  }
-
-  /**
-   * Validate command can be executed
-   */
-  validate(): string | null {
-    if (!this.entityId) {
-      return 'Entity ID is required';
-    }
-    if (this.vertexIndex < 0) {
-      return 'Vertex index must be non-negative';
-    }
-    return null;
   }
 }

@@ -12,11 +12,12 @@
  */
 
 import { createModuleLogger } from '@/lib/telemetry';
-import type { ICommand, SerializedCommand } from '../interfaces';
+import type { ICommand } from '../interfaces';
 
 const logger = createModuleLogger('MoveOverlayVertexCommand');
 import type { Overlay } from '../../../overlays/types';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
+import { DragVertexEditCommand } from '../drag-vertex-edit-command';
+import { OverlayVertexCommand } from '../overlay-vertex-command';
 import { canMergeDragSamples } from '../merge-window';
 
 /**
@@ -43,23 +44,20 @@ export interface VertexMovement {
 /**
  * Command for moving a single vertex in an overlay with undo support
  */
-export class MoveOverlayVertexCommand implements ICommand {
-  readonly id: string;
+export class MoveOverlayVertexCommand extends OverlayVertexCommand<OverlayStoreVertexOperations> {
   readonly name = 'MoveOverlayVertex';
   readonly type = 'move-overlay-vertex';
-  readonly timestamp: number;
 
   constructor(
-    private readonly overlayId: string,
-    private readonly vertexIndex: number,
+    overlayId: string,
+    vertexIndex: number,
     private readonly oldPosition: [number, number],
     private readonly newPosition: [number, number],
-    private readonly overlayStore: OverlayStoreVertexOperations,
+    overlayStore: OverlayStoreVertexOperations,
     /** True only for live-drag samples; distinct edits (both `false`) never coalesce. ADR-507 §8. */
     private readonly isDragging: boolean = false
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(overlayId, vertexIndex, overlayStore);
   }
 
   /**
@@ -96,26 +94,20 @@ export class MoveOverlayVertexCommand implements ICommand {
   }
 
   /**
-   * Check if can merge with another command
-   * Merges consecutive moves of the same vertex within time window
+   * Merge consecutive live-drag samples of the same overlay vertex — distinct
+   * edits stay separate. SSoT gate via `canMergeDragSamples`.
    */
   canMergeWith(other: ICommand): boolean {
-    if (!(other instanceof MoveOverlayVertexCommand)) {
-      return false;
-    }
-
-    // Must be same overlay and vertex
-    if (other.overlayId !== this.overlayId || other.vertexIndex !== this.vertexIndex) {
-      return false;
-    }
-
-    // Coalesce only live-drag samples within the merge window — distinct edits stay separate. SSoT.
-    return canMergeDragSamples(this, other, this.isDragging, other.isDragging);
+    return (
+      other instanceof MoveOverlayVertexCommand &&
+      other.overlayId === this.overlayId &&
+      other.vertexIndex === this.vertexIndex &&
+      canMergeDragSamples(this, other, this.isDragging, other.isDragging)
+    );
   }
 
   /**
-   * Merge with another move command
-   * Keeps original old position, uses new position from other command
+   * Merge: keep the original old position, adopt the latest new position.
    */
   mergeWith(other: ICommand): ICommand {
     const otherMove = other as MoveOverlayVertexCommand;
@@ -130,47 +122,28 @@ export class MoveOverlayVertexCommand implements ICommand {
   }
 
   /**
-   * 🏢 ENTERPRISE: Serialize for persistence
+   * 🏢 ENTERPRISE: Serialized `data` payload.
    */
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        overlayId: this.overlayId,
-        vertexIndex: this.vertexIndex,
-        oldPosition: this.oldPosition,
-        newPosition: this.newPosition,
-        isDragging: this.isDragging,
-      },
-      version: 1,
+      overlayId: this.overlayId,
+      vertexIndex: this.vertexIndex,
+      oldPosition: this.oldPosition,
+      newPosition: this.newPosition,
+      isDragging: this.isDragging,
     };
-  }
-
-  /**
-   * 🏢 ENTERPRISE: Get affected entity IDs
-   */
-  getAffectedEntityIds(): string[] {
-    return [this.overlayId];
   }
 
   /**
    * Validate command can be executed
    */
   validate(): string | null {
-    if (!this.overlayId) {
-      return 'Overlay ID is required';
-    }
-    if (this.vertexIndex < 0) {
-      return 'Vertex index must be non-negative';
+    const targetError = this.validateVertexTarget();
+    if (targetError) {
+      return targetError;
     }
     const overlay = this.overlayStore.overlays[this.overlayId];
-    if (!overlay) {
-      return `Overlay ${this.overlayId} not found`;
-    }
-    if (!overlay.polygon || this.vertexIndex >= overlay.polygon.length) {
+    if (!overlay?.polygon || this.vertexIndex >= overlay.polygon.length) {
       return `Vertex index ${this.vertexIndex} out of bounds`;
     }
     return null;
@@ -183,21 +156,18 @@ export class MoveOverlayVertexCommand implements ICommand {
  *
  * Use case: Moving multiple selected grips together
  */
-export class MoveMultipleOverlayVerticesCommand implements ICommand {
-  readonly id: string;
+export class MoveMultipleOverlayVerticesCommand extends DragVertexEditCommand<MoveMultipleOverlayVerticesCommand> {
   readonly name = 'MoveMultipleOverlayVertices';
   readonly type = 'move-multiple-overlay-vertices';
-  readonly timestamp: number;
 
   constructor(
     /** Vertices to move with their old and new positions */
     private readonly movements: VertexMovement[],
     private readonly overlayStore: OverlayStoreVertexOperations,
     /** True only for live-drag samples; distinct edits (both `false`) never coalesce. ADR-507 §8. */
-    private readonly isDragging: boolean = false
+    isDragging: boolean = false
   ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+    super(isDragging);
   }
 
   /**
@@ -225,27 +195,17 @@ export class MoveMultipleOverlayVerticesCommand implements ICommand {
   }
 
   /**
-   * Redo: Move all vertices to new positions again
-   */
-  redo(): void {
-    this.execute();
-  }
-
-  /**
    * Get description for UI
    */
   getDescription(): string {
     return `Move ${this.movements.length} vertices`;
   }
 
-  /**
-   * Move commands can merge if same vertices within time window
-   */
-  canMergeWith(other: ICommand): boolean {
-    if (!(other instanceof MoveMultipleOverlayVerticesCommand)) {
-      return false;
-    }
+  protected isSameCommand(other: ICommand): other is MoveMultipleOverlayVerticesCommand {
+    return other instanceof MoveMultipleOverlayVerticesCommand;
+  }
 
+  protected sameTarget(other: MoveMultipleOverlayVerticesCommand): boolean {
     // Must have same vertices (same overlayId + vertexIndex combinations)
     if (other.movements.length !== this.movements.length) {
       return false;
@@ -260,20 +220,13 @@ export class MoveMultipleOverlayVerticesCommand implements ICommand {
       }
     }
 
-    // Coalesce only live-drag samples within the merge window — distinct edits stay separate. SSoT.
-    return canMergeDragSamples(this, other, this.isDragging, other.isDragging);
+    return true;
   }
 
-  /**
-   * Merge with another move command
-   * Keeps original old positions, uses new positions from other command
-   */
-  mergeWith(other: ICommand): ICommand {
-    const otherMove = other as MoveMultipleOverlayVerticesCommand;
-
+  protected cloneForMerge(latest: MoveMultipleOverlayVerticesCommand): ICommand {
     // Create map of other movements for quick lookup
     const otherMap = new Map<string, VertexMovement>();
-    for (const m of otherMove.movements) {
+    for (const m of latest.movements) {
       otherMap.set(`${m.overlayId}:${m.vertexIndex}`, m);
     }
 
@@ -297,19 +250,12 @@ export class MoveMultipleOverlayVerticesCommand implements ICommand {
   }
 
   /**
-   * 🏢 ENTERPRISE: Serialize for persistence
+   * 🏢 ENTERPRISE: Serialized `data` payload.
    */
-  serialize(): SerializedCommand {
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        movements: this.movements,
-        isDragging: this.isDragging,
-      },
-      version: 1,
+      movements: this.movements,
+      isDragging: this.isDragging,
     };
   }
 

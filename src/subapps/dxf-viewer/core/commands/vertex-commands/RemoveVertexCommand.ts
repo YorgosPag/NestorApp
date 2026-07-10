@@ -5,29 +5,22 @@
  * Stores vertex position for undo (restore) operations.
  */
 
-import type { ICommand, ISceneManager, SerializedCommand } from '../interfaces';
+import type { ISceneManager } from '../interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
-import { generateEntityId } from '../../../systems/entity-creation/utils';
+import { EntityVertexCommand } from '../entity-vertex-command';
 
 /**
  * Command for removing a vertex from an entity
  */
-export class RemoveVertexCommand implements ICommand {
-  readonly id: string;
+export class RemoveVertexCommand extends EntityVertexCommand {
   readonly name = 'RemoveVertex';
   readonly type = 'remove-vertex';
-  readonly timestamp: number;
 
   private removedPosition: Point2D | null = null;
   private wasExecuted = false;
 
-  constructor(
-    private readonly entityId: string,
-    private readonly vertexIndex: number,
-    private readonly sceneManager: ISceneManager
-  ) {
-    this.id = generateEntityId();
-    this.timestamp = Date.now();
+  constructor(entityId: string, vertexIndex: number, sceneManager: ISceneManager) {
+    super(entityId, vertexIndex, sceneManager);
   }
 
   /**
@@ -68,69 +61,12 @@ export class RemoveVertexCommand implements ICommand {
     return `Remove vertex ${this.vertexIndex}`;
   }
 
-  /**
-   * Remove vertex commands cannot be merged
-   */
-  canMergeWith(): boolean {
-    return false;
-  }
-
-  /**
-   * Get the entity ID
-   */
-  getEntityId(): string {
-    return this.entityId;
-  }
-
-  /**
-   * Get the vertex index
-   */
-  getVertexIndex(): number {
-    return this.vertexIndex;
-  }
-
-  /**
-   * Get the removed position (after execution)
-   */
-  getRemovedPosition(): Point2D | null {
-    return this.removedPosition ? { ...this.removedPosition } : null;
-  }
-
-  /**
-   * 🏢 ENTERPRISE: Serialize for persistence
-   */
-  serialize(): SerializedCommand {
+  /** 🏢 ENTERPRISE: Serialized `data` payload. */
+  protected serializeData(): Record<string, unknown> {
     return {
-      type: this.type,
-      id: this.id,
-      name: this.name,
-      timestamp: this.timestamp,
-      data: {
-        entityId: this.entityId,
-        vertexIndex: this.vertexIndex,
-        removedPosition: this.removedPosition,
-      },
-      version: 1,
+      entityId: this.entityId,
+      vertexIndex: this.vertexIndex,
+      removedPosition: this.removedPosition,
     };
-  }
-
-  /**
-   * 🏢 ENTERPRISE: Get affected entity IDs
-   */
-  getAffectedEntityIds(): string[] {
-    return [this.entityId];
-  }
-
-  /**
-   * Validate command can be executed
-   */
-  validate(): string | null {
-    if (!this.entityId) {
-      return 'Entity ID is required';
-    }
-    if (this.vertexIndex < 0) {
-      return 'Vertex index must be non-negative';
-    }
-    return null;
   }
 }
