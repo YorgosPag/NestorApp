@@ -74,6 +74,8 @@ export interface HatchDocData {
   readonly lineAngle?: number;
   readonly lineSpacing?: number;
   readonly doubleCrossHatch?: boolean;
+  /** ADR-531 Φ5b.6 — 'screen' = raster μοτίβο σταθερής πυκνότητας px (zoom-independent). */
+  readonly patternSpace?: 'world' | 'screen';
   readonly patternOrigin?: Point2D;
   readonly drawOrder?: 0 | 1 | 2 | 3 | 4;
   readonly gapTolerance?: number;
@@ -125,7 +127,7 @@ const HATCH_SCALAR_KEYS: readonly (keyof HatchDocData)[] = [
   'patternName', 'patternType', 'patternScale', 'patternAngle',
   'seedPoints', 'fillColor', 'backgroundColor', 'associative', 'fillType',
   'islandStyle', 'lineAngle', 'lineSpacing', 'doubleCrossHatch', 'patternOrigin',
-  'drawOrder', 'gapTolerance',
+  'drawOrder', 'gapTolerance', 'patternSpace',
   // ADR-507 Φ5 — gradient = flat object (όχι nested array) → αποθηκεύεται ως map field
   // με τον ίδιο μηχανισμό (pickHatchData copy + ...scalars spread στο hatchDocToEntity).
   'gradient',

@@ -437,13 +437,23 @@ ground truth. Αποκωδικοποίηση επιβεβαίωσε/διόρθω
   στον handler — ΙΔΙΟ μονοπάτι με gradient/lineweightMm σε κάθε κρίκο (type → scene→Dxf handler → toEntityModel
   → renderer → persistence), κανένας νέος μηχανισμός. Regression test: `dxf-renderer-entity-model-hatch.test.ts`
   (backgroundColor passthrough + absent→undefined). ⚠️ Canvas render — browser-verify Giorgio.
-- **2026-07-10** — **Φ5b.6 FIX #3d (μετά το #3c: «φαίνεται μόνο το λευκό, οι πράσινες γραμμές χάθηκαν»):
-  contrast-aware χρώμα γραμμών.** Το FIX #3c ζωγράφισε σωστά λευκό+γραμμές, αλλά το `<color>C0DCC0` (χλωμό
-  sage πράσινο, 192/220/192) πάνω στο λευκό `<raster_bgcolor>FFFFFF` = αντίθεση **1.47:1** → πρακτικά αόρατο
-  (πριν, σε σκούρο καμβά, ~11:1 → ολοκάθαρο). Επαλήθευση με στατικό+jest probe: `buildHatchEntitySegments`
-  παράγει 55 γραμμές (ζωγραφίζονται σωστά), άρα αμιγώς θέμα αντίθεσης — όχι σειρά/branch. **Απόφαση Giorgio:
-  «λευκό + ορατές γραμμές» (όπως ο Τέκτων δείχνει και τα δύο).** Fix: ο `HatchRenderer` προσαρμόζει το χρώμα
-  γραμμών/περιγράμματος ενάντια στο `backgroundColor` (όχι τον καμβά) μέσω του SSoT `adaptColorToBackground`
-  (ADR-509) → `#C0DCC0`→`#869A86` (contrast 3.01:1, πράσινο κανάλι κυρίαρχο = hue-safe). Χωρίς φόντο → αυτούσιο
-  (καμία αλλαγή στον σκούρο καμβά). Μηδέν νέα math (reuse adaptive-entity-color). Regression test στο
-  `adaptive-entity-color.test.ts` (Τέκτων C0DCC0/λευκό → ορατό + πράσινο). ⚠️ Canvas render — browser-verify.
+- **2026-07-10** — **Φ5b.6 FIX #3d (μετά το #3c, δύο εστιασμένα θέματα Giorgio): (α) χρώμα ακριβώς Τέκτονα,
+  (β) πυκνότητα raster/screen-space.**
+  - **Ενδιάμεσο (αναστράφηκε):** δοκιμάστηκε contrast-adaptation (`adaptColorToBackground` #C0DCC0→#869A86,
+    3:1) για ορατότητα σε λευκό. Ο Giorgio το απέρριψε — **θέλει ακριβώς το `<color>C0DCC0`** (πιστότητα
+    χρώματος > ορατότητα). Reverted πλήρως (import + branch + regression test).
+  - **(β) Πυκνότητα — root:** ο Τέκτων ζωγραφίζει το raster hatch με **σταθερή απόσταση ~1-2px ΟΘΟΝΗΣ,
+    zoom-independent** (ground truth Giorgio: «όσο κι αν αλλάζω το ζουμ η απόσταση μένει ίδια»). Εμείς το
+    κάναμε **world-space** (150mm → πυκνώνει/αραιώνει με το ζουμ) → θεμελιώδης αναντιστοιχία. **Απόφαση
+    Giorgio: screen-space raster (πιστό).** Fix: νέο πεδίο **`HatchEntity.patternSpace: 'world' | 'screen'`**
+    (default world = καμία αλλαγή στα υπάρχοντα hatch). Threaded όπως το backgroundColor σε ΟΛΗ την αλυσίδα:
+    `HatchEntity` type → `DxfHatch` → scene→Dxf handler → `toEntityModel` → persistence (`HatchDocData` +
+    `HATCH_SCALAR_KEYS`, survives reload). Ο tek mapper θέτει `patternSpace:'screen'` **μόνο** στον raster
+    κλάδο (fillType 'user-defined' = pattern 22/άγνωστο)· τα γνωστά PAT μένουν world-space. Ο `HatchRenderer`
+    ζωγραφίζει το 'screen' ως **`CanvasPattern` tile** (οριζόντιες γραμμές σταθερού px, rotate στη γωνία +
+    anchor στο screen-pos του world origin → κουνιέται με pan, σταθερό px ανεξάρτητα ζουμ). Fallback σε
+    world-space αν αποτύχει το createPattern. Constants: `SCREEN_HATCH_SPACING_PX=3` (tunable).
+  - **Επαλήθευση:** jest probe → `buildHatchEntitySegments` = 55 γραμμές (η render pipeline ήταν σωστή· καθαρά
+    contrast+density). Regression: `tek-hatch-to-bim.test.ts` (raster→'screen', predefined→undefined),
+    `dxf-renderer-entity-model-hatch.test.ts` (patternSpace passthrough). ⚠️ Canvas `CanvasPattern` δεν
+    καλύπτεται από jest (firebase import chain + DOM) → browser-verify Giorgio.

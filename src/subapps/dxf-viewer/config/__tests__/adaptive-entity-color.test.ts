@@ -153,18 +153,6 @@ describe('adaptColorToBackground', () => {
     expect(adaptColorToBackground(once, BLACK)).toBe(once);
   });
 
-  // ADR-531 Φ5b.6 — Τέκτων hatch: χλωμό πράσινο <color>C0DCC0 πάνω σε λευκό <raster_bgcolor>
-  // FFFFFF = 1.47:1 (αόρατο). Ο HatchRenderer προσαρμόζει το χρώμα γραμμών ενάντια στο ΦΟΝΤΟ →
-  // ορατό ΚΑΙ πράσινο (hue-safe): σκουραίνει, το πράσινο κανάλι μένει κυρίαρχο.
-  it('Τέκτων hatch χλωμό πράσινο #C0DCC0 σε λευκό → ορατό + παραμένει πράσινο', () => {
-    const out = adaptColorToBackground('#C0DCC0', WHITE, MIN_ENTITY_CONTRAST);
-    expect(out).not.toBe('#C0DCC0');
-    expect(contrastRatio(out, WHITE)).toBeGreaterThanOrEqual(MIN_ENTITY_CONTRAST - 0.05);
-    const rgb = parseHex(out);
-    expect(rgb).not.toBeNull();
-    if (rgb) expect(rgb.g).toBeGreaterThan(Math.max(rgb.r, rgb.b)); // hue-safe: πράσινο κυρίαρχο
-  });
-
   it('άκυρο input → αυτούσιο (no throw)', () => {
     expect(adaptColorToBackground('zzz', BLACK)).toBe('zzz');
   });

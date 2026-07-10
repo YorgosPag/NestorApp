@@ -82,3 +82,38 @@ describe('ADR-363 Phase 7A — calculateBimEntity2DBounds', () => {
     });
   });
 });
+
+// ADR-619 Bug #7 — the converted DxfScene (what Home/zoom-extents iterates) nests
+// wrapped-variant geometry under a sub-entity field, so the flat `entity.geometry`
+// read returned null and the stair was dropped from the fit-to-view bounds.
+describe('ADR-619 Bug #7 — wrapped (DxfScene) sub-entity form', () => {
+  /** The converted DxfScene shape: `{ type, <xEntity>: { geometry } }`. */
+  function makeWrappedBimEntity(
+    type: 'stair' | 'slab' | 'slab-opening' | 'opening',
+    field: 'stairEntity' | 'slabEntity' | 'slabOpeningEntity' | 'openingEntity',
+    bbox: { min: { x: number; y: number }; max: { x: number; y: number } },
+  ): Entity {
+    return { type, [field]: { geometry: { bbox } } } as unknown as Entity;
+  }
+
+  it.each([
+    ['stair', 'stairEntity'],
+    ['slab', 'slabEntity'],
+    ['slab-opening', 'slabOpeningEntity'],
+    ['opening', 'openingEntity'],
+  ] as const)('resolves bounds from the nested %s payload', (type, field) => {
+    const e = makeWrappedBimEntity(type, field, {
+      min: { x: -4340, y: -17960 },
+      max: { x: -3117, y: -13560 },
+    });
+    expect(calculateBimEntity2DBounds(e)).toEqual({
+      min: { x: -4340, y: -17960 },
+      max: { x: -3117, y: -13560 },
+    });
+  });
+
+  it('wrapped stair with no geometry yet → null (no crash)', () => {
+    const e = { type: 'stair', stairEntity: {} } as unknown as Entity;
+    expect(calculateBimEntity2DBounds(e)).toBeNull();
+  });
+});

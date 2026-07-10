@@ -215,6 +215,9 @@ export function buildEntityModelFromDxf(
         lineAngle: entity.lineAngle,
         lineSpacing: entity.lineSpacing,
         doubleCrossHatch: entity.doubleCrossHatch,
+        // ADR-531 Φ5b.6 — raster/screen-space μοτίβο (σταθερή πυκνότητα px). Χωρίς αυτό το
+        // passthrough ο HatchRenderer βλέπει patternSpace:undefined → πέφτει σε world-space.
+        patternSpace: entity.patternSpace,
         islandStyle: entity.islandStyle,
         // ADR-507 Φ5 — gradient γέμισμα (αλλιώς ο HatchRenderer πέφτει σε solid).
         gradient: entity.gradient,

@@ -14,6 +14,19 @@
  */
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
+// ADR-363 — SSoT reader for wrapped-variant geometry (slab/slab-opening/opening/stair
+// nest it under a sub-entity field in the converted DxfScene; direct variants keep it flat).
+import { unwrapDxfSubEntity } from '../../canvas-v2/dxf-canvas/dxf-types';
+
+/** Minimal geometry-bearing shape both scene forms expose after unwrap. */
+interface BimGeometryCarrier {
+  readonly geometry?: {
+    readonly bbox?: {
+      readonly min: { readonly x: number; readonly y: number };
+      readonly max: { readonly x: number; readonly y: number };
+    };
+  };
+}
 
 /**
  * Returns 2D AABB `{min,max}` from a BIM entity's pre-computed
@@ -75,7 +88,13 @@ export function calculateBimEntity2DBounds(entity: Entity): { min: Point2D; max:
     // ADR-358 — stair projects its pre-computed geometry.bbox to 2D (same fall-through;
     // merged with the shared block in ADR-587 Φ9 Slice 1 — the bodies were byte-identical).
     case 'stair': {
-      const bbox = entity.geometry?.bbox;
+      // ADR-619 Bug #7 — read geometry via the SSoT unwrap: in the converted
+      // DxfScene the wrapped variants (opening/slab/slab-opening/stair) nest
+      // `geometry` under a sub-entity field, so the old flat `entity.geometry`
+      // was `undefined` → null bounds → Home/zoom-extents silently dropped the
+      // stair (it sat outside the walls' extent and never framed). Direct
+      // variants (wall/beam/column/foundation/roof) unwrap to themselves.
+      const bbox = unwrapDxfSubEntity<BimGeometryCarrier>(entity).geometry?.bbox;
       if (!bbox) return null;
       return {
         min: { x: bbox.min.x, y: bbox.min.y },

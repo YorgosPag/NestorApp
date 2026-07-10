@@ -54,4 +54,11 @@ describe('buildEntityModelFromDxf — hatch passthrough', () => {
     const model = buildEntityModelFromDxf(makeHatch({}), false, RESOLVED);
     expect((model as unknown as HatchEntity).backgroundColor).toBeUndefined();
   });
+
+  it('διατηρεί το patternSpace (Φ5b.6 raster screen-space)', () => {
+    const model = buildEntityModelFromDxf(
+      makeHatch({ fillType: 'user-defined', patternSpace: 'screen' } as Partial<DxfEntityUnion>), false, RESOLVED,
+    );
+    expect((model as unknown as HatchEntity).patternSpace).toBe('screen');
+  });
 });

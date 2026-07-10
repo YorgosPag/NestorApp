@@ -450,6 +450,8 @@ export const TO_DXF_HANDLERS: Partial<Record<EntityType, ToDxfHandler>> = {
       lineAngle: h.lineAngle,
       lineSpacing: h.lineSpacing,
       doubleCrossHatch: h.doubleCrossHatch,
+      // ADR-531 Φ5b.6 — raster/screen-space μοτίβο (σταθερή πυκνότητα px, zoom-independent).
+      patternSpace: h.patternSpace,
       islandStyle: h.islandStyle,
       // ADR-507 Φ5 — gradient γέμισμα· χωρίς αυτό ο HatchRenderer βλέπει gradient:undefined
       // και πέφτει σε solid (το gradient δεν φτάνει ποτέ στον καμβά).

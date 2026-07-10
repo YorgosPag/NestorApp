@@ -26,10 +26,6 @@ import { hatchBoundsCenter, hatchGradientAngleGripPos, getHatchBoundaryGrips, ge
 import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
 import { buildHatchEntitySegments, hatchMinWorldSpacing } from '../../bim/geometry/shared/hatch-pattern-geometry';
 import { isSolidHatch, resolveHatchLineWidthPx } from '../../bim/hatch/hatch-properties';
-// ADR-509 / ADR-531 Φ5b.6 — contrast-aware line color SSoT. Όταν το hatch έχει αδιαφανές
-// background fill (π.χ. Τέκτων λευκό), οι γραμμές μοτίβου ζωγραφίζονται ΠΑΝΩ του → πρέπει να
-// έχουν ελάχιστο contrast με ΤΟ ΦΟΝΤΟ (όχι τον καμβά). Reuse του adaptive-color SSoT (μηδέν νέα math).
-import { adaptColorToBackground, MIN_ENTITY_CONTRAST } from '../../config/adaptive-entity-color';
 import type { HatchGradient } from '../../bim/hatch/hatch-gradient';
 // ADR-507 Φ5 / A3 — pure gradient paint SSoT (κοινό με το live grip-drag ghost,
 // `draw-ghost-entity` case 'hatch'· preview === commit, μηδέν δεύτερη gradient math).
@@ -49,6 +45,17 @@ const HATCH_COLLAPSE_ALPHA = 0.45;
 const CULL_SEGMENT_THRESHOLD = 200;
 /** Όριο εγγραφών στο segment cache (αποφυγή ανεξέλεγκτης μεγέθυνσης). */
 const SEG_CACHE_MAX = 256;
+
+/**
+ * ADR-531 Φ5b.6 — screen-space raster μοτίβο (`patternSpace:'screen'`, Τέκτων raster hatch).
+ * Οι γραμμές έχουν σταθερή απόσταση σε **pixels ΟΘΟΝΗΣ**, zoom-independent (ground truth Giorgio:
+ * ~1-2px, σταθερό όσο κι αν αλλάζει το ζουμ) — ζωγραφίζεται ως `CanvasPattern` tile αντί για
+ * world-space segments. `TILE_W` >1 για φθηνό repeat· `SPACING_PX` = κάθετη απόσταση γραμμών.
+ */
+const SCREEN_HATCH_SPACING_PX = 3;
+const SCREEN_HATCH_LINE_PX = 1;
+const SCREEN_HATCH_TILE_W = 8;
+const SCREEN_HATCH_DEFAULT_ANGLE_DEG = 45;
 
 /**
  * Φθηνό signature των geometry-relevant πεδίων μιας γραμμοσκίασης. Τα segments είναι
@@ -76,6 +83,8 @@ export class HatchRenderer extends BaseEntityRenderer {
    * (pan/zoom/hover) → βαρύ. Invalidate μόνο όταν αλλάξει το geometry signature.
    */
   private readonly segCache = new Map<string, { sig: string; segs: ReturnType<typeof buildHatchEntitySegments> }>();
+  /** ADR-531 Φ5b.6 — cache του screen-space raster `CanvasPattern` ανά χρώμα (tile = σταθερό px). */
+  private readonly screenPatternCache = new Map<string, CanvasPattern | null>();
 
   /** Cached pattern segments (recompute μόνο σε αλλαγή geometry/pattern). */
   private cachedSegments(hatch: HatchEntity): ReturnType<typeof buildHatchEntitySegments> {
@@ -88,6 +97,57 @@ export class HatchRenderer extends BaseEntityRenderer {
     }
     this.segCache.set(hatch.id, { sig, segs });
     return segs;
+  }
+
+  /**
+   * ADR-531 Φ5b.6 — `CanvasPattern` (tile) οριζόντιων γραμμών σε σταθερό px, ανά χρώμα (cached).
+   * Το tile μένει σε συντεταγμένες ΟΘΟΝΗΣ → σταθερή πυκνότητα ανεξάρτητα ζουμ. Rotation/anchor
+   * γίνονται στο {@link fillScreenSpacePattern} μέσω `setTransform`. `null` αν αποτύχει το 2D ctx.
+   */
+  private screenSpacePattern(color: string): CanvasPattern | null {
+    const hit = this.screenPatternCache.get(color);
+    if (hit !== undefined) return hit;
+    const tile = document.createElement('canvas');
+    tile.width = SCREEN_HATCH_TILE_W;
+    tile.height = SCREEN_HATCH_SPACING_PX;
+    const tctx = tile.getContext('2d');
+    let pat: CanvasPattern | null = null;
+    if (tctx) {
+      tctx.strokeStyle = color;
+      tctx.lineWidth = SCREEN_HATCH_LINE_PX;
+      // Μία οριζόντια γραμμή ανά tile → επανάληψη = παράλληλες γραμμές κάθε SPACING_PX. Το 0.5
+      // κεντράρει τη 1px γραμμή σε ακέραιο pixel (crisp, χωρίς AA blur).
+      tctx.beginPath();
+      tctx.moveTo(0, SCREEN_HATCH_SPACING_PX - 0.5);
+      tctx.lineTo(SCREEN_HATCH_TILE_W, SCREEN_HATCH_SPACING_PX - 0.5);
+      tctx.stroke();
+      pat = this.ctx.createPattern(tile, 'repeat');
+    }
+    this.screenPatternCache.set(color, pat);
+    return pat;
+  }
+
+  /**
+   * ADR-531 Φ5b.6 — γεμίζει το όριο με raster μοτίβο σταθερής πυκνότητας px (Τέκτων raster hatch).
+   * Στρέφει τις (οριζόντιες στο tile) γραμμές στη γωνία `angleDeg` και αγκυρώνει τη φάση στο screen
+   * position του world origin → το μοτίβο «κουνιέται» με το pan (δεν σέρνεται) ΚΑΙ κρατά σταθερό px
+   * ανεξάρτητα ζουμ. Επιστρέφει `false` αν δεν φτιάχτηκε pattern → ο caller πέφτει σε world-space.
+   */
+  private fillScreenSpacePattern(
+    paths: ReadonlyArray<ReadonlyArray<Point2D>>, color: string, angleDeg: number,
+  ): boolean {
+    const pat = this.screenSpacePattern(color);
+    if (!pat) return false;
+    if (typeof pat.setTransform === 'function' && typeof DOMMatrix === 'function') {
+      const o = this.worldToScreen({ x: 0, y: 0 });
+      pat.setTransform(new DOMMatrix().translate(o.x, o.y).rotate(angleDeg));
+    }
+    this.ctx.save();
+    this.ctx.fillStyle = pat;
+    this.drawBoundaryPath(paths);
+    this.ctx.fill('evenodd');
+    this.ctx.restore();
+    return true;
   }
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -113,15 +173,7 @@ export class HatchRenderer extends BaseEntityRenderer {
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
 
-    const rawColor = hatch.fillColor ?? entity.color ?? CAD_UI_COLORS.entity.default;
-    // ADR-531 Φ5b.6 — όταν υπάρχει αδιαφανές background fill, οι γραμμές/περίγραμμα ζωγραφίζονται
-    // ΠΑΝΩ του· προσάρμοσε το χρώμα τους ώστε να έχει ελάχιστο contrast με ΤΟ ΦΟΝΤΟ (Τέκτων: χλωμό
-    // πράσινο C0DCC0 σε λευκό = 1.44:1 → αόρατο). Το adaptColorToBackground κρατά το hue, σκουραίνει
-    // ελάχιστα ώς 3:1 (κορεσμένα χρώματα με ήδη επαρκές contrast μένουν αυτούσια). Χωρίς φόντο →
-    // αυτούσιο (γραμμές στον σκούρο καμβά — καμία αλλαγή στην υπάρχουσα συμπεριφορά).
-    const color = hatch.backgroundColor
-      ? adaptColorToBackground(rawColor, hatch.backgroundColor, MIN_ENTITY_CONTRAST)
-      : rawColor;
+    const color = hatch.fillColor ?? entity.color ?? CAD_UI_COLORS.entity.default;
 
     // ADR-507 / ADR-531 Φ5b.6 — «Background color» (AutoCAD DXF 63): γεμίζει την περιοχή ΠΙΣΩ από
     // τις γραμμές μοτίβου (π.χ. ο Τέκτων δίνει λευκό raster_bgcolor → λευκό φόντο + πράσινες γραμμές).
@@ -140,6 +192,12 @@ export class HatchRenderer extends BaseEntityRenderer {
       this.ctx.fillStyle = color;
       this.drawBoundaryPath(paths);
       this.ctx.fill('evenodd');
+    } else if (
+      hatch.patternSpace === 'screen'
+      && this.fillScreenSpacePattern(paths, color, hatch.lineAngle ?? SCREEN_HATCH_DEFAULT_ANGLE_DEG)
+    ) {
+      // ADR-531 Φ5b.6 — raster μοτίβο: σταθερή πυκνότητα px (zoom-independent, Τέκτων). Ο έλεγχος
+      // ΚΑΙ ζωγραφίζει· `false` (αδύνατο createPattern) → πέφτει στους world-space κλάδους παρακάτω.
     } else if (this.isLineDensityTooHigh(hatch)) {
       // Density-LOD: γραμμές sub-pixel → ελαφρύ solid tint (1 op αντί για χιλιάδες
       // γραμμές). Παραλείπει ΚΑΙ την παραγωγή segments (μηδέν cost σε zoom-out).

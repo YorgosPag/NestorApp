@@ -40,6 +40,8 @@ describe('tekHatchToEntity (ADR-531 Φ5b.6)', () => {
     expect(hatch?.lineSpacing).toBeCloseTo(150, 0); // scaleX 0.15m → 150mm
     expect(hatch?.fillColor).toBe('#C0DCC0');
     expect(hatch?.backgroundColor).toBe('#FFFFFF'); // λευκό φόντο πίσω από τις γραμμές
+    // raster: σταθερή πυκνότητα px ΟΘΟΝΗΣ, zoom-independent (Giorgio: ~1-2px, σταθερό στο ζουμ).
+    expect(hatch?.patternSpace).toBe('screen');
     expect(hatch?.boundaryPaths[0]).toHaveLength(7);
     // Y-flip: 4.75m→4750, 10.3m Y-up → −10300 canvas Y-down.
     expect(hatch?.boundaryPaths[0][0].x).toBeCloseTo(4750, 0);
@@ -54,6 +56,8 @@ describe('tekHatchToEntity (ADR-531 Φ5b.6)', () => {
     expect(hatch?.patternScale).toBeCloseTo(0.5, 3);
     expect(hatch?.patternAngle).toBeCloseTo(30, 3);
     expect(hatch?.fillColor).toBe('#FF0000');
+    // Γνωστό PAT μοτίβο = κανονικό world-space (ΟΧΙ raster) → όχι patternSpace override.
+    expect(hatch?.patternSpace).toBeUndefined();
   });
 
   it('όριο <3 κορυφές → null + warning', () => {

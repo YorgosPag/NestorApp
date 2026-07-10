@@ -91,9 +91,15 @@ export function tekHatchToEntity(
     warnings.push('Γραμμοσκίαση .tek παραλείφθηκε: ανεπαρκές όριο (<3 κορυφές).');
     return { hatch: null, warnings };
   }
-  // ADR-531 Φ5b.6 — background color πίσω από τις γραμμές (ο Τέκτων: raster_bgcolor, π.χ. λευκό).
-  const hatch: HatchEntity = rec.bgColor
-    ? { ...built, backgroundColor: tekColorToHex(rec.bgColor) }
-    : built;
+  // ADR-531 Φ5b.6 — post-build overrides (SSoT: όπως το backgroundColor, ΟΧΙ μέσω HatchDrawDefaults).
+  //  • backgroundColor: raster_bgcolor πίσω από τις γραμμές (π.χ. λευκό).
+  //  • patternSpace 'screen': ΜΟΝΟ ο raster κλάδος (fillType 'user-defined' εδώ = pattern 22/άγνωστο)
+  //    → ο Τέκτων το δείχνει με σταθερή πυκνότητα ~1-2px ΟΘΟΝΗΣ, zoom-independent (raster). Τα γνωστά
+  //    PAT (fillType 'predefined') μένουν world-space (κανονικό AutoCAD μοτίβο).
+  const hatch: HatchEntity = {
+    ...built,
+    ...(rec.bgColor ? { backgroundColor: tekColorToHex(rec.bgColor) } : {}),
+    ...(built.fillType === 'user-defined' ? { patternSpace: 'screen' as const } : {}),
+  };
   return { hatch, warnings };
 }

@@ -591,6 +591,8 @@ export interface DxfHatch extends DxfEntity {
   lineAngle?: HatchEntity['lineAngle'];
   lineSpacing?: HatchEntity['lineSpacing'];
   doubleCrossHatch?: HatchEntity['doubleCrossHatch'];
+  /** ADR-531 Φ5b.6 — 'screen' = raster μοτίβο σταθερής πυκνότητας px (zoom-independent). */
+  patternSpace?: HatchEntity['patternSpace'];
   islandStyle?: HatchEntity['islandStyle'];
   /** ADR-507 Φ5 — gradient γέμισμα· ο HatchRenderer το διαβάζει για fillType='gradient'. */
   gradient?: HatchEntity['gradient'];
@@ -650,6 +652,20 @@ export type DxfWrappedType = keyof typeof DXF_WRAPPED_SUBENTITY_FIELD;
 export function dxfSubEntityPayload(entity: { readonly type: string }): Record<string, unknown> {
   const field = DXF_WRAPPED_SUBENTITY_FIELD[entity.type as DxfWrappedType];
   return field ? { [field]: entity } : {};
+}
+
+/**
+ * READ counterpart of {@link dxfSubEntityPayload}: return the geometry/params-bearing
+ * object for an entity — the nested sub-entity for a wrapped variant
+ * (slab/slab-opening/opening/stair/dimension), or the entity itself for a direct one.
+ * SSoT via {@link DXF_WRAPPED_SUBENTITY_FIELD}, so callers that consume BOTH the flat
+ * scene shape and the wrapped DxfScene shape (bounds/zoom-extents, cut-plane extents)
+ * read the payload without a per-type `entity.xEntity ?? entity` ladder.
+ */
+export function unwrapDxfSubEntity<T = unknown>(entity: { readonly type: string }): T {
+  const field = DXF_WRAPPED_SUBENTITY_FIELD[entity.type as DxfWrappedType];
+  const nested = field ? (entity as Record<string, unknown>)[field] : undefined;
+  return (nested ?? entity) as T;
 }
 
 // === DXF SCENE ===

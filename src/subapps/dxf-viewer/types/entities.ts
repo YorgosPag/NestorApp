@@ -636,6 +636,12 @@ export interface HatchEntity extends BaseEntity {
   lineSpacing?: number;
   /** User-defined hatch — διπλή (σταυρωτή) γραμμοσκίαση. */
   doubleCrossHatch?: boolean;
+  /**
+   * ADR-531 Φ5b.6 — χώρος μοτίβου. 'world' (default) = οι γραμμές έχουν σταθερή απόσταση σε
+   * ΜΟΝΑΔΕΣ ΣΧΕΔΙΟΥ (πυκνώνουν/αραιώνουν με το ζουμ — κλασικό AutoCAD). 'screen' = **raster**:
+   * σταθερή απόσταση σε PIXELS ΟΘΟΝΗΣ, zoom-independent (ο Τέκτων raster hatch, ~1-2px). Ο
+   * HatchRenderer ζωγραφίζει το 'screen' ως CanvasPattern tile αντί για world-space segments. */
+  patternSpace?: 'world' | 'screen';
   /** Σημείο αναφοράς (phase) του μοτίβου — προεπιλογή world origin. */
   patternOrigin?: Point2D;
   /** Inline (imported) PAT μοτίβο για third-party DXF εκτός catalog (ADR-507 Φ6).

@@ -43,6 +43,7 @@ import { useBimEntityRestoredPersistEffect } from '../../hooks/data/useBimEntity
 import { useBimEntityAttachedPersistEffect } from '../../hooks/data/useBimEntityAttachedPersistEffect';
 import { upsertStairBoq, deleteStairBoq } from '../services/stair-boq-sync';
 import { isStair, mergeStairSnapshot } from '../stairs/stair-snapshot-merge';
+import { isStairCreateTool } from '../stairs/stair-create-tools';
 import { DXF_TIMING } from '../../config/dxf-timing';
 import type { LevelSceneWriter } from '../../systems/levels/level-scene-accessor';
 
@@ -398,7 +399,12 @@ export function useStairPersistence(
   // snapshot AND lands in `floorplan_stairs/{stairId}` on the same tick.
   useEffect(() => {
     const cleanup = EventBus.on('drawing:entity-created', (payload) => {
-      if (payload.tool !== 'stair') return;
+      // ADR-619 Bug #6 — BOTH stair tools emit a `StairEntity`: the line-based tool
+      // tags `'stair'`, «Σκάλα από περιοχή» tags `'stair-from-region'`. Without the
+      // second tag the region stair never got its first Firestore save and vanished
+      // on refresh (persisted local-only). SSoT `isStairCreateTool` gates the tool;
+      // the `entity.type === 'stair'` guard below is the real type gate.
+      if (!isStairCreateTool(payload.tool)) return;
       const entity = payload.entity as StairEntity | undefined;
       if (!entity || (entity as { type?: string }).type !== 'stair') return;
       if (!serviceRef.current) return;
