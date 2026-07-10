@@ -75,6 +75,46 @@ function boundsFromEntities(entities: readonly Entity[]): SceneBounds {
   return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
 }
 
+/**
+ * Ποσοστό διόγκωσης του stair footprint για το φιλτράρισμα generator-γεωμετρίας (ανεξάρτητο
+ * μονάδων — κλάσμα της μεγαλύτερης διάστασης). Καλύπτει μύτες/επικαλύψεις βαθμίδων που ξεπερνούν
+ * οριακά το BIM bbox, χωρίς να αγγίζει γνήσιες annotations έξω από τη σκάλα.
+ */
+const GENERATOR_MARGIN_FRAC = 0.02;
+
+/** Επεκτείνει ένα bbox κατά κλάσμα της μεγαλύτερης διάστασής του. */
+function inflate(b: SceneBounds, frac: number): SceneBounds {
+  const m = frac * Math.max(b.max.x - b.min.x, b.max.y - b.min.y);
+  return { min: { x: b.min.x - m, y: b.min.y - m }, max: { x: b.max.x + m, y: b.max.y + m } };
+}
+
+/** `true` αν το `inner` bbox περιέχεται πλήρως στο `outer`. */
+function isInside(inner: SceneBounds, outer: SceneBounds): boolean {
+  return inner.min.x >= outer.min.x && inner.max.x <= outer.max.x
+    && inner.min.y >= outer.min.y && inner.max.y <= outer.max.y;
+}
+
+/**
+ * ADR-526 — «αντικατάσταση, όχι overlay»: ο Τέκτων αποθηκεύει κάθε σκάλα ΚΑΙ ως semantic
+ * `<stair>` ΚΑΙ ως 2Δ generator γεωμετρία (`<line>` ακμές βαθμίδων + `<text>` αριθμοί). Αφού
+ * φτιάξουμε τη native BIM σκάλα, πετάμε τα 2Δ primitives που πέφτουν ΜΕΣΑ στο footprint της —
+ * μένει μόνο το καθαρό BIM μοντέλο. Πρωτόγονα εκτός σκαλών (γνήσιες annotations) μένουν ανέπαφα.
+ */
+function dropGeneratorGeometry(
+  primitives: readonly Entity[],
+  stairFootprints: readonly SceneBounds[],
+): { kept: Entity[]; dropped: number } {
+  if (stairFootprints.length === 0) return { kept: [...primitives], dropped: 0 };
+  const kept: Entity[] = [];
+  let dropped = 0;
+  for (const e of primitives) {
+    const b = primitiveBounds(e);
+    if (b && stairFootprints.some((fp) => isInside(b, fp))) { dropped += 1; continue; }
+    kept.push(e);
+  }
+  return { kept, dropped };
+}
+
 export interface TekSceneBuildResult {
   readonly scene: SceneModel;
   readonly warnings: readonly string[];
@@ -128,11 +168,28 @@ export function buildSceneFromTekScene(
     if (hatch) hatchEntities.push(hatch);
     warnings.push(...hatchWarnings);
   }
+  // ADR-526 — native BIM σκάλες + αντικατάσταση των 2Δ generator primitives (γραμμές/αριθμοί
+  // βαθμίδων) που τις διπλασιάζουν: τα φιλτράρουμε με βάση το footprint κάθε σκάλας.
+  const stairEntities: Entity[] = parsed.stairs.map((rec) => tekStairToEntity(rec, levelId, units));
+  const stairFootprints: SceneBounds[] = stairEntities
+    .map((e) => calculateBimEntity2DBounds(e))
+    .filter((b): b is SceneBounds => b !== null)
+    .map((b) => inflate(b, GENERATOR_MARGIN_FRAC));
+  const lineEntities = parsed.lines.map((rec) => tekLineToEntity(rec, units));
+  const textEntities = parsed.texts.map((rec) => tekTextToEntity(rec, units));
+  const { kept: keptLines, dropped: droppedLines } = dropGeneratorGeometry(lineEntities, stairFootprints);
+  const { kept: keptTexts, dropped: droppedTexts } = dropGeneratorGeometry(textEntities, stairFootprints);
+  if (droppedLines + droppedTexts > 0) {
+    warnings.push(
+      `Αφαιρέθηκαν ${droppedLines} γραμμές + ${droppedTexts} αριθμοί βαθμίδων εντός σκαλών `
+      + '(generator γεωμετρία — αντικατάσταση από native BIM σκάλα).',
+    );
+  }
   const entities: Entity[] = [
-    ...parsed.stairs.map((rec) => tekStairToEntity(rec, levelId, units)),
-    ...parsed.lines.map((rec) => tekLineToEntity(rec, units)),
+    ...stairEntities,
+    ...keptLines,
     ...parsed.arcs.map((rec) => tekArcToEntity(rec, units)),
-    ...parsed.texts.map((rec) => tekTextToEntity(rec, units)),
+    ...keptTexts,
     // ADR-531 Φ5b.2 — BIM τοίχοι + κουφώματα (αντί για 2Δ primitives).
     ...wallEntities,
     // ADR-531 Φ5b.4 — BIM πλάκες.

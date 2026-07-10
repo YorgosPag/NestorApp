@@ -30,6 +30,61 @@ function sampleRecord(overrides: Partial<TekStairRecord> = {}): TekStairRecord {
   };
 }
 
+/**
+ * Ρεαλιστική ΕΥΘΕΙΑ σκάλα όπως πραγματικό `.tek` (ΣΚΑΛΑ-2): πολλαπλές `<point2d>` ομάδες
+ * (2-point overall rails + 17-point per-step ακμές αριστερά/δεξιά/κέντρο) + sentinel `(0,0)`.
+ * Πλάτος 1.2m (x: 6.55→7.75), 16 πατήματα, ΔΥψος 3m, πάτημα 0.275, landings 0.
+ */
+function realStraightRecord(overrides: Partial<TekStairRecord> = {}): TekStairRecord {
+  const ys: number[] = [];
+  for (let i = 0; i < 17; i += 1) ys.push(11.2 - i * 0.275);
+  const sentinel: TekPoint2D = { x: 0, y: 0 };
+  const edge = (x: number): TekPoint2D[] => [...ys.map((y) => ({ x, y })), sentinel];
+  return {
+    rawXml: '<record><type>21</type></record>',
+    polylines: [
+      [{ x: 6.55, y: 11.2 }, { x: 6.55, y: 6.8 }],
+      [{ x: 7.75, y: 11.2 }, { x: 7.75, y: 6.8 }],
+      [{ x: 7.15, y: 11.2 }, { x: 7.15, y: 6.8 }],
+      edge(6.55), edge(7.75), edge(7.15),
+    ],
+    startElevationM: 0,
+    endElevationM: 3,
+    steps: 16,
+    landings: 0,
+    stairWidthM: 1.2,
+    treadGoingM: 0.275,
+    riserHeightM: 3 / 17,
+    waistThicknessM: 0.15,
+    walklineLengthM: 4.4,
+    minStepWidthM: 0.07,
+    stepsNumbering: true,
+    ...overrides,
+  };
+}
+
+describe('tekStairToEntity — ρεαλιστική ευθεία σκάλα (ΣΚΑΛΑ-2)', () => {
+  it('landings=0 + καθαρή γραμμή πορείας → straight (ΟΧΙ winder από sentinel (0,0))', () => {
+    const e = tekStairToEntity(realStraightRecord(), 'level-1');
+    expect(e.params.variant.kind).toBe('straight');
+  });
+
+  it('basePoint στο ΚΕΝΤΡΟ της σκάλας (7.15m), όχι στην ακμή — Y-flip → (7150, -11200)mm', () => {
+    const e = tekStairToEntity(realStraightRecord());
+    expect(e.params.basePoint.x).toBeCloseTo(7150, 1);
+    expect(e.params.basePoint.y).toBeCloseTo(-11200, 1);
+  });
+
+  it('κατεύθυνση κατά μήκος της σκάλας (~90°) και σωστές διαστάσεις', () => {
+    const e = tekStairToEntity(realStraightRecord());
+    expect(e.params.direction).toBeCloseTo(90, 0);
+    expect(e.params.stepCount).toBe(17);
+    expect(e.params.tread).toBeCloseTo(275, 1);
+    expect(e.params.width).toBeCloseTo(1200, 1);
+    expect(e.params.totalRise).toBeCloseTo(3000, 3);
+  });
+});
+
 describe('tekStairToEntity', () => {
   it('παράγει stair entity με σωστό type/levelId', () => {
     const e = tekStairToEntity(sampleRecord(), 'level-1');

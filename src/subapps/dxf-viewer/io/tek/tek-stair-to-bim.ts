@@ -10,9 +10,10 @@
  * StairParams defaults/geometry. Εδώ μένει ΜΟΝΟ η Tekton-specific παραγωγή
  * basePoint/direction/variant από τη γεωμετρία και τα scalar πεδία.
  *
- * Φ1 (stair-first): η παραμετρική σκάλα τοποθετείται σωστά (θέση/κλίμακα/βαθμίδες/ύψος).
- * Η ΑΚΡΙΒΗΣ αναπαραγωγή ελικοειδούς footprint (pixel-perfect) είναι επόμενη φάση —
- * εδώ η winder γωνία/πλήθος προκύπτουν ευρετικά από τη γραμμή πορείας.
+ * Placement (ADR-526): η γραμμή πορείας ΔΕΝ είναι «η μεγαλύτερη polyline» — ο Τέκτων αποθηκεύει
+ * πολλές `<point2d>` ομάδες (πλευρικές ακμές + κέντρο + περίγραμμα), γεμισμένες με sentinel
+ * `(0,0)`. Παράγουμε το **κέντρο** ως μέσο όρο των δύο εξωτερικών ακμών· ο variant προκύπτει από
+ * το authoritative `landings` (0 ⇒ ευθεία) + τη στροφή της ΚΑΘΑΡΗΣ γραμμής πορείας.
  */
 
 import { type SceneUnits } from '../../utils/scene-units';
@@ -41,6 +42,15 @@ function tekToScene(p: TekPoint2D, units: SceneUnits): Point2D {
   return tekMetersToScene(p.x, p.y, units);
 }
 
+/**
+ * Ο Τέκτων γεμίζει τις `<point2d>` λίστες με sentinel `(0,0)` μέχρι τη χωρητικότητά τους — ΔΕΝ
+ * είναι πραγματικές κορυφές. Χωρίς φιλτράρισμα, το (0,0) «τραβάει» τη γραμμή πορείας προς την
+ * αρχή αξόνων → ψεύτικη στροφή (ευθεία σκάλα εμφανίζεται ως winder).
+ */
+function isSentinel(p: TekPoint2D): boolean {
+  return p.x === 0 && p.y === 0;
+}
+
 /** Αφαιρεί outlier κορυφές (labels/anchors π.χ. (−11.9, 2.07)) μακριά από τον διάμεσο. */
 function dropOutliers(pl: readonly TekPoint2D[]): TekPoint2D[] {
   if (pl.length === 0) return [];
@@ -49,14 +59,62 @@ function dropOutliers(pl: readonly TekPoint2D[]): TekPoint2D[] {
   return pl.filter((p) => Math.hypot(p.x - cx, p.y - cy) <= OUTLIER_DISTANCE_M);
 }
 
-/** Επιλέγει τη γραμμή πορείας: τη μεγαλύτερη (σε κορυφές) πολυγραμμή μετά τον καθαρισμό. */
-function pickWalkline(polylines: readonly (readonly TekPoint2D[])[]): TekPoint2D[] {
-  let best: TekPoint2D[] = [];
-  for (const pl of polylines) {
-    const clean = dropOutliers(pl);
-    if (clean.length > best.length) best = clean;
+/** Καθαρισμός polyline: αφαιρεί sentinels `(0,0)` + outlier κορυφές (labels/anchors). */
+function cleanPolyline(pl: readonly TekPoint2D[]): TekPoint2D[] {
+  return dropOutliers(pl.filter((p) => !isSentinel(p)));
+}
+
+/** Κεντροειδές μιας polyline (scene coords). */
+function centroidOf(pl: readonly Point2D[]): Point2D {
+  const s = pl.reduce((a, p) => ({ x: a.x + p.x, y: a.y + p.y }), { x: 0, y: 0 });
+  return { x: s.x / pl.length, y: s.y / pl.length };
+}
+
+/** Κρατά μόνο τις πιο λεπτομερείς polylines (μέγιστο πλήθος σημείων) — οι ακμές ανά βαθμίδα. */
+function mostDetailed(polys: readonly Point2D[][]): Point2D[][] {
+  const maxLen = polys.reduce((m, p) => Math.max(m, p.length), 0);
+  return polys.filter((p) => p.length === maxLen);
+}
+
+/** Οι δύο πλευρικές ακμές = ζεύγος με μέγιστη απόσταση κεντροειδών (τα εξωτερικά «κάγκελα»). */
+function pickRails(polys: readonly Point2D[][]): readonly [Point2D[], Point2D[]] | null {
+  if (polys.length < 2) return null;
+  let best: [Point2D[], Point2D[]] | null = null;
+  let bestDist = -1;
+  for (let i = 0; i < polys.length; i += 1) {
+    for (let j = i + 1; j < polys.length; j += 1) {
+      const ci = centroidOf(polys[i]);
+      const cj = centroidOf(polys[j]);
+      const d = Math.hypot(ci.x - cj.x, ci.y - cj.y);
+      if (d > bestDist) { bestDist = d; best = [polys[i], polys[j]]; }
+    }
   }
   return best;
+}
+
+/** Μέσος όρος δύο ακμών (ευθυγραμμισμένων στην ίδια φορά) → γραμμή πορείας (κέντρο). */
+function averageRails(a: readonly Point2D[], b: readonly Point2D[]): Point2D[] {
+  const flip = Math.hypot(a[0].x - b[0].x, a[0].y - b[0].y)
+    > Math.hypot(a[0].x - b[b.length - 1].x, a[0].y - b[b.length - 1].y);
+  const bb = flip ? [...b].reverse() : b;
+  const n = Math.min(a.length, bb.length);
+  const out: Point2D[] = [];
+  for (let i = 0; i < n; i += 1) {
+    out.push({ x: (a[i].x + bb[i].x) / 2, y: (a[i].y + bb[i].y) / 2 });
+  }
+  return out;
+}
+
+/**
+ * Γραμμή πορείας (κέντρο) από τις καθαρισμένες polylines σε scene coords: μέσος όρος των δύο
+ * εξωτερικών ακμών (διατηρεί τυχόν καμπυλότητα για winder). Fallback → η μεγαλύτερη polyline.
+ */
+function deriveCenterline(scenePolys: readonly Point2D[][]): Point2D[] {
+  const nonEmpty = scenePolys.filter((p) => p.length > 0);
+  if (nonEmpty.length === 0) return [];
+  const rails = pickRails(mostDetailed(nonEmpty));
+  if (rails) return averageRails(rails[0], rails[1]);
+  return nonEmpty.reduce((a, b) => (b.length > a.length ? b : a), nonEmpty[0]);
 }
 
 interface StairPlacement {
@@ -82,9 +140,15 @@ function derivePlacement(walklineScene: readonly Point2D[]): StairPlacement {
   return { basePoint: walklineScene[0], directionDeg, turnDeg };
 }
 
-/** Επιλέγει variant (ευθεία ή winder) + παραμέτρους στροφής από τη γεωμετρία. */
-function resolveVariant(turnDeg: number, stepCount: number): StairVariantParams {
-  if (Math.abs(turnDeg) < TURN_THRESHOLD_DEG) return { kind: 'straight' };
+/**
+ * Επιλέγει variant (ευθεία ή winder). Πρωταρχικό σήμα το authoritative `landings` του Τέκτονα
+ * (0 = χωρίς πλατύσκαλο ⇒ υποψήφια ευθεία)· επιβεβαίωση από τη στροφή της ΚΑΘΑΡΗΣ γραμμής
+ * πορείας. Έτσι μια ευθεία σκάλα δεν κατατάσσεται λανθασμένα ως winder λόγω θορύβου γεωμετρίας.
+ */
+function resolveVariant(
+  turnDeg: number, stepCount: number, landings: number,
+): StairVariantParams {
+  if (landings === 0 && Math.abs(turnDeg) < TURN_THRESHOLD_DEG) return { kind: 'straight' };
   const winderCount = Math.max(
     1,
     Math.min(stepCount - 1, Math.round(Math.abs(turnDeg) / DEG_PER_WINDER)),
@@ -120,8 +184,11 @@ export function tekStairToEntity(
   levelId: string,
   sceneUnits: SceneUnits = 'mm',
 ): StairEntity {
-  const walkline = pickWalkline(rec.polylines).map((p) => tekToScene(p, sceneUnits));
-  const placement = derivePlacement(walkline);
+  const scenePolys = rec.polylines.map(
+    (pl) => cleanPolyline(pl).map((p) => tekToScene(p, sceneUnits)),
+  );
+  const centerline = deriveCenterline(scenePolys);
+  const placement = derivePlacement(centerline);
   const stepCount = resolveStepCount(rec);
   const totalRiseScene = metersToScene(Math.abs(rec.endElevationM - rec.startElevationM), sceneUnits);
   const overrides: StairParamOverrides = {
@@ -133,7 +200,7 @@ export function tekStairToEntity(
   const base: StairParams = buildDefaultStairParams(
     placement.basePoint, placement.directionDeg, overrides, sceneUnits,
   );
-  const variant = resolveVariant(placement.turnDeg, stepCount);
+  const variant = resolveVariant(placement.turnDeg, stepCount, rec.landings);
   const params: StairParams = {
     ...base,
     variant,
