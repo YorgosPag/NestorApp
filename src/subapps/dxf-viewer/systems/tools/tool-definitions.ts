@@ -324,12 +324,10 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
  *  - `finish-paint` → per-face override σε υπάρχον wall-covering (δεν δημιουργεί entity).
  *  - `ellipse` / `arc` (dropdown parent) → χωρίς επαληθευμένο dedicated creation path.
  *
- * **Surfaced asymmetry** (ADR-587 §6 — το registry το ανέδειξε, ΟΧΙ διορθώνεται εδώ):
- *  - `floorplan-symbol` — το tool `floorplan-symbol` ΔΗΜΙΟΥΡΓΕΙ `type:'floorplan-symbol'`
- *    (`floorplan-symbol.factory.ts:47`) που ΕΧΕΙ renderer (`FloorplanSymbolRenderer`), αλλά ο τύπος
- *    ΛΕΙΠΕΙ από το ADR-550 `RENDERABLE_ENTITY_TYPES` (αποδίδεται μέσω του entity-model path, όχι του
- *    `EntityRendererComposite`). Το να μπει εκεί απαιτεί πλήρη αλλαγή ADR-550 (surfaces+contracts+
- *    render-coverage) → χωριστό follow-up. Εξαιρείται από τον χάρτη· καρφωμένο στο coverage test.
+ * **Resolved asymmetry** (ADR-415/ADR-550, 2026-07-12): `floorplan-symbol` ΠΛΕΟΝ είναι
+ *  κανονικός `RenderableEntityType` (registered + `FloorplanSymbolRenderer` στο
+ *  `EntityRendererComposite`), οπότε έχει κανονικό tool→entity back-link (`'floorplan-symbol'`),
+ *  όπως το furniture. (Πριν έλειπε από το ADR-550 SSoT → ήταν καρφωμένη εξαίρεση εδώ.)
  *
  * **Entity-side gaps** (RenderableEntityTypes ΧΩΡΙΣ ToolType back-link): `thermal-space`,
  * `space-separator` (δημιουργούνται από hooks που ΔΕΝ είναι `ToolType` → εκτός `TOOL_DEFINITIONS`),
@@ -367,7 +365,10 @@ export const TOOL_CREATES_ENTITY: Partial<Record<ToolType, RenderableEntityType>
   'floor-finish': 'floor-finish',
   'wall-covering': 'wall-covering', 'wall-covering-room': 'wall-covering',
   'furniture': 'furniture',
-  // NB: `floorplan-symbol` deliberately absent — see the JSDoc «surfaced asymmetries» note.
+  // ADR-415 / ADR-550 (2026-07-12) — asymmetry RESOLVED: `floorplan-symbol` is now a
+  // registered RenderableEntityType (renderable-entity-type.ts) with a live renderer in
+  // EntityRendererComposite, so it carries a normal tool→entity back-link like furniture.
+  'floorplan-symbol': 'floorplan-symbol',
   // ── Annotation (ADR-583) — tool id ≠ entity type (every kind → annotation-symbol) ──
   'north-arrow': 'annotation-symbol', 'section-mark': 'annotation-symbol',
   'grid-bubble': 'annotation-symbol', 'elevation-mark': 'annotation-symbol',
@@ -399,4 +400,24 @@ export const TOOL_CREATES_ENTITY: Partial<Record<ToolType, RenderableEntityType>
 // compact map (fan-out view) or `TOOL_DEFINITIONS[tool].createsEntityType` (per-tool view).
 for (const toolId of Object.keys(TOOL_CREATES_ENTITY) as ToolType[]) {
   TOOL_DEFINITIONS[toolId].createsEntityType = TOOL_CREATES_ENTITY[toolId];
+}
+
+/**
+ * ADR-624 — entity types whose tools own the shared PreviewCanvas via a dedicated
+ * WYSIWYG placement ghost (`canvas-layer-stack-*-ghost` micro-leaves). While such a
+ * tool is active, the generic drawing-hover MUST NOT clear that canvas — the ghost's
+ * own RAF harness owns it (else the two race → the ghost flickers as the cursor moves).
+ * Derived predicate reuses `TOOL_CREATES_ENTITY` so every fan-out alias (e.g. the 16
+ * `mep-*` fixture tool ids, the 4 `mep-segment` tools) is covered without re-listing.
+ */
+const PLACEMENT_GHOST_OWNER_ENTITY_TYPES: ReadonlySet<RenderableEntityType> = new Set([
+  'mep-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator',
+  'mep-boiler', 'mep-water-heater', 'mep-segment', 'floorplan-symbol',
+]);
+
+/** True when `tool` owns the PreviewCanvas via a dedicated placement ghost (ADR-624). */
+export function toolOwnsPlacementGhost(tool: string | undefined | null): boolean {
+  if (!tool) return false;
+  const entityType = TOOL_CREATES_ENTITY[tool as ToolType];
+  return entityType !== undefined && PLACEMENT_GHOST_OWNER_ENTITY_TYPES.has(entityType);
 }

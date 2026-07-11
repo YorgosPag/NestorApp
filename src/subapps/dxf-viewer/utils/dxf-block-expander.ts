@@ -84,9 +84,36 @@ function noteError(ctx: ExpandContext, issue: ImportIssue): void {
 }
 
 /**
+ * Geometric core of the INSERT placement transform (the `p_world` formula, file header):
+ * scale about base → rotate about base → translate by (placement − base). Each step reuses a
+ * per-entity SSoT (scaleEntity / rotateEntity / translateEntityByAnchor) that already covers
+ * EVERY renderable type incl. `hatch.boundaryPaths` — so this ONE composition places both the
+ * exploded block members (via {@link transformBlockEntity}) AND a reconstructed associative
+ * hatch (via {@link transformInsertHatch}) identically. NO id/layer bookkeeping here.
+ */
+function applyBlockTransformGeometry(
+  entity: AnySceneEntity,
+  base: Point2D,
+  sx: number,
+  sy: number,
+  angleDeg: number,
+  placement: Point2D,
+): AnySceneEntity {
+  const scaled = scaleEntity(entity as unknown as Entity, base, sx, sy);
+  const e1 = { ...entity, ...scaled };
+  const rotated = rotateEntity(e1 as unknown as Entity, base, angleDeg);
+  const e2 = { ...e1, ...rotated };
+  const moved = translateEntityByAnchor(e2 as unknown as Entity, {
+    x: placement.x - base.x,
+    y: placement.y - base.y,
+  });
+  return { ...e2, ...moved } as AnySceneEntity;
+}
+
+/**
  * Apply an INSERT's transform to one already-converted block entity, returning a fresh clone.
- * Composition order (each SSoT contributes a Partial that is merged): scale about base →
- * rotate about base → translate by (placement − base). BYBLOCK layer ('0') inherits the INSERT layer.
+ * Reuses {@link applyBlockTransformGeometry} for the placement math; adds the block bookkeeping:
+ * BYBLOCK layer ('0') inherits the INSERT layer, and a fresh unique `_i#` id per cloned member.
  */
 function transformBlockEntity(
   entity: AnySceneEntity,
@@ -98,24 +125,45 @@ function transformBlockEntity(
   insertLayer: string,
   idSeq: { n: number }
 ): AnySceneEntity {
-  const scaled = scaleEntity(entity as unknown as Entity, base, sx, sy);
-  const e1 = { ...entity, ...scaled };
-  const rotated = rotateEntity(e1 as unknown as Entity, base, angleDeg);
-  const e2 = { ...e1, ...rotated };
-  const moved = translateEntityByAnchor(e2 as unknown as Entity, {
-    x: placement.x - base.x,
-    y: placement.y - base.y,
-  });
+  const e2 = applyBlockTransformGeometry(entity, base, sx, sy, angleDeg, placement);
 
   const layerId = (e2 as { layerId?: string }).layerId;
   const finalLayer = !layerId || layerId === '0' ? insertLayer : layerId;
 
   return {
     ...e2,
-    ...moved,
     layerId: finalLayer,
     id: `${(entity as { id?: string }).id ?? 'blk'}_i${idSeq.n++}`,
   } as AnySceneEntity;
+}
+
+/**
+ * ADR-635 Φ C.11 — place a reconstructed R12 associative-hatch (built by `tryConvertInsertHatch`
+ * from the ACAD/HATCH XDATA boundary cache) into world space using the SAME INSERT block transform
+ * the `*X#` explosion applies (`instantiateInsert` → {@link transformBlockEntity}).
+ *
+ * WHY: the R14_HATCH_DATA boundary cache is stored in the `*X#` block's LOCAL coordinate space
+ * (relative to the block base). Skipping this transform left every imported hatch at raw
+ * geo-referenced coords (~2.8e6) while its exploded siblings sat at the drawing's local origin —
+ * hatches rendered 2.8M units off-screen AND Home/Shift+1 zoom-extents unioned local(0..70k) with
+ * hatch(2.8e6) → over-zoom to a dot (KADOS.ΓΡΑΜΜΟΣΚΙΑΣΕΙΣ, 2026-07-11). Reusing
+ * `applyBlockTransformGeometry` makes the placed hatch BYTE-IDENTICAL to where the exploded pattern
+ * lines would land (SSoT — never a second transform path). A hatch INSERT is a single placement
+ * (no MINSERT array). Returns the hatch unchanged when the block def is absent (safe degradation).
+ */
+export function transformInsertHatch(
+  hatch: AnySceneEntity,
+  insert: EntityData,
+  blockDefs: BlockDefMap,
+): AnySceneEntity {
+  const name = insert.data['2'];
+  const def = name ? blockDefs.get(name) : undefined;
+  if (!def) return hatch;
+  const placement: Point2D = { x: numOr(insert.data['10'], 0), y: numOr(insert.data['20'], 0) };
+  const sx = numOr(insert.data['41'], 1);
+  const sy = numOr(insert.data['42'], 1);
+  const angle = numOr(insert.data['50'], 0);
+  return applyBlockTransformGeometry(hatch, def.base, sx, sy, angle, placement);
 }
 
 /**

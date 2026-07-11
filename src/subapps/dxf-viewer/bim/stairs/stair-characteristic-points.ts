@@ -19,12 +19,17 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { StairEntity, Polygon3D } from '../types/stair-types';
 import { getStairGrips } from './stair-grips';
-import { projectVerticesTo2D, footprintEdgeMidpoints } from '../geometry/shared/polygon-utils';
+import { projectVerticesTo2D, footprintEdgeMidpoints, polygon2DAreaCentroid } from '../geometry/shared/polygon-utils';
 
-/** Οι χαρακτηριστικές θέσεις έλξης μιας σκάλας (χωρίς center — πολλά σκαλοπάτια). */
+/**
+ * Οι χαρακτηριστικές θέσεις έλξης μιας σκάλας. Σε αντίθεση με τα single-footprint entities,
+ * η σκάλα έχει ΠΟΛΛΑ `centers` — ένα area-centroid ανά σκαλοπάτι/πλατύσκαλο (ο χρήστης έλκεται
+ * στο «κέντρο του γωνιακού πλατύσκαλου», Giorgio 2026-07-11).
+ */
 export interface StairCharPoints {
   readonly corners: Point2D[];
   readonly midpoints: Point2D[];
+  readonly centers: Point2D[];
 }
 
 /**
@@ -49,12 +54,16 @@ function walkableSurfaces(entity: StairEntity): readonly Polygon3D[] {
 export function getStairCharacteristicPoints(entity: StairEntity): StairCharPoints {
   const corners: Point2D[] = getStairGrips(entity).map((grip) => grip.position);
   const midpoints: Point2D[] = [];
+  const centers: Point2D[] = [];
   for (const surface of walkableSurfaces(entity)) {
     // Τα vertices είναι bare `Point3D[]` σε winding order → projection + preOrdered ώστε
     // γωνίες/μέσα να μη «σπάνε» σε μη-κυρτά (landings μπορεί να είναι L/Γ, ADR-597 §non-convex).
     const verts2d = projectVerticesTo2D(surface);
+    if (verts2d.length < 3) continue;
     corners.push(...verts2d);
     midpoints.push(...footprintEdgeMidpoints(verts2d, { preOrdered: true }));
+    // Area-centroid (όχι vertex-mean) → σωστό «κέντρο» και για κοίλα L/Γ πλατύσκαλα.
+    centers.push(polygon2DAreaCentroid(verts2d));
   }
-  return { corners, midpoints };
+  return { corners, midpoints, centers };
 }

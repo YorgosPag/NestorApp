@@ -621,6 +621,7 @@
 | **ADR-636** | Professional DXF Export (HEADER, version-driven encoding) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-636-professional-dxf-export-header-encoding.md) |
 | **ADR-637** | Stair Rest Landings (πλατύσκαλα) — kind-independent SSoT | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-637-stair-rest-landings-ssot.md) |
 | **ADR-638** | Bathroom Auto-Layout Generator (generative space planning) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-638-bathroom-auto-layout-generator.md) |
+| **ADR-639** | DXF Viewer Large-File Performance (worker parse + progress + spatial culling + streaming + WebGL) | 📝 PROPOSED | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-639-dxf-viewer-large-file-performance.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1221,6 +1222,7 @@
 | **ADR-636** | Professional DXF Export (HEADER, version-driven encoding) | ✅ APPROVED | [View](./adrs/ADR-636-professional-dxf-export-header-encoding.md) |
 | **ADR-637** | Stair Rest Landings (πλατύσκαλα) — kind-independent SSoT | ✅ APPROVED | [View](./adrs/ADR-637-stair-rest-landings-ssot.md) |
 | **ADR-638** | Bathroom Auto-Layout Generator (generative space planning) | ✅ APPROVED | [View](./adrs/ADR-638-bathroom-auto-layout-generator.md) |
+| **ADR-639** | DXF Viewer Large-File Performance (worker parse + progress + spatial culling + streaming + WebGL) | 📝 PROPOSED | [View](./adrs/ADR-639-dxf-viewer-large-file-performance.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

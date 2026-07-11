@@ -142,14 +142,13 @@ describe('TOOL_CREATES_ENTITY — entity-side gaps (pinned known holes)', () => 
     expect(produced.has('space-separator')).toBe(false);
   });
 
-  it('floorplan-symbol is a surfaced asymmetry: tool exists but its type is absent from RENDERABLE (ADR-550 follow-up)', () => {
-    // The `floorplan-symbol` tool IS a real ToolType that authors `type:'floorplan-symbol'`…
+  it('floorplan-symbol asymmetry RESOLVED (ADR-415/ADR-550, 2026-07-12): now renderable + back-linked', () => {
+    // The `floorplan-symbol` tool authors `type:'floorplan-symbol'`, which is NOW a registered
+    // RenderableEntityType (renderable-entity-type.ts) with a live `FloorplanSymbolRenderer` in
+    // EntityRendererComposite — so it carries a normal tool→entity back-link like furniture.
     expect(TOOL_DEFINITIONS['floorplan-symbol']).toBeDefined();
-    // …but that entity type is NOT in the ADR-550 renderable SSoT (rendered via the entity-model
-    // path, not EntityRendererComposite). So it is deliberately excluded from the back-link map
-    // until ADR-550 registers it. Fixing it here would ripple into the render-coverage contract.
-    expect(RENDERABLE_SET.has('floorplan-symbol')).toBe(false);
-    expect(TOOL_CREATES_ENTITY['floorplan-symbol']).toBeUndefined();
-    expect(TOOL_DEFINITIONS['floorplan-symbol'].createsEntityType).toBeUndefined();
+    expect(RENDERABLE_SET.has('floorplan-symbol')).toBe(true);
+    expect(TOOL_CREATES_ENTITY['floorplan-symbol']).toBe('floorplan-symbol');
+    expect(TOOL_DEFINITIONS['floorplan-symbol'].createsEntityType).toBe('floorplan-symbol');
   });
 });

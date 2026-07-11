@@ -48,9 +48,6 @@ import {
   subscribeTrackingPoints,
   getTrackingPointsSnapshot,
 } from '../../systems/tracking/TrackingPointStore';
-// ADR-357 / 2026-07-04 — commit shares the preview's tracking SSoT (acquired ⊕
-// ambient ⊕ segment-base clean-corner) so the clicked point ≡ the locked ghost.
-import { resolveAlignmentTracking } from '../../systems/tracking/resolve-alignment-tracking';
 // 🏢 ADR-099: Centralized Polygon Tolerances
 import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
 // 🏢 ADR-362 Phase D1: Dim tool routing layer (Smart DIM + 4 manual overrides)
@@ -66,9 +63,12 @@ import { useCenterMarkCreate } from '../dimensions/useCenterMarkCreate';
 // ADR-357 Phase 7: Snap Override orchestrator (single-use snap modifiers)
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { ExtendedSnapType } from '../../snapping/extended-types';
-import { handleToolCompletion, resolveOrthoPolarStep, MEASURE_TOOLS_FOR_GUIDES, resolveDimCommitPoint, performDoubleClickFinish, commitM2PClick, resolveLineFamilyCommitPoint } from './drawing-handler-utils';
+import { handleToolCompletion, resolveOrthoPolarStep, MEASURE_TOOLS_FOR_GUIDES, resolveDimCommitPoint, performDoubleClickFinish, commitM2PClick, resolveCommittedDrawingPoint } from './drawing-handler-utils';
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
 import { processDrawingHover } from './drawing-hover-handler';
+// ADR-624 — single-click placement tools own the PreviewCanvas via their dedicated ghost;
+// the generic hover must not clear it (else the ghost flickers on cursor move).
+import { toolOwnsPlacementGhost } from '../../systems/tools/tool-definitions';
 export { MEASURE_TOOLS_FOR_GUIDES } from './drawing-handler-utils';
 
 type Pt = { x: number, y: number };
@@ -342,34 +342,21 @@ export function useDrawingHandlers(
       snappedPoint = applySnap(afterStep);
     }
 
-    // ADR-357 Phase 4 / 2026-07-04 — promote the alignment hit to the committed
-    // point through the SAME SSoT as the preview (`resolveAlignmentTracking`:
-    // acquired ⊕ ambient ⊕ segment-base clean-corner + adaptive quantize), so the
-    // clicked point is IDENTICAL to the locked ghost (WYSIWYG). Previously this used
-    // `resolveTrackingSnap` with acquired points ONLY — no ambient, no base corner,
-    // no quantize → preview≠commit for line-endpoint alignment (rectangle wouldn't
-    // actually close on click).
-    let finalPoint = snappedPoint;
-    const ambientOn = ambientAlignmentConfigStore.getSnapshot().enabled;
-    const committedTracking = resolveAlignmentTracking(snappedPoint, {
+    // ADR-357 Phase 4 / ADR-508 §line-family — promote the snapped point to the committed
+    // point through the SAME SSoT pipeline as the preview: alignment tracking (acquired ⊕
+    // ambient ⊕ segment-base clean-corner + adaptive quantize) THEN the line-family flush /
+    // length-angle lock. Clicked point ≡ locked ghost (WYSIWYG). The composed resolver lives
+    // in drawing-handler-utils so this hook stays under the N.7.1 size limit.
+    const finalPoint = resolveCommittedDrawingPoint(snappedPoint, {
       scale: canvasOps.getTransform().scale,
-      polarEnabled: polarOnRef.current && !orthoOnRef.current,
-      sceneEntities: ambientOn ? (currentScene?.entities ?? null) : null,
-      segmentBase: lastRef ?? null,
-    });
-    if (committedTracking) finalPoint = committedTracking.point;
-
-    // ADR-508 §line-cyan / ADR-060 §line-family — commit-time length/angle lock + flush/κάθετο κλείδωμα
-    // για `line` ΚΑΙ `line-perpendicular`, μέσω του ΚΟΙΝΟΥ SSoT helper (ίδιος εγκέφαλος με το preview →
-    // preview ≡ commit). No-op για κάθε άλλο εργαλείο. Ζει στο drawing-handler-utils ώστε το hook να
-    // μένει κάτω από το όριο N.7.1.
-    finalPoint = resolveLineFamilyCommitPoint(
+      polar: polarOnRef.current,
+      ortho: orthoOnRef.current,
+      sceneEntities: currentScene?.entities,
+      segmentBase: lastRef,
       activeTool,
-      finalPoint,
-      drawingState.tempPoints.length,
-      lastRef,
-      resolveSceneUnits(currentScene),
-    );
+      tempPointsLength: drawingState.tempPoints.length,
+      sceneUnits: resolveSceneUnits(currentScene),
+    });
 
     const transformUtils = canvasOps.getTransformUtils();
     const completed = addPoint(finalPoint, transformUtils);
@@ -410,6 +397,15 @@ export function useDrawingHandlers(
     // callback (useAutoDimCutlineTool). Skip the generic drawing hover so it does
     // not clear/fight the live ghost-chain overlay.
     if (activeTool === 'auto-dim-cutline') return;
+    // ADR-624 (2026-07-12) — single-click placement tools own the PreviewCanvas via their
+    // OWN dedicated WYSIWYG ghost RAF (mep-fixture / floorplan-symbol / panel / manifold /
+    // radiator / boiler / water-heater / segment). Skip the generic hover ENTIRELY (mirror
+    // of auto-dim-cutline above): they never produce a generic preview entity, so this
+    // handler only (a) cleared the shared canvas every move → wiped their ghost (flicker)
+    // and (b) ran the per-move ambient-alignment scan over ALL scene entities + tracking
+    // resolution → main-thread cost that made the ghost lag behind the OS cursor. Snapping
+    // still works (ImmediateSnapStore is updated by the snap engine, not here).
+    if (toolOwnsPlacementGhost(activeTool)) return;
     processDrawingHover(p, {
       activeTool,
       isDimTool: dimRouting.isDimTool,

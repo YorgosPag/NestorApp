@@ -34,6 +34,7 @@ export interface RenderSurfaces {
  * στο `ENTITY_RENDER_CONTRACTS` και αφαίρεσέ το από εδώ.
  */
 export const BIM_2D_ONLY_TYPES: readonly RenderableEntityType[] = [
+  'floorplan-symbol', // ADR-415 — 2D σύμβολο κάτοψης (WC/κουζίνα/έπιπλα)· pure vector, καμία 3D mesh
   'wall-covering',   // ADR-511 — λεπτή επίστρωση στην παρειά· καμία ανεξάρτητη 3D mesh
   'thermal-space',   // ADR-422 — αναλυτικό IfcSpace· χωρίς 3D solid
   'space-separator', // ADR-437 — IfcVirtualElement· καθαρά 2D γραμμή

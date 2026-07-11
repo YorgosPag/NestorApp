@@ -250,3 +250,34 @@ string). Well-formed nodes (rich toolbar / AI-created / commands) export correct
   7 νέα tests (`dxf-roundtrip-textstyle.test.ts`: TEXT/MTEXT emit + reverse-symmetry μέσω `parseStyleTable`/
   `buildStyleFontMap` + dedup + STANDARD/explode gating), **157 export/core + 119 adapter/import/parser jest green**,
   jscpd clean. ΟΧΙ browser-verified.
+- **2026-07-11 — Στάδιο 2 Φ2.4 (D.2) — LEADER export round-trip (ADR-635 Batch 2-B parity):** ο `writeEntity`
+  switch **skip-άρε** το LEADER (`// spline/leader/xline/ray → skipped.`) → τα imported leaders χάνονταν στο
+  export. Νέος pure serializer **`emitLeader(vertices, arrowEnabled, layer, aci, s, pair)`**
+  (`dxf-ascii-primitive-emitters.ts`, μοτίβο `emitPoint`/`emitPath`) = ΑΚΡΙΒΕΣ inverse του import `convertLeader`
+  (`utils/dxf-leader-converter.ts`): **10/20 ordered vertices** (arrow tip = vertices[0]) που το
+  `parseVerticesFromPairs` ξαναδιαβάζει καθαρά + **71** arrowhead flag (`arrowHead.type !== 'none' → 1`, round-trips
+  closed↔none· missing→enabled) + **62** χρώμα. AutoCAD-faithful defaults `3`='Standard' / `72`=0 (straight) /
+  `73`=3 (no annotation) / `76`=vertex-count για fidelity — το import αγνοεί ό,τι δεν διαβάζει, οπότε **δεν** χαλούν
+  το re-parse. Arrow **size** = `DEFAULT_DIMSTYLE.dimasz` (σταθερά, ΔΕΝ γράφεται στο αρχείο) → σκόπιμα **δεν** emitted
+  (δεν round-trips από file). Annotation pointer (340) δεν resolved → δεν emitted. STYLE codes (6/48/370) **εξαιρούνται**
+  ('leader' ΕΚΤΟΣ `STYLE_APPEND_TYPES` — το `convertLeader` διαβάζει μόνο 62, καμία round-trip αξία· scope καθαρό).
+  Guard `vertices.length < 2 → κανένα LEADER block` (mirror `emitPath`). Export scope: `leader` δεν είναι `isBimEntity`
+  → επιβιώνει σε `dxf-only`/`both` (κανένα filter block). 7 νέα tests (`dxf-roundtrip-leader.test.ts`: 71/76/3/72 emit +
+  round-trip vertices/arrowHead μέσω `convertLeader` + scale + none/undefined gating + `<2`-guard + bare envelope),
+  **164 export/core jest green**, jscpd clean. ΟΧΙ browser-verified.
+- **2026-07-12 — Στάδιο 2 Φ2.4 (D.3) — native SOLID/TRACE/3DFACE export round-trip (ADR-635 Φάση B parity):**
+  τα imported SOLID/TRACE/3DFACE (ο `dxf-quad-fill-converter.ts` τα χαρτογραφεί όλα σε `HatchEntity` fillType
+  'solid') εξάγονταν ως **downgraded HATCH** — χανόταν η ταυτότητα του native primitive. Giorgio: full
+  Revit/AutoCAD-level fidelity. (α) **νέο origin marker** `HatchEntity.dxfSourceType?: 'solid'|'trace'|'3dface'`
+  (additive· απών = γνήσιο HATCH → μηδέν regression· συμβατό με convention `dxf*` πεδίων) — το `convertQuadFill`
+  το θέτει από το `idPrefix` (μηδέν fabrication: πραγματική origin, όχι abuse του `id`). (β) **νέο emitter**
+  `emitQuadFill(kind, vertices, layer, aci, s, pair)` (`dxf-ascii-primitive-emitters.ts`) = ΑΚΡΙΒΕΣ inverse του
+  import `parseQuadVertices`: το import αποθηκεύει το boundary σε **draw-order** (1-2-4-3 bowtie-corrected), οπότε
+  ο export **un-bowties** πίσω στα DXF corner slots 10=v1/11=v2/12=v3/13=v4 (τρίγωνο → slot 13 = 3η κορυφή). Z=0
+  (SOLID/TRACE 2D· το 3DFACE import ήδη πρόβαλε το Z → flat face, honest). (γ) writer `case 'hatch'`: branch ΠΡΙΝ
+  το `dxfFaces`/`emitHatch` fallback — `dxfSourceType` + boundary 3/4 κορυφών → `emitQuadFill(QUAD_ENTITY_NAME[src])`.
+  Gated AutoCAD path — Tekton `explode` κρατά το exploded-LINE fallback (minimal parser δεν διαβάζει SOLID)·
+  γνήσιο HATCH (χωρίς marker) αμετάβλητο. 5 αρχεία (entities/quad-fill-converter/primitive-emitters/writer + test).
+  7 tests (`dxf-roundtrip-solid.test.ts`: SOLID quad/τρίγωνο + TRACE + 3DFACE round-trip μέσω `convertSolid/Trace/3dFace`
+  + scale + explode-fallback + γνήσιο-HATCH zero-regression), **179 export/core + quad-fill jest green**, jscpd clean.
+  ΟΧΙ browser-verified.

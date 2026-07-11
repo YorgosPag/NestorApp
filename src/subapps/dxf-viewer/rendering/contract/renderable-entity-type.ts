@@ -65,6 +65,9 @@ export const BIM_RENDERABLE_TYPES = [
   'thermal-space',
   'space-separator',
   'furniture',
+  // ADR-415 — 2D floorplan symbol (WC/κουζίνα/έπιπλα κάτοψης): pure-vector 2D κάτοψη,
+  // κανένα standalone 3D solid (βλ. BIM_2D_ONLY_TYPES). Renderer: FloorplanSymbolRenderer.
+  'floorplan-symbol',
   'mep-fixture',
   'electrical-panel',
   'mep-manifold',

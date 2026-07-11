@@ -228,11 +228,16 @@ export const HATCH_PATTERN_CATALOG: Readonly<Record<string, HatchPattern>> = {
     ],
   },
   GRASS: {
+    // Ακριβές acad.pat conversion (× INCH): οι τρεις οικογένειες 90/45/135 (ΟΧΙ 60/120)
+    // σχηματίζουν το συμμετρικό «βελάκι» της AutoCAD. Τιμές inches → mm:
+    //   90:  delta .707106781,1  dashes .1875,-1.8125  → [17.9605, 25.4] / [4.7625,-46.0375]
+    //   45/135: delta 0,2         dashes .1875,-1.8125  → [0, 50.8]      / [4.7625,-46.0375]
+    // Πριν: 60/120 + [50.8,50.8]/[25.4,-76.2] = προσεγγιστικό → άναρχες γραμμές (ADR-635 Φ C.10).
     name: 'GRASS', labelKey: 'ribbon.commands.hatchEditor.patterns.grass', category: 'ground',
     lines: [
-      line(90, [0, 0], [50.8, 50.8], [25.4, -76.2]),
-      line(60, [0, 0], [50.8, 50.8], [25.4, -76.2]),
-      line(120, [0, 0], [50.8, 50.8], [25.4, -76.2]),
+      line(90, [0, 0], [0.707106781 * INCH, 1 * INCH], [0.1875 * INCH, -1.8125 * INCH]),
+      line(45, [0, 0], [0, 2 * INCH], [0.1875 * INCH, -1.8125 * INCH]),
+      line(135, [0, 0], [0, 2 * INCH], [0.1875 * INCH, -1.8125 * INCH]),
     ],
   },
   MUDST: {
@@ -308,6 +313,29 @@ export const HATCH_PATTERN_CATALOG: Readonly<Record<string, HatchPattern>> = {
       line(90, [0, 0], [0, 3.175]),
     ],
   },
+  // ADR-635 Φ C.10 — SQUARE/HEX έλειπαν εντελώς από τον catalog → imported hatch με αυτά
+  // τα ονόματα έπεφτε σε catalog MISS → `buildHatchEntitySegments` = [] → ΚΑΝΕΝΑ pattern
+  // (μόνο outline). Ακριβή acad.pat conversions (× INCH), ώστε canvas + DXF-export να τα
+  // αποδίδουν 1:1 με την AutoCAD.
+  SQUARE: {
+    // acad.pat: `0/90, 0,0, 0,.25, .25,-.25` → μικρά ευθυγραμμισμένα τετράγωνα.
+    name: 'SQUARE', labelKey: 'ribbon.commands.hatchEditor.patterns.square', category: 'special',
+    lines: [
+      line(0, [0, 0], [0, 0.25 * INCH], [0.25 * INCH, -0.25 * INCH]),
+      line(90, [0, 0], [0, 0.25 * INCH], [0.25 * INCH, -0.25 * INCH]),
+    ],
+  },
+  HEX: {
+    // acad.pat εξάγωνα: οικογένειες 0/120/60· κάθετη απόσταση .25·sin60 = .216506351·
+    // dashes .125 (ακμή) / -.125 (κενό). Το 60° set έχει origin-shift .125 + αντίστροφη
+    // φάση dash ώστε οι ακμές να κλείνουν το εξάγωνο. ⚠️ visual-verify (σύνθετο μοτίβο).
+    name: 'HEX', labelKey: 'ribbon.commands.hatchEditor.patterns.hex', category: 'special',
+    lines: [
+      line(0, [0, 0], [0, 0.216506351 * INCH], [0.125 * INCH, -0.125 * INCH, 0.125 * INCH, -0.125 * INCH]),
+      line(120, [0, 0], [0, 0.216506351 * INCH], [0.125 * INCH, -0.125 * INCH, 0.125 * INCH, -0.125 * INCH]),
+      line(60, [0.125 * INCH, 0], [0, 0.216506351 * INCH], [-0.125 * INCH, 0.125 * INCH, -0.125 * INCH, 0.125 * INCH]),
+    ],
+  },
   HONEY: {
     // Κηρήθρα (honeycomb approximation): τρεις οικογένειες 60°.
     name: 'HONEY', labelKey: 'ribbon.commands.hatchEditor.patterns.honey', category: 'special',
@@ -344,6 +372,11 @@ const SUGGESTED_SCALES: Readonly<Record<string, number>> = {
   STEEL: 7, CROSS: 10,
   CORK: 7, INSUL: 7,
   DOTS: 5, PLAST: 10, PLASTI: 10, BOX: 2, NET: 20, HONEY: 3, GOST_GLASS: 2,
+  // ADR-635 Φ C.10 — density normalization ώστε default draw (patternScale=1) να δίνει
+  // ορατή πυκνότητα ≥30 mm (invariant του catalog test): SQUARE 6.35×5≈32· HEX 5.5×6≈33.
+  // Η import fidelity ΔΕΝ εξαρτάται από αυτό: το idempotency αποθηκεύει fileScale/suggested,
+  // οπότε effective = fileScale στο re-import (γι' αυτό ο χρήστης κάνει ΦΡΕΣΚΙΑ εισαγωγή).
+  SQUARE: 5, HEX: 6,
 };
 
 /** Επιστρέφει το μοτίβο με το δοθέν όνομα (case-insensitive), ή `undefined`. */

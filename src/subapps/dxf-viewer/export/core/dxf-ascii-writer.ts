@@ -21,7 +21,7 @@
  * ADR-505 §A.
  */
 
-import type { Entity, HatchEntity, SceneLayer } from '../../types/entities';
+import type { Entity, HatchEntity, LeaderEntity, SceneLayer } from '../../types/entities';
 import type { DimensionEntity, DimStyle } from '../../types/dimension';
 import type { Point2D } from '../../rendering/types/Types';
 // ADR-636 Στάδιο 2 Φ2.1 — full `TABLES → LAYER` section. The single TABLES section (LTYPE +
@@ -38,16 +38,10 @@ export { rectangleEntityVertices };
 // in-process writers + production export stay in lockstep. Before Round 24,
 // dimensions were silently dropped at the entity switch.
 import { emitDimensionEntity } from '../../utils/dxf-dimension-writer';
-// ADR-362 Round 26 — anonymous dimension BLOCKS: the real drawn geometry of each
-// dimension (ext lines + dim line/arc + arrowheads + text) is built from the SAME
-// on-screen SSoT (`buildDimensionBlockPrimitives` → `buildDimensionGeometry`) and
-// emitted as a `*Dn` block so dimensions display reliably even in readers that
-// don't regenerate dimension geometry.
-import {
-  buildDimensionBlockPrimitives,
-  type DimBlockPrimitive,
-} from '../../systems/dimensions/dim-block-primitives';
-import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
+// ADR-362 Round 26 — anonymous dimension BLOCKS emitter lives in its own module
+// (file-size SRP, N.7.1). Builds one `*Dn` block per dimension from the on-screen
+// geometry SSoT so dimensions display reliably even in non-regenerating readers.
+import { buildDimensionLookup, writeDimensionBlock } from './dxf-ascii-dimension-block-writer';
 import { hexToAci } from '../../ui/text-toolbar/controls/aci-palette';
 // 🏢 Color-Conversion SSoT (ADR-573): int(0xRRGGBB)→hex via canonical `dxf-true-color`.
 import { trueColorToHex } from '../../utils/dxf-true-color';
@@ -66,11 +60,13 @@ import type { DxfStyleTableEntry } from '../../text-engine/types/text-ast.types'
 // module (file-size SRP split, N.7.1). `emitLine` stays the ONE definition injected into `emitHatch`.
 import {
   emit3DFace,
+  emitQuadFill,
   emitLine,
   emitCircle,
   emitPoint,
   emitArc,
   emitPath,
+  emitLeader,
   emitEntityStyle,
   arcPoints,
   num,
@@ -147,7 +143,6 @@ export interface DxfWriteOptions {
 
 const DEFAULT_LAYER = '0';
 const DEFAULT_ACI = 7; // white/black (ByLayer-ish fallback)
-const ACI_BYLAYER = 256; // dimension-block geometry follows the dim's layer colour
 
 // ADR-636 Φ2.4 (D.6) — single-header entities whose STYLE codes (6/48/370) are appended
 // AFTER the emitter (valid: the pairs bind to the entity until the next `0`). POLYLINE /
@@ -156,6 +151,12 @@ const ACI_BYLAYER = 256; // dimension-block geometry follows the dim's layer col
 const STYLE_APPEND_TYPES: ReadonlySet<Entity['type']> = new Set([
   'line', 'circle', 'arc', 'text', 'mtext', 'point',
 ]);
+
+// ADR-636 Φ2.4 (D.3) — origin-primitive marker → native DXF entity name (round-trip of the
+// `dxf-quad-fill-converter` import). Inverse of the `idPrefix` the import stamps.
+const QUAD_ENTITY_NAME: Readonly<Record<'solid' | 'trace' | '3dface', 'SOLID' | 'TRACE' | '3DFACE'>> = {
+  solid: 'SOLID', trace: 'TRACE', '3dface': '3DFACE',
+};
 
 /** Produce a DXF string for the given (flattened) entities. */
 export function writeDxfAscii(
@@ -342,6 +343,17 @@ function writeEntity(
       break;
     }
     case 'hatch': {
+      // ADR-636 Φ2.4 (D.3) — imported SOLID/TRACE/3DFACE round-trip to their NATIVE entity (not a
+      // downgraded HATCH), preserving the source primitive identity (Revit/AutoCAD fidelity). The
+      // `emitQuadFill` un-bowties the draw-order boundary back to the DXF corner slots (inverse of
+      // `parseQuadVertices`). AutoCAD path only — Tekton `explode` keeps the exploded-LINE fallback
+      // (its minimal parser doesn't read SOLID). Genuine HATCH (no `dxfSourceType`) is unaffected.
+      const src = (e as HatchEntity).dxfSourceType;
+      const quad = (e as HatchEntity).boundaryPaths?.[0];
+      if (!explode && src && quad && (quad.length === 3 || quad.length === 4)) {
+        emitQuadFill(QUAD_ENTITY_NAME[src], quad, layer, aci, s, pair);
+        break;
+      }
       // ADR-505 §C (SOLID fill / poché) — «βαμμένη επιφάνεια» = προ-υπολογισμένα 3D
       // faces (πλευρές + καπάκια, βλ. solid-fill-geometry) → ένα `3DFACE` ανά face.
       // x/y με coordinate scale· z (mm) με mmScale (ίδια σύμβαση με rebar/thickness).
@@ -378,7 +390,17 @@ function writeEntity(
       // just its position (10/20/30) + layer + colour, mirroring emitCircle.
       emitPoint(e.position, layer, aci, s, pair);
       break;
-    // spline/leader/xline/ray → skipped.
+    case 'leader': {
+      // ADR-636 Φ2.4 (D.2) — native LEADER round-trips the ADR-635 Batch 2-B import. Ordered
+      // 10/20 vertices (arrow tip = vertices[0]) + 71 arrowhead flag; the import re-reads them via
+      // `convertLeader`. Annotation (340) / arrow size (DIMASZ) are not file-round-trippable → not
+      // emitted. STYLE codes (6/48/370) are excluded — `convertLeader` reads only 62 (no round-trip
+      // value), so 'leader' is deliberately NOT in STYLE_APPEND_TYPES.
+      const lead = e as unknown as LeaderEntity;
+      emitLeader(lead.vertices, lead.arrowHead?.type !== 'none', layer, aci, s, pair);
+      break;
+    }
+    // spline/xline/ray → skipped.
     default:
       break;
   }
@@ -411,66 +433,6 @@ function collectTextStyles(entities: readonly Entity[]): DxfStyleTableEntry[] {
     });
   }
   return [...byName.values()];
-}
-
-// ─── Dimension anonymous block (ADR-362 Round 26) ─────────────────────────────
-
-/** Build a `DimensionLookup` over the export's dimensions (baseline/continued chains). */
-function buildDimensionLookup(dimEntities: readonly Entity[]): DimensionLookup {
-  const byId = new Map<string, DimensionEntity>();
-  for (const e of dimEntities) byId.set(e.id, e as unknown as DimensionEntity);
-  return (id: string) => byId.get(id);
-}
-
-/**
- * Emit one anonymous `BLOCK *Di … ENDBLK` containing the dimension's real drawn
- * geometry. Geometry comes entirely from `buildDimensionBlockPrimitives` (the
- * on-screen SSoT); we only serialize the world-space primitives through the
- * existing entity emitters. On a build failure (partial def points / missing
- * chain parent) we skip the block silently — the DIMENSION entity remains.
- */
-function writeDimensionBlock(
-  pair: Pair, entity: DimensionEntity, style: DimStyle, blockName: string, layer: string, s: number,
-  lookup: DimensionLookup,
-): void {
-  let primitives: DimBlockPrimitive[];
-  try {
-    primitives = buildDimensionBlockPrimitives(entity, style, lookup);
-  } catch {
-    return; // degenerate / unresolved chain → no block (regen-capable readers still show the DIMENSION)
-  }
-
-  pair(0, 'BLOCK');
-  pair(8, layer);
-  pair(2, blockName);
-  pair(70, 1);                 // anonymous block flag (bit 1)
-  pair(10, 0); pair(20, 0); pair(30, 0); // base point at origin
-  pair(3, blockName);          // block name (repeated per DXF BLOCK spec)
-
-  for (const prim of primitives) {
-    switch (prim.kind) {
-      case 'line':
-        emitLine(prim.a, prim.b, layer, ACI_BYLAYER, s, pair);
-        break;
-      case 'arc':
-        emitArc(prim.center, prim.radius, prim.startDeg, prim.endDeg, layer, ACI_BYLAYER, s, pair);
-        break;
-      case 'circle':
-        emitCircle(prim.center, prim.radius, layer, ACI_BYLAYER, s, pair);
-        break;
-      case 'fill':
-        // Solid arrowhead → 3DFACE (z=0). Reuses the ADR-505 §C solid-fill primitive.
-        emit3DFace(prim.points.map((pt) => ({ x: pt.x, y: pt.y, zMm: 0 })), layer, ACI_BYLAYER, s, s, pair);
-        break;
-      case 'text':
-        // centred dimension text — h=centre(1)/v=middle(2), byte-identical to the old `centered` flag.
-        emitText(prim.position, prim.text, prim.heightWorld, layer, ACI_BYLAYER, s, pair, prim.rotationDeg, { h: 1, v: 2 });
-        break;
-    }
-  }
-
-  pair(0, 'ENDBLK');
-  pair(8, layer);
 }
 
 // ADR-505 §A — primitive emitters (emitLine/emitCircle/emitArc/emitPoint/emit3DFace/emitPath),

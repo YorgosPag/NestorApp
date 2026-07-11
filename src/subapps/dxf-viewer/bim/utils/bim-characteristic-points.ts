@@ -77,6 +77,12 @@ export interface BimCharPoints {
   readonly corners: Point2D[];
   readonly midpoints: Point2D[];
   readonly center: Point2D | null;
+  /**
+   * Πολλαπλά κέντρα — ΜΟΝΟ για multi-part entities (σκάλα: ένα area-centroid ανά
+   * σκαλοπάτι/πλατύσκαλο). Όταν παρόν, υπερισχύει του single `center` στο category accessor.
+   * Τα single-footprint entities το αφήνουν undefined (χρησιμοποιούν το `center`).
+   */
+  readonly centers?: readonly Point2D[];
   readonly labelRoot: string | null;
 }
 
@@ -175,6 +181,9 @@ export function getBimCharacteristicPointsOfCategory(
   const all = getBimCharacteristicPoints(entity);
   if (category === 'corner') return all.corners;
   if (category === 'midpoint') return all.midpoints;
+  // Multi-part entities (σκάλα) εκθέτουν πολλά `centers` (ένα ανά σκαλοπάτι/πλατύσκαλο)· τα
+  // single-footprint entities το single `center`.
+  if (all.centers) return [...all.centers];
   return all.center ? [all.center] : [];
 }
 
@@ -281,8 +290,10 @@ function linearPoints(entity: Entity, endpoints: Point2D[]): BimCharPoints {
  */
 function stairPoints(entity: Entity): BimCharPoints {
   if (!isStairEntity(entity)) return EMPTY;
-  const { corners, midpoints } = getStairCharacteristicPoints(entity);
-  return { corners, midpoints, center: null, labelRoot: getBimCharacteristicLabelRoot(entity) };
+  const { corners, midpoints, centers } = getStairCharacteristicPoints(entity);
+  // `center: null` (κανένα ΕΝΙΑΙΟ κέντρο) αλλά `centers` = ένα area-centroid ανά
+  // σκαλοπάτι/πλατύσκαλο → «Κέντρο σκάλας» snap στο κέντρο κάθε γωνιακού πλατύσκαλου.
+  return { corners, midpoints, center: null, centers, labelRoot: getBimCharacteristicLabelRoot(entity) };
 }
 
 // ─── Source helpers ──────────────────────────────────────────────────────────

@@ -13,7 +13,8 @@ import {
 } from '../../../hooks/drawing/stair-completion';
 import { getStairGrips } from '../stair-grips';
 import { getStairCharacteristicPoints } from '../stair-characteristic-points';
-import { projectVerticesTo2D } from '../../geometry/shared/polygon-utils';
+import { getBimCharacteristicPointsOfCategory } from '../../utils/bim-characteristic-points';
+import { projectVerticesTo2D, polygon2DAreaCentroid } from '../../geometry/shared/polygon-utils';
 import type { StairEntity, StairParams } from '../../../bim/types/stair-types';
 
 const basePoint = { x: 0, y: 0 };
@@ -86,5 +87,28 @@ describe('getStairCharacteristicPoints (ADR-597 §stair)', () => {
         expect(cornerKeys.has(key(v))).toBe(true);
       }
     }
+  });
+
+  it('εκθέτει area-centroid ανά σκαλοπάτι/πλατύσκαλο (finite, μη κενό)', () => {
+    for (const stair of [makeStraight(), makeLShape()]) {
+      const { centers } = getStairCharacteristicPoints(stair);
+      expect(centers.length).toBeGreaterThan(0);
+      expect(centers.every(isFinitePt)).toBe(true);
+    }
+  });
+
+  it('περιλαμβάνει το ΚΕΝΤΡΟ του γωνιακού πλατύσκαλου στα centers', () => {
+    const stair = makeLShape();
+    const landings = stair.geometry.landings ?? [];
+    expect(landings.length).toBeGreaterThan(0);
+    const centerKeys = new Set(getStairCharacteristicPoints(stair).centers.map(key));
+    for (const landing of landings) {
+      expect(centerKeys.has(key(polygon2DAreaCentroid(projectVerticesTo2D(landing))))).toBe(true);
+    }
+  });
+
+  it('end-to-end: getBimCharacteristicPointsOfCategory(stair, "center") → πολλά centers', () => {
+    const centers = getBimCharacteristicPointsOfCategory(makeLShape(), 'center');
+    expect(centers.length).toBeGreaterThan(1);
   });
 });

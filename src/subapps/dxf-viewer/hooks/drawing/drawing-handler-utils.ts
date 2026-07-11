@@ -21,6 +21,10 @@ import type { SceneUnits } from '../../utils/scene-units';
 // ADR-562 Φ9 / ADR-357 — dim-creation alignment traces (commit parity with the hover preview).
 import { resolveDimAlignmentTracking } from '../dimensions/dim-alignment-tracking';
 import { dimensionCreateStore } from '../../stores/DimensionCreateStore';
+// ADR-357 Phase 4 / 2026-07-04 — generic-drawing commit-point alignment (acquired ⊕ ambient ⊕
+// segment-base clean-corner + adaptive quantize), the SAME SSoT the hover preview reads.
+import { resolveAlignmentTracking } from '../../systems/tracking/resolve-alignment-tracking';
+import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
 
 /** Snap modes whose snapped point lies ON a single host curve (host recoverable). */
 const POINT_ON_CURVE_SNAPS = new Set<ExtendedSnapType>([
@@ -278,6 +282,42 @@ export function resolveLineFamilyCommitPoint(
     if (!visibleOsnap) finalPoint = resolveLineCommitPoint(finalPoint, sceneUnits);
   }
   return finalPoint;
+}
+
+/**
+ * SSoT commit-point resolver for the GENERIC drawing path (`useDrawingHandlers.onDrawingPoint`).
+ * Promotes the snapped point to the committed point through the SAME pipeline as the preview:
+ * (1) alignment tracking — acquired ⊕ ambient ⊕ segment-base clean-corner + adaptive quantize
+ * (via `resolveAlignmentTracking`), then (2) the line-family flush / length-angle lock
+ * (`resolveLineFamilyCommitPoint`). Keeps `useDrawingHandlers` under the N.7.1 size limit and
+ * guarantees clicked point ≡ locked ghost (WYSIWYG). `sceneEntities` is only consulted when
+ * ambient alignment is enabled (mirrors the preview gate).
+ */
+export function resolveCommittedDrawingPoint(
+  snappedPoint: Pt,
+  opts: {
+    scale: number;
+    polar: boolean;
+    ortho: boolean;
+    sceneEntities: readonly Entity[] | undefined;
+    segmentBase: Pt | undefined;
+    activeTool: ToolType;
+    tempPointsLength: number;
+    sceneUnits: SceneUnits;
+  },
+): Pt {
+  let finalPoint = snappedPoint;
+  const ambientOn = ambientAlignmentConfigStore.getSnapshot().enabled;
+  const committedTracking = resolveAlignmentTracking(snappedPoint, {
+    scale: opts.scale,
+    polarEnabled: opts.polar && !opts.ortho,
+    sceneEntities: ambientOn ? (opts.sceneEntities ?? null) : null,
+    segmentBase: opts.segmentBase ?? null,
+  });
+  if (committedTracking) finalPoint = committedTracking.point;
+  return resolveLineFamilyCommitPoint(
+    opts.activeTool, finalPoint, opts.tempPointsLength, opts.segmentBase, opts.sceneUnits,
+  );
 }
 
 /** AutoCAD-style hard ortho: projects point onto H or V axis from referencePoint */

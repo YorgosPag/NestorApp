@@ -11,15 +11,18 @@
  */
 
 import { createToolBridgeStore } from '../../../../stores/createToolBridgeStore';
-import type { FloorplanSymbolParamOverrides } from '../../../../hooks/drawing/floorplan-symbol-completion';
+import type { FloorplanSymbolParamOverrides, SceneUnits } from '../../../../hooks/drawing/floorplan-symbol-completion';
 
 /** Snapshot of the floorplan-symbol tool's user-editable state. */
 export interface FloorplanSymbolToolBridgeHandle {
   readonly isActive: boolean;
   readonly assetId: string;
+  /** Effective commit overrides (picked `assetId` merged in) — read by the WYSIWYG ghost. */
   readonly overrides: FloorplanSymbolParamOverrides;
   setAssetId(assetId: string): void;
   setParamOverrides(overrides: FloorplanSymbolParamOverrides): void;
+  /** ADR-574 — active scene units so the placement ghost matches commit size. */
+  getSceneUnits(): SceneUnits;
 }
 
 export const floorplanSymbolToolBridgeStore = createToolBridgeStore<FloorplanSymbolToolBridgeHandle>();

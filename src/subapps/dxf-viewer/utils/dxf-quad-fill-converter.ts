@@ -141,6 +141,10 @@ function convertQuadFill(
     patternType: 'solid',
     fillType: 'solid',
     islandStyle: 'normal',
+    // ADR-636 Φ2.4 (D.3) — remember the origin primitive so export reproduces the NATIVE
+    // SOLID/TRACE/3DFACE (not a downgraded HATCH). `boundary` stays draw-order (1-2-4-3); the
+    // export `emitQuadFill` un-bowties it back to the DXF 10/11/12/13 slots (inverse of parse).
+    dxfSourceType: idPrefix,
     ...(color && { color }),
   };
 }

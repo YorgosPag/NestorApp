@@ -669,6 +669,12 @@ export interface HatchEntity extends BaseEntity {
   drawOrder?: 0 | 1 | 2 | 3 | 4;
   /** Ανοχή κενού ορίου για boundary detection (mm, Φ3). */
   gapTolerance?: number;
+  /**
+   * ADR-636 Φ2.4 (D.3) — origin primitive όταν το hatch προήλθε από import DXF SOLID/TRACE/3DFACE
+   * (`dxf-quad-fill-converter.ts`). Απών → γνήσιο HATCH. Ο export writer το χρησιμοποιεί για να
+   * αναπαράγει το **native** entity (Revit/AutoCAD fidelity) αντί να το υποβαθμίσει σε HATCH.
+   */
+  dxfSourceType?: 'solid' | 'trace' | '3dface';
 }
 
 // ✅ ENTERPRISE: AutoCAD XLine Entity (construction line - infinite in both directions)

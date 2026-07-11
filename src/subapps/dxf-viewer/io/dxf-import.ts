@@ -13,6 +13,10 @@ import type { SceneUnits } from '../utils/scene-units';
 import { encodingService, type SupportedEncoding } from './encoding-service';
 import { calculateTightBounds } from '../utils/bounds-utils';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
+import { DXF_IMPORT_THRESHOLDS } from '../config/dxf-import-thresholds';
+
+/** ADR-639 Στάδιο 1 — empty stats used by every early-return failure result. */
+const EMPTY_IMPORT_STATS = { entityCount: 0, layerCount: 0, parseTimeMs: 0 } as const;
 
 export class DxfImportService {
   private worker: Worker | null = null;
@@ -37,96 +41,110 @@ export class DxfImportService {
    */
   async importDxfFile(file: File, encoding?: string, unitsOverride?: SceneUnits): Promise<DxfImportResult> {
 
-    // 🏢 ENTERPRISE: Direct parse first (reliable, encoding-aware)
-    // Worker fallback kept for future use but direct parse is primary path
-    try {
-      const result = await this.directParseFileWithEncoding(file, encoding, unitsOverride);
-      if (result.success) {
-        return result;
+    // ADR-639 Στάδιο 1 — Large files parse in a Web Worker so the heavy, synchronous
+    // line-by-line parse runs OFF the main thread and the browser UI never freezes.
+    // Small files stay on the direct main-thread path (parse is fast; skip worker latency).
+    if (file.size >= DXF_IMPORT_THRESHOLDS.WORKER_PARSE_MIN_BYTES) {
+      const workerResult = await this.parseViaWorker(file, encoding, unitsOverride);
+      if (workerResult.success) {
+        return workerResult;
       }
-    } catch {
-      // Fall through to worker path
+      // Worker soft-failed (unsupported env, crash, timeout) → fall through to the
+      // exhaustive direct main-thread parse as a safety net. It may briefly freeze the
+      // UI, but loading-with-a-hitch beats failing to load at all.
+      console.warn('⚠️ DXF worker parse failed; falling back to main-thread parse:', workerResult.error);
     }
-    
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
+
+    // 🏢 ENTERPRISE: Direct parse (primary for small files, safety-net fallback for large).
+    // Encoding-aware (Greek Windows-1253 / ISO-8859-7 via encodingService), fault-tolerant.
+    try {
+      return await this.directParseFileWithEncoding(file, encoding, unitsOverride);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return { success: false, error: `DXF parsing failed: ${errorMessage}`, stats: { ...EMPTY_IMPORT_STATS } };
+    }
+  }
+
+  /**
+   * ADR-639 Στάδιο 1 — Parse a DXF file in the Web Worker, off the main thread.
+   *
+   * The file is READ + DECODED on the main thread with the correct encoding
+   * (native TextDecoder is fast; encodingService handles Greek Windows-1253 / ISO-8859-7).
+   * Only the heavy PARSE is handed to the worker. Bounds normalization runs back on the
+   * main thread here (the worker parses with `normalizeBounds:false`), matching the
+   * legacy behaviour so downstream consumers see an identically-shaped scene.
+   */
+  private async parseViaWorker(file: File, encoding?: string, unitsOverride?: SceneUnits): Promise<DxfImportResult> {
+    // Read with the SAME encoding auto-detect as the direct path — never raw UTF-8,
+    // which would corrupt Greek text in older cp1253/ISO-8859-7 DXF files.
+    const readResult = await encodingService.readFileWithAutoDetect(file, encoding as SupportedEncoding | undefined);
+    if (!readResult) {
+      return {
+        success: false,
+        error: 'Failed to read DXF file with any supported encoding (UTF-8, Windows-1253, ISO-8859-7)',
+        stats: { ...EMPTY_IMPORT_STATS },
+      };
+    }
+    const { content } = readResult;
+
+    return new Promise<DxfImportResult>((resolve) => {
       const importTimeout = PANEL_LAYOUT.TIMING.IMPORT_TIMEOUT;
+      let settled = false;
+      const finish = (result: DxfImportResult) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        resolve(result);
+      };
+
       const timeout = setTimeout(() => {
         console.error(`⌛ DXF import timeout after ${importTimeout / 1000} seconds`);
-        resolve({
+        finish({
           success: false,
           error: `DXF import timeout after ${importTimeout / 1000}s - worker did not respond`,
-          stats: { entityCount: 0, layerCount: 0, parseTimeMs: 0 }
+          stats: { ...EMPTY_IMPORT_STATS },
         });
       }, importTimeout);
-      
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        if (!content) {
-          clearTimeout(timeout);
-          resolve({
-            success: false,
-            error: 'Failed to read file content',
-            stats: { entityCount: 0, layerCount: 0, parseTimeMs: 0 }
-          });
-          return;
-        }
-        
-        try {
-          const worker = this.getWorker();
-          
-          worker.onmessage = (event) => {
-            clearTimeout(timeout);
-            const result = event.data as DxfImportResult;
-            
-            if (result.success && result.scene) {
-              // Normalize to positive quadrant: bottom-left corner → (0,0)
-              const perfectBounds = calculateTightBounds(result.scene.entities, true);
-              result.scene.bounds = perfectBounds;
-            }
-            
-            resolve(result);
-          };
-          
-          worker.onerror = (error) => {
-            clearTimeout(timeout);
-            console.error('DXF worker error:', error);
-            resolve({
-              success: false,
-              error: 'DXF parsing worker failed. This might be due to an unsupported file format or corrupted file.',
-              stats: { entityCount: 0, layerCount: 0, parseTimeMs: 0 }
-            });
-          };
-          
-          worker.postMessage({
-            type: 'parse-dxf',
-            fileContent: content,
-            filename: file.name,
-            unitsOverride, // ADR-462 — canonical-mm scale at parse
-          });
-        } catch (workerError) {
-          clearTimeout(timeout);
-          console.error('Failed to create worker:', workerError);
-          resolve({
-            success: false,
-            error: 'Failed to initialize DXF parser. Worker not supported in this environment.',
-            stats: { entityCount: 0, layerCount: 0, parseTimeMs: 0 }
-          });
-        }
-      };
-      
-      reader.onerror = () => {
-        clearTimeout(timeout);
-        resolve({
+
+      let worker: Worker;
+      try {
+        worker = this.getWorker();
+      } catch (workerError) {
+        console.error('Failed to create worker:', workerError);
+        finish({
           success: false,
-          error: 'Failed to read file',
-          stats: { entityCount: 0, layerCount: 0, parseTimeMs: 0 }
+          error: 'Failed to initialize DXF parser. Worker not supported in this environment.',
+          stats: { ...EMPTY_IMPORT_STATS },
+        });
+        return;
+      }
+
+      worker.onmessage = (event) => {
+        const result = event.data as DxfImportResult;
+        if (result.success && result.scene) {
+          // Worker parses with normalizeBounds:false → finish normalization here
+          // (move bottom-left corner → (0,0), positive quadrant).
+          const perfectBounds = calculateTightBounds(result.scene.entities, true);
+          result.scene.bounds = perfectBounds;
+        }
+        finish(result);
+      };
+
+      worker.onerror = (error) => {
+        console.error('DXF worker error:', error);
+        finish({
+          success: false,
+          error: 'DXF parsing worker failed. This might be due to an unsupported file format or corrupted file.',
+          stats: { ...EMPTY_IMPORT_STATS },
         });
       };
-      
-      // 🏢 ENTERPRISE: Use provided encoding or default to UTF-8
-      reader.readAsText(file, encoding || 'UTF-8');
+
+      worker.postMessage({
+        type: 'parse-dxf',
+        fileContent: content,
+        filename: file.name,
+        unitsOverride, // ADR-462 — canonical-mm scale at parse
+      });
     });
   }
   

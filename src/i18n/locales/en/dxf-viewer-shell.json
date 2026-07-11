@@ -3830,6 +3830,8 @@
           "plasti": "Plastic (technical)",
           "box": "Boxes",
           "net": "Net",
+          "square": "Squares",
+          "hex": "Hexagons",
           "honey": "Honeycomb",
           "gostGlass": "Glass (GOST)"
         }

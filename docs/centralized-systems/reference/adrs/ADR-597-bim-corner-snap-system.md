@@ -1142,8 +1142,11 @@ External references:
 **Fix (SSoT, μηδέν νέα γεωμετρία):**
 - **NEW** `bim/stairs/stair-characteristic-points.ts` — `getStairCharacteristicPoints(stair)`:
   - `corners` = ΟΛΕΣ οι θέσεις των grips (`getStairGrips(stair).map(g => g.position)` — «ίδια με
-    τα grips») **+** οι γωνίες ΚΑΘΕ σκαλοπατιού.
+    τα grips») **+** οι γωνίες ΚΑΘΕ σκαλοπατιού/πλατύσκαλου.
   - `midpoints` = τα μέσα των ακμών ΚΑΘΕ walkable επιφάνειας (`footprintEdgeMidpoints`, preOrdered).
+  - `centers` = **area-centroid ΚΑΘΕ σκαλοπατιού/πλατύσκαλου** (`polygon2DAreaCentroid` — σωστό
+    κέντρο βάρους και για κοίλα L/Γ landings). Η σκάλα είναι multi-part → πολλά κέντρα, όχι ένα
+    (Giorgio 2026-07-11: «στο κέντρο του γωνιακού πλατύσκαλου δεν εμφανιζόταν έλξη»).
   - Walkable επιφάνειες = `treadsBelowCut ∪ treadsAboveCut ∪ landings` (ADR-632 alias trap: το
     `treads` είναι legacy alias του `treadsBelowCut`, fallback για legacy geometry). **Τα
     `landings` (ADR-637 §5) είναι ΚΡΙΣΙΜΑ** — καλύπτουν τη ΓΩΝΙΑΚΗ περιοχή σε L/U/Γ σκάλες (+
@@ -1151,9 +1154,11 @@ External references:
     κανένα snap (Giorgio 2026-07-11, screenshot κυκλωμένα σημεία). Projection 3D→2D με το
     `projectVerticesTo2D` SSoT (§16). Τα vertices είναι bare `Point3D[]` (`Polygon3D`).
 - **`bim-characteristic-points.ts`**: `if (isStairEntity(e)) return stairPoints(e)` στον dispatcher·
-  νέος `stairPoints` resolver (`center: null` — πολλά treads, χωρίς ενιαίο κεντροειδές)·
+  νέος `stairPoints` resolver (`center: null` + `centers: []` — πολλά κέντρα ανά μέρος)·
   `getBimCharacteristicLabelRoot` → `'stair'`. Η σκάλα ΔΕΝ περνά από τον κοινό `footprintPoints`
-  core (δεν έχει ενιαίο footprint).
+  core (δεν έχει ενιαίο footprint). **Interface extension:** `BimCharPoints.centers?: readonly
+  Point2D[]` (optional, back-compat) — όταν παρόν, ο `getBimCharacteristicPointsOfCategory(_,
+  'center')` το επιστρέφει αντί του single `center`. Single-footprint entities αμετάβλητα.
 - **i18n**: 1 νέο key `snapModes.labels.bim.noun.stair` («σκάλας» / "of stair") → σύνθεση «Γωνία/
   Μέσο σκάλας» μέσω του υπάρχοντος `resolveBimSnapLabelText` (καμία νέα υποδομή).
 - Ο generic `BimCharacteristicSnapEngine` καταναλώνει **αυτόματα** το νέο resolver — **καμία αλλαγή
@@ -1162,9 +1167,10 @@ External references:
 **Companion (render):** hover → εμφάνιση grips για ΟΛΕΣ τις οντότητες — βλ. ADR-040 changelog
 2026-07-11 (overlay-only, bitmap-cache invariant).
 
-**Tests:** `bim/stairs/__tests__/stair-characteristic-points.test.ts` (6 tests: grip positions ⊆
-corners, tread corners > grips, per-surface midpoints, finite coords, straight + l-shape, **landing
-vertices ⊆ corners** — γωνιακή περιοχή L/U). PASS.
+**Tests:** `bim/stairs/__tests__/stair-characteristic-points.test.ts` (10 tests: grip positions ⊆
+corners, tread corners > grips, per-surface midpoints, finite coords, straight + l-shape, landing
+vertices ⊆ corners, **area-centroid ανά μέρος**, **κέντρο γωνιακού πλατύσκαλου ∈ centers**,
+**end-to-end `getBimCharacteristicPointsOfCategory(stair,'center')` → πολλά centers**). PASS.
 
 **Files:** NEW `stair-characteristic-points.ts` + test· MOD `bim-characteristic-points.ts` +
 `el/en dxf-viewer-shell.json`. ✅ Google-level: YES — SSoT reuse, μηδέν διπλότυπο, μηδέν engine

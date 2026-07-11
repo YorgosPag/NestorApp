@@ -127,6 +127,7 @@ export const ENTITY_RENDER_CONTRACTS: Readonly<
   'mep-underfloor': point('mep-underfloor'),
 
   // ── BIM — σκόπιμα 2D-only ──
+  'floorplan-symbol': only2D('floorplan-symbol'), // ADR-415 — pure-vector 2D σύμβολο κάτοψης (καμία 3D mesh)
   'wall-covering': only2D('wall-covering'), // ADR-511 — λεπτή επίστρωση παρειάς
   'thermal-space': only2D('thermal-space'), // ADR-422 — αναλυτικό IfcSpace
   'space-separator': only2D('space-separator'), // ADR-437 — IfcVirtualElement

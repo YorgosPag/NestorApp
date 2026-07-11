@@ -14,7 +14,7 @@ import { buildStyleFontMap } from '../text-engine/parser';
 import { buildMlineStyleMap } from './dxf-mline-style-parser';
 // ADR-635 Φ2 — INSERT/BLOCK expansion (block-definition map + placement transform).
 import { parseBlockDefinitions } from './dxf-block-parser';
-import { instantiateInsert, DEFAULT_SCENE_ENTITY_BUDGET, type ExpandContext } from './dxf-block-expander';
+import { instantiateInsert, transformInsertHatch, DEFAULT_SCENE_ENTITY_BUDGET, type ExpandContext } from './dxf-block-expander';
 // ADR-635 Φ C.6 — R12 associative-hatch INSERT (ACAD/HATCH XDATA) → single HATCH entity.
 import { tryConvertInsertHatch } from './dxf-hatch-xdata-converter';
 // ADR-635 Φ3 — fault-tolerant import: skipped/failed entities are RECORDED, not fatal.
@@ -238,7 +238,11 @@ export class DxfSceneBuilder {
           // boundary; otherwise fall through to normal block explosion (safe degradation).
           const insertHatch = tryConvertInsertHatch(entityData, index);
           if (insertHatch) {
-            processSceneEntity(insertHatch);
+            // ADR-635 Φ C.11 — the XDATA boundary cache is in the `*X#` block's LOCAL space;
+            // place it with the SAME INSERT transform the block explosion uses so the hatch
+            // lands at the drawing origin, not raw geo-referenced coords (~2.8e6 → off-screen
+            // + Home over-zoom). Byte-identical to where the exploded pattern lines would sit.
+            processSceneEntity(transformInsertHatch(insertHatch, entityData, blockDefs));
             recordParsed(diagnostics, 'HATCH');
             return;
           }

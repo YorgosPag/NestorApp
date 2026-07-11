@@ -72,7 +72,7 @@ const useFloorplanSymbolPlacement = createSingleClickPlacementTool<
   computeFootprint: (params) => computeFloorplanSymbolGeometry(params).footprint.vertices,
   resolveCommitOverrides: (s) => ({ ...s.overrides, assetId: s.assetId }),
   getStatusText: (s) => (s.phase === 'awaitingPosition' ? 'tools.floorplanSymbol.statusPosition' : ''),
-  useExtension: ({ state, isActive, setState, setParamOverrides }) => {
+  useExtension: ({ state, isActive, setState, setParamOverrides, getSceneUnits }) => {
     const setAssetId = useCallback(
       (assetId: string) => setState((prev) => ({ ...prev, assetId, error: null })),
       [setState],
@@ -83,16 +83,20 @@ const useFloorplanSymbolPlacement = createSingleClickPlacementTool<
       floorplanSymbolToolBridgeStore.set({
         isActive,
         assetId: state.assetId,
-        overrides: state.overrides,
+        // ADR-574 — publish the EFFECTIVE overrides (picked assetId merged in, same as
+        // `resolveCommitOverrides`) + `getSceneUnits` so the WYSIWYG placement ghost
+        // reflects the currently-picked symbol at the correct scene units (ghost ≡ commit).
+        overrides: { ...state.overrides, assetId: state.assetId },
         setAssetId,
         setParamOverrides,
+        getSceneUnits,
       });
       return () => {
         if (floorplanSymbolToolBridgeStore.get()?.setAssetId === setAssetId) {
           floorplanSymbolToolBridgeStore.set(null);
         }
       };
-    }, [state, isActive, setAssetId, setParamOverrides]);
+    }, [state, isActive, setAssetId, setParamOverrides, getSceneUnits]);
 
     return { setAssetId };
   },

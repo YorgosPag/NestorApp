@@ -471,6 +471,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         scalePreview={{}}
         stretchPreview={{}}
         mepFixtureGhostPreview={{ isAwaitingPosition: mepFixtureTool.isAwaitingPosition, getGhostFootprint: mepFixtureTool.getGhostFootprint }}
+        floorplanSymbolGhostPreview={{ isAwaitingPosition: floorplanSymbolTool.isAwaitingPosition, getGhostFootprint: floorplanSymbolTool.getGhostFootprint }}
         electricalPanelGhostPreview={{ isAwaitingPosition: electricalPanelTool.isAwaitingPosition, getGhostFootprint: electricalPanelTool.getGhostFootprint }}
         mepManifoldGhostPreview={{ isAwaitingPosition: mepManifoldTool.isAwaitingPosition, getGhostFootprint: mepManifoldTool.getGhostFootprint }}
         mepRadiatorGhostPreview={{ isAwaitingPosition: mepRadiatorTool.isAwaitingPosition, getGhostFootprint: mepRadiatorTool.getGhostFootprint }}

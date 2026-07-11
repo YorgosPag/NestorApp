@@ -134,4 +134,46 @@ describe('buildScene — R12 hatch INSERT is not exploded into loose lines', () 
     const h = entities.find(e => e.type === 'hatch') as unknown as { patternName: string };
     expect(h.patternName).toBe('GRASS');
   });
+
+  // ADR-635 Φ C.11 — regression for the KADOS.ΓΡΑΜΜΟΣΚΙΑΣΕΙΣ bug (2026-07-11): the R14_HATCH_DATA
+  // boundary cache is stored in the `*X#` block's LOCAL space, so the reconstructed hatch MUST ride
+  // the INSERT block transform (like the exploded siblings) instead of keeping the raw cache coords.
+  it('places the reconstructed hatch via the INSERT block transform (local XDATA → world), not raw cache coords', () => {
+    // Block *X7 BASED at (1000,2000): its hatch XDATA boundary cache lives in that local frame.
+    const blockBody = lines(
+      ['0', 'BLOCK'], ['2', '*X7'], ['10', 1000], ['20', 2000], ['30', 0],
+      ['0', 'LINE'], ['8', '0'], ['10', 1000], ['20', 2000], ['11', 1010], ['21', 2000],
+      ['0', 'ENDBLK'],
+    );
+    // A closed square in the block's local (base-relative) space: (1000,2000)→+(10,10).
+    const boundary: Array<[string, string | number]> = [
+      ...edge(1000, 2000, 1010, 2000), ...edge(1010, 2000, 1010, 2010),
+      ...edge(1010, 2010, 1000, 2010), ...edge(1000, 2010, 1000, 2000),
+    ];
+    // INSERTed at world (0,0) → placed hatch = (p − base) = local origin, NOT the raw (1000,2000).
+    const insertBody = lines(
+      ['0', 'INSERT'], ['5', '2BC'], ['8', 'HATCHLAYER'], ['2', '*X7'],
+      ['10', 0], ['20', 0], ['30', 0],
+      ...xdataHead('GRASS', 1, 0).map(([c, v]) => [c, v] as [string | number, string | number]),
+      ...boundary.map(([c, v]) => [c, v] as [string | number, string | number]),
+      ...patternTail.map(([c, v]) => [c, v] as [string | number, string | number]),
+    );
+    const content = [
+      ...lines(['0', 'SECTION'], ['2', 'BLOCKS']), ...blockBody, ...lines(['0', 'ENDSEC']),
+      ...lines(['0', 'SECTION'], ['2', 'ENTITIES']), ...insertBody, ...lines(['0', 'ENDSEC']),
+      ...lines(['0', 'EOF']),
+    ].join('\n');
+
+    const entities: AnySceneEntity[] = DxfSceneBuilder.buildScene(content, 'mm').entities;
+    const h = entities.find(e => e.type === 'hatch') as unknown as {
+      boundaryPaths: Array<Array<{ x: number; y: number }>>;
+    };
+    expect(h).toBeDefined();
+    // First vertex maps to the drawing origin (was (1000,2000) — off-screen — before the fix).
+    expect(h.boundaryPaths[0][0].x).toBeCloseTo(0, 6);
+    expect(h.boundaryPaths[0][0].y).toBeCloseTo(0, 6);
+    // The whole boundary sits at LOCAL scale, never at raw geo-referenced cache coords.
+    const maxAbs = Math.max(...h.boundaryPaths[0].flatMap(p => [Math.abs(p.x), Math.abs(p.y)]));
+    expect(maxAbs).toBeLessThan(100);
+  });
 });

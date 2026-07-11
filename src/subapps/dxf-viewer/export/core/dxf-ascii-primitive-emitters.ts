@@ -74,6 +74,34 @@ export function emit3DFace(
   pair(62, aci);
 }
 
+/**
+ * A `SOLID` / `TRACE` / `3DFACE` — filled quad/triangle, the EXACT inverse of the import
+ * `parseQuadVertices` (utils/dxf-quad-fill-converter): the import stores the boundary in
+ * DRAW order (1-2-4-3 bowtie-corrected), so to reproduce the original DXF we un-bowtie back
+ * to the corner slots 10=v1 / 11=v2 / 12=v3 / 13=v4. A triangle (3 vertices) repeats the 3rd
+ * corner in slot 13 (the DXF triangle convention parseQuadVertices reads). Z is 0 — SOLID/TRACE
+ * are 2D and the 3DFACE import already projected Z away (2D viewer), so a flat face is honest.
+ *
+ * @see utils/dxf-quad-fill-converter — parseQuadVertices, the import this mirrors
+ */
+export function emitQuadFill(
+  kind: 'SOLID' | 'TRACE' | '3DFACE', vertices: readonly Point2D[], layer: string, aci: number, s: number, pair: Pair,
+): void {
+  if (vertices.length < 3) return;
+  const quad = vertices.length >= 4;
+  const v1 = vertices[0];             // draw[0]
+  const v2 = vertices[1];             // draw[1]
+  const v3 = quad ? vertices[3] : vertices[2]; // draw[3] (triangle → 3rd corner)
+  const v4 = vertices[2];             // draw[2] (triangle → == v3)
+  pair(0, kind);
+  pair(10, v1.x * s); pair(20, v1.y * s); pair(30, 0);
+  pair(11, v2.x * s); pair(21, v2.y * s); pair(31, 0);
+  pair(12, v3.x * s); pair(22, v3.y * s); pair(32, 0);
+  pair(13, v4.x * s); pair(23, v4.y * s); pair(33, 0);
+  pair(8, layer);
+  pair(62, aci);
+}
+
 /** A LINE — coordinates first, layer, colour (ACI). Optional Z per endpoint (3Δ rebar). */
 export function emitLine(
   a: Point2D, b: Point2D, layer: string, aci: number, s: number, pair: Pair, za?: number, zb?: number,
@@ -146,6 +174,34 @@ export function emitPath(
     pair(10, v.x * s); pair(20, v.y * s);
   }
   pair(0, 'SEQEND'); pair(8, layer);
+}
+
+/**
+ * A `LEADER` — annotation callout: ordered path vertices (ARROW TIP = vertices[0]) plus an
+ * arrowhead flag. The EXACT inverse of the import `convertLeader` (utils/dxf-leader-converter):
+ * the 10/20 pairs stay clean ordered vertices (so `parseVerticesFromPairs` re-reads them), 71 is
+ * the arrowhead flag and 62 the colour. `3`(dimstyle 'Standard') / `72`(straight path) /
+ * `73`(no annotation) / `76`(vertex count) are the AutoCAD-faithful defaults for fidelity — the
+ * import ignores what it does not read, so they never perturb the round-trip. Arrow SIZE is
+ * re-derived on import from DIMASZ (a constant, never written to file) so it is NOT emitted.
+ *
+ * @see utils/dxf-leader-converter — the import extractor this mirrors
+ */
+export function emitLeader(
+  vertices: readonly Point2D[], arrowEnabled: boolean, layer: string, aci: number, s: number, pair: Pair,
+): void {
+  if (vertices.length < 2) return;
+  pair(0, 'LEADER');
+  pair(8, layer);
+  pair(62, aci);
+  pair(3, 'Standard');            // dimstyle name (default)
+  pair(71, arrowEnabled ? 1 : 0); // arrowhead flag: 0 disabled / 1 enabled
+  pair(72, 0);                    // path type: 0 = straight segments
+  pair(73, 3);                    // creation flag: 3 = created without annotation
+  pair(76, vertices.length);      // number of vertices
+  for (const v of vertices) {
+    pair(10, v.x * s); pair(20, v.y * s); pair(30, 0);
+  }
 }
 
 /** Tessellate an arc (degrees, CCW start→end) into a polyline of points. */
