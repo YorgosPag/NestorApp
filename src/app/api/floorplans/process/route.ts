@@ -186,6 +186,8 @@ async function handleProcessFloorplan(
       fileType: result.processedData.fileType,
       processedAt: new Date(result.processedData.processedAt).toISOString(),
       stats: result.stats,
+      // ADR-635 Φ3 — surface partial-import warnings to the client (Revit-style report).
+      ...(result.warnings && result.warnings.length > 0 && { warnings: result.warnings }),
     });
   } catch (error) {
     if (lockedFileId) {

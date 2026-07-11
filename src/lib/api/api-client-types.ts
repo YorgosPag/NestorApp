@@ -53,13 +53,17 @@ export class ApiClientError extends Error {
   public readonly errorCode?: string;
   public readonly response?: Response;
   public readonly requestId?: string;
+  /** Server-provided technical detail (response body `details`) — the real cause behind a
+   *  generic `error` message. Previously discarded, leaving 500s undiagnosable client-side. */
+  public readonly details?: string;
 
   constructor(
     message: string,
     statusCode: number,
     errorCode?: string,
     response?: Response,
-    requestId?: string
+    requestId?: string,
+    details?: string
   ) {
     super(message);
     this.name = 'ApiClientError';
@@ -67,6 +71,7 @@ export class ApiClientError extends Error {
     this.errorCode = errorCode;
     this.response = response;
     this.requestId = requestId;
+    this.details = details;
 
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, ApiClientError);
@@ -84,6 +89,7 @@ export class ApiClientError extends Error {
       statusCode: this.statusCode,
       errorCode: this.errorCode,
       requestId: this.requestId,
+      details: this.details,
       stack: this.stack,
     };
   }

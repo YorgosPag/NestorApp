@@ -238,12 +238,15 @@ export class EnterpriseApiClient {
 
     let errorMessage = statusText || 'Request failed';
     let errorCode = `HTTP_${status}`;
+    let errorDetails: string | undefined;
 
     try {
       const errorBody = await response.json();
       if (errorBody && typeof errorBody === 'object') {
         errorMessage = (errorBody as Record<string, unknown>).error as string || errorMessage;
         errorCode = (errorBody as Record<string, unknown>).errorCode as string || errorCode;
+        // Preserve the server's technical `details` (the real cause) instead of discarding it.
+        errorDetails = (errorBody as Record<string, unknown>).details as string | undefined;
       }
     } catch { /* use default message */ }
 
@@ -264,7 +267,8 @@ export class EnterpriseApiClient {
       status,
       errorCode || mapped?.code || 'SERVER_ERROR',
       response,
-      context.requestId
+      context.requestId,
+      errorDetails
     );
   }
 
@@ -381,9 +385,12 @@ export class EnterpriseApiClient {
     const duration = Date.now() - context.startTime;
     const isClientError = error instanceof ApiClientError && error.statusCode >= 400 && error.statusCode < 500;
     const logMethod = isClientError ? 'warn' : 'error';
+    // Include the server's technical `details` so 500s are diagnosable from the console,
+    // not just the generic `error` message.
+    const details = error instanceof ApiClientError ? error.details : undefined;
     logger[logMethod](
       `[API] ${context.method} ${context.url} - ${isClientError ? error.statusCode : 'Failed'} (${duration}ms)`,
-      { error: error.message }
+      { error: error.message, ...(details && { details }) }
     );
   }
 }

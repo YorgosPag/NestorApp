@@ -25,6 +25,8 @@ const SUPPORTED_PDF_EXTENSIONS = ['pdf'];
 export interface ProcessResult {
   processedData: FloorplanProcessedData;
   stats?: { entityCount: number; layerCount: number; parseTimeMs: number };
+  /** ADR-635 Φ3 — Revit-style import warnings (skipped/failed/clamped entities). */
+  warnings?: string[];
 }
 
 /**
@@ -82,8 +84,13 @@ export async function processDxf(
   const { DxfSceneBuilder } = await import(
     '@/subapps/dxf-viewer/utils/dxf-scene-builder'
   );
+  // ADR-635 Φ3 — fault-tolerant, diagnostics-carrying build (never aborts on one bad entity).
+  const { summarizeDiagnostics } = await import(
+    '@/subapps/dxf-viewer/utils/dxf-import-diagnostics'
+  );
 
-  const scene = DxfSceneBuilder.buildScene(content);
+  const { scene, diagnostics } = DxfSceneBuilder.buildSceneWithDiagnostics(content);
+  const warnings = summarizeDiagnostics(diagnostics);
   const parseTimeMs = Date.now() - parseStart;
 
   const dxfSceneData: DxfSceneData = {
@@ -133,9 +140,9 @@ export async function processDxf(
     encoding,
   };
 
-  logger.info('DXF parsed', { stats });
+  logger.info('DXF parsed', { stats, ...(warnings.length > 0 && { warnings }) });
 
-  return { processedData, stats };
+  return { processedData, stats, warnings };
 }
 
 /**
