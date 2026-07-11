@@ -166,7 +166,7 @@ export function createBridgeStorePlacementGhostHook<
 >(
   spec: Readonly<BridgeStorePlacementGhostSpec<THandle, TOverrides, TParams, TEntity>>,
 ): (props: Readonly<BridgeStorePlacementGhostProps>) => void {
-  const { bridgeStore, buildDefaultParams, buildEntity } = spec;
+  const { bridgeStore, buildDefaultParams, buildEntity, useImmediateSnap } = spec;
 
   return function useBridgeStorePlacementGhost(props: Readonly<BridgeStorePlacementGhostProps>): void {
     const { isAwaitingPosition, transform, getCanvas, getViewportElement } = props;
@@ -176,6 +176,7 @@ export function createBridgeStorePlacementGhostHook<
       transform,
       getCanvas,
       getViewportElement,
+      useImmediateSnap,
       buildGhostEntity: (frame): Entity | null => {
         if (!frame.effectiveCursor) return null;
         // ADR-574 — build the FULL entity με τους ΙΔΙΟΥΣ commit builders + overrides

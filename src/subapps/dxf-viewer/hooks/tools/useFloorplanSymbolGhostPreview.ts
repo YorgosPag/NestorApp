@@ -25,4 +25,8 @@ export const useFloorplanSymbolGhostPreview = createBridgeStorePlacementGhostHoo
   bridgeStore: floorplanSymbolToolBridgeStore,
   buildDefaultParams: buildDefaultFloorplanSymbolParams,
   buildEntity: buildFloorplanSymbolEntity,
+  // ADR-624 — free-point placement: the commit uses the RAW cursor (canvas-click-mep-dispatch
+  // «RAW worldPoint; free-point placement»), so the ghost follows the raw 60fps cursor too →
+  // ghost ≡ commit + zero lag when Snap/Grid is ON (the ~30fps snap point no longer gates it).
+  useImmediateSnap: false,
 });
