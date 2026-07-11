@@ -79,6 +79,20 @@ describe('ADR-602 Stage 2 — preview builders dual-write (§1.4 Bug 3 by constr
     const p = buildDxfDragPreview('dragging', unified(), anchor, cursor);
     expect(p).not.toBeNull();
     expect('gripKind' in p!).toBe(false);
+    expect('landingId' in p!).toBe(false);
+  });
+
+  // ADR-637 Phase 4-C — the rest-landing id must ride the drag-preview snapshot so the
+  // live WYSIWYG ghost patches the SAME landing the commit does (preview ≡ commit).
+  it('buildDxfDragPreview forwards `landingId`, omits it when absent', () => {
+    const withId = buildDxfDragPreview(
+      'dragging',
+      unified({ gripKind: { on: 'stair', kind: 'stair-rest-landing-slide' }, landingId: 'stln_1' }),
+      anchor, cursor,
+    );
+    expect(withId!.landingId).toBe('stln_1');
+    const without = buildDxfDragPreview('dragging', unified(), anchor, cursor);
+    expect('landingId' in without!).toBe(false);
   });
 
   it('buildRotateReferencePreview (rotate) forwards the SAME `gripKind` — disjoint subsets κλείνουν', () => {

@@ -33,7 +33,10 @@ function makeStair(
 
 describe('StairRestLandingsSection — ADR-637 Phase 4-B', () => {
   it('shows the unsupported hint and no Add button for a kind without a consumer', () => {
-    render(<StairRestLandingsSection stair={makeStair('l-shape')} dispatchPatch={jest.fn()} />);
+    // `winder` + `triangular-outline` are the only kinds whose geometry generator
+    // still ignores `restLandings` (l-shape/u-shape/gamma gained support in Φ2b,
+    // triangular-fan in Φ3/Φ4-C). Use `winder` as the genuinely-unsupported example.
+    render(<StairRestLandingsSection stair={makeStair('winder')} dispatchPatch={jest.fn()} />);
     expect(
       screen.getByText('stairAdvancedPanel.sections.restLandings.unsupportedHint'),
     ).toBeInTheDocument();

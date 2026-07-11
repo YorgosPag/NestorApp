@@ -63,4 +63,10 @@ export interface EntityPreviewTransform {
    */
   readonly gripKind?: EntityGripKind;
   readonly anchorPos?: Point2D;
+  /**
+   * ADR-637 Phase 4-C — target rest-landing id for the `stair-rest-landing-*` grips.
+   * Routed into `applyStairGripDrag` so the live ghost patches the SAME `restLandings[i]`
+   * (slide `at` / resize `length`) the commit does. Undefined for every other grip kind.
+   */
+  readonly landingId?: string;
 }

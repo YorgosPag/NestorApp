@@ -32,5 +32,7 @@ export function toEntityPreviewTransform(dp: DxfGripDragPreview): EntityPreviewT
     ...(dp.anchorPos           ? { anchorPos:           dp.anchorPos }            : {}),
     // ADR-363 Phase 1G — rotation centre for the rotation hot-grip ghost.
     ...(dp.rotatePivot         ? { rotatePivot:         dp.rotatePivot }          : {}),
+    // ADR-637 Phase 4-C — target rest-landing id for the live stair-landing ghost.
+    ...(dp.landingId           ? { landingId:           dp.landingId }            : {}),
   };
 }

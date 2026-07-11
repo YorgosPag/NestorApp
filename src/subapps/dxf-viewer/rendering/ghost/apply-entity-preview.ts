@@ -138,7 +138,7 @@ export function applyEntityPreview(
   ctx?: ApplyEntityPreviewContext,
 ): DxfEntityUnion {
   if (!preview || preview.entityId !== entity.id) return entity;
-  const { delta, gripIndex, movesEntity, edgeVertexIndices, anchorPos, rotatePivot } = preview;
+  const { delta, gripIndex, movesEntity, edgeVertexIndices, anchorPos, rotatePivot, landingId } = preview;
   // ADR-602 Stage 4 — read each discriminator via the tagged SSoT accessor (populated by
   // `toEntityPreviewTransform` beside the legacy fields). Same variable names + types keep
   // the per-entity dispatch below unchanged.
@@ -426,6 +426,12 @@ export function applyEntityPreview(
       // matches the commit path (otherwise an L/U/Γ end-corner preview would
       // decompose on flight-1's axis and snap on release).
       geometry: stair.geometry,
+      // ADR-637 Phase 4-C — target rest-landing id for the `stair-rest-landing-*`
+      // grips, so the live ghost slides/resizes the SAME landing the commit does
+      // (`commitStairGripDrag` forwards the identical channel). Without it
+      // `slideRestLanding`/`resizeRestLandingLength` can't locate the landing →
+      // `newParams === stair.params` → no ghost. No-op for every other stair grip.
+      ...(landingId ? { landingId } : {}),
     });
     if (newParams === stair.params) return entity;
     const newGeometry = computeStairGeometry(newParams);

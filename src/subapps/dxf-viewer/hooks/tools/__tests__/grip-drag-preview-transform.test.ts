@@ -28,6 +28,19 @@ describe('toEntityPreviewTransform', () => {
   it('omits absent optional discriminators (no undefined keys leak)', () => {
     const t = toEntityPreviewTransform(base);
     expect('rotatePivot' in t).toBe(false);
+    expect('landingId' in t).toBe(false);
+  });
+
+  // ADR-637 Phase 4-C — the rest-landing id must reach `applyEntityPreview` so the
+  // live ghost slides/resizes the SAME landing the commit does (preview ≡ commit).
+  it('spreads the rest-landing id when present, omits it when absent', () => {
+    expect('landingId' in toEntityPreviewTransform(base)).toBe(false);
+    const t = toEntityPreviewTransform({
+      ...base,
+      gripKind: { on: 'stair', kind: 'stair-rest-landing-slide' },
+      landingId: 'stln_1',
+    });
+    expect(t.landingId).toBe('stln_1');
   });
 
   it('spreads the rotation pivot when present', () => {

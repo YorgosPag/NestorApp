@@ -45,6 +45,14 @@ export interface DxfGripDragPreview {
   gripKind?: EntityGripKind;
   anchorPos?: Point2D;
   /**
+   * ADR-637 Phase 4-C — target rest-landing id for the `stair-rest-landing-*` grips.
+   * Forwarded from `UnifiedGripInfo.landingId` by `buildDxfDragPreview` so the live
+   * WYSIWYG ghost (`applyEntityPreview` → `applyStairGripDrag`) edits the SAME landing
+   * the commit (`commitStairGripDrag`) does — preview ≡ commit. Undefined for every
+   * other grip kind.
+   */
+  landingId?: string;
+  /**
    * ADR-363 Phase 1G — set when the active grip is a wall corner being moved via
    * the hot-grip (click-click) state. Consumed by `useGripGhostPreview` to draw
    * the dashed rubber-band leader from `anchorPos` → cursor (anchorPos + delta).
