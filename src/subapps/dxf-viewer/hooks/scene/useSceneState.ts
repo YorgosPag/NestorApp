@@ -7,8 +7,10 @@
 
 import { useEffect, useCallback } from 'react';
 import type { SceneModel, AnySceneEntity } from '../../types/scene';
-import { EventBus } from '../../systems/events';
 import { useLevels, useCurrentLevelScene } from '../../systems/levels';
+// Giorgio 2026-07-11 — fresh-import → fit-to-extents intent for the SINGLE
+// `useViewportAutoFit` controller (ADR-399). Replaces the imperative fit emit.
+import { markFreshImportFit } from '../../systems/zoom/viewport-fit-intent';
 // ADR-635 Φ C.8 — imported per-entity (BIM/stair/hatch) first-save emitter (SSoT, shared .tek+DXF)
 import { emitImportedEntityCreateEvents } from '../../systems/levels/emit-imported-entity-create-events';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
@@ -18,7 +20,6 @@ import { useDxfImport } from '../useDxfImport';
 import { importTekFile, isTekFileName } from '../../io/tek/tek-import';
 import { useNotifications } from '../../../../providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { PANEL_LAYOUT } from '../../config/panel-tokens';
 // ✅ ENTERPRISE: Centralized copy-to-clipboard hook
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 // 🔒 TENANT SCOPING + replace cleanup (ADR-399)
@@ -192,7 +193,10 @@ export function useSceneState() {
         emitImportedEntityCreateEvents(result.scene.entities);
         // 🛡️ ADR-526 Φ5a — persist the level↔FileRecord link now (shared helper, N.18).
         linkSceneFileToLevel();
-        setTimeout(() => EventBus.emit('canvas-fit-to-view', { source: 'auto' }), PANEL_LAYOUT.TIMING.FIT_TO_VIEW_DELAY);
+        // Giorgio 2026-07-11 — signal the SINGLE `useViewportAutoFit` controller (ADR-399)
+        // to fit-to-extents on this fresh import (all entity types), instead of racing it
+        // with an imperative `EventBus.emit('canvas-fit-to-view')`. Sync, before render commit.
+        markFreshImportFit();
         return;
       }
 
@@ -216,8 +220,10 @@ export function useSceneState() {
         // onSceneSaved callback is a harmless no-op. Skipped when no canonical id (non-wizard
         // drag-drop import has no FileRecord). Raster (non-dxf) never reaches here.
         linkSceneFileToLevel();
-        // Scene rendering is handled by Canvas V2 system
-        setTimeout(() => EventBus.emit('canvas-fit-to-view', { source: 'auto' }), PANEL_LAYOUT.TIMING.FIT_TO_VIEW_DELAY);
+        // Scene rendering is handled by Canvas V2 system.
+        // Giorgio 2026-07-11 — fresh import → fit-to-extents via the SINGLE
+        // `useViewportAutoFit` controller (ADR-399), no imperative double-emit race.
+        markFreshImportFit();
       } else {
         derr('SceneState', '❌ DXF import returned null scene');
         const errorMessage = importError ? `DXF Import Error: ${importError}` : 'Failed to import DXF file. Please check the file format and try again.';

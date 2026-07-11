@@ -235,3 +235,18 @@ string). Well-formed nodes (rich toolbar / AI-created / commands) export correct
   (`dxf-roundtrip-linetype-lineweight.test.ts`: LINE/CIRCLE/POLYLINE emit + reverse-symmetry με τους ίδιους
   import extractors + gating absent/ByLayer-sentinel/ltscale-1/explode), **150 export/core + 55 adapter/import
   jest green**, jscpd clean. ΟΧΙ browser-verified.
+- **2026-07-11 — Στάδιο 2 Φ2.4 (D.5) — TEXTSTYLE export round-trip (ADR-635 C.5 parity):** το
+  `dxf-ascii-text-writer.ts` έγραφε **hardcoded `pair(7,'STANDARD')`** και δεν υπήρχε STYLE table → το
+  πραγματικό font των TEXT/MTEXT χανόταν. (α) **STYLE table** στο `emitTablesSection` (`dxf-ascii-tables-writer.ts`,
+  σειρά LAYER→**STYLE**→DIMSTYLE) μέσω `emitTextStyle` = ΑΚΡΙΒΕΣ inverse του import `groupCodesToEntry`
+  (`style-table-reader.ts`), **reuse του import type `DxfStyleTableEntry`** (ΟΧΙ νέος τύπος). (β) **real group 7**:
+  νέος `textStyleName(fontFamily)` (style name = το font family, AutoCAD/ezdxf name-a-style-after-its-font) — η
+  **ΜΙΑ** derivation που μοιράζονται το group-7 code και το STYLE entry ώστε να μη διαφωνούν· `readTextEntityFamily(e)`
+  διαβάζει το first-run family από το `textNode`. (γ) ο writer **αυτο-συλλέγει** distinct styles από τα entities
+  (`collectTextStyles`, mirror του dimension-blocks derivation — μηδέν adapter/option churn)· `fontFile` = family
+  verbatim (το import κάνει `stripExtension` → **δεν** fabricάρεται synthetic `.shx`). `STANDARD` = implicit
+  (AutoCAD always-present) → font-less text = καμία STYLE entry. Gated AutoCAD path (Tekton `explode` → group 7
+  STANDARD + table-less, **byte-identical**). Καμία αλλαγή σε signature πλην additive `emitText` `styleName?` param.
+  7 νέα tests (`dxf-roundtrip-textstyle.test.ts`: TEXT/MTEXT emit + reverse-symmetry μέσω `parseStyleTable`/
+  `buildStyleFontMap` + dedup + STANDARD/explode gating), **157 export/core + 119 adapter/import/parser jest green**,
+  jscpd clean. ΟΧΙ browser-verified.

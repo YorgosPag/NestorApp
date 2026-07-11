@@ -37,6 +37,9 @@ import {
   resolveAutoFitAction,
   isDegenerateRestoreScale,
 } from '../../systems/zoom/viewport-autofit-policy';
+// Giorgio 2026-07-11 — user-initiated import intent (read-and-clear): forces a
+// fit-to-extents that overrides the ADR-400 restore. Set by `useSceneState`.
+import { consumeFreshImportFit } from '../../systems/zoom/viewport-fit-intent';
 import { DXF_TIMING } from '../../config/dxf-timing';
 
 /** Subset of the zoom system this hook needs (floorplan-background fit). */
@@ -170,12 +173,19 @@ export function useViewportAutoFit({
     const hasContent = sceneHasEntities(currentScene) || !!floorplanBg?.background;
     const levelChanged = currentLevelId !== prevLevelIdRef.current;
     const fileChanged = !!fileRecordId && fileRecordId !== prevFileRecordIdRef.current;
+    // Giorgio 2026-07-11 — a user-initiated file import (any type) must ALWAYS fit,
+    // overriding the persisted-viewport restore. Consume-once so the deferred fit's
+    // re-render never re-reads a stale intent. This replaces the old imperative
+    // `EventBus.emit('canvas-fit-to-view')` in `useSceneState` → single controller,
+    // no double-emit race (ADR-399).
+    const freshImport = consumeFreshImportFit();
 
     const action = resolveAutoFitAction({
       hasContent,
       hasFittedOnce: hasFittedRef.current,
       levelChanged,
       fileChanged,
+      freshImport,
     });
 
     // Adopt the latest identity so the NEXT evaluation compares against it.
@@ -184,9 +194,10 @@ export function useViewportAutoFit({
 
     if (action === 'skip') return;
 
-    // Mark the one-time initial decision as taken synchronously so a re-run during
-    // the defer never schedules it twice.
-    if (action === 'initial') hasFittedRef.current = true;
+    // Latch «already fitted» synchronously for BOTH the one-time initial decision AND
+    // a fresh-import fit, so a re-run during the defer never schedules twice and
+    // subsequent scene mutations fall through to 'skip' (keep the viewport stable).
+    if (action === 'initial' || freshImport) hasFittedRef.current = true;
 
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(

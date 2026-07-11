@@ -33,22 +33,34 @@ export interface AutoFitPolicyInput {
   readonly levelChanged: boolean;
   /** The bound file record changed to a new non-null id since the last evaluation. */
   readonly fileChanged: boolean;
+  /**
+   * A USER-INITIATED file import just committed its scene (Giorgio 2026-07-11).
+   * Overrides restore/skip → ALWAYS fit-to-extents, so loading ANY file (.dxf/.tek/…)
+   * frames every entity (DXF/BIM/MEP/…). A hard-refresh RELOAD does NOT set this, so
+   * it keeps the ADR-400 persisted-viewport restore. Sourced from `viewport-fit-intent`.
+   */
+  readonly freshImport: boolean;
 }
 
 /**
  * The single auto-fit decision:
  *   - no content yet                       → 'skip'    (nothing to frame)
+ *   - user-initiated file import           → 'fit'     (ALWAYS Zoom Extents — Giorgio)
  *   - first content of the session         → 'initial' (ADR-400 restore-or-fit)
  *   - new file under the SAME level        → 'fit'     (genuine re-import = Zoom Extents)
  *   - everything else (navigation, drawing,→ 'skip'    (keep the viewport stable)
  *     subsequent scene mutations)
  *
- * A file change that coincides with a level change is NAVIGATION (the user switched
- * floors to one that owns a different file), NOT a re-import — hence the explicit
- * `!levelChanged` guard that keeps the viewport stable across floors.
+ * `freshImport` wins FIRST (after the empty guard): loading any file always frames
+ * its content, overriding a persisted-viewport restore that would otherwise fire on
+ * the session's first content. A file change that coincides with a level change is
+ * NAVIGATION (the user switched floors to one that owns a different file), NOT a
+ * re-import — hence the explicit `!levelChanged` guard that keeps the viewport stable
+ * across floors.
  */
 export function resolveAutoFitAction(input: AutoFitPolicyInput): AutoFitAction {
   if (!input.hasContent) return 'skip';
+  if (input.freshImport) return 'fit';
   if (!input.hasFittedOnce) return 'initial';
   if (input.fileChanged && !input.levelChanged) return 'fit';
   return 'skip';

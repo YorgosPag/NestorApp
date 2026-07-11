@@ -1128,3 +1128,44 @@ External references:
 - Revit Endpoint snap on wall faces: Autodesk Revit User Guide § "Object Snaps".
 - ArchiCAD Wall Hotspots: Graphisoft ArchiCAD 27 Reference Manual § "Drawing Aids".
 - Vectorworks Smart Cursor: Vectorworks 2024 Getting Started Guide § "Snapping".
+
+---
+
+## 19. Extension — Stair characteristic points (2026-07-11)
+
+**Αφορμή (Giorgio 2026-07-11):** «όταν κάνω hover πάνω από σκάλα να εμφανίζονται τα σημάδια
+ελέγχου και να έλκομαι από αυτά» — snap **και** στα grips **και** σε κάθε σκαλοπάτι.
+
+**Κενό:** η `StairEntity` ΔΕΝ είχε καταχώρηση στον `getBimCharacteristicPoints` dispatcher
+→ επέστρεφε `EMPTY` → η σκάλα δεν πρόσφερε κανένα BIM_CORNER/MIDPOINT/CENTER snap.
+
+**Fix (SSoT, μηδέν νέα γεωμετρία):**
+- **NEW** `bim/stairs/stair-characteristic-points.ts` — `getStairCharacteristicPoints(stair)`:
+  - `corners` = ΟΛΕΣ οι θέσεις των grips (`getStairGrips(stair).map(g => g.position)` — «ίδια με
+    τα grips») **+** οι γωνίες ΚΑΘΕ σκαλοπατιού.
+  - `midpoints` = τα μέσα των ακμών ΚΑΘΕ walkable επιφάνειας (`footprintEdgeMidpoints`, preOrdered).
+  - Walkable επιφάνειες = `treadsBelowCut ∪ treadsAboveCut ∪ landings` (ADR-632 alias trap: το
+    `treads` είναι legacy alias του `treadsBelowCut`, fallback για legacy geometry). **Τα
+    `landings` (ADR-637 §5) είναι ΚΡΙΣΙΜΑ** — καλύπτουν τη ΓΩΝΙΑΚΗ περιοχή σε L/U/Γ σκάλες (+
+    intermediate rest landings)· χωρίς αυτά η γωνιακή γωνία + τα landing σκαλοπάτια δεν πρόσφεραν
+    κανένα snap (Giorgio 2026-07-11, screenshot κυκλωμένα σημεία). Projection 3D→2D με το
+    `projectVerticesTo2D` SSoT (§16). Τα vertices είναι bare `Point3D[]` (`Polygon3D`).
+- **`bim-characteristic-points.ts`**: `if (isStairEntity(e)) return stairPoints(e)` στον dispatcher·
+  νέος `stairPoints` resolver (`center: null` — πολλά treads, χωρίς ενιαίο κεντροειδές)·
+  `getBimCharacteristicLabelRoot` → `'stair'`. Η σκάλα ΔΕΝ περνά από τον κοινό `footprintPoints`
+  core (δεν έχει ενιαίο footprint).
+- **i18n**: 1 νέο key `snapModes.labels.bim.noun.stair` («σκάλας» / "of stair") → σύνθεση «Γωνία/
+  Μέσο σκάλας» μέσω του υπάρχοντος `resolveBimSnapLabelText` (καμία νέα υποδομή).
+- Ο generic `BimCharacteristicSnapEngine` καταναλώνει **αυτόματα** το νέο resolver — **καμία αλλαγή
+  στα engines / registry / priorities**.
+
+**Companion (render):** hover → εμφάνιση grips για ΟΛΕΣ τις οντότητες — βλ. ADR-040 changelog
+2026-07-11 (overlay-only, bitmap-cache invariant).
+
+**Tests:** `bim/stairs/__tests__/stair-characteristic-points.test.ts` (6 tests: grip positions ⊆
+corners, tread corners > grips, per-surface midpoints, finite coords, straight + l-shape, **landing
+vertices ⊆ corners** — γωνιακή περιοχή L/U). PASS.
+
+**Files:** NEW `stair-characteristic-points.ts` + test· MOD `bim-characteristic-points.ts` +
+`el/en dxf-viewer-shell.json`. ✅ Google-level: YES — SSoT reuse, μηδέν διπλότυπο, μηδέν engine
+change. 🟡 UNCOMMITTED.

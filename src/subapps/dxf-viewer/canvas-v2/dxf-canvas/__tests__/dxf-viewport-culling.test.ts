@@ -73,6 +73,42 @@ describe('getEntityBBox — opening uses NESTED openingEntity.geometry.bbox (ADR
   });
 });
 
+/** Minimal DxfHatch — world-space geometry in `boundaryPaths` (rings of {x,y}), NOT geometry.bbox. */
+function hatchEntity(rings: Array<Array<[number, number]>>): DxfEntityUnion {
+  return {
+    type: 'hatch',
+    boundaryPaths: rings.map((ring) => ring.map(([x, y]) => ({ x, y }))),
+  } as unknown as DxfEntityUnion;
+}
+
+describe('getEntityBBox — hatch uses boundaryPaths, not the ±1e6 fallback (ADR-635 Φ C.9)', () => {
+  it('a geo-referenced hatch returns its real world-space bbox from boundaryPaths', () => {
+    // Real KADOS AutoCAD γραμμοσκίαση coords (X ~2.8e6, geo-referenced ~2847 m from origin).
+    const h = hatchEntity([[[2_828_100, 4_176_200], [2_912_400, 4_176_200], [2_912_400, 4_189_000], [2_828_100, 4_189_000]]]);
+    expect(getEntityBBox(h)).toEqual({
+      minX: 2_828_100, minY: 4_176_200, maxX: 2_912_400, maxY: 4_189_000,
+    });
+  });
+
+  it('flattens the AABB over multiple boundary rings', () => {
+    const h = hatchEntity([
+      [[100, 100], [200, 100], [200, 200]],
+      [[-50, -50], [300, 400]],
+    ]);
+    expect(getEntityBBox(h)).toEqual({ minX: -50, minY: -50, maxX: 300, maxY: 400 });
+  });
+
+  it('is NOT culled at a geo-referenced viewport (the "hatch invisible" bug 2026-07-11)', () => {
+    const h = hatchEntity([[[2_828_100, 4_176_200], [2_912_400, 4_189_000]]]);
+    const worldViewport = { minX: 2_820_000, minY: 4_170_000, maxX: 2_920_000, maxY: 4_195_000 };
+    expect(isEntityInViewport(h, worldViewport)).toBe(true);
+  });
+
+  it('a hatch with no boundary vertices falls back to the full-plane box', () => {
+    expect(getEntityBBox(hatchEntity([]))).toEqual({ minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 });
+  });
+});
+
 /** Minimal DxfDimension wrapper carrying a linear DimensionEntity (defPoints at real coords). */
 function linearDim(
   p1: [number, number],

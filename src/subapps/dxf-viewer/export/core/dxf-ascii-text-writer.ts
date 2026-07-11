@@ -30,11 +30,33 @@ import { attachmentToMTextCode, attachmentToVJust } from '../../utils/dxf-text-c
 import type { Pair } from './dxf-ascii-hatch-writer';
 
 const DEFAULT_TEXT_HEIGHT = 0.18; // output units — used if entity has no height.
+const DEFAULT_STYLE = 'STANDARD'; // AutoCAD's always-present default text style (no STYLE entry needed).
 
 /** DXF TEXT justification: `h` = code 72 (H), `v` = code 73 (V). */
 export interface TextAlign {
   readonly h: 0 | 1 | 2;
   readonly v: 0 | 1 | 2 | 3;
+}
+
+/**
+ * The DXF text-style NAME (group 7) for a font family. AutoCAD/ezdxf name a synthesized style
+ * after its font, so we use the family itself as the style name — the ONE derivation both the
+ * emitted group-7 code and the STYLE-table entry share, so they never diverge. Absent / the
+ * `Standard` sentinel → `STANDARD` (implicit, no STYLE entry). Round-trips ADR-635 Φ C.5:
+ * name → STYLE `fontFile` → `stripExtension` → the same family.
+ */
+export function textStyleName(fontFamily: string | undefined): string {
+  const f = fontFamily?.trim();
+  if (!f || f.toUpperCase() === DEFAULT_STYLE) return DEFAULT_STYLE;
+  return f;
+}
+
+/** Read a TEXT/MTEXT entity's first-run font family off its `textNode` (absent → ''). */
+export function readTextEntityFamily(e: Entity): string {
+  const node = (e as TextEntity | MTextEntity).textNode;
+  return node?.paragraphs?.[0]?.runs?.[0] && 'text' in node.paragraphs[0].runs[0]
+    ? (node.paragraphs[0].runs[0] as TextRun).style?.fontFamily ?? ''
+    : '';
 }
 
 /**
@@ -58,7 +80,7 @@ export function alignFromTextEntity(e: TextEntity): TextAlign | undefined {
  */
 export function emitText(
   p: Point2D, text: string, height: number | undefined, layer: string, aci: number, s: number, pair: Pair,
-  rotationDeg = 0, align?: TextAlign,
+  rotationDeg = 0, align?: TextAlign, styleName: string = DEFAULT_STYLE,
 ): void {
   pair(0, 'TEXT');
   pair(10, p.x * s); pair(20, p.y * s);
@@ -66,7 +88,7 @@ export function emitText(
   pair(1, sanitizeText(text));
   pair(50, rotationDeg); // rotation (CCW degrees)
   pair(41, 1);           // width factor
-  pair(7, 'STANDARD');   // text style
+  pair(7, styleName);    // text style (group 7) — round-trips the STYLE table (ADR-636 D.5)
   if (align && (align.h !== 0 || align.v !== 0)) {
     // Alignment point (11/21) mirrors the insertion point; 73 only when non-baseline.
     pair(72, align.h);
@@ -90,10 +112,12 @@ export function emitMText(
   const node = ensureTextNode(e as MTextEntity);
   const { content, entityType } = serializeDxfTextNode(node, { version });
   const charHeight = firstRunHeight(node) ?? (e as MTextEntity).fontSize ?? (e as MTextEntity).height;
+  // ADR-636 Φ2.4 (D.5) — real group 7 from the node's font (same derivation as the STYLE table).
+  const styleName = textStyleName(readTextEntityFamily(e));
 
   if (entityType === 'TEXT') {
-    // R12 downgrade — no MTEXT: emit the (space-joined) content as plain TEXT.
-    emitText((e as MTextEntity).position, content, charHeight, layer, aci, s, pair, node.rotation);
+    // R12 downgrade — no MTEXT: emit the (space-joined) content as plain TEXT (style carried).
+    emitText((e as MTextEntity).position, content, charHeight, layer, aci, s, pair, node.rotation, undefined, styleName);
     return;
   }
 
@@ -105,7 +129,7 @@ export function emitMText(
   pair(40, charHeight != null ? charHeight * s : DEFAULT_TEXT_HEIGHT);
   pair(41, width * s);                             // reference rectangle width (0 = no wrap)
   pair(71, attachmentToMTextCode(node.attachment)); // 9-point attachment (1-9)
-  pair(7, 'STANDARD');
+  pair(7, styleName);
   pair(50, node.rotation);                          // rotation (CCW degrees)
   pair(1, sanitizeText(content));
 }

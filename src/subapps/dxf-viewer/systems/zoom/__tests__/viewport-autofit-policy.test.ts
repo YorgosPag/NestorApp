@@ -16,6 +16,7 @@ const input = (over: Partial<AutoFitPolicyInput>): AutoFitPolicyInput => ({
   hasFittedOnce: true,
   levelChanged: false,
   fileChanged: false,
+  freshImport: false,
   ...over,
 });
 
@@ -46,6 +47,23 @@ describe('resolveAutoFitAction', () => {
 
   it('initial wins even if a file/level also changed on the very first content', () => {
     expect(resolveAutoFitAction(input({ hasFittedOnce: false, fileChanged: true, levelChanged: true }))).toBe('initial');
+  });
+
+  // Giorgio 2026-07-11 — a user-initiated file import ALWAYS fits to extents.
+  it('fresh import → fit (even on first content, overriding restore/initial)', () => {
+    expect(resolveAutoFitAction(input({ freshImport: true, hasFittedOnce: false }))).toBe('fit');
+  });
+
+  it('fresh import → fit (even when re-importing under the same session)', () => {
+    expect(resolveAutoFitAction(input({ freshImport: true, hasFittedOnce: true }))).toBe('fit');
+  });
+
+  it('fresh import → fit (overrides what would be a navigation skip)', () => {
+    expect(resolveAutoFitAction(input({ freshImport: true, fileChanged: true, levelChanged: true }))).toBe('fit');
+  });
+
+  it('fresh import with NO content → still skip (nothing to frame)', () => {
+    expect(resolveAutoFitAction(input({ freshImport: true, hasContent: false }))).toBe('skip');
   });
 });
 

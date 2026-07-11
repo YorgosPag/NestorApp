@@ -335,7 +335,49 @@ import branches → shared emitter), `systems/levels/__tests__/emit-imported-ent
 order preserved· empty no-op); jscpd clean. Browser (Giorgio): φρέσκια εισαγωγή σε ΝΕΟ όροφο → 9 γραμμοσκιάσεις
 που **παραμένουν μετά από reload**.
 
+## Φ C.9 — Imported hatch INVISIBLE: viewport-culling missing `case 'hatch'` (geo-referenced drop)
+
+**Symptom (Giorgio, real file `KADOS.ΓΡΑΜΜΟΣΚΙΑΣΕΙΣ-AUTOCAD.dxf`):** μετά το Φ C.8 (persistence fix) το panel
+δείχνει σωστά **«15 στοιχεία»** (2 polyline + 3 line + 1 circle + **9 hatches**), αλλά **οι 9 γραμμοσκιάσεις
+παραμένουν ΑΟΡΑΤΕΣ** — φαίνονται μόνο τα 6 dumb-DXF. Επιβιώνουν (Φ C.8) αλλά δεν ζωγραφίζονται.
+
+**Root cause (100% επιβεβαιωμένο, ΟΧΙ parser/persistence):** το SSoT viewport-culling module
+`canvas-v2/dxf-canvas/dxf-viewport-culling.ts → getEntityBBox()` **δεν είχε `case 'hatch'`**. Ο hatch κρατά τη
+γεωμετρία του στο `boundaryPaths` (array of rings of `{x,y}`), **ΟΧΙ** σε `geometry.bbox` → έπεφτε στο
+`default → geometryBBoxOrFullPlane()` → conservative **`FULL_PLANE_BBOX = ±1e6`**. ΑΛΛΑ το αρχείο είναι
+**geo-referenced**: hatch coords **~2.8e6 mm** (2847 m από την origin). `2.8e6 > 1e6` → το `±1e6` box **δεν
+τέμνει** το world-viewport → `isEntityInViewport() === false` → **culled → ποτέ δεν ζωγραφίζεται.** Ίδιο class
+bug με τα dimension/opening/wall geo-referenced culling fixes (2026-07-03). Οι **σχεδιασμένοι** hatches φαίνονται
+μια χαρά γιατί είναι κοντά στην origin (coords < 1e6, εντός του ±1e6 fallback) — γι' αυτό ήταν κρυμμένο.
+
+**Fix (SSoT, 1 case, mirror του `case 'polyline'` — ΟΧΙ νέος bbox helper):** νέο `case 'hatch'` πριν το
+`default` που υπολογίζει AABB flatten-άροντας όλα τα `boundaryPaths` rings (mirror του polyline vertex-scan)·
+degenerate hatch χωρίς κορυφές → conservative `FULL_PLANE_BBOX` (ασφαλές — δεν κρύβεται κατά λάθος).
+
+**ΔΕΝ άλλαξε** parser / persistence (Φ C.8) — σωστά. Ορθογώνιο με το Φ C.8: το ένα = «επιβιώνουν», αυτό =
+«ζωγραφίζονται» — χρειάζονται **και τα δύο**.
+
+**Sibling gap (flagged, secondary):** το spatial-index picking bounds SSoT `types/entity-bounds.ts` **επίσης
+δεν έχει hatch case** → σε geo-referenced DXF ο imported hatch μπορεί να μην επιλέγεται με κλικ. ΔΕΝ
+επιβεβαιώθηκε με ground truth (ο render-blocker ήταν το culling)· επόμενο case αν αναφερθεί.
+
+**Files:** `canvas-v2/dxf-canvas/dxf-viewport-culling.ts` (νέο `case 'hatch'`),
+`canvas-v2/dxf-canvas/__tests__/dxf-viewport-culling.test.ts` (+4 unit: real-bbox· multi-ring flatten·
+geo-referenced NOT culled· degenerate fallback). **Verification:** 18/18 jest green (4 νέα hatch). Browser
+(Giorgio): re-import `KADOS.ΓΡΑΜΜΟΣΚΙΑΣΕΙΣ-AUTOCAD.dxf` → 9 γραμμοσκιάσεις ορατές στη θέση τους + μετά reload.
+
 ## Changelog
+- **2026-07-11 — Φ C.9 (imported hatch INVISIBLE — viewport-culling missing `case 'hatch'`):** ο
+  `getEntityBBox()` (`dxf-viewport-culling.ts`) δεν είχε hatch case → ο hatch (γεωμετρία στο `boundaryPaths`,
+  όχι `geometry.bbox`) έπεφτε στο ±1e6 `FULL_PLANE_BBOX` και σε geo-referenced DXF (coords ~2.8e6) γινόταν
+  culled → αόρατος («15 στοιχεία αλλά 9 hatches αόρατοι»). Νέο `case 'hatch'` (AABB από boundaryPaths, mirror
+  του `case 'polyline'`, ΟΧΙ νέος helper) + 4 unit. Sibling των dimension/opening/wall geo-referenced culling
+  fixes. Flag: `entity-bounds.ts` picking bounds έχει το ίδιο gap (secondary). Ορθογώνιο με Φ C.8 (persistence).
+- **2026-07-11 — Export parity (ADR-636 Φ2.4 D.5): C.5 round-trip.** Το font που εισάγει το import (group 7
+  text-style name → STYLE table → `buildStyleFontMap`/`styleEntryDefaults`, `style-table-reader.ts`) γράφεται
+  πλέον ΠΙΣΩ στο export: STYLE table (inverse `groupCodesToEntry`, **reuse του type `DxfStyleTableEntry`**) +
+  real group 7 (style name = font family, `textStyleName`). Round-trip απόδειξη με τον ίδιο import reader
+  (`parseStyleTable`/`buildStyleFontMap`) στο `dxf-roundtrip-textstyle.test.ts`. Λεπτομέρειες: ADR-636 changelog (D.5).
 - **2026-07-11 — Export parity (ADR-636 Φ2.4 D.6): C.3/C.4 round-trip.** Οι per-entity STYLE codes που
   διαβάζει το import (**6** linetype name `extractEntityLinetype` / **48** CELTSCALE `extractEntityLtscale` /
   **370** lineweight `extractEntityLineweight`, στο `dxf-entity-style-extract.ts`) γράφονται πλέον ΠΙΣΩ στο

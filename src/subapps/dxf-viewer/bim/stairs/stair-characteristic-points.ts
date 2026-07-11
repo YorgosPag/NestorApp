@@ -28,15 +28,19 @@ export interface StairCharPoints {
 }
 
 /**
- * ΟΛΑ τα σκαλοπάτια της κάτοψης: below-cut ∪ above-cut. ADR-632 alias trap — το
- * `geometry.treads` είναι legacy alias του `treadsBelowCut`, οπότε ενώνουμε ΡΗΤΑ τα δύο
- * πραγματικά σύνολα (fallback στο `treads` για legacy geometry χωρίς split cut sets).
+ * ΟΛΕΣ οι walkable επιφάνειες της κάτοψης: σκαλοπάτια (below-cut ∪ above-cut) + πλατύσκαλα
+ * (landings). ADR-632 alias trap — το `geometry.treads` είναι legacy alias του
+ * `treadsBelowCut`, οπότε ενώνουμε ΡΗΤΑ τα δύο πραγματικά σύνολα (fallback στο `treads` για
+ * legacy geometry χωρίς split cut sets). ADR-637 §5 — τα `landings` καλύπτουν τη ΓΩΝΙΑΚΗ
+ * περιοχή σε L/U/Γ σκάλες (+ intermediate rest landings)· χωρίς αυτά η γωνιακή γωνία + τα
+ * landing σκαλοπάτια δεν πρόσφεραν καθόλου snap points (Giorgio 2026-07-11).
  */
-function allTreads(entity: StairEntity): readonly Polygon3D[] {
+function walkableSurfaces(entity: StairEntity): readonly Polygon3D[] {
   const g = entity.geometry;
   const below = g.treadsBelowCut ?? g.treads ?? [];
   const above = g.treadsAboveCut ?? [];
-  return [...below, ...above];
+  const landings = g.landings ?? [];
+  return [...below, ...above, ...landings];
 }
 
 /**
@@ -45,10 +49,10 @@ function allTreads(entity: StairEntity): readonly Polygon3D[] {
 export function getStairCharacteristicPoints(entity: StairEntity): StairCharPoints {
   const corners: Point2D[] = getStairGrips(entity).map((grip) => grip.position);
   const midpoints: Point2D[] = [];
-  for (const tread of allTreads(entity)) {
-    // Τα tread vertices είναι bare `Point3D[]` σε winding order → projection + preOrdered
-    // ώστε γωνίες/μέσα να μη «σπάνε» σε μη-κυρτά (σπάνιο για tread, αλλά συνεπές με ADR-597).
-    const verts2d = projectVerticesTo2D(tread);
+  for (const surface of walkableSurfaces(entity)) {
+    // Τα vertices είναι bare `Point3D[]` σε winding order → projection + preOrdered ώστε
+    // γωνίες/μέσα να μη «σπάνε» σε μη-κυρτά (landings μπορεί να είναι L/Γ, ADR-597 §non-convex).
+    const verts2d = projectVerticesTo2D(surface);
     corners.push(...verts2d);
     midpoints.push(...footprintEdgeMidpoints(verts2d, { preOrdered: true }));
   }

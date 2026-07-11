@@ -60,6 +60,16 @@ function geometryBBoxOrFullPlane(entity: DxfEntityUnion): BBox {
   return FULL_PLANE_BBOX;
 }
 
+/** Enclosing-circle AABB — shared by `circle` and (conservatively) `arc` entities. */
+function radialBBox(center: { x: number; y: number }, radius: number): BBox {
+  return {
+    minX: center.x - radius,
+    minY: center.y - radius,
+    maxX: center.x + radius,
+    maxY: center.y + radius,
+  };
+}
+
 /**
  * Compute axis-aligned world-space bbox for a DXF entity. Cheap O(1) per
  * primitive except polylines, which are O(vertices).
@@ -75,22 +85,12 @@ export function getEntityBBox(entity: DxfEntityUnion): BBox {
       };
     }
     case 'circle': {
-      return {
-        minX: entity.center.x - entity.radius,
-        minY: entity.center.y - entity.radius,
-        maxX: entity.center.x + entity.radius,
-        maxY: entity.center.y + entity.radius,
-      };
+      return radialBBox(entity.center, entity.radius);
     }
     case 'arc': {
       // Conservative: use the full enclosing circle bbox. A tighter bbox would
       // require trigonometric extrema per quadrant — not worth the CPU for culling.
-      return {
-        minX: entity.center.x - entity.radius,
-        minY: entity.center.y - entity.radius,
-        maxX: entity.center.x + entity.radius,
-        maxY: entity.center.y + entity.radius,
-      };
+      return radialBBox(entity.center, entity.radius);
     }
     case 'polyline': {
       const vs = entity.vertices;
@@ -152,6 +152,25 @@ export function getEntityBBox(entity: DxfEntityUnion): BBox {
     case 'opening': {
       const bb = entity.openingEntity.geometry?.bbox;
       return bb ? { minX: bb.min.x, minY: bb.min.y, maxX: bb.max.x, maxY: bb.max.y } : FULL_PLANE_BBOX;
+    }
+    // ADR-635 Φ C.9 / ADR-040 Phase IX — the HATCH variant keeps its world-space geometry in
+    // `boundaryPaths` (array of rings of {x,y}), NOT in `geometry.bbox`. Without this case it fell
+    // to the ±1e6 `FULL_PLANE_BBOX` fallback → every imported hatch in a geo-referenced DXF (coords
+    // ~2.8e6, KADOS AutoCAD γραμμοσκιάσεις) was culled from the 2D base pass while the panel still
+    // counted it: the "15 στοιχεία αλλά οι 9 hatches αόρατοι" bug (2026-07-11). Sibling of the
+    // wall/dimension/opening geo-referenced culling fixes. Mirrors the `case 'polyline'` vertex scan,
+    // flattened over all rings; a hatch with no vertices keeps the conservative full-plane fallback.
+    case 'hatch': {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const ring of entity.boundaryPaths ?? []) {
+        for (const v of ring) {
+          if (v.x < minX) minX = v.x;
+          if (v.x > maxX) maxX = v.x;
+          if (v.y < minY) minY = v.y;
+          if (v.y > maxY) maxY = v.y;
+        }
+      }
+      return Number.isFinite(minX) ? { minX, minY, maxX, maxY } : FULL_PLANE_BBOX;
     }
     // ADR-363 / ADR-436 / ADR-040 Phase IX — BIM direct-entities (wall/column/beam/foundation/
     // slab/roof/opening/…) all carry a world-space `geometry.bbox`. Route them through ONE SSoT

@@ -13,6 +13,7 @@ import {
 } from '../../../hooks/drawing/stair-completion';
 import { getStairGrips } from '../stair-grips';
 import { getStairCharacteristicPoints } from '../stair-characteristic-points';
+import { projectVerticesTo2D } from '../../geometry/shared/polygon-utils';
 import type { StairEntity, StairParams } from '../../../bim/types/stair-types';
 
 const basePoint = { x: 0, y: 0 };
@@ -73,5 +74,17 @@ describe('getStairCharacteristicPoints (ADR-597 §stair)', () => {
   it('δουλεύει και για non-straight (l-shape) — μη κενά corners', () => {
     const { corners } = getStairCharacteristicPoints(makeLShape());
     expect(corners.length).toBeGreaterThan(0);
+  });
+
+  it('περιλαμβάνει τα vertices των πλατύσκαλων (landings) — η ΓΩΝΙΑΚΗ περιοχή L/U', () => {
+    const stair = makeLShape();
+    const landings = stair.geometry.landings ?? [];
+    expect(landings.length).toBeGreaterThan(0); // η l-shape landing έχει γωνιακό πλατύσκαλο
+    const cornerKeys = new Set(getStairCharacteristicPoints(stair).corners.map(key));
+    for (const landing of landings) {
+      for (const v of projectVerticesTo2D(landing)) {
+        expect(cornerKeys.has(key(v))).toBe(true);
+      }
+    }
   });
 });

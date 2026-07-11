@@ -58,7 +58,10 @@ import { emitHatch, type Pair } from './dxf-ascii-hatch-writer';
 // ADR-636 Στάδιο 2 Φ2.3 — TEXT (with 72/73 justification) + real MTEXT (\P line breaks, 71
 // attachment) emitters live in their own module (file-size SRP). `alignFromTextEntity` derives
 // the H/V codes from the entity via the inverse import maps (zero new alignment table).
-import { emitText, emitMText, alignFromTextEntity } from './dxf-ascii-text-writer';
+import {
+  emitText, emitMText, alignFromTextEntity, textStyleName, readTextEntityFamily,
+} from './dxf-ascii-text-writer';
+import type { DxfStyleTableEntry } from '../../text-engine/types/text-ast.types';
 // ADR-505 §A — low-level DXF primitive emitters + geometry/format helpers live in a sibling
 // module (file-size SRP split, N.7.1). `emitLine` stays the ONE definition injected into `emitHatch`.
 import {
@@ -216,9 +219,13 @@ export function writeDxfAscii(
   // supplies `tableLayers`) then DIMSTYLE (when dimensions carried a resolved style), in DXF
   // table order. Gated: bare `writeDxfAscii(entities)` (no tableLayers, no dimStyles) stays
   // table-less (Tekton/legacy). Placed after HEADER, before BLOCKS/ENTITIES.
+  // ADR-636 Φ2.4 (D.5) — synthesize a STYLE table from the fonts the TEXT/MTEXT entities carry
+  // (AutoCAD path only; Tekton `explode` keeps the historic STANDARD-only, table-less output).
+  const textStyles = explode ? [] : collectTextStyles(entities);
   emitTablesSection(out, pair, {
     tableLayers: options.tableLayers,
     customLinetypes: options.customLinetypes,
+    textStyles,
     dimStyles,
     s,
   });
@@ -305,6 +312,8 @@ function writeEntity(
       emitText(
         e.position, e.text ?? '', e.height ?? e.fontSize, layer, aci, s, pair,
         explode ? 0 : (e.rotation ?? 0), explode ? undefined : alignFromTextEntity(e),
+        // ADR-636 Φ2.4 (D.5) — real group 7 (AutoCAD path); Tekton `explode` → emitText default STANDARD.
+        explode ? undefined : textStyleName(readTextEntityFamily(e)),
       );
       break;
     case 'mtext':
@@ -378,6 +387,30 @@ function writeEntity(
   // stays byte-identical, its minimal parser ignores these codes anyway). POLYLINE-based
   // entities already carried their STYLE in the emitPath header above.
   if (!explode && STYLE_APPEND_TYPES.has(e.type)) emitEntityStyle(pair, e);
+}
+
+// ─── Text styles (ADR-636 Φ2.4 D.5) ──────────────────────────────────────────
+
+/**
+ * Collect the distinct STYLE table entries the TEXT/MTEXT entities reference — the inverse of
+ * the import's `buildStyleFontMap`. Style name = font family (the ONE derivation `textStyleName`
+ * shares with the per-entity group-7 code, so table and entities agree); `fontFile` = the family
+ * verbatim (import strips the extension on the way in, so no synthetic `.shx` is fabricated). The
+ * always-present `STANDARD` needs no entry (AutoCAD implicit) so font-less text adds nothing.
+ */
+function collectTextStyles(entities: readonly Entity[]): DxfStyleTableEntry[] {
+  const byName = new Map<string, DxfStyleTableEntry>();
+  for (const e of entities) {
+    if (e.type !== 'text' && e.type !== 'mtext') continue;
+    const family = readTextEntityFamily(e);
+    const name = textStyleName(family);
+    if (name === 'STANDARD' || byName.has(name)) continue;
+    byName.set(name, {
+      name, fontFile: family, bigFontFile: '',
+      height: 0, widthFactor: 1, obliqueAngle: 0, flags: 0, textGenerationFlags: 0,
+    });
+  }
+  return [...byName.values()];
 }
 
 // ─── Dimension anonymous block (ADR-362 Round 26) ─────────────────────────────
