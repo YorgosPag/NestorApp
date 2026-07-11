@@ -1,6 +1,6 @@
 # ADR-638 — Bathroom Auto-Layout Generator (generative space planning)
 
-**Status:** Accepted (Στάδιο 0 + 1 + 2 implemented — headless solver + live ribbon command)
+**Status:** Accepted (Στάδιο 0 + 1 + 2 + 3-facing implemented — headless solver + live ribbon command + room-bounding fixture facing)
 **Date:** 2026-07-11
 **Domain:** dxf-viewer / systems (space planning)
 **Related:** ADR-425 (Stage-0 semantic recognition — `RecognizedSpace`/bathroom classification, the room INPUT), ADR-406/408 (`mep-fixture` sanitary terminals — the placement OUTPUT), ADR-567 (structural-placement-overlap — the collision pattern reused), ADR-426/427 (water-supply / drainage auto-design — consume the placed fixtures downstream), ADR-419 (perimeter engine — room polygon)
@@ -138,9 +138,28 @@ detection / target-guessing πλέον (το hover-pick δίνει το polygon 
 - **ADR-462 units:** ο bathroom detection τρέχει σε `'mm'` (canonical mm)· το wall-aware flag
   είναι ορθογώνιο στις μονάδες.
 
-### Στάδιο 3+ — pending (not in this commit)
+### Στάδιο 3 — Room-bounding fixture facing (DONE)
 
-- **Στάδιο 3** — solutions-preview UI: cycle A/B/C candidates as WYSIWYG placement
+Auto-placed fixtures were committed **facing the wall** (πρόσωπο προς τον τοίχο). The
+solver already knows the orientation — every `RoomWall` carries an `inward` normal and
+every `FixturePlacement` a `rotationDeg = atan2(inward)` — but the commit builder
+**discarded** it and recomputed the rotation from the footprint's first edge (bl→br =
+along the wall = width axis), losing the "front → room" semantics.
+
+Fix (SSoT reuse, zero shared-file changes): `bathroom-fixture-commit.ts` now derives the
+entity rotation from `placement.rotationDeg` (the inward angle) plus a single documented
+offset `MEP_FIXTURE_SYMBOL_FRONT_OFFSET_DEG = 90`. Derivation: the `mep-fixture` symbol
+draws its **front at local −Y** (`symbol-vector-helpers` uniform convention `v=0 → front
+edge, v=1 → back edge`; e.g. the WC cistern is at `v≈1`, the bowl at `v≈0` — a **global**
+convention shared by every sanitary/appliance drawer, **not per-kind**). `mep-fixture`
+rotation θ maps local −Y to world angle θ−90°; setting θ = `rotationDeg + 90°` makes the
+front land on `inward` ⇒ back on the wall, front into the room. Net effect is a clean
+180° correction of the previous (width-axis) rotation. The unused `rotationDegFromFootprint`
+helper was removed.
+
+### Στάδιο 3-preview + Στάδιο 4 — pending (not in this commit)
+
+- **Στάδιο 3-preview** — solutions-preview UI: cycle A/B/C candidates as WYSIWYG placement
   ghosts (ADR-624), Accept/Next.
 - **Στάδιο 4** (optional) — after commit, run `designWaterSupply`/`designDrainage`
   (ADR-426/427) to auto-route pipes to the freshly-placed fixtures.
@@ -176,6 +195,9 @@ detection / target-guessing πλέον (το hover-pick δίνει το polygon 
 - `src/subapps/dxf-viewer/systems/bathroom-layout/index.ts`
 - **Στάδιο 2:** `bathroom-fixture-commit.ts`, `recognized-space-adapter.ts`,
   `run-bathroom-auto-arrange-flow.ts` (all under `systems/bathroom-layout/`)
+- **Στάδιο 3 facing edit:** `bathroom-fixture-commit.ts` (rotation from `placement.rotationDeg`
+  + `MEP_FIXTURE_SYMBOL_FRONT_OFFSET_DEG`, `rotationDegFromFootprint` removed)
+- **Στάδιο 3 facing new test:** `__tests__/bathroom-fixture-facing.test.ts`
 - **Στάδιο 2 edits:** `ui/ribbon/data/systems-discipline-tabs.ts`,
   `app/dxf-special-actions.ts`, `src/i18n/locales/{el,en}/dxf-viewer-shell.json`,
   `src/i18n/locales/{el,en}/dxf-viewer.json`
@@ -206,7 +228,10 @@ detection / target-guessing πλέον (το hover-pick δίνει το polygon 
   interpolation.
 - `bim/walls/__tests__/region-structural-footprints.test.ts` — 5 tests (Στάδιο 2b.1 wall-aware):
   extractLineSegments off/on, wall-only room NOT detected without flag / detected with flag
-  (contains centre), `detectSpaces` wall-aware. Total **30/30 (feature) + 77/77 (regression) green**.
+  (contains centre), `detectSpaces` wall-aware.
+- `__tests__/bathroom-fixture-facing.test.ts` — 3 tests (Στάδιο 3): every committed fixture's
+  front (rotated footprint local −Y) projects positive onto the wall `inward` normal, canonical
+  bottom-wall case, fixed +90° offset. Total **33/33 (feature) green**.
 
 ## Changelog
 
@@ -228,4 +253,10 @@ detection / target-guessing πλέον (το hover-pick δίνει το polygon 
   την αλυσίδα `extractLineSegments`→…→`pickRegionPerimeterAt` — εκθέτει τις παρειές footprint
   τοίχων+κολόνων (reuse `wallFootprintPolygon`/`resolveMemberFootprintVertices`, μηδέν νέα
   γεωμετρία). Ενεργό σε bathroom+thermal-space+`detectSpaces`· wall-fill μένει line-only.
+- **2026-07-11 (Opus 4.8)** — Στάδιο 3 **fixture facing** (Giorgio: τα είδη κοιτούσαν τον τοίχο).
+  Ο commit πετούσε το `placement.rotationDeg` (=`atan2(inward)`) και ξαναϋπολόγιζε τη γωνία από
+  την ακμή footprint (width axis) → πρόσωπο στον τοίχο. Fix: rotation = `rotationDeg` + documented
+  `MEP_FIXTURE_SYMBOL_FRONT_OFFSET_DEG = 90` (σύμβολο front = local −Y, ενιαία σύμβαση
+  `symbol-vector-helpers`, όχι per-kind) ⇒ πλάτη στον τοίχο, πρόσωπο στο δωμάτιο (καθαρή 180°
+  διόρθωση). Μηδέν αλλαγές σε shared mep-fixture SSoT. **33/33 jest green** (+3 facing tests).
   +5 tests αποδεικνύουν off→0/on→room. **77/77 regression green**, jscpd clean.

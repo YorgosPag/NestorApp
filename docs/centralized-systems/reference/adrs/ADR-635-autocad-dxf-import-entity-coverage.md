@@ -165,6 +165,47 @@ shared `runDxfParse()`.
 **Tests:** `dxf-import-robustness.test.ts` (5 cases: clean import, skipped-type counting, MINSERT clamp,
 truncated-file no-throw, `buildScene` back-compat). Existing Φ1/Φ2 suites unchanged & green. jscpd clean.
 
+## Φ4 — Rich MTEXT import (parseMtext AST — closes the ADR-636 Φ2.3 double-escape limitation)
+
+**Symptom.** Imported MTEXT showed its **inline codes verbatim** (`Γραμμή1\PΓραμμή2` on one line,
+no paragraph break, no formatting), and a re-export **double-escaped** the paragraph break
+(`\P` → `\\P`) — the known limitation flagged in ADR-636 Φ2.3.
+
+**Root cause.** `convertMText` dropped the entire raw group-1/3 content string into **ONE run** via
+`buildTextNodeFromFlat`, so `textNode` was a single flat run holding the raw codes:
+1. **View** — the render/hit-test/snap SSoTs read the flat `.text` FIRST
+   (`e.text ?? extractFlatText(textNode)`, e.g. `project-scene-text.ts:50`, `TextRenderer.ts:86`),
+   and `.text` was the raw string → codes rendered literally, `splitTextLines` never saw the `\P`.
+2. **Re-export** — `emitMText` → `serializeDxfTextNode` `escapeText`'d the run's `\` → the run text
+   `"…\P…"` became `"…\\P…"`.
+
+**Fix (SSoT reuse, one converter, zero new parser).** `convertMText` now feeds the **existing**
+ADR-344 parser SSoT: `parseMtext(tokenizeMtext(decodeGreekText(raw)), { height })` → a real
+multi-paragraph/run `DxfTextNode`. The node's `attachment` (code 71) and `rotation` (code 50) are
+set from the entity (the parser hard-codes `TL`/`0`, seeing only inline codes). The flat `.text` is
+now the PLAIN reduction `extractFlatText(textNode)` (paragraph breaks → `\n`, no codes) — the string
+every flat-first consumer needs.
+
+**Result (fidelity in one):**
+- **View** — `\P`→`\n` line breaks render correctly; first-run align/bold/italic/color/height apply
+  (via the existing `extractFirstRunStyle`/`resolveTextHeight` from the AST). Inline codes handled:
+  `\H \W \T \Q \C \c \f \S`-stacks, `%%c`/`%%d`/`%%p`, `\U+XXXX`.
+- **Re-export** — `serializeDxfTextNode` round-trips `\P` cleanly (runs hold no raw codes → no
+  double-escape). Closes the ADR-636 Φ2.3 limitation.
+
+**Files:** `utils/dxf-text-converters.ts` (`convertMText` only — `convertText` unchanged),
+`utils/__tests__/dxf-text-converters.test.ts` (new, 7 cases).
+
+**Verification:** `dxf-text-converters.test.ts` 7/7 + parser/tokenizer/export-writer suites 146/146
+green (round-trip `Line1\PLine2` ⇒ content `Line1\PLine2`, NOT `Line1\\PLine2`). jscpd clean.
+
+**Known limitation (parser, not the converter — future phase).** The upstream parser flattens DXF
+into `Record<string,string>`, so a long MTEXT split across multiple group-3 chunks (250-char
+segments) keeps only the **last** chunk. Correct AutoCAD content = `concat(group-3…) + group-1`.
+This needs an ordered-pairs content accumulator in `DxfEntityParser` (mirror `parseVerticesFromPairs`,
+Φ1) — out of scope here. Simple `TEXT` `%%c`/`%%d`/`%%p`/`%%u`/`%%o` codes are likewise still verbatim
+(`convertText` uses `buildTextNodeFromFlat`) — Roadmap Φ B/C.
+
 ## Out of scope (roadmap)
 - Full BYBLOCK color/linetype inheritance; text-angle rotation fidelity under INSERT.
 - **Follow-up:** `convertSpline` has the same data-map vertex bug (`dxf-entity-converters.ts`);
@@ -172,6 +213,11 @@ truncated-file no-throw, `buildScene` back-compat). Existing Φ1/Φ2 suites unch
   currently rendered as straight segments (21 curved vertices in the sample).
 
 ## Changelog
+- **2026-07-11 — Φ4 (rich MTEXT import):** `convertMText` feeds the ADR-344 parser SSoT
+  (`tokenizeMtext` → `parseMtext`) so raw inline codes become a real multi-paragraph/run AST
+  instead of one flat run. Flat `.text` = `extractFlatText` (plain, `\P`→`\n`). Fixes verbatim-code
+  display + line-break-less view AND the ADR-636 Φ2.3 double-escape (`\P`→`\\P`) on re-export.
+  `convertText` unchanged. New `dxf-text-converters.test.ts` (7). 146 sibling jest green, jscpd clean.
 - **2026-07-11 — Φ1:** empty-line filter fix + old-style POLYLINE support + LWPOLYLINE vertex
   fix + closed bitmask. Real AutoCAD R12 import goes from ~467 to ~4467 rendered entities.
 - **2026-07-11 — Φ2:** INSERT/BLOCK expansion (section-aware parse + block-def map + placement

@@ -1,6 +1,6 @@
 # ADR-637 — Stair Rest Landings (πλατύσκαλα) — kind-independent SSoT
 
-- **Status**: Accepted — Phase 1 + Phase 2 (rectilinear family) + Phase 4-A (draggable/resizable landing grips) + Phase 4-B (add/remove/length/depth panel UI) implemented
+- **Status**: Accepted — Phase 1 + Phase 2 (rectilinear family: straight/multi-flight/v-shape) + Phase 2b (turning family: L/U/Γ edge-origin flights) + Phase 4-A (draggable/resizable landing grips) + Phase 4-B (add/remove/length/depth panel UI) implemented
 - **Date**: 2026-07-11
 - **Owners**: DXF/BIM stair subsystem
 - **Related**: ADR-611 (stair geometry generators SSoT), ADR-633 (multi-flight turn points), ADR-619 (stair-from-region walkline / `preserveZ`), ADR-358 (stair tool), ADR-631/625 (command + drag-preview bases), ADR-040 (micro-leaf subscribers)
@@ -145,19 +145,34 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
     `StairGeometryService-multiflight-landings.test.ts` (8) and
     `StairGeometryService-vshape-landings.test.ts` (7). Full stair geometry suite
     green (360) + `stair-turn-point` (13).
-- **Phase 2 — KNOWN LIMITATION (deferred)**: **L-shape / U-shape / Γ (gamma)** do
-  NOT yet honour `restLandings`. Their flight 1 is centreline-origin but flights
-  2+ are **edge-origin** (`buildFlightFromEdge`) with bespoke corner-landing +
-  multi-turn walkline builders keyed off `tread·n1`. A flight-1 rest landing
-  rigidly shifts every downstream edge-origin flight along `u1` by the landing's
-  plan delta, and the bespoke per-kind walklines cannot be cleanly stitched
-  without reworking each builder — high risk to the z-model/walkline. Per the
-  "do not ship a half-broken z-model" rule this is deferred to a follow-up
-  (`buildEdgeOriginRun` mirror of `buildFlightFromEdge`). Until then, adding a
-  rest landing to an L/U/Γ stair is a **no-op** (geometry stays valid, landing has
-  no effect). Users needing rest landings on a turning stair use **multi-flight**,
-  which is fully covered. Straight / multi-flight / v-shape cover the
-  centreline-origin family completely.
+- **Phase 2b — DONE** (resolves the Phase 2 deferral): **L-shape / U-shape / Γ
+  (gamma)** now honour `restLandings`. The deferred `buildEdgeOriginRun` mirror of
+  `buildFlightFromEdge` was written (`stair-flight-run-builder.ts`) as the
+  edge-origin sibling of `buildRectilinearRun`; both now share ONE segment walk
+  (`walkStairRun` core injected with per-origin builders — N.18, no sibling clone).
+  Key insight: the level model is **z-invariant** — a rest landing consumes one
+  level WITHIN its flight's span, so every turn landing stays at its old level
+  (`n1`, `n1+n2+1`, …) and every downstream edge-origin flight keeps its old
+  `zFirstTread`; only the plan footprint grows. Each kind therefore just anchors
+  its turn landing(s) + edge-origin flight(s) at the preceding run's real plan end
+  (`run.endXY`) instead of a hard-coded `tread·n1`. The three kind computers were
+  **merged to a single path each** (no `computeXWithRestLandings` twin): flight 1
+  via `centrelineRun`, flights 2+ via `edgeRun`, prologue via `beginTurnRun`,
+  assembly + rest/turn-landing interleave + grip-handle surfacing via
+  `assembleTurnRunStair`, and the walkline is the bespoke builder when there are no
+  rest landings (byte-identical to pre-2b) or the run-stitched centreline
+  (`appendRunAcrossNinetyTurn` / kind-specific stitch) otherwise. New shared SSoT:
+  `walkStairRun`, `buildEdgeOriginRun`/`edgeRun`, `centrelineRun`, `beginTurnRun`,
+  `assembleTurnRunStair`, `appendRunAcrossNinetyTurn` (all in
+  `stair-flight-run-builder.ts`) + `offsetAlong` (`stair-geometry-shared.ts`).
+  `stairKindSupportsRestLandings` now also returns `true` for `l-shape` / `u-shape`
+  / `gamma`, so the panel + grips light up automatically (grips need no new wiring
+  — they read `restLandingHandles`, which all three now emit). The L-shape
+  **winder-corner** variant still ignores rest landings (its corner is fan treads,
+  not a run boundary). Tests: `stair-edge-origin-run.test.ts` (3),
+  `StairGeometryService-{lshape,ushape,gamma}-landings.test.ts` (8+7+7); full stair
+  geometry suite green (34 suites / 391) incl. the exhaustive per-kind coordinate
+  tests (proves byte-identical no-rest paths after the merge); jscpd-diff clean.
 - **Phase 3 — pending**: walkline family (spiral/helical/elliptical/sketch) via
   `preserveZ`.
 - **Phase 4-A — DONE**: draggable + resizable rest-landing grips (recompute on
@@ -232,6 +247,15 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
 
 ## Changelog
 
+- **2026-07-11** — Phase 2b: L / U / Γ rest landings (resolves the Phase 2
+  deferral). `buildEdgeOriginRun` (edge-origin sibling of `buildRectilinearRun`,
+  sharing the `walkStairRun` core) + `centrelineRun`/`edgeRun`/`beginTurnRun`
+  helpers + `assembleTurnRunStair` (interleaves rest/turn landings + surfaces grip
+  handles) + `appendRunAcrossNinetyTurn` (shared 90°-turn walkline stitch) +
+  `offsetAlong` (Vec2 plan offset). Each kind computer merged to one path (bare +
+  rest-landing), anchoring turn landings at the preceding run's `endXY`; z-model
+  invariant, footprint grows. `stairKindSupportsRestLandings` += l-shape/u-shape/
+  gamma. +25 tests; stair suite 391 green; jscpd-clean.
 - **2026-07-11** — Phase 1: kind-independent rest-landing SSoT + straight-run proof.
 - **2026-07-11** — Phase 2: rectilinear family. `buildRectilinearRun` SSoT
   (`stair-flight-run-builder.ts`) + `partitionRestLandingsByFlight`; straight

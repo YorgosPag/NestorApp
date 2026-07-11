@@ -19,6 +19,11 @@ import {
 import { dwarn } from '../debug';
 import type { DxfTextNode, TextJustification, TextParagraph, TextRun } from '../text-engine/types';
 import { DXF_COLOR_BY_LAYER } from '../text-engine/types';
+// ADR-635 Φ4 — rich MTEXT import: reuse the ADR-344 parser SSoT (tokenizer → AST),
+// never a second parser. `extractFlatText` (ADR-344 SSoT) reduces the AST to the plain
+// `.text` string the render/hit-test/snap pipeline reads first.
+import { parseMtext, tokenizeMtext } from '../text-engine/parser';
+import { extractFlatText } from './text-node-utils';
 
 // ── Text node builder (ADR-344 SSOT unification) ──────────────────────────────
 
@@ -202,6 +207,15 @@ export function convertText(
  * Convert MTEXT/MULTILINETEXT entity
  * DXF Codes: 10,20 = Position; 1/3 = Content; 40 = Height; 50 = Rotation; 71 = Attachment
  *
+ * 🏢 ADR-635 Φ4 — RICH import: the raw group-1/3 content string carries AutoCAD inline
+ * codes (`\P` paragraph breaks, `\H`/`\C`/`\f`/`\S` formatting, `%%c`/`%%d`/`%%p`,
+ * `\U+XXXX`). Instead of dropping the whole raw string into ONE run (basic path — which
+ * showed the codes verbatim and double-escaped `\P`→`\\P` on re-export, the ADR-636 Φ2.3
+ * known limitation), feed the FULL ADR-344 parser SSoT (`tokenizeMtext` → `parseMtext`)
+ * so `textNode` becomes a real multi-paragraph/run AST. Then the render/hit-test/snap
+ * pipeline breaks lines correctly and applies the first-run style, AND `serializeDxfTextNode`
+ * round-trips the `\P` cleanly (runs no longer hold raw codes → no double-escape).
+ *
  * 🏢 ADR-344 Phase 11.D TODO: same XDATA wire-up note as convertText() above.
  */
 export function convertMText(
@@ -210,24 +224,36 @@ export function convertMText(
   index: number
 ): AnySceneEntity | null {
   const { x, y, height, rotation } = parseTextTransform(data);
-  let text = data['1'] || data['3'] || '';
+  const rawContent = data['1'] || data['3'] || '';
   const attachmentPoint = parseInt(data['71']) || 1;
   const alignment = mapMTextAlignment(attachmentPoint);
 
-  if (isNaN(x) || isNaN(y) || text.trim() === '') {
-    dwarn('EntityConverter', `⚠️ Skipping MTEXT ${index}: missing position or text`, { x, y, text });
+  if (isNaN(x) || isNaN(y) || rawContent.trim() === '') {
+    dwarn('EntityConverter', `⚠️ Skipping MTEXT ${index}: missing position or text`, { x, y, text: rawContent });
     return null;
   }
 
-  text = decodeGreekText(text);
+  // Greek decode FIRST — legacy `\uXXXX` (lowercase) escapes that the tokenizer's `\U+`
+  // (uppercase) path does not cover; the MTEXT inline codes are untouched by the decode.
+  const decoded = decodeGreekText(rawContent);
+  // `height` (code 40) seeds the base run style (default char height for runs w/o `\H`).
+  const parsed = parseMtext(tokenizeMtext(decoded), { height });
+  // `parseMtext` hard-codes attachment 'TL' / rotation 0 (it sees only inline codes) — set
+  // the real values from the entity (code 71 attachment + code 50 rotation).
+  const textNode: DxfTextNode = {
+    ...parsed,
+    attachment: MTEXT_ATTACHMENT_MAP[attachmentPoint] ?? 'TL',
+    rotation,
+  };
+  // Flat `.text` = PLAIN text (paragraph breaks → `\n`), NOT the raw inline-code string:
+  // the render/hit-test/snap SSoTs read `e.text ?? extractFlatText(textNode)` — flat wins,
+  // so a raw `.text` would show `\P`/codes verbatim despite a correct AST.
+  const plainText = extractFlatText(textNode);
   const color = extractEntityColor(data);
 
   return buildTextSceneEntity({
-    idPrefix: 'mtext', index, layer, x, y, text, height, rotation, alignment,
-    textNode: buildTextNodeFromFlat(
-      text.trim(), height, rotation, alignment,
-      MTEXT_ATTACHMENT_MAP[attachmentPoint],
-    ),
+    idPrefix: 'mtext', index, layer, x, y, text: plainText, height, rotation, alignment,
+    textNode,
     color,
   });
 }

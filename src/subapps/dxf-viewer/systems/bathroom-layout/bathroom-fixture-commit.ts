@@ -9,8 +9,13 @@
  * Units bridge: the solver works in mm; a fixture's `position` is stored in SCENE
  * units while its `width`/`length` stay in mm. So we scale each placement centre
  * mm→scene (`mmToSceneUnits`) and pass the footprint dims straight through in mm.
- * The entity rotation is read off the footprint's first edge (bl→br), which runs
- * along the wall — exactly the `mep-fixture` width axis at rotation 0.
+ *
+ * Facing (Στάδιο 3): the entity rotation is derived from the placement's `rotationDeg`
+ * (= `atan2(inward)`, the wall's into-room normal) so every fixture sits with its BACK
+ * on the wall and its FRONT into the room (Revit "room-bounding fixture facing"). The
+ * `mep-fixture` symbol draws its front at local −Y (`symbol-vector-helpers` convention
+ * `v=0 → front edge`), so aligning that front with `inward` needs a +90° offset — see
+ * {@link MEP_FIXTURE_SYMBOL_FRONT_OFFSET_DEG}.
  *
  * The `vanity` (επιπλομπάνιο) has no `mep-fixture`/furniture kind yet (ADR-638 later
  * stage adds `FurnitureKind:'vanity'`); it is reported in `skipped`, not silently
@@ -19,7 +24,6 @@
  * @see docs/centralized-systems/reference/adrs/ADR-638-bathroom-auto-layout-generator.md
  */
 
-import type { Point2D } from '../../rendering/types/Types';
 import { appendEntitiesToScene, type SceneAppendAccessor } from '../../bim/scene/append-entity-to-scene';
 import {
   buildDefaultMepFixtureParams,
@@ -48,12 +52,27 @@ export interface BathroomFixtureBuildResult {
   readonly skipped: SkippedFixture[];
 }
 
-/** Degrees CCW of the footprint's first edge (bl→br = along the wall = width axis). */
-function rotationDegFromFootprint(footprint: readonly Point2D[]): number {
-  if (footprint.length < 2) return 0;
-  const a = footprint[0];
-  const b = footprint[1];
-  return (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+/**
+ * Degrees added to a placement's `rotationDeg` (= `atan2(inward)`) to make the fixture
+ * FACE the room (back on the wall). Derivation:
+ *   - `mep-fixture` rotation θ (CCW) maps the symbol's local +Y to world angle θ+90°,
+ *     local −Y to θ−90° (`mep-fixture-geometry.ts` `transformFootprint`).
+ *   - The symbol draws its FRONT at local −Y (`symbol-vector-helpers` convention
+ *     `v=0 → front edge, v=1 → back edge`; e.g. the WC cistern sits at v≈1, the bowl at
+ *     v≈0). This is a single global convention shared by every sanitary/appliance drawer.
+ *   - We want local −Y (front) to point along `inward`: θ−90° = atan2(inward) = rotationDeg
+ *     ⇒ θ = rotationDeg + 90°.
+ * A fixed +90° (not per-kind), because the front-at-−Y convention is uniform across kinds.
+ */
+export const MEP_FIXTURE_SYMBOL_FRONT_OFFSET_DEG = 90;
+
+/**
+ * Rotation (deg CCW) for a placed fixture so its back hugs the wall and its front looks
+ * into the room. Reuses the solver's `rotationDeg` (`atan2(inward)`) — the wall-facing
+ * ground truth — plus the symbol front offset. No footprint-edge recomputation.
+ */
+function fixtureFacingRotationDeg(placementRotationDeg: number): number {
+  return placementRotationDeg + MEP_FIXTURE_SYMBOL_FRONT_OFFSET_DEG;
 }
 
 /**
@@ -75,7 +94,7 @@ export function buildBathroomFixtureEntities(
     }
     const params = buildDefaultMepFixtureParams(
       { x: p.center.x * toScene, y: p.center.y * toScene },
-      { kind: p.kind, width: p.widthMm, length: p.depthMm, rotation: rotationDegFromFootprint(p.footprint) },
+      { kind: p.kind, width: p.widthMm, length: p.depthMm, rotation: fixtureFacingRotationDeg(p.rotationDeg) },
       ctx.sceneUnits,
     );
     const res = buildMepFixtureEntity(params, ctx.layerId);
