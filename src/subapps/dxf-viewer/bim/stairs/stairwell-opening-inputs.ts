@@ -39,20 +39,41 @@ export interface StairwellInputOptions {
   readonly sceneUnits?: SceneUnits;
   /** Host lookup για attach-resolved κατακόρυφο προφίλ (ADR-401). Απόν → nominal. */
   readonly resolveHostInput?: StairVerticalContext['resolveHostInput'];
+  /**
+   * ADR-632 cross-level — datum-relative FFL (mm) του ορόφου της σκάλας, ώστε τα z
+   * να ανέβουν σε **απόλυτο** datum (ADR-369 §2). Η in-scene γεωμετρία είναι
+   * **level-relative** (0-based ανά όροφο· ο 3D stacker προσθέτει `floorElevationMm`
+   * — βλ. `multi-floor-3d-source`). Same-level/single-level → default `0` =
+   * byte-for-byte η προηγούμενη συμπεριφορά (σκάλα & πλάκα μοιράζονται τον ίδιο
+   * offset, ακυρώνεται). Cross-level (σκάλα ορόφου Ν, πλάκα ορόφου Ν+1) → κάθε
+   * πλευρά περνά το **δικό της** FFL ώστε ο planner να συγκρίνει headroom σε κοινό
+   * απόλυτο datum. Reuse `resolveFloorElevationMm` (`building-foundation-level`).
+   */
+  readonly floorElevationMm?: number;
 }
 
 // ─── Slab candidates ─────────────────────────────────────────────────────────
 
 /**
- * Υποψήφιες υπερκείμενες πλάκες από `SlabEntity[]`. `topZmm = levelElevation +
- * heightOffsetFromLevel` (top-face FFL, ADR-369 §2.1)· `undersideZmm = top −
- * thickness`. Και τα δύο σε mm· `outline` στις μονάδες σκηνής (ίδιος χώρος με τη σκάλα).
+ * Υποψήφιες υπερκείμενες πλάκες από `SlabEntity[]`. `topZmm = floorElevationMm +
+ * levelElevation + heightOffsetFromLevel` (top-face FFL, ADR-369 §2.1)·
+ * `undersideZmm = top − thickness`. Και τα δύο σε mm· `outline` στις μονάδες σκηνής
+ * (κοινός χώρος x/y με τη σκάλα — cross-floor plans share building origin, ίδια
+ * υπόθεση με το ETICS `resolveSlabsAboveForLevel`).
+ *
+ * ADR-632 cross-level — `floorElevationMm` = datum-relative FFL (mm) του ορόφου
+ * **της πλάκας** (default `0` = same-level/single-level, byte-for-byte η παλιά
+ * συμπεριφορά). Η in-scene `levelElevation` είναι level-relative (0-based ανά
+ * όροφο)· προσθέτοντας το FFL του ορόφου της πλάκας ανεβαίνει σε απόλυτο datum ώστε
+ * να συγκρίνεται με σκάλα άλλου ορόφου.
  */
 export function buildStairwellSlabCandidates(
   slabs: readonly SlabEntity[],
+  floorElevationMm = 0,
 ): StairwellSlabCandidate[] {
   return slabs.map((slab) => {
-    const topZmm = slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0);
+    const topZmm =
+      floorElevationMm + slab.params.levelElevation + (slab.params.heightOffsetFromLevel ?? 0);
     return {
       slabId: slab.id,
       outline: slab.params.outline,
@@ -81,25 +102,38 @@ function buildStairInput(
   stair: StairEntity,
   ctx: StairVerticalContext,
   sceneToMm: number,
+  floorElevationMm: number,
 ): StairwellPlanStair {
   const profile = resolveStairVerticalProfile(stair.params, ctx);
-  // ADR-632 vs ADR-358 tread shape adapter (SSoT boundary). The stairwell planner
-  // represents each tread as a `{ vertices }` `Polygon3D`, but the stair geometry
-  // SSoT (`StairGeometry.treads`) is a BARE `Point3D[]` per tread. Wrap ONCE here —
-  // this file is the scene→planner translation boundary — so both tread consumers
-  // (`computeStairNosings` + `computeStairwellOpeningOutline`) read `.vertices`
-  // safely. Without it any stair with real geometry crashed at `tread.vertices`
-  // (`undefined`), first surfaced by a multi-flight turn commit (ADR-633).
-  const treads: Polygon3D[] = stair.geometry.treads.map((vertices) => ({ vertices: [...vertices] }));
+  // ADR-632 — FULL tread set (below + above the 2D cut plane). `StairGeometry.treads`
+  // is a **legacy alias = `treadsBelowCut`** (only treads under `cutPlaneHeight`, default
+  // 1200mm — the 2D section-view subset). The headroom-violating treads sit near the
+  // ceiling, ABOVE the cut plane, so reading `.treads` alone dropped exactly the
+  // dangerous upper steps → the auto «well» opening landed on the wrong (lower) slice
+  // of the run. Mirror the 3D SSoT (`StairToThreeConverter` spreads
+  // `treadsBelowCut ∪ treadsAboveCut`) so nosings + outline cover the whole stair.
+  // Fallback to `.treads` keeps legacy fixtures (that only set the alias) working.
+  const belowCut = stair.geometry.treadsBelowCut ?? stair.geometry.treads;
+  const aboveCut = stair.geometry.treadsAboveCut ?? [];
+  // Tread shape adapter (SSoT boundary): the planner reads `{ vertices }` `Polygon3D`,
+  // but the stair geometry SSoT stores each tread as a BARE `Point3D[]`. Wrap ONCE here
+  // (this file is the scene→planner translation boundary) so both consumers
+  // (`computeStairNosings` + `computeStairwellOpeningOutline`) read `.vertices` safely.
+  const treads: Polygon3D[] = [...belowCut, ...aboveCut].map((vertices) => ({ vertices: [...vertices] }));
+  // ADR-632 cross-level — lift every z into ABSOLUTE datum by adding this stair's
+  // floor FFL. In-scene geometry is level-relative (0-based per floor); the profile
+  // (base/top) and nosings are all in that same relative frame, so a single uniform
+  // offset moves the whole stair into the building's absolute datum. Same-level →
+  // `floorElevationMm = 0` (both stair & the overhead slab share the offset → cancels).
   const nosingsZmm = computeStairNosings(treads, stair.params.direction).map((n) => ({
     treadIndex: n.treadIndex,
-    zMm: n.point.z * sceneToMm,
+    zMm: floorElevationMm + n.point.z * sceneToMm,
   }));
   return {
     stairId: stair.id,
     footprint: bboxFootprint(stair),
-    baseZmm: profile.baseZmm,
-    topZmm: profile.topZmm,
+    baseZmm: floorElevationMm + profile.baseZmm,
+    topZmm: floorElevationMm + profile.topZmm,
     treads,
     nosingsZmm,
     minHeadroomMm: effectiveMinHeadroomMm(stair.params.codeProfile),
@@ -115,8 +149,9 @@ export function buildStairwellPlanStairs(
   options: StairwellInputOptions = {},
 ): StairwellPlanStair[] {
   const sceneToMm = dxfUnitToMm(options.sceneUnits ?? 'mm');
+  const floorElevationMm = options.floorElevationMm ?? 0;
   const ctx: StairVerticalContext = { resolveHostInput: options.resolveHostInput };
-  return stairs.map((stair) => buildStairInput(stair, ctx, sceneToMm));
+  return stairs.map((stair) => buildStairInput(stair, ctx, sceneToMm, floorElevationMm));
 }
 
 // ─── Managed openings ────────────────────────────────────────────────────────
