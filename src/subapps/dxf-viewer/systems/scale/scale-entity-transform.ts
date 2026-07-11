@@ -129,7 +129,13 @@ function scaleLeader(e: Entity & { type: 'leader' }, base: Point2D, sx: number, 
 }
 
 function scalePoint2(e: Entity & { type: 'point' }, base: Point2D, sx: number, sy: number) {
-  return { position: scalePoint(e.position, base, sx, sy) };
+  // ADR-635 Φάση C — $PDSIZE > 0 is in drawing units, so it scales with the canonical-mm
+  // factor like any length (|sx|). 0 / <0 are viewport-relative (resolved at draw time) → untouched.
+  const pdSize = (e as { pdSize?: number }).pdSize;
+  return {
+    position: scalePoint(e.position, base, sx, sy),
+    ...(pdSize !== undefined && pdSize > 0 ? { pdSize: pdSize * Math.abs(sx) } : {}),
+  };
 }
 
 function scaleDimension(e: Entity & { type: 'dimension' }, base: Point2D, sx: number, sy: number) {

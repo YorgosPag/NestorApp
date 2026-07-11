@@ -255,6 +255,11 @@ Tests: `dxf-quad-fill-converter.test.ts` (8) + `dxf-point-converter.test.ts` (4)
   currently rendered as straight segments (21 curved vertices in the sample).
 
 ## Changelog
+- **2026-07-11 — Φ C (POINT glyph render + scale):** το POINT σταματά να είναι no-op — νέο SSoT
+  `rendering/entities/shared/point-glyph.ts` (pure `$PDMODE`/`$PDSIZE` decode: figure dot/plus/cross/tick
+  + circle/square enclosures + size math· fully unit-tested), stamping στο `PointRenderer` (mirror του
+  arrowhead decode/stamp split). `scaleEntity` `case 'point'` + converter/parser coverage. Σχετίζεται
+  με τα stair rest-landing edits (ADR-637) που ταξιδεύουν στο ίδιο batch.
 - **2026-07-11 — LEADER renderer file landed:** το `rendering/entities/LeaderRenderer.ts` +
   `EntityRendererComposite` registration + `scaleEntity` `case 'leader'` committed (η υλοποίηση που
   περιγράφεται στην από κάτω εγγραφή Part B· render/scale coverage πλέον στο repo, CHECK 6D gate).

@@ -215,7 +215,7 @@ export function computeWalklineStair(
     const risers = buildWalklineRisers(run.walkline, params.width, sign);
     const stringers = buildStringersFromWalkline(run.walkline, params.width);
     const cutLine = buildWalklineCutLine(run.walkline, params.width, cutPlaneHeight);
-    return assembleStairGeometry(params, {
+    const geometry = assembleStairGeometry(params, {
       treads: run.treads,
       risers,
       stringers,
@@ -225,6 +225,11 @@ export function computeWalklineStair(
       flightSplit: run.flightSplit,
       landings: run.landings,
     });
+    // ADR-637 Phase 4-C — surface the per-landing grip handles (mirror of the
+    // rectilinear `buildRectilinearRun` consumers). Absent ⇒ no rest-landing grips.
+    return run.landingHandles.length > 0
+      ? { ...geometry, restLandingHandles: run.landingHandles }
+      : geometry;
   }
 
   const treads = buildWalklineTreads(walkline, params.width, sign);

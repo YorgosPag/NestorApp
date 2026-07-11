@@ -410,7 +410,7 @@ export function convertEntityToScene(
       return convertRay(data, layer, index);
     // ADR-635 Φάση B — filled quads (bowtie-corrected → solid hatch), point, multiline.
     case 'POINT':
-      return convertPoint(data, layer, index);
+      return convertPoint(data, layer, index, header);
     case 'SOLID':
       return convertSolid(data, layer, index);
     case '3DFACE':

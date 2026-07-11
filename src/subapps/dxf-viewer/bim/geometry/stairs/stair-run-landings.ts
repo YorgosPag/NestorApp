@@ -47,11 +47,15 @@ const REST_LANDING_SUPPORTED_KINDS: ReadonlySet<StairKind> = new Set([
   // sampled walkline).
   'sketch',
   'elliptical',
-  // ADR-637 Phase 3 (radial) — spiral/helical: a landing is a flat annular sector
-  // swept over a wider angle at constant z (the sweep grows). triangular-fan shares
-  // the radial builder but is a base flare, not a run with landings → deferred.
+  // ADR-637 Phase 3 (radial) — spiral/helical/triangular-fan: a landing is a flat
+  // annular (or apex-triangle) sector swept over a wider angle at constant z (the
+  // sweep grows). triangular-fan is an apex-mode radial run identical in geometry to
+  // spiral (same `radialSector`), so a landing renders the same wider wedge; a rest
+  // landing keeps `stepCount` invariant (level model) so the fan's single-arc
+  // `stepCount === stepCountPerArc` assertion still holds.
   'spiral',
   'helical',
+  'triangular-fan',
 ]);
 
 /** True when `kind`'s geometry generator consumes `StairParams.restLandings`. */

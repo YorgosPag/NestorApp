@@ -77,6 +77,17 @@ export interface DxfHeaderData {
   annoScale: number;
   /** $MEASUREMENT - Drawing units (0=English, 1=Metric) */
   measurement: number;
+  /**
+   * $PDMODE - Point display mode bitmask (ADR-635 Φάση C). Drawing-wide: figure =
+   * `pdmode & 7` (0=dot,1=none,2=plus,3=X,4=tick), +32=circle around, +64=square around.
+   * Baked onto every imported PointEntity so PointRenderer draws the AutoCAD glyph.
+   */
+  pdmode: number;
+  /**
+   * $PDSIZE - Point display size (ADR-635 Φάση C). >0 = absolute drawing units,
+   * 0 = 5% of viewport height, <0 = |value|% of viewport height.
+   */
+  pdsize: number;
 }
 
 // ============================================================================

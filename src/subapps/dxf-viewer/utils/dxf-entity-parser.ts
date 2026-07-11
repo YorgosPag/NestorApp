@@ -71,7 +71,10 @@ export class DxfEntityParser {
       dimscale: 1,
       dimtxt: 2.5,
       annoScale: 1,
-      measurement: 1
+      measurement: 1,
+      // ADR-635 Φάση C — point display: 0 = dot figure, 0 = 5%-viewport size (AutoCAD defaults).
+      pdmode: 0,
+      pdsize: 0
     };
 
     let inHeader = false;
@@ -112,6 +115,13 @@ export class DxfEntityParser {
           break;
         case '$MEASUREMENT':
           if (code === '70') header.measurement = parseInt(value) || 1;
+          break;
+        // ADR-635 Φάση C — point display sysvars (drawing-wide glyph mode + size).
+        case '$PDMODE':
+          if (code === '70') header.pdmode = parseInt(value) || 0;
+          break;
+        case '$PDSIZE':
+          if (code === '40') header.pdsize = parseFloat(value) || 0;
           break;
       }
     }

@@ -127,6 +127,15 @@ export interface PointEntity extends BaseEntity {
   position: Point2D;
   size?: number;
   style?: 'dot' | 'cross' | 'plus' | 'circle';
+  /**
+   * ADR-635 Φάση C — DXF $PDMODE display bitmask, baked from the drawing header at
+   * import time (drawing-wide sysvar, but denormalized per-point so PointRenderer stays
+   * stateless — mirrors DIMSTYLE baking on DimensionEntity). figure = `pdMode & 7`
+   * (0=dot,1=none,2=plus,3=X,4=tick), +32=circle, +64=square. undefined → dot (default).
+   */
+  pdMode?: number;
+  /** ADR-635 Φάση C — DXF $PDSIZE: >0 drawing units, 0 = 5%-viewport, <0 = |%|-viewport. */
+  pdSize?: number;
 }
 
 /**

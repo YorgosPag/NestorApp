@@ -21,11 +21,12 @@
  * both fold `planStairRunSegments` into one geometry, one via the flight generator,
  * this one via the sampled walkline.
  *
- * NOTE (deferred): grip handles are intentionally NOT surfaced for this family — the
- * `slideRestLanding` transform projects axially on `params.direction`/`totalRun`,
- * which are undefined (`totalRun = 0`) for curved runs, so a slide grip would jump
- * the landing to the top. Curved-run rest-landing grips need an arclength-projection
- * model (a future phase). The panel add/remove/length/depth path is fully functional.
+ * ADR-637 Phase 4-C — grip handles ARE now surfaced for this family: each landing
+ * emits a `RestLandingHandle` (centroid + travel tangent + length/depth) from the
+ * SAME stretched-chord walk that builds the landing quad (SSoT — a grip can never
+ * disagree with what's drawn). `slideRestLanding` projects the cursor onto the
+ * sampled walkline by arc-length (not axially — curved runs have `totalRun = 0`),
+ * so a curved landing slides along its own curve.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-637-stair-rest-landings-ssot.md
  * @see ./stair-flight-run-builder.ts (rectilinear sibling)
@@ -33,10 +34,19 @@
  */
 
 import type { Point3D } from '../../../rendering/types/Types';
-import type { Polygon3D, Polyline3D, StairRestLanding } from '../../../bim/types/stair-types';
+import type {
+  Polygon3D,
+  Polyline3D,
+  RestLandingHandle,
+  StairRestLanding,
+} from '../../../bim/types/stair-types';
 import { point } from './stair-geometry-shared';
 import { buildWalklineTreads, chordTangent } from './stair-geometry-samplers';
-import { planStairRunSegments, resolveRestLandingLength } from './stair-run-landings';
+import {
+  planStairRunSegments,
+  resolveRestLandingDepth,
+  resolveRestLandingLength,
+} from './stair-run-landings';
 
 /** Treads + landings + label bookkeeping for a walkline run carrying rest landings. */
 export interface WalklineRunResult {
@@ -46,6 +56,8 @@ export interface WalklineRunResult {
   readonly treads: readonly Polygon3D[];
   /** Flat landing quads (the stretched chords), in level order. */
   readonly landings: readonly Polygon3D[];
+  /** ADR-637 Phase 4-C — per-landing grip handle (centroid + travel tangent), level order. */
+  readonly landingHandles: readonly RestLandingHandle[];
   /** Per-sub-flight rising-tread counts (label numbering; `length === landings.length + 1`). */
   readonly flightSplit: readonly number[];
 }
@@ -77,6 +89,7 @@ export function buildWalklineRunWithLandings(
   // Stretch each landing chord along its base tangent; rigid-translate the rest.
   const out: Point3D[] = new Array(walkline.length);
   out[0] = point(walkline[0].x, walkline[0].y, walkline[0].z);
+  const landingHandles: RestLandingHandle[] = [];
   let shiftX = 0;
   let shiftY = 0;
   for (let level = 0; level < stepCount; level++) {
@@ -91,6 +104,16 @@ export function buildWalklineRunWithLandings(
       out[level + 1] = point(endX, endY, next.z); // z unchanged → riser onto next tread
       shiftX = endX - next.x;
       shiftY = endY - next.y;
+      // Handle centroid = midpoint of the stretched chord at the landing's flat z
+      // (the wedge tread sits at `out[level].z`, see buildWalklineTreads); travel
+      // axis = the base tangent the chord was stretched along.
+      landingHandles.push({
+        id: landing.id,
+        center: point((out[level].x + endX) / 2, (out[level].y + endY) / 2, out[level].z),
+        along: t,
+        length,
+        depth: resolveRestLandingDepth(landing.depth, width),
+      });
     } else {
       out[level + 1] = point(next.x + shiftX, next.y + shiftY, next.z);
     }
@@ -105,5 +128,5 @@ export function buildWalklineRunWithLandings(
     else treads.push(allTreads[i]);
   }
 
-  return { walkline: out, treads, landings, flightSplit };
+  return { walkline: out, treads, landings, landingHandles, flightSplit };
 }

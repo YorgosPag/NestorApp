@@ -2,6 +2,7 @@
  * ADR-635 Φάση B — POINT entity converter tests.
  */
 import { convertPoint } from '../dxf-point-converter';
+import type { DxfHeaderData } from '../dxf-parser-types';
 
 type PointScene = {
   type: string;
@@ -9,7 +10,13 @@ type PointScene = {
   layerId: string;
   position: { x: number; y: number };
   color?: string;
+  pdMode?: number;
+  pdSize?: number;
 };
+
+const header = (pdmode: number, pdsize: number): DxfHeaderData => ({
+  insunits: 4, dimscale: 1, dimtxt: 2.5, annoScale: 1, measurement: 1, pdmode, pdsize,
+});
 
 describe('convertPoint — DXF POINT import (ADR-635 Φάση B)', () => {
   it('parses valid 10/20 into position', () => {
@@ -37,5 +44,18 @@ describe('convertPoint — DXF POINT import (ADR-635 Φάση B)', () => {
     const e = convertPoint({ '10': '0', '20': '0' }, 'L1', 6) as PointScene;
     expect(e).not.toBeNull();
     expect('color' in e).toBe(false);
+  });
+
+  // ADR-635 Φάση C — drawing-wide $PDMODE/$PDSIZE baked per-point.
+  it('bakes $PDMODE/$PDSIZE from the header onto the point', () => {
+    const e = convertPoint({ '10': '0', '20': '0' }, 'L1', 7, header(35, 2.5)) as PointScene;
+    expect(e.pdMode).toBe(35);
+    expect(e.pdSize).toBe(2.5);
+  });
+
+  it('omits pdMode/pdSize when no header is passed (tool-created point → renderer default)', () => {
+    const e = convertPoint({ '10': '0', '20': '0' }, 'L1', 8) as PointScene;
+    expect('pdMode' in e).toBe(false);
+    expect('pdSize' in e).toBe(false);
   });
 });

@@ -18,11 +18,12 @@
  * Called by `computeRadialStair` only when `hasRestLandings` is true; the no-rest
  * path there is untouched (byte-identical single-flight radial geometry).
  *
- * NOTE (deferred): grip handles are NOT surfaced for this family — the
- * `slideRestLanding` transform projects axially on `params.direction`/`totalRun`,
- * both undefined for radial runs (`totalRun = 0`). Curved-run landing grips need an
- * arclength/angle-projection model (a future phase). The panel add/remove/length/
- * depth path is fully functional.
+ * ADR-637 Phase 4-C — grip handles ARE now surfaced for this family: each landing
+ * emits a `RestLandingHandle` at the mid-sweep walkline point (travel axis = the
+ * radial tangent there), from the SAME angle walk that builds the landing sector.
+ * `slideRestLanding` projects the cursor onto the sampled walkline by arc-length
+ * (radial runs have `totalRun = 0`), so a spiral/helical landing slides along its
+ * own curve.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-637-stair-rest-landings-ssot.md
  * @see ./stair-walkline-run-builder.ts (walkline-following sibling)
@@ -30,7 +31,13 @@
  */
 
 import type { Point3D } from '../../../rendering/types/Types';
-import type { Polygon3D, Segment3D, StairGeometry, StairParams } from '../../../bim/types/stair-types';
+import type {
+  Polygon3D,
+  RestLandingHandle,
+  Segment3D,
+  StairGeometry,
+  StairParams,
+} from '../../../bim/types/stair-types';
 import { DEFAULT_CUT_PLANE_HEIGHT, arrowSymbol } from './stair-geometry-shared';
 import {
   assembleStairGeometry,
@@ -38,9 +45,14 @@ import {
   radialPoint,
   radialRiser,
   radialSector,
+  radialTangentAt,
 } from './stair-geometry-generators';
 import type { RadialStairConfig } from './stair-geometry-runs';
-import { planStairRunSegments, resolveRestLandingLength } from './stair-run-landings';
+import {
+  planStairRunSegments,
+  resolveRestLandingDepth,
+  resolveRestLandingLength,
+} from './stair-run-landings';
 
 const DEG2RAD = Math.PI / 180;
 
@@ -65,6 +77,7 @@ export function buildRadialRunWithLandings(
   const treads: Polygon3D[] = [];
   const risers: Segment3D[] = [];
   const landings: Polygon3D[] = [];
+  const landingHandles: RestLandingHandle[] = [];
   const flightSplit: number[] = [];
   // One boundary per level edge (walkline + stringers) — `stepCount+1` entries.
   const boundaries: Array<{ theta: number; z: number }> = [{ theta: 0, z: center.z }];
@@ -91,6 +104,15 @@ export function buildRadialRunWithLandings(
       const length = resolveRestLandingLength(seg.landing.length, params.width);
       const dTheta = walklineRadius > 1e-9 ? sign * (length / walklineRadius) : angleStep;
       landings.push(radialSector(center, innerRadius, outerRadius, theta, theta + dTheta, zAt(seg.level), apex, sign));
+      // Grip handle at the mid-sweep walkline point; travel axis = radial tangent there.
+      const midTheta = theta + dTheta / 2;
+      landingHandles.push({
+        id: seg.landing.id,
+        center: radialPoint(center, walklineRadius, midTheta, zAt(seg.level)),
+        along: radialTangentAt(midTheta, sign),
+        length,
+        depth: resolveRestLandingDepth(seg.landing.depth, params.width),
+      });
       advance(seg.level, dTheta);
     }
   }
@@ -103,7 +125,7 @@ export function buildRadialRunWithLandings(
   const cutPlaneHeight = params.cutPlaneHeight ?? DEFAULT_CUT_PLANE_HEIGHT;
   const cutLine = buildWalklineCutLine(walkline, params.width, cutPlaneHeight);
 
-  return assembleStairGeometry(params, {
+  const geometry = assembleStairGeometry(params, {
     treads,
     risers,
     stringers,
@@ -113,4 +135,9 @@ export function buildRadialRunWithLandings(
     flightSplit,
     landings,
   });
+  // ADR-637 Phase 4-C — surface the per-landing grip handles (mirror of the
+  // rectilinear `buildRectilinearRun` consumers). Absent ⇒ no rest-landing grips.
+  return landingHandles.length > 0
+    ? { ...geometry, restLandingHandles: landingHandles }
+    : geometry;
 }

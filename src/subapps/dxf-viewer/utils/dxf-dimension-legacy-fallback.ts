@@ -32,7 +32,9 @@ const DEFAULT_HEADER: DxfHeaderData = {
   dimscale: 1,      // No scaling
   dimtxt: 2.5,      // AutoCAD Standard DIMTXT default (mm)
   annoScale: 1,     // 1:1
-  measurement: 1    // Metric
+  measurement: 1,   // Metric
+  pdmode: 0,        // ADR-635 Φάση C — dot figure (default)
+  pdsize: 0         // 5%-viewport size (default)
 };
 
 // ============================================================================
