@@ -166,6 +166,80 @@ export function planStairRunSegments(
   return segments;
 }
 
+/**
+ * Split a global rest-landing schedule across the flights of a multi-flight run.
+ *
+ * A multi-flight stair develops as `flightTreadCounts` = per-flight level spans;
+ * a rest landing's global `at` (0..1 over the WHOLE developed run) is mapped to a
+ * global tread index `round(at·(total−1))`, then routed to the flight whose tread
+ * range contains it. Its `at` is RE-EXPRESSED as a LOCAL fraction within that
+ * flight so `buildRectilinearRun` (which plans each flight independently) places
+ * it at the same level the global schedule intended.
+ *
+ * A landing that maps to the very first (`0`) or very last (`total−1`) tread of
+ * the whole stair — where no rest landing is legal (levels `0` / `span−1` are
+ * reserved treads) — is clamped inward to the nearest interior flight tread, so a
+ * boundary landing is routed to a real flight rather than silently dropped. Each
+ * flight's own planner then re-clamps to its legal `[1, span−2]` band.
+ *
+ * Returns one array per flight (same length/order as `flightTreadCounts`), each
+ * carrying the landings routed to that flight with local `at`.
+ */
+export function partitionRestLandingsByFlight(
+  flightTreadCounts: readonly number[],
+  restLandings: readonly StairRestLanding[] | undefined,
+): StairRestLanding[][] {
+  const perFlight: StairRestLanding[][] = flightTreadCounts.map(() => []);
+  if (!restLandings || restLandings.length === 0 || flightTreadCounts.length === 0) {
+    return perFlight;
+  }
+  const total = flightTreadCounts.reduce((a, b) => a + b, 0);
+  if (total < 1) return perFlight;
+
+  // Flight start (cumulative first-tread level) per flight.
+  const flightStart: number[] = [];
+  let acc = 0;
+  for (const n of flightTreadCounts) {
+    flightStart.push(acc);
+    acc += n;
+  }
+
+  for (const landing of restLandings) {
+    // Global tread index this landing claims, clamped to the interior [1, total−2]
+    // so a boundary `at` still lands on a real (non-reserved) flight tread.
+    const raw = Math.round(landing.at * (total - 1));
+    const globalIdx = clampToInterior(raw, total);
+    if (globalIdx === null) continue; // total < 3 → no interior tread anywhere
+    const flightIdx = flightIndexOfLevel(globalIdx, flightStart, flightTreadCounts);
+    const span = flightTreadCounts[flightIdx];
+    const localLevel = globalIdx - flightStart[flightIdx];
+    // Re-express as a local fraction; the flight's own planner re-clamps to its band.
+    const localAt = span > 1 ? localLevel / (span - 1) : 0;
+    perFlight[flightIdx].push({ ...landing, at: localAt });
+  }
+  return perFlight;
+}
+
+/** Clamp a global tread index into `[1, total−2]`, or `null` when no interior exists. */
+function clampToInterior(idx: number, total: number): number | null {
+  if (total < 3) return null;
+  if (idx < 1) return 1;
+  if (idx > total - 2) return total - 2;
+  return idx;
+}
+
+/** Find the flight whose `[start, start+count)` tread range contains `level`. */
+function flightIndexOfLevel(
+  level: number,
+  flightStart: readonly number[],
+  flightTreadCounts: readonly number[],
+): number {
+  for (let f = flightStart.length - 1; f >= 0; f--) {
+    if (level >= flightStart[f] && level < flightStart[f] + flightTreadCounts[f]) return f;
+  }
+  return 0;
+}
+
 /** True when the params carry at least one rest landing that can materialize. */
 export function hasRestLandings(
   stepCount: number,

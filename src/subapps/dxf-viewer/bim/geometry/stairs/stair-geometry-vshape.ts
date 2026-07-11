@@ -34,6 +34,8 @@ import {
   arrowSymbol,
 } from './stair-geometry-shared';
 import { assembleMultiFlight, buildRectilinearFlight } from './stair-geometry-generators';
+import { buildRectilinearRun } from './stair-flight-run-builder';
+import { partitionRestLandingsByFlight } from './stair-run-landings';
 
 const MIN_ARM_ANGLE_DEG = 15;
 const MAX_ARM_ANGLE_DEG = 170;
@@ -45,6 +47,11 @@ export function computeVShape(
   variant: StairVariantVShape,
 ): StairGeometry {
   assertVShapeConstraints(variant);
+  // ADR-637 Phase 2 — rest landings re-route each arm through `buildRectilinearRun`.
+  // No rest landings → the byte-identical bare-flight path below.
+  if (params.restLandings && params.restLandings.length > 0) {
+    return computeVShapeWithLandings(params, variant);
+  }
   const { basePoint, direction, rise, tread, nosing, width, upDirection } = params;
   const [n1, n2] = variant.armSplit;
   const u1 = directionToUnitVector(direction);
@@ -61,6 +68,39 @@ export function computeVShape(
     cutDirs: [u1, u2],
     flightSplit: [n1, n2],
     arrowSymbol: arrowSymbol(basePoint, walkline[0], upDirection),
+  });
+}
+
+/**
+ * ADR-637 Phase 2 — V-shape carrying rest landings. Both arms diverge from the
+ * shared apex (centreline origin), so each arm is one `buildRectilinearRun` with
+ * its partitioned landings. The developed run is `[arm1, arm2]`; the apex is a
+ * geometric junction (NOT a landing), so it carries no landing number — arm2
+ * treads simply continue the global count after arm1's.
+ */
+function computeVShapeWithLandings(
+  params: Readonly<StairParams>,
+  variant: StairVariantVShape,
+): StairGeometry {
+  const { basePoint, direction, rise, tread, nosing, width, upDirection } = params;
+  const [n1, n2] = variant.armSplit;
+  const u1 = directionToUnitVector(direction);
+  const u2 = directionToUnitVector(direction + variant.armAngleDeg);
+  const per = partitionRestLandingsByFlight([n1, n2], params.restLandings);
+  const originXY = { x: basePoint.x, y: basePoint.y };
+  const common = { startLevel: 0, baseZ: basePoint.z, rise, tread, nosing, width } as const;
+  const run1 = buildRectilinearRun({ ...common, originXY, u: u1, treadCount: n1, restLandings: per[0] });
+  const run2 = buildRectilinearRun({ ...common, originXY, u: u2, treadCount: n2, restLandings: per[1] });
+  // Walkline runs tip-of-arm-1 → apex → tip-of-arm-2 (arm 1 reversed; apex shared once).
+  const walkline = [...[...run1.walklinePts].reverse(), ...run2.walklinePts.slice(1)];
+  return assembleMultiFlight(params, {
+    treads: [...run1.treads, ...run2.treads],
+    risers: [...run1.risers, ...run2.risers],
+    walkline,
+    cutDirs: [...run1.cutDirs, ...run2.cutDirs],
+    flightSplit: [...run1.flightSplit, ...run2.flightSplit],
+    arrowSymbol: arrowSymbol(basePoint, walkline[0], upDirection),
+    landings: [...run1.landings, ...run2.landings],
   });
 }
 

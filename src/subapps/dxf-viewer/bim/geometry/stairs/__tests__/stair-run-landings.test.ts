@@ -6,6 +6,7 @@
 
 import {
   planStairRunSegments,
+  partitionRestLandingsByFlight,
   hasRestLandings,
   resolveRestLandingLength,
   resolveRestLandingDepth,
@@ -93,6 +94,61 @@ describe('planStairRunSegments', () => {
     const segs = planStairRunSegments(4, [L('a', 0.3), L('b', 0.6), L('c', 0.5)]);
     expect(landingLevels(segs)).toHaveLength(2);
     expect(treadTotal(segs) + 2).toBe(4);
+  });
+});
+
+describe('partitionRestLandingsByFlight', () => {
+  it('no landings → empty array per flight', () => {
+    expect(partitionRestLandingsByFlight([5, 5], undefined)).toEqual([[], []]);
+    expect(partitionRestLandingsByFlight([5, 5], [])).toEqual([[], []]);
+  });
+
+  it('routes a landing to the flight whose tread range contains its global level', () => {
+    // total=10; at=0.3 → globalIdx round(2.7)=3 → flight 0 (levels 0..4).
+    const per = partitionRestLandingsByFlight([5, 5], [L('a', 0.3)]);
+    expect(per[0]).toHaveLength(1);
+    expect(per[1]).toHaveLength(0);
+    // local level 3 within a 5-level flight → local at = 3/4 = 0.75.
+    expect(per[0][0].at).toBeCloseTo(0.75, 9);
+    expect(per[0][0].id).toBe('a'); // identity preserved
+  });
+
+  it('routes a late landing to the second flight with re-expressed local at', () => {
+    // at=0.7 → globalIdx round(6.3)=6 → flight 1 (levels 5..9), local level 1 → 1/4.
+    const per = partitionRestLandingsByFlight([5, 5], [L('b', 0.7)]);
+    expect(per[0]).toHaveLength(0);
+    expect(per[1]).toHaveLength(1);
+    expect(per[1][0].at).toBeCloseTo(0.25, 9);
+  });
+
+  it('splits two landings across the two flights', () => {
+    const per = partitionRestLandingsByFlight([5, 5], [L('a', 0.3), L('b', 0.7)]);
+    expect(per.map((f) => f.length)).toEqual([1, 1]);
+  });
+
+  it('clamps a boundary at=0 inward to the first flight (never dropped)', () => {
+    const per = partitionRestLandingsByFlight([5, 5], [L('a', 0)]);
+    expect(per[0]).toHaveLength(1);
+    expect(per[1]).toHaveLength(0);
+  });
+
+  it('clamps a boundary at=1 inward to the last flight (never dropped)', () => {
+    const per = partitionRestLandingsByFlight([5, 5], [L('a', 1)]);
+    expect(per[0]).toHaveLength(0);
+    expect(per[1]).toHaveLength(1);
+  });
+
+  it('asymmetric flights: routes by cumulative tread range', () => {
+    // flights [3,7], total=10; at=0.5 → globalIdx round(4.5)=5 → flight 1 (levels 3..9).
+    const per = partitionRestLandingsByFlight([3, 7], [L('a', 0.5)]);
+    expect(per[0]).toHaveLength(0);
+    expect(per[1]).toHaveLength(1);
+    // local level 5-3=2 within a 7-level flight → 2/6.
+    expect(per[1][0].at).toBeCloseTo(2 / 6, 9);
+  });
+
+  it('total < 3 → nothing placeable, arrays stay empty', () => {
+    expect(partitionRestLandingsByFlight([1, 1], [L('a', 0.5)])).toEqual([[], []]);
   });
 });
 

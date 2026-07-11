@@ -27,11 +27,14 @@ import type {
   Segment3D,
   StairGeometry,
   StairParams,
+  StairRestLanding,
   StairVariantMultiFlight,
 } from '../../../bim/types/stair-types';
 import {
   type Vec2,
   perp,
+  point,
+  directionToUnitVector,
   arrowSymbol,
 } from './stair-geometry-shared';
 import {
@@ -39,13 +42,23 @@ import {
   buildCornerLanding,
   buildRectilinearFlight,
 } from './stair-geometry-generators';
-import { walkMultiFlight } from '../../stairs/stair-multiflight-centerline';
+import {
+  advanceMultiFlightTurn,
+  walkMultiFlight,
+} from '../../stairs/stair-multiflight-centerline';
+import { buildRectilinearRun } from './stair-flight-run-builder';
+import { partitionRestLandingsByFlight } from './stair-run-landings';
 
 export function computeMultiFlight(
   params: Readonly<StairParams>,
   variant: StairVariantMultiFlight,
 ): StairGeometry {
   assertMultiFlightBuildable(variant);
+  // ADR-637 Phase 2 — rest landings re-route each flight through `buildRectilinearRun`.
+  // No rest landings → the byte-identical `walkMultiFlight` path below.
+  if (params.restLandings && params.restLandings.length > 0) {
+    return computeMultiFlightWithLandings(params, variant);
+  }
   const { rise, tread, nosing, width, upDirection } = params;
 
   const treads: Polygon3D[] = [];
@@ -90,6 +103,114 @@ export function computeMultiFlight(
     arrowSymbol: arrowSymbol(walkline[0], walkline[1], upDirection),
     landings,
   });
+}
+
+/**
+ * ADR-637 Phase 2 — multi-flight run carrying rest landings. Walks the flights
+ * manually (rather than `walkMultiFlight`, whose flight starts assume no plan
+ * shift), routing each flight through `buildRectilinearRun` with its partitioned
+ * landings. Turn landings + the quarter-turn advance reuse the SSoT
+ * `advanceMultiFlightTurn` so the turn math never diverges from `walkMultiFlight`.
+ */
+function computeMultiFlightWithLandings(
+  params: Readonly<StairParams>,
+  variant: StairVariantMultiFlight,
+): StairGeometry {
+  const { basePoint, rise, tread, nosing, width, direction, upDirection } = params;
+  const perFlight = partitionRestLandingsByFlight(variant.flights, params.restLandings);
+  const acc: MultiFlightAccum = {
+    treads: [], risers: [], landings: [], flightSplit: [], cutDirs: [], walkline: [],
+  };
+  const state: MultiFlightWalkState = {
+    dirDeg: direction, u: directionToUnitVector(direction), cx: basePoint.x, cy: basePoint.y, levelBase: 0,
+  };
+
+  for (let k = 0; k < variant.flights.length; k++) {
+    appendFlightRun(acc, state, params, variant.flights[k], perFlight[k], k === 0);
+    if (k < variant.turns.length) appendTurn(acc, state, params, variant.turns[k], variant.flights[k]);
+  }
+
+  return assembleMultiFlight(params, {
+    treads: acc.treads,
+    risers: acc.risers,
+    walkline: acc.walkline,
+    cutDirs: acc.cutDirs,
+    flightSplit: acc.flightSplit,
+    arrowSymbol: arrowSymbol(acc.walkline[0], acc.walkline[1], upDirection),
+    landings: acc.landings,
+  });
+}
+
+interface MultiFlightAccum {
+  treads: Polygon3D[];
+  risers: Segment3D[];
+  landings: Polygon3D[];
+  flightSplit: number[];
+  cutDirs: Vec2[];
+  walkline: Point3D[];
+}
+
+interface MultiFlightWalkState {
+  dirDeg: number;
+  u: Vec2;
+  cx: number;
+  cy: number;
+  /** Cumulative level of the current flight's first tread (z + turn bookkeeping). */
+  levelBase: number;
+}
+
+/** Build one flight's run at the current cursor and fold it into the accumulator. */
+function appendFlightRun(
+  acc: MultiFlightAccum,
+  state: MultiFlightWalkState,
+  params: Readonly<StairParams>,
+  treadCount: number,
+  restLandings: readonly StairRestLanding[],
+  isFirst: boolean,
+): void {
+  const { basePoint, rise, tread, nosing, width } = params;
+  const run = buildRectilinearRun({
+    originXY: { x: state.cx, y: state.cy },
+    u: state.u,
+    startLevel: state.levelBase,
+    baseZ: basePoint.z,
+    rise, tread, nosing, width,
+    treadCount,
+    restLandings,
+  });
+  acc.treads.push(...run.treads);
+  acc.risers.push(...run.risers);
+  acc.landings.push(...run.landings);
+  acc.flightSplit.push(...run.flightSplit);
+  acc.cutDirs.push(...run.cutDirs);
+  // First flight includes its origin vertex; later flights' origin == the prior
+  // turn's `nextStart` already pushed, so drop the duplicate leading vertex.
+  acc.walkline.push(...(isFirst ? run.walklinePts : run.walklinePts.slice(1)));
+  state.cx = run.endXY.x;
+  state.cy = run.endXY.y;
+}
+
+/** Append the turn landing + quarter-turn advance after the flight of `treadCount` levels. */
+function appendTurn(
+  acc: MultiFlightAccum,
+  state: MultiFlightWalkState,
+  params: Readonly<StairParams>,
+  turn: StairVariantMultiFlight['turns'][number],
+  treadCount: number,
+): void {
+  const { basePoint, rise, width } = params;
+  const endZ = basePoint.z + rise * (state.levelBase + treadCount);
+  const end = point(state.cx, state.cy, endZ);
+  const adv = advanceMultiFlightTurn(end, state.u, state.dirDeg, turn, width, rise);
+  acc.landings.push(
+    buildCornerLanding({ x: state.cx, y: state.cy }, state.u, perp(state.u), width, adv.landingDepth, endZ, true),
+  );
+  acc.walkline.push(adv.nextStart);
+  state.dirDeg = adv.nextDirDeg;
+  state.u = adv.dir;
+  state.cx = adv.nextStart.x;
+  state.cy = adv.nextStart.y;
+  state.levelBase += treadCount + 1;
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────

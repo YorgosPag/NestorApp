@@ -52,6 +52,46 @@ export function resolveTurnLandingDepth(turn: StairTurnNode, width: number): num
   return d === 'auto' ? width : d;
 }
 
+export interface MultiFlightTurnAdvance {
+  /** Next-flight centreline start (z = one rise above the landing). */
+  readonly nextStart: Point3D;
+  /** Next-flight unit travel direction. */
+  readonly dir: Vec2;
+  /** Resolved landing depth for this turn. */
+  readonly landingDepth: number;
+  /** Absolute run direction (deg) after the turn — feeds the next advance. */
+  readonly nextDirDeg: number;
+}
+
+/**
+ * Advance across ONE turn (SSoT — used by `walkMultiFlight` and the ADR-637
+ * rest-landing multi-flight path). Rotates `dirDeg` by `±turnAngleDeg`, then the
+ * next-flight CENTRELINE start is the quarter-turn corner construction (matches
+ * gamma flight-2 exactly, ADR-611/ADR-633): advance `halfW` along the INCOMING
+ * dir to the landing centre, then `halfW` along the OUTGOING dir to the exit
+ * edge, stepping up one rise. `end` is the incoming flight's real centreline end
+ * (its plan XY already reflects any rest landings inside that flight).
+ */
+export function advanceMultiFlightTurn(
+  end: Point3D,
+  flightDir: Vec2,
+  dirDeg: number,
+  turn: StairTurnNode,
+  width: number,
+  rise: number,
+): MultiFlightTurnAdvance {
+  const nextDirDeg = dirDeg + (turn.turnDirection === 'left' ? 1 : -1) * turn.turnAngleDeg;
+  const uNext = directionToUnitVector(nextDirDeg);
+  const landingDepth = resolveTurnLandingDepth(turn, width);
+  const halfW = width * 0.5;
+  const nextStart = point(
+    end.x + flightDir.x * halfW + uNext.x * halfW,
+    end.y + flightDir.y * halfW + uNext.y * halfW,
+    end.z + rise,
+  );
+  return { nextStart, dir: uNext, landingDepth, nextDirDeg };
+}
+
 /**
  * Per-flight centreline frames for a multi-flight stair. Tolerant of a malformed
  * `turns` length (extra flights simply get no `next`); `computeMultiFlight`
@@ -80,24 +120,11 @@ export function walkMultiFlight(
 
     let next: MultiFlightStep['next'];
     if (k < variant.turns.length) {
-      const turn = variant.turns[k];
-      dirDeg += (turn.turnDirection === 'left' ? 1 : -1) * turn.turnAngleDeg;
-      const uNext = directionToUnitVector(dirDeg);
-      const depth = resolveTurnLandingDepth(turn, width);
-      // Next-flight CENTRELINE start = quarter-turn corner construction (matches
-      // gamma flight-2 exactly, ADR-611): advance halfW along the INCOMING dir to
-      // the landing centre, then halfW along the OUTGOING dir to the exit edge.
-      // (The prior `end + uNext·width` slid the flight sideways by a full width
-      // without advancing → it overlapped the incoming flight's tail, ADR-633.)
-      const halfW = width * 0.5;
-      const nextStart = point(
-        end.x + flightDir.x * halfW + uNext.x * halfW,
-        end.y + flightDir.y * halfW + uNext.y * halfW,
-        end.z + rise,
-      );
-      next = { start: nextStart, dir: uNext, landingDepth: depth };
-      u = uNext;
-      start = nextStart;
+      const adv = advanceMultiFlightTurn(end, flightDir, dirDeg, variant.turns[k], width, rise);
+      next = { start: adv.nextStart, dir: adv.dir, landingDepth: adv.landingDepth };
+      dirDeg = adv.nextDirDeg;
+      u = adv.dir;
+      start = adv.nextStart;
     }
     steps.push({ flightIndex: k, start: flightStart, end, dir: flightDir, stepCount: n, next });
   }

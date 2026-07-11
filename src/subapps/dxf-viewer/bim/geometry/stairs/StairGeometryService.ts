@@ -22,10 +22,7 @@
 
 import { offsetPolyline } from '../../../rendering/entities/shared/geometry-offset-utils';
 import type {
-  Point3D,
-  Polygon3D,
   Polyline3D,
-  Segment3D,
   StairGeometry,
   StairParams,
 } from '../../../bim/types/stair-types';
@@ -33,7 +30,6 @@ import {
   DEFAULT_CUT_PLANE_HEIGHT,
   type Vec2,
   directionToUnitVector,
-  perp,
   point,
   arrowSymbol,
   splitTreadsByCutPlane,
@@ -43,14 +39,10 @@ import {
 import {
   assembleMultiFlight,
   assembleStairGeometry,
-  buildCornerLanding,
   buildRectilinearFlight,
 } from './stair-geometry-generators';
-import {
-  hasRestLandings,
-  planStairRunSegments,
-  resolveRestLandingLength,
-} from './stair-run-landings';
+import { buildRectilinearRun } from './stair-flight-run-builder';
+import { hasRestLandings } from './stair-run-landings';
 import { computeLShape } from './stair-geometry-lshape';
 import { computeUShape } from './stair-geometry-ushape';
 import { computeGamma } from './stair-geometry-gamma';
@@ -170,50 +162,30 @@ function computeStraight(params: Readonly<StairParams>): StairGeometry {
 function computeStraightWithLandings(params: Readonly<StairParams>): StairGeometry {
   const { basePoint, direction, rise, tread, nosing, width, stepCount, upDirection } = params;
   const u = directionToUnitVector(direction);
-  const v = perp(u);
-  const segments = planStairRunSegments(stepCount, params.restLandings);
-
-  const treads: Polygon3D[] = [];
-  const risers: Segment3D[] = [];
-  const landings: Polygon3D[] = [];
-  const flightSplit: number[] = [];
-  const cutDirs: Vec2[] = [];
-  const walkline: Point3D[] = [point(basePoint.x, basePoint.y, basePoint.z)];
-
-  let cx = basePoint.x;
-  let cy = basePoint.y;
-  const zAtLevel = (level: number): number => basePoint.z + rise * level;
-
-  for (const seg of segments) {
-    if (seg.kind === 'flight') {
-      const flightStart = point(cx, cy, zAtLevel(seg.startLevel));
-      const flight = buildRectilinearFlight(flightStart, u, rise, tread, nosing, width, seg.treadCount);
-      treads.push(...flight.treads);
-      risers.push(...flight.risers);
-      flightSplit.push(seg.treadCount);
-      cutDirs.push(u);
-      const along = tread * seg.treadCount;
-      cx += u.x * along;
-      cy += u.y * along;
-      walkline.push(point(cx, cy, zAtLevel(seg.startLevel + seg.treadCount)));
-    } else {
-      const z = zAtLevel(seg.level);
-      const length = resolveRestLandingLength(seg.landing.length, width);
-      landings.push(buildCornerLanding({ x: cx, y: cy }, u, v, width, length, z, /* centered */ true));
-      cx += u.x * length;
-      cy += u.y * length;
-      walkline.push(point(cx, cy, z));
-    }
-  }
+  // ADR-637 Phase 2 — a straight run is one rectilinear run from `buildRectilinearRun`
+  // (the SSoT shared with multi-flight / v-shape / L·U·Γ flight 1). Assembled through
+  // `assembleMultiFlight` so cut-line/labels/landings match the turn-landing family.
+  const run = buildRectilinearRun({
+    originXY: { x: basePoint.x, y: basePoint.y },
+    u,
+    startLevel: 0,
+    baseZ: basePoint.z,
+    rise,
+    tread,
+    nosing,
+    width,
+    treadCount: stepCount,
+    restLandings: params.restLandings ?? [],
+  });
 
   return assembleMultiFlight(params, {
-    treads,
-    risers,
-    walkline,
-    cutDirs,
-    flightSplit,
-    arrowSymbol: arrowSymbol(walkline[0], walkline[1], upDirection),
-    landings,
+    treads: run.treads,
+    risers: run.risers,
+    walkline: run.walklinePts,
+    cutDirs: run.cutDirs,
+    flightSplit: run.flightSplit,
+    arrowSymbol: arrowSymbol(run.walklinePts[0], run.walklinePts[1], upDirection),
+    landings: run.landings,
   });
 }
 
