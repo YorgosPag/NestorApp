@@ -1,32 +1,45 @@
 /**
- * Balanced winder band — SSoT for the k≥1 "dancing steps" turn (ADR-630 Phase 2b;
- * newel / min-inner boundary added in Phase 2c).
+ * Balanced "dancing" winder band — SSoT for the direction-changing turn
+ * (ADR-630 Phase 2c: spread inner ends — risers directed to different points).
  *
  * The turn region (last `k` treads of flight 1 + `W` winders + first `k` treads
  * of flight 2) is rebuilt as ONE balanced band of `M = W + 2k` treads that all
- * share equal walkline going, with the risers **swung gradually** from
- * perpendicular (flight side) to radial (corner) — the classic balanced /
- * dancing-winder construction (Revit default, continental-EU / ΝΟΚ practice).
+ * share equal walkline going — the classic balanced / dancing-winder construction
+ * (Revit, ArchiCAD, French drafting method, US Patent 6,845,595).
  *
  * Construction (plan view, pivot P at the inner corner, R = width/2):
  *   - Band walkline = straight1 tail (k·t) + arc(R about P, angle Θ) + straight2
  *     head (k·t). Its total length `S = 2·k·t + R·Θ` is divided into `M` EQUAL
- *     goings `g = S/M`; a riser sits at every mark.
- *   - Each riser is perpendicular to the walkline tangent and runs from the
- *     INNER boundary (flight-1 inner edge → corner P → flight-2 inner edge) to
- *     the OUTER boundary (flight-1 outer edge → circle radius `width` → flight-2
- *     outer edge). In the arc the riser is radial → passes through P, so the
- *     wedges reach the corner (no hole); in the straights it is perpendicular;
- *     across the junction the swing is gradual → "dancing".
+ *     goings `g = S/M`; a walkline mark sits at every riser.
+ *   - OUTER end of each riser: flight-1 outer edge → circle radius `width` about P
+ *     → flight-2 outer edge (perpendicular on the straights, radial on the arc).
+ *   - INNER end of each riser sits on the reflex L boundary
+ *     `flight-1 inner edge → P → flight-2 inner edge`, but the ends are **SPREAD**
+ *     so the risers are **directed to different points** — never all onto P. The
+ *     spread keeps a **minimum inner spacing `minInnerGoing`** (code narrow-end
+ *     going) near the corner; the two innermost meet at P, so the winder treads'
+ *     own extensions **fill the corner** (no hole, no separate polygon, no acute
+ *     zero-going miter). Away from the corner the spacing relaxes back to the
+ *     perpendicular feet → the transition fades out over the trapezoidal treads.
  *   - The band occupies EXACTLY the footprint of the `k+W+k` treads it replaces,
- *     so the pure flights (first `n1−k`, last `n2−k`) are untouched — zero
- *     ripple. Only the band's straight treads shrink from `t` to `g` (the small,
- *     graduated transition), which is what keeps the turn uniform.
+ *     so the pure flights (first `n1−k`, last `n2−k`) are untouched.
  *
- * `k` is chosen automatically (`computeBalancedBandPlan`): 1 transition tread per
- * side, widened to 2 when the equal going is more than 3 % off the straight
- * tread (the "spread to steps 6/12" case). `k = 0` (very short flights) falls
- * back to a pure fan of `W` wedges reaching P — still no hole.
+ * `k` **auto-grows** (`computeBalancedBandPlan`) until the equal walkline going is
+ * within tolerance of the straight tread (≈ 280) — as many neighbouring treads
+ * become trapezoidal as needed (bounded by the flight lengths). `minInnerGoing = 0`
+ * (profile `none`) → the inner ends collapse onto P (legacy reach-P apex).
+ *
+ * ADR-630 Phase 2d (option C: **UNIFORM going**) — the equal going is measured on
+ * the balanced-winder walking line (DIN Lauflinie), placed at the radius
+ * `R* = W·tread/Θ` where the winder going equals the straight tread (not the
+ * centre radius `width/2`). At `R*` the band going is EXACTLY `tread` for any `k`
+ * (`(2k·t + R*·Θ)/(W+2k) = t`), so every step — straight flights AND band — keeps
+ * a uniform going = `tread`; the flights never spread and `k` collapses to its
+ * minimum. The physical outer edge stays at `width/2` (straights) / `width` (arc);
+ * only the going-reference radius moves inward, so the drawn walkline, stringers
+ * and handrails (derived at the centre) are untouched. When `R* > width/2` (turn
+ * too wide / too few winders to reach `tread` inside the stair) it clamps to the
+ * centre radius → best-effort centre going (legacy Φ2c behaviour).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-630-winder-walkline-rule.md
  */
@@ -41,9 +54,14 @@ import {
 } from './stair-geometry-generators';
 
 const BAND_EPS = 1e-6;
-/** Max transition treads per side (k). k=2 = "also make steps 6 & 12 trapezoidal". */
-const MAX_BAND_STEPS_PER_SIDE = 2;
-/** Widen the band while the equal going is more than this fraction off `tread`. */
+/**
+ * Safety cap on transition treads per side (k). The real bound is the flight
+ * lengths (`n1−1`, `n2−1`); `k` grows toward the tolerance below, spreading the
+ * trapezoidal transition over as many neighbouring treads as needed to keep the
+ * walkline going ≈ tread. High enough to never bind for realistic stairs.
+ */
+const MAX_BAND_STEPS_PER_SIDE = 12;
+/** Grow the band while the equal going is more than this fraction off `tread`. */
 const BAND_GOING_TOL = 0.03;
 
 export interface BalancedBandInput {
@@ -65,11 +83,11 @@ export interface BalancedBandInput {
   readonly winderCount: number;
   /**
    * Minimum going at the narrow (inner) end, in the SAME units as `width`
-   * (`resolveWinderMinimums(codeProfile, width).minInnerGoing`). Drives the inner
-   * boundary radius `r_in = minInnerGoing · (width/2) / g` so the arc risers stop
-   * on a small inner circle (newel core) instead of collapsing to the pivot P —
-   * trapezoidal wedges (no acute miter), central polygon filled (no hole).
-   * `0` (codeProfile `none`) → `r_in = 0` → legacy reach-P apex.
+   * (`resolveWinderMinimums(codeProfile, width).minInnerGoing`). Sets the MINIMUM
+   * spacing between consecutive inner riser ends near the corner, so the risers
+   * spread onto the flight-edge L (directed to different points) instead of
+   * collapsing onto P — the two innermost meet at P and the winder treads fill the
+   * corner. `0` (codeProfile `none`) → inner ends collapse onto P (legacy apex).
    */
   readonly minInnerGoing: number;
 }
@@ -89,31 +107,14 @@ export interface BalancedWinderRunGeometry {
   /** `[n1−k, M, n2−k]` for label numbering + cut-line flight boundaries. */
   readonly flightSplit: readonly [number, number, number];
   readonly plan: BalancedBandPlan;
-  /**
-   * Filled central polygon (newel core) around the pivot P — the region between
-   * the inner `r_in` arc and the corner, sealed so the trapezoidal wedges leave
-   * no hole. `null` when `minInnerGoing = 0` (legacy reach-P apex, nothing to
-   * fill). The caller appends it to the `treads` list PAST `Σ flightSplit`, so it
-   * renders as fill (2D `StairRenderer` draws only treads; 3D extrudes a slab)
-   * WITHOUT being numbered as a step (`buildTreadLabels` stops at `Σ flightSplit`).
-   */
-  readonly newelCore: Polygon3D | null;
 }
 
-// ─── Newel / min-inner boundary (ADR-630 Phase 2c) ────────────────────────────
-//
-// Phase 2b let the arc risers pass through the pivot P → the wedges reached the
-// corner (no hole) but converged to an ACUTE zero-going miter. Phase 2c stops the
-// arc risers on a small inner circle of radius `r_in = minInnerGoing · halfW / g`
-// (Revit "Minimum Width on Inside Boundary" / ArchiCAD newel): the wedges become
-// TRAPEZOIDS with a `minInnerGoing`-deep narrow end (no acute miter), and the
-// central polygon [0..r_in] around P is filled as a solid `newelCore` (no hole).
-// `minInnerGoing = 0` (codeProfile `none`) → `r_in = 0` → legacy reach-P apex.
-
 /**
- * Choose `k` and the equal going. Widen from 1 to `MAX_BAND_STEPS_PER_SIDE` until
- * the going is within `BAND_GOING_TOL` of the straight tread; `k = 0` when there
- * is no flight tread to borrow (pure fan going `R·Θ/W`).
+ * Choose `k` and the equal going. Grow `k` from 1 (bounded by the flight lengths
+ * and `MAX_BAND_STEPS_PER_SIDE`) until the going is within `BAND_GOING_TOL` of the
+ * straight tread — the transition spreads over as many trapezoidal treads as
+ * needed to keep the going ≈ tread. `k = 0` when there is no flight tread to
+ * borrow (pure fan going `R·Θ/W`).
  */
 export function computeBalancedBandPlan(input: {
   readonly turnRad: number;
@@ -146,28 +147,46 @@ export function computeBalancedBandPlan(input: {
   return { bandStepsPerSide: chosen, walklineGoing: going(chosen), totalBandSteps: w + 2 * chosen };
 }
 
+/**
+ * ADR-630 Φ2d (option C) — the radius at which the equal going is measured. The
+ * winder going scales with radius (`going = R·Θ/W`); at `R* = W·tread/Θ` it equals
+ * the straight tread, so the whole run keeps a UNIFORM going = `tread` with no
+ * spread. Clamped to the centre radius `width/2`: when `R* > width/2` (turn too
+ * wide / too few winders), `tread` is unreachable inside the stair → fall back to
+ * the centre radius (best-effort centre going > tread, legacy Φ2c).
+ */
+export function resolveBandWalklineRadius(
+  width: number,
+  tread: number,
+  winderCount: number,
+  turnRad: number,
+): number {
+  const halfW = width * 0.5;
+  const turnMag = Math.abs(turnRad);
+  if (winderCount <= 0 || turnMag < BAND_EPS || tread <= 0) return halfW;
+  return Math.min(halfW, (winderCount * tread) / turnMag);
+}
+
 // ─── One riser sample along the band walkline ─────────────────────────────────
 
 type BandZone = 'A' | 'B' | 'C';
 
-interface RiserSample {
-  readonly inner: Vec2;
-  readonly outer: Vec2;
-  readonly zone: BandZone;
-}
-
 /**
  * Assemble the full winder run (pure flight 1 + balanced band + pure flight 2)
- * as one tread + riser list. Reaches the pivot P at the corner (no hole) and
- * keeps equal walkline going across the band.
+ * as one tread + riser list. The band risers are directed to different inner
+ * points (spread on the flight-edge L, min spacing `minInnerGoing`) so the corner
+ * is filled by the winder treads' own extensions with equal walkline going.
  */
 export function buildBalancedWinderRun(input: BalancedBandInput): BalancedWinderRunGeometry {
   const { basePoint, u1, u2, width, tread, nosing, rise, n1, n2, winderCount } = input;
+  // ADR-630 Φ2d (option C) — measure the equal going on the balanced walking line
+  // `R*` (uniform going = `tread`, no spread), not the centre radius `width/2`.
+  const walklineRadius = resolveBandWalklineRadius(width, tread, winderCount, input.turnRad);
   const plan = computeBalancedBandPlan({
     turnRad: input.turnRad,
     winderCount,
     tread,
-    walklineRadius: width * 0.5,
+    walklineRadius,
     n1,
     n2,
   });
@@ -175,7 +194,7 @@ export function buildBalancedWinderRun(input: BalancedBandInput): BalancedWinder
   const widthAxis = rotateVec(input.ray0, input.turnRad);
 
   const flight1 = buildRectilinearFlight(basePoint, u1, rise, tread, nosing, width, n1 - k);
-  const band = buildBand(input, plan, widthAxis);
+  const band = buildBand(input, plan, widthAxis, walklineRadius);
   const flight2Origin: Vec2 = {
     x: input.pivotXY.x + u2.x * (k * tread),
     y: input.pivotXY.y + u2.y * (k * tread),
@@ -190,7 +209,6 @@ export function buildBalancedWinderRun(input: BalancedBandInput): BalancedWinder
     risers: [...flight1.risers, ...band.risers, ...flight2.risers],
     flightSplit: [n1 - k, plan.totalBandSteps, n2 - k],
     plan,
-    newelCore: band.newelCore,
   };
 }
 
@@ -200,88 +218,100 @@ function buildBand(
   input: BalancedBandInput,
   plan: BalancedBandPlan,
   widthAxis: Vec2,
-): FlightGeometry & { readonly newelCore: Polygon3D | null } {
+  walklineRadius: number,
+): FlightGeometry {
   const { basePoint, width, tread, rise, n1 } = input;
   const k = plan.bandStepsPerSide;
   const m = plan.totalBandSteps;
-  if (m <= 0) return { treads: [], risers: [], newelCore: null };
+  if (m <= 0) return { treads: [], risers: [] };
   const halfW = width * 0.5;
   const bandStartAlong = (n1 - k) * tread;
   const zoneAEnd = k * tread;
-  const zoneBEnd = zoneAEnd + halfW * Math.abs(input.turnRad);
+  // ADR-630 Φ2d — arc developed on the going-reference walkline `R*` (not halfW),
+  // so the equal marks `s = j·g` tile it into exactly W equal-angle winders.
+  const zoneBEnd = zoneAEnd + walklineRadius * Math.abs(input.turnRad);
   const g = plan.walklineGoing;
-  const rIn = innerBoundaryRadius(input.minInnerGoing, halfW, g);
   const t1Outer = add(input.pivotXY, input.ray0, width); // outer tangent (arc start)
   const t2Outer = add(input.pivotXY, widthAxis, width);  // outer tangent (arc end)
 
-  const samples: RiserSample[] = [];
+  // Outer riser ends + zone (equal-going walkline marks).
+  const outers: Vec2[] = [];
+  const zones: BandZone[] = [];
   for (let j = 0; j <= m; j++) {
-    samples.push(sampleRiser(input, widthAxis, j * g, bandStartAlong, zoneAEnd, zoneBEnd, halfW, rIn));
+    const s = j * g;
+    const o = sampleOuter(input, widthAxis, s, bandStartAlong, zoneAEnd, zoneBEnd, halfW, walklineRadius);
+    outers.push(o.outer);
+    zones.push(o.zone);
   }
+  // Inner riser ends spread on the flight-edge L (dancing winders).
+  const inners = spreadInnerEnds(input, m, g, zoneAEnd, zoneBEnd, k * tread);
 
   const treads: Polygon3D[] = [];
   const risers: Segment3D[] = [];
   for (let j = 0; j < m; j++) {
-    const a = samples[j];
-    const b = samples[j + 1];
     const z = basePoint.z + rise * (n1 - k + j);
-    const outerSeam = seamPoint(a.zone, b.zone, t1Outer, t2Outer);
+    const outerSeam = seamPoint(zones[j], zones[j + 1], t1Outer, t2Outer);
     const ring: Vec2[] = outerSeam
-      ? [a.inner, a.outer, outerSeam, b.outer, b.inner]
-      : [a.inner, a.outer, b.outer, b.inner];
+      ? [inners[j], outers[j], outerSeam, outers[j + 1], inners[j + 1]]
+      : [inners[j], outers[j], outers[j + 1], inners[j + 1]];
     treads.push(liftCCW(dedupe(ring), z));
   }
   for (let j = 1; j < m; j++) {
     risers.push({
-      start: point(samples[j].inner.x, samples[j].inner.y, basePoint.z + rise * (n1 - k + j - 1)),
-      end: point(samples[j].outer.x, samples[j].outer.y, basePoint.z + rise * (n1 - k + j)),
+      start: point(inners[j].x, inners[j].y, basePoint.z + rise * (n1 - k + j - 1)),
+      end: point(outers[j].x, outers[j].y, basePoint.z + rise * (n1 - k + j)),
     });
   }
-  // Newel core sits at the top band tread's level (highest winder) so it caps the
-  // filled pillar from above in both plan (fill) and 3D (extruded slab).
-  const coreZ = basePoint.z + rise * (n1 - k + Math.max(0, m - 1));
-  return { treads, risers, newelCore: buildNewelCore(samples, input.pivotXY, coreZ, rIn) };
+  return { treads, risers };
 }
 
 /**
- * Inner boundary radius `r_in` such that the narrow (inner) end going equals
- * `minInnerGoing`. In the arc zone the risers are radial with equal walkline
- * going `g` at radius `halfW`, so the per-riser angle is `g / halfW` and the
- * going at radius `r` is `r · g / halfW`; solving for `minInnerGoing` gives
- * `r_in = minInnerGoing · halfW / g`. Capped just inside the walkline so the
- * inner boundary never crosses it (degenerate/inverted wedges).
+ * Inner riser ends on the reflex L boundary `flight-1 inner edge → P → flight-2
+ * inner edge`, developed as a signed offset `d` from P (negative = back onto
+ * flight-1 along `u1`, positive = forward onto flight-2 along `u2`).
+ *
+ * The perpendicular feet (`d = s − zoneAEnd` on the flight side, `d = s − zoneBEnd`
+ * on the far side) collapse to `d = 0` across the arc → all risers would hit P.
+ * We instead SPREAD them: from the corner mark `jMid` (`d = 0`, the one riser that
+ * stays on P) push the neighbours out to a minimum spacing `minInnerGoing`, fading
+ * back to the natural feet once the flight spacing (≈ tread) already exceeds it.
+ * The result: risers directed to different points, the two innermost meet at P,
+ * the winder treads fill the corner. `minInnerGoing = 0` → feet unchanged (P apex).
  */
-function innerBoundaryRadius(minInnerGoing: number, halfW: number, g: number): number {
-  if (minInnerGoing <= BAND_EPS || g <= BAND_EPS) return 0;
-  const raw = (minInnerGoing * halfW) / g;
-  return Math.min(Math.max(0, raw), halfW * 0.98);
+function spreadInnerEnds(
+  input: BalancedBandInput,
+  m: number,
+  g: number,
+  zoneAEnd: number,
+  zoneBEnd: number,
+  bandTail: number,
+): Vec2[] {
+  const { pivotXY: pv, u1, u2, minInnerGoing } = input;
+  const sMid = (zoneAEnd + zoneBEnd) * 0.5;
+  const d: number[] = [];
+  let jMid = 0;
+  let best = Infinity;
+  for (let j = 0; j <= m; j++) {
+    const s = j * g;
+    const dj = s <= zoneAEnd + BAND_EPS ? s - zoneAEnd : s >= zoneBEnd - BAND_EPS ? s - zoneBEnd : 0;
+    d.push(dj);
+    if (Math.abs(s - sMid) < best) { best = Math.abs(s - sMid); jMid = j; }
+  }
+  if (minInnerGoing > BAND_EPS) {
+    d[jMid] = 0;
+    for (let j = jMid + 1; j <= m; j++) d[j] = Math.max(d[j], d[j - 1] + minInnerGoing);
+    for (let j = jMid - 1; j >= 0; j--) d[j] = Math.min(d[j], d[j + 1] - minInnerGoing);
+  }
+  return d.map((dj) => {
+    const c = Math.max(-bandTail, Math.min(bandTail, dj)); // keep within the band's flight tails
+    return c <= 0
+      ? { x: pv.x + u1.x * c, y: pv.y + u1.y * c }
+      : { x: pv.x + u2.x * c, y: pv.y + u2.y * c };
+  });
 }
 
-/**
- * Filled sector around the pivot P bounded by the two flight inner edges, the two
- * transition chords and the inner `r_in` arc — every edge shared with a band tread
- * or the stair outline, so the fill is watertight. Returns `null` when `r_in ≈ 0`
- * (legacy reach-P apex — the arc wedges still meet at P, there is no hole to fill).
- */
-function buildNewelCore(
-  samples: readonly RiserSample[],
-  pivot: Vec2,
-  z: number,
-  rIn: number,
-): Polygon3D | null {
-  const last = samples.length - 1;
-  if (rIn <= BAND_EPS || last < 1) return null;
-  let lo = 0;
-  let hi = last;
-  for (let j = 0; j <= last; j++) if (samples[j].zone === 'A') lo = j; // last zone-A sample
-  for (let j = last; j >= 0; j--) if (samples[j].zone === 'C') hi = j; // first zone-C sample
-  const ring: Vec2[] = [pivot];
-  for (let j = lo; j <= hi; j++) ring.push(samples[j].inner);
-  const deduped = dedupe(ring);
-  return deduped.length >= 3 ? liftCCW(deduped, z) : null;
-}
-
-function sampleRiser(
+/** Outer riser end (+ zone) at walkline distance `s` along the band. */
+function sampleOuter(
   input: BalancedBandInput,
   widthAxis: Vec2,
   s: number,
@@ -289,31 +319,25 @@ function sampleRiser(
   zoneAEnd: number,
   zoneBEnd: number,
   halfW: number,
-  rIn: number,
-): RiserSample {
+  walklineRadius: number,
+): { readonly outer: Vec2; readonly zone: BandZone } {
   const { basePoint, u1, u2, v1, ray0, pivotXY, turnSign, width } = input;
   if (zoneAEnd > BAND_EPS && s <= zoneAEnd + BAND_EPS) {
     const along = bandStartAlong + s;
     const center: Vec2 = { x: basePoint.x + u1.x * along, y: basePoint.y + u1.y * along };
-    return {
-      inner: { x: center.x + v1.x * turnSign * halfW, y: center.y + v1.y * turnSign * halfW },
-      outer: { x: center.x - v1.x * turnSign * halfW, y: center.y - v1.y * turnSign * halfW },
-      zone: 'A',
-    };
+    return { outer: { x: center.x - v1.x * turnSign * halfW, y: center.y - v1.y * turnSign * halfW }, zone: 'A' };
   }
   if (s <= zoneBEnd + BAND_EPS) {
-    const angle = ((s - zoneAEnd) / halfW) * turnSign;
+    // ADR-630 Φ2d — arc angle from the going-reference radius `R*` (not halfW), so
+    // equal going marks map to equal-angle winders; the outer end stays on `width`.
+    const angle = ((s - zoneAEnd) / walklineRadius) * turnSign;
     const ray = rotateVec(ray0, angle);
-    return { inner: add(pivotXY, ray, rIn), outer: add(pivotXY, ray, width), zone: 'B' };
+    return { outer: add(pivotXY, ray, width), zone: 'B' };
   }
   const sC = s - zoneBEnd;
   const t2: Vec2 = add(pivotXY, widthAxis, halfW);
   const center: Vec2 = { x: t2.x + u2.x * sC, y: t2.y + u2.y * sC };
-  return {
-    inner: { x: center.x - widthAxis.x * halfW, y: center.y - widthAxis.y * halfW },
-    outer: { x: center.x + widthAxis.x * halfW, y: center.y + widthAxis.y * halfW },
-    zone: 'C',
-  };
+  return { outer: { x: center.x + widthAxis.x * halfW, y: center.y + widthAxis.y * halfW }, zone: 'C' };
 }
 
 /** Outer boundary tangent point when a tread straddles a straight↔arc junction. */

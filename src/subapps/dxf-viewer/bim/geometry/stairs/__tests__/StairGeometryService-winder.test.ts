@@ -78,14 +78,13 @@ describe('StairGeometryService — winder', () => {
     const g = computeStairGeometry(makeWinderParams());
     const treads = allTreads(g);
     expect(treads).toHaveLength(14);
-    // The first pure flight-1 treads (band borrows ≤2 per side, n1=5) advance
-    // along +X by one tread each, first at x=0.
+    // The first pure flight-1 tread starts at x=0 and is one tread deep along +X.
+    // (ADR-630 Φ2c: `k` grows toward the tolerance, so the count of pure treads is
+    //  k-dependent — assert the always-present first pure tread, k-agnostically.)
+    expect(treads[0]).toHaveLength(4);
     expect(treads[0][0].x).toBeCloseTo(0, 6);
-    for (let i = 0; i < 3; i++) {
-      expect(treads[i]).toHaveLength(4);
-      expect(treads[i][0].x).toBeCloseTo(250 * i, 6);
-      expect(treads[i][0].y).toBeCloseTo(treads[0][0].y, 6);
-    }
+    const proj = treads[0].map((v) => v.x); // u1 = (1,0)
+    expect(Math.max(...proj) - Math.min(...proj)).toBeCloseTo(250, 4);
   });
 
   it('Test 2: tread z progression Δz=rise across all 14 treads', () => {
@@ -124,11 +123,11 @@ describe('StairGeometryService — winder', () => {
   it('Test 5: pure flight 2 advances along u2 = rotate(u1, +90°) = (0,1)', () => {
     const g = computeStairGeometry(makeWinderParams());
     const treads = allTreads(g);
-    // The last two treads are always pure flight 2 (band borrows ≤2 per side).
-    const last = treads[treads.length - 1][0];
-    const prev = treads[treads.length - 2][0];
-    expect(last.x - prev.x).toBeCloseTo(0, 6);
-    expect(last.y - prev.y).toBeCloseTo(250, 6);
+    // The last tread is the pure flight-2 end: one tread deep along u2=(0,1)
+    // (k-agnostic — Φ2c grows the band, so the count of pure treads varies).
+    const last = treads[treads.length - 1];
+    const proj = last.map((v) => v.y); // u2 = (0,1)
+    expect(Math.max(...proj) - Math.min(...proj)).toBeCloseTo(250, 4);
   });
 
   it('Test 6: stepCount=11, winderCount=3 → 11 treads, count conserved', () => {
@@ -173,9 +172,9 @@ describe('StairGeometryService — winder', () => {
   it('Test 12: turnAngle=180° → u2 = -u1 = (-1,0); pure flight 2 advances along -X', () => {
     const g = computeStairGeometry(makeWinderParams({ turnAngle: 180 }));
     const treads = allTreads(g);
-    const last = treads[treads.length - 1][0];
-    const prev = treads[treads.length - 2][0];
-    expect(last.x - prev.x).toBeCloseTo(-250, 6);
-    expect(last.y - prev.y).toBeCloseTo(0, 6);
+    // Last tread = pure flight-2 end: one tread deep along u2=(-1,0) (k-agnostic).
+    const last = treads[treads.length - 1];
+    const projX = last.map((v) => v.x); // depth along ±X
+    expect(Math.max(...projX) - Math.min(...projX)).toBeCloseTo(250, 4);
   });
 });

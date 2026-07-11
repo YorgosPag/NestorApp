@@ -22,6 +22,8 @@
 import * as THREE from 'three';
 import type { StairEntity, Polygon3D, Polyline3D, Segment3D } from '../../bim/types/stair-types';
 import { resolveStairMaterial } from '../materials/stair-material-resolver';
+import { resolveTreadNosing } from '../../bim/geometry/stairs/stair-tread-overrides';
+import { buildTreadNosingMesh } from './stair-tread-nosing-3d';
 import { inferSceneUnitsFromWidth, sceneUnitsToMeters } from '../../utils/scene-units';
 import { attachEdgesProjection } from './bim-three-edges';
 import { ensureWorldUvs } from './bim-uv-helpers';
@@ -120,7 +122,14 @@ function buildTreadMeshes(
   ];
   for (let i = 0; i < allTreads.length; i++) {
     const mat = resolveStairMaterial(stair, 'stair-tread', i);
-    const mesh = extrudeFlatSlab(allTreads[i]!, sceneToM, thicknessM, mat, baseY);
+    // ADR-358 Q19 Φ4b — a per-tread `customProfile` (Revit Nosing Profile) sweeps
+    // a shaped nose; without one, `resolveTreadNosing` yields no section and we
+    // fall back to the flat slab (the Φ4a square overhang already sits in `poly`).
+    const section = resolveTreadNosing(stair.params, i).section;
+    const mesh = section
+      ? buildTreadNosingMesh(allTreads, i, section, sceneToM, thicknessM, mat, baseY)
+        ?? extrudeFlatSlab(allTreads[i]!, sceneToM, thicknessM, mat, baseY)
+      : extrudeFlatSlab(allTreads[i]!, sceneToM, thicknessM, mat, baseY);
     if (!mesh) continue;
     const tagged = tagMesh(mesh, stair, 'tread', levelId, i);
     attachStairEdges(tagged, 'treads');

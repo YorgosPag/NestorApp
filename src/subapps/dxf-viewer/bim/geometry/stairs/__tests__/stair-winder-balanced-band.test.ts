@@ -12,6 +12,7 @@ import {
   type BalancedBandInput,
   buildBalancedWinderRun,
   computeBalancedBandPlan,
+  resolveBandWalklineRadius,
 } from '../stair-winder-balanced-band';
 
 const HALF_PI = Math.PI / 2;
@@ -95,14 +96,13 @@ describe('buildBalancedWinderRun', () => {
     expect(a + b + c).toBe(17);
   });
 
-  it('minInnerGoing 0 (legacy) — wedges reach the pivot P, no newel core', () => {
+  it('minInnerGoing 0 (legacy) — inner ends collapse onto the pivot P', () => {
     const input = makeInput();
     const run = buildBalancedWinderRun(input);
     const atPivot = run.treads.filter((t) =>
       t.some((v) => distFromPivot(v, input.pivotXY) < 1e-6),
     );
     expect(atPivot.length).toBeGreaterThanOrEqual(2);
-    expect(run.newelCore).toBeNull();
   });
 
   it('every tread is a simple polygon at a single contiguous elevation z = i·rise', () => {
@@ -128,57 +128,106 @@ describe('buildBalancedWinderRun', () => {
   });
 });
 
-// ─── ADR-630 Φ2c — newel / min-inner boundary ─────────────────────────────────
+// ─── ADR-630 Φ2c — dancing spread (risers directed to different points) ────────
 
-describe('buildBalancedWinderRun — newel core (minInnerGoing > 0)', () => {
-  // width 1000 → halfW 500, k=2 → g = (2·2·280 + 500·π/2)/7 ≈ 272.2.
-  const G = (2 * 2 * 280 + 500 * HALF_PI) / 7;
+describe('computeBalancedBandPlan — grows k for the going', () => {
+  it('grows k past 2 to keep the going near the tread (wide stair → more trapezoidal steps)', () => {
+    // width 1200 → R 600: k climbs to 5 so g ≈ 288 (2.8 % off 280).
+    const plan = computeBalancedBandPlan({
+      turnRad: HALF_PI, winderCount: 3, tread: 280, walklineRadius: 600, n1: 7, n2: 7,
+    });
+    expect(plan.bandStepsPerSide).toBeGreaterThan(2);
+    expect(Math.abs(280 - plan.walklineGoing) / 280).toBeLessThanOrEqual(0.03);
+  });
+});
+
+describe('buildBalancedWinderRun — dancing spread (minInnerGoing > 0)', () => {
   const MIN_INNER = 130;
-  const R_IN = (MIN_INNER * 500) / G; // ≈ 238.8
 
-  it('no tread converges to the pivot P — the acute miter is gone', () => {
+  it('spreads the inner ends — the corner is filled by fewer treads than the converging apex', () => {
     const input = makeInput({ minInnerGoing: MIN_INNER });
-    const run = buildBalancedWinderRun(input);
-    const atPivot = run.treads.filter((t) =>
+    const spread = buildBalancedWinderRun(input).treads.filter((t) =>
       t.some((v) => distFromPivot(v, input.pivotXY) < 1e-6),
     );
-    expect(atPivot).toHaveLength(0);
+    const legacy = buildBalancedWinderRun(makeInput()).treads.filter((t) =>
+      t.some((v) => distFromPivot(v, input.pivotXY) < 1e-6),
+    );
+    expect(spread.length).toBeGreaterThanOrEqual(1); // corner still filled (no hole)
+    expect(spread.length).toBeLessThan(legacy.length); // risers no longer all converge on P
   });
 
-  it('emits a filled newel core polygon that contains P (no hole)', () => {
-    const input = makeInput({ minInnerGoing: MIN_INNER });
-    const run = buildBalancedWinderRun(input);
-    expect(run.newelCore).not.toBeNull();
-    const core = run.newelCore ?? [];
-    expect(core.length).toBeGreaterThanOrEqual(3);
-    expect(core.some((v) => distFromPivot(v, input.pivotXY) < 1e-6)).toBe(true);
+  it('every tread stays a simple polygon (≥3 verts) at contiguous z', () => {
+    const run = buildBalancedWinderRun(makeInput({ minInnerGoing: MIN_INNER }));
+    for (let i = 0; i < run.treads.length; i++) {
+      expect(run.treads[i].length).toBeGreaterThanOrEqual(3);
+      for (const v of run.treads[i]) expect(v.z).toBeCloseTo(175 * i, 6);
+    }
   });
 
-  it('arc risers stop on the inner circle r_in = minInnerGoing·halfW/g', () => {
-    const input = makeInput({ minInnerGoing: MIN_INNER });
-    const run = buildBalancedWinderRun(input);
-    const core = run.newelCore ?? [];
-    // The core's farthest vertices from P are the arc samples at radius r_in (the
-    // two transition endpoints sit closer, on the flight edges). The resulting
-    // inner-end going (r_in·g/halfW) equals the code minimum.
-    const radii = core.map((v) => distFromPivot(v, input.pivotXY));
-    const rIn = Math.max(...radii);
-    expect(rIn).toBeCloseTo(R_IN, 3);
-    expect((rIn * G) / 500).toBeCloseTo(MIN_INNER, 3);
-  });
-
-  it('preserves the tread count + numbering split (core is out-of-band)', () => {
+  it('keeps the total tread count + numbering split (no extra fill polygon)', () => {
     const run = buildBalancedWinderRun(makeInput({ minInnerGoing: MIN_INNER }));
     expect(run.treads).toHaveLength(17);
     const [a, b, c] = run.flightSplit;
     expect(a + b + c).toBe(17);
   });
 
-  it('caps r_in just inside the walkline for an oversized minInnerGoing', () => {
-    // minInnerGoing ≥ g would push r_in past halfW → clamp to 0.98·halfW.
-    const run = buildBalancedWinderRun(makeInput({ minInnerGoing: 10_000 }));
-    const core = run.newelCore ?? [];
-    const maxR = Math.max(...core.map((v) => distFromPivot(v, { x: 7 * 280, y: 500 })));
-    expect(maxR).toBeLessThanOrEqual(500 * 0.98 + 1e-6);
+  it('the inner ends nearest the corner keep a ≥ minInnerGoing narrow-end width', () => {
+    // The two innermost treads meet at P; their neighbouring inner ends sit at
+    // least `minInnerGoing` from P along the flight edges (no zero-going miter).
+    const input = makeInput({ minInnerGoing: MIN_INNER });
+    const innerDists = buildBalancedWinderRun(input).risers
+      .map((r) => distFromPivot({ x: r.start.x, y: r.start.y }, input.pivotXY))
+      .filter((d) => d > 1e-6)
+      .sort((x, y) => x - y);
+    expect(innerDists[0]).toBeGreaterThanOrEqual(MIN_INNER - 1e-6);
+  });
+});
+
+// ─── ADR-630 Φ2d — uniform going (option C) ────────────────────────────────────
+
+describe('ADR-630 Φ2d — uniform going (option C)', () => {
+  /** width 1200 → halfW 600 > R* = 3·280/(π/2) = 534.7 → going reaches tread. */
+  const wide = (overrides?: Partial<BalancedBandInput>): BalancedBandInput =>
+    makeInput({ width: 1200, pivotXY: { x: 7 * 280, y: 600 }, ...overrides });
+
+  it('resolveBandWalklineRadius: R* when reachable, clamps to halfW otherwise', () => {
+    // Wide stair: R* = W·t/Θ = 3·280/(π/2) = 534.7 < halfW 600 → use R*.
+    expect(resolveBandWalklineRadius(1200, 280, 3, HALF_PI)).toBeCloseTo((3 * 280) / HALF_PI, 6);
+    // Narrow stair: R* 534.7 > halfW 500 → tread unreachable → clamp to halfW.
+    expect(resolveBandWalklineRadius(1000, 280, 3, HALF_PI)).toBeCloseTo(500, 6);
+    // Degenerate (no winders) → centre radius.
+    expect(resolveBandWalklineRadius(1200, 280, 0, HALF_PI)).toBeCloseTo(600, 6);
+  });
+
+  it('wide stair → equal going == tread (uniform), band collapses to k=1', () => {
+    const run = buildBalancedWinderRun(wide());
+    expect(run.plan.walklineGoing).toBeCloseTo(280, 6); // uniform going = user tread
+    expect(run.plan.bandStepsPerSide).toBe(1); // minimal band — flights don't spread
+    expect(run.plan.totalBandSteps).toBe(3 + 2 * 1);
+    expect(run.treads).toHaveLength(17);
+  });
+
+  it('narrow stair (clamped) keeps the legacy centre going ≠ tread', () => {
+    // width 1000: R* > halfW → clamp → going measured at halfW 500 < tread.
+    const run = buildBalancedWinderRun(makeInput());
+    expect(run.plan.walklineGoing).toBeLessThan(280);
+  });
+
+  it('pure straight flights still advance by exactly tread (no spread)', () => {
+    const run = buildBalancedWinderRun(wide());
+    // Pure flight-1 treads (n1−k = 6) advance by one tread each along u1 = (1,0).
+    const minX = (t: (typeof run.treads)[number]): number => Math.min(...t.map((v) => v.x));
+    expect(minX(run.treads[1]) - minX(run.treads[0])).toBeCloseTo(280, 6);
+    expect(minX(run.treads[2]) - minX(run.treads[1])).toBeCloseTo(280, 6);
+  });
+
+  it('wide stair → winders are equal-angle wedges (outer ends at 0/30/60/90°)', () => {
+    const run = buildBalancedWinderRun(wide());
+    const P = { x: 7 * 280, y: 600 };
+    // Every band tread outer vertex sits on the outer radius = width (1200) about P.
+    const onOuter = run.treads
+      .flatMap((t) => t)
+      .filter((v) => Math.abs(distFromPivot(v, P) - 1200) < 1e-3);
+    expect(onOuter.length).toBeGreaterThan(0);
   });
 });

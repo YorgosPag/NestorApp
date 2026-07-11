@@ -24,6 +24,8 @@ import { useGuideWorkflowComputed } from '../../hooks/guides/useGuideWorkflowCom
 import { useDraftPolygonLayer } from '../../hooks/layers/useDraftPolygonLayer';
 import { useHoveredEntity } from '../../systems/hover/useHover';
 import { useSelectedRoofEdge } from '../../bim/roofs/useRoofEdgeSelection';
+// ADR-358 Q19 Φ3a — sub-element selection store (2D stair tread highlight redraw).
+import { useStairSubElementSelectionStore } from '../../bim/stairs/stair-sub-element-selection-store';
 // ADR-532 B4 — grip render is selection-driven; the leaf self-subscribes so the
 // orchestrator (CanvasSection) no longer re-renders on entity selection.
 import { useSelectedEntityIds } from '../../systems/selection/useSelectedEntities';
@@ -266,6 +268,11 @@ export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
   // η αλλαγή επιλεγμένης ακμής να ξανατρέχει το δυναμικό «selected» pass (live
   // edge highlight). Μόνο αυτό το leaf re-renders, ΟΧΙ ο orchestrator (ADR-040).
   const selectedRoofEdge = useSelectedRoofEdge();
+  // ADR-358 Q19 Φ3a — micro-leaf subscription so a tread sub-selected in 3D/2D
+  // (low-freq: click / Tab / Esc) repaints the 2D plan highlight WITHOUT re-rendering
+  // the CanvasSection orchestrator (mirror `useSelectedRoofEdge`, ADR-040). The
+  // StairRenderer reads the store at render time; this call only forces the redraw.
+  useStairSubElementSelectionStore((s) => s.selected);
   // ADR-575 §selection/hover semantics — ids of the live GROUP containers, so the canvas
   // interactive overlay paints a hovered/selected group as ONE unit (whole-group highlight,
   // no per-member grips) instead of one stray member. Same derivation SSoT as the grip

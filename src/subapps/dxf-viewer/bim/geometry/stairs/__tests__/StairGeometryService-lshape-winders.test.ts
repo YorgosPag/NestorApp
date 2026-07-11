@@ -114,23 +114,24 @@ describe('StairGeometryService — L-shape with winders (Phase 3f)', () => {
     expect(atPivot.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('Test 4b (ADR-630 Φ2c): codeProfile nok → newel core fills the corner, no acute apex, numbering intact', () => {
+  it('Test 4b (ADR-630 Φ2c): codeProfile nok → dancing spread, corner filled, no converging apex, numbering intact', () => {
     const g = computeStairGeometry(
       makeLShapeWinders({ cutPlaneHeight: 10000, codeProfile: 'nok', treadLabelDisplay: 'all' }),
     );
+    const legacy = computeStairGeometry(makeLShapeWinders({ cutPlaneHeight: 10000, codeProfile: 'none' }));
     const all: readonly Polygon3D[] = [...g.treadsBelowCut, ...g.treadsAboveCut];
+    const legacyAll: readonly Polygon3D[] = [...legacy.treadsBelowCut, ...legacy.treadsAboveCut];
     const pivot = { x: 7 * 280, y: -500 };
-    // (a) 17 numbered wedges + 1 unnumbered newel core = 18 filled polygons.
-    expect(all).toHaveLength(18);
-    // (b) The corner is filled up to P — exactly one polygon (the core) reaches it,
-    //     so the numbered wedges keep a min-inner width (no acute miter, no hole).
-    const atPivot = all.filter((t) =>
-      t.some((v) => Math.hypot(v.x - pivot.x, v.y - pivot.y) < COORD_TOL),
-    );
-    expect(atPivot).toHaveLength(1);
-    // (c) The core rides the treads channel (2D fill), NOT landings.
+    const atP = (ts: readonly Polygon3D[]): number =>
+      ts.filter((t) => t.some((v) => Math.hypot(v.x - pivot.x, v.y - pivot.y) < COORD_TOL)).length;
+    // (a) The corner is filled by the winders' own extensions (no hole) …
+    expect(atP(all)).toBeGreaterThanOrEqual(1);
+    // … but the risers spread → fewer treads touch P than the legacy converging apex.
+    expect(atP(all)).toBeLessThan(atP(legacyAll));
+    // (b) No separate fill polygon / landing.
     expect(g.landings).toHaveLength(0);
-    // (d) Numbering is unaffected by the out-of-band core (1..17).
+    // (c) Tread count + numbering unaffected (1..17).
+    expect(all).toHaveLength(17);
     expect(g.treadLabels).toHaveLength(17);
     expect(g.treadLabels?.[16].text).toBe('17');
   });

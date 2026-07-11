@@ -59,6 +59,10 @@ import {
   pickBottomExtensionMm,
   extendPolylineEnds,
 } from './stair-handrail-extension';
+// ADR-358 Q19 Φ3a — 2D per-tread selection highlight (reads the SHARED sub-element
+// store; low-freq redraw via the canvas leaf subscription — "3D mirrors 2D").
+import { drawStairSubElementHighlight } from './stair-sub-element-highlight-2d';
+import { useStairSubElementSelectionStore } from '../stairs/stair-sub-element-selection-store';
 
 const ARROW_HEAD_PX = 10;
 const ARROW_HEAD_HALF_WIDTH_PX = 5;
@@ -192,6 +196,15 @@ export class StairRenderer extends BaseEntityRenderer {
     );
 
     renderTreadsForStructure(scx, stair.params.structureType, clipped.treads);
+    // ADR-358 Q19 Φ3a — highlight the sub-selected tread (topmost pass over the
+    // fill). Global build-order `allTreads` so the store index aligns with 3D.
+    drawStairSubElementHighlight(
+      this.ctx,
+      (p) => this.worldToScreen(p),
+      allTreads,
+      stair.id,
+      useStairSubElementSelectionStore.getState().selected,
+    );
     renderStringersForStructure(
       scx,
       stair.params.structureType,

@@ -49,6 +49,7 @@ import {
   buildHandrailsFromParams,
 } from './stair-geometry-shared';
 import { buildTreadLabels, buildTreadLabelsWithLandings } from './stair-geometry-labels';
+import { applyPerTreadNosing } from './stair-tread-overrides';
 
 // ─── Flight geometry (treads + risers) ────────────────────────────────────────
 
@@ -191,11 +192,16 @@ export function assembleStairGeometry(
   parts: StairGeometryParts,
 ): StairGeometry {
   const landings = parts.landings ?? [];
+  // ADR-611 Φ4 (ADR-358 Q19) — per-tread nosing SSoT. Runs on the global
+  // build-order tread list BEFORE the cut-plane split, so index i aligns with
+  // `perTreadOverrides[i]` and the 3D tag/material key. No-op (same reference)
+  // when the stair has no overrides → geometry stays byte-identical.
+  const treads = applyPerTreadNosing(parts.treads, params);
   const cutPlaneHeight = params.cutPlaneHeight ?? DEFAULT_CUT_PLANE_HEIGHT;
-  const split = splitTreadsByCutPlane(parts.treads, cutPlaneHeight);
+  const split = splitTreadsByCutPlane(treads, cutPlaneHeight);
   const treadLabels = landings.length > 0
     ? buildTreadLabelsWithLandings(
-        parts.treads,
+        treads,
         landings,
         parts.flightSplit,
         params.treadLabelDisplay,
@@ -204,7 +210,7 @@ export function assembleStairGeometry(
         params.treadNumberStart,
       )
     : buildTreadLabels(
-        parts.treads,
+        treads,
         parts.flightSplit,
         params.treadLabelDisplay,
         params.treadLabelEveryN,
@@ -224,7 +230,7 @@ export function assembleStairGeometry(
     cutLine: parts.cutLine,
     treadLabels,
     bbox: bboxOfPolygons(
-      landings.length > 0 ? [...parts.treads, ...landings] : parts.treads,
+      landings.length > 0 ? [...treads, ...landings] : treads,
     ),
   };
 }

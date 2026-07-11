@@ -133,15 +133,8 @@ export function assembleWinderRun(
   const walkline = buildWinderWalkline(params, layout);
   const midRay = rotateVec(layout.ray0, (layout.winderCount / 2) * layout.signedSweepRad);
   const midTangent = winderTangentAt(midRay, layout.turnSign);
-  // ADR-630 Φ2c — the newel core is appended AFTER the numbered treads so it fills
-  // the inner corner up to the pivot P (the wedges themselves stop on the `r_in`
-  // arc, no acute miter). It rides the `treads` channel — the only one the 2D
-  // `StairRenderer` fills — but sits past `Σ flightSplit`, so `buildTreadLabels`
-  // never numbers it (winder steps stay 1..N) and the 3D converter extrudes it as
-  // a corner slab. No hole, no acute tip, numbering intact.
-  const treads = run.newelCore ? [...run.treads, run.newelCore] : run.treads;
   return assembleMultiFlight(params, {
-    treads,
+    treads: run.treads,
     risers: run.risers,
     walkline,
     cutDirs: [layout.u1, midTangent, layout.u2],
