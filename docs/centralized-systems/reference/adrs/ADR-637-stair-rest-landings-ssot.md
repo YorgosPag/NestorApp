@@ -1,6 +1,6 @@
 # ADR-637 — Stair Rest Landings (πλατύσκαλα) — kind-independent SSoT
 
-- **Status**: Accepted — Phase 1 + Phase 2 (rectilinear family) implemented
+- **Status**: Accepted — Phase 1 + Phase 2 (rectilinear family) + Phase 4-A (draggable/resizable landing grips) implemented
 - **Date**: 2026-07-11
 - **Owners**: DXF/BIM stair subsystem
 - **Related**: ADR-611 (stair geometry generators SSoT), ADR-633 (multi-flight turn points), ADR-619 (stair-from-region walkline / `preserveZ`), ADR-358 (stair tool), ADR-631/625 (command + drag-preview bases), ADR-040 (micro-leaf subscribers)
@@ -160,7 +160,44 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
   centreline-origin family completely.
 - **Phase 3 — pending**: walkline family (spiral/helical/elliptical/sketch) via
   `preserveZ`.
-- **Phase 4 — pending**: draggable landing grips + live re-flow preview + commit.
+- **Phase 4-A — DONE**: draggable + resizable rest-landing grips (recompute on
+  release, matching every other stair grip). Chain:
+  - **Handle SSoT (geometry)**: `buildRectilinearRun` now emits
+    `landingHandles: RestLandingHandle[]` (id + world centroid + travel `along` +
+    resolved length/depth) from the SAME cursor walk as the landing quad, so a
+    grip can never disagree with what's drawn. Threaded up as the optional
+    `StairGeometry.restLandingHandles` (defined in `stair-types.ts`) by all three
+    centreline-origin consumers (`computeStraightWithLandings`,
+    `computeMultiFlightWithLandings`, `computeVShapeWithLandings`). Absent when a
+    stair carries no rest landings (back-compat, byte-identical geometry).
+  - **Grip emission**: `pushRestLandingGrips` (in `stair-grips.ts`, called from
+    `getStairGrips` on both the straight + non-straight paths) emits PER handle a
+    slide grip at the centroid (`stair-rest-landing-slide`) + two length grips at
+    `center ± along·(length/2)` (`…-length-lo` / `…-length-hi`). Each grip carries
+    the target `GripInfo.landingId` (a minimal new id channel on `GripInfo` /
+    `UnifiedGripInfo`, forwarded through `wrapDxfGrip`) so a run with several
+    landings edits the right one.
+  - **Pure transforms** (`stair-grip-transforms.ts`): `slideRestLanding` projects
+    the cursor axially onto the run (mirror of `adjustFlightSplit`) → a 0..1
+    fraction written to `restLandings[i].at`, clamped to `(0,1)` by ε; the
+    geometry re-quantizes to the nearest legal level on recompute. Length grips
+    (both edges share one transform) project onto `along` from the handle centre →
+    `length = 2·|projection|`, clamped to `[tread, developed run]`. The targeted
+    landing is patched immutably by id; every other grip kind falls through
+    unchanged.
+  - **Commit**: NO change to the dispatch — `PARAMETRIC_COMMIT_HANDLERS` routes by
+    entity type (`stair` → `commitStairGripDrag`), so the 3 new kinds "just work";
+    `commitStairGripDrag` now forwards `grip.landingId` into the drag input.
+    `UpdateStairParamsCommand` recomputes geometry on mouse-up (`isDragging:false`,
+    the existing stair UX). **Live-during-drag re-flow is deferred** (a future WYSIWYG
+    ghost re-running `computeStairGeometry` each frame per ADR-625) — out of scope here.
+  - **KNOWN LIMITATION**: grips appear only for kinds that surface handles
+    (straight / multi-flight / v-shape); L/U/Γ still no-op on rest landings (Phase 2
+    edge-origin limitation).
+  - Tests: `StairGeometryService-restlanding-handles.test.ts` (4) +
+    `stair-rest-landing-grips.test.ts` (12); stair grip + geometry suites green
+    (52 suites / 710); grip discriminator coverage green; jscpd-clean.
+- **Phase 4-B — pending**: live re-flow preview during drag + add/remove/length UI panel.
 - **Phase 5 — pending**: 2D/3D pick+highlight (`part:'landing'`) + advanced-panel
   add/remove/length UI.
 
@@ -173,3 +210,12 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
   from `walkMultiFlight`) and v-shape wired. L/U/Γ deferred (edge-origin flights —
   known limitation, no-op until `buildEdgeOriginRun`). +23 tests; suite 360 green;
   jscpd-clean.
+- **2026-07-11** — Phase 4-A: draggable + resizable rest-landing grips.
+  `RestLandingHandle` SSoT emitted by `buildRectilinearRun` → optional
+  `StairGeometry.restLandingHandles` (populated by straight / multi-flight /
+  v-shape); `pushRestLandingGrips` emits slide + 2 length grips per landing;
+  `slideRestLanding` / `resizeRestLandingLength` pure transforms (edit `at` /
+  `length` by id, clamped); minimal `landingId` channel on `GripInfo` /
+  `UnifiedGripInfo` (forwarded in `wrapDxfGrip` + `commitStairGripDrag`); dispatch
+  unchanged (routes by entity type). Recompute-on-release; live-during-drag
+  deferred to Phase 4-B. +16 tests; stair suites 52/710 green; jscpd-clean.

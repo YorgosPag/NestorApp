@@ -20,7 +20,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { isOpeningEntity } from '../../types/entities';
 import type { SceneAppendAccessor } from '../../bim/scene/append-entity-to-scene';
-import { mmToSceneUnits, resolveSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { getLayer } from '../../stores/LayerStore';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
@@ -61,19 +61,46 @@ function entityPoint(entity: Entity): Point2D | null {
   return p ? { x: p.x, y: p.y } : null;
 }
 
-/** Pick the bathroom to arrange: smallest space containing the selection, else the smallest room. */
+/** Nearest space to a point by centroid distance (used when a bounding wall is selected). */
+function nearestSpaceByCentroid(
+  spaces: readonly RecognizedSpace[],
+  points: readonly Point2D[],
+): RecognizedSpace | null {
+  let best: RecognizedSpace | null = null;
+  let bestD = Infinity;
+  for (const s of spaces) {
+    for (const pt of points) {
+      const d = Math.hypot(s.centroid.x - pt.x, s.centroid.y - pt.y);
+      if (d < bestD) { bestD = d; best = s; }
+    }
+  }
+  return best;
+}
+
+/**
+ * Pick the bathroom to arrange. Priority: (1) the smallest space that directly
+ * CONTAINS a selection point; (2) the space whose centroid is NEAREST a selection
+ * point — so selecting a wall that bounds the room (its bbox centre sits on/in the
+ * wall, outside the room polygon) still resolves to that room; (3) the smallest
+ * room overall (bathrooms are small) when nothing is selected.
+ */
 function pickTargetSpace(
   spaces: readonly RecognizedSpace[],
   selected: readonly Entity[],
 ): RecognizedSpace | null {
   if (spaces.length === 0) return null;
-  for (const e of selected) {
-    const pt = entityPoint(e);
-    if (!pt) continue;
+  const points = selected
+    .map(entityPoint)
+    .filter((p): p is Point2D => p !== null);
+  for (const pt of points) {
     const containing = spaces
       .filter((s) => isPointInPolygon(pt, [...s.polygon]))
       .sort((a, b) => a.area - b.area)[0];
     if (containing) return containing;
+  }
+  if (points.length > 0) {
+    const nearest = nearestSpaceByCentroid(spaces, points);
+    if (nearest) return nearest;
   }
   return [...spaces].sort((a, b) => a.area - b.area)[0] ?? null;
 }
@@ -109,7 +136,13 @@ export function runBathroomAutoArrangeFlow(
   if (!scene) return 0;
 
   const entities = scene.entities as unknown as Entity[];
-  const sceneUnits = resolveSceneUnits(scene);
+  // ADR-462 — scene geometry is stored in CANONICAL millimetres by construction; the
+  // fixture builder + geometry (`computeMepFixtureGeometry`) place both position AND
+  // size in that same mm coordinate space (exactly like manual fixture placement, whose
+  // tool resolves to `'mm'`). Using the DECLARED display unit here (`resolveSceneUnits`,
+  // e.g. 'm'/'cm') would scale the placements into a different frame → visible-but-
+  // wrong-position / wrong-size fixtures. So the geometry unit is always `'mm'`.
+  const sceneUnits: SceneUnits = 'mm';
   const spaces = detectSpaces(entities, levelId, sceneUnits);
   const selectedSet = new Set(selectedEntityIds);
   const target = pickTargetSpace(spaces, entities.filter((e) => selectedSet.has(e.id)));

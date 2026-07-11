@@ -63,11 +63,9 @@ Coordinates are still written in the caller's output unit via `scale` (ADR-505);
 
 - **Φ2.1 (DONE) — `TABLES → LAYER` section** (real layer definitions with ACI/true-colour/on-off/
   freeze/lock/linetype/lineweight instead of inline-only 62). See below.
-- **Φ2.2 (roadmap)** — **Version selector UI** (AutoCAD «Save As»: R12 / 2000 / 2007 / 2018) +
-  **per-version text encoding**: for R12–2004, encode TEXT bytes as **Windows-1253** and set
-  `$DWGCODEPAGE=ANSI_1253` (mixed-encoding Blob); `\U+XXXX` escapes as a version-independent fallback
-  (MTEXT-safe). Reuse the `cp1253` byte table already in `io/encoding-service.ts` (**invert** it — no
-  second table).
+- **Φ2.2 (DONE) — auto version-driven encoding.** The version dropdown already existed in the export
+  dialog (`ui/components/export/ExportDialog.tsx`, all 7 releases); Φ2.2 wired the **encoding** behind
+  it. See below.
 - **Φ2.3 (roadmap)** — `$MEASUREMENT`/`$EXTMIN`/`$EXTMAX`/`$LTSCALE` HEADER+, MTEXT round-trip
   (currently MTEXT → single-line TEXT), TEXT alignment (72/73/11/21) preservation.
 - **Φ2.4 (roadmap)** — `TEXTSTYLE` table, import Φ3 skipped-warning.
@@ -98,6 +96,32 @@ but **no production caller** used it — Φ2.1 **wires it in** (no new writer).
   minimal. `collectCustomLinetypesForExport` resolves the layers' non-ISO linetypes from the
   `LinetypeRegistry` SSoT (`resolveLinetype`), skipping ISO baseline (`isIsoBaselineLinetype`) — no
   new table (mirrors `collectDimStylesForExport`).
+
+### Στάδιο 2 Φ2.2 (DONE) — auto version-driven text encoding (max automation, zero data-loss)
+
+Goal (Giorgio): the most professional, "just works" behaviour — the user never gets a broken export,
+with maximum automation and minimum intervention. The DXF **version dropdown already existed** in the
+export dialog (built ahead of the roadmap note), so Φ2.2 is purely the **encoding** behind it — no new
+UI, no encoding toggle.
+
+- **Default = R2018 (AC1032)** — `DEFAULT_DXF_VERSION` bumped from AC1015, mirroring AutoCAD «Save As»
+  (defaults to latest). A modern UTF-8 file opens correctly everywhere with Greek intact and zero
+  codepage ambiguity → the safe "everything correct" default for the 99% case.
+- **Encoding is 100% auto-derived from the version** (`versionToEncoding` in `dxf-export-adapter.ts`):
+  pre-Unicode releases (AC1009/AC1015/AC1018 = R12–2004) → `cp1253`, 2007+ → `utf-8`. Set on
+  `settings.encoding` in `buildDxfExportRequest`. The user only ever picks a version.
+- **Real Windows-1253 byte encoding** (`EncodingService.encodeWindows1253`, `io/encoding-service.ts`) —
+  the exact **inverse** of `decodeWindows1253`, built ONCE from the SAME `WINDOWS_1253_TO_UNICODE`
+  table (no second table). `renderDxfBlob` re-encodes the whole DXF string to Windows-1253 bytes when
+  `encoding === 'cp1253'` (ASCII structure 1:1, Greek → single codepage bytes) → the file matches its
+  own `$DWGCODEPAGE=ANSI_1253` and opens in legacy AutoCAD/Tekton. `resolveUnicodeSafeAcadVer` now
+  **honors** the pre-Unicode version as-is (no bump, since bytes are real cp1253).
+- **Zero data-loss escaping:** characters outside Windows-1253 (exotic symbols/CJK — never Greek/Latin)
+  are emitted as a lossless `\U+XXXX` DXF unicode escape (which Nestor's own MTEXT importer,
+  `text-engine/parser/mtext-tokenizer`, round-trips) instead of a lossy `?`. Astral-plane (> 0xFFFF)
+  falls back to `?` (no 4-hex escape).
+- **Deferred to Φ2.3:** `\U+XXXX` as a general MTEXT escape belongs with real MTEXT emission (currently
+  MTEXT → single-line TEXT). For Φ2.2 all Greek fits cp1253, so no escaping is needed for Greek content.
 
 ## Tests
 - `export/core/__tests__/dxf-ascii-writer.test.ts` — HEADER emitted (order + exact group codes) when
