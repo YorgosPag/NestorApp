@@ -39,6 +39,15 @@ export function perp(u: Vec2): Vec2 {
   return { x: -u.y, y: u.x };
 }
 
+/**
+ * Plan-frame offset: `base + dir·scale`. SSoT for the "step off a point along a
+ * direction" idiom every turning kind (L/U/Γ) uses to place turn corners /
+ * edge-origin flights (N.18 — no per-kind twin of the `{x:…,y:…}` literal).
+ */
+export function offsetAlong(base: Vec2, dir: Vec2, scale: number): Vec2 {
+  return { x: base.x + dir.x * scale, y: base.y + dir.y * scale };
+}
+
 /** Rotate a 2-D vector by `angleRad` (CCW positive). SSoT for the winder fan. */
 export function rotateVec(v: Vec2, angleRad: number): Vec2 {
   const c = Math.cos(angleRad);

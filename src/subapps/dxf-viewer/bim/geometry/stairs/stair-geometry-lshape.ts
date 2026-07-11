@@ -24,19 +24,20 @@ import {
   rectangleAt,
   point,
   arrowSymbol,
+  offsetAlong,
 } from './stair-geometry-shared';
-import {
-  type FlightGeometry,
-  assembleTwoFlightLanding,
-  buildFlightFromEdge,
-  buildRectilinearFlight,
-  resolveSwitchbackBase,
-} from './stair-geometry-generators';
+import { resolveSwitchbackBase } from './stair-geometry-generators';
 import {
   assembleWinderRun,
   assertWinderMethodSupported,
   buildWinderLayout,
 } from './stair-geometry-winder';
+import {
+  appendRunAcrossNinetyTurn,
+  assembleTurnRunStair,
+  beginTurnRun,
+  edgeRun,
+} from './stair-flight-run-builder';
 
 // ─── L-SHAPE entry ────────────────────────────────────────────────────────────
 
@@ -54,32 +55,44 @@ export function computeLShape(
   return computeLShapeWithLanding(params, variant);
 }
 
+/**
+ * L-shape landing variant — two flights joined by one 90° turn landing. ONE path
+ * for both the bare stair and rest-landing (πλατύσκαλα) stairs (ADR-637 Phase 2b):
+ * flight 1 is a centreline run, flight 2 an edge-origin run, so an empty schedule
+ * yields runs byte-identical to the old bare flights. The turn landing is anchored
+ * at flight 1's real plan end (`run1.endXY`) → a rest landing inside flight 1
+ * slides the corner + flight 2 with no bespoke offset math; the z-model stays
+ * invariant (flight 2 from level n1+1), only the footprint grows. Walkline is the
+ * bespoke `buildLShapeWalkline` with no rest landings (byte-identical) and the
+ * run-stitched centreline (shared 90°-turn helper) otherwise.
+ *
+ * ADR-358 Phase 3d — up-arrow on the FIRST walkline segment (AutoCAD/Revit plan
+ * convention); `assembleTurnRunStair` derives it from `walkline[0]→walkline[1]`.
+ */
 function computeLShapeWithLanding(
   params: Readonly<StairParams>,
   variant: StairVariantLShapeLanding,
 ): StairGeometry {
   assertLShapeCornerSupported(variant);
-  const { basePoint, rise, tread, nosing, width } = params;
+  const { basePoint, rise, tread, width } = params;
   const { u1, v1, n1, n2, landingDepth, turnSign } = resolveSwitchbackBase(params, variant);
   const u2: Vec2 = { x: v1.x * turnSign, y: v1.y * turnSign };
-  // ADR-358 Phase 3d hotfix — arrow follows walkline FIRST segment (flight 1
-  // direction), not a straight diagonal from basePoint to flight-2 top
-  // (industry convention: AutoCAD/Revit plan view show the UP arrow on flight
-  // 1; multi-flight ascent is implied by tread numbering — see assembleTwoFlightLanding).
-  const flight1 = buildRectilinearFlight(basePoint, u1, rise, tread, nosing, width, n1);
-  const landing = buildLShapeLanding(basePoint, u1, v1, rise, tread, width, landingDepth, n1);
-  const flight2 = buildLShapeFlight2(
-    basePoint, u1, v1, u2, turnSign, rise, tread, nosing, width, n1, n2,
+  const { common, per, run1 } = beginTurnRun(params, u1, [n1, n2]);
+  const turnLanding = buildLShapeLandingAt(
+    run1.endXY, u1, v1, width, landingDepth, basePoint.z + rise * n1,
   );
-  const walkline = buildLShapeWalkline(basePoint, u1, u2, rise, tread, width, n1, n2);
-  return assembleTwoFlightLanding(params, {
-    flight1,
-    flight2,
-    walkline,
-    landing,
-    dirs: [u1, u2],
-    split: [n1, n2],
-  });
+  // Flight 2 edge origin off the turn corner (v1·turnSign·halfW), cross-width u1.
+  const flight2Origin = offsetAlong(run1.endXY, v1, turnSign * width * 0.5);
+  const run2 = edgeRun(common, flight2Origin, u2, u1, n1 + 1, n2, per[1]);
+
+  let walkline: Point3D[];
+  if (!params.restLandings || params.restLandings.length === 0) {
+    walkline = buildLShapeWalkline(basePoint, u1, u2, rise, tread, width, n1, n2);
+  } else {
+    walkline = [...run1.walklinePts];
+    appendRunAcrossNinetyTurn(walkline, run2, u1, width);
+  }
+  return assembleTurnRunStair(params, [run1, run2], [turnLanding], walkline);
 }
 
 /**
@@ -115,54 +128,23 @@ function assertLShapeCornerSupported(variant: StairVariantLShapeLanding): void {
   }
 }
 
-function buildLShapeLanding(
-  basePoint: Readonly<Point3D>,
+/**
+ * ADR-637 Phase 2b — the L-corner turn landing anchored at flight 1's ACTUAL
+ * plan end (`flightEnd = basePoint + u·(n1·tread)` with no rest landings, or
+ * `run1.endXY` when flight 1 carries πλατύσκαλα), so a rest landing inside flight
+ * 1 slides the corner + flight 2 without any bespoke offset math.
+ */
+function buildLShapeLandingAt(
+  flightEnd: Vec2,
   u: Vec2,
   v: Vec2,
-  rise: number,
-  tread: number,
   width: number,
   landingDepth: number,
-  n1: number,
+  z: number,
 ): Polygon3D {
   const halfW = width * 0.5;
-  const along = tread * n1;
-  const corner: Vec2 = {
-    x: basePoint.x + u.x * along - v.x * halfW,
-    y: basePoint.y + u.y * along - v.y * halfW,
-  };
-  return rectangleAt(corner, u, landingDepth, width, basePoint.z + rise * n1);
-}
-
-/**
- * Flight 2 origin: corner of landing on its u2-exit side, lateral edge at u1 =
- * n1·tread. turnRight (turnSign=-1): exit on -v1 edge; turnLeft (+1): +v1 edge.
- * Width axis = u1 for BOTH turn dirs — preserves CCW alignment with the landing
- * footprint. ADR-611 — treads/risers via the shared `buildFlightFromEdge`.
- */
-function buildLShapeFlight2(
-  basePoint: Readonly<Point3D>,
-  u1: Vec2,
-  v1: Vec2,
-  u2: Vec2,
-  turnSign: 1 | -1,
-  rise: number,
-  tread: number,
-  nosing: number,
-  width: number,
-  n1: number,
-  n2: number,
-): FlightGeometry {
-  const halfW = width * 0.5;
-  const exitLateralSign = turnSign;
-  const flight2Origin: Vec2 = {
-    x: basePoint.x + u1.x * (tread * n1) + v1.x * (exitLateralSign * halfW),
-    y: basePoint.y + u1.y * (tread * n1) + v1.y * (exitLateralSign * halfW),
-  };
-  const v2 = u1;
-  return buildFlightFromEdge(
-    flight2Origin, u2, v2, rise, tread, nosing, width, n2, basePoint.z + rise * (n1 + 1),
-  );
+  const corner: Vec2 = { x: flightEnd.x - v.x * halfW, y: flightEnd.y - v.y * halfW };
+  return rectangleAt(corner, u, landingDepth, width, z);
 }
 
 function buildLShapeWalkline(

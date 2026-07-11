@@ -30,9 +30,7 @@
 
 import type { Point3D } from '../../../rendering/types/Types';
 import type {
-  Polygon3D,
   Polyline3D,
-  Segment3D,
   StairGeometry,
   StairParams,
   StairTurnDirectionLR,
@@ -42,85 +40,112 @@ import {
   type Vec2,
   perp,
   directionToUnitVector,
+  offsetAlong,
   point,
-  arrowSymbol,
 } from './stair-geometry-shared';
+import { buildCornerLanding } from './stair-geometry-generators';
 import {
-  assembleMultiFlight,
-  buildCornerLanding,
-  buildFlightFromEdge,
-  buildRectilinearFlight,
-} from './stair-geometry-generators';
+  type StairRunResult,
+  appendRunAcrossNinetyTurn,
+  assembleTurnRunStair,
+  beginTurnRun,
+  edgeRun,
+} from './stair-flight-run-builder';
 
+/**
+ * Γ (gamma) — three flights joined by two turn landings. ONE path for both the
+ * bare stair and rest-landing (πλατύσκαλα) stairs (ADR-637 Phase 2b): every
+ * flight is a run (`centrelineRun` for flight 1, `edgeRun` for the two
+ * edge-origin flights), so an empty schedule yields runs byte-identical to the
+ * old bare flights. Each turn landing is anchored at the preceding run's real
+ * plan end (`endXY`) → a rest landing inside any flight slides everything
+ * downstream with no bespoke offset math; the two-turn z-model stays invariant
+ * (landing 1 at level n1, landing 2 at level n1+n2+1), only the footprint grows.
+ * The walkline is the bespoke 6-vertex `buildGammaWalkline` when there are no
+ * rest landings (byte-identical) and the run-stitched centreline otherwise.
+ */
 export function computeGamma(
   params: Readonly<StairParams>,
   variant: StairVariantGamma,
 ): StairGeometry {
   assertGammaCornerSupported(variant);
-  const { basePoint, direction, rise, tread, nosing, width, upDirection } = params;
-  const u1 = directionToUnitVector(direction);
-  const v1 = perp(u1);
+  const { basePoint, direction, rise, width } = params;
+  const { u1, v1, u2, v2, u3, turnSign1, turnSign2 } = resolveGammaFrame(direction, variant);
   const [n1, n2, n3] = variant.flightSplit;
-  const turnSign1 = turnSign(variant.turnSequence[0]);
-  const turnSign2 = turnSign(variant.turnSequence[1]);
   const landing1Depth = resolveDepth(variant.landings[0], width);
   const landing2Depth = resolveDepth(variant.landings[1], width);
-
-  const u2: Vec2 = { x: turnSign1 * v1.x, y: turnSign1 * v1.y };
-  const v2 = perp(u2);
-  const u3: Vec2 = { x: turnSign2 * v2.x, y: turnSign2 * v2.y };
-
-  const flight1 = buildRectilinearFlight(basePoint, u1, rise, tread, nosing, width, n1);
+  const halfW = width * 0.5;
+  const { common, per, run1 } = beginTurnRun(params, u1, [n1, n2, n3]);
   const landing1 = buildCornerLanding(
-    { x: basePoint.x + u1.x * (n1 * tread), y: basePoint.y + u1.y * (n1 * tread) },
-    u1, perp(u1), width, landing1Depth, basePoint.z + rise * n1, /* centered = */ true,
-  );
-  const flight2Origin: Vec2 = {
-    x: basePoint.x + u1.x * (n1 * tread) + v1.x * (turnSign1 * width * 0.5),
-    y: basePoint.y + u1.y * (n1 * tread) + v1.y * (turnSign1 * width * 0.5),
-  };
-  const flight2 = buildFlightFromEdge(
-    flight2Origin, u2, u1, rise, tread, nosing, width, n2, basePoint.z + rise * (n1 + 1),
-  );
-  const landing2Origin: Vec2 = {
-    x: flight2Origin.x + u2.x * (n2 * tread),
-    y: flight2Origin.y + u2.y * (n2 * tread),
-  };
-  const landing2 = buildCornerLanding(
-    landing2Origin, u2, u1, width, landing2Depth,
-    basePoint.z + rise * (n1 + n2 + 1), /* centered = */ false,
-  );
-  const flight3Origin: Vec2 = {
-    x: landing2Origin.x + v2.x * (turnSign2 * width * 0.5),
-    y: landing2Origin.y + v2.y * (turnSign2 * width * 0.5),
-  };
-  const flight3 = buildFlightFromEdge(
-    flight3Origin, u3, u2, rise, tread, nosing, width, n3,
-    basePoint.z + rise * (n1 + n2 + 2),
+    run1.endXY, u1, v1, width, landing1Depth, basePoint.z + rise * n1, /* centered */ true,
   );
 
-  const allTreads: readonly Polygon3D[] = [
-    ...flight1.treads, ...flight2.treads, ...flight3.treads,
-  ];
-  const risers: readonly Segment3D[] = [
-    ...flight1.risers, ...flight2.risers, ...flight3.risers,
-  ];
-  const walkline = buildGammaWalkline(
-    basePoint, u1, u2, u3, rise, tread, width, n1, n2, n3,
+  // Flight 2 — edge origin off the landing-1 turn corner, along u2, cross-width u1.
+  const flight2Origin = offsetAlong(run1.endXY, v1, turnSign1 * halfW);
+  const run2 = edgeRun(common, flight2Origin, u2, u1, n1 + 1, n2, per[1]);
+  const landing2 = buildCornerLanding(
+    run2.endXY, u2, u1, width, landing2Depth,
+    basePoint.z + rise * (n1 + n2 + 1), /* centered */ false,
   );
-  // ADR-358 Phase 3d hotfix — arrow on FIRST flight segment (see lshape rationale).
-  return assembleMultiFlight(params, {
-    treads: allTreads,
-    risers,
-    walkline,
-    cutDirs: [u1, u2, u3],
-    flightSplit: [n1, n2, n3],
-    arrowSymbol: arrowSymbol(walkline[0], walkline[1], upDirection),
-    landings: [landing1, landing2],
-  });
+
+  // Flight 3 — edge origin off the landing-2 corner, along u3, cross-width u2.
+  const flight3Origin = offsetAlong(run2.endXY, v2, turnSign2 * halfW);
+  const run3 = edgeRun(common, flight3Origin, u3, u2, n1 + n2 + 2, n3, per[2]);
+
+  const walkline = gammaWalkline(params, variant, [run1, run2, run3], { u1, u2, u3 });
+  return assembleTurnRunStair(params, [run1, run2, run3], [landing1, landing2], walkline);
+}
+
+/**
+ * Bespoke 6-vertex walkline with no rest landings (byte-identical to the pre-2b
+ * gamma); run-stitched centreline (shared 90°-turn helper, same as L-shape) once
+ * any flight carries a πλατύσκαλο.
+ */
+function gammaWalkline(
+  params: Readonly<StairParams>,
+  variant: StairVariantGamma,
+  runs: readonly [StairRunResult, StairRunResult, StairRunResult],
+  dirs: { u1: Vec2; u2: Vec2; u3: Vec2 },
+): Point3D[] {
+  const { basePoint, rise, tread, width } = params;
+  const [n1, n2, n3] = variant.flightSplit;
+  if (!params.restLandings || params.restLandings.length === 0) {
+    return buildGammaWalkline(basePoint, dirs.u1, dirs.u2, dirs.u3, rise, tread, width, n1, n2, n3);
+  }
+  const walkline: Point3D[] = [...runs[0].walklinePts];
+  appendRunAcrossNinetyTurn(walkline, runs[1], dirs.u1, width);
+  appendRunAcrossNinetyTurn(walkline, runs[2], dirs.u2, width);
+  return walkline;
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────────
+
+/** Plan frame shared by both gamma paths: the three flight directions + turns. */
+interface GammaFrame {
+  readonly u1: Vec2;
+  readonly v1: Vec2;
+  readonly u2: Vec2;
+  readonly v2: Vec2;
+  readonly u3: Vec2;
+  readonly turnSign1: 1 | -1;
+  readonly turnSign2: 1 | -1;
+}
+
+/**
+ * Resolve the three flight directions from the base `direction` + `turnSequence`.
+ * SSoT for both `computeGamma` and `computeGammaWithRestLandings` (N.18 — the
+ * `u2 = turnSign1·v1`, `u3 = turnSign2·v2` chain lives once).
+ */
+function resolveGammaFrame(direction: number, variant: StairVariantGamma): GammaFrame {
+  const u1 = directionToUnitVector(direction);
+  const v1 = perp(u1);
+  const turnSign1 = turnSign(variant.turnSequence[0]);
+  const turnSign2 = turnSign(variant.turnSequence[1]);
+  const u2: Vec2 = { x: turnSign1 * v1.x, y: turnSign1 * v1.y };
+  const v2 = perp(u2);
+  const u3: Vec2 = { x: turnSign2 * v2.x, y: turnSign2 * v2.y };
+  return { u1, v1, u2, v2, u3, turnSign1, turnSign2 };
+}
 
 function turnSign(d: StairTurnDirectionLR): 1 | -1 {
   return d === 'right' ? -1 : 1;

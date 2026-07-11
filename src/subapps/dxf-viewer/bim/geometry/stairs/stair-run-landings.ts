@@ -40,6 +40,9 @@ const REST_LANDING_SUPPORTED_KINDS: ReadonlySet<StairKind> = new Set([
   'straight',
   'multi-flight',
   'v-shape',
+  'l-shape',
+  'u-shape',
+  'gamma',
 ]);
 
 /** True when `kind`'s geometry generator consumes `StairParams.restLandings`. */

@@ -38,39 +38,54 @@ import type {
 } from '../../../bim/types/stair-types';
 import {
   type Vec2,
+  offsetAlong,
   point,
 } from './stair-geometry-shared';
+import { resolveSwitchbackBase } from './stair-geometry-generators';
 import {
-  type FlightGeometry,
-  assembleTwoFlightLanding,
-  buildFlightFromEdge,
-  buildRectilinearFlight,
-  resolveSwitchbackBase,
-} from './stair-geometry-generators';
+  type StairRunResult,
+  assembleTurnRunStair,
+  beginTurnRun,
+  edgeRun,
+} from './stair-flight-run-builder';
 
+/**
+ * U-shape — two anti-parallel flights joined by one 180° switchback landing
+ * spanning 2·width laterally. ONE path for both the bare stair and rest-landing
+ * (πλατύσκαλα) stairs (ADR-637 Phase 2b): flight 1 is a centreline run, flight 2
+ * an anti-parallel edge-origin run (`u2 = −u1`), so an empty schedule yields runs
+ * byte-identical to the old bare flights. The switchback landing is anchored at
+ * flight 1's real plan end → a rest landing inside flight 1 slides the landing +
+ * flight 2 with no bespoke offset math; the z-model stays invariant (flight 2 from
+ * level n1+1), only the footprint grows. Walkline is the bespoke
+ * `buildUShapeWalkline` with no rest landings (byte-identical) and the run-stitched
+ * centreline otherwise.
+ */
 export function computeUShape(
   params: Readonly<StairParams>,
   variant: StairVariantUShape,
 ): StairGeometry {
   assertUShapeCornerSupported(variant);
-  const { basePoint, rise, tread, nosing, width } = params;
+  const { basePoint, rise, tread, width } = params;
   const { u1, v1, n1, n2, landingDepth, turnSign } = resolveSwitchbackBase(params, variant);
-  // Flight 2 is anti-parallel (180° switchback) — u2 = −u1 (vs l-shape's 90°).
-  const u2: Vec2 = { x: -u1.x, y: -u1.y };
-  const flight1 = buildRectilinearFlight(basePoint, u1, rise, tread, nosing, width, n1);
-  const landing = buildUShapeLanding(basePoint, u1, v1, turnSign, rise, tread, width, landingDepth, n1);
-  const flight2 = buildUShapeFlight2(
-    basePoint, u1, v1, u2, turnSign, rise, tread, nosing, width, landingDepth, n1, n2,
+  const u2: Vec2 = { x: -u1.x, y: -u1.y }; // 180° switchback (vs l-shape's 90°)
+  const vOut: Vec2 = { x: turnSign * v1.x, y: turnSign * v1.y };
+  const halfW = width * 0.5;
+  const { common, per, run1 } = beginTurnRun(params, u1, [n1, n2]);
+  const turnLanding = buildUShapeLandingAt(
+    run1.endXY, u1, v1, turnSign, width, landingDepth, basePoint.z + rise * n1,
   );
-  const walkline = buildUShapeWalkline(basePoint, u1, v1, u2, turnSign, rise, tread, width, n1, n2);
-  return assembleTwoFlightLanding(params, {
-    flight1,
-    flight2,
-    walkline,
-    landing,
-    dirs: [u1, u2],
-    split: [n1, n2],
-  });
+  // Flight 2 inner edge = far u1 edge of the landing, shared side (v1·turnSign·halfW).
+  const innerEdge = offsetAlong(offsetAlong(run1.endXY, u1, landingDepth), v1, turnSign * halfW);
+  const run2 = edgeRun(common, innerEdge, u2, vOut, n1 + 1, n2, per[1]);
+
+  let walkline: Point3D[];
+  if (!params.restLandings || params.restLandings.length === 0) {
+    walkline = buildUShapeWalkline(basePoint, u1, v1, u2, turnSign, rise, tread, width, n1, n2);
+  } else {
+    walkline = stitchUShapeWalkline(run1, run2, v1, turnSign, width);
+  }
+  return assembleTurnRunStair(params, [run1, run2], [turnLanding], walkline);
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -84,62 +99,55 @@ function assertUShapeCornerSupported(variant: StairVariantUShape): void {
   }
 }
 
-function buildUShapeLanding(
-  basePoint: Readonly<Point3D>,
+/**
+ * ADR-637 Phase 2b — the 2·width switchback landing anchored at flight 1's ACTUAL
+ * plan end (`flightEnd = basePoint + u·(n1·tread)` with no rest landings, or
+ * `run1.endXY` when flight 1 carries πλατύσκαλα), so a rest landing inside flight
+ * 1 slides the landing + flight 2 without bespoke offset math.
+ */
+function buildUShapeLandingAt(
+  flightEnd: Vec2,
   u: Vec2,
   v: Vec2,
   turnSign: 1 | -1,
-  rise: number,
-  tread: number,
   width: number,
   landingDepth: number,
-  n1: number,
+  z: number,
 ): Polygon3D {
   const halfW = width * 0.5;
-  const along0 = n1 * tread;
-  const along1 = along0 + landingDepth;
   // Landing spans 2·width laterally: from flight 1's far edge (turnSign side =
   // landing-shared with flight 2) outward by `width`, plus flight 1's own
   // width band on the opposite side.
   const vNear = turnSign === -1 ? -(halfW + width) : -halfW;
   const vFar = turnSign === -1 ? halfW : halfW + width;
-  const z = basePoint.z + rise * n1;
   return [
-    point(basePoint.x + u.x * along0 + v.x * vNear, basePoint.y + u.y * along0 + v.y * vNear, z),
-    point(basePoint.x + u.x * along1 + v.x * vNear, basePoint.y + u.y * along1 + v.y * vNear, z),
-    point(basePoint.x + u.x * along1 + v.x * vFar, basePoint.y + u.y * along1 + v.y * vFar, z),
-    point(basePoint.x + u.x * along0 + v.x * vFar, basePoint.y + u.y * along0 + v.y * vFar, z),
+    point(flightEnd.x + v.x * vNear, flightEnd.y + v.y * vNear, z),
+    point(flightEnd.x + u.x * landingDepth + v.x * vNear, flightEnd.y + u.y * landingDepth + v.y * vNear, z),
+    point(flightEnd.x + u.x * landingDepth + v.x * vFar, flightEnd.y + u.y * landingDepth + v.y * vFar, z),
+    point(flightEnd.x + v.x * vFar, flightEnd.y + v.y * vFar, z),
   ];
 }
 
 /**
- * Flight 2 inner edge (shared with the landing, closest to flight 1) at
- * `v1·(turnSign·halfW)`; outer direction `vOut = turnSign·v1`. ADR-611 —
- * treads/risers via the shared `buildFlightFromEdge`.
+ * U-shape centreline stitch (rest-landing path): flight 1 (along u1) → lateral
+ * 180° shift across the landing (v1·turnSign·width) → flight 2 (along −u1). The
+ * lateral cross sits at the landing elevation; flight 2's own run walkline (with
+ * any rest-landing stretches) follows from its centreline origin.
  */
-function buildUShapeFlight2(
-  basePoint: Readonly<Point3D>,
-  u1: Vec2,
+function stitchUShapeWalkline(
+  run1: StairRunResult,
+  run2: StairRunResult,
   v1: Vec2,
-  u2: Vec2,
   turnSign: 1 | -1,
-  rise: number,
-  tread: number,
-  nosing: number,
   width: number,
-  landingDepth: number,
-  n1: number,
-  n2: number,
-): FlightGeometry {
-  const halfW = width * 0.5;
-  const innerEdge: Vec2 = {
-    x: basePoint.x + u1.x * (n1 * tread + landingDepth) + v1.x * (turnSign * halfW),
-    y: basePoint.y + u1.y * (n1 * tread + landingDepth) + v1.y * (turnSign * halfW),
-  };
-  const vOut: Vec2 = { x: turnSign * v1.x, y: turnSign * v1.y };
-  return buildFlightFromEdge(
-    innerEdge, u2, vOut, rise, tread, nosing, width, n2, basePoint.z + rise * (n1 + 1),
+): Point3D[] {
+  const p2 = run1.walklinePts[run1.walklinePts.length - 1]; // flight-1 top centreline @ z(n1)
+  const landingCross = point(
+    p2.x + v1.x * (turnSign * width),
+    p2.y + v1.y * (turnSign * width),
+    p2.z,
   );
+  return [...run1.walklinePts, landingCross, ...run2.walklinePts];
 }
 
 function buildUShapeWalkline(
