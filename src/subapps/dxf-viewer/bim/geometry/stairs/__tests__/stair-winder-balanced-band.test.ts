@@ -144,21 +144,23 @@ describe('computeBalancedBandPlan — grows k for the going', () => {
 describe('buildBalancedWinderRun — balanced fill to P (Φ2f, minInnerGoing > 0)', () => {
   const MIN_INNER = 130;
 
-  it('one inner riser end sits on P → the corner is filled (≥2 treads share P)', () => {
+  it('a tread vertex sits on P → the corner is filled (Φ2g: odd W → mid tread bent through P)', () => {
     const input = makeInput({ minInnerGoing: MIN_INNER });
     const onP = buildBalancedWinderRun(input).treads.filter((t) =>
       t.some((v) => distFromPivot(v, input.pivotXY) < 1e-6),
     );
-    expect(onP.length).toBeGreaterThanOrEqual(2);
+    expect(onP.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('the inner ends nearest the corner keep a ≥ minInnerGoing narrow-end width', () => {
+  it('the corner going (two inner ends flanking P) keeps ≥ minInnerGoing', () => {
     const input = makeInput({ minInnerGoing: MIN_INNER });
     const innerDists = buildBalancedWinderRun(input).risers
       .map((r) => distFromPivot({ x: r.start.x, y: r.start.y }, input.pivotXY))
       .filter((dd) => dd > 1e-6)
       .sort((x, y) => x - y);
-    expect(innerDists[0]).toBeGreaterThanOrEqual(MIN_INNER - 1e-6);
+    // Φ2g V-ramp: the mid tread bends through P, so the two innermost ends flank P
+    // at ±(minInnerGoing/2); their combined corner going is ≥ the code minimum.
+    expect(innerDists[0] + innerDists[1]).toBeGreaterThanOrEqual(MIN_INNER - 1e-6);
   });
 
   it('minInnerGoing 0 → arc feet collapse onto P (legacy fan)', () => {
@@ -291,13 +293,13 @@ describe('ADR-630 Φ2g — inner-edge going forms a smooth ramp (no abrupt miter
     return [...diffs(back), ...diffs(fwd)];
   }
 
-  it('the corner inner going is the code minimum (≈130), not collapsed to 0', () => {
+  it('the corner going (two inner ends flanking P) is the code minimum (≈130), not 0', () => {
     const P = { x: 7 * 280, y: 600 };
-    const closest = buildBalancedWinderRun(gamma()).risers
+    const d = buildBalancedWinderRun(gamma()).risers
       .map((r) => distFromPivot({ x: r.start.x, y: r.start.y }, P))
       .filter((dd) => dd > 1e-6)
-      .sort((a, b) => a - b)[0];
-    expect(closest).toBeCloseTo(130, 3);
+      .sort((a, b) => a - b);
+    expect(d[0] + d[1]).toBeCloseTo(130, 3); // ±65 flanking the P-bent mid tread
   });
 
   it('inner goings are NOT a flat plateau — they ramp up well past the minimum', () => {
@@ -316,12 +318,13 @@ describe('ADR-630 Φ2g — inner-edge going forms a smooth ramp (no abrupt miter
     }
   });
 
-  it('two innermost treads still meet at P → corner filled (no hole)', () => {
+  it('the mid tread is bent through P → corner filled (no hole), extra apex vertex', () => {
     const input = gamma();
-    const onP = buildBalancedWinderRun(input).treads.filter((t) =>
-      t.some((v) => distFromPivot(v, input.pivotXY) < 1e-6),
-    );
-    expect(onP.length).toBeGreaterThanOrEqual(2);
+    const run = buildBalancedWinderRun(input);
+    const onP = run.treads.filter((t) => t.some((v) => distFromPivot(v, input.pivotXY) < 1e-6));
+    expect(onP.length).toBeGreaterThanOrEqual(1);
+    // odd W (=3) → the P-bent mid tread carries an extra vertex (pentagon).
+    expect(Math.max(...run.treads.map((t) => t.length))).toBeGreaterThanOrEqual(5);
   });
 
   it('inner going never OVERSHOOTS the tread (capped ramp → monotonic, no bulge)', () => {

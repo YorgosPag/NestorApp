@@ -89,6 +89,34 @@ inflated the bbox to 363m.
 (511 model-space + 45 from 15× `NEW00O_BLOCK` @ 3 entities each). The 417 **un-inserted** block
 definitions correctly no longer render (AutoCAD semantics — only INSERTed blocks appear).
 
+## Φ3-text — imported text «has no height» (canonical-mm scale shadowed by textNode)
+
+**Symptom (Giorgio, real KADOS file):** «τα κείμενα φαίνονται σαν μία γραμμή, δεν έχουν ύψος».
+Grabbing a text's top-middle grip and dragging up made it show correctly. The Greek content was
+**fine** (`ΚΛΙΜΑΚΑ` / `ΗΜΕΡΟΜΗΝΙΑ` decode correctly via `encodingService` Windows-1253 auto-detect —
+the earlier «ÊËÉÌÁÊÁ» report was a throwaway-test `latin1` artifact, not a pipeline bug).
+
+**Root cause:** ADR-462 canonical-mm import scales the file to mm (this drawing: `$INSUNITS=4` mm but
+geometry diagonal ~73 → heuristic `'m'` → ×1000). `DxfSceneBuilder.buildScene` applies this via the
+ADR-348 `scaleEntity` SSoT, whose `scaleText` scaled only the **flat** `height`/`fontSize` (0.1003 →
+100.3). But the AUTHORITATIVE height lives in `textNode.paragraphs[].runs[].style.height`, and the
+render/grip/ghost/3D SSoT `resolveTextHeight` reads that run height **FIRST** — so the flat scale was
+**shadowed**: the renderer kept reading the unscaled `0.1003` → text ~1000× too short (invisible line
+in a 68 m drawing). The grip-resize path already scaled the textNode (`scaleTextNodeRunHeights`);
+the import/toolbar-Scale path did not.
+
+**Fix (SSoT, one point):** `scaleText` (and `scaleMText`) in `systems/scale/scale-entity-transform.ts`
+now also scale the `textNode` run heights via the **existing** `scaleTextNodeRunHeights(node, |sy|)`
+helper (the same one the grip-resize commit uses — no duplicate scaler, N.18). This fixes the DXF
+import AND the latent toolbar-Scale-tool case for imported/textNode text in one place. Verified
+end-to-end: `convertText → scaleEntity(×1000) → resolveTextHeight` returns **100.3** (was 0.1003).
+Tests: `systems/scale/__tests__/scale-entity-text-height.test.ts` (3 cases: uniform, non-uniform |sy|,
+factor-1 no-op).
+
+**Outlier `+95.00`:** a legit stray elevation label ~47.8 m below all geometry (layer visible,
+`72/73=0`, position from `10/20` — AutoCAD shows it there too). Per Giorgio: leave as-is (AutoCAD
+zoom-extents includes everything). No code change.
+
 ## Out of scope (roadmap)
 - **Φ3 — skipped-entities warning.** No user-facing report of dropped types (`SOLID`, `POINT`,
   `3DFACE`). Add a per-type counter → toast/report (Google-level: no silent drop).
@@ -104,3 +132,9 @@ definitions correctly no longer render (AutoCAD semantics — only INSERTed bloc
   transform, nested + MINSERT arrays). Fixes ~360m-away block geometry: bbox 363m→68.7m, 0 strays.
   New: `dxf-block-parser.ts`, `dxf-block-expander.ts`, `parseEntityAt`/`findSectionRange`,
   `resolveLayerColor` SSoT. 266 jest, jscpd clean.
+- **2026-07-11 — Φ3-text:** imported text «no height» fix. `scaleText`/`scaleMText`
+  (`scale-entity-transform.ts`) now scale the `textNode` run heights via the existing
+  `scaleTextNodeRunHeights` SSoT — the canonical-mm scale was shadowed because `resolveTextHeight`
+  reads the run height first. Also repairs the toolbar Scale tool for imported text. Greek decode
+  confirmed already correct; `+95.00` outlier left as-is (AutoCAD semantics). New test
+  `scale-entity-text-height.test.ts` (3 cases). jscpd clean.

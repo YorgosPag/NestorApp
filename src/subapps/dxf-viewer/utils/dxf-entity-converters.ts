@@ -281,6 +281,11 @@ export function convertEllipse(
 // splits below); re-exported here for backward-compatible import paths.
 export { convertText, convertMText } from './dxf-text-converters';
 
+// Local binding for the master router below — a bare `export … from` re-exports but
+// does NOT create a local name, so `convertEntityToScene` calling `convertText` threw
+// `convertText is not defined` (empty import). Mirrors the hatch/xline-ray split pattern.
+import { convertText, convertMText } from './dxf-text-converters';
+
 // ============================================================================
 // 🏢 ENTERPRISE: SPLINE CONVERTER
 // ============================================================================

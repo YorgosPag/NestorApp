@@ -275,8 +275,9 @@ function buildBand(
   const t1Outer = add(P, input.ray0, width); // outer tangent (arc start, at width)
   const t2Outer = add(P, widthAxis, width);  // outer tangent (arc end, at width)
 
-  // Inner riser ends spread on the reflex L — two innermost meet at P (fill corner).
-  const inners = spreadInnerEnds(input, m, g, zoneAEnd, zoneBEnd, k * tread);
+  // Inner riser ends: a symmetric V-ramp of goings on the reflex L (fills corner).
+  const offsets = computeInnerOffsets(input, m, g, zoneAEnd, zoneBEnd, k * tread);
+  const inners = offsets.map((dj) => innerPoint(input, dj, k * tread));
   // Outer ends: EVERY riser passes through its LOCKED R* walkline mark. The
   // (inner → mark) ray is extended to the outer boundary — the width circle on the
   // arc, the flight outer edge on the straight tails — so no riser drifts off the
@@ -316,6 +317,10 @@ function buildBand(
     const ring: Vec2[] = seam
       ? [inners[j], outers[j], seam, outers[j + 1], inners[j + 1]]
       : [inners[j], outers[j], outers[j + 1], inners[j + 1]];
+    // Odd tread count → the mid tread straddles P (offsets change sign): bend its
+    // inner edge through P (extra apex) so the corner is FILLED with no hole and
+    // the V-ramp stays perfectly symmetric (ADR-630 Φ2g).
+    if (offsets[j] < -BAND_EPS && offsets[j + 1] > BAND_EPS) ring.push(P);
     treads.push(liftCCW(dedupe(ring), z));
   }
   for (let j = 1; j < m; j++) {
@@ -328,91 +333,53 @@ function buildBand(
 }
 
 /**
- * Inner riser ends on the reflex L boundary `flight-1 inner edge → P → flight-2
- * inner edge`, developed as a signed offset `d` from P (negative = back onto
- * flight-1 along `u1`, positive = forward onto flight-2 along `u2`). The corner
- * mark `jMid` stays on P (`d = 0`) so the two innermost treads meet at P and fill
- * the corner.
+ * Signed inner-end offsets `d[0..m]` from P along the reflex L boundary
+ * (`flight-1 inner edge → P → flight-2 inner edge`; negative = back onto flight-1
+ * along `u1`, positive = forward onto flight-2 along `u2`).
  *
- * ADR-630 Φ2g — when a code minimum applies, the offsets form a SYMMETRIC LINEAR
- * RAMP (`rampInnerOffsets`): the inner going grows in equal increments from
- * `minInnerGoing` (at the corner) out to ~`tread` at each flight junction, so the
- * face/riser rotation spreads gradually over the whole band — no abrupt miter.
- * `minInnerGoing = 0` (legacy fan) → arc feet stay on P (perpendicular tails).
+ * ADR-630 Φ2g — with a code minimum the inner GOINGS form a **symmetric V**:
+ * `minInnerGoing` at the corner, rising in equal increments to ~`tread` at each
+ * flight junction. The slope follows from the sum constraint (`Σ gaps = 2·bandTail`
+ * — the whole inner edge from junction to P and back), so the ends land EXACTLY on
+ * `±bandTail` and the face/riser rotation spreads SMOOTHLY over every band tread
+ * (no flat plateau, no overshoot bulge). The corner is filled either by a mark on P
+ * (even tread count) or a mid tread bent through P (odd count, handled by the
+ * caller). `minInnerGoing = 0` (legacy fan) → arc feet collapse onto P.
  */
-function spreadInnerEnds(
+function computeInnerOffsets(
   input: BalancedBandInput,
   m: number,
   g: number,
   zoneAEnd: number,
   zoneBEnd: number,
   bandTail: number,
-): Vec2[] {
-  const { pivotXY: pv, u1, u2, minInnerGoing } = input;
-  const sMid = (zoneAEnd + zoneBEnd) * 0.5;
-  const d: number[] = [];
-  let jMid = 0;
-  let best = Infinity;
-  for (let j = 0; j <= m; j++) {
-    const s = j * g;
-    const dj = s <= zoneAEnd + BAND_EPS ? s - zoneAEnd : s >= zoneBEnd - BAND_EPS ? s - zoneBEnd : 0;
-    d.push(dj);
-    if (Math.abs(s - sMid) < best) { best = Math.abs(s - sMid); jMid = j; }
+): number[] {
+  const { minInnerGoing } = input;
+  if (minInnerGoing <= BAND_EPS) {
+    const d: number[] = [];
+    for (let j = 0; j <= m; j++) {
+      const s = j * g;
+      d.push(s <= zoneAEnd + BAND_EPS ? s - zoneAEnd : s >= zoneBEnd - BAND_EPS ? s - zoneBEnd : 0);
+    }
+    return d;
   }
-  if (minInnerGoing > BAND_EPS) {
-    d[jMid] = 0;
-    fillRampSide(d, jMid, 1, m - jMid, bandTail, minInnerGoing, input.tread);
-    fillRampSide(d, jMid, -1, jMid, bandTail, minInnerGoing, input.tread);
-  }
-  return d.map((dj) => {
-    const c = Math.max(-bandTail, Math.min(bandTail, dj));
-    return c <= 0
-      ? { x: pv.x + u1.x * c, y: pv.y + u1.y * c }
-      : { x: pv.x + u2.x * c, y: pv.y + u2.y * c };
-  });
+  const centerGap = (m - 1) / 2; // gap index (0..m−1) at the band centre
+  let absSum = 0;
+  for (let j = 0; j < m; j++) absSum += Math.abs(j - centerGap);
+  const slope = absSum > BAND_EPS ? Math.max(0, (2 * bandTail - m * minInnerGoing) / absSum) : 0;
+  const d: number[] = [-bandTail];
+  for (let j = 0; j < m; j++) d.push(d[j] + minInnerGoing + slope * Math.abs(j - centerGap));
+  d[m] = bandTail; // exact junction (guard FP drift)
+  return d;
 }
 
-/**
- * ADR-630 Φ2g — fill one side of the inner-offset ramp. Starting at the corner
- * mark (`d = 0`), `p` monotonically **non-decreasing** gaps ramp from
- * `minInnerGoing` (nearest the corner) up to — and CAPPED at — `tread`, so the
- * offsets land EXACTLY on the flight junction (`dir·bandTail`) and the inner
- * going never overshoots the straight-flight tread (no bulge / no lean flip).
- * The gap `i` is `min(tread, minInnerGoing + i·delta)`; `delta` is solved so the
- * gaps sum to `bandTail` (a monotone bisection — the sum rises with `delta`). If
- * the code minimum is already too large to rise (sum at `delta = 0` ≥ bandTail),
- * the side falls back to uniform spacing.
- */
-function fillRampSide(
-  d: number[],
-  jMid: number,
-  dir: 1 | -1,
-  p: number,
-  bandTail: number,
-  minInnerGoing: number,
-  tread: number,
-): void {
-  if (p <= 0) return;
-  if (p === 1) { d[jMid + dir] = dir * bandTail; return; }
-  const sumFor = (delta: number): number => {
-    let s = 0;
-    for (let i = 0; i < p; i++) s += Math.min(tread, minInnerGoing + i * delta);
-    return s;
-  };
-  const write = (gap: (i: number) => number): void => {
-    let acc = 0;
-    for (let i = 0; i < p; i++) { acc += gap(i); d[jMid + dir * (i + 1)] = dir * acc; }
-    d[jMid + dir * p] = dir * bandTail; // snap the junction exactly onto the flight edge
-  };
-  if (sumFor(0) >= bandTail) { const u = bandTail / p; write(() => u); return; }
-  let lo = 0;
-  let hi = bandTail; // delta ≥ this caps every gap at tread → sum = min + (p−1)·tread ≥ bandTail
-  for (let it = 0; it < 60; it++) {
-    const mid = (lo + hi) / 2;
-    if (sumFor(mid) < bandTail) lo = mid; else hi = mid;
-  }
-  const delta = (lo + hi) / 2;
-  write((i) => Math.min(tread, minInnerGoing + i * delta));
+/** Map a signed offset `d` (clamped to the band) to its inner-end point on L. */
+function innerPoint(input: BalancedBandInput, d: number, bandTail: number): Vec2 {
+  const { pivotXY: pv, u1, u2 } = input;
+  const c = Math.max(-bandTail, Math.min(bandTail, d));
+  return c <= 0
+    ? { x: pv.x + u1.x * c, y: pv.y + u1.y * c }
+    : { x: pv.x + u2.x * c, y: pv.y + u2.y * c };
 }
 
 /**

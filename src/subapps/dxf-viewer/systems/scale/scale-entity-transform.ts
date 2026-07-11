@@ -13,6 +13,8 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { SceneEntity } from '../../core/commands/interfaces';
+import type { DxfTextNode } from '../../text-engine/types';
+import { scaleTextNodeRunHeights } from '../../utils/text-node-utils';
 
 // ── Point scale ───────────────────────────────────────────────────────────────
 
@@ -77,6 +79,7 @@ function scaleSpline(e: Entity & { type: 'spline' }, base: Point2D, sx: number, 
 }
 
 function scaleText(e: Entity & { type: 'text' }, base: Point2D, sx: number, sy: number) {
+  const node = (e as { textNode?: DxfTextNode }).textNode;
   return {
     position: scalePoint(e.position, base, sx, sy),
     height: (e.height ?? e.fontSize ?? 1) * Math.abs(sy),
@@ -85,15 +88,26 @@ function scaleText(e: Entity & { type: 'text' }, base: Point2D, sx: number, sy: 
     // X-scale (mirror `scaleMText`'s `width *= sx`), so the toolbar Scale tool and the
     // e/w grip resize share one width model. Uniform scale (sx===sy) leaves it at 1×.
     widthFactor: ((e as { widthFactor?: number }).widthFactor ?? 1) * Math.abs(sx),
+    // ADR-635 — the AUTHORITATIVE height lives in the `textNode`: `resolveTextHeight`
+    // reads run `style.height` FIRST, so scaling only the flat `height` above is SHADOWED
+    // (imported DXF text rendered ~1000× too short after the canonical-mm import scale →
+    // «κείμενα χωρίς ύψος, μία γραμμή»). Scale the run heights through the SSoT so
+    // render / grip / ghost / 3D all read the scaled value. Reuses the same helper the
+    // grip-resize path uses — no duplicate scaler.
+    ...(node ? { textNode: scaleTextNodeRunHeights(node, Math.abs(sy)) } : {}),
   };
 }
 
 function scaleMText(e: Entity & { type: 'mtext' }, base: Point2D, sx: number, sy: number) {
+  const node = (e as { textNode?: DxfTextNode }).textNode;
   return {
     position: scalePoint(e.position, base, sx, sy),
     height: e.height !== undefined ? e.height * Math.abs(sy) : undefined,
     fontSize: e.fontSize !== undefined ? e.fontSize * Math.abs(sy) : undefined,
     width: e.width * Math.abs(sx),
+    // ADR-635 — mirror `scaleText`: the run `style.height` in the `textNode` is what
+    // `resolveTextHeight` reads first, so the flat-height scale alone is shadowed.
+    ...(node ? { textNode: scaleTextNodeRunHeights(node, Math.abs(sy)) } : {}),
   };
 }
 

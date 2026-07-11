@@ -203,35 +203,33 @@ stringer keeps its arc **cusp** (pre-existing follow-up — explicit winder stri
      by `n1−1, n2−1, MAX_BAND_STEPS_PER_SIDE`. σκάλα Γ → `k = 4` (band 11, steps 4–14).
      `walklineGoing` stays `tread` (going(k)=tread at `R*`) → **Φ2f uniform going
      untouched**.
-  2. **`spreadInnerEnds` — symmetric linear ramp** (`fillRampSide`). Replace the flat
-     `minInnerGoing` spacing (which gave a 130-mm plateau then an abrupt jump to
-     `tread`) with a per-side ramp: the inner going grows in **equal increments** from
-     `minInnerGoing` at the corner out to ~`tread` at each flight junction. The slope
-     follows from the sum constraint (`Σ gaps = bandTail`), so both sides land
-     **exactly** on the flight edge (`±k·tread`) → the band blends seamlessly into the
-     straights (no abrupt miter). Corner mark stays on `P` (two innermost treads meet →
-     corner still filled). `minInnerGoing = 0` → legacy fan (perpendicular feet)
-     untouched. Measured σκάλα Γ ramp: `130 → 152 → 175 → 198 → 220 …` (was flat
-     `130,130,130,20`).
+  2. **`computeInnerOffsets` — symmetric V-ramp** (replaces the flat `minInnerGoing`
+     plateau + the earlier per-side `fillRampSide`). The inner GOINGS form a symmetric
+     **V**: `minInnerGoing` at the corner, rising in **equal increments** to ~`tread`
+     at each flight junction. The slope follows from the whole-edge sum constraint
+     (`Σ gaps = 2·bandTail`), so the ends land EXACTLY on `±bandTail` and the rotation
+     spreads SMOOTHLY over EVERY band tread (no plateau, no overshoot). `minInnerGoing =
+     0` → legacy fan untouched. Measured σκάλα Γ ramp:
+     `280 | 265 238 211 184 157 [P] 157 184 211 238 265 | 280`.
 
-  **Φ2g visual fixes (same day, after Giorgio's right-turn screenshot):**
-  - **Overshoot / lean flip** — the shorter side's ramp flared PAST the tread (inner
-    edge `310 > 275`), making the inner going non-monotonic and the transition risers
-    flip lean direction. Fix: `fillRampSide` now **caps each gap at `tread`** (ramp-to-
-    tread-then-flat; `delta` solved by bisection so the gaps still sum to `bandTail`).
-    Inner going is now **monotonic** (`275,275,237,183` toward the corner) — no bulge.
+  **Φ2g visual fixes (same day, iterated on Giorgio's right-turn screenshots):**
   - **Seam protrusion** — the last straight-tail outer end extended PAST the arc
     tangent (`(-600,2092)` vs tangent `(-600,1925)`), poking a spike out past the outer
     edge. Fix: at the zone boundaries (`j === k`, `j === m − k`) the outer end is
     **snapped to the tangent point** `t1Outer`/`t2Outer` (on both flight edge AND width
     circle) instead of the extended line.
+  - **Rotation not spread / odd-`W` asymmetry** — a first attempt (per-side ramp +
+    cap at `tread`) flattened the outer transition treads (rotation bunched at the
+    corner) and, because `W = 3` is odd, split the band `5|6` so one side overshot.
+    Fix: the **symmetric V-ramp** above + a **parity-aware corner**: for an ODD tread
+    count the MID tread is **bent through `P`** (extra apex vertex → a pentagon), so the
+    ramp is perfectly symmetric and the corner is still filled (no hole); for an EVEN
+    count a mark lands on `P` (two treads meet). Corner going = `minInnerGoing` (the two
+    innermost ends flank `P` at `±minInnerGoing/2`).
 
-  Tests: `+10` Φ2g total (shape-`k`, ramp not-flat, corner `=min`, capped-no-overshoot,
-  tangent-locked-no-protrusion, corner filled, no degenerate). Full stairs dir
-  **318/318 green**, jscpd clean. *(REMAINING for Giorgio's eye: transition risers are
-  CHORDS inner-edge→arc — per the Φ2f fill-to-P construction they lean toward the OUTER
-  side, not radial toward P; making them radial reintroduces the apex-at-P / newel-void
-  tradeoffs already rejected — flagged for Giorgio's decision.)*
+  Tests: `+10` Φ2g total (shape-`k`, ramp not-flat, no-overshoot, tangent-locked-no-
+  protrusion, corner going `=min`, mid-tread-bent-through-P, no degenerate). Full stairs
+  dir **318/318 green**, jscpd clean.
 - **2026-07-11** — Phase 2f (**locked marks + spread fill to P**, DONE — Giorgio's
   construction, supersedes Φ2e radial+newel): visual check of Φ2e showed the radial
   fan left a **newel void** ("hole") at the corner. Giorgio's fix: **lock** the
