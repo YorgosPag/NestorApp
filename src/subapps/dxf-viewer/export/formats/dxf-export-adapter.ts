@@ -15,7 +15,8 @@
  * ADR-505 §B.
  */
 
-import type { Entity } from '../../types/entities';
+import type { Entity, PointEntity } from '../../types/entities';
+import { isPointEntity } from '../../types/entities';
 import type { SceneModel, SceneLayer, SceneBounds } from '../../types/scene-types';
 import {
   createDefaultExportSettings,
@@ -211,6 +212,9 @@ export function renderDxfBlob(request: DxfExportSceneRequest, lineMode?: DxfLine
     measurement: professionalTables ? 1 : undefined, // 1 = metric
     ltscale: professionalTables ? 1 : undefined,
     lunits: professionalTables ? 2 : undefined,       // 2 = decimal
+    // ADR-636 Φ2.4 (D.1) — POINT glyph sysvars (round-trip C.1). Gated on the AutoCAD path so the
+    // bare Tekton envelope stays header-less (an empty object spreads to nothing → no HEADER trigger).
+    ...(professionalTables ? resolvePointDisplayForExport(request.scene.entities, scale) : {}),
   });
   // ADR-636 Στάδιο 2 Φ2.2 — encode the final bytes to match the declared version. UTF-8 (2007+)
   // writes the JS string as-is; a pre-Unicode target (cp1253) re-encodes the WHOLE string to
@@ -243,6 +247,28 @@ export function computeScaledExtents(
   return {
     min: { x: b.min.x * scale, y: b.min.y * scale },
     max: { x: b.max.x * scale, y: b.max.y * scale },
+  };
+}
+
+/**
+ * ADR-636 Φ2.4 (D.1) — drawing-wide POINT display sysvars for the HEADER, round-tripping the C.1
+ * import (which baked $PDMODE/$PDSIZE per-point). Read back off the first point that carries them
+ * (drawing-wide value → every point shares it). `$PDSIZE > 0` is a drawing-unit length → pre-scaled
+ * to output units (mirror of extMin/extMax); ≤ 0 is a viewport-% → passed raw. No point / no baked
+ * value → `{}` (AutoCAD's own point-display defaults apply).
+ */
+export function resolvePointDisplayForExport(
+  entities: readonly Entity[],
+  scale: number,
+): { pdmode?: number; pdsize?: number } {
+  const point = entities.find(
+    (e): e is PointEntity => isPointEntity(e) && (e.pdMode != null || e.pdSize != null),
+  );
+  if (!point) return {};
+  const pdsize = point.pdSize != null && point.pdSize > 0 ? point.pdSize * scale : point.pdSize;
+  return {
+    ...(point.pdMode != null && { pdmode: point.pdMode }),
+    ...(pdsize != null && { pdsize }),
   };
 }
 

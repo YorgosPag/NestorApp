@@ -9,6 +9,9 @@ import { registerLinetypes } from '../stores/LinetypeRegistry';
 // ADR-635 Φ C.5 — STYLE table pre-pass: map each text-style name → its font family so
 // TEXT/MTEXT (group 7) resolve to the real font. Reuses the ADR-344 STYLE parser SSoT.
 import { buildStyleFontMap } from '../text-engine/parser';
+// ADR-635 Φ C.7 — MLINESTYLE (OBJECTS section) pre-pass: map style name/handle → N line
+// elements so an MLINE draws its real parallel lines instead of a single reference path.
+import { buildMlineStyleMap } from './dxf-mline-style-parser';
 // ADR-635 Φ2 — INSERT/BLOCK expansion (block-definition map + placement transform).
 import { parseBlockDefinitions } from './dxf-block-parser';
 import { instantiateInsert, DEFAULT_SCENE_ENTITY_BUDGET, type ExpandContext } from './dxf-block-expander';
@@ -142,6 +145,11 @@ export class DxfSceneBuilder {
     // ╚════════════════════════════════════════════════════════════════════════╝
     const styleFonts = buildStyleFontMap(content);
 
+    // ADR-635 Φ C.7 — MLINESTYLE pre-pass (OBJECTS section, line-based). Per-drawing map
+    // (like dimStyles/styleFonts), threaded to convertMline so an MLINE expands to its N
+    // parallel element polylines. Absent OBJECTS/MLINESTYLE ⇒ empty map ⇒ STANDARD default.
+    const mlineStyles = buildMlineStyleMap(lines);
+
     const entities: AnySceneEntity[] = [];
     const layers: Record<string, SceneLayer> = {};
 
@@ -211,6 +219,7 @@ export class DxfSceneBuilder {
       header,
       dimStyles,
       styleFonts,
+      mlineStyles,
       idSeq: { n: 0 },
       diagnostics,
       budget: { max: DEFAULT_SCENE_ENTITY_BUDGET, used: 0 },
@@ -237,7 +246,7 @@ export class DxfSceneBuilder {
           recordParsed(diagnostics, 'INSERT');
           return;
         }
-        const result = DxfEntityParser.convertToSceneEntity(entityData, index, header, dimStyles, styleFonts);
+        const result = DxfEntityParser.convertToSceneEntity(entityData, index, header, dimStyles, styleFonts, mlineStyles);
         if (!result) {
           // Unsupported entity type (e.g. SOLID/POINT/3DFACE) — was silently dropped; now counted.
           recordSkipped(diagnostics, type);

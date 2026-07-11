@@ -20,6 +20,7 @@ import type { Point2D } from '../rendering/types/Types';
 import type { EntityData } from './dxf-converter-helpers';
 import { extractEntityColor, isByBlockColor } from './dxf-converter-helpers';
 import type { DxfHeaderData, DimStyleMap, StyleFontMap } from './dxf-parser-types';
+import type { MlineStyleMap } from './dxf-mline-style-parser';
 import type { BlockDefMap } from './dxf-block-parser';
 import { convertEntityToScene } from './dxf-entity-converters';
 import { scaleEntity } from '../systems/scale/scale-entity-transform';
@@ -50,6 +51,8 @@ export interface ExpandContext {
   dimStyles?: DimStyleMap;
   /** ADR-635 Φ C.5 — STYLE→font map so block-nested TEXT/MTEXT (group 7) resolve fonts too. */
   styleFonts?: StyleFontMap;
+  /** ADR-635 Φ C.7 — MLINESTYLE map so block-nested MLINE (group 2/340) resolves its N elements. */
+  mlineStyles?: MlineStyleMap;
   /** Monotonic id source shared across the whole scene so cloned entities stay unique. */
   idSeq: { n: number };
   /** Import diagnostics collector (skipped/error/clamp records). Optional for legacy callers. */
@@ -169,7 +172,7 @@ export function instantiateInsert(
         local.push(...instantiateInsert(child, blockDefs, ctx, depth + 1));
         continue;
       }
-      const converted = convertEntityToScene(child, ctx.idSeq.n++, ctx.header, ctx.dimStyles, ctx.styleFonts);
+      const converted = convertEntityToScene(child, ctx.idSeq.n++, ctx.header, ctx.dimStyles, ctx.styleFonts, ctx.mlineStyles);
       if (!converted) continue;
       const inheritColor = insertColor !== undefined && isByBlockColor(child.data);
       for (const e of Array.isArray(converted) ? converted : [converted]) {

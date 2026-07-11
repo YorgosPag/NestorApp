@@ -46,6 +46,40 @@ function makeDrawnLine(id = 'entity_drawn', visible = true): EntityModel {
   } as unknown as EntityModel;
 }
 
+// An imported open polyline with direction-change vertices (Giorgio's report):
+// only the two end vertices used to be snappable — the 3 corners in between were
+// silently dropped from the ENDPOINT index.
+function makeOpenPolyline(id = 'ent_polyline'): EntityModel {
+  return {
+    id,
+    type: 'polyline',
+    layerId: '',
+    color: '#FFFFFF',
+    closed: false,
+    vertices: [
+      { x: 0, y: 0 },      // end vertex
+      { x: 100, y: 0 },    // corner (direction change)
+      { x: 100, y: 100 },  // corner (direction change)
+      { x: 200, y: 100 },  // end vertex
+    ],
+  } as unknown as EntityModel;
+}
+
+function makeClosedPolyline(id = 'ent_polyline_closed'): EntityModel {
+  return {
+    id,
+    type: 'polyline',
+    layerId: '',
+    color: '#FFFFFF',
+    closed: true,
+    vertices: [
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 100, y: 100 },
+    ],
+  } as unknown as EntityModel;
+}
+
 function makeContext(overrides: Partial<SnapEngineContext> = {}): SnapEngineContext {
   return {
     entities: [],
@@ -112,5 +146,48 @@ describe('EndpointSnapEngine — imported DXF endpoints snap (ADR-378 regression
     const nearDrawn = engine.findSnapCandidates({ x: 0, y: 0 }, makeContext());
     expect(nearImported.candidates.some(c => c.entityId === 'ent_a')).toBe(true);
     expect(nearDrawn.candidates.some(c => c.entityId === 'entity_b')).toBe(true);
+  });
+});
+
+describe('EndpointSnapEngine — open polyline vertex endpoints (Revit-grade osnap)', () => {
+  let engine: EndpointSnapEngine;
+
+  beforeEach(() => {
+    engine = new EndpointSnapEngine();
+  });
+
+  afterEach(() => {
+    engine.dispose();
+  });
+
+  it('snaps to an INTERMEDIATE direction-change vertex (regression: Giorgio report)', () => {
+    engine.initialize([makeOpenPolyline()]);
+    // Corner between the two segments — used to be dropped from the index.
+    const { candidates } = engine.findSnapCandidates({ x: 100, y: 0 }, makeContext());
+    expect(candidates.length).toBeGreaterThan(0);
+    expect(candidates[0].entityId).toBe('ent_polyline');
+    expect(candidates[0].point).toEqual({ x: 100, y: 0 });
+  });
+
+  it('snaps to the second intermediate corner too', () => {
+    engine.initialize([makeOpenPolyline()]);
+    const { candidates } = engine.findSnapCandidates({ x: 100, y: 100 }, makeContext());
+    expect(candidates.some(c => c.point.x === 100 && c.point.y === 100)).toBe(true);
+  });
+
+  it('still snaps to the first and last vertices (no regression)', () => {
+    engine.initialize([makeOpenPolyline()]);
+    const first = engine.findSnapCandidates({ x: 0, y: 0 }, makeContext());
+    const last = engine.findSnapCandidates({ x: 200, y: 100 }, makeContext());
+    expect(first.candidates.some(c => c.point.x === 0 && c.point.y === 0)).toBe(true);
+    expect(last.candidates.some(c => c.point.x === 200 && c.point.y === 100)).toBe(true);
+  });
+
+  it('snaps to every vertex of a closed polyline', () => {
+    engine.initialize([makeClosedPolyline()]);
+    for (const v of [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }]) {
+      const { candidates } = engine.findSnapCandidates(v, makeContext());
+      expect(candidates.some(c => c.point.x === v.x && c.point.y === v.y)).toBe(true);
+    }
   });
 });

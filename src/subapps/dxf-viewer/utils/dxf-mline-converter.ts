@@ -1,33 +1,52 @@
 /**
- * 🏢 ENTERPRISE: DXF MLINE Converter (ADR-635 Φάση B)
+ * 🏢 ENTERPRISE: DXF MLINE Converter (ADR-635 Φάση B · Φ C.7)
  *
- * MLINE (multiline) = N παράλληλες γραμμές ορισμένες από ένα MLINESTYLE object
- * (offsets/caps/line-elements) που ζει στο OBJECTS section, προσβάσιμο μόνο μέσω
- * handle pointer (code 340) — ΔΕΝ αναλύεται σε αυτό το Φάση B MVP.
+ * MLINE (multiline) = N παράλληλες γραμμές που ορίζει ένα MLINESTYLE object
+ * (offsets/colors ανά element) στο OBJECTS section. Φ C.7: ζωγραφίζουμε ΟΛΑ τα
+ * elements ως N `type:'polyline'` — καθένα = η reference path μετατοπισμένη κατά
+ * `(elementOffset + justAdjust) × scale`, με κοινό `groupId` (ADR-608 provenance)
+ * ώστε το imported MLINE να παραμένει ΕΝΑ selectable unit (AutoCAD parity).
  *
- * MVP: εξάγουμε τη REFERENCE/κεντρική διαδρομή (vertices 11/21, justification-
- * independent) ως ΕΝΑ `type:'polyline'`. Πλήρες multi-offset rendering (N
- * παράλληλες γραμμές) είναι follow-up εφόσον χρειαστεί MLINESTYLE parsing.
+ * Χωρίς MLINESTYLE (π.χ. R12 / απών style) → default STANDARD (±0.5), όπως το AutoCAD.
+ *
+ * SSoT reuse (ΟΧΙ νέο offset math): `offsetPolyline` (rendering/entities/shared/
+ * geometry-offset-utils) — proven miter/bevel, positive = LEFT of travel = AutoCAD
+ * MLINE +offset. Color resolution: `extractEntityColor` (ίδιο με κάθε converter).
  *
  * ⚠️ Δουλεύει πάνω σε ORDERED `pairs` (ίδιο idiom με HATCH/POLYLINE) — το flat
  * `data` map θα κρατούσε μόνο το ΤΕΛΕΥΤΑΙΟ 11/21 ζεύγος (πολλαπλά vertices).
  *
  * @see AutoCAD DXF Reference: MLINE entity
- * @see dxf-hatch-converter.ts — ίδιο pattern (ordered pairs state machine)
+ * @see dxf-mline-style-parser.ts — MLINESTYLE (OBJECTS section) reader
  */
 
 import type { AnySceneEntity } from '../types/scene';
-import type { Point2D } from '../rendering/types/Types';
+import type { Point2D, Point3D } from '../rendering/types/Types';
+import type { MlineStyleDef, MlineStyleMap } from './dxf-mline-style-parser';
+import { STANDARD_MLINE_STYLE } from './dxf-mline-style-parser';
+import { offsetPolyline } from '../rendering/entities/shared/geometry-offset-utils';
 import { extractEntityColor } from './dxf-converter-helpers';
 import { dwarn } from '../debug';
 
 type DxfPairs = ReadonlyArray<readonly [string, string]>;
 
+/** MLINE justification (group 70): where the drawn line sits relative to the elements. */
+const MLINE_JUSTIFY_TOP = 0;
+const MLINE_JUSTIFY_BOTTOM = 2;
+
+interface MlineParams {
+  readonly scale: number;
+  readonly justification: number;
+  readonly styleName?: string;
+  readonly styleHandle?: string;
+  readonly isClosed: boolean;
+  readonly entityColor?: string;
+}
+
 /**
  * Διαβάζει τα vertex-coordinate codes 11/21 (ΟΧΙ 10/20 — αυτά είναι το duplicate
  * "start point" της οντότητας). Codes 12/13/22/23/74/41/75/42 (direction/miter/
- * element params) παρεμβάλλονται ανάμεσα σε διαδοχικά 11/21 ζεύγη αλλά δεν ταιριάζουν
- * στο pattern-match, άρα αγνοούνται φυσικά — ίδιο idiom με parseVerticesFromPairs.
+ * element params) παρεμβάλλονται αλλά δεν ταιριάζουν στο pattern-match, άρα αγνοούνται.
  */
 function parseMlineVertices(pairs: DxfPairs): Point2D[] {
   const vertices: Point2D[] = [];
@@ -47,38 +66,88 @@ function parseMlineVertices(pairs: DxfPairs): Point2D[] {
   return vertices;
 }
 
+/** Extract MLINE scale (40), justification (70), style name (2)/handle (340), closed (71), color. */
+function readMlineParams(pairs: DxfPairs): MlineParams {
+  const first = (code: string): string | undefined => pairs.find(([c]) => c === code)?.[1];
+  const scaleRaw = parseFloat(first('40') ?? '1');
+  const scale = Number.isFinite(scaleRaw) ? scaleRaw : 1;
+  const justification = parseInt(first('70') ?? '0', 10) || 0;
+  // 71 bit 2 = closed (ΟΧΙ 70 bit 1 όπως LWPOLYLINE — διαφορετικό bitmask spec).
+  const isClosed = ((parseInt(first('71') ?? '0', 10) || 0) & 2) === 2;
+  const colorCode = first('62');
+  const entityColor = colorCode ? extractEntityColor({ '62': colorCode }) : undefined;
+  return {
+    scale,
+    justification,
+    styleName: first('2'),
+    styleHandle: first('340'),
+    isClosed,
+    entityColor,
+  };
+}
+
+/** Resolve the MLINE's style by name then handle, falling back to AutoCAD STANDARD. */
+function resolveMlineStyle(styles: MlineStyleMap | undefined, params: MlineParams): MlineStyleDef {
+  if (!styles) return STANDARD_MLINE_STYLE;
+  const byName = params.styleName ? styles.get(params.styleName) : undefined;
+  const byHandle = params.styleHandle ? styles.get(params.styleHandle) : undefined;
+  return byName ?? byHandle ?? STANDARD_MLINE_STYLE;
+}
+
 /**
- * Convert MLINE entity → reference-line `polyline` scene entity (ADR-635 Φάση B MVP).
- * ΔΕΝ αναπαράγει τις N παράλληλες γραμμές του MLINESTYLE (offsets) — follow-up.
+ * Justification shift so the drawn reference path aligns with AutoCAD's convention:
+ * Top → the max-offset element lands on the path; Bottom → the min-offset element;
+ * Zero (default) → no shift (offset 0 on the path).
+ */
+function justificationAdjust(justification: number, elements: readonly { offset: number }[]): number {
+  const offsets = elements.map(e => e.offset);
+  if (justification === MLINE_JUSTIFY_TOP) return -Math.max(...offsets);
+  if (justification === MLINE_JUSTIFY_BOTTOM) return -Math.min(...offsets);
+  return 0;
+}
+
+/** Build one element polyline: reference path offset perpendicular by `distance` (2D). */
+function buildElementVertices(refPath: readonly Point3D[], distance: number): Point2D[] {
+  if (distance === 0) return refPath.map(({ x, y }) => ({ x, y }));
+  return offsetPolyline(refPath, distance).map(({ x, y }) => ({ x, y }));
+}
+
+/**
+ * Convert MLINE entity → N parallel `polyline` scene entities (ADR-635 Φ C.7), one per
+ * MLINESTYLE element, grouped via `groupId`. Falls back to STANDARD (±0.5) when the
+ * style is absent. Returns [] when there are < 2 reference vertices.
  */
 export function convertMline(
   pairs: DxfPairs,
   layer: string,
   index: number,
-): AnySceneEntity | null {
+  mlineStyles?: MlineStyleMap,
+): AnySceneEntity[] {
   const vertices = parseMlineVertices(pairs);
-
   if (vertices.length < 2) {
     dwarn('EntityConverter', `⚠️ Skipping MLINE ${index}: insufficient vertices (11/21)`, vertices.length);
-    return null;
+    return [];
   }
 
-  // 71 bit 2 = closed (ΟΧΙ 70 bit 1 όπως LWPOLYLINE — διαφορετικό bitmask spec).
-  const flags71Entry = pairs.find(([code]) => code === '71');
-  const flags71 = flags71Entry ? parseInt(flags71Entry[1], 10) || 0 : 0;
-  const isClosed = (flags71 & 2) === 2;
+  const params = readMlineParams(pairs);
+  const style = resolveMlineStyle(mlineStyles, params);
+  const adjust = justificationAdjust(params.justification, style.elements);
+  const refPath: Point3D[] = vertices.map(({ x, y }) => ({ x, y, z: 0 }));
+  const groupId = `mline_${index}`;
 
-  // extractEntityColor διαβάζει flat Record — μετατρέπουμε το πρώτο 62 σε mini-map.
-  const colorEntry = pairs.find(([code]) => code === '62');
-  const color = colorEntry ? extractEntityColor({ '62': colorEntry[1] }) : undefined;
-
-  return {
-    id: `mline_${index}`,
-    type: 'polyline',
-    layerId: layer,
-    visible: true,
-    vertices,
-    closed: isClosed,
-    ...(color && { color }),
-  };
+  return style.elements.map((element, k) => {
+    const distance = (element.offset + adjust) * params.scale;
+    const elementColor = element.aci ? extractEntityColor({ '62': element.aci }) : undefined;
+    const color = elementColor ?? params.entityColor;
+    return {
+      id: `${groupId}_e${k}`,
+      type: 'polyline',
+      layerId: layer,
+      visible: true,
+      vertices: buildElementVertices(refPath, distance),
+      closed: params.isClosed,
+      groupId,
+      ...(color && { color }),
+    } as AnySceneEntity;
+  });
 }

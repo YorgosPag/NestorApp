@@ -85,21 +85,12 @@ export class GeometricCalculations {
       endpoints.push(entity.start);
       endpoints.push(entity.end);
     } else if (isPolylineEntity(entity) || isLWPolylineEntity(entity)) {
-      const vertices = entity.vertices;
-      const isClosed = entity.closed || false;
-
-      if (vertices && vertices.length > 0) {
-        if (isClosed) {
-          // For closed polylines, all vertices are endpoints (corners)
-          endpoints.push(...vertices);
-        } else {
-          // For open polylines, only first and last are endpoints
-          endpoints.push(vertices[0]);
-          if (vertices.length > 1) {
-            endpoints.push(vertices[vertices.length - 1]);
-          }
-        }
-      }
+      // AutoCAD/Revit ENDPOINT osnap: ΚΑΘΕ κορυφή είναι άκρο ενός τμήματος — όχι
+      // μόνο τα δύο ακραία. Ισχύει το ίδιο για ανοιχτή ΚΑΙ κλειστή πολυγραμμή· το
+      // `closed` flag δεν προσθέτει/αφαιρεί κορυφή, μόνο την ακμή κλεισίματος (που
+      // την καλύπτει το MIDPOINT). Πριν, η ανοιχτή πολυγραμμή έδινε μόνο first+last,
+      // κρύβοντας τα σημεία αλλαγής διεύθυνσης από την έλξη (ADR-378 follow-up).
+      if (entity.vertices) endpoints.push(...entity.vertices);
     } else if (isArcEntity(entity)) {
       // 🏢 ADR-074: Use centralized pointOnCircle
       const start = pointOnCircle(entity.center, entity.radius, entity.startAngle);

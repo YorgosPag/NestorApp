@@ -32,6 +32,7 @@ export type {
 export { SUPPORTED_ENTITY_TYPES, DXF_SECTION_MARKERS, INSUNITS_TO_MM } from './dxf-parser-types';
 
 import type { DxfHeaderData, DimStyleMap, StyleFontMap } from './dxf-parser-types';
+import type { MlineStyleMap } from './dxf-mline-style-parser';
 import { SUPPORTED_ENTITY_TYPES, INSUNITS_TO_MM, INSUNITS_NAMES } from './dxf-parser-types';
 
 // Re-export table parsers for backward compatibility
@@ -356,8 +357,9 @@ export class DxfEntityParser {
     index: number,
     header?: DxfHeaderData,
     dimStyles?: DimStyleMap,
-    styleFonts?: StyleFontMap
+    styleFonts?: StyleFontMap,
+    mlineStyles?: MlineStyleMap
   ): AnySceneEntity | AnySceneEntity[] | null {
-    return convertEntityToScene(entityData, index, header, dimStyles, styleFonts);
+    return convertEntityToScene(entityData, index, header, dimStyles, styleFonts, mlineStyles);
   }
 }

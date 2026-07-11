@@ -22,6 +22,7 @@
 
 import type { AnySceneEntity } from '../types/scene';
 import type { DxfHeaderData, DimStyleMap, StyleFontMap } from './dxf-entity-parser';
+import type { MlineStyleMap } from './dxf-mline-style-parser';
 import { vectorMagnitude } from '../rendering/entities/shared/geometry-rendering-utils';
 
 import {
@@ -379,9 +380,10 @@ export function convertEntityToScene(
   index: number,
   header?: DxfHeaderData,
   dimStyles?: DimStyleMap,
-  styleFonts?: StyleFontMap
+  styleFonts?: StyleFontMap,
+  mlineStyles?: MlineStyleMap
 ): AnySceneEntity | AnySceneEntity[] | null {
-  const result = routeEntityToConverter(entityData, index, header, dimStyles, styleFonts);
+  const result = routeEntityToConverter(entityData, index, header, dimStyles, styleFonts, mlineStyles);
   return applyImportedStyleFields(result, entityData.data);
 }
 
@@ -431,7 +433,8 @@ function routeEntityToConverter(
   index: number,
   header?: DxfHeaderData,
   dimStyles?: DimStyleMap,
-  styleFonts?: StyleFontMap
+  styleFonts?: StyleFontMap,
+  mlineStyles?: MlineStyleMap
 ): AnySceneEntity | AnySceneEntity[] | null {
   const { type, layer, data } = entityData;
 
@@ -481,7 +484,7 @@ function routeEntityToConverter(
     case 'TRACE':
       return convertTrace(data, layer, index);
     case 'MLINE':
-      return convertMline(entityData.pairs ?? [], layer, index);
+      return convertMline(entityData.pairs ?? [], layer, index, mlineStyles);
     // ADR-635 Φάση B Batch 2 Part B — annotation callout (ordered 10/20 vertices via pairs).
     case 'LEADER':
       return convertLeader(entityData, index);

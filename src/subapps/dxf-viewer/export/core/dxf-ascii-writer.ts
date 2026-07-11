@@ -59,6 +59,18 @@ import { emitHatch, type Pair } from './dxf-ascii-hatch-writer';
 // attachment) emitters live in their own module (file-size SRP). `alignFromTextEntity` derives
 // the H/V codes from the entity via the inverse import maps (zero new alignment table).
 import { emitText, emitMText, alignFromTextEntity } from './dxf-ascii-text-writer';
+// ADR-505 §A — low-level DXF primitive emitters + geometry/format helpers live in a sibling
+// module (file-size SRP split, N.7.1). `emitLine` stays the ONE definition injected into `emitHatch`.
+import {
+  emit3DFace,
+  emitLine,
+  emitCircle,
+  emitPoint,
+  emitArc,
+  emitPath,
+  arcPoints,
+  num,
+} from './dxf-ascii-primitive-emitters';
 import { DxfDocumentVersion, parseDocumentVersion } from '../../text-engine/types/text-toolbar.types';
 import type { DxfLineMode } from '../types';
 
@@ -119,12 +131,19 @@ export interface DxfWriteOptions {
   readonly measurement?: number;
   readonly ltscale?: number;
   readonly lunits?: number;
+  /**
+   * ADR-636 Φ2.4 (D.1) — POINT display sysvars, round-tripping the C.1 import. `$PDMODE`
+   * (70, bitmask: figure|+32 circle|+64 square) is unit-agnostic; `$PDSIZE` (40) is pre-scaled
+   * to output units by the caller when > 0 (viewport-% values ≤ 0 pass through) — mirror of the
+   * extMin/extMax pre-scaling convention. Gated on the same HEADER switch (bare/Tekton unaffected).
+   */
+  readonly pdmode?: number;
+  readonly pdsize?: number;
 }
 
 const DEFAULT_LAYER = '0';
 const DEFAULT_ACI = 7; // white/black (ByLayer-ish fallback)
 const ACI_BYLAYER = 256; // dimension-block geometry follows the dim's layer colour
-const ARC_SEGMENT_DEG = 12;
 
 /** Produce a DXF string for the given (flattened) entities. */
 export function writeDxfAscii(
@@ -152,7 +171,8 @@ export function writeDxfAscii(
   if (
     options.acadVer || options.insunits != null || options.codepage ||
     options.extMin || options.extMax || options.measurement != null ||
-    options.ltscale != null || options.lunits != null
+    options.ltscale != null || options.lunits != null ||
+    options.pdmode != null || options.pdsize != null
   ) {
     pair(0, 'SECTION');
     pair(2, 'HEADER');
@@ -166,6 +186,9 @@ export function writeDxfAscii(
     if (options.ltscale != null) { pair(9, '$LTSCALE'); pair(40, options.ltscale); }
     if (options.lunits != null) { pair(9, '$LUNITS'); pair(70, options.lunits); }
     if (options.measurement != null) { pair(9, '$MEASUREMENT'); pair(70, options.measurement); }
+    // ADR-636 Φ2.4 (D.1) — POINT display sysvars (round-trip C.1 import). $PDSIZE pre-scaled by caller.
+    if (options.pdmode != null) { pair(9, '$PDMODE'); pair(70, options.pdmode); }
+    if (options.pdsize != null) { pair(9, '$PDSIZE'); pair(40, options.pdsize); }
     pair(0, 'ENDSEC');
   }
 
@@ -328,59 +351,16 @@ function writeEntity(
       emitDimensionEntity(pair, { entity: dim, styleName, layerName: layer }, nextDimBlock(), s);
       break;
     }
-    // point/spline/leader/xline/ray → skipped.
+    case 'point':
+      // ADR-636 Φ2.4 (D.1) — POINT round-trips the C.1 import. The glyph ($PDMODE/$PDSIZE) is a
+      // drawing-wide HEADER sysvar (emitted once above), not a per-POINT field — the entity is
+      // just its position (10/20/30) + layer + colour, mirroring emitCircle.
+      emitPoint(e.position, layer, aci, s, pair);
+      break;
+    // spline/leader/xline/ray → skipped.
     default:
       break;
   }
-}
-
-/** A `3DFACE` — up to 4 corners (triangle → 4th = 3rd). x/y × `s`, z (mm) × mmScale. */
-function emit3DFace(
-  face: ReadonlyArray<{ x: number; y: number; zMm: number }>,
-  layer: string, aci: number, s: number, mmScale: number, pair: Pair,
-): void {
-  if (face.length < 3) return;
-  const c = [face[0], face[1], face[2], face[3] ?? face[2]]; // tri → 4η κορυφή = 3η
-  pair(0, '3DFACE');
-  for (let i = 0; i < 4; i += 1) {
-    pair(10 + i, c[i].x * s);
-    pair(20 + i, c[i].y * s);
-    pair(30 + i, c[i].zMm * mmScale);
-  }
-  pair(8, layer);
-  pair(62, aci);
-}
-
-/** A LINE — coordinates first, layer, colour (ACI). Optional Z per endpoint (3Δ rebar). */
-function emitLine(
-  a: Point2D, b: Point2D, layer: string, aci: number, s: number, pair: Pair, za?: number, zb?: number,
-): void {
-  pair(0, 'LINE');
-  pair(10, a.x * s); pair(20, a.y * s);
-  if (za !== undefined) pair(30, za);
-  pair(11, b.x * s); pair(21, b.y * s);
-  if (zb !== undefined) pair(31, zb);
-  pair(8, layer);
-  pair(62, aci);
-}
-
-function emitCircle(c: Point2D, r: number, layer: string, aci: number, s: number, pair: Pair): void {
-  pair(0, 'CIRCLE');
-  pair(10, c.x * s); pair(20, c.y * s);
-  pair(40, r * s);
-  pair(8, layer);
-  pair(62, aci);
-}
-
-function emitArc(
-  c: Point2D, r: number, startDeg: number, endDeg: number, layer: string, aci: number, s: number, pair: Pair,
-): void {
-  pair(0, 'ARC');
-  pair(10, c.x * s); pair(20, c.y * s);
-  pair(40, r * s);
-  pair(50, startDeg); pair(51, endDeg);
-  pair(8, layer);
-  pair(62, aci);
 }
 
 // ─── Dimension anonymous block (ADR-362 Round 26) ─────────────────────────────
@@ -443,56 +423,5 @@ function writeDimensionBlock(
   pair(8, layer);
 }
 
-/**
- * Emit a vertex path — as a single `POLYLINE` (AutoCAD) or, when `explode`,
- * as individual `LINE` segments (Tekton has no POLYLINE).
- */
-function emitPath(
-  vertices: readonly Point2D[], closed: boolean, layer: string, aci: number, s: number, explode: boolean, pair: Pair,
-  thickness = 0,
-): void {
-  if (vertices.length < 2) return;
-  if (explode) {
-    for (let i = 0; i < vertices.length - 1; i += 1) {
-      emitLine(vertices[i], vertices[i + 1], layer, aci, s, pair);
-    }
-    if (closed && vertices.length > 2) {
-      emitLine(vertices[vertices.length - 1], vertices[0], layer, aci, s, pair);
-    }
-    return;
-  }
-  // Old-style POLYLINE (R12-native, universally readable). With `thickness`,
-  // AutoCAD extrudes the closed polyline along +Z → pseudo-3D prism.
-  pair(0, 'POLYLINE'); pair(8, layer); pair(62, aci);
-  pair(66, 1);                       // vertices-follow flag
-  pair(70, closed ? 1 : 0);          // 1 = closed
-  if (thickness) pair(39, thickness); // extrusion height (group 39)
-  for (const v of vertices) {
-    pair(0, 'VERTEX'); pair(8, layer);
-    pair(10, v.x * s); pair(20, v.y * s);
-  }
-  pair(0, 'SEQEND'); pair(8, layer);
-}
-
-// ─── Geometry helpers ─────────────────────────────────────────────────────────
-
-/** Tessellate an arc (degrees, CCW start→end) into a polyline of points. */
-function arcPoints(c: Point2D, r: number, startDeg: number, endDeg: number): Point2D[] {
-  let sweep = endDeg - startDeg;
-  while (sweep <= 0) sweep += 360;
-  const steps = Math.max(2, Math.ceil(sweep / ARC_SEGMENT_DEG));
-  const pts: Point2D[] = [];
-  for (let i = 0; i <= steps; i += 1) {
-    const a = ((startDeg + (sweep * i) / steps) * Math.PI) / 180;
-    pts.push({ x: c.x + r * Math.cos(a), y: c.y + r * Math.sin(a) });
-  }
-  return pts;
-}
-
-// ─── Formatting ───────────────────────────────────────────────────────────────
-
-/** DXF number: fixed 6-decimals, trimmed, never exponential. */
-function num(n: number): string {
-  if (!Number.isFinite(n)) return '0';
-  return n.toFixed(6).replace(/\.?0+$/, '') || '0';
-}
+// ADR-505 §A — primitive emitters (emitLine/emitCircle/emitArc/emitPoint/emit3DFace/emitPath),
+// arcPoints + num moved to `dxf-ascii-primitive-emitters.ts` (file-size SRP split, N.7.1).

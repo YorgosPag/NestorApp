@@ -211,3 +211,13 @@ string). Well-formed nodes (rich toolbar / AI-created / commands) export correct
   raw inline codes in one run → re-export double-escapes (import-side defect, deferred to Φ2.4).
   **Note:** the `computeScaledExtents` DEFAULT_BOUNDS-sentinel guard is an uncommitted follow-up on top
   of commits `edefe56a`/`d5de7136` (which landed the rest of Φ2.3).
+- **2026-07-11 — Στάδιο 2 Φ2.4 (D.1) — POINT export round-trip (ADR-635 C.1 parity):** ο `writeEntity`
+  switch skip-άριζε το POINT (`default: break`) → τα imported points χάνονταν στο export. Νέο `emitPoint`
+  helper (mirror `emitCircle`: `0 POINT / 10·s / 20·s / 30 0 / 8 / 62`) + `case 'point'`. Το glyph είναι
+  **drawing-wide HEADER sysvar** (όχι per-POINT): νέα `DxfWriteOptions.pdmode/pdsize` → `$PDMODE`(70)/
+  `$PDSIZE`(40) στο HEADER block (ίδιο gate). Ο adapter `resolvePointDisplayForExport(entities, scale)`
+  διαβάζει τα baked `pdMode/pdSize` από το πρώτο point (drawing-wide → κοινά)· `$PDSIZE>0` pre-scaled σε
+  output units (**mirror του extMin/extMax** — adapter pre-scales, writer emits raw), viewport-% ≤0 raw·
+  gated στο AutoCAD path (empty object → bare Tekton envelope αμετάβλητο). Round-trips την C.1 import.
+  9 νέα tests (`dxf-roundtrip-point.test.ts`: writer emit + scale + convertPoint round-trip + HEADER +
+  adapter derivation), **151 export/core + 19 adapter jest green**, jscpd clean. ΟΧΙ browser-verified.

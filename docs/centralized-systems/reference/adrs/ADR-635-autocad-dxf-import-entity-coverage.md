@@ -301,6 +301,17 @@ canonical-mm pass exactly like a native HATCH. Reuses the existing `hatch-patter
 38/38 jest green; jscpd clean; real 26 MB R12 file end-to-end 156 860 lines → 9 hatches.
 
 ## Changelog
+- **2026-07-11 — Φ C.7 (MLINESTYLE import: MLINE → N parallel element polylines):** ο `convertMline` έβγαζε
+  ΜΙΑ reference polyline (11/21) — τα MLINESTYLE elements (offsets/colors) στο **OBJECTS** section (handle 340)
+  αγνοούνταν. Νέο **self-contained** `dxf-mline-style-parser.ts` (`buildMlineStyleMap`, ordered scan του OBJECTS
+  ώστε τα repeated 49/62/6 να επιβιώνουν· key by name **και** handle· fill-colour 62 πριν το πρώτο 49 αγνοείται)
+  + `STANDARD_MLINE_STYLE` (±0.5). Ο `convertMline(pairs, layer, index, mlineStyles?)` διαβάζει scale (40),
+  justification (70: Top/Zero/Bottom → offset adjust), style name (2)/handle (340), closed (71 bit2) και επιστρέφει
+  **N polylines** — καθεμία = reference path offset κατά `(offset+adjust)×scale` μέσω του SSoT
+  `offsetPolyline` (rendering/entities/shared, **zero νέο offset math**) — με κοινό `groupId` (ADR-608 provenance)
+  ώστε το MLINE να μένει ΕΝΑ selectable unit (AutoCAD parity). Απών OBJECTS/MLINESTYLE → STANDARD default.
+  Per-drawing map threaded σαν το C.5 (`convertToSceneEntity`/`ExpandContext` 6ο param, pre-pass `buildMlineStyleMap(lines)`).
+  14 νέα tests (parser + converter + end-to-end), 386 sibling jest green (utils + systems/scale), jscpd clean.
 - **2026-07-11 — Φ C.6 (R12 associative-hatch INSERT → single HATCH via ACAD/HATCH XDATA):** R12/AC1009 has
   no HATCH entity — hatches are anonymous `*X#` blocks of exploded LINEs, INSERTed with `1001 ACAD / 1000 HATCH`
   XDATA (+ `R14_HATCH_DATA` boundary cache). New `dxf-hatch-xdata-converter.ts` (`tryConvertInsertHatch`)
