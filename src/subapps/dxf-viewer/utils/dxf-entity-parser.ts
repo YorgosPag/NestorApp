@@ -38,6 +38,18 @@ export { parseDimStyles, parseLayerColors } from './dxf-table-parsers';
 import { parseDimStyles as _parseDimStyles, parseLayerColors as _parseLayerColors } from './dxf-table-parsers';
 import type { LayerColorMap } from './dxf-parser-types';
 
+/**
+ * Safe (code\nvalue) line accessor — SSoT for boundary-tolerant reads. DXF is a fixed 2-line
+ * stride; a truncated / odd-line-count file (or a `0` marker on the very last line) can push
+ * `i+1` past the end. Returning '' instead of letting `lines[i+1].trim()` throw
+ * "Cannot read properties of undefined" keeps the parser fault-tolerant (ADR-635 Φ3).
+ * Shared by this parser and the BLOCKS-section parser — no twin.
+ */
+export function lineAt(lines: string[], i: number): string {
+  const v = lines[i];
+  return v === undefined ? '' : v.trim();
+}
+
 // ============================================================================
 // 🏢 ENTERPRISE: DXF ENTITY PARSER CLASS
 // ============================================================================
@@ -147,7 +159,7 @@ export class DxfEntityParser {
    * Extracts entity type, layer, and all group codes until next "0" marker.
    */
   static parseEntity(lines: string[], startIndex: number): EntityData | null {
-    const entityType = lines[startIndex + 1].trim();
+    const entityType = lineAt(lines, startIndex + 1);
     const data: Record<string, string> = {};
     // ADR-507 — ordered pairs διατηρούν επαναλαμβανόμενους κωδικούς (HATCH boundaries).
     const pairs: Array<readonly [string, string]> = [];
@@ -228,7 +240,7 @@ export class DxfEntityParser {
    *   resume scanning from.
    */
   static parseEntityAt(lines: string[], i: number): { entity: EntityData | null; next: number } {
-    const value = lines[i + 1].trim();
+    const value = lineAt(lines, i + 1);
 
     if (value === 'POLYLINE') {
       // Old-style POLYLINE is a COMPOUND entity (POLYLINE header + N×VERTEX + SEQEND, each

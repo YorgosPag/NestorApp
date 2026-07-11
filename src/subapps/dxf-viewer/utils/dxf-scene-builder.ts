@@ -3,7 +3,15 @@ import type { Entity } from '../types/entities';
 import { DxfEntityParser, type LayerColorMap } from './dxf-entity-parser';
 // ADR-635 Φ2 — INSERT/BLOCK expansion (block-definition map + placement transform).
 import { parseBlockDefinitions } from './dxf-block-parser';
-import { instantiateInsert, type ExpandContext } from './dxf-block-expander';
+import { instantiateInsert, DEFAULT_SCENE_ENTITY_BUDGET, type ExpandContext } from './dxf-block-expander';
+// ADR-635 Φ3 — fault-tolerant import: skipped/failed entities are RECORDED, not fatal.
+import {
+  createImportDiagnostics,
+  recordParsed,
+  recordSkipped,
+  recordError,
+  type ImportDiagnostics,
+} from './dxf-import-diagnostics';
 import { DEFAULT_LAYER_COLOR, getLayerColor } from '../config/color-config';
 import { getAciColor } from '../settings/standards/aci';
 // ADR-130: Centralized Default Layer Name
@@ -46,6 +54,20 @@ export class DxfSceneBuilder {
    * app reads `units: 'mm'` — no per-floor unit guessing downstream.
    */
   static buildScene(content: string, unitsOverride?: SceneUnits): SceneModel {
+    return DxfSceneBuilder.buildSceneWithDiagnostics(content, unitsOverride).scene;
+  }
+
+  /**
+   * ADR-635 Φ3 — the fault-tolerant core. Same scene construction as {@link buildScene}, but
+   * returns the accumulated {@link ImportDiagnostics} alongside the scene so callers (server
+   * route, client import, worker) can surface a Revit-style "Import Warnings" report. A single
+   * malformed entity is recorded and skipped — it never aborts the whole import.
+   */
+  static buildSceneWithDiagnostics(
+    content: string,
+    unitsOverride?: SceneUnits,
+  ): { scene: SceneModel; diagnostics: ImportDiagnostics } {
+    const diagnostics = createImportDiagnostics();
 
     // ⚠️ DO NOT filter empty lines. DXF is a strict (code\nvalue) stream and AutoCAD writes
     // EMPTY string values (empty TEXT/handle/name codes). Dropping blank lines shifts the

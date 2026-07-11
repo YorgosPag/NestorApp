@@ -12,7 +12,7 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { EntityData } from './dxf-converter-helpers';
-import { DxfEntityParser } from './dxf-entity-parser';
+import { DxfEntityParser, lineAt } from './dxf-entity-parser';
 
 /** A parsed BLOCK definition: base (grab) point + its member entities (raw, unexpanded). */
 export interface BlockDef {
@@ -53,9 +53,9 @@ export function parseBlockDefinitions(lines: string[]): BlockDefMap {
 
   let i = range.start;
   while (i < range.end) {
-    if (lines[i].trim() !== '0') { i += 2; continue; }
+    if (lineAt(lines, i) !== '0') { i += 2; continue; }
 
-    if (lines[i + 1].trim() !== 'BLOCK') {
+    if (lineAt(lines, i + 1) !== 'BLOCK') {
       i += 2;
       continue;
     }
@@ -65,8 +65,8 @@ export function parseBlockDefinitions(lines: string[]): BlockDefMap {
 
     const entities: EntityData[] = [];
     while (i < range.end) {
-      if (lines[i].trim() !== '0') { i += 2; continue; }
-      if (lines[i + 1].trim() === 'ENDBLK') {
+      if (lineAt(lines, i) !== '0') { i += 2; continue; }
+      if (lineAt(lines, i + 1) === 'ENDBLK') {
         i = DxfEntityParser.findNextEntity(lines, i + 2);
         break;
       }
