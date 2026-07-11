@@ -16,7 +16,11 @@ import { SpatialUtils } from '../../../core/spatial/SpatialUtils';
 // hit-test / marquee / viewport-culling use). Reused here so Home/Shift+1
 // zoom-extents frames EVERY renderable type, not a hardcoded DXF+BIM subset.
 import { resolveEntityBounds } from '../../../rendering/hitTesting/entity-bounds-ssot';
+import type { BoundingBox2D } from '../../../rendering/hitTesting/entity-bounds-ssot';
 import type { Entity } from '../../../types/entities';
+// Giorgio 2026-07-12 — outlier-tolerant zoom-extents: a few corrupted/stray entities
+// (import flyaways at km-scale coords) must not blow up the fit bbox into a dot.
+import { computeRobustBounds } from './robust-bounds';
 
 // ============================================================================
 // 🏢 CANONICAL TYPES
@@ -97,20 +101,26 @@ export function createBoundsFromDxfScene(
   // silently ignored them. A lone dimension gave null bounds → no zoom at all;
   // it "worked" only when a covered entity was co-present. One resolver now frames
   // every renderable type the rest of the app already knows how to bound.
-  const allPoints: Point2D[] = [];
+  const boxes: BoundingBox2D[] = [];
 
   for (const entity of scene.entities) {
     const box = resolveEntityBounds(entity as unknown as Entity);
     if (!box) continue;
-    const min: Point2D = { x: box.minX, y: box.minY };
-    const max: Point2D = { x: box.maxX, y: box.maxY };
     // 🛡️ GUARD: Skip providers that yielded NaN/Infinity (ADR-161 strict finite).
-    if (isValidPointStrict(min) && isValidPointStrict(max)) {
-      allPoints.push(min, max);
+    if (
+      isValidPointStrict({ x: box.minX, y: box.minY }) &&
+      isValidPointStrict({ x: box.maxX, y: box.maxY })
+    ) {
+      boxes.push(box);
     }
   }
 
-  return calculateBoundingBox(allPoints);
+  // 🎯 Giorgio 2026-07-12 — outlier-robust zoom-extents. A tiny minority of provably-far
+  // flyaways (e.g. 7 corrupted import hatches at ~8.5 km, y≈x, among 3844 entities) are
+  // dropped so the fit frames the real drawing instead of a 17 km × 17 km void. Both
+  // gates (few outliers AND large shrink) must hold — otherwise the full union is used
+  // unchanged, so legitimate wide drawings are never clipped. Returns null on no boxes.
+  return computeRobustBounds(boxes).bounds;
 }
 
 /**

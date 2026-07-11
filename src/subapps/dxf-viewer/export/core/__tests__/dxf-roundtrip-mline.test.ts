@@ -111,6 +111,25 @@ describe('writeDxfAscii — native MLINE round-trip (D.4)', () => {
     expect(dxf).toContain('0\nLINE\n');
   });
 
+  it('round-trips entity colour (62) + per-element aci (MLINESTYLE 49/62)', () => {
+    const carrier = {
+      id: 'mline_0_e0', type: 'polyline', layerId: 'L', groupId: 'mline_0',
+      vertices: [{ x: 0, y: 0.6 }, { x: 10, y: 0.6 }],
+      dxfMlineSource: {
+        ...SOURCE, entityColor: '#00ff00', styleName: 'CWALL',
+        style: { name: 'CWALL', elements: [{ offset: 0.6, aci: '1' }, { offset: -0.4 }] },
+      } as DxfMlineSource,
+    } as unknown as PolylineEntity;
+    const dxf = writeDxfAscii([carrier], { layersById: LAYERS });
+    const pairs = extractPairs(dxf, 'MLINE');
+    expect(pairs.some(([c]) => c === '62')).toBe(true); // entity colour emitted
+    const styles = buildMlineStyleMap(dxf.split('\n'));
+    const out = convertMline(pairs, 'WALL', 0, styles) as unknown as Array<{ color?: string }>;
+    expect(out).toHaveLength(2);
+    // element 0 → per-element aci· element 1 (χωρίς aci) → entity-colour fallback → και τα δύο χρωματισμένα
+    expect(out.every((e) => typeof e.color === 'string')).toBe(true);
+  });
+
   it('γνήσιο polyline (χωρίς dxfMlineSource) μένει POLYLINE (zero regression)', () => {
     const plain = {
       id: 'p1', type: 'polyline', layerId: 'L',
