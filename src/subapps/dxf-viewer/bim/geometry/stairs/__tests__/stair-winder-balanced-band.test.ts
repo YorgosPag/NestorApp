@@ -141,19 +141,32 @@ describe('computeBalancedBandPlan — grows k for the going', () => {
   });
 });
 
-describe('buildBalancedWinderRun — dancing spread (minInnerGoing > 0)', () => {
+describe('buildBalancedWinderRun — balanced fill to P (Φ2f, minInnerGoing > 0)', () => {
   const MIN_INNER = 130;
 
-  it('spreads the inner ends — the corner is filled by fewer treads than the converging apex', () => {
+  it('one inner riser end sits on P → the corner is filled (≥2 treads share P)', () => {
     const input = makeInput({ minInnerGoing: MIN_INNER });
-    const spread = buildBalancedWinderRun(input).treads.filter((t) =>
+    const onP = buildBalancedWinderRun(input).treads.filter((t) =>
       t.some((v) => distFromPivot(v, input.pivotXY) < 1e-6),
     );
-    const legacy = buildBalancedWinderRun(makeInput()).treads.filter((t) =>
+    expect(onP.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('the inner ends nearest the corner keep a ≥ minInnerGoing narrow-end width', () => {
+    const input = makeInput({ minInnerGoing: MIN_INNER });
+    const innerDists = buildBalancedWinderRun(input).risers
+      .map((r) => distFromPivot({ x: r.start.x, y: r.start.y }, input.pivotXY))
+      .filter((dd) => dd > 1e-6)
+      .sort((x, y) => x - y);
+    expect(innerDists[0]).toBeGreaterThanOrEqual(MIN_INNER - 1e-6);
+  });
+
+  it('minInnerGoing 0 → arc feet collapse onto P (legacy fan)', () => {
+    const input = makeInput(); // minInnerGoing 0
+    const onP = buildBalancedWinderRun(input).treads.filter((t) =>
       t.some((v) => distFromPivot(v, input.pivotXY) < 1e-6),
     );
-    expect(spread.length).toBeGreaterThanOrEqual(1); // corner still filled (no hole)
-    expect(spread.length).toBeLessThan(legacy.length); // risers no longer all converge on P
+    expect(onP.length).toBeGreaterThanOrEqual(2);
   });
 
   it('every tread stays a simple polygon (≥3 verts) at contiguous z', () => {
@@ -164,22 +177,11 @@ describe('buildBalancedWinderRun — dancing spread (minInnerGoing > 0)', () => 
     }
   });
 
-  it('keeps the total tread count + numbering split (no extra fill polygon)', () => {
+  it('keeps the total tread count (n1−k + M + n2−k = 17)', () => {
     const run = buildBalancedWinderRun(makeInput({ minInnerGoing: MIN_INNER }));
     expect(run.treads).toHaveLength(17);
     const [a, b, c] = run.flightSplit;
     expect(a + b + c).toBe(17);
-  });
-
-  it('the inner ends nearest the corner keep a ≥ minInnerGoing narrow-end width', () => {
-    // The two innermost treads meet at P; their neighbouring inner ends sit at
-    // least `minInnerGoing` from P along the flight edges (no zero-going miter).
-    const input = makeInput({ minInnerGoing: MIN_INNER });
-    const innerDists = buildBalancedWinderRun(input).risers
-      .map((r) => distFromPivot({ x: r.start.x, y: r.start.y }, input.pivotXY))
-      .filter((d) => d > 1e-6)
-      .sort((x, y) => x - y);
-    expect(innerDists[0]).toBeGreaterThanOrEqual(MIN_INNER - 1e-6);
   });
 });
 
@@ -199,11 +201,11 @@ describe('ADR-630 Φ2d — uniform going (option C)', () => {
     expect(resolveBandWalklineRadius(1200, 280, 0, HALF_PI)).toBeCloseTo(600, 6);
   });
 
-  it('wide stair → equal going == tread (uniform), band collapses to k=1', () => {
+  it('wide stair → equal going == tread (uniform); band k=1 (locked R* marks)', () => {
     const run = buildBalancedWinderRun(wide());
     expect(run.plan.walklineGoing).toBeCloseTo(280, 6); // uniform going = user tread
-    expect(run.plan.bandStepsPerSide).toBe(1); // minimal band — flights don't spread
-    expect(run.plan.totalBandSteps).toBe(3 + 2 * 1);
+    expect(run.plan.bandStepsPerSide).toBe(1); // going hits tread at k=1 (R* marks)
+    expect(run.plan.totalBandSteps).toBe(3 + 2); // W + 2k
     expect(run.treads).toHaveLength(17);
   });
 
@@ -229,5 +231,118 @@ describe('ADR-630 Φ2d — uniform going (option C)', () => {
       .flatMap((t) => t)
       .filter((v) => Math.abs(distFromPivot(v, P) - 1200) < 1e-3);
     expect(onOuter.length).toBeGreaterThan(0);
+  });
+});
+
+// ─── ADR-630 Φ2g — graduated inner-going ramp (spread the rotation) ─────────────
+
+describe('ADR-630 Φ2g — shape-driven k (graduated rotation)', () => {
+  const base = { turnRad: HALF_PI, winderCount: 3, tread: 280, n1: 7, n2: 7 };
+
+  it('closed form k = round(W·(t+min)/(2·(t−min))) — grows past the going-driven k', () => {
+    // Uniform stair (R* marks): going = tread for every k, so the LEGACY going
+    // rule picks k=1. With a code minimum the SHAPE rule spreads the rotation:
+    // k = round(3·(280+130)/(2·(280−130))) = round(1230/300) = 4.
+    const plan = computeBalancedBandPlan({ ...base, walklineRadius: (3 * 280) / HALF_PI, minInnerGoing: 130 });
+    expect(plan.bandStepsPerSide).toBe(4);
+    expect(plan.walklineGoing).toBeCloseTo(280, 6); // going stays uniform (Φ2f untouched)
+    expect(plan.totalBandSteps).toBe(3 + 2 * 4);
+  });
+
+  it('minInnerGoing 0 (legacy fan) → k stays on the going-driven choice (k=1 uniform)', () => {
+    const plan = computeBalancedBandPlan({ ...base, walklineRadius: (3 * 280) / HALF_PI, minInnerGoing: 0 });
+    expect(plan.bandStepsPerSide).toBe(1);
+  });
+
+  it('takes the wider of going-driven and shape-driven k (narrow clamped stair)', () => {
+    // Narrow stair (R clamped to 500): going rule alone → k=2; shape rule → k=4.
+    const plan = computeBalancedBandPlan({ ...base, walklineRadius: 500, minInnerGoing: 130 });
+    expect(plan.bandStepsPerSide).toBe(4);
+  });
+
+  it('a bigger code minimum (fewer steps to climb) spreads over fewer treads', () => {
+    // min 200 → k = round(3·480/160) = round(9) = 9, capped by kMax = min(n−1)=6.
+    const wideFlights = computeBalancedBandPlan({ ...base, n1: 12, n2: 12, walklineRadius: (3 * 280) / HALF_PI, minInnerGoing: 200 });
+    expect(wideFlights.bandStepsPerSide).toBe(9);
+    // min 250 → k = round(3·530/60) = 27, capped by kMax.
+    const capped = computeBalancedBandPlan({ ...base, walklineRadius: (3 * 280) / HALF_PI, minInnerGoing: 250 });
+    expect(capped.bandStepsPerSide).toBe(6); // min(n1−1, n2−1, MAX) = 6
+  });
+});
+
+describe('ADR-630 Φ2g — inner-edge going forms a smooth ramp (no abrupt miter)', () => {
+  /** σκάλα Γ: 1200 / 280 / W3 / 90°, code min 130 (NOK). */
+  const gamma = (): BalancedBandInput =>
+    makeInput({ width: 1200, pivotXY: { x: 7 * 280, y: 600 }, minInnerGoing: 130 });
+
+  /**
+   * Inner-edge goings per flight side. σκάλα Γ: P at (1960, 600), backward ends
+   * ride u1 (y ≈ P.y, x < P.x), forward ends ride u2 (x ≈ P.x, y > P.y). Split by
+   * side, take consecutive offset differences (the inner goings) corner-out.
+   */
+  function innerGoingsPerSide(run: ReturnType<typeof buildBalancedWinderRun>, P: { x: number; y: number }): number[] {
+    const bandTail = 4 * 280;
+    const starts = run.risers
+      .map((r) => ({ x: r.start.x, y: r.start.y }))
+      .filter((s) => distFromPivot(s, P) > 1e-6 && distFromPivot(s, P) <= bandTail + 1);
+    const back = starts.filter((s) => Math.abs(s.y - P.y) < 1e-3).map((s) => P.x - s.x).sort((a, b) => a - b);
+    const fwd = starts.filter((s) => Math.abs(s.x - P.x) < 1e-3).map((s) => s.y - P.y).sort((a, b) => a - b);
+    const diffs = (offs: number[]): number[] => offs.slice(1).map((o, i) => o - offs[i]).filter((gg) => gg > 1e-6);
+    return [...diffs(back), ...diffs(fwd)];
+  }
+
+  it('the corner inner going is the code minimum (≈130), not collapsed to 0', () => {
+    const P = { x: 7 * 280, y: 600 };
+    const closest = buildBalancedWinderRun(gamma()).risers
+      .map((r) => distFromPivot({ x: r.start.x, y: r.start.y }, P))
+      .filter((dd) => dd > 1e-6)
+      .sort((a, b) => a - b)[0];
+    expect(closest).toBeCloseTo(130, 3);
+  });
+
+  it('inner goings are NOT a flat plateau — they ramp up well past the minimum', () => {
+    const goings = innerGoingsPerSide(buildBalancedWinderRun(gamma()), { x: 7 * 280, y: 600 });
+    const max = Math.max(...goings);
+    // Old Φ2f bug: every near-corner going pinned to 130 (flat). Now it ramps.
+    expect(max).toBeGreaterThan(130 * 1.5);
+  });
+
+  it('every band tread is a simple polygon (≥3 verts) at contiguous z (no degenerate)', () => {
+    const run = buildBalancedWinderRun(gamma());
+    expect(run.treads).toHaveLength(17);
+    for (let i = 0; i < run.treads.length; i++) {
+      expect(run.treads[i].length).toBeGreaterThanOrEqual(3);
+      for (const v of run.treads[i]) expect(v.z).toBeCloseTo(175 * i, 6);
+    }
+  });
+
+  it('two innermost treads still meet at P → corner filled (no hole)', () => {
+    const input = gamma();
+    const onP = buildBalancedWinderRun(input).treads.filter((t) =>
+      t.some((v) => distFromPivot(v, input.pivotXY) < 1e-6),
+    );
+    expect(onP.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('inner going never OVERSHOOTS the tread (capped ramp → monotonic, no bulge)', () => {
+    const goings = innerGoingsPerSide(buildBalancedWinderRun(gamma()), { x: 7 * 280, y: 600 });
+    // Φ2g cap: an inner going may reach but never exceed the straight-flight tread.
+    for (const gg of goings) expect(gg).toBeLessThanOrEqual(280 + 1e-3);
+  });
+
+  it('the arc tangents are locked outer vertices (dist == width) — no seam protrusion', () => {
+    const input = gamma();
+    const run = buildBalancedWinderRun(input);
+    const [a, b] = run.flightSplit; // band treads are a .. a+b−1
+    // The A↔B and B↔C tangents sit EXACTLY on the outer arc (radius = width). After
+    // the Φ2g snap the straight-tail outer no longer overshoots past them, so two
+    // band vertices land at distance == width (± ε) from P.
+    const onArc = [];
+    for (let i = a; i < a + b; i++) {
+      for (const v of run.treads[i]) {
+        if (Math.abs(distFromPivot(v, input.pivotXY) - 1200) < 1e-3) onArc.push(v);
+      }
+    }
+    expect(onArc.length).toBeGreaterThanOrEqual(2);
   });
 });

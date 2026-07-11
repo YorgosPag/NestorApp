@@ -163,6 +163,16 @@ export interface StairPerTreadOverride {
   readonly customProfile?: readonly Point2D[];
 }
 
+/**
+ * ADR-358 Q19 Φ7 — per-riser override. A riser carries ONLY a material override
+ * (unlike a tread it has no nosing / nosing-profile — those are tread-face finish
+ * concepts). Keyed by the 0-based GLOBAL build-order riser index — the same key
+ * the 3D `stairComponentIndex` tag and `resolveStairMaterial`'s `subIndex` use.
+ */
+export interface StairPerRiserOverride {
+  readonly material?: string;
+}
+
 export interface StairHandrails {
   readonly inner: boolean;
   readonly outer: boolean;
@@ -411,6 +421,8 @@ export interface StairParams {
   readonly riserType: StairRiserType;
   readonly materials?: StairMaterials;
   readonly perTreadOverrides?: Readonly<Record<number, StairPerTreadOverride>>;
+  /** ADR-358 Q19 Φ7 — per-riser material overrides (0-based global build-order key). */
+  readonly perRiserOverrides?: Readonly<Record<number, StairPerRiserOverride>>;
   readonly antiskidNosing: boolean;
   readonly adaContrastStrip: boolean;
 

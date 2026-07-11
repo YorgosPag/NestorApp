@@ -14,6 +14,9 @@
 export const SUPPORTED_ENTITY_TYPES = [
   'LINE',
   'LWPOLYLINE',
+  // Old-style POLYLINE (AutoCAD R12/AC1009 & any "Save As R12"): POLYLINE + VERTEX… + SEQEND.
+  // Parsed specially via DxfEntityParser.parsePolylineGroup (compound entity, not flat parseEntity).
+  'POLYLINE',
   'CIRCLE',
   'ARC',
   'TEXT',

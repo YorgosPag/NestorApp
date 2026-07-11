@@ -28,6 +28,7 @@ import {
   type FoundationFirestoreService,
 } from './foundation-firestore-service';
 import { resolveBimPersistenceScope } from '../persistence/bim-floor-scope';
+import { mutateLevelSceneEntities } from '../../systems/levels/mutate-level-scene';
 import { useFoundationLevelStore } from '../../state/foundation-level-store';
 import type { FoundationLevelTarget } from '../../systems/levels/building-foundation-level';
 import type { FoundationEntity } from '../types/foundation-types';
@@ -59,27 +60,6 @@ export interface FoundationCrossLevelWriter {
 }
 
 /**
- * Μετάλλαξη της σκηνής Θεμελίωσης ΟΤΑΝ είναι φορτωμένη (αλλιώς no-op).
- *
- * Origin = `'system-reconcile'`: αυτή είναι ΠΑΡΑΓΩΓΗ (derived) εγγραφή — η
- * αυθεντική persistence του πεδίλου γίνεται μέσω `svc.saveFoundation()`
- * (foundation collection). Άρα ΔΕΝ πρέπει να πυροδοτεί το γενικό DXF-scene
- * autosave του ορόφου Θεμελίωσης: ένας special level (ADR-461) χωρίς ανεβασμένο
- * DXF δεν έχει `canonicalScenePath` → ADR-293 error θόρυβος σε κάθε cross-level
- * εγγραφή. Η σκηνή ενημερώνεται μόνο για live εμφάνιση· όταν ο χρήστης
- * επεξεργαστεί ο ίδιος τον όροφο, παίζει το κανονικό `'local-edit'` autosave.
- */
-function mutateFoundationScene(
-  io: LevelSceneIO,
-  levelId: string,
-  mutate: (entities: readonly AnySceneEntity[]) => AnySceneEntity[],
-): void {
-  const scene = io.getLevelScene(levelId);
-  if (!scene) return;
-  io.setLevelScene(levelId, { ...scene, entities: mutate(scene.entities) }, 'system-reconcile');
-}
-
-/**
  * Φτιάχνει writer για το foundation scope του `target`, ή `null` αν λείπει
  * έγκυρο scope (companyId/projectId/userId + floorId/floorplanId).
  */
@@ -107,7 +87,10 @@ export function createFoundationCrossLevelWriter(
 
   return {
     create(entity) {
-      mutateFoundationScene(io, target.levelId, (es) => [...es, entity as unknown as AnySceneEntity]);
+      // Origin `'system-reconcile'`: derived write — η αυθεντική persistence γίνεται μέσω
+      // `svc.saveFoundation()` (foundation collection). ΔΕΝ πρέπει να πυροδοτεί το DXF-scene
+      // autosave του special ορόφου Θεμελίωσης (χωρίς `canonicalScenePath` → ADR-293 θόρυβος).
+      mutateLevelSceneEntities(io, target.levelId, (es) => [...es, entity as unknown as AnySceneEntity], 'system-reconcile');
       // ADR-459 Phase 7 — optimistic store sync ώστε ο reconciler να βλέπει το νέο
       // πέδιλο αμέσως (χωρίς να περιμένει τον async refresh του useFoundationLevelSync).
       useFoundationLevelStore.getState().upsertEntity(entity as unknown as Entity);
@@ -116,8 +99,11 @@ export function createFoundationCrossLevelWriter(
       });
     },
     update(entity) {
-      mutateFoundationScene(io, target.levelId, (es) =>
-        es.map((e) => (e.id === entity.id ? (entity as unknown as AnySceneEntity) : e)),
+      mutateLevelSceneEntities(
+        io,
+        target.levelId,
+        (es) => es.map((e) => (e.id === entity.id ? (entity as unknown as AnySceneEntity) : e)),
+        'system-reconcile',
       );
       useFoundationLevelStore.getState().upsertEntity(entity as unknown as Entity);
       void svc
@@ -132,7 +118,7 @@ export function createFoundationCrossLevelWriter(
         });
     },
     remove(foundationId) {
-      mutateFoundationScene(io, target.levelId, (es) => es.filter((e) => e.id !== foundationId));
+      mutateLevelSceneEntities(io, target.levelId, (es) => es.filter((e) => e.id !== foundationId), 'system-reconcile');
       useFoundationLevelStore.getState().removeEntity(foundationId);
       void svc.deleteFoundation(foundationId).catch(() => {
         /* μη-κρίσιμο */

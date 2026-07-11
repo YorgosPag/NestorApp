@@ -10,9 +10,10 @@
 import {
   useStairSubElementSelectionStore,
   isSameStairSubElement,
-  stairSubElementHover,
   setStairSubElementHover,
   resetStairSubElementHover,
+  getStairSubElementHover,
+  subscribeStairSubElementHover,
   type StairSubElementRef,
 } from '../stair-sub-element-selection-store';
 
@@ -64,21 +65,52 @@ describe('stair-sub-element-selection-store', () => {
   describe('hover (non-reactive singleton)', () => {
     it('set / reset mutate the singleton', () => {
       setStairSubElementHover(tread(7));
-      expect(stairSubElementHover.ref).toEqual(tread(7));
+      expect(getStairSubElementHover()).toEqual(tread(7));
       resetStairSubElementHover();
-      expect(stairSubElementHover.ref).toBeNull();
+      expect(getStairSubElementHover()).toBeNull();
     });
 
     it('selectSub resets hover (indices go stale on a new selection)', () => {
       setStairSubElementHover(tread(7));
       useStairSubElementSelectionStore.getState().selectSub(tread(1));
-      expect(stairSubElementHover.ref).toBeNull();
+      expect(getStairSubElementHover()).toBeNull();
     });
 
     it('clear resets hover', () => {
       setStairSubElementHover(tread(7));
       useStairSubElementSelectionStore.getState().clear();
-      expect(stairSubElementHover.ref).toBeNull();
+      expect(getStairSubElementHover()).toBeNull();
+    });
+
+    it('getStairSubElementHover reflects the singleton', () => {
+      setStairSubElementHover(tread(2));
+      expect(getStairSubElementHover()).toEqual(tread(2));
+    });
+  });
+
+  describe('hover subscription (Φ3c redraw trigger)', () => {
+    it('notifies subscribers on a genuine change', () => {
+      const cb = jest.fn();
+      const unsub = subscribeStairSubElementHover(cb);
+      setStairSubElementHover(tread(1));
+      expect(cb).toHaveBeenCalledTimes(1);
+      unsub();
+    });
+
+    it('skips notify + mutation when unchanged (same tread move = zero redraw)', () => {
+      setStairSubElementHover(tread(1));
+      const cb = jest.fn();
+      const unsub = subscribeStairSubElementHover(cb);
+      setStairSubElementHover(tread(1)); // structurally identical
+      expect(cb).not.toHaveBeenCalled();
+      unsub();
+    });
+
+    it('stops notifying after unsubscribe', () => {
+      const cb = jest.fn();
+      subscribeStairSubElementHover(cb)();
+      setStairSubElementHover(tread(3));
+      expect(cb).not.toHaveBeenCalled();
     });
   });
 

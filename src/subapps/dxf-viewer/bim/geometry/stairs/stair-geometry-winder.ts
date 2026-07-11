@@ -50,9 +50,10 @@ import {
   point,
   arrowSymbol,
   rotateVec,
+  buildStringersFromWalkline,
 } from './stair-geometry-shared';
 import { assembleMultiFlight } from './stair-geometry-generators';
-import { buildBalancedWinderRun } from './stair-winder-balanced-band';
+import { buildBalancedWinderRun, resolveBandWalklineRadius } from './stair-winder-balanced-band';
 import { resolveWinderMinimums } from './stair-winder-walkline-rule';
 
 const DEG2RAD = Math.PI / 180;
@@ -130,16 +131,25 @@ export function assembleWinderRun(
     // 130mm etc.); resolved into `width`'s unit system by the walkline-rule SSoT.
     minInnerGoing: resolveWinderMinimums(params.codeProfile, params.width).minInnerGoing,
   });
-  const walkline = buildWinderWalkline(params, layout);
+  // ADR-630 Φ2e — the DISPLAY line of travel sits at `R*` (uniform going = tread,
+  // radial risers land on it). Stringers stay derived from the CENTRE walkline so
+  // the stair edges (walkline ± width/2) are unchanged — no regression.
+  const totalTurnRad = layout.signedSweepRad * layout.winderCount;
+  const walklineRadius = resolveBandWalklineRadius(
+    params.width, params.tread, layout.winderCount, totalTurnRad,
+  );
+  const displayWalkline = buildWinderWalkline(params, layout, walklineRadius);
+  const stringers = buildStringersFromWalkline(buildWinderWalkline(params, layout), params.width);
   const midRay = rotateVec(layout.ray0, (layout.winderCount / 2) * layout.signedSweepRad);
   const midTangent = winderTangentAt(midRay, layout.turnSign);
   return assembleMultiFlight(params, {
     treads: run.treads,
     risers: run.risers,
-    walkline,
+    walkline: displayWalkline,
     cutDirs: [layout.u1, midTangent, layout.u2],
     flightSplit: run.flightSplit,
-    arrowSymbol: arrow(walkline),
+    arrowSymbol: arrow(displayWalkline),
+    stringers,
   });
 }
 
@@ -193,18 +203,25 @@ export function buildWinderLayout(
 export function buildWinderWalkline(
   params: Readonly<StairParams>,
   layout: WinderLayout,
+  walklineRadius?: number,
 ): Polyline3D {
   const { basePoint, rise, tread, width } = params;
-  const { u2, pivotXY, ray0, signedSweepRad, n1, n2, winderCount } = layout;
+  const { u2, v1, turnSign, pivotXY, ray0, signedSweepRad, n1, n2, winderCount } = layout;
   const halfW = width * 0.5;
+  // ADR-630 Φ2e — the drawn line of travel runs at radius `rw` from the inner
+  // edge (default = centre `halfW`; the display walkline passes `R*` for a uniform
+  // going). Shift the straight run inward by (halfW − rw) so it is tangent to the
+  // `rw` arc (no kink at the flight↔turn junction).
+  const rw = walklineRadius ?? halfW;
+  const shift = (halfW - rw) * turnSign;
   const out: Point3D[] = [];
-  out.push(point(basePoint.x, basePoint.y, basePoint.z));
-  // Winder samples j=0..winderCount. j=0 coincides with flight-1 end centerline.
+  out.push(point(basePoint.x + v1.x * shift, basePoint.y + v1.y * shift, basePoint.z));
+  // Winder samples j=0..winderCount. j=0 coincides with flight-1 end walkline.
   for (let j = 0; j <= winderCount; j++) {
     const ray = rotateVec(ray0, j * signedSweepRad);
     out.push(point(
-      pivotXY.x + halfW * ray.x,
-      pivotXY.y + halfW * ray.y,
+      pivotXY.x + rw * ray.x,
+      pivotXY.y + rw * ray.y,
       basePoint.z + rise * (n1 + j),
     ));
   }

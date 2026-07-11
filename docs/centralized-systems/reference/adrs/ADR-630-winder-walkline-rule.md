@@ -141,14 +141,22 @@ The balancing uses that same `R = width/2` arc as its going-measurement line.
 
 ## Consequences
 
-- The corner "hole" and the zero-going miter are both gone for the σκάλα Γ and
-  the winder kind: the band fills to P and the turn tiles cleanly.
-- Every step — straight flights **and** band — keeps a **uniform going = `tread`**
-  (Φ2d, option C): the going is measured on the balanced walking line `R* =
-  W·tread/Θ`, so there is no going jump between the straights and the turn and the
-  stair never spreads. The risers swing gradually — the Revit/textbook
-  "balanced/dancing" result. When `R* > width/2` (narrow stair) it clamps to the
-  centre radius → best-effort going (`< tread`).
+- The corner "hole", the zero-going miter AND the sharp apex are all gone (Φ2f):
+  the winder risers spread onto the flight-edge `L`, the two innermost meeting at
+  `P`, so the treads fill the corner themselves — no hole, no newel void, no
+  separate polygon.
+- Every band riser passes through its **locked equal-going walkline mark** at `R*`
+  (verified 0.0 mm off) — **no kinks, risers cross the line of travel cleanly**.
+- Every step — straight flights **and** band — keeps a **uniform going = `tread`**:
+  the walkline sits at `R* = W·tread/Θ`, so there is no going jump between the
+  straights and the turn and the stair never spreads. When `R* > width/2` (narrow
+  stair) the walkline clamps to the centre radius → best-effort going (`< tread`).
+- The face/riser rotation is **spread gradually** over several "dancing" treads
+  (Φ2g): the inner-edge going ramps in equal increments from `minInnerGoing` at the
+  corner out to ~`tread` at the flights, so there is **no abrupt miter** at the
+  band↔flight junction. The number of transition treads (`k`) is derived from a
+  closed form so the ramp naturally ends on the tread; the going on the line of
+  travel stays uniform `tread` throughout.
 - The balance is **geometric** (applies for every profile incl. `'none'`); the
   code minimum stays a validator warning only.
 - The band is footprint-preserving → labels (`stepCount` unchanged), stringers
@@ -156,29 +164,110 @@ The balancing uses that same `R = width/2` arc as its going-measurement line.
 
 ### Known limitation (follow-up)
 
-With Φ2d the going is uniform at any `k`, so `k` collapses to its **minimum (1)** —
-the band shape (angle taper over the transition treads) is now the only reason to
-grow `k`; the winder wedges may look more abrupt than the wide-`k` Φ2c band and may
-need a shape-only iteration. On a **narrow** stair (`R* > width/2`) the going stays
-`< tread` (clamped) — inherent (a wide turn can't fit the requested going). A tiny
-tangent-corner approximation at the straight↔arc seam (sub-mm for real dims) is
-absorbed by an inserted seam vertex.
+The band outer edges are anchored chords (not the smooth arc) so the outer tread
+edges may show tiny scallops vs the outer stringer. Winder treads are still
+**wedges** (deeper toward the outside) — inherent to every winder; "uniform" means
+uniform going on the line of travel, not identical polygons. On a **narrow** stair
+(`R* > width/2`) the going stays `< tread` (clamped). The centre-derived inner
+stringer keeps its arc **cusp** (pre-existing follow-up — explicit winder stringers).
 
 ## Testing
 
-- `stair-winder-balanced-band.test.ts` — auto-`k` plan (equal going, widen-to-
-  tolerance, `k=0` fallback, degenerate) + assembled run (tread count, wedges
-  reaching P = no hole, contiguous z, cw/ccw mirror) + **Φ2d uniform going**
-  (`resolveBandWalklineRadius` R*/clamp, wide stair → going == tread & k=1, narrow
-  clamp → going < tread, pure flights advance by tread, equal-angle wedges).
+- `stair-winder-balanced-band.test.ts` — `computeBalancedBandPlan` (auto-`k`) +
+  **Φ2f balanced fill** (inner end on P → corner filled, ≥ minInnerGoing narrow-end
+  spacing, minInnerGoing 0 → feet on P, count conserved) + **uniform going**
+  (`resolveBandWalklineRadius` R*/clamp, wide stair → going == tread & band k=1,
+  narrow clamp → going < tread, pure flights advance by tread) + **Φ2g graduated
+  ramp** (shape-driven `k` closed form, grows past the going-driven `k`, takes the
+  wider of the two, minInnerGoing 0 → legacy `k`; inner going ramps — not a flat
+  plateau — corner going ≈ min, corner still filled, no degenerate tread).
 - `stair-winder-walkline-rule.test.ts` — mm/scene resolver + `winderWalklineWarnings`.
-- Regression: `StairGeometryService-winder` / `-lshape-winders` assert the band
-  reaches the shared pivot P (no hole), pure flights rectilinear, count conserved.
-  Full stairs dir: **298/298 green**. jscpd: clean.
+- Regression: `StairGeometryService-winder` / `-lshape-winders` — band reaches P
+  (no hole), pure flights rectilinear, count conserved.
+  Full stairs dir: **316/316 green**. jscpd: clean.
 
 ## Changelog
 
-- **2026-07-11** — Phase 2d (**option C — UNIFORM going**, DONE): every step —
+- **2026-07-11** — Phase 2g (**graduated inner-going ramp**, DONE — Giorgio's
+  order): visual check of Φ2f (σκάλα Γ, 1200/280/W3/90°) showed a near-**miter** at
+  the inner corner — the face/riser rotation collapsed into a **single** transition
+  tread per side (`k = 1`), because at `R*` the equal going is `tread` for **any**
+  `k`, so the going-tolerance loop closed `k` at its minimum. Two coupled fixes, both
+  in existing SSoT functions (no duplicates):
+  1. **`computeBalancedBandPlan` — shape-driven `k`.** Decouple `k` from the going
+     (which is already uniform): grow it so the rotation spreads over enough "dancing"
+     treads. Closed form (unit-safe, no magic mm constant): the band inner going
+     averages `2k·t/(W+2k)`; a symmetric ramp with the corner gap at `minInnerGoing`
+     lands its outer gap on `tread` when `k = W·(t+minInnerGoing)/(2·(t−minInnerGoing))`
+     (`shapeStepsPerSide`). The wider of {going-driven, shape-driven} `k` wins, bounded
+     by `n1−1, n2−1, MAX_BAND_STEPS_PER_SIDE`. σκάλα Γ → `k = 4` (band 11, steps 4–14).
+     `walklineGoing` stays `tread` (going(k)=tread at `R*`) → **Φ2f uniform going
+     untouched**.
+  2. **`spreadInnerEnds` — symmetric linear ramp** (`fillRampSide`). Replace the flat
+     `minInnerGoing` spacing (which gave a 130-mm plateau then an abrupt jump to
+     `tread`) with a per-side ramp: the inner going grows in **equal increments** from
+     `minInnerGoing` at the corner out to ~`tread` at each flight junction. The slope
+     follows from the sum constraint (`Σ gaps = bandTail`), so both sides land
+     **exactly** on the flight edge (`±k·tread`) → the band blends seamlessly into the
+     straights (no abrupt miter). Corner mark stays on `P` (two innermost treads meet →
+     corner still filled). `minInnerGoing = 0` → legacy fan (perpendicular feet)
+     untouched. Measured σκάλα Γ ramp: `130 → 152 → 175 → 198 → 220 …` (was flat
+     `130,130,130,20`).
+
+  **Φ2g visual fixes (same day, after Giorgio's right-turn screenshot):**
+  - **Overshoot / lean flip** — the shorter side's ramp flared PAST the tread (inner
+    edge `310 > 275`), making the inner going non-monotonic and the transition risers
+    flip lean direction. Fix: `fillRampSide` now **caps each gap at `tread`** (ramp-to-
+    tread-then-flat; `delta` solved by bisection so the gaps still sum to `bandTail`).
+    Inner going is now **monotonic** (`275,275,237,183` toward the corner) — no bulge.
+  - **Seam protrusion** — the last straight-tail outer end extended PAST the arc
+    tangent (`(-600,2092)` vs tangent `(-600,1925)`), poking a spike out past the outer
+    edge. Fix: at the zone boundaries (`j === k`, `j === m − k`) the outer end is
+    **snapped to the tangent point** `t1Outer`/`t2Outer` (on both flight edge AND width
+    circle) instead of the extended line.
+
+  Tests: `+10` Φ2g total (shape-`k`, ramp not-flat, corner `=min`, capped-no-overshoot,
+  tangent-locked-no-protrusion, corner filled, no degenerate). Full stairs dir
+  **318/318 green**, jscpd clean. *(REMAINING for Giorgio's eye: transition risers are
+  CHORDS inner-edge→arc — per the Φ2f fill-to-P construction they lean toward the OUTER
+  side, not radial toward P; making them radial reintroduces the apex-at-P / newel-void
+  tradeoffs already rejected — flagged for Giorgio's decision.)*
+- **2026-07-11** — Phase 2f (**locked marks + spread fill to P**, DONE — Giorgio's
+  construction, supersedes Φ2e radial+newel): visual check of Φ2e showed the radial
+  fan left a **newel void** ("hole") at the corner. Giorgio's fix: **lock** the
+  equal-going walkline marks at `R*` (the "blue" crossings where walkline = riser =
+  tread face) and **rotate** each riser around its mark so its inner end spreads
+  onto the reflex flight-edge `L`, the two innermost meeting at **P** → the corner
+  is filled by the winders' own treads (no hole, no newel, no separate polygon).
+  EVERY band riser passes through its locked mark: the (inner → mark) ray is
+  extended to the outer boundary (`extendToCircle` on the arc, `extendToLine` on the
+  straight tails) — verified 0.0 mm off-walkline for all band risers; going stays
+  uniform `tread` on the `R*` walkline. `k` auto-grows (`computeBalancedBandPlan`)
+  so the spread fades over the borrowed transition treads. One-file geometry change
+  (`stair-winder-balanced-band.ts`: `buildBand` + `spreadInnerEnds` restored, new
+  `walklineMark`/`extendToCircle`/`extendToLine`; `resolveNewelRadius`/radial fan
+  dropped). Tests 308/308, jscpd clean. Pending: Giorgio visual verify.
+- **2026-07-11** — Phase 2e (**radial + newel**, superseded by Φ2f): supersedes the Φ2c/Φ2d
+  "dancing spread"): after Φ2d, Giorgio's visual check showed (1) the corner treads
+  still read deeper and (2) the drawn walkline had **kinks the risers did not pass
+  through**. Root cause (found by dumping the real geometry): the Φ2c *spread* inner
+  ends made the winder risers **non-radial**, so they crossed the centre walkline
+  ~65 mm off the equal-going marks; and Φ2d moved only an **invisible** going radius,
+  leaving the drawn walkline at the centre (going 314 on the arc). Fix (Giorgio chose
+  "radial + newel"): the winder risers are **RADIAL** through `P` at equal
+  `Δθ = turnRad/W`, their inner ends stopping at a **newel radius** `r_n =
+  minInnerGoing/Δθ` (narrow-end going = code min; no zero-width apex, no separate
+  polygon, no hole); the **drawn** walkline sits at `R* = W·tread/Θ` so radial risers
+  land exactly on it (no kinks) and every step keeps a uniform going = `tread`.
+  Stringers stay derived from the **centre** walkline (unchanged edges, no
+  regression). One-domain change: `stair-winder-balanced-band.ts`
+  (`buildBalancedWinderRun` → radial fan, `resolveNewelRadius`, drops the band /
+  `spreadInnerEnds` / `sampleOuter`), `stair-geometry-winder.ts` (`buildWinderWalkline`
+  radius param + display-vs-centre split, explicit stringers),
+  `stair-geometry-generators.ts` (`assembleMultiFlight` optional `stringers`). Tests
+  300/300 green, jscpd clean. Note (Giorgio): newel `r_n` is code-sized (~248 mm for
+  ΝΟΚ/1200) — may want to tune smaller after his visual check.
+- **2026-07-11** — Phase 2d (**option C — UNIFORM going**, superseded by Φ2e): every step —
   straight flights **and** band — keeps a **uniform going = `tread`**, so the σκάλα Γ
   no longer shows the ~8 mm deeper band (steps 6-11) next to the 280 straights.
   Root cause: the equal going was measured at the **centre** radius `width/2`, where

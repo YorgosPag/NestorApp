@@ -24,6 +24,10 @@ import { setSnapDrawingMode } from './SnapDrawingModeStore';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { projectPointOntoGuide, isGuideEditTool, GUIDE_HIT_TOLERANCE_PX } from '../../systems/guides/guide-types';
 import { setHoveredEntity, setHoveredOverlay } from '../hover/HoverStore';
+// ADR-358 Q19 Φ3c — per-tread hover pre-highlight while a stair is sole-selected
+// (component mode). Shares the Φ3b click-into gate; clears itself otherwise.
+import { updateStairSubElementHover2D } from '../../bim/stairs/stair-sub-element-hover-2d';
+import { setStairSubElementHover } from '../../bim/stairs/stair-sub-element-selection-store';
 import { withPerf, perfTick } from './mouse-handler-perf';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { dperf } from '../../debug';
@@ -268,6 +272,7 @@ export function useMouseMoveHandler({
     if (isGripDragging) {
       setHoveredEntity(null);
       setHoveredOverlay(null);
+      setStairSubElementHover(null);
     } else if ((activeTool === 'select' || entityPickingActive) && !refs.panStateRef.current.isPanning && !cursor.isSelecting) {
       const hoverNow = performance.now();
       if (hoverNow - refs.hoverThrottleRef.current >= PANEL_LAYOUT.TIMING.HOVER_THROTTLE_MS) {
@@ -280,6 +285,9 @@ export function useMouseMoveHandler({
           );
           // Write to HoverStore (zero-React-state update). Backward-compat callback kept.
           setHoveredEntity(hitEntityId);
+          // ADR-358 Q19 Φ3c — resolve the per-tread pre-highlight (no-op unless the
+          // hovered entity is the sole-selected stair; skip-if-unchanged inside).
+          updateStairSubElementHover2D(hitEntityId, worldPos, scene?.entities as readonly Entity[] | undefined);
           if (onHoverEntity) {
             withPerf('hover-entity-callback', () => onHoverEntity(hitEntityId));
           }

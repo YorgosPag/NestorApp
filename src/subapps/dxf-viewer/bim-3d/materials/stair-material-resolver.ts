@@ -2,7 +2,8 @@
  * stair-material-resolver — Revit-pattern per-component material resolution για 3D stairs.
  *
  * Resolution chain (ADR-370 Phase 5, FULL ENTERPRISE):
- *   1. `stair.params.perTreadOverrides[treadIndex]?.material` (component='stair-tread' only)
+ *   1. per-SUB-element override (ADR-358 Q19): `perTreadOverrides[subIndex].material`
+ *      for treads · `perRiserOverrides[subIndex].material` for risers (Φ7)
  *   2. `stair.params.materials?.[componentField]`
  *   3. element-type default (`elem-stair-{component}` via MaterialCatalog3D)
  *
@@ -53,18 +54,29 @@ function resolvePresetToMat3D(presetOrId: string): string | null {
   return null;
 }
 
+/** Per-sub-element material override (tread → `perTreadOverrides`, riser → `perRiserOverrides`). */
+function resolveSubElementOverride(
+  stair: StairEntity,
+  component: Stair3DComponent,
+  subIndex?: number,
+): string | undefined {
+  if (subIndex === undefined) return undefined;
+  if (component === 'stair-tread') return stair.params.perTreadOverrides?.[subIndex]?.material;
+  if (component === 'stair-riser') return stair.params.perRiserOverrides?.[subIndex]?.material;
+  return undefined;
+}
+
 export function resolveStairMaterial(
   stair: StairEntity,
   component: Stair3DComponent,
-  treadIndex?: number,
+  subIndex?: number,
 ): THREE.MeshStandardMaterial {
-  // 1. Per-tread override (treads only).
-  if (component === 'stair-tread' && treadIndex !== undefined) {
-    const override = stair.params.perTreadOverrides?.[treadIndex]?.material;
-    if (override) {
-      const matKey = resolvePresetToMat3D(override);
-      if (matKey) return getMaterial3D(matKey);
-    }
+  // 1. Per-sub-element override (ADR-358 Q19): tread OR riser, keyed by the 0-based
+  //    global build-order index (== the 3D `stairComponentIndex` tag).
+  const overrideMat = resolveSubElementOverride(stair, component, subIndex);
+  if (overrideMat) {
+    const matKey = resolvePresetToMat3D(overrideMat);
+    if (matKey) return getMaterial3D(matKey);
   }
 
   // 2. Stair-level component material.

@@ -123,6 +123,70 @@ export function parseVerticesFromData(data: Record<string, string>): Point2D[] {
   return vertices;
 }
 
+/**
+ * DXF polyline vertex — Point2D plus optional bulge (code 42, arc segment factor).
+ */
+export interface DxfPolyVertex {
+  x: number;
+  y: number;
+  /** DXF code 42 — bulge of the arc segment STARTING at this vertex (0 = straight). */
+  bulge?: number;
+}
+
+/**
+ * 🏢 ENTERPRISE: Parse polyline vertices from ORDERED (code, value) pairs.
+ *
+ * The flat `Record<string,string>` in `EntityData.data` OVERWRITES repeated group
+ * codes, so `parseVerticesFromData` keeps only the LAST 10/20 → any polyline with
+ * >1 vertex collapses to a single point and is dropped. This reads the ordered
+ * `pairs` (ADR-507, same mechanism HATCH uses) so every vertex survives.
+ *
+ * Used by both LWPOLYLINE (raw entity pairs) and old-style POLYLINE (VERTEX blocks
+ * pre-aggregated by DxfEntityParser.parsePolylineGroup). Callers must pass ONLY
+ * vertex-bearing 10/20 pairs — e.g. the POLYLINE header's dummy elevation 10/20/30
+ * is excluded upstream.
+ *
+ * DXF Format: 10 = vertex X, 20 = vertex Y, 42 = bulge (optional, per vertex).
+ *
+ * @param pairs - Ordered (code, value) pairs from the entity/vertex stream
+ * @returns Array of parsed vertices (with bulge when non-zero)
+ */
+export function parseVerticesFromPairs(
+  pairs: ReadonlyArray<readonly [string, string]> | undefined
+): DxfPolyVertex[] {
+  const vertices: DxfPolyVertex[] = [];
+  if (!pairs) return vertices;
+
+  let current: { x?: number; y?: number; bulge?: number } = {};
+
+  const flush = (): void => {
+    // 🏢 ADR: Use centralized isValidPoint
+    if (isValidPoint(current)) {
+      vertices.push({
+        x: current.x,
+        y: current.y,
+        ...(current.bulge ? { bulge: current.bulge } : {})
+      });
+    }
+  };
+
+  for (const [code, value] of pairs) {
+    if (code === '10') {
+      // New vertex begins — commit the previous one first.
+      flush();
+      current = { x: parseFloat(value) };
+    } else if (code === '20' && current.x !== undefined) {
+      current.y = parseFloat(value);
+    } else if (code === '42' && current.x !== undefined) {
+      const bulge = parseFloat(value);
+      if (!Number.isNaN(bulge) && bulge !== 0) current.bulge = bulge;
+    }
+  }
+
+  flush();
+  return vertices;
+}
+
 // ============================================================================
 // 🏢 ENTERPRISE: GREEK TEXT DECODING
 // ============================================================================

@@ -62,6 +62,8 @@ import { EntityBodyDragStore } from '../drag/EntityBodyDragStore';
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 // ADR-363 — F9/Q SNAP-MODE step layer for the body-drag COMMIT (WYSIWYG with the live ghost).
 import { applyGripStepSnap, isGripStepActive } from '../../bim/grips/grip-step-quantize';
+// ADR-358 Q19 Φ3b — 2D «click-into»: 2nd click on the sole-selected stair → tread sub-select.
+import { handleStairClickInto2D } from '../../bim/stairs/stair-click-into-2d';
 
 /** Min pointer travel (px) before a body-drag counts as a drag (else it's a click). */
 const BODY_DRAG_MIN_PX = 3;
@@ -452,10 +454,17 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
         const hitSnap = getPointerSnapshotFromElement(canvasForHit);
         if (!hitSnap) return;
         const hitResult = hitTestCallback(scene, cursor.position, transform, hitSnap.viewport);
-        if (onEntitySelect) onEntitySelect(hitResult, e.shiftKey || e.ctrlKey || e.metaKey);
+        const additive = e.shiftKey || e.ctrlKey || e.metaKey;
+        // ADR-358 Q19 Φ3b — «click-into»: a 2nd plain click on the sole-selected stair, over a
+        // tread, enters that sub-element (host stays selected) and CONSUMES the click. Any other
+        // click clears a stale sub-selection. Mirror of the 3D `handleClick` gesture.
+        const worldClick = screenToWorldWithSnapshot(getScreenPosFromEvent(e, hitSnap), transform, hitSnap);
+        if (handleStairClickInto2D(hitResult, additive, worldClick, scene?.entities as unknown as readonly Entity[] | undefined)) {
+          return;
+        }
+        if (onEntitySelect) onEntitySelect(hitResult, additive);
         // No entity + select tool + clean left-click → start two-click selection (AutoCAD: click→move→click)
-        if (!hitResult && activeTool === 'select' && e.button === 0 && !wasPanning &&
-            !(e.shiftKey || e.ctrlKey || e.metaKey)) {
+        if (!hitResult && activeTool === 'select' && e.button === 0 && !wasPanning && !additive) {
           cursor.startSelection(getScreenPosFromEvent(e, hitSnap));
         }
       }

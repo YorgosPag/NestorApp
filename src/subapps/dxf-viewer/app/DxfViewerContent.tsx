@@ -64,6 +64,7 @@ import { useStructuralComponentOverride } from '../hooks/useStructuralComponentO
 import { useStructuralOrganism } from '../hooks/useStructuralOrganism';
 import { useStructuralRelevanceRouter } from '../hooks/useStructuralRelevanceRouter';
 import { useFoundationLevelSync } from '../hooks/useFoundationLevelSync';
+import { useCrossLevelStairwellOpenings } from '../hooks/data/useCrossLevelStairwellOpenings';
 import { useColumnAdjacencyNotification } from '../hooks/useColumnAdjacencyNotification';
 import { useAutoFoundationDesign } from '../hooks/useAutoFoundationDesign';
 import { useStructuralOrganismNotification } from '../hooks/useStructuralOrganismNotification';
@@ -323,6 +324,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   useDimensionModify({ levelManager }); // ADR-362 Phase K — DIMBREAK / DIMSPACE (selection-driven, undoable)
   useStructuralComponentOverride({ levelManager }); // ADR-470 — per-element σώμα/σοβάς/οπλισμός visibility override
   useFoundationLevelSync({ levelManager }); // ADR-459 Phase 0 — foundation-level SSoT (cross-level organism)
+  useCrossLevelStairwellOpenings({ levelManager }); // ADR-632 CL-3 — cross-level stairwell «well» opening (σκάλα ορόφου Ν ↔ πλάκα ορόφου Ν+1)
   useStructuralOrganism({ levelManager }); // ADR-459 Phase 1 — cross-entity structural diagnostics («λείπει το πέδιλο»)
   useProactiveStructuralAnalysis({ levelManager }); // ADR-481 (T3) — on-demand στατικός FEM solver (K·u=F → M/V/N), explicit «Ανάλυση» trigger
   useStructuralAnalysisNotification(); // ADR-482 (T3-UI) — toast στο `bim:analysis-solved` (πλήθος συνδυασμών / μηχανισμός)

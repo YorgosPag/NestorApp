@@ -37,6 +37,7 @@
 
 import type { ISceneManager, SceneEntity } from '../../core/commands/interfaces';
 import type { Entity } from '../../types/entities';
+import type { Polygon3D } from '../types/bim-base';
 import type { SlabEntity } from '../types/slab-types';
 import type { SlabOpeningEntity, SlabOpeningParams } from '../types/slab-opening-types';
 import { isSlabEntity, isSlabOpeningEntity, isStairEntity } from '../../types/entities';
@@ -105,6 +106,63 @@ function touchesStairOrSlab(
   return entities.some((e) => changed.has(e.id) && (isStairEntity(e) || isSlabEntity(e)));
 }
 
+// ─── Materialisation (shared SSoT — single-level apply + cross-level writer) ───
+
+/**
+ * Υλοποιεί ένα desired «well» opening σε `SlabOpeningEntity` (deterministic id +
+ * edge-touching tolerance), ΧΩΡΙΣ scene mutation. SSoT — το μοιράζονται ο
+ * single-level `applyCreate` (εδώ) και ο cross-level writer (ADR-632 CL-2), ώστε το
+ * σχήμα params/id/warning να μένει **ένα** (N.0.2/N.18 — μηδέν sibling clone).
+ *
+ * ADR-632 Φ5:
+ *  - deterministic-stable id ανά (autoStairId, slabId) → idempotent re-run, μηδέν churn.
+ *  - `allowOutsideSlab` → edge-touching outline commit-άρεται με soft warning badge
+ *    αντί σιωπηλού hard-reject (big-player: Revit δείχνει opening + warning).
+ *  - genuine hard errors ακόμη μπλοκάρουν, αλλά **logged** (N.7.2 — όχι silent skip).
+ */
+export function materializeStairwellAutoOpening(
+  desired: StairwellDesiredOpening,
+  hostSlab: SlabEntity,
+  sceneUnits: StairwellInputOptions['sceneUnits'],
+): SlabOpeningEntity | null {
+  const params: SlabOpeningParams = {
+    kind: STAIRWELL_AUTO_OPENING_KIND,
+    slabId: desired.slabId,
+    outline: desired.outline,
+    autoStairId: desired.autoStairId,
+    ...(sceneUnits ? { sceneUnits } : {}),
+  };
+  const stableId = generateDeterministicSlabOpeningId(
+    stairwellOpeningPairKey(desired.autoStairId, desired.slabId),
+  );
+  const built = buildSlabOpeningEntity(params, hostSlab, hostSlab.layerId, {
+    idOverride: stableId,
+    allowOutsideSlab: true,
+  });
+  if (!built.ok) {
+    logger.warn('stairwell-opening: auto «well» opening skipped (genuine hard errors)', {
+      slabId: desired.slabId,
+      autoStairId: desired.autoStairId,
+      hardErrors: built.hardErrors,
+    });
+    return null;
+  }
+  return built.entity;
+}
+
+/**
+ * Ξαναχτίζει ένα υπάρχον opening με νέο `outline` (params + recomputed geometry).
+ * SSoT — μοιράζεται από τον single-level update loop + τον cross-level writer.
+ */
+export function rebuildStairwellOpeningOutline(
+  current: SlabOpeningEntity,
+  outline: Polygon3D,
+): { readonly params: SlabOpeningParams; readonly geometry: SlabOpeningEntity['geometry']; readonly entity: SlabOpeningEntity } {
+  const params: SlabOpeningParams = { ...current.params, outline };
+  const geometry = computeSlabOpeningGeometry(params);
+  return { params, geometry, entity: { ...current, params, geometry } };
+}
+
 // ─── Apply ───────────────────────────────────────────────────────────────────
 
 /** Materialise + insert ένα auto «well» opening· επιστρέφει το entity ή `null`. */
@@ -115,38 +173,10 @@ function applyCreate(
 ): SlabOpeningEntity | null {
   const host = sceneManager.getEntity(desired.slabId) as unknown as SlabEntity | undefined;
   if (!host || !isSlabEntity(host as unknown as Entity)) return null;
-
-  const params: SlabOpeningParams = {
-    kind: STAIRWELL_AUTO_OPENING_KIND,
-    slabId: desired.slabId,
-    outline: desired.outline,
-    autoStairId: desired.autoStairId,
-    ...(sceneUnits ? { sceneUnits } : {}),
-  };
-  // ADR-632 Φ5 — deterministic-stable id ανά (autoStairId, slabId): idempotent re-run
-  // (undo→redo) ξαναφτιάχνει το ΙΔΙΟ doc id → setDoc idempotent, μηδέν Firestore churn.
-  const stableId = generateDeterministicSlabOpeningId(
-    stairwellOpeningPairKey(desired.autoStairId, desired.slabId),
-  );
-  // ADR-632 Φ5 edge-touching — auto «well» opening: το outline του (safeIntersection με
-  // το slab) συχνά ακουμπά το χείλος του slab· `allowOutsideSlab` το commit-άρει με soft
-  // warning badge αντί για σιωπηλό hard-reject (big-player: Revit δείχνει opening + warning).
-  const built = buildSlabOpeningEntity(params, host, host.layerId, {
-    idOverride: stableId,
-    allowOutsideSlab: true,
-  });
-  if (!built.ok) {
-    // N.7.2 — όχι silent skip: πραγματικά hard errors (self-intersecting / zero-area /
-    // missing host) εξακολουθούν να μπλοκάρουν, αλλά καταγράφονται (δεν εξαφανίζονται σιωπηλά).
-    logger.warn('stairwell-opening: auto «well» opening skipped (genuine hard errors)', {
-      slabId: desired.slabId,
-      autoStairId: desired.autoStairId,
-      hardErrors: built.hardErrors,
-    });
-    return null;
-  }
-  sceneManager.addEntity(built.entity as unknown as SceneEntity);
-  return built.entity;
+  const entity = materializeStairwellAutoOpening(desired, host, sceneUnits);
+  if (!entity) return null;
+  sceneManager.addEntity(entity as unknown as SceneEntity);
+  return entity;
 }
 
 /**
@@ -185,10 +215,9 @@ export function applyStairwellOpeningPlan(
   for (const { openingId, outline } of plan.updates) {
     const cur = sceneManager.getEntity(openingId) as unknown as SlabOpeningEntity | undefined;
     if (!cur || !isSlabOpeningEntity(cur as unknown as Entity)) continue;
-    const params: SlabOpeningParams = { ...cur.params, outline };
-    const geometry = computeSlabOpeningGeometry(params);
+    const { params, geometry, entity } = rebuildStairwellOpeningOutline(cur, outline);
     updates.set(openingId, { params, geometry } as unknown as Partial<SceneEntity>);
-    updatedEntities.push({ ...cur, params, geometry });
+    updatedEntities.push(entity);
   }
   if (updates.size > 0) sceneManager.updateEntities(updates);
 

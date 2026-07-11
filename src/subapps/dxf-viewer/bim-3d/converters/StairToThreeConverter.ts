@@ -150,9 +150,10 @@ function buildRiserMeshes(
   const out: THREE.Mesh[] = [];
   const riseM = stair.params.rise * sceneToM;
   const thicknessM = DEFAULT_RISER_THICKNESS_MM * MM_TO_M;
-  const mat = resolveStairMaterial(stair, 'stair-riser');
   const risers = stair.geometry.risers;
   for (let i = 0; i < risers.length; i++) {
+    // ADR-358 Q19 Φ7 — per-riser material override (0-based, matches the `stairComponentIndex` tag).
+    const mat = resolveStairMaterial(stair, 'stair-riser', i);
     const mesh = buildRiserBox(risers[i]!, sceneToM, riseM, thicknessM, mat, baseY);
     if (mesh) {
       const tagged = tagMesh(mesh, stair, 'riser', levelId, i);

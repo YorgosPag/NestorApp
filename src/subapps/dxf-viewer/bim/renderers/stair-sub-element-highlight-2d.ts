@@ -15,16 +15,20 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { Polygon3D } from '../types/stair-types';
 import type { StairSubElementRef } from '../stairs/stair-sub-element-selection-store';
+import { isSameStairSubElement } from '../stairs/stair-sub-element-selection-store';
 import { UI_COLORS_BASE } from '../../config/color-config';
 
-const FILL_ALPHA = 0.25;
+const SELECT_FILL_ALPHA = 0.25;
+const HOVER_FILL_ALPHA = 0.12; // fainter pre-highlight (Revit hover < selection)
 const OUTLINE_WIDTH_PX = 2;
 
 /**
- * Paint the selection halo for a stair sub-element. No-op when `selected` is null,
- * targets a different stair, is not a tread, or the index is out of range.
- * `allTreads` MUST be the global build-order list so `selected.index` aligns with
- * the store / 3D tag / `perTreadOverrides`.
+ * Paint the sub-element halos for a stair: the faint HOVER pre-highlight (Φ3c)
+ * first, then the stronger SELECTION halo (Φ3a) on top so the selected tread
+ * always wins visually. Each is a no-op when its ref is null, targets a different
+ * stair, is not a tread, or the index is out of range. `allTreads` MUST be the
+ * global build-order list so the index aligns with the store / 3D tag /
+ * `perTreadOverrides`.
  */
 export function drawStairSubElementHighlight(
   ctx: CanvasRenderingContext2D,
@@ -32,9 +36,26 @@ export function drawStairSubElementHighlight(
   allTreads: readonly Polygon3D[],
   stairId: string,
   selected: StairSubElementRef | null,
+  hovered: StairSubElementRef | null = null,
 ): void {
-  if (!selected || selected.stairId !== stairId || selected.part !== 'tread') return;
-  const tread = allTreads[selected.index];
+  // Skip the hover pass when it coincides with the selection (no double-paint).
+  if (!isSameStairSubElement(hovered, selected)) {
+    paintTreadHalo(ctx, worldToScreen, allTreads, stairId, hovered, HOVER_FILL_ALPHA);
+  }
+  paintTreadHalo(ctx, worldToScreen, allTreads, stairId, selected, SELECT_FILL_ALPHA);
+}
+
+/** Fill + stroke one tread's halo at `fillAlpha`. No-op for a null / mismatched ref. */
+function paintTreadHalo(
+  ctx: CanvasRenderingContext2D,
+  worldToScreen: (p: Point2D) => Point2D,
+  allTreads: readonly Polygon3D[],
+  stairId: string,
+  ref: StairSubElementRef | null,
+  fillAlpha: number,
+): void {
+  if (!ref || ref.stairId !== stairId || ref.part !== 'tread') return;
+  const tread = allTreads[ref.index];
   if (!tread || tread.length < 3) return;
 
   ctx.save();
@@ -48,7 +69,7 @@ export function drawStairSubElementHighlight(
   }
   ctx.closePath();
 
-  ctx.globalAlpha = FILL_ALPHA;
+  ctx.globalAlpha = fillAlpha;
   ctx.fillStyle = UI_COLORS_BASE.EDIT_EDGE_HIGHLIGHT;
   ctx.fill();
   ctx.globalAlpha = 1;

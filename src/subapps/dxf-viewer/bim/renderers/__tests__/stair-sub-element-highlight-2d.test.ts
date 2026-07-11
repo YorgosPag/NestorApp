@@ -90,4 +90,40 @@ describe('drawStairSubElementHighlight', () => {
     drawStairSubElementHighlight(ctx as unknown as CanvasRenderingContext2D, identity, TREADS, 'stair_1', tread(9));
     expect(ctx.fill).not.toHaveBeenCalled();
   });
+
+  describe('Φ3c hover pass', () => {
+    it('paints BOTH hover and selection when they differ (2 fills)', () => {
+      const ctx = mockCtx();
+      drawStairSubElementHighlight(
+        ctx as unknown as CanvasRenderingContext2D, identity, TREADS, 'stair_1', tread(0), tread(1),
+      );
+      expect(ctx.fill).toHaveBeenCalledTimes(2);
+    });
+
+    it('paints ONCE when hover coincides with the selection (no double-paint)', () => {
+      const ctx = mockCtx();
+      drawStairSubElementHighlight(
+        ctx as unknown as CanvasRenderingContext2D, identity, TREADS, 'stair_1', tread(1), tread(1),
+      );
+      expect(ctx.fill).toHaveBeenCalledTimes(1);
+    });
+
+    it('paints hover alone when nothing is selected', () => {
+      const ctx = mockCtx();
+      drawStairSubElementHighlight(
+        ctx as unknown as CanvasRenderingContext2D, identity, TREADS, 'stair_1', null, tread(0),
+      );
+      expect(ctx.fill).toHaveBeenCalledTimes(1);
+      expect(ctx.moveTo).toHaveBeenCalledWith(0, 0); // tread 0 first vertex
+    });
+
+    it('ignores a hover targeting a different stair', () => {
+      const ctx = mockCtx();
+      drawStairSubElementHighlight(
+        ctx as unknown as CanvasRenderingContext2D, identity, TREADS, 'stair_1', null,
+        { stairId: 'other', part: 'tread', index: 0 },
+      );
+      expect(ctx.fill).not.toHaveBeenCalled();
+    });
+  });
 });

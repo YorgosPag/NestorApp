@@ -25,6 +25,7 @@
  */
 
 import { create } from 'zustand';
+import { createExternalStore } from '../../stores/createExternalStore';
 
 /** The editable sub-parts of a stair (Φ1 scope — finish-level per-element edits). */
 export type StairSubPart = 'tread' | 'riser';
@@ -85,22 +86,46 @@ export const useStairSubElementSelectionStore = create<StairSubSelectionState>((
 }));
 
 /**
- * High-frequency HOVER state for stair sub-elements (ADR-040: zero React state).
- * Pointer handlers mutate `ref` on every move; the 2D/3D highlight redraw reads it.
- * Never routed through React — a hover must not trigger a re-render.
+ * High-frequency HOVER state for stair sub-elements (ADR-358 Q19 Φ3c).
+ *
+ * Mirrors `HoverStore`: a mutable singleton the highlight redraw READS imperatively
+ * (no prop-threading), PLUS a subscriber set so a change repaints the plan. In 2D
+ * the canvas only redraws on demand, so — unlike the 3D RAF loop — hover needs an
+ * explicit notify: pointer handlers mutate via {@link setStairSubElementHover}, a
+ * single canvas LEAF subscribes (`useSyncExternalStore`, ADR-040 micro-leaf — NOT
+ * the orchestrator), and the `StairRenderer` reads the singleton at paint time.
+ * Skip-if-unchanged (structural) keeps a same-tread move re-render-free.
  */
-export interface StairSubElementHoverState {
-  ref: StairSubElementRef | null;
-}
+/**
+ * High-frequency hover cell on the shared `createExternalStore` SSoT (Tier-3
+ * `create-external-store` module — no hand-rolled listener Set). The structural
+ * `equals` guard is the skip-if-unchanged: only a genuine tread change notifies
+ * the subscribed leaf, so moving within the same tread costs zero re-render
+ * (mirror of the old `if (isSame…) return` bail).
+ */
+const hoverStore = createExternalStore<StairSubElementRef | null>(null, {
+  equals: isSameStairSubElement,
+});
 
-export const stairSubElementHover: StairSubElementHoverState = { ref: null };
-
-/** Set (or clear with `null`) the hovered sub-element. Mutates the non-reactive singleton. */
+/**
+ * Set (or clear with `null`) the hovered sub-element. Skip-if-unchanged
+ * (structural via the store `equals`) — moving within the same tread is a no-op.
+ */
 export function setStairSubElementHover(ref: StairSubElementRef | null): void {
-  stairSubElementHover.ref = ref;
+  hoverStore.set(ref);
 }
 
 /** Clear the hovered sub-element (deselect / stair change / pointer leave). */
 export function resetStairSubElementHover(): void {
-  stairSubElementHover.ref = null;
+  hoverStore.set(null);
+}
+
+/** Current hovered sub-element (snapshot for `useSyncExternalStore` / imperative reads). */
+export function getStairSubElementHover(): StairSubElementRef | null {
+  return hoverStore.get();
+}
+
+/** Subscribe a canvas leaf to hover changes (ADR-040 micro-leaf redraw trigger). */
+export function subscribeStairSubElementHover(cb: () => void): () => void {
+  return hoverStore.subscribe(cb);
 }

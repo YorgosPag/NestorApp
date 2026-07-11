@@ -4709,6 +4709,18 @@
         "rowAriaLabel": "Βαθμίδα {index}",
         "selectedRowAriaLabel": "Βαθμίδα {index} (επιλεγμένη)"
       },
+      "perRiser": {
+        "title": "Παρακάμψεις ανά ρίχτι",
+        "empty": "Καμία παράκαμψη",
+        "addOverride": "Προσθήκη",
+        "removeOverride": "Αφαίρεση",
+        "columns": {
+          "index": "#",
+          "material": "Υλικό"
+        },
+        "rowAriaLabel": "Ρίχτι {index}",
+        "selectedRowAriaLabel": "Ρίχτι {index} (επιλεγμένο)"
+      },
       "cutPlane": {
         "title": "Επίπεδο Τομής",
         "inheritProject": "Κληρονομικότητα από το έργο",
@@ -4731,6 +4743,19 @@
           "front": "Μπροστά",
           "none": "Καμία",
           "frontAndSides": "Μπροστά + Πλευρές"
+        }
+      },
+      "nosingProfile": {
+        "title": "Προφίλ Μύτης",
+        "hint": "Επιλέξτε βαθμίδα (κλικ σε πάτημα) για επεξεργασία του προφίλ",
+        "treadLabel": "Βαθμίδα {index}",
+        "shape": "Σχήμα",
+        "size": "Μέγεθος (χιλ.)",
+        "shapes": {
+          "square": "Ίσιο",
+          "bullnose": "Στρογγυλεμένο",
+          "chamfer": "Λοξότμητο",
+          "custom": "Προσαρμοσμένο"
         }
       }
     },

@@ -4709,6 +4709,18 @@
         "rowAriaLabel": "Tread {index}",
         "selectedRowAriaLabel": "Tread {index} (selected)"
       },
+      "perRiser": {
+        "title": "Per-Riser Overrides",
+        "empty": "No overrides",
+        "addOverride": "Add",
+        "removeOverride": "Remove",
+        "columns": {
+          "index": "#",
+          "material": "Material"
+        },
+        "rowAriaLabel": "Riser {index}",
+        "selectedRowAriaLabel": "Riser {index} (selected)"
+      },
       "cutPlane": {
         "title": "Cut Plane",
         "inheritProject": "Inherit from project",
@@ -4731,6 +4743,19 @@
           "front": "Front",
           "none": "None",
           "frontAndSides": "Front + Sides"
+        }
+      },
+      "nosingProfile": {
+        "title": "Nosing Profile",
+        "hint": "Click a tread to edit its nosing profile",
+        "treadLabel": "Tread {index}",
+        "shape": "Shape",
+        "size": "Size (mm)",
+        "shapes": {
+          "square": "Square",
+          "bullnose": "Bullnose",
+          "chamfer": "Chamfer",
+          "custom": "Custom"
         }
       }
     },

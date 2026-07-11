@@ -282,13 +282,20 @@ export interface MultiFlightParts {
   readonly flightSplit: readonly number[];
   readonly arrowSymbol: StairArrowSymbol;
   readonly landings?: readonly Polygon3D[];
+  /**
+   * Explicit stringers override. When the drawn walkline is deliberately not the
+   * stair centreline (ADR-630 Φ2e winder: display walkline at `R*`), the caller
+   * supplies the centre-derived stringers so the edges stay correct. Defaults to
+   * `buildStringersFromWalkline(walkline, width)`.
+   */
+  readonly stringers?: { readonly inner: Polyline3D; readonly outer: Polyline3D };
 }
 
 export function assembleMultiFlight(
   params: Readonly<StairParams>,
   parts: MultiFlightParts,
 ): StairGeometry {
-  const stringers = buildStringersFromWalkline(parts.walkline, params.width);
+  const stringers = parts.stringers ?? buildStringersFromWalkline(parts.walkline, params.width);
   const cutPlaneHeight = params.cutPlaneHeight ?? DEFAULT_CUT_PLANE_HEIGHT;
   const cutLine = buildCutLineForFlights(
     parts.treads,

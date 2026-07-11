@@ -1,6 +1,9 @@
 import type { SceneModel, AnySceneEntity, SceneLayer } from '../types/scene';
 import type { Entity } from '../types/entities';
 import { DxfEntityParser, type LayerColorMap } from './dxf-entity-parser';
+// ADR-635 Φ2 — INSERT/BLOCK expansion (block-definition map + placement transform).
+import { parseBlockDefinitions } from './dxf-block-parser';
+import { instantiateInsert, type ExpandContext } from './dxf-block-expander';
 import { DEFAULT_LAYER_COLOR, getLayerColor } from '../config/color-config';
 import { getAciColor } from '../settings/standards/aci';
 // ADR-130: Centralized Default Layer Name
@@ -15,6 +18,24 @@ import { insunitsCodeToSceneUnits, mmToSceneUnits, resolveImportSourceUnits, typ
 // ADR-348 SSoT — per-entity scale transform (reused for the import unit-scale pass).
 import { scaleEntity } from '../systems/scale/scale-entity-transform';
 
+/**
+ * Resolve a layer's real color from the two authoritative sources (SSoT, shared by layer
+ * registration and per-entity BYLAYER resolution): the parsed LAYER table, else the
+ * `COLOR_<n>` layer-name → ACI convention. Returns undefined when neither applies (callers
+ * decide the final fallback: hash color for layers, leave-uncolored for entities).
+ */
+function resolveLayerColor(layerName: string, layerColors: LayerColorMap): string | undefined {
+  const fromTable = layerColors[layerName]?.color;
+  if (fromTable) return fromTable;
+
+  const colorMatch = layerName.match(/^COLOR_(\d+)$/i);
+  if (colorMatch) {
+    const aciIndex = parseInt(colorMatch[1], 10);
+    if (aciIndex >= 1 && aciIndex <= 255) return getAciColor(aciIndex);
+  }
+  return undefined;
+}
+
 export class DxfSceneBuilder {
   /**
    * ADR-462 — CANONICAL-mm: a DXF is imported in WHATEVER units it was authored,
@@ -26,7 +47,12 @@ export class DxfSceneBuilder {
    */
   static buildScene(content: string, unitsOverride?: SceneUnits): SceneModel {
 
-    const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    // ⚠️ DO NOT filter empty lines. DXF is a strict (code\nvalue) stream and AutoCAD writes
+    // EMPTY string values (empty TEXT/handle/name codes). Dropping blank lines shifts the
+    // fixed 2-line stride in parseEntities/parseHeader/table-parsers → alignment corrupts and
+    // ~90% of entities are silently lost (real R12 sample: 4483 → 467). Trim strips \r/spaces;
+    // empty values survive as '' so every (code,value) pair stays aligned.
+    const lines = content.split('\n').map(line => line.trim());
 
     // ╔════════════════════════════════════════════════════════════════════════╗
     // ║ 🏢 ENTERPRISE: Parse HEADER first for unit/scale information          ║
@@ -72,8 +98,11 @@ export class DxfSceneBuilder {
       locked: false,
     });
 
-    // Parse entities using state machine
-    const parsedEntities = DxfEntityParser.parseEntities(lines);
+    // ADR-635 Φ2 — parse BLOCK definitions, then parse ONLY the ENTITIES section so block-
+    // definition geometry is not emitted standalone (it is placed via INSERT expansion below).
+    const blockDefs = parseBlockDefinitions(lines);
+    const entitiesRange = DxfEntityParser.findSectionRange(lines, 'ENTITIES') ?? undefined;
+    const parsedEntities = DxfEntityParser.parseEntities(lines, entitiesRange);
 
     // ╔════════════════════════════════════════════════════════════════════════╗
     // ║ 🏢 ENTERPRISE DIMSTYLE SUPPORT (2026-01-03)                            ║
@@ -88,67 +117,48 @@ export class DxfSceneBuilder {
     let byLayerColorCount = 0;
     let explicitColorCount = 0;
 
+    // Per-entity post-processing (layer registration + BYLAYER color resolution). Shared by
+    // directly-converted entities AND block-expanded ones (ADR-635 Φ2) so both resolve layers
+    // and colors through the SAME code — no twin. ADR-358 Phase 9D boundary casts preserved.
+    const processSceneEntity = (entity: AnySceneEntity): void => {
+      const layerName = getLayerNameOrDefault(entity.layerId);
+
+      // Register layer with REAL ACI colors from parsed LAYER table
+      DxfSceneBuilder.registerLayer(layers, layerName, layerColors);
+
+      // Attribute stable `layerId` from the registered SceneLayer (id-keyed routing downstream).
+      (entity as { layerId?: string }).layerId = layers[layerName].id;
+
+      // 🎨 BYLAYER color: if the entity has no explicit color, apply the layer's real color.
+      // Priority: parsed LAYER table → COLOR_X name pattern (ACI) → (registerLayer hash fallback).
+      const entityColor = (entity as { color?: string }).color;
+      if (!entityColor) {
+        const resolvedColor = resolveLayerColor(layerName, layerColors);
+        if (resolvedColor) {
+          (entity as { color?: string }).color = resolvedColor;
+          byLayerColorCount++;
+        }
+      } else {
+        explicitColorCount++;
+      }
+
+      entities.push(entity);
+    };
+
+    // ADR-635 Φ2 — INSERT expands the referenced block's geometry with its placement transform;
+    // every other entity converts directly. Both funnel through processSceneEntity.
+    const expandCtx: ExpandContext = { header, dimStyles, idSeq: { n: 0 } };
+
     parsedEntities.forEach((entityData, index) => {
+      if (entityData.type === 'INSERT') {
+        for (const e of instantiateInsert(entityData, blockDefs, expandCtx)) processSceneEntity(e);
+        return;
+      }
       const result = DxfEntityParser.convertToSceneEntity(entityData, index, header, dimStyles);
       if (!result) return;
-
       // Normalize to array (DIMENSION returns multiple entities: text + lines)
       const converted = Array.isArray(result) ? result : [result];
-
-      for (const entity of converted) {
-        // ADR-358 Phase 9D-5b-i — DXF parse boundary: raw DxfEntityParser output still
-        // emits `.layer` (group 8 string) at runtime; narrow cast preserves boundary read
-        // since BaseEntity.layer field was dropped from SceneEntity schema in 9D-5b-i.
-        // TODO Phase 9E candidate: extract formal `RawDxfEntity` type for parse boundary.
-        const layerName = getLayerNameOrDefault(entity.layerId);
-
-        // Register layer with REAL ACI colors from parsed LAYER table
-        DxfSceneBuilder.registerLayer(layers, layerName, layerColors);
-
-        // ADR-358 Phase 9D-2 — attribute stable `layerId` on entity from the
-        // registered SceneLayer. Provides id-keyed routing downstream
-        // (DxfRenderer/HitTester) prior to Phase 9E `SceneModel.layers` re-key.
-        (entity as { layerId?: string }).layerId = layers[layerName].id;
-
-        // ╔════════════════════════════════════════════════════════════════════════╗
-        // ║ 🎨 BYLAYER COLOR RESOLUTION (2026-01-03)                               ║
-        // ║                                                                        ║
-        // ║ ΚΡΙΣΙΜΟ: Αν το entity δεν έχει explicit color (ByLayer),              ║
-        // ║ εφάρμοσε το ΠΡΑΓΜΑΤΙΚΟ χρώμα του layer!                               ║
-        // ║                                                                        ║
-        // ║ Priority:                                                              ║
-        // ║ 1. layerColors[layerName] - Parsed from LAYER table                   ║
-        // ║ 2. COLOR_X pattern - Extract ACI from layer name (e.g. COLOR_43)      ║
-        // ║ 3. getLayerColor() - Hash-based fallback                              ║
-        // ╚════════════════════════════════════════════════════════════════════════╝
-        const entityColor = (entity as { color?: string }).color;
-        // Check if entity has NO color (undefined, null, or empty string = ByLayer)
-        if (!entityColor) {
-          // Try 1: Get from parsed LAYER table
-          let resolvedColor = layerColors[layerName]?.color;
-
-          // Try 2: Extract ACI from layer name pattern COLOR_X (e.g. COLOR_43 → ACI 43)
-          if (!resolvedColor) {
-            const colorMatch = layerName.match(/^COLOR_(\d+)$/i);
-            if (colorMatch) {
-              const aciIndex = parseInt(colorMatch[1], 10);
-              if (aciIndex >= 1 && aciIndex <= 255) {
-                resolvedColor = getAciColor(aciIndex);
-              }
-            }
-          }
-
-          if (resolvedColor) {
-            // Mutate entity to add layer color
-            (entity as { color?: string }).color = resolvedColor;
-            byLayerColorCount++;
-          }
-        } else {
-          explicitColorCount++;
-        }
-
-        entities.push(entity);
-      }
+      for (const entity of converted) processSceneEntity(entity);
     });
 
     // Debug: Log color assignment summary with sample colors
@@ -245,25 +255,9 @@ export class DxfSceneBuilder {
       // ║ 3. getLayerColor() → Hash-based fallback                               ║
       // ╚════════════════════════════════════════════════════════════════════════╝
 
-      // Try 1: Get from parsed LAYER table
-      let resolvedColor = layerColors[layerName]?.color;
+      // Try 1+2: LAYER table → COLOR_X name (shared SSoT). Try 3: hash-based fallback.
       const visible = layerColors[layerName]?.visible ?? true;
-
-      // Try 2: Extract ACI from layer name pattern COLOR_X (e.g. COLOR_43 → ACI 43)
-      if (!resolvedColor) {
-        const colorMatch = layerName.match(/^COLOR_(\d+)$/i);
-        if (colorMatch) {
-          const aciIndex = parseInt(colorMatch[1], 10);
-          if (aciIndex >= 1 && aciIndex <= 255) {
-            resolvedColor = getAciColor(aciIndex);
-          }
-        }
-      }
-
-      // Try 3: Hash-based fallback
-      if (!resolvedColor) {
-        resolvedColor = getLayerColor(layerName);
-      }
+      const resolvedColor = resolveLayerColor(layerName, layerColors) ?? getLayerColor(layerName);
 
       // ADR-358 Phase 9C/9D-2 — factory auto-gens stable `lyr_<UUID-v4>` id.
       layers[layerName] = createSceneLayer({

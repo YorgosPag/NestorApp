@@ -8,9 +8,11 @@
  *   - Presets (7.5, Stream H — G26/Q32 library presets)
  *   - Materials (7b2a, Stream G item 1)
  *   - Per-Tread Overrides (7b2a, Stream G item 2)
+ *   - Per-Riser Overrides (Q19 Φ7 — per-riser material)
  *   - Cut Plane Height (7b2a, Stream G item 3)
  *   - Tread Numbering (7b2b-α, Stream G item 4)
  *   - Nosing Side (7b2b-α, Stream G item 5)
+ *   - Nosing Profile (Q19 Φ6 — per-tread bullnose/chamfer preset writer)
  *
  * Presets section sits first (industry convention: Revit Type Selector / ArchiCAD
  * Favorites at top of Properties palette). It receives auth + project context
@@ -31,10 +33,12 @@ import { StairPersistenceSection } from './sections/StairPersistenceSection';
 import { StairPresetsSection } from './sections/StairPresetsSection';
 import { StairMaterialsSection } from './sections/StairMaterialsSection';
 import { StairPerTreadOverrideSection } from './sections/StairPerTreadOverrideSection';
+import { StairPerRiserOverrideSection } from './sections/StairPerRiserOverrideSection';
 import { StairCutPlaneSection } from './sections/StairCutPlaneSection';
 import { StairTreadNumberingSection } from './sections/StairTreadNumberingSection';
 import { StairTreadLabelSizeSection } from './sections/StairTreadLabelSizeSection';
 import { StairNosingSection } from './sections/StairNosingSection';
+import { StairTreadNosingProfileSection } from './sections/StairTreadNosingProfileSection';
 import type { DispatchStairParamPatch } from './commands/dispatchStairParamPatch';
 
 export interface StairAdvancedPanelProps {
@@ -101,10 +105,12 @@ export function StairAdvancedPanel({
       )}
       <StairMaterialsSection stair={stair} dispatchPatch={dispatchPatch} />
       <StairPerTreadOverrideSection stair={stair} dispatchPatch={dispatchPatch} />
+      <StairPerRiserOverrideSection stair={stair} dispatchPatch={dispatchPatch} />
       <StairCutPlaneSection stair={stair} dispatchPatch={dispatchPatch} />
       <StairTreadNumberingSection stair={stair} dispatchPatch={dispatchPatch} />
       <StairTreadLabelSizeSection stair={stair} dispatchPatch={dispatchPatch} />
       <StairNosingSection stair={stair} dispatchPatch={dispatchPatch} />
+      <StairTreadNosingProfileSection stair={stair} dispatchPatch={dispatchPatch} />
     </aside>
   );
 }

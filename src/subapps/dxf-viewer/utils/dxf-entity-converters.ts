@@ -27,15 +27,11 @@ import { vectorMagnitude } from '../rendering/entities/shared/geometry-rendering
 import {
   type EntityData,
   parseVerticesFromData,
-  decodeGreekText,
-  mapHorizontalAlignment,
-  mapMTextAlignment,
+  parseVerticesFromPairs,
   extractEntityColor
 } from './dxf-converter-helpers';
 
 import { dwarn } from '../debug';
-import type { DxfTextNode, TextJustification, TextParagraph, TextRun } from '../text-engine/types';
-import { DXF_COLOR_BY_LAYER } from '../text-engine/types';
 
 // Re-export types for backward compatibility
 export type { EntityData, TextAlignment, EntityConverter } from './dxf-converter-helpers';
@@ -83,22 +79,23 @@ export function convertLine(
 }
 
 /**
- * Convert LWPOLYLINE entity
- * DXF Codes: 10,20 = Vertex points (repeated); 70 = Closed flag
+ * Build the `type:'polyline'` scene entity shared by LWPOLYLINE and old-style POLYLINE.
+ * Single source for the closed-flag bitmask (70 bit 1 — AutoCAD emits e.g. 129 = 128|1),
+ * color extraction and the emitted shape, so both converters stay identical downstream.
  */
-export function convertLwPolyline(
+function buildPolylineSceneEntity(
+  vertices: Array<{ x: number; y: number }>,
   data: Record<string, string>,
   layer: string,
-  index: number
+  index: number,
+  label: 'POLYLINE' | 'LWPOLYLINE'
 ): AnySceneEntity | null {
-  const isClosed = data['70'] === '1';
-  const vertices = parseVerticesFromData(data);
-
   if (vertices.length < 2) {
-    dwarn('EntityConverter', `⚠️ Skipping LWPOLYLINE ${index}: insufficient vertices`, vertices.length);
+    dwarn('EntityConverter', `⚠️ Skipping ${label} ${index}: insufficient vertices`, vertices.length);
     return null;
   }
 
+  const isClosed = ((parseInt(data['70'] ?? '0', 10) || 0) & 1) === 1;
   const color = extractEntityColor(data);
 
   return {
@@ -112,9 +109,72 @@ export function convertLwPolyline(
   };
 }
 
+/**
+ * Convert LWPOLYLINE entity
+ * DXF Codes: 10,20 = Vertex points (repeated); 70 = flags (bit 1 = closed)
+ *
+ * Vertices are read from ordered `pairs` (ADR-507) when available, because the flat
+ * `data` map overwrites repeated 10/20 and keeps only the last vertex. Falls back to
+ * `parseVerticesFromData` for callers that pass no pairs.
+ */
+export function convertLwPolyline(
+  data: Record<string, string>,
+  layer: string,
+  index: number,
+  pairs?: ReadonlyArray<readonly [string, string]>
+): AnySceneEntity | null {
+  const vertices = pairs && pairs.length > 0
+    ? parseVerticesFromPairs(pairs).map(v => ({ x: v.x, y: v.y }))
+    : parseVerticesFromData(data);
+  return buildPolylineSceneEntity(vertices, data, layer, index, 'LWPOLYLINE');
+}
+
+/**
+ * Convert old-style POLYLINE entity (AutoCAD R12/AC1009: POLYLINE + N×VERTEX + SEQEND).
+ *
+ * Vertices are pre-aggregated by DxfEntityParser.parsePolylineGroup into ordered `pairs`
+ * (10/20/42, header elevation excluded). Emits the SAME scene entity as LWPOLYLINE so all
+ * downstream (bounds, unit scaling, renderer) treats both identically.
+ *
+ * Bulge (code 42) is preserved on the parsed vertices but rendered as straight segments
+ * for now (Φ1a) — bulge→arc tessellation is a follow-up (Φ1b).
+ */
+export function convertPolyline(
+  entityData: EntityData,
+  index: number
+): AnySceneEntity | null {
+  const { data, layer, pairs } = entityData;
+  const vertices = parseVerticesFromPairs(pairs).map(v => ({ x: v.x, y: v.y }));
+  return buildPolylineSceneEntity(vertices, data, layer, index, 'POLYLINE');
+}
+
 // ============================================================================
 // 🏢 ENTERPRISE: CURVE CONVERTERS
 // ============================================================================
+
+/**
+ * Parse + validate the shared center (10/20) + radius (40) triple for CIRCLE/ARC.
+ * Single SSoT for the parse & NaN/positive-radius guard (jscpd twin removal, ADR-583).
+ * Returns `null` (and warns) when the parameters are invalid.
+ */
+function parseValidCenterRadius(
+  data: Record<string, string>,
+  entityLabel: string,
+  index: number,
+): { centerX: number; centerY: number; radius: number } | null {
+  const centerX = parseFloat(data['10']);
+  const centerY = parseFloat(data['20']);
+  const radius = parseFloat(data['40']);
+
+  if (isNaN(centerX) || isNaN(centerY) || isNaN(radius) || radius <= 0) {
+    dwarn('EntityConverter', `⚠️ Skipping ${entityLabel} ${index}: invalid parameters`, {
+      centerX, centerY, radius
+    });
+    return null;
+  }
+
+  return { centerX, centerY, radius };
+}
 
 /**
  * Convert CIRCLE entity
@@ -125,16 +185,9 @@ export function convertCircle(
   layer: string,
   index: number
 ): AnySceneEntity | null {
-  const centerX = parseFloat(data['10']);
-  const centerY = parseFloat(data['20']);
-  const radius = parseFloat(data['40']);
-
-  if (isNaN(centerX) || isNaN(centerY) || isNaN(radius) || radius <= 0) {
-    dwarn('EntityConverter', `⚠️ Skipping CIRCLE ${index}: invalid parameters`, {
-      centerX, centerY, radius
-    });
-    return null;
-  }
+  const parsed = parseValidCenterRadius(data, 'CIRCLE', index);
+  if (!parsed) return null;
+  const { centerX, centerY, radius } = parsed;
 
   const color = extractEntityColor(data);
 
@@ -158,18 +211,11 @@ export function convertArc(
   layer: string,
   index: number
 ): AnySceneEntity | null {
-  const centerX = parseFloat(data['10']);
-  const centerY = parseFloat(data['20']);
-  const radius = parseFloat(data['40']);
+  const parsed = parseValidCenterRadius(data, 'ARC', index);
+  if (!parsed) return null;
+  const { centerX, centerY, radius } = parsed;
   const startAngle = parseFloat(data['50']) || 0;
   const endAngle = parseFloat(data['51']) || 360;
-
-  if (isNaN(centerX) || isNaN(centerY) || isNaN(radius) || radius <= 0) {
-    dwarn('EntityConverter', `⚠️ Skipping ARC ${index}: invalid parameters`, {
-      centerX, centerY, radius
-    });
-    return null;
-  }
 
   const color = extractEntityColor(data);
 
@@ -228,161 +274,12 @@ export function convertEllipse(
   };
 }
 
-// ── Text node builder (ADR-344 SSOT unification) ──────────────────────────────
-
-const ALIGNMENT_TO_ATTACHMENT: Record<'left' | 'center' | 'right', TextJustification> = {
-  left: 'BL', center: 'BC', right: 'BR',
-};
-
-const MTEXT_ATTACHMENT_MAP: Record<number, TextJustification> = {
-  1: 'TL', 2: 'TC', 3: 'TR',
-  4: 'ML', 5: 'MC', 6: 'MR',
-  7: 'BL', 8: 'BC', 9: 'BR',
-};
-
-function buildTextNodeFromFlat(
-  text: string,
-  height: number,
-  rotation: number,
-  alignment: 'left' | 'center' | 'right',
-  attachment?: TextJustification,
-): DxfTextNode {
-  const run: TextRun = {
-    text,
-    style: {
-      fontFamily: '',
-      bold: false,
-      italic: false,
-      underline: false,
-      overline: false,
-      strikethrough: false,
-      height,
-      widthFactor: 1,
-      obliqueAngle: 0,
-      tracking: 1,
-      color: DXF_COLOR_BY_LAYER,
-    },
-  };
-  const para: TextParagraph = {
-    runs: [run],
-    indent: 0,
-    leftMargin: 0,
-    rightMargin: 0,
-    tabs: [],
-    justification: alignment === 'center' ? 1 : alignment === 'right' ? 2 : 0,
-    lineSpacingMode: 'multiple',
-    lineSpacingFactor: 1,
-  };
-  return {
-    paragraphs: [para],
-    attachment: attachment ?? ALIGNMENT_TO_ATTACHMENT[alignment],
-    lineSpacing: { mode: 'multiple', factor: 1 },
-    rotation,
-    isAnnotative: false,
-    annotationScales: [],
-    currentScale: '',
-  };
-}
-
 // ============================================================================
-// 🏢 ENTERPRISE: TEXT CONVERTERS
+// 🏢 ENTERPRISE: TEXT CONVERTERS (extracted → dxf-text-converters.ts, N.7.1 SRP)
 // ============================================================================
-
-/**
- * Convert TEXT entity with full CAD property extraction
- * DXF Codes: 10,20 = Position; 1 = Content; 40 = Height; 50 = Rotation; 72 = H-justification
- *
- * 🏢 ADR-344 Phase 11.D TODO (out of scope this commit):
- * When the parser is upgraded to preserve XDATA pairs (AcDbAnnotativeData,
- * group codes 1001/1070/1071) the conversion should call
- * `parseAnnotativeXData(pairs, scaleResolver)` from
- * `text-engine/parser/xdata-annotative-codec.ts` and populate
- * `isAnnotative` / `annotationScales` on the returned TextEntity.
- * Current parser flattens DXF into Record<string,string> which is lossy for
- * XDATA — full wire-up requires upstream parser refactor (separate task).
- */
-export function convertText(
-  data: Record<string, string>,
-  layer: string,
-  index: number
-): AnySceneEntity | null {
-  const x = parseFloat(data['10']);
-  const y = parseFloat(data['20']);
-  let text = data['1'] || '';
-  const height = parseFloat(data['40']) || 1;
-  const rotation = parseFloat(data['50']) || 0;
-  const horizontalJustification = parseInt(data['72']) || 0;
-  const alignment = mapHorizontalAlignment(horizontalJustification);
-
-  if (isNaN(x) || isNaN(y) || text.trim() === '') {
-    dwarn('EntityConverter', `⚠️ Skipping TEXT ${index}: missing position or text`, { x, y, text });
-    return null;
-  }
-
-  text = decodeGreekText(text);
-  const color = extractEntityColor(data);
-
-  return {
-    id: `text_${index}`,
-    type: 'text',
-    layerId: layer,
-    visible: true,
-    position: { x, y },
-    text: text.trim(),
-    fontSize: height,
-    height,
-    rotation,
-    alignment,
-    textNode: buildTextNodeFromFlat(text.trim(), height, rotation, alignment),
-    ...(color && { color })
-  };
-}
-
-/**
- * Convert MTEXT/MULTILINETEXT entity
- * DXF Codes: 10,20 = Position; 1/3 = Content; 40 = Height; 50 = Rotation; 71 = Attachment
- *
- * 🏢 ADR-344 Phase 11.D TODO: same XDATA wire-up note as convertText() above.
- */
-export function convertMText(
-  data: Record<string, string>,
-  layer: string,
-  index: number
-): AnySceneEntity | null {
-  const x = parseFloat(data['10']);
-  const y = parseFloat(data['20']);
-  let text = data['1'] || data['3'] || '';
-  const height = parseFloat(data['40']) || 1;
-  const rotation = parseFloat(data['50']) || 0;
-  const attachmentPoint = parseInt(data['71']) || 1;
-  const alignment = mapMTextAlignment(attachmentPoint);
-
-  if (isNaN(x) || isNaN(y) || text.trim() === '') {
-    dwarn('EntityConverter', `⚠️ Skipping MTEXT ${index}: missing position or text`, { x, y, text });
-    return null;
-  }
-
-  text = decodeGreekText(text);
-  const color = extractEntityColor(data);
-
-  return {
-    id: `mtext_${index}`,
-    type: 'text',
-    layerId: layer,
-    visible: true,
-    position: { x, y },
-    text: text.trim(),
-    fontSize: height,
-    height,
-    rotation,
-    alignment,
-    textNode: buildTextNodeFromFlat(
-      text.trim(), height, rotation, alignment,
-      MTEXT_ATTACHMENT_MAP[attachmentPoint],
-    ),
-    ...(color && { color })
-  };
-}
+// TEXT / MTEXT live in their own module (mirror dimension / hatch / xline-ray
+// splits below); re-exported here for backward-compatible import paths.
+export { convertText, convertMText } from './dxf-text-converters';
 
 // ============================================================================
 // 🏢 ENTERPRISE: SPLINE CONVERTER
@@ -461,7 +358,11 @@ export function convertEntityToScene(
       // ADR-507 Φ1a — χρειάζεται ordered pairs (boundary loops με επαναλαμβανόμενα 10/20).
       return convertHatch(entityData.pairs ?? [], layer, index);
     case 'LWPOLYLINE':
-      return convertLwPolyline(data, layer, index);
+      // ADR-507 pairs → survive repeated 10/20 that the flat `data` map overwrites.
+      return convertLwPolyline(data, layer, index, entityData.pairs);
+    case 'POLYLINE':
+      // Old-style POLYLINE (R12): vertices pre-aggregated into pairs by parsePolylineGroup.
+      return convertPolyline(entityData, index);
     case 'CIRCLE':
       return convertCircle(data, layer, index);
     case 'ARC':
