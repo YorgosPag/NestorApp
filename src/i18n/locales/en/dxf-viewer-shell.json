@@ -4725,6 +4725,21 @@
         "rowAriaLabel": "Riser {index}",
         "selectedRowAriaLabel": "Riser {index} (selected)"
       },
+      "restLandings": {
+        "title": "Rest Landings",
+        "addLanding": "Add landing",
+        "removeOverride": "Remove landing",
+        "empty": "No rest landings",
+        "unsupportedHint": "Rest landings are not supported for this stair type",
+        "auto": "Auto",
+        "columns": {
+          "index": "#",
+          "length": "Length (mm)",
+          "depth": "Depth (mm)"
+        },
+        "rowAriaLabel": "Landing {index}",
+        "selectedRowAriaLabel": "Landing {index} (selected)"
+      },
       "cutPlane": {
         "title": "Cut Plane",
         "inheritProject": "Inherit from project",

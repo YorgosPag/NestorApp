@@ -1,6 +1,6 @@
 # ADR-637 — Stair Rest Landings (πλατύσκαλα) — kind-independent SSoT
 
-- **Status**: Accepted — Phase 1 + Phase 2 (rectilinear family) + Phase 4-A (draggable/resizable landing grips) implemented
+- **Status**: Accepted — Phase 1 + Phase 2 (rectilinear family) + Phase 4-A (draggable/resizable landing grips) + Phase 4-B (add/remove/length/depth panel UI) implemented
 - **Date**: 2026-07-11
 - **Owners**: DXF/BIM stair subsystem
 - **Related**: ADR-611 (stair geometry generators SSoT), ADR-633 (multi-flight turn points), ADR-619 (stair-from-region walkline / `preserveZ`), ADR-358 (stair tool), ADR-631/625 (command + drag-preview bases), ADR-040 (micro-leaf subscribers)
@@ -197,9 +197,38 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
   - Tests: `StairGeometryService-restlanding-handles.test.ts` (4) +
     `stair-rest-landing-grips.test.ts` (12); stair grip + geometry suites green
     (52 suites / 710); grip discriminator coverage green; jscpd-clean.
-- **Phase 4-B — pending**: live re-flow preview during drag + add/remove/length UI panel.
-- **Phase 5 — pending**: 2D/3D pick+highlight (`part:'landing'`) + advanced-panel
-  add/remove/length UI.
+- **Phase 4-B — DONE**: add/remove/length/depth panel UI, `StairRestLandingsSection`
+  (`ui/stair-advanced-panel/sections/StairRestLandingsSection.tsx`), composed into
+  `StairAdvancedPanel` between per-riser overrides and cut-plane height. Mirrors
+  the per-tread/per-riser override sections' look (reuses `StairOverrideRowShell`
+  for the index cell + remove button; N.18 — no cloned row chrome).
+  - **Gating (SSoT)**: `stairKindSupportsRestLandings` (new export,
+    `bim/geometry/stairs/stair-run-landings.ts`) is the single source of truth for
+    "does this kind's geometry generator consume `restLandings`" — currently
+    `straight` / `multi-flight` / `v-shape` (matches Phase 4-A's grip-handle
+    coverage and the Phase 2 known limitation). Other kinds (L/U/Γ, walkline
+    family, etc.) show a hint instead of a no-op editor.
+  - **Add**: appends `{ id: stln_N, at: 0.5, length: 'auto' }` — `stln_N` is a
+    deterministic LOCAL sub-object id (max existing numeric suffix + 1; NOT a
+    Firestore document id, so `enterprise-id.service` does not apply — N.6 scope
+    is `setDoc()` documents). New pure helper module
+    `sections/stair-rest-landing-helpers.ts` (`nextRestLandingId` /
+    `appendRestLanding` / `removeRestLandingById` / `patchRestLandingById`),
+    unit-tested independent of React.
+  - **Length / depth editors**: per-row "auto" checkbox + numeric input (mm),
+    same visual pattern as `StairCutPlaneSection`'s inherit toggle. Unchecking
+    "auto" prefills the stair's own `width` (square landing default, matching
+    `resolveRestLandingLength`/`resolveRestLandingDepth`). Writes go through the
+    existing `dispatchStairParamPatch` → `UpdateStairParamsCommand` (undo +
+    recompute), same as every other panel section.
+  - **Known scope limits carried forward**: no click-into sub-element selection
+    for landings yet (`part:'landing'` — Phase 5), and no live re-flow preview
+    during a grip drag (still recompute-on-release, Phase 4-A's deferred item).
+  - Tests: `stair-rest-landing-helpers.test.ts` (8) +
+    `StairRestLandingsSection.test.tsx` (6); i18n audit clean (0 new violations);
+    jscpd-diff clean.
+- **Phase 5 — pending**: 2D/3D pick+highlight (`part:'landing'`) for the panel row +
+  live re-flow preview during grip drag.
 
 ## Changelog
 
@@ -219,3 +248,12 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
   `UnifiedGripInfo` (forwarded in `wrapDxfGrip` + `commitStairGripDrag`); dispatch
   unchanged (routes by entity type). Recompute-on-release; live-during-drag
   deferred to Phase 4-B. +16 tests; stair suites 52/710 green; jscpd-clean.
+- **2026-07-11** — Phase 4-B: add/remove/length/depth panel UI.
+  `StairRestLandingsSection` composed into `StairAdvancedPanel`; gated on new
+  `stairKindSupportsRestLandings` SSoT export (straight/multi-flight/v-shape);
+  add seeds a deterministic local `stln_N` id (pure helpers in
+  `stair-rest-landing-helpers.ts`, not an enterprise-id — sub-object, not a
+  Firestore doc); length/depth editors reuse the cut-plane "auto" toggle
+  pattern; writes through the existing `dispatchStairParamPatch`. i18n keys
+  added under `stairAdvancedPanel.sections.restLandings` (el+en). +14 tests;
+  i18n-audit clean; jscpd-diff clean.

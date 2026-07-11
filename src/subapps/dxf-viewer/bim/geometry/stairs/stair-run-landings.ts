@@ -26,7 +26,26 @@
  * @see docs/centralized-systems/reference/adrs/ADR-611-stair-geometry-generators-ssot.md
  */
 
-import type { StairRestLanding } from '../../types/stair-types';
+import type { StairKind, StairRestLanding } from '../../types/stair-types';
+
+/**
+ * Kinds whose geometry generator actually CONSUMES `StairParams.restLandings`
+ * today (`StairGeometryService.ts` / `stair-geometry-multiflight.ts` /
+ * `stair-geometry-vshape.ts`). Other kinds ignore the field — the docstring
+ * above describes the eventual "all 13 kinds" target, but code is the source
+ * of truth (CLAUDE.md N.0.1), so UI (ADR-637 Phase 4-B `StairRestLandingsSection`)
+ * gates the add/edit affordance on this SSoT instead of offering a silent no-op.
+ */
+const REST_LANDING_SUPPORTED_KINDS: ReadonlySet<StairKind> = new Set([
+  'straight',
+  'multi-flight',
+  'v-shape',
+]);
+
+/** True when `kind`'s geometry generator consumes `StairParams.restLandings`. */
+export function stairKindSupportsRestLandings(kind: StairKind): boolean {
+  return REST_LANDING_SUPPORTED_KINDS.has(kind);
+}
 
 /** A consecutive run of `treadCount` treads starting at level `startLevel`. */
 export interface StairRunFlightSegment {

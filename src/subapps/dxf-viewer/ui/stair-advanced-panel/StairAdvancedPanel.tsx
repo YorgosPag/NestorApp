@@ -9,6 +9,7 @@
  *   - Materials (7b2a, Stream G item 1)
  *   - Per-Tread Overrides (7b2a, Stream G item 2)
  *   - Per-Riser Overrides (Q19 Φ7 — per-riser material)
+ *   - Rest Landings / πλατύσκαλα (ADR-637 Phase 4-B — add/remove/length/depth)
  *   - Cut Plane Height (7b2a, Stream G item 3)
  *   - Tread Numbering (7b2b-α, Stream G item 4)
  *   - Nosing Side (7b2b-α, Stream G item 5)
@@ -34,6 +35,7 @@ import { StairPresetsSection } from './sections/StairPresetsSection';
 import { StairMaterialsSection } from './sections/StairMaterialsSection';
 import { StairPerTreadOverrideSection } from './sections/StairPerTreadOverrideSection';
 import { StairPerRiserOverrideSection } from './sections/StairPerRiserOverrideSection';
+import { StairRestLandingsSection } from './sections/StairRestLandingsSection';
 import { StairCutPlaneSection } from './sections/StairCutPlaneSection';
 import { StairTreadNumberingSection } from './sections/StairTreadNumberingSection';
 import { StairTreadLabelSizeSection } from './sections/StairTreadLabelSizeSection';
@@ -106,6 +108,7 @@ export function StairAdvancedPanel({
       <StairMaterialsSection stair={stair} dispatchPatch={dispatchPatch} />
       <StairPerTreadOverrideSection stair={stair} dispatchPatch={dispatchPatch} />
       <StairPerRiserOverrideSection stair={stair} dispatchPatch={dispatchPatch} />
+      <StairRestLandingsSection stair={stair} dispatchPatch={dispatchPatch} />
       <StairCutPlaneSection stair={stair} dispatchPatch={dispatchPatch} />
       <StairTreadNumberingSection stair={stair} dispatchPatch={dispatchPatch} />
       <StairTreadLabelSizeSection stair={stair} dispatchPatch={dispatchPatch} />

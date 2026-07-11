@@ -4725,6 +4725,21 @@
         "rowAriaLabel": "Ρίχτι {index}",
         "selectedRowAriaLabel": "Ρίχτι {index} (επιλεγμένο)"
       },
+      "restLandings": {
+        "title": "Πλατύσκαλα",
+        "addLanding": "Προσθήκη πλατύσκαλου",
+        "removeOverride": "Αφαίρεση πλατύσκαλου",
+        "empty": "Δεν υπάρχουν πλατύσκαλα",
+        "unsupportedHint": "Δεν υποστηρίζονται πλατύσκαλα για αυτόν τον τύπο σκάλας",
+        "auto": "Αυτόματο",
+        "columns": {
+          "index": "#",
+          "length": "Μήκος (χιλ.)",
+          "depth": "Βάθος (χιλ.)"
+        },
+        "rowAriaLabel": "Πλατύσκαλο {index}",
+        "selectedRowAriaLabel": "Πλατύσκαλο {index} (επιλεγμένο)"
+      },
       "cutPlane": {
         "title": "Επίπεδο Τομής",
         "inheritProject": "Κληρονομικότητα από το έργο",
