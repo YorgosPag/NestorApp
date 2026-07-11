@@ -14,6 +14,7 @@ import {
   resolveUnicodeSafeAcadVer,
   encodingToCodepage,
   collectCustomLinetypesForExport,
+  versionToEncoding,
 } from '../dxf-export-adapter';
 import type { ResolvedExportFloor } from '../../core/export-floor-scope';
 import type { Entity } from '../../../types/entities';
@@ -151,6 +152,48 @@ describe('ADR-636 Στάδιο 2 Φ2.1 — professional LAYER table', () => {
     } as unknown as SceneModel;
     const names = collectCustomLinetypesForExport(s).map((l) => l.name);
     expect(names).toEqual(['WallDashed']);
+  });
+});
+
+describe('ADR-636 Στάδιο 2 Φ2.2 — auto version-driven encoding', () => {
+  const realLine = { id: 'l', type: 'line', layerId: 'lyr_g', start: { x: 0, y: 0 }, end: { x: 1, y: 1 } } as unknown as Entity;
+  // Scene with a Greek layer name → the encoded byte count differs between cp1253 and UTF-8.
+  const greekScene = {
+    entities: [realLine],
+    layersById: { lyr_g: { id: 'lyr_g', name: 'ΚΑΤΟΨΗ', color: '#ff0000', colorAci: 1, visible: true } },
+    bounds: { min: { x: 0, y: 0 }, max: { x: 10, y: 10 } },
+    units: 'mm',
+  } as unknown as SceneModel;
+
+  it('versionToEncoding: pre-Unicode → cp1253, 2007+ → utf-8', () => {
+    expect(versionToEncoding('AC1009')).toBe('cp1253'); // R12
+    expect(versionToEncoding('AC1015')).toBe('cp1253'); // R2000
+    expect(versionToEncoding('AC1018')).toBe('cp1253'); // R2004
+    expect(versionToEncoding('AC1021')).toBe('utf-8');  // R2007
+    expect(versionToEncoding('AC1032')).toBe('utf-8');  // R2018
+  });
+
+  it('buildDxfExportRequest auto-derives settings.encoding from the version', () => {
+    // default version (AC1032) → utf-8
+    const def = buildDxfExportRequest(greekScene, { entityScope: 'dxf-only' });
+    expect(def.request.settings.version).toBe('AC1032');
+    expect(def.request.settings.encoding).toBe('utf-8');
+    // pre-Unicode override → cp1253
+    const r2000 = buildDxfExportRequest(greekScene, { entityScope: 'dxf-only', version: 'AC1015' });
+    expect(r2000.request.settings.encoding).toBe('cp1253');
+  });
+
+  it('renderDxfBlob: R2000 (cp1253) encodes Greek as single bytes → smaller than R2018 (UTF-8)', () => {
+    const utf8 = renderDxfBlob(buildDxfExportRequest(greekScene, { entityScope: 'dxf-only', version: 'AC1032' }).request);
+    const cp1253 = renderDxfBlob(buildDxfExportRequest(greekScene, { entityScope: 'dxf-only', version: 'AC1015' }).request);
+    // Greek 'ΚΑΤΟΨΗ' = 2 bytes/char in UTF-8 vs 1 byte/char in Windows-1253 → cp1253 blob is smaller.
+    expect(cp1253.size).toBeLessThan(utf8.size);
+  });
+
+  it('renderDxfBlob still returns a valid dxf Blob on the cp1253 path', () => {
+    const blob = renderDxfBlob(buildDxfExportRequest(greekScene, { entityScope: 'dxf-only', version: 'AC1009' }).request);
+    expect(blob.size).toBeGreaterThan(0);
+    expect(blob.type).toBe('application/dxf');
   });
 });
 

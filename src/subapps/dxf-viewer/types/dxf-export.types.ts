@@ -60,10 +60,15 @@ export const DXF_VERSION_NAMES: Record<DxfVersion, string> = {
 } as const;
 
 /**
- * Default DXF version for export
- * R2000 (AC1015) offers best balance of compatibility and features
+ * Default DXF version for export.
+ *
+ * ADR-636 Στάδιο 2 Φ2.2 — R2018 (AC1032), mirroring AutoCAD «Save As» (defaults to the
+ * latest release). A modern Unicode (UTF-8) file opens correctly everywhere in current
+ * software with Greek intact and zero codepage ambiguity — the "just works" default. Users
+ * who need an older target pick it in the export dialog; the exporter then automatically
+ * switches to the matching Windows-1253 codepage encoding (see `versionToEncoding`).
  */
-export const DEFAULT_DXF_VERSION: DxfVersion = 'AC1015';
+export const DEFAULT_DXF_VERSION: DxfVersion = 'AC1032';
 
 // ============================================================================
 // UNIT CONFIGURATION

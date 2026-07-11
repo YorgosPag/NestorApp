@@ -38,6 +38,7 @@ import { usedCategoryLayerDefs } from '../core/dxf-category-layers';
 import { writeDxfAscii } from '../core/dxf-ascii-writer';
 import { resolveLinetype } from '../../stores/LinetypeRegistry';
 import { isIsoBaselineLinetype, type LinetypeDef } from '../../config/linetype-iso-catalog';
+import { encodingService } from '../../io/encoding-service';
 import type { ResolvedExportFloor } from '../core/export-floor-scope';
 import type { ExportArtifact, ExportEntityScope, DxfLineMode } from '../types';
 
@@ -124,6 +125,9 @@ export function buildDxfExportRequest(
   const settings = createDefaultExportSettings();
   if (options.version) settings.version = options.version;
   if (options.unit) settings.units = options.unit;
+  // ADR-636 Στάδιο 2 Φ2.2 — encoding is fully AUTO-derived from the target version (zero user
+  // intervention, no encoding UI): pre-Unicode releases → Windows-1253 bytes, 2007+ → UTF-8.
+  settings.encoding = versionToEncoding(settings.version);
 
   const request: DxfExportSceneRequest = {
     scene: {
@@ -193,7 +197,24 @@ export function renderDxfBlob(request: DxfExportSceneRequest, lineMode?: DxfLine
     tableLayers: professionalTables ? Object.values(request.scene.layersById) : undefined,
     customLinetypes: professionalTables ? collectCustomLinetypesForExport(request.scene) : undefined,
   });
-  return new Blob([dxf], { type: 'application/dxf' });
+  // ADR-636 Στάδιο 2 Φ2.2 — encode the final bytes to match the declared version. UTF-8 (2007+)
+  // writes the JS string as-is; a pre-Unicode target (cp1253) re-encodes the WHOLE string to
+  // Windows-1253 bytes (ASCII structure 1:1, Greek → single codepage bytes) so the file matches
+  // its own `$DWGCODEPAGE=ANSI_1253` and opens correctly in legacy AutoCAD/Tekton.
+  const bytes = request.settings.encoding === 'cp1253'
+    ? encodingService.encodeWindows1253(dxf)
+    : dxf;
+  return new Blob([bytes], { type: 'application/dxf' });
+}
+
+/**
+ * ADR-636 Στάδιο 2 Φ2.2 — auto-derive the text encoding from the target DXF version (AutoCAD
+ * «Save As» model: the release drives encoding, not a separate user toggle). Pre-Unicode
+ * releases (R12–2004) use the Windows-1253 codepage (this app is Greek-first); 2007+ (AC1021+)
+ * use UTF-8. Keeps encoding fully automatic — the user only ever picks a version.
+ */
+export function versionToEncoding(version: DxfVersion): DxfEncoding {
+  return PRE_UNICODE_VERSIONS.has(version) ? 'cp1253' : 'utf-8';
 }
 
 /**
@@ -221,11 +242,12 @@ export function collectCustomLinetypesForExport(scene: SceneModel): LinetypeDef[
 const PRE_UNICODE_VERSIONS: ReadonlySet<DxfVersion> = new Set(['AC1009', 'AC1015', 'AC1018']);
 
 /**
- * ADR-636 Στάδιο 1 — the writer currently emits UTF-8, which is only valid from AC1021 (R2007)
- * onward. If a pre-Unicode version is requested WITH utf-8 text, bump the declared `$ACADVER`
- * to AC1021 so AutoCAD reads the bytes as UTF-8 instead of ANSI (else Greek → «ÊËÉÌÁÊÁ»).
- * Στάδιο 2 will instead honor lower versions by encoding the text in the matching codepage
- * (cp1253 for Greek R12), at which point this bump no longer applies to those.
+ * Reconcile the declared `$ACADVER` with the byte encoding. Since Στάδιο 2 Φ2.2 auto-derives
+ * `cp1253` for pre-Unicode versions (`versionToEncoding`), those are now **honored as-is**
+ * (real Windows-1253 bytes → the requested R12/2000/2004 is kept). The bump only guards the
+ * defensive edge case of a pre-Unicode version still paired with `utf-8` (which no live path
+ * produces): there we raise `$ACADVER` to AC1021 so the UTF-8 bytes aren't read as ANSI and
+ * garbled (Greek → «ÊËÉÌÁÊÁ»).
  */
 export function resolveUnicodeSafeAcadVer(version: DxfVersion, encoding: DxfEncoding): DxfVersion {
   return encoding === 'utf-8' && PRE_UNICODE_VERSIONS.has(version) ? 'AC1021' : version;

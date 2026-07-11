@@ -138,6 +138,23 @@ const WINDOWS_1253_TO_UNICODE: Readonly<Record<number, number>> = {
   0xFE: 0x03CE  // Greek small letter omega with tonos
 } as const;
 
+/**
+ * Inverse of `WINDOWS_1253_TO_UNICODE` (unicode code-point → Windows-1253 byte), built ONCE
+ * from the SAME table (no second table — SSoT). Used by `encodeWindows1253` for DXF export
+ * (ADR-636 Στάδιο 2 Φ2.2). ASCII (0x00–0x7F) is identity and not stored here.
+ */
+let UNICODE_TO_WINDOWS_1253: Map<number, number> | null = null;
+function unicodeToWindows1253(): Map<number, number> {
+  if (!UNICODE_TO_WINDOWS_1253) {
+    const map = new Map<number, number>();
+    for (const [byteStr, unicode] of Object.entries(WINDOWS_1253_TO_UNICODE)) {
+      map.set(unicode, Number(byteStr));
+    }
+    UNICODE_TO_WINDOWS_1253 = map;
+  }
+  return UNICODE_TO_WINDOWS_1253;
+}
+
 // ============================================================================
 // 🏢 ENTERPRISE: ENCODING SERVICE CLASS
 // ============================================================================
@@ -280,26 +297,57 @@ export class EncodingService {
   }
 
   /**
+   * 🏢 ENTERPRISE: Encode a string to Windows-1253 bytes for DXF export (ADR-636 Στάδιο 2 Φ2.2).
+   *
+   * The exact inverse of `decodeWindows1253`, reusing the SAME table (`unicodeToWindows1253`,
+   * no second table). ASCII (≤ 0x7F) is written 1:1, so the whole DXF string — pure-ASCII
+   * structure + Greek text — can be encoded in one pass. Greek/Latin covered by Windows-1253
+   * map to a single byte.
+   *
+   * Characters OUTSIDE Windows-1253 (rare — exotic symbols/CJK/emoji, never Greek/Latin) are
+   * emitted as a `\U+XXXX` DXF unicode escape (uppercase 4-hex, ASCII bytes) instead of a lossy
+   * `?`, so **no character is ever silently dropped** and Nestor's own MTEXT importer
+   * (`text-engine/parser/mtext-tokenizer`) round-trips them back. Codepoints > 0xFFFF fall back
+   * to `?` (0x3F) since `\U+XXXX` is 4-hex only.
+   */
+  encodeWindows1253(text: string): Uint8Array {
+    const map = unicodeToWindows1253();
+    const bytes: number[] = [];
+    for (const ch of text) {
+      const code = ch.codePointAt(0) ?? 0x3f;
+      if (code <= 0x7f) {
+        bytes.push(code); // ASCII identity (DXF structure + Latin text)
+        continue;
+      }
+      const byte = map.get(code);
+      if (byte !== undefined) {
+        bytes.push(byte); // representable in Windows-1253 (all Greek)
+      } else if (code <= 0xffff) {
+        for (const c of `\\U+${code.toString(16).toUpperCase().padStart(4, '0')}`) {
+          bytes.push(c.charCodeAt(0)); // lossless escape for out-of-codepage chars
+        }
+      } else {
+        bytes.push(0x3f); // astral plane → '?' (no 4-hex escape)
+      }
+    }
+    return new Uint8Array(bytes);
+  }
+
+  /**
    * 🏢 ENTERPRISE: Decode ISO-8859-7 bytes to Unicode string
    *
    * @param bytes - The raw bytes to decode
    * @returns Decoded Unicode string
    */
   decodeISO88597(bytes: Uint8Array): string {
-    let result = '';
-    for (let i = 0; i < bytes.length; i++) {
-      const byte = bytes[i];
-      if (byte < 128) {
-        result += String.fromCharCode(byte);
-      } else if (byte >= 0xB0 && byte <= 0xFE) {
-        const greekOffset = byte - 0xB0;
-        const unicodeStart = 0x0390;
-        result += String.fromCharCode(unicodeStart + greekOffset);
-      } else {
-        result += String.fromCharCode(byte);
+    // Reuse the shared byte-loop SSoT (`processBytes`) — only the high-byte mapping
+    // differs (ISO-8859-7 Greek block 0xB0–0xFE → U+0390+offset).
+    return this.processBytes(bytes, (byte) => {
+      if (byte >= 0xB0 && byte <= 0xFE) {
+        return String.fromCharCode(0x0390 + (byte - 0xB0));
       }
-    }
-    return result;
+      return String.fromCharCode(byte);
+    });
   }
 
   /**
