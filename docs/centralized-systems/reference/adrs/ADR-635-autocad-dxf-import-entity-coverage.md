@@ -1,6 +1,6 @@
 # ADR-635 — AutoCAD DXF Import Entity Coverage (empty-line alignment + old-style POLYLINE)
 
-**Status:** Accepted (Φ1 implemented)
+**Status:** Accepted (Φ1–Φ3 implemented)
 **Date:** 2026-07-11
 **Domain:** dxf-viewer / import parser
 **Related:** ADR-507 (ordered-pairs HATCH), ADR-462 (canonical-mm), ADR-368 (units override)
@@ -124,9 +124,48 @@ non-uniform height |sy| + widthFactor sx/sy, e/w grip sy=1, factor-1 no-op).
 `72/73=0`, position from `10/20` — AutoCAD shows it there too). Per Giorgio: leave as-is (AutoCAD
 zoom-extents includes everything). No code change.
 
+## Φ3 — fault-tolerant import + diagnostics (Revit/Figma-level robustness)
+
+**Problem.** The `/api/floorplans/process` route returned a generic `500 "Floorplan processing failed"`
+after ~11 s and the real cause never reached the client. Root causes were structural, not one bad file:
+1. **Unbounded INSERT/MINSERT expansion** (Φ2) — `cols×rows` and nested-block recursion had no entity
+   ceiling → a malformed/huge array or exponential block reference could exhaust memory / stall.
+2. **Unguarded `lines[i+1].trim()`** in `parseEntity` / `parseEntityAt` / the BLOCKS parser →
+   `TypeError` on a truncated or odd-line-count file.
+3. **All-or-nothing parse** — a single throwing entity aborted the whole import.
+4. **Silent drops** — recognized-but-unconvertible types (`SOLID`, …) vanished with no trace.
+5. **Swallowed detail** — the API client discarded the response `details`, so 500s were undiagnosable.
+
+**Design (how the big players do it).** A professional importer imports what it can and *reports* the
+rest. Four layers, all funnelling through existing SSoTs (no new transform/parse math):
+
+- **L1 Fault-tolerant core** — the per-entity loop in `buildSceneWithDiagnostics` wraps each entity
+  (and each block member) in try/catch: a failure is recorded and skipped, the import continues. A safe
+  `lineAt(lines,i)` accessor (SSoT in `dxf-entity-parser.ts`, reused by the BLOCKS parser) returns `''`
+  instead of throwing at the stream boundary.
+- **L2 Bounded expansion** — `dxf-block-expander.ts` caps MINSERT cells at `MAX_ARRAY_CELLS = 10 000`
+  and enforces a scene-wide `DEFAULT_SCENE_ENTITY_BUDGET = 500 000` shared via `ExpandContext.budget`;
+  the depth guard (16) now records a clamp instead of failing silently. **No silent caps** — every clamp
+  is logged in the diagnostics.
+- **L3 Diagnostics SSoT** — `dxf-import-diagnostics.ts`: `ImportDiagnostics` (`parsedByType`,
+  `skippedByType`, `errors[]`, `clamps[]`, `truncated`) + `summarizeDiagnostics()`. `buildScene()` stays
+  backward-compatible (returns the scene only); the new `buildSceneWithDiagnostics()` returns
+  `{ scene, diagnostics }`.
+- **L4 Surface** — a single `runDxfParse()` SSoT (`run-dxf-parse.ts`, no DOM deps) does
+  build→normalize→validate→wrap and is now the ONE implementation used by both the Web Worker and the
+  client direct path (removed the twin boilerplate). The server route returns `warnings[]`; the API
+  client (`ApiClientError.details` + `handleResponse`/`logError`) now preserves and logs the server
+  `details`.
+
+**SSoT note.** `buildScene` is *not* triplicated — it is one implementation called from three sites
+(server route, `dxf-import.ts`, worker); the robustness lives in that one core. The genuine duplication
+that *did* exist — the build/validate/wrap boilerplate in the worker and `dxf-import.ts` — is now the
+shared `runDxfParse()`.
+
+**Tests:** `dxf-import-robustness.test.ts` (5 cases: clean import, skipped-type counting, MINSERT clamp,
+truncated-file no-throw, `buildScene` back-compat). Existing Φ1/Φ2 suites unchanged & green. jscpd clean.
+
 ## Out of scope (roadmap)
-- **Φ3 — skipped-entities warning.** No user-facing report of dropped types (`SOLID`, `POINT`,
-  `3DFACE`). Add a per-type counter → toast/report (Google-level: no silent drop).
 - Full BYBLOCK color/linetype inheritance; text-angle rotation fidelity under INSERT.
 - **Follow-up:** `convertSpline` has the same data-map vertex bug (`dxf-entity-converters.ts`);
   migrate to `parseVerticesFromPairs`. Bulge→arc tessellation (Φ1b) — bulge is captured but
@@ -149,3 +188,10 @@ zoom-extents includes everything). No code change.
   stretched glyphs 1000× wide on the uniform mm-import («τεράστιες οριζόντιες γραμμές»). widthFactor
   is a ratio → corrected to `*= |sx/sy|` (uniform→1×, e/w grip sy=1 unchanged). Real file: widthFactor
   1 (was 1000). Test grown to 5 cases.
+- **2026-07-11 — Φ3 (fault-tolerant import + diagnostics):** fixes the generic `/api/floorplans/process`
+  500. Per-entity try/catch (import never aborts on one bad entity); `lineAt()` boundary guard SSoT
+  (no more `lines[i+1].trim()` TypeError on truncated files); bounded INSERT/MINSERT expansion
+  (`MAX_ARRAY_CELLS=10 000`, scene budget `500 000`) with recorded clamps (no silent caps);
+  `ImportDiagnostics` SSoT (`dxf-import-diagnostics.ts`) surfaced as Revit-style `warnings[]` on both the
+  server response and `DxfImportResult`; single `runDxfParse()` SSoT replaces the worker/client wrap twin;
+  API client now preserves+logs the server `details`. New `dxf-import-robustness.test.ts` (5 cases). jscpd clean.

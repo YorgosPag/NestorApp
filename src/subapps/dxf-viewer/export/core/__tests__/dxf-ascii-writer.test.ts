@@ -519,3 +519,72 @@ describe('writeDxfAscii — dimension BLOCKS section (ADR-362 Round 26)', () => 
     expect(dxf).toContain('0\nDIMENSION\n');
   });
 });
+
+// ADR-636 Στάδιο 2 Φ2.1 — full LAYER table: AutoCAD keeps the layer defs (colour/on-off/
+// freeze/lock/linetype) instead of auto-creating defaults. LTYPE + LAYER share the SAME single
+// TABLES section as DIMSTYLE, in DXF table order.
+import { createSceneLayer } from '../../../types/entities';
+import { ISO_129_TEMPLATE as LAYER_TEST_STYLE } from '../../../systems/dimensions/dim-style-templates';
+
+describe('writeDxfAscii — LAYER table (ADR-636 Στάδιο 2 Φ2.1)', () => {
+  const wallLayer = createSceneLayer({
+    id: 'lyr_walls', name: 'A-WALL', color: '#FF0000', colorAci: 1,
+    linetype: 'Dashed', lineweight: 0.5, source: 'dxf-import',
+  });
+  function dimForStyle(): Entity {
+    return {
+      id: 'd', type: 'dimension', dimensionType: 'linear', layerId: 'L',
+      styleId: LAYER_TEST_STYLE.id,
+      defPoints: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 50, y: 20 }],
+      rotation: 0, measurementValue: 100,
+    } as unknown as Entity;
+  }
+
+  it('emits a TABLES → LAYER section with the layer name when tableLayers is provided', () => {
+    const dxf = writeDxfAscii([line()], { layersById: LAYERS, tableLayers: [wallLayer] });
+    expect(dxf).toContain('0\nSECTION\n2\nTABLES\n');
+    expect(dxf).toContain('0\nTABLE\n2\nLAYER\n');
+    expect(dxf).toContain('0\nLAYER\n2\nA-WALL\n'); // the layer record
+    // TABLES precedes ENTITIES.
+    expect(dxf.indexOf('2\nTABLES\n')).toBeLessThan(dxf.indexOf('2\nENTITIES\n'));
+  });
+
+  it('LTYPE table precedes the LAYER table (DXF table order)', () => {
+    const dxf = writeDxfAscii([line()], { layersById: LAYERS, tableLayers: [wallLayer] });
+    expect(dxf.indexOf('2\nLTYPE\n')).toBeLessThan(dxf.indexOf('2\nLAYER\n'));
+  });
+
+  it('LAYER + DIMSTYLE coexist in ONE TABLES section, order LAYER→DIMSTYLE', () => {
+    const dxf = writeDxfAscii([line(), dimForStyle()], {
+      layersById: LAYERS, tableLayers: [wallLayer], dimStyles: [LAYER_TEST_STYLE],
+    });
+    // exactly one TABLES section (no second SECTION/TABLES).
+    expect(countOccurrences(dxf, '2\nTABLES\n')).toBe(1);
+    expect(countOccurrences(dxf, '0\nSECTION\n2\nTABLES\n')).toBe(1);
+    // LAYER table before DIMSTYLE table.
+    expect(dxf.indexOf('2\nLAYER\n')).toBeLessThan(dxf.indexOf('2\nDIMSTYLE\n'));
+  });
+
+  it('custom (non-ISO) linetype → LTYPE entry (ISO baseline is skipped by the table writer)', () => {
+    const customLt = {
+      name: 'WallDashed', description: '__ __', pattern: [12, -3],
+      origin: 'dxf-import' as const,
+    };
+    const dxf = writeDxfAscii([line()], {
+      layersById: LAYERS, tableLayers: [wallLayer], customLinetypes: [customLt],
+    });
+    expect(dxf).toContain('0\nLTYPE\n2\nWallDashed\n');
+  });
+
+  it('no tableLayers → no LAYER table (bare/Tekton unchanged)', () => {
+    const dxf = writeDxfAscii([line()], { layersById: LAYERS });
+    expect(dxf).not.toContain('2\nLAYER\n');
+    expect(dxf).not.toContain('TABLES');
+  });
+
+  it('empty tableLayers array → no LAYER table (gated)', () => {
+    const dxf = writeDxfAscii([line()], { layersById: LAYERS, tableLayers: [] });
+    expect(dxf).not.toContain('2\nLAYER\n');
+    expect(dxf).not.toContain('TABLES');
+  });
+});

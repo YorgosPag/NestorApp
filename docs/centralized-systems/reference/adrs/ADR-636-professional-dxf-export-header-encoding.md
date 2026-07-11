@@ -59,15 +59,45 @@ so that UTF-8 is honored, **without** yet changing byte encoding.
 Coordinates are still written in the caller's output unit via `scale` (ADR-505); the scene is mm
 (ADR-462), the default export writes metres (`scale ×0.001`).
 
-### Στάδιο 2 (roadmap) — full version-driven encoding + tables
+### Στάδιο 2 — full version-driven encoding + tables
 
-- **Version selector UI** (AutoCAD «Save As»: R12 / 2000 / 2007 / 2018) in the export dialog.
-- **Per-version text encoding**: for R12–2004, encode TEXT bytes as **Windows-1253** and set
+- **Φ2.1 (DONE) — `TABLES → LAYER` section** (real layer definitions with ACI/true-colour/on-off/
+  freeze/lock/linetype/lineweight instead of inline-only 62). See below.
+- **Φ2.2 (roadmap)** — **Version selector UI** (AutoCAD «Save As»: R12 / 2000 / 2007 / 2018) +
+  **per-version text encoding**: for R12–2004, encode TEXT bytes as **Windows-1253** and set
   `$DWGCODEPAGE=ANSI_1253` (mixed-encoding Blob); `\U+XXXX` escapes as a version-independent fallback
-  (MTEXT-safe). Reuse the `cp1253` byte table already in `io/encoding-service.ts` (no second table).
-- **`TABLES → LAYER`** section (real layer definitions with ACI/true-colour) instead of inline-only 62.
-- **`$ACADVER`/`$HANDSEED`/`$MEASUREMENT`** and a fuller HEADER for stricter readers.
-- MTEXT round-trip (currently MTEXT → single-line TEXT), TEXT alignment (72/73/11/21) preservation.
+  (MTEXT-safe). Reuse the `cp1253` byte table already in `io/encoding-service.ts` (**invert** it — no
+  second table).
+- **Φ2.3 (roadmap)** — `$MEASUREMENT`/`$EXTMIN`/`$EXTMAX`/`$LTSCALE` HEADER+, MTEXT round-trip
+  (currently MTEXT → single-line TEXT), TEXT alignment (72/73/11/21) preservation.
+- **Φ2.4 (roadmap)** — `TEXTSTYLE` table, import Φ3 skipped-warning.
+
+### Στάδιο 2 Φ2.1 (DONE) — professional `TABLES → LAYER` section
+
+The exporter previously emitted layers **only** as inline `62` (ACI per entity) → AutoCAD auto-created
+layers with defaults, losing colour/on-off/freeze/lock/linetype/lineweight. Big-player DXF always
+carries a real LAYER table. A complete `TABLES` writer already existed
+(`utils/dxf-layer-table-writer.ts` → `writeLayerTable`, mirror of the parsers, with round-trip tests)
+but **no production caller** used it — Φ2.1 **wires it in** (no new writer).
+
+- **`utils/dxf-layer-table-writer.ts`** — extract `emitLayerTableBody(out, input)` (LTYPE + LAYER
+  `TABLE` blocks **without** the `SECTION/TABLES/ENDSEC` wrapper). `writeLayerTable` becomes a thin
+  wrapper around it → its output stays **byte-identical** (round-trip parsers/tests unaffected).
+- **`export/core/dxf-ascii-tables-writer.ts`** (new, file-size SRP mirror of the HATCH split) —
+  `emitTablesSection(out, pair, { tableLayers, customLinetypes, dimStyles, s })` emits **ONE**
+  `SECTION/TABLES` holding LTYPE + LAYER (via `emitLayerTableBody`) **then** DIMSTYLE, in correct DXF
+  table order. Fixes the latent **two-TABLES-sections** issue (Round 25 DIMSTYLE was a separate
+  section). Emits nothing when both empty → bare envelope preserved.
+- **`export/core/dxf-ascii-writer.ts`** — new `DxfWriteOptions.{tableLayers, customLinetypes}`; the
+  inline DIMSTYLE block is replaced by a call to `emitTablesSection`. **Gated**: a bare
+  `writeDxfAscii(entities)` (no tableLayers/dimStyles) stays table-less (Tekton/legacy). Inline `62`
+  per entity is kept (belt-and-suspenders). File back under 500 lines (484) via the split.
+- **`export/formats/dxf-export-adapter.ts`** — `renderDxfBlob` passes `tableLayers =
+  Object.values(scene.layersById)` and `customLinetypes = collectCustomLinetypesForExport(scene)`
+  **only** on the AutoCAD (POLYLINE) path (`lineMode !== 'lines'`); the Tekton (`lines`) path stays
+  minimal. `collectCustomLinetypesForExport` resolves the layers' non-ISO linetypes from the
+  `LinetypeRegistry` SSoT (`resolveLinetype`), skipping ISO baseline (`isIsoBaselineLinetype`) — no
+  new table (mirrors `collectDimStylesForExport`).
 
 ## Tests
 - `export/core/__tests__/dxf-ascii-writer.test.ts` — HEADER emitted (order + exact group codes) when
@@ -81,3 +111,11 @@ Coordinates are still written in the caller's output unit via `scale` (ADR-505);
 - **2026-07-11 — Στάδιο 1:** professional HEADER ($ACADVER Unicode-safe bump + $INSUNITS + $DWGCODEPAGE)
   in `dxf-ascii-writer` (gated) + `dxf-export-adapter` resolvers, reusing `DXF_UNIT_VALUES`. Fixes Greek
   garbling in AutoCAD 2007+ and unit ambiguity on re-import. jscpd clean.
+- **2026-07-11 — Στάδιο 2 Φ2.1:** wired the existing `writeLayerTable` SSoT into the production export
+  as a real `TABLES → LAYER` section. Extracted `emitLayerTableBody` (byte-identical `writeLayerTable`);
+  new split `dxf-ascii-tables-writer.ts` (`emitTablesSection`) unifies LTYPE+LAYER+DIMSTYLE into ONE
+  correctly-ordered TABLES section (fixes latent double-TABLES); adapter feeds
+  `tableLayers`/`customLinetypes` (AutoCAD path only, Tekton stays minimal) via `LinetypeRegistry` SSoT.
+  Gated (bare/Tekton unchanged), inline `62` kept. 87 jest green (incl. byte-identical round-trip proof);
+  E2E verified (HEADER + single TABLES[LTYPE/LAYER] + ENTITIES, Greek layer name intact). jscpd clean.
+  Writer 484 lines (< 500 via split).

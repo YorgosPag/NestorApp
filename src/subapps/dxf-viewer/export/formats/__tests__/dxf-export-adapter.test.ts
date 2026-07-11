@@ -13,10 +13,15 @@ import {
   renderDxfBlob,
   resolveUnicodeSafeAcadVer,
   encodingToCodepage,
+  collectCustomLinetypesForExport,
 } from '../dxf-export-adapter';
 import type { ResolvedExportFloor } from '../../core/export-floor-scope';
 import type { Entity } from '../../../types/entities';
 import type { SceneModel } from '../../../types/scene-types';
+import {
+  __resetLinetypeRegistryForTesting,
+  registerLinetypes,
+} from '../../../stores/LinetypeRegistry';
 
 function native(type: string, id: string): Entity {
   return { id, type, layerId: 'lyr_a' } as unknown as Entity;
@@ -107,6 +112,45 @@ describe('ADR-636 Στάδιο 1 — professional HEADER', () => {
     const blob = renderDxfBlob(request);
     expect(blob.size).toBeGreaterThan(0);
     expect(blob.type).toBe('application/dxf');
+  });
+});
+
+describe('ADR-636 Στάδιο 2 Φ2.1 — professional LAYER table', () => {
+  const realLine = { id: 'l', type: 'line', layerId: 'lyr_a', start: { x: 0, y: 0 }, end: { x: 1, y: 1 } } as unknown as Entity;
+
+  // Content of the LAYER table is asserted in the writer suite (dxf-ascii-writer.test.ts). Here we
+  // prove the WIRING/gating: the AutoCAD (polyline) blob carries the extra LTYPE+LAYER table bytes,
+  // the Tekton (lines) blob does not. jsdom's Blob has no .text(), so we compare sizes.
+  it('AutoCAD (polyline) path carries a LAYER table; Tekton (lines) stays minimal', () => {
+    const { request } = buildDxfExportRequest(scene([realLine]), { entityScope: 'dxf-only' });
+    const polyline = renderDxfBlob(request);          // default lineMode → professional tables
+    const tekton = renderDxfBlob(request, 'lines');   // gated out
+    expect(polyline.size).toBeGreaterThan(tekton.size);
+  });
+
+  it('collectCustomLinetypesForExport skips ISO baseline + undefined linetypes', () => {
+    const s = {
+      ...scene([realLine]),
+      layersById: {
+        a: { id: 'a', name: 'A', color: '#fff', visible: true },                    // no linetype
+        b: { id: 'b', name: 'B', color: '#fff', visible: true, linetype: 'Continuous' }, // ISO
+      },
+    } as unknown as SceneModel;
+    expect(collectCustomLinetypesForExport(s)).toEqual([]);
+  });
+
+  it('collectCustomLinetypesForExport includes a registered custom (non-ISO) linetype, distinct', () => {
+    __resetLinetypeRegistryForTesting();
+    registerLinetypes([{ name: 'WallDashed', description: '__ __', pattern: [12, -3], origin: 'dxf-import' }]);
+    const s = {
+      ...scene([realLine]),
+      layersById: {
+        a: { id: 'a', name: 'A', color: '#fff', visible: true, linetype: 'WallDashed' },
+        b: { id: 'b', name: 'B', color: '#fff', visible: true, linetype: 'WallDashed' }, // duplicate → once
+      },
+    } as unknown as SceneModel;
+    const names = collectCustomLinetypesForExport(s).map((l) => l.name);
+    expect(names).toEqual(['WallDashed']);
   });
 });
 
