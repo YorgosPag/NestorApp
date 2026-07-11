@@ -24,9 +24,23 @@ import { convertEntityToScene } from './dxf-entity-converters';
 import { scaleEntity } from '../systems/scale/scale-entity-transform';
 import { rotateEntity } from './rotation-math';
 import { translateEntityByAnchor } from '../systems/stretch/stretch-entity-transform';
+import {
+  recordClamp,
+  recordError,
+  type ImportDiagnostics,
+} from './dxf-import-diagnostics';
 
 /** Guard against pathological / cyclic block nesting. */
 const MAX_DEPTH = 16;
+
+/**
+ * Bounds for INSERT expansion (ADR-635 Φ3). A malformed/huge MINSERT array or exponential
+ * nested-block reference must NOT hang the parser or exhaust memory — like Revit, we cap and
+ * report (never silently). Cells = one MINSERT array cell; the scene budget is the hard ceiling
+ * on total expanded entities across ALL INSERTs (shared via ExpandContext.budget).
+ */
+const MAX_ARRAY_CELLS = 10_000;
+export const DEFAULT_SCENE_ENTITY_BUDGET = 500_000;
 
 /** Conversion + id context threaded through (possibly nested) INSERT expansion. */
 export interface ExpandContext {
@@ -34,6 +48,10 @@ export interface ExpandContext {
   dimStyles?: DimStyleMap;
   /** Monotonic id source shared across the whole scene so cloned entities stay unique. */
   idSeq: { n: number };
+  /** Import diagnostics collector (skipped/error/clamp records). Optional for legacy callers. */
+  diagnostics?: ImportDiagnostics;
+  /** Shared entity budget across the whole scene's INSERT expansion. */
+  budget?: { max: number; used: number };
 }
 
 function numOr(v: string | undefined, fallback: number): number {

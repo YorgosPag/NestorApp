@@ -39,6 +39,24 @@ describe('writeDxfAscii — Tekton minimal dialect', () => {
     expect(dxf).not.toContain('$INSUNITS');
   });
 
+  it('ADR-636 Στάδιο 1 — HEADER ($ACADVER/$INSUNITS/$DWGCODEPAGE) όταν δοθούν options, ΠΡΙΝ τα ENTITIES', () => {
+    const dxf = writeDxfAscii([line()], {
+      layersById: LAYERS, acadVer: 'AC1021', insunits: 6, codepage: 'ANSI_1253',
+    });
+    expect(dxf.startsWith('0\nSECTION\n2\nHEADER\n')).toBe(true);
+    expect(dxf).toContain('9\n$ACADVER\n1\nAC1021\n');
+    expect(dxf).toContain('9\n$INSUNITS\n70\n6\n');
+    expect(dxf).toContain('9\n$DWGCODEPAGE\n3\nANSI_1253\n');
+    // HEADER precedes ENTITIES
+    expect(dxf.indexOf('2\nHEADER')).toBeLessThan(dxf.indexOf('2\nENTITIES'));
+  });
+
+  it('ADR-636 Στάδιο 1 — χωρίς header options → παραμένει bare (zero regression)', () => {
+    const dxf = writeDxfAscii([line()], { layersById: LAYERS });
+    expect(dxf).not.toContain('HEADER');
+    expect(dxf).not.toContain('$ACADVER');
+  });
+
   it('LINE = 10/20/11/21/8 χωρίς Z (Tekton layout)', () => {
     const dxf = writeDxfAscii([line()], { layersById: LAYERS });
     expect(dxf).toContain('0\nLINE\n10\n0\n20\n0\n11\n100\n21\n50\n8\nCOLOR_10\n');

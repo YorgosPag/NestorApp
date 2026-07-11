@@ -19,9 +19,11 @@ import type { Entity } from '../../types/entities';
 import type { SceneModel, SceneLayer, SceneBounds } from '../../types/scene-types';
 import {
   createDefaultExportSettings,
+  DXF_UNIT_VALUES,
   type DxfExportSceneRequest,
   type DxfVersion,
   type DxfUnit,
+  type DxfEncoding,
 } from '../../types/dxf-export.types';
 import { mmToSceneUnits, resolveSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { DEFAULT_DRAWING_SCALE } from '../../config/bim-render-settings-types';
@@ -174,8 +176,35 @@ export function renderDxfBlob(request: DxfExportSceneRequest, lineMode?: DxfLine
     // ADR-362 Round 25 — emit a DIMSTYLE table so native dimensions resolve to a
     // real style (not STANDARD). Empty for dimension-free scenes → bare envelope.
     dimStyles: collectDimStylesForExport(request.scene.entities),
+    // ADR-636 Στάδιο 1 — professional HEADER: declare a Unicode-capable $ACADVER (so the
+    // UTF-8 text, incl. Greek, opens correctly in AutoCAD 2007+), the real $INSUNITS (units
+    // the coordinates were written in → clean round-trip), and $DWGCODEPAGE.
+    acadVer: resolveUnicodeSafeAcadVer(request.settings.version, request.settings.encoding),
+    insunits: DXF_UNIT_VALUES[request.settings.units],
+    codepage: encodingToCodepage(request.settings.encoding),
   });
   return new Blob([dxf], { type: 'application/dxf' });
+}
+
+/** DXF releases that predate Unicode (R2007/AC1021). Their DXF is codepage-encoded, so UTF-8
+ * text written under them is read as ANSI and garbled. */
+const PRE_UNICODE_VERSIONS: ReadonlySet<DxfVersion> = new Set(['AC1009', 'AC1015', 'AC1018']);
+
+/**
+ * ADR-636 Στάδιο 1 — the writer currently emits UTF-8, which is only valid from AC1021 (R2007)
+ * onward. If a pre-Unicode version is requested WITH utf-8 text, bump the declared `$ACADVER`
+ * to AC1021 so AutoCAD reads the bytes as UTF-8 instead of ANSI (else Greek → «ÊËÉÌÁÊÁ»).
+ * Στάδιο 2 will instead honor lower versions by encoding the text in the matching codepage
+ * (cp1253 for Greek R12), at which point this bump no longer applies to those.
+ */
+export function resolveUnicodeSafeAcadVer(version: DxfVersion, encoding: DxfEncoding): DxfVersion {
+  return encoding === 'utf-8' && PRE_UNICODE_VERSIONS.has(version) ? 'AC1021' : version;
+}
+
+/** DXF `$DWGCODEPAGE` for the chosen text encoding (Greek → ANSI_1253, else ANSI_1252). For a
+ * UTF-8/AC1021+ file it is informational — the version drives decoding — but AutoCAD emits it. */
+export function encodingToCodepage(encoding: DxfEncoding): string {
+  return encoding === 'cp1253' ? 'ANSI_1253' : 'ANSI_1252';
 }
 
 /** Factor to convert scene-unit coordinates into the target DXF unit. */

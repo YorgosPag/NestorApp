@@ -77,6 +77,17 @@ export interface DxfWriteOptions {
    * style name; otherwise the envelope stays bare (no TABLES) as before.
    */
   readonly dimStyles?: ReadonlyArray<DimStyle>;
+  /**
+   * ADR-636 Στάδιο 1 — DXF HEADER. When `acadVer`/`insunits`/`codepage` are supplied the
+   * writer prepends a minimal `HEADER` section: `$ACADVER` (a Unicode-capable version so the
+   * UTF-8 text — incl. Greek — opens correctly in AutoCAD 2007+ instead of being read as ANSI
+   * and garbled), `$INSUNITS` (declares the file's units → ends re-import unit-guessing) and
+   * `$DWGCODEPAGE`. Omitted → the historic bare, header-less envelope (Tekton/legacy) — zero
+   * regression. Coordinates are still written in the caller's output unit via `scale`.
+   */
+  readonly acadVer?: string;
+  readonly insunits?: number;
+  readonly codepage?: string;
 }
 
 const DEFAULT_LAYER = '0';
@@ -98,6 +109,21 @@ export function writeDxfAscii(
     out.push(String(code), typeof value === 'number' ? num(value) : value);
   };
   const layerObj = (e: Entity): DxfWriteLayer | undefined => options.layersById?.[e.layerId];
+
+  // ADR-636 Στάδιο 1 — HEADER section MUST come first (DXF orders HEADER → TABLES → BLOCKS →
+  // ENTITIES). Gated on the caller supplying version/units so bare `writeDxfAscii(entities)`
+  // calls (Tekton/legacy) keep the historic header-less envelope. `$ACADVER` declares a
+  // Unicode-capable release → AutoCAD reads the UTF-8 text as UTF-8 (no ANSI garbling);
+  // `$INSUNITS` declares the units so a re-import stops guessing; `$DWGCODEPAGE` is the
+  // conventional companion.
+  if (options.acadVer || options.insunits != null || options.codepage) {
+    pair(0, 'SECTION');
+    pair(2, 'HEADER');
+    if (options.acadVer) { pair(9, '$ACADVER'); pair(1, options.acadVer); }
+    if (options.insunits != null) { pair(9, '$INSUNITS'); pair(70, options.insunits); }
+    if (options.codepage) { pair(9, '$DWGCODEPAGE'); pair(3, options.codepage); }
+    pair(0, 'ENDSEC');
+  }
 
   // ADR-362 Round 25 — DIMSTYLE table (only when the export carries dimensions whose
   // styles were resolved). `styleId → name` lets DIMENSION code 3 reference the real

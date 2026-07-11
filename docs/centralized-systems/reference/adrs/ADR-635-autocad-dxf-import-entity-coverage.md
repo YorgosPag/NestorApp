@@ -110,8 +110,15 @@ now also scale the `textNode` run heights via the **existing** `scaleTextNodeRun
 helper (the same one the grip-resize commit uses — no duplicate scaler, N.18). This fixes the DXF
 import AND the latent toolbar-Scale-tool case for imported/textNode text in one place. Verified
 end-to-end: `convertText → scaleEntity(×1000) → resolveTextHeight` returns **100.3** (was 0.1003).
-Tests: `systems/scale/__tests__/scale-entity-text-height.test.ts` (3 cases: uniform, non-uniform |sy|,
-factor-1 no-op).
+
+**Follow-up bug (unmasked by the height fix): `widthFactor` ×1000 → «τεράστιες οριζόντιες γραμμές».**
+Once the text became visible, `scaleText` was stretching every glyph 1000× wide. Root cause: it did
+`widthFactor *= |sx|`, but `widthFactor` is a **RATIO** (glyph width ÷ height), not an absolute width —
+a uniform scale (sx===sy, the ×1000 import) must leave it **unchanged**. Corrected to
+`widthFactor *= |sx/sy|` (uniform → 1×; identical to `|sx|` for the e/w grip where sy===1, so that
+path is untouched; `sy===0` → 1×). Verified on the real file: widthFactor now **1** (was 1000), height
+100–630. Tests: `scale-entity-text-height.test.ts` (5 cases: uniform height+widthFactor=1,
+non-uniform height |sy| + widthFactor sx/sy, e/w grip sy=1, factor-1 no-op).
 
 **Outlier `+95.00`:** a legit stray elevation label ~47.8 m below all geometry (layer visible,
 `72/73=0`, position from `10/20` — AutoCAD shows it there too). Per Giorgio: leave as-is (AutoCAD
@@ -137,4 +144,8 @@ zoom-extents includes everything). No code change.
   `scaleTextNodeRunHeights` SSoT — the canonical-mm scale was shadowed because `resolveTextHeight`
   reads the run height first. Also repairs the toolbar Scale tool for imported text. Greek decode
   confirmed already correct; `+95.00` outlier left as-is (AutoCAD semantics). New test
-  `scale-entity-text-height.test.ts` (3 cases). jscpd clean.
+  `scale-entity-text-height.test.ts`. jscpd clean.
+  **+ widthFactor follow-up:** the height fix unmasked a `scaleText` bug — `widthFactor *= |sx|`
+  stretched glyphs 1000× wide on the uniform mm-import («τεράστιες οριζόντιες γραμμές»). widthFactor
+  is a ratio → corrected to `*= |sx/sy|` (uniform→1×, e/w grip sy=1 unchanged). Real file: widthFactor
+  1 (was 1000). Test grown to 5 cases.

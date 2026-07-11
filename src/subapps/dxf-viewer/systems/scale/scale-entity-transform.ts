@@ -84,10 +84,14 @@ function scaleText(e: Entity & { type: 'text' }, base: Point2D, sx: number, sy: 
     position: scalePoint(e.position, base, sx, sy),
     height: (e.height ?? e.fontSize ?? 1) * Math.abs(sy),
     fontSize: (e.fontSize ?? e.height ?? 1) * Math.abs(sy),
-    // ADR-557 — a non-uniform Scale stretches the glyph horizontally via the TEXT
-    // X-scale (mirror `scaleMText`'s `width *= sx`), so the toolbar Scale tool and the
-    // e/w grip resize share one width model. Uniform scale (sx===sy) leaves it at 1×.
-    widthFactor: ((e as { widthFactor?: number }).widthFactor ?? 1) * Math.abs(sx),
+    // ADR-635 Φ3-text — `widthFactor` is a RATIO (glyph width ÷ height), NOT an absolute width like
+    // MTEXT's `width`. A scale by (sx,sy) takes width→sx·w and height→sy·h, so the ratio
+    // becomes `widthFactor · sx/sy` — a UNIFORM scale (sx===sy, e.g. the ADR-462 canonical-mm
+    // ×1000 import) must leave it UNCHANGED. The old `* |sx|` multiplied it by 1000 on import →
+    // once the height fix made text visible, glyphs stretched 1000× wide («τεράστιες οριζόντιες
+    // γραμμές»). `|sx/sy|` is identical to `|sx|` for the e/w grip (sy===1), so that path is
+    // unchanged. `sy===0` (degenerate) falls back to 1× (no stretch).
+    widthFactor: ((e as { widthFactor?: number }).widthFactor ?? 1) * (sy !== 0 ? Math.abs(sx / sy) : 1),
     // ADR-635 — the AUTHORITATIVE height lives in the `textNode`: `resolveTextHeight`
     // reads run `style.height` FIRST, so scaling only the flat `height` above is SHADOWED
     // (imported DXF text rendered ~1000× too short after the canonical-mm import scale →

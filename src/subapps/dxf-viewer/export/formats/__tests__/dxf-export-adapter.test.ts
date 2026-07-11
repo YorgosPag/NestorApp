@@ -10,6 +10,9 @@ import {
   buildDxfExportRequest,
   mergeFloorsToSingleDxfScene,
   buildFloorFilename,
+  renderDxfBlob,
+  resolveUnicodeSafeAcadVer,
+  encodingToCodepage,
 } from '../dxf-export-adapter';
 import type { ResolvedExportFloor } from '../../core/export-floor-scope';
 import type { Entity } from '../../../types/entities';
@@ -80,6 +83,30 @@ describe('buildDxfExportRequest', () => {
     });
     expect(request.settings.version).toBe('AC1032');
     expect(request.settings.units).toBe('meters');
+  });
+});
+
+describe('ADR-636 Στάδιο 1 — professional HEADER', () => {
+  it('resolveUnicodeSafeAcadVer bumps pre-Unicode + utf-8 → AC1021', () => {
+    expect(resolveUnicodeSafeAcadVer('AC1009', 'utf-8')).toBe('AC1021'); // R12 → R2007
+    expect(resolveUnicodeSafeAcadVer('AC1015', 'utf-8')).toBe('AC1021'); // R2000 → R2007
+    expect(resolveUnicodeSafeAcadVer('AC1021', 'utf-8')).toBe('AC1021'); // already Unicode
+    expect(resolveUnicodeSafeAcadVer('AC1032', 'utf-8')).toBe('AC1032'); // R2018 kept
+    expect(resolveUnicodeSafeAcadVer('AC1009', 'cp1253')).toBe('AC1009'); // non-utf-8 kept (Στάδιο 2)
+  });
+
+  it('encodingToCodepage: Greek → ANSI_1253, else ANSI_1252', () => {
+    expect(encodingToCodepage('cp1253')).toBe('ANSI_1253');
+    expect(encodingToCodepage('utf-8')).toBe('ANSI_1252');
+    expect(encodingToCodepage('cp1252')).toBe('ANSI_1252');
+  });
+
+  it('renderDxfBlob returns a non-empty DXF Blob (HEADER content covered by the writer test)', () => {
+    const realLine = { id: 'l', type: 'line', layerId: 'lyr_a', start: { x: 0, y: 0 }, end: { x: 1, y: 1 } } as unknown as Entity;
+    const { request } = buildDxfExportRequest(scene([realLine]), { entityScope: 'dxf-only', unit: 'meters' });
+    const blob = renderDxfBlob(request);
+    expect(blob.size).toBeGreaterThan(0);
+    expect(blob.type).toBe('application/dxf');
   });
 });
 

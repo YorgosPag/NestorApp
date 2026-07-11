@@ -45,18 +45,26 @@ const nodeHeight = (patch: unknown): number | undefined =>
     : undefined;
 
 describe('ADR-635 — scaleEntity scales text height in textNode (not only flat)', () => {
-  it('uniform mm-import scale ×1000 scales BOTH flat and textNode run height', () => {
+  it('uniform mm-import scale ×1000 scales height but leaves widthFactor at 1 (no horizontal stretch)', () => {
     const patch = scaleEntity(mkText(0.1003), { x: 0, y: 0 }, 1000, 1000);
     expect((patch as { height: number }).height).toBeCloseTo(100.3, 3);
     expect((patch as { fontSize: number }).fontSize).toBeCloseTo(100.3, 3);
     expect(nodeHeight(patch)).toBeCloseTo(100.3, 3); // was 0.1003 (shadow) before the fix
+    // ADR-636 — uniform scale must NOT stretch glyphs (was ×1000 → «τεράστιες οριζόντιες γραμμές»).
+    expect((patch as { widthFactor: number }).widthFactor).toBeCloseTo(1, 6);
   });
 
-  it('non-uniform scale uses the vertical factor (|sy|) for text height', () => {
+  it('non-uniform scale: height ×|sy|, widthFactor × sx/sy (ratio)', () => {
     const patch = scaleEntity(mkText(2), { x: 0, y: 0 }, 5, 3);
     expect((patch as { height: number }).height).toBeCloseTo(6, 6);  // 2 × |sy|
     expect(nodeHeight(patch)).toBeCloseTo(6, 6);                     // textNode agrees
-    expect((patch as { widthFactor: number }).widthFactor).toBeCloseTo(5, 6); // |sx|
+    expect((patch as { widthFactor: number }).widthFactor).toBeCloseTo(5 / 3, 6); // sx/sy ratio
+  });
+
+  it('e/w grip resize (sy=1) keeps widthFactor = sx (ratio == |sx| when sy===1)', () => {
+    const patch = scaleEntity(mkText(2), { x: 0, y: 0 }, 4, 1);
+    expect((patch as { widthFactor: number }).widthFactor).toBeCloseTo(4, 6); // unchanged behaviour
+    expect((patch as { height: number }).height).toBeCloseTo(2, 6);           // sy=1 → height same
   });
 
   it('is a no-op for textNode when factor === 1 (returns same run height)', () => {
