@@ -344,10 +344,13 @@ import { convertXLine, convertRay } from './dxf-xline-ray-converter';
 export { convertSolid, convert3dFace, convertTrace } from './dxf-quad-fill-converter';
 export { convertPoint } from './dxf-point-converter';
 export { convertMline } from './dxf-mline-converter';
+// ADR-635 Φάση B Batch 2 Part B — LEADER (annotation callout: path + tip arrowhead).
+export { convertLeader } from './dxf-leader-converter';
 
 import { convertSolid, convert3dFace, convertTrace } from './dxf-quad-fill-converter';
 import { convertPoint } from './dxf-point-converter';
 import { convertMline } from './dxf-mline-converter';
+import { convertLeader } from './dxf-leader-converter';
 
 // ============================================================================
 // 🏢 ENTERPRISE: MASTER CONVERTER
@@ -416,6 +419,9 @@ export function convertEntityToScene(
       return convertTrace(data, layer, index);
     case 'MLINE':
       return convertMline(entityData.pairs ?? [], layer, index);
+    // ADR-635 Φάση B Batch 2 Part B — annotation callout (ordered 10/20 vertices via pairs).
+    case 'LEADER':
+      return convertLeader(entityData, index);
     default:
       return null;
   }

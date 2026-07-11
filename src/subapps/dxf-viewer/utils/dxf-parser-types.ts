@@ -37,6 +37,8 @@ export const SUPPORTED_ENTITY_TYPES = [
   // template (ATTDEF, skipped per-INSERT via block-expander guard). Both → type:'text'.
   'ATTRIB',
   'ATTDEF',
+  // ADR-635 Φάση B Batch 2 Part B — annotation callout (path + tip arrowhead → LeaderEntity).
+  'LEADER',
   'XLINE',
   'RAY'
 ] as const;

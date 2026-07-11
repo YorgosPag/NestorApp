@@ -29,6 +29,7 @@ import { AnnotationSymbolRenderer } from '../entities/AnnotationSymbolRenderer';
 import { ScaleBarRenderer } from '../entities/ScaleBarRenderer';
 // ADR-612 — opening info tag leaf (dedicated non-BIM annotation; world-mm box, sibling of scale-bar).
 import { OpeningInfoTagRenderer } from '../entities/OpeningInfoTagRenderer';
+import { LeaderRenderer } from '../entities/LeaderRenderer';
 // ADR-363 Phase 1B — parametric wall leaf (2D plan view).
 import { WallRenderer, type OpeningsByWall } from '../../bim/renderers/WallRenderer';
 // ADR-363 Phase 2 — opening leaf (door/window/sliding-door/french-door/fixed).
@@ -160,9 +161,7 @@ export class EntityRendererComposite {
     // ADR-362 Phase C1 — dimension renderer (10 variants via DimGeometry union).
     const dimensionRenderer = new DimensionRenderer(this.ctx);
     // ADR-359 Phase 4.b — Liang-Barsky clipped construction line renderers.
-    const xlineRenderer = new XLineRenderer(this.ctx);
-    const rayRenderer = new RayRenderer(this.ctx);
-    // ADR-507 Φ1a — hatch renderer (solid fill + user-defined lines).
+    const xlineRenderer = new XLineRenderer(this.ctx); const rayRenderer = new RayRenderer(this.ctx);
     const hatchRenderer = new HatchRenderer(this.ctx);
     // ADR-583 — annotation symbol renderer (North arrow; annotative unit-space glyph).
     const annotationSymbolRenderer = new AnnotationSymbolRenderer(this.ctx);
@@ -170,6 +169,7 @@ export class EntityRendererComposite {
     const scaleBarRenderer = new ScaleBarRenderer(this.ctx);
     // ADR-612 — opening info tag renderer (world-mm box, 3 editable numeral cells).
     const openingInfoTagRenderer = new OpeningInfoTagRenderer(this.ctx);
+    const leaderRenderer = new LeaderRenderer(this.ctx); // ADR-635 — leader callout path + tip arrowhead
 
     // Register renderers by entity type
     this.renderers.set('line', lineRenderer);
@@ -216,6 +216,7 @@ export class EntityRendererComposite {
     this.renderers.set('annotation-symbol', annotationSymbolRenderer);
     this.renderers.set('scale-bar', scaleBarRenderer);
     this.renderers.set('opening-info-tag', openingInfoTagRenderer);
+    this.renderers.set('leader', leaderRenderer);
   }
 
   /**

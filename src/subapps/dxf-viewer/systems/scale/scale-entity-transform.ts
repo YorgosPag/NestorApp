@@ -115,6 +115,19 @@ function scaleMText(e: Entity & { type: 'mtext' }, base: Point2D, sx: number, sy
   };
 }
 
+// ADR-635 Φάση B Batch 2 Part B — LEADER: scale the callout path like a polyline and the
+// arrow size / hook length like a scalar radius (`|sx|`, matching the arc/circle convention).
+// Without this the leader fell through to `default: {}` and stayed at raw DXF coordinates while
+// every other entity scaled by the canonical-mm factor → misplaced callout in metre/cm drawings.
+function scaleLeader(e: Entity & { type: 'leader' }, base: Point2D, sx: number, sy: number) {
+  const s = Math.abs(sx);
+  return {
+    vertices: scalePoints(e.vertices, base, sx, sy),
+    ...(e.arrowHead ? { arrowHead: { ...e.arrowHead, size: e.arrowHead.size * s } } : {}),
+    ...(e.hookLineLength !== undefined ? { hookLineLength: e.hookLineLength * s } : {}),
+  };
+}
+
 function scalePoint2(e: Entity & { type: 'point' }, base: Point2D, sx: number, sy: number) {
   return { position: scalePoint(e.position, base, sx, sy) };
 }
@@ -190,6 +203,8 @@ export function scaleEntity(
       return scaleMText(entity, base, sx, sy) as Partial<SceneEntity>;
     case 'point':
       return scalePoint2(entity, base, sx, sy) as Partial<SceneEntity>;
+    case 'leader':
+      return scaleLeader(entity, base, sx, sy) as Partial<SceneEntity>;
     case 'dimension':
       return scaleDimension(entity, base, sx, sy) as Partial<SceneEntity>;
     case 'hatch':

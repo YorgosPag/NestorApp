@@ -232,17 +232,21 @@ Edits: `SUPPORTED_ENTITY_TYPES` (+3DFACE/TRACE/POINT/MLINE), `convertEntityToSce
 Tests: `dxf-quad-fill-converter.test.ts` (8) + `dxf-point-converter.test.ts` (4) +
 `dxf-mline-converter.test.ts` (5). Full `utils/__tests__` **295/295** green, jscpd clean.
 
-**Batch 2 — Part A (ATTRIB/ATTDEF) DONE, Part B (LEADER) PENDING:**
+**Batch 2 — Part A (ATTRIB/ATTDEF) DONE, Part B (LEADER) DONE:**
 - ✅ **ATTRIB / ATTDEF** → `type:'text'` (DONE 2026-07-11): shared `convertAttributeEntity` στο
   `dxf-text-converters.ts` (reuse `parseTextTransform`/`buildTextNodeFromFlat`/`buildTextSceneEntity`).
   Code 1 = ορατό value· code 2 = tag (`TextEntity.attributeTag?`)· code 70 bit 1 = invisible→`visible:false`.
   ✅ **Guard** επιβεβαιωμένος: `instantiateInsert` block-member loop → `if (child.type === 'ATTDEF') continue;`
   (ο `child` είναι raw `EntityData`· η design-agent υπόθεση για `convertEntityToScene(child)` ήταν λάθος).
   Χωρίς guard κάθε INSERT θα stamp-άριζε το stale default value. 9 νέα tests (guard integration incl.).
-- **LEADER** → `LeaderEntity` (ήδη υπάρχει) + **νέος `LeaderRenderer`** (reuse DIMENSION arrowhead SSoT
-  `renderArrowhead`/`getArrowheadBlock`). Vertices από ordered pairs (10/20)· arrowhead code 71.
-  ⚠️ Ο renderer έχει πολλές helper-API deps (`renderWithPhases`/`drawVerticesPath`/`hitTestLineSegments`)
-  που χρειάζονται signature verification πριν το commit.
+- ✅ **LEADER** → `LeaderEntity` + **νέος `LeaderRenderer`** (DONE 2026-07-11): callout path (open
+  polyline, tip=vertices[0]) + arrowhead στο tip **reuse DIMENSION arrowhead SSoT** (`renderArrowhead`/
+  `getArrowheadBlock`, ADR-362 — ΟΧΙ χειροκίνητο τρίγωνο). `convertLeader(entityData)` vertices από ordered
+  `pairs` (10/20), code 71=arrowhead flag (default on→closedFilled, 0→none), size=`DEFAULT_DIMSTYLE.dimasz`.
+  Renderer mirrors `PolylineRenderer` line-for-line (`renderWithPhases`/`drawVerticesPath`/`shouldRenderLines`/
+  `hitTestLineSegments` — όλα επιβεβαιωμένα με read). Registered `'leader'` στο `EntityRendererComposite`.
+  ✅ **Κρίσιμη correctness:** προστέθηκε `case 'leader'` στο `scaleEntity` SSoT (`scaleLeader`) — έπεφτε στο
+  `default: {}` → callout στα raw coords ενώ όλα τα άλλα scaled (misplacement σε μέτρα/cm). 8 νέα tests.
 
 ## Out of scope (roadmap)
 - Full BYBLOCK color/linetype inheritance; text-angle rotation fidelity under INSERT.
@@ -251,6 +255,18 @@ Tests: `dxf-quad-fill-converter.test.ts` (8) + `dxf-point-converter.test.ts` (4)
   currently rendered as straight segments (21 curved vertices in the sample).
 
 ## Changelog
+- **2026-07-11 — LEADER renderer file landed:** το `rendering/entities/LeaderRenderer.ts` +
+  `EntityRendererComposite` registration + `scaleEntity` `case 'leader'` committed (η υλοποίηση που
+  περιγράφεται στην από κάτω εγγραφή Part B· render/scale coverage πλέον στο repo, CHECK 6D gate).
+- **2026-07-11 — Φ B Batch 2 Part B (LEADER import + render):** LEADER → `LeaderEntity` (νέος
+  `dxf-leader-converter.ts`: ordered `pairs` vertices, tip=vertices[0], code 71 arrowhead flag,
+  size=DIMASZ) + **νέος `LeaderRenderer`** (mirror `PolylineRenderer`· arrowhead **reuse ADR-362 SSoT**
+  `renderArrowhead`/`getArrowheadBlock`, unitPx=screen-length του size world-units — ΟΧΙ bespoke τρίγωνο)
+  registered `'leader'` στο `EntityRendererComposite`. `SUPPORTED_ENTITY_TYPES` +LEADER· router +1 case.
+  **Correctness fix:** `scaleEntity` απέκτησε `case 'leader'` (`scaleLeader`: vertices ως polyline +
+  arrowHead.size/hookLineLength ως scalar |sx|) — πριν έπεφτε στο `default:{}` → misplaced callout σε
+  non-mm σχέδια. 8 νέα tests (converter 5 + scale 3), **316/316** utils+scale green,
+  jscpd clean. Export (emitLeader) = Φάση D.
 - **2026-07-11 — Φ B Batch 2 Part A (ATTRIB/ATTDEF import):** ATTRIB (block attribute value) + ATTDEF
   (definition template default) → `type:'text'` μέσω shared `convertAttributeEntity` (extend, όχι νέο
   sibling — reuse των υπαρχόντων `parseTextTransform`/`buildTextNodeFromFlat`/`buildTextSceneEntity`).
