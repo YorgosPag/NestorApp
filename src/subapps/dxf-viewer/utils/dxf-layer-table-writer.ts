@@ -46,11 +46,25 @@ export function writeLayerTable(input: WriteLayerTableInput): string[] {
   emit(out, '0', 'SECTION');
   emit(out, '2', 'TABLES');
 
-  emitLtypeTable(out, input.customLinetypes);
-  emitLayerTable(out, input.layers);
+  emitLayerTableBody(out, input);
 
   emit(out, '0', 'ENDSEC');
   return out;
+}
+
+/**
+ * Emit the LTYPE + LAYER `TABLE` blocks **without** the surrounding
+ * `SECTION/TABLES … ENDSEC` wrapper — so a caller that already owns a single
+ * `TABLES` section (the production writer `dxf-ascii-writer`, which also emits a
+ * `DIMSTYLE` table) can inline LTYPE + LAYER into that **one** section, in the
+ * correct DXF table order (LTYPE → LAYER → DIMSTYLE). ADR-636 Στάδιο 2 Φ2.1.
+ *
+ * `writeLayerTable` above stays the wrapped SSoT (byte-identical output) for the
+ * round-trip parsers/tests.
+ */
+export function emitLayerTableBody(out: string[], input: WriteLayerTableInput): void {
+  emitLtypeTable(out, input.customLinetypes);
+  emitLayerTable(out, input.layers);
 }
 
 function emitLtypeTable(out: string[], linetypes: ReadonlyArray<LinetypeDef>): void {

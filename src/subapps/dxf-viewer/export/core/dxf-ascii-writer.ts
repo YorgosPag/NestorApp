@@ -21,9 +21,14 @@
  * ADR-505 §A.
  */
 
-import type { Entity, HatchEntity } from '../../types/entities';
+import type { Entity, HatchEntity, SceneLayer } from '../../types/entities';
 import type { DimensionEntity, DimStyle } from '../../types/dimension';
 import type { Point2D } from '../../rendering/types/Types';
+// ADR-636 Στάδιο 2 Φ2.1 — full `TABLES → LAYER` section. The single TABLES section (LTYPE +
+// LAYER, reusing the `writeLayerTable` SSoT, then DIMSTYLE) is emitted by the split-out
+// `emitTablesSection` (file-size SRP, mirror of the HATCH split).
+import { emitTablesSection } from './dxf-ascii-tables-writer';
+import type { LinetypeDef } from '../../config/linetype-iso-catalog';
 // rotated-rectangle entity-level SSoT (corner1/corner2 ή x/y/w/h + rotation, pivot=corner1). Re-export
 // ώστε ο TEK exporter (`dxf-to-tek.ts`) να κρατά το ίδιο import path (μηδέν διπλότυπο formula).
 import { rectangleEntityVertices } from '../../rendering/entities/shared/geometry-utils';
@@ -33,7 +38,6 @@ export { rectangleEntityVertices };
 // in-process writers + production export stay in lockstep. Before Round 24,
 // dimensions were silently dropped at the entity switch.
 import { emitDimensionEntity } from '../../utils/dxf-dimension-writer';
-import { emitDimStyle } from '../../utils/dxf-dimstyle-writer';
 // ADR-362 Round 26 — anonymous dimension BLOCKS: the real drawn geometry of each
 // dimension (ext lines + dim line/arc + arrowheads + text) is built from the SAME
 // on-screen SSoT (`buildDimensionBlockPrimitives` → `buildDimensionGeometry`) and
@@ -88,6 +92,17 @@ export interface DxfWriteOptions {
   readonly acadVer?: string;
   readonly insunits?: number;
   readonly codepage?: string;
+  /**
+   * ADR-636 Στάδιο 2 Φ2.1 — full `TABLES → LAYER` section. When `tableLayers` is non-empty the
+   * writer emits a real LTYPE + LAYER table (colour/on-off/freeze/lock/linetype/lineweight/
+   * true-colour + Nestor XDATA, via the `writeLayerTable` SSoT) inside the SAME single `TABLES`
+   * section as DIMSTYLE — so AutoCAD keeps the layer definitions instead of auto-creating layers
+   * with defaults. `customLinetypes` are the non-ISO linetypes referenced by those layers (ISO
+   * baseline is implicit — skipped by the table writer). Omitted → header-less/table-less bare
+   * envelope (Tekton/legacy) — the per-entity inline `62` colour is unaffected either way.
+   */
+  readonly tableLayers?: ReadonlyArray<SceneLayer>;
+  readonly customLinetypes?: ReadonlyArray<LinetypeDef>;
 }
 
 const DEFAULT_LAYER = '0';
@@ -135,16 +150,17 @@ export function writeDxfAscii(
     dimStyleNameById[st.id] = st.name;
     dimStyleById[st.id] = st;
   }
-  if (dimStyles.length > 0) {
-    pair(0, 'SECTION');
-    pair(2, 'TABLES');
-    pair(0, 'TABLE');
-    pair(2, 'DIMSTYLE');
-    pair(70, dimStyles.length);
-    for (const st of dimStyles) emitDimStyle(pair, st, s);
-    pair(0, 'ENDTAB');
-    pair(0, 'ENDSEC');
-  }
+
+  // ADR-636 Στάδιο 2 Φ2.1 — ONE `TABLES` section holding LTYPE + LAYER (when the caller
+  // supplies `tableLayers`) then DIMSTYLE (when dimensions carried a resolved style), in DXF
+  // table order. Gated: bare `writeDxfAscii(entities)` (no tableLayers, no dimStyles) stays
+  // table-less (Tekton/legacy). Placed after HEADER, before BLOCKS/ENTITIES.
+  emitTablesSection(out, pair, {
+    tableLayers: options.tableLayers,
+    customLinetypes: options.customLinetypes,
+    dimStyles,
+    s,
+  });
 
   // ADR-362 Round 26 — BLOCKS section (after TABLES, before ENTITIES). One anonymous
   // `*Di` block per dimension, carrying its real drawn geometry. The block index `i`

@@ -36,6 +36,8 @@ import { expandAnnotationsToPrimitives } from '../core/annotation-to-primitives'
 import { collectOverlayDxfEntities } from '../core/overlay-dxf-collector';
 import { usedCategoryLayerDefs } from '../core/dxf-category-layers';
 import { writeDxfAscii } from '../core/dxf-ascii-writer';
+import { resolveLinetype } from '../../stores/LinetypeRegistry';
+import { isIsoBaselineLinetype, type LinetypeDef } from '../../config/linetype-iso-catalog';
 import type { ResolvedExportFloor } from '../core/export-floor-scope';
 import type { ExportArtifact, ExportEntityScope, DxfLineMode } from '../types';
 
@@ -168,6 +170,9 @@ export function collectDimStylesForExport(entities: readonly Entity[]): DimStyle
  * file is dimensionally correct in Tekton/AutoCAD.
  */
 export function renderDxfBlob(request: DxfExportSceneRequest, lineMode?: DxfLineMode): Blob {
+  // ADR-636 Στάδιο 2 Φ2.1 — full LAYER table only on the AutoCAD (POLYLINE) path. The Tekton
+  // dialect (`lines`) flattens/ignores tables → keep it minimal (bare, per its parser).
+  const professionalTables = lineMode !== 'lines';
   const dxf = writeDxfAscii(request.scene.entities, {
     layersById: request.scene.layersById,
     scale: coordinateScale(request.scene.units, request.settings.units),
@@ -182,8 +187,33 @@ export function renderDxfBlob(request: DxfExportSceneRequest, lineMode?: DxfLine
     acadVer: resolveUnicodeSafeAcadVer(request.settings.version, request.settings.encoding),
     insunits: DXF_UNIT_VALUES[request.settings.units],
     codepage: encodingToCodepage(request.settings.encoding),
+    // ADR-636 Στάδιο 2 Φ2.1 — real LTYPE + LAYER table (colour/on-off/freeze/lock/linetype/
+    // lineweight/true-colour) so AutoCAD keeps the layer definitions instead of auto-creating
+    // defaults. Layers = the very set the writer already uses for name resolution.
+    tableLayers: professionalTables ? Object.values(request.scene.layersById) : undefined,
+    customLinetypes: professionalTables ? collectCustomLinetypesForExport(request.scene) : undefined,
   });
   return new Blob([dxf], { type: 'application/dxf' });
+}
+
+/**
+ * ADR-636 Στάδιο 2 Φ2.1 — the non-ISO linetypes referenced by the scene's layers, resolved
+ * from the LinetypeRegistry SSoT (`resolveLinetype`) for the exported LTYPE table. ISO baseline
+ * names are skipped (implicit in every reader — the table writer omits them too). Distinct by
+ * name; unresolved names (absent from this session) are left out (AutoCAD falls back to
+ * Continuous). Mirrors `collectDimStylesForExport`'s registry-read pattern.
+ */
+export function collectCustomLinetypesForExport(scene: SceneModel): LinetypeDef[] {
+  const seen = new Set<string>();
+  const out: LinetypeDef[] = [];
+  for (const layer of Object.values(scene.layersById)) {
+    const name = layer.linetype;
+    if (!name || seen.has(name) || isIsoBaselineLinetype(name)) continue;
+    seen.add(name);
+    const def = resolveLinetype(name);
+    if (def) out.push(def);
+  }
+  return out;
 }
 
 /** DXF releases that predate Unicode (R2007/AC1021). Their DXF is codepage-encoded, so UTF-8
