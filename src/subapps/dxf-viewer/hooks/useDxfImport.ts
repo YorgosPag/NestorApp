@@ -16,10 +16,13 @@ import {
   processDxfImportResult,
   handleDxfImportError
 } from '../io/dxf-import';
+// ADR-635 Φ3 — Revit-style import-warnings toast (SSoT).
+import { useDxfImportNotifications } from '@/hooks/notifications/useDxfImportNotifications';
 
 export function useDxfImport() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dxfImportNotifications = useDxfImportNotifications();
 
   const importDxfFile = async (file: File): Promise<SceneModel | null> => {
     setIsLoading(true);
@@ -27,6 +30,9 @@ export function useDxfImport() {
 
     try {
       const result = await dxfImportService.importDxfFile(file);
+
+      // ADR-635 Φ3 — surface partial-import warnings (skipped/failed/clamped entities).
+      dxfImportNotifications.importedWithWarnings(result.warnings);
 
       // 🏢 ENTERPRISE: Use centralized utilities from dxf-import.ts
       return processDxfImportResult(

@@ -1,4 +1,9 @@
 {
+  "import": {
+    "warnings": {
+      "summary": "{count, plural, one {Drawing imported with # warning} other {Drawing imported with # warnings}}"
+    }
+  },
   "layers": {
     "title": "DXF Layers ({count})",
     "clickToSelect": "Click to select",
@@ -166,6 +171,11 @@
     "copyFailed": "Copy failed",
     "perfMonitorOn": "FPS, Memory, Rendering metrics active",
     "perfMonitorOff": "Better performance - monitoring disabled",
+    "bathroomAutoArrange": {
+      "noRoom": "Select an element inside the bathroom (or draw a closed room) and try again.",
+      "noSolution": "No fixture layout fits this bathroom.",
+      "done": "Placed {count, plural, one {# sanitary fixture} other {# sanitary fixtures}} automatically."
+    },
     "selectLevelForPolygon": "Please select a Level first to save the polygon",
     "overlayNeedsBackground": "No reference file found for this floor. Make sure you have imported a DXF drawing or a floorplan image."
   },

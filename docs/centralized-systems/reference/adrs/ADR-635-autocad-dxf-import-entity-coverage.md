@@ -195,3 +195,8 @@ truncated-file no-throw, `buildScene` back-compat). Existing Φ1/Φ2 suites unch
   `ImportDiagnostics` SSoT (`dxf-import-diagnostics.ts`) surfaced as Revit-style `warnings[]` on both the
   server response and `DxfImportResult`; single `runDxfParse()` SSoT replaces the worker/client wrap twin;
   API client now preserves+logs the server `details`. New `dxf-import-robustness.test.ts` (5 cases). jscpd clean.
+- **2026-07-11 — Φ3 (UI toast):** the import `warnings[]` now surface as a Revit-style toast. New
+  `useDxfImportNotifications` domain hook (SSoT) + `NOTIFICATION_KEYS.dxfImport.importedWithWarnings`
+  (`dxf-viewer:import.warnings.summary`, ICU plural, el+en). Wired into BOTH import paths:
+  server auto-process (`useFloorplanAutoProcess`) and client import (`useDxfImport`). Localized title +
+  verbatim technical detail lines (same raw-detail pattern as `useFilesNotifications`). jscpd clean.
