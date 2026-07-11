@@ -182,7 +182,40 @@ export interface BimRenderSettings {
    * Τέκτονα — χωρίς fill/hatch/λαβές. ΜΙΑ οντότητα, δύο όψεις (Revit-grade). Per-view.
    */
   planLinesOnly?: boolean;
+  /**
+   * ADR-375 — «DXF Σχέδιο» V/G row (Revit «Imported Categories»): per-view
+   * overrides for the imported drawing AS A WHOLE, applied to every raw DXF
+   * entity (`resolveEntityBimCategory === null`: lines/arcs/text/dimensions/
+   * hatches…). Absent ⇒ defaults (visible, no colour override). Per-view.
+   */
+  dxfImport?: Partial<DxfImportStyle>;
 }
+
+/**
+ * ADR-375 — style/visibility overrides for the imported DXF drawing as a whole
+ * (Revit V/G «Imported Categories» single row). Applies to every raw DXF entity
+ * (`resolveEntityBimCategory === null`). The per-layer detail stays in the Layer
+ * Manager — this is the master row, exactly like Revit's imported-category entry.
+ */
+export interface DxfImportStyle {
+  /** false ⇒ όλες οι raw DXF οντότητες κρύβονται (row toggled off). */
+  visible: boolean;
+  /** null ⇒ αρχικά χρώματα DXF· hex ⇒ ενιαίο override σε ΟΛΕΣ τις DXF οντότητες. */
+  projectionColor: string | null;
+  /**
+   * Ενιαίο πάχος γραμμής (mm) για ΟΛΕΣ τις DXF οντότητες — AutoCAD «Lineweight»
+   * ανά εισαγωγή. `0` ⇒ χωρίς override (κάθε οντότητα κρατά το δικό της πάχος)·
+   * θετικό mm (ISO catalog) ⇒ ενιαίο override.
+   */
+  projectionLineweightMm: number;
+}
+
+/** ADR-375 — default «DXF Σχέδιο» row: visible, no colour/weight override. */
+export const DEFAULT_DXF_IMPORT_STYLE: DxfImportStyle = {
+  visible: true,
+  projectionColor: null,
+  projectionLineweightMm: 0,
+};
 
 export interface ResolvedBimSettings {
   drawingScale: number;
@@ -218,6 +251,8 @@ export interface ResolvedBimSettings {
   yAxisCut: AxisCutSetting;
   /** ADR-531 Φ5b.3 — resolved «Μόνο κάτοψη DXF» plan-lines toggle (default OFF). */
   planLinesOnly: boolean;
+  /** ADR-375 — resolved «DXF Σχέδιο» import row (default: visible, no colour override). */
+  dxfImport: DxfImportStyle;
 }
 
 /** ADR-455 — merge a persisted partial axis cut with the default (off). */
@@ -283,6 +318,8 @@ export function resolveBimSettings(s?: BimRenderSettings | null): ResolvedBimSet
     yAxisCut: resolveAxisCut(s?.yAxisCut),
     // ADR-531 Φ5b.3 — absent ⇒ false (plan-lines «μόνο κάτοψη DXF» opt-in).
     planLinesOnly: s?.planLinesOnly ?? false,
+    // ADR-375 — «DXF Σχέδιο» import row: merge persisted partial with defaults.
+    dxfImport: { ...DEFAULT_DXF_IMPORT_STYLE, ...(s?.dxfImport ?? {}) },
   };
 }
 

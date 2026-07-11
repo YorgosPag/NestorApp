@@ -73,7 +73,12 @@ function readBimCacheInputs(): { drawingScale: number; bimSettingsHash: string }
     // both overlays are baked into the cached normal-state bitmap (scene-level passes in
     // `DxfRenderer.render`), so toggling them must rebuild it (they arrive via the store the
     // cache does NOT subscribe to — they must live in the key, like the ADR-040 Phase D toggles).
-    bimSettingsHash: JSON.stringify({ vr: s.viewRange, cpa: s.cutPlaneActive, os: s.objectStyles, ts: getCurrentOpeningTagStyle(), fs: s.showFinishSkin, rebar: s.showReinforcement }),
+    // ADR-375 — `dxf` (dxfImport: «DXF Σχέδιο» V/G row) busts the cache: visibility +
+    // colour + lineweight overrides for every raw DXF entity are baked into the cached
+    // normal-state bitmap (DxfRenderer.isEntityLayerSkipped + resolveStyleForRender), so
+    // toggling/recolouring/reweighting the imported drawing must rebuild it. Same rule as
+    // fs/rebar — a per-view setting that alters normal-state pixels MUST live in the key.
+    bimSettingsHash: JSON.stringify({ vr: s.viewRange, cpa: s.cutPlaneActive, os: s.objectStyles, ts: getCurrentOpeningTagStyle(), fs: s.showFinishSkin, rebar: s.showReinforcement, dxf: s.dxfImport }),
   };
 }
 

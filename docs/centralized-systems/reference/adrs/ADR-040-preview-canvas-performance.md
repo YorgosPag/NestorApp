@@ -71,6 +71,9 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-11 — 🐛 FIX: bitmap cache key λείπει το `dxfImport` → «DXF Σχέδιο» toggle δεν έκρυβε τις DXF (ADR-375, CHECK 6B/6D)
+**Τι:** ο διακόπτης «DXF Σχέδιο» (V/G row, Revit «Imported Categories») έκλεινε την ορατότητα αλλά **οι raw DXF οντότητες παρέμεναν στον καμβά**. **Root cause (ADR-040 cardinal rule #3 gotcha):** ο render-gate ήταν σωστός (`DxfRenderer.isEntityLayerSkipped` + `resolveStyleForRender` κρύβουν/επανα-χρωματίζουν/ξαναπαχαίνουν τα raw DXF όταν αλλάζει το `dxfImport`), αλλά το per-view `dxfImport` override (visibility + colour + lineweight) **ψήνεται στα cached normal-state pixels** και **έλειπε** από το κλειδί invalidation του bitmap cache (`bimSettingsHash`, `dxf-bitmap-cache.ts:readBimCacheInputs`). Το `dxf-canvas-renderer` subscription μαρκάρει τον καμβά dirty σε κάθε αλλαγή store → redraw, αλλά ο bitmap **δεν** ξαναχτιζόταν γιατί το hash έμενε ίδιο → stale bitmap re-blit. **Fix (one-line + docs):** προστέθηκε `dxf: s.dxfImport` στο `bimSettingsHash` — ίδιος κανόνας με `fs` (showFinishSkin) / `rebar` (showReinforcement): per-view setting που αλλάζει normal-state pixels **ΠΡΕΠΕΙ** να ζει στο cache key. **SSoT:** μοναδικό cache-key σημείο (grep `bimSettingsHash`/`readBimCacheInputs`) — καμία διπλασιασμένη τοποθεσία· τα scene-level BIM overlays δεν επηρεάζονται (BIM, όχι raw DXF). Καλύπτει **ταυτόχρονα** visibility + colour + weight (όλα στο ένα `dxfImport` object). **Test:** NEW `__tests__/dxf-bitmap-cache-dxf-import-invalidation.test.ts` (7/7 PASS) — mirror του `dxf-bitmap-cache-subcategory-invalidation.test.ts`, pin end-to-end μέσω public `rebuild()`/`isDirty()`: toggle visibility / colour / lineweight → cache busts· unchanged → stays valid (control, μηδέν over-invalidation). **Files:** MOD `canvas-v2/dxf-canvas/dxf-bitmap-cache.ts` (+`dxf` key + docs), NEW test. Co-staged: ADR-040 + ADR-375. ✅ Google-level: YES — SSoT single cache-key site, μηδέν over-invalidation (control test), regression pinned, ίδιο μοτίβο με fs/rebar. 🟡 UNCOMMITTED.
+
 ### 2026-07-11 — 🎯 NEW high-freq micro-leaf subscription: stair sub-element 2D HOVER pre-highlight (ADR-358 Q19 Φ3c, CHECK 6B)
 **Τι:** το per-step stair editing (ADR-358 Q19) αποκτά **hover pre-highlight** στην 2D κάτοψη (Revit component-mode): όσο μια σκάλα είναι sole-selected, το ποντίκι πάνω σε βαθμίδα την φωτίζει αχνά. Το micro-leaf `DxfCanvasSubscriber` (`canvas-layer-stack-leaves.tsx`) απέκτησε **δεύτερη** subscription `useSyncExternalStore(subscribeStairSubElementHover, getStairSubElementHover)` — δίπλα στην Φ3a low-freq `selected` subscription. **Γιατί χρειάστηκε explicit notify (2D vs 3D):** στο 3D υπάρχει συνεχές RAF loop → το non-reactive hover singleton διαβάζεται κάθε frame· στο 2D ο canvas ξαναζωγραφίζει **on-demand**, οπότε το hover singleton (`stairSubElementHover`, Φ0) απέκτησε `subscribe`+notify (mirror `HoverStore`/`useHoveredEntity`) για να οδηγεί τον redraw. **Συμμόρφωση ADR-040:** (1) η subscription ζει **μόνο** στο leaf — **καμία** νέα `useSyncExternalStore` σε `CanvasSection`/`CanvasLayerStack` (cardinal rule #1, CHECK 6C ασφαλές)· ίδιο tier με το υπάρχον `useHoveredEntity` (high-freq hover ήδη accepted ως leaf). (2) **skip-if-unchanged** (structural, `isSameStairSubElement`) στον setter → κίνηση μέσα στην ίδια βαθμίδα = **μηδέν** notify/redraw· το hit-test τρέχει **μόνο** όταν σκάλα είναι sole-selected (σπάνιο state), οπότε το churn είναι bounded. (3) ο `StairRenderer` διαβάζει το singleton **imperatively at paint** (`getStairSubElementHover()`), το hook απλώς forces τον redraw — μηδέν prop-threading. (4) **καμία** αλλαγή σε bitmap cache / cache key / high-freq topology (το hover ζει ΕΚΤΟΣ cache key, cardinal rule #3 τηρείται). **Files:** MOD `bim/stairs/stair-sub-element-selection-store.ts` (+subscribe/notify/getter), NEW `bim/stairs/stair-sub-element-hover-2d.ts` (gate resolver), MOD `bim/renderers/stair-sub-element-highlight-2d.ts` (hover pass), `bim/renderers/StairRenderer.ts` (imperative read), `systems/cursor/mouse-handler-move.ts` (resolve στο throttled hover branch), `canvas-layer-stack-leaves.tsx` (leaf subscription). Co-staged: ADR-040 + ADR-358. ✅ Google-level: YES — leaf-local subscription (ίδιο tier με useHoveredEntity), skip-if-unchanged zero-redraw, hit-test μόνο σε component mode, render-time imperative read, μηδέν cache-key touch, μηδέν orchestrator re-render. 🟡 UNCOMMITTED.
 
@@ -3891,3 +3894,22 @@ preview-entity-renderers.ts` `renderRectangle`** (ghost preview = 4 περιστ
 branch (mirror line/wall/beam)· η rotation-awareness ζει στο pure vertex SSoT (identity fast-path για
 rotation=0 → μηδέν regression σε μη-περιστραμμένα). `DynamicInputSubscriber` παραμένει leaf (δεν προάγει
 subscription σε orchestrator). Staged για CHECK 6B/6D. ΟΧΙ tsc (N.17). 🔴 commit (Giorgio).
+
+## 2026-07-11: ADR-375 — «DXF Σχέδιο» V/G master row (Revit «Imported Categories») (CHECK 6B/6D stage)
+
+**Τι:** νέα ΜΙΑ γραμμή στο panel «Ορατότητα & Γραφικά» που ελέγχει ΟΛΕΣ τις raw DXF οντότητες
+(`resolveEntityBimCategory === null`) ως σύνολο — visibility on/off + ενιαίο projection-colour override —
+όπως το Revit «Imported Categories». Αρχείο CHECK 6B/6D που άγγιξα: **`DxfRenderer.ts`**, σε **δύο υπάρχοντα
+per-entity seams** (μηδέν νέο loop/subscription):
+- `isEntityLayerSkipped` — νέο gate: αν `dxfImport.visible === false` **και** η οντότητα είναι raw DXF →
+  skip. Διαβάζει το ίδιο `useBimRenderSettingsStore.getState()` που ήδη διαβαζόταν εκεί (cut-plane gate) →
+  μηδέν επιπλέον getState. Ισχύει και στα 3 render passes (κοινό gate).
+- `resolveStyleForRender` — αν υπάρχει `dxfImport.projectionColor` (≠null) **ή** `projectionLineweightMm` (>0)
+  **και** raw DXF → `{ ...style, colorHex?, lineWidthPx? }` (weight via `lineweightToPx` ISO SSoT).
+  Τοπικά στον `DxfRenderer` (ΟΧΙ στο κοινό `resolveEntityRenderStyle`) → print/WYSIWYG paths μένουν άθικτα.
+  Το override συμμετέχει αυτόματα στο LINE batch key (ο batch pass καλεί την ίδια μέθοδο).
+
+**Γιατί δεν σπάει την αρχιτεκτονική:** μηδέν νέα `useSyncExternalStore`/subscription· καμία αλλαγή σε bitmap
+cache key (visibility/colour ζουν σε per-view store, human-rate flips → invalidation μέσω του υπάρχοντος
+render loop, όχι key-bloat· rule 3 τηρείται). Read-time getters (rule 2). Staged για CHECK 6B/6D. ΟΧΙ tsc
+(N.17). 🔴 commit (Giorgio).

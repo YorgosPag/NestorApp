@@ -102,6 +102,9 @@ export function detectSpaces(
 ): readonly RecognizedSpace[] {
   const scale = mmToSceneUnits(sceneUnits); // scene units per mm
   const tol = tolMm * scale; // mm → scene units
-  const perimeters = getCachedRegionPerimeters(entities, tol);
+  // ADR-638 §wall-aware (Giorgio 2026-07-11) — οι BIM τοίχοι/κολόνες οριοθετούν χώρους
+  // ΟΠΩΣ οι DXF γραμμές (Revit «room bounding»). Χωρίς αυτό, ένα δωμάτιο σχεδιασμένο
+  // μόνο με BIM τοίχους δεν αναγνωριζόταν ως χώρος (μόνο DXF loops πιάνονταν).
+  const perimeters = getCachedRegionPerimeters(entities, tol, tol, true);
   return perimeters.map((p) => buildSpace(p, perimeters, storeyId, scale));
 }

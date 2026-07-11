@@ -35,15 +35,17 @@ import { type ViewRange } from '../config/bim-view-range';
 import {
   STRUCTURAL_BIM_CATEGORIES,
   BIM_CATEGORIES,
-  DEFAULT_OBJECT_STYLES,
   type BimCategory,
   type ObjectStyle,
-  type SubcategoryStyle,
 } from '../config/bim-object-styles';
 import type { Discipline } from '../bim/discipline/bim-discipline';
 import { saveBimRenderSettings } from '../services/bim-render-settings.service';
 import type { BimRenderSettingsState } from './bim-render-settings-store-types';
 import { DXF_TIMING } from '../config/dxf-timing';
+import {
+  withSubcategoryStyle,
+  withDefaultSubcategories,
+} from './bim-render-settings-store-style-utils';
 
 // ── Debounce helper ────────────────────────────────────────────────────────
 
@@ -95,6 +97,8 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       yAxisCut: state.yAxisCut,
       // ADR-531 Φ5b.3 — persist the «Μόνο κάτοψη DXF» plan-lines toggle per-view.
       planLinesOnly: state.planLinesOnly,
+      // ADR-375 — persist the «DXF Σχέδιο» import row (visibility + colour override) per-view.
+      dxfImport: state.dxfImport,
     };
   }
 
@@ -141,6 +145,7 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         xAxisCut: resolved.xAxisCut,
         yAxisCut: resolved.yAxisCut,
         planLinesOnly: resolved.planLinesOnly,
+        dxfImport: resolved.dxfImport,
         lastLocalMutationAt: 0,
         bimVisibilitySnapshot: null,
       });
@@ -341,6 +346,33 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         debounceWrite(state.currentLevelId, buildRaw({ ...get(), planLinesOnly }));
     },
 
+    setDxfImportVisibility(visible) {
+      const state = get();
+      if (state.dxfImport.visible === visible) return; // idempotent — no-op write
+      const dxfImport = { ...state.dxfImport, visible };
+      set({ dxfImport, lastLocalMutationAt: Date.now() });
+      if (state.currentLevelId)
+        debounceWrite(state.currentLevelId, buildRaw({ ...get(), dxfImport }));
+    },
+
+    setDxfImportColor(color) {
+      const state = get();
+      if (state.dxfImport.projectionColor === color) return; // idempotent — no-op write
+      const dxfImport = { ...state.dxfImport, projectionColor: color };
+      set({ dxfImport, lastLocalMutationAt: Date.now() });
+      if (state.currentLevelId)
+        debounceWrite(state.currentLevelId, buildRaw({ ...get(), dxfImport }));
+    },
+
+    setDxfImportLineweight(mm) {
+      const state = get();
+      if (state.dxfImport.projectionLineweightMm === mm) return; // idempotent — no-op write
+      const dxfImport = { ...state.dxfImport, projectionLineweightMm: mm };
+      set({ dxfImport, lastLocalMutationAt: Date.now() });
+      if (state.currentLevelId)
+        debounceWrite(state.currentLevelId, buildRaw({ ...get(), dxfImport }));
+    },
+
     setObjectStyleVgColor(category, key, color) {
       const prev = get().objectStyles[category];
       commitObjectStyle(set, get, buildRaw, category, { ...prev, [key]: color });
@@ -457,43 +489,4 @@ function commitAxisCut(
   set({ ...partial, lastLocalMutationAt: Date.now() });
   const { currentLevelId } = get();
   if (currentLevelId) debounceWrite(currentLevelId, buildRaw(get()));
-}
-
-/** Immutably transform one subcategory's style under a category. */
-function withSubcategoryStyle(
-  styles: Record<BimCategory, ObjectStyle>,
-  category: BimCategory,
-  subcategoryKey: string,
-  transform: (prev: SubcategoryStyle) => SubcategoryStyle,
-): Record<BimCategory, ObjectStyle> {
-  const prev = styles[category];
-  const prevSubs = prev.subcategories ?? {};
-  const nextSub = transform(prevSubs[subcategoryKey] ?? {});
-  const nextCat: ObjectStyle = {
-    ...prev,
-    subcategories: { ...prevSubs, [subcategoryKey]: nextSub },
-  };
-  return { ...styles, [category]: nextCat };
-}
-
-/**
- * Return a copy of `style` with its `subcategories` reset to the category's
- * defaults. When the category has no default subcategories the key is dropped
- * entirely (avoids persisting empty `subcategories: {}` noise + Firestore
- * undefined writes).
- */
-function withDefaultSubcategories(style: ObjectStyle, category: BimCategory): ObjectStyle {
-  const def = DEFAULT_OBJECT_STYLES[category].subcategories;
-  const next: ObjectStyle = { ...style };
-  if (!def) {
-    delete next.subcategories;
-    return next;
-  }
-  const cloned: Partial<Record<string, SubcategoryStyle>> = {};
-  for (const [key, sub] of Object.entries(def)) {
-    if (sub) cloned[key] = { ...sub };
-  }
-  if (Object.keys(cloned).length === 0) delete next.subcategories;
-  else next.subcategories = cloned;
-  return next;
 }

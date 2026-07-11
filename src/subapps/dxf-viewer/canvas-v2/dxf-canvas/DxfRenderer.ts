@@ -14,6 +14,8 @@ import type { Entity, SceneLayer } from '../../types/entities';
 import { viewportToWorldBBox, isEntityInViewport } from './dxf-viewport-culling';
 // ADR-510 Φ2 — canvas linetype dash: metric pattern (mm) → setLineDash px (zoom + LTSCALE aware).
 import { dashMmToScreenPx } from '../../rendering/linetype-dash-resolver';
+// ADR-375 — «DXF Σχέδιο» row lineweight override: mm → screen px (ISO catalog SSoT).
+import { lineweightToPx } from '../../config/lineweight-iso-catalog';
 import { getLinetypeScale } from '../../stores/LinetypeScaleStore';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
 import { resolveEntityLayerName, getLayer as getLayerStoreLayer } from '../../stores/LayerStore';
@@ -208,22 +210,20 @@ export class DxfRenderer {
     //         έρχονται από Firestore snapshot ΜΕΤΑ τα persisted openings στο
     //         `scene.entities` array, σκεπάζουν τα openings (alpha-blend) και
     //         η οπή γίνεται αόρατη (incident 2026-05-25, ADR-363 §11.Q3).
-    for (const entity of scene.entities) {
-      if (entity.type === 'slab-opening') continue;
-      if (!entity.visible) continue;
-      if (!isEntityInViewport(entity, worldViewport)) continue;
-      if (this.isEntityLayerSkipped(entity, effectiveOptions.layersById)) continue;
-      if (batchedIds.has(entity.id)) continue;
-      this.renderEntityUnified(entity, transform, actualViewport, effectiveOptions);
-    }
-    for (const entity of scene.entities) {
-      if (entity.type !== 'slab-opening') continue;
-      if (!entity.visible) continue;
-      if (!isEntityInViewport(entity, worldViewport)) continue;
-      if (this.isEntityLayerSkipped(entity, effectiveOptions.layersById)) continue;
-      if (batchedIds.has(entity.id)) continue;
-      this.renderEntityUnified(entity, transform, actualViewport, effectiveOptions);
-    }
+    const renderMatching = (accept: (type: string) => boolean): void => {
+      for (const entity of scene.entities) {
+        if (!accept(entity.type)) continue;
+        if (!entity.visible) continue;
+        if (!isEntityInViewport(entity, worldViewport)) continue;
+        if (this.isEntityLayerSkipped(entity, effectiveOptions.layersById)) continue;
+        if (batchedIds.has(entity.id)) continue;
+        this.renderEntityUnified(entity, transform, actualViewport, effectiveOptions);
+      }
+    };
+    // Pass A: όλα ΕΚΤΟΣ slab-opening.
+    renderMatching((type) => type !== 'slab-opening');
+    // Pass B: slab-openings ΠΑΝΩ από τα slabs (ADR-363 §11.Q3).
+    renderMatching((type) => type === 'slab-opening');
     // ADR-449 Slice X2 μέρος Β — ΕΝΑ scene-level pass για τον ΕΝΙΑΙΟ σοβά (mirror του 3Δ
     // `syncStructuralFinishSkin`): μετά τα entities, ζωγραφίζει το merged-silhouette outline
     // από την ΙΔΙΑ SSoT με το 3Δ → ίδιες γωνίες/συμβολές, μηδέν διπλή γραμμή.
@@ -358,7 +358,24 @@ export class DxfRenderer {
     entity: DxfEntityUnion,
     layersById?: Record<string, SceneLayer>,
   ): ResolvedRenderStyle {
-    return resolveEntityRenderStyle(entity, layersById);
+    const style = resolveEntityRenderStyle(entity, layersById);
+    // ADR-375 — «DXF Σχέδιο» row overrides (colour + lineweight) for every raw DXF
+    // entity (null category). null colour / 0 mm ⇒ keep the entity's own value.
+    // Applied ONLY on the interactive canvas path (this method) — print / WYSIWYG
+    // resolve through resolveEntityRenderStyle directly and stay untouched.
+    const dxf = useBimRenderSettingsStore.getState().dxfImport;
+    const hasColorOverride = dxf.projectionColor !== null;
+    const hasWeightOverride = dxf.projectionLineweightMm > 0;
+    if ((hasColorOverride || hasWeightOverride) && resolveEntityBimCategory(entity) === null) {
+      return {
+        ...style,
+        colorHex: hasColorOverride ? dxf.projectionColor as string : style.colorHex,
+        lineWidthPx: hasWeightOverride
+          ? Math.max(1, lineweightToPx(dxf.projectionLineweightMm))
+          : style.lineWidthPx,
+      };
+    }
+    return style;
   }
 
   /**
@@ -383,6 +400,11 @@ export class DxfRenderer {
     // is off, or for raw DXF / un-gated BIM types (getEntityZExtents → null).
     const bimSettings = useBimRenderSettingsStore.getState();
     if (isHiddenByCutPlane(entity, bimSettings.viewRange, bimSettings.cutPlaneActive)) return true;
+
+    // ADR-375 — «DXF Σχέδιο» master visibility (Revit «Imported Categories» row).
+    // When the imported-DXF row is toggled off, hide every raw DXF primitive
+    // (resolveEntityBimCategory === null). BIM entities stay unaffected.
+    if (bimSettings.dxfImport.visible === false && resolveEntityBimCategory(entity) === null) return true;
 
     const isolate = getIsolateEffectsSnapshot();
     if (isolate.active && isolate.mode === 'freeze' && isolate.isolatedEntityIds.size > 0) {

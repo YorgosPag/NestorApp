@@ -20,6 +20,7 @@ import { isWallEntity, isThermalSpaceEntity, type Entity } from '../../types/ent
 import { appendEntitiesToScene } from '../../bim/scene/append-entity-to-scene';
 import { useMepUnderfloorTool, MEP_UNDERFLOOR_AUTO_CLOSE_TOLERANCE_DEFAULT } from '../drawing/useMepUnderfloorTool';
 import { useThermalSpaceTool } from '../drawing/useThermalSpaceTool';
+import { useBathroomAutoArrangeTool } from '../drawing/useBathroomAutoArrangeTool';
 import { useSpaceSeparatorTool } from '../drawing/useSpaceSeparatorTool';
 import { useToolLifecycle } from './useToolLifecycle';
 import { resolveSceneUnits, mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
@@ -42,6 +43,7 @@ export interface AreaToolsReturn {
   wallCoveringTool: ReturnType<typeof useWallCoveringTool>; // ADR-511
   mepUnderfloorTool: ReturnType<typeof useMepUnderfloorTool>; // ADR-408 Εύρος Β #3
   thermalSpaceTool: ReturnType<typeof useThermalSpaceTool>; // ADR-422
+  bathroomAutoArrangeTool: ReturnType<typeof useBathroomAutoArrangeTool>; // ADR-638 Στάδιο 2b
   spaceSeparatorTool: ReturnType<typeof useSpaceSeparatorTool>; // ADR-437
 }
 
@@ -157,6 +159,20 @@ export function useSpecialToolsAreaTools(props: AreaToolsProps): AreaToolsReturn
   });
   useToolLifecycle(activeTool === 'thermal-space', thermalSpaceTool.activate, thermalSpaceTool.deactivate);
 
+  // ADR-638 Στάδιο 2b — BATHROOM AUTO-ARRANGE TOOL: Revit «Place Space» hover→click
+  // region-pick (hover σε δωμάτιο → highlight, κλικ → auto-τοποθέτηση ειδών υγιεινής).
+  // ΙΔΙΟ region-detection SSoT με το thermal-space· η solve+commit λογική ζει στο
+  // `arrangeBathroomForRoom`. Continuous (μένει awaiting μετά το commit).
+  const bathroomAutoArrangeTool = useBathroomAutoArrangeTool({
+    getSceneEntities,
+    getAccessor: () => levelManager,
+  });
+  useToolLifecycle(
+    activeTool === 'bathroom-auto-arrange',
+    bathroomAutoArrangeTool.activate,
+    bathroomAutoArrangeTool.deactivate,
+  );
+
   // ADR-437 — SPACE SEPARATOR TOOL (2-click line; participates in region detection).
   const spaceSeparatorTool = useSpaceSeparatorTool({
     currentLevelId,
@@ -172,6 +188,7 @@ export function useSpecialToolsAreaTools(props: AreaToolsProps): AreaToolsReturn
     wallCoveringTool,
     mepUnderfloorTool,
     thermalSpaceTool,
+    bathroomAutoArrangeTool,
     spaceSeparatorTool,
   };
 }

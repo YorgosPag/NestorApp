@@ -115,13 +115,16 @@ export const BimPatternSelect: React.FC<BimPatternSelectProps> = ({
 };
 
 interface BimLineweightSelectProps {
-  /** Current concrete mm value. */
+  /** Current concrete mm value (0 = unset when `allowUnset`). */
   value: number;
   onChange: (mm: number) => void;
   /** Highlight as a per-cell override (amber). */
   modified?: boolean;
   /** Right-click handler (e.g. reset the cell). */
   onContextMenu?: (e: React.MouseEvent) => void;
+  /** ADR-375 — prepend a «—» (value 0) option meaning "no override / original". */
+  allowUnset?: boolean;
+  disabled?: boolean;
   className?: string;
   'aria-label'?: string;
 }
@@ -132,6 +135,8 @@ export const BimLineweightSelect: React.FC<BimLineweightSelectProps> = ({
   onChange,
   modified,
   onContextMenu,
+  allowUnset,
+  disabled,
   className,
   'aria-label': ariaLabel,
 }) => {
@@ -140,6 +145,7 @@ export const BimLineweightSelect: React.FC<BimLineweightSelectProps> = ({
     <Select
       value={String(value)}
       onValueChange={(v) => onChange(parseFloat(v))}
+      disabled={disabled}
     >
       <SelectTrigger
         size="sm"
@@ -155,6 +161,9 @@ export const BimLineweightSelect: React.FC<BimLineweightSelectProps> = ({
       </SelectTrigger>
       {/* w-auto overrides the popper's trigger-width lock so items are never clipped. */}
       <SelectContent className="w-auto min-w-[5rem]">
+        {allowUnset && (
+          <SelectItem value="0" className="font-mono whitespace-nowrap">—</SelectItem>
+        )}
         {LINEWEIGHT_MM_OPTIONS.map((v) => (
           <SelectItem key={v} value={String(v)} className="font-mono whitespace-nowrap">
             {v.toFixed(2)}

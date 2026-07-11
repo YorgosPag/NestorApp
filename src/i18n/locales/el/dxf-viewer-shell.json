@@ -945,6 +945,9 @@
     "thermalSpace": {
       "statusPlace": "Κλικ μέσα σε δωμάτιο για δημιουργία θερμικού χώρου"
     },
+    "bathroomAutoArrange": {
+      "statusPick": "Κλικ μέσα στο μπάνιο για αυτόματη τοποθέτηση ειδών υγιεινής"
+    },
     "mepUnderfloor": {
       "statusFirstVertex": "Κλικ για πρώτη κορυφή θερμαινόμενης περιοχής",
       "statusNextVertex": "Κλικ για επόμενη κορυφή — Enter για κλείσιμο",
@@ -4077,14 +4080,20 @@
           "light-fixture": "Φωτιστικό",
           "electrical-panel": "Ηλεκτρικός Πίνακας",
           "mep-manifold": "Συλλέκτης",
+          "mep-radiator": "Καλοριφέρ",
+          "mep-boiler": "Λέβητας",
+          "mep-water-heater": "Θερμοσίφωνας",
+          "mep-underfloor": "Ενδοδαπέδια Θέρμανση",
           "railing": "Κιγκλίδωμα",
           "mep-wire": "Καλώδιο Κυκλώματος",
           "furniture": "Έπιπλο",
           "duct": "Αεραγωγός",
           "pipe": "Σωλήνας",
+          "fuel": "Παροχή Καυσίμου",
           "drain-pipe": "Αποχέτευση",
           "sanitary": "Είδος Υγιεινής",
-          "kitchen": "Στοιχείο Κουζίνας"
+          "kitchen": "Στοιχείο Κουζίνας",
+          "foundation": "Θεμελίωση"
         }
       },
       "subcategories": {
@@ -4179,6 +4188,13 @@
         "toggleVisibility": "Εναλλαγή ορατότητας κατηγορίας {cat}",
         "reset": "Επαναφορά Προεπιλογών",
         "resetAriaLabel": "Επαναφορά ορατότητας/γραφικών στις προεπιλογές",
+        "filterPlaceholder": "Φίλτρο κατηγοριών…",
+        "filterAriaLabel": "Φιλτράρισμα κατηγοριών ορατότητας",
+        "noResults": "Καμία κατηγορία δεν ταιριάζει",
+        "dxfImportRow": "DXF Σχέδιο",
+        "dxfImportToggle": "Εναλλαγή ορατότητας εισαγόμενου DXF",
+        "dxfImportColorTitle": "Χρώμα εισαγόμενου DXF",
+        "dxfImportWeightTitle": "Πάχος γραμμής εισαγόμενου DXF",
         "patterns": {
           "solid": "Συνεχής",
           "dashed": "Διακεκομμένη",

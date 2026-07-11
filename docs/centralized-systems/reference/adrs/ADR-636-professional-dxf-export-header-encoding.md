@@ -66,9 +66,11 @@ Coordinates are still written in the caller's output unit via `scale` (ADR-505);
 - **Φ2.2 (DONE) — auto version-driven encoding.** The version dropdown already existed in the export
   dialog (`ui/components/export/ExportDialog.tsx`, all 7 releases); Φ2.2 wired the **encoding** behind
   it. See below.
-- **Φ2.3 (roadmap)** — `$MEASUREMENT`/`$EXTMIN`/`$EXTMAX`/`$LTSCALE` HEADER+, MTEXT round-trip
-  (currently MTEXT → single-line TEXT), TEXT alignment (72/73/11/21) preservation.
-- **Φ2.4 (roadmap)** — `TEXTSTYLE` table, import Φ3 skipped-warning.
+- **Φ2.3 (DONE)** — real MTEXT emission (`\P` line breaks + 71 attachment), TEXT justification
+  (72/73/11/21), and richer HEADER (`$EXTMIN`/`$EXTMAX`/`$MEASUREMENT`/`$LTSCALE`/`$LUNITS`). See below.
+- **Φ2.4 (roadmap)** — `TEXTSTYLE` table, import Φ3 skipped-warning, **rich MTEXT import** (feed the
+  `mtext-tokenizer` into the entity `textNode` so re-export never double-escapes raw inline codes —
+  see Φ2.3 "known limitation").
 
 ### Στάδιο 2 Φ2.1 (DONE) — professional `TABLES → LAYER` section
 
@@ -120,8 +122,54 @@ UI, no encoding toggle.
   are emitted as a lossless `\U+XXXX` DXF unicode escape (which Nestor's own MTEXT importer,
   `text-engine/parser/mtext-tokenizer`, round-trips) instead of a lossy `?`. Astral-plane (> 0xFFFF)
   falls back to `?` (no 4-hex escape).
-- **Deferred to Φ2.3:** `\U+XXXX` as a general MTEXT escape belongs with real MTEXT emission (currently
-  MTEXT → single-line TEXT). For Φ2.2 all Greek fits cp1253, so no escaping is needed for Greek content.
+- **Resolved in Φ2.3:** `\U+XXXX` as a general MTEXT escape needs **no extra code** — the Φ2.2 whole-file
+  byte-encode already applies it to MTEXT content (cp1253 path: Greek→bytes, out-of-codepage→`\U+`), and
+  the UTF-8 path (2007+) writes non-ASCII verbatim. See Φ2.3 below.
+
+### Στάδιο 2 Φ2.3 (DONE) — real MTEXT + TEXT justification + richer HEADER
+
+The writer previously routed **both** `text` and `mtext` through the same single-line `emitText` →
+MTEXT lost its line breaks + attachment, and TEXT lost its alignment (72/73 were emitted **only** for
+centred dimension-block text). Φ2.3 makes the AutoCAD path emit real MTEXT and honour justification,
+reusing the app's existing text SSoTs — **zero new serializer/escaper/alignment table**.
+
+- **`export/core/dxf-ascii-text-writer.ts`** (new, file-size SRP split — mirror of the HATCH/TABLES
+  writers; the writer would otherwise exceed 500 lines). Holds:
+  - `emitText(..., align?)` — single-line `TEXT` with optional H/V justification (72/73 + the 11/21
+    alignment point the DXF spec requires). No `align` (or left+baseline) → **byte-identical** legacy
+    output. The centred dimension-block text passes `align:{h:1,v:2}` → identical to the old `centered`
+    flag.
+  - `emitMText(e, …, version)` — real `MTEXT` (`0/MTEXT`, `10/20/30`, `40` char height, `41` reference
+    width, `71` attachment, `50` rotation, `1` content). The content string — inline `\P` line breaks +
+    `\`/`{`/`}` escaping — comes from the **SSoT serializer `serializeDxfTextNode`** (`text-engine/
+    serializer/mtext-serializer.ts`), version-gated (R12 → plain-TEXT downgrade). Node source =
+    `ensureTextNode(e)` (`text-engine/edit/ensure-text-node.ts`). This is the serializer's intended
+    reuse — it had **no** production caller before.
+- **Inverse alignment maps (co-located with the forward import maps, no new table):**
+  `alignmentToHJust` in `utils/dxf-converter-helpers.ts` (beside `mapHorizontalAlignment`);
+  `attachmentToMTextCode` + `attachmentToVJust` in `utils/dxf-text-converters.ts` (beside
+  `MTEXT_ATTACHMENT_MAP`). `alignFromTextEntity` reads H from `entity.alignment` and V **only** from an
+  explicit `textNode.attachment` (never the `ensureTextNode` fallback — that would fabricate a
+  middle-left attachment and shift every legacy TEXT).
+- **`export/core/dxf-ascii-writer.ts`** — `case 'text'`/`'mtext'` split. `explode` (Tekton) keeps the
+  historic single-line, alignment-less TEXT for **both** (its minimal parser reads only LINE/TEXT/
+  CIRCLE); the AutoCAD path gets justified TEXT / real MTEXT. Version derived once via
+  `parseDocumentVersion(acadVer)` (default R2018). New gated `DxfWriteOptions.{extMin, extMax,
+  measurement, ltscale, lunits}` emit `$EXTMIN`/`$EXTMAX` (10/20/30) + `$MEASUREMENT`/`$LTSCALE`/
+  `$LUNITS` inside the same HEADER switch (bare/Tekton unaffected). Writer 498 lines (< 500 via split).
+- **`export/formats/dxf-export-adapter.ts`** — `renderDxfBlob` computes drawing extents via the
+  canonical `calculateTightBounds` SSoT (no local bounds math) × the coordinate scale
+  (`computeScaledExtents`), passing `extMin/extMax` + `measurement:1`(metric)/`ltscale:1`/`lunits:2`
+  (decimal) **only** on the AutoCAD path. Degenerate/empty (and the `DEFAULT_BOUNDS` 0,0→100,100
+  sentinel `calculateTightBounds` returns for uncomputable scenes) → `undefined` → the writer omits the
+  extents (no bogus 100×100 zoom-extents box).
+
+**Known limitation (pre-existing import defect, deferred to Φ2.4):** the basic import
+`convertMText → buildTextNodeFromFlat` stores the raw group-1 string (including raw `\P`) in a **single
+run**. Re-serialising such a node double-escapes existing inline codes (`\P` → `\\P`). This is an
+**import**-side defect (the rich `mtext-tokenizer` must feed the entity `textNode`), out of scope for an
+export phase; net result is neutral-to-better vs the old single-line TEXT (which also emitted the raw
+string). Well-formed nodes (rich toolbar / AI-created / commands) export correctly.
 
 ## Tests
 - `export/core/__tests__/dxf-ascii-writer.test.ts` — HEADER emitted (order + exact group codes) when
@@ -151,3 +199,15 @@ UI, no encoding toggle.
   Encoding fully automatic — no encoding UI (version dropdown already existed). 97 jest green (6 new
   encoding-service + adapter); E2E: cp1253 blob round-trips lossless, keeps AC1015 (no bump), ANSI_1253,
   Greek intact. jscpd clean.
+- **2026-07-11 — Στάδιο 2 Φ2.3:** real MTEXT (`\P`/71/40/41/50) + TEXT justification (72/73/11/21) +
+  richer HEADER (`$EXTMIN`/`$EXTMAX`/`$MEASUREMENT`/`$LTSCALE`/`$LUNITS`). New file-size split
+  `dxf-ascii-text-writer.ts` (`emitText` + new `emitMText`) reusing the SSoT `serializeDxfTextNode`
+  (its first production caller) + `ensureTextNode`; inverse alignment helpers co-located with the
+  forward import maps (`alignmentToHJust`, `attachmentToMTextCode`, `attachmentToVJust`) — no new table.
+  Adapter derives extents from the canonical `calculateTightBounds` SSoT (DEFAULT_BOUNDS-sentinel
+  guarded). Gated: bare/Tekton (`lines`) + left-baseline TEXT stay byte-identical; MTEXT only on the
+  AutoCAD path. `\U+` MTEXT escape needed no new code (covered by the Φ2.2 byte-encode). 86 writer+
+  adapter jest green (18 new). Writer 498 lines (< 500). Known limitation: basic-import MTEXT nodes hold
+  raw inline codes in one run → re-export double-escapes (import-side defect, deferred to Φ2.4).
+  **Note:** the `computeScaledExtents` DEFAULT_BOUNDS-sentinel guard is an uncommitted follow-up on top
+  of commits `edefe56a`/`d5de7136` (which landed the rest of Φ2.3).

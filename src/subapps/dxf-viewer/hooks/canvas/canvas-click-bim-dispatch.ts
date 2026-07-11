@@ -40,6 +40,7 @@ export function dispatchBimToolClick(
     beamBetweenMembersTool,
     mepUnderfloorTool,
     thermalSpaceTool,
+    bathroomAutoArrangeTool,
     spaceSeparatorTool,
     slabOpeningTool,
     openingTool,
@@ -122,6 +123,12 @@ export function dispatchBimToolClick(
   // PRIORITY 4.7e: ADR-422 — Thermal-space tool single click-in-region (Revit «Place Space»).
   if (activeTool === 'thermal-space' && thermalSpaceTool?.isActive) {
     thermalSpaceTool.onCanvasClick(bimPoint);
+    return true;
+  }
+  // PRIORITY 4.7e-bis: ADR-638 Στάδιο 2b — Bathroom auto-arrange hover→click region-pick.
+  // WORLDPOINT — hit-tests existing geometry· ORTHO/POLAR ΔΕΝ πρέπει να μετακινήσει το pick.
+  if (activeTool === 'bathroom-auto-arrange' && bathroomAutoArrangeTool?.isActive) {
+    bathroomAutoArrangeTool.onCanvasClick(worldPoint);
     return true;
   }
   // PRIORITY 4.7f: ADR-437 — Space-separator tool 2-click line placement.

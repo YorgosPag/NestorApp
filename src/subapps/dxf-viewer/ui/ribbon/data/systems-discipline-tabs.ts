@@ -118,9 +118,9 @@ export const WATER_TAB: RibbonTab = {
             toolBtn('waterTab.bathtub', 'floorplanSymbol.catalog.bathtub', 'bim-furniture', 'mep-bathtub'),
             toolBtn('waterTab.bidet', 'floorplanSymbol.catalog.bidet', 'bim-furniture', 'mep-bidet'),
             toolBtn('waterTab.washingMachine', 'mepFixture.appliance.washingMachine', 'bim-furniture', 'mep-washing-machine'),
-            // ADR-638 — one-click generative bathroom layout: detect the selected/only
-            // bathroom room → solve → commit the fixture arrangement (one undo).
-            actionBtn('waterTab.bathroomAutoArrange', 'ribbon.commands.bim.bathroomAutoArrange.label', 'bim-furniture', 'bathroom.actions.autoArrange'),
+            // ADR-638 Στάδιο 2b — generative bathroom layout tool: hover σε κλειστό δωμάτιο →
+            // highlight → κλικ → solve + commit των ειδών υγιεινής (Revit «Place Space» pattern).
+            toolBtn('waterTab.bathroomAutoArrange', 'ribbon.commands.bim.bathroomAutoArrange.label', 'bim-furniture', 'bathroom-auto-arrange'),
           ],
         },
       ],

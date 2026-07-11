@@ -41,6 +41,7 @@ import { isIsoBaselineLinetype, type LinetypeDef } from '../../config/linetype-i
 // ADR-636 Στάδιο 2 Φ2.3 — drawing extents for $EXTMIN/$EXTMAX (correct zoom-extents on open),
 // computed from the exported primitives via the canonical bounds SSoT (no local bounds math).
 import { calculateTightBounds, isValidBounds, type BoundsEntity } from '../../utils/bounds-utils';
+import { DEFAULT_BOUNDS } from '../../config/geometry-constants';
 import type { Point2D } from '../../rendering/types/Types';
 import { encodingService } from '../../io/encoding-service';
 import type { ResolvedExportFloor } from '../core/export-floor-scope';
@@ -231,8 +232,14 @@ export function computeScaledExtents(
   entities: readonly Entity[],
   scale: number,
 ): { min: Point2D; max: Point2D } | undefined {
+  if (entities.length === 0) return undefined;
   const b = calculateTightBounds(entities as unknown as BoundsEntity[]);
-  if (!isValidBounds(b)) return undefined;
+  // `calculateTightBounds` returns the DEFAULT_BOUNDS (0,0→100,100) sentinel when no entity yields
+  // computable bounds — treat that as "no extents" (skip) rather than write a bogus 100×100 box.
+  const isSentinel =
+    b.min.x === DEFAULT_BOUNDS.min.x && b.min.y === DEFAULT_BOUNDS.min.y &&
+    b.max.x === DEFAULT_BOUNDS.max.x && b.max.y === DEFAULT_BOUNDS.max.y;
+  if (!isValidBounds(b) || isSentinel) return undefined;
   return {
     min: { x: b.min.x * scale, y: b.min.y * scale },
     max: { x: b.max.x * scale, y: b.max.y * scale },

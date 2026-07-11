@@ -152,6 +152,23 @@ export interface BimRenderSettingsState extends ResolvedBimSettings {
    * όπως το top-view του Τέκτονα· `false` ⇒ κανονική BIM όψη. Per-view, debounced.
    */
   setPlanLinesOnly: (planLinesOnly: boolean) => void;
+  /**
+   * ADR-375 — «DXF Σχέδιο» V/G row (Revit «Imported Categories»): toggle the
+   * visibility of the imported drawing as a whole (all raw DXF entities). Single
+   * state update + single debounced write (idempotent).
+   */
+  setDxfImportVisibility: (visible: boolean) => void;
+  /**
+   * ADR-375 — «DXF Σχέδιο» row: set a single projection-colour override for ALL
+   * raw DXF entities (null = original per-entity DXF colours). Debounced write.
+   */
+  setDxfImportColor: (color: string | null) => void;
+  /**
+   * ADR-375 — «DXF Σχέδιο» row: set a single lineweight override (mm) for ALL raw
+   * DXF entities (AutoCAD per-import Lineweight). 0 = no override (keep each
+   * entity's own weight). Debounced write.
+   */
+  setDxfImportLineweight: (mm: number) => void;
   /** Override projection or cut color for a category (null = canvas token). */
   setObjectStyleVgColor: (
     category: BimCategory,

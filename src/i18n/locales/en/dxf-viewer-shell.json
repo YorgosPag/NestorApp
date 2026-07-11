@@ -945,6 +945,9 @@
     "thermalSpace": {
       "statusPlace": "Click inside a room to place a thermal space"
     },
+    "bathroomAutoArrange": {
+      "statusPick": "Click inside the bathroom to auto-place sanitary fixtures"
+    },
     "mepUnderfloor": {
       "statusFirstVertex": "Click for first heating-area vertex",
       "statusNextVertex": "Click for next vertex — Enter to close",
@@ -4077,14 +4080,20 @@
           "light-fixture": "Light Fixture",
           "electrical-panel": "Electrical Panel",
           "mep-manifold": "Manifold",
+          "mep-radiator": "Radiator",
+          "mep-boiler": "Boiler",
+          "mep-water-heater": "Water Heater",
+          "mep-underfloor": "Underfloor Heating",
           "railing": "Railing",
           "mep-wire": "Circuit Wire",
           "furniture": "Furniture",
           "duct": "Duct",
           "pipe": "Pipe",
+          "fuel": "Fuel Supply",
           "drain-pipe": "Drainage",
           "sanitary": "Sanitary Fixture",
-          "kitchen": "Kitchen Element"
+          "kitchen": "Kitchen Element",
+          "foundation": "Foundation"
         }
       },
       "subcategories": {
@@ -4179,6 +4188,13 @@
         "toggleVisibility": "Toggle visibility for category {cat}",
         "reset": "Reset to Defaults",
         "resetAriaLabel": "Reset visibility/graphics to defaults",
+        "filterPlaceholder": "Filter categories…",
+        "filterAriaLabel": "Filter visibility categories",
+        "noResults": "No matching category",
+        "dxfImportRow": "DXF Drawing",
+        "dxfImportToggle": "Toggle imported DXF visibility",
+        "dxfImportColorTitle": "Imported DXF color",
+        "dxfImportWeightTitle": "Imported DXF line weight",
         "patterns": {
           "solid": "Solid",
           "dashed": "Dashed",

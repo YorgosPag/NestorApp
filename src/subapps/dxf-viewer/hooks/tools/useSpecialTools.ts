@@ -87,7 +87,7 @@ export interface UseSpecialToolsReturn extends SelectionToolsReturn, PlacementTo
   // floorplanSymbolTool, electricalPanelTool, mepManifoldTool, mepRadiatorTool,
   // mepBoilerTool, mepWaterHeaterTool, mepSegmentTool, railingTool (extracted to useSpecialTools-placement-tools.ts).
   // AreaToolsReturn provides: slabTool, roofTool, floorFinishTool, mepUnderfloorTool,
-  // thermalSpaceTool, spaceSeparatorTool (extracted to useSpecialTools-area-tools.ts).
+  // thermalSpaceTool, bathroomAutoArrangeTool, spaceSeparatorTool (extracted to useSpecialTools-area-tools.ts).
   stairTool: ReturnType<typeof useStairTool>;
   /** ADR-619 — «Σκάλα από περιοχή» polygon-sketch tool (shape → stair type). */
   stairRegionTool: ReturnType<typeof useStairRegionSketch>;
@@ -281,6 +281,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     wallCoveringTool,
     mepUnderfloorTool,
     thermalSpaceTool,
+    bathroomAutoArrangeTool,
     spaceSeparatorTool,
   } = useSpecialToolsAreaTools({ activeTool, levelManager });
   // ADR-363 Phase 4 — COLUMN TOOL
@@ -455,6 +456,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     wallCoveringTool,
     mepUnderfloorTool,
     thermalSpaceTool,
+    bathroomAutoArrangeTool,
     spaceSeparatorTool,
     columnTool,
     foundationTool,

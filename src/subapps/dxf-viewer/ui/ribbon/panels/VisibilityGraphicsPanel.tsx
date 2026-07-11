@@ -23,10 +23,12 @@
  * without recursion.
  */
 
-import React, { useState, useCallback } from 'react';
-import { ChevronDown, Eye, EyeOff, RotateCcw } from 'lucide-react';
+import React, { useState, useCallback, useMemo } from 'react';
+import { ChevronDown, Eye, EyeOff, RotateCcw, Search } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../components/RibbonTooltip';
 import { FloatingPanel } from '@/components/ui/floating';
+import { Input } from '@/components/ui/input';
+import { normalizeForSearch } from '@/utils/greek-text';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useBimRenderSettingsStore } from '../../../state/bim-render-settings-store';
 import { BIM_CATEGORIES, type BimCategory } from '../../../config/bim-object-styles';
@@ -35,7 +37,7 @@ import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { UnifiedColorPicker } from '../../color/UnifiedColorPicker';
-import { BimPenSelect, BimPatternSelect } from '../components/BimStyleSelects';
+import { BimPenSelect, BimPatternSelect, BimLineweightSelect } from '../components/BimStyleSelects';
 
 /**
  * Shared grid template for the header and every category row (8 columns):
@@ -51,6 +53,7 @@ export const VisibilityGraphicsPanel: React.FC = () => {
   const { t } = useTranslation('dxf-viewer-shell');
   const colors = useSemanticColors();
   const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState('');
 
   const objectStyles = useBimRenderSettingsStore((s) => s.objectStyles);
   const setObjectStyleField = useBimRenderSettingsStore((s) => s.setObjectStyleField);
@@ -58,6 +61,12 @@ export const VisibilityGraphicsPanel: React.FC = () => {
   const setObjectStyleVgColor = useBimRenderSettingsStore((s) => s.setObjectStyleVgColor);
   const setObjectStyleVgPattern = useBimRenderSettingsStore((s) => s.setObjectStyleVgPattern);
   const resetToDefaults = useBimRenderSettingsStore((s) => s.resetToDefaults);
+
+  // ADR-375 — «DXF Σχέδιο» import row (Revit «Imported Categories»).
+  const dxfImport = useBimRenderSettingsStore((s) => s.dxfImport);
+  const setDxfImportVisibility = useBimRenderSettingsStore((s) => s.setDxfImportVisibility);
+  const setDxfImportColor = useBimRenderSettingsStore((s) => s.setDxfImportColor);
+  const setDxfImportLineweight = useBimRenderSettingsStore((s) => s.setDxfImportLineweight);
 
   const handlePen = useCallback(
     (cat: BimCategory, key: 'projectionPen' | 'cutPen', pen: number) => {
@@ -95,6 +104,22 @@ export const VisibilityGraphicsPanel: React.FC = () => {
   const hiddenCount = BIM_CATEGORIES.filter(
     (cat) => objectStyles[cat].visible === false,
   ).length;
+
+  // Filter categories by typed text (accent-insensitive, matches translated label).
+  const filteredCategories = useMemo<readonly BimCategory[]>(() => {
+    const query = normalizeForSearch(filter.trim());
+    if (!query) return BIM_CATEGORIES;
+    return BIM_CATEGORIES.filter((cat) =>
+      normalizeForSearch(t(`ribbon.commands.objectStyles.categories.${cat}`)).includes(query),
+    );
+  }, [filter, t]);
+
+  // ADR-375 — the «DXF Σχέδιο» master row shows unless the active filter excludes it.
+  const dxfRowMatchesFilter = useMemo(() => {
+    const query = normalizeForSearch(filter.trim());
+    if (!query) return true;
+    return normalizeForSearch(t('ribbon.commands.visibilityGraphics.dxfImportRow')).includes(query);
+  }, [filter, t]);
 
   return (
     <span className="dxf-ribbon-combobox-row">
@@ -136,6 +161,18 @@ export const VisibilityGraphicsPanel: React.FC = () => {
             icon={hiddenCount > 0 ? <EyeOff /> : <Eye />}
           />
           <FloatingPanel.Content className={`max-h-[70vh] overflow-y-auto ${colors.text.secondary}`}>
+            {/* Filter field — πληκτρολόγησε κείμενο για να στενέψεις τη λίστα κατηγοριών */}
+            <div className="relative mb-2">
+              <Search className={`pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 ${colors.text.muted}`} />
+              <Input
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                placeholder={t('ribbon.commands.visibilityGraphics.filterPlaceholder')}
+                aria-label={t('ribbon.commands.visibilityGraphics.filterAriaLabel')}
+                className="h-8 pl-7"
+              />
+            </div>
+
             {/* Header row */}
             <div
               className={`grid gap-x-2 gap-y-0.5 items-center ${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} font-medium mb-1`}
@@ -156,8 +193,56 @@ export const VisibilityGraphicsPanel: React.FC = () => {
               <span className="text-center">{t('ribbon.commands.visibilityGraphics.cutPattern')}</span>
             </div>
 
+            {/* ADR-375 — «DXF Σχέδιο» master row (Revit «Imported Categories»): one row
+                controlling ALL raw DXF entities. Per-layer detail stays in the Layer Manager. */}
+            {dxfRowMatchesFilter && (
+              <div
+                className={`grid gap-x-2 gap-y-0.5 items-center py-0.5 mb-1 pb-1 border-b border-border ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${dxfImport.visible === false ? colors.text.muted : colors.text.secondary}`}
+                style={{ gridTemplateColumns: GRID_TEMPLATE }}
+              >
+                <span className="truncate font-semibold">
+                  {t('ribbon.commands.visibilityGraphics.dxfImportRow')}
+                </span>
+                <button
+                  onClick={() => setDxfImportVisibility(dxfImport.visible === false)}
+                  aria-label={t('ribbon.commands.visibilityGraphics.dxfImportToggle')}
+                  aria-pressed={dxfImport.visible !== false}
+                  className={`flex justify-center items-center w-6 h-6 rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS}`}
+                >
+                  {dxfImport.visible === false
+                    ? <EyeOff className="w-3.5 h-3.5 opacity-60" />
+                    : <Eye className="w-3.5 h-3.5 opacity-80" />}
+                </button>
+                <BimLineweightSelect
+                  value={dxfImport.projectionLineweightMm}
+                  onChange={setDxfImportLineweight}
+                  allowUnset
+                  disabled={dxfImport.visible === false}
+                  aria-label={t('ribbon.commands.visibilityGraphics.dxfImportWeightTitle')}
+                />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex">
+                      <UnifiedColorPicker
+                        variant="modal"
+                        value={dxfImport.projectionColor ?? '#888888'}
+                        onChange={(v) => setDxfImportColor(v || null)}
+                        disabled={dxfImport.visible === false}
+                        title={t('ribbon.commands.visibilityGraphics.dxfImportColorTitle')}
+                      />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('ribbon.commands.visibilityGraphics.dxfImportColorTitle')}</TooltipContent>
+                </Tooltip>
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
+            )}
+
             {/* Category rows */}
-            {BIM_CATEGORIES.map((cat) => {
+            {filteredCategories.map((cat) => {
               const style = objectStyles[cat];
               const isHidden = style.visible === false;
               return (
@@ -249,6 +334,12 @@ export const VisibilityGraphicsPanel: React.FC = () => {
                 </div>
               );
             })}
+
+            {filteredCategories.length === 0 && !dxfRowMatchesFilter && (
+              <p className={`py-3 text-center ${PANEL_LAYOUT.TYPOGRAPHY.SM} ${colors.text.muted}`}>
+                {t('ribbon.commands.visibilityGraphics.noResults')}
+              </p>
+            )}
 
             <button
               onClick={handleReset}

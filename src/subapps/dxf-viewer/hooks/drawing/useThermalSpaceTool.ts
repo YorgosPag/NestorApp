@@ -33,14 +33,7 @@ import {
   type SceneUnits,
 } from './thermal-space-completion';
 import { DEFAULT_THERMAL_SPACE_CEILING_HEIGHT_MM } from '../../bim/types/thermal-space-types';
-import {
-  pickRegionPerimeterAt,
-  isPerimeterOversized,
-  perimeterExtentMm,
-  findOpenChainLineIdsNear,
-} from '../../bim/walls/perimeter-from-faces';
-import { mmToSceneUnits } from '../../utils/scene-units';
-import { EventBus } from '../../systems/events/EventBus';
+import { pickValidatedRegionForClick } from '../../bim/walls/pick-region-for-tool';
 
 // ─── State machine types ─────────────────────────────────────────────────────
 
@@ -134,29 +127,11 @@ export function useThermalSpaceTool(
 
       const entities = getSceneEntities?.() ?? [];
       const sceneUnits: SceneUnits = getSceneUnits?.() ?? 'mm';
-      const scale = mmToSceneUnits(sceneUnits);
 
-      // ADR-419 Layer 1 SSoT — μικρότερο εμπεριέχον loop + tol (κοινό click/hover,
-      // cached perimeters, μηδέν O(n²) recompute).
-      const { perimeter: pick, tol } = pickRegionPerimeterAt(point, entities, sceneUnits);
-      if (!pick) {
-        // Layer 5 — open-loop diagnostics (highlight unclosed lines, μην σιωπάς).
-        const openIds = findOpenChainLineIdsNear(point, entities, tol);
-        if (openIds.length === 0) return false;
-        EventBus.emit('bim:region-perimeter-rejected', { reason: 'no-closed-loop' });
-        EventBus.emit('dxf.highlightByIds', { mode: 'select', ids: openIds });
-        return true;
-      }
-      // Layer 4 — γιγάντιο περίγραμμα (εξωτερικό κτίριο) → warning, όχι garbage χώρος.
-      if (isPerimeterOversized(pick, scale)) {
-        const { width, height } = perimeterExtentMm(pick, scale);
-        EventBus.emit('bim:region-perimeter-rejected', {
-          reason: 'oversized',
-          widthM: width / 1000,
-          depthM: height / 1000,
-        });
-        return true;
-      }
+      // Κοινό SSoT με το hover + bathroom-auto-arrange: pick → open-loop diagnostics → oversized guard.
+      const outcome = pickValidatedRegionForClick(point, entities, sceneUnits);
+      if (outcome.status !== 'picked') return outcome.status === 'consumed';
+      const pick = outcome.perimeter;
 
       const ceilingHeightMm = getCeilingHeightMm?.() ?? DEFAULT_THERMAL_SPACE_CEILING_HEIGHT_MM;
       const params = buildDefaultThermalSpaceParams(

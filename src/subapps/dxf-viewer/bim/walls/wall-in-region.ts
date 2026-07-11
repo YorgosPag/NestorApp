@@ -31,7 +31,13 @@ import {
   isCircleEntity,
   isEllipseEntity,
   isSplineEntity,
+  isWallEntity,
+  isColumnEntity,
 } from '../../types/entities';
+// ADR-638 §wall-aware — δομικές παρειές ως όρια δωματίου (opt-in). Reuse των ΚΑΝΟΝΙΚΩΝ
+// footprint SSoT (μηδέν νέα γεωμετρία): τοίχος → raw∪mitered footprint, κολόνα → member footprint.
+import { wallFootprintPolygon } from '../finishes/wall-footprint-union';
+import { resolveMemberFootprintVertices } from '../structural/member-footprint-2d';
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 import { isPointInPolygon, arcToPolyline } from '../../utils/geometry/GeometryUtils';
 // Reuse των ΚΑΝΟΝΙΚΩΝ tessellators (μηδέν νέος): arc/circle → arcToPolyline (ADR-166),
@@ -86,6 +92,15 @@ export interface ExtractLineSegmentsOptions {
    * για τον wall/thermal rectangle detector που θέλει μόνο ευθείες πλευρές).
    */
   readonly tessellateCurves?: boolean;
+  /**
+   * ADR-638 §wall-aware (Giorgio 2026-07-11) — αν `true`, οι BIM δομικές οντότητες
+   * (ΤΟΙΧΟΙ + ΚΟΛΟΝΕΣ) εκθέτουν τις ΠΑΡΕΙΕΣ του footprint τους ως τμήματα, ώστε ένα
+   * δωμάτιο οριοθετημένο από BIM τοίχους/κολόνες (χωρίς DXF γραμμές) να ανιχνεύεται σαν
+   * κλειστός χώρος (Revit «room bounding»). Default `false` → πλήρης μη-regression για
+   * τα wall/column-fill εργαλεία που θέλουν ΜΟΝΟ DXF γραμμές. Δοκάρια (overhead) ΔΕΝ
+   * οριοθετούν χώρο κάτοψης → εξαιρούνται.
+   */
+  readonly structuralFootprints?: boolean;
 }
 
 /** Σπάει μια αλυσίδα δειγματισμένων σημείων σε διαδοχικά τμήματα (closed → +κλείσιμο). */
@@ -117,9 +132,23 @@ export function extractLineSegments(
   entities: readonly Entity[],
   options: ExtractLineSegmentsOptions = {},
 ): RegionLineSeg[] {
-  const { tessellateCurves = false } = options;
+  const { tessellateCurves = false, structuralFootprints = false } = options;
   const segs: RegionLineSeg[] = [];
   for (const e of entities) {
+    // ADR-638 §wall-aware — δομικές παρειές (τοίχος/κολόνα) ως όρια δωματίου (opt-in).
+    // Το footprint είναι κλειστός δακτύλιος → τα edges του γίνονται τμήματα (ίδιο
+    // `pushChainSegments` με τα καμπύλα). Έτσι ένα δωμάτιο από BIM τοίχους ανιχνεύεται.
+    if (structuralFootprints) {
+      if (isWallEntity(e)) {
+        pushChainSegments(e.id, wallFootprintPolygon({ id: e.id, kind: e.kind, params: e.params }), true, segs);
+        continue;
+      }
+      if (isColumnEntity(e)) {
+        const fp = resolveMemberFootprintVertices(e);
+        if (fp && fp.length >= 3) pushChainSegments(e.id, fp, true, segs);
+        continue;
+      }
+    }
     if (isLineEntity(e)) {
       segs.push({ id: e.id, start: projectPointTo2D(e.start), end: projectPointTo2D(e.end) });
       continue;

@@ -87,6 +87,57 @@ clearance rules, and generates several ranked candidate arrangements. That is th
   keys (`callbacks.bathroomAutoArrange`, dxf-viewer el/en). No new bridge/hook (ADR-609
   factory deliberately NOT cloned — too heavy for a one-click action).
 
+### Στάδιο 2b — Hover→click region-pick tool (DONE)
+
+Ο Giorgio ζήτησε **έλεγχο** αντί για μαντεψιά: το κουμπί έγινε **εργαλείο** (Revit
+«Place Space» pattern) — ενεργοποίηση → **hover** σε κλειστό δωμάτιο → η περιοχή
+**highlight**-άρεται → **κλικ** → τοποθέτηση στα ΕΚΕΙΝΟ το δωμάτιο. Καμία space
+detection / target-guessing πλέον (το hover-pick δίνει το polygon απευθείας).
+
+- **FULL SSoT reuse — μηδέν διπλότυπο:** το ΙΔΙΟ region-detection (`pickRegionPerimeterAt`
+  + `isPerimeterOversized` + `findOpenChainLineIdsNear`) με το thermal-space tool· το ΙΔΙΟ
+  hover-highlight store (`RegionPerimeterPreviewStore` via `singleZoneRegionPreview`, overlay
+  ήδη global-mounted).
+- `run-bathroom-auto-arrange-flow.ts` **repurposed** → reusable core
+  `arrangeBathroomForRoom(accessor, roomPolygon, entities, deps)` (door-extract → solve →
+  commit → notify). Το παλιό selection-based `runBathroomAutoArrangeFlow` **αφαιρέθηκε**
+  (το κουμπί έγινε tool, όχι action).
+- **NEW** `hooks/drawing/useBathroomAutoArrangeTool.ts` — FSM idle/awaiting (continuous),
+  mirror `useThermalSpaceTool`· `onCanvasClick` (WORLDPOINT) = pick + guards → core.
+  Notifications/`t` self-contained (`useNotifications` + `useTranslation('dxf-viewer')`).
+- **NEW** `hooks/canvas/useBathroomAutoArrangeMouseMove.ts` — throttled 50ms hover producer
+  (mirror `useRegionPerimeterMouseMove`): refs (ADR-040, μηδέν orchestrator subscription),
+  sig-dedup, module guard. Στο transition προς region-tool (τοίχος/κολόνα) ΔΕΝ σβήνει το
+  store (το κατέχει ο region hook) → μηδέν flicker.
+- **ADR-462 units:** ΟΛΟ το pipeline (pick + adapter + commit) τρέχει σε `'mm'` (canonical mm
+  scene)· το `resolveSceneUnits` (display unit) θα έσπαγε tolerance & frame.
+- Wiring (wide, 10 αρχεία): ribbon `actionBtn`→`toolBtn('…','bathroom-auto-arrange')` +
+  tool-lifecycle (`useSpecialTools-area-tools`) + click dispatch (`canvas-click-bim-dispatch`,
+  priority 4.7e-bis) + mousemove chain (`useCanvasSectionUI`) + thread handle
+  (`useSpecialTools` / `useCanvasClickHandler` / `canvas-click-types` / `CanvasSection`) +
+  αφαίρεση του action block (`dxf-special-actions`) + status key (`tools.bathroomAutoArrange.statusPick`).
+
+### Στάδιο 2b.1 — Wall-aware region detection (fix, DONE)
+
+**Πρόβλημα (Giorgio 2026-07-11):** το εργαλείο (και το thermal-space + `detectSpaces`)
+αναγνώριζε ΜΟΝΟ δωμάτια από DXF γραμμές — **ΟΧΙ** από BIM τοίχους/κολόνες. Ρίζα: όλη η
+αλυσίδα (`pickRegionPerimeterAt`→`getCachedRegionPerimeters`→**`extractLineSegments`**)
+μετέτρεπε σε ακμές μόνο LINE/POLYLINE/SpaceSeparator· οι τοίχοι (centerline+πάχος) αγνοούνταν.
+Προϋπήρχε σε ΟΛΟ το ADR-638 (και στο instant-action). Δεν είναι Revit-grade.
+
+**Fix (opt-in, μηδέν ρίσκο):** νέο flag `structuralFootprints` (default **false**) που εκθέτει
+τις **παρειές του footprint** τοίχων + κολόνων ως τμήματα (Revit «room bounding»). Δοκάρια
+(overhead) εξαιρούνται. FULL SSoT reuse: `wallFootprintPolygon` (`finishes/wall-footprint-union`)
++ `resolveMemberFootprintVertices` (`structural/member-footprint-2d`) — μηδέν νέα γεωμετρία.
+
+- Threading: `extractLineSegments` (options) → `extractClosedPolygons` → `perimeterFacesToRects`
+  → `getCachedRegionPerimeters` (+cache key +content signature) → `pickRegionPerimeterAt`.
+- Ενεργό (true) σε: **bathroom** tool+hover, **thermal-space** tool, **`detectSpaces`** (όλη η
+  αναγνώριση χώρων). Τα wall-fill/column-from-perimeter εργαλεία μένουν default false (line-only)
+  → **πλήρης μη-regression** (77/77 υπάρχοντα jest πράσινα).
+- **ADR-462 units:** ο bathroom detection τρέχει σε `'mm'` (canonical mm)· το wall-aware flag
+  είναι ορθογώνιο στις μονάδες.
+
 ### Στάδιο 3+ — pending (not in this commit)
 
 - **Στάδιο 3** — solutions-preview UI: cycle A/B/C candidates as WYSIWYG placement
@@ -128,6 +179,18 @@ clearance rules, and generates several ranked candidate arrangements. That is th
 - **Στάδιο 2 edits:** `ui/ribbon/data/systems-discipline-tabs.ts`,
   `app/dxf-special-actions.ts`, `src/i18n/locales/{el,en}/dxf-viewer-shell.json`,
   `src/i18n/locales/{el,en}/dxf-viewer.json`
+- **Στάδιο 2b new:** `hooks/drawing/useBathroomAutoArrangeTool.ts`,
+  `hooks/canvas/useBathroomAutoArrangeMouseMove.ts` (+ `run-bathroom-auto-arrange-flow.ts`
+  repurposed → `arrangeBathroomForRoom`)
+- **Στάδιο 2b edits:** `hooks/tools/useSpecialTools-area-tools.ts`, `hooks/tools/useSpecialTools.ts`,
+  `hooks/canvas/canvas-click-types.ts`, `hooks/canvas/useCanvasClickHandler.ts`,
+  `hooks/canvas/canvas-click-bim-dispatch.ts`, `components/dxf-layout/CanvasSection.tsx`,
+  `hooks/canvas/useCanvasSectionUI.ts`, `ui/ribbon/data/systems-discipline-tabs.ts`,
+  `app/dxf-special-actions.ts`, `src/i18n/locales/{el,en}/dxf-viewer-shell.json`
+- **Στάδιο 2b.1 wall-aware edits:** `bim/walls/wall-in-region.ts` (`extractLineSegments`
+  `structuralFootprints`), `bim/walls/perimeter-from-faces.ts` (thread + cache),
+  `systems/recognition/space-detection.ts`, `hooks/drawing/useBathroomAutoArrangeTool.ts`,
+  `hooks/canvas/useBathroomAutoArrangeMouseMove.ts`, `hooks/drawing/useThermalSpaceTool.ts`
 
 ## Tests
 
@@ -137,7 +200,13 @@ clearance rules, and generates several ranked candidate arrangements. That is th
   unplaced-warning.
 - `__tests__/bathroom-layout-commit.test.ts` — 8 tests (Στάδιο 2): solution→mep-fixture
   entities, vanity skip, mm→scene unit bridge, commit no-op without a level, scene→mm
-  polygon, door keep-clear derivation. Total 21/21 green.
+  polygon, door keep-clear derivation.
+- `__tests__/bathroom-auto-arrange-flow.test.ts` — 4 tests (Στάδιο 2b): `arrangeBathroomForRoom`
+  success+toast, no-fit warning (tiny room), door keep-clear integration, success-count
+  interpolation.
+- `bim/walls/__tests__/region-structural-footprints.test.ts` — 5 tests (Στάδιο 2b.1 wall-aware):
+  extractLineSegments off/on, wall-only room NOT detected without flag / detected with flag
+  (contains centre), `detectSpaces` wall-aware. Total **30/30 (feature) + 77/77 (regression) green**.
 
 ## Changelog
 
@@ -148,3 +217,15 @@ clearance rules, and generates several ranked candidate arrangements. That is th
   (Ύδρευση tab) + pure commit-builder (solution → undoable `mep-fixture` batch) + recognition
   adapter (scene→mm + door keep-clear from openings). 4 edits + 3 new files, no new
   bridge/hook. 21/21 jest green, jscpd clean, 4 locale JSONs valid.
+- **2026-07-11 (Opus 4.8)** — Στάδιο 2b: instant-action → **hover→click region-pick tool**
+  (Revit «Place Space»). FULL SSoT reuse (`pickRegionPerimeterAt` + `RegionPerimeterPreviewStore`,
+  ίδια με thermal-space)· `run-bathroom-auto-arrange-flow` repurposed → reusable core
+  `arrangeBathroomForRoom` (παλιό selection-flow αφαιρέθηκε). 2 new hooks (tool + throttled
+  hover, ADR-040-safe refs, μηδέν flicker vs region hook) + 8 wiring edits. Units σε `'mm'`
+  σε όλο το pipeline (ADR-462). **25/25 jest green** (+4 flow tests), jscpd clean.
+- **2026-07-11 (Opus 4.8)** — Στάδιο 2b.1 **wall-aware region detection** (Giorgio: δεν έπιανε
+  δωμάτια από BIM τοίχους, μόνο DXF). Opt-in `structuralFootprints` flag (default false) σε όλη
+  την αλυσίδα `extractLineSegments`→…→`pickRegionPerimeterAt` — εκθέτει τις παρειές footprint
+  τοίχων+κολόνων (reuse `wallFootprintPolygon`/`resolveMemberFootprintVertices`, μηδέν νέα
+  γεωμετρία). Ενεργό σε bathroom+thermal-space+`detectSpaces`· wall-fill μένει line-only.
+  +5 tests αποδεικνύουν off→0/on→room. **77/77 regression green**, jscpd clean.

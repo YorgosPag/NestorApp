@@ -12,6 +12,7 @@ import { useTextDoubleClickEditor } from '../../ui/text-toolbar/hooks/useTextDou
 import { useOpeningInfoTagDoubleClick } from './use-opening-info-tag-double-click';
 import { useAutoAreaMouseMove } from './useAutoAreaMouseMove';
 import { useRegionPerimeterMouseMove } from './useRegionPerimeterMouseMove';
+import { useBathroomAutoArrangeMouseMove } from './useBathroomAutoArrangeMouseMove';
 import { QuickPropertiesMiniPanelStore } from '../../systems/properties/QuickPropertiesMiniPanelStore';
 import { PropertiesPaletteStore } from '../../systems/properties/PropertiesPaletteStore';
 // ADR-575 §enter-group — double-click a selected GROUP to step INTO it (Revit «Edit
@@ -77,5 +78,9 @@ export function useCanvasSectionUI({
   const { handleMouseMoveWithAutoArea } = useAutoAreaMouseMove({ handleMouseMove, activeTool, levelManager, currentOverlays, transformScale });
   // ADR-419 Layer 3 — αλυσίδωση: region/perimeter hover preview πάνω από το auto-area.
   const { handleMouseMoveWithRegionPreview } = useRegionPerimeterMouseMove({ handleMouseMove: handleMouseMoveWithAutoArea, activeTool, levelManager });
-  return { textEditor, handleDoubleClick, handleMouseMoveWithAutoArea: handleMouseMoveWithRegionPreview };
+  // ADR-638 Στάδιο 2b — αλυσίδωση: bathroom auto-arrange hover highlight πάνω από το
+  // region preview (τρέχει ΤΕΛΕΥΤΑΙΟ → οδηγεί το ΙΔΙΟ RegionPerimeterPreviewStore όταν
+  // είναι ενεργό το εργαλείο μπάνιου· αλλιώς καθαρό passthrough).
+  const { handleMouseMoveWithBathroomPreview } = useBathroomAutoArrangeMouseMove({ handleMouseMove: handleMouseMoveWithRegionPreview, activeTool, levelManager });
+  return { textEditor, handleDoubleClick, handleMouseMoveWithAutoArea: handleMouseMoveWithBathroomPreview };
 }

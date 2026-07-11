@@ -281,6 +281,68 @@ describe('useBimRenderSettingsStore', () => {
     });
   });
 
+  describe('dxfImport (ADR-375 — «DXF Σχέδιο» V/G master row)', () => {
+    it('defaults to visible with no colour/weight override', () => {
+      act(() => useBimRenderSettingsStore.getState().loadForLevel('lvl-dxf0'));
+      const { dxfImport } = useBimRenderSettingsStore.getState();
+      expect(dxfImport.visible).toBe(true);
+      expect(dxfImport.projectionColor).toBeNull();
+      expect(dxfImport.projectionLineweightMm).toBe(0);
+    });
+
+    it('sets and clears the lineweight override (0 = unset)', () => {
+      act(() => useBimRenderSettingsStore.getState().setDxfImportLineweight(0.35));
+      expect(useBimRenderSettingsStore.getState().dxfImport.projectionLineweightMm).toBe(0.35);
+      act(() => useBimRenderSettingsStore.getState().setDxfImportLineweight(0));
+      expect(useBimRenderSettingsStore.getState().dxfImport.projectionLineweightMm).toBe(0);
+    });
+
+    it('toggles visibility off and back on', () => {
+      act(() => useBimRenderSettingsStore.getState().setDxfImportVisibility(false));
+      expect(useBimRenderSettingsStore.getState().dxfImport.visible).toBe(false);
+      act(() => useBimRenderSettingsStore.getState().setDxfImportVisibility(true));
+      expect(useBimRenderSettingsStore.getState().dxfImport.visible).toBe(true);
+    });
+
+    it('sets and clears the projection-colour override', () => {
+      act(() => useBimRenderSettingsStore.getState().setDxfImportColor('#ff0000'));
+      expect(useBimRenderSettingsStore.getState().dxfImport.projectionColor).toBe('#ff0000');
+      act(() => useBimRenderSettingsStore.getState().setDxfImportColor(null));
+      expect(useBimRenderSettingsStore.getState().dxfImport.projectionColor).toBeNull();
+    });
+
+    it('is idempotent — setting the current value bumps no mutation timestamp', () => {
+      act(() => useBimRenderSettingsStore.getState().loadForLevel('lvl-dxf1'));
+      const before = useBimRenderSettingsStore.getState().lastLocalMutationAt;
+      act(() => useBimRenderSettingsStore.getState().setDxfImportVisibility(true)); // already visible
+      expect(useBimRenderSettingsStore.getState().lastLocalMutationAt).toBe(before);
+    });
+
+    it('loadForLevel rehydrates a persisted DXF import override', () => {
+      act(() => {
+        useBimRenderSettingsStore.getState().loadForLevel('lvl-dxf2', {
+          drawingScale: 100,
+          dxfImport: { visible: false, projectionColor: '#00ff00' },
+        });
+      });
+      const { dxfImport } = useBimRenderSettingsStore.getState();
+      expect(dxfImport.visible).toBe(false);
+      expect(dxfImport.projectionColor).toBe('#00ff00');
+    });
+
+    it('loadForLevel with a partial DXF import merges defaults (legacy views)', () => {
+      act(() => {
+        useBimRenderSettingsStore.getState().loadForLevel('lvl-dxf3', {
+          drawingScale: 100,
+          dxfImport: { visible: false },
+        });
+      });
+      const { dxfImport } = useBimRenderSettingsStore.getState();
+      expect(dxfImport.visible).toBe(false);
+      expect(dxfImport.projectionColor).toBeNull();
+    });
+  });
+
   describe('getState() non-React access (renderer pattern)', () => {
     it('objectStyles accessible outside React', () => {
       const styles = useBimRenderSettingsStore.getState().objectStyles;

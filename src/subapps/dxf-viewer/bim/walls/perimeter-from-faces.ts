@@ -41,6 +41,8 @@ import {
   isRectangleEntity,
   isRectEntity,
   isSpaceSeparatorEntity,
+  isWallEntity,
+  isColumnEntity,
 } from '../../types/entities';
 import { rectangleCorners } from './wall-from-entity';
 import {
@@ -190,6 +192,7 @@ export function extractClosedPolygons(
   entities: readonly Entity[],
   tol: number,
   mergeTol: number = tol,
+  structuralFootprints: boolean = false,
 ): Point2D[][] {
   const polygons: Point2D[][] = [];
   const seen = new Set<string>();
@@ -210,7 +213,7 @@ export function extractClosedPolygons(
     else looseEntities.push(e);
   }
 
-  const segs = extractLineSegments(looseEntities);
+  const segs = extractLineSegments(looseEntities, { structuralFootprints });
   // Planar face traversal — μεμονωμένα ορθογώνια, κλειστά L/U/πολύγωνα, ΚΑΙ
   // εφαπτόμενα σχήματα με κοινή κορυφή (junctions βαθμού >2) ως loose lines.
   // ADR-419 §region-tolerance: node-merge (`mergeTol`) ΔΙΑΧΩΡΙΣΜΕΝΟ από gap-closure
@@ -270,7 +273,7 @@ function unionTouchingPolygons(
 export function perimeterFacesToRects(
   entities: readonly Entity[],
   tol: number,
-  options?: { readonly unionTouching?: boolean; readonly mergeTol?: number },
+  options?: { readonly unionTouching?: boolean; readonly mergeTol?: number; readonly structuralFootprints?: boolean },
 ): PerimeterFacesResult {
   // ADR-419 §planar-faces: ο planar detector πιάνει ΗΔΗ τα εφαπτόμενα σχήματα με
   // κοινή κορυφή (junctions)· το union (column path) απλώς τα ραφράζει σε ΕΝΑ Γ/Τ/Π.
@@ -282,7 +285,7 @@ export function perimeterFacesToRects(
   // degenerate ή οι κορυφές της dedup-άρονται → το μικρό feature χάνει τα σκέλη του.
   // Default `feat = tol` → μηδέν αλλαγή για callers με single tol (π.χ. tests).
   const feat = options?.mergeTol ?? tol;
-  const closed = extractClosedPolygons(entities, tol, feat);
+  const closed = extractClosedPolygons(entities, tol, feat, options?.structuralFootprints ?? false);
   const polys = options?.unionTouching ? unionTouchingPolygons(closed) : closed;
   const perimeters: ClosedPerimeter[] = [];
   let ignoredCount = 0;
@@ -348,7 +351,7 @@ let _lastTolKey = '';
 let _lastRegionPerimeters: readonly ClosedPerimeter[] = [];
 
 /** Φθηνή (O(n)) υπογραφή ΜΟΝΟ των γραμμών — αλλάζει μόνο όταν αλλάζουν οι παρειές. */
-function regionLineSignature(entities: readonly Entity[]): string {
+function regionLineSignature(entities: readonly Entity[], structuralFootprints: boolean): string {
   let lines = 0;
   let polys = 0;
   let verts = 0;
@@ -356,14 +359,18 @@ function regionLineSignature(entities: readonly Entity[]): string {
   // ΧΩΡΙΣ μέτρησή τους εδώ, η προσθήκη/διαγραφή διαχωριστή ΔΕΝ σπάει το content-fallback
   // cache (ίδια υπογραφή πριν/μετά) → ο διαχωριστής γίνεται αόρατος στον detector.
   let seps = 0;
+  // ADR-638 §wall-aware — όταν οι δομικές παρειές συμμετέχουν, η προσθήκη/μετακίνηση
+  // τοίχου/κολόνας ΠΡΕΠΕΙ να σπάει το content-cache (αλλιώς νέος τοίχος = αόρατος στον detector).
+  let struct = 0;
   for (const e of entities) {
     if (isLineEntity(e)) lines++;
     else if (isPolylineEntity(e) || isLWPolylineEntity(e)) {
       polys++;
       verts += e.vertices?.length ?? 0;
     } else if (isSpaceSeparatorEntity(e)) seps++;
+    else if (structuralFootprints && (isWallEntity(e) || isColumnEntity(e))) struct++;
   }
-  return `${lines}:${polys}:${verts}:${seps}`;
+  return `${lines}:${polys}:${verts}:${seps}:${struct}`;
 }
 
 /**
@@ -375,10 +382,12 @@ export function getCachedRegionPerimeters(
   entities: readonly Entity[],
   tol: number,
   mergeTol: number = tol,
+  structuralFootprints: boolean = false,
 ): readonly ClosedPerimeter[] {
   // αποφυγή cache-miss σε sub-pixel float drift· ΚΑΙ οι δύο ανοχές στο κλειδί (ADR-419
-  // §region-tolerance — node-merge + gap-closure διαχωρισμένα).
-  const key = `${Math.round(tol * 1000)}:${Math.round(mergeTol * 1000)}`;
+  // §region-tolerance — node-merge + gap-closure διαχωρισμένα). ADR-638 — το wall-aware
+  // flag ΜΕΡΟΣ του κλειδιού (αλλιώς line-only & wall-aware μοιράζονταν λάθος cache entry).
+  const key = `${Math.round(tol * 1000)}:${Math.round(mergeTol * 1000)}:${structuralFootprints ? 'S' : ''}`;
   let byTol = _regionPerimeterCache.get(entities);
   if (byTol) {
     const cached = byTol.get(key);
@@ -387,11 +396,11 @@ export function getCachedRegionPerimeters(
     byTol = new Map();
     _regionPerimeterCache.set(entities, byTol);
   }
-  const sig = regionLineSignature(entities);
+  const sig = regionLineSignature(entities, structuralFootprints);
   const result =
     sig === _lastLineSig && key === _lastTolKey
       ? _lastRegionPerimeters
-      : perimeterFacesToRects(entities, tol, { mergeTol }).perimeters;
+      : perimeterFacesToRects(entities, tol, { mergeTol, structuralFootprints }).perimeters;
   _lastLineSig = sig;
   _lastTolKey = key;
   _lastRegionPerimeters = result;
@@ -420,15 +429,18 @@ export function pickRegionPerimeterAt(
   point: Readonly<Point2D>,
   entities: readonly Entity[],
   sceneUnits: SceneUnits,
+  structuralFootprints: boolean = false,
 ): RegionPerimeterPick {
   // ADR-419 §region-tolerance: node-merge (`mergeTol`, capped) ΔΙΑΧΩΡΙΣΜΕΝΟ από το
   // gap-closure (`gapTol`, 50mm floor) ώστε μικρά κλειστά features να μην καταρρέουν.
   // Επιστρέφουμε το `gapTol` ως `tol` — αυτό τροφοδοτεί τα open-chain diagnostics
   // (`findOpenChain*Near` reach) που θέλουν τη γενναιόδωρη ανοχή.
+  // ADR-638 §wall-aware — `structuralFootprints` περνά διαφανώς στον cached detector:
+  // οι BIM τοίχοι/κολόνες γίνονται όρια δωματίου (opt-in· default false = line-only).
   const { mergeTol, gapTol } = resolveRegionLoopTolerances(sceneUnits);
   const perimeter = pickSmallestContainingPerimeter(
     point,
-    getCachedRegionPerimeters(entities, gapTol, mergeTol),
+    getCachedRegionPerimeters(entities, gapTol, mergeTol, structuralFootprints),
   );
   return { perimeter, tol: gapTol };
 }
