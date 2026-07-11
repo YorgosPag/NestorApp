@@ -2232,6 +2232,10 @@
           "label": "Auto Water Supply",
           "tooltip": "Auto-design the domestic water network (cold/hot): Generate → review → accept"
         },
+        "bathroomAutoArrange": {
+          "label": "Auto-arrange Bathroom",
+          "tooltip": "Recognise the bathroom (selected or only room) and auto-place sanitary fixtures wall-hugging with use-zone clearances"
+        },
         "waterAutoGenerate": {
           "label": "Generate",
           "tooltip": "Recognize the storey + auto-design the water networks (preview)"

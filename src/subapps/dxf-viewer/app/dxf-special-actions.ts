@@ -38,6 +38,8 @@ import { usePerformanceHUDStore } from '../bim-3d/performance/PerformanceHUDStor
 import { AdminLayerManagerDialogStore } from '../stores/AdminLayerManagerDialogStore';
 // ADR-563 — auto-dimension command flow (dialog → engine → batch commit)
 import { runAutoDimensionFlow } from '../systems/dimensions/auto/run-auto-dimension-flow';
+// ADR-638 — bathroom auto-arrange flow (detect room → solve → commit fixtures)
+import { runBathroomAutoArrangeFlow } from '../systems/bathroom-layout/run-bathroom-auto-arrange-flow';
 // ADR-362 §7 — «Ιδιότητες…»: open the F11/Ctrl+1 Full Properties Palette (self-follows selection).
 import { PropertiesPaletteStore } from '../systems/properties/PropertiesPaletteStore';
 
@@ -114,6 +116,12 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
   // levelManager satisfies SceneAppendAccessor (scene read + undoable batch commit).
   if (action === 'auto-dimension') {
     void runAutoDimensionFlow(levelManager, selectedEntityIds);
+    return true;
+  }
+  // ADR-638: «Αυτόματη Διαρρύθμιση Μπάνιου» — detect the selected/only bathroom room,
+  // solve a wall-hugging fixture layout, commit the best as one undoable batch.
+  if (action === 'bathroom.actions.autoArrange') {
+    runBathroomAutoArrangeFlow(levelManager, selectedEntityIds, { notifications, t });
     return true;
   }
   // ADR-396 P6: Open Thermal Envelope (ETICS) authoring dialog (ThermalEnvelopeHost listens)

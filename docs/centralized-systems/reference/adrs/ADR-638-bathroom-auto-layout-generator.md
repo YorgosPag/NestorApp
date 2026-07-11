@@ -1,6 +1,6 @@
 # ADR-638 — Bathroom Auto-Layout Generator (generative space planning)
 
-**Status:** Accepted (Στάδιο 0 + Στάδιο 1 implemented — headless solver)
+**Status:** Accepted (Στάδιο 0 + 1 + 2 implemented — headless solver + live ribbon command)
 **Date:** 2026-07-11
 **Domain:** dxf-viewer / systems (space planning)
 **Related:** ADR-425 (Stage-0 semantic recognition — `RecognizedSpace`/bathroom classification, the room INPUT), ADR-406/408 (`mep-fixture` sanitary terminals — the placement OUTPUT), ADR-567 (structural-placement-overlap — the collision pattern reused), ADR-426/427 (water-supply / drainage auto-design — consume the placed fixtures downstream), ADR-419 (perimeter engine — room polygon)
@@ -67,11 +67,28 @@ clearance rules, and generates several ranked candidate arrangements. That is th
   open), **tidiness** (fewer walls / aligned runs). `score = completeness × Σ w·axis`.
 - `index.ts` — public barrel.
 
-### Στάδιο 2+ — pending (not in this commit)
+### Στάδιο 2 — Live ribbon command + scene commit (DONE)
 
-- **Στάδιο 2** — commit path: chosen `BathroomLayoutSolution` → `buildMepFixtureEntity`
-  per placement → `appendEntitiesToScene` (one undoable batch); ribbon action
-  «Auto-διαρρύθμιση μπάνιου» wired to a selected/recognised bathroom space.
+- `bathroom-fixture-commit.ts` — pure `buildBathroomFixtureEntities(solution, ctx)`:
+  each placement → `buildDefaultMepFixtureParams` → `buildMepFixtureEntity` (dims mm,
+  centre mm→scene, rotation from the footprint's wall edge). `commitBathroomSolution`
+  wraps it in `appendEntitiesToScene` (one undoable batch). The `vanity` has no entity
+  kind yet → reported in `skipped` (N.7.2), not dropped.
+- `recognized-space-adapter.ts` — pure `recognizedSpaceToRoomInput(polygon, units, …)`:
+  scene→mm polygon (reuses `polygon2DCentroid`) + primary-door keep-clear from
+  `DoorMarker`s.
+- `run-bathroom-auto-arrange-flow.ts` — the `'bathroom.actions.autoArrange'` glue:
+  resolve units → `detectSpaces` → pick target bathroom (smallest space containing the
+  selection, else smallest room) → extract door markers from `OpeningEntity`s → solve →
+  commit best → notify. Mirrors `run-auto-dimension-flow.ts`.
+- Wiring: one `actionBtn` in the Ύδρευση tab's `water-fixtures` panel
+  (`systems-discipline-tabs.ts`); one `if` in `app/dxf-special-actions.ts`; i18n
+  label (`ribbon.commands.bim.bathroomAutoArrange`, dxf-viewer-shell el/en) + notification
+  keys (`callbacks.bathroomAutoArrange`, dxf-viewer el/en). No new bridge/hook (ADR-609
+  factory deliberately NOT cloned — too heavy for a one-click action).
+
+### Στάδιο 3+ — pending (not in this commit)
+
 - **Στάδιο 3** — solutions-preview UI: cycle A/B/C candidates as WYSIWYG placement
   ghosts (ADR-624), Accept/Next.
 - **Στάδιο 4** (optional) — after commit, run `designWaterSupply`/`designDrainage`
@@ -106,16 +123,28 @@ clearance rules, and generates several ranked candidate arrangements. That is th
 - `src/subapps/dxf-viewer/systems/bathroom-layout/bathroom-layout-scoring.ts`
 - `src/subapps/dxf-viewer/systems/bathroom-layout/bathroom-layout-solver.ts`
 - `src/subapps/dxf-viewer/systems/bathroom-layout/index.ts`
+- **Στάδιο 2:** `bathroom-fixture-commit.ts`, `recognized-space-adapter.ts`,
+  `run-bathroom-auto-arrange-flow.ts` (all under `systems/bathroom-layout/`)
+- **Στάδιο 2 edits:** `ui/ribbon/data/systems-discipline-tabs.ts`,
+  `app/dxf-special-actions.ts`, `src/i18n/locales/{el,en}/dxf-viewer-shell.json`,
+  `src/i18n/locales/{el,en}/dxf-viewer.json`
 
 ## Tests
 
-- `src/subapps/dxf-viewer/systems/bathroom-layout/__tests__/bathroom-layout-solver.test.ts`
-  — 13 tests: dims-reuse, wall segmentation (CW→CCW normalise), rect building,
-  full-fixture placement (inside-room + no collision), door keep-clear respected,
-  ranking order, determinism, 7-fixture set, degenerate room, unplaced-warning.
+- `__tests__/bathroom-layout-solver.test.ts` — 13 tests: dims-reuse, wall segmentation
+  (CW→CCW normalise), rect building, full-fixture placement (inside-room + no collision),
+  door keep-clear respected, ranking order, determinism, 7-fixture set, degenerate room,
+  unplaced-warning.
+- `__tests__/bathroom-layout-commit.test.ts` — 8 tests (Στάδιο 2): solution→mep-fixture
+  entities, vanity skip, mm→scene unit bridge, commit no-op without a level, scene→mm
+  polygon, door keep-clear derivation. Total 21/21 green.
 
 ## Changelog
 
 - **2026-07-11 (Opus 4.8)** — Στάδιο 0 + Στάδιο 1: contract + clearance SSoT + headless
   rule-based solver + four-axis ranking. 13/13 jest green. jscpd clean (no new clones).
   Number bumped 637→638 (ADR-637 claimed by stair-rest-landings mid-session).
+- **2026-07-11 (Opus 4.8)** — Στάδιο 2: live «Αυτόματη Διαρρύθμιση Μπάνιου» ribbon command
+  (Ύδρευση tab) + pure commit-builder (solution → undoable `mep-fixture` batch) + recognition
+  adapter (scene→mm + door keep-clear from openings). 4 edits + 3 new files, no new
+  bridge/hook. 21/21 jest green, jscpd clean, 4 locale JSONs valid.
