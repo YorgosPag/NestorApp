@@ -164,12 +164,21 @@ reusing the app's existing text SSoTs — **zero new serializer/escaper/alignmen
   sentinel `calculateTightBounds` returns for uncomputable scenes) → `undefined` → the writer omits the
   extents (no bogus 100×100 zoom-extents box).
 
-**Known limitation (pre-existing import defect, deferred to Φ2.4):** the basic import
-`convertMText → buildTextNodeFromFlat` stores the raw group-1 string (including raw `\P`) in a **single
-run**. Re-serialising such a node double-escapes existing inline codes (`\P` → `\\P`). This is an
-**import**-side defect (the rich `mtext-tokenizer` must feed the entity `textNode`), out of scope for an
-export phase; net result is neutral-to-better vs the old single-line TEXT (which also emitted the raw
-string). Well-formed nodes (rich toolbar / AI-created / commands) export correctly.
+**~~Known limitation~~ → RESOLVED in ADR-635 Φ4 (2026-07-11, commit `d362a0ab`).** The former defect
+— `convertMText → buildTextNodeFromFlat` storing the raw group-1 string (incl. raw `\P`) in a **single
+run**, so re-serialising double-escaped `\P` → `\\P` — is **fixed**: `convertMText` now feeds the
+ADR-344 parser SSoT (`parseMtext(tokenizeMtext(decoded), …)`) → the imported `textNode` is a real
+multi-paragraph/run AST whose runs hold **no raw codes**, so `emitMText`/`serializeDxfTextNode`
+round-trip `\P` (and `\H`/`\C`/…) cleanly. Pinned end-to-end by
+`export/core/__tests__/dxf-roundtrip-mtext.test.ts` (write → `emitMText` → re-import, no `\\P`) +
+`utils/__tests__/dxf-text-converters.test.ts`. See ADR-635 Φ4.
+
+*Residual (separate, pre-existing — NOT this note's double-escape):* an **imported** MTEXT is flattened
+to a `type:'text'` scene entity, so if it is later re-exported it takes the single-line `emitText` path
+(paragraph breaks collapse to spaces) rather than `emitMText`. Unchanged by Φ4 (the old raw-`\P` `.text`
+also failed to round-trip). Preserving MTEXT-ness on import would be a cross-cutting entity-type change —
+tracked separately, not in scope here. **Well-formed `type:'mtext'` nodes (rich toolbar / AI / commands /
+the Φ4 clean AST) export via `emitMText` correctly.**
 
 ## Tests
 - `export/core/__tests__/dxf-ascii-writer.test.ts` — HEADER emitted (order + exact group codes) when
@@ -180,6 +189,7 @@ string). Well-formed nodes (rich toolbar / AI-created / commands) export correct
   `HEADER $ACADVER=AC1021 / $INSUNITS=6 / $DWGCODEPAGE=ANSI_1252` before `ENTITIES`, Greek intact.
 
 ## Changelog
+- **2026-07-12 — Φ2.3 note cleanup (rich MTEXT double-escape RESOLVED, Opus 4.8):** UNCOMMITTED. Το «Known limitation» note (πρώην γρ.167-172) που έλεγε ότι το `convertMText → buildTextNodeFromFlat` double-escapes `\P`→`\\P` ήταν **STALE** — το ADR-635 Φ4 (commit `d362a0ab`) το είχε ήδη λύσει (rich `parseMtext(tokenizeMtext(...))` AST, runs χωρίς raw codes). Αντικαταστάθηκε με RESOLVED pointer + honest residual caveat (imported MTEXT→`type:'text'`→`emitText` single-line, χάνει paragraph breaks — pre-existing, ΟΧΙ το double-escape). Επαληθεύτηκε end-to-end με νέο `export/core/__tests__/dxf-roundtrip-mtext.test.ts` (3/3, write→emitMText→re-import). Doc-only εδώ· 0 export code αλλαγές. Δες ADR-635 Φ4.
 - **2026-07-11 — Στάδιο 1:** professional HEADER ($ACADVER Unicode-safe bump + $INSUNITS + $DWGCODEPAGE)
   in `dxf-ascii-writer` (gated) + `dxf-export-adapter` resolvers, reusing `DXF_UNIT_VALUES`. Fixes Greek
   garbling in AutoCAD 2007+ and unit ambiguity on re-import. jscpd clean.

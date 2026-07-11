@@ -219,10 +219,24 @@ every flat-first consumer needs.
   double-escape). Closes the ADR-636 Φ2.3 limitation.
 
 **Files:** `utils/dxf-text-converters.ts` (`convertMText` only — `convertText` unchanged),
-`utils/__tests__/dxf-text-converters.test.ts` (new, 7 cases).
+`utils/__tests__/dxf-text-converters.test.ts` (7 cases, serializer-level), and — **2026-07-12
+end-to-end verify** — `export/core/__tests__/dxf-roundtrip-mtext.test.ts` (3 cases: write→`emitMText`→
+re-import through the PRODUCTION `writeDxfAscii` writer, `\P` clean / inline `\H` no double-escape /
+attachment+rotation preserved). The stale ADR-636 Φ2.3 "known limitation" note was replaced with a
+RESOLVED pointer (same commit).
 
-**Verification:** `dxf-text-converters.test.ts` 7/7 + parser/tokenizer/export-writer suites 146/146
-green (round-trip `Line1\PLine2` ⇒ content `Line1\PLine2`, NOT `Line1\\PLine2`). jscpd clean.
+**Verification:** `dxf-text-converters.test.ts` 7/7 + `dxf-roundtrip-mtext.test.ts` 3/3 +
+parser/tokenizer/export-writer suites green (round-trip `Line1\PLine2` ⇒ content `Line1\PLine2`, NOT
+`Line1\\PLine2`, through the real writer). jscpd clean.
+
+**Residual (pre-existing, NOT the double-escape — out of scope, verified 2026-07-12).** An *imported*
+MTEXT is flattened to a `type:'text'` scene entity (`buildTextSceneEntity` sets `type:'text'` for every
+text kind). On re-export it therefore takes the single-line `emitText` path, whose `sanitizeText`
+collapses the flat `.text` `\n` breaks to spaces → paragraph structure is lost. This is unchanged by Φ4
+(pre-Φ4 the raw-`\P` `.text` likewise failed to round-trip: `convertText` never parsed `\P`). The proper
+MTEXT round-trip — the `emitMText`/`serializeDxfTextNode` path where the double-escape lived — is clean.
+Preserving MTEXT identity on import (keeping `type:'mtext'`) is a cross-cutting entity-type change across
+render/hit-test/snap consumers → deferred, needs its own ADR phase.
 
 **Known limitation (parser, not the converter — future phase).** The upstream parser flattens DXF
 into `Record<string,string>`, so a long MTEXT split across multiple group-3 chunks (250-char
@@ -460,6 +474,7 @@ Fixes **ΚΑΙ ΤΑ ΔΥΟ** συμπτώματα ταυτόχρονα (σωστ
 block-expansion/attrib/mm/robustness jest green· jscpd clean.
 
 ## Changelog
+- **2026-07-12 — Φ4 verify + doc-cleanup (rich MTEXT round-trip end-to-end, Opus 4.8):** UNCOMMITTED. **Audit revelation:** το Φ4 core (rich MTEXT μέσω `parseMtext(tokenizeMtext(...))`) είχε ΗΔΗ μπει (commit `d362a0ab`) — το ADR-636 Φ2.3 «known limitation» note ήταν **STALE**. Δουλειά = **verify + test + doc**, ΟΧΙ re-implement. Νέο **end-to-end** round-trip test `export/core/__tests__/dxf-roundtrip-mtext.test.ts` (3 cases) μέσω του **production `writeDxfAscii`→`emitMText`→`serializeDxfTextNode`** (όχι μόνο serializer isolated): `\P` καθαρό (ΟΧΙ `\\P`)· inline `\H` χωρίς double-escape (αποδεικνύει καθαρό AST χωρίς literal-code runs)· attachment(71)+rotation(50) round-trip. 3/3 PASS. **Stale ADR-636 note → RESOLVED pointer** (ίδιο commit). **🔴 Residual (honest, pre-existing, out-of-scope):** το *imported* MTEXT flatten-άρεται σε `type:'text'` (`buildTextSceneEntity` πάντα `type:'text'`) → re-export μέσω `emitText` single-line → `sanitizeText` collapse-άρει `\n`→space → χάνονται τα paragraph breaks. **ΟΧΙ Φ4 regression** (και πριν χανόταν: `convertText` δεν parse-άρει `\P`). Το proper `emitMText` path (όπου ζούσε το double-escape) είναι καθαρό. Preserve MTEXT identity (`type:'mtext'` στο import) = cross-cutting entity-type αλλαγή σε render/hit-test/snap → deferred, δικό του ADR phase. 1 νέο test file, 0 src αλλαγές (core ήδη εκεί). jscpd clean.
 - **2026-07-12 — Φ3.1 (parser-level skipped-warning — genuinely-unsupported entity TYPES, Opus 4.8):** UNCOMMITTED. Το Φ3 diagnostics κάλυπτε ΜΟΝΟ *recognized-but-unconvertible* types (μέσα στο `SUPPORTED_ENTITY_TYPES`, converter→null· π.χ. `SOLID`). Αλλά ένα **αληθινά μη-υποστηριζόμενο TYPE** (`REGION`/`3DSOLID`/`MESH`/`WIPEOUT`/`ACAD_TABLE`…) απορρίπτεται ένα layer νωρίτερα στο `parseEntityAt` (`{entity:null}`, ποτέ δεν μπαίνει στο `parsedEntities`) → **silent data loss ΧΩΡΙΣ warning** ακόμη και μετά το Φ3. **Fix = pure wire (reuse, ΟΧΙ νέο σύστημα):** thread του ΙΔΙΟΥ `ImportDiagnostics` collector (optional, no-op όταν απών — mirror του `dxf-block-expander` pattern) σε `parseEntities`/`parseEntityAt`/`parseBlockDefinitions`· `noteUnsupportedType()` κάνει `recordSkipped` ΜΟΝΟ για πραγματικό entity type — φιλτράρει `DXF_SECTION_MARKERS` (ENDSEC/BLOCK…) + νέο `DXF_STRUCTURAL_SUBMARKERS` (`VERTEX`/`SEQEND`, τα καταναλώνουν οι compound parsers) ώστε ένα leaked terminator να μη φτιάχνει ψεύτικο warning. Ο `dxf-scene-builder` περνά το υπάρχον `diagnostics` και στα δύο parse calls → τα counts ρέουν στο ίδιο `summarizeDiagnostics()` → `runDxfParse().warnings` → `importedWithWarnings` toast. **Μηδέν νέο UI/notification/collector.** 4 MOD (`dxf-parser-types.ts` +`DXF_STRUCTURAL_SUBMARKERS`, `dxf-entity-parser.ts`, `dxf-block-parser.ts`, `dxf-scene-builder.ts`) + 4 regression tests (`dxf-import-robustness.test.ts`: REGION/3DSOLID counted· unsupported member σε BLOCK counted· SEQEND/ENDSEC ΟΧΙ warned· no-collector back-compat), 9/9 PASS. jscpd clean (4 files).
 - **2026-07-12 — Φ C.12 (🐛 3-coord hatch boundary vertices διαβάζονταν ως 2-coord → km-scale garbage, Opus 4.8):** UNCOMMITTED. **Διάγνωση από ΠΡΑΓΜΑΤΙΚΟ DXF** (KADOS «1ος Όροφος», κατέβασμα του original 42MB .dxf + scene.json blob + Firestore): 7/117 imported hatches κατέληγαν με boundary vertices σε coords `x≈y≈8.56M` (πάνω στη διαγώνιο — center = ο μέσος όρος ενός `[0..17M]×[0..17M]` bbox), 9,6km μακριά από τον όγκο → το fit-to-view αγκάλιαζε 17km → σχέδιο = κουκκίδα. **Root cause:** στο `extractR14BoundaryPaths` (`dxf-hatch-xdata-converter.ts`), το polyline-vertex path (`1071 n` + scalars) υπέθετε **σταθερά 2 coords/vertex** (`i += 2`). ΑΛΛΑ η AutoCAD γράφει το boundary polyline **είτε** 2 (x,y) **είτε 3 (x,y,bulge)** scalars/vertex — **18/117** hatches του δείγματος ήταν 3-coord. Με stride 2, κάθε vertex ολίσθαινε κατά ένα scalar → η στήλη bulge διαβαζόταν ως το επόμενο X → spurious `(0,x)`/`(x,0)` vertices → bbox explosion. **Fix:** infer stride από το πλήθος consecutive 1040 (`count === n*3 ? 3 : 2`), διάβασε (x,y) αγνοώντας το 3ο scalar. Backward-compatible (2-coord: `count===n*2≠n*3` → stride 2, αμετάβλητο). **Επαληθευμένο στο πραγματικό DXF:** μετά το fix, 0 corrupt vertices, ΟΛΑ τα 117 hatches στο σωστό range (X 17107..17172m). 1 MOD (`dxf-hatch-xdata-converter.ts`) + 2 regression tests (3-coord stride 3 + 2-coord backward-compat), 9/9 PASS. **Υπάρχοντα δεδομένα:** τα 7 corrupted ζουν ΜΟΝΟ στο scene.json blob (ΟΧΙ σε `floorplan_hatches`) → εξαφανίζονται αυτόματα στο reload (`reconcileLoadedSceneBim` πετά snapshot hatches)· καθαρή λύση = re-import με τον διορθωμένο parser. Συμπληρωματικό: outlier-robust fit (ADR-399, 2026-07-12) κάνει το framing ανθεκτικό ακόμη και σε κακά δεδομένα. 🔴 browser-verify: re-import → 117 hatches σωστά τοποθετημένα.
 - **2026-07-12 — Φ C.11 (imported hatch στο ΛΑΘΟΣ σημείο — R12 hatch-INSERT boundary χωρίς block transform):**
