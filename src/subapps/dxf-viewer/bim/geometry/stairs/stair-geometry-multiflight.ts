@@ -24,6 +24,7 @@
 import type { Point3D } from '../../../rendering/types/Types';
 import type {
   Polygon3D,
+  RestLandingHandle,
   Segment3D,
   StairGeometry,
   StairParams,
@@ -119,7 +120,7 @@ function computeMultiFlightWithLandings(
   const { basePoint, rise, tread, nosing, width, direction, upDirection } = params;
   const perFlight = partitionRestLandingsByFlight(variant.flights, params.restLandings);
   const acc: MultiFlightAccum = {
-    treads: [], risers: [], landings: [], flightSplit: [], cutDirs: [], walkline: [],
+    treads: [], risers: [], landings: [], landingHandles: [], flightSplit: [], cutDirs: [], walkline: [],
   };
   const state: MultiFlightWalkState = {
     dirDeg: direction, u: directionToUnitVector(direction), cx: basePoint.x, cy: basePoint.y, levelBase: 0,
@@ -130,7 +131,7 @@ function computeMultiFlightWithLandings(
     if (k < variant.turns.length) appendTurn(acc, state, params, variant.turns[k], variant.flights[k]);
   }
 
-  return assembleMultiFlight(params, {
+  const geometry = assembleMultiFlight(params, {
     treads: acc.treads,
     risers: acc.risers,
     walkline: acc.walkline,
@@ -139,12 +140,18 @@ function computeMultiFlightWithLandings(
     arrowSymbol: arrowSymbol(acc.walkline[0], acc.walkline[1], upDirection),
     landings: acc.landings,
   });
+  // ADR-637 Phase 4-A — per-landing grip handles across all flights (each in its
+  // own flight's world travel dir). Absent when no flight carries a rest landing.
+  return acc.landingHandles.length > 0
+    ? { ...geometry, restLandingHandles: acc.landingHandles }
+    : geometry;
 }
 
 interface MultiFlightAccum {
   treads: Polygon3D[];
   risers: Segment3D[];
   landings: Polygon3D[];
+  landingHandles: RestLandingHandle[];
   flightSplit: number[];
   cutDirs: Vec2[];
   walkline: Point3D[];
@@ -181,6 +188,7 @@ function appendFlightRun(
   acc.treads.push(...run.treads);
   acc.risers.push(...run.risers);
   acc.landings.push(...run.landings);
+  acc.landingHandles.push(...run.landingHandles);
   acc.flightSplit.push(...run.flightSplit);
   acc.cutDirs.push(...run.cutDirs);
   // First flight includes its origin vertex; later flights' origin == the prior

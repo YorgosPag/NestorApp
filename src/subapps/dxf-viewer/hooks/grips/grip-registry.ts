@@ -61,6 +61,8 @@ export function wrapDxfGrip(grip: GripInfo): UnifiedGripInfo {
     // (GripInfo→UnifiedGripInfo). The 31 legacy `xxxGripKind` forwards were deleted;
     // every consumer now reads via `gripKindOf(g, '<entity.type>')`.
     ...(grip.gripKind ? { gripKind: grip.gripKind } : {}),
+    // ADR-637 Phase 4-A — forward the rest-landing target id (stair-rest-landing-* grips).
+    ...(grip.landingId ? { landingId: grip.landingId } : {}),
   };
 }
 

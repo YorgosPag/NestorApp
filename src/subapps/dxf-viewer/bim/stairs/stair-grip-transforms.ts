@@ -19,7 +19,11 @@
 
 import type { Point2D, Point3D } from '../../rendering/types/Types';
 import type { StairGripKind } from '../../hooks/useGripMovement';
-import type { StairGeometry, StairParams, StairVariantParams } from '../../bim/types/stair-types';
+import type {
+  StairGeometry,
+  StairParams,
+  StairVariantParams,
+} from '../../bim/types/stair-types';
 import { mmFactorFromWidth } from './stair-floor-link';
 import {
   RAD_TO_DEG,
@@ -45,6 +49,9 @@ import { applyRectStairGrip } from './stair-rect-adapter';
 // `rotateAxisPointsAboutPivot` (swept angle + canonical rotatePoint), the SAME
 // primitive the wall/beam/column rotation grips use. No re-implemented cos/sin.
 import { rotateAxisPointsAboutPivot } from '../grips/grip-math';
+// ADR-637 Phase 4-A — intermediate rest-landing (πλατύσκαλο) transforms live in their
+// own SRP module (N.7.1); the dispatcher below delegates to them.
+import { slideRestLanding, resizeRestLandingLength } from './stair-grip-rest-landing';
 
 export interface StairGripDragInput {
   /** Original params at drag start (preserves invariants when needed). */
@@ -68,6 +75,12 @@ export interface StairGripDragInput {
    * spin about the front-edge centre, `direction` only).
    */
   readonly pivot?: Point2D;
+  /**
+   * ADR-637 Phase 4-A — target rest-landing id for the `stair-rest-landing-*`
+   * grips. The slide / length transforms patch the matching `restLandings[i]` by
+   * this id; ignored by every other grip kind.
+   */
+  readonly landingId?: string;
 }
 
 /**
@@ -115,6 +128,12 @@ export function applyStairGripDrag(
       return resizeLandingDepth(input);
     case 'stair-landing-corner-radius':
       return resizeLandingCornerRadius(input);
+    // ADR-637 Phase 4-A — intermediate rest-landing (πλατύσκαλο) grips.
+    case 'stair-rest-landing-slide':
+      return slideRestLanding(input);
+    case 'stair-rest-landing-length-lo':
+    case 'stair-rest-landing-length-hi':
+      return resizeRestLandingLength(input);
     default: {
       const _exhaustive: never = gripKind;
       return input.originalParams;

@@ -31,6 +31,13 @@ export interface GripInfo {
    * `gripKindOf(grip, '<entity.type>')`.
    */
   gripKind?: EntityGripKind;
+  /**
+   * ADR-637 Phase 4-A — target rest-landing id for the `stair-rest-landing-*`
+   * grips. A stair run can carry several rest landings, so the grip needs to say
+   * WHICH landing it edits; the pure transform (`applyStairGripDrag`) patches
+   * `restLandings` by matching this id. Absent for every non-rest-landing grip.
+   */
+  landingId?: string;
 }
 
 /** Grip drag state */

@@ -89,6 +89,7 @@ export function getStairGrips(entity: Readonly<StairEntity>): GripInfo[] {
   if (params.variant.kind === 'straight') {
     const grips: GripInfo[] = [];
     pushStraightGrips(grips, entity);
+    pushRestLandingGrips(grips, entity);
     return grips;
   }
 
@@ -143,6 +144,10 @@ export function getStairGrips(entity: Readonly<StairEntity>): GripInfo[] {
     // no rectangular footprint → keep the on-axis width + length handles.
     pushAxisWidthLength(grips, entity, { base, u, p });
   }
+
+  // ADR-637 Phase 4-A — rest-landing grips for any non-straight kind that carries
+  // them (multi-flight / v-shape; L/U/Γ emit none until the edge-origin follow-up).
+  pushRestLandingGrips(grips, entity);
 
   // ADR-363 Φ1G.5 Slice 2 — drop the central MOVE marker (`stair-base`) from the
   // non-straight output (declutter; Alt+drag from any grip translates the stair). The
@@ -438,6 +443,41 @@ function pushLandingGrips(
       movesEntity: false,
       gripKind: { on: 'stair', kind: 'stair-landing-corner-radius' },
     });
+  }
+}
+
+// ─── ADR-637 Phase 4-A — intermediate rest-landing (πλατύσκαλο) grips ─────────
+
+/**
+ * Emit the draggable + resizable grips for every intermediate rest landing the
+ * geometry produced. Positions come straight from `geometry.restLandingHandles`
+ * (the SSoT computed in the same cursor walk as the landing quad), so a grip can
+ * never disagree with what's drawn. Per handle:
+ *   - one SLIDE grip at the landing centroid (`stair-rest-landing-slide`);
+ *   - two LENGTH grips at `center ± along·(length/2)` (`…-length-lo` / `…-length-hi`).
+ * Each grip carries `landingId` so the pure transform edits the right landing when
+ * a run has several. Absent handles (no rest landings) → no grips (back-compat).
+ */
+function pushRestLandingGrips(grips: GripInfo[], entity: Readonly<StairEntity>): void {
+  const handles = entity.geometry.restLandingHandles;
+  if (!handles || handles.length === 0) return;
+  for (const h of handles) {
+    const c = project2D(h.center);
+    const halfLen = h.length / 2;
+    const emit = (pos: Point2D, kind: StairGripKind): void => {
+      grips.push({
+        entityId: entity.id,
+        gripIndex: grips.length,
+        type: 'vertex',
+        position: pos,
+        movesEntity: false,
+        gripKind: { on: 'stair', kind },
+        landingId: h.id,
+      });
+    };
+    emit(c, 'stair-rest-landing-slide');
+    emit({ x: c.x - h.along.x * halfLen, y: c.y - h.along.y * halfLen }, 'stair-rest-landing-length-lo');
+    emit({ x: c.x + h.along.x * halfLen, y: c.y + h.along.y * halfLen }, 'stair-rest-landing-length-hi');
   }
 }
 

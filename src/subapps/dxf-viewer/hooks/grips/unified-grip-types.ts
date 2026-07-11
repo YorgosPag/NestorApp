@@ -150,6 +150,13 @@ export interface UnifiedGripInfo {
    */
   readonly gripKind?: EntityGripKind;
   /**
+   * ADR-637 Phase 4-A — target rest-landing id for the `stair-rest-landing-*`
+   * grips (forwarded from `GripInfo.landingId` in `wrapDxfGrip`). Lets
+   * `commitStairGripDrag` tell the pure transform WHICH landing to edit when a run
+   * carries several. Absent for every non-rest-landing grip.
+   */
+  readonly landingId?: string;
+  /**
    * ADR-397 Φ2 (Giorgio 2026-06-17) — the owning entity's local frame (world unit
    * axes) for MOVE-glyph grips, from `resolveMoveGlyphFrame`. Attached in
    * `useGripRegistry` (which has the entity). Lets the directional move-by-value

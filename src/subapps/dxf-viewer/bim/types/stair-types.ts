@@ -546,6 +546,26 @@ export interface StairHandrailGeometry {
   readonly outer?: Polyline3D;
 }
 
+/**
+ * ADR-637 Phase 4-A — per-rest-landing handle metadata for interactive grips.
+ * Emitted by `buildRectilinearRun` from the SAME cursor walk that builds the
+ * landing quad (SSoT — center/along/length can never disagree with the geometry).
+ * Surfaced on `StairGeometry.restLandingHandles` and consumed by
+ * `pushRestLandingGrips` (slide + length grips) — see `bim/stairs/stair-grips.ts`.
+ */
+export interface RestLandingHandle {
+  /** The `StairRestLanding.id` this handle targets (grip → landing identity). */
+  readonly id: string;
+  /** Landing quad centroid, world coords (slide grip anchor). */
+  readonly center: Point3D;
+  /** Unit travel direction of this landing's flight (slide + length axes). */
+  readonly along: Point2D;
+  /** Resolved plan length along travel (scene units). */
+  readonly length: number;
+  /** Resolved cross-width depth (scene units). */
+  readonly depth: number;
+}
+
 export interface StairGeometry {
   /** Legacy alias = treadsBelowCut. Kept for backward-compat with §6.2 render pipeline. */
   readonly treads: readonly Polygon3D[];
@@ -562,6 +582,11 @@ export interface StairGeometry {
   /** G14 — break-line zigzag 45° (ISO 128) when stair crosses cut plane. */
   readonly cutLine?: Segment3D;
   readonly treadLabels?: readonly StairTreadLabel[];
+  /**
+   * ADR-637 Phase 4-A — per-rest-landing grip handle metadata (SSoT for grip
+   * placement). Absent when the stair carries no rest landings (back-compat).
+   */
+  readonly restLandingHandles?: readonly RestLandingHandle[];
   readonly bbox: BoundingBox3D;
 }
 

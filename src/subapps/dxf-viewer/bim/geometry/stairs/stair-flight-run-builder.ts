@@ -25,10 +25,19 @@
  */
 
 import type { Point3D } from '../../../rendering/types/Types';
-import type { Polygon3D, Segment3D, StairRestLanding } from '../../../bim/types/stair-types';
+import type {
+  Polygon3D,
+  RestLandingHandle,
+  Segment3D,
+  StairRestLanding,
+} from '../../../bim/types/stair-types';
 import { type Vec2, perp, point } from './stair-geometry-shared';
 import { buildCornerLanding, buildRectilinearFlight } from './stair-geometry-generators';
-import { planStairRunSegments, resolveRestLandingLength } from './stair-run-landings';
+import {
+  planStairRunSegments,
+  resolveRestLandingDepth,
+  resolveRestLandingLength,
+} from './stair-run-landings';
 
 /** Frame + scalars + schedule for one rectilinear run. */
 export interface BuildRectilinearRunInput {
@@ -56,6 +65,12 @@ export interface RectilinearRunResult {
   readonly risers: Segment3D[];
   /** Rest-landing quads, in run order (one per inter-sub-flight boundary). */
   readonly landings: Polygon3D[];
+  /**
+   * ADR-637 Phase 4-A — per-rest-landing grip handle (id + centre + travel dir +
+   * length/depth), one per emitted landing, in run order (parallel to `landings`).
+   * Computed from the SAME cursor walk as the quad (SSoT for grip placement).
+   */
+  readonly landingHandles: RestLandingHandle[];
   /** Per-sub-flight tread counts (label numbering + cut-line boundaries). */
   readonly flightSplit: number[];
   /** One direction per sub-flight (all equal `u`) for `buildCutLineForFlights`. */
@@ -80,6 +95,7 @@ export function buildRectilinearRun(input: BuildRectilinearRunInput): Rectilinea
   const treads: Polygon3D[] = [];
   const risers: Segment3D[] = [];
   const landings: Polygon3D[] = [];
+  const landingHandles: RestLandingHandle[] = [];
   const flightSplit: number[] = [];
   const cutDirs: Vec2[] = [];
   let cx = originXY.x;
@@ -102,11 +118,24 @@ export function buildRectilinearRun(input: BuildRectilinearRunInput): Rectilinea
       const z = zAtLevel(seg.level);
       const length = resolveRestLandingLength(seg.landing.length, width);
       landings.push(buildCornerLanding({ x: cx, y: cy }, u, v, width, length, z, /* centered */ true));
+      // ADR-637 Phase 4-A — grip handle from the SAME walk: centroid = origin +
+      // u·(length/2) (buildCornerLanding is v-centred), travel dir = u, resolved
+      // length + cross-width depth. Emitted before advancing the cursor.
+      landingHandles.push({
+        id: seg.landing.id,
+        center: point(cx + u.x * (length / 2), cy + u.y * (length / 2), z),
+        along: u,
+        length,
+        depth: resolveRestLandingDepth(seg.landing.depth, width),
+      });
       cx += u.x * length;
       cy += u.y * length;
       walklinePts.push(point(cx, cy, z));
     }
   }
 
-  return { treads, risers, landings, flightSplit, cutDirs, walklinePts, endXY: { x: cx, y: cy } };
+  return {
+    treads, risers, landings, landingHandles, flightSplit, cutDirs, walklinePts,
+    endXY: { x: cx, y: cy },
+  };
 }

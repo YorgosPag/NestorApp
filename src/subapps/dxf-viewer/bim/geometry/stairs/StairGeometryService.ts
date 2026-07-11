@@ -178,7 +178,7 @@ function computeStraightWithLandings(params: Readonly<StairParams>): StairGeomet
     restLandings: params.restLandings ?? [],
   });
 
-  return assembleMultiFlight(params, {
+  const geometry = assembleMultiFlight(params, {
     treads: run.treads,
     risers: run.risers,
     walkline: run.walklinePts,
@@ -187,6 +187,10 @@ function computeStraightWithLandings(params: Readonly<StairParams>): StairGeomet
     arrowSymbol: arrowSymbol(run.walklinePts[0], run.walklinePts[1], upDirection),
     landings: run.landings,
   });
+  // ADR-637 Phase 4-A — surface the per-landing grip handles (absent when empty).
+  return run.landingHandles.length > 0
+    ? { ...geometry, restLandingHandles: run.landingHandles }
+    : geometry;
 }
 
 function buildStraightWalkline(

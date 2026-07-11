@@ -179,6 +179,8 @@ export function commitStairGripDrag(
     // ADR-393 v2 Phase 2 — multi-flight corner transforms read the last flight's
     // direction from the walkline; supply the drag-start geometry as that SSoT.
     geometry: stair.geometry,
+    // ADR-637 Phase 4-A — target rest-landing id for the stair-rest-landing-* grips.
+    ...(grip.landingId ? { landingId: grip.landingId } : {}),
     ...(useRotatePivot ? { pivot: rotateCtx.pivot! } : {}),
   });
   const command = new UpdateStairParamsCommand(

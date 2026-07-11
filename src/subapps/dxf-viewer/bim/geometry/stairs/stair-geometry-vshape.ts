@@ -93,7 +93,7 @@ function computeVShapeWithLandings(
   const run2 = buildRectilinearRun({ ...common, originXY, u: u2, treadCount: n2, restLandings: per[1] });
   // Walkline runs tip-of-arm-1 → apex → tip-of-arm-2 (arm 1 reversed; apex shared once).
   const walkline = [...[...run1.walklinePts].reverse(), ...run2.walklinePts.slice(1)];
-  return assembleMultiFlight(params, {
+  const geometry = assembleMultiFlight(params, {
     treads: [...run1.treads, ...run2.treads],
     risers: [...run1.risers, ...run2.risers],
     walkline,
@@ -102,6 +102,10 @@ function computeVShapeWithLandings(
     arrowSymbol: arrowSymbol(basePoint, walkline[0], upDirection),
     landings: [...run1.landings, ...run2.landings],
   });
+  // ADR-637 Phase 4-A — per-landing grip handles from both arms (each in its own
+  // world travel dir u1/u2). Absent when neither arm carries a rest landing.
+  const restLandingHandles = [...run1.landingHandles, ...run2.landingHandles];
+  return restLandingHandles.length > 0 ? { ...geometry, restLandingHandles } : geometry;
 }
 
 // ─── V-SHAPE private helpers ──────────────────────────────────────────────────

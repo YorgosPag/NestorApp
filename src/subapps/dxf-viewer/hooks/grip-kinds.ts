@@ -106,7 +106,17 @@ export type StairGripKind =
   | 'stair-flight2-start'
   // ADR-393 Phase B2 — landing depth + corner radius (L/U/Γ)
   | 'stair-landing-depth'
-  | 'stair-landing-corner-radius';
+  | 'stair-landing-corner-radius'
+  // ADR-637 Phase 4-A — intermediate rest-landing (πλατύσκαλο) grips. Emitted per
+  // `geometry.restLandingHandles` entry for ANY kind that carries rest landings
+  // (straight / multi-flight / v-shape). The targeted landing is carried by
+  // `GripInfo.landingId` (see `bim/stairs/stair-grips.ts:pushRestLandingGrips`):
+  //   - `stair-rest-landing-slide`     → slide the landing along the run (edits `at`).
+  //   - `stair-rest-landing-length-lo` → resize plan length from the low edge.
+  //   - `stair-rest-landing-length-hi` → resize plan length from the high edge.
+  | 'stair-rest-landing-slide'
+  | 'stair-rest-landing-length-lo'
+  | 'stair-rest-landing-length-hi';
 
 /**
  * ADR-362 Phase I2 — Dimension grip kind.
