@@ -44,6 +44,22 @@ const squareEdges = (): Array<[string, string | number]> => [
   ...edge(10, 10, 0, 10), ...edge(0, 10, 0, 0),
 ];
 
+/**
+ * A polyline boundary path: `1071 n` + n vertices, each written as `coordsPerVert`
+ * consecutive 1040 scalars (2 = x,y | 3 = x,y,bulge). AutoCAD uses both encodings.
+ */
+const polylinePath = (
+  verts: ReadonlyArray<readonly [number, number, number?]>,
+  coordsPerVert: 2 | 3,
+): Array<[string, string | number]> => {
+  const out: Array<[string, string | number]> = [['1071', verts.length]];
+  for (const [x, y, b] of verts) {
+    out.push(['1040', x], ['1040', y]);
+    if (coordsPerVert === 3) out.push(['1040', b ?? 0]);
+  }
+  return out;
+};
+
 const insertWith = (pairs: Pair[], layer = 'HATCHLAYER'): EntityData =>
   ({ type: 'INSERT', layer, data: { '2': '*X6' }, pairs });
 
@@ -66,6 +82,31 @@ describe('tryConvertInsertHatch', () => {
     expect(h.patternScale).toBeCloseTo(0.005, 6);
     expect(h.patternAngle).toBeCloseTo(0, 6);
     expect(h.boundaryPaths).toHaveLength(1);
+    expect(h.boundaryPaths[0]).toEqual([
+      { x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 },
+    ]);
+  });
+
+  // ADR-635 — 3-coord (x,y,bulge) polyline boundary. Before the stride fix these were read
+  // at stride 2, shifting every vertex by one scalar → spurious (0,x)/(x,0) verts that blew the
+  // hatch bbox to km-scale (KADOS: 7/117 hatches at ~8.5 km, y≈x → fit-to-view = a dot).
+  it('reads a 3-coord (x,y,bulge) polyline boundary at stride 3 → correct (x,y) verts', () => {
+    const verts = [[0, 0, 0], [10, 0, 0], [10, 10, 0], [0, 10, 0]] as const;
+    const pairs = P(...xdataHead('GRASS', 1, 0), ...polylinePath(verts, 3), ...patternTail);
+    const hatch = tryConvertInsertHatch(insertWith(pairs), 3);
+    expect(hatch).not.toBeNull();
+    const h = hatch as unknown as { boundaryPaths: Array<Array<{ x: number; y: number }>> };
+    expect(h.boundaryPaths[0]).toEqual([
+      { x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 },
+    ]);
+  });
+
+  it('reads a 2-coord (x,y) polyline boundary at stride 2 (backward-compat, unchanged)', () => {
+    const verts = [[0, 0], [10, 0], [10, 10], [0, 10]] as const;
+    const pairs = P(...xdataHead('GRASS', 1, 0), ...polylinePath(verts, 2), ...patternTail);
+    const hatch = tryConvertInsertHatch(insertWith(pairs), 2);
+    expect(hatch).not.toBeNull();
+    const h = hatch as unknown as { boundaryPaths: Array<Array<{ x: number; y: number }>> };
     expect(h.boundaryPaths[0]).toEqual([
       { x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 },
     ]);

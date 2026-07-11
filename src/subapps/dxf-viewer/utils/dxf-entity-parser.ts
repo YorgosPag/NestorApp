@@ -33,7 +33,17 @@ export { SUPPORTED_ENTITY_TYPES, DXF_SECTION_MARKERS, INSUNITS_TO_MM } from './d
 
 import type { DxfHeaderData, DimStyleMap, StyleFontMap } from './dxf-parser-types';
 import type { MlineStyleMap } from './dxf-mline-style-parser';
-import { SUPPORTED_ENTITY_TYPES, INSUNITS_TO_MM, INSUNITS_NAMES } from './dxf-parser-types';
+import {
+  SUPPORTED_ENTITY_TYPES,
+  DXF_SECTION_MARKERS,
+  DXF_STRUCTURAL_SUBMARKERS,
+  INSUNITS_TO_MM,
+  INSUNITS_NAMES,
+} from './dxf-parser-types';
+// ADR-635 Φ3 follow-up — parser-level skipped-warning: genuinely-unsupported entity TYPES
+// (REGION/3DSOLID/…) are dropped BEFORE the scene-builder's converter loop, so only the parser
+// can record them. Reuses the ImportDiagnostics SSoT (no twin collector) — no-op when absent.
+import { recordSkipped, type ImportDiagnostics } from './dxf-import-diagnostics';
 
 // Re-export table parsers for backward compatibility
 export { parseDimStyles, parseLayerColors } from './dxf-table-parsers';
@@ -50,6 +60,21 @@ import type { LayerColorMap } from './dxf-parser-types';
 export function lineAt(lines: string[], i: number): string {
   const v = lines[i];
   return v === undefined ? '' : v.trim();
+}
+
+/**
+ * Record a genuinely-unsupported entity TYPE that the top-level dispatch is about to drop, so a
+ * Revit-style "Import Warnings" toast reports the silent data loss (ADR-635 Φ3 follow-up).
+ * No-ops when no collector is threaded (mirrors the dxf-block-expander optional-collector pattern).
+ * Section markers (ENDSEC/BLOCK/…) and structural sub-markers (VERTEX/SEQEND, consumed by the
+ * compound parsers) are NOT user-facing entities → never warned; empty values (odd-line
+ * truncation) are ignored too.
+ */
+function noteUnsupportedType(diagnostics: ImportDiagnostics | undefined, value: string): void {
+  if (!diagnostics || !value) return;
+  if ((DXF_SECTION_MARKERS as readonly string[]).includes(value)) return;
+  if ((DXF_STRUCTURAL_SUBMARKERS as readonly string[]).includes(value)) return;
+  recordSkipped(diagnostics, value);
 }
 
 // ============================================================================
@@ -233,15 +258,22 @@ export class DxfEntityParser {
    * @param range - Optional `[start,end)` line window (e.g. the ENTITIES section from
    *   findSectionRange). Restricting to ENTITIES stops block-definition entities from being
    *   emitted standalone — they are instantiated only via INSERT expansion (ADR-635 Φ2).
+   * @param diagnostics - Optional {@link ImportDiagnostics} collector. When present, an
+   *   unsupported entity TYPE dropped here is recorded (ADR-635 Φ3 follow-up); when absent the
+   *   parser behaves exactly as before (silent skip).
    */
-  static parseEntities(lines: string[], range?: { start: number; end: number }): EntityData[] {
+  static parseEntities(
+    lines: string[],
+    range?: { start: number; end: number },
+    diagnostics?: ImportDiagnostics,
+  ): EntityData[] {
     const entities: EntityData[] = [];
     let i = range ? range.start : 0;
     const end = range ? range.end : lines.length - 1;
 
     while (i < end) {
       if (lines[i].trim() === '0') {
-        const { entity, next } = DxfEntityParser.parseEntityAt(lines, i);
+        const { entity, next } = DxfEntityParser.parseEntityAt(lines, i, diagnostics);
         if (entity) entities.push(entity);
         i = next;
       } else {
@@ -257,10 +289,16 @@ export class DxfEntityParser {
    * parser so both handle POLYLINE-compound / supported / unknown identically (no twin logic).
    *
    * @param i - Index of a line whose value is `'0'` (caller guarantees)
+   * @param diagnostics - Optional collector; a genuinely-unsupported entity TYPE is recorded here
+   *   (ADR-635 Φ3 follow-up) instead of vanishing without a trace.
    * @returns The parsed entity (null for unsupported types / section markers) and the index to
    *   resume scanning from.
    */
-  static parseEntityAt(lines: string[], i: number): { entity: EntityData | null; next: number } {
+  static parseEntityAt(
+    lines: string[],
+    i: number,
+    diagnostics?: ImportDiagnostics,
+  ): { entity: EntityData | null; next: number } {
     const value = lineAt(lines, i + 1);
 
     if (value === 'POLYLINE') {
@@ -271,7 +309,9 @@ export class DxfEntityParser {
     if (SUPPORTED_ENTITY_TYPES.includes(value as typeof SUPPORTED_ENTITY_TYPES[number])) {
       return { entity: DxfEntityParser.parseEntity(lines, i), next: DxfEntityParser.findNextEntity(lines, i + 2) };
     }
-    // Unknown entity type or section marker (e.g. ENDSEC/ENDBLK) — skip silently.
+    // Unknown entity type or section marker (e.g. ENDSEC/ENDBLK) — skip silently, but RECORD a
+    // genuinely-unsupported entity (REGION/3DSOLID/MESH/…) so the import warns instead of losing it.
+    noteUnsupportedType(diagnostics, value);
     return { entity: null, next: i + 2 };
   }
 

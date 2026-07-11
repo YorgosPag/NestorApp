@@ -58,6 +58,19 @@ export const DXF_SECTION_MARKERS = [
   'BLOCK'
 ] as const;
 
+/**
+ * Structural sub-entity markers that compose/terminate a COMPOUND entity (old-style POLYLINE's
+ * VERTEX list; the SEQEND that closes a POLYLINE or an INSERT attribute sequence). In normal
+ * flow they are consumed by `parsePolylineGroup` / attribute handling; if one leaks to the
+ * top-level dispatch it is skipped SILENTLY. Unlike a genuinely-unsupported entity
+ * (REGION/3DSOLID/MESH/…), these are NOT user-facing geometry, so they must NOT raise an
+ * "Import Warnings" skipped count (ADR-635 Φ3 follow-up).
+ */
+export const DXF_STRUCTURAL_SUBMARKERS = [
+  'VERTEX',
+  'SEQEND'
+] as const;
+
 // ============================================================================
 // DXF HEADER DATA TYPE
 // ============================================================================

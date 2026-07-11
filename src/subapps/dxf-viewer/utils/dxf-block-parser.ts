@@ -13,6 +13,7 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { EntityData } from './dxf-converter-helpers';
 import { DxfEntityParser, lineAt } from './dxf-entity-parser';
+import type { ImportDiagnostics } from './dxf-import-diagnostics';
 
 /** A parsed BLOCK definition: base (grab) point + its member entities (raw, unexpanded). */
 export interface BlockDef {
@@ -45,8 +46,11 @@ function parseBlockHeader(
  * Parse every BLOCK…ENDBLK in the BLOCKS section into a definition map.
  * Member entities are parsed with the SAME dispatch as top-level entities
  * (`DxfEntityParser.parseEntityAt`) so POLYLINE-compound / nested INSERT are handled identically.
+ *
+ * @param diagnostics - Optional collector: an unsupported entity TYPE inside a block definition
+ *   (dropped, hence lost from every INSERT of that block) is recorded (ADR-635 Φ3 follow-up).
  */
-export function parseBlockDefinitions(lines: string[]): BlockDefMap {
+export function parseBlockDefinitions(lines: string[], diagnostics?: ImportDiagnostics): BlockDefMap {
   const defs: BlockDefMap = new Map();
   const range = DxfEntityParser.findSectionRange(lines, 'BLOCKS');
   if (!range) return defs;
@@ -70,7 +74,7 @@ export function parseBlockDefinitions(lines: string[]): BlockDefMap {
         i = DxfEntityParser.findNextEntity(lines, i + 2);
         break;
       }
-      const { entity, next } = DxfEntityParser.parseEntityAt(lines, i);
+      const { entity, next } = DxfEntityParser.parseEntityAt(lines, i, diagnostics);
       if (entity) entities.push(entity);
       i = next;
     }

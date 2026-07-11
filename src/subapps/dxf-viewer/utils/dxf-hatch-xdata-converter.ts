@@ -136,14 +136,22 @@ function extractR14BoundaryPaths(pairs: DxfPairs): Point2D[][] | null {
       const n = parseInt(v, 10) || 0;
       if (n === 0) break; // boundary terminator — pattern section follows
       if (pairs[i + 1]?.[0] === '1040') {
-        // Polyline-vertex path: read n (x,y) pairs.
+        // Polyline-vertex path: `n` vertices as consecutive 1040 scalars. AutoCAD writes
+        // EITHER 2 (x, y) OR 3 (x, y, bulge) scalars per vertex — infer the stride from the
+        // consecutive-1040 count so a bulge column is not misread as the next vertex's X.
+        // 🐛 ADR-635 — 3-coord hatches (18/117 in the KADOS sample) were read at stride 2,
+        // shifting every vertex by one scalar → spurious (0,x)/(x,0) verts that exploded the
+        // hatch bbox to [0..17M] (center ≈ 8.5 km, y≈x) → fit-to-view collapsed to a dot.
         flush();
         i += 1;
+        let count = 0;
+        while (i + count < pairs.length && pairs[i + count][0] === '1040') count += 1;
+        const stride = n > 0 && count === n * 3 ? 3 : 2;
         const verts: Point2D[] = [];
         for (let k = 0; k < n && i + 1 < pairs.length; k += 1) {
           if (pairs[i][0] === '1040' && pairs[i + 1][0] === '1040') {
             verts.push({ x: +pairs[i][1], y: +pairs[i + 1][1] });
-            i += 2;
+            i += stride;
           } else break;
         }
         if (verts.length >= 3) paths.push(verts);

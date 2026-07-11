@@ -1,4 +1,5 @@
 import { DxfSceneBuilder } from '../dxf-scene-builder';
+import { DxfEntityParser } from '../dxf-entity-parser';
 import {
   summarizeDiagnostics,
   totalSkipped,
@@ -91,5 +92,61 @@ describe('ADR-635 Φ3 — fault-tolerant import diagnostics', () => {
     const scene = DxfSceneBuilder.buildScene(content, 'mm');
     expect(scene.entities).toHaveLength(1);
     expect(scene.units).toBe('mm');
+  });
+});
+
+describe('ADR-635 Φ3 follow-up — parser-level skipped-warning (unsupported entity TYPES)', () => {
+  it('records a genuinely-unsupported TYPE dropped by the parser (REGION never reached the converter loop)', () => {
+    // REGION is NOT in SUPPORTED_ENTITY_TYPES → parseEntityAt dropped it BEFORE the scene-builder
+    // converter loop, so it used to vanish with zero trace (no scene entity, no warning).
+    const { count, diagnostics } = buildDiag([
+      ...lines(['0', 'LINE'], ['8', '0'], ['10', 0], ['20', 0], ['11', 10], ['21', 10]),
+      ...lines(['0', 'REGION'], ['8', '0'], ['100', 'AcDbModelerGeometry']),
+      ...lines(['0', 'REGION'], ['8', '0'], ['100', 'AcDbModelerGeometry']),
+      ...lines(['0', '3DSOLID'], ['8', '0'], ['100', 'AcDbModelerGeometry']),
+    ]);
+    expect(count).toBe(1); // only the LINE survived
+    expect(diagnostics.parsedByType.LINE).toBe(1);
+    expect(diagnostics.skippedByType.REGION).toBe(2);
+    expect(diagnostics.skippedByType['3DSOLID']).toBe(1);
+    expect(totalSkipped(diagnostics)).toBe(3);
+    expect(summarizeDiagnostics(diagnostics)[0]).toContain('REGION×2');
+  });
+
+  it('records an unsupported TYPE inside a BLOCK definition (lost from every INSERT of that block)', () => {
+    const block = lines(
+      ['0', 'BLOCK'], ['2', 'B'], ['10', 0], ['20', 0], ['30', 0],
+      ['0', 'MESH'], ['8', '0'], ['100', 'AcDbSubDMesh'],
+      ['0', 'ENDBLK'],
+    );
+    const { diagnostics } = buildDiag(
+      lines(['0', 'INSERT'], ['2', 'B'], ['10', 0], ['20', 0]),
+      block,
+    );
+    // The MESH member is unsupported → recorded once when the block definition is parsed.
+    expect(diagnostics.skippedByType.MESH).toBe(1);
+  });
+
+  it('does NOT warn about section markers or structural sub-markers (SEQEND/VERTEX/ENDSEC)', () => {
+    // A stray SEQEND leaking to the top-level dispatch must stay silent (structural, not geometry).
+    const { diagnostics } = buildDiag([
+      ...lines(['0', 'LINE'], ['8', '0'], ['10', 0], ['20', 0], ['11', 1], ['21', 1]),
+      ...lines(['0', 'SEQEND'], ['8', '0']),
+    ]);
+    expect(diagnostics.skippedByType.SEQEND).toBeUndefined();
+    expect(diagnostics.skippedByType.ENDSEC).toBeUndefined();
+    expect(totalSkipped(diagnostics)).toBe(0);
+    expect(isClean(diagnostics)).toBe(true);
+  });
+
+  it('parseEntities stays backward-compatible when no diagnostics collector is threaded', () => {
+    // The optional collector is a no-op when absent — the raw parser API must not change behaviour.
+    const raw = [
+      ...lines(['0', 'LINE'], ['8', '0'], ['10', 0], ['20', 0], ['11', 1], ['21', 1]),
+      ...lines(['0', 'REGION'], ['8', '0']),
+    ];
+    const entities = DxfEntityParser.parseEntities(raw);
+    expect(entities).toHaveLength(1);
+    expect(entities[0].type).toBe('LINE');
   });
 });

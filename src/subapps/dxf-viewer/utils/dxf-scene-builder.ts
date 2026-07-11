@@ -167,9 +167,12 @@ export class DxfSceneBuilder {
 
     // ADR-635 Φ2 — parse BLOCK definitions, then parse ONLY the ENTITIES section so block-
     // definition geometry is not emitted standalone (it is placed via INSERT expansion below).
-    const blockDefs = parseBlockDefinitions(lines);
+    // ADR-635 Φ3 follow-up — the SAME diagnostics collector is threaded into the parser so
+    // genuinely-unsupported entity TYPES (REGION/3DSOLID/MESH/…), dropped BEFORE this loop, are
+    // recorded as skipped instead of vanishing silently. One SSoT collector, no twin.
+    const blockDefs = parseBlockDefinitions(lines, diagnostics);
     const entitiesRange = DxfEntityParser.findSectionRange(lines, 'ENTITIES') ?? undefined;
-    const parsedEntities = DxfEntityParser.parseEntities(lines, entitiesRange);
+    const parsedEntities = DxfEntityParser.parseEntities(lines, entitiesRange, diagnostics);
 
     // ╔════════════════════════════════════════════════════════════════════════╗
     // ║ 🏢 ENTERPRISE DIMSTYLE SUPPORT (2026-01-03)                            ║
