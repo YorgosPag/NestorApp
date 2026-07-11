@@ -165,6 +165,31 @@ shared `runDxfParse()`.
 **Tests:** `dxf-import-robustness.test.ts` (5 cases: clean import, skipped-type counting, MINSERT clamp,
 truncated-file no-throw, `buildScene` back-compat). Existing Φ1/Φ2 suites unchanged & green. jscpd clean.
 
+## Φ3.1 — parser-level skipped-warning (genuinely-unsupported entity TYPES)
+
+**Gap.** Φ3 point #4 (silent drops) only covered *recognized-but-unconvertible* types — a type IN
+`SUPPORTED_ENTITY_TYPES` that `convertToSceneEntity` returns `null` for (e.g. `SOLID`). Those are
+recorded in the scene-builder converter loop (`recordSkipped`). But a **genuinely-unsupported TYPE**
+(`REGION` / `3DSOLID` / `MESH` / `WIPEOUT` / `ACAD_TABLE` / …) is dropped one layer earlier — in
+`DxfEntityParser.parseEntityAt`, which returns `{ entity: null }` and never adds it to `parsedEntities`.
+It therefore never reached the converter loop → **still a silent data loss with no warning** after Φ3.
+
+**Fix (reuse, no new system).** Thread the SAME `ImportDiagnostics` collector into the parser:
+- `parseEntities(lines, range?, diagnostics?)` and `parseEntityAt(lines, i, diagnostics?)` gain an
+  **optional** collector (no-op when absent → the raw parser API stays backward-compatible, mirroring
+  the `dxf-block-expander` optional-collector pattern).
+- `parseBlockDefinitions(lines, diagnostics?)` threads it too, so an unsupported member inside a BLOCK
+  definition (lost from *every* INSERT of that block) is recorded as well.
+- Before the silent `return`, `noteUnsupportedType()` calls `recordSkipped` **only** for a real entity
+  type — `DXF_SECTION_MARKERS` (ENDSEC/BLOCK/…) and a new `DXF_STRUCTURAL_SUBMARKERS` (`VERTEX`/`SEQEND`,
+  consumed by the compound parsers) are filtered out so a leaked terminator never fabricates a warning.
+- `dxf-scene-builder` passes its existing `diagnostics` object to both parse calls → the counts flow
+  through the SAME `summarizeDiagnostics()` → `runDxfParse().warnings` → `importedWithWarnings` toast.
+  **Zero new UI/notification/collector** — pure wire.
+
+**Tests:** `dxf-import-robustness.test.ts` +4 cases (REGION/3DSOLID counted, unsupported member inside a
+BLOCK counted, SEQEND/ENDSEC NOT warned, no-collector back-compat). jscpd clean.
+
 ## Φ4 — Rich MTEXT import (parseMtext AST — closes the ADR-636 Φ2.3 double-escape limitation)
 
 **Symptom.** Imported MTEXT showed its **inline codes verbatim** (`Γραμμή1\PΓραμμή2` on one line,
@@ -435,6 +460,8 @@ Fixes **ΚΑΙ ΤΑ ΔΥΟ** συμπτώματα ταυτόχρονα (σωστ
 block-expansion/attrib/mm/robustness jest green· jscpd clean.
 
 ## Changelog
+- **2026-07-12 — Φ3.1 (parser-level skipped-warning — genuinely-unsupported entity TYPES, Opus 4.8):** UNCOMMITTED. Το Φ3 diagnostics κάλυπτε ΜΟΝΟ *recognized-but-unconvertible* types (μέσα στο `SUPPORTED_ENTITY_TYPES`, converter→null· π.χ. `SOLID`). Αλλά ένα **αληθινά μη-υποστηριζόμενο TYPE** (`REGION`/`3DSOLID`/`MESH`/`WIPEOUT`/`ACAD_TABLE`…) απορρίπτεται ένα layer νωρίτερα στο `parseEntityAt` (`{entity:null}`, ποτέ δεν μπαίνει στο `parsedEntities`) → **silent data loss ΧΩΡΙΣ warning** ακόμη και μετά το Φ3. **Fix = pure wire (reuse, ΟΧΙ νέο σύστημα):** thread του ΙΔΙΟΥ `ImportDiagnostics` collector (optional, no-op όταν απών — mirror του `dxf-block-expander` pattern) σε `parseEntities`/`parseEntityAt`/`parseBlockDefinitions`· `noteUnsupportedType()` κάνει `recordSkipped` ΜΟΝΟ για πραγματικό entity type — φιλτράρει `DXF_SECTION_MARKERS` (ENDSEC/BLOCK…) + νέο `DXF_STRUCTURAL_SUBMARKERS` (`VERTEX`/`SEQEND`, τα καταναλώνουν οι compound parsers) ώστε ένα leaked terminator να μη φτιάχνει ψεύτικο warning. Ο `dxf-scene-builder` περνά το υπάρχον `diagnostics` και στα δύο parse calls → τα counts ρέουν στο ίδιο `summarizeDiagnostics()` → `runDxfParse().warnings` → `importedWithWarnings` toast. **Μηδέν νέο UI/notification/collector.** 4 MOD (`dxf-parser-types.ts` +`DXF_STRUCTURAL_SUBMARKERS`, `dxf-entity-parser.ts`, `dxf-block-parser.ts`, `dxf-scene-builder.ts`) + 4 regression tests (`dxf-import-robustness.test.ts`: REGION/3DSOLID counted· unsupported member σε BLOCK counted· SEQEND/ENDSEC ΟΧΙ warned· no-collector back-compat), 9/9 PASS. jscpd clean (4 files).
+- **2026-07-12 — Φ C.12 (🐛 3-coord hatch boundary vertices διαβάζονταν ως 2-coord → km-scale garbage, Opus 4.8):** UNCOMMITTED. **Διάγνωση από ΠΡΑΓΜΑΤΙΚΟ DXF** (KADOS «1ος Όροφος», κατέβασμα του original 42MB .dxf + scene.json blob + Firestore): 7/117 imported hatches κατέληγαν με boundary vertices σε coords `x≈y≈8.56M` (πάνω στη διαγώνιο — center = ο μέσος όρος ενός `[0..17M]×[0..17M]` bbox), 9,6km μακριά από τον όγκο → το fit-to-view αγκάλιαζε 17km → σχέδιο = κουκκίδα. **Root cause:** στο `extractR14BoundaryPaths` (`dxf-hatch-xdata-converter.ts`), το polyline-vertex path (`1071 n` + scalars) υπέθετε **σταθερά 2 coords/vertex** (`i += 2`). ΑΛΛΑ η AutoCAD γράφει το boundary polyline **είτε** 2 (x,y) **είτε 3 (x,y,bulge)** scalars/vertex — **18/117** hatches του δείγματος ήταν 3-coord. Με stride 2, κάθε vertex ολίσθαινε κατά ένα scalar → η στήλη bulge διαβαζόταν ως το επόμενο X → spurious `(0,x)`/`(x,0)` vertices → bbox explosion. **Fix:** infer stride από το πλήθος consecutive 1040 (`count === n*3 ? 3 : 2`), διάβασε (x,y) αγνοώντας το 3ο scalar. Backward-compatible (2-coord: `count===n*2≠n*3` → stride 2, αμετάβλητο). **Επαληθευμένο στο πραγματικό DXF:** μετά το fix, 0 corrupt vertices, ΟΛΑ τα 117 hatches στο σωστό range (X 17107..17172m). 1 MOD (`dxf-hatch-xdata-converter.ts`) + 2 regression tests (3-coord stride 3 + 2-coord backward-compat), 9/9 PASS. **Υπάρχοντα δεδομένα:** τα 7 corrupted ζουν ΜΟΝΟ στο scene.json blob (ΟΧΙ σε `floorplan_hatches`) → εξαφανίζονται αυτόματα στο reload (`reconcileLoadedSceneBim` πετά snapshot hatches)· καθαρή λύση = re-import με τον διορθωμένο parser. Συμπληρωματικό: outlier-robust fit (ADR-399, 2026-07-12) κάνει το framing ανθεκτικό ακόμη και σε κακά δεδομένα. 🔴 browser-verify: re-import → 117 hatches σωστά τοποθετημένα.
 - **2026-07-12 — Φ C.11 (imported hatch στο ΛΑΘΟΣ σημείο — R12 hatch-INSERT boundary χωρίς block transform):**
   το `tryConvertInsertHatch` (Φ C.6) διάβαζε το R14_HATCH_DATA boundary (block-LOCAL space) αλλά **δεν εφάρμοζε
   το INSERT block transform** που εφαρμόζει το `instantiateInsert` στα exploded members → τα hatches έμεναν στα
