@@ -28,6 +28,7 @@ import {
   recordClamp,
   recordError,
   type ImportDiagnostics,
+  type ImportIssue,
 } from './dxf-import-diagnostics';
 
 /** Guard against pathological / cyclic block nesting. */
@@ -62,6 +63,18 @@ function numOr(v: string | undefined, fallback: number): number {
 function intOr(v: string | undefined, fallback: number): number {
   const n = v !== undefined ? parseInt(v, 10) : NaN;
   return Number.isFinite(n) ? n : fallback;
+}
+
+function errMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
+/** Diagnostics recorders that no-op when the (optional) collector is absent. */
+function clamp(ctx: ExpandContext, issue: ImportIssue): void {
+  if (ctx.diagnostics) recordClamp(ctx.diagnostics, issue);
+}
+function noteError(ctx: ExpandContext, issue: ImportIssue): void {
+  if (ctx.diagnostics) recordError(ctx.diagnostics, issue);
 }
 
 /**
@@ -109,7 +122,14 @@ export function instantiateInsert(
   ctx: ExpandContext,
   depth = 0
 ): AnySceneEntity[] {
-  if (depth > MAX_DEPTH) return [];
+  if (depth > MAX_DEPTH) {
+    clamp(ctx, {
+      kind: 'INSERT',
+      reason: `nesting depth > ${MAX_DEPTH} (possible cyclic block reference)`,
+      at: insert.data['2'],
+    });
+    return [];
+  }
 
   const data = insert.data;
   const name = data['2'];
@@ -125,25 +145,51 @@ export function instantiateInsert(
   const colSp = numOr(data['44'], 0);
   const rowSp = numOr(data['45'], 0);
 
-  // 1) Block-local scene entities (nested INSERTs recurse; others convert once).
+  // 1) Block-local scene entities (nested INSERTs recurse; others convert once). Each child is
+  // isolated: one malformed member entity is recorded and skipped, it does NOT kill the block.
   const local: AnySceneEntity[] = [];
   for (const child of def.entities) {
-    if (child.type === 'INSERT') {
-      local.push(...instantiateInsert(child, blockDefs, ctx, depth + 1));
-      continue;
+    try {
+      if (child.type === 'INSERT') {
+        local.push(...instantiateInsert(child, blockDefs, ctx, depth + 1));
+        continue;
+      }
+      const converted = convertEntityToScene(child, ctx.idSeq.n++, ctx.header, ctx.dimStyles);
+      if (!converted) continue;
+      for (const e of Array.isArray(converted) ? converted : [converted]) local.push(e);
+    } catch (err) {
+      noteError(ctx, {
+        kind: child.type || 'UNKNOWN',
+        reason: errMessage(err),
+        at: `block ${name ?? '?'}`,
+      });
     }
-    const converted = convertEntityToScene(child, ctx.idSeq.n++, ctx.header, ctx.dimStyles);
-    if (!converted) continue;
-    for (const e of Array.isArray(converted) ? converted : [converted]) local.push(e);
   }
 
   // 2) Place each array cell; MINSERT spacing runs along the rotated X (cols) / Y (rows) axes.
+  // Cell count and the scene-wide entity budget are bounded (ADR-635 Φ3) so a giant/malformed
+  // MINSERT array or block explosion cannot hang the importer — we cap and report.
+  const requestedCells = cols * rows;
+  const cellBudget = Math.min(requestedCells, MAX_ARRAY_CELLS);
+  if (requestedCells > MAX_ARRAY_CELLS) {
+    clamp(ctx, {
+      kind: 'MINSERT',
+      reason: `array ${cols}×${rows}=${requestedCells} cells clamped to ${MAX_ARRAY_CELLS}`,
+      at: name,
+    });
+  }
+
   const rad = (angle * Math.PI) / 180;
   const cos = Math.cos(rad);
   const sin = Math.sin(rad);
   const out: AnySceneEntity[] = [];
-  for (let r = 0; r < rows; r++) {
+  let cells = 0;
+  let budgetHit = false;
+
+  arrayLoop: for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
+      if (cells >= cellBudget) break arrayLoop;
+      cells++;
       const ax = c * colSp;
       const ay = r * rowSp;
       const placement: Point2D = {
@@ -151,9 +197,22 @@ export function instantiateInsert(
         y: insertPt.y + ax * sin + ay * cos,
       };
       for (const e of local) {
+        if (ctx.budget && ctx.budget.used >= ctx.budget.max) {
+          budgetHit = true;
+          break arrayLoop;
+        }
         out.push(transformBlockEntity(e, def.base, sx, sy, angle, placement, insert.layer, ctx.idSeq));
+        if (ctx.budget) ctx.budget.used++;
       }
     }
+  }
+
+  if (budgetHit) {
+    clamp(ctx, {
+      kind: 'INSERT',
+      reason: `scene entity budget (${ctx.budget?.max}) reached — expansion stopped`,
+      at: name,
+    });
   }
 
   return out;
