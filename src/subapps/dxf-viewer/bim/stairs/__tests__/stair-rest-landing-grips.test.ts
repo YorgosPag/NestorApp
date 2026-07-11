@@ -13,7 +13,13 @@
 import { buildDefaultStairParams, buildStairEntity } from '../../../hooks/drawing/stair-completion';
 import { applyStairGripDrag, getStairGrips } from '../stair-grips';
 import { computeStairGeometry } from '../../geometry/stairs/StairGeometryService';
-import type { StairEntity, StairParams, StairRestLanding } from '../../../bim/types/stair-types';
+import type {
+  Point3D,
+  StairEntity,
+  StairParams,
+  StairRestLanding,
+  StairVariantSketch,
+} from '../../../bim/types/stair-types';
 import { gripKindOf } from '../../../hooks/grip-kinds';
 
 function makeStraightParams(restLandings: readonly StairRestLanding[]): StairParams {
@@ -195,5 +201,110 @@ describe('stair rest-landing grips (ADR-637 Phase 4-A)', () => {
     expect(next.basePoint.x).toBe(50);
     expect(next.basePoint.y).toBe(30);
     expect(next.restLandings).toEqual(params.restLandings); // untouched
+  });
+});
+
+// ─── ADR-637 Phase 4-C — curved-family (walkline) grips ──────────────────────
+// Sketch = a straight walkline (all y=0) so arc-length reasoning is exact; the
+// slide MUST project onto the walkline (totalRun = 0 for every curved kind), not
+// axially — the Phase 4-A axial model would divide by 1 and fling the landing.
+function makeSketchParams(restLandings: readonly StairRestLanding[]): StairParams {
+  const walklinePath: readonly Point3D[] = [
+    { x: 0, y: 0, z: 0 }, { x: 300, y: 0, z: 0 }, { x: 600, y: 0, z: 0 },
+    { x: 900, y: 0, z: 0 }, { x: 1200, y: 0, z: 0 }, { x: 1500, y: 0, z: 0 },
+  ];
+  const variant: StairVariantSketch = { kind: 'sketch', walklinePath };
+  return {
+    basePoint: { x: 0, y: 0, z: 0 }, direction: 0, rise: 600, tread: 300, nosing: 0,
+    nosingSide: 'none', width: 800, stepCount: 5, totalRise: 3000, totalRun: 0,
+    pitch: 30, structureType: 'monolithic', riserType: 'closed', antiskidNosing: false,
+    adaContrastStrip: false, variant, walklineOffset: 300,
+    handrails: { inner: false, outer: false, height: 900 }, upDirection: 'forward',
+    treadNumberStart: 1, treadLabelDisplay: 'none', treadLabelRestartPerFlight: false,
+    codeProfile: 'none', restLandings,
+  };
+}
+
+/** Cumulative plan arc-lengths of a walkline + its total (2D). */
+function arcLengths(wl: readonly Point3D[]): { cum: number[]; total: number } {
+  const cum = [0];
+  for (let i = 1; i < wl.length; i++) {
+    cum.push(cum[i - 1] + Math.hypot(wl[i].x - wl[i - 1].x, wl[i].y - wl[i - 1].y));
+  }
+  return { cum, total: cum[cum.length - 1] };
+}
+
+describe('curved-family rest-landing grips (ADR-637 Phase 4-C)', () => {
+  it('13. curved (sketch) landing → 3 grips emitted end-to-end (handles surfaced)', () => {
+    const entity = buildStairEntity(makeSketchParams([{ id: 'r1', at: 0.5, length: 'auto' }]), '0');
+    expect(entity.geometry.restLandingHandles).toHaveLength(1);
+    const grips = getStairGrips(entity);
+    expect(grips.filter((g) => g.landingId === 'r1').map((g) => gripKindOf(g, 'stair')).sort()).toEqual([
+      'stair-rest-landing-length-hi',
+      'stair-rest-landing-length-lo',
+      'stair-rest-landing-slide',
+    ]);
+  });
+
+  it('14. slide projects the cursor onto the walkline by arc-length (not axially)', () => {
+    const params = makeSketchParams([{ id: 'r1', at: 0.3, length: 'auto' }]);
+    const geometry = computeStairGeometry(params);
+    const wl = geometry.walkline;
+    const { cum, total } = arcLengths(wl);
+    // Drop the cursor exactly on an interior walkline vertex → its arc-length fraction.
+    const k = 3;
+    const next = applyStairGripDrag('stair-rest-landing-slide', {
+      originalParams: params,
+      delta: { x: 0, y: 0 },
+      currentPos: { x: wl[k].x, y: wl[k].y },
+      geometry,
+      landingId: 'r1',
+    });
+    expect(next.restLandings![0].at).toBeCloseTo(cum[k] / total, 6);
+  });
+
+  it('15. curved slide clamps at strictly inside (0,1) at the walkline ends', () => {
+    const params = makeSketchParams([{ id: 'r1', at: 0.3, length: 'auto' }]);
+    const geometry = computeStairGeometry(params);
+    const wl = geometry.walkline;
+    const hi = applyStairGripDrag('stair-rest-landing-slide', {
+      originalParams: params, delta: { x: 0, y: 0 },
+      currentPos: { x: wl[wl.length - 1].x + 5000, y: 0 }, geometry, landingId: 'r1',
+    });
+    const lo = applyStairGripDrag('stair-rest-landing-slide', {
+      originalParams: params, delta: { x: 0, y: 0 },
+      currentPos: { x: wl[0].x - 5000, y: 0 }, geometry, landingId: 'r1',
+    });
+    expect(hi.restLandings![0].at).toBeGreaterThan(0);
+    expect(hi.restLandings![0].at).toBeLessThan(1);
+    expect(lo.restLandings![0].at).toBeGreaterThan(0);
+    expect(lo.restLandings![0].at).toBeLessThan(1);
+  });
+
+  it('16. curved slide without geometry (no walkline) leaves the landing put', () => {
+    const params = makeSketchParams([{ id: 'r1', at: 0.3, length: 'auto' }]);
+    const next = applyStairGripDrag('stair-rest-landing-slide', {
+      originalParams: params,
+      delta: { x: 0, y: 0 },
+      currentPos: { x: 99999, y: 0 },
+      landingId: 'r1',
+    });
+    expect(next.restLandings![0].at).toBeCloseTo(0.3, 9); // unchanged (no curve to project onto)
+  });
+
+  it('17. curved length grip can grow past one tread (cap = walkline length, not totalRun)', () => {
+    const params = makeSketchParams([{ id: 'r1', at: 0.5, length: 'auto' }]);
+    const geometry = computeStairGeometry(params);
+    const h = geometry.restLandingHandles![0];
+    const next = applyStairGripDrag('stair-rest-landing-length-hi', {
+      originalParams: params,
+      delta: { x: 0, y: 0 },
+      // Push 700 along +x from the handle centre → length 1400 (> tread 300).
+      currentPos: { x: h.center.x + 700, y: h.center.y },
+      geometry,
+      landingId: 'r1',
+    });
+    expect(next.restLandings![0].length).toBeCloseTo(1400, 4);
+    expect(next.restLandings![0].length).toBeGreaterThan(params.tread);
   });
 });

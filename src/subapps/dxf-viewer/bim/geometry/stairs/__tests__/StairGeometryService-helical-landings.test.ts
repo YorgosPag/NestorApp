@@ -55,8 +55,14 @@ describe('StairGeometryService — helical rest landings (ADR-637 Φ3 radial)', 
     expect(g.walkline[g.walkline.length - 1].z).toBeCloseTo(175 * 12, 9);
   });
 
-  it('grips deferred → no restLandingHandles surfaced', () => {
+  it('ADR-637 Φ4-C — rest-landing grip handle surfaced (mid-sweep on walkline circle)', () => {
     const g = computeStairGeometry(makeHelicalParams([{ id: 'r1', at: 0.5, length: 'auto' }]));
-    expect(g.restLandingHandles).toBeUndefined();
+    expect(g.restLandingHandles).toHaveLength(1);
+    const h = g.restLandingHandles![0];
+    expect(h.id).toBe('r1');
+    expect(h.length).toBeCloseTo(1000, 6); // 'auto' → width
+    // Handle sits on the walkline circle: radius = (inner+outer)/2 = (400+1400)/2 = 900.
+    expect(Math.hypot(h.center.x, h.center.y)).toBeCloseTo(900, 6);
+    expect(Math.hypot(h.along.x, h.along.y)).toBeCloseTo(1, 6);
   });
 });

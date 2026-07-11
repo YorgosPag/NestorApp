@@ -81,8 +81,16 @@ describe('StairGeometryService — sketch rest landings (ADR-637 Φ3)', () => {
     expect(g.walkline[g.walkline.length - 1].z).toBeCloseTo(3000, 9);
   });
 
-  it('grips deferred for the walkline family → no restLandingHandles surfaced', () => {
+  it('ADR-637 Φ4-C — rest-landing grip handle surfaced (chord midpoint, unit tangent)', () => {
     const g = computeStairGeometry(makeSketchParams([{ id: 'r1', at: 0.5, length: 'auto' }]));
-    expect(g.restLandingHandles).toBeUndefined();
+    expect(g.restLandingHandles).toHaveLength(1);
+    const h = g.restLandingHandles![0];
+    expect(h.id).toBe('r1');
+    expect(h.length).toBeCloseTo(800, 6); // 'auto' → width
+    // Level-2 chord x=600 stretched to length 800 → end x=1400 → midpoint x=1000.
+    expect(h.center.x).toBeCloseTo(1000, 6);
+    // Handle sits at the landing quad's flat z (level 2 → 2·rise = 1200).
+    expect(h.center.z).toBeCloseTo(1200, 6);
+    expect(Math.hypot(h.along.x, h.along.y)).toBeCloseTo(1, 6); // chord unit tangent
   });
 });

@@ -83,8 +83,15 @@ describe('StairGeometryService — elliptical rest landings (ADR-637 Φ3)', () =
     expect(g.walkline[g.walkline.length - 1].z).toBeCloseTo(2100, 9);
   });
 
-  it('grips deferred → no restLandingHandles surfaced for elliptical', () => {
+  it('ADR-637 Φ4-C — rest-landing grip handle surfaced (id-tagged, unit tangent)', () => {
     const g = computeStairGeometry(makeEllipticalParams([{ id: 'r1', at: 0.5, length: 'auto' }]));
-    expect(g.restLandingHandles).toBeUndefined();
+    expect(g.restLandingHandles).toHaveLength(1);
+    const h = g.restLandingHandles![0];
+    expect(h.id).toBe('r1');
+    expect(h.length).toBeGreaterThan(0);
+    expect(Number.isFinite(h.center.x) && Number.isFinite(h.center.y) && Number.isFinite(h.center.z)).toBe(true);
+    // Handle z matches the landing quad's flat z.
+    expect(h.center.z).toBeCloseTo(g.landings[0][0].z, 6);
+    expect(Math.hypot(h.along.x, h.along.y)).toBeCloseTo(1, 6);
   });
 });
