@@ -28,7 +28,8 @@ import {
   type EntityData,
   parseVerticesFromData,
   parseVerticesFromPairs,
-  extractEntityColor
+  extractEntityColor,
+  extractEntityLineweight
 } from './dxf-converter-helpers';
 
 import { dwarn } from '../debug';
@@ -357,7 +358,11 @@ import { convertLeader } from './dxf-leader-converter';
 // ============================================================================
 
 /**
- * Master converter function — routes entity types to appropriate converters.
+ * Master converter function — routes entity types to appropriate converters, then
+ * bakes the imported per-entity lineweight (DXF group 370) onto the result (ADR-635
+ * Φ C.3). The `data['370']` read is centralized HERE so every converter (and every
+ * block-expanded child, which also routes through this fn) inherits it uniformly —
+ * one place, no copy-paste across ~10 converter modules (N.0.2).
  *
  * @param entityData - Parsed entity data from DxfEntityParser
  * @param index - Entity index for unique ID generation
@@ -365,6 +370,42 @@ import { convertLeader } from './dxf-leader-converter';
  * @param dimStyles - Optional parsed DIMSTYLE map with real DIMTXT values
  */
 export function convertEntityToScene(
+  entityData: EntityData,
+  index: number,
+  header?: DxfHeaderData,
+  dimStyles?: DimStyleMap
+): AnySceneEntity | AnySceneEntity[] | null {
+  const result = routeEntityToConverter(entityData, index, header, dimStyles);
+  return applyImportedLineweight(result, entityData.data);
+}
+
+/**
+ * Bake a concrete per-entity lineweight (DXF group 370) onto the converted result.
+ *
+ * Absent/ByLayer/ByBlock/Default 370 ⇒ `extractEntityLineweight` returns undefined ⇒
+ * the result is returned UNCHANGED (native/Tekton/bare paths carry no 370 → zero
+ * regression). A concrete mm value is spread onto the entity (or each entity of an
+ * array) as `lineweightMm`, the same field the render style cascade + LWDISPLAY gate
+ * already consume (ADR-510 Φ2G). Lineweight is zoom-independent mm — never scaled.
+ */
+function applyImportedLineweight(
+  result: AnySceneEntity | AnySceneEntity[] | null,
+  data: Record<string, string>
+): AnySceneEntity | AnySceneEntity[] | null {
+  if (result === null) return null;
+  const lineweightMm = extractEntityLineweight(data);
+  if (lineweightMm === undefined) return result;
+  return Array.isArray(result)
+    ? result.map(entity => ({ ...entity, lineweightMm }))
+    : { ...result, lineweightMm };
+}
+
+/**
+ * Per-type converter dispatch (the raw routing switch). Kept separate from
+ * `convertEntityToScene` so the public entry point can apply the shared lineweight
+ * post-pass without threading it through every branch.
+ */
+function routeEntityToConverter(
   entityData: EntityData,
   index: number,
   header?: DxfHeaderData,

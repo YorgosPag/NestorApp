@@ -21,6 +21,9 @@ import type { Point2D } from '../rendering/types/Types';
 import { getAciColor } from '../settings/standards/aci';
 // 🏢 SSoT: 24-bit true-color (group code 420) → hex (ADR-507 Φ5, reused here for import)
 import { trueColorToHex } from './dxf-true-color';
+// 🏢 SSoT: DXF group 370 lineweight (mm) — reuse the ISO catalog decoder (ADR-635 Φ C.3).
+import { parseDxfCode370, isConcreteLineweight } from '../config/lineweight-iso-catalog';
+import type { LineweightMm } from '../types/entities';
 // 🏢 ADR: Centralized point validation
 import { isValidPoint } from '../rendering/entities/shared/entity-validation-utils';
 
@@ -399,4 +402,39 @@ export function extractEntityColor(data: Record<string, string>): string | undef
 export function isByBlockColor(data: Record<string, string>): boolean {
   if (data['420'] !== undefined) return false; // explicit true-color overrides BYBLOCK
   return parseInt(data['62'] ?? '', 10) === 0;
+}
+
+// ============================================================================
+// 🏢 ENTERPRISE: LINEWEIGHT EXTRACTION (DXF GROUP CODE 370) — ADR-635 Φ C.3
+// ============================================================================
+
+/**
+ * 🏢 ENTERPRISE: Extract a per-entity lineweight (mm) from DXF group code 370.
+ *
+ * DXF group 370 encodes the entity's own lineweight in hundredths of a millimetre
+ * (25 → 0.25mm), plus the three inheritance sentinels -1 ByBlock / -2 ByLayer /
+ * -3 Default. We bake ONLY a **concrete** mm value onto the imported entity
+ * (`entity.lineweightMm`), mirroring `extractEntityColor`: the sentinels collapse to
+ * `undefined` so the render style cascade (`resolveEntityStyle`) resolves them from
+ * the owning layer (implicit ByLayer) exactly like AutoCAD. An out-of-catalog raw
+ * value snaps to the nearest ISO weight via `parseDxfCode370`, else → undefined.
+ *
+ * Reuses the `lineweight-iso-catalog` SSoT (`parseDxfCode370`) — no second decoder.
+ * The screen-px conversion + the global LWDISPLAY gate live downstream in
+ * `dxf-renderer-style-resolve.ts` (ADR-510 Φ2G); this only populates the import value.
+ * BYBLOCK lineweight inheritance on INSERT is a follow-up (mirror of the C.2 color rule).
+ *
+ * @see extractEntityColor - the color sibling this mirrors
+ * @see config/lineweight-iso-catalog.ts - parseDxfCode370 SSoT
+ * @param data - Raw DXF group codes
+ * @returns Concrete lineweight in mm, or undefined (absent / ByLayer / ByBlock / Default)
+ */
+export function extractEntityLineweight(data: Record<string, string>): LineweightMm | undefined {
+  const raw = data['370'];
+  if (raw === undefined) return undefined;
+  const int = parseInt(raw, 10);
+  if (Number.isNaN(int)) return undefined;
+  const lw = parseDxfCode370(int);
+  // Concrete-only: -1/-2/-3 sentinels stay absent → the layer cascade resolves them.
+  return isConcreteLineweight(lw) ? lw : undefined;
 }

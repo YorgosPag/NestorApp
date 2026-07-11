@@ -315,7 +315,16 @@ export class DxfRenderer {
     // ADR-559 — AutoCAD GRIPOBJLIMIT: hide grips for ALL selected entities once the
     // selection-object count exceeds the limit (entity stays selected, only grips are skipped).
     const gripsVisible = isSelected && !options.suppressGrips && !this._gripsSuppressedByObjLimit;
-    const ghostMult = options.movePreviewActive && isSelected ? GHOST_DEFAULTS.alpha : 1.0;
+    // ADR-049 inverted ghost: dim the dragged original to GHOST_DEFAULTS.alpha (its solid moving
+    // copy lives on PreviewCanvas). ADR-637 Φ4-D EXCEPTION (Giorgio 2026-07-11): a STAIR grip drag
+    // re-flows the stair IN PLACE (basePoint fixed — a rest landing slides, treads redistribute),
+    // so the dimmed original sits UNDER its own live re-flow ghost and its OLD steps bleed through
+    // the orange outline ghost («τα σκαλοπάτια φαίνονται από κάτω»). Hide it fully (alpha 0) so only
+    // the clean orange re-flow ghost shows — exactly like the committed stair on release. Every
+    // other kind keeps the 0.45 dim (its ghost moves AWAY → the dimmed origin is a useful reference).
+    const ghostMult = options.movePreviewActive && isSelected
+      ? (entity.type === 'stair' ? 0 : GHOST_DEFAULTS.alpha)
+      : 1.0;
     const renderOptions: RenderOptions = {
       phase: isSelected ? 'selected' : isHovered ? 'highlighted' : 'normal',
       transform,

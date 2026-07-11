@@ -255,6 +255,26 @@ Tests: `dxf-quad-fill-converter.test.ts` (8) + `dxf-point-converter.test.ts` (4)
   currently rendered as straight segments (21 curved vertices in the sample).
 
 ## Changelog
+- **2026-07-11 — Φ C.3 (LINEWEIGHT import: per-entity group 370):** οι entity converters
+  διάβαζαν `extractEntityColor` αλλά **ΟΧΙ** το `data['370']` → το per-entity πάχος χανόταν στο import.
+  Νέο SSoT helper `extractEntityLineweight(data)` (`utils/dxf-converter-helpers.ts`, mirror του
+  `extractEntityColor`): reuse του υπάρχοντος `parseDxfCode370` (`config/lineweight-iso-catalog.ts` —
+  **ΟΧΙ** νέος decoder), bake **μόνο concrete mm**· τα sentinels -1/-2/-3 (ByBlock/ByLayer/Default) +
+  out-of-catalog + absent → `undefined` ώστε το render cascade (`resolveEntityStyle`) να τα λύσει από το
+  layer (implicit ByLayer, όπως το AutoCAD). Η εφαρμογή γίνεται **κεντρικά** στο router
+  `convertEntityToScene` (νέο `applyImportedLineweight` post-pass + rename του switch σε
+  `routeEntityToConverter`) → καλύπτει top-level **ΚΑΙ** block-expanded entities (τα children περνούν κι
+  αυτά από το router) με **ΕΝΑ** σημείο, χωρίς copy-paste στους ~10 converters (N.0.2). Το `lineweightMm`
+  ρέει `buildBase` (`dxf-scene-entity-converter.ts` γρ ~90) → `DxfEntityUnion` → resolver.
+  **Render/gate/mm→px ΗΤΑΝ ΗΔΗ DONE (ADR-510 Φ2G):** `LineweightDisplayStore` (global LWDISPLAY toggle,
+  default TRUE κατ' απόφαση Giorgio), `dxf-renderer-style-resolve.ts` `lineweightToPx`+`gatePx` (1px hairline
+  όταν off, print πάντα on). **Απόφαση:** το imported header `$LWDISPLAY` **ΔΕΝ** wire-άρεται στο global
+  store — είναι σκόπιμα user/session preference· ένα file-import που αλλάζει το global display setting όλων
+  των σχεδίων δεν είναι σωστό για αυτή τη single-toggle αρχιτεκτονική. Gate: χωρίς 370 → **τίποτα δεν αλλάζει**
+  (native/Tekton/bare paths αμετάβλητα). BYBLOCK lineweight σε INSERT = follow-up (mirror του C.2 pattern).
+  9 νέα tests (`dxf-entity-lineweight.test.ts`: helper concrete/sentinel/absent/out-of-catalog + router
+  integration LINE/CIRCLE/null-gate), **343/343** utils+scale green, jscpd clean. ΔΕΝ browser-verified
+  (χρειάζεται canvas)· η import/parse/gate λογική = tested (+ το υπάρχον Φ2G render test).
 - **2026-07-11 — Φ C.2 (COLOR cascade: true-color 420 + BYBLOCK inheritance):** ο `extractEntityColor`
   (`utils/dxf-converter-helpers.ts`) διάβαζε **μόνο** ACI code 62 → κάθε RGB-exported DXF (AutoCAD/Revit)
   έχανε το χρώμα. Τώρα: **group code 420** (24-bit `0x00RRGGBB`) διαβάζεται με **προτεραιότητα πάνω από

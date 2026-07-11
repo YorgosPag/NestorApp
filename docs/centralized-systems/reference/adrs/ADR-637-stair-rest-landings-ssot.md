@@ -1,6 +1,6 @@
 # ADR-637 — Stair Rest Landings (πλατύσκαλα) — kind-independent SSoT
 
-- **Status**: Accepted — Phase 1 + Phase 2 (rectilinear family: straight/multi-flight/v-shape) + Phase 2b (turning family: L/U/Γ edge-origin flights) + Phase 3 (walkline-following: elliptical/sketch + radial: spiral/helical/triangular-fan) + Phase 4-A (rectilinear draggable/resizable landing grips) + Phase 4-B (add/remove/length/depth panel UI) + Phase 4-C (curved-family grips: walkline/radial arc-length slide + triangular-fan landings) + Phase 4-D (live drag re-flow ghost) implemented. 11/13 kinds support rest landings (winder + triangular-outline remain). Phase 5 (pick/highlight) pending.
+- **Status**: Accepted — Phase 1 + Phase 2 (rectilinear family: straight/multi-flight/v-shape) + Phase 2b (turning family: L/U/Γ edge-origin flights) + Phase 3 (walkline-following: elliptical/sketch + radial: spiral/helical/triangular-fan) + Phase 4-A (rectilinear draggable/resizable landing grips) + Phase 4-B (add/remove/length/depth panel UI) + Phase 4-C (curved-family grips: walkline/radial arc-length slide + triangular-fan landings) + Phase 4-D (live drag re-flow ghost) + Phase 5 (2D/3D `part:'landing'` pick/highlight) implemented. 11/13 kinds support rest landings (winder + triangular-outline remain).
 - **Date**: 2026-07-11
 - **Owners**: DXF/BIM stair subsystem
 - **Related**: ADR-611 (stair geometry generators SSoT), ADR-633 (multi-flight turn points), ADR-619 (stair-from-region walkline / `preserveZ`), ADR-358 (stair tool), ADR-631/625 (command + drag-preview bases), ADR-040 (micro-leaf subscribers)
@@ -363,10 +363,54 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
     warning, zero new hardcoded colour). `useGripGhostPreview` routes `type==='stair'`
     to it and skips the WYSIWYG body path (stairs have no join-miter / finish-skin). Only
     the stair ghost changed; every other entity keeps its WYSIWYG preview. jscpd-diff clean.
-- **Phase 5 — pending**: 2D/3D pick+highlight (`part:'landing'`) for the panel row.
+  - **HIDE the original while dragging (Giorgio 2026-07-11)**: the orange ghost is an
+    OUTLINE skeleton (transparent between strokes), so the ADR-049 inverted-ghost dim
+    (`GHOST_DEFAULTS.alpha`) left the OLD steps bleeding through it («τα σκαλοπάτια
+    φαίνονται από κάτω»). Because a stair re-flows IN PLACE (basePoint fixed), the dimmed
+    origin sits under its own live ghost instead of being a useful «where it was» reference.
+    Fix: `DxfRenderer` hides the dragged stair fully (`ghostMult = 0`) for
+    `entity.type==='stair'` under `movePreviewActive` — so during the drag ONLY the clean
+    orange re-flow ghost shows, exactly like the committed stair on release. Every other
+    kind keeps the 0.45 dim. Co-staged ADR-040 (CHECK 6B — DxfRenderer is a hot-path file).
+- **Phase 5 — DONE**: 2D/3D «click-into» pick + highlight of a rest landing as a
+  sub-element (`part:'landing'`), reusing the tread/riser infra (ADR-358 Q19) with
+  ZERO parallel machinery:
+  - `StairSubPart` gains `'landing'` (+ `isStairSubPart` guard) — the SINGLE narrow
+    every 2D + 3D consumer already routes through, so the 3D raycaster
+    (`stairSubElementFields` → `stairPart`/`stairSubIndex`), the click gate
+    (`use-bim3d-pointer-handlers` `isStairSubPart` + `selectSub`) and the highlighter
+    (`StairSubElementHighlighter.setTarget` guard + `findMesh` by component+index) all
+    accept landings with no code change.
+  - **2D hit-test** (`hitTestStairSubElement`) now scans `geometry.landings[]` beside
+    the treads via a shared `pickHighestContaining` (the existing `pointInPolygon`
+    SSoT ray-cast, one helper for both passes — ADR-584 anti-clone). A landing wins a
+    z-tie: it is the walkable slab resting ON a flight junction, so it is the click
+    target there. Hover (`stair-sub-element-hover-2d`) and the click gesture
+    (`stair-click-into-2d`) inherit landings for free through this shared SSoT.
+  - **2D highlight** (`drawStairSubElementHighlight`) takes the `geometry.landings`
+    list and resolves the polygon array per `ref.part` (`polysForPart`: tread→treads,
+    landing→landings, riser→none), painting the same cyan halo the treads use.
+  - **3D** landing meshes now carry a 0-based `stairComponentIndex` (their position in
+    `geometry.landings`) in `StairToThreeConverter.buildLandingMeshes` — the last
+    missing tag; the mesh was already `stairComponent:'landing'`. Tab-cycle
+    (`countStairSubElementMeshes`) counts them generically.
+  - Tests: +4 landing hit cases (part/tread-fallback/z-tie/legacy) + 3 landing halo
+    cases + 1 landing-index tag case. Stair sub-element suites 68 green; jscpd-diff
+    clean. Visual plan-view artifact produced (real `StairGeometryService` straight +
+    `at:0.5` landing → click centroid resolves `part:'landing'`, index 0).
 
 ## Changelog
 
+- **2026-07-11** — Phase 5: 2D/3D pick + highlight of a rest landing as a sub-element
+  (`part:'landing'`). `StairSubPart`/`isStairSubPart` gain `'landing'` → the 3D
+  raycaster, click gate and `StairSubElementHighlighter` accept landings with no code
+  change. 2D `hitTestStairSubElement` scans `geometry.landings[]` via a shared
+  `pickHighestContaining` (`pointInPolygon` SSoT, ADR-584 anti-clone), landing wins a
+  z-tie; hover + click-into inherit it through the shared SSoT.
+  `drawStairSubElementHighlight` resolves the polygon list per `ref.part` and paints
+  the landing halo. `StairToThreeConverter.buildLandingMeshes` tags each landing mesh
+  with its 0-based `stairComponentIndex` (the last missing tag). +8 tests (68 green);
+  jscpd-diff clean. Visual artifact confirmed (real straight + `at:0.5` landing).
 - **2026-07-11** — Phase 4-C: curved-family rest-landing grips + `triangular-fan`
   landings. `buildWalklineRunWithLandings` / `buildRadialRunWithLandings` now emit
   `RestLandingHandle[]` (centroid + travel tangent) from the same landing walk →
