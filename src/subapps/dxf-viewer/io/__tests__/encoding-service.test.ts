@@ -39,6 +39,12 @@ describe('EncodingService.encodeWindows1253', () => {
     expect(enc('中')).toEqual(ascii('\\U+4E2D'));
   });
 
+  it('Latin-1 letter absent from cp1253 (Ò) → lossless \\U+XXXX escape, not a byte', () => {
+    // Ò (U+00D2) is a real Latin-1 char but NOT in Windows-1253 (a Greek codepage). It must escape
+    // losslessly, NOT invent a byte — decode leniently maps byte 0xD2 to U+00D2 but 0xD2 is unassigned.
+    expect(enc('Ò')).toEqual(ascii('\\U+00D2'));
+  });
+
   it('astral-plane char (> 0xFFFF) falls back to ? (0x3F)', () => {
     expect(enc('😀')).toEqual([0x3f]); // U+1F600 — no 4-hex escape
   });

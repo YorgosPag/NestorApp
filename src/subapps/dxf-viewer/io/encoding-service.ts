@@ -299,16 +299,20 @@ export class EncodingService {
   /**
    * 🏢 ENTERPRISE: Encode a string to Windows-1253 bytes for DXF export (ADR-636 Στάδιο 2 Φ2.2).
    *
-   * The exact inverse of `decodeWindows1253`, reusing the SAME table (`unicodeToWindows1253`,
-   * no second table). ASCII (≤ 0x7F) is written 1:1, so the whole DXF string — pure-ASCII
-   * structure + Greek text — can be encoded in one pass. Greek/Latin covered by Windows-1253
-   * map to a single byte.
+   * The inverse of `decodeWindows1253` for every code point Windows-1253 actually **assigns**
+   * (reusing the SAME table via `unicodeToWindows1253`, no second table): all Greek + covered
+   * Latin/punctuation round-trip byte-exact, and ASCII (≤ 0x7F) is written 1:1 — so the whole
+   * DXF string (pure-ASCII structure + Greek text) encodes in one pass.
    *
-   * Characters OUTSIDE Windows-1253 (rare — exotic symbols/CJK/emoji, never Greek/Latin) are
-   * emitted as a `\U+XXXX` DXF unicode escape (uppercase 4-hex, ASCII bytes) instead of a lossy
-   * `?`, so **no character is ever silently dropped** and Nestor's own MTEXT importer
-   * (`text-engine/parser/mtext-tokenizer`) round-trips them back. Codepoints > 0xFFFF fall back
-   * to `?` (0x3F) since `\U+XXXX` is 4-hex only.
+   * It is NOT a total inverse of decode: `decodeWindows1253` leniently Latin-1-passes the ~12
+   * bytes cp1253 leaves unassigned (0x81, 0x88, …, 0xAA, 0xD2, 0xFF → U+0081…U+00FF), but those
+   * code points are genuinely NOT representable in cp1253, so encode treats them as out-of-codepage.
+   *
+   * Characters OUTSIDE Windows-1253 (exotic symbols/CJK/emoji, or Latin-1 letters like Ò/ÿ the
+   * Greek codepage can't hold — never Greek) are emitted as a `\U+XXXX` DXF unicode escape
+   * (uppercase 4-hex, ASCII bytes) instead of a lossy `?`, so **no character is ever silently
+   * dropped** and Nestor's own MTEXT importer (`text-engine/parser/mtext-tokenizer`) round-trips
+   * them back. Code points > 0xFFFF fall back to `?` (0x3F) since `\U+XXXX` is 4-hex only.
    */
   encodeWindows1253(text: string): Uint8Array {
     const map = unicodeToWindows1253();
