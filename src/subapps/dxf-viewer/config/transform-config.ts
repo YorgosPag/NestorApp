@@ -20,19 +20,20 @@ import { clamp } from '../rendering/entities/shared/geometry-utils';
 /**
  * Scale limits για canvas transformation
  *
- * RATIONALE (2026-02-18 UPDATE):
- * - MIN_SCALE: 0.001 (0.1%) - Ultra-wide view for massive site plans
- * - MAX_SCALE: 10000 (1,000,000%) - Sub-millimeter CAD precision
+ * RATIONALE (2026-07-12 UPDATE — wider range per Giorgio):
+ * - MIN_SCALE: 0.0001 (0.01%) - Ultra-wide view for massive site plans (10× further out)
+ * - MAX_SCALE: 100000 (10,000,000%) - Extreme sub-millimeter CAD precision (10× closer in)
  *
  * AutoCAD/BricsCAD allow essentially unlimited zoom range.
- * These limits prevent floating-point precision loss at extremes.
+ * These limits stay well within IEEE-754 double precision — canvas transforms
+ * multiply doubles, so no precision loss at these extremes.
  */
 export const TRANSFORM_SCALE_LIMITS = {
-  /** Minimum scale (0.1% - ultra-wide view for large sites) */
-  MIN_SCALE: 0.001,
+  /** Minimum scale (0.01% - ultra-wide view for large sites) */
+  MIN_SCALE: 0.0001,
 
-  /** Maximum scale (1,000,000% - sub-millimeter CAD precision) */
-  MAX_SCALE: 10000,
+  /** Maximum scale (10,000,000% - extreme sub-millimeter CAD precision) */
+  MAX_SCALE: 100000,
 
   /** Default/initial scale (100% - 1:1 view) */
   DEFAULT_SCALE: 1,
@@ -63,17 +64,17 @@ export const PDF_SCALE_LIMITS = {
 /**
  * Practical zoom limits για UI controls (wheel + keyboard + buttons)
  *
- * RATIONALE (2026-02-18 UPDATE):
- * - MIN_SCALE: 0.001 (0.1%) - Enables viewing entire site plans
- * - MAX_SCALE: 10000 (1,000,000%) - Sub-millimeter precision for detailed CAD work
+ * RATIONALE (2026-07-12 UPDATE — wider range per Giorgio):
+ * - MIN_SCALE: 0.0001 (0.01%) - Enables viewing entire site plans (10× further out)
+ * - MAX_SCALE: 100000 (10,000,000%) - Extreme precision for detailed CAD work (10× closer in)
  * - Same as TRANSFORM_SCALE_LIMITS for consistent UX across all input methods
  */
 export const UI_ZOOM_LIMITS = {
-  /** Minimum scale for all zoom methods (0.1%) */
-  MIN_SCALE: 0.001,
+  /** Minimum scale for all zoom methods (0.01%) */
+  MIN_SCALE: 0.0001,
 
-  /** Maximum scale for all zoom methods (1,000,000%) */
-  MAX_SCALE: 10000,
+  /** Maximum scale for all zoom methods (10,000,000%) */
+  MAX_SCALE: 100000,
 } as const;
 
 // ============================================
