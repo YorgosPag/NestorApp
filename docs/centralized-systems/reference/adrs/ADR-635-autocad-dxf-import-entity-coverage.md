@@ -254,7 +254,94 @@ Tests: `dxf-quad-fill-converter.test.ts` (8) + `dxf-point-converter.test.ts` (4)
   migrate to `parseVerticesFromPairs`. Bulge→arc tessellation (Φ1b) — bulge is captured but
   currently rendered as straight segments (21 curved vertices in the sample).
 
+## Φ C.6 — R12 associative-hatch INSERT → single HATCH entity (ACAD/HATCH XDATA)
+
+**Symptom (Giorgio, real file `KADOS.ΓΡΑΜΜΟΣΚΙΑΣΕΙΣ.dxf`):** «οι γραμμοσκιάσεις εμφανίζονται σαν
+μεμονωμένες γραμμές στον καμβά». Diagnosed against the sample: **AC1009 (R12)**, 26 MB, `$ACADVER=AC1009`.
+R12 has **no HATCH entity** — a hatch is an anonymous block (`*X#`) of exploded pattern LINEs, INSERTed
+into model space and tagged with XDATA `1001 ACAD / 1000 HATCH`. The file has **9 hatch INSERTs** whose
+`*X#` blocks hold **156 860 LINEs** total. ADR-635 Φ2 `instantiateInsert` faithfully exploded them → the
+canvas showed ~156k loose lines instead of 9 hatches.
+
+**Big-player parity:** modern AutoCAD re-associates the boundary from the `R14_HATCH_DATA` XDATA cache and
+shows a live HATCH — it does NOT leave the lines loose. So the enterprise+SSoT fix coincides with real-world
+practice: reconstruct, don't explode.
+
+**XDATA structure** (per hatch INSERT): `1001 ACAD / 1000 HATCH / 1002 { / 1070 <flags> / 1000 <patternName>
+(e.g. GRASS) / 1040 <scale> / 1040 <angleDeg> / 1000 R14_HATCH_DATA / …matrix… / 1000 <patternName> /
+…boundary paths… / 1071 0 / …pattern-line defs… / 1002 }`. The boundary uses **two** encodings, both handled:
+- **edge list** — per edge `1070 1` + 4×`1040` (x1,y1,x2,y2); polygon = ordered edge start points (islands
+  split on a geometric gap).
+- **polyline** — `1071 <numVerts>` + `numVerts × (1040 x, 1040 y)`.
+Collection is bounded by the `1071 0` boundary terminator, so the pattern-definition section (which reuses
+`1070`/`1040`, incl. `1070 3` line-family counts) is never misread as edges. A curved edge (`1070` type
+2/3/4 = arc/ellipse/spline) returns `null` → fall back to explosion (safe degradation, never wrong geometry).
+
+**Implementation:**
+1. **`dxf-hatch-xdata-converter.ts`** (new) — `tryConvertInsertHatch(insert, index)`: detects the ACAD/HATCH
+   XDATA on the INSERT's ordered `pairs` (the parser already retains XDATA — all codes are `≠0` until the
+   next entity, so no parser change was needed), reads pattern/scale/angle + boundary, returns one hatch entity.
+2. **`dxf-hatch-converter.ts`** — extracted `buildHatchSceneEntity(params)` as the **shared assembly SSoT**
+   (fillType resolution + catalog scale-idempotency + entity shape). `convertHatch` (native HATCH) now delegates
+   to it — the two hatch importers can never drift (N.18: no sibling clone of the ~50-line assembly).
+3. **`dxf-scene-builder.ts`** — INSERT gate: `tryConvertInsertHatch` FIRST; on a hit, emit the single hatch
+   (`recordParsed('HATCH')`) and skip `instantiateInsert`; else fall through to normal block explosion.
+
+**Result on the real file (via `buildScene`):** entity types `{hatch:9, polyline:2, line:3, circle:1}` = **15
+total** (was **156 860+** loose lines). All 9 hatches reconstructed (both edge-list & polyline boundary
+encodings), pattern names preserved (GRASS/HEX/SQUARE/NET/ANSI31), BYLAYER color, coordinates ride the
+canonical-mm pass exactly like a native HATCH. Reuses the existing `hatch-pattern-catalog` (GRASS etc.) +
+`HatchRenderer` — no new render path.
+
+**Files:** `utils/dxf-hatch-xdata-converter.ts` (new), `utils/dxf-hatch-converter.ts` (extract shared builder),
+`utils/dxf-scene-builder.ts` (INSERT gate), `utils/__tests__/dxf-hatch-xdata-converter.test.ts` (new, 6 unit +
+1 buildScene integration).
+
+**Verification:** `dxf-hatch-xdata-converter.test.ts` + hatch/gradient/block-expansion/renderer regression =
+38/38 jest green; jscpd clean; real 26 MB R12 file end-to-end 156 860 lines → 9 hatches.
+
 ## Changelog
+- **2026-07-11 — Φ C.6 (R12 associative-hatch INSERT → single HATCH via ACAD/HATCH XDATA):** R12/AC1009 has
+  no HATCH entity — hatches are anonymous `*X#` blocks of exploded LINEs, INSERTed with `1001 ACAD / 1000 HATCH`
+  XDATA (+ `R14_HATCH_DATA` boundary cache). New `dxf-hatch-xdata-converter.ts` (`tryConvertInsertHatch`)
+  reconstructs ONE hatch entity/INSERT (both edge-list & polyline boundary encodings; curved edges → fall back);
+  shared `buildHatchSceneEntity` SSoT extracted from `convertHatch` (no clone); scene-builder gates the INSERT.
+  Real KADOS file: **156 860 lines → 9 hatches** (15 entities total). 7 new tests, 38 sibling jest green, jscpd clean.
+- **2026-07-11 — Φ C.5 (FONT / TEXTSTYLE render parity: entity group 7 → STYLE table → fontFamily):**
+  τα imported TEXT/MTEXT ζωγραφίζονταν με hardcoded `fontFamily: ''` (`buildTextNodeFromFlat`) — η
+  drawing-specific γραμματοσειρά (π.χ. `romans.shx`) χανόταν και όλα render-άρονταν με το render-default
+  (Liberation Sans). Το κενό ήταν **WIRING**, ΟΧΙ έλλειψη parser: το STYLE table parser
+  (`parseStyleTable` + `styleEntryDefaults`) + η SHX→web substitution (`resolveEntityFont`/`lookupSubstitute`)
+  **ΥΠΗΡΧΑΝ ΗΔΗ** (ADR-344/ADR-530) αλλά **κανείς δεν τα κατανάλωνε** στο import build flow.
+  - **Νέος thin SSoT composer** (`text-engine/parser/style-table-reader.ts`): `buildStyleFontMap(content)`
+    → `Record<styleName, fontFamily>` πάνω από τα υπάρχοντα `parseStyleTable` + `styleEntryDefaults`
+    (**ΟΧΙ** δεύτερος parser). Αποθηκεύει το **stripped** font-file name (`romans`), **ΟΧΙ**
+    pre-substituted web font: το render `resolveEntityFont` κάνει το substitution downstream — pre-substitute
+    θα (α) double-substitute και (β) θα override-άρε λάθος ένα company-uploaded exact-match font (direct cache hit).
+  - **STYLE pre-pass wired:** το `DxfSceneBuilder.buildSceneWithDiagnostics` χτίζει `styleFonts = buildStyleFontMap(content)`
+    (δίπλα στο C.4 LTYPE pre-pass + DIMSTYLE/LAYER) και το threading **per-drawing** (mirror `dimStyles`, ΟΧΙ
+    global store — δεν μολύνεται shared registry).
+  - **Threading (5ος optional param):** `convertToSceneEntity` → `convertEntityToScene` → `routeEntityToConverter`
+    → `convertText`/`convertMText`, + `ExpandContext.styleFonts` για block-nested text. Νέος τύπος `StyleFontMap`
+    (`dxf-parser-types.ts`, mirror `DimStyleMap`).
+  - **Converters:** νέος gated helper `resolveStyleFont(data, styleFonts)` — group 7 → map → fontFamily,
+    αλλιώς `''`. `buildTextNodeFromFlat` πήρε `fontFamily=''` param (τελευταίο) → `run.style.fontFamily`.
+    `convertMText` seed-άρει το `parseMtext(..., { height, fontFamily })` (inline `\f`/`\F` overrides ΑΚΟΜΑ
+    κερδίζουν, AutoCAD parity). **Gate:** χωρίς group 7 / unknown style → `''` (TEXT) ή το parser default
+    `'Standard'` (MTEXT) → native/Tekton/bare text αμετάβλητο, zero regression.
+  - **Big-player (AutoCAD):** group 7 = text style name → STYLE entry → fontFile· «Standard» = default·
+    missing SHX → substitute (mirror του δικού μας `lookupSubstitute`).
+  - **Backlog:** ATTRIB/ATTDEF font (ίδιο `buildTextNodeFromFlat` path· default `''` σήμερα = αμετάβλητο)·
+    substitution precision για stripped names (`txt`→Mono / `gothicg`→Unifraktur χάνονται στο catch-all —
+    property του `styleEntryDefaults`/`lookupSubstitute` keying, ΟΧΙ του C.5). **C.6 HATCH / C.7 MLINESTYLE** = backlog.
+  - **Files:** `style-table-reader.ts`+`parser/index.ts` (`buildStyleFontMap`), `dxf-parser-types.ts`
+    (`StyleFontMap`), `dxf-entity-parser.ts` (re-export + 5ος param), `dxf-entity-converters.ts` (threading),
+    `dxf-text-converters.ts` (`resolveStyleFont` + fontFamily param + convertText/MText), `dxf-scene-builder.ts`
+    (STYLE pre-pass), `dxf-block-expander.ts` (`ExpandContext.styleFonts`). **11 νέα tests**
+    (`dxf-entity-font.test.ts`: buildStyleFontMap strip/empty/no-table + convertText known/absent/unknown/no-map
+    + convertMText seed/default/unknown + builder end-to-end), **378/378** utils+scale green + **396/396**
+    text-engine green, jscpd clean. ΔΕΝ browser-verified (χρειάζεται canvas)· η import→map→resolve→run-style
+    λογική = tested (+ τα υπάρχοντα `resolveEntityFont`/glyph render tests).
 - **2026-07-11 — Φ C.4 (LINETYPE render parity: entity group 6 + CELTSCALE 48 + $LTSCALE + LTYPE pre-pass):**
   οι entity converters διάβαζαν χρώμα/πάχος αλλά **ΟΧΙ** το `data['6']` (linetype) / `data['48']` (CELTSCALE)
   → το per-entity linetype override χανόταν (dashed/dotted γραμμές render-άρονταν solid). Επιπλέον το

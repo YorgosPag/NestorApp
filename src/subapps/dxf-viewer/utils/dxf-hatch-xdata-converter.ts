@@ -87,77 +87,103 @@ function readHatchXdataHead(pairs: DxfPairs): HatchXdataHead | null {
   };
 }
 
-interface LineEdge { x1: number; y1: number; x2: number; y2: number; }
-
 /**
- * Extract the boundary line edges from the `R14_HATCH_DATA` section. Each edge is `1070 1`
- * (line) followed by exactly four `1040` (x1,y1,x2,y2). The elevation/normal matrix that
- * precedes the edges uses lone `1040`/`1010`/`1011` codes (never `1070 1`+4×`1040`), so the
- * arity check skips it; the pattern-definition section that follows starts with a `1070 1`
- * that has only two `1040` args → the arity check terminates collection there.
- *
- * Returns `null` if a curved edge (type 2/3/4) is present anywhere in the boundary — such a
- * boundary cannot be reconstructed as a polygon here, so the caller must fall back.
+ * Locate where the boundary-path data begins inside `R14_HATCH_DATA`: the section opens with a
+ * handle `1000`, an elevation/normal transform matrix (1011/1021/1031 rows + 1010/1020/1030
+ * normal), then repeats the pattern name as a `1000` immediately preceded by the normal's `1030`.
+ * Boundary data starts right after that pattern-name `1000`. Returns -1 when no R14 block exists.
  */
-function extractR14LineEdges(pairs: DxfPairs): LineEdge[] | null {
+function findR14BoundaryStart(pairs: DxfPairs): number {
   let r14 = -1;
   for (let i = 0; i < pairs.length; i += 1) {
     if (pairs[i][0] === '1000' && pairs[i][1] === 'R14_HATCH_DATA') { r14 = i; break; }
   }
-  if (r14 < 0) return null;
+  if (r14 < 0) return -1;
+  for (let i = r14 + 1; i < pairs.length; i += 1) {
+    if (pairs[i][0] === '1000' && pairs[i - 1]?.[0] === '1030') return i + 1;
+  }
+  return -1;
+}
 
-  const edges: LineEdge[] = [];
-  let started = false;
-  let i = r14 + 1;
+/**
+ * Extract boundary polygon paths from the `R14_HATCH_DATA` section. AutoCAD writes a boundary
+ * path in one of TWO encodings, both handled here:
+ *
+ *   • **edge list** — per edge `1070 1` (line) + four `1040` (x1,y1,x2,y2); the polygon is the
+ *     ordered edge start points. A geometric gap between an edge's end and the next edge's start
+ *     splits a new loop (islands).
+ *   • **polyline** — `1071 <numVerts>` immediately followed by `numVerts × (1040 x, 1040 y)`.
+ *
+ * Collection is bounded by the `1071 0` boundary terminator, so the pattern-definition section
+ * that follows (which reuses `1070`/`1040` codes, incl. `1070 3` line-family counts) is never
+ * misread. A curved boundary edge (`1070` type 2/3/4 = arc/ellipse/spline) returns `null` so the
+ * caller falls back to block explosion (the hatch still shows — safe degradation, not wrong shape).
+ */
+function extractR14BoundaryPaths(pairs: DxfPairs): Point2D[][] | null {
+  const start = findR14BoundaryStart(pairs);
+  if (start < 0) return null; // no R14 boundary cache → caller falls back
+
+  const paths: Point2D[][] = [];
+  let cur: Point2D[] = [];
+  let lastEnd: Point2D | null = null;
+  const flush = (): void => { if (cur.length >= 3) paths.push(cur); cur = []; lastEnd = null; };
+
+  let i = start;
   while (i < pairs.length) {
     const [c, v] = pairs[i];
+
+    if (c === '1071') {
+      const n = parseInt(v, 10) || 0;
+      if (n === 0) break; // boundary terminator — pattern section follows
+      if (pairs[i + 1]?.[0] === '1040') {
+        // Polyline-vertex path: read n (x,y) pairs.
+        flush();
+        i += 1;
+        const verts: Point2D[] = [];
+        for (let k = 0; k < n && i + 1 < pairs.length; k += 1) {
+          if (pairs[i][0] === '1040' && pairs[i + 1][0] === '1040') {
+            verts.push({ x: +pairs[i][1], y: +pairs[i + 1][1] });
+            i += 2;
+          } else break;
+        }
+        if (verts.length >= 3) paths.push(verts);
+        continue;
+      }
+      i += 1; // structural 1071 (numPaths / flag)
+      continue;
+    }
+
     if (c === '1070') {
       const t = v.trim();
       if (t === '1') {
         const p1 = pairs[i + 1]; const p2 = pairs[i + 2];
         const p3 = pairs[i + 3]; const p4 = pairs[i + 4];
         if (p1?.[0] === '1040' && p2?.[0] === '1040' && p3?.[0] === '1040' && p4?.[0] === '1040') {
-          edges.push({ x1: +p1[1], y1: +p2[1], x2: +p3[1], y2: +p4[1] });
-          started = true;
+          const s: Point2D = { x: +p1[1], y: +p2[1] };
+          const e: Point2D = { x: +p3[1], y: +p4[1] };
+          if (lastEnd && (Math.abs(s.x - lastEnd.x) > EDGE_JOIN_TOL || Math.abs(s.y - lastEnd.y) > EDGE_JOIN_TOL)) {
+            if (cur.length >= 3) paths.push(cur);
+            cur = [];
+          }
+          cur.push(s);
+          lastEnd = e;
           i += 5;
           continue;
         }
-        if (started) break; // pattern-definition section reached (1070 1 with <4 args)
-      } else if (t === '2' || t === '3' || t === '4') {
-        // Arc / ellipse / spline boundary edge — unsupported polygon reconstruction.
-        return null;
+        i += 1; // `1070 1` used as a polyline flag (not a 4-coord edge)
+        continue;
       }
-    } else if (c === '1000' && started) {
-      break; // next XDATA string section
+      if (t === '2' || t === '3' || t === '4') return null; // curved edge → fall back
+      i += 1; // `1070 0` style/associativity flag
+      continue;
     }
+
+    if (c === '1000') break; // unexpected next XDATA section — stop
     i += 1;
   }
+  flush();
 
-  return edges.length > 0 ? edges : null;
-}
-
-/**
- * Chain line edges into closed boundary paths, splitting on geometric discontinuity so islands
- * (separate loops) become separate paths — robust regardless of the proprietary `1071` grouping
- * semantics. Consecutive edges share an exact endpoint in the file, so an EDGE_JOIN_TOL gap marks
- * a new loop. Each vertex list is the ordered edge start points (the loop closes back to vertex 0).
- */
-function edgesToBoundaryPaths(edges: LineEdge[]): Point2D[][] {
-  const paths: Point2D[][] = [];
-  let cur: Point2D[] = [];
-  let lastEnd: Point2D | null = null;
-
-  for (const e of edges) {
-    if (lastEnd && (Math.abs(e.x1 - lastEnd.x) > EDGE_JOIN_TOL || Math.abs(e.y1 - lastEnd.y) > EDGE_JOIN_TOL)) {
-      if (cur.length >= 3) paths.push(cur);
-      cur = [];
-    }
-    cur.push({ x: e.x1, y: e.y1 });
-    lastEnd = { x: e.x2, y: e.y2 };
-  }
-  if (cur.length >= 3) paths.push(cur);
-
-  return paths;
+  return paths.length > 0 ? paths : null;
 }
 
 /**
@@ -176,11 +202,8 @@ export function tryConvertInsertHatch(insert: EntityData, index: number): AnySce
   const head = readHatchXdataHead(pairs);
   if (!head) return null;
 
-  const edges = extractR14LineEdges(pairs);
-  if (!edges) return null;
-
-  const boundaryPaths = edgesToBoundaryPaths(edges);
-  if (boundaryPaths.length === 0) return null;
+  const boundaryPaths = extractR14BoundaryPaths(pairs);
+  if (!boundaryPaths || boundaryPaths.length === 0) return null;
 
   return buildHatchSceneEntity({
     id: `hatch_insert_${index}`,
