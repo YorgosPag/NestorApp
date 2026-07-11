@@ -67,6 +67,54 @@ export function radialTangentAt(theta: number, sign: 1 | -1): Vec2 {
   return { x: -sign * Math.sin(theta), y: sign * Math.cos(theta) };
 }
 
+/**
+ * One radial tread/landing quad, flat at `z`, spanning `[theta0, theta1]`. `apex`
+ * collapses the inner edge to the centre point (spiral / triangular-fan → triangle);
+ * otherwise an annular quad at `[innerRadius, outerRadius]` (helical). Winding is
+ * `sign`-oriented (ccw = +1). SSoT sector — shared by `buildRadialTreads` and the
+ * rest-landing sector (ADR-637 Φ3 radial): a landing is just a sector swept over a
+ * wider angle at constant `z`, so no new tread/landing math (N.18).
+ */
+export function radialSector(
+  center: Readonly<Point3D>,
+  innerRadius: number,
+  outerRadius: number,
+  theta0: number,
+  theta1: number,
+  z: number,
+  apex: boolean,
+  sign: 1 | -1,
+): Polygon3D {
+  const outerA = radialPoint(center, outerRadius, theta0, z);
+  const outerB = radialPoint(center, outerRadius, theta1, z);
+  if (apex) {
+    const apexPt = point(center.x, center.y, z);
+    return sign === 1 ? [apexPt, outerA, outerB] : [apexPt, outerB, outerA];
+  }
+  const innerA = radialPoint(center, innerRadius, theta0, z);
+  const innerB = radialPoint(center, innerRadius, theta1, z);
+  return sign === 1 ? [innerA, outerA, outerB, innerB] : [innerB, outerB, outerA, innerA];
+}
+
+/**
+ * One diagonal radial riser (ADR-370 Phase 5.3) at boundary `theta`, spanning the
+ * radial width from `zLow` (inner edge) to `zHigh` (outer edge). SSoT — shared by
+ * `buildRadialRisers` and the rest-landing walk.
+ */
+export function radialRiser(
+  center: Readonly<Point3D>,
+  innerRadius: number,
+  outerRadius: number,
+  theta: number,
+  zLow: number,
+  zHigh: number,
+): Segment3D {
+  return {
+    start: radialPoint(center, innerRadius, theta, zLow),
+    end: radialPoint(center, outerRadius, theta, zHigh),
+  };
+}
+
 // ─── Walkline-following kinds (chord-perpendicular wedges) ─────────────────────
 
 /** Normalized chord tangent from `a` to `b`; falls back to +X for a zero chord. */

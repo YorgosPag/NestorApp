@@ -154,6 +154,8 @@ export {
   buildAngularGrid,
   radialPoint,
   radialTangentAt,
+  radialSector,
+  radialRiser,
   chordTangent,
   buildWalklineTreads,
   buildWalklineRisers,

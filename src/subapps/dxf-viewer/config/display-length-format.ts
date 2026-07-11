@@ -54,7 +54,13 @@ import {
   toDisplayArea,
 } from './units';
 import { displayUnitState } from './display-unit-state';
-import { FormatterRegistry, type Precision } from '../formatting';
+// ADR-373 server-safe deep import — the `../formatting` barrel re-exports the
+// React `useFormatter` hook (→ react-i18next → `createContext`), which crashes when
+// this pure module is pulled into a server/RSC bundle (the DXF `/api/floorplans/process`
+// route imports it transitively via entity-bounds → scale-bar-geometry). Import the
+// non-React registry + type from their real modules so no React edge leaks server-side.
+import { FormatterRegistry } from '../formatting/FormatterRegistry';
+import type { Precision } from './number-format-config';
 import { canvasToMmScaleFor, type SceneUnits } from '../utils/scene-units';
 
 export interface FormatMeasurementOptions {

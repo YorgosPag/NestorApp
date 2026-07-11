@@ -33,7 +33,11 @@ import { getTextPreviewStyleWithOverride, renderStyledTextWithOverride } from '.
 // 🏢 ADR-066: Centralized Angle Calculation
 import { calculateDistance, calculateAngle } from './geometry-rendering-utils';
 // 🏢 ADR-082: Enterprise Number Formatting
-import { FormatterRegistry, type Precision } from '../../../formatting';
+// ADR-373 server-safe deep import — avoid the `formatting` barrel (re-exports the
+// React `useFormatter` hook → react-i18next → `createContext`) so this shared render
+// util carries no React edge into any server/RSC bundle that pulls it transitively.
+import { FormatterRegistry } from '../../../formatting/FormatterRegistry';
+import type { Precision } from '../../../config/number-format-config';
 // 🏢 ADR-462: display-unit SSoT — entity distance labels follow the status-bar unit
 import { formatLengthMm, formatLengthForDisplay } from '../../../config/display-length-format';
 // 🏢 ADR-112: Centralized Text Rotation Pattern
@@ -324,6 +328,36 @@ export function formatCoordinateLocale(value: number, decimals: number = 2): str
  * // For main canvas (with rotation, no background)
  * renderDistanceLabel(ctx, worldStart, worldEnd, screenStart, screenEnd, FINAL_LABEL_DEFAULTS);
  */
+/**
+ * Shared setup for both distance-label renderers (N.18 — killed the twin block):
+ * merge options over defaults, compute the display text (ADR-462 mm→display SSoT),
+ * screen midpoint + line angle, then `save`/`translate`/`rotate` the context so the
+ * caller draws the label at the origin. Caller owns the matching `ctx.restore()`.
+ */
+function beginDistanceLabel(
+  ctx: CanvasRenderingContext2D,
+  worldP1: Point2D,
+  worldP2: Point2D,
+  screenP1: Point2D,
+  screenP2: Point2D,
+  options: DistanceLabelOptions,
+  defaults: DistanceLabelOptions
+): { opts: DistanceLabelOptions; text: string } {
+  const opts = { ...defaults, ...options };
+  // ADR-462: distance is a canonical-mm world length → display-unit SSoT owns the
+  // unit + locale + label (replaces the raw `formatDistance`). Follows the selector.
+  const text = formatLengthMm(calculateWorldDistance(worldP1, worldP2));
+  const midX = (screenP1.x + screenP2.x) / 2;
+  const midY = (screenP1.y + screenP2.y) / 2;
+  // 🏢 ADR-066 centralized angle + ADR-110 text rotation normalization.
+  const rawAngle = calculateAngle(screenP1, screenP2);
+  const angle = opts.rotateWithLine ? normalizeTextAngle(rawAngle) : rawAngle;
+  ctx.save();
+  ctx.translate(midX, midY + opts.verticalOffset);
+  if (opts.rotateWithLine) ctx.rotate(angle);
+  return { opts, text };
+}
+
 export function renderDistanceLabel(
   ctx: CanvasRenderingContext2D,
   worldP1: Point2D,
@@ -332,34 +366,9 @@ export function renderDistanceLabel(
   screenP2: Point2D,
   options: DistanceLabelOptions = PREVIEW_LABEL_DEFAULTS
 ): void {
-  // Merge with defaults
-  const opts = { ...PREVIEW_LABEL_DEFAULTS, ...options };
-
-  // Calculate distance from WORLD coordinates
-  const distance = calculateWorldDistance(worldP1, worldP2);
-  // ADR-462: distance is a canonical-mm world length → display-unit SSoT owns the
-  // unit + locale + label (replaces the raw `formatDistance`). Follows the selector.
-  const text = formatLengthMm(distance);
-
-  // Calculate midpoint for label positioning (screen coordinates)
-  const midX = (screenP1.x + screenP2.x) / 2;
-  const midY = (screenP1.y + screenP2.y) / 2;
-
-  // Calculate line angle for rotation (if enabled)
-  // 🏢 ADR-066: Use centralized angle calculation
-  // 🏢 ADR-110: Use centralized text rotation normalization
-  const rawAngle = calculateAngle(screenP1, screenP2);
-  const angle = opts.rotateWithLine ? normalizeTextAngle(rawAngle) : rawAngle;
-
-  ctx.save();
-
-  // Move to label position
-  ctx.translate(midX, midY + opts.verticalOffset);
-
-  // Rotate if enabled
-  if (opts.rotateWithLine) {
-    ctx.rotate(angle);
-  }
+  const { opts, text } = beginDistanceLabel(
+    ctx, worldP1, worldP2, screenP1, screenP2, options, PREVIEW_LABEL_DEFAULTS
+  );
 
   // Get styling from centralized system
   const style = getTextPreviewStyleWithOverride();
@@ -423,30 +432,9 @@ export function renderDistanceLabelStyled(
   screenP2: Point2D,
   options: DistanceLabelOptions = FINAL_LABEL_DEFAULTS
 ): void {
-  const opts = { ...FINAL_LABEL_DEFAULTS, ...options };
-
-  // Calculate distance from WORLD coordinates
-  const distance = calculateWorldDistance(worldP1, worldP2);
-  // ADR-462: distance is a canonical-mm world length → display-unit SSoT owns the
-  // unit + locale + label (replaces the raw `formatDistance`). Follows the selector.
-  const text = formatLengthMm(distance);
-
-  // Calculate midpoint
-  const midX = (screenP1.x + screenP2.x) / 2;
-  const midY = (screenP1.y + screenP2.y) / 2;
-
-  // Calculate line angle
-  // 🏢 ADR-066: Use centralized angle calculation
-  // 🏢 ADR-110: Use centralized text rotation normalization
-  const rawAngle = calculateAngle(screenP1, screenP2);
-  const angle = opts.rotateWithLine ? normalizeTextAngle(rawAngle) : rawAngle;
-
-  ctx.save();
-  ctx.translate(midX, midY + opts.verticalOffset);
-
-  if (opts.rotateWithLine) {
-    ctx.rotate(angle);
-  }
+  const { text } = beginDistanceLabel(
+    ctx, worldP1, worldP2, screenP1, screenP2, options, FINAL_LABEL_DEFAULTS
+  );
 
   // Use centralized styled text rendering
   renderStyledTextWithOverride(ctx, text, 0, 0);

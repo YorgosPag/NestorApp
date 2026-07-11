@@ -44,9 +44,12 @@ import {
   buildWalklineRisers,
   buildWalklineTreads,
   radialPoint,
+  radialRiser,
+  radialSector,
   radialTangentAt,
 } from './stair-geometry-generators';
 import { buildWalklineRunWithLandings } from './stair-walkline-run-builder';
+import { buildRadialRunWithLandings } from './stair-radial-run-builder';
 import { hasRestLandings } from './stair-run-landings';
 
 // ─── Radial stair (Revit CurvedStairsRun) ─────────────────────────────────────
@@ -74,6 +77,14 @@ export function computeRadialStair(
   params: Readonly<StairParams>,
   cfg: RadialStairConfig,
 ): StairGeometry {
+  // ADR-637 Φ3 (radial) — rest landings: a landing is a flat annular sector swept
+  // over a wider angle at constant z (the spiral/helix just sweeps more total
+  // angle). No rest landings ⇒ the branch is skipped and geometry stays
+  // byte-identical to the single-flight radial path.
+  if (hasRestLandings(params.stepCount, params.restLandings)) {
+    return buildRadialRunWithLandings(params, cfg);
+  }
+
   const grid = buildAngularGrid(cfg.sweepAngleDeg, cfg.turnDirection, params.stepCount, params.rise);
   const treads = buildRadialTreads(params.stepCount, grid, cfg);
   const risers = buildRadialRisers(params.stepCount, grid, cfg);
@@ -100,21 +111,16 @@ function buildRadialTreads(
   const { center, innerRadius, outerRadius, apex } = cfg;
   const treads: Polygon3D[] = new Array(stepCount);
   for (let i = 0; i < stepCount; i++) {
-    const theta0 = i * grid.angleStep;
-    const theta1 = (i + 1) * grid.angleStep;
-    const z = center.z + grid.riseStep * i;
-    const outerA = radialPoint(center, outerRadius, theta0, z);
-    const outerB = radialPoint(center, outerRadius, theta1, z);
-    if (apex) {
-      const apexPt = point(center.x, center.y, z);
-      treads[i] = grid.sign === 1 ? [apexPt, outerA, outerB] : [apexPt, outerB, outerA];
-    } else {
-      const innerA = radialPoint(center, innerRadius, theta0, z);
-      const innerB = radialPoint(center, innerRadius, theta1, z);
-      treads[i] = grid.sign === 1
-        ? [innerA, outerA, outerB, innerB]
-        : [innerB, outerB, outerA, innerA];
-    }
+    treads[i] = radialSector(
+      center,
+      innerRadius,
+      outerRadius,
+      i * grid.angleStep,
+      (i + 1) * grid.angleStep,
+      center.z + grid.riseStep * i,
+      apex,
+      grid.sign,
+    );
   }
   return treads;
 }
@@ -129,13 +135,16 @@ function buildRadialRisers(
   const { center, innerRadius, outerRadius } = cfg;
   const risers: Segment3D[] = [];
   for (let i = 0; i < stepCount - 1; i++) {
-    const theta = (i + 1) * grid.angleStep;
-    const zLow = center.z + grid.riseStep * i;
-    const zHigh = center.z + grid.riseStep * (i + 1);
-    risers.push({
-      start: radialPoint(center, innerRadius, theta, zLow),
-      end: radialPoint(center, outerRadius, theta, zHigh),
-    });
+    risers.push(
+      radialRiser(
+        center,
+        innerRadius,
+        outerRadius,
+        (i + 1) * grid.angleStep,
+        center.z + grid.riseStep * i,
+        center.z + grid.riseStep * (i + 1),
+      ),
+    );
   }
   return risers;
 }
