@@ -19,6 +19,8 @@ import {
   processFloorplanWithPolicy,
   isInProgress,
 } from '@/services/floorplans/floorplan-processing-mutation-gateway';
+// ADR-635 Φ3 — Revit-style import-warnings toast (SSoT).
+import { useDxfImportNotifications } from '@/hooks/notifications/useDxfImportNotifications';
 
 // ============================================================================
 // TYPES
@@ -46,6 +48,7 @@ export function useFloorplanAutoProcess({
   refetch,
 }: UseFloorplanAutoProcessParams): void {
   const submittedIds = useRef<Set<string>>(new Set());
+  const dxfImportNotifications = useDxfImportNotifications();
 
   useEffect(() => {
     if (displayStyle !== 'floorplan-gallery') return;
@@ -80,6 +83,8 @@ export function useFloorplanAutoProcess({
           } else {
             anyProcessed = true;
             logger.info('Auto-processed floorplan', { fileId: file.id });
+            // ADR-635 Φ3 — surface partial-import warnings (skipped/failed/clamped entities).
+            dxfImportNotifications.importedWithWarnings(result.warnings);
           }
         } catch (err) {
           // Allow retry on next render
@@ -102,5 +107,5 @@ export function useFloorplanAutoProcess({
     return () => {
       cancelled = true;
     };
-  }, [displayStyle, files, refetch]);
+  }, [displayStyle, files, refetch, dxfImportNotifications]);
 }

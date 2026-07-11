@@ -16,6 +16,8 @@ export interface FloorplanProcessResult {
     layerCount: number;
     parseTimeMs: number;
   };
+  /** ADR-635 Φ3 — Revit-style import warnings (skipped/failed/clamped entities). */
+  warnings?: string[];
 }
 
 export interface FloorplanProcessInProgressResult {
