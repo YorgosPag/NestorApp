@@ -32,6 +32,36 @@ const MTEXT_ATTACHMENT_MAP: Record<number, TextJustification> = {
   7: 'BL', 8: 'BC', 9: 'BR',
 };
 
+/**
+ * INVERSE of `MTEXT_ATTACHMENT_MAP` — 9-point attachment → DXF MTEXT code 71 (1-9).
+ * SSoT companion for the export writer (`emitMText`) so it never invents a second
+ * attachment table. Derived once from the forward map; default 1 (TL) for safety.
+ */
+const ATTACHMENT_TO_MTEXT_CODE: Record<TextJustification, number> = Object.fromEntries(
+  Object.entries(MTEXT_ATTACHMENT_MAP).map(([code, att]) => [att, Number(code)]),
+) as Record<TextJustification, number>;
+
+export function attachmentToMTextCode(attachment: TextJustification | undefined): number {
+  return attachment ? ATTACHMENT_TO_MTEXT_CODE[attachment] ?? 1 : 1;
+}
+
+/**
+ * Attachment row → DXF TEXT vertical-alignment code 73 (0=baseline, 1=bottom,
+ * 2=middle, 3=top). Companion to the H-just inverse (`alignmentToHJust`) for the
+ * export writer: top row (T*) → 3, middle (M*) → 2, bottom (B*) → 0 (baseline,
+ * the DXF default). Keeps left-baseline TEXT byte-identical (returns 0).
+ */
+export function attachmentToVJust(attachment: TextJustification | undefined): 0 | 1 | 2 | 3 {
+  switch (attachment?.[0]) {
+    case 'T':
+      return 3;
+    case 'M':
+      return 2;
+    default:
+      return 0;
+  }
+}
+
 function buildTextNodeFromFlat(
   text: string,
   height: number,

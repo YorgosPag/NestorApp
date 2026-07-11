@@ -259,6 +259,33 @@ export function mapHorizontalAlignment(code: number): TextAlignment {
 }
 
 /**
+ * 🏢 ENTERPRISE: INVERSE of `mapHorizontalAlignment` — alignment → DXF code 72.
+ *
+ * Canonical H-justification for DXF export (TEXT group code 72):
+ * - 'left'   → 0 (default)
+ * - 'center' → 1
+ * - 'right'  → 2
+ *
+ * SSoT companion to the import mapper above so the export writer never invents a
+ * second alignment table. Any non-left value pairs with an 11/21 alignment point
+ * per the DXF TEXT spec (the writer handles that).
+ *
+ * @see mapHorizontalAlignment - forward (code → alignment)
+ * @param alignment - Text alignment ('left' | 'center' | 'right')
+ * @returns DXF horizontal justification code (0-2)
+ */
+export function alignmentToHJust(alignment: TextAlignment | undefined): 0 | 1 | 2 {
+  switch (alignment) {
+    case 'center':
+      return 1;
+    case 'right':
+      return 2;
+    default:
+      return 0;
+  }
+}
+
+/**
  * 🏢 ENTERPRISE: Map MTEXT attachment point to alignment
  *
  * DXF Code 71 values (3x3 grid for MTEXT):

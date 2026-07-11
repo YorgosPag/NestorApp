@@ -55,6 +55,11 @@ import { trueColorToHex } from '../../utils/dxf-true-color';
 // types live with the HATCH writer; `emitLine` (below) stays the ONE definition and
 // is injected into `emitHatch` for the exploded (Τέκτονας) path.
 import { emitHatch, type Pair } from './dxf-ascii-hatch-writer';
+// ADR-636 Στάδιο 2 Φ2.3 — TEXT (with 72/73 justification) + real MTEXT (\P line breaks, 71
+// attachment) emitters live in their own module (file-size SRP). `alignFromTextEntity` derives
+// the H/V codes from the entity via the inverse import maps (zero new alignment table).
+import { emitText, emitMText, alignFromTextEntity } from './dxf-ascii-text-writer';
+import { DxfDocumentVersion, parseDocumentVersion } from '../../text-engine/types/text-toolbar.types';
 import type { DxfLineMode } from '../types';
 
 /** Minimal layer shape needed for name + ByLayer colour resolution. */
@@ -103,12 +108,22 @@ export interface DxfWriteOptions {
    */
   readonly tableLayers?: ReadonlyArray<SceneLayer>;
   readonly customLinetypes?: ReadonlyArray<LinetypeDef>;
+  /**
+   * ADR-636 Στάδιο 2 Φ2.3 — richer HEADER for pro-grade fidelity. `extMin`/`extMax` are the
+   * drawing extents in OUTPUT units (already ×scale) → AutoCAD zoom-extents opens on the model
+   * instead of a blank sheet. `$MEASUREMENT` (1=metric), `$LTSCALE`, `$LUNITS` (2=decimal) are
+   * the standard AutoCAD defaults. All gated on the same HEADER switch (bare/Tekton unaffected).
+   */
+  readonly extMin?: Point2D;
+  readonly extMax?: Point2D;
+  readonly measurement?: number;
+  readonly ltscale?: number;
+  readonly lunits?: number;
 }
 
 const DEFAULT_LAYER = '0';
 const DEFAULT_ACI = 7; // white/black (ByLayer-ish fallback)
 const ACI_BYLAYER = 256; // dimension-block geometry follows the dim's layer colour
-const DEFAULT_TEXT_HEIGHT = 0.18; // output units — used if entity has no height.
 const ARC_SEGMENT_DEG = 12;
 
 /** Produce a DXF string for the given (flattened) entities. */
@@ -119,6 +134,9 @@ export function writeDxfAscii(
   const s = options.scale ?? 1;
   const mmScale = options.mmScale ?? s;
   const explode = options.lineMode === 'lines';
+  // ADR-636 Στάδιο 2 Φ2.3 — MTEXT serialization is version-gated (R12 downgrades to TEXT). Derive
+  // the release from `$ACADVER`; default to R2018 (the app's default target) when unspecified.
+  const version = parseDocumentVersion(options.acadVer ?? '') ?? DxfDocumentVersion.R2018;
   const out: string[] = [];
   const pair = (code: number, value: string | number): void => {
     out.push(String(code), typeof value === 'number' ? num(value) : value);
@@ -131,12 +149,23 @@ export function writeDxfAscii(
   // Unicode-capable release → AutoCAD reads the UTF-8 text as UTF-8 (no ANSI garbling);
   // `$INSUNITS` declares the units so a re-import stops guessing; `$DWGCODEPAGE` is the
   // conventional companion.
-  if (options.acadVer || options.insunits != null || options.codepage) {
+  if (
+    options.acadVer || options.insunits != null || options.codepage ||
+    options.extMin || options.extMax || options.measurement != null ||
+    options.ltscale != null || options.lunits != null
+  ) {
     pair(0, 'SECTION');
     pair(2, 'HEADER');
     if (options.acadVer) { pair(9, '$ACADVER'); pair(1, options.acadVer); }
     if (options.insunits != null) { pair(9, '$INSUNITS'); pair(70, options.insunits); }
     if (options.codepage) { pair(9, '$DWGCODEPAGE'); pair(3, options.codepage); }
+    // ADR-636 Στάδιο 2 Φ2.3 — drawing extents (already in output units) → correct zoom-extents
+    // on open; $MEASUREMENT/$LTSCALE/$LUNITS are the AutoCAD-standard metric/decimal defaults.
+    if (options.extMin) { pair(9, '$EXTMIN'); pair(10, options.extMin.x); pair(20, options.extMin.y); pair(30, 0); }
+    if (options.extMax) { pair(9, '$EXTMAX'); pair(10, options.extMax.x); pair(20, options.extMax.y); pair(30, 0); }
+    if (options.ltscale != null) { pair(9, '$LTSCALE'); pair(40, options.ltscale); }
+    if (options.lunits != null) { pair(9, '$LUNITS'); pair(70, options.lunits); }
+    if (options.measurement != null) { pair(9, '$MEASUREMENT'); pair(70, options.measurement); }
     pair(0, 'ENDSEC');
   }
 
@@ -187,7 +216,7 @@ export function writeDxfAscii(
   let dimBlockIndex = 0;
   for (const e of entities) {
     const layer = layerObj(e);
-    writeEntity(e, layer?.name ?? DEFAULT_LAYER, resolveAci(e, layer), s, mmScale, explode, pair, () => dimBlockIndex++, dimStyleNameById);
+    writeEntity(e, layer?.name ?? DEFAULT_LAYER, resolveAci(e, layer), s, mmScale, explode, pair, () => dimBlockIndex++, dimStyleNameById, version);
   }
   pair(0, 'ENDSEC');
   pair(0, 'EOF');
@@ -218,7 +247,7 @@ function resolveAci(e: Entity, layer: DxfWriteLayer | undefined): number {
 
 function writeEntity(
   e: Entity, layer: string, aci: number, s: number, mmScale: number, explode: boolean, pair: Pair,
-  nextDimBlock: () => number, dimStyleNameById: Record<string, string>,
+  nextDimBlock: () => number, dimStyleNameById: Record<string, string>, version: DxfDocumentVersion,
 ): void {
   switch (e.type) {
     case 'line': {
@@ -239,8 +268,18 @@ function writeEntity(
       else emitArc(e.center, e.radius, e.startAngle, e.endAngle, layer, aci, s, pair);
       break;
     case 'text':
+      // ADR-636 Φ2.3 — single-line TEXT with H/V justification (72/73/11/21) on the AutoCAD path.
+      // Tekton (`explode`) keeps the bare, alignment-less, unrotated TEXT (byte-identical legacy).
+      emitText(
+        e.position, e.text ?? '', e.height ?? e.fontSize, layer, aci, s, pair,
+        explode ? 0 : (e.rotation ?? 0), explode ? undefined : alignFromTextEntity(e),
+      );
+      break;
     case 'mtext':
-      emitText(e.position, e.text ?? '', e.height ?? e.fontSize, layer, aci, s, pair);
+      // ADR-636 Φ2.3 — real MTEXT (\P line breaks, 71 attachment) on the AutoCAD path; Tekton's
+      // minimal parser reads only TEXT, so `explode` keeps the historic single-line TEXT fallback.
+      if (explode) emitText(e.position, e.text ?? '', e.height ?? e.fontSize, layer, aci, s, pair);
+      else emitMText(e, layer, aci, s, pair, version);
       break;
     case 'rectangle':
     case 'rect':
@@ -344,28 +383,6 @@ function emitArc(
   pair(62, aci);
 }
 
-function emitText(
-  p: Point2D, text: string, height: number | undefined, layer: string, aci: number, s: number, pair: Pair,
-  rotationDeg = 0, centered = false,
-): void {
-  pair(0, 'TEXT');
-  pair(10, p.x * s); pair(20, p.y * s);
-  pair(40, height != null ? height * s : DEFAULT_TEXT_HEIGHT);
-  pair(1, sanitizeText(text));
-  pair(50, rotationDeg); // rotation (CCW degrees) — dimension block text uses textRotation
-  pair(41, 1);          // width factor
-  pair(7, 'STANDARD');  // text style
-  if (centered) {
-    // Centre the text on `p`: horizontal=centre (72/1) + vertical=middle (73/2) with
-    // the alignment point repeated in 11/21 (DXF requires it once 72/73 are set).
-    pair(72, 1);
-    pair(11, p.x * s); pair(21, p.y * s);
-    pair(73, 2);
-  }
-  pair(8, layer);
-  pair(62, aci);
-}
-
 // ─── Dimension anonymous block (ADR-362 Round 26) ─────────────────────────────
 
 /** Build a `DimensionLookup` over the export's dimensions (baseline/continued chains). */
@@ -416,7 +433,8 @@ function writeDimensionBlock(
         emit3DFace(prim.points.map((pt) => ({ x: pt.x, y: pt.y, zMm: 0 })), layer, ACI_BYLAYER, s, s, pair);
         break;
       case 'text':
-        emitText(prim.position, prim.text, prim.heightWorld, layer, ACI_BYLAYER, s, pair, prim.rotationDeg, true);
+        // centred dimension text — h=centre(1)/v=middle(2), byte-identical to the old `centered` flag.
+        emitText(prim.position, prim.text, prim.heightWorld, layer, ACI_BYLAYER, s, pair, prim.rotationDeg, { h: 1, v: 2 });
         break;
     }
   }
@@ -477,8 +495,4 @@ function arcPoints(c: Point2D, r: number, startDeg: number, endDeg: number): Poi
 function num(n: number): string {
   if (!Number.isFinite(n)) return '0';
   return n.toFixed(6).replace(/\.?0+$/, '') || '0';
-}
-
-function sanitizeText(text: string): string {
-  return text.replace(/[\r\n]+/g, ' ');
 }

@@ -38,6 +38,10 @@ import { usedCategoryLayerDefs } from '../core/dxf-category-layers';
 import { writeDxfAscii } from '../core/dxf-ascii-writer';
 import { resolveLinetype } from '../../stores/LinetypeRegistry';
 import { isIsoBaselineLinetype, type LinetypeDef } from '../../config/linetype-iso-catalog';
+// ADR-636 Στάδιο 2 Φ2.3 — drawing extents for $EXTMIN/$EXTMAX (correct zoom-extents on open),
+// computed from the exported primitives via the canonical bounds SSoT (no local bounds math).
+import { calculateTightBounds, isValidBounds, type BoundsEntity } from '../../utils/bounds-utils';
+import type { Point2D } from '../../rendering/types/Types';
 import { encodingService } from '../../io/encoding-service';
 import type { ResolvedExportFloor } from '../core/export-floor-scope';
 import type { ExportArtifact, ExportEntityScope, DxfLineMode } from '../types';
@@ -177,9 +181,12 @@ export function renderDxfBlob(request: DxfExportSceneRequest, lineMode?: DxfLine
   // ADR-636 Στάδιο 2 Φ2.1 — full LAYER table only on the AutoCAD (POLYLINE) path. The Tekton
   // dialect (`lines`) flattens/ignores tables → keep it minimal (bare, per its parser).
   const professionalTables = lineMode !== 'lines';
+  const scale = coordinateScale(request.scene.units, request.settings.units);
+  // ADR-636 Στάδιο 2 Φ2.3 — drawing extents (output units) only on the AutoCAD path; Tekton stays lean.
+  const extents = professionalTables ? computeScaledExtents(request.scene.entities, scale) : undefined;
   const dxf = writeDxfAscii(request.scene.entities, {
     layersById: request.scene.layersById,
-    scale: coordinateScale(request.scene.units, request.settings.units),
+    scale,
     mmScale: mmToOutputScale(request.settings.units),
     lineMode,
     // ADR-362 Round 25 — emit a DIMSTYLE table so native dimensions resolve to a
@@ -196,6 +203,13 @@ export function renderDxfBlob(request: DxfExportSceneRequest, lineMode?: DxfLine
     // defaults. Layers = the very set the writer already uses for name resolution.
     tableLayers: professionalTables ? Object.values(request.scene.layersById) : undefined,
     customLinetypes: professionalTables ? collectCustomLinetypesForExport(request.scene) : undefined,
+    // ADR-636 Στάδιο 2 Φ2.3 — richer HEADER (AutoCAD-standard): real drawing extents +
+    // metric/decimal defaults, so the file opens zoomed to the model with correct scale/units.
+    extMin: extents?.min,
+    extMax: extents?.max,
+    measurement: professionalTables ? 1 : undefined, // 1 = metric
+    ltscale: professionalTables ? 1 : undefined,
+    lunits: professionalTables ? 2 : undefined,       // 2 = decimal
   });
   // ADR-636 Στάδιο 2 Φ2.2 — encode the final bytes to match the declared version. UTF-8 (2007+)
   // writes the JS string as-is; a pre-Unicode target (cp1253) re-encodes the WHOLE string to
@@ -205,6 +219,24 @@ export function renderDxfBlob(request: DxfExportSceneRequest, lineMode?: DxfLine
     ? encodingService.encodeWindows1253(dxf)
     : dxf;
   return new Blob([bytes], { type: 'application/dxf' });
+}
+
+/**
+ * ADR-636 Στάδιο 2 Φ2.3 — the drawing extents ($EXTMIN/$EXTMAX) in OUTPUT units. Computed from
+ * the exported primitives via the canonical `calculateTightBounds` SSoT (no local bounds math),
+ * then scaled by the same factor as every coordinate. Returns `undefined` for a degenerate/empty
+ * result → the writer omits the extents (no bogus 0,0 zoom-extents box).
+ */
+export function computeScaledExtents(
+  entities: readonly Entity[],
+  scale: number,
+): { min: Point2D; max: Point2D } | undefined {
+  const b = calculateTightBounds(entities as unknown as BoundsEntity[]);
+  if (!isValidBounds(b)) return undefined;
+  return {
+    min: { x: b.min.x * scale, y: b.min.y * scale },
+    max: { x: b.max.x * scale, y: b.max.y * scale },
+  };
 }
 
 /**
