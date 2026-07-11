@@ -143,3 +143,11 @@ UI, no encoding toggle.
   Gated (bare/Tekton unchanged), inline `62` kept. 87 jest green (incl. byte-identical round-trip proof);
   E2E verified (HEADER + single TABLES[LTYPE/LAYER] + ENTITIES, Greek layer name intact). jscpd clean.
   Writer 484 lines (< 500 via split).
+- **2026-07-11 — Στάδιο 2 Φ2.2:** auto version-driven text encoding. `DEFAULT_DXF_VERSION` → AC1032
+  (R2018, AutoCAD-style latest default, UTF-8). New `EncodingService.encodeWindows1253` (inverts the
+  existing 1253 table — no second table) + `versionToEncoding` (pre-Unicode → cp1253, 2007+ → utf-8),
+  set on `settings.encoding` in `buildDxfExportRequest`; `renderDxfBlob` re-encodes to Windows-1253
+  bytes for cp1253 (else UTF-8 Blob). Out-of-codepage chars → lossless `\U+XXXX` escape (not `?`).
+  Encoding fully automatic — no encoding UI (version dropdown already existed). 97 jest green (6 new
+  encoding-service + adapter); E2E: cp1253 blob round-trips lossless, keeps AC1015 (no bump), ANSI_1253,
+  Greek intact. jscpd clean.
