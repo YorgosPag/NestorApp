@@ -2,10 +2,15 @@
  * Bathroom Auto-Arrange — reusable arrange core · ADR-638 (Στάδιο 2 → 2b).
  *
  * Given a room perimeter polygon (scene coordinates = canonical mm, ADR-462) plus
- * the level's entities (for door keep-clear), this derives the solver input, runs
- * the pure solver and commits the best arrangement as ONE undoable batch — then
- * surfaces a success / warning toast. Thin glue over SSoT: the solver / adapter /
- * commit-builder do the real work.
+ * the level's entities, this derives the solver input, runs the pure solver and
+ * commits the best arrangement as ONE undoable batch — then surfaces a success /
+ * warning toast. Thin glue over SSoT: the solver / adapter / commit-builder do the
+ * real work.
+ *
+ * Στάδιο 3 — two BIM-derived constraints are applied here (via `bathroom-room-constraints`):
+ * the room polygon is inset by the wall plaster (σοβάς) thickness so fixtures hug the
+ * FINISHED face, and door SWING QUADRANTS (real `OpeningGeometry.hingeArc` sectors) are
+ * passed to the solver as keep-clear zones.
  *
  * Στάδιο 2b — the room polygon is supplied directly by the hover→click region-pick
  * tool (`useBathroomAutoArrangeTool`), so NO space detection / target-guessing lives
@@ -20,15 +25,19 @@ import type { TFunction } from 'i18next';
 import type { NotificationContextValue } from '@/types/notifications';
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
-import { isOpeningEntity } from '../../types/entities';
 import type { SceneAppendAccessor } from '../../bim/scene/append-entity-to-scene';
-import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { type SceneUnits } from '../../utils/scene-units';
 import { getLayer } from '../../stores/LayerStore';
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 import type { LayoutFixtureKind } from './bathroom-layout-types';
 import { solveBathroomLayout } from './bathroom-layout-solver';
-import { recognizedSpaceToRoomInput, type DoorMarker } from './recognized-space-adapter';
+import { recognizedSpaceToRoomInput } from './recognized-space-adapter';
 import { commitBathroomSolution } from './bathroom-fixture-commit';
+import {
+  extractDoorConstraints,
+  resolveInteriorFinishThicknessMm,
+  insetRoomForPlasterMm,
+} from './bathroom-room-constraints';
 
 /** Default kit placed when the user has no per-room fixture selection yet (Στάδιο 3 adds a dialog). */
 const DEFAULT_BATHROOM_FIXTURES: readonly LayoutFixtureKind[] = [
@@ -39,30 +48,10 @@ const DEFAULT_BATHROOM_FIXTURES: readonly LayoutFixtureKind[] = [
   'washing-machine',
 ];
 
-/** The door `OpeningKind`s (windows never block fixture placement). */
-const DOOR_KINDS: ReadonlySet<string> = new Set([
-  'door', 'double-door', 'sliding-door', 'double-sliding-door', 'pocket-door',
-  'bifold-door', 'overhead-door', 'revolving-door', 'french-door',
-]);
-
 /** Deps read at event time (same identities the tool already holds). */
 export interface BathroomAutoArrangeDeps {
   readonly notifications: NotificationContextValue;
   readonly t: TFunction;
-}
-
-/** Reduce door openings to solver door markers (positions scene→mm, widths already mm). */
-function extractDoorMarkers(entities: readonly Entity[], sceneUnits: SceneUnits): DoorMarker[] {
-  const toMm = 1 / mmToSceneUnits(sceneUnits);
-  const markers: DoorMarker[] = [];
-  for (const e of entities) {
-    if (!isOpeningEntity(e)) continue;
-    if (!DOOR_KINDS.has(e.params.kind)) continue;
-    const pos = e.geometry?.position;
-    if (!pos) continue;
-    markers.push({ positionMm: { x: pos.x * toMm, y: pos.y * toMm }, widthMm: e.params.width });
-  }
-  return markers;
 }
 
 /**
@@ -85,8 +74,19 @@ export function arrangeBathroomForRoom(
   const { notifications, t } = deps;
   const sceneUnits: SceneUnits = 'mm';
 
-  const doorsMm = extractDoorMarkers(entities, sceneUnits);
-  const input = recognizedSpaceToRoomInput(roomPolygon, sceneUnits, DEFAULT_BATHROOM_FIXTURES, { doorsMm });
+  // ADR-638 Στάδιο 3 — respect the wall plaster (σοβάς): inset the structural room
+  // polygon inward by the resolved interior finish thickness so fixtures hug the
+  // FINISHED face, not the bare structural face.
+  const plasterMm = resolveInteriorFinishThicknessMm(entities);
+  const finishedRoom = insetRoomForPlasterMm(roomPolygon, plasterMm);
+
+  // ADR-638 Στάδιο 3 — respect the door swing QUADRANT: accurate hinge-arc sectors
+  // (double-leaf → two) + non-hinged doors as a legacy entry rect.
+  const { swingZonesMm, fallbackDoors } = extractDoorConstraints(entities, sceneUnits);
+  const input = recognizedSpaceToRoomInput(finishedRoom, sceneUnits, DEFAULT_BATHROOM_FIXTURES, {
+    doorsMm: fallbackDoors,
+    doorSwingZonesMm: swingZonesMm,
+  });
   const [best] = solveBathroomLayout(input);
   if (!best) {
     notifications.warning(t('callbacks.bathroomAutoArrange.noSolution'));

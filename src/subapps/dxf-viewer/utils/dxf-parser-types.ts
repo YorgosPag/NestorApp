@@ -28,6 +28,11 @@ export const SUPPORTED_ENTITY_TYPES = [
   'DIMENSION',
   'HATCH',
   'SOLID',
+  // ADR-635 Φάση B — filled-quad primitives (3DFACE/TRACE → hatch), POINT, MLINE (reference line).
+  '3DFACE',
+  'TRACE',
+  'POINT',
+  'MLINE',
   'XLINE',
   'RAY'
 ] as const;

@@ -36,3 +36,12 @@ export {
   type DoorMarker,
   type SpaceToRoomInputOptions,
 } from './recognized-space-adapter';
+
+// ─── Στάδιο 3 — door swing quadrants + wall plaster inset ─────────────────────
+export {
+  extractDoorConstraints,
+  resolveInteriorFinishThicknessMm,
+  insetRoomForPlasterMm,
+  DOOR_KINDS,
+  type DoorConstraints,
+} from './bathroom-room-constraints';

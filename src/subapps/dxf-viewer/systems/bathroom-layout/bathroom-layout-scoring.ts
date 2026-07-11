@@ -41,19 +41,19 @@ function scorePlumbing(
 function scoreCirculation(
   placements: readonly FixturePlacement[],
   roomAreaMm2: number,
-  doorKeepClear: readonly Point2D[] | undefined,
+  doorKeepClears: readonly (readonly Point2D[])[],
 ): number {
   const occupied = placements.reduce((s, p) => s + areaOf(p.footprint), 0);
   const openness = roomAreaMm2 > 0 ? clamp01(1 - occupied / roomAreaMm2) : 0;
-  let doorClear = 1;
-  if (doorKeepClear && doorKeepClear.length >= 3) {
-    const keepArea = areaOf(doorKeepClear) || 1;
-    const worst = placements.reduce(
-      (m, p) => Math.max(m, rectOverlapMm2(p.footprint, doorKeepClear)),
-      0,
-    );
-    doorClear = clamp01(1 - worst / keepArea);
+  // Worst intrusion fraction across ALL door swing quadrants / entry zones.
+  let worstFrac = 0;
+  for (const zone of doorKeepClears) {
+    if (zone.length < 3) continue;
+    const keepArea = areaOf(zone) || 1;
+    const worst = placements.reduce((m, p) => Math.max(m, rectOverlapMm2(p.footprint, zone)), 0);
+    worstFrac = Math.max(worstFrac, worst / keepArea);
   }
+  const doorClear = clamp01(1 - worstFrac);
   return clamp01(0.5 * openness + 0.5 * doorClear);
 }
 
@@ -90,15 +90,15 @@ export function scoreLayout(args: {
   readonly requestedCount: number;
   readonly roomLifted: readonly Point3D[];
   readonly roomAreaMm2: number;
-  readonly doorKeepClear: readonly Point2D[] | undefined;
+  readonly doorKeepClears: readonly (readonly Point2D[])[];
   readonly wetWallHintIndex: number | undefined;
 }): { score: number; breakdown: LayoutScoreBreakdown } {
-  const { placements, requestedCount, roomLifted, roomAreaMm2, doorKeepClear, wetWallHintIndex } = args;
+  const { placements, requestedCount, roomLifted, roomAreaMm2, doorKeepClears, wetWallHintIndex } = args;
   const completeness = requestedCount > 0 ? placements.length / requestedCount : 1;
   const breakdown: LayoutScoreBreakdown = {
     ergonomics: ergonomicsWithRoom(placements, roomLifted),
     plumbing: scorePlumbing(placements, roomDiagonalMm(roomLifted), wetWallHintIndex),
-    circulation: scoreCirculation(placements, roomAreaMm2, doorKeepClear),
+    circulation: scoreCirculation(placements, roomAreaMm2, doorKeepClears),
     tidiness: scoreTidiness(placements),
     completeness: clamp01(completeness),
   };

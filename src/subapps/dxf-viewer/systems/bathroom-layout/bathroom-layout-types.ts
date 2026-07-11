@@ -61,8 +61,17 @@ export interface RoomInput {
   /**
    * Optional keep-clear polygon (door swing / entry zone), millimetres. Fixture
    * footprints must not intrude here; use-zones overlapping it are penalised.
+   * Legacy singular field (toward-centroid rect for non-hinged doors). For accurate
+   * hinged-door swing quadrants use {@link doorKeepClearsMm}; the solver honours both.
    */
   readonly doorKeepClearMm?: readonly Point2D[];
+  /**
+   * Optional CONVEX keep-clear zones (mm) — one per door swing quadrant (ADR-638
+   * Στάδιο 3). Each is a convex sector `[hingeAnchor, …swingArc]` built from the real
+   * `OpeningGeometry.hingeArc`; double-leaf / multi-door rooms contribute several. The
+   * solver rejects any fixture footprint overlapping ANY zone.
+   */
+  readonly doorKeepClearsMm?: readonly (readonly Point2D[])[];
   /**
    * Optional index (into the solver's wall segmentation) of a wall carrying an
    * existing plumbing stack/riser — wet fixtures placed on it score higher.

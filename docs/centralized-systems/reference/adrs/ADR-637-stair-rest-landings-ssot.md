@@ -1,6 +1,6 @@
 # ADR-637 — Stair Rest Landings (πλατύσκαλα) — kind-independent SSoT
 
-- **Status**: Accepted — Phase 1 + Phase 2 (rectilinear family: straight/multi-flight/v-shape) + Phase 2b (turning family: L/U/Γ edge-origin flights) + Phase 4-A (draggable/resizable landing grips) + Phase 4-B (add/remove/length/depth panel UI) implemented
+- **Status**: Accepted — Phase 1 + Phase 2 (rectilinear family: straight/multi-flight/v-shape) + Phase 2b (turning family: L/U/Γ edge-origin flights) + Phase 3 (walkline-following family: elliptical/sketch; radial + walkline-grips deferred) + Phase 4-A (draggable/resizable landing grips) + Phase 4-B (add/remove/length/depth panel UI) implemented
 - **Date**: 2026-07-11
 - **Owners**: DXF/BIM stair subsystem
 - **Related**: ADR-611 (stair geometry generators SSoT), ADR-633 (multi-flight turn points), ADR-619 (stair-from-region walkline / `preserveZ`), ADR-358 (stair tool), ADR-631/625 (command + drag-preview bases), ADR-040 (micro-leaf subscribers)
@@ -89,7 +89,8 @@ pre-ADR-637 path.
 | Family | Kinds | Landing rendering |
 |---|---|---|
 | **Rectilinear flights** | straight, L, Γ, Π/U, multi-flight, V, winder | `buildCornerLanding` quad (0° corner) — reuse ADR-611 |
-| **Walkline** | spiral, helical, elliptical, sketch | flat-z stretch on the walkline — reuse ADR-619 `preserveZ` |
+| **Walkline-following** | elliptical, sketch | flat-z stretch on the sampled walkline — reuse ADR-619 flat-z + `buildWalklineTreads` |
+| **Radial** (deferred) | spiral, helical, triangular-fan | treads come from an angular grid, not the walkline → own landing insertion needed; deferred (see Phase 3) |
 
 Each family builds its **flights** its own way and shares the landing scheduling.
 No new tread/landing math is written — flights reuse `buildRectilinearFlight` /
@@ -173,8 +174,48 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
   `StairGeometryService-{lshape,ushape,gamma}-landings.test.ts` (8+7+7); full stair
   geometry suite green (34 suites / 391) incl. the exhaustive per-kind coordinate
   tests (proves byte-identical no-rest paths after the merge); jscpd-diff clean.
-- **Phase 3 — pending**: walkline family (spiral/helical/elliptical/sketch) via
-  `preserveZ`.
+- **Phase 3 — DONE (walkline-following subset: elliptical + sketch)**: rest
+  landings for the walkline-following family. New SSoT
+  `stair-walkline-run-builder.ts` (`buildWalklineRunWithLandings`) — the walkline
+  analogue of `buildRectilinearRun`. It folds `planStairRunSegments` into a
+  **stretched walkline**: at each landing level the chord is stretched from its
+  natural going to the landing's plan `length` along the SAME base tangent, and
+  every downstream point is rigid-translated by the extra plan offset. **z values
+  are untouched**, so total rise and riser count stay invariant (ADR §2) and only
+  the plan footprint grows. The stretched chord's wedge (built by the shared
+  `buildWalklineTreads`, flat at `z_level`) IS the landing quad — it is
+  **reclassified** out of the tread list into `landings[]` (reuse, not new math —
+  N.18, no clone of the wedge loop). `computeWalklineStair` branches on
+  `hasRestLandings`: the no-rest path is byte-identical (still
+  `assembleSingleFlightWalkline`), the rest path re-flows treads/risers/stringers/
+  cut-line over the new walkline and assembles via `assembleStairGeometry` with the
+  real `flightSplit` + `landings` (so `buildTreadLabelsWithLandings` numbers
+  correctly — `landings.length === flightSplit.length − 1`).
+  `stairKindSupportsRestLandings` += `sketch` / `elliptical`, so the panel lights
+  up. Tests: `stair-walkline-run-builder.test.ts` (5) +
+  `StairGeometryService-{sketch,elliptical}-landings.test.ts` (3+3); full stair
+  geometry + stairs suites green (59 suites / 747, incl. the unchanged
+  sketch/elliptical coordinate tests — proves byte-identical no-rest path);
+  jscpd-diff clean.
+  - **Deferred — radial family** (spiral / helical / triangular-fan): their treads
+    come from an **angular grid** (`buildRadialTreads`), not the walkline, so the
+    flat-z walkline trick does not apply — a radial landing would be a flat annular
+    sector needing its own grid insertion. Mid-run landings on a parametric radial
+    run are also unusual (Revit/ArchiCAD model curved-run mid-landings as **separate
+    landing components**, not a consumed step). Deferred to avoid a half-broken
+    z-model, mirroring the Phase 2 L/U/Γ deferral. Not added to
+    `stairKindSupportsRestLandings` (panel shows the hint).
+  - **Deferred — walkline-family grips**: `restLandingHandles` are intentionally
+    NOT surfaced for elliptical/sketch. The `slideRestLanding` transform projects
+    the cursor axially on `params.direction` / `params.totalRun`, but curved kinds
+    run with `totalRun = 0` and no meaningful axial direction, so a slide grip would
+    snap the landing to the top. Curved-run landing grips need an
+    arclength-projection model (a future phase). The panel add/remove/length/depth
+    path is fully functional today (writes `restLandings` → recompute).
+  - **Elliptical note**: on a parametric curve the tangent-stretch translates the
+    post-landing arc rigidly (the ellipse "opens" past the landing) — geometrically
+    valid + z-correct, natural for a free sketch. Visually confirmed in a plan-view
+    artifact.
 - **Phase 4-A — DONE**: draggable + resizable rest-landing grips (recompute on
   release, matching every other stair grip). Chain:
   - **Handle SSoT (geometry)**: `buildRectilinearRun` now emits
@@ -247,6 +288,15 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
 
 ## Changelog
 
+- **2026-07-11** — Phase 3: walkline-following rest landings (elliptical + sketch).
+  New SSoT `stair-walkline-run-builder.ts` (`buildWalklineRunWithLandings`) —
+  stretches each landing chord along its base tangent + rigid-translates the
+  remainder (z invariant, footprint grows), reclassifies the stretched wedge from
+  `buildWalklineTreads` into `landings[]` (N.18 — no clone). `computeWalklineStair`
+  branches on `hasRestLandings` (no-rest byte-identical). `stairKindSupportsRest
+  Landings` += sketch/elliptical. Radial family (spiral/helical/triangular-fan) +
+  walkline grips deferred (angular-grid treads / `totalRun=0` axial slide). +11
+  tests; stair suites 59/747 green; jscpd-clean.
 - **2026-07-11** — Phase 2b: L / U / Γ rest landings (resolves the Phase 2
   deferral). `buildEdgeOriginRun` (edge-origin sibling of `buildRectilinearRun`,
   sharing the `walkStairRun` core) + `centrelineRun`/`edgeRun`/`beginTurnRun`

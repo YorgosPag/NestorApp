@@ -1,6 +1,6 @@
 # ADR-638 — Bathroom Auto-Layout Generator (generative space planning)
 
-**Status:** Accepted (Στάδιο 0 + 1 + 2 + 3-facing implemented — headless solver + live ribbon command + room-bounding fixture facing)
+**Status:** Accepted (Στάδιο 0 + 1 + 2 + 3 implemented — headless solver + live ribbon command + room-bounding fixture facing + door swing quadrant + wall plaster inset)
 **Date:** 2026-07-11
 **Domain:** dxf-viewer / systems (space planning)
 **Related:** ADR-425 (Stage-0 semantic recognition — `RecognizedSpace`/bathroom classification, the room INPUT), ADR-406/408 (`mep-fixture` sanitary terminals — the placement OUTPUT), ADR-567 (structural-placement-overlap — the collision pattern reused), ADR-426/427 (water-supply / drainage auto-design — consume the placed fixtures downstream), ADR-419 (perimeter engine — room polygon)
@@ -157,6 +157,28 @@ front land on `inward` ⇒ back on the wall, front into the room. Net effect is 
 180° correction of the previous (width-axis) rotation. The unused `rotationDegFromFootprint`
 helper was removed.
 
+### Στάδιο 3 — Door swing quadrant + wall plaster (DONE)
+
+Two BIM-real constraints the placer ignored (Giorgio, στιγμιότυπο 2026-07-11): fixtures
+landed inside the **door swing quadrant** and against the **bare structural face** (not
+the plastered face). Both fixed in `bathroom-room-constraints.ts` (pure, tested) wired
+into `run-bathroom-auto-arrange-flow.ts` — zero new geometry:
+
+- **Swing quadrant** — the old `extractDoorMarkers` read only door position+width and
+  `buildDoorKeepClear` reserved a toward-centroid rectangle (wrong side / wrong depth).
+  Now `extractDoorConstraints` reads the REAL `OpeningGeometry.hingeArc` + `hingeAnchor`
+  (ADR-363) and builds the convex swing SECTOR `[hingeAnchor, …arc]` per hinged leaf
+  (double-leaf → two sectors); non-hinged doors (sliding/pocket) keep the legacy entry
+  rect. The solver now accepts MULTIPLE convex keep-clear zones (`RoomInput.doorKeepClearsMm`)
+  and rejects any footprint overlapping ANY zone (`polygonIntersectionAreaMm2` handles the
+  convex sector — no solver-overlap change). Scoring's `circulation` axis penalises the
+  worst intrusion across all zones.
+- **Plaster (σοβάς)** — the picked room polygon traces STRUCTURAL wall faces (Στάδιο 2b.1).
+  `resolveInteriorFinishThicknessMm` reads the walls' ADR-449 `finish` skin (`isFinishActive`
+  SSoT, max active interior thickness; 0 when none) and `insetRoomForPlasterMm` insets the
+  room by it via `insetPolygonMiter` (concave-safe, Γ/Π/L rooms) so fixtures hug the finished
+  face. Uniform inset = exact for the common uniform-plaster case (Giorgio-chosen scope).
+
 ### Στάδιο 3-preview + Στάδιο 4 — pending (not in this commit)
 
 - **Στάδιο 3-preview** — solutions-preview UI: cycle A/B/C candidates as WYSIWYG placement
@@ -198,6 +220,13 @@ helper was removed.
 - **Στάδιο 3 facing edit:** `bathroom-fixture-commit.ts` (rotation from `placement.rotationDeg`
   + `MEP_FIXTURE_SYMBOL_FRONT_OFFSET_DEG`, `rotationDegFromFootprint` removed)
 - **Στάδιο 3 facing new test:** `__tests__/bathroom-fixture-facing.test.ts`
+- **Στάδιο 3 swing+plaster new:** `bathroom-room-constraints.ts` (door swing sectors from
+  `hingeArc` + interior-finish resolve + `insetPolygonMiter` plaster inset)
+- **Στάδιο 3 swing+plaster edits:** `run-bathroom-auto-arrange-flow.ts` (wire constraints),
+  `recognized-space-adapter.ts` (`doorSwingZonesMm` → `doorKeepClearsMm`),
+  `bathroom-layout-solver.ts` + `bathroom-layout-scoring.ts` (multi keep-clear zones),
+  `bathroom-layout-types.ts` (`RoomInput.doorKeepClearsMm`), `index.ts` (barrel)
+- **Στάδιο 3 swing+plaster new test:** `__tests__/bathroom-room-constraints.test.ts`
 - **Στάδιο 2 edits:** `ui/ribbon/data/systems-discipline-tabs.ts`,
   `app/dxf-special-actions.ts`, `src/i18n/locales/{el,en}/dxf-viewer-shell.json`,
   `src/i18n/locales/{el,en}/dxf-viewer.json`
@@ -231,7 +260,11 @@ helper was removed.
   (contains centre), `detectSpaces` wall-aware.
 - `__tests__/bathroom-fixture-facing.test.ts` — 3 tests (Στάδιο 3): every committed fixture's
   front (rotated footprint local −Y) projects positive onto the wall `inward` normal, canonical
-  bottom-wall case, fixed +90° offset. Total **33/33 (feature) green**.
+  bottom-wall case, fixed +90° offset.
+- `__tests__/bathroom-room-constraints.test.ts` — 10 tests (Στάδιο 3): swing sector from hinge
+  arc (single/double-leaf/scene→mm/non-hinged fallback/window-ignore), interior finish resolve
+  (max active / none→0), plaster inset (0→unchanged / shrinks by ~2×t), solver honours swing zone
+  (no footprint intrudes). Total **43/43 (feature) green**.
 
 ## Changelog
 
@@ -260,3 +293,10 @@ helper was removed.
   `symbol-vector-helpers`, όχι per-kind) ⇒ πλάτη στον τοίχο, πρόσωπο στο δωμάτιο (καθαρή 180°
   διόρθωση). Μηδέν αλλαγές σε shared mep-fixture SSoT. **33/33 jest green** (+3 facing tests).
   +5 tests αποδεικνύουν off→0/on→room. **77/77 regression green**, jscpd clean.
+- **2026-07-11 (Opus 4.8)** — Στάδιο 3 **door swing quadrant + wall plaster** (Giorgio: τα είδη
+  μπαίνανε στο τόξο σάρωσης της πόρτας & ακουμπούσαν στη δομική παρειά χωρίς σοβά). Νέο pure
+  `bathroom-room-constraints.ts`: (α) swing sectors από το πραγματικό `OpeningGeometry.hingeArc`+
+  `hingeAnchor` (single/double-leaf) → solver multi keep-clear zones (`doorKeepClearsMm`)· (β)
+  plaster inset του room polygon κατά το interior finish thickness των τοίχων (`isFinishActive`+
+  `insetPolygonMiter`). Reuse-only (μηδέν νέα γεωμετρία, μηδέν convexHull — το sector είναι convex).
+  Επιλογή Giorgio: ομοιόμορφο resolved thickness. **43/43 jest green** (+10), jscpd clean.

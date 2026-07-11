@@ -337,6 +337,19 @@ export { convertXLine, convertRay } from './dxf-xline-ray-converter';
 import { convertXLine, convertRay } from './dxf-xline-ray-converter';
 
 // ============================================================================
+// 🏢 ENTERPRISE: SOLID / 3DFACE / TRACE / POINT / MLINE CONVERTERS (ADR-635 Φάση B)
+// ============================================================================
+// Extracted σε δικά τους modules (Google SRP, N.7.1). SOLID/3DFACE/TRACE → HatchEntity
+// (filled poché, HatchRenderer)· POINT → PointEntity· MLINE → reference polyline.
+export { convertSolid, convert3dFace, convertTrace } from './dxf-quad-fill-converter';
+export { convertPoint } from './dxf-point-converter';
+export { convertMline } from './dxf-mline-converter';
+
+import { convertSolid, convert3dFace, convertTrace } from './dxf-quad-fill-converter';
+import { convertPoint } from './dxf-point-converter';
+import { convertMline } from './dxf-mline-converter';
+
+// ============================================================================
 // 🏢 ENTERPRISE: MASTER CONVERTER
 // ============================================================================
 
@@ -387,6 +400,17 @@ export function convertEntityToScene(
       return convertXLine(data, layer, index);
     case 'RAY':
       return convertRay(data, layer, index);
+    // ADR-635 Φάση B — filled quads (bowtie-corrected → solid hatch), point, multiline.
+    case 'POINT':
+      return convertPoint(data, layer, index);
+    case 'SOLID':
+      return convertSolid(data, layer, index);
+    case '3DFACE':
+      return convert3dFace(data, layer, index);
+    case 'TRACE':
+      return convertTrace(data, layer, index);
+    case 'MLINE':
+      return convertMline(entityData.pairs ?? [], layer, index);
     default:
       return null;
   }

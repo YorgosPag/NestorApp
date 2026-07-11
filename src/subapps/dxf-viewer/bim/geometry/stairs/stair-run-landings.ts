@@ -43,6 +43,11 @@ const REST_LANDING_SUPPORTED_KINDS: ReadonlySet<StairKind> = new Set([
   'l-shape',
   'u-shape',
   'gamma',
+  // ADR-637 Phase 3 — walkline-following family (flat-z landing stretch in the
+  // sampled walkline). The radial family (spiral/helical/triangular-fan) builds
+  // treads from an angular grid, not the walkline, so it is deferred.
+  'sketch',
+  'elliptical',
 ]);
 
 /** True when `kind`'s geometry generator consumes `StairParams.restLandings`. */

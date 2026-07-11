@@ -206,6 +206,42 @@ This needs an ordered-pairs content accumulator in `DxfEntityParser` (mirror `pa
 Φ1) — out of scope here. Simple `TEXT` `%%c`/`%%d`/`%%p`/`%%u`/`%%o` codes are likewise still verbatim
 (`convertText` uses `buildTextNodeFromFlat`) — Roadmap Φ B/C.
 
+## Φ B — Import entity coverage (types που το AutoCAD έχει & εμείς DROP-άραμε)
+
+**Symptom.** Ο master router (`convertEntityToScene`) είχε `default: return null` → πολλά AutoCAD
+entity types **σιωπηλά χάνονταν**. Δύο διαφορετικά σημεία αποκοπής: (α) `SOLID` ήταν στο
+`SUPPORTED_ENTITY_TYPES` αλλά χωρίς converter → μετριόταν `skippedByType`· (β) POINT/3DFACE/TRACE/
+MLINE/LEADER/ATTRIB **ούτε καν** στο `SUPPORTED_ENTITY_TYPES` → φιλτράρονταν στον `parseEntityAt`
+πριν το EntityData → πλήρως αόρατα (χειρότερο από skipped).
+
+**Batch 1 (DONE) — converters-only, renderers ήδη υπάρχουν:**
+- **POINT** → `PointEntity` (`dxf-point-converter.ts`). ⚠️ ο `PointRenderer` είναι **no-op σήμερα**
+  («NUCLEAR: POINT CIRCLE ELIMINATED») — import coverage + diagnostics OK, αλλά **δεν ζωγραφίζεται
+  ορατά** μέχρι να ενεργοποιηθεί $PDMODE/$PDSIZE glyph rendering (Φάση C).
+- **SOLID / 3DFACE / TRACE** → `HatchEntity(fillType:'solid')` (`dxf-quad-fill-converter.ts`,
+  `HatchRenderer` ζωγραφίζει). Κοινός SSoT `parseQuadVertices` + 3 thin wrappers (jscpd-safe).
+  ⚠️ **BOWTIE fix:** η σειρά ζωγραφίσματος quad είναι **1→2→4→3** (ΟΧΙ 1-2-3-4)· χωρίς swap → παπιγιόν.
+  Triangle collapse όταν vertex4==vertex3. Z (3DFACE) → 2D projection μέσω `projectPointTo2D` SSoT.
+- **MLINE** → reference `polyline` (`dxf-mline-converter.ts`, MVP). Vertices από **11/21** (ΟΧΙ 10/20 =
+  duplicate start point)· `closed` = code **71 bit 2** (ΟΧΙ 70 bit 1 όπως LWPOLYLINE)· ordered `pairs`
+  (το flat `data` θα κρατούσε μόνο το τελευταίο vertex). MLINESTYLE offsets (N παράλληλες) = follow-up
+  (ζουν στο OBJECTS section μέσω handle 340). Ο router υποστηρίζει ήδη array-return.
+
+Edits: `SUPPORTED_ENTITY_TYPES` (+3DFACE/TRACE/POINT/MLINE), `convertEntityToScene` switch (5 cases),
+3 νέα SRP modules. Diagnostics **αυτόματα** → `parsedByType` (μηδέν αλλαγή στο diagnostics module).
+Tests: `dxf-quad-fill-converter.test.ts` (8) + `dxf-point-converter.test.ts` (4) +
+`dxf-mline-converter.test.ts` (5). Full `utils/__tests__` **295/295** green, jscpd clean.
+
+**Batch 2 (PENDING — specs έτοιμα, handoff):**
+- **ATTRIB / ATTDEF** → `type:'text'` (extend `dxf-text-converters.ts` με shared `convertAttributeEntity`).
+  Code 1 = ορατό value· code 2 = tag (νέο `TextEntity.attributeTag?`)· code 70 bit 1 = invisible→`visible:false`.
+  ⚠️ **Guard:** ATTDEF-template μέσα σε BLOCK → **skip στο `instantiateInsert`** (αλλιώς stale default
+  value duplicated σε κάθε INSERT). Χρειάζεται επαλήθευση του πραγματικού block-expander signature.
+- **LEADER** → `LeaderEntity` (ήδη υπάρχει) + **νέος `LeaderRenderer`** (reuse DIMENSION arrowhead SSoT
+  `renderArrowhead`/`getArrowheadBlock`). Vertices από ordered pairs (10/20)· arrowhead code 71.
+  ⚠️ Ο renderer έχει πολλές helper-API deps (`renderWithPhases`/`drawVerticesPath`/`hitTestLineSegments`)
+  που χρειάζονται signature verification πριν το commit.
+
 ## Out of scope (roadmap)
 - Full BYBLOCK color/linetype inheritance; text-angle rotation fidelity under INSERT.
 - **Follow-up:** `convertSpline` has the same data-map vertex bug (`dxf-entity-converters.ts`);
@@ -213,6 +249,12 @@ This needs an ordered-pairs content accumulator in `DxfEntityParser` (mirror `pa
   currently rendered as straight segments (21 curved vertices in the sample).
 
 ## Changelog
+- **2026-07-11 — Φ B Batch 1 (import entity coverage, converters-only):** POINT→PointEntity,
+  SOLID/3DFACE/TRACE→HatchEntity(solid, bowtie-corrected 1→2→4→3 + triangle collapse + 2D projection),
+  MLINE→reference polyline (11/21 vertices, closed=71 bit 2). 3 νέα SRP modules
+  (`dxf-quad-fill-converter`/`dxf-point-converter`/`dxf-mline-converter`) + `SUPPORTED_ENTITY_TYPES`
+  entries + 5 switch cases. Diagnostics auto→parsedByType. 17 νέα tests, 295/295 utils green, jscpd clean.
+  ⚠️ PointRenderer no-op (Φάση C). Batch 2 (ATTRIB/ATTDEF + LEADER+renderer) PENDING με έτοιμα specs.
 - **2026-07-11 — Φ4 (rich MTEXT import):** `convertMText` feeds the ADR-344 parser SSoT
   (`tokenizeMtext` → `parseMtext`) so raw inline codes become a real multi-paragraph/run AST
   instead of one flat run. Flat `.text` = `extractFlatText` (plain, `\P`→`\n`). Fixes verbatim-code

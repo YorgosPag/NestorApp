@@ -30,6 +30,7 @@ import type {
 } from '../../../bim/types/stair-types';
 import {
   DEFAULT_CUT_PLANE_HEIGHT,
+  arrowSymbol,
   point,
   buildCutLine,
   buildStringersFromWalkline,
@@ -37,6 +38,7 @@ import {
 import {
   type AngularGrid,
   assembleSingleFlightWalkline,
+  assembleStairGeometry,
   buildAngularGrid,
   buildWalklineCutLine,
   buildWalklineRisers,
@@ -44,6 +46,8 @@ import {
   radialPoint,
   radialTangentAt,
 } from './stair-geometry-generators';
+import { buildWalklineRunWithLandings } from './stair-walkline-run-builder';
+import { hasRestLandings } from './stair-run-landings';
 
 // ─── Radial stair (Revit CurvedStairsRun) ─────────────────────────────────────
 
@@ -192,10 +196,31 @@ export function computeWalklineStair(
   walkline: Polyline3D,
   sign: 1 | -1,
 ): StairGeometry {
+  const cutPlaneHeight = params.cutPlaneHeight ?? DEFAULT_CUT_PLANE_HEIGHT;
+
+  // ADR-637 Phase 3 — rest landings: stretch the walkline at each landing level
+  // (flat-z stretch), then re-flow treads/risers over the new walkline. No rest
+  // landings ⇒ the branch below is skipped and geometry stays byte-identical.
+  if (hasRestLandings(params.stepCount, params.restLandings)) {
+    const run = buildWalklineRunWithLandings(walkline, params.restLandings ?? [], params.width, sign);
+    const risers = buildWalklineRisers(run.walkline, params.width, sign);
+    const stringers = buildStringersFromWalkline(run.walkline, params.width);
+    const cutLine = buildWalklineCutLine(run.walkline, params.width, cutPlaneHeight);
+    return assembleStairGeometry(params, {
+      treads: run.treads,
+      risers,
+      stringers,
+      walkline: run.walkline,
+      cutLine,
+      arrowSymbol: arrowSymbol(run.walkline[0], run.walkline[run.walkline.length - 1], params.upDirection),
+      flightSplit: run.flightSplit,
+      landings: run.landings,
+    });
+  }
+
   const treads = buildWalklineTreads(walkline, params.width, sign);
   const risers = buildWalklineRisers(walkline, params.width, sign);
   const stringers = buildStringersFromWalkline(walkline, params.width);
-  const cutPlaneHeight = params.cutPlaneHeight ?? DEFAULT_CUT_PLANE_HEIGHT;
   const cutLine = buildWalklineCutLine(walkline, params.width, cutPlaneHeight);
   return assembleSingleFlightWalkline(params, { treads, risers, stringers, walkline, cutLine });
 }

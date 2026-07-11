@@ -64,8 +64,14 @@ export function buildDoorKeepClear(
 
 /** Options for {@link recognizedSpaceToRoomInput}. */
 export interface SpaceToRoomInputOptions {
-  /** Doors in the room (mm) — the widest becomes the primary keep-clear. */
+  /** Doors in the room (mm) — the widest becomes the primary (legacy rect) keep-clear. */
   readonly doorsMm?: readonly DoorMarker[];
+  /**
+   * ADR-638 Στάδιο 3 — accurate CONVEX door-swing sectors (mm), one per hinged leaf,
+   * built from the real `OpeningGeometry.hingeArc`. Preferred over `doorsMm`; both are
+   * honoured by the solver. Empty / absent ⇒ fall back to the `doorsMm` rect.
+   */
+  readonly doorSwingZonesMm?: readonly (readonly Point2D[])[];
   /** Door clearance depth (mm, default 750). */
   readonly clearanceMm?: number;
   /** Index of a wall carrying a plumbing stack (wet fixtures score higher there). */
@@ -92,10 +98,13 @@ export function recognizedSpaceToRoomInput(
   const doorKeepClearMm = primary
     ? buildDoorKeepClear(primary, centroid, options.clearanceMm)
     : undefined;
+  // ADR-638 Στάδιο 3 — accurate hinged-door swing sectors (already mm, convex, ≥3 pts).
+  const swingZones = (options.doorSwingZonesMm ?? []).filter((z) => z.length >= 3);
   return {
     polygonMm,
     fixtures,
     ...(doorKeepClearMm ? { doorKeepClearMm } : {}),
+    ...(swingZones.length ? { doorKeepClearsMm: swingZones } : {}),
     ...(options.wetWallHintIndex !== undefined ? { wetWallHintIndex: options.wetWallHintIndex } : {}),
   };
 }
