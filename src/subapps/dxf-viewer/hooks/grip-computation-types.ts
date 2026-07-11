@@ -45,7 +45,7 @@ export interface DxfGripDragPreview {
   gripKind?: EntityGripKind;
   anchorPos?: Point2D;
   /**
-   * ADR-637 Phase 4-C — target rest-landing id for the `stair-rest-landing-*` grips.
+   * ADR-637 Phase 4-D — target rest-landing id for the `stair-rest-landing-*` grips.
    * Forwarded from `UnifiedGripInfo.landingId` by `buildDxfDragPreview` so the live
    * WYSIWYG ghost (`applyEntityPreview` → `applyStairGripDrag`) edits the SAME landing
    * the commit (`commitStairGripDrag`) does — preview ≡ commit. Undefined for every

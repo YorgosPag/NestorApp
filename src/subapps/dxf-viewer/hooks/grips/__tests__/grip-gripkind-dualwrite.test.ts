@@ -82,7 +82,7 @@ describe('ADR-602 Stage 2 — preview builders dual-write (§1.4 Bug 3 by constr
     expect('landingId' in p!).toBe(false);
   });
 
-  // ADR-637 Phase 4-C — the rest-landing id must ride the drag-preview snapshot so the
+  // ADR-637 Phase 4-D — the rest-landing id must ride the drag-preview snapshot so the
   // live WYSIWYG ghost patches the SAME landing the commit does (preview ≡ commit).
   it('buildDxfDragPreview forwards `landingId`, omits it when absent', () => {
     const withId = buildDxfDragPreview(

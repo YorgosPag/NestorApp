@@ -147,7 +147,7 @@ export function buildDxfDragPreview(
     // legacy `xxxGripKind` forwards were deleted; consumers read via `gripKindOf`. `anchorPos`
     // is already emitted unconditionally above (line 143), so no per-kind anchor spread is needed.
     ...(activeGrip.gripKind ? { gripKind: activeGrip.gripKind } : {}),
-    // ADR-637 Phase 4-C — forward the target rest-landing id so the live WYSIWYG ghost
+    // ADR-637 Phase 4-D — forward the target rest-landing id so the live WYSIWYG ghost
     // (`applyEntityPreview` → `applyStairGripDrag`) slides/resizes the SAME landing the
     // commit (`commitStairGripDrag`) does. No-op for every non-landing grip.
     ...(activeGrip.landingId ? { landingId: activeGrip.landingId } : {}),

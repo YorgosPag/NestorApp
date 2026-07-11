@@ -1,6 +1,6 @@
 # ADR-637 — Stair Rest Landings (πλατύσκαλα) — kind-independent SSoT
 
-- **Status**: Accepted — Phase 1 + Phase 2 (rectilinear family: straight/multi-flight/v-shape) + Phase 2b (turning family: L/U/Γ edge-origin flights) + Phase 3 (walkline-following: elliptical/sketch + radial: spiral/helical; triangular-fan + curved-grips deferred) + Phase 4-A (draggable/resizable landing grips) + Phase 4-B (add/remove/length/depth panel UI) implemented
+- **Status**: Accepted — Phase 1 + Phase 2 (rectilinear family: straight/multi-flight/v-shape) + Phase 2b (turning family: L/U/Γ edge-origin flights) + Phase 3 (walkline-following: elliptical/sketch + radial: spiral/helical/triangular-fan) + Phase 4-A (rectilinear draggable/resizable landing grips) + Phase 4-B (add/remove/length/depth panel UI) + Phase 4-C (curved-family grips: walkline/radial arc-length slide + triangular-fan landings) + Phase 4-D (live drag re-flow ghost) implemented. 11/13 kinds support rest landings (winder + triangular-outline remain). Phase 5 (pick/highlight) pending.
 - **Date**: 2026-07-11
 - **Owners**: DXF/BIM stair subsystem
 - **Related**: ADR-611 (stair geometry generators SSoT), ADR-633 (multi-flight turn points), ADR-619 (stair-from-region walkline / `preserveZ`), ADR-358 (stair tool), ADR-631/625 (command + drag-preview bases), ADR-040 (micro-leaf subscribers)
@@ -90,7 +90,7 @@ pre-ADR-637 path.
 |---|---|---|
 | **Rectilinear flights** | straight, L, Γ, Π/U, multi-flight, V, winder | `buildCornerLanding` quad (0° corner) — reuse ADR-611 |
 | **Walkline-following** | elliptical, sketch | flat-z stretch on the sampled walkline — reuse ADR-619 flat-z + `buildWalklineTreads` |
-| **Radial** | spiral, helical | flat annular sector swept over a WIDER angle at constant z (`Δθ = length / walklineRadius`) — reuse `radialSector`. triangular-fan deferred (base flare) |
+| **Radial** | spiral, helical, triangular-fan | flat annular (apex-triangle for fan/spiral) sector swept over a WIDER angle at constant z (`Δθ = length / walklineRadius`) — reuse `radialSector`. triangular-fan is apex-mode radial identical to spiral (Phase 4-C) |
 
 Each family builds its **flights** its own way and shares the landing scheduling.
 No new tread/landing math is written — flights reuse `buildRectilinearFlight` /
@@ -197,14 +197,11 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
   geometry + stairs suites green (59 suites / 747, incl. the unchanged
   sketch/elliptical coordinate tests — proves byte-identical no-rest path);
   jscpd-diff clean.
-  - **Deferred — curved-family grips**: `restLandingHandles` are intentionally NOT
-    surfaced for the walkline OR radial families (elliptical/sketch/spiral/helical).
-    The `slideRestLanding` transform projects the cursor axially on
-    `params.direction` / `params.totalRun`, but curved kinds run with `totalRun = 0`
-    and no meaningful axial direction, so a slide grip would snap the landing to the
-    top. Curved-run landing grips need an arclength/angle-projection model (a future
-    phase). The panel add/remove/length/depth path is fully functional today (writes
-    `restLandings` → recompute).
+  - **Curved-family grips — RESOLVED in Phase 4-C** (see below): `restLandingHandles`
+    ARE now surfaced for the walkline AND radial families; `slideRestLanding` projects
+    the cursor onto the sampled `walkline` by arc-length (the axial model is skipped
+    when `totalRun = 0`). The panel add/remove/length/depth path also remains fully
+    functional.
   - **Elliptical note**: on a parametric curve the tangent-stretch translates the
     post-landing arc rigidly (the ellipse "opens" past the landing) — geometrically
     valid + z-correct, natural for a free sketch. Visually confirmed in a plan-view
@@ -225,8 +222,8 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
   branches on `hasRestLandings` (no-rest path untouched); the rest path builds
   treads/risers/landings + a boundary-derived walkline/stringers and assembles via
   `assembleStairGeometry`. `stairKindSupportsRestLandings` += `spiral` / `helical`.
-  **triangular-fan deferred** (it shares the radial builder but is a base flare, not
-  a run with landings — not added to the supported set). Tests:
+  **triangular-fan added later in Phase 4-C** (same apex-mode radial geometry as
+  spiral, so a landing renders the same wider wedge). Tests:
   `stair-radial-run-builder.test.ts` (2) +
   `StairGeometryService-{spiral,helical}-landings.test.ts` (3+3); full stair suites
   green (62 suites / 755, incl. unchanged spiral/helical/triangular-fan coordinate
@@ -262,8 +259,8 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
     entity type (`stair` → `commitStairGripDrag`), so the 3 new kinds "just work";
     `commitStairGripDrag` now forwards `grip.landingId` into the drag input.
     `UpdateStairParamsCommand` recomputes geometry on mouse-up (`isDragging:false`,
-    the existing stair UX). **Live-during-drag re-flow is deferred** (a future WYSIWYG
-    ghost re-running `computeStairGeometry` each frame per ADR-625) — out of scope here.
+    the existing stair UX). Live-during-drag WYSIWYG re-flow ghost — **now DONE in
+    Phase 4-D** (was deferred here).
   - **KNOWN LIMITATION**: grips appear only for kinds that surface handles
     (straight / multi-flight / v-shape); L/U/Γ still no-op on rest landings (Phase 2
     edge-origin limitation).
@@ -296,15 +293,93 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
     recompute), same as every other panel section.
   - **Known scope limits carried forward**: no click-into sub-element selection
     for landings yet (`part:'landing'` — Phase 5), and no live re-flow preview
-    during a grip drag (still recompute-on-release, Phase 4-A's deferred item).
+    during a grip drag (resolved in Phase 4-D).
   - Tests: `stair-rest-landing-helpers.test.ts` (8) +
     `StairRestLandingsSection.test.tsx` (6); i18n audit clean (0 new violations);
     jscpd-diff clean.
-- **Phase 5 — pending**: 2D/3D pick+highlight (`part:'landing'`) for the panel row +
-  live re-flow preview during grip drag.
+- **Phase 4-C — DONE**: rest-landing grips for the CURVED families (walkline:
+  elliptical/sketch; radial: spiral/helical/triangular-fan) + `triangular-fan`
+  landings enabled. Two sub-parts:
+  - **Handles surfaced (geometry SSoT)**: `buildWalklineRunWithLandings` and
+    `buildRadialRunWithLandings` now emit `RestLandingHandle[]` from the SAME walk
+    that builds the landing quad — walkline: handle centroid = the stretched chord
+    midpoint at the landing's flat z, `along` = the chord tangent; radial: centroid =
+    the mid-sweep walkline point `radialPoint(walklineRadius, θ+Δθ/2)`, `along` =
+    `radialTangentAt(θ+Δθ/2)`. `computeWalklineStair` and `buildRadialRunWithLandings`
+    spread them onto `StairGeometry.restLandingHandles` (mirror of the rectilinear
+    `buildRectilinearRun` consumers). `pushRestLandingGrips` is kind-independent —
+    it reads `geometry.restLandingHandles`, so **no new grip wiring**: the slide +
+    2 length grips light up automatically for every curved kind.
+  - **Curved slide projection**: `slideRestLanding` branches on the run family.
+    Rectilinear (`totalRun > 0`) keeps the axial projection ÷ `totalRun`
+    (byte-identical to Phase 4-A — straight/multi-flight/v-shape untouched). Curved
+    (`totalRun = 0` — no single run direction) projects the cursor onto the sampled
+    `walkline` by ARC-LENGTH via the existing `projectPointToPolylineOffset`
+    (ADR-363/615 SSoT — no new polyline math) ÷ the walkline's plan length, so a
+    landing slides along its own curve instead of snapping to the top. The length
+    grips' `maxLength` cap now uses the same developed-run length (walkline length
+    for curved), so a curved landing can grow past one tread. `commitStairGripDrag`
+    already forwards `geometry` + `landingId`, so no dispatch change.
+  - **triangular-fan**: added to `REST_LANDING_SUPPORTED_KINDS` — it is an apex-mode
+    radial run geometrically identical to spiral (same `radialSector`), and a rest
+    landing keeps `stepCount` invariant, so the fan's single-arc
+    `stepCount === stepCountPerArc` assertion still holds. 11/13 kinds now support
+    rest landings (winder + triangular-outline remain).
+  - Tests: `StairGeometryService-triangular-fan-landings.test.ts` (3) + curved
+    handle assertions flipped in the spiral/helical/elliptical/sketch landing suites
+    + curved slide/length cases in `stair-rest-landing-grips.test.ts` (#13–17). Stair
+    suites green (34 suites / 321); jscpd-diff clean on the 5 changed source files.
+  - **Still recompute-on-release for the transform math**; the live per-frame ghost
+    is Phase 4-D (family-agnostic — it now also drives these curved grips).
+- **Phase 4-D — DONE**: live WYSIWYG re-flow ghost during a rest-landing grip drag
+  (resolves Phase 4-A's deferred item). The stair grip-drag ghost pipeline already
+  re-runs `computeStairGeometry` each frame for every OTHER stair grip
+  (`apply-entity-preview.ts` → `applyStairGripDrag` → `computeStairGeometry`); the
+  rest-landing kinds saw NO ghost only because `landingId` (which the transforms
+  `slideRestLanding` / `resizeRestLandingLength` need to locate the target landing)
+  was dropped by the preview chain — `commitStairGripDrag` forwarded it, but
+  `buildDxfDragPreview` did not. Fix = thread the SAME `landingId` channel the commit
+  uses through the 4 preview layers so **preview ≡ commit** by construction:
+  - `DxfGripDragPreview.landingId?` (`grip-computation-types.ts`) +
+    `EntityPreviewTransform.landingId?` (`entity-preview-types.ts`) — additive fields.
+  - `buildDxfDragPreview` (`grip-projections.ts`) spreads `activeGrip.landingId` onto
+    the snapshot (mirror of the `gripKind` forward); `toEntityPreviewTransform`
+    (`grip-drag-preview-transform.ts`) passes it through to the transform.
+  - `applyEntityPreview` (`apply-entity-preview.ts`) reads `preview.landingId` and
+    forwards it into the stair-branch `applyStairGripDrag` call (previously omitted →
+    `slideRestLanding` got `landingId: undefined` → `newParams === stair.params` → the
+    `transformed !== entity` gate in `useGripGhostPreview` skipped the ghost body).
+  No new per-frame cost beyond the existing stair ghost (the slide preview quantizes to
+  the nearest legal level each frame, matching the commit's release-time re-flow). Tests:
+  `grip-drag-preview-transform.test.ts` + `grip-gripkind-dualwrite.test.ts` (landingId
+  forward/omit assertions); jscpd-diff clean.
+- **Phase 5 — pending**: 2D/3D pick+highlight (`part:'landing'`) for the panel row.
 
 ## Changelog
 
+- **2026-07-11** — Phase 4-C: curved-family rest-landing grips + `triangular-fan`
+  landings. `buildWalklineRunWithLandings` / `buildRadialRunWithLandings` now emit
+  `RestLandingHandle[]` (centroid + travel tangent) from the same landing walk →
+  spread onto `StairGeometry.restLandingHandles`, so the kind-independent
+  `pushRestLandingGrips` lights the slide + 2 length grips for elliptical/sketch/
+  spiral/helical/triangular-fan with no new wiring. `slideRestLanding` branches on
+  the run family: rectilinear (`totalRun>0`) keeps the axial projection
+  (byte-identical to Phase 4-A), curved (`totalRun=0`) projects the cursor onto the
+  sampled walkline by arc-length via the existing `projectPointToPolylineOffset`
+  (ADR-363/615 SSoT — reuse, no new polyline math); the length-grip `maxLength` cap
+  uses the same developed-run length so curved landings grow past one tread.
+  `triangular-fan` added to `REST_LANDING_SUPPORTED_KINDS` (apex-mode radial ≡ spiral;
+  `stepCount` invariant keeps `stepCount===stepCountPerArc`). 11/13 kinds now. +3 fan
+  tests + 5 curved slide/handle cases + 4 flipped curved-handle assertions; stair
+  suites 34/321 green; jscpd-diff clean.
+- **2026-07-11** — Phase 4-D: live WYSIWYG re-flow ghost during a rest-landing grip
+  drag (resolves Phase 4-A's deferred item). Threaded the `landingId` channel — already
+  forwarded by `commitStairGripDrag` — through the 4 preview layers
+  (`DxfGripDragPreview` / `EntityPreviewTransform` fields + `buildDxfDragPreview` /
+  `toEntityPreviewTransform` forwards + the `applyEntityPreview` stair branch), so the
+  ghost slides/resizes the SAME landing the commit does (preview ≡ commit). The rest of
+  the stair ghost pipeline (`computeStairGeometry` each frame) was already in place. +3
+  test cases (preview-transform + dualwrite); affected suites green; jscpd-diff clean.
 - **2026-07-11** — Phase 3 (radial): spiral + helical rest landings. New SSoT
   `stair-radial-run-builder.ts` (`buildRadialRunWithLandings`) — landing = flat
   annular sector swept over `Δθ = length / walklineRadius` at constant z (sweep

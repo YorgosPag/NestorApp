@@ -426,7 +426,7 @@ export function applyEntityPreview(
       // matches the commit path (otherwise an L/U/Γ end-corner preview would
       // decompose on flight-1's axis and snap on release).
       geometry: stair.geometry,
-      // ADR-637 Phase 4-C — target rest-landing id for the `stair-rest-landing-*`
+      // ADR-637 Phase 4-D — target rest-landing id for the `stair-rest-landing-*`
       // grips, so the live ghost slides/resizes the SAME landing the commit does
       // (`commitStairGripDrag` forwards the identical channel). Without it
       // `slideRestLanding`/`resizeRestLandingLength` can't locate the landing →

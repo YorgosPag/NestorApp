@@ -31,7 +31,7 @@ describe('toEntityPreviewTransform', () => {
     expect('landingId' in t).toBe(false);
   });
 
-  // ADR-637 Phase 4-C — the rest-landing id must reach `applyEntityPreview` so the
+  // ADR-637 Phase 4-D — the rest-landing id must reach `applyEntityPreview` so the
   // live ghost slides/resizes the SAME landing the commit does (preview ≡ commit).
   it('spreads the rest-landing id when present, omits it when absent', () => {
     expect('landingId' in toEntityPreviewTransform(base)).toBe(false);
