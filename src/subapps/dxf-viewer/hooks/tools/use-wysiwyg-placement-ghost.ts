@@ -68,6 +68,14 @@ export interface WysiwygPlacementGhostConfig<TBuild = Entity> {
    * κάθε hook (κενό όταν το build διαβάζει ό,τι χρειάζεται fresh στο call time).
    */
   readonly drawDeps?: DependencyList;
+  /**
+   * ADR-624 — αν το ghost κάθεται στο snapped commit point (`getImmediateSnap`, ~30fps
+   * async) ή ακολουθεί τον raw 60fps κέρσορα. Default `true` (WYSIWYG: preview στο σημείο
+   * που θα κουμπώσει). Θέσε `false` για **free-point** placement (το commit χρησιμοποιεί
+   * τον RAW κέρσορα, π.χ. floorplan-symbol/furniture): αλλιώς το ghost lag-άρει πίσω από
+   * τον κέρσορα όταν το snap/grid είναι ON (30fps) ΚΑΙ αποκλίνει από το raw commit.
+   */
+  readonly useImmediateSnap?: boolean;
 }
 
 /**
@@ -77,7 +85,7 @@ export interface WysiwygPlacementGhostConfig<TBuild = Entity> {
 export function useWysiwygPlacementGhost<TBuild = Entity>(
   config: Readonly<WysiwygPlacementGhostConfig<TBuild>>,
 ): void {
-  const { isActive, transform, getCanvas, getViewportElement, buildGhostEntity, paintGhost, drawOverlay, drawDeps } = config;
+  const { isActive, transform, getCanvas, getViewportElement, buildGhostEntity, paintGhost, drawOverlay, drawDeps, useImmediateSnap } = config;
 
   const draw = useCallback((frame: GhostDrawFrame) => {
     const build = buildGhostEntity(frame);
@@ -94,7 +102,8 @@ export function useWysiwygPlacementGhost<TBuild = Entity>(
     getCanvas,
     getViewportElement,
     transform,
-    useImmediateSnap: true,
+    // Default true (snapped WYSIWYG). Free-point placement passes false → raw 60fps cursor.
+    useImmediateSnap: useImmediateSnap ?? true,
     draw,
   });
 }
@@ -136,6 +145,12 @@ export interface BridgeStorePlacementGhostSpec<
   buildDefaultParams(cursor: Point2D, overrides: TOverrides | undefined, sceneUnits: SceneUnits): TParams;
   /** Ο ίδιος entity builder που τρέχει το commit path. */
   buildEntity(params: TParams, layerId: string): BuildPlacementEntityResult<TEntity>;
+  /**
+   * ADR-624 — default `true` (snapped WYSIWYG). Θέσε `false` για free-point placement
+   * (commit = RAW κέρσορας, π.χ. floorplan-symbol) ώστε το ghost να ακολουθεί τον raw
+   * 60fps κέρσορα → ghost ≡ commit + μηδέν lag όταν snap/grid ON. Βλ. `WysiwygPlacementGhostConfig.useImmediateSnap`.
+   */
+  readonly useImmediateSnap?: boolean;
 }
 
 /**
