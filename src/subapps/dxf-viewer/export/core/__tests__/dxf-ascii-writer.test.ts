@@ -588,3 +588,115 @@ describe('writeDxfAscii — LAYER table (ADR-636 Στάδιο 2 Φ2.1)', () => {
     expect(dxf).not.toContain('TABLES');
   });
 });
+
+// ADR-636 Στάδιο 2 Φ2.3 — real MTEXT (\P line breaks, 71 attachment) + TEXT justification
+// (72/73/11/21) + richer HEADER ($EXTMIN/$EXTMAX/$MEASUREMENT/$LTSCALE/$LUNITS). Gated so
+// bare/Tekton + left-baseline TEXT stay byte-identical.
+
+/** A clean single-run paragraph whose style matches the serializer base (→ no inline codes). */
+function para(text: string): unknown {
+  return {
+    runs: [{
+      text,
+      style: {
+        fontFamily: 'Standard', bold: false, italic: false, underline: false,
+        overline: false, strikethrough: false, height: 2.5, widthFactor: 1,
+        obliqueAngle: 0, tracking: 1, color: { kind: 'ByLayer' },
+      },
+    }],
+    indent: 0, leftMargin: 0, rightMargin: 0, tabs: [], justification: 0,
+    lineSpacingMode: 'multiple', lineSpacingFactor: 1,
+  };
+}
+function mtextNode(lines: string[], attachment = 'TL', rotation = 0): unknown {
+  return {
+    paragraphs: lines.map(para), attachment,
+    lineSpacing: { mode: 'multiple', factor: 1 }, rotation,
+    isAnnotative: false, annotationScales: [], currentScale: '',
+  };
+}
+function textEntity(extra: Record<string, unknown>): Entity {
+  return {
+    id: 't', type: 'text', layerId: 'L', position: { x: 5, y: 5 }, text: 'Hi', height: 2, ...extra,
+  } as unknown as Entity;
+}
+function mtextEntity(lines: string[], attachment = 'TL', rotation = 0): Entity {
+  return {
+    id: 'm', type: 'mtext', layerId: 'L', position: { x: 1, y: 2 }, width: 100,
+    text: lines.join(' '), textNode: mtextNode(lines, attachment, rotation),
+  } as unknown as Entity;
+}
+
+describe('writeDxfAscii — MTEXT emission (ADR-636 Στάδιο 2 Φ2.3)', () => {
+  it('multi-paragraph MTEXT → 0/MTEXT με \\P line breaks + 71/40/41/50', () => {
+    const dxf = writeDxfAscii([mtextEntity(['ΑΛΦΑ', 'ΒΗΤΑ'], 'MC', 30)], { layersById: LAYERS });
+    expect(dxf).toContain('0\nMTEXT\n');
+    expect(dxf).toContain('ΑΛΦΑ\\PΒΗΤΑ'); // \P (literal backslash-P) between paragraphs
+    expect(dxf).toContain('71\n5\n');      // MC attachment → code 5
+    expect(dxf).toContain('40\n2.5\n');    // char height from the run style
+    expect(dxf).toContain('41\n100\n');    // reference-rectangle width
+    expect(dxf).toContain('50\n30\n');     // rotation
+  });
+
+  it('R12 (AC1009) → downgrade σε plain TEXT (MTEXT δεν υπάρχει προ R2000)', () => {
+    const dxf = writeDxfAscii([mtextEntity(['ΑΛΦΑ', 'ΒΗΤΑ'])], {
+      layersById: LAYERS, acadVer: 'AC1009',
+    });
+    expect(dxf).not.toContain('0\nMTEXT\n');
+    expect(dxf).toContain('0\nTEXT\n');
+    expect(dxf).toContain('ΑΛΦΑ ΒΗΤΑ'); // space-joined content
+  });
+
+  it('Tekton (lines mode) → single TEXT, ΟΧΙ MTEXT (unchanged)', () => {
+    const dxf = writeDxfAscii([mtextEntity(['ΑΛΦΑ', 'ΒΗΤΑ'])], { layersById: LAYERS, lineMode: 'lines' });
+    expect(dxf).not.toContain('MTEXT');
+    expect(dxf).toContain('0\nTEXT\n');
+  });
+});
+
+describe('writeDxfAscii — TEXT justification (ADR-636 Στάδιο 2 Φ2.3)', () => {
+  it('center alignment → 72=1 + alignment point 11/21', () => {
+    const dxf = writeDxfAscii([textEntity({ alignment: 'center' })], { layersById: LAYERS });
+    expect(dxf).toContain('72\n1\n');
+    expect(dxf).toContain('11\n5\n21\n5\n');
+    expect(dxf).not.toContain('73\n'); // no textNode → baseline (v=0) → no 73
+  });
+
+  it('right alignment → 72=2', () => {
+    const dxf = writeDxfAscii([textEntity({ alignment: 'right' })], { layersById: LAYERS });
+    expect(dxf).toContain('72\n2\n');
+  });
+
+  it('top attachment (textNode) → 73=3 vertical', () => {
+    const dxf = writeDxfAscii([textEntity({ alignment: 'left', textNode: mtextNode(['X'], 'TL') })], { layersById: LAYERS });
+    expect(dxf).toContain('72\n0\n');
+    expect(dxf).toContain('73\n3\n');
+  });
+
+  it('left/baseline (καμία alignment) → BYTE-IDENTICAL legacy TEXT (χωρίς 72/73)', () => {
+    const dxf = writeDxfAscii([textEntity({})], { layersById: LAYERS });
+    expect(dxf).not.toContain('72\n');
+    expect(dxf).not.toContain('73\n');
+    expect(dxf).toContain('0\nTEXT\n10\n5\n20\n5\n40\n2\n1\nHi\n50\n0\n41\n1\n7\nSTANDARD\n8\nCOLOR_10\n62\n');
+  });
+});
+
+describe('writeDxfAscii — richer HEADER (ADR-636 Στάδιο 2 Φ2.3)', () => {
+  it('$EXTMIN/$EXTMAX/$MEASUREMENT/$LTSCALE/$LUNITS όταν δοθούν', () => {
+    const dxf = writeDxfAscii([line()], {
+      layersById: LAYERS, extMin: { x: 0, y: 0 }, extMax: { x: 10, y: 20 },
+      measurement: 1, ltscale: 1, lunits: 2,
+    });
+    expect(dxf).toContain('9\n$EXTMIN\n10\n0\n20\n0\n30\n0\n');
+    expect(dxf).toContain('9\n$EXTMAX\n10\n10\n20\n20\n30\n0\n');
+    expect(dxf).toContain('9\n$MEASUREMENT\n70\n1\n');
+    expect(dxf).toContain('9\n$LTSCALE\n40\n1\n');
+    expect(dxf).toContain('9\n$LUNITS\n70\n2\n');
+  });
+
+  it('χωρίς extents/measurement options → bare (zero regression)', () => {
+    const dxf = writeDxfAscii([line()], { layersById: LAYERS });
+    expect(dxf).not.toContain('$EXTMIN');
+    expect(dxf).not.toContain('$MEASUREMENT');
+  });
+});

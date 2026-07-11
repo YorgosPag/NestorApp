@@ -15,6 +15,7 @@ import {
   encodingToCodepage,
   collectCustomLinetypesForExport,
   versionToEncoding,
+  computeScaledExtents,
 } from '../dxf-export-adapter';
 import type { ResolvedExportFloor } from '../../core/export-floor-scope';
 import type { Entity } from '../../../types/entities';
@@ -194,6 +195,25 @@ describe('ADR-636 Στάδιο 2 Φ2.2 — auto version-driven encoding', () => 
     const blob = renderDxfBlob(buildDxfExportRequest(greekScene, { entityScope: 'dxf-only', version: 'AC1009' }).request);
     expect(blob.size).toBeGreaterThan(0);
     expect(blob.type).toBe('application/dxf');
+  });
+});
+
+describe('ADR-636 Στάδιο 2 Φ2.3 — drawing extents ($EXTMIN/$EXTMAX)', () => {
+  it('computeScaledExtents: tight bounds των primitives × scale', () => {
+    const ents = [
+      { id: 'a', type: 'line', layerId: 'L', start: { x: 0, y: 0 }, end: { x: 100, y: 50 } },
+      { id: 'b', type: 'line', layerId: 'L', start: { x: -20, y: 10 }, end: { x: 40, y: 200 } },
+    ] as unknown as Entity[];
+    const ext = computeScaledExtents(ents, 0.001);
+    expect(ext).toBeDefined();
+    expect(ext?.min.x).toBeCloseTo(-0.02, 6);
+    expect(ext?.min.y).toBeCloseTo(0, 6);
+    expect(ext?.max.x).toBeCloseTo(0.1, 6);
+    expect(ext?.max.y).toBeCloseTo(0.2, 6);
+  });
+
+  it('άδειο → undefined (ο writer παραλείπει τα extents, όχι ψεύτικο 100×100)', () => {
+    expect(computeScaledExtents([], 1)).toBeUndefined();
   });
 });
 
