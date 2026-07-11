@@ -255,6 +255,48 @@ Tests: `dxf-quad-fill-converter.test.ts` (8) + `dxf-point-converter.test.ts` (4)
   currently rendered as straight segments (21 curved vertices in the sample).
 
 ## Changelog
+- **2026-07-11 — Φ C.4 (LINETYPE render parity: entity group 6 + CELTSCALE 48 + $LTSCALE + LTYPE pre-pass):**
+  οι entity converters διάβαζαν χρώμα/πάχος αλλά **ΟΧΙ** το `data['6']` (linetype) / `data['48']` (CELTSCALE)
+  → το per-entity linetype override χανόταν (dashed/dotted γραμμές render-άρονταν solid). Επιπλέον το
+  `parseLinetypeTable` (LTYPE table parser) **δεν καλούνταν πουθενά στο import build flow** (μόνο σε
+  tests/writer) → τα custom `.lin` linetypes δεν register-άρονταν → fallback σε solid.
+  - **Νέοι SSoT helpers** (`utils/dxf-converter-helpers.ts`, δίπλα στο `extractEntityLineweight`,
+    mirror του C.3/C.2): `extractEntityLinetype(data)` — group 6, bake **concrete name** (incl. `Continuous`,
+    που είναι ΠΡΑΓΜΑΤΙΚΟ linetype, όχι sentinel → overrides dashed layer)· τα `BYLAYER`/`BYBLOCK` (case-
+    insensitive) + absent → `undefined` ώστε το render cascade να λύσει από το layer (implicit ByLayer).
+    `extractEntityLtscale(data)` — group 48, finite **positive** μόνο· absent/invalid/trivial-1 → `undefined`.
+    **Κανένας νέος resolver** — το name→pattern resolution μένει στο render SSoT `resolveLinetypePatternMm`
+    (`resolveAnyLinetype` catalog ∪ `resolveLinetype` registry, case-insensitive DXF names).
+  - **Κεντρική εφαρμογή στο router:** το `applyImportedLineweight` **γενικεύτηκε σε `applyImportedStyleFields`**
+    (`convertEntityToScene`) που βάζει lineweight (370) + linetypeName (6) + ltscale (48) σε **ΕΝΑ** gated
+    post-pass → καλύπτει top-level **ΚΑΙ** block-expanded, χωρίς copy-paste (N.0.2). Gate: χωρίς 6/48/370 →
+    entity αμετάβλητο.
+  - **Render forward:** το `linetypeName` ρέει ήδη `buildBase` (`dxf-scene-entity-converter.ts` γρ ~89).
+    Προστέθηκε **forward του `ltscale`** (γρ ~90, mirror lineweightMm, gated `!== 1`) → `DxfEntityUnion` →
+    `dxf-renderer-entity-model.ts` (ήδη διάβαζε `entity.ltscale`) → `dashMmToScreenPx(…, celtscale)` /
+    DxfRenderer batch key. Το mm→px + LTSCALE×CELTSCALE×zoom stacking **ΗΤΑΝ ΗΔΗ DONE** (ADR-510 Φ2).
+  - **LTYPE pre-pass wired:** το `DxfSceneBuilder.buildSceneWithDiagnostics` καλεί πλέον `parseLinetypeTable`
+    → `registerLinetypes` **ΠΡΙΝ** τη μετατροπή entities, ώστε custom entity linetype names (group 6) να
+    resolve-άρουν αντί για solid. Idempotent (registry dedupes by name)· **server-safe** (origin `dxf-import`
+    ⇒ κανένα localStorage write).
+  - **Απόφαση big-player — `$LTSCALE` (header group 40): parse-only, ΔΕΝ εφαρμόζεται.** Προστέθηκε
+    `DxfHeaderData.ltscale?` + parse στο `parseHeader` (finite positive μόνο) για fidelity/round-trip
+    (ADR-636). ΔΕΝ γράφεται ούτε στο global `LinetypeScaleStore` (θα μόλυνε το persisted user preference όλων
+    των σχεδίων — ίδια απόφαση με το C.3 `$LWDISPLAY`) ούτε baked per-entity. **Λόγος:** το render
+    **αντικαθιστά** το dash pattern από το σταθερό-mm ISO catalog (`resolveLinetypePatternMm` by name), ΟΧΙ
+    από τα source `.lin` μήκη· το source `$LTSCALE` είναι multiplier βαθμονομημένος στα source units + source
+    `.lin`, **ασύμβατος** με το canonical-mm normalized space → εφαρμογή του θα αλλοίωνε το dash sizing (π.χ.
+    metre-drawing LTSCALE=1000 → 12700mm dashes). Το `LinetypeScaleStore` μένει το **manual knob του χρήστη**.
+    Το **CELTSCALE (48)** αντίθετα είναι pure unitless per-object ratio → εφαρμόζεται καθαρά.
+  - **BYBLOCK linetype σε INSERT** = follow-up (mirror του C.2 color BYBLOCK). **C.5 FONT / C.6 HATCH /
+    C.7 MLINESTYLE** = backlog.
+  - **Files:** `dxf-converter-helpers.ts` (2 helpers), `dxf-entity-converters.ts` (post-pass rename+extend),
+    `dxf-parser-types.ts` (`ltscale?`), `dxf-entity-parser.ts` (`$LTSCALE` parse), `dxf-scene-builder.ts`
+    (LTYPE pre-pass), `dxf-scene-entity-converter.ts` (ltscale forward). 17 νέα tests
+    (`dxf-entity-linetype.test.ts`: helpers name/sentinel/Continuous/absent + ltscale + router LINE/CIRCLE/
+    coexist-με-370/gate + `$LTSCALE` parse + builder LTYPE-pre-pass integration), **364/364** utils+scale+
+    entity-model-line green, jscpd clean. ΔΕΝ browser-verified (χρειάζεται canvas)· η import/parse/register/
+    forward λογική = tested (+ τα υπάρχοντα ADR-510 render tests).
 - **2026-07-11 — Φ C.3 (LINEWEIGHT import: per-entity group 370):** οι entity converters
   διάβαζαν `extractEntityColor` αλλά **ΟΧΙ** το `data['370']` → το per-entity πάχος χανόταν στο import.
   Νέο SSoT helper `extractEntityLineweight(data)` (`utils/dxf-converter-helpers.ts`, mirror του

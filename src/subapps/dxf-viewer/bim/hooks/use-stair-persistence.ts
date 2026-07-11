@@ -160,7 +160,17 @@ export function useStairPersistence(
     );
 
     return () => unsubscribe();
-  }, [levelManager, companyId, projectId, floorplanId, userId]);
+    // ADR-420 — `floorId` MUST be in the dep array (mirror of the instantiation
+    // effect above). The service is re-created whenever the durable `floorId`
+    // resolves/changes; without `floorId` here the live `onSnapshot` stays bound
+    // to the stale/null previous service → its first snapshot is empty → the
+    // ADR-390 reconcile drops the in-scene stair and it never returns from
+    // `floorplan_stairs`. This is the same subscription-deps fix landed for the
+    // other 12 BIM persistence hooks on 2026-06-17; the stair hook (not migrated
+    // to `create-bim-entity-persistence-hook`) was the last one still missing it.
+    // Surfaces on dev Fast-Refresh/HMR remounts where `floorId` resolves on a
+    // later render than the other scope ids.
+  }, [levelManager, companyId, projectId, floorplanId, floorId, userId]);
 
   // Acquire / release soft-lock around primary selection lifecycle.
   // DD-2 (ADR §6.8) — acquire on first local edit, release on deselection / TTL.

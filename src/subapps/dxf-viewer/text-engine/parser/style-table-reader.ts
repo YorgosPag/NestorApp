@@ -55,6 +55,26 @@ export function styleEntryDefaults(entry: DxfStyleTableEntry): {
   };
 }
 
+/**
+ * ADR-635 Φ C.5 — build a `{ styleName → fontFamily }` map from a DXF's STYLE table,
+ * for the import pipeline to resolve a TEXT/MTEXT entity's text-style name (group 7) to the
+ * font the render pipeline should use. Thin composition over the existing SSoT
+ * (`parseStyleTable` + `styleEntryDefaults`) — NOT a second parser.
+ *
+ * The stored value is the STRIPPED font-file name (e.g. 'romans'), NOT a pre-substituted web
+ * font: `resolveEntityFont()` applies the SHX→web-font substitution downstream (romans →
+ * Liberation Sans). Pre-substituting here would (a) double-substitute and (b) wrongly override
+ * a company-uploaded exact-match font that the resolver's direct cache hit would have kept.
+ */
+export function buildStyleFontMap(dxfContent: string): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const entry of parseStyleTable(dxfContent)) {
+    if (!entry.name) continue;
+    map[entry.name] = styleEntryDefaults(entry).fontFamily;
+  }
+  return map;
+}
+
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
 type GroupCodeMap = Map<string, string>;

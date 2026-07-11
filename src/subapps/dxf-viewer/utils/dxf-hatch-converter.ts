@@ -29,6 +29,85 @@ import { dwarn } from '../debug';
 type DxfPairs = ReadonlyArray<readonly [string, string]>;
 
 /**
+ * Normalized inputs for assembling a `type:'hatch'` scene entity, shared by BOTH hatch
+ * import paths (ADR-635 Φ C.6):
+ *   - `convertHatch` (native HATCH entity — modern DXF, ADR-507)
+ *   - `tryConvertInsertHatch` (R12/AC1009 associative-hatch INSERT via `ACAD/HATCH` XDATA)
+ *
+ * Keeping the fillType resolution + scale-idempotency + entity shape in ONE builder means the
+ * two importers can never drift (N.18: no sibling clone of the ~50-line assembly).
+ */
+export interface HatchAssemblyInput {
+  id: string;
+  layer: string;
+  boundaryPaths: Point2D[][];
+  patternName: string | undefined;
+  solid: boolean;
+  /** DXF group 76 (0 = user-defined line family, else predefined). Default 1 when absent. */
+  patternTypeCode: number;
+  /** DXF group 75 island style code. */
+  islandCode: number;
+  /** Pattern angle in DEGREES (undefined ⇒ omit). */
+  angle: number | undefined;
+  /** EFFECTIVE pattern scale as written in the file (undefined ⇒ omit). */
+  scale: number | undefined;
+  color: string | undefined;
+  seedPoints?: Point2D[];
+  gradient?: HatchGradient;
+  inlinePattern?: HatchPattern;
+}
+
+/**
+ * Assemble the final `type:'hatch'` scene entity from normalized inputs (SSoT for both hatch
+ * importers). Applies the scale idempotency for catalog patterns: the writer emits the EFFECTIVE
+ * scale (= suggested × user) at group 41, so a catalog hit re-derives the user multiplier
+ * (`scale / suggested`) to avoid double-scaling at render (ADR-507 Φ6). Gradient/inline patterns
+ * and the user-defined line-family fields are optional.
+ */
+export function buildHatchSceneEntity(input: HatchAssemblyInput): AnySceneEntity {
+  const {
+    id, layer, boundaryPaths, patternName, solid, patternTypeCode, islandCode,
+    angle, scale, color, seedPoints = [], gradient, inlinePattern,
+  } = input;
+
+  const fillType = gradient ? 'gradient'
+    : solid ? 'solid' : (patternTypeCode === 0 ? 'user-defined' : 'predefined');
+
+  let patternScale = scale;
+  if (fillType === 'predefined') {
+    const catalogHit = getHatchPattern(patternName);
+    if (catalogHit) {
+      const suggested = getSuggestedScale(patternName);
+      if (scale !== undefined && !Number.isNaN(scale) && suggested > 0) patternScale = scale / suggested;
+    }
+  }
+
+  const hasAngle = angle !== undefined && !Number.isNaN(angle);
+  const hasScale = patternScale !== undefined && !Number.isNaN(patternScale);
+  const userDefined = fillType === 'user-defined';
+
+  return {
+    id,
+    type: 'hatch',
+    layerId: layer,
+    visible: true,
+    boundaryPaths,
+    patternName,
+    patternType: gradient ? 'gradient' : solid ? 'solid' : 'pattern',
+    fillType,
+    islandStyle: dxf75ToIslandStyle(islandCode),
+    // patternAngle = γενική γωνία· lineAngle/lineSpacing είναι user-defined έννοιες
+    // (μην τα γεμίζεις σε predefined — εκεί χρησιμοποιείται patternAngle/patternScale).
+    ...(hasAngle && { patternAngle: angle, ...(userDefined && { lineAngle: angle }) }),
+    ...(hasScale && { patternScale, ...(userDefined && { lineSpacing: patternScale }) }),
+    ...(inlinePattern && { inlinePattern }),
+    ...(gradient && { gradient }),
+    ...(seedPoints.length > 0 && { seedPoints }),
+    ...(color && { color }),
+  };
+}
+
+/**
  * i18n key (N.11) για inline-imported pattern. ΔΕΝ εμφανίζεται στο UI dropdown (το
  * inlinePattern ζει ανά entity, όχι στο catalog) — απλώς ικανοποιεί τον τύπο
  * `HatchPattern`. Κλειδί, ΟΧΙ hardcoded label.
@@ -207,56 +286,37 @@ export function convertHatch(
     };
   }
 
-  const fillType = gradient ? 'gradient'
-    : solid ? 'solid' : (patternTypeCode === 0 ? 'user-defined' : 'predefined');
-
-  // ── Scale idempotency + inline pattern (ADR-507 Φ6) ─────────────────────────
-  // Ο writer γράφει στο group 41 το EFFECTIVE scale (= suggested(ανά μοτίβο) × user).
-  // Αν το ξαναδιαβάζαμε ως `patternScale`, ο geometry resolver θα ξανα-εφάρμοζε το
-  // suggested → διπλό scaling. Λύση: για catalog-hit ανέκτησε τον user multiplier
-  // (idempotent write→read→render). Για άγνωστο όνομα (third-party DXF) διάβασε τις
-  // inline γραμμές → render 1:1 ώστε να ΜΗΝ μένει αόρατη η γραμμοσκίαση.
-  let patternScale = scale;
+  // ── Inline pattern (ADR-507 Φ6) — catalog MISS only ─────────────────────────
+  // Για άγνωστο όνομα (third-party DXF εκτός catalog) διάβασε τις inline γραμμές → render
+  // 1:1 ώστε να ΜΗΝ μένει αόρατη η γραμμοσκίαση. Η scale idempotency για catalog-hit ζει
+  // πλέον στον shared `buildHatchSceneEntity` (SSoT — no twin).
+  const isPredefined = !gradient && !solid && patternTypeCode !== 0;
   let inlinePattern: HatchPattern | undefined;
-  if (fillType === 'predefined') {
-    const catalogHit = getHatchPattern(patternName);
-    if (catalogHit) {
-      const suggested = getSuggestedScale(patternName);
-      if (scale !== undefined && !Number.isNaN(scale) && suggested > 0) patternScale = scale / suggested;
-    } else if (idx78 >= 0) {
-      const lines = parseInlinePatternLines(pairs, idx78);
-      if (lines.length > 0) {
-        inlinePattern = {
-          name: patternName ?? 'IMPORTED',
-          labelKey: INLINE_PATTERN_LABEL_KEY,
-          category: 'special',
-          lines,
-        };
-      }
+  if (isPredefined && !getHatchPattern(patternName) && idx78 >= 0) {
+    const lines = parseInlinePatternLines(pairs, idx78);
+    if (lines.length > 0) {
+      inlinePattern = {
+        name: patternName ?? 'IMPORTED',
+        labelKey: INLINE_PATTERN_LABEL_KEY,
+        category: 'special',
+        lines,
+      };
     }
   }
 
-  const hasAngle = angle !== undefined && !Number.isNaN(angle);
-  const hasScale = patternScale !== undefined && !Number.isNaN(patternScale);
-  const userDefined = fillType === 'user-defined';
-
-  return {
+  return buildHatchSceneEntity({
     id: `hatch_${index}`,
-    type: 'hatch',
-    layerId: layer,
-    visible: true,
+    layer,
     boundaryPaths,
     patternName,
-    patternType: gradient ? 'gradient' : solid ? 'solid' : 'pattern',
-    fillType,
-    islandStyle: dxf75ToIslandStyle(islandCode),
-    // patternAngle = γενική γωνία· lineAngle/lineSpacing είναι user-defined έννοιες
-    // (μην τα γεμίζεις σε predefined — εκεί χρησιμοποιείται patternAngle/patternScale).
-    ...(hasAngle && { patternAngle: angle, ...(userDefined && { lineAngle: angle }) }),
-    ...(hasScale && { patternScale, ...(userDefined && { lineSpacing: patternScale }) }),
-    ...(inlinePattern && { inlinePattern }),
-    ...(gradient && { gradient }),
-    ...(seedPoints.length > 0 && { seedPoints }),
-    ...(color && { color }),
-  };
+    solid,
+    patternTypeCode,
+    islandCode,
+    angle,
+    scale,
+    color,
+    seedPoints,
+    gradient,
+    inlinePattern,
+  });
 }

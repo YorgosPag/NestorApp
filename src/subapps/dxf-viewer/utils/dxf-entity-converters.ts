@@ -21,7 +21,7 @@
  */
 
 import type { AnySceneEntity } from '../types/scene';
-import type { DxfHeaderData, DimStyleMap } from './dxf-entity-parser';
+import type { DxfHeaderData, DimStyleMap, StyleFontMap } from './dxf-entity-parser';
 import { vectorMagnitude } from '../rendering/entities/shared/geometry-rendering-utils';
 
 import {
@@ -371,14 +371,17 @@ import { convertLeader } from './dxf-leader-converter';
  * @param index - Entity index for unique ID generation
  * @param header - Optional DXF header data for DIMSCALE normalization
  * @param dimStyles - Optional parsed DIMSTYLE map with real DIMTXT values
+ * @param styleFonts - Optional parsed STYLE→font map (ADR-635 Φ C.5); TEXT/MTEXT resolve
+ *   their text-style name (group 7) through it to the real font family.
  */
 export function convertEntityToScene(
   entityData: EntityData,
   index: number,
   header?: DxfHeaderData,
-  dimStyles?: DimStyleMap
+  dimStyles?: DimStyleMap,
+  styleFonts?: StyleFontMap
 ): AnySceneEntity | AnySceneEntity[] | null {
-  const result = routeEntityToConverter(entityData, index, header, dimStyles);
+  const result = routeEntityToConverter(entityData, index, header, dimStyles, styleFonts);
   return applyImportedStyleFields(result, entityData.data);
 }
 
@@ -427,7 +430,8 @@ function routeEntityToConverter(
   entityData: EntityData,
   index: number,
   header?: DxfHeaderData,
-  dimStyles?: DimStyleMap
+  dimStyles?: DimStyleMap,
+  styleFonts?: StyleFontMap
 ): AnySceneEntity | AnySceneEntity[] | null {
   const { type, layer, data } = entityData;
 
@@ -450,10 +454,10 @@ function routeEntityToConverter(
     case 'ELLIPSE':
       return convertEllipse(data, layer, index);
     case 'TEXT':
-      return convertText(data, layer, index);
+      return convertText(data, layer, index, styleFonts);
     case 'MTEXT':
     case 'MULTILINETEXT':
-      return convertMText(data, layer, index);
+      return convertMText(data, layer, index, styleFonts);
     // ADR-635 Φάση B Batch 2 — block attribute value (visible) + definition template.
     case 'ATTRIB':
       return convertAttrib(data, layer, index);

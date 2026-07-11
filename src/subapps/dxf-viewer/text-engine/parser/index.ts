@@ -3,4 +3,4 @@ export type { MtextToken } from './mtext-tokenizer';
 
 export { parseMtext, parseText } from './mtext-parser';
 
-export { parseStyleTable, styleEntryDefaults } from './style-table-reader';
+export { parseStyleTable, styleEntryDefaults, buildStyleFontMap } from './style-table-reader';

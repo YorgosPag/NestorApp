@@ -10,6 +10,7 @@
  */
 
 import type { AnySceneEntity } from '../types/scene';
+import type { StyleFontMap } from './dxf-parser-types';
 import {
   decodeGreekText,
   mapHorizontalAlignment,
@@ -67,17 +68,31 @@ export function attachmentToVJust(attachment: TextJustification | undefined): 0 
   }
 }
 
+/**
+ * ADR-635 Φ C.5 — resolve a TEXT/MTEXT entity's text-style name (DXF group 7) to a font
+ * family via the pre-parsed STYLE map. Gate: no group 7, or a style name absent from the map
+ * (unknown style), → '' so the render font-resolver keeps its default (unchanged behaviour;
+ * native/Tekton/bare text carries no group 7). AutoCAD parity: group 7 = text style name →
+ * STYLE table entry → font file (romans → Liberation Sans via `resolveEntityFont`).
+ */
+function resolveStyleFont(data: Record<string, string>, styleFonts?: StyleFontMap): string {
+  const styleName = data['7'];
+  if (!styleName || !styleFonts) return '';
+  return styleFonts[styleName] ?? '';
+}
+
 function buildTextNodeFromFlat(
   text: string,
   height: number,
   rotation: number,
   alignment: 'left' | 'center' | 'right',
   attachment?: TextJustification,
+  fontFamily = '',
 ): DxfTextNode {
   const run: TextRun = {
     text,
     style: {
-      fontFamily: '',
+      fontFamily,
       bold: false,
       italic: false,
       underline: false,
@@ -181,7 +196,8 @@ function buildTextSceneEntity(params: {
 export function convertText(
   data: Record<string, string>,
   layer: string,
-  index: number
+  index: number,
+  styleFonts?: StyleFontMap,
 ): AnySceneEntity | null {
   const { x, y, height, rotation } = parseTextTransform(data);
   let text = data['1'] || '';
@@ -195,10 +211,12 @@ export function convertText(
 
   text = decodeGreekText(text);
   const color = extractEntityColor(data);
+  // ADR-635 Φ C.5 — text-style name (group 7) → STYLE font family; '' when absent/unknown.
+  const fontFamily = resolveStyleFont(data, styleFonts);
 
   return buildTextSceneEntity({
     idPrefix: 'text', index, layer, x, y, text, height, rotation, alignment,
-    textNode: buildTextNodeFromFlat(text.trim(), height, rotation, alignment),
+    textNode: buildTextNodeFromFlat(text.trim(), height, rotation, alignment, undefined, fontFamily),
     color,
   });
 }
@@ -221,7 +239,8 @@ export function convertText(
 export function convertMText(
   data: Record<string, string>,
   layer: string,
-  index: number
+  index: number,
+  styleFonts?: StyleFontMap,
 ): AnySceneEntity | null {
   const { x, y, height, rotation } = parseTextTransform(data);
   const rawContent = data['1'] || data['3'] || '';
@@ -237,7 +256,14 @@ export function convertMText(
   // (uppercase) path does not cover; the MTEXT inline codes are untouched by the decode.
   const decoded = decodeGreekText(rawContent);
   // `height` (code 40) seeds the base run style (default char height for runs w/o `\H`).
-  const parsed = parseMtext(tokenizeMtext(decoded), { height });
+  // ADR-635 Φ C.5 — the text-style font (group 7 → STYLE) seeds the base run family so runs
+  // without an inline `\f`/`\F` override render with the drawing's real font (AutoCAD parity).
+  // Gated: no group 7 / unknown style → the parser keeps its 'Standard' default (unchanged).
+  const fontFamily = resolveStyleFont(data, styleFonts);
+  const parsed = parseMtext(tokenizeMtext(decoded), {
+    height,
+    ...(fontFamily && { fontFamily }),
+  });
   // `parseMtext` hard-codes attachment 'TL' / rotation 0 (it sees only inline codes) — set
   // the real values from the entity (code 71 attachment + code 50 rotation).
   const textNode: DxfTextNode = {

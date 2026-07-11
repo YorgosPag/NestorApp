@@ -6,9 +6,14 @@ import { DxfEntityParser, type LayerColorMap } from './dxf-entity-parser';
 // reference custom `.lin` patterns resolve at render instead of falling back to solid.
 import { parseLinetypeTable } from './dxf-linetype-table-parser';
 import { registerLinetypes } from '../stores/LinetypeRegistry';
+// ADR-635 Φ C.5 — STYLE table pre-pass: map each text-style name → its font family so
+// TEXT/MTEXT (group 7) resolve to the real font. Reuses the ADR-344 STYLE parser SSoT.
+import { buildStyleFontMap } from '../text-engine/parser';
 // ADR-635 Φ2 — INSERT/BLOCK expansion (block-definition map + placement transform).
 import { parseBlockDefinitions } from './dxf-block-parser';
 import { instantiateInsert, DEFAULT_SCENE_ENTITY_BUDGET, type ExpandContext } from './dxf-block-expander';
+// ADR-635 Φ C.6 — R12 associative-hatch INSERT (ACAD/HATCH XDATA) → single HATCH entity.
+import { tryConvertInsertHatch } from './dxf-hatch-xdata-converter';
 // ADR-635 Φ3 — fault-tolerant import: skipped/failed entities are RECORDED, not fatal.
 import {
   createImportDiagnostics,
@@ -124,6 +129,19 @@ export class DxfSceneBuilder {
     const { linetypes: customLinetypes } = parseLinetypeTable(lines);
     if (customLinetypes.length > 0) registerLinetypes(customLinetypes);
 
+    // ╔════════════════════════════════════════════════════════════════════════╗
+    // ║ 🏢 ADR-635 Φ C.5 — TEXT STYLE (FONT) PRE-PASS                          ║
+    // ║                                                                        ║
+    // ║ Parse the STYLE table (raw `content` — parseStyleTable is line-based    ║
+    // ║ internally) into a { styleName → fontFamily } map, threaded to the      ║
+    // ║ TEXT/MTEXT converters so an entity's text-style name (group 7) renders  ║
+    // ║ with the drawing's real font (romans → Liberation Sans via the render   ║
+    // ║ font-resolver's SHX substitution) instead of the '' default. Per-drawing║
+    // ║ (like dimStyles), NOT a global store — no per-drawing prop mutates a     ║
+    // ║ shared registry (mirror of the DIMSTYLE map, not LinetypeRegistry).     ║
+    // ╚════════════════════════════════════════════════════════════════════════╝
+    const styleFonts = buildStyleFontMap(content);
+
     const entities: AnySceneEntity[] = [];
     const layers: Record<string, SceneLayer> = {};
 
@@ -192,6 +210,7 @@ export class DxfSceneBuilder {
     const expandCtx: ExpandContext = {
       header,
       dimStyles,
+      styleFonts,
       idSeq: { n: 0 },
       diagnostics,
       budget: { max: DEFAULT_SCENE_ENTITY_BUDGET, used: 0 },
@@ -203,11 +222,22 @@ export class DxfSceneBuilder {
       const type = entityData.type || 'UNKNOWN';
       try {
         if (entityData.type === 'INSERT') {
+          // ADR-635 Φ C.6 — R12/AC1009 has no HATCH entity: a hatch is an anonymous block
+          // (`*X#`) of exploded pattern lines, INSERTed with ACAD/HATCH XDATA. Reconstruct it
+          // as a SINGLE hatch entity (modern-AutoCAD behaviour) so it is «perceived as a hatch»
+          // instead of thousands of loose lines. Only when the XDATA yields a usable line-edge
+          // boundary; otherwise fall through to normal block explosion (safe degradation).
+          const insertHatch = tryConvertInsertHatch(entityData, index);
+          if (insertHatch) {
+            processSceneEntity(insertHatch);
+            recordParsed(diagnostics, 'HATCH');
+            return;
+          }
           for (const e of instantiateInsert(entityData, blockDefs, expandCtx)) processSceneEntity(e);
           recordParsed(diagnostics, 'INSERT');
           return;
         }
-        const result = DxfEntityParser.convertToSceneEntity(entityData, index, header, dimStyles);
+        const result = DxfEntityParser.convertToSceneEntity(entityData, index, header, dimStyles, styleFonts);
         if (!result) {
           // Unsupported entity type (e.g. SOLID/POINT/3DFACE) — was silently dropped; now counted.
           recordSkipped(diagnostics, type);

@@ -214,6 +214,20 @@ export interface DimStyleEntry {
 /** Map of DIMSTYLE names to their properties */
 export type DimStyleMap = Record<string, DimStyleEntry>;
 
+// ============================================================================
+// STYLE → FONT MAP TYPE (ADR-635 Φ C.5)
+// ============================================================================
+
+/**
+ * Map of DXF text-style names (STYLE table, group 2) → resolved font-family string
+ * (STYLE fontFile group 3, extension stripped via `styleEntryDefaults`). Built once per
+ * import by `buildStyleFontMap` and threaded to the TEXT/MTEXT converters so an entity's
+ * text-style name (group 7) resolves to the real font (romans → Liberation Sans via
+ * `resolveEntityFont`'s SHX→web substitution) instead of the '' default. Per-drawing, like
+ * {@link DimStyleMap} — NOT a global store.
+ */
+export type StyleFontMap = Record<string, string>;
+
 /** Default DIMSTYLE as fallback (AutoCAD "Standard" defaults) */
 export const DEFAULT_DIMSTYLE: DimStyleEntry = {
   name: 'Standard',

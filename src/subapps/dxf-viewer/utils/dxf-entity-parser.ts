@@ -25,12 +25,13 @@ export type {
   DxfHeaderData,
   DimStyleEntry,
   DimStyleMap,
+  StyleFontMap,
   LayerColorEntry,
   LayerColorMap,
 } from './dxf-parser-types';
 export { SUPPORTED_ENTITY_TYPES, DXF_SECTION_MARKERS, INSUNITS_TO_MM } from './dxf-parser-types';
 
-import type { DxfHeaderData, DimStyleMap } from './dxf-parser-types';
+import type { DxfHeaderData, DimStyleMap, StyleFontMap } from './dxf-parser-types';
 import { SUPPORTED_ENTITY_TYPES, INSUNITS_TO_MM, INSUNITS_NAMES } from './dxf-parser-types';
 
 // Re-export table parsers for backward compatibility
@@ -354,8 +355,9 @@ export class DxfEntityParser {
     entityData: EntityData,
     index: number,
     header?: DxfHeaderData,
-    dimStyles?: DimStyleMap
+    dimStyles?: DimStyleMap,
+    styleFonts?: StyleFontMap
   ): AnySceneEntity | AnySceneEntity[] | null {
-    return convertEntityToScene(entityData, index, header, dimStyles);
+    return convertEntityToScene(entityData, index, header, dimStyles, styleFonts);
   }
 }
