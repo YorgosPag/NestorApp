@@ -78,3 +78,64 @@ describe('hitTestStairSubElement', () => {
     expect(hitTestStairSubElement({ id: 's', geometry: null }, { x: 0, y: 0 })).toBeNull();
   });
 });
+
+describe('hitTestStairSubElement — rest landings (ADR-637 Φ5)', () => {
+  /** Landing quad (mm): x ∈ [x0, x0+800], y ∈ [−500, 500], at elevation z. */
+  function landing(x0: number, z: number): Polygon3D {
+    return [
+      { x: x0, y: -500, z },
+      { x: x0 + 800, y: -500, z },
+      { x: x0 + 800, y: 500, z },
+      { x: x0, y: 500, z },
+    ];
+  }
+
+  /** Two treads (z 0/175) then a landing slab at z 350 further along +X. */
+  function stairWithLanding(): StairHitInput {
+    return {
+      id: 'stair_L',
+      geometry: {
+        treadsBelowCut: [tread(0, 0), tread(1, 175)],
+        treadsAboveCut: [],
+        landings: [landing(600, 350)],
+      },
+    };
+  }
+
+  it('resolves a landing under the point (part:landing + 0-based landings index)', () => {
+    expect(hitTestStairSubElement(stairWithLanding(), { x: 1000, y: 0 })).toEqual({
+      stairId: 'stair_L',
+      part: 'landing',
+      index: 0,
+    });
+  });
+
+  it('still resolves a tread when the point misses the landing', () => {
+    expect(hitTestStairSubElement(stairWithLanding(), { x: 100, y: 0 })).toEqual({
+      stairId: 'stair_L',
+      part: 'tread',
+      index: 0,
+    });
+  });
+
+  it('prefers the landing (walkable top slab) on a z-tie overlap with a tread', () => {
+    // Landing at x ∈ [200,1000] z=175 overlaps tread 1 (x ∈ [280,585] z=175).
+    const stair: StairHitInput = {
+      id: 'stair_T',
+      geometry: {
+        treadsBelowCut: [tread(0, 0), tread(1, 175)],
+        treadsAboveCut: [],
+        landings: [landing(200, 175)],
+      },
+    };
+    expect(hitTestStairSubElement(stair, { x: 300, y: 0 })).toEqual({
+      stairId: 'stair_T',
+      part: 'landing',
+      index: 0,
+    });
+  });
+
+  it('no landings array → tread pick is unaffected (byte-identical legacy path)', () => {
+    expect(hitTestStairSubElement(stair(), { x: 100, y: 0 })?.part).toBe('tread');
+  });
+});

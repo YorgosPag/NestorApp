@@ -27,12 +27,16 @@
 import { create } from 'zustand';
 import { createExternalStore } from '../../stores/createExternalStore';
 
-/** The editable sub-parts of a stair (Φ1 scope — finish-level per-element edits). */
-export type StairSubPart = 'tread' | 'riser';
+/**
+ * The editable/pickable sub-parts of a stair. `tread`/`riser` are the Φ1 finish-
+ * level edit targets; `landing` (ADR-637 Φ5) is a rest-landing slab, pickable in
+ * the SAME «click-into components» gesture (2D hit-test + 3D raycast share this SSoT).
+ */
+export type StairSubPart = 'tread' | 'riser' | 'landing';
 
 /** Narrow a raw `userData.stairComponent` string to an editable {@link StairSubPart}. */
 export function isStairSubPart(value: string | undefined): value is StairSubPart {
-  return value === 'tread' || value === 'riser';
+  return value === 'tread' || value === 'riser' || value === 'landing';
 }
 
 /** A stable reference to one sub-element of one stair (0-based geometry index). */

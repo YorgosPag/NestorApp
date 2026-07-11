@@ -44,8 +44,21 @@ const TREADS: Polygon3D[] = [
   ],
 ];
 
+const LANDINGS: Polygon3D[] = [
+  [
+    { x: 40, y: 0, z: 10 },
+    { x: 60, y: 0, z: 10 },
+    { x: 60, y: 20, z: 10 },
+    { x: 40, y: 20, z: 10 },
+  ],
+];
+
 function tread(index: number): StairSubElementRef {
   return { stairId: 'stair_1', part: 'tread', index };
+}
+
+function landing(index: number): StairSubElementRef {
+  return { stairId: 'stair_1', part: 'landing', index };
 }
 
 describe('drawStairSubElementHighlight', () => {
@@ -89,6 +102,33 @@ describe('drawStairSubElementHighlight', () => {
     const ctx = mockCtx();
     drawStairSubElementHighlight(ctx as unknown as CanvasRenderingContext2D, identity, TREADS, 'stair_1', tread(9));
     expect(ctx.fill).not.toHaveBeenCalled();
+  });
+
+  describe('Φ5 landing halo (ADR-637)', () => {
+    it('fills + strokes the selected landing polygon', () => {
+      const ctx = mockCtx();
+      drawStairSubElementHighlight(
+        ctx as unknown as CanvasRenderingContext2D, identity, TREADS, 'stair_1', landing(0), null, LANDINGS,
+      );
+      expect(ctx.fill).toHaveBeenCalledTimes(1);
+      expect(ctx.moveTo).toHaveBeenCalledWith(40, 0); // landing 0 first vertex
+    });
+
+    it('is a no-op for a landing ref when no landings are supplied', () => {
+      const ctx = mockCtx();
+      drawStairSubElementHighlight(
+        ctx as unknown as CanvasRenderingContext2D, identity, TREADS, 'stair_1', landing(0),
+      );
+      expect(ctx.fill).not.toHaveBeenCalled();
+    });
+
+    it('paints a hovered landing + a selected tread together (2 fills)', () => {
+      const ctx = mockCtx();
+      drawStairSubElementHighlight(
+        ctx as unknown as CanvasRenderingContext2D, identity, TREADS, 'stair_1', tread(0), landing(0), LANDINGS,
+      );
+      expect(ctx.fill).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('Φ3c hover pass', () => {

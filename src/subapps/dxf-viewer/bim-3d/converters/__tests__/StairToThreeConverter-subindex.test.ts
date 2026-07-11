@@ -75,4 +75,17 @@ describe('StairToThreeConverter — sub-element index tagging (ADR-358 Q19)', ()
       expect(typeof m.userData['stairComponentIndex']).toBe('number');
     }
   });
+
+  it('rest-landing meshes carry sequential 0-based stairComponentIndex (ADR-637 Φ5)', () => {
+    const stair = makeStair();
+    const landingAt = (x0: number, z: number) => [P(x0, 0, z), P(x0 + 800, 0, z), P(x0 + 800, 900, z), P(x0, 900, z)];
+    const withLandings = {
+      ...stair,
+      geometry: { ...stair.geometry, landings: [landingAt(0, 350), landingAt(1000, 700)] },
+    } as unknown as StairEntity;
+    const landingIdx = stairToMeshes(withLandings)
+      .filter((m) => m.userData['stairComponent'] === 'landing')
+      .map((m) => m.userData['stairComponentIndex'] as number);
+    expect(landingIdx).toEqual([0, 1]);
+  });
 });

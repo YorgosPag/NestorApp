@@ -66,6 +66,9 @@ import {
   useStairSubElementSelectionStore,
   getStairSubElementHover,
 } from '../stairs/stair-sub-element-selection-store';
+// ADR-358 Phase 8 — hover/highlight halo geometry (footprint outline + OBB fallback)
+// lives in a sibling module (file-size SRP split, N.7.1).
+import { drawStairPerimeterOutline } from './stair-perimeter-outline';
 
 const ARROW_HEAD_PX = 10;
 const ARROW_HEAD_HALF_WIDTH_PX = 5;
@@ -138,7 +141,7 @@ export class StairRenderer extends BaseEntityRenderer {
       // outermost ring survives. Drawing the bbox once gives a guaranteed
       // continuous magenta halo around the whole stair, identical in
       // perceived weight to the per-line glow of simpler entities.
-      this.drawPerimeterOutline(stair);
+      drawStairPerimeterOutline(this.ctx, (p) => this.worldToScreen(p), stair);
       this.ctx.restore();
     }
 
@@ -210,6 +213,7 @@ export class StairRenderer extends BaseEntityRenderer {
       stair.id,
       useStairSubElementSelectionStore.getState().selected,
       getStairSubElementHover(),
+      geometry.landings, // ADR-637 Φ5 — rest-landing halo (part:'landing')
     );
     renderStringersForStructure(
       scx,
@@ -259,98 +263,6 @@ export class StairRenderer extends BaseEntityRenderer {
   }
 
   // ─── Internal drawing helpers ───────────────────────────────────────────
-
-  /**
-   * Glow halo for hover/highlight (ADR-358 Phase 8, Giorgio 2026-07-10 revision).
-   *
-   * Follows the ACTUAL stair footprint — for an L / U / Γ / curved stair the halo is
-   * an L / U / Γ / curved outline that COINCIDES with the shape, NOT a rectangular
-   * bounding box that engulfs the empty inner corner (the exact bug Giorgio flagged:
-   * «να μην είναι τετράγωνο»). The footprint boundary is `outer stringer forward +
-   * inner stringer reversed` — both stringers are the walkline offset by ±width/2
-   * (`buildStringersFromWalkline`), so the closed loop hugs the run for EVERY variant
-   * (straight → rectangle, L/U/Γ → the bent shape, spiral/sketch → the curved band).
-   *
-   * Falls back to the local-frame OBB only when the stringers are degenerate (< 2
-   * points) — e.g. a not-yet-computed geometry.
-   */
-  private drawPerimeterOutline(stair: StairEntity): void {
-    const { outer, inner } = stair.geometry.stringers;
-    if (outer.length >= 2 && inner.length >= 2) {
-      this.ctx.beginPath();
-      const first = this.worldToScreen({ x: outer[0].x, y: outer[0].y });
-      this.ctx.moveTo(first.x, first.y);
-      for (let i = 1; i < outer.length; i++) {
-        const s = this.worldToScreen({ x: outer[i].x, y: outer[i].y });
-        this.ctx.lineTo(s.x, s.y);
-      }
-      // inner stringer reversed → closes the band along the OTHER long edge.
-      for (let i = inner.length - 1; i >= 0; i--) {
-        const s = this.worldToScreen({ x: inner[i].x, y: inner[i].y });
-        this.ctx.lineTo(s.x, s.y);
-      }
-      this.ctx.closePath();
-      this.ctx.stroke();
-      return;
-    }
-    this.drawPerimeterOutlineObb(stair);
-  }
-
-  /**
-   * Fallback halo: a tight Oriented Bounding Box (OBB) in the stair's local frame,
-   * used only when the stringers are degenerate. Folds every tread + stringer vertex
-   * into `min/max` along the `direction` axes so it wraps the full footprint.
-   */
-  private drawPerimeterOutlineObb(stair: StairEntity): void {
-    const params = stair.params;
-    const dirRad = (params.direction * Math.PI) / 180;
-    const cos = Math.cos(dirRad);
-    const sin = Math.sin(dirRad);
-    const bp = params.basePoint;
-
-    let uMin = Infinity, uMax = -Infinity, vMin = Infinity, vMax = -Infinity;
-    const fold = (px: number, py: number): void => {
-      const dx = px - bp.x;
-      const dy = py - bp.y;
-      const u = cos * dx + sin * dy;
-      const v = -sin * dx + cos * dy;
-      if (u < uMin) uMin = u;
-      if (u > uMax) uMax = u;
-      if (v < vMin) vMin = v;
-      if (v > vMax) vMax = v;
-    };
-
-    for (const tread of stair.geometry.treadsBelowCut) {
-      for (const p of tread) fold(p.x, p.y);
-    }
-    for (const p of stair.geometry.stringers.outer) fold(p.x, p.y);
-    for (const p of stair.geometry.stringers.inner) fold(p.x, p.y);
-
-    if (uMin === Infinity) return; // no vertices — defensive
-
-    const localCorners = [
-      { u: uMin, v: vMin },
-      { u: uMax, v: vMin },
-      { u: uMax, v: vMax },
-      { u: uMin, v: vMax },
-    ];
-    this.ctx.beginPath();
-    const first = this.worldToScreen({
-      x: bp.x + cos * localCorners[0].u - sin * localCorners[0].v,
-      y: bp.y + sin * localCorners[0].u + cos * localCorners[0].v,
-    });
-    this.ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < localCorners.length; i++) {
-      const c = localCorners[i];
-      const s = this.worldToScreen({
-        x: bp.x + cos * c.u - sin * c.v,
-        y: bp.y + sin * c.u + cos * c.v,
-      });
-      this.ctx.lineTo(s.x, s.y);
-    }
-    this.ctx.closePath();
-    this.ctx.stroke();
-  }
 
   private drawWalkline(walkline: ReadonlyArray<Point3D>, lineWidthPx: number, linePattern: LinePatternKey): void {
     if (walkline.length < 2) return;

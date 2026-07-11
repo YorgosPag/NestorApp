@@ -318,11 +318,14 @@ function buildLandingMeshes(
   const out: THREE.Mesh[] = [];
   const thicknessM = DEFAULT_LANDING_THICKNESS_MM * MM_TO_M;
   const mat = resolveStairMaterial(stair, 'stair-landing');
-  for (const poly of stair.geometry.landings) {
+  const landings = stair.geometry.landings;
+  for (let i = 0; i < landings.length; i++) {
     // Same convention as treads: poly.z = walkable top face (shared SSoT extrude, ADR-584).
-    const mesh = extrudeFlatSlab(poly, sceneToM, thicknessM, mat, baseY);
+    const mesh = extrudeFlatSlab(landings[i]!, sceneToM, thicknessM, mat, baseY);
     if (!mesh) continue;
-    const tagged = tagMesh(mesh, stair, 'landing', levelId);
+    // ADR-637 Φ5 — 0-based index into `geometry.landings` = the `stairComponentIndex`
+    // the 2D hit-test, raycaster and sub-element highlighter pick landings by.
+    const tagged = tagMesh(mesh, stair, 'landing', levelId, i);
     // landing has no canonical subcategory in ADR-377 taxonomy → parent stair style.
     attachStairEdges(tagged);
     out.push(tagged);

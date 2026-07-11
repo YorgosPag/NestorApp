@@ -68,7 +68,7 @@ export class StairSubElementHighlighter {
     });
   }
 
-  /** Set / clear the highlighted sub-element. `null` (or a non-tread/riser part) clears. */
+  /** Set / clear the highlighted sub-element. `null` (or a non tread/riser/landing part) clears. */
   setTarget(ref: StairSubElementRef | null): void {
     this.target = ref && isStairSubPart(ref.part) ? ref : null;
     this.rebuild();
