@@ -34,14 +34,15 @@ import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { HOVER_HIGHLIGHT, MEP_TEAL_COLOR } from '../../config/color-config';
 import { hexToRgba } from '../../config/color-math';
 import { getLayer } from '../../stores/LayerStore';
+// ADR-375 Φ D — content stroke (πάχος + pattern + χρώμα) από το κεντρικό pen-table SSoT.
+import { applyBimContentStroke } from './shared/bim-entity-stroke';
 
 /**
- * Panel palette — electrical distribution board (teal). ADR-408 Φ5: the panel is
+ * Panel fill — electrical distribution board (teal). ADR-408 Φ5: the panel is
  * a circuit **source**, not a member, so it is NOT coloured by system (Revit:
- * Electrical Equipment carries no circuit colour). It keeps this equipment teal;
- * only the connected fixtures take the circuit colour.
+ * Electrical Equipment carries no circuit colour). The outline stroke colour now
+ * comes from the `electrical-panel` category (teal) via the SSoT resolver.
  */
-const PANEL_STROKE = MEP_TEAL_COLOR;
 const PANEL_FILL = hexToRgba(MEP_TEAL_COLOR, 0.18);
 
 export class ElectricalPanelRenderer extends BaseEntityRenderer {
@@ -87,8 +88,13 @@ export class ElectricalPanelRenderer extends BaseEntityRenderer {
     this.ctx.fillStyle = adaptFillTintForCanvas(PANEL_FILL);
     this.drawPolygonPath(verts);
     this.ctx.fill();
-    this.ctx.strokeStyle = PANEL_STROKE;
-    this.ctx.lineWidth = RENDER_LINE_WIDTHS.NORMAL;
+    // ADR-375 Φ D — content outline: πάχος + pattern + teal χρώμα από το SSoT (αντί
+    // hardcoded NORMAL + PANEL_STROKE). Οι breaker-row γραμμές κληρονομούν το ίδιο pen.
+    applyBimContentStroke(
+      this.ctx,
+      { category: 'electrical-panel', cutState: 'projection', layer },
+      { scale: this.transform.scale, applyColor: true },
+    );
     this.drawPolygonPath(verts);
     this.ctx.stroke();
 

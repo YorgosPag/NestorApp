@@ -13,7 +13,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-415-2d-floorplan-symbol-library.md
  */
 
-import type { BimCategory } from '../../config/bim-object-styles';
+import { type BimCategory, BIM_CATEGORY_LINE_COLORS } from '../../config/bim-object-styles';
 import type { Discipline } from '../discipline/bim-discipline';
 import type { IfcEntityType } from '../types/ifc-entity-mixin';
 import type { FloorplanSymbolCategory } from '../types/floorplan-symbol-types';
@@ -47,7 +47,8 @@ export const FLOORPLAN_SYMBOL_CATEGORY_CONFIG: Readonly<
     discipline: 'plumbing',
     ifcType: 'IfcSanitaryTerminal',
     labelKey: 'floorplanSymbol.category.sanitary',
-    stroke: '#0369a1',
+    // ADR-375 Φ D — stroke από το κεντρικό BIM_CATEGORY_LINE_COLORS SSoT (όχι διπλό literal).
+    stroke: BIM_CATEGORY_LINE_COLORS.sanitary,
     fill: 'rgba(2, 132, 199, 0.10)',
   },
   kitchen: {
@@ -55,7 +56,7 @@ export const FLOORPLAN_SYMBOL_CATEGORY_CONFIG: Readonly<
     discipline: 'architectural',
     ifcType: 'IfcFurniture',
     labelKey: 'floorplanSymbol.category.kitchen',
-    stroke: '#047857',
+    stroke: BIM_CATEGORY_LINE_COLORS.kitchen,
     fill: 'rgba(5, 150, 105, 0.10)',
   },
   furniture: {
@@ -63,7 +64,7 @@ export const FLOORPLAN_SYMBOL_CATEGORY_CONFIG: Readonly<
     discipline: 'interior',
     ifcType: 'IfcFurniture',
     labelKey: 'floorplanSymbol.category.furniture',
-    stroke: '#8b5e34',
+    stroke: BIM_CATEGORY_LINE_COLORS.furniture,
     fill: 'rgba(180, 130, 80, 0.12)',
   },
 } as const;

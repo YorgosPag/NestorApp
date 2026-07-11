@@ -11,6 +11,8 @@
 import type { PenIndex } from './bim-pen-table';
 import type { LinePatternKey } from './bim-line-patterns';
 import type { StructuralComponent } from './bim-structural-components';
+// ADR-375 Phase D — equipment teal SSoT (reused for electrical-panel + thermal-space).
+import { MEP_TEAL_COLOR } from './color-config';
 
 /**
  * ADR-375 Phase C.9 — Revit-grade προκαθορισμένα ΧΡΩΜΑΤΑ γραμμής ανά κατηγορία.
@@ -53,6 +55,26 @@ export const BIM_CATEGORY_LINE_COLORS = {
   stair: '#2f8f6f',
   /** Κιγκλίδωμα — ψυχρό steel-grey, λεπτό μέταλλο (parent `railing`). */
   railing: '#607080',
+  // ── ADR-375 Phase D — MEP / έπιπλα / σύμβολα / αναλυτικές ταυτότητες χρώματος ──
+  // Μεταφέρθηκαν στο SSoT ώστε να τα οδηγεί ο resolveSubcategoryStyle (2D outline)
+  // + τα 3D edge overlays, και να δουλεύουν τα per-view V/G color overrides.
+  // Πριν ήταν hardcoded τοπικές σταθερές μέσα σε κάθε renderer (N.0.2 duplicate).
+  /** Έπιπλο — tan ξύλου (parent `furniture`, ADR-410). */
+  furniture: '#8b5e34',
+  /** Είδος υγιεινής — cool blue (parent `sanitary`, ADR-415). */
+  sanitary: '#0369a1',
+  /** Στοιχείο κουζίνας — πράσινο casework (parent `kitchen`, ADR-415). */
+  kitchen: '#047857',
+  /** Ηλεκτρικός πίνακας — equipment teal (parent `electrical-panel`, ADR-408). */
+  electricalPanel: MEP_TEAL_COLOR,
+  /** Θέρμανση νερού — hydronic warm-red (καλοριφέρ/λέβητας/ενδοδαπέδια, ADR-408 Εύρος Β). */
+  hydronicHeating: '#dc2626',
+  /** Θερμοσίφωνας — DHW μπλε (parent `mep-water-heater`, ADR-408). */
+  domesticHotWater: '#1d4ed8',
+  /** Θερμικός χώρος — analytical teal (parent `thermal-space`, ADR-422/571). */
+  thermalSpace: MEP_TEAL_COLOR,
+  /** Διαχωριστής χώρου — analytical violet (parent `space-separator`, ADR-437). */
+  spaceSeparator: '#9333ea',
 } as const;
 
 /**
@@ -327,18 +349,39 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   envelope:       { projectionPen: 3,  cutPen: 4  },
   // ADR-406 — MEP φωτιστικό: λεπτή γραμμή προβολής (annotation-grade family symbol).
   'light-fixture': { projectionPen: 3, cutPen: 3 },
-  // ADR-408 Φ3 — ηλεκτρικός πίνακας: μεσαία γραμμή (equipment box).
-  'electrical-panel': { projectionPen: 4, cutPen: 5 },
-  // ADR-408 Φ12 — συλλέκτης ύδρευσης: μεσαία γραμμή (plumbing equipment bar).
+  // ADR-408 Φ3 — ηλεκτρικός πίνακας: μεσαία γραμμή (equipment box). ADR-375 Φ D — teal ταυτότητα.
+  'electrical-panel': {
+    projectionPen: 4, cutPen: 5,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.electricalPanel,
+    cutColor: BIM_CATEGORY_LINE_COLORS.electricalPanel,
+  },
+  // ADR-408 Φ12 — συλλέκτης ύδρευσης: μεσαία γραμμή (plumbing equipment bar). Χρώμα per-kind
+  // (νερό cyan-teal / αποχέτευση καφέ) → μένει δυναμικό στον renderer, όχι στατική ταυτότητα εδώ.
   'mep-manifold': { projectionPen: 4, cutPen: 5 },
-  // ADR-408 Εύρος Β — καλοριφέρ: μεσαία γραμμή (heating equipment panel).
-  'mep-radiator': { projectionPen: 4, cutPen: 5 },
-  // ADR-408 Εύρος Β #2 — λέβητας: μεσαία γραμμή (heating source cabinet).
-  'mep-boiler': { projectionPen: 4, cutPen: 5 },
-  // ADR-408 DHW — θερμοσίφωνας: μεσαία γραμμή (plumbing equipment cabinet, mirrors boiler).
-  'mep-water-heater': { projectionPen: 4, cutPen: 5 },
-  // ADR-408 Εύρος Β #3 — ενδοδαπέδια θέρμανση: λεπτή γραμμή (area hatch overlay, interior plan).
-  'mep-underfloor': { projectionPen: 3, cutPen: 4 },
+  // ADR-408 Εύρος Β — καλοριφέρ: μεσαία γραμμή (heating equipment panel). ADR-375 Φ D — hydronic red.
+  'mep-radiator': {
+    projectionPen: 4, cutPen: 5,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.hydronicHeating,
+    cutColor: BIM_CATEGORY_LINE_COLORS.hydronicHeating,
+  },
+  // ADR-408 Εύρος Β #2 — λέβητας: μεσαία γραμμή (heating source cabinet). ADR-375 Φ D — hydronic red.
+  'mep-boiler': {
+    projectionPen: 4, cutPen: 5,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.hydronicHeating,
+    cutColor: BIM_CATEGORY_LINE_COLORS.hydronicHeating,
+  },
+  // ADR-408 DHW — θερμοσίφωνας: μεσαία γραμμή (plumbing equipment cabinet). ADR-375 Φ D — DHW μπλε.
+  'mep-water-heater': {
+    projectionPen: 4, cutPen: 5,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.domesticHotWater,
+    cutColor: BIM_CATEGORY_LINE_COLORS.domesticHotWater,
+  },
+  // ADR-408 Εύρος Β #3 — ενδοδαπέδια θέρμανση: λεπτή γραμμή. ADR-375 Φ D — hydronic red.
+  'mep-underfloor': {
+    projectionPen: 3, cutPen: 4,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.hydronicHeating,
+    cutColor: BIM_CATEGORY_LINE_COLORS.hydronicHeating,
+  },
   // ADR-407 — κάγκελο: μεσαία γραμμή προβολής (metal members, plan symbol).
   // ADR-445 — ψυχρό steel-grey ταυτότητα (λεπτό μέταλλο).
   railing: {
@@ -349,8 +392,12 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   // ADR-408 Φ7 — καλώδιο κυκλώματος: λεπτή γραμμή annotation (το χρώμα έρχεται
   // per-system από το `systemColor`, όχι από εδώ — η κατηγορία δίνει μόνο V/G).
   'mep-wire':     { projectionPen: 3, cutPen: 3 },
-  // ADR-410 — έπιπλο: λεπτή γραμμή footprint (interior plan symbol).
-  furniture:      { projectionPen: 3, cutPen: 3 },
+  // ADR-410 — έπιπλο: λεπτή γραμμή footprint (interior plan symbol). ADR-375 Φ D — tan ταυτότητα.
+  furniture: {
+    projectionPen: 3, cutPen: 3,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.furniture,
+    cutColor: BIM_CATEGORY_LINE_COLORS.furniture,
+  },
   // ADR-408 Φ8 — αεραγωγός: μεσαία γραμμή (mechanical duct run, plan rectangle).
   duct:           { projectionPen: 4, cutPen: 5 },
   // ADR-408 Φ8 — σωλήνας: λεπτή γραμμή (plumbing pipe run, plan centerline).
@@ -361,17 +408,33 @@ export const DEFAULT_OBJECT_STYLES: Readonly<Record<BimCategory, ObjectStyle>> =
   // ADR-408 Φ14 — σωλήνας αποχέτευσης: ίδιο pen με τον σωλήνα (το καφέ χρώμα έρχεται
   // από το classification, όχι από εδώ — η κατηγορία δίνει μόνο ξεχωριστό V/G).
   'drain-pipe':   { projectionPen: 3, cutPen: 4 },
-  // ADR-415 — είδος υγιεινής: λεπτή γραμμή (annotation-grade plan symbol).
-  sanitary:       { projectionPen: 3, cutPen: 3 },
-  // ADR-415 — στοιχείο κουζίνας: λεπτή γραμμή (casework plan symbol).
-  kitchen:        { projectionPen: 3, cutPen: 3 },
+  // ADR-415 — είδος υγιεινής: λεπτή γραμμή (annotation-grade plan symbol). ADR-375 Φ D — cool blue.
+  sanitary: {
+    projectionPen: 3, cutPen: 3,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.sanitary,
+    cutColor: BIM_CATEGORY_LINE_COLORS.sanitary,
+  },
+  // ADR-415 — στοιχείο κουζίνας: λεπτή γραμμή (casework plan symbol). ADR-375 Φ D — casework green.
+  kitchen: {
+    projectionPen: 3, cutPen: 3,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.kitchen,
+    cutColor: BIM_CATEGORY_LINE_COLORS.kitchen,
+  },
   // ADR-419 — επικάλυψη δαπέδου ανά δωμάτιο: λεπτή γραμμή (IfcCovering FLOORING, interior hatch).
   'floor-finish': { projectionPen: 3, cutPen: 3 },
   'wall-covering': { projectionPen: 3, cutPen: 3 },
-  // ADR-422 — θερμικός χώρος: λεπτή γραμμή (IfcSpace analytical overlay, interior tag).
-  'thermal-space': { projectionPen: 3, cutPen: 3 },
-  // ADR-437 — διαχωριστής χώρου: λεπτή γραμμή (IfcVirtualElement boundary line).
-  'space-separator': { projectionPen: 3, cutPen: 3 },
+  // ADR-422 — θερμικός χώρος: λεπτή γραμμή (IfcSpace analytical overlay). ADR-375 Φ D — analytical teal.
+  'thermal-space': {
+    projectionPen: 3, cutPen: 3,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.thermalSpace,
+    cutColor: BIM_CATEGORY_LINE_COLORS.thermalSpace,
+  },
+  // ADR-437 — διαχωριστής χώρου: λεπτή γραμμή (IfcVirtualElement). ADR-375 Φ D — analytical violet.
+  'space-separator': {
+    projectionPen: 3, cutPen: 3,
+    projectionColor: BIM_CATEGORY_LINE_COLORS.spaceSeparator,
+    cutColor: BIM_CATEGORY_LINE_COLORS.spaceSeparator,
+  },
   // ADR-436 — θεμελίωση: μεσαία γραμμή (below-grade structural). Foundation-plan
   // 2Δ διακεκομμένη σύμβαση + subcategories wiring = Slice 1 (renderer).
   foundation: {

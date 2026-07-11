@@ -3919,7 +3919,7 @@
       "ssotFile": "src/subapps/dxf-viewer/bim/types/bim-base.ts",
       "description": "BIM entity base types (ADR-363): BimEntity generic, BimValidation, BimQuantityTakeoff, SoftLock, Point3D. All BIM entity interfaces extend BimEntity — no re-implementation of these types elsewhere.",
       "forbiddenPatterns": [
-        "interface BimEntity[^<]",
+        "interface BimEntity[^A-Za-z0-9_<]",
         "interface BimValidation\\b",
         "interface BimQuantityTakeoff\\b",
         "interface SoftLock\\b",
