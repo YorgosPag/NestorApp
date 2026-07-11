@@ -110,6 +110,7 @@ export const SUPPORTED_NAMESPACES = [
   'onboarding',             // 🏢 New tenant onboarding wizard (ADR-326 Phase 8)
   'settings',               // 🏢 App settings pages (shortcuts, etc.)
   'textToolbar',            // 🏢 DXF text toolbar / Properties panel (ADR-344)
+  'textFindReplace',        // 🏢 DXF text Find & Replace dialog (ADR-344 Phase 9)
   'bim3d',                  // 🏢 BIM 3D Viewer (ADR-366)
   'bim-3d-aria',            // 🏢 BIM 3D ARIA entity descriptions (ADR-366 Phase 8.1)
   'bim-materials',          // 🏢 BIM Material Library editor UI (ADR-363 Phase 6.5)
@@ -237,6 +238,7 @@ export async function preloadCriticalNamespaces(language: Language = 'el') {
     'bim-3d-aria',
     'bim-materials',
     'textToolbar',
+    'textFindReplace',
     'geo-canvas',
     'geo-canvas-drawing',
     'files',

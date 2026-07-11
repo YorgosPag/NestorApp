@@ -109,6 +109,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'onboarding': return () => import('./locales/el/onboarding.json');
     case 'settings': return () => import('./locales/el/settings.json');
     case 'textToolbar': return () => import('./locales/el/textToolbar.json');
+    case 'textFindReplace': return () => import('./locales/el/textFindReplace.json');
     case 'bim3d': return () => import('./locales/el/bim3d.json');
     case 'bim-3d-aria': return () => import('./locales/el/bim-3d-aria.json');
     case 'bim-materials': return () => import('./locales/el/bim-materials.json');
@@ -211,6 +212,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'onboarding': return () => import('./locales/en/onboarding.json');
     case 'settings': return () => import('./locales/en/settings.json');
     case 'textToolbar': return () => import('./locales/en/textToolbar.json');
+    case 'textFindReplace': return () => import('./locales/en/textFindReplace.json');
     case 'bim3d': return () => import('./locales/en/bim3d.json');
     case 'bim-3d-aria': return () => import('./locales/en/bim-3d-aria.json');
     case 'bim-materials': return () => import('./locales/en/bim-materials.json');

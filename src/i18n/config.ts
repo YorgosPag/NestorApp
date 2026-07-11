@@ -150,6 +150,7 @@ if (typeof window !== 'undefined') {
       'common-shared',      // 🏢 Split from common (ADR-280)
       'settings',           // 🏢 Settings pages (shortcuts, etc.)
       'textToolbar',        // 🏢 DXF text toolbar / Properties panel (ADR-344)
+      'textFindReplace',    // 🏢 DXF text Find & Replace dialog (ADR-344 Phase 9)
     ];
 
     const saved = safeGetItem(STORAGE_KEYS.PREFERRED_LANGUAGE, '');
