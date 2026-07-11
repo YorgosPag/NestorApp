@@ -12,7 +12,6 @@ import type { DxfImportResult, SceneModel } from '../types/scene';
 import type { SceneUnits } from '../utils/scene-units';
 import { encodingService, type SupportedEncoding } from './encoding-service';
 import { calculateTightBounds } from '../utils/bounds-utils';
-import { countSceneLayers } from '../utils/scene-entity-count';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 
 export class DxfImportService {
@@ -153,44 +152,10 @@ export class DxfImportService {
 
       const { content } = readResult;
 
-      const { DxfSceneBuilder } = await import('../utils/dxf-scene-builder');
-      const startTime = performance.now();
-
-      const scene = DxfSceneBuilder.buildScene(content, unitsOverride);
-
-      if (!scene) {
-        return {
-          success: false,
-          error: 'Failed to build scene from DXF content',
-          stats: { entityCount: 0, layerCount: 0, parseTimeMs: 0 }
-        };
-      }
-
-      // Normalize to positive quadrant: bottom-left corner → (0,0)
-      if (scene.entities.length > 0) {
-        const perfectBounds = calculateTightBounds(scene.entities, true);
-        scene.bounds = perfectBounds;
-      }
-
-      if (!DxfSceneBuilder.validateScene(scene)) {
-        return {
-          success: false,
-          error: 'Scene validation failed',
-          stats: { entityCount: 0, layerCount: 0, parseTimeMs: 0 }
-        };
-      }
-
-      const parseTimeMs = performance.now() - startTime;
-
-      return {
-        success: true,
-        scene,
-        stats: {
-          entityCount: scene.entities.length,
-          layerCount: countSceneLayers(scene),
-          parseTimeMs
-        }
-      };
+      // ADR-635 Φ3 — build/validate/normalize/wrap via the runDxfParse SSoT (dynamic import
+      // keeps the heavy scene-builder out of the initial bundle, as before).
+      const { runDxfParse } = await import('../utils/run-dxf-parse');
+      return runDxfParse(content, unitsOverride, { normalizeBounds: true });
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

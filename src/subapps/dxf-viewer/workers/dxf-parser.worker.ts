@@ -1,8 +1,8 @@
 // DXF Parser Web Worker - Working Implementation
 import type { DxfImportResult } from '../types/scene';
 import type { SceneUnits } from '../utils/scene-units';
-import { DxfSceneBuilder } from '../utils/dxf-scene-builder';
-import { countSceneLayers } from '../utils/scene-entity-count';
+// ADR-635 Φ3 — shared build/validate/wrap SSoT (fault-tolerant, diagnostics-carrying).
+import { runDxfParse } from '../utils/run-dxf-parse';
 
 interface WorkerMessage {
   type: 'parse-dxf';
@@ -12,47 +12,17 @@ interface WorkerMessage {
   unitsOverride?: SceneUnits;
 }
 
-// Main DXF content parser using working DxfSceneBuilder
+// Main DXF content parser — delegates to the runDxfParse SSoT. The main thread normalizes
+// bounds after transfer (dxf-import.ts onmessage), so the Worker leaves normalizeBounds off.
 function parseDxfContent(content: string, filename: string, unitsOverride?: SceneUnits): DxfImportResult {
-  const startTime = performance.now();
   console.debug('🔧 Worker: Received parse request for:', filename);
-
-  try {
-    // Build scene using working DxfSceneBuilder (not broken npm parser)
-    const scene = DxfSceneBuilder.buildScene(content, unitsOverride);
-    
-    // Validate the built scene
-    if (!DxfSceneBuilder.validateScene(scene)) {
-      throw new Error('Invalid scene generated during parsing');
-    }
-    
-    const parseTimeMs = performance.now() - startTime;
-    console.debug(`✅ Worker: Parse completed in ${parseTimeMs.toFixed(2)}ms`);
-    
-    return {
-      success: true,
-      scene,
-      stats: {
-        entityCount: scene.entities.length,
-        layerCount: countSceneLayers(scene),
-        parseTimeMs
-      }
-    };
-  } catch (error) {
-    console.error('❌ Worker: Parse error:', error);
-    
-    const parseTimeMs = performance.now() - startTime;
-    
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown parsing error',
-      stats: {
-        entityCount: 0,
-        layerCount: 0,
-        parseTimeMs
-      }
-    };
-  }
+  const result = runDxfParse(content, unitsOverride, { normalizeBounds: false });
+  console.debug(
+    result.success
+      ? `✅ Worker: Parse completed in ${result.stats.parseTimeMs.toFixed(2)}ms`
+      : `❌ Worker: Parse error: ${result.error}`,
+  );
+  return result;
 }
 
 // Enhanced worker message handler

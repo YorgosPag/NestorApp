@@ -169,18 +169,42 @@ export class DxfSceneBuilder {
 
     // ADR-635 Φ2 — INSERT expands the referenced block's geometry with its placement transform;
     // every other entity converts directly. Both funnel through processSceneEntity.
-    const expandCtx: ExpandContext = { header, dimStyles, idSeq: { n: 0 } };
+    // ADR-635 Φ3 — diagnostics + a shared entity budget bound pathological block explosions.
+    const expandCtx: ExpandContext = {
+      header,
+      dimStyles,
+      idSeq: { n: 0 },
+      diagnostics,
+      budget: { max: DEFAULT_SCENE_ENTITY_BUDGET, used: 0 },
+    };
 
+    // Fault-tolerant loop: one bad entity is recorded and skipped — the import continues
+    // (Revit/Figma behaviour), never a whole-file abort.
     parsedEntities.forEach((entityData, index) => {
-      if (entityData.type === 'INSERT') {
-        for (const e of instantiateInsert(entityData, blockDefs, expandCtx)) processSceneEntity(e);
-        return;
+      const type = entityData.type || 'UNKNOWN';
+      try {
+        if (entityData.type === 'INSERT') {
+          for (const e of instantiateInsert(entityData, blockDefs, expandCtx)) processSceneEntity(e);
+          recordParsed(diagnostics, 'INSERT');
+          return;
+        }
+        const result = DxfEntityParser.convertToSceneEntity(entityData, index, header, dimStyles);
+        if (!result) {
+          // Unsupported entity type (e.g. SOLID/POINT/3DFACE) — was silently dropped; now counted.
+          recordSkipped(diagnostics, type);
+          return;
+        }
+        // Normalize to array (DIMENSION returns multiple entities: text + lines)
+        const converted = Array.isArray(result) ? result : [result];
+        for (const entity of converted) processSceneEntity(entity);
+        recordParsed(diagnostics, type);
+      } catch (err) {
+        recordError(diagnostics, {
+          kind: type,
+          reason: err instanceof Error ? err.message : String(err),
+          at: `#${index}`,
+        });
       }
-      const result = DxfEntityParser.convertToSceneEntity(entityData, index, header, dimStyles);
-      if (!result) return;
-      // Normalize to array (DIMENSION returns multiple entities: text + lines)
-      const converted = Array.isArray(result) ? result : [result];
-      for (const entity of converted) processSceneEntity(entity);
     });
 
     // Debug: Log color assignment summary with sample colors
@@ -227,9 +251,19 @@ export class DxfSceneBuilder {
       // scales correctly without re-implementing per-type math. Coordinates, radii
       // and text heights all become mm.
       const origin = { x: 0, y: 0 };
-      finalEntities = entities.map(
-        (e) => ({ ...e, ...scaleEntity(e as unknown as Entity, origin, mmFactor, mmFactor) }) as AnySceneEntity,
-      );
+      finalEntities = entities.map((e) => {
+        try {
+          return { ...e, ...scaleEntity(e as unknown as Entity, origin, mmFactor, mmFactor) } as AnySceneEntity;
+        } catch (err) {
+          // A single entity that resists the unit-scale must not sink the whole import —
+          // keep it unscaled and record it (ADR-635 Φ3).
+          recordError(diagnostics, {
+            kind: (e as { type?: string }).type || 'UNKNOWN',
+            reason: `unit-scale failed: ${err instanceof Error ? err.message : String(err)}`,
+          });
+          return e;
+        }
+      });
       finalBounds = DxfSceneBuilder.calculateBounds(finalEntities);
     }
 
@@ -238,7 +272,7 @@ export class DxfSceneBuilder {
       Object.values(layers).map((l) => [l.id, l]),
     );
 
-    return {
+    const scene: SceneModel = {
       entities: finalEntities,
       layersById,
       bounds: finalBounds,
@@ -247,6 +281,8 @@ export class DxfSceneBuilder {
       dimStyles: Object.keys(dimStyles).length > 0 ? dimStyles : undefined,
       headerDimscale: header.dimscale, // ADR-362 R10 — annotative-style resolution in dim-style-importer
     };
+
+    return { scene, diagnostics };
   }
 
   /**

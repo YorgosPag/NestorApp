@@ -6,6 +6,8 @@ import { generateLayerId } from '@/services/enterprise-id-convenience';
 // runtime DIMSTYLE registry can be seeded on import (canonical type lives next
 // to the parser since it owns the DXF I/O contract).
 import type { DimStyleEntry } from '../utils/dxf-parser-types';
+// ADR-635 Φ3 — structured import diagnostics carried on DxfImportResult.
+import type { ImportDiagnostics } from '../utils/dxf-import-diagnostics';
 
 /**
  * DXF group 370 lineweight catalog — 24 ISO values (mm) + 3 special enums.
@@ -181,7 +183,10 @@ export interface DxfImportResult {
   success: boolean;
   scene?: SceneModel;
   error?: string;
+  /** Human-readable, technical warning lines (from ImportDiagnostics). */
   warnings?: string[];
+  /** ADR-635 Φ3 — structured import diagnostics (skipped/failed/clamped, per type). */
+  diagnostics?: ImportDiagnostics;
   stats: {
     entityCount: number;
     layerCount: number;
