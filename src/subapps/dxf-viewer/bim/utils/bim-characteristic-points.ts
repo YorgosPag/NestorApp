@@ -48,7 +48,9 @@ import {
   isFloorFinishEntity,
   isMepUnderfloorEntity,
   isMepSegmentEntity,
+  isStairEntity,
 } from '../../types/entities';
+import { getStairCharacteristicPoints } from '../stairs/stair-characteristic-points';
 import { getWallCornerWorldPoints } from '../walls/wall-corner-anchors';
 import { getBeamCornerWorldPoints } from '../beams/beam-corner-anchors';
 import { getSlabCornerWorldPoints } from '../slabs/slab-corner-anchors';
@@ -129,6 +131,9 @@ export function getBimCharacteristicLabelRoot(entity: Entity): string | null {
   if (isFloorFinishEntity(entity)) return 'floorFinish';
   if (isMepUnderfloorEntity(entity)) return 'mepUnderfloor';
   if (isMepSegmentEntity(entity)) return isSegmentVertical(entity.params) ? null : 'mepSegment';
+  // ADR-597 §stair (Giorgio 2026-07-11) — η σκάλα δείχνει «Γωνία/Μέσο σκάλας» στα grips +
+  // σε κάθε σκαλοπάτι. Τα σημεία της είναι πραγματικές δομικές γωνίες, όχι «περίεργο σχήμα».
+  if (isStairEntity(entity)) return 'stair';
   return null;
 }
 
@@ -151,6 +156,7 @@ export function getBimCharacteristicPoints(entity: Entity): BimCharPoints {
   if (isBeamEntity(entity)) return beamPoints(entity);
   if (isColumnEntity(entity)) return columnPoints(entity);
   if (isMepSegmentEntity(entity)) return linearPoints(entity, segmentEndpoints(entity));
+  if (isStairEntity(entity)) return stairPoints(entity);
   if (isFoundationEntity(entity)) return foundationPoints(entity);
   if (isCentredBoxEntity(entity)) return centredBoxPoints(entity);
   const polygon = polygonFootprint(entity);
@@ -266,6 +272,17 @@ function linearPoints(entity: Entity, endpoints: Point2D[]): BimCharPoints {
     center: null,
     labelRoot: getBimCharacteristicLabelRoot(entity),
   };
+}
+
+/**
+ * Stair — grip θέσεις + γωνίες/μέσα ΚΑΘΕ σκαλοπατιού (ΔΕΝ περνά από `footprintPoints`: η
+ * σκάλα δεν έχει ενιαίο footprint). `center: null` — πολλά treads, χωρίς ενιαίο κεντροειδές.
+ * Delegates στο SSoT `getStairCharacteristicPoints` (bim/stairs) — καμία γεωμετρία εδώ.
+ */
+function stairPoints(entity: Entity): BimCharPoints {
+  if (!isStairEntity(entity)) return EMPTY;
+  const { corners, midpoints } = getStairCharacteristicPoints(entity);
+  return { corners, midpoints, center: null, labelRoot: getBimCharacteristicLabelRoot(entity) };
 }
 
 // ─── Source helpers ──────────────────────────────────────────────────────────

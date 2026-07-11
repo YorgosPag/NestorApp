@@ -314,7 +314,11 @@ export class DxfRenderer {
 
     // ADR-559 — AutoCAD GRIPOBJLIMIT: hide grips for ALL selected entities once the
     // selection-object count exceeds the limit (entity stays selected, only grips are skipped).
-    const gripsVisible = isSelected && !options.suppressGrips && !this._gripsSuppressedByObjLimit;
+    // ADR-637 §hover-grips (Giorgio 2026-07-11): grips εμφανίζονται ΚΑΙ σε hover (όχι μόνο
+    // selection). Στο mode='selected' το synthetic hoveredEntityId=null → isHovered=false →
+    // μηδενική επίδραση στο selection path. Το call site (dxf-canvas-renderer hover pass)
+    // ελέγχει το πότε μέσω `suppressGrips` (όχι grips όταν τρέχει εργαλείο / ήδη επιλεγμένη).
+    const gripsVisible = (isSelected || isHovered) && !options.suppressGrips && !this._gripsSuppressedByObjLimit;
     // ADR-049 inverted ghost: dim the dragged original to GHOST_DEFAULTS.alpha (its solid moving
     // copy lives on PreviewCanvas). ADR-637 Φ4-D EXCEPTION (Giorgio 2026-07-11): a STAIR grip drag
     // re-flows the stair IN PLACE (basePoint fixed — a rest landing slides, treads redistribute),

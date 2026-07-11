@@ -221,3 +221,17 @@ string). Well-formed nodes (rich toolbar / AI-created / commands) export correct
   gated στο AutoCAD path (empty object → bare Tekton envelope αμετάβλητο). Round-trips την C.1 import.
   9 νέα tests (`dxf-roundtrip-point.test.ts`: writer emit + scale + convertPoint round-trip + HEADER +
   adapter derivation), **151 export/core + 19 adapter jest green**, jscpd clean. ΟΧΙ browser-verified.
+- **2026-07-11 — Στάδιο 2 Φ2.4 (D.6) — linetype/lineweight/CELTSCALE export round-trip (ADR-635 C.3/C.4 parity):**
+  οι entity emitters έγραφαν ΜΟΝΟ `62`(color)+`8`(layer) → η per-entity STYLE (group **6** linetype name /
+  **48** CELTSCALE / **370** lineweight) που διαβάζει το import χανόταν στο export. Νέος **κεντρικός** helper
+  `emitEntityStyle(pair, style)` (στο `dxf-ascii-primitive-emitters.ts`) = ΑΚΡΙΒΕΣ inverse των import extractors
+  (`extractEntityLinetype`/`extractEntityLtscale`/`extractEntityLineweight`), gated concrete-only και reuse του
+  ISO-catalog `encodeDxfCode370` SSoT (ΟΧΙ νέος πίνακας 370). Placement: single-header entities
+  (line/circle/arc/text/mtext/point) → append μετά το switch μέσω `STYLE_APPEND_TYPES` Set (valid: τα pairs
+  δένουν στο entity μέχρι το επόμενο `0`)· POLYLINE/rectangle → STYLE στο header μέσω νέου optional `emitPath`
+  param (ΠΡΙΝ τα VERTEX/SEQEND). Gated στο AutoCAD path (Tekton `explode` μένει **byte-identical** — ο minimal
+  parser του αγνοεί έτσι κι αλλιώς τα codes). HATCH/DIMENSION εκτός scope (DIMSTYLE path). Καμία αλλαγή σε
+  υπάρχον emitter signature πλην του additive `emitPath` param → μηδέν sibling-clone (N.0.2). 10 νέα tests
+  (`dxf-roundtrip-linetype-lineweight.test.ts`: LINE/CIRCLE/POLYLINE emit + reverse-symmetry με τους ίδιους
+  import extractors + gating absent/ByLayer-sentinel/ltscale-1/explode), **150 export/core + 55 adapter/import
+  jest green**, jscpd clean. ΟΧΙ browser-verified.

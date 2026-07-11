@@ -1278,7 +1278,8 @@
           "thermalSpace": "χώρου",
           "floorFinish": "δαπέδου",
           "mepUnderfloor": "ενδοδαπέδιου",
-          "mepSegment": "αγωγού"
+          "mepSegment": "αγωγού",
+          "stair": "σκάλας"
         }
       },
       "text": "Κείμενο",

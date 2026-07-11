@@ -68,6 +68,7 @@ import {
   emitPoint,
   emitArc,
   emitPath,
+  emitEntityStyle,
   arcPoints,
   num,
 } from './dxf-ascii-primitive-emitters';
@@ -144,6 +145,14 @@ export interface DxfWriteOptions {
 const DEFAULT_LAYER = '0';
 const DEFAULT_ACI = 7; // white/black (ByLayer-ish fallback)
 const ACI_BYLAYER = 256; // dimension-block geometry follows the dim's layer colour
+
+// ADR-636 Φ2.4 (D.6) — single-header entities whose STYLE codes (6/48/370) are appended
+// AFTER the emitter (valid: the pairs bind to the entity until the next `0`). POLYLINE /
+// rectangle carry their STYLE in the emitPath header instead (before VERTEX/SEQEND);
+// HATCH / DIMENSION own their style path (DIMSTYLE) — excluded.
+const STYLE_APPEND_TYPES: ReadonlySet<Entity['type']> = new Set([
+  'line', 'circle', 'arc', 'text', 'mtext', 'point',
+]);
 
 /** Produce a DXF string for the given (flattened) entities. */
 export function writeDxfAscii(
@@ -309,7 +318,9 @@ function writeEntity(
       // SSoT `rectangleEntityVertices`: χειρίζεται ΚΑΙ corner1/corner2 (drawn rects — x/y/w/h undefined)
       // ΚΑΙ x/y/w/h, ΚΑΙ το `rotation` (pivot=corner1). Πριν: raw rectVertices(e.x,...) → NaN για drawn +
       // αγνοούσε rotation.
-      emitPath(rectangleEntityVertices(e), true, layer, aci, s, explode, pair);
+      // ADR-636 Φ2.4 (D.6) — STYLE codes (6/48/370) travel in the POLYLINE header (AutoCAD mode
+      // only; Tekton `explode` stays bare). Reverse of the import extractors.
+      emitPath(rectangleEntityVertices(e), true, layer, aci, s, explode, pair, 0, explode ? undefined : e);
       break;
     case 'polyline':
     case 'lwpolyline': {
@@ -317,7 +328,8 @@ function writeEntity(
       // Thickness is in mm → scale with mmScale, NOT the coordinate scale.
       const thicknessMm = (e as { dxfThicknessMm?: number }).dxfThicknessMm ?? 0;
       const thickness = explode ? 0 : thicknessMm * mmScale;
-      emitPath(e.vertices, e.closed ?? false, layer, aci, s, explode, pair, thickness);
+      // ADR-636 Φ2.4 (D.6) — STYLE codes in the POLYLINE header (AutoCAD mode only).
+      emitPath(e.vertices, e.closed ?? false, layer, aci, s, explode, pair, thickness, explode ? undefined : e);
       break;
     }
     case 'hatch': {
@@ -361,6 +373,11 @@ function writeEntity(
     default:
       break;
   }
+  // ADR-636 Φ2.4 (D.6) — append the common STYLE codes (6 linetype / 48 CELTSCALE / 370
+  // lineweight) for single-header entities, in AutoCAD mode only (Tekton `explode` output
+  // stays byte-identical, its minimal parser ignores these codes anyway). POLYLINE-based
+  // entities already carried their STYLE in the emitPath header above.
+  if (!explode && STYLE_APPEND_TYPES.has(e.type)) emitEntityStyle(pair, e);
 }
 
 // ─── Dimension anonymous block (ADR-362 Round 26) ─────────────────────────────

@@ -9,6 +9,8 @@ import { useEffect, useCallback } from 'react';
 import type { SceneModel, AnySceneEntity } from '../../types/scene';
 import { EventBus } from '../../systems/events';
 import { useLevels, useCurrentLevelScene } from '../../systems/levels';
+// ADR-635 Φ C.8 — imported per-entity (BIM/stair/hatch) first-save emitter (SSoT, shared .tek+DXF)
+import { emitImportedEntityCreateEvents } from '../../systems/levels/emit-imported-entity-create-events';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 // ✅ ΦΑΣΗ 7: useDxfImport μεταφέρθηκε στο hooks/ folder
 import { useDxfImport } from '../useDxfImport';
@@ -182,30 +184,12 @@ export function useSceneState() {
           notifications.warning(result.warnings.join('\n'), { duration: 5000 });
         }
         setLevelScene(targetLevelId, result.scene);
-        // BIM entities → PersistenceHost first-save (Firestore). 2Δ primitives (line/arc/
+        // BIM/stair/hatch → PersistenceHost first-save (Firestore). 2Δ primitives (line/arc/
         // circle/text/dimension) ΔΕΝ έχουν host → ΟΧΙ emit· σώζονται με το scene blob (linkSceneToLevel).
-        // ADR-531 Φ5b.2 — ΚΡΙΣΙΜΟ: χωρίς first-save, το Firestore reconciliation snapshot αφαιρεί τα
-        // wall/opening από το scene (ο τοίχος «εμφανίζεται & εξαφανίζεται»). tool = entity.type
-        // (default createTrigger, ADR-594). Τοίχος ΠΡΙΝ το κούφωμα (host-first, opening.wallId ref).
-        for (const entity of result.scene.entities) {
-          if (entity.type === 'stair') {
-            EventBus.emit('drawing:entity-created', { entity, tool: 'stair' });
-          } else if (entity.type === 'wall') {
-            EventBus.emit('drawing:entity-created', { entity, tool: 'wall' });
-          } else if (entity.type === 'opening') {
-            EventBus.emit('drawing:entity-created', { entity, tool: 'opening' });
-          } else if (entity.type === 'slab') {
-            EventBus.emit('drawing:entity-created', { entity, tool: 'slab' });
-          } else if (entity.type === 'column') {
-            // ADR-531 Φ5b.5 — κολώνα/τοιχίο: first-save (tool 'column') αλλιώς το Firestore
-            // reconciliation snapshot την αφαιρεί (ίδιο bug με τον τοίχο).
-            EventBus.emit('drawing:entity-created', { entity, tool: 'column' });
-          } else if (entity.type === 'hatch') {
-            // ADR-531 Φ5b.6 — γραμμοσκίαση: first-save μέσω του extraCreateTrigger του hatch
-            // persistence (drawing:entity-created), ΟΧΙ drawing:complete (αποφυγή auto-guide prompt).
-            EventBus.emit('drawing:entity-created', { entity, tool: 'hatch' });
-          }
-        }
+        // ADR-531 Φ5b.2 — ΚΡΙΣΙΜΟ: χωρίς first-save, το Firestore reconciliation snapshot (reconcile-
+        // LoadedSceneBim) αφαιρεί τα per-entity entities από το scene (ο τοίχος/η γραμμοσκίαση
+        // «εμφανίζεται & εξαφανίζεται»). SSoT emitter — ίδιος για .tek ΚΑΙ DXF import (N.18).
+        emitImportedEntityCreateEvents(result.scene.entities);
         // 🛡️ ADR-526 Φ5a — persist the level↔FileRecord link now (shared helper, N.18).
         linkSceneFileToLevel();
         setTimeout(() => EventBus.emit('canvas-fit-to-view', { source: 'auto' }), PANEL_LAYOUT.TIMING.FIT_TO_VIEW_DELAY);
@@ -216,6 +200,11 @@ export function useSceneState() {
       if (scene) {
 
         setLevelScene(targetLevelId, scene);
+        // 🛡️ ADR-635 Φ C.8 — imported per-entity entities (hatch· + Φ B SOLID→hatch, τυχόν BIM)
+        // first-save μέσω του ΙΔΙΟΥ SSoT emitter με το .tek branch. ΧΩΡΙΣ αυτό, οι εισαγόμενες
+        // AutoCAD γραμμοσκιάσεις ζωγραφίζονται μία φορά αλλά το `reconcileLoadedSceneBim` τις πετά
+        // στο πρώτο reload (καμία `floorplan_hatches` doc) → «hatches χάνονται μετά την εισαγωγή».
+        emitImportedEntityCreateEvents(scene.entities);
         // 🛡️ ROOT-CAUSE FIX (incident 2026-06-08 — "hard refresh → χάνεται το σχέδιο"):
         // Link the level to the canonical wizard FileRecord id DETERMINISTICALLY, NOW —
         // instead of relying on the 2s debounced auto-save round-trip. The auto-save

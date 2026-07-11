@@ -1278,7 +1278,8 @@
           "thermalSpace": "of space",
           "floorFinish": "of floor finish",
           "mepUnderfloor": "of underfloor loop",
-          "mepSegment": "of duct"
+          "mepSegment": "of duct",
+          "stair": "of stair"
         }
       },
       "text": "Text",

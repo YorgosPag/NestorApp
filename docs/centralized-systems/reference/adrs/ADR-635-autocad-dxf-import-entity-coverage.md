@@ -300,7 +300,53 @@ canonical-mm pass exactly like a native HATCH. Reuses the existing `hatch-patter
 **Verification:** `dxf-hatch-xdata-converter.test.ts` + hatch/gradient/block-expansion/renderer regression =
 38/38 jest green; jscpd clean; real 26 MB R12 file end-to-end 156 860 lines → 9 hatches.
 
+## Φ C.8 — Imported per-entity entities first-save on DXF import (hatch persistence drop)
+
+**Symptom (Giorgio, real file `KADOS.ΓΡΑΜΜΟΣΚΙΑΣΕΙΣ-AUTOCAD.dxf`):** μετά από φρέσκια εισαγωγή ο όροφος
+δείχνει **μόνο 6 στοιχεία** (2 polyline + 3 line + 1 circle = τα dumb-DXF) και **οι 9 γραμμοσκιάσεις
+εξαφανίζονται** (και ήδη στο load, και μετά από reload). Ο parser (Φ C.6) δίνει σωστά **9 hatches** — το
+πρόβλημα ήταν **downstream, στο persistence**.
+
+**Root cause (100% επιβεβαιωμένο):** ο `hatch` είναι **per-entity-persisted** (collection
+`floorplan_hatches`, SSoT· `isPerEntityPersistedEntity` = `isBimEntity || isStairEntity || isHatchEntity`).
+Στο load, το `systems/levels/scene-bim-load-policy.ts → reconcileLoadedSceneBim` πετά το scene-blob copy
+κάθε per-entity entity ως **παράγωγο cache** και το ξαναγεμίζει ΜΟΝΟ από τα per-entity Firestore docs. Το
+first-save σκανδαλίζεται event-driven από `drawing:entity-created {tool}`. Το **.tek import** το εξέπεμπε
+ήδη (Φ5b.6, ADR-531)· το **DXF import** (`hooks/scene/useSceneState.ts`) **δεν εξέπεμπε τίποτα** μετά το
+`setLevelScene` → κανένα `floorplan_hatches` doc → το `reconcileLoadedSceneBim` έριχνε τους snapshot hatches
+χωρίς docs να τους ξαναγεμίσουν → **εξαφάνιση**. (Τα 6 dumb-DXF έμεναν γιατί ΔΕΝ είναι per-entity-persisted.)
+
+**Fix (SSoT, mirror του proven .tek pattern — ΟΧΙ νέο persistence path):**
+1. **`systems/levels/emit-imported-entity-create-events.ts`** (new) — `emitImportedEntityCreateEvents(entities)`:
+   για κάθε `isPerEntityPersistedEntity(e)` εκπέμπει `drawing:entity-created { entity, tool: e.type }`. Το
+   `tool: e.type` είναι καθολικά σωστό: ο default createTrigger του `createBimEntityPersistenceHook` (ADR-594)
+   είναι `{ tool: entityType }` με `entityType === entity.type`, και ο hatch έχει explicit extraCreateTrigger
+   `{ tool: 'hatch' }` (ADR-507). Iteration = scene order → host-first ordering (τοίχος ΠΡΙΝ κούφωμα).
+2. **`hooks/scene/useSceneState.ts`** — ο inline if/else `for`-loop του .tek branch (stair/wall/opening/slab/
+   column/hatch) **αντικαταστάθηκε** από κλήση του κοινού emitter (N.18 — μία υλοποίηση, όχι δύο δίδυμα), και
+   ο **DXF branch** καλεί ΤΩΡΑ τον ίδιο emitter μετά το `setLevelScene`. Ένας δρόμος, δύο consumers.
+
+**ΔΕΝ άλλαξε** το `reconcileLoadedSceneBim` — είναι σωστό (dual-persistence SSoT policy, ADR-390 Φ4). Ο emitter
+είναι idempotent στο DB (setDoc + σταθερό entity id).
+
+**Files:** `systems/levels/emit-imported-entity-create-events.ts` (new), `hooks/scene/useSceneState.ts` (both
+import branches → shared emitter), `systems/levels/__tests__/emit-imported-entity-create-events.test.ts` (new,
+5 unit). **Verification:** 5/5 jest green (hatch tool 'hatch'· BIM+stair tool===type· pure-DXF ignored· scene
+order preserved· empty no-op); jscpd clean. Browser (Giorgio): φρέσκια εισαγωγή σε ΝΕΟ όροφο → 9 γραμμοσκιάσεις
+που **παραμένουν μετά από reload**.
+
 ## Changelog
+- **2026-07-11 — Export parity (ADR-636 Φ2.4 D.6): C.3/C.4 round-trip.** Οι per-entity STYLE codes που
+  διαβάζει το import (**6** linetype name `extractEntityLinetype` / **48** CELTSCALE `extractEntityLtscale` /
+  **370** lineweight `extractEntityLineweight`, στο `dxf-entity-style-extract.ts`) γράφονται πλέον ΠΙΣΩ στο
+  export μέσω του κεντρικού inverse helper `emitEntityStyle` (concrete-only gating = ΑΚΡΙΒΩΣ οι ίδιοι κανόνες
+  με τους extractors· 370 μέσω του `encodeDxfCode370` SSoT). Round-trip απόδειξη με τους ίδιους extractors στο
+  `dxf-roundtrip-linetype-lineweight.test.ts`. Λεπτομέρειες: ADR-636 changelog (D.6).
+- **2026-07-11 — Φ C.8 (imported per-entity entities first-save on DXF import — hatch persistence drop):** το
+  DXF import δεν εξέπεμπε `drawing:entity-created` → οι εισαγόμενες AutoCAD γραμμοσκιάσεις (per-entity SSoT,
+  `floorplan_hatches`) δεν first-save-άρανε → το `reconcileLoadedSceneBim` τις πετούσε στο load («6 στοιχεία,
+  9 hatches χάνονται»). Νέος SSoT emitter `emitImportedEntityCreateEvents` (mirror .tek Φ5b.6), κοινός σε .tek +
+  DXF branches του `useSceneState` (ο inline .tek loop → κλήση helper, N.18). `reconcileLoadedSceneBim` άθικτο.
 - **2026-07-11 — Φ C.7 (MLINESTYLE import: MLINE → N parallel element polylines):** ο `convertMline` έβγαζε
   ΜΙΑ reference polyline (11/21) — τα MLINESTYLE elements (offsets/colors) στο **OBJECTS** section (handle 340)
   αγνοούνταν. Νέο **self-contained** `dxf-mline-style-parser.ts` (`buildMlineStyleMap`, ordered scan του OBJECTS

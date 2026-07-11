@@ -4,7 +4,7 @@
 |----------|-------|
 | **Status** | APPROVED |
 | **Date** | 2026-01-01 |
-| **Last Updated** | 2026-06-28 |
+| **Last Updated** | 2026-07-11 |
 | **Category** | Drawing System |
 | **Canonical Location** | `canvas-v2/preview-canvas/` |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -70,6 +70,9 @@ Mouse Event → DxfCanvas.onMouseMove
 ---
 
 ## Changelog
+
+### 2026-07-11 — 🎯 HOVER → grips overlay (όχι μόνο selection) για ΟΛΕΣ τις οντότητες (ADR-597 §hover-grips, CHECK 6B)
+**Τι:** Όταν ο χρήστης κάνει **hover** πάνω σε οντότητα (σκάλα, τοίχο, κολόνα…), εμφανίζονται τα **grips** (τα μπλε σημάδια ελέγχου) — όχι πλέον μόνο σε selection. Πριν: το hover έκανε μόνο κίτρινο glow (`phase: 'highlighted'`). Αίτημα Giorgio 2026-07-11: «όταν κάνω hover πάνω από σκάλα να εμφανίζονται τα σημάδια ελέγχου και να έλκομαι από αυτά» (scope: όλες οι οντότητες). **Fix (2 σημεία):** (1) `DxfRenderer.renderEntityUnified` — `gripsVisible = (isSelected || isHovered) && !suppressGrips && !objLimit` (πριν: μόνο `isSelected`)· στο selection pass το synthetic `hoveredEntityId=null` → `isHovered=false` → **μηδέν regression**. (2) `dxf-canvas-renderer.ts` hover pass — υπολογισμός `gripsAllowed` + `selectedSet` **πάνω από** το hover pass (μετακινημένος από το selection block, ΕΝΑ ορισμός, όχι διπλός)· single hover → `suppressGrips: !gripsAllowed || selectedSet.has(hoveredId)` (όχι grips όταν τρέχει command ή είναι ήδη επιλεγμένη — δεν διπλασιάζονται)· group hover → `suppressGrips: true` (το group έχει δικό του gizmo). **Performance:** τα grips ζωγραφίζονται στο **interactive overlay** πάνω από το bitmap blit (ADR-040 cardinal rule #3) — το bitmap cache key (`cacheInputs`) **αμετάβλητο**, hover = cache HIT → 1 blit + 1 single-entity overlay (~0.5ms), **καμία** πτώση FPS. **Files:** MOD `canvas-v2/dxf-canvas/DxfRenderer.ts` + `dxf-canvas-renderer.ts`. Co-staged: ADR-040 + ADR-597. ✅ Google-level: YES — overlay-only, bitmap-cache invariant, καμία νέα `useSyncExternalStore` σε orchestrator, reuse `suppressGrips`/`gripsAllowed`. 🟡 UNCOMMITTED.
 
 ### 2026-07-11 — 🎯 STAIR grip-drag: κρύψε πλήρως την αρχική (όχι dim) όσο σέρνεται (ADR-637 Φ4-D, CHECK 6B)
 **Τι:** κατά το grip-drag **σκάλας** (π.χ. σύρσιμο πλατύσκαλου), η αρχική σκάλα στον κύριο καμβά **κρύβεται εντελώς** (alpha 0) αντί για το κανονικό inverted-ghost dim (`GHOST_DEFAULTS.alpha` ≈ 0.45). **Root cause:** το ADR-049 inverted-ghost dim υποθέτει ότι το moving copy φεύγει ΑΛΛΟΥ, άρα η αχνή αρχική = χρήσιμη αναφορά «πού ήταν». Η σκάλα όμως κάνει **re-flow ΕΠΙ ΤΟΠΟΥ** (basePoint σταθερό — το πλατύσκαλο ολισθαίνει, τα σκαλοπάτια ανακατανέμονται): το ζωντανό WYSIWYG re-flow ghost της κάθεται ΠΑΝΩ στην αχνή αρχική (ίδιο χρώμα, ίδιος τόπος) → «δεν ξεχωρίζει» + τα παλιά σκαλοπάτια «φαίνονται από κάτω» (Giorgio 2026-07-11). **Fix (one-line):** `DxfRenderer.renderEntityUnified` — `ghostMult` γίνεται `0` όταν `movePreviewActive && isSelected && entity.type==='stair'` (κάθε άλλο είδος κρατά το 0.45 dim). Το `gripDraggedEntityId` flip ξαναχτίζει τον static κύριο καμβά μία φορά στο drag-start (μηδέν per-frame cost, ADR-040 static-main-canvas αναλλοίωτο)· στο release ο committed καμβάς ξανα-ζωγραφίζεται. Αποτέλεσμα: όσο σέρνεις βλέπεις **μόνο** το πλήρες WYSIWYG re-flow ghost (drawMemberBodyGhostWithJoinMiter → drawRealEntityPreview) — σε κάθε θέση που κουμπώνει, ακριβώς «σαν να έκανες drop εκεί» (Giorgio 2026-07-11). **Files:** MOD `canvas-v2/dxf-canvas/DxfRenderer.ts` (ghostMult stair-gate). Co-staged: ADR-040 + ADR-637. ✅ Google-level: YES — stair-scoped, μηδέν επίπτωση σε άλλα είδη, static-canvas invariant, μηδέν νέο state. 🟡 UNCOMMITTED.

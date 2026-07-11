@@ -28,19 +28,10 @@ import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformSt
 // ADR-455 — 2D section-line overlay for the vertical X/Y cuts.
 import { renderAxisCutLines } from '../../systems/axis-cut/axis-cut-line-renderer';
 import { perfStart, perfEnd } from '../../debug/perf-line-profile';
-// ADR-358 §5.6.bis Phase 10 — re-render on isolate state change.
-import { subscribeIsolateEffects } from '../../systems/isolate/IsolateEffectsStore';
-// ADR-358 §5.6.bis Phase 10 — re-render on LayerStore mutations (visible/frozen toggles).
-import { subscribeLayerStore } from '../../stores/LayerStore';
-// ADR-510 Φ2G — global LWDISPLAY toggle: read at entity-paint time (not the cache
-// key), so a flip must invalidate the normal-state bitmap (same contract as LayerStore).
-import { subscribeLineweightDisplay } from '../../stores/LineweightDisplayStore';
-import { subscribeCanvasBackgroundChange } from '../../config/canvas-theme';
-// ADR-375 Phase B — re-render on BIM render-settings changes (drawingScale / viewRange / objectStyles).
-import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
-// ADR-530 — preload CAD glyph fonts + rebuild the bitmap layer once they land.
-import { preloadCadSubstituteFonts, subscribeFontReady } from '../../text-engine/fonts';
 import { LassoStore, computeLassoMode } from '../../systems/cursor/LassoStore';
+// File-size SRP split (N.7.1) — bitmap-cache dirty/invalidate store subscriptions live in a
+// dedicated lifecycle hook (isolate / LayerStore / fonts / LWDISPLAY / background / BIM settings).
+import { useDxfCanvasCacheInvalidation } from './useDxfCanvasCacheInvalidation';
 
 const logger = createModuleLogger('DxfCanvasRenderer');
 
@@ -219,14 +210,31 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
         // ONE arbitrary member (the pre-ADR-575 «stray member glows» bug). When the id is
         // a group we paint EACH of its members as 'hovered' (whole-group cyan); otherwise
         // the plain O(1) single-entity path (incl. a member the user "entered" — own id).
+        // ADR-637 §hover-grips (Giorgio 2026-07-11) — τα grips εμφανίζονται ΚΑΙ σε hover
+        // (όχι μόνο selection). Υπολογίζουμε `gripsAllowed` + `selectedSet` ΕΔΩ, πάνω από το
+        // hover pass, ώστε να τα διαβάζει: (α) κανένα grip όταν τρέχει command (Move κ.λπ.),
+        // (β) κανένα διπλό grip όταν η hovered οντότητα είναι ήδη επιλεγμένη (τα δίνει το
+        // selection pass). Overlay-only → μηδέν κόστος bitmap (ADR-040 cardinal rule #3).
+        const activeTool = refs.activeToolRef.current;
+        const gripsAllowed =
+          !activeTool ||
+          activeTool === 'select' ||
+          activeTool === 'layering' ||
+          activeTool === 'wall-on-entity' ||
+          isBimRegionOrPerimeterTool(activeTool);
+        const selectedSet = new Set(curRenderOptions.selectedEntityIds);
+
         const hoveredId = curRenderOptions.hoveredEntityId;
         if (hoveredId) {
           const hoveredMembers = curMembersByGroupId.get(hoveredId);
           if (hoveredMembers) {
+            // Whole-group hover: cyan glow μόνο — το group έχει δικό του gizmo (όπως στο
+            // selection group branch), οπότε suppressGrips στα members.
             for (const ent of hoveredMembers) {
               renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'hovered', {
                 gripInteractionState: curRenderOptions.gripInteractionState,
                 layersById: curLayersById,
+                suppressGrips: true,
               });
             }
           } else {
@@ -235,6 +243,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
               renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'hovered', {
                 gripInteractionState: curRenderOptions.gripInteractionState,
                 layersById: curLayersById,
+                suppressGrips: !gripsAllowed || selectedSet.has(hoveredId),
               });
             }
           }
@@ -248,17 +257,9 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
         //
         // AutoCAD parity: grips are only visible in selection mode (no active command).
         // When a tool like Move is active, grips disappear — the tool has its own UX.
-        const activeTool = refs.activeToolRef.current;
-        // ADR-363 Phase 1J / ADR-419 — 'wall-on-entity' shows grips on the picked
-        // source; the region/perimeter tools (wall/column *-region-* + *-from-perimeter)
-        // show grips on the accumulated 4-line picks so the user sees the selection.
-        const gripsAllowed =
-          !activeTool ||
-          activeTool === 'select' ||
-          activeTool === 'layering' ||
-          activeTool === 'wall-on-entity' ||
-          // ADR-419 — region/perimeter εργαλεία δείχνουν grips στα accumulated 4-line picks.
-          isBimRegionOrPerimeterTool(activeTool);
+        // ADR-363 Phase 1J / ADR-419 — 'wall-on-entity' shows grips on the picked source; the
+        // region/perimeter tools show grips on the accumulated 4-line picks. `activeTool` +
+        // `gripsAllowed` are computed once above the hover pass (shared by both passes).
         for (const selId of curRenderOptions.selectedEntityIds) {
           // ADR-575 §selection/hover semantics — a selected GROUP renders as ONE unit:
           // paint ALL its members as 'selected' with grips SUPPRESSED (the whole-group
@@ -426,71 +427,10 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
     isDirtyRef.current = true;
   }, [scene, transform, viewport, renderOptions, gridSettings, rulerSettings, guides, guidesVisible, showGuideDimensions, ghostGuide, ghostDiagonalGuide, highlightedGuideId, constructionPoints, highlightedPointId, ghostSegmentLine]);
 
-  // ADR-358 §5.6.bis Phase 10 — mark dirty on IsolateEffectsStore changes
-  // (toggle isolate → dim opacity slider drag → mode swap). Zero-cost when
-  // store is idle (single Set entry, no notifications until command fires).
-  useEffect(() => {
-    return subscribeIsolateEffects(() => {
-      // ADR-040 Phase D wiring: isolate alpha is applied at entity-paint time and
-      // is NOT part of the bitmap cache key → invalidate so the layer rebuilds.
-      bitmapCacheRef.current?.invalidate();
-      isDirtyRef.current = true;
-    });
-  }, []);
-
-  // ADR-358 §5.6.bis Phase 10 — mark dirty on LayerStore mutations (Phase 8
-  // visibility toggle, Phase 10 LayerOff/Freeze/Lock, etc). The renderer
-  // reads layer flags from LayerStore as the runtime SSoT.
-  useEffect(() => {
-    return subscribeLayerStore(() => {
-      // ADR-040 Phase D wiring: visible/frozen/lock/colour flags are read from
-      // LayerStore at paint time (not the cache key) → invalidate to force rebuild.
-      bitmapCacheRef.current?.invalidate();
-      isDirtyRef.current = true;
-    });
-  }, []);
-
-  // ADR-375 Phase B — mark dirty on BIM render-settings changes (DrawingScale,
-  // ViewRange, ObjectStyles). Bitmap cache key already includes these fields,
-  // so a dirty mark forces re-evaluation and rebuild on the next frame.
-  useEffect(() => {
-    return useBimRenderSettingsStore.subscribe(() => {
-      isDirtyRef.current = true;
-    });
-  }, []);
-
-  // ADR-530 — preload the CAD glyph font(s) once on mount, then rebuild the
-  // entity layer when they land so text re-renders as glyph paths instead of the
-  // CSS fillText fallback. Font availability is NOT part of the bitmap cache key
-  // (one-time event), so a single invalidate() on the ready signal is ADR-040
-  // compliant — same contract as the LayerStore subscription above.
-  useEffect(() => {
-    const unsubscribe = subscribeFontReady(() => {
-      bitmapCacheRef.current?.invalidate();
-      isDirtyRef.current = true;
-    });
-    void preloadCadSubstituteFonts();
-    return unsubscribe;
-  }, []);
-
-  // ADR-510 Φ2G — mark dirty when the global "Show Lineweight" (LWDISPLAY) toggle
-  // flips. The resolved px width is read at entity-paint time (resolveEntityRenderStyle
-  // → getShowLineweight), NOT baked into the bitmap cache key → invalidate to rebuild.
-  useEffect(() => {
-    return subscribeLineweightDisplay(() => {
-      bitmapCacheRef.current?.invalidate();
-      isDirtyRef.current = true;
-    });
-  }, []);
-
-  // ADR-608 — invalidate on canvas background/theme change: dim-text «Φόντο σχεδίου» masks bake the
-  // LIVE background (`resolveDxfCanvasBackgroundHex`), which is NOT in the cache key. Same as LWDISPLAY.
-  useEffect(() => {
-    return subscribeCanvasBackgroundChange(() => {
-      bitmapCacheRef.current?.invalidate();
-      isDirtyRef.current = true;
-    });
-  }, []);
+  // File-size SRP split (N.7.1) — the bitmap-cache dirty/invalidate store subscriptions
+  // (isolate / LayerStore / BIM settings / fonts / LWDISPLAY / background) live in a
+  // dedicated lifecycle hook. Behaviour is identical; the hot renderScene path is untouched.
+  useDxfCanvasCacheInvalidation(bitmapCacheRef, isDirtyRef);
 
   // Selection dirty-marking handled by DxfCanvas imperative SelectionStore
   // subscription — no useEffect dep array needed here.

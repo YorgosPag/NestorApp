@@ -13,9 +13,49 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import type { LineweightMm } from '../../types/entities';
 import type { Pair } from './dxf-ascii-hatch-writer';
+// ADR-636 Φ2.4 (D.6) — DXF group 370 encoder SSoT (inverse του import `parseDxfCode370`).
+// ΟΧΙ νέος πίνακας: το lineweightMm→enum-code ζει ΜΟΝΟ στον ISO catalog.
+import { encodeDxfCode370, isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 
 const ARC_SEGMENT_DEG = 12;
+
+/**
+ * The three per-entity STYLE group codes a DXF entity carries in common: linetype
+ * name (6), per-object linetype scale / CELTSCALE (48) and lineweight (370). Every
+ * field is on `BaseEntity`, so an `Entity` satisfies this structurally.
+ */
+export interface EntityStyleCodes {
+  readonly linetypeName?: string;
+  readonly ltscale?: number;
+  readonly lineweightMm?: LineweightMm;
+}
+
+/**
+ * Emit the common per-entity STYLE group codes — the EXACT inverse of the import
+ * extractors (`extractEntityLinetype` / `extractEntityLtscale` / `extractEntityLineweight`
+ * in `dxf-entity-style-extract.ts`), keeping the round-trip symmetric:
+ *   - **6** linetype name — written only for a concrete name (import already collapses
+ *     absent / BYLAYER / BYBLOCK to `undefined`, so a bare entity stays ByLayer).
+ *   - **370** lineweight — concrete mm only, encoded via the ISO-catalog `encodeDxfCode370`
+ *     SSoT (the sentinels never reach here — import drops them to `undefined`).
+ *   - **48** CELTSCALE — a finite positive scale that is not the trivial `1` (mirrors the
+ *     import guard `value <= 0 || value === 1 → undefined`).
+ *
+ * Absent everywhere → nothing emitted, so a style-less entity's envelope is byte-identical
+ * to the pre-D.6 output (zero regression). MUST be called inside the entity's group-code
+ * block (after code 62, before the next `0`) so the pairs bind to the entity.
+ *
+ * @see utils/dxf-entity-style-extract — the import extractors this mirrors
+ * @see config/lineweight-iso-catalog — encodeDxfCode370 SSoT
+ */
+export function emitEntityStyle(pair: Pair, style: EntityStyleCodes): void {
+  if (style.linetypeName) pair(6, style.linetypeName);
+  if (isConcreteLineweight(style.lineweightMm)) pair(370, encodeDxfCode370(style.lineweightMm));
+  const lts = style.ltscale;
+  if (typeof lts === 'number' && Number.isFinite(lts) && lts > 0 && lts !== 1) pair(48, lts);
+}
 
 /** A `3DFACE` — up to 4 corners (triangle → 4th = 3rd). x/y × `s`, z (mm) × mmScale. */
 export function emit3DFace(
@@ -80,7 +120,7 @@ export function emitArc(
  */
 export function emitPath(
   vertices: readonly Point2D[], closed: boolean, layer: string, aci: number, s: number, explode: boolean, pair: Pair,
-  thickness = 0,
+  thickness = 0, style?: EntityStyleCodes,
 ): void {
   if (vertices.length < 2) return;
   if (explode) {
@@ -95,6 +135,9 @@ export function emitPath(
   // Old-style POLYLINE (R12-native, universally readable). With `thickness`,
   // AutoCAD extrudes the closed polyline along +Z → pseudo-3D prism.
   pair(0, 'POLYLINE'); pair(8, layer); pair(62, aci);
+  // ADR-636 Φ2.4 (D.6) — STYLE codes belong in the POLYLINE header (before the VERTEX/SEQEND
+  // sub-entities), so they bind to the polyline and not to a discarded SEQEND.
+  if (style) emitEntityStyle(pair, style);
   pair(66, 1);                       // vertices-follow flag
   pair(70, closed ? 1 : 0);          // 1 = closed
   if (thickness) pair(39, thickness); // extrusion height (group 39)
