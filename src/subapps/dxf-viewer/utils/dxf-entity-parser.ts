@@ -123,6 +123,15 @@ export class DxfEntityParser {
         case '$PDSIZE':
           if (code === '40') header.pdsize = parseFloat(value) || 0;
           break;
+        // ADR-635 Φ C.4 — global linetype scale. Parsed for fidelity/round-trip; NOT
+        // applied at import (see DxfHeaderData.ltscale). Only a finite positive value
+        // is stored (AutoCAD rejects LTSCALE <= 0); absent/invalid stays undefined.
+        case '$LTSCALE':
+          if (code === '40') {
+            const lts = parseFloat(value);
+            if (Number.isFinite(lts) && lts > 0) header.ltscale = lts;
+          }
+          break;
       }
     }
 

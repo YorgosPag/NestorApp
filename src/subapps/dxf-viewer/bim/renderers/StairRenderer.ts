@@ -31,6 +31,8 @@ import type { Entity } from '../../types/entities';
 import { isStairEntity } from '../../types/entities';
 import { getStairGrips, stairGripGlyphShape } from '../stairs/stair-grips';
 import { gripKindOf } from '../../hooks/grip-kinds';
+// ADR-637 Φ4-D — fuchsia identity colour for the rest-landing (πλατύσκαλο) grips (Giorgio «φουξ»).
+import { GRIP_REST_LANDING_COLOR } from '../../config/color-config';
 import { resolveSubcategoryStyle } from '../../config/bim-line-weight-resolver';
 import { resolveIsEntityVisible } from '../visibility/visibility-resolver';
 import { isStructuralComponentVisible } from '../visibility/structural-component-visibility';
@@ -237,16 +239,24 @@ export class StairRenderer extends BaseEntityRenderer {
     if (!isStairEntity(entity)) return [];
     const stair = entity as StairEntity;
     if (!stair.params || !stair.geometry) return [];
-    return getStairGrips(stair).map((g) => ({
-      id: `${g.entityId}-grip-${g.gripIndex}`,
-      position: g.position,
-      type: 'vertex' as const,
-      entityId: g.entityId,
-      isVisible: true,
-      gripIndex: g.gripIndex,
-      // ADR-393 v2 — carry the icon glyph for the move/rotation handles.
-      shape: stairGripGlyphShape(gripKindOf(g, 'stair')),
-    }));
+    return getStairGrips(stair).map((g) => {
+      const stairKind = gripKindOf(g, 'stair');
+      // ADR-637 Φ4-D (Giorgio 2026-07-11 «φουξ») — the rest-landing (πλατύσκαλο) handles
+      // (slide + length-lo/hi) get a distinct FUCHSIA identity so they read apart from every
+      // other stair grip. `customColor` (ADR-047) overrides temperature in GripColorManager.
+      const isRestLandingGrip = stairKind?.startsWith('stair-rest-landing') ?? false;
+      return {
+        id: `${g.entityId}-grip-${g.gripIndex}`,
+        position: g.position,
+        type: 'vertex' as const,
+        entityId: g.entityId,
+        isVisible: true,
+        gripIndex: g.gripIndex,
+        // ADR-393 v2 — carry the icon glyph for the move/rotation handles.
+        shape: stairGripGlyphShape(stairKind),
+        ...(isRestLandingGrip ? { customColor: GRIP_REST_LANDING_COLOR } : {}),
+      };
+    });
   }
 
   hitTest(entity: EntityModel, point: Point2D, tolerance: number): boolean {

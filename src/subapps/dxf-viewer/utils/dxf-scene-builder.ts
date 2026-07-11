@@ -1,6 +1,11 @@
 import type { SceneModel, AnySceneEntity, SceneLayer } from '../types/scene';
 import type { Entity } from '../types/entities';
 import { DxfEntityParser, type LayerColorMap } from './dxf-entity-parser';
+// ADR-635 Φ C.4 — LTYPE table pre-pass: register the DXF's custom linetypes into the
+// runtime registry BEFORE entities convert, so per-entity linetype names (group 6) that
+// reference custom `.lin` patterns resolve at render instead of falling back to solid.
+import { parseLinetypeTable } from './dxf-linetype-table-parser';
+import { registerLinetypes } from '../stores/LinetypeRegistry';
 // ADR-635 Φ2 — INSERT/BLOCK expansion (block-definition map + placement transform).
 import { parseBlockDefinitions } from './dxf-block-parser';
 import { instantiateInsert, DEFAULT_SCENE_ENTITY_BUDGET, type ExpandContext } from './dxf-block-expander';
@@ -104,6 +109,20 @@ export class DxfSceneBuilder {
     // ║ Αυτό λύνει το πρόβλημα με τα διαφορετικά χρώματα viewer vs native!   ║
     // ╚════════════════════════════════════════════════════════════════════════╝
     const layerColors = DxfEntityParser.parseLayerColors(lines);
+
+    // ╔════════════════════════════════════════════════════════════════════════╗
+    // ║ 🏢 ADR-635 Φ C.4 — CUSTOM LINETYPE PRE-PASS                            ║
+    // ║                                                                        ║
+    // ║ Register the DXF's LTYPE table (custom `.lin` dash patterns) into the  ║
+    // ║ runtime LinetypeRegistry BEFORE any entity converts, so a per-entity   ║
+    // ║ linetype name (group 6) that references a custom pattern resolves via  ║
+    // ║ `resolveLinetypePatternMm` instead of falling back to a solid line.    ║
+    // ║ Idempotent (registry dedupes by name); server-safe (dxf-import origin  ║
+    // ║ ⇒ no localStorage write). $LTSCALE (header.ltscale) is intentionally   ║
+    // ║ NOT applied here — see DxfHeaderData.ltscale.                          ║
+    // ╚════════════════════════════════════════════════════════════════════════╝
+    const { linetypes: customLinetypes } = parseLinetypeTable(lines);
+    if (customLinetypes.length > 0) registerLinetypes(customLinetypes);
 
     const entities: AnySceneEntity[] = [];
     const layers: Record<string, SceneLayer> = {};

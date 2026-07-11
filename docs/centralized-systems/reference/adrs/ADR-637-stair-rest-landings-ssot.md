@@ -353,25 +353,24 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
   the nearest legal level each frame, matching the commit's release-time re-flow). Tests:
   `grip-drag-preview-transform.test.ts` + `grip-gripkind-dualwrite.test.ts` (landingId
   forward/omit assertions); jscpd-diff clean.
-  - **ORANGE ghost (Giorgio 2026-07-11)**: the WYSIWYG member-body path repaints the
-    moving stair ghost in the stair's OWN colour → it overlapped the original stair
-    indistinguishably («δεν ξεχωρίζει»). New pure helper `drawStairGhostOrange`
-    (`grip-ghost-preview-draw-helpers.ts`) paints the moving stair ghost as an ORANGE
-    skeleton — each tread + rest-landing outline (thin) + the stringer perimeter (thick,
-    via the SSoT `drawGhostEntity` `'stair'` case) — using the shared 'warning' orange
-    (`resolveGhostStatusColor('warning')` → `#f59e0b`, same hue as the column/wall live
-    warning, zero new hardcoded colour). `useGripGhostPreview` routes `type==='stair'`
-    to it and skips the WYSIWYG body path (stairs have no join-miter / finish-skin). Only
-    the stair ghost changed; every other entity keeps its WYSIWYG preview. jscpd-diff clean.
-  - **HIDE the original while dragging (Giorgio 2026-07-11)**: the orange ghost is an
-    OUTLINE skeleton (transparent between strokes), so the ADR-049 inverted-ghost dim
-    (`GHOST_DEFAULTS.alpha`) left the OLD steps bleeding through it («τα σκαλοπάτια
-    φαίνονται από κάτω»). Because a stair re-flows IN PLACE (basePoint fixed), the dimmed
-    origin sits under its own live ghost instead of being a useful «where it was» reference.
-    Fix: `DxfRenderer` hides the dragged stair fully (`ghostMult = 0`) for
-    `entity.type==='stair'` under `movePreviewActive` — so during the drag ONLY the clean
-    orange re-flow ghost shows, exactly like the committed stair on release. Every other
-    kind keeps the 0.45 dim. Co-staged ADR-040 (CHECK 6B — DxfRenderer is a hot-path file).
+  - **«σαν να έκανα drop» — full WYSIWYG ghost + hidden original (Giorgio 2026-07-11)**:
+    the moving stair ghost must show, in EVERY position it snaps to during the drag, the
+    FULL re-flowed stair exactly as it will look once committed («σε κάθε δυνατή θέση …
+    σαν να είχα κάνει drop σε αυτή τη θέση»). Two coupled facts made that fail: (1) the
+    ghost renders in the stair's OWN colour (WYSIWYG real renderer), and (2) a stair
+    re-flows IN PLACE (basePoint fixed — the landing slides, treads redistribute), so the
+    ADR-049 inverted-ghost dim left the ORIGINAL sitting at 0.45 UNDER its own live ghost
+    → same colour + same place = «δεν ξεχωρίζει» and the old steps bled through. Fix: the
+    stair flows through the SAME WYSIWYG path as every other member
+    (`drawMemberBodyGhostWithJoinMiter` → `drawRealEntityPreview`, no special-case), AND
+    `DxfRenderer` HIDES the dragged original fully (`ghostMult = 0`) for
+    `entity.type==='stair'` under `movePreviewActive` (every other kind keeps the 0.45
+    dim — its ghost moves AWAY, so the dimmed origin is a useful «where it was» reference).
+    Result: during the drag ONLY the full WYSIWYG re-flowed stair shows, snapping through
+    the legal landing levels — indistinguishable from the release. Co-staged ADR-040
+    (CHECK 6B — DxfRenderer is a hot-path file). NOTE: the interim orange-skeleton attempt
+    (`drawStairGhostOrange`, `grip-ghost-preview-stair-helpers.ts`) is superseded by this
+    — the helper is left in place (harmless, dxf-viewer is knip-ignored) pending cleanup.
 - **Phase 5 — DONE**: 2D/3D «click-into» pick + highlight of a rest landing as a
   sub-element (`part:'landing'`), reusing the tread/riser infra (ADR-358 Q19) with
   ZERO parallel machinery:
@@ -401,6 +400,14 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
 
 ## Changelog
 
+- **2026-07-11** — Phase 4-D (fuchsia grips): the rest-landing (πλατύσκαλο) handles now
+  render in a distinct FUCHSIA (`GRIP_REST_LANDING_COLOR = #E4007C`, color-config SSoT — NOT
+  the warm-magenta #ff00ff, so a static landing grip never reads as hovered) so they stand
+  apart from every other stair grip (Giorgio «βάψε τις λαβές — μόνον του πλατύσκαλου — φουξ»).
+  Wiring: new optional `GripInfo.customColor` (Types.ts) forwarded to `GripRenderConfig.customColor`
+  by `GripPhaseRenderer` (highest priority in `GripColorManager`, ADR-047); `StairRenderer.getGrips`
+  sets it for `gripKind.startsWith('stair-rest-landing')`. Generic channel — every other grip
+  unaffected. jscpd-diff clean; stair grip + glyph tests green.
 - **2026-07-11** — Phase 5: 2D/3D pick + highlight of a rest landing as a sub-element
   (`part:'landing'`). `StairSubPart`/`isStairSubPart` gain `'landing'` → the 3D
   raycaster, click gate and `StairSubElementHighlighter` accept landings with no code
@@ -426,10 +433,11 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
   `stepCount` invariant keeps `stepCount===stepCountPerArc`). 11/13 kinds now. +3 fan
   tests + 5 curved slide/handle cases + 4 flipped curved-handle assertions; stair
   suites 34/321 green; jscpd-diff clean.
-- **2026-07-11** — Phase 4-D (orange ghost): the moving stair ghost now paints ORANGE
-  (skeleton via new `drawStairGhostOrange` + `resolveGhostStatusColor('warning')`) so it
-  stands out from the original stair during a grip drag — the WYSIWYG path repainted it in
-  the stair's own colour, indistinguishable overlap (Giorgio). Stair-only; jscpd-diff clean.
+- **2026-07-11** — Phase 4-D («σαν drop»): during a stair grip drag the moving ghost shows
+  the FULL WYSIWYG re-flowed stair in every snapped position (as if dropped there), and the
+  dragged ORIGINAL is HIDDEN on the main canvas (`DxfRenderer` `ghostMult=0` for stairs) so
+  it doesn't blend/bleed under the same-colour same-place re-flow ghost (Giorgio). The interim
+  orange-skeleton attempt was superseded. Co-staged ADR-040 (CHECK 6B); jscpd-diff clean.
 - **2026-07-11** — Phase 4-D: live WYSIWYG re-flow ghost during a rest-landing grip
   drag (resolves Phase 4-A's deferred item). Threaded the `landingId` channel — already
   forwarded by `commitStairGripDrag` — through the 4 preview layers

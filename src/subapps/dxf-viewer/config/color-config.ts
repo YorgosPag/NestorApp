@@ -26,6 +26,11 @@ export const GRIP_CONTOUR_COLOR = '#000000' as const; // Black — outline
 // rotation operation. Cyan (= UI_COLORS_BASE.GUIDE_X '#00BCD4', construction/guide
 // family) so it reads as "snap reference", distinct from cold/warm/hot.
 export const GRIP_SNAPPABLE_COLOR = '#00BCD4' as const; // Cyan — snappable-during-rotation
+// ADR-637 Φ4-D — «rest-landing» (πλατύσκαλο) grip identity colour (Giorgio 2026-07-11 «φουξ»).
+// A vivid FUCHSIA so the landing slide/length handles read as a distinct family among the
+// stair grips. Deliberately NOT the warm magenta #ff00ff (hover) — a redder fuchsia so a
+// STATIC landing grip never reads as a hovered one. Applied as a per-grip `customColor`.
+export const GRIP_REST_LANDING_COLOR = '#E4007C' as const; // Fuchsia — stair rest-landing grips
 
 /**
  * Resolved grip colors — all fields are non-null strings, ready for rendering.

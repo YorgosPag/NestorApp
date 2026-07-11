@@ -155,6 +155,13 @@ export interface GripInfo {
   // `MoveGlyphZoneStore`; the renderer lights ONLY that arm (warm) over a cold
   // cross. Undefined → whole cross drawn in its temperature colour (default).
   moveHoveredZone?: import('../../bim/grips/move-glyph-zones').MoveGlyphZone;
+
+  // ADR-047 / ADR-637 Φ4-D — optional per-grip fill override (highest priority in
+  // `GripColorManager.getColor`). Set by a renderer's `getGrips` to give a grip family a
+  // distinct identity colour (e.g. StairRenderer paints rest-landing grips fuchsia). When
+  // set the grip renders in this colour regardless of temperature; undefined → normal
+  // cold/warm/hot behaviour. Forwarded to `GripRenderConfig.customColor` by GripPhaseRenderer.
+  customColor?: string;
 }
 
 // ADR-559 — the rendering grip-settings type is the canonical `GripSettingsFull` projection

@@ -88,6 +88,15 @@ export interface DxfHeaderData {
    * 0 = 5% of viewport height, <0 = |value|% of viewport height.
    */
   pdsize: number;
+  /**
+   * $LTSCALE - global linetype (dash) scale (ADR-635 Φ C.4, DXF group 40). Parsed for
+   * fidelity + export round-trip (ADR-636), but **deliberately NOT applied** at import:
+   * the render substitutes fixed-mm ISO catalog patterns (not the source `.lin` lengths),
+   * so this source-unit-space multiplier has no valid anchor in our canonical-mm space —
+   * applying it would corrupt dash sizing. The user-facing `LinetypeScaleStore` stays the
+   * manual global knob (mirror of the C.3 `$LWDISPLAY` no-wire decision). Absent ⇒ undefined.
+   */
+  ltscale?: number;
 }
 
 // ============================================================================

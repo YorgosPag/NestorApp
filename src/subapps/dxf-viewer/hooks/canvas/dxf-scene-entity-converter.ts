@@ -88,6 +88,10 @@ function buildBase(entity: SceneEntity, layers: SceneLayers, layersById?: SceneL
     ...(entity.colorTrueColor !== undefined && { colorTrueColor: entity.colorTrueColor }),
     ...((ltSentinel || entity.linetypeName) && { linetypeName: entity.linetypeName }),
     ...(entity.lineweightMm !== undefined && { lineweightMm: entity.lineweightMm }),
+    // ADR-635 Φ C.4 — forward per-object CELTSCALE (DXF group 48) so imported dash
+    // patterns scale correctly. Gated on a non-trivial value → the render EntityModel
+    // builder + dash sizer read `entity.ltscale`; absent/1 ⇒ omitted (zero regression).
+    ...(entity.ltscale !== undefined && entity.ltscale !== 1 && { ltscale: entity.ltscale }),
     ...(entity.transparency !== undefined && { transparency: entity.transparency }),
     ...(m.measurement !== undefined && { measurement: m.measurement }),
     ...(m.showEdgeDistances !== undefined && { showEdgeDistances: m.showEdgeDistances }),

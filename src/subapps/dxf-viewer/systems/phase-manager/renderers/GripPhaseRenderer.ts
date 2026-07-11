@@ -202,6 +202,10 @@ export class GripPhaseRenderer {
         ...(grip.glyphRotationRad !== undefined ? { glyphRotationRad: grip.glyphRotationRad } : {}),
         // ADR-397 Φ2 — per-arm hover highlight zone (drawn local frame).
         ...(moveHoveredZone ? { hoveredZone: moveHoveredZone } : {}),
+        // ADR-047 / ADR-637 Φ4-D — per-grip identity colour (e.g. fuchsia rest-landing grips).
+        // Highest priority in GripColorManager → overrides temperature. The batch key in
+        // `renderGripSetBatched` already includes customColor, so grouping stays correct.
+        ...(grip.customColor ? { customColor: grip.customColor } : {}),
       };
     });
     // ADR-559 — honour the «Διαφάνεια» (grip opacity) setting. `UnifiedGripRenderer` has no

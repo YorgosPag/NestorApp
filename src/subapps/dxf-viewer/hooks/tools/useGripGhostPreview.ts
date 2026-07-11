@@ -95,7 +95,6 @@ import {
   drawMemberGripHud,
   paintGripEndpointReshapeArcs,
   drawGroupGhost,
-  drawStairGhostOrange,
 } from './grip-ghost-preview-draw-helpers';
 // ADR-040 Φ12 — SSoT live cursor-driven drag-preview resolver (file-size SRP split, N.7.1):
 // recomputes translate + rotation sweep from the effective-world identically to the commit.
@@ -341,38 +340,33 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // marker below still draws (it must follow even on a zero-delta press).
     if (transformed !== entity) {
       ctx.save();
-      // ADR-637 Phase 4-D (Giorgio 2026-07-11) — a moving STAIR ghost paints in ORANGE (skeleton:
-      // treads + rest landings + stringer perimeter) so it stands out from the original stair
-      // (which stays in its own colour on the main canvas). The WYSIWYG member-body path below
-      // would repaint it in the stair's OWN colour → the two overlap indistinguishably («δεν
-      // ξεχωρίζει το φάντασμα»). SSoT orange via `resolveGhostStatusColor('warning')`.
-      if ((transformed as { type?: string }).type === 'stair') {
-        drawStairGhostOrange(ctx, transformed as unknown as DxfEntityUnion, t, vp);
-      } else {
-        // ADR-550 (WYSIWYG preview) — the MOVING copy renders through the REAL entity renderer
-        // (full fidelity: wall thickness+fill+poché+material hatch, column footprint+fill, …) so
-        // the preview matches the committed form, not a silhouette. The original-position copy is
-        // the dimmed ghost (main canvas, via `gripDraggedEntityId`). Layer table drives ByLayer style.
-        const bimPreview = getBimPreview(ctx);
-        const layersById = getLayersById();
-        // ADR-363 §wall-joint-miter-preview / ADR-449 — draw the moving member body ghost with its
-        // LIVE wall join-miter (neighbours mitered underneath, ghost on top), re-forming the future
-        // corner exactly as it will close on commit. Columns/beams have no join → drawn as-is. The
-        // returned ghost + neighbours feed the finish-skin silhouette below. SHARED SSoT helper with
-        // the body-drag MOVE path (`useEntityBodyDragPreview`) so the two gestures cannot diverge.
-        const joinScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
-        const { ghost: wallGhostToDraw, neighbours: finishPreviewNeighbours } = drawMemberBodyGhostWithJoinMiter(
-          bimPreview, transformed, joinScene?.entities ?? [], resolveSceneUnits(joinScene), layersById, t, vp,
+      // ADR-550 (WYSIWYG preview) — the MOVING copy renders through the REAL entity renderer
+      // (full fidelity: wall thickness+fill+poché+material hatch, column footprint+fill, …) so
+      // the preview matches the committed form, not a silhouette. The original-position copy is
+      // the dimmed ghost (main canvas, via `gripDraggedEntityId`). Layer table drives ByLayer style.
+      // ADR-637 Φ4-D (Giorgio 2026-07-11) — a STAIR flows through this SAME WYSIWYG path so, in
+      // every position it snaps to during the drag, the ghost shows the FULL re-flowed stair
+      // exactly «σαν να είχα κάνει drop σε αυτή τη θέση». Its dragged original is hidden on the
+      // main canvas (DxfRenderer `ghostMult=0` for stairs) so nothing bleeds through underneath.
+      const bimPreview = getBimPreview(ctx);
+      const layersById = getLayersById();
+      // ADR-363 §wall-joint-miter-preview / ADR-449 — draw the moving member body ghost with its
+      // LIVE wall join-miter (neighbours mitered underneath, ghost on top), re-forming the future
+      // corner exactly as it will close on commit. Columns/beams/stairs have no join → drawn as-is.
+      // The returned ghost + neighbours feed the finish-skin silhouette below. SHARED SSoT helper
+      // with the body-drag MOVE path (`useEntityBodyDragPreview`) so the two gestures cannot diverge.
+      const joinScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+      const { ghost: wallGhostToDraw, neighbours: finishPreviewNeighbours } = drawMemberBodyGhostWithJoinMiter(
+        bimPreview, transformed, joinScene?.entities ?? [], resolveSceneUnits(joinScene), layersById, t, vp,
+      );
+      // ADR-449 — LIVE σοβάς: after the member body ghost, re-draw the merged finish-skin
+      // silhouette for the preview scene (dragged wall/column/beam + mitered neighbours at
+      // their new positions) via the SAME committed scene-pass. No-op when «Σοβατισμένη όψη»
+      // is off (internal per-element gate). Mirrors the committed order (plaster after body).
+      if (joinScene && isStructuralFinishMember((transformed as { type?: string }).type)) {
+        drawStructuralFinishSkinPreview(
+          ctx, joinScene.entities, wallGhostToDraw, finishPreviewNeighbours, t, vp,
         );
-        // ADR-449 — LIVE σοβάς: after the member body ghost, re-draw the merged finish-skin
-        // silhouette for the preview scene (dragged wall/column/beam + mitered neighbours at
-        // their new positions) via the SAME committed scene-pass. No-op when «Σοβατισμένη όψη»
-        // is off (internal per-element gate). Mirrors the committed order (plaster after body).
-        if (joinScene && isStructuralFinishMember((transformed as { type?: string }).type)) {
-          drawStructuralFinishSkinPreview(
-            ctx, joinScene.entities, wallGhostToDraw, finishPreviewNeighbours, t, vp,
-          );
-        }
       }
 
       // ADR-049 (inverted ghost) — followers below (connected pipes / co-move partners) are
