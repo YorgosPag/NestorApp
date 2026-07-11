@@ -173,6 +173,31 @@ export interface StairPerRiserOverride {
   readonly material?: string;
 }
 
+/**
+ * ADR-637 — a single intermediate "πλατύσκαλο" (rest landing) placed anywhere
+ * along a stair run, INDEPENDENT of the stair kind. Consumed by every kind via
+ * `planStairRunSegments` (bim/geometry/stairs/stair-run-landings.ts): rectilinear
+ * kinds emit a `buildCornerLanding` quad, walkline kinds emit a flat-z stretch.
+ *
+ *   - `id`     — stable identity (survives edits) so a grip/selection can target
+ *                one landing when a run carries several. Not a Firestore doc id.
+ *   - `at`     — position along the developed run, `0..1`. Mapped to a discrete
+ *                level `round(at·(stepCount−1))`, clamped to `[1, stepCount−2]`.
+ *                Dragging the landing changes `at` → treads re-flow either side.
+ *   - `length` — plan length along travel (scene units). `'auto'` → `width`
+ *                (square landing). Grip-editable.
+ *   - `depth`  — cross-width extent (scene units). `'auto'`/absent → `width`.
+ *
+ * A rest landing consumes exactly one rise level (like L-shape's `n1+1+n2`),
+ * so total rise / riser count stay invariant; only the plan footprint grows.
+ */
+export interface StairRestLanding {
+  readonly id: string;
+  readonly at: number;
+  readonly length: 'auto' | number;
+  readonly depth?: 'auto' | number;
+}
+
 export interface StairHandrails {
   readonly inner: boolean;
   readonly outer: boolean;
@@ -430,6 +455,15 @@ export interface StairParams {
   readonly cutPlaneHeight?: number;
 
   readonly variant: StairVariantParams;
+
+  /**
+   * ADR-637 — kind-independent intermediate rest landings (πλατύσκαλα). Optional
+   * for back-compat: absent/empty → the run is a single uninterrupted flight and
+   * geometry stays byte-identical to the pre-ADR-637 path. Planned + consumed via
+   * `planStairRunSegments`. Distinct from turn landings (which live in the variant
+   * and imply a direction change) — a rest landing keeps the travel direction.
+   */
+  readonly restLandings?: readonly StairRestLanding[];
 
   readonly walklineOffset: number; // mm (default 300)
   readonly handrails: StairHandrails;
