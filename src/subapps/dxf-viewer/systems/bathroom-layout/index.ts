@@ -19,3 +19,20 @@ export type {
 export { resolveFixtureSpec, resolveFixtureSpecs } from './sanitary-clearance-spec';
 export { segmentRoomWalls, buildFixtureRects, type RoomWall, type PlacedRects } from './room-walls';
 export { solveBathroomLayout } from './bathroom-layout-solver';
+
+// ─── Στάδιο 2 — scene commit + recognition adapter ───────────────────────────
+export {
+  buildBathroomFixtureEntities,
+  commitBathroomSolution,
+  type BathroomCommitContext,
+  type BathroomCommitSummary,
+  type BathroomFixtureBuildResult,
+  type SkippedFixture,
+} from './bathroom-fixture-commit';
+export {
+  recognizedSpaceToRoomInput,
+  spacePolygonToMm,
+  buildDoorKeepClear,
+  type DoorMarker,
+  type SpaceToRoomInputOptions,
+} from './recognized-space-adapter';
