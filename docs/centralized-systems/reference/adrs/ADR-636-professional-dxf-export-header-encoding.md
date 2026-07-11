@@ -281,3 +281,24 @@ string). Well-formed nodes (rich toolbar / AI-created / commands) export correct
   7 tests (`dxf-roundtrip-solid.test.ts`: SOLID quad/τρίγωνο + TRACE + 3DFACE round-trip μέσω `convertSolid/Trace/3dFace`
   + scale + explode-fallback + γνήσιο-HATCH zero-regression), **179 export/core + quad-fill jest green**, jscpd clean.
   ΟΧΙ browser-verified.
+- **2026-07-12 — Στάδιο 2 Φ2.4 (D.4) — native MLINE + MLINESTYLE export round-trip (ADR-635 Φ C.7 parity) — ΚΛΕΙΝΕΙ η Φάση D:**
+  το import (`dxf-mline-converter.ts`) εκρήγνυσι ένα MLINE σε **N element `polyline`** (μία ανά MLINESTYLE element)· έτσι η
+  γεωμετρία **ήδη** έκανε round-trip ως N POLYLINE, αλλά χανόταν η ταυτότητα του MLINE + το MLINESTYLE. Giorgio: **Επιλογή C —
+  full native** (παρότι οι μεγάλοι, AutoCAD/ezdxf/Revit, «exploded stays exploded»). Enterprise-σωστός τρόπος = **rich marker
+  preservation στο import** (μοτίβο D.3), ΟΧΙ lossy reverse-offset από τις polylines. (α) **νέο origin marker**
+  `PolylineEntity.dxfMlineSource?: DxfMlineSource` (`entities.ts`) με τα ΑΥΘΕΝΤΙΚΑ params (refPath 11/21 + scale 40 + justification
+  70 + isClosed 71 + styleName 2 + styleHandle 340 + entityColor 62 + resolved MLINESTYLE `{name,handle,elements:[{offset,aci}]}`)·
+  ο `convertMline` το κολλά **ΜΟΝΟ στο πρώτο element** (`_e0` = emitter-carrier). (β) **νέο sibling writer**
+  `dxf-ascii-mline-writer.ts` (μοτίβο tables/hatch/text writers, ώστε ο main writer να μείνει ≤500 — 462 γρ): `buildMlineStyleRegistry`
+  (name-dedup + synthetic handles), `collectMlineGroupIds`, `emitMline` (= inverse των `readMlineParams`+`parseMlineVertices`: 100
+  subclass markers + 2/340/40/70/71 + 72/73 counts + 10/20/30 start + per-vertex 11/21/31 + 12/22/32 direction + 13/23/33 miter),
+  `emitObjectsSection` (**νέα OBJECTS section** — δεν υπήρχε καθόλου στον writer: `ACAD_MLINESTYLE` dictionary + `MLINESTYLE` objects,
+  = inverse του `buildMlineStyleMap`). (γ) writer `case 'polyline'`: ο carrier (`dxfMlineSource`) → `emitMline`· τα sibling elements
+  (ίδιο groupId, χωρίς marker) **suppress-άρονται** (το MLINE τα ξανα-ζωγραφίζει)· OBJECTS section **LAST** (μετά ENTITIES, πριν EOF).
+  Gated AutoCAD path — Tekton `explode` κρατά τα N exploded LINEs (zero regression). **⚠️ Fidelity boundary (τεκμηριωμένο):** ο import
+  ΔΕΝ διαβάζει τα per-element segment-fill params (74/41/75/42), οπότε τα εκπέμπω άδεια (`74 0 / 75 0`) — **δικό μας round-trip = ακριβές
+  & tested· AutoCAD open = valid MLINE, ζωγραφίζει με regen**· absolute no-regen pixel fidelity = επιπλέον increment (computed segment
+  params). 5 αρχεία (entities/mline-converter/**νέο** mline-writer/writer + test). 7 tests (`dxf-roundtrip-mline.test.ts`: ΕΝΑ MLINE +
+  sibling-suppression + OBJECTS/MLINESTYLE μέσω `buildMlineStyleMap` + ανασύνθεση 2 elements μέσω `convertMline` + scale/justification +
+  scale-verts + explode-fallback + γνήσιο-polyline zero-regression), **178 export/core + 14 mline import jest green**, jscpd clean.
+  ΟΧΙ browser-verified (AutoCAD). **Η Φάση D (D.1–D.6) είναι πλήρης.**

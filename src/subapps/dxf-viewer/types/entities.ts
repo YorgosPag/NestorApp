@@ -36,6 +36,44 @@ export interface LineEntity extends BaseEntity {
 //   startWidths[i] = width (DXF 40) at vertices[i] of that outgoing segment
 //   endWidths[i]   = width (DXF 41) at vertices[i+1] of that outgoing segment
 // Geometry SSoT: rendering/entities/shared/geometry-bulge-utils.ts.
+/**
+ * ADR-636 Φ2.4 (D.4) — provenance ενός imported DXF MLINE. Το import (ADR-635 Φ C.7)
+ * εκρήγνυσι το MLINE σε N παράλληλες `polyline` (μία ανά MLINESTYLE element)· αυτό το
+ * marker κρατά τα **αυθεντικά** MLINE params (ΟΧΙ lossy reverse-offset από τις polylines)
+ * ώστε ο export writer να αναπαράγει το **native** MLINE + MLINESTYLE (OBJECTS section).
+ * Το κουβαλά ΜΟΝΟ το πρώτο element polyline (`_e0`) = ο emitter-carrier· τα siblings
+ * (ίδιο `groupId`, χωρίς marker) τα suppress-άρει ο writer (το MLINE τα ξανα-ζωγραφίζει).
+ */
+export interface DxfMlineElementSource {
+  /** Signed perpendicular offset από τη zero line του style (group 49). */
+  readonly offset: number;
+  /** Raw ACI color string του element (group 62)· absent → follows entity/ByLayer. */
+  readonly aci?: string;
+}
+export interface DxfMlineStyleSource {
+  readonly name: string;
+  readonly handle?: string;
+  readonly elements: readonly DxfMlineElementSource[];
+}
+export interface DxfMlineSource {
+  /** Reference-path vertices (group 11/21) — η γραμμή αναφοράς πριν το element offset. */
+  readonly refPath: Point2D[];
+  /** MLINE scale (group 40). */
+  readonly scale: number;
+  /** Justification (group 70): 0=top, 1=zero, 2=bottom. */
+  readonly justification: number;
+  /** Style name (group 2). */
+  readonly styleName?: string;
+  /** Style handle (group 340) — pointer στο MLINESTYLE object. */
+  readonly styleHandle?: string;
+  /** Closed flag (group 71 bit 2). */
+  readonly isClosed: boolean;
+  /** Entity-level ACI resolved hex (group 62)· absent → ByLayer. */
+  readonly entityColor?: string;
+  /** Το resolved MLINESTYLE (name + handle + ordered line elements). */
+  readonly style: DxfMlineStyleSource;
+}
+
 export interface PolylineEntity extends BaseEntity {
   type: 'polyline';
   vertices: Point2D[];
@@ -45,6 +83,8 @@ export interface PolylineEntity extends BaseEntity {
   bulges?: number[];          // ADR-510 Φ3: per-segment arc factor (DXF group 42)
   startWidths?: number[];     // ADR-510 Φ3: per-segment start width (DXF group 40)
   endWidths?: number[];       // ADR-510 Φ3: per-segment end width (DXF group 41)
+  /** ADR-636 Φ2.4 (D.4) — imported-MLINE provenance· ΜΟΝΟ στο πρώτο element polyline. */
+  dxfMlineSource?: DxfMlineSource;
 }
 
 export interface LWPolylineEntity extends BaseEntity {

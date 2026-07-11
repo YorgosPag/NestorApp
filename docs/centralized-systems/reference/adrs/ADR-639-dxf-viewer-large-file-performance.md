@@ -160,5 +160,16 @@ Highest cost; the "professional-grade" ceiling. **Touches ADR-040 critical files
 - **2026-07-12** — **Στάδιο 1 DONE.** Worker-primary routing for files ≥ 5 MB
   (`config/dxf-import-thresholds.ts` SSoT + `io/dxf-import.ts` `parseViaWorker`), with
   encoding-correct read (fixes latent cp1253/ISO-8859-7 corruption in the old worker
-  path) and direct-parse safety-net fallback. 3 routing tests passing. Next: Στάδιο 2
-  (import progress feedback).
+  path) and direct-parse safety-net fallback. 3 routing tests passing.
+- **2026-07-12** — **Στάδιο 1 hotfix (critical).** User reported "browser still freezes".
+  Root cause: `getWorker()` created the worker WITHOUT `{ type: 'module' }`. Since
+  `dxf-parser.worker.ts` uses ES `import` (runDxfParse SSoT), a classic worker crashed on
+  first message → silent fallback to the main-thread (freezing) parse — i.e. the worker had
+  **never actually run**; Στάδιο 1's routing just surfaced it. Fix: added `{ type: 'module' }`
+  (mirrors the working `spell.worker` instantiation, `spell-checker.ts:73`). Verified the
+  parse chain (`run-dxf-parse`/`dxf-scene-builder`) is worker-safe (no window/document/react).
+  **Known remaining main-thread costs (→ Στάδια 3-5):** after the off-thread parse, the main
+  thread still (a) structured-clones ~215k entities back from the worker, (b) runs
+  `calculateTightBounds` normalize O(n), and (c) renders all entities (full-scene bitmap,
+  no spatial cull / LOD). These can still cause a shorter hitch on 40 MB files and are the
+  target of the next phases. Next: Στάδιο 2 (progress feedback), then Στάδιο 3 (spatial cull).

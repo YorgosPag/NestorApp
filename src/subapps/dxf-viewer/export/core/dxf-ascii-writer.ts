@@ -21,7 +21,7 @@
  * ADR-505 §A.
  */
 
-import type { Entity, HatchEntity, LeaderEntity, SceneLayer } from '../../types/entities';
+import type { Entity, HatchEntity, LeaderEntity, PolylineEntity, SceneLayer } from '../../types/entities';
 import type { DimensionEntity, DimStyle } from '../../types/dimension';
 import type { Point2D } from '../../rendering/types/Types';
 // ADR-636 Στάδιο 2 Φ2.1 — full `TABLES → LAYER` section. The single TABLES section (LTYPE +
@@ -73,6 +73,12 @@ import {
 } from './dxf-ascii-primitive-emitters';
 import { DxfDocumentVersion, parseDocumentVersion } from '../../text-engine/types/text-toolbar.types';
 import type { DxfLineMode } from '../types';
+// ADR-636 Φ2.4 (D.4) — native MLINE entity + MLINESTYLE (OBJECTS section) round-trip, reversing
+// the ADR-635 Φ C.7 import (which exploded an MLINE into N element polylines + a `dxfMlineSource`
+// provenance marker). Split into its own module (file-size SRP, mirror of tables/hatch/text writers).
+import {
+  buildMlineStyleRegistry, collectMlineGroupIds, emitMline, emitObjectsSection,
+} from './dxf-ascii-mline-writer';
 
 /** Minimal layer shape needed for name + ByLayer colour resolution. */
 export interface DxfWriteLayer {
@@ -250,15 +256,32 @@ export function writeDxfAscii(
     pair(0, 'ENDSEC');
   }
 
+  // ADR-636 Φ2.4 (D.4) — native MLINE round-trip: reconstruct one MLINE + its MLINESTYLE from
+  // the `dxfMlineSource` marker the import stamped on the first element polyline of each group.
+  // AutoCAD path only; `explode` (Tekton) keeps the exploded N POLYLINEs (zero regression).
+  const mlineStyles = buildMlineStyleRegistry(explode ? [] : entities);
+  const mlineGroupIds = explode ? new Set<string>() : collectMlineGroupIds(entities);
+
   pair(0, 'SECTION');
   pair(2, 'ENTITIES');
   // Anonymous dimension blocks need sequential names (*D0, *D1, …) across the file.
   let dimBlockIndex = 0;
   for (const e of entities) {
     const layer = layerObj(e);
-    writeEntity(e, layer?.name ?? DEFAULT_LAYER, resolveAci(e, layer), s, mmScale, explode, pair, () => dimBlockIndex++, dimStyleNameById, version);
+    const layerName = layer?.name ?? DEFAULT_LAYER;
+    // ADR-636 Φ2.4 (D.4) — the carrier polyline (`dxfMlineSource`) emits ONE native MLINE; its
+    // sibling element polylines (same groupId, no marker) are suppressed — the MLINE re-draws them.
+    if (!explode && e.type === 'polyline') {
+      const src = (e as PolylineEntity).dxfMlineSource;
+      if (src) { emitMline(pair, src, mlineStyles.handleFor(src), layerName, s); continue; }
+      if (e.groupId && mlineGroupIds.has(e.groupId)) continue;
+    }
+    writeEntity(e, layerName, resolveAci(e, layer), s, mmScale, explode, pair, () => dimBlockIndex++, dimStyleNameById, version);
   }
   pair(0, 'ENDSEC');
+  // ADR-636 Φ2.4 (D.4) — OBJECTS section (ACAD_MLINESTYLE dictionary + MLINESTYLE objects) comes
+  // LAST in DXF order (after ENTITIES, before EOF). Skipped when no MLINE was exported (isEmpty).
+  emitObjectsSection(pair, mlineStyles);
   pair(0, 'EOF');
   return out.join('\n') + '\n';
 }

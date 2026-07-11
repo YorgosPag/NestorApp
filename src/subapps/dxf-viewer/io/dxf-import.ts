@@ -23,8 +23,13 @@ export class DxfImportService {
   
   private getWorker(): Worker {
     if (!this.worker) {
+      // ADR-639 Στάδιο 1 — `{ type: 'module' }` is REQUIRED: dxf-parser.worker.ts uses
+      // ES `import` (runDxfParse SSoT). A classic worker cannot resolve ES imports, so it
+      // would crash on first message and silently fall back to a main-thread (freezing)
+      // parse. Mirrors the working spell.worker instantiation.
       this.worker = new Worker(
-        new URL('../workers/dxf-parser.worker.ts', import.meta.url)
+        new URL('../workers/dxf-parser.worker.ts', import.meta.url),
+        { type: 'module' }
       );
     }
     return this.worker;

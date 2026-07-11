@@ -21,6 +21,7 @@
  */
 
 import type { AnySceneEntity } from '../types/scene';
+import type { DxfMlineSource } from '../types/entities';
 import type { Point2D, Point3D } from '../rendering/types/Types';
 import type { MlineStyleDef, MlineStyleMap } from './dxf-mline-style-parser';
 import { STANDARD_MLINE_STYLE } from './dxf-mline-style-parser';
@@ -134,6 +135,22 @@ export function convertMline(
   const adjust = justificationAdjust(params.justification, style.elements);
   const refPath: Point3D[] = vertices.map(({ x, y }) => ({ x, y, z: 0 }));
   const groupId = `mline_${index}`;
+  // ADR-636 Φ2.4 (D.4) — τα ΑΥΘΕΝΤΙΚΑ MLINE params (refPath + style + scale/justification),
+  // ώστε ο export writer να αναπαράγει το native MLINE + MLINESTYLE (ΟΧΙ lossy reverse-offset).
+  const source: DxfMlineSource = {
+    refPath: vertices.map(({ x, y }) => ({ x, y })),
+    scale: params.scale,
+    justification: params.justification,
+    isClosed: params.isClosed,
+    ...(params.styleName && { styleName: params.styleName }),
+    ...(params.styleHandle && { styleHandle: params.styleHandle }),
+    ...(params.entityColor && { entityColor: params.entityColor }),
+    style: {
+      name: style.name,
+      ...(style.handle && { handle: style.handle }),
+      elements: style.elements.map((e) => ({ offset: e.offset, ...(e.aci && { aci: e.aci }) })),
+    },
+  };
 
   return style.elements.map((element, k) => {
     const distance = (element.offset + adjust) * params.scale;
@@ -147,6 +164,8 @@ export function convertMline(
       vertices: buildElementVertices(refPath, distance),
       closed: params.isClosed,
       groupId,
+      // Marker ΜΟΝΟ στο πρώτο element (emitter-carrier)· siblings suppress-άρονται στο export.
+      ...(k === 0 && { dxfMlineSource: source }),
       ...(color && { color }),
     } as AnySceneEntity;
   });
