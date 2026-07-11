@@ -353,6 +353,16 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
   the nearest legal level each frame, matching the commit's release-time re-flow). Tests:
   `grip-drag-preview-transform.test.ts` + `grip-gripkind-dualwrite.test.ts` (landingId
   forward/omit assertions); jscpd-diff clean.
+  - **ORANGE ghost (Giorgio 2026-07-11)**: the WYSIWYG member-body path repaints the
+    moving stair ghost in the stair's OWN colour → it overlapped the original stair
+    indistinguishably («δεν ξεχωρίζει»). New pure helper `drawStairGhostOrange`
+    (`grip-ghost-preview-draw-helpers.ts`) paints the moving stair ghost as an ORANGE
+    skeleton — each tread + rest-landing outline (thin) + the stringer perimeter (thick,
+    via the SSoT `drawGhostEntity` `'stair'` case) — using the shared 'warning' orange
+    (`resolveGhostStatusColor('warning')` → `#f59e0b`, same hue as the column/wall live
+    warning, zero new hardcoded colour). `useGripGhostPreview` routes `type==='stair'`
+    to it and skips the WYSIWYG body path (stairs have no join-miter / finish-skin). Only
+    the stair ghost changed; every other entity keeps its WYSIWYG preview. jscpd-diff clean.
 - **Phase 5 — pending**: 2D/3D pick+highlight (`part:'landing'`) for the panel row.
 
 ## Changelog
@@ -372,6 +382,10 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
   `stepCount` invariant keeps `stepCount===stepCountPerArc`). 11/13 kinds now. +3 fan
   tests + 5 curved slide/handle cases + 4 flipped curved-handle assertions; stair
   suites 34/321 green; jscpd-diff clean.
+- **2026-07-11** — Phase 4-D (orange ghost): the moving stair ghost now paints ORANGE
+  (skeleton via new `drawStairGhostOrange` + `resolveGhostStatusColor('warning')`) so it
+  stands out from the original stair during a grip drag — the WYSIWYG path repainted it in
+  the stair's own colour, indistinguishable overlap (Giorgio). Stair-only; jscpd-diff clean.
 - **2026-07-11** — Phase 4-D: live WYSIWYG re-flow ghost during a rest-landing grip
   drag (resolves Phase 4-A's deferred item). Threaded the `landingId` channel — already
   forwarded by `commitStairGripDrag` — through the 4 preview layers

@@ -255,6 +255,18 @@ Tests: `dxf-quad-fill-converter.test.ts` (8) + `dxf-point-converter.test.ts` (4)
   currently rendered as straight segments (21 curved vertices in the sample).
 
 ## Changelog
+- **2026-07-11 — Φ C.2 (COLOR cascade: true-color 420 + BYBLOCK inheritance):** ο `extractEntityColor`
+  (`utils/dxf-converter-helpers.ts`) διάβαζε **μόνο** ACI code 62 → κάθε RGB-exported DXF (AutoCAD/Revit)
+  έχανε το χρώμα. Τώρα: **group code 420** (24-bit `0x00RRGGBB`) διαβάζεται με **προτεραιότητα πάνω από
+  62** (AutoCAD κανόνας), reuse του υπάρχοντος SSoT `trueColorToHex` (`utils/dxf-true-color.ts`, ADR-507 Φ5
+  — ΟΧΙ νέος helper· method-byte prefix masked με `& 0xffffff`). Νέο companion `isByBlockColor(data)` (62===0,
+  420 overrides) ώστε το BYBLOCK να διακρίνεται από ByLayer/no-color (και τα τρία collapse σε `undefined`
+  στον resolver). **BYBLOCK inheritance** στο `dxf-block-expander.ts` `instantiateInsert`: child με color
+  BYBLOCK κληρονομεί το explicit χρώμα του INSERT (mirror του υπάρχοντος BYBLOCK layer '0' rule, γρ ~104-106)·
+  όταν ο INSERT είναι BYLAYER/undefined το child πέφτει σωστά στο layer resolution μέσω του inherited
+  `layerId`. Gate: μη-BYBLOCK/native/Tekton paths αμετάβλητα (explicit color πάντα κερδίζει). 13 νέα tests
+  (`dxf-entity-color.test.ts` 10 + block-expansion BYBLOCK integration 3), **334/334** utils+scale green,
+  jscpd clean. ΔΕΝ browser-verified (χρειάζεται canvas)· η resolve/precedence/inherit λογική = tested.
 - **2026-07-11 — Φ C (POINT glyph render + scale):** το POINT σταματά να είναι no-op — νέο SSoT
   `rendering/entities/shared/point-glyph.ts` (pure `$PDMODE`/`$PDSIZE` decode: figure dot/plus/cross/tick
   + circle/square enclosures + size math· fully unit-tested), stamping στο `PointRenderer` (mirror του

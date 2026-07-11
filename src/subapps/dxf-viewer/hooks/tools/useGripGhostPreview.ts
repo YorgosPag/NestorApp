@@ -74,14 +74,11 @@ import { isHatchOriginGripKind, isHatchAngleGripKind } from '../../bim/hatch/hat
 // polar-tracking ray στη γωνία + tooltip τιμής. Κεντρικό SSoT — μηδέν bespoke style.
 import { paintPolarTrackingLine } from '../../canvas-v2/preview-canvas/polar-tracking-line-paint';
 // ADR-397 / ADR-357 — POLAR + AutoAlign ίχνη κατά την περιστροφή (ΙΔΙΑ SSoT με τη σχεδίαση).
-import { resolveRotationTracking, paintRotationTracking, type RotationTracking } from './rotation-tracking-overlay';
+import { paintRotationTracking } from './rotation-tracking-overlay';
 import { paintDirectionArc } from '../../canvas-v2/preview-canvas/direction-arc-paint';
 // SSoT gate «ΤΟΞΟ ΦΟΡΑΣ» (status-bar toggle, `cadToggleState.dirArc`) — το τόξο φοράς περιστροφής
 // είναι ΞΕΧΩΡΙΣΤΟ σύστημα (Giorgio 2026-07-09): OFF ⇒ κρύβεται σε ΚΑΘΕ περιστροφή grip-drag.
 import { cadToggleState } from '../../systems/constraints/cad-toggle-state';
-// ADR-397 §15b — SECOND direction arc: the LIVE corner angle between the rotating wall
-// and the neighbour it is joined to (same 🟢/🔴 SSoT paint as the rotation arc).
-import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 // ADR-090 — SSoT point+vector add (translate), replaces inline `{x:A.x+B.x,y:A.y+B.y}`.
@@ -98,10 +95,11 @@ import {
   drawMemberGripHud,
   paintGripEndpointReshapeArcs,
   drawGroupGhost,
+  drawStairGhostOrange,
 } from './grip-ghost-preview-draw-helpers';
-// ADR-040 Φ12 — SSoT grip delta resolvers (shared with buildDxfDragPreview/commit), so
-// the live synchronous ghost derives translate + rotation identically from the effective-world.
-import { resolveGripTranslateDelta, resolveLiveRotationFromCursor } from '../grips/grip-projections';
+// ADR-040 Φ12 — SSoT live cursor-driven drag-preview resolver (file-size SRP split, N.7.1):
+// recomputes translate + rotation sweep from the effective-world identically to the commit.
+import { resolveLiveGripDragPreview } from './grip-ghost-preview-live-transform';
 // ADR-508 §grip-tracking (Giorgio 2026-07-06) — ενεργό footprint grip-kind σε reshape λαβές
 // (κορυφή/μεσαία) πολυγωνικής BIM οντότητας — χρησιμοποιείται στο POLAR lock του άκρου.
 import { resolveActiveFootprintGripKind } from '../../systems/grip/footprint-reshape-anchors';
@@ -160,44 +158,16 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // `dp` reassignments below (every spread preserves it from `dragPreview`).
     const hatchKind = gripKindOf(dragPreview, 'hatch');
 
-    // Live recompute of whatever the cursor drives 1:1:
-    //  · CURSOR-DRIVEN ROTATION (free rotate / 6-click align-end) → recompute the sweep
-    //    (delta + angle readout) from the cursor — Revit/AutoCAD rotate tracks 1:1.
-    //  · TRANSLATE / parametric RESIZE → recompute the move delta from the cursor.
-    // Excluded (kept on the React `dragPreview`): TYPED-angle rotation (keyed value, NOT
-    // cursor-driven) and HATCH-gradient drags (bespoke origin/angle marker geometry).
+    // ADR-040 Φ12 — recompute whatever the cursor drives 1:1 (cursor-driven rotation sweep or
+    // translate/resize delta) from the LIVE effective-world, plus rotation POLAR/AutoAlign tracking.
+    // Pure SSoT helper (file-size SRP split, N.7.1) — byte-identical to the React `dragPreview`.
+    // Excluded (kept on `dragPreview`): TYPED-angle rotation (keyed) + HATCH-gradient drags.
     const isHatchDrag = !!hatchKind;
     const isRotation = !!(dragPreview.rotatePivot || dragPreview.rotateRefLine || dragPreview.rotateAlignLine);
-    let dp = dragPreview;
-    // ADR-397 / ADR-357 — POLAR + AutoAlign ίχνη κατά την περιστροφή (parity με σχεδίαση). Resolve
-    // ΠΡΙΝ το sweep ώστε ο polar/alignment-locked cursor να τροφοδοτήσει την περιστροφή → η πορτοκαλί/
-    // λευκή γραμμή να συμπίπτει με τον περιστρεφόμενο τοίχο. Μόνο στο cursor-driven free / align-end rotate.
-    let rotationTracking: RotationTracking | null = null;
-    let sweepCursor = effectiveCursor;
-    if (effectiveCursor && dragPreview.rotateCursorDriven && dragPreview.rotatePivot) {
-      const ambientOn = ambientAlignmentConfigStore.getSnapshot().enabled;
-      const sceneEntitiesForAmbient = ambientOn && levelManager.currentLevelId
-        ? levelManager.getLevelScene(levelManager.currentLevelId)?.entities ?? null
-        : null;
-      rotationTracking = resolveRotationTracking(
-        dragPreview.rotatePivot, effectiveCursor, t.scale, sceneEntitiesForAmbient,
-      );
-      sweepCursor = rotationTracking.cursor;
-    }
-    if (sweepCursor) {
-      if (dragPreview.rotateCursorDriven && dragPreview.rotatePivot && dragPreview.anchorPos) {
-        dp = { ...dragPreview, ...resolveLiveRotationFromCursor(dragPreview, sweepCursor) };
-      } else if (!isRotation && !isHatchDrag && dragPreview.anchorPos) {
-        dp = {
-          ...dragPreview,
-          delta: resolveGripTranslateDelta(
-            dragPreview.anchorPos,
-            effectiveCursor,
-            dragPreview.movesEntity === true || dragPreview.hotGrip === true,
-          ),
-        };
-      }
-    }
+    const { dp: liveDp, rotationTracking } = resolveLiveGripDragPreview(
+      dragPreview, effectiveCursor, t, levelManager, isRotation, isHatchDrag,
+    );
+    let dp = liveDp;
 
     const rawEntity = getEntity(dp.entityId);
     if (!rawEntity) return;
@@ -371,29 +341,38 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     // marker below still draws (it must follow even on a zero-delta press).
     if (transformed !== entity) {
       ctx.save();
-      // ADR-550 (WYSIWYG preview) — the MOVING copy renders through the REAL entity renderer
-      // (full fidelity: wall thickness+fill+poché+material hatch, column footprint+fill, …) so
-      // the preview matches the committed form, not a silhouette. The original-position copy is
-      // the dimmed ghost (main canvas, via `gripDraggedEntityId`). Layer table drives ByLayer style.
-      const bimPreview = getBimPreview(ctx);
-      const layersById = getLayersById();
-      // ADR-363 §wall-joint-miter-preview / ADR-449 — draw the moving member body ghost with its
-      // LIVE wall join-miter (neighbours mitered underneath, ghost on top), re-forming the future
-      // corner exactly as it will close on commit. Columns/beams have no join → drawn as-is. The
-      // returned ghost + neighbours feed the finish-skin silhouette below. SHARED SSoT helper with
-      // the body-drag MOVE path (`useEntityBodyDragPreview`) so the two gestures cannot diverge.
-      const joinScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
-      const { ghost: wallGhostToDraw, neighbours: finishPreviewNeighbours } = drawMemberBodyGhostWithJoinMiter(
-        bimPreview, transformed, joinScene?.entities ?? [], resolveSceneUnits(joinScene), layersById, t, vp,
-      );
-      // ADR-449 — LIVE σοβάς: after the member body ghost, re-draw the merged finish-skin
-      // silhouette for the preview scene (dragged wall/column/beam + mitered neighbours at
-      // their new positions) via the SAME committed scene-pass. No-op when «Σοβατισμένη όψη»
-      // is off (internal per-element gate). Mirrors the committed order (plaster after body).
-      if (joinScene && isStructuralFinishMember((transformed as { type?: string }).type)) {
-        drawStructuralFinishSkinPreview(
-          ctx, joinScene.entities, wallGhostToDraw, finishPreviewNeighbours, t, vp,
+      // ADR-637 Phase 4-D (Giorgio 2026-07-11) — a moving STAIR ghost paints in ORANGE (skeleton:
+      // treads + rest landings + stringer perimeter) so it stands out from the original stair
+      // (which stays in its own colour on the main canvas). The WYSIWYG member-body path below
+      // would repaint it in the stair's OWN colour → the two overlap indistinguishably («δεν
+      // ξεχωρίζει το φάντασμα»). SSoT orange via `resolveGhostStatusColor('warning')`.
+      if ((transformed as { type?: string }).type === 'stair') {
+        drawStairGhostOrange(ctx, transformed as unknown as DxfEntityUnion, t, vp);
+      } else {
+        // ADR-550 (WYSIWYG preview) — the MOVING copy renders through the REAL entity renderer
+        // (full fidelity: wall thickness+fill+poché+material hatch, column footprint+fill, …) so
+        // the preview matches the committed form, not a silhouette. The original-position copy is
+        // the dimmed ghost (main canvas, via `gripDraggedEntityId`). Layer table drives ByLayer style.
+        const bimPreview = getBimPreview(ctx);
+        const layersById = getLayersById();
+        // ADR-363 §wall-joint-miter-preview / ADR-449 — draw the moving member body ghost with its
+        // LIVE wall join-miter (neighbours mitered underneath, ghost on top), re-forming the future
+        // corner exactly as it will close on commit. Columns/beams have no join → drawn as-is. The
+        // returned ghost + neighbours feed the finish-skin silhouette below. SHARED SSoT helper with
+        // the body-drag MOVE path (`useEntityBodyDragPreview`) so the two gestures cannot diverge.
+        const joinScene = levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null;
+        const { ghost: wallGhostToDraw, neighbours: finishPreviewNeighbours } = drawMemberBodyGhostWithJoinMiter(
+          bimPreview, transformed, joinScene?.entities ?? [], resolveSceneUnits(joinScene), layersById, t, vp,
         );
+        // ADR-449 — LIVE σοβάς: after the member body ghost, re-draw the merged finish-skin
+        // silhouette for the preview scene (dragged wall/column/beam + mitered neighbours at
+        // their new positions) via the SAME committed scene-pass. No-op when «Σοβατισμένη όψη»
+        // is off (internal per-element gate). Mirrors the committed order (plaster after body).
+        if (joinScene && isStructuralFinishMember((transformed as { type?: string }).type)) {
+          drawStructuralFinishSkinPreview(
+            ctx, joinScene.entities, wallGhostToDraw, finishPreviewNeighbours, t, vp,
+          );
+        }
       }
 
       // ADR-049 (inverted ghost) — followers below (connected pipes / co-move partners) are

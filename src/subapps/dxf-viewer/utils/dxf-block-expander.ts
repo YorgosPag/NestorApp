@@ -18,6 +18,7 @@ import type { AnySceneEntity } from '../types/scene';
 import type { Entity } from '../types/entities';
 import type { Point2D } from '../rendering/types/Types';
 import type { EntityData } from './dxf-converter-helpers';
+import { extractEntityColor, isByBlockColor } from './dxf-converter-helpers';
 import type { DxfHeaderData, DimStyleMap } from './dxf-parser-types';
 import type { BlockDefMap } from './dxf-block-parser';
 import { convertEntityToScene } from './dxf-entity-converters';
@@ -145,6 +146,12 @@ export function instantiateInsert(
   const colSp = numOr(data['44'], 0);
   const rowSp = numOr(data['45'], 0);
 
+  // BYBLOCK color source (ADR-635 Φ C.2): a child drawn with color BYBLOCK (62=0) inherits the
+  // INSERT's explicit color, mirroring the BYBLOCK layer '0' rule. When the INSERT itself is
+  // BYLAYER/undefined this stays undefined and the child falls through to layer resolution via
+  // its inherited layerId (which becomes insertLayer) — matching AutoCAD's cascade.
+  const insertColor = extractEntityColor(data);
+
   // 1) Block-local scene entities (nested INSERTs recurse; others convert once). Each child is
   // isolated: one malformed member entity is recorded and skipped, it does NOT kill the block.
   const local: AnySceneEntity[] = [];
@@ -162,7 +169,10 @@ export function instantiateInsert(
       }
       const converted = convertEntityToScene(child, ctx.idSeq.n++, ctx.header, ctx.dimStyles);
       if (!converted) continue;
-      for (const e of Array.isArray(converted) ? converted : [converted]) local.push(e);
+      const inheritColor = insertColor !== undefined && isByBlockColor(child.data);
+      for (const e of Array.isArray(converted) ? converted : [converted]) {
+        local.push(inheritColor ? ({ ...e, color: insertColor } as AnySceneEntity) : e);
+      }
     } catch (err) {
       noteError(ctx, {
         kind: child.type || 'UNKNOWN',

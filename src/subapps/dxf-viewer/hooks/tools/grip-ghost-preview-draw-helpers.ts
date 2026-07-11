@@ -55,6 +55,9 @@ import { lerpPoint } from '../../rendering/entities/shared/geometry-utils';
 // ADR-508 §*-hud — live member grip HUD painter (file-size SRP split, N.7.1). Re-exported below so
 // existing consumers of `grip-ghost-preview-draw-helpers` keep their import path unchanged.
 export { drawMemberGripHud } from './grip-ghost-preview-hud-helpers';
+// ADR-637 Φ4-D — moving STAIR ghost painter (file-size SRP split, N.7.1). Re-exported so the hook's
+// import path stays unchanged.
+export { drawStairGhostOrange } from './grip-ghost-preview-stair-helpers';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -411,6 +414,9 @@ export function drawMemberBodyGhostWithJoinMiter(
   drawRealEntityPreview(bimPreview, ghost, layersById, t, vp);
   return { ghost, neighbours };
 }
+
+// ADR-637 Φ4-D — `drawStairGhostOrange` (moving STAIR ghost painter) moved to
+// `grip-ghost-preview-stair-helpers.ts` (file-size SRP split, N.7.1) and re-exported at the top.
 
 // ADR-508 §*-hud — `drawMemberGripHud` (live member grip HUD) moved to
 // `grip-ghost-preview-hud-helpers.ts` (file-size SRP split, N.7.1) and re-exported at the top.

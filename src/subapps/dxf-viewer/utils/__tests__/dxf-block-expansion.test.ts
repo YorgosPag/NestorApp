@@ -1,4 +1,5 @@
 import { DxfSceneBuilder } from '../dxf-scene-builder';
+import { extractEntityColor } from '../dxf-converter-helpers';
 import type { AnySceneEntity } from '../../types/scene';
 
 /**
@@ -102,5 +103,49 @@ describe('INSERT expansion', () => {
   it('ignores INSERT of an unknown block (no crash, no entities)', () => {
     const es = build([], lines(['0', 'INSERT'], ['2', 'NOPE'], ['10', 5], ['20', 5]));
     expect(es.filter(e => e.type === 'line')).toHaveLength(0);
+  });
+});
+
+describe('INSERT BYBLOCK color inheritance (ADR-635 Φ C.2)', () => {
+  // Block line drawn with an explicit color code (62) so we can exercise BYBLOCK (0) vs explicit.
+  const coloredBlockLine = (name: string, colorCode: number): string[] =>
+    lines(
+      ['0', 'BLOCK'], ['2', name], ['10', 0], ['20', 0], ['30', 0],
+      ['0', 'LINE'], ['8', '0'], ['62', colorCode], ['10', 0], ['20', 0], ['11', 1], ['21', 0],
+      ['0', 'ENDBLK'],
+    );
+
+  it('BYBLOCK child inherits the INSERT explicit color', () => {
+    const es = build(
+      coloredBlockLine('B', 0), // child color = BYBLOCK
+      lines(['0', 'INSERT'], ['2', 'B'], ['10', 0], ['20', 0], ['62', 1]), // INSERT color = ACI 1
+    );
+    const l = es.find(e => e.type === 'line') as AnySceneEntity;
+    expect(l.color).toBe(extractEntityColor({ '62': '1' }));
+  });
+
+  it('non-BYBLOCK child keeps its OWN color, ignoring the INSERT color', () => {
+    const es = build(
+      coloredBlockLine('B', 2), // child color = ACI 2 (explicit)
+      lines(['0', 'INSERT'], ['2', 'B'], ['10', 0], ['20', 0], ['62', 1]),
+    );
+    const l = es.find(e => e.type === 'line') as AnySceneEntity;
+    expect(l.color).toBe(extractEntityColor({ '62': '2' }));
+  });
+
+  it('BYBLOCK child + BYLAYER INSERT (no explicit color) → falls through to layer (no bogus inherit)', () => {
+    // With no explicit INSERT color there is nothing to inherit: the child must resolve exactly
+    // like a plain BYLAYER child, NOT pick up a stray color. Compare against a BYLAYER reference.
+    const byBlock = build(
+      coloredBlockLine('B', 0), // child color = BYBLOCK
+      lines(['0', 'INSERT'], ['2', 'B'], ['10', 0], ['20', 0]), // INSERT has no explicit color
+    );
+    const byLayerRef = build(
+      blockLine('R', [0, 0], [0, 0, 1, 0]), // plain child, no color code (BYLAYER)
+      lines(['0', 'INSERT'], ['2', 'R'], ['10', 0], ['20', 0]),
+    );
+    const l = byBlock.find(e => e.type === 'line') as AnySceneEntity;
+    const ref = byLayerRef.find(e => e.type === 'line') as AnySceneEntity;
+    expect(l.color).toBe(ref.color);
   });
 });

@@ -19,6 +19,8 @@ import type { Point2D } from '../rendering/types/Types';
 
 // 🏢 ENTERPRISE: Import ACI color system for DXF color extraction
 import { getAciColor } from '../settings/standards/aci';
+// 🏢 SSoT: 24-bit true-color (group code 420) → hex (ADR-507 Φ5, reused here for import)
+import { trueColorToHex } from './dxf-true-color';
 // 🏢 ADR: Centralized point validation
 import { isValidPoint } from '../rendering/entities/shared/entity-validation-utils';
 
@@ -316,24 +318,38 @@ export function mapMTextAlignment(attachmentPoint: number): TextAlignment {
 }
 
 // ============================================================================
-// 🏢 ENTERPRISE: COLOR EXTRACTION (DXF GROUP CODE 62)
+// 🏢 ENTERPRISE: COLOR EXTRACTION (DXF GROUP CODES 420 + 62)
 // ============================================================================
 
 /**
  * 🏢 ENTERPRISE: Extract entity color from DXF data
  *
- * DXF Color System (Group Code 62):
- * - 0 = ByBlock (inherits from containing block)
- * - 1-255 = ACI (AutoCAD Color Index)
- * - 256 = ByLayer (inherits from layer color)
+ * DXF Color System, resolved in AutoCAD precedence order:
+ * - **Group Code 420** — 24-bit true color (`0x00RRGGBB`). When present it WINS over
+ *   the ACI code 62 (AutoCAD rule: an explicit RGB always overrides the palette index).
+ * - **Group Code 62** — ACI (AutoCAD Color Index):
+ *   - 0 = ByBlock (inherits from containing block → undefined here, resolved by the block expander)
+ *   - 1-255 = ACI palette color
+ *   - 256 = ByLayer (inherits from layer color → undefined here, resolved from the layer)
  *
  * @see AutoCAD DXF Reference: Common Entity Properties
  * @see settings/standards/aci.ts - ACI color palette
+ * @see dxf-true-color.ts - 24-bit RGB ↔ hex SSoT
+ * @see isByBlockColor - companion BYBLOCK detector used by the block expander
  *
  * @param data - Raw DXF group codes
- * @returns Hex color string or undefined (for ByBlock/ByLayer)
+ * @returns Hex color string or undefined (for ByBlock/ByLayer/no color)
  */
 export function extractEntityColor(data: Record<string, string>): string | undefined {
+  // True-color (code 420) has priority over the ACI index (code 62) — AutoCAD rule.
+  const trueColorRaw = data['420'];
+  if (trueColorRaw !== undefined) {
+    const rgb = parseInt(trueColorRaw, 10);
+    if (Number.isFinite(rgb)) {
+      return trueColorToHex(rgb);
+    }
+  }
+
   const colorCode = data['62'];
 
   if (!colorCode) {
@@ -349,7 +365,7 @@ export function extractEntityColor(data: Record<string, string>): string | undef
 
   // Handle special cases
   if (colorIndex === 0) {
-    // ByBlock - return undefined, renderer will use default
+    // ByBlock - return undefined, block expander resolves from the containing INSERT
     return undefined;
   }
 
@@ -365,4 +381,22 @@ export function extractEntityColor(data: Record<string, string>): string | undef
 
   // Invalid index - return undefined
   return undefined;
+}
+
+/**
+ * 🏢 ENTERPRISE: True when the entity's DXF color is **BYBLOCK** (code 62 === 0).
+ *
+ * BYBLOCK means "take the color of the containing INSERT" — semantically distinct from a
+ * missing color (implicit BYLAYER) or ByLayer (256), both of which resolve from the layer.
+ * `extractEntityColor` collapses all three to `undefined`, so the block expander uses this
+ * companion to tell BYBLOCK apart and apply INSERT-color inheritance (mirrors the BYBLOCK
+ * layer '0' rule). An explicit true-color (code 420) overrides BYBLOCK → returns false.
+ *
+ * @see extractEntityColor - color resolution this complements
+ * @param data - Raw DXF group codes
+ * @returns true only when color is explicitly BYBLOCK
+ */
+export function isByBlockColor(data: Record<string, string>): boolean {
+  if (data['420'] !== undefined) return false; // explicit true-color overrides BYBLOCK
+  return parseInt(data['62'] ?? '', 10) === 0;
 }
