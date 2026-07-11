@@ -218,6 +218,19 @@ export function scaleEntity(
     case 'rectangle':
     case 'rect':
       return scaleRectangle(entity, base, sx, sy) as Partial<SceneEntity>;
+    case 'block': {
+      // ADR-640 — BLOCK instance (DXF INSERT): scaling about `base` moves the insertion point
+      // toward/away from base AND multiplies the placement scale factors (INSERT semantics — the
+      // block definition/local members are immutable). Scaling about the origin (import mm-pass)
+      // grows the rendered geometry by the same factor because the member contribution is
+      // `scale · member` → this is the correct AutoCAD block scale.
+      const e = entity as unknown as { position: { x: number; y: number }; scale?: { x: number; y: number } };
+      const curScale = e.scale ?? { x: 1, y: 1 };
+      return {
+        position: { x: base.x + (e.position.x - base.x) * sx, y: base.y + (e.position.y - base.y) * sy },
+        scale: { x: curScale.x * sx, y: curScale.y * sy },
+      } as unknown as Partial<SceneEntity>;
+    }
     case 'group': {
       // ADR-575 — GROUP container: scaling the group scales every member about the
       // SAME base. Recurse the SAME SSoT per member (handles nested groups).

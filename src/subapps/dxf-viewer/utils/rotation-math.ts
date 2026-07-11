@@ -97,6 +97,19 @@ const rotateTextLike: RotateHandler = (entity, pivot, angleDeg) => {
   };
 };
 
+// Shared point-insertion rotation (ADR-583 annotation-symbol + ADR-640 block INSERT):
+// rotate the insertion point about the pivot + accumulate the glyph/placement rotation.
+// Both carry a `position` + optional `rotation` and are NOT recursed into (unlike the
+// identity GROUP). About their own centre (grip pivot = position) only `rotation` advances.
+const rotatePointInsertionLike: RotateHandler = (entity, pivot, angleDeg) => {
+  const e = entity as typeof entity & { position: Point2D; rotation?: number };
+  const currentRotation = e.rotation ?? 0;
+  return {
+    position: rotatePoint(e.position, pivot, angleDeg),
+    rotation: normalizeAngleDeg(currentRotation + angleDeg),
+  } as Partial<Entity>;
+};
+
 /**
  * Introspectable rotation seam (ADR-587 Φ5 — TIER-2 cheap seam). ΕΝΑ type-keyed
  * registry αντί για `switch (entity.type)`, ώστε τα keys να δένονται στο descriptor
@@ -142,17 +155,11 @@ const ROTATE_HANDLERS: Partial<Record<EntityType, RotateHandler>> = {
   },
   text: rotateTextLike,
   mtext: rotateTextLike,
-  // ADR-583 — annotation symbol (North arrow): rotate the insertion point about the
-  // pivot + accumulate the glyph rotation (1:1 the text/mtext case). About its own
-  // centre (grip pivot = position) the point is fixed and only `rotation` advances.
-  'annotation-symbol': (entity, pivot, angleDeg) => {
-    const e = entity as typeof entity & { position: Point2D; rotation?: number };
-    const currentRotation = e.rotation ?? 0;
-    return {
-      position: rotatePoint(e.position, pivot, angleDeg),
-      rotation: normalizeAngleDeg(currentRotation + angleDeg),
-    } as Partial<Entity>;
-  },
+  // ADR-583 — annotation symbol (North arrow): point-insertion rotation (1:1 text/mtext).
+  'annotation-symbol': rotatePointInsertionLike,
+  // ADR-640 — BLOCK instance (DXF INSERT): point-insertion rotation (INSERT semantics — the
+  // block definition is immutable; local members are NOT recursed, unlike the identity GROUP).
+  block: rotatePointInsertionLike,
   'angle-measurement': (entity, pivot, angleDeg) => {
     const e = entity as Extract<Entity, { type: 'angle-measurement' }>;
     // Angle between arms is invariant under rotation — keep original angle value

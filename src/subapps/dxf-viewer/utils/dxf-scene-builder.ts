@@ -15,6 +15,11 @@ import { buildMlineStyleMap } from './dxf-mline-style-parser';
 // ADR-635 Φ2 — INSERT/BLOCK expansion (block-definition map + placement transform).
 import { parseBlockDefinitions } from './dxf-block-parser';
 import { instantiateInsert, transformInsertHatch, DEFAULT_SCENE_ENTITY_BUDGET, type ExpandContext } from './dxf-block-expander';
+// ADR-640 — a NAMED single INSERT is preserved as a first-class BlockEntity (not flattened).
+import { createBlockInstance } from '../systems/block/block-instance';
+import { isBlockEntity, type BlockEntity } from '../types/entities';
+// ADR-640 Φ7 — block-aware bounds (expands blocks to members before the primitive bounds pass).
+import { calculateBoundsWithBlocks } from './dxf-block-aware-bounds';
 // ADR-635 Φ C.6 — R12 associative-hatch INSERT (ACAD/HATCH XDATA) → single HATCH entity.
 import { tryConvertInsertHatch } from './dxf-hatch-xdata-converter';
 // ADR-635 Φ3 — fault-tolerant import: skipped/failed entities are RECORDED, not fatal.
@@ -190,7 +195,10 @@ export class DxfSceneBuilder {
     // Per-entity post-processing (layer registration + BYLAYER color resolution). Shared by
     // directly-converted entities AND block-expanded ones (ADR-635 Φ2) so both resolve layers
     // and colors through the SAME code — no twin. ADR-358 Phase 9D boundary casts preserved.
-    const processSceneEntity = (entity: AnySceneEntity): void => {
+    // Layer registration + BYLAYER color resolution for ONE entity (mutates layerId/color in place).
+    // Split out of processSceneEntity so BLOCK members — which live inside the container and never
+    // enter the live `entities` list — can be resolved with the SAME code (ADR-640).
+    const resolveEntityLayerAndColor = (entity: AnySceneEntity): void => {
       const layerName = getLayerNameOrDefault(entity.layerId);
 
       // Register layer with REAL ACI colors from parsed LAYER table
@@ -211,8 +219,21 @@ export class DxfSceneBuilder {
       } else {
         explicitColorCount++;
       }
+    };
 
+    const processSceneEntity = (entity: AnySceneEntity): void => {
+      resolveEntityLayerAndColor(entity);
       entities.push(entity);
+    };
+
+    // ADR-640 — a BlockEntity keeps its members OUT of the live scene, so they never pass through
+    // processSceneEntity. Resolve their registered layer id + BYLAYER colour here (recursively for
+    // nested blocks) so expandBlockInstance renders them exactly like top-level entities.
+    const resolveBlockMemberLayers = (block: BlockEntity): void => {
+      for (const m of block.entities) {
+        resolveEntityLayerAndColor(m as AnySceneEntity);
+        if (isBlockEntity(m)) resolveBlockMemberLayers(m);
+      }
     };
 
     // ADR-635 Φ2 — INSERT expands the referenced block's geometry with its placement transform;
@@ -248,6 +269,23 @@ export class DxfSceneBuilder {
             processSceneEntity(transformInsertHatch(insertHatch, entityData, blockDefs));
             recordParsed(diagnostics, 'HATCH');
             return;
+          }
+          // ADR-640 Phase-0 gate — a NAMED, single (non-MINSERT) INSERT is preserved as a
+          // first-class BlockEntity (selectable/movable/explodable, round-trips to INSERT).
+          // Anonymous '*' blocks (already handled above for hatch; '*D#' dimensions) and MINSERT
+          // arrays (cols×rows > 1) keep the legacy flatten (a future phase may wrap arrays).
+          const blockName = entityData.data['2'];
+          const cols = Math.max(1, parseInt(entityData.data['70'] ?? '1', 10) || 1);
+          const rows = Math.max(1, parseInt(entityData.data['71'] ?? '1', 10) || 1);
+          if (blockName && !blockName.startsWith('*') && cols === 1 && rows === 1) {
+            const def = blockDefs.get(blockName);
+            const block = def ? createBlockInstance(blockName, def, entityData, blockDefs, expandCtx) : null;
+            if (block) {
+              resolveBlockMemberLayers(block);
+              processSceneEntity(block);
+              recordParsed(diagnostics, 'INSERT');
+              return;
+            }
           }
           for (const e of instantiateInsert(entityData, blockDefs, expandCtx)) processSceneEntity(e);
           recordParsed(diagnostics, 'INSERT');
@@ -286,11 +324,8 @@ export class DxfSceneBuilder {
       sampleLayers
     });
 
-    // Calculate bounds
-    const bounds = entities.length > 0 ? DxfSceneBuilder.calculateBounds(entities) : {
-      min: { x: -100, y: -100 },
-      max: { x: 100, y: 100 }
-    };
+    // Calculate bounds (ADR-640 Φ7 — block-aware: expands any BlockEntity to its members first).
+    const bounds = calculateBoundsWithBlocks(entities, DxfSceneBuilder.calculateBounds);
 
     // ╔════════════════════════════════════════════════════════════════════════╗
     // ║ 🔧 BACKUP COMPATIBILITY (2026-01-03)                                   ║
@@ -329,7 +364,7 @@ export class DxfSceneBuilder {
           return e;
         }
       });
-      finalBounds = DxfSceneBuilder.calculateBounds(finalEntities);
+      finalBounds = calculateBoundsWithBlocks(finalEntities, DxfSceneBuilder.calculateBounds);
     }
 
     // ADR-358 Phase 9E-1: build id-keyed mirror alongside name-keyed `layers`.

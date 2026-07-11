@@ -19,7 +19,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Entity, LineEntity, ArcEntity, RectangleEntity, RectEntity, GroupEntity } from '../../types/entities';
+import type { Entity, LineEntity, ArcEntity, RectangleEntity, RectEntity, GroupEntity, BlockEntity } from '../../types/entities';
 import { bulgeToArc, isStraightSegment } from '../../rendering/entities/shared/geometry-bulge-utils';
 import { radToDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 import { inheritEntityStyle } from '../entity-creation/inherit-entity-style';
@@ -28,9 +28,12 @@ import { rectangleEntityVertices } from '../../rendering/entities/shared/geometr
 // ADR-575 — UNGROUP «Κατάργηση Ομαδοποίησης»: exploding a GROUP container restores
 // its members. Single SSoT unwrap lives in the group engine.
 import { ungroupGroup } from '../group/group-entity';
+// ADR-640 — EXPLODE of a BLOCK instance restores its placed members in world space (AutoCAD
+// EXPLODE of an INSERT). Single SSoT placement lives in the block engine.
+import { explodeBlockInstance } from '../block/block-instance';
 
-/** Entity types that EXPLODE can break apart (Φ5.1 + GROUP UNGROUP). */
-const EXPLODABLE_TYPES: ReadonlySet<string> = new Set(['polyline', 'lwpolyline', 'rectangle', 'rect', 'group']);
+/** Entity types that EXPLODE can break apart (Φ5.1 + GROUP UNGROUP + BLOCK, ADR-640). */
+const EXPLODABLE_TYPES: ReadonlySet<string> = new Set(['polyline', 'lwpolyline', 'rectangle', 'rect', 'group', 'block']);
 
 /** True when EXPLODE would produce a change for this entity type. */
 export function isExplodable(entity: Entity): boolean {
@@ -149,6 +152,9 @@ export function explodeEntity(entity: Entity): Entity[] | null {
   } else if (entity.type === 'group') {
     // UNGROUP: a GROUP container breaks back into its members (ADR-575).
     segs = ungroupGroup(entity as GroupEntity);
+  } else if (entity.type === 'block') {
+    // EXPLODE of a preserved DXF INSERT → its placed members in world space (ADR-640).
+    segs = explodeBlockInstance(entity as BlockEntity);
   }
   if (!segs) return null;
   // Belt-and-suspenders: drop any primitive with non-finite geometry so a broken

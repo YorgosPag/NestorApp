@@ -5,6 +5,7 @@
  */
 
 import * as THREE from 'three';
+import { createDesynchronizedWebglRenderer } from '../../rendering/webgl/desynchronized-webgl-renderer';
 import { createViewportCamera } from '../viewport/viewport-camera';
 import { createViewCube } from '../viewport/view-cube/view-cube';
 import type { ViewportCamera, CanonicalViewId } from '../viewport/viewport-types';
@@ -119,23 +120,12 @@ export function createBimRenderer(container: HTMLElement): THREE.WebGLRenderer {
   // στο getContext (μόνο alpha/depth/stencil/antialias/premultipliedAlpha/preserveDrawingBuffer/
   // powerPreference/failIfMajorPerformanceCaveat). Γι' αυτό φτιάχνουμε ΕΜΕΙΣ το webgl2 context με
   // το flag και το περνάμε στον renderer μέσω της παραμέτρου `context`.
-  const canvas = document.createElement('canvas');
-  const glAttributes: WebGLContextAttributes = {
-    antialias: true,
-    alpha: true,
-    stencil: true,
-    premultipliedAlpha: true,
-    preserveDrawingBuffer: false,
-    powerPreference: 'high-performance',
-    desynchronized: true,
-    failIfMajorPerformanceCaveat: false,
-  };
-  const context = canvas.getContext('webgl2', glAttributes);
-  // Belt-and-suspenders: αν το webgl2 context δεν δημιουργηθεί (απίθανο σε σύγχρονο browser), αφήνουμε
-  // το three να ακολουθήσει το δικό του fallback path με τα ίδια params (χωρίς desynchronized).
-  const renderer = context
-    ? new THREE.WebGLRenderer({ canvas, context, antialias: true, alpha: true, stencil: true, preserveDrawingBuffer: false, powerPreference: 'high-performance' })
-    : new THREE.WebGLRenderer({ antialias: true, alpha: true, stencil: true, preserveDrawingBuffer: false, powerPreference: 'high-performance' });
+  // ADR-639 Στάδιο 5 — ο desynchronized webgl2 context + το belt-and-suspenders fallback
+  // ζουν πλέον στο κοινό SSoT (`createDesynchronizedWebglRenderer`) ώστε ο BIM viewport και
+  // το 2Δ DXF WebGL line layer να μη μπορούν ΠΟΤΕ να αποκλίνουν στα low-latency flags. Το
+  // σκεπτικό (desynchronized low-latency present, discrete-GPU powerPreference, r0.170
+  // getContext-forwarding gap) τεκμηριώνεται εκεί. Ο BIM κρατά stencil:true (stencil-cap pipeline).
+  const renderer = createDesynchronizedWebglRenderer({ antialias: true, alpha: true, stencil: true });
   renderer.setPixelRatio(bimPixelRatio());
   renderer.setSize(container.clientWidth || 800, container.clientHeight || 600);
   renderer.setClearColor(0x1a1a1a, 1);

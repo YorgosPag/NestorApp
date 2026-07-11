@@ -62,9 +62,12 @@ describe('Rotate capability coverage — ζωντανό seam ↔ descriptor doma
     expect(asSorted(noRotate)).toEqual(asSorted(expected));
   });
 
-  it('ο ΜΟΝΟΣ non-renderable handler είναι το "group" (editor-only container)', () => {
+  it('οι non-renderable handlers είναι τα containers "block" + "group" (editor-only)', () => {
+    // ADR-640 — το BLOCK instance (preserved DXF INSERT) είναι container: expand-before-convert
+    // (κανένας leaf renderer, όπως το group), αλλά ΕΧΕΙ rotation handler (INSERT-semantic: rotate
+    // insertion point + accumulate placement rotation).
     const nonRenderable = ROTATE_SUPPORTED_TYPES.filter((t) => !renderableSet.has(t));
-    expect(nonRenderable).toEqual(['group']);
+    expect(asSorted(nonRenderable)).toEqual(asSorted(['block', 'group']));
   });
 
   it('τύπος χωρίς handler → rotateEntity επιστρέφει {} (no-op default, per-site)', () => {

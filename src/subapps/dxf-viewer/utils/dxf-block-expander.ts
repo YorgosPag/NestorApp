@@ -91,7 +91,7 @@ function noteError(ctx: ExpandContext, issue: ImportIssue): void {
  * exploded block members (via {@link transformBlockEntity}) AND a reconstructed associative
  * hatch (via {@link transformInsertHatch}) identically. NO id/layer bookkeeping here.
  */
-function applyBlockTransformGeometry(
+export function applyBlockTransformGeometry(
   entity: AnySceneEntity,
   base: Point2D,
   sx: number,
@@ -167,6 +167,54 @@ export function transformInsertHatch(
 }
 
 /**
+ * Build the block definition's member entities in BLOCK-LOCAL coordinate space (no placement
+ * transform applied). Nested INSERTs recurse (flattened into this block's local space); ATTDEF
+ * templates are skipped; a BYBLOCK-colored child inherits the INSERT's explicit color. Each child
+ * is isolated — one malformed member is recorded and skipped, it does NOT kill the block.
+ *
+ * Single SSoT shared by BOTH the explode path ({@link instantiateInsert}) AND the preserve-as-block
+ * path (`systems/block/block-instance.createBlockInstance`), so the member set is byte-identical
+ * whether an INSERT is flattened or kept as a `BlockEntity`.
+ */
+export function buildLocalBlockMembers(
+  def: { entities: EntityData[] },
+  blockDefs: BlockDefMap,
+  ctx: ExpandContext,
+  insertColor: string | undefined,
+  depth: number,
+  blockName: string | undefined,
+): AnySceneEntity[] {
+  const local: AnySceneEntity[] = [];
+  for (const child of def.entities) {
+    try {
+      // ADR-635 Φάση B Batch 2 — ATTDEF inside a BLOCK is an attribute *definition*
+      // (template): AutoCAD replaces it with the INSERT's ATTRIB value at placement time,
+      // never rendering the default per copy. Without this guard every INSERT would stamp
+      // the stale default value/tag. (The real value arrives as a standalone ATTRIB in the
+      // ENTITIES stream, converted independently.)
+      if (child.type === 'ATTDEF') continue;
+      if (child.type === 'INSERT') {
+        local.push(...instantiateInsert(child, blockDefs, ctx, depth + 1));
+        continue;
+      }
+      const converted = convertEntityToScene(child, ctx.idSeq.n++, ctx.header, ctx.dimStyles, ctx.styleFonts, ctx.mlineStyles);
+      if (!converted) continue;
+      const inheritColor = insertColor !== undefined && isByBlockColor(child.data);
+      for (const e of Array.isArray(converted) ? converted : [converted]) {
+        local.push(inheritColor ? ({ ...e, color: insertColor } as AnySceneEntity) : e);
+      }
+    } catch (err) {
+      noteError(ctx, {
+        kind: child.type || 'UNKNOWN',
+        reason: errMessage(err),
+        at: `block ${blockName ?? '?'}`,
+      });
+    }
+  }
+  return local;
+}
+
+/**
  * Expand one INSERT entity into scene entities (recursively for nested INSERTs, with MINSERT
  * column/row array support). Returns [] for unknown block names or when the nesting guard trips.
  */
@@ -205,35 +253,9 @@ export function instantiateInsert(
   // its inherited layerId (which becomes insertLayer) — matching AutoCAD's cascade.
   const insertColor = extractEntityColor(data);
 
-  // 1) Block-local scene entities (nested INSERTs recurse; others convert once). Each child is
-  // isolated: one malformed member entity is recorded and skipped, it does NOT kill the block.
-  const local: AnySceneEntity[] = [];
-  for (const child of def.entities) {
-    try {
-      // ADR-635 Φάση B Batch 2 — ATTDEF inside a BLOCK is an attribute *definition*
-      // (template): AutoCAD replaces it with the INSERT's ATTRIB value at placement time,
-      // never rendering the default per copy. Without this guard every INSERT would stamp
-      // the stale default value/tag. (The real value arrives as a standalone ATTRIB in the
-      // ENTITIES stream, converted independently.)
-      if (child.type === 'ATTDEF') continue;
-      if (child.type === 'INSERT') {
-        local.push(...instantiateInsert(child, blockDefs, ctx, depth + 1));
-        continue;
-      }
-      const converted = convertEntityToScene(child, ctx.idSeq.n++, ctx.header, ctx.dimStyles, ctx.styleFonts, ctx.mlineStyles);
-      if (!converted) continue;
-      const inheritColor = insertColor !== undefined && isByBlockColor(child.data);
-      for (const e of Array.isArray(converted) ? converted : [converted]) {
-        local.push(inheritColor ? ({ ...e, color: insertColor } as AnySceneEntity) : e);
-      }
-    } catch (err) {
-      noteError(ctx, {
-        kind: child.type || 'UNKNOWN',
-        reason: errMessage(err),
-        at: `block ${name ?? '?'}`,
-      });
-    }
-  }
+  // 1) Block-local scene entities (nested INSERTs recurse; others convert once) — shared SSoT with
+  // the preserve-as-block path so a flattened INSERT and a kept BlockEntity have identical members.
+  const local = buildLocalBlockMembers(def, blockDefs, ctx, insertColor, depth, name);
 
   // 2) Place each array cell; MINSERT spacing runs along the rotated X (cols) / Y (rows) axes.
   // Cell count and the scene-wide entity budget are bounded (ADR-635 Φ3) so a giant/malformed

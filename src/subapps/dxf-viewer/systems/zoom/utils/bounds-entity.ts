@@ -19,6 +19,11 @@ import { DEFAULT_BOUNDS } from '../../../config/geometry-constants';
 import { createInfinityBounds, isInfinityBounds, expandInfinityBounds } from '../../../config/geometry-constants';
 import { isValidPoint } from '../../../rendering/entities/shared/entity-validation-utils';
 import type { Bounds } from './bounds';
+// ADR-640 — a BLOCK instance (preserved DXF INSERT) must contribute its placed members' real
+// bbox to zoom-extents / selection bounds, NOT a zero-size insertion point. Reuses the render
+// expander SSoT so the bounds match exactly where the block draws.
+import { expandBlockInstance } from '../../block/block-expander';
+import type { BlockEntity } from '../../../types/entities';
 
 // ============================================================================
 // ENTITY BOUNDS CALCULATION
@@ -72,6 +77,15 @@ export interface MutableBoundsEntity extends BoundsEntity {
  * Get bounds for a single entity.
  * Returns modern Bounds format { min, max }.
  */
+/** Degenerate (zero-size) bounds at a single insertion point — shared by the `point` case
+ *  and the `block` empty-member fallback so both express "min === max === position" once. */
+function pointBounds(position: Point2D): Bounds {
+  return {
+    min: { x: position.x, y: position.y },
+    max: { x: position.x, y: position.y }
+  };
+}
+
 export function getEntityBounds(entity: BoundsEntity): Bounds | null {
   switch (entity.type) {
     case 'line': {
@@ -153,14 +167,26 @@ export function getEntityBounds(entity: BoundsEntity): Bounds | null {
       break;
     }
 
-    case 'point':
+    case 'point': {
+      if (entity.position) return pointBounds(entity.position);
+      break;
+    }
+
     case 'block': {
-      if (entity.position) {
-        return {
-          min: { x: entity.position.x, y: entity.position.y },
-          max: { x: entity.position.x, y: entity.position.y }
-        };
+      // ADR-640 — real bbox: expand the block's placed members and union their bounds (reuses the
+      // render SSoT). Falls back to the insertion point only for an empty/degenerate block.
+      const block = entity as unknown as BlockEntity;
+      if (Array.isArray(block.entities) && block.entities.length > 0) {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const member of expandBlockInstance(block)) {
+          const b = getEntityBounds(member as unknown as BoundsEntity);
+          if (!b) continue;
+          minX = Math.min(minX, b.min.x); minY = Math.min(minY, b.min.y);
+          maxX = Math.max(maxX, b.max.x); maxY = Math.max(maxY, b.max.y);
+        }
+        if (Number.isFinite(minX)) return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
       }
+      if (entity.position) return pointBounds(entity.position);
       break;
     }
   }

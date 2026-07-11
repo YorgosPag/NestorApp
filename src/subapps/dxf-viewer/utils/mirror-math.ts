@@ -141,6 +141,19 @@ export function mirrorEntity(entity: Entity, axis: MirrorAxis): Partial<Entity> 
         point2: mp(entity.point2),
       };
 
+    case 'block': {
+      // ADR-640 — BLOCK instance (DXF INSERT): reflect the insertion point, mirror the placement
+      // angle (2α−r), and negate ONE scale axis. Derivation: a reflection F about axis angle α
+      // factors as F·R(r)·S(sx,sy) = R(2α−r)·diag(sx,−sy), i.e. rotation→ma(r), scale.y→−scale.y.
+      // This reproduces AutoCAD's mirrored INSERT (definition immutable; members NOT recursed).
+      const e = entity as unknown as { position: Point2D; scale?: Point2D; rotation?: number };
+      const s = e.scale ?? { x: 1, y: 1 };
+      return {
+        position: mp(e.position),
+        rotation: normalizeAngleDeg(ma(e.rotation ?? 0)),
+        scale: { x: s.x, y: -s.y },
+      } as unknown as Partial<Entity>;
+    }
     case 'group': {
       // ADR-575 — GROUP container: mirroring the group mirrors every member across
       // the SAME axis. Recurse the SAME SSoT per member (handles nested groups).

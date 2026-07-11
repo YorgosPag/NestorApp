@@ -118,3 +118,22 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
   }
   return handler(entity, base);
 }
+
+/**
+ * Map a list of scene entities through {@link convertEntity}, dropping the ones that
+ * project to `null` (unsupported type / degenerate). ONE place owns the "expand 1→N →
+ * convert each → keep the non-null" loop that the array / group / block branches of the
+ * scene converter all run (N.0.2 — no per-branch reduce twins, N.18 clone-free).
+ */
+export function convertEntities(
+  entities: SceneEntity[],
+  layers: SceneLayers,
+  layersById?: SceneLayers,
+): DxfEntityUnion[] {
+  const out: DxfEntityUnion[] = [];
+  for (const e of entities) {
+    const c = convertEntity(e, layers, layersById);
+    if (c) out.push(c);
+  }
+  return out;
+}

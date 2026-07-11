@@ -19,11 +19,13 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { perfMark } from '../../debug/perf-line-profile';
 import type { DxfScene, DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { SceneModel, Entity } from '../../types/entities';
-import { isArrayEntity, isGroupEntity } from '../../types/entities';
+import { isArrayEntity, isGroupEntity, isBlockEntity } from '../../types/entities';
 import type { PathParams } from '../../systems/array/types';
 import { expandArrayEntity } from '../../systems/array/array-expander';
 // ADR-575 — GROUP «Ομαδοποίηση» expands to its members before conversion (mirror of array).
 import { expandGroupEntity } from '../../systems/group/group-expander';
+// ADR-640 — BLOCK instance (preserved DXF INSERT) expands to its placed members before conversion.
+import { expandBlockInstance } from '../../systems/block/block-expander';
 // 🏢 ADR-358 Phase 9D-3: hydrate the LayerStore SSoT from the active scene snapshot.
 import { setLayers as setLayerStoreLayers } from '../../stores/LayerStore';
 // ADR-362 Round 5 — seed the runtime DIMSTYLE registry from the active scene
@@ -37,7 +39,8 @@ import { registerImportedDimStyles } from '../../systems/dimensions/dim-style-im
 import { resolveSceneUnits, mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { immediateSceneScale } from '../../systems/cursor/ImmediateSceneScaleStore';
 // Pure per-entity projection SSoT (extracted to keep this file ≤500 LOC).
-import { convertEntity } from './dxf-scene-entity-converter';
+// convertEntities = shared "expand → convert each → drop nulls" loop (no per-branch twins).
+import { convertEntity, convertEntities } from './dxf-scene-entity-converter';
 // ADR-458 — cross-element post-pass: beam-to-column cutback (column wins) → displayOutline.
 import { applyBeamColumnCutback2D } from './dxf-scene-beam-cutback';
 // ADR-458 — cross-element post-pass: wall-to-column cutback (column wins) → displayFootprint.
@@ -105,12 +108,7 @@ function convertSceneToDxfWithCache(
         const pathEnt = entity.arrayKind === 'path' && entity.params.kind === 'path'
           ? (entities as Entity[]).find(e => e.id === (entity.params as PathParams).pathEntityId)
           : undefined;
-        const expanded = expandArrayEntity(entity, pathEnt);
-        items = expanded.reduce<DxfEntityUnion[]>((acc, e) => {
-          const c = convertEntity(e, layers, layersById);
-          if (c) acc.push(c);
-          return acc;
-        }, []);
+        items = convertEntities(expandArrayEntity(entity, pathEnt), layers, layersById);
         if (items.length > 0) arrayCache.set(entity, items);
       }
       for (const item of items) converted.push(item);
@@ -126,13 +124,21 @@ function convertSceneToDxfWithCache(
       const isActiveGroup = activeGroupId != null && entity.id === activeGroupId;
       let items = isActiveGroup ? undefined : arrayCache.get(entity);
       if (!items) {
-        const expanded = expandGroupEntity(entity, entities as Entity[], activeGroupId);
-        items = expanded.reduce<DxfEntityUnion[]>((acc, e) => {
-          const c = convertEntity(e, layers, layersById);
-          if (c) acc.push(c);
-          return acc;
-        }, []);
+        items = convertEntities(expandGroupEntity(entity, entities as Entity[], activeGroupId), layers, layersById);
         if (!isActiveGroup && items.length > 0) arrayCache.set(entity, items);
+      }
+      for (const item of items) converted.push(item);
+      continue;
+    }
+
+    // ADR-640: BlockEntity (preserved DXF INSERT) expands 1→N placed members before conversion.
+    // Members are re-tagged with the block id (expandBlockInstance) so click→whole block; cached by
+    // the container object like arrays/groups (stable ref while the block isn't transformed).
+    if (isBlockEntity(entity)) {
+      let items = arrayCache.get(entity);
+      if (!items) {
+        items = convertEntities(expandBlockInstance(entity), layers, layersById);
+        if (items.length > 0) arrayCache.set(entity, items);
       }
       for (const item of items) converted.push(item);
       continue;
@@ -187,44 +193,12 @@ export function convertSceneToDxf(
   scene: SceneModel | null,
   userDrawingUnits?: SceneUnits,
 ): DxfScene {
-  const entities = scene?.entities ?? [];
-  const layers = scene?.layersById ?? {};
-  const layersById = scene?.layersById;
-  const converted: DxfEntityUnion[] = [];
-
-  for (const entity of entities) {
-    // ADR-353: ArrayEntity expands 1→N items before conversion.
-    if (isArrayEntity(entity)) {
-      const pathEnt = entity.arrayKind === 'path' && entity.params.kind === 'path'
-        ? (entities as Entity[]).find(e => e.id === (entity.params as PathParams).pathEntityId)
-        : undefined;
-      for (const e of expandArrayEntity(entity, pathEnt)) {
-        const c = convertEntity(e, layers, layersById);
-        if (c) converted.push(c);
-      }
-      continue;
-    }
-    // ADR-575: GroupEntity expands 1→N members before conversion (identity container).
-    if (isGroupEntity(entity)) {
-      for (const e of expandGroupEntity(entity, entities as Entity[])) {
-        const c = convertEntity(e, layers, layersById);
-        if (c) converted.push(c);
-      }
-      continue;
-    }
-    const c = convertEntity(entity, layers, layersById);
-    if (c) converted.push(c);
-  }
-
-  return {
-    // ADR-458 — member-to-column cutback post-pass (column wins). Identity fast-path
-    // όταν δεν υπάρχουν κολόνες/δοκάρια/τοίχοι → ίδιο reference, μηδέν κόστος.
-    entities: applyWallWallCrossCutback2D(applyWallColumnCutback2D(applyBeamColumnCutback2D(converted))),
-    layers: Object.keys(layers),
-    layersById,
-    bounds: scene?.bounds ?? null,
-    units: userDrawingUnits ?? resolveSceneUnits(scene),
-  };
+  // Throwaway per-call WeakMaps → the cached core visits each entity exactly once (nothing
+  // to reuse in a single pass), so this is behaviourally the uncached snapshot variant while
+  // sharing ONE conversion pipeline with the hot active-floor path (N.18 — no parallel twin
+  // of the array/group/block expansion + cutback post-pass). No `activeGroupId` → no drill-in
+  // bypass, exactly the read-only underlay semantics.
+  return convertSceneToDxfWithCache(scene, userDrawingUnits, new WeakMap(), new WeakMap());
 }
 
 // ============================================================================
