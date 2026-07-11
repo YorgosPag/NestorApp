@@ -1,6 +1,6 @@
 # ADR-637 — Stair Rest Landings (πλατύσκαλα) — kind-independent SSoT
 
-- **Status**: Accepted — Phase 1 + Phase 2 (rectilinear family: straight/multi-flight/v-shape) + Phase 2b (turning family: L/U/Γ edge-origin flights) + Phase 3 (walkline-following family: elliptical/sketch; radial + walkline-grips deferred) + Phase 4-A (draggable/resizable landing grips) + Phase 4-B (add/remove/length/depth panel UI) implemented
+- **Status**: Accepted — Phase 1 + Phase 2 (rectilinear family: straight/multi-flight/v-shape) + Phase 2b (turning family: L/U/Γ edge-origin flights) + Phase 3 (walkline-following: elliptical/sketch + radial: spiral/helical; triangular-fan + curved-grips deferred) + Phase 4-A (draggable/resizable landing grips) + Phase 4-B (add/remove/length/depth panel UI) implemented
 - **Date**: 2026-07-11
 - **Owners**: DXF/BIM stair subsystem
 - **Related**: ADR-611 (stair geometry generators SSoT), ADR-633 (multi-flight turn points), ADR-619 (stair-from-region walkline / `preserveZ`), ADR-358 (stair tool), ADR-631/625 (command + drag-preview bases), ADR-040 (micro-leaf subscribers)
@@ -90,7 +90,7 @@ pre-ADR-637 path.
 |---|---|---|
 | **Rectilinear flights** | straight, L, Γ, Π/U, multi-flight, V, winder | `buildCornerLanding` quad (0° corner) — reuse ADR-611 |
 | **Walkline-following** | elliptical, sketch | flat-z stretch on the sampled walkline — reuse ADR-619 flat-z + `buildWalklineTreads` |
-| **Radial** (deferred) | spiral, helical, triangular-fan | treads come from an angular grid, not the walkline → own landing insertion needed; deferred (see Phase 3) |
+| **Radial** | spiral, helical | flat annular sector swept over a WIDER angle at constant z (`Δθ = length / walklineRadius`) — reuse `radialSector`. triangular-fan deferred (base flare) |
 
 Each family builds its **flights** its own way and shares the landing scheduling.
 No new tread/landing math is written — flights reuse `buildRectilinearFlight` /
@@ -197,25 +197,42 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
   geometry + stairs suites green (59 suites / 747, incl. the unchanged
   sketch/elliptical coordinate tests — proves byte-identical no-rest path);
   jscpd-diff clean.
-  - **Deferred — radial family** (spiral / helical / triangular-fan): their treads
-    come from an **angular grid** (`buildRadialTreads`), not the walkline, so the
-    flat-z walkline trick does not apply — a radial landing would be a flat annular
-    sector needing its own grid insertion. Mid-run landings on a parametric radial
-    run are also unusual (Revit/ArchiCAD model curved-run mid-landings as **separate
-    landing components**, not a consumed step). Deferred to avoid a half-broken
-    z-model, mirroring the Phase 2 L/U/Γ deferral. Not added to
-    `stairKindSupportsRestLandings` (panel shows the hint).
-  - **Deferred — walkline-family grips**: `restLandingHandles` are intentionally
-    NOT surfaced for elliptical/sketch. The `slideRestLanding` transform projects
-    the cursor axially on `params.direction` / `params.totalRun`, but curved kinds
-    run with `totalRun = 0` and no meaningful axial direction, so a slide grip would
-    snap the landing to the top. Curved-run landing grips need an
-    arclength-projection model (a future phase). The panel add/remove/length/depth
-    path is fully functional today (writes `restLandings` → recompute).
+  - **Deferred — curved-family grips**: `restLandingHandles` are intentionally NOT
+    surfaced for the walkline OR radial families (elliptical/sketch/spiral/helical).
+    The `slideRestLanding` transform projects the cursor axially on
+    `params.direction` / `params.totalRun`, but curved kinds run with `totalRun = 0`
+    and no meaningful axial direction, so a slide grip would snap the landing to the
+    top. Curved-run landing grips need an arclength/angle-projection model (a future
+    phase). The panel add/remove/length/depth path is fully functional today (writes
+    `restLandings` → recompute).
   - **Elliptical note**: on a parametric curve the tangent-stretch translates the
     post-landing arc rigidly (the ellipse "opens" past the landing) — geometrically
     valid + z-correct, natural for a free sketch. Visually confirmed in a plan-view
     artifact.
+- **Phase 3 (radial) — DONE (spiral + helical)**: rest landings for the radial
+  family. New SSoT `stair-radial-run-builder.ts` (`buildRadialRunWithLandings`) —
+  the **angle-space analogue** of the walkline stretch: a radial run is parametrised
+  by sweep angle (each tread sweeps `angleStep` at constant z), so a landing is a
+  flat annular sector swept over a WIDER angle `Δθ = length / walklineRadius` at the
+  landing's z, and every downstream tread is shifted in angle by the extra sweep.
+  The spiral/helix therefore stays a **clean curve** — the total sweep simply grows,
+  with no "gap" (contrast the elliptical tangent-stretch). z-model invariant (a
+  landing consumes one level → one rise onto the next tread), footprint = the swept
+  angle grows. The tread sector and the landing quad are the SAME `radialSector`
+  primitive, risers the SAME `radialRiser` — both **extracted** from
+  `buildRadialTreads`/`buildRadialRisers` into `stair-geometry-samplers.ts` and
+  **dogfooded** by the originals (N.18, byte-identical, no clone). `computeRadialStair`
+  branches on `hasRestLandings` (no-rest path untouched); the rest path builds
+  treads/risers/landings + a boundary-derived walkline/stringers and assembles via
+  `assembleStairGeometry`. `stairKindSupportsRestLandings` += `spiral` / `helical`.
+  **triangular-fan deferred** (it shares the radial builder but is a base flare, not
+  a run with landings — not added to the supported set). Tests:
+  `stair-radial-run-builder.test.ts` (2) +
+  `StairGeometryService-{spiral,helical}-landings.test.ts` (3+3); full stair suites
+  green (62 suites / 755, incl. unchanged spiral/helical/triangular-fan coordinate
+  tests — proves byte-identical no-rest path after the sector/riser extraction);
+  jscpd-diff clean. Radial landings visually confirmed in a plan-view artifact
+  (cleaner than elliptical — no gap).
 - **Phase 4-A — DONE**: draggable + resizable rest-landing grips (recompute on
   release, matching every other stair grip). Chain:
   - **Handle SSoT (geometry)**: `buildRectilinearRun` now emits
@@ -288,6 +305,15 @@ No new tread/landing math is written — flights reuse `buildRectilinearFlight` 
 
 ## Changelog
 
+- **2026-07-11** — Phase 3 (radial): spiral + helical rest landings. New SSoT
+  `stair-radial-run-builder.ts` (`buildRadialRunWithLandings`) — landing = flat
+  annular sector swept over `Δθ = length / walklineRadius` at constant z (sweep
+  grows, spiral stays clean). `radialSector` / `radialRiser` extracted to
+  `stair-geometry-samplers.ts` + dogfooded by `buildRadialTreads`/`buildRadialRisers`
+  (N.18, byte-identical). `computeRadialStair` branches on `hasRestLandings`.
+  `stairKindSupportsRestLandings` += spiral/helical (triangular-fan deferred —
+  base flare). Curved-family grips still deferred (`totalRun=0` axial slide). +8
+  tests; stair suites 62/755 green; jscpd-clean.
 - **2026-07-11** — Phase 3: walkline-following rest landings (elliptical + sketch).
   New SSoT `stair-walkline-run-builder.ts` (`buildWalklineRunWithLandings`) —
   stretches each landing chord along its base tangent + rigid-translates the

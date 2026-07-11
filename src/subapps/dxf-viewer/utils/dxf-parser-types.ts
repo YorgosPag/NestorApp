@@ -33,6 +33,10 @@ export const SUPPORTED_ENTITY_TYPES = [
   'TRACE',
   'POINT',
   'MLINE',
+  // ADR-635 Φάση B Batch 2 — block attribute value (ATTRIB, visible) + definition
+  // template (ATTDEF, skipped per-INSERT via block-expander guard). Both → type:'text'.
+  'ATTRIB',
+  'ATTDEF',
   'XLINE',
   'RAY'
 ] as const;

@@ -232,11 +232,13 @@ Edits: `SUPPORTED_ENTITY_TYPES` (+3DFACE/TRACE/POINT/MLINE), `convertEntityToSce
 Tests: `dxf-quad-fill-converter.test.ts` (8) + `dxf-point-converter.test.ts` (4) +
 `dxf-mline-converter.test.ts` (5). Full `utils/__tests__` **295/295** green, jscpd clean.
 
-**Batch 2 (PENDING — specs έτοιμα, handoff):**
-- **ATTRIB / ATTDEF** → `type:'text'` (extend `dxf-text-converters.ts` με shared `convertAttributeEntity`).
-  Code 1 = ορατό value· code 2 = tag (νέο `TextEntity.attributeTag?`)· code 70 bit 1 = invisible→`visible:false`.
-  ⚠️ **Guard:** ATTDEF-template μέσα σε BLOCK → **skip στο `instantiateInsert`** (αλλιώς stale default
-  value duplicated σε κάθε INSERT). Χρειάζεται επαλήθευση του πραγματικού block-expander signature.
+**Batch 2 — Part A (ATTRIB/ATTDEF) DONE, Part B (LEADER) PENDING:**
+- ✅ **ATTRIB / ATTDEF** → `type:'text'` (DONE 2026-07-11): shared `convertAttributeEntity` στο
+  `dxf-text-converters.ts` (reuse `parseTextTransform`/`buildTextNodeFromFlat`/`buildTextSceneEntity`).
+  Code 1 = ορατό value· code 2 = tag (`TextEntity.attributeTag?`)· code 70 bit 1 = invisible→`visible:false`.
+  ✅ **Guard** επιβεβαιωμένος: `instantiateInsert` block-member loop → `if (child.type === 'ATTDEF') continue;`
+  (ο `child` είναι raw `EntityData`· η design-agent υπόθεση για `convertEntityToScene(child)` ήταν λάθος).
+  Χωρίς guard κάθε INSERT θα stamp-άριζε το stale default value. 9 νέα tests (guard integration incl.).
 - **LEADER** → `LeaderEntity` (ήδη υπάρχει) + **νέος `LeaderRenderer`** (reuse DIMENSION arrowhead SSoT
   `renderArrowhead`/`getArrowheadBlock`). Vertices από ordered pairs (10/20)· arrowhead code 71.
   ⚠️ Ο renderer έχει πολλές helper-API deps (`renderWithPhases`/`drawVerticesPath`/`hitTestLineSegments`)
@@ -249,6 +251,15 @@ Tests: `dxf-quad-fill-converter.test.ts` (8) + `dxf-point-converter.test.ts` (4)
   currently rendered as straight segments (21 curved vertices in the sample).
 
 ## Changelog
+- **2026-07-11 — Φ B Batch 2 Part A (ATTRIB/ATTDEF import):** ATTRIB (block attribute value) + ATTDEF
+  (definition template default) → `type:'text'` μέσω shared `convertAttributeEntity` (extend, όχι νέο
+  sibling — reuse των υπαρχόντων `parseTextTransform`/`buildTextNodeFromFlat`/`buildTextSceneEntity`).
+  Code 1=value(ορατό), 2=tag→`TextEntity.attributeTag?`, 70 bit 1→`visible:false`, 72=H-just, 40/50=height/rot.
+  `SUPPORTED_ENTITY_TYPES` +ATTRIB/ATTDEF· router +2 switch cases. **Κρίσιμος guard** στο `instantiateInsert`
+  (`child.type==='ATTDEF' → continue`): ATTDEF μέσα σε BLOCK είναι template, αντικαθίσταται από το ATTRIB
+  του INSERT — χωρίς guard κάθε INSERT stamp-άρει το stale default. 9 νέα tests (converter + guard
+  integration via `DxfSceneBuilder.buildScene`), **304/304** utils green, jscpd clean. Part B (LEADER +
+  νέος `LeaderRenderer`) PENDING με έτοιμα specs.
 - **2026-07-11 — Φ B Batch 1 (import entity coverage, converters-only):** POINT→PointEntity,
   SOLID/3DFACE/TRACE→HatchEntity(solid, bowtie-corrected 1→2→4→3 + triangle collapse + 2D projection),
   MLINE→reference polyline (11/21 vertices, closed=71 bit 2). 3 νέα SRP modules

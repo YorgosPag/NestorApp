@@ -159,6 +159,12 @@ export interface TextEntity extends BaseEntity {
   // 🏢 ADR-344 Phase 11 — Annotative scaling (optional, populated by XDATA parser)
   isAnnotative?: boolean;
   annotationScales?: readonly EntityAnnotationScale[];
+  /**
+   * ADR-635 Φάση B — DXF ATTRIB/ATTDEF tag (group code 2). Populated only when a
+   * `type:'text'` entity originates from an attribute (`convertAttrib`/`convertAttdef`),
+   * so the identity survives without a cast (N.2). Plain TEXT/MTEXT leave it undefined.
+   */
+  attributeTag?: string;
 }
 
 export interface MTextEntity extends BaseEntity {

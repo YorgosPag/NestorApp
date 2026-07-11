@@ -132,7 +132,7 @@ function parseTextTransform(data: Record<string, string>): {
  * converters differ only in `idPrefix` and the `textNode` attachment.
  */
 function buildTextSceneEntity(params: {
-  idPrefix: 'text' | 'mtext';
+  idPrefix: 'text' | 'mtext' | 'attrib' | 'attdef';
   index: number;
   layer: string;
   x: number;
@@ -256,4 +256,85 @@ export function convertMText(
     textNode,
     color,
   });
+}
+
+// ============================================================================
+// 🏢 ENTERPRISE: ATTRIBUTE CONVERTERS (ADR-635 Φάση B Batch 2)
+// ============================================================================
+
+/**
+ * Shared ATTRIB/ATTDEF → `type:'text'` conversion. AutoCAD renders both the block
+ * attribute VALUE (ATTRIB, code 1) and — in the block editor — the attribute
+ * DEFINITION's default value (ATTDEF, code 1) as ordinary single-line text, so we
+ * reuse the exact TEXT machinery (`buildTextNodeFromFlat`, no MTEXT inline-code parse:
+ * attribute values carry no `\P`/`\H` codes). The two public converters differ only in
+ * `idPrefix`/`label`.
+ *
+ * DXF codes — 1=value (VISIBLE, same as TEXT), 2=tag, 3=prompt (ATTDEF, NOT rendered),
+ * 10/20=position, 40=height, 50=rotation, 72=H-justification, 70 bit 1=invisible.
+ *
+ * ⚠️ ATTDEF templates that live INSIDE a BLOCK are skipped per-INSERT by the
+ * `dxf-block-expander.ts` guard (otherwise every INSERT would stamp the stale default);
+ * this converter handles only the standalone / model-space case.
+ */
+function convertAttributeEntity(
+  data: Record<string, string>,
+  layer: string,
+  index: number,
+  idPrefix: 'attrib' | 'attdef',
+  label: 'ATTRIB' | 'ATTDEF',
+): AnySceneEntity | null {
+  const { x, y, height, rotation } = parseTextTransform(data);
+  let text = data['1'] || '';
+  const alignment = mapHorizontalAlignment(parseInt(data['72']) || 0);
+  const invisible = ((parseInt(data['70']) || 0) & 1) === 1;
+
+  if (isNaN(x) || isNaN(y) || text.trim() === '') {
+    dwarn('EntityConverter', `⚠️ Skipping ${label} ${index}: missing position or text`, { x, y, text });
+    return null;
+  }
+
+  text = decodeGreekText(text);
+  const color = extractEntityColor(data);
+  const tag = data['2'];
+
+  const base = buildTextSceneEntity({
+    idPrefix, index, layer, x, y, text, height, rotation, alignment,
+    textNode: buildTextNodeFromFlat(text.trim(), height, rotation, alignment),
+    color,
+  });
+
+  // 70 bit 1 = invisible attribute (still imported, hidden until unhidden — AutoCAD parity).
+  // Tag (code 2) preserved on the entity so export can round-trip ATTRIB→TEXT losslessly-ish.
+  return {
+    ...base,
+    visible: !invisible,
+    ...(tag ? { attributeTag: tag } : {}),
+  };
+}
+
+/**
+ * Convert ATTRIB (block attribute value instance) → `type:'text'`.
+ * ATTRIB entities follow their INSERT in the ENTITIES stream with absolute WCS coords,
+ * so a standalone conversion places them exactly where AutoCAD shows them.
+ */
+export function convertAttrib(
+  data: Record<string, string>,
+  layer: string,
+  index: number,
+): AnySceneEntity | null {
+  return convertAttributeEntity(data, layer, index, 'attrib', 'ATTRIB');
+}
+
+/**
+ * Convert ATTDEF (attribute definition template) → `type:'text'` using its default
+ * value (code 1). Block-nested ATTDEFs are skipped by the block-expander guard; this
+ * covers the rare standalone/model-space ATTDEF.
+ */
+export function convertAttdef(
+  data: Record<string, string>,
+  layer: string,
+  index: number,
+): AnySceneEntity | null {
+  return convertAttributeEntity(data, layer, index, 'attdef', 'ATTDEF');
 }

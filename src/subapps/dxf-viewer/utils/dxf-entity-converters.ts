@@ -279,12 +279,12 @@ export function convertEllipse(
 // ============================================================================
 // TEXT / MTEXT live in their own module (mirror dimension / hatch / xline-ray
 // splits below); re-exported here for backward-compatible import paths.
-export { convertText, convertMText } from './dxf-text-converters';
+export { convertText, convertMText, convertAttrib, convertAttdef } from './dxf-text-converters';
 
 // Local binding for the master router below — a bare `export … from` re-exports but
 // does NOT create a local name, so `convertEntityToScene` calling `convertText` threw
 // `convertText is not defined` (empty import). Mirrors the hatch/xline-ray split pattern.
-import { convertText, convertMText } from './dxf-text-converters';
+import { convertText, convertMText, convertAttrib, convertAttdef } from './dxf-text-converters';
 
 // ============================================================================
 // 🏢 ENTERPRISE: SPLINE CONVERTER
@@ -392,6 +392,11 @@ export function convertEntityToScene(
     case 'MTEXT':
     case 'MULTILINETEXT':
       return convertMText(data, layer, index);
+    // ADR-635 Φάση B Batch 2 — block attribute value (visible) + definition template.
+    case 'ATTRIB':
+      return convertAttrib(data, layer, index);
+    case 'ATTDEF':
+      return convertAttdef(data, layer, index);
     case 'SPLINE':
       return convertSpline(data, layer, index);
     case 'DIMENSION':

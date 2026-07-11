@@ -150,6 +150,12 @@ export function instantiateInsert(
   const local: AnySceneEntity[] = [];
   for (const child of def.entities) {
     try {
+      // ADR-635 Φάση B Batch 2 — ATTDEF inside a BLOCK is an attribute *definition*
+      // (template): AutoCAD replaces it with the INSERT's ATTRIB value at placement time,
+      // never rendering the default per copy. Without this guard every INSERT would stamp
+      // the stale default value/tag. (The real value arrives as a standalone ATTRIB in the
+      // ENTITIES stream, converted independently.)
+      if (child.type === 'ATTDEF') continue;
       if (child.type === 'INSERT') {
         local.push(...instantiateInsert(child, blockDefs, ctx, depth + 1));
         continue;
