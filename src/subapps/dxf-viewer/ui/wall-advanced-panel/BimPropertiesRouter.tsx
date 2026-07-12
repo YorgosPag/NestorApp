@@ -18,7 +18,7 @@
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { isWallEntity, isStairEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity, isSlabOpeningEntity } from '../../types/entities';
+import { isWallEntity, isStairEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity, isSlabOpeningEntity, isHatchEntity } from '../../types/entities';
 import { isWallDrawingTool } from '../../systems/tools/region-tool-ids';
 import { useResolvedSelectedEntity } from '../../hooks/selection/useResolvedSelectedEntity';
 import { StairPropertiesTab } from '../stair-advanced-panel/StairPropertiesTab';
@@ -28,9 +28,13 @@ import { BeamPropertiesTab } from '../beam-advanced-panel/BeamPropertiesTab';
 import { FoundationPropertiesTab } from '../foundation-advanced-panel/FoundationPropertiesTab';
 import { SlabPropertiesTab } from '../slab-advanced-panel/SlabPropertiesTab';
 import { SlabOpeningPropertiesTab } from '../slab-opening-advanced-panel/SlabOpeningPropertiesTab';
-// ADR-510 Φ2E #4 — inline «Τμήματα Μοτίβου» editor for a selected style-editable primitive.
+// ADR-510 Φ2E #4/#6 — inline «Τμήματα Μοτίβου» + full properties for a selected
+// style-editable primitive, plus draft-mode (line/primitive tool active, no selection).
 import { isStyleEditablePrimitiveType } from '../../types/style-editable-primitives';
+import { isLinePrimitiveDrawingTool } from '../../app/resolve-tool-active-trigger';
 import { LinePropertiesTab } from '../line-advanced-panel/LinePropertiesTab';
+// ADR-507 — hatch Properties palette (ribbon ↔ panel split, Revit-style + draft mode).
+import { HatchPropertiesTab } from '../hatch-advanced-panel/HatchPropertiesTab';
 import type { SceneModel } from '../../types/scene';
 
 export interface BimPropertiesRouterProps {
@@ -66,6 +70,19 @@ export function BimPropertiesRouter(
     return <WallPropertiesTab {...props} draftMode />;
   }
 
+  // ADR-507 — εργαλείο «Γραμμοσκίαση» ενεργό χωρίς επιλογή → draft panel (ρύθμιση
+  // draw-defaults για την επόμενη· Revit-style «διάλεξε ιδιότητες → σχεδίασε»).
+  if (!selected && activeTool === 'hatch') {
+    return <HatchPropertiesTab {...props} draftMode />;
+  }
+
+  // ADR-510 Φ2E #6 — εργαλείο γραμμής/primitive (line/circle/rectangle/polyline/arc…)
+  // ενεργό χωρίς επιλογή → draft «Ιδιότητες Γραμμής» (draw-defaults για την επόμενη·
+  // «όρισε ιδιότητες → σχεδίασε»). Ίδιο pattern με τοίχο/γραμμοσκίαση· ΟΧΙ κενό panel.
+  if (!selected && isLinePrimitiveDrawingTool(activeTool)) {
+    return <LinePropertiesTab {...props} draftMode />;
+  }
+
   // ADR-363 Phase 4 — column Properties palette (ribbon ↔ panel split).
   if (selected && isColumnEntity(selected)) {
     return <ColumnPropertiesTab {...props} />;
@@ -90,6 +107,12 @@ export function BimPropertiesRouter(
   // managed/lock status). Surfacing του soft warning ως κείμενο, όχι μόνο badge.
   if (selected && isSlabOpeningEntity(selected)) {
     return <SlabOpeningPropertiesTab {...props} />;
+  }
+
+  // ADR-507 — επιλεγμένη γραμμοσκίαση → πλήρες Properties palette
+  // (Γενικά / Μοτίβο / Διαβάθμιση / Πληροφορίες). Πριν το generic primitive fallback.
+  if (selected && isHatchEntity(selected)) {
+    return <HatchPropertiesTab {...props} />;
   }
 
   if (selected && isStairEntity(selected)) {

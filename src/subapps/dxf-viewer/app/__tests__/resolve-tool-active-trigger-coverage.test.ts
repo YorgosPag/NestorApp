@@ -33,6 +33,7 @@ jest.mock('firebase/auth', () => ({
 import {
   TOOL_ACTIVE_TRIGGER,
   isLineModifyTool,
+  isLinePrimitiveDrawingTool,
   resolveToolActiveTrigger,
 } from '../resolve-tool-active-trigger';
 import { isColumnRegionTool, isWallDrawingTool } from '../../systems/tools/region-tool-ids';
@@ -134,5 +135,30 @@ describe('resolveToolActiveTrigger — disjointness invariant (reorder safety pr
     expect(isWallDrawingTool('column-region-box')).toBe(false); // column-region sample
     expect(isWallDrawingTool('guide-x')).toBe(false);
     expect(isLineModifyTool('dim-linear')).toBe(false);
+  });
+});
+
+// ADR-510 Φ2E #6 — draft-mode predicate: every primitive draw tool that opens the
+// «Στυλ Γραμμής» tab must be recognised (so the left panel draft-opens, not empty).
+describe('isLinePrimitiveDrawingTool (ADR-510 Φ2E #6)', () => {
+  it('is true for every tool that maps to the line contextual trigger', () => {
+    for (const [tool, trigger] of TOOL_ACTIVE_TRIGGER) {
+      if (trigger === LINE_TOOL_CONTEXTUAL_TRIGGER) {
+        expect(isLinePrimitiveDrawingTool(tool)).toBe(true);
+      }
+    }
+    // representative primitives
+    for (const t of ['line', 'circle', 'rectangle', 'polyline', 'arc-3p', 'ellipse']) {
+      expect(isLinePrimitiveDrawingTool(t)).toBe(true);
+    }
+  });
+
+  it('is false for non-line tools, modify tools, and empty/null', () => {
+    expect(isLinePrimitiveDrawingTool('stair')).toBe(false);
+    expect(isLinePrimitiveDrawingTool('hatch')).toBe(false);
+    expect(isLinePrimitiveDrawingTool('trim')).toBe(false); // line-modify, not a draw tool
+    expect(isLinePrimitiveDrawingTool(null)).toBe(false);
+    expect(isLinePrimitiveDrawingTool(undefined)).toBe(false);
+    expect(isLinePrimitiveDrawingTool('')).toBe(false);
   });
 });

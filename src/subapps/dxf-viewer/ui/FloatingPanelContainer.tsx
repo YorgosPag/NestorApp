@@ -12,6 +12,9 @@ import { PanelTabs } from './components/PanelTabs';
 // REMOVED: LayerManagementPanel - replaced with unified overlay system
 import type { SceneModel } from '../types/scene';
 import { isWallDrawingTool } from '../systems/tools/region-tool-ids';
+// ADR-510 Φ2E #6 — line/primitive drawing tools also auto-open the Properties palette
+// (draft draw-defaults), mirror του τοίχου. SSoT predicate (reuse του tool-trigger map).
+import { isLinePrimitiveDrawingTool } from '../app/resolve-tool-active-trigger';
 import type { ToolType } from '../ui/toolbar/types';
 import type { DxfSaveContext } from '../services/dxf-firestore.service';
 import { useLevels } from '../systems/levels';
@@ -93,17 +96,21 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   // container to take `primarySelectedId` as a prop → broke its memo on every
   // click. The host drives the switch imperatively via `showTab('properties')`.
 
-  // ADR-363 — auto-open the Properties palette when the user ACTIVATES the wall
-  // tool (Revit «set the type, then draw»): the left panel surfaces the draft
-  // wall parameters (ΣΥΝΘΕΣΗ ΣΤΡΩΣΕΩΝ) alongside the contextual ribbon tab.
-  // Gated on the TRANSITION into a wall tool (prevToolRef) so a manual switch to
-  // another panel WHILE the tool stays active is respected (no bounce-back).
+  // ADR-363 / ADR-510 Φ2E #6 — auto-open the Properties palette when the user
+  // ACTIVATES a draft-capable draw tool (Revit «set the type, then draw»): the left
+  // panel surfaces the draw-defaults alongside the contextual ribbon tab. Covers the
+  // WALL tool (ΣΥΝΘΕΣΗ ΣΤΡΩΣΕΩΝ) and every LINE/primitive tool (line/circle/rectangle/
+  // polyline/arc… → «Ιδιότητες Γραμμής» draft). Gated on the TRANSITION into such a
+  // tool (prevToolRef) so a manual switch to another panel WHILE the tool stays active
+  // is respected (no bounce-back).
   const prevToolRef = React.useRef<ToolType | null>(null);
   React.useEffect(() => {
-    const enteredWallTool =
-      isWallDrawingTool(currentTool) && !isWallDrawingTool(prevToolRef.current ?? undefined);
+    // ADR-507 — το εργαλείο «Γραμμοσκίαση» ανοίγει επίσης το Properties palette (draft
+    // draw-defaults για την επόμενη γραμμοσκίαση· mirror του τοίχου/γραμμής).
+    const draftNow = isWallDrawingTool(currentTool) || isLinePrimitiveDrawingTool(currentTool) || currentTool === 'hatch';
+    const draftPrev = isWallDrawingTool(prevToolRef.current) || isLinePrimitiveDrawingTool(prevToolRef.current) || prevToolRef.current === 'hatch';
     prevToolRef.current = currentTool;
-    if (enteredWallTool && activePanel !== 'properties') {
+    if (draftNow && !draftPrev && activePanel !== 'properties') {
       setActivePanel('properties');
     }
   }, [currentTool, activePanel, setActivePanel]);

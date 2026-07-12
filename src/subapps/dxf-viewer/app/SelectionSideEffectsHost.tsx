@@ -35,7 +35,7 @@ import { useTextToolbarSelectionSync } from '../ui/text-toolbar/hooks/useTextToo
 // ADR-557 — live-preview reactivity leaf: pulses the ribbon field store when the grip-drag
 // publisher writes live height/widthFactor/rotation, so the Text-Editor tab tracks the drag.
 import { TextToolbarRibbonPreviewSyncMount } from '../ui/ribbon/context/TextToolbarRibbonPreviewSync';
-import { isBimEntity, isStairEntity } from '../types/entities';
+import { isBimEntity, isStairEntity, isHatchEntity } from '../types/entities';
 // ADR-510 Φ2E #4 — selecting a style-editable primitive (line/polyline/…) also pops
 // the Properties palette (inline «Τμήματα Μοτίβου»), so the user sees it immediately.
 import { isStyleEditablePrimitiveType } from '../types/style-editable-primitives';
@@ -104,7 +104,9 @@ export const SelectionSideEffectsHost = React.memo<SelectionSideEffectsHostProps
     if (!isNewPrimary || !currentScene) return;
     const entity = currentScene.entities.find((e) => e.id === primarySelectedId);
     if (!entity) return;
-    if (isBimEntity(entity) || isStairEntity(entity) || isStyleEditablePrimitiveType(entity.type)) {
+    // ADR-507 — η γραμμοσκίαση δεν είναι isBimEntity/primitive· ρητό branch ώστε το
+    // αριστερό Properties palette να ανοίγει ΚΑΙ σε επιλογή hatch (όπως το ribbon tab).
+    if (isBimEntity(entity) || isStairEntity(entity) || isHatchEntity(entity) || isStyleEditablePrimitiveType(entity.type)) {
       floatingRef.current?.showTab('properties');
     }
   }, [primarySelectedId, currentScene, floatingRef]);

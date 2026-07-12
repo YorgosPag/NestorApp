@@ -63,6 +63,8 @@ import {
   type GradientFieldPatch,
 } from '../../../bim/hatch/hatch-gradient-build';
 import { normalizeGradientType, normalizeGradientShift } from '../../../bim/hatch/hatch-gradient';
+// ADR-507/510 Φ4 — κοινό «Επίπεδο» field wiring (ίδιο SSoT με το line bridge).
+import { useEntityLayerField } from './bridge/useEntityLayerField';
 import {
   HATCH_RIBBON_KEYS,
   isHatchRibbonNumberKey,
@@ -144,6 +146,8 @@ export function useRibbonHatchBridge(
   );
 
   const resolveHatch = useResolveSelectedEntity(levelManager, universalSelection, isHatchEntity);
+  // ADR-510 Φ4 — «Επίπεδο»: per-object layerId (επιλεγμένο) / current layer (defaults).
+  const layerField = useEntityLayerField(levelManager);
 
   const patchHatch = useCallback(
     (hatch: HatchEntity, patch: Record<string, unknown>): void => {
@@ -180,6 +184,9 @@ export function useRibbonHatchBridge(
         return { value: hatch ? formatAreaForDisplay(computeHatchAreaMm2(hatch)) : '—', options: [] };
       }
       if (isHatchRibbonStringKey(commandKey)) {
+        if (commandKey === HATCH_RIBBON_KEYS.stringParams.layer) {
+          return layerField.getState(hatch);
+        }
         if (commandKey === HATCH_RIBBON_KEYS.stringParams.fillType) {
           return { value: hatch?.fillType ?? defaults.fillType, options: [] };
         }
@@ -242,13 +249,17 @@ export function useRibbonHatchBridge(
       }
       return null;
     },
-    [resolveHatch, defaults],
+    [resolveHatch, defaults, layerField],
   );
 
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
       const hatch = resolveHatch();
       if (isHatchRibbonStringKey(commandKey)) {
+        if (commandKey === HATCH_RIBBON_KEYS.stringParams.layer) {
+          layerField.apply(hatch, value);
+          return;
+        }
         if (commandKey === HATCH_RIBBON_KEYS.stringParams.fillType) {
           const fillType: NonNullable<HatchEntity['fillType']> =
             value === 'user-defined' ? 'user-defined'
@@ -359,7 +370,7 @@ export function useRibbonHatchBridge(
         else setHatchDrawDefaults({ lineSpacing: numeric });
       }
     },
-    [resolveHatch, patchHatch, applyGradientChange, defaults],
+    [resolveHatch, patchHatch, applyGradientChange, defaults, layerField],
   );
 
   const onToggle = useCallback(

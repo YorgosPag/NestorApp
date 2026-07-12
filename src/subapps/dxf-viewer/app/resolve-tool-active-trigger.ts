@@ -150,6 +150,17 @@ export function isLineModifyTool(activeTool: string): boolean {
 }
 
 /**
+ * ADR-510 Φ2E #6 — True όταν το ενεργό εργαλείο είναι primitive-drawing tool που
+ * ανοίγει το «Στυλ Γραμμής» contextual tab (line/circle/rectangle/polyline/arc/…).
+ * Reuse του ΙΔΙΟΥ `TOOL_ACTIVE_TRIGGER` map (SSoT) → μηδέν δεύτερη λίστα εργαλείων.
+ * Το `BimPropertiesRouter` το χρησιμοποιεί για draft-mode `LinePropertiesTab`
+ * (Revit «όρισε ιδιότητες → σχεδίασε», mirror τοίχου/γραμμοσκίασης).
+ */
+export function isLinePrimitiveDrawingTool(activeTool: string | null | undefined): boolean {
+  return !!activeTool && TOOL_ACTIVE_TRIGGER.get(activeTool) === LINE_TOOL_CONTEXTUAL_TRIGGER;
+}
+
+/**
  * Το pure, activeTool-only μισό της contextual-tab επίλυσης. Καλείται από το
  * `useActiveContextualTrigger` ΑΦΟΥ καμία stateful pre-rule (animation / selection /
  * multi-select) δεν έπιασε.

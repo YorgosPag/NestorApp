@@ -55,8 +55,9 @@ import {
 } from '../panels/dimensions/LinePatternSegmentsEditor';
 // ADR-510 Φ2E #5 — full per-object fields (Γενικά/Γεωμετρία) via the shared bridge.
 import { useRibbonLineToolBridge } from '../ribbon/hooks/useRibbonLineToolBridge';
-import { LINE_PROPERTY_GROUPS } from './line-property-fields';
+import { LINE_PROPERTY_GROUPS, LINE_SELECTION_ONLY_KEYS } from './line-property-fields';
 import { LinePropertySection } from './LinePropertyRow';
+import type { LinePropertyGroup } from './line-property-fields';
 import type { SceneModel } from '../../types/scene';
 
 export interface LinePropertiesTabProps {
@@ -64,11 +65,23 @@ export interface LinePropertiesTabProps {
   readonly currentScene: SceneModel | null;
   readonly projectId?: string;
   readonly floorplanId?: string;
+  /**
+   * ADR-510 Φ2E #6 — draft mode: a line/primitive drawing tool is active with NO
+   * selection → show «Γενικά» bound to draw-defaults (Revit «όρισε ιδιότητες →
+   * σχεδίασε», mirror τοίχου/γραμμοσκίασης). Selection-only sections/fields drop.
+   */
+  readonly draftMode?: boolean;
+}
+
+/** Draft mode: keep only the fields that have a draw-default write path. */
+function forDraft(group: LinePropertyGroup): LinePropertyGroup {
+  return { ...group, fields: group.fields.filter((f) => !LINE_SELECTION_ONLY_KEYS.has(f.commandKey)) };
 }
 
 export function LinePropertiesTab({
   primarySelectedId,
   currentScene,
+  draftMode,
 }: LinePropertiesTabProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-panels');
   const e = (k: string) => t(`panels.dimensions.linePatternEditor.${k}`);
@@ -121,7 +134,8 @@ export function LinePropertiesTab({
     [entity, patchEntity],
   );
 
-  if (!entity) {
+  // Draft mode (tool active, no selection) still renders — showing draw-defaults.
+  if (!entity && !draftMode) {
     return (
       <p className="px-3 py-6 text-center text-xs text-muted-foreground">
         {e('inlineTab.emptyState')}
@@ -129,12 +143,17 @@ export function LinePropertiesTab({
     );
   }
 
-  const generalGroup = LINE_PROPERTY_GROUPS.find((g) => g.id === 'general');
+  const rawGeneral = LINE_PROPERTY_GROUPS.find((g) => g.id === 'general');
+  // In draft mode drop selection-only fields (transparency) → only actionable defaults.
+  const generalGroup = rawGeneral && (draftMode ? forDraft(rawGeneral) : rawGeneral);
   // Geometry (line-only) + polyline width (polyline-only) — gated via the SAME
-  // panel-visibility predicate the ribbon used (`getPanelVisibility`).
-  const gatedGroups = LINE_PROPERTY_GROUPS.filter(
-    (g) => g.id !== 'general' && (!g.visibilityKey || bridge.getPanelVisibility(g.visibilityKey)),
-  );
+  // panel-visibility predicate the ribbon used (`getPanelVisibility`). Rendered only
+  // for a real selection: geometry has no draw-default meaning (Revit/AutoCAD parity).
+  const gatedGroups = entity
+    ? LINE_PROPERTY_GROUPS.filter(
+        (g) => g.id !== 'general' && (!g.visibilityKey || bridge.getPanelVisibility(g.visibilityKey)),
+      )
+    : [];
 
   return (
     <section aria-label={e('inlineTab.title')} className="flex flex-col gap-3 p-2">
@@ -147,17 +166,19 @@ export function LinePropertiesTab({
         />
       )}
 
-      {/* «Τμήματα Μοτίβου» — the editor's own legend is the section header. */}
-      <div className="flex flex-col gap-1">
-        <LinePatternSegmentsEditor
-          segments={segments}
-          onChange={applyPattern}
-          labels={buildLinePatternSegmentsLabels(e)}
-        />
-        {segments.length === 0 && (
-          <p className="px-1 text-xs text-muted-foreground">{e('inlineTab.hint')}</p>
-        )}
-      </div>
+      {/* «Τμήματα Μοτίβου» — selection-only (per-line COW edit); hidden in draft. */}
+      {entity && (
+        <div className="flex flex-col gap-1">
+          <LinePatternSegmentsEditor
+            segments={segments}
+            onChange={applyPattern}
+            labels={buildLinePatternSegmentsLabels(e)}
+          />
+          {segments.length === 0 && (
+            <p className="px-1 text-xs text-muted-foreground">{e('inlineTab.hint')}</p>
+          )}
+        </div>
+      )}
 
       {gatedGroups.map((g) => (
         <LinePropertySection

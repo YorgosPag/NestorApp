@@ -37,7 +37,8 @@ type ComboState = RibbonComboboxState | null;
 
 /** Optional toggle half of the bridge (only style panels with toggle fields supply it). */
 export interface EntityPropertyToggleBridge {
-  readonly getToggleState: (commandKey: string) => boolean;
+  /** `null` (mixed/άγνωστο) → treated as unchecked by the row. */
+  readonly getToggleState: (commandKey: string) => boolean | null;
   readonly onToggle: (commandKey: string, next: boolean) => void;
 }
 

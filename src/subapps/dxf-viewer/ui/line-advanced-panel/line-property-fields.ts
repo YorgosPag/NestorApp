@@ -97,3 +97,13 @@ export const LINE_PROPERTY_GROUPS: readonly LinePropertyGroup[] = [
     ],
   },
 ];
+
+/**
+ * ADR-510 Φ2E #6 — fields with NO draw-default meaning (write is selection-only in
+ * the bridge). In draft mode (line tool active, no selection) they are dropped from
+ * «Γενικά» so the panel shows only actionable draw-defaults (mirror του hatch
+ * `HATCH_SELECTION_ONLY_KEYS`). Transparency draw-default is not wired (ADR-510 Φ4).
+ */
+export const LINE_SELECTION_ONLY_KEYS: ReadonlySet<string> = new Set<string>([
+  LINE_TOOL_RIBBON_KEYS.transparency,
+]);

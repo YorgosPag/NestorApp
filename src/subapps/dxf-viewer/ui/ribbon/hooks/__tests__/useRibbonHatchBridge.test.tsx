@@ -40,6 +40,24 @@ jest.mock('../../../../core/commands/entity-commands/UpdateEntityCommand', () =>
   })),
 }));
 
+// ADR-510 Φ4 — «Επίπεδο» field deps: LayerStore + current-layer action. Το
+// `useCurrentLayerChange` σέρνει NotificationProvider→i18n (heavy)· mock όπως στο
+// `useRibbonLineToolBridge.test`.
+jest.mock('../../../../stores/LayerStore', () => {
+  // Stable reference — useSyncExternalStore απαιτεί cached snapshot (αλλιώς loop/error).
+  const snapshot = {
+    layers: [{ id: 'lvl-1', name: 'Layer 1' }, { id: 'lyr-2', name: 'Walls' }],
+    currentLayerId: 'lvl-1',
+  };
+  return {
+    getLayerStoreSnapshot: () => snapshot,
+    subscribeLayerStore: () => () => {},
+  };
+});
+jest.mock('../../../components/layer-picker/useCurrentLayerChange', () => ({
+  useCurrentLayerChange: () => ({ changeCurrentLayer: jest.fn() }),
+}));
+
 const solidHatch = {
   id: 'hatch-1', type: 'hatch' as const, layerId: 'lvl-1', visible: true,
   fillType: 'solid' as const, fillColor: '#808080',
@@ -77,6 +95,7 @@ const METHOD_PICK_KEY = HATCH_RIBBON_KEYS.toggles.methodPickPoint;
 const METHOD_BOUNDARY_KEY = HATCH_RIBBON_KEYS.toggles.methodBoundary;
 const TRANSPARENCY_KEY = HATCH_RIBBON_KEYS.params.transparency;
 const SEND_TO_BACK_KEY = HATCH_RIBBON_KEYS.toggles.sendToBack;
+const LAYER_KEY = HATCH_RIBBON_KEYS.stringParams.layer;
 
 beforeEach(() => {
   resetGlobalCommandHistory();
@@ -474,6 +493,43 @@ describe('useRibbonHatchBridge — «Πίσω πλάνο» (ADR-507, drawOrder +
     );
     expect(result.current.getToggleState(SEND_TO_BACK_KEY)).toBe(false);
     act(() => result.current.onToggle(SEND_TO_BACK_KEY, false));
+    expect((UpdateEntityCommand as jest.Mock).mock.calls.length).toBe(0);
+  });
+});
+
+describe('useRibbonHatchBridge — «Επίπεδο» (ADR-510 Φ4, κοινό SSoT με line)', () => {
+  it('getComboboxState: value=entity.layerId, options από το live LayerStore', () => {
+    const { result } = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(solidHatch),
+        universalSelection: makeSelection('hatch-1'),
+      }),
+    );
+    const state = result.current.getComboboxState(LAYER_KEY);
+    expect(state?.value).toBe('lvl-1');
+    expect(state?.options.map((o) => o.value)).toEqual(['lvl-1', 'lyr-2']);
+  });
+
+  it('onComboboxChange σε επιλεγμένο → undoable patch { layerId }', () => {
+    const { result } = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(solidHatch),
+        universalSelection: makeSelection('hatch-1'),
+      }),
+    );
+    act(() => result.current.onComboboxChange(LAYER_KEY, 'lyr-2'));
+    expect((UpdateEntityCommand as jest.Mock).mock.calls[0]?.[1]).toEqual({ layerId: 'lyr-2' });
+  });
+
+  it('χωρίς επιλογή → value=current layer, κανένα UpdateEntityCommand (draw-default)', () => {
+    const { result } = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(null),
+        universalSelection: makeSelection(null),
+      }),
+    );
+    expect(result.current.getComboboxState(LAYER_KEY)?.value).toBe('lvl-1');
+    act(() => result.current.onComboboxChange(LAYER_KEY, 'lyr-2'));
     expect((UpdateEntityCommand as jest.Mock).mock.calls.length).toBe(0);
   });
 });
