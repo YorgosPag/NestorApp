@@ -16,6 +16,11 @@
  * outside this file + registry + tests + DXF I/O bridge.
  */
 
+// ADR-642 §6.2 — superset: ένας τύπος γραμμής μπορεί να κουβαλά και πλήρη complex
+// ορισμό (text/symbols/caps/width/compound). Type-only import → κανένας runtime
+// κύκλος (τα complex types δεν κάνουν runtime import από εδώ).
+import type { ComplexLinetypeDef } from './complex-linetype-types';
+
 /** A linetype definition — ISO baseline or runtime-registered. */
 export interface LinetypeDef {
   /** Stable id for runtime-registered linetypes (`ltp_<ULID>`). ISO baseline omits. */
@@ -30,6 +35,13 @@ export interface LinetypeDef {
   readonly origin: LinetypeOrigin;
   /** Source `.lin` filename when `origin === 'lin-import'`. */
   readonly sourceFile?: string;
+  /**
+   * ADR-642 §6.2 — προαιρετικός πλήρης complex ορισμός (superset). Παρών ΜΟΝΟ για
+   * τύπους που δεν εκφράζονται ως simple `pattern` (embedded text/symbols/compound/
+   * caps/variable-width). Simple τύποι το αφήνουν `undefined` και κρατούν το `pattern`
+   * ως SSoT (zero migration). Ο renderer/DXF-writer προτιμά το `complex` όταν υπάρχει.
+   */
+  readonly complex?: ComplexLinetypeDef;
 }
 
 export type LinetypeOrigin =

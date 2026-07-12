@@ -258,7 +258,11 @@ describe('writeDxfAscii — native HATCH (ADR-507 Φ1a)', () => {
   it('solid → HATCH με 2/SOLID, 70/1, 91/1, 93/4 + κορυφές', () => {
     const dxf = writeDxfAscii([solidHatch()], { layersById: LAYERS });
     expect(dxf).toContain('0\nHATCH\n');
+    // ADR-507 — `AcDbEntity` subclass marker ΠΡΙΝ το `AcDbHatch` (χωρίς αυτό ο AutoCAD/ezdxf
+    // R2018 parser κρασάρει στο HATCH → μαύρη οθόνη). Ελέγχει και τη σειρά των markers.
+    expect(dxf).toContain('100\nAcDbEntity\n');
     expect(dxf).toContain('100\nAcDbHatch\n');
+    expect(dxf.indexOf('100\nAcDbEntity\n')).toBeLessThan(dxf.indexOf('100\nAcDbHatch\n'));
     expect(dxf).toContain('2\nSOLID\n');
     expect(dxf).toMatch(/\n70\n1\n/);
     expect(dxf).toMatch(/\n91\n1\n/);

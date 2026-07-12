@@ -11,6 +11,8 @@ import { polarTrackingStore } from '../../systems/constraints/polar-tracking-sto
 import { applyAlongAxisStepSnap } from '../../bim/grips/grip-step-quantize';
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { TrackingPointStore } from '../../systems/tracking/TrackingPointStore';
+import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
 // ADR-508 §line-cyan / ADR-060 — commit-time «line family» flush + κάθετο κλείδωμα (κοινός εγκέφαλος με το preview).
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { applyLengthAngleLock } from '../../systems/dynamic-input/length-angle-lock';
@@ -194,6 +196,49 @@ export function performDoubleClickFinish(
     ops.onEntityCreated(newEntity as Entity);
   }
   handleToolCompletion(activeTool);
+}
+
+/** Tools that auto-close when the click lands near their first point (ADR-047). */
+const AUTO_CLOSE_TOOLS = new Set<string>(['measure-area', 'polygon', 'hatch']);
+
+/**
+ * ADR-047 — close-on-first-point click for polygon-based tools (polygon / measure-area / hatch).
+ * When ≥3 points exist and the RAW click lands within `CLOSE_DETECTION` (scaled to world) of the
+ * first point, finish the polyline (unless an overlay completion handled it), run tool completion,
+ * clear the preview + tracking memory, and return `true` so the caller returns early. Returns
+ * `false` when no close happened (normal point flow continues). Extracted from
+ * `useDrawingHandlers.onDrawingPoint` (SSoT, keeps the hook under the N.7.1 file-size budget).
+ */
+export function tryAutoClosePolygon(
+  rawPoint: Pt,
+  ops: {
+    activeTool: ToolType;
+    tempPoints: ReadonlyArray<Pt>;
+    scale: number;
+    finishPolyline: () => object | null | undefined;
+    onEntityCreated: (entity: Entity) => void;
+    clearPreview: () => void;
+  },
+): boolean {
+  const firstPoint = ops.tempPoints[0];
+  if (!AUTO_CLOSE_TOOLS.has(ops.activeTool) || ops.tempPoints.length < 3 || !firstPoint) return false;
+
+  // CRITICAL: distance uses the RAW point (pre-snap) — matches AutoCAD/BricsCAD close pattern.
+  const distance = calculateDistance(rawPoint, firstPoint);
+  if (distance >= POLYGON_TOLERANCES.CLOSE_DETECTION / ops.scale) return false;
+
+  // Overlay completion first (same order as onDrawingDoubleClick).
+  const { toolStyleStore } = require('../../stores/ToolStyleStore');
+  if (!toolStyleStore.triggerOverlayCompletion()) {
+    const newEntity = ops.finishPolyline();
+    if (newEntity && 'type' in newEntity && typeof newEntity.type === 'string') {
+      ops.onEntityCreated(newEntity as Entity);
+    }
+  }
+  handleToolCompletion(ops.activeTool);
+  ops.clearPreview();
+  TrackingPointStore.clearAll();
+  return true;
 }
 
 /**

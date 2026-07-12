@@ -1,6 +1,6 @@
 # ADR-642 — Complex Linetypes: embedded text, symbols, width, caps/joins & compound strokes
 
-- **Status:** 🔵 PROPOSED (research + design; no code yet — Φ1 pending Giorgio scope approval)
+- **Status:** 🟢 ACCEPTED — **Φ1 (stroke geometry) IMPLEMENTED** (2026-07-12). Φ2–Φ5 pending. Scope §9 εγκρίθηκε (Q1/Q2/Q4· Q3 symbols → Φ3).
 - **Date:** 2026-07-12
 - **Domain:** DXF Viewer · Linetype subsystem · Canvas render pipeline · Pattern editor UI · DXF/`.lin` I/O · Persistence
 - **Related:** ADR-358 (Linetype ISO catalog + `LinetypeRegistry` SSoT), ADR-362 (Path B: user-authored reusable line patterns — the segment editor), ADR-357 §5.5 (canonical mm units), ADR-510 Φ2E #4 (copy-on-write inline pattern edit), ADR-040 (micro-leaf render discipline / bitmap cache keys)
@@ -220,7 +220,7 @@ export interface ComplexLinetypeDef {
 
 | Φάση | Περιεχόμενο | Μηχανισμοί | Ρίσκο |
 |---|---|---|---|
-| **Φ1** | Μοντέλο (`ComplexLinetypeDef`) + adapters + registry superset + **stroke geometry** (caps/join/corner/width/phase/scale-space) στον stroker· fast-path guard | #5 #6 #7 #8 #10 #11 | Μεσαίο (render path) |
+| **Φ1** ✅ | Μοντέλο (`ComplexLinetypeDef`) + adapters + registry superset + **stroke geometry** (caps/join/corner/width/phase/scale-space) στον stroker· fast-path guard | #5 #6 #7 #8 #10 #11 | Μεσαίο (render path) — **DONE** |
 | **Φ2** | **Embedded text** (#2) end-to-end: model → stroker → editor row → live preview → DXF I/O | #2 | Μεσαίο |
 | **Φ3** | **Symbol Library** (§6.3, builtin seed) + **symbol elements** + **ρόλοι** side/start/end (#3, μέρος #4) | #3, #4α | Μεσαίο |
 | **Φ4** | **Corner-role symbols** (inner/outer corner) + align-dash corner policy (υπόλοιπο #4/#7) | #4β #7 | Υψηλό (corner math) |
@@ -239,16 +239,38 @@ export interface ComplexLinetypeDef {
 - **Anti-duplication (N.18)**: πριν «done» σε κάθε φάση → `npm run jscpd:diff` στα staged αρχεία (ο
   stroker & τα adapters είναι υψηλού κινδύνου για sibling clones του dash math).
 
-## 9. Open questions (για Giorgio)
+## 9. Open questions — αποφάσεις Giorgio (2026-07-12)
 
-1. **Scope**: επιβεβαίωση ότι κόβουμε #Art-brush, #Raster, `.shx` import (χαμηλή αξία/υψηλό κόστος).
-2. **#11 scale-space default**: model-space (σαν AutoCAD) ή paper-space (σαν Revit) ως προεπιλογή;
-3. **Symbol seed**: ποια ακριβώς σύμβολα θέλει στο builtin (τοπογραφικά: `×`, `*`, φράχτες, utilities
-   GAS/W/ΔΕΗ/ΟΤΕ, βέλη, batting, tree-line);
-4. **Προτεραιότητα φάσεων**: ξεκινάμε Φ1 (geometry) ή Φ2 (text — πιο ορατό «wow» στα τοπογραφικά);
+1. **Scope**: ✅ **Κόβουμε** Art-brush stretch, Raster line styles, `.shx` shape import (χαμηλή αξία/υψηλό
+   κόστος). Ανοίγουν ως μελλοντική φάση μόνο αν προκύψει interop-ανάγκη (π.χ. πελάτης στέλνει `.shx`).
+2. **#11 scale-space default**: ✅ **`model`** (AutoCAD-faithful + ίδια σημερινή συμπεριφορά → μηδέν
+   regression). Το **`paper`** (Revit-mode) υλοποιείται ΚΑΙ αυτό, ανά τύπο, ως opt-in — «full enterprise»
+   που καλύπτει όλους τους μεγάλους παίκτες χωρίς να χαλάει κανέναν (Giorgio: «όπως το κάνουν οι μεγάλοι»).
+3. **Symbol seed**: ⏳ ΑΝΟΙΧΤΟ — θα ρωτηθεί στην έναρξη της **Φ3** (Symbol Library), όπου και χρησιμοποιείται.
+4. **Προτεραιότητα φάσεων**: ✅ **Φ1 πρώτα** (geometry θεμέλιο· το text της Φ2 πατά πάνω του).
 
 ## 10. Changelog
 
-- **2026-07-12** — ADR δημιουργήθηκε. Research sweep (11 μηχανισμοί), current-state ανάλυση
+- **2026-07-12 (Φ1 IMPLEMENTED)** — Scope §9 εγκρίθηκε (Q1: κόβουμε Art-brush/Raster/`.shx`· Q2:
+  scale-space default `model` + `paper` opt-in· Q4: Φ1 πρώτα). Υλοποιήθηκε το **stroke-geometry θεμέλιο**:
+  - `config/complex-linetype-types.ts` — πλήρες μοντέλο `ComplexLinetypeDef` / `PatternElement` (types-only).
+  - `config/complex-linetype-adapters.ts` — pure `patternToComplex` / `complexToPattern` /
+    `isSimpleExpressible` / `dashPatternToElements` / `effectiveScaleSpace` (backward-compat bridge, §6.2).
+  - `rendering/linetype/complex-stroke-geometry.ts` — pure arc-length primitives (segments, cumulative
+    length, `pointAt`, `sampleSubpath` με bend σε κορυφές, `offsetPolyline` για compound).
+  - `rendering/linetype/complex-dash-draw.ts` — canvas primitives: `tracePolylinePath` (SSoT path trace),
+    `strokeDashSubpath` (caps + width), `drawDot`, `fillTaperedDash` (variable width #8).
+  - `rendering/linetype/ComplexLineStroker.ts` — `strokeStyledPolyline`: **fast-path guard** (simple →
+    reuse `dashMmToScreenPx`, μηδέν regression) + **complex arc-length walk** (caps #5, join #6, corner
+    break/bypass #7, width #8, phase #10, scale-space model/paper #11, compound layers #9). Text/symbol
+    elements ορίζονται αλλά προσπερνώνται (Φ2/Φ3).
+  - `config/linetype-iso-catalog.ts` — `LinetypeDef.complex?` προαιρετικό (registry superset, §8· type-only
+    import, μηδέν runtime κύκλος, μηδέν migration).
+  - Tests (jest, N.17): 33 πράσινα σε 3 suites (adapters round-trip + fast-path guard· geometry· stroker
+    fast/complex/phase/break/compound/taper/degenerate-fallback). jscpd (N.18): καθαρό (0 new clones μετά
+    την εξαγωγή του `tracePolylinePath`).
+  - **On-touch migration (§8)**: τα 145 σημερινά `setLineDash` call-sites ΔΕΝ αγγίχτηκαν — το
+    `strokeStyledPolyline()` seam υιοθετείται σταδιακά (Boy-Scout) καθώς complex τύποι εμφανίζονται (Φ2+).
+- **2026-07-12 (created)** — ADR δημιουργήθηκε. Research sweep (11 μηχανισμοί), current-state ανάλυση
   (simple-only μέσω `setLineDash`), ενοποιημένο μοντέλο `ComplexLinetypeDef`, custom-stroker απόφαση,
   5-φασικό roadmap. Status: PROPOSED — αναμονή scope-approval (§9) πριν Φ1.

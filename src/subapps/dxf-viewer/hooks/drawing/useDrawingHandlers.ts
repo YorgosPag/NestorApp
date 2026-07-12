@@ -21,9 +21,15 @@
 // DEBUG FLAG - 🔍 ENABLE FOR TRACING PREVIEW ISSUES
 const DEBUG_DRAWING_HANDLERS = false; // 🔧 DISABLED (2026-02-02) - performance investigation
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { ToolType } from '../../ui/toolbar/types';
 import { useCadToggles } from '../common/useCadToggles';
+// ADR-641 — Block Editor (BEDIT) scene scope: while a block is entered, ALL snap / entity-detection /
+// unit resolution in the drawing + dimension tools must read the block-LOCAL (effective) scene, not the
+// world one — otherwise they snap/pick against world geometry the editor isn't showing (collapsed
+// def-points → «zero» dimensions, def-points in the wrong frame → placed far from the block on exit).
+import { useActiveBlockEditId } from '../../systems/block/useActiveBlockEdit';
+import { resolveBlockEditScene } from '../../systems/block/block-edit-scene';
 // 🏢 ENTERPRISE (2026-01-30): Centralized tool metadata for continuous mode
 // 🏢 ENTERPRISE (2026-01-30): Centralized Tool State Store - ADR Tool Persistence
 import type { Entity } from '../../types/entities';
@@ -40,16 +46,12 @@ import { useCanvasOperations } from '../interfaces/useCanvasOperations';
 import { useRulersGridContext } from '../../systems/rulers-grid/RulersGridSystem';
 // 🏢 ADR-040: PreviewCanvas for direct preview rendering (performance optimization)
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
-// 🎯 ADR-047: Distance calculation for close-on-first-point
-import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 // ADR-357 Phase 4: Object Snap Tracking
 import {
   TrackingPointStore,
   subscribeTrackingPoints,
   getTrackingPointsSnapshot,
 } from '../../systems/tracking/TrackingPointStore';
-// 🏢 ADR-099: Centralized Polygon Tolerances
-import { POLYGON_TOLERANCES } from '../../config/tolerance-config';
 // 🏢 ADR-362 Phase D1: Dim tool routing layer (Smart DIM + 4 manual overrides)
 import { useDimToolRouting } from '../dimensions/useDimToolRouting';
 // ADR-563 Φ4-Α: interactive cut-line dimension tool (dialog + 3-click + ghost-chain preview).
@@ -63,7 +65,7 @@ import { useCenterMarkCreate } from '../dimensions/useCenterMarkCreate';
 // ADR-357 Phase 7: Snap Override orchestrator (single-use snap modifiers)
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
 import { ExtendedSnapType } from '../../snapping/extended-types';
-import { handleToolCompletion, resolveOrthoPolarStep, MEASURE_TOOLS_FOR_GUIDES, resolveDimCommitPoint, performDoubleClickFinish, commitM2PClick, resolveCommittedDrawingPoint } from './drawing-handler-utils';
+import { handleToolCompletion, resolveOrthoPolarStep, MEASURE_TOOLS_FOR_GUIDES, resolveDimCommitPoint, performDoubleClickFinish, commitM2PClick, resolveCommittedDrawingPoint, tryAutoClosePolygon } from './drawing-handler-utils';
 import { ambientAlignmentConfigStore } from '../../systems/tracking/ambient-alignment-config-store';
 import { processDrawingHover } from './drawing-hover-handler';
 // ADR-624 — single-click placement tools own the PreviewCanvas via their dedicated ghost;
@@ -85,12 +87,24 @@ export function useDrawingHandlers(
   // Canvas operations hook
   const canvasOps = useCanvasOperations();
 
+  // ADR-641 — the scene the drawing/dim tools should snap/detect against: the raw world scene, or —
+  // while a Block Editor session is open — that block's block-LOCAL synthetic scene (`resolveBlockEditScene`
+  // returns the SAME `currentScene` ref at the top level, so behaviour outside BEDIT is unchanged). This
+  // is the SAME scope resolver the canvas render / hit-test / main snap engine already use (ADR-641 Φ2/Φ4).
+  const activeBlockEditId = useActiveBlockEditId();
+  // `?? undefined` keeps the same `SceneModel | undefined` shape as `currentScene`, so every read below
+  // is a drop-in replacement. Outside BEDIT this IS `currentScene` (same ref → no extra snap re-inits).
+  const effectiveScene = useMemo(
+    () => resolveBlockEditScene(currentScene ?? null, activeBlockEditId) ?? undefined,
+    [currentScene, activeBlockEditId],
+  );
+
   // 🏢 ADR-362 Phase D1: dim creation flow (Smart DIM + 4 manual overrides)
   const dimRouting = useDimToolRouting({ activeTool, onEntityCreated, previewCanvasRef, onToolChange });
   // ADR-362 Phase L2: center mark + centerline tools
   const centerMarkCreate = useCenterMarkCreate({ activeTool, onEntityCreated, previewCanvasRef });
   // ADR-563 Φ4-Α: interactive cut-line dimension tool — lifecycle + live ghost-chain preview.
-  useAutoDimCutlineTool({ activeTool, previewCanvasRef, getScene: () => currentScene, onToolChange });
+  useAutoDimCutlineTool({ activeTool, previewCanvasRef, getScene: () => effectiveScene, onToolChange });
 
   // ADR-508 §line-cyan — η ΓΡΑΜΜΗ χρειάζεται τους ΙΔΙΟΥΣ face-snap στόχους με τον τοίχο για το flush
   // κούμπωμα + κυανές. Τα BIM tools (wall/beam/...) γεμίζουν το κοινό `sceneSnapTargetsStore` μέσω
@@ -98,7 +112,7 @@ export function useDrawingHandlers(
   // γραμμή → καμία παρειά → καμία κυανή. Mount-άρουμε τον ΙΔΙΟ sync εδώ (μία πηγή) + refresh on
   // line-activate (στόχοι έτοιμοι πριν το 1ο ghost). Ο εσωτερικός `drawing:entity-created` listener
   // κρατά τους στόχους φρέσκους μετά.
-  const refreshSnapTargets = useSceneSnapTargetSync(() => currentScene?.entities ?? []);
+  const refreshSnapTargets = useSceneSnapTargetSync(() => effectiveScene?.entities ?? []);
   // refresh on line-activate ΚΑΙ όταν αλλάζει το πλήθος οντοτήτων (νέα γραμμή committed στο ίδιο session —
   // το γενικό `completeEntity` δεν εκπέμπει `drawing:entity-created`, οπότε δεν αρκεί ο εσωτερικός listener).
   // ADR-060 — η «κάθετη γραμμή» χρειάζεται ΤΟΥΣ ΙΔΙΟΥΣ face-snap στόχους με τη γραμμή· αλλιώς άδειο cache
@@ -111,7 +125,7 @@ export function useDrawingHandlers(
   const isLineFamilyTool =
     activeTool === 'line' || activeTool === 'line-perpendicular' || activeTool === 'polyline' ||
     activeTool === 'text' || activeTool === 'mtext';
-  const lineSceneEntityCount = isLineFamilyTool ? (currentScene?.entities.length ?? 0) : -1;
+  const lineSceneEntityCount = isLineFamilyTool ? (effectiveScene?.entities.length ?? 0) : -1;
   useEffect(() => {
     if (isLineFamilyTool) refreshSnapTargets();
   }, [isLineFamilyTool, lineSceneEntityCount, refreshSnapTargets]);
@@ -155,7 +169,7 @@ export function useDrawingHandlers(
   // 🏢 FIX (2026-02-20): Pass current zoom scale for correct pixel→world tolerance conversion
   const currentTransform = canvasOps.getTransform();
   const { snapManager, findSnapPoint } = useSnapManager(canvasRef, {
-    scene: currentScene,
+    scene: effectiveScene,
     gridStep, // 🔲 GRID SNAP: Pass grid step for grid snapping
     scale: currentTransform.scale,
     onSnapPoint: () => {},
@@ -215,7 +229,7 @@ export function useDrawingHandlers(
       const { alignedSnapped, hoveredEntity, snapMode, secondEntity } = resolveDimCommitPoint(p, {
         applySnap,
         findSnapPoint,
-        sceneEntities: currentScene?.entities,
+        sceneEntities: effectiveScene?.entities,
         scale: canvasOps.getTransform().scale,
         polarEnabled: polarOnRef.current && !orthoOnRef.current,
         ambientEnabled: ambientAlignmentConfigStore.getSnapshot().enabled,
@@ -241,39 +255,17 @@ export function useDrawingHandlers(
       });
     }
 
-    // 🎯 ADR-047: CLOSE POLYGON ON FIRST-POINT CLICK (AutoCAD/BricsCAD pattern)
-    // CRITICAL: Check distance BEFORE snap, using RAW point!
-    // 🏢 ENTERPRISE: Unified close detection for ALL polygon-based tools (polygon, measure-area, overlays)
-    const isClosableTool = activeTool === 'measure-area' || activeTool === 'polygon' || activeTool === 'hatch';
-    const hasMinPoints = drawingState.tempPoints.length >= 3; // Need at least 3 points to close
-
-    if (isClosableTool && hasMinPoints && drawingState.tempPoints[0]) {
-      const firstPoint = drawingState.tempPoints[0];
-      const distance = calculateDistance(p, firstPoint); // ✅ Use RAW point, NOT snapped!
-
-      if (distance < POLYGON_TOLERANCES.CLOSE_DETECTION / canvasOps.getTransform().scale) {
-        // 🎯 AUTO-CLOSE: User clicked near first point - close the polygon!
-        // Ίδιο pattern με onDrawingDoubleClick — overlay completion first
-        const { toolStyleStore } = require('../../stores/ToolStyleStore');
-        const isOverlayCompletion = toolStyleStore.triggerOverlayCompletion();
-
-        if (!isOverlayCompletion) {
-          const newEntity = finishPolyline();
-          if (newEntity && 'type' in newEntity && typeof newEntity.type === 'string') {
-            onEntityCreated(newEntity as Entity);
-          }
-        }
-        // 🏢 ENTERPRISE: Use centralized tool completion logic via ToolStateStore
-        handleToolCompletion(activeTool);
-
-        // Clear preview canvas
-        if (previewCanvasRef?.current) {
-          previewCanvasRef.current.clear();
-        }
-        // ADR-357 Phase 4: polygon auto-close also decays acquired points.
-        TrackingPointStore.clearAll();
-        return;
-      }
+    // 🎯 ADR-047: CLOSE POLYGON ON FIRST-POINT CLICK (AutoCAD/BricsCAD pattern) — SSoT helper in
+    // drawing-handler-utils (distance uses the RAW point, pre-snap; returns true when it closed).
+    if (tryAutoClosePolygon(p, {
+      activeTool,
+      tempPoints: drawingState.tempPoints,
+      scale: canvasOps.getTransform().scale,
+      finishPolyline,
+      onEntityCreated,
+      clearPreview: () => previewCanvasRef?.current?.clear(),
+    })) {
+      return;
     }
 
     // Normal point addition (not closing)
@@ -351,11 +343,11 @@ export function useDrawingHandlers(
       scale: canvasOps.getTransform().scale,
       polar: polarOnRef.current,
       ortho: orthoOnRef.current,
-      sceneEntities: currentScene?.entities,
+      sceneEntities: effectiveScene?.entities,
       segmentBase: lastRef,
       activeTool,
       tempPointsLength: drawingState.tempPoints.length,
-      sceneUnits: resolveSceneUnits(currentScene),
+      sceneUnits: resolveSceneUnits(effectiveScene),
     });
 
     const transformUtils = canvasOps.getTransformUtils();
@@ -426,13 +418,13 @@ export function useDrawingHandlers(
       getLatestPreviewEntity,
       // ADR-362 hotfix: entity resolver — snap entityId → DetectableEntity
       resolveEntity: (id) =>
-        currentScene?.entities.find((e) => e.id === id) as DetectableEntity | undefined,
+        effectiveScene?.entities.find((e) => e.id === id) as DetectableEntity | undefined,
       // ADR-357 ambient alignment: event-time scene reads (closed-over prop, no
       // React subscription in the hover hot path — ADR-040 safe).
-      getSceneEntities: () => currentScene?.entities ?? [],
-      getSceneUnitsScale: () => mmToSceneUnits(resolveSceneUnits(currentScene)),
+      getSceneEntities: () => effectiveScene?.entities ?? [],
+      getSceneUnitsScale: () => mmToSceneUnits(resolveSceneUnits(effectiveScene)),
     });
-  }, [activeTool, dimRouting, centerMarkCreate, drawingState.tempPoints, applySnap, canvasOps, previewCanvasRef, updatePreview, getLatestPreviewEntity, currentScene]);
+  }, [activeTool, dimRouting, centerMarkCreate, drawingState.tempPoints, applySnap, canvasOps, previewCanvasRef, updatePreview, getLatestPreviewEntity, effectiveScene]);
   
   const onDrawingCancel = useCallback(() => {
     // 🏢 ADR-362 Phase D1: cancel dim flow if active (does not stop tool deselect).

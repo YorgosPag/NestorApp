@@ -70,6 +70,11 @@ export function emitHatch(
 
   // Native HATCH (AutoCAD R2000+ minimal, polyline boundaries).
   pair(0, 'HATCH');
+  // ADR-507 — υποχρεωτικό `AcDbEntity` subclass marker ΠΡΙΝ τα common codes (8/62/440) και πριν
+  // το `AcDbHatch`. Χωρίς αυτό, ο R2018 (AC1032) DXF parser του AutoCAD/ezdxf ΚΡΑΣΑΡΕΙ στο HATCH
+  // (μεταβλητή δομή → βασίζεται στα subclass markers) → «invalid or incomplete DXF input, drawing
+  // discarded» → μαύρη οθόνη. Ίδιο pattern με DIMENSION/MLINE writers (0→AcDbEntity→8→AcDb<Class>).
+  pair(100, 'AcDbEntity');
   pair(8, layer);
   pair(62, aci);
   // ADR-507 — διαφάνεια (0=αδιαφανές → κανένας κωδικός). Common AcDbEntity code, μετά το 62.

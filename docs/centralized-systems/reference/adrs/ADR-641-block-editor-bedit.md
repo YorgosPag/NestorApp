@@ -136,6 +136,27 @@ SSoT (no parallel scene subscription left reading the world). Full feature PARTI
   synchronous read-after-write guarantee.
 
 ## Changelog
+- **2026-07-12** — **Φ4 follow-up: drawing/dimension tools' OWN snap + entity-detection now block-edit-aware.**
+  Symptom (Giorgio, browser): placing a **dimension** on a member inside BEDIT gave a **zero-length**
+  dimension, and on exit it sat **far from the block** («η κλίμακα δεν είναι σωστή»). **Root cause
+  (traced):** `useDrawingHandlers` (feeds every drawing + dim tool) runs its OWN `useSnapManager` +
+  scene-snap-targets + dim entity-by-id resolver + unit resolution off the **world** `currentScene` —
+  a separate path from the main snap engine already fixed to the effective scene (`SnapSceneSyncLeaf`).
+  Inside BEDIT the block members aren't top-level world entities, so: the dim «select object» resolver
+  (`currentScene.entities.find(id)`) missed the member → collapsed def-points → measurement
+  `distance(defPoints[0],defPoints[1]) = 0` (`linear-aligned-builder`); snap grabbed distant world
+  geometry → def-points in the wrong frame → placed far once the block instance re-applies its
+  placement on exit. (The dimension DID commit as a block member — Giorgio saw it in the editor, which
+  renders only `block.entities` — so the commit path was already correct; only the coordinate/entity
+  CAPTURE was world-scoped.) **Fix (1 file, mirrors Φ2/Φ4):** `useDrawingHandlers` derives
+  `effectiveScene = resolveBlockEditScene(currentScene, useActiveBlockEditId()) ?? undefined` (a drop-in
+  `SceneModel | undefined`, IDENTICAL ref to `currentScene` at the top level → zero behaviour change
+  outside BEDIT) and every snap / target / entity-resolver / scene-units read now uses it (10 sites:
+  snap manager, `useSceneSnapTargetSync`, `resolveDimCommitPoint`, `resolveCommittedDrawingPoint`,
+  `useAutoDimCutlineTool`, the by-id `DetectableEntity` resolver, `getSceneEntities`,
+  `getSceneUnitsScale`). Bonus: ALL drawing tools (line/text/…) now snap to the block members in BEDIT.
+  `useActiveBlockEditId` is low-freq (one transition per enter/exit) → one re-render per gesture,
+  ADR-040-acceptable. New test `block-drawing-snap-scope.test.ts` (4 green); jscpd:diff clean.
 - **2026-07-12** — **Φ4 follow-up: ALL fit / zoom-extents paths are now block-edit-aware (single
   chokepoint).** Symptom (Giorgio, browser): inside BEDIT, HOME/Shift+1 made the block vanish, «F»
   fit-to-selection did nothing, wheel-zoom made the block vanish, and the enter-fit framed
