@@ -625,6 +625,7 @@
 | **ADR-640** | Block subsystem — DXF INSERT as a first-class, round-trippable Block instance | 🟢 IMPLEMENTED (M1) | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-640-block-instance-subsystem.md) |
 | **ADR-641** | Block Editor (AutoCAD BEDIT) — exclusive block-local editing + sync-all-instances | 🟡 IN PROGRESS (Φ1) | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-641-block-editor-bedit.md) |
 | **ADR-642** | Complex Linetypes — embedded text/symbols, caps/joins, width, compound strokes | 🔵 PROPOSED | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-642-complex-linetypes-symbols.md) |
+| **ADR-643** | Hatch Image Fill — «ζωντανά» υλικά (φωτο πλακιδίου) ως `fillType:'image'` πάνω στο ADR-507 (μοντέλο ArchiCAD) | 🟢 SPEC COMPLETE | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-643-hatch-image-fill.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
