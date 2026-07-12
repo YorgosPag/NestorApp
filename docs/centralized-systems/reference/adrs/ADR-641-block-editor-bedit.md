@@ -117,9 +117,10 @@ one phase per session (≤70% context).
 Google-level (pure `resolveBlockEditScene` + `block-member-scene-access` SSoTs reused by every scene /
 command consumer, ADR-040-safe leaf-only subscriptions, coordinate-frame-correct in-place edits, one
 global CommandHistory, fully unit-tested, zero duplication — CHECK 3.28 clean incl. de-dup of legacy
-adapter twins). Full feature PARTIAL until Φ5 (commit/sync) lands AND the two exclusive-scope gaps that
-browser end-to-end surfaced (viewport re-fit on enter + snap/hover scoped to the block-local scene) are
-closed. Tracked in changelog.
+adapter twins). The exclusive-scope now holds end-to-end: render + hit-test + hover + SNAP + viewport
+fit all scope to the block-local scene through the SAME `useEffectiveLevelScene`/`resolveBlockEditScene`
+SSoT (no parallel scene subscription left reading the world). Full feature PARTIAL only until Φ5
+(commit/sync write-back) lands. Tracked in changelog.
 
 ## 7. Risks (from design fan-out)
 - **ADR-040 micro-leaf**: the scene-swap subscription (Φ2) and status leaf (Φ3) must stay leaf-only
@@ -154,10 +155,19 @@ closed. Tracked in changelog.
   `useSceneManagerAdapter.ts` is UNCHANGED — the generic adapter self-reads the store, so no signature
   threading was needed. New tests: `block-member-scene-access.test.ts` (18) + `level-scene-vertex-ops.test.ts`
   (10) + `grip-adapter-block-member-writeback.test.ts` (6) + `entity-zorder-ops.test.ts` (5); all green,
-  jscpd:diff clean. **Known gaps → Φ4-follow-up:** z-order reorder inside BEDIT is top-level-only (a member
-  id no-ops, graceful); browser end-to-end surfaced two exclusive-scope completeness issues (viewport does
-  not re-fit to the block-local scene on enter → members off-screen; snap/hover still read the WORLD scene
-  → out-of-block attraction) — tracked separately.
+  jscpd:diff clean.
+  **Same-session exclusive-scope fixes (browser end-to-end, Giorgio):** (1) **Snap scope** —
+  `SnapSceneSyncLeaf` fed the snap engine off `useLevelScene` (WORLD), so inside BEDIT the cursor was
+  attracted to every entity of the whole drawing; switched to `useEffectiveLevelScene` (the SAME source
+  the paint leaf + hit-test already use), so the engine indexes only the block-local members. (2)
+  **Viewport fit** — entering a block swapped the canvas to block-local space (members @ origin) but the
+  world transform left them off-screen (blank canvas); folded a BEDIT enter/exit fit into the ONE
+  auto-fit controller `useViewportAutoFit` (ADR-399): on the `useActiveBlockEditId()` transition it
+  `zoomToFit`s the block-local bounds (`resolveBlockEditScene(...).bounds`, no re-implemented math) via a
+  new shared `commitZoomToFit` helper, saving/restoring the pre-enter view on exit (AutoCAD parity); the
+  scene-load policy effect is untouched (deps don't change on enter/exit). Hover/hit-test needed no change
+  (already read the effective scene via `DxfCanvasSubscriber`). **Remaining Φ4-follow-up:** z-order reorder
+  inside BEDIT is top-level-only (a member id no-ops, graceful).
 - **2026-07-12** — **Φ3 Enter/exit UX implemented.** Double-click a selected block in
   `useCanvasSectionUI` (`collectBlockEntities.get(id)`) enters its editor, gated on
   `getActiveGroupId()===null`; the existing group-enter path now gated on `!isBlockEditActive()`
