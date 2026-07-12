@@ -15,7 +15,7 @@
  */
 
 import React from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, AlignVerticalJustifyCenter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -29,6 +29,7 @@ import {
   type LinePatternLayer,
   type LinePatternSegment,
   defaultCompoundLayer,
+  centerOffsetForLayer,
 } from '../../../config/line-pattern-segments';
 import { listCompoundPresets } from '../../../config/linetype-compound-presets';
 import {
@@ -50,6 +51,7 @@ export interface LinePatternLayersLabels {
   readonly offset: string;
   readonly addLayer: string;
   readonly removeLayer: string;
+  readonly centerLayer: string;
   readonly layerName: (index: number) => string;
   readonly presetsLabel: string;
   readonly presetName: (id: string) => string;
@@ -69,6 +71,7 @@ export function buildLinePatternLayersLabels(
     offset: e('compound.offset'),
     addLayer: e('compound.addLayer'),
     removeLayer: e('compound.removeLayer'),
+    centerLayer: e('compound.centerLayer'),
     layerName: (i) => `${e('compound.layer')} ${i + 1}`,
     presetsLabel: e('compound.presets'),
     presetName: (id) => e(`compound.presetNames.${id}`),
@@ -119,7 +122,9 @@ export function LinePatternLayersEditor({
             layer={layer}
             labels={labels}
             canRemove={layers.length > 1}
+            canCenter={layers.length > 1}
             onOffset={(v) => patchLayer(i, { offsetMm: v })}
+            onCenter={() => patchLayer(i, { offsetMm: centerOffsetForLayer(layers, i) })}
             onSegments={(segments) => patchLayer(i, { segments })}
             onRemove={() => removeLayer(i)}
           />
@@ -170,15 +175,17 @@ function PresetBar({
   );
 }
 
-/** One compound layer: header (name + offset field + remove) + the nested single-layer editor. */
+/** One compound layer: header (name + offset field + centre + remove) + the nested single-layer editor. */
 function LayerCard({
-  index, layer, labels, canRemove, onOffset, onSegments, onRemove,
+  index, layer, labels, canRemove, canCenter, onOffset, onCenter, onSegments, onRemove,
 }: {
   index: number;
   layer: LinePatternLayer;
   labels: LinePatternLayersLabels;
   canRemove: boolean;
+  canCenter: boolean;
   onOffset: (v: number) => void;
+  onCenter: () => void;
   onSegments: (segments: LinePatternSegment[]) => void;
   onRemove: () => void;
 }) {
@@ -192,6 +199,16 @@ function LayerCard({
           variant="ghost"
           size="icon"
           className="h-7 w-7 ml-auto"
+          onClick={onCenter}
+          disabled={!canCenter}
+          aria-label={labels.centerLayer}
+        >
+          <AlignVerticalJustifyCenter className={iconSizes.sm} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
           onClick={onRemove}
           disabled={!canRemove}
           aria-label={labels.removeLayer}

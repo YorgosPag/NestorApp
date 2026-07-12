@@ -91,3 +91,43 @@ describe('useScaleTool — interactive click (ADR-646 Phase 1)', () => {
     expect(ScaleToolStore.getState().phase).toBe('idle');
   });
 });
+
+describe('useScaleTool — parametric BIM skip-with-message (ADR-646 #3)', () => {
+  beforeEach(() => ScaleToolStore.reset());
+
+  function withScene(entities: Array<{ id: string; type: string }>, ids: string[]) {
+    return defaultProps({
+      selectedEntityIds: ids,
+      levelManager: {
+        currentLevelId: 'l1',
+        getLevelScene: jest.fn(() => ({ entities, layersById: {} })),
+        setLevelScene: jest.fn(),
+      },
+    } as Partial<Parameters<typeof useScaleTool>[0]>);
+  }
+
+  function armDirectDrag(ids: string[]) {
+    ScaleToolStore.setSelectedEntityIds(ids);
+    ScaleToolStore.setBasePoint({ x: 0, y: 0 });
+    ScaleToolStore.setDragRefPoint({ x: 10, y: 0 });
+    ScaleToolStore.setPhase('scale_input', 'direct');
+  }
+
+  it('scales the CAD entity but skips the parametric BIM one', () => {
+    const props = withScene([{ id: 'ln', type: 'line' }, { id: 'wl', type: 'wall' }], ['ln', 'wl']);
+    const { result } = renderHook(() => useScaleTool(props));
+    act(() => armDirectDrag(['ln', 'wl']));
+    act(() => result.current.handleScaleClick({ x: 20, y: 0 }));
+    expect(props.executeCommand).toHaveBeenCalledTimes(1); // line committed, wall skipped
+    expect(ScaleToolStore.getState().phase).toBe('idle');
+  });
+
+  it('aborts with NO commit when every selected entity is parametric BIM', () => {
+    const props = withScene([{ id: 'wl', type: 'wall' }, { id: 'col', type: 'column' }], ['wl', 'col']);
+    const { result } = renderHook(() => useScaleTool(props));
+    act(() => armDirectDrag(['wl', 'col']));
+    act(() => result.current.handleScaleClick({ x: 20, y: 0 }));
+    expect(props.executeCommand).not.toHaveBeenCalled();
+    expect(ScaleToolStore.getState().phase).toBe('idle'); // reset + return to select
+  });
+});

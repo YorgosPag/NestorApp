@@ -404,6 +404,7 @@
           "offset": "Offset",
           "addLayer": "Add layer",
           "removeLayer": "Remove layer",
+          "centerLayer": "Center between the other layers",
           "presets": "Presets",
           "presetNames": {
             "road": "Road (double line)",

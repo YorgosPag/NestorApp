@@ -432,6 +432,28 @@ export function isCompound(layers: readonly LinePatternLayer[]): boolean {
 }
 
 /**
+ * The offset (mm) that centres layer `index` between the OTHER layers — the midpoint of their min &
+ * max offsets (the geometric centre of the compound's span). Exactly what a cross-tie layer wants:
+ * sit halfway between the outer rails, whatever their offsets (e.g. rails at 0 and +1.5 → tie +0.75),
+ * so a hand-authored railway is not left eccentric. With no other layers there is nothing to centre
+ * against → the layer keeps its own offset.
+ */
+export function centerOffsetForLayer(
+  layers: readonly LinePatternLayer[],
+  index: number,
+): number {
+  let min = Infinity;
+  let max = -Infinity;
+  layers.forEach((l, i) => {
+    if (i === index) return;
+    if (l.offsetMm < min) min = l.offsetMm;
+    if (l.offsetMm > max) max = l.offsetMm;
+  });
+  if (min === Infinity) return layers[index]?.offsetMm ?? 0; // no other layers
+  return (min + max) / 2;
+}
+
+/**
  * Authored compound layers → `ComplexLinetypeDef` (the render + registry SSoT for #9). Each
  * layer's segments lift through the SAME `segmentToElement` bridge the single-layer path uses;
  * `offsetMm`/`widthMm` ride onto the `StrokeLayer` (0 offset omitted to stay byte-identical to
