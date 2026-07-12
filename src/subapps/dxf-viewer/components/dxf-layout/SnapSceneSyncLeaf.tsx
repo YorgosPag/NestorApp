@@ -20,18 +20,23 @@
  * same way — the CommandHistory epoch bump inside the hook still waited on a scene
  * ref change that never arrived.
  *
- * Fix (mirror the render leaf): subscribe to the SAME live scene SSoT
- * (`useLevelScene`) + overlays here, so a committed entity re-inits the snap engine
- * on the next idle tick — for exactly the scene the canvas paints. `?? fallbackScene`
- * mirrors `DxfCanvasSubscriber`'s `liveScene ?? scene`, keeping snapping correct
- * before `SceneStore` hydrates on first load. Renders null; the orchestrator stays
- * inert (ADR-040 — no scene subscription in CanvasSection.tsx, CHECK 6C).
+ * Fix (mirror the render leaf): subscribe to the SAME live scene SSoT the canvas paints +
+ * overlays here, so a committed entity re-inits the snap engine on the next idle tick — for
+ * exactly the scene the canvas paints. `?? fallbackScene` mirrors `DxfCanvasSubscriber`'s
+ * `liveScene ?? scene`, keeping snapping correct before `SceneStore` hydrates on first load.
+ * Renders null; the orchestrator stays inert (ADR-040 — no scene subscription in CanvasSection.tsx,
+ * CHECK 6C).
+ *
+ * ADR-641 Φ4 — the "SAME scene the canvas paints" is the EFFECTIVE scene (`useEffectiveLevelScene`),
+ * NOT the raw world scene: while a Block Editor session is open the canvas shows only the block-local
+ * members, so the snap engine must index THOSE (else the cursor is attracted to every entity in the
+ * whole drawing the block belongs to). Reference-identical to the world scene when not inside BEDIT.
  *
  * Sole owner: mounted exactly once by `CanvasSection` (replaces its direct hook call).
  */
 
 import { useGlobalSnapSceneSync } from '../../snapping/hooks/useGlobalSnapSceneSync';
-import { useLevelScene } from '../../systems/scene/useSceneSelectors';
+import { useEffectiveLevelScene } from '../../systems/block/useEffectiveLevelScene';
 import { useLiveOverlaysForLevel } from '../../hooks/useLiveOverlaysForLevel';
 import type { SceneModel } from '../../types/scene';
 

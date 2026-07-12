@@ -113,10 +113,13 @@ one phase per session (≤70% context).
 - **Nest-capable stack store**: blocks don't nest (import flattens) — a single active id is correct.
 
 ## 6. Google-level declaration
-🟡 **PARTIAL** — Φ1 foundation + Φ2 render scope are Google-level (pure `resolveBlockEditScene`
-SSoT reused by every scene consumer, ADR-040-safe leaf-only subscriptions, coordinate-frame-correct
-suppression, fully unit-tested, zero duplication). Full feature PARTIAL until Φ3–Φ5 land. Tracked in
-changelog.
+🟡 **PARTIAL** — Φ1 foundation + Φ2 render scope + Φ3 enter/exit UX + Φ4 edit-tools scope are
+Google-level (pure `resolveBlockEditScene` + `block-member-scene-access` SSoTs reused by every scene /
+command consumer, ADR-040-safe leaf-only subscriptions, coordinate-frame-correct in-place edits, one
+global CommandHistory, fully unit-tested, zero duplication — CHECK 3.28 clean incl. de-dup of legacy
+adapter twins). Full feature PARTIAL until Φ5 (commit/sync) lands AND the two exclusive-scope gaps that
+browser end-to-end surfaced (viewport re-fit on enter + snap/hover scoped to the block-local scene) are
+closed. Tracked in changelog.
 
 ## 7. Risks (from design fan-out)
 - **ADR-040 micro-leaf**: the scene-swap subscription (Φ2) and status leaf (Φ3) must stay leaf-only
@@ -132,6 +135,29 @@ changelog.
   synchronous read-after-write guarantee.
 
 ## Changelog
+- **2026-07-12** — **Φ4 Edit-tools scope implemented.** New pure `block-member-scene-access.ts`
+  (mirror `group-member-scene-access.ts`, but **gated on `activeBlockId`** + **single-level** — blocks
+  don't nest): `findEntityOrBlockMember` / `updateEntityOrBlockMember` / `updateEntitiesOrBlockMembers`
+  / `addBlockMember` / `removeEntityOrBlockMember`, with a shared `mapWithActiveBlock` engine. BOTH
+  `ISceneManager` adapters made block-member-aware — `grip-scene-manager-adapter` (was group-aware;
+  now routes to block helpers via `getActiveBlockEditId()`) and the generic `LevelSceneManagerAdapter`
+  (getEntity/getEntities/updateEntity/updateEntities/addEntity/removeEntity + vertex methods; a private
+  `commitMemberUpdate` shares the writeback shape). Edits land on the LIVE `block.entities` (ADR-527
+  read-after-write intact) so the next `buildBlockEditScene` shows them; no `expandBlockInstance` on the
+  active block (coordinate-frame safe, §7). Grip threading: `GripRegistryPublisher` swaps to the
+  effective (block-local) scene via `resolveBlockEditScene` so member grips compute in the rendered
+  frame + the whole-block gizmo drops «for free»; `useGripRegistry` takes `activeBlockEditId` as a
+  defensive gizmo-suppression guard (mirror `activeGroupStack`). **N.7.1/N.18 hygiene:** extracted
+  `level-scene-vertex-ops.ts` (per-type vertex transforms — freed the adapter from its 500-line ceiling)
+  + `entity-zorder-ops.ts` (`moveEntityInList`/`frontBackTargetIndex` — ONE z-order SSoT for both
+  adapters, killed the pre-existing CHECK 3.28 reorder/moveToIndex twins). **N.0.1 code=truth:**
+  `useSceneManagerAdapter.ts` is UNCHANGED — the generic adapter self-reads the store, so no signature
+  threading was needed. New tests: `block-member-scene-access.test.ts` (18) + `level-scene-vertex-ops.test.ts`
+  (10) + `grip-adapter-block-member-writeback.test.ts` (6) + `entity-zorder-ops.test.ts` (5); all green,
+  jscpd:diff clean. **Known gaps → Φ4-follow-up:** z-order reorder inside BEDIT is top-level-only (a member
+  id no-ops, graceful); browser end-to-end surfaced two exclusive-scope completeness issues (viewport does
+  not re-fit to the block-local scene on enter → members off-screen; snap/hover still read the WORLD scene
+  → out-of-block attraction) — tracked separately.
 - **2026-07-12** — **Φ3 Enter/exit UX implemented.** Double-click a selected block in
   `useCanvasSectionUI` (`collectBlockEntities.get(id)`) enters its editor, gated on
   `getActiveGroupId()===null`; the existing group-enter path now gated on `!isBlockEditActive()`
