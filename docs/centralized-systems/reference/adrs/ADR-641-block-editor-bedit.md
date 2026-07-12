@@ -162,12 +162,18 @@ SSoT (no parallel scene subscription left reading the world). Full feature PARTI
   the paint leaf + hit-test already use), so the engine indexes only the block-local members. (2)
   **Viewport fit** — entering a block swapped the canvas to block-local space (members @ origin) but the
   world transform left them off-screen (blank canvas); folded a BEDIT enter/exit fit into the ONE
-  auto-fit controller `useViewportAutoFit` (ADR-399): on the `useActiveBlockEditId()` transition it
-  `zoomToFit`s the block-local bounds (`resolveBlockEditScene(...).bounds`, no re-implemented math) via a
-  new shared `commitZoomToFit` helper, saving/restoring the pre-enter view on exit (AutoCAD parity); the
-  scene-load policy effect is untouched (deps don't change on enter/exit). Hover/hit-test needed no change
-  (already read the effective scene via `DxfCanvasSubscriber`). **Remaining Φ4-follow-up:** z-order reorder
-  inside BEDIT is top-level-only (a member id no-ops, graceful).
+  auto-fit controller `useViewportAutoFit` (ADR-399): on the `useActiveBlockEditId()` transition it fits
+  the block-local bounds (`resolveBlockEditScene(...).bounds`, no re-implemented math), saving/restoring
+  the pre-enter view on exit (AutoCAD parity); the scene-load policy effect is untouched (deps don't
+  change on enter/exit). **Over-zoom follow-up (Giorgio: entered at 220:1):** the first cut used
+  `zoomSystem.zoomToFit`, whose `ZoomManager` cap is the interactive `maxScale=100000` (effectively
+  uncapped) → a small block filled the screen at an extreme scale. Switched to
+  `FitToViewService.calculateFitToViewFromBounds(bounds, vp, { padding: 0.1 })` — the SAME call + defaults
+  (10% padding, `maxScale=20`) the normal DXF content fit uses (`useFitToView`), so entering a block frames
+  it exactly like «zoom extents» does elsewhere. One shared `applyFitTransform` helper commits either fit
+  (N.18, no twin). Hover/hit-test needed no change (already read the effective scene via
+  `DxfCanvasSubscriber`). **Remaining Φ4-follow-up:** z-order reorder inside BEDIT is top-level-only (a
+  member id no-ops, graceful).
 - **2026-07-12** — **Φ3 Enter/exit UX implemented.** Double-click a selected block in
   `useCanvasSectionUI` (`collectBlockEntities.get(id)`) enters its editor, gated on
   `getActiveGroupId()===null`; the existing group-enter path now gated on `!isBlockEditActive()`

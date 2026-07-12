@@ -18,6 +18,8 @@ export const HATCH_RIBBON_KEYS = {
     fillColor: 'hatch.params.fillColor',
     /** Island detection style: 'normal' | 'outer' | 'ignore'. */
     islandStyle: 'hatch.params.islandStyle',
+    /** Επίπεδο (layer) — per-object `layerId` (επιλεγμένο) ή current drawing layer (defaults). */
+    layer: 'hatch.params.layer',
     /** Όνομα predefined μοτίβου (PAT catalog) — π.χ. 'ANSI31'. */
     patternName: 'hatch.params.patternName',
     /** Πάχος γραμμών (AutoCAD LWT) — 'ByLayer' ή mm ως string (ADR-507 Φ2). */
@@ -94,6 +96,7 @@ export type HatchRibbonStringCommandKey =
   | typeof HATCH_RIBBON_KEYS.stringParams.fillType
   | typeof HATCH_RIBBON_KEYS.stringParams.fillColor
   | typeof HATCH_RIBBON_KEYS.stringParams.islandStyle
+  | typeof HATCH_RIBBON_KEYS.stringParams.layer
   | typeof HATCH_RIBBON_KEYS.stringParams.patternName
   | typeof HATCH_RIBBON_KEYS.stringParams.lineweight
   | typeof HATCH_RIBBON_KEYS.stringParams.gradientType
@@ -131,6 +134,7 @@ export const isHatchRibbonStringKey = makeKeySetGuard<HatchRibbonStringCommandKe
   HATCH_RIBBON_KEYS.stringParams.fillType,
   HATCH_RIBBON_KEYS.stringParams.fillColor,
   HATCH_RIBBON_KEYS.stringParams.islandStyle,
+  HATCH_RIBBON_KEYS.stringParams.layer,
   HATCH_RIBBON_KEYS.stringParams.patternName,
   HATCH_RIBBON_KEYS.stringParams.lineweight,
   HATCH_RIBBON_KEYS.stringParams.gradientType,

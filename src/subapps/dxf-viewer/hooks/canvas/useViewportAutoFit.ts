@@ -38,6 +38,9 @@ import type { ViewTransform } from '../../rendering/types/Types';
 import { useActiveBlockEditId } from '../../systems/block/useActiveBlockEdit';
 import { resolveBlockEditScene } from '../../systems/block/block-edit-scene';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+// ADR-641 Φ4 — same fit calculation the normal content fit uses (padding 10%, maxScale 20), so the
+// block-editor enter fit never over-zooms a small block past the app's fit cap.
+import { FitToViewService } from '../../services/FitToViewService';
 import type { FloorplanBackgroundForLevelResult } from '../../floorplan-background';
 import { EventBus } from '../../systems/events';
 import { readPersistedViewport } from '../../services/viewport-persistence';
@@ -139,14 +142,10 @@ export function useViewportAutoFit({
   const prevBlockEditIdRef = useRef<string | null>(null);
   const preEnterTransformRef = useRef<ViewTransform | null>(null);
 
-  // ADR-641 Φ4 / N.18 — SSoT for the two "fit these bounds into the viewport and commit the transform
-  // iff finite" call sites (the scene/background load fit + the block-editor enter fit), so they can
-  // never drift into token-identical twins.
-  const commitZoomToFit = (
-    bounds: { min: { x: number; y: number }; max: { x: number; y: number } },
-    vp: { width: number; height: number },
-  ): void => {
-    const t = zoomRef.current.zoomToFit(bounds, vp, false)?.transform;
+  // ADR-641 Φ4 / N.18 — SSoT «apply this fit transform iff finite» for BOTH fit call sites (the
+  // scene/background load fit via the zoom system + the block-editor enter fit via FitToViewService),
+  // so they never drift into token-identical twins. A null/degenerate transform is a safe no-op.
+  const applyFitTransform = (t: ViewTransform | null | undefined): void => {
     if (t && Number.isFinite(t.scale) && Number.isFinite(t.offsetX) && Number.isFinite(t.offsetY)) {
       setTransformRef.current(t);
     }
@@ -174,9 +173,12 @@ export function useViewportAutoFit({
     const bg = bgRef.current?.background;
     const vp = viewportRef.current;
     if (bg && vp.width > 0 && vp.height > 0) {
-      commitZoomToFit(
-        { min: { x: 0, y: 0 }, max: { x: bg.naturalBounds.width, y: bg.naturalBounds.height } },
-        vp,
+      applyFitTransform(
+        zoomRef.current.zoomToFit(
+          { min: { x: 0, y: 0 }, max: { x: bg.naturalBounds.width, y: bg.naturalBounds.height } },
+          vp,
+          false,
+        )?.transform,
       );
     }
   };
@@ -249,7 +251,15 @@ export function useViewportAutoFit({
       const bounds = blockScene?.bounds;
       const vp = viewportRef.current;
       if (bounds && vp.width > 0 && vp.height > 0) {
-        commitZoomToFit({ min: bounds.min, max: bounds.max }, vp);
+        // Same calculation + defaults (padding 10%, maxScale 20) as the normal content fit
+        // (useFitToView) — so entering a small block does NOT jump to an extreme zoom (Giorgio: 220:1);
+        // NOT the zoom system's uncapped maxScale (100000). setTransform is the ADR-040 SSoT wrapper.
+        const result = FitToViewService.calculateFitToViewFromBounds(
+          { min: bounds.min, max: bounds.max },
+          vp,
+          { padding: 0.1 },
+        );
+        applyFitTransform(result.transform);
       }
     } else if (prev) {
       // EXIT: restore exactly the view the user had before entering (AutoCAD BEDIT parity).

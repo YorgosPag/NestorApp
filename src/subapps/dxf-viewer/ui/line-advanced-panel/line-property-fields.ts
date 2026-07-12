@@ -22,30 +22,18 @@ import {
 import { LINEWEIGHT_RIBBON_OPTIONS } from '../ribbon/data/lineweight-ribbon-options';
 // ADR-583 SSoT builder για numeric-literal option ladders (kill το hand-written clone).
 import { literalNumberOptions } from '../ribbon/data/ribbon-numeric-options';
-import type { BimPropertyOption } from '../bim-properties/bim-property-types';
 import type { RibbonNumericInputConfig } from '../ribbon/types/ribbon-types';
+// ADR-507/510 — line panel descriptor τύποι = τα generic entity-property types (SSoT,
+// κοινά με τη γραμμοσκίαση)· η γραμμή απλώς χρησιμοποιεί υποσύνολο των controls.
+import type {
+  EntityPropertyControl,
+  EntityPropertyField,
+  EntityPropertyGroup,
+} from '../entity-properties/entity-property-fields';
 
-/** Control renderer για ένα πεδίο του line Properties panel. */
-export type LinePropertyControl = 'select' | 'color' | 'numeric';
-
-/** Ένα πεδίο ιδιότητας γραμμής (descriptor). */
-export interface LinePropertyField {
-  readonly commandKey: string;
-  readonly labelKey: string;
-  readonly control: LinePropertyControl;
-  /** Στατικές επιλογές όταν το bridge δεν τις τροφοδοτεί live (π.χ. lineweight, presets). */
-  readonly options: readonly BimPropertyOption[];
-  /** Numeric constraints (μόνο `control:'numeric'`). */
-  readonly numericInput?: RibbonNumericInputConfig;
-}
-
-/** Λογικό group (= section) μέσα στο panel· gated μέσω `getPanelVisibility` όταν οριστεί. */
-export interface LinePropertyGroup {
-  readonly id: string;
-  readonly titleKey: string;
-  readonly visibilityKey?: string;
-  readonly fields: readonly LinePropertyField[];
-}
+export type LinePropertyControl = EntityPropertyControl;
+export type LinePropertyField = EntityPropertyField;
+export type LinePropertyGroup = EntityPropertyGroup;
 
 // ── Option / numeric specs (panel-only μετά το Φ2E #5 ribbon-slim) ─────────────
 

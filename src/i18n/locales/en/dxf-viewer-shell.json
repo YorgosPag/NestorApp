@@ -3776,6 +3776,7 @@
           "curved": "Curved"
         },
         "fillColor": "Color",
+        "layer": "Layer",
         "lineAngle": "Angle",
         "lineSpacing": "Spacing",
         "patternName": "Pattern",
@@ -4836,6 +4837,16 @@
       "finish": { "title": "Plaster Finish" },
       "envelope": { "title": "Envelope Function" },
       "material": { "title": "Material" }
+    }
+  },
+  "hatchAdvancedPanel": {
+    "title": "Hatch Properties",
+    "emptyState": "Select a hatch to see its properties.",
+    "sections": {
+      "general": { "title": "General" },
+      "pattern": { "title": "Pattern" },
+      "gradient": { "title": "Gradient" },
+      "info": { "title": "Information" }
     }
   },
   "beamAdvancedPanel": {
