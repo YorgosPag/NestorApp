@@ -32,7 +32,7 @@ import {
   DEFAULT_SEGMENT_LENGTH_MM,
   segmentsToDashPattern,
   segmentsToComplex,
-  hasTextSegments,
+  hasComplexSegments,
   describeSegments,
   validateLinePattern,
 } from '../../../config/line-pattern-segments';
@@ -92,9 +92,9 @@ export function LinePatternEditorDialog({
     if (!validation.ok) return;
     const trimmed = name.trim();
     const description = describeSegments(segments);
-    // ADR-642 Φ2 — a text-carrying pattern is stored as a full `complex` def (the
-    // `pattern` keeps the geometry-only fallback); simple patterns pass `complex` undefined.
-    const complex = hasTextSegments(segments)
+    // ADR-642 Φ2/Φ3 — a text/symbol-carrying pattern is stored as a full `complex` def
+    // (the `pattern` keeps the geometry-only fallback); simple patterns pass undefined.
+    const complex = hasComplexSegments(segments)
       ? segmentsToComplex(trimmed, segments, description)
       : undefined;
     const created = registerUserLinetype(trimmed, pattern, description, complex);

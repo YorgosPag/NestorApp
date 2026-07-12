@@ -27,6 +27,7 @@ import type {
   ComplexLinetypeDef,
   DashCap,
   StrokeLayer,
+  SymbolElement,
   TextElement,
 } from '../../config/complex-linetype-types';
 import {
@@ -36,6 +37,7 @@ import {
   tracePolylinePath,
 } from './complex-dash-draw';
 import { drawTextElement } from './complex-text-draw';
+import { drawSymbolElement } from './complex-symbol-draw';
 import {
   buildSegments,
   cumulativeLengths,
@@ -62,15 +64,17 @@ export interface StrokePolylineOptions {
   readonly closed?: boolean;
 }
 
-/** Μία εγγραφή του κύκλου σχεδίασης — geometry/text element σε px. */
+/** Μία εγγραφή του κύκλου σχεδίασης — geometry/text/symbol element σε px. */
 interface CycleEntry {
-  readonly kind: 'dash' | 'gap' | 'dot' | 'text';
+  readonly kind: 'dash' | 'gap' | 'dot' | 'text' | 'symbol';
   readonly lengthPx: number;
   readonly widthPx: number;
   readonly cap?: DashCap;
   readonly widthProfile?: readonly number[];
   /** Το embedded-text element (μόνο για `kind === 'text'`, ADR-642 Φ2). */
   readonly text?: TextElement;
+  /** Το embedded-symbol element (μόνο για `kind === 'symbol'`, ADR-642 Φ3). */
+  readonly symbol?: SymbolElement;
 }
 
 /** mm→px factor ανάλογα με το scale-space (× LTSCALE × CELTSCALE). */
@@ -129,6 +133,10 @@ function buildCycle(layer: StrokeLayer, mmToPx: number, baseWidthPx: number): Cy
       // Text occupies a ZERO-length slot (AutoCAD-faithful) — drawn at the cursor, the
       // surrounding gaps make its room. X/Y offset + scale/rotation live in `drawTextElement`.
       cycle.push({ kind: 'text', lengthPx: 0, widthPx: baseWidthPx, text: el });
+    } else if (el.kind === 'symbol') {
+      // Symbol occupies a ZERO-length slot too (`.shx` shape linetype convention) — the
+      // glyph is stamped at the cursor; scale/rotation/offset live in `drawSymbolElement`.
+      cycle.push({ kind: 'symbol', lengthPx: 0, widthPx: baseWidthPx, symbol: el });
     }
   }
   return cycle;
@@ -164,6 +172,13 @@ function walkPath(
       // Zero-length slot (like a dot): draw at the cursor, no advance. ADR-642 Φ2 (#2).
       if (el.text && dist >= 0 && dist <= total) {
         drawTextElement(ctx, el.text, pointAt(segs, cum, dist), mmToPx);
+      }
+      continue;
+    }
+    if (el.kind === 'symbol') {
+      // Zero-length slot (like text): stamp the glyph at the cursor, no advance. ADR-642 Φ3 (#3).
+      if (el.symbol && dist >= 0 && dist <= total) {
+        drawSymbolElement(ctx, el.symbol, pointAt(segs, cum, dist), mmToPx);
       }
       continue;
     }

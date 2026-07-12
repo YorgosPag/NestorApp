@@ -75,6 +75,22 @@ export function buildStyleFontMap(dxfContent: string): Record<string, string> {
   return map;
 }
 
+/**
+ * ADR-642 Φ2-B — build a `{ styleHandle → fontFamily }` map from a DXF's STYLE table, so the
+ * LTYPE reader can resolve a complex-linetype embedded-text `340` (STYLE handle) reference to
+ * the font the render pipeline should use. Handle keys are upper-cased (DXF handles are hex,
+ * case-insensitive). Entries without a handle (handle-less writer) are skipped. Thin
+ * composition over the SSoT (`parseStyleTable` + `styleEntryDefaults`) — NOT a second parser.
+ */
+export function buildStyleHandleFontMap(dxfContent: string): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const entry of parseStyleTable(dxfContent)) {
+    if (!entry.handle) continue;
+    map[entry.handle.toUpperCase()] = styleEntryDefaults(entry).fontFamily;
+  }
+  return map;
+}
+
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
 type GroupCodeMap = Map<string, string>;
@@ -115,6 +131,7 @@ function collectGroupCodes(lines: string[], start: number): { codes: GroupCodeMa
 }
 
 function groupCodesToEntry(codes: GroupCodeMap): DxfStyleTableEntry {
+  const handle = codes.get('5');
   return {
     name: codes.get('2') ?? 'Standard',
     fontFile: codes.get('3') ?? '',
@@ -124,6 +141,8 @@ function groupCodesToEntry(codes: GroupCodeMap): DxfStyleTableEntry {
     obliqueAngle: parseFloat(codes.get('50') ?? '0') || 0,
     flags: parseInt(codes.get('70') ?? '0', 10) || 0,
     textGenerationFlags: parseInt(codes.get('71') ?? '0', 10) || 0,
+    // ADR-642 Φ2-B — DXF handle (group 5) for complex-linetype `340` resolution on import.
+    ...(handle ? { handle } : {}),
   };
 }
 

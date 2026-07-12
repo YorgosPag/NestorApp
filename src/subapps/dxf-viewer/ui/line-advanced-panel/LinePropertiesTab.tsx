@@ -174,6 +174,7 @@ export function LinePropertiesTab({
             onChange={applyPattern}
             labels={buildLinePatternSegmentsLabels(e)}
             allowText={false}
+            allowSymbol={false}
           />
           {segments.length === 0 && (
             <p className="px-1 text-xs text-muted-foreground">{e('inlineTab.hint')}</p>

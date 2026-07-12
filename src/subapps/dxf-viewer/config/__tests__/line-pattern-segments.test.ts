@@ -124,13 +124,13 @@ describe('segmentsToComplex ⇄ complexToSegments', () => {
     expect(back).toEqual(gasPattern);
   });
 
-  it('drops symbol elements (Φ3) it cannot yet author', () => {
-    const withSymbol = segmentsToComplex('S', [{ kind: 'dash', lengthMm: 5 }, { kind: 'gap', lengthMm: 2 }]);
+  it('preserves symbol elements (ADR-642 Φ3 — now authorable)', () => {
+    const base = segmentsToComplex('S', [{ kind: 'dash', lengthMm: 5 }, { kind: 'gap', lengthMm: 2 }]);
     const layered = {
-      ...withSymbol,
-      layers: [{ elements: [...withSymbol.layers[0].elements, { kind: 'symbol' as const, glyphId: 'x', role: 'side' as const, scale: 1, rotationDeg: 0, offsetXMm: 0, offsetYMm: 0 }] }],
+      ...base,
+      layers: [{ elements: [...base.layers[0].elements, { kind: 'symbol' as const, glyphId: 'x', role: 'side' as const, scale: 1, rotationDeg: 0, offsetXMm: 0, offsetYMm: 0 }] }],
     };
-    expect(complexToSegments(layered).map((s) => s.kind)).toEqual(['dash', 'gap']);
+    expect(complexToSegments(layered).map((s) => s.kind)).toEqual(['dash', 'gap', 'symbol']);
   });
 });
 

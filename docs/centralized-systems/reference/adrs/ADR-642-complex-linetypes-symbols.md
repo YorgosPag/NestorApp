@@ -1,6 +1,6 @@
 # ADR-642 — Complex Linetypes: embedded text, symbols, width, caps/joins & compound strokes
 
-- **Status:** 🟢 ACCEPTED — **Φ1 (stroke geometry) IMPLEMENTED** (2026-07-12). **Φ2-A (embedded text: render + editor + live preview) IMPLEMENTED** (2026-07-12). **Φ2-B μέρος 1 — full-canvas entity routing IMPLEMENTED** (2026-07-12): κάθε entity renderer (LINE/POLYLINE/ARC/CIRCLE) ρουτάρει το `──GAS──` μέσω `strokeStyledPolyline` όταν ο τύπος έχει `complex`· **εκκρεμεί Φ2-B μέρος 2 — DXF `[TEXT,...]` import/export** (`.lin` reader δεν υπάρχει στο repo → εκτός scope). Φ3–Φ5 pending. Scope §9 εγκρίθηκε· Φ2 scope (2026-07-12): Q1 = υπάρχον text SSoT (`resolveEntityFont`), Q2 = `followPath` toggle ανά κείμενο (default true), Q3 = render+editor+preview πρώτα, DXF μετά. Φ2-B scope (2026-07-12): routing πρώτα, ΟΛΑ τα entity types μαζί (κοινό seam), STYLE handle = synthetic-per-styleId (MLINE pattern) στο μέρος 2.
+- **Status:** 🟢 ACCEPTED — **Φ1 (stroke geometry) IMPLEMENTED** (2026-07-12). **Φ2-A (embedded text: render + editor + live preview) IMPLEMENTED** (2026-07-12). **Φ2-B IMPLEMENTED** (2026-07-12): μέρος 1 — full-canvas entity routing (κάθε renderer LINE/POLYLINE/ARC/CIRCLE ρουτάρει το `──GAS──` μέσω `strokeStyledPolyline` όταν ο τύπος έχει `complex`)· μέρος 2 — DXF `[TEXT,...]` import/export (LTYPE reader parse-άρει τα embedded 74/340/46/50/44/45/9 → `complex`, resolve `340`→font μέσω `buildStyleHandleFontMap`· writer εκπέμπει τα descriptors με synthetic STYLE handle ανά styleId· `.lin` reader δεν υπάρχει στο repo → εκτός scope). **Φ3-A (symbols: render + catalog + editor) IMPLEMENTED** (2026-07-12): builtin `linetype-symbol-catalog` (×/+/∗/○/□/tick/βέλος/μόνωση/δέντρο ως `AnnotationSymbolPrimitive[]`) + shared `stampSymbolPrimitive` painter (extracted από `AnnotationSymbolRenderer` → ΕΝΑ SSoT για annotation+linetype glyphs) + `drawSymbolElement` (mirror text) στον stroker + Symbol row στον editor. **Φ3-B (DXF symbol I/O) IMPLEMENTED** (2026-07-12): 3-tier resolution — Tier 1 Nestor `NESTOR_APP_LTYPE` XDATA (δικά μας αρχεία → lossless glyph/role/scale/rot/offset), Tier 2 well-known `acad.lin` όνομα→glyph (`FENCELINE1→circle` κ.λπ.· χαρτογράφηση με όνομα, ΟΧΙ με shape#), Tier 3 graceful-skip· universal-valid `49 0.0` degrade (κανένα dangling `.shx` ref)· §6.6.3. **Φ4–Φ5 pending.** Scope §9 εγκρίθηκε· Φ2 scope (2026-07-12): Q1 = υπάρχον text SSoT (`resolveEntityFont`), Q2 = `followPath` toggle ανά κείμενο (default true), Q3 = render+editor+preview πρώτα, DXF μετά. Φ2-B scope (2026-07-12): routing πρώτα, ΟΛΑ τα entity types μαζί (κοινό seam), STYLE handle = synthetic-per-styleId (MLINE pattern) στο μέρος 2. Φ3 scope (2026-07-12): symbol seed = οι 9 τοπογραφικά/utility glyphs· DXF export = **full-enterprise «όπως οι μεγάλοι» → graceful-degrade valid geometry + Nestor XDATA preservation** (Revit/ArchiCAD-style lossless-in-ecosystem· = Φ3-B)· render+editor πρώτα (mirror Φ2-A/Φ2-B).
 - **Date:** 2026-07-12
 - **Domain:** DXF Viewer · Linetype subsystem · Canvas render pipeline · Pattern editor UI · DXF/`.lin` I/O · Persistence
 - **Related:** ADR-358 (Linetype ISO catalog + `LinetypeRegistry` SSoT), ADR-362 (Path B: user-authored reusable line patterns — the segment editor), ADR-357 §5.5 (canonical mm units), ADR-510 Φ2E #4 (copy-on-write inline pattern edit), ADR-040 (micro-leaf render discipline / bitmap cache keys)
@@ -173,12 +173,24 @@ export interface ComplexLinetypeDef {
 
 ### 6.3 Symbol Library (SSoT για #3/#4)
 
-- Νέος **`stores/LinetypeSymbolRegistry.ts`** (mirror του `LinetypeRegistry`): κατάλογος από
-  `SymbolGlyph = { id, name, kind: 'builtin'|'shx-import'|'user', path: Path2D-serializable }`.
-- **Builtin seed**: τα τοπογραφικά/utility σύμβολα που ζήτησε ο Giorgio — `×`, `*`, `+`, `○`, `□`,
-  tick, βέλος, batting/insulation S-curve, tree scallop. Ορισμένα ως **vector paths** (όχι font glyphs)
-  ώστε να αποδίδονται με width/scale/rotation σωστά.
-- `.shx` shape import = μεταγενέστερη φάση (interop). Το builtin seed αρκεί για enterprise UX.
+> **Φ3-A υλοποίηση (code = source of truth, 2026-07-12) — ΑΝΑΘΕΩΡΗΣΗ του αρχικού σχεδίου:** το SSoT
+> audit βρήκε ότι υπάρχει **ήδη** enterprise vector-glyph υποδομή (ADR-583 `annotation-symbol-catalog`)
+> με πλήρες `AnnotationSymbolPrimitive` vocabulary (`line·polyline·circle·arc·text·svg`) + uniform stamp
+> loop. Άρα **δεν** φτιάξαμε `SymbolGlyph{ path: Path2D }` (Path2D σπάει σε node tests, δεν είναι το
+> καθιερωμένο μοτίβο· οι Illustrator/MicroStation κρατούν vector primitives, όχι rasterized paths).
+
+- **`config/linetype-symbol-catalog.ts`** (ΝΕΟ, static — mirror `linetype-iso-catalog`/`annotation-symbol-catalog`):
+  `LinetypeSymbolDefinition = { id, labelKey, geometry: AnnotationSymbolPrimitive[], origin }`. Builtin seed
+  = οι 9 τοπογραφικά/utility glyphs που ζήτησε ο Giorgio — `×` `+` `∗` `○` `□` tick, βέλος (γεμάτη κεφαλή),
+  μόνωση (γωνιώδες zigzag), δέντρο (τόξο-scallop) — **ως unit-space vector primitives** (1.0=ύψος, +Y=πάνω,
+  [0,0]=κέντρο), όχι font/Path2D. `getLinetypeSymbol(id)` fallback → `cross`.
+- **`rendering/entities/shared/symbol-primitive-stamp.ts`** (ΝΕΟ, pure SSoT): `stampSymbolPrimitive(ctx,
+  prim, { toScreen, radiusScale, rot })` — extracted **VERBATIM** από το `AnnotationSymbolRenderer.stampPrimitive`
+  (Boy-Scout N.0.2· ΕΝΑ painter για annotation symbols ΚΑΙ linetype symbols· ο renderer πλέον delegate-άρει).
+- **Mutable registry** (user-authored glyphs) + **`.shx` shape import** = μεταγενέστερη φάση (§9.1, out of
+  scope τώρα) — ακριβώς όπως ο `LinetypeRegistry` layer-άρει ISO-baseline-then-runtime. Το static builtin
+  seed αρκεί για enterprise UX. **Follow-up**: registration του νέου stamper/catalog στο `.ssot-registry.json`
+  (§8) — αναβλήθηκε ώστε να μη γίνει risky baseline regen μέσα στη συνεδρία.
 
 ### 6.4 Render engine (custom stroker)
 
@@ -189,7 +201,10 @@ export interface ComplexLinetypeDef {
      **(Φ2 IMPLEMENTED)** zero-length slot (AutoCAD-faithful — τα γύρω gaps δίνουν χώρο) →
      `complex-text-draw.drawTextElement` με tangent-angle rotation (αν `followPath`) + X/Y offset +
      `scale`, μέσω του `paintTextRun`/`resolveEntityFont` SSoT (glyph-path ή CSS fallback)· symbol →
-     `ctx.transform` + draw `Path2D` (Φ3)· gap → skip.
+     **(Φ3-A IMPLEMENTED)** zero-length slot (mirror text)· `drawSymbolElement` resolve-άρει το glyph από
+     το `linetype-symbol-catalog` και stamp-άρει τα unit-space primitives μέσω του κοινού
+     `stampSymbolPrimitive` (X κατά tangent, Y κατά left normal, `scale`, R σχετικό-με-tangent + user R·
+     ΟΧΙ upright-flip — τα βέλη ακολουθούν τη φορά)· gap → skip.
   3. **Corner policy** στις κορυφές (Break/Bypass/alignDash) + `join`.
   4. Compound: επαναλαμβάνει ανά `StrokeLayer` με `offsetMm` (parallel offset του path).
 - **Fast path αμετάβλητο**: αν ο τύπος είναι *simple-expressible* (`complexToPattern !== null` **και**
@@ -217,9 +232,24 @@ export interface ComplexLinetypeDef {
   simple-expressible. Simple τύποι → αμετάβλητο υπάρχον μονοπάτι.
 - Interop caveat: shapes χρειάζονται `.shx` reference στο DXF — για builtin symbols εξάγουμε ισοδύναμο
   ή graceful-degrade σε simple (documented).
-- **STYLE handle (Φ2-B μέρος 2)**: ο client ASCII writer είναι handle-less· το embedded text `340`
-  reference θα παραχθεί με **deterministic synthetic handle ανά styleId**, μιμούμενο το υπάρχον
-  SSoT precedent `export/core/dxf-ascii-mline-writer.ts` (MLINESTYLE `340` → synthetic handle base).
+- **STYLE handle (Φ2-B μέρος 2 — IMPLEMENTED)**: ο client ASCII writer είναι handle-less· το embedded
+  text `340` reference παράγεται με **deterministic synthetic handle ανά styleId**
+  (`buildEmbeddedTextStyleHandles`, base `0xA0` — distinct από το MLINESTYLE `0x2A`), μιμούμενο το SSoT
+  precedent `export/core/dxf-ascii-mline-writer.ts`. **Import**: `buildStyleHandleFontMap(dxfContent)`
+  (STYLE reader, group 5 → font family) resolve-άρει το `340` → `styleId`· unresolved → `Standard` fallback.
+
+### 6.6.2 DXF embedded-text I/O (Φ2-B μέρος 2 — IMPLEMENTED)
+
+- **Reader** `utils/dxf-linetype-table-parser.ts` — `parseLinetypeTable(lines, styleHandleToFont?)`: μετά
+  από ένα `49` slot, ένα `74` με bit `0x2` (text) διαβάζει `340`/`46`/`50`/`44`/`45`/`9` → `TextElement`
+  (styleId = `styleHandleToFont[340]` ή `Standard`· `followPath = !(74 & 0x1)`)· η ordered element list
+  γίνεται το `complex` def του `LinetypeDef` (`pattern` = geometry-only fallback). Shapes (bit `0x4`) = Φ3 skip.
+  Wired στο `dxf-scene-builder.ts` (`buildStyleHandleFontMap(content)` πριν το LTYPE pre-pass) → εισαγόμενο
+  AutoCAD `──GAS──` φορτώνει `complex` και ζωγραφίζεται με το κείμενο (μέσω §6.6.1 routing).
+- **Writer** `utils/dxf-layer-table-writer.ts` — `emitLtypeTable`: όταν `lt.complex && !isSimpleExpressible`
+  εκπέμπει τα ordered elements (`49` geometry + `49 0.0`/`74`/`75`/`340`/`46`/`50`/`44`/`45`/`9` text block)·
+  synthetic handle ανά styleId (`buildEmbeddedTextStyleHandles`, PURE → ο reader το reconstruct-άρει στο
+  round-trip test). Simple τύποι → αμετάβλητο `49` emission. Production export = ezdxf (Python), αμετάβλητο.
 
 ### 6.6.1 Full-canvas routing seam (Φ2-B μέρος 1 — IMPLEMENTED)
 
@@ -237,6 +267,36 @@ export interface ComplexLinetypeDef {
   normal-state bitmap· το `complex` προέρχεται από `LinetypeRegistry` (τα edits ήδη invalidate-άρουν το
   bitmap μέσω `useDxfCanvasCacheInvalidation`). CHECK 6B/6D: co-staged με ADR-040 changelog.
 
+### 6.6.3 DXF embedded-symbol I/O (Φ3-B — IMPLEMENTED)
+
+**Απόφαση (Giorgio 2026-07-12):** «όπως οι μεγάλοι, full enterprise» → **3-tier resolution**, ώστε
+δικά μας αρχεία = lossless, ξένα κοινά αρχεία = όσο γίνεται ίδιο, άγνωστα = ασφαλές degrade. Το DXF
+complex linetype κρατά ένα σύμβολο ως `[shape#, file.shx]` (group `74` bit `0x4` + `75`)· η γεωμετρία
+ζει στο εξωτερικό `.shx` binary (**out of scope §9.1**), όχι στο DXF. Άρα εφαρμόζουμε το enterprise
+μοτίβο (Revit/ArchiCAD): **graceful-degrade σε valid geometry + preserve το proprietary σε XDATA**.
+
+- **Writer** `utils/dxf-layer-table-writer.ts` — `emitComplexLtype`: το symbol element πλέον εκπέμπεται
+  (δεν φιλτράρεται) ως **universal-valid zero-length slot** `49 0.0` (ΟΧΙ `74 4`/`75`/`340` → κανένα
+  dangling `.shx` reference που θα χαλούσε άλλους readers)· ΝΕΟ `emitSymbolXData` προσθέτει ένα
+  `1001 NESTOR_APP_LTYPE` block ανά record με per-symbol descriptor (`slot`/`glyph`/`role`/`scale`/
+  `rot`/`offx`/`offy`, flat `key=value` `1000` strings — το LAYER XDATA idiom). Νέα σταθερά SSoT
+  `LINETYPE_SYMBOL_XDATA_APP = 'NESTOR_APP_LTYPE'` (dedicated namespace· ποτέ σύγκρουση με `ACAD`).
+- **APPID** `export/core/dxf-ascii-tables-writer.ts` — `NESTOR_APP_LTYPE` προστέθηκε στο
+  `EXPORT_APPID_NAMES` (import της σταθεράς SSoT· strict-reader validity — κάθε `1001 <app>` χρειάζεται
+  APPID record).
+- **Reader** `utils/dxf-linetype-table-parser.ts` — streaming XDATA accumulation (mirror του LAYER
+  parser: `xdataApp`/`xdataBuf`)· `74 & 0x4` → `foreignShapeSlots`· `finalizeSymbols(draft)` στο flush:
+  - **Tier 1** — `NESTOR_APP_LTYPE` XDATA → `SymbolElement` στο `slot` (δικά μας αρχεία → lossless).
+  - **Tier 2** — foreign shape χωρίς XDATA + **γνωστό standard όνομα** (`config/linetype-shape-import-map.ts`:
+    `FENCELINE1→circle`, `FENCELINE2→square`, `BATTING→insulation`, `ZIGZAG→insulation`, `TRACKS→tick`)
+    → mapped builtin glyph. Χαρτογράφηση **με το όνομα** (δημόσιο/σταθερό `acad.lin`), **ΟΧΙ** με shape#
+    (θα ήταν εφεύρεση → λάθος glyph). Extension point: μελλοντικός `.shx` parser layer-άρει από κάτω, μηδέν rework.
+  - **Tier 3** — άγνωστο foreign shape → **graceful skip** (μένει zero-length dot, τα dashes ακέραια·
+    documented, ποτέ λάθος γεωμετρία).
+- **Wiring**: κανένα νέο — το XDATA είναι στο ίδιο `lines` stream που ήδη περνά στο `parseLinetypeTable`
+  (`dxf-scene-builder.ts`, Φ2-B). Production export = **ezdxf (Python), αμετάβλητο**· ο TS writer καλύπτει
+  το in-app round-trip.
+
 ## 7. Phased roadmap
 
 | Φάση | Περιεχόμενο | Μηχανισμοί | Ρίσκο |
@@ -244,8 +304,9 @@ export interface ComplexLinetypeDef {
 | **Φ1** ✅ | Μοντέλο (`ComplexLinetypeDef`) + adapters + registry superset + **stroke geometry** (caps/join/corner/width/phase/scale-space) στον stroker· fast-path guard | #5 #6 #7 #8 #10 #11 | Μεσαίο (render path) — **DONE** |
 | **Φ2-A** ✅ | **Embedded text** (#2): model bridge → stroker render → editor Text row → live preview | #2 | Μεσαίο — **DONE** |
 | **Φ2-B μέρος 1** ✅ | **Full-canvas entity routing**: LINE/POLYLINE/ARC/CIRCLE → `strokeStyledPolyline` όταν `complex` (κοινό `strokeStyledEntityPolyline` seam) | #2 | Μεσαίο — **DONE** |
-| **Φ2-B μέρος 2** | **DXF `[TEXT,...]` import/export** (LTYPE embedded text + STYLE synthetic handle· `.lin` δεν υπάρχει στο repo) | #2 | Μεσαίο |
-| **Φ3** | **Symbol Library** (§6.3, builtin seed) + **symbol elements** + **ρόλοι** side/start/end (#3, μέρος #4) | #3, #4α | Μεσαίο |
+| **Φ2-B μέρος 2** ✅ | **DXF `[TEXT,...]` import/export** (LTYPE embedded text reader/writer + STYLE synthetic handle· `.lin` δεν υπάρχει στο repo) | #2 | Μεσαίο — **DONE** |
+| **Φ3-A** ✅ | **Symbol Library** (§6.3, builtin seed ως `AnnotationSymbolPrimitive[]`) + **shared `stampSymbolPrimitive`** + **symbol elements** στον stroker + Symbol row editor (ρόλος `side`) | #3 | Μεσαίο — **DONE** |
+| **Φ3-B** ✅ | **DXF symbol I/O**: 3-tier — Nestor XDATA (lossless) / well-known `acad.lin` name→glyph / graceful-skip· universal-valid `49 0.0` degrade (mirror Φ2-B· `.shx` = out of scope §9.1) | #3 | Μεσαίο — **DONE** |
 | **Φ4** | **Corner-role symbols** (inner/outer corner) + align-dash corner policy (υπόλοιπο #4/#7) | #4β #7 | Υψηλό (corner math) |
 | **Φ5** | **Compound layers** (#9) + parallel-offset stroking + editor multi-layer UI | #9 | Υψηλό |
 | — | *Εκτός scope προς το παρόν:* Art-brush stretch, raster line styles, `.shx` shape import | — | — |
@@ -269,11 +330,93 @@ export interface ComplexLinetypeDef {
 2. **#11 scale-space default**: ✅ **`model`** (AutoCAD-faithful + ίδια σημερινή συμπεριφορά → μηδέν
    regression). Το **`paper`** (Revit-mode) υλοποιείται ΚΑΙ αυτό, ανά τύπο, ως opt-in — «full enterprise»
    που καλύπτει όλους τους μεγάλους παίκτες χωρίς να χαλάει κανέναν (Giorgio: «όπως το κάνουν οι μεγάλοι»).
-3. **Symbol seed**: ⏳ ΑΝΟΙΧΤΟ — θα ρωτηθεί στην έναρξη της **Φ3** (Symbol Library), όπου και χρησιμοποιείται.
+3. **Symbol seed**: ✅ (2026-07-12, έναρξη Φ3) — οι **9 τοπογραφικά/utility glyphs**: `×` `+` `∗` `○` `□` tick,
+   βέλος, μόνωση, δέντρο. **DXF export**: ✅ full-enterprise «όπως οι μεγάλοι» → **graceful-degrade valid
+   geometry + Nestor XDATA** (Revit/ArchiCAD lossless-in-ecosystem· = Φ3-B, ξεχωριστή συνεδρία).
 4. **Προτεραιότητα φάσεων**: ✅ **Φ1 πρώτα** (geometry θεμέλιο· το text της Φ2 πατά πάνω του).
 
 ## 10. Changelog
 
+- **2026-07-12 (Φ3-B IMPLEMENTED — DXF embedded-symbol I/O: 3-tier graceful-degrade + Nestor XDATA)** —
+  Scope Φ3-B (2026-07-12): Q1 appId = **`NESTOR_APP_LTYPE`** (dedicated, Revit-style· ποτέ σύγκρουση με
+  `ACAD`)· Q2 ξένα shapes = **«όπως οι μεγάλοι, όσο γίνεται ίδιο»** → 3-tier (XDATA lossless / well-known
+  όνομα→glyph / graceful-skip), χαρτογράφηση **με όνομα** `acad.lin` (verifiable), ΟΧΙ εφεύρεση shape#.
+  **SSoT audit (grep-verified):** το `emitLayerXData` ήδη γράφει Nestor XDATA σε table record + ο
+  `dxf-layer-table-parser` το διαβάζει streaming (`xdataApp`/`xdataBuf`) → **mirror** αντί για νέο parser.
+  Ο production `dxf-ascii-tables-writer` delegate-άρει στο `emitLtypeTable` → ΕΝΑ writer αγγίχτηκε. Υλοποιήθηκαν:
+  - `config/linetype-shape-import-map.ts` (ΝΕΟ, data) — `WELL_KNOWN_LINETYPE_SYMBOLS` (`FENCELINE1→circle`,
+    `FENCELINE2→square`, `BATTING→insulation`, `ZIGZAG→insulation`, `TRACKS→tick`) +
+    `resolveWellKnownLinetypeSymbol(name)` (case-insensitive· guard ότι το glyph υπάρχει στο catalog) +
+    `listWellKnownLinetypeNames`. Tier 2 extension point για μελλοντικό `.shx` parser (zero rework).
+  - `utils/dxf-layer-table-writer.ts` — `emitComplexLtype`: symbols πλέον εκπέμπονται ως universal-valid
+    `49 0.0` slot (όχι filtered-out· κανένα `74 4`/`75`/`340` dangling `.shx` ref)· ΝΕΟ `emitSymbolXData`
+    (mirror `emitLayerXData`) → `1001 NESTOR_APP_LTYPE` block ανά symbol (`slot`/`glyph`/`role`/`scale`/
+    `rot`/`offx`/`offy`)· ΝΕΑ export σταθερά `LINETYPE_SYMBOL_XDATA_APP` (SSoT).
+  - `utils/dxf-linetype-table-parser.ts` — streaming XDATA (`1001`→`xdataApp`, `1000/1040/1070/1071`→
+    `xdataBuf`· mirror LAYER parser)· `74 & 0x4`→`foreignShapeSlots`· `finalizeSymbols(draft)` στο flush
+    (Tier 1 XDATA → Tier 2 well-known name → Tier 3 skip)· `parseSymbolXData` + `normalizeSymbolRole`.
+  - `export/core/dxf-ascii-tables-writer.ts` — `LINETYPE_SYMBOL_XDATA_APP` στο `EXPORT_APPID_NAMES`
+    (import της SSoT σταθεράς· strict-reader APPID validity).
+  - Tests (jest, N.17): +10 (`utils/__tests__/dxf-linetype-symbol-roundtrip.test.ts`) — Tier 1 round-trip
+    glyph/role/scale/rot/offset· geometry-degrade `[5,0,-3]`· mixed text+symbol order· Tier 2
+    `FENCELINE1→circle`/`fenceline2→square` (case-insensitive)· Tier 3 unknown→skip· simple unaffected·
+    import-map unit (standards→glyph, case/trim, unknown→null, όλα τα mapped glyphs υπάρχουν). 16 πράσινα
+    μαζί με το Φ2-B round-trip· 68 regression (linetype+config+layer round-trip) πράσινα. jscpd (N.18):
+    καθαρό (0 new clones στα 4 staged src).
+  - **ΟΧΙ render/canvas touch** (καθαρό DXF I/O → όχι ADR-040). ΟΧΙ tsc (N.17). Commit = Giorgio.
+- **2026-07-12 (Φ3-A IMPLEMENTED — embedded symbols: catalog + shared stamper + render + editor)** —
+  Scope Φ3 (2026-07-12): symbol seed = 9 τοπογραφικά/utility glyphs· DXF export = full-enterprise
+  graceful-degrade + Nestor XDATA (= Φ3-B)· render+editor πρώτα (mirror Φ2-A/Φ2-B). **SSoT audit finding
+  (code = source of truth):** υπήρχε ήδη το `AnnotationSymbolPrimitive` vocabulary + stamp loop (ADR-583)
+  → **δεν** φτιάχτηκε `SymbolGlyph{Path2D}` registry (§6.3 ΑΝΑΘΕΩΡΗΘΗΚΕ). Υλοποιήθηκαν:
+  - `rendering/entities/shared/symbol-primitive-stamp.ts` (ΝΕΟ, pure) — `stampSymbolPrimitive(ctx, prim,
+    { toScreen, radiusScale, rot })` extracted **VERBATIM** από `AnnotationSymbolRenderer.stampPrimitive`
+    (+`stampSvgGlyph`). ΕΝΑ painter για annotation ΚΑΙ linetype glyphs (N.18, Boy-Scout).
+  - `rendering/entities/AnnotationSymbolRenderer.ts` — refactor: `drawGlyph` delegate-άρει στο shared
+    stamper (μηδέν συμπεριφορική αλλαγή· render leaf → co-staged ADR-040/ADR-642, CHECK 6D).
+  - `config/linetype-symbol-catalog.ts` (ΝΕΟ, static data) — `LinetypeSymbolDefinition` + 9 builtin glyphs
+    ως unit-space `AnnotationSymbolPrimitive[]` (cross/plus/asterisk/circle/square/tick/arrow/insulation/tree)
+    + `getLinetypeSymbol`/`listLinetypeSymbols` (fallback `cross`).
+  - `rendering/linetype/complex-symbol-draw.ts` (ΝΕΟ) — `drawSymbolElement(ctx, el, at, mmToPx)`: mirror
+    ΑΚΡΙΒΩΣ του `drawTextElement` (zero-length slot, X κατά tangent, Y κατά left normal, scale, R
+    tangent-relative + user R)· virtual y-UP frame ώστε οι world-CCW/Y-flip συμβάσεις του stamper να ισχύουν.
+  - `rendering/linetype/ComplexLineStroker.ts` — `symbol` branch στο `buildCycle` (zero-length) + `walkPath`
+    (mirror text)· `CycleEntry` += `'symbol'`/`symbol?`. Symbols πλέον **ζωγραφίζονται** (ήταν skip Φ1/Φ2).
+  - `config/line-pattern-segments.ts` — `LinePatternSymbolSegment` variant + `defaultSymbolSegment` +
+    `hasSymbolSegments`/`hasComplexSegments` (= text||symbol gate)· `segmentToElement`/`elementToSegment`/
+    `complexToSegments` symbol-aware (πλέον preserve, ΟΧΙ drop)· `validate`/`describeSegments`/`segmentsToDashPattern`
+    symbol-aware (visible mark· skip στο mm pattern).
+  - `ui/panels/dimensions/LinePatternSegmentsEditor.tsx` — **Symbol row** (glyph picker + S/R/X/Y) μέσω
+    ΝΕΟΥ κοινού `ComplexSegmentRowShell` + `PlacementFields` (de-dup με το Text row, N.18)· `allowSymbol`
+    prop (inline COW tab → false, όπως text)· WYSIWYG preview switch σε `hasComplexSegments`. Ο dialog
+    (`LinePatternEditorDialog`) αποθηκεύει `complex` όταν `hasComplexSegments` (text **ή** symbol).
+  - i18n: keys `linePatternEditor.{kinds,add}.symbol` + `linePatternEditor.symbol.*` (+ 9 `glyphs.*`) σε
+    `el` **και** `en` (N.11, keys ΠΡΩΤΑ). Tests (jest, N.17): +30 (stamp per-kind· catalog seed/lookup/envelope·
+    symbol-draw placement/rotation/guards· stroker symbol routing· segments symbol round-trip· ενημέρωση του
+    Φ2 «drops symbol» test → «preserves symbol») — 9 suites πράσινα (72 tests linetype+config). jscpd (N.18):
+    καθαρό μετά την εξαγωγή `PlacementFields`+`ComplexSegmentRowShell` (0 new clones στα 7 staged src).
+  - **ADR-040 (CHECK 6D)**: ο `AnnotationSymbolRenderer` refactor = pure delegation· μηδέν νέα
+    `useSyncExternalStore`/subscription· ο stamper είναι pure→cacheable, μηδέν hover/selection στο cache key·
+    co-staged ADR-040 changelog. **Full-canvas routing seam (Φ2-B) ήδη έτοιμο** → τα symbol linetypes
+    ζωγραφίζονται σε ΟΛΑ τα entities αυτόματα (κανένα touch στους 4 renderers). ΟΧΙ tsc (N.17). Commit = Giorgio.
+- **2026-07-12 (Φ2-B μέρος 2 IMPLEMENTED — DXF `[TEXT,...]` embedded-text I/O)** — Scope Q3 (2026-07-12):
+  STYLE handle = **synthetic-per-styleId** (MLINE pattern). Υλοποιήθηκαν:
+  - `text-engine/parser/style-table-reader.ts` — `buildStyleHandleFontMap(dxfContent)` (νέο· `{ handle→font }`
+    από το STYLE table)· `DxfStyleTableEntry.handle?` (group 5) captured. Barrel + type ενημερώθηκαν.
+  - `utils/dxf-linetype-table-parser.ts` — `parseLinetypeTable(lines, styleHandleToFont?)`: ordered element
+    walk· ένα `74 & 0x2` upgrade-άρει το `49 0.0` slot σε `TextElement` (styleId από `340`→font, `followPath
+    = !(74 & 0x1)`, scale/rot/offset από `46/50/44/45`, value από `9`)· χτίζει `complex` def (`origin:
+    'dxf-import'`). Shapes (`0x4`) = Φ3 skip.
+  - `utils/dxf-scene-builder.ts` — build `buildStyleHandleFontMap(content)` πριν το LTYPE pre-pass, threaded
+    στο `parseLinetypeTable` → εισαγόμενο AutoCAD complex linetype φορτώνει `complex` και ζωγραφίζεται (§6.6.1).
+  - `utils/dxf-layer-table-writer.ts` — `emitLtypeTable` εκπέμπει embedded `[TEXT,...]` descriptors όταν
+    `lt.complex && !isSimpleExpressible`· `buildEmbeddedTextStyleHandles` (νέο export, PURE, base `0xA0`)
+    δίνει deterministic synthetic handle ανά styleId. Simple τύποι → αμετάβλητο `49` emission (zero regression).
+  - Tests (jest, N.17): +6 (writer→reader round-trip value/style/scale/rot/offset/followPath· fallback
+    `Standard`· simple no-complex· `buildStyleHandleFontMap` handle→font· full STYLE+LTYPE `340` resolve) —
+    3 suites πράσινα (38 tests utils round-trip). jscpd (N.18): καθαρό (0 new clones στα 4 staged src).
+  - Interop caveat: production DXF export = ezdxf (Python microservice), αμετάβλητο· ο TS writer καλύπτει το
+    in-app round-trip. `.lin` reader δεν υπάρχει στο repo → εκτός scope. ΟΧΙ tsc (N.17). Commit = Giorgio.
 - **2026-07-12 (Φ2-B μέρος 1 IMPLEMENTED — full-canvas entity routing)** — Scope Φ2-B (§9-style):
   routing πρώτα (όχι DXF), **ΟΛΑ** τα entity types μαζί μέσω ΕΝΟΣ seam, STYLE handle = synthetic-per-styleId
   (μέρος 2). Το `──GAS──` ζωγραφίζεται πλέον στον **κύριο καμβά** σε πραγματικές γραμμές, όχι μόνο στο

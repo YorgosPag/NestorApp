@@ -43,24 +43,22 @@ import {
   type LinePatternSegment,
   type LinePatternSegmentKind,
   type LinePatternTextSegment,
+  type LinePatternSymbolSegment,
   DEFAULT_SEGMENT_LENGTH_MM,
   LINETYPE_TEXT_STYLE_OPTIONS,
   defaultTextSegment,
-  hasTextSegments,
-  segmentsToComplex,
+  defaultSymbolSegment,
+  hasComplexSegments,
   segmentsToDashPattern,
 } from '../../../config/line-pattern-segments';
-import { buildLinetypeThumbnailFromPattern } from '../../../rendering/linetype-thumbnail';
-import { strokeStyledPolyline } from '../../../rendering/linetype/ComplexLineStroker';
+import { listLinetypeSymbols } from '../../../config/linetype-symbol-catalog';
+import { PatternPreview, TextPatternPreview } from './LinePatternPreviews';
 
 /** The three geometry segment kinds shown in the in-row kind picker. */
 export const SEGMENT_KINDS: readonly LinePatternGeometrySegment['kind'][] = ['dash', 'gap', 'dot'];
 
-/** All segment kinds offered by the add bar (geometry + embedded text). */
-const ADD_KINDS: readonly LinePatternSegmentKind[] = ['dash', 'gap', 'dot', 'text'];
-
-/** Screen px per mm for the text preview canvas — makes a default (scale 1) glyph legible. */
-const PREVIEW_PX_PER_MM = 4;
+/** Every builtin symbol glyph id (picker source) — resolved once at module load. */
+const SYMBOL_GLYPH_IDS: readonly string[] = listLinetypeSymbols().map((g) => g.id);
 
 /** i18n labels the host supplies (namespace-agnostic — no hardcoded strings here). */
 export interface LinePatternSegmentsLabels {
@@ -80,6 +78,15 @@ export interface LinePatternSegmentsLabels {
     readonly offsetX: string;
     readonly offsetY: string;
     readonly followPath: string;
+  };
+  /** Embedded-symbol row field labels + per-glyph names (ADR-642 Φ3). */
+  readonly symbol: {
+    readonly glyph: string;
+    readonly scale: string;
+    readonly rotation: string;
+    readonly offsetX: string;
+    readonly offsetY: string;
+    readonly glyphName: (id: string) => string;
   };
 }
 
@@ -108,6 +115,14 @@ export function buildLinePatternSegmentsLabels(
       offsetY: e('text.offsetY'),
       followPath: e('text.followPath'),
     },
+    symbol: {
+      glyph: e('symbol.glyph'),
+      scale: e('symbol.scale'),
+      rotation: e('symbol.rotation'),
+      offsetX: e('symbol.offsetX'),
+      offsetY: e('symbol.offsetY'),
+      glyphName: (id) => e(`symbol.glyphs.${id}`),
+    },
   };
 }
 
@@ -126,6 +141,13 @@ export interface LinePatternSegmentsEditorProps {
    * linetypes are authored centrally in the dialog (AutoCAD/Revit convention).
    */
   readonly allowText?: boolean;
+  /**
+   * Offer the embedded-symbol row (ADR-642 Φ3, `──×──`). Default true (the «New line
+   * type» dialog). Like text, the inline per-line COW tab passes false: it edits only the
+   * geometry `pattern`, so a symbol row there would be silently dropped — symbol linetypes
+   * are authored centrally in the dialog (AutoCAD/Revit convention).
+   */
+  readonly allowSymbol?: boolean;
 }
 
 export function LinePatternSegmentsEditor({
@@ -135,27 +157,46 @@ export function LinePatternSegmentsEditor({
   patternError,
   showPreview = true,
   allowText = true,
+  allowSymbol = true,
 }: LinePatternSegmentsEditorProps): React.ReactElement {
   const pattern = React.useMemo(() => segmentsToDashPattern(segments), [segments]);
-  const hasText = React.useMemo(() => hasTextSegments(segments), [segments]);
+  // Text OR symbol → the SVG dash preview can't render it, switch to the real canvas stroke.
+  const hasComplex = React.useMemo(() => hasComplexSegments(segments), [segments]);
 
   const addSegment = (kind: LinePatternSegmentKind) =>
     onChange([
       ...segments,
-      kind === 'text' ? defaultTextSegment() : { kind, lengthMm: kind === 'dot' ? 0 : DEFAULT_SEGMENT_LENGTH_MM },
+      kind === 'text'
+        ? defaultTextSegment()
+        : kind === 'symbol'
+          ? defaultSymbolSegment()
+          : { kind, lengthMm: kind === 'dot' ? 0 : DEFAULT_SEGMENT_LENGTH_MM },
     ]);
 
   const patchGeometry = (index: number, patch: Partial<LinePatternGeometrySegment>) =>
-    onChange(segments.map((s, i) => (i === index && s.kind !== 'text' ? { ...s, ...patch } : s)));
+    onChange(
+      segments.map((s, i) =>
+        i === index && s.kind !== 'text' && s.kind !== 'symbol' ? { ...s, ...patch } : s,
+      ),
+    );
 
   const patchText = (index: number, patch: Partial<LinePatternTextSegment>) =>
     onChange(segments.map((s, i) => (i === index && s.kind === 'text' ? { ...s, ...patch } : s)));
 
+  const patchSymbol = (index: number, patch: Partial<LinePatternSymbolSegment>) =>
+    onChange(segments.map((s, i) => (i === index && s.kind === 'symbol' ? { ...s, ...patch } : s)));
+
   const removeSegment = (index: number) => onChange(segments.filter((_, i) => i !== index));
+
+  const addKinds: readonly LinePatternSegmentKind[] = [
+    ...SEGMENT_KINDS,
+    ...(allowText ? (['text'] as const) : []),
+    ...(allowSymbol ? (['symbol'] as const) : []),
+  ];
 
   return (
     <div className="flex flex-col gap-3">
-      {showPreview && (hasText
+      {showPreview && (hasComplex
         ? <TextPatternPreview label={labels.previewLabel} segments={segments} />
         : <PatternPreview label={labels.previewLabel} pattern={pattern} />)}
 
@@ -168,6 +209,14 @@ export function LinePatternSegmentsEditor({
               seg={seg}
               labels={labels}
               onPatch={(patch) => patchText(i, patch)}
+              onRemove={() => removeSegment(i)}
+            />
+          ) : seg.kind === 'symbol' ? (
+            <SymbolSegmentRow
+              key={i}
+              seg={seg}
+              labels={labels}
+              onPatch={(patch) => patchSymbol(i, patch)}
               onRemove={() => removeSegment(i)}
             />
           ) : (
@@ -183,7 +232,7 @@ export function LinePatternSegmentsEditor({
             />
           ),
         )}
-        <AddSegmentBar kinds={allowText ? ADD_KINDS : SEGMENT_KINDS} addLabel={labels.add} onAdd={addSegment} />
+        <AddSegmentBar kinds={addKinds} addLabel={labels.add} onAdd={addSegment} />
         {patternError && (
           <p className="text-xs text-destructive mt-1" role="alert">
             {patternError}
@@ -195,68 +244,6 @@ export function LinePatternSegmentsEditor({
 }
 
 // ── Subcomponents (shared by the dialog + the inline tab) ─────────────────────
-
-function PatternPreview({ label, pattern }: { label: string; pattern: readonly number[] }) {
-  const thumb = buildLinetypeThumbnailFromPattern(pattern, 220, 16);
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-muted-foreground w-36 shrink-0">{label}</span>
-      <svg
-        viewBox={`0 0 ${thumb.width} ${thumb.height}`}
-        className="h-4 w-full rounded-sm border border-border"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <line
-          x1={0}
-          y1={thumb.height / 2}
-          x2={thumb.width}
-          y2={thumb.height / 2}
-          stroke="currentColor"
-          strokeWidth={1.25}
-          strokeDasharray={thumb.dash.length > 0 ? thumb.dash.join(' ') : undefined}
-        />
-      </svg>
-    </div>
-  );
-}
-
-/**
- * WYSIWYG preview for a text-carrying pattern — strokes a horizontal line through the
- * REAL `strokeStyledPolyline` SSoT, so `──GAS──` renders exactly as it will on canvas.
- */
-function TextPatternPreview({ label, segments }: { label: string; segments: readonly LinePatternSegment[] }) {
-  const ref = React.useRef<HTMLCanvasElement>(null);
-
-  React.useEffect(() => {
-    const canvas = ref.current;
-    const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
-    const dpr = window.devicePixelRatio || 1;
-    const w = canvas.clientWidth;
-    const h = canvas.clientHeight;
-    if (w <= 0 || h <= 0) return;
-    canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-    ctx.strokeStyle = window.getComputedStyle(canvas).color || '#111';
-    ctx.lineWidth = 1.25;
-    const def = segmentsToComplex('__preview__', segments);
-    const midY = h / 2;
-    strokeStyledPolyline(ctx, [{ x: 6, y: midY }, { x: w - 6, y: midY }], def, {
-      worldToScreenScale: PREVIEW_PX_PER_MM,
-      ltscale: 1,
-    });
-  }, [segments]);
-
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-muted-foreground w-36 shrink-0">{label}</span>
-      <canvas ref={ref} className="h-9 w-full rounded-sm border border-border" aria-hidden="true" />
-    </div>
-  );
-}
 
 function SegmentRow({
   seg, kindLabel, lengthUnit, removeLabel, onKind, onLength, onRemove,
@@ -298,6 +285,40 @@ function SegmentRow({
   );
 }
 
+/**
+ * Shared shell for the two «complex» rows (text `──GAS──` + symbol `──×──`): a bordered
+ * card whose header is a `header` picker + a trash button, and whose footer is the
+ * `PlacementFields` quartet (+ an optional `extra`, e.g. the text follow-path switch).
+ * ONE SSoT (N.18) — both rows differ only in their leading picker + optional extra.
+ */
+function ComplexSegmentRowShell({
+  header, placementLabels, placement, onPlacementChange, extra, onRemove, removeLabel,
+}: {
+  header: React.ReactNode;
+  placementLabels: { readonly scale: string; readonly rotation: string; readonly offsetX: string; readonly offsetY: string };
+  placement: { readonly scale: number; readonly rotationDeg: number; readonly offsetXMm: number; readonly offsetYMm: number };
+  onPlacementChange: (patch: { scale?: number; rotationDeg?: number; offsetXMm?: number; offsetYMm?: number }) => void;
+  extra?: React.ReactNode;
+  onRemove: () => void;
+  removeLabel: string;
+}) {
+  const iconSizes = useIconSizes();
+  return (
+    <div className="flex flex-col gap-1.5 rounded-sm border border-border/60 p-2">
+      <div className="flex items-center gap-2">
+        {header}
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onRemove} aria-label={removeLabel}>
+          <Trash2 className={iconSizes.sm} />
+        </Button>
+      </div>
+      <div className="flex items-end gap-2">
+        <PlacementFields labels={placementLabels} value={placement} onChange={onPlacementChange} />
+        {extra}
+      </div>
+    </div>
+  );
+}
+
 /** Embedded-text row (ADR-642 Φ2): value + style picker + scale/rotation/offset + follow-path. */
 function TextSegmentRow({
   seg, labels, onPatch, onRemove,
@@ -307,45 +328,97 @@ function TextSegmentRow({
   onPatch: (patch: Partial<LinePatternTextSegment>) => void;
   onRemove: () => void;
 }) {
-  const iconSizes = useIconSizes();
   const t = labels.text;
   return (
-    <div className="flex flex-col gap-1.5 rounded-sm border border-border/60 p-2">
-      <div className="flex items-center gap-2">
-        <Input
-          value={seg.value}
-          placeholder={t.valuePlaceholder}
-          onChange={(ev) => onPatch({ value: ev.target.value })}
-          aria-label={t.value}
-          className="h-7 text-xs flex-1 px-1.5"
-        />
-        <Select value={seg.styleId} onValueChange={(v) => onPatch({ styleId: v })}>
-          <SelectTrigger className="h-7 text-xs w-32" aria-label={t.style}><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {LINETYPE_TEXT_STYLE_OPTIONS.map((s) => (
-              <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onRemove} aria-label={labels.removeSegment}>
-          <Trash2 className={iconSizes.sm} />
-        </Button>
-      </div>
-      <div className="flex items-end gap-2">
-        <NumField label={t.scale} value={seg.scale} step={0.1} onChange={(v) => onPatch({ scale: v })} />
-        <NumField label={t.rotation} value={seg.rotationDeg} step={1} onChange={(v) => onPatch({ rotationDeg: v })} />
-        <NumField label={t.offsetX} value={seg.offsetXMm} step={0.1} onChange={(v) => onPatch({ offsetXMm: v })} />
-        <NumField label={t.offsetY} value={seg.offsetYMm} step={0.1} onChange={(v) => onPatch({ offsetYMm: v })} />
+    <ComplexSegmentRowShell
+      removeLabel={labels.removeSegment}
+      onRemove={onRemove}
+      placementLabels={t}
+      placement={seg}
+      onPlacementChange={onPatch}
+      header={
+        <>
+          <Input
+            value={seg.value}
+            placeholder={t.valuePlaceholder}
+            onChange={(ev) => onPatch({ value: ev.target.value })}
+            aria-label={t.value}
+            className="h-7 text-xs flex-1 px-1.5"
+          />
+          <Select value={seg.styleId} onValueChange={(v) => onPatch({ styleId: v })}>
+            <SelectTrigger className="h-7 text-xs w-32" aria-label={t.style}><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {LINETYPE_TEXT_STYLE_OPTIONS.map((s) => (
+                <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </>
+      }
+      extra={
         <label className="flex items-center gap-1.5 pb-1 ml-auto">
           <Switch checked={seg.followPath} onCheckedChange={(v) => onPatch({ followPath: v })} />
           <span className="text-[10px] text-muted-foreground whitespace-nowrap">{t.followPath}</span>
         </label>
-      </div>
-    </div>
+      }
+    />
   );
 }
 
-/** Compact labelled numeric input used by the text row (scale / rotation / offsets). */
+/** Embedded-symbol row (ADR-642 Φ3): glyph picker + scale/rotation/offset (`──×──`). */
+function SymbolSegmentRow({
+  seg, labels, onPatch, onRemove,
+}: {
+  seg: LinePatternSymbolSegment;
+  labels: LinePatternSegmentsLabels;
+  onPatch: (patch: Partial<LinePatternSymbolSegment>) => void;
+  onRemove: () => void;
+}) {
+  const s = labels.symbol;
+  return (
+    <ComplexSegmentRowShell
+      removeLabel={labels.removeSegment}
+      onRemove={onRemove}
+      placementLabels={s}
+      placement={seg}
+      onPlacementChange={onPatch}
+      header={
+        <Select value={seg.glyphId} onValueChange={(v) => onPatch({ glyphId: v })}>
+          <SelectTrigger className="h-7 text-xs flex-1" aria-label={s.glyph}><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {SYMBOL_GLYPH_IDS.map((id) => (
+              <SelectItem key={id} value={id} className="text-xs">{s.glyphName(id)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      }
+    />
+  );
+}
+
+/**
+ * The AutoCAD placement quartet (Scale / Rotation / X-offset / Y-offset) shared by the
+ * text AND symbol rows — the `["…",STYLE,S,R,X,Y]` fields both element kinds carry. ONE
+ * SSoT (N.18): text/symbol both feed their own label bag + patch, no duplicated field list.
+ */
+function PlacementFields({
+  labels, value, onChange,
+}: {
+  labels: { readonly scale: string; readonly rotation: string; readonly offsetX: string; readonly offsetY: string };
+  value: { readonly scale: number; readonly rotationDeg: number; readonly offsetXMm: number; readonly offsetYMm: number };
+  onChange: (patch: { scale?: number; rotationDeg?: number; offsetXMm?: number; offsetYMm?: number }) => void;
+}) {
+  return (
+    <>
+      <NumField label={labels.scale} value={value.scale} step={0.1} onChange={(v) => onChange({ scale: v })} />
+      <NumField label={labels.rotation} value={value.rotationDeg} step={1} onChange={(v) => onChange({ rotationDeg: v })} />
+      <NumField label={labels.offsetX} value={value.offsetXMm} step={0.1} onChange={(v) => onChange({ offsetXMm: v })} />
+      <NumField label={labels.offsetY} value={value.offsetYMm} step={0.1} onChange={(v) => onChange({ offsetYMm: v })} />
+    </>
+  );
+}
+
+/** Compact labelled numeric input used by the placement rows (scale / rotation / offsets). */
 function NumField({
   label, value, step, onChange,
 }: {

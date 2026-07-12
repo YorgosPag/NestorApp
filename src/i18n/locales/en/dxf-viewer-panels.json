@@ -352,13 +352,15 @@
           "dash": "Dash",
           "gap": "Gap",
           "dot": "Dot",
-          "text": "Text"
+          "text": "Text",
+          "symbol": "Symbol"
         },
         "add": {
           "dash": "Dash",
           "gap": "Gap",
           "dot": "Dot",
-          "text": "Text"
+          "text": "Text",
+          "symbol": "Symbol"
         },
         "text": {
           "value": "Text",
@@ -369,6 +371,24 @@
           "offsetX": "X offset",
           "offsetY": "Y offset",
           "followPath": "Follow line"
+        },
+        "symbol": {
+          "glyph": "Symbol",
+          "scale": "Scale",
+          "rotation": "Rotation",
+          "offsetX": "X offset",
+          "offsetY": "Y offset",
+          "glyphs": {
+            "cross": "Cross (×)",
+            "plus": "Plus (+)",
+            "asterisk": "Asterisk (∗)",
+            "circle": "Circle (○)",
+            "square": "Square (□)",
+            "tick": "Tick",
+            "arrow": "Arrow",
+            "insulation": "Insulation",
+            "tree": "Tree"
+          }
         },
         "cancel": "Cancel",
         "save": "Save",

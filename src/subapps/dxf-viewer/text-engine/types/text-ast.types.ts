@@ -148,4 +148,10 @@ export interface DxfStyleTableEntry {
   readonly flags: number;
   /** Text generation flags: 2=backward, 4=upside-down (group code 71). */
   readonly textGenerationFlags: number;
+  /**
+   * ADR-642 Φ2-B — DXF handle (group code 5) of this STYLE record, when present. Used to
+   * resolve a complex-linetype embedded-text `340` STYLE reference on import. Absent when
+   * the writer omits handles (the minimal client writer is otherwise handle-less).
+   */
+  readonly handle?: string;
 }

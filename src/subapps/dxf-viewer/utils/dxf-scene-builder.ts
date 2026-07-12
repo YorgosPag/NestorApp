@@ -8,7 +8,7 @@ import { parseLinetypeTable } from './dxf-linetype-table-parser';
 import { registerLinetypes } from '../stores/LinetypeRegistry';
 // ADR-635 Φ C.5 — STYLE table pre-pass: map each text-style name → its font family so
 // TEXT/MTEXT (group 7) resolve to the real font. Reuses the ADR-344 STYLE parser SSoT.
-import { buildStyleFontMap } from '../text-engine/parser';
+import { buildStyleFontMap, buildStyleHandleFontMap } from '../text-engine/parser';
 // ADR-635 Φ C.7 — MLINESTYLE (OBJECTS section) pre-pass: map style name/handle → N line
 // elements so an MLINE draws its real parallel lines instead of a single reference path.
 import { buildMlineStyleMap } from './dxf-mline-style-parser';
@@ -142,7 +142,10 @@ export class DxfSceneBuilder {
     // ║ ⇒ no localStorage write). $LTSCALE (header.ltscale) is intentionally   ║
     // ║ NOT applied here — see DxfHeaderData.ltscale.                          ║
     // ╚════════════════════════════════════════════════════════════════════════╝
-    const { linetypes: customLinetypes } = parseLinetypeTable(lines);
+    // ADR-642 Φ2-B — resolve embedded-text `340` STYLE handles → font family so an imported
+    // AutoCAD complex linetype (`──GAS──`) carries a full `complex` def and renders its text.
+    const styleHandleFonts = buildStyleHandleFontMap(content);
+    const { linetypes: customLinetypes } = parseLinetypeTable(lines, styleHandleFonts);
     if (customLinetypes.length > 0) registerLinetypes(customLinetypes);
 
     // ╔════════════════════════════════════════════════════════════════════════╗

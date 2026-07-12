@@ -26,11 +26,16 @@ import type { LinetypeOrigin } from './linetype-iso-catalog';
 import type {
   ComplexLinetypeDef,
   PatternElement,
+  SymbolRole,
 } from './complex-linetype-types';
 import { DEFAULT_SCALE_SPACE } from './complex-linetype-adapters';
+import { DEFAULT_LINETYPE_SYMBOL_ID } from './linetype-symbol-catalog';
 
-/** One authored segment kind — geometry (`dash`/`gap`/`dot`) or embedded `text` (#2). */
-export type LinePatternSegmentKind = 'dash' | 'gap' | 'dot' | 'text';
+/**
+ * One authored segment kind — geometry (`dash`/`gap`/`dot`), embedded `text` (#2) or
+ * embedded `symbol` (#3, ADR-642 Φ3: `──×──×──` φράχτης).
+ */
+export type LinePatternSegmentKind = 'dash' | 'gap' | 'dot' | 'text' | 'symbol';
 
 /** Geometry segment — `dot` ignores `lengthMm` (a dot is a zero-length dash). */
 export interface LinePatternGeometrySegment {
@@ -56,8 +61,26 @@ export interface LinePatternTextSegment {
   readonly followPath: boolean;
 }
 
+/**
+ * Embedded-symbol segment — ADR-642 Φ3 (#3). Mirrors `SymbolElement`: a glyph from the
+ * `linetype-symbol-catalog` (`×`/`+`/`○`/βέλος/…) + AutoCAD S/R/X/Y placement. `role`
+ * defaults to `'side'` (along the line); corner roles come in Φ4.
+ */
+export interface LinePatternSymbolSegment {
+  readonly kind: 'symbol';
+  readonly glyphId: string;
+  readonly role: SymbolRole;
+  readonly scale: number;
+  readonly rotationDeg: number;
+  readonly offsetXMm: number;
+  readonly offsetYMm: number;
+}
+
 /** One authored segment — discriminated on `kind`. */
-export type LinePatternSegment = LinePatternGeometrySegment | LinePatternTextSegment;
+export type LinePatternSegment =
+  | LinePatternGeometrySegment
+  | LinePatternTextSegment
+  | LinePatternSymbolSegment;
 
 /** Sensible default length (mm) for a freshly-added dash/gap row (acadiso gap). */
 export const DEFAULT_SEGMENT_LENGTH_MM = 3.175;
@@ -96,9 +119,39 @@ export function defaultTextSegment(): LinePatternTextSegment {
   };
 }
 
+/** Defaults for a freshly-added symbol row — the fence `×` glyph, along-the-line role. */
+export const DEFAULT_SYMBOL_SCALE = 1;
+
+/** A fresh symbol segment — the default catalog glyph (`×`), `side` role, scale 1. */
+export function defaultSymbolSegment(): LinePatternSymbolSegment {
+  return {
+    kind: 'symbol',
+    glyphId: DEFAULT_LINETYPE_SYMBOL_ID,
+    role: 'side',
+    scale: DEFAULT_SYMBOL_SCALE,
+    rotationDeg: 0,
+    offsetXMm: 0,
+    offsetYMm: 0,
+  };
+}
+
 /** True when any authored segment carries embedded text (→ store as `complex`, not `pattern`). */
 export function hasTextSegments(segments: readonly LinePatternSegment[]): boolean {
   return segments.some((s) => s.kind === 'text');
+}
+
+/** True when any authored segment carries an embedded symbol (ADR-642 Φ3). */
+export function hasSymbolSegments(segments: readonly LinePatternSegment[]): boolean {
+  return segments.some((s) => s.kind === 'symbol');
+}
+
+/**
+ * True when the segment list needs full `ComplexLinetypeDef` storage — i.e. it carries
+ * text OR symbols, which the `number[]` mm pattern cannot express. The SSoT gate both the
+ * dialog (store `complex`) and the editor (WYSIWYG canvas preview vs SVG dash) call.
+ */
+export function hasComplexSegments(segments: readonly LinePatternSegment[]): boolean {
+  return hasTextSegments(segments) || hasSymbolSegments(segments);
 }
 
 /** Reserved names the user may not reuse for a custom pattern (AutoCAD sentinels). */
@@ -131,7 +184,8 @@ export function segmentsToDashPattern(
 ): number[] {
   const out: number[] = [];
   for (const seg of segments) {
-    if (seg.kind === 'text') continue; // text is not expressible as a mm dash value
+    // text/symbol are not expressible as a mm dash value (they live in `complex`)
+    if (seg.kind === 'text' || seg.kind === 'symbol') continue;
     if (seg.kind === 'dot') {
       out.push(0);
       continue;
@@ -174,6 +228,7 @@ export function dashPatternToSegments(
 export function describeSegments(segments: readonly LinePatternSegment[]): string {
   const glyph = (s: LinePatternSegment): string => {
     if (s.kind === 'text') return s.value ? ` ${s.value} ` : ' T ';
+    if (s.kind === 'symbol') return ' ✳ ';
     return s.kind === 'dash' ? '▬' : s.kind === 'dot' ? '·' : ' ';
   };
   return segments.map(glyph).join('').trim() || '—';
@@ -196,8 +251,10 @@ export function validateLinePattern(
   if (existingNames.includes(trimmed)) return { ok: false, nameError: 'name.taken' };
 
   if (segments.length === 0) return { ok: false, patternError: 'pattern.empty' };
-  // Text counts as a visible mark (──GAS──) — a text row satisfies "needs visible".
-  const hasVisible = segments.some((s) => s.kind === 'dash' || s.kind === 'dot' || s.kind === 'text');
+  // Text/symbol count as a visible mark (──GAS──, ──×──) — either satisfies "needs visible".
+  const hasVisible = segments.some(
+    (s) => s.kind === 'dash' || s.kind === 'dot' || s.kind === 'text' || s.kind === 'symbol',
+  );
   const hasGap = segments.some((s) => s.kind === 'gap');
   const emptyText = segments.some((s) => s.kind === 'text' && s.value.trim().length === 0);
   const badLength = segments.some(
@@ -224,6 +281,17 @@ function segmentToElement(seg: LinePatternSegment): PatternElement {
       offsetXMm: seg.offsetXMm,
       offsetYMm: seg.offsetYMm,
       followPath: seg.followPath,
+    };
+  }
+  if (seg.kind === 'symbol') {
+    return {
+      kind: 'symbol',
+      glyphId: seg.glyphId,
+      role: seg.role,
+      scale: seg.scale,
+      rotationDeg: seg.rotationDeg,
+      offsetXMm: seg.offsetXMm,
+      offsetYMm: seg.offsetYMm,
     };
   }
   if (seg.kind === 'gap') return { kind: 'gap', lengthMm: Math.abs(seg.lengthMm) };
@@ -266,22 +334,28 @@ function elementToSegment(el: PatternElement): LinePatternSegment {
       followPath: el.followPath,
     };
   }
+  if (el.kind === 'symbol') {
+    return {
+      kind: 'symbol',
+      glyphId: el.glyphId,
+      role: el.role,
+      scale: el.scale,
+      rotationDeg: el.rotationDeg,
+      offsetXMm: el.offsetXMm,
+      offsetYMm: el.offsetYMm,
+    };
+  }
   if (el.kind === 'gap') return { kind: 'gap', lengthMm: el.lengthMm };
   if (el.kind === 'dot') return { kind: 'dot', lengthMm: 0 };
-  if (el.kind === 'dash') return { kind: 'dash', lengthMm: el.lengthMm };
-  // symbol (Φ3) — not authorable yet; skip by projecting to a zero-gap (never emitted).
-  return { kind: 'gap', lengthMm: 0 };
+  return { kind: 'dash', lengthMm: el.lengthMm };
 }
 
 /**
- * `ComplexLinetypeDef` → authored segment list (first layer). Lets the editor load
- * an existing text-carrying linetype back into rows. Symbol elements (Φ3) are not
- * yet authorable and are dropped.
+ * `ComplexLinetypeDef` → authored segment list (first layer). Lets the editor load an
+ * existing text/symbol-carrying linetype back into rows (ADR-642 Φ2/Φ3).
  */
 export function complexToSegments(def: ComplexLinetypeDef): LinePatternSegment[] {
   const layer = def.layers[0];
   if (!layer) return [];
-  return layer.elements
-    .filter((el) => el.kind !== 'symbol')
-    .map(elementToSegment);
+  return layer.elements.map(elementToSegment);
 }
