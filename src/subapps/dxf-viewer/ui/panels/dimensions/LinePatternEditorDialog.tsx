@@ -32,6 +32,9 @@ import {
   DEFAULT_SEGMENT_LENGTH_MM,
   segmentsToDashPattern,
   layersToComplex,
+  complexToLayers,
+  singleLayer,
+  dashPatternToSegments,
   hasComplexSegments,
   isCompound,
   describeLayers,
@@ -40,7 +43,10 @@ import {
 import {
   listSelectableLinetypeNames,
   registerUserLinetype,
+  upsertUserLinetype,
 } from '../../../stores/LinetypeRegistry';
+import { resolveLinetypeDef } from '../../../rendering/linetype-dash-resolver';
+import { isSimpleExpressible } from '../../../config/complex-linetype-adapters';
 // ADR-510 Φ2E #4 / ADR-642 Φ5 — the segment UI is the shared editor; compound (multi-layer)
 // patterns wrap it via `LinePatternLayersEditor`. The dialog keeps only the name field +
 // registration; the layer/segment rows + preview live in one SSoT.
@@ -67,12 +73,20 @@ interface LinePatternEditorDialogProps {
   onOpenChange: (open: boolean) => void;
   /** Called with the new linetype name after a successful registration. */
   onCreated?: (name: string) => void;
+  /**
+   * ADR-642 Edit-in-place — when set, the dialog edits this EXISTING user-created
+   * linetype in place (name locked, pre-loaded layers, `save()` → upsert) instead of
+   * creating a new one. Big-player parity (Revit/AutoCAD): a named user pattern is
+   * edited in place and every line that references it updates (same-name upsert).
+   */
+  editName?: string;
 }
 
 export function LinePatternEditorDialog({
   open,
   onOpenChange,
   onCreated,
+  editName,
 }: LinePatternEditorDialogProps) {
   const { t } = useTranslation('dxf-viewer-panels');
   const e = (key: string) => t(`panels.dimensions.linePatternEditor.${key}`);
@@ -80,12 +94,32 @@ export function LinePatternEditorDialog({
   const [name, setName] = React.useState('');
   const [layers, setLayers] = React.useState<LinePatternLayer[]>(initialLayers);
 
+  // Pre-load / reset on every open: edit mode seeds the existing def's layers (compound →
+  // `complexToLayers`, simple → the geometry fallback via `singleLayer`); create mode starts fresh.
+  React.useEffect(() => {
+    if (!open) return;
+    if (editName) {
+      const def = resolveLinetypeDef(editName);
+      const complex = def?.complex;
+      setName(editName);
+      setLayers(
+        complex && !isSimpleExpressible(complex)
+          ? complexToLayers(complex)
+          : singleLayer(dashPatternToSegments(def?.pattern ?? [])),
+      );
+    } else {
+      setName('');
+      setLayers(initialLayers());
+    }
+  }, [open, editName]);
+
   // Geometry-only fallback pattern = the base (first) layer — what a simple picker/renderer reads.
   const pattern = React.useMemo(
     () => segmentsToDashPattern(layers[0]?.segments ?? []),
     [layers],
   );
-  const existingNames = listSelectableLinetypeNames();
+  // Edit mode: exclude the edited name from the taken-names set (an in-place edit keeps its own name).
+  const existingNames = listSelectableLinetypeNames().filter((n) => n !== editName);
   const validation = validateLinePatternLayers(name, layers, existingNames);
 
   const reset = React.useCallback(() => {
@@ -107,8 +141,11 @@ export function LinePatternEditorDialog({
     // a plain single-layer dash pattern passes `undefined`.
     const needsComplex = isCompound(layers) || layers.some((l) => hasComplexSegments(l.segments));
     const complex = needsComplex ? layersToComplex(trimmed, layers, description) : undefined;
-    const created = registerUserLinetype(trimmed, pattern, description, complex);
-    if (created) onCreated?.(created.name);
+    // Edit-in-place → upsert the locked name (all referencing lines update); else register a new type.
+    const saved = editName
+      ? upsertUserLinetype(editName, pattern, description, complex)
+      : registerUserLinetype(trimmed, pattern, description, complex);
+    if (saved) onCreated?.(saved.name);
     close();
   };
 
