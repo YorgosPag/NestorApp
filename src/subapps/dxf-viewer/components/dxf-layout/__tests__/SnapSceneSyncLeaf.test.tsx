@@ -1,21 +1,22 @@
 /**
- * ADR-547 regression guard — SnapSceneSyncLeaf feeds the LIVE SceneStore scene
- * (not the stale orchestrator prop) into useGlobalSnapSceneSync, so in-session
- * commits re-init the snap engine without a hard reload.
+ * ADR-547 regression guard — SnapSceneSyncLeaf feeds the LIVE scene (not the stale orchestrator prop)
+ * into useGlobalSnapSceneSync, so in-session commits re-init the snap engine without a hard reload.
+ * ADR-641 Φ4 — that live scene is now the EFFECTIVE scene (`useEffectiveLevelScene`): inside a Block
+ * Editor session it is the block-local scene, so the snap engine indexes only the block's members.
  */
 import { render } from '@testing-library/react';
 import type { SceneModel } from '../../../types/scene';
 
-// Mock the three delegated hooks — the leaf is pure wiring, so we assert the
-// exact scene/overlays argument it forwards.
+// Mock the delegated hooks — the leaf is pure wiring, so we assert the exact
+// scene/overlays argument it forwards.
 const snapSyncSpy = jest.fn();
 jest.mock('../../../snapping/hooks/useGlobalSnapSceneSync', () => ({
   useGlobalSnapSceneSync: (args: unknown) => snapSyncSpy(args),
 }));
 
 let mockLiveScene: SceneModel | null = null;
-jest.mock('../../../systems/scene/useSceneSelectors', () => ({
-  useLevelScene: () => mockLiveScene,
+jest.mock('../../../systems/block/useEffectiveLevelScene', () => ({
+  useEffectiveLevelScene: () => mockLiveScene,
 }));
 
 const mockOverlays = [{ id: 'ov1' }];

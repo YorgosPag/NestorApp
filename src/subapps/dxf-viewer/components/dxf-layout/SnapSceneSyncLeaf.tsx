@@ -52,7 +52,7 @@ interface SnapSceneSyncLeafProps {
  * snap engine re-initialises on every in-session commit. Renders nothing.
  */
 export function SnapSceneSyncLeaf({ levelId, fallbackScene }: SnapSceneSyncLeafProps): null {
-  const liveScene = useLevelScene(levelId);
+  const liveScene = useEffectiveLevelScene(levelId);
   const overlays = useLiveOverlaysForLevel(levelId);
   useGlobalSnapSceneSync({ scene: liveScene ?? fallbackScene, overlays });
   return null;
