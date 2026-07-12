@@ -16,15 +16,19 @@ import { viewportToWorldBBox, isEntityInViewport } from './dxf-viewport-culling'
 import { dashMmToScreenPx } from '../../rendering/linetype-dash-resolver';
 // ADR-375 — «DXF Σχέδιο» row lineweight override: mm → screen px (ISO catalog SSoT).
 import { lineweightToPx } from '../../config/lineweight-iso-catalog';
-import { getLinetypeScale } from '../../stores/LinetypeScaleStore';
-// 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
-import { resolveEntityLayerName, getLayer as getLayerStoreLayer } from '../../stores/LayerStore';
-// ADR-358 §5.6.bis Phase 10 — Layer Isolate runtime effects (zero-cost passthrough when inactive).
-import { getIsolateEffectsSnapshot } from '../../systems/isolate/IsolateEffectsStore';
+// ADR-510 Φ2H — effective LTSCALE = per-scene base × user knob; scene base set once/frame.
+import { getEffectiveLinetypeScale, setActiveSceneLinetypeScale } from '../../stores/LinetypeScaleStore';
 import { resolveEntityBimCategory } from '../../bim/visibility/resolve-entity-bim-category';
-// ADR-452 — cut-plane (Revit View Range) hide gate SSoT.
-import { isHiddenByCutPlane } from '../../bim/visibility/entity-z-extents';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
+// ADR-639 Στάδιο 5 — GPU line-layer suppression flags (event-time getters, ADR-040 rule 2).
+import { isWebglLineLayerActive, getWebglOwnedEntityIds } from '../webgl-lines/webgl-line-layer-store';
+// ADR-640 arc-fix — type-gated "already drawn by the line layer?" predicates. Container members
+// (block/group/array) share ONE id, so the per-entity skip must gate by TYPE, never a shared id
+// alone — else a non-line member (arc/circle/text) is suppressed by a batched line sibling.
+import { isDrawnByBatchedLineLayer, isDrawnByWebglLineLayer } from '../webgl-lines/line-layer-draw-suppression';
+// ADR-639 Στάδιο 5 — shared layer/isolate/cut-plane skip predicate (SSoT; was the private
+// `isEntityLayerSkipped` method, extracted so the WebGL buffer builder asks the same question).
+import { isEntityLayerSkipped as isEntityLayerSkippedShared } from './dxf-entity-layer-skip';
 // Per-frame index builders (extracted Boy-Scout file-size split, 2026-05-19).
 import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, buildWallsById, buildColumnFootprints } from './dxf-renderer-frame-builders';
 // ADR-550 / ADR-358 §G7 — entity render-style SSoT (shared with the WYSIWYG preview path).
@@ -120,6 +124,9 @@ export class DxfRenderer {
     // ADR-362 Round 5 — propagate active scene units so dim text + arrows scale
     // correctly in non-mm DXFs (e.g. meters). Default `'mm'` keeps legacy parity.
     this.entityComposite.setDimensionSceneUnits(scene.units ?? 'mm');
+    // ADR-510 Φ2H — publish this scene's base LTSCALE (auto-fit / file $LTSCALE) as the
+    // per-frame ambient every dash-stroke site reads via getEffectiveLinetypeScale().
+    setActiveSceneLinetypeScale(scene.linetypeScale);
 
     // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): bitmap cache passes skipInteractive=true
     // to render entities in pure normal-state. Interactive overlays are drawn separately.
@@ -153,6 +160,11 @@ export class DxfRenderer {
     type LineBatch = { starts: Point2D[]; ends: Point2D[]; lw: number; alpha: number; dashMm: ReadonlyArray<number>; celtscale: number };
     const lineBatches = new Map<string, LineBatch>();
     const batchedIds = new Set<string>();
+    // ADR-639 Στάδιο 5 — event-time read (once/frame, never stale): when the GPU line
+    // layer is live, the ids in `webglOwnedIds` are drawn by it, so their Canvas2D
+    // normal-state stroke is suppressed below. Null when the layer is off → today's path.
+    const webglLineActive = isWebglLineLayerActive();
+    const webglOwnedIds = webglLineActive ? getWebglOwnedEntityIds() : null;
 
     for (const entity of scene.entities) {
       if (entity.type !== 'line') continue;
@@ -165,6 +177,10 @@ export class DxfRenderer {
       const meta = entity as typeof entity & { measurement?: boolean; lineType?: string };
       if (meta.measurement) continue;
       if (meta.lineType && meta.lineType !== 'solid') continue;
+      // ADR-639 Στάδιο 5 — the GPU layer owns this normal-state line: skip its Canvas2D
+      // stroke (selected/hovered lines already `continue`d above → still drawn with
+      // highlight by the per-entity overlay). `batchedIds` also skips the per-entity pass.
+      if (webglOwnedIds && webglOwnedIds.has(entity.id)) { batchedIds.add(entity.id); continue; }
 
       const resolved = this.resolveStyleForRender(entity, effectiveOptions.layersById);
       const color = resolved.colorHex;
@@ -190,7 +206,7 @@ export class DxfRenderer {
       this.ctx.strokeStyle = color;
       this.ctx.lineWidth = batch.lw;
       // ADR-510 Φ2 — metric dash → screen px (zoom × LTSCALE × CELTSCALE); [] for solid.
-      this.ctx.setLineDash(dashMmToScreenPx(batch.dashMm, transform.scale, getLinetypeScale(), batch.celtscale));
+      this.ctx.setLineDash(dashMmToScreenPx(batch.dashMm, transform.scale, getEffectiveLinetypeScale(), batch.celtscale));
       this.ctx.globalAlpha = batch.alpha;
       this.ctx.lineCap = 'butt';
       this.ctx.beginPath();
@@ -216,7 +232,17 @@ export class DxfRenderer {
         if (!entity.visible) continue;
         if (!isEntityInViewport(entity, worldViewport)) continue;
         if (this.isEntityLayerSkipped(entity, effectiveOptions.layersById)) continue;
-        if (batchedIds.has(entity.id)) continue;
+        // ADR-640 arc-fix — TYPE-gated skip: only a LINE that was batch-drawn is suppressed here.
+        // Container members share the container id (block/group/array), so an arc/circle/text member
+        // must NOT be skipped just because a batched line sibling put that id in `batchedIds`.
+        if (isDrawnByBatchedLineLayer(entity, batchedIds)) continue;
+        // ADR-639 Στάδιο 5 — GPU owns owned normal-state entities (plain polylines here):
+        // suppress their Canvas2D per-entity draw. Selected/hovered stay drawn so their
+        // highlight overlay paints on top of the GPU line (interaction independence, rule 3).
+        // ADR-640 arc-fix — likewise gated by type (line/plain-polyline only), not a shared id.
+        if (isDrawnByWebglLineLayer(entity, webglOwnedIds)
+            && !this._selectionSet.has(entity.id)
+            && effectiveOptions.hoveredEntityId !== entity.id) continue;
         this.renderEntityUnified(entity, transform, actualViewport, effectiveOptions);
       }
     };
@@ -392,55 +418,19 @@ export class DxfRenderer {
   }
 
   /**
-   * ADR-358 §5.6.bis Phase 10 — return true when the entity belongs to a
-   * frozen or invisible layer (`LAYFRZ` / `LAYOFF` AutoCAD). Renderer skips
-   * those entirely. Called per entity in both render loops — kept inline-fast.
+   * ADR-358 §5.6.bis Phase 10 — return true when the entity is hidden by a cut-plane,
+   * the imported-DXF master toggle, an isolate FREEZE, or a frozen/invisible layer.
+   * Called per entity in both render loops.
    *
-   * LayerStore is the runtime SSoT (hydrated from SceneModel via
-   * `useDxfSceneConversion`); `layersById` is the cold fallback for legacy
-   * call sites or test harnesses that didn't go through the level loader.
+   * ADR-639 Στάδιο 5 — the body now lives in the shared `dxf-entity-layer-skip` SSoT so
+   * the WebGL line-layer buffer builder asks the EXACT same question (a divergence would
+   * leave a frozen/isolated line drawn by one layer and suppressed by the other). This
+   * stays a thin instance method so the two call sites above keep the `this.` form.
    */
   private isEntityLayerSkipped(
     entity: DxfEntityUnion,
     layersById?: Record<string, SceneLayer>,
   ): boolean {
-    // ADR-358 §5.6.bis — entity-scope isolate in FREEZE mode hides every entity
-    // outside the isolated set. (Layer flags are NOT mutated for entity isolate,
-    // so the freeze must be enforced here.) Dim mode is handled by applyIsolateAlpha.
-    // ADR-452 — cut-plane hide gate (Revit View Range, single horizontal section).
-    // Hides BIM entities whose base sits above the active cut elevation so the 2D
-    // plan shows only what exists at/below the slider height. No-op when the gate
-    // is off, or for raw DXF / un-gated BIM types (getEntityZExtents → null).
-    const bimSettings = useBimRenderSettingsStore.getState();
-    if (isHiddenByCutPlane(entity, bimSettings.viewRange, bimSettings.cutPlaneActive)) return true;
-
-    // ADR-375 — «DXF Σχέδιο» master visibility (Revit «Imported Categories» row).
-    // When the imported-DXF row is toggled off, hide every raw DXF primitive
-    // (resolveEntityBimCategory === null). BIM entities stay unaffected.
-    if (bimSettings.dxfImport.visible === false && resolveEntityBimCategory(entity) === null) return true;
-
-    const isolate = getIsolateEffectsSnapshot();
-    if (isolate.active && isolate.mode === 'freeze' && isolate.isolatedEntityIds.size > 0) {
-      return !entity.id || !isolate.isolatedEntityIds.has(entity.id);
-    }
-    // Category-scope freeze: hide entities whose BimCategory ∉ the isolated set
-    // (raw DXF primitives resolve to null → hidden, like Revit "Isolate Category").
-    if (isolate.active && isolate.mode === 'freeze' && isolate.isolatedCategories.size > 0) {
-      const cat = resolveEntityBimCategory(entity);
-      return cat === null || !isolate.isolatedCategories.has(cat);
-    }
-    if (!entity.layerId && !layersById) return false;
-    const storeLayer = entity.layerId ? getLayerStoreLayer(entity.layerId) : null;
-    if (storeLayer) {
-      return storeLayer.frozen === true || storeLayer.visible === false;
-    }
-    if (!layersById) return false;
-    const layerById = entity.layerId ? layersById[entity.layerId] : undefined;
-    const layer = layerById ?? (() => {
-      const name = resolveEntityLayerName(entity);
-      return name ? layersById[name] : undefined;
-    })();
-    if (!layer) return false;
-    return layer.frozen === true || layer.visible === false;
+    return isEntityLayerSkippedShared(entity, layersById);
   }
 }

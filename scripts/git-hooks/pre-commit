@@ -492,7 +492,7 @@ fi
 # These files implement the micro-leaf subscriber architecture (ADR-040).
 # Commit is BLOCKED unless ADR-040 is staged alongside these changes.
 DXF_PERF_CRITICAL_FILES=$(echo "$STAGED_FILES" | grep -E \
-  'src/subapps/dxf-viewer/(components/dxf-layout/(CanvasSection|CanvasLayerStack|canvas-layer-stack-leaves|canvas-layer-stack-types)|canvas-v2/dxf-canvas/(DxfRenderer|dxf-canvas-renderer|dxf-bitmap-cache)|hooks/(state/useGuideActions|state/useGuideState|canvas/guide-click-handlers|canvas/useCanvasContextMenu|canvas/canvas-click-types)|systems/(hover/HoverStore|cursor/ImmediatePositionStore|cursor/ImmediateSnapStore)|rendering/core/UnifiedFrameScheduler)' \
+  'src/subapps/dxf-viewer/(components/dxf-layout/(CanvasSection|CanvasLayerStack|canvas-layer-stack-leaves|canvas-layer-stack-types|canvas-layer-stack-webgl-line-leaf)|canvas-v2/dxf-canvas/(DxfRenderer|dxf-canvas-renderer|dxf-bitmap-cache|dxf-entity-layer-skip)|canvas-v2/webgl-lines/|hooks/(state/useGuideActions|state/useGuideState|canvas/guide-click-handlers|canvas/useCanvasContextMenu|canvas/canvas-click-types)|systems/(hover/HoverStore|cursor/ImmediatePositionStore|cursor/ImmediateSnapStore|cursor/ImmediateTransformStore)|rendering/core/UnifiedFrameScheduler)' \
   || true)
 ADR040_STAGED=$(echo "$STAGED_FILES" | grep -i "ADR-040" || true)
 

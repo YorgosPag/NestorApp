@@ -10,8 +10,29 @@
 > (`layer-stack`) είχε γυρίσει κενό· το κάλυψα με άμεση ανάγνωση του `CanvasLayerStack.tsx`
 > (βλ. §11 «Insertion point»).
 >
-> **Κατάσταση: DESIGN ONLY — καμία γραμμή κώδικα.** Ακολουθεί ADR-driven Phase 1: έγκριση Giorgio
-> πριν την υλοποίηση (N.8, render-critical/ADR-040, shared working tree). Χάρτης: `ADR-639`.
+> **Κατάσταση (2026-07-12): IMPLEMENTED — STEP 0-15 DONE, uncommitted.** Το blueprint υλοποιήθηκε
+> πλήρως (Giorgio approval). STEP 0-8 = pure modules (`canvas-v2/webgl-lines/`, 38/38 jest). STEP 9 =
+> `WebglLineLayerManager` (imperative). STEP 10 = `canvas-layer-stack-webgl-line-leaf` (thin React leaf).
+> STEP 11-13 = ADR-040 integration (CanvasLayerStack z5 mount + re-export· `DxfRenderer` suppression via
+> shared `isWebglOwnedLine`/`ownedEntityIds` + migrate σε shared `dxf-entity-layer-skip`· `'webgl-line-canvas'`
+> στο `TRANSFORM_CANVAS_IDS`). STEP 15 = ADR-040 changelog + Z-index table· CHECK 6B pre-commit + τα νέα
+> perf-critical αρχεία (Giorgio: «βάλε τα και στο 6B»). Πλήρες changelog: **ADR-040 §2026-07-12**.
+>
+> **2 τεκμηριωμένες αποκλίσεις (ασφαλείς):** (FLAG 1) ColorManagement μένει **ON** (THREE-global —
+> `false` θα χαλούσε το κοινό BIM 3D renderer)· ο buffer builder ανεβάζει **linear-converted** vertex
+> colors → sRGB OETF αναπαράγει το ακριβές Canvas2D hex, μηδέν global side-effect. Άρα η §"ColorManagement"
+> παρακάτω (`enabled=false`) **ΔΕΝ** εφαρμόστηκε ως έχει — αντικαταστάθηκε από linear-upload. (FLAG 2) η
+> SSoT extraction του desynchronized webgl2 ctx άγγιξε `bim-3d/scene/scene-setup.ts` (behavior-preserving,
+> BIM κρατά stencil:true). Χάρτης: `ADR-639`.
+>
+> **Εκκρεμεί:** browser-verify στο 215k permit DXF (weak PC) → Giorgio.
+>
+> **LOD cutoff = 0 στο idle (ΟΧΙ 1px).** Το §"LOD strategy" παρακάτω προτείνει `cutoffPx=1` idle —
+> **αυτό είναι ΛΑΘΟΣ και δεν εφαρμόστηκε.** Το 1px πετάει sub-pixel-length segments· σε exploded permit
+> οι γραμμοσκιάσεις είναι χιλιάδες ΚΟΝΤΑ LINEs (sub-pixel στο fit-view αλλά αθροιστικά ορατός τόνος) →
+> suppressed στο Canvas2D + LOD-dropped στο GPU = **εξαφανίστηκαν** (incident 2026-07-12). Το μόνο
+> pixel-identical idle = **0 (draw all owned segments)**. `>0` cutoff = interaction-only optimisation
+> (drop detail WHILE panning σε weak GPU, restored σε 0 στο rest), ποτέ idle. Pin: `webgl-line-lod.test.ts`.
 
 ---
 

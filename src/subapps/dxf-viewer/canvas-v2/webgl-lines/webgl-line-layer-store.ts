@@ -55,3 +55,27 @@ export function setWebglLineLayerActive(next: boolean): void {
 export function subscribeWebglLineLayerActive(callback: () => void): () => void {
   return activeStore.subscribe(callback);
 }
+
+/**
+ * The exact set of entity ids the GPU layer currently draws — published by the
+ * manager on every rebuild (STEP 9). The DxfRenderer reads it as an EVENT-TIME getter
+ * (per frame) to suppress the Canvas2D stroke of a GPU-owned normal-state line, so the
+ * two layers never draw a line twice nor leave one undrawn — even under the bucket cap
+ * (the set is EXACTLY what was built, never a re-run predicate). Plain module cell:
+ * only the frame-time getter reads it, no React subscriber → no reactivity needed.
+ */
+let ownedEntityIds: ReadonlySet<string> = new Set();
+
+/** Event-time getter — the exact GPU-owned id set (STEP 12 suppression reads this). */
+export function getWebglOwnedEntityIds(): ReadonlySet<string> {
+  return ownedEntityIds;
+}
+
+/**
+ * Publish the GPU-owned id set. Called by the manager after each buffer rebuild (and
+ * cleared to empty on dispose). Low-frequency — the Canvas2D repaint it needs is
+ * already driven by the same scene/content change that triggered the rebuild.
+ */
+export function setWebglOwnedEntityIds(ids: ReadonlySet<string>): void {
+  ownedEntityIds = ids;
+}

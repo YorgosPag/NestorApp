@@ -31,6 +31,7 @@ import {
   SnapIndicatorSubscriber,
   DraftLayerSubscriber,
   DxfCanvasSubscriber,
+  WebglLineLayerSubscriber,
   PreviewCanvasMounts,
   type LayerCanvasPassthroughProps,
 } from './canvas-layer-stack-leaves';
@@ -43,10 +44,9 @@ import { FinishPaint2DPanel } from './FinishPaint2DPanel';
 import { RegionPerimeterPreviewOverlay } from './RegionPerimeterPreviewOverlay';
 import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay'; import { DynamicInputSubscriber } from './DynamicInputSubscriber'; import { CanvasLayerStack3dLeaf } from './canvas-layer-stack-3d-leaf'; import { UnifiedPerformanceHudLeaf } from './UnifiedPerformanceHudLeaf';
 import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleButton'; import { Focus2DOverlayLeaf } from './Focus2DOverlayLeaf'; import { SelectionCursorIcon } from '../../accessibility/SelectionCursorIcon';
-// ADR-575 — GROUP selection affordance overlay (dashed box + «Ομάδα · N»), ADR-040 leaf.
-import { GroupSelectionOverlaySubscriber } from './GroupSelectionOverlaySubscriber';
-// ADR-575 §8 — GROUP interactive gizmo (move cross + rotation handle) canvas leaf.
-import { GroupGizmoLayer } from './GroupGizmoLayer';
+// ADR-575/640 — GROUP + BLOCK container selection affordances (overlays + gizmos), grouped
+// out of this shell to keep it under the 500-line budget (N.7.1). ADR-040 leaves inside.
+import { ContainerSelectionLayers } from './ContainerSelectionLayers';
 import { CutPlaneSliderLeaf } from './CutPlaneSliderLeaf'; /* ADR-452 cut-plane slider, self-gated 2D */ import { AxisCutSliderLeaf } from './AxisCutSliderLeaf'; /* ADR-455 vertical X/Y section sliders, self-gated 2D */ import { useDxfOverlay3DSync } from './useDxfOverlay3DSync'; import { useLevelId3DSync } from './useLevelId3DSync';
 // ADR-396 P4 — ETICS θερμοπρόσοψη 2D overlay (dedicated floor-overlay micro-leaf).
 import { EnvelopeOverlay } from './EnvelopeOverlay';
@@ -274,6 +274,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   useCrosshairCursor(containerRef as React.RefObject<HTMLElement | null>, {
     enabled: crosshairSettings.enabled,
   });
+
   return (
     <>
       <div className="flex-1 relative">
@@ -319,6 +320,18 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
               layerCanvasPassthroughProps={layerCanvasPassthroughProps}
             />
           )}
+          {/* ADR-639 Στάδιο 5 — GPU line layer (z5): the bulk solid LINE/POLYLINE geometry on
+              persistent LineSegments2, pan/zoom = camera-matrix-only. Sits ABOVE grid/floorplan/
+              draft (z0) and BELOW the DxfCanvas (z10) so detail + selection/hover overpaint it
+              (correct painter order: bulk lines bottom, detail on top). Pure JSX mount — ZERO
+              useSyncExternalStore in this shell (ADR-040 CHECK 6C). Self-gates to large scenes via
+              WEBGL_LINE_LAYER_MIN_ENTITIES; below the gate it builds nothing and Canvas2D draws all. */}
+          <WebglLineLayerSubscriber
+            scene={dxfScene}
+            sceneLevelId={levelManager.currentLevelId}
+            convertScene={convertScene}
+            className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['5']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
+          />
           {showDxfCanvas && (
             <DxfCanvasSubscriber
               dxfCanvasRef={dxfCanvasRef}
@@ -398,26 +411,14 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             transform={transform}
             className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['30']}`}
           />
-          {/* ADR-575 — GROUP selection affordance: ONE dashed box + «Ομάδα · N» per
-              selected group. Self-subscribing leaf (selection + scene) → the Shell
-              stays subscription-free (ADR-040 cardinal rule #1). */}
-          <GroupSelectionOverlaySubscriber
-            sceneLevelId={levelManager.currentLevelId}
-            transform={transform}
-            viewport={viewport}
-            className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['30']}`}
-          />
-          {/* ADR-575 §8 — GROUP interactive GIZMO: ONE move cross + ONE rotation handle
-              at each selected group's bbox centre, painted with the SAME grip glyphs +
-              hover/hot temperature as every other grip (canvas, Giorgio's choice). Self-
-              subscribing leaf (selection + scene + grip-interaction state). */}
-          <GroupGizmoLayer
+          {/* ADR-575/640 — GROUP + BLOCK selection affordances (dashed box overlays + move/
+              rotation gizmos). Self-subscribing ADR-040 leaves; the shell stays subscription-free. */}
+          <ContainerSelectionLayers
             sceneLevelId={levelManager.currentLevelId}
             transform={transform}
             viewport={viewport}
             gripInteractionState={dxfGripInteraction.gripInteractionState}
             gripSize={settings.grip?.gripSize}
-            className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['30']}`}
           />
           <RulerCornerBox
             rulerWidth={rulerSettings.width ?? RULERS_GRID_CONFIG.DEFAULT_RULER_WIDTH}

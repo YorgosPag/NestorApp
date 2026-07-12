@@ -31,6 +31,7 @@
 | Layer | Z-Index | Description |
 |-------|---------|-------------|
 | LayerCanvas | 0 | Background overlays |
+| **WebglLineLayer** | **5** | **ADR-639 Στάδιο 5 — GPU-batched bulk solid LINE/POLYLINE (persistent `LineSegments2`, camera-matrix-only pan/zoom). Below DxfCanvas so detail + selection/hover overpaint it. Gated to large scenes.** |
 | DxfCanvas | 10 | DXF entity rendering |
 | **PreviewCanvas** | **15** | **Drawing preview (rubber-band lines, grips)** |
 | CrosshairOverlay | 20 | Cursor crosshair |
@@ -70,6 +71,56 @@ Mouse Event → DxfCanvas.onMouseMove
 ---
 
 ## Changelog
+
+### 2026-07-12 — ✅ Registry pattern edit → bitmap-cache invalidation (ADR-510 Φ2E #4, CHECK 6D)
+**Τι:** νέα (6η) imperative invalidation subscription στο `useDxfCanvasCacheInvalidation.ts` —
+`subscribeLinetypeRegistry(() => { bitmapCacheRef.current?.invalidate(); isDirtyRef.current = true; })`.
+**Γιατί:** το inline «Τμήματα Μοτίβου» COW editor (ADR-510 Φ2E #4) καλεί `upsertUserLinetype` σε κάθε edit· ο dash
+derive-άρεται σε **entity-paint time** (`resolveEntityRenderStyle → resolveLinetypePatternMm → registry`) και **ΔΕΝ**
+είναι μέρος του bitmap-cache key, οπότε ένα same-name pattern update πρέπει να invalidate-άρει για να ξαναζωγραφίσει.
+**Συμμόρφωση ADR-040:** πανομοιότυπο συμβόλαιο με τις υπάρχουσες subscriptions (LWDISPLAY/LayerStore/isolate/fonts/
+background — rule 2, state read at paint-time)· low-frequency (τα linetype edits είναι σπάνια, όπως το isolate opacity
+slider) → full-layer rebuild εδώ είναι αποδεκτό. **Μηδέν** `useSyncExternalStore` σε shell/orchestrator (CHECK 6C
+ασφαλές)· η αλλαγή ζει μόνο στο invalidation wiring hook. Co-staged CHECK 6D. Πλήρες detail: **ADR-510 changelog
+Φ2E #4 2026-07-12**. ΟΧΙ tsc (N.17). 🔴 browser-verify + commit (Giorgio).
+
+### 2026-07-12 — 🐛 Imported dashed linetype rendered solid → per-scene LTSCALE (ADR-510 Φ2H, CHECK 6B/6D)
+**Σύμπτωμα:** εισαγόμενη γραμμή `ACAD_ISO10W100` σε σχέδιο **μέτρων** φαινόταν **συμπαγής** (στο AutoCAD διακεκομμένη).
+**Root cause (ασυμφωνία κλίμακας):** το ADR-462 canonical-mm scale-άρει τη γεωμετρία ×1000 (μέτρα→mm) αλλά το dash pattern
+μένει mm-convention → 737 υπο-pixel περίοδοι → συμπαγές. **Fix (ADR-040-safe):** ο `DxfRenderer.render` δημοσιεύει το
+per-scene base LTSCALE (`scene.linetypeScale`, resolved στο import) ως **non-persisted ambient 1×/frame**
+(`setActiveSceneLinetypeScale`)· τα dash-stroke sites διαβάζουν `getEffectiveLinetypeScale()` = scene base × user knob.
+**Μηδέν νέα `useSyncExternalStore`/subscription**, μηδέν αλλαγή σε bitmap cache key (το ambient είναι low-freq, τίθεται
+στην αρχή του render pass πριν τα entity draws)· read-time ambient (rule 2). Πλήρες detail: **ADR-510 changelog Φ2H
+2026-07-12**. Co-staged CHECK 6B/6D (`DxfRenderer.ts`). ΟΧΙ tsc (N.17). 🔴 browser-verify + commit (Giorgio).
+
+### 2026-07-12 — 🐛 Container-member arc-disappearance fix (ADR-640, CHECK 6B/6D)
+**Συμπτώμα:** ένα εισαγόμενο block (DXF INSERT κρατημένο ως `BlockEntity`, ADR-640) με μικτά members (ευθύγραμμα + καμπύλα) ζωγράφιζε **μόνο** τα LINEs — τα ARCs (και κάθε non-line member) **εξαφανίζονταν** («ΤΑ ΚΑΜΠΥΛΑ ΔΕΝ ΕΜΦΑΝΙΖΟΝΤΑΙ ΑΠΟ ΤΗΝ ΣΤΙΓΜΗ ΠΟΥ ΤΑ ΚΑΝΕΙ ΜΠΛΟΚ»).
+
+**Root cause:** το container expansion (block/group/array) re-tag-άρει **ΚΑΘΕ** member με το ΙΔΙΟ container `id` (ώστε click→όλο το container). Στο `DxfRenderer.render` το per-entity skip γινόταν με **id-only** έλεγχο (`batchedIds.has(entity.id)` / `webglOwnedIds.has(entity.id)`). Μόλις ένα LINE member μπει στο line-batch, το container id προστίθεται στο `batchedIds` → κάθε non-line member (ARC) με το ΙΔΙΟ id παραλείπεται στο δεύτερο pass. Latent σε group/array με mixed περιεχόμενο επίσης.
+
+**Fix:** το line layer ζωγραφίζει ΜΟΝΟ `line`/plain-`polyline` → το suppression πρέπει να είναι **type-gated**, όχι shared-id. Νέο SSoT `canvas-v2/webgl-lines/line-layer-draw-suppression.ts` (`isDrawnByBatchedLineLayer` / `isDrawnByWebglLineLayer`), καταναλώνεται και στα δύο skip sites του `DxfRenderer`. Ένα arc/circle/text member δεν είναι ποτέ line → ποτέ δεν καταπιέζεται από batched line sibling. 7 regression tests. Μηδέν αλλαγή στο batching/GPU fast-path για γνήσια μοναδικά-id lines.
+
+### 2026-07-12 — 🚀 NEW render layer: WebGL line layer (ADR-639 Στάδιο 5, CHECK 6B/6C/6D)
+**Τι:** νέο GPU line layer (z5) που κάνει GPU-batch το solid, non-interactive LINE/plain-POLYLINE bulk (~97% των 215k-entity permit DXF) σε persistent `LineSegments2` buffers χτισμένα **μία φορά ανά scene identity**· pan/zoom ενημερώνει **ΜΟΝΟ** τα ortho bounds μιας `OrthographicCamera` (μηδέν buffer re-upload) → 60fps πλοήγηση (Figma/AutoCAD-web class). Ό,τι άλλο (arcs/hatch/text/dims/dashed + κάθε selected/hovered/grip/frozen line) μένει στο Canvas2D `DxfRenderer` + bitmap cache.
+
+**Συμμόρφωση ADR-040 (και οι 4 cardinal rules):**
+- **Rule 1 (orchestrators subscription-free):** `CanvasSection.tsx` ΑΝΕΓΓΙΧΤΟ· `CanvasLayerStack.tsx` παίρνει ΜΟΝΟ pure JSX mount (`<WebglLineLayerSubscriber>`, z5 μεταξύ grid/floorplan z0 και DxfCanvas z10) — **μηδέν `useSyncExternalStore`** (CHECK 6C clean).
+- **Rule 2 (event-time getters):** ο imperative `WebglLineLayerManager` reads `getImmediateTransform()` **μέσα** στο UnifiedFrameScheduler tick (ποτέ captured prop → ποτέ stale) και recompute-άρει ortho bounds κάθε dirty frame.
+- **Rule 3 (μηδέν interaction identity σε buffer/rebuild-key):** hover/select/grip **ΠΟΤΕ** στο buffer ή στο rebuild trigger. Το `webgl-line-buffer-builder` είναι selection-agnostic → interactive lines μένουν στο GPU buffer και **overpainted** από το Canvas2D `renderSingleEntity` overlay στο z10 → 60fps hover/select με μηδέν GPU re-upload (αποφεύγει το FPS-1 regression).
+- **Rule 4 (≤1 canvas, ≤2 high-freq hooks):** 1 WebGL canvas, **0** high-freq `useSyncExternalStore` στο leaf (transform μέσω tick getter)· scene/content/DPR = LOW-freq.
+- **Scheduler discipline:** `registerRenderCallback('webgl-line-canvas', NORMAL, tick, isDirty)` — ποτέ private rAF — και **UNREGISTER πριν `dispose()`** (mirror `BimViewport3D.tsx:207-213`).
+- **Transform SSoT:** `'webgl-line-canvas'` προστέθηκε στο `ImmediateTransformStore.TRANSFORM_CANVAS_IDS` (reads only· sole writers αμετάβλητοι) → wheel-zoom-without-mousemove marks το layer dirty μέσω του ΙΔΙΟΥ `markSystemsDirty` SSoT.
+
+**Suppression (μηδέν gap/double-draw):** ΕΝΑ shared predicate `isWebglOwnedLine()` τρέφει ΚΑΙ τον builder (include) ΚΑΙ τον `DxfRenderer` (suppress). Ο manager δημοσιεύει το **ακριβές** `ownedEntityIds` (ό,τι πραγματικά χτίστηκε, ακόμα και κάτω από το `MAX_BUCKETS` cap) στο `webgl-line-layer-store`· ο `DxfRenderer` suppress-άρει iff `isWebglLineLayerActive() && ownedIds.has(id)` (event-time read/frame) — selected/hovered lines έχουν ήδη `continue` πριν, οπότε κρατούν το Canvas2D highlight τους. Inactive branch = byte-for-byte ο σημερινός κώδικας (belt-and-suspenders fallback: large-scene gate / WebGL-unavailable / context-lost).
+
+**Files:** NEW `canvas-v2/webgl-lines/` (WebglLineLayerManager + is-webgl-owned-line/renderer-setup/ortho-camera/buffer-builder/lod/layer-store/dispose/content-invalidation + 5 test suites) · NEW `canvas-v2/dxf-canvas/dxf-entity-layer-skip.ts` (SSoT εξαγωγή του πρώην `DxfRenderer.isEntityLayerSkipped` — τώρα thin delegate· ο builder ρωτά το ΙΔΙΟ) · NEW `components/dxf-layout/canvas-layer-stack-webgl-line-leaf.tsx` · NEW shared `rendering/webgl/desynchronized-webgl-renderer.ts` (κοινό low-latency ctx με το BIM 3D· `bim-3d/scene/scene-setup.ts` το καλεί). MOD `DxfRenderer.ts` (suppression + delegate), `CanvasLayerStack.tsx` (+mount), `canvas-layer-stack-leaves.tsx` (+re-export), `ImmediateTransformStore.ts` (+id), `config/panel-tokens.ts` (+z5 token), `config/dxf-import-thresholds.ts` (`WEBGL_LINE_LAYER_MIN_ENTITIES=50k`), `scripts/git-hooks/pre-commit` (CHECK 6B + τα νέα perf-critical αρχεία & `ImmediateTransformStore`). Co-staged: ADR-040 + ADR-639.
+
+**2 τεκμηριωμένες αποκλίσεις από το blueprint (ασφαλείς):** (1) **ColorManagement μένει ON** (THREE-global — false θα χαλούσε τα χρώματα του κοινού BIM 3D renderer)· αντ' αυτού ο builder ανεβάζει **linear-converted** vertex colors ώστε το sRGB OETF να αναπαράγει το ακριβές Canvas2D hex — μηδέν global side-effect. (2) άγγιξα `bim-3d/scene/scene-setup.ts` για την SSoT extraction του desynchronized renderer (behavior-preserving, BIM κρατά stencil:true).
+
+**Accepted consequence (τεκμηριωμένο στο ADR-639 Risk #1):** painter-order — ΟΛΑ τα GPU lines κάτω από ΟΛΑ τα Canvas2D entities· opaque hatch/solid fill μπορεί να κρύψει overlapping line. Gated πίσω από `WEBGL_LINE_LAYER_MIN_ENTITIES`· permit files 97% lines/σπάνια overlaps.
+
+✅ Google-level: YES — proactive one-time build σε scene-identity lifecycle, idempotent `invalidate()`, belt-and-suspenders Canvas2D fallback, ΕΝΑ SSoT predicate + SSoT layer-skip, explicit leaf-owned GL disposal (unregister-before-dispose). Pure modules 38/38 jest GREEN· jscpd:diff clean. 🟡 UNCOMMITTED. Browser-verify (215k permit, weak PC) → Giorgio.
 
 ### 2026-07-11 — ✨ NEW micro-leaf: floorplan-symbol 2D placement ghost (ADR-415, CHECK 6B)
 **Τι:** νέος WYSIWYG placement ghost για το εργαλείο «2D Σύμβολα» (WC/κουζίνα/έπιπλα κάτοψης) — το επιλεγμένο σύμβολο ζωγραφίζεται ημιδιάφανο στον snapped κέρσορα ενόσω `isAwaitingPosition`, όπως fixture/panel/6 MEP. **Συμμόρφωση ADR-040:** νέο micro-leaf `FloorplanSymbolGhostPreviewMount` (`React.memo`, `return null`) που **self-subscribes** στο cursor store μέσω `useFloorplanSymbolGhostPreview` (= 3-line binding του `createBridgeStorePlacementGhostHook` SSoT, ADR-624) → **CanvasSection δεν re-render-άρει σε mousemove**· δέχεται `transform`/`getCanvas`/`getViewportElement` από τον ίδιο composite (`canvas-layer-stack-preview-mounts`) με τα υπόλοιπα ghost leaves· **καμία** νέα `useSyncExternalStore` σε shell/orchestrator (CHECK 6C ασφαλές). Threading (CHECK 6B touch → co-staged ADR-040 + ADR-415): payload `floorplanSymbolGhostPreview` από `CanvasSection` (`useFloorplanSymbolTool.isAwaitingPosition`+`getGhostFootprint`) → `CanvasLayerStack` → `PreviewCanvasMounts`. Το `floorplanSymbolToolBridgeStore` δημοσιεύει EFFECTIVE overrides (picked `assetId`) + `getSceneUnits` ώστε ghost ≡ commit. **Files:** NEW `hooks/tools/useFloorplanSymbolGhostPreview.ts` + `components/dxf-layout/canvas-layer-stack-floorplan-symbol-ghost.tsx`· MOD `canvas-layer-stack-types.ts` / `-preview-mounts.tsx` / `CanvasLayerStack.tsx` / `CanvasSection.tsx` / `useFloorplanSymbolTool.ts` / `floorplan-symbol-tool-bridge-store.ts`. ✅ Google-level: YES — reuse SSoT factory (μηδέν copy-paste draw skeleton), micro-leaf self-subscribe, orchestrator inert. Smoke tests PASS (18), jscpd καθαρό. 🟡 UNCOMMITTED.

@@ -689,6 +689,7 @@ export const PANEL_LAYOUT = {
   // ============================================================================
   Z_INDEX: {
     '0': 'z-0',                          // 0 - Base level
+    '5': 'z-[5]',                        // 5 - ADR-639 Στάδιο 5 WebGL line layer (between grid/floorplan z0 and DxfCanvas z10)
     '10': 'z-10',                        // 10 - Low elevation
     '20': 'z-20',                        // 20 - Medium elevation
     '30': 'z-30',                        // 30 - High elevation

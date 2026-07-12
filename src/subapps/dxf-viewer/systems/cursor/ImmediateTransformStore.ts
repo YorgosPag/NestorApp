@@ -23,7 +23,12 @@ import { markSystemsDirty } from '../../rendering/core/UnifiedFrameScheduler';
 // ΙΔΙΟΥ dirty SSoT με τον main canvas, αντί για χωριστή subscription. Ασφαλές πλέον:
 // ο `PreviewRenderer.render()` διαβάζει live `getImmediateTransform()` (όχι cached) →
 // μηδέν stale-entity race (το entity αλλάζει μόνο σε mousemove, όχι σε pan/zoom).
-const TRANSFORM_CANVAS_IDS = ['dxf-canvas', 'layer-canvas', 'preview-canvas'] as const;
+// ADR-639 Στάδιο 5 — `webgl-line-canvas`: ο GPU line layer κάνει pan/zoom με camera-matrix
+// only (μηδέν buffer touch). Μπαίνει εδώ ώστε το wheel-zoom ΧΩΡΙΣ mousemove να το κάνει
+// dirty world-locked μέσω του ΙΔΙΟΥ markSystemsDirty SSoT (όπως ο main/preview canvas), αντί
+// για χωριστή subscription. Το layer διαβάζει live `getImmediateTransform()` στο tick του,
+// ΠΟΤΕ δεν γράφει το store (sole writers: useViewportManager.setTransform + CanvasContext).
+const TRANSFORM_CANVAS_IDS = ['dxf-canvas', 'layer-canvas', 'preview-canvas', 'webgl-line-canvas'] as const;
 
 let _transform: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
 const fullListeners = new Set<() => void>();

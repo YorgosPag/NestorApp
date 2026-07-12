@@ -698,8 +698,11 @@ powershell.exe -ExecutionPolicy Bypass -File "C:\Nestor_Pagonis\enterprise-backu
 | `hooks/canvas/useCanvasContextMenu.ts` | Event-time reads — MUST use getter, not snapshot |
 | `systems/hover/HoverStore.ts` | Hover SSoT — zero React state |
 | `systems/cursor/ImmediatePositionStore.ts` | Cursor SSoT — zero React state |
-| `systems/cursor/ImmediateTransformStore.ts` | Transform SSoT — zero React state. Read via `getImmediateTransform()` (event-time) or `useTransformValue()` (leaf subscriber). Sole writer: `useViewportManager.setTransform` + `CanvasContext.setTransform`. |
+| `systems/cursor/ImmediateTransformStore.ts` | Transform SSoT — zero React state. Read via `getImmediateTransform()` (event-time) or `useTransformValue()` (leaf subscriber). Sole writer: `useViewportManager.setTransform` + `CanvasContext.setTransform`. `TRANSFORM_CANVAS_IDS` includes `webgl-line-canvas` (ADR-639 Στάδιο 5). |
 | `rendering/core/UnifiedFrameScheduler.ts` | RAF orchestrator |
+| `canvas-v2/webgl-lines/` (whole folder) | ADR-639 Στάδιο 5 — GPU line layer (z5): `WebglLineLayerManager` (imperative, reads `getImmediateTransform()` at tick time), pure buffer/ortho/LOD helpers, activation+owned-ids store. Persistent `LineSegments2`, camera-matrix-only pan/zoom. |
+| `components/dxf-layout/canvas-layer-stack-webgl-line-leaf.tsx` | ADR-639 Στάδιο 5 — thin React leaf for the WebGL line layer. ZERO high-freq `useSyncExternalStore` (transform via tick getter); LOW-freq scene/DPR/content only. Unregister-before-dispose. |
+| `canvas-v2/dxf-canvas/dxf-entity-layer-skip.ts` | SSoT layer/isolate/cut-plane skip predicate — shared by `DxfRenderer` (delegates) + the WebGL buffer builder (same question → no gap/double-draw). |
 
 ### Cardinal rules (violations cause 60fps re-renders or stale data):
 

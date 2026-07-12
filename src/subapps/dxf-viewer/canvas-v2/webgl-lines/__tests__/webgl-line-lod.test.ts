@@ -46,4 +46,15 @@ describe('computeInstanceCount', () => {
     expect(computeInstanceCount(DESC, 0, 1)).toBe(0);
     expect(computeInstanceCount(DESC, -1, 1)).toBe(0);
   });
+
+  it('cutoff 0 draws EVERY segment — the true "LOD off" (hatch-visibility regression)', () => {
+    // Incident 2026-07-12: the manager idled at cutoff=1, which dropped sub-pixel-length
+    // segments — silently erasing dense hatch fills (thousands of ~mm LINEs that render
+    // sub-pixel at fit-view but form a visible tone) since the DxfRenderer suppresses those
+    // owned lines. cutoff=0 is the only pixel-identical idle value: draw ALL owned segments,
+    // even zero-length ones, at any scale. Pins IDLE_CUTOFF_PX = 0.
+    expect(computeInstanceCount(DESC, 0.001, 0)).toBe(5); // tiny scale → all still drawn
+    expect(computeInstanceCount(DESC, 1000, 0)).toBe(5);
+    expect(computeInstanceCount(new Float32Array([5, 0, 0]), 1, 0)).toBe(3); // zero-length kept
+  });
 });
