@@ -28,6 +28,8 @@ export interface ScaleToolState {
   nonUniformMode: boolean;
   selectedEntityIds: string[];
   basePoint: Point2D | null;
+  /** First real cursor sample after the base point — the drag reference (factor 1). ADR-646 #1. */
+  dragRefPoint: Point2D | null;
   refP1x: Point2D | null;
   refP2x: Point2D | null;
   refP1y: Point2D | null;
@@ -46,6 +48,7 @@ const INITIAL: ScaleToolState = {
   nonUniformMode: false,
   selectedEntityIds: [],
   basePoint: null,
+  dragRefPoint: null,
   refP1x: null,
   refP2x: null,
   refP1y: null,
@@ -83,6 +86,10 @@ export const ScaleToolStore = {
 
   setBasePoint(pt: Point2D | null): void {
     _patch({ basePoint: pt });
+  },
+
+  setDragRefPoint(pt: Point2D | null): void {
+    _patch({ dragRefPoint: pt });
   },
 
   setRefPoint(

@@ -30,6 +30,7 @@ import { NESTOR_DEFAULT_TEMPLATE } from '../../systems/dimensions/dim-style-temp
 import { emitLayerTableBody, LINETYPE_SYMBOL_XDATA_APP, LAYER_XDATA_APPS } from '../../utils/dxf-layer-table-writer';
 import type { Pair } from './dxf-ascii-hatch-writer';
 import type { HandleAllocator } from './dxf-ascii-handle-allocator';
+import { GREEK_CAPABLE_FONT } from './dxf-ascii-text-writer';
 
 /**
  * ADR-636 (2026-07-12) — the `*Active` viewport view, so AutoCAD opens ZOOMED on the drawing
@@ -192,7 +193,8 @@ function emitAppidTable(pair: Pair, allocator: HandleAllocator): void {
 
 /** ADR-644 (#9d) — the mandatory default text style AutoCAD R2018 requires in the STYLE table. */
 const STANDARD_STYLE: DxfStyleTableEntry = {
-  name: 'Standard', fontFile: 'txt', bigFontFile: '', height: 0,
+  // ADR-644 (#8) — Greek-capable TrueType (the SHX `txt` default renders Greek text as «?»).
+  name: 'Standard', fontFile: GREEK_CAPABLE_FONT, bigFontFile: '', height: 0,
   widthFactor: 1, obliqueAngle: 0, flags: 0, textGenerationFlags: 0,
 };
 

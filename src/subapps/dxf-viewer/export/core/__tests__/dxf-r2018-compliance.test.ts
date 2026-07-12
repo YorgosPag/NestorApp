@@ -165,11 +165,31 @@ describe('ADR-644 — R2018 structural compliance (professional path)', () => {
     expect(dxf.slice(ltStart, ltStart + 200)).toContain('74\n0\n'); // R2018 element-type flag
   });
 
+  it('#9h — an entity with the bogus linetype "0" does NOT emit `6 0` (AutoCAD «Bad linetype name 0»)', () => {
+    const badLt = { id: 'x', type: 'line', layerId: 'walls', linetypeName: '0', start: { x: 0, y: 0 }, end: { x: 1, y: 1 } } as unknown as Entity;
+    const dxf = writeDxfAscii([badLt], proOptions());
+    const rec = dxf.slice(dxf.indexOf('0\nLINE\n'), dxf.indexOf('0\nENDSEC', dxf.indexOf('0\nLINE\n')));
+    expect(rec).not.toContain('\n6\n0\n'); // no linetype-0 reference
+    // a valid linetype name IS still emitted.
+    const okLt = { id: 'y', type: 'line', layerId: 'walls', linetypeName: 'Dashed', start: { x: 0, y: 0 }, end: { x: 1, y: 1 } } as unknown as Entity;
+    expect(writeDxfAscii([okLt], proOptions())).toContain('\n6\nDashed\n');
+  });
+
   it('#6 — HATCH does NOT emit the invalid `47 0` pixel-size (AutoCAD expects 98)', () => {
     const dxf = writeDxfAscii([solidHatch()], proOptions());
     const hatch = dxf.slice(dxf.indexOf('100\nAcDbHatch\n'), dxf.indexOf('0\nENDSEC\n', dxf.indexOf('AcDbHatch')));
     expect(hatch).not.toContain('\n47\n0\n');
     expect(hatch).toContain('\n98\n'); // seed-point count directly, no stray 47
+  });
+
+  it('#9i — OBJECTS section always present with the root Named Object Dictionary (ACAD_GROUP)', () => {
+    const dxf = writeDxfAscii([line()], proOptions()); // no mline / no image
+    expect(dxf).toContain('0\nSECTION\n2\nOBJECTS\n');
+    expect(dxf).toContain('100\nAcDbDictionary\n');
+    expect(dxf).toContain('3\nACAD_GROUP\n');
+    // root NOD owner is 0 (root); the ACAD_GROUP dict is owned by the NOD.
+    const nod = dxf.match(/0\nDICTIONARY\n5\n([0-9A-F]+)\n330\n0\n100\nAcDbDictionary\n/);
+    expect(nod).not.toBeNull();
   });
 
   it('gating — Tekton (explode) stays handle-less/byte-identical', () => {

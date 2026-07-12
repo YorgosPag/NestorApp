@@ -1,6 +1,6 @@
 # ADR-642 — Complex Linetypes: embedded text, symbols, width, caps/joins & compound strokes
 
-- **Status:** 🟢 ACCEPTED — **Φ1 (stroke geometry) IMPLEMENTED** (2026-07-12). **Φ2-A (embedded text: render + editor + live preview) IMPLEMENTED** (2026-07-12). **Φ2-B IMPLEMENTED** (2026-07-12): μέρος 1 — full-canvas entity routing (κάθε renderer LINE/POLYLINE/ARC/CIRCLE ρουτάρει το `──GAS──` μέσω `strokeStyledPolyline` όταν ο τύπος έχει `complex`)· μέρος 2 — DXF `[TEXT,...]` import/export (LTYPE reader parse-άρει τα embedded 74/340/46/50/44/45/9 → `complex`, resolve `340`→font μέσω `buildStyleHandleFontMap`· writer εκπέμπει τα descriptors με synthetic STYLE handle ανά styleId· `.lin` reader δεν υπάρχει στο repo → εκτός scope). **Φ3-A (symbols: render + catalog + editor) IMPLEMENTED** (2026-07-12): builtin `linetype-symbol-catalog` (×/+/∗/○/□/tick/βέλος/μόνωση/δέντρο ως `AnnotationSymbolPrimitive[]`) + shared `stampSymbolPrimitive` painter (extracted από `AnnotationSymbolRenderer` → ΕΝΑ SSoT για annotation+linetype glyphs) + `drawSymbolElement` (mirror text) στον stroker + Symbol row στον editor. **Φ3-B (DXF symbol I/O) IMPLEMENTED** (2026-07-12): 3-tier resolution — Tier 1 Nestor `NESTOR_APP_LTYPE` XDATA (δικά μας αρχεία → lossless glyph/role/scale/rot/offset), Tier 2 well-known `acad.lin` όνομα→glyph (`FENCELINE1→circle` κ.λπ.· χαρτογράφηση με όνομα, ΟΧΙ με shape#), Tier 3 graceful-skip· universal-valid `49 0.0` degrade (κανένα dangling `.shx` ref)· §6.6.3. **Φ4 (corner-role symbols + alignDash) IMPLEMENTED** (2026-07-12): `innerCorner`/`outerCorner` glyphs στις κοίλες/κυρτές κορυφές (turn-sign classification μέσω `polylineVertices`), `start`/`end` στα άκρα — πέρασμα ΟΡΘΟΓΩΝΙΟ στον arc-length walk (`side` symbols μένουν στον κύκλο)· `alignDash` corner policy (dash αντί για κενό σε κάθε κορυφή)· role selector στον editor· round-trip corner-role μέσω XDATA επιβεβαιωμένο· §6.4 βήμα 3. **Φ5-A (compound layers: model + presets + editor + render) IMPLEMENTED** (2026-07-12): multi-layer authored model (`LinePatternLayer` = segments + `offsetMm` + `widthMm?`) ⇄ `ComplexLinetypeDef.layers[]` (`layersToComplex`/`complexToLayers`)· presets (δρόμος = 2 solid rails ±offset, σιδηρόδρομος = 2 rails + centre ties)· `LinePatternLayersEditor` (per-layer offset + nested single-layer editor + preset picker + compound WYSIWYG preview)· render + `offsetPolyline` ΗΔΗ από Φ1· solid sub-layers επιτρέπονται σε compound. **Φ5-B (DXF compound I/O — graceful-degrade + Nestor XDATA lossless, mirror Φ3-B) pending.** Scope §9 εγκρίθηκε· Φ2 scope (2026-07-12): Q1 = υπάρχον text SSoT (`resolveEntityFont`), Q2 = `followPath` toggle ανά κείμενο (default true), Q3 = render+editor+preview πρώτα, DXF μετά. Φ2-B scope (2026-07-12): routing πρώτα, ΟΛΑ τα entity types μαζί (κοινό seam), STYLE handle = synthetic-per-styleId (MLINE pattern) στο μέρος 2. Φ3 scope (2026-07-12): symbol seed = οι 9 τοπογραφικά/utility glyphs· DXF export = **full-enterprise «όπως οι μεγάλοι» → graceful-degrade valid geometry + Nestor XDATA preservation** (Revit/ArchiCAD-style lossless-in-ecosystem· = Φ3-B)· render+editor πρώτα (mirror Φ2-A/Φ2-B).
+- **Status:** 🟢 ACCEPTED — **Φ1 (stroke geometry) IMPLEMENTED** (2026-07-12). **Φ2-A (embedded text: render + editor + live preview) IMPLEMENTED** (2026-07-12). **Φ2-B IMPLEMENTED** (2026-07-12): μέρος 1 — full-canvas entity routing (κάθε renderer LINE/POLYLINE/ARC/CIRCLE ρουτάρει το `──GAS──` μέσω `strokeStyledPolyline` όταν ο τύπος έχει `complex`)· μέρος 2 — DXF `[TEXT,...]` import/export (LTYPE reader parse-άρει τα embedded 74/340/46/50/44/45/9 → `complex`, resolve `340`→font μέσω `buildStyleHandleFontMap`· writer εκπέμπει τα descriptors με synthetic STYLE handle ανά styleId· `.lin` reader δεν υπάρχει στο repo → εκτός scope). **Φ3-A (symbols: render + catalog + editor) IMPLEMENTED** (2026-07-12): builtin `linetype-symbol-catalog` (×/+/∗/○/□/tick/βέλος/μόνωση/δέντρο ως `AnnotationSymbolPrimitive[]`) + shared `stampSymbolPrimitive` painter (extracted από `AnnotationSymbolRenderer` → ΕΝΑ SSoT για annotation+linetype glyphs) + `drawSymbolElement` (mirror text) στον stroker + Symbol row στον editor. **Φ3-B (DXF symbol I/O) IMPLEMENTED** (2026-07-12): 3-tier resolution — Tier 1 Nestor `NESTOR_APP_LTYPE` XDATA (δικά μας αρχεία → lossless glyph/role/scale/rot/offset), Tier 2 well-known `acad.lin` όνομα→glyph (`FENCELINE1→circle` κ.λπ.· χαρτογράφηση με όνομα, ΟΧΙ με shape#), Tier 3 graceful-skip· universal-valid `49 0.0` degrade (κανένα dangling `.shx` ref)· §6.6.3. **Φ4 (corner-role symbols + alignDash) IMPLEMENTED** (2026-07-12): `innerCorner`/`outerCorner` glyphs στις κοίλες/κυρτές κορυφές (turn-sign classification μέσω `polylineVertices`), `start`/`end` στα άκρα — πέρασμα ΟΡΘΟΓΩΝΙΟ στον arc-length walk (`side` symbols μένουν στον κύκλο)· `alignDash` corner policy (dash αντί για κενό σε κάθε κορυφή)· role selector στον editor· round-trip corner-role μέσω XDATA επιβεβαιωμένο· §6.4 βήμα 3. **Φ5-A (compound layers: model + presets + editor + render) IMPLEMENTED** (2026-07-12): multi-layer authored model (`LinePatternLayer` = segments + `offsetMm` + `widthMm?`) ⇄ `ComplexLinetypeDef.layers[]` (`layersToComplex`/`complexToLayers`)· presets (δρόμος = 2 solid rails ±offset, σιδηρόδρομος = 2 rails + centre ties)· `LinePatternLayersEditor` (per-layer offset + nested single-layer editor + preset picker + compound WYSIWYG preview)· render + `offsetPolyline` ΗΔΗ από Φ1· solid sub-layers επιτρέπονται σε compound. **Φ5-B (DXF compound I/O) IMPLEMENTED** (2026-07-13): graceful-degrade base layer geometry (`49` slots → ξένος reader βλέπει μία γραμμή) + Nestor `NESTOR_APP_LTYPE` XDATA lossless για ΟΛΑ τα layers (per-layer `offsetMm`/`widthMm` + πλήρης element list των `layers[1..]`)· disjoint key namespace (`clayer`/`coff`/`cw`/`cel.*`) από τα Φ3-B symbol keys → record με ΚΑΙ symbols ΚΑΙ compound parse-άρει καθαρά· base-layer offset ≠ 0 διατηρείται (road ±0.5, χωρίς centre)· §6.6.4· mirror Φ3-B. Scope §9 εγκρίθηκε· Φ2 scope (2026-07-12): Q1 = υπάρχον text SSoT (`resolveEntityFont`), Q2 = `followPath` toggle ανά κείμενο (default true), Q3 = render+editor+preview πρώτα, DXF μετά. Φ2-B scope (2026-07-12): routing πρώτα, ΟΛΑ τα entity types μαζί (κοινό seam), STYLE handle = synthetic-per-styleId (MLINE pattern) στο μέρος 2. Φ3 scope (2026-07-12): symbol seed = οι 9 τοπογραφικά/utility glyphs· DXF export = **full-enterprise «όπως οι μεγάλοι» → graceful-degrade valid geometry + Nestor XDATA preservation** (Revit/ArchiCAD-style lossless-in-ecosystem· = Φ3-B)· render+editor πρώτα (mirror Φ2-A/Φ2-B).
 - **Date:** 2026-07-12
 - **Domain:** DXF Viewer · Linetype subsystem · Canvas render pipeline · Pattern editor UI · DXF/`.lin` I/O · Persistence
 - **Related:** ADR-358 (Linetype ISO catalog + `LinetypeRegistry` SSoT), ADR-362 (Path B: user-authored reusable line patterns — the segment editor), ADR-357 §5.5 (canonical mm units), ADR-510 Φ2E #4 (copy-on-write inline pattern edit), ADR-040 (micro-leaf render discipline / bitmap cache keys)
@@ -303,6 +303,32 @@ complex linetype κρατά ένα σύμβολο ως `[shape#, file.shx]` (gro
   (`dxf-scene-builder.ts`, Φ2-B). Production export = **ezdxf (Python), αμετάβλητο**· ο TS writer καλύπτει
   το in-app round-trip.
 
+### 6.6.4 DXF compound I/O (Φ5-B — IMPLEMENTED)
+
+**Απόφαση (Giorgio 2026-07-12):** ίδιο enterprise μοτίβο με Φ3-B — **graceful-degrade + Nestor XDATA
+lossless**. Ένας compound τύπος (road/railway, #9) έχει N παράλληλα `StrokeLayer` με διαφορετικό
+`offsetMm`· το DXF LTYPE record εκφράζει **μόνο μία** ακολουθία `49`. Άρα: το **base layer** (`layers[0]`)
+ζει στα `49`/text/symbol slots (ό,τι βλέπει ξένος reader → degrade σε **μία** γραμμή, ποτέ σπασμένο
+record)· τα υπόλοιπα layers + όλα τα per-layer offsets διατηρούνται lossless σε XDATA.
+
+- **Writer** `utils/dxf-layer-table-writer.ts` — `emitComplexLtype` καλεί ΝΕΟ `emitCompoundXData(out, complex)`
+  μετά το `emitSymbolXData`. Εκπέμπει ένα `1001 NESTOR_APP_LTYPE` block: `clayer=<idx>` ανοίγει layer,
+  `coff`/`cw` το offset/width του, και κάθε `cel.kind=<dash|gap|dot|symbol|text>` ανοίγει ένα element με
+  τα δικά του πεδία (`cel.len` ή `cel.glyph`/`cel.role`/`cel.scale`/`cel.rot`/`cel.offx`/`cel.offy` /
+  `cel.val`/`cel.style`/`cel.follow`). Το **base layer** εκπέμπει block **μόνο** αν έχει offset/width ≠ 0
+  (τα elements του είναι ήδη στα `49`)· non-compound single-layer → **no-op** (μηδέν regression Φ2/Φ3).
+  Flat per-field `1000` (idiom Φ3-B): 255-char safe, escape-free — text value με `=`/`;` επιβιώνει (δικό του
+  `1000`). **Disjoint key namespace** (`clayer`/`coff`/`cw`/`cel.*`) από τα symbol keys (`slot`/`glyph`/…)
+  → record με ΚΑΙ base symbols ΚΑΙ compound layers δεν διασταυρώνεται.
+- **Reader** `utils/dxf-linetype-table-parser.ts` — `finalizeCompound(draft)` στο flush (μετά το
+  `finalizeSymbols`): `parseCompoundXData` ξαναχτίζει το base offset/width (index 0) + τα `layers[1..]`
+  (offset/width + elements). `buildComplexIfEmbedded` προάγει σε `complex` **και** όταν δεν υπάρχει
+  embedded text/symbol (καθαρά γεωμετρικός compound = διπλή γραμμή → και πάλι πολυστρωματικός).
+- **SSoT (anti-duplication N.18)**: κοινός iterator `forEachNestorXData` (streaming `1001/1000` XDATA
+  extraction — ΕΝΑ SSoT για symbol + compound decoders)· κοινό `buildSymbolElement` (symbol-slot + compound)·
+  κοινό `emitCompoundPlacement` (S/R/X/Y symbol + text). Ίδιο `LINETYPE_SYMBOL_XDATA_APP` (κανένα νέο APPID).
+- **Wiring / production**: κανένα νέο· production export = **ezdxf, αμετάβλητο**· ο TS writer = in-app round-trip.
+
 ## 7. Phased roadmap
 
 | Φάση | Περιεχόμενο | Μηχανισμοί | Ρίσκο |
@@ -315,7 +341,7 @@ complex linetype κρατά ένα σύμβολο ως `[shape#, file.shx]` (gro
 | **Φ3-B** ✅ | **DXF symbol I/O**: 3-tier — Nestor XDATA (lossless) / well-known `acad.lin` name→glyph / graceful-skip· universal-valid `49 0.0` degrade (mirror Φ2-B· `.shx` = out of scope §9.1) | #3 | Μεσαίο — **DONE** |
 | **Φ4** ✅ | **Corner-role symbols** (inner/outer corner + start/end) + align-dash corner policy (υπόλοιπο #4/#7) | #4β #7 | Υψηλό (corner math) — **DONE** |
 | **Φ5-A** ✅ | **Compound layers** (#9) — multi-layer model/bridge + presets (δρόμος/σιδηρόδρομος) + editor multi-layer UI + compound preview (render + `offsetPolyline` ήδη Φ1) | #9 | Υψηλό — **DONE** |
-| **Φ5-B** | **DXF compound I/O** — full-enterprise graceful-degrade (base layer geometry) + Nestor XDATA lossless για τα υπόλοιπα layers (mirror Φ3-B) | #9 | Μεσαίο |
+| **Φ5-B** ✅ | **DXF compound I/O** — full-enterprise graceful-degrade (base layer geometry) + Nestor XDATA lossless για τα υπόλοιπα layers + base offset (mirror Φ3-B· §6.6.4) | #9 | Μεσαίο — **DONE** |
 | — | *Εκτός scope προς το παρόν:* Art-brush stretch, raster line styles, `.shx` shape import | — | — |
 
 Κάθε φάση: αυτόνομα shippable, με tests (jest — όχι tsc, N.17), και ADR changelog update (N.0.1 Phase 3).
@@ -344,6 +370,30 @@ complex linetype κρατά ένα σύμβολο ως `[shape#, file.shx]` (gro
 
 ## 10. Changelog
 
+- **2026-07-13 (Φ5-B IMPLEMENTED — DXF compound I/O: graceful-degrade + Nestor XDATA lossless)** —
+  Ολοκλήρωση της Φ5 (Q2 = DXF full-enterprise «όπως οι μεγάλοι»). Λύνει το τεκμηριωμένο gap της Φ5-A (ο
+  in-app TS writer εξέπεμπε ΜΟΝΟ base layer). Encoding: flat per-field `1000` (idiom Φ3-B· §9-Q εγκρίθηκε
+  στο handoff). §6.6.4.
+  - `utils/dxf-layer-table-writer.ts` — ΝΕΟ `emitCompoundXData` (per-layer `clayer`/`coff`/`cw` + `cel.*`
+    elements για `layers[1..]`· base layer block μόνο για offset/width ≠ 0) + `emitCompoundElement` +
+    κοινό `emitCompoundPlacement` (S/R/X/Y symbol+text)· κλήση στο `emitComplexLtype` μετά το `emitSymbolXData`.
+    Non-compound → no-op (μηδέν regression Φ2/Φ3).
+  - `utils/dxf-linetype-table-parser.ts` — ΝΕΟ `finalizeCompound` (flush, μετά `finalizeSymbols`) +
+    `parseCompoundXData` (`clayer`/`cel.kind` state machine → base offset/width + `StrokeLayer[]`) +
+    `fillCompoundElement`/`buildCompoundElement`· `buildComplexIfEmbedded` προάγει σε `complex` και σε
+    καθαρά γεωμετρικό compound (base offset/width ή extra layers)· νέα draft fields
+    (`baseLayerOffsetMm`/`baseLayerWidthMm`/`compoundExtraLayers`).
+  - **Anti-duplication (N.18)**: extraction 3 SSoT helpers για να μηδενιστούν sibling clones που έπιασε το
+    `jscpd:diff` — `forEachNestorXData` (κοινό streaming XDATA iterator: symbol+compound), `buildSymbolElement`
+    (κοινό symbol build: `slot=` + `cel.kind=symbol`), `emitCompoundPlacement` (κοινά S/R/X/Y).
+  - **Disjoint key namespace** (`clayer`/`coff`/`cw`/`cel.*` vs `slot`/`glyph`/…) → record με base symbols +
+    compound layers parse-άρει καθαρά και με τους δύο decoders (test-covered).
+  - **Base-layer offset ≠ 0** (road = 2 rails ±0.5 χωρίς centre) διατηρείται μέσω `clayer=0`/`coff` XDATA.
+  - Tests (jest, N.17): +12 — `__tests__/dxf-linetype-compound-roundtrip.test.ts` (road base-offset round-trip,
+    graceful degrade σε single stroke, railway 3-layer + tie symbol, sub-layer symbol S/R/X/Y fidelity,
+    base-symbol+extra-layer coexistence, sub-layer text με `=`/`;`, simple type ανέγγιχτο, όλα τα presets).
+    19/19 πράσινα με το υπάρχον Φ3-B symbol suite (μηδέν regression). jscpd (N.18): καθαρό (0 new clones / 3 files).
+  - **ADR-040 (CHECK 6B/6D)**: DXF I/O only — κανένα canvas/render touch (mirror Φ3-B) → εκτός scope ADR-040.
 - **2026-07-12 (Φ5-A IMPLEMENTED — compound layers: model + presets + multi-layer editor + render)** —
   Scope Φ5 (2026-07-12, Giorgio): Q1 = **free-form + presets**· Q2 = **DXF full-enterprise «όπως οι μεγάλοι»
   (Revit/ArchiCAD/Maxon/Figma)** → split σε **Φ5-A** (τώρα: in-app model+editor+render) + **Φ5-B** (DXF compound

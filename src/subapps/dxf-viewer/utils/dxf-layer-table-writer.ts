@@ -304,20 +304,25 @@ function emitCompoundElement(out: string[], el: PatternElement): void {
   } else if (el.kind === 'symbol') {
     emit(out, '1000', `cel.glyph=${el.glyphId}`);
     emit(out, '1000', `cel.role=${el.role}`);
-    emit(out, '1000', `cel.scale=${toDxfNumber(el.scale)}`);
-    emit(out, '1000', `cel.rot=${toDxfNumber(el.rotationDeg)}`);
-    emit(out, '1000', `cel.offx=${toDxfNumber(el.offsetXMm)}`);
-    emit(out, '1000', `cel.offy=${toDxfNumber(el.offsetYMm)}`);
+    emitCompoundPlacement(out, el);
   } else if (el.kind === 'text') {
     emit(out, '1000', `cel.val=${el.value}`);
     emit(out, '1000', `cel.style=${el.styleId}`);
-    emit(out, '1000', `cel.scale=${toDxfNumber(el.scale)}`);
-    emit(out, '1000', `cel.rot=${toDxfNumber(el.rotationDeg)}`);
-    emit(out, '1000', `cel.offx=${toDxfNumber(el.offsetXMm)}`);
-    emit(out, '1000', `cel.offy=${toDxfNumber(el.offsetYMm)}`);
+    emitCompoundPlacement(out, el);
     emit(out, '1000', `cel.follow=${el.followPath ? '1' : '0'}`);
   }
   // dot → kind only (no fields)
+}
+
+/** The shared S/R/X/Y placement fields both a symbol and a text sub-layer element carry (`cel.*`). */
+function emitCompoundPlacement(
+  out: string[],
+  el: { scale: number; rotationDeg: number; offsetXMm: number; offsetYMm: number },
+): void {
+  emit(out, '1000', `cel.scale=${toDxfNumber(el.scale)}`);
+  emit(out, '1000', `cel.rot=${toDxfNumber(el.rotationDeg)}`);
+  emit(out, '1000', `cel.offx=${toDxfNumber(el.offsetXMm)}`);
+  emit(out, '1000', `cel.offy=${toDxfNumber(el.offsetYMm)}`);
 }
 
 /** `PatternElement` → its signed `49` value (dash=+len, gap=−len, dot/symbol=0). */

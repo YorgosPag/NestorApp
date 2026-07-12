@@ -111,6 +111,20 @@ imported `ACAD_ISO*`) → built-in catalog → minimal CONTINUOUS stand-in. Το
   pre-existing ADR-642 concern· σπάνιο σε κατόψεις· εκτός Φάσης A.
 
 ## 6. Changelog
+- **2026-07-13 — #9i Root Named Object Dictionary (AutoCAD F2 iteration #8, UNCOMMITTED):** Όγδοο
+  re-export → «**File lacks the NamedObject dictionary**» (global). Το `(9).dxf` δεν είχε **καθόλου**
+  OBJECTS section (καμία MLINE, η image hatch→solid) → κανένα root NOD. Ο R2018 απαιτεί το root Named
+  Object Dictionary. Fix: το professional path εκπέμπει **πάντα** OBJECTS section με root NOD (owner 0)
+  + standard (κενό) `ACAD_GROUP` dict, και αναφέρει `ACAD_MLINESTYLE`/`ACAD_IMAGE_DICT` όταν υπάρχουν.
+  ezdxf: 0 errors, `doc.rootdict` αναγνωρίζεται. 392/392 tests, jscpd clean. Εκκρεμεί νέο AutoCAD F2
+  (πιθανό επόμενο: ACAD_LAYOUT με Model layout — αν το ζητήσει).
+- **2026-07-13 — #9h Bogus linetype «0» σε entities (AutoCAD F2 iteration #7, UNCOMMITTED):** Μετά το
+  timeout το export παρήχθη & άνοιξε ΠΟΛΥ πιο μακριά (γρ.4556, past blocks) → «**Bad linetype name 0**»
+  σε LINE (block member, layer «01»). Διάγνωση στο `(9).dxf`: 28 entities φέρουν group `6 0` (imported
+  stray token)· το «0» εξαιρείται από το LTYPE table (IMPLICIT) → undefined. Επιβεβαιώθηκε ότι ΟΛΑ τα
+  άλλα referenced linetypes ορίζονται (ACAD_ISO03/07/10W100, HIDDEN2, LTP-*, Dashed, Divide) + όλα τα
+  layers (0/01/04/…) υπάρχουν. Fix: `emitEntityStyle` skip group 6 όταν το όνομα είναι «0»/blank →
+  ByLayer inherit. 391/391 tests, jscpd clean. Εκκρεμεί νέο AutoCAD F2.
 - **2026-07-13 — Export-blocker: image-fill pre-pass πάγωμα (defensive timeout, UNCOMMITTED):** Το export
   **κόλλησε** (δεν παρήγαγε DXF) — ΟΧΙ ο writer (stress test 2209 entities → 100ms), αλλά ο **image-fill
   pre-pass** (`resolveImageFillsForDxf` → `decodeImageForExport`, ADR-643 Φ5b): ο Giorgio διέγραψε ένα hatch

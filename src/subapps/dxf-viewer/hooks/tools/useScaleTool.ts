@@ -25,7 +25,7 @@ import { useSceneManagerAdapter, type SceneAdapterLevelManager } from '../../sys
 import { useModifyToolActivation } from '../../systems/tools/useModifyToolActivation';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { ScaleToolStore } from '../../systems/scale/ScaleToolStore';
-import { computeUniformRef } from '../../systems/scale/scale-reference-calc';
+import { computeUniformRef, referenceDistance, computeLiveScale } from '../../systems/scale/scale-reference-calc';
 import type { ScaleSubPhase } from '../../systems/scale/ScaleToolStore';
 import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
 
@@ -188,13 +188,24 @@ export function useScaleTool(props: UseScaleToolProps): UseScaleToolReturn {
 
     if (s.phase === 'base_point') {
       ScaleToolStore.setBasePoint(worldPoint);
+      ScaleToolStore.setDragRefPoint(null); // fresh drag reference (captured by the preview)
       ScaleToolStore.setPhase('scale_input', 'direct');
       return;
     }
 
     if (s.phase !== 'scale_input') return;
-    routeReferenceClick(s.subPhase, worldPoint);
-  }, [isActive]);
+
+    // ADR-646 #1 — direct drag: a click locks the live factor (AutoCAD drag-to-scale parity).
+    // Requires an established drag reference, so a stray click without movement is ignored.
+    if (s.subPhase === 'direct') {
+      if (!s.basePoint || !s.dragRefPoint) return;
+      const live = computeLiveScale(s, worldPoint, s.basePoint);
+      executeScale(live, live);
+      return;
+    }
+
+    routeReferenceClick(s, worldPoint, executeScale);
+  }, [isActive, executeScale]);
 
   // ── Escape handler ────────────────────────────────────────────────────────
 
@@ -235,12 +246,20 @@ export function useScaleTool(props: UseScaleToolProps): UseScaleToolReturn {
 
 // ── Reference click routing (module-level, no deps) ───────────────────────────
 
-function routeReferenceClick(subPhase: ScaleSubPhase, pt: Point2D): void {
+function routeReferenceClick(
+  s: ReturnType<typeof ScaleToolStore.getState>,
+  pt: Point2D,
+  executeScale: (sx: number, sy: number) => void,
+): void {
+  const { subPhase, basePoint } = s;
   switch (subPhase) {
     case 'ref_p1_x': ScaleToolStore.setRefPoint('refP1x', pt); ScaleToolStore.setSubPhase('ref_p2_x'); break;
     case 'ref_p2_x': ScaleToolStore.setRefPoint('refP2x', pt); ScaleToolStore.setSubPhase('ref_new_x'); break;
     case 'ref_p1_y': ScaleToolStore.setRefPoint('refP1y', pt); ScaleToolStore.setSubPhase('ref_p2_y'); break;
     case 'ref_p2_y': ScaleToolStore.setRefPoint('refP2y', pt); ScaleToolStore.setSubPhase('ref_new_y'); break;
+    // ADR-646 #2 — new length by pick: measured from the base point to the clicked point.
+    case 'ref_new_x': if (basePoint) confirmRefNewX(s, referenceDistance(basePoint, pt), executeScale); break;
+    case 'ref_new_y': if (basePoint) confirmRefNewY(s, referenceDistance(basePoint, pt), executeScale); break;
   }
 }
 
@@ -306,27 +325,41 @@ function handleEnterConfirm(
 
   if (subPhase === 'direct_y') { executeScale(s.currentSx, val); return true; }
 
-  if (subPhase === 'ref_new_x') {
-    const { refP1x, refP2x, nonUniformMode } = s;
-    if (!refP1x || !refP2x) return false;
-    const sx = computeUniformRef(refP1x, refP2x, val);
-    if (sx === null) return false;
-    if (!nonUniformMode) { executeScale(sx, sx); return true; }
-    ScaleToolStore.setFactors(sx, s.currentSy);
-    ScaleToolStore.setSubPhase('ref_p1_y');
-    return true;
-  }
-
-  if (subPhase === 'ref_new_y') {
-    const { refP1y, refP2y, currentSx } = s;
-    if (!refP1y || !refP2y) return false;
-    const sy = computeUniformRef(refP1y, refP2y, val);
-    if (sy === null) return false;
-    executeScale(currentSx, sy);
-    return true;
-  }
+  // Typed and picked new-length share the SAME reference math (SSoT) — only the source differs.
+  if (subPhase === 'ref_new_x') return confirmRefNewX(s, val, executeScale);
+  if (subPhase === 'ref_new_y') return confirmRefNewY(s, val, executeScale);
 
   return false;
+}
+
+// ── Reference new-length confirm (shared by typed Enter + point pick) ──────────
+
+function confirmRefNewX(
+  s: ReturnType<typeof ScaleToolStore.getState>,
+  newLength: number,
+  executeScale: (sx: number, sy: number) => void,
+): boolean {
+  const { refP1x, refP2x, nonUniformMode } = s;
+  if (!refP1x || !refP2x) return false;
+  const sx = computeUniformRef(refP1x, refP2x, newLength);
+  if (sx === null) return false;
+  if (!nonUniformMode) { executeScale(sx, sx); return true; }
+  ScaleToolStore.setFactors(sx, s.currentSy);
+  ScaleToolStore.setSubPhase('ref_p1_y');
+  return true;
+}
+
+function confirmRefNewY(
+  s: ReturnType<typeof ScaleToolStore.getState>,
+  newLength: number,
+  executeScale: (sx: number, sy: number) => void,
+): boolean {
+  const { refP1y, refP2y, currentSx } = s;
+  if (!refP1y || !refP2y) return false;
+  const sy = computeUniformRef(refP1y, refP2y, newLength);
+  if (sy === null) return false;
+  executeScale(currentSx, sy);
+  return true;
 }
 
 function parseNumericBuffer(buf: string): number | null {

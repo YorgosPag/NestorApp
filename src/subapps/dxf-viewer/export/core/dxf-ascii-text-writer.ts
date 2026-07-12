@@ -52,6 +52,22 @@ export function textStyleName(fontFamily: string | undefined): string {
   return f;
 }
 
+/** ADR-644 (#8) — the Greek-capable TrueType the export falls back to. The AutoCAD SHX `txt`/`txt.shx`
+ *  font has NO Greek glyphs → Greek text renders as «?». Arial (Windows-ubiquitous, full Unicode) is
+ *  the big-player-safe substitute the diagnosis confirmed («Arial.ttf το έλυσε»). */
+export const GREEK_CAPABLE_FONT = 'Arial.ttf';
+
+/**
+ * ADR-644 (#8) — resolve a STYLE record's `fontFile` (group 3) to a Greek-capable one. The imported
+ * families collapse to the non-Unicode SHX `txt` (→ «?» for Greek); substitute a Unicode TrueType.
+ * A real named font (already a `.ttf`/other) is kept verbatim (assume it can render its own script).
+ */
+export function resolveExportFont(fontFamily: string | undefined): string {
+  const f = fontFamily?.trim();
+  if (!f || /^(txt|standard)(\.shx)?$/i.test(f)) return GREEK_CAPABLE_FONT;
+  return f;
+}
+
 /** Read a TEXT/MTEXT entity's first-run font family off its `textNode` (absent → ''). */
 export function readTextEntityFamily(e: Entity): string {
   const node = (e as TextEntity | MTextEntity).textNode;

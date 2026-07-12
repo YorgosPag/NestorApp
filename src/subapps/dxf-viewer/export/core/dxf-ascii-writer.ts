@@ -394,12 +394,32 @@ export function writeDxfAscii(
     writeEntity(e, layerName, resolveAci(e, layer), s, mmScale, explode, pair, () => dimBlockIndex++, dimStyleNameById, version, emitHandles, modelSpaceHandle);
   }
   pair(0, 'ENDSEC');
-  // ADR-636 Φ2.4 (D.4) / ADR-643 Φ5b — ONE OBJECTS section (LAST in DXF order) holding BOTH the
-  // ACAD_MLINESTYLE dictionary/styles AND the ACAD_IMAGE_DICT/IMAGEDEFs. Skipped when neither present.
+  // ADR-636 Φ2.4 (D.4) / ADR-643 Φ5b / ADR-644 (#9i) — ONE OBJECTS section (LAST in DXF order). The
+  // professional (R2018) path ALWAYS emits it because AutoCAD REQUIRES the root Named Object
+  // Dictionary (NOD) or it aborts: «File lacks the NamedObject dictionary». The NOD owns a standard
+  // (empty) ACAD_GROUP dict + references the ACAD_MLINESTYLE / ACAD_IMAGE_DICT dictionaries when
+  // present. Legacy/Tekton keeps the historic gated behaviour (emit only when mline/image exist).
   const hasObjects = !mlineStyles.isEmpty || !imageDefs.isEmpty;
-  if (hasObjects) {
+  if (emitHandles || hasObjects) {
     pair(0, 'SECTION');
     pair(2, 'OBJECTS');
+    if (emitHandles) {
+      const nodHandle = alloc.next();
+      const groupHandle = alloc.next();
+      pair(0, 'DICTIONARY');
+      pair(5, nodHandle);
+      pair(330, '0');
+      pair(100, 'AcDbDictionary');
+      pair(281, 1);                                   // hard-owner flag
+      pair(3, 'ACAD_GROUP'); pair(350, groupHandle);  // the always-present group dictionary
+      if (!mlineStyles.isEmpty) { pair(3, 'ACAD_MLINESTYLE'); pair(350, mlineStyles.dictHandle); }
+      if (!imageDefs.isEmpty) { pair(3, 'ACAD_IMAGE_DICT'); pair(350, imageDefs.dictHandle); }
+      pair(0, 'DICTIONARY');                          // ACAD_GROUP (empty)
+      pair(5, groupHandle);
+      pair(330, nodHandle);
+      pair(100, 'AcDbDictionary');
+      pair(281, 1);
+    }
     emitMlineStyleBlocks(pair, mlineStyles);
     emitImageDefBlocks(pair, imageDefs);
     pair(0, 'ENDSEC');

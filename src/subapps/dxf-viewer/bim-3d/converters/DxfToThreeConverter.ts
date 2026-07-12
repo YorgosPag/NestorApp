@@ -27,7 +27,7 @@ import { ACI_PALETTE } from '../../settings/standards/aci';
 import { hexToTrueColor } from '../../utils/dxf-true-color';
 import { sceneUnitsToMeters, resolveSceneUnits } from '../../utils/scene-units';
 import { circlePolyline, arcPolyline } from './dxf-arc-circle-sample';
-// ADR-644 Φάση B — shared glyph atlas + merged, atlas-sampled text mesh (replaces the per-text
+// ADR-645 Φάση B — shared glyph atlas + merged, atlas-sampled text mesh (replaces the per-text
 // `CanvasTexture` path: 1 atlas + one draw call per floor instead of thousands of textures).
 import { GlyphAtlas } from './glyph-atlas';
 import { AtlasTextMeshBuilder, countTextGlyphCapacity } from './glyph-atlas-text-mesh';
@@ -334,6 +334,10 @@ export class DxfToThreeConverter {
       if (positions.length === 0) continue;
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
+      // ADR-645 Φάση C — static line bounds → compute the bounding sphere ONCE now so three's native
+      // per-object frustum culling (`renderer.render(root, camera)`, the underlay pass) skips an
+      // off-screen floor's wireframe deterministically from the first frame (no lazy first-render cost).
+      geo.computeBoundingSphere();
       // ADR-537 underlay-depth — drawn in the dedicated underlay pass: depth-TESTED (walls in
       // front occlude it) but `depthWrite:false` so overlapping linework never self-z-fights.
       const mat = new THREE.LineBasicMaterial({
@@ -407,10 +411,14 @@ export class DxfToThreeConverter {
     const builders = this.makeFloorBuilders(items);
     const builderFor = (item: StreamTextItem): AtlasTextMeshBuilder => builders.get(item.group)!;
     const flushAll = (): void => { for (const b of builders.values()) b.flush(); };
+    // ADR-645 Φάση C — build complete: bounds are final → re-enable three's native frustum culling
+    // so off-screen floors' text is skipped by the underlay pass. (Kept OFF while streaming.)
+    const finalizeAll = (): void => { for (const b of builders.values()) b.finalize(); };
 
     if (total < DXF_IMPORT_THRESHOLDS.INCREMENTAL_3D_MIN_ENTITIES) {
       for (const item of items) this.appendTextGlyphs(item, builderFor(item));
       flushAll();
+      finalizeAll();
       this.onSceneDirty();
       return;
     }
@@ -422,7 +430,9 @@ export class DxfToThreeConverter {
       total,
       processItem: (i) => this.appendTextGlyphs(items[i], builderFor(items[i])),
       onFrameProcessed: (done, tot) => { flushAll(); setDxf3dStreamProgress(done, tot); this.onSceneDirty(); },
-      onComplete: () => { this.activeBuild = null; flushAll(); clearDxf3dStreamProgress(); this.onSceneDirty(); },
+      onComplete: () => {
+        this.activeBuild = null; flushAll(); finalizeAll(); clearDxf3dStreamProgress(); this.onSceneDirty();
+      },
       onCancelled: () => { clearDxf3dStreamProgress(); },
     });
   }

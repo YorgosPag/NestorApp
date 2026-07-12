@@ -76,7 +76,11 @@ export interface EntityR2018 {
  * @see config/lineweight-iso-catalog — encodeDxfCode370 SSoT
  */
 export function emitEntityStyle(pair: Pair, style: EntityStyleCodes): void {
-  if (style.linetypeName) pair(6, style.linetypeName);
+  // ADR-644 — «0» is NOT a valid linetype name (a stray layer-ish token some imported entities carry
+  // in group 6). No LTYPE record defines it → AutoCAD aborts «Bad linetype name 0». Treat it (and
+  // blank) as ByLayer inherit → skip group 6. Every real name the export adapter collects IS defined
+  // in the LTYPE table; only the bogus '0'/'' slip through (they are excluded from the table).
+  if (style.linetypeName && style.linetypeName !== '0') pair(6, style.linetypeName);
   if (isConcreteLineweight(style.lineweightMm)) pair(370, encodeDxfCode370(style.lineweightMm));
   const lts = style.ltscale;
   if (typeof lts === 'number' && Number.isFinite(lts) && lts > 0 && lts !== 1) pair(48, lts);

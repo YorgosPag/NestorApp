@@ -104,4 +104,43 @@ describe('AtlasTextMeshBuilder', () => {
     b.dispose();
     atlas.dispose();
   });
+
+  // ── ADR-645 Φάση C — screen-size LOD attribute + frustum-cull finalize ──────────────────────────
+
+  it('bakes a non-zero, same-per-corner aEmVec (glyph vertical extent) for the LOD shader', () => {
+    const atlas = new GlyphAtlas();
+    const b = new AtlasTextMeshBuilder(atlas, 2);
+    b.addEntity(text({ text: 'A', height: 10 }), atlas, 0xffffff);
+    const em = (b.mesh.geometry as THREE.BufferGeometry).getAttribute('aEmVec');
+    // The vertical edge has a real length (drives on-screen height) …
+    const len = Math.hypot(em.getX(0), em.getY(0), em.getZ(0));
+    expect(len).toBeGreaterThan(0);
+    // … and is identical on all four corners of the glyph quad.
+    for (let i = 1; i < 4; i++) {
+      expect(em.getX(i)).toBeCloseTo(em.getX(0), 6);
+      expect(em.getY(i)).toBeCloseTo(em.getY(0), 6);
+      expect(em.getZ(i)).toBeCloseTo(em.getZ(0), 6);
+    }
+    b.dispose();
+    atlas.dispose();
+  });
+
+  it('finalize() re-enables frustum culling once glyphs exist, but never for an empty mesh', () => {
+    const atlas = new GlyphAtlas();
+    const empty = new AtlasTextMeshBuilder(atlas, 4);
+    expect(empty.mesh.frustumCulled).toBe(false); // streaming default (bounds fill progressively)
+    empty.finalize();
+    expect(empty.mesh.frustumCulled).toBe(false); // degenerate sphere → leave culling off
+
+    const filled = new AtlasTextMeshBuilder(atlas, 4);
+    filled.addEntity(text({ text: 'A' }), atlas, 0xffffff);
+    filled.flush();
+    expect(filled.mesh.frustumCulled).toBe(false); // still off mid-stream
+    filled.finalize();
+    expect(filled.mesh.frustumCulled).toBe(true); // bounds final → three culls off-screen floors
+
+    empty.dispose();
+    filled.dispose();
+    atlas.dispose();
+  });
 });

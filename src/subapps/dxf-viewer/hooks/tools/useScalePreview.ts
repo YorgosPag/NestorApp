@@ -13,13 +13,15 @@
  */
 
 import { useCallback } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { ViewTransform } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { ScaleToolStore, type ScaleToolState } from '../../systems/scale/ScaleToolStore';
 // ADR-348 SSoT — the SAME per-entity scale the commit (`ScaleEntityCommand`) applies, so the
 // WYSIWYG preview cannot diverge from the committed result (incl. circle → ellipse).
 import { scaleEntity } from '../../systems/scale/scale-entity-transform';
+// ADR-646 #1 SSoT — the live drag factor shared verbatim with the tooltip + click-commit.
+import { computeLiveScale } from '../../systems/scale/scale-reference-calc';
 // ADR-550 (WYSIWYG) — moving copies render through the REAL entity renderer (full fidelity).
 import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
 import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
@@ -32,19 +34,18 @@ export interface UseScalePreviewProps {
   getViewportElement?: () => HTMLElement | null;
 }
 
-/** Live uniform scale factor from cursor distance (SSoT — same value tooltip + copies use). */
-function computeLiveScale(s: ScaleToolState, cursor: Point2D, basePoint: Point2D): number {
-  if (s.subPhase !== 'direct') return s.currentSx;
-  const dist = Math.hypot(cursor.x - basePoint.x, cursor.y - basePoint.y);
-  return dist > 0.001 ? dist / 100 : 1;
-}
-
 export function useScalePreview(props: UseScalePreviewProps): void {
   const { levelManager, transform, getCanvas, getViewportElement } = props;
 
   // ADR-641 — `getEntity` (BEDIT-aware, VIEW-space members) is supplied by the harness frame.
   const renderCopies = useCallback(
     ({ state: s, cursor, basePoint, transform: t, viewport, bimPreview, layers, getEntity }: TransformGhostFrame<ScaleToolState>) => {
+      // ADR-646 #1 — capture the drag reference on the first real move sample (factor 1 at start),
+      // so the live ratio is shared verbatim with the click-commit. One guarded write per drag.
+      if (s.subPhase === 'direct' && !s.dragRefPoint) {
+        const d = Math.hypot(cursor.x - basePoint.x, cursor.y - basePoint.y);
+        if (d > 1e-6) ScaleToolStore.setDragRefPoint({ x: cursor.x, y: cursor.y });
+      }
       const live = computeLiveScale(s, cursor, basePoint);
       for (const entityId of s.selectedEntityIds) {
         const entity = getEntity(entityId);

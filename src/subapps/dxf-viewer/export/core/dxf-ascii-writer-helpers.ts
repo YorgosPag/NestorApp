@@ -15,7 +15,7 @@ import type { DxfStyleTableEntry } from '../../text-engine/types/text-ast.types'
 import { hexToAci } from '../../ui/text-toolbar/controls/aci-palette';
 // 🏢 Color-Conversion SSoT (ADR-573): int(0xRRGGBB)→hex via canonical `dxf-true-color`.
 import { trueColorToHex } from '../../utils/dxf-true-color';
-import { readTextEntityFamily, textStyleName } from './dxf-ascii-text-writer';
+import { readTextEntityFamily, textStyleName, resolveExportFont } from './dxf-ascii-text-writer';
 import type { DxfWriteLayer } from './dxf-ascii-writer';
 
 const DEFAULT_ACI = 7; // white/black (ByLayer-ish fallback)
@@ -53,7 +53,8 @@ export function collectTextStyles(entities: readonly Entity[]): DxfStyleTableEnt
     const name = textStyleName(family);
     if (name === 'STANDARD' || byName.has(name)) continue;
     byName.set(name, {
-      name, fontFile: family, bigFontFile: '',
+      // ADR-644 (#8) — Greek-capable font (the SHX `txt` renders Greek as «?»).
+      name, fontFile: resolveExportFont(family), bigFontFile: '',
       height: 0, widthFactor: 1, obliqueAngle: 0, flags: 0, textGenerationFlags: 0,
     });
   }

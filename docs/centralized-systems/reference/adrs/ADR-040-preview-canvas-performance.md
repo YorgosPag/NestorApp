@@ -72,6 +72,21 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-13 — ✅ 3D DXF overlay = view-dependent frustum culling + screen-size text LOD (ADR-645 Φάση C)
+**Τι:** στο multi-floor «Όλοι οι όροφοι» ό,τι είναι εκτός frustum ή projectάρεται πολύ μικρό δεν σχεδιάζεται
+(Revit/Navisworks declutter), χωρίς να σπάσει το Φ.A/B streaming. **Συμμόρφωση ADR-040 (κανένα δεύτερο rAF,
+κανένα CPU/frame):** (1) **Frustum = three-native** — ο υπάρχων underlay pass κάνει ήδη `renderer.render(root, camera)`
+(per-object cull)· ενεργοποιείται ντετερμινιστικά με `geo.computeBoundingSphere()` μία φορά στα line color-buckets +
+`AtlasTextMeshBuilder.finalize()` (`frustumCulled=true` μόλις ο build ολοκληρωθεί, ΠΟΤΕ mid-stream → κανένα
+partial-bounds mis-cull). (2) **Text LOD = per-fragment shader `discard`** (ΝΕΟ `glyph-atlas-text-lod.ts`,
+`onBeforeCompile` στο stock `MeshBasicMaterial`): baked `aEmVec` per glyph → projected on-screen ύψος, κάτω από
+`TEXT_LABEL_MIN_PX`=8 → discard. **Μηδέν CPU/frame, μηδέν re-upload** — το μόνο uniform που αλλάζει (viewport CSS px)
+το θέτει το `mesh.onBeforeRender` (μόνο για non-culled meshes). Ίδια φιλοσοφία με το 2Δ WebGL line LOD
+(`computeInstanceCount`: drop sub-`cutoffPx`). Bitmap cache / micro-leaf subscription pattern **άθικτα** (η αλλαγή
+ζει στον converter + στο overlay material, ΟΧΙ σε orchestrator· καμία `useSyncExternalStore`). Πλήρες detail:
+**ADR-645 §3 Φ.C + §8 + ADR-366 changelog**. ΟΧΙ tsc (N.17)· jest 60 suites/442 GREEN· jscpd:diff καθαρό.
+🔴 browser-verify + commit (Giorgio).
+
 ### 2026-07-12 — ✅ 3D DXF overlay build τρέχει στο UnifiedFrameScheduler (time-sliced streaming, ADR-645 Φάση A)
 **Τι:** το 2Δ→3Δ build του `DxfToThreeConverter` έπαψε να είναι σύγχρονο all-at-once μέσα σε React commit effect
 (που πάγωνε τον browser σε μεγάλα multi-floor DXF — 468 text × ορόφους). Νέο SSoT `bim-3d/scene/incremental-scene-builder.ts`:

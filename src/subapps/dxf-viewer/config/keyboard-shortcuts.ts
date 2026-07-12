@@ -1122,6 +1122,12 @@ export const matchesShortcutDef = (
 
   if (!modifierMatch) return false;
 
+  // Guard: a synthetic / IME-composition / dead-key event can arrive with `event.key`
+  // undefined, and a malformed shortcut def may lack `key`. Neither can match — and calling
+  // a string method on `undefined` throws, which would crash the ENTIRE keydown handler
+  // (every shortcut dies). Bail out safely instead.
+  if (typeof event.key !== 'string' || typeof shortcut.key !== 'string') return false;
+
   // Check key
   const eventKey = event.key.toUpperCase();
   const shortcutKey = shortcut.key.toUpperCase();

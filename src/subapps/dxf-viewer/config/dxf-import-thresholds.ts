@@ -71,4 +71,17 @@ export const DXF_IMPORT_THRESHOLDS = {
    * above a typical annotated plan's title block yet well below the drawings that motivated this.
    */
   INCREMENTAL_3D_MIN_ENTITIES: 40,
+
+  /**
+   * ADR-645 Φάση C — screen-size text LOD (declutter): the minimum on-screen glyph height, in CSS
+   * pixels, below which a 3D DXF label fragment is discarded in the shader.
+   *
+   * In «Όλοι οι όροφοι» thousands of labels project to a few pixels when zoomed out — unreadable
+   * clutter that the big players (Revit / Navisworks / Forge) hide until you zoom back in. The
+   * merged atlas text mesh (Φάση B) can't drop individual glyphs without a rebuild, so the cut is
+   * made per-fragment on the GPU (`glyph-atlas-text-lod.ts`): each glyph's projected em height is
+   * compared to this floor. 8 px is below the readability limit of CAD annotation text yet high
+   * enough to clear the far-floor label soup — tune here (SSoT), never inline.
+   */
+  TEXT_LABEL_MIN_PX: 8,
 } as const;
