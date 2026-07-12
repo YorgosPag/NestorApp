@@ -19,6 +19,9 @@
 > **Φ2E #5** 🟢 (Properties-palette-first layout — ribbon→panel split: πλήρες per-object surface (Γενικά+Γεωμετρία)
 > στο αριστερό `LinePropertiesTab` μέσω descriptor `line-property-fields` + του ΙΔΙΟΥ `useRibbonLineToolBridge`·
 > ribbon slim σε ~1 σειρά· AutoCAD/Revit parity· 6 jest, jscpd clean, UNCOMMITTED 2026-07-12).
+> **Φ2E #6** 🟢 (draft mode «Ιδιότητες Γραμμής» — εργαλείο γραμμής/primitive ενεργό χωρίς επιλογή → panel με
+> draw-defaults «Γενικά» ΟΧΙ κενό· `isLinePrimitiveDrawingTool` predicate + router draft branch + auto-open· mirror
+> τοίχου/γραμμοσκίασης· 2 jest, jscpd clean, UNCOMMITTED 2026-07-12).
 > **🔴 ΕΚΚΡΕΜΕΙ:** Φ2F (DXF LTYPE round-trip + persistence = Φ9) — orchestrator-scale, επόμενη συνεδρία.
 > **Φ3 (bulge polyline + multifunctional grips)** 🟡 ΣΕ ΕΞΕΛΙΞΗ (UNCOMMITTED 2026-06-22): **Φ3a** 🟢 geometry SSoT
 > (`geometry-bulge-utils` bulge↔arc + `arcToPolyline`)· **Φ3b** 🟢 vertex model parallel-arrays (Επιλογή A) + arc
@@ -1155,6 +1158,25 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   invalidate-άρει σε scene-ref change, όχι per-field· αφού το Χρώμα δουλεύει, ξαναχτίζεται) → χρειάζονται συγκεκριμένο
   repro (πιθανό subtle change ή selection-render masking, όχι code bug). tsc SKIP (N.17). 🔴 browser-verify (Βήμα σε
   dashed γραμμή αλλάζει πυκνότητα παυλών) + commit → Giorgio.
+- **2026-07-12 — Φ2E #6 DRAFT MODE «Ιδιότητες Γραμμής» (tool active, no selection → draw-defaults, ΟΧΙ κενό·
+  Opus 4.8, shared tree, UNCOMMITTED).** **Ερώτημα Giorgio:** όταν το εργαλείο -Γραμμή- είναι ενεργό χωρίς
+  προεπιλεγμένη γραμμή, το αριστερό Properties ήταν **κενό** — σωστό; **Απάντηση/big-player:** AutoCAD = κενό
+  (draw-defaults στο ribbon)· **Revit/Figma = γεμάτο με draw-defaults** («set the type, then draw»). Η ΔΙΚΗ μας
+  εφαρμογή έχει ΗΔΗ επιλέξει το Revit μοντέλο (`BimPropertiesRouter`: `!selected && isWallDrawingTool` → wall draft·
+  `!selected && activeTool==='hatch'` → hatch draft) → η γραμμή που έμενε κενή ήταν **ασυνέπεια**. **Impl (mirror
+  τοίχου/γραμμοσκίασης, SSoT):** (α) NEW predicate `isLinePrimitiveDrawingTool` στο `resolve-tool-active-trigger.ts`
+  — reuse του ΙΔΙΟΥ `TOOL_ACTIVE_TRIGGER` map (μηδέν δεύτερη λίστα· καλύπτει line/circle/rectangle/polyline/arc/
+  ellipse/polygon — ό,τι ανοίγει το «Στυλ Γραμμής» tab). (β) `LinePropertiesTab` `draftMode` prop + `forDraft`
+  (drop selection-only πεδία μέσω NEW `LINE_SELECTION_ONLY_KEYS`={transparency}, mirror `HATCH_SELECTION_ONLY_KEYS`):
+  draft → μόνο «Γενικά» (draw-defaults via το ΙΔΙΟ bridge — dual-mode QuickStyleStore)· «Τμήματα Μοτίβου» +
+  «Γεωμετρία»/«Πολυγραμμή» = selection-only (κρύβονται· geometry έτσι κι αλλιώς `getPanelVisibility=false` χωρίς
+  επιλογή). (γ) `BimPropertiesRouter` branch `!selected && isLinePrimitiveDrawingTool(activeTool)` →
+  `<LinePropertiesTab draftMode />` (μετά wall/hatch draft, πριν τα selected branches). (δ) `FloatingPanelContainer`
+  auto-open: το draft-tool effect γενικεύτηκε (wall ∪ line-primitive ∪ hatch) ώστε η ενεργοποίηση εργαλείου γραμμής
+  να ανοίγει αυτόματα το Properties (Revit «pick tool → panel pops»). **Tests:** +2 `isLinePrimitiveDrawingTool`
+  (every line-trigger tool true· non-line/modify/null false)· 29 GREEN (tool-trigger coverage + descriptor + tab).
+  jscpd:diff clean. tsc SKIP (N.17). 🔴 browser-verify (εργαλείο -Γραμμή- χωρίς επιλογή → Properties ανοίγει με
+  «Γενικά» draw-defaults, ΟΧΙ κενό· άλλαξε Χρώμα/Τύπος → η ΕΠΟΜΕΝΗ γραμμή τα παίρνει) + commit → Giorgio.
 - **2026-07-12 — Φ2E #5 PROPERTIES-PALETTE-FIRST LAYOUT — ribbon→panel split για επιλεγμένη γραμμή (AutoCAD/Revit/
   Figma parity· Opus 4.8, shared tree, UNCOMMITTED).** **Στόχος (Giorgio, μετά από ανάλυση στιγμιότυπου):** το
   contextual «Στυλ Γραμμής» ribbon tab έκανε διπλή δουλειά (draw-defaults + πλήρες per-object editing + ΟΛΗ η
