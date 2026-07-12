@@ -1,6 +1,6 @@
 # ADR-641 — Block Editor (AutoCAD BEDIT): exclusive block-local editing of a Block instance
 
-- **Status:** 🟡 IN PROGRESS (Φ1 Foundation + Φ2 Exclusive render scope + Φ3 Enter/exit UX implemented; Φ4–Φ5 planned)
+- **Status:** 🟡 IN PROGRESS (Φ1 Foundation + Φ2 Exclusive render scope + Φ3 Enter/exit UX + Φ4 Edit-tools scope implemented; Φ5 Commit/sync planned)
 - **Date:** 2026-07-12
 - **Domain:** DXF Viewer · Block subsystem · Canvas render scope · Editing tools/commands/undo · UX/i18n
 - **Related:** ADR-640 (Block instance subsystem — this realizes its §7 "enter-block" deferral), ADR-575 (GROUP drill-in — the architectural template), ADR-040 (micro-leaf render discipline), ADR-527 (LevelSceneManagerAdapter synchronous read-after-write)
@@ -55,7 +55,9 @@ systems/block/useEffectiveLevelScene.ts  useEffectiveLevelScene(levelId): SceneM
 systems/block/exit-block-editor.ts       exitBlockEditAndReselect()   (SSoT exit gesture — close + re-select block; shared by Esc hook + Close button)  [Φ3]
 systems/block/useBlockEditorExitEscape.ts  ESC @ BLOCK_EDITOR_EXIT(274) → exitBlockEditAndReselect  (mirror useGroupExitEscape)  [Φ3]
 ui/toolbar/StatusBarActiveBlockLeaf.tsx  breadcrumb «Επεξεργασία μπλοκ «name»» + clickable Close  (micro-leaf on useActiveBlockEditName)  [Φ3]
-systems/block/block-member-scene-access.ts  find/update/add/remove member of the active block (mirror group-member-scene-access)  [Φ4]
+systems/block/block-member-scene-access.ts  find/update/updateEntities/add/remove member of the active block, gated on activeBlockId (mirror group-member-scene-access; single-level, blocks don't nest)  [Φ4 ✅]
+systems/entity-creation/level-scene-vertex-ops.ts  pure per-type vertex transforms extracted from LevelSceneManagerAdapter (made room under the N.7.1 500-line ceiling; reused by both writeback paths)  [Φ4 ✅]
+systems/entity-creation/entity-zorder-ops.ts  shared moveEntityInList/frontBackTargetIndex — z-order render-list reorder SSoT for BOTH adapters (CHECK 3.28 de-dup of pre-existing reorder/moveToIndex twins)  [Φ4 ✅]
 core/commands/entity-commands/SyncBlockDefinitionCommand.ts  write-back + sync all same-name instances (one undoable) [Φ5]
 ```
 
@@ -70,9 +72,9 @@ core/commands/entity-commands/SyncBlockDefinitionCommand.ts  write-back + sync a
 | UX | `systems/escape-bus/escape-priority.ts` + `systems/block/useBlockEditorExitEscape.ts` + `systems/block/exit-block-editor.ts` (**NEW** exit SSoT) + `hooks/useKeyboardShortcuts.ts` (mount) | new `BLOCK_EDITOR_EXIT` (274) priority + Esc hook → `exitBlockEditAndReselect` (close + re-select block); shared with the Close button | **Φ3 ✅** |
 | UX | `ui/toolbar/StatusBarActiveBlockLeaf.tsx` (**NEW**) + `ToolbarStatusBar.tsx` (mount) | breadcrumb «Επεξεργασία μπλοκ «name» · Esc για έξοδο» + clickable `<button>` Close (`exitBlockEditAndReselect`); micro-leaf on `useActiveBlockEditName` | **Φ3 ✅** |
 | UX | `src/i18n/locales/{el,en}/dxf-viewer.json` | new `activeBlock.{editingActive,editingHint,close}` keys (N.11, no hardcoded) | **Φ3 ✅** |
-| Edit | `systems/block/block-member-scene-access.ts` | **NEW** member find/update/add/remove for active block | Φ4 |
-| Edit | `grip-scene-manager-adapter.ts` + `LevelSceneManagerAdapter.ts`/`useSceneManagerAdapter.ts` | make BOTH adapters block-member-aware (the generic one is new work GROUP left undone) | Φ4 |
-| Edit | `hooks/grips/grip-registry.ts` + `GripRegistryPublisher.tsx` | thread active-block-edit id; suppress whole-block gizmo while inside | Φ4 |
+| Edit | `systems/block/block-member-scene-access.ts` | **NEW** member find/update/updateEntities/add/remove for the active block, gated on `activeBlockId` (single-level — blocks don't nest) | **Φ4 ✅** |
+| Edit | `grip-scene-manager-adapter.ts` + `LevelSceneManagerAdapter.ts` | make BOTH adapters block-member-aware. Each reads `getActiveBlockEditId()` at method-time (event-time getter, ADR-040-safe) → block helpers while inside BEDIT, else the top-level/group path. **N.0.1 code=truth:** `useSceneManagerAdapter.ts` is UNCHANGED — the generic adapter self-reads the store, so no signature threading was needed (the §3 plan named it; the code shows the adapter is the sole site). Extracted `level-scene-vertex-ops.ts` + `entity-zorder-ops.ts` to stay under the N.7.1 ceiling + kill CHECK 3.28 twins. | **Φ4 ✅** |
+| Edit | `hooks/grips/grip-registry.ts` + `GripRegistryPublisher.tsx` | Publisher swaps to the effective (block-local) scene via `resolveBlockEditScene` (mirror the paint leaf) so member grips compute in the rendered frame + the whole-block gizmo drops «for free»; threads `activeBlockEditId` into `useGripRegistry` as a defensive gizmo-suppression guard (mirror `activeGroupStack`) | **Φ4 ✅** |
 | Commit | `core/commands/entity-commands/SyncBlockDefinitionCommand.ts` | **NEW** write-back + sync all same-name instances (undoable) wired to Close | Φ5 |
 
 ## 4. Phasing
