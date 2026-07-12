@@ -18,18 +18,22 @@ import type { Pair } from './dxf-ascii-hatch-writer';
 // ADR-636 Φ2.4 (D.6) — DXF group 370 encoder SSoT (inverse του import `parseDxfCode370`).
 // ΟΧΙ νέος πίνακας: το lineweightMm→enum-code ζει ΜΟΝΟ στον ISO catalog.
 import { encodeDxfCode370, isConcreteLineweight } from '../../config/lineweight-iso-catalog';
+// ADR-507 — per-entity transparency (DXF 440) codec SSoT (inverse του import `decodeDxf440`).
+import { encodeDxf440 } from './dxf-transparency-440';
 
 const ARC_SEGMENT_DEG = 12;
 
 /**
- * The three per-entity STYLE group codes a DXF entity carries in common: linetype
- * name (6), per-object linetype scale / CELTSCALE (48) and lineweight (370). Every
- * field is on `BaseEntity`, so an `Entity` satisfies this structurally.
+ * The per-entity STYLE group codes a DXF entity carries in common: linetype name (6),
+ * per-object linetype scale / CELTSCALE (48), lineweight (370) and transparency (440).
+ * Every field is on `BaseEntity`, so an `Entity` satisfies this structurally.
  */
 export interface EntityStyleCodes {
   readonly linetypeName?: string;
   readonly ltscale?: number;
   readonly lineweightMm?: LineweightMm;
+  /** AutoCAD object transparency % (0..90). DXF group 440· 0/undefined → κανένας κωδικός. */
+  readonly transparency?: number;
 }
 
 /**
@@ -55,6 +59,9 @@ export function emitEntityStyle(pair: Pair, style: EntityStyleCodes): void {
   if (isConcreteLineweight(style.lineweightMm)) pair(370, encodeDxfCode370(style.lineweightMm));
   const lts = style.ltscale;
   if (typeof lts === 'number' && Number.isFinite(lts) && lts > 0 && lts !== 1) pair(48, lts);
+  // 440 transparency — concrete value only (encodeDxf440 drops 0/undefined → ByLayer inherit).
+  const transp = encodeDxf440(style.transparency);
+  if (transp !== undefined) pair(440, transp);
 }
 
 /** A `3DFACE` — up to 4 corners (triangle → 4th = 3rd). x/y × `s`, z (mm) × mmScale. */

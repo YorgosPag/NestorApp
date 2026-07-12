@@ -9,7 +9,7 @@
  */
 import { useCallback, useMemo } from 'react';
 
-import type { Entity } from '../../../types/entities';
+import type { Entity, AnySceneEntity } from '../../../types/entities';
 import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
 import type {
@@ -84,6 +84,24 @@ export function useResolveSelectedEntity<T extends Entity>(
     if (!entity || !guard(entity)) return null;
     return entity;
   }, [levelManager, universalSelection, guard]);
+}
+
+/** AutoCAD object transparency range: 0 (opaque) .. 90 (90% transparent). */
+const TRANSPARENCY_MAX = 90;
+
+/**
+ * Combobox display value for an entity's transparency (0 = opaque). Shared by the
+ * line-tool + hatch bridges (`transparency` lives on `BaseEntity` → every entity
+ * exposes it), so both read it the same way (N.18 — one definition).
+ */
+export function entityTransparencyValue(entity: AnySceneEntity): string {
+  const raw = (entity as { transparency?: number }).transparency;
+  return String(typeof raw === 'number' ? raw : 0);
+}
+
+/** Clamp typed transparency to the AutoCAD 0..90 integer range. */
+export function clampTransparency(n: number): number {
+  return Math.max(0, Math.min(TRANSPARENCY_MAX, Math.round(n)));
 }
 
 /** A ribbon toggle that is always `false` (bridges with no toggle commands). */

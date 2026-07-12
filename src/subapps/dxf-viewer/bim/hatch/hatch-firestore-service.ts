@@ -79,6 +79,8 @@ export interface HatchDocData {
   readonly patternOrigin?: Point2D;
   readonly drawOrder?: 0 | 1 | 2 | 3 | 4;
   readonly gapTolerance?: number;
+  /** ADR-507 — AutoCAD object transparency % (0..90· DXF 440). Κληρονομείται από BaseEntity. */
+  readonly transparency?: number;
   /** ADR-507 Φ5 — gradient γέμισμα. Flat map (μηδέν nested array) → Firestore-legal αυτούσιο. */
   readonly gradient?: HatchGradient;
 }
@@ -127,7 +129,7 @@ const HATCH_SCALAR_KEYS: readonly (keyof HatchDocData)[] = [
   'patternName', 'patternType', 'patternScale', 'patternAngle',
   'seedPoints', 'fillColor', 'backgroundColor', 'associative', 'fillType',
   'islandStyle', 'lineAngle', 'lineSpacing', 'doubleCrossHatch', 'patternOrigin',
-  'drawOrder', 'gapTolerance', 'patternSpace',
+  'drawOrder', 'gapTolerance', 'patternSpace', 'transparency',
   // ADR-507 Φ5 — gradient = flat object (όχι nested array) → αποθηκεύεται ως map field
   // με τον ίδιο μηχανισμό (pickHatchData copy + ...scalars spread στο hatchDocToEntity).
   'gradient',

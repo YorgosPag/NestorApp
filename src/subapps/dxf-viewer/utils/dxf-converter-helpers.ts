@@ -23,13 +23,21 @@ import { getAciColor } from '../settings/standards/aci';
 import { trueColorToHex } from './dxf-true-color';
 // 🏢 ADR: Centralized point validation
 import { isValidPoint } from '../rendering/entities/shared/entity-validation-utils';
-// ADR-635 Φ C.3/C.4 — per-entity lineweight/linetype/ltscale extractors live in a sibling
-// module (file-size SRP split, N.7.1). Re-exported below so converters' import path stays stable.
+// ADR-635 Φ C.3/C.4 + ADR-507 — per-entity lineweight/linetype/ltscale/transparency extractors
+// live in a sibling module (file-size SRP split, N.7.1). Imported for `applyImportedStyleFields`
+// below AND re-exported so converters' import path stays stable.
+import {
+  extractEntityLineweight,
+  extractEntityLinetype,
+  extractEntityLtscale,
+  extractEntityTransparency,
+} from './dxf-entity-style-extract';
 export {
   extractEntityLineweight,
   extractEntityLinetype,
   extractEntityLtscale,
-} from './dxf-entity-style-extract';
+  extractEntityTransparency,
+};
 
 // ============================================================================
 // 🏢 ENTERPRISE: TYPE DEFINITIONS
@@ -411,3 +419,52 @@ export function isByBlockColor(data: Record<string, string>): boolean {
 // ADR-635 Φ C.3/C.4 — `extractEntityLineweight` / `extractEntityLinetype` /
 // `extractEntityLtscale` moved to `dxf-entity-style-extract.ts` (file-size SRP split, N.7.1)
 // and re-exported at the top so converters' import path stays unchanged.
+
+// ============================================================================
+// 🏢 ENTERPRISE: IMPORTED COMMON STYLE FIELDS (post-pass, ADR-635 / ADR-507)
+// ============================================================================
+
+/**
+ * Bake the imported common style fields onto the converted result — ONE shared
+ * post-pass for lineweight (group 370, ADR-635 Φ C.3), linetype name (group 6),
+ * per-object CELTSCALE (group 48, ADR-635 Φ C.4) and transparency (group 440, ADR-507).
+ *
+ * Every field is GATED on its own extractor returning a concrete value:
+ *   - group 370 absent / ByLayer / ByBlock / Default ⇒ no `lineweightMm`.
+ *   - group 6 absent / ByLayer / ByBlock ⇒ no `linetypeName` (layer cascade resolves).
+ *   - group 48 absent / invalid / trivial 1 ⇒ no `ltscale`.
+ *   - group 440 absent / opaque / ByLayer / ByBlock ⇒ no `transparency`.
+ * When none applies the result is returned UNCHANGED (native/Tekton/bare paths carry
+ * no 370/6/48/440 → zero regression). Concrete values are spread onto the entity (or each
+ * entity of an array — block-expanded) as the SAME fields the render style cascade +
+ * LWDISPLAY gate + dash sizer already consume (ADR-510 Φ2/Φ2G). None of these is a
+ * geometric coordinate, so the import unit-scale (canonical-mm) never touches them.
+ *
+ * @see dxf-entity-converters.ts - convertEntityToScene (the sole caller)
+ */
+export function applyImportedStyleFields(
+  result: AnySceneEntity | AnySceneEntity[] | null,
+  data: Record<string, string>
+): AnySceneEntity | AnySceneEntity[] | null {
+  if (result === null) return null;
+  const lineweightMm = extractEntityLineweight(data);
+  const linetypeName = extractEntityLinetype(data);
+  const ltscale = extractEntityLtscale(data);
+  // ADR-507 — group 440 object transparency (0..90· absent/opaque/ByLayer ⇒ undefined).
+  const transparency = extractEntityTransparency(data);
+  if (
+    lineweightMm === undefined && linetypeName === undefined
+    && ltscale === undefined && transparency === undefined
+  ) {
+    return result;
+  }
+  const patch = {
+    ...(lineweightMm !== undefined && { lineweightMm }),
+    ...(linetypeName !== undefined && { linetypeName }),
+    ...(ltscale !== undefined && { ltscale }),
+    ...(transparency !== undefined && { transparency }),
+  };
+  return Array.isArray(result)
+    ? result.map(entity => ({ ...entity, ...patch }))
+    : { ...result, ...patch };
+}

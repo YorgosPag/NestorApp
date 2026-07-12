@@ -22,9 +22,11 @@ import { isHatchEntity } from '../../../types/entities';
 import type { HatchEntity, LineweightMm } from '../../../types/entities';
 import { isConcreteLineweight, LINEWEIGHT_SPECIAL, parseDxfCode370 } from '../../../config/lineweight-iso-catalog';
 import { LINEWEIGHT_BYLAYER_VALUE } from '../data/lineweight-ribbon-options';
-import { useCommandHistory } from '../../../core/commands';
+import { useCommandHistory, CompoundCommand } from '../../../core/commands';
 import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
 import { DeleteEntityCommand } from '../../../core/commands/entity-commands/DeleteEntityCommand';
+// ADR-507 «Πίσω πλάνο» — array-order = paint-order reorder (κοινό, undoable).
+import { ReorderEntityCommand } from '../../../core/commands/entity-commands/ReorderEntityCommand';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
   getHatchDrawDefaults,
@@ -76,7 +78,13 @@ import type {
 } from '../context/RibbonCommandContext';
 import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
-import { useResolveSelectedEntity, useStableBridge, type RibbonEntityBridgeCore } from './ribbon-entity-bridge-shared';
+import {
+  useResolveSelectedEntity,
+  useStableBridge,
+  entityTransparencyValue,
+  clampTransparency,
+  type RibbonEntityBridgeCore,
+} from './ribbon-entity-bridge-shared';
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
@@ -196,6 +204,10 @@ export function useRibbonHatchBridge(
         return { value: hatch?.islandStyle ?? defaults.islandStyle, options: [] };
       }
       if (isHatchRibbonNumberKey(commandKey)) {
+        // Διαφάνεια: ιδιότητα ΜΟΝΟ επιλεγμένης γραμμοσκίασης (mirror line-tool· χωρίς draw-default).
+        if (commandKey === HATCH_RIBBON_KEYS.params.transparency) {
+          return { value: hatch ? entityTransparencyValue(hatch) : '0', options: [] };
+        }
         if (commandKey === HATCH_RIBBON_KEYS.params.gapTolerance) {
           return { value: String(hatch?.gapTolerance ?? defaults.gapTolerance), options: [] };
         }
@@ -297,6 +309,12 @@ export function useRibbonHatchBridge(
       if (isHatchRibbonNumberKey(commandKey)) {
         const numeric = Number.parseFloat(value);
         if (Number.isNaN(numeric)) return;
+        // Διαφάνεια: 0 ΕΓΚΥΡΟ (αδιαφανές) → πριν τον generic >0 έλεγχο. Selected-only.
+        if (commandKey === HATCH_RIBBON_KEYS.params.transparency) {
+          if (numeric < 0 || !hatch) return;
+          patchHatch(hatch, { transparency: clampTransparency(numeric) });
+          return;
+        }
         // Gap tolerance: 0 ΕΓΚΥΡΟ (απενεργοποίηση) → πριν από τον generic >0 έλεγχο.
         if (commandKey === HATCH_RIBBON_KEYS.params.gapTolerance) {
           if (numeric < 0) return;
@@ -369,6 +387,21 @@ export function useRibbonHatchBridge(
         return;
       }
       const hatch = resolveHatch();
+      // «Πίσω πλάνο»: ON → στο πίσω μέρος του entities array (ζωγραφίζεται ΚΑΤΩ)· OFF → μπροστά.
+      // drawOrder = αποθηκευμένο intent, ReorderEntityCommand = η ενέργεια· ΕΝΑ compound = 1 undo.
+      if (commandKey === HATCH_RIBBON_KEYS.toggles.sendToBack) {
+        if (!hatch || !levelManager.currentLevelId) return;
+        const sm = createLevelSceneManagerAdapter(
+          levelManager.getLevelScene,
+          levelManager.setLevelScene,
+          levelManager.currentLevelId,
+        );
+        executeCommand(new CompoundCommand('Hatch draw order', [
+          new ReorderEntityCommand(hatch.id, nextValue ? 'back' : 'front', sm),
+          new UpdateEntityCommand(hatch.id, { drawOrder: nextValue ? 0 : 4 }, sm, 'Update hatch'),
+        ]));
+        return;
+      }
       if (commandKey === HATCH_RIBBON_KEYS.toggles.gradientSingleColor) {
         applyGradientChange(hatch, { field: 'singleColor', value: nextValue });
         return;
@@ -376,7 +409,7 @@ export function useRibbonHatchBridge(
       if (hatch) patchHatch(hatch, { doubleCrossHatch: nextValue || undefined });
       else setHatchDrawDefaults({ doubleCrossHatch: nextValue });
     },
-    [resolveHatch, patchHatch, applyGradientChange, t],
+    [resolveHatch, patchHatch, applyGradientChange, executeCommand, levelManager, t],
   );
 
   const getToggleState = useCallback(
@@ -394,6 +427,10 @@ export function useRibbonHatchBridge(
         return hatchSelectArmed;
       }
       const hatch = resolveHatch();
+      // «Πίσω πλάνο» πατημένο = drawOrder στο back bucket (0). Νέες γραμμοσκιάσεις = 0 → ON.
+      if (commandKey === HATCH_RIBBON_KEYS.toggles.sendToBack) {
+        return hatch ? (hatch.drawOrder ?? 0) === 0 : NULL_TOGGLE;
+      }
       if (commandKey === HATCH_RIBBON_KEYS.toggles.gradientSingleColor) {
         return hatch ? (hatch.gradient?.singleColor ?? false) : defaults.gradientSingleColor;
       }

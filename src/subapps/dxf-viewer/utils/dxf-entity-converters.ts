@@ -30,9 +30,7 @@ import {
   parseVerticesFromData,
   parseVerticesFromPairs,
   extractEntityColor,
-  extractEntityLineweight,
-  extractEntityLinetype,
-  extractEntityLtscale
+  applyImportedStyleFields
 } from './dxf-converter-helpers';
 
 import { dwarn } from '../debug';
@@ -385,42 +383,6 @@ export function convertEntityToScene(
 ): AnySceneEntity | AnySceneEntity[] | null {
   const result = routeEntityToConverter(entityData, index, header, dimStyles, styleFonts, mlineStyles);
   return applyImportedStyleFields(result, entityData.data);
-}
-
-/**
- * Bake the imported common style fields onto the converted result — ONE shared
- * post-pass for lineweight (group 370, ADR-635 Φ C.3), linetype name (group 6) and
- * per-object CELTSCALE (group 48, ADR-635 Φ C.4).
- *
- * Every field is GATED on its own extractor returning a concrete value:
- *   - group 370 absent / ByLayer / ByBlock / Default ⇒ no `lineweightMm`.
- *   - group 6 absent / ByLayer / ByBlock ⇒ no `linetypeName` (layer cascade resolves).
- *   - group 48 absent / invalid / trivial 1 ⇒ no `ltscale`.
- * When none applies the result is returned UNCHANGED (native/Tekton/bare paths carry
- * no 370/6/48 → zero regression). Concrete values are spread onto the entity (or each
- * entity of an array — block-expanded) as the SAME fields the render style cascade +
- * LWDISPLAY gate + dash sizer already consume (ADR-510 Φ2/Φ2G). None of these is a
- * geometric coordinate, so the import unit-scale (canonical-mm) never touches them.
- */
-function applyImportedStyleFields(
-  result: AnySceneEntity | AnySceneEntity[] | null,
-  data: Record<string, string>
-): AnySceneEntity | AnySceneEntity[] | null {
-  if (result === null) return null;
-  const lineweightMm = extractEntityLineweight(data);
-  const linetypeName = extractEntityLinetype(data);
-  const ltscale = extractEntityLtscale(data);
-  if (lineweightMm === undefined && linetypeName === undefined && ltscale === undefined) {
-    return result;
-  }
-  const patch = {
-    ...(lineweightMm !== undefined && { lineweightMm }),
-    ...(linetypeName !== undefined && { linetypeName }),
-    ...(ltscale !== undefined && { ltscale }),
-  };
-  return Array.isArray(result)
-    ? result.map(entity => ({ ...entity, ...patch }))
-    : { ...result, ...patch };
 }
 
 /**

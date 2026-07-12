@@ -16,6 +16,8 @@
 import type { LineweightMm } from '../types/entities';
 // 🏢 SSoT: DXF group 370 lineweight (mm) — reuse the ISO catalog decoder (ADR-635 Φ C.3).
 import { parseDxfCode370, isConcreteLineweight } from '../config/lineweight-iso-catalog';
+// 🏢 SSoT: DXF group 440 transparency codec (inverse του export `encodeDxf440`, ADR-507).
+import { decodeDxf440 } from '../export/core/dxf-transparency-440';
 
 /**
  * 🏢 ENTERPRISE: Extract a per-entity lineweight (mm) from DXF group code 370.
@@ -109,4 +111,25 @@ export function extractEntityLtscale(data: Record<string, string>): number | und
   const value = parseFloat(raw);
   if (!Number.isFinite(value) || value <= 0 || value === 1) return undefined;
   return value;
+}
+
+/**
+ * 🏢 ENTERPRISE: Extract a per-entity transparency % (0..90) from DXF group code 440.
+ *
+ * Group 440 encodes AutoCAD object transparency as a 32-bit int (BYALPHA flag + alpha
+ * byte). We decode via the `decodeDxf440` SSoT (inverse of the `encodeDxf440` writer),
+ * baking ONLY a concrete value onto `entity.transparency`. Opaque (0) / ByLayer / ByBlock
+ * collapse to `undefined` — exactly like `extractEntityColor`/`extractEntityLineweight` —
+ * so the render style cascade (`resolveEntityStyle`) resolves the inherited transparency.
+ *
+ * @see export/core/dxf-transparency-440 - decodeDxf440 SSoT
+ * @param data - Raw DXF group codes
+ * @returns Concrete transparency % (1..90), or undefined (absent / opaque / ByLayer / ByBlock)
+ */
+export function extractEntityTransparency(data: Record<string, string>): number | undefined {
+  const raw = data['440'];
+  if (raw === undefined) return undefined;
+  const int = parseInt(raw, 10);
+  if (Number.isNaN(int)) return undefined;
+  return decodeDxf440(int);
 }

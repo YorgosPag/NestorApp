@@ -11,6 +11,7 @@
 import { describe, it, expect } from '@jest/globals';
 import { writeDxfAscii } from '../../export/core/dxf-ascii-writer';
 import { convertHatch } from '../dxf-entity-converters';
+import { extractEntityTransparency } from '../dxf-entity-style-extract';
 import {
   buildHatchEntitySegments,
   hatchMinWorldSpacing,
@@ -131,6 +132,38 @@ describe('convertHatch — roundtrip (write → read)', () => {
 
   it('κενά pairs (χωρίς 91) → null', () => {
     expect(convertHatch([], '0', 0)).toBeNull();
+  });
+});
+
+describe('convertHatch — transparency (DXF 440) roundtrip — ADR-507', () => {
+  /** Build a code→value Record από τα ordered pairs του HATCH block (για τους style extractors). */
+  function hatchCodes(dxf: string): Record<string, string> {
+    const extracted = extractHatch(dxf);
+    expect(extracted).not.toBeNull();
+    const rec: Record<string, string> = {};
+    for (const [code, value] of extracted!.pairs) rec[code] = value;
+    return rec;
+  }
+
+  it('διαφανής γραμμοσκίαση (45) → γράφεται group 440 + διαβάζεται πίσω ως 45', () => {
+    const rec = hatchCodes(writeDxfAscii([solidHatch({ transparency: 45 })], { layersById: LAYERS }));
+    expect(rec['440']).toBeDefined();
+    expect(extractEntityTransparency(rec)).toBe(45);
+  });
+
+  it('max διαφάνεια (90) → roundtrips ως 90', () => {
+    const rec = hatchCodes(writeDxfAscii([solidHatch({ transparency: 90 })], { layersById: LAYERS }));
+    expect(extractEntityTransparency(rec)).toBe(90);
+  });
+
+  it('αδιαφανής (0) → ΚΑΝΕΝΑΣ κωδικός 440 (default, μηδέν regression)', () => {
+    const rec = hatchCodes(writeDxfAscii([solidHatch({ transparency: 0 })], { layersById: LAYERS }));
+    expect(rec['440']).toBeUndefined();
+  });
+
+  it('χωρίς transparency → κανένας κωδικός 440', () => {
+    const rec = hatchCodes(writeDxfAscii([solidHatch()], { layersById: LAYERS }));
+    expect(rec['440']).toBeUndefined();
   });
 });
 

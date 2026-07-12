@@ -42,6 +42,8 @@ export const HATCH_RIBBON_KEYS = {
     gradientShift: 'hatch.params.gradientShift',
     /** Gap tolerance (AutoCAD HPGAPTOL, world units) — pick-point (ADR-507 Φ3/§5β.1). */
     gapTolerance: 'hatch.params.gapTolerance',
+    /** Διαφάνεια (AutoCAD object transparency 0..90· DXF 440) — μόνο επιλεγμένη γραμμοσκίαση. */
+    transparency: 'hatch.params.transparency',
   },
   toggles: {
     /** Διπλή (σταυρωτή) γραμμοσκίαση. */
@@ -56,6 +58,12 @@ export const HATCH_RIBBON_KEYS = {
     methodPickPoint: 'hatch.toggle.methodPickPoint',
     /** «Σχεδίαση ορίου» (Τρόπος Α / N-click boundary) — pressed = pickMode==='boundary'. */
     methodBoundary: 'hatch.toggle.methodBoundary',
+    /**
+     * «Πίσω πλάνο» — η γραμμοσκίαση ζωγραφίζεται ΚΑΤΩ από τις υπόλοιπες οντότητες
+     * (AutoCAD «Send Hatches to Back»). pressed = drawOrder===0 (back bucket). Enact =
+     * `ReorderEntityCommand` (array-order = paint-order). Μόνο επιλεγμένη γραμμοσκίαση.
+     */
+    sendToBack: 'hatch.toggle.sendToBack',
   },
   readouts: {
     /** Live εμβαδόν (read-only, m²). */
@@ -79,7 +87,8 @@ export type HatchRibbonNumberCommandKey =
   | typeof HATCH_RIBBON_KEYS.params.patternScale
   | typeof HATCH_RIBBON_KEYS.params.gradientAngle
   | typeof HATCH_RIBBON_KEYS.params.gradientShift
-  | typeof HATCH_RIBBON_KEYS.params.gapTolerance;
+  | typeof HATCH_RIBBON_KEYS.params.gapTolerance
+  | typeof HATCH_RIBBON_KEYS.params.transparency;
 
 export type HatchRibbonStringCommandKey =
   | typeof HATCH_RIBBON_KEYS.stringParams.fillType
@@ -96,7 +105,8 @@ export type HatchRibbonToggleKey =
   | typeof HATCH_RIBBON_KEYS.toggles.gradientSingleColor
   | typeof HATCH_RIBBON_KEYS.toggles.selectExisting
   | typeof HATCH_RIBBON_KEYS.toggles.methodPickPoint
-  | typeof HATCH_RIBBON_KEYS.toggles.methodBoundary;
+  | typeof HATCH_RIBBON_KEYS.toggles.methodBoundary
+  | typeof HATCH_RIBBON_KEYS.toggles.sendToBack;
 
 export type HatchRibbonReadoutKey =
   | typeof HATCH_RIBBON_KEYS.readouts.area;
@@ -115,6 +125,7 @@ export const isHatchRibbonNumberKey = makeKeySetGuard<HatchRibbonNumberCommandKe
   HATCH_RIBBON_KEYS.params.gradientAngle,
   HATCH_RIBBON_KEYS.params.gradientShift,
   HATCH_RIBBON_KEYS.params.gapTolerance,
+  HATCH_RIBBON_KEYS.params.transparency,
 ]);
 export const isHatchRibbonStringKey = makeKeySetGuard<HatchRibbonStringCommandKey>([
   HATCH_RIBBON_KEYS.stringParams.fillType,
@@ -132,6 +143,7 @@ export const isHatchRibbonToggleKey = makeKeySetGuard<HatchRibbonToggleKey>([
   HATCH_RIBBON_KEYS.toggles.selectExisting,
   HATCH_RIBBON_KEYS.toggles.methodPickPoint,
   HATCH_RIBBON_KEYS.toggles.methodBoundary,
+  HATCH_RIBBON_KEYS.toggles.sendToBack,
 ]);
 export const isHatchRibbonReadoutKey = makeKeySetGuard<HatchRibbonReadoutKey>([
   HATCH_RIBBON_KEYS.readouts.area,

@@ -24,6 +24,9 @@ import { isSolidHatch, islandStyleToDxf75 } from '../../bim/hatch/hatch-properti
 import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
 import { hexToTrueColor } from '../../utils/dxf-true-color';
 import type { HatchGradient } from '../../bim/hatch/hatch-gradient';
+// ADR-507 — per-entity transparency (DXF 440). Το HATCH είναι εκτός `STYLE_APPEND_TYPES`
+// (γράφει το header inline), οπότε το 440 μπαίνει χειροκίνητα μετά το 62 (common AcDbEntity).
+import { encodeDxf440 } from './dxf-transparency-440';
 
 /** Scale-aware group-code sink — `(code, value) => out.push(...)`. */
 export type Pair = (code: number, value: string | number) => void;
@@ -69,6 +72,9 @@ export function emitHatch(
   pair(0, 'HATCH');
   pair(8, layer);
   pair(62, aci);
+  // ADR-507 — διαφάνεια (0=αδιαφανές → κανένας κωδικός). Common AcDbEntity code, μετά το 62.
+  const transp440 = encodeDxf440(e.transparency);
+  if (transp440 !== undefined) pair(440, transp440);
   pair(100, 'AcDbHatch');
   pair(10, 0); pair(20, 0); pair(30, 0);          // elevation point
   pair(210, 0); pair(220, 0); pair(230, 1);       // extrusion normal

@@ -56,13 +56,16 @@ const GRADIENT_TYPE_OPTIONS = [
   { value: 'curved', labelKey: 'ribbon.commands.hatchEditor.gradientTypes.curved', isLiteralLabel: false },
 ] as const;
 
-/** Γωνία gradient (μοίρες) — editable numeric combobox με presets. */
-const GRADIENT_ANGLE_OPTIONS = [
+/** Κοινά preset γωνιών 0/45/90/135° — gradient-angle & line-angle μοιράζονται (N.18, ADR-583). */
+const ANGLE_PRESET_OPTIONS = [
   { value: '0', labelKey: '0°', isLiteralLabel: true },
   { value: '45', labelKey: '45°', isLiteralLabel: true },
   { value: '90', labelKey: '90°', isLiteralLabel: true },
   { value: '135', labelKey: '135°', isLiteralLabel: true },
 ] as const;
+
+/** Γωνία gradient (μοίρες) — editable numeric combobox με presets. */
+const GRADIENT_ANGLE_OPTIONS = ANGLE_PRESET_OPTIONS;
 
 /** Μετατόπιση gradient 0..1 (DXF 461) — editable numeric combobox με presets. */
 const GRADIENT_SHIFT_OPTIONS = [
@@ -94,12 +97,8 @@ const ISLAND_STYLE_OPTIONS = [
   { value: 'ignore', labelKey: 'ribbon.commands.hatchEditor.islandIgnore', isLiteralLabel: false },
 ] as const;
 
-const LINE_ANGLE_OPTIONS = [
-  { value: '0', labelKey: '0°', isLiteralLabel: true },
-  { value: '45', labelKey: '45°', isLiteralLabel: true },
-  { value: '90', labelKey: '90°', isLiteralLabel: true },
-  { value: '135', labelKey: '135°', isLiteralLabel: true },
-] as const;
+/** Γωνία γραμμών γραμμοσκίασης — ίδιο preset με τη γωνία gradient (N.18). */
+const LINE_ANGLE_OPTIONS = ANGLE_PRESET_OPTIONS;
 
 const LINE_SPACING_OPTIONS = [
   { value: '25', labelKey: '25 mm', isLiteralLabel: true },
@@ -108,6 +107,15 @@ const LINE_SPACING_OPTIONS = [
   { value: '150', labelKey: '150 mm', isLiteralLabel: true },
   { value: '200', labelKey: '200 mm', isLiteralLabel: true },
   { value: '300', labelKey: '300 mm', isLiteralLabel: true },
+] as const;
+
+/** Διαφάνεια (AutoCAD object transparency 0..90) — editable numeric με presets (mirror line-tool). */
+const TRANSPARENCY_OPTIONS = [
+  { value: '0', labelKey: '0', isLiteralLabel: true },
+  { value: '25', labelKey: '25', isLiteralLabel: true },
+  { value: '50', labelKey: '50', isLiteralLabel: true },
+  { value: '75', labelKey: '75', isLiteralLabel: true },
+  { value: '90', labelKey: '90', isLiteralLabel: true },
 ] as const;
 
 // ─── Tab definition ───────────────────────────────────────────────────────────
@@ -199,6 +207,41 @@ export const CONTEXTUAL_HATCH_TAB: RibbonTab = {
                 // ADR-344/345 — unified rich color picker (ColorPickerPopover),
                 // hex in/out via the bridge. Replaces the 8-swatch dropdown.
                 comboboxVariant: 'dxf-color',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      // ADR-507 — Εμφάνιση: διαφάνεια (0..90) + «Πίσω πλάνο» (κάτω από τις οντότητες).
+      // Ισχύει ΜΟΝΟ όταν είναι επιλεγμένη μια γραμμοσκίαση (ιδιότητες οντότητας).
+      id: 'hatch-appearance',
+      labelKey: 'ribbon.panels.hatchAppearance',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'hatch.transparency',
+                labelKey: 'ribbon.commands.hatchEditor.transparency',
+                commandKey: HATCH_RIBBON_KEYS.params.transparency,
+                comboboxWidthPx: 90,
+                options: TRANSPARENCY_OPTIONS,
+                numericInput: { editable: true, min: 0, max: 90, allowDecimal: false },
+              },
+            },
+            {
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'hatch.sendToBack',
+                labelKey: 'ribbon.commands.hatchEditor.sendToBack',
+                tooltipKey: 'ribbon.commands.hatchEditor.sendToBackTip',
+                commandKey: HATCH_RIBBON_KEYS.toggles.sendToBack,
               },
             },
           ],

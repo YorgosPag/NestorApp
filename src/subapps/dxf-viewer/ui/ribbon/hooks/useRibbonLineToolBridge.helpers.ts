@@ -25,8 +25,9 @@ import type { Point2D } from '../../../rendering/types/Types';
 import { LINE_TOOL_RIBBON_KEYS } from './bridge/line-tool-command-keys';
 
 export const BYLAYER = 'ByLayer';
-/** AutoCAD object transparency range: 0 (opaque) .. 90 (90% transparent). */
-const TRANSPARENCY_MAX = 90;
+// Transparency helpers κεντρικοποιήθηκαν στο `ribbon-entity-bridge-shared` (κοινά με το
+// hatch bridge, N.18) — re-export ώστε η διαδρομή import από εδώ να μένει σταθερή.
+export { entityTransparencyValue, clampTransparency } from './ribbon-entity-bridge-shared';
 
 /** Combobox display value for an entity's linetype (declared, not resolved — Revit shows «By Layer»). */
 export function entityLinetypeValue(entity: AnySceneEntity): string {
@@ -109,17 +110,6 @@ export function buildLayerOptions(layers: ReadonlyArray<LayerLike>): readonly Ri
 /** Combobox display value for an entity's per-object layer. */
 export function entityLayerValue(entity: AnySceneEntity): string {
   return entity.layerId ?? '';
-}
-
-/** Combobox display value for an entity's transparency (0 = opaque). */
-export function entityTransparencyValue(entity: AnySceneEntity): string {
-  const raw = (entity as { transparency?: number }).transparency;
-  return String(typeof raw === 'number' ? raw : 0);
-}
-
-/** Clamp typed transparency to the AutoCAD 0..90 integer range. */
-export function clampTransparency(n: number): number {
-  return Math.max(0, Math.min(TRANSPARENCY_MAX, Math.round(n)));
 }
 
 /**
