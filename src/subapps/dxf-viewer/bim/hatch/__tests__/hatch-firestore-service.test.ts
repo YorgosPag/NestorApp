@@ -266,4 +266,42 @@ describe('converters — entity ↔ doc round-trip', () => {
     expect(rebuilt.fillType).toBe('gradient');
     expect(rebuilt.gradient).toEqual(gradHatch.gradient);
   });
+
+  it('round-trips the imageFill object (ADR-643 Φ6 — flat map, survives refresh)', () => {
+    const imageHatch: HatchEntity = {
+      ...HATCH,
+      fillType: 'image',
+      imageFill: {
+        assetId: 'bmat_test000000000000000001',
+        tileWidth: 600,
+        tileHeight: 600,
+        angle: 30,
+        grout: { color: '#ffffff', widthMm: 5 },
+      },
+    };
+    const data = pickHatchData(imageHatch);
+    // Persisted verbatim (assetId reference + tile params + grout) — no inline pixels.
+    expect(data.fillType).toBe('image');
+    expect(data.imageFill).toEqual(imageHatch.imageFill);
+    const rebuilt = hatchDocToEntity({ ...docOf(), data });
+    expect(rebuilt.fillType).toBe('image');
+    expect(rebuilt.imageFill).toEqual(imageHatch.imageFill);
+  });
+
+  it('NEVER persists the export-only dxfImageExport marker (ADR-643 §6 — transient)', () => {
+    const withMarker = {
+      ...HATCH,
+      fillType: 'image' as const,
+      imageFill: { assetId: 'bmat_x', tileWidth: 600, tileHeight: 600 },
+      // Export-only marker (stamped by the DXF pre-pass) must never leak into Firestore.
+      dxfImageExport: {
+        filename: 'images/x.jpg', pixelWidth: 512, pixelHeight: 512,
+        tileWorldWidth: 600, tileWorldHeight: 600, angleDeg: 0, inserts: [{ x: 0, y: 0 }],
+      },
+    };
+    const data = pickHatchData(withMarker as unknown as HatchEntity);
+    expect(data).not.toHaveProperty('dxfImageExport');
+    // imageFill still survives (only the transient marker is dropped).
+    expect(data.imageFill).toEqual(withMarker.imageFill);
+  });
 });

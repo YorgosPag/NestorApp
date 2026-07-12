@@ -742,6 +742,38 @@ export interface HatchEntity extends BaseEntity {
   dxfSourceType?: 'solid' | 'trace' | '3dface';
   /** ADR-643 Φ1 — image fill (μόνο όταν `fillType==='image'`). Reference σε asset, ΟΧΙ pixels. */
   imageFill?: HatchImageFill;
+  /**
+   * ADR-643 Φ5b — προ-υπολογισμένο marker για **πιστή** DXF εξαγωγή του image fill (image mode).
+   * Παράγεται από τον async pre-pass (`image-fill-export.ts`, client-side: decode + tile-grid +
+   * even-odd PIP culling)· ο pure DXF writer το σειριοποιεί ως tiled `IMAGE`+`IMAGEDEF` (ίδιο idiom
+   * με τα `dxfFaces`/`dxfMlineSource`). Απών → γνήσιο image fill (render) ή solid-downgrade (export).
+   */
+  dxfImageExport?: DxfImageExportMarker;
+}
+
+/**
+ * ADR-643 Φ5b — προ-υπολογισμένη γεωμετρία τοποθέτησης για την **πιστή** DXF εξαγωγή ενός
+ * image-fill hatch. Το raster πλακίδιο επαναλαμβάνεται σε **πραγματική διάσταση** πάνω στο
+ * boundary (Revit/ArchiCAD standard)· κάθε `insert` = κάτω-αριστερή γωνία ενός tile (μονάδες
+ * σχεδίου, ΠΡΙΝ το coordinate scale), even-odd PIP-culled ώστε να μη ξεχειλίζει έξω από την
+ * περιοχή. Όλα τα tiles μοιράζονται ΕΝΑ `IMAGEDEF` (ανά `filename`). Το `filename` = relative
+ * path μέσα στο `.zip` bundle (π.χ. `images/granite.jpg`).
+ */
+export interface DxfImageExportMarker {
+  /** Relative path του raster μέσα στο `.zip` bundle (IMAGEDEF group 1). */
+  readonly filename: string;
+  /** Intrinsic πλάτος του source raster σε pixels (IMAGE group 13 / IMAGEDEF group 10). */
+  readonly pixelWidth: number;
+  /** Intrinsic ύψος του source raster σε pixels (IMAGE group 23 / IMAGEDEF group 20). */
+  readonly pixelHeight: number;
+  /** Πραγματικό πλάτος tile σε μονάδες σχεδίου (πριν το coordinate scale). */
+  readonly tileWorldWidth: number;
+  /** Πραγματικό ύψος tile σε μονάδες σχεδίου (πριν το coordinate scale). */
+  readonly tileWorldHeight: number;
+  /** Γωνία περιστροφής του μοτίβου (μοίρες). */
+  readonly angleDeg: number;
+  /** Κάτω-αριστερή γωνία κάθε tile (μονάδες σχεδίου) — PIP-culled στο boundary. */
+  readonly inserts: readonly Point2D[];
 }
 
 // ✅ ENTERPRISE: AutoCAD XLine Entity (construction line - infinite in both directions)

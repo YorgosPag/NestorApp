@@ -17,7 +17,7 @@
  * @see ../../../bim-3d/lighting/hdri-upload.service.ts — the mirrored template
  */
 
-import { ref as makeStorageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref as makeStorageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
 import {
   buildBimMaterialThumbnailPath,
@@ -105,4 +105,19 @@ export async function uploadMaterialThumbnail(
       err instanceof Error ? err.message : String(err),
     );
   }
+}
+
+/**
+ * Deletes the Storage object behind a material thumbnail **download URL**. The
+ * Firebase modular `ref(storage, url)` accepts an `https://` download URL to the
+ * same bucket, so we delete by the URL the doc already carries (no extension
+ * guessing). No-op on a falsy URL. Missing-object errors are swallowed by the
+ * caller (best-effort cleanup — the Firestore doc is the source of truth for
+ * existence; an orphan blob must never block the delete UX).
+ *
+ * @see ./hatch-image-delete.service.ts — the orchestrator (doc delete → this)
+ */
+export async function deleteMaterialThumbnailByUrl(url: string): Promise<void> {
+  if (!url) return;
+  await deleteObject(makeStorageRef(storage, url));
 }

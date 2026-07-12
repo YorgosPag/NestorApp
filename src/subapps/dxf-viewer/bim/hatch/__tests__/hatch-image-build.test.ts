@@ -47,4 +47,39 @@ describe('hatch-image-build (ADR-643 Φ3)', () => {
       expect(current.tileWidth).toBe(1500); // original untouched
     });
   });
+
+  describe('grout (ADR-643 Φ5)', () => {
+    const base = { assetId: 'matimg-wood', tileWidth: 600, tileHeight: 600, angle: 0 };
+
+    it('omits grout from defaults when disabled', () => {
+      expect(buildImageFillFromDefaults(D).grout).toBeUndefined();
+    });
+
+    it('includes grout from defaults when enabled', () => {
+      const enabled = { ...D, groutEnabled: true, groutColor: '#eee', groutWidthMm: 8 };
+      expect(buildImageFillFromDefaults(enabled).grout).toEqual({ color: '#eee', widthMm: 8 });
+    });
+
+    it('enabling grout creates it from the default color/width', () => {
+      const next = withImageFillPatch(base, D, { field: 'groutEnabled', value: true });
+      expect(next.grout).toEqual({ color: D.groutColor, widthMm: D.groutWidthMm });
+    });
+
+    it('disabling grout removes the object', () => {
+      const withGrout = { ...base, grout: { color: '#fff', widthMm: 5 } };
+      const next = withImageFillPatch(withGrout, D, { field: 'groutEnabled', value: false });
+      expect(next.grout).toBeUndefined();
+    });
+
+    it('setting grout colour enables it and keeps the default width', () => {
+      const next = withImageFillPatch(base, D, { field: 'groutColor', value: '#333333' });
+      expect(next.grout).toEqual({ color: '#333333', widthMm: D.groutWidthMm });
+    });
+
+    it('setting grout width preserves the existing colour', () => {
+      const withGrout = { ...base, grout: { color: '#abcdef', widthMm: 5 } };
+      const next = withImageFillPatch(withGrout, D, { field: 'groutWidth', value: 12 });
+      expect(next.grout).toEqual({ color: '#abcdef', widthMm: 12 });
+    });
+  });
 });

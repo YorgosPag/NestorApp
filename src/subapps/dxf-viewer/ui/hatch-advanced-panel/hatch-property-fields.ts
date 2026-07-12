@@ -63,6 +63,8 @@ const SCALE_INPUT: RibbonNumericInputConfig = { editable: true, min: 0.01 };
 const ANGLE_INPUT: RibbonNumericInputConfig = { editable: true, min: 0, max: 360 };
 // ADR-643 Φ3 — πραγματική διάσταση tile εικόνας (mm)· ≥1 mm.
 const TILE_INPUT: RibbonNumericInputConfig = { editable: true, min: 1 };
+// ADR-643 Φ5 — πραγματικό πλάτος αρμού (mm)· ≥0.1 mm.
+const GROUT_WIDTH_INPUT: RibbonNumericInputConfig = { editable: true, min: 0.1 };
 const SPACING_INPUT: RibbonNumericInputConfig = { editable: true, min: 1 };
 const TRANSPARENCY_INPUT: RibbonNumericInputConfig = { editable: true, min: 0, max: 90, allowDecimal: false };
 const SHIFT_INPUT: RibbonNumericInputConfig = { editable: true, min: 0, max: 1 };
@@ -139,6 +141,10 @@ export const HATCH_PROPERTY_GROUPS: readonly EntityPropertyGroup[] = [
       H(K.params.imageTileWidth, lbl('imageTileWidth'), 'numeric', { numericInput: TILE_INPUT }),
       H(K.params.imageTileHeight, lbl('imageTileHeight'), 'numeric', { numericInput: TILE_INPUT }),
       H(K.params.imageAngle, lbl('imageAngle'), 'numeric', { numericInput: ANGLE_INPUT }),
+      // ADR-643 Φ5 — αρμοί (grout) πάνω από την εικόνα (ArchiCAD symbol-fill combo).
+      H(K.toggles.grout, lbl('grout'), 'toggle'),
+      H(K.stringParams.groutColor, lbl('groutColor'), 'color'),
+      H(K.params.groutWidth, lbl('groutWidth'), 'numeric', { numericInput: GROUT_WIDTH_INPUT }),
     ],
   },
   {

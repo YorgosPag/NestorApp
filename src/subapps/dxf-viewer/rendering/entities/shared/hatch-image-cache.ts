@@ -14,12 +14,19 @@
  * texture URL, ADR-413). Άγνωστο id → fallback στο raw `assetId` ως src
  * (backward-compatible με Φ1 dev-mode / Φ4 user uploads).
  *
- * @see ./material-image-resolver.ts — assetId → src (ADR-643 Φ2)
+ * Φ4: όταν αλλάζει ο `user-material-image-store` (π.χ. reopened doc: το hatch
+ * ζωγραφίστηκε ΠΡΙΝ φορτώσει η βιβλιοθήκη → cache-άρισε `error`), ένα lazy
+ * version-check στο `resolve()` πετά τα `error` entries ώστε να ξανα-resolve-άρουν
+ * με το πλέον γνωστό URL — leak-free (μηδέν per-cache subscription).
+ *
+ * @see ./material-image-resolver.ts — assetId → src (ADR-643 Φ2/Φ4)
+ * @see ./user-material-image-store.ts — user uploads + version gate (Φ4)
  * @see docs/centralized-systems/reference/adrs/ADR-643-hatch-image-fill.md
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  */
 
 import { resolveMaterialImageSrc } from './material-image-resolver';
+import { getUserMaterialImageVersion } from './user-material-image-store';
 
 type ImageState = 'loading' | 'ready' | 'error';
 
@@ -30,6 +37,8 @@ interface CacheEntry {
 
 export class HatchImageCache {
   private readonly entries = new Map<string, CacheEntry>();
+  /** Τελευταία γνωστή έκδοση του user-image store (Φ4 lazy error-retry gate). */
+  private lastStoreVersion = getUserMaterialImageVersion();
 
   /**
    * @param onLoad καλείται μετά από κάθε επιτυχή async decode (→ invalidate/redraw).
@@ -46,11 +55,26 @@ export class HatchImageCache {
    * → ξεκινά async decode). Idempotent: κλήσεις κατά το loading δεν ξαναφορτώνουν.
    */
   resolve(assetId: string): CanvasImageSource | null {
+    this.retryStaleErrors();
     const hit = this.entries.get(assetId);
     if (hit) return hit.img;
     this.entries.set(assetId, { img: null, state: 'loading' });
     void this.load(assetId);
     return null;
+  }
+
+  /**
+   * Φ4: αν άλλαξε ο user-image store από το τελευταίο frame, πέτα τα `error`
+   * entries ώστε ένα πλέον-γνωστό URL (π.χ. μετά τη φόρτωση της βιβλιοθήκης) να
+   * ξανα-resolve-άρει στο επόμενο `resolve()`. Cheap: ένας ακέραιος έλεγχος/frame.
+   */
+  private retryStaleErrors(): void {
+    const v = getUserMaterialImageVersion();
+    if (v === this.lastStoreVersion) return;
+    this.lastStoreVersion = v;
+    for (const [id, entry] of this.entries) {
+      if (entry.state === 'error') this.entries.delete(id);
+    }
   }
 
   private async load(assetId: string): Promise<void> {

@@ -3764,6 +3764,9 @@
         "imageTileWidth": "Πλάτος πλακιδίου",
         "imageTileHeight": "Ύψος πλακιδίου",
         "imageAngle": "Γωνία",
+        "grout": "Αρμοί",
+        "groutColor": "Χρώμα αρμού",
+        "groutWidth": "Πλάτος αρμού (mm)",
         "gradientType": "Τύπος",
         "gradientAngle": "Γωνία",
         "gradientShift": "Μετατόπιση",
@@ -4865,6 +4868,23 @@
       "plaster": "Σοβάς",
       "metal": "Μέταλλο",
       "roofTiles": "Κεραμίδι στέγης"
+    },
+    "upload": {
+      "button": "Ανέβασμα φωτο",
+      "uploading": "Ανέβασμα…",
+      "uploadsTitle": "Δικές μου εικόνες",
+      "defaultName": "Εικόνα υλικού",
+      "delete": "Αφαίρεση εικόνας",
+      "deleteTitle": "Αφαίρεση εικόνας;",
+      "deleteDescription": "Η εικόνα «{name}» θα αφαιρεθεί οριστικά από τη βιβλιοθήκη υλικών. Γραμμοσκιάσεις που τη χρησιμοποιούν θα εμφανίζουν πλέον απλό χρώμα.",
+      "deleteConfirm": "Αφαίρεση",
+      "errors": {
+        "format": "Μη υποστηριζόμενος τύπος αρχείου (PNG, JPG ή WebP).",
+        "size": "Το αρχείο είναι πολύ μεγάλο (μέγιστο 2 MB).",
+        "failed": "Το ανέβασμα απέτυχε. Δοκιμάστε ξανά.",
+        "notReady": "Δεν είναι δυνατό το ανέβασμα τώρα — απαιτείται σύνδεση.",
+        "deleteFailed": "Η αφαίρεση απέτυχε. Δοκιμάστε ξανά."
+      }
     }
   },
   "beamAdvancedPanel": {
@@ -5842,6 +5862,11 @@
     "lineModes": {
       "polyline": "Polyline (AutoCAD / standard)",
       "lines": "Γραμμές (Τέκτονας / FESPA)"
+    },
+    "dxfImageFillMode": "Γέμισμα εικόνας",
+    "imageFillModes": {
+      "solid": "Ελαφρύ (μέσο χρώμα)",
+      "image": "Πιστό (εικόνα σε ZIP)"
     },
     "tekSymbolMode": "Σύμβολα",
     "tekSymbolModes": {

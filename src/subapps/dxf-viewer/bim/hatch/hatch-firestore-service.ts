@@ -36,7 +36,7 @@ import { firestoreQueryService } from '@/services/firestore';
 import { buildBimScopeConstraints, bimScopeWriteFields } from '../persistence/bim-floor-scope';
 import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import type { Point2D } from '../../rendering/types/Types';
-import type { HatchEntity } from '../../types/entities';
+import type { HatchEntity, HatchImageFill } from '../../types/entities';
 import type { HatchGradient } from './hatch-gradient';
 
 // ============================================================================
@@ -69,7 +69,7 @@ export interface HatchDocData {
   readonly fillColor?: string;
   readonly backgroundColor?: string;
   readonly associative?: boolean;
-  readonly fillType?: 'solid' | 'user-defined' | 'predefined' | 'gradient';
+  readonly fillType?: 'solid' | 'user-defined' | 'predefined' | 'gradient' | 'image';
   readonly islandStyle?: 'normal' | 'outer' | 'ignore';
   readonly lineAngle?: number;
   readonly lineSpacing?: number;
@@ -83,6 +83,14 @@ export interface HatchDocData {
   readonly transparency?: number;
   /** ADR-507 Φ5 — gradient γέμισμα. Flat map (μηδέν nested array) → Firestore-legal αυτούσιο. */
   readonly gradient?: HatchGradient;
+  /**
+   * ADR-643 — image-fill (μόνο όταν fillType==='image'). Flat map (assetId + tile
+   * size/angle/origin + optional grout) → Firestore-legal αυτούσιο, ίδιο idiom με το
+   * gradient. Η φωτο ζει ΜΙΑ φορά στη material library (assetId reference, ΟΧΙ inline
+   * pixels — ADR-643 §3.2). Το export-only `dxfImageExport` marker ΔΕΝ persist-άρεται
+   * (δεν είναι scalar key → structurally excluded από το pickHatchData allowlist).
+   */
+  readonly imageFill?: HatchImageFill;
 }
 
 export interface HatchDoc {
@@ -133,6 +141,9 @@ const HATCH_SCALAR_KEYS: readonly (keyof HatchDocData)[] = [
   // ADR-507 Φ5 — gradient = flat object (όχι nested array) → αποθηκεύεται ως map field
   // με τον ίδιο μηχανισμό (pickHatchData copy + ...scalars spread στο hatchDocToEntity).
   'gradient',
+  // ADR-643 — image-fill = flat object (assetId + tile params + grout) → ίδιος μηχανισμός.
+  // Το export-only `dxfImageExport` marker ΕΠΙΤΗΔΕΣ ΛΕΙΠΕΙ (allowlist → ποτέ persisted).
+  'imageFill',
 ];
 
 /** Runtime hatch shape consumed on the write side (boundaryPaths = Point2D[][]). */

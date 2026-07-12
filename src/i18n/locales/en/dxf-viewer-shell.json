@@ -3764,6 +3764,9 @@
         "imageTileWidth": "Tile width",
         "imageTileHeight": "Tile height",
         "imageAngle": "Angle",
+        "grout": "Grout lines",
+        "groutColor": "Grout colour",
+        "groutWidth": "Grout width (mm)",
         "gradientType": "Type",
         "gradientAngle": "Angle",
         "gradientShift": "Shift",
@@ -4865,6 +4868,23 @@
       "plaster": "Plaster",
       "metal": "Metal",
       "roofTiles": "Roof tiles"
+    },
+    "upload": {
+      "button": "Upload photo",
+      "uploading": "Uploading…",
+      "uploadsTitle": "My images",
+      "defaultName": "Material image",
+      "delete": "Remove image",
+      "deleteTitle": "Remove image?",
+      "deleteDescription": "“{name}” will be permanently removed from the material library. Hatches using it will now show a plain colour.",
+      "deleteConfirm": "Remove",
+      "errors": {
+        "format": "Unsupported file type (PNG, JPG or WebP).",
+        "size": "File is too large (2 MB max).",
+        "failed": "Upload failed. Please try again.",
+        "notReady": "Cannot upload right now — sign-in required.",
+        "deleteFailed": "Removal failed. Please try again."
+      }
     }
   },
   "beamAdvancedPanel": {
@@ -5842,6 +5862,11 @@
     "lineModes": {
       "polyline": "Polyline (AutoCAD / standard)",
       "lines": "Lines (Tekton / FESPA)"
+    },
+    "dxfImageFillMode": "Image fill",
+    "imageFillModes": {
+      "solid": "Light (average colour)",
+      "image": "Faithful (image in ZIP)"
     },
     "tekSymbolMode": "Symbols",
     "tekSymbolModes": {

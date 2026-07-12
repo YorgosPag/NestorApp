@@ -78,6 +78,9 @@ export function readHatchComboboxState(
     if (commandKey === HATCH_RIBBON_KEYS.stringParams.imageAsset) {
       return { value: hatch?.imageFill?.assetId ?? defaults.imageAssetId, options: [] };
     }
+    if (commandKey === HATCH_RIBBON_KEYS.stringParams.groutColor) {
+      return { value: hatch?.imageFill?.grout?.color ?? defaults.groutColor, options: [] };
+    }
     return { value: hatch?.islandStyle ?? defaults.islandStyle, options: [] };
   }
   if (isHatchRibbonNumberKey(commandKey)) {
@@ -114,6 +117,9 @@ export function readHatchComboboxState(
     }
     if (commandKey === HATCH_RIBBON_KEYS.params.imageAngle) {
       return { value: String(hatch?.imageFill?.angle ?? defaults.imageAngle), options: [] };
+    }
+    if (commandKey === HATCH_RIBBON_KEYS.params.groutWidth) {
+      return { value: String(hatch?.imageFill?.grout?.widthMm ?? defaults.groutWidthMm), options: [] };
     }
     // «Απόσταση»: στο «έτοιμο μοτίβο» δείχνει την ΠΡΑΓΜΑΤΙΚΗ world απόσταση γραμμών
     // (min-spacing), που προκύπτει από το patternScale· αλλιώς το lineSpacing (mm).

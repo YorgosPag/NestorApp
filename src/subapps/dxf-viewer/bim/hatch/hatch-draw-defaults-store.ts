@@ -74,6 +74,13 @@ export interface HatchDrawDefaults {
   readonly imageTileHeight: number;
   /** Γωνία περιστροφής μοτίβου εικόνας (μοίρες). */
   readonly imageAngle: number;
+  // ── ADR-643 Φ5 — αρμοί (grout) πάνω από την εικόνα ──
+  /** Ενεργοί αρμοί (γραμμές στα όρια των tiles). */
+  readonly groutEnabled: boolean;
+  /** Χρώμα αρμού (hex). */
+  readonly groutColor: string;
+  /** Πραγματικό πλάτος αρμού (mm). */
+  readonly groutWidthMm: number;
 }
 
 // ADR-643 Φ3 — πρώτο catalog υλικό ως default· tile size DERIVED (SSoT, μηδέν διπλότυπη διάσταση).
@@ -105,6 +112,10 @@ export const DEFAULT_HATCH_DRAW_DEFAULTS: HatchDrawDefaults = {
   imageTileWidth: DEFAULT_IMAGE_TILE.width,
   imageTileHeight: DEFAULT_IMAGE_TILE.height,
   imageAngle: 0,
+  // Grout defaults (ADR-643 Φ5) — απενεργοποιημένοι· λευκός αρμός 5 mm (κοινό πλακιδίων).
+  groutEnabled: false,
+  groutColor: '#ffffff',
+  groutWidthMm: 5,
 };
 
 // Plain single-state store (always-notify· ο caller στέλνει partial patch → πάντα νέο object).

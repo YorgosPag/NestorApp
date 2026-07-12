@@ -45,6 +45,7 @@ function forDraft(group: EntityPropertyGroup): EntityPropertyGroup {
 export function HatchPropertiesTab({
   primarySelectedId,
   currentScene,
+  projectId,
   draftMode,
 }: HatchPropertiesTabProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
@@ -91,6 +92,7 @@ export function HatchPropertiesTab({
             <MaterialImagePicker
               selectedAssetId={bridge.getComboboxState(HATCH_RIBBON_KEYS.stringParams.imageAsset)?.value ?? ''}
               onSelect={(id) => bridge.onComboboxChange(HATCH_RIBBON_KEYS.stringParams.imageAsset, id)}
+              projectId={projectId}
             />
           )}
           <EntityPropertySection

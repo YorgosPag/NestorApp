@@ -129,6 +129,9 @@ function imageDefaultPatch(
     imageTileWidth: next.tileWidth,
     imageTileHeight: next.tileHeight,
     imageAngle: next.angle,
+    groutEnabled: !!next.grout,
+    groutColor: next.grout?.color ?? d.groutColor,
+    groutWidthMm: next.grout?.widthMm ?? d.groutWidthMm,
   };
 }
 
@@ -276,6 +279,10 @@ export function useRibbonHatchBridge(
           applyImageChange(hatch, { field: 'assetId', value });
           return;
         }
+        if (commandKey === HATCH_RIBBON_KEYS.stringParams.groutColor) {
+          applyImageChange(hatch, { field: 'groutColor', value });
+          return;
+        }
         // islandStyle
         const islandStyle = value === 'outer' ? 'outer' : value === 'ignore' ? 'ignore' : 'normal';
         if (hatch) patchHatch(hatch, { islandStyle });
@@ -320,6 +327,11 @@ export function useRibbonHatchBridge(
         if (commandKey === HATCH_RIBBON_KEYS.params.imageAngle) {
           if (numeric < 0) return;
           applyImageChange(hatch, { field: 'angle', value: numeric });
+          return;
+        }
+        if (commandKey === HATCH_RIBBON_KEYS.params.groutWidth) {
+          if (numeric <= 0) return;
+          applyImageChange(hatch, { field: 'groutWidth', value: numeric });
           return;
         }
         if (commandKey === HATCH_RIBBON_KEYS.params.lineAngle) {
@@ -398,10 +410,14 @@ export function useRibbonHatchBridge(
         applyGradientChange(hatch, { field: 'singleColor', value: nextValue });
         return;
       }
+      if (commandKey === HATCH_RIBBON_KEYS.toggles.grout) {
+        applyImageChange(hatch, { field: 'groutEnabled', value: nextValue });
+        return;
+      }
       if (hatch) patchHatch(hatch, { doubleCrossHatch: nextValue || undefined });
       else setHatchDrawDefaults({ doubleCrossHatch: nextValue });
     },
-    [resolveHatch, patchHatch, applyGradientChange, executeCommand, levelManager, t],
+    [resolveHatch, patchHatch, applyGradientChange, applyImageChange, executeCommand, levelManager, t],
   );
 
   const getToggleState = useCallback(
@@ -425,6 +441,9 @@ export function useRibbonHatchBridge(
       }
       if (commandKey === HATCH_RIBBON_KEYS.toggles.gradientSingleColor) {
         return hatch ? (hatch.gradient?.singleColor ?? false) : defaults.gradientSingleColor;
+      }
+      if (commandKey === HATCH_RIBBON_KEYS.toggles.grout) {
+        return hatch ? !!hatch.imageFill?.grout : defaults.groutEnabled;
       }
       return hatch ? (hatch.doubleCrossHatch ?? false) : defaults.doubleCrossHatch;
     },

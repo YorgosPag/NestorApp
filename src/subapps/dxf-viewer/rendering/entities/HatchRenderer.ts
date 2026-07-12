@@ -37,7 +37,7 @@ import { fillHatchGradient, traceHatchBoundary } from './shared/hatch-gradient-p
 // ADR-643 Φ1 — image fill: pure tiling/paint SSoT + live decoded-image cache. Ο
 // `fillHatchPattern` είναι ΓΕΝΙΚΟΣ → τον μοιράζεται και το screen-raster μονοπάτι.
 import {
-  resolveImageFillOrigin, computeImageTileMatrix, fillHatchPattern, averageImageColor,
+  resolveImageFillOrigin, computeImageTileMatrix, fillHatchPattern, drawImageGrout, averageImageColor,
 } from './shared/hatch-image-paint';
 import { HatchImageCache } from './shared/hatch-image-cache';
 // ADR-040 — async asset load «σπρώχνει» ένα dirty-frame (ο renderer δεν subscribe-άρει).
@@ -401,6 +401,12 @@ export class HatchRenderer extends BaseEntityRenderer {
       img, imageFill, this.worldToScreen(origin), this.transform.scale,
     );
     fillHatchPattern(this.ctx, paths, pattern, matrix, (p) => this.worldToScreen(p));
+    // ADR-643 Φ5 — αρμοί στα όρια των tiles (ίδια matrix → ακριβής ευθυγράμμιση).
+    if (imageFill.grout && matrix) {
+      drawImageGrout(
+        this.ctx, paths, img, matrix, imageFill.grout, this.transform.scale, (p) => this.worldToScreen(p),
+      );
+    }
   }
 
   /** True όταν το tile προβάλλεται sub-threshold px στο τρέχον zoom (→ LOD tint). */

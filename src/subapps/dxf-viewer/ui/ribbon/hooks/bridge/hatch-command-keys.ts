@@ -32,6 +32,8 @@ export const HATCH_RIBBON_KEYS = {
     gradientColor2: 'hatch.params.gradientColor2',
     /** ADR-643 Φ3 — asset id υλικού εικόνας (catalog `matimg-*`) — μόνο fillType='image'. */
     imageAsset: 'hatch.params.imageAsset',
+    /** ADR-643 Φ5 — χρώμα αρμού (hex) — μόνο fillType='image'. */
+    groutColor: 'hatch.params.groutColor',
   },
   params: {
     /** Γωνία γραμμών (μοίρες) — user-defined. */
@@ -50,6 +52,8 @@ export const HATCH_RIBBON_KEYS = {
     imageTileHeight: 'hatch.params.imageTileHeight',
     /** ADR-643 Φ3 — γωνία περιστροφής μοτίβου εικόνας (μοίρες) — μόνο fillType='image'. */
     imageAngle: 'hatch.params.imageAngle',
+    /** ADR-643 Φ5 — πραγματικό πλάτος αρμού (mm) — μόνο fillType='image'. */
+    groutWidth: 'hatch.params.groutWidth',
     /** Gap tolerance (AutoCAD HPGAPTOL, world units) — pick-point (ADR-507 Φ3/§5β.1). */
     gapTolerance: 'hatch.params.gapTolerance',
     /** Διαφάνεια (AutoCAD object transparency 0..90· DXF 440) — μόνο επιλεγμένη γραμμοσκίαση. */
@@ -60,6 +64,8 @@ export const HATCH_RIBBON_KEYS = {
     doubleCrossHatch: 'hatch.toggle.doubleCrossHatch',
     /** Single-color gradient (color1 → tint προς λευκό). */
     gradientSingleColor: 'hatch.toggle.gradientSingleColor',
+    /** ADR-643 Φ5 — αρμοί (grout) πάνω από την εικόνα — μόνο fillType='image'. */
+    grout: 'hatch.toggle.grout',
     /** «Επιλογή γραμμοσκίασης» — armed pick-existing (πατημένο = armed, one-shot). */
     selectExisting: 'hatch.toggle.selectExisting',
     // ADR-507 Φ3 — Μέθοδος ορίου ως 2 μεγάλα radio-toggles (αντί dropdown): το ένα
@@ -103,7 +109,8 @@ export type HatchRibbonNumberCommandKey =
   | typeof HATCH_RIBBON_KEYS.params.transparency
   | typeof HATCH_RIBBON_KEYS.params.imageTileWidth
   | typeof HATCH_RIBBON_KEYS.params.imageTileHeight
-  | typeof HATCH_RIBBON_KEYS.params.imageAngle;
+  | typeof HATCH_RIBBON_KEYS.params.imageAngle
+  | typeof HATCH_RIBBON_KEYS.params.groutWidth;
 
 export type HatchRibbonStringCommandKey =
   | typeof HATCH_RIBBON_KEYS.stringParams.fillType
@@ -115,11 +122,13 @@ export type HatchRibbonStringCommandKey =
   | typeof HATCH_RIBBON_KEYS.stringParams.gradientType
   | typeof HATCH_RIBBON_KEYS.stringParams.gradientColor1
   | typeof HATCH_RIBBON_KEYS.stringParams.gradientColor2
-  | typeof HATCH_RIBBON_KEYS.stringParams.imageAsset;
+  | typeof HATCH_RIBBON_KEYS.stringParams.imageAsset
+  | typeof HATCH_RIBBON_KEYS.stringParams.groutColor;
 
 export type HatchRibbonToggleKey =
   | typeof HATCH_RIBBON_KEYS.toggles.doubleCrossHatch
   | typeof HATCH_RIBBON_KEYS.toggles.gradientSingleColor
+  | typeof HATCH_RIBBON_KEYS.toggles.grout
   | typeof HATCH_RIBBON_KEYS.toggles.selectExisting
   | typeof HATCH_RIBBON_KEYS.toggles.methodPickPoint
   | typeof HATCH_RIBBON_KEYS.toggles.methodBoundary
@@ -147,6 +156,7 @@ export const isHatchRibbonNumberKey = makeKeySetGuard<HatchRibbonNumberCommandKe
   HATCH_RIBBON_KEYS.params.imageTileWidth,
   HATCH_RIBBON_KEYS.params.imageTileHeight,
   HATCH_RIBBON_KEYS.params.imageAngle,
+  HATCH_RIBBON_KEYS.params.groutWidth,
 ]);
 export const isHatchRibbonStringKey = makeKeySetGuard<HatchRibbonStringCommandKey>([
   HATCH_RIBBON_KEYS.stringParams.fillType,
@@ -159,10 +169,12 @@ export const isHatchRibbonStringKey = makeKeySetGuard<HatchRibbonStringCommandKe
   HATCH_RIBBON_KEYS.stringParams.gradientColor1,
   HATCH_RIBBON_KEYS.stringParams.gradientColor2,
   HATCH_RIBBON_KEYS.stringParams.imageAsset,
+  HATCH_RIBBON_KEYS.stringParams.groutColor,
 ]);
 export const isHatchRibbonToggleKey = makeKeySetGuard<HatchRibbonToggleKey>([
   HATCH_RIBBON_KEYS.toggles.doubleCrossHatch,
   HATCH_RIBBON_KEYS.toggles.gradientSingleColor,
+  HATCH_RIBBON_KEYS.toggles.grout,
   HATCH_RIBBON_KEYS.toggles.selectExisting,
   HATCH_RIBBON_KEYS.toggles.methodPickPoint,
   HATCH_RIBBON_KEYS.toggles.methodBoundary,

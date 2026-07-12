@@ -22,12 +22,22 @@ import { getMaterialImageDefaultTileMm } from '../../data/material-image-catalog
 
 type HatchImageFill = NonNullable<HatchEntity['imageFill']>;
 
+type HatchGrout = NonNullable<HatchImageFill['grout']>;
+
 /** Ένα πεδίο του image-fill προς αλλαγή (discriminated ώστε το value να είναι typed). */
 export type ImageFieldPatch =
   | { readonly field: 'assetId'; readonly value: string }
   | { readonly field: 'tileWidth'; readonly value: number }
   | { readonly field: 'tileHeight'; readonly value: number }
-  | { readonly field: 'angle'; readonly value: number };
+  | { readonly field: 'angle'; readonly value: number }
+  | { readonly field: 'groutEnabled'; readonly value: boolean }
+  | { readonly field: 'groutColor'; readonly value: string }
+  | { readonly field: 'groutWidth'; readonly value: number };
+
+/** Grout object από τα draw-defaults (SSoT — μηδέν διπλότυπο default). */
+function groutFromDefaults(d: HatchDrawDefaults): HatchGrout {
+  return { color: d.groutColor, widthMm: d.groutWidthMm };
+}
 
 /** `HatchImageFill` από τα draw-defaults (νέα γραμμοσκίαση / switch σε fillType='image'). */
 export function buildImageFillFromDefaults(d: HatchDrawDefaults): HatchImageFill {
@@ -36,13 +46,15 @@ export function buildImageFillFromDefaults(d: HatchDrawDefaults): HatchImageFill
     tileWidth: d.imageTileWidth,
     tileHeight: d.imageTileHeight,
     angle: d.imageAngle,
+    ...(d.groutEnabled ? { grout: groutFromDefaults(d) } : {}),
   };
 }
 
 /**
  * Νέο (immutable) `HatchImageFill` = (τρέχον ή defaults) + patch ενός πεδίου. Στην
  * αλλαγή υλικού (`assetId`) υιοθετεί το πραγματικό default μέγεθος tile του υλικού
- * (Revit/ArchiCAD «texture real-world size»).
+ * (Revit/ArchiCAD «texture real-world size»). Η επεξεργασία χρώματος/πάχους αρμού
+ * ενεργοποιεί τους αρμούς (δημιουργεί το grout object αν λείπει).
  */
 export function withImageFillPatch(
   current: HatchImageFill | undefined,
@@ -61,5 +73,16 @@ export function withImageFillPatch(
       return { ...base, tileHeight: patch.value };
     case 'angle':
       return { ...base, angle: patch.value };
+    case 'groutEnabled': {
+      if (!patch.value) {
+        const { grout: _drop, ...rest } = base;
+        return rest;
+      }
+      return { ...base, grout: base.grout ?? groutFromDefaults(d) };
+    }
+    case 'groutColor':
+      return { ...base, grout: { color: patch.value, widthMm: base.grout?.widthMm ?? d.groutWidthMm } };
+    case 'groutWidth':
+      return { ...base, grout: { color: base.grout?.color ?? d.groutColor, widthMm: patch.value } };
   }
 }
