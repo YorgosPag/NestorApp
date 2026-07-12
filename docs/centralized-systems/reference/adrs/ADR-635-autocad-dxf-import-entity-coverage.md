@@ -473,7 +473,121 @@ Fixes **ΚΑΙ ΤΑ ΔΥΟ** συμπτώματα ταυτόχρονα (σωστ
 (+1 regression: block-based INSERT → hatch στο τοπικό origin). **Verification:** 7/7 hatch-xdata + 33/33
 block-expansion/attrib/mm/robustness jest green· jscpd clean.
 
+## Φ C.13 — Imported hatch off-screen ΟΤΑΝ συνυπάρχει με block: robust-bounds απορρίπτει τη γραμμοσκίαση ως flyaway
+
+**Symptom (Giorgio, controlled repro — 2 μικρά R12 αρχεία, ίδιος τύπος/διαστάσεις hatch):**
+`ΓΡΑΜΜΟΣΚΙΑΣΗ_ΧΩΡΙΣ_ΜΠΛΟΚ.dxf` (1 hatch-INSERT `*X3`) → η γραμμοσκίαση **φαίνεται κανονικά**.
+`ΓΡΑΜΜΟΣΚΙΑΣΗ_ΜΕ_ΜΠΛΟΚ.dxf` (hatch-INSERT `*X5` + block-INSERT `*U2`) → **φαίνεται ΜΟΝΟ το μπλοκ**, η
+γραμμοσκίαση εξαφανίζεται. Το ίδιο και στο 42MB permit («όλα φορτώνουν εκτός από γραμμοσκιάσεις»).
+
+**Διαδρομή διάγνωσης (jest με τα ΠΡΑΓΜΑΤΙΚΑ αρχεία — απέκλεισε ΟΛΑ τα «προφανή»):** parser (hatch parsed OK, 1
+HATCH στο build), persistence emit (fires για hatch), block transforms (scale/rotate/translate ΟΛΑ χειρίζονται
+`boundaryPaths`), render suppression (type-gated, δεν αγγίζει hatch), reconcile. Το build επιστρέφει σωστά
+`{hatch:1, line:20, arc:8}` **και** ο converted `DxfScene` **έχει** τη γραμμοσκίαση. Άρα ΟΧΙ parser/persistence/
+block-system — το πρόβλημα είναι στο **viewport fit**.
+
+**Root cause (100% επιβεβαιωμένο):** το fresh-import auto-fit ΔΕΝ χρησιμοποιεί το `scene.bounds` — ο
+`useViewportAutoFit` κάνει `EventBus.emit('canvas-fit-to-view')` → ο `useFitToView` handler υπολογίζει
+`createCombinedBounds(dxfScene…)` (`systems/zoom/utils/bounds.ts`) → **`computeRobustBounds`** (`robust-bounds.ts`,
+ADR-399, outlier-tolerant zoom-extents για corrupted import flyaways). Το `*U2` flatten-άρει σε **28 πυκνά entities**
+(20 lines+8 arcs) γύρω στο `(3201,1459)`· η **μοναχική** γραμμοσκίαση στο `(3212,1454)` (11 μονάδες μακριά) περνά:
+(gate MAD — cluster MAD~0.5, `thr=12×0.5=6`, hatch@11 → outlier), (gate 1 minority — 1/29 ≤ 10%), **(gate 2 shrink —
+dropping το drops τη διαγώνιο 8.6× ≥ `MIN_SHRINK_RATIO=4`)** → **η γραμμοσκίαση απορρίπτεται** από το fit bbox
+(`createCombinedBounds` = `(3200.8,1459.3)–(3202.9,1460.1)` = ΜΟΝΟ το block). **ΧΩΡΙΣ block δούλευε** γιατί 1 entity
+`< 8` → το robust-bounds κάνει skip (γραμμή 78). Το `MIN_SHRINK_RATIO=4` ήταν **λάθος βαθμονομημένο**: 4× shrink =
+content 25 % της οθόνης (πλήρως ορατό) — η «σε-κουκκίδα» παθολογία που δικαιολογεί το feature χρειάζεται ~100× (το
+KADOS 8.5 km import garbage = ~130×).
+
+**Fix (1 constant, unit-independent):** `MIN_SHRINK_RATIO` **4 → 50** — απορρίπτει ΜΟΝΟ αληθινά dot-causing flyaways
+(≥50× = content ≤2 % οθόνης). Μετά: `createCombinedBounds(ΜΕ_ΜΠΛΟΚ)` = `(3200.8,1451.9)–(3218.4,1460.1)` (block **+**
+γραμμοσκίαση). **Το REAL-SCENARIO test (74m cluster + 7 flyaways @8.5km, ~130×) ΕΞΑΚΟΛΟΥΘΕΙ να απορρίπτει** → μηδέν
+regression στον σκοπό του feature.
+
+**Secondary fix (ίδιο θέμα, correctness):** `DxfSceneBuilder.calculateBounds` (τρέφει το paper-scale 1:N + `scene.
+bounds` + `validateScene`) είχε επίσης switch χωρίς `case 'hatch'` → νέο `case 'hatch'` (dedup όλων των cases σε ένα
+`expand(x,y)` helper για N.18). ΔΕΝ ήταν αυτό το fit-blocker (το fit πάει από `createCombinedBounds`), αλλά σωστό να
+περιλαμβάνει τη γραμμοσκίαση στο drawing extent.
+
+**Sibling gap (flagged, boy-scout/N.18):** **3** bbox impls — `calculateBounds` (paper-scale/scene.bounds),
+`dxf-viewport-culling.getEntityBBox` (per-frame culling, hatch απ' το Φ C.9), `entity-bounds-ssot.resolveEntityBounds`
+(πλήρες SSoT· το `createCombinedBounds` ΤΟ χρησιμοποιεί ήδη). SSoT-convergence του `calculateBounds`→`resolveEntityBounds`
+deferred (αλλάζει fit για text/dim/BIM → regression risk).
+
+**Files:** `systems/zoom/utils/robust-bounds.ts` (`MIN_SHRINK_RATIO` 4→50 — THE fit fix),
+`systems/zoom/utils/__tests__/robust-bounds.test.ts` (+1: nearby larger content ~9× KEPT),
+`utils/dxf-scene-builder.ts` (`case 'hatch'` + `expand()` dedup), `utils/__tests__/dxf-scene-bounds-hatch.test.ts`
+(+3). **Verification:** robust-bounds 7/7 (REAL km flyaway ΑΚΟΜΑ dropped) + scene-bounds 3/3· `createCombinedBounds`
+στα πραγματικά αρχεία επιβεβαίωσε το union. jscpd clean. 🔴 browser-verify (Giorgio): re-import `ΜΕ_ΜΠΛΟΚ` →
+γραμμοσκίαση + μπλοκ μαζί· **+ επιβεβαίωσε ότι το 42MB permit ακόμα framing-άρει σωστά** (το km-flyaway protection).
+
+## Φ C.14 — Imported hatch σε ΛΑΘΟΣ ΣΧΕΤΙΚΗ θέση από το block: import recenter δεν μετέφερε τη γραμμοσκίαση
+
+**Symptom (Giorgio, ΙΔΙΟ repro `ΓΡΑΜΜΟΣΚΙΑΣΗ_ΜΕ_ΜΠΛΟΚ` — μετά το Φ C.13 fix):** ΚΑΙ η γραμμοσκίαση ΚΑΙ το
+μπλοκ εμφανίζονται πλέον, αλλά **σε τεράστια σχετική απόσταση** (screenshots: μπλοκ ~origin, γραμμοσκίαση @3212).
+Στο AutoCAD ακουμπάνε (το έπιπλο `*U2` δίπλα στη γραμμοσκίαση).
+
+**Διαδρομή διάγνωσης (jest ground-truth στο ΠΡΑΓΜΑΤΙΚΟ αρχείο):** `DxfSceneBuilder.buildScene` (χωρίς recenter)
+δίνει hatch `(3206..3218,1451..1456)` + block members `(3200..3203,1459..1460)` = **12 μονάδες μακριά, ΣΩΣΤΑ** →
+άρα το transform pipeline (`transformInsertHatch`/`instantiateInsert`/`applyBlockTransformGeometry`) είναι σωστό, ΟΧΙ
+bug. Εφαρμόζοντας το ΠΡΑΓΜΑΤΙΚΟ import βήμα (`calculateTightBounds(entities, true)` — «bottom-left → (0,0)») στο ίδιο
+scene: hatch **μένει** @`(3212,1454)` ενώ όλα τα άλλα πάνε στο origin → **dist=3525** (= τα «μεγάλες αποστάσεις»).
+
+**Root cause (100%):** το `io/dxf-import.ts` normalize-άρει κάθε import (`calculateTightBounds(…, true)` /
+`runDxfParse({normalizeBounds:true})`) μετακινώντας τη γεωμετρία στο θετικό τεταρτημόριο. Οι δύο συναρτήσεις που το
+κάνουν — `getEntityBounds` (υπολογισμός offset) **και** `normalizeEntityPositions` (εφαρμογή offset) στο
+`systems/zoom/utils/bounds-entity.ts` — είχαν `switch(entity.type)` **ΧΩΡΙΣ `case 'hatch'`**. Η γεωμετρία του hatch
+ζει στο `boundaryPaths` (rings of {x,y}), όχι σε primitive `start/center`. Άρα η γραμμοσκίαση **αποκλειόταν από το
+offset ΚΑΙ έμενε αμετάφραστη** — stranded στις absolute coords ενώ οι siblings πήγαιναν στο origin. **Τρίτο** σημείο
+της ίδιας οικογένειας hatch-`boundaryPaths` gap (μετά scene-builder Φ C.13 + culling Φ C.9).
+
+**Fix (SSoT, mirror των υπαρχόντων hatch cases):** `case 'hatch'` σε **αμφότερα** — `getEntityBounds` (bbox από
+`boundaryPaths` rings, reuse `createInfinityBounds`/`expandInfinityBounds`) ΚΑΙ `normalizeEntityPositions` (offset σε
+κάθε vertex). Τύποι `BoundsEntity`/`MutableBoundsEntity` απέκτησαν `boundaryPaths?`. Μετά: το ίδιο scene normalize-άρει
+σε hatch `(6..18,0..5)` + block `(0..2,7..8)` = **dist=12 ΞΑΝΑ** (σωστή σχετική θέση AutoCAD), όλα στο positive quadrant.
+
+**Files:** `systems/zoom/utils/bounds-entity.ts` (4 edits: 2 type fields + `case 'hatch'` σε `getEntityBounds` &
+`normalizeEntityPositions`), `systems/zoom/utils/__tests__/bounds-entity-hatch-normalize.test.ts` (νέο, 5 tests).
+**Verification:** 17/17 (νέα 5 + robust-bounds 7/7 Φ C.13 ΑΚΟΜΑ + bounds-bim 5/5)· jscpd clean. 🔴 browser-verify
+(Giorgio): re-import `ΜΕ_ΜΠΛΟΚ` → γραμμοσκίαση **πάνω/δίπλα** στο μπλοκ (όχι μακριά).
+
+## Φ C.15 — Imported hatch «εμφανίζεται & εξαφανίζεται»: create-event πριν ετοιμαστεί το persistence service (import race)
+
+**Symptom (Giorgio, ΙΔΙΟ repro `ΓΡΑΜΜΟΣΚΙΑΣΗ_ΜΕ_ΜΠΛΟΚ` — μετά τα Φ C.13/C.14):** στη φόρτωση, hatch + block
+στη σωστή θέση, ένδειξη **«2 στοιχεία»** — αλλά **αμέσως** η γραμμοσκίαση εξαφανίζεται → **«1 στοιχείο»** (μένει
+το block). Το block (ADR-640 preserved, ΟΧΙ per-entity-persisted) επιβιώνει· ο hatch (per-entity-persisted) φεύγει.
+
+**Root cause (SSoT audit):** Ο hatch έχει dual persistence — SSoT = `floorplan_hatches` doc, το scene blob =
+derived cache. Στο load, `reconcileLoadedSceneBim` πετά blob-hatch χωρίς DB doc· γι' αυτό ο importer εκπέμπει
+`drawing:entity-created {tool:'hatch'}` (`emitImportedEntityCreateEvents`, Φ C.8) → first-save. **ΑΛΛΑ** ο κοινός
+`createBimEntityPersistenceHook` έκανε στον first-save listener:
+```
+if (!serviceRef.current) return;   // ← silent drop
+pendingFirstSaveIdsRef.current.add(id); void persist(entity);
+```
+Ο emit είναι **σύγχρονος** στο import (`useSceneState`, αμέσως μετά `setLevelScene`)· το service instantiate-άρεται
+**async** σε `useEffect` (keyed σε floorId/floorplanId — αλλάζουν σε fresh import σε νέο/αλλαγμένο level). Άρα στο
+emit-time `serviceRef.current === null` → **early-return**: ούτε `pending` (δεν προστατεύεται από το merge), ούτε save
+(κανένα doc). Έπειτα η subscription fire-άρει με docs=[] → στο `mergeDocsIntoScene` το `dropOrphan = id ⇒
+!dirty.has(id) && !pending.has(id)` επιστρέφει true → **ο hatch αφαιρείται** από το scene (2→1). Γενικό race
+(κάθε per-entity type σε fresh-import-into-new-level), ΟΧΙ hatch-specific.
+
+**Fix (belt-and-suspenders, additive — το ready-path αμετάβλητο):** στον first-save listener, **ΠΑΝΤΑ** `pending`+`dirty`
+add (drop-protection ανεξάρτητα readiness)· αν `!serviceRef.current`, **defer** το entity σε νέο `deferredFirstSaveRef`
+map αντί για early-return. Η service-instantiation `useEffect`, μόλις set-άρει το `serviceRef.current`, **flush**-άρει τα
+deferred (persist κάθε ένα). Έτσι ο hatch (α) μένει ορατός (pending → δεν πέφτει στο merge) και (β) first-save-άρεται
+μόλις ετοιμαστεί το scope → doc γράφεται → επιβιώνει σε reload.
+
+**Files:** `hooks/data/create-bim-entity-persistence-hook.ts` (3 edits: `deferredFirstSaveRef` + flush στο service effect
++ always-protect/defer στον listener), `hooks/data/__tests__/create-bim-entity-persistence-hook.test.tsx` (+1 race test:
+create-event με null scope → rerender valid scope → deferred flush → save×1). **Verification:** 10/10 (νέο race test +
+9 existing) + merge-docs 53/53 suite· jscpd clean. 🔴 browser-verify (Giorgio): re-import `ΜΕ_ΜΠΛΟΚ` → γραμμοσκίαση
+**παραμένει** (2 στοιχεία σταθερά, όχι 2→1) + reload → ακόμη εκεί.
+
 ## Changelog
+- **2026-07-12 — Φ C.15 (🐛 imported hatch «εμφανίζεται & εξαφανίζεται» — create-event πριν ετοιμαστεί το persistence service, Opus 4.8):** UNCOMMITTED. Follow-up των Φ C.13/C.14 (ίδιο `ΓΡΑΜΜΟΣΚΙΑΣΗ_ΜΕ_ΜΠΛΟΚ`): με σωστή θέση πλέον, ένδειξη «2 στοιχεία» → **αμέσως** «1 στοιχείο» (hatch φεύγει, block μένει). **SSoT audit:** ο importer ΕΚΠΕΜΠΕΙ ήδη `drawing:entity-created {tool:'hatch'}` (`emitImportedEntityCreateEvents`, Φ C.8) για first-save, ΑΛΛΑ ο κοινός `createBimEntityPersistenceHook` first-save listener έκανε `if (!serviceRef.current) return` **πριν** το `pending` add + save. Ο emit είναι σύγχρονος στο import· το service instantiate-άρεται async (useEffect keyed σε floorId/floorplanId, αλλάζουν σε νέο level) → στο emit-time `serviceRef` null → **silent drop** (ούτε protection ούτε save). Μετά subscription με docs=[] → `mergeDocsIntoScene.dropOrphan` (`!dirty && !pending`) πετά τον unprotected hatch (2→1). Γενικό race κάθε per-entity type σε fresh-import. **Fix (additive):** ΠΑΝΤΑ `pending`+`dirty` add (protection) + **defer** (`deferredFirstSaveRef`) όταν service null· η service-instantiation effect **flush**-άρει τα deferred μόλις ετοιμαστεί το scope. Ready-path αμετάβλητο. 1 MOD (`create-bim-entity-persistence-hook.ts`, 3 edits) + 1 race test· 10/10 hook + 53/53 persistence suite· jscpd clean. 🔴 browser: re-import ΜΕ_ΜΠΛΟΚ → γραμμοσκίαση σταθερή (2 στοιχεία) + reload OK.
+- **2026-07-12 — Φ C.14 (🐛 imported hatch σε λάθος ΣΧΕΤΙΚΗ θέση — import recenter δεν μετέφερε τη γραμμοσκίαση, Opus 4.8):** UNCOMMITTED. Sibling/follow-up του Φ C.13 (ίδιο αρχείο `ΓΡΑΜΜΟΣΚΙΑΣΗ_ΜΕ_ΜΠΛΟΚ`): μετά που η γραμμοσκίαση ξαναφάνηκε, εμφανιζόταν σε **τεράστια απόσταση** από το μπλοκ (screenshots: μπλοκ ~origin, hatch @3212). **Διάγνωση (jest ground-truth):** `buildScene` (χωρίς recenter) → hatch & block members **12u μακριά, ΣΩΣΤΑ** (transform pipeline OK, ΟΧΙ bug). Εφαρμογή του ΠΡΑΓΜΑΤΙΚΟΥ import βήματος `calculateTightBounds(entities, true)` («bottom-left→(0,0)») → hatch **μένει** @3212 ενώ όλα τα άλλα → origin → **dist=3525**. **Root cause:** `io/dxf-import.ts` normalize-άρει κάθε import· `getEntityBounds` **και** `normalizeEntityPositions` (`bounds-entity.ts`) είχαν `switch` **χωρίς `case 'hatch'`** → η γραμμοσκίαση (geometry στο `boundaryPaths`, όχι primitive field) **αποκλειόταν από το offset ΚΑΙ έμενε αμετάφραστη**. Τρίτο hatch-`boundaryPaths` gap (μετά scene-builder Φ C.13 + culling Φ C.9). **Fix (SSoT):** `case 'hatch'` σε αμφότερες (mirror culling/scene-builder) + `boundaryPaths?` στους τύπους `BoundsEntity`/`MutableBoundsEntity`. Μετά: ίδιο scene → **dist=12 ΞΑΝΑ**, όλα positive-quadrant. 1 MOD (`bounds-entity.ts`, 4 edits) + 1 νέο test (5)· 17/17 (robust-bounds Φ C.13 ΑΚΟΜΑ 7/7)· jscpd clean. 🔴 browser: re-import ΜΕ_ΜΠΛΟΚ → γραμμοσκίαση δίπλα στο μπλοκ.
+- **2026-07-12 — Φ C.13 (🐛 imported hatch off-screen όταν συνυπάρχει με block — robust-bounds απορρίπτει τη γραμμοσκίαση ως flyaway, Opus 4.8):** UNCOMMITTED. Controlled repro από τον Giorgio (2 μικρά R12 αρχεία): hatch ΜΟΝΟΣ → ορατός· hatch + block (`*U2`) → φαίνεται ΜΟΝΟ το μπλοκ. **Διάγνωση (jest με τα ΠΡΑΓΜΑΤΙΚΑ αρχεία) — απέκλεισε** parser (hatch parsed OK), persistence emit (fires), block transforms (scale/rotate/translate χειρίζονται hatch), render suppression (type-gated): το build ΚΑΙ ο converted DxfScene **έχουν** τη γραμμοσκίαση → το πρόβλημα = **viewport fit**. **Root cause:** το fresh-import fit πάει `useViewportAutoFit`→`EventBus('canvas-fit-to-view')`→`useFitToView`→`createCombinedBounds`→**`computeRobustBounds`** (robust-bounds.ts, ADR-399). Το `*U2` flatten-άρει σε 28 πυκνά entities· η μοναχική γραμμοσκίαση (11 μονάδες μακριά) περνά MAD+minority+shrink gates → **απορρίπτεται** ως outlier (`createCombinedBounds`=ΜΟΝΟ block `3200.8..3202.9`). ΧΩΡΙΣ block: 1 entity `<8` → robust skip → δούλευε. Το `MIN_SHRINK_RATIO=4` λάθος βαθμονομημένο (4× = content 25% οθόνης, ορατό· dot-παθολογία χρειάζεται ~100×· KADOS km garbage=~130×). **Fix:** `MIN_SHRINK_RATIO` **4→50** (1 constant, unit-independent) → `createCombinedBounds(ΜΕ)` = union `(3200.8,1451.9)–(3218.4,1460.1)`. **REAL-SCENARIO test (74m+7 flyaways@8.5km, ~130×) ΑΚΟΜΑ απορρίπτει → μηδέν regression.** **Secondary (correctness):** `calculateBounds` (paper-scale/scene.bounds) είχε επίσης `case 'hatch'` gap → προστέθηκε (+`expand()` dedup, N.18). **Flagged:** 3 bbox impls· `calculateBounds`→`resolveEntityBounds` convergence deferred. 2 MOD + 4 regression tests (robust-bounds 7/7 incl. km-flyaway ΑΚΟΜΑ dropped· scene-bounds 3/3)· jscpd clean. 🔴 browser: re-import ΜΕ_ΜΠΛΟΚ + **επιβεβαίωση 42MB permit ακόμα σωστό**.
+- **2026-07-12 — Named single INSERT → first-class BlockEntity (ADR-640 M1, Opus 4.8):** UNCOMMITTED. Το Φ2 explode-on-import (`instantiateInsert` → loose lines/arcs) **χάνει** την ταυτότητα «μπλοκ» — reported από ΠΡΑΓΜΑΤΙΚΟ DXF (`KADOS/ΕΠΙΠΛΟ.dxf`, single `NEC32_BLOCK` INSERT): «το έπιπλο σπάει σε γραμμές». **Fix (ADR-640):** ένα **named, single (non-MINSERT)** INSERT διατηρείται πλέον ως `type:'block'` container (selectable/movable/explodable, round-trips σε INSERT), αντί να flatten-άρεται. Ο `dxf-scene-builder` INSERT branch απέκτησε Phase-0 gate (`name && !name.startsWith('*') && cols===1 && rows===1`) → `createBlockInstance` (νέο `systems/block/`, mirror του GROUP· reuse του extracted `buildLocalBlockMembers` SSoT). **Anonymous `*`-hatch/`*D#`-dimension blocks + MINSERT arrays ΑΜΕΤΑΒΛΗΤΑ** (legacy flatten). Το placement math είναι byte-identical (shared `applyBlockTransformGeometry`). E2E στο πραγματικό αρχείο: 1 INSERT → 1 block, 28 members, 800×2100mm bounds, 0 loose lines. Λεπτομέρειες + 6-consumer verdict + storage decision: **ADR-640**. `dxf-block-expansion.test.ts` ενημερώθηκε (expand block πριν τα geometry asserts). 9/9 + 13 νέα block tests PASS.
 - **2026-07-12 — Φ4 verify + doc-cleanup (rich MTEXT round-trip end-to-end, Opus 4.8):** UNCOMMITTED. **Audit revelation:** το Φ4 core (rich MTEXT μέσω `parseMtext(tokenizeMtext(...))`) είχε ΗΔΗ μπει (commit `d362a0ab`) — το ADR-636 Φ2.3 «known limitation» note ήταν **STALE**. Δουλειά = **verify + test + doc**, ΟΧΙ re-implement. Νέο **end-to-end** round-trip test `export/core/__tests__/dxf-roundtrip-mtext.test.ts` (3 cases) μέσω του **production `writeDxfAscii`→`emitMText`→`serializeDxfTextNode`** (όχι μόνο serializer isolated): `\P` καθαρό (ΟΧΙ `\\P`)· inline `\H` χωρίς double-escape (αποδεικνύει καθαρό AST χωρίς literal-code runs)· attachment(71)+rotation(50) round-trip. 3/3 PASS. **Stale ADR-636 note → RESOLVED pointer** (ίδιο commit). **🔴 Residual (honest, pre-existing, out-of-scope):** το *imported* MTEXT flatten-άρεται σε `type:'text'` (`buildTextSceneEntity` πάντα `type:'text'`) → re-export μέσω `emitText` single-line → `sanitizeText` collapse-άρει `\n`→space → χάνονται τα paragraph breaks. **ΟΧΙ Φ4 regression** (και πριν χανόταν: `convertText` δεν parse-άρει `\P`). Το proper `emitMText` path (όπου ζούσε το double-escape) είναι καθαρό. Preserve MTEXT identity (`type:'mtext'` στο import) = cross-cutting entity-type αλλαγή σε render/hit-test/snap → deferred, δικό του ADR phase. 1 νέο test file, 0 src αλλαγές (core ήδη εκεί). jscpd clean.
 - **2026-07-12 — Φ3.1 (parser-level skipped-warning — genuinely-unsupported entity TYPES, Opus 4.8):** UNCOMMITTED. Το Φ3 diagnostics κάλυπτε ΜΟΝΟ *recognized-but-unconvertible* types (μέσα στο `SUPPORTED_ENTITY_TYPES`, converter→null· π.χ. `SOLID`). Αλλά ένα **αληθινά μη-υποστηριζόμενο TYPE** (`REGION`/`3DSOLID`/`MESH`/`WIPEOUT`/`ACAD_TABLE`…) απορρίπτεται ένα layer νωρίτερα στο `parseEntityAt` (`{entity:null}`, ποτέ δεν μπαίνει στο `parsedEntities`) → **silent data loss ΧΩΡΙΣ warning** ακόμη και μετά το Φ3. **Fix = pure wire (reuse, ΟΧΙ νέο σύστημα):** thread του ΙΔΙΟΥ `ImportDiagnostics` collector (optional, no-op όταν απών — mirror του `dxf-block-expander` pattern) σε `parseEntities`/`parseEntityAt`/`parseBlockDefinitions`· `noteUnsupportedType()` κάνει `recordSkipped` ΜΟΝΟ για πραγματικό entity type — φιλτράρει `DXF_SECTION_MARKERS` (ENDSEC/BLOCK…) + νέο `DXF_STRUCTURAL_SUBMARKERS` (`VERTEX`/`SEQEND`, τα καταναλώνουν οι compound parsers) ώστε ένα leaked terminator να μη φτιάχνει ψεύτικο warning. Ο `dxf-scene-builder` περνά το υπάρχον `diagnostics` και στα δύο parse calls → τα counts ρέουν στο ίδιο `summarizeDiagnostics()` → `runDxfParse().warnings` → `importedWithWarnings` toast. **Μηδέν νέο UI/notification/collector.** 4 MOD (`dxf-parser-types.ts` +`DXF_STRUCTURAL_SUBMARKERS`, `dxf-entity-parser.ts`, `dxf-block-parser.ts`, `dxf-scene-builder.ts`) + 4 regression tests (`dxf-import-robustness.test.ts`: REGION/3DSOLID counted· unsupported member σε BLOCK counted· SEQEND/ENDSEC ΟΧΙ warned· no-collector back-compat), 9/9 PASS. jscpd clean (4 files).
 - **2026-07-12 — Φ C.12 (🐛 3-coord hatch boundary vertices διαβάζονταν ως 2-coord → km-scale garbage, Opus 4.8):** UNCOMMITTED. **Διάγνωση από ΠΡΑΓΜΑΤΙΚΟ DXF** (KADOS «1ος Όροφος», κατέβασμα του original 42MB .dxf + scene.json blob + Firestore): 7/117 imported hatches κατέληγαν με boundary vertices σε coords `x≈y≈8.56M` (πάνω στη διαγώνιο — center = ο μέσος όρος ενός `[0..17M]×[0..17M]` bbox), 9,6km μακριά από τον όγκο → το fit-to-view αγκάλιαζε 17km → σχέδιο = κουκκίδα. **Root cause:** στο `extractR14BoundaryPaths` (`dxf-hatch-xdata-converter.ts`), το polyline-vertex path (`1071 n` + scalars) υπέθετε **σταθερά 2 coords/vertex** (`i += 2`). ΑΛΛΑ η AutoCAD γράφει το boundary polyline **είτε** 2 (x,y) **είτε 3 (x,y,bulge)** scalars/vertex — **18/117** hatches του δείγματος ήταν 3-coord. Με stride 2, κάθε vertex ολίσθαινε κατά ένα scalar → η στήλη bulge διαβαζόταν ως το επόμενο X → spurious `(0,x)`/`(x,0)` vertices → bbox explosion. **Fix:** infer stride από το πλήθος consecutive 1040 (`count === n*3 ? 3 : 2`), διάβασε (x,y) αγνοώντας το 3ο scalar. Backward-compatible (2-coord: `count===n*2≠n*3` → stride 2, αμετάβλητο). **Επαληθευμένο στο πραγματικό DXF:** μετά το fix, 0 corrupt vertices, ΟΛΑ τα 117 hatches στο σωστό range (X 17107..17172m). 1 MOD (`dxf-hatch-xdata-converter.ts`) + 2 regression tests (3-coord stride 3 + 2-coord backward-compat), 9/9 PASS. **Υπάρχοντα δεδομένα:** τα 7 corrupted ζουν ΜΟΝΟ στο scene.json blob (ΟΧΙ σε `floorplan_hatches`) → εξαφανίζονται αυτόματα στο reload (`reconcileLoadedSceneBim` πετά snapshot hatches)· καθαρή λύση = re-import με τον διορθωμένο parser. Συμπληρωματικό: outlier-robust fit (ADR-399, 2026-07-12) κάνει το framing ανθεκτικό ακόμη και σε κακά δεδομένα. 🔴 browser-verify: re-import → 117 hatches σωστά τοποθετημένα.

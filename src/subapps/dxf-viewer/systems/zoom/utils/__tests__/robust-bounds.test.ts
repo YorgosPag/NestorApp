@@ -72,4 +72,20 @@ describe('computeRobustBounds', () => {
     const r = computeRobustBounds(boxes);
     expect(r.dropped).toBe(0);
   });
+
+  it('ADR-635 Φ C.13 — nearby larger content (moderate ~9× shrink) is KEPT, not a flyaway', () => {
+    // Repro of ΓΡΑΜΜΟΣΚΙΑΣΗ_ΜΕ_ΜΠΛΟΚ: a 2-unit block flattens to 28 dense entities; a lone
+    // HATCH (bigger than the block, only ~11 units away) is a statistical + minority outlier
+    // but dropping it shrinks the box only ~9× — NOT a sub-pixel-dot flyaway. It must stay in
+    // the fit extents (else «φαίνεται μόνο το μπλοκ»). Locks MIN_SHRINK_RATIO (was 4 → cropped).
+    const boxes: BoundingBox2D[] = [];
+    for (let i = 0; i < 28; i++) {
+      boxes.push(box(3201.85 + (i % 4) * 0.3, 1459.7 + Math.floor(i / 4) * 0.1, 0.4));
+    }
+    boxes.push(box(3212.65, 1454.4, 6)); // the hatch — spans 3206.6..3218.6 × 1448.4..1460.4
+    const r = computeRobustBounds(boxes);
+    expect(r.dropped).toBe(0);
+    expect(r.bounds!.max.x).toBeGreaterThan(3218); // reaches the hatch's far edge
+    expect(r.bounds!.min.y).toBeLessThan(1449);
+  });
 });

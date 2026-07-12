@@ -158,6 +158,41 @@ describe('createBimEntityPersistenceHook', () => {
     unmount();
   });
 
+  it('deferred first-save (Φ C.15): create-event before the service is ready flushes once scope resolves', async () => {
+    // Repro of the "imported hatch appears then vanishes" race: a fresh import emits
+    // drawing:entity-created SYNCHRONOUSLY, before the async service-instantiation effect
+    // has run for the imported level's scope. The OLD code early-returned on the null
+    // service → the first-save was lost AND the entity was never protected → the first
+    // (docless) snapshot dropped it. The fix defers the save + flushes on service-ready.
+    const onPersisted = jest.fn();
+    const { hook, getSvc } = buildHook({ onPersisted });
+    const lm = makeLevelManager();
+    // Start with an UNRESOLVABLE scope (no companyId) → resolveBimPersistenceScope → null → no service.
+    const { rerender, unmount } = renderHook(
+      ({ company }: { company: string }) => hook({ ...baseParams(lm, null), companyId: company }),
+      { initialProps: { company: '' } },
+    );
+
+    // Create-event arrives while the service is still null.
+    await act(async () => {
+      EventBus.emit('drawing:entity-created', { tool: 'furniture', entity: ent('e1', 5) });
+      await tick();
+    });
+    // Nothing could have been saved yet (no service was ever created).
+    expect(getSvc()).toBeUndefined();
+
+    // Scope resolves → service instantiated → the deferred first-save flushes exactly once.
+    rerender({ company: 'c1' });
+    await act(async () => {
+      await tick();
+    });
+
+    expect(getSvc().save).toHaveBeenCalledTimes(1);
+    expect(onPersisted).toHaveBeenCalledTimes(1);
+    expect(onPersisted.mock.calls[0][1].isNew).toBe(true);
+    unmount();
+  });
+
   it('subscribe → diff-merge adds the doc entity to the scene', async () => {
     const { hook, getSvc } = buildHook({});
     const lm = makeLevelManager();

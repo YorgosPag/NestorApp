@@ -30,8 +30,19 @@ import type { BoundingBox2D } from '../../../rendering/hitTesting/entity-bounds-
 const MAD_K = 12;
 /** Drop outliers only when they are at most this fraction of all entities. */
 const MAX_OUTLIER_FRACTION = 0.1;
-/** Drop outliers only when doing so shrinks the bbox diagonal by at least this factor. */
-const MIN_SHRINK_RATIO = 4;
+/**
+ * Drop outliers only when doing so shrinks the bbox diagonal by at least this factor.
+ *
+ * ADR-635 Φ C.13 — this is the LAST, decisive gate and MUST correspond to the actual
+ * pathology: a flyaway drops content to a **sub-pixel dot** only when it makes the fit
+ * ~100× too big (content < ~1–2 % of the view). The old value `4` fired at a 4× shrink —
+ * content still 25 % of the view, fully visible — so it wrongly rejected legitimate
+ * nearby content: a lone HATCH (bigger than, and only ~11 units from, a 2-unit block that
+ * flattened to 28 dense entities) passed the MAD + minority gates and was dropped from the
+ * fit → «φαίνεται μόνο το μπλοκ» (ΓΡΑΜΜΟΣΚΙΑΣΗ_ΜΕ_ΜΠΛΟΚ). Raised so only a true dot-causing
+ * flyaway (the ~130× KADOS 8.5 km import garbage this feature exists for) is rejected.
+ */
+const MIN_SHRINK_RATIO = 50;
 
 export interface RobustBoundsResult {
   bounds: { min: Point2D; max: Point2D } | null;

@@ -46,6 +46,8 @@ export interface BoundsEntity {
   x?: number;
   y?: number;
   width?: number;
+  /** ADR-635 — HATCH world-space geometry: rings of {x,y}. No primitive start/center field. */
+  boundaryPaths?: Point2D[][];
 }
 
 /**
@@ -67,6 +69,7 @@ export interface MutableBoundsEntity extends BoundsEntity {
   vertices?: Array<{ x: number; y: number }>;
   center?: { x: number; y: number };
   position?: { x: number; y: number };
+  boundaryPaths?: Array<Array<{ x: number; y: number }>>;
 }
 
 // ============================================================================
@@ -169,6 +172,29 @@ export function getEntityBounds(entity: BoundsEntity): Bounds | null {
 
     case 'point': {
       if (entity.position) return pointBounds(entity.position);
+      break;
+    }
+
+    case 'hatch': {
+      // ADR-635 — a HATCH keeps its world-space geometry in `boundaryPaths` (rings of {x,y}),
+      // never in a primitive start/center field, so bounds must scan the rings explicitly.
+      // WITHOUT this the import's bottom-left→(0,0) normalization (io/dxf-import.ts →
+      // calculateTightBounds) both EXCLUDED the hatch from the offset AND left it untranslated:
+      // every other entity shifted to the origin while the hatch stayed at its absolute coords,
+      // stranding it thousands of units away (repro: ΓΡΑΜΜΟΣΚΙΑΣΗ_ΜΕ_ΜΠΛΟΚ — «hatch & μπλοκ
+      // σε μεγάλες αποστάσεις», 2026-07-12). Mirrors scene-builder (Φ C.13) & culling (Φ C.9).
+      const hatchBounds = createInfinityBounds();
+      for (const ring of entity.boundaryPaths ?? []) {
+        for (const v of ring) {
+          if (isValidPoint(v)) expandInfinityBounds(hatchBounds, v.x, v.y);
+        }
+      }
+      if (!isInfinityBounds(hatchBounds)) {
+        return {
+          min: { x: hatchBounds.minX, y: hatchBounds.minY },
+          max: { x: hatchBounds.maxX, y: hatchBounds.maxY }
+        };
+      }
       break;
     }
 
@@ -351,6 +377,21 @@ export function normalizeEntityPositions(
           if (entity.position) {
             entity.position.x += offsetX;
             entity.position.y += offsetY;
+          }
+          break;
+        }
+
+        case 'hatch': {
+          // ADR-635 — translate the hatch's boundary rings exactly like every other geometry so
+          // the import recenter moves it WITH its siblings instead of stranding it at absolute
+          // coords (see the getEntityBounds 'hatch' case for the full repro/rationale).
+          for (const ring of entity.boundaryPaths ?? []) {
+            for (const vertex of ring) {
+              if (isValidPoint(vertex)) {
+                vertex.x += offsetX;
+                vertex.y += offsetY;
+              }
+            }
           }
           break;
         }

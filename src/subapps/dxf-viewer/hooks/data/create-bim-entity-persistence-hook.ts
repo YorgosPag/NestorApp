@@ -114,6 +114,9 @@ export function createBimEntityPersistenceHook<
     const dirtyIdsRef = useRef<Set<string>>(new Set());
     const lastSavedParamsRef = useRef<Map<string, TComparable>>(new Map());
     const pendingFirstSaveIdsRef = useRef<Set<string>>(new Set());
+    // ADR-635 Φ C.15 — first-save events that arrived before the async service was ready
+    // (fresh-import-into-new-level race); flushed by the service-instantiation effect below.
+    const deferredFirstSaveRef = useRef<Map<string, TEntity>>(new Map());
     const deletedIdsRef = useRef<Set<string>>(new Set());
     const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const selectedRef = useRef<TEntity | null>(null);
@@ -163,6 +166,17 @@ export function createBimEntityPersistenceHook<
         floorId: scope.floorId,
         userId: scope.userId,
       });
+
+      // ADR-635 Φ C.15 — service is now ready: flush first-saves that arrived before it
+      // existed (fresh-import race). Their ids are already in `pending` (merge-drop
+      // protection), so the entity stayed visible until this write lands.
+      const deferred = deferredFirstSaveRef.current;
+      if (deferred.size > 0) {
+        const queued = [...deferred.values()];
+        deferred.clear();
+        for (const e of queued) void persist(e);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [companyId, projectId, floorplanId, floorId, userId]);
 
     // ---- Subscribe + diff-merge (keyed on stable primitives only) ----------
@@ -435,9 +449,21 @@ export function createBimEntityPersistenceHook<
           if (p.tool !== trigger.tool) return;
           const entity = p.entity as TEntity | undefined;
           if (!entity || (entity as { type?: string }).type !== config.entityType) return;
-          if (!serviceRef.current) return;
+          // Protect from the snapshot merge's orphan-drop REGARDLESS of service readiness
+          // (dropOrphan keeps pending/dirty ids). A create-event can arrive BEFORE the async
+          // service-instantiation effect runs — a fresh DXF import emits `drawing:entity-created`
+          // synchronously (useSceneState) before this hook re-rendered with the imported level's
+          // scope. Without this, the subscription's first (docless) snapshot dropped the freshly
+          // imported entity → "appears then vanishes" (repro: imported AutoCAD hatch beside a
+          // block, ADR-635 Φ C.15). Previously this path early-returned on `!serviceRef.current`,
+          // silently losing both the protection AND the first-save.
           pendingFirstSaveIdsRef.current.add(entity.id);
           dirtyIdsRef.current.add(entity.id);
+          if (!serviceRef.current) {
+            // Service not ready — defer; the instantiation effect flushes it once scoped.
+            deferredFirstSaveRef.current.set(entity.id, entity);
+            return;
+          }
           void persist(entity);
         }),
       );
