@@ -306,6 +306,24 @@ export function scaleEntity(
     case 'rectangle':
     case 'rect':
       return scaleRectangle(entity, base, sx, sy) as Partial<SceneEntity>;
+    // ADR-646 Φ2 — construction lines + standalone annotations (were silent `default:{}` no-ops).
+    case 'xline':
+    case 'ray':
+      return scaleConstructionLine(entity, base, sx, sy) as Partial<SceneEntity>;
+    case 'angle-measurement':
+      return scaleAngleMeasurement(entity, base, sx, sy) as Partial<SceneEntity>;
+    case 'center-mark':
+      return scaleCenterMark(entity, base, sx, sy) as Partial<SceneEntity>;
+    case 'centerline':
+      return scaleCenterLine(entity, base, sx, sy) as Partial<SceneEntity>;
+    case 'annotation-symbol':
+      return scaleAnnotationSymbol(entity, base, sx, sy) as Partial<SceneEntity>;
+    case 'scale-bar':
+      return scaleScaleBar(entity, base, sx, sy) as Partial<SceneEntity>;
+    case 'opening-info-tag':
+      return scaleOpeningInfoTag(entity, base, sx, sy) as Partial<SceneEntity>;
+    case 'array':
+      return scaleArray(entity, base, sx, sy) as Partial<SceneEntity>;
     case 'block': {
       // ADR-640 — BLOCK instance (DXF INSERT): scaling about `base` moves the insertion point
       // toward/away from base AND multiplies the placement scale factors (INSERT semantics — the

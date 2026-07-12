@@ -766,6 +766,8 @@
     "refNewLength": "Specify new length",
     "lockedLayerSkipped": "{count} objects on locked layers were skipped",
     "allLockedAbort": "All objects are on locked layers — cancelled",
+    "scaleUnsupportedSkipped": "{count} objects can't be scaled (BIM/parametric) — skipped",
+    "allUnsupportedAbort": "None of the selected objects can be scaled (BIM/parametric) — cancelled",
     "invalidZeroFactor": "Scale factor cannot be zero",
     "copyModeOn": "Copy mode: ON",
     "nonUniformOn": "Non-uniform scale: ON"

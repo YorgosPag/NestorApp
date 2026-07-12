@@ -26,6 +26,7 @@ import { useModifyToolActivation } from '../../systems/tools/useModifyToolActiva
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { ScaleToolStore } from '../../systems/scale/ScaleToolStore';
 import { computeUniformRef, referenceDistance, computeLiveScale } from '../../systems/scale/scale-reference-calc';
+import { isScalableEntityType } from '../../systems/scale/scale-entity-transform';
 import type { ScaleSubPhase } from '../../systems/scale/ScaleToolStore';
 import { GripHandoffStore } from '../../systems/grip/GripHandoffStore';
 
@@ -51,23 +52,36 @@ export interface UseScaleToolReturn {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function filterLockedEntities(
+interface SelectionPartition {
+  workable: string[];
+  /** On a locked layer → skipped (ADR-348). */
+  lockedSkipped: number;
+  /** Parametric BIM / unsupported type → skipped with an explicit message (ADR-646 #3). */
+  unsupportedSkipped: number;
+}
+
+// Single scene pass splitting the selection into what SCALE will act on vs what it skips, so the
+// user gets an explicit reason instead of a silent no-op on BIM/parametric entities (Revit-grade).
+function partitionSelection(
   ids: string[],
   getLevelScene: SceneAdapterLevelManager['getLevelScene'],
   levelId: string | null,
-): { workable: string[]; skipped: number } {
-  if (!levelId) return { workable: ids, skipped: 0 };
+): SelectionPartition {
+  if (!levelId) return { workable: ids, lockedSkipped: 0, unsupportedSkipped: 0 };
   const scene = getLevelScene(levelId);
-  if (!scene) return { workable: ids, skipped: 0 };
+  if (!scene) return { workable: ids, lockedSkipped: 0, unsupportedSkipped: 0 };
   const workable: string[] = [];
   const layers = scene.layersById ?? {};
+  let lockedSkipped = 0;
+  let unsupportedSkipped = 0;
   for (const id of ids) {
     const entity = scene.entities.find(e => e.id === id);
     const layer = entity?.layerId ? layers[entity.layerId] : undefined;
-    if (layer?.locked) continue;
+    if (layer?.locked) { lockedSkipped++; continue; }
+    if (entity && !isScalableEntityType(entity.type)) { unsupportedSkipped++; continue; }
     workable.push(id);
   }
-  return { workable, skipped: ids.length - workable.length };
+  return { workable, lockedSkipped, unsupportedSkipped };
 }
 
 function phaseToPromptKey(phase: string, subPhase: string): string {
@@ -147,23 +161,32 @@ export function useScaleTool(props: UseScaleToolProps): UseScaleToolReturn {
       return;
     }
 
-    const { workable, skipped } = filterLockedEntities(
+    const { workable, lockedSkipped, unsupportedSkipped } = partitionSelection(
       s.selectedEntityIds,
       levelManager.getLevelScene,
       levelManager.currentLevelId,
     );
 
     if (workable.length === 0) {
-      toolHintOverrideStore.setOverride(i18next.t('tool-hints:scaleTool.allLockedAbort'));
+      // Prefer the "cannot be scaled" reason when nothing was merely locked (ADR-646 #3).
+      const abortKey = unsupportedSkipped > 0 && lockedSkipped === 0
+        ? 'scaleTool.allUnsupportedAbort'
+        : 'scaleTool.allLockedAbort';
+      toolHintOverrideStore.setOverride(i18next.t(`tool-hints:${abortKey}`));
       ScaleToolStore.reset();
       previewCanvasRef.current?.clear();
       onToolChange?.('select');
       return;
     }
 
-    if (skipped > 0) {
+    // Partial skip: surface the more actionable message (unsupported takes priority over locked).
+    if (unsupportedSkipped > 0) {
       toolHintOverrideStore.setOverride(
-        i18next.t('tool-hints:scaleTool.lockedLayerSkipped', { count: skipped }),
+        i18next.t('tool-hints:scaleTool.scaleUnsupportedSkipped', { count: unsupportedSkipped }),
+      );
+    } else if (lockedSkipped > 0) {
+      toolHintOverrideStore.setOverride(
+        i18next.t('tool-hints:scaleTool.lockedLayerSkipped', { count: lockedSkipped }),
       );
     }
 
