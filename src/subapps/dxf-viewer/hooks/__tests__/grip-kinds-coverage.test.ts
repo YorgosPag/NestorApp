@@ -14,7 +14,7 @@
  *  3. Behavioral pin — `gripKindOf` επιστρέφει το kind ΜΟΝΟ στο σωστό `on` tag, αλλιώς
  *     `undefined` (mismatched tag ή απών `gripKind`). Καλύπτει και template-literal kind.
  *
- * ⚠️ Domain anchor = οι **33 grip-producer entities** (περιλαμβάνει editor-only `group`),
+ * ⚠️ Domain anchor = οι **34 grip-producer entities** (περιλαμβάνει editor-only `group` + `block`),
  * ΟΧΙ το `RENDERABLE_ENTITY_TYPES` (ADR-602 §1.1 / handoff). Το module που ελέγχεται είναι
  * ΚΑΘΑΡΟ (μόνο types + 1 const + 1 pure function) — μηδέν React/store.
  */
@@ -52,13 +52,15 @@ describe('ADR-602 grip discriminator SSoT — coverage', () => {
   });
 
   // ── 2. Runtime completeness ────────────────────────────────────────────────
-  it('runtime: 33 grip-producer entities, μηδέν διπλότυπα', () => {
-    expect(GRIP_KIND_ENTITIES).toHaveLength(33);
-    expect(new Set(GRIP_KIND_ENTITIES).size).toBe(33);
+  it('runtime: 34 grip-producer entities, μηδέν διπλότυπα', () => {
+    expect(GRIP_KIND_ENTITIES).toHaveLength(34);
+    expect(new Set(GRIP_KIND_ENTITIES).size).toBe(34);
   });
 
-  it('runtime: περιλαμβάνει το editor-only `group` (domain ≠ RENDERABLE)', () => {
+  it('runtime: περιλαμβάνει τα editor-only `group` + `block` (domain ≠ RENDERABLE)', () => {
     expect(GRIP_KIND_ENTITIES).toContain('group');
+    // ADR-640 — the kept DXF INSERT container is a grip producer (whole-block gizmo).
+    expect(GRIP_KIND_ENTITIES).toContain('block');
   });
 
   // ── 3. Behavioral pin — `gripKindOf` ───────────────────────────────────────

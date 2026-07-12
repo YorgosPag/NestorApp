@@ -25,12 +25,14 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { GroupEntity } from '../../types/entities';
+import type { GroupEntity, BlockEntity } from '../../types/entities';
 import type { UnifiedGripInfo, DxfCommitDeps } from './unified-grip-types';
 import { RotateEntityCommand } from '../../core/commands/entity-commands/RotateEntityCommand';
 import { createSceneManagerAdapter } from './grip-scene-manager-adapter';
 import { gripKindOf } from '../grip-kinds';
 import { computeGroupSelectionBounds } from '../../systems/group/group-selection-bounds';
+import { computeBlockSelectionBounds } from '../../systems/block/block-selection-bounds';
+import type { GroupSelectionBounds } from '../../systems/group/group-selection-bounds';
 import { resolveRotation } from './grip-primitive-rotate-commits';
 // ADR-561 EXT — copy intent SSoT (right-click «Copy» toggle OR live Ctrl/⌘), the SAME
 // predicate the primitive move-copy + rotate-copy commits use.
@@ -43,21 +45,33 @@ interface GroupSceneShape {
 }
 
 /**
- * ADR-575 §8 — group gizmo rotation commit. Only the `'group-rotation'` handle routes
- * here (the `'group-move'` cross falls through to the whole-group translate upstream).
- * Rotates the whole group about its bbox centre via the canonical `RotateEntityCommand`.
+ * ADR-575 §8 / ADR-640 — whole-CONTAINER gizmo rotation commit. Handles BOTH the
+ * `'group-rotation'` handle (GROUP → `rotateEntity` case 'group' recurses members) AND
+ * the `'block-rotation'` handle (BLOCK → `rotateEntity` case 'block' rotates the insertion
+ * point, INSERT semantics). Only the rotation handle routes here (the move cross falls
+ * through to the whole-container translate upstream). The pivot = the container's bbox
+ * centre (the SAME centre the gizmo places its handles on), resolved by `raw.type`.
  */
 export function commitGroupGizmoRotation(
   grip: UnifiedGripInfo,
   delta: Point2D,
   deps: DxfCommitDeps,
 ): void {
-  if (!grip.entityId || gripKindOf(grip, 'group') !== 'group-rotation') return;
+  const isGroupRotation = gripKindOf(grip, 'group') === 'group-rotation';
+  const isBlockRotation = gripKindOf(grip, 'block') === 'block-rotation';
+  if (!grip.entityId || (!isGroupRotation && !isBlockRotation)) return;
   const sceneManager = createSceneManagerAdapter(deps);
   if (!sceneManager) return;
   const raw = sceneManager.getEntity(grip.entityId) as GroupSceneShape | undefined;
-  if (!raw || raw.type !== 'group') return;
-  const bounds = computeGroupSelectionBounds(raw as unknown as GroupEntity);
+  if (!raw) return;
+  let bounds: GroupSelectionBounds | null = null;
+  if (raw.type === 'group' && isGroupRotation) {
+    bounds = computeGroupSelectionBounds(raw as unknown as GroupEntity);
+  } else if (raw.type === 'block' && isBlockRotation) {
+    bounds = computeBlockSelectionBounds(raw as unknown as BlockEntity);
+  } else {
+    return;
+  }
   if (!bounds) return;
   const res = resolveRotation(grip, delta, bounds.center);
   if (!res) return;

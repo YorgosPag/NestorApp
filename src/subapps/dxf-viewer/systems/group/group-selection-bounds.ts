@@ -34,6 +34,32 @@ export interface GroupSelectionBounds {
 }
 
 /**
+ * SSoT core — union a container's already-expanded leaf primitives into a
+ * {@link GroupSelectionBounds} (AABB + centre + member count), or `null` when no
+ * leaf yields bounds. The ONE place the box-union + centre math lives, shared by
+ * every composite container (GROUP via {@link computeGroupSelectionBounds}, BLOCK via
+ * `computeBlockSelectionBounds`, ADR-640) — the SOLE differences per container are
+ * the expansion function and the `memberCount` source, supplied by the caller. Pure —
+ * zero new bbox math (delegates to the ADR-394 `calculateCombinedEntityBounds` SSoT).
+ */
+export function computeContainerBounds(
+  leaves: readonly Entity[],
+  memberCount: number,
+): GroupSelectionBounds | null {
+  const bounds = calculateCombinedEntityBounds(leaves as unknown as AnySceneEntity[]);
+  if (!bounds) return null;
+  return {
+    min: bounds.min,
+    max: bounds.max,
+    center: {
+      x: (bounds.min.x + bounds.max.x) / 2,
+      y: (bounds.min.y + bounds.max.y) / 2,
+    },
+    memberCount,
+  };
+}
+
+/**
  * Combined bounds + centre + member count for a selected GROUP container, or
  * `null` when no member yields bounds (degenerate/empty group).
  */
@@ -42,20 +68,8 @@ export function computeGroupSelectionBounds(group: GroupEntity): GroupSelectionB
   if (!Array.isArray(members) || members.length === 0) return null;
 
   // Flatten nested GROUP/ARRAY members via the render/snap expansion SSoT so the
-  // box hugs every leaf primitive, then union their AABBs via the ADR-394 SSoT.
-  const leaves = expandGroupEntity(group);
-  const bounds = calculateCombinedEntityBounds(leaves as unknown as AnySceneEntity[]);
-  if (!bounds) return null;
-
-  return {
-    min: bounds.min,
-    max: bounds.max,
-    center: {
-      x: (bounds.min.x + bounds.max.x) / 2,
-      y: (bounds.min.y + bounds.max.y) / 2,
-    },
-    memberCount: members.length,
-  };
+  // box hugs every leaf primitive, then union their AABBs via the shared core.
+  return computeContainerBounds(expandGroupEntity(group), members.length);
 }
 
 /**

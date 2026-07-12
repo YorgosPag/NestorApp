@@ -421,6 +421,10 @@
     "editingHint": "Esc to exit",
     "editingNested": "Editing group · level {level}"
   },
+  "blockSelection": {
+    "label": "Block \"{name}\" · {count, plural, one {# object} other {# objects}}",
+    "statusMultiple": "{count, plural, one {# block} other {# blocks}}"
+  },
   "tools": {
     "xline": {
       "name": "Construction Line",

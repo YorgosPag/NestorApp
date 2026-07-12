@@ -39,6 +39,7 @@ import type {
   ArcGripKind,
   LineGripKind,
   GroupGripKind,
+  BlockGripKind,
   AnnotationSymbolGripKind,
   ScaleBarGripKind,
   OpeningInfoTagGripKind,
@@ -318,6 +319,7 @@ export type {
   ArcGripKind,
   LineGripKind,
   GroupGripKind,
+  BlockGripKind,
   AnnotationSymbolGripKind,
   ScaleBarGripKind,
   OpeningInfoTagGripKind,
@@ -399,6 +401,7 @@ export interface GripKindByEntity {
   arc: ArcGripKind;
   line: LineGripKind;
   group: GroupGripKind;
+  block: BlockGripKind;
   'annotation-symbol': AnnotationSymbolGripKind;
   'scale-bar': ScaleBarGripKind;
   'opening-info-tag': OpeningInfoTagGripKind;
@@ -441,6 +444,6 @@ export const GRIP_KIND_ENTITIES = [
   'floor-finish', 'hatch', 'mep-underfloor', 'beam', 'column', 'foundation',
   'mep-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator', 'mep-boiler',
   'mep-water-heater', 'furniture', 'floorplan-symbol', 'mep-segment', 'xline',
-  'ray', 'polyline', 'circle', 'arc', 'line', 'group', 'annotation-symbol', 'scale-bar',
+  'ray', 'polyline', 'circle', 'arc', 'line', 'group', 'block', 'annotation-symbol', 'scale-bar',
   'opening-info-tag', 'text',
 ] as const satisfies readonly (keyof GripKindByEntity)[];

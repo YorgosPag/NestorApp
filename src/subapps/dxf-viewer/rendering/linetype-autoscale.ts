@@ -86,3 +86,44 @@ export function computeAutoLinetypeScale(params: {
   const lt = naturalPeriods / AUTO_LTSCALE_TARGET_PERIODS;
   return Math.min(AUTO_LTSCALE_CLAMP_MAX, Math.max(AUTO_LTSCALE_CLAMP_MIN, lt));
 }
+
+/**
+ * ADR-510 Φ2H — resolve a scene's base LTSCALE (linetype dash density) at import.
+ *
+ * Priority (AutoCAD-faithful):
+ *   1. The file's `$LTSCALE` when it is a concrete NON-default value (≠ 1) — trust
+ *      what the author set.
+ *   2. Otherwise auto-fit: pick a scale so the COARSEST non-solid linetype actually
+ *      used renders at a visible density on this drawing's diagonal — what makes a
+ *      meter-scale ISO-linetype line (baked to mm, ADR-462) look dashed instead of
+ *      collapsing to hundreds of sub-pixel periods.
+ *
+ * Returns `undefined` (neutral 1) when no non-solid linetype is used or the fit is a
+ * no-op — keeping the SceneModel clean for the overwhelmingly common solid drawing.
+ * Structurally typed so it stays free of the scene-model import graph.
+ */
+export function resolveSceneLinetypeScale(
+  entities: ReadonlyArray<{ linetypeName?: string }>,
+  layers: Record<string, { linetype?: string }>,
+  bounds: { min: { x: number; y: number }; max: { x: number; y: number } },
+  headerLtscale: number | undefined,
+): number | undefined {
+  // 1) Concrete, non-default file $LTSCALE wins (faithful).
+  if (Number.isFinite(headerLtscale) && (headerLtscale as number) > 0 && headerLtscale !== 1) {
+    return headerLtscale;
+  }
+  // 2) Auto-fit from the linetypes actually referenced (entity group-6 + layer table).
+  const usedNames = new Set<string>();
+  for (const e of entities) {
+    if (e.linetypeName) usedNames.add(e.linetypeName);
+  }
+  for (const l of Object.values(layers)) {
+    if (l.linetype) usedNames.add(l.linetype);
+  }
+  const representativePeriodMm = maxUsedLinetypePeriodMm(usedNames);
+  if (representativePeriodMm <= 0) return undefined; // no non-solid linetype → neutral
+
+  const diagonalMm = Math.hypot(bounds.max.x - bounds.min.x, bounds.max.y - bounds.min.y);
+  const auto = computeAutoLinetypeScale({ diagonalMm, representativePeriodMm });
+  return auto === 1 ? undefined : auto;
+}

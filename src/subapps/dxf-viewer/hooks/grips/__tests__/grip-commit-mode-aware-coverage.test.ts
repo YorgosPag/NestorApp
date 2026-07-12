@@ -59,6 +59,7 @@ const SEAM_C_GATED = [
   'polyline',           // polyline-rotation → commitPolylineRotationGripDrag· polyline-arc-midpoint-* → commitPolylineBulgeGripDrag
   'annotation-symbol',  // annotation-symbol-rotation → commitAnnotationSymbolGripDrag· annotation-symbol-move → commitWholeEntityMove
   'group',              // group-rotation → commitGroupGizmoRotation· group-move → commitWholeEntityMove
+  'block',              // ADR-640: block-rotation → commitGroupGizmoRotation· block-move → commitWholeEntityMove
   'text',               // textKind (ANY) → commitTextGripDrag
   'line',               // line-rotation → commitLineGripDrag· line-move → commitDxfGripDragViaStretchCommand
 ] as const;
@@ -134,15 +135,18 @@ const GATE_ORDER: readonly GatePin[] = [
   { order: 7, phase: 'primitive-gate', match: "annotation-symbol: 'annotation-symbol-rotation'", handler: 'commitAnnotationSymbolGripDrag' },
   { order: 8, phase: 'primitive-gate', match: "group: 'group-rotation'", handler: 'commitGroupGizmoRotation' },
   { order: 9, phase: 'primitive-gate', match: "group: 'group-move'", handler: 'commitWholeEntityMove' },
-  { order: 10, phase: 'primitive-gate', match: "annotation-symbol: 'annotation-symbol-move'", handler: 'commitWholeEntityMove' },
-  { order: 11, phase: 'primitive-gate', match: "polyline: 'polyline-arc-midpoint-*'", handler: 'commitPolylineBulgeGripDrag' },
-  { order: 12, phase: 'primitive-gate', match: 'text: ANY textKind', handler: 'commitTextGripDrag' },
-  { order: 13, phase: 'primitive-gate', match: "line: 'line-rotation'", handler: 'commitLineGripDrag' },
-  { order: 14, phase: 'primitive-gate', match: "line: 'line-move'", handler: 'commitDxfGripDragViaStretchCommand' },
+  // ADR-640 — block gizmo gates mirror the group's, right after them in source order.
+  { order: 10, phase: 'primitive-gate', match: "block: 'block-rotation'", handler: 'commitGroupGizmoRotation' },
+  { order: 11, phase: 'primitive-gate', match: "block: 'block-move'", handler: 'commitWholeEntityMove' },
+  { order: 12, phase: 'primitive-gate', match: "annotation-symbol: 'annotation-symbol-move'", handler: 'commitWholeEntityMove' },
+  { order: 13, phase: 'primitive-gate', match: "polyline: 'polyline-arc-midpoint-*'", handler: 'commitPolylineBulgeGripDrag' },
+  { order: 14, phase: 'primitive-gate', match: 'text: ANY textKind', handler: 'commitTextGripDrag' },
+  { order: 15, phase: 'primitive-gate', match: "line: 'line-rotation'", handler: 'commitLineGripDrag' },
+  { order: 16, phase: 'primitive-gate', match: "line: 'line-move'", handler: 'commitDxfGripDragViaStretchCommand' },
   // ── generic mode dispatch (default) ─────────────────────────────────────────
-  { order: 15, phase: 'mode-dispatch', match: "mode==='move'", handler: 'commitWholeEntityMove' },
-  { order: 16, phase: 'mode-dispatch', match: "mode==='rotate'|'scale'|'mirror'", handler: 'GripHandoffStore.set + deps.onToolChange' },
-  { order: 17, phase: 'mode-dispatch', match: "mode==='stretch' (default)", handler: 'commitDxfGripDragViaStretchCommand' },
+  { order: 17, phase: 'mode-dispatch', match: "mode==='move'", handler: 'commitWholeEntityMove' },
+  { order: 18, phase: 'mode-dispatch', match: "mode==='rotate'|'scale'|'mirror'", handler: 'GripHandoffStore.set + deps.onToolChange' },
+  { order: 19, phase: 'mode-dispatch', match: "mode==='stretch' (default)", handler: 'commitDxfGripDragViaStretchCommand' },
 ] as const;
 
 const PHASE_RANK: Record<GatePhase, number> = {
@@ -157,11 +161,11 @@ const domainSet = new Set<string>(GRIP_KIND_ENTITIES);
 
 describe('Mode-aware grip-commit routing coverage — Seam C ↔ grip discriminator domain (ADR-587 Φ7)', () => {
   // ── Domain closure & disjointness ─────────────────────────────────────────
-  it('(A)∪(B)∪(C) === GRIP_KIND_ENTITIES (domain closure, 8 + 24 + 1 = 33)', () => {
+  it('(A)∪(B)∪(C) === GRIP_KIND_ENTITIES (domain closure, 9 + 24 + 1 = 34)', () => {
     const union = [...SEAM_C_GATED, ...SEAM_B_PARAMETRIC, ...GENERIC_DISPATCH_ONLY];
     expect(asSorted(union)).toEqual(asSorted([...GRIP_KIND_ENTITIES]));
-    expect(GRIP_KIND_ENTITIES).toHaveLength(33);
-    expect(union).toHaveLength(33); // καμία επικάλυψη → κάθε entity σε ΑΚΡΙΒΩΣ 1 partition
+    expect(GRIP_KIND_ENTITIES).toHaveLength(34);
+    expect(union).toHaveLength(34); // καμία επικάλυψη → κάθε entity σε ΑΚΡΙΒΩΣ 1 partition
   });
 
   it('οι 3 partitions είναι pairwise disjoint', () => {
@@ -179,14 +183,14 @@ describe('Mode-aware grip-commit routing coverage — Seam C ↔ grip discrimina
   });
 
   // ── Golden partition sets ─────────────────────────────────────────────────
-  it('(A) SEAM_C_GATED = καρφωμένο golden set (8)', () => {
+  it('(A) SEAM_C_GATED = καρφωμένο golden set (9)', () => {
     expect(asSorted([...SEAM_C_GATED])).toEqual(
       asSorted([
         'opening', 'mep-manifold', 'arc', 'polyline', 'annotation-symbol',
-        'group', 'text', 'line',
+        'group', 'block', 'text', 'line',
       ]),
     );
-    expect(SEAM_C_GATED).toHaveLength(8);
+    expect(SEAM_C_GATED).toHaveLength(9);
   });
 
   it('(B) SEAM_B_PARAMETRIC = 24 (οι 26 Seam-B ΜΕΙΟΝ opening + mep-manifold)', () => {
@@ -201,8 +205,8 @@ describe('Mode-aware grip-commit routing coverage — Seam C ↔ grip discrimina
   });
 
   // ── Ordered gate map — load-bearing sequencing ────────────────────────────
-  it('GATE_ORDER είναι στην ακριβή source σειρά (18 gates, orders 0..17)', () => {
-    expect(GATE_ORDER).toHaveLength(18);
+  it('GATE_ORDER είναι στην ακριβή source σειρά (20 gates, orders 0..19)', () => {
+    expect(GATE_ORDER).toHaveLength(20);
     GATE_ORDER.forEach((g, i) => expect(g.order).toBe(i));
   });
 

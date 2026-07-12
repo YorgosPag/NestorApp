@@ -30,11 +30,12 @@ import { applyLineRotationDrag } from '../../systems/line/line-grips';
 // by identity). polylineBboxCenter = the commit's per-polyline pivot fallback.
 import { applyPrimitiveRotationDrag } from '../../hooks/grips/primitive-rotation-drag';
 import { polylineBboxCenter } from '../../systems/polyline/rectangle-detect';
-import type { Entity, GroupEntity } from '../../types/entities';
+import type { Entity, GroupEntity, BlockEntity } from '../../types/entities';
 // ADR-575 §8 — GROUP gizmo live ghost: reuse the commit's whole-group transform SSoTs
 // (rotate via `applyPrimitiveRotationDrag`→`rotateEntity`, move via `calculateMovedGeometry`)
 // + the bbox-centre pivot fallback (the gizmo origin).
 import { computeGroupSelectionBounds } from '../../systems/group/group-selection-bounds';
+import { computeBlockSelectionBounds } from '../../systems/block/block-selection-bounds';
 import { calculateMovedGeometry } from '../../core/commands/entity-commands/move-entity-geometry';
 import type { SceneEntity } from '../../core/commands/interfaces';
 import { applyTextGripDrag } from '../../bim/text/text-grips';
@@ -154,6 +155,7 @@ export function applyEntityPreview(
   const arcGripKind = gripKindOf(preview, 'arc');
   const polylineGripKind = gripKindOf(preview, 'polyline');
   const groupGripKind = gripKindOf(preview, 'group');
+  const blockGripKind = gripKindOf(preview, 'block');
   const annotationSymbolGripKind = gripKindOf(preview, 'annotation-symbol');
   if (delta.x === 0 && delta.y === 0) return entity;
 
@@ -403,6 +405,19 @@ export function applyEntityPreview(
     // Whole-group translate (gizmo move cross OR any whole-group move) — the SAME
     // `calculateMovedGeometry` case 'group' the commit runs (recurse members). Returns
     // `{ members }`; folded onto the cloned group so the render expands + ghosts each.
+    const patch = calculateMovedGeometry(entity as unknown as SceneEntity, delta);
+    return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
+  }
+  // ADR-640 — BLOCK gizmo live ghost: pivot = bbox centre (`rotateEntity` case 'block'
+  // rotates the insertion point, INSERT semantics). The transformed `type:'block'`
+  // container is expanded + ghosted by `drawGroupGhost` (container-agnostic).
+  if (blockGripKind === 'block-rotation' && anchorPos && entity.type === 'block') {
+    return rotationGhost(entity, anchorPos, delta, rotatePivot ?? computeBlockSelectionBounds(entity as unknown as BlockEntity)?.center);
+  }
+  if (movesEntity && entity.type === 'block') {
+    // Whole-block translate (gizmo move cross) — the SAME `calculateMovedGeometry` case
+    // 'block' the commit runs (translate `position`). Returns `{ position }`; folded onto
+    // the cloned block so the render re-expands + ghosts each member at the new placement.
     const patch = calculateMovedGeometry(entity as unknown as SceneEntity, delta);
     return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
   }

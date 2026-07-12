@@ -22,9 +22,11 @@ import { paintDirectionArc } from '../../canvas-v2/preview-canvas/direction-arc-
 import { rotateSweepDegFromDirs } from '../grips/grip-projections';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { drawGhostEntity, GHOST_DEFAULTS } from '../../rendering/ghost';
-// ADR-575 §8 — expand a transformed GROUP container into its member primitives to ghost each.
+// ADR-575 §8 / ADR-640 — expand a transformed GROUP / BLOCK container into its member
+// primitives to ghost each (container-agnostic; each expander re-tags with the container id).
 import { expandGroupEntity } from '../../systems/group/group-expander';
-import type { GroupEntity } from '../../types/entities';
+import { expandBlockInstance } from '../../systems/block/block-expander';
+import type { GroupEntity, BlockEntity } from '../../types/entities';
 // ADR-449 — the moving member body ghost renders through the REAL entity renderer (WYSIWYG),
 // and a wall additionally re-forms its live join-miter (same SSoT as commit + resize).
 import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
@@ -421,17 +423,18 @@ export function drawMemberBodyGhostWithJoinMiter(
 // ADR-508 §*-hud — `drawMemberGripHud` (live member grip HUD) moved to
 // `grip-ghost-preview-hud-helpers.ts` (file-size SRP split, N.7.1) and re-exported at the top.
 
-// ── ADR-575 §8 — GROUP gizmo live ghost (whole-group move / rotate) ──────────────
+// ── ADR-575 §8 / ADR-640 — CONTAINER gizmo live ghost (whole GROUP / BLOCK move / rotate) ──
 /**
- * Ghost a transformed `type:'group'` CONTAINER by expanding it into its member
- * primitives and drawing each translucent (every member was already moved by the
- * SAME `calculateMovedGeometry`/`rotateEntity` case 'group' the commit runs).
+ * Ghost a transformed `type:'group'` OR `type:'block'` CONTAINER by expanding it into its
+ * member primitives and drawing each translucent (every member was already placed by the
+ * SAME `calculateMovedGeometry`/`rotateEntity` the commit runs — group recurses members,
+ * block re-materialises them from the new `position`/`rotation`).
  *
- * The single-entity ghost path cannot draw a group, so this is called first and,
- * when it returns `true`, the caller early-returns (Revit/C4D «όλη η ομάδα κινείται»).
+ * The single-entity ghost path cannot draw a container, so this is called first and, when
+ * it returns `true`, the caller early-returns (Revit/C4D «όλη η ομάδα/το block κινείται»).
  * A no-op transform (`transformed === entity`) still counts as handled → returns `true`.
  *
- * @returns `true` if the entity was a group (caller must stop), else `false`.
+ * @returns `true` if the entity was a group/block (caller must stop), else `false`.
  */
 export function drawGroupGhost(
   ctx: CanvasRenderingContext2D,
@@ -440,13 +443,21 @@ export function drawGroupGhost(
   t: ViewTransform,
   vp: Viewport,
 ): boolean {
-  if ((transformed as { type?: string }).type !== 'group') return false;
+  const type = (transformed as { type?: string }).type;
+  // Container-agnostic expander: each re-tags every placed member with the container id.
+  const expand =
+    type === 'group'
+      ? () => expandGroupEntity(transformed as unknown as GroupEntity)
+      : type === 'block'
+        ? () => expandBlockInstance(transformed as unknown as BlockEntity)
+        : null;
+  if (!expand) return false;
   if (transformed !== entity) {
     ctx.save();
     ctx.globalAlpha = GHOST_DEFAULTS.alpha;
     ctx.strokeStyle = GHOST_DEFAULTS.color;
     ctx.fillStyle = GHOST_DEFAULTS.color;
-    for (const member of expandGroupEntity(transformed as unknown as GroupEntity)) {
+    for (const member of expand()) {
       drawGhostEntity(ctx, member as unknown as DxfEntityUnion, t, vp);
     }
     ctx.restore();

@@ -15,6 +15,8 @@ import { ToolbarCoordinatesDisplay } from './ToolbarCoordinatesDisplay';
 import { StatusBarBimHoverLeaf } from './StatusBarBimHoverLeaf';
 // ADR-575: selected GROUP readout inline in the status bar («Ομάδα · N αντικείμενα»)
 import { StatusBarGroupSelectionLeaf } from './StatusBarGroupSelectionLeaf';
+// ADR-640: selected BLOCK readout inline in the status bar («Μπλοκ «name» · N αντικείμενα»)
+import { StatusBarBlockSelectionLeaf } from './StatusBarBlockSelectionLeaf';
 import { StatusBarActiveGroupLeaf } from './StatusBarActiveGroupLeaf';
 // 🏢 ADR-418: real view-scale (1:N) micro-leaf
 import { useViewScale } from '../../systems/zoom/hooks/useViewScale';
@@ -173,6 +175,12 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
 
         {/* ADR-575 — selected GROUP identity + size, inline in the status bar. */}
         <StatusBarGroupSelectionLeaf
+          className={colors.text.info}
+          separatorClassName={colors.text.muted}
+        />
+
+        {/* ADR-640 — selected BLOCK identity + size, inline in the status bar. */}
+        <StatusBarBlockSelectionLeaf
           className={colors.text.info}
           separatorClassName={colors.text.muted}
         />

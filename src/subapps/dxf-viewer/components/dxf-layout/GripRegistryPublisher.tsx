@@ -29,6 +29,7 @@ import type { SceneModel } from '../../types/scene';
 import type { Overlay } from '../../overlays/types';
 import { useGripRegistry } from '../../hooks/grips/grip-registry';
 import { collectGroupEntities } from '../../systems/group/group-selection-bounds';
+import { collectBlockEntities } from '../../systems/block/block-selection-bounds';
 // ADR-575 §enter-group — the drill-in stack: convert the active group's members with
 // their own id (so member grips build) AND suppress the whole-group gizmo while inside.
 import { useActiveGroupId, useActiveGroupStack } from '../../systems/group/useActiveGroup';
@@ -82,7 +83,16 @@ export const GripRegistryPublisher: React.FC<GripRegistryPublisherProps> = ({
     () => collectGroupEntities(liveSceneModel?.entities),
     [liveSceneModel],
   );
-  const allGrips = useGripRegistry({ dxfScene: reactiveScene, selectedEntityIds, selectedOverlays, groupEntities, activeGroupStack });
+  // ADR-640 — BLOCK containers in the live scene, keyed by id (mirror `groupEntities`). A
+  // selected block renders as ONE unit (dashed box + «Μπλοκ «name» · N» overlay + shared
+  // gizmo), so the registry suppresses its members' per-member grips AND emits the whole-
+  // block move/rotation gizmo. Reads the ORIGINAL SceneModel entities (the BlockEntity
+  // survives only pre-expansion), NOT the dxfScene.
+  const blockEntities = useMemo(
+    () => collectBlockEntities(liveSceneModel?.entities),
+    [liveSceneModel],
+  );
+  const allGrips = useGripRegistry({ dxfScene: reactiveScene, selectedEntityIds, selectedOverlays, groupEntities, blockEntities, activeGroupStack });
 
   // Publish the full grip set for event-time hit-testing.
   useEffect(() => { AllGripsStore.set(allGrips); }, [allGrips]);

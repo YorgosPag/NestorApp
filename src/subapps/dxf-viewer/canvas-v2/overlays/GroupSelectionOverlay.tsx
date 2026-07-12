@@ -1,18 +1,20 @@
 /**
- * GroupSelectionOverlay — ADR-575 group-selection affordance (2D).
+ * GroupSelectionOverlay — ADR-575 / ADR-640 container-selection affordance (2D).
  *
- * When one or more GROUP containers are selected, draws — per group — ONE dashed
- * bounding box hugging all members + a «Ομάδα · N αντικείμενα» pill, so the user
- * reads the selection as a single group of N (Figma / Revit / Cinema 4D parity)
- * instead of the previous ambiguous single-member handles.
+ * When one or more composite CONTAINERS are selected, draws — per container — ONE dashed
+ * bounding box hugging all members + a pill, so the user reads the selection as a single
+ * container of N (Figma / Revit / Cinema 4D parity) instead of ambiguous single-member
+ * handles. Container-agnostic: a GROUP passes «Ομάδα · N» (ADR-575), a BLOCK passes «Μπλοκ
+ * «name» · N» (ADR-640) — the label is pre-computed by each subscriber (with its own `t`)
+ * and carried per box, so this ONE presentational component serves both (zero clone).
  *
- * Presentational only: it receives already-computed world-space {@link GroupSelectionBounds}
- * (SSoT: `computeGroupSelectionBounds`) and projects each box corner world → screen
- * via `CoordinateTransforms.worldToScreen` (the SAME pipeline as entity rendering:
- * Y-inversion + margins), mirroring `SnapIndicatorOverlay`. Pointer-events: none.
+ * Presentational only: it receives already-computed world-space {@link LabeledSelectionBounds}
+ * (SSoT: `computeGroupSelectionBounds` / `computeBlockSelectionBounds`) and projects each box
+ * corner world → screen via `CoordinateTransforms.worldToScreen` (the SAME pipeline as entity
+ * rendering: Y-inversion + margins), mirroring `SnapIndicatorOverlay`. Pointer-events: none.
  *
- * @see components/dxf-layout/GroupSelectionOverlaySubscriber.tsx — the ADR-040 leaf
- *      that subscribes to selection + scene and computes the bounds.
+ * @see components/dxf-layout/GroupSelectionOverlaySubscriber.tsx — the ADR-040 GROUP leaf.
+ * @see components/dxf-layout/BlockSelectionOverlaySubscriber.tsx — the ADR-040 BLOCK leaf.
  */
 'use client';
 
@@ -20,7 +22,6 @@ import React from 'react';
 import type { ViewTransform } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { UI_COLORS_BASE } from '../../config/color-config';
-import { useTranslation } from '@/i18n';
 import type { GroupSelectionBounds } from '../../systems/group/group-selection-bounds';
 
 /** Screen-space padding around the member extents (Figma-style breathing room). */
@@ -28,8 +29,13 @@ const BOX_PADDING_PX = 4;
 /** Dashed-box dash pattern (px). */
 const BOX_DASH = '5 4';
 
+/** A container's bounds + its pre-resolved pill label (group or block, ADR-640). */
+export interface LabeledSelectionBounds extends GroupSelectionBounds {
+  readonly label: string;
+}
+
 interface GroupSelectionOverlayProps {
-  readonly groups: readonly GroupSelectionBounds[];
+  readonly groups: readonly LabeledSelectionBounds[];
   readonly viewport: { width: number; height: number };
   readonly transform: ViewTransform;
   readonly className?: string;
@@ -41,7 +47,6 @@ export default function GroupSelectionOverlay({
   transform,
   className = '',
 }: GroupSelectionOverlayProps) {
-  const { t } = useTranslation('dxf-viewer');
   if (groups.length === 0) return null;
 
   const t2 = transform as { scale: number; offsetX: number; offsetY: number };
@@ -61,7 +66,7 @@ export default function GroupSelectionOverlay({
         const y = Math.min(a.y, b.y) - BOX_PADDING_PX;
         const w = Math.abs(b.x - a.x) + BOX_PADDING_PX * 2;
         const h = Math.abs(b.y - a.y) + BOX_PADDING_PX * 2;
-        const label = t('groupSelection.label', { count: g.memberCount });
+        const label = g.label;
 
         return (
           <g key={`group-sel-${i}`}>
@@ -76,7 +81,7 @@ export default function GroupSelectionOverlay({
               strokeDasharray={BOX_DASH}
               rx={2}
             />
-            {/* «Ομάδα · N» pill anchored to the top-left corner, above the box. */}
+            {/* Container pill anchored to the top-left corner, above the box. */}
             <g transform={`translate(${x}, ${y - 20})`}>
               <rect
                 x={0}

@@ -11,13 +11,13 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import GroupSelectionOverlay from '../../canvas-v2/overlays/GroupSelectionOverlay';
+import { useTranslation } from '@/i18n';
+import GroupSelectionOverlay, { type LabeledSelectionBounds } from '../../canvas-v2/overlays/GroupSelectionOverlay';
 import { useSelectedEntityIds } from '../../systems/selection/useSelectedEntities';
 import { useLevelScene } from '../../systems/scene/useSceneSelectors';
 import {
   resolveSelectedGroups,
   computeGroupSelectionBounds,
-  type GroupSelectionBounds,
 } from '../../systems/group/group-selection-bounds';
 import type { ViewTransform } from '../../rendering/types/Types';
 
@@ -35,16 +35,22 @@ export const GroupSelectionOverlaySubscriber = React.memo(function GroupSelectio
   viewport,
   className,
 }: GroupSelectionOverlaySubscriberProps) {
+  const { t } = useTranslation('dxf-viewer');
   const selectedEntityIds = useSelectedEntityIds();
   const sceneModel = useLevelScene(sceneLevelId);
 
-  const groups: GroupSelectionBounds[] = useMemo(() => {
+  const groups: LabeledSelectionBounds[] = useMemo(() => {
     const selectedGroups = resolveSelectedGroups(sceneModel?.entities, selectedEntityIds);
     if (selectedGroups.length === 0) return [];
     return selectedGroups
-      .map(computeGroupSelectionBounds)
-      .filter((b): b is GroupSelectionBounds => b !== null);
-  }, [sceneModel, selectedEntityIds]);
+      .map((group): LabeledSelectionBounds | null => {
+        const bounds = computeGroupSelectionBounds(group);
+        return bounds
+          ? { ...bounds, label: t('groupSelection.label', { count: bounds.memberCount }) }
+          : null;
+      })
+      .filter((b): b is LabeledSelectionBounds => b !== null);
+  }, [sceneModel, selectedEntityIds, t]);
 
   if (groups.length === 0) return null;
 

@@ -171,3 +171,21 @@ export type OpeningInfoTagGripKind =
  * ΜΗΔΕΝ νέα glyph math / rotation engine / group transform — όλα REUSE.
  */
 export type GroupGripKind = 'group-move' | 'group-rotation';
+
+/**
+ * ADR-640 — BLOCK gizmo grip kind (kept DXF INSERT preserved as a first-class
+ * `type:'block'` container, ΟΧΙ BIM params entity). Mirror του `GroupGripKind`: το
+ * επιλεγμένο block εμφανίζει ΕΝΑ κοινό βελάκι στο κέντρο του bounding box (Revit /
+ * AutoCAD INSERT gizmo), αντί per-member λαβές:
+ *   - `block-move`     → κεντρικός σταυρός μετακίνησης (4-arrow MOVE glyph + hot-grip
+ *                        move + whole-block translate μέσω `calculateMovedGeometry`
+ *                        case 'block' → μεταφορά του `position`, INSERT semantics —
+ *                        ΧΩΡΙΣ recurse στα members, αντίθετα από το group).
+ *   - `block-rotation` → λαβή περιστροφής (midway κάτω από το κέντρο, μέσω
+ *                        `rotationHandleMidwayOffset`)· commit μέσω της canonical
+ *                        `RotateEntityCommand` (pivot = κέντρο bbox) → `rotateEntity`
+ *                        case 'block'. Ίδιο shared hot-grip flow με το `group-*`.
+ * ΜΗΔΕΝ νέα glyph math / rotation engine / block transform — όλα REUSE (το gizmo
+ * geometry είναι το ΙΔΙΟ `getContainerGizmoGrips` core με το group).
+ */
+export type BlockGripKind = 'block-move' | 'block-rotation';

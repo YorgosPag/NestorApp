@@ -77,8 +77,8 @@ const PREVIEW_GHOST_BOX_TYPES = [
   'column', 'foundation', 'beam', 'mep-fixture', 'electrical-panel',
   'mep-manifold', 'mep-segment', 'furniture',
 ] as const;
-/** Editor-only container — NON-renderable, rotation + move (asymmetry δ). */
-const PREVIEW_GHOST_EDITOR_ONLY_TYPES = ['group'] as const;
+/** Editor-only containers — NON-renderable, rotation + move (asymmetry δ). ADR-640 adds `block`. */
+const PREVIEW_GHOST_EDITOR_ONLY_TYPES = ['group', 'block'] as const;
 
 /** ΟΛΟΙ οι types με ρητό parametric ghost branch (και τα δύο αρχεία + group). */
 const PREVIEW_GHOST_SUPPORTED_TYPES = [
@@ -126,9 +126,9 @@ describe('Preview-ghost routing coverage — ghost dispatch ↔ descriptor domai
     expect(asSorted(withoutBranch)).toEqual(asSorted([...PREVIEW_GHOST_OFF_PATH_TYPES]));
   });
 
-  it('editor-only extra: ο ΜΟΝΟΣ non-renderable supported type είναι το "group" (container)', () => {
+  it('editor-only extra: οι non-renderable supported types είναι τα container "group" + "block" (ADR-640)', () => {
     const nonRenderable = PREVIEW_GHOST_SUPPORTED_TYPES.filter((t) => !renderableSet.has(t));
-    expect(nonRenderable).toEqual(['group']);
+    expect(asSorted([...nonRenderable])).toEqual(asSorted(['group', 'block']));
   });
 
   // ── asymmetry (α) — box types ζουν στο sibling `apply-parametric-box-preview` ──────

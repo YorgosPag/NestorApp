@@ -421,6 +421,10 @@
     "editingHint": "Esc για έξοδο",
     "editingNested": "Επεξεργασία ομάδας · επίπεδο {level}"
   },
+  "blockSelection": {
+    "label": "Μπλοκ «{name}» · {count, plural, one {# αντικείμενο} other {# αντικείμενα}}",
+    "statusMultiple": "{count, plural, one {# μπλοκ} other {# μπλοκ}}"
+  },
   "tools": {
     "xline": {
       "name": "Γραμμή Κατασκευής",

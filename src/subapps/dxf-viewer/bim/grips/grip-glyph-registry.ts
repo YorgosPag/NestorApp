@@ -105,6 +105,10 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   // SAME 4-arrow MOVE glyph + curved ROTATION glyph as every entity (Revit / C4D gizmo).
   'group-move': 'move',
   'group-rotation': 'rotation',
+  // BLOCK gizmo (ADR-640) — the whole-block move cross + rotation handle render the SAME
+  // 4-arrow MOVE glyph + curved ROTATION glyph as the group / every entity (INSERT gizmo).
+  'block-move': 'move',
+  'block-rotation': 'rotation',
   // Annotation symbol (ADR-583) — North arrow: move cross + rotation handle, same
   // glyph vocabulary as the arc / line (no resize, D5).
   'annotation-symbol-move': 'move',

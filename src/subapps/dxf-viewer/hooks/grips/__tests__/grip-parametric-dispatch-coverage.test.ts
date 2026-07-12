@@ -39,9 +39,9 @@ const asSorted = (xs: readonly string[]): string[] => [...xs].sort();
 const domainSet = new Set<string>(GRIP_KIND_ENTITIES);
 const supportedSet = new Set<string>(PARAMETRIC_COMMIT_SUPPORTED_KINDS);
 
-/** Οι 7 non-parametric grip kinds — δρομολογούνται στο primitive/whole-entity path. */
+/** Οι 8 non-parametric grip kinds — δρομολογούνται στο primitive/whole-entity path. */
 const NON_PARAMETRIC_KINDS = [
-  'line', 'circle', 'arc', 'polyline', 'text', 'group', 'annotation-symbol',
+  'line', 'circle', 'arc', 'polyline', 'text', 'group', 'block', 'annotation-symbol',
 ] as const;
 
 describe('Parametric-commit dispatch coverage — ζωντανό seam ↔ grip discriminator domain (ADR-587 Φ7)', () => {
@@ -64,15 +64,15 @@ describe('Parametric-commit dispatch coverage — ζωντανό seam ↔ grip d
     );
   });
 
-  it('grip kinds ΧΩΡΙΣ parametric commit = complement (7 primitive/editor kinds)', () => {
+  it('grip kinds ΧΩΡΙΣ parametric commit = complement (8 primitive/editor kinds)', () => {
     const noParametric = GRIP_KIND_ENTITIES.filter((k) => !supportedSet.has(k));
     expect(asSorted(noParametric)).toEqual(asSorted([...NON_PARAMETRIC_KINDS]));
   });
 
-  it('golden ∪ complement === GRIP_KIND_ENTITIES (domain closure, 26 + 7 = 33)', () => {
+  it('golden ∪ complement === GRIP_KIND_ENTITIES (domain closure, 26 + 8 = 34)', () => {
     const union = [...PARAMETRIC_COMMIT_SUPPORTED_KINDS, ...NON_PARAMETRIC_KINDS];
     expect(asSorted(union)).toEqual(asSorted([...GRIP_KIND_ENTITIES]));
-    expect(GRIP_KIND_ENTITIES).toHaveLength(33);
+    expect(GRIP_KIND_ENTITIES).toHaveLength(34);
   });
 
   it('κανένα supported kind δεν είναι εκτός domain (seam ⊆ discriminator)', () => {

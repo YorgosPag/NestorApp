@@ -30,11 +30,14 @@ import { shouldHideDataGripForSelection } from './transform-glyph-visibility';
 import { resolveMoveGlyphFrame } from '../../bim/grips/move-glyph-frame';
 import { hotGripKindOf, hotGripOpForKind } from './wall-hot-grip-fsm';
 import { mmScaleFor } from '../../utils/scene-units';
-import type { Entity, GroupEntity } from '../../types/entities';
+import type { Entity, GroupEntity, BlockEntity } from '../../types/entities';
 import type { SceneUnits } from '../../utils/scene-units';
 // ADR-575 §8 — the whole-group gizmo (move cross + rotation handle) + its bbox SSoT.
 import { getGroupGizmoGrips } from '../../systems/group/group-gizmo-grips';
 import { computeGroupSelectionBounds } from '../../systems/group/group-selection-bounds';
+// ADR-640 — the whole-block gizmo (same shared core) + its bbox SSoT.
+import { getBlockGizmoGrips } from '../../systems/block/block-gizmo-grips';
+import { computeBlockSelectionBounds } from '../../systems/block/block-selection-bounds';
 
 // ============================================================================
 // PURE: Wrap DXF GripInfo → UnifiedGripInfo
@@ -136,6 +139,17 @@ interface UseGripRegistryParams {
    */
   groupEntities?: ReadonlyMap<string, GroupEntity>;
   /**
+   * ADR-640 — selected BLOCK containers keyed by id (mirror {@link groupEntities}). A
+   * kept DXF INSERT renders as ONE unit (dashed box + «Μπλοκ «name» · N» overlay + shared
+   * gizmo), so its members must NOT emit per-member grips: every expanded member carries
+   * the SAME `block.id`, so the entity map keeps just one — showing handles on a single
+   * arbitrary member mis-reads as «one object selected». INSTEAD, the whole-block gizmo
+   * (move cross + rotation handle at the bbox centre) is emitted here from the
+   * `BlockEntity`. Blocks have no enter-block drill-in (edited via Explode), so unlike
+   * groups there is no `activeStack` guard.
+   */
+  blockEntities?: ReadonlyMap<string, BlockEntity>;
+  /**
    * ADR-575 §enter-group — the active drill-in stack. While INSIDE a group (its id is on
    * the stack), its whole-group gizmo is suppressed so the entered member's own grips
    * show instead (the member carries its own id in the converted scene via active-group
@@ -153,6 +167,7 @@ export function useGripRegistry({
   selectedEntityIds,
   selectedOverlays,
   groupEntities,
+  blockEntities,
   activeGroupStack,
 }: UseGripRegistryParams): UnifiedGripInfo[] {
   // ADR-559 §big-player — `maxGripsPerEntity` intentionally NOT read here: no per-object grip
@@ -196,6 +211,23 @@ export function useGripRegistry({
           const bounds = computeGroupSelectionBounds(group);
           if (bounds) {
             for (const grip of getGroupGizmoGrips(group, bounds)) {
+              const wrapped = wrapDxfGrip(grip);
+              if (!isGripTypeVisible(wrapped.type, gripTypeFlags)) continue;
+              result.push(wrapped);
+            }
+          }
+          continue;
+        }
+        // ADR-640 — a selected BLOCK renders as ONE unit (mirror the group path above):
+        // suppress its members' per-member grips (they all share `block.id`, so only one
+        // would show) and emit the whole-block GIZMO instead (move cross + rotation handle
+        // at the bbox centre). No enter-block drill-in (blocks are edited via Explode), so
+        // no `activeStack` guard is needed. Always visible (both `type: 'vertex'`).
+        const block = blockEntities?.get(entityId);
+        if (block) {
+          const bounds = computeBlockSelectionBounds(block);
+          if (bounds) {
+            for (const grip of getBlockGizmoGrips(block, bounds)) {
               const wrapped = wrapDxfGrip(grip);
               if (!isGripTypeVisible(wrapped.type, gripTypeFlags)) continue;
               result.push(wrapped);
@@ -248,5 +280,5 @@ export function useGripRegistry({
     }
 
     return result;
-  }, [dxfScene, selectedEntityIds, selectedOverlays, groupEntities, activeGroupStack, showMidpoints, showCenters, showQuadrants, gripObjLimit]);
+  }, [dxfScene, selectedEntityIds, selectedOverlays, groupEntities, blockEntities, activeGroupStack, showMidpoints, showCenters, showQuadrants, gripObjLimit]);
 }

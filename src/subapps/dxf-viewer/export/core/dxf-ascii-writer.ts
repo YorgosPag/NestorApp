@@ -79,6 +79,11 @@ import type { DxfLineMode } from '../types';
 import {
   buildMlineStyleRegistry, collectMlineGroupIds, emitMline, emitObjectsSection,
 } from './dxf-ascii-mline-writer';
+// ADR-640 M2 — INSERT reference + named BLOCK definition round-trip (block instances). The heavy
+// logic (INSERT emit, dedup-by-name BLOCK section) lives in its own module (file-size SRP, N.7.1);
+// members are serialized back through THIS writer's `writeEntity` via the injected `emitBlockMember`.
+import { emitInsert, writeBlockDefinitions } from './dxf-ascii-insert-writer';
+import type { BlockEntity } from '../../types/entities';
 
 /** Minimal layer shape needed for name + ByLayer colour resolution. */
 export interface DxfWriteLayer {
@@ -242,17 +247,37 @@ export function writeDxfAscii(
   // = position in the dimension stream, which matches the sequential `*Di` the entity
   // writer stamps below (SSoT index map — both iterate `entities` in order). Gated on
   // resolved styles: without a DIMSTYLE we can't build geometry (Round 24/25 fallback).
+  // ADR-640 M2 — the ONE `BLOCKS` section holds anonymous `*Di` dimension blocks AND named
+  // block-instance definitions (INSERT references). Opened when either is present (DXF allows a
+  // single BLOCKS section, so both share it). Bare `writeDxfAscii(entities)` with neither stays
+  // block-section-less (Tekton/legacy) — zero regression.
   const dimEntities = entities.filter((e) => e.type === 'dimension');
-  if (dimStyles.length > 0 && dimEntities.length > 0) {
-    const lookup = buildDimensionLookup(dimEntities);
+  const blockEntities = entities.filter((e): e is BlockEntity => e.type === 'block');
+  const hasDimBlocks = dimStyles.length > 0 && dimEntities.length > 0;
+  if (hasDimBlocks || blockEntities.length > 0) {
     pair(0, 'SECTION');
     pair(2, 'BLOCKS');
-    dimEntities.forEach((e, i) => {
-      const dim = e as unknown as DimensionEntity;
-      const style = dimStyleById[dim.styleId];
-      if (!style) return; // unresolved style → skip block (DIMENSION entity still regen-fallbacks)
-      writeDimensionBlock(pair, dim, style, `*D${i}`, layerObj(e)?.name ?? DEFAULT_LAYER, s, lookup);
-    });
+    if (hasDimBlocks) {
+      const lookup = buildDimensionLookup(dimEntities);
+      dimEntities.forEach((e, i) => {
+        const dim = e as unknown as DimensionEntity;
+        const style = dimStyleById[dim.styleId];
+        if (!style) return; // unresolved style → skip block (DIMENSION entity still regen-fallbacks)
+        writeDimensionBlock(pair, dim, style, `*D${i}`, layerObj(e)?.name ?? DEFAULT_LAYER, s, lookup);
+      });
+    }
+    if (blockEntities.length > 0) {
+      // ADR-640 M2 — one named BLOCK per distinct name (dedup inside writeBlockDefinitions). Members
+      // are BLOCK-LOCAL @ base (0,0) and re-use THIS writer's per-type emitters via `writeEntity`
+      // (dependency injection, mirror of `emitHatch(…, emitLine)`) — zero re-implemented geometry.
+      let memberDimBlock = 0;
+      const emitBlockMember = (m: Entity): void => {
+        const layer = layerObj(m);
+        writeEntity(m, layer?.name ?? DEFAULT_LAYER, resolveAci(m, layer), s, mmScale, explode,
+          pair, () => memberDimBlock++, dimStyleNameById, version);
+      };
+      writeBlockDefinitions(pair, blockEntities, (b) => layerObj(b)?.name ?? DEFAULT_LAYER, emitBlockMember);
+    }
     pair(0, 'ENDSEC');
   }
 
@@ -423,7 +448,14 @@ function writeEntity(
       emitLeader(lead.vertices, lead.arrowHead?.type !== 'none', layer, aci, s, pair);
       break;
     }
-    // spline/xline/ray → skipped.
+    case 'block': {
+      // ADR-640 M2 — a first-class block instance → native INSERT reference (name + placement
+      // transform). The named BLOCK definition (its local members) is emitted once in the BLOCKS
+      // section above, deduplicated by `block.name` (many instances share one definition).
+      emitInsert(pair, e as BlockEntity, layer, aci, s);
+      break;
+    }
+    // spline/xline/ray + group/array (container flatten TBD) → skipped.
     default:
       break;
   }

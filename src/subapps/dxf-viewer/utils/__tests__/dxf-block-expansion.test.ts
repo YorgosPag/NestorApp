@@ -1,27 +1,36 @@
 import { DxfSceneBuilder } from '../dxf-scene-builder';
 import { extractEntityColor } from '../dxf-converter-helpers';
 import type { AnySceneEntity } from '../../types/scene';
+import { isBlockEntity, type BlockEntity } from '../../types/entities';
+import { expandBlockInstance } from '../../systems/block/block-expander';
 
 /**
- * ADR-635 Φ2 — INSERT/BLOCK expansion.
+ * ADR-635 Φ2 + ADR-640 — INSERT/BLOCK expansion.
  *
  * Proves block references are placed with the DXF transform
  *   p_world = insertPoint + Rot(angle)·Scale(sx,sy)·(p_block − base)
  * instead of block-definition geometry leaking at its authored coordinates (the ~360m-away bug).
+ *
+ * ADR-640 — a NAMED, single INSERT is now PRESERVED as a first-class `BlockEntity` (not flattened),
+ * so these tests expand the block to its world-space members (`flat()`) before asserting geometry.
+ * The placement math is byte-identical to the legacy flatten path (shared `applyBlockTransformGeometry`).
+ * MINSERT arrays and unknown blocks still take the flatten/no-op path.
  */
 
 function lines(...pairs: Array<[string | number, string | number]>): string[] {
   return pairs.flatMap(([c, v]) => [String(c), String(v)]);
 }
 
-/** Wrap BLOCKS + ENTITIES bodies into a minimal DXF and build with mm units (scale factor 1). */
+/** Build a minimal DXF (mm units, scale factor 1), then EXPAND any preserved block instance to its
+ * world-space members — so geometry assertions see the same primitives the canvas renders. */
 function build(blocks: string[], entities: string[]): AnySceneEntity[] {
   const content = [
     ...lines(['0', 'SECTION'], ['2', 'BLOCKS']), ...blocks, ...lines(['0', 'ENDSEC']),
     ...lines(['0', 'SECTION'], ['2', 'ENTITIES']), ...entities, ...lines(['0', 'ENDSEC']),
     ...lines(['0', 'EOF']),
   ].join('\n');
-  return DxfSceneBuilder.buildScene(content, 'mm').entities;
+  const es = DxfSceneBuilder.buildScene(content, 'mm').entities;
+  return es.flatMap((e) => (isBlockEntity(e) ? (expandBlockInstance(e as BlockEntity) as AnySceneEntity[]) : [e]));
 }
 
 const blockLine = (name: string, base: [number, number], seg: [number, number, number, number]): string[] =>

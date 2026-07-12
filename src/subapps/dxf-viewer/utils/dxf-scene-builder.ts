@@ -17,6 +17,9 @@ import { parseBlockDefinitions } from './dxf-block-parser';
 import { instantiateInsert, transformInsertHatch, DEFAULT_SCENE_ENTITY_BUDGET, type ExpandContext } from './dxf-block-expander';
 // ADR-640 — a NAMED single INSERT is preserved as a first-class BlockEntity (not flattened).
 import { createBlockInstance } from '../systems/block/block-instance';
+// ADR-640 M3 — SSoT gate for WHICH block names preserve vs flatten (named + real-anonymous *U/*A/*E
+// preserve; *X hatch / *D dimension decorations flatten). Fixes furniture *U# breaking to loose lines.
+import { shouldPreserveBlockName } from './dxf-anonymous-block';
 import { isBlockEntity, type BlockEntity } from '../types/entities';
 // ADR-640 Φ7 — block-aware bounds (expands blocks to members before the primitive bounds pass).
 import { calculateBoundsWithBlocks } from './dxf-block-aware-bounds';
@@ -37,12 +40,17 @@ import { getLayerNameOrDefault, DXF_DEFAULT_LAYER } from '../config/layer-config
 // ADR-358 Phase 9C/9D — SceneLayer construction SSoT (auto-gens `lyr_<UUID-v4>` id).
 import { createSceneLayer } from '../types/entities';
 // 🏢 ADR-158: Centralized Infinity Bounds Initialization
-import { createInfinityBounds } from '../config/geometry-constants';
+// ADR-635 ΦC.13 / N.18 — extracted pure entity-array bounds SSoT (keeps this file lean).
+import { computeEntityArrayBounds } from './dxf-entity-array-bounds';
 // ADR-358 Phase 8 — propagate real $INSUNITS to SceneModel.units via SSoT.
 // ADR-462 canonical-mm — scale source units → mm at import (mmToSceneUnits inverse).
 import { insunitsCodeToSceneUnits, mmToSceneUnits, resolveImportSourceUnits, type SceneUnits } from './scene-units';
 // ADR-348 SSoT — per-entity scale transform (reused for the import unit-scale pass).
 import { scaleEntity } from '../systems/scale/scale-entity-transform';
+// ADR-510 Φ2H — per-scene base LTSCALE resolver (fit dash density so mm-convention patterns
+// stay visible on meter-scale drawings; ADR-462 bakes geometry to mm). SSoT lives with the
+// autoscale helpers so the scene-builder stays lean.
+import { resolveSceneLinetypeScale } from '../rendering/linetype-autoscale';
 
 /**
  * Resolve a layer's real color from the two authoritative sources (SSoT, shared by layer
@@ -270,14 +278,16 @@ export class DxfSceneBuilder {
             recordParsed(diagnostics, 'HATCH');
             return;
           }
-          // ADR-640 Phase-0 gate — a NAMED, single (non-MINSERT) INSERT is preserved as a
-          // first-class BlockEntity (selectable/movable/explodable, round-trips to INSERT).
-          // Anonymous '*' blocks (already handled above for hatch; '*D#' dimensions) and MINSERT
-          // arrays (cols×rows > 1) keep the legacy flatten (a future phase may wrap arrays).
+          // ADR-640 Phase-0 gate — a single (non-MINSERT) INSERT whose block name is preservable
+          // is kept as a first-class BlockEntity (selectable/movable/explodable, round-trips to
+          // INSERT). ADR-640 M3: preservable = named OR real-anonymous (`*U#` dynamic/anonymous,
+          // `*A#` array, `*E#`); the `*X#` (R12 hatch, handled above) and `*D#` (dimension) anon
+          // decorations still flatten via the SSoT `shouldPreserveBlockName`. MINSERT arrays
+          // (cols×rows > 1) keep the legacy flatten (a future phase may wrap arrays as ArrayEntity).
           const blockName = entityData.data['2'];
           const cols = Math.max(1, parseInt(entityData.data['70'] ?? '1', 10) || 1);
           const rows = Math.max(1, parseInt(entityData.data['71'] ?? '1', 10) || 1);
-          if (blockName && !blockName.startsWith('*') && cols === 1 && rows === 1) {
+          if (blockName && shouldPreserveBlockName(blockName) && cols === 1 && rows === 1) {
             const def = blockDefs.get(blockName);
             const block = def ? createBlockInstance(blockName, def, entityData, blockDefs, expandCtx) : null;
             if (block) {
@@ -372,6 +382,14 @@ export class DxfSceneBuilder {
       Object.values(layers).map((l) => [l.id, l]),
     );
 
+    // ADR-510 Φ2H — resolve the per-scene base LTSCALE (dash density). The file's own
+    // $LTSCALE wins when non-default; otherwise auto-fit so mm-convention dash patterns
+    // land at a visible density on this (possibly meter-scale) drawing. Only computed
+    // when non-solid linetypes are actually used — else left undefined (neutral).
+    const linetypeScale = resolveSceneLinetypeScale(
+      finalEntities, layers, finalBounds, header.ltscale,
+    );
+
     const scene: SceneModel = {
       entities: finalEntities,
       layersById,
@@ -380,6 +398,7 @@ export class DxfSceneBuilder {
       units: 'mm',
       dimStyles: Object.keys(dimStyles).length > 0 ? dimStyles : undefined,
       headerDimscale: header.dimscale, // ADR-362 R10 — annotative-style resolution in dim-style-importer
+      ...(linetypeScale !== undefined && { linetypeScale }),
     };
 
     return { scene, diagnostics };
@@ -427,40 +446,10 @@ export class DxfSceneBuilder {
     }
   }
 
+  // ADR-635 ΦC.13 / N.18 — delegates to the extracted pure SSoT (keeps this class lean;
+  // the static entry point stays for `calculateBoundsWithBlocks` + the hatch-bounds test).
   static calculateBounds(entities: AnySceneEntity[]) {
-    // 🏢 ADR-158: Centralized Infinity Bounds Initialization
-    const bounds = createInfinityBounds();
-
-    entities.forEach(entity => {
-      switch (entity.type) {
-        case 'line':
-          bounds.minX = Math.min(bounds.minX, entity.start.x, entity.end.x);
-          bounds.minY = Math.min(bounds.minY, entity.start.y, entity.end.y);
-          bounds.maxX = Math.max(bounds.maxX, entity.start.x, entity.end.x);
-          bounds.maxY = Math.max(bounds.maxY, entity.start.y, entity.end.y);
-          break;
-        case 'polyline':
-          entity.vertices.forEach(v => {
-            bounds.minX = Math.min(bounds.minX, v.x);
-            bounds.minY = Math.min(bounds.minY, v.y);
-            bounds.maxX = Math.max(bounds.maxX, v.x);
-            bounds.maxY = Math.max(bounds.maxY, v.y);
-          });
-          break;
-        case 'circle':
-        case 'arc':
-          bounds.minX = Math.min(bounds.minX, entity.center.x - entity.radius);
-          bounds.minY = Math.min(bounds.minY, entity.center.y - entity.radius);
-          bounds.maxX = Math.max(bounds.maxX, entity.center.x + entity.radius);
-          bounds.maxY = Math.max(bounds.maxY, entity.center.y + entity.radius);
-          break;
-      }
-    });
-
-    return {
-      min: { x: bounds.minX, y: bounds.minY },
-      max: { x: bounds.maxX, y: bounds.maxY }
-    };
+    return computeEntityArrayBounds(entities);
   }
 
   static validateScene(scene: SceneModel): boolean {

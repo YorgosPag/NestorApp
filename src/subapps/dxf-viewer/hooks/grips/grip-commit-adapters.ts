@@ -171,6 +171,7 @@ export function commitDxfGripDragModeAware(
   const polylineKind = gripKindOf(grip, 'polyline');
   const annotationSymbolKind = gripKindOf(grip, 'annotation-symbol');
   const groupKind = gripKindOf(grip, 'group');
+  const blockKind = gripKindOf(grip, 'block');
   const textKind = gripKindOf(grip, 'text');
   const lineKind = gripKindOf(grip, 'line');
   // Opening flip actions (Revit-style «Flip Hand» + «Flip Facing») are click-to-toggle
@@ -273,6 +274,21 @@ export function commitDxfGripDragModeAware(
   // (`deps.moveEntities` → `MoveEntityCommand` → `calculateMovedGeometry` case 'group' →
   // recurse members). Ctrl / «Copy» clones with the same base point.
   if (groupKind === 'group-move') {
+    commitWholeEntityMove(grip, delta, deps, isGripCopyIntent());
+    return;
+  }
+  // ADR-640 — BLOCK gizmo ROTATION handle → rotate the whole block about its bbox centre
+  // via the SAME canonical `RotateEntityCommand` the group uses (`rotateEntity` case
+  // 'block' rotates the insertion point + accumulates rotation, INSERT semantics). The
+  // shared `commitGroupGizmoRotation` resolves the container bounds by `raw.type`.
+  if (blockKind === 'block-rotation') {
+    commitGroupGizmoRotation(grip, delta, deps);
+    return;
+  }
+  // ADR-640 — BLOCK gizmo MOVE cross → translate the whole block DETERMINISTICALLY via the
+  // whole-entity move SSoT (`deps.moveEntities` → `MoveEntityCommand` → `calculateMovedGeometry`
+  // case 'block' → translate `position`). Ctrl / «Copy» clones. Mirror `group-move`.
+  if (blockKind === 'block-move') {
     commitWholeEntityMove(grip, delta, deps, isGripCopyIntent());
     return;
   }

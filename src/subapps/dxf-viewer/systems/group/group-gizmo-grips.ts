@@ -37,6 +37,7 @@
 
 import type { GroupEntity } from '../../types/entities';
 import type { GripInfo, GroupGripKind } from '../../hooks/grip-types';
+import type { EntityGripKind } from '../../hooks/grip-kinds';
 import { rectLocalWorld, type RectFrame } from '../../bim/grips/rect-frame';
 import { rotationHandleMidwayOffset } from '../../bim/grips/rotation-handle-policy';
 import type { GroupSelectionBounds } from './group-selection-bounds';
@@ -45,17 +46,24 @@ import type { GroupSelectionBounds } from './group-selection-bounds';
 export const GROUP_MOVE_KIND: GroupGripKind = 'group-move';
 export const GROUP_ROTATION_KIND: GroupGripKind = 'group-rotation';
 
-/** Grip index of the MOVE cross (0) and the rotation handle (1) — keyed on `group.id`. */
+/** Grip index of the MOVE cross (0) and the rotation handle (1) — keyed on the container id. */
 export const GROUP_MOVE_GRIP_INDEX = 0;
 export const GROUP_ROTATION_GRIP_INDEX = 1;
 
 /**
- * The 2 whole-group handles (MOVE cross @ centre + rotation handle midway toward the
- * bottom edge), placed on the group's world-axis AABB. Returns the hooks `GripInfo`;
- * the group gizmo render leaf maps each to its glyph (`gripGlyphShape`). A degenerate
- * (zero-area) bbox keeps both handles at the centre (mirror the polyline degenerate ring).
+ * SSoT — the 2 whole-CONTAINER gizmo handles (MOVE cross @ centre + rotation handle
+ * midway toward the bottom edge), placed on the container's world-axis AABB. Container-
+ * agnostic: the same geometry serves a GROUP (ADR-575) and a BLOCK (ADR-640) — only the
+ * tagged `gripKind` differs (supplied by the caller). Returns the hooks `GripInfo`; the
+ * gizmo render leaf maps each to its glyph (`gripGlyphShape`). A degenerate (zero-area)
+ * bbox keeps both handles at the centre (mirror the polyline degenerate ring).
  */
-export function getGroupGizmoGrips(group: GroupEntity, bounds: GroupSelectionBounds): GripInfo[] {
+export function getContainerGizmoGrips(
+  entityId: string,
+  bounds: GroupSelectionBounds,
+  moveGripKind: EntityGripKind,
+  rotationGripKind: EntityGripKind,
+): GripInfo[] {
   const halfWidth = (bounds.max.x - bounds.min.x) / 2;
   const halfLength = (bounds.max.y - bounds.min.y) / 2;
   // World-axis AABB → a zero-rotation `RectFrame`, so the rotation handle placement
@@ -66,20 +74,33 @@ export function getGroupGizmoGrips(group: GroupEntity, bounds: GroupSelectionBou
 
   return [
     {
-      entityId: group.id,
+      entityId,
       gripIndex: GROUP_MOVE_GRIP_INDEX,
       type: 'vertex',
       position: bounds.center,
       movesEntity: true,
-      gripKind: { on: 'group', kind: GROUP_MOVE_KIND },
+      gripKind: moveGripKind,
     },
     {
-      entityId: group.id,
+      entityId,
       gripIndex: GROUP_ROTATION_GRIP_INDEX,
       type: 'vertex',
       position: rectLocalWorld(frame, 0, rotOffsetY),
       movesEntity: false,
-      gripKind: { on: 'group', kind: GROUP_ROTATION_KIND },
+      gripKind: rotationGripKind,
     },
   ];
+}
+
+/**
+ * The 2 whole-group handles — thin GROUP wrapper over {@link getContainerGizmoGrips}
+ * that tags both handles `on: 'group'`. The gizmo geometry lives once in the shared core.
+ */
+export function getGroupGizmoGrips(group: GroupEntity, bounds: GroupSelectionBounds): GripInfo[] {
+  return getContainerGizmoGrips(
+    group.id,
+    bounds,
+    { on: 'group', kind: GROUP_MOVE_KIND },
+    { on: 'group', kind: GROUP_ROTATION_KIND },
+  );
 }

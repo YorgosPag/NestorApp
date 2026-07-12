@@ -158,6 +158,11 @@ export const HOT_GRIP_OP_REGISTRY: Readonly<Record<string, WallHotGripOp>> = {
   // commit recurses the group members (`calculateMovedGeometry` / `rotateEntity`).
   'group-move': 'move',
   'group-rotation': 'rotate',
+  // BLOCK gizmo (ADR-640) — the whole-block move cross + rotation handle, full wall parity:
+  // move MOVE (3-click) + rotation REFERENCE (6-click) / free spin. The commit translates the
+  // insertion point / rotates it (`calculateMovedGeometry` / `rotateEntity` case 'block').
+  'block-move': 'move',
+  'block-rotation': 'rotate',
   // Annotation symbol (ADR-583) — North arrow: move cross (3-click move + per-arm
   // directional) + rotation (6-click reference / free spin), full parity με τον arc.
   // NO resize (fixed aspect, D5).

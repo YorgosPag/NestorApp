@@ -108,6 +108,10 @@ EntityMergeService (pure)            systems/group/group-entity.ts (pure)
 select/render/snap/move/rotate/scale/mirror/persist/undo-redo, SSoT reuse, μηδέν διπλότυπο.
 Follow-up (full Block μετά, ανά απόφαση Giorgio): named block definitions + INSERT instances +
 block library — ξεχωριστό, μεγαλύτερο subsystem.
+**→ REALIZED (2026-07-12) από το ADR-640** (M1): το `type:'block'` αναβίωσε ως first-class
+container (mirror αυτού του GROUP subsystem), ώστε ένα imported DXF INSERT να μπαίνει ως ΕΝΑ
+selectable/explodable block. Το ADR-640 §2 Fork-1 τεκμηριώνει γιατί το `'block'` reuse είναι
+πλέον σωστό (το entity ΕΙΝΑΙ INSERT — η §1/§4 απόρριψη ίσχυε μόνο επειδή «group ≠ INSERT»).
 
 ---
 
