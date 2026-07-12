@@ -178,6 +178,15 @@ export class HatchRenderer extends BaseEntityRenderer {
     this.phaseManager.applyPhaseStyle(entity as Entity, phaseState);
     this.ctx.save();
 
+    // ADR-507 — per-object διαφάνεια (ribbon «Διαφάνεια», `options.alpha` από
+    // `transparencyToAlpha(entity.transparency)`). Ο HatchRenderer έχει custom render() που
+    // ΔΕΝ περνά από το `BaseEntityRenderer.setupStyle` (όπου κανονικά μπαίνει το alpha), οπότε
+    // το εφαρμόζουμε ρητά εδώ μέσα στο outer save → όλα τα γεμίσματα/όρια το κληρονομούν.
+    // Χωρίς αυτό η επεξεργασία διαφάνειας αγνοούνταν σιωπηλά ΜΟΝΟ για τη γραμμοσκίαση.
+    if (options.alpha !== undefined && options.alpha < 1) {
+      this.ctx.globalAlpha *= options.alpha;
+    }
+
     const color = hatch.fillColor ?? entity.color ?? CAD_UI_COLORS.entity.default;
 
     // ADR-507 / ADR-531 Φ5b.6 — «Background color» (AutoCAD DXF 63): γεμίζει την περιοχή ΠΙΣΩ από
