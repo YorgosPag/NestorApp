@@ -25,10 +25,9 @@ import { translatePoint } from '../entities/shared/geometry-vector-utils';
 import type { DxfEntityUnion, DxfLine, DxfArc, DxfPolyline } from '../../canvas-v2/dxf-canvas/dxf-types';
 // ADR-363 Slice F — plain DXF line rotation live ghost (shared axis-box rotate SSoT).
 import { applyLineRotationDrag } from '../../systems/line/line-grips';
-// ADR-561 — plain DXF arc + polyline/rectangle rotation live ghost: the ONE shared
-// `rotateEntity`-delegating SSoT the commit (`RotateEntityCommand`) runs (preview ≡ commit
-// by identity). polylineBboxCenter = the commit's per-polyline pivot fallback.
-import { applyPrimitiveRotationDrag } from '../../hooks/grips/primitive-rotation-drag';
+// ADR-561 — plain DXF arc + polyline/rectangle rotation live ghost delegates to the shared
+// `rotationGhost` SSoT (helpers) which runs the commit's `rotateEntity` engine (preview ≡
+// commit by identity). polylineBboxCenter = the commit's per-polyline pivot fallback.
 import { polylineBboxCenter } from '../../systems/polyline/rectangle-detect';
 import type { Entity, GroupEntity, BlockEntity } from '../../types/entities';
 // ADR-575 §8 — GROUP gizmo live ghost: reuse the commit's whole-group transform SSoTs
@@ -36,6 +35,8 @@ import type { Entity, GroupEntity, BlockEntity } from '../../types/entities';
 // + the bbox-centre pivot fallback (the gizmo origin).
 import { computeGroupSelectionBounds } from '../../systems/group/group-selection-bounds';
 import { computeBlockSelectionBounds } from '../../systems/block/block-selection-bounds';
+// ADR-641 — block selection-box corner/edge SCALE live ghost (same SSoT the commit runs).
+import { applyBlockBoxGripDrag, blockBoxRoleFromKind } from '../../systems/block/block-box-grips';
 import { calculateMovedGeometry } from '../../core/commands/entity-commands/move-entity-geometry';
 import type { SceneEntity } from '../../core/commands/interfaces';
 import { applyTextGripDrag } from '../../bim/text/text-grips';
@@ -77,7 +78,7 @@ import type { HatchEntity } from '../../types/entities';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
 import type { EntityPreviewTransform, ApplyEntityPreviewContext } from './entity-preview-types';
 import { gripKindOf } from '../../hooks/grip-kinds';
-import { unwrapStair, applyClassicEntityPreview } from './apply-entity-preview-helpers';
+import { unwrapStair, applyClassicEntityPreview, rotationGhost } from './apply-entity-preview-helpers';
 import { applyParametricBoxPreview } from './apply-parametric-box-preview';
 // ADR-615/363 — opening live ghosts (self-hosted + hosted Alt-move) extracted (N.7.1).
 import { applyOpeningPreview } from './apply-opening-preview';
@@ -102,26 +103,6 @@ export function normalizePreviewEntity(entity: DxfEntityUnion): DxfEntityUnion {
   return entity.type === 'lwpolyline'
     ? ({ ...(entity as object), type: 'polyline' } as DxfEntityUnion)
     : entity;
-}
-
-/**
- * ADR-561/583 — SHARED rotation live-ghost: spin `entity` about `pivot` via the SAME
- * `applyPrimitiveRotationDrag` → `rotateEntity` engine the commit runs (preview ≡
- * commit). `undefined` pivot (no gizmo centre) or a degenerate sweep → the entity
- * unchanged. The single source the arc / polyline / annotation-symbol / group rotation
- * ghost branches all delegate to (N.18 — jscpd flagged the inline twins).
- */
-function rotationGhost(
-  entity: DxfEntityUnion,
-  anchorPos: Point2D,
-  delta: Point2D,
-  pivot: Point2D | undefined,
-): DxfEntityUnion {
-  if (!pivot) return entity;
-  const currentPos: Point2D = translatePoint(anchorPos, delta);
-  const patch = applyPrimitiveRotationDrag(entity as unknown as Entity, { anchor: anchorPos, currentPos, pivot });
-  if (!patch) return entity;
-  return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
 }
 
 /**
@@ -420,6 +401,18 @@ export function applyEntityPreview(
     // the cloned block so the render re-expands + ghosts each member at the new placement.
     const patch = calculateMovedGeometry(entity as unknown as SceneEntity, delta);
     return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
+  }
+  // ADR-641 — BLOCK selection-box CORNER / EDGE live ghost: per-axis SCALE (opposite
+  // corner/edge fixed) via the SAME `applyBlockBoxGripDrag` → `scaleEntity` case 'block'
+  // the commit runs (preview ≡ commit by identity). The `{ position, scale }` INSERT patch is
+  // folded onto the cloned block so `drawGroupGhost` re-expands + ghosts every member at the
+  // new placement/scale.
+  if (entity.type === 'block') {
+    const boxRole = blockBoxRoleFromKind(blockGripKind);
+    if (boxRole) {
+      const patch = applyBlockBoxGripDrag(boxRole, entity as unknown as BlockEntity, delta);
+      return patch ? ({ ...(entity as object), ...patch } as unknown as DxfEntityUnion) : entity;
+    }
   }
 
   // ── ADR-358 Phase 5d — parametric stair live preview ─────────────────────

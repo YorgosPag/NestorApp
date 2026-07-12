@@ -26,14 +26,18 @@ const makeBlock = (): BlockEntity =>
     entities: [mkLine('a', 0, 0, 4, 0), mkLine('b', 0, 2, 4, 2)],
   } as unknown as BlockEntity);
 
-describe('getBlockGizmoGrips (ADR-640)', () => {
-  it('emits exactly TWO handles keyed on the block id, always visible', () => {
+describe('getBlockGizmoGrips (ADR-640 gizmo + ADR-641 box)', () => {
+  it('emits the 2 gizmo handles + 8 perimeter box handles, all keyed on the block id', () => {
     const block = makeBlock();
     const bounds = computeBlockSelectionBounds(block)!;
     const grips = getBlockGizmoGrips(block, bounds);
-    expect(grips).toHaveLength(2);
+    expect(grips).toHaveLength(10);
     expect(grips.every((g) => g.entityId === block.id)).toBe(true);
-    expect(grips.every((g) => g.type === 'vertex')).toBe(true);
+    // Gizmo handles (0/1) are the always-visible vertices; the 4 corners are structural
+    // vertices (always visible) and the 4 edges are midpoints (gated by «Midpoints»).
+    expect(grips.slice(0, 2).every((g) => g.type === 'vertex')).toBe(true);
+    expect(grips.slice(2, 6).every((g) => g.type === 'corner')).toBe(true);
+    expect(grips.slice(6, 10).every((g) => g.type === 'midpoint')).toBe(true);
   });
 
   it('places the MOVE cross at the bbox centre (whole-block translate)', () => {

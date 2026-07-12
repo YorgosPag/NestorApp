@@ -31,6 +31,11 @@ import React, { useLayoutEffect, useMemo, useRef } from 'react';
 import { useSelectedEntityIds } from '../../systems/selection/useSelectedEntities';
 import { useLevelScene } from '../../systems/scene/useSceneSelectors';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
+// ADR-641 / ADR-559 — the ONE grip-type display predicate, shared with the hit-test path
+// (`grip-registry`), so a container's edge-midpoint handles (block selection box) are drawn
+// iff they are pickable («visible ≡ pickable»). Low-freq settings read → ADR-040-safe leaf.
+import { isGripTypeVisible } from '../../hooks/grips/grip-type-visibility';
+import { useGripStyle } from '../../stores/GripStyleStore';
 import { UnifiedGripRenderer } from '../../rendering/grips/UnifiedGripRenderer';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { getDevicePixelRatio } from '../../systems/cursor/utils';
@@ -84,11 +89,19 @@ export const ContainerGizmoLayer = React.memo(function ContainerGizmoLayer({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const selectedEntityIds = useSelectedEntityIds();
   const sceneModel = useLevelScene(sceneLevelId);
+  // ADR-641 / ADR-559 — the «Grip Types» display prefs; the ONLY reason a resolved gizmo grip is
+  // filtered is the edge-midpoint (block box) handles honouring «Midpoints» (wall parity). The
+  // move/rotation gizmo handles are `vertex` → always pass, so a GROUP (2 handles) is untouched.
+  const { showMidpoints, showCenters, showQuadrants } = useGripStyle();
 
-  // The gizmo grips for every selected container (move cross + rotation handle @ bbox centre).
+  // The gizmo grips for every selected container (move cross + rotation handle @ bbox centre,
+  // plus — for a block — the 8 perimeter box handles), filtered by the grip-type prefs so the
+  // DRAWN set matches the pickable set published to `AllGripsStore` (ADR-559).
   const grips: GripInfo[] = useMemo(
-    () => resolveGrips(sceneModel?.entities, selectedEntityIds),
-    [sceneModel, selectedEntityIds, resolveGrips],
+    () => resolveGrips(sceneModel?.entities, selectedEntityIds).filter((g) =>
+      isGripTypeVisible(g.type, { showMidpoints, showCenters, showQuadrants }),
+    ),
+    [sceneModel, selectedEntityIds, resolveGrips, showMidpoints, showCenters, showQuadrants],
   );
 
   useLayoutEffect(() => {

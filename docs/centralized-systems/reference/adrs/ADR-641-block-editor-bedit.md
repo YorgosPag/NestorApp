@@ -143,6 +143,62 @@ SSoT (no parallel scene subscription left reading the world). Full feature PARTI
   synchronous read-after-write guarantee.
 
 ## Changelog
+- **2026-07-12** — **Φ4 follow-up #5: a NEW entity drawn INSIDE a Block Editor now persists (it
+  vanished from both canvases).** Symptom (Giorgio): while in BEDIT, drawing a line previewed fine,
+  but on completion it appeared in NEITHER the block-editor canvas NOR the world canvas on exit.
+  **Root cause (traced end-to-end, not assumed):** the create path was already correct at the command
+  layer — `completeEntity` → `CreateEntityCommand` → the block-member-aware `LevelSceneManagerAdapter.addEntity`
+  → `addBlockMember` appends the new entity to the active block's `.entities` in DEFINITION space
+  (`toDef` inverse view→def). BUT `completeEntity` then built its `drawing:complete` event's
+  `updatedScene` from a **naive top-level append** (`{ ...sceneBefore, entities: [...sceneBefore.entities,
+  createdEntity] }`), and the listener (`useDxfViewerEffects` → `handleSceneChange` → `setLevelScene`)
+  wrote THAT back as the level scene — **clobbering** the correct member add. So the block lost the
+  member (gone from the BEDIT canvas, which renders `block.entities`) and the line landed at the WORLD
+  top level in VIEW-space coords (near origin / real-size, ~18 km from the geo-offset drawing → gone
+  from the world canvas too). **Fix (1 file, SSoT):** `completeEntity` now derives `finalScene` from the
+  **actual committed scene** (`getScene(levelId)` — the command wrote synchronously through the adapter,
+  ADR-527), not a manual append. One read is correct for EVERY path — top-level append, block-member add,
+  AND the post-create reorder that used to need its own read — so the `drawing:complete` write-back is now
+  idempotent with the command's write instead of overwriting it. **General rule:** the `updatedScene`
+  broadcast on `drawing:complete` MUST be the committed scene, never a hand-reconstructed one — a
+  reconstruction is blind to member-scope (BEDIT) / reorder / any non-append command. All drawing tools
+  (line/rect/circle/polyline/polygon) route through this ONE `completeEntity`, so the fix covers them.
+  jscpd:diff clean; block suite 103 green (pending Giorgio browser re-verify).
+- **2026-07-12** — **Top-level block SELECTION now shows the wall-grade transform gizmo (8 box
+  handles + move + rotation), and drops the dashed box + pill.** Scope note: this is the *top-level
+  selection* affordance (single-click a block), NOT BEDIT (double-click) — filed here per the
+  session handoff; the emission/scale SSoT live in the block subsystem (ADR-640). **Symptom
+  (Giorgio, screenshot):** selecting a block showed only a poor 2-handle gizmo (move + rotation) +
+  a blue dashed box + a floating «Μπλοκ «name» · N αντικείμενα» pill; Giorgio wants the SAME grips a
+  BIM wall shows (4 corners + 4 edge midpoints + move cross + rotation handle), no box, no pill (info
+  stays only in the status bar). **Fix (full SSoT, big-player = Figma / C4D transform box):**
+  NEW pure `systems/block/block-box-grips.ts` emits the 8 perimeter handles on the block's world-AABB
+  (`computeBlockSelectionBounds` → a `rotationDeg=0` `RectFrame`) using the SHARED `rect-frame`
+  corner/edge readers, and maps a corner/edge drag → `{ position, scale }` INSERT patch via the SHARED
+  opposite-element-fixed `rect-grip-engine` + the ONE block scale SSoT (`scaleEntity` case 'block',
+  ADR-348/640) — ZERO new geometry/scale math; the canonical `block.entities` stay immutable.
+  `getBlockGizmoGrips` now = the 2 gizmo handles (0/1) **+** the 8 box handles (2-9). `BlockGripKind`
+  gains `block-corner-{ne,nw,sw,se}` + `block-edge-{n,e,s,w}`. Commit: NEW `grip-block-box-commit.ts`
+  (`commitBlockBoxScaleGripDrag` → `UpdateEntityCommand`, mirror `commitAnnotationSymbolResizeGripDrag`),
+  dispatched in `commitDxfGripDragModeAware` (gate `isBlockBoxGripKind`). Live ghost: `apply-entity-preview`
+  runs the SAME `applyBlockBoxGripDrag` patch → `drawGroupGhost` re-expands members at the new scale
+  (preview ≡ commit). **Wall parity for «Midpoints» (Giorgio choice):** corners are `type:'corner'`
+  (structural → always visible), the 4 edges are `type:'midpoint'` (gated by the «Midpoints» grip-type
+  pref). To keep «visible ≡ pickable» (ADR-559), `ContainerGizmoLayer` (the shared group/block gizmo
+  painter) now filters its resolved grips through the SAME `isGripTypeVisible` predicate the hit-test
+  (`grip-registry`) already applies — a low-freq `useGripStyle` read, ADR-040-safe leaf; the GROUP (2
+  `vertex` handles) is untouched. **No glyph/FSM change:** corners/edges render the default 'square'
+  and stay press-drag (absent from `grip-glyph-registry` / `HOT_GRIP_OP_REGISTRY`), exactly like the
+  text/column corners. **Box/pill removed block-specifically:** `BlockSelectionOverlaySubscriber` is
+  now a mounted null-leaf; the GROUP keeps its own box + «Ομάδα · N» pill via the SEPARATE
+  `GroupSelectionOverlaySubscriber` (untouched). **Known limitation:** the box is the world-AABB, so
+  corner-scale is WYSIWYG-exact for `rotation=0` (the common case + the screenshot); a rotated block
+  scales along its local axes (INSERT semantics) → the AABB handle approximates (oriented-box refinement
+  = follow-up). New tests: `block-box-grips.test.ts` (emission + corner/edge scale patch + role maps +
+  square-glyph/press-drag wiring, 17) + updated `block-gizmo-grips.test.ts` (10 handles). Block + grip
+  suites green; jscpd:diff clean. **BEDIT interaction:** inside a Block Editor the whole-block gizmo
+  (now incl. the box) is still suppressed (`BlockGizmoLayer` / `grip-registry` `activeBlockEditId`
+  guards) — the box is a WORLD-bounds affordance, wrong frame in block-local space.
 - **2026-07-12** — **Φ4 follow-up #4: move/rotate/scale/stretch GHOST previews are now BEDIT-aware.**
   Symptom (Giorgio, browser): after #3, members select + highlight, but dragging a member (move / rotate)
   showed **no live ghost preview**. **Root cause (traced):** all five transform-preview hooks resolve the

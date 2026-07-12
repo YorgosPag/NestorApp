@@ -103,7 +103,9 @@ import {
   commitAnnotationSymbolGripDrag,
   commitAnnotationSymbolResizeGripDrag,
   commitGroupGizmoRotation,
+  commitBlockBoxScaleGripDrag,
 } from './grip-parametric-commits';
+import { isBlockBoxGripKind } from '../../systems/block/block-box-grips';
 import { tryCommitParametricGripDrag } from './grip-parametric-dispatch';
 import { gripKindOf } from '../grip-kinds';
 /**
@@ -290,6 +292,15 @@ export function commitDxfGripDragModeAware(
   // case 'block' → translate `position`). Ctrl / «Copy» clones. Mirror `group-move`.
   if (blockKind === 'block-move') {
     commitWholeEntityMove(grip, delta, deps, isGripCopyIntent());
+    return;
+  }
+  // ADR-641 — BLOCK selection-box CORNER / EDGE handle → per-axis SCALE of the whole block
+  // (opposite corner/edge fixed) via the block scale SSoT (`scaleEntity` case 'block') →
+  // `UpdateEntityCommand` with a `{ position, scale }` INSERT patch (definition members
+  // immutable). Gate to the 8 box kinds ONLY — the move cross + rotation handle are handled
+  // above, and a block container has no vertices so the stretch path cannot serve this scale.
+  if (isBlockBoxGripKind(blockKind)) {
+    commitBlockBoxScaleGripDrag(grip, delta, deps);
     return;
   }
   // ADR-583 — annotation symbol (North arrow) MOVE cross → translate the whole

@@ -187,5 +187,25 @@ export type GroupGripKind = 'group-move' | 'group-rotation';
  *                        case 'block'. Ίδιο shared hot-grip flow με το `group-*`.
  * ΜΗΔΕΝ νέα glyph math / rotation engine / block transform — όλα REUSE (το gizmo
  * geometry είναι το ΙΔΙΟ `getContainerGizmoGrips` core με το group).
+ *
+ * ADR-641 — wall-grade selection BOX (Giorgio 2026-07-12 «οι ίδιες λαβές που δείχνει ένας
+ * τοίχος»): ΕΠΙΠΛΕΟΝ των 2 gizmo handles, το επιλεγμένο block δείχνει 8 περιμετρικές λαβές
+ * (Figma / C4D transform box) πάνω στο world-AABB (`systems/block/block-box-grips.ts`):
+ *   - `block-corner-{ne,nw,sw,se}` → 2-DOF scale (αντίθετη γωνία σταθερή)· commit μέσω
+ *                        `applyBlockBoxGripDrag` → `scaleEntity` case 'block' → `UpdateEntityCommand`
+ *                        (`{ position, scale }` INSERT patch — definition members immutable).
+ *   - `block-edge-{n,e,s,w}`       → 1-axis stretch (αντίθετη ακμή σταθερή)· ίδιο commit path.
+ * Corners = πάντα ορατές (structural)· edges = gated από το «Midpoints» preference (wall parity).
+ * ΜΗΔΕΝ νέα geometry/scale math — reuse `rect-frame` + `rect-grip-engine` + `scaleEntity`.
  */
-export type BlockGripKind = 'block-move' | 'block-rotation';
+export type BlockGripKind =
+  | 'block-move'
+  | 'block-rotation'
+  | 'block-corner-ne'
+  | 'block-corner-nw'
+  | 'block-corner-sw'
+  | 'block-corner-se'
+  | 'block-edge-n'
+  | 'block-edge-e'
+  | 'block-edge-s'
+  | 'block-edge-w';

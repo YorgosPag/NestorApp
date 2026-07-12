@@ -94,6 +94,10 @@ export { commitAnnotationSymbolResizeGripDrag } from './grip-annotation-symbol-c
 // in grip-group-commits.ts. Re-exported here so the commit API stays one import.
 export { commitGroupGizmoRotation } from './grip-group-commits';
 
+// ADR-641 — BLOCK selection-box corner/edge SCALE commit lives in grip-block-box-commit.ts
+// (N.7.1 file-size split). Re-exported so the commit API stays one import.
+export { commitBlockBoxScaleGripDrag } from './grip-block-box-commit';
+
 // ADR-406 / ADR-408 Φ3 / ADR-410 — centred-box grip commits (mep-fixture /
 // electrical panel / furniture) live in grip-parametric-centred-box-commits.ts
 // (N.7.1 file-size split). Re-exported here so the commit API stays one import.

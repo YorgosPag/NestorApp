@@ -16,6 +16,29 @@ import { calculateDistance, translatePoint } from '../entities/shared/geometry-r
 // (openings stay host-derived) + DXF primitives incl. `lwpolyline` natively. The classic
 // whole-entity ghost delegates here so preview ≡ commit BY IDENTITY (zero duplicate logic).
 import { calculateMovedGeometry } from '../../core/commands/entity-commands/move-entity-geometry';
+// ADR-561/583 — the ONE `rotateEntity`-delegating engine the commit (`RotateEntityCommand`) runs.
+import { applyPrimitiveRotationDrag } from '../../hooks/grips/primitive-rotation-drag';
+import type { Entity } from '../../types/entities';
+
+/**
+ * ADR-561/583 — SHARED rotation live-ghost: spin `entity` about `pivot` via the SAME
+ * `applyPrimitiveRotationDrag` → `rotateEntity` engine the commit runs (preview ≡
+ * commit). `undefined` pivot (no gizmo centre) or a degenerate sweep → the entity
+ * unchanged. The single source the arc / polyline / annotation-symbol / group rotation
+ * ghost branches all delegate to (N.18 — jscpd flagged the inline twins).
+ */
+export function rotationGhost(
+  entity: DxfEntityUnion,
+  anchorPos: Point2D,
+  delta: Point2D,
+  pivot: Point2D | undefined,
+): DxfEntityUnion {
+  if (!pivot) return entity;
+  const currentPos: Point2D = translatePoint(anchorPos, delta);
+  const patch = applyPrimitiveRotationDrag(entity as unknown as Entity, { anchor: anchorPos, currentPos, pivot });
+  if (!patch) return entity;
+  return { ...(entity as object), ...patch } as unknown as DxfEntityUnion;
+}
 
 export function getCircleQuadrant(
   entity: { center: Point2D; radius: number },
