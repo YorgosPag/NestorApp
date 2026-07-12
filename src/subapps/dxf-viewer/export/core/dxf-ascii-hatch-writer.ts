@@ -163,12 +163,21 @@ function emitPredefinedPattern(e: HatchEntity, pair: Pair, s: number): void {
     return;
   }
   pair(78, lines.length);                         // number of pattern definition lines
+  // ADR-644 (#7) — AutoCAD BAKES the pattern angle into the definition: line angle (53) = pl.angle +
+  // patternAngle, AND the base point (43/44) + offset (45/46) are ROTATED by patternAngle (verified
+  // vs ezdxf: angle 30° rotates the ANSI31 offset from 135°→165°). Our writer previously rotated only
+  // the line angle → the perpendicular spacing pointed the wrong way for angled patterns (≠ canvas,
+  // which rotates the whole pattern via `buildPatternLineSegments`). 52 stays the metadata angle.
+  const rad = degToRad(angle);
+  const c = Math.cos(rad), sn = Math.sin(rad);
+  const rotX = (x: number, y: number): number => x * c - y * sn;
+  const rotY = (x: number, y: number): number => x * sn + y * c;
   for (const pl of lines) {
-    pair(53, pl.angle + angle);                   // line angle
-    pair(43, pl.origin[0] * eff);                 // base point X
-    pair(44, pl.origin[1] * eff);                 // base point Y
-    pair(45, pl.delta[0] * eff);                  // offset (delta) X
-    pair(46, pl.delta[1] * eff);                  // offset (delta) Y
+    pair(53, pl.angle + angle);                   // line angle (pattern-line angle + overall angle)
+    pair(43, rotX(pl.origin[0] * eff, pl.origin[1] * eff)); // base point X (rotated)
+    pair(44, rotY(pl.origin[0] * eff, pl.origin[1] * eff)); // base point Y (rotated)
+    pair(45, rotX(pl.delta[0] * eff, pl.delta[1] * eff));   // offset (delta) X (rotated)
+    pair(46, rotY(pl.delta[0] * eff, pl.delta[1] * eff));   // offset (delta) Y (rotated)
     pair(79, pl.dashes.length);                   // number of dash lengths
     for (const d of pl.dashes) pair(49, d * eff); // dash length
   }

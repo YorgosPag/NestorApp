@@ -111,6 +111,14 @@ imported `ACAD_ISO*`) → built-in catalog → minimal CONTINUOUS stand-in. Το
   pre-existing ADR-642 concern· σπάνιο σε κατόψεις· εκτός Φάσης A.
 
 ## 6. Changelog
+- **2026-07-13 — Complex-linetype `74` σε geometry elements (regression από re-export, UNCOMMITTED):**
+  Νέο re-export → «**Error in LTYPE Table — Missing group code 49 in complex linetype**» στο `_TEST1`
+  (complex linetype με symbols, ADR-642). ezdxf STRICT OK (lenient) αλλά AutoCAD κόβει. Root: το
+  `emitComplexLtype` (ADR-642, `dxf-layer-table-writer.ts`) εκπέμπει geometry `49` **χωρίς `74`**, ενώ
+  ο simple path (#9) βάζει `74 0` σε κάθε `49` → ασυνέπεια που desync-άρει τον LTYPE parser του AutoCAD.
+  Fix: `74 0` μετά από κάθε geometry/symbol `49` στο complex path (κάθε element σε complex linetype
+  απαιτεί `74`, όπως το acad.lin). 25/25 complex/symbol round-trip tests PASS (ο parser ανέχεται το 74),
+  401/401 export. **Αγγίζει ADR-642 code** (blocking export-open bug — ίδιο idiom με το image-fill timeout).
 - **2026-07-13 — 🎉 ΤΟ ΑΡΧΕΙΟ ΑΝΟΙΞΕ ΣΤΟ AUTOCAD (Φάση A ΟΛΟΚΛΗΡΩΘΗΚΕ) → Φάση B (πιστότητα), UNCOMMITTED:**
   Μετά από 8 iterations δομικών fixes το export ανοίγει. Απομένουν 2 θέματα πιστότητας:
   - **#8 κείμενα «?»:** το STYLE table έγραφε font `txt` (txt.shx, χωρίς ελληνικά glyphs) → όλα τα

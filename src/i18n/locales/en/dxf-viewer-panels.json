@@ -334,6 +334,7 @@
           "title": "Line Properties",
           "emptyState": "Select a line to view and edit its pattern segments.",
           "hint": "Add segments (Dash / Gap / Dot) to define a pattern for this line.",
+          "compoundHint": "Complex line type (multi-layer or with symbols/text) — edit it from the line-type dialog.",
           "sections": {
             "general": "General",
             "geometry": "Geometry",

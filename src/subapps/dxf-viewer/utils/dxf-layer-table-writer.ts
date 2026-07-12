@@ -218,6 +218,10 @@ function emitComplexLtype(
     } else {
       // dash / gap / dot / symbol → single `49` slot (symbol = 0.0, its descriptor rides in XDATA).
       emit(out, '49', toDxfNumber(elementDashValue(el)));
+      // ADR-644 — R2018 complex linetype: EVERY `49` needs a `74` (element type; 0 = plain dash),
+      // exactly like the simple path. Omitting it on the geometry elements while the text elements
+      // carry `74` desyncs AutoCAD's LTYPE parser → «Missing group code 49 in complex linetype».
+      emit(out, '74', '0');
     }
   }
   emitSymbolXData(out, elements);

@@ -37,11 +37,14 @@ import { useLevels } from '../../systems/levels';
 import { isStyleEditablePrimitiveType } from '../../types/style-editable-primitives';
 import {
   type LinePatternSegment,
+  type LinePatternLayer,
   segmentsToDashPattern,
   dashPatternToSegments,
   describeSegments,
   linePatternName,
+  complexToLayers,
 } from '../../config/line-pattern-segments';
+import { isSimpleExpressible } from '../../config/complex-linetype-adapters';
 import { resolveLinetypeDef } from '../../rendering/linetype-dash-resolver';
 import {
   upsertUserLinetype,
@@ -53,6 +56,7 @@ import {
   LinePatternSegmentsEditor,
   buildLinePatternSegmentsLabels,
 } from '../panels/dimensions/LinePatternSegmentsEditor';
+import { CompoundPatternPreview } from '../panels/dimensions/LinePatternPreviews';
 // ADR-510 Φ2E #5 — full per-object fields (Γενικά/Γεωμετρία) via the shared bridge.
 import { useRibbonLineToolBridge } from '../ribbon/hooks/useRibbonLineToolBridge';
 import { LINE_PROPERTY_GROUPS, LINE_SELECTION_ONLY_KEYS } from './line-property-fields';
@@ -111,12 +115,27 @@ export function LinePropertiesTab({
     return found && isStyleEditablePrimitiveType(found.type) ? found : null;
   }, [primarySelectedId, currentScene]);
 
-  const segments = React.useMemo<LinePatternSegment[]>(() => {
-    if (!entity) return [];
-    const pattern = resolveLinetypeDef(entity.linetypeName)?.pattern ?? [];
-    return dashPatternToSegments(pattern);
-    // registrySnapshot is a dep so a same-name upsert re-derives (entity ref stable).
-  }, [entity, registrySnapshot]);
+  // Resolve the FULL def once (pattern + optional `complex`). registrySnapshot is a dep so a
+  // same-name COW upsert re-derives (entity ref stable).
+  const linetypeDef = React.useMemo(
+    () => (entity ? resolveLinetypeDef(entity.linetypeName) : null),
+    [entity, registrySnapshot],
+  );
+
+  const segments = React.useMemo<LinePatternSegment[]>(
+    () => dashPatternToSegments(linetypeDef?.pattern ?? []),
+    [linetypeDef],
+  );
+
+  // ADR-642 Φ5 — a COMPOUND (or text/symbol-carrying) type cannot be expressed as a flat segment
+  // list: the inline geom editor would show only the base layer AND, worse, editing it would
+  // `upsertUserLinetype` a single-layer pattern that FLATTENS the compound (rails/ties lost). When
+  // the type is not simple-expressible we show the accurate compound preview + a hint instead of the
+  // editor (edit-in-place via the dialog is the dedicated path).
+  const compoundLayers = React.useMemo<LinePatternLayer[] | null>(() => {
+    const complex = linetypeDef?.complex;
+    return complex && !isSimpleExpressible(complex) ? complexToLayers(complex) : null;
+  }, [linetypeDef]);
 
   const applyPattern = React.useCallback(
     (next: LinePatternSegment[]) => {
@@ -166,18 +185,28 @@ export function LinePropertiesTab({
         />
       )}
 
-      {/* «Τμήματα Μοτίβου» — selection-only (per-line COW edit); hidden in draft. */}
+      {/* «Τμήματα Μοτίβου» — selection-only (per-line COW edit); hidden in draft. A compound /
+          symbol / text type can't be flattened to a segment list → accurate preview + hint. */}
       {entity && (
         <div className="flex flex-col gap-1">
-          <LinePatternSegmentsEditor
-            segments={segments}
-            onChange={applyPattern}
-            labels={buildLinePatternSegmentsLabels(e)}
-            allowText={false}
-            allowSymbol={false}
-          />
-          {segments.length === 0 && (
-            <p className="px-1 text-xs text-muted-foreground">{e('inlineTab.hint')}</p>
+          {compoundLayers ? (
+            <>
+              <CompoundPatternPreview label={e('previewLabel')} layers={compoundLayers} />
+              <p className="px-1 text-xs text-muted-foreground">{e('inlineTab.compoundHint')}</p>
+            </>
+          ) : (
+            <>
+              <LinePatternSegmentsEditor
+                segments={segments}
+                onChange={applyPattern}
+                labels={buildLinePatternSegmentsLabels(e)}
+                allowText={false}
+                allowSymbol={false}
+              />
+              {segments.length === 0 && (
+                <p className="px-1 text-xs text-muted-foreground">{e('inlineTab.hint')}</p>
+              )}
+            </>
           )}
         </div>
       )}
