@@ -29,7 +29,14 @@ export function useColorGroups(scene: SceneModel | null, searchTerm: string) {
         if (!groups.has(colorName)) {
           groups.set(colorName, []);
         }
-        groups.get(colorName)!.push(layerName);
+        // ADR-358 Phase 9E-4: layers UI is name-keyed (getSceneLayerByName resolves
+        // to the FIRST match), so two layer objects sharing name+color collapse to the
+        // same rendered row. Dedupe by name to avoid duplicate React keys and identical
+        // duplicate rows in the color group list.
+        const names = groups.get(colorName)!;
+        if (!names.includes(layerName)) {
+          names.push(layerName);
+        }
       }
     });
 
