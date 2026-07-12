@@ -170,7 +170,7 @@ angle, x-origin, y-origin, delta-x, delta-y [, dash1, dash2, ...]
 | Q6 | UX flow: ρυθμίσεις πρώτα ή κλικ πρώτα; | **Β — κλικ πρώτα, ρυθμίσεις στο contextual panel** | Default solid, αμέσως ορατό· contextual panel για pattern/scale/angle/color/islandStyle. |
 | Q7 | Hatch origin / base point; | **Revit style — χρήστης ορίζει σημείο· full enterprise SSoT** | `HatchEntity.patternOrigin?: Point2D`· NEW `hatch-origin.ts` (pure)· `HatchOriginStore` (tool-time)· default = lower-left corner of bounding box (Revit default). |
 | Q8 | Layer assignment; | **Απόφαση agent (Revit/AutoCAD pattern):** dedicated `ΓΡΑΜΜΟΣΚΙΑΣΗ` default layer, αλλά ακολουθεί το active layer αν ο χρήστης το έχει αλλάξει | `HatchEntity.layer` = `'ΓΡΑΜΜΟΣΚΙΑΣΗ'` by default· configurable στο contextual panel (dropdown active layers). |
-| Q9 | Transparency / opacity; | **Απόφαση agent (AutoCAD 2011+ / Revit):** YES — `opacity: number` (0-100%) | `HatchEntity.opacity?: number` default `100`· canvas: `ctx.globalAlpha`· DXF: group `440` (transparency, 0=opaque, 255=transparent)· slider στο contextual panel. |
+| Q9 | Transparency / opacity; | **Απόφαση agent (AutoCAD 2011+ / Revit):** YES. ⚠️ **ΥΛΟΠΟΙΗΘΗΚΕ ΔΙΑΦΟΡΕΤΙΚΑ** (βλ. Changelog 2026-07-12): **ΟΧΙ** ξεχωριστό `opacity 0-100` — reuse του κληρονομημένου `BaseEntity.transparency` (AutoCAD κλίμακα **0..90**, DXF group **440**). | Το `transparency` εφαρμόζεται ΗΔΗ γενικά από τον renderer (`resolveEntityRenderStyle → alpha → DxfRenderer.renderEntityUnified`, μηδέν αλλαγή στον HatchRenderer)· combobox «Διαφάνεια» στο panel «Εμφάνιση» (selected-only, mirror line-tool)· DXF 440 roundtrip μέσω `dxf-transparency-440.ts` SSoT. |
 | Q10 | Πολλές περιοχές σε μία εντολή; | **Απόφαση agent:** κάθε pick = ξεχωριστό `HatchEntity` (simpler, enterprise) | Ο χρήστης κάνει πολλά κλικ → κάθε κλικ = νέο entity με τις ίδιες ρυθμίσεις (ίδιο pattern/scale/color)· ESC = τέλος εντολής. |
 
 ---
@@ -217,8 +217,10 @@ export interface HatchEntity extends BaseEntity {
   gradientTint?: number;             // DXF 462 (0.0-1.0, single-color)
   // Pattern origin — Revit style (Q7)
   patternOrigin?: Point2D;           // σημείο από το οποίο ξεκινάει το μοτίβο· default = lower-left bbox
-  // Appearance (Q9)
-  opacity?: number;                  // 0-100, default 100· DXF group 440 (0=opaque, 255=transparent)
+  // Appearance (Q9) — ⚠️ ΔΕΝ δηλώνεται εδώ: το transparency (0..90, DXF 440)
+  // κληρονομείται από BaseEntity.transparency (ΜΗΝ διπλασιάζεις — βλ. Changelog 2026-07-12).
+  // Draw-order intent (send-to-back):
+  drawOrder?: 0 | 1 | 2 | 3 | 4;     // 0=πίσω bucket· user-toggle «Πίσω πλάνο» (§5δ.9)
   // Layer (Q8) — κληρονομείται από BaseEntity.layer· default 'ΓΡΑΜΜΟΣΚΙΑΣΗ'
 }
 ```
@@ -859,6 +861,11 @@ noPlot?: boolean; // default false· αν true → παραλείπεται απ
 - `drawOrderStore` (existing SSoT) — reuse.
 - Opt-out: setting «Αυτόματα πίσω» (default: ON).
 
+**Update 2026-07-12 — user-toggle «Πίσω πλάνο» (per-hatch):** το `drawOrder` (κοιμώμενο ώς τότε — πάντα 0, ποτέ δεν διαβαζόταν) γίνεται το **αποθηκευμένο intent** ενός toggle στο panel «Εμφάνιση»:
+- `getToggleState`: pressed = `drawOrder===0` (νέες γραμμοσκιάσεις = 0 → ON).
+- `onToggle(on)`: **ΕΝΑ** `CompoundCommand` = `ReorderEntityCommand(id, on?'back':'front')` (array-order = paint-order, η πραγματική ενέργεια) **+** `UpdateEntityCommand({ drawOrder: on?0:4 })` (intent) → μία undo step, array + intent συνεπή.
+- Το z-order στο canvas παραμένει array-order-based (ο renderer ΔΕΝ ταξινομεί κατά `drawOrder`)· το `drawOrder` είναι μόνο persisted intent για το toggle state.
+
 ---
 
 ### 5δ.10 Hatch Template Inheritance (.dwt-style Defaults)
@@ -1193,6 +1200,13 @@ alignElementId?: string;         // host· η γωνία μοτίβου = εφα
 
 ## 8. Changelog
 
+- **2026-07-12** — **Διαφάνεια γραμμοσκίασης (0..90) + toggle «Πίσω πλάνο» (κάτω από τις οντότητες) + DXF 440 roundtrip (UNCOMMITTED· 44 jest GREEN).** Ο Giorgio ζήτησε ανά-γραμμοσκίαση (α) ρύθμιση διαφάνειας και (β) επιλογή αν ζωγραφίζεται ΚΑΤΩ από DXF/BIM/MEP.
+  - **SSoT audit (grep, ΠΡΙΝ κώδικα):** σχεδόν όλη η υποδομή υπήρχε ήδη → μόνο wiring. (i) `BaseEntity.transparency` (0..90, DXF 440) **εφαρμόζεται ΗΔΗ** στη γραμμοσκίαση από τον renderer (`resolveEntityRenderStyle → alpha → DxfRenderer.renderEntityUnified`) → **μηδέν αλλαγή στον `HatchRenderer`**. (ii) `ReorderEntityCommand(id,'front'|'back')` υπήρχε έτοιμη & undoable. (iii) Το `drawOrder` ήταν κοιμώμενο (πάντα 0, ποτέ δεν διαβαζόταν).
+  - **Διόρθωση stale ADR:** το §3 Q9 / §4.2 έλεγαν ξεχωριστό `opacity 0-100` — ΔΕΝ υλοποιήθηκε έτσι· reuse του `BaseEntity.transparency` (0..90) χωρίς διπλασιασμό. Q9/§4.2/§5δ.9 επικαιροποιήθηκαν.
+  - **Διαφάνεια (selected-only, mirror line-tool):** νέο panel «Εμφάνιση» → combobox «Διαφάνεια» (0..90). Bridge read `entityTransparencyValue` / write `patchHatch({ transparency: clampTransparency(n) })`. Τα helpers `entityTransparencyValue`/`clampTransparency` **κεντρικοποιήθηκαν** από το `useRibbonLineToolBridge.helpers` → `ribbon-entity-bridge-shared` (N.18, κοινά με το line-tool· re-export για σταθερή διαδρομή).
+  - **«Πίσω πλάνο» toggle:** `drawOrder` = αποθηκευμένο intent· pressed = `drawOrder===0`· `onToggle` = ΕΝΑ `CompoundCommand` (`ReorderEntityCommand` + `UpdateEntityCommand{drawOrder}`) = μία undo step (βλ. §5δ.9 update).
+  - **DXF 440 roundtrip (πλήρες, Giorgio choice):** νέο SSoT `export/core/dxf-transparency-440.ts` (`encodeDxf440`/`decodeDxf440`, %↔raw, BYALPHA flag, opaque/ByLayer→undefined). Export: inline στο `emitHatch` (μετά 62) **+** generic `emitEntityStyle` (line/circle/arc/text/point → διορθώνει ΚΑΙ το line-tool κενό). Import: νέο `extractEntityTransparency` στο shared post-pass `applyImportedStyleFields` (ρέει σε ΟΛΕΣ τις οντότητες). Persistence: `transparency` στο `HatchDocData` + `HATCH_SCALAR_KEYS`.
+  - **ΑΡΧΕΙΑ:** NEW `dxf-transparency-440.ts`· MOD `contextual-hatch-tab.ts`, `hatch-command-keys.ts`, `useRibbonHatchBridge.ts`, `ribbon-entity-bridge-shared.ts`, `useRibbonLineToolBridge.helpers.ts`, `hatch-firestore-service.ts`, `dxf-ascii-hatch-writer.ts`, `dxf-ascii-primitive-emitters.ts`, `dxf-entity-style-extract.ts`, `dxf-converter-helpers.ts`, `dxf-entity-converters.ts`, i18n `{el,en}/dxf-viewer-shell.json` (+4 keys). TESTS: `useRibbonHatchBridge.test.tsx` (+10), `dxf-roundtrip-hatch.test.ts` (+4), NEW `dxf-transparency-440.test.ts` (7). ✅ **Google-level: YES** — reuse transparency/ReorderEntityCommand/helpers· renderer άθικτος· compound = 1 undo· selected-only = ίδιο pattern με line-tool· DXF 440 = industry-standard, generic. ⚠️ **CHECK 6D:** αρχεία ribbon/export (όχι canvas-draw)· ο HatchRenderer ΔΕΝ άλλαξε → stage ADR-507. 🔴 ΕΚΚΡΕΜΕΙ: browser-verify (`/dxf/viewer`: επίλεξε γραμμοσκίαση → «Διαφάνεια» 0→45→90 live + reload· toggle «Πίσω πλάνο» → κάτω/πάνω από τοίχους· undo/redo· export→import .dxf κρατά διαφάνεια) + commit (Giorgio).
 - **2026-07-10** — **[→ ADR-627] move/rotate λαβές + length/angle HUD + alignment traces + τόξα φοράς (parity με το περίγραμμα εμβαδού).** Το hatch απέκτησε σταυρό μετακίνησης + σημάδι περιστροφής στο εξωτερικό όριο (`boundaryPaths[0]`) μέσω του ΚΟΙΝΟΥ placement SSoT `resolveMoveRotateHandleWorld` (ADR-561) + νέο `bim/hatch/hatch-move-rotate-grips.ts`· grip kinds `hatch-move`/`hatch-rotation`· `rotateEntity` case 'hatch' (ξεκλείδωσε ΚΑΙ το Rotate tool)· commit μέσα στο `commitHatchGripDrag` (rotation→`RotateEntityCommand`, move→shared `commitWholeEntityMove`)· HUD/alignment μέσω του κοινού `grip-drag-alignment-role` SSoT. Λεπτομέρειες + πλήρες SSoT map: **ADR-627**. UNCOMMITTED· εκκρεμεί browser-verify.
 - **2026-07-08** — **Μέθοδος ορίου: dropdown → 2 μεγάλα εικονιστικά radio-κουμπιά (UX discoverability· UNCOMMITTED· 21 jest GREEN στο `useRibbonHatchBridge`).** Ο Giorgio διαπίστωσε ότι η επιλογή τρόπου («Επιλογή σημείου» auto-detect ⇄ «Σχεδίαση ορίου» N-click) υπήρχε ήδη (Φ3) αλλά ήταν **αόρατη** μέσα σε ένα combobox — δεν κατάλαβε ότι μπορεί να σχεδιάσει όριο με διαδοχικά κλικ. Ζήτησε **2 μεγάλα κουμπιά με εικονίδια** «όπως της Αρχικής» ώστε να φαίνεται οπτικά η κάθε μέθοδος (big-player: AutoCAD «Hatch Creation → Boundaries» large Pick Points/Select· Revit).
   - **SSoT audit (grep, ΠΡΙΝ κώδικα):** ο N-click boundary drawing **ΗΤΑΝ ήδη πλήρως υλοποιημένος** (tool `hatch`=drawing tool → `buildHatchEntityFromBoundary` + rubber-band preview + close-on-first/Enter). Μηδέν αλλαγή στη ροή σχεδίασης — μόνο το UI control του mode-toggle. Ο `hatch-pick-mode-store` παραμένει το SSoT.

@@ -75,6 +75,8 @@ const GRAD_VIS_KEY = HATCH_RIBBON_KEYS.visibility.gradient;
 
 const METHOD_PICK_KEY = HATCH_RIBBON_KEYS.toggles.methodPickPoint;
 const METHOD_BOUNDARY_KEY = HATCH_RIBBON_KEYS.toggles.methodBoundary;
+const TRANSPARENCY_KEY = HATCH_RIBBON_KEYS.params.transparency;
+const SEND_TO_BACK_KEY = HATCH_RIBBON_KEYS.toggles.sendToBack;
 
 beforeEach(() => {
   resetGlobalCommandHistory();
@@ -367,5 +369,111 @@ describe('useRibbonHatchBridge — gradient (ADR-507 Φ5 UI)', () => {
       }),
     );
     expect(hidden.result.current.getPanelVisibility(GRAD_VIS_KEY)).toBe(false);
+  });
+});
+
+describe('useRibbonHatchBridge — διαφάνεια (ADR-507, selected-only)', () => {
+  it('getComboboxState διαβάζει το transparency της οντότητας', () => {
+    const h = { ...solidHatch, transparency: 40 };
+    const { result } = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(h),
+        universalSelection: makeSelection('hatch-1'),
+      }),
+    );
+    expect(result.current.getComboboxState(TRANSPARENCY_KEY)?.value).toBe('40');
+  });
+
+  it('χωρίς transparency → 0 (αδιαφανές)', () => {
+    const { result } = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(solidHatch),
+        universalSelection: makeSelection('hatch-1'),
+      }),
+    );
+    expect(result.current.getComboboxState(TRANSPARENCY_KEY)?.value).toBe('0');
+  });
+
+  it('onComboboxChange σε επιλεγμένο → patch { transparency } (clamped 0..90)', () => {
+    const { result } = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(solidHatch),
+        universalSelection: makeSelection('hatch-1'),
+      }),
+    );
+    act(() => result.current.onComboboxChange(TRANSPARENCY_KEY, '150'));
+    expect((UpdateEntityCommand as jest.Mock).mock.calls[0]?.[1]).toEqual({ transparency: 90 });
+  });
+
+  it('χωρίς επιλογή → κανένα command (selected-only, mirror line-tool)', () => {
+    const { result } = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(null),
+        universalSelection: makeSelection(null),
+      }),
+    );
+    act(() => result.current.onComboboxChange(TRANSPARENCY_KEY, '50'));
+    expect((UpdateEntityCommand as jest.Mock).mock.calls.length).toBe(0);
+    expect(result.current.getComboboxState(TRANSPARENCY_KEY)?.value).toBe('0');
+  });
+});
+
+describe('useRibbonHatchBridge — «Πίσω πλάνο» (ADR-507, drawOrder + reorder)', () => {
+  it('νέα γραμμοσκίαση (drawOrder undefined) → toggle ON (default back)', () => {
+    const { result } = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(solidHatch),
+        universalSelection: makeSelection('hatch-1'),
+      }),
+    );
+    expect(result.current.getToggleState(SEND_TO_BACK_KEY)).toBe(true);
+  });
+
+  it('drawOrder=4 (μπροστά) → toggle OFF', () => {
+    const front = { ...solidHatch, drawOrder: 4 as const };
+    const { result } = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(front),
+        universalSelection: makeSelection('hatch-1'),
+      }),
+    );
+    expect(result.current.getToggleState(SEND_TO_BACK_KEY)).toBe(false);
+  });
+
+  it('onToggle(false) → patch { drawOrder: 4 } (μπροστά)', () => {
+    const { result } = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(solidHatch),
+        universalSelection: makeSelection('hatch-1'),
+      }),
+    );
+    act(() => result.current.onToggle(SEND_TO_BACK_KEY, false));
+    // Το UpdateEntityCommand (mocked) εκτελείται μέσα στο CompoundCommand μαζί με το reorder.
+    const patch = (UpdateEntityCommand as jest.Mock).mock.calls[0]?.[1];
+    expect(patch).toEqual({ drawOrder: 4 });
+  });
+
+  it('onToggle(true) → patch { drawOrder: 0 } (πίσω)', () => {
+    const front = { ...solidHatch, drawOrder: 4 as const };
+    const { result } = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(front),
+        universalSelection: makeSelection('hatch-1'),
+      }),
+    );
+    act(() => result.current.onToggle(SEND_TO_BACK_KEY, true));
+    expect((UpdateEntityCommand as jest.Mock).mock.calls[0]?.[1]).toEqual({ drawOrder: 0 });
+  });
+
+  it('χωρίς επιλογή → NULL_TOGGLE + κανένα command', () => {
+    const { result } = renderHook(() =>
+      useRibbonHatchBridge({
+        levelManager: makeLevelManager(null),
+        universalSelection: makeSelection(null),
+      }),
+    );
+    expect(result.current.getToggleState(SEND_TO_BACK_KEY)).toBe(false);
+    act(() => result.current.onToggle(SEND_TO_BACK_KEY, false));
+    expect((UpdateEntityCommand as jest.Mock).mock.calls.length).toBe(0);
   });
 });
