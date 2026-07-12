@@ -259,8 +259,10 @@ export function registerUserLinetype(
  *
  * ISO baseline / catalog names stay IMMUTABLE (module contract): an existing entry
  * that is NOT `user-created` is never overwritten → returns null. A new name is
- * registered fresh; an existing user-created name has its pattern + description
- * replaced (id/origin preserved, deterministic). Persists + notifies exactly once.
+ * registered fresh; an existing user-created name has its pattern + description +
+ * optional `complex` def replaced (id/origin preserved, deterministic). Persists +
+ * notifies exactly once. `complex` mirrors `registerUserLinetype` so an in-place edit
+ * of a compound / text / symbol type keeps its rich def (ADR-642 Edit-in-place).
  *
  * @returns the upserted def, or null if the name collides with a non-user entry.
  */
@@ -268,17 +270,22 @@ export function upsertUserLinetype(
   name: string,
   pattern: ReadonlyArray<number>,
   description = '',
+  complex?: ComplexLinetypeDef,
 ): LinetypeDef | null {
   const trimmed = name.trim();
   const existing = definitionsByName.get(trimmed);
   if (existing && existing.origin !== 'user-created') return null;
-  if (!existing) return registerUserLinetype(trimmed, pattern, description);
+  if (!existing) return registerUserLinetype(trimmed, pattern, description, complex);
   const def: LinetypeDef = Object.freeze({
     id: existing.id,
     name: existing.name,
     description,
     pattern: Object.freeze([...pattern]) as ReadonlyArray<number>,
     origin: 'user-created',
+    // ADR-642 Edit-in-place — carry the full complex def (compound / text / symbols) so an
+    // in-place edit through the dialog does NOT flatten the compound; simple types pass
+    // `undefined` and stay pattern-only (byte-identical to the pre-fix output).
+    ...(complex ? { complex } : {}),
   });
   // Same name → insertionOrder unchanged; only the Map entry + snapshot rebuild.
   definitionsByName.set(def.name, def);

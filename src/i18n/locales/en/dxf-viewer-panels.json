@@ -342,6 +342,8 @@
           }
         },
         "title": "New line type",
+        "editTitle": "Edit line type",
+        "edit": "Edit",
         "description": "Define explicit lengths for dashes, gaps and dots. The pattern is saved and selectable by name on any dimension.",
         "nameLabel": "Name",
         "namePlaceholder": "e.g. Dashed 5-2",

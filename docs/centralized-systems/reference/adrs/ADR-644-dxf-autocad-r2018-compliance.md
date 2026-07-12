@@ -111,6 +111,13 @@ imported `ACAD_ISO*`) → built-in catalog → minimal CONTINUOUS stand-in. Το
   pre-existing ADR-642 concern· σπάνιο σε κατόψεις· εκτός Φάσης A.
 
 ## 6. Changelog
+- **2026-07-13 — #7b Hatch pattern angle: rotate base/offset (fidelity, UNCOMMITTED):** Το αρχείο ανοίγει,
+  ελληνικά ✅, hatches ορατά ✅, αλλά τα μοτίβα διαφέρουν από τον canvas. Root (μερικό): το AutoCAD BAKES
+  τη γωνία μοτίβου στο definition — 53 = pl.angle + patternAngle **ΚΑΙ** base(43/44)+offset(45/46)
+  ROTATED κατά patternAngle (verified vs ezdxf: 30° → ANSI31 offset 135°→165°). Ο writer rotate-άρε μόνο
+  το 53 → η κάθετη απόσταση έδειχνε λάθος κατεύθυνση για angled μοτίβα (≠ canvas που rotate-άρει όλο το
+  pattern). Fix: rotate base/offset κατά patternAngle. angle=0 → byte-identical. 87/87 hatch tests. (Η
+  γενικότερη πιστότητα μοτίβου ελέγχεται με screenshot AutoCAD↔Nestor.)
 - **2026-07-13 — Complex-linetype `74` σε geometry elements (regression από re-export, UNCOMMITTED):**
   Νέο re-export → «**Error in LTYPE Table — Missing group code 49 in complex linetype**» στο `_TEST1`
   (complex linetype με symbols, ADR-642). ezdxf STRICT OK (lenient) αλλά AutoCAD κόβει. Root: το
