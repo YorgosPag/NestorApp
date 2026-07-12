@@ -22,6 +22,8 @@ import {
 import { TAU } from '../primitives/canvasPaths';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
 import { degToRad } from './shared/geometry-utils';
+// 🏢 ADR-646 Φ3: elliptical-arc tessellation SSoT (Y-flip-correct partial ellipse rendering)
+import { tessellateEllipseArc, ellipseArcSegments } from './shared/geometry-ellipse-utils';
 // 🏢 ADR-091: Centralized Text Label Offsets, ADR-124: Dot Radius
 import { TEXT_LABEL_OFFSETS, RENDER_GEOMETRY } from '../../config/text-rendering-config';
 
@@ -66,14 +68,14 @@ export class EllipseRenderer extends BaseEntityRenderer {
     const ellipseData = validateEllipseEntity(entity);
     if (!ellipseData) return;
 
-    const { center, majorAxis, minorAxis, rotation } = ellipseData;
+    const { center, majorAxis, minorAxis, rotation, startParam, endParam } = ellipseData;
 
     // 🔺 Χρήση 3-phase system όπως όλες οι άλλες οντότητες
     this.renderWithPhases(
       entity,
       options,
       // Geometry rendering
-      () => this.renderEllipseGeometry(center, majorAxis, minorAxis, rotation),
+      () => this.renderEllipseGeometry(center, majorAxis, minorAxis, rotation, startParam, endParam),
       // Measurements rendering
       () => this.renderEllipseMeasurements(center, majorAxis, minorAxis),
       // Yellow dots rendering
@@ -81,21 +83,49 @@ export class EllipseRenderer extends BaseEntityRenderer {
     );
   }
 
-  private renderEllipseGeometry(center: Point2D, majorAxis: number, minorAxis: number, rotation: number): void {
+  private renderEllipseGeometry(
+    center: Point2D,
+    majorAxis: number,
+    minorAxis: number,
+    rotation: number,
+    startParam?: number,
+    endParam?: number,
+  ): void {
+    // 🏢 ADR-646 Φ3: elliptical ARC (startParam/endParam present, e.g. an arc scaled
+    // non-uniformly) → tessellate the CCW sweep in WORLD space via the SSoT sampler and
+    // stroke through `worldToScreen`. This is Y-flip correct and matches exactly what
+    // snapping / arrays compute — `ctx.ellipse` start/end angles are ambiguous under the
+    // screen Y-flip, so the native path is reserved for the symmetric FULL ellipse below.
+    if (startParam !== undefined && endParam !== undefined) {
+      const pts = tessellateEllipseArc(
+        { center, majorAxis, minorAxis, rotation, startParam, endParam },
+        ellipseArcSegments(startParam, endParam),
+      );
+      this.ctx.beginPath();
+      pts.forEach((p, i) => {
+        const s = this.worldToScreen(p);
+        if (i === 0) this.ctx.moveTo(s.x, s.y);
+        else this.ctx.lineTo(s.x, s.y);
+      });
+      this.ctx.stroke();
+      return;
+    }
+
+    // FULL ellipse → native smooth path (unchanged).
     const screenCenter = this.worldToScreen(center);
     const screenMajor = majorAxis * this.transform.scale;
     const screenMinor = minorAxis * this.transform.scale;
-    
+
     this.ctx.save();
     this.ctx.translate(screenCenter.x, screenCenter.y);
     // 🏢 ADR-067: Use centralized angle conversion
     this.ctx.rotate(degToRad(rotation));
-    
+
     // 🏢 ADR-058: Use centralized TAU constant
     this.ctx.beginPath();
     this.ctx.ellipse(0, 0, screenMajor, screenMinor, 0, 0, TAU);
     this.ctx.stroke();
-    
+
     this.ctx.restore();
   }
 

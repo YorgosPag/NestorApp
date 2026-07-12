@@ -57,6 +57,8 @@ import {
   buildLinePatternSegmentsLabels,
 } from '../panels/dimensions/LinePatternSegmentsEditor';
 import { CompoundPatternPreview } from '../panels/dimensions/LinePatternPreviews';
+import { LinePatternEditorDialog } from '../panels/dimensions/LinePatternEditorDialog';
+import { Button } from '@/components/ui/button';
 // ADR-510 Φ2E #5 — full per-object fields (Γενικά/Γεωμετρία) via the shared bridge.
 import { useRibbonLineToolBridge } from '../ribbon/hooks/useRibbonLineToolBridge';
 import { LINE_PROPERTY_GROUPS, LINE_SELECTION_ONLY_KEYS } from './line-property-fields';
@@ -108,6 +110,10 @@ export function LinePropertiesTab({
     getLinetypeRegistrySnapshot,
     getLinetypeRegistrySnapshot,
   );
+
+  // ADR-642 Edit-in-place — the «✎ Επεξεργασία» affordance opens the shared dialog pre-loaded on the
+  // named user-created type; a same-name upsert refreshes the preview above via the registry sub.
+  const [editorOpen, setEditorOpen] = React.useState(false);
 
   const entity = React.useMemo(() => {
     if (!primarySelectedId || !currentScene) return null;
@@ -193,6 +199,18 @@ export function LinePropertiesTab({
             <>
               <CompoundPatternPreview label={e('previewLabel')} layers={compoundLayers} />
               <p className="px-1 text-xs text-muted-foreground">{e('inlineTab.compoundHint')}</p>
+              {/* User-created compound → edit in place (Revit/AutoCAD parity); imported/ISO stays
+                  read-only (a «Duplicate & edit» is the fast-follow). */}
+              {linetypeDef?.origin === 'user-created' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="self-start"
+                  onClick={() => setEditorOpen(true)}
+                >
+                  {e('edit')}
+                </Button>
+              )}
             </>
           ) : (
             <>
@@ -220,6 +238,15 @@ export function LinePropertiesTab({
           onComboboxChange={bridge.onComboboxChange}
         />
       ))}
+
+      {/* Edit-in-place dialog — only for a user-created named type (the button gate matches). */}
+      {linetypeDef?.origin === 'user-created' && (
+        <LinePatternEditorDialog
+          open={editorOpen}
+          onOpenChange={setEditorOpen}
+          editName={linetypeDef.name}
+        />
+      )}
     </section>
   );
 }

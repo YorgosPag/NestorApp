@@ -153,7 +153,7 @@ export function LinePatternEditorDialog({
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())}>
       <DialogContent size="default">
         <DialogHeader>
-          <DialogTitle>{e('title')}</DialogTitle>
+          <DialogTitle>{editName ? e('editTitle') : e('title')}</DialogTitle>
           <DialogDescription>{e('description')}</DialogDescription>
         </DialogHeader>
 
@@ -163,6 +163,7 @@ export function LinePatternEditorDialog({
             placeholder={e('namePlaceholder')}
             value={name}
             onChange={setName}
+            readOnly={Boolean(editName)}
             error={validation.nameError ? e(`errors.${validation.nameError}`) : null}
           />
 
@@ -186,9 +187,10 @@ export function LinePatternEditorDialog({
 // ── Subcomponents ─────────────────────────────────────────────────────────────
 
 function NameRow({
-  label, placeholder, value, onChange, error,
+  label, placeholder, value, onChange, error, readOnly = false,
 }: {
   label: string; placeholder: string; value: string; onChange: (v: string) => void; error: string | null;
+  readOnly?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -198,6 +200,7 @@ function NameRow({
         value={value}
         placeholder={placeholder}
         onChange={(ev) => onChange(ev.target.value)}
+        readOnly={readOnly}
         className="h-7 text-xs"
       />
       {error && <p className="text-xs text-destructive" role="alert">{error}</p>}

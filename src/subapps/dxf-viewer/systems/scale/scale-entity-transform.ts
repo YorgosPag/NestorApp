@@ -16,6 +16,14 @@ import type { ArrayParams } from '../array/types';
 import type { SceneEntity } from '../../core/commands/interfaces';
 import type { DxfTextNode } from '../../text-engine/types';
 import { scaleTextNodeRunHeights } from '../../utils/text-node-utils';
+// ADR-646 Φ3 — reuse the geometry SSoTs: the visible-CCW arc range (shared with hit-test/snap),
+// the deg→rad helper, and the rotation-aware rect corner builder (both rect representations).
+import { arcVisibleCcwRange } from '../../rendering/entities/shared/geometry-arc-utils';
+import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
+import { rectangleEntityVertices } from '../../rendering/entities/shared/geometry-utils';
+
+const TWO_PI = Math.PI * 2;
+const norm2pi = (x: number): number => ((x % TWO_PI) + TWO_PI) % TWO_PI;
 
 // ── Point scale ───────────────────────────────────────────────────────────────
 
@@ -39,12 +47,70 @@ function scaleLine(e: Entity & { type: 'line' }, base: Point2D, sx: number, sy: 
   };
 }
 
+// ── Circle / arc → ellipse (non-uniform) SSoT ─────────────────────────────────
+
+/**
+ * Non-uniform scale turns a circle (radius `r`) into an axis-aligned ellipse. AutoCAD convention:
+ * the LONGER world axis becomes `majorAxis`; when Y is longer the axes swap and `rotation` = 90°
+ * (`majorAxis` then points along +Y). SSoT shared by `scaleCircleToEllipse` (full) AND `scaleArc`
+ * (partial) so the axes/rotation/swap decision lives in exactly one place.
+ */
+function nonUniformEllipseAxes(radius: number, absSx: number, absSy: number): {
+  majorAxis: number; minorAxis: number; rotation: number; swap: boolean;
+} {
+  const horizontal = radius * absSx;
+  const vertical = radius * absSy;
+  return absSx >= absSy
+    ? { majorAxis: horizontal, minorAxis: vertical, rotation: 0, swap: false }
+    : { majorAxis: vertical, minorAxis: horizontal, rotation: 90, swap: true };
+}
+
+/**
+ * Map an ORIGINAL circle angle `θ` (degrees) to the ellipse parameter `t` (radians) of the
+ * non-uniformly scaled arc. Derived from the local-frame projection `cos t = u/major`,
+ * `sin t = v/minor` where `(u, v)` are the scaled radial vector's components along the ellipse
+ * axes — so it handles the rotation-90 `swap` AND mirror signs (negative `sx`/`sy`) exactly.
+ * ADR-646 #4.
+ */
+function circleAngleToEllipseParam(angleDeg: number, sx: number, sy: number, swap: boolean): number {
+  const a = degToRad(angleDeg);
+  const cos = Math.cos(a);
+  const sin = Math.sin(a);
+  const sgnX = sx < 0 ? -1 : 1;
+  const sgnY = sy < 0 ? -1 : 1;
+  return swap
+    ? Math.atan2(-sgnX * cos, sgnY * sin)
+    : Math.atan2(sgnY * sin, sgnX * cos);
+}
+
 function scaleArc(e: Entity & { type: 'arc' }, base: Point2D, sx: number, sy: number) {
+  const center = scalePoint(e.center, base, sx, sy);
+  // Uniform scale keeps a circular ARC (AutoCAD) — only the radius scales by |s|.
   if (sx === sy) {
-    return { center: scalePoint(e.center, base, sx, sy), radius: e.radius * Math.abs(sx) };
+    return { center, radius: e.radius * Math.abs(sx) };
   }
-  // Non-uniform arc → elliptical arc (type stays 'arc'; render will approximate)
-  return { center: scalePoint(e.center, base, sx, sy), radius: e.radius * Math.abs(sx) };
+  // Non-uniform scale → TRUE elliptical arc (AutoCAD/ArchiCAD). Axes/rotation reuse the
+  // circle→ellipse SSoT; the arc's VISIBLE CCW range maps to startParam/endParam via the
+  // param SSoT above. A mirror (`sx·sy < 0`) reverses CCW↔CW in param space, so swap the
+  // endpoints to keep the ellipse sweep CCW (ellipses render start→end CCW).
+  const axes = nonUniformEllipseAxes(e.radius, Math.abs(sx), Math.abs(sy));
+  const range = arcVisibleCcwRange(e.startAngle, e.endAngle, e.counterclockwise);
+  const mirrored = sx * sy < 0;
+  const deg0 = mirrored ? range.end : range.start;
+  const deg1 = mirrored ? range.start : range.end;
+  const rawStart = circleAngleToEllipseParam(deg0, sx, sy, axes.swap);
+  const rawEnd = circleAngleToEllipseParam(deg1, sx, sy, axes.swap);
+  const startParam = norm2pi(rawStart);
+  const sweep = norm2pi(rawEnd - rawStart) || TWO_PI;
+  return {
+    type: 'ellipse' as const,
+    center,
+    majorAxis: axes.majorAxis,
+    minorAxis: axes.minorAxis,
+    rotation: axes.rotation,
+    startParam,
+    endParam: startParam + sweep,
+  };
 }
 
 function scaleCircleUniform(e: Entity & { type: 'circle' }, base: Point2D, s: number) {
@@ -52,15 +118,15 @@ function scaleCircleUniform(e: Entity & { type: 'circle' }, base: Point2D, s: nu
 }
 
 function scaleCircleToEllipse(e: Entity & { type: 'circle' }, base: Point2D, sx: number, sy: number) {
-  const absSx = Math.abs(sx);
-  const absSy = Math.abs(sy);
   const center = scalePoint(e.center, base, sx, sy);
-  const horizontal = e.radius * absSx;
-  const vertical = e.radius * absSy;
-  if (absSx >= absSy) {
-    return { type: 'ellipse' as const, center, majorAxis: horizontal, minorAxis: vertical, rotation: 0 };
-  }
-  return { type: 'ellipse' as const, center, majorAxis: vertical, minorAxis: horizontal, rotation: 90 };
+  const axes = nonUniformEllipseAxes(e.radius, Math.abs(sx), Math.abs(sy));
+  return {
+    type: 'ellipse' as const,
+    center,
+    majorAxis: axes.majorAxis,
+    minorAxis: axes.minorAxis,
+    rotation: axes.rotation,
+  };
 }
 
 function scaleEllipse(e: Entity & { type: 'ellipse' }, base: Point2D, sx: number, sy: number) {
@@ -160,6 +226,15 @@ function scaleRectangle(
   sx: number,
   sy: number,
 ) {
+  // ADR-646 #5 — a ROTATED rect under NON-uniform scale is no longer a rectangle: the two edge
+  // directions scale by different factors and the corner angles shear → it becomes a
+  // parallelogram. AutoCAD/ArchiCAD/Figma bake it to an explicit 4-vertex polyline. Reuse the
+  // rotation-aware corner SSoT (`rectangleEntityVertices`, handles corner1/corner2 AND x/y/w/h),
+  // then scale each corner. Uniform scale (any rotation) OR an axis-aligned rect stays a rect.
+  if (e.rotation && sx !== sy) {
+    const vertices = rectangleEntityVertices(e).map(v => scalePoint(v, base, sx, sy));
+    return { type: 'polyline' as const, vertices, closed: true };
+  }
   const origin = scalePoint({ x: e.x, y: e.y }, base, sx, sy);
   return {
     x: origin.x,

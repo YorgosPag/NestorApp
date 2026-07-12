@@ -65,6 +65,9 @@ export function validateEllipseEntity(entity: EntityModel): {
   majorAxis: number;
   minorAxis: number;
   rotation: number;
+  // 🏢 ADR-646 Φ3: elliptical-arc bounds (radians, CCW from +majorAxis). Absent → full ellipse.
+  startParam?: number;
+  endParam?: number;
 } | null {
   // 🏢 ADR-102: Use centralized type guard
   if (!isEllipseEntity(entity as Entity)) return null;
@@ -78,7 +81,14 @@ export function validateEllipseEntity(entity: EntityModel): {
 
   if (!center || !majorAxis || !minorAxis) return null;
 
-  return { center, majorAxis, minorAxis, rotation };
+  return {
+    center,
+    majorAxis,
+    minorAxis,
+    rotation,
+    startParam: ellipseEntity.startParam,
+    endParam: ellipseEntity.endParam,
+  };
 }
 
 /**

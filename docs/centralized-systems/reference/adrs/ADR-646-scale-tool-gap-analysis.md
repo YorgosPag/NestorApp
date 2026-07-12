@@ -1,6 +1,6 @@
 # ADR-646: Scale Tool — Ανάλυση Κενών & Χάρτης Ολοκλήρωσης
 
-**Status:** 🟡 IN PROGRESS (Φάσεις 1+2 ✅ IMPLEMENTED 2026-07-13· Φάσεις 3-4 εκκρεμούν)
+**Status:** 🟡 IN PROGRESS (Φάσεις 1+2+3 ✅ IMPLEMENTED 2026-07-13· Φάση 4 εκκρεμεί)
 **Date:** 2026-07-12
 **Domain:** DXF Viewer — Modify Tools
 **Base:** [ADR-348](ADR-348-scale-command.md) (Scale Command)· σχετικά: ADR-418 (view-scale), ADR-625 (transform ghost preview SSoT)
@@ -86,18 +86,35 @@
   + array-level rotation** = προσεγγιστικό (ίδιο caveat με #5)· uniform = ακριβές. Το array είναι
   associative → regeneration downstream· **browser-verify PENDING**.
 
-### 🟠 #4 — Τόξο (arc) σε non-uniform = γεωμετρικά λάθος
+### 🟠 #4 — Τόξο (arc) σε non-uniform = γεωμετρικά λάθος — ✅ ΔΙΟΡΘΩΘΗΚΕ (2026-07-13, true elliptical arc)
 - **Σύμπτωμα:** non-uniform scale σε τόξο → λάθος σχήμα.
-- **Ρίζα:** `scale-entity-transform.ts` `scaleArc` (γρ. 41-47) — σε non-uniform **αγνοεί το `sy`**,
-  κλιμακώνει radius μόνο με `|sx|`· το τόξο **δεν** μετατρέπεται σε ελλειπτικό (ο κύκλος→έλλειψη
-  γίνεται σωστά μέσω `scaleCircleToEllipse`, το arc→elliptical-arc **όχι** — το σχόλιο το παραδέχεται).
-- **Fix sketch:** non-uniform arc → `elliptical-arc` (ή τουλάχιστον σωστή προσέγγιση), ανάλογα με το
-  αν υπάρχει τύπος «elliptical-arc» στο σύστημα· αλλιώς τεκμηρίωσε το ως γνωστό όριο.
+- **Ρίζα:** `scale-entity-transform.ts` `scaleArc` — σε non-uniform **αγνοούσε το `sy`**, κλιμάκωνε
+  radius μόνο με `|sx|`· το τόξο **δεν** μετατρεπόταν σε ελλειπτικό.
+- **Απόφαση Giorgio (2026-07-13):** «όπως οι μεγάλοι — Revit/ArchiCAD/Cinema4D/Figma-level, full
+  enterprise» → **πραγματικό elliptical arc** (όχι polyline bake), όπως ο AutoCAD (arc→ELLIPSE με params).
+- **Κρίσιμο εύρημα (grep, CODE=SoT):** ο viewer **δεν ζωγράφιζε** μερική έλλειψη — `EllipseRenderer`
+  σχεδίαζε πάντα πλήρη έλλειψη (`ctx.ellipse … 0..TAU`) αγνοώντας `startParam/endParam`, το
+  `validateEllipseEntity` δεν τα επέστρεφε καν, και ο DXF importer μετατρέπει κάθε `ELLIPSE`→`circle`.
+  Το `scaleCircleToEllipse` «δούλευε» μόνο επειδή η έλλειψη ήταν **πλήρης**.
+- **Υλοποίηση:** (α) νέος SSoT `rendering/entities/shared/geometry-ellipse-utils.ts` (`ellipsePointAt`,
+  `tessellateEllipseArc`) — convention ίδια με snap `intersection-calculators` + array `EllipseStrategy`
+  (point = center + R(rot)·(major·cos t, minor·sin t)· rotation μοίρες· params rad CCW από +major).
+  (β) `EllipseRenderer.renderEllipseGeometry` τιμά πλέον `startParam/endParam` → tessellated path μέσω
+  `worldToScreen` (Y-flip-correct· η full ellipse μένει native — μηδέν regression). (γ) `validateEllipseEntity`
+  επιστρέφει `startParam/endParam`. (δ) `scaleArc` non-uniform → `{type:'ellipse', center, majorAxis,
+  minorAxis, rotation, startParam, endParam}`: axes/rotation μέσω του νέου SSoT `nonUniformEllipseAxes`
+  (κοινό με circle→ellipse), map της **visible CCW range** (`arcVisibleCcwRange`) → params μέσω
+  `circleAngleToEllipseParam` (local-frame projection· χειρίζεται swap rotation-90 **και** mirror signs).
+  Uniform → μένει circular arc.
 
-### 🟡 #5 — Rectangle: αγνοείται η περιστροφή
-- **Ρίζα:** `scale-entity-transform.ts` `scaleRectangle` (γρ. 156-169) — χρησιμοποιεί x/y/width/height
-  χωρίς `rotation` → non-uniform scale σε **στραμμένο** ορθογώνιο βγαίνει λάθος (η non-uniform
-  παραμόρφωση πρέπει να γίνει στο τοπικό στραμμένο πλαίσιο, ή το rect να «ψηθεί» σε polyline).
+### 🟡 #5 — Rectangle: αγνοείται η περιστροφή — ✅ ΔΙΟΡΘΩΘΗΚΕ (2026-07-13, parallelogram bake)
+- **Ρίζα:** `scaleRectangle` χρησιμοποιούσε x/y/width/height χωρίς `rotation` → non-uniform scale σε
+  **στραμμένο** ορθογώνιο βγαίνει λάθος.
+- **Υλοποίηση (πρακτική μεγάλων — AutoCAD/ArchiCAD/Figma):** rotated + non-uniform → **bake σε closed
+  polyline** 4 κορυφών (παραλληλόγραμμο — δεν παραμένει ορθογώνιο). Reuse του corner SSoT
+  `rectangleEntityVertices` (χειρίζεται ΚΑΙ corner1/corner2 ΚΑΙ x/y/w/h + rotation) → `scalePoint` ανά
+  κορυφή. Uniform (οποιοδήποτε rotation) Ή axis-aligned rect → μένει rect (η ομοιόμορφη κλίμακα δεν
+  παραμορφώνει το ορθογώνιο).
 
 ### 🟡 #6 — Καμία οπτική βοήθεια UI
 - Μόνο command-line στιλ (πληκτρολόγηση + `tool-hints`). Δεν υπάρχει on-screen numeric box, presets
@@ -120,8 +137,8 @@
 **Φάση 2 — Ασφαλής μεταχείριση μη-υποστηριζόμενων (#3). ✅ IMPLEMENTED 2026-07-13 (υβριδικά).**
 Skip-with-message για parametric BIM + πραγματικό scale για τα καθαρά γεωμετρικά (βλ. #3 παραπάνω).
 
-**Φάση 3 — Γεωμετρική ορθότητα (#4, #5).** Arc→elliptical-arc σε non-uniform· rectangle rotation-aware
-(ή bake σε polyline).
+**Φάση 3 — Γεωμετρική ορθότητα (#4, #5). ✅ IMPLEMENTED 2026-07-13.** Arc→**true elliptical arc** σε
+non-uniform (νέος render SSoT για μερική έλλειψη)· rotated rectangle → parallelogram polyline bake.
 
 **Φάση 4 — UI affordance (#6) + καθαρισμός (#7).** Contextual controls για C/R/N + συντελεστή·
 κατανάλωση/αφαίρεση `computeNonUniformRef`.
@@ -141,6 +158,19 @@ Skip-with-message για parametric BIM + πραγματικό scale για τα
 
 ## Changelog
 
+- **2026-07-13** — **Φάση 3 IMPLEMENTED (#4 arc→true elliptical arc, #5 rotated rect→parallelogram).**
+  Απόφαση Giorgio: «όπως οι μεγάλοι — Revit/ArchiCAD/Cinema4D/Figma-level, full enterprise· τα tokens/χρόνος
+  δεν με προβληματίζουν» → **πραγματικό elliptical arc**, όχι polyline bake. Grep audit (CODE=SoT) αποκάλυψε
+  ότι ο viewer **δεν ζωγράφιζε** μερική έλλειψη → επεκτάθηκε το scope στο rendering:
+  - **NEW** `rendering/entities/shared/geometry-ellipse-utils.ts` — SSoT sampler για elliptical arc
+    (`ellipsePointAt`/`tessellateEllipseArc`/`ellipseArcSegments`), convention ίδια με snap+array.
+  - `EllipseRenderer.renderEllipseGeometry` τιμά `startParam/endParam` (tessellated path, Y-flip-correct·
+    full ellipse μένει native). `validateEllipseEntity` επιστρέφει `startParam/endParam`.
+  - `scale-entity-transform.ts`: νέο `nonUniformEllipseAxes` SSoT (κοινό circle+arc), `circleAngleToEllipseParam`
+    (local-frame projection· swap + mirror-safe), `scaleArc` non-uniform → EllipseEntity με params,
+    `scaleRectangle` rotated+non-uniform → closed polyline (reuse `rectangleEntityVertices`).
+  - +1 test suite (`scale-entity-geometry-phase3`, 7 tests: arc uniform/no-swap/swap/endpoints + rect ×3).
+    jscpd:diff clean. Co-staged ADR-040 (EllipseRenderer = entity renderer). Follow-up: #6/#7 (Φ4).
 - **2026-07-13** — **Φάση 2 IMPLEMENTED (#3, υβριδικά — απόφαση Giorgio «full enterprise, όπως οι μεγάλοι»).**
   SSoT gate `isScalableEntityType()` στο `scale-entity-transform.ts` (mirror του switch). Parametric BIM +
   `stair` → skip-with-message μέσω `partitionSelection` στο `useScaleTool.ts` (mirror `filterLockedEntities`)

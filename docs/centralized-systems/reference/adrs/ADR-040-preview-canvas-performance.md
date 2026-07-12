@@ -4079,3 +4079,17 @@ SSoT για annotation symbols ΚΑΙ linetype symbols (N.18 anti-clone, Boy-Sco
 `{toScreen, radiusScale, rot}` → draw), δεν διαβάζει hover/selection → cacheable στο normal-state bitmap
 (rule 3 τηρείται). Το phase-tint μένει ευθύνη του renderer (fillStyle set πριν το loop), όχι του stamper.
 Staged για CHECK 6D (co-staged με ADR-642 changelog). ΟΧΙ tsc (N.17). 🔴 commit (Giorgio).
+
+## 2026-07-13: ADR-646 Φ3 — `EllipseRenderer` τιμά πλέον `startParam/endParam` (μερική έλλειψη, CHECK 6D stage)
+
+**Τι:** ο `EllipseRenderer` (entity renderer, CHECK 6D list) `renderEllipseGeometry` αποκτά **partial-arc branch**:
+όταν υπάρχουν `startParam/endParam` (π.χ. τόξο που κλιμακώθηκε non-uniform → ελλειπτικό, ADR-646 #4),
+tessellate-άρει την CCW σάρωση σε **world** σημεία μέσω του ΝΕΟΥ pure SSoT `rendering/entities/shared/
+geometry-ellipse-utils.ts` (`ellipsePointAt`/`tessellateEllipseArc`) και τα στρώνει με `worldToScreen`.
+**Γιατί path αντί για `ctx.ellipse`:** οι start/end γωνίες του `ctx.ellipse` είναι διφορούμενες κάτω από
+το screen Y-flip· η δειγματοληψία στον world χώρο + `worldToScreen` είναι Y-flip-correct και **ταυτίζεται**
+με τη σύμβαση που ήδη χρησιμοποιούν snap (`intersection-calculators`) + array (`EllipseStrategy`).
+**Γιατί δεν σπάει την αρχιτεκτονική:** η **full** έλλειψη (χωρίς params) μένει στο native `ctx.ellipse`
+path (μηδέν regression)· **μηδέν** νέα `useSyncExternalStore`/subscription· ο sampler είναι pure (δεν
+διαβάζει hover/selection) → cacheable στο normal-state bitmap (rule 3 τηρείται· δεν αγγίζει το cache key).
+Co-staged με ADR-646/ADR-348 changelog. jscpd:diff clean. ΟΧΙ tsc (N.17). 🔴 commit (Giorgio).

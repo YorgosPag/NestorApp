@@ -24,6 +24,7 @@ import { resolveLinetypeDef } from '../../rendering/linetype-dash-resolver';
 import {
   linePatternName,
   dashPatternToSegments,
+  segmentsToComplex,
 } from '../../config/line-pattern-segments';
 
 const LS_KEY = 'dxf:custom-linetypes';
@@ -63,6 +64,45 @@ describe('upsertUserLinetype — update in place', () => {
     registerUserLinetype('LTP-y', [1, -1]);
     upsertUserLinetype('LTP-y', [9, -9]);
     expect(resolveLinetype('LTP-y')?.pattern).toEqual([9, -9]);
+  });
+});
+
+describe('upsertUserLinetype — complex preservation (ADR-642 Edit-in-place)', () => {
+  const complexSegments = [
+    { kind: 'dash', lengthMm: 5 },
+    { kind: 'gap', lengthMm: 2 },
+    {
+      kind: 'symbol' as const,
+      glyphId: 'cross',
+      role: 'side' as const,
+      scale: 1,
+      rotationDeg: 0,
+      offsetXMm: 0,
+      offsetYMm: 0,
+    },
+  ];
+
+  it('carries the complex def when CREATING via upsert (free name → register path)', () => {
+    const complex = segmentsToComplex('GAS', complexSegments, '▬ ✳');
+    const def = upsertUserLinetype('GAS', [5, -2], '▬ ✳', complex);
+    expect(def?.complex).toBeDefined();
+    expect(def?.complex?.layers[0].elements.some((el) => el.kind === 'symbol')).toBe(true);
+    expect(resolveLinetype('GAS')?.complex).toEqual(complex);
+  });
+
+  it('does NOT flatten the complex when EDITING in place (existing name → replace path)', () => {
+    const complex = segmentsToComplex('GAS', complexSegments, '▬ ✳');
+    upsertUserLinetype('GAS', [5, -2], '▬ ✳', complex);
+    // Re-upsert the same name with the complex def (the in-place edit path the dialog drives).
+    const edited = upsertUserLinetype('GAS', [5, -2], '▬ ✳', complex);
+    expect(edited?.complex?.layers[0].elements.some((el) => el.kind === 'symbol')).toBe(true);
+    expect(resolveLinetype('GAS')?.complex).toEqual(complex);
+  });
+
+  it('leaves complex undefined for a simple in-place edit (backward-safe)', () => {
+    upsertUserLinetype('LTP-simple', [5, -2], '▬ ▬');
+    const edited = upsertUserLinetype('LTP-simple', [8, -3], '▬ ▬');
+    expect(edited?.complex).toBeUndefined();
   });
 });
 
