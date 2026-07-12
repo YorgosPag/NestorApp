@@ -37,8 +37,13 @@ import { useSelectedEntityIds } from '../../systems/selection/useSelectedEntitie
 // ADR-547): this render leaf subscribes to the scene SSoT and converts the fresh
 // snapshot itself, so a committed entity repaints on the SAME frame — instead of
 // waiting for a coincidental orchestrator re-render. ONLY this leaf re-renders.
-import { useLevelScene } from '../../systems/scene/useSceneSelectors';
+// ADR-641 Φ2 — the canvas render leaf reads the EXCLUSIVE-render-scope scene: the raw world scene,
+// or — while a Block Editor session is open — the entered block's block-local synthetic scene. The
+// swap is a LOW-freq leaf subscription (one transition per enter/exit) → ADR-040-safe; only this
+// leaf re-renders, never the orchestrator.
+import { useEffectiveLevelScene } from '../../systems/block/useEffectiveLevelScene';
 import { collectGroupEntities } from '../../systems/group/group-selection-bounds';
+import { collectBlockEntities } from '../../systems/block/block-selection-bounds';
 // ADR-575 §enter-group — leaf self-subscribes the drill-in level so the active group's
 // members are re-tagged with their own id (in-place edit) without re-rendering CanvasSection.
 import { useActiveGroupId } from '../../systems/group/useActiveGroup';
@@ -56,6 +61,10 @@ import type { DxfScene, DxfRenderOptions } from '../../canvas-v2/dxf-canvas/dxf-
 import type { ConstructionPoint } from '../../systems/guides/guide-types';
 import type { GridSettings, RulerSettings } from '../../canvas-v2';
 import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTypes';
+// ADR-639 Στάδιο 5 — the WebGL line-layer micro-leaf lives in its own file (keeps this
+// barrel from growing); re-exported here so the CanvasLayerStack shell imports every leaf
+// from the one place. Its own subscriptions are LOW-freq (scene/DPR/content), ADR-040-safe.
+export { WebglLineLayerSubscriber } from './canvas-layer-stack-webgl-line-leaf';
 
 // ─── Stable guide store subscriptions (module-level = stable across renders) ──
 // ADR-040: micro-leaf pattern — DxfCanvasSubscriber is the ONLY React subscriber
@@ -235,7 +244,10 @@ export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
   // bitmap cache invalidates on `sceneRef` → repaint. Hover/selection re-renders of
   // this leaf reuse the cached ref (no needless rebuild). Falls back to the prop
   // `scene` before the store has the level (first paint).
-  const liveSceneModel = useLevelScene(sceneLevelId);
+  // ADR-641 Φ2 — EXCLUSIVE render scope: while a block is entered this returns that block's local-
+  // space synthetic scene (ONLY its members, base @ origin) instead of the world scene, so the
+  // canvas becomes the AutoCAD Block Editor. Outside BEDIT it is the raw world scene (same ref).
+  const liveSceneModel = useEffectiveLevelScene(sceneLevelId);
   // ADR-575 §enter-group — drill-in level. Changing it (double-click enter / Esc exit)
   // re-tags only the active group's members with their own id so the entered member is
   // individually paintable/hover-able/selectable (Revit «Edit Group»). Low-freq (one
@@ -286,8 +298,15 @@ export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
   // no per-member grips) instead of one stray member. Same derivation SSoT as the grip
   // registry (`collectGroupEntities`). Reads the RAW SceneModel (groups survive only
   // pre-expansion); rebuilds only on a real scene mutation → stable through hover re-renders.
+  // ADR-640 — BLOCK containers share the SAME whole-container highlight mechanism as
+  // groups (the renderer paints every member that shares one id). Union the block ids
+  // into `groupIds` so a hovered/selected block highlights as ONE unit (the field name
+  // keeps `groupIds` for minimal diff — it is now «container ids», group ∪ block).
   const groupIds = useMemo(
-    () => new Set(collectGroupEntities(liveSceneModel?.entities).keys()),
+    () => new Set([
+      ...collectGroupEntities(liveSceneModel?.entities).keys(),
+      ...collectBlockEntities(liveSceneModel?.entities).keys(),
+    ]),
     [liveSceneModel],
   );
   // ADR-550 — store-driven transform tools dim their selected originals (a real moving copy is on

@@ -623,6 +623,7 @@
 | **ADR-638** | Bathroom Auto-Layout Generator (generative space planning) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-638-bathroom-auto-layout-generator.md) |
 | **ADR-639** | DXF Viewer Large-File Performance (worker parse + progress + spatial culling + streaming + WebGL) | 📝 PROPOSED | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-639-dxf-viewer-large-file-performance.md) |
 | **ADR-640** | Block subsystem — DXF INSERT as a first-class, round-trippable Block instance | 🟢 IMPLEMENTED (M1) | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-640-block-instance-subsystem.md) |
+| **ADR-641** | Block Editor (AutoCAD BEDIT) — exclusive block-local editing + sync-all-instances | 🟡 IN PROGRESS (Φ1) | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-641-block-editor-bedit.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---

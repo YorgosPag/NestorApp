@@ -21,6 +21,7 @@ import {
   resolveSelectedBlocks,
   computeBlockSelectionBounds,
 } from '../../systems/block/block-selection-bounds';
+import { useActiveBlockEditId } from '../../systems/block/useActiveBlockEdit';
 import type { ViewTransform } from '../../rendering/types/Types';
 
 interface BlockSelectionOverlaySubscriberProps {
@@ -40,6 +41,10 @@ export const BlockSelectionOverlaySubscriber = React.memo(function BlockSelectio
   const { t } = useTranslation('dxf-viewer');
   const selectedEntityIds = useSelectedEntityIds();
   const sceneModel = useLevelScene(sceneLevelId);
+  // ADR-641 Φ2 — inside a Block Editor the whole-block selection box/pill is suppressed: the block
+  // renders as its members in BLOCK-LOCAL space, so a box drawn from the block's WORLD bounds would
+  // sit in the wrong coordinate frame. Low-freq leaf subscription → ADR-040-safe.
+  const inBlockEdit = useActiveBlockEditId() !== null;
 
   const blocks: LabeledSelectionBounds[] = useMemo(() => {
     const selectedBlocks = resolveSelectedBlocks(sceneModel?.entities, selectedEntityIds);
@@ -54,7 +59,7 @@ export const BlockSelectionOverlaySubscriber = React.memo(function BlockSelectio
       .filter((b): b is LabeledSelectionBounds => b !== null);
   }, [sceneModel, selectedEntityIds, t]);
 
-  if (blocks.length === 0) return null;
+  if (inBlockEdit || blocks.length === 0) return null;
 
   return (
     <GroupSelectionOverlay

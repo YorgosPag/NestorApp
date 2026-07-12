@@ -425,6 +425,11 @@
     "label": "Μπλοκ «{name}» · {count, plural, one {# αντικείμενο} other {# αντικείμενα}}",
     "statusMultiple": "{count, plural, one {# μπλοκ} other {# μπλοκ}}"
   },
+  "activeBlock": {
+    "editingActive": "Επεξεργασία μπλοκ «{name}»",
+    "editingHint": "Esc για έξοδο",
+    "close": "Κλείσιμο"
+  },
   "tools": {
     "xline": {
       "name": "Γραμμή Κατασκευής",

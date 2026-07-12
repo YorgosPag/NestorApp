@@ -425,6 +425,11 @@
     "label": "Block \"{name}\" · {count, plural, one {# object} other {# objects}}",
     "statusMultiple": "{count, plural, one {# block} other {# blocks}}"
   },
+  "activeBlock": {
+    "editingActive": "Editing block \"{name}\"",
+    "editingHint": "Esc to exit",
+    "close": "Close"
+  },
   "tools": {
     "xline": {
       "name": "Construction Line",

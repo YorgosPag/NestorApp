@@ -72,6 +72,17 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-12 — ✅ Block Editor (BEDIT) exclusive render scope — leaf scene-swap (ADR-641 Φ2, CHECK 6B/6D)
+**Τι:** το `DxfCanvasSubscriber` (`canvas-layer-stack-leaves.tsx`) διαβάζει πλέον `useEffectiveLevelScene(sceneLevelId)`
+αντί `useLevelScene` — όταν ένα block είναι «entered» (`getActiveBlockEditId() !== null`) επιστρέφει το block-local
+synthetic scene (ADR-641), αλλιώς το ίδιο raw world scene (ίδιο ref). Τα `BlockGizmoLayer` + `BlockSelectionOverlaySubscriber`
+καταστέλλονται με low-freq `useActiveBlockEditId()` guard.
+**Συμμόρφωση ADR-040:** και οι δύο νέες subscriptions (`useActiveBlockEditId` μέσα στο `useEffectiveLevelScene`, +
+τα guards) είναι **low-frequency** (μία μετάβαση ανά enter/exit gesture, όπως το `activeGroupId` drill-in) → μόνο τα
+leaves re-render, **καμία** `useSyncExternalStore` σε `CanvasSection`/`CanvasLayerStack` (CHECK 6C ασφαλές). Το swap ζει
+σε **SceneModel level** (νέο `useEffectiveLevelScene` leaf hook), όχι στο hot bitmap-cache path ή σε cache key. Co-staged
+CHECK 6B/6D. Πλήρες detail: **ADR-641 changelog (Φ2)**.
+
 ### 2026-07-12 — ✅ Registry pattern edit → bitmap-cache invalidation (ADR-510 Φ2E #4, CHECK 6D)
 **Τι:** νέα (6η) imperative invalidation subscription στο `useDxfCanvasCacheInvalidation.ts` —
 `subscribeLinetypeRegistry(() => { bitmapCacheRef.current?.invalidate(); isDirtyRef.current = true; })`.

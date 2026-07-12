@@ -18,8 +18,13 @@ import { PropertiesPaletteStore } from '../../systems/properties/PropertiesPalet
 // ADR-575 §enter-group — double-click a selected GROUP to step INTO it (Revit «Edit
 // Group» / Figma). Selection-driven (single-click selects the whole group, double-click
 // enters): resolve the selected id to its container, push the drill-in level.
-import { enterGroup } from '../../systems/group/ActiveGroupStore';
+import { enterGroup, getActiveGroupId } from '../../systems/group/ActiveGroupStore';
 import { resolveGroupContainingEntity } from '../../systems/group/group-selection-bounds';
+// ADR-641 §3 — double-click a selected BLOCK to step INTO its exclusive Block Editor (AutoCAD
+// BEDIT). Mirror of enter-group, but a scene-scope SWAP (the canvas shows ONLY the block's
+// block-local members). Mutually exclusive with GROUP drill-in (ADR-641 §7).
+import { enterBlockEdit, isBlockEditActive } from '../../systems/block/ActiveBlockEditStore';
+import { collectBlockEntities } from '../../systems/block/block-selection-bounds';
 
 interface Params {
   transformRef: React.MutableRefObject<{ scale: number; offsetX: number; offsetY: number }>;
@@ -61,7 +66,16 @@ export function useCanvasSectionUI({
         const levelId = levelManager.currentLevelId;
         const rawScene = levelId ? levelManager.getLevelScene(levelId) : null;
         const group = resolveGroupContainingEntity(rawScene?.entities, ids[0]);
-        if (group) { enterGroup(group.id); return; }
+        // GROUP mutual-exclusivity (ADR-641 §7): never enter a group while a Block Editor is open.
+        if (group && !isBlockEditActive()) { enterGroup(group.id); return; }
+        // ADR-641 §3 — a BLOCK is selected via its container id (members carry block.id), so the
+        // single selected id resolves straight to the block. Enter its exclusive editor, but NOT
+        // while inside a group (mutual-exclusivity — else two scope systems fight over one canvas).
+        const block = collectBlockEntities(rawScene?.entities).get(ids[0]);
+        if (block) {
+          if (getActiveGroupId() === null) enterBlockEdit(block.id, block.name);
+          return;
+        }
         const entity = dxfScene?.entities.find(en => en.id === ids[0]);
         if (entity?.type === 'line') {
           const rect = containerRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 };

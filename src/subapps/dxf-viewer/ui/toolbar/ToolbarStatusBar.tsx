@@ -18,6 +18,8 @@ import { StatusBarGroupSelectionLeaf } from './StatusBarGroupSelectionLeaf';
 // ADR-640: selected BLOCK readout inline in the status bar («Μπλοκ «name» · N αντικείμενα»)
 import { StatusBarBlockSelectionLeaf } from './StatusBarBlockSelectionLeaf';
 import { StatusBarActiveGroupLeaf } from './StatusBarActiveGroupLeaf';
+// ADR-641 §3 — «Επεξεργασία μπλοκ «name» · Esc για έξοδο» + clickable Close while inside a BEDIT.
+import { StatusBarActiveBlockLeaf } from './StatusBarActiveBlockLeaf';
 // 🏢 ADR-418: real view-scale (1:N) micro-leaf
 import { useViewScale } from '../../systems/zoom/hooks/useViewScale';
 import type { ToolType } from './types';
@@ -187,6 +189,12 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
 
         {/* ADR-575 §enter-group — «Επεξεργασία ομάδας · Esc για έξοδο» while drilled in. */}
         <StatusBarActiveGroupLeaf
+          className={colors.text.info}
+          separatorClassName={colors.text.muted}
+        />
+
+        {/* ADR-641 §3 — «Επεξεργασία μπλοκ «name» · Esc για έξοδο» + Close while inside a BEDIT. */}
+        <StatusBarActiveBlockLeaf
           className={colors.text.info}
           separatorClassName={colors.text.muted}
         />

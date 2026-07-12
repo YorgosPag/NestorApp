@@ -28,6 +28,8 @@ import { useViewMode3DStore, selectIs3D } from '../bim-3d/stores/ViewMode3DStore
 import { useEscapeHandler, ESC_PRIORITY } from '../systems/escape-bus';
 // ADR-575 §enter-group — ESC steps OUT of the active group (registers its own bus slot).
 import { useGroupExitEscape } from '../systems/group/useGroupExitEscape';
+// ADR-641 §3 — ESC closes the active Block Editor (BLOCK_EDITOR_EXIT 274, block twin of GROUP_EXIT).
+import { useBlockEditorExitEscape } from '../systems/block/useBlockEditorExitEscape';
 // ADR-036 / ADR-364 Group 3 follow-up (2026-05-19): Single Source of Truth for
 // "is this tool a drawing or measurement tool?" lives in TOOL_DEFINITIONS via
 // `isInteractiveTool`. Eliminates the previously-hand-maintained
@@ -295,6 +297,10 @@ export const useKeyboardShortcuts = ({
   // ADR-575 §enter-group — ESC bus registration #3: step OUT of the active group
   // (GROUP_EXIT 275, between clear-grips and plain deselect).
   useGroupExitEscape();
+
+  // ADR-641 §3 — ESC bus registration #4: close the active Block Editor (BLOCK_EDITOR_EXIT 274,
+  // block twin of GROUP_EXIT — mutually exclusive, never both active).
+  useBlockEditorExitEscape();
 
   return {
     handleCanvasMouseMove

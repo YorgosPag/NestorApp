@@ -21,6 +21,7 @@ import {
   computeBlockSelectionBounds,
 } from '../../systems/block/block-selection-bounds';
 import { getBlockGizmoGrips } from '../../systems/block/block-gizmo-grips';
+import { useActiveBlockEditId } from '../../systems/block/useActiveBlockEdit';
 import type { GripInfo } from '../../hooks/grip-types';
 import type { Entity } from '../../types/entities';
 import { ContainerGizmoLayer, type ContainerGripResolver } from './ContainerGizmoLayer';
@@ -52,5 +53,11 @@ const resolveBlockGizmoGrips: ContainerGripResolver = (
 };
 
 export const BlockGizmoLayer = React.memo(function BlockGizmoLayer(props: BlockGizmoLayerProps) {
+  // ADR-641 Φ2 — inside a Block Editor the whole-block gizmo is suppressed: the canvas shows the
+  // block's members in BLOCK-LOCAL space, so a gizmo resolved from the block's WORLD bounds would
+  // paint in the wrong coordinate frame. Members are edited by their own grips, not the container's.
+  // Low-freq leaf subscription (one transition per enter/exit) → ADR-040-safe.
+  const inBlockEdit = useActiveBlockEditId() !== null;
+  if (inBlockEdit) return null;
   return <ContainerGizmoLayer {...props} resolveGrips={resolveBlockGizmoGrips} />;
 });

@@ -159,6 +159,18 @@ export const ESC_PRIORITY = {
   GROUP_EXIT: 275,
 
   /**
+   * P274 — Active Block Editor (BEDIT) drill-in (ADR-641 §3).
+   *
+   * The BLOCK twin of {@link GROUP_EXIT}: while INSIDE a Block Editor (double-clicked a
+   * block → exclusive block-local canvas), ESC closes the editor and re-selects the exited
+   * block — BEFORE the plain deselect at ENTITY_SELECTION (250), so the first ESC leaves the
+   * editor (block selected) and the next ESC deselects it. Below GRIP_SELECTION (300) so
+   * clearing member grips still wins first. Mutually exclusive with GROUP_EXIT (a block and a
+   * group are never entered at the same time), so the exact relative order to 275 never binds.
+   */
+  BLOCK_EDITOR_EXIT: 274,
+
+  /**
    * P250 — Entity selection non-empty (DXF + overlays).
    *
    * AutoCAD/BricsCAD pattern: ESC deselects after all higher contexts cleared.
