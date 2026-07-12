@@ -22,6 +22,8 @@ import { CutPlaneSlider3DLeaf } from './CutPlaneSlider3DLeaf';
 import { Section2DPanel } from '../panels/Section2DPanel';
 import { RenderFinalDialog } from '../render/RenderFinalDialog';
 import { RenderProgressOverlay } from '../render/RenderProgressOverlay';
+// ADR-645 Φάση A — Forge-style «loading %» overlay for the incremental 3D DXF text streaming build.
+import { Dxf3dStreamProgressLeaf } from './Dxf3dStreamProgressLeaf';
 import { ViewCubeContextMenu } from './view-cube/view-cube-context-menu';
 import { Grip3DVertexContextMenu } from './grips/Grip3DVertexContextMenu';
 import { FaceContextMenu } from './grips/FaceContextMenu';
@@ -452,6 +454,10 @@ export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimE
       {isRendering && !readOnly && (
         <RenderProgressOverlay onCancel={handleRenderCancel} />
       )}
+
+      {/* ADR-645 Φάση A — incremental 3D DXF text streaming «loading %» (self-hides when idle).
+          Shown in readOnly too — the streamed build runs there as well. */}
+      <Dxf3dStreamProgressLeaf />
 
       {/* Render dialog — Radix (ADR-001). Suppressed in readOnly. */}
       {!readOnly && (

@@ -59,6 +59,8 @@ export const DXF_TIMING = {
     CONSTRAINT_MIN: 10,
     /** Geometric-constraint solver max interval between updates (ADR-516 Group 6). */
     CONSTRAINT_MAX: 100,
+    /** Incremental 3D scene-build per-frame wall-clock budget (time-sliced streaming, ADR-645). */
+    INCREMENTAL_BUILD_BUDGET: 8,
   },
 
   // ──────────────────────────────────────────────────────────────────────────

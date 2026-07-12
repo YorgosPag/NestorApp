@@ -54,4 +54,21 @@ export const DXF_IMPORT_THRESHOLDS = {
    * permit files (209k plain LINEs) that motivated Στάδιο 5.
    */
   WEBGL_LINE_LAYER_MIN_ENTITIES: 50_000,
+
+  /**
+   * ADR-645 Φάση A — engage INCREMENTAL (time-sliced) 3D text streaming only when a build has
+   * at least this many text entities.
+   *
+   * The 2D→3D freeze (§2.2) is the synchronous, all-at-once `buildDxfTextMesh` loop: each text
+   * entity spins up a `<canvas>` + vector glyph engine + a `CanvasTexture` GPU upload. At the
+   * real 40 MB / 468-text (× floors) scale this blocks the main thread for seconds. Above this
+   * gate the text meshes are built across frames on a ~8 ms budget so the browser stays
+   * responsive; below it the handful of labels build synchronously inline — fast enough that the
+   * streaming overhead (a progress overlay flash, per-frame yields) would cost more than it saves.
+   *
+   * Counted per BUILD (single floor OR the whole «Όλοι οι όροφοι» stack aggregated), so a
+   * multi-floor view with few labels each but many floors correctly streams. 40 is comfortably
+   * above a typical annotated plan's title block yet well below the drawings that motivated this.
+   */
+  INCREMENTAL_3D_MIN_ENTITIES: 40,
 } as const;

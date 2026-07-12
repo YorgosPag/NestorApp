@@ -72,6 +72,18 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-12 — ✅ 3D DXF overlay build τρέχει στο UnifiedFrameScheduler (time-sliced streaming, ADR-645 Φάση A)
+**Τι:** το 2Δ→3Δ build του `DxfToThreeConverter` έπαψε να είναι σύγχρονο all-at-once μέσα σε React commit effect
+(που πάγωνε τον browser σε μεγάλα multi-floor DXF — 468 text × ορόφους). Νέο SSoT `bim-3d/scene/incremental-scene-builder.ts`:
+generic **time-sliced runner** πάνω στο **υπάρχον `UnifiedFrameScheduler.scheduleOnce` one-shot rAF** (ΟΧΙ δεύτερο
+rAF loop) — frame budget ~8ms, chunked clock-reads, progress callback, clean cancel token· pure + dependency-injected
+→ πλήρως jest-driveable με fake scheduler/clock. **Συμμόρφωση ADR-040:** (1) οι φθηνές γραμμές μπαίνουν στη σκηνή
+ΑΜΕΣΩΣ (camera-fit χωρίς αναμονή)· τα ακριβά text meshes streamαρουν σε batches με `markSceneDirty` per batch — το
+render-gating (`isSceneDirty`) ήδη επαναζωγραφίζει μόνο όταν dirty. (2) Νέο **micro-leaf** progress: `Dxf3dStreamProgressStore`
+(zero React state, subscribe/getSnapshot — ίδιο pattern με `HoverStore`/`ImmediatePositionStore`) + `Dxf3dStreamProgressLeaf`
+(ο ΜΟΝΑΔΙΚΟΣ subscriber → καμία cascade στο viewport). (3) Cancellation στο `disposeRoot()` πριν το teardown → race-free.
+`ThreeJsSceneManager` περνά `() => markSceneDirty()` στον converter (constructor callback). Πλήρες detail: **ADR-645 §8 + ADR-366 changelog**. ΟΧΙ tsc (N.17)· jest 56/56 GREEN. 🔴 browser-verify + commit (Giorgio).
+
 ### 2026-07-12 — ✅ Complex-linetype full-canvas routing — per-entity seam (ADR-642 Φ2-B μέρος 1, CHECK 6B/6D)
 **Τι:** τα entity renderers (LINE/POLYLINE/ARC/CIRCLE) ρουτάρουν το geometry stroke μέσω ΕΝΟΣ κοινού seam
 `strokeStyledEntityPolyline` (`rendering/entities/shared/complex-line-routing.ts`): όταν ο resolved τύπος έχει
@@ -4009,3 +4021,16 @@ per-entity seams** (μηδέν νέο loop/subscription):
 cache key (visibility/colour ζουν σε per-view store, human-rate flips → invalidation μέσω του υπάρχοντος
 render loop, όχι key-bloat· rule 3 τηρείται). Read-time getters (rule 2). Staged για CHECK 6B/6D. ΟΧΙ tsc
 (N.17). 🔴 commit (Giorgio).
+
+## 2026-07-12: ADR-642 Φ3-A — shared symbol-primitive stamper (`AnnotationSymbolRenderer` delegation, CHECK 6D stage)
+
+**Τι:** ο `AnnotationSymbolRenderer` (entity renderer, CHECK 6D list) refactor-άρεται ώστε το `drawGlyph` να
+**delegate-άρει** το per-primitive draw στο ΝΕΟ pure `rendering/entities/shared/symbol-primitive-stamp.ts`
+(`stampSymbolPrimitive`), extracted **VERBATIM** από τη μέθοδο `stampPrimitive`/`stampSvgGlyph`. **Γιατί:**
+το ADR-642 Φ3 (complex-linetype symbols, `──×──` φράχτης) χρειάζεται τον ΙΔΙΟ unit-space glyph painter — ΕΝΑ
+SSoT για annotation symbols ΚΑΙ linetype symbols (N.18 anti-clone, Boy-Scout N.0.2), αντί για sibling twin.
+**Γιατί δεν σπάει την αρχιτεκτονική:** καθαρό move-refactor — **μηδέν** συμπεριφορική αλλαγή, **μηδέν** νέα
+`useSyncExternalStore`/subscription, **καμία** αλλαγή στο bitmap cache key. Ο stamper είναι pure (ctx +
+`{toScreen, radiusScale, rot}` → draw), δεν διαβάζει hover/selection → cacheable στο normal-state bitmap
+(rule 3 τηρείται). Το phase-tint μένει ευθύνη του renderer (fillStyle set πριν το loop), όχι του stamper.
+Staged για CHECK 6D (co-staged με ADR-642 changelog). ΟΧΙ tsc (N.17). 🔴 commit (Giorgio).

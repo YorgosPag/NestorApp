@@ -54,7 +54,12 @@
   "viewport": {
     "placeholder": "3D viewport (loading...)",
     "loadingLabel": "Loading 3D scene",
-    "webglError": "WebGL is not supported on this device"
+    "webglError": "WebGL is not supported on this device",
+    "streaming": {
+      "title": "Loading floor plan in 3D…",
+      "labels": "Labels: {current}/{total}",
+      "percent": "{percent}%"
+    }
   },
   "entityCard": {
     "closeAria": "Close panel",

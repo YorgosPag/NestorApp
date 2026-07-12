@@ -20,7 +20,7 @@
 
 import * as THREE from 'three';
 import type { Point2D } from '../../rendering/types/Types';
-import type { DxfScene, DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { DxfScene, DxfEntityUnion, DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { SceneLayer } from '../../types/entities';
 import { ACI_PALETTE } from '../../settings/standards/aci';
 // 🏢 ADR-571: hex→int SSoT (μηδέν local parseInt duplicate)
@@ -30,6 +30,13 @@ import { circlePolyline, arcPolyline } from './dxf-arc-circle-sample';
 import { buildDxfTextMesh } from './dxf-text-3d';
 import { registerPostFxOverlay } from '../scene/post-fx-overlay-pass';
 import { finiteBox3FromObject } from '../scene/finite-bounds';
+// ADR-645 Φάση A — time-sliced text streaming (freeze fix) + its progress SSoT.
+import { runIncrementalBuild, type IncrementalBuildHandle } from '../scene/incremental-scene-builder';
+import { setDxf3dStreamProgress, clearDxf3dStreamProgress } from '../stores/Dxf3dStreamProgressStore';
+// ADR-645 Φάση A — gate: below this many text entities the build stays synchronous (no loader flash).
+import { DXF_IMPORT_THRESHOLDS } from '../../config/dxf-import-thresholds';
+// ADR-645 Φάση A — view-priority ordering reuses the 2D per-entity bbox SSoT (ADR-040 Phase IX).
+import { getEntityBBox } from '../../canvas-v2/dxf-canvas/dxf-viewport-culling';
 import {
   toDxfOverlaySyncKey,
   isSameDxfOverlaySync,
@@ -41,6 +48,8 @@ import {
 // ── Constants ─────────────────────────────────────────────────────────────────
 const DEFAULT_COLOR = 0xffffff;
 const WIREFRAME_OPACITY = 0.65;
+/** ADR-645 Φάση A — one active streaming build per converter; a re-sync replaces it under this id. */
+const DXF3D_STREAM_BUILD_ID = 'dxf3d-text-stream';
 
 // ACI_PALETTE values are CSS hex strings '#RRGGBB'. Cast for numeric index access.
 const ACI_MAP = ACI_PALETTE as unknown as Record<number, string | undefined>;
@@ -167,12 +176,43 @@ export interface DxfOverlayFloorEntry {
 
 const MM_TO_M = 0.001;
 
+/** ADR-645 Φάση A — one floor's built wireframe group + the text entities left to stream into it. */
+interface BuiltFloorGroup {
+  readonly group: THREE.Group;
+  readonly layersById: Record<string, SceneLayer> | undefined;
+  /** Visible text entities of this floor — deferred to the streamed pass (§text hotspot). */
+  readonly textEntities: readonly DxfText[];
+}
+
+/** ADR-645 Φάση A — one deferred text mesh: which entity, into which floor group, with which layers. */
+interface StreamTextItem {
+  readonly group: THREE.Group;
+  readonly entity: DxfText;
+  readonly layersById: Record<string, SceneLayer> | undefined;
+}
+
+/**
+ * ADR-645 Φάση A — view-priority: bigger text first (bbox area, descending) so titles /
+ * prominent labels stream in before the fine print. Uses the 2D per-entity bbox SSoT
+ * (`getEntityBBox`, ADR-040 Phase IX); non-finite areas sort last. Full frustum / screen-size
+ * culling is Φάση C — this is the cheap, camera-free ordering the streamed build needs now.
+ */
+function textPriorityArea(entity: DxfText): number {
+  const bb = getEntityBBox(entity);
+  const area = (bb.maxX - bb.minX) * (bb.maxY - bb.minY);
+  return Number.isFinite(area) ? area : 0;
+}
+
 export class DxfToThreeConverter {
   private readonly scene: THREE.Scene;
+  /** ADR-645 Φάση A — invoked per streamed batch so the frame scheduler repaints the fill-in. */
+  private readonly onSceneDirty: () => void;
   private root: THREE.Group | null = null;
   private readonly activeMaterials: THREE.LineBasicMaterial[] = [];
   /** ADR-537 underlay-depth — unregister the post-FX overlay provider on dispose. */
   private readonly unregisterOverlay: () => void;
+  /** ADR-645 Φάση A — in-flight streamed text build; cancelled on every re-sync / dispose. */
+  private activeBuild: IncrementalBuildHandle | null = null;
   // 🚀 PERF (ADR-040, 2026-06-28) — idempotency guards. `sync()`/`syncMultiFloor()`
   // skip the full teardown + GPU re-upload when handed an overlay-equivalent input
   // (e.g. a BIM column moved but no DXF line/text changed). Cross-mode: each path
@@ -180,8 +220,9 @@ export class DxfToThreeConverter {
   private lastSyncKey: DxfOverlaySyncKey | null = null;
   private lastMultiKey: readonly DxfOverlayFloorKey[] | null = null;
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, onSceneDirty: () => void = () => {}) {
     this.scene = scene;
+    this.onSceneDirty = onSceneDirty;
     // ADR-537 underlay-depth — the wireframe/text underlay is drawn by the dedicated post-FX
     // overlay pass (`post-fx-overlay-pass.ts`), never the lit scene. Register the current root as
     // a provider (kept `visible=false`); the pass draws it on top of the scene depth, AO-immune.
@@ -199,18 +240,23 @@ export class DxfToThreeConverter {
     this.lastSyncKey = key;
     this.lastMultiKey = null; // leaving multi-floor mode
     this.disposeRoot();
-    const group = dxfScene ? this.buildColorGroup(dxfScene) : null;
-    if (!group) return;
+    const built = dxfScene ? this.buildLineGroup(dxfScene) : null;
+    if (!built) return;
 
     // Flat structure (named group holds the LineSegments directly) — unchanged
     // from the pre-multi-floor layout so existing consumers / tests keep working.
-    group.name = 'dxf-wireframe';
+    built.group.name = 'dxf-wireframe';
     // ADR-537 underlay-depth — drawn by the dedicated post-FX overlay pass (`post-fx-overlay-pass.ts`),
     // not the lit scene. `visible=false` hides it from the main render; the pass reads the root
     // via `getRoot()` (the owner accessor, mirror of `getBounds`) and flips it on for its own pass.
-    group.visible = false;
-    this.root = group;
-    this.scene.add(group);
+    built.group.visible = false;
+    this.root = built.group;
+    this.scene.add(built.group);
+    // ADR-645 Φάση A — lines are in the scene NOW → `getBounds()` frames the camera immediately;
+    // the (expensive) text meshes stream in across the next frames without blocking.
+    this.streamText(built.textEntities.map((entity) => (
+      { group: built.group, entity, layersById: built.layersById }
+    )));
   }
 
   /**
@@ -229,31 +275,42 @@ export class DxfToThreeConverter {
     this.disposeRoot();
     const root = new THREE.Group();
     root.name = 'dxf-wireframe-multifloor';
+    // ADR-645 Φάση A — text of EVERY floor is aggregated into ONE streamed build (multi-floor is
+    // the real scale driver: text × floors → thousands). One runner, one progress bar, one budget.
+    const textTasks: StreamTextItem[] = [];
     for (const entry of entries) {
-      const group = this.buildColorGroup(entry.scene);
-      if (!group) continue;
-      group.position.y = entry.floorElevationMm * MM_TO_M;
-      root.add(group);
+      const built = this.buildLineGroup(entry.scene);
+      if (!built) continue;
+      built.group.position.y = entry.floorElevationMm * MM_TO_M;
+      root.add(built.group);
+      for (const entity of built.textEntities) {
+        textTasks.push({ group: built.group, entity, layersById: built.layersById });
+      }
     }
     if (root.children.length === 0) return;
     // ADR-537 underlay-depth — same dedicated underlay pass for the stacked multi-floor root.
     root.visible = false;
     this.root = root;
     this.scene.add(root);
+    this.streamText(textTasks);
   }
 
   /**
-   * Build a colour-bucketed `THREE.Group` for one DXF scene (scaled to metres),
-   * or null when there is nothing to draw. Shared by `sync` + `syncMultiFloor`.
+   * ADR-645 Φάση A — build ONLY the cheap line color-buckets for one DXF scene (scaled to
+   * metres) and collect its visible text entities for the deferred streamed pass. Returns null
+   * when there is nothing visible/drawable. Shared by `sync` + `syncMultiFloor`.
    */
-  private buildColorGroup(dxfScene: DxfScene): THREE.Group | null {
+  private buildLineGroup(dxfScene: DxfScene): BuiltFloorGroup | null {
     if (dxfScene.entities.length === 0) return null;
 
     const layersById = dxfScene.layersById as Record<string, SceneLayer> | undefined;
     const colorBuckets = new Map<number, number[]>();
+    const textEntities: DxfText[] = [];
 
     for (const entity of dxfScene.entities) {
       if (!entity.visible) continue;
+      // ADR-645 Φάση A — text is deferred to the streamed pass (the §2.2 freeze hotspot).
+      if (entity.type === 'text') { textEntities.push(entity); continue; }
       const color = resolveEntityColor(entity, layersById);
       let bucket = colorBuckets.get(color);
       if (!bucket) {
@@ -279,26 +336,8 @@ export class DxfToThreeConverter {
       group.add(new THREE.LineSegments(geo, mat));
     }
 
-    // ADR-537 β — text entities have no stroke; render each as a flat textured plane (laid on
-    // the floor plane in native units) so it is visible + selectable/hoverable in 3D.
-    for (const entity of dxfScene.entities) {
-      if (entity.type !== 'text' || !entity.visible) continue;
-      const bundle = buildDxfTextMesh(entity, resolveEntityColor(entity, layersById));
-      if (!bundle) continue;
-      // ADR-537 NaN-guard — a text entity with a non-finite anchor/height yields a NaN mesh
-      // position (or geometry) → the same Box3 poisoning as `pushSeg`. Skip it (and free its GPU
-      // resources, since the disposeRoot traversal below will no longer reach an un-added mesh).
-      const p = bundle.mesh.position;
-      if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.z)) {
-        bundle.geometry.dispose();
-        bundle.material.dispose();
-        bundle.texture.dispose();
-        continue;
-      }
-      group.add(bundle.mesh);
-    }
-
-    if (group.children.length === 0) return null;
+    // Nothing visible at all (no line segments, no text) → no group, mirrors the old null return.
+    if (group.children.length === 0 && textEntities.length === 0) return null;
 
     // Scale the wireframe overlay from DXF world units → metres so it aligns
     // with BIM geometry. appendEntitySegments stores raw DXF coordinates;
@@ -306,7 +345,57 @@ export class DxfToThreeConverter {
     // Scene-units → metres via the SSoT (`scene-units.ts`); declared unit, else mm default.
     const unitScale = sceneUnitsToMeters(resolveSceneUnits({ units: dxfScene.units }));
     group.scale.set(unitScale, 1, unitScale);
-    return group;
+    return { group, layersById, textEntities };
+  }
+
+  /**
+   * ADR-537 β — text entities have no stroke; render each as a flat textured plane laid on the
+   * floor plane in native units so it is visible + selectable/hoverable in 3D. Appends one text
+   * mesh to its floor group. NaN-guarded (a non-finite anchor/height poisons the shared Box3 →
+   * NaN-frames the camera; skip + free the GPU resources of the un-added mesh).
+   */
+  private appendTextMesh(item: StreamTextItem): void {
+    const bundle = buildDxfTextMesh(item.entity, resolveEntityColor(item.entity, item.layersById));
+    if (!bundle) return;
+    const p = bundle.mesh.position;
+    if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.z)) {
+      bundle.geometry.dispose();
+      bundle.material.dispose();
+      bundle.texture.dispose();
+      return;
+    }
+    item.group.add(bundle.mesh);
+  }
+
+  /**
+   * ADR-645 Φάση A — build the deferred text meshes. Small scenes (< the gate) build
+   * synchronously inline — fast enough, and NO loader flash / regression. Large scenes stream
+   * the text across frames on the `UnifiedFrameScheduler` (frame budget), view-priority ordered,
+   * publishing progress to `Dxf3dStreamProgressStore` so the overlay can show %. The line
+   * wireframe is already in the scene, so the browser stays responsive throughout the fill-in.
+   */
+  private streamText(items: StreamTextItem[]): void {
+    if (items.length === 0) { this.onSceneDirty(); return; }
+    // View-priority: bigger text first (descending bbox area).
+    items.sort((a, b) => textPriorityArea(b.entity) - textPriorityArea(a.entity));
+    const total = items.length;
+
+    if (total < DXF_IMPORT_THRESHOLDS.INCREMENTAL_3D_MIN_ENTITIES) {
+      for (const item of items) this.appendTextMesh(item);
+      this.onSceneDirty();
+      return;
+    }
+
+    setDxf3dStreamProgress(0, total);
+    this.onSceneDirty(); // paint the line wireframe immediately (frame 0)
+    this.activeBuild = runIncrementalBuild({
+      id: DXF3D_STREAM_BUILD_ID,
+      total,
+      processItem: (i) => this.appendTextMesh(items[i]),
+      onFrameProcessed: (done, tot) => { setDxf3dStreamProgress(done, tot); this.onSceneDirty(); },
+      onComplete: () => { this.activeBuild = null; clearDxf3dStreamProgress(); this.onSceneDirty(); },
+      onCancelled: () => { clearDxf3dStreamProgress(); },
+    });
   }
 
   getBounds(): THREE.Box3 | null {
@@ -318,6 +407,11 @@ export class DxfToThreeConverter {
   }
 
   private disposeRoot(): void {
+    // ADR-645 Φάση A — a new sync (re-sync / floor switch / dispose) aborts any in-flight streamed
+    // text build BEFORE teardown, so no `processItem` can append a mesh to a group about to be
+    // disposed (clean cancellation — the §Google-level race-free guarantee). `cancel()` clears the
+    // progress overlay via `onCancelled`; the fresh `streamText` re-arms it if the new build streams.
+    if (this.activeBuild) { this.activeBuild.cancel(); this.activeBuild = null; }
     if (!this.root) return;
     this.root.traverse((obj) => {
       if (obj instanceof THREE.LineSegments) obj.geometry.dispose();
@@ -337,7 +431,8 @@ export class DxfToThreeConverter {
 
   dispose(): void {
     this.unregisterOverlay();
-    this.disposeRoot();
+    this.disposeRoot(); // ADR-645 Φάση A — cancels the in-flight streamed build (+ clears its progress).
+    clearDxf3dStreamProgress(); // defensive: ensure the overlay never lingers after unmount.
     this.lastSyncKey = null;
     this.lastMultiKey = null;
   }

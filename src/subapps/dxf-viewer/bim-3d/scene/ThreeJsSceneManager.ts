@@ -120,7 +120,9 @@ export class ThreeJsSceneManager {
     this.hemi = lights.hemi;
     this.scene = createBimScene(lights);
     this.bimLayer = new BimSceneLayer(this.scene);
-    this.dxfConverter = new DxfToThreeConverter(this.scene);
+    // ADR-645 Φάση A — the converter streams text meshes across frames; each batch marks the
+    // scene dirty so the UnifiedFrameScheduler repaints the fill-in without a second rAF loop.
+    this.dxfConverter = new DxfToThreeConverter(this.scene, () => this.markSceneDirty());
     this.viewport = initViewportCamera({
       rendererDomElement: this.renderer.domElement,
       initialPosition: INITIAL_CAMERA_POSITION,
