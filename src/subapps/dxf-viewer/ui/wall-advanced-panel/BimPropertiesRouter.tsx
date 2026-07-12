@@ -28,6 +28,9 @@ import { BeamPropertiesTab } from '../beam-advanced-panel/BeamPropertiesTab';
 import { FoundationPropertiesTab } from '../foundation-advanced-panel/FoundationPropertiesTab';
 import { SlabPropertiesTab } from '../slab-advanced-panel/SlabPropertiesTab';
 import { SlabOpeningPropertiesTab } from '../slab-opening-advanced-panel/SlabOpeningPropertiesTab';
+// ADR-510 Φ2E #4 — inline «Τμήματα Μοτίβου» editor for a selected style-editable primitive.
+import { isStyleEditablePrimitiveType } from '../../types/style-editable-primitives';
+import { LinePropertiesTab } from '../line-advanced-panel/LinePropertiesTab';
 import type { SceneModel } from '../../types/scene';
 
 export interface BimPropertiesRouterProps {
@@ -91,6 +94,13 @@ export function BimPropertiesRouter(
 
   if (selected && isStairEntity(selected)) {
     return <StairPropertiesTab {...props} />;
+  }
+
+  // ADR-510 Φ2E #4 — a selected generic primitive (line/polyline/circle/arc/…)
+  // gets the inline «Τμήματα Μοτίβου» pattern editor. After all BIM branches so a
+  // BIM element's own panel always wins; before the empty state so it's not lost.
+  if (selected && isStyleEditablePrimitiveType(selected.type)) {
+    return <LinePropertiesTab {...props} />;
   }
 
   // No BIM selection — render the stair tab's empty state (legacy path).

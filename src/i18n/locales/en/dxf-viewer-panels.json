@@ -330,6 +330,16 @@
       },
       "linePatternEditor": {
         "openButton": "New line type…",
+        "inlineTab": {
+          "title": "Line Properties",
+          "emptyState": "Select a line to view and edit its pattern segments.",
+          "hint": "Add segments (Dash / Gap / Dot) to define a pattern for this line.",
+          "sections": {
+            "general": "General",
+            "geometry": "Geometry",
+            "polyline": "Polyline"
+          }
+        },
         "title": "New line type",
         "description": "Define explicit lengths for dashes, gaps and dots. The pattern is saved and selectable by name on any dimension.",
         "nameLabel": "Name",

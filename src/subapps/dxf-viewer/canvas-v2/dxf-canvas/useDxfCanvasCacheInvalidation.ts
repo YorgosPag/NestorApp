@@ -28,6 +28,12 @@ import { subscribeLayerStore } from '../../stores/LayerStore';
 // key), so a flip must invalidate the normal-state bitmap (same contract as LayerStore).
 import { subscribeLineweightDisplay } from '../../stores/LineweightDisplayStore';
 import { subscribeCanvasBackgroundChange } from '../../config/canvas-theme';
+// ADR-510 Φ2E #4 — user-created linetype PATTERN edits (inline «Τμήματα Μοτίβου»
+// COW editor) mutate the LinetypeRegistry in place. The dash is derived at
+// entity-paint time (resolveEntityRenderStyle → resolveLinetypePatternMm → registry)
+// and is NOT part of the bitmap cache key, so a same-name pattern update must
+// invalidate to repaint — identical contract to LWDISPLAY/LayerStore/isolate below.
+import { subscribeLinetypeRegistry } from '../../stores/LinetypeRegistry';
 // ADR-375 Phase B — re-render on BIM render-settings changes (drawingScale / viewRange / objectStyles).
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 // ADR-530 — preload CAD glyph fonts + rebuild the bitmap layer once they land.
@@ -103,6 +109,19 @@ export function useDxfCanvasCacheInvalidation(
   // LIVE background (`resolveDxfCanvasBackgroundHex`), which is NOT in the cache key. Same as LWDISPLAY.
   useEffect(() => {
     return subscribeCanvasBackgroundChange(() => {
+      bitmapCacheRef.current?.invalidate();
+      isDirtyRef.current = true;
+    });
+  }, [bitmapCacheRef, isDirtyRef]);
+
+  // ADR-510 Φ2E #4 — invalidate when a user-created linetype's PATTERN changes
+  // (inline «Τμήματα Μοτίβου» COW editor calls `upsertUserLinetype` on each edit).
+  // The dash is resolved from the registry at entity-paint time (NOT the cache key),
+  // so a same-name pattern update repaints only via this invalidate — same contract
+  // as LWDISPLAY above. Low-frequency (linetype edits are rare, like the isolate
+  // opacity slider), so a full-layer rebuild here is ADR-040 compliant.
+  useEffect(() => {
+    return subscribeLinetypeRegistry(() => {
       bitmapCacheRef.current?.invalidate();
       isDirtyRef.current = true;
     });

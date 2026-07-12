@@ -66,27 +66,12 @@ const LINEWEIGHT_OPTIONS = LINEWEIGHT_RIBBON_OPTIONS;
 // Ο former ACI `COLOR_OPTIONS` dropdown αφαιρέθηκε — ο picker μιλάει hex, το bridge
 // μεταφράζει hex ↔ true-color + πλησιέστερο ACI (καμία στατική λίστα εδώ).
 
-// ─── Linetype scale (CELTSCALE) options ───────────────────────────────────────
-// Numeric presets → RibbonCombobox renders an EDITABLE type-to-enter field (the
-// list is purely numeric); `numericInput.editable` keeps free typing too.
-
-const LINETYPE_SCALE_OPTIONS = literalNumberOptions(['0.25', '0.5', '1', '2', '4']);
-
-// ─── Polyline width options (ADR-510 Φ3d) ─────────────────────────────────────
-// Edge-to-edge width in the ACTIVE display unit (default cm). Presets are just
-// shortcuts — the field is editable (numericInput), so any value can be typed.
-// 0 = hairline. Values chosen to be VISIBLE at the default cm unit (1 cm = 10 mm).
-
-const WIDTH_OPTIONS = literalNumberOptions(['0', '1', '2', '5', '10']);
-
-// ─── Transparency options (ADR-510 Φ4) ────────────────────────────────────────
-// AutoCAD object transparency 0 (opaque) .. 90. Editable integer, presets are
-// shortcuts. Draw-defaults show 0.
-
-const TRANSPARENCY_OPTIONS = literalNumberOptions(['0', '25', '50', '75', '90']);
-
-// ADR-510 Φ4 — editable numeric config for a signed display-unit coordinate/delta.
-const COORD_INPUT = { editable: true, allowNegative: true, allowDecimal: true } as const;
+// ─── ADR-510 Φ2E #5 — CELTSCALE / width / transparency / coordinate specs MOVED ──
+// The per-object linetype-scale, polyline width, transparency and geometry
+// (coordinate/delta) fields no longer live in this contextual ribbon tab: they
+// migrated to the left Properties palette (AutoCAD-grade split — Ribbon = tools +
+// quick draw-defaults; palette = the selected object's full truth). Their option
+// ladders + numeric configs now live in `ui/line-advanced-panel/line-property-fields.ts`.
 
 // ─── Fillet radius options (ADR-510 Φ4e) ──────────────────────────────────────
 // AutoCAD FILLETRAD. Editable (any value typed), presets are shortcuts. 0 = extend.
@@ -275,23 +260,12 @@ export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
                 options: [],
               },
             },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'lineToolStyle.transparency',
-                labelKey: 'ribbon.commands.quickStyle.transparency',
-                commandKey: LINE_TOOL_RIBBON_KEYS.transparency,
-                comboboxWidthPx: 80,
-                options: TRANSPARENCY_OPTIONS,
-                numericInput: { editable: true, min: 0, max: 90, allowDecimal: false },
-              },
-            },
+            // ADR-510 Φ2E #5 — «Διαφάνεια» moved to the left Properties palette (Γενικά).
           ],
         },
       ],
     },
-    // ── Εμφάνιση Γραμμής (linetype / lineweight / scale + width flyout) ────────
+    // ── Εμφάνιση Γραμμής (linetype / lineweight + «＋ Νέος τύπος») ──────────────
     {
       id: 'line-appearance',
       labelKey: 'ribbon.panels.lineAppearance',
@@ -322,19 +296,7 @@ export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
                 options: LINEWEIGHT_OPTIONS,
               },
             },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'lineToolStyle.linetypeScale',
-                labelKey: 'ribbon.commands.quickStyle.linetypeScale',
-                commandKey: LINE_TOOL_RIBBON_KEYS.linetypeScale,
-                comboboxWidthPx: 80,
-                options: LINETYPE_SCALE_OPTIONS,
-                // ADR-510 Φ2E #2 — editable numeric (CELTSCALE > 0), Revit-grade.
-                numericInput: { editable: true, min: 0.01 },
-              },
-            },
+            // ADR-510 Φ2E #5 — «Κλίμακα» (CELTSCALE) moved to the left Properties palette (Γενικά).
           ],
         },
         // ADR-510 Φ2E #3 — «＋ Νέος τύπος» launcher σε 2η στήλη (δεξιά από «Τύπος»,
@@ -358,159 +320,12 @@ export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
         },
       ],
     },
-    // ── Πολυγραμμή (AutoCAD «Global Width» — polyline-only → self-hides for a LINE) ─
-    // ADR-510 Φ3d — «Πλάτος» is a polyline-only property; a plain LINE has no width in
-    // the data model (the write silently skips it). Mirroring the Geometry panel's
-    // line-only self-hide, this panel appears ONLY when a width-capable (polyline-like)
-    // entity is selected (`visibilityKey` → getPanelVisibility → isPolylineLike).
-    {
-      id: 'line-width',
-      labelKey: 'ribbon.panels.linePolyline',
-      visibilityKey: LINE_TOOL_PANEL_VISIBILITY_KEYS.widthApplicable,
-      rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'lineToolStyle.width',
-                labelKey: 'ribbon.commands.quickStyle.width',
-                commandKey: LINE_TOOL_RIBBON_KEYS.width,
-                comboboxWidthPx: 80,
-                options: WIDTH_OPTIONS,
-                // ADR-510 Φ3d — editable numeric polyline width (≥ 0, display unit).
-                numericInput: { editable: true, min: 0 },
-              },
-            },
-          ],
-        },
-      ],
-    },
-    // ── Γεωμετρία (AutoCAD «Geometry», line-only → self-hides otherwise) ───────
-    {
-      id: 'line-geometry',
-      labelKey: 'ribbon.panels.lineGeometry',
-      visibilityKey: LINE_TOOL_PANEL_VISIBILITY_KEYS.geometry,
-      rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'lineToolStyle.length',
-                labelKey: 'ribbon.commands.quickStyle.length',
-                commandKey: LINE_TOOL_RIBBON_KEYS.length,
-                comboboxWidthPx: 90,
-                options: [],
-                numericInput: { editable: true, allowDecimal: true, min: 0.0001 },
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'lineToolStyle.angle',
-                labelKey: 'ribbon.commands.quickStyle.angle',
-                commandKey: LINE_TOOL_RIBBON_KEYS.angle,
-                comboboxWidthPx: 90,
-                options: [],
-                numericInput: { editable: true, allowNegative: true, allowDecimal: true },
-              },
-            },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'lineToolStyle.startX',
-                labelKey: 'ribbon.commands.quickStyle.startX',
-                commandKey: LINE_TOOL_RIBBON_KEYS.startX,
-                comboboxWidthPx: 90,
-                options: [],
-                numericInput: COORD_INPUT,
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'lineToolStyle.startY',
-                labelKey: 'ribbon.commands.quickStyle.startY',
-                commandKey: LINE_TOOL_RIBBON_KEYS.startY,
-                comboboxWidthPx: 90,
-                options: [],
-                numericInput: COORD_INPUT,
-              },
-            },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'lineToolStyle.endX',
-                labelKey: 'ribbon.commands.quickStyle.endX',
-                commandKey: LINE_TOOL_RIBBON_KEYS.endX,
-                comboboxWidthPx: 90,
-                options: [],
-                numericInput: COORD_INPUT,
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'lineToolStyle.endY',
-                labelKey: 'ribbon.commands.quickStyle.endY',
-                commandKey: LINE_TOOL_RIBBON_KEYS.endY,
-                comboboxWidthPx: 90,
-                options: [],
-                numericInput: COORD_INPUT,
-              },
-            },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'lineToolStyle.deltaX',
-                labelKey: 'ribbon.commands.quickStyle.deltaX',
-                commandKey: LINE_TOOL_RIBBON_KEYS.deltaX,
-                comboboxWidthPx: 90,
-                options: [],
-                numericInput: COORD_INPUT,
-              },
-            },
-            {
-              type: 'combobox',
-              size: 'small',
-              command: {
-                id: 'lineToolStyle.deltaY',
-                labelKey: 'ribbon.commands.quickStyle.deltaY',
-                commandKey: LINE_TOOL_RIBBON_KEYS.deltaY,
-                comboboxWidthPx: 90,
-                options: [],
-                numericInput: COORD_INPUT,
-              },
-            },
-          ],
-        },
-      ],
-    },
+    // ── ADR-510 Φ2E #5 — «Πλάτος» (polyline width) + «Γεωμετρία» (Μήκος/Γωνία/Αρχή/
+    // Τέλος/Δ) panels MOVED to the left Properties palette. Geometry is a selection-only
+    // surface (no draw-default meaning) → it belongs in the object editor, not the ribbon
+    // (AutoCAD: geometry lives in Ctrl+1 Properties, never in the ribbon). The ribbon tab
+    // now stays ~1 row: tools + quick appearance (Στυλ/Χρώμα/Επίπεδο/Τύπος/Πάχος/＋Νέος).
+    // The `getPanelVisibility(geometry|widthApplicable)` predicates stay in the bridge —
+    // the palette now consumes them for its own line-only / polyline-only gating.
   ],
 };

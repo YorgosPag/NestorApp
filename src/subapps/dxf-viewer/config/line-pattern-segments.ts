@@ -66,6 +66,18 @@ export function segmentsToDashPattern(
   return out;
 }
 
+/**
+ * Deterministic per-line linetype NAME for copy-on-write pattern editing
+ * (ADR-510 Φ2E #4). The inline «Τμήματα Μοτίβου» editor forks a shared ISO
+ * linetype into this per-entity OWNED name on the first edit, then updates that
+ * name's pattern in place on subsequent ones (`upsertUserLinetype`). Deterministic
+ * + ASCII + RNG-free so the same line always maps to the same owned name
+ * (idempotent, undo-stable, no registry bloat across edits of one line).
+ */
+export function linePatternName(entityId: string): string {
+  return `LTP-${entityId}`;
+}
+
 /** DXF mm pattern → segment list (for editing an existing custom pattern). */
 export function dashPatternToSegments(
   pattern: readonly number[],

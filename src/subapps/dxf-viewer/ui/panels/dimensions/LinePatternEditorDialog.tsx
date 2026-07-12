@@ -15,7 +15,6 @@
  */
 
 import React from 'react';
-import { Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from '@/i18n';
 import {
   Dialog,
@@ -29,16 +28,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import {
   type LinePatternSegment,
-  type LinePatternSegmentKind,
   DEFAULT_SEGMENT_LENGTH_MM,
   segmentsToDashPattern,
   describeSegments,
@@ -48,9 +38,13 @@ import {
   listSelectableLinetypeNames,
   registerUserLinetype,
 } from '../../../stores/LinetypeRegistry';
-import { buildLinetypeThumbnailFromPattern } from '../../../rendering/linetype-thumbnail';
-
-const SEGMENT_KINDS: readonly LinePatternSegmentKind[] = ['dash', 'gap', 'dot'];
+// ADR-510 Φ2E #4 — the segment list UI is now the shared editor (reused by the
+// inline left-Properties LinePropertiesTab too). The dialog keeps only the name
+// field + registration; the segment rows/add-bar/preview live in one SSoT.
+import {
+  LinePatternSegmentsEditor,
+  buildLinePatternSegmentsLabels,
+} from './LinePatternSegmentsEditor';
 
 /** A sensible starting point: one dash + one gap (a plain dashed pattern). */
 function initialSegments(): LinePatternSegment[] {
@@ -92,15 +86,6 @@ export function LinePatternEditorDialog({
     onOpenChange(false);
   }, [reset, onOpenChange]);
 
-  const addSegment = (kind: LinePatternSegmentKind) =>
-    setSegments((prev) => [...prev, { kind, lengthMm: kind === 'dot' ? 0 : DEFAULT_SEGMENT_LENGTH_MM }]);
-
-  const patchSegment = (index: number, patch: Partial<LinePatternSegment>) =>
-    setSegments((prev) => prev.map((s, i) => (i === index ? { ...s, ...patch } : s)));
-
-  const removeSegment = (index: number) =>
-    setSegments((prev) => prev.filter((_, i) => i !== index));
-
   const save = () => {
     if (!validation.ok) return;
     const created = registerUserLinetype(name.trim(), pattern, describeSegments(segments));
@@ -125,32 +110,12 @@ export function LinePatternEditorDialog({
             error={validation.nameError ? e(`errors.${validation.nameError}`) : null}
           />
 
-          <PatternPreview label={e('previewLabel')} pattern={pattern} />
-
-          <fieldset className="flex flex-col gap-1.5 border-0 p-0 m-0">
-            <legend className="text-xs font-medium mb-1">{e('segmentsLabel')}</legend>
-            {segments.map((seg, i) => (
-              <SegmentRow
-                key={i}
-                seg={seg}
-                kindLabel={(k) => e(`kinds.${k}`)}
-                lengthUnit={e('mm')}
-                removeLabel={e('removeSegment')}
-                onKind={(k) => patchSegment(i, { kind: k, lengthMm: k === 'dot' ? 0 : seg.lengthMm || DEFAULT_SEGMENT_LENGTH_MM })}
-                onLength={(v) => patchSegment(i, { lengthMm: v })}
-                onRemove={() => removeSegment(i)}
-              />
-            ))}
-            <AddSegmentBar
-              addLabel={(k) => e(`add.${k}`)}
-              onAdd={addSegment}
-            />
-            {validation.patternError && (
-              <p className="text-xs text-destructive mt-1" role="alert">
-                {e(`errors.${validation.patternError}`)}
-              </p>
-            )}
-          </fieldset>
+          <LinePatternSegmentsEditor
+            segments={segments}
+            onChange={setSegments}
+            labels={buildLinePatternSegmentsLabels(e)}
+            patternError={validation.patternError ? e(`errors.${validation.patternError}`) : null}
+          />
         </div>
 
         <DialogFooter>
@@ -180,90 +145,6 @@ function NameRow({
         className="h-7 text-xs"
       />
       {error && <p className="text-xs text-destructive" role="alert">{error}</p>}
-    </div>
-  );
-}
-
-function PatternPreview({ label, pattern }: { label: string; pattern: readonly number[] }) {
-  const thumb = buildLinetypeThumbnailFromPattern(pattern, 220, 16);
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-muted-foreground w-36 shrink-0">{label}</span>
-      <svg
-        viewBox={`0 0 ${thumb.width} ${thumb.height}`}
-        className="h-4 w-full rounded-sm border border-border"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <line
-          x1={0}
-          y1={thumb.height / 2}
-          x2={thumb.width}
-          y2={thumb.height / 2}
-          stroke="currentColor"
-          strokeWidth={1.25}
-          strokeDasharray={thumb.dash.length > 0 ? thumb.dash.join(' ') : undefined}
-        />
-      </svg>
-    </div>
-  );
-}
-
-function SegmentRow({
-  seg, kindLabel, lengthUnit, removeLabel, onKind, onLength, onRemove,
-}: {
-  seg: LinePatternSegment;
-  kindLabel: (k: LinePatternSegmentKind) => string;
-  lengthUnit: string;
-  removeLabel: string;
-  onKind: (k: LinePatternSegmentKind) => void;
-  onLength: (v: number) => void;
-  onRemove: () => void;
-}) {
-  const iconSizes = useIconSizes();
-  const isDot = seg.kind === 'dot';
-  return (
-    <div className="flex items-center gap-2">
-      <Select value={seg.kind} onValueChange={(v) => onKind(v as LinePatternSegmentKind)}>
-        <SelectTrigger className="h-7 text-xs w-28"><SelectValue /></SelectTrigger>
-        <SelectContent>
-          {SEGMENT_KINDS.map((k) => (
-            <SelectItem key={k} value={k} className="text-xs">{kindLabel(k)}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Input
-        type="number"
-        min={0}
-        step={0.1}
-        value={isDot ? '' : seg.lengthMm}
-        disabled={isDot}
-        onChange={(ev) => onLength(parseFloat(ev.target.value) || 0)}
-        className="h-7 text-xs w-24 px-1.5"
-      />
-      <span className="text-xs text-muted-foreground w-6">{isDot ? '' : lengthUnit}</span>
-      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onRemove} aria-label={removeLabel}>
-        <Trash2 className={iconSizes.sm} />
-      </Button>
-    </div>
-  );
-}
-
-function AddSegmentBar({
-  addLabel, onAdd,
-}: {
-  addLabel: (k: LinePatternSegmentKind) => string;
-  onAdd: (k: LinePatternSegmentKind) => void;
-}) {
-  const iconSizes = useIconSizes();
-  return (
-    <div className="flex items-center gap-2 mt-1">
-      {SEGMENT_KINDS.map((k) => (
-        <Button key={k} variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => onAdd(k)}>
-          <Plus className={iconSizes.sm} />
-          {addLabel(k)}
-        </Button>
-      ))}
     </div>
   );
 }

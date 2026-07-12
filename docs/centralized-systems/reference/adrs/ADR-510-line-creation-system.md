@@ -13,6 +13,12 @@
 > **Φ2E #3** 🟢 (custom-linetype pattern editor wired στο LINE tab «Εμφάνιση Γραμμής»: «＋ Νέος τύπος» launcher →
 > reusable `LinePatternEditorDialog` → auto-assign στην επιλεγμένη γραμμή/draw-defaults μέσω του υπάρχοντος bridge
 > `linetype` key· Revit/AutoCAD named-reusable-pattern practice· 4 jest, jscpd clean, UNCOMMITTED 2026-07-12).
+> **Φ2E #4** 🟢 (inline «Τμήματα Μοτίβου» στο ΑΡΙΣΤΕΡΟ Properties palette — Figma-grade live edit· copy-on-write
+> named pattern ΧΩΡΙΣ data-model change· §COW re-render λύθηκε με 6η registry→bitmap-cache subscription· shared
+> `LinePatternSegmentsEditor` + `LinePropertiesTab` + `useEntityPatchCommand`· 9 jest, jscpd clean, UNCOMMITTED 2026-07-12).
+> **Φ2E #5** 🟢 (Properties-palette-first layout — ribbon→panel split: πλήρες per-object surface (Γενικά+Γεωμετρία)
+> στο αριστερό `LinePropertiesTab` μέσω descriptor `line-property-fields` + του ΙΔΙΟΥ `useRibbonLineToolBridge`·
+> ribbon slim σε ~1 σειρά· AutoCAD/Revit parity· 6 jest, jscpd clean, UNCOMMITTED 2026-07-12).
 > **🔴 ΕΚΚΡΕΜΕΙ:** Φ2F (DXF LTYPE round-trip + persistence = Φ9) — orchestrator-scale, επόμενη συνεδρία.
 > **Φ3 (bulge polyline + multifunctional grips)** 🟡 ΣΕ ΕΞΕΛΙΞΗ (UNCOMMITTED 2026-06-22): **Φ3a** 🟢 geometry SSoT
 > (`geometry-bulge-utils` bulge↔arc + `arcToPolyline`)· **Φ3b** 🟢 vertex model parallel-arrays (Επιλογή A) + arc
@@ -1149,6 +1155,64 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   invalidate-άρει σε scene-ref change, όχι per-field· αφού το Χρώμα δουλεύει, ξαναχτίζεται) → χρειάζονται συγκεκριμένο
   repro (πιθανό subtle change ή selection-render masking, όχι code bug). tsc SKIP (N.17). 🔴 browser-verify (Βήμα σε
   dashed γραμμή αλλάζει πυκνότητα παυλών) + commit → Giorgio.
+- **2026-07-12 — Φ2E #5 PROPERTIES-PALETTE-FIRST LAYOUT — ribbon→panel split για επιλεγμένη γραμμή (AutoCAD/Revit/
+  Figma parity· Opus 4.8, shared tree, UNCOMMITTED).** **Στόχος (Giorgio, μετά από ανάλυση στιγμιότυπου):** το
+  contextual «Στυλ Γραμμής» ribbon tab έκανε διπλή δουλειά (draw-defaults + πλήρες per-object editing + ΟΛΗ η
+  geometry) → 4 στριμωγμένες σειρές. **Big-player split:** Ribbon = εργαλεία + quick draw-defaults· Properties
+  palette = η πλήρης αλήθεια του επιλεγμένου (AutoCAD Ctrl+1· geometry ΠΟΤΕ στο ribbon). **SSoT audit (Explore
+  agent):** το `useRibbonLineToolBridge` επιστρέφει plain callbacks (`getComboboxState`/`onComboboxChange`/
+  `getPanelVisibility`, ΟΧΙ ribbon-coupled)· standalone reusable field components υπάρχουν ήδη: `BimPropertyRow`
+  (selects, ADR-471), `ColorDialogTrigger`/`RibbonColorField` (χρώμα), `RibbonEditableCombobox` + pure
+  `ribbon-combobox-numeric` helpers (numeric)· `ColumnAdvancedPanel` = το descriptor-driven πρότυπο. **Impl (reuse,
+  μηδέν rebuild):** (α) NEW `line-property-fields.ts` descriptor SSoT (groups Γενικά/Γεωμετρία/Πολυγραμμή × fields
+  `{commandKey, labelKey, control:'select'|'color'|'numeric', options?, numericInput?}`)· τα CELTSCALE/Διαφάνεια/
+  Πλάτος/coordinate option ladders + numeric configs **μετακινήθηκαν** εδώ (panel-only). (β) NEW `LinePropertyRow`
+  = control-dispatcher (select→`BimPropertyRow`· color→`ColorDialogTrigger` palette-row· numeric→`Input` + pure
+  numeric helpers, palette-native, jscpd-clean vs `RibbonEditableCombobox`) + `LinePropertySection`. (γ)
+  `LinePropertiesTab` extend: καλεί το ΙΔΙΟ bridge (`universalSelection={getPrimaryId:()=>primarySelectedId}`),
+  renders Γενικά → «Τμήματα Μοτίβου» (Φ2E #4) → Γεωμετρία/Πολυγραμμή (gated via `getPanelVisibility`). (δ)
+  `contextual-line-tool-tab.ts` slim: αφαιρέθηκαν τα panels `line-geometry` + `line-width` και τα πεδία
+  `transparency` (Γενικά) + `linetypeScale` (Εμφάνιση) → το ribbon μένει ~1 σειρά (tools + Στυλ/Χρώμα/Επίπεδο/
+  Τύπος/Πάχος/＋Νέος). Τα visibility-key predicates μένουν στο bridge (τα καταναλώνει τώρα το panel). (ε) i18n
+  `inlineTab.sections.{general,geometry,polyline}` (el+en)· τα field labels reuse-άρουν τα υπάρχοντα
+  `ribbon.commands.quickStyle.*`. **Appearance quick-set μένει ΚΑΙ στο ribbon ΚΑΙ (πλήρες) στο panel** (AutoCAD
+  parity, εγκεκριμένο). **Tests:** +6 descriptor (`line-property-fields.test`: valid keys/labels/visibility/numeric/
+  controls/geometry-set)· ενημερώθηκαν 2 tab-structure assertions (geometry/width panels gone· general/appearance
+  slimmed)· 62 GREEN (line-tab + bridge + descriptor). jscpd:diff clean. tsc SKIP (N.17). 🔴 browser-verify (επιλογή
+  γραμμής → ribbon ~1 σειρά· αριστερό Properties = Γενικά + Τμήματα Μοτίβου + Γεωμετρία· edit → ΑΜΕΣΩΣ + undo·
+  geometry line-only, width polyline-only) + commit → Giorgio.
+- **2026-07-12 — Φ2E #4 INLINE «ΤΜΗΜΑΤΑ ΜΟΤΙΒΟΥ» στο ΑΡΙΣΤΕΡΟ Properties palette (Figma-grade live edit, COW·
+  Opus 4.8, shared tree, UNCOMMITTED).** **Στόχος (Giorgio):** επιλέγω γραμμή → βλέπω+επεξεργάζομαι ζωντανά τα
+  τμήματα του μοτίβου της (Γραμμή/Κενό/Τελεία + mm) inline στο ΑΡΙΣΤΕΡΟ Properties (ΟΧΙ ribbon)· copy-on-write named
+  pattern, **ΧΩΡΙΣ αλλαγή data-model**· συμπληρωματικό του Φ2E #3 modal (ο modal μένει, κοινός segment editor).
+  **§COW live-re-render (λύθηκε ΠΡΩΤΑ):** το μοτίβο είναι named+shared (registry)· ο renderer το derive-άρει από
+  `entity.linetypeName` (`dxf-renderer-style-resolve.ts` → `resolveLinetypePatternMm`)· **κανένα render path δεν
+  subscribe-άρει στο registry** + το bitmap-cache key δεν το περιέχει → same-name pattern update δεν ξαναζωγράφιζε.
+  **ΛΥΣΗ (καθιερωμένο pattern, ΟΧΙ hack):** 6η subscription `subscribeLinetypeRegistry` στο
+  `useDxfCanvasCacheInvalidation.ts` → `invalidate()` + `isDirtyRef=true` (mirror LWDISPLAY/LayerStore/isolate/fonts/
+  background — state read at paint-time, όχι στο cache key· low-frequency = ADR-040-compliant). **CHECK 6D → staged
+  ADR-040.** **COW write flow (idempotent, belt-and-suspenders):** `targetName = linePatternName(entity.id)`
+  (deterministic, ASCII, RNG-free)· `upsertUserLinetype(targetName, pattern, desc)` (NEW create-or-update-in-place
+  registry mutation, ISO baseline immutable → null)· αν `entity.linetypeName !== targetName` → `patchEntity(
+  {linetypeName})` (undoable fork/assign). 1ο edit off shared ISO = fork → entity change → `sceneRef` invalidate +
+  **undoable**· επόμενα same-name edits → registry notify → η νέα subscription invalidate. Shared ISO άλλων γραμμών
+  ΠΟΤΕ δεν αλλάζει. **Undo scope (διαφάνεια):** το COW fork είναι undoable· οι επόμενες βελτιώσεις pattern στο ίδιο
+  owned όνομα ξαναζωγραφίζουν αλλά ΔΕΝ είναι ατομικά undoable (registry mutation, όχι command) — v1 όριο. **Impl
+  (reuse, μηδέν clone):** (α) NEW `LinePatternSegmentsEditor` = extract των `SegmentRow`+`AddSegmentBar`+`PatternPreview`
+  από τον dialog (SSoT· ο dialog γίνεται consumer)· + `buildLinePatternSegmentsLabels(e)` helper (έλυσε jscpd label-object
+  clone). (β) NEW `LinePropertiesTab` (mirror `ColumnPropertiesTab`: reactive via `currentScene` + registry subscription·
+  READ `resolveLinetypeDef→dashPatternToSegments`· EDIT live → COW). (γ) `BimPropertiesRouter` branch
+  (`isStyleEditablePrimitiveType` → `LinePropertiesTab`, πριν το empty-state). (δ) auto-open: **ΔΙΟΡΘΩΣΗ recognition** —
+  το handoff έλεγε `FloatingPanelContainer`, αλλά ο κώδικας (ADR-532 Stage C) το έχει στο `SelectionSideEffectsHost`
+  (effect #3· code wins) → πρόσθεσε `|| isStyleEditablePrimitiveType(entity.type)`. (ε) Boy-Scout SSoT: extract κοινό
+  `useEntityPatchCommand` (UpdateEntityCommand + `useSceneManagerAdapter`)· ο `useRibbonLineToolBridge` refactored να το
+  χρησιμοποιεί (μηδέν clone). (στ) i18n `panels.dimensions.linePatternEditor.inlineTab.{title,emptyState,hint}` (el+en)·
+  ο editor reuse-άρει τα υπάρχοντα `linePatternEditor` keys. **meters-scale × LTSCALE trap:** ίδια λύση με Φ2E #3
+  (nominal mm· fine-tune = υπάρχον CELTSCALE «Κλίμακα»· μηδέν νέο scaling UI). **Tests:** +9 jest (`LinetypeRegistry.upsert`
+  — upsert create/update-in-place/ISO-immutable/persist· `linePatternName` deterministic· COW read-derivation)· 37 GREEN
+  linetype/pattern-suite + 57 GREEN line-ribbon regression. jscpd:diff clean. tsc SKIP (N.17). 🔴 browser-verify (επιλογή
+  γραμμής → αριστερό Properties ανοίγει → «Τμήματα Μοτίβου» → edit → αλλάζει ΑΜΕΣΩΣ + undo + shared ISO ανέγγιχτο) +
+  commit → Giorgio.
 - **2026-07-12 — Φ2E #3 CUSTOM-LINETYPE PATTERN EDITOR στο LINE tab (Revit/AutoCAD «named reusable pattern +
   assign», FULL SSoT· Opus 4.8, shared tree).** **Στόχος (Giorgio):** επιλέγω γραμμή → ορίζω μοτίβο διακεκομμένης
   (παύλα/κενό/τελεία) από το contextual tab. **SSoT audit:** ο `LinePatternEditorDialog` (segments mm →

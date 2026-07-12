@@ -36,6 +36,9 @@ import { useTextToolbarSelectionSync } from '../ui/text-toolbar/hooks/useTextToo
 // publisher writes live height/widthFactor/rotation, so the Text-Editor tab tracks the drag.
 import { TextToolbarRibbonPreviewSyncMount } from '../ui/ribbon/context/TextToolbarRibbonPreviewSync';
 import { isBimEntity, isStairEntity } from '../types/entities';
+// ADR-510 Φ2E #4 — selecting a style-editable primitive (line/polyline/…) also pops
+// the Properties palette (inline «Τμήματα Μοτίβου»), so the user sees it immediately.
+import { isStyleEditablePrimitiveType } from '../types/style-editable-primitives';
 import type { SceneModel } from '../types/scene';
 import type { ToolType } from '../ui/toolbar/types';
 import type { FloatingPanelHandle } from '../ui/FloatingPanelContainer';
@@ -101,7 +104,7 @@ export const SelectionSideEffectsHost = React.memo<SelectionSideEffectsHostProps
     if (!isNewPrimary || !currentScene) return;
     const entity = currentScene.entities.find((e) => e.id === primarySelectedId);
     if (!entity) return;
-    if (isBimEntity(entity) || isStairEntity(entity)) {
+    if (isBimEntity(entity) || isStairEntity(entity) || isStyleEditablePrimitiveType(entity.type)) {
       floatingRef.current?.showTab('properties');
     }
   }, [primarySelectedId, currentScene, floatingRef]);

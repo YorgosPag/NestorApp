@@ -70,25 +70,33 @@ describe('ADR-510 Φ4g — CONTEXTUAL_LINE_TOOL_TAB modify reorg', () => {
     }
   });
 
-  // ADR-510 Φ3d — «Πλάτος» (polyline-only) lives in its OWN visibility-gated panel so it
-  // self-hides for a selected plain LINE (where width is meaningless), mirroring the
-  // line-only Geometry panel.
-  it('isolates the polyline «Πλάτος» field into a widthApplicable-gated panel', () => {
-    const panel = panelById('line-width');
-    expect(panel?.visibilityKey).toBe(LINE_TOOL_PANEL_VISIBILITY_KEYS.widthApplicable);
-    expect(buttonsOf('line-width').map((b) => b.command.id)).toEqual(['lineToolStyle.width']);
+  // ADR-510 Φ2E #5 — the per-object «Γεωμετρία» + polyline «Πλάτος» panels MOVED to the
+  // left Properties palette (Ribbon = tools + quick draw-defaults; palette = full object).
+  it('no longer hosts the geometry / polyline-width panels (moved to the left palette)', () => {
+    expect(panelById('line-geometry')).toBeUndefined();
+    expect(panelById('line-width')).toBeUndefined();
   });
 
-  it('leaves the always-visible «Εμφάνιση Γραμμής» panel free of the polyline width field', () => {
+  it('slims «Εμφάνιση Γραμμής» to linetype + lineweight + «＋ Νέος τύπος» (scale moved to palette)', () => {
     const appearanceKeys = buttonsOf('line-appearance').map((b) => b.command.commandKey);
+    // ADR-510 Φ2E #5 — «Κλίμακα» (linetypeScale) + «Πλάτος» (width) are palette-only now.
+    expect(appearanceKeys).not.toContain('lineToolStyle.linetypeScale');
     expect(appearanceKeys).not.toContain('lineToolStyle.width');
-    // linetype / lineweight / scale (valid for a plain LINE) stay put; ADR-510 Φ2E #3
-    // adds the «＋ Νέος τύπος» pattern-editor launcher as a trailing widget column.
     expect(appearanceKeys).toEqual([
       'lineToolStyle.linetype',
       'lineToolStyle.lineweight',
-      'lineToolStyle.linetypeScale',
       'lineToolStyle.newLineType',
+    ]);
+  });
+
+  it('slims «Γενικά» to quick appearance only (transparency moved to palette)', () => {
+    const generalKeys = buttonsOf('line-general').map((b) => b.command.commandKey);
+    // ADR-510 Φ2E #5 — «Διαφάνεια» is palette-only now; style/color/layer stay as quick-set.
+    expect(generalKeys).not.toContain('lineToolStyle.transparency');
+    expect(generalKeys).toEqual([
+      'lineToolStyle.lineStyle',
+      'lineToolStyle.color',
+      'lineToolStyle.layer',
     ]);
   });
 
