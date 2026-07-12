@@ -4,6 +4,8 @@
 
 import {
   getLinetypeScale,
+  getEffectiveLinetypeScale,
+  setActiveSceneLinetypeScale,
   setLinetypeScale,
   resetLinetypeScale,
   subscribeLinetypeScale,
@@ -60,5 +62,33 @@ describe('LinetypeScaleStore', () => {
     setLinetypeScale(5);
     resetLinetypeScale();
     expect(getLinetypeScale()).toBe(DEFAULT_LTSCALE);
+  });
+
+  // ─── ADR-510 Φ2H — per-scene base × user knob ──────────────────────────────
+  describe('effective LTSCALE (scene base × user knob)', () => {
+    it('defaults to the user knob when no scene base is set', () => {
+      setLinetypeScale(2);
+      expect(getEffectiveLinetypeScale()).toBe(2);
+    });
+
+    it('composes the per-scene base with the user knob multiplicatively', () => {
+      setActiveSceneLinetypeScale(30);
+      setLinetypeScale(2);
+      expect(getEffectiveLinetypeScale()).toBe(60);
+    });
+
+    it('undefined / non-positive scene base falls back to neutral 1', () => {
+      setActiveSceneLinetypeScale(undefined);
+      expect(getEffectiveLinetypeScale()).toBe(DEFAULT_LTSCALE);
+      setActiveSceneLinetypeScale(0);
+      expect(getEffectiveLinetypeScale()).toBe(DEFAULT_LTSCALE);
+      setActiveSceneLinetypeScale(Number.NaN);
+      expect(getEffectiveLinetypeScale()).toBe(DEFAULT_LTSCALE);
+    });
+
+    it('the user-knob getter never sees the scene base', () => {
+      setActiveSceneLinetypeScale(30);
+      expect(getLinetypeScale()).toBe(DEFAULT_LTSCALE); // status-bar control reads THIS
+    });
   });
 });

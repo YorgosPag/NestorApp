@@ -176,6 +176,15 @@ export interface SceneModel {
    * for meters/cm drawings.
    */
   headerDimscale?: number;
+  /**
+   * ADR-510 Φ2H — per-scene base LTSCALE (linetype dash density). Resolved at import:
+   * the file's `$LTSCALE` when non-default, else an auto-fit value so mm-convention
+   * dash patterns render at a visible density on meter-scale drawings (ADR-462 bakes
+   * geometry to mm, so a raw ISO pattern is otherwise ~700 sub-pixel periods → looks
+   * solid). Absent ⇒ neutral 1. The renderer multiplies this with the user's manual
+   * `LinetypeScaleStore` knob (status-bar control) via `getEffectiveLinetypeScale()`.
+   */
+  linetypeScale?: number;
   version?: string;
 }
 

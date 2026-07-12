@@ -15,6 +15,11 @@ export const LINE_TOOL_RIBBON_KEYS = Object.freeze({
   color:         'lineToolStyle.color',
   // ADR-510 Φ2E #2 — per-object linetype scale (CELTSCALE, DXF grp 48).
   linetypeScale: 'lineToolStyle.linetypeScale',
+  // ADR-510 Φ2E #3 — «＋ Νέος τύπος» pattern-editor launcher. Widget-only key
+  // (no combobox): the `LineNewLinePatternWidget` self-dispatches the `linetype`
+  // key on save. The bridge early-returns for it (no read/write) so it never
+  // reaches the color fallthrough. Kept here for guard reachability + discoverability.
+  newLineType: 'lineToolStyle.newLineType',
   // ADR-510 Φ3d — polyline width (edge-to-edge, model-space; DXF grp 40/41).
   width: 'lineToolStyle.width',
   // ── ADR-510 Φ4 — AutoCAD «General» additions (selected entity) ──────────────

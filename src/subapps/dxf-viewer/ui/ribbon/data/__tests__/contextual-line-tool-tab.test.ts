@@ -82,9 +82,25 @@ describe('ADR-510 Φ4g — CONTEXTUAL_LINE_TOOL_TAB modify reorg', () => {
   it('leaves the always-visible «Εμφάνιση Γραμμής» panel free of the polyline width field', () => {
     const appearanceKeys = buttonsOf('line-appearance').map((b) => b.command.commandKey);
     expect(appearanceKeys).not.toContain('lineToolStyle.width');
-    // linetype / lineweight / scale (valid for a plain LINE) stay put.
+    // linetype / lineweight / scale (valid for a plain LINE) stay put; ADR-510 Φ2E #3
+    // adds the «＋ Νέος τύπος» pattern-editor launcher as a trailing widget column.
     expect(appearanceKeys).toEqual([
-      'lineToolStyle.linetype', 'lineToolStyle.lineweight', 'lineToolStyle.linetypeScale',
+      'lineToolStyle.linetype',
+      'lineToolStyle.lineweight',
+      'lineToolStyle.linetypeScale',
+      'lineToolStyle.newLineType',
     ]);
+  });
+
+  // ADR-510 Φ2E #3 — the «＋ Νέος τύπος» pattern-editor launcher lives on the
+  // «Εμφάνιση Γραμμής» panel as a `widget` button (opens LinePatternEditorDialog,
+  // assigns the created linetype to the selected line via the bridge).
+  it('hosts the «＋ Νέος τύπος» pattern launcher as a line-new-line-pattern widget', () => {
+    const widget = buttonsOf('line-appearance').find(
+      (b) => b.command.id === 'lineToolStyle.newLineType',
+    );
+    expect(widget?.type).toBe('widget');
+    expect((widget as { widgetId?: string }).widgetId).toBe('line-new-line-pattern');
+    expect(widget?.command.labelKey).toBe('ribbon.commands.lineNewLineType');
   });
 });

@@ -226,6 +226,44 @@ export function registerUserLinetype(
 }
 
 /**
+ * Create OR update-in-place a USER-CREATED linetype (ADR-510 Φ2E #4, COW live edit).
+ *
+ * Unlike `registerUserLinetype` (AutoCAD "first registration wins" — refuses an
+ * existing name), this is the copy-on-write mutation the inline «Τμήματα Μοτίβου»
+ * editor drives on every segment edit: the per-line owned name (`linePatternName`)
+ * is created on the first edit and its pattern updated IN PLACE on subsequent ones.
+ *
+ * ISO baseline / catalog names stay IMMUTABLE (module contract): an existing entry
+ * that is NOT `user-created` is never overwritten → returns null. A new name is
+ * registered fresh; an existing user-created name has its pattern + description
+ * replaced (id/origin preserved, deterministic). Persists + notifies exactly once.
+ *
+ * @returns the upserted def, or null if the name collides with a non-user entry.
+ */
+export function upsertUserLinetype(
+  name: string,
+  pattern: ReadonlyArray<number>,
+  description = '',
+): LinetypeDef | null {
+  const trimmed = name.trim();
+  const existing = definitionsByName.get(trimmed);
+  if (existing && existing.origin !== 'user-created') return null;
+  if (!existing) return registerUserLinetype(trimmed, pattern, description);
+  const def: LinetypeDef = Object.freeze({
+    id: existing.id,
+    name: existing.name,
+    description,
+    pattern: Object.freeze([...pattern]) as ReadonlyArray<number>,
+    origin: 'user-created',
+  });
+  // Same name → insertionOrder unchanged; only the Map entry + snapshot rebuild.
+  definitionsByName.set(def.name, def);
+  rebuildSnapshot();
+  persistUserLinetypes();
+  return def;
+}
+
+/**
  * Register many definitions atomically — emits a single notify().
  *
  * @returns count of newly added definitions (existing names skipped).

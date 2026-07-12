@@ -24,7 +24,8 @@
 import type { LineweightMm } from '../../../types/entities';
 import { lineweightToPx } from '../../../config/lineweight-iso-catalog';
 import { dashMmToScreenPx, resolveLinetypePatternMm } from '../../linetype-dash-resolver';
-import { getLinetypeScale } from '../../../stores/LinetypeScaleStore';
+// ADR-510 Φ2H — effective LTSCALE = per-scene base × user knob (scene base set by DxfRenderer).
+import { getEffectiveLinetypeScale } from '../../../stores/LinetypeScaleStore';
 
 /** DIMLTSCALE default — no per-style density change (AutoCAD CELTSCALE convention). */
 export const DEFAULT_DIM_LTSCALE = 1;
@@ -66,7 +67,7 @@ export function resolveDimStroke(
   const dashPx = dashMmToScreenPx(
     resolveLinetypePatternMm(linetype),
     worldToScreenScale,
-    getLinetypeScale(),
+    getEffectiveLinetypeScale(),
     celtscale,
   );
   return { lineWidthPx, dashPx };

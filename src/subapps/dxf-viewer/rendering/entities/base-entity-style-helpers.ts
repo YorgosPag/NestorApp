@@ -9,7 +9,8 @@
 import { HOVER_HIGHLIGHT } from '../../config/color-config';
 // ADR-510 Φ2 — canvas linetype dash: resolved metric pattern (mm) → setLineDash px.
 import { dashMmToScreenPx } from '../linetype-dash-resolver';
-import { getLinetypeScale } from '../../stores/LinetypeScaleStore';
+// ADR-510 Φ2H — effective LTSCALE = per-scene base × user knob (scene base set by DxfRenderer).
+import { getEffectiveLinetypeScale } from '../../stores/LinetypeScaleStore';
 
 /**
  * ADR-510 Φ2 — apply an entity's resolved metric linetype dash to a canvas context.
@@ -24,7 +25,7 @@ export function applyEntityLinetypeDash(
 ): void {
   const dashMm = entity.dashMm;
   if (dashMm && dashMm.length > 0) {
-    ctx.setLineDash(dashMmToScreenPx(dashMm, scale, getLinetypeScale(), entity.ltscale ?? 1));
+    ctx.setLineDash(dashMmToScreenPx(dashMm, scale, getEffectiveLinetypeScale(), entity.ltscale ?? 1));
   }
 }
 

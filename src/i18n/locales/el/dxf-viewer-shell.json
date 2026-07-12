@@ -1794,6 +1794,7 @@
       "matchPropertiesTooltip": "Αντιγραφή ιδιοτήτων από το αντικείμενο-πηγή στα επιλεγμένα αντικείμενα-στόχους",
       "dimLineTypeScale": "Πυκνότητα",
       "dimNewLineType": "Νέος τύπος",
+      "lineNewLineType": "Νέος τύπος",
       "currentLayerPicker": "Τρέχον Επίπεδο",
       "line": "Γραμμή",
       "lineVariants": {

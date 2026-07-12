@@ -1794,6 +1794,7 @@
       "matchPropertiesTooltip": "Copy properties from the source object to the selected target objects",
       "dimLineTypeScale": "Density",
       "dimNewLineType": "New type",
+      "lineNewLineType": "New type",
       "currentLayerPicker": "Current Layer",
       "line": "Line",
       "lineVariants": {

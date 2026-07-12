@@ -32,11 +32,44 @@ const store = createPersistedValue<number>(LS_LTSCALE, DEFAULT_LTSCALE, {
   validate: (v) => (Number.isFinite(v) && v > 0 ? v : DEFAULT_LTSCALE),
 });
 
+// ─── Per-scene base LTSCALE (ADR-510 Φ2H — non-persisted ambient) ────────────
+//
+// The persisted `store` above is the USER knob (status-bar LinetypeScaleControl,
+// AutoCAD `LTSCALE`). Separately, each imported scene carries its OWN base LTSCALE
+// (`SceneModel.linetypeScale`) — either the file's `$LTSCALE` or an auto-fit value
+// so a meter-scale drawing's mm-convention dash patterns render at a VISIBLE density
+// (without it, an ISO linetype on a 13 m line collapses to 700+ sub-pixel periods →
+// looks solid). This is a per-render ambient, NOT persisted (persisting it would
+// leak one drawing's scale onto the next). `DxfRenderer.render()` sets it once per
+// frame from the active scene; every dash-stroke site reads the COMBINED effective
+// scale so the two compose exactly like AutoCAD (drawing LTSCALE × user override).
+let activeSceneScale = DEFAULT_LTSCALE;
+
+/**
+ * Set the active scene's base LTSCALE (from `SceneModel.linetypeScale`). Called once
+ * per frame by the renderer before any dash is stroked. Non-positive / non-finite ⇒
+ * reset to 1 (defensive; a bad scene value must not zero every dash).
+ */
+export function setActiveSceneLinetypeScale(next: number | undefined): void {
+  activeSceneScale = Number.isFinite(next) && (next as number) > 0 ? (next as number) : DEFAULT_LTSCALE;
+}
+
 // ─── Snapshot getter (useSyncExternalStore-compatible) ───────────────────────
 
-/** Current global LTSCALE. Always a finite positive number. */
+/** Current USER-knob LTSCALE (status-bar control). Always a finite positive number. */
 export function getLinetypeScale(): number {
   return store.get();
+}
+
+/**
+ * Effective LTSCALE at stroke time = active scene base × user knob. This is the
+ * value EVERY dash-stroke site multiplies into `dashMmToScreenPx` (batch LINE path,
+ * per-entity path, dim + BIM resolvers) so the per-scene auto-fit and the user's
+ * manual override compose. The status-bar control reads/writes `getLinetypeScale`
+ * (the user knob) ONLY — it must not see the scene base.
+ */
+export function getEffectiveLinetypeScale(): number {
+  return activeSceneScale * store.get();
 }
 
 // ─── Subscriptions ───────────────────────────────────────────────────────────
@@ -67,4 +100,5 @@ export function resetLinetypeScale(): void {
 /** @internal Reset to default + clear subscribers. Tests only. */
 export function __resetLinetypeScaleForTesting(): void {
   store.reset(DEFAULT_LTSCALE);
+  activeSceneScale = DEFAULT_LTSCALE;
 }

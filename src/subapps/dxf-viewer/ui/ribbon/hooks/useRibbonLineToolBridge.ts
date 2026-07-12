@@ -71,9 +71,9 @@ import {
   endForDelta,
   withCoord,
 } from '../../../systems/properties/line-geometry-edit';
-import { useCommandHistory } from '../../../core/commands';
-import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
-import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
+// ADR-510 Φ2E #4 — undoable entity patch via the shared SSoT hook (same wiring the
+// inline «Τμήματα Μοτίβου» LinePropertiesTab uses → one command path, zero clone).
+import { useEntityPatchCommand } from '../../../hooks/commands/useEntityPatchCommand';
 import type { RibbonComboboxState } from '../context/RibbonCommandContext';
 import {
   LINE_TOOL_RIBBON_KEYS,
@@ -132,7 +132,7 @@ export function useRibbonLineToolBridge(
   props: UseRibbonLineToolBridgeProps,
 ): RibbonLineToolBridge {
   const { levelManager, universalSelection } = props;
-  const { execute: executeCommand } = useCommandHistory();
+  const patchEntityCmd = useEntityPatchCommand(levelManager);
 
   const snapshot = useSyncExternalStore(
     subscribeQuickStyle, getQuickStyleSnapshot, getQuickStyleSnapshot,
@@ -195,20 +195,18 @@ export function useRibbonLineToolBridge(
 
   const patchEntity = useCallback(
     (entity: AnySceneEntity, patch: Record<string, unknown>): void => {
-      if (!levelManager.currentLevelId) return;
-      const sm = createLevelSceneManagerAdapter(
-        levelManager.getLevelScene,
-        levelManager.setLevelScene,
-        levelManager.currentLevelId,
-      );
-      executeCommand(new UpdateEntityCommand(entity.id, patch, sm, 'Update line style'));
+      patchEntityCmd(entity.id, patch, 'Update line style');
     },
-    [executeCommand, levelManager],
+    [patchEntityCmd],
   );
 
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {
       if (!isLineToolRibbonKey(commandKey)) return null;
+
+      // ADR-510 Φ2E #3 — «Νέος τύπος» is a widget launcher, not a combobox: it has
+      // no value to read (and must NOT fall through to the color state below).
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.newLineType) return null;
 
       // ADR-510 Φ4e — FILLET radius: tool state, independent of any selection.
       if (commandKey === LINE_TOOL_RIBBON_KEYS.filletRadius) {
@@ -303,6 +301,10 @@ export function useRibbonLineToolBridge(
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
       if (!isLineToolRibbonKey(commandKey)) return;
+
+      // ADR-510 Φ2E #3 — «Νέος τύπος» launcher fires no combobox write of its own
+      // (it re-dispatches the `linetype` key on save); ignore it here defensively.
+      if (commandKey === LINE_TOOL_RIBBON_KEYS.newLineType) return;
 
       // ADR-510 Φ4e — FILLET radius: drive the FilletToolStore (mirrors keyboard entry).
       if (commandKey === LINE_TOOL_RIBBON_KEYS.filletRadius) {

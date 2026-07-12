@@ -47,6 +47,9 @@ import {
 import { LINEWEIGHT_RIBBON_OPTIONS } from './lineweight-ribbon-options';
 // ADR-510 Φ4g — SSoT LARGE tool-button factory (Revit «Modify» flat buttons).
 import { toolBtn } from './ribbon-large-button-helpers';
+// ADR-583 / CHECK 3.28 — SSoT builder for literal-number combobox ladders (kills the
+// hand-written `{ value, labelKey, isLiteralLabel }` clone across the preset arrays).
+import { literalNumberOptions } from './ribbon-numeric-options';
 
 export const LINE_TOOL_CONTEXTUAL_TRIGGER = 'line-tool-active';
 
@@ -67,65 +70,31 @@ const LINEWEIGHT_OPTIONS = LINEWEIGHT_RIBBON_OPTIONS;
 // Numeric presets → RibbonCombobox renders an EDITABLE type-to-enter field (the
 // list is purely numeric); `numericInput.editable` keeps free typing too.
 
-const LINETYPE_SCALE_OPTIONS = [
-  { value: '0.25', labelKey: '0.25', isLiteralLabel: true },
-  { value: '0.5',  labelKey: '0.5',  isLiteralLabel: true },
-  { value: '1',    labelKey: '1',    isLiteralLabel: true },
-  { value: '2',    labelKey: '2',    isLiteralLabel: true },
-  { value: '4',    labelKey: '4',    isLiteralLabel: true },
-] as const;
+const LINETYPE_SCALE_OPTIONS = literalNumberOptions(['0.25', '0.5', '1', '2', '4']);
 
 // ─── Polyline width options (ADR-510 Φ3d) ─────────────────────────────────────
 // Edge-to-edge width in the ACTIVE display unit (default cm). Presets are just
 // shortcuts — the field is editable (numericInput), so any value can be typed.
 // 0 = hairline. Values chosen to be VISIBLE at the default cm unit (1 cm = 10 mm).
 
-const WIDTH_OPTIONS = [
-  { value: '0',  labelKey: '0',  isLiteralLabel: true },
-  { value: '1',  labelKey: '1',  isLiteralLabel: true },
-  { value: '2',  labelKey: '2',  isLiteralLabel: true },
-  { value: '5',  labelKey: '5',  isLiteralLabel: true },
-  { value: '10', labelKey: '10', isLiteralLabel: true },
-] as const;
+const WIDTH_OPTIONS = literalNumberOptions(['0', '1', '2', '5', '10']);
 
 // ─── Transparency options (ADR-510 Φ4) ────────────────────────────────────────
 // AutoCAD object transparency 0 (opaque) .. 90. Editable integer, presets are
 // shortcuts. Draw-defaults show 0.
 
-const TRANSPARENCY_OPTIONS = [
-  { value: '0',  labelKey: '0',  isLiteralLabel: true },
-  { value: '25', labelKey: '25', isLiteralLabel: true },
-  { value: '50', labelKey: '50', isLiteralLabel: true },
-  { value: '75', labelKey: '75', isLiteralLabel: true },
-  { value: '90', labelKey: '90', isLiteralLabel: true },
-] as const;
+const TRANSPARENCY_OPTIONS = literalNumberOptions(['0', '25', '50', '75', '90']);
 
 // ADR-510 Φ4 — editable numeric config for a signed display-unit coordinate/delta.
 const COORD_INPUT = { editable: true, allowNegative: true, allowDecimal: true } as const;
 
 // ─── Fillet radius options (ADR-510 Φ4e) ──────────────────────────────────────
 // AutoCAD FILLETRAD. Editable (any value typed), presets are shortcuts. 0 = extend.
-const FILLET_RADIUS_OPTIONS = [
-  { value: '0',  labelKey: '0',  isLiteralLabel: true },
-  { value: '5',  labelKey: '5',  isLiteralLabel: true },
-  { value: '10', labelKey: '10', isLiteralLabel: true },
-  { value: '20', labelKey: '20', isLiteralLabel: true },
-  { value: '50', labelKey: '50', isLiteralLabel: true },
-] as const;
+const FILLET_RADIUS_OPTIONS = literalNumberOptions(['0', '5', '10', '20', '50']);
 
 // ─── Chamfer distance / angle options (ADR-510 Φ4f) ────────────────────────────
-const CHAMFER_DIST_OPTIONS = [
-  { value: '5',  labelKey: '5',  isLiteralLabel: true },
-  { value: '10', labelKey: '10', isLiteralLabel: true },
-  { value: '20', labelKey: '20', isLiteralLabel: true },
-  { value: '50', labelKey: '50', isLiteralLabel: true },
-] as const;
-const CHAMFER_ANGLE_OPTIONS = [
-  { value: '15', labelKey: '15', isLiteralLabel: true },
-  { value: '30', labelKey: '30', isLiteralLabel: true },
-  { value: '45', labelKey: '45', isLiteralLabel: true },
-  { value: '60', labelKey: '60', isLiteralLabel: true },
-] as const;
+const CHAMFER_DIST_OPTIONS = literalNumberOptions(['5', '10', '20', '50']);
+const CHAMFER_ANGLE_OPTIONS = literalNumberOptions(['15', '30', '45', '60']);
 
 // ─── Tab definition ───────────────────────────────────────────────────────────
 
@@ -364,6 +333,25 @@ export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
                 options: LINETYPE_SCALE_OPTIONS,
                 // ADR-510 Φ2E #2 — editable numeric (CELTSCALE > 0), Revit-grade.
                 numericInput: { editable: true, min: 0.01 },
+              },
+            },
+          ],
+        },
+        // ADR-510 Φ2E #3 — «＋ Νέος τύπος» launcher σε 2η στήλη (δεξιά από «Τύπος»,
+        // mirror του dim tab). Ανοίγει τον reusable `LinePatternEditorDialog`· στο save
+        // ο `LineNewLinePatternWidget` ΑΝΑΘΕΤΕΙ τον νέο τύπο στην επιλεγμένη γραμμή
+        // (undoable) ή στα draw-defaults — Revit «όρισε μοτίβο διακεκομμένης».
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'line-new-line-pattern',
+              command: {
+                id: 'lineToolStyle.newLineType',
+                labelKey: 'ribbon.commands.lineNewLineType',
+                commandKey: LINE_TOOL_RIBBON_KEYS.newLineType,
               },
             },
           ],

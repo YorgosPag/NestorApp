@@ -14,7 +14,8 @@
 
 import { resolveAnyDashMm } from './linetype-aliases';
 import { dashMmToScreenPx } from '../rendering/linetype-dash-resolver';
-import { getLinetypeScale } from '../stores/LinetypeScaleStore';
+// ADR-510 Φ2H — effective LTSCALE = per-scene base × user knob (scene base set by DxfRenderer).
+import { getEffectiveLinetypeScale } from '../stores/LinetypeScaleStore';
 import type { LinePatternKey } from './bim-line-patterns';
 
 /**
@@ -36,5 +37,5 @@ export function bimDashMm(key: LinePatternKey): ReadonlyArray<number> {
  * @returns px dash array; `[]` for solid (zero-allocation native solid path).
  */
 export function bimDashPx(key: LinePatternKey, scale: number): number[] {
-  return dashMmToScreenPx(bimDashMm(key), scale, getLinetypeScale());
+  return dashMmToScreenPx(bimDashMm(key), scale, getEffectiveLinetypeScale());
 }

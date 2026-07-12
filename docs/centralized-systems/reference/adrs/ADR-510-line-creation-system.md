@@ -10,8 +10,10 @@
 > οι consumers (DXF entity + 8 BIM renderers μέσω `bim-dash-resolver` + legacy `getDashArray`). ~250 jest GREEN.
 > **Φ2E #1** 🟢 (selected-line contextual tab + linetype editing UI, Revit-grade dual-mode bridge· + render-bug fix
 > 2026-06-22). **Φ2E #2** 🟢 (linetype scale UI: global LTSCALE status-bar + per-line CELTSCALE «Βήμα» στο tab).
-> **🔴 ΕΚΚΡΕΜΕΙ:** Φ2E #3 (custom-linetype creation pattern editor) + Φ2F (DXF LTYPE round-trip + persistence =
-> Φ9) — orchestrator-scale το καθένα, επόμενη συνεδρία.
+> **Φ2E #3** 🟢 (custom-linetype pattern editor wired στο LINE tab «Εμφάνιση Γραμμής»: «＋ Νέος τύπος» launcher →
+> reusable `LinePatternEditorDialog` → auto-assign στην επιλεγμένη γραμμή/draw-defaults μέσω του υπάρχοντος bridge
+> `linetype` key· Revit/AutoCAD named-reusable-pattern practice· 4 jest, jscpd clean, UNCOMMITTED 2026-07-12).
+> **🔴 ΕΚΚΡΕΜΕΙ:** Φ2F (DXF LTYPE round-trip + persistence = Φ9) — orchestrator-scale, επόμενη συνεδρία.
 > **Φ3 (bulge polyline + multifunctional grips)** 🟡 ΣΕ ΕΞΕΛΙΞΗ (UNCOMMITTED 2026-06-22): **Φ3a** 🟢 geometry SSoT
 > (`geometry-bulge-utils` bulge↔arc + `arcToPolyline`)· **Φ3b** 🟢 vertex model parallel-arrays (Επιλογή A) + arc
 > rendering/hit-test· **Φ3c** 🟢 multifunctional grips (Convert↔Arc/Line + Add/Remove Vertex + live bulge-drag· NEW
@@ -1147,6 +1149,30 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   invalidate-άρει σε scene-ref change, όχι per-field· αφού το Χρώμα δουλεύει, ξαναχτίζεται) → χρειάζονται συγκεκριμένο
   repro (πιθανό subtle change ή selection-render masking, όχι code bug). tsc SKIP (N.17). 🔴 browser-verify (Βήμα σε
   dashed γραμμή αλλάζει πυκνότητα παυλών) + commit → Giorgio.
+- **2026-07-12 — Φ2E #3 CUSTOM-LINETYPE PATTERN EDITOR στο LINE tab (Revit/AutoCAD «named reusable pattern +
+  assign», FULL SSoT· Opus 4.8, shared tree).** **Στόχος (Giorgio):** επιλέγω γραμμή → ορίζω μοτίβο διακεκομμένης
+  (παύλα/κενό/τελεία) από το contextual tab. **SSoT audit:** ο `LinePatternEditorDialog` (segments mm →
+  `registerUserLinetype`, live preview) + το `DimNewLinePatternWidget` launcher ΥΠΗΡΧΑΝ ήδη (wired μόνο στο dim
+  panel)· ο `useRibbonLineToolBridge.onComboboxChange(linetype)` ήδη κάνει dual-mode assign (selected →
+  `patchEntity({linetypeName})` undoable· draw-defaults → `setQuickStyleLinetype`). **Big-player practice
+  (επιβεβαιωμένη):** Revit «Line Patterns» / AutoCAD LTYPE = named reusable pattern + assign + per-object scale·
+  **κανείς δεν κάνει inline per-object dash editing** → ο υπάρχων dialog είναι ήδη σωστός, απλώς wire-άρεται (ΟΧΙ
+  νέος dialog). **Impl (reuse, μηδέν διπλότυπα):** (α) NEW `LinePatternLauncherButton` = κοινό presentational SSoT
+  (button + dialog + open-state, props `labelKey`/`onCreated?`)· ο `DimNewLinePatternWidget` refactored σε thin
+  wrapper (μηδέν clone — N.18). (β) NEW `LineNewLinePatternWidget` = `useRibbonDispatch().onComboboxChange(
+  LINE_TOOL_RIBBON_KEYS.linetype, name)` στο `onCreated` → 100% reuse του bridge assign path (και για επιλεγμένη
+  γραμμή **και** draw-defaults). (γ) NEW key `LINE_TOOL_RIBBON_KEYS.newLineType` (widget-only) + early-return guards
+  στο bridge (`getComboboxState`/`onComboboxChange`) ώστε να ΜΗΝ πέσει στο color-fallthrough. (δ) widget button στο
+  panel «Εμφάνιση Γραμμής» (2η στήλη, mirror dim). (ε) i18n `ribbon.commands.lineNewLineType` (el+en).
+  **meters-scale × LTSCALE trap (§ΚΡΙΣΙΜΗ ΠΑΓΙΔΑ):** ΛΥΣΗ = Revit Option B — ο editor αυθεντικοποιεί **nominal mm**·
+  το νέο pattern περνά από τον ΙΔΙΟ `getEffectiveLinetypeScale` (scene auto-fit LTSCALE × CELTSCALE × zoom) όπως ΚΑΘΕ
+  ISO linetype → συνεπές/προβλέψιμο· fine-tune ανά γραμμή = το υπάρχον πεδίο «Κλίμακα» (CELTSCALE) δίπλα. Μηδέν νέο
+  scaling UI, μηδέν special-casing. **Boy-Scout (N.0.2):** τα 6 literal-numeric preset arrays του tab (LINETYPE_SCALE/
+  WIDTH/TRANSPARENCY/FILLET/CHAMFER×2) κεντρικοποιήθηκαν στον υπάρχοντα SSoT `literalNumberOptions` (ADR-583) — έλυσε
+  προϋπάρχον jscpd clone (FILLET vs CHAMFER preset bodies). **Tests:** +2 tab-structure (widget presence), +2 bridge
+  guard (newLineType → null/no-op), +2 widget dispatch (onCreated → onComboboxChange με linetype key)· 57 GREEN
+  line-suite + 25 dim regression. jscpd:diff clean. tsc SKIP (N.17). 🔴 browser-verify (επιλογή γραμμής → «＋ Νέος
+  τύπος» → παύλα/κενό/τελεία → assign ΑΜΕΣΩΣ με προβλέψιμο μέγεθος + undo) + commit → Giorgio.
 - **2026-07-08 — Φ3d follow-up: «Πλάτος» self-hides για μη-polyline επιλογή (εγκρίθηκε από Giorgio, AutoCAD/Revit
   parity).** Το «Πλάτος» (polyline global width) εμφανιζόταν και σε επιλεγμένη απλή ΓΡΑΜΜΗ, όπου δεν έχει νόημα
   (το data-model του LINE δεν έχει width → ο handler έκανε silent-skip). **Υλοποίηση (mirror του line-only Geometry
@@ -1172,3 +1198,26 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
   no-layer fallback = το bug, layer-absent fallback, opaque default, max-90 monotonic) + lineweight suite 6/6 αμετάβλητο.
   ⚠️ **CHECK 6D** (canvas render αρχείο) → stage ADR-510 (ή ADR-040). 🔴 browser-verify (επιλογή γραμμής → «Διαφάνεια» 80 →
   ξεθωριάζει· deselect → παραμένει διάφανη· δοκίμασε και κύκλο/τόξο/κείμενο) + commit → Giorgio.
+- **2026-07-12 — Φ2H: εισαγόμενη διακεκομμένη γραμμή φαινόταν ΣΥΜΠΑΓΗΣ (per-scene auto-fit LTSCALE· Giorgio· UNCOMMITTED·
+  21 νέα jest GREEN + 86 regression GREEN).** Σύμπτωμα: αρχείο `ΔΙΑΚΕΚΟΜΜΕΝΗ.dxf` (R12/AC1009, μία LINE σε `ACAD_ISO10W100`,
+  σχέδιο σε **μέτρα**) → στο AutoCAD διακεκομμένη (11 παύλες + 10 τελείες), στη Nestor **συμπαγής**. **Διάγνωση (εμπειρικά,
+  jest στο ίδιο αρχείο):** όλο το linetype pipeline δουλεύει — LTYPE pre-pass κάνει register το pattern `[12,-3,0,-3]`
+  (period 18), το entity κρατά `linetypeName`, ο style-resolve βγάζει `dashMm` και ο `DxfRenderer` καλεί `setLineDash`.
+  **ROOT CAUSE = ασυμφωνία κλίμακας:** το ADR-462 canonical-mm scale-άρει σωστά τη ΓΕΩΜΕΤΡΙΑ ×1000 (μέτρα→mm, γραμμή
+  13.272 mm) αλλά το dash pattern μένει mm-convention (18 mm) → **737 περίοδοι** στη γραμμή → κάθε παύλα ~0,4 px (υπο-pixel)
+  → φαίνεται συμπαγής. **FIX (per-scene base LTSCALE, ΟΧΙ co-scale του pattern):** το co-scale του pattern απορρίφθηκε — το
+  `registerLinetypes` είναι first-wins/global-persistent (ordering + contamination) και θα διαχώριζε custom↔catalog patterns
+  + θα χαλούσε το round-trip. Αντ' αυτού resolve-άρεται **ένα per-scene `SceneModel.linetypeScale`** στο import
+  (`DxfSceneBuilder.resolveSceneLinetypeScale`): file `$LTSCALE` όταν ≠ default, αλλιώς **auto-fit** ώστε το coarsest
+  non-solid linetype να αποδίδεται σε ορατή πυκνότητα (mirror του AutoCAD `LTSCALE`). NEW pure `rendering/linetype-autoscale.ts`
+  (`computeAutoLinetypeScale` conservative — no-op όταν η φυσική πυκνότητα είναι ήδη καλή· `maxUsedLinetypePeriodMm`).
+  **Render wiring:** NEW `LinetypeScaleStore.getEffectiveLinetypeScale()` = per-scene base × user knob (non-persisted ambient
+  `setActiveSceneLinetypeScale`, τίθεται 1×/frame από `DxfRenderer.render` από το `scene.linetypeScale`)· και τα 4 dash-stroke
+  sites (batch LINE στο `DxfRenderer`, per-entity `base-entity-style-helpers`, `dim-stroke-resolver`, `bim-dash-resolver`)
+  διαβάζουν πλέον το effective. Το status-bar `LinetypeScaleControl` παραμένει ο ΧΕΙΡΟΚΙΝΗΤΟΣ πολλαπλασιαστής (διαβάζει
+  `getLinetypeScale`, όχι το scene base). **Αρχεία:** `dxf-scene-builder.ts`, `scene-types.ts` (`+linetypeScale?`),
+  `stores/LinetypeScaleStore.ts`, `rendering/linetype-autoscale.ts` (NEW), `DxfRenderer.ts`, `base-entity-style-helpers.ts`,
+  `dim-stroke-resolver.ts`, `bim-dash-resolver.ts`. **Tests:** NEW `linetype-autoscale.test.ts` (11), `LinetypeScaleStore`
+  effective (4), `dxf-import-dashed-linetype-density.test.ts` (2 — meters→visible density + explicit `$LTSCALE` faithful).
+  ⚠️ **CHECK 6B/6D** (τροποποίηση `DxfRenderer` micro-leaf) → stage ADR-040 + ADR-510. tsc SKIP (N.17). 🔴 browser-verify
+  (import → ορατά διακεκομμένη ~20+ παύλες· status-bar LinetypeScaleControl αλλάζει πυκνότητα ζωντανά) + commit → Giorgio.

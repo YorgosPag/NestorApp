@@ -532,6 +532,21 @@ describe('useRibbonLineToolBridge — Φ4 panel visibility (geometry is line-onl
   });
 });
 
+describe('useRibbonLineToolBridge — Φ2E #3 «Νέος τύπος» launcher key is inert in the bridge', () => {
+  // The `newLineType` key belongs to a widget launcher, not a combobox: the bridge
+  // must neither read a value for it (→ null, NOT the color fallthrough) nor write.
+  it('getComboboxState returns null for newLineType (no color fallthrough)', () => {
+    expect(renderLine().current.getComboboxState(K.newLineType)).toBeNull();
+  });
+
+  it('onComboboxChange is a no-op for newLineType (no command, no QuickStyle write)', () => {
+    renderLine().current.onComboboxChange(K.newLineType, 'ANYTHING');
+    expect(UpdateEntityCommand as unknown as jest.Mock).not.toHaveBeenCalled();
+    expect(mockSetLinetype).not.toHaveBeenCalled();
+    expect(mockSetColor).not.toHaveBeenCalled();
+  });
+});
+
 describe('useRibbonLineToolBridge — Φ4g Options-Bar visibility (fillet/chamfer active-tool)', () => {
   const FILLET = LINE_TOOL_PANEL_VISIBILITY_KEYS.filletOptions;
   const CHAMFER = LINE_TOOL_PANEL_VISIBILITY_KEYS.chamferOptions;

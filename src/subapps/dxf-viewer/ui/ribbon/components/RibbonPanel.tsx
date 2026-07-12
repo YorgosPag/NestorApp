@@ -67,6 +67,7 @@ import { RibbonHatchListWidget } from './RibbonHatchListWidget';
 // ADR-362 Round 35 — «Λαβές Μετακίνησης Σειρών» toggle widget.
 import { DimRowHandlesToggle } from './DimRowHandlesToggle';
 import { DimNewLinePatternWidget } from './DimNewLinePatternWidget';
+import { LineNewLinePatternWidget } from './LineNewLinePatternWidget';
 import { MultiSelectionCommonPropertiesPanel } from './MultiSelectionCommonPropertiesPanel';
 import { MultiSelectionFilterPanel } from './MultiSelectionFilterPanel';
 import { CurrentLayerPicker } from '../../components/layer-picker/CurrentLayerPicker';
@@ -133,6 +134,10 @@ function renderButton(button: RibbonButton): React.ReactNode {
     }
     if (button.widgetId === 'dim-new-line-pattern') {
       return <DimNewLinePatternWidget key="dim-new-line-pattern-widget" />;
+    }
+    // ADR-510 Φ2E #3 — «＋ Νέος τύπος» στο LINE tab (creates + assigns to the line).
+    if (button.widgetId === 'line-new-line-pattern') {
+      return <LineNewLinePatternWidget key="line-new-line-pattern-widget" />;
     }
     if (button.widgetId === 'mep-wire-toggle') {
       return <MepWireToggle key="mep-wire-toggle-widget" />;
