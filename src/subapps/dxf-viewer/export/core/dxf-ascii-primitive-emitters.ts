@@ -8,6 +8,14 @@
  * state — so the entity writer, the dimension-block writer and the HATCH writer all reuse
  * the ONE definition (zero divergence).
  *
+ * ADR-644 (#9e) — each emitter has TWO shapes selected by the optional `r2018` context:
+ *   • bare (Tekton / round-trip / injected HATCH-explode): geometry + trailing `8`/`62`,
+ *     R12-minimal, byte-identical to the pre-644 output.
+ *   • R2018 (professional AutoCAD): `100 AcDbEntity` + common codes (8/62 + style) BEFORE the
+ *     geometry, then the geometry `100 AcDb<Class>` subclass marker — or AutoCAD aborts DXFIN
+ *     («Class separator for class AcDbEntity expected»). The `5` handle is injected by the
+ *     writer's `pair` sink right after the `0 <TYPE>`.
+ *
  * @module export/core/dxf-ascii-primitive-emitters
  * @see export/core/dxf-ascii-writer — the consumer
  */
@@ -34,6 +42,19 @@ export interface EntityStyleCodes {
   readonly lineweightMm?: LineweightMm;
   /** AutoCAD object transparency % (0..90). DXF group 440· 0/undefined → κανένας κωδικός. */
   readonly transparency?: number;
+}
+
+/**
+ * ADR-644 (#9e) — the R2018 entity context. When passed to an emitter, it emits the full
+ * `AcDbEntity` common block (subclass marker + layer + colour + style codes) before the geometry,
+ * followed by the geometry-class marker. `owner` (330) is optional — AutoCAD DXFIN assigns model
+ * space when absent, so we omit it (no need to thread the *Model_Space block-record handle).
+ */
+export interface EntityR2018 {
+  /** Optional owner handle (330). Omitted → no owner group (DXFIN defaults to model space). */
+  readonly owner?: string;
+  /** Common style codes (6/48/370/440) folded into the AcDbEntity block. */
+  readonly style?: EntityStyleCodes;
 }
 
 /**
@@ -64,21 +85,42 @@ export function emitEntityStyle(pair: Pair, style: EntityStyleCodes): void {
   if (transp !== undefined) pair(440, transp);
 }
 
+/**
+ * ADR-644 (#9e) — emit the R2018 `AcDbEntity` common block (owner 330 → `100 AcDbEntity` → layer 8
+ * → colour 62 → style codes). The `5` handle precedes it (injected by the sink). Callers follow it
+ * with the geometry-class marker (`100 AcDb<Class>`) and the geometry itself. Exported so the TEXT /
+ * MTEXT / INSERT writers (own modules, file-size SRP) share the ONE definition.
+ */
+export function emitAcDbEntity(pair: Pair, layer: string, aci: number, r: EntityR2018): void {
+  if (r.owner) pair(330, r.owner);
+  pair(100, 'AcDbEntity');
+  pair(8, layer);
+  pair(62, aci);
+  if (r.style) emitEntityStyle(pair, r.style);
+}
+
+/** ADR-644 (#9e) — the AcDbEntity block for a sub-entity (VERTEX/SEQEND): layer only, no colour. */
+function emitSubEntity(pair: Pair, layer: string, owner?: string): void {
+  if (owner) pair(330, owner);
+  pair(100, 'AcDbEntity');
+  pair(8, layer);
+}
+
 /** A `3DFACE` — up to 4 corners (triangle → 4th = 3rd). x/y × `s`, z (mm) × mmScale. */
 export function emit3DFace(
   face: ReadonlyArray<{ x: number; y: number; zMm: number }>,
-  layer: string, aci: number, s: number, mmScale: number, pair: Pair,
+  layer: string, aci: number, s: number, mmScale: number, pair: Pair, r2018?: EntityR2018,
 ): void {
   if (face.length < 3) return;
   const c = [face[0], face[1], face[2], face[3] ?? face[2]]; // tri → 4η κορυφή = 3η
   pair(0, '3DFACE');
+  if (r2018) { emitAcDbEntity(pair, layer, aci, r2018); pair(100, 'AcDbFace'); }
   for (let i = 0; i < 4; i += 1) {
     pair(10 + i, c[i].x * s);
     pair(20 + i, c[i].y * s);
     pair(30 + i, c[i].zMm * mmScale);
   }
-  pair(8, layer);
-  pair(62, aci);
+  if (!r2018) { pair(8, layer); pair(62, aci); }
 }
 
 /**
@@ -92,7 +134,8 @@ export function emit3DFace(
  * @see utils/dxf-quad-fill-converter — parseQuadVertices, the import this mirrors
  */
 export function emitQuadFill(
-  kind: 'SOLID' | 'TRACE' | '3DFACE', vertices: readonly Point2D[], layer: string, aci: number, s: number, pair: Pair,
+  kind: 'SOLID' | 'TRACE' | '3DFACE', vertices: readonly Point2D[], layer: string, aci: number, s: number,
+  pair: Pair, r2018?: EntityR2018,
 ): void {
   if (vertices.length < 3) return;
   const quad = vertices.length >= 4;
@@ -101,52 +144,61 @@ export function emitQuadFill(
   const v3 = quad ? vertices[3] : vertices[2]; // draw[3] (triangle → 3rd corner)
   const v4 = vertices[2];             // draw[2] (triangle → == v3)
   pair(0, kind);
+  // SOLID/TRACE → AcDbTrace subclass· 3DFACE → AcDbFace.
+  if (r2018) { emitAcDbEntity(pair, layer, aci, r2018); pair(100, kind === '3DFACE' ? 'AcDbFace' : 'AcDbTrace'); }
   pair(10, v1.x * s); pair(20, v1.y * s); pair(30, 0);
   pair(11, v2.x * s); pair(21, v2.y * s); pair(31, 0);
   pair(12, v3.x * s); pair(22, v3.y * s); pair(32, 0);
   pair(13, v4.x * s); pair(23, v4.y * s); pair(33, 0);
-  pair(8, layer);
-  pair(62, aci);
+  if (!r2018) { pair(8, layer); pair(62, aci); }
 }
 
 /** A LINE — coordinates first, layer, colour (ACI). Optional Z per endpoint (3Δ rebar). */
 export function emitLine(
-  a: Point2D, b: Point2D, layer: string, aci: number, s: number, pair: Pair, za?: number, zb?: number,
+  a: Point2D, b: Point2D, layer: string, aci: number, s: number, pair: Pair,
+  za?: number, zb?: number, r2018?: EntityR2018,
 ): void {
   pair(0, 'LINE');
+  if (r2018) { emitAcDbEntity(pair, layer, aci, r2018); pair(100, 'AcDbLine'); }
   pair(10, a.x * s); pair(20, a.y * s);
   if (za !== undefined) pair(30, za);
   pair(11, b.x * s); pair(21, b.y * s);
   if (zb !== undefined) pair(31, zb);
-  pair(8, layer);
-  pair(62, aci);
+  if (!r2018) { pair(8, layer); pair(62, aci); }
 }
 
-export function emitCircle(c: Point2D, r: number, layer: string, aci: number, s: number, pair: Pair): void {
+export function emitCircle(
+  c: Point2D, r: number, layer: string, aci: number, s: number, pair: Pair, r2018?: EntityR2018,
+): void {
   pair(0, 'CIRCLE');
+  if (r2018) { emitAcDbEntity(pair, layer, aci, r2018); pair(100, 'AcDbCircle'); }
   pair(10, c.x * s); pair(20, c.y * s);
   pair(40, r * s);
-  pair(8, layer);
-  pair(62, aci);
+  if (!r2018) { pair(8, layer); pair(62, aci); }
 }
 
 /** A POINT — position (× `s`), layer, colour (ACI). Display glyph lives in the HEADER ($PDMODE/$PDSIZE). */
-export function emitPoint(p: Point2D, layer: string, aci: number, s: number, pair: Pair): void {
+export function emitPoint(
+  p: Point2D, layer: string, aci: number, s: number, pair: Pair, r2018?: EntityR2018,
+): void {
   pair(0, 'POINT');
+  if (r2018) { emitAcDbEntity(pair, layer, aci, r2018); pair(100, 'AcDbPoint'); }
   pair(10, p.x * s); pair(20, p.y * s); pair(30, 0);
-  pair(8, layer);
-  pair(62, aci);
+  if (!r2018) { pair(8, layer); pair(62, aci); }
 }
 
 export function emitArc(
-  c: Point2D, r: number, startDeg: number, endDeg: number, layer: string, aci: number, s: number, pair: Pair,
+  c: Point2D, r: number, startDeg: number, endDeg: number, layer: string, aci: number, s: number,
+  pair: Pair, r2018?: EntityR2018,
 ): void {
   pair(0, 'ARC');
+  // R2018 ARC is a two-subclass entity: AcDbCircle (centre/radius) then AcDbArc (angles).
+  if (r2018) { emitAcDbEntity(pair, layer, aci, r2018); pair(100, 'AcDbCircle'); }
   pair(10, c.x * s); pair(20, c.y * s);
   pair(40, r * s);
+  if (r2018) pair(100, 'AcDbArc');
   pair(50, startDeg); pair(51, endDeg);
-  pair(8, layer);
-  pair(62, aci);
+  if (!r2018) { pair(8, layer); pair(62, aci); }
 }
 
 /**
@@ -155,7 +207,7 @@ export function emitArc(
  */
 export function emitPath(
   vertices: readonly Point2D[], closed: boolean, layer: string, aci: number, s: number, explode: boolean, pair: Pair,
-  thickness = 0, style?: EntityStyleCodes,
+  thickness = 0, style?: EntityStyleCodes, r2018?: EntityR2018,
 ): void {
   if (vertices.length < 2) return;
   if (explode) {
@@ -169,18 +221,22 @@ export function emitPath(
   }
   // Old-style POLYLINE (R12-native, universally readable). With `thickness`,
   // AutoCAD extrudes the closed polyline along +Z → pseudo-3D prism.
-  pair(0, 'POLYLINE'); pair(8, layer); pair(62, aci);
-  // ADR-636 Φ2.4 (D.6) — STYLE codes belong in the POLYLINE header (before the VERTEX/SEQEND
-  // sub-entities), so they bind to the polyline and not to a discarded SEQEND.
-  if (style) emitEntityStyle(pair, style);
+  pair(0, 'POLYLINE');
+  if (r2018) { emitAcDbEntity(pair, layer, aci, r2018); pair(100, 'AcDb2dPolyline'); }
+  else { pair(8, layer); pair(62, aci); if (style) emitEntityStyle(pair, style); }
   pair(66, 1);                       // vertices-follow flag
   pair(70, closed ? 1 : 0);          // 1 = closed
   if (thickness) pair(39, thickness); // extrusion height (group 39)
   for (const v of vertices) {
-    pair(0, 'VERTEX'); pair(8, layer);
+    pair(0, 'VERTEX');
+    if (r2018) { emitSubEntity(pair, layer, r2018.owner); pair(100, 'AcDbVertex'); pair(100, 'AcDb2dVertex'); }
+    else pair(8, layer);
     pair(10, v.x * s); pair(20, v.y * s);
+    if (r2018) pair(30, 0);
   }
-  pair(0, 'SEQEND'); pair(8, layer);
+  pair(0, 'SEQEND');
+  if (r2018) emitSubEntity(pair, layer, r2018.owner);
+  else pair(8, layer);
 }
 
 /**
@@ -196,11 +252,12 @@ export function emitPath(
  */
 export function emitLeader(
   vertices: readonly Point2D[], arrowEnabled: boolean, layer: string, aci: number, s: number, pair: Pair,
+  r2018?: EntityR2018,
 ): void {
   if (vertices.length < 2) return;
   pair(0, 'LEADER');
-  pair(8, layer);
-  pair(62, aci);
+  if (r2018) { emitAcDbEntity(pair, layer, aci, r2018); pair(100, 'AcDbLeader'); }
+  else { pair(8, layer); pair(62, aci); }
   pair(3, 'Standard');            // dimstyle name (default)
   pair(71, arrowEnabled ? 1 : 0); // arrowhead flag: 0 disabled / 1 enabled
   pair(72, 0);                    // path type: 0 = straight segments

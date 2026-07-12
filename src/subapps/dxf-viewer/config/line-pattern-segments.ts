@@ -262,7 +262,10 @@ function validateName(name: string, existingNames: readonly string[]): LinePatte
  * text. Returns the failing code or `null` when valid. SSoT shared by the single-pattern and
  * the compound (per-layer) validators.
  */
-function validateSegmentList(segments: readonly LinePatternSegment[]): LinePatternErrorCode | null {
+function validateSegmentList(
+  segments: readonly LinePatternSegment[],
+  requireGap = true,
+): LinePatternErrorCode | null {
   if (segments.length === 0) return 'pattern.empty';
   // Text/symbol count as a visible mark (──GAS──, ──×──) — either satisfies "needs visible".
   const hasVisible = segments.some(
@@ -276,7 +279,9 @@ function validateSegmentList(segments: readonly LinePatternSegment[]): LinePatte
   if (emptyText) return 'pattern.textEmpty';
   if (badLength) return 'pattern.badLength';
   if (!hasVisible) return 'pattern.needsVisible';
-  if (!hasGap) return 'pattern.needsGap';
+  // A compound sub-layer MAY be solid (a continuous rail) — the gap is only required for a
+  // standalone single-layer type (else it is just the default solid line).
+  if (requireGap && !hasGap) return 'pattern.needsGap';
   return null;
 }
 
@@ -481,8 +486,10 @@ export function validateLinePatternLayers(
   const nameError = validateName(name, existingNames);
   if (nameError) return { ok: false, nameError };
   if (layers.length === 0) return { ok: false, patternError: 'pattern.empty' };
+  // Genuine compounds allow solid rails; a standalone single layer still needs a gap.
+  const requireGap = layers.length === 1;
   for (const l of layers) {
-    const patternError = validateSegmentList(l.segments);
+    const patternError = validateSegmentList(l.segments, requireGap);
     if (patternError) return { ok: false, patternError };
   }
   return { ok: true };

@@ -251,11 +251,19 @@ export function completeEntity(
   });
   const createdEntity = (command.getEntity() ?? entity) as AnySceneEntity;
   const finalEntityId = createdEntity.id;
-  // Με post-create reorder ο πίνακας οντοτήτων άλλαξε σειρά → ξαναδιάβασε το scene
-  // (το χειροκίνητο append θα ήταν λάθος). Αλλιώς κράτα το γρήγορο μονοπάτι.
-  const reorderedScene = extraCommands.length > 0 ? getScene(levelId) : null;
-  const finalScene: SceneModel = reorderedScene
-    ? reorderedScene
+  // ADR-641 — read the ACTUAL committed scene (the `CreateEntityCommand` wrote through the
+  // block-member-aware `LevelSceneManagerAdapter`, synchronously per ADR-527), NOT a naive
+  // top-level append. Inside a Block Editor the new entity is a MEMBER of the active block
+  // (stored in DEFINITION space); the old `{ ...sceneBefore, entities: [...top, createdEntity] }`
+  // fast path put it at the WORLD top level in VIEW-space coords, and the `drawing:complete`
+  // listener (`useDxfViewerEffects`) then wrote THAT back as the current scene — clobbering the
+  // correct member add, so the line vanished from BOTH the BEDIT canvas (not a member) and the
+  // world (wrong frame). One `getScene` read reflects the write in the same tick and is correct
+  // for every path (top-level append, block-member add, AND post-create reorder — which used to
+  // need its own read). Falls back to a manual append / a fresh scene only if the read is empty.
+  const committedScene = getScene(levelId);
+  const finalScene: SceneModel = committedScene
+    ? committedScene
     : sceneBefore
     ? { ...sceneBefore, entities: [...sceneBefore.entities, createdEntity] }
     : {

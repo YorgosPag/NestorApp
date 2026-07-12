@@ -41,6 +41,9 @@ const ENTITY_SCOPE_OPTIONS = ['both', 'dxf-only', 'bim-only'] as const;
 const FLOOR_SCOPE_OPTIONS = ['active', 'all-zip', 'all-single'] as const;
 const UNIT_OPTIONS = ['millimeters', 'centimeters', 'meters'] as const;
 const LINE_MODE_OPTIONS = ['polyline', 'lines'] as const;
+// ADR-643 Φ5b — image-fill hatch export: 'solid' (Ελαφρύ, μέσο χρώμα, single-file) / 'image'
+// (Πιστό, tiled IMAGE + raster bundled σε ZIP). Default 'solid' (πάντα ανοίγει).
+const IMAGE_FILL_MODE_OPTIONS = ['solid', 'image'] as const;
 const TEK_SYMBOL_MODE_OPTIONS = ['native', 'geometry'] as const;
 const VERSION_OPTIONS = Object.keys(DXF_VERSION_NAMES) as DxfVersion[];
 
@@ -152,6 +155,19 @@ export function ExportDialog({ open, onOpenChange, onSubmit }: ExportDialogProps
                 <SelectContent>
                   {LINE_MODE_OPTIONS.map((m) => (
                     <SelectItem key={m} value={m}>{t(`export.lineModes.${m}`)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
+
+          {isDxf && (
+            <Field label={t('export.dxfImageFillMode')}>
+              <Select value={state.dxfImageFillMode} onValueChange={(v) => state.setDxfImageFillMode(v as NonNullable<ExportRequest['dxfImageFillMode']>)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {IMAGE_FILL_MODE_OPTIONS.map((m) => (
+                    <SelectItem key={m} value={m}>{t(`export.imageFillModes.${m}`)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

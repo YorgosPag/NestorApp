@@ -143,6 +143,31 @@ SSoT (no parallel scene subscription left reading the world). Full feature PARTI
   synchronous read-after-write guarantee.
 
 ## Changelog
+- **2026-07-12** — **Φ4 follow-up #6: a member drawn inside BEDIT now shows on the world canvas after
+  exit (it was visible only under a hover).** Symptom (Giorgio): after #5 the line persists and shows
+  inside the editor, but on EXIT it appears on the block ONLY while hovering the block. **Root cause
+  (traced end-to-end):** two layers draw straight lines — the Canvas2D `DxfRenderer` and the GPU
+  `WebglLineLayer` (ADR-639 Στάδιο 5). The Canvas2D renderer SUPPRESSES any line the GPU layer «owns»
+  (STEP 12, `isDrawnByWebglLineLayer`) to avoid double-stroking, and the block's expanded members all
+  carry the block id, so the whole block's lines are GPU-owned. BUT the GPU line leaf scoped to the
+  **raw world** scene (`useReactiveLevelScene` → `useLevelScene`) while the Canvas2D leaf scoped to the
+  **BEDIT-aware effective** scene (`useEffectiveLevelScene`). The member was added to the world block
+  MID-session (inside BEDIT), so on EXIT the world scene ref is UNCHANGED → the GPU leaf's
+  `manager.setScene` (ref-equality gated) never re-runs → the GPU buffers + `webglOwnedEntityIds` never
+  rebuild with the new member. Net: Canvas2D suppresses the new line (id is GPU-owned) yet the GPU
+  buffer lacks it → drawn by NEITHER layer. The hover overlay (`renderSingleEntity`) bypasses the
+  suppression (+ the layer/cut-plane skip), so it alone repainted the member — hence «only on hover».
+  **Fix (1 line, SSoT):** `useReactiveLevelScene` (used ONLY by the WebGL line leaf) now subscribes to
+  the SAME `useEffectiveLevelScene` the Canvas2D leaf reads. So the two line layers always agree on the
+  render scope, and EXIT becomes a real scene-identity change (block-local → world) → `setScene` →
+  `rebuild()` → `markDirty()` → the GPU buffer + owned-ids include the new member and it is drawn.
+  Bonus: during BEDIT the GPU layer now scopes to the block-local editor scene (below the large-scene
+  gate → inactive, Canvas2D strokes the members) instead of wrongly owning the world block's lines.
+  Outside BEDIT `useEffectiveLevelScene` === `useLevelScene` (identical ref) → zero change to the normal
+  path. **General rule:** every canvas line-drawing layer MUST read the effective (BEDIT-aware) scene —
+  a layer on the raw world scene silently diverges from the Canvas2D suppression owner around BEDIT.
+  Touches the ADR-639 Στάδιο 5 GPU line path (scene source) — no buffer/camera/LOD change. Block +
+  WebGL suites 143 green; jscpd:diff clean (pending Giorgio browser re-verify).
 - **2026-07-12** — **Φ4 follow-up #5: a NEW entity drawn INSIDE a Block Editor now persists (it
   vanished from both canvases).** Symptom (Giorgio): while in BEDIT, drawing a line previewed fine,
   but on completion it appeared in NEITHER the block-editor canvas NOR the world canvas on exit.

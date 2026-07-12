@@ -21,7 +21,7 @@
  * ADR-505 §A.
  */
 
-import type { Entity, HatchEntity, LeaderEntity, PolylineEntity, SceneLayer } from '../../types/entities';
+import type { Entity, HatchEntity, PolylineEntity, SceneLayer } from '../../types/entities';
 import type { DimensionEntity, DimStyle } from '../../types/dimension';
 import type { Point2D } from '../../rendering/types/Types';
 // ADR-636 Στάδιο 2 Φ2.1 — full `TABLES → LAYER` section. The single TABLES section (LTYPE +
@@ -33,56 +33,46 @@ import type { LinetypeDef } from '../../config/linetype-iso-catalog';
 // ώστε ο TEK exporter (`dxf-to-tek.ts`) να κρατά το ίδιο import path (μηδέν διπλότυπο formula).
 import { rectangleEntityVertices } from '../../rendering/entities/shared/geometry-utils';
 export { rectangleEntityVertices };
-// ADR-362 Round 24/25 — native DIMENSION + DIMSTYLE emission reuse the dimension
-// group-code SSoT (utils/dxf-dimension-writer + dxf-dimstyle-writer) so the
-// in-process writers + production export stay in lockstep. Before Round 24,
-// dimensions were silently dropped at the entity switch.
-import { emitDimensionEntity } from '../../utils/dxf-dimension-writer';
 // ADR-362 Round 26 — anonymous dimension BLOCKS emitter lives in its own module
 // (file-size SRP, N.7.1). Builds one `*Dn` block per dimension from the on-screen
 // geometry SSoT so dimensions display reliably even in non-regenerating readers.
 import { buildDimensionLookup, writeDimensionBlock } from './dxf-ascii-dimension-block-writer';
-// ADR-507 Φ1a/Φ5 — HATCH emission split out (N.7.1 file-size SSoT). `Pair`/`EmitLine`
-// types live with the HATCH writer; `emitLine` (below) stays the ONE definition and
-// is injected into `emitHatch` for the exploded (Τέκτονας) path.
-import { emitHatch, type Pair } from './dxf-ascii-hatch-writer';
-// ADR-636 Στάδιο 2 Φ2.3 — TEXT (with 72/73 justification) + real MTEXT (\P line breaks, 71
-// attachment) emitters live in their own module (file-size SRP). `alignFromTextEntity` derives
-// the H/V codes from the entity via the inverse import maps (zero new alignment table).
-import {
-  emitText, emitMText, alignFromTextEntity, textStyleName, readTextEntityFamily,
-} from './dxf-ascii-text-writer';
+// ADR-507 Φ1a/Φ5 — HATCH emission split out (N.7.1 file-size SSoT). The `Pair` sink type lives with
+// the HATCH writer; the writer threads it through every emitter (`emitHatch` + `emitLine` injection
+// now happen inside the per-entity dispatcher `writeEntity`, see below).
+import type { Pair } from './dxf-ascii-hatch-writer';
 // ADR-505 §A / ADR-636 — colour→ACI + STYLE-table collection helpers live in a sibling module
 // (file-size SRP split, N.7.1). Same derivations, extracted verbatim to keep the writer ≤500 lines.
 import { resolveAci, collectTextStyles } from './dxf-ascii-writer-helpers';
-// ADR-505 §A — low-level DXF primitive emitters + geometry/format helpers live in a sibling
-// module (file-size SRP split, N.7.1). `emitLine` stays the ONE definition injected into `emitHatch`.
-import {
-  emit3DFace,
-  emitQuadFill,
-  emitLine,
-  emitCircle,
-  emitPoint,
-  emitArc,
-  emitPath,
-  emitLeader,
-  emitEntityStyle,
-  arcPoints,
-  num,
-} from './dxf-ascii-primitive-emitters';
+// ADR-505 §A — low-level DXF primitive emitters live in a sibling module (file-size SRP split,
+// N.7.1); the per-entity dispatcher (`writeEntity`) that drives them was split out too (see below).
+// The writer itself only needs `num` (its raw `$HANDSEED`/coordinate formatter).
+import { num } from './dxf-ascii-primitive-emitters';
+// ADR-505 §A — per-entity → native DXF emitter switchboard (`writeEntity`), split out for file-size
+// SRP (N.7.1) alongside the hatch/text/mline/insert writers. Drives the primitive emitters above.
+import { writeEntity } from './dxf-ascii-entity-dispatch';
 import { DxfDocumentVersion, parseDocumentVersion } from '../../text-engine/types/text-toolbar.types';
 import type { DxfLineMode } from '../types';
 // ADR-636 Φ2.4 (D.4) — native MLINE entity + MLINESTYLE (OBJECTS section) round-trip, reversing
 // the ADR-635 Φ C.7 import (which exploded an MLINE into N element polylines + a `dxfMlineSource`
 // provenance marker). Split into its own module (file-size SRP, mirror of tables/hatch/text writers).
 import {
-  buildMlineStyleRegistry, collectMlineGroupIds, emitMline, emitObjectsSection,
+  buildMlineStyleRegistry, collectMlineGroupIds, emitMline, emitMlineStyleBlocks,
 } from './dxf-ascii-mline-writer';
+// ADR-643 Φ5b — image-fill hatch «πιστή» εξαγωγή: tiled IMAGE entities + IMAGEDEF (OBJECTS
+// section, μοιρασμένη με τα MLINESTYLE). Το `dxfImageExport` marker το προ-υπολογίζει ο client
+// pre-pass (`image-fill-export.ts`)· εδώ γίνεται pure σειριοποίηση. Solid-downgrade (default) ΔΕΝ
+// περνά από εδώ — ο pre-pass το μετατρέπει σε κανονικό solid hatch πριν τον writer.
+import { buildImageDefRegistry, emitImageTiles, emitImageDefBlocks } from './dxf-ascii-image-writer';
 // ADR-640 M2 — INSERT reference + named BLOCK definition round-trip (block instances). The heavy
 // logic (INSERT emit, dedup-by-name BLOCK section) lives in its own module (file-size SRP, N.7.1);
 // members are serialized back through THIS writer's `writeEntity` via the injected `emitBlockMember`.
-import { emitInsert, writeBlockDefinitions } from './dxf-ascii-insert-writer';
+import { writeBlockDefinitions, emitBlockBegin, emitBlockEnd } from './dxf-ascii-insert-writer';
 import type { BlockEntity } from '../../types/entities';
+// ADR-644 (#5) — ONE handle allocator (R2018: every entity/table/record needs a unique `5`/`105`
+// handle + `$HANDSEED`). The writer wraps the `pair` sink to lazily inject a handle after each
+// entity's `0 <TYPE>`; tables/records allocate explicitly (they also need owner 330 + subclass).
+import { createHandleAllocator, type HandleAllocator } from './dxf-ascii-handle-allocator';
 
 /** Minimal layer shape needed for name + ByLayer colour resolution. */
 export interface DxfWriteLayer {
@@ -153,6 +143,11 @@ export interface DxfWriteOptions {
 
 const DEFAULT_LAYER = '0';
 
+// ADR-644 (#5) — `0 <value>` markers that are NOT handle-bearing objects: section/table
+// structure only. Everything else (LINE/CIRCLE/HATCH/TEXT/DIMENSION/INSERT/MLINE/VERTEX/SEQEND/
+// BLOCK/ENDBLK/DICTIONARY/MLINESTYLE/…) is an object that needs a `5` handle in R2018.
+const HANDLE_EXCLUDE: ReadonlySet<string> = new Set(['SECTION', 'ENDSEC', 'TABLE', 'ENDTAB', 'EOF']);
+
 /**
  * ADR-636 (2026-07-12) — derive the `*Active` VPORT view (+ $VIEWCTR/$VIEWSIZE) from the drawing
  * extents so AutoCAD opens FRAMED on the model (fixes «μαύρη οθόνη στο άνοιγμα»: no VPORT → default
@@ -169,20 +164,6 @@ function computeVportView(min?: Point2D, max?: Point2D): VportView | undefined {
   return { center: { x: (min.x + max.x) / 2, y: (min.y + max.y) / 2 }, height, aspect: 1 };
 }
 
-// ADR-636 Φ2.4 (D.6) — single-header entities whose STYLE codes (6/48/370) are appended
-// AFTER the emitter (valid: the pairs bind to the entity until the next `0`). POLYLINE /
-// rectangle carry their STYLE in the emitPath header instead (before VERTEX/SEQEND);
-// HATCH / DIMENSION own their style path (DIMSTYLE) — excluded.
-const STYLE_APPEND_TYPES: ReadonlySet<Entity['type']> = new Set([
-  'line', 'circle', 'arc', 'text', 'mtext', 'point',
-]);
-
-// ADR-636 Φ2.4 (D.3) — origin-primitive marker → native DXF entity name (round-trip of the
-// `dxf-quad-fill-converter` import). Inverse of the `idPrefix` the import stamps.
-const QUAD_ENTITY_NAME: Readonly<Record<'solid' | 'trace' | '3dface', 'SOLID' | 'TRACE' | '3DFACE'>> = {
-  solid: 'SOLID', trace: 'TRACE', '3dface': '3DFACE',
-};
-
 /** Produce a DXF string for the given (flattened) entities. */
 export function writeDxfAscii(
   entities: readonly Entity[],
@@ -195,9 +176,48 @@ export function writeDxfAscii(
   // the release from `$ACADVER`; default to R2018 (the app's default target) when unspecified.
   const version = parseDocumentVersion(options.acadVer ?? '') ?? DxfDocumentVersion.R2018;
   const out: string[] = [];
-  const pair = (code: number, value: string | number): void => {
+  const rawPush = (code: number, value: string | number): void => {
     out.push(String(code), typeof value === 'number' ? num(value) : value);
   };
+
+  // ADR-644 (#5) — professional R2018 structural compliance (handles/$HANDSEED/APPID/subclass) is
+  // emitted on the SAME path as the HEADER, and ONLY for the AutoCAD (non-explode) dialect. Bare
+  // `writeDxfAscii(entities)` (unit tests / legacy in-process) and Tekton (`explode`) keep their
+  // historic handle-less, byte-identical envelope — zero regression.
+  const wantHeader = !!(
+    options.acadVer || options.insunits != null || options.codepage ||
+    options.extMin || options.extMax || options.measurement != null ||
+    options.ltscale != null || options.lunits != null ||
+    options.pdmode != null || options.pdsize != null
+  );
+  // ADR-644 — R2018 structural compliance (handles/subclass/tables/defaults) applies to R2000+ only;
+  // R12 (AC1009) is the handle-less, subclass-less legacy format, so it stays bare even professionally.
+  const emitHandles = wantHeader && !explode && version !== DxfDocumentVersion.R12;
+  const alloc = createHandleAllocator();
+  const handleAlloc: HandleAllocator | undefined = emitHandles ? alloc : undefined;
+  // ADR-644 (#9f) — the *Model_Space / *Paper_Space BLOCK_RECORD handles, pre-allocated so the
+  // BLOCK_RECORD table (owner of the two records), the BLOCKS section (their matching BLOCK
+  // definitions — R2018 requires them) and every model-space entity's owner (330) all reference the
+  // SAME handle. Without the *Model_Space BLOCK definition AutoCAD desyncs → «Invalid Block Name».
+  const modelSpaceHandle = emitHandles ? alloc.next() : undefined;
+  const paperSpaceHandle = emitHandles ? alloc.next() : undefined;
+
+  // ADR-644 (#5) — lazy handle injection: after any `0 <TYPE>` that is not a structural marker,
+  // the NEXT pair triggers a `5 <handle>` — UNLESS the record already carries its own handle (`5`
+  // for entities/objects, `105` for DIMSTYLE), in which case it was allocated from the SAME `alloc`.
+  let pendingHandle = false;
+  const pair: Pair = emitHandles
+    ? (code, value) => {
+        if (pendingHandle) {
+          pendingHandle = false;
+          if (code !== 5 && code !== 105) rawPush(5, alloc.next());
+        }
+        rawPush(code, value);
+        if (code === 0 && typeof value === 'string' && !HANDLE_EXCLUDE.has(value)) {
+          pendingHandle = true;
+        }
+      }
+    : rawPush;
   const layerObj = (e: Entity): DxfWriteLayer | undefined => options.layersById?.[e.layerId];
 
   // ADR-636 Στάδιο 1 — HEADER section MUST come first (DXF orders HEADER → TABLES → BLOCKS →
@@ -209,12 +229,10 @@ export function writeDxfAscii(
   // ADR-636 (2026-07-12) — the `*Active` view derived from the extents; reused by the HEADER
   // ($VIEWCTR/$VIEWSIZE) AND the VPORT table so AutoCAD opens framed on the model.
   const vportView = computeVportView(options.extMin, options.extMax);
-  if (
-    options.acadVer || options.insunits != null || options.codepage ||
-    options.extMin || options.extMax || options.measurement != null ||
-    options.ltscale != null || options.lunits != null ||
-    options.pdmode != null || options.pdsize != null
-  ) {
+  // ADR-644 (#5) — index of the `$HANDSEED` value slot in `out`, backfilled after all emission
+  // (the seed must be ≥ every handle, known only at the end). -1 when handles are off.
+  let seedIdx = -1;
+  if (wantHeader) {
     pair(0, 'SECTION');
     pair(2, 'HEADER');
     if (options.acadVer) { pair(9, '$ACADVER'); pair(1, options.acadVer); }
@@ -236,6 +254,18 @@ export function writeDxfAscii(
     // ADR-636 Φ2.4 (D.1) — POINT display sysvars (round-trip C.1 import). $PDSIZE pre-scaled by caller.
     if (options.pdmode != null) { pair(9, '$PDMODE'); pair(70, options.pdmode); }
     if (options.pdsize != null) { pair(9, '$PDSIZE'); pair(40, options.pdsize); }
+    // ADR-644 (#9b) — $PSTYLEMODE = 1 (color-dependent / CTB plot styles, the AutoCAD default). In
+    // this mode a layer's plot style follows its colour, so the layer PlotStyleName handle (390) may
+    // be the null handle. Declaring it is the companion to emitting `390` on every LAYER record —
+    // without BOTH, AutoCAD aborts the LAYER table («Did not receive PlotStyleName»).
+    if (emitHandles) { pair(9, '$PSTYLEMODE'); pair(290, 1); }
+    // ADR-644 (#5) — $HANDSEED (next-unused handle). Value backfilled after all handles are handed
+    // out; pushed raw (code 5, but not an object handle → must bypass the lazy-injection sink).
+    if (emitHandles) {
+      rawPush(9, '$HANDSEED');
+      rawPush(5, '0');
+      seedIdx = out.length - 1;
+    }
     pair(0, 'ENDSEC');
   }
 
@@ -248,6 +278,23 @@ export function writeDxfAscii(
   for (const st of dimStyles) {
     dimStyleNameById[st.id] = st.name;
     dimStyleById[st.id] = st;
+  }
+
+  const dimEntities = entities.filter((e) => e.type === 'dimension');
+  const blockEntities = entities.filter((e): e is BlockEntity => e.type === 'block');
+  const hasDimBlocks = dimStyles.length > 0 && dimEntities.length > 0;
+  // ADR-644 (#9g) — AutoCAD requires a BLOCK_RECORD entry for EVERY block in the BLOCKS section (it
+  // does NOT auto-create them at DXFIN, unlike ezdxf → «Invalid Block Name»). Pre-allocate a record
+  // handle per block name (named INSERT blocks + resolvable `*Dn` dimension blocks) so the
+  // BLOCK_RECORD record ⇄ the BLOCK definition owner (330) reference the SAME handle.
+  const blockRecordHandles = new Map<string, string>();
+  if (emitHandles) {
+    for (const name of new Set(blockEntities.map((b) => b.name))) blockRecordHandles.set(name, alloc.next());
+    if (hasDimBlocks) {
+      dimEntities.forEach((e, i) => {
+        if (dimStyleById[(e as unknown as DimensionEntity).styleId]) blockRecordHandles.set(`*D${i}`, alloc.next());
+      });
+    }
   }
 
   // ADR-636 Στάδιο 2 Φ2.1 — ONE `TABLES` section holding LTYPE + LAYER (when the caller
@@ -264,6 +311,10 @@ export function writeDxfAscii(
     textStyles,
     dimStyles,
     s,
+    allocator: handleAlloc,
+    modelSpaceHandle,
+    paperSpaceHandle,
+    blockRecordHandles,
   });
 
   // ADR-362 Round 26 — BLOCKS section (after TABLES, before ENTITIES). One anonymous
@@ -275,19 +326,24 @@ export function writeDxfAscii(
   // block-instance definitions (INSERT references). Opened when either is present (DXF allows a
   // single BLOCKS section, so both share it). Bare `writeDxfAscii(entities)` with neither stays
   // block-section-less (Tekton/legacy) — zero regression.
-  const dimEntities = entities.filter((e) => e.type === 'dimension');
-  const blockEntities = entities.filter((e): e is BlockEntity => e.type === 'block');
-  const hasDimBlocks = dimStyles.length > 0 && dimEntities.length > 0;
-  if (hasDimBlocks || blockEntities.length > 0) {
+  // ADR-644 (#9f) — professional R2018 ALWAYS emits a BLOCKS section: it MUST define *Model_Space +
+  // *Paper_Space (declared in the BLOCK_RECORD table) or AutoCAD desyncs reading the entities that
+  // follow. Legacy/Tekton stays block-section-less unless a real block exists.
+  if (emitHandles || hasDimBlocks || blockEntities.length > 0) {
     pair(0, 'SECTION');
     pair(2, 'BLOCKS');
+    if (emitHandles && modelSpaceHandle && paperSpaceHandle) {
+      emitSpaceBlock(pair, '*Model_Space', modelSpaceHandle);
+      emitSpaceBlock(pair, '*Paper_Space', paperSpaceHandle);
+    }
     if (hasDimBlocks) {
       const lookup = buildDimensionLookup(dimEntities);
       dimEntities.forEach((e, i) => {
         const dim = e as unknown as DimensionEntity;
         const style = dimStyleById[dim.styleId];
         if (!style) return; // unresolved style → skip block (DIMENSION entity still regen-fallbacks)
-        writeDimensionBlock(pair, dim, style, `*D${i}`, layerObj(e)?.name ?? DEFAULT_LAYER, s, lookup);
+        // ADR-644 (#9g) — owner (330) = the pre-allocated `*Dn` BLOCK_RECORD handle (record ⇄ def match).
+        writeDimensionBlock(pair, dim, style, `*D${i}`, layerObj(e)?.name ?? DEFAULT_LAYER, s, lookup, emitHandles, blockRecordHandles.get(`*D${i}`));
       });
     }
     if (blockEntities.length > 0) {
@@ -298,9 +354,10 @@ export function writeDxfAscii(
       const emitBlockMember = (m: Entity): void => {
         const layer = layerObj(m);
         writeEntity(m, layer?.name ?? DEFAULT_LAYER, resolveAci(m, layer), s, mmScale, explode,
-          pair, () => memberDimBlock++, dimStyleNameById, version);
+          pair, () => memberDimBlock++, dimStyleNameById, version, emitHandles);
       };
-      writeBlockDefinitions(pair, blockEntities, (b) => layerObj(b)?.name ?? DEFAULT_LAYER, emitBlockMember);
+      // ADR-644 (#9g) — each BLOCK definition's owner (330) = its pre-allocated BLOCK_RECORD handle.
+      writeBlockDefinitions(pair, blockEntities, (b) => layerObj(b)?.name ?? DEFAULT_LAYER, emitBlockMember, emitHandles, blockRecordHandles);
     }
     pair(0, 'ENDSEC');
   }
@@ -308,8 +365,11 @@ export function writeDxfAscii(
   // ADR-636 Φ2.4 (D.4) — native MLINE round-trip: reconstruct one MLINE + its MLINESTYLE from
   // the `dxfMlineSource` marker the import stamped on the first element polyline of each group.
   // AutoCAD path only; `explode` (Tekton) keeps the exploded N POLYLINEs (zero regression).
-  const mlineStyles = buildMlineStyleRegistry(explode ? [] : entities);
+  const mlineStyles = buildMlineStyleRegistry(explode ? [] : entities, handleAlloc);
   const mlineGroupIds = explode ? new Set<string>() : collectMlineGroupIds(entities);
+  // ADR-643 Φ5b — IMAGEDEF registry (AutoCAD path only· Tekton `explode` → minimal parser, no images).
+  // Built here (after mline) so its handles come from the SAME `$HANDSEED` pool, before the ENTITIES loop.
+  const imageDefs = buildImageDefRegistry(explode ? [] : entities, handleAlloc);
 
   pair(0, 'SECTION');
   pair(2, 'ENTITIES');
@@ -325,149 +385,43 @@ export function writeDxfAscii(
       if (src) { emitMline(pair, src, mlineStyles.handleFor(src), layerName, s); continue; }
       if (e.groupId && mlineGroupIds.has(e.groupId)) continue;
     }
-    writeEntity(e, layerName, resolveAci(e, layer), s, mmScale, explode, pair, () => dimBlockIndex++, dimStyleNameById, version);
+    // ADR-643 Φ5b — image-mode hatch → tiled IMAGE entities (πραγματική διάσταση tile) που δείχνουν
+    // στο κοινό IMAGEDEF· ΑΝΤΙ για το native HATCH. Solid-downgrade δεν έχει marker → κανονικός writeEntity.
+    if (!explode && e.type === 'hatch') {
+      const marker = (e as HatchEntity).dxfImageExport;
+      if (marker) { emitImageTiles(pair, marker, imageDefs.handleFor(marker.filename), layerName, resolveAci(e, layer), s); continue; }
+    }
+    writeEntity(e, layerName, resolveAci(e, layer), s, mmScale, explode, pair, () => dimBlockIndex++, dimStyleNameById, version, emitHandles, modelSpaceHandle);
   }
   pair(0, 'ENDSEC');
-  // ADR-636 Φ2.4 (D.4) — OBJECTS section (ACAD_MLINESTYLE dictionary + MLINESTYLE objects) comes
-  // LAST in DXF order (after ENTITIES, before EOF). Skipped when no MLINE was exported (isEmpty).
-  emitObjectsSection(pair, mlineStyles);
+  // ADR-636 Φ2.4 (D.4) / ADR-643 Φ5b — ONE OBJECTS section (LAST in DXF order) holding BOTH the
+  // ACAD_MLINESTYLE dictionary/styles AND the ACAD_IMAGE_DICT/IMAGEDEFs. Skipped when neither present.
+  const hasObjects = !mlineStyles.isEmpty || !imageDefs.isEmpty;
+  if (hasObjects) {
+    pair(0, 'SECTION');
+    pair(2, 'OBJECTS');
+    emitMlineStyleBlocks(pair, mlineStyles);
+    emitImageDefBlocks(pair, imageDefs);
+    pair(0, 'ENDSEC');
+  }
   pair(0, 'EOF');
+  // ADR-644 (#5) — backfill $HANDSEED now that every handle has been handed out (≥ all of them).
+  if (seedIdx >= 0) out[seedIdx] = alloc.seedHex();
   return out.join('\n') + '\n';
 }
 
 // ─── Per-entity emitters ──────────────────────────────────────────────────────
 
-function writeEntity(
-  e: Entity, layer: string, aci: number, s: number, mmScale: number, explode: boolean, pair: Pair,
-  nextDimBlock: () => number, dimStyleNameById: Record<string, string>, version: DxfDocumentVersion,
-): void {
-  switch (e.type) {
-    case 'line': {
-      // ADR-505 (rebar 3D export) — προαιρετικό Z ανά άκρο (mm → output unit με mmScale,
-      // ΟΧΙ coord scale· ίδια σύμβαση με το extrusion thickness). Absent → 2Δ (body αμετάβλητο).
-      const za = (e as { dxfStartZMm?: number }).dxfStartZMm;
-      const zb = (e as { dxfEndZMm?: number }).dxfEndZMm;
-      emitLine(e.start, e.end, layer, aci, s, pair,
-        za != null ? za * mmScale : undefined,
-        zb != null ? zb * mmScale : undefined);
-      break;
-    }
-    case 'circle':
-      emitCircle(e.center, e.radius, layer, aci, s, pair);
-      break;
-    case 'arc':
-      if (explode) emitPath(arcPoints(e.center, e.radius, e.startAngle, e.endAngle), false, layer, aci, s, true, pair);
-      else emitArc(e.center, e.radius, e.startAngle, e.endAngle, layer, aci, s, pair);
-      break;
-    case 'text':
-      // ADR-636 Φ2.3 — single-line TEXT with H/V justification (72/73/11/21) on the AutoCAD path.
-      // Tekton (`explode`) keeps the bare, alignment-less, unrotated TEXT (byte-identical legacy).
-      emitText(
-        e.position, e.text ?? '', e.height ?? e.fontSize, layer, aci, s, pair,
-        explode ? 0 : (e.rotation ?? 0), explode ? undefined : alignFromTextEntity(e),
-        // ADR-636 Φ2.4 (D.5) — real group 7 (AutoCAD path); Tekton `explode` → emitText default STANDARD.
-        explode ? undefined : textStyleName(readTextEntityFamily(e)),
-      );
-      break;
-    case 'mtext':
-      // ADR-636 Φ2.3 — real MTEXT (\P line breaks, 71 attachment) on the AutoCAD path; Tekton's
-      // minimal parser reads only TEXT, so `explode` keeps the historic single-line TEXT fallback.
-      if (explode) emitText(e.position, e.text ?? '', e.height ?? e.fontSize, layer, aci, s, pair);
-      else emitMText(e, layer, aci, s, pair, version);
-      break;
-    case 'rectangle':
-    case 'rect':
-      // SSoT `rectangleEntityVertices`: χειρίζεται ΚΑΙ corner1/corner2 (drawn rects — x/y/w/h undefined)
-      // ΚΑΙ x/y/w/h, ΚΑΙ το `rotation` (pivot=corner1). Πριν: raw rectVertices(e.x,...) → NaN για drawn +
-      // αγνοούσε rotation.
-      // ADR-636 Φ2.4 (D.6) — STYLE codes (6/48/370) travel in the POLYLINE header (AutoCAD mode
-      // only; Tekton `explode` stays bare). Reverse of the import extractors.
-      emitPath(rectangleEntityVertices(e), true, layer, aci, s, explode, pair, 0, explode ? undefined : e);
-      break;
-    case 'polyline':
-    case 'lwpolyline': {
-      // Pseudo-3D extrusion (AutoCAD polyline mode only — Tekton stays 2D).
-      // Thickness is in mm → scale with mmScale, NOT the coordinate scale.
-      const thicknessMm = (e as { dxfThicknessMm?: number }).dxfThicknessMm ?? 0;
-      const thickness = explode ? 0 : thicknessMm * mmScale;
-      // ADR-636 Φ2.4 (D.6) — STYLE codes in the POLYLINE header (AutoCAD mode only).
-      emitPath(e.vertices, e.closed ?? false, layer, aci, s, explode, pair, thickness, explode ? undefined : e);
-      break;
-    }
-    case 'hatch': {
-      // ADR-636 Φ2.4 (D.3) — imported SOLID/TRACE/3DFACE round-trip to their NATIVE entity (not a
-      // downgraded HATCH), preserving the source primitive identity (Revit/AutoCAD fidelity). The
-      // `emitQuadFill` un-bowties the draw-order boundary back to the DXF corner slots (inverse of
-      // `parseQuadVertices`). AutoCAD path only — Tekton `explode` keeps the exploded-LINE fallback
-      // (its minimal parser doesn't read SOLID). Genuine HATCH (no `dxfSourceType`) is unaffected.
-      const src = (e as HatchEntity).dxfSourceType;
-      const quad = (e as HatchEntity).boundaryPaths?.[0];
-      if (!explode && src && quad && (quad.length === 3 || quad.length === 4)) {
-        emitQuadFill(QUAD_ENTITY_NAME[src], quad, layer, aci, s, pair);
-        break;
-      }
-      // ADR-505 §C (SOLID fill / poché) — «βαμμένη επιφάνεια» = προ-υπολογισμένα 3D
-      // faces (πλευρές + καπάκια, βλ. solid-fill-geometry) → ένα `3DFACE` ανά face.
-      // x/y με coordinate scale· z (mm) με mmScale (ίδια σύμβαση με rebar/thickness).
-      const faces = (e as {
-        dxfFaces?: ReadonlyArray<ReadonlyArray<{ x: number; y: number; zMm: number }>>;
-      }).dxfFaces;
-      if (faces) {
-        for (const f of faces) emit3DFace(f, layer, aci, s, mmScale, pair);
-        break;
-      }
-      // ADR-507 Φ1a — χωρίς προ-υπολογισμένα 3D faces → πραγματική γραμμοσκίαση:
-      // polyline mode → native `HATCH` entity (boundary loops + pattern meta)·
-      // lines mode (Τέκτονας) → exploded LINEs (boundary + user-defined γραμμές).
-      emitHatch(e as HatchEntity, layer, aci, s, explode, pair, emitLine);
-      break;
-    }
-    case 'dimension': {
-      // ADR-362 Round 24 — native DIMENSION entity (all 11 variants) via the
-      // group-code SSoT. `pair` is the scale-aware sink; coordinates are scaled
-      // inside `emitDimensionEntity` (same `s` as every other entity). styleName =
-      // the dim's styleId (AutoCAD falls back to STANDARD when no DIMSTYLE table is
-      // present — a DIMSTYLE/BLOCKS section is the next increment). Layer/colour are
-      // emitted by the dimension header itself (code 8); ACI is left to the style.
-      const dim = e as unknown as DimensionEntity;
-      // Round 25 — real DIMSTYLE name (from the resolved table) when available,
-      // else the raw styleId / Standard fallback (Round 24 behaviour).
-      const styleName = dimStyleNameById[dim.styleId] ?? dim.styleId ?? 'Standard';
-      emitDimensionEntity(pair, { entity: dim, styleName, layerName: layer }, nextDimBlock(), s);
-      break;
-    }
-    case 'point':
-      // ADR-636 Φ2.4 (D.1) — POINT round-trips the C.1 import. The glyph ($PDMODE/$PDSIZE) is a
-      // drawing-wide HEADER sysvar (emitted once above), not a per-POINT field — the entity is
-      // just its position (10/20/30) + layer + colour, mirroring emitCircle.
-      emitPoint(e.position, layer, aci, s, pair);
-      break;
-    case 'leader': {
-      // ADR-636 Φ2.4 (D.2) — native LEADER round-trips the ADR-635 Batch 2-B import. Ordered
-      // 10/20 vertices (arrow tip = vertices[0]) + 71 arrowhead flag; the import re-reads them via
-      // `convertLeader`. Annotation (340) / arrow size (DIMASZ) are not file-round-trippable → not
-      // emitted. STYLE codes (6/48/370) are excluded — `convertLeader` reads only 62 (no round-trip
-      // value), so 'leader' is deliberately NOT in STYLE_APPEND_TYPES.
-      const lead = e as unknown as LeaderEntity;
-      emitLeader(lead.vertices, lead.arrowHead?.type !== 'none', layer, aci, s, pair);
-      break;
-    }
-    case 'block': {
-      // ADR-640 M2 — a first-class block instance → native INSERT reference (name + placement
-      // transform). The named BLOCK definition (its local members) is emitted once in the BLOCKS
-      // section above, deduplicated by `block.name` (many instances share one definition).
-      emitInsert(pair, e as BlockEntity, layer, aci, s);
-      break;
-    }
-    // spline/xline/ray + group/array (container flatten TBD) → skipped.
-    default:
-      break;
-  }
-  // ADR-636 Φ2.4 (D.6) — append the common STYLE codes (6 linetype / 48 CELTSCALE / 370
-  // lineweight) for single-header entities, in AutoCAD mode only (Tekton `explode` output
-  // stays byte-identical, its minimal parser ignores these codes anyway). POLYLINE-based
-  // entities already carried their STYLE in the emitPath header above.
-  if (!explode && STYLE_APPEND_TYPES.has(e.type)) emitEntityStyle(pair, e);
+/**
+ * ADR-644 (#9f) — emit a `*Model_Space` / `*Paper_Space` BLOCK definition (empty, on layer `0`).
+ * R2018 requires these two in the BLOCKS section to match their BLOCK_RECORD entries. `recordHandle`
+ * is the owner (330) — the same handle the BLOCK_RECORD record carries. The `5` block handle is
+ * injected by the sink right after the `0 BLOCK`/`0 ENDBLK`.
+ */
+function emitSpaceBlock(pair: Pair, name: string, recordHandle: string): void {
+  // ADR-644 (#9f/#9g) — reuse the shared BLOCK begin/end SSoT (empty block, layer `0`, flag 0).
+  emitBlockBegin(pair, name, 0, '0', recordHandle, true);
+  emitBlockEnd(pair, '0', recordHandle, true);
 }
 
 // ADR-505 §A — primitive emitters (emitLine/emitCircle/emitArc/emitPoint/emit3DFace/emitPath),

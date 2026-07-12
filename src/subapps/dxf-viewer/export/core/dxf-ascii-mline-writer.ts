@@ -27,21 +27,25 @@
 import type { Entity, PolylineEntity, DxfMlineSource, DxfMlineStyleSource } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
 import type { Pair } from './dxf-ascii-hatch-writer';
+import type { HandleAllocator } from './dxf-ascii-handle-allocator';
 import { hexToAci } from '../../ui/text-toolbar/controls/aci-palette';
 
-/** Deterministic handles for the OBJECTS section — the file is otherwise handle-less, so a
- *  small reserved block cannot collide. `2A` = the ACAD_MLINESTYLE dictionary, `2B…` = styles. */
+/** Legacy reserved OBJECTS-section handles, used ONLY when no allocator is supplied (bare/round-trip
+ *  callers): `2A` = the ACAD_MLINESTYLE dictionary, `2B…` = styles. ADR-644 (#5): the professional
+ *  (AutoCAD) path passes the shared allocator so these come from the ONE `$HANDSEED`-covered pool. */
 const MLINE_DICT_HANDLE = '2A';
 const MLINE_STYLE_HANDLE_BASE = 0x2b;
 
 const ACI_BYLAYER = 256;
 
-/** A deduped MLINESTYLE registry: style defs + their (synthetic) handles, keyed by name. */
+/** A deduped MLINESTYLE registry: style defs + their handles, keyed by name. */
 export interface MlineStyleRegistry {
   /** The deduped `{ def, handle }` list, in first-seen order (for the OBJECTS section). */
   readonly defs: ReadonlyArray<{ readonly def: DxfMlineStyleSource; readonly handle: string }>;
   /** True when no entity carried an MLINE source → the OBJECTS section is skipped entirely. */
   readonly isEmpty: boolean;
+  /** Handle of the `ACAD_MLINESTYLE` dictionary (owner `330` of every style object). */
+  readonly dictHandle: string;
   /** The handle a given MLINE source's style resolves to (for the entity's group 340). */
   handleFor(source: DxfMlineSource): string;
 }
@@ -50,21 +54,34 @@ export interface MlineStyleRegistry {
  * Scan the entities for imported-MLINE provenance markers (`dxfMlineSource`, carried by the
  * first element polyline of each group) and build a name-deduped MLINESTYLE registry. Two
  * MLINEs sharing a style name collapse to ONE MLINESTYLE object (AutoCAD names are unique).
+ *
+ * ADR-644 (#5) — when `allocator` is supplied (professional AutoCAD path), every handle (dict +
+ * styles) is drawn from the ONE shared pool so `$HANDSEED` covers them and no global collision is
+ * possible. Without it (bare/round-trip callers) the historic reserved block is used verbatim
+ * (byte-identical output).
  */
-export function buildMlineStyleRegistry(entities: readonly Entity[]): MlineStyleRegistry {
+export function buildMlineStyleRegistry(
+  entities: readonly Entity[], allocator?: HandleAllocator,
+): MlineStyleRegistry {
   const byName = new Map<string, { def: DxfMlineStyleSource; handle: string }>();
   for (const e of entities) {
     if (e.type !== 'polyline') continue;
     const src = (e as PolylineEntity).dxfMlineSource;
     if (!src || byName.has(src.style.name)) continue;
-    const handle = (MLINE_STYLE_HANDLE_BASE + byName.size).toString(16).toUpperCase();
+    const handle = allocator
+      ? allocator.next()
+      : (MLINE_STYLE_HANDLE_BASE + byName.size).toString(16).toUpperCase();
     byName.set(src.style.name, { def: src.style, handle });
   }
   const defs = [...byName.values()];
+  // Dict handle allocated AFTER the styles (only when non-empty → no wasted handle). Value ordering
+  // is irrelevant to DXF validity; only global uniqueness + `$HANDSEED` coverage matter.
+  const dictHandle = defs.length > 0 && allocator ? allocator.next() : MLINE_DICT_HANDLE;
   return {
     defs,
     isEmpty: defs.length === 0,
-    handleFor: (source) => byName.get(source.style.name)?.handle ?? MLINE_DICT_HANDLE,
+    dictHandle,
+    handleFor: (source) => byName.get(source.style.name)?.handle ?? dictHandle,
   };
 }
 
@@ -136,10 +153,10 @@ export function emitMline(
 /** Emit one `MLINESTYLE` object — the inverse of `pairsToMlineStyle`. The pre-`49` `62` is the
  *  style fill colour (import ignores it); each `49` opens an element, a following `62` is that
  *  element's colour (emitted only when the source carried one, so a colourless element stays so). */
-function emitMlineStyle(pair: Pair, def: DxfMlineStyleSource, handle: string): void {
+function emitMlineStyle(pair: Pair, def: DxfMlineStyleSource, handle: string, dictHandle: string): void {
   pair(0, 'MLINESTYLE');
   pair(5, handle);
-  pair(330, MLINE_DICT_HANDLE);
+  pair(330, dictHandle);
   pair(100, 'AcDbMlineStyle');
   pair(2, def.name);
   pair(70, 0);              // style flags
@@ -160,20 +177,34 @@ function emitMlineStyle(pair: Pair, def: DxfMlineStyleSource, handle: string): v
  * distinct style. DXF file order places OBJECTS last (after ENTITIES, before EOF). Skipped
  * entirely when no MLINE was exported (`registry.isEmpty`) → header-less/legacy envelope
  * unaffected. `buildMlineStyleMap` re-reads these blocks by scanning for `0 MLINESTYLE`.
+ *
+ * ADR-643 Φ5b — the DXF spec allows a SINGLE `OBJECTS` section, so when the export ALSO carries
+ * image-fill IMAGEDEFs the main writer opens the section itself and calls the body-only
+ * `emitMlineStyleBlocks` + `emitImageDefBlocks`. This wrapper stays for MLINE-only callers/tests.
  */
 export function emitObjectsSection(pair: Pair, registry: MlineStyleRegistry): void {
   if (registry.isEmpty) return;
   pair(0, 'SECTION');
   pair(2, 'OBJECTS');
+  emitMlineStyleBlocks(pair, registry);
+  pair(0, 'ENDSEC');
+}
+
+/**
+ * Emit ONLY the `ACAD_MLINESTYLE` dictionary + `MLINESTYLE` blocks (no `SECTION`/`ENDSEC`
+ * wrapper) so the main writer can combine them with image `IMAGEDEF` blocks in the ONE shared
+ * `OBJECTS` section (ADR-643 Φ5b). No-op when no MLINE was exported.
+ */
+export function emitMlineStyleBlocks(pair: Pair, registry: MlineStyleRegistry): void {
+  if (registry.isEmpty) return;
   // ACAD_MLINESTYLE dictionary (owner of the MLINESTYLE objects).
   pair(0, 'DICTIONARY');
-  pair(5, MLINE_DICT_HANDLE);
+  pair(5, registry.dictHandle);
   pair(330, '0');
   pair(100, 'AcDbDictionary');
   for (const { def, handle } of registry.defs) {
     pair(3, def.name);
     pair(350, handle);
   }
-  for (const { def, handle } of registry.defs) emitMlineStyle(pair, def, handle);
-  pair(0, 'ENDSEC');
+  for (const { def, handle } of registry.defs) emitMlineStyle(pair, def, handle, registry.dictHandle);
 }

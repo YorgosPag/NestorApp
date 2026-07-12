@@ -398,6 +398,18 @@
             "tree": "Tree"
           }
         },
+        "compound": {
+          "layers": "Layers",
+          "layer": "Layer",
+          "offset": "Offset",
+          "addLayer": "Add layer",
+          "removeLayer": "Remove layer",
+          "presets": "Presets",
+          "presetNames": {
+            "road": "Road (double line)",
+            "railway": "Railway"
+          }
+        },
         "cancel": "Cancel",
         "save": "Save",
         "errors": {

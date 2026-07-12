@@ -28,31 +28,37 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  type LinePatternSegment,
+  type LinePatternLayer,
   DEFAULT_SEGMENT_LENGTH_MM,
   segmentsToDashPattern,
-  segmentsToComplex,
+  layersToComplex,
   hasComplexSegments,
-  describeSegments,
-  validateLinePattern,
+  isCompound,
+  describeLayers,
+  validateLinePatternLayers,
 } from '../../../config/line-pattern-segments';
 import {
   listSelectableLinetypeNames,
   registerUserLinetype,
 } from '../../../stores/LinetypeRegistry';
-// ADR-510 Φ2E #4 — the segment list UI is now the shared editor (reused by the
-// inline left-Properties LinePropertiesTab too). The dialog keeps only the name
-// field + registration; the segment rows/add-bar/preview live in one SSoT.
+// ADR-510 Φ2E #4 / ADR-642 Φ5 — the segment UI is the shared editor; compound (multi-layer)
+// patterns wrap it via `LinePatternLayersEditor`. The dialog keeps only the name field +
+// registration; the layer/segment rows + preview live in one SSoT.
 import {
-  LinePatternSegmentsEditor,
-  buildLinePatternSegmentsLabels,
-} from './LinePatternSegmentsEditor';
+  LinePatternLayersEditor,
+  buildLinePatternLayersLabels,
+} from './LinePatternLayersEditor';
 
-/** A sensible starting point: one dash + one gap (a plain dashed pattern). */
-function initialSegments(): LinePatternSegment[] {
+/** A sensible starting point: one centre layer with one dash + one gap (a plain dashed pattern). */
+function initialLayers(): LinePatternLayer[] {
   return [
-    { kind: 'dash', lengthMm: 5 },
-    { kind: 'gap', lengthMm: DEFAULT_SEGMENT_LENGTH_MM },
+    {
+      segments: [
+        { kind: 'dash', lengthMm: 5 },
+        { kind: 'gap', lengthMm: DEFAULT_SEGMENT_LENGTH_MM },
+      ],
+      offsetMm: 0,
+    },
   ];
 }
 
@@ -72,15 +78,19 @@ export function LinePatternEditorDialog({
   const e = (key: string) => t(`panels.dimensions.linePatternEditor.${key}`);
 
   const [name, setName] = React.useState('');
-  const [segments, setSegments] = React.useState<LinePatternSegment[]>(initialSegments);
+  const [layers, setLayers] = React.useState<LinePatternLayer[]>(initialLayers);
 
-  const pattern = React.useMemo(() => segmentsToDashPattern(segments), [segments]);
+  // Geometry-only fallback pattern = the base (first) layer — what a simple picker/renderer reads.
+  const pattern = React.useMemo(
+    () => segmentsToDashPattern(layers[0]?.segments ?? []),
+    [layers],
+  );
   const existingNames = listSelectableLinetypeNames();
-  const validation = validateLinePattern(name, segments, existingNames);
+  const validation = validateLinePatternLayers(name, layers, existingNames);
 
   const reset = React.useCallback(() => {
     setName('');
-    setSegments(initialSegments());
+    setLayers(initialLayers());
   }, []);
 
   const close = React.useCallback(() => {
@@ -91,12 +101,12 @@ export function LinePatternEditorDialog({
   const save = () => {
     if (!validation.ok) return;
     const trimmed = name.trim();
-    const description = describeSegments(segments);
-    // ADR-642 Φ2/Φ3 — a text/symbol-carrying pattern is stored as a full `complex` def
-    // (the `pattern` keeps the geometry-only fallback); simple patterns pass undefined.
-    const complex = hasComplexSegments(segments)
-      ? segmentsToComplex(trimmed, segments, description)
-      : undefined;
+    const description = describeLayers(layers);
+    // ADR-642 Φ2/Φ3/Φ5 — a compound (multi-layer / offset) OR text/symbol-carrying pattern is
+    // stored as a full `complex` def (the `pattern` keeps the base-layer geometry-only fallback);
+    // a plain single-layer dash pattern passes `undefined`.
+    const needsComplex = isCompound(layers) || layers.some((l) => hasComplexSegments(l.segments));
+    const complex = needsComplex ? layersToComplex(trimmed, layers, description) : undefined;
     const created = registerUserLinetype(trimmed, pattern, description, complex);
     if (created) onCreated?.(created.name);
     close();
@@ -119,10 +129,10 @@ export function LinePatternEditorDialog({
             error={validation.nameError ? e(`errors.${validation.nameError}`) : null}
           />
 
-          <LinePatternSegmentsEditor
-            segments={segments}
-            onChange={setSegments}
-            labels={buildLinePatternSegmentsLabels(e)}
+          <LinePatternLayersEditor
+            layers={layers}
+            onChange={setLayers}
+            labels={buildLinePatternLayersLabels(e)}
             patternError={validation.patternError ? e(`errors.${validation.patternError}`) : null}
           />
         </div>

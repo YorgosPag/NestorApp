@@ -84,6 +84,36 @@ render-gating (`isSceneDirty`) ήδη επαναζωγραφίζει μόνο ό
 (ο ΜΟΝΑΔΙΚΟΣ subscriber → καμία cascade στο viewport). (3) Cancellation στο `disposeRoot()` πριν το teardown → race-free.
 `ThreeJsSceneManager` περνά `() => markSceneDirty()` στον converter (constructor callback). Πλήρες detail: **ADR-645 §8 + ADR-366 changelog**. ΟΧΙ tsc (N.17)· jest 56/56 GREEN. 🔴 browser-verify + commit (Giorgio).
 
+### 2026-07-12 — ✅ 3D DXF text = shared glyph atlas + merged mesh (1 draw call/όροφο, ADR-645 Φάση B)
+**Τι:** ο per-text `CanvasTexture` (χιλιάδες textures στο multi-floor = GPU blowout + upload stalls) αντικαταστάθηκε από
+**ΕΝΑ shared `GlyphAtlas`** (`bim-3d/converters/glyph-atlas.ts`) + **merged BufferGeometry ανά όροφο** (`glyph-atlas-text-mesh.ts`,
+`MeshBasicMaterial({ map: atlas, vertexColors })`). Κάθε ΜΟΝΑΔΙΚΟ glyph rasterize-άρεται **μία φορά** (lazily) μέσω του ADR-557
+font SSoT (`paintTextRun`/`getGlyphRun`) — ίδιες outlines με το 2Δ, καμία νέα εξάρτηση. **Συμμόρφωση ADR-040:** (1) το atlas
+build είναι **naturally time-sliced** — piggyback στο Φάση-A streamed pass, καθώς τα unique glyphs είναι bounded (αλφάβητο, όχι
+text count)· `texture.needsUpdate` μόνο κατά το warm-up. (2) Bounds: incremental `boundingBox` ΜΟΝΟ στα γραμμένα glyphs (το
+preallocated (0,0,0) tail ΔΕΝ μολύνει το camera framing). (3) **Selection/hover ανέπαφα** — plan-space (`dxf-wireframe-hit-test`)
++ em-box glow (`dxf-entity-outline`), entity-driven, ΠΟΤΕ raycast του text mesh. Ο atlas είναι converter-owned + persistent
+(cells cache across syncs). Πλήρες detail: **ADR-645 §8**. ΟΧΙ tsc (N.17)· jest 73 GREEN· jscpd:diff καθαρό. 🔴 browser-verify + commit (Giorgio).
+
+### 2026-07-12 — ✅ Complex-linetype compound layers — editor + preview (ADR-642 Φ5-A, CHECK 6D)
+**Τι:** multi-layer (compound) pattern editor + `CompoundPatternPreview` (parallel rails / ties). Ο
+`strokeStyledPolyline` **αμετάβλητος** — το compound render (`for layer of def.layers` + `offsetPolyline`)
+υπάρχει από Φ1. **Συμμόρφωση ADR-040:** ο νέος κώδικας είναι editor UI + ένα WYSIWYG preview canvas που
+καλεί τον pure `strokeStyledPolyline` (points+def→draw)· διαβάζει **μηδέν** hover/selection, δεν αγγίζει το
+bitmap-cache key, **καμία** νέα `useSyncExternalStore` σε shell/orchestrator. Το κοινό `StrokePreviewCanvas`
+είναι leaf-local (own ref+effect). Πλήρες detail: **ADR-642 changelog (Φ5-A)**. ΟΧΙ tsc (N.17)· jest 94 GREEN·
+jscpd:diff καθαρό. 🔴 browser-verify + commit (Giorgio).
+
+### 2026-07-12 — ✅ Complex-linetype corner-role symbols + alignDash (ADR-642 Φ4, CHECK 6B/6D)
+**Τι:** ο `ComplexLineStroker` απέκτησε corner-role symbol placement (`innerCorner`/`outerCorner` στις
+κοίλες/κυρτές κορυφές μέσω ΝΕΟΥ pure `polylineVertices` + `stampCornerSymbols`· `start`/`end` στα άκρα) και
+την `alignDash` corner policy (dash αντί κενό σε κάθε κορυφή). **Συμμόρφωση ADR-040:** ο stroker + τα νέα
+helpers (`polylineVertices`, `stampCornerSymbols`, `firstDashOffsetPx`) είναι **pure** (points+def→draw),
+διαβάζουν **μηδέν** hover/selection → cacheable στο normal-state bitmap· καμία αλλαγή στο cache key· **μηδέν**
+νέα `useSyncExternalStore`. Το corner-symbol πέρασμα είναι ΟΡΘΟΓΩΝΙΟ στον arc-length walk (δεν αγγίζει το
+routing seam της Φ2-B). Πλήρες detail: **ADR-642 changelog (Φ4) + §6.4 βήμα 3**. ΟΧΙ tsc (N.17)· jest 81 GREEN·
+jscpd:diff καθαρό. 🔴 browser-verify + commit (Giorgio).
+
 ### 2026-07-12 — ✅ Complex-linetype full-canvas routing — per-entity seam (ADR-642 Φ2-B μέρος 1, CHECK 6B/6D)
 **Τι:** τα entity renderers (LINE/POLYLINE/ARC/CIRCLE) ρουτάρουν το geometry stroke μέσω ΕΝΟΣ κοινού seam
 `strokeStyledEntityPolyline` (`rendering/entities/shared/complex-line-routing.ts`): όταν ο resolved τύπος έχει

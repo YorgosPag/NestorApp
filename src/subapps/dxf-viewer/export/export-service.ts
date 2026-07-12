@@ -22,16 +22,19 @@ import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import { resolveExportFloors } from './core/export-floor-scope';
 import { createStoredZip, blobToUint8, type ZipFile } from './core/zip-pack';
 import {
-  exportFloorToDxf,
   renderDxfBlob,
   buildDxfExportRequest,
   mergeFloorsToSingleDxfScene,
   buildFloorFilename,
   type DxfExportOptions,
 } from './formats/dxf-export-adapter';
+import { resolveImageFillsForDxf } from './core/image-fill-export';
 import { exportFloorToTek, type TekExportOptions } from './formats/tek-export-adapter';
 import { useDrawingScaleStore } from '../state/drawing-scale-store';
-import type { ExportArtifact, ExportDeps, ExportRequest, ExportResult } from './types';
+import type { DxfExportSceneRequest } from '../types/dxf-export.types';
+import type {
+  DxfImageFillMode, DxfLineMode, ExportArtifact, ExportDeps, ExportRequest, ExportResult,
+} from './types';
 
 export async function runExport(
   request: ExportRequest,
@@ -120,25 +123,79 @@ async function runDxfExport(
     // ADR-583/608 — live annotation scale so exported symbols keep their printed size.
     drawingScale: useDrawingScaleStore.getState().drawingScale,
   };
+  // ADR-643 Φ5b — image-fill hatch export mode (solid-downgrade default / faithful IMAGE + zip raster).
+  const imageMode: DxfImageFillMode = request.dxfImageFillMode ?? 'solid';
 
   // all-single → one merged DXF across every floor.
   if (request.floorScope === 'all-single') {
     const merged = mergeFloorsToSingleDxfScene(floors, request.entityScope, request.dxfLineMode);
     const { request: dxfReq, warnings } = buildDxfExportRequest(merged.scene, dxfOptions);
-    const blob = renderDxfBlob(dxfReq, request.dxfLineMode);
+    const rendered = await renderDxfWithImages(dxfReq, request.dxfLineMode, imageMode);
     const finalName = buildFloorFilename(deps.projectName, 'all-floors', 'dxf');
-    triggerExportDownload({ blob, filename: finalName });
-    return { filename: finalName, fileCount: 1, warnings: [...merged.warnings, ...warnings] };
+    const allWarnings = [...merged.warnings, ...warnings, ...rendered.warnings];
+    return packageDxfArtifacts(
+      [{ filename: finalName, blob: rendered.blob }], rendered.rasters, deps, allWarnings, finalName,
+    );
   }
 
   // active / all-zip → one artifact per floor.
   const warnings: string[] = [];
   const artifacts: ExportArtifact[] = [];
+  const rasters: ExportArtifact[] = [];
   for (const floor of floors) {
-    const out = exportFloorToDxf(floor, dxfOptions);
-    artifacts.push(out.artifact);
-    warnings.push(...out.warnings);
+    const { request: dxfReq, warnings: buildWarnings } = buildDxfExportRequest(floor.scene, dxfOptions);
+    const rendered = await renderDxfWithImages(dxfReq, request.dxfLineMode, imageMode);
+    artifacts.push({ filename: buildFloorFilename(deps.projectName, floor.level.name, 'dxf'), blob: rendered.blob });
+    warnings.push(...buildWarnings, ...rendered.warnings);
+    rasters.push(...rendered.rasters);
   }
 
-  return packageArtifacts(artifacts, deps, warnings);
+  return packageDxfArtifacts(artifacts, rasters, deps, warnings);
+}
+
+/**
+ * ADR-643 Φ5b — render a built DXF request, running the async image-fill pre-pass first: image
+ * hatches become either a solid downgrade (avg colour) or tiled `IMAGE`+`IMAGEDEF` markers, and
+ * (image mode) the raster files to bundle. Solid mode / image-free scenes → zero rasters (historic
+ * single-file behaviour). Pure `renderDxfBlob` stays untouched — it serializes the stamped markers.
+ */
+async function renderDxfWithImages(
+  request: DxfExportSceneRequest, lineMode: DxfLineMode | undefined, mode: DxfImageFillMode,
+): Promise<{ blob: Blob; rasters: ExportArtifact[]; warnings: string[] }> {
+  const resolved = await resolveImageFillsForDxf(request.scene.entities, mode);
+  const req2: DxfExportSceneRequest = { ...request, scene: { ...request.scene, entities: resolved.entities } };
+  return { blob: renderDxfBlob(req2, lineMode), rasters: resolved.rasters, warnings: [...resolved.warnings] };
+}
+
+/**
+ * ADR-643 Φ5b — deliver DXF artifacts, bundling any image-fill rasters. Zero rasters → historic
+ * path (single `.dxf` download, or a floors `.zip` for multi-floor). With rasters, EVERYTHING goes
+ * into ONE `.zip` (the `.dxf`(s) at root + deduped `images/*` at relative paths the IMAGEDEFs
+ * reference) — AutoCAD eTransmit standard, opens with the images resolved.
+ */
+async function packageDxfArtifacts(
+  artifacts: ExportArtifact[], rasters: ExportArtifact[], deps: ExportDeps, warnings: string[],
+  singleName?: string,
+): Promise<ExportResult> {
+  if (rasters.length === 0) {
+    if (singleName && artifacts.length === 1) {
+      triggerExportDownload({ blob: artifacts[0].blob, filename: singleName });
+      return { filename: singleName, fileCount: 1, warnings };
+    }
+    return packageArtifacts(artifacts, deps, warnings);
+  }
+  const deduped = dedupeByFilename(rasters);
+  const files: ZipFile[] = [];
+  for (const a of artifacts) files.push({ name: a.filename, data: await blobToUint8(a.blob) });
+  for (const r of deduped) files.push({ name: r.filename, data: await blobToUint8(r.blob) });
+  const zipName = buildFloorFilename(deps.projectName, 'dxf', 'zip');
+  triggerExportDownload({ blob: createStoredZip(files), filename: zipName });
+  return { filename: zipName, fileCount: files.length, warnings };
+}
+
+/** Keep the first artifact per filename (same material reused across floors → ONE bundled file). */
+function dedupeByFilename(artifacts: readonly ExportArtifact[]): ExportArtifact[] {
+  const byName = new Map<string, ExportArtifact>();
+  for (const a of artifacts) if (!byName.has(a.filename)) byName.set(a.filename, a);
+  return [...byName.values()];
 }

@@ -24,6 +24,7 @@ import type {
   ExportFloorScope,
   ExportRequest,
   DxfLineMode,
+  DxfImageFillMode,
   TekSymbolMode,
 } from '../../../export/types';
 import { scopeIncludesBim } from '../../../export/core/export-entity-scope';
@@ -41,6 +42,8 @@ export interface ExportDialogState {
   setDxfUnit: (u: DxfUnit) => void;
   dxfLineMode: DxfLineMode;
   setDxfLineMode: (m: DxfLineMode) => void;
+  dxfImageFillMode: DxfImageFillMode;
+  setDxfImageFillMode: (m: DxfImageFillMode) => void;
   tekSymbolMode: TekSymbolMode;
   setTekSymbolMode: (m: TekSymbolMode) => void;
   /** True when current format requires BIM content (IFC) but scope excludes it. */
@@ -57,6 +60,9 @@ export function useExportDialogState(): ExportDialogState {
   // Default 'polyline' (AutoCAD/standard — proper objects). Switch to 'lines'
   // for Τέκτονας/FESPA, whose basic parser reads only LINE/TEXT/CIRCLE.
   const [dxfLineMode, setDxfLineMode] = React.useState<DxfLineMode>('polyline');
+  // ADR-643 Φ5b — image-fill hatch export mode. Default 'solid' (Ελαφρύ: μέσο χρώμα, πάντα
+  // ανοίγει, single-file). Switch to 'image' για πιστό tiled IMAGE + raster bundled σε zip.
+  const [dxfImageFillMode, setDxfImageFillMode] = React.useState<DxfImageFillMode>('solid');
   // Default 'native' — annotation symbols → ΕΝΑ built-in Tekton object (ενιαίο πακέτο).
   // Switch to 'geometry' to keep our exact glyph geometry (grouped with tags).
   const [tekSymbolMode, setTekSymbolMode] = React.useState<TekSymbolMode>('native');
@@ -73,9 +79,10 @@ export function useExportDialogState(): ExportDialogState {
       dxfVersion: format === 'dxf' ? dxfVersion : undefined,
       dxfUnit: format === 'dxf' ? dxfUnit : undefined,
       dxfLineMode: format === 'dxf' ? dxfLineMode : undefined,
+      dxfImageFillMode: format === 'dxf' ? dxfImageFillMode : undefined,
       tekSymbolMode: format === 'tek' ? tekSymbolMode : undefined,
     }),
-    [format, entityScope, floorScope, dxfVersion, dxfUnit, dxfLineMode, tekSymbolMode],
+    [format, entityScope, floorScope, dxfVersion, dxfUnit, dxfLineMode, dxfImageFillMode, tekSymbolMode],
   );
 
   return {
@@ -91,6 +98,8 @@ export function useExportDialogState(): ExportDialogState {
     setDxfUnit,
     dxfLineMode,
     setDxfLineMode,
+    dxfImageFillMode,
+    setDxfImageFillMode,
     tekSymbolMode,
     setTekSymbolMode,
     scopeConflictsWithFormat,

@@ -47,6 +47,17 @@ export type ExportFloorScope = 'active' | 'all-zip' | 'all-single';
 export type DxfLineMode = 'polyline' | 'lines';
 
 /**
+ * ADR-643 Φ5b — πώς εξάγεται ένα image-fill hatch στο DXF (το native DXF `HATCH` δεν
+ * έχει image fill· απόφαση Giorgio Q3 = ΚΑΙ ΤΑ ΔΥΟ, επιλογή χρήστη):
+ *   'solid' → **Ελαφρύ (default)**: υποβάθμιση σε `SOLID` με το μέσο χρώμα της εικόνας
+ *             (ασφαλές, πάντα ανοίγει, ελαφρύ single-file `.dxf`).
+ *   'image' → **Πιστό**: το raster ταξιδεύει bundled σε `.zip` (relative path,
+ *             AutoCAD eTransmit standard)· εξάγεται ως tiled `IMAGE`+`IMAGEDEF`
+ *             σε πραγματική διάσταση tile (κοντά στο AutoCAD «Super Hatch»).
+ */
+export type DxfImageFillMode = 'solid' | 'image';
+
+/**
  * ADR-608 — πώς μεταφέρονται τα annotation symbols στο `.tek`:
  *   'native'   → σύμβολα με built-in Tekton equivalent γίνονται ΕΝΑ type-7 `<object>`
  *                (ενιαίο επιλέξιμο πακέτο, native εμφάνιση Τέκτονα, portable).
@@ -70,6 +81,8 @@ export interface ExportRequest {
   readonly dxfUnit?: DxfUnit;
   /** DXF geometry mode (POLYLINE vs exploded LINEs). */
   readonly dxfLineMode?: DxfLineMode;
+  /** ADR-643 Φ5b — image-fill hatch export mode (solid-downgrade default / faithful IMAGE). */
+  readonly dxfImageFillMode?: DxfImageFillMode;
 
   /** TEK-specific — annotation symbol transfer mode (native objects vs geometry). */
   readonly tekSymbolMode?: TekSymbolMode;

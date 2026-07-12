@@ -28,6 +28,7 @@ import { DxfDocumentVersion } from '../../text-engine/types/text-toolbar.types';
 import { alignmentToHJust } from '../../utils/dxf-converter-helpers';
 import { attachmentToMTextCode, attachmentToVJust } from '../../utils/dxf-text-converters';
 import type { Pair } from './dxf-ascii-hatch-writer';
+import { emitAcDbEntity, type EntityR2018 } from './dxf-ascii-primitive-emitters';
 
 const DEFAULT_TEXT_HEIGHT = 0.18; // output units — used if entity has no height.
 const DEFAULT_STYLE = 'STANDARD'; // AutoCAD's always-present default text style (no STYLE entry needed).
@@ -80,15 +81,26 @@ export function alignFromTextEntity(e: TextEntity): TextAlign | undefined {
  */
 export function emitText(
   p: Point2D, text: string, height: number | undefined, layer: string, aci: number, s: number, pair: Pair,
-  rotationDeg = 0, align?: TextAlign, styleName: string = DEFAULT_STYLE,
+  rotationDeg = 0, align?: TextAlign, styleName: string = DEFAULT_STYLE, r2018?: EntityR2018,
 ): void {
   pair(0, 'TEXT');
+  // ADR-644 (#9e) — R2018 TEXT: AcDbEntity common block, then `100 AcDbText`, then a SECOND
+  // `100 AcDbText` before the vertical-justification `73` (the AutoCAD two-subclass TEXT quirk).
+  if (r2018) { emitAcDbEntity(pair, layer, aci, r2018); pair(100, 'AcDbText'); }
   pair(10, p.x * s); pair(20, p.y * s);
+  if (r2018) pair(30, 0);
   pair(40, height != null ? height * s : DEFAULT_TEXT_HEIGHT);
   pair(1, sanitizeText(text));
   pair(50, rotationDeg); // rotation (CCW degrees)
   pair(41, 1);           // width factor
   pair(7, styleName);    // text style (group 7) — round-trips the STYLE table (ADR-636 D.5)
+  if (r2018) {
+    pair(72, align?.h ?? 0);
+    if (align && (align.h !== 0 || align.v !== 0)) { pair(11, p.x * s); pair(21, p.y * s); pair(31, 0); }
+    pair(100, 'AcDbText');
+    pair(73, align?.v ?? 0);
+    return;
+  }
   if (align && (align.h !== 0 || align.v !== 0)) {
     // Alignment point (11/21) mirrors the insertion point; 73 only when non-baseline.
     pair(72, align.h);
@@ -108,6 +120,7 @@ export function emitText(
  */
 export function emitMText(
   e: Entity, layer: string, aci: number, s: number, pair: Pair, version: DxfDocumentVersion,
+  r2018?: EntityR2018,
 ): void {
   const node = ensureTextNode(e as MTextEntity);
   const { content, entityType } = serializeDxfTextNode(node, { version });
@@ -116,15 +129,17 @@ export function emitMText(
   const styleName = textStyleName(readTextEntityFamily(e));
 
   if (entityType === 'TEXT') {
-    // R12 downgrade — no MTEXT: emit the (space-joined) content as plain TEXT (style carried).
+    // R12 downgrade — no MTEXT: emit the (space-joined) content as plain TEXT (style carried). R12 is
+    // handle-less/subclass-less, so no r2018 block (the writer gates emitHandles off for R12 anyway).
     emitText((e as MTextEntity).position, content, charHeight, layer, aci, s, pair, node.rotation, undefined, styleName);
     return;
   }
 
   const width = (e as MTextEntity).width ?? 0;
   pair(0, 'MTEXT');
-  pair(8, layer);
-  pair(62, aci);
+  // ADR-644 (#9e) — R2018 MTEXT: AcDbEntity common block + `100 AcDbMText` before the data.
+  if (r2018) { emitAcDbEntity(pair, layer, aci, r2018); pair(100, 'AcDbMText'); }
+  else { pair(8, layer); pair(62, aci); }
   pair(10, (e as MTextEntity).position.x * s); pair(20, (e as MTextEntity).position.y * s); pair(30, 0);
   pair(40, charHeight != null ? charHeight * s : DEFAULT_TEXT_HEIGHT);
   pair(41, width * s);                             // reference rectangle width (0 = no wrap)

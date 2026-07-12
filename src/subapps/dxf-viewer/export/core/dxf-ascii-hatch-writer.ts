@@ -124,7 +124,11 @@ export function emitHatch(
     pair(46, Math.cos(r) * spacing);              // offset y (κάθετο)
     pair(79, 0);                                  // dash items
   }
-  pair(47, 0);                                    // pixel size
+  // ADR-644 (#6) — ΟΧΙ `47 0.0` (pixel size). Το pixel-size 0 είναι άκυρο σε non-associative
+  // HATCH: ο R2018 parser του AutoCAD μετά το `76` περιμένει `98` (seed count) και, βρίσκοντας
+  // `47`, κόβει («Error: expected group code 98» → drawing discarded). Το ezdxf-native HATCH ΔΕΝ
+  // εκπέμπει `47` για non-associative. Ο import reader το διαβάζει προαιρετικά → η παράλειψη δεν
+  // σπάει round-trip. (Associative hatch με πραγματικό pixel size = μελλοντικό increment.)
   const seeds = e.seedPoints ?? [];
   pair(98, seeds.length);                         // number of seed points
   for (const sp of seeds) { pair(10, sp.x * s); pair(20, sp.y * s); }

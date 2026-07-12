@@ -17,8 +17,9 @@ import {
 } from '../../systems/dimensions/dim-block-primitives';
 import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
 import type { Pair } from './dxf-ascii-hatch-writer';
-import { emit3DFace, emitLine, emitCircle, emitArc } from './dxf-ascii-primitive-emitters';
+import { emit3DFace, emitLine, emitCircle, emitArc, type EntityR2018 } from './dxf-ascii-primitive-emitters';
 import { emitText } from './dxf-ascii-text-writer';
+import { emitBlockBegin, emitBlockEnd } from './dxf-ascii-insert-writer';
 
 const ACI_BYLAYER = 256; // dimension-block geometry follows the dim's layer colour
 
@@ -38,7 +39,7 @@ export function buildDimensionLookup(dimEntities: readonly Entity[]): DimensionL
  */
 export function writeDimensionBlock(
   pair: Pair, entity: DimensionEntity, style: DimStyle, blockName: string, layer: string, s: number,
-  lookup: DimensionLookup,
+  lookup: DimensionLookup, professional = false, owner?: string,
 ): void {
   let primitives: DimBlockPrimitive[];
   try {
@@ -47,35 +48,33 @@ export function writeDimensionBlock(
     return; // degenerate / unresolved chain → no block (regen-capable readers still show the DIMENSION)
   }
 
-  pair(0, 'BLOCK');
-  pair(8, layer);
-  pair(2, blockName);
-  pair(70, 1);                 // anonymous block flag (bit 1)
-  pair(10, 0); pair(20, 0); pair(30, 0); // base point at origin
-  pair(3, blockName);          // block name (repeated per DXF BLOCK spec)
+  // ADR-644 (#9e) — R2018 block members carry subclass markers (ByLayer, no per-entity style → `{}`).
+  const r2018: EntityR2018 | undefined = professional ? {} : undefined;
+
+  // ADR-644 (#9e/#9g) — shared R2018 BLOCK header SSoT. Flag 1 = anonymous (`*Dn` dimension block).
+  emitBlockBegin(pair, blockName, 1, layer, owner, professional);
 
   for (const prim of primitives) {
     switch (prim.kind) {
       case 'line':
-        emitLine(prim.a, prim.b, layer, ACI_BYLAYER, s, pair);
+        emitLine(prim.a, prim.b, layer, ACI_BYLAYER, s, pair, undefined, undefined, r2018);
         break;
       case 'arc':
-        emitArc(prim.center, prim.radius, prim.startDeg, prim.endDeg, layer, ACI_BYLAYER, s, pair);
+        emitArc(prim.center, prim.radius, prim.startDeg, prim.endDeg, layer, ACI_BYLAYER, s, pair, r2018);
         break;
       case 'circle':
-        emitCircle(prim.center, prim.radius, layer, ACI_BYLAYER, s, pair);
+        emitCircle(prim.center, prim.radius, layer, ACI_BYLAYER, s, pair, r2018);
         break;
       case 'fill':
         // Solid arrowhead → 3DFACE (z=0). Reuses the ADR-505 §C solid-fill primitive.
-        emit3DFace(prim.points.map((pt) => ({ x: pt.x, y: pt.y, zMm: 0 })), layer, ACI_BYLAYER, s, s, pair);
+        emit3DFace(prim.points.map((pt) => ({ x: pt.x, y: pt.y, zMm: 0 })), layer, ACI_BYLAYER, s, s, pair, r2018);
         break;
       case 'text':
         // centred dimension text — h=centre(1)/v=middle(2), byte-identical to the old `centered` flag.
-        emitText(prim.position, prim.text, prim.heightWorld, layer, ACI_BYLAYER, s, pair, prim.rotationDeg, { h: 1, v: 2 });
+        emitText(prim.position, prim.text, prim.heightWorld, layer, ACI_BYLAYER, s, pair, prim.rotationDeg, { h: 1, v: 2 }, 'STANDARD', r2018);
         break;
     }
   }
 
-  pair(0, 'ENDBLK');
-  pair(8, layer);
+  emitBlockEnd(pair, layer, owner, professional);
 }

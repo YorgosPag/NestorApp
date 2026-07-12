@@ -27,7 +27,10 @@ import { ACI_PALETTE } from '../../settings/standards/aci';
 import { hexToTrueColor } from '../../utils/dxf-true-color';
 import { sceneUnitsToMeters, resolveSceneUnits } from '../../utils/scene-units';
 import { circlePolyline, arcPolyline } from './dxf-arc-circle-sample';
-import { buildDxfTextMesh } from './dxf-text-3d';
+// ADR-644 Φάση B — shared glyph atlas + merged, atlas-sampled text mesh (replaces the per-text
+// `CanvasTexture` path: 1 atlas + one draw call per floor instead of thousands of textures).
+import { GlyphAtlas } from './glyph-atlas';
+import { AtlasTextMeshBuilder, countTextGlyphCapacity } from './glyph-atlas-text-mesh';
 import { registerPostFxOverlay } from '../scene/post-fx-overlay-pass';
 import { finiteBox3FromObject } from '../scene/finite-bounds';
 // ADR-645 Φάση A — time-sliced text streaming (freeze fix) + its progress SSoT.
@@ -213,6 +216,10 @@ export class DxfToThreeConverter {
   private readonly unregisterOverlay: () => void;
   /** ADR-645 Φάση A — in-flight streamed text build; cancelled on every re-sync / dispose. */
   private activeBuild: IncrementalBuildHandle | null = null;
+  /** ADR-645 Φάση B — shared glyph atlas (one texture, cells cached across syncs). Lazy. */
+  private atlas: GlyphAtlas | null = null;
+  /** ADR-645 Φάση B — per-floor atlas text mesh builders of the CURRENT root (disposed on re-sync). */
+  private textBuilders: AtlasTextMeshBuilder[] = [];
   // 🚀 PERF (ADR-040, 2026-06-28) — idempotency guards. `sync()`/`syncMultiFloor()`
   // skip the full teardown + GPU re-upload when handed an overlay-equivalent input
   // (e.g. a BIM column moved but no DXF line/text changed). Cross-mode: each path
@@ -349,39 +356,61 @@ export class DxfToThreeConverter {
   }
 
   /**
-   * ADR-537 β — text entities have no stroke; render each as a flat textured plane laid on the
-   * floor plane in native units so it is visible + selectable/hoverable in 3D. Appends one text
-   * mesh to its floor group. NaN-guarded (a non-finite anchor/height poisons the shared Box3 →
-   * NaN-frames the camera; skip + free the GPU resources of the un-added mesh).
+   * ADR-645 Φάση B — one atlas text task: append this entity's glyphs into its floor's merged
+   * atlas mesh, tinted by the resolved entity colour. The layout is NaN-guarded per glyph
+   * (`AtlasTextMeshBuilder.addEntity`), so a bad anchor drops that text without poisoning the Box3.
    */
-  private appendTextMesh(item: StreamTextItem): void {
-    const bundle = buildDxfTextMesh(item.entity, resolveEntityColor(item.entity, item.layersById));
-    if (!bundle) return;
-    const p = bundle.mesh.position;
-    if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.z)) {
-      bundle.geometry.dispose();
-      bundle.material.dispose();
-      bundle.texture.dispose();
-      return;
-    }
-    item.group.add(bundle.mesh);
+  private appendTextGlyphs(item: StreamTextItem, builder: AtlasTextMeshBuilder): void {
+    builder.addEntity(item.entity, this.requireAtlas(), resolveEntityColor(item.entity, item.layersById));
+  }
+
+  /** ADR-645 Φάση B — the shared glyph atlas, created lazily on first streamed text build. */
+  private requireAtlas(): GlyphAtlas {
+    if (!this.atlas) this.atlas = new GlyphAtlas();
+    return this.atlas;
   }
 
   /**
-   * ADR-645 Φάση A — build the deferred text meshes. Small scenes (< the gate) build
-   * synchronously inline — fast enough, and NO loader flash / regression. Large scenes stream
-   * the text across frames on the `UnifiedFrameScheduler` (frame budget), view-priority ordered,
-   * publishing progress to `Dxf3dStreamProgressStore` so the overlay can show %. The line
-   * wireframe is already in the scene, so the browser stays responsive throughout the fill-in.
+   * ADR-645 Φάση B — one merged atlas text mesh PER floor group. Each floor's glyphs stream into
+   * its own pre-sized BufferGeometry (added to the group NOW, empty), so the group's scale +
+   * elevation transform still maps native units → the metre world. All floors share ONE atlas
+   * texture → 1 atlas + one draw call per floor instead of thousands of `CanvasTexture` meshes.
+   */
+  private makeFloorBuilders(items: readonly StreamTextItem[]): Map<THREE.Group, AtlasTextMeshBuilder> {
+    const byGroup = new Map<THREE.Group, StreamTextItem[]>();
+    for (const item of items) {
+      const list = byGroup.get(item.group);
+      if (list) list.push(item); else byGroup.set(item.group, [item]);
+    }
+    const builders = new Map<THREE.Group, AtlasTextMeshBuilder>();
+    for (const [group, groupItems] of byGroup) {
+      const capacity = countTextGlyphCapacity(groupItems.map((it) => it.entity));
+      const builder = new AtlasTextMeshBuilder(this.requireAtlas(), capacity);
+      group.add(builder.mesh);
+      this.textBuilders.push(builder);
+      builders.set(group, builder);
+    }
+    return builders;
+  }
+
+  /**
+   * ADR-645 Φάση A/B — stream the deferred text into the shared glyph atlas. Small scenes (< the
+   * gate) build synchronously inline (no loader flash); large scenes stream the glyph layout across
+   * frames on the `UnifiedFrameScheduler`, view-priority ordered, with % progress. Selectable /
+   * hoverable is unaffected — the pick + hover glow read the entities, never the atlas mesh.
    */
   private streamText(items: StreamTextItem[]): void {
     if (items.length === 0) { this.onSceneDirty(); return; }
     // View-priority: bigger text first (descending bbox area).
     items.sort((a, b) => textPriorityArea(b.entity) - textPriorityArea(a.entity));
     const total = items.length;
+    const builders = this.makeFloorBuilders(items);
+    const builderFor = (item: StreamTextItem): AtlasTextMeshBuilder => builders.get(item.group)!;
+    const flushAll = (): void => { for (const b of builders.values()) b.flush(); };
 
     if (total < DXF_IMPORT_THRESHOLDS.INCREMENTAL_3D_MIN_ENTITIES) {
-      for (const item of items) this.appendTextMesh(item);
+      for (const item of items) this.appendTextGlyphs(item, builderFor(item));
+      flushAll();
       this.onSceneDirty();
       return;
     }
@@ -391,9 +420,9 @@ export class DxfToThreeConverter {
     this.activeBuild = runIncrementalBuild({
       id: DXF3D_STREAM_BUILD_ID,
       total,
-      processItem: (i) => this.appendTextMesh(items[i]),
-      onFrameProcessed: (done, tot) => { setDxf3dStreamProgress(done, tot); this.onSceneDirty(); },
-      onComplete: () => { this.activeBuild = null; clearDxf3dStreamProgress(); this.onSceneDirty(); },
+      processItem: (i) => this.appendTextGlyphs(items[i], builderFor(items[i])),
+      onFrameProcessed: (done, tot) => { flushAll(); setDxf3dStreamProgress(done, tot); this.onSceneDirty(); },
+      onComplete: () => { this.activeBuild = null; flushAll(); clearDxf3dStreamProgress(); this.onSceneDirty(); },
       onCancelled: () => { clearDxf3dStreamProgress(); },
     });
   }
@@ -412,16 +441,13 @@ export class DxfToThreeConverter {
     // disposed (clean cancellation — the §Google-level race-free guarantee). `cancel()` clears the
     // progress overlay via `onCancelled`; the fresh `streamText` re-arms it if the new build streams.
     if (this.activeBuild) { this.activeBuild.cancel(); this.activeBuild = null; }
+    // ADR-645 Φάση B — dispose the atlas text meshes' geometry + material (NOT the shared atlas
+    // TEXTURE, which is converter-owned + reused across syncs — see `dispose`).
+    for (const builder of this.textBuilders) builder.dispose();
+    this.textBuilders.length = 0;
     if (!this.root) return;
     this.root.traverse((obj) => {
       if (obj instanceof THREE.LineSegments) obj.geometry.dispose();
-      // ADR-537 β — text meshes own their geometry + material + CanvasTexture.
-      if (obj instanceof THREE.Mesh) {
-        obj.geometry.dispose();
-        const mat = obj.material as THREE.Material & { map?: THREE.Texture | null };
-        mat.map?.dispose();
-        mat.dispose();
-      }
     });
     for (const mat of this.activeMaterials) mat.dispose();
     this.activeMaterials.length = 0;
@@ -432,6 +458,9 @@ export class DxfToThreeConverter {
   dispose(): void {
     this.unregisterOverlay();
     this.disposeRoot(); // ADR-645 Φάση A — cancels the in-flight streamed build (+ clears its progress).
+    // ADR-645 Φάση B — the shared glyph atlas texture outlives individual roots; free it on unmount.
+    this.atlas?.dispose();
+    this.atlas = null;
     clearDxf3dStreamProgress(); // defensive: ensure the overlay never lingers after unmount.
     this.lastSyncKey = null;
     this.lastMultiKey = null;

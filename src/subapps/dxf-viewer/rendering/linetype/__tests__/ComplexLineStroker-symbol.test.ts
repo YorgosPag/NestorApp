@@ -136,3 +136,27 @@ describe('strokeStyledPolyline — alignDash corner policy', () => {
     expect(firstMoveToX(patternDef('break'))).toBeCloseTo(5, 6);
   });
 });
+
+describe('strokeStyledPolyline — compound layers (#9)', () => {
+  const compoundDef: ComplexLinetypeDef = {
+    name: 'Rail',
+    description: '',
+    layers: [
+      { elements: [{ kind: 'dash', lengthMm: 10 }], offsetMm: 5 },
+      { elements: [{ kind: 'dash', lengthMm: 10 }], offsetMm: -5 },
+    ],
+    scaleSpace: 'model',
+    origin: 'user-created',
+  };
+
+  it('strokes each layer at its perpendicular offset (two parallel rails)', () => {
+    const { ctx, calls } = createMockCtx();
+    strokeStyledPolyline(ctx, [{ x: 0, y: 0 }, { x: 100, y: 0 }], compoundDef, {
+      worldToScreenScale: 1,
+      ltscale: 1,
+    });
+    const ys = calls.filter((c) => c.fn === 'moveTo').map((c) => c.args[1] as number);
+    expect(ys).toContain(5); // top rail
+    expect(ys).toContain(-5); // bottom rail
+  });
+});

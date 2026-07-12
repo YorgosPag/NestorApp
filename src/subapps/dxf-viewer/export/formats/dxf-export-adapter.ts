@@ -38,7 +38,7 @@ import { collectOverlayDxfEntities } from '../core/overlay-dxf-collector';
 import { usedCategoryLayerDefs } from '../core/dxf-category-layers';
 import { writeDxfAscii } from '../core/dxf-ascii-writer';
 import { resolveLinetype } from '../../stores/LinetypeRegistry';
-import { isIsoBaselineLinetype, type LinetypeDef } from '../../config/linetype-iso-catalog';
+import { getCatalogLinetype, type LinetypeDef } from '../../config/linetype-iso-catalog';
 // ADR-636 Στάδιο 2 Φ2.3 — drawing extents for $EXTMIN/$EXTMAX (correct zoom-extents on open),
 // computed from the exported primitives via the canonical bounds SSoT (no local bounds math).
 import { isValidBounds } from '../../utils/bounds-utils';
@@ -52,7 +52,7 @@ import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
 import { encodingService } from '../../io/encoding-service';
 import type { ResolvedExportFloor } from '../core/export-floor-scope';
-import type { ExportArtifact, ExportEntityScope, DxfLineMode } from '../types';
+import type { ExportEntityScope, DxfLineMode } from '../types';
 
 /**
  * Stamp each entity's *rendered* colour onto `.color` BEFORE decomposition, so
@@ -292,23 +292,35 @@ export function versionToEncoding(version: DxfVersion): DxfEncoding {
   return PRE_UNICODE_VERSIONS.has(version) ? 'cp1253' : 'utf-8';
 }
 
+/** Reserved linetype names AutoCAD ALWAYS knows implicitly → never emitted as an LTYPE record. */
+const IMPLICIT_LINETYPE_NAMES: ReadonlySet<string> = new Set([
+  '', 'Continuous', 'CONTINUOUS', 'ByLayer', 'BYLAYER', 'ByBlock', 'BYBLOCK', '0',
+]);
+
 /**
- * ADR-636 Στάδιο 2 Φ2.1 — the non-ISO linetypes referenced by the scene's layers, resolved
- * from the LinetypeRegistry SSoT (`resolveLinetype`) for the exported LTYPE table. ISO baseline
- * names are skipped (implicit in every reader — the table writer omits them too). Distinct by
- * name; unresolved names (absent from this session) are left out (AutoCAD falls back to
- * Continuous). Mirrors `collectDimStylesForExport`'s registry-read pattern.
+ * ADR-644 (#4) — EVERY linetype the file references must be DEFINED in the LTYPE table, or AutoCAD
+ * aborts the load («Bad linetype name ACAD_ISO03W100»). Unlike ADR-636 (layers only, ISO skipped),
+ * this scans BOTH the scene's layers AND every entity's `linetypeName` (group 6) and INCLUDES ISO —
+ * AutoCAD does not auto-create linetypes from a DXF, so even the baseline names need a record.
+ *
+ * Resolution per distinct name (implicit names excluded): the runtime LinetypeRegistry (incl.
+ * DXF-imported `ACAD_ISO*`) → the built-in ISO catalog → a minimal CONTINUOUS-valid stand-in (so an
+ * unknown name still resolves to a solid line instead of aborting). The table writer stays "dumb":
+ * it defines whatever this SSoT hands it.
  */
 export function collectCustomLinetypesForExport(scene: SceneModel): LinetypeDef[] {
   const seen = new Set<string>();
   const out: LinetypeDef[] = [];
-  for (const layer of Object.values(scene.layersById)) {
-    const name = layer.linetype;
-    if (!name || seen.has(name) || isIsoBaselineLinetype(name)) continue;
+  const consider = (name: string | undefined | null): void => {
+    if (!name || seen.has(name) || IMPLICIT_LINETYPE_NAMES.has(name)) return;
     seen.add(name);
-    const def = resolveLinetype(name);
-    if (def) out.push(def);
-  }
+    const def: LinetypeDef = resolveLinetype(name)
+      ?? getCatalogLinetype(name)
+      ?? { name, description: '', pattern: [], origin: 'dxf-import' };
+    out.push(def);
+  };
+  for (const layer of Object.values(scene.layersById)) consider(layer.linetype);
+  for (const e of scene.entities) consider((e as { linetypeName?: string }).linetypeName);
   return out;
 }
 
@@ -345,22 +357,6 @@ export function coordinateScale(sceneUnits: SceneUnits, dxfUnit: DxfUnit): numbe
 export function mmToOutputScale(dxfUnit: DxfUnit): number {
   const target = DXF_UNIT_TO_SCENE[dxfUnit];
   return target ? mmToSceneUnits(target) : 1;
-}
-
-/**
- * Export a single resolved floor to a DXF artifact (one `.dxf` blob).
- * The filename is floor-aware so multi-floor zip packaging stays unambiguous.
- */
-export function exportFloorToDxf(
-  floor: ResolvedExportFloor,
-  options: DxfExportOptions,
-): { artifact: ExportArtifact; warnings: string[] } {
-  const { request, warnings } = buildDxfExportRequest(floor.scene, options);
-  const filename = buildFloorFilename(options.baseName, floor.level.name, 'dxf');
-  return {
-    artifact: { filename, blob: renderDxfBlob(request, options.lineMode) },
-    warnings,
-  };
 }
 
 /**

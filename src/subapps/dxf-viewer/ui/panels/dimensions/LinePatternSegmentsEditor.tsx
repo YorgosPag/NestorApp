@@ -435,7 +435,7 @@ function PlacementFields({
 }
 
 /** Compact labelled numeric input used by the placement rows (scale / rotation / offsets). */
-function NumField({
+export function NumField({
   label, value, step, onChange,
 }: {
   label: string; value: number; step: number; onChange: (v: number) => void;

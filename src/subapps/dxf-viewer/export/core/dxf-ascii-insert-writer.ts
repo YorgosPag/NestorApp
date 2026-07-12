@@ -23,6 +23,7 @@
 
 import type { BlockEntity, Entity } from '../../types/entities';
 import type { Pair } from './dxf-ascii-hatch-writer';
+import { emitAcDbEntity, type EntityR2018 } from './dxf-ascii-primitive-emitters';
 // ADR-640 M3 — round-trip the anonymous flag: an imported `*U#`/`*A#` block (now preserved) must
 // re-export with BLOCK flag 70=1 so a re-import keeps it anonymous (and AutoCAD reads it faithfully).
 import { isAnonymousBlockName } from '../../utils/dxf-anonymous-block';
@@ -31,17 +32,47 @@ import { isAnonymousBlockName } from '../../utils/dxf-anonymous-block';
 export type EmitMember = (member: Entity) => void;
 
 /**
+ * ADR-644 (#9e/#9g) — the SSoT for a BLOCK-definition begin header, shared by the named-block writer,
+ * the dimension-block writer and the writer's *Model_Space/*Paper_Space emitter (N.18 — one shape, no
+ * twins). Professional (R2018): owner (330) + `100 AcDbEntity` + layer + `100 AcDbBlockBegin`, then
+ * name/flag/base/name/xref. Bare (legacy/Tekton): just the layer. The `5` handle is injected by the
+ * writer's sink right after the `0 BLOCK`.
+ */
+export function emitBlockBegin(
+  pair: Pair, name: string, flag: number, layer: string, owner: string | undefined, professional: boolean,
+): void {
+  pair(0, 'BLOCK');
+  if (professional) { if (owner) pair(330, owner); pair(100, 'AcDbEntity'); pair(8, layer); pair(100, 'AcDbBlockBegin'); }
+  else pair(8, layer);
+  pair(2, name);
+  pair(70, flag);
+  pair(10, 0); pair(20, 0); pair(30, 0);  // base point at origin
+  pair(3, name);                          // block name (repeated per DXF BLOCK spec)
+  if (professional) pair(1, '');          // xref path name (empty — not an xref)
+}
+
+/** ADR-644 (#9e/#9g) — the SSoT for a BLOCK-definition `ENDBLK` (mirror of {@link emitBlockBegin}). */
+export function emitBlockEnd(
+  pair: Pair, layer: string, owner: string | undefined, professional: boolean,
+): void {
+  pair(0, 'ENDBLK');
+  if (professional) { if (owner) pair(330, owner); pair(100, 'AcDbEntity'); pair(8, layer); pair(100, 'AcDbBlockEnd'); }
+  else pair(8, layer);
+}
+
+/**
  * Emit one `INSERT` entity: block name (2), insertion point (10/20/30, scaled),
  * X/Y/Z scale factors (41/42/43, dimensionless — NOT scaled) and rotation in
  * degrees (50). Mirrors the group codes `createBlockInstance` reads on import, so
  * the reference round-trips losslessly.
  */
 export function emitInsert(
-  pair: Pair, block: BlockEntity, layer: string, aci: number, s: number,
+  pair: Pair, block: BlockEntity, layer: string, aci: number, s: number, r2018?: EntityR2018,
 ): void {
   pair(0, 'INSERT');
-  pair(8, layer);
-  pair(62, aci);
+  // ADR-644 (#9e) — R2018 INSERT: AcDbEntity common block + `100 AcDbBlockReference` before the data.
+  if (r2018) { emitAcDbEntity(pair, layer, aci, r2018); pair(100, 'AcDbBlockReference'); }
+  else { pair(8, layer); pair(62, aci); }
   pair(2, block.name);
   pair(10, block.position.x * s);
   pair(20, block.position.y * s);
@@ -66,6 +97,8 @@ export function writeBlockDefinitions(
   blocks: readonly BlockEntity[],
   layerFor: (block: BlockEntity) => string,
   emitMember: EmitMember,
+  professional = false,
+  blockRecordHandles?: ReadonlyMap<string, string>,
 ): void {
   const seen = new Set<string>();
   for (const block of blocks) {
@@ -73,17 +106,11 @@ export function writeBlockDefinitions(
     seen.add(block.name);
 
     const layer = layerFor(block);
-    pair(0, 'BLOCK');
-    pair(8, layer);
-    pair(2, block.name);
+    // ADR-644 (#9g) — owner (330) = this block's pre-allocated BLOCK_RECORD handle (record ⇄ def match).
+    const owner = blockRecordHandles?.get(block.name);
     // ADR-640 M3 — flag 1 = anonymous (`*U#`/`*A#`/…), 0 = named. Faithful re-import + AutoCAD read.
-    pair(70, isAnonymousBlockName(block.name) ? 1 : 0);
-    pair(10, 0); pair(20, 0); pair(30, 0);  // base point at origin (M1 baked)
-    pair(3, block.name);                    // block name (repeated per DXF BLOCK spec)
-
+    emitBlockBegin(pair, block.name, isAnonymousBlockName(block.name) ? 1 : 0, layer, owner, professional);
     for (const member of block.entities) emitMember(member);
-
-    pair(0, 'ENDBLK');
-    pair(8, layer);
+    emitBlockEnd(pair, layer, owner, professional);
   }
 }

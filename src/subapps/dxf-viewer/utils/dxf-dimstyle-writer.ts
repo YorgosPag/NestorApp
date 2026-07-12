@@ -32,6 +32,7 @@ import type {
   DimToleranceJustify,
 } from '../types/dimension';
 import type { DimGroupSink } from './dxf-dimension-writer';
+import type { HandleAllocator } from '../export/core/dxf-ascii-handle-allocator';
 import { findClosestAci } from '../settings/standards/aci';
 import { trueColorToHex } from './dxf-true-color';
 
@@ -93,8 +94,20 @@ function flag(b: boolean): string { return b ? '1' : '0'; }
  * fields are unit-independent (factors/flags/enums/colours) or are paper-relative
  * sizes that DIMSCALE governs. At scale 1 it is a no-op.
  */
-export function emitDimStyle(sink: DimGroupSink, s: DimStyle, scale = 1): void {
+export function emitDimStyle(
+  sink: DimGroupSink, s: DimStyle, scale = 1,
+  ownerHandle?: string, allocator?: HandleAllocator,
+): void {
   sink(0, 'DIMSTYLE');
+  // ADR-644 (#9) — R2018 DIMSTYLE record: handle is group **105** (not 5), owner 330 → the DIMSTYLE
+  // table, plus the two subclass markers. Gated on the allocator so `writeDimStyleTable` (round-trip)
+  // stays byte-identical. Emitted FIRST so the writer's lazy-injection sink sees 105 and skips.
+  if (allocator && ownerHandle) {
+    sink(105, allocator.next());
+    sink(330, ownerHandle);
+    sink(100, 'AcDbSymbolTableRecord');
+    sink(100, 'AcDbDimStyleTableRecord');
+  }
   sink(2, s.name);
   sink(70, 0);                          // flags (standard = 0)
 
