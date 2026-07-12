@@ -38,6 +38,10 @@ class FakeWorker {
   onerror: ((e: unknown) => void) | null = null;
   lastPosted: unknown = null;
   terminated = false;
+  // ADR-639 Στάδιο 1 — the service attaches a persistent `message` listener via
+  // addEventListener for the `worker-ready` liveness handshake (separate from the
+  // per-parse `onmessage`), so the mock must mirror the real Worker interface.
+  private messageListeners: ((e: MessageEvent) => void)[] = [];
   constructor() {
     workerConstructCount += 1;
     lastWorker = this;
@@ -45,11 +49,27 @@ class FakeWorker {
   postMessage(msg: unknown) {
     this.lastPosted = msg;
   }
+  addEventListener(type: string, cb: (e: MessageEvent) => void) {
+    if (type === 'message') this.messageListeners.push(cb);
+  }
+  removeEventListener(type: string, cb: (e: MessageEvent) => void) {
+    if (type === 'message') this.messageListeners = this.messageListeners.filter((l) => l !== cb);
+  }
   terminate() {
     this.terminated = true;
   }
+  /** Dispatch a message to BOTH onmessage and addEventListener('message') listeners (real Worker). */
+  private dispatch(data: unknown) {
+    const ev = { data } as MessageEvent;
+    this.onmessage?.(ev);
+    this.messageListeners.forEach((l) => l(ev));
+  }
+  /** Simulate the module-load liveness signal (`worker-ready`). */
+  emitReady() {
+    this.dispatch({ type: 'worker-ready' });
+  }
   emitSuccess(result: DxfImportResult) {
-    this.onmessage?.({ data: result } as MessageEvent);
+    this.dispatch(result);
   }
   emitError(err: unknown) {
     this.onerror?.(err);
@@ -144,5 +164,60 @@ describe('ADR-639 Στάδιο 1 — importDxfFile worker routing', () => {
 
     expect(result.success).toBe(true);
     expect(mockRunDxfParse).toHaveBeenCalledTimes(1); // direct fallback ran
+  });
+
+  it('falls back FAST when the worker never signals readiness (liveness probe)', async () => {
+    // Regression pin for the 2026-07-12 incident: a worker whose module failed to load
+    // under Turbopack never posts `worker-ready` and never responds. Before the probe the
+    // service dead-waited the ENTIRE parse ceiling (60s→242s) before falling back. Now the
+    // readiness probe abandons it after WORKER_READY_PROBE_MS and the main-thread parse runs.
+    jest.useFakeTimers();
+    try {
+      mockRunDxfParse.mockResolvedValue(SUCCESS_SCENE);
+      const svc = await freshService();
+
+      const large = makeFile(DXF_IMPORT_THRESHOLDS.WORKER_PARSE_MIN_BYTES + 10);
+      const promise = svc.importDxfFile(large, undefined, 'mm');
+
+      // Flush the async encoding read so the worker is constructed + posted to.
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(workerConstructCount).toBe(1);
+      // Worker stays silent (no emitReady, no emitSuccess) → advance past the probe window.
+      jest.advanceTimersByTime(DXF_IMPORT_THRESHOLDS.WORKER_READY_PROBE_MS + 1);
+
+      const result = await promise;
+      expect(result.success).toBe(true);
+      expect(mockRunDxfParse).toHaveBeenCalledTimes(1); // fast fallback ran (not a dead-wait)
+      expect(lastWorker!.terminated).toBe(true); // the wedged worker was disposed
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('does NOT fall back while a ready worker is still parsing a large scene', async () => {
+    // A worker that signalled readiness but takes a while to parse must NOT trip the probe.
+    jest.useFakeTimers();
+    try {
+      const svc = await freshService();
+
+      const large = makeFile(DXF_IMPORT_THRESHOLDS.WORKER_PARSE_MIN_BYTES);
+      const promise = svc.importDxfFile(large, undefined, 'm');
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(workerConstructCount).toBe(1);
+
+      // Worker signals it loaded, then keeps parsing past the readiness window.
+      lastWorker!.emitReady();
+      jest.advanceTimersByTime(DXF_IMPORT_THRESHOLDS.WORKER_READY_PROBE_MS + 1);
+      expect(mockRunDxfParse).not.toHaveBeenCalled(); // still trusting the live worker
+
+      lastWorker!.emitSuccess(SUCCESS_SCENE);
+      const result = await promise;
+      expect(result.success).toBe(true);
+      expect(mockRunDxfParse).not.toHaveBeenCalled(); // worker delivered — no fallback
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

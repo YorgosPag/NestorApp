@@ -209,6 +209,14 @@ export const DXF_TIMING = {
     QUOTA_CHECK: 60000,
     /** DXF import timeout (1 minute). */
     IMPORT_TIMEOUT: 60000,
+    /** DXF import Worker readiness-probe timeout — ADR-639 Στάδιο 1. No `worker-ready`
+     *  within this window ⇒ the worker module failed to load ⇒ fast main-thread fallback
+     *  (8s tolerates a cold Turbopack worker-bundle compile). */
+    IMPORT_WORKER_READY_PROBE: 8000,
+    /** DXF import Worker parse ceiling, applied ONLY once the worker is confirmed alive —
+     *  ADR-639 Στάδιο 1. Abandons a worker that loaded but wedged mid-parse; the main-thread
+     *  fallback finishes the job. Generous but bounded (a healthy 215k-entity parse fits). */
+    IMPORT_WORKER_PARSE_TIMEOUT: 90000,
     /** Default cache TTL (5 minutes). */
     CACHE_TTL: 300000,
     /** Extended cache TTL (10 minutes, global/singleton caches). */

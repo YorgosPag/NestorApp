@@ -12,7 +12,6 @@ import type { DxfImportResult, SceneModel } from '../types/scene';
 import type { SceneUnits } from '../utils/scene-units';
 import { encodingService, type SupportedEncoding } from './encoding-service';
 import { calculateTightBounds } from '../utils/bounds-utils';
-import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { DXF_IMPORT_THRESHOLDS } from '../config/dxf-import-thresholds';
 
 /** ADR-639 Στάδιο 1 — empty stats used by every early-return failure result. */
@@ -20,17 +19,35 @@ const EMPTY_IMPORT_STATS = { entityCount: 0, layerCount: 0, parseTimeMs: 0 } as 
 
 export class DxfImportService {
   private worker: Worker | null = null;
-  
+  /**
+   * ADR-639 Στάδιο 1 — true once the worker has posted `worker-ready` (its module body
+   * actually executed in the Worker scope). If a module fails to load (an import-chain
+   * throw under Turbopack — the parse chain never reaches `self.postMessage`), this stays
+   * false and `parseViaWorker` bails to the main-thread parse FAST instead of dead-waiting
+   * the full parse timeout on a wedged worker. Persists across the singleton's lifetime.
+   */
+  private workerReady = false;
+
   private getWorker(): Worker {
     if (!this.worker) {
       // ADR-639 Στάδιο 1 — `{ type: 'module' }` is REQUIRED: dxf-parser.worker.ts uses
       // ES `import` (runDxfParse SSoT). A classic worker cannot resolve ES imports, so it
       // would crash on first message and silently fall back to a main-thread (freezing)
       // parse. Mirrors the working spell.worker instantiation.
-      this.worker = new Worker(
+      const worker = new Worker(
         new URL('../workers/dxf-parser.worker.ts', import.meta.url),
         { type: 'module' }
       );
+      this.workerReady = false;
+      // Persistent liveness listener — separate from the per-parse `onmessage` (which is
+      // reassigned each import), so the readiness signal is never overwritten. Fires for the
+      // result message too; the type guard ignores everything but the handshake.
+      worker.addEventListener('message', (event: MessageEvent) => {
+        if ((event.data as { type?: string } | null)?.type === 'worker-ready') {
+          this.workerReady = true;
+        }
+      });
+      this.worker = worker;
     }
     return this.worker;
   }
@@ -93,23 +110,47 @@ export class DxfImportService {
     const { content } = readResult;
 
     return new Promise<DxfImportResult>((resolve) => {
-      const importTimeout = PANEL_LAYOUT.TIMING.IMPORT_TIMEOUT;
       let settled = false;
       const finish = (result: DxfImportResult) => {
         if (settled) return;
         settled = true;
-        clearTimeout(timeout);
+        clearTimeout(readyProbe);
+        clearTimeout(parseTimeout);
         resolve(result);
       };
 
-      const timeout = setTimeout(() => {
-        console.error(`⌛ DXF import timeout after ${importTimeout / 1000} seconds`);
+      // ADR-639 Στάδιο 1 — LIVENESS probe (the real fix, 2026-07-12). A worker whose module
+      // failed to load in the Worker scope (import-chain throw under Turbopack) never posts
+      // `worker-ready`, so `onerror` may not fire and `postMessage` goes nowhere. Without this
+      // we dead-waited the ENTIRE parse timeout on a wedged worker before falling back. Now: if
+      // no readiness signal within WORKER_READY_PROBE_MS, treat the worker as unavailable and
+      // fall back to the main-thread parse FAST. A slow SCENE parse never delays this — the
+      // worker posts `worker-ready` at module load, before any parse message is handled. A
+      // reused (already-ready) worker passes instantly. Declared BEFORE getWorker so `finish`
+      // (callable from the getWorker catch) never hits a temporal-dead-zone reference.
+      const readyProbe = setTimeout(() => {
+        if (this.workerReady) return; // alive → the parse ceiling governs from here
+        console.warn('⚠️ DXF worker did not signal readiness — treating as unavailable, falling back to main-thread parse');
+        this.dispose();
         finish({
           success: false,
-          error: `DXF import timeout after ${importTimeout / 1000}s - worker did not respond`,
+          error: 'DXF worker failed to load (no readiness signal) - falling back to main-thread parse',
           stats: { ...EMPTY_IMPORT_STATS },
         });
-      }, importTimeout);
+      }, DXF_IMPORT_THRESHOLDS.WORKER_READY_PROBE_MS);
+
+      // Parse ceiling — applies only once the worker is confirmed alive (it never freezes the
+      // UI). Abandons a worker that loaded but then wedged mid-parse; the fallback finishes it.
+      const parseTimeoutMs = DXF_IMPORT_THRESHOLDS.WORKER_PARSE_TIMEOUT_MS;
+      const parseTimeout = setTimeout(() => {
+        console.error(`⌛ DXF import timeout after ${parseTimeoutMs / 1000} seconds`);
+        this.dispose();
+        finish({
+          success: false,
+          error: `DXF import timeout after ${parseTimeoutMs / 1000}s - worker did not respond`,
+          stats: { ...EMPTY_IMPORT_STATS },
+        });
+      }, parseTimeoutMs);
 
       let worker: Worker;
       try {
@@ -125,7 +166,9 @@ export class DxfImportService {
       }
 
       worker.onmessage = (event) => {
-        const result = event.data as DxfImportResult;
+        const data = event.data as (DxfImportResult & { type?: string }) | null;
+        if (data?.type === 'worker-ready') return; // liveness handshake, not the parse result
+        const result = data as DxfImportResult;
         if (result.success && result.scene) {
           // Worker parses with normalizeBounds:false → finish normalization here
           // (move bottom-left corner → (0,0), positive quadrant).
@@ -136,7 +179,19 @@ export class DxfImportService {
       };
 
       worker.onerror = (error) => {
-        console.error('DXF worker error:', error);
+        // ErrorEvent props are not own-enumerable → a bare log prints `{}`. Extract the
+        // fields explicitly so a worker LOAD failure surfaces the real message/file/line
+        // instead of an opaque object (ADR-639 Στάδιο 1 diagnosis, 2026-07-12).
+        const ev = error as Partial<ErrorEvent>;
+        console.error('DXF worker error:', {
+          message: ev.message,
+          filename: ev.filename,
+          lineno: ev.lineno,
+          colno: ev.colno,
+        });
+        // The worker faulted → drop it so the NEXT import rebuilds a clean one before we
+        // fall through to the main-thread parse below.
+        this.dispose();
         finish({
           success: false,
           error: 'DXF parsing worker failed. This might be due to an unsupported file format or corrupted file.',
@@ -195,6 +250,7 @@ export class DxfImportService {
       this.worker.terminate();
       this.worker = null;
     }
+    this.workerReady = false;
   }
 }
 

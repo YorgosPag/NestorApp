@@ -13,9 +13,32 @@
  * The number is deliberately conservative — a typical hand-drawn plan is well under
  * 5 MB, while exploded permit drawings (everything as individual LINEs) are tens of MB.
  */
+import { DXF_TIMING } from './dxf-timing';
+
 export const DXF_IMPORT_THRESHOLDS = {
   /** Route parsing to the Web Worker when `file.size` (bytes) ≥ this value. 5 MB. */
   WORKER_PARSE_MIN_BYTES: 5 * 1024 * 1024,
+
+  /**
+   * ADR-639 Στάδιο 1 — max wait for the worker to signal it LOADED (posted `worker-ready`).
+   *
+   * The worker posts `worker-ready` at module load, the instant its import chain finishes
+   * executing in the Worker scope. If it does NOT arrive within this window, the module
+   * failed to load (an import-chain throw under Turbopack — `onerror` may not fire and the
+   * parse `postMessage` goes nowhere), so we fall back to the main-thread parse FAST instead
+   * of dead-waiting the whole parse ceiling on a wedged worker. A healthy module signals in
+   * well under a second; 8 s tolerates a cold worker-bundle compile in dev/Turbopack.
+   * SSoT: DXF_TIMING.lifecycle.IMPORT_WORKER_READY_PROBE (ADR-516).
+   */
+  WORKER_READY_PROBE_MS: DXF_TIMING.lifecycle.IMPORT_WORKER_READY_PROBE,
+  /**
+   * ADR-639 Στάδιο 1 — parse ceiling, applied ONLY once the worker is confirmed alive (it
+   * has posted `worker-ready`). The worker never freezes the UI, so this only abandons a
+   * worker that loaded but then wedged mid-parse; the main-thread fallback finishes the job.
+   * Generous but bounded — a healthy worker parses a 215k-entity permit well within it.
+   * SSoT: DXF_TIMING.lifecycle.IMPORT_WORKER_PARSE_TIMEOUT (ADR-516).
+   */
+  WORKER_PARSE_TIMEOUT_MS: DXF_TIMING.lifecycle.IMPORT_WORKER_PARSE_TIMEOUT,
 
   /**
    * ADR-639 Στάδιο 5 — engage the WebGL line layer only for large scenes.
