@@ -16,6 +16,7 @@ import {
   complexToLayers,
   describeLayers,
   validateLinePatternLayers,
+  centerOffsetForLayer,
 } from '../line-pattern-segments';
 import { COMPOUND_PRESETS, listCompoundPresets } from '../linetype-compound-presets';
 
@@ -36,6 +37,34 @@ describe('compound-layer helpers', () => {
     const l = defaultCompoundLayer(1.5);
     expect(l.offsetMm).toBe(1.5);
     expect(l.segments.map((s) => s.kind)).toEqual(['dash', 'gap']);
+  });
+
+  it('centerOffsetForLayer puts a tie at the midpoint of the two rails (symmetric ±0.75 → 0)', () => {
+    // The tie is layer index 2; the rails are at ±0.75 → centre = 0.
+    expect(centerOffsetForLayer(compound, 2)).toBe(0);
+  });
+
+  it('centerOffsetForLayer centres between asymmetric rails (rails 0 and +1.5 → +0.75)', () => {
+    // The eccentric case Giorgio hit: base rail at 0, second rail at +1.5, tie authored at 0.
+    const eccentric: LinePatternLayer[] = [
+      { segments: [{ kind: 'dash', lengthMm: 4 }], offsetMm: 0 },
+      { segments: [{ kind: 'dash', lengthMm: 4 }], offsetMm: 1.5 },
+      { segments: [{ kind: 'gap', lengthMm: 3 }], offsetMm: 0 },
+    ];
+    expect(centerOffsetForLayer(eccentric, 2)).toBe(0.75);
+  });
+
+  it('centerOffsetForLayer ignores the layer itself (its own offset never skews the midpoint)', () => {
+    const layers: LinePatternLayer[] = [
+      { segments: [{ kind: 'dash', lengthMm: 4 }], offsetMm: -2 },
+      { segments: [{ kind: 'dash', lengthMm: 4 }], offsetMm: 4 },
+      { segments: [{ kind: 'dash', lengthMm: 4 }], offsetMm: 99 }, // self — must be excluded
+    ];
+    expect(centerOffsetForLayer(layers, 2)).toBe(1); // midpoint of -2 and 4
+  });
+
+  it('centerOffsetForLayer keeps a lone layer put (nothing to centre against)', () => {
+    expect(centerOffsetForLayer([{ segments: [{ kind: 'dash', lengthMm: 5 }], offsetMm: 2 }], 0)).toBe(2);
   });
 
   it('isCompound: true for ≥2 layers OR any non-zero offset', () => {

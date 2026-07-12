@@ -1,6 +1,6 @@
 # ADR-646: Scale Tool — Ανάλυση Κενών & Χάρτης Ολοκλήρωσης
 
-**Status:** 🟡 IN PROGRESS (Φάση 1 ✅ IMPLEMENTED 2026-07-13· Φάσεις 2-4 εκκρεμούν)
+**Status:** 🟡 IN PROGRESS (Φάσεις 1+2 ✅ IMPLEMENTED 2026-07-13· Φάσεις 3-4 εκκρεμούν)
 **Date:** 2026-07-12
 **Domain:** DXF Viewer — Modify Tools
 **Base:** [ADR-348](ADR-348-scale-command.md) (Scale Command)· σχετικά: ADR-418 (view-scale), ADR-625 (transform ghost preview SSoT)
@@ -65,14 +65,26 @@
 - **Προσδοκία:** ο AutoCAD επιτρέπει pick σημείου για το νέο μήκος (μετρά απόσταση base→pick).
 - **Fix sketch:** case `ref_new_x`/`ref_new_y` → μήκος = `dist(base, pt)` → `computeUniformRef(...)`.
 
-### 🟠 #3 — BIM & άλλες οντότητες = σιωπηλό no-op
-- **Σύμπτωμα:** κλιμάκωση σε τοίχο/κολώνα/δοκό/πλάκα/σκάλα/πέδιλο/εικόνα/array/region/scale-bar/
-  σύμβολα → **τίποτα**, χωρίς μήνυμα.
-- **Ρίζα:** `scale-entity-transform.ts` `scaleEntity` `default: {}` (γρ. 243-244).
-- **Απόφαση προς λήψη:** για parametric BIM ίσως σκόπιμο (η κλιμάκωση δεν έχει νόημα σε type-driven
-  στοιχεία) — αλλά τότε χρειάζεται **ρητό μήνυμα** «η κλιμάκωση δεν υποστηρίζεται για {type}» +
-  filtering (mirror του `filterLockedEntities`). Εναλλακτικά, υποστήριξη επιλεγμένων τύπων (image/
-  array/scale-bar) που έχουν καθαρή γεωμετρική έννοια.
+### 🟠 #3 — BIM & άλλες οντότητες = σιωπηλό no-op — ✅ ΔΙΟΡΘΩΘΗΚΕ (2026-07-13, υβριδικά)
+- **Σύμπτωμα:** κλιμάκωση σε τοίχο/κολώνα/δοκό/πλάκα/σκάλα/πέδιλο/array/scale-bar/σύμβολα → **τίποτα**,
+  χωρίς μήνυμα.
+- **Ρίζα:** `scale-entity-transform.ts` `scaleEntity` `default: {}`.
+- **Απόφαση Giorgio (2026-07-13):** «όπως οι μεγάλοι — Revit/ArchiCAD/Maxon/Figma-level, full enterprise».
+- **Υλοποίηση (υβριδική, όπως οι μεγάλοι):**
+  - **Parametric BIM** (wall/opening/slab/slab-opening/column/beam/foundation/roof/MEP/railing/furniture/
+    …/**stair**) → **skip-with-message** (Revit «Elements cannot be scaled»). SSoT gate
+    `isScalableEntityType()` (mirror του `scaleEntity` switch)· ο tool κάνει `partitionSelection`
+    (mirror `filterLockedEntities`) → `scaleTool.scaleUnsupportedSkipped` / `allUnsupportedAbort`.
+  - **Καθαρά γεωμετρικά που έκαναν σιωπηλό no-op → τώρα κλιμακώνονται:** `xline`/`ray` (anchors,
+    direction=unit άθικτο)· `angle-measurement` (3 σημεία)· `center-mark`/`centerline` (σημεία·
+    annotative size/extension paper-mm **διατηρούνται**)· `annotation-symbol`/`scale-bar` → **position-only**
+    (annotative + scale-invariant length διατηρούνται — AutoCAD annotative)· `opening-info-tag`
+    (position + `widthMm` world-mm)· `array` (recursive `hiddenSources` + spacing params ανά kind).
+- **Fidelity boundaries (100% ειλικρίνεια):** (α) `image`/`raster` ΔΕΝ είναι scene `Entity` — ζει στο
+  ξεχωριστό `FloorplanBackground` (`BackgroundTransform`)· εκτός scope του `scaleEntity` (χωριστή
+  ενσωμάτωση, follow-up). (β) `region`/`polygon` δεν υπάρχουν ως entity types. (γ) `array` σε **non-uniform
+  + array-level rotation** = προσεγγιστικό (ίδιο caveat με #5)· uniform = ακριβές. Το array είναι
+  associative → regeneration downstream· **browser-verify PENDING**.
 
 ### 🟠 #4 — Τόξο (arc) σε non-uniform = γεωμετρικά λάθος
 - **Σύμπτωμα:** non-uniform scale σε τόξο → λάθος σχήμα.
@@ -105,8 +117,8 @@
 μόνο το click-commit + σωστό ratio. Ένα SSoT `computeLiveScale` για preview & commit· cases `direct`
 και `ref_new_*` στο click routing. *(1-2 αρχεία, χαμηλό ρίσκο.)*
 
-**Φάση 2 — Ασφαλής μεταχείριση μη-υποστηριζόμενων (#3).** Filtering + ρητό μήνυμα για BIM/λοιπά αντί
-σιωπηλού no-op (απόφαση Giorgio: skip-with-message ή partial support).
+**Φάση 2 — Ασφαλής μεταχείριση μη-υποστηριζόμενων (#3). ✅ IMPLEMENTED 2026-07-13 (υβριδικά).**
+Skip-with-message για parametric BIM + πραγματικό scale για τα καθαρά γεωμετρικά (βλ. #3 παραπάνω).
 
 **Φάση 3 — Γεωμετρική ορθότητα (#4, #5).** Arc→elliptical-arc σε non-uniform· rectangle rotation-aware
 (ή bake σε polyline).
@@ -129,6 +141,14 @@
 
 ## Changelog
 
+- **2026-07-13** — **Φάση 2 IMPLEMENTED (#3, υβριδικά — απόφαση Giorgio «full enterprise, όπως οι μεγάλοι»).**
+  SSoT gate `isScalableEntityType()` στο `scale-entity-transform.ts` (mirror του switch). Parametric BIM +
+  `stair` → skip-with-message μέσω `partitionSelection` στο `useScaleTool.ts` (mirror `filterLockedEntities`)
+  + νέα i18n `scaleTool.scaleUnsupportedSkipped`/`allUnsupportedAbort` (el+en). Νέα scale transforms
+  (πρώην `default:{}`): xline, ray, angle-measurement, center-mark, centerline (annotative-preserving),
+  annotation-symbol + scale-bar (position-only), opening-info-tag (position+widthMm), array (recursive
+  sources + per-kind spacing). +1 test suite (scale-entity-extra-types, 9 tests) + 2 partition tests.
+  Fidelity: image/raster (FloorplanBackground) + array browser-verify = follow-ups (documented στο #3).
 - **2026-07-13** — **Φάση 1 IMPLEMENTED** (#1 click-to-scale + #2 reference-pick). Νέο SSoT
   `computeLiveScale` στο `scale-reference-calc.ts` (moved από `useScalePreview.ts`) — ο live συντελεστής
   είναι πλέον **λόγος** ως προς το πρώτο cursor sample μετά το σημείο βάσης (`ScaleToolStore.dragRefPoint`,

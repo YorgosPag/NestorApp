@@ -111,6 +111,17 @@ imported `ACAD_ISO*`) → built-in catalog → minimal CONTINUOUS stand-in. Το
   pre-existing ADR-642 concern· σπάνιο σε κατόψεις· εκτός Φάσης A.
 
 ## 6. Changelog
+- **2026-07-13 — 🎉 ΤΟ ΑΡΧΕΙΟ ΑΝΟΙΞΕ ΣΤΟ AUTOCAD (Φάση A ΟΛΟΚΛΗΡΩΘΗΚΕ) → Φάση B (πιστότητα), UNCOMMITTED:**
+  Μετά από 8 iterations δομικών fixes το export ανοίγει. Απομένουν 2 θέματα πιστότητας:
+  - **#8 κείμενα «?»:** το STYLE table έγραφε font `txt` (txt.shx, χωρίς ελληνικά glyphs) → όλα τα
+    ελληνικά ως «?». Fix: `resolveExportFont` → Greek-capable TrueType (`Arial.ttf`, `GREEK_CAPABLE_FONT`)
+    για τα `txt`/`Standard` styles (τόσο το mandatory `Standard` όσο και τα `collectTextStyles`).
+  - **#7 γραμμοσκιάσεις αόρατες:** το pattern geometry (43-46/49) + group 41 δεν πολλαπλασιάζονταν με το
+    coordinate scale `s`, ενώ το boundary ναι. mm-scene→m-output (s=0.001): boundary 1000mm→1m αλλά offset
+    31.75mm έμενε 31.75 → 31.75m σε 1m hatch = ΑΟΡΑΤΟ (τα 116 hatches διαβάζονταν από ezdxf αλλά έβγαιναν
+    κενά). Fix: `eff = resolveEffectiveHatchScale × s` → pattern + 41 σε output units (WYSIWYG με canvas
+    που δουλεύει σε scene units). Επιβεβαιωμένο: ezdxf pre-scale-άρει το definition (offset scale=2 = 2×
+    scale=1) + κρατά 41 — ίδια σύμβαση. 393/393 tests (s=1 byte-identical), jscpd clean. Εκκρεμεί F2.
 - **2026-07-13 — #9i Root Named Object Dictionary (AutoCAD F2 iteration #8, UNCOMMITTED):** Όγδοο
   re-export → «**File lacks the NamedObject dictionary**» (global). Το `(9).dxf` δεν είχε **καθόλου**
   OBJECTS section (καμία MLINE, η image hatch→solid) → κανένα root NOD. Ο R2018 απαιτεί το root Named
