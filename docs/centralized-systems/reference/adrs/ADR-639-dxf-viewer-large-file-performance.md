@@ -166,10 +166,34 @@ Highest cost; the "professional-grade" ceiling. **Touches ADR-040 critical files
   `dxf-parser.worker.ts` uses ES `import` (runDxfParse SSoT), a classic worker crashed on
   first message → silent fallback to the main-thread (freezing) parse — i.e. the worker had
   **never actually run**; Στάδιο 1's routing just surfaced it. Fix: added `{ type: 'module' }`
-  (mirrors the working `spell.worker` instantiation, `spell-checker.ts:73`). Verified the
-  parse chain (`run-dxf-parse`/`dxf-scene-builder`) is worker-safe (no window/document/react).
+  (mirrors the working `spell.worker` instantiation, `spell-checker.ts:73`). ⚠️ The claim here
+  that the parse chain was "worker-safe (no window/document/react)" was **later disproved** — see
+  the 2026-07-12 react-leak root-cause entry below; the worker was STILL failing to load.
   **Known remaining main-thread costs (→ Στάδια 3-5):** after the off-thread parse, the main
   thread still (a) structured-clones ~215k entities back from the worker, (b) runs
   `calculateTightBounds` normalize O(n), and (c) renders all entities (full-scene bitmap,
   no spatial cull / LOD). These can still cause a shorter hitch on 40 MB files and are the
   target of the next phases. Next: Στάδιο 2 (progress feedback), then Στάδιο 3 (spatial cull).
+- **2026-07-12** — **Στάδιο 1 root cause found + fixed (react leak in the worker parse chunk).**
+  After the `{ type: 'module' }` hotfix the worker STILL failed to load (`DXF worker error: {}`
+  on every large import) → fast fallback to the freezing main-thread parse (the ADR-639 Στάδιο 1
+  liveness probe kept the app usable but slow). Root cause, found by a deterministic on-disk
+  import-closure trace (not a guess): the parse chain pulled **`react`** into the worker chunk,
+  and Turbopack cannot build a `"use client"`/react module for the worker target → opaque module
+  load crash. The single leaf was `stores/TextStyleStore.ts`, which imported
+  `useSyncExternalStore` from 'react' for an **unused** `useTextStyle` hook. It reached the parse
+  closure through:
+  `run-dxf-parse → dxf-scene-builder → dxf-block-expander → dxf-entity-converters →
+  rendering/entities/shared/geometry-rendering-utils → hooks/useTextPreviewStyle →
+  stores/TextStyleStore`, and poisoned **11 distinct edges** into `geometry-rendering-utils`
+  (every geometry util that imports it for pure math). **Fix (root, one file):** made
+  `TextStyleStore.ts` a pure vanilla store — removed `"use client"`, the `react` import, and the
+  zero-consumer `useTextStyle` hook — restoring the `createExternalStore` doctrine (store core is
+  framework-free; the React binding lives at the consumer via `useSyncExternalStore`, the Zustand
+  vanilla/react split). No change to `geometry-rendering-utils` or any of the 11 importers — the
+  react leak dies at the source, so all 11 edges clear at once. **Proof:** the `run-dxf-parse`
+  transitive closure went from 1 react importer to **0** (199 modules, zero react/three/DOM).
+  **Regression guard:** `workers/__tests__/worker-parse-chain-react-free.test.ts` (2 tests) walks
+  the real import graph and fails if react/react-dom/three re-enters the closure, or if the worker
+  entry gains a static (non-type) value import. `tsc` not run per repo rule N.17; browser-verify
+  (large DXF → worker loads, no `{}` error, off-thread parse, no freeze) pending on Giorgio.

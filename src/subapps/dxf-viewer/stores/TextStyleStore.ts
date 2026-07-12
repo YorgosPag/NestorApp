@@ -1,8 +1,21 @@
-"use client";
-
 /**
- * Text Style Store
- * Single source of truth for text styling in preview rendering
+ * Text Style Store — pure vanilla external store (SSoT for preview text styling).
+ *
+ * ⚠️ WORKER-SAFE — NEVER import `react` here (no `useSyncExternalStore`, no `"use client"`).
+ * This module sits in the DXF parse import chain (`run-dxf-parse` → dxf-scene-builder →
+ * dxf-block-expander → dxf-entity-converters → geometry-rendering-utils →
+ * useTextPreviewStyle → HERE), which Turbopack bundles into the parse Web Worker
+ * (`workers/dxf-parser.worker.ts`). A single `from 'react'` in this chunk fails the worker
+ * module load → `worker.onerror` fires an opaque `{}` → the import silently falls back to a
+ * main-thread parse that FREEZES the UI on large files (ADR-639 Στάδιο 1 root cause).
+ *
+ * The vanilla store already exposes `get`/`set`/`subscribe`; a React component that wants a
+ * reactive subscription calls, at the CONSUMER:
+ *   `useSyncExternalStore(textStyleStore.subscribe, textStyleStore.get, textStyleStore.get)`
+ * (the `createExternalStore` doctrine — the Zustand vanilla/react split). This keeps the
+ * store framework-agnostic and safe to import from a Worker/server.
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-639-dxf-viewer-large-file-performance.md
  */
 
 export interface TextStyle {
@@ -18,7 +31,6 @@ export interface TextStyle {
   isSubscript: boolean;
 }
 
-import { useSyncExternalStore } from 'react';
 import { UI_COLORS } from '../config/color-config';
 import { createExternalStore } from './createExternalStore';
 
@@ -50,7 +62,3 @@ export const textStyleStore = {
     return store.subscribe(cb);
   },
 };
-
-export function useTextStyle(): TextStyle {
-  return useSyncExternalStore(textStyleStore.subscribe, textStyleStore.get, textStyleStore.get);
-}
