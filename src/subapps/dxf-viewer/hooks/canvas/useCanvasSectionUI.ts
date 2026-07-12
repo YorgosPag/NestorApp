@@ -24,6 +24,9 @@ import { resolveGroupContainingEntity } from '../../systems/group/group-selectio
 // BEDIT). Mirror of enter-group, but a scene-scope SWAP (the canvas shows ONLY the block's
 // block-local members). Mutually exclusive with GROUP drill-in (ADR-641 §7).
 import { enterBlockEdit, isBlockEditActive } from '../../systems/block/ActiveBlockEditStore';
+// ADR-641 — capture the real-size/recenter VIEW transform at enter time (fixed for the session) so the
+// Block Editor shows the block at its world size, framed on the origin (Revit/ArchiCAD/Figma parity).
+import { computeBlockEditViewTransform } from '../../systems/block/block-edit-view-transform';
 import { collectBlockEntities } from '../../systems/block/block-selection-bounds';
 
 interface Params {
@@ -73,7 +76,9 @@ export function useCanvasSectionUI({
         // while inside a group (mutual-exclusivity — else two scope systems fight over one canvas).
         const block = collectBlockEntities(rawScene?.entities).get(ids[0]);
         if (block) {
-          if (getActiveGroupId() === null) enterBlockEdit(block.id, block.name);
+          if (getActiveGroupId() === null) {
+            enterBlockEdit(block.id, block.name, computeBlockEditViewTransform(block));
+          }
           return;
         }
         const entity = dxfScene?.entities.find(en => en.id === ids[0]);

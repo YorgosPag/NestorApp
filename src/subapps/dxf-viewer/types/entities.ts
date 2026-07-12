@@ -663,6 +663,30 @@ export interface LeaderEntity extends BaseEntity {
   hasHookLine?: boolean;         // Whether to draw hook line
 }
 
+/**
+ * ADR-643 Φ1 — Image fill descriptor για μια γραμμοσκίαση (μοντέλο ArchiCAD «Image Fill»).
+ * Το entity κρατά ΜΟΝΟ `assetId` (reference) — ΠΟΤΕ inline base64: μια φωτο πλακιδίου
+ * =100KB–2MB· inline → κάθε scene/undo-snapshot/persist φουσκώνει ανεξέλεγκτα (ADR-040).
+ * Η ίδια η εικόνα ζει μία φορά στο asset store και resolve-άρεται runtime.
+ *
+ * Κλίμακα δεμένη με την ΠΡΑΓΜΑΤΙΚΗ διάσταση tile σε mm (Revit/ArchiCAD standard):
+ * πλακίδιο 600×600 φαίνεται ακριβώς 600×600 σε κάθε zoom.
+ */
+export interface HatchImageFill {
+  /** Enterprise asset id της εικόνας υλικού (Φ1: χρησιμοποιείται και ως προσωρινό src). */
+  assetId: string;
+  /** Πραγματικό πλάτος tile σε μονάδες σχεδίου (mm). */
+  tileWidth: number;
+  /** Πραγματικό ύψος tile σε mm (στη δημιουργία default = tileWidth → τετράγωνο). */
+  tileHeight: number;
+  /** Γωνία περιστροφής του μοτίβου (μοίρες, default 0). */
+  angle?: number;
+  /** Σημείο αγκύρωσης (phase) του tiling — default = κάτω-αριστερή γωνία bbox. */
+  origin?: Point2D;
+  /** Προαιρετικές γραμμές αρμών (grout) πάνω από την εικόνα (Φ5, ΟΧΙ Φ1). */
+  grout?: { color: string; widthMm: number };
+}
+
 // ✅ ENTERPRISE: AutoCAD Hatch Entity (fill pattern)
 // 🏢 ADR-507 — γραμμοσκίαση (hatch) όπως AutoCAD HATCH/BHATCH. Φ1a προσθέτει τα
 // πεδία solid + user-defined lines + island/draw-order (incremental — οι υπόλοιπες
@@ -681,8 +705,9 @@ export interface HatchEntity extends BaseEntity {
   associative?: boolean;         // Whether hatch updates with boundary changes
   // ── ADR-507 Φ1a ────────────────────────────────────────────────────────────
   /** Fill family. 'solid' = συμπαγές γέμισμα· 'user-defined' = παράλληλες γραμμές
-   *  (lineAngle/lineSpacing)· 'predefined' = PAT pattern (Φ2)· 'gradient' (Φ5). */
-  fillType?: 'solid' | 'user-defined' | 'predefined' | 'gradient';
+   *  (lineAngle/lineSpacing)· 'predefined' = PAT pattern· 'gradient' (ADR-507 Φ5)·
+   *  'image' = εικόνα υλικού tiled στην περιοχή (ADR-643 Φ1· δες `imageFill`). */
+  fillType?: 'solid' | 'user-defined' | 'predefined' | 'gradient' | 'image';
   /** Island detection style (DXF code 75): normal=even-odd, outer, ignore. */
   islandStyle?: 'normal' | 'outer' | 'ignore';
   /** User-defined hatch — γωνία γραμμών (μοίρες). */
@@ -715,6 +740,8 @@ export interface HatchEntity extends BaseEntity {
    * αναπαράγει το **native** entity (Revit/AutoCAD fidelity) αντί να το υποβαθμίσει σε HATCH.
    */
   dxfSourceType?: 'solid' | 'trace' | '3dface';
+  /** ADR-643 Φ1 — image fill (μόνο όταν `fillType==='image'`). Reference σε asset, ΟΧΙ pixels. */
+  imageFill?: HatchImageFill;
 }
 
 // ✅ ENTERPRISE: AutoCAD XLine Entity (construction line - infinite in both directions)

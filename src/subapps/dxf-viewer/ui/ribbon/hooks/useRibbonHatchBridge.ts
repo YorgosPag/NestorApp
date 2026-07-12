@@ -20,7 +20,7 @@ import { useCallback, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isHatchEntity } from '../../../types/entities';
 import type { HatchEntity, LineweightMm } from '../../../types/entities';
-import { isConcreteLineweight, LINEWEIGHT_SPECIAL, parseDxfCode370 } from '../../../config/lineweight-iso-catalog';
+import { LINEWEIGHT_SPECIAL, parseDxfCode370 } from '../../../config/lineweight-iso-catalog';
 import { LINEWEIGHT_BYLAYER_VALUE } from '../data/lineweight-ribbon-options';
 import { useCommandHistory, CompoundCommand } from '../../../core/commands';
 import { UpdateEntityCommand } from '../../../core/commands/entity-commands/UpdateEntityCommand';
@@ -41,14 +41,8 @@ import {
   subscribeHatchPickMode,
   type HatchPickMode,
 } from '../../../bim/hatch/hatch-pick-mode-store';
-import { computeHatchAreaMm2 } from '../../../bim/hatch/hatch-completion';
-// ADR-507 — mode-aware «Απόσταση» στο «έτοιμο μοτίβο»: world min-spacing ⇄ patternScale (SSoT).
-import {
-  hatchMinWorldSpacing,
-  patternScaleForSpacingMm,
-} from '../../../bim/geometry/shared/hatch-pattern-geometry';
-// Area readout SSoT (ADR-462) — locale + display-unit aware (μηδέν δικό μου format).
-import { formatAreaForDisplay } from '../../../config/display-length-format';
+// ADR-507 — mode-aware «Απόσταση» στο «έτοιμο μοτίβο»: patternScale ⇄ spacing (write-side).
+import { patternScaleForSpacingMm } from '../../../bim/geometry/shared/hatch-pattern-geometry';
 // ADR-507 — «Επιλογή γραμμοσκίασης» (armed pick-existing) mode SSoT.
 import {
   armHatchSelect,
@@ -63,14 +57,21 @@ import {
   type GradientFieldPatch,
 } from '../../../bim/hatch/hatch-gradient-build';
 import { normalizeGradientType, normalizeGradientShift } from '../../../bim/hatch/hatch-gradient';
+// ADR-643 Φ3 — image-fill build SSoT (mirror του gradient-build).
+import {
+  buildImageFillFromDefaults,
+  withImageFillPatch,
+  type ImageFieldPatch,
+} from '../../../bim/hatch/hatch-image-build';
 // ADR-507/510 Φ4 — κοινό «Επίπεδο» field wiring (ίδιο SSoT με το line bridge).
 import { useEntityLayerField } from './bridge/useEntityLayerField';
+// ADR-643 Φ3 — read-side SSoT (εξήχθη· single-responsibility + όριο 500 γρ.).
+import { readHatchComboboxState } from './bridge/hatch-bridge-read';
 import {
   HATCH_RIBBON_KEYS,
   isHatchRibbonNumberKey,
   isHatchRibbonStringKey,
   isHatchRibbonToggleKey,
-  isHatchRibbonReadoutKey,
   isHatchRibbonActionKey,
   isHatchRibbonVisibilityKey,
 } from './bridge/hatch-command-keys';
@@ -83,7 +84,6 @@ import type { useUniversalSelection } from '../../../systems/selection';
 import {
   useResolveSelectedEntity,
   useStableBridge,
-  entityTransparencyValue,
   clampTransparency,
   type RibbonEntityBridgeCore,
 } from './ribbon-entity-bridge-shared';
@@ -114,9 +114,22 @@ function gradientDefaultPatch(patch: GradientFieldPatch): Partial<HatchDrawDefau
   }
 }
 
-/** lineweightMm → option value ('ByLayer' ή «0.50»· toFixed(2) ταιριάζει με LINEWEIGHT_RIBBON_OPTIONS). */
-function lineweightToOptionValue(lw: LineweightMm | undefined): string {
-  return isConcreteLineweight(lw) ? lw.toFixed(2) : LINEWEIGHT_BYLAYER_VALUE;
+/**
+ * Map ενός image-fill patch → flat draw-default πεδία (no-selection mode). Στην αλλαγή
+ * υλικού υιοθετούμε ΚΑΙ το πραγματικό default tile size του υλικού (μέσω του build SSoT),
+ * ώστε το draft preview να δείχνει το σωστό μέγεθος (ίδια συμπεριφορά με selected).
+ */
+function imageDefaultPatch(
+  d: HatchDrawDefaults,
+  patch: ImageFieldPatch,
+): Partial<HatchDrawDefaults> {
+  const next = withImageFillPatch(buildImageFillFromDefaults(d), d, patch);
+  return {
+    imageAssetId: next.assetId,
+    imageTileWidth: next.tileWidth,
+    imageTileHeight: next.tileHeight,
+    imageAngle: next.angle,
+  };
 }
 
 export function useRibbonHatchBridge(
@@ -176,79 +189,25 @@ export function useRibbonHatchBridge(
     [defaults, patchHatch],
   );
 
-  const getComboboxState = useCallback(
-    (commandKey: string): RibbonComboboxState | null => {
-      const hatch = resolveHatch();
-      // Readout: live εμβαδόν (μόνο όταν υπάρχει επιλεγμένη γραμμοσκίαση).
-      if (isHatchRibbonReadoutKey(commandKey)) {
-        return { value: hatch ? formatAreaForDisplay(computeHatchAreaMm2(hatch)) : '—', options: [] };
+  // Image fill = nested object (mirror gradient): σε αλλαγή 1 πεδίου ξαναχτίζουμε ΟΛΟ
+  // το imageFill (immutable) από (entity.imageFill ?? defaults) + patch, μέσω του build SSoT.
+  const applyImageChange = useCallback(
+    (hatch: HatchEntity | null, patch: ImageFieldPatch): void => {
+      if (hatch) {
+        const imageFill = withImageFillPatch(hatch.imageFill, defaults, patch);
+        patchHatch(hatch, { imageFill, fillType: 'image', patternType: 'pattern' });
+      } else {
+        setHatchDrawDefaults(imageDefaultPatch(defaults, patch));
       }
-      if (isHatchRibbonStringKey(commandKey)) {
-        if (commandKey === HATCH_RIBBON_KEYS.stringParams.layer) {
-          return layerField.getState(hatch);
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.stringParams.fillType) {
-          return { value: hatch?.fillType ?? defaults.fillType, options: [] };
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.stringParams.fillColor) {
-          return { value: hatch?.fillColor ?? defaults.fillColor, options: [] };
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.stringParams.patternName) {
-          return { value: hatch?.patternName ?? defaults.patternName, options: [] };
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.stringParams.lineweight) {
-          return { value: lineweightToOptionValue(hatch?.lineweightMm ?? defaults.lineweightMm), options: [] };
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.stringParams.gradientType) {
-          return { value: hatch?.gradient?.type ?? defaults.gradientType, options: [] };
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.stringParams.gradientColor1) {
-          return { value: hatch?.gradient?.color1 ?? defaults.gradientColor1, options: [] };
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.stringParams.gradientColor2) {
-          return { value: hatch?.gradient?.color2 ?? defaults.gradientColor2, options: [] };
-        }
-        return { value: hatch?.islandStyle ?? defaults.islandStyle, options: [] };
-      }
-      if (isHatchRibbonNumberKey(commandKey)) {
-        // Διαφάνεια: ιδιότητα ΜΟΝΟ επιλεγμένης γραμμοσκίασης (mirror line-tool· χωρίς draw-default).
-        if (commandKey === HATCH_RIBBON_KEYS.params.transparency) {
-          return { value: hatch ? entityTransparencyValue(hatch) : '0', options: [] };
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.params.gapTolerance) {
-          return { value: String(hatch?.gapTolerance ?? defaults.gapTolerance), options: [] };
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.params.lineAngle) {
-          // «Γωνία»: στο «έτοιμο μοτίβο» οδηγεί το patternAngle (ο predefined renderer
-          // αγνοεί το lineAngle)· αλλιώς το lineAngle (user-defined).
-          const isPredef = (hatch?.fillType ?? defaults.fillType) === 'predefined';
-          const angle = isPredef
-            ? (hatch?.patternAngle ?? defaults.patternAngle)
-            : (hatch?.lineAngle ?? defaults.lineAngle);
-          return { value: String(angle), options: [] };
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.params.patternScale) {
-          return { value: String(hatch?.patternScale ?? defaults.patternScale), options: [] };
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.params.gradientAngle) {
-          return { value: String(hatch?.gradient?.angleDeg ?? defaults.gradientAngle), options: [] };
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.params.gradientShift) {
-          return { value: String(hatch?.gradient?.shift ?? defaults.gradientShift), options: [] };
-        }
-        // «Απόσταση»: στο «έτοιμο μοτίβο» δείχνει την ΠΡΑΓΜΑΤΙΚΗ world απόσταση γραμμών
-        // (min-spacing), που προκύπτει από το patternScale· αλλιώς το lineSpacing (mm).
-        const isPredef = (hatch?.fillType ?? defaults.fillType) === 'predefined';
-        if (isPredef) {
-          const worldSpacing = hatchMinWorldSpacing(
-            hatch ?? { fillType: 'predefined', patternName: defaults.patternName, patternScale: defaults.patternScale },
-          );
-          return { value: String(Math.round(worldSpacing)), options: [] };
-        }
-        return { value: String(hatch?.lineSpacing ?? defaults.lineSpacing), options: [] };
-      }
-      return null;
     },
+    [defaults, patchHatch],
+  );
+
+  // Read-side εξήχθη ολόκληρο στο `hatch-bridge-read` (pure· single-responsibility +
+  // όριο 500 γρ.). Εδώ μένει μόνο η resolve-and-delegate.
+  const getComboboxState = useCallback(
+    (commandKey: string): RibbonComboboxState | null =>
+      readHatchComboboxState(commandKey, resolveHatch(), defaults, layerField),
     [resolveHatch, defaults, layerField],
   );
 
@@ -265,7 +224,8 @@ export function useRibbonHatchBridge(
             value === 'user-defined' ? 'user-defined'
               : value === 'predefined' ? 'predefined'
                 : value === 'gradient' ? 'gradient'
-                  : 'solid';
+                  : value === 'image' ? 'image'
+                    : 'solid';
           const patternType: NonNullable<HatchEntity['patternType']> =
             fillType === 'solid' ? 'solid' : fillType === 'gradient' ? 'gradient' : 'pattern';
           if (hatch) {
@@ -273,6 +233,7 @@ export function useRibbonHatchBridge(
             const patch: Record<string, unknown> = { fillType, patternType };
             if (fillType === 'predefined' && !hatch.patternName) patch.patternName = defaults.patternName;
             if (fillType === 'gradient' && !hatch.gradient) patch.gradient = buildGradientFromDefaults(defaults);
+            if (fillType === 'image' && !hatch.imageFill) patch.imageFill = buildImageFillFromDefaults(defaults);
             patchHatch(hatch, patch);
           } else setHatchDrawDefaults({ fillType });
           return;
@@ -311,6 +272,10 @@ export function useRibbonHatchBridge(
           applyGradientChange(hatch, { field: 'color2', value });
           return;
         }
+        if (commandKey === HATCH_RIBBON_KEYS.stringParams.imageAsset) {
+          applyImageChange(hatch, { field: 'assetId', value });
+          return;
+        }
         // islandStyle
         const islandStyle = value === 'outer' ? 'outer' : value === 'ignore' ? 'ignore' : 'normal';
         if (hatch) patchHatch(hatch, { islandStyle });
@@ -339,6 +304,22 @@ export function useRibbonHatchBridge(
         }
         if (commandKey === HATCH_RIBBON_KEYS.params.gradientShift) {
           applyGradientChange(hatch, { field: 'shift', value: normalizeGradientShift(numeric) });
+          return;
+        }
+        // Image tile διαστάσεις (mm, >0) + γωνία (0..360· 0 ΕΓΚΥΡΟ → πριν τον generic >0 έλεγχο).
+        if (commandKey === HATCH_RIBBON_KEYS.params.imageTileWidth) {
+          if (numeric <= 0) return;
+          applyImageChange(hatch, { field: 'tileWidth', value: numeric });
+          return;
+        }
+        if (commandKey === HATCH_RIBBON_KEYS.params.imageTileHeight) {
+          if (numeric <= 0) return;
+          applyImageChange(hatch, { field: 'tileHeight', value: numeric });
+          return;
+        }
+        if (commandKey === HATCH_RIBBON_KEYS.params.imageAngle) {
+          if (numeric < 0) return;
+          applyImageChange(hatch, { field: 'angle', value: numeric });
           return;
         }
         if (commandKey === HATCH_RIBBON_KEYS.params.lineAngle) {
@@ -370,7 +351,7 @@ export function useRibbonHatchBridge(
         else setHatchDrawDefaults({ lineSpacing: numeric });
       }
     },
-    [resolveHatch, patchHatch, applyGradientChange, defaults, layerField],
+    [resolveHatch, patchHatch, applyGradientChange, applyImageChange, defaults, layerField],
   );
 
   const onToggle = useCallback(
@@ -472,12 +453,15 @@ export function useRibbonHatchBridge(
     [resolveHatch, levelManager, executeCommand, t],
   );
 
-  // Gradient panel ορατό μόνο όταν το (επιλεγμένο hatch ή τα defaults) fillType='gradient'.
+  // Contextual panels (Revit-style): κάθε panel ορατό μόνο όταν το (επιλεγμένο hatch ή
+  // τα defaults) fillType ταιριάζει — gradient panel ↔ 'gradient', image panel ↔ 'image'.
   const getPanelVisibility = useCallback(
     (visibilityKey: string): boolean => {
       if (!isHatchRibbonVisibilityKey(visibilityKey)) return true;
       const hatch = resolveHatch();
-      return (hatch?.fillType ?? defaults.fillType) === 'gradient';
+      const fillType = hatch?.fillType ?? defaults.fillType;
+      if (visibilityKey === HATCH_RIBBON_KEYS.visibility.image) return fillType === 'image';
+      return fillType === 'gradient';
     },
     [resolveHatch, defaults],
   );

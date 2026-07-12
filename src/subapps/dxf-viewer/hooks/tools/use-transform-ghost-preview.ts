@@ -23,11 +23,15 @@
 
 import { useCallback } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { AnySceneEntity } from '../../types/entities';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 import { useBimPreviewRenderer } from './useBimPreviewRenderer';
 import { useLevelLayersById } from './useLevelLayersById';
 import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 import { useGhostOverlay, type GhostOverlayStore } from './use-ghost-overlay';
+// ADR-641 — the harness owns the BEDIT-aware entity getter so every base-point transform preview
+// resolves a member in the editor's VIEW frame automatically (no per-tool getEntity boilerplate).
+import { useBeditAwareEntityGetter } from './use-bedit-aware-entity-getter';
 
 const BASE_POINT_COLOR = '#FF4444';
 const RUBBER_BAND_COLOR = '#FFD700';
@@ -47,6 +51,8 @@ export interface TransformGhostFrame<S> {
   readonly viewport: GhostDrawFrame['viewport'];
   readonly bimPreview: BimPreviewContext;
   readonly layers: LevelLayerTable;
+  /** BEDIT-aware entity resolver (top-level, or the active block's member in VIEW space). ADR-641. */
+  readonly getEntity: (id: string) => AnySceneEntity | null;
 }
 
 export interface TransformGhostConfig<S extends { phase: string }> {
@@ -78,6 +84,8 @@ export function useTransformGhostPreview<S extends { phase: string }>(
   // ADR-550 — lazy real-entity renderer + level layer-table getter (shared SSoT hooks).
   const getBimPreview = useBimPreviewRenderer();
   const layersById = useLevelLayersById(levelManager);
+  // ADR-641 — BEDIT-aware entity getter handed to every renderCopies (members resolve in VIEW space).
+  const getEntity = useBeditAwareEntityGetter(levelManager);
 
   const draw = useCallback(
     (frame: GhostDrawFrame, s: S, toScreen: (p: Point2D) => Point2D) => {
@@ -124,11 +132,11 @@ export function useTransformGhostPreview<S extends { phase: string }>(
       const layers = layersById();
       renderCopies({
         ctx, state: s, cursor: effectiveCursor, basePoint,
-        transform: frame.transform, viewport: frame.viewport, bimPreview, layers,
+        transform: frame.transform, viewport: frame.viewport, bimPreview, layers, getEntity,
       });
       ctx.restore();
     },
-    [isDrawPhase, getBasePoint, buildTooltip, renderCopies, getBimPreview, layersById],
+    [isDrawPhase, getBasePoint, buildTooltip, renderCopies, getBimPreview, layersById, getEntity],
   );
 
   useGhostOverlay<S>({

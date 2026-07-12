@@ -33,6 +33,8 @@ import { isEntityLayerSkipped as isEntityLayerSkippedShared } from './dxf-entity
 import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, buildWallsById, buildColumnFootprints } from './dxf-renderer-frame-builders';
 // ADR-550 / ADR-358 §G7 — entity render-style SSoT (shared with the WYSIWYG preview path).
 import { resolveEntityRenderStyle, type ResolvedRenderStyle } from './dxf-renderer-style-resolve';
+// ADR-642 Φ2-B — genuine complex linetypes (embedded text) opt out of the solid LINE batch.
+import { isSimpleExpressible } from '../../config/complex-linetype-adapters';
 import { drawFoundationReinforcement2D } from './dxf-foundation-reinforcement-overlay';
 import { drawSlabReinforcement2D } from './dxf-slab-reinforcement-overlay';
 // Scene-level structural overlay passes (Boy-Scout file-size split, 2026-06-17 —
@@ -183,6 +185,11 @@ export class DxfRenderer {
       if (webglOwnedIds && webglOwnedIds.has(entity.id)) { batchedIds.add(entity.id); continue; }
 
       const resolved = this.resolveStyleForRender(entity, effectiveOptions.layersById);
+      // ADR-642 Φ2-B — a complex linetype (embedded `──GAS──` text) cannot be expressed by a
+      // single batched `setLineDash` stroke. Exclude it from the solid LINE batch (and do NOT
+      // add it to `batchedIds`) so it falls through to the per-entity pass, where LineRenderer
+      // routes it through `strokeStyledEntityPolyline` and the text is drawn along the geometry.
+      if (resolved.complex && !isSimpleExpressible(resolved.complex)) continue;
       const color = resolved.colorHex;
       const lw = resolved.lineWidthPx;
       const alpha = resolved.alpha;
@@ -375,14 +382,16 @@ export class DxfRenderer {
   private toEntityModel(
     entity: DxfEntityUnion,
     isSelected: boolean,
-    resolvedOrLayersById: { colorHex: string; lineWidthPx: number; alpha: number; dashMm: ReadonlyArray<number> } | Record<string, SceneLayer> | undefined,
+    resolvedOrLayersById: ResolvedRenderStyle | Record<string, SceneLayer> | undefined,
   ): Entity {
     const isPreResolved =
       typeof resolvedOrLayersById === 'object' &&
       resolvedOrLayersById !== null &&
       'colorHex' in resolvedOrLayersById;
+    // ADR-642 Φ2-B — use the `ResolvedRenderStyle` SSoT type (was a duplicated inline shape)
+    // so the resolved `complex` def flows through to `buildEntityModelFromDxf` unchanged.
     const resolved = isPreResolved
-      ? (resolvedOrLayersById as { colorHex: string; lineWidthPx: number; alpha: number; dashMm: ReadonlyArray<number> })
+      ? (resolvedOrLayersById as ResolvedRenderStyle)
       : this.resolveStyleForRender(entity, resolvedOrLayersById as Record<string, SceneLayer> | undefined);
     return buildEntityModelFromDxf(entity, isSelected, resolved);
   }

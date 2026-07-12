@@ -30,6 +30,8 @@ export const HATCH_RIBBON_KEYS = {
     gradientColor1: 'hatch.params.gradientColor1',
     /** Δεύτερο χρώμα gradient (hex) — αγνοείται όταν single-color. */
     gradientColor2: 'hatch.params.gradientColor2',
+    /** ADR-643 Φ3 — asset id υλικού εικόνας (catalog `matimg-*`) — μόνο fillType='image'. */
+    imageAsset: 'hatch.params.imageAsset',
   },
   params: {
     /** Γωνία γραμμών (μοίρες) — user-defined. */
@@ -42,6 +44,12 @@ export const HATCH_RIBBON_KEYS = {
     gradientAngle: 'hatch.params.gradientAngle',
     /** Μετατόπιση gradient 0..1 (DXF 461· 0=centered) — μόνο fillType='gradient'. */
     gradientShift: 'hatch.params.gradientShift',
+    /** ADR-643 Φ3 — πραγματικό πλάτος tile εικόνας (mm) — μόνο fillType='image'. */
+    imageTileWidth: 'hatch.params.imageTileWidth',
+    /** ADR-643 Φ3 — πραγματικό ύψος tile εικόνας (mm) — μόνο fillType='image'. */
+    imageTileHeight: 'hatch.params.imageTileHeight',
+    /** ADR-643 Φ3 — γωνία περιστροφής μοτίβου εικόνας (μοίρες) — μόνο fillType='image'. */
+    imageAngle: 'hatch.params.imageAngle',
     /** Gap tolerance (AutoCAD HPGAPTOL, world units) — pick-point (ADR-507 Φ3/§5β.1). */
     gapTolerance: 'hatch.params.gapTolerance',
     /** Διαφάνεια (AutoCAD object transparency 0..90· DXF 440) — μόνο επιλεγμένη γραμμοσκίαση. */
@@ -80,6 +88,8 @@ export const HATCH_RIBBON_KEYS = {
   visibility: {
     /** Panel «Gradient» ορατό μόνο όταν fillType='gradient' (Revit-style contextual). */
     gradient: 'hatch.visibility.gradient',
+    /** ADR-643 Φ3 — Panel «Εικόνα» (swatch grid + διαστάσεις) ορατό μόνο όταν fillType='image'. */
+    image: 'hatch.visibility.image',
   },
 } as const;
 
@@ -90,7 +100,10 @@ export type HatchRibbonNumberCommandKey =
   | typeof HATCH_RIBBON_KEYS.params.gradientAngle
   | typeof HATCH_RIBBON_KEYS.params.gradientShift
   | typeof HATCH_RIBBON_KEYS.params.gapTolerance
-  | typeof HATCH_RIBBON_KEYS.params.transparency;
+  | typeof HATCH_RIBBON_KEYS.params.transparency
+  | typeof HATCH_RIBBON_KEYS.params.imageTileWidth
+  | typeof HATCH_RIBBON_KEYS.params.imageTileHeight
+  | typeof HATCH_RIBBON_KEYS.params.imageAngle;
 
 export type HatchRibbonStringCommandKey =
   | typeof HATCH_RIBBON_KEYS.stringParams.fillType
@@ -101,7 +114,8 @@ export type HatchRibbonStringCommandKey =
   | typeof HATCH_RIBBON_KEYS.stringParams.lineweight
   | typeof HATCH_RIBBON_KEYS.stringParams.gradientType
   | typeof HATCH_RIBBON_KEYS.stringParams.gradientColor1
-  | typeof HATCH_RIBBON_KEYS.stringParams.gradientColor2;
+  | typeof HATCH_RIBBON_KEYS.stringParams.gradientColor2
+  | typeof HATCH_RIBBON_KEYS.stringParams.imageAsset;
 
 export type HatchRibbonToggleKey =
   | typeof HATCH_RIBBON_KEYS.toggles.doubleCrossHatch
@@ -119,7 +133,8 @@ export type HatchRibbonActionKey =
   | typeof HATCH_RIBBON_KEYS.actions.delete;
 
 export type HatchRibbonVisibilityKey =
-  | typeof HATCH_RIBBON_KEYS.visibility.gradient;
+  | typeof HATCH_RIBBON_KEYS.visibility.gradient
+  | typeof HATCH_RIBBON_KEYS.visibility.image;
 
 export const isHatchRibbonNumberKey = makeKeySetGuard<HatchRibbonNumberCommandKey>([
   HATCH_RIBBON_KEYS.params.lineAngle,
@@ -129,6 +144,9 @@ export const isHatchRibbonNumberKey = makeKeySetGuard<HatchRibbonNumberCommandKe
   HATCH_RIBBON_KEYS.params.gradientShift,
   HATCH_RIBBON_KEYS.params.gapTolerance,
   HATCH_RIBBON_KEYS.params.transparency,
+  HATCH_RIBBON_KEYS.params.imageTileWidth,
+  HATCH_RIBBON_KEYS.params.imageTileHeight,
+  HATCH_RIBBON_KEYS.params.imageAngle,
 ]);
 export const isHatchRibbonStringKey = makeKeySetGuard<HatchRibbonStringCommandKey>([
   HATCH_RIBBON_KEYS.stringParams.fillType,
@@ -140,6 +158,7 @@ export const isHatchRibbonStringKey = makeKeySetGuard<HatchRibbonStringCommandKe
   HATCH_RIBBON_KEYS.stringParams.gradientType,
   HATCH_RIBBON_KEYS.stringParams.gradientColor1,
   HATCH_RIBBON_KEYS.stringParams.gradientColor2,
+  HATCH_RIBBON_KEYS.stringParams.imageAsset,
 ]);
 export const isHatchRibbonToggleKey = makeKeySetGuard<HatchRibbonToggleKey>([
   HATCH_RIBBON_KEYS.toggles.doubleCrossHatch,
@@ -158,4 +177,5 @@ export const isHatchRibbonActionKey = makeKeySetGuard<HatchRibbonActionKey>([
 ]);
 export const isHatchRibbonVisibilityKey = makeKeySetGuard<HatchRibbonVisibilityKey>([
   HATCH_RIBBON_KEYS.visibility.gradient,
+  HATCH_RIBBON_KEYS.visibility.image,
 ]);

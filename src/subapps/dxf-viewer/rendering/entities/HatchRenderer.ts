@@ -19,15 +19,14 @@
 
 import { BaseEntityRenderer } from './BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../types/Types';
-import type { Entity, HatchEntity } from '../../types/entities';
+import type { Entity, HatchEntity, HatchImageFill } from '../../types/entities';
 import { isHatchEntity } from '../../types/entities';
 import { createVertexGrip, createEdgeGrip } from './shared/grip-utils';
 import { hatchBoundsCenter, hatchGradientAngleGripPos, getHatchBoundaryGrips, getHatchEdgeMidpointGrips } from '../../bim/hatch/hatch-grips';
 // ADR-627 — whole-hatch MOVE cross + rotation handle (area/polyline parity). The SAME
 // `getHatchMoveRotateGrips` SSoT the interaction path emits → drawn ≡ pickable.
 import { getHatchMoveRotateGrips } from '../../bim/hatch/hatch-move-rotate-grips';
-import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
-import { gripKindOf } from '../../hooks/grip-kinds';
+import { toMoveRotateGlyphGrips } from '../../bim/grips/move-rotate-glyph-grips';
 import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
 import { buildHatchEntitySegments, hatchMinWorldSpacing } from '../../bim/geometry/shared/hatch-pattern-geometry';
 import { isSolidHatch, resolveHatchLineWidthPx } from '../../bim/hatch/hatch-properties';
@@ -35,6 +34,14 @@ import type { HatchGradient } from '../../bim/hatch/hatch-gradient';
 // ADR-507 Φ5 / A3 — pure gradient paint SSoT (κοινό με το live grip-drag ghost,
 // `draw-ghost-entity` case 'hatch'· preview === commit, μηδέν δεύτερη gradient math).
 import { fillHatchGradient, traceHatchBoundary } from './shared/hatch-gradient-paint';
+// ADR-643 Φ1 — image fill: pure tiling/paint SSoT + live decoded-image cache. Ο
+// `fillHatchPattern` είναι ΓΕΝΙΚΟΣ → τον μοιράζεται και το screen-raster μονοπάτι.
+import {
+  resolveImageFillOrigin, computeImageTileMatrix, fillHatchPattern, averageImageColor,
+} from './shared/hatch-image-paint';
+import { HatchImageCache } from './shared/hatch-image-cache';
+// ADR-040 — async asset load «σπρώχνει» ένα dirty-frame (ο renderer δεν subscribe-άρει).
+import { markAllCanvasDirty } from '../core/frame-scheduler-api';
 import { aabbIntersectsRaw } from '../hitTesting/bounds-operations';
 import { CAD_UI_COLORS, HOVER_HIGHLIGHT } from '../../config/color-config';
 /**
@@ -61,6 +68,13 @@ const SCREEN_HATCH_SPACING_PX = 3;
 const SCREEN_HATCH_LINE_PX = 1;
 const SCREEN_HATCH_TILE_W = 8;
 const SCREEN_HATCH_DEFAULT_ANGLE_DEG = 45;
+
+/**
+ * ADR-643 Φ1 — density-LOD κατώφλι για image fill: κάτω από αυτό το on-screen μέγεθος
+ * tile (px) η εικόνα είναι δυσδιάκριτη μάζα → ο renderer πέφτει σε μέσο-χρώμα solid tint
+ * (μηδέν drawImage cost σε zoom-out· ίδιο σκεπτικό με το {@link HATCH_MIN_LINE_SPACING_PX}).
+ */
+const HATCH_IMAGE_MIN_TILE_PX = 4;
 
 /**
  * Φθηνό signature των geometry-relevant πεδίων μιας γραμμοσκίασης. Τα segments είναι
@@ -90,6 +104,12 @@ export class HatchRenderer extends BaseEntityRenderer {
   private readonly segCache = new Map<string, { sig: string; segs: ReturnType<typeof buildHatchEntitySegments> }>();
   /** ADR-531 Φ5b.6 — cache του screen-space raster `CanvasPattern` ανά χρώμα (tile = σταθερό px). */
   private readonly screenPatternCache = new Map<string, CanvasPattern | null>();
+  /** ADR-643 Φ1 — live cache decoded εικόνων υλικού· async load → dirty-frame (ADR-040). */
+  private readonly imageCache = new HatchImageCache(markAllCanvasDirty);
+  /** ADR-643 Φ1 — `CanvasPattern` (repeat) ανά assetId· size/angle/scale μπαίνουν στο DOMMatrix. */
+  private readonly imagePatternCache = new Map<string, CanvasPattern | null>();
+  /** ADR-643 Φ1 — μέσο χρώμα εικόνας ανά assetId (LOD tint fallback)· `null` = αδύνατο (taint). */
+  private readonly averageColorCache = new Map<string, string | null>();
 
   /** Cached pattern segments (recompute μόνο σε αλλαγή geometry/pattern). */
   private cachedSegments(hatch: HatchEntity): ReturnType<typeof buildHatchEntitySegments> {
@@ -143,15 +163,13 @@ export class HatchRenderer extends BaseEntityRenderer {
   ): boolean {
     const pat = this.screenSpacePattern(color);
     if (!pat) return false;
+    let matrix: DOMMatrix | null = null;
     if (typeof pat.setTransform === 'function' && typeof DOMMatrix === 'function') {
       const o = this.worldToScreen({ x: 0, y: 0 });
-      pat.setTransform(new DOMMatrix().translate(o.x, o.y).rotate(angleDeg));
+      matrix = new DOMMatrix().translate(o.x, o.y).rotate(angleDeg);
     }
-    this.ctx.save();
-    this.ctx.fillStyle = pat;
-    this.drawBoundaryPath(paths);
-    this.ctx.fill('evenodd');
-    this.ctx.restore();
+    // Κοινό «γέμισε boundary με transformed pattern» SSoT (ADR-643) — ίδιο μονοπάτι με image fill.
+    fillHatchPattern(this.ctx, paths, pat, matrix, (p) => this.worldToScreen(p));
     return true;
   }
 
@@ -192,20 +210,18 @@ export class HatchRenderer extends BaseEntityRenderer {
     // ADR-507 / ADR-531 Φ5b.6 — «Background color» (AutoCAD DXF 63): γεμίζει την περιοχή ΠΙΣΩ από
     // τις γραμμές μοτίβου (π.χ. ο Τέκτων δίνει λευκό raster_bgcolor → λευκό φόντο + πράσινες γραμμές).
     // Μόνο για pattern/user-defined· solid/gradient γεμίζουν ήδη πλήρως. even-odd → νησίδες = τρύπες.
-    if (hatch.backgroundColor && !isSolidHatch(hatch) && hatch.fillType !== 'gradient') {
-      this.ctx.save();
-      this.ctx.fillStyle = hatch.backgroundColor;
-      this.drawBoundaryPath(paths);
-      this.ctx.fill('evenodd');
-      this.ctx.restore();
+    if (hatch.backgroundColor && !isSolidHatch(hatch)
+      && hatch.fillType !== 'gradient' && hatch.fillType !== 'image') {
+      this.fillBoundary(paths, hatch.backgroundColor);
     }
 
-    if (hatch.fillType === 'gradient' && hatch.gradient) {
+    if (hatch.fillType === 'image' && hatch.imageFill) {
+      // ADR-643 Φ1 — εικόνα υλικού tiled στην περιοχή (μοντέλο ArchiCAD «Image Fill»).
+      this.fillImage(paths, hatch.imageFill, color);
+    } else if (hatch.fillType === 'gradient' && hatch.gradient) {
       this.fillGradient(paths, hatch.gradient, hatch.patternOrigin);
     } else if (isSolidHatch(hatch)) {
-      this.ctx.fillStyle = color;
-      this.drawBoundaryPath(paths);
-      this.ctx.fill('evenodd');
+      this.fillBoundary(paths, color);
     } else if (
       hatch.patternSpace === 'screen'
       && this.fillScreenSpacePattern(paths, color, hatch.lineAngle ?? SCREEN_HATCH_DEFAULT_ANGLE_DEG)
@@ -215,12 +231,7 @@ export class HatchRenderer extends BaseEntityRenderer {
     } else if (this.isLineDensityTooHigh(hatch)) {
       // Density-LOD: γραμμές sub-pixel → ελαφρύ solid tint (1 op αντί για χιλιάδες
       // γραμμές). Παραλείπει ΚΑΙ την παραγωγή segments (μηδέν cost σε zoom-out).
-      this.ctx.save();
-      this.ctx.globalAlpha *= HATCH_COLLAPSE_ALPHA;
-      this.ctx.fillStyle = color;
-      this.drawBoundaryPath(paths);
-      this.ctx.fill('evenodd');
-      this.ctx.restore();
+      this.fillBoundary(paths, color, HATCH_COLLAPSE_ALPHA);
     } else {
       // SSoT: ίδια segments με τον DXF writer· cached (transform-independent, ADR-040).
       // Πάχος γραμμών = AutoCAD LWT (zoom-independent) από το lineweightMm (ADR-507 Φ2).
@@ -285,17 +296,12 @@ export class HatchRenderer extends BaseEntityRenderer {
     // ADR-627 — whole-hatch MOVE cross + rotation handle, appended LAST via the SAME
     // `getHatchMoveRotateGrips` SSoT the interaction path uses (drawn ≡ pickable). Move →
     // 4-arrow MOVE glyph, rotation → curved ROTATION glyph via the `gripGlyphShape` registry.
-    for (const g of getHatchMoveRotateGrips(entity.id, hatch.boundaryPaths?.[0] ?? [], gi)) {
-      grips.push({
-        id: `${g.entityId}-grip-${g.gripIndex}`,
-        entityId: g.entityId,
-        type: g.type,
-        gripIndex: g.gripIndex,
-        position: g.position,
-        isVisible: true,
-        shape: gripGlyphShape(gripKindOf(g, 'hatch')),
-      });
-    }
+    grips.push(
+      ...toMoveRotateGlyphGrips(
+        getHatchMoveRotateGrips(entity.id, hatch.boundaryPaths?.[0] ?? [], gi),
+        'hatch',
+      ),
+    );
     return grips;
   }
 
@@ -352,6 +358,73 @@ export class HatchRenderer extends BaseEntityRenderer {
   /** Χτίζει ΕΝΑ canvas path με ΟΛΑ τα boundary paths ως subpaths (delegate στο SSoT). */
   private drawBoundaryPath(paths: ReadonlyArray<ReadonlyArray<Point2D>>): void {
     traceHatchBoundary(this.ctx, paths, (p) => this.worldToScreen(p));
+  }
+
+  /**
+   * SSoT: γεμίζει το boundary (even-odd → νησίδες = τρύπες) με συμπαγές χρώμα· προαιρετικό
+   * `alpha` multiply (LOD tint). Κοινό για solid / background / density-LOD / image tint
+   * fallback — μηδέν επανάληψη του save→fillStyle→trace→fill('evenodd')→restore idiom.
+   */
+  private fillBoundary(
+    paths: ReadonlyArray<ReadonlyArray<Point2D>>, color: string, alpha = 1,
+  ): void {
+    this.ctx.save();
+    if (alpha < 1) this.ctx.globalAlpha *= alpha;
+    this.ctx.fillStyle = color;
+    this.drawBoundaryPath(paths);
+    this.ctx.fill('evenodd');
+    this.ctx.restore();
+  }
+
+  /**
+   * ADR-643 Φ1 — γέμισμα με εικόνα υλικού: tiled `CanvasPattern` κομμένο στο boundary,
+   * με κλίμακα δεμένη στην πραγματική διάσταση tile (mm). LOD/async fallback: εικόνα
+   * μη-φορτωμένη ή sub-threshold tile → μέσο χρώμα (ή hatch color) ως ελαφρύ solid tint
+   * (μηδέν drawImage cost σε zoom-out· fire-and-forget load → dirty-frame μέσω cache).
+   */
+  private fillImage(
+    paths: ReadonlyArray<ReadonlyArray<Point2D>>, imageFill: HatchImageFill, fallbackColor: string,
+  ): void {
+    const img = this.imageCache.resolve(imageFill.assetId);
+    if (!img || this.isImageTileTooSmall(imageFill)) {
+      const tint = img
+        ? this.cachedAverageColor(imageFill.assetId, img) ?? fallbackColor
+        : fallbackColor;
+      this.fillBoundary(paths, tint, HATCH_COLLAPSE_ALPHA);
+      return;
+    }
+    const pattern = this.imagePattern(imageFill.assetId, img);
+    if (!pattern) { this.fillBoundary(paths, fallbackColor, HATCH_COLLAPSE_ALPHA); return; }
+    const origin = resolveImageFillOrigin(paths, imageFill);
+    if (!origin) return;
+    const matrix = computeImageTileMatrix(
+      img, imageFill, this.worldToScreen(origin), this.transform.scale,
+    );
+    fillHatchPattern(this.ctx, paths, pattern, matrix, (p) => this.worldToScreen(p));
+  }
+
+  /** True όταν το tile προβάλλεται sub-threshold px στο τρέχον zoom (→ LOD tint). */
+  private isImageTileTooSmall(f: HatchImageFill): boolean {
+    const minTilePx = Math.min(f.tileWidth, f.tileHeight || f.tileWidth) * this.transform.scale;
+    return minTilePx > 0 && minTilePx < HATCH_IMAGE_MIN_TILE_PX;
+  }
+
+  /** `CanvasPattern` (repeat) ανά assetId — size/angle/scale μπαίνουν στο DOMMatrix (cached). */
+  private imagePattern(assetId: string, img: CanvasImageSource): CanvasPattern | null {
+    const hit = this.imagePatternCache.get(assetId);
+    if (hit !== undefined) return hit;
+    const pat = this.ctx.createPattern(img, 'repeat');
+    this.imagePatternCache.set(assetId, pat);
+    return pat;
+  }
+
+  /** Μέσο χρώμα εικόνας ανά assetId (delegate στο pure SSoT· cached). */
+  private cachedAverageColor(assetId: string, img: CanvasImageSource): string | null {
+    const hit = this.averageColorCache.get(assetId);
+    if (hit !== undefined) return hit;
+    const c = averageImageColor(img);
+    this.averageColorCache.set(assetId, c);
+    return c;
   }
 
   /** Σχεδιάζει τα τμήματα μοτίβου (κοινό για user-defined + predefined). */

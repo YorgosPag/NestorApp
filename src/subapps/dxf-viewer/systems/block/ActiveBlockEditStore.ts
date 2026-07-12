@@ -17,18 +17,23 @@
 
 // SSoT pub/sub cell (N.12 / ADR-294 module `create-external-store`) — no hand-rolled listener Set.
 import { createExternalStore } from '../../stores/createExternalStore';
+import type { BlockEditViewTransform } from './block-edit-view-transform';
 
 /**
  * The id of the currently-entered BlockEntity (its own container id), or null at the top level;
  * `name` is cached alongside so the breadcrumb/status leaf renders «Επεξεργασία μπλοκ «name»»
- * without re-resolving the block from the scene on every subscriber tick.
+ * without re-resolving the block from the scene on every subscriber tick. `viewTransform` is the
+ * enter-time-fixed real-size/recenter transform (ADR-641 — see {@link BlockEditViewTransform}) that
+ * BOTH the render build ({@link buildBlockEditScene}) and the member write-back read, so the editor
+ * shows the block at its world size and edits map back to the canonical definition space.
  */
 interface ActiveBlockEditState {
   readonly id: string | null;
   readonly name: string | null;
+  readonly viewTransform: BlockEditViewTransform | null;
 }
 
-const store = createExternalStore<ActiveBlockEditState>({ id: null, name: null });
+const store = createExternalStore<ActiveBlockEditState>({ id: null, name: null, viewTransform: null });
 
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
@@ -36,16 +41,20 @@ const store = createExternalStore<ActiveBlockEditState>({ id: null, name: null }
  * Enter the Block Editor for BlockEntity `blockId` (name `blockName` for the breadcrumb). No-op when
  * that block is already the active one, so a repeat double-click doesn't churn subscribers.
  */
-export function enterBlockEdit(blockId: string, blockName: string): void {
+export function enterBlockEdit(
+  blockId: string,
+  blockName: string,
+  viewTransform: BlockEditViewTransform | null = null,
+): void {
   if (!blockId) return;
   if (store.get().id === blockId) return;
-  store.set({ id: blockId, name: blockName });
+  store.set({ id: blockId, name: blockName, viewTransform });
 }
 
 /** Exit the Block Editor — back to the top scene level. No-op when not inside any block editor. */
 export function exitBlockEdit(): void {
   if (store.get().id === null) return;
-  store.set({ id: null, name: null });
+  store.set({ id: null, name: null, viewTransform: null });
 }
 
 // ─── Getters (snapshot-compatible for useSyncExternalStore) ──────────────────
@@ -58,6 +67,15 @@ export function getActiveBlockEditId(): string | null {
 /** The currently-entered block's name (for the breadcrumb), or `null` at the top level. */
 export function getActiveBlockEditName(): string | null {
   return store.get().name;
+}
+
+/**
+ * The enter-time-fixed VIEW transform for the active Block Editor (real-size + recenter), or `null` at
+ * the top level. Read event-time by the render build + the member write-back (ADR-641), never a stale
+ * React snapshot (ADR-040 dual-access).
+ */
+export function getBlockEditViewTransform(): BlockEditViewTransform | null {
+  return store.get().viewTransform;
 }
 
 /** True while a Block Editor session is open (exclusive canvas active). */

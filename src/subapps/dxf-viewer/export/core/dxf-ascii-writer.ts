@@ -27,7 +27,7 @@ import type { Point2D } from '../../rendering/types/Types';
 // ADR-636 Στάδιο 2 Φ2.1 — full `TABLES → LAYER` section. The single TABLES section (LTYPE +
 // LAYER, reusing the `writeLayerTable` SSoT, then DIMSTYLE) is emitted by the split-out
 // `emitTablesSection` (file-size SRP, mirror of the HATCH split).
-import { emitTablesSection } from './dxf-ascii-tables-writer';
+import { emitTablesSection, type VportView } from './dxf-ascii-tables-writer';
 import type { LinetypeDef } from '../../config/linetype-iso-catalog';
 // rotated-rectangle entity-level SSoT (corner1/corner2 ή x/y/w/h + rotation, pivot=corner1). Re-export
 // ώστε ο TEK exporter (`dxf-to-tek.ts`) να κρατά το ίδιο import path (μηδέν διπλότυπο formula).
@@ -42,9 +42,6 @@ import { emitDimensionEntity } from '../../utils/dxf-dimension-writer';
 // (file-size SRP, N.7.1). Builds one `*Dn` block per dimension from the on-screen
 // geometry SSoT so dimensions display reliably even in non-regenerating readers.
 import { buildDimensionLookup, writeDimensionBlock } from './dxf-ascii-dimension-block-writer';
-import { hexToAci } from '../../ui/text-toolbar/controls/aci-palette';
-// 🏢 Color-Conversion SSoT (ADR-573): int(0xRRGGBB)→hex via canonical `dxf-true-color`.
-import { trueColorToHex } from '../../utils/dxf-true-color';
 // ADR-507 Φ1a/Φ5 — HATCH emission split out (N.7.1 file-size SSoT). `Pair`/`EmitLine`
 // types live with the HATCH writer; `emitLine` (below) stays the ONE definition and
 // is injected into `emitHatch` for the exploded (Τέκτονας) path.
@@ -55,7 +52,9 @@ import { emitHatch, type Pair } from './dxf-ascii-hatch-writer';
 import {
   emitText, emitMText, alignFromTextEntity, textStyleName, readTextEntityFamily,
 } from './dxf-ascii-text-writer';
-import type { DxfStyleTableEntry } from '../../text-engine/types/text-ast.types';
+// ADR-505 §A / ADR-636 — colour→ACI + STYLE-table collection helpers live in a sibling module
+// (file-size SRP split, N.7.1). Same derivations, extracted verbatim to keep the writer ≤500 lines.
+import { resolveAci, collectTextStyles } from './dxf-ascii-writer-helpers';
 // ADR-505 §A — low-level DXF primitive emitters + geometry/format helpers live in a sibling
 // module (file-size SRP split, N.7.1). `emitLine` stays the ONE definition injected into `emitHatch`.
 import {
@@ -153,7 +152,22 @@ export interface DxfWriteOptions {
 }
 
 const DEFAULT_LAYER = '0';
-const DEFAULT_ACI = 7; // white/black (ByLayer-ish fallback)
+
+/**
+ * ADR-636 (2026-07-12) — derive the `*Active` VPORT view (+ $VIEWCTR/$VIEWSIZE) from the drawing
+ * extents so AutoCAD opens FRAMED on the model (fixes «μαύρη οθόνη στο άνοιγμα»: no VPORT → default
+ * off-screen 0,0 view). A SQUARE view of side 1.1×max(w,h) centered on the bbox contains the whole
+ * drawing regardless of the screen aspect (AutoCAD letterboxes) — never black, never clipped.
+ * Degenerate/absent extents → `undefined` (writer skips the VPORT, bare envelope unchanged).
+ */
+function computeVportView(min?: Point2D, max?: Point2D): VportView | undefined {
+  if (!min || !max) return undefined;
+  const w = Math.abs(max.x - min.x);
+  const h = Math.abs(max.y - min.y);
+  const side = Math.max(w, h);
+  const height = side > 0 ? side * 1.1 : 1;
+  return { center: { x: (min.x + max.x) / 2, y: (min.y + max.y) / 2 }, height, aspect: 1 };
+}
 
 // ADR-636 Φ2.4 (D.6) — single-header entities whose STYLE codes (6/48/370) are appended
 // AFTER the emitter (valid: the pairs bind to the entity until the next `0`). POLYLINE /
@@ -192,6 +206,9 @@ export function writeDxfAscii(
   // Unicode-capable release → AutoCAD reads the UTF-8 text as UTF-8 (no ANSI garbling);
   // `$INSUNITS` declares the units so a re-import stops guessing; `$DWGCODEPAGE` is the
   // conventional companion.
+  // ADR-636 (2026-07-12) — the `*Active` view derived from the extents; reused by the HEADER
+  // ($VIEWCTR/$VIEWSIZE) AND the VPORT table so AutoCAD opens framed on the model.
+  const vportView = computeVportView(options.extMin, options.extMax);
   if (
     options.acadVer || options.insunits != null || options.codepage ||
     options.extMin || options.extMax || options.measurement != null ||
@@ -207,6 +224,12 @@ export function writeDxfAscii(
     // on open; $MEASUREMENT/$LTSCALE/$LUNITS are the AutoCAD-standard metric/decimal defaults.
     if (options.extMin) { pair(9, '$EXTMIN'); pair(10, options.extMin.x); pair(20, options.extMin.y); pair(30, 0); }
     if (options.extMax) { pair(9, '$EXTMAX'); pair(10, options.extMax.x); pair(20, options.extMax.y); pair(30, 0); }
+    // ADR-636 (2026-07-12) — current-view sysvars (mirror the VPORT *Active) so readers that honor
+    // the HEADER view open framed on the model too. Center in DCS, size = view height.
+    if (vportView) {
+      pair(9, '$VIEWCTR'); pair(10, vportView.center.x); pair(20, vportView.center.y);
+      pair(9, '$VIEWSIZE'); pair(40, vportView.height);
+    }
     if (options.ltscale != null) { pair(9, '$LTSCALE'); pair(40, options.ltscale); }
     if (options.lunits != null) { pair(9, '$LUNITS'); pair(70, options.lunits); }
     if (options.measurement != null) { pair(9, '$MEASUREMENT'); pair(70, options.measurement); }
@@ -235,6 +258,7 @@ export function writeDxfAscii(
   // (AutoCAD path only; Tekton `explode` keeps the historic STANDARD-only, table-less output).
   const textStyles = explode ? [] : collectTextStyles(entities);
   emitTablesSection(out, pair, {
+    viewport: vportView,
     tableLayers: options.tableLayers,
     customLinetypes: options.customLinetypes,
     textStyles,
@@ -309,26 +333,6 @@ export function writeDxfAscii(
   emitObjectsSection(pair, mlineStyles);
   pair(0, 'EOF');
   return out.join('\n') + '\n';
-}
-
-// ─── Colour resolution (entity → ACI, code 62) ────────────────────────────────
-
-/**
- * Resolve an entity's display colour to an ACI index, mirroring the renderer's
- * cascade (colorTrueColor > colorAci > concrete hex > ByLayer → layer colour).
- */
-function resolveAci(e: Entity, layer: DxfWriteLayer | undefined): number {
-  if (e.colorMode !== 'ByLayer') {
-    if (e.colorTrueColor != null) return hexToAci(trueColorToHex(e.colorTrueColor));
-    if (e.colorAci != null && e.colorAci > 0) return e.colorAci;
-    if (e.color) return hexToAci(e.color);
-  }
-  if (layer) {
-    if (layer.colorTrueColor != null) return hexToAci(trueColorToHex(layer.colorTrueColor));
-    if (layer.colorAci != null && layer.colorAci > 0) return layer.colorAci;
-    if (layer.color) return hexToAci(layer.color);
-  }
-  return DEFAULT_ACI;
 }
 
 // ─── Per-entity emitters ──────────────────────────────────────────────────────
@@ -464,30 +468,6 @@ function writeEntity(
   // stays byte-identical, its minimal parser ignores these codes anyway). POLYLINE-based
   // entities already carried their STYLE in the emitPath header above.
   if (!explode && STYLE_APPEND_TYPES.has(e.type)) emitEntityStyle(pair, e);
-}
-
-// ─── Text styles (ADR-636 Φ2.4 D.5) ──────────────────────────────────────────
-
-/**
- * Collect the distinct STYLE table entries the TEXT/MTEXT entities reference — the inverse of
- * the import's `buildStyleFontMap`. Style name = font family (the ONE derivation `textStyleName`
- * shares with the per-entity group-7 code, so table and entities agree); `fontFile` = the family
- * verbatim (import strips the extension on the way in, so no synthetic `.shx` is fabricated). The
- * always-present `STANDARD` needs no entry (AutoCAD implicit) so font-less text adds nothing.
- */
-function collectTextStyles(entities: readonly Entity[]): DxfStyleTableEntry[] {
-  const byName = new Map<string, DxfStyleTableEntry>();
-  for (const e of entities) {
-    if (e.type !== 'text' && e.type !== 'mtext') continue;
-    const family = readTextEntityFamily(e);
-    const name = textStyleName(family);
-    if (name === 'STANDARD' || byName.has(name)) continue;
-    byName.set(name, {
-      name, fontFile: family, bigFontFile: '',
-      height: 0, widthFactor: 1, obliqueAngle: 0, flags: 0, textGenerationFlags: 0,
-    });
-  }
-  return [...byName.values()];
 }
 
 // ADR-505 §A — primitive emitters (emitLine/emitCircle/emitArc/emitPoint/emit3DFace/emitPath),

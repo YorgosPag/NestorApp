@@ -111,6 +111,8 @@ import {
   paintWallJoinCornerArc,
 } from './grip-ghost-preview-overlay-helpers';
 import { gripKindOf } from '../grip-kinds';
+// ADR-641 — BEDIT-aware O(1) cached entity getter (member in VIEW space while inside a Block Editor).
+import { useBeditAwareEntityGetter } from './use-bedit-aware-entity-getter';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -130,15 +132,10 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
 
   const isActive = dragPreview !== null;
 
-  const getEntity = useCallback(
-    (entityId: string): AnySceneEntity | null => {
-      if (!levelManager.currentLevelId) return null;
-      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-      if (!scene?.entities) return null;
-      return scene.entities.find(e => e.id === entityId) ?? null;
-    },
-    [levelManager],
-  );
+  // ADR-641 — BEDIT-aware O(1) getter: inside a Block Editor the dragged id is a MEMBER, resolved in
+  // the editor's VIEW frame (real-size/recentred) so the move/rotate ghost renders where the canvas
+  // shows it; at the top level it is the cached lookup. Shared SSoT with the other transform previews.
+  const getEntity = useBeditAwareEntityGetter(levelManager);
 
   // ADR-550 — lazy real-entity renderer + level layer-table getter (shared SSoT hooks).
   const getBimPreview = useBimPreviewRenderer();

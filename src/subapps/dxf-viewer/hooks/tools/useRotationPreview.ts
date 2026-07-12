@@ -19,7 +19,10 @@
 import { useCallback } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { AnySceneEntity, Entity } from '../../types/entities';
+import type { Entity } from '../../types/entities';
+// ADR-641 — BEDIT-aware O(1) cached entity getter (member in VIEW space while inside a Block Editor).
+import { useBeditAwareEntityGetter } from './use-bedit-aware-entity-getter';
+import { drawRubberBandLine } from '../../canvas-v2/preview-canvas/rubber-band-paint';
 // ADR-188 SSoT — the SAME per-entity rotate the commit (`RotateEntityCommand.computeUpdates`)
 // applies: BIM-aware pivot rotate first, generic `rotateEntity` fallback. Preview ≡ commit.
 import { rotateEntity } from '../../utils/rotation-math';
@@ -81,13 +84,8 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
     transform, getCanvas, getViewportElement,
   } = props;
 
-  /** Read an entity from the current level scene (read-only) */
-  const getEntity = useCallback((entityId: string): AnySceneEntity | null => {
-    if (!levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene?.entities) return null;
-    return scene.entities.find(e => e.id === entityId) ?? null;
-  }, [levelManager]);
+  // ADR-641 — BEDIT-aware O(1) getter (member in VIEW space inside a Block Editor, else top-level).
+  const getEntity = useBeditAwareEntityGetter(levelManager);
 
   // ADR-550 — lazy real-entity renderer + level layer-table getter (shared SSoT hooks).
   const getBimPreview = useBimPreviewRenderer();
@@ -107,17 +105,8 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
     // === Rubber band line: pivot → cursor — visible in BOTH phases ===
     if (effectiveCursor) {
       const cursorScreen = CoordinateTransforms.worldToScreen(effectiveCursor, t, viewport);
-
-      ctx.save();
-      ctx.strokeStyle = '#FFD700';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([6, 4]);
-      ctx.beginPath();
-      ctx.moveTo(pivotScreen.x, pivotScreen.y);
-      ctx.lineTo(cursorScreen.x, cursorScreen.y);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
+      // Shared SSoT paint (CHECK 3.28 de-dup with the Move preview).
+      drawRubberBandLine(ctx, pivotScreen, cursorScreen);
     }
 
     // === Reference phase: only base marker + rubber band (drawn above) ===

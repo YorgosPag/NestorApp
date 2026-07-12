@@ -35,6 +35,9 @@
 
 import type { DxfEntityUnion, DxfPolyline } from '../dxf-canvas/dxf-types';
 import type { ResolvedRenderStyle } from '../dxf-canvas/dxf-renderer-style-resolve';
+// ADR-642 Φ2-B — a complex linetype (embedded text/symbols) is stroked per-entity via the
+// Canvas2D complex stroker, never by the flat GPU `LineSegments2` layer.
+import { isSimpleExpressible } from '../../config/complex-linetype-adapters';
 
 /**
  * Frame/build-time context the predicate needs to mirror the `DxfRenderer` loop.
@@ -112,6 +115,12 @@ export function isWebglOwnedLine(
   // whose dash only surfaces after style resolution. A non-empty dash pattern →
   // stays Canvas2D (LineMaterial world-unit dashes cannot match screen-px dashes).
   if (resolvedStyle.dashMm.length > 0) return false;
+
+  // ADR-642 Φ2-B — a genuine complex linetype (embedded `──GAS──` text) is drawn by the
+  // Canvas2D complex stroker along the geometry. Its geometry-only fallback dash is usually
+  // non-empty (caught above), but guard explicitly (belt-and-suspenders): the flat GPU layer
+  // has no text/symbol capability, so it must never own such a line.
+  if (resolvedStyle.complex && !isSimpleExpressible(resolvedStyle.complex)) return false;
 
   return true;
 }

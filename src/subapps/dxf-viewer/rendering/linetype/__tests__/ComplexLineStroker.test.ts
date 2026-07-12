@@ -18,9 +18,14 @@ function createMockCtx() {
     beginPath: rec('beginPath'), moveTo: rec('moveTo'), lineTo: rec('lineTo'),
     closePath: rec('closePath'), stroke: rec('stroke'), fill: rec('fill'),
     setLineDash: rec('setLineDash'),
+    // Φ2 embedded-text path (drawTextElement → CSS fillText fallback in node).
+    translate: rec('translate'), rotate: rec('rotate'), fillText: rec('fillText'),
+    measureText: (t: string) => { calls.push({ fn: 'measureText', args: [t] }); return { width: t.length * 5 }; },
     get lineWidth() { return lineWidth; },
     set lineWidth(v: number) { lineWidth = v; },
     set lineCap(_v: string) {}, set lineJoin(_v: string) {}, set miterLimit(_v: number) {},
+    set font(_v: string) {}, set fillStyle(_v: string | CanvasGradient | CanvasPattern) {},
+    get strokeStyle(): string { return '#000'; }, set strokeStyle(_v: string) {},
   };
   return { calls, ctx: ctx as unknown as CanvasRenderingContext2D };
 }
@@ -135,5 +140,37 @@ describe('complex-path (arc-length walk)', () => {
     const { ctx, calls } = createMockCtx();
     strokeStyledPolyline(ctx, [{ x: 0, y: 0 }], dashedSimple, OPTS);
     expect(strokes(calls)).toBe(0);
+  });
+});
+
+describe('embedded text (#2, Φ2)', () => {
+  // ──GAS──: dash 5 / gap 2 / text GAS / gap 5 → cycle 12mm. Over 48px (mmToPx 4) → repeats.
+  const gasLine: ComplexLinetypeDef = {
+    name: 'GAS', description: '', origin: 'user-created',
+    layers: [{ elements: [
+      { kind: 'dash', lengthMm: 5 },
+      { kind: 'gap', lengthMm: 2 },
+      { kind: 'text', value: 'GAS', styleId: 'arial', scale: 1, rotationDeg: 0, offsetXMm: 0, offsetYMm: 0, followPath: true },
+      { kind: 'gap', lengthMm: 5 },
+    ] }],
+  };
+  const LONG: Point[] = [{ x: 0, y: 0 }, { x: 48, y: 0 }];
+
+  it('takes the complex path (text → not simple-expressible) and paints the value', () => {
+    const { ctx, calls } = createMockCtx();
+    strokeStyledPolyline(ctx, LONG, gasLine, { worldToScreenScale: 4, ltscale: 1 });
+    const texts = calls.filter((c) => c.fn === 'fillText').map((c) => c.args[0]);
+    expect(texts.length).toBeGreaterThanOrEqual(1);
+    expect(texts.every((t) => t === 'GAS')).toBe(true);
+    // NOT the fast path — no native dashed stroke of the whole line.
+    expect(dashArgs(calls).some((d) => d.length > 0)).toBe(false);
+  });
+
+  it('repeats the text once per cycle across the line length', () => {
+    const { ctx, calls } = createMockCtx();
+    strokeStyledPolyline(ctx, LONG, gasLine, { worldToScreenScale: 4, ltscale: 1 });
+    // 48px / (12mm × 4px/mm = 48px) → ~1 full cycle; at least one GAS placed.
+    const texts = calls.filter((c) => c.fn === 'fillText');
+    expect(texts.length).toBeGreaterThanOrEqual(1);
   });
 });

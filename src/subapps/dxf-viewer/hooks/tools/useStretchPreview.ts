@@ -13,9 +13,9 @@
  * @see hooks/tools/use-transform-ghost-preview — shared transform draw-skeleton (ADR-625)
  */
 
-import { useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
-import type { Entity, AnySceneEntity } from '../../types/entities';
+import type { Entity } from '../../types/entities';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { StretchToolStore, type StretchToolState } from '../../systems/stretch/StretchToolStore';
 import {
@@ -39,23 +39,9 @@ export interface UseStretchPreviewProps {
 export function useStretchPreview(props: UseStretchPreviewProps): void {
   const { levelManager, transform, getCanvas, getViewportElement } = props;
 
-  // O(1) entity lookup memoised on scene array identity (rebuilt only when scene swaps).
-  const entityMapRef = useRef<Map<string, AnySceneEntity>>(new Map());
-  const entityArrayRef = useRef<readonly AnySceneEntity[] | null>(null);
-
-  const getEntity = useCallback((id: string): AnySceneEntity | null => {
-    if (!levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    if (!scene?.entities) return null;
-    if (scene.entities !== entityArrayRef.current) {
-      entityArrayRef.current = scene.entities;
-      entityMapRef.current = new Map(scene.entities.map(e => [e.id, e]));
-    }
-    return entityMapRef.current.get(id) ?? null;
-  }, [levelManager]);
-
+  // ADR-641 — `getEntity` (BEDIT-aware, VIEW-space members) is supplied by the harness frame.
   const renderCopies = useCallback(
-    ({ state: s, cursor, basePoint, transform: t, viewport, bimPreview, layers }: TransformGhostFrame<StretchToolState>) => {
+    ({ state: s, cursor, basePoint, transform: t, viewport, bimPreview, layers, getEntity }: TransformGhostFrame<StretchToolState>) => {
       const delta: Point2D = { x: cursor.x - basePoint.x, y: cursor.y - basePoint.y };
       if (Math.abs(delta.x) < 0.001 && Math.abs(delta.y) < 0.001) return;
 
@@ -78,7 +64,7 @@ export function useStretchPreview(props: UseStretchPreviewProps): void {
         if (moved) drawRealEntityPreview(bimPreview, moved, layers, t, viewport);
       }
     },
-    [getEntity],
+    [],
   );
 
   useTransformGhostPreview<StretchToolState>({

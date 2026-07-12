@@ -27,7 +27,10 @@ import { getShowLineweight } from '../../stores/LineweightDisplayStore';
 // shared with the dim stroke resolver + linetype thumbnail. Was `resolveAnyDashMm`
 // (catalog-only) → the no-layer fallback silently rendered user-created custom
 // linetypes as solid; this closes that gap without changing catalog behaviour.
-import { resolveLinetypePatternMm } from '../../rendering/linetype-dash-resolver';
+import { resolveLinetypeDef } from '../../rendering/linetype-dash-resolver';
+// ADR-642 Φ2-B — complex linetype (embedded text) def carried alongside the mm dash so the
+// per-entity render seam can route through `strokeStyledPolyline` (full-canvas ──GAS──).
+import type { ComplexLinetypeDef } from '../../config/complex-linetype-types';
 import { getPrintColorPolicy, applyPlotColor } from '../../config/print-color-policy';
 import { adaptEntityColorForCanvas } from '../../config/adaptive-entity-color';
 import { getIsolateEffectsSnapshot } from '../../systems/isolate/IsolateEffectsStore';
@@ -40,6 +43,13 @@ export interface ResolvedRenderStyle {
   lineWidthPx: number;
   alpha: number;
   dashMm: ReadonlyArray<number>;
+  /**
+   * ADR-642 Φ2-B — the resolved complex-linetype def (embedded text/symbols) when the
+   * entity's linetype has one, else absent. Present ⇒ the entity is excluded from the
+   * solid LINE batch + GPU line layer and stroked per-entity via `strokeStyledPolyline`
+   * (the `──GAS──` text is drawn along the real geometry). Absent ⇒ unchanged fast path.
+   */
+  complex?: ComplexLinetypeDef;
 }
 
 /**
@@ -91,6 +101,9 @@ export function resolveEntityRenderStyle(
   const ownLineweightPx = isConcreteLineweight(entity.lineweightMm)
     ? lineweightToPx(entity.lineweightMm, dpiForMm)
     : 0;
+  // ADR-642 Φ2-B / ADR-362 — resolve the entity's OWN linetype def once (catalog∪registry
+  // SSoT) so BOTH the mm dash geometry AND the complex embedded-text def come from one lookup.
+  const ownLinetype = resolveLinetypeDef(entity.linetypeName);
   const fallback: ResolvedRenderStyle = {
     colorHex: printPolicy
       ? applyPlotColor(entity.color ?? null, entity.colorAci ?? null, printPolicy)
@@ -100,7 +113,11 @@ export function resolveEntityRenderStyle(
     // OWN linetype must still render dashed. `resolveLinetypePatternMm` = the ONE
     // catalog∪registry SSoT (also resolves user-created customs) — ByLayer/ByBlock/
     // Continuous/unknown ⇒ [] (solid).
-    dashMm: resolveLinetypePatternMm(entity.linetypeName),
+    dashMm: ownLinetype?.pattern ?? [],
+    // ADR-642 Φ2-B — carry the OWN complex def (embedded text) through the no-layer
+    // fallback too, so a freshly-drawn/imported line with a `──GAS──` linetype whose
+    // layer isn't in `layersById` still routes to the complex stroker (mirror dashMm).
+    ...(ownLinetype?.complex ? { complex: ownLinetype.complex } : {}),
     // ADR-510 — even without a layer/cascade context, the entity's OWN object
     // transparency (AutoCAD per-object, ribbon «Διαφάνεια») must still apply — same
     // rule as the OWN lineweight/linetype above. Was hardcoded `1` → the ribbon
@@ -138,6 +155,9 @@ export function resolveEntityRenderStyle(
       alpha: baseAlpha,
       // ADR-510 Φ2 — resolved metric dash pattern ([] for Continuous).
       dashMm: resolved.linetype.pattern,
+      // ADR-642 Φ2-B — the cascade-resolved linetype's complex def (embedded text), when
+      // present, so the entity strokes via the complex path instead of the solid batch.
+      ...(resolved.linetype.complex ? { complex: resolved.linetype.complex } : {}),
     },
     entity,
   );

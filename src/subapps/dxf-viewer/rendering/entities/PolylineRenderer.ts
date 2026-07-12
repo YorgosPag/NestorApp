@@ -16,13 +16,14 @@ import { computePolygonAreaMetrics, paintPolygonAreaLabel } from './shared/measu
 // ADR-561 — whole-polyline MOVE cross + rotation handle SSoT, shared with the
 // interaction path (`computeDxfEntityGrips`) so render ≡ interaction.
 import { getPolylineMoveRotateGrips, polylineMoveRotateStartIndex } from '../../systems/polyline/polyline-grips';
-import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
-import { gripKindOf } from '../../hooks/grip-kinds';
+import { toMoveRotateGlyphGrips } from '../../bim/grips/move-rotate-glyph-grips';
 // 🏢 ADR-510 Φ3: bulge (arc-segment) geometry SSoT
 import { hasAnyBulge, expandPolyline, bulgeToPolyline } from './shared/geometry-bulge-utils';
 // 🏢 ADR-510 Φ3d: wide / tapered polyline (per-segment width) geometry SSoT
 import { hasAnyWidth, resolveSegmentWidth, buildSegmentWidthBand } from './shared/geometry-polyline-width';
 import { drawVerticesPath } from './shared/geometry-rendering-utils';
+// ADR-642 Φ2-B — full-canvas complex-linetype routing (embedded `──GAS──` text) SSoT seam.
+import { strokeStyledEntityPolyline, type ComplexRoutableEntity } from './shared/complex-line-routing';
 
 export class PolylineRenderer extends BaseEntityRenderer {
 
@@ -76,13 +77,18 @@ export class PolylineRenderer extends BaseEntityRenderer {
     // stroke the resulting path. Canvas dash/linetype still applies along the arc.
     if (hasAnyBulge(bulges)) {
       const worldPath = expandPolyline(vertices, bulges, closed);
-      const screenPath = worldPath.map(v => this.worldToScreen(v));
-      this.drawPath(screenPath, false); // expandPolyline already closed the loop
+      const screenPath = worldPath.map(v => this.worldToScreen(v)); // expandPolyline already closed the loop
       const isOverlayEntity = ('isOverlayPreview' in entity && entity.isOverlayPreview === true);
       if (isOverlayEntity && closed && this.ctx.fillStyle !== UI_COLORS.TRANSPARENT) {
+        this.drawPath(screenPath, false);
         this.ctx.fill();
       }
-      this.ctx.stroke();
+      // ADR-642 Φ2-B — route through the complex stroker when a `──GAS──` linetype is present
+      // (text follows the tessellated arc path); else native stroke (zero regression).
+      if (!strokeStyledEntityPolyline(this.ctx, screenPath, entity as ComplexRoutableEntity, this.transform.scale)) {
+        this.drawPath(screenPath, false);
+        this.ctx.stroke();
+      }
       return;
     }
 
@@ -105,16 +111,17 @@ export class PolylineRenderer extends BaseEntityRenderer {
       }
     } else {
       // Κανονικό polyline (solid lines)
-      this.drawPath(screenVertices, closed);
-      
       // 🔺 ΔΙΟΡΘΩΣΗ: Fill για overlay polylines μόνο - ΠΡΩΤΑ το fill, μετά το stroke
       const isOverlayEntity = ('isOverlayPreview' in entity && entity.isOverlayPreview === true);
-      
       // 🔺 ΚΡΙΤΙΚΗ ΔΙΟΡΘΩΣΗ: fill() πρώτα, stroke() μετά για σωστό layering
       if (isOverlayEntity && closed && this.ctx.fillStyle !== UI_COLORS.TRANSPARENT) {
+        this.drawPath(screenVertices, closed);
         this.ctx.fill();
-        this.ctx.stroke();
-      } else {
+      }
+      // ADR-642 Φ2-B — route through the complex stroker when a `──GAS──` linetype is present
+      // (text follows every segment incl. the closing edge); else native stroke (zero regression).
+      if (!strokeStyledEntityPolyline(this.ctx, screenVertices, entity as ComplexRoutableEntity, this.transform.scale, closed)) {
+        this.drawPath(screenVertices, closed);
         this.ctx.stroke();
       }
     }
@@ -242,17 +249,7 @@ export class PolylineRenderer extends BaseEntityRenderer {
     const moveRotate = getPolylineMoveRotateGrips(
       entity.id, vertices, closed, polylineMoveRotateStartIndex(vertices.length, closed),
     );
-    for (const g of moveRotate) {
-      grips.push({
-        id: `${g.entityId}-grip-${g.gripIndex}`,
-        entityId: g.entityId,
-        type: g.type,
-        gripIndex: g.gripIndex,
-        position: g.position,
-        isVisible: true,
-        shape: gripGlyphShape(gripKindOf(g, 'polyline')),
-      });
-    }
+    grips.push(...toMoveRotateGlyphGrips(moveRotate, 'polyline'));
 
     return grips;
   }

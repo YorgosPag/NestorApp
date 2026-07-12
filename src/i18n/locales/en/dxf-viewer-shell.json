@@ -3760,6 +3760,10 @@
         "fillTypeUserDefined": "Lines",
         "fillTypePredefined": "Predefined",
         "fillTypeGradient": "Gradient",
+        "fillTypeImage": "Image",
+        "imageTileWidth": "Tile width",
+        "imageTileHeight": "Tile height",
+        "imageAngle": "Angle",
         "gradientType": "Type",
         "gradientAngle": "Angle",
         "gradientShift": "Shift",
@@ -4846,7 +4850,21 @@
       "general": { "title": "General" },
       "pattern": { "title": "Pattern" },
       "gradient": { "title": "Gradient" },
+      "image": { "title": "Image" },
       "info": { "title": "Information" }
+    }
+  },
+  "hatchImageFill": {
+    "pickerTitle": "Material",
+    "materials": {
+      "ceramicTile": "Ceramic tile",
+      "wood": "Wood",
+      "marble": "Marble",
+      "concrete": "Exposed concrete",
+      "brick": "Brick",
+      "plaster": "Plaster",
+      "metal": "Metal",
+      "roofTiles": "Roof tiles"
     }
   },
   "beamAdvancedPanel": {

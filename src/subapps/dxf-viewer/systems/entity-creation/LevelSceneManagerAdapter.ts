@@ -34,7 +34,7 @@ import { createSceneLayer, isBlockEntity, type Entity } from '../../types/entiti
 // NOT a top-level entity. `getActiveBlockEditId()` is an event-time getter (ADR-040-safe; no React
 // snapshot), and the member-scene-access SSoT resolves + writes back the member (or descends nowhere
 // when `null` → identical top-level behaviour). Edits land on the LIVE `block.entities`.
-import { getActiveBlockEditId } from '../block/ActiveBlockEditStore';
+import { getActiveBlockEditId, getBlockEditViewTransform } from '../block/ActiveBlockEditStore';
 import {
   findEntityOrBlockMember,
   updateEntityOrBlockMember,
@@ -42,6 +42,9 @@ import {
   addBlockMember,
   removeEntityOrBlockMember,
 } from '../block/block-member-scene-access';
+// ADR-641 — the real-size/recenter VIEW transform, so `getEntities()` inside BEDIT returns members in
+// the same VIEW space as `getEntity()` (a cascade scan that reads member geometry stays consistent).
+import { viewFromDef } from '../block/block-edit-view-transform';
 // ADR-641 Φ4 — per-type vertex transforms extracted from this adapter (was at the N.7.1 500-line
 // ceiling); reused by both the top-level and block-member writeback paths.
 import {
@@ -133,11 +136,14 @@ export class LevelSceneManagerAdapter implements ISceneManager {
   private commitMemberUpdate(scene: SceneModel, entityId: string, updater: (e: Entity) => Entity): void {
     this.commitScene({
       ...scene,
+      // ADR-641 — inside BEDIT the updater runs in VIEW space; the result is inverse-transformed back
+      // to the canonical definition before it is stored (transform null → identity top-level path).
       entities: updateEntityOrBlockMember(
         scene.entities as readonly Entity[],
         entityId,
         getActiveBlockEditId(),
         updater,
+        getBlockEditViewTransform(),
       ) as unknown as AnySceneEntity[],
     });
   }
@@ -163,6 +169,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
           scene.entities as readonly Entity[],
           getActiveBlockEditId(),
           sceneEntity as unknown as Entity,
+          getBlockEditViewTransform(),
         ) as unknown as AnySceneEntity[],
       };
       this.commitScene(updatedScene);
@@ -224,6 +231,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
       scene?.entities as readonly Entity[] | undefined,
       entityId,
       getActiveBlockEditId(),
+      getBlockEditViewTransform(),
     );
     // 🏢 ENTERPRISE: Type conversion from AnySceneEntity to SceneEntity interface
     return entity ? (entity as unknown as SceneEntity) : undefined;
@@ -246,7 +254,13 @@ export class LevelSceneManagerAdapter implements ISceneManager {
         (e) => e.id === activeBlockId && isBlockEntity(e as unknown as Entity),
       );
       if (block && 'entities' in block) {
-        return (block as unknown as { entities: readonly SceneEntity[] }).entities;
+        const members = (block as unknown as { entities: readonly Entity[] }).entities;
+        // ADR-641 — present members in VIEW space (matching `getEntity`) so a cascade scan reading
+        // member geometry is consistent with the editor. Transform null → members returned verbatim.
+        const t = getBlockEditViewTransform();
+        return (t
+          ? members.map((m) => viewFromDef(m as AnySceneEntity, t))
+          : members) as unknown as readonly SceneEntity[];
       }
     }
     return scene.entities as unknown as readonly SceneEntity[];
@@ -285,6 +299,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
         scene.entities as readonly Entity[],
         patchFns,
         getActiveBlockEditId(),
+        getBlockEditViewTransform(),
       ) as unknown as AnySceneEntity[],
     });
   }
@@ -340,6 +355,7 @@ export class LevelSceneManagerAdapter implements ISceneManager {
       scene?.entities as readonly Entity[] | undefined,
       entityId,
       getActiveBlockEditId(),
+      getBlockEditViewTransform(),
     );
     return entity ? getEntityVertices(entity) : undefined;
   }

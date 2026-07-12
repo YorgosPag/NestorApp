@@ -456,6 +456,9 @@ export const TO_DXF_HANDLERS: Partial<Record<EntityType, ToDxfHandler>> = {
       // ADR-507 Φ5 — gradient γέμισμα· χωρίς αυτό ο HatchRenderer βλέπει gradient:undefined
       // και πέφτει σε solid (το gradient δεν φτάνει ποτέ στον καμβά).
       gradient: h.gradient,
+      // ADR-643 Φ1 — image fill· ίδιο μονοπάτι με gradient (αλλιώς σιωπηλό drop → η
+      // εικόνα δεν φτάνει ποτέ στον HatchRenderer).
+      imageFill: h.imageFill,
       // ADR-531 Φ5b.6 — background color (AutoCAD DXF 63· ο Τέκτων raster_bgcolor). Χωρίς
       // αυτόν τον κρίκο το committed hatch έχανε το λευκό φόντο (φαινόταν μόνο σε grip-drag
       // ghost, που διαβάζει το ζωντανό scene entity). Ίδιο μονοπάτι με fillColor/gradient.

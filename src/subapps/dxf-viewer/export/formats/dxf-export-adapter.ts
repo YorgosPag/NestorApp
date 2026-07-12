@@ -41,8 +41,14 @@ import { resolveLinetype } from '../../stores/LinetypeRegistry';
 import { isIsoBaselineLinetype, type LinetypeDef } from '../../config/linetype-iso-catalog';
 // ADR-636 Στάδιο 2 Φ2.3 — drawing extents for $EXTMIN/$EXTMAX (correct zoom-extents on open),
 // computed from the exported primitives via the canonical bounds SSoT (no local bounds math).
-import { calculateTightBounds, isValidBounds, type BoundsEntity } from '../../utils/bounds-utils';
-import { DEFAULT_BOUNDS } from '../../config/geometry-constants';
+import { isValidBounds } from '../../utils/bounds-utils';
+// ADR-636/ADR-010 — reuse the CANVAS fit-to-view bounds SSoT (`resolveEntityBounds` +
+// `computeRobustBounds`) for the export extents, instead of the legacy `calculateTightBounds`
+// (per-type gaps: blocks in world space / dimensions / rect corner-form silently contributed
+// zero → export framed only a central subset while geometry spanned 380k). Same resolver the
+// hit-test, marquee-select and viewport-culling already trust.
+import { createBoundsFromDxfScene } from '../../systems/zoom/utils/bounds';
+import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
 import { encodingService } from '../../io/encoding-service';
 import type { ResolvedExportFloor } from '../core/export-floor-scope';
@@ -227,23 +233,27 @@ export function renderDxfBlob(request: DxfExportSceneRequest, lineMode?: DxfLine
 }
 
 /**
- * ADR-636 Στάδιο 2 Φ2.3 — the drawing extents ($EXTMIN/$EXTMAX) in OUTPUT units. Computed from
- * the exported primitives via the canonical `calculateTightBounds` SSoT (no local bounds math),
- * then scaled by the same factor as every coordinate. Returns `undefined` for a degenerate/empty
- * result → the writer omits the extents (no bogus 0,0 zoom-extents box).
+ * ADR-636 Στάδιο 2 Φ2.3 — the drawing extents ($EXTMIN/$EXTMAX) in OUTPUT units. Computed via the
+ * CANVAS fit-to-view SSoT (`createBoundsFromDxfScene` → `resolveEntityBounds` + outlier-robust
+ * `computeRobustBounds`) so the file frames the SAME geometry the user sees on screen, then scaled
+ * by the same factor as every coordinate. Returns `undefined` for a degenerate/empty result (SSoT
+ * yields `null`) → the writer omits the extents (no bogus 0,0 zoom-extents box).
+ *
+ * ⚠️ ADR-636 (2026-07-12 fix) — was the legacy `calculateTightBounds`, whose per-type switch left
+ * blocks (world-space), dimensions and rect corner-form contributing ZERO points → the export
+ * framed only a central subset (repro `1ος Όροφος`: $EXTMAX (74,174) while geometry spanned
+ * x[-363k, 18k]). The canvas resolver has no such gaps (it bounds every renderable type).
  */
 export function computeScaledExtents(
   entities: readonly Entity[],
   scale: number,
 ): { min: Point2D; max: Point2D } | undefined {
   if (entities.length === 0) return undefined;
-  const b = calculateTightBounds(entities as unknown as BoundsEntity[]);
-  // `calculateTightBounds` returns the DEFAULT_BOUNDS (0,0→100,100) sentinel when no entity yields
-  // computable bounds — treat that as "no extents" (skip) rather than write a bogus 100×100 box.
-  const isSentinel =
-    b.min.x === DEFAULT_BOUNDS.min.x && b.min.y === DEFAULT_BOUNDS.min.y &&
-    b.max.x === DEFAULT_BOUNDS.max.x && b.max.y === DEFAULT_BOUNDS.max.y;
-  if (!isValidBounds(b) || isSentinel) return undefined;
+  const b = createBoundsFromDxfScene(
+    { entities, layers: [], bounds: null } as unknown as DxfScene,
+    true, // forceRecalculate — no cached scene.bounds, compute from the exported entities
+  );
+  if (!b || !isValidBounds(b)) return undefined;
   return {
     min: { x: b.min.x * scale, y: b.min.y * scale },
     max: { x: b.max.x * scale, y: b.max.y * scale },

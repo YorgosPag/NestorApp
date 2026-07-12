@@ -27,10 +27,17 @@ SWAP** to a synthetic block-local scene.
 ## 2. Decision
 
 **Exclusive scene-scope swap.** While a block is entered, the canvas renders a **synthetic
-block-local `SceneModel`** built from `block.entities` verbatim (identity placement, base at
-origin, member ids preserved). Nothing else is in that scene, so hit-test / hover / grips scope
-to the members **for free** (no id-filtering) — the mirror-image of how GROUP gets scoping from
-re-tagging.
+`SceneModel`** built from `block.entities`, member ids preserved. Nothing else is in that scene, so
+hit-test / hover / grips scope to the members **for free** (no id-filtering) — the mirror-image of how
+GROUP gets scoping from re-tagging. **The editor space is a real-size VIEW of the definition (Φ4
+follow-up #3, code=truth):** `block.entities` are authored in the block's own units at an arbitrary
+offset (a metres-authored INSERT carries `scale ≈ 1000`), so rendering them verbatim showed the block
+1000× too small and far off-origin. Instead they are mapped through a **fixed-at-enter view transform**
+`view = Scale·(member − C)` (the instance's scale + the definition bounds-centre) so the canvas shows
+the block at its **world size, framed on the origin** (Revit/ArchiCAD/Figma parity). The canonical
+`block.entities` stay in definition space; every edit is inverse-transformed (`def = C + Scale⁻¹·view`)
+back before storage — the transform boundary is the member read/write SSoT
+(`block-edit-view-transform.ts` + `block-member-scene-access.ts`).
 
 **Edits go in-place through the same command stack.** Member Move/Rotate/Scale/Delete/Add run
 through the existing `ISceneManager` seam, made **member-aware** (mirror
@@ -136,6 +143,61 @@ SSoT (no parallel scene subscription left reading the world). Full feature PARTI
   synchronous read-after-write guarantee.
 
 ## Changelog
+- **2026-07-12** — **Φ4 follow-up #4: move/rotate/scale/stretch GHOST previews are now BEDIT-aware.**
+  Symptom (Giorgio, browser): after #3, members select + highlight, but dragging a member (move / rotate)
+  showed **no live ghost preview**. **Root cause (traced):** all five transform-preview hooks resolve the
+  dragged entity by id from the **WORLD** scene (`levelManager.getLevelScene(currentLevelId).entities.find`),
+  so inside BEDIT — where the id is a MEMBER of `block.entities`, not a top-level entity — the lookup
+  returned `null` and the ghost drawer early-returned (`if (!rawEntity) return`). **Fix (SSoT):** NEW
+  `resolveEffectiveEntityById(entities, id)` (in `block-edit-scene.ts`, reuses `findEntityOrBlockMember` +
+  the enter-time transform) resolves an id to a top-level entity OR the active block's member **forward-
+  transformed into the editor's VIEW frame** — so the ghost renders where the canvas shows it, and (since
+  the commit already reads/writes members via the VIEW-aware adapters) preview ≡ commit. NEW
+  `useBeditAwareEntityGetter(levelManager)` hook wraps it with the O(1) top-level cache the Move/Stretch
+  previews rely on (BEDIT branch bypasses the cache — members can't live in it). `useGripGhostPreview` +
+  `useMovePreview` use the hook directly; the shared `useTransformGhostPreview` harness (Cluster #16 SSoT)
+  now **owns** the getter and hands it into every `renderCopies` frame (`TransformGhostFrame.getEntity`),
+  so `useScalePreview` + `useStretchPreview` drop their own getEntity entirely (further centralisation).
+  **N.18 hygiene:** extracted the gold rubber-band leader to `canvas-v2/preview-canvas/rubber-band-paint.ts`
+  (`drawRubberBandLine`, de-dup of the pre-existing Move/Rotation twin surfaced by the touch) + unified the
+  five hooks' entity resolvers onto the one getter. Block suite 103 green; jscpd:diff clean.
+- **2026-07-12** — **Φ4 follow-up #3: BEDIT shows the block at its REAL-WORLD size (view transform), not
+  the raw definition.** Symptom (Giorgio, browser + `🔬 BEDIT-DIAG` dump): entering `NEC32_BLOCK` (a
+  couch) the ruler read **~4 mm** for the whole 2 m sofa and the cursor read **~18 m** coords — the
+  block was unusable. **Root cause (confirmed with runtime data, not assumed):** the block is authored
+  in **metres** (`block.scale = {1000,1000}`, world units mm → 1 def-unit = 1000 mm = 1 m) with its
+  geometry at a geo-offset `~(18170, 3505)` def-units; `localSpan 0.8×2.1` **× 1000 = 800×2100 mm** = the
+  real couch. The old `buildBlockEditScene` rendered `block.entities` **verbatim** with `units:'mm'`
+  hardcoded → 1000× too small + ~18 km off-origin. (This is also what AutoCAD BEDIT shows for such a
+  block — the big players that make it usable are the component-based ones: Revit «Edit Family» /
+  ArchiCAD in-place / C4D / Figma «edit component», which present the DEFINITION at real size.) **Fix
+  (Giorgio: full-enterprise, big-player-grade):** the Block Editor is now a **transformed VIEW** of the
+  canonical definition. NEW pure SSoT `block-edit-view-transform.ts`: `computeBlockEditViewTransform(block)`
+  → `{sx, sy, cx, cy}` (the instance's per-axis scale + the definition bounds-centre, **fixed at enter**
+  so the view never drifts as members are edited); `viewFromDef(e) = Scale·(e − C)` (real-world magnitude,
+  recentred on the origin) and `defFromView(e) = C + Scale⁻¹·e` — **both a single reuse of
+  `applyBlockTransformGeometry`** (the INSERT placement SSoT — zero new geometry math, covers every type
+  incl. hatch). `ActiveBlockEditStore` carries the enter-time transform (`enterBlockEdit(id, name,
+  viewTransform)` + `getBlockEditViewTransform()` event-time getter, ADR-040-safe); `useCanvasSectionUI`
+  computes it on double-click enter. `buildBlockEditScene` maps members def→view + inherits the world
+  scene `units` (via `resolveBlockEditScene`, which reads the store) → the whole render/hit-test/hover/
+  grip/snap/fit chain (all funnel through `resolveBlockEditScene`) is at world size in the drawing's unit
+  system **for free**. The **transform boundary is `block-member-scene-access.ts`** (the ONE member
+  read/write SSoT both `ISceneManager` adapters call): a member is forward-transformed (def→view) on read
+  so a tool/grip sees exactly the geometry the canvas shows, and the tool's edited result is
+  inverse-transformed (view→def) before it is stored — so the canonical `block.entities` stay in
+  definition space (multi-instance sync Φ5 + DXF INSERT round-trip preserved), only the editor VIEW is
+  transformed. Both adapters (`grip-scene-manager-adapter`, `LevelSceneManagerAdapter` incl. its
+  `getEntities()` cascade view) thread `getBlockEditViewTransform()` through; the helpers keep their pure
+  `transform?`-param design (`null` → identity → top-level path + existing unit tests unchanged). New tests:
+  `block-edit-view-transform.test.ts` (8: compute + view/def round-trip incl. circle) + `block-member-view-transform.test.ts`
+  (6: read=view, write=def, add=inverse, no-op round-trip); block suite **103 green**, adapters 17 green,
+  jscpd:diff clean. **Note (§2 code=truth):** the editor space is no longer the raw definition-local frame —
+  it is the definition **scaled to world magnitude and recentred on the origin** (real-size WYSIWYG), the
+  canonical definition itself untouched. **Selection (member click):** the full select path was already
+  effective-scene-correct (hit-test → store → paint → grips all read the effective scene); the earlier
+  «members don't select» symptom is expected to clear now that the frame is at a sane scale/tolerance —
+  pending Giorgio browser re-verify.
 - **2026-07-12** — **Φ4 follow-up: drawing/dimension tools' OWN snap + entity-detection now block-edit-aware.**
   Symptom (Giorgio, browser): placing a **dimension** on a member inside BEDIT gave a **zero-length**
   dimension, and on exit it sat **far from the block** («η κλίμακα δεν είναι σωστή»). **Root cause

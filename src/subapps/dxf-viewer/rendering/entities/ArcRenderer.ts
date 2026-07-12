@@ -22,6 +22,9 @@ import { validateArcEntity } from './shared/entity-validation-utils';
 import { buildRadiusLabel, buildArcLengthLabel, renderStackedCenterMeasurementLabel } from './shared/measurement-label';
 // 🏢 ADR-058: Centralized Canvas Primitives
 import { addArcPath } from '../primitives/canvasPaths';
+// ADR-642 Φ2-B — full-canvas complex-linetype routing (embedded `──GAS──` text) SSoT seam
+// + screen-space arc tessellation (text follows the sampled curve).
+import { strokeStyledEntityPolyline, sampleArcScreen, type ComplexRoutableEntity } from './shared/complex-line-routing';
 // 🏢 ADR-090: Centralized angle formatting
 import { formatAngle } from './shared/distance-label-utils';
 // 🏢 ADR-067: Centralized Radians/Degrees Conversion
@@ -44,7 +47,7 @@ export class ArcRenderer extends BaseEntityRenderer {
       entity,
       options,
       // Geometry rendering - pass counterclockwise flag
-      () => this.renderArcGeometry(arcData.center, arcData.radius, arcData.startAngle, arcData.endAngle, arcData.counterclockwise),
+      () => this.renderArcGeometry(entity, arcData.center, arcData.radius, arcData.startAngle, arcData.endAngle, arcData.counterclockwise),
       // Measurements rendering
       () => this.renderArcMeasurements(arcData.center, arcData.radius, arcData.startAngle, arcData.endAngle),
       // Yellow dots rendering
@@ -52,7 +55,7 @@ export class ArcRenderer extends BaseEntityRenderer {
     );
   }
 
-  private renderArcGeometry(center: Point2D, radius: number, startAngle: number, endAngle: number, counterclockwise: boolean): void {
+  private renderArcGeometry(entity: EntityModel, center: Point2D, radius: number, startAngle: number, endAngle: number, counterclockwise: boolean): void {
     // 🏢 ADR-165: Debug console.log removed for production cleanup
 
     // 🏢 ADR-067: Use centralized angle conversion
@@ -75,6 +78,15 @@ export class ArcRenderer extends BaseEntityRenderer {
     const screenCounterclockwise = !counterclockwise;
 
     // 🏢 ADR-165: Debug console.log removed for production cleanup
+
+    // ADR-642 Φ2-B — complex linetype (embedded `──GAS──` text) ⇒ tessellate the arc to
+    // screen points and stroke via the complex SSoT (text follows the curve). Sampling is
+    // gated on `complex` so the common solid/dash arc keeps the native `ctx.arc` fast path.
+    const routable = entity as ComplexRoutableEntity;
+    if (routable.complex) {
+      const screenPts = sampleArcScreen(screenCenter, screenRadius, screenStartRad, screenEndRad, screenCounterclockwise);
+      if (strokeStyledEntityPolyline(this.ctx, screenPts, routable, this.transform.scale)) return;
+    }
 
     // 🏢 ADR-058: Use centralized canvas primitives
     this.ctx.beginPath();

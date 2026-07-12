@@ -18,28 +18,56 @@
  * `DxfSceneBuilder.calculateBounds` SSoT (no re-implemented bbox math, N.18).
  */
 
-import type { BlockEntity } from '../../types/entities';
+import type { BlockEntity, Entity } from '../../types/entities';
 import { isBlockEntity } from '../../types/entities';
-import type { SceneModel } from '../../types/scene';
+import type { SceneModel, AnySceneEntity } from '../../types/scene';
 import { DxfSceneBuilder } from '../../utils/dxf-scene-builder';
+// ADR-641 — the real-size/recenter VIEW transform (def→view) + its enter-time-fixed getter, so the
+// editor shows the block at world size framed on the origin (Revit/ArchiCAD/Figma parity).
+import type { BlockEditViewTransform } from './block-edit-view-transform';
+import { viewFromDef } from './block-edit-view-transform';
+import { getActiveBlockEditId, getBlockEditViewTransform } from './ActiveBlockEditStore';
+import { findEntityOrBlockMember } from './block-member-scene-access';
+
+/** Options for {@link buildBlockEditScene}: the enter-time VIEW transform + the world scene's units. */
+export interface BuildBlockEditSceneOptions {
+  /**
+   * ADR-641 — the real-size/recenter VIEW transform. When present the members are mapped def→view
+   * (`Scale·(m − C)`) so the editor shows the block at its world size framed on the origin; when
+   * `null`/absent the members render verbatim (definition space — legacy behaviour, still used by the
+   * pure unit tests that don't set a transform).
+   */
+  transform?: BlockEditViewTransform | null;
+  /** The world scene's units, inherited so the ruler/cursor/snap read the block in the drawing's unit
+   *  system (the members are now at world magnitude via `transform`). Defaults to `'mm'`. */
+  units?: SceneModel['units'];
+}
 
 /**
- * Build the exclusive block-local {@link SceneModel} for editing `block`. `layersById` is the parent
- * scene's id-keyed layer map (passed through so the members' `layerId`s resolve to real layers /
- * colours). A fresh `entities` array reference is returned each call (React memo correctness) while
- * the member objects themselves are shared with `block.entities` (live edits render on rebuild).
+ * Build the exclusive {@link SceneModel} for editing `block`. `layersById` is the parent scene's
+ * id-keyed layer map (passed through so the members' `layerId`s resolve to real layers / colours).
+ *
+ * With a VIEW `transform` (ADR-641) the members are cloned and mapped def→view (real-world size,
+ * recentred on the origin), so the canvas shows the block the way it appears placed in the drawing;
+ * edits committed through the member write-back are inverse-transformed back to the canonical
+ * `block.entities` (def space), so this build reflects them on the next rebuild. Without a transform
+ * (unit tests / degenerate) the members render verbatim. A fresh `entities` array reference is returned
+ * each call (React memo correctness).
  */
 export function buildBlockEditScene(
   block: BlockEntity,
   layersById: SceneModel['layersById'],
+  opts: BuildBlockEditSceneOptions = {},
 ): SceneModel {
-  const entities = [...block.entities];
+  const { transform, units } = opts;
+  const entities = transform
+    ? block.entities.map((m) => viewFromDef(m as AnySceneEntity, transform) as typeof m)
+    : [...block.entities];
   return {
     entities,
     layersById,
-    // Members live in block-local space (base @ origin) — identity placement, no transform applied.
-    bounds: DxfSceneBuilder.calculateBounds(entities),
-    units: 'mm',
+    bounds: DxfSceneBuilder.calculateBounds(entities as AnySceneEntity[]),
+    units: units ?? 'mm',
   };
 }
 
@@ -68,5 +96,25 @@ export function resolveBlockEditScene(
     (e): e is BlockEntity => e.id === activeBlockEditId && isBlockEntity(e),
   );
   if (!block) return scene;
-  return buildBlockEditScene(block, scene.layersById);
+  // ADR-641 — feed the enter-time VIEW transform (real-size + recenter) + the world units so the
+  // editor build is at world magnitude in the drawing's unit system. `getBlockEditViewTransform()`
+  // returns null when no transform was captured (legacy/tests) → verbatim definition-space build.
+  return buildBlockEditScene(block, scene.layersById, {
+    transform: getBlockEditViewTransform(),
+    units: scene.units,
+  });
+}
+
+/**
+ * ADR-641 — event-time resolve of an id to the entity the EDITOR operates on: a top-level entity, or
+ * — while a Block Editor session is open — the active block's member forward-transformed into the
+ * editor's VIEW frame (real-size/recentred), matching exactly what the canvas shows. The SSoT the
+ * preview/ghost hooks call so a member's move/rotate ghost renders in the right frame (outside BEDIT it
+ * is a plain top-level lookup — `getActiveBlockEditId()` is null). Reuses {@link findEntityOrBlockMember}.
+ */
+export function resolveEffectiveEntityById(
+  entities: readonly Entity[] | undefined,
+  id: string,
+): Entity | null {
+  return findEntityOrBlockMember(entities, id, getActiveBlockEditId(), getBlockEditViewTransform());
 }

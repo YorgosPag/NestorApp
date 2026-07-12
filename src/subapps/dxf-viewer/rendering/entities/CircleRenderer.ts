@@ -27,6 +27,9 @@ import { gripKindOf } from '../../hooks/grip-kinds';
 // 🏢 ADR-058: Centralized Canvas Primitives
 // 🏢 ADR-077: Centralized TAU Constant
 import { addCirclePath, TAU } from '../primitives/canvasPaths';
+// ADR-642 Φ2-B — full-canvas complex-linetype routing (embedded `──GAS──` text) SSoT seam
+// + screen-space circle tessellation (closed loop; text follows the perimeter).
+import { strokeStyledEntityPolyline, sampleCircleScreen, type ComplexRoutableEntity } from './shared/complex-line-routing';
 import { renderCircleAreaText } from './shared/circle-text-utils';
 import { renderContinuousLine, renderLineWithTextCheck } from './shared/line-rendering-utils';
 import { renderStyledTextWithOverride } from '../../hooks/useTextPreviewStyle';
@@ -69,10 +72,19 @@ export class CircleRenderer extends BaseEntityRenderer {
     const screenRadius = radius * this.transform.scale;
 
     // Draw circle perimeter
-    // 🏢 ADR-058: Use centralized canvas primitives
-    this.ctx.beginPath();
-    addCirclePath(this.ctx, screenCenter, screenRadius);
-    this.ctx.stroke();
+    // ADR-642 Φ2-B — complex linetype (embedded `──GAS──` text) ⇒ tessellate the circle to a
+    // closed screen loop and stroke via the complex SSoT (text follows the perimeter). Gated on
+    // `complex` so the common solid/dash circle keeps the native `addCirclePath` fast path.
+    const routable = entity as ComplexRoutableEntity;
+    const perimeterDrawn = routable.complex
+      ? strokeStyledEntityPolyline(this.ctx, sampleCircleScreen(screenCenter, screenRadius), routable, this.transform.scale, true)
+      : false;
+    if (!perimeterDrawn) {
+      // 🏢 ADR-058: Use centralized canvas primitives
+      this.ctx.beginPath();
+      addCirclePath(this.ctx, screenCenter, screenRadius);
+      this.ctx.stroke();
+    }
 
     // For preview phase, draw the radius/diameter line (the missing blue dashed line!)
     if (options.preview) {

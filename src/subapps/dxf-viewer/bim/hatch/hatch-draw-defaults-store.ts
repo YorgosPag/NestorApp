@@ -20,6 +20,11 @@ import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
 import { createExternalStore } from '../../stores/createExternalStore';
 import type { HatchGradientType } from './hatch-gradient';
 import { DEFAULT_GRADIENT_DEFAULTS } from './hatch-gradient-build';
+// ADR-643 Φ2/Φ3 — starter material library (curated ids) + derived πραγματικό tile size.
+import {
+  listMaterialImages,
+  getMaterialImageDefaultTileMm,
+} from '../../data/material-image-catalog';
 
 /** Οι ρυθμίσεις σχεδίασης που κουβαλάει μια νέα γραμμοσκίαση. */
 export interface HatchDrawDefaults {
@@ -60,7 +65,20 @@ export interface HatchDrawDefaults {
   readonly gradientAngle: number;
   /** Μετατόπιση gradient 0..1 (DXF 461) — 0=centered. */
   readonly gradientShift: number;
+  // ── ADR-643 Φ3 — image fill (μόνο fillType='image') ──
+  /** Asset id υλικού εικόνας (catalog `matimg-*`). */
+  readonly imageAssetId: string;
+  /** Πραγματικό πλάτος tile εικόνας (mm). */
+  readonly imageTileWidth: number;
+  /** Πραγματικό ύψος tile εικόνας (mm). */
+  readonly imageTileHeight: number;
+  /** Γωνία περιστροφής μοτίβου εικόνας (μοίρες). */
+  readonly imageAngle: number;
 }
+
+// ADR-643 Φ3 — πρώτο catalog υλικό ως default· tile size DERIVED (SSoT, μηδέν διπλότυπη διάσταση).
+const DEFAULT_IMAGE_ASSET_ID = listMaterialImages()[0]?.id ?? '';
+const DEFAULT_IMAGE_TILE = getMaterialImageDefaultTileMm(DEFAULT_IMAGE_ASSET_ID);
 
 /**
  * Εργοστασιακές προεπιλογές — «γραμμές» (user-defined) διαγώνιες 45° / 100 mm
@@ -82,6 +100,11 @@ export const DEFAULT_HATCH_DRAW_DEFAULTS: HatchDrawDefaults = {
   gapTolerance: 0,
   // Gradient defaults (ADR-507 Φ5 UI) — μπλε → λευκό, γραμμικό· SSoT στο hatch-gradient-build.
   ...DEFAULT_GRADIENT_DEFAULTS,
+  // Image defaults (ADR-643 Φ3) — πρώτο catalog υλικό, πραγματικό tile size (derived).
+  imageAssetId: DEFAULT_IMAGE_ASSET_ID,
+  imageTileWidth: DEFAULT_IMAGE_TILE.width,
+  imageTileHeight: DEFAULT_IMAGE_TILE.height,
+  imageAngle: 0,
 };
 
 // Plain single-state store (always-notify· ο caller στέλνει partial patch → πάντα νέο object).

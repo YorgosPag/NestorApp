@@ -351,12 +351,24 @@
         "kinds": {
           "dash": "Dash",
           "gap": "Gap",
-          "dot": "Dot"
+          "dot": "Dot",
+          "text": "Text"
         },
         "add": {
           "dash": "Dash",
           "gap": "Gap",
-          "dot": "Dot"
+          "dot": "Dot",
+          "text": "Text"
+        },
+        "text": {
+          "value": "Text",
+          "valuePlaceholder": "e.g. GAS",
+          "style": "Style",
+          "scale": "Scale",
+          "rotation": "Rotation",
+          "offsetX": "X offset",
+          "offsetY": "Y offset",
+          "followPath": "Follow line"
         },
         "cancel": "Cancel",
         "save": "Save",
@@ -370,7 +382,8 @@
             "empty": "Add at least one segment.",
             "needsVisible": "Needs at least one dash or dot.",
             "needsGap": "Needs at least one gap in between.",
-            "badLength": "Lengths must be greater than zero."
+            "badLength": "Lengths must be greater than zero.",
+            "textEmpty": "Enter text for the text segment."
           }
         }
       }

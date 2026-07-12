@@ -26,10 +26,28 @@
 
 import type { Entity, BlockEntity } from '../../types/entities';
 import { isBlockEntity } from '../../types/entities';
+import type { AnySceneEntity } from '../../types/scene';
+// ADR-641 — the Block Editor is a real-size/recenter VIEW of the canonical definition. Members are
+// stored in DEFINITION space (`block.entities`); the editor reads/writes them in VIEW space. This
+// module is the transform boundary: a member is forward-transformed (def→view) on the way OUT to a
+// tool, and the tool's edited result is inverse-transformed (view→def) before it is stored — so the
+// updater always sees the same view-space geometry the canvas/grips/snap show, while the definition
+// stays canonical. `transform === null/undefined` → identity (top-level path + the pure unit tests).
+import type { BlockEditViewTransform } from './block-edit-view-transform';
+import { viewFromDef, defFromView } from './block-edit-view-transform';
 
 /** True when `entity` is the active block container we may descend into. */
 function isActiveBlock(entity: Entity, activeBlockId: string | null | undefined): entity is BlockEntity {
   return !!activeBlockId && entity.id === activeBlockId && isBlockEntity(entity);
+}
+
+/** def→view for a member (identity when no transform). */
+function toView(member: Entity, transform: BlockEditViewTransform | null | undefined): Entity {
+  return transform ? (viewFromDef(member as AnySceneEntity, transform) as unknown as Entity) : member;
+}
+/** view→def for a member (identity when no transform). */
+function toDef(member: Entity, transform: BlockEditViewTransform | null | undefined): Entity {
+  return transform ? (defFromView(member as AnySceneEntity, transform) as unknown as Entity) : member;
 }
 
 /**
@@ -43,9 +61,11 @@ function mapWithActiveBlock(
   entities: readonly Entity[],
   activeBlockId: string | null | undefined,
   resolve: (entity: Entity) => Entity | undefined,
+  transform?: BlockEditViewTransform | null,
 ): Entity[] {
   let changed = false;
   const next = entities.map((entity) => {
+    // Top-level entities are edited in world space (no BEDIT transform).
     const replacement = resolve(entity);
     if (replacement !== undefined) {
       changed = true;
@@ -54,10 +74,11 @@ function mapWithActiveBlock(
     if (isActiveBlock(entity, activeBlockId)) {
       let memberChanged = false;
       const nextMembers = entity.entities.map((m) => {
-        const r = resolve(m);
+        // Present the member in VIEW space to the resolver/updater, store the result back in DEF space.
+        const r = resolve(toView(m, transform));
         if (r !== undefined) {
           memberChanged = true;
-          return r;
+          return toDef(r, transform);
         }
         return m;
       });
@@ -80,13 +101,15 @@ export function findEntityOrBlockMember(
   entities: readonly Entity[] | undefined,
   targetId: string | null | undefined,
   activeBlockId: string | null | undefined,
+  transform?: BlockEditViewTransform | null,
 ): Entity | null {
   if (!entities || entities.length === 0 || !targetId) return null;
   for (const entity of entities) {
     if (entity.id === targetId) return entity;
     if (isActiveBlock(entity, activeBlockId)) {
       const member = entity.entities.find((m) => m.id === targetId);
-      if (member) return member;
+      // Return the member in VIEW space (real-size/recentred), matching what the canvas shows.
+      if (member) return toView(member, transform);
     }
   }
   return null;
@@ -105,8 +128,14 @@ export function updateEntityOrBlockMember(
   targetId: string,
   activeBlockId: string | null | undefined,
   updater: (entity: Entity) => Entity,
+  transform?: BlockEditViewTransform | null,
 ): Entity[] {
-  return mapWithActiveBlock(entities, activeBlockId, (e) => (e.id === targetId ? updater(e) : undefined));
+  return mapWithActiveBlock(
+    entities,
+    activeBlockId,
+    (e) => (e.id === targetId ? updater(e) : undefined),
+    transform,
+  );
 }
 
 /**
@@ -119,12 +148,18 @@ export function updateEntitiesOrBlockMembers(
   entities: readonly Entity[],
   patches: ReadonlyMap<string, (entity: Entity) => Entity>,
   activeBlockId: string | null | undefined,
+  transform?: BlockEditViewTransform | null,
 ): Entity[] {
   if (patches.size === 0) return entities as Entity[];
-  return mapWithActiveBlock(entities, activeBlockId, (e) => {
-    const patch = patches.get(e.id);
-    return patch ? patch(e) : undefined;
-  });
+  return mapWithActiveBlock(
+    entities,
+    activeBlockId,
+    (e) => {
+      const patch = patches.get(e.id);
+      return patch ? patch(e) : undefined;
+    },
+    transform,
+  );
 }
 
 /**
@@ -136,13 +171,15 @@ export function addBlockMember(
   entities: readonly Entity[],
   activeBlockId: string | null | undefined,
   member: Entity,
+  transform?: BlockEditViewTransform | null,
 ): Entity[] {
   if (!activeBlockId) return [...entities, member];
   let added = false;
   const next = entities.map((entity) => {
     if (isActiveBlock(entity, activeBlockId)) {
       added = true;
-      return { ...entity, entities: [...entity.entities, member] };
+      // The tool created `member` in VIEW space → store it back in DEF space.
+      return { ...entity, entities: [...entity.entities, toDef(member, transform)] };
     }
     return entity;
   });

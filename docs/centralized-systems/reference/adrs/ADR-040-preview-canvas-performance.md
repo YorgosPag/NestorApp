@@ -72,6 +72,23 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-12 — ✅ Complex-linetype full-canvas routing — per-entity seam (ADR-642 Φ2-B μέρος 1, CHECK 6B/6D)
+**Τι:** τα entity renderers (LINE/POLYLINE/ARC/CIRCLE) ρουτάρουν το geometry stroke μέσω ΕΝΟΣ κοινού seam
+`strokeStyledEntityPolyline` (`rendering/entities/shared/complex-line-routing.ts`): όταν ο resolved τύπος έχει
+**genuine** `complex` (embedded `──GAS──` text), ζωγραφίζει μέσω του `strokeStyledPolyline` SSoT· αλλιώς
+επιστρέφει `false` και ο renderer κάνει το native `ctx.stroke()`. Το `complex` περνά μέσω
+`ResolvedRenderStyle.complex?` (`dxf-renderer-style-resolve.ts`) → `buildEntityModelFromDxf` (spread όπως το
+`dashMm`). Το solid **LINE batch** (`DxfRenderer.ts`) και η **GPU line ownership** (`is-webgl-owned-line.ts`)
+εξαιρούν το genuine complex → πέφτει στο per-entity path όπου ζωγραφίζεται με το κείμενο.
+**Συμμόρφωση ADR-040:** το seam είναι **pure** (points+def→draw), διαβάζει **μηδέν** hover/selection → cacheable
+στο normal-state bitmap· το `complex` derive-άρεται σε **paint time** (`resolveEntityRenderStyle`, όπως το
+`dashMm`) και **ΔΕΝ** είναι μέρος του bitmap-cache key. Το `complex` προέρχεται από `LinetypeRegistry`, του
+οποίου τα edits **ήδη** invalidate-άρουν το bitmap (6η subscription στο `useDxfCanvasCacheInvalidation`, §2026-07-12
+παρακάτω) → same-name pattern update ξαναζωγραφίζει σωστά. **Μηδέν** νέα `useSyncExternalStore` σε shell/
+orchestrator (CHECK 6C ασφαλές). Το `DxfRenderer.ts` batch-exclusion είναι event-time read του resolved style
+(rule 2), όχι subscription. Co-staged CHECK 6B/6D (DxfRenderer + 4 entity renderers + is-webgl-owned-line).
+Πλήρες detail: **ADR-642 changelog (Φ2-B μέρος 1) + §6.6.1**. ΟΧΙ tsc (N.17). 🔴 browser-verify + commit (Giorgio).
+
 ### 2026-07-12 — ✅ BEDIT block-aware fit/zoom-extents — `CanvasSection` prop pass-through (ADR-641 Φ4-follow-up, CHECK 6B)
 **Τι:** το `CanvasSection` περνά πλέον `currentScene` (world `SceneModel`, ήδη διαθέσιμο prop) στο `useFitToView`, ώστε ο
 ΕΝΑΣ `canvas-fit-to-view` handler να λύνει τα block-local bounds (`resolveBlockEditScene`) όσο `getActiveBlockEditId()` — τα

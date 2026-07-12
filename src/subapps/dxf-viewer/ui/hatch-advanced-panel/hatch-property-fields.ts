@@ -32,6 +32,8 @@ const FILL_TYPE_OPTIONS: readonly BimPropertyOption[] = [
   { value: 'user-defined', labelKey: 'ribbon.commands.hatchEditor.fillTypeUserDefined' },
   { value: 'predefined', labelKey: 'ribbon.commands.hatchEditor.fillTypePredefined' },
   { value: 'gradient', labelKey: 'ribbon.commands.hatchEditor.fillTypeGradient' },
+  // ADR-643 — γέμισμα με εικόνα υλικού (μοντέλο ArchiCAD «Image Fill»).
+  { value: 'image', labelKey: 'ribbon.commands.hatchEditor.fillTypeImage' },
 ];
 
 const ISLAND_STYLE_OPTIONS: readonly BimPropertyOption[] = [
@@ -59,6 +61,8 @@ const PATTERN_NAME_OPTIONS: readonly BimPropertyOption[] = listHatchPatterns().m
 
 const SCALE_INPUT: RibbonNumericInputConfig = { editable: true, min: 0.01 };
 const ANGLE_INPUT: RibbonNumericInputConfig = { editable: true, min: 0, max: 360 };
+// ADR-643 Φ3 — πραγματική διάσταση tile εικόνας (mm)· ≥1 mm.
+const TILE_INPUT: RibbonNumericInputConfig = { editable: true, min: 1 };
 const SPACING_INPUT: RibbonNumericInputConfig = { editable: true, min: 1 };
 const TRANSPARENCY_INPUT: RibbonNumericInputConfig = { editable: true, min: 0, max: 90, allowDecimal: false };
 const SHIFT_INPUT: RibbonNumericInputConfig = { editable: true, min: 0, max: 1 };
@@ -122,6 +126,19 @@ export const HATCH_PROPERTY_GROUPS: readonly EntityPropertyGroup[] = [
       H(K.stringParams.gradientColor1, lbl('gradientColor1'), 'color'),
       H(K.stringParams.gradientColor2, lbl('gradientColor2'), 'color'),
       H(K.toggles.gradientSingleColor, lbl('gradientSingleColor'), 'toggle'),
+    ],
+  },
+  {
+    // ADR-643 — Revit/ArchiCAD-style contextual: ορατό μόνο όταν fillType='image'
+    // (bridge.getPanelVisibility). Το visual swatch grid (επιλογή υλικού) το ζωγραφίζει
+    // bespoke ο `HatchPropertiesTab` πάνω από αυτά τα πεδία (reuse ADR-413 thumbnails).
+    id: 'image',
+    titleKey: 'hatchAdvancedPanel.sections.image.title',
+    visibilityKey: K.visibility.image,
+    fields: [
+      H(K.params.imageTileWidth, lbl('imageTileWidth'), 'numeric', { numericInput: TILE_INPUT }),
+      H(K.params.imageTileHeight, lbl('imageTileHeight'), 'numeric', { numericInput: TILE_INPUT }),
+      H(K.params.imageAngle, lbl('imageAngle'), 'numeric', { numericInput: ANGLE_INPUT }),
     ],
   },
   {

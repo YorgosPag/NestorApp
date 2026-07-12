@@ -49,6 +49,8 @@ import type { EntityModel, GripInfo, RenderOptions } from '../types/Types';
 import type { Point2D } from '../types/Types';
 import { pointToLineDistance } from './shared/geometry-utils';
 import { renderSplitLine } from './shared/line-utils';
+// ADR-642 Φ2-B — full-canvas complex-linetype routing (embedded `──GAS──` text) SSoT seam.
+import { strokeStyledEntityPolyline, type ComplexRoutableEntity } from './shared/complex-line-routing';
 // ADR-363 Slice F/G.4 — line grips SSoT (start/end/midpoint MOVE + rotation handle),
 // the SAME source `computeDxfEntityGrips` (interaction + 3D) consumes, so the on-canvas
 // 2D grips match exactly (mirror `TextRenderer.getGrips` → `getTextGrips`).
@@ -99,8 +101,8 @@ export class LineRenderer extends BaseEntityRenderer {
     if (this.shouldRenderSplitLine(entity, options)) {
       // Όλες οι οντότητες κατά την προεπισκόπηση με showEdgeDistances → split line
       this.renderSplitLineWithGap(screenStart, screenEnd, entity, options);
-    } else {
-      // Normal solid line
+    } else if (!strokeStyledEntityPolyline(this.ctx, [screenStart, screenEnd], entity as ComplexRoutableEntity, this.transform.scale)) {
+      // ADR-642 Φ2-B — no complex linetype ⇒ native solid/dash fast path (zero regression).
       this.ctx.beginPath();
       this.ctx.moveTo(screenStart.x, screenStart.y);
       this.ctx.lineTo(screenEnd.x, screenEnd.y);

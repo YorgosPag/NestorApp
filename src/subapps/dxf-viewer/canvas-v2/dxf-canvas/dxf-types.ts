@@ -596,6 +596,8 @@ export interface DxfHatch extends DxfEntity {
   islandStyle?: HatchEntity['islandStyle'];
   /** ADR-507 Φ5 — gradient γέμισμα· ο HatchRenderer το διαβάζει για fillType='gradient'. */
   gradient?: HatchEntity['gradient'];
+  /** ADR-643 Φ1 — image fill· ο HatchRenderer το διαβάζει για fillType='image'. */
+  imageFill?: HatchEntity['imageFill'];
   /**
    * ADR-531 Φ5b.6 — Background color (AutoCAD DXF 63· ο Τέκτων `raster_bgcolor`, π.χ. λευκό).
    * Ο HatchRenderer γεμίζει ΠΙΣΩ από τις γραμμές μοτίβου. Χωρίς αυτόν τον κρίκο ο scene→Dxf

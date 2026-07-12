@@ -14,7 +14,7 @@
 
 import { useCallback } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
-import type { AnySceneEntity, Entity } from '../../types/entities';
+import type { Entity } from '../../types/entities';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { ScaleToolStore, type ScaleToolState } from '../../systems/scale/ScaleToolStore';
 // ADR-348 SSoT — the SAME per-entity scale the commit (`ScaleEntityCommand`) applies, so the
@@ -42,14 +42,9 @@ function computeLiveScale(s: ScaleToolState, cursor: Point2D, basePoint: Point2D
 export function useScalePreview(props: UseScalePreviewProps): void {
   const { levelManager, transform, getCanvas, getViewportElement } = props;
 
-  const getEntity = useCallback((id: string): AnySceneEntity | null => {
-    if (!levelManager.currentLevelId) return null;
-    const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-    return scene?.entities.find(e => e.id === id) ?? null;
-  }, [levelManager]);
-
+  // ADR-641 — `getEntity` (BEDIT-aware, VIEW-space members) is supplied by the harness frame.
   const renderCopies = useCallback(
-    ({ state: s, cursor, basePoint, transform: t, viewport, bimPreview, layers }: TransformGhostFrame<ScaleToolState>) => {
+    ({ state: s, cursor, basePoint, transform: t, viewport, bimPreview, layers, getEntity }: TransformGhostFrame<ScaleToolState>) => {
       const live = computeLiveScale(s, cursor, basePoint);
       for (const entityId of s.selectedEntityIds) {
         const entity = getEntity(entityId);
@@ -61,7 +56,7 @@ export function useScalePreview(props: UseScalePreviewProps): void {
         drawRealEntityPreview(bimPreview, scaled, layers, t, viewport);
       }
     },
-    [getEntity],
+    [],
   );
 
   useTransformGhostPreview<ScaleToolState>({

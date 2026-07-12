@@ -21,9 +21,12 @@
  * @module hooks/tools/useMovePreview
  */
 
-import { useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
-import type { AnySceneEntity, Entity } from '../../types/entities';
+import type { Entity } from '../../types/entities';
+// ADR-641 — BEDIT-aware O(1) cached entity getter (member in VIEW space while inside a Block Editor).
+import { useBeditAwareEntityGetter } from './use-bedit-aware-entity-getter';
+import { drawRubberBandLine } from '../../canvas-v2/preview-canvas/rubber-band-paint';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import type { MovePhase } from './useMoveTool';
@@ -91,23 +94,8 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     getViewportElement,
   } = props;
 
-  // O(1) entity lookup — map rebuilt only when entities array ref changes (not every RAF frame)
-  const entityMapRef = useRef<Map<string, AnySceneEntity>>(new Map());
-  const entityArrayRef = useRef<AnySceneEntity[] | undefined>(undefined);
-
-  const getEntity = useCallback(
-    (entityId: string): AnySceneEntity | null => {
-      if (!levelManager.currentLevelId) return null;
-      const scene = levelManager.getLevelScene(levelManager.currentLevelId);
-      if (!scene?.entities) return null;
-      if (scene.entities !== entityArrayRef.current) {
-        entityArrayRef.current = scene.entities;
-        entityMapRef.current = new Map(scene.entities.map(e => [e.id, e]));
-      }
-      return entityMapRef.current.get(entityId) ?? null;
-    },
-    [levelManager],
-  );
+  // BEDIT-aware O(1) cached entity getter (shared SSoT with the Stretch preview).
+  const getEntity = useBeditAwareEntityGetter(levelManager);
 
   // ADR-550 — lazy real-entity renderer + level layer-table getter (shared SSoT hooks).
   const getBimPreview = useBimPreviewRenderer();
@@ -153,17 +141,8 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     const destination = moveTrk ? moveTrk.point : orthoDestination;
     const cursorScreen = CoordinateTransforms.worldToScreen(destination, t, viewport);
 
-    // Rubber band (dashed gold)
-    ctx.save();
-    ctx.strokeStyle = '#FFD700';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([6, 4]);
-    ctx.beginPath();
-    ctx.moveTo(pivotScreen.x, pivotScreen.y);
-    ctx.lineTo(cursorScreen.x, cursorScreen.y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.restore();
+    // Rubber band (dashed gold) — shared SSoT paint (CHECK 3.28 de-dup with the Rotation preview).
+    drawRubberBandLine(ctx, pivotScreen, cursorScreen);
 
     // AutoAlign traces (dashed paths + intersection halo + distance tooltip) on top of the
     // rubber band, via the SAME SSoT paint the dim grip + creation flows use.

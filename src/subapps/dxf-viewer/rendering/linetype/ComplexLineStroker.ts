@@ -27,6 +27,7 @@ import type {
   ComplexLinetypeDef,
   DashCap,
   StrokeLayer,
+  TextElement,
 } from '../../config/complex-linetype-types';
 import {
   drawDot,
@@ -34,6 +35,7 @@ import {
   strokeDashSubpath,
   tracePolylinePath,
 } from './complex-dash-draw';
+import { drawTextElement } from './complex-text-draw';
 import {
   buildSegments,
   cumulativeLengths,
@@ -60,13 +62,15 @@ export interface StrokePolylineOptions {
   readonly closed?: boolean;
 }
 
-/** Μία εγγραφή του κύκλου σχεδίασης — geometry element σε px. */
+/** Μία εγγραφή του κύκλου σχεδίασης — geometry/text element σε px. */
 interface CycleEntry {
-  readonly kind: 'dash' | 'gap' | 'dot';
+  readonly kind: 'dash' | 'gap' | 'dot' | 'text';
   readonly lengthPx: number;
   readonly widthPx: number;
   readonly cap?: DashCap;
   readonly widthProfile?: readonly number[];
+  /** Το embedded-text element (μόνο για `kind === 'text'`, ADR-642 Φ2). */
+  readonly text?: TextElement;
 }
 
 /** mm→px factor ανάλογα με το scale-space (× LTSCALE × CELTSCALE). */
@@ -105,7 +109,7 @@ function fastStroke(
   ctx.restore();
 }
 
-/** Geometry elements → draw cycle (px). Text/symbol προσπερνώνται (Φ2/Φ3). */
+/** Geometry + text elements → draw cycle (px). Symbol elements προσπερνώνται (Φ3). */
 function buildCycle(layer: StrokeLayer, mmToPx: number, baseWidthPx: number): CycleEntry[] {
   const cycle: CycleEntry[] = [];
   for (const el of layer.elements) {
@@ -121,6 +125,10 @@ function buildCycle(layer: StrokeLayer, mmToPx: number, baseWidthPx: number): Cy
       cycle.push({ kind: 'gap', lengthPx: Math.max(el.lengthMm * mmToPx, 0), widthPx: baseWidthPx });
     } else if (el.kind === 'dot') {
       cycle.push({ kind: 'dot', lengthPx: 0, widthPx: baseWidthPx, cap: el.cap });
+    } else if (el.kind === 'text') {
+      // Text occupies a ZERO-length slot (AutoCAD-faithful) — drawn at the cursor, the
+      // surrounding gaps make its room. X/Y offset + scale/rotation live in `drawTextElement`.
+      cycle.push({ kind: 'text', lengthPx: 0, widthPx: baseWidthPx, text: el });
     }
   }
   return cycle;
@@ -138,6 +146,7 @@ function walkPath(
   cycle: readonly CycleEntry[],
   cycleLenPx: number,
   phasePx: number,
+  mmToPx: number,
 ): void {
   const cum = cumulativeLengths(segs);
   const total = cum[cum.length - 1];
@@ -149,6 +158,13 @@ function walkPath(
     const el = cycle[i % cycle.length];
     if (el.kind === 'dot') {
       if (dist >= 0 && dist <= total) drawDot(ctx, pointAt(segs, cum, dist), el.widthPx, el.cap);
+      continue;
+    }
+    if (el.kind === 'text') {
+      // Zero-length slot (like a dot): draw at the cursor, no advance. ADR-642 Φ2 (#2).
+      if (el.text && dist >= 0 && dist <= total) {
+        drawTextElement(ctx, el.text, pointAt(segs, cum, dist), mmToPx);
+      }
       continue;
     }
     const start = dist;
@@ -182,9 +198,9 @@ function strokeLayer(
   const phasePx = (def.phaseMm ?? 0) * mmToPx;
   const segs = buildSegments(pts, closed);
   if (def.cornerPolicy === 'break') {
-    for (const s of segs) walkPath(ctx, [s], cycle, cycleLenPx, phasePx);
+    for (const s of segs) walkPath(ctx, [s], cycle, cycleLenPx, phasePx, mmToPx);
   } else {
-    walkPath(ctx, segs, cycle, cycleLenPx, phasePx);
+    walkPath(ctx, segs, cycle, cycleLenPx, phasePx, mmToPx);
   }
 }
 

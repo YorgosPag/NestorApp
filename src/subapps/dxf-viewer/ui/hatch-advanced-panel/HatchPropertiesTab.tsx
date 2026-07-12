@@ -21,6 +21,8 @@ import { useLevels } from '../../systems/levels';
 import { isHatchEntity } from '../../types/entities';
 import { useRibbonHatchBridge } from '../ribbon/hooks/useRibbonHatchBridge';
 import { EntityPropertySection } from '../entity-properties/EntityPropertyRow';
+import { MaterialImagePicker } from './MaterialImagePicker';
+import { HATCH_RIBBON_KEYS } from '../ribbon/hooks/bridge/hatch-command-keys';
 import { HATCH_PROPERTY_GROUPS, HATCH_SELECTION_ONLY_KEYS } from './hatch-property-fields';
 import type { EntityPropertyGroup } from '../entity-properties/entity-property-fields';
 import type { SceneModel } from '../../types/scene';
@@ -83,14 +85,22 @@ export function HatchPropertiesTab({
   return (
     <section aria-label={t('hatchAdvancedPanel.title')} className="flex flex-col gap-3 p-2">
       {visibleGroups.map((g) => (
-        <EntityPropertySection
-          key={g.id}
-          title={t(g.titleKey)}
-          group={g}
-          getComboboxState={bridge.getComboboxState}
-          onComboboxChange={bridge.onComboboxChange}
-          toggle={toggle}
-        />
+        <React.Fragment key={g.id}>
+          {/* ADR-643 Φ3 — visual swatch grid πάνω από τις διαστάσεις, μόνο στο image group. */}
+          {g.id === 'image' && (
+            <MaterialImagePicker
+              selectedAssetId={bridge.getComboboxState(HATCH_RIBBON_KEYS.stringParams.imageAsset)?.value ?? ''}
+              onSelect={(id) => bridge.onComboboxChange(HATCH_RIBBON_KEYS.stringParams.imageAsset, id)}
+            />
+          )}
+          <EntityPropertySection
+            title={t(g.titleKey)}
+            group={g}
+            getComboboxState={bridge.getComboboxState}
+            onComboboxChange={bridge.onComboboxChange}
+            toggle={toggle}
+          />
+        </React.Fragment>
       ))}
     </section>
   );

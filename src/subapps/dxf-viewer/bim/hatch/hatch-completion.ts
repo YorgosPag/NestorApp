@@ -20,6 +20,7 @@ import { HatchLifecycleSignalCommand } from '../../core/commands/entity-commands
 import { calculatePolygonArea } from '../../rendering/entities/shared/geometry-polyline-utils';
 import { getHatchDrawDefaults, type HatchDrawDefaults } from './hatch-draw-defaults-store';
 import { buildGradientFromDefaults } from './hatch-gradient-build';
+import { buildImageFillFromDefaults } from './hatch-image-build';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
@@ -47,6 +48,7 @@ function buildHatchEntityFromPaths(
   const isPredefined = d.fillType === 'predefined';
   const isGradient = d.fillType === 'gradient';
   const isUserDefined = d.fillType === 'user-defined';
+  const isImage = d.fillType === 'image';
   return {
     id,
     type: 'hatch',
@@ -67,6 +69,8 @@ function buildHatchEntityFromPaths(
     patternAngle: isPredefined ? d.patternAngle : undefined,
     // gradient γέμισμα (ADR-507 Φ5) — μόνο όταν fillType==='gradient', χτισμένο από τα defaults (SSoT).
     gradient: isGradient ? buildGradientFromDefaults(d) : undefined,
+    // image γέμισμα (ADR-643 Φ3) — μόνο όταν fillType==='image'· χτισμένο από τα defaults (SSoT).
+    imageFill: isImage ? buildImageFillFromDefaults(d) : undefined,
     // Gap tolerance (ADR-507 §5β.1 / Φ3) — αποθηκεύεται μόνο όταν >0 (pick-point bridge).
     gapTolerance: d.gapTolerance > 0 ? d.gapTolerance : undefined,
     // Πάχος γραμμών (AutoCAD LWT) — αποθηκεύεται μόνο όταν concrete· ByLayer/default

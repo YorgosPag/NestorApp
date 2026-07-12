@@ -1,6 +1,6 @@
 # ADR-642 — Complex Linetypes: embedded text, symbols, width, caps/joins & compound strokes
 
-- **Status:** 🟢 ACCEPTED — **Φ1 (stroke geometry) IMPLEMENTED** (2026-07-12). Φ2–Φ5 pending. Scope §9 εγκρίθηκε (Q1/Q2/Q4· Q3 symbols → Φ3).
+- **Status:** 🟢 ACCEPTED — **Φ1 (stroke geometry) IMPLEMENTED** (2026-07-12). **Φ2-A (embedded text: render + editor + live preview) IMPLEMENTED** (2026-07-12). **Φ2-B μέρος 1 — full-canvas entity routing IMPLEMENTED** (2026-07-12): κάθε entity renderer (LINE/POLYLINE/ARC/CIRCLE) ρουτάρει το `──GAS──` μέσω `strokeStyledPolyline` όταν ο τύπος έχει `complex`· **εκκρεμεί Φ2-B μέρος 2 — DXF `[TEXT,...]` import/export** (`.lin` reader δεν υπάρχει στο repo → εκτός scope). Φ3–Φ5 pending. Scope §9 εγκρίθηκε· Φ2 scope (2026-07-12): Q1 = υπάρχον text SSoT (`resolveEntityFont`), Q2 = `followPath` toggle ανά κείμενο (default true), Q3 = render+editor+preview πρώτα, DXF μετά. Φ2-B scope (2026-07-12): routing πρώτα, ΟΛΑ τα entity types μαζί (κοινό seam), STYLE handle = synthetic-per-styleId (MLINE pattern) στο μέρος 2.
 - **Date:** 2026-07-12
 - **Domain:** DXF Viewer · Linetype subsystem · Canvas render pipeline · Pattern editor UI · DXF/`.lin` I/O · Persistence
 - **Related:** ADR-358 (Linetype ISO catalog + `LinetypeRegistry` SSoT), ADR-362 (Path B: user-authored reusable line patterns — the segment editor), ADR-357 §5.5 (canonical mm units), ADR-510 Φ2E #4 (copy-on-write inline pattern edit), ADR-040 (micro-leaf render discipline / bitmap cache keys)
@@ -186,8 +186,10 @@ export interface ComplexLinetypeDef {
   `ComplexLinetypeDef` και κάνει **arc-length walk**:
   1. Υπολογίζει συνολικό μήκος & cumulative offsets (με `phaseMm`, `continuous`).
   2. Για κάθε element «καταναλώνει» μήκος: dash → sub-path με `cap`/`width`/`widthProfile`· text →
-     `ctx.fillText` με tangent-angle rotation (αν `followPath`)· symbol → `ctx.transform` + draw
-     `Path2D`· gap → skip.
+     **(Φ2 IMPLEMENTED)** zero-length slot (AutoCAD-faithful — τα γύρω gaps δίνουν χώρο) →
+     `complex-text-draw.drawTextElement` με tangent-angle rotation (αν `followPath`) + X/Y offset +
+     `scale`, μέσω του `paintTextRun`/`resolveEntityFont` SSoT (glyph-path ή CSS fallback)· symbol →
+     `ctx.transform` + draw `Path2D` (Φ3)· gap → skip.
   3. **Corner policy** στις κορυφές (Break/Bypass/alignDash) + `join`.
   4. Compound: επαναλαμβάνει ανά `StrokeLayer` με `offsetMm` (parallel offset του path).
 - **Fast path αμετάβλητο**: αν ο τύπος είναι *simple-expressible* (`complexToPattern !== null` **και**
@@ -215,13 +217,34 @@ export interface ComplexLinetypeDef {
   simple-expressible. Simple τύποι → αμετάβλητο υπάρχον μονοπάτι.
 - Interop caveat: shapes χρειάζονται `.shx` reference στο DXF — για builtin symbols εξάγουμε ισοδύναμο
   ή graceful-degrade σε simple (documented).
+- **STYLE handle (Φ2-B μέρος 2)**: ο client ASCII writer είναι handle-less· το embedded text `340`
+  reference θα παραχθεί με **deterministic synthetic handle ανά styleId**, μιμούμενο το υπάρχον
+  SSoT precedent `export/core/dxf-ascii-mline-writer.ts` (MLINESTYLE `340` → synthetic handle base).
+
+### 6.6.1 Full-canvas routing seam (Φ2-B μέρος 1 — IMPLEMENTED)
+
+- **SSoT seam**: `rendering/entities/shared/complex-line-routing.ts` — `strokeStyledEntityPolyline(ctx,
+  screenPoints, entity, scale, closed)`: επιστρέφει `true` (και ζωγραφίζει μέσω `strokeStyledPolyline`)
+  όταν το entity έχει **genuine** `complex` (`!isSimpleExpressible`)· αλλιώς `false` → ο caller κάνει το
+  native `ctx.stroke()` (μηδέν regression για solid/dash). Arc/circle → `sampleArcScreen`/`sampleCircleScreen`
+  (screen-space tessellation· το κείμενο ακολουθεί την καμπύλη).
+- **Threading**: `ResolvedRenderStyle.complex?` (`dxf-renderer-style-resolve.ts`, fallback ΚΑΙ layer path)
+  → `buildEntityModelFromDxf` (spread όπως το `dashMm`) → οι 4 entity renderers.
+- **Exclusions (correctness)**: το complex εξαιρείται από το solid **LINE batch** (`DxfRenderer.ts`) ΚΑΙ
+  από την **GPU line ownership** (`is-webgl-owned-line.ts`) — και τα δύο δεν έχουν text capability· πέφτει
+  στο per-entity path όπου ζωγραφίζεται με το κείμενο.
+- **ADR-040**: το seam είναι pure (points+def→draw), δεν διαβάζει hover/selection → cacheable στο
+  normal-state bitmap· το `complex` προέρχεται από `LinetypeRegistry` (τα edits ήδη invalidate-άρουν το
+  bitmap μέσω `useDxfCanvasCacheInvalidation`). CHECK 6B/6D: co-staged με ADR-040 changelog.
 
 ## 7. Phased roadmap
 
 | Φάση | Περιεχόμενο | Μηχανισμοί | Ρίσκο |
 |---|---|---|---|
 | **Φ1** ✅ | Μοντέλο (`ComplexLinetypeDef`) + adapters + registry superset + **stroke geometry** (caps/join/corner/width/phase/scale-space) στον stroker· fast-path guard | #5 #6 #7 #8 #10 #11 | Μεσαίο (render path) — **DONE** |
-| **Φ2** | **Embedded text** (#2) end-to-end: model → stroker → editor row → live preview → DXF I/O | #2 | Μεσαίο |
+| **Φ2-A** ✅ | **Embedded text** (#2): model bridge → stroker render → editor Text row → live preview | #2 | Μεσαίο — **DONE** |
+| **Φ2-B μέρος 1** ✅ | **Full-canvas entity routing**: LINE/POLYLINE/ARC/CIRCLE → `strokeStyledPolyline` όταν `complex` (κοινό `strokeStyledEntityPolyline` seam) | #2 | Μεσαίο — **DONE** |
+| **Φ2-B μέρος 2** | **DXF `[TEXT,...]` import/export** (LTYPE embedded text + STYLE synthetic handle· `.lin` δεν υπάρχει στο repo) | #2 | Μεσαίο |
 | **Φ3** | **Symbol Library** (§6.3, builtin seed) + **symbol elements** + **ρόλοι** side/start/end (#3, μέρος #4) | #3, #4α | Μεσαίο |
 | **Φ4** | **Corner-role symbols** (inner/outer corner) + align-dash corner policy (υπόλοιπο #4/#7) | #4β #7 | Υψηλό (corner math) |
 | **Φ5** | **Compound layers** (#9) + parallel-offset stroking + editor multi-layer UI | #9 | Υψηλό |
@@ -251,6 +274,58 @@ export interface ComplexLinetypeDef {
 
 ## 10. Changelog
 
+- **2026-07-12 (Φ2-B μέρος 1 IMPLEMENTED — full-canvas entity routing)** — Scope Φ2-B (§9-style):
+  routing πρώτα (όχι DXF), **ΟΛΑ** τα entity types μαζί μέσω ΕΝΟΣ seam, STYLE handle = synthetic-per-styleId
+  (μέρος 2). Το `──GAS──` ζωγραφίζεται πλέον στον **κύριο καμβά** σε πραγματικές γραμμές, όχι μόνο στο
+  editor preview. Υλοποιήθηκαν:
+  - `rendering/entities/shared/complex-line-routing.ts` (ΝΕΟ) — `strokeStyledEntityPolyline` (SSoT seam:
+    `complex` genuine → `strokeStyledPolyline`, αλλιώς `false` → native `ctx.stroke()`, μηδέν regression) +
+    `sampleArcScreen`/`sampleCircleScreen` (screen-space tessellation για arc/circle, text-follow στην καμπύλη).
+  - `canvas-v2/dxf-canvas/dxf-renderer-style-resolve.ts` — `ResolvedRenderStyle.complex?`· resolved και στο
+    no-layer fallback (`resolveLinetypeDef(name)?.complex`) και στο cascade path (`resolved.linetype.complex`).
+    Το OWN linetype def resolve-άρεται μία φορά (pattern + complex από ΕΝΑ lookup).
+  - `canvas-v2/dxf-canvas/dxf-renderer-entity-model.ts` — `complex` spread στο EntityModel base (mirror `dashMm`).
+  - `canvas-v2/dxf-canvas/DxfRenderer.ts` — το solid **LINE batch** εξαιρεί genuine complex (`continue`, χωρίς
+    `batchedIds`) → πέφτει στο per-entity path· `toEntityModel` inline shape → `ResolvedRenderStyle` (DRY).
+  - `canvas-v2/webgl-lines/is-webgl-owned-line.ts` — η GPU line ownership επιστρέφει `false` για genuine
+    complex (ο flat `LineSegments2` δεν έχει text/symbol capability· belt-and-suspenders πάνω από το
+    `dashMm.length>0` gate).
+  - Οι 4 entity renderers (`LineRenderer`/`PolylineRenderer`/`ArcRenderer`/`CircleRenderer`) ρουτάρουν το
+    geometry stroke μέσω του seam· arc/circle tessellate ΜΟΝΟ όταν `complex` παρών (fast path αμετάβλητος).
+  - Tests (jest, N.17): +11 (seam true/false/simple-expressible/degenerate/celtscale· arc/circle samplers·
+    entity-model complex passthrough) — 6 suites πράσινα (59 tests linetype+routing+entity-model). jscpd
+    (N.18): καθαρό (0 new clones στα 9 staged src). **Εκκρεμεί Φ2-B μέρος 2**: DXF `[TEXT,...]` reader/writer.
+  - **ADR-040 (CHECK 6B/6D)**: το seam είναι pure→cacheable, μηδέν hover/selection στο cache key, μηδέν νέα
+    `useSyncExternalStore`· co-staged ADR-040 changelog. ΟΧΙ tsc (N.17). 🔴 browser-verify + commit (Giorgio).
+- **2026-07-12 (Φ2-A IMPLEMENTED — embedded text: render + editor + live preview)** — Scope Φ2 (§9-style):
+  Q1 = **υπάρχον text SSoT** (`styleId` = font family → `resolveEntityFont`/`paintTextRun`, το ΙΔΙΟ engine
+  που ζωγραφίζει όλα τα TEXT σε 2D/3D — ADR-557/530· μηδέν δεύτερος font μηχανισμός), Q2 = `followPath`
+  **toggle ανά κείμενο** (default `true`, τοπογραφικό de-facto), Q3 = **render+editor+preview πρώτα**,
+  DXF I/O + full-canvas routing = Φ2-B. Υλοποιήθηκαν:
+  - `rendering/linetype/complex-text-draw.ts` (ΝΕΟ) — `drawTextElement`: AutoCAD-faithful placement
+    (zero-length slot· X κατά μήκος tangent, Y κατά left normal, `scale`×mmToPx, R σχετικό-με-tangent αν
+    `followPath`· upright-flip σε leftward baseline). Reuse `paintTextRun`/`resolveEntityFont` (direct
+    module imports — ΟΧΙ το `text-engine/fonts` barrel: αποφυγή Firebase/fetch deps στο hot path/tests).
+  - `rendering/linetype/ComplexLineStroker.ts` — `buildCycle`/`walkPath` πλέον ΑΠΟΔΙΔΟΥΝ text elements
+    (zero-length, σαν dot)· symbol elements ακόμη skip (Φ3). Το `mmToPx` περνά στο `walkPath`.
+  - `config/line-pattern-segments.ts` — `LinePatternSegment` → discriminated union (+`text` variant)·
+    νέα `segmentsToComplex`/`complexToSegments` bridge, `hasTextSegments`, `defaultTextSegment`,
+    `LINETYPE_TEXT_STYLE_OPTIONS`· `validateLinePattern` (text = visible mark, `pattern.textEmpty`)·
+    `segmentsToDashPattern`/`describeSegments` text-aware.
+  - `ui/panels/dimensions/LinePatternSegmentsEditor.tsx` — νέα **Text row** (value + style picker +
+    scale/rotation/offset + `followPath` Switch) + «Add text»· **WYSIWYG live preview** μέσω canvas
+    `strokeStyledPolyline` (ο ΙΔΙΟΣ render SSoT) όταν υπάρχει text (αλλιώς το υπάρχον SVG dash preview).
+    `allowText` prop (default true· ο inline `LinePropertiesTab` → `false`: geometry-only COW, το text
+    authored κεντρικά στον dialog — AutoCAD/Revit convention).
+  - `ui/panels/dimensions/LinePatternEditorDialog.tsx` — `save()` χτίζει `complex` όταν `hasTextSegments`
+    και το περνά στο `registerUserLinetype` (το `pattern` κρατά το geometry-only fallback).
+  - `stores/LinetypeRegistry.ts` — `registerUserLinetype` + persisted shape δέχονται optional `complex`
+    (localStorage round-trip για authored `──GAS──`· light hydrate guard· zero migration).
+  - i18n: keys `linePatternEditor.{kinds,add}.text` + `linePatternEditor.text.*` + `errors.pattern.textEmpty`
+    σε `el` **και** `en` (N.11, keys ΠΡΩΤΑ). Tests (jest, N.17): +25 (text-draw placement/flip/guards·
+    stroker text integration· segments bridge/validate) — 5 suites πράσινα (83 tests σύνολο linetype+config).
+    jscpd (N.18): καθαρό (0 new clones στα 6 staged src). **Εκκρεμεί Φ2-B**: DXF `[TEXT,...]` reader/writer +
+    routing των entity renderers μέσω `strokeStyledPolyline` (on-touch, §8).
 - **2026-07-12 (Φ1 IMPLEMENTED)** — Scope §9 εγκρίθηκε (Q1: κόβουμε Art-brush/Raster/`.shx`· Q2:
   scale-space default `model` + `paper` opt-in· Q4: Φ1 πρώτα). Υλοποιήθηκε το **stroke-geometry θεμέλιο**:
   - `config/complex-linetype-types.ts` — πλήρες μοντέλο `ComplexLinetypeDef` / `PatternElement` (types-only).

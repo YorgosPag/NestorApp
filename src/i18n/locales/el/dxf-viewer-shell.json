@@ -3760,6 +3760,10 @@
         "fillTypeUserDefined": "Γραμμές",
         "fillTypePredefined": "Έτοιμο μοτίβο",
         "fillTypeGradient": "Διαβάθμιση",
+        "fillTypeImage": "Εικόνα",
+        "imageTileWidth": "Πλάτος πλακιδίου",
+        "imageTileHeight": "Ύψος πλακιδίου",
+        "imageAngle": "Γωνία",
         "gradientType": "Τύπος",
         "gradientAngle": "Γωνία",
         "gradientShift": "Μετατόπιση",
@@ -4846,7 +4850,21 @@
       "general": { "title": "Γενικά" },
       "pattern": { "title": "Μοτίβο" },
       "gradient": { "title": "Διαβάθμιση" },
+      "image": { "title": "Εικόνα" },
       "info": { "title": "Πληροφορίες" }
+    }
+  },
+  "hatchImageFill": {
+    "pickerTitle": "Υλικό",
+    "materials": {
+      "ceramicTile": "Κεραμικό πλακίδιο",
+      "wood": "Ξύλο",
+      "marble": "Μάρμαρο",
+      "concrete": "Εμφανές σκυρόδεμα",
+      "brick": "Τούβλο",
+      "plaster": "Σοβάς",
+      "metal": "Μέταλλο",
+      "roofTiles": "Κεραμίδι στέγης"
     }
   },
   "beamAdvancedPanel": {

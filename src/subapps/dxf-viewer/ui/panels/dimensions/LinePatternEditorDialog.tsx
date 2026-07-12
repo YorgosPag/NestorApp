@@ -31,6 +31,8 @@ import {
   type LinePatternSegment,
   DEFAULT_SEGMENT_LENGTH_MM,
   segmentsToDashPattern,
+  segmentsToComplex,
+  hasTextSegments,
   describeSegments,
   validateLinePattern,
 } from '../../../config/line-pattern-segments';
@@ -88,7 +90,14 @@ export function LinePatternEditorDialog({
 
   const save = () => {
     if (!validation.ok) return;
-    const created = registerUserLinetype(name.trim(), pattern, describeSegments(segments));
+    const trimmed = name.trim();
+    const description = describeSegments(segments);
+    // ADR-642 Φ2 — a text-carrying pattern is stored as a full `complex` def (the
+    // `pattern` keeps the geometry-only fallback); simple patterns pass `complex` undefined.
+    const complex = hasTextSegments(segments)
+      ? segmentsToComplex(trimmed, segments, description)
+      : undefined;
+    const created = registerUserLinetype(trimmed, pattern, description, complex);
     if (created) onCreated?.(created.name);
     close();
   };

@@ -2,6 +2,9 @@ import type { DxfEntityUnion, DxfText, DxfOpening } from './dxf-types';
 import type { Entity } from '../../types/entities';
 // ADR-557 — the single TEXT_RENDER_FIELDS passthrough SSoT (anti-drift; see text-render-fields.ts).
 import { pickTextRenderFields } from '../../bim/text/text-render-fields';
+// ADR-642 Φ2-B — complex linetype (embedded text) def carried onto the EntityModel so the
+// per-entity render seam (`strokeStyledEntityPolyline`) can draw `──GAS──` along the geometry.
+import type { ComplexLinetypeDef } from '../../config/complex-linetype-types';
 
 function mapDxfLineTypeToEnterprise(
   dxfLineType: string | undefined,
@@ -21,7 +24,7 @@ function mapDxfLineTypeToEnterprise(
 export function buildEntityModelFromDxf(
   entity: DxfEntityUnion,
   isSelected: boolean,
-  resolved: { colorHex: string; lineWidthPx: number; alpha: number; dashMm?: ReadonlyArray<number> },
+  resolved: { colorHex: string; lineWidthPx: number; alpha: number; dashMm?: ReadonlyArray<number>; complex?: ComplexLinetypeDef },
 ): Entity {
   const entityWithLineType = entity as typeof entity & { lineType?: string };
   const entityWithMeasurement = entity as typeof entity & {
@@ -39,6 +42,10 @@ export function buildEntityModelFromDxf(
     // ADR-510 Φ2 — resolved metric dash pattern; BaseEntityRenderer.setupStyle
     // converts mm → px at stroke time. Absent/[] ⇒ solid (zero regression).
     ...(resolved.dashMm && resolved.dashMm.length > 0 && { dashMm: resolved.dashMm }),
+    // ADR-642 Φ2-B — complex linetype (embedded text) def. Present ⇒ the entity renderers
+    // route their geometry stroke through `strokeStyledEntityPolyline` (the `──GAS──` text is
+    // drawn along the real line) instead of a plain `ctx.stroke()`. Absent ⇒ zero regression.
+    ...(resolved.complex && { complex: resolved.complex }),
     // ADR-510 Φ2E #2 — per-object linetype scale (CELTSCALE «Βήμα»). The stroke-time
     // dash sizer (`applyEntityLinetypeDash`) reads `entity.ltscale` off THIS EntityModel;
     // without carrying it here the ribbon «Βήμα» edit was silently dropped (always 1)
@@ -221,6 +228,8 @@ export function buildEntityModelFromDxf(
         islandStyle: entity.islandStyle,
         // ADR-507 Φ5 — gradient γέμισμα (αλλιώς ο HatchRenderer πέφτει σε solid).
         gradient: entity.gradient,
+        // ADR-643 Φ1 — image fill (αλλιώς ο HatchRenderer βλέπει imageFill:undefined → solid).
+        imageFill: entity.imageFill,
         // ADR-507 Φ2 — AutoCAD LWT πάχος γραμμών hatch. Το `base` εδώ προωθεί μόνο
         // `lineweight` (resolved px)· χωρίς αυτό το passthrough ο HatchRenderer βλέπει
         // lineweightMm:undefined και πέφτει στο DEFAULT_HATCH_LINE_WIDTH_PX.

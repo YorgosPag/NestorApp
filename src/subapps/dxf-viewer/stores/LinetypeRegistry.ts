@@ -21,6 +21,7 @@ import {
   LINETYPE_ISO_CATALOG,
   type LinetypeDef,
 } from '../config/linetype-iso-catalog';
+import type { ComplexLinetypeDef } from '../config/complex-linetype-types';
 import { createExternalStore } from './createExternalStore';
 import { createPersistedValue } from './createPersistedValue';
 import { storageRemove } from '../utils/storage-utils';
@@ -62,13 +63,25 @@ let { byName: definitionsByName, order: insertionOrder } = buildIsoSeed();
 
 const LS_CUSTOM_LINETYPES = 'dxf:custom-linetypes';
 
-type PersistedUserLinetype = Pick<LinetypeDef, 'name' | 'description' | 'pattern'>;
+// ADR-642 Φ2 — a text/symbol/compound linetype is not expressible as `pattern`; the full
+// `complex` def is persisted alongside so an authored `──GAS──` survives reload (the
+// `pattern` still holds the geometry-only fallback for the simple render/DXF fast-path).
+type PersistedUserLinetype = Pick<LinetypeDef, 'name' | 'description' | 'pattern'> & {
+  readonly complex?: ComplexLinetypeDef;
+};
 
 /** Deterministic, ASCII, RNG-free id from a (unique) name — `ltp_<base36 hash>`. */
 function userLinetypeId(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (Math.imul(31, h) + name.charCodeAt(i)) | 0;
   return `ltp_${Math.abs(h).toString(36)}`;
+}
+
+/** Light structural guard for a persisted complex def (ADR-642 Φ2) — object with ≥1 layer. */
+function isPlausibleComplex(v: unknown): v is ComplexLinetypeDef {
+  if (!v || typeof v !== 'object') return false;
+  const layers = (v as { layers?: unknown }).layers;
+  return Array.isArray(layers) && layers.length > 0;
 }
 
 /** Hydrate-time validation — reproduces the old `Array.isArray` + per-entry guard exactly. */
@@ -78,13 +91,14 @@ function sanitizeHydratedCustoms(hydrated: PersistedUserLinetype[]): PersistedUs
   const out: PersistedUserLinetype[] = [];
   for (const entry of raw) {
     if (!entry || typeof entry !== 'object') continue;
-    const { name, description, pattern } = entry as Record<string, unknown>;
+    const { name, description, pattern, complex } = entry as Record<string, unknown>;
     if (typeof name !== 'string' || name.length === 0) continue;
     if (!Array.isArray(pattern) || !pattern.every((v) => typeof v === 'number' && Number.isFinite(v))) continue;
     out.push({
       name,
       description: typeof description === 'string' ? description : '',
       pattern: Object.freeze([...pattern]) as ReadonlyArray<number>,
+      ...(isPlausibleComplex(complex) ? { complex } : {}),
     });
   }
   return out;
@@ -101,7 +115,12 @@ function persistUserLinetypes(): void {
   for (const name of insertionOrder) {
     const def = definitionsByName.get(name);
     if (def && def.origin === 'user-created') {
-      customs.push({ name: def.name, description: def.description, pattern: [...def.pattern] });
+      customs.push({
+        name: def.name,
+        description: def.description,
+        pattern: [...def.pattern],
+        ...(def.complex ? { complex: def.complex } : {}),
+      });
     }
   }
   customLinetypesStore.set(customs);
@@ -117,6 +136,7 @@ for (const custom of customLinetypesStore.get()) {
       description: custom.description,
       pattern: Object.freeze([...custom.pattern]) as ReadonlyArray<number>,
       origin: 'user-created',
+      ...(custom.complex ? { complex: custom.complex } : {}),
     });
     definitionsByName.set(def.name, def);
     insertionOrder.push(def.name);
@@ -211,6 +231,7 @@ export function registerUserLinetype(
   name: string,
   pattern: ReadonlyArray<number>,
   description = '',
+  complex?: ComplexLinetypeDef,
 ): LinetypeDef | null {
   const trimmed = name.trim();
   if (definitionsByName.has(trimmed)) return null;
@@ -220,6 +241,9 @@ export function registerUserLinetype(
     description,
     pattern: Object.freeze([...pattern]) as ReadonlyArray<number>,
     origin: 'user-created',
+    // ADR-642 Φ2 — carry the full complex def (embedded text/symbols) when the type
+    // is not simple-expressible; simple types leave it undefined and keep `pattern` SSoT.
+    ...(complex ? { complex } : {}),
   });
   registerLinetype(def);
   return def;

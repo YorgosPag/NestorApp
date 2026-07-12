@@ -32,7 +32,7 @@ import {
 // ADR-641 Φ4 — BLOCK-member counterpart: while a Block Editor session is open (BEDIT), the id is a
 // member of the active block's `.entities` (block-local coords). `getActiveBlockEditId()` gates the
 // descent; GROUP drill-in and BEDIT are mutually exclusive (ADR-641 §7), so exactly one path applies.
-import { getActiveBlockEditId } from '../../systems/block/ActiveBlockEditStore';
+import { getActiveBlockEditId, getBlockEditViewTransform } from '../../systems/block/ActiveBlockEditStore';
 import {
   findEntityOrBlockMember,
   updateEntityOrBlockMember,
@@ -73,22 +73,25 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
   // top level, inside an entered GROUP, or inside the active BLOCK (BEDIT). The two drill-ins are
   // mutually exclusive, so `getActiveBlockEditId()` picks the path: block-member helpers while inside
   // a Block Editor, group-member helpers otherwise (which already fold in the plain top-level case).
+  // ADR-641 — inside BEDIT the block helpers also apply the real-size/recenter VIEW transform: reads
+  // return a member in VIEW space (matching the canvas/grips), writes inverse-transform back to the
+  // canonical definition. `getBlockEditViewTransform()` is the enter-time-fixed transform (null → identity).
   const resolveEntity = (entities: readonly Entity[] | undefined, id: string): Entity | null => {
     const activeBlockId = getActiveBlockEditId();
     return activeBlockId
-      ? findEntityOrBlockMember(entities, id, activeBlockId)
+      ? findEntityOrBlockMember(entities, id, activeBlockId, getBlockEditViewTransform())
       : findEntityOrGroupMember(entities, id);
   };
   const writeBackEntity = (entities: readonly Entity[], id: string, updater: (e: Entity) => Entity): Entity[] => {
     const activeBlockId = getActiveBlockEditId();
     return activeBlockId
-      ? updateEntityOrBlockMember(entities, id, activeBlockId, updater)
+      ? updateEntityOrBlockMember(entities, id, activeBlockId, updater, getBlockEditViewTransform())
       : updateEntityOrGroupMember(entities, id, updater);
   };
   const writeBackMany = (entities: readonly Entity[], patches: ReadonlyMap<string, (e: Entity) => Entity>): Entity[] => {
     const activeBlockId = getActiveBlockEditId();
     return activeBlockId
-      ? updateEntitiesOrBlockMembers(entities, patches, activeBlockId)
+      ? updateEntitiesOrBlockMembers(entities, patches, activeBlockId, getBlockEditViewTransform())
       : updateEntitiesOrGroupMembers(entities, patches);
   };
 
@@ -96,13 +99,15 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
     addEntity: (entity: SceneEntity) => {
       const scene = getLevelScene(currentLevelId);
       if (scene) {
-        // ADR-641 Φ4 — a Copy-grip inside BEDIT adds a MEMBER to the active block; top-level append otherwise.
+        // ADR-641 Φ4 — a Copy-grip inside BEDIT adds a MEMBER to the active block; top-level append
+        // otherwise. The dropped copy is in VIEW space → inverse-transformed to def space on store.
         setLevelScene(currentLevelId, {
           ...scene,
           entities: addBlockMember(
             scene.entities as readonly Entity[],
             getActiveBlockEditId(),
             entity as unknown as Entity,
+            getBlockEditViewTransform(),
           ) as unknown as AnySceneEntity[],
         });
       }

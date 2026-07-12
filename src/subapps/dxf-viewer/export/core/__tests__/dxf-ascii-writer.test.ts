@@ -703,4 +703,35 @@ describe('writeDxfAscii — richer HEADER (ADR-636 Στάδιο 2 Φ2.3)', () =>
     expect(dxf).not.toContain('$EXTMIN');
     expect(dxf).not.toContain('$MEASUREMENT');
   });
+
+  // ADR-636 (2026-07-12) — extents present → `*Active` VPORT view + $VIEWCTR/$VIEWSIZE so AutoCAD
+  // opens FRAMED on the model (fixes «μαύρη οθόνη στο άνοιγμα»: no VPORT → off-screen 0,0 view).
+  it('extents → VPORT *Active view centered on bbox + $VIEWCTR/$VIEWSIZE', () => {
+    const dxf = writeDxfAscii([line()], {
+      layersById: LAYERS, extMin: { x: 0, y: 0 }, extMax: { x: 10, y: 20 },
+    });
+    // Square view of side 1.1×max(w=10,h=20)=22, centered on (5,10).
+    expect(dxf).toContain('0\nTABLE\n2\nVPORT\n');
+    expect(dxf).toContain('2\n*Active\n');
+    expect(dxf).toContain('12\n5\n22\n10\n');   // view center
+    expect(dxf).toContain('40\n22\n');           // view height (1.1×20)
+    expect(dxf).toContain('9\n$VIEWCTR\n10\n5\n20\n10\n');
+    expect(dxf).toContain('9\n$VIEWSIZE\n40\n22\n');
+  });
+
+  it('extents + tableLayers → VPORT προηγείται του LAYER table (σωστή DXF σειρά)', () => {
+    const dxf = writeDxfAscii([line()], {
+      layersById: LAYERS, extMin: { x: 0, y: 0 }, extMax: { x: 10, y: 20 },
+      tableLayers: Object.values(LAYERS),
+    });
+    expect(dxf.indexOf('2\nVPORT\n')).toBeGreaterThanOrEqual(0);
+    expect(dxf.indexOf('2\nLAYER\n')).toBeGreaterThanOrEqual(0);
+    expect(dxf.indexOf('2\nVPORT\n')).toBeLessThan(dxf.indexOf('2\nLAYER\n'));
+  });
+
+  it('χωρίς extents → κανένα VPORT (bare envelope)', () => {
+    const dxf = writeDxfAscii([line()], { layersById: LAYERS });
+    expect(dxf).not.toContain('2\nVPORT\n');
+    expect(dxf).not.toContain('$VIEWCTR');
+  });
 });
