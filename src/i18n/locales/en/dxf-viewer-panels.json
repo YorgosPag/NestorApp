@@ -378,6 +378,14 @@
           "rotation": "Rotation",
           "offsetX": "X offset",
           "offsetY": "Y offset",
+          "role": "Role",
+          "roles": {
+            "side": "Side",
+            "innerCorner": "Inner corner",
+            "outerCorner": "Outer corner",
+            "start": "Start",
+            "end": "End"
+          },
           "glyphs": {
             "cross": "Cross (×)",
             "plus": "Plus (+)",

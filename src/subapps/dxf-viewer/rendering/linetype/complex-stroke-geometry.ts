@@ -98,6 +98,90 @@ export function sampleSubpath(
   return out;
 }
 
+/** Ρόλος μιας κορυφής κατά μήκος της polyline (ADR-642 Φ4 corner-role placement). */
+export type PolylineVertexRole = 'start' | 'end' | 'interior';
+
+/**
+ * Μια κορυφή της polyline με προσανατολισμό + ταξινόμηση στροφής — για την τοποθέτηση
+ * corner-role συμβόλων (#4). `ux/uy` = μοναδιαία εφαπτομένη προσανατολισμού (διχοτόμος
+ * στις εσωτερικές κορυφές, γειτονικό τμήμα στα άκρα) στο screen-space (y-DOWN), ώστε το
+ * `drawSymbolElement` (που κάνει το δικό του Y-flip) να το δεχτεί όπως τα side symbols.
+ *
+ * `turn` = προσημασμένο cross-product `din × dout` στο screen frame:
+ *   - `turn < 0` → αριστερή/CCW στροφή στην οθόνη → **outerCorner** (κυρτή· εξωτερική γωνία).
+ *   - `turn > 0` → δεξιά/CW στροφή στην οθόνη → **innerCorner** (κοίλη/reflex· εσωτερική γωνία).
+ *   - `|turn| ~ 0` (συγγραμμικό) → ούτε inner ούτε outer (καμία γωνία).
+ * `start`/`end` κορυφές έχουν `turn = 0` (δεν ταξινομούνται ως inner/outer).
+ */
+export interface PolylineVertex {
+  readonly x: number;
+  readonly y: number;
+  readonly ux: number;
+  readonly uy: number;
+  readonly turn: number;
+  readonly role: PolylineVertexRole;
+}
+
+/** Μοναδιαία κατεύθυνση a→b (μηδενικό διάνυσμα αν συμπίπτουν). */
+function unitDir(a: Point, b: Point): { x: number; y: number } {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy);
+  return len > 0 ? { x: dx / len, y: dy / len } : { x: 0, y: 0 };
+}
+
+/**
+ * Κορυφές της polyline με προσανατολισμό + ταξινόμηση inner/outer (ADR-642 Φ4). Οι
+ * διαδοχικές ταυτόσημες κορυφές συγχωνεύονται (κανένα ψευδο-corner μηδενικού μήκους)· σε
+ * `closed`, το διπλό σημείο κλεισίματος αφαιρείται και ΟΛΕΣ οι κορυφές είναι `interior`.
+ * Καθαρή γεωμετρία — καμία επανάληψη dash math (reuse από τον stroker για corner symbols).
+ */
+export function polylineVertices(points: readonly Point[], closed = false): PolylineVertex[] {
+  const pts: Point[] = [];
+  for (const p of points) {
+    const last = pts[pts.length - 1];
+    if (!last || last.x !== p.x || last.y !== p.y) pts.push({ x: p.x, y: p.y });
+  }
+  if (closed && pts.length > 1) {
+    const f = pts[0];
+    const l = pts[pts.length - 1];
+    if (f.x === l.x && f.y === l.y) pts.pop();
+  }
+  const n = pts.length;
+  if (n === 0) return [];
+  if (n === 1) return [{ x: pts[0].x, y: pts[0].y, ux: 1, uy: 0, turn: 0, role: 'start' }];
+
+  const out: PolylineVertex[] = [];
+  for (let i = 0; i < n; i++) {
+    const cur = pts[i];
+    if (!closed && i === 0) {
+      const d = unitDir(cur, pts[1]);
+      out.push({ x: cur.x, y: cur.y, ux: d.x, uy: d.y, turn: 0, role: 'start' });
+      continue;
+    }
+    if (!closed && i === n - 1) {
+      const d = unitDir(pts[n - 2], cur);
+      out.push({ x: cur.x, y: cur.y, ux: d.x, uy: d.y, turn: 0, role: 'end' });
+      continue;
+    }
+    const din = unitDir(pts[(i - 1 + n) % n], cur);
+    const dout = unitDir(cur, pts[(i + 1) % n]);
+    let bx = din.x + dout.x;
+    let by = din.y + dout.y;
+    const blen = Math.hypot(bx, by);
+    if (blen > 1e-9) {
+      bx /= blen;
+      by /= blen;
+    } else {
+      bx = din.x;
+      by = din.y; // 180° spike → orient along the incoming tangent
+    }
+    const turn = din.x * dout.y - din.y * dout.x;
+    out.push({ x: cur.x, y: cur.y, ux: bx, uy: by, turn, role: 'interior' });
+  }
+  return out;
+}
+
 /**
  * Parallel offset της polyline κατά `distPx` (προσημασμένο — κάθετο +90°). Ανά κορυφή
  * miter join (μέσος όρος γειτονικών normals). Χρησιμοποιείται από τα compound layers

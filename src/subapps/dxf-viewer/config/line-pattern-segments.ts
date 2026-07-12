@@ -122,6 +122,19 @@ export function defaultTextSegment(): LinePatternTextSegment {
 /** Defaults for a freshly-added symbol row — the fence `×` glyph, along-the-line role. */
 export const DEFAULT_SYMBOL_SCALE = 1;
 
+/**
+ * All symbol placement roles (#4, Illustrator 5-tile) in picker order — the editor's
+ * role-selector source. `side` = along the line (Φ3); `innerCorner`/`outerCorner` land on
+ * concave/convex vertices; `start`/`end` on the polyline endpoints (Φ4).
+ */
+export const SYMBOL_ROLES: readonly SymbolRole[] = [
+  'side',
+  'innerCorner',
+  'outerCorner',
+  'start',
+  'end',
+];
+
 /** A fresh symbol segment — the default catalog glyph (`×`), `side` role, scale 1. */
 export function defaultSymbolSegment(): LinePatternSymbolSegment {
   return {
@@ -234,6 +247,39 @@ export function describeSegments(segments: readonly LinePatternSegment[]): strin
   return segments.map(glyph).join('').trim() || '—';
 }
 
+/** Validate a linetype NAME — non-empty, not a reserved sentinel, not already taken. */
+function validateName(name: string, existingNames: readonly string[]): LinePatternErrorCode | null {
+  const trimmed = name.trim();
+  if (trimmed.length === 0) return 'name.empty';
+  if (RESERVED_LINETYPE_NAMES.includes(trimmed)) return 'name.reserved';
+  if (existingNames.includes(trimmed)) return 'name.taken';
+  return null;
+}
+
+/**
+ * Validate ONE segment list — at least one visible mark (dash/dot/text/symbol) AND at least
+ * one gap (otherwise it is just a solid line), with every dash/gap length > 0 and no empty
+ * text. Returns the failing code or `null` when valid. SSoT shared by the single-pattern and
+ * the compound (per-layer) validators.
+ */
+function validateSegmentList(segments: readonly LinePatternSegment[]): LinePatternErrorCode | null {
+  if (segments.length === 0) return 'pattern.empty';
+  // Text/symbol count as a visible mark (──GAS──, ──×──) — either satisfies "needs visible".
+  const hasVisible = segments.some(
+    (s) => s.kind === 'dash' || s.kind === 'dot' || s.kind === 'text' || s.kind === 'symbol',
+  );
+  const hasGap = segments.some((s) => s.kind === 'gap');
+  const emptyText = segments.some((s) => s.kind === 'text' && s.value.trim().length === 0);
+  const badLength = segments.some(
+    (s) => (s.kind === 'dash' || s.kind === 'gap') && (!Number.isFinite(s.lengthMm) || s.lengthMm <= 0),
+  );
+  if (emptyText) return 'pattern.textEmpty';
+  if (badLength) return 'pattern.badLength';
+  if (!hasVisible) return 'pattern.needsVisible';
+  if (!hasGap) return 'pattern.needsGap';
+  return null;
+}
+
 /**
  * Validate a name + segment list for registration. Name must be non-empty, not a
  * reserved sentinel, and not already taken (case-sensitive, AutoCAD convention).
@@ -245,25 +291,10 @@ export function validateLinePattern(
   segments: readonly LinePatternSegment[],
   existingNames: readonly string[],
 ): LinePatternValidation {
-  const trimmed = name.trim();
-  if (trimmed.length === 0) return { ok: false, nameError: 'name.empty' };
-  if (RESERVED_LINETYPE_NAMES.includes(trimmed)) return { ok: false, nameError: 'name.reserved' };
-  if (existingNames.includes(trimmed)) return { ok: false, nameError: 'name.taken' };
-
-  if (segments.length === 0) return { ok: false, patternError: 'pattern.empty' };
-  // Text/symbol count as a visible mark (──GAS──, ──×──) — either satisfies "needs visible".
-  const hasVisible = segments.some(
-    (s) => s.kind === 'dash' || s.kind === 'dot' || s.kind === 'text' || s.kind === 'symbol',
-  );
-  const hasGap = segments.some((s) => s.kind === 'gap');
-  const emptyText = segments.some((s) => s.kind === 'text' && s.value.trim().length === 0);
-  const badLength = segments.some(
-    (s) => (s.kind === 'dash' || s.kind === 'gap') && (!Number.isFinite(s.lengthMm) || s.lengthMm <= 0),
-  );
-  if (emptyText) return { ok: false, patternError: 'pattern.textEmpty' };
-  if (badLength) return { ok: false, patternError: 'pattern.badLength' };
-  if (!hasVisible) return { ok: false, patternError: 'pattern.needsVisible' };
-  if (!hasGap) return { ok: false, patternError: 'pattern.needsGap' };
+  const nameError = validateName(name, existingNames);
+  if (nameError) return { ok: false, nameError };
+  const patternError = validateSegmentList(segments);
+  if (patternError) return { ok: false, patternError };
   return { ok: true };
 }
 
@@ -358,4 +389,101 @@ export function complexToSegments(def: ComplexLinetypeDef): LinePatternSegment[]
   const layer = def.layers[0];
   if (!layer) return [];
   return layer.elements.map(elementToSegment);
+}
+
+// ── Compound-layer bridge (ADR-642 Φ5, #9) — multi-layer authored model ⇄ ComplexLinetypeDef ──
+
+/**
+ * One authored compound layer (#9): a segment list + its perpendicular `offsetMm` from the
+ * line axis (0 = the centre/base layer) + an optional per-layer base `widthMm`. A single
+ * centre layer is exactly the common (non-compound) type — the editor always works in this
+ * model, so the single- and multi-layer paths share ONE code path (no fork).
+ */
+export interface LinePatternLayer {
+  readonly segments: readonly LinePatternSegment[];
+  readonly offsetMm: number;
+  readonly widthMm?: number;
+}
+
+/** Wrap a segment list as a single centre layer (offset 0) — the backward-compatible default. */
+export function singleLayer(segments: readonly LinePatternSegment[]): LinePatternLayer[] {
+  return [{ segments: [...segments], offsetMm: 0 }];
+}
+
+/** A fresh compound layer at a given offset — seeded with one dash + one gap (a plain dashed run). */
+export function defaultCompoundLayer(offsetMm: number): LinePatternLayer {
+  return {
+    segments: [
+      { kind: 'dash', lengthMm: DEFAULT_SEGMENT_LENGTH_MM },
+      { kind: 'gap', lengthMm: DEFAULT_SEGMENT_LENGTH_MM },
+    ],
+    offsetMm,
+  };
+}
+
+/** True when the authored layers form a genuine compound (≥2 layers OR any non-zero offset). */
+export function isCompound(layers: readonly LinePatternLayer[]): boolean {
+  return layers.length > 1 || layers.some((l) => l.offsetMm !== 0);
+}
+
+/**
+ * Authored compound layers → `ComplexLinetypeDef` (the render + registry SSoT for #9). Each
+ * layer's segments lift through the SAME `segmentToElement` bridge the single-layer path uses;
+ * `offsetMm`/`widthMm` ride onto the `StrokeLayer` (0 offset omitted to stay byte-identical to
+ * the single-layer output). `scaleSpace` = the Φ1 default so a compound scales like the simple types.
+ */
+export function layersToComplex(
+  name: string,
+  layers: readonly LinePatternLayer[],
+  description = '',
+  origin: LinetypeOrigin = 'user-created',
+): ComplexLinetypeDef {
+  return {
+    name,
+    description,
+    layers: layers.map((l) => ({
+      elements: l.segments.map(segmentToElement),
+      ...(l.offsetMm ? { offsetMm: l.offsetMm } : {}),
+      ...(l.widthMm != null ? { widthMm: l.widthMm } : {}),
+    })),
+    scaleSpace: DEFAULT_SCALE_SPACE,
+    origin,
+  };
+}
+
+/** `ComplexLinetypeDef` → authored compound layers (inverse of `layersToComplex`). */
+export function complexToLayers(def: ComplexLinetypeDef): LinePatternLayer[] {
+  return def.layers.map((l) => ({
+    segments: l.elements.map(elementToSegment),
+    offsetMm: l.offsetMm ?? 0,
+    ...(l.widthMm != null ? { widthMm: l.widthMm } : {}),
+  }));
+}
+
+/**
+ * Compact human-readable description of a compound: single layer → the plain segment glyphs;
+ * multi-layer → each layer's glyphs joined by `∥` (parallel bars — the compound affordance).
+ */
+export function describeLayers(layers: readonly LinePatternLayer[]): string {
+  if (layers.length <= 1) return describeSegments(layers[0]?.segments ?? []);
+  return layers.map((l) => describeSegments(l.segments)).join(' ∥ ');
+}
+
+/**
+ * Validate a name + compound layers for registration. Name rules as `validateLinePattern`;
+ * EVERY layer must itself be a valid pattern (a compound line with a broken sub-layer is invalid).
+ */
+export function validateLinePatternLayers(
+  name: string,
+  layers: readonly LinePatternLayer[],
+  existingNames: readonly string[],
+): LinePatternValidation {
+  const nameError = validateName(name, existingNames);
+  if (nameError) return { ok: false, nameError };
+  if (layers.length === 0) return { ok: false, patternError: 'pattern.empty' };
+  for (const l of layers) {
+    const patternError = validateSegmentList(l.segments);
+    if (patternError) return { ok: false, patternError };
+  }
+  return { ok: true };
 }

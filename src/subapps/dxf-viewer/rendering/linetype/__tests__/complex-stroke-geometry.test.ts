@@ -7,6 +7,7 @@ import {
   cumulativeLengths,
   offsetPolyline,
   pointAt,
+  polylineVertices,
   sampleSubpath,
   totalLength,
   type Point,
@@ -90,5 +91,48 @@ describe('offsetPolyline', () => {
     const out = offsetPolyline(src, 0);
     expect(out).toEqual(src);
     expect(out).not.toBe(src);
+  });
+});
+
+describe('polylineVertices (ADR-642 Φ4 corner-role placement)', () => {
+  it('classifies start / interior / end and orients along the tangent/bisector', () => {
+    const verts = polylineVertices(L); // ⌐: (0,0)→(10,0)→(10,10)
+    expect(verts).toHaveLength(3);
+
+    expect(verts[0]).toMatchObject({ x: 0, y: 0, role: 'start', turn: 0 });
+    expect(verts[0].ux).toBeCloseTo(1, 6); // start tangent = first segment dir
+    expect(verts[0].uy).toBeCloseTo(0, 6);
+
+    expect(verts[2]).toMatchObject({ x: 10, y: 10, role: 'end', turn: 0 });
+    expect(verts[2].ux).toBeCloseTo(0, 6); // end tangent = last segment dir
+    expect(verts[2].uy).toBeCloseTo(1, 6);
+
+    const corner = verts[1];
+    expect(corner.role).toBe('interior');
+    expect(corner).toMatchObject({ x: 10, y: 0 });
+    // right/CW turn on screen (right → down) → positive cross → inner corner
+    expect(corner.turn).toBeGreaterThan(0);
+    // bisector of (1,0) and (0,1) is the 45° diagonal
+    expect(corner.ux).toBeCloseTo(Math.SQRT1_2, 6);
+    expect(corner.uy).toBeCloseTo(Math.SQRT1_2, 6);
+  });
+
+  it('flips the turn sign for the mirror corner (left/CCW turn → outer)', () => {
+    // right → up (screen y-DOWN so up = −y): (0,0)→(10,0)→(10,−10)
+    const verts = polylineVertices([{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: -10 }]);
+    expect(verts[1].turn).toBeLessThan(0); // outer corner
+  });
+
+  it('merges duplicate points and drops the closing point for closed loops', () => {
+    const square = [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }, { x: 0, y: 0 }];
+    const verts = polylineVertices(square, true);
+    expect(verts).toHaveLength(4); // closing dup removed
+    expect(verts.every((v) => v.role === 'interior')).toBe(true); // no start/end when closed
+  });
+
+  it('is a single start vertex for a degenerate one-point input', () => {
+    expect(polylineVertices([{ x: 3, y: 5 }])).toEqual([
+      { x: 3, y: 5, ux: 1, uy: 0, turn: 0, role: 'start' },
+    ]);
   });
 });

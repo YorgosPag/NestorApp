@@ -43,8 +43,10 @@ import {
   cumulativeLengths,
   offsetPolyline,
   pointAt,
+  polylineVertices,
   sampleSubpath,
   type Point,
+  type PolylineVertex,
   type Seg,
 } from './complex-stroke-geometry';
 
@@ -133,9 +135,10 @@ function buildCycle(layer: StrokeLayer, mmToPx: number, baseWidthPx: number): Cy
       // Text occupies a ZERO-length slot (AutoCAD-faithful) — drawn at the cursor, the
       // surrounding gaps make its room. X/Y offset + scale/rotation live in `drawTextElement`.
       cycle.push({ kind: 'text', lengthPx: 0, widthPx: baseWidthPx, text: el });
-    } else if (el.kind === 'symbol') {
-      // Symbol occupies a ZERO-length slot too (`.shx` shape linetype convention) — the
-      // glyph is stamped at the cursor; scale/rotation/offset live in `drawSymbolElement`.
+    } else if (el.kind === 'symbol' && el.role === 'side') {
+      // Only `side` symbols ride the arc-length cycle (zero-length slot, `.shx` shape
+      // convention) — the glyph is stamped at the cursor. Corner/start/end roles (#4) are
+      // placed at vertices by `stampCornerSymbols`, NOT along the walk (ADR-642 Φ4).
       cycle.push({ kind: 'symbol', lengthPx: 0, widthPx: baseWidthPx, symbol: el });
     }
   }
@@ -194,7 +197,63 @@ function walkPath(
   }
 }
 
-/** Στρώνει ένα layer (μη-simple): build cycle → walk (break = ανά τμήμα, αλλιώς συνεχές). */
+/** Arc-length offset (px) μέσα στον κύκλο όπου ξεκινά το πρώτο ορατό dash — 0 αν κανένα. */
+function firstDashOffsetPx(cycle: readonly CycleEntry[]): number {
+  let offset = 0;
+  for (const el of cycle) {
+    if (el.kind === 'dash') return offset;
+    offset += el.lengthPx;
+  }
+  return 0;
+}
+
+/** Κάτω από αυτό το |turn| μια κορυφή είναι συγγραμμική → ούτε inner ούτε outer γωνία. */
+const CORNER_TURN_EPS = 1e-6;
+
+/** Ανήκει ένα corner-role σύμβολο σε αυτή την κορυφή; (ADR-642 Φ4 role→vertex mapping.) */
+function roleMatchesVertex(role: SymbolElement['role'], v: PolylineVertex): boolean {
+  switch (role) {
+    case 'start':
+      return v.role === 'start';
+    case 'end':
+      return v.role === 'end';
+    case 'innerCorner':
+      return v.role === 'interior' && v.turn > CORNER_TURN_EPS;
+    case 'outerCorner':
+      return v.role === 'interior' && v.turn < -CORNER_TURN_EPS;
+    default:
+      return false; // 'side' → ζωγραφίζεται από τον walk, ποτέ εδώ
+  }
+}
+
+/**
+ * Stamp-άρει corner/start/end σύμβολα (#4) στις κορυφές της polyline — πέρασμα ΟΡΘΟΓΩΝΙΟ
+ * στον arc-length walk: inner/outer glyphs στις κοίλες/κυρτές κορυφές, start/end στα άκρα.
+ * Τα glyphs προσανατολίζονται κατά τη διχοτόμο της κορυφής (ή την εφαπτομένη του άκρου).
+ * No-op όταν το layer δεν έχει non-`side` σύμβολο (ο κοινός τύπος → μηδέν overhead).
+ */
+function stampCornerSymbols(
+  ctx: CanvasRenderingContext2D,
+  pts: readonly Point[],
+  layer: StrokeLayer,
+  mmToPx: number,
+  closed: boolean,
+): void {
+  const cornerSyms = layer.elements.filter(
+    (e): e is SymbolElement => e.kind === 'symbol' && e.role !== 'side',
+  );
+  if (cornerSyms.length === 0) return;
+  const verts = polylineVertices(pts, closed);
+  for (const v of verts) {
+    for (const sym of cornerSyms) {
+      if (roleMatchesVertex(sym.role, v)) {
+        drawSymbolElement(ctx, sym, { x: v.x, y: v.y, ux: v.ux, uy: v.uy }, mmToPx);
+      }
+    }
+  }
+}
+
+/** Στρώνει ένα layer (μη-simple): build cycle → walk (break/alignDash ανά τμήμα, αλλιώς συνεχές) → corner symbols. */
 function strokeLayer(
   ctx: CanvasRenderingContext2D,
   pts: readonly Point[],
@@ -208,15 +267,22 @@ function strokeLayer(
   const cycleLenPx = cycle.reduce((s, e) => s + e.lengthPx, 0);
   if (cycle.length === 0 || cycleLenPx <= 0) {
     strokePolyline(ctx, pts); // degenerate → solid fallback (never blank a line)
-    return;
-  }
-  const phasePx = (def.phaseMm ?? 0) * mmToPx;
-  const segs = buildSegments(pts, closed);
-  if (def.cornerPolicy === 'break') {
-    for (const s of segs) walkPath(ctx, [s], cycle, cycleLenPx, phasePx, mmToPx);
   } else {
-    walkPath(ctx, segs, cycle, cycleLenPx, phasePx, mmToPx);
+    const segs = buildSegments(pts, closed);
+    if (def.cornerPolicy === 'break') {
+      const phasePx = (def.phaseMm ?? 0) * mmToPx;
+      for (const s of segs) walkPath(ctx, [s], cycle, cycleLenPx, phasePx, mmToPx);
+    } else if (def.cornerPolicy === 'alignDash') {
+      // Per-segment walk (σαν break) αλλά phased ώστε ένα DASH — όχι κενό — να ξεκινά σε κάθε
+      // κορυφή (MicroStation "align dashes to corners"). Παρακάμπτει το user phase. #7.
+      const alignPhasePx = firstDashOffsetPx(cycle);
+      for (const s of segs) walkPath(ctx, [s], cycle, cycleLenPx, alignPhasePx, mmToPx);
+    } else {
+      const phasePx = (def.phaseMm ?? 0) * mmToPx;
+      walkPath(ctx, segs, cycle, cycleLenPx, phasePx, mmToPx);
+    }
   }
+  stampCornerSymbols(ctx, pts, layer, mmToPx, closed);
 }
 
 /**

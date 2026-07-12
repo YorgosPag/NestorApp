@@ -64,3 +64,75 @@ describe('strokeStyledPolyline — symbol routing', () => {
     ).not.toThrow();
   });
 });
+
+// ── ADR-642 Φ4: corner/start/end role placement + alignDash corner policy ──────────
+
+/** A `[gap, ×-symbol]` cycle with the symbol at a given role — the gap alone draws nothing. */
+const roleDef = (role: 'innerCorner' | 'outerCorner' | 'start' | 'end'): ComplexLinetypeDef => ({
+  name: `Corner-${role}`,
+  description: '',
+  layers: [{ elements: [
+    { kind: 'gap', lengthMm: 10 },
+    { kind: 'symbol', glyphId: 'cross', role, scale: 1, rotationDeg: 0, offsetXMm: 0, offsetYMm: 0 },
+  ] }],
+  scaleSpace: 'model',
+  origin: 'user-created',
+});
+
+/** ⌐ shape: one interior vertex at (10,0), a right/CW (screen) turn → INNER corner. */
+const elbow: readonly Point[] = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }];
+
+describe('strokeStyledPolyline — corner/start/end role placement', () => {
+  const moveTos = (def: ComplexLinetypeDef, pts: readonly Point[]) => {
+    const { ctx, calls } = createMockCtx();
+    strokeStyledPolyline(ctx, pts, def, { worldToScreenScale: 4, ltscale: 1 });
+    return calls.filter((c) => c.fn === 'moveTo').length;
+  };
+
+  it('stamps an innerCorner glyph at the concave elbow (one × = 2 spokes)', () => {
+    expect(moveTos(roleDef('innerCorner'), elbow)).toBe(2);
+  });
+
+  it('does NOT stamp an outerCorner glyph at an inner elbow', () => {
+    expect(moveTos(roleDef('outerCorner'), elbow)).toBe(0);
+  });
+
+  it('stamps a start glyph only at the first vertex', () => {
+    expect(moveTos(roleDef('start'), elbow)).toBe(2);
+  });
+
+  it('stamps an end glyph only at the last vertex', () => {
+    expect(moveTos(roleDef('end'), elbow)).toBe(2);
+  });
+
+  it('corner roles ride the vertices, NOT the arc-length cycle (immune to line length)', () => {
+    // A long straight line has NO interior vertex → an innerCorner symbol never stamps.
+    expect(moveTos(roleDef('innerCorner'), [{ x: 0, y: 0 }, { x: 1000, y: 0 }])).toBe(0);
+  });
+});
+
+describe('strokeStyledPolyline — alignDash corner policy', () => {
+  const patternDef = (cornerPolicy: 'alignDash' | 'break'): ComplexLinetypeDef => ({
+    name: 'Align',
+    description: '',
+    layers: [{ elements: [{ kind: 'gap', lengthMm: 5 }, { kind: 'dash', lengthMm: 5 }] }],
+    cornerPolicy,
+    scaleSpace: 'model',
+    origin: 'user-created',
+  });
+  const seg: readonly Point[] = [{ x: 0, y: 0 }, { x: 20, y: 0 }];
+  const firstMoveToX = (def: ComplexLinetypeDef): number => {
+    const { ctx, calls } = createMockCtx();
+    strokeStyledPolyline(ctx, seg, def, { worldToScreenScale: 1, ltscale: 1 });
+    const m = calls.find((c) => c.fn === 'moveTo');
+    return m ? (m.args[0] as number) : NaN;
+  };
+
+  it('alignDash shifts the phase so a DASH begins at the corner (dist 0)', () => {
+    expect(firstMoveToX(patternDef('alignDash'))).toBeCloseTo(0, 6);
+  });
+
+  it('break keeps the leading gap → the first dash starts after it (dist 5)', () => {
+    expect(firstMoveToX(patternDef('break'))).toBeCloseTo(5, 6);
+  });
+});

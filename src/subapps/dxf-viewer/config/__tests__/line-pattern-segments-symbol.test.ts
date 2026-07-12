@@ -59,4 +59,17 @@ describe('line-pattern-segments — symbol round-trip', () => {
     const back = complexToSegments(def);
     expect(back).toEqual(fence);
   });
+
+  it('preserves a corner-role symbol through the complex bridge (ADR-642 Φ4)', () => {
+    const withCorner: LinePatternSegment[] = [
+      { kind: 'dash', lengthMm: 5 },
+      { kind: 'symbol', glyphId: 'square', role: 'innerCorner', scale: 1, rotationDeg: 0, offsetXMm: 0, offsetYMm: 0 },
+    ];
+    const def = segmentsToComplex('Corner', withCorner, 'corner');
+    expect(def.layers[0].elements.find((e) => e.kind === 'symbol')).toMatchObject({
+      role: 'innerCorner',
+      glyphId: 'square',
+    });
+    expect(complexToSegments(def)).toEqual(withCorner);
+  });
 });

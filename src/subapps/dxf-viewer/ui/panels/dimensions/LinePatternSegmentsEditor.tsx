@@ -46,11 +46,13 @@ import {
   type LinePatternSymbolSegment,
   DEFAULT_SEGMENT_LENGTH_MM,
   LINETYPE_TEXT_STYLE_OPTIONS,
+  SYMBOL_ROLES,
   defaultTextSegment,
   defaultSymbolSegment,
   hasComplexSegments,
   segmentsToDashPattern,
 } from '../../../config/line-pattern-segments';
+import type { SymbolRole } from '../../../config/complex-linetype-types';
 import { listLinetypeSymbols } from '../../../config/linetype-symbol-catalog';
 import { PatternPreview, TextPatternPreview } from './LinePatternPreviews';
 
@@ -79,14 +81,16 @@ export interface LinePatternSegmentsLabels {
     readonly offsetY: string;
     readonly followPath: string;
   };
-  /** Embedded-symbol row field labels + per-glyph names (ADR-642 Φ3). */
+  /** Embedded-symbol row field labels + per-glyph names + placement roles (ADR-642 Φ3/Φ4). */
   readonly symbol: {
     readonly glyph: string;
+    readonly role: string;
     readonly scale: string;
     readonly rotation: string;
     readonly offsetX: string;
     readonly offsetY: string;
     readonly glyphName: (id: string) => string;
+    readonly roleName: (r: SymbolRole) => string;
   };
 }
 
@@ -117,11 +121,13 @@ export function buildLinePatternSegmentsLabels(
     },
     symbol: {
       glyph: e('symbol.glyph'),
+      role: e('symbol.role'),
       scale: e('symbol.scale'),
       rotation: e('symbol.rotation'),
       offsetX: e('symbol.offsetX'),
       offsetY: e('symbol.offsetY'),
       glyphName: (id) => e(`symbol.glyphs.${id}`),
+      roleName: (r) => e(`symbol.roles.${r}`),
     },
   };
 }
@@ -383,14 +389,24 @@ function SymbolSegmentRow({
       placement={seg}
       onPlacementChange={onPatch}
       header={
-        <Select value={seg.glyphId} onValueChange={(v) => onPatch({ glyphId: v })}>
-          <SelectTrigger className="h-7 text-xs flex-1" aria-label={s.glyph}><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {SYMBOL_GLYPH_IDS.map((id) => (
-              <SelectItem key={id} value={id} className="text-xs">{s.glyphName(id)}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <>
+          <Select value={seg.glyphId} onValueChange={(v) => onPatch({ glyphId: v })}>
+            <SelectTrigger className="h-7 text-xs flex-1" aria-label={s.glyph}><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {SYMBOL_GLYPH_IDS.map((id) => (
+                <SelectItem key={id} value={id} className="text-xs">{s.glyphName(id)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={seg.role} onValueChange={(v) => onPatch({ role: v as SymbolRole })}>
+            <SelectTrigger className="h-7 text-xs w-32" aria-label={s.role}><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {SYMBOL_ROLES.map((r) => (
+                <SelectItem key={r} value={r} className="text-xs">{s.roleName(r)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </>
       }
     />
   );

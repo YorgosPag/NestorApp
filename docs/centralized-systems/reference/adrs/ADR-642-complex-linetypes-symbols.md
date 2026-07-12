@@ -1,6 +1,6 @@
 # ADR-642 — Complex Linetypes: embedded text, symbols, width, caps/joins & compound strokes
 
-- **Status:** 🟢 ACCEPTED — **Φ1 (stroke geometry) IMPLEMENTED** (2026-07-12). **Φ2-A (embedded text: render + editor + live preview) IMPLEMENTED** (2026-07-12). **Φ2-B IMPLEMENTED** (2026-07-12): μέρος 1 — full-canvas entity routing (κάθε renderer LINE/POLYLINE/ARC/CIRCLE ρουτάρει το `──GAS──` μέσω `strokeStyledPolyline` όταν ο τύπος έχει `complex`)· μέρος 2 — DXF `[TEXT,...]` import/export (LTYPE reader parse-άρει τα embedded 74/340/46/50/44/45/9 → `complex`, resolve `340`→font μέσω `buildStyleHandleFontMap`· writer εκπέμπει τα descriptors με synthetic STYLE handle ανά styleId· `.lin` reader δεν υπάρχει στο repo → εκτός scope). **Φ3-A (symbols: render + catalog + editor) IMPLEMENTED** (2026-07-12): builtin `linetype-symbol-catalog` (×/+/∗/○/□/tick/βέλος/μόνωση/δέντρο ως `AnnotationSymbolPrimitive[]`) + shared `stampSymbolPrimitive` painter (extracted από `AnnotationSymbolRenderer` → ΕΝΑ SSoT για annotation+linetype glyphs) + `drawSymbolElement` (mirror text) στον stroker + Symbol row στον editor. **Φ3-B (DXF symbol I/O) IMPLEMENTED** (2026-07-12): 3-tier resolution — Tier 1 Nestor `NESTOR_APP_LTYPE` XDATA (δικά μας αρχεία → lossless glyph/role/scale/rot/offset), Tier 2 well-known `acad.lin` όνομα→glyph (`FENCELINE1→circle` κ.λπ.· χαρτογράφηση με όνομα, ΟΧΙ με shape#), Tier 3 graceful-skip· universal-valid `49 0.0` degrade (κανένα dangling `.shx` ref)· §6.6.3. **Φ4–Φ5 pending.** Scope §9 εγκρίθηκε· Φ2 scope (2026-07-12): Q1 = υπάρχον text SSoT (`resolveEntityFont`), Q2 = `followPath` toggle ανά κείμενο (default true), Q3 = render+editor+preview πρώτα, DXF μετά. Φ2-B scope (2026-07-12): routing πρώτα, ΟΛΑ τα entity types μαζί (κοινό seam), STYLE handle = synthetic-per-styleId (MLINE pattern) στο μέρος 2. Φ3 scope (2026-07-12): symbol seed = οι 9 τοπογραφικά/utility glyphs· DXF export = **full-enterprise «όπως οι μεγάλοι» → graceful-degrade valid geometry + Nestor XDATA preservation** (Revit/ArchiCAD-style lossless-in-ecosystem· = Φ3-B)· render+editor πρώτα (mirror Φ2-A/Φ2-B).
+- **Status:** 🟢 ACCEPTED — **Φ1 (stroke geometry) IMPLEMENTED** (2026-07-12). **Φ2-A (embedded text: render + editor + live preview) IMPLEMENTED** (2026-07-12). **Φ2-B IMPLEMENTED** (2026-07-12): μέρος 1 — full-canvas entity routing (κάθε renderer LINE/POLYLINE/ARC/CIRCLE ρουτάρει το `──GAS──` μέσω `strokeStyledPolyline` όταν ο τύπος έχει `complex`)· μέρος 2 — DXF `[TEXT,...]` import/export (LTYPE reader parse-άρει τα embedded 74/340/46/50/44/45/9 → `complex`, resolve `340`→font μέσω `buildStyleHandleFontMap`· writer εκπέμπει τα descriptors με synthetic STYLE handle ανά styleId· `.lin` reader δεν υπάρχει στο repo → εκτός scope). **Φ3-A (symbols: render + catalog + editor) IMPLEMENTED** (2026-07-12): builtin `linetype-symbol-catalog` (×/+/∗/○/□/tick/βέλος/μόνωση/δέντρο ως `AnnotationSymbolPrimitive[]`) + shared `stampSymbolPrimitive` painter (extracted από `AnnotationSymbolRenderer` → ΕΝΑ SSoT για annotation+linetype glyphs) + `drawSymbolElement` (mirror text) στον stroker + Symbol row στον editor. **Φ3-B (DXF symbol I/O) IMPLEMENTED** (2026-07-12): 3-tier resolution — Tier 1 Nestor `NESTOR_APP_LTYPE` XDATA (δικά μας αρχεία → lossless glyph/role/scale/rot/offset), Tier 2 well-known `acad.lin` όνομα→glyph (`FENCELINE1→circle` κ.λπ.· χαρτογράφηση με όνομα, ΟΧΙ με shape#), Tier 3 graceful-skip· universal-valid `49 0.0` degrade (κανένα dangling `.shx` ref)· §6.6.3. **Φ4 (corner-role symbols + alignDash) IMPLEMENTED** (2026-07-12): `innerCorner`/`outerCorner` glyphs στις κοίλες/κυρτές κορυφές (turn-sign classification μέσω `polylineVertices`), `start`/`end` στα άκρα — πέρασμα ΟΡΘΟΓΩΝΙΟ στον arc-length walk (`side` symbols μένουν στον κύκλο)· `alignDash` corner policy (dash αντί για κενό σε κάθε κορυφή)· role selector στον editor· round-trip corner-role μέσω XDATA επιβεβαιωμένο· §6.4 βήμα 3. **Φ5 pending.** Scope §9 εγκρίθηκε· Φ2 scope (2026-07-12): Q1 = υπάρχον text SSoT (`resolveEntityFont`), Q2 = `followPath` toggle ανά κείμενο (default true), Q3 = render+editor+preview πρώτα, DXF μετά. Φ2-B scope (2026-07-12): routing πρώτα, ΟΛΑ τα entity types μαζί (κοινό seam), STYLE handle = synthetic-per-styleId (MLINE pattern) στο μέρος 2. Φ3 scope (2026-07-12): symbol seed = οι 9 τοπογραφικά/utility glyphs· DXF export = **full-enterprise «όπως οι μεγάλοι» → graceful-degrade valid geometry + Nestor XDATA preservation** (Revit/ArchiCAD-style lossless-in-ecosystem· = Φ3-B)· render+editor πρώτα (mirror Φ2-A/Φ2-B).
 - **Date:** 2026-07-12
 - **Domain:** DXF Viewer · Linetype subsystem · Canvas render pipeline · Pattern editor UI · DXF/`.lin` I/O · Persistence
 - **Related:** ADR-358 (Linetype ISO catalog + `LinetypeRegistry` SSoT), ADR-362 (Path B: user-authored reusable line patterns — the segment editor), ADR-357 §5.5 (canonical mm units), ADR-510 Φ2E #4 (copy-on-write inline pattern edit), ADR-040 (micro-leaf render discipline / bitmap cache keys)
@@ -205,7 +205,13 @@ export interface ComplexLinetypeDef {
      το `linetype-symbol-catalog` και stamp-άρει τα unit-space primitives μέσω του κοινού
      `stampSymbolPrimitive` (X κατά tangent, Y κατά left normal, `scale`, R σχετικό-με-tangent + user R·
      ΟΧΙ upright-flip — τα βέλη ακολουθούν τη φορά)· gap → skip.
-  3. **Corner policy** στις κορυφές (Break/Bypass/alignDash) + `join`.
+  3. **Corner policy** στις κορυφές (Break/Bypass/**alignDash — Φ4 IMPLEMENTED**) + `join`. Το
+     `alignDash` κάνει per-segment walk (σαν `break`) αλλά με phase = `firstDashOffsetPx(cycle)` ώστε
+     ένα **dash** (όχι κενό) να ξεκινά σε κάθε κορυφή (MicroStation "align dashes to corners"). Επιπλέον
+     **corner-role symbols (Φ4 IMPLEMENTED)**: `stampCornerSymbols` τοποθετεί `innerCorner`/`outerCorner`
+     glyphs στις εσωτερικές κορυφές (ταξινόμηση με το πρόσημο του `turn` cross-product μέσω
+     `polylineVertices`) και `start`/`end` glyphs στα άκρα — ΟΡΘΟΓΩΝΙΟ πέρασμα στον walk (τα `side`
+     μένουν στον arc-length κύκλο· τα non-`side` βγαίνουν από το `buildCycle`).
   4. Compound: επαναλαμβάνει ανά `StrokeLayer` με `offsetMm` (parallel offset του path).
 - **Fast path αμετάβλητο**: αν ο τύπος είναι *simple-expressible* (`complexToPattern !== null` **και**
   single-layer **και** χωρίς caps/width/text/symbol), συνεχίζουμε με native `ctx.setLineDash()` — μηδέν
@@ -307,7 +313,7 @@ complex linetype κρατά ένα σύμβολο ως `[shape#, file.shx]` (gro
 | **Φ2-B μέρος 2** ✅ | **DXF `[TEXT,...]` import/export** (LTYPE embedded text reader/writer + STYLE synthetic handle· `.lin` δεν υπάρχει στο repo) | #2 | Μεσαίο — **DONE** |
 | **Φ3-A** ✅ | **Symbol Library** (§6.3, builtin seed ως `AnnotationSymbolPrimitive[]`) + **shared `stampSymbolPrimitive`** + **symbol elements** στον stroker + Symbol row editor (ρόλος `side`) | #3 | Μεσαίο — **DONE** |
 | **Φ3-B** ✅ | **DXF symbol I/O**: 3-tier — Nestor XDATA (lossless) / well-known `acad.lin` name→glyph / graceful-skip· universal-valid `49 0.0` degrade (mirror Φ2-B· `.shx` = out of scope §9.1) | #3 | Μεσαίο — **DONE** |
-| **Φ4** | **Corner-role symbols** (inner/outer corner) + align-dash corner policy (υπόλοιπο #4/#7) | #4β #7 | Υψηλό (corner math) |
+| **Φ4** ✅ | **Corner-role symbols** (inner/outer corner + start/end) + align-dash corner policy (υπόλοιπο #4/#7) | #4β #7 | Υψηλό (corner math) — **DONE** |
 | **Φ5** | **Compound layers** (#9) + parallel-offset stroking + editor multi-layer UI | #9 | Υψηλό |
 | — | *Εκτός scope προς το παρόν:* Art-brush stretch, raster line styles, `.shx` shape import | — | — |
 
@@ -337,6 +343,33 @@ complex linetype κρατά ένα σύμβολο ως `[shape#, file.shx]` (gro
 
 ## 10. Changelog
 
+- **2026-07-12 (Φ4 IMPLEMENTED — corner-role symbols + alignDash corner policy)** — Scope Φ4 (2026-07-12,
+  Giorgio): Q1 = **και τα δύο** (corner glyphs #4β + `alignDash` #7 μαζί· ίδιο touch-point στον stroker)·
+  Q2 = **start/end τώρα** (τετριμμένο μόλις υπάρχει το vertex-placement). **SSoT audit (grep-verified):**
+  reuse των `complex-stroke-geometry` arc-length primitives + `drawSymbolElement` (Φ3) + `emitSymbolXData`/
+  `parseSymbolXData` role round-trip (ήδη generic) + `ComplexSegmentRowShell`/`PlacementFields` editor
+  shell — **μηδέν νέος μηχανισμός**. Υλοποιήθηκαν:
+  - `rendering/linetype/complex-stroke-geometry.ts` — ΝΕΟ pure `polylineVertices(points, closed)` →
+    `PolylineVertex[]` (start/end/interior role + orientation tangent [διχοτόμος στις κορυφές] + signed
+    `turn` cross-product). Merge διαδοχικών ταυτόσημων σημείων· closed → drop closing dup + όλα interior.
+  - `rendering/linetype/ComplexLineStroker.ts` — `buildCycle` βγάζει τα non-`side` symbols από τον
+    arc-length κύκλο· ΝΕΟ `stampCornerSymbols` (ΟΡΘΟΓΩΝΙΟ πέρασμα: `roleMatchesVertex` → inner=`turn>ε`,
+    outer=`turn<−ε`, start/end στα άκρα· stamp μέσω `drawSymbolElement`)· `strokeLayer` += `alignDash`
+    branch (per-segment walk με phase = ΝΕΟ `firstDashOffsetPx(cycle)` → dash σε κάθε κορυφή) + κλήση
+    `stampCornerSymbols`. Corner symbols ζωγραφίζονται και στο solid-fallback (γραμμή + posts).
+  - `config/line-pattern-segments.ts` — ΝΕΟ `SYMBOL_ROLES` (picker order: side/inner/outer/start/end).
+    Ο υπάρχων `segmentToElement`/`elementToSegment` ήδη preserve-άρει το `role` (μηδέν αλλαγή bridge).
+  - `ui/panels/dimensions/LinePatternSegmentsEditor.tsx` — **role selector** στο Symbol row (δεύτερο
+    Select δίπλα στο glyph picker)· `labels.symbol.role`/`roleName` στο label bag + `buildLinePatternSegmentsLabels`.
+  - i18n: keys `linePatternEditor.symbol.role` + `symbol.roles.{side,innerCorner,outerCorner,start,end}` σε
+    `el` **και** `en` (`dxf-viewer-panels`· N.11 keys ΠΡΩΤΑ· shell namespace = allowSymbol false → δεν χρειάζεται).
+  - Tests (jest, N.17): +18 — `polylineVertices` (start/end/interior classification, turn sign inner/outer,
+    closed dedup, degenerate)· stroker corner placement (inner stamps/outer skips/start/end/immune-to-length)·
+    `alignDash` vs `break` phase (first-dash-at-corner)· config corner-role round-trip· XDATA innerCorner
+    round-trip. 8 suites / 81 tests πράσινα (linetype+config+utils). jscpd (N.18): καθαρό (0 new clones / 4 src).
+  - **ADR-040 (CHECK 6B/6D)**: ο stroker παραμένει pure (points+def→draw)· `stampCornerSymbols`/`polylineVertices`
+    δεν διαβάζουν hover/selection → cacheable, μηδέν αλλαγή cache key· καμία νέα `useSyncExternalStore`·
+    co-staged ADR-040 changelog. ΟΧΙ tsc (N.17). Commit = Giorgio.
 - **2026-07-12 (Φ3-B IMPLEMENTED — DXF embedded-symbol I/O: 3-tier graceful-degrade + Nestor XDATA)** —
   Scope Φ3-B (2026-07-12): Q1 appId = **`NESTOR_APP_LTYPE`** (dedicated, Revit-style· ποτέ σύγκρουση με
   `ACAD`)· Q2 ξένα shapes = **«όπως οι μεγάλοι, όσο γίνεται ίδιο»** → 3-tier (XDATA lossless / well-known
