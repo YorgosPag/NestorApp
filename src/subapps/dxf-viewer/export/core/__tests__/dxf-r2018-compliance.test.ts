@@ -175,6 +175,24 @@ describe('ADR-644 — R2018 structural compliance (professional path)', () => {
     expect(writeDxfAscii([okLt], proOptions())).toContain('\n6\nDashed\n');
   });
 
+  it('#7 — predefined HATCH pattern offset scales with the coordinate scale s (visible density)', () => {
+    const hatch = {
+      id: 'h', type: 'hatch', layerId: 'walls', fillType: 'predefined', patternName: 'ANSI31',
+      patternScale: 1, patternAngle: 0, islandStyle: 'normal',
+      boundaryPaths: [[{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }, { x: 0, y: 1000 }]],
+    } as unknown as Entity;
+    // s=1 → group 41 = suggested×user (unchanged); s=0.001 → 1000× smaller (mm-scene → m-output).
+    const at1 = writeDxfAscii([hatch], proOptions());
+    const atMilli = writeDxfAscii([hatch], { ...proOptions(), scale: 0.001 });
+    // read group 41 INSIDE the HATCH entity (the file's first 41 is the VPORT aspect ratio).
+    const g41 = (dxf: string): number => {
+      const h = dxf.slice(dxf.indexOf('0\nHATCH\n'));
+      return Number(h.slice(0, h.indexOf('\n0\n')).match(/\n41\n([0-9.eE-]+)\n/)![1]);
+    };
+    expect(g41(at1)).toBeGreaterThan(1);            // meaningful density at s=1
+    expect(g41(atMilli)).toBeCloseTo(g41(at1) * 0.001, 6); // scaled by s → visible in a metre drawing
+  });
+
   it('#6 — HATCH does NOT emit the invalid `47 0` pixel-size (AutoCAD expects 98)', () => {
     const dxf = writeDxfAscii([solidHatch()], proOptions());
     const hatch = dxf.slice(dxf.indexOf('100\nAcDbHatch\n'), dxf.indexOf('0\nENDSEC\n', dxf.indexOf('AcDbHatch')));

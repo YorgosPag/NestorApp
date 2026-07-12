@@ -1,6 +1,6 @@
 # ADR-645 — 3D Incremental Scene Streaming (μεγάλα DXF στον 3Δ καμβά χωρίς freeze)
 
-> **Status:** 🟢 **Φάση A + B + C IMPLEMENTED** (streaming build — freeze fix · shared glyph atlas · view-dependent frustum culling + screen-size text LOD) · Q&A ανοιχτό (Giorgio 2026-07-13)
+> **Status:** 🟢 **Φάση A + B + C IMPLEMENTED + BROWSER-VERIFIED** (streaming build — freeze fix · shared glyph atlas · view-dependent frustum culling + screen-size text LOD) — Giorgio 2026-07-13: «λειτουργεί σωστά, ξεκούραστος ο χειρισμός» (40MB «Όλοι οι όροφοι»). Φ.B+Φ.C uncommitted (commit = Giorgio). §7 MSDF = μελλοντική επιλογή μόνο-αν-χρειαστεί.
 > **Date:** 2026-07-12
 > **Subapp:** `src/subapps/dxf-viewer`
 > **Author:** Giorgio + agent

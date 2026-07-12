@@ -12,6 +12,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
+import type { ArrayParams } from '../array/types';
 import type { SceneEntity } from '../../core/commands/interfaces';
 import type { DxfTextNode } from '../../text-engine/types';
 import { scaleTextNodeRunHeights } from '../../utils/text-node-utils';
@@ -166,6 +167,93 @@ function scaleRectangle(
     width: e.width * Math.abs(sx),
     height: e.height * Math.abs(sy),
   };
+}
+
+// ── Construction / annotation geometry (ADR-646 Φ2) ───────────────────────────
+
+// XLINE / RAY: two anchor points scale like any world point; `direction` is a unit
+// vector (orientation only) → untouched. Without this both fell to `default:{}`.
+function scaleConstructionLine(e: Entity & { type: 'xline' | 'ray' }, base: Point2D, sx: number, sy: number) {
+  return {
+    basePoint: scalePoint(e.basePoint, base, sx, sy),
+    ...(e.secondPoint ? { secondPoint: scalePoint(e.secondPoint, base, sx, sy) } : {}),
+  };
+}
+
+function scaleAngleMeasurement(e: Entity & { type: 'angle-measurement' }, base: Point2D, sx: number, sy: number) {
+  // Three world points; the reported `angle` is derived at render time from them.
+  return {
+    vertex: scalePoint(e.vertex, base, sx, sy),
+    point1: scalePoint(e.point1, base, sx, sy),
+    point2: scalePoint(e.point2, base, sx, sy),
+  };
+}
+
+function scaleCenterMark(e: Entity & { type: 'center-mark' }, base: Point2D, sx: number, sy: number) {
+  // `size` is annotative paper-mm → preserved (AutoCAD annotative). Only the world center moves.
+  return { center: scalePoint(e.center, base, sx, sy) };
+}
+
+function scaleCenterLine(e: Entity & { type: 'centerline' }, base: Point2D, sx: number, sy: number) {
+  // `extension` is annotative paper-mm → preserved. Endpoints are world → scaled.
+  return { start: scalePoint(e.start, base, sx, sy), end: scalePoint(e.end, base, sx, sy) };
+}
+
+function scaleAnnotationSymbol(e: Entity & { type: 'annotation-symbol' }, base: Point2D, sx: number, sy: number) {
+  // `sizeMm` is annotative paper-mm → preserved; the insertion point follows the geometry.
+  return { position: scalePoint(e.position, base, sx, sy) };
+}
+
+function scaleScaleBar(e: Entity & { type: 'scale-bar' }, base: Point2D, sx: number, sy: number) {
+  // `length` is scale-INVARIANT by design; bar/label heights are annotative paper-mm. Only the
+  // world origin follows the transform (params are the SSoT; derived geometry recomputes on render).
+  return { position: scalePoint(e.position, base, sx, sy) };
+}
+
+function scaleOpeningInfoTag(e: Entity & { type: 'opening-info-tag' }, base: Point2D, sx: number, sy: number) {
+  // `widthMm` is WORLD canonical-mm (NOT annotative) → scales like a length (|sx|). Height is
+  // derived (locked aspect); the geometry cache recomputes from these params.
+  return { position: scalePoint(e.position, base, sx, sy), widthMm: e.widthMm * Math.abs(sx) };
+}
+
+// ARRAY (ADR-353): scale the source copies (recursive SSoT, like GROUP) AND the spacing params so
+// the whole associative pattern scales; the array regenerates its items from these downstream.
+function scaleArrayParams(params: ArrayParams, base: Point2D, sx: number, sy: number): ArrayParams {
+  switch (params.kind) {
+    case 'rect':
+      return { ...params, colSpacing: params.colSpacing * Math.abs(sx), rowSpacing: params.rowSpacing * Math.abs(sy) };
+    case 'polar':
+      return { ...params, center: scalePoint(params.center, base, sx, sy), radius: params.radius * Math.abs(sx) };
+    case 'path':
+      return params.spacing !== undefined ? { ...params, spacing: params.spacing * Math.abs(sx) } : params;
+  }
+}
+
+function scaleArray(e: Entity & { type: 'array' }, base: Point2D, sx: number, sy: number) {
+  return {
+    hiddenSources: e.hiddenSources.map(m => ({ ...m, ...scaleEntity(m, base, sx, sy) })),
+    params: scaleArrayParams(e.params, base, sx, sy),
+    ...(e.basePointOverride ? { basePointOverride: scalePoint(e.basePointOverride, base, sx, sy) } : {}),
+  };
+}
+
+// ── Supported-type gate (SSoT — MUST mirror the `scaleEntity` switch below) ────
+
+/**
+ * The entity types the scale transform actually handles. The tool reads this to
+ * skip parametric BIM (wall/column/beam/slab/stair/…) with an explicit message
+ * instead of a silent no-op (ADR-646 #3) — Revit/ArchiCAD «cannot be scaled».
+ */
+const SCALABLE_ENTITY_TYPES: ReadonlySet<string> = new Set([
+  'line', 'arc', 'circle', 'ellipse', 'polyline', 'lwpolyline', 'spline', 'text', 'mtext',
+  'point', 'leader', 'dimension', 'hatch', 'rectangle', 'rect', 'block', 'group',
+  'xline', 'ray', 'array', 'angle-measurement', 'center-mark', 'centerline',
+  'annotation-symbol', 'scale-bar', 'opening-info-tag',
+]);
+
+/** Whether the scale transform produces a real geometry change for `type` (ADR-646 #3). */
+export function isScalableEntityType(type: string): boolean {
+  return SCALABLE_ENTITY_TYPES.has(type);
 }
 
 // ── Main dispatch ─────────────────────────────────────────────────────────────

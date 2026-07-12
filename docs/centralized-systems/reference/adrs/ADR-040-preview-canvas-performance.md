@@ -85,7 +85,7 @@ partial-bounds mis-cull). (2) **Text LOD = per-fragment shader `discard`** (ΝΕ
 (`computeInstanceCount`: drop sub-`cutoffPx`). Bitmap cache / micro-leaf subscription pattern **άθικτα** (η αλλαγή
 ζει στον converter + στο overlay material, ΟΧΙ σε orchestrator· καμία `useSyncExternalStore`). Πλήρες detail:
 **ADR-645 §3 Φ.C + §8 + ADR-366 changelog**. ΟΧΙ tsc (N.17)· jest 60 suites/442 GREEN· jscpd:diff καθαρό.
-🔴 browser-verify + commit (Giorgio).
+✅ **browser-verified 2026-07-13** (Giorgio: «λειτουργεί σωστά, ξεκούραστος ο χειρισμός», 40MB «Όλοι οι όροφοι»). Uncommitted — commit = Giorgio.
 
 ### 2026-07-12 — ✅ 3D DXF overlay build τρέχει στο UnifiedFrameScheduler (time-sliced streaming, ADR-645 Φάση A)
 **Τι:** το 2Δ→3Δ build του `DxfToThreeConverter` έπαψε να είναι σύγχρονο all-at-once μέσα σε React commit effect

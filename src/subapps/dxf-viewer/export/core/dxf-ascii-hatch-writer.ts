@@ -108,16 +108,18 @@ export function emitHatch(
   if (gradient) {
     emitGradient(gradient, pair);
   } else if (predefined) {
-    emitPredefinedPattern(e, pair);
+    emitPredefinedPattern(e, pair, s);
   } else if (!solid) {
     const angle = e.lineAngle ?? e.patternAngle ?? 0;
-    const spacing = e.lineSpacing ?? e.patternScale ?? 1;
+    // ADR-644 (#7) — the line spacing is in SCENE units (same as the boundary paths on the canvas);
+    // × `s` converts it to OUTPUT units so the pattern density matches the (× s) boundary. Without
+    // it a mm-scene / m-output export (s=0.001) spaced the lines 1000× too far apart → invisible.
+    const spacing = (e.lineSpacing ?? e.patternScale ?? 1) * s;
+    const r = degToRad(angle);
     pair(52, angle);                              // pattern angle
-    pair(41, spacing);                            // pattern scale / spacing
+    pair(41, spacing);                            // pattern scale / spacing (output units)
     pair(77, e.doubleCrossHatch ? 1 : 0);         // double flag
     pair(78, 1);                                  // number of pattern definition lines
-    // ΕΝΑ ορισμός γραμμής μοτίβου → έγκυρο user-defined hatch στο AutoCAD.
-    const r = degToRad(angle);
     pair(53, angle);                              // line angle
     pair(43, 0); pair(44, 0);                     // base point
     pair(45, -Math.sin(r) * spacing);             // offset x (κάθετο)
@@ -140,12 +142,16 @@ export function emitHatch(
  * (ADR-507 §2.3). Οι τιμές κλιμακώνονται κατά `patternScale` ώστε το εξαγόμενο DXF
  * να ταιριάζει με την οθόνη. Άγνωστο pattern → fallback σε μία γραμμή (valid hatch).
  */
-function emitPredefinedPattern(e: HatchEntity, pair: Pair): void {
+function emitPredefinedPattern(e: HatchEntity, pair: Pair, s: number): void {
   const angle = e.patternAngle ?? 0;
-  // effective scale (suggested ανά μοτίβο × user) — ίδιο με τον canvas (WYSIWYG).
-  const scale = resolveEffectiveHatchScale(e.patternName, e.patternScale);
+  // ADR-644 (#7) — WYSIWYG με τον canvas: ο canvas κτίζει τις γραμμές μοτίβου σε SCENE units
+  // (`pattern.delta × scale`, ίδιες μονάδες με το scene-unit boundary). Το export κλιμακώνει ΚΑΙ το
+  // boundary ΚΑΙ το μοτίβο κατά `s` (scene→output). `eff = scale × s` → το pattern definition (43-46/
+  // 49) + το group 41 σε OUTPUT units. Χωρίς το `× s` (π.χ. mm-scene→m-output, s=0.001) οι γραμμές
+  // απείχαν 1000× → ΑΟΡΑΤΕΣ (ADR-507 Φ6 / handoff #7).
+  const eff = resolveEffectiveHatchScale(e.patternName, e.patternScale) * s;
   pair(52, angle);                                // pattern angle
-  pair(41, scale);                                // pattern scale
+  pair(41, eff);                                  // pattern scale (output units)
   pair(77, 0);                                    // double flag (n/a για predefined)
   const pattern = getHatchPattern(e.patternName);
   const lines = pattern?.lines ?? [];
@@ -153,18 +159,18 @@ function emitPredefinedPattern(e: HatchEntity, pair: Pair): void {
     // fallback: μία διαγώνια ώστε το hatch να παραμένει έγκυρο.
     pair(78, 1);
     pair(53, angle); pair(43, 0); pair(44, 0);
-    pair(45, 0); pair(46, scale || 1); pair(79, 0);
+    pair(45, 0); pair(46, eff || s); pair(79, 0);
     return;
   }
   pair(78, lines.length);                         // number of pattern definition lines
   for (const pl of lines) {
     pair(53, pl.angle + angle);                   // line angle
-    pair(43, pl.origin[0] * scale);               // base point X
-    pair(44, pl.origin[1] * scale);               // base point Y
-    pair(45, pl.delta[0] * scale);                // offset (delta) X
-    pair(46, pl.delta[1] * scale);                // offset (delta) Y
+    pair(43, pl.origin[0] * eff);                 // base point X
+    pair(44, pl.origin[1] * eff);                 // base point Y
+    pair(45, pl.delta[0] * eff);                  // offset (delta) X
+    pair(46, pl.delta[1] * eff);                  // offset (delta) Y
     pair(79, pl.dashes.length);                   // number of dash lengths
-    for (const d of pl.dashes) pair(49, d * scale); // dash length
+    for (const d of pl.dashes) pair(49, d * eff); // dash length
   }
 }
 
