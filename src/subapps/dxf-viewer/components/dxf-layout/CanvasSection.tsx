@@ -252,7 +252,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     draggingEdgeMidpoint, dragPreviewPosition,
     hiddenOverlayIds: overlayStore.hiddenOverlayIds,
   });
-  const { fitToOverlay } = useFitToView({ dxfScene, colorLayers, zoomSystem, setTransform, containerRef, currentOverlays });
+  const { fitToOverlay } = useFitToView({ dxfScene, currentScene: props.currentScene ?? null, colorLayers, zoomSystem, setTransform, containerRef, currentOverlays });
   useCanvasPan({ transformRef, setTransform });
   const floorplanBg = useFloorplanBackgroundForLevel();
   // ADR-399 — ΕΝΑ viewport auto-fit controller (SSoT)· λεπτομέρειες: ADR-040 changelog 2026-06-16.

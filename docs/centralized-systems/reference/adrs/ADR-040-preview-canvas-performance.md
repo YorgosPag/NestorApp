@@ -72,6 +72,14 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-12 — ✅ BEDIT block-aware fit/zoom-extents — `CanvasSection` prop pass-through (ADR-641 Φ4-follow-up, CHECK 6B)
+**Τι:** το `CanvasSection` περνά πλέον `currentScene` (world `SceneModel`, ήδη διαθέσιμο prop) στο `useFitToView`, ώστε ο
+ΕΝΑΣ `canvas-fit-to-view` handler να λύνει τα block-local bounds (`resolveBlockEditScene`) όσο `getActiveBlockEditId()` — τα
+zoom-extents μέσα στο BEDIT πλαισιώνουν το ΜΠΛΟΚ, όχι τον κόσμο. Πλήρες detail: **ADR-641 changelog (Φ4-follow-up)**.
+**Συμμόρφωση ADR-040:** η αλλαγή στο `CanvasSection` είναι **μία γραμμή pass-through** ενός low-freq prop — **καμία** νέα
+`useSyncExternalStore` (CHECK 6C ασφαλές)· ο handler τρέχει σε event time (EventBus), διαβάζει τον world scene μέσω ref και
+τον active-block id μέσω event-time getter (ADR-040 dual-access). Co-staged CHECK 6B.
+
 ### 2026-07-12 — ✅ Block Editor (BEDIT) exclusive render scope — leaf scene-swap (ADR-641 Φ2, CHECK 6B/6D)
 **Τι:** το `DxfCanvasSubscriber` (`canvas-layer-stack-leaves.tsx`) διαβάζει πλέον `useEffectiveLevelScene(sceneLevelId)`
 αντί `useLevelScene` — όταν ένα block είναι «entered» (`getActiveBlockEditId() !== null`) επιστρέφει το block-local

@@ -7,6 +7,10 @@ import { createCombinedBounds } from '../../systems/zoom/utils/bounds';
 import { getImmediatePosition } from '../../systems/cursor/ImmediatePositionStore';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import { dwarn } from '../../debug';
+// ADR-641 — the ruler-corner zoom-to-fit is a zoom-extents path: inside a Block Editor it must frame
+// the block's LOCAL bounds, so it routes to the ONE block-aware canvas-fit-to-view handler.
+import { isBlockEditActive } from '../../systems/block/ActiveBlockEditStore';
+import { EventBus } from '../../systems/events';
 import type { CanvasLayerStackProps } from './canvas-layer-stack-types';
 
 type Deps = Pick<CanvasLayerStackProps, 'zoomSystem' | 'viewport'> & {
@@ -37,6 +41,12 @@ export function useCanvasLayerStackZoomHandlers({
   colorLayersRef,
 }: Deps): CanvasLayerStackZoomHandlers {
   const handleRulerZoomToFit = useCallback(() => {
+    // ADR-641 — inside a Block Editor, frame the block's LOCAL bounds: route to the ONE block-aware
+    // fit handler (useFitToView) instead of the world combined-bounds fit below.
+    if (isBlockEditActive()) {
+      EventBus.emit('canvas-fit-to-view', { source: 'ruler' });
+      return;
+    }
     const combinedBounds = createCombinedBounds(sceneRef.current, colorLayersRef.current, true);
     if (combinedBounds && viewport.width > 0 && viewport.height > 0) {
       zoomSystem.zoomToFit(combinedBounds, viewport, true);

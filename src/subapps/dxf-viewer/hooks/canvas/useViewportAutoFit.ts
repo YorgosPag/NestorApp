@@ -20,27 +20,27 @@
  * ADR-641 Φ4 — Block Editor (BEDIT) enter/exit fit lives here too (STILL one controller):
  * entering a block swaps the canvas to a block-LOCAL scene (members @ origin), so the world
  * transform would leave them off-screen. On the `useActiveBlockEditId()` transition this hook
- * saves the pre-enter view and `zoomToFit`s the block-local bounds (from the effective scene,
- * reusing `resolveBlockEditScene`); on exit it restores the saved view (AutoCAD parity). The
- * scene-load policy effect is untouched — its deps don't change on enter/exit, so the two never
- * fight. Reading the low-freq active-block id here costs one CanvasSection re-render per
- * enter/exit gesture (never per-frame) — ADR-040-acceptable.
+ * saves the pre-enter view and delegates the enter fit to the ONE block-aware zoom-extents handler
+ * (`useFitToView`'s `canvas-fit-to-view` listener, which reads the active block id and fits its
+ * LOCAL bounds THROUGH the zoom system) via `EventBus.emit('canvas-fit-to-view')` — a single fit
+ * implementation (N.18), and the ZoomManager stays in sync so a later wheel zoom stays on the block.
+ * On exit it restores the saved view through `zoomSystem.setTransform` (AutoCAD parity), which also
+ * re-syncs the ZoomManager to the world transform (a plain setter would leave it stale → first
+ * post-exit wheel jumps). The scene-load policy effect is untouched — its deps don't change on
+ * enter/exit, so the two never fight. Reading the low-freq active-block id here costs one
+ * CanvasSection re-render per enter/exit gesture (never per-frame) — ADR-040-acceptable.
  *
  * @see systems/zoom/viewport-autofit-policy.ts — the pure decision SSoT
- * @see hooks/canvas/useFitToView.ts — the EventBus fit/restore handlers
- * @see systems/block/block-edit-scene.ts — resolveBlockEditScene (block-local bounds SSoT)
+ * @see hooks/canvas/useFitToView.ts — the block-aware canvas-fit-to-view handler (block-local bounds)
  */
 
 import { useEffect, useRef } from 'react';
 import type { SceneModel } from '../../types/scene';
 import type { ViewTransform } from '../../rendering/types/Types';
-// ADR-641 Φ4 — BEDIT enter/exit viewport fit (see header).
+// ADR-641 Φ4 — BEDIT enter/exit viewport fit (see header). Enter delegates to the block-aware
+// canvas-fit-to-view handler; exit restores the saved transform through the zoom system.
 import { useActiveBlockEditId } from '../../systems/block/useActiveBlockEdit';
-import { resolveBlockEditScene } from '../../systems/block/block-edit-scene';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
-// ADR-641 Φ4 — same fit calculation the normal content fit uses (padding 10%, maxScale 20), so the
-// block-editor enter fit never over-zooms a small block past the app's fit cap.
-import { FitToViewService } from '../../services/FitToViewService';
 import type { FloorplanBackgroundForLevelResult } from '../../floorplan-background';
 import { EventBus } from '../../systems/events';
 import { readPersistedViewport } from '../../services/viewport-persistence';
@@ -59,13 +59,15 @@ import {
 import { consumeFreshImportFit } from '../../systems/zoom/viewport-fit-intent';
 import { DXF_TIMING } from '../../config/dxf-timing';
 
-/** Subset of the zoom system this hook needs (floorplan-background fit). */
+/** Subset of the zoom system this hook needs (floorplan-background fit + BEDIT exit restore). */
 interface ZoomSystemLike {
   zoomToFit: (
     bounds: { min: { x: number; y: number }; max: { x: number; y: number } },
     viewport: { width: number; height: number },
     alignToOrigin?: boolean,
   ) => { transform: ViewTransform } | null;
+  /** ADR-641 — apply an absolute transform AND sync the ZoomManager (used by the BEDIT exit restore). */
+  setTransform: (t: ViewTransform) => void;
 }
 
 export interface UseViewportAutoFitParams {
@@ -142,9 +144,9 @@ export function useViewportAutoFit({
   const prevBlockEditIdRef = useRef<string | null>(null);
   const preEnterTransformRef = useRef<ViewTransform | null>(null);
 
-  // ADR-641 Φ4 / N.18 — SSoT «apply this fit transform iff finite» for BOTH fit call sites (the
-  // scene/background load fit via the zoom system + the block-editor enter fit via FitToViewService),
-  // so they never drift into token-identical twins. A null/degenerate transform is a safe no-op.
+  // N.18 — SSoT «apply this fit transform iff finite» for the floorplan-background load fit (the
+  // block-editor enter fit no longer computes a transform here — it delegates to the block-aware
+  // canvas-fit-to-view handler). A null/degenerate transform is a safe no-op.
   const applyFitTransform = (t: ViewTransform | null | undefined): void => {
     if (t && Number.isFinite(t.scale) && Number.isFinite(t.offsetX) && Number.isFinite(t.offsetY)) {
       setTransformRef.current(t);
@@ -244,28 +246,20 @@ export function useViewportAutoFit({
     prevBlockEditIdRef.current = activeBlockEditId;
 
     if (activeBlockEditId) {
-      // ENTER: remember the current world view, then frame the block-local members. Bounds come from
-      // the effective (block-local) scene via the SSoT resolver — no re-implemented bbox math.
+      // ENTER: remember the current world view, then delegate to the ONE block-aware zoom-extents
+      // handler (useFitToView reads the active block id and fits its LOCAL bounds through the zoom
+      // system). Emitting — instead of a second, divergent fit here — keeps a single fit
+      // implementation (N.18) and keeps the ZoomManager in sync so a subsequent wheel zoom stays on
+      // the block. Capture BEFORE emit, since the handler runs synchronously and changes the view.
       preEnterTransformRef.current = getImmediateTransform();
-      const blockScene = resolveBlockEditScene(sceneRef.current, activeBlockEditId);
-      const bounds = blockScene?.bounds;
-      const vp = viewportRef.current;
-      if (bounds && vp.width > 0 && vp.height > 0) {
-        // Same calculation + defaults (padding 10%, maxScale 20) as the normal content fit
-        // (useFitToView) — so entering a small block does NOT jump to an extreme zoom (Giorgio: 220:1);
-        // NOT the zoom system's uncapped maxScale (100000). setTransform is the ADR-040 SSoT wrapper.
-        const result = FitToViewService.calculateFitToViewFromBounds(
-          { min: bounds.min, max: bounds.max },
-          vp,
-          { padding: 0.1 },
-        );
-        applyFitTransform(result.transform);
-      }
+      EventBus.emit('canvas-fit-to-view', { source: 'block-edit-enter' });
     } else if (prev) {
-      // EXIT: restore exactly the view the user had before entering (AutoCAD BEDIT parity).
+      // EXIT: restore exactly the view the user had before entering (AutoCAD BEDIT parity), THROUGH
+      // the zoom system so the ZoomManager re-syncs to the world transform (a plain setter would
+      // leave it stale → the first post-exit wheel zoom would jump).
       const saved = preEnterTransformRef.current;
       preEnterTransformRef.current = null;
-      if (saved) setTransformRef.current(saved);
+      if (saved) zoomRef.current.setTransform(saved);
     }
   }, [activeBlockEditId]);
 

@@ -136,6 +136,35 @@ SSoT (no parallel scene subscription left reading the world). Full feature PARTI
   synchronous read-after-write guarantee.
 
 ## Changelog
+- **2026-07-12** — **Φ4 follow-up: ALL fit / zoom-extents paths are now block-edit-aware (single
+  chokepoint).** Symptom (Giorgio, browser): inside BEDIT, HOME/Shift+1 made the block vanish, «F»
+  fit-to-selection did nothing, wheel-zoom made the block vanish, and the enter-fit framed
+  unreliably. **Root cause (traced, not assumed):** every zoom-extents path computed bounds from the
+  WORLD scene — `handleFitToView` used `createCombinedBounds(dxfScene=world)`, «F» filtered
+  `currentScene.entities` (world top-level, where block members don't live → empty → no-op), the
+  ruler-corner fit used world `createCombinedBounds` too — and, crucially, the enter-fit applied its
+  transform through a **plain `setTransform`** that never synced the `ZoomManager`, so the next
+  `wheelZoom` (which reads `ZoomManager.currentTransform`) computed from the STALE world transform →
+  the block jumped off-screen. **Fix (full SSoT, no new module):** the ONE `canvas-fit-to-view`
+  handler (`useFitToView.handleFitToView` — the chokepoint every trigger funnels through:
+  HOME/Shift+1, toolbar, middle-double-click, ruler button, BEDIT enter) is now block-aware — while
+  `getActiveBlockEditId()` it fits `resolveBlockEditScene(worldScene, id)?.bounds` (block-LOCAL, the
+  SAME scope resolver render/hit-test/snap use) via the SAME **uncapped** `zoomToFit` the «F»/«Z»
+  selection fit uses (centered, `alignToOrigin=false`) — NO artificial `maxScale`, because AutoCAD/
+  Revit «zoom extents» in the block editor frames the block to fill the viewport regardless of scale
+  (Giorgio: a `maxScale=20` cap left a small block «far»). `zoomToFit` keeps the `ZoomManager` in
+  sync (wheel afterward stays on the block); it never falls through to the world fit. `useViewportAutoFit` now **delegates**
+  the enter fit to that handler via `EventBus.emit('canvas-fit-to-view')` (one fit implementation,
+  N.18 — dropped its own `FitToViewService`/`resolveBlockEditScene` copy) and restores the pre-enter
+  view on exit **through `zoomSystem.setTransform`** (re-syncs the `ZoomManager` → no post-exit wheel
+  jump). «F»/«Z» (`useKeyboardShortcuts`) now filters the **effective** scene
+  (`resolveBlockEditScene(currentScene, getActiveBlockEditId())?.entities`) so a selected member's
+  LOCAL bounds are found. The ruler-corner `handleRulerZoomToFit` routes to the same handler while
+  `isBlockEditActive()`. **N.18 hygiene:** extracted `applyCappedFit` (shared by `fitToOverlay` + the
+  block branch) and `applyZoomToFit` (shared by the world zoom-extents branch + fit-to-selection —
+  killed a pre-existing NaN-guard twin); `useFitToView` shrank. New test `block-fit-scope.test.ts`
+  (5 green) pins both the HOME whole-block-extents and «F» selection scope with the real SSoT; block
+  suite 70 green; jscpd:diff clean. Touched `CanvasSection.tsx` (one prop) → ADR-040 changelog updated.
 - **2026-07-12** — **Φ4 Edit-tools scope implemented.** New pure `block-member-scene-access.ts`
   (mirror `group-member-scene-access.ts`, but **gated on `activeBlockId`** + **single-level** — blocks
   don't nest): `findEntityOrBlockMember` / `updateEntityOrBlockMember` / `updateEntitiesOrBlockMembers`

@@ -28,6 +28,10 @@ import { useViewMode3DStore, selectIs3D } from '../bim-3d/stores/ViewMode3DStore
 import { useEscapeHandler, ESC_PRIORITY } from '../systems/escape-bus';
 // ADR-575 §enter-group — ESC steps OUT of the active group (registers its own bus slot).
 import { useGroupExitEscape } from '../systems/group/useGroupExitEscape';
+// ADR-641 — «F»/«Z» fit-to-selection must scope to the entered block's LOCAL scene (members live in
+// block.entities, not top-level), so resolve the effective scene before filtering the selection.
+import { getActiveBlockEditId } from '../systems/block/ActiveBlockEditStore';
+import { resolveBlockEditScene } from '../systems/block/block-edit-scene';
 // ADR-641 §3 — ESC closes the active Block Editor (BLOCK_EDITOR_EXIT 274, block twin of GROUP_EXIT).
 import { useBlockEditorExitEscape } from '../systems/block/useBlockEditorExitEscape';
 // ADR-036 / ADR-364 Group 3 follow-up (2026-05-19): Single Source of Truth for
@@ -123,8 +127,12 @@ export const useKeyboardShortcuts = ({
       ) {
         e.preventDefault();
         const selectedSet = new Set(selectedEntityIds);
+        // ADR-641 — scope to the effective scene: the entered block's block-local members when a
+        // Block Editor session is open (`resolveBlockEditScene` returns the world scene unchanged at
+        // the top level), so a selected member's LOCAL bounds are found instead of an empty filter.
+        const scopedScene = resolveBlockEditScene(currentScene, getActiveBlockEditId());
         const bounds = calculateCombinedEntityBounds(
-          currentScene.entities.filter(en => selectedSet.has(en.id)),
+          (scopedScene?.entities ?? []).filter(en => selectedSet.has(en.id)),
         );
         if (bounds) {
           EventBus.emit('canvas-fit-to-view-selected', { bounds });
