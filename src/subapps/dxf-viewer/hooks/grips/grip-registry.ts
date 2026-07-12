@@ -156,6 +156,14 @@ interface UseGripRegistryParams {
    * tagging → the normal per-entity grip path builds them). Revit «Edit Group».
    */
   activeGroupStack?: readonly string[];
+  /**
+   * ADR-641 Φ4 — the entered Block Editor's block id (or null). Defensive whole-block gizmo
+   * suppression: while INSIDE a block the effective scene is block-local and holds no `BlockEntity`,
+   * so `blockEntities` is normally empty already; this guard also drops the gizmo if the still-
+   * selected container id lingers with the container present (belt-and-suspenders, mirror
+   * `activeGroupStack`). The entered members take the normal per-entity grip path.
+   */
+  activeBlockEditId?: string | null;
 }
 
 /**
@@ -169,6 +177,7 @@ export function useGripRegistry({
   groupEntities,
   blockEntities,
   activeGroupStack,
+  activeBlockEditId,
 }: UseGripRegistryParams): UnifiedGripInfo[] {
   // ADR-559 §big-player — `maxGripsPerEntity` intentionally NOT read here: no per-object grip
   // cap (visible ≡ pickable). Only the object-COUNT `gripObjLimit` (AutoCAD GRIPOBJLIMIT) bounds perf.
@@ -221,10 +230,13 @@ export function useGripRegistry({
         // ADR-640 — a selected BLOCK renders as ONE unit (mirror the group path above):
         // suppress its members' per-member grips (they all share `block.id`, so only one
         // would show) and emit the whole-block GIZMO instead (move cross + rotation handle
-        // at the bbox centre). No enter-block drill-in (blocks are edited via Explode), so
-        // no `activeStack` guard is needed. Always visible (both `type: 'vertex'`).
+        // at the bbox centre). Always visible (both `type: 'vertex'`).
+        // ADR-641 Φ4 — while INSIDE this block (BEDIT) suppress its whole-block gizmo: the entered
+        // members are edited via their own grips (block-local effective scene). Normally the effective
+        // scene holds no `BlockEntity` so `blockEntities` is already empty; this guard is the belt-and-
+        // suspenders for a lingering selected container id (mirror the group `activeGroupStack` guard).
         const block = blockEntities?.get(entityId);
-        if (block) {
+        if (block && entityId !== activeBlockEditId) {
           const bounds = computeBlockSelectionBounds(block);
           if (bounds) {
             for (const grip of getBlockGizmoGrips(block, bounds)) {
@@ -280,5 +292,5 @@ export function useGripRegistry({
     }
 
     return result;
-  }, [dxfScene, selectedEntityIds, selectedOverlays, groupEntities, blockEntities, activeGroupStack, showMidpoints, showCenters, showQuadrants, gripObjLimit]);
+  }, [dxfScene, selectedEntityIds, selectedOverlays, groupEntities, blockEntities, activeGroupStack, activeBlockEditId, showMidpoints, showCenters, showQuadrants, gripObjLimit]);
 }

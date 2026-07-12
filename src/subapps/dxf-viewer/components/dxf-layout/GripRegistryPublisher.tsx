@@ -33,6 +33,11 @@ import { collectBlockEntities } from '../../systems/block/block-selection-bounds
 // ADR-575 §enter-group — the drill-in stack: convert the active group's members with
 // their own id (so member grips build) AND suppress the whole-group gizmo while inside.
 import { useActiveGroupId, useActiveGroupStack } from '../../systems/group/useActiveGroup';
+// ADR-641 Φ4 — Block Editor (BEDIT) render-scope parity: while a block is entered the grip registry
+// must compute against the SAME block-local scene the paint leaf shows (`resolveBlockEditScene`), so
+// member grips land in the rendered frame and the whole-block gizmo drops out «for free».
+import { useActiveBlockEditId } from '../../systems/block/useActiveBlockEdit';
+import { resolveBlockEditScene } from '../../systems/block/block-edit-scene';
 import { useSelectedEntityIds, useSelectionByType } from '../../systems/selection/useSelectedEntities';
 import { useLevelScene } from '../../systems/scene/useSceneSelectors';
 import { AllGripsStore } from '../../systems/grip/AllGripsStore';
@@ -69,9 +74,18 @@ export const GripRegistryPublisher: React.FC<GripRegistryPublisherProps> = ({
   // gizmo). Low-freq → ADR-040-safe; only this leaf re-renders.
   const activeGroupId = useActiveGroupId();
   const activeGroupStack = useActiveGroupStack();
+  // ADR-641 Φ4 — the effective scene: raw world scene, or (while a Block Editor session is open) that
+  // block's block-local synthetic scene. Reference-identical to `liveSceneModel` when not inside BEDIT
+  // (`resolveBlockEditScene(scene, null) === scene`), so the top-level path is byte-unchanged. Low-freq
+  // id → ADR-040-safe; only this leaf re-renders on enter/exit.
+  const activeBlockEditId = useActiveBlockEditId();
+  const effectiveScene = useMemo(
+    () => resolveBlockEditScene(liveSceneModel, activeBlockEditId),
+    [liveSceneModel, activeBlockEditId],
+  );
   const reactiveScene = useMemo(
-    () => (liveSceneModel ? convertScene(liveSceneModel, activeGroupId) : dxfScene),
-    [liveSceneModel, convertScene, dxfScene, activeGroupId],
+    () => (effectiveScene ? convertScene(effectiveScene, activeGroupId) : dxfScene),
+    [effectiveScene, convertScene, dxfScene, activeGroupId],
   );
   // ADR-575 §8 — GROUP containers in the live scene, keyed by id. A selected group
   // renders as ONE unit (dashed box + «Ομάδα · N» overlay + shared gizmo), so the
@@ -80,19 +94,20 @@ export const GripRegistryPublisher: React.FC<GripRegistryPublisherProps> = ({
   // move/rotation gizmo from the `GroupEntity` (needed for its bounds). Reads the ORIGINAL
   // SceneModel entities (the GroupEntity survives only pre-expansion), NOT the dxfScene.
   const groupEntities = useMemo(
-    () => collectGroupEntities(liveSceneModel?.entities),
-    [liveSceneModel],
+    () => collectGroupEntities(effectiveScene?.entities),
+    [effectiveScene],
   );
-  // ADR-640 — BLOCK containers in the live scene, keyed by id (mirror `groupEntities`). A
-  // selected block renders as ONE unit (dashed box + «Μπλοκ «name» · N» overlay + shared
-  // gizmo), so the registry suppresses its members' per-member grips AND emits the whole-
-  // block move/rotation gizmo. Reads the ORIGINAL SceneModel entities (the BlockEntity
-  // survives only pre-expansion), NOT the dxfScene.
+  // ADR-640 — BLOCK containers in the effective scene, keyed by id (mirror `groupEntities`). A
+  // selected block renders as ONE unit (dashed box + «Μπλοκ «name» · N» overlay + shared gizmo), so
+  // the registry suppresses its members' per-member grips AND emits the whole-block gizmo. Reads the
+  // pre-expansion SceneModel entities, NOT the dxfScene. ADR-641 Φ4 — while INSIDE that block (BEDIT)
+  // the effective scene is block-LOCAL and holds no `BlockEntity`, so this map is empty and the whole-
+  // block gizmo drops out «for free»; the entered members take the normal per-entity grip path.
   const blockEntities = useMemo(
-    () => collectBlockEntities(liveSceneModel?.entities),
-    [liveSceneModel],
+    () => collectBlockEntities(effectiveScene?.entities),
+    [effectiveScene],
   );
-  const allGrips = useGripRegistry({ dxfScene: reactiveScene, selectedEntityIds, selectedOverlays, groupEntities, blockEntities, activeGroupStack });
+  const allGrips = useGripRegistry({ dxfScene: reactiveScene, selectedEntityIds, selectedOverlays, groupEntities, blockEntities, activeGroupStack, activeBlockEditId });
 
   // Publish the full grip set for event-time hit-testing.
   useEffect(() => { AllGripsStore.set(allGrips); }, [allGrips]);

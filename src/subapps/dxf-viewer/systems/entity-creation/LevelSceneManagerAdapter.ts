@@ -27,16 +27,31 @@ import type { SceneModel, AnySceneEntity, SceneBounds } from '../../types/scene'
 import { DXF_DEFAULT_LAYER } from '../../config/layer-config';
 // 🏢 ADR-XXX: Centralized Color Config
 import { UI_COLORS } from '../../config/color-config';
-// 🏢 ADR-102: Centralized Entity Type Guards
 // 🏢 ADR-358 Phase 9C: createSceneLayer factory (SceneLayer.id required, auto-gen via enterprise-id)
+import { createSceneLayer, isBlockEntity, type Entity } from '../../types/entities';
+// ADR-641 Φ4 — BLOCK-member awareness. While a Block Editor session is open, an id the command
+// system passes is a MEMBER of the active block (in block-local coords inside `block.entities`),
+// NOT a top-level entity. `getActiveBlockEditId()` is an event-time getter (ADR-040-safe; no React
+// snapshot), and the member-scene-access SSoT resolves + writes back the member (or descends nowhere
+// when `null` → identical top-level behaviour). Edits land on the LIVE `block.entities`.
+import { getActiveBlockEditId } from '../block/ActiveBlockEditStore';
 import {
-  isLineEntity,
-  isCircleEntity,
-  isRectangleEntity,
-  isPolylineEntity,
-  createSceneLayer,
-  type Entity,
-} from '../../types/entities';
+  findEntityOrBlockMember,
+  updateEntityOrBlockMember,
+  updateEntitiesOrBlockMembers,
+  addBlockMember,
+  removeEntityOrBlockMember,
+} from '../block/block-member-scene-access';
+// ADR-641 Φ4 — per-type vertex transforms extracted from this adapter (was at the N.7.1 500-line
+// ceiling); reused by both the top-level and block-member writeback paths.
+import {
+  applyVertexUpdate,
+  insertEntityVertex,
+  removeEntityVertex,
+  getEntityVertices,
+} from './level-scene-vertex-ops';
+// Z-order render-list reordering SSoT (shared with the grip adapter — no per-adapter twin).
+import { moveEntityInList, frontBackTargetIndex } from './entity-zorder-ops';
 
 /**
  * Type for getLevelScene function from useLevels hook
@@ -111,6 +126,23 @@ export class LevelSceneManagerAdapter implements ISceneManager {
   }
 
   /**
+   * ADR-641 Φ4 — commit a member-aware single-entity update: route `updater` through the block-member
+   * writeback SSoT (a top-level entity OR a member of the active block) and commit. Shared by
+   * `updateEntity` + the three vertex methods so the writeback shape lives in ONE place.
+   */
+  private commitMemberUpdate(scene: SceneModel, entityId: string, updater: (e: Entity) => Entity): void {
+    this.commitScene({
+      ...scene,
+      entities: updateEntityOrBlockMember(
+        scene.entities as readonly Entity[],
+        entityId,
+        getActiveBlockEditId(),
+        updater,
+      ) as unknown as AnySceneEntity[],
+    });
+  }
+
+  /**
    * Add an entity to the scene
    * Called by CreateEntityCommand.execute() and redo()
    */
@@ -122,10 +154,16 @@ export class LevelSceneManagerAdapter implements ISceneManager {
     const sceneEntity = entity as unknown as AnySceneEntity;
 
     if (scene) {
-      // Add to existing scene
+      // ADR-641 Φ4 — inside a Block Editor session the new entity is a MEMBER of the active block
+      // (appended to its `block.entities`); at the top level it is a plain scene append. `null`
+      // activeBlockId → identical top-level append.
       const updatedScene: SceneModel = {
         ...scene,
-        entities: [...scene.entities, sceneEntity],
+        entities: addBlockMember(
+          scene.entities as readonly Entity[],
+          getActiveBlockEditId(),
+          sceneEntity as unknown as Entity,
+        ) as unknown as AnySceneEntity[],
       };
       this.commitScene(updatedScene);
     } else {
@@ -162,10 +200,14 @@ export class LevelSceneManagerAdapter implements ISceneManager {
     const scene = this.getLatestScene();
 
     if (scene) {
-      const updatedEntities = scene.entities.filter((e) => e.id !== entityId);
+      // ADR-641 Φ4 — member-aware delete (top-level OR a member of the active block).
       const updatedScene: SceneModel = {
         ...scene,
-        entities: updatedEntities,
+        entities: removeEntityOrBlockMember(
+          scene.entities as readonly Entity[],
+          entityId,
+          getActiveBlockEditId(),
+        ) as unknown as AnySceneEntity[],
       };
       this.commitScene(updatedScene);
     }
@@ -177,7 +219,12 @@ export class LevelSceneManagerAdapter implements ISceneManager {
    */
   getEntity(entityId: string): SceneEntity | undefined {
     const scene = this.getLatestScene();
-    const entity = scene?.entities.find((e) => e.id === entityId);
+    // ADR-641 Φ4 — member-aware read: also resolves an id INSIDE the active block's `.entities`.
+    const entity = findEntityOrBlockMember(
+      scene?.entities as readonly Entity[] | undefined,
+      entityId,
+      getActiveBlockEditId(),
+    );
     // 🏢 ENTERPRISE: Type conversion from AnySceneEntity to SceneEntity interface
     return entity ? (entity as unknown as SceneEntity) : undefined;
   }
@@ -189,7 +236,20 @@ export class LevelSceneManagerAdapter implements ISceneManager {
    */
   getEntities(): readonly SceneEntity[] {
     const scene = this.getLatestScene();
-    return (scene?.entities ?? []) as unknown as readonly SceneEntity[];
+    if (!scene) return [];
+    // ADR-641 Φ4 — inside a Block Editor session the operative entity set is the active block's
+    // members (block-local), not the world top level; a cascade scan (e.g. ADR-363 hosted-opening)
+    // then sees the correct in-editor scope.
+    const activeBlockId = getActiveBlockEditId();
+    if (activeBlockId) {
+      const block = scene.entities.find(
+        (e) => e.id === activeBlockId && isBlockEntity(e as unknown as Entity),
+      );
+      if (block && 'entities' in block) {
+        return (block as unknown as { entities: readonly SceneEntity[] }).entities;
+      }
+    }
+    return scene.entities as unknown as readonly SceneEntity[];
   }
 
   /**
@@ -200,14 +260,8 @@ export class LevelSceneManagerAdapter implements ISceneManager {
     const scene = this.getLatestScene();
 
     if (scene) {
-      const updatedEntities = scene.entities.map((e) =>
-        e.id === entityId ? { ...e, ...updates } : e
-      );
-      const updatedScene: SceneModel = {
-        ...scene,
-        entities: updatedEntities as AnySceneEntity[],
-      };
-      this.commitScene(updatedScene);
+      // ADR-641 Φ4 — member-aware writeback (top-level OR inside the active block).
+      this.commitMemberUpdate(scene, entityId, (e) => ({ ...e, ...updates } as unknown as Entity));
     }
   }
 
@@ -220,12 +274,19 @@ export class LevelSceneManagerAdapter implements ISceneManager {
     const scene = this.getLatestScene();
     if (!scene) return;
 
-    const updatedEntities = scene.entities.map((e) => {
-      const u = updates.get(e.id);
-      return u ? ({ ...e, ...u } as AnySceneEntity) : e;
-    });
+    // ADR-641 Φ4 — member-aware batch writeback: patches also reach members inside the active
+    // block. Build a per-id patch-fn map once; the SSoT descends into the active block container.
+    const patchFns = new Map<string, (e: Entity) => Entity>();
+    updates.forEach((u, id) => patchFns.set(id, (e) => ({ ...e, ...u } as unknown as Entity)));
 
-    this.commitScene({ ...scene, entities: updatedEntities });
+    this.commitScene({
+      ...scene,
+      entities: updateEntitiesOrBlockMembers(
+        scene.entities as readonly Entity[],
+        patchFns,
+        getActiveBlockEditId(),
+      ) as unknown as AnySceneEntity[],
+    });
   }
 
   /**
@@ -236,45 +297,9 @@ export class LevelSceneManagerAdapter implements ISceneManager {
     const scene = this.getLatestScene();
 
     if (scene) {
-      const updatedEntities = scene.entities.map((entity) => {
-        if (entity.id !== entityId) return entity;
-
-        // Handle polyline vertices
-        // 🏢 ADR-102: Use centralized type guard with Entity cast + property check for TS narrowing
-        if (isPolylineEntity(entity as unknown as Entity) && 'vertices' in entity) {
-          const vertices = [...entity.vertices];
-          if (vertexIndex >= 0 && vertexIndex < vertices.length) {
-            vertices[vertexIndex] = position;
-            return { ...entity, vertices };
-          }
-        }
-
-        // Handle line start/end
-        // 🏢 ADR-102: Use centralized type guard with Entity cast
-        if (isLineEntity(entity as unknown as Entity)) {
-          if (vertexIndex === 0) {
-            return { ...entity, start: position };
-          } else if (vertexIndex === 1) {
-            return { ...entity, end: position };
-          }
-        }
-
-        // Handle circle center
-        // 🏢 ADR-102: Use centralized type guard with Entity cast
-        if (isCircleEntity(entity as unknown as Entity)) {
-          if (vertexIndex === 0) {
-            return { ...entity, center: position };
-          }
-        }
-
-        return entity;
-      });
-
-      const updatedScene: SceneModel = {
-        ...scene,
-        entities: updatedEntities,
-      };
-      this.commitScene(updatedScene);
+      // ADR-641 Φ4 — per-type transform (`applyVertexUpdate`, extracted SSoT) via the member-aware
+      // writeback: works on a top-level entity OR a member of the active block.
+      this.commitMemberUpdate(scene, entityId, (e) => applyVertexUpdate(e, vertexIndex, position));
     }
   }
 
@@ -286,25 +311,8 @@ export class LevelSceneManagerAdapter implements ISceneManager {
     const scene = this.getLatestScene();
 
     if (scene) {
-      const updatedEntities = scene.entities.map((entity) => {
-        if (entity.id !== entityId) return entity;
-
-        // Only polylines support vertex insertion
-        // 🏢 ADR-102: Use centralized type guard with Entity cast + property check for TS narrowing
-        if (isPolylineEntity(entity as unknown as Entity) && 'vertices' in entity) {
-          const vertices = [...entity.vertices];
-          vertices.splice(insertIndex, 0, position);
-          return { ...entity, vertices };
-        }
-
-        return entity;
-      });
-
-      const updatedScene: SceneModel = {
-        ...scene,
-        entities: updatedEntities,
-      };
-      this.commitScene(updatedScene);
+      // ADR-641 Φ4 — member-aware; `insertEntityVertex` (extracted SSoT) handles the polyline-only rule.
+      this.commitMemberUpdate(scene, entityId, (e) => insertEntityVertex(e, insertIndex, position));
     }
   }
 
@@ -316,27 +324,8 @@ export class LevelSceneManagerAdapter implements ISceneManager {
     const scene = this.getLatestScene();
 
     if (scene) {
-      const updatedEntities = scene.entities.map((entity) => {
-        if (entity.id !== entityId) return entity;
-
-        // Only polylines support vertex removal
-        // 🏢 ADR-102: Use centralized type guard with Entity cast + property check for TS narrowing
-        if (isPolylineEntity(entity as unknown as Entity) && 'vertices' in entity) {
-          const vertices = [...entity.vertices];
-          if (vertexIndex >= 0 && vertexIndex < vertices.length && vertices.length > 2) {
-            vertices.splice(vertexIndex, 1);
-            return { ...entity, vertices };
-          }
-        }
-
-        return entity;
-      });
-
-      const updatedScene: SceneModel = {
-        ...scene,
-        entities: updatedEntities,
-      };
-      this.commitScene(updatedScene);
+      // ADR-641 Φ4 — member-aware; `removeEntityVertex` (extracted SSoT) enforces polyline + >2 rule.
+      this.commitMemberUpdate(scene, entityId, (e) => removeEntityVertex(e, vertexIndex));
     }
   }
 
@@ -346,78 +335,45 @@ export class LevelSceneManagerAdapter implements ISceneManager {
    */
   getVertices(entityId: string): Point2D[] | undefined {
     const scene = this.getLatestScene();
-    const entity = scene?.entities.find((e) => e.id === entityId);
-
-    if (!entity) return undefined;
-
-    // Handle polyline vertices
-    // 🏢 ADR-102: Use centralized type guard with Entity cast + property check for TS narrowing
-    if (isPolylineEntity(entity as unknown as Entity) && 'vertices' in entity) {
-      return entity.vertices;
-    }
-
-    // Handle line as 2 vertices
-    // 🏢 ENTERPRISE: Type guard ensures start/end are defined for line entities
-    // 🏢 ADR-102: Use centralized type guard with Entity cast
-    if (isLineEntity(entity as unknown as Entity)) {
-      const lineEntity = entity as { start?: Point2D; end?: Point2D };
-      if (lineEntity.start && lineEntity.end) {
-        return [lineEntity.start, lineEntity.end];
-      }
-    }
-
-    // Handle circle as 1 vertex (center)
-    // 🏢 ADR-102: Use centralized type guard with Entity cast
-    if (isCircleEntity(entity as unknown as Entity)) {
-      const circleEntity = entity as { center?: Point2D };
-      if (circleEntity.center) {
-        return [circleEntity.center];
-      }
-    }
-
-    // Handle rectangle as 2 corners
-    // 🏢 ADR-102: Use centralized type guard with Entity cast
-    if (isRectangleEntity(entity as unknown as Entity) && 'corner1' in entity && 'corner2' in entity) {
-      const rectEntity = entity as { corner1?: Point2D; corner2?: Point2D };
-      if (rectEntity.corner1 && rectEntity.corner2) {
-        return [rectEntity.corner1, rectEntity.corner2];
-      }
-    }
-
-    return undefined;
+    // ADR-641 Φ4 — member-aware read; `getEntityVertices` (extracted SSoT) does the per-type mapping.
+    const entity = findEntityOrBlockMember(
+      scene?.entities as readonly Entity[] | undefined,
+      entityId,
+      getActiveBlockEditId(),
+    );
+    return entity ? getEntityVertices(entity) : undefined;
   }
 
-  /** Z-order: return current render-list index of an entity. -1 if not found. */
+  /**
+   * Z-order: current render-list index of an entity. -1 if not found.
+   * ADR-641 Φ4 — TOP-LEVEL scope only: block-member reorder inside BEDIT is not yet supported, so a
+   * member id returns -1 and `reorderEntity`/`moveEntityToIndex` no-op (graceful degradation, not
+   * corruption). Deferred to a later phase.
+   */
   getEntityIndex(entityId: string): number {
     const scene = this.getLatestScene();
     if (!scene) return -1;
     return scene.entities.findIndex((e) => e.id === entityId);
   }
 
-  /** Z-order: move entity to front (end of list) or back (start). */
+  /** Z-order: move entity to front (end of list) or back (start). Shared SSoT (N.0.2). */
   reorderEntity(entityId: string, direction: 'front' | 'back'): void {
     const scene = this.getLatestScene();
     if (!scene) return;
-    const idx = scene.entities.findIndex((e) => e.id === entityId);
-    if (idx === -1) return;
-    const entities = scene.entities.slice() as AnySceneEntity[];
-    const [entity] = entities.splice(idx, 1);
-    if (direction === 'front') entities.push(entity);
-    else entities.unshift(entity);
-    this.commitScene({ ...scene, entities });
+    const entities = moveEntityInList(
+      scene.entities,
+      entityId,
+      frontBackTargetIndex(direction, scene.entities.length),
+    );
+    if (entities) this.commitScene({ ...scene, entities });
   }
 
   /** Z-order: restore entity to an exact index — used by ReorderEntityCommand.undo(). */
   moveEntityToIndex(entityId: string, targetIndex: number): void {
     const scene = this.getLatestScene();
     if (!scene) return;
-    const idx = scene.entities.findIndex((e) => e.id === entityId);
-    if (idx === -1) return;
-    const entities = scene.entities.slice() as AnySceneEntity[];
-    const [entity] = entities.splice(idx, 1);
-    const clamped = Math.min(Math.max(0, targetIndex), entities.length);
-    entities.splice(clamped, 0, entity);
-    this.commitScene({ ...scene, entities });
+    const entities = moveEntityInList(scene.entities, entityId, targetIndex);
+    if (entities) this.commitScene({ ...scene, entities });
   }
 
   /**

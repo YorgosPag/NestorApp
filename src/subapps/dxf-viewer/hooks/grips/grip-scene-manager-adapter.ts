@@ -29,6 +29,19 @@ import {
   updateEntityOrGroupMember,
   updateEntitiesOrGroupMembers,
 } from '../../systems/group/group-member-scene-access';
+// ADR-641 Φ4 — BLOCK-member counterpart: while a Block Editor session is open (BEDIT), the id is a
+// member of the active block's `.entities` (block-local coords). `getActiveBlockEditId()` gates the
+// descent; GROUP drill-in and BEDIT are mutually exclusive (ADR-641 §7), so exactly one path applies.
+import { getActiveBlockEditId } from '../../systems/block/ActiveBlockEditStore';
+import {
+  findEntityOrBlockMember,
+  updateEntityOrBlockMember,
+  updateEntitiesOrBlockMembers,
+  addBlockMember,
+  removeEntityOrBlockMember,
+} from '../../systems/block/block-member-scene-access';
+// Z-order render-list reordering SSoT (shared with LevelSceneManagerAdapter — no per-adapter twin).
+import { moveEntityInList, frontBackTargetIndex } from '../../systems/entity-creation/entity-zorder-ops';
 import type { DxfCommitDeps } from './unified-grip-types';
 
 // ============================================================================
@@ -55,29 +68,63 @@ export function computeAngleDegrees(vertex: Point2D, p1: Point2D, p2: Point2D): 
 export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | null {
   const { currentLevelId, getLevelScene, setLevelScene } = deps;
   if (!currentLevelId) return null;
+
+  // ADR-575 + ADR-641 Φ4 — container-member routing SSoT for THIS adapter. An id may resolve at the
+  // top level, inside an entered GROUP, or inside the active BLOCK (BEDIT). The two drill-ins are
+  // mutually exclusive, so `getActiveBlockEditId()` picks the path: block-member helpers while inside
+  // a Block Editor, group-member helpers otherwise (which already fold in the plain top-level case).
+  const resolveEntity = (entities: readonly Entity[] | undefined, id: string): Entity | null => {
+    const activeBlockId = getActiveBlockEditId();
+    return activeBlockId
+      ? findEntityOrBlockMember(entities, id, activeBlockId)
+      : findEntityOrGroupMember(entities, id);
+  };
+  const writeBackEntity = (entities: readonly Entity[], id: string, updater: (e: Entity) => Entity): Entity[] => {
+    const activeBlockId = getActiveBlockEditId();
+    return activeBlockId
+      ? updateEntityOrBlockMember(entities, id, activeBlockId, updater)
+      : updateEntityOrGroupMember(entities, id, updater);
+  };
+  const writeBackMany = (entities: readonly Entity[], patches: ReadonlyMap<string, (e: Entity) => Entity>): Entity[] => {
+    const activeBlockId = getActiveBlockEditId();
+    return activeBlockId
+      ? updateEntitiesOrBlockMembers(entities, patches, activeBlockId)
+      : updateEntitiesOrGroupMembers(entities, patches);
+  };
+
   return {
     addEntity: (entity: SceneEntity) => {
       const scene = getLevelScene(currentLevelId);
       if (scene) {
+        // ADR-641 Φ4 — a Copy-grip inside BEDIT adds a MEMBER to the active block; top-level append otherwise.
         setLevelScene(currentLevelId, {
           ...scene,
-          entities: [...scene.entities, entity as unknown as AnySceneEntity],
+          entities: addBlockMember(
+            scene.entities as readonly Entity[],
+            getActiveBlockEditId(),
+            entity as unknown as Entity,
+          ) as unknown as AnySceneEntity[],
         });
       }
     },
     removeEntity: (id: string) => {
       const scene = getLevelScene(currentLevelId);
       if (scene) {
+        // ADR-641 Φ4 — member-aware delete (top-level OR a member of the active block).
         setLevelScene(currentLevelId, {
           ...scene,
-          entities: scene.entities.filter((e) => e.id !== id),
+          entities: removeEntityOrBlockMember(
+            scene.entities as readonly Entity[],
+            id,
+            getActiveBlockEditId(),
+          ) as unknown as AnySceneEntity[],
         });
       }
     },
     getEntity: (id: string) => {
       const scene = getLevelScene(currentLevelId);
-      // ADR-575 — member-aware: also resolves an id INSIDE an entered group container.
-      return (findEntityOrGroupMember(scene?.entities as readonly Entity[] | undefined, id) ?? undefined) as SceneEntity | undefined;
+      // ADR-575 / ADR-641 Φ4 — member-aware: resolves an id INSIDE an entered group OR the active block.
+      return (resolveEntity(scene?.entities as readonly Entity[] | undefined, id) ?? undefined) as SceneEntity | undefined;
     },
     getEntities: () => {
       const scene = getLevelScene(currentLevelId);
@@ -86,10 +133,10 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
     updateEntity: (id: string, updates: Partial<SceneEntity>) => {
       const scene = getLevelScene(currentLevelId);
       if (scene) {
-        // ADR-575 — member-aware writeback (top-level OR inside an entered group).
+        // ADR-575 / ADR-641 Φ4 — member-aware writeback (top-level, entered group, OR active block).
         setLevelScene(currentLevelId, {
           ...scene,
-          entities: updateEntityOrGroupMember(
+          entities: writeBackEntity(
             scene.entities as readonly Entity[],
             id,
             (e) => ({ ...e, ...updates } as unknown as Entity),
@@ -100,11 +147,11 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
     updateVertex: (id: string, vertexIndex: number, position: Point2D) => {
       const scene = getLevelScene(currentLevelId);
       if (!scene) return;
-      // ADR-575 — member-aware writeback: the per-type vertex transform runs on the
-      // resolved entity whether it is top-level or a member of an entered group.
+      // ADR-575 / ADR-641 Φ4 — member-aware writeback: the per-type vertex transform runs on the
+      // resolved entity whether it is top-level, a member of an entered group, OR of the active block.
       setLevelScene(currentLevelId, {
         ...scene,
-        entities: updateEntityOrGroupMember(scene.entities as readonly Entity[], id, (e) => {
+        entities: writeBackEntity(scene.entities as readonly Entity[], id, (e) => {
           // Polyline/polygon: has vertices array
           if ('vertices' in e && Array.isArray(e.vertices)) {
             const vertices = [...e.vertices] as Point2D[];
@@ -167,8 +214,8 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
     },
     getVertices: (id: string): Point2D[] | undefined => {
       const scene = getLevelScene(currentLevelId);
-      // ADR-575 — member-aware: resolve an entered group member by its own id too.
-      const entity = findEntityOrGroupMember(scene?.entities as readonly Entity[] | undefined, id);
+      // ADR-575 / ADR-641 Φ4 — member-aware: resolve an entered group OR active-block member by id.
+      const entity = resolveEntity(scene?.entities as readonly Entity[] | undefined, id);
       if (!entity) return undefined;
       if ('vertices' in entity && Array.isArray(entity.vertices)) {
         return entity.vertices as Point2D[];
@@ -222,14 +269,14 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
     updateEntities: (updates: ReadonlyMap<string, Partial<SceneEntity>>) => {
       const scene = getLevelScene(currentLevelId);
       if (!scene) return;
-      // ADR-575 — member-aware batch writeback: patches also reach members inside an
-      // entered group (multi-grip move of an in-place member). Build a per-id patch-fn
-      // map once; the SSoT descends into group containers.
+      // ADR-575 / ADR-641 Φ4 — member-aware batch writeback: patches also reach members inside an
+      // entered group OR the active block (multi-grip move of an in-place member). Build a per-id
+      // patch-fn map once; the routed SSoT descends into the entered container.
       const patchFns = new Map<string, (e: Entity) => Entity>();
       updates.forEach((patch, id) => patchFns.set(id, (e) => ({ ...e, ...patch } as unknown as Entity)));
       setLevelScene(currentLevelId, {
         ...scene,
-        entities: updateEntitiesOrGroupMembers(scene.entities as readonly Entity[], patchFns) as unknown as AnySceneEntity[],
+        entities: writeBackMany(scene.entities as readonly Entity[], patchFns) as unknown as AnySceneEntity[],
       });
     },
     getEntityIndex: (entityId: string): number => {
@@ -240,23 +287,18 @@ export function createSceneManagerAdapter(deps: DxfCommitDeps): ISceneManager | 
     reorderEntity: (entityId: string, direction: 'front' | 'back') => {
       const scene = getLevelScene(currentLevelId);
       if (!scene) return;
-      const idx = scene.entities.findIndex((e) => e.id === entityId);
-      if (idx === -1) return;
-      const entities = [...scene.entities];
-      const [entity] = entities.splice(idx, 1);
-      if (direction === 'front') entities.push(entity);
-      else entities.unshift(entity);
-      setLevelScene(currentLevelId, { ...scene, entities });
+      const entities = moveEntityInList(
+        scene.entities,
+        entityId,
+        frontBackTargetIndex(direction, scene.entities.length),
+      );
+      if (entities) setLevelScene(currentLevelId, { ...scene, entities });
     },
     moveEntityToIndex: (entityId: string, targetIndex: number) => {
       const scene = getLevelScene(currentLevelId);
       if (!scene) return;
-      const idx = scene.entities.findIndex((e) => e.id === entityId);
-      if (idx === -1) return;
-      const entities = [...scene.entities];
-      const [entity] = entities.splice(idx, 1);
-      entities.splice(targetIndex, 0, entity);
-      setLevelScene(currentLevelId, { ...scene, entities });
+      const entities = moveEntityInList(scene.entities, entityId, targetIndex);
+      if (entities) setLevelScene(currentLevelId, { ...scene, entities });
     },
   };
 }
