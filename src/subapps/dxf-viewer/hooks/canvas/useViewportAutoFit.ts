@@ -17,13 +17,27 @@
  * fit again only on a genuine re-import (new file under the SAME level), otherwise
  * keep the viewport stable — so floor→floor navigation always shows the same area.
  *
+ * ADR-641 Φ4 — Block Editor (BEDIT) enter/exit fit lives here too (STILL one controller):
+ * entering a block swaps the canvas to a block-LOCAL scene (members @ origin), so the world
+ * transform would leave them off-screen. On the `useActiveBlockEditId()` transition this hook
+ * saves the pre-enter view and `zoomToFit`s the block-local bounds (from the effective scene,
+ * reusing `resolveBlockEditScene`); on exit it restores the saved view (AutoCAD parity). The
+ * scene-load policy effect is untouched — its deps don't change on enter/exit, so the two never
+ * fight. Reading the low-freq active-block id here costs one CanvasSection re-render per
+ * enter/exit gesture (never per-frame) — ADR-040-acceptable.
+ *
  * @see systems/zoom/viewport-autofit-policy.ts — the pure decision SSoT
  * @see hooks/canvas/useFitToView.ts — the EventBus fit/restore handlers
+ * @see systems/block/block-edit-scene.ts — resolveBlockEditScene (block-local bounds SSoT)
  */
 
 import { useEffect, useRef } from 'react';
 import type { SceneModel } from '../../types/scene';
 import type { ViewTransform } from '../../rendering/types/Types';
+// ADR-641 Φ4 — BEDIT enter/exit viewport fit (see header).
+import { useActiveBlockEditId } from '../../systems/block/useActiveBlockEdit';
+import { resolveBlockEditScene } from '../../systems/block/block-edit-scene';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import type { FloorplanBackgroundForLevelResult } from '../../floorplan-background';
 import { EventBus } from '../../systems/events';
 import { readPersistedViewport } from '../../services/viewport-persistence';
@@ -120,6 +134,24 @@ export function useViewportAutoFit({
   const setTransformRef = useRef(setTransform);
   setTransformRef.current = setTransform;
 
+  // ADR-641 Φ4 — Block Editor session id (low-freq: one transition per enter/exit gesture).
+  const activeBlockEditId = useActiveBlockEditId();
+  const prevBlockEditIdRef = useRef<string | null>(null);
+  const preEnterTransformRef = useRef<ViewTransform | null>(null);
+
+  // ADR-641 Φ4 / N.18 — SSoT for the two "fit these bounds into the viewport and commit the transform
+  // iff finite" call sites (the scene/background load fit + the block-editor enter fit), so they can
+  // never drift into token-identical twins.
+  const commitZoomToFit = (
+    bounds: { min: { x: number; y: number }; max: { x: number; y: number } },
+    vp: { width: number; height: number },
+  ): void => {
+    const t = zoomRef.current.zoomToFit(bounds, vp, false)?.transform;
+    if (t && Number.isFinite(t.scale) && Number.isFinite(t.offsetX) && Number.isFinite(t.offsetY)) {
+      setTransformRef.current(t);
+    }
+  };
+
   // ADR-375 Phase B.4 — pick a standard fit-to-paper 1:N from the scene's bounds
   // (canonical mm) and apply it via the store, unless the user has manually set
   // the scale this session (`applyAutoDrawingScale` guards that). Bounds are in mm
@@ -142,15 +174,10 @@ export function useViewportAutoFit({
     const bg = bgRef.current?.background;
     const vp = viewportRef.current;
     if (bg && vp.width > 0 && vp.height > 0) {
-      const result = zoomRef.current.zoomToFit(
+      commitZoomToFit(
         { min: { x: 0, y: 0 }, max: { x: bg.naturalBounds.width, y: bg.naturalBounds.height } },
         vp,
-        false,
       );
-      const t = result?.transform;
-      if (t && Number.isFinite(t.scale) && Number.isFinite(t.offsetX) && Number.isFinite(t.offsetY)) {
-        setTransformRef.current(t);
-      }
     }
   };
 
@@ -206,6 +233,31 @@ export function useViewportAutoFit({
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentScene, currentLevelId, fileRecordId, floorplanBg?.background, viewport.width, viewport.height]);
+
+  // ADR-641 Φ4 — Block Editor enter/exit viewport fit (see header). Separate effect keyed ONLY on the
+  // active-block id so it fires on the enter/exit gesture and never on scene mutations / navigation.
+  useEffect(() => {
+    const prev = prevBlockEditIdRef.current;
+    if (prev === activeBlockEditId) return;
+    prevBlockEditIdRef.current = activeBlockEditId;
+
+    if (activeBlockEditId) {
+      // ENTER: remember the current world view, then frame the block-local members. Bounds come from
+      // the effective (block-local) scene via the SSoT resolver — no re-implemented bbox math.
+      preEnterTransformRef.current = getImmediateTransform();
+      const blockScene = resolveBlockEditScene(sceneRef.current, activeBlockEditId);
+      const bounds = blockScene?.bounds;
+      const vp = viewportRef.current;
+      if (bounds && vp.width > 0 && vp.height > 0) {
+        commitZoomToFit({ min: bounds.min, max: bounds.max }, vp);
+      }
+    } else if (prev) {
+      // EXIT: restore exactly the view the user had before entering (AutoCAD BEDIT parity).
+      const saved = preEnterTransformRef.current;
+      preEnterTransformRef.current = null;
+      if (saved) setTransformRef.current(saved);
+    }
+  }, [activeBlockEditId]);
 
   // Clear any pending timer only on unmount — never on a mid-load re-run.
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
