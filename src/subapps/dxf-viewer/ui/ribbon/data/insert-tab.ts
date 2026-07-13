@@ -101,6 +101,32 @@ export const INSERT_TAB: RibbonTab = {
       ],
     },
     {
+      // ADR-651 Φάση Β — «Πινακίδα»: single-click placement tool (commandKey = ToolType
+      // 'title-block'). Το πρότυπο λύνεται με τα στοιχεία του ενεργού έργου (zero-config
+      // auto-fill) και μπαίνει στη σκηνή ως BlockEntity — καμία επιλογή πριν το κλικ.
+      id: 'titleBlock',
+      labelKey: 'ribbon.panels.titleBlock',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'insert.title-block',
+                labelKey: 'ribbon.commands.titleBlock',
+                tooltipKey: 'ribbon.commands.titleBlockTooltip',
+                icon: 'title-block',
+                commandKey: 'title-block',
+                shortcut: 'TITLEBLOCK',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       // ADR-583 — Annotation symbol library (North arrow first). Single-click
       // placement tool (commandKey = ToolType 'north-arrow').
       id: 'annotationSymbols',

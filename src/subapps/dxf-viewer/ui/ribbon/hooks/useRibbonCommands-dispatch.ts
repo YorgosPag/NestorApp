@@ -61,6 +61,10 @@ import { isDimRibbonKey } from './bridge/dim-command-keys';
 import { isXlineRibbonKey } from './bridge/xline-command-keys';
 import { isScaleToolRibbonKey } from './bridge/scale-tool-command-keys';
 import { isBlockLibraryRibbonKey } from './bridge/block-library-command-keys';
+import {
+  isTitleBlockRibbonKey,
+  isTitleBlockRibbonStringKey,
+} from './bridge/title-block-command-keys';
 // Badge / panel-visibility guards (own key-sets, live in bridge hook files).
 import { isStairBadgeKey, isStairPanelVisibilityKey } from '../../../bim/hooks/use-ribbon-stair-bridge';
 import { isWallBadgeKey } from './useRibbonWallBridge';
@@ -144,6 +148,7 @@ export interface ComboboxRouteDeps {
   readonly xlineModeBridge: ComboboxCapable;
   readonly scaleToolBridge: ComboboxCapable;
   readonly blockLibraryBridge: ComboboxCapable;
+  readonly titleBlockBridge: ComboboxCapable;
 }
 
 /** Bridges consumed by the badge routes. */
@@ -265,6 +270,9 @@ export function buildComboboxRoutes(d: ComboboxRouteDeps): readonly ComboboxRout
     { ...both(isScaleToolRibbonKey), ...boundCombobox(d.scaleToolBridge) },
     // ADR-652 M1.5 — numeric-only (rotation/scale): κανένα string/asset key, άρα σκέτο `both`.
     { ...both(isBlockLibraryRibbonKey), ...boundCombobox(d.blockLibraryBridge) },
+    // ADR-651 Φάση Γ — «Πινακίδα Σχεδίου»: string params (preset/χαρτί/προσανατολισμός/
+    // κορνίζα → options store) + numeric (rotation/scale → tool handle).
+    { ...both(anyOf(isTitleBlockRibbonKey, isTitleBlockRibbonStringKey)), ...boundCombobox(d.titleBlockBridge) },
   ];
 }
 

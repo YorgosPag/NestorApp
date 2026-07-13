@@ -10,6 +10,7 @@ import { isMepBoilerToggleKey } from './bridge/mep-boiler-command-keys';
 import { isHatchRibbonToggleKey } from './bridge/hatch-command-keys';
 import { isDimVisibilityKey } from './bridge/dim-command-keys';
 import { isScaleToolToggleKey } from './bridge/scale-tool-command-keys';
+import { isBlockLibraryToggleKey } from './bridge/block-library-command-keys';
 
 /**
  * ADR-547 / N.7.1 — the ribbon toggle dispatch (write + read), extracted from
@@ -20,7 +21,7 @@ import { isScaleToolToggleKey } from './bridge/scale-tool-command-keys';
  */
 type RibbonToggleBridges = Pick<
   UseRibbonCommandsProps,
-  'wallBridge' | 'arrayBridge' | 'openingBridge' | 'roofBridge' | 'mepBoilerBridge' | 'hatchBridge' | 'dimBridge' | 'scaleToolBridge' | 'textEditorBridge'
+  'wallBridge' | 'arrayBridge' | 'openingBridge' | 'roofBridge' | 'mepBoilerBridge' | 'hatchBridge' | 'dimBridge' | 'scaleToolBridge' | 'blockLibraryBridge' | 'textEditorBridge'
 >;
 
 interface UseRibbonToggleCommandsParams extends RibbonToggleBridges {
@@ -43,6 +44,7 @@ export function useRibbonToggleCommands({
   hatchBridge,
   dimBridge,
   scaleToolBridge,
+  blockLibraryBridge,
   textEditorBridge,
 }: UseRibbonToggleCommandsParams): RibbonToggleCommands {
   const onToggle = useEventCallback(
@@ -81,6 +83,11 @@ export function useRibbonToggleCommands({
         scaleToolBridge.onToggle(key, next);
         return;
       }
+      // ADR-652 M5 — Block Library «Ομοιόμορφη κλίμακα» (Uniform Scale) lock toggle.
+      if (isBlockLibraryToggleKey(key)) {
+        blockLibraryBridge.onToggle(key, next);
+        return;
+      }
       textEditorBridge.onToggle(key, next);
     },
   );
@@ -98,9 +105,11 @@ export function useRibbonToggleCommands({
       if (isDimVisibilityKey(key)) return dimBridge.getToggleState(key);
       // ADR-646 Φ4 #6 — scale tool Copy / Non-uniform toggle state.
       if (isScaleToolToggleKey(key)) return scaleToolBridge.getToggleState(key);
+      // ADR-652 M5 — Block Library «Ομοιόμορφη κλίμακα» toggle state (default ON).
+      if (isBlockLibraryToggleKey(key)) return blockLibraryBridge.getToggleState(key);
       return textEditorBridge.getToggleState(key);
     },
-    [snapEnabled, wallBridge, arrayBridge, openingBridge, roofBridge, mepBoilerBridge, hatchBridge, dimBridge, scaleToolBridge, textEditorBridge],
+    [snapEnabled, wallBridge, arrayBridge, openingBridge, roofBridge, mepBoilerBridge, hatchBridge, dimBridge, scaleToolBridge, blockLibraryBridge, textEditorBridge],
   );
 
   return { onToggle, getToggleState };

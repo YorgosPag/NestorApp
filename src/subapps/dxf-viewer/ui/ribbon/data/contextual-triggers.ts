@@ -52,6 +52,7 @@ export { XLINE_MODE_CONTEXTUAL_TRIGGER } from './contextual-xline-mode-tab';
 export { SCALE_TOOL_CONTEXTUAL_TRIGGER } from './contextual-scale-tool-tab';
 export { FURNITURE_CONTEXTUAL_TRIGGER } from './contextual-furniture-tab';
 export { BLOCK_LIBRARY_CONTEXTUAL_TRIGGER } from './contextual-block-library-tab';
+export { TITLE_BLOCK_CONTEXTUAL_TRIGGER } from './contextual-title-block-tab';
 export { FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER } from './contextual-floorplan-symbol-tab';
 export { MEP_FIXTURE_LIBRARY_CONTEXTUAL_TRIGGER } from './contextual-mep-fixture-library-tab';
 export { MEP_RISER_CONTEXTUAL_TRIGGER } from './contextual-mep-riser-tab';
