@@ -294,7 +294,10 @@ export type ToolType =
   // ADR-649: «Ετικέτα Εμβαδού Γραμμοσκίασης» — 2-κλικ placement/creation tool (pick
   // hatch → place TextEntity με το εμβαδόν). Persists ως κανονικό text (select/move/
   // delete/undo). ΔΕΝ είναι measurement readout — δεν μπαίνει στο MeasurementTool union.
-  | 'hatch-area-label';   // HATCHAREALABEL — 2-click → TextEntity (εμβαδόν γραμμοσκίασης)
+  | 'hatch-area-label'    // HATCHAREALABEL — 2-click → TextEntity (εμβαδόν γραμμοσκίασης)
+  // ADR-650 Milestone 1: Topographic contours — φόρτωση σημείων (X,Y,Z) → CDT/TIN →
+  // marching-triangles → native lwpolyline/text ισοϋψείς. Panel-driven (όχι canvas click).
+  | 'topo-contours';      // TOPO — generate contour lines from survey points
 
 
 export interface ToolDefinition {

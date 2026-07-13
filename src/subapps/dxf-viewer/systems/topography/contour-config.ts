@@ -1,0 +1,52 @@
+/**
+ * ADR-650 Milestone 1 — Topography / contour configuration (data only, no logic).
+ *
+ * Layer NAMES here follow the established `config/layer-config.ts` precedent
+ * (`DXF_DEFAULT_LAYER = '0'`): DXF layer names are structural identifiers, not
+ * user-facing UI copy, so they live as config constants — NOT `t()` keys (N.11).
+ * The layer names mirror the AutoCAD/Civil 3D convention for contour layers.
+ *
+ * Units: canonical mm (ADR-462). Survey elevations are stored in mm; labels are
+ * formatted in metres for the surveyor (÷1000), the field convention.
+ */
+
+/** Canonical contour-generation parameters. */
+export interface ContourConfig {
+  /** Minor contour interval in canonical mm (e.g. 500 = 0.5 m). Must be > 0. */
+  readonly intervalMm: number;
+  /** Every N-th contour is a MAJOR (index) contour. e.g. 5 → majors at each 5·interval. */
+  readonly majorEvery: number;
+  /**
+   * Elevation (mm) that the interval grid is anchored to. Levels are generated at
+   * `baseElevationMm + k·intervalMm`. Default 0 (contours at 0, ±interval, …).
+   */
+  readonly baseElevationMm: number;
+  /** Emit elevation TextEntity labels on major contours. */
+  readonly labelMajors: boolean;
+  /** Decimal places for the metre-formatted elevation label. */
+  readonly labelDecimals: number;
+}
+
+/** Sensible topographic defaults (0.5 m minor, 2.5 m major index every 5th). */
+export const DEFAULT_CONTOUR_CONFIG: ContourConfig = {
+  intervalMm: 500,
+  majorEvery: 5,
+  baseElevationMm: 0,
+  labelMajors: true,
+  labelDecimals: 2,
+};
+
+/** DXF layer name for MINOR (intermediate) contours — structural id, not UI copy. */
+export const TOPO_MINOR_LAYER_NAME = 'TOPO-CONTOUR-MINOR' as const;
+/** DXF layer name for MAJOR (index) contours. */
+export const TOPO_MAJOR_LAYER_NAME = 'TOPO-CONTOUR-MAJOR' as const;
+/** DXF layer name for elevation labels. */
+export const TOPO_LABEL_LAYER_NAME = 'TOPO-CONTOUR-LABEL' as const;
+
+/** Default contour layer colours (AutoCAD topo convention: brown family). */
+export const TOPO_MINOR_COLOR = '#B5651D' as const; // light brown
+export const TOPO_MAJOR_COLOR = '#8B4513' as const; // saddle brown (heavier)
+export const TOPO_LABEL_COLOR = '#8B4513' as const;
+
+/** Default text height (mm) for elevation labels. */
+export const TOPO_LABEL_HEIGHT_MM = 300 as const;

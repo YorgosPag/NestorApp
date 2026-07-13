@@ -1,6 +1,6 @@
 # ADR-650 — Τοπογραφικές Αποτυπώσεις & Ισοϋψείς Γραμμές (Έρευνα Αγοράς + Αρχιτεκτονικό Blueprint)
 
-- **Status**: 🔵 PROPOSED (research / documentation — καμία υλοποίηση σε αυτό το βήμα)
+- **Status**: 🟡 IN PROGRESS — **Milestone 1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· βλ. changelog v4). Έρευνα §1–§11 & roadmap §12.1 παραμένουν το blueprint για M2–M4.
 - **Date**: 2026-07-13
 - **Category**: DXF Viewer / Topography / Research
 - **Σχετικά**: ADR-635 (culling gap σε geo-referenced συντεταγμένες ±1e6), ADR-462 (canonical mm),
@@ -341,6 +341,29 @@ false-flat handling) → **d3-tricontour** contours (major/minor) → **native P
 **Milestone 4:** ελληνικό export (πίνακας ΕΓΣΑ'87 + DXF Κτηματολογίου + PDF) → «ένα κουμπί → φάκελος».
 **Αργότερα:** drone/LiDAR point clouds (AI ground-filter), auto-breakline detection, multiplayer, Gaussian-Splat.
 
+### 12.2 Λεπτομερές roadmap μετά το Milestone 1 (προγραμματισμένες φάσεις — ΟΛΑ θα υλοποιηθούν)
+
+> **Αρχή προγραμματισμού (Giorgio):** ΟΛΑ τα §12.1 features **θα υλοποιηθούν** — δεν είναι «εκτός scope»,
+> είναι **σε σειρά**. **1 φάση ανά συνεδρία** (καθαρό context). Κάθε φάση: big-player pattern + Full
+> Enterprise + Full SSOT· **SSOT audit (grep) ΠΡΙΝ κώδικα**· άδειες MIT/Apache/BSD/ISC μόνο· ΟΧΙ tsc·
+> ≤500 γρ/αρχείο, ≤40 γρ/function· i18n el+en· commit/push μόνο ο Giorgio.
+>
+> **Milestone 1 = ✅ DONE** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· changelog v4).
+
+| Φάση | Τίτλος | Τι περιλαμβάνει | Big-player πρακτική | Κύριο SSoT reuse | Νέες άδειες |
+|------|--------|-----------------|--------------------|--------------------|-------------|
+| **M2** | **Import Wizard** (Q9) | Column-mapping CSV/TXT/Excel (PNEZD/PENZD/…, delimiter, units, σειρά στηλών) + DXF POINT/TEXT extraction → `TopoPointStore`. Breakline picking (mark υπάρχουσες polylines ως constraints). | Civil 3D «Field to Finish» point import· CASS column reorder (§7 pain-point → κάν'το UX win) | υπάρχων DXF parser (`utils/dxf-entity-parser.ts`)· `parse-topo-points.ts` (extend)· `TopoPointStore` | — (SheetJS αν Excel = Apache-2.0 ✅) |
+| **M3** | **Smoothing switch + LOD** (Q5) | Διακόπτης «ακριβείς↔όμορφες»· smoothing = **display layer πάνω** στις raw (chaikin/curveCatmullRom) + **self-intersection guard**· contour simplification (Douglas-Peucker) + LOD ανά zoom (Q3 μεγάλες εκτάσεις). Κλείδωμα στο ακριβές για νόμιμο export. | GRASS RST / d3-shape curve· Global Mapper simplify· «regularize-then-contour» | `contour-chainer` output· `core/spatial/` (LOD queries)· render pipeline | `chaikin-smooth` (MIT ✅) ή `d3-shape` (ISC ✅)· `simplify-js` (BSD ✅) |
+| **M4** | **3D όψη εδάφους** (Q8) | TIN → `BufferGeometry` mesh (Z=υψόμετρο)· «γύρνα τον λόφο»· RTIN LOD για μεγάλες εκτάσεις. **Παράγωγο του ΙΔΙΟΥ TIN** (μηδέν διπλή πηγή). | Revit Toposolid· C4D volume mesh· Martini/RTIN | `bim-3d` engine (three.js, ADR-366/645)· `TinSurface` (M1)· vertical-datum/scale SSoT | `martini` (ISC ✅) — υπάρχον `three` |
+| **M5** | **AI καμπανάκι + «μίλα στο σχέδιο»** (Q7 #1-2) | (α) Background QA rules engine (elevation busts, COGO closure, outliers, missing breaklines) με inline flags· (β) NL editing («interval 0.5m», «σβήσε spikes») = LLM tool-calling πάνω στο υπάρχον command SSoT. **AI-accelerant/human-certifier.** | Bentley Label-Optimizer· TBC blunder detection· SuperMap/DeepSeek NL assistant | `ai-assistant/` (`match-tool-definitions`, `dxf-openai-call`)· command SSoT· worker | ONNX-web (MIT)/Transformers.js (Apache) μόνο αν χρειαστεί client-ML |
+| **M6** | **Όγκοι cut/fill** (Q1) | Triangular-prism `V=A·(Δz₁+Δz₂+Δz₃)/3`, O(n)· cross-section/profile (triangle-walk)· cross-check μεθόδων (§7 CASS). **IN-HOUSE** (δεν υπάρχει permissive lib). | Civil 3D volumes· CASS 3-method cross-check | `TinSurface` (M1)· `polygon-utils` (area)· `bim/schedule` (BOQ output) | — (in-house) |
+| **M7** | **Ελληνικό export → «ένα κουμπί → φάκελος»** (Q1, Q7 #3) | Πίνακας συντεταγμένων ΕΓΣΑ'87· DXF Κτηματολογίου (layer schema)· ψηφιακά υπογεγραμμένο PDF· auto tolerance-check (§10 ανοχές)· δήλωση Ν.651/1977· εντός/εκτός σχεδίου. | CASS cadastral output· ελληνικά add-ons (ΕΓΣΑ'87-dependent) | export pipeline (DXF/PDF)· `enterprise-id`· §10 constants (νέο `egsa-config`) | pdf-lib (MIT ✅)· proj4 (MIT ✅ για ΕΓΣΑ'87) |
+| **M8+** | **Point clouds / moonshots** | drone/LiDAR (AI ground-filter CSF/KPConv server), auto-breakline detection, multiplayer (CRDT), Gaussian-Splat visualization layer. | §6, §9 differentiators | worker split (client/server)· Potree | CSF (Apache ✅), Potree (BSD-2 ✅) — server-GPU για heavy ML |
+
+**Εξαρτήσεις/σειρά:** M2 (input) → M3 (display) → M4 (3D) είναι ανεξάρτητα-παράλληλα δυνατά μετά το M1.
+M5 (AI) θέλει ώριμο core. M6 (όγκοι) θέλει μόνο το TIN (M1) → μπορεί νωρίς. M7 (export) θέλει M1+M6 για
+πλήρη φάκελο. Προτεινόμενη σειρά υλοποίησης: **M2 → M4 → M6 → M3 → M5 → M7 → M8**, αλλά ο Giorgio ορίζει.
+
 ---
 
 ## Decision (σύσταση — μη δεσμευτική)
@@ -412,3 +435,20 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
   (legal+contours), input σημείο-σημείο/ποικίλλει, μεγάλες εκτάσεις, 3 UX modes, breakline-aware από την
   αρχή, διακόπτης ακρίβειας/ομορφιάς, όλα τα AI features σε σειρά, 3D όψη, πρώτο ορόσημο «βλέπω ισοϋψείς».
   Προστέθηκε §12.1 (σύνοψη + 4 milestones). **Status PROPOSED — καμία υλοποίηση.**
+- **2026-07-13 (v4)** — **Milestone 1 ΥΛΟΠΟΙΗΘΗΚΕ** (Phase 3, N.0.1). Νέο subsystem
+  `src/subapps/dxf-viewer/systems/topography/`: `TopoPointStore` (vanilla `createExternalStore`,
+  raw SSoT points+breaklines+local-origin) → `topo-local-origin` (Q3: min-corner offset για ΕΓΣΑ'87
+  ±1e6, ADR-635) → `tin-builder` (**CDT μέσω `cdt2d` MIT** + robust-predicates, breaklines ως constrained
+  edges, false-flat count) → `marching-triangles` + `contour-chainer` → `topo-to-entities`
+  (**native `lwpolyline` με `elevation` + major/minor labels**) → `completeEntities` (ADR-057). UI:
+  `ui/panels/topography/TopographyPanel` (νέο tab «Τοπογραφικό» στο FloatingPanel· basic X Y Z parser,
+  interval/index-every, «Δημιουργία»). Tool `'topo-contours'` (category `utility`, panel-driven).
+  Tests: tin-builder/contour-generator/parse (13 πράσινα, ground-truth κεκλιμένο επίπεδο + κώνος).
+  **ΑΠΟΦΑΣΗ (απόκλιση από §8 stack):** αντί `d3-tricontour` → **in-house marching-triangles πάνω στο
+  CDT**. Λόγος: το `d3-tricontour` κάνει δικό του **unconstrained** Delaunay εσωτερικά, άρα θα **αγνοούσε
+  τα breaklines** (Q6 mandatory). Το marching-triangles πάνω στο δικό μας constrained TIN είναι ο
+  καθιερωμένος big-player δρόμος (Civil 3D/CASS «meandering triangles», κανένα saddle ambiguity σε
+  3-vertex cells) και τιμά τα breaklines. Νέο dep: `cdt2d@1.0.0` (MIT· transitive `robust-*` MIT).
+  **ΕΠΟΜΕΝΕΣ ΦΑΣΕΙΣ** (προγραμματισμένες, ΟΧΙ εκτός scope — βλ. §12.2 roadmap): import wizard/CSV
+  mapping, smoothing switch, 3D mesh, AI QA, όγκοι cut/fill, ελληνικό export. **Status: PROPOSED →
+  Milestone 1 IMPLEMENTED (πυρήνας)· M2–M6 προγραμματισμένα (§12.2).**

@@ -303,6 +303,10 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // category:'drawing' ⇒ isInDrawingMode=true, ώστε το mouse-up select block να ΜΗΝ τρέχει
   // παράλληλα με τον click handler (κανένα διπλό select). allowsContinuous: πολλές στη σειρά.
   'hatch-area-label':  { id: 'hatch-area-label',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-650 Milestone 1 — Topographic contours. Panel-driven (load points → generate),
+  // NOT a canvas-click authoring tool: it emits MANY entities (lwpolyline + text) via
+  // completeEntities, so it is a deliberate absence from TOOL_CREATES_ENTITY (multi-type).
+  'topo-contours':     { id: 'topo-contours',     category: 'utility', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
 };
 
 /**

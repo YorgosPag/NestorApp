@@ -492,6 +492,9 @@
         "confirm": "Replace",
         "unknownFile": "new file"
       }
+    },
+    "topography": {
+      "title": "Topography"
     }
   },
   "layerActions": {
@@ -936,6 +939,26 @@
     "memberKind": {
       "entity": "Entity",
       "region": "Region"
+    }
+  },
+  "topography": {
+    "title": "Topography — Contours",
+    "subtitle": "Load survey points (X Y Z) and generate contour lines.",
+    "loadLabel": "Points file (X Y Z per line)",
+    "intervalLabel": "Interval (m)",
+    "majorEveryLabel": "Index every",
+    "generate": "Generate contours",
+    "status": {
+      "readError": "Could not read the file.",
+      "loaded": "{count, plural, one {# point loaded} other {# points loaded}}",
+      "skipped": "{count, plural, one {# line skipped} other {# lines skipped}}",
+      "generated": "Generated {contours} contours ({entities} entities)."
+    },
+    "error": {
+      "too-few-points": "At least 3 points are required.",
+      "no-contours": "No contours produced (check the interval).",
+      "no-layers": "Could not create contour layers.",
+      "no-level": "No active level."
     }
   }
 }
