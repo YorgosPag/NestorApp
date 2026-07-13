@@ -54,6 +54,15 @@
     "areaPrefix": "A",
     "perimeterPrefix": "P"
   },
+  "topoBreakline": {
+    "status": {
+      "awaitingEntity": "Pick a drawing line to use as a breakline",
+      "addedElevation": "Breakline added (elevation from the line) · total: {count}",
+      "addedProximity": "Breakline added (elevation from the nearest points) · total: {count}",
+      "removed": "Breakline removed · total: {count}",
+      "needsPoints": "Load survey points first — a 2D line carries no elevation"
+    }
+  },
   "hatchAreaLabel": {
     "areaPrefix": "Area",
     "status": {
@@ -1243,6 +1252,10 @@
     "blockLibrary": {
       "statusPosition": "Click to place block",
       "errorNoSelection": "Select a block from «My Blocks»"
+    },
+    "titleBlock": {
+      "statusPosition": "Click to place the drawing title block",
+      "errorNoTemplate": "No title block template found"
     }
   },
   "blockLibrary": {
@@ -1539,6 +1552,8 @@
       "scaleTool": "Scale",
       "analyze": "Analyze",
       "furnitureProperties": "Furniture Properties",
+      "blockLibraryPlacement": "Block Placement",
+      "titleBlockPlacement": "Title Block",
       "floorplanSymbolProperties": "Symbol Properties",
       "annotationSymbolProperties": "Annotation Symbol",
       "scaleBarProperties": "Scale Bar",
@@ -1556,8 +1571,7 @@
       "drainage": "Drainage",
       "heating": "Heating",
       "hvac": "HVAC",
-      "fireGas": "Fire & Gas",
-      "blockLibraryPlacement": "Block Placement"
+      "fireGas": "Fire & Gas"
     },
     "panels": {
       "draw": "Draw",
@@ -1771,6 +1785,7 @@
       "dxfFiles": "DXF Files",
       "annotationSymbols": "Symbols",
       "blockLibrary": "Blocks",
+      "titleBlock": "Title Block",
       "background": "Background",
       "exportPanel": "Export",
       "cursor": "Cursor",
@@ -1822,6 +1837,11 @@
       "thermalEnvelope": "Thermal Envelope",
       "furnitureCatalog": "Catalog",
       "furnitureGeometry": "Geometry",
+      "blockLibraryTransform": "Transform",
+      "titleBlockTemplate": "Template",
+      "titleBlockSheet": "Sheet",
+      "titleBlockTransform": "Transform",
+      "titleBlockStamp": "Stamp",
       "furnitureActions": "Actions",
       "floorplanSymbolCatalog": "Symbol",
       "floorplanSymbolGeometry": "Geometry",
@@ -1835,8 +1855,7 @@
       "mepRiser": "Stack",
       "print": "Print",
       "export": "Export",
-      "structural": "Structural",
-      "blockLibraryTransform": "Transform"
+      "structural": "Structural"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -3893,6 +3912,14 @@
         "grout": "Grout lines",
         "groutColor": "Grout colour",
         "groutWidth": "Grout width (mm)",
+        "tint": "Recolour",
+        "tintColorA": "Colour A (dark)",
+        "tintColorB": "Colour B (light)",
+        "tintStrength": "Strength (%)",
+        "procColorA": "Colour 1",
+        "procColorB": "Colour 2",
+        "procJointMm": "Joint (mm)",
+        "procJointColor": "Joint colour",
         "gradientType": "Type",
         "gradientAngle": "Angle",
         "gradientShift": "Shift",
@@ -4555,6 +4582,10 @@
       },
       "openGuidePanel": "Guide Panel",
       "blockLibrary": "Blocks",
+      "titleBlock": "Title Block",
+      "titleBlockTooltip": "Place a drawing title block, auto-filled from the active project",
+      "titleBlockStamp": "Stamp…",
+      "titleBlockStampTooltip": "Upload the engineer stamp/signature — placed automatically on every title block",
       "toggleGuides": "Show/Hide Guides",
       "guideAnalysis": "Guide Analysis",
       "displayGrid": "Grid",
@@ -4705,6 +4736,32 @@
         "delete": "Delete",
         "deleteConfirm": "Delete furniture? This action cannot be undone."
       },
+      "blockLibraryEditor": {
+        "rotation": "Rotation",
+        "scale": "Scale"
+      },
+      "titleBlockEditor": {
+        "preset": "Template",
+        "presetOptions": {
+          "standard": "Standard",
+          "permit": "Building permit",
+          "simple": "Simple",
+          "detail": "Detail"
+        },
+        "paperSize": "Paper size",
+        "orientation": "Orientation",
+        "orientationOptions": {
+          "portrait": "Portrait",
+          "landscape": "Landscape"
+        },
+        "frameMode": "Frame",
+        "frameModeOptions": {
+          "sheet": "Full sheet (ISO 5457)",
+          "box": "Title block only"
+        },
+        "rotation": "Rotation",
+        "scale": "Scale"
+      },
       "mepFixtureLibrary": {
         "asset": "Model",
         "parametric": "Parametric (no model)",
@@ -4766,10 +4823,6 @@
         "attachTooltip": "Attach the selected columns to the selected footing (select 1 footing + columns)",
         "detach": "Detach footing",
         "detachTooltip": "Detach the selected columns (or all columns of the selected footing) from the footing"
-      },
-      "blockLibraryEditor": {
-        "rotation": "Rotation",
-        "scale": "Scale"
       }
     },
     "tooltips": {
@@ -5029,10 +5082,23 @@
       "image": {
         "title": "Image"
       },
+      "imageTint": {
+        "title": "Recolour"
+      },
+      "procedural": {
+        "title": "Procedural"
+      },
       "info": {
         "title": "Information"
       }
     }
+  },
+  "proceduralMaterials": {
+    "sectionTitle": "Procedural",
+    "checker": "Checkerboard",
+    "gridTile": "Tile",
+    "runningBond": "Brick",
+    "stripes": "Stripes"
   },
   "hatchImageFill": {
     "pickerTitle": "Material",
@@ -6021,7 +6087,33 @@
     "error": "Print failed. Please try again.",
     "titleBlock": {
       "label": "Title block & sheet frame",
-      "missingHint": "This drawing has no title block — one will be added to the printed sheet with the project data."
+      "missingHint": "This drawing has no title block — one will be added to the printed sheet with the project data.",
+      "compliance": {
+        "title": "Submission completeness check",
+        "emptyValues": "Empty fields: {fields}",
+        "absentFields": "Not included in the template: {fields}",
+        "noStampImage": "No stamp image uploaded — the cell will print empty for stamping by hand.",
+        "footer": "Printing is not blocked — the decision is yours."
+      }
+    }
+  },
+  "titleBlockStamp": {
+    "title": "Engineer stamp & signature",
+    "description": "Upload your stamp once (PNG/JPG with transparency, up to 2MB). It is placed automatically in the stamp cell of every title block — on screen and on the printed sheet.",
+    "upload": "Upload stamp",
+    "replace": "Replace",
+    "uploading": "Uploading…",
+    "remove": "Remove",
+    "removing": "Removing…",
+    "current": "Current stamp",
+    "empty": "No stamp set.",
+    "close": "Close",
+    "errors": {
+      "format": "Unsupported format. Use PNG, JPG or WebP.",
+      "size": "File too large (2MB limit).",
+      "failed": "Upload failed. Please try again.",
+      "removeFailed": "Removal failed. Please try again.",
+      "notReady": "No active user/company available."
     }
   },
   "export": {
@@ -6073,22 +6165,5 @@
     "cancel": "Cancel",
     "exporting": "Exporting…",
     "error": "Export failed. Please try again."
-  },
-  "topoBoundary": {
-    "status": {
-      "awaitingEntity": "Click a CLOSED polyline on the drawing to set it as the site boundary.",
-      "added": "Boundary set — volumes are counted only inside it.",
-      "removed": "Boundary cleared — volumes cover the whole survey.",
-      "notClosed": "That line is not closed — a boundary must have an inside."
-    }
-  },
-  "topoBreakline": {
-    "status": {
-      "awaitingEntity": "Pick a drawing line to use as a breakline",
-      "addedElevation": "Breakline added (elevation from the line) · total: {count}",
-      "addedProximity": "Breakline added (elevation from the nearest points) · total: {count}",
-      "removed": "Breakline removed · total: {count}",
-      "needsPoints": "Load survey points first — a 2D line carries no elevation"
-    }
   }
 }

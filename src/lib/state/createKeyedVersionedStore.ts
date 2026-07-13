@@ -24,6 +24,8 @@ export interface KeyedVersionedStore<T> {
   setAll(items: readonly T[]): void;
   /** Προσθέτει/ενημερώνει ένα στοιχείο (last-wins ανά key). */
   upsert(item: T): void;
+  /** Αφαιρεί ένα στοιχείο (no-op αν λείπει). `true` ⇒ υπήρχε και αφαιρέθηκε. */
+  remove(key: string): boolean;
   /** Στοιχείο με το δοσμένο key, ή `null`. */
   get(key: string): T | null;
   /** Όλα τα στοιχεία (σειρά εισαγωγής, STABLE reference μεταξύ αλλαγών). */
@@ -57,6 +59,11 @@ export function createKeyedVersionedStore<T>(keyOf: (item: T) => string): KeyedV
     upsert(item) {
       items.set(keyOf(item), item);
       emit();
+    },
+    remove(key) {
+      if (!items.delete(key)) return false;
+      emit();
+      return true;
     },
     get(key) {
       return items.get(key) ?? null;

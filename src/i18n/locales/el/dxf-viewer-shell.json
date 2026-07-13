@@ -54,6 +54,15 @@
     "areaPrefix": "Ε",
     "perimeterPrefix": "Περ"
   },
+  "topoBreakline": {
+    "status": {
+      "awaitingEntity": "Επίλεξε γραμμή του σχεδίου ως γραμμή ασυνέχειας",
+      "addedElevation": "Γραμμή ασυνέχειας (υψόμετρο από τη γραμμή) · σύνολο: {count}",
+      "addedProximity": "Γραμμή ασυνέχειας (υψόμετρο από τα πλησιέστερα σημεία) · σύνολο: {count}",
+      "removed": "Η γραμμή ασυνέχειας αφαιρέθηκε · σύνολο: {count}",
+      "needsPoints": "Φόρτωσε πρώτα σημεία — η 2Δ γραμμή δεν έχει υψόμετρο"
+    }
+  },
   "hatchAreaLabel": {
     "areaPrefix": "Εμβαδόν",
     "status": {
@@ -1243,6 +1252,10 @@
     "blockLibrary": {
       "statusPosition": "Κάνε κλικ για τοποθέτηση block",
       "errorNoSelection": "Επίλεξε ένα block από το «Τα Blocks μου»"
+    },
+    "titleBlock": {
+      "statusPosition": "Κάνε κλικ για τοποθέτηση πινακίδας σχεδίου",
+      "errorNoTemplate": "Δεν βρέθηκε πρότυπο πινακίδας"
     }
   },
   "blockLibrary": {
@@ -1539,6 +1552,8 @@
       "scaleTool": "Κλιμάκωση",
       "analyze": "Ανάλυση",
       "furnitureProperties": "Ιδιότητες Επίπλου",
+      "blockLibraryPlacement": "Τοποθέτηση Block",
+      "titleBlockPlacement": "Πινακίδα Σχεδίου",
       "floorplanSymbolProperties": "Ιδιότητες Συμβόλου",
       "annotationSymbolProperties": "Σύμβολο Σχεδίασης",
       "scaleBarProperties": "Γραφική Κλίμακα",
@@ -1556,8 +1571,7 @@
       "drainage": "Αποχέτευση",
       "heating": "Θέρμανση",
       "hvac": "Κλιματισμός",
-      "fireGas": "Πυρόσβεση & Αέριο",
-      "blockLibraryPlacement": "Τοποθέτηση Block"
+      "fireGas": "Πυρόσβεση & Αέριο"
     },
     "panels": {
       "draw": "Σχεδίαση",
@@ -1771,6 +1785,7 @@
       "dxfFiles": "Αρχεία DXF",
       "annotationSymbols": "Σύμβολα",
       "blockLibrary": "Blocks",
+      "titleBlock": "Πινακίδα",
       "background": "Υπόβαθρο",
       "exportPanel": "Εξαγωγή",
       "cursor": "Δρομέας",
@@ -1822,6 +1837,11 @@
       "thermalEnvelope": "Θερμοπρόσοψη",
       "furnitureCatalog": "Κατάλογος",
       "furnitureGeometry": "Γεωμετρία",
+      "blockLibraryTransform": "Μετασχηματισμός",
+      "titleBlockTemplate": "Πρότυπο",
+      "titleBlockSheet": "Φύλλο",
+      "titleBlockTransform": "Μετασχηματισμός",
+      "titleBlockStamp": "Σφραγίδα",
       "furnitureActions": "Ενέργειες",
       "floorplanSymbolCatalog": "Σύμβολο",
       "floorplanSymbolGeometry": "Γεωμετρία",
@@ -1835,8 +1855,7 @@
       "mepRiser": "Στήλη",
       "print": "Εκτύπωση",
       "export": "Εξαγωγή",
-      "structural": "Στατικά",
-      "blockLibraryTransform": "Μετασχηματισμός"
+      "structural": "Στατικά"
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",
@@ -3893,6 +3912,14 @@
         "grout": "Αρμοί",
         "groutColor": "Χρώμα αρμού",
         "groutWidth": "Πλάτος αρμού (mm)",
+        "tint": "Χρωματισμός",
+        "tintColorA": "Χρώμα Α (σκούρο)",
+        "tintColorB": "Χρώμα Β (φωτεινό)",
+        "tintStrength": "Ένταση (%)",
+        "procColorA": "Χρώμα 1",
+        "procColorB": "Χρώμα 2",
+        "procJointMm": "Αρμός (mm)",
+        "procJointColor": "Χρώμα αρμού",
         "gradientType": "Τύπος",
         "gradientAngle": "Γωνία",
         "gradientShift": "Μετατόπιση",
@@ -4555,6 +4582,10 @@
       },
       "openGuidePanel": "Πίνακας Οδηγών",
       "blockLibrary": "Blocks",
+      "titleBlock": "Πινακίδα",
+      "titleBlockTooltip": "Τοποθέτηση πινακίδας σχεδίου με αυτόματη συμπλήρωση από το ενεργό έργο",
+      "titleBlockStamp": "Σφραγίδα…",
+      "titleBlockStampTooltip": "Ανέβασμα σφραγίδας/υπογραφής μηχανικού — μπαίνει αυτόματα σε όλες τις πινακίδες",
       "toggleGuides": "Εμφάνιση/Απόκρυψη Οδηγών",
       "guideAnalysis": "Ανάλυση Οδηγών",
       "displayGrid": "Πλέγμα",
@@ -4705,6 +4736,32 @@
         "delete": "Διαγραφή",
         "deleteConfirm": "Διαγραφή επίπλου; Η ενέργεια δεν αναιρείται."
       },
+      "blockLibraryEditor": {
+        "rotation": "Περιστροφή",
+        "scale": "Κλίμακα"
+      },
+      "titleBlockEditor": {
+        "preset": "Πρότυπο",
+        "presetOptions": {
+          "standard": "Τυπική",
+          "permit": "Άδεια δόμησης",
+          "simple": "Απλή",
+          "detail": "Λεπτομέρεια"
+        },
+        "paperSize": "Μέγεθος χαρτιού",
+        "orientation": "Προσανατολισμός",
+        "orientationOptions": {
+          "portrait": "Όρθιο",
+          "landscape": "Πλαγιαστό"
+        },
+        "frameMode": "Κορνίζα",
+        "frameModeOptions": {
+          "sheet": "Πλήρες φύλλο (ISO 5457)",
+          "box": "Μόνο η πινακίδα"
+        },
+        "rotation": "Περιστροφή",
+        "scale": "Κλίμακα"
+      },
       "mepFixtureLibrary": {
         "asset": "Μοντέλο",
         "parametric": "Παραμετρικό (χωρίς μοντέλο)",
@@ -4766,10 +4823,6 @@
         "attachTooltip": "Σύνδεση των επιλεγμένων κολόνων στο επιλεγμένο πέδιλο (επίλεξε 1 πέδιλο + κολόνες)",
         "detach": "Αποσύνδεση πεδίλου",
         "detachTooltip": "Αποσύνδεση των επιλεγμένων κολόνων (ή όλων των κολόνων του επιλεγμένου πεδίλου) από το πέδιλο"
-      },
-      "blockLibraryEditor": {
-        "rotation": "Περιστροφή",
-        "scale": "Κλίμακα"
       }
     },
     "tooltips": {
@@ -5029,10 +5082,23 @@
       "image": {
         "title": "Εικόνα"
       },
+      "imageTint": {
+        "title": "Χρωματισμός"
+      },
+      "procedural": {
+        "title": "Διαδικαστικό"
+      },
       "info": {
         "title": "Πληροφορίες"
       }
     }
+  },
+  "proceduralMaterials": {
+    "sectionTitle": "Διαδικαστικά",
+    "checker": "Σκακιέρα",
+    "gridTile": "Πλακίδιο",
+    "runningBond": "Τούβλο",
+    "stripes": "Ρίγες"
   },
   "hatchImageFill": {
     "pickerTitle": "Υλικό",
@@ -6021,7 +6087,33 @@
     "error": "Η εκτύπωση απέτυχε. Δοκιμάστε ξανά.",
     "titleBlock": {
       "label": "Πινακίδα σχεδίου & κορνίζα",
-      "missingHint": "Το σχέδιο δεν έχει πινακίδα — θα προστεθεί στο τυπωμένο φύλλο με τα στοιχεία του έργου."
+      "missingHint": "Το σχέδιο δεν έχει πινακίδα — θα προστεθεί στο τυπωμένο φύλλο με τα στοιχεία του έργου.",
+      "compliance": {
+        "title": "Έλεγχος πληρότητας για κατάθεση",
+        "emptyValues": "Κενά πεδία: {fields}",
+        "absentFields": "Το πρότυπο δεν περιλαμβάνει: {fields}",
+        "noStampImage": "Δεν έχει ανέβει εικόνα σφραγίδας — το κελί θα τυπωθεί κενό για σφράγιση με το χέρι.",
+        "footer": "Η εκτύπωση δεν εμποδίζεται — εσείς αποφασίζετε."
+      }
+    }
+  },
+  "titleBlockStamp": {
+    "title": "Σφραγίδα & υπογραφή μηχανικού",
+    "description": "Ανεβάστε μία φορά τη σφραγίδα σας (PNG/JPG με διαφάνεια, έως 2MB). Μπαίνει αυτόματα στο κελί σφραγίδας κάθε πινακίδας — στην οθόνη και στο τυπωμένο φύλλο.",
+    "upload": "Ανέβασμα σφραγίδας",
+    "replace": "Αντικατάσταση",
+    "uploading": "Ανέβασμα…",
+    "remove": "Αφαίρεση",
+    "removing": "Αφαίρεση…",
+    "current": "Τρέχουσα σφραγίδα",
+    "empty": "Δεν έχει οριστεί σφραγίδα.",
+    "close": "Κλείσιμο",
+    "errors": {
+      "format": "Μη υποστηριζόμενη μορφή. Χρησιμοποιήστε PNG, JPG ή WebP.",
+      "size": "Το αρχείο είναι πολύ μεγάλο (όριο 2MB).",
+      "failed": "Το ανέβασμα απέτυχε. Δοκιμάστε ξανά.",
+      "removeFailed": "Η αφαίρεση απέτυχε. Δοκιμάστε ξανά.",
+      "notReady": "Δεν είναι διαθέσιμος ενεργός χρήστης/εταιρεία."
     }
   },
   "export": {
@@ -6073,22 +6165,5 @@
     "cancel": "Άκυρο",
     "exporting": "Εξαγωγή…",
     "error": "Η εξαγωγή απέτυχε. Δοκιμάστε ξανά."
-  },
-  "topoBoundary": {
-    "status": {
-      "awaitingEntity": "Κάνε κλικ σε ΚΛΕΙΣΤΗ γραμμή του σχεδίου για να την ορίσεις ως όριο οικοπέδου.",
-      "added": "Το όριο ορίστηκε — οι όγκοι μετρώνται μόνο μέσα σε αυτό.",
-      "removed": "Το όριο αφαιρέθηκε — οι όγκοι μετρούν όλη την αποτύπωση.",
-      "notClosed": "Η γραμμή δεν είναι κλειστή — το όριο πρέπει να έχει εσωτερικό."
-    }
-  },
-  "topoBreakline": {
-    "status": {
-      "awaitingEntity": "Επίλεξε γραμμή του σχεδίου ως γραμμή ασυνέχειας",
-      "addedElevation": "Γραμμή ασυνέχειας (υψόμετρο από τη γραμμή) · σύνολο: {count}",
-      "addedProximity": "Γραμμή ασυνέχειας (υψόμετρο από τα πλησιέστερα σημεία) · σύνολο: {count}",
-      "removed": "Η γραμμή ασυνέχειας αφαιρέθηκε · σύνολο: {count}",
-      "needsPoints": "Φόρτωσε πρώτα σημεία — η 2Δ γραμμή δεν έχει υψόμετρο"
-    }
   }
 }

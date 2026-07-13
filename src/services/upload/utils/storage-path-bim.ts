@@ -69,6 +69,26 @@ export function buildBimMaterialThumbnailPath(params: {
   return `companies/${params.companyId}/bim-material-thumbnails/${params.materialId}.${params.ext}`;
 }
 
+/**
+ * Storage path της **σφραγίδας/υπογραφής μηχανικού** (ADR-651 Φάση Ε — Απόφαση #6α).
+ *
+ * Path scheme: `companies/{companyId}/engineer-stamps/{userId}.{ext}`
+ *
+ * Company-scoped (tenant isolation — mirror του material-thumbnail path) αλλά **keyed by
+ * `userId`**: η σφραγίδα ανήκει στον ΜΗΧΑΝΙΚΟ (το Α.Μ. ΤΕΕ είναι προσωπικό), όχι στο έργο
+ * και όχι στο σχέδιο — ανεβαίνει ΜΙΑ φορά και εμφανίζεται σε ΟΛΕΣ τις πινακίδες (πρακτική
+ * ArchiCAD Project Info / Revit shared params). Το download URL γράφεται στο
+ * `users/{userId}.stampImageUrl` και ταξιδεύει στην πινακίδα μέσα από το **υπάρχον**
+ * `buildPlaceholderScope()` — κανένα δεύτερο data path.
+ */
+export function buildEngineerStampPath(params: {
+  companyId: string;
+  userId: string;
+  ext: BimMaterialThumbnailExt;
+}): string {
+  return `companies/${params.companyId}/engineer-stamps/${params.userId}.${params.ext}`;
+}
+
 /** PBR texture map channel of a user-uploaded BIM material appearance asset. */
 export type BimMaterialTextureMapName = 'albedo' | 'normal' | 'roughness' | 'ao';
 

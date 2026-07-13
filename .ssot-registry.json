@@ -4234,6 +4234,74 @@
       "addedDate": "2026-07-06",
       "addedByAdr": "ADR-397",
       "tier": 3
+    },
+    "scoped-library-service": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/services/scoped-library-service.ts",
+      "description": "ADR-652 M2 (2026-07-13): Η ΣΗΜΑΣΙΟΛΟΓΙΑ ΤΩΝ SCOPES μιας βιβλιοθήκης περιεχομένου (system / company / project / user) ζει ΜΙΑ φορά, στα bucket factories του ScopedLibraryService (systemScopeBucket / companyScopeBucket / projectScopeBucket / userScopeBucket) — μαζί με τον πυρήνα list/subscribe/create/patch/delete + TTL cache + builtin guard + tenant isolation. Τον συνθέτουν ο MaterialLibraryService (ADR-363) και ο BlockLibraryService (ADR-652). Forbidden: χειρόγραφο `where('scope', '==', '<literal>')` — μια δεύτερη μηχανή βιβλιοθήκης ξαναγράφει τα ίδια buckets και ξεχνά το tenant/ιδιωτικότητα του user scope. ΓΝΩΣΤΕΣ ΠΑΡΑΒΑΣΕΙΣ (baselined, ratchet → μόνο κάτω): bim-family-type-service.ts + stair-presets-service.ts χτίζουν χειροκίνητα τα ίδια user/company/project buckets — υποψήφια migration στον ScopedLibraryService. Δυναμικά φίλτρα (`where('scope', '==', filters.scope)`, boq-repository) ΔΕΝ είναι bucket και δεν πιάνονται.",
+      "forbiddenPatterns": [
+        "where\\(['\"]scope['\"], *['\"]==['\"], *['\"](system|company|project|user)['\"]\\)"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/services/scoped-library-service.ts"
+      ],
+      "addedDate": "2026-07-13",
+      "addedByAdr": "ADR-652",
+      "tier": 3
+    },
+    "keyed-versioned-store": {
+      "ssotFile": "src/lib/state/createKeyedVersionedStore.ts",
+      "description": "ADR-652 M2/M4 (2026-07-13): Το μοτίβο «Map + μονότονο version + subscribe + stable snapshot» (setAll/upsert/remove/get/list/getVersion/clear) είναι ΕΝΑΣ primitive, πάνω από τον createExternalStore. Τον τυλίγουν typed wrappers ανά domain (block-library-registry, block-library-cloud-store). Forbidden: δεύτερη δήλωση του ίδιου store contract (re-declared interface / setAll(items: readonly …) API) αντί για κλήση του createKeyedVersionedStore. ΟΡΙΟ ΤΟΥ ΕΛΕΓΧΟΥ (ρητά): ο regex ratchet πιάνει την ΑΝΤΙΓΡΑΦΗ ΤΟΥ ΣΥΜΒΟΛΑΙΟΥ, όχι έναν structural clone με άλλα ονόματα — αυτόν τον πιάνει το token-based jscpd (CHECK 3.28 / ADR-584), που ΗΔΗ έπιασε το αρχικό sibling clone των δύο stores στο M2.",
+      "forbiddenPatterns": [
+        "interface [A-Za-z]*KeyedVersionedStore",
+        "setAll\\(items: readonly"
+      ],
+      "allowlist": [
+        "src/lib/state/createKeyedVersionedStore.ts"
+      ],
+      "addedDate": "2026-07-13",
+      "addedByAdr": "ADR-652",
+      "tier": 2
+    },
+    "library-filter": {
+      "ssotFile": "src/subapps/dxf-viewer/ui/panels/shared/library-filter.ts",
+      "description": "ADR-652 M3 (2026-07-13): Το φιλτράρισμα ενός content browser (αναζήτηση κειμένου + κατηγορία + scope/«ποια βιβλιοθήκη») ζει ΜΙΑ φορά: LibraryFilterState / EMPTY_LIBRARY_FILTER / matchesLibraryFilter (+ το LibraryFilterBar UI). Καταναλωτές: BlockLibraryPanel (ADR-652) και MaterialsLibraryPanel (ADR-363 §6.5). Forbidden: (α) δεύτερη δήλωση του συμβολαίου φίλτρου (interface …LibraryFilterState/Subject), (β) inline ξαναγράψιμο του predicate με τον sentinel (`filter.category !== LIBRARY_FILTER_ALL`) αντί για κλήση του matchesLibraryFilter. Το γενικό `toLowerCase().includes()` ΔΕΝ είναι παράβαση — αναζήτηση υπάρχει παντού στην εφαρμογή· εδώ προστατεύεται το ΣΥΜΒΟΛΑΙΟ της βιβλιοθήκης, ενώ τον structural clone τον πιάνει το jscpd (CHECK 3.28).",
+      "forbiddenPatterns": [
+        "interface [A-Za-z]*LibraryFilter(State|Subject)",
+        "\\.(category|scope) *!== *LIBRARY_FILTER_ALL"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/ui/panels/shared/library-filter.ts"
+      ],
+      "addedDate": "2026-07-13",
+      "addedByAdr": "ADR-652",
+      "tier": 3
+    },
+    "block-scope-guard": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/block-library/block-scope-guard.ts",
+      "description": "ADR-652 M2/M3/M4 (2026-07-13): ΕΝΑΣ νομικός έλεγχος — κοινόχρηστο scope (company/project/system) απαιτεί `license.redistributable === true`. Canonical: assertBlockScopeAllowed() / canPromoteToSharedScope() / isSharedBlockScope(). Τον καλούν ΟΛΕΣ οι διαδρομές εγγραφής (saveBlock, updateBlock, promoteBlock) ΚΑΙ το UI — αλλιώς η κάθε νέα διαδρομή γίνεται πίσω πόρτα του gate (ακριβώς αυτό συνέβη με το promote πριν το M3). Forbidden: δεύτερος inline έλεγχος του `license.redistributable` (`=== true` / `!…license.redistributable`) οπουδήποτε αλλού. Δεύτερη γραμμή άμυνας: firestore.rules (`scope != 'system'` σε create/update) + το rules test suite.",
+      "forbiddenPatterns": [
+        "[^`]license\\.redistributable *===",
+        "! *[A-Za-z.]*license\\.redistributable"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/block-library/block-scope-guard.ts"
+      ],
+      "addedDate": "2026-07-13",
+      "addedByAdr": "ADR-652",
+      "tier": 3
+    },
+    "entity-polylines": {
+      "ssotFile": "src/subapps/dxf-viewer/rendering/entities/shared/entity-polylines.ts",
+      "description": "ADR-652 M4 (2026-07-13): «Entity[] → πολυγραμμές (σημεία)» — ο ΟΥΔΕΤΕΡΟΣ συνθέτης, με μηδέν δικά του μαθηματικά καμπύλης: κάθε τύπος delegate-άρει στο υπάρχον SSoT του (geometry-bulge/arc/ellipse/spline-utils, rectangleEntityVertices, expandBlockInstance). Καταναλωτές: όποιος θέλει ΣΧΗΜΑ και όχι ζωγραφική (thumbnail βιβλιοθήκης· αύριο: hit-testing, bounds, εξαγωγή SVG). Forbidden: νέος per-type switch «entity → points/segments/vertices». ΡΗΤΗ ΕΞΑΙΡΕΣΗ (ADR-652 §M4): οι ΤΡΕΙΣ backends (Canvas2D renderer, DXF writer, vector-PDF emitter) ΔΕΝ ξαναγράφονται πάνω του — ο καθένας θέλει περισσότερα από σχήμα (χρώμα/πάχος, γεμίσματα, native arcs). ΓΝΩΣΤΗ ΠΑΡΑΒΑΣΗ (baselined): utils/geometry/GeometryUtils.ts → entityToSegments() (μερικό: μόνο line/polyline/arc — αγνοεί bulge/circle/ellipse/spline/block) — υποψήφιο να γίνει thin adapter πάνω στο entityToPolylines.",
+      "forbiddenPatterns": [
+        "function [a-zA-Z]*[Ee]ntit(y|ies)To(Points|Polylines|Polyline|Segments|Vertices)"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/rendering/entities/shared/entity-polylines.ts"
+      ],
+      "addedDate": "2026-07-13",
+      "addedByAdr": "ADR-652",
+      "tier": 3
     }
   }
 }

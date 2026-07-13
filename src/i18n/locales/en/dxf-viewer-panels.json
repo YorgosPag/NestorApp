@@ -948,6 +948,13 @@
     "intervalLabel": "Interval (m)",
     "majorEveryLabel": "Index every",
     "generate": "Generate contours",
+    "contourStyle": {
+      "title": "Contours: exact ↔ smooth",
+      "hint": "Same contours, two looks: exact (they sit on the surveyed points) or smooth (a gentle curve for presentation).",
+      "exact": "Exact",
+      "smooth": "Smooth",
+      "exportNote": "Legal export (Cadastre) always uses the exact contours."
+    },
     "status": {
       "readError": "Could not read the file.",
       "loaded": "{count, plural, one {# point loaded} other {# points loaded}}",
