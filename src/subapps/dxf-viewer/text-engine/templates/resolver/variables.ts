@@ -35,6 +35,8 @@ export type PlaceholderPath =
   | 'project.name'
   | 'project.code'
   | 'project.owner'
+  | 'project.location'
+  | 'project.client'
   | 'drawing.title'
   | 'drawing.scale'
   | 'drawing.sheetNumber'
@@ -86,6 +88,16 @@ export const PLACEHOLDER_REGISTRY: Readonly<Record<PlaceholderPath, PlaceholderM
     labelI18nKey: 'textTemplates:placeholders.project.owner',
     source: 'project',
     sample: 'Δημήτριος Παπαδόπουλος',
+  },
+  'project.location': {
+    labelI18nKey: 'textTemplates:placeholders.project.location',
+    source: 'project',
+    sample: 'Λ. Κηφισίας 12, Αθήνα',
+  },
+  'project.client': {
+    labelI18nKey: 'textTemplates:placeholders.project.client',
+    source: 'project',
+    sample: 'Οικοδομική Α.Ε.',
   },
   // ── drawing ─────────────────────────────────────────────────────────────
   'drawing.title': {

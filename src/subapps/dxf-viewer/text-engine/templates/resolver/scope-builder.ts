@@ -77,8 +77,12 @@ function pickProject(data: Record<string, unknown> | undefined): PlaceholderScop
     name: stringField(data.name) ?? stringField(data.title),
     code: stringField(data.projectCode),
     owner: stringField(data.linkedCompanyName) ?? stringField(data.company),
+    location: stringField(data.location),
+    client: stringField(data.client),
   };
-  return project.name || project.code || project.owner ? project : undefined;
+  return project.name || project.code || project.owner || project.location || project.client
+    ? project
+    : undefined;
 }
 
 function composeFullName(data: Record<string, unknown>): string | undefined {

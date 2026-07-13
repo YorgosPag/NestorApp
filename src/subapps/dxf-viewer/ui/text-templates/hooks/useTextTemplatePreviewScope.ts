@@ -39,6 +39,8 @@ export function useTextTemplatePreviewScope(locale: PreviewLocale = 'el'): Place
         name: sampleFor('project.name'),
         code: sampleFor('project.code'),
         owner: sampleFor('project.owner'),
+        location: sampleFor('project.location'),
+        client: sampleFor('project.client'),
       },
       drawing: {
         title: sampleFor('drawing.title'),

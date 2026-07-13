@@ -19,6 +19,7 @@ import * as React from 'react';
 
 import { useEventGatedDialog } from './dialog-hosts/useEventGatedDialog';
 import { useLevels } from '../systems/levels';
+import { useProjectHierarchyOptional } from '../contexts/ProjectHierarchyContext';
 import { useCurrentSceneModel } from '../ui/text-toolbar/hooks/useCurrentSceneModel';
 import { nowISO } from '@/lib/date-local';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -42,15 +43,24 @@ function PrintBody({ onClose }: { readonly onClose: () => void }): React.JSX.Ele
   const { t } = useTranslation('dxf-viewer-shell');
   const scene = useCurrentSceneModel();
   const { currentLevelId, levels } = useLevels();
+  // ADR-651 Φάση Α — wire the print title block to the real active Project
+  // (owner/location/client live server-side only; the client hierarchy carries
+  // the project identity/name — see ADR-651 §4.2 gap #5).
+  const hierarchy = useProjectHierarchyOptional();
 
   // 3D source is available only while a 3D scene is mounted (read at open-time).
   const sceneManager3d = getActiveSceneManager();
   const canPrint3d = sceneManager3d !== null;
 
+  // Filename identity — stays drawing-scoped (level name), unchanged behaviour.
   const projectName = React.useMemo(() => {
     const level = levels.find((l) => l.id === currentLevelId);
     return level?.name ?? level?.sceneFileName ?? 'drawing';
   }, [levels, currentLevelId]);
+
+  // Title-block heading — the real project name when one is selected, else the
+  // drawing/level name (safe fallback: hierarchy may be absent, ADR-371).
+  const titleBlockProject = hierarchy?.selectedProject?.name ?? projectName;
 
   const handleSubmit = React.useCallback(
     async (request: PrintRequest) => {
@@ -63,7 +73,7 @@ function PrintBody({ onClose }: { readonly onClose: () => void }): React.JSX.Ele
           ? async (raster) => captureCurrent3dView(manager, raster)
           : undefined,
         titleBlock: {
-          project: projectName,
+          project: titleBlockProject,
           labels: {
             scale: t('print.titleBlock.scale'),
             date: t('print.titleBlock.date'),
@@ -73,7 +83,7 @@ function PrintBody({ onClose }: { readonly onClose: () => void }): React.JSX.Ele
       };
       await runPrint(request, deps);
     },
-    [scene, projectName, t],
+    [scene, projectName, titleBlockProject, t],
   );
 
   const handleOpenChange = React.useCallback(

@@ -34,8 +34,15 @@ function resolveLocaleKey(tree: LocaleTree, dottedKey: string): unknown {
 }
 
 describe('PLACEHOLDER_REGISTRY', () => {
-  it('exposes 17 placeholder paths (Phase 7.C scope)', () => {
-    expect(ALL_PLACEHOLDER_PATHS).toHaveLength(17);
+  it('exposes 19 placeholder paths (Phase 7.C + ADR-651 Φάση Α project.location/client)', () => {
+    expect(ALL_PLACEHOLDER_PATHS).toHaveLength(19);
+  });
+
+  it('registers the ADR-651 project.location + project.client paths under the project source', () => {
+    for (const path of ['project.location', 'project.client'] as const) {
+      expect(isKnownPlaceholder(path)).toBe(true);
+      expect(PLACEHOLDER_REGISTRY[path].source).toBe('project');
+    }
   });
 
   it('returns paths sorted alphabetically', () => {

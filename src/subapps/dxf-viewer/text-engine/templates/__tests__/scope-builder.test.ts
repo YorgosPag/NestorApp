@@ -119,6 +119,17 @@ describe('buildPlaceholderScope — project', () => {
     });
   });
 
+  it('hydrates ADR-651 location + client fields when present on the doc', async () => {
+    seed('projects', 'pr_2', {
+      companyId: 'co_1',
+      location: 'Λ. Κηφισίας 12, Αθήνα',
+      client: 'Οικοδομική Α.Ε.',
+    });
+    const scope = await buildPlaceholderScope({ companyId: 'co_1', projectId: 'pr_2' });
+    expect(scope.project?.location).toBe('Λ. Κηφισίας 12, Αθήνα');
+    expect(scope.project?.client).toBe('Οικοδομική Α.Ε.');
+  });
+
   it('returns undefined project when projectId is omitted', async () => {
     const scope = await buildPlaceholderScope({ companyId: 'co_1' });
     expect(scope.project).toBeUndefined();

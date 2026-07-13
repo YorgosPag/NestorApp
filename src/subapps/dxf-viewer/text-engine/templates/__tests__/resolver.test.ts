@@ -30,7 +30,13 @@ const FIXED_DATE = new Date('2026-05-11T10:00:00Z');
 
 const FULL_SCOPE: PlaceholderScope = {
   company: { name: 'Nestor Construct' },
-  project: { name: 'Πολυκατοικία Αθηνών', code: 'PRJ-001', owner: 'Δ. Παπαδόπουλος' },
+  project: {
+    name: 'Πολυκατοικία Αθηνών',
+    code: 'PRJ-001',
+    owner: 'Δ. Παπαδόπουλος',
+    location: 'Λ. Κηφισίας 12, Αθήνα',
+    client: 'Οικοδομική Α.Ε.',
+  },
   drawing: { title: 'Κάτοψη Α', scale: '1:50', sheetNumber: 'A-101', units: 'mm' },
   user: { fullName: 'Γ. Παγώνης', checkerName: 'Ν. Παγώνης', title: 'Αρχιτέκτων', licenseNumber: 'ΤΕΕ 12345' },
   revision: { number: '3', date: FIXED_DATE, author: 'Γ. Π.', description: 'Διόρθωση όψεων' },
@@ -50,6 +56,12 @@ describe('resolvePlaceholdersInString — known paths', () => {
     expect(
       resolvePlaceholdersInString('{{company.name}} — {{project.code}}', FULL_SCOPE),
     ).toBe('Nestor Construct — PRJ-001');
+  });
+
+  it('substitutes ADR-651 project.location + project.client', () => {
+    expect(
+      resolvePlaceholdersInString('ΘΕΣΗ: {{project.location}} / ΕΡΓΟΔΟΤΗΣ: {{project.client}}', FULL_SCOPE),
+    ).toBe('ΘΕΣΗ: Λ. Κηφισίας 12, Αθήνα / ΕΡΓΟΔΟΤΗΣ: Οικοδομική Α.Ε.');
   });
 
   it('tolerates inner whitespace inside braces', () => {

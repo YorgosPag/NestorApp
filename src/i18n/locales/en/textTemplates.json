@@ -6,7 +6,9 @@
     "project": {
       "name": "Project Name",
       "code": "Project Code",
-      "owner": "Project Owner"
+      "owner": "Project Owner",
+      "location": "Location",
+      "client": "Client"
     },
     "drawing": {
       "title": "Drawing Title",

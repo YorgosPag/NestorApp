@@ -52,6 +52,8 @@ function readProject(path: PlaceholderPath, scope: PlaceholderScope): string | u
   if (path === 'project.name') return p.name;
   if (path === 'project.code') return p.code;
   if (path === 'project.owner') return p.owner;
+  if (path === 'project.location') return p.location;
+  if (path === 'project.client') return p.client;
   return undefined;
 }
 

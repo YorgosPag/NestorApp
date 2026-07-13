@@ -27,6 +27,10 @@ export interface PlaceholderScopeProject {
   readonly name?: string;
   readonly code?: string;
   readonly owner?: string;
+  /** Site location / address (ΘΕΣΗ ΕΡΓΟΥ) — ISO 7200 / ΤΕΕ permit field. */
+  readonly location?: string;
+  /** Client / employer (ΕΡΓΟΔΟΤΗΣ) — distinct from `owner` (κύριος του έργου). */
+  readonly client?: string;
 }
 
 /** Optional drawing facts — typically read from the active DXF document. */
