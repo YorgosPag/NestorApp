@@ -21,6 +21,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { GeometricCalculations } from '../../snapping/shared/GeometricCalculations';
 import { getPolylineSegments } from '../../rendering/entities/shared/geometry-rendering-utils';
+import { tessellateSplinePoints } from '../../rendering/entities/shared/geometry-spline-utils';
 // ArcEntity angles are DEGREES; `angleInSweep` works in RADIANS — convert on read.
 import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
 import {
@@ -216,40 +217,10 @@ export function tessellateEllipse(
 }
 
 export function tessellateSpline(sp: SplineEntity, segments = TESSELLATION_SEGMENTS): Point2D[] {
-  // First-order approximation: tessellate by Catmull-Rom interpolation through
-  // control points. Sufficient for trim — matches AutoCAD industry behavior
-  // where SPLINE-fit is converted to CV polyline before trim (Q5/Q7).
-  const cp = sp.controlPoints;
-  if (!cp || cp.length < 2) return [];
-  if (cp.length === 2) return [cp[0], cp[1]];
-
-  const out: Point2D[] = [];
-  const closed = sp.closed === true;
-  const n = cp.length;
-  const last = closed ? n : n - 1;
-
-  for (let i = 0; i < last; i++) {
-    const p0 = cp[(i - 1 + n) % n] ?? cp[i];
-    const p1 = cp[i];
-    const p2 = cp[(i + 1) % n] ?? cp[i];
-    const p3 = cp[(i + 2) % n] ?? p2;
-    const steps = Math.max(1, Math.floor(segments / last));
-    for (let s = 0; s < steps; s++) {
-      const t = s / steps;
-      out.push(catmullRom(p0, p1, p2, p3, t));
-    }
-  }
-  if (!closed) out.push(cp[n - 1]);
-  return out;
-}
-
-function catmullRom(p0: Point2D, p1: Point2D, p2: Point2D, p3: Point2D, t: number): Point2D {
-  const t2 = t * t;
-  const t3 = t2 * t;
-  return {
-    x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
-    y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
-  };
+  // First-order approximation via the shared Catmull-Rom SSoT (`geometry-spline-utils`) — sufficient
+  // for trim, matches AutoCAD industry behavior where a SPLINE-fit is converted to a CV polyline
+  // before trim (Q5/Q7). Same math the DXF-export `explode` fallback uses (zero duplication, N.18).
+  return tessellateSplinePoints(sp.controlPoints, sp.closed === true, segments);
 }
 
 // ── Intersection dispatcher ──────────────────────────────────────────────────

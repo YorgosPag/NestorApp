@@ -19,10 +19,17 @@
  * ADR-505 §A / ADR-636 Φ2.4.
  */
 
-import type { Entity, HatchEntity, LeaderEntity, BlockEntity } from '../../types/entities';
+import type {
+  Entity, HatchEntity, LeaderEntity, BlockEntity, EllipseEntity, SplineEntity,
+  XLineEntity, RayEntity,
+} from '../../types/entities';
 import type { DimensionEntity } from '../../types/dimension';
 import { DxfDocumentVersion } from '../../text-engine/types/text-toolbar.types';
 import { rectangleEntityVertices } from '../../rendering/entities/shared/geometry-utils';
+import {
+  tessellateEllipseArc, ellipseArcSegments,
+} from '../../rendering/entities/shared/geometry-ellipse-utils';
+import { tessellateSplinePoints } from '../../rendering/entities/shared/geometry-spline-utils';
 import { emitDimensionEntity } from '../../utils/dxf-dimension-writer';
 import { emitHatch, type Pair } from './dxf-ascii-hatch-writer';
 import {
@@ -37,6 +44,10 @@ import {
   emitArc,
   emitPath,
   emitLeader,
+  emitEllipse,
+  emitSpline,
+  emitConstructionLine,
+  unitDirection,
   emitEntityStyle,
   arcPoints,
   type EntityR2018,
@@ -186,7 +197,54 @@ export function writeEntity(
       emitInsert(pair, e as BlockEntity, layer, aci, s, r2018);
       break;
     }
-    // spline/xline/ray + group/array (container flatten TBD) → skipped.
+    case 'ellipse': {
+      // Big-player native (Revit/AutoCAD): NATIVE `ELLIPSE` on the AutoCAD path; the Tekton
+      // (`explode`) path — whose minimal parser reads no ELLIPSE — gets a tessellated polyline
+      // via the `geometry-ellipse-utils` SSoT (same sampler the canvas draws). majorAxis/minorAxis
+      // are SEMI-axes; startParam/endParam are radians (default full ellipse 0..2π).
+      const el = e as EllipseEntity;
+      const startP = el.startParam ?? 0;
+      const endP = el.endParam ?? Math.PI * 2;
+      if (explode) {
+        const pts = tessellateEllipseArc(
+          {
+            center: el.center, majorAxis: el.majorAxis, minorAxis: el.minorAxis,
+            rotation: el.rotation ?? 0, startParam: startP, endParam: endP,
+          },
+          ellipseArcSegments(startP, endP),
+        );
+        // Full ellipse → last sample coincides with the first, so the polyline closes naturally
+        // (no extra closing segment needed); partial arc stays open.
+        emitPath(pts, false, layer, aci, s, true, pair);
+      } else {
+        emitEllipse(el.center, el.majorAxis, el.minorAxis, el.rotation ?? 0, startP, endP, layer, aci, s, pair, r2018);
+      }
+      break;
+    }
+    case 'spline': {
+      // Big-player native: NATIVE `SPLINE` (control points + generated clamped-uniform knots) on the
+      // AutoCAD path; Tekton (`explode`) gets a Catmull-Rom tessellated polyline via the shared SSoT
+      // (`geometry-spline-utils` — same math trim uses).
+      const sp = e as SplineEntity;
+      if (explode) {
+        emitPath(tessellateSplinePoints(sp.controlPoints, sp.closed ?? false), sp.closed ?? false, layer, aci, s, true, pair);
+      } else {
+        emitSpline(sp.controlPoints, sp.degree ?? 3, sp.closed ?? false, layer, aci, s, pair, r2018);
+      }
+      break;
+    }
+    case 'xline':
+    case 'ray': {
+      // Construction geometry — native `XLINE`/`RAY` (infinite/semi-infinite) on the AutoCAD path.
+      // Tekton has no infinite-line concept → dropped in `explode` (a finite segment would lie about
+      // the extent), mirroring how the format already omits it.
+      if (explode) break;
+      const c = e as XLineEntity | RayEntity;
+      const dir = unitDirection(c.direction, c.basePoint, c.secondPoint);
+      emitConstructionLine(e.type === 'xline' ? 'XLINE' : 'RAY', c.basePoint, dir, layer, aci, s, pair, r2018);
+      break;
+    }
+    // group/array (container flatten) → handled upstream (expanded before dispatch); unknown → skip.
     default:
       break;
   }

@@ -451,6 +451,17 @@ DXF writer ΚΑΙ τα live measurements/preview, μέσω κεντρικών pu
 
 ## 6. Changelog
 
+- **2026-07-13** — **Φ4j — Ενιαίο leading «Κλείσιμο» button σε ΚΑΘΕ contextual tab (Revit «Modify | …» far-left → Αρχική).**
+  Αίτημα Giorgio: όταν επιλέγεται πολυγραμμή/γραμμικό primitive (ή οποιοδήποτε entity) και ανοίγει το contextual tab,
+  να εμφανίζεται στην ΑΡΧΗ του ribbon ΜΕΓΑΛΟ κουμπί «Κλείσιμο» που να γυρνάει στην Αρχική καρτέλα — παντού ίδιο. (Αρχική
+  ιδέα «Επιλογή» εγκαταλείφθηκε: το base-select tool δεν έκλεινε την καρτέλα· ο Giorgio θέλει «Κλείσιμο».) Επαναχρησιμο-
+  ποιεί ΠΛΗΡΩΣ τον υπάρχοντα ADR-363 close-pipeline (μηδέν νέο wiring): νέο SSoT `buildClosePanel(tabId)` +
+  `withStandardClose(tab)` σε `ui/ribbon/data/contextual-close-panel.ts` (generic action `contextual.actions.close`
+  → `isContextualTabCloseAction` → `closeContextualTab` → clear selection + tool 'select' → RibbonRoot revert σε `home`).
+  **Κεντρική injection** στο `app/ribbon-contextual-config.ts`: `RIBBON_CONTEXTUAL_TABS = RAW.map(withStandardClose)` —
+  αφαιρεί τυχόν legacy per-tab close (χωρίς διπλό) + prepend του ενιαίου Close panel σε ΟΛΑ τα (48) contextual tabs, ΚΑΙ
+  αυτόματα σε μελλοντικά. Νέα i18n keys `ribbon.commands.close` + `ribbon.panels.close` (el «Κλείσιμο» / en «Close»).
+  Βλ. ADR-363 §changelog. Ο line-tool tab δεν έχει πλέον bespoke panel — παίρνει το close κεντρικά όπως όλοι.
 - **2026-06-20** — Δημιουργία ADR. Ολοκλήρωση έρευνας §2 (τύποι γραμμών, linetypes, input methods, drawing aids,
   constraints, pline options, modify/grips, modern/AI features, ευκαιρίες υπεροχής). Καταγραφή σημερινής
   κατάστασης κώδικα §1.1. Q&A ανοιχτό — ξεκινά Q1.

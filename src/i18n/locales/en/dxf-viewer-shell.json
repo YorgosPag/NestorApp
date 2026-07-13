@@ -1457,6 +1457,7 @@
       "draw": "Draw",
       "multiSelectionMatch": "Match Properties",
       "modify": "Modify",
+      "close": "Close",
       "modifyEdit": "Edit",
       "annotation": "Annotation",
       "layerManager": "Layer Manager",
@@ -2388,6 +2389,7 @@
         }
       },
       "select": "Select",
+      "close": "Close",
       "gripEdit": "Grip Edit",
       "matchSyringe": "Match Properties",
       "matchSyringeTooltip": "Property syringe: click a source entity to pick up its properties, then click targets to apply them in sequence.",

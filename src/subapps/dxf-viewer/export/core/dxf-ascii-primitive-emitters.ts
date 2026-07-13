@@ -206,6 +206,100 @@ export function emitArc(
 }
 
 /**
+ * An `ELLIPSE` (AcDbEllipse) — big-player native (Revit/AutoCAD/ArchiCAD emit ELLIPSE, not a
+ * tessellated polyline). Center (10/20/30), major-axis ENDPOINT vector relative to center
+ * (11/21/31 = semi-major × unit(rotation)), axis ratio 40 = minor/major, start/end params
+ * (41/42, radians CCW from the major axis; full ellipse → 0..2π). Consumes the `EllipseEntity`
+ * semi-axes + rotation (degrees) directly — same convention as the `geometry-ellipse-utils` SSoT,
+ * zero re-implemented math. AutoCAD requires 0 < ratio ≤ 1 (major ≥ minor); malformed entities are
+ * caught by the ezdxf round-trip verify, not silently mangled.
+ */
+export function emitEllipse(
+  center: Point2D, semiMajor: number, semiMinor: number, rotationDeg: number,
+  startParam: number, endParam: number, layer: string, aci: number, s: number, pair: Pair,
+  r2018?: EntityR2018,
+): void {
+  pair(0, 'ELLIPSE');
+  if (r2018) { emitAcDbEntity(pair, layer, aci, r2018); pair(100, 'AcDbEllipse'); }
+  const rot = (rotationDeg * Math.PI) / 180;
+  pair(10, center.x * s); pair(20, center.y * s); pair(30, 0);
+  // major-axis endpoint RELATIVE to center (× s), along the rotation direction.
+  pair(11, semiMajor * Math.cos(rot) * s); pair(21, semiMajor * Math.sin(rot) * s); pair(31, 0);
+  pair(40, semiMajor !== 0 ? semiMinor / semiMajor : 1); // ratio = minor / major
+  pair(41, startParam); pair(42, endParam);
+  if (!r2018) { pair(8, layer); pair(62, aci); }
+}
+
+/**
+ * Clamped, uniform (open) knot vector for `n` control points of degree `p` — always a VALID
+ * B-spline knot vector (m = n + p + 1 knots, first & last (p+1) repeated), so a SPLINE built from
+ * bare control points (import rarely carries an explicit knot vector) never aborts AutoCAD DXFIN
+ * («improper knot vector»). Interior knots evenly spaced 1..(n−p−1). Requires n ≥ p + 1 (the caller
+ * clamps the degree). Standard NURBS construction — the shape big players emit for a fit spline.
+ */
+export function clampedUniformKnots(n: number, p: number): number[] {
+  const knots: number[] = [];
+  for (let i = 0; i <= p; i += 1) knots.push(0);
+  for (let j = 1; j < n - p; j += 1) knots.push(j);
+  for (let i = 0; i <= p; i += 1) knots.push(n - p);
+  return knots;
+}
+
+/**
+ * A `SPLINE` (AcDbSpline) — big-player native. Control points (10/20/30), degree (71), a VALID
+ * clamped-uniform knot vector (72=count, 40 per knot) generated from the control-point count so an
+ * import-less knot vector still loads cleanly, and the planar flag (70 bit 8, +1 when closed). The
+ * Tekton (`explode`) path never reaches here — it gets a tessellated polyline via `tessellateSpline`
+ * (its minimal parser reads no SPLINE). Emits `73`=control-point count, `74`=0 fit points.
+ */
+export function emitSpline(
+  controlPoints: readonly Point2D[], degreeIn: number, closed: boolean,
+  layer: string, aci: number, s: number, pair: Pair, r2018?: EntityR2018,
+): void {
+  const n = controlPoints?.length ?? 0;
+  if (n < 2) return; // degenerate / field-less spline → skip (no bogus SPLINE record)
+  const p = Math.min(Math.max(1, Math.floor(degreeIn) || 3), n - 1);
+  const knots = clampedUniformKnots(n, p);
+  pair(0, 'SPLINE');
+  if (r2018) { emitAcDbEntity(pair, layer, aci, r2018); pair(100, 'AcDbSpline'); }
+  else { pair(8, layer); pair(62, aci); }
+  pair(70, (closed ? 1 : 0) | 8); // 8 = planar, +1 = closed
+  pair(71, p);
+  pair(72, knots.length);
+  pair(73, n);
+  pair(74, 0);
+  for (const k of knots) pair(40, k);
+  for (const v of controlPoints) { pair(10, v.x * s); pair(20, v.y * s); pair(30, 0); }
+}
+
+/** Unit direction for an XLINE/RAY — normalizes `dir`, or derives it from `base→second`. Falls
+ * back to +X for a degenerate (zero-length) input so the construction line is still well-formed. */
+export function unitDirection(dir: Point2D | undefined, base: Point2D, second?: Point2D): Point2D {
+  let dx = dir?.x ?? (second ? second.x - base.x : 1);
+  let dy = dir?.y ?? (second ? second.y - base.y : 0);
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-12) { dx = 1; dy = 0; } else { dx /= len; dy /= len; }
+  return { x: dx, y: dy };
+}
+
+/**
+ * An `XLINE` (AcDbXline, construction line — infinite both ways) or `RAY` (AcDbRay, semi-infinite).
+ * Base point (10/20/30, × `s`) + a UNIT direction vector (11/21/31 — a direction, never scaled).
+ * `kind` picks the entity + subclass. Native (Revit/AutoCAD keep construction geometry as XLINE/RAY);
+ * the Tekton path drops them (no infinite-line concept) rather than emitting a bogus finite segment.
+ */
+export function emitConstructionLine(
+  kind: 'XLINE' | 'RAY', base: Point2D, dir: Point2D, layer: string, aci: number, s: number,
+  pair: Pair, r2018?: EntityR2018,
+): void {
+  pair(0, kind);
+  if (r2018) { emitAcDbEntity(pair, layer, aci, r2018); pair(100, kind === 'XLINE' ? 'AcDbXline' : 'AcDbRay'); }
+  pair(10, base.x * s); pair(20, base.y * s); pair(30, 0);
+  pair(11, dir.x); pair(21, dir.y); pair(31, 0);
+  if (!r2018) { pair(8, layer); pair(62, aci); }
+}
+
+/**
  * Emit a vertex path — as a single `POLYLINE` (AutoCAD) or, when `explode`,
  * as individual `LINE` segments (Tekton has no POLYLINE).
  */

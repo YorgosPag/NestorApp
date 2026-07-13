@@ -63,12 +63,14 @@ import { resolveContextualTrigger } from './resolve-contextual-trigger';
 import { resolveToolActiveTrigger, isLineModifyTool } from './resolve-tool-active-trigger';
 import { annotationKindForTool } from '../config/annotation-kind-registry';
 import { useAnnotationSymbolSelectionStore } from '../state/annotation-symbol-selection-store';
+// ADR-363 / ADR-510 Φ4j — SSoT «Κλείσιμο» normaliser (leading close button per tab).
+import { withStandardClose } from '../ui/ribbon/data/contextual-close-panel';
 
 const BIM_KIND_TYPES: ReadonlySet<string> = new Set([
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair', 'roof',
 ]);
 
-export const RIBBON_CONTEXTUAL_TABS = [
+const RAW_RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_TEXT_EDITOR_TAB,
   CONTEXTUAL_ARRAY_RECT_TAB,
   CONTEXTUAL_ARRAY_POLAR_TAB,
@@ -116,7 +118,15 @@ export const RIBBON_CONTEXTUAL_TABS = [
   ANIMATION_CONTEXTUAL_TAB,
   CONTEXTUAL_GUIDES_TAB,
   CONTEXTUAL_DIMENSIONS_TAB,
-] as const;
+];
+
+// ADR-363 / ADR-510 Φ4j — every contextual tab opens with the SAME leading «Κλείσιμο»
+// button (Revit «Modify | …» far-left), which returns to the Home tab. Central
+// injection = SSoT: `withStandardClose` strips any legacy per-tab close button (no
+// duplicate) and prepends the unified Close panel, so ALL current AND future contextual
+// tabs get it with zero per-file work. New contextual tabs must NOT declare their own
+// close button — the registry owns it.
+export const RIBBON_CONTEXTUAL_TABS = RAW_RIBBON_CONTEXTUAL_TABS.map(withStandardClose);
 
 export function useActiveContextualTrigger({
   primarySelectedId, selectedEntityIds, currentScene, activeTool,
