@@ -4449,6 +4449,43 @@ service cloud.firestore {
                                 || isCompanyAdminOfCompany(resource.data.companyId))));
     }
 
+    // =========================================================================
+    // 🧱 BLOCK_LIBRARY COLLECTION - ADR-652 M2
+    // =========================================================================
+    // 2D DXF block content library (blklib_*). Scope: 'user' (ιδιωτική βιβλιοθήκη
+    // του δημιουργού) | 'company' | 'project' | 'system' (seed-only, read-all).
+    // Η γεωμετρία ζει ως blob στο Storage — εδώ μόνο metadata + provenance/license.
+    // ΙΔΙΩΤΙΚΟΤΗΤΑ: user-scope doc διαβάζεται ΜΟΝΟ από τον δημιουργό του (ό,τι
+    // ανεβάζει ο χρήστης από ξένο DXF δεν διαρρέει στην υπόλοιπη εταιρεία).
+    // =========================================================================
+    match /block_library/{blockId} {
+      allow read: if isAuthenticated()
+                  && (isSuperAdminOnly()
+                      || resource.data.scope == 'system'
+                      || (belongsToCompany(resource.data.companyId)
+                          && (resource.data.scope != 'user'
+                              || resource.data.createdBy == request.auth.uid)));
+      allow create: if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || (request.resource.data.companyId == getUserCompanyId()
+                            && request.resource.data.createdBy == request.auth.uid
+                            && request.resource.data.scope != 'system'));
+      // ADR-652 M3 — «Δημοσίευση» (promote): user → company/project στο ΙΔΙΟ doc, επιτρεπτό.
+      // ΚΡΙΣΙΜΟ: απαγορεύεται η ΑΥΤΟ-ΠΡΟΑΓΩΓΗ σε `system` — θα έκανε το block ορατό σε ΟΛΟΥΣ
+      // τους πελάτες (read rule: `scope == 'system'`). System content ΜΟΝΟ από seed (Admin SDK).
+      allow update: if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
+                            && resource.data.scope != 'system'
+                            && request.resource.data.scope != 'system'
+                            && request.resource.data.companyId == resource.data.companyId));
+      allow delete: if isAuthenticated()
+                    && (isSuperAdminOnly()
+                        || (resource.data.scope != 'system'
+                            && (resource.data.createdBy == request.auth.uid
+                                || isCompanyAdminOfCompany(resource.data.companyId))));
+    }
+
     match /bim_settings/{settingsId} {
       allow read: if isAuthenticated()
                   && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));

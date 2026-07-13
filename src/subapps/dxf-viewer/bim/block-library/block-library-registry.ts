@@ -1,70 +1,66 @@
 /**
- * Block Library — in-session registry (Milestone 1).
+ * Block Library — registry των ΤΟΠΟΘΕΤΗΣΙΜΩΝ ορισμών (γεωμετρία στη μνήμη).
  *
- * SSoT store για τους {@link InSessionBlockDef} που «κρατάμε» από το τρέχον DXF import,
- * ώστε ο χρήστης να τους ΞΑΝΑΤΟΠΟΘΕΤΕΙ (palette «Τα Blocks μου» + placement tool).
- * Καθαρά 2D/React-free — μοτίβο ίδιο με `user-material-image-store` (map + `createExternalStore`
- * version signal). Το Milestone 2 θα προσθέσει cloud persistence· εδώ ΜΟΝΟ in-memory.
+ * SSoT store για τους {@link InSessionBlockDef} που είναι έτοιμοι για τοποθέτηση. Δύο
+ * τροφοδότες, ΕΝΑΣ τόπος:
+ *  1. **import** (M1) — τα named blocks του τρέχοντος DXF (`captureSessionBlocksFromScene`).
+ *  2. **cloud hydration** (M2) — ένα αποθηκευμένο `BlockLibraryItem` του οποίου το geometry
+ *     blob κατέβηκε από το Storage (`hydrateCloudBlockDef`).
  *
- * Κλειδί = block name (μοναδικό ανά DXF). Δεύτερο import με ίδιο όνομα → override (τελευταίο κερδίζει).
+ * Έτσι το placement tool έχει ΜΙΑ πηγή γεωμετρίας: ό,τι κι αν διάλεξε ο χρήστης στο
+ * palette (session ή cloud), μέχρι να φτάσει στο tool είναι απλώς ένας ορισμός εδώ μέσα —
+ * καμία δεύτερη διαδρομή τοποθέτησης.
  *
- * @see ./capture-blocks-from-scene.ts — τροφοδότης (import scene → defs)
- * @see ../../rendering/entities/shared/user-material-image-store.ts — ίδιο store pattern
+ * Κλειδί = block name. Δεύτερο import/hydration με ίδιο όνομα → override (τελευταίο κερδίζει).
+ * Καθαρά vanilla (ADR-040): μηδέν React state — ο μηχανισμός map+version έρχεται από τον
+ * κοινό {@link createKeyedVersionedStore} (ίδιος primitive με το cloud store· όχι δίδυμο).
+ *
+ * @see ./capture-session-blocks.ts — τροφοδότης #1 (import scene → defs)
+ * @see ./hydrate-cloud-block.ts — τροφοδότης #2 (cloud item → def)
+ * @see ./block-library-cloud-store.ts — τα cloud METADATA (χωρίς γεωμετρία)
  */
 
-import { createExternalStore } from '../../stores/createExternalStore';
+import { createKeyedVersionedStore } from '@/lib/state/createKeyedVersionedStore';
 import type { InSessionBlockDef } from './block-library-types';
 
-/** blockName → ορισμός. Ο map είναι ο mutation accelerator· το signal είναι το version. */
-const defs = new Map<string, InSessionBlockDef>();
-const versionSignal = createExternalStore<number>(0);
-
-function emit(): void {
-  versionSignal.set(versionSignal.get() + 1);
-}
+const store = createKeyedVersionedStore<InSessionBlockDef>((def) => def.name);
 
 /** Αντικαθιστά ΟΛΟ το registry από ένα snapshot (π.χ. μετά από import). */
 export function setSessionBlockDefs(list: readonly InSessionBlockDef[]): void {
-  defs.clear();
-  for (const def of list) defs.set(def.name, def);
-  emit();
+  store.setAll(list);
 }
 
 /** Προσθέτει/ενημερώνει έναν ορισμό (τελευταίο κερδίζει). */
 export function upsertSessionBlockDef(def: InSessionBlockDef): void {
-  defs.set(def.name, def);
-  emit();
+  store.upsert(def);
 }
 
 /** Ορισμός με το δοσμένο όνομα, ή `null` αν άγνωστο. */
 export function getSessionBlockDef(name: string): InSessionBlockDef | null {
-  return defs.get(name) ?? null;
+  return store.get(name);
 }
 
-/** Όλοι οι ορισμοί (σταθερή σειρά εισαγωγής). */
+/** Όλοι οι ορισμοί (σταθερή σειρά εισαγωγής, stable reference μεταξύ αλλαγών). */
 export function listSessionBlockDefs(): readonly InSessionBlockDef[] {
-  return [...defs.values()];
+  return store.list();
 }
 
 /** Μονότονο version — bump σε κάθε αλλαγή (subscribe gate). */
 export function getSessionBlockDefsVersion(): number {
-  return versionSignal.get();
+  return store.getVersion();
 }
 
 /** Subscribe σε αλλαγές· επιστρέφει unsubscribe. */
 export function subscribeSessionBlockDefs(listener: () => void): () => void {
-  return versionSignal.subscribe(listener);
+  return store.subscribe(listener);
 }
 
 /** Καθαρίζει το registry (π.χ. νέο/άδειο σχέδιο). */
 export function clearSessionBlockDefs(): void {
-  if (defs.size === 0) return;
-  defs.clear();
-  emit();
+  store.clear();
 }
 
 /** Test-only reset. */
 export function __resetSessionBlockLibraryForTests(): void {
-  defs.clear();
-  versionSignal.reset(0);
+  store.reset();
 }

@@ -10,10 +10,17 @@
  * FSM: idle → awaitingPosition → committed → awaitingPosition (continuous). ESC reset.
  * Το commit το κάνει ο καλών μέσω `onBlockCreated` → `addBlockToScene` (undoable SSoT).
  *
+ * M1.5: το `useExtension` δημοσιεύει το tool handle στο `blockLibraryToolBridgeStore` ώστε το
+ * contextual ribbon tab να ρυθμίζει rotation/scale της ΕΠΟΜΕΝΗΣ τοποθέτησης (ΑΝΤΙΣΤΡΟΦΗ φορά
+ * από το selection store: εκεί palette→tool, εδώ tool→ribbon).
+ *
  * @see ./create-single-click-placement-tool.ts — invariant FSM (ADR-600)
  * @see ../../bim/block-library/block-library-selection-store.ts — «ποιο block» SSoT
  * @see ../../bim/block-library/place-block-from-library.ts — buildBlockEntityFromDef
+ * @see ../../ui/ribbon/hooks/bridge/block-library-tool-bridge-store.ts — tool → ribbon (M1.5)
  */
+
+import { useEffect } from 'react';
 
 import type { BlockEntity } from '../../types/entities';
 import { getSessionBlockDef } from '../../bim/block-library/block-library-registry';
@@ -29,6 +36,7 @@ import {
   type CorePlacementResult,
   type CorePlacementState,
 } from './create-single-click-placement-tool';
+import { blockLibraryToolBridgeStore } from '../../ui/ribbon/hooks/bridge/block-library-tool-bridge-store';
 
 /** Blocks είναι αυτο-συνεπή στις scene units — καμία mm→scene μετατροπή (σε αντίθεση με furniture). */
 type BlockSceneUnits = 'mm';
@@ -74,6 +82,22 @@ const useBlockPlacement = createSingleClickPlacementTool<
     return def ? computeBlockFootprint(def, params) : [];
   },
   getStatusText: (s) => (s.phase === 'awaitingPosition' ? 'tools.blockLibrary.statusPosition' : ''),
+  // ADR-652 M1.5 — δημοσίευσε το handle στο ribbon (tool → contextual tab). Καμία extra tool
+  // state: ο πυρήνας (ADR-600) κατέχει ήδη τα `overrides` + τον `setParamOverrides` setter,
+  // άρα ο bridge γράφει ΑΠΕΥΘΕΙΑΣ στον SSoT setter — κανένα δεύτερο αντίγραφο του transform.
+  useExtension: ({ state, isActive, setParamOverrides }) => {
+    useEffect(() => {
+      blockLibraryToolBridgeStore.set({ isActive, overrides: state.overrides, setParamOverrides });
+      // Καθάρισε ΜΟΝΟ αν το store κρατά ακόμα ΤΟ ΔΙΚΟ ΜΑΣ handle (ο `setParamOverrides` είναι
+      // stable ανά tool instance → ασφαλές identity key· mirror του furniture tool).
+      return () => {
+        if (blockLibraryToolBridgeStore.get()?.setParamOverrides === setParamOverrides) {
+          blockLibraryToolBridgeStore.set(null);
+        }
+      };
+    }, [state.overrides, isActive, setParamOverrides]);
+    return {};
+  },
 });
 
 export function useBlockLibraryTool(

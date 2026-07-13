@@ -305,6 +305,41 @@ service firebase.storage {
     }
 
     // =========================================================================
+    // 🧱 BLOCK LIBRARY GEOMETRY BLOBS — ADR-652 M2
+    // =========================================================================
+    // Path: /companies/{companyId}/block-library/{fileName}
+    //
+    // Το «αρχείο» ενός αποθηκευμένου 2D block (BLOCK-LOCAL members ως JSON), keyed
+    // by blockId (blklib_*). Το metadata + το geometryUrl ζουν στο Firestore doc
+    // block_library/{blockId}. Company-scoped (tenant isolation, mirror των BIM
+    // material thumbnails). 5 MB cap — ένα vector block είναι δεκάδες KB.
+    // =========================================================================
+
+    match /companies/{companyId}/block-library/{fileName} {
+      allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
+      allow write: if (belongsToCompany(companyId) || isSuperAdmin())
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType == 'application/json';
+      allow delete: if (belongsToCompany(companyId) || isSuperAdmin());
+    }
+
+    // =========================================================================
+    // 🧱📚 SYSTEM / PARTNER BLOCK LIBRARY — ADR-652 M3
+    // =========================================================================
+    // Path: /system/block-library/{fileName}
+    //
+    // Η ΕΤΟΙΜΗ βιβλιοθήκη (`scope:'system'`, `builtin:true`): ΔΕΝ ανήκει σε καμία
+    // εταιρεία — τη διαβάζουν ΟΛΟΙ οι πελάτες (mirror του Firestore read rule
+    // `resource.data.scope == 'system'`). Γράφεται ΜΟΝΟ από το seed (Admin SDK, που
+    // παρακάμπτει τους κανόνες) — από client, ποτέ: read-only content.
+    // =========================================================================
+
+    match /system/block-library/{fileName} {
+      allow read: if isAuthenticated();
+      allow write, delete: if isSuperAdmin();
+    }
+
+    // =========================================================================
     // 🎨 BIM MATERIAL 3D PBR TEXTURES — ADR-413 §2D Phase 3
     // =========================================================================
     // Path: /companies/{companyId}/bim-material-textures/{materialId}/{fileName}

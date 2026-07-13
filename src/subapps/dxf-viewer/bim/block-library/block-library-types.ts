@@ -41,21 +41,39 @@ export interface InSessionBlockDef {
   readonly boundsMm: BlockBoundsMm | null;
 }
 
-/** Κατηγορία για ομαδοποίηση/φίλτρο στο palette. Πηγή αλήθειας για τα UI groups. */
-export type BlockCategory =
-  | 'furniture'
-  | 'sanitary'
-  | 'vehicle'
-  | 'door'
-  | 'window'
-  | 'plant'
-  | 'other';
+/**
+ * Κατηγορίες για ομαδοποίηση/φίλτρο στο palette — **ΕΝΑΣ** κατάλογος (M3).
+ * Ο τύπος ΠΑΡΑΓΕΤΑΙ από τη λίστα: το dropdown της φόρμας και το φίλτρο του palette
+ * διαβάζουν ΑΥΤΗΝ, ώστε μια νέα κατηγορία να μπαίνει σε ΕΝΑ σημείο (i18n:
+ * `blockLibrary.categories.*`).
+ */
+export const BLOCK_CATEGORIES = [
+  'furniture',
+  'sanitary',
+  'kitchen',
+  'vehicle',
+  'door',
+  'window',
+  'plant',
+  'other',
+] as const;
+
+export type BlockCategory = (typeof BLOCK_CATEGORIES)[number];
 
 /** Scope ορατότητας — mirror του `bim_materials` scope μοντέλου. */
 export type BlockLibraryScope = 'user' | 'company' | 'project' | 'system';
 
-/** Τύπος άδειας ανά αντικείμενο (το «ταμπελάκι» άδειας). */
-export type BlockLicenseType = 'unknown' | 'cc0' | 'cc-by' | 'proprietary' | 'partner-granted';
+/** Τύποι άδειας (το «ταμπελάκι» άδειας) — ίδιο SSoT μοτίβο με τις κατηγορίες. */
+export const BLOCK_LICENSE_TYPES = [
+  'unknown',
+  'cc0',
+  'cc-by',
+  'proprietary',
+  'partner-granted',
+] as const;
+
+/** Τύπος άδειας ανά αντικείμενο. */
+export type BlockLicenseType = (typeof BLOCK_LICENSE_TYPES)[number];
 
 /** Ίχνος προέλευσης — από πού ήρθε το block. */
 export interface BlockProvenance {
@@ -108,6 +126,54 @@ export const DEFAULT_USER_IMPORT_LICENSE: BlockLicense = {
   type: 'unknown',
   redistributable: false,
 };
+
+/**
+ * Είσοδος για «Αποθήκευση στη βιβλιοθήκη» (M2). Ο χρήστης δίνει κατηγορία + άδεια·
+ * το `scope` default `'user'` (ιδιωτική βιβλιοθήκη). Η γεωμετρία ΔΕΝ περνά από εδώ ως
+ * URL — ο service ανεβάζει το blob και συμπληρώνει μόνος του το `geometryUrl`.
+ */
+export interface SaveBlockLibraryItemInput {
+  /** `'system'` απαγορεύεται από client (seed-only) — mirror του material library. */
+  readonly scope: Exclude<BlockLibraryScope, 'system'>;
+  readonly name: string;
+  readonly category: BlockCategory;
+  readonly boundsMm: BlockBoundsMm;
+  /** BLOCK-LOCAL members — ανεβαίνουν ως blob στο Storage. */
+  readonly localMembers: readonly Entity[];
+  readonly provenance: BlockProvenance;
+  readonly license: BlockLicense;
+}
+
+/**
+ * Είσοδος για «Δημοσίευση» (M3): προάγει ένα ΗΔΗ αποθηκευμένο block από την ιδιωτική
+ * βιβλιοθήκη σε κοινόχρηστο scope (εταιρείας/έργου) — το ArchiCAD «publish to office
+ * library» / Figma «publish to team library». Ο χρήστης μπορεί ταυτόχρονα να ΔΙΟΡΘΩΣΕΙ
+ * την άδεια (γι' αυτό το `license` είναι προαιρετικό εδώ): χωρίς `redistributable`, το
+ * ΙΔΙΟ gate που φυλά το `saveBlock` απορρίπτει την προαγωγή.
+ */
+export interface PromoteBlockLibraryItemInput {
+  readonly blockId: string;
+  /** `'system'` ΠΟΤΕ από client — μόνο seed (Admin SDK). */
+  readonly scope: Extract<BlockLibraryScope, 'company' | 'project'>;
+  /** Διορθωμένη άδεια· αν λείπει, ισχύει η αποθηκευμένη. */
+  readonly license?: BlockLicense;
+}
+
+/** Typed error codes της βιβλιοθήκης block (mirror `BIM_MATERIAL_ERRORS`). */
+export const BLOCK_LIBRARY_ERRORS = {
+  NAME_REQUIRED: 'BLOCK_LIBRARY_NAME_REQUIRED',
+  GEOMETRY_REQUIRED: 'BLOCK_LIBRARY_GEOMETRY_REQUIRED',
+  PROJECT_SCOPE_REQUIRES_PROJECT_ID: 'BLOCK_LIBRARY_PROJECT_SCOPE_REQUIRES_PROJECT_ID',
+  SYSTEM_SCOPE_CLIENT_FORBIDDEN: 'BLOCK_LIBRARY_SYSTEM_SCOPE_CLIENT_FORBIDDEN',
+  /** Νομικό GATE: κοινόχρηστο scope απαιτεί `license.redistributable === true`. */
+  SHARED_SCOPE_REQUIRES_REDISTRIBUTABLE: 'BLOCK_LIBRARY_SHARED_SCOPE_REQUIRES_REDISTRIBUTABLE',
+  BUILTIN_NOT_MUTABLE: 'BLOCK_LIBRARY_BUILTIN_NOT_MUTABLE',
+  NOT_FOUND: 'BLOCK_LIBRARY_NOT_FOUND',
+  GEOMETRY_FETCH_FAILED: 'BLOCK_LIBRARY_GEOMETRY_FETCH_FAILED',
+} as const;
+
+export type BlockLibraryErrorCode =
+  (typeof BLOCK_LIBRARY_ERRORS)[keyof typeof BLOCK_LIBRARY_ERRORS];
 
 /**
  * User-tunable placement overrides του Block Library tool (Milestone 1). Mirror του

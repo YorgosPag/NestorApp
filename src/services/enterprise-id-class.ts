@@ -384,6 +384,7 @@ export class EnterpriseIdService {
   generateFloorplanSymbolId(): string { return this.generateId(P.FLOORPLAN_SYMBOL).id; }
   generateBimPresetId(): string { return this.generateId(P.BIM_PRESET).id; }
   generateBimMaterialId(): string { return this.generateId(P.BIM_MATERIAL).id; }
+  generateBlockLibraryItemId(): string { return this.generateId(P.BLOCK_LIBRARY_ITEM).id; }
   generateBimSettingsId(): string { return this.generateId(P.BIM_SETTINGS).id; }
   generateBimFamilyTypeId(): string { return this.generateId(P.BIM_FAMILY_TYPE).id; }
 

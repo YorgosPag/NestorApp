@@ -59,6 +59,8 @@ interface FloatingPanelsSectionProps {
   showGuidePanel: boolean;
   showGuideAnalysisPanel: boolean;
   showBlockLibraryPanel: boolean;
+  /** ADR-652 M3 — ενεργό έργο· χωρίς αυτό δεν προσφέρεται δημοσίευση block σε scope «έργου». */
+  projectId?: string;
   handleAction: (action: string) => void;
 
   // Overlay Toolbar
@@ -108,6 +110,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
   showGuidePanel,
   showGuideAnalysisPanel,
   showBlockLibraryPanel,
+  projectId,
   handleAction,
   activeTool,
   overlayMode,
@@ -209,12 +212,14 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
         />
       )}
 
-      {/* Block Library M1: «Τα Blocks μου» palette. Επιλογή κάρτας → set selection +
-          activate placement tool· η επόμενη κλικ στον καμβά τοποθετεί το block. */}
+      {/* Block Library: palette (session + βιβλιοθήκη + έτοιμο περιεχόμενο). Επιλογή κάρτας →
+          set selection + activate placement tool· η επόμενη κλικ στον καμβά τοποθετεί το block.
+          M3: το `projectId` ξεκλειδώνει τη δημοσίευση σε scope «έργου». */}
       {showBlockLibraryPanel && (
         <BlockLibraryPanel
           isVisible={showBlockLibraryPanel}
           onClose={() => handleAction('toggle-block-library-panel')}
+          projectId={projectId}
           onSelectBlock={(name) => {
             setSelectedBlockName(name);
             handleToolChange('block-library');

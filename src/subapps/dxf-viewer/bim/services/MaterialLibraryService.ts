@@ -5,46 +5,36 @@
  *
  * Root collection `bim_materials/{materialId}` με 3-scope discrimination via
  * `scope` field. System docs έχουν `companyId: null, projectId: null` —
- * readable σε όλους τους authenticated users (Firestore rules:3704-3723).
+ * readable σε όλους τους authenticated users (Firestore rules).
  *
- * Mirror του `StairPresetsService` (ADR-358 Phase 7.5) pattern, αλλά:
- *   - Root collection αντί subcollection (system scope NA σε per-company path).
- *   - 3-listener subscribe για live merge στο editor UI.
- *   - Builtin guard: system-seeded entries non-mutable / non-deletable από client.
+ * ADR-652 M2 — Ο ΚΟΙΝΟΣ πυρήνας (multi-scope list/subscribe/CRUD + cache +
+ * builtin guard) ζει πλέον στον {@link ScopedLibraryService}: εδώ μένει ΜΟΝΟ ό,τι
+ * είναι υλικό-specific (payload shape, validation, error codes). Δεύτερος
+ * καταναλωτής του ίδιου πυρήνα: `BlockLibraryService` (block_library).
  *
  * SOS N.6: setDoc + enterprise ID only (no addDoc, no inline UUID).
- * Cache TTL 5min — invalidated on every write. Subscribe equality guard
+ * Cache TTL 5min — invalidated on every write (πυρήνας). Subscribe equality guard
  * (memory rule `feedback_firestore_subscribe_equality_guard`).
  *
+ * @see ./scoped-library-service.ts — ο κοινός πυρήνας
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §Q8 §Phase 6.5
  */
 
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  serverTimestamp,
-  setDoc,
-  where,
-  type DocumentData,
-  type QueryDocumentSnapshot,
-  type Unsubscribe,
-} from 'firebase/firestore';
+import { type Unsubscribe } from 'firebase/firestore';
 
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateBimMaterialId } from '@/services/enterprise-id.service';
-import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import {
   BIM_MATERIAL_ERRORS,
   type BimMaterial,
   type SaveBimMaterialInput,
   type UpdateBimMaterialPatch,
 } from '../types/bim-material-types';
-import { DXF_TIMING } from '../../config/dxf-timing';
+import {
+  ScopedLibraryService,
+  companyScopeBucket,
+  optionalProjectScopeBucket,
+  systemScopeBucket,
+} from './scoped-library-service';
 
 // ============================================================================
 // CONFIG
@@ -56,173 +46,45 @@ export interface MaterialLibraryServiceConfig {
   readonly projectId?: string;
 }
 
-const CACHE_TTL_MS = DXF_TIMING.lifecycle.CACHE_TTL; // ADR-516
-
-// ============================================================================
-// CONVERTERS
-// ============================================================================
-
-function snapshotToMaterial(snap: QueryDocumentSnapshot<DocumentData>): BimMaterial {
-  return snap.data() as BimMaterial;
-}
-
-/** Snapshot key για equality guard στο subscribe merge. */
-function buildEqualityKey(materials: readonly BimMaterial[]): string {
-  return materials
-    .map((m) => `${m.id}:${m.updatedAt?.toMillis?.() ?? 0}`)
-    .join('|');
-}
-
-/** Strip undefined από patch — Firestore rejects undefined. */
-function stripUndefined(patch: UpdateBimMaterialPatch): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(patch)) {
-    if (v !== undefined) out[k] = v;
-  }
-  return out;
-}
-
 // ============================================================================
 // SERVICE
 // ============================================================================
 
 export class MaterialLibraryService {
-  private cache: { readonly materials: readonly BimMaterial[]; readonly ts: number } | null = null;
+  private readonly library: ScopedLibraryService<BimMaterial>;
 
-  constructor(private readonly config: MaterialLibraryServiceConfig) {}
-
-  private collectionRef() {
-    return collection(db, COLLECTIONS.BIM_MATERIALS);
-  }
-
-  private docRef(materialId: string) {
-    return doc(db, COLLECTIONS.BIM_MATERIALS, materialId);
+  constructor(private readonly config: MaterialLibraryServiceConfig) {
+    this.library = new ScopedLibraryService<BimMaterial>({
+      collectionKey: 'BIM_MATERIALS',
+      companyId: config.companyId,
+      userId: config.userId,
+      // Υλικά: system (seeded γενικά) + εταιρείας + (προαιρετικά) έργου.
+      buckets: [
+        systemScopeBucket(),
+        companyScopeBucket(),
+        ...optionalProjectScopeBucket(config.projectId),
+      ],
+      errors: {
+        notFound: BIM_MATERIAL_ERRORS.NOT_FOUND,
+        builtinNotMutable: BIM_MATERIAL_ERRORS.BUILTIN_NOT_MUTABLE,
+      },
+    });
   }
 
   /**
    * Returns merged materials visible to the current actor: system (all) +
    * company-scope (own company) + project-scope (matching projectId if set).
-   * Firestore rules enforce tenant isolation; this method narrows by scope.
    */
-  async listMaterials(): Promise<readonly BimMaterial[]> {
-    const now = Date.now();
-    if (this.cache && now - this.cache.ts < CACHE_TTL_MS) {
-      return this.cache.materials;
-    }
-
-    const buckets = await Promise.all([
-      this.fetchSystemScope(),
-      this.fetchCompanyScope(),
-      this.config.projectId ? this.fetchProjectScope(this.config.projectId) : Promise.resolve([]),
-    ]);
-
-    const merged: BimMaterial[] = [];
-    for (const bucket of buckets) merged.push(...bucket);
-
-    this.cache = { materials: merged, ts: now };
-    return merged;
+  listMaterials(): Promise<readonly BimMaterial[]> {
+    return this.library.list();
   }
 
-  /**
-   * Live merge subscriber for the editor UI. Three firestoreQueryService
-   * subscriptions (system + company + optional project) με merge + equality
-   * guard — SSoT subscribe per `firestore-realtime` module (ADR-355).
-   */
+  /** Live merge subscriber for the editor UI (system + company + optional project). */
   subscribeMaterials(
     cb: (materials: readonly BimMaterial[]) => void,
     onError: (error: Error) => void = () => {},
   ): Unsubscribe {
-    let systemDocs: readonly BimMaterial[] = [];
-    let companyDocs: readonly BimMaterial[] = [];
-    let projectDocs: readonly BimMaterial[] = [];
-    let lastKey = '__INITIAL__';
-
-    const emit = (): void => {
-      const merged: BimMaterial[] = [];
-      merged.push(...systemDocs, ...companyDocs, ...projectDocs);
-      const key = buildEqualityKey(merged);
-      if (key === lastKey) return;
-      lastKey = key;
-      this.cache = { materials: merged, ts: Date.now() };
-      cb(merged);
-    };
-
-    const unsubSystem = firestoreQueryService.subscribe<BimMaterial>(
-      'BIM_MATERIALS',
-      (result) => {
-        systemDocs = result.documents;
-        emit();
-      },
-      onError,
-      {
-        constraints: [where('scope', '==', 'system')],
-        tenantOverride: 'skip',
-      },
-    );
-
-    const unsubCompany = firestoreQueryService.subscribe<BimMaterial>(
-      'BIM_MATERIALS',
-      (result) => {
-        companyDocs = result.documents;
-        emit();
-      },
-      onError,
-      {
-        constraints: [where('scope', '==', 'company')],
-      },
-    );
-
-    let unsubProject: Unsubscribe = () => {};
-    if (this.config.projectId) {
-      const projectId = this.config.projectId;
-      unsubProject = firestoreQueryService.subscribe<BimMaterial>(
-        'BIM_MATERIALS',
-        (result) => {
-          projectDocs = result.documents;
-          emit();
-        },
-        onError,
-        {
-          constraints: [
-            where('scope', '==', 'project'),
-            where('projectId', '==', projectId),
-          ],
-        },
-      );
-    }
-
-    return () => {
-      unsubSystem();
-      unsubCompany();
-      unsubProject();
-    };
-  }
-
-  private async fetchSystemScope(): Promise<readonly BimMaterial[]> {
-    const q = query(this.collectionRef(), where('scope', '==', 'system'));
-    const snap = await getDocs(q);
-    return snap.docs.map(snapshotToMaterial);
-  }
-
-  private async fetchCompanyScope(): Promise<readonly BimMaterial[]> {
-    const q = query(
-      this.collectionRef(),
-      where('scope', '==', 'company'),
-      where('companyId', '==', this.config.companyId),
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(snapshotToMaterial);
-  }
-
-  private async fetchProjectScope(projectId: string): Promise<readonly BimMaterial[]> {
-    const q = query(
-      this.collectionRef(),
-      where('scope', '==', 'project'),
-      where('companyId', '==', this.config.companyId),
-      where('projectId', '==', projectId),
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(snapshotToMaterial);
+    return this.library.subscribe(cb, onError);
   }
 
   /**
@@ -243,10 +105,7 @@ export class MaterialLibraryService {
     }
 
     const id = generateBimMaterialId();
-    const ref = this.docRef(id);
-
-    const payload = {
-      id,
+    const created = await this.library.create(id, {
       scope: input.scope,
       nameEl: input.nameEl.trim(),
       nameEn: input.nameEn.trim(),
@@ -263,68 +122,28 @@ export class MaterialLibraryService {
       notes: input.notes ?? null,
       thumbnailUrl: input.thumbnailUrl ?? null,
       pbrTextures: input.pbrTextures ?? null,
-      builtin: false,
-      companyId: this.config.companyId,
       projectId: input.scope === 'project' ? (this.config.projectId ?? null) : null,
-      createdBy: this.config.userId,
-      createdAt: serverTimestamp(),
-      updatedBy: this.config.userId,
-      updatedAt: serverTimestamp(),
-    };
+    });
 
-    await setDoc(ref, payload);
-    this.invalidateCache();
-
-    return payload as unknown as BimMaterial;
+    return created as unknown as BimMaterial;
   }
 
   /** Patches a non-builtin material. Builtin (system seed) rejected. */
-  async updateMaterial(materialId: string, patch: UpdateBimMaterialPatch): Promise<void> {
-    const ref = this.docRef(materialId);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) {
-      throw new Error(BIM_MATERIAL_ERRORS.NOT_FOUND);
-    }
-    const current = snap.data() as BimMaterial;
-    if (current.builtin) {
-      throw new Error(BIM_MATERIAL_ERRORS.BUILTIN_NOT_MUTABLE);
-    }
-
-    const cleaned = stripUndefined(patch);
-    await setDoc(
-      ref,
-      {
-        ...cleaned,
-        updatedBy: this.config.userId,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true },
-    );
-    this.invalidateCache();
+  updateMaterial(materialId: string, patch: UpdateBimMaterialPatch): Promise<void> {
+    return this.library.patch(materialId, { ...patch });
   }
 
   /** Deletes a non-builtin material. Builtin rejected. */
-  async deleteMaterial(materialId: string): Promise<void> {
-    const ref = this.docRef(materialId);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) {
-      throw new Error(BIM_MATERIAL_ERRORS.NOT_FOUND);
-    }
-    const current = snap.data() as BimMaterial;
-    if (current.builtin) {
-      throw new Error(BIM_MATERIAL_ERRORS.BUILTIN_NOT_MUTABLE);
-    }
-    await deleteDoc(ref);
-    this.invalidateCache();
+  deleteMaterial(materialId: string): Promise<void> {
+    return this.library.remove(materialId);
   }
 
-  async getMaterialById(materialId: string): Promise<BimMaterial | null> {
-    const snap = await getDoc(this.docRef(materialId));
-    return snap.exists() ? (snap.data() as BimMaterial) : null;
+  getMaterialById(materialId: string): Promise<BimMaterial | null> {
+    return this.library.getById(materialId);
   }
 
   invalidateCache(): void {
-    this.cache = null;
+    this.library.invalidateCache();
   }
 }
 

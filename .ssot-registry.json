@@ -974,6 +974,7 @@
       ],
       "allowlist": [
         "src/services/upload/utils/storage-path.ts",
+        "src/services/upload/utils/storage-path-bim.ts",
         "src/services/upload/utils/file-display-name.ts",
         "src/lib/security/path-sanitizer.ts",
         "src/app/api/admin/migrate-company-id/migration-operations.ts"

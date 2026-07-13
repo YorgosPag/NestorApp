@@ -158,12 +158,12 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
 
   // -------------------------------------------------------------------------
   // Path 3: CAD files (ownership-based, super_admin can read/delete but not write)
-  // storage.rules lines 294-305
+  // storage.rules lines 370-381
   // -------------------------------------------------------------------------
   {
     pathId: 'cad',
     pattern: 'owner_based',
-    rulesRange: [294, 305],
+    rulesRange: [370, 381],
     testFile: 'tests/storage-rules/suites/cad-files.storage.test.ts',
     matrix: [
       // owner (same_tenant_user uid == path userId)
@@ -187,7 +187,7 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
 
   // -------------------------------------------------------------------------
   // Path 4: Temp uploads (owner-only, NO super_admin bypass on any operation)
-  // storage.rules lines 314-321
+  // storage.rules lines 390-397
   //
   // NOTE: The `allow read, write` rule uses `isValidFileSize()` which checks
   // `request.resource.size`. For read operations, `request.resource` is null
@@ -198,7 +198,7 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   {
     pathId: 'temp',
     pattern: 'owner_based_no_superadmin',
-    rulesRange: [314, 321],
+    rulesRange: [390, 397],
     testFile: 'tests/storage-rules/suites/temp-uploads.storage.test.ts',
     matrix: [
       // owner (same_tenant_user uid == path userId)
@@ -244,6 +244,13 @@ export const STORAGE_RULES_PENDING: readonly string[] = [
   // keyed by materialId + map). Test suite to be added in follow-up:
   // tests/storage-rules/suites/bim-material-textures.storage.test.ts
   '/companies/{companyId}/bim-material-textures/{materialId}/{fileName}',
+  // ADR-652 M2 Block Library geometry blobs (company-scoped, application/json ≤ 5 MB,
+  // keyed by blklib_* id). Test suite to be added in follow-up:
+  // tests/storage-rules/suites/block-library-geometry.storage.test.ts
+  '/companies/{companyId}/block-library/{fileName}',
+  // ADR-652 M3 system content (έτοιμη/partner βιβλιοθήκη): read = κάθε authenticated χρήστης,
+  // write/delete = super-admin only (seed μέσω Admin SDK). Ίδιο test suite με το company path.
+  '/system/block-library/{fileName}',
   // ADR-410 CC0 furniture mesh library (shared read-only catalog; super_admin curates writes/deletes).
   // Test suite to be added in follow-up: tests/storage-rules/suites/furniture-library.storage.test.ts
   '/furniture-library/{assetFile}',

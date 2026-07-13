@@ -1248,7 +1248,76 @@
   "blockLibrary": {
     "title": "My Blocks",
     "hint": "Pick a block and click on the canvas to place it.",
-    "empty": "No blocks in this session. Import a DXF that contains blocks."
+    "empty": "No blocks in this session. Import a DXF that contains blocks.",
+    "badges": {
+      "saved": "Saved to library",
+      "system": "BUILT-IN"
+    },
+    "categories": {
+      "furniture": "Furniture",
+      "sanitary": "Sanitary",
+      "vehicle": "Vehicles",
+      "door": "Doors",
+      "window": "Windows",
+      "plant": "Plants",
+      "other": "Other",
+      "kitchen": "Kitchen"
+    },
+    "licenses": {
+      "unknown": "Unknown licence",
+      "cc0": "CC0 (public domain)",
+      "cc-by": "CC BY (attribution)",
+      "proprietary": "Proprietary",
+      "partner-granted": "Partner-granted"
+    },
+    "save": {
+      "action": "Save to library",
+      "title": "Save block to library",
+      "name": "Name",
+      "category": "Category",
+      "licenseType": "Licence type",
+      "attribution": "Attribution (optional)",
+      "termsUrl": "Terms URL (optional)",
+      "redistributable": "Redistribution allowed",
+      "redistributableHint": "Leave off unless you have an explicit right to redistribute. Required before the block can be shared with the company or project.",
+      "confirm": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel"
+    },
+    "errors": {
+      "geometryFetchFailed": "Could not load the block geometry.",
+      "saveFailed": "Saving to the library failed.",
+      "promoteFailed": "Publishing failed.",
+      "deleteFailed": "Delete failed."
+    },
+    "scopes": {
+      "session": "Current drawing",
+      "user": "My blocks",
+      "company": "Company",
+      "project": "Project",
+      "system": "Built-in library"
+    },
+    "filter": {
+      "searchPlaceholder": "Search blocks...",
+      "allCategories": "All categories",
+      "allScopes": "All",
+      "ariaLabel": "Block library filters",
+      "noMatch": "No block matches the filter."
+    },
+    "promote": {
+      "action": "Publish",
+      "title": "Publish “{name}”",
+      "description": "The block becomes visible to everyone sharing this library. It stays the same object — no copy is created.",
+      "target": "Publish to",
+      "blockedReason": "You have not declared redistribution rights for this drawing. Without them it cannot be shared — if you do hold the rights, tick “Redistribution allowed”.",
+      "confirm": "Publish",
+      "publishing": "Publishing…"
+    },
+    "delete": {
+      "action": "Delete",
+      "title": "Delete block",
+      "description": "“{name}” will be permanently deleted from the library (along with its geometry). Blocks already placed in the drawing are unaffected."
+    }
   },
   "snapModes": {
     "labels": {
@@ -1487,7 +1556,8 @@
       "drainage": "Drainage",
       "heating": "Heating",
       "hvac": "HVAC",
-      "fireGas": "Fire & Gas"
+      "fireGas": "Fire & Gas",
+      "blockLibraryPlacement": "Block Placement"
     },
     "panels": {
       "draw": "Draw",
@@ -1765,7 +1835,8 @@
       "mepRiser": "Stack",
       "print": "Print",
       "export": "Export",
-      "structural": "Structural"
+      "structural": "Structural",
+      "blockLibraryTransform": "Transform"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -4695,6 +4766,10 @@
         "attachTooltip": "Attach the selected columns to the selected footing (select 1 footing + columns)",
         "detach": "Detach footing",
         "detachTooltip": "Detach the selected columns (or all columns of the selected footing) from the footing"
+      },
+      "blockLibraryEditor": {
+        "rotation": "Rotation",
+        "scale": "Scale"
       }
     },
     "tooltips": {
@@ -4897,12 +4972,24 @@
     "title": "Column Properties",
     "emptyState": "Select a column to see its properties.",
     "sections": {
-      "structural": { "title": "Structural / Reinforcement" },
-      "loads": { "title": "Design Load" },
-      "tilt": { "title": "Tilt" },
-      "finish": { "title": "Plaster Finish" },
-      "envelope": { "title": "Envelope Function" },
-      "material": { "title": "Material" }
+      "structural": {
+        "title": "Structural / Reinforcement"
+      },
+      "loads": {
+        "title": "Design Load"
+      },
+      "tilt": {
+        "title": "Tilt"
+      },
+      "finish": {
+        "title": "Plaster Finish"
+      },
+      "envelope": {
+        "title": "Envelope Function"
+      },
+      "material": {
+        "title": "Material"
+      }
     }
   },
   "blockAdvancedPanel": {
@@ -4930,11 +5017,21 @@
     "title": "Hatch Properties",
     "emptyState": "Select a hatch to see its properties.",
     "sections": {
-      "general": { "title": "General" },
-      "pattern": { "title": "Pattern" },
-      "gradient": { "title": "Gradient" },
-      "image": { "title": "Image" },
-      "info": { "title": "Information" }
+      "general": {
+        "title": "General"
+      },
+      "pattern": {
+        "title": "Pattern"
+      },
+      "gradient": {
+        "title": "Gradient"
+      },
+      "image": {
+        "title": "Image"
+      },
+      "info": {
+        "title": "Information"
+      }
     }
   },
   "hatchImageFill": {
@@ -4973,25 +5070,37 @@
     "sections": {
       "structural": {
         "title": "Structural / Reinforcement",
-        "fields": { "effectiveFlangeWidth": "b_eff (mm)" }
+        "fields": {
+          "effectiveFlangeWidth": "b_eff (mm)"
+        }
       },
-      "loads": { "title": "Design Load" }
+      "loads": {
+        "title": "Design Load"
+      }
     }
   },
   "slabAdvancedPanel": {
     "title": "Slab Properties",
     "emptyState": "Select a slab to see its properties.",
     "sections": {
-      "structural": { "title": "Structural / Reinforcement" },
-      "loads": { "title": "Design Load" }
+      "structural": {
+        "title": "Structural / Reinforcement"
+      },
+      "loads": {
+        "title": "Design Load"
+      }
     }
   },
   "slabOpeningAdvancedPanel": {
     "title": "Slab Opening Properties",
     "emptyState": "Select a slab opening to see its properties.",
     "sections": {
-      "info": { "title": "Info" },
-      "warnings": { "title": "Warnings" }
+      "info": {
+        "title": "Info"
+      },
+      "warnings": {
+        "title": "Warnings"
+      }
     },
     "info": {
       "kind": "Type",
@@ -5008,10 +5117,18 @@
     "title": "Foundation Properties",
     "emptyState": "Select a foundation element to see its properties.",
     "sections": {
-      "structural": { "title": "Structural / Reinforcement" },
-      "loads": { "title": "Loads & Bearing" },
-      "seismic": { "title": "Seismic" },
-      "readouts": { "title": "Quantities" }
+      "structural": {
+        "title": "Structural / Reinforcement"
+      },
+      "loads": {
+        "title": "Loads & Bearing"
+      },
+      "seismic": {
+        "title": "Seismic"
+      },
+      "readouts": {
+        "title": "Quantities"
+      }
     }
   },
   "wallAdvancedPanel": {
@@ -5903,10 +6020,8 @@
     "printing": "Generating…",
     "error": "Print failed. Please try again.",
     "titleBlock": {
-      "label": "Title block",
-      "scale": "Scale",
-      "date": "Date",
-      "sheet": "Sheet"
+      "label": "Title block & sheet frame",
+      "missingHint": "This drawing has no title block — one will be added to the printed sheet with the project data."
     }
   },
   "export": {
@@ -5958,5 +6073,13 @@
     "cancel": "Cancel",
     "exporting": "Exporting…",
     "error": "Export failed. Please try again."
+  },
+  "topoBoundary": {
+    "status": {
+      "awaitingEntity": "Click a CLOSED polyline on the drawing to set it as the site boundary.",
+      "added": "Boundary set — volumes are counted only inside it.",
+      "removed": "Boundary cleared — volumes cover the whole survey.",
+      "notClosed": "That line is not closed — a boundary must have an inside."
+    }
   }
 }

@@ -11,14 +11,13 @@ import { Plus } from 'lucide-react';
 import { useTranslation } from '@/i18n';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useCompanyId } from '@/hooks/useCompanyId';
+import { LibraryFilterBar } from '../shared/LibraryFilterBar';
+import {
+  EMPTY_LIBRARY_FILTER,
+  matchesLibraryFilter,
+  type LibraryFilterState,
+} from '../shared/library-filter';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type {
   BimMaterial,
@@ -39,8 +38,12 @@ interface MaterialsLibraryPanelProps {
   projectId?: string;
 }
 
-type ScopeFilter = BimMaterialScope | 'all';
-type CategoryFilter = BimMaterialCategory | 'all';
+/** Οι κατηγορίες υλικού — ένας κατάλογος για dropdown + i18n. */
+const CATEGORIES: readonly BimMaterialCategory[] = [
+  'plaster', 'masonry', 'concrete', 'insulation', 'flooring',
+  'window-frame', 'door-frame', 'paint', 'roofing', 'waterproofing', 'other',
+];
+const SCOPES: readonly BimMaterialScope[] = ['system', 'company', 'project'];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -54,23 +57,33 @@ export function MaterialsLibraryPanel({ projectId }: MaterialsLibraryPanelProps)
 
   const { materials, loading, save, update, remove } = useMaterialLibrary({ companyId, userId, projectId });
 
-  const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
-  const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('all');
+  // ADR-652 M3 — το φιλτράρισμα βιβλιοθήκης είναι κοινό SSoT (το μοιράζεται με το palette
+  // των block): ίδιο state, ίδιος pure κανόνας, ίδια μπάρα.
+  const [filter, setFilter] = useState<LibraryFilterState>(EMPTY_LIBRARY_FILTER);
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<BimMaterial | undefined>(undefined);
   const [deleteTarget, setDeleteTarget] = useState<BimMaterial | null>(null);
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim();
-    return materials.filter((m) => {
-      if (categoryFilter !== 'all' && m.category !== categoryFilter) return false;
-      if (scopeFilter !== 'all' && m.scope !== scopeFilter) return false;
-      if (q && !m.nameEl.toLowerCase().includes(q) && !m.nameEn.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [materials, search, categoryFilter, scopeFilter]);
+  const filtered = useMemo(
+    () =>
+      materials.filter((m) =>
+        matchesLibraryFilter(
+          { names: [m.nameEl, m.nameEn], category: m.category, scope: m.scope },
+          filter,
+        ),
+      ),
+    [materials, filter],
+  );
+
+  const categoryOptions = useMemo(
+    () => CATEGORIES.map((c) => ({ value: c, label: t(`categories.${c}`) })),
+    [t],
+  );
+  const scopeOptions = useMemo(
+    () => SCOPES.map((s) => ({ value: s, label: t(`scopes.${s}`) })),
+    [t],
+  );
 
   const openCreate = useCallback(() => { setEditTarget(undefined); setEditorOpen(true); }, []);
   const openEdit = useCallback((m: BimMaterial) => { setEditTarget(m); setEditorOpen(true); }, []);
@@ -120,12 +133,6 @@ export function MaterialsLibraryPanel({ projectId }: MaterialsLibraryPanelProps)
     setDeleteTarget(null);
   }, [deleteTarget, remove]);
 
-  const CATEGORIES: BimMaterialCategory[] = [
-    'plaster', 'masonry', 'concrete', 'insulation', 'flooring',
-    'window-frame', 'door-frame', 'paint', 'roofing', 'waterproofing', 'other',
-  ];
-  const SCOPE_FILTERS: ScopeFilter[] = ['all', 'system', 'company', 'project'];
-
   return (
     <section aria-label={t('list.title')} className="flex flex-col gap-2 h-full">
       <header className="flex items-center justify-between gap-1">
@@ -137,45 +144,16 @@ export function MaterialsLibraryPanel({ projectId }: MaterialsLibraryPanelProps)
         </Button>
       </header>
 
-      <nav className="flex flex-col gap-1.5" aria-label={t('list.filtersAriaLabel')}>
-        <input
-          type="search"
-          placeholder={t('list.searchPlaceholder')}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className={`w-full text-xs px-2 py-1 rounded ${colors.border.default} border ${colors.bg.primary} ${colors.text.primary} focus:outline-none focus:ring-1 focus:ring-ring`}
-        />
-        <div className="flex gap-1">
-          <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as CategoryFilter)}>
-            <SelectTrigger size="sm" className="text-xs h-6 flex-1">
-              <SelectValue placeholder={t('list.allCategories')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('list.allCategories')}</SelectItem>
-              {CATEGORIES.map((c) => (
-                <SelectItem key={c} value={c}>{t(`categories.${c}`)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="flex gap-0.5">
-            {SCOPE_FILTERS.map((sc) => (
-              <button
-                key={sc}
-                type="button"
-                onClick={() => setScopeFilter(sc)}
-                className={[
-                  'text-xs px-1.5 py-0.5 rounded transition-colors',
-                  scopeFilter === sc
-                    ? 'bg-primary text-primary-foreground'
-                    : `${colors.bg.secondary} ${colors.text.muted} hover:${colors.bg.hover}`,
-                ].join(' ')}
-              >
-                {t(`scopes.${sc}`)}
-              </button>
-            ))}
-          </div>
-        </div>
-      </nav>
+      <LibraryFilterBar
+        value={filter}
+        onChange={setFilter}
+        searchPlaceholder={t('list.searchPlaceholder')}
+        categories={categoryOptions}
+        allCategoriesLabel={t('list.allCategories')}
+        scopes={scopeOptions}
+        allScopesLabel={t('scopes.all')}
+        ariaLabel={t('list.filtersAriaLabel')}
+      />
 
       <main className="flex flex-col gap-1 overflow-y-auto flex-1 min-h-0">
         {loading && (

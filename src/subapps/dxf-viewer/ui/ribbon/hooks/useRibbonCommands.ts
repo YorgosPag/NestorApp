@@ -72,6 +72,7 @@ export function useRibbonCommands({
   mepUnderfloorBridge,
   mepSegmentBridge,
   furnitureBridge,
+  blockLibraryBridge,
   floorplanSymbolBridge,
   annotationSymbolBridge,
   scaleBarBridge,
@@ -104,7 +105,7 @@ export function useRibbonCommands({
     wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge,
     foundationBridge, slabOpeningBridge, mepFixtureBridge, mepManifoldBridge,
     electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge,
-    mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, floorplanSymbolBridge,
+    mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, blockLibraryBridge, floorplanSymbolBridge,
     annotationSymbolBridge, scaleBarBridge, mepFixtureLibraryBridge, mepRiserBridge, arrayBridge,
     lineToolBridge, dimBridge, xlineModeBridge, scaleToolBridge,
   };

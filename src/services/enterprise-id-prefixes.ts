@@ -270,6 +270,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   FLOORPLAN_SYMBOL: 'fpsym',   // floorplan_symbols collection — pure-vector 2D floorplan symbol (ADR-415, WC/sanitary first)
   BIM_PRESET: 'bpst',          // bim_presets collection — element type presets (system/company/project/user scope)
   BIM_MATERIAL: 'bmat',        // bim_materials collection — material library (Phase 6+)
+  BLOCK_LIBRARY_ITEM: 'blklib', // block_library collection — 2D DXF block content library (ADR-652 M2)
   BIM_SETTINGS: 'bset',        // bim_settings collection — per-company BIM configuration
   BIM_FAMILY_TYPE: 'bimftype', // bim_family_types collection — shared parametric family type definitions (ADR-driven)
 

@@ -42,6 +42,7 @@ import type { RibbonMepWaterHeaterBridge } from './useRibbonMepWaterHeaterBridge
 import type { RibbonMepUnderfloorBridge } from './useRibbonMepUnderfloorBridge';
 import type { RibbonMepSegmentBridge } from './useRibbonMepSegmentBridge';
 import type { RibbonFurnitureBridge } from './useRibbonFurnitureBridge';
+import type { RibbonBlockLibraryBridge } from './useRibbonBlockLibraryBridge';
 import type { RibbonFloorplanSymbolBridge } from './useRibbonFloorplanSymbolBridge';
 import type { RibbonAnnotationSymbolBridge } from './useRibbonAnnotationSymbolBridge';
 import type { RibbonScaleBarBridge } from './useRibbonScaleBarBridge';
@@ -104,6 +105,7 @@ export interface UseRibbonCommandsProps {
   mepUnderfloorBridge: RibbonMepUnderfloorBridge;
   mepSegmentBridge: RibbonMepSegmentBridge;
   furnitureBridge: RibbonFurnitureBridge;
+  blockLibraryBridge: RibbonBlockLibraryBridge;
   floorplanSymbolBridge: RibbonFloorplanSymbolBridge;
   annotationSymbolBridge: RibbonAnnotationSymbolBridge;
   scaleBarBridge: RibbonScaleBarBridge;

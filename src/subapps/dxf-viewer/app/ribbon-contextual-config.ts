@@ -40,6 +40,7 @@ import { CONTEXTUAL_HATCH_TAB } from '../ui/ribbon/data/contextual-hatch-tab';
 import { CONTEXTUAL_THERMAL_SPACE_TAB } from '../ui/ribbon/data/contextual-thermal-space-tab';
 import { CONTEXTUAL_MEP_SEGMENT_TAB } from '../ui/ribbon/data/contextual-mep-segment-tab';
 import { CONTEXTUAL_FURNITURE_TAB } from '../ui/ribbon/data/contextual-furniture-tab';
+import { CONTEXTUAL_BLOCK_LIBRARY_TAB } from '../ui/ribbon/data/contextual-block-library-tab';
 import { CONTEXTUAL_FLOORPLAN_SYMBOL_TAB } from '../ui/ribbon/data/contextual-floorplan-symbol-tab';
 import { CONTEXTUAL_ANNOTATION_SYMBOL_TAB } from '../ui/ribbon/data/contextual-annotation-symbol-tab';
 import { CONTEXTUAL_SCALE_BAR_TAB } from '../ui/ribbon/data/contextual-scale-bar-tab';
@@ -110,6 +111,7 @@ const RAW_RIBBON_CONTEXTUAL_TABS = [
   CONTEXTUAL_MEP_FIXTURE_LIBRARY_TAB,
   CONTEXTUAL_MEP_RISER_TAB,
   CONTEXTUAL_FURNITURE_TAB,
+  CONTEXTUAL_BLOCK_LIBRARY_TAB,
   CONTEXTUAL_FLOORPLAN_SYMBOL_TAB,
   CONTEXTUAL_ANNOTATION_SYMBOL_TAB,
   CONTEXTUAL_SCALE_BAR_TAB,

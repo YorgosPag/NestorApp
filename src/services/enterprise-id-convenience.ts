@@ -298,6 +298,7 @@ export const generateFurnitureId = () => enterpriseIdService.generateFurnitureId
 export const generateFloorplanSymbolId = () => enterpriseIdService.generateFloorplanSymbolId();
 export const generateBimPresetId = () => enterpriseIdService.generateBimPresetId();
 export const generateBimMaterialId = () => enterpriseIdService.generateBimMaterialId();
+export const generateBlockLibraryItemId = () => enterpriseIdService.generateBlockLibraryItemId();
 export const generateBimSettingsId = () => enterpriseIdService.generateBimSettingsId();
 export const generateBimFamilyTypeId = () => enterpriseIdService.generateBimFamilyTypeId();
 

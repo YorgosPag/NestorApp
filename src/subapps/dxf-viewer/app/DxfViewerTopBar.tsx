@@ -62,6 +62,7 @@ import { SlabOpeningPersistenceHost } from './SlabOpeningPersistenceHost';
 import { StairPersistenceHost } from './StairPersistenceHost';
 import { SlabOpeningStackHost } from './SlabOpeningStackHost';
 import { UserMaterialRegistryHost } from './UserMaterialRegistryHost';
+import { BlockLibraryRegistryHost } from './BlockLibraryRegistryHost';
 import { PsetEditorHost } from './PsetEditorHost';
 import { IfcExportHost } from './IfcExportHost';
 import { useFloorMetadata } from '../hooks/data/useFloorMetadata';
@@ -392,6 +393,10 @@ export function DxfViewerTopBar({
         floorId={floorId}
       />
       <UserMaterialRegistryHost
+        projectId={projectId}
+      />
+      {/* ADR-652 M2 — τροφοδοτεί το palette «Τα Blocks μου» με τη μόνιμη βιβλιοθήκη. */}
+      <BlockLibraryRegistryHost
         projectId={projectId}
       />
       <PsetEditorHost levelManager={levelManager} />

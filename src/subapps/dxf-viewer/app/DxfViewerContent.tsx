@@ -434,6 +434,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           showGuidePanel={showGuidePanel}
           showGuideAnalysisPanel={showGuideAnalysisPanel}
           showBlockLibraryPanel={showBlockLibraryPanel}
+          projectId={levelManager.saveContext?.projectId ?? undefined}
           handleAction={wrappedHandleAction}
           activeTool={activeTool}
           overlayMode={overlayMode}

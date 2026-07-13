@@ -95,11 +95,21 @@ export function buildMeshCatalogOptions(
   }));
 }
 
-/** The full tool-handle surface a drawing-mode bridge reads/writes. */
+/**
+ * The full tool-handle surface a drawing-mode bridge reads/writes.
+ *
+ * The asset picker (`assetId` / `setAssetId`) is OPTIONAL: a tool is numeric-only when
+ * the ribbon does not own "which asset" — e.g. `block-library` (ADR-652), where the
+ * palette («Τα Blocks μου») owns the selection via its own SSoT store and the ribbon
+ * only tunes rotation/scale. Picker bridges (furniture / floorplan-symbol /
+ * mep-fixture-library) still declare both as required on their own handle type, so they
+ * keep full type-safety — this widening only lets the ONE factory serve both shapes
+ * instead of forcing a numeric-only sibling clone of it (N.18).
+ */
 export interface ToolHandleLike extends ToolNumericOverrideHandle {
   readonly isActive: boolean;
-  readonly assetId: string;
-  setAssetId(assetId: string): void;
+  readonly assetId?: string;
+  setAssetId?(assetId: string): void;
 }
 
 /** Per-bridge configuration for {@link useToolHandleBridge}. */
@@ -108,10 +118,10 @@ export interface ToolHandleBridgeConfig<H extends ToolHandleLike> {
   readonly toolHandle: H | null;
   /** Imperative read of the current handle for event dispatch (`store.get()`). */
   readonly readImperative: () => H | null;
-  /** commandKey identifying the asset/model picker. */
-  readonly assetIdKey: string;
-  /** Builds the picker options (catalog SSoT, may carry thumbnails). */
-  readonly buildOptions: () => RibbonComboboxState['options'];
+  /** commandKey identifying the asset/model picker. Omit for numeric-only tools. */
+  readonly assetIdKey?: string;
+  /** Builds the picker options (catalog SSoT, may carry thumbnails). Omit with `assetIdKey`. */
+  readonly buildOptions?: () => RibbonComboboxState['options'];
   /** commandKey → numeric override field on the handle's `overrides`. */
   readonly numberKeyToField: Readonly<Record<string, string>>;
   /** Fallback per-key numeric value when the override is unset. */
@@ -150,9 +160,10 @@ export function useToolHandleBridge<H extends ToolHandleLike>(
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {
       if (!toolHandle || !toolHandle.isActive) return null;
-      if (commandKey === assetIdKey) {
-        const value = displayAssetId ? displayAssetId(toolHandle) : toolHandle.assetId;
-        return { value, options: buildOptions() };
+      // Picker branch — skipped entirely on numeric-only tools (no `assetIdKey`).
+      if (assetIdKey !== undefined && commandKey === assetIdKey) {
+        const value = displayAssetId ? displayAssetId(toolHandle) : toolHandle.assetId ?? '';
+        return { value, options: buildOptions ? buildOptions() : [] };
       }
       if (Object.prototype.hasOwnProperty.call(numberKeyToField, commandKey)) {
         return readToolOverrideNumber(toolHandle, commandKey, numberKeyToField, numberKeyDefault);
@@ -167,8 +178,9 @@ export function useToolHandleBridge<H extends ToolHandleLike>(
     (commandKey: string, value: string): void => {
       const handle = readImperative();
       if (!handle || !handle.isActive) return;
-      if (commandKey === assetIdKey) {
-        handle.setAssetId(mapAssetIdValue ? mapAssetIdValue(value) : value);
+      // Picker branch — skipped entirely on numeric-only tools (no `assetIdKey`).
+      if (assetIdKey !== undefined && commandKey === assetIdKey) {
+        handle.setAssetId?.(mapAssetIdValue ? mapAssetIdValue(value) : value);
         return;
       }
       if (Object.prototype.hasOwnProperty.call(numberKeyToField, commandKey)) {

@@ -414,6 +414,8 @@ export const COLLECTIONS = {
   BIM_PRESETS: process.env.NEXT_PUBLIC_BIM_PRESETS_COLLECTION || 'bim_presets',
   /** Material library — 25 seeded generics (Phase 6+). IDs via bmat_* prefix. */
   BIM_MATERIALS: process.env.NEXT_PUBLIC_BIM_MATERIALS_COLLECTION || 'bim_materials',
+  /** Block library — 2D DXF block content (user/company/project/system scope), ADR-652 M2. IDs via blklib_* prefix. */
+  BLOCK_LIBRARY: process.env.NEXT_PUBLIC_BLOCK_LIBRARY_COLLECTION || 'block_library',
   /** Per-company BIM configuration (hotkeys, defaults, layer convention). IDs via bset_* prefix. */
   BIM_SETTINGS: process.env.NEXT_PUBLIC_BIM_SETTINGS_COLLECTION || 'bim_settings',
 
