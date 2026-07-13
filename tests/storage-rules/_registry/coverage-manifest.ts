@@ -158,12 +158,12 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
 
   // -------------------------------------------------------------------------
   // Path 3: CAD files (ownership-based, super_admin can read/delete but not write)
-  // storage.rules lines 370-381
+  // storage.rules lines 390-401
   // -------------------------------------------------------------------------
   {
     pathId: 'cad',
     pattern: 'owner_based',
-    rulesRange: [370, 381],
+    rulesRange: [390, 401],
     testFile: 'tests/storage-rules/suites/cad-files.storage.test.ts',
     matrix: [
       // owner (same_tenant_user uid == path userId)
@@ -187,7 +187,7 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
 
   // -------------------------------------------------------------------------
   // Path 4: Temp uploads (owner-only, NO super_admin bypass on any operation)
-  // storage.rules lines 390-397
+  // storage.rules lines 410-417
   //
   // NOTE: The `allow read, write` rule uses `isValidFileSize()` which checks
   // `request.resource.size`. For read operations, `request.resource` is null
@@ -198,7 +198,7 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   {
     pathId: 'temp',
     pattern: 'owner_based_no_superadmin',
-    rulesRange: [390, 397],
+    rulesRange: [410, 417],
     testFile: 'tests/storage-rules/suites/temp-uploads.storage.test.ts',
     matrix: [
       // owner (same_tenant_user uid == path userId)
@@ -240,6 +240,9 @@ export const STORAGE_RULES_PENDING: readonly string[] = [
   // ADR-413 §2D Phase 2 BIM material appearance thumbnails (company-scoped, image/* ≤ 5 MB).
   // Test suite to be added in follow-up: tests/storage-rules/suites/bim-material-thumbnails.storage.test.ts
   '/companies/{companyId}/bim-material-thumbnails/{fileName}',
+  // ADR-651 Φάση Ε engineer stamp/signature image (company-scoped, image/* ≤ 2 MB).
+  // Test suite to be added in follow-up: tests/storage-rules/suites/engineer-stamps.storage.test.ts
+  '/companies/{companyId}/engineer-stamps/{fileName}',
   // ADR-413 §2D Phase 3 BIM material 3D PBR texture maps (company-scoped, image/* ≤ 10 MB,
   // keyed by materialId + map). Test suite to be added in follow-up:
   // tests/storage-rules/suites/bim-material-textures.storage.test.ts

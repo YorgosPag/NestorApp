@@ -305,6 +305,26 @@ service firebase.storage {
     }
 
     // =========================================================================
+    // 🖋️ ΣΦΡΑΓΙΔΑ / ΥΠΟΓΡΑΦΗ ΜΗΧΑΝΙΚΟΥ — ADR-651 Φάση Ε
+    // =========================================================================
+    // Path: /companies/{companyId}/engineer-stamps/{fileName}
+    //
+    // Η σφραγίδα/υπογραφή του μηχανικού (PNG/JPG/WebP), keyed by userId. Ανεβαίνει
+    // ΜΙΑ φορά και μπαίνει αυτόματα στο κελί σφραγίδας κάθε πινακίδας σχεδίου
+    // (οθόνη + PDF). Το download URL persist-άρεται στο `users/{userId}.stampImageUrl`.
+    // Company-scoped (tenant isolation, mirror των BIM material thumbnails). 2 MB cap
+    // — μια σφραγίδα είναι μικρή εικόνα· ο client εφαρμόζει το ίδιο όριο.
+    // =========================================================================
+
+    match /companies/{companyId}/engineer-stamps/{fileName} {
+      allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
+      allow write: if (belongsToCompany(companyId) || isSuperAdmin())
+                   && request.resource.size < 2 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      allow delete: if (belongsToCompany(companyId) || isSuperAdmin());
+    }
+
+    // =========================================================================
     // 🧱 BLOCK LIBRARY GEOMETRY BLOBS — ADR-652 M2
     // =========================================================================
     // Path: /companies/{companyId}/block-library/{fileName}
