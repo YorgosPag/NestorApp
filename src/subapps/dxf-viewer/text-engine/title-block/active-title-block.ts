@@ -27,7 +27,8 @@ import {
   getPlaceholderScopeSources,
   loadPlaceholderScope,
 } from '../templates/resolver/placeholder-scope-client';
-import type { PlaceholderScope } from '../templates/resolver/scope.types';
+import type { PlaceholderScope, PlaceholderScopeRevision } from '../templates/resolver/scope.types';
+import { getActiveRevisionFacts, loadProjectRevisions } from './revisions/revision-client';
 import type { TextTemplate } from '../templates/template.types';
 import type { TitleBlockSheetOptions } from './print-sheet';
 import { getStampImage, loadStampImage } from './stamp-image-client';
@@ -73,6 +74,16 @@ export interface TitleBlockScopeOverrides {
    * (`sheet-numbering.ts`) — καμία χειρόγραφη αρίθμηση.
    */
   readonly sheetNumber?: string;
+  /**
+   * ADR-651 Φάση Η — η αναθεώρηση που γράφεται στην πινακίδα (`{{revision.*}}`). Κανονικά
+   * είναι η **τρέχουσα** του έργου (τελευταία καταχωρημένη, από το `revision-client` cache)·
+   * ο καλών τη δίνει ρητά μόνο για **προεπισκόπηση** (π.χ. ο διάλογος αναθεωρήσεων δείχνει
+   * πώς θα φαίνεται η υπό έγκριση αναθεώρηση **πριν** καταχωρηθεί).
+   *
+   * ⚠️ `revision.date` είναι `Date` — γι' αυτό τα revision facts είναι **client-owned** και
+   * ΔΕΝ ταξιδεύουν στο `PlaceholderScopeSources` του route (δεν είναι JSON-safe· §5.1).
+   */
+  readonly revision?: PlaceholderScopeRevision;
 }
 
 /** Firestore scope (cached) + τα drawing facts που ζουν στο ενεργό σχέδιο. */
@@ -87,6 +98,10 @@ export function buildActiveTitleBlockScope(
       title: overrides?.title,
       sheetNumber: overrides?.sheetNumber,
     },
+    // Φάση Η — ο παραγωγός που έλειπε: τα `revision.*` placeholders υπήρχαν από το ADR-344
+    // αλλά κανείς δεν τα γέμιζε. Πλέον η **τρέχουσα** αναθεώρηση του έργου φτάνει στην
+    // πινακίδα ΚΑΙ στον πίνακα αναθεωρήσεων, στα 3 backends, από το ΙΔΙΟ κανάλι overrides.
+    revision: overrides?.revision ?? getActiveRevisionFacts(locale),
     formatting: { locale },
   };
 }
@@ -106,7 +121,12 @@ export type StampImageForm = 'url' | 'data-url';
  */
 export async function loadTitleBlockAssets(projectId?: string): Promise<void> {
   const sources = await loadPlaceholderScope(projectId);
-  await loadStampImage(sources.user?.stampImageUrl);
+  await Promise.all([
+    loadStampImage(sources.user?.stampImageUrl),
+    // Φάση Η — η τρέχουσα αναθεώρηση του έργου, στο ΙΔΙΟ σημείο προ-φόρτωσης (ένας ιδιοκτήτης
+    // του lifecycle): ό,τι φορτώνει η πινακίδα, φορτώνεται εδώ και διαβάζεται σύγχρονα μετά.
+    loadProjectRevisions(projectId),
+  ]);
 }
 
 /** Η σφραγίδα του ενεργού μηχανικού, στη μορφή που ζητά ο καλών (event-time read). */

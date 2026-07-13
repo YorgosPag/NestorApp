@@ -54,8 +54,12 @@ export interface BuildSheetSetOptions {
   readonly locale: TitleBlockLocale;
 }
 
-/** Ο τίτλος ενός φύλλου = η ανθρώπινη ετικέτα του ορόφου (fallback: το όνομά του). */
-function sheetTitleForLevel(level: Level): string {
+/**
+ * Ο τίτλος ενός φύλλου = η ανθρώπινη ετικέτα του ορόφου (fallback: το όνομά του).
+ * SSoT — τον μοιράζονται το σετ εκτύπωσης (Φάση Ζ) και το αποτύπωμα αναθεώρησης (Φάση Η):
+ * το φύλλο λέγεται το ΙΔΙΟ και στο PDF και στον πίνακα αναθεωρήσεων.
+ */
+export function sheetTitleForLevel(level: Level): string {
   return level.entityLabel?.trim() || level.name;
 }
 

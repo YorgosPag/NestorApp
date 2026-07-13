@@ -94,7 +94,9 @@ function readDate(path: PlaceholderPath, scope: PlaceholderScope): string | unde
 }
 
 // Named toShortDate (not formatDate) to avoid intl-formatting SSoT conflict (ADR-314).
-function toShortDate(value: Date, formatting: PlaceholderScopeFormatting | undefined): string {
+// Exported (ADR-651 Φάση Η) so the revision dialog prints dates EXACTLY as the title block
+// does — one formatter, zero drift between what you approve and what gets plotted.
+export function toShortDate(value: Date, formatting: PlaceholderScopeFormatting | undefined): string {
   const locale = formatting?.locale === 'en' ? 'en-US' : 'el-GR';
   return new Intl.DateTimeFormat(locale, {
     year: 'numeric',
