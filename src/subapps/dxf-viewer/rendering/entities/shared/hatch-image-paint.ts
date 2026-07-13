@@ -24,18 +24,11 @@ import type { Point2D } from '../../types/Types';
 import type { HatchImageFill } from '../../../types/entities';
 import { hatchBounds } from '../../../bim/hatch/hatch-grips';
 import { traceHatchBoundary, type ToScreen } from './hatch-gradient-paint';
+import { imageIntrinsicSize } from './image-intrinsic-size';
 
-/** Intrinsic pixel μέγεθος μιας decoded εικόνας (HTMLImageElement / ImageBitmap / canvas). */
-function imageIntrinsicSize(img: CanvasImageSource): { w: number; h: number } {
-  if (typeof HTMLImageElement !== 'undefined' && img instanceof HTMLImageElement) {
-    return { w: img.naturalWidth, h: img.naturalHeight };
-  }
-  if (typeof ImageBitmap !== 'undefined' && img instanceof ImageBitmap) {
-    return { w: img.width, h: img.height };
-  }
-  const sized = img as { width?: number; height?: number };
-  return { w: sized.width ?? 0, h: sized.height ?? 0 };
-}
+// Re-export (ADR-651 Φάση Ε) — παλαιοί καταναλωτές (`ImageRenderer`) εισάγουν το
+// `imageIntrinsicSize` από εδώ· ο ορισμός ζει πλέον στο `image-intrinsic-size.ts` SSoT.
+export { imageIntrinsicSize };
 
 /**
  * Σημείο αγκύρωσης (phase) του tiling: ρητό `origin`, αλλιώς κάτω-αριστερή γωνία του

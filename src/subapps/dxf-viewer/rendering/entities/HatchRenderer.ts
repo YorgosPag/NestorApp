@@ -40,6 +40,8 @@ import {
   resolveImageFillOrigin, computeImageTileMatrix, fillHatchPattern, drawImageGrout, averageImageColor,
 } from './shared/hatch-image-paint';
 import { HatchImageCache } from './shared/hatch-image-cache';
+// ADR-653 Φ8 — variant key SSoT: «τι ζωγραφίζεται» (υλικό + tint), όχι σκέτο assetId.
+import { imageFillVariantKey } from './shared/hatch-image-variant-key';
 // ADR-040 — async asset load «σπρώχνει» ένα dirty-frame (ο renderer δεν subscribe-άρει).
 import { markAllCanvasDirty } from '../core/frame-scheduler-api';
 import { aabbIntersectsRaw } from '../hitTesting/bounds-operations';
@@ -106,9 +108,9 @@ export class HatchRenderer extends BaseEntityRenderer {
   private readonly screenPatternCache = new Map<string, CanvasPattern | null>();
   /** ADR-643 Φ1 — live cache decoded εικόνων υλικού· async load → dirty-frame (ADR-040). */
   private readonly imageCache = new HatchImageCache(markAllCanvasDirty);
-  /** ADR-643 Φ1 — `CanvasPattern` (repeat) ανά assetId· size/angle/scale μπαίνουν στο DOMMatrix. */
+  /** ADR-643 Φ1 / ADR-653 Φ8 — `CanvasPattern` (repeat) ανά variant key· size/angle/scale στο DOMMatrix. */
   private readonly imagePatternCache = new Map<string, CanvasPattern | null>();
-  /** ADR-643 Φ1 — μέσο χρώμα εικόνας ανά assetId (LOD tint fallback)· `null` = αδύνατο (taint). */
+  /** ADR-643 Φ1 / ADR-653 Φ8 — μέσο χρώμα εικόνας ανά variant key (LOD tint fallback)· `null`=taint. */
   private readonly averageColorCache = new Map<string, string | null>();
 
   /** Cached pattern segments (recompute μόνο σε αλλαγή geometry/pattern). */
@@ -385,15 +387,25 @@ export class HatchRenderer extends BaseEntityRenderer {
   private fillImage(
     paths: ReadonlyArray<ReadonlyArray<Point2D>>, imageFill: HatchImageFill, fallbackColor: string,
   ): void {
-    const img = this.imageCache.resolve(imageFill.assetId);
+    // ADR-653 Φ8 — ΕΝΑ variant key τρέφει ΚΑΙ τα τρία caches (decoded image / pattern /
+    // μέσο χρώμα), ώστε καφέ vs άσπρη/μαύρη εκδοχή του ίδιου υλικού να μη συγκρούονται.
+    const key = imageFillVariantKey(imageFill);
+    const img = this.imageCache.resolve({
+      key,
+      assetId: imageFill.assetId,
+      tint: imageFill.tint,
+      procedural: imageFill.procedural,
+      tileWidthMm: imageFill.tileWidth,
+      tileHeightMm: imageFill.tileHeight,
+    });
     if (!img || this.isImageTileTooSmall(imageFill)) {
       const tint = img
-        ? this.cachedAverageColor(imageFill.assetId, img) ?? fallbackColor
+        ? this.cachedAverageColor(key, img) ?? fallbackColor
         : fallbackColor;
       this.fillBoundary(paths, tint, HATCH_COLLAPSE_ALPHA);
       return;
     }
-    const pattern = this.imagePattern(imageFill.assetId, img);
+    const pattern = this.imagePattern(key, img);
     if (!pattern) { this.fillBoundary(paths, fallbackColor, HATCH_COLLAPSE_ALPHA); return; }
     const origin = resolveImageFillOrigin(paths, imageFill);
     if (!origin) return;
@@ -415,21 +427,21 @@ export class HatchRenderer extends BaseEntityRenderer {
     return minTilePx > 0 && minTilePx < HATCH_IMAGE_MIN_TILE_PX;
   }
 
-  /** `CanvasPattern` (repeat) ανά assetId — size/angle/scale μπαίνουν στο DOMMatrix (cached). */
-  private imagePattern(assetId: string, img: CanvasImageSource): CanvasPattern | null {
-    const hit = this.imagePatternCache.get(assetId);
+  /** `CanvasPattern` (repeat) ανά variant key — size/angle/scale μπαίνουν στο DOMMatrix (cached). */
+  private imagePattern(key: string, img: CanvasImageSource): CanvasPattern | null {
+    const hit = this.imagePatternCache.get(key);
     if (hit !== undefined) return hit;
     const pat = this.ctx.createPattern(img, 'repeat');
-    this.imagePatternCache.set(assetId, pat);
+    this.imagePatternCache.set(key, pat);
     return pat;
   }
 
-  /** Μέσο χρώμα εικόνας ανά assetId (delegate στο pure SSoT· cached). */
-  private cachedAverageColor(assetId: string, img: CanvasImageSource): string | null {
-    const hit = this.averageColorCache.get(assetId);
+  /** Μέσο χρώμα εικόνας ανά variant key (delegate στο pure SSoT· cached). */
+  private cachedAverageColor(key: string, img: CanvasImageSource): string | null {
+    const hit = this.averageColorCache.get(key);
     if (hit !== undefined) return hit;
     const c = averageImageColor(img);
-    this.averageColorCache.set(assetId, c);
+    this.averageColorCache.set(key, c);
     return c;
   }
 
