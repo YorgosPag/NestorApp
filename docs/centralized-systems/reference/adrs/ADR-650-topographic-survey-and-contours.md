@@ -1,6 +1,6 @@
 # ADR-650 — Τοπογραφικές Αποτυπώσεις & Ισοϋψείς Γραμμές (Έρευνα Αγοράς + Αρχιτεκτονικό Blueprint)
 
-- **Status**: 🟡 IN PROGRESS — **M1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· v4) · **M2 IMPLEMENTED** (μέρος Α import wizard· v5 — μέρος Β breakline picking· v6) · **M4 IMPLEMENTED** (3Δ όψη εδάφους: μοναδικό derived TIN → `BufferGeometry` mesh + hypsometric· v7) · **M6 IMPLEMENTED** (όγκοι cut/fill: prisms + daylight split + στάθμη/επιφάνεια/όριο + cross-check + 3Δ cut/fill style· v8, §12.4) · **M7 IMPLEMENTED** (ελληνικό export «ένα κουμπί → φάκελος»: πίνακες στο σχέδιο + ZIP με DXF/PDF/CSV/XLSX + auto tolerance-check §10· v9, §12.5). **Εκκρεμούν**: M3 (smoothing/LOD), M5 (AI), M8. Έρευνα §1–§11 & roadmap §12.2 παραμένουν το blueprint.
+- **Status**: 🟡 IN PROGRESS — **M1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· v4) · **M2 IMPLEMENTED** (μέρος Α import wizard· v5 — μέρος Β breakline picking· v6) · **M4 IMPLEMENTED** (3Δ όψη εδάφους: μοναδικό derived TIN → `BufferGeometry` mesh + hypsometric· v7) · **M6 IMPLEMENTED** (όγκοι cut/fill: prisms + daylight split + στάθμη/επιφάνεια/όριο + cross-check + 3Δ cut/fill style· v8, §12.4) · **M7 IMPLEMENTED** (ελληνικό export «ένα κουμπί → φάκελος»: πίνακες στο σχέδιο + ZIP με DXF/PDF/CSV/XLSX + auto tolerance-check §10· v9, §12.5) · **M3 IMPLEMENTED** (ισοϋψείς ακριβείς↔όμορφες + LOD· v10) · **M5α IMPLEMENTED** (AI «καμπανάκι» = deterministic QA rules engine + inline flags, χωρίς LLM· v11) · **M5β IMPLEMENTED** («μίλα στο σχέδιο» = NL editing με LLM tool-calling πάνω στα υπάρχοντα topo commands· 8 tools + destructive spike-removal με confirm· v12 — **M5 ΠΛΗΡΕΣ**). **Εκκρεμεί**: M8. Έρευνα §1–§11 & roadmap §12.2 παραμένουν το blueprint.
 - **Date**: 2026-07-13
 - **Category**: DXF Viewer / Topography / Research
 - **Σχετικά**: ADR-635 (culling gap σε geo-referenced συντεταγμένες ±1e6), ADR-462 (canonical mm),
@@ -355,7 +355,8 @@ false-flat handling) → **d3-tricontour** contours (major/minor) → **native P
 | **M2** ✅ | **Import Wizard** (Q9) | Column-mapping CSV/TXT/Excel (PNEZD/PENZD/…, delimiter, units, σειρά στηλών) + DXF POINT/TEXT extraction → `TopoPointStore`. Breakline picking (mark υπάρχουσες polylines ως constraints) — **DONE, changelog v5 (μέρος Α) + v6 (μέρος Β)**. | Civil 3D «Field to Finish» point import· CASS column reorder (§7 pain-point → κάν'το UX win) | υπάρχων DXF parser (`utils/dxf-entity-parser.ts`)· `parse-topo-points.ts` (extend)· `TopoPointStore` | — (SheetJS αν Excel = Apache-2.0 ✅) |
 | **M3** ✅ | **Smoothing switch + LOD** (Q5) | Διακόπτης «ακριβείς↔όμορφες»· smoothing = **non-destructive render-time στυλ** (AutoCAD spline-fit / Civil 3D «Contour Smoothing»): γενικό πεδίο `BaseEntity.smoothDisplay` — ο `PolylineRenderer` ζωγραφίζει cached Catmull-Rom καμπύλη, οι `vertices` (control) μένουν **ΑΚΡΙΒΕΙΣ** → export/Κτηματολόγιο κλειδωμένο δωρεάν. **Self-intersection guard** (windowed· raw fallback ανά span) + **Douglas-Peucker LOD ανά zoom** (bucketed cache → 0 per-frame smoothing, ADR-040). **DONE, changelog v10.** | Civil 3D «Surface Style · Contour Smoothing»· AutoCAD PEDIT spline-fit polyline | `catmullRom`/`tessellateSplinePoints` (`geometry-spline-utils`)· `segmentsIntersect` (`GeometryUtils`)· `simplifyPolyline` RDP (`geometry-polyline-utils`)· `EntityIdsBatchPatchCommand`· `terrain-3d-store` pattern | **καμία νέα** (και οι 3 αλγόριθμοι in-house) |
 | **M4** ✅ | **3D όψη εδάφους** (Q8) | TIN → `BufferGeometry` mesh (Z=υψόμετρο)· «γύρνα τον λόφο»· hypsometric elevation banding. **Παράγωγο του ΙΔΙΟΥ TIN** (μηδέν διπλή πηγή — επιβάλλεται από `topo-surface.ts`). **DONE, changelog v7.** RTIN LOD (martini) **ΔΕΝ** μπήκε: καμία μετρημένη ανάγκη ακόμη (§12.3) — dependency μόνο όταν αποδειχθεί. | Civil 3D Surface + Surface Style· Revit Toposolid· C4D | `bim-3d` engine (three.js, ADR-366/645)· `TinSurface` (M1)· `dxfPlanToWorld` + `MaterialCatalog3D` + `disposeObjectTree` | **καμία νέα** — υπάρχον `three` |
-| **M5** | **AI καμπανάκι + «μίλα στο σχέδιο»** (Q7 #1-2) | (α) Background QA rules engine (elevation busts, COGO closure, outliers, missing breaklines) με inline flags· (β) NL editing («interval 0.5m», «σβήσε spikes») = LLM tool-calling πάνω στο υπάρχον command SSoT. **AI-accelerant/human-certifier.** | Bentley Label-Optimizer· TBC blunder detection· SuperMap/DeepSeek NL assistant | `ai-assistant/` (`match-tool-definitions`, `dxf-openai-call`)· command SSoT· worker | ONNX-web (MIT)/Transformers.js (Apache) μόνο αν χρειαστεί client-ML |
+| **M5α** ✅ | **AI καμπανάκι (QA rules engine)** (Q7 #1) | Background **deterministic** QA (elevation busts = MAD robust· duplicate/outliers· closure = self-intersect/degenerate ring· missing breaklines = dihedral fold χωρίς constraint) με **inline flags**: λίστα panel με zoom-to + ⊙ markers (reuse ADR-435). **Μηδέν LLM/κόστος, offline. AI-accelerant/human-certifier.** **DONE, changelog v11.** | Civil 3D «Surface Statistics»· TBC blunder detection | `getTopoSurface`/`TopoPointStore`· `median` (`utils/statistics`)· `polygon-utils`· `scene-units`· `ClashMarkerLayer`+`canvas-fit-to-view-selected` (ADR-435/394) | **καμία νέα** (in-house, μηδέν LLM) |
+| **M5β** ✅ | **«Μίλα στο σχέδιο» (NL editing)** (Q7 #2) | NL editing («interval 0.5m», «σβήσε spikes») = **LLM tool-calling** πάνω στο υπάρχον command SSoT (`useTopoContours`/`contour-display-store`/`terrain-3d-store`/`cut-fill-store`/`runTopoQa`/`TopoPointStore`) — **8 topo tools** + executor στο ΥΠΑΡΧΟΝ `ai-assistant/` chat (ό,τι κάνει το `grid-tool-definitions`). Το LLM **ΔΕΝ** γράφει γεωμετρία· καλεί τα ίδια commands. Destructive «σβήσε spikes» = reuse M5α detector + **ρητό confirm** (human-certifier). **DONE, changelog v12.** | SuperMap/Autodesk AI assistant· Speckle NL-CAD | `ai-assistant/` (`grid/match-tool-definitions`, `dxf-openai-call`, `useDxfAiChat`)· command SSoT· M5α `runTopoQa` | **καμία νέα** — υπάρχον gpt-4o-mini |
 | **M6** ✅ | **Όγκοι cut/fill** (Q1) | Triangular-prism πάνω στο TIN + **daylight split** + προαιρετικό **όριο οικοπέδου** + αναφορά **στάθμη Ή μελετημένη επιφάνεια** + **cross-check με κάνναβο** (§7 CASS) + 3Δ **cut/fill analysis style**. **DONE, changelog v8.** BOQ output **ΔΕΝ** μπήκε: το έδαφος δεν είναι entity → δεν υπάρχει `sourceEntityId` να κρεμαστεί γραμμή (βλ. §12.4) — μεταφέρεται σε M4b/M7. | Civil 3D Volumes Dashboard· CASS 3-method cross-check | `TinSurface` (M1)· `polygon-utils` (area/centroid/S-H clip)· `marching-triangles` (crossEdge)· `scene-units` (mm³→m³) | — (in-house, **καμία νέα**) |
 | **M7** ✅ | **Ελληνικό export → «ένα κουμπί → φάκελος»** (Q1, Q7 #3) | Πίνακας συντεταγμένων ΕΓΣΑ'87 + εμβαδομέτρηση οικοπέδου + πίνακας όγκων + **auto tolerance-check** (§10) — **ΚΑΙ** ως entities μέσα στο σχέδιο **ΚΑΙ** ως ZIP (DXF+PDF+CSV+XLSX). **DONE, changelog v9** (§12.5). **ΔΕΝ** μπήκαν: proj4/pdf-lib (**καμία μετρημένη ανάγκη** — βλ. §12.5), ψηφιακή υπογραφή (eIDAS — ο μηχανικός, εκτός εφαρμογής), DXF layer schema Κτηματολογίου (**open gap §10** — λείπει το primary source). | CASS cadastral output· Civil 3D «coordinate table in drawing + report files» | `bim/schedule` exporters (CSV/XLSX/PDF)· `buildScheduleTable`+`detailPrimitivesToEntities` (ADR-622)· `zip-pack` (ADR-505)· DXF export (ADR-648)· `polygon-utils`· `scene-units` | **καμία νέα** |
 | **M8+** | **Point clouds / moonshots** | drone/LiDAR (AI ground-filter CSF/KPConv server), auto-breakline detection, multiplayer (CRDT), Gaussian-Splat visualization layer. | §6, §9 differentiators | worker split (client/server)· Potree | CSF (Apache ✅), Potree (BSD-2 ✅) — server-GPU για heavy ML |
@@ -855,3 +856,99 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
   σε ΟΛΟ το contour set, ή topo overlay renderer με το σύνολο)· user-facing LOD/segment tuning (τώρα σταθερά).
 
   **Status: M1 + M2 + M3 + M4 + M6 + M7 IMPLEMENTED· M5, M8 προγραμματισμένα (§12.2).**
+
+- **2026-07-13 (v11)** — **Milestone 5α ΥΛΟΠΟΙΗΘΗΚΕ: AI «καμπανάκι» = background QA rules engine + inline
+  flags** (§12.2 M5 μέρος α· Q7 #1). **Ρητά ΕΚΤΟΣ αυτού του v11:** το μέρος β «μίλα στο σχέδιο» (NL editing /
+  LLM tool-calling) — δικό του session **M5β** (γι' αυτό το μοντέλο μένει «M5 προγραμματισμένο» → τώρα «M5α»).
+
+  **Φιλοσοφία (§9):** AI-accelerant / **human-certifier**. **Μηδέν LLM, μηδέν κόστος, offline** — καθαρή
+  γεωμετρία/στατιστική. Το engine **ΠΟΤΕ** δεν πειράζει τα δεδομένα· επιστρέφει ευρήματα, ο μηχανικός κρίνει.
+
+  **Big-player πρακτική:** Civil 3D «Surface → Statistics» / Trimble Business Center «blunder detection» —
+  «Run → review» (transient report, όχι per-frame). Έξοδος σε **δύο** επιφάνειες (η πρακτική Civil 3D/TBC):
+  **λίστα panel με zoom-to** + **inline ⊙ markers** στον καμβά.
+
+  **Οι 4 deterministic έλεγχοι** (`systems/topography/qa/`): (1) **elevation busts** — residual κόμβου vs
+  **median** γειτόνων στο TIN, robust **MAD** fence (Iglewicz–Hoaglin ≈3.5·MAD)· (2) **duplicate/outliers** —
+  coincident XY (spatial grid O(n)) με ασυμβίβαστο Ζ· (3) **closure** — self-intersection + εκφυλισμένος βρόχος
+  για όριο & κλειστές breaklines· (4) **missing breaklines** — dihedral fold ανά TIN edge, flag στα steep
+  **χωρίς** breakline constraint.
+
+  **SSoT reuse — ΚΑΜΙΑ νέα εξάρτηση, μηδέν LLM (§8 + N.18):** `getTopoSurface` (ο μοναδικός derived TIN — ΠΟΤΕ
+  `buildTin`)· `TopoPointStore` (raw)· `median` (`utils/statistics`)· `isPolygonSelfIntersecting`/`polygonArea`/
+  `polygon2DCentroid` (`polygon-utils`)· `lengthMmToM`/`areaMm2ToM2` (`scene-units`)· `radToDeg` (angle SSoT).
+  Ο micrometre-grid key του `tin-builder` έγινε **exported** `localVertexKey` (Boy-Scout N.0.2) ώστε το QA
+  edge↔breakline matching να μη rounding-drift-άρει. **Markers:** reuse `ClashMarkerLayer`+`ClashMarkerGlyph`
+  (ADR-435) — ίδιο ⊙, ίδια `high/medium/low` παλέτα· overlay = **sibling του `ClashOverlayMount`**
+  (`canvas-layer-stack-topo-qa-overlay.tsx`, low-freq `topo-qa-store`, ADR-040-safe). **Zoom-to:** ο κανονικός
+  `canvas-fit-to-view-selected` EventBus SSoT (ίδιο μονοπάτι με το πλήκτρο Z / clash focus).
+
+  **Closure — ρητή honesty (§9):** measured-vs-**δηλωμένο** εμβαδόν/περίμετρος (Ν.4495/2017) ζει ΗΔΗ στο M7
+  `deliverables/greek-survey-rules.ts` — **δεν** διπλασιάζεται εδώ· και **traverse misclosure** (bearing/distance)
+  θέλει raw παρατηρήσεις που το subsystem δεν κρατά → εκτός scope, δηλωμένο αντί «μαγειρεμένο».
+
+  **Files:** +`qa/topo-qa-types.ts`, `qa/topo-qa-config.ts`, `qa/topo-qa-topology.ts`, `qa/topo-qa-format.ts`,
+  `qa/check-elevation-busts.ts`, `qa/check-duplicate-points.ts`, `qa/check-boundary-closure.ts`,
+  `qa/check-missing-breaklines.ts`, `qa/run-topo-qa.ts`, `qa/topo-qa-store.ts`·
+  +`components/dxf-layout/canvas-layer-stack-topo-qa-overlay.tsx`· +`ui/panels/topography/TopoQaSection.tsx`·
+  `canvas-layer-stack-preview-mounts.tsx` (mount· CHECK 6B/6D: ADR-040+ADR-650 staged)· `tin-builder.ts` (export)·
+  `TopographyPanel.tsx`· `TopographyPanel.module.css`· i18n `dxf-viewer-panels` el+en (`topography.qa.*`).
+  Tests: +10 QA πράσινα (elevation/duplicate/closure/missing-breakline + `runTopoQa` integration)· tin-builder/
+  topo-surface/contour regression πράσινα.
+
+  **Εκκρεμή (ρητά ΟΧΙ μαντεμένα):** **M5β** «μίλα στο σχέδιο» (topo tool-set + executor στο υπάρχον `ai-assistant/`
+  chat)· 3Δ QA markers (τώρα κρύβονται σε 3D — zoom-to δουλεύει)· auto-clear του report σε αλλαγή σημείων (τώρα
+  «Run → review» snapshot + Clear, όπως Civil 3D/TBC)· user-facing tuning των κατωφλίων (τώρα σταθερά config).
+
+  **Status: M1 + M2 + M3 + M4 + M5α + M6 + M7 IMPLEMENTED· M5β, M8 προγραμματισμένα (§12.2).**
+
+- **2026-07-14 (v12)** — **Milestone 5β ΥΛΟΠΟΙΗΘΗΚΕ: «Μίλα στο σχέδιο» = NL editing με LLM tool-calling**
+  (§12.2 M5 μέρος β· Q7 #2). **Το M5 (α+β) είναι πλέον ΠΛΗΡΕΣ.**
+
+  **Φιλοσοφία (§9):** AI-accelerant / **human-certifier**. 🔴 Το LLM **ΔΕΝ** γράφει γεωμετρία και **ΔΕΝ**
+  γράφει stores απευθείας — καλεί τα **ΙΔΙΑ** commands που καλεί το UI (ένας executor ανά tool → υπάρχον
+  command/store). Έτσι undo/persist/derived-TIN/QA report μένουν byte-identical με ένα πάτημα κουμπιού.
+
+  **Big-player πρακτική (§8):** SuperMap/Autodesk AI assistant, Speckle NL-CAD — NL editing = **tool-calling
+  πάνω σε υπάρχον command API**, ΟΧΙ raw geometry από το μοντέλο. Αυτό ακριβώς.
+
+  **Reuse ΟΛΟΥ του AI infra (`ai-assistant/`) — ΚΑΝΕΝΑ δεύτερο chat/loop/executor/caller, ΚΑΜΙΑ νέα dep:**
+  ίδιο chat (`DxfAiChatPanel`/`useDxfAiChat`), ίδιο route (`api/dxf-ai/command`), ίδιος caller (`callOpenAI`,
+  gpt-4o-mini). Το topo tool-set μπαίνει **δίπλα** στα drawing tools (ένα AI, πολλά domain tool-sets — ό,τι
+  προβλέπει το `grid-tool-definitions`). Ο client κάνει partition: drawing calls → `executeDxfAiToolCalls`,
+  topo calls → νέο `executeTopoAiToolCalls`.
+
+  **8 topo tools** (`topo-tool-definitions.ts`, ίδιο Chat-Completions σχήμα με grid: `strict:true`, optional =
+  `['x','null']` στο `required`): `generate_contours` (→`useTopoContours.generate`), `set_contour_style`
+  (→`useContourDisplay.setStyle`), `toggle_terrain_3d`+`set_terrain_style` (→`terrain-3d-store`),
+  `run_quality_check` (→ **καλεί** το M5α `runTopoQa`+`topoQaStore`, δεν το ξαναχτίζει), `set_cutfill_reference`+
+  `run_cutfill` (→`cut-fill-store`, mirror του panel: analysis style στο 3Δ), `remove_elevation_spikes`
+  (**destructive**). Μονάδες: το μοντέλο δίνει **ΜΕΤΡΑ** (όπως τα λέει ο χρήστης)· ο executor →mm (ίδια αιχμή
+  μετατροπής με το panel, ΠΟΤΕ το LLM).
+
+  **Destructive «σβήσε τα spikes» — ρητό confirm (Q-spikes = ΜΕΣΑ):** νέο deterministic SSoT
+  `remove-elevation-spikes.ts` — **reuse** του M5α `checkElevationBusts` ως η μοναδική πηγή «τι είναι spike»· ο
+  flagged TIN node γυρίζει στο raw σημείο μέσω του **ίδιου** `localVertexKey` που έκανε dedup ο `tin-builder`
+  (κόμβοι από breakline vertex → κανένα raw σημείο → δεν σβήνονται). Ο executor **ΔΕΝ** σβήνει: επιστρέφει
+  `TopoPendingConfirm`· το chat δείχνει inline Confirm/Cancel· μόνο μετά το «Επιβεβαίωση» τρέχει
+  `confirmRemoveElevationSpikes`→`removeElevationSpikes`→`setTopoPoints`. Ο μηχανικός εγκρίνει, ποτέ το LLM.
+
+  **N.11:** ο executor επιστρέφει **i18n keys+params** (ίδιο συμβόλαιο με τα M5α QA flags), το chat τα resolve-άρει
+  με `t()` — μηδέν hardcoded strings. i18n `aiAssistant.topo.*` el+en (`dxf-viewer-guides`).
+
+  **Files:** +`ai-assistant/topo-tool-definitions.ts` (+`TOPO_TOOL_NAMES` SSoT — μία λίστα για type union / route
+  allow-list / executor partition, ώστε να μη γίνει drift όπως το χειροκίνητο grid set)·
+  +`ai-assistant/topo-ai-tool-executor.ts`· +`systems/topography/remove-elevation-spikes.ts`· MOD `ai-assistant/
+  types.ts` (topo tool names/args + `TopoAiExecutionResult`/`TopoPendingConfirm`)· `dxf-system-prompt.ts` (topo
+  section)· `api/dxf-ai/command/route.ts` (+`TOPO_TOOL_DEFINITIONS`)· `command-helpers.ts` (+`TOPO_TOOL_NAMES` στο
+  allow-list)· `hooks/useDxfAiChat.ts` (partition + pending-confirm state + confirm/cancel)· `components/
+  DxfAiChatPanel.tsx` (topo commands από hooks + inline confirm affordance)· `ai-assistant/index.ts`.
+  Tests: +19 πράσινα (executor mapping με mocks· spike-removal preview/remove/idempotent)· υπάρχον
+  `match-intent-schema` πράσινο (no regression).
+
+  **Ρητά ΔΕΝ μπήκαν (ΟΧΙ μαντεμένα):** M8 (point clouds/auto-breakline)· persistent «current interval» store (το
+  interval ζει σε React state του `TopographyPanel`· το `generate_contours` παίρνει το interval ως arg, ίδια
+  συμπεριφορά με το κουμπί — δεν εφευρέθηκε store)· sync του panel interval field με την AI εντολή (χωριστές
+  επιφάνειες ελέγχου, όπως command-line vs slider). M5α open items (3Δ markers, auto-clear, tuning) παραμένουν.
+
+  **Status: M1 + M2 + M3 + M4 + M5 (α+β) + M6 + M7 IMPLEMENTED· M8 προγραμματισμένο (§12.2).**

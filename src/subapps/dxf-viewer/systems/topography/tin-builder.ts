@@ -18,8 +18,13 @@ import cdt2d, { type Cdt2dPoint, type Cdt2dEdge } from 'cdt2d';
 import type { TopoPoint, Breakline, LocalOrigin, TinSurface, TopoBounds } from './topo-types';
 import { computeLocalOrigin, ZERO_ORIGIN } from './topo-local-origin';
 
-/** Micrometre-grid key so coincident survey/breakline vertices merge to one TIN node. */
-function vertexKey(localX: number, localY: number): string {
+/**
+ * Micrometre-grid key so coincident survey/breakline vertices merge to one TIN node.
+ * Exported as the SSoT for «which LOCAL grid cell is this vertex in» — the QA topology
+ * pass (ADR-650 M5α) reuses it to match a TIN edge back to a breakline segment, so the
+ * two can never round differently and disagree about coincidence.
+ */
+export function localVertexKey(localX: number, localY: number): string {
   return `${Math.round(localX * 1000)}:${Math.round(localY * 1000)}`;
 }
 
@@ -31,7 +36,7 @@ interface CollectedVertices {
 
 /** Add one LOCAL vertex (deduped by grid key), returning its index. */
 function pushVertex(acc: CollectedVertices, localX: number, localY: number, z: number): number {
-  const key = vertexKey(localX, localY);
+  const key = localVertexKey(localX, localY);
   const existing = acc.keyToIndex.get(key);
   if (existing !== undefined) return existing;
   const index = acc.positions.length;
@@ -64,7 +69,7 @@ function buildConstraintEdges(
   const edges: Cdt2dEdge[] = [];
   for (const bl of breaklines) {
     const idx = bl.vertices.map((v) =>
-      acc.keyToIndex.get(vertexKey(v.x - origin.x, v.y - origin.y)),
+      acc.keyToIndex.get(localVertexKey(v.x - origin.x, v.y - origin.y)),
     );
     for (let i = 0; i < idx.length - 1; i++) {
       const a = idx[i];

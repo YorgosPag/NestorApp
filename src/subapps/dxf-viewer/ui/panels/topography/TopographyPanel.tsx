@@ -32,6 +32,7 @@ import { useContourDisplay } from '../../../systems/topography/useContourDisplay
 import { TopoImportWizard } from './TopoImportWizard';
 import { TopoCutFillSection } from './TopoCutFillSection';
 import { TopoDeliverablesSection } from './TopoDeliverablesSection';
+import { TopoQaSection } from './TopoQaSection';
 import styles from './TopographyPanel.module.css';
 
 /** Load state after a file has been parsed. */
@@ -238,6 +239,9 @@ export function TopographyPanel(): React.JSX.Element {
 
       {/* ADR-650 M6 — όγκοι εκσκαφών/επιχώσεων πάνω στην ΙΔΙΑ επιφάνεια (τρίτο style: cut/fill). */}
       <TopoCutFillSection />
+
+      {/* ADR-650 M5α — «καμπανάκι» ποιότητας: deterministic έλεγχοι + inline flags (χωρίς LLM). */}
+      <TopoQaSection />
 
       {/* ADR-650 M7 — «ένα κουμπί → φάκελος»: πίνακες μέσα στο σχέδιο + ZIP παραδοτέων. */}
       <TopoDeliverablesSection />
