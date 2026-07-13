@@ -151,6 +151,12 @@ Import pipeline (καθρέφτης του export, additive πάνω στους 
 
 ## Changelog
 
+- **2026-07-13** — **Καμία αλλαγή στο συμβόλαιο** του vector backend, μία στη σημασία της `area`
+  (ADR-651 Φάση ΣΤ / ADR-453): όταν το φύλλο φέρει πινακίδα, το `draw(pdf, area)` καλείται με την
+  **ωφέλιμη** περιοχή της κορνίζας ISO 5457 (κορνίζα μείον πινακίδα) αντί για τη συμμετρική περιοχή
+  περιθωρίου — το διανυσματικό σχέδιο δεν τυπώνεται ποτέ κάτω από την πινακίδα. Η κορνίζα/πινακίδα
+  ζωγραφίζεται **μετά**, ως `DetailPrimitive[]` (ADR-622), στην ίδια σελίδα ⇒ όλα τα στοιχεία του PDF
+  παραμένουν **native vector** (επιλέξιμο κείμενο, AutoCAD PDF-Import → πραγματικές οντότητες).
 - **2026-07-09** — Φ-texts **ANCHOR rewrite → exact native centering** (Opus, acceptance test Giorgio:
   «κύκλος με «1» ΤΑΥΤΙΣΜΕΝΑ ΚΕΝΤΡΑ → το «1» να μείνει ΑΚΡΙΒΩΣ στο κέντρο μετά το export»). **SSoT audit
   (grep):** το alignment encoding ζούσε **διπλό** (export `H_ALIGN` {left0/center1/right2} + import

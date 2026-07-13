@@ -18,7 +18,11 @@ import { createCombinedBounds } from '../../utils/bounds-utils';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { FitMode, PrintPlotStyle, RasterTargetPx } from '../config/paper-types';
-import { rasterToViewport, computeDrawingScaleTransform } from '../config/paper-math';
+import {
+  rasterToViewport,
+  computeDrawingScaleTransform,
+  resolveAppliedScaleDenominator,
+} from '../config/paper-math';
 import { setPrintColorPolicy, clearPrintColorPolicy } from '../../config/print-color-policy';
 import type { CaptureResult } from './capture-types';
 import { createOffscreen2dTarget } from './capture-2d-offscreen-canvas';
@@ -115,7 +119,6 @@ export function captureCurrent2dView(input: Capture2dInput): CaptureResult {
     dataUrl: canvas.toDataURL('image/png'),
     widthPx: input.raster.widthPx,
     heightPx: input.raster.heightPx,
-    appliedScaleDenominator:
-      input.fitMode === 'drawing-scale' ? input.scaleDenominator ?? null : null,
+    appliedScaleDenominator: resolveAppliedScaleDenominator(input.fitMode, input.scaleDenominator),
   };
 }

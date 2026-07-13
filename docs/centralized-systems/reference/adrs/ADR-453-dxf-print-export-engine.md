@@ -71,6 +71,35 @@ Ribbon **Ανάλυση → «Εκτύπωση»** (`analyze-tab.ts` PRINT_PANEL
 
 ## Changelog
 
+- **2026-07-14** — **Ο assembler έγινε πολυσέλιδος** (ADR-651 Φάση Ζ — σετ φύλλων, Opus). **MOD**
+  `assemble/pdf-assembler.ts`: νέο `assemblePrintPdfPages(pages, paper)` (`new jsPDF`+font μία φορά,
+  `addPage()` ανά φύλλο, κοινός `drawPrintPage`) ⇒ ένα πολυσέλιδο PDF για ολόκληρο **σετ φύλλων**·
+  το single-page `assemblePrintPdf` έγινε **thin wrapper** (μηδέν διπλότυπο εξόδου, N.18). **MOD**
+  `print-service.ts`: νέο `runPrintSet` (κάθε όροφος = μία σελίδα, ίδιο `buildSheet`/2D capture,
+  extracted `capture2dScene` SSoT)· `PrintRequest.wholeSet`. Το multi-sheet παραμένει **PDF-level**
+  (τα native paperspace LAYOUT/VPORT records μένουν DEFERRED). Λεπτομέρειες: ADR-651 §5.5.
+- **2026-07-13** — **Η πινακίδα του PDF έπαψε να είναι δική μας** (ADR-651 Φάση ΣΤ, Opus). Το print
+  engine είχε **δικό του** title block (`assemble/title-block-renderer.ts` → `drawTitleBlock`: κουτί
+  ~85mm με level-name / scale / date), ενώ η οθόνη έδειχνε πλήρη πινακίδα ISO 5457 με πραγματικά
+  στοιχεία έργου ⇒ **δύο μηχανές, δύο αλήθειες**. Πλέον:
+  - **DELETED** `assemble/title-block-renderer.ts` + `assemble/title-block-types.ts` (νεκρά).
+  - **MOD** `assemble/pdf-assembler.ts` — δέχεται `area: PrintableAreaMm` (ο καλών την έχει ήδη
+    υπολογίσει· έφυγε το διπλό `resolvePrintableAreaMm`) + προαιρετικά `sheetPrimitives:
+    DetailPrimitive[]` (ADR-622) και τα ζωγραφίζει με τον **κοινό** `renderDetailPrimitives` — sheet-mm
+    === page-mm, καμία μετατροπή. Η λεζάντα κλίμακας μένει μόνο για φύλλα **χωρίς** πινακίδα.
+  - **MOD** `print-service.ts` — `PrintDeps.titleBlock` (project + labels) → **`titleBlockLocale`**:
+    ό,τι αφορά την πινακίδα (preset / κορνίζα / δεδομένα) το **διαβάζει** από τους SSoT της οθόνης
+    (ADR-651), δεν το φτιάχνει. Το **χαρτί** παραμένει του `PrintRequest` (τυπώνεις σε ό,τι βάζεις
+    στον εκτυπωτή)· η **κλίμακα** που γράφεται στην πινακίδα είναι αυτή που ΟΝΤΩΣ τυπώνεται.
+  - **Περιοχή σχεδίου**: με πινακίδα, το σχέδιο τοποθετείται στην **ωφέλιμη** περιοχή της κορνίζας
+    (ποτέ κάτω από την πινακίδα)· χωρίς πινακίδα, ισχύει η κλασική συμμετρική περιοχή (μηδέν
+    παλινδρόμηση). Το vector capture (ADR-608) δέχεται την ίδια `area` — καμία αλλαγή στο συμβόλαιό του.
+  - **MOD** `config/paper-math.ts` — `computeRasterPxForArea(area, dpi)` (raster sizing από **ορθογώνιο**,
+    αφού η ωφέλιμη περιοχή δεν είναι συμμετρική· το `computePaperRasterPx` έγινε thin wrapper) +
+    `resolveAppliedScaleDenominator()` / `formatScaleText()` — ο κανόνας «ποια κλίμακα τυπώνεται» ζούσε
+    3 φορές (2 capture adapters + service)· τώρα μία.
+  - **MOD** `PrintDialog`/`PrintOutputControls` — υπόδειξη «λείπει πινακίδα» (ADR-651 Απόφαση #10β).
+  - Tests: `pdf-assembler` + `print-service` ξαναγράφτηκαν στο νέο συμβόλαιο· 94/94 suites green.
 - **2026-06-14** — Slices 0-5 implemented (Opus). 30 jest GREEN, tsc clean. UNCOMMITTED.
   🔴 browser-verify (Analyze→Εκτύπωση→A3/landscape→Save PDF 2Δ· 3Δ source· Open&Print) + commit.
 - **2026-07-09** — **ADR-608 vector-PDF backend** wired into the print engine (Opus). `CaptureResult`

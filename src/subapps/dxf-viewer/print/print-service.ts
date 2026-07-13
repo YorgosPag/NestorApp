@@ -5,6 +5,13 @@
  * the SAME assembler (`assemblePrintPdf`) and the SAME output primitives
  * (`triggerExportDownload` / `openBlobInNewTab`), which is the SSoT guarantee.
  *
+ * **ADR-651 Φάση ΣΤ** — η πινακίδα του PDF δεν φτιάχνεται πια εδώ: το print **διαβάζει** την
+ * ενεργή πινακίδα (preset / κορνίζα / πραγματικά στοιχεία έργου) από τους ΙΔΙΟΥΣ event-time
+ * SSoT που τροφοδοτούν και την οθόνη, και την τυπώνει από το ΙΔΙΟ layout model. Δύο μόνο
+ * πράγματα κρατά για τον εαυτό του, γιατί ανήκουν στην εκτύπωση:
+ *   - το **χαρτί** = αυτό του `PrintRequest` (τυπώνεις σε ό,τι βάζεις στον εκτυπωτή),
+ *   - η **κλίμακα** = αυτή που ΟΝΤΩΣ τυπώνεται (1:N του διαλόγου, όχι της οθόνης).
+ *
  * @module subapps/dxf-viewer/print/print-service
  */
 
@@ -12,14 +19,28 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { triggerExportDownload, openBlobInNewTab } from '@/lib/exports/trigger-export-download';
 import type { SceneModel } from '../types/entities';
 import type { SceneUnits } from '../utils/scene-units';
+import {
+  buildActiveTitleBlockScope,
+  buildActiveTitleBlockSheetOptions,
+  titleBlockTemplateForLocale,
+  type TitleBlockScopeOverrides,
+} from '../text-engine/title-block/active-title-block';
+import { buildPrintSheet, type PrintSheet } from '../text-engine/title-block/print-sheet';
+import type { SheetSetItem } from '../text-engine/title-block/sheet-set';
+import type { TitleBlockLocale } from '../text-engine/title-block/title-block-presets';
+import { resolveTitleBlockContent } from '../text-engine/title-block/title-block-rows';
 import type { PrintRequest, RasterTargetPx } from './config/paper-types';
 import { EXPORT_DPI, DEFAULT_PAGE_MARGIN_MM } from './config/paper-constants';
-import { computePaperRasterPx } from './config/paper-math';
+import {
+  computeRasterPxForArea,
+  formatScaleText,
+  resolveAppliedScaleDenominator,
+  resolvePrintableAreaMm,
+} from './config/paper-math';
 import type { CaptureResult } from './capture/capture-types';
 import { captureCurrent2dView } from './capture/capture-2d';
 import { captureCurrent2dViewVector } from './capture/capture-2d-vector';
-import { assemblePrintPdf } from './assemble/pdf-assembler';
-import type { TitleBlockContent, TitleBlockInput } from './assemble/title-block-types';
+import { assemblePrintPdf, assemblePrintPdfPages, type PrintPage } from './assemble/pdf-assembler';
 import { buildPrintFilename } from './print-filename';
 
 const logger = createModuleLogger('DXF_PRINT');
@@ -28,7 +49,7 @@ export interface PrintDeps {
   /** Active 2D scene (required for source='2d'). */
   scene: SceneModel | null;
   userDrawingUnits?: SceneUnits;
-  /** Project/drawing name for the filename + (Slice 4) title block. */
+  /** Project/drawing name for the filename. */
   projectName: string;
   /** Injected ISO date string (nowISO().slice(0,10)) — keeps the service pure. */
   dateStr: string;
@@ -37,29 +58,66 @@ export interface PrintDeps {
    * mounted. Decouples this service from Three.js.
    */
   capture3d?: (raster: RasterTargetPx) => Promise<CaptureResult>;
-  /** Slice 4 — title block project name + translated labels (from PrintHost). */
-  titleBlock?: TitleBlockInput;
+  /**
+   * ADR-651 Φάση ΣΤ — η γλώσσα του προτύπου πινακίδας (Απόφαση #8). Μόνο αυτό χρειάζεται ο
+   * host: ΟΛΑ τα υπόλοιπα (preset, κορνίζα, στοιχεία έργου/μελετητή) ζουν ήδη σε SSoT που
+   * διαβάζονται event-time — καμία δεύτερη πηγή αλήθειας για την πινακίδα.
+   */
+  titleBlockLocale?: TitleBlockLocale;
 }
 
-/** Compose the render-ready title block from request + capture (or undefined). */
-function buildTitleBlock(
+/**
+ * Η πινακίδα + η κορνίζα του τυπωμένου φύλλου, ή `undefined` όταν ο χρήστης δεν τη θέλει
+ * (ή δεν υπάρχει γλώσσα προτύπου — π.χ. εκτός React host, στα tests).
+ *
+ * ADR-651 Φάση Ζ: τα `overrides` (τίτλος/αριθμός φύλλου) διαφέρουν ανά φύλλο στο σετ —
+ * ίδια κατά τα άλλα πινακίδα, από το ΙΔΙΟ layout model.
+ */
+function buildSheet(
   request: PrintRequest,
   deps: PrintDeps,
-  capture: CaptureResult,
-): TitleBlockContent | undefined {
-  if (!request.includeTitleBlock || !deps.titleBlock) return undefined;
-  const { project, labels } = deps.titleBlock;
-  const scaleText = capture.appliedScaleDenominator
-    ? `1:${capture.appliedScaleDenominator}`
-    : '—';
-  return {
-    heading: project,
-    fields: [
-      { label: labels.scale, value: scaleText },
-      { label: labels.date, value: deps.dateStr },
-      { label: labels.sheet, value: `${request.paper.size} · ${request.paper.orientation}` },
-    ],
+  overrides?: TitleBlockScopeOverrides,
+): PrintSheet | undefined {
+  const locale = deps.titleBlockLocale;
+  if (!request.includeTitleBlock || !locale) return undefined;
+
+  const scaleName = formatScaleText(
+    resolveAppliedScaleDenominator(request.fitMode, request.scaleDenominator),
+  );
+  const content = resolveTitleBlockContent(
+    titleBlockTemplateForLocale(locale),
+    buildActiveTitleBlockScope(locale, { scaleName, ...overrides }),
+  );
+  return buildPrintSheet({
+    paper: request.paper,
+    content,
+    // ADR-651 Φάση Ε: το PDF θέλει τη σφραγίδα ως **data URL** (ο jsPDF `addImage` δεν
+    // δέχεται remote URL) — η ίδια εικόνα, άλλη μορφή· ίδιο layout model με την οθόνη.
+    options: buildActiveTitleBlockSheetOptions(locale, 'data-url'),
+  });
+}
+
+/**
+ * Capture ενός συγκεκριμένου 2D scene (SSoT — μοιράζεται από single print + σετ φύλλων).
+ * ADR-608 — vector είναι το 2D default (επιλέξιμες οντότητες, zoom-safe)· raster fallback.
+ */
+function capture2dScene(
+  request: PrintRequest,
+  scene: SceneModel | null,
+  userDrawingUnits: SceneUnits | undefined,
+  raster: RasterTargetPx,
+): CaptureResult {
+  const capture2dInput = {
+    scene,
+    userDrawingUnits,
+    raster,
+    fitMode: request.fitMode,
+    scaleDenominator: request.scaleDenominator,
+    plotStyle: request.plotStyle,
   };
+  return request.outputMode === 'raster'
+    ? captureCurrent2dView(capture2dInput)
+    : captureCurrent2dViewVector(capture2dInput);
 }
 
 /** Route to the correct capture adapter by source. */
@@ -75,19 +133,7 @@ async function captureSource(
     // 3D has no vector representation (real materials/shading) → always raster.
     return deps.capture3d(raster);
   }
-  const capture2dInput = {
-    scene: deps.scene,
-    userDrawingUnits: deps.userDrawingUnits,
-    raster,
-    fitMode: request.fitMode,
-    scaleDenominator: request.scaleDenominator,
-    plotStyle: request.plotStyle,
-  };
-  // ADR-608 — vector is the 2D default (selectable entities, zoom-safe); raster
-  // fallback stays byte-for-byte the previous behaviour.
-  return request.outputMode === 'raster'
-    ? captureCurrent2dView(capture2dInput)
-    : captureCurrent2dViewVector(capture2dInput);
+  return capture2dScene(request, deps.scene, deps.userDrawingUnits, raster);
 }
 
 /** Route the assembled blob to download or OS print dialog. */
@@ -107,20 +153,75 @@ function routeOutput(blob: Blob, request: PrintRequest, deps: PrintDeps): void {
  * surface an error to the user.
  */
 export async function runPrint(request: PrintRequest, deps: PrintDeps): Promise<void> {
-  const marginMm = DEFAULT_PAGE_MARGIN_MM;
-  const raster = computePaperRasterPx(request.paper, EXPORT_DPI, marginMm);
+  // Το φύλλο υπολογίζεται ΠΡΙΝ το capture: ορίζει την περιοχή στην οποία θα ζωγραφιστεί το
+  // σχέδιο (και άρα το μέγεθος του raster) — μηδέν await μέσα στο render path (N.7.2).
+  const sheet = buildSheet(request, deps);
+  const area =
+    sheet?.drawingAreaMm ?? resolvePrintableAreaMm(request.paper, DEFAULT_PAGE_MARGIN_MM);
+  const raster = computeRasterPxForArea(area, EXPORT_DPI);
   const capture = await captureSource(request, deps, raster);
   const blob = await assemblePrintPdf({
     capture,
     paper: request.paper,
-    marginMm,
-    includeTitleBlock: request.includeTitleBlock,
-    titleBlock: buildTitleBlock(request, deps, capture),
-    scaleText: capture.appliedScaleDenominator ? `1:${capture.appliedScaleDenominator}` : null,
+    area,
+    sheetPrimitives: sheet?.primitives,
+    // Λεζάντα μόνο όταν υπάρχει ΠΡΑΓΜΑΤΙΚΗ κλίμακα (fit-to-page ⇒ καμία λεζάντα, όπως πριν).
+    scaleText: capture.appliedScaleDenominator
+      ? formatScaleText(capture.appliedScaleDenominator)
+      : null,
   });
   routeOutput(blob, request, deps);
   logger.info('Print job completed', {
     source: request.source,
+    paper: `${request.paper.size}/${request.paper.orientation}`,
+    fitMode: request.fitMode,
+    target: request.target,
+    titleBlock: sheet !== undefined,
+  });
+}
+
+/**
+ * ADR-651 Φάση Ζ — τυπώνει **ολόκληρο σετ φύλλων** ενός έργου σε ΕΝΑ πολυσέλιδο PDF: ένα
+ * φύλλο ανά όροφο (`SheetSetItem`), με **αυτόματη αρίθμηση** (Α-1, Α-2…) και **συνεπή
+ * πινακίδα** — μία αλλαγή στα στοιχεία έργου φαίνεται σε όλα (πρακτική AutoCAD Sheet Set
+ * Manager / Vectorworks batch / ArchiCAD Layout Book).
+ *
+ * Μηδέν δεύτερη μηχανή: κάθε φύλλο = το ΙΔΙΟ `buildSheet` (με per-sheet τίτλο/αριθμό) + το
+ * ΙΔΙΟ 2D capture + ο ΙΔΙΟΣ assembler (πλέον πολυσέλιδος). Σετ = **2Δ μόνο** (τα levels
+ * είναι 2Δ κατόψεις). Κάθε φύλλο capture-άρεται και μπαίνει στη σελίδα του **σειριακά**
+ * ⇒ το per-scene layer hydration δεν διαρρέει μεταξύ σελίδων.
+ */
+export async function runPrintSet(
+  request: PrintRequest,
+  deps: PrintDeps,
+  sheets: readonly SheetSetItem[],
+): Promise<void> {
+  if (sheets.length === 0) throw new Error('Sheet set is empty');
+
+  const pages: PrintPage[] = [];
+  for (const sheet of sheets) {
+    const built = buildSheet(request, deps, {
+      title: sheet.title,
+      sheetNumber: sheet.sheetNumber,
+    });
+    const area =
+      built?.drawingAreaMm ?? resolvePrintableAreaMm(request.paper, DEFAULT_PAGE_MARGIN_MM);
+    const raster = computeRasterPxForArea(area, EXPORT_DPI);
+    const capture = capture2dScene(request, sheet.scene, sheet.userDrawingUnits, raster);
+    pages.push({
+      capture,
+      area,
+      sheetPrimitives: built?.primitives,
+      scaleText: capture.appliedScaleDenominator
+        ? formatScaleText(capture.appliedScaleDenominator)
+        : null,
+    });
+  }
+
+  const blob = await assemblePrintPdfPages(pages, request.paper);
+  routeOutput(blob, request, deps);
+  logger.info('Print set completed', {
+    sheets: sheets.length,
     paper: `${request.paper.size}/${request.paper.orientation}`,
     fitMode: request.fitMode,
     target: request.target,

@@ -30,7 +30,7 @@ import { stampRenderedColors } from '../../export/formats/dxf-export-adapter';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import type { PrintColorPolicy } from '../../config/print-color-policy';
-import { pxToMm } from '../config/paper-math';
+import { pxToMm, resolveAppliedScaleDenominator } from '../config/paper-math';
 import { emitSceneToPdf } from '../vector/scene-vector-emitter';
 import type { Capture2dInput } from './capture-2d';
 import { resolvePrintTransform, prepareScene2dCapture } from './capture-2d';
@@ -96,8 +96,7 @@ export function captureCurrent2dViewVector(input: Capture2dInput): CaptureResult
 
   return {
     kind: 'vector',
-    appliedScaleDenominator:
-      input.fitMode === 'drawing-scale' ? input.scaleDenominator ?? null : null,
+    appliedScaleDenominator: resolveAppliedScaleDenominator(input.fitMode, input.scaleDenominator),
     draw: (pdf, area) => {
       emitSceneToPdf(pdf, {
         entities,

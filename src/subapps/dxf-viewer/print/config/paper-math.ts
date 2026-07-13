@@ -11,6 +11,7 @@
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { Bounds } from '../../utils/bounds-utils';
 import type {
+  FitMode,
   PaperSpec,
   PaperDimensionsMm,
   PrintableAreaMm,
@@ -57,15 +58,37 @@ export function resolvePrintableAreaMm(
 }
 
 /**
- * Physical-pixel size of the offscreen capture canvas for the printable area,
- * clamping the DPI down so neither axis exceeds MAX_CANVAS_DIMENSION_PX.
+ * ADR-651 Φάση ΣΤ — η κλίμακα που ΟΝΤΩΣ τυπώνεται. Καθαρή συνάρτηση του request (οι capture
+ * adapters εφαρμόζουν ακριβώς αυτόν τον κανόνα), οπότε είναι γνωστή **πριν** το capture — και
+ * μπορεί να μπει στην πινακίδα του PDF χωρίς να περιμένει το σχέδιο (μηδέν race, N.7.2).
  */
-export function computePaperRasterPx(
-  spec: PaperSpec,
+export function resolveAppliedScaleDenominator(
+  fitMode: FitMode,
+  scaleDenominator: number | undefined,
+): number | null {
+  return fitMode === 'drawing-scale' ? scaleDenominator ?? null : null;
+}
+
+/** Άγνωστη/μη πραγματική κλίμακα (fit-to-page, 3D) — ουδέτερο σύμβολο, όχι κείμενο UI. */
+const NO_SCALE_TEXT = '—';
+
+/** `1:100` ή `—` — το κείμενο κλίμακας που γράφεται στην πινακίδα/λεζάντα. */
+export function formatScaleText(denominator: number | null): string {
+  return denominator ? `1:${denominator}` : NO_SCALE_TEXT;
+}
+
+/**
+ * Physical-pixel size of the offscreen capture canvas for an ARBITRARY printable
+ * rectangle, clamping the DPI down so neither axis exceeds MAX_CANVAS_DIMENSION_PX.
+ *
+ * ADR-651 Φάση ΣΤ — με πινακίδα, η περιοχή σχεδίου δεν είναι πια συμμετρική (είναι η
+ * ωφέλιμη περιοχή της κορνίζας ISO 5457), γι' αυτό το raster sizing δέχεται **ορθογώνιο**
+ * και όχι περιθώριο.
+ */
+export function computeRasterPxForArea(
+  area: PrintableAreaMm,
   requestedDpi: number,
-  marginMm: number,
 ): RasterTargetPx {
-  const area = resolvePrintableAreaMm(spec, marginMm);
   const largestMm = Math.max(area.widthMm, area.heightMm);
   const largestPxAtDpi = mmToPx(largestMm, requestedDpi);
   const effectiveDpi =
@@ -77,6 +100,19 @@ export function computePaperRasterPx(
     heightPx: Math.max(1, Math.round(mmToPx(area.heightMm, effectiveDpi))),
     effectiveDpi,
   };
+}
+
+/**
+ * Physical-pixel size of the offscreen capture canvas for the symmetric-margin printable
+ * area (the no-title-block sheet). Thin wrapper over {@link computeRasterPxForArea} — one
+ * clamping rule, two entry points.
+ */
+export function computePaperRasterPx(
+  spec: PaperSpec,
+  requestedDpi: number,
+  marginMm: number,
+): RasterTargetPx {
+  return computeRasterPxForArea(resolvePrintableAreaMm(spec, marginMm), requestedDpi);
 }
 
 /** Build the renderer Viewport from a raster target. */
