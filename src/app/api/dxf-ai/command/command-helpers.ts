@@ -22,6 +22,7 @@ import type {
   DxfAiChatHistoryEntry,
 } from '@/subapps/dxf-viewer/ai-assistant/types';
 import { DXF_AI_LIMITS } from '@/subapps/dxf-viewer/config/ai-assistant-config';
+import { TOPO_TOOL_NAMES } from '@/subapps/dxf-viewer/ai-assistant/topo-tool-definitions';
 
 const logger = createModuleLogger('DXF_AI_COMMAND');
 
@@ -48,6 +49,8 @@ const VALID_TOOL_NAMES = new Set<string>([
   'create_grid_group',
   'set_grid_spacing',
   'toggle_grid_snap',
+  // Topography tools (ADR-650 M5β — «μίλα στο σχέδιο»)
+  ...TOPO_TOOL_NAMES,
 ]);
 
 function isValidToolName(name: string): name is DxfAiToolName {

@@ -23,6 +23,9 @@ import type {
   ToggleGridSnapArgs,
   GridContextSnapshot,
 } from './grid-types';
+import type { TopoAiToolName } from './topo-tool-definitions';
+import type { ContourDisplayStyle } from '../systems/topography/contour-config';
+import type { TerrainSurfaceStyle, CutFillReferenceMode } from '../systems/topography/topo-types';
 
 // ============================================================================
 // CHAT MESSAGE TYPES
@@ -107,7 +110,9 @@ export type DxfAiToolName =
   | 'move_grid_guide'
   | 'create_grid_group'
   | 'set_grid_spacing'
-  | 'toggle_grid_snap';
+  | 'toggle_grid_snap'
+  // Topography tools (ADR-650 M5β — names owned by topo-tool-definitions SSoT)
+  | TopoAiToolName;
 
 /** A single tool call returned by the AI */
 export interface DxfAiToolCall {
@@ -117,7 +122,10 @@ export interface DxfAiToolCall {
     | DrawShapesArgs | DrawRegularPolygonArgs | QueryEntitiesArgs | UndoActionArgs
     // Grid tool arguments (ADR-189)
     | AddGuideArgs | RemoveGuideArgs | MoveGuideArgs
-    | CreateGridGroupArgs | SetGridSpacingArgs | ToggleGridSnapArgs;
+    | CreateGridGroupArgs | SetGridSpacingArgs | ToggleGridSnapArgs
+    // Topography tool arguments (ADR-650 M5β)
+    | GenerateContoursArgs | SetContourStyleArgs | ToggleTerrain3DArgs | SetTerrainStyleArgs
+    | SetCutfillReferenceArgs | TopoNoArgs;
 }
 
 /** Arguments for draw_line tool */
@@ -203,6 +211,40 @@ export interface UndoActionArgs {
 }
 
 // ============================================================================
+// TOPOGRAPHY TOOL ARGUMENTS (ADR-650 M5β) — units in METRES (executor → mm)
+// ============================================================================
+
+/** Arguments for generate_contours — both optional (null = keep panel defaults). */
+export interface GenerateContoursArgs {
+  interval_m: number | null;
+  major_every: number | null;
+}
+
+/** Arguments for set_contour_style. */
+export interface SetContourStyleArgs {
+  style: ContourDisplayStyle;
+}
+
+/** Arguments for toggle_terrain_3d. */
+export interface ToggleTerrain3DArgs {
+  visible: boolean;
+}
+
+/** Arguments for set_terrain_style. */
+export interface SetTerrainStyleArgs {
+  style: TerrainSurfaceStyle;
+}
+
+/** Arguments for set_cutfill_reference — datum_z_m in METRES, null unless mode is "datum". */
+export interface SetCutfillReferenceArgs {
+  mode: CutFillReferenceMode;
+  datum_z_m: number | null;
+}
+
+/** Arguments for the parameter-less topo tools (run_quality_check / run_cutfill / spikes). */
+export type TopoNoArgs = Record<string, never>;
+
+// ============================================================================
 // EXECUTION RESULT
 // ============================================================================
 
@@ -212,4 +254,28 @@ export interface DxfAiExecutionResult {
   entitiesCreated: string[];
   message: string;
   error?: string;
+}
+
+/**
+ * A destructive topo action awaiting the engineer's explicit confirm (§9 human-certifier).
+ * The executor returns this instead of mutating; the chat shows a Confirm/Cancel affordance
+ * and, on confirm, runs the paired command.
+ */
+export interface TopoPendingConfirm {
+  /** Which destructive action is pending (only spike removal for now). */
+  readonly kind: 'remove-elevation-spikes';
+  /** How many raw points would be deleted — shown in the confirm prompt. */
+  readonly count: number;
+}
+
+/**
+ * Result of executing topography tool calls. Messages are i18n keys + params (N.11) resolved
+ * by the caller with `t()`, mirroring the M5α QA flag contract — the executor never bakes
+ * user-facing text.
+ */
+export interface TopoAiExecutionResult {
+  /** i18n keys (+ params) describing what happened, in call order. */
+  readonly messages: ReadonlyArray<{ key: string; params?: Record<string, string | number> }>;
+  /** A destructive action awaiting confirm, if any (at most one per turn). */
+  readonly pendingConfirm: TopoPendingConfirm | null;
 }

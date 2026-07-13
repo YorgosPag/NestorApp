@@ -25,13 +25,24 @@ import type {
   DxfAiCommandResponse,
   DxfCanvasContext,
   DxfAiChatHistoryEntry,
+  DxfAiToolCall,
+  TopoPendingConfirm,
 } from '../types';
 import type { SceneModel } from '../../types/entities';
 import { executeDxfAiToolCalls } from '../dxf-ai-tool-executor';
+import {
+  executeTopoAiToolCalls,
+  confirmRemoveElevationSpikes,
+  type TopoAiCommands,
+} from '../topo-ai-tool-executor';
+import { isTopoToolName } from '../topo-tool-definitions';
 import { countSceneEntities } from '../../utils/scene-entity-count';
 import { generateEntityId } from '../../systems/entity-creation/utils';
 import { DXF_AI_API, DXF_AI_LIMITS, DXF_AI_DEFAULTS } from '../../config/ai-assistant-config';
 import { nowISO } from '@/lib/date-local';
+
+/** Resolve an i18n key (+ params) to display text — the chat panel passes its `t`. */
+export type TopoMessageTranslator = (key: string, params?: Record<string, string | number>) => string;
 
 // ============================================================================
 // TYPES
@@ -44,6 +55,12 @@ export interface UseDxfAiChatOptions {
   setScene: (levelId: string, scene: SceneModel) => void;
   /** Current level ID */
   levelId: string;
+  /**
+   * ADR-650 M5β — the topography commands the executor routes NL topo tool-calls to, plus the
+   * translator for its i18n message keys. Optional: without it the chat is drawing-only (the
+   * DXF-only tests need no topo wiring).
+   */
+  topo?: TopoAiCommands & { translate: TopoMessageTranslator };
 }
 
 export interface UseDxfAiChatReturn {
@@ -57,6 +74,12 @@ export interface UseDxfAiChatReturn {
   sendMessage: (text: string) => Promise<void>;
   /** Clear all messages */
   clearChat: () => void;
+  /** A destructive topo action awaiting the engineer's confirm, or null (ADR-650 M5β §9). */
+  pendingConfirm: TopoPendingConfirm | null;
+  /** Run the pending destructive action (the engineer pressed Confirm). */
+  confirmPending: () => void;
+  /** Dismiss the pending destructive action (the engineer pressed Cancel). */
+  cancelPending: () => void;
 }
 
 // ============================================================================
@@ -96,15 +119,47 @@ function buildCanvasContext(
 }
 
 // ============================================================================
+// TOPO TOOL-CALL ROUTING (ADR-650 M5β)
+// ============================================================================
+
+/** The topo half of a response: resolved display text + any destructive action pending confirm. */
+interface TopoOutcome {
+  readonly message: string;
+  readonly pending: TopoPendingConfirm | null;
+}
+
+/**
+ * Partition the topography tool calls out of a response, run them through the topo executor and
+ * resolve their i18n keys with the panel's translator. Drawing calls are handled separately by
+ * the entity executor — one chat, two domain executors (the grid-tool-definitions pattern).
+ */
+function runTopoCalls(
+  toolCalls: readonly DxfAiToolCall[],
+  topo: (TopoAiCommands & { translate: TopoMessageTranslator }) | undefined,
+): TopoOutcome {
+  const topoCalls = toolCalls.filter((c) => isTopoToolName(c.name));
+  if (topoCalls.length === 0 || !topo) return { message: '', pending: null };
+
+  const { translate, ...commands } = topo;
+  const result = executeTopoAiToolCalls(topoCalls, commands);
+  const lines = result.messages.map((m) => translate(m.key, m.params));
+  if (result.pendingConfirm) {
+    lines.push(translate('aiAssistant.topo.spikes.confirmPrompt', { count: result.pendingConfirm.count }));
+  }
+  return { message: lines.join('\n'), pending: result.pendingConfirm };
+}
+
+// ============================================================================
 // HOOK
 // ============================================================================
 
 export function useDxfAiChat(options: UseDxfAiChatOptions): UseDxfAiChatReturn {
-  const { getScene, setScene, levelId } = options;
+  const { getScene, setScene, levelId, topo } = options;
 
   const [messages, setMessages] = useState<DxfAiMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingConfirm, setPendingConfirm] = useState<TopoPendingConfirm | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // ── CRITICAL: Refs to prevent stale closures after await ──
@@ -122,6 +177,10 @@ export function useDxfAiChat(options: UseDxfAiChatOptions): UseDxfAiChatReturn {
 
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
+
+  // ADR-650 M5β — same anti-stale contract for the topo commands/translator.
+  const topoRef = useRef(topo);
+  topoRef.current = topo;
 
   const sendMessage = useCallback(async (text: string) => {
     const trimmed = text.trim();
@@ -194,10 +253,16 @@ export function useDxfAiChat(options: UseDxfAiChatOptions): UseDxfAiChatReturn {
         }
       }
 
+      // ADR-650 M5β — route topo tool calls to their own executor (undo/command SSoT intact),
+      // and surface any destructive action awaiting the engineer's confirm.
+      const topoOutcome = runTopoCalls(data.toolCalls, topoRef.current);
+      setPendingConfirm(topoOutcome.pending);
+
       // Build assistant message
       const assistantContent = [
         data.answer,
         executionMessage,
+        topoOutcome.message,
       ].filter(Boolean).join('\n\n');
 
       const assistantMessage: DxfAiMessage = {
@@ -237,7 +302,34 @@ export function useDxfAiChat(options: UseDxfAiChatOptions): UseDxfAiChatReturn {
     setMessages([]);
     setError(null);
     setIsLoading(false);
+    setPendingConfirm(null);
   }, []);
+
+  // ── ADR-650 M5β — destructive-action confirm (§9 human-certifier) ──
+  // The engineer, never the LLM, authorises the raw-survey mutation. The action runs here,
+  // its outcome is appended as an assistant message, and the pending state clears.
+  const appendAssistantMessage = useCallback((content: string, status: DxfAiMessage['status']) => {
+    setMessages((prev) => [
+      ...prev,
+      { id: generateEntityId(), role: 'assistant', content, timestamp: nowISO(), status },
+    ]);
+  }, []);
+
+  const confirmPending = useCallback(() => {
+    const current = pendingConfirm;
+    const topo = topoRef.current;
+    if (!current || !topo) return;
+    setPendingConfirm(null);
+    const outcome = confirmRemoveElevationSpikes();
+    appendAssistantMessage(topo.translate(outcome.key, outcome.params), 'success');
+  }, [pendingConfirm, appendAssistantMessage]);
+
+  const cancelPending = useCallback(() => {
+    const topo = topoRef.current;
+    if (!pendingConfirm) return;
+    setPendingConfirm(null);
+    if (topo) appendAssistantMessage(topo.translate('aiAssistant.topo.spikes.cancelled'), 'success');
+  }, [pendingConfirm, appendAssistantMessage]);
 
   return {
     messages,
@@ -245,5 +337,8 @@ export function useDxfAiChat(options: UseDxfAiChatOptions): UseDxfAiChatReturn {
     error,
     sendMessage,
     clearChat,
+    pendingConfirm,
+    confirmPending,
+    cancelPending,
   };
 }

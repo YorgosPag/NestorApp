@@ -18,6 +18,19 @@ export type { UseDxfAiChatOptions, UseDxfAiChatReturn } from './hooks/useDxfAiCh
 export { executeDxfAiToolCalls } from './dxf-ai-tool-executor';
 export type { ExecuteDxfAiToolCallsOptions } from './dxf-ai-tool-executor';
 
+// ADR-650 M5β — topography tool-set + executor («μίλα στο σχέδιο»)
+export {
+  TOPO_TOOL_DEFINITIONS,
+  TOPO_TOOL_NAMES,
+  isTopoToolName,
+  type TopoAiToolName,
+} from './topo-tool-definitions';
+export {
+  executeTopoAiToolCalls,
+  confirmRemoveElevationSpikes,
+  type TopoAiCommands,
+} from './topo-ai-tool-executor';
+
 // Types
 export type {
   DxfAiMessage,

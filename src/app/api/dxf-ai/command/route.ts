@@ -22,6 +22,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { DXF_AI_TOOL_DEFINITIONS } from '@/subapps/dxf-viewer/ai-assistant/dxf-tool-definitions';
+import { TOPO_TOOL_DEFINITIONS } from '@/subapps/dxf-viewer/ai-assistant/topo-tool-definitions';
 import { buildDxfAiSystemPrompt } from '@/subapps/dxf-viewer/ai-assistant/dxf-system-prompt';
 import {
   callOpenAI,
@@ -71,6 +72,11 @@ async function handler(
     // Build messages array
     const systemPrompt = buildDxfAiSystemPrompt(canvasContext);
 
+    // ADR-650 M5β — the topo tool-set rides in the same chat/loop (one AI, many domain
+    // tool-sets — exactly the grid-tool-definitions pattern). The client routes topo calls
+    // to `executeTopoAiToolCalls`; drawing calls stay with the entity executor.
+    const toolDefinitions = [...DXF_AI_TOOL_DEFINITIONS, ...TOPO_TOOL_DEFINITIONS];
+
     const conversationMessages: Array<ChatCompletionMessage | { role: 'assistant'; content: string | null; tool_calls?: ChatCompletionToolCall[] } | { role: 'tool'; tool_call_id: string; content: string }> = [
       { role: 'system', content: systemPrompt },
     ];
@@ -99,7 +105,7 @@ async function handler(
 
       const { message: assistantMessage, finishReason } = await callOpenAI(
         conversationMessages as ChatCompletionMessage[],
-        DXF_AI_TOOL_DEFINITIONS,
+        toolDefinitions,
         AI_ANALYSIS_DEFAULTS.OPENAI.TIMEOUT_MS,
       );
 

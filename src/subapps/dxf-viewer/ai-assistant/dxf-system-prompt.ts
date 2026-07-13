@@ -178,7 +178,37 @@ Bounds: (${minX}, ${minY}) → (${maxX}, ${maxY})
 
 ΠΑΡΑΔΕΙΓΜΑΤΑ UNDO:
 - "αναίρεσε" → undo_action(count=1)
-- "αναίρεσε τις 3 τελευταίες" → undo_action(count=3)${gridSection}`;
+- "αναίρεσε τις 3 τελευταίες" → undo_action(count=3)
+${buildTopoToolsSection()}${gridSection}`;
+}
+
+// ============================================================================
+// TOPOGRAPHY TOOLS SECTION (ADR-650 M5β — always active)
+// ============================================================================
+
+/**
+ * Topography NL-editing capability. These tools call the SAME commands the Topography panel
+ * calls — the model chooses the command, never the geometry. Numbers stay in the user's units
+ * (metres); the executor converts to mm, never the model (same rule as the drawing tools).
+ */
+function buildTopoToolsSection(): string {
+  return `
+ΕΡΓΑΛΕΙΑ ΤΟΠΟΓΡΑΦΙΑΣ (ισοϋψείς / έδαφος / έλεγχος / όγκοι — «μίλα στο σχέδιο»):
+- generate_contours: Υπολογισμός ισοϋψών από τα σημεία. interval_m σε ΜΕΤΡΑ (null = default 0.5m), major_every (null = default). ΜΗΝ μετατρέπεις μονάδες.
+- set_contour_style: «όμορφες» → smooth, «ακριβείς» → exact.
+- toggle_terrain_3d: εμφάνιση/απόκρυψη 3Δ εδάφους (visible true/false).
+- set_terrain_style: shaded / hypsometric (υψομετρικά χρώματα) / cutfill.
+- run_quality_check: έλεγχος ποιότητας (εντοπίζει spikes/λάθη με markers, ΔΕΝ σβήνει τίποτα).
+- set_cutfill_reference: mode datum («σκάψε μέχρι +12.50» → datum_z_m=12.5, ΜΕΤΡΑ) ή surface.
+- run_cutfill: υπολογισμός όγκων εκσκαφών/επιχώσεων.
+- remove_elevation_spikes: ΔΙΑΓΡΑΦΗ των spikes (ΚΑΤΑΣΤΡΟΦΙΚΟ — η εφαρμογή ζητά ρητή επιβεβαίωση). Μόνο όταν ο χρήστης ζητά ρητά ΝΑ ΣΒΗΣΕΙ spikes.
+
+ΚΡΙΣΙΜΟΣ ΚΑΝΟΝΑΣ ΤΟΠΟΓΡΑΦΙΑΣ:
+- «έλεγξε/βρες τα spikes» → run_quality_check (ΔΕΝ σβήνει). «σβήσε τα spikes» → remove_elevation_spikes (με επιβεβαίωση).
+- «κάνε interval 0.5m» / «φτιάξε τις ισοϋψείς» → generate_contours(interval_m=0.5, major_every=null).
+- «κάνε τις ισοϋψείς όμορφες» → set_contour_style(style="smooth").
+- «δείξε το 3Δ έδαφος» → toggle_terrain_3d(visible=true). «βάλε υψομετρικά χρώματα» → set_terrain_style(style="hypsometric").
+- «υπολόγισε όγκους μέχρι το +12.50» → set_cutfill_reference(mode="datum", datum_z_m=12.5) ΚΑΙ run_cutfill().`;
 }
 
 // ============================================================================

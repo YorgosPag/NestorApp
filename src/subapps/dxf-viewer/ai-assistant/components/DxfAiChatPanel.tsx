@@ -19,14 +19,16 @@
 
 'use client';
 
-import React, { useCallback, useEffect, useRef } from 'react';
-import { Bot, Loader2, Send, Sparkles, Trash2, User, X } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { AlertTriangle, Bot, Loader2, Send, Sparkles, Trash2, User, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useDxfAiChat } from '../hooks/useDxfAiChat';
+import { useDxfAiChat, type TopoMessageTranslator } from '../hooks/useDxfAiChat';
+import { useTopoContours } from '../../systems/topography/useTopoContours';
+import { useContourDisplay } from '../../systems/topography/useContourDisplay';
 import type { DxfAiMessage } from '../types';
 import type { SceneModel } from '../../types/entities';
 
@@ -106,10 +108,28 @@ function DxfAiChatPanelInner({
   const scrollRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
-  const { messages, isLoading, sendMessage, clearChat } = useDxfAiChat({
+  // ADR-650 M5β — the two topo commands that must run through hooks to keep undo/command SSoT
+  // intact. `generate`/`setStyle` are stable callbacks; the translator resolves the executor's
+  // i18n keys (N.11 — the executor never bakes user-facing text).
+  const { generate: generateContours } = useTopoContours();
+  const { setStyle: setContourStyle } = useContourDisplay();
+  const translateTopo = useCallback<TopoMessageTranslator>(
+    (key, params) => t(key, params ?? {}),
+    [t],
+  );
+  const topo = useMemo(
+    () => ({ generateContours, setContourStyle, translate: translateTopo }),
+    [generateContours, setContourStyle, translateTopo],
+  );
+
+  const {
+    messages, isLoading, sendMessage, clearChat,
+    pendingConfirm, confirmPending, cancelPending,
+  } = useDxfAiChat({
     getScene,
     setScene,
     levelId,
+    topo,
   });
 
   // Auto-scroll to bottom on new messages
@@ -203,6 +223,28 @@ function DxfAiChatPanelInner({
           )}
         </div>
       </ScrollArea>
+
+      {/* ADR-650 M5β — destructive-action confirm (§9 human-certifier). The engineer, never the
+          LLM, authorises the raw-survey mutation. */}
+      {pendingConfirm && (
+        <section
+          className={`flex flex-col gap-2 px-3 py-2 ${colors.border.default} border-t ${colors.bg.error}`}
+          aria-label={t('aiAssistant.topo.spikes.confirmTitle')}
+        >
+          <p className={`flex items-center gap-2 text-sm ${colors.text.primary}`}>
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+            {t('aiAssistant.topo.spikes.confirmPrompt', { count: pendingConfirm.count })}
+          </p>
+          <span className="flex items-center gap-2">
+            <Button variant="destructive" size="sm" onClick={confirmPending} className="flex-1">
+              {t('aiAssistant.topo.spikes.confirmButton')}
+            </Button>
+            <Button variant="outline" size="sm" onClick={cancelPending} className="flex-1">
+              {t('aiAssistant.topo.spikes.cancelButton')}
+            </Button>
+          </span>
+        </section>
+      )}
 
       {/* Input */}
       <footer className={`px-3 py-2 ${colors.border.default} border-t`}>
