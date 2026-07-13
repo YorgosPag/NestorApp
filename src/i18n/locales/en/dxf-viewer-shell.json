@@ -5109,7 +5109,10 @@
     "checker": "Checkerboard",
     "gridTile": "Tile",
     "runningBond": "Brick",
-    "stripes": "Stripes"
+    "stripes": "Stripes",
+    "herringbone": "Herringbone",
+    "basketweave": "Basketweave",
+    "hexagon": "Hexagon"
   },
   "hatchImageFill": {
     "pickerTitle": "Material",
@@ -5121,7 +5124,17 @@
       "brick": "Brick",
       "plaster": "Plaster",
       "metal": "Metal",
-      "roofTiles": "Roof tiles"
+      "roofTiles": "Roof tiles",
+      "granite": "Granite",
+      "asphalt": "Asphalt",
+      "gravel": "Gravel",
+      "plywood": "Plywood",
+      "osb": "OSB",
+      "laminate": "Laminate",
+      "woodFloor": "Wood floor",
+      "smoothConcrete": "Smooth concrete",
+      "cobblestone": "Cobblestone",
+      "parquet": "Parquet"
     },
     "upload": {
       "button": "Upload photo",
@@ -6106,6 +6119,10 @@
         "noStampImage": "No stamp image uploaded — the cell will print empty for stamping by hand.",
         "footer": "Printing is not blocked — the decision is yours."
       }
+    },
+    "sheetSet": {
+      "label": "Whole sheet set ({count, plural, one {# sheet} other {# sheets}})",
+      "hint": "One multi-page PDF: one sheet per floor, auto-numbered (A-1, A-2…) with a consistent title block on all."
     }
   },
   "titleBlockStamp": {
@@ -6170,6 +6187,11 @@
     "tekSymbolModes": {
       "native": "Tekton symbols (single object)",
       "geometry": "Exact geometry (grouped)"
+    },
+    "tekHatchMode": "Hatching",
+    "tekHatchModes": {
+      "native": "Tekton pattern (light, approximate)",
+      "exploded": "Exact lines (full match, heavy file)"
     },
     "scopeConflict": "IFC contains BIM entities only. Choose “DXF & BIM” or “BIM only”.",
     "submit": "Export",

@@ -45,6 +45,8 @@ const LINE_MODE_OPTIONS = ['polyline', 'lines'] as const;
 // (Πιστό, tiled IMAGE + raster bundled σε ZIP). Default 'solid' (πάντα ανοίγει).
 const IMAGE_FILL_MODE_OPTIONS = ['solid', 'image'] as const;
 const TEK_SYMBOL_MODE_OPTIONS = ['native', 'geometry'] as const;
+/** ADR-648 Στάδιο Ε — native μοτίβο Τέκτονα (ελαφρύ) vs αποδομημένες γραμμές (πλήρης ταύτιση). */
+const TEK_HATCH_MODE_OPTIONS = ['native', 'exploded'] as const;
 const VERSION_OPTIONS = Object.keys(DXF_VERSION_NAMES) as DxfVersion[];
 
 export interface ExportDialogProps {
@@ -181,6 +183,21 @@ export function ExportDialog({ open, onOpenChange, onSubmit }: ExportDialogProps
                 <SelectContent>
                   {TEK_SYMBOL_MODE_OPTIONS.map((m) => (
                     <SelectItem key={m} value={m}>{t(`export.tekSymbolModes.${m}`)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
+
+          {/* ADR-648 Στάδιο Ε — «Μοτίβο Τέκτονα» (ελαφρύ, κατά προσέγγιση) vs «Ακριβείς γραμμές»
+              (πλήρης ταύτιση με AutoCAD, βαρύ αρχείο). */}
+          {isTek && (
+            <Field label={t('export.tekHatchMode')}>
+              <Select value={state.tekHatchMode} onValueChange={(v) => state.setTekHatchMode(v as NonNullable<ExportRequest['tekHatchMode']>)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TEK_HATCH_MODE_OPTIONS.map((m) => (
+                    <SelectItem key={m} value={m}>{t(`export.tekHatchModes.${m}`)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

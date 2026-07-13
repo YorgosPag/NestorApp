@@ -26,6 +26,7 @@ import type {
   DxfLineMode,
   DxfImageFillMode,
   TekSymbolMode,
+  TekHatchMode,
 } from '../../../export/types';
 import { scopeIncludesBim } from '../../../export/core/export-entity-scope';
 
@@ -46,6 +47,8 @@ export interface ExportDialogState {
   setDxfImageFillMode: (m: DxfImageFillMode) => void;
   tekSymbolMode: TekSymbolMode;
   setTekSymbolMode: (m: TekSymbolMode) => void;
+  tekHatchMode: TekHatchMode;
+  setTekHatchMode: (m: TekHatchMode) => void;
   /** True when current format requires BIM content (IFC) but scope excludes it. */
   readonly scopeConflictsWithFormat: boolean;
   buildRequest: () => ExportRequest;
@@ -66,6 +69,10 @@ export function useExportDialogState(): ExportDialogState {
   // Default 'native' — annotation symbols → ΕΝΑ built-in Tekton object (ενιαίο πακέτο).
   // Switch to 'geometry' to keep our exact glyph geometry (grouped with tags).
   const [tekSymbolMode, setTekSymbolMode] = React.useState<TekSymbolMode>('native');
+  // ADR-648 Στάδιο Ε — default 'native': μοτίβο της βιβλιοθήκης του Τέκτονα → ελαφρύ αρχείο +
+  // επεξεργάσιμο hatch, αλλά ΚΑΤΑ ΠΡΟΣΕΓΓΙΣΗ. 'exploded' → οι ακριβείς γραμμές (πλήρης ταύτιση
+  // με το AutoCAD) με τίμημα το μέγεθος (μετρημένο: πραγματικό σχέδιο 107 MB).
+  const [tekHatchMode, setTekHatchMode] = React.useState<TekHatchMode>('native');
 
   // IFC/TEK carry only BIM elements → a `dxf-only` scope produces an empty model.
   const scopeConflictsWithFormat =
@@ -81,8 +88,12 @@ export function useExportDialogState(): ExportDialogState {
       dxfLineMode: format === 'dxf' ? dxfLineMode : undefined,
       dxfImageFillMode: format === 'dxf' ? dxfImageFillMode : undefined,
       tekSymbolMode: format === 'tek' ? tekSymbolMode : undefined,
+      tekHatchMode: format === 'tek' ? tekHatchMode : undefined,
     }),
-    [format, entityScope, floorScope, dxfVersion, dxfUnit, dxfLineMode, dxfImageFillMode, tekSymbolMode],
+    [
+      format, entityScope, floorScope, dxfVersion, dxfUnit, dxfLineMode, dxfImageFillMode,
+      tekSymbolMode, tekHatchMode,
+    ],
   );
 
   return {
@@ -102,6 +113,8 @@ export function useExportDialogState(): ExportDialogState {
     setDxfImageFillMode,
     tekSymbolMode,
     setTekSymbolMode,
+    tekHatchMode,
+    setTekHatchMode,
     scopeConflictsWithFormat,
     buildRequest,
   };

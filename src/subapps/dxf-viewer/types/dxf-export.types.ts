@@ -289,7 +289,8 @@ export type EzdxfEntityType =
   | 'LEADER'
   | 'HATCH'
   | 'XLINE'
-  | 'RAY';
+  | 'RAY'
+  | 'IMAGE';
 
 /**
  * Mapping from Nestor entity types to ezdxf types
@@ -346,6 +347,8 @@ export const ENTITY_TYPE_MAPPING: Record<EntityType, EzdxfEntityType | null> = {
   'wall-covering': null,  // ADR-511 BIM wall finish per room/face — exported via composite
   'thermal-space': null,  // ADR-422 analytical thermal space — not exported
   'space-separator': null, // ADR-437 space separator — not exported
+  // ADR-651 Φάση Ε — raster image: native IMAGE/IMAGEDEF (export pre-pass owns the marker).
+  'image': 'IMAGE',
 } as const;
 
 /**
