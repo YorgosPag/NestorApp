@@ -22,7 +22,10 @@ import type { BlockLibraryParamOverrides } from '../../../../bim/block-library/b
 /** Το handle που δημοσιεύει το `useBlockLibraryTool.useExtension` στο ribbon. */
 export interface BlockLibraryToolBridgeHandle {
   readonly isActive: boolean;
-  /** Τα τρέχοντα placement overrides (rotation σε ΜΟΙΡΕΣ, scale ομοιόμορφο). */
+  /**
+   * Τα τρέχοντα placement overrides: rotation (ΜΟΙΡΕΣ), scaleX/scaleY (αρνητικό = mirror,
+   * M5) + `uniform` lock. Ο setter δέχεται partial patch — ο πυρήνας (ADR-600) κάνει merge.
+   */
   readonly overrides: BlockLibraryParamOverrides;
   setParamOverrides(overrides: BlockLibraryParamOverrides): void;
 }

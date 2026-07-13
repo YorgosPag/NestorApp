@@ -65,9 +65,15 @@ const useBlockPlacement = createSingleClickPlacementTool<
   BlockSceneUnits
 >({
   defaultSceneUnits: 'mm',
+  // M5 — X/Y κλίμακα (αρνητικό = mirror). Ο bridge έχει ήδη συγχρονίσει τους δύο άξονες
+  // όταν το «Ομοιόμορφη» lock είναι ON, οπότε εδώ διαβάζουμε απευθείας scaleX/scaleY.
+  // Απόντα και τα δύο ⇒ undefined ⇒ ο assembler βάζει το default `{x:1,y:1}`.
   buildParams: (clickPoint, overrides): BlockToolParams => ({
     position: { x: clickPoint.x, y: clickPoint.y },
-    scale: overrides.scale != null ? { x: overrides.scale, y: overrides.scale } : undefined,
+    scale:
+      overrides.scaleX != null || overrides.scaleY != null
+        ? { x: overrides.scaleX ?? 1, y: overrides.scaleY ?? 1 }
+        : undefined,
     rotation: overrides.rotation,
     layerId: '0',
     blockName: getSelectedBlockName() ?? '',

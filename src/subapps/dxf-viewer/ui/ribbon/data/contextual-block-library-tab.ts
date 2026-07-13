@@ -6,8 +6,12 @@
  *
  * ΔΕΝ έχει panel επιλογής block: το «ποιο block» το κατέχει το palette «Τα Blocks μου»
  * (`block-library-selection-store`, ADR-652 SSoT). Εδώ ο χρήστης ρυθμίζει ΜΟΝΟ το transform
- * της επόμενης τοποθέτησης — γωνία (μοίρες) + ομοιόμορφη κλίμακα — δεμένο live στο
+ * της επόμενης τοποθέτησης — γωνία (μοίρες) + κλίμακα X/Y — δεμένο live στο
  * `blockLibraryToolBridgeStore` μέσω του `useRibbonBlockLibraryBridge`.
+ *
+ * **M5 (AutoCAD INSERT-faithful)**: ξεχωριστά πεδία «Κλίμακα X» / «Κλίμακα Y» (αρνητικό =
+ * καθρέφτισμα) + toggle «Ομοιόμορφη» (AutoCAD «Uniform Scale», default ON — ο bridge κρατά
+ * X=Y όσο είναι κλειδωμένο, ίδια εμπειρία με την προ-M5 ενιαία κλίμακα).
  *
  * ⚠️ ΚΑΜΙΑ δήλωση κουμπιού «Κλείσιμο» — το `withStandardClose` το προσθέτει κεντρικά.
  *
@@ -28,8 +32,12 @@ export const BLOCK_LIBRARY_CONTEXTUAL_TRIGGER = 'block-library-tool-active';
 /** Γωνία τοποθέτησης σε μοίρες (τα presets· ο χρήστης μπορεί να πληκτρολογήσει ό,τι θέλει). */
 const ROTATION_DEG_OPTIONS = literalNumberOptions([0, 45, 90, 135, 180, 225, 270, 315]);
 
-/** Ομοιόμορφος συντελεστής κλίμακας (1 = 1:1 — όπως έφτασε το block από το DXF). */
-const SCALE_OPTIONS = literalNumberOptions([0.25, 0.5, 0.75, 1, 1.5, 2, 5]);
+/**
+ * Συντελεστής κλίμακας ανά άξονα (1 = 1:1 — όπως έφτασε το block από το DXF). Το preset
+ * `-1` = καθρέφτισμα στον άξονα (AutoCAD parity: αρνητικό scale = mirror· ίδιο με το ×-1
+ * του scale tool, ADR-646). Ο χρήστης μπορεί να πληκτρολογήσει οποιονδήποτε αριθμό.
+ */
+const SCALE_OPTIONS = literalNumberOptions([-1, 0.25, 0.5, 0.75, 1, 1.5, 2, 5]);
 
 // ─── Tab definition ──────────────────────────────────────────────────────────
 
@@ -60,18 +68,47 @@ export const CONTEXTUAL_BLOCK_LIBRARY_TAB: RibbonTab = {
                 numericInput: { editable: true, allowNegative: true, allowDecimal: true },
               },
             },
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              // «Ομοιόμορφη» lock (AutoCAD «Uniform Scale»). Δρομολογείται μέσω του κοινού
+              // ribbon-toggle SSoT (useRibbonToggleCommands). Default ON → editing X οδηγεί & το Y.
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'blockLibrary.uniform',
+                labelKey: 'ribbon.commands.blockLibraryEditor.uniform',
+                icon: 'scale',
+                commandKey: BLOCK_LIBRARY_RIBBON_KEYS.toggles.uniform,
+              },
+            },
             {
               type: 'combobox',
               size: 'small',
               command: {
-                id: 'blockLibrary.scale',
-                labelKey: 'ribbon.commands.blockLibraryEditor.scale',
-                commandKey: BLOCK_LIBRARY_RIBBON_KEYS.params.scale,
+                id: 'blockLibrary.scaleX',
+                labelKey: 'ribbon.commands.blockLibraryEditor.scaleX',
+                commandKey: BLOCK_LIBRARY_RIBBON_KEYS.params.scaleX,
                 comboboxWidthPx: 80,
                 options: SCALE_OPTIONS,
-                // Δεκαδικά ναι (0.35×)· αρνητικά ΟΧΙ — το αρνητικό scale είναι καθρέφτισμα,
-                // όχι κλίμακα, και δεν ανήκει σε αυτό το πεδίο.
-                numericInput: { editable: true, allowNegative: false, allowDecimal: true, min: 0 },
+                // Δεκαδικά (0.35×) + αρνητικά (−1 = καθρέφτισμα στον X, AutoCAD parity).
+                numericInput: { editable: true, allowNegative: true, allowDecimal: true },
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'blockLibrary.scaleY',
+                labelKey: 'ribbon.commands.blockLibraryEditor.scaleY',
+                commandKey: BLOCK_LIBRARY_RIBBON_KEYS.params.scaleY,
+                comboboxWidthPx: 80,
+                options: SCALE_OPTIONS,
+                // Δεκαδικά (0.35×) + αρνητικά (−1 = καθρέφτισμα στον Y, AutoCAD parity).
+                numericInput: { editable: true, allowNegative: true, allowDecimal: true },
               },
             },
           ],
