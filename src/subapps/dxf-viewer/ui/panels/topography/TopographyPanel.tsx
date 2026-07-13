@@ -28,8 +28,10 @@ import {
   subscribeTerrain3D,
 } from '../../../systems/topography/terrain-3d-store';
 import { DEFAULT_CONTOUR_CONFIG } from '../../../systems/topography/contour-config';
+import { useContourDisplay } from '../../../systems/topography/useContourDisplay';
 import { TopoImportWizard } from './TopoImportWizard';
 import { TopoCutFillSection } from './TopoCutFillSection';
+import { TopoDeliverablesSection } from './TopoDeliverablesSection';
 import styles from './TopographyPanel.module.css';
 
 /** Load state after a file has been parsed. */
@@ -65,6 +67,11 @@ export function TopographyPanel(): React.JSX.Element {
   const onToggleHypsometric = React.useCallback(() => {
     setTerrain3DStyle(getTerrain3DState().style === 'hypsometric' ? 'shaded' : 'hypsometric');
   }, []);
+
+  // ADR-650 M3 — plan-view contour display style (exact ↔ smooth). Non-destructive:
+  // the surveyed vertices stay exact, so legal export is always the accurate line.
+  const contourDisplay = useContourDisplay();
+  const contourSmooth = contourDisplay.style === 'smooth';
 
   const [intervalM, setIntervalM] = React.useState(DEFAULT_CONTOUR_CONFIG.intervalMm / 1000);
   const [majorEvery, setMajorEvery] = React.useState(DEFAULT_CONTOUR_CONFIG.majorEvery);
@@ -175,6 +182,33 @@ export function TopographyPanel(): React.JSX.Element {
         {t('topography.generate')}
       </button>
 
+      {/* ADR-650 M3 — «Ακριβείς ↔ Όμορφες»: display style over the SAME contours
+          (Civil 3D «Contour Smoothing»). Το «όμορφο» είναι μόνο παρουσίαση — το
+          νόμιμο export βγαίνει πάντα με τις ακριβείς κορυφές. */}
+      <section className={styles.field}>
+        <h3 className={styles.label}>{t('topography.contourStyle.title')}</h3>
+        <p className={styles.subtitle}>{t('topography.contourStyle.hint')}</p>
+        <div className={styles.row}>
+          <button
+            type="button"
+            className={`${styles.generateButton} ${!contourSmooth ? styles.toolActive : ''}`}
+            onClick={() => contourDisplay.setStyle('exact')}
+            aria-pressed={!contourSmooth}
+          >
+            {t('topography.contourStyle.exact')}
+          </button>
+          <button
+            type="button"
+            className={`${styles.generateButton} ${contourSmooth ? styles.toolActive : ''}`}
+            onClick={() => contourDisplay.setStyle('smooth')}
+            aria-pressed={contourSmooth}
+          >
+            {t('topography.contourStyle.smooth')}
+          </button>
+        </div>
+        <p className={styles.status}>{t('topography.contourStyle.exportNote')}</p>
+      </section>
+
       {/* ADR-650 M4 — η ίδια επιφάνεια που κόβει τις ισοϋψείς, ως στερεό στην 3Δ όψη.
           Το «υψομετρικό» είναι analysis style (Civil 3D Elevation Banding): χρωματίζει τα
           υψόμετρα, ΔΕΝ αλλάζει την τριγωνοποίηση. */}
@@ -204,6 +238,9 @@ export function TopographyPanel(): React.JSX.Element {
 
       {/* ADR-650 M6 — όγκοι εκσκαφών/επιχώσεων πάνω στην ΙΔΙΑ επιφάνεια (τρίτο style: cut/fill). */}
       <TopoCutFillSection />
+
+      {/* ADR-650 M7 — «ένα κουμπί → φάκελος»: πίνακες μέσα στο σχέδιο + ZIP παραδοτέων. */}
+      <TopoDeliverablesSection />
 
       {status && (
         <p className={`${styles.status} ${status.error ? styles.statusError : ''}`}>{status.text}</p>
