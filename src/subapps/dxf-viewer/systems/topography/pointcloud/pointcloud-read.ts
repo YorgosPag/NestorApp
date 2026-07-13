@@ -5,7 +5,10 @@
  * file name, it decides the format and hands back a `PointCloudReadResult`. Nobody outside the
  * `pointcloud/` folder should ever import `las-reader` / `ascii-xyz-reader` directly.
  *
- *   bytes + name → detectPointCloudFormat → readLasPointCloud | readAsciiXyzPointCloud
+ *   bytes + name → detectPointCloudFormat → readLasPointCloud | readLazPointCloud | readAsciiXyzPointCloud
+ *
+ * `laz-reader` is reached by DYNAMIC import — it drags in a 214 KB WASM module that an engineer who
+ * only ever opens `.las`/`.xyz` must never be made to download.
  *
  * ⚠️ WHY THE SHARED HELPERS LIVE HERE (N.18 / ADR-584): the two readers differ only in how they
  * DECODE a point — the bookkeeping around it (stride sampling, bounds accumulation, assembling
@@ -39,6 +42,8 @@ export const POINTCLOUD_MSG = {
   ERROR_NOT_LAS: 'topography.pointcloud.error.notLas',
   ERROR_LAS_TRUNCATED: 'topography.pointcloud.error.lasTruncated',
   ERROR_LAZ_UNSUPPORTED: 'topography.pointcloud.error.lazUnsupported',
+  ERROR_LAZ_RUNTIME_UNAVAILABLE: 'topography.pointcloud.error.lazRuntimeUnavailable',
+  ERROR_LAZ_DECODE_FAILED: 'topography.pointcloud.error.lazDecodeFailed',
   ERROR_UNSUPPORTED_PDRF: 'topography.pointcloud.error.unsupportedPdrf',
   ERROR_NO_POINTS: 'topography.pointcloud.error.noPoints',
   WARN_STRIDE_SAMPLED: 'topography.pointcloud.warn.strideSampled',
@@ -92,20 +97,25 @@ function isLazCompressed(buffer: ArrayBuffer): boolean {
 /**
  * Read any supported point cloud into the canonical SoA buffer.
  *
- * LAZ fails honestly: decompressing it needs a laz-perf-class dependency we deliberately do not
- * take in M8α, so the wizard tells the engineer to export as `.las` rather than silently loading
- * nothing. `onProgress` receives 0..1 and is advisory (the caller throttles it to the UI).
+ * ⚠️ ASYNC SINCE M8β, and that is not incidental. LAZ decompression is WebAssembly, and a WASM
+ * module can only be instantiated asynchronously — so the honest signature for «read a point
+ * cloud» is a Promise. The two synchronous readers are simply awaited through it; `.las` and
+ * `.xyz` pay nothing (the laz-perf module is behind a dynamic import and is never even fetched
+ * unless a `.laz` arrives). `onProgress` receives 0..1 and is advisory.
  *
  * @throws Error whose `message` is an i18n KEY from {@link POINTCLOUD_MSG} (N.11).
  */
-export function readPointCloud(
+export async function readPointCloud(
   buffer: ArrayBuffer,
   fileName: string,
   opts: PointCloudReadOptions,
   onProgress?: (ratio: number) => void,
-): PointCloudReadResult {
+): Promise<PointCloudReadResult> {
   const format = detectPointCloudFormat(fileName, buffer);
-  if (format === 'laz') throw new Error(POINTCLOUD_MSG.ERROR_LAZ_UNSUPPORTED);
+  if (format === 'laz') {
+    const { readLazPointCloud } = await import('./laz-reader');
+    return readLazPointCloud(buffer, opts, onProgress);
+  }
   if (format === 'las') return readLasPointCloud(buffer, opts, onProgress);
 
   const text = new TextDecoder('utf-8').decode(buffer);

@@ -329,6 +329,7 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "14.6.1",
     "@types/dompurify": "3.2.0",
+    "@types/emscripten": "1.41.5",
     "@types/geojson": "7946.0.16",
     "@types/jest": "^30.0.0",
     "@types/jest-axe": "^3.5.9",
