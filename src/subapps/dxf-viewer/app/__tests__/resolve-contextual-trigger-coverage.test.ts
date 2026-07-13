@@ -41,6 +41,7 @@ import { ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/conte
 import { SCALE_BAR_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-scale-bar-tab';
 import { TEXT_EDITOR_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-text-editor-tab';
 import { LINE_TOOL_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-line-tool-tab';
+import { BLOCK_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-block-tab';
 import { MEP_FIXTURE_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-mep-fixture-tab';
 import { MEP_FLOOR_DRAIN_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-mep-floor-drain-tab';
 import { MEP_MANIFOLD_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-mep-manifold-tab';
@@ -183,6 +184,13 @@ describe('Selection contextual-trigger coverage — map ↔ resolver ↔ descrip
       expect(resolveContextualTrigger({ type: 'array', params: { kind: 'path' } })).toBe(
         ARRAY_PATH_CONTEXTUAL_TRIGGER,
       );
+    });
+
+    // ADR-641 — block (INSERT) container: editor-only, εκτός descriptor domain (όπως array).
+    it('block: → «Μπλοκ» tab (explicit branch, ΟΧΙ στο map)', () => {
+      expect(resolveContextualTrigger({ type: 'block' })).toBe(BLOCK_CONTEXTUAL_TRIGGER);
+      // Δεν διαρρέει στο SSoT map (ώστε το descriptor-domain coverage να μένει καθαρό).
+      expect(Object.keys(ENTITY_CONTEXTUAL_TRIGGER)).not.toContain('block');
     });
   });
 });

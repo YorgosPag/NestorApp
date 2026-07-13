@@ -53,8 +53,11 @@ export function useAutoAreaMouseMove(params: UseAutoAreaMouseMoveParams) {
       // αν είναι ενεργό το hatch tool· αλλιώς το μπλε διακεκομμένο φάντασμα μπέρδευε
       // τον χρήστη σαν να ζητάει δημιουργία).
       const armed = isHatchSelectArmed();
+      // ADR-649 — «Ετικέτα Εμβαδού Γραμμοσκίασης»: ΙΔΙΟ hover-highlight με το armed
+      // «Επιλογή γραμμοσκίασης» (φώτισε τη hatch κάτω από τον κέρσορα, ΟΧΙ create-ghost).
+      const isAreaLabel = toolRef.current === 'hatch-area-label';
       const isHatchPick = isHatchPickPointActive(toolRef.current);
-      if (!armed && toolRef.current !== 'auto-measure-area' && !isHatchPick) return;
+      if (!armed && !isAreaLabel && toolRef.current !== 'auto-measure-area' && !isHatchPick) return;
 
       const now = performance.now();
       if (now - throttleRef.current < 50) return;
@@ -64,9 +67,10 @@ export function useAutoAreaMouseMove(params: UseAutoAreaMouseMoveParams) {
       const scene = lm.currentLevelId ? lm.getLevelScene(lm.currentLevelId) : null;
       const entities = scene?.entities ?? [];
 
-      // Armed: σβήσε το create-ghost και φώτισε τη γραμμοσκίαση κάτω από τον κέρσορα
-      // (hover highlight = HoverStore SSoT) ώστε ο χρήστης να δει τι θα επιλέξει.
-      if (armed) {
+      // Armed «Επιλογή» Ή «Ετικέτα Εμβαδού»: σβήσε το create-ghost και φώτισε τη
+      // γραμμοσκίαση κάτω από τον κέρσορα (hover highlight = HoverStore SSoT) ώστε ο
+      // χρήστης να δει τι θα επιλέξει — ίδια συμπεριφορά με το εργαλείο «Επιλογή».
+      if (armed || isAreaLabel) {
         setAutoAreaPreview(null);
         setHoveredEntity(pickTopHatchAt(worldPos, entities as unknown as Entity[]));
         return;

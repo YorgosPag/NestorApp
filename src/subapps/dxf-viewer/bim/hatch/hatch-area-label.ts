@@ -1,14 +1,19 @@
 /**
  * ADR-649 — «Ετικέτα Εμβαδού Γραμμοσκίασης»: pure builders (χωρίς React/state).
  *
- * SSoT για ΤΟ ΚΕΙΜΕΝΟ + ΤΗ ΘΕΣΗ + ΤΟ text-entity της ετικέτας εμβαδού που ρίχνει
- * το 2-κλικ εργαλείο (`handleHatchAreaLabelClick`). Μηδέν re-implementation:
+ * SSoT για ΤΟ ΚΕΙΜΕΝΟ + ΤΗ ΘΕΣΗ + ΤΟ ΜΕΓΕΘΟΣ + ΤΟ text-entity της ετικέτας εμβαδού
+ * που ρίχνει το 2-κλικ εργαλείο (`handleHatchAreaLabelClick`). Μηδέν re-implementation:
  *   - εμβαδόν  → `computeHatchAreaMm2` (outer − islands, mm²)
  *   - μορφή    → `formatAreaForDisplay` (ενεργή display-μονάδα, «25,00 m²»)
  *   - κέντρο   → `polygon2DAreaCentroid` (area-weighted, σωστό σε κοίλα L/T/U)
+ *   - bbox     → `boundsOfPoints` (fit-to-hatch ύψος κειμένου)
  *   - υλικό    → `HATCH_PATTERN_CATALOG[patternName].labelKey` → genitive i18n
- *   - textNode → `makeNode`/`makeRun` SSoT + `paperHeightToModel` (unit-safe ύψος)
+ *   - textNode → `makeNode`/`makeRun` SSoT builders
  *   - id       → `generateEntityId` (enterprise-id SSoT, N.6)
+ *
+ * **Μέγεθος κειμένου (fit-to-hatch):** το ύψος ΔΕΝ κλιμακώνεται με το `drawingScale`
+ * (που έκανε τα κείμενα δυσανάλογα μεγάλα)· προκύπτει από τις ΔΙΑΣΤΑΣΕΙΣ της ίδιας της
+ * γραμμοσκίασης ώστε η ετικέτα να χωράει πάντα μέσα της, ανεξάρτητα από κλίμακα/μονάδες.
  *
  * @see ./hatch-completion — computeHatchAreaMm2
  * @see ../geometry/shared/polygon-utils — polygon2DAreaCentroid
@@ -17,20 +22,24 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { HatchEntity, TextEntity } from '../../types/entities';
-import type { SceneUnits } from '../../utils/scene-units';
 import type { DxfTextNode } from '../../text-engine/types/text-ast.types';
 import { i18n } from '@/i18n';
 import { computeHatchAreaMm2 } from './hatch-completion';
 import { pickTopHatchAt } from './hatch-pick-at';
 import { formatAreaForDisplay } from '../../config/display-length-format';
 import { polygon2DAreaCentroid } from '../geometry/shared/polygon-utils';
+import { boundsOfPoints } from '../../services/clip/clip-geometry';
 import { HATCH_PATTERN_CATALOG } from '../../data/hatch-pattern-catalog';
 import { makeRun, makeParagraph, makeNode, DEFAULT_RUN_STYLE } from '../../text-engine/templates/defaults/template-helpers';
-import { paperHeightToModel } from '../../utils/annotation-scale';
-import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
 import { generateEntityId } from '../../systems/entity-creation/utils';
 
 const NS = 'dxf-viewer-shell';
+
+// Fit-to-hatch tuning: το κείμενο καταλαμβάνει ~85% του πλάτους του bbox (με μέσο
+// πλάτος χαρακτήρα ≈ 0.6× του ύψους) ΚΑΙ ≤35% του ύψους — ό,τι δώσει μικρότερο ύψος.
+const LABEL_WIDTH_FILL = 0.85;
+const LABEL_CHAR_WIDTH_RATIO = 0.6;
+const LABEL_MAX_HEIGHT_FRACTION = 0.35;
 
 /**
  * Γενική (genitive) ονομασία υλικού για το pattern της γραμμοσκίασης, ή `null`.
@@ -72,40 +81,45 @@ export function resolveHatchLabelAnchor(hatch: HatchEntity, clickPoint: Point2D)
 }
 
 /**
- * `DxfTextNode` για το κείμενο της ετικέτας με **unit-safe** ύψος: το paper-mm
- * DEFAULT_HEIGHT κλιμακώνεται με το drawing-scale + τις scene units (ίδια διαδρομή
- * με το `makeEmptyTextNode` του text tool), ώστε το μέγεθος να είναι σωστό σε
- * mm/cm/m σκηνές. Χτίζεται με τα `makeRun`/`makeParagraph`/`makeNode` SSoT builders.
+ * **Fit-to-hatch** ύψος κειμένου (ίδιες μονάδες με τις συντεταγμένες του σχεδίου):
+ * όσο χρειάζεται ώστε το κείμενο να χωράει στο ~85% του πλάτους του bbox της
+ * γραμμοσκίασης, χωρίς να ξεπερνά το ~35% του ύψους της. Degenerate outer → 1.
  */
-export function buildHatchAreaLabelTextNode(
-  text: string,
-  units: SceneUnits,
-  drawingScale: number,
-): DxfTextNode {
-  const height = paperHeightToModel(TEXT_SIZE_LIMITS.DEFAULT_HEIGHT, drawingScale, units);
-  return makeNode([makeParagraph([makeRun(text, { ...DEFAULT_RUN_STYLE, height })])]);
+export function fitHatchLabelHeight(text: string, outer: readonly Point2D[] | undefined): number {
+  if (!outer || outer.length < 3) return 1;
+  const b = boundsOfPoints(outer as Point2D[]);
+  const width = b.maxX - b.minX;
+  const height = b.maxY - b.minY;
+  const byWidth = (LABEL_WIDTH_FILL * width) / Math.max(1, text.length * LABEL_CHAR_WIDTH_RATIO);
+  const byHeight = LABEL_MAX_HEIGHT_FRACTION * height;
+  const fit = Math.min(byWidth, byHeight);
+  return fit > 0 ? fit : 1;
 }
 
 /**
- * Το ολοκληρωμένο `TextEntity` της ετικέτας εμβαδού (κείμενο + θέση + textNode +
- * enterprise id), έτοιμο για `completeEntity`. Το `layerId: ''` αφήνει τον
- * canonical create-path να αναθέσει το ενεργό layer (mirror του annotation symbol).
+ * `DxfTextNode` για την ετικέτα: ένα κεντραρισμένο (MC) run με το δοσμένο `height`
+ * (σε μονάδες σχεδίου). Χτίζεται με τα `makeRun`/`makeParagraph`/`makeNode` SSoT.
  */
-export function buildHatchAreaLabelEntity(
-  hatch: HatchEntity,
-  clickPoint: Point2D,
-  units: SceneUnits,
-  drawingScale: number,
-): TextEntity {
+export function buildHatchAreaLabelTextNode(text: string, height: number): DxfTextNode {
+  const run = makeRun(text, { ...DEFAULT_RUN_STYLE, height });
+  return makeNode([makeParagraph([run], { justification: 1 })], { attachment: 'MC' });
+}
+
+/**
+ * Το ολοκληρωμένο `TextEntity` της ετικέτας εμβαδού (κείμενο + θέση + fit-to-hatch
+ * ύψος + textNode + enterprise id), έτοιμο για `completeEntity`. Το `layerId: ''`
+ * αφήνει τον canonical create-path να αναθέσει το ενεργό layer (mirror annotation symbol).
+ */
+export function buildHatchAreaLabelEntity(hatch: HatchEntity, clickPoint: Point2D): TextEntity {
   const text = buildHatchAreaLabelText(hatch);
-  const position = resolveHatchLabelAnchor(hatch, clickPoint);
+  const height = fitHatchLabelHeight(text, hatch.boundaryPaths[0]);
   return {
     id: generateEntityId(),
     type: 'text',
     layerId: '',
-    position,
+    position: resolveHatchLabelAnchor(hatch, clickPoint),
     text,
-    textNode: buildHatchAreaLabelTextNode(text, units, drawingScale),
+    textNode: buildHatchAreaLabelTextNode(text, height),
     rotation: 0,
   };
 }

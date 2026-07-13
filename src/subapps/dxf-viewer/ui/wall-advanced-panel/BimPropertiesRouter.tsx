@@ -18,7 +18,7 @@
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { isWallEntity, isStairEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity, isSlabOpeningEntity, isHatchEntity } from '../../types/entities';
+import { isWallEntity, isStairEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity, isSlabOpeningEntity, isHatchEntity, isBlockEntity } from '../../types/entities';
 import { isWallDrawingTool } from '../../systems/tools/region-tool-ids';
 import { useResolvedSelectedEntity } from '../../hooks/selection/useResolvedSelectedEntity';
 import { StairPropertiesTab } from '../stair-advanced-panel/StairPropertiesTab';
@@ -35,6 +35,8 @@ import { isLinePrimitiveDrawingTool } from '../../app/resolve-tool-active-trigge
 import { LinePropertiesTab } from '../line-advanced-panel/LinePropertiesTab';
 // ADR-507 — hatch Properties palette (ribbon ↔ panel split, Revit-style + draft mode).
 import { HatchPropertiesTab } from '../hatch-advanced-panel/HatchPropertiesTab';
+// ADR-641 (single-click selection surface) — selected block → object inspector.
+import { BlockPropertiesTab } from '../block-advanced-panel/BlockPropertiesTab';
 import type { SceneModel } from '../../types/scene';
 
 export interface BimPropertiesRouterProps {
@@ -124,6 +126,12 @@ export function BimPropertiesRouter(
   // BIM element's own panel always wins; before the empty state so it's not lost.
   if (selected && isStyleEditablePrimitiveType(selected.type)) {
     return <LinePropertiesTab {...props} />;
+  }
+
+  // ADR-641 — a selected block (INSERT) gets its object inspector (ταυτότητα +
+  // εμφάνιση + INSERT transform). After all BIM branches, before the empty state.
+  if (selected && isBlockEntity(selected)) {
+    return <BlockPropertiesTab {...props} />;
   }
 
   // No BIM selection — render the stair tab's empty state (legacy path).

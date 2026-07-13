@@ -15,6 +15,7 @@ import { i18n } from '@/i18n';
 import { useToolLifecycle } from '../tools/useToolLifecycle';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { resetHatchAreaLabel } from '../../bim/hatch/hatch-area-label-store';
+import { setHoveredEntity } from '../../systems/hover/HoverStore';
 
 const NS = 'dxf-viewer-shell';
 
@@ -26,6 +27,7 @@ export function useHatchAreaLabelTool(isActive: boolean): void {
 
   const deactivate = useCallback(() => {
     resetHatchAreaLabel();
+    setHoveredEntity(null); // καθάρισε το hover-highlight όταν φεύγει το εργαλείο
     toolHintOverrideStore.setOverride(null);
   }, []);
 

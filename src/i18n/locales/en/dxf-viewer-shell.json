@@ -1456,6 +1456,7 @@
       "dimension": "Dimension",
       "dimensions": "Dimensions",
       "lineToolStyle": "Line Style",
+      "blockTools": "Block",
       "xlineMode": "Construction Line",
       "scaleTool": "Scale",
       "analyze": "Analyze",
@@ -1730,6 +1731,7 @@
       "lineGeometry": "Geometry",
       "linePolyline": "Polyline",
       "lineDraw": "Line",
+      "blockActions": "Block",
       "lineModify": "Modify",
       "lineFilletOptions": "Fillet Options",
       "lineChamferOptions": "Chamfer Options",
@@ -2438,6 +2440,7 @@
       "chamferAngle": "Angle",
       "array": "Array",
       "explode": "Explode",
+      "blockEdit": "Edit Block",
       "join": "Join",
       "group": "Group",
       "ungroup": "Ungroup",
@@ -4889,6 +4892,26 @@
       "finish": { "title": "Plaster Finish" },
       "envelope": { "title": "Envelope Function" },
       "material": { "title": "Material" }
+    }
+  },
+  "blockAdvancedPanel": {
+    "title": "Block Properties",
+    "emptyState": "Select a block to see its properties.",
+    "sections": {
+      "general": "General",
+      "geometry": "Geometry"
+    },
+    "fields": {
+      "name": "Name",
+      "count": "Objects",
+      "layer": "Layer",
+      "color": "Color",
+      "transparency": "Transparency",
+      "posX": "Position X",
+      "posY": "Position Y",
+      "scaleX": "Scale X",
+      "scaleY": "Scale Y",
+      "rotation": "Rotation"
     }
   },
   "hatchAdvancedPanel": {

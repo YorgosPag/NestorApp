@@ -34,6 +34,16 @@
 (genitive) ζει ΜΟΝΟ στο locale (`hatchAreaLabel.materials.<key>`), με `i18n.exists` guard·
 MISS → fallback στο σκέτο «Εμβαδόν: …». (EN: `of grass`/`of concrete`/… → «Area of grass: …».)
 
+**Hover highlight (parity με «Επιλογή»):** όσο το εργαλείο είναι ενεργό, το mousemove φωτίζει τη
+γραμμοσκίαση κάτω από τον κέρσορα μέσω του ΙΔΙΟΥ `HoverStore` SSoT — reuse του armed
+«Επιλογή γραμμοσκίασης» branch στο `useAutoAreaMouseMove` (`setHoveredEntity(pickTopHatchAt(...))`,
+ΟΧΙ create-ghost). Καθάρισμα (`setHoveredEntity(null)`) στο deactivate.
+
+**Μέγεθος κειμένου (fit-to-hatch):** το ύψος ΔΕΝ κλιμακώνεται με το `drawingScale` (έβγαζε
+δυσανάλογα μεγάλα κείμενα)· `fitHatchLabelHeight` το παράγει από το bbox (`boundsOfPoints`) της
+γραμμοσκίασης — ~85% του πλάτους (μέσο πλάτος χαρακτήρα 0.6×) με cap 35% του ύψους — ώστε να
+χωράει πάντα, ανεξάρτητα κλίμακας/μονάδων. Κεντραρισμένο (attachment `MC`).
+
 ### Reuse (μηδέν re-implementation)
 
 | Ανάγκη | SSoT |
@@ -79,3 +89,10 @@ MISS → fallback στο σκέτο «Εμβαδόν: …». (EN: `of grass`/`of
   reuse όλων των SSoT). Νέα αρχεία: `hatch-area-label.ts`, `hatch-area-label-store.ts`,
   `useHatchAreaLabelTool.ts`. i18n: `hatchAreaLabel.*` + `ribbon.commands/tooltips.hatchAreaLabel`
   (el+en).
+- **2026-07-13 (feedback Giorgio)** — (1) **Hover highlight** parity με «Επιλογή» (reuse του
+  armed-hatch-select branch στο `useAutoAreaMouseMove` + cleanup στο deactivate). (2) **Fit-to-hatch
+  μέγεθος κειμένου** (`fitHatchLabelHeight` από bbox, αντικατέστησε το `paperHeightToModel×
+  drawingScale` που έβγαζε πολύ μεγάλα κείμενα) + κεντραρισμένο run (`MC`).
+- **2026-07-13 (feedback Giorgio)** — Δεύτερο σημείο εισόδου: κουμπί «Ετικέτα Εμβαδού» και στο
+  **contextual tab της γραμμοσκίασης** (`contextual-hatch-tab.ts`, panel `hatch-actions`). Ίδιο
+  `commandKey: 'hatch-area-label'` → κανένα νέο wiring.

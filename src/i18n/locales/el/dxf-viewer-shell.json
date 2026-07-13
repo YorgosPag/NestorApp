@@ -1456,6 +1456,7 @@
       "dimension": "Διάσταση",
       "dimensions": "Διαστάσεις",
       "lineToolStyle": "Στυλ Γραμμής",
+      "blockTools": "Μπλοκ",
       "xlineMode": "Γραμμή Κατασκευής",
       "scaleTool": "Κλιμάκωση",
       "analyze": "Ανάλυση",
@@ -1730,6 +1731,7 @@
       "lineGeometry": "Γεωμετρία",
       "linePolyline": "Πολυγραμμή",
       "lineDraw": "Γραμμή",
+      "blockActions": "Μπλοκ",
       "lineModify": "Τροποποίηση",
       "lineFilletOptions": "Επιλογές Συναρμογής",
       "lineChamferOptions": "Επιλογές Λοξοτομής",
@@ -2438,6 +2440,7 @@
       "chamferAngle": "Γωνία",
       "array": "Πίνακας",
       "explode": "Διάλυση",
+      "blockEdit": "Επεξεργασία Μπλοκ",
       "join": "Ένωση",
       "group": "Ομαδοποίηση",
       "ungroup": "Κατάργηση Ομαδοποίησης",
@@ -4889,6 +4892,26 @@
       "finish": { "title": "Σοβάς" },
       "envelope": { "title": "Λειτουργία Κελύφους" },
       "material": { "title": "Υλικό" }
+    }
+  },
+  "blockAdvancedPanel": {
+    "title": "Ιδιότητες Μπλοκ",
+    "emptyState": "Επίλεξε ένα μπλοκ για να δεις τις ιδιότητες.",
+    "sections": {
+      "general": "Γενικά",
+      "geometry": "Γεωμετρία"
+    },
+    "fields": {
+      "name": "Όνομα",
+      "count": "Αντικείμενα",
+      "layer": "Επίπεδο",
+      "color": "Χρώμα",
+      "transparency": "Διαφάνεια",
+      "posX": "Θέση X",
+      "posY": "Θέση Y",
+      "scaleX": "Κλίμακα X",
+      "scaleY": "Κλίμακα Y",
+      "rotation": "Γωνία"
     }
   },
   "hatchAdvancedPanel": {

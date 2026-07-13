@@ -124,6 +124,20 @@ export const CONTEXTUAL_HATCH_TAB: RibbonTab = {
           isInFlyout: false,
           buttons: [
             {
+              // ADR-649 — «Ετικέτα Εμβαδού» (2-κλικ: pick hatch → place TextEntity). Απλό
+              // tool-change (commandKey = ToolType, χωρίς action → onToolChange). Ίδιο κουμπί
+              // με το Annotate→Measure panel, εδώ στο contextual tab της γραμμοσκίασης.
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'hatch.areaLabel',
+                labelKey: 'ribbon.commands.hatchAreaLabel',
+                tooltipKey: 'ribbon.tooltips.hatchAreaLabel',
+                icon: 'measure-area',
+                commandKey: 'hatch-area-label',
+              },
+            },
+            {
               // ADR-507 — «Επιλογή γραμμοσκίασης» (armed pick-existing· toggle = μένει
               // πατημένο όσο περιμένει κλικ σε γραμμοσκίαση, one-shot disarm μετά).
               type: 'toggle',

@@ -48,7 +48,6 @@ import {
   armHatchAreaLabelPlacement,
   resetHatchAreaLabel,
 } from '../../bim/hatch/hatch-area-label-store';
-import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { i18n } from '@/i18n';
 
@@ -330,8 +329,7 @@ export function handleHatchAreaLabelClick(
     toolHintOverrideStore.setOverride(i18n.t('hatchAreaLabel.status.awaitingHatch', { ns: HATCH_AREA_LABEL_NS }));
     return true;
   }
-  const drawingScale = useDrawingScaleStore.getState().drawingScale;
-  const entity = buildHatchAreaLabelEntity(hatch, worldPoint, resolveSceneUnits(scene), drawingScale);
+  const entity = buildHatchAreaLabelEntity(hatch, worldPoint);
   completeEntity(entity, { tool: 'hatch-area-label', levelId, getScene: p.levelManager.getLevelScene, setScene });
   resetHatchAreaLabel();
   toolHintOverrideStore.setOverride(i18n.t('hatchAreaLabel.status.awaitingHatch', { ns: HATCH_AREA_LABEL_NS }));

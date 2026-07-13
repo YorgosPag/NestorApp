@@ -27,6 +27,7 @@ export { FOUNDATION_CONTEXTUAL_TRIGGER } from './contextual-foundation-tab';
 export { SLAB_OPENING_CONTEXTUAL_TRIGGER } from './contextual-slab-opening-tab';
 export { DIMENSION_CONTEXTUAL_TRIGGER } from './contextual-dimension-tab';
 export { LINE_TOOL_CONTEXTUAL_TRIGGER } from './contextual-line-tool-tab';
+export { BLOCK_CONTEXTUAL_TRIGGER } from './contextual-block-tab';
 export { MEP_FIXTURE_CONTEXTUAL_TRIGGER } from './contextual-mep-fixture-tab';
 export { MEP_FLOOR_DRAIN_CONTEXTUAL_TRIGGER } from './contextual-mep-floor-drain-tab';
 export { MEP_SANITARY_FIXTURE_CONTEXTUAL_TRIGGER } from './contextual-mep-sanitary-fixture-tab';

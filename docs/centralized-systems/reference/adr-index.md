@@ -7,7 +7,7 @@
 > ⚠️ **AUTO-GENERATED FILE** - Do not edit manually!
 > Run `node docs/centralized-systems/reference/scripts/generate-adr-index.cjs` to regenerate.
 
-**📊 Stats**: 586 ADRs | Last Updated: 2026-07-11
+**📊 Stats**: 598 ADRs | Last Updated: 2026-07-13
 
 ---
 
@@ -28,7 +28,7 @@
 | 🔧 **Backend Systems** | 3 | [View](#backend-systems) |
 | 🛠️ **Infrastructure** | 3 | [View](#infrastructure) |
 | ⚡ **Performance** | 4 | [View](#performance) |
-| 📄 **Uncategorized** | 367 | [View](#uncategorized) |
+| 📄 **Uncategorized** | 379 | [View](#uncategorized) |
 
 ---
 
@@ -621,15 +621,18 @@
 | **ADR-636** | Professional DXF Export (HEADER, version-driven encoding) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-636-professional-dxf-export-header-encoding.md) |
 | **ADR-637** | Stair Rest Landings (πλατύσκαλα) — kind-independent SSoT | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-637-stair-rest-landings-ssot.md) |
 | **ADR-638** | Bathroom Auto-Layout Generator (generative space planning) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-638-bathroom-auto-layout-generator.md) |
-| **ADR-639** | DXF Viewer Large-File Performance (worker parse + progress + spatial culling + streaming + WebGL) | 📝 PROPOSED | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-639-dxf-viewer-large-file-performance.md) |
-| **ADR-640** | Block subsystem — DXF INSERT as a first-class, round-trippable Block instance | 🟢 IMPLEMENTED (M1) | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-640-block-instance-subsystem.md) |
-| **ADR-641** | Block Editor (AutoCAD BEDIT) — exclusive block-local editing + sync-all-instances | 🟡 IN PROGRESS (Φ1) | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-641-block-editor-bedit.md) |
-| **ADR-642** | Complex Linetypes — embedded text/symbols, caps/joins, width, compound strokes | 🔵 PROPOSED | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-642-complex-linetypes-symbols.md) |
-| **ADR-643** | Hatch Image Fill — «ζωντανά» υλικά (φωτο πλακιδίου) ως `fillType:'image'` πάνω στο ADR-507 (μοντέλο ArchiCAD) | 🟢 SPEC COMPLETE | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-643-hatch-image-fill.md) |
-| **ADR-644** | DXF AutoCAD R2018 structural compliance — handles/$HANDSEED + APPID + subclass markers + πλήρες LTYPE (το export ΑΝΟΙΓΕΙ στο AutoCAD) | 🟢 IMPLEMENTED (Φάση A) | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-644-dxf-autocad-r2018-compliance.md) |
-| **ADR-645** | 3D Incremental Scene Streaming — μεγάλα DXF στον 3Δ χωρίς freeze (streaming build + glyph atlas + culling/LOD· ο 3Δ αντίστοιχος του ADR-639) | 🔵 PROPOSED | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-645-3d-incremental-scene-streaming.md) |
-| **ADR-646** | Scale Tool — Ανάλυση Κενών & Χάρτης Ολοκλήρωσης (click-to-scale/reference-pick missing· BIM no-op· arc/rect gaps· πάνω στο ADR-348) | 🔍 PROPOSED | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-646-scale-tool-gap-analysis.md) |
-| **ADR-647** | R12 Associative-Hatch πλήρης πιστότητα μοτίβου — `parseR14PatternLines` → `inlinePattern` (GRATE αόρατο + catalog-mismatch· decode-first R14_HATCH_DATA spec) | 🔵 PROPOSED | 2026-07-13 | Uncategorized | [📄](./adrs/ADR-647-r12-hatch-pattern-def-parity.md) |
+| **ADR-639** | DXF Viewer Large-File Performance (worker parsing + progress + spatial-indexed culling + streaming + WebGL line layer) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-639-dxf-viewer-large-file-performance.md) |
+| **ADR-640** | Block subsystem: DXF INSERT as a first-class, round-trippable Block instance | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-640-block-instance-subsystem.md) |
+| **ADR-641** | Block Editor (AutoCAD BEDIT): exclusive block-local editing of a Block instance | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-641-block-editor-bedit.md) |
+| **ADR-642** | Complex Linetypes: embedded text, symbols, width, caps/joins & compound strokes | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-642-complex-linetypes-symbols.md) |
+| **ADR-643** | Hatch Image Fill (Γέμισμα Γραμμοσκίασης με Εικόνα / «ζωντανά» υλικά) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-643-hatch-image-fill.md) |
+| **ADR-644** | DXF AutoCAD R2018 Structural Compliance (handles / APPID / subclass / LTYPE) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-644-dxf-autocad-r2018-compliance.md) |
+| **ADR-645** | 3D Incremental Scene Streaming (μεγάλα DXF στον 3Δ καμβά χωρίς freeze) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-645-3d-incremental-scene-streaming.md) |
+| **ADR-646** | Scale Tool — Ανάλυση Κενών & Χάρτης Ολοκλήρωσης | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-646-scale-tool-gap-analysis.md) |
+| **ADR-647** | R12 Associative-Hatch: πλήρης πιστότητα μοτίβου (R14_HATCH_DATA pattern-def) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-647-r12-hatch-pattern-def-parity.md) |
+| **ADR-648** | Πλήρης κάλυψη οντοτήτων στην εξαγωγή DXF & Τέκτονας (.tek) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-648-dxf-tek-export-entity-coverage.md) |
+| **ADR-649** | Εργαλείο «Ετικέτα Εμβαδού Γραμμοσκίασης» (Hatch Area Label) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-649-hatch-area-label-tool.md) |
+| **ADR-650** | Τοπογραφικές Αποτυπώσεις & Ισοϋψείς Γραμμές (Έρευνα Αγοράς + Αρχιτεκτονικό Blueprint) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-650-topographic-survey-and-contours.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1230,11 +1233,18 @@
 | **ADR-636** | Professional DXF Export (HEADER, version-driven encoding) | ✅ APPROVED | [View](./adrs/ADR-636-professional-dxf-export-header-encoding.md) |
 | **ADR-637** | Stair Rest Landings (πλατύσκαλα) — kind-independent SSoT | ✅ APPROVED | [View](./adrs/ADR-637-stair-rest-landings-ssot.md) |
 | **ADR-638** | Bathroom Auto-Layout Generator (generative space planning) | ✅ APPROVED | [View](./adrs/ADR-638-bathroom-auto-layout-generator.md) |
-| **ADR-639** | DXF Viewer Large-File Performance (worker parse + progress + spatial culling + streaming + WebGL) | 📝 PROPOSED | [View](./adrs/ADR-639-dxf-viewer-large-file-performance.md) |
-| **ADR-640** | Block subsystem — DXF INSERT as a first-class, round-trippable Block instance | 🟢 IMPLEMENTED (M1) | [View](./adrs/ADR-640-block-instance-subsystem.md) |
-| **ADR-645** | 3D Incremental Scene Streaming — μεγάλα DXF στον 3Δ χωρίς freeze (streaming build + glyph atlas + culling/LOD) | 🔵 PROPOSED | [View](./adrs/ADR-645-3d-incremental-scene-streaming.md) |
-| **ADR-646** | Scale Tool — Ανάλυση Κενών & Χάρτης Ολοκλήρωσης | 🔍 PROPOSED | [View](./adrs/ADR-646-scale-tool-gap-analysis.md) |
-| **ADR-647** | R12 Associative-Hatch πλήρης πιστότητα μοτίβου (R14_HATCH_DATA pattern-def → inlinePattern) | 🔵 PROPOSED | [View](./adrs/ADR-647-r12-hatch-pattern-def-parity.md) |
+| **ADR-639** | DXF Viewer Large-File Performance (worker parsing + progress + spatial-indexed culling + streaming + WebGL line layer) | ✅ APPROVED | [View](./adrs/ADR-639-dxf-viewer-large-file-performance.md) |
+| **ADR-640** | Block subsystem: DXF INSERT as a first-class, round-trippable Block instance | ✅ APPROVED | [View](./adrs/ADR-640-block-instance-subsystem.md) |
+| **ADR-641** | Block Editor (AutoCAD BEDIT): exclusive block-local editing of a Block instance | ✅ APPROVED | [View](./adrs/ADR-641-block-editor-bedit.md) |
+| **ADR-642** | Complex Linetypes: embedded text, symbols, width, caps/joins & compound strokes | ✅ APPROVED | [View](./adrs/ADR-642-complex-linetypes-symbols.md) |
+| **ADR-643** | Hatch Image Fill (Γέμισμα Γραμμοσκίασης με Εικόνα / «ζωντανά» υλικά) | ✅ APPROVED | [View](./adrs/ADR-643-hatch-image-fill.md) |
+| **ADR-644** | DXF AutoCAD R2018 Structural Compliance (handles / APPID / subclass / LTYPE) | ✅ APPROVED | [View](./adrs/ADR-644-dxf-autocad-r2018-compliance.md) |
+| **ADR-645** | 3D Incremental Scene Streaming (μεγάλα DXF στον 3Δ καμβά χωρίς freeze) | ✅ APPROVED | [View](./adrs/ADR-645-3d-incremental-scene-streaming.md) |
+| **ADR-646** | Scale Tool — Ανάλυση Κενών & Χάρτης Ολοκλήρωσης | ✅ APPROVED | [View](./adrs/ADR-646-scale-tool-gap-analysis.md) |
+| **ADR-647** | R12 Associative-Hatch: πλήρης πιστότητα μοτίβου (R14_HATCH_DATA pattern-def) | ✅ APPROVED | [View](./adrs/ADR-647-r12-hatch-pattern-def-parity.md) |
+| **ADR-648** | Πλήρης κάλυψη οντοτήτων στην εξαγωγή DXF & Τέκτονας (.tek) | ✅ APPROVED | [View](./adrs/ADR-648-dxf-tek-export-entity-coverage.md) |
+| **ADR-649** | Εργαλείο «Ετικέτα Εμβαδού Γραμμοσκίασης» (Hatch Area Label) | ✅ APPROVED | [View](./adrs/ADR-649-hatch-area-label-tool.md) |
+| **ADR-650** | Τοπογραφικές Αποτυπώσεις & Ισοϋψείς Γραμμές (Έρευνα Αγοράς + Αρχιτεκτονικό Blueprint) | ✅ APPROVED | [View](./adrs/ADR-650-topographic-survey-and-contours.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

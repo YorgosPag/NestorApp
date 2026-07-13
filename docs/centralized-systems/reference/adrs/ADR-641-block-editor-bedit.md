@@ -143,6 +143,30 @@ SSoT (no parallel scene subscription left reading the world). Full feature PARTI
   synchronous read-after-write guarantee.
 
 ## Changelog
+- **2026-07-13** — **Single-click selection surface: contextual ribbon tab «Μπλοκ» + Properties palette
+  object inspector.** Symptom (Giorgio, screenshot): single-click σε ένα block (`NEC32_BLOCK`) δεν άνοιγε
+  ΤΙΠΟΤΑ — ούτε contextual tab, ούτε καρτέλα ιδιοτήτων (έπεφτε στο generic «Επίλεξε έναν τοίχο…»), σε
+  αντίθεση με τη γραμμή. **Root cause:** το `'block'` έλειπε από το `ENTITY_CONTEXTUAL_TRIGGER` map
+  (`app/resolve-contextual-trigger.ts`) ΚΑΙ δεν υπήρχε branch στον `BimPropertiesRouter`. (Το double-click
+  BEDIT + τα box grips ήταν ήδη εδώ· έλειπε μόνο το single-click surface.) **Fix — big-player split
+  (Revit «Modify | Block Reference» / ArchiCAD / C4D / Figma· Giorgio choice 2026-07-13):** το contextual
+  ribbon tab κρατά ΜΟΝΟ ενέργειες, ΟΛΕΣ οι ιδιότητες ζουν στο object inspector (AutoCAD Ctrl+1 parity).
+  - **Ribbon (actions):** NEW `ui/ribbon/data/contextual-block-tab.ts` (`BLOCK_CONTEXTUAL_TRIGGER='block-selected'`)
+    — Επιλογή (SSoT `buildSelectPanel`) + «Επεξεργασία Μπλοκ» (BEDIT) + «Διάλυση» (reuse `action:'explode'`).
+    Registration: `contextual-triggers.ts` (barrel) + `ENTITY_CONTEXTUAL_TRIGGER` (`block:` entry) +
+    `RIBBON_CONTEXTUAL_TABS`. NEW `ui/ribbon/hooks/useBlockEditRibbonAction.ts` (mirror `useExplodeRibbonAction`):
+    `action:'block-edit'` → `enterBlockEdit(id, name, computeBlockEditViewTransform(block))` — το ΙΔΙΟ SSoT
+    με το double-click (μηδέν extraction), chained block-edit → group → join → explode → array → base στο
+    `useDxfViewerRibbon.ts`. GROUP mutual-exclusivity (§7) διατηρείται (`getActiveGroupId()===null` gate).
+  - **Palette (properties):** NEW `ui/block-advanced-panel/` (mirror `LinePropertiesTab`/column) — descriptor
+    `block-property-fields.ts` (Γενικά: Όνομα/Πλήθος read-only + Επίπεδο/Χρώμα/Διαφάνεια· Γεωμετρία: θέση
+    Χ/Υ + κλίμακα Χ/Υ + γωνία, editable numeric) + `useBlockPropertyBridge` (read/write μέσω του SSoT
+    `useEntityPatchCommand` → `UpdateEntityCommand`, ΙΔΙΟ command με τα box grips· layer μέσω του κοινού
+    `useEntityLayerField`) + `BlockAdvancedPanel`/`BlockPropertiesTab`, branch `isBlockEntity` στον
+    `BimPropertiesRouter`. INSERT semantics: `block.entities` αμετάβλητα — αλλάζει ΜΟΝΟ το flat
+    `{position,scale,rotation}` transform + appearance. i18n `blockAdvancedPanel.*` + `ribbon.tabs.blockTools`/
+    `panels.blockActions`/`commands.blockEdit` (el+en). Reuse-only· κανένα άγγιγμα στο performance-critical
+    ribbon command context (ADR-040/587). @see ADR-587 §Φ3a (entity-keyed trigger SSoT), ADR-363 Φ4 (palette split).
 - **2026-07-12** — **Φ4 follow-up #6: a member drawn inside BEDIT now shows on the world canvas after
   exit (it was visible only under a hover).** Symptom (Giorgio): after #5 the line persists and shows
   inside the editor, but on EXIT it appears on the block ONLY while hovering the block. **Root cause

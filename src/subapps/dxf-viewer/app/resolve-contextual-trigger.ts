@@ -42,6 +42,7 @@ import {
   SLAB_OPENING_CONTEXTUAL_TRIGGER,
   DIMENSION_CONTEXTUAL_TRIGGER,
   LINE_TOOL_CONTEXTUAL_TRIGGER,
+  BLOCK_CONTEXTUAL_TRIGGER,
   MEP_FIXTURE_CONTEXTUAL_TRIGGER,
   MEP_FLOOR_DRAIN_CONTEXTUAL_TRIGGER,
   MEP_SANITARY_FIXTURE_CONTEXTUAL_TRIGGER,
@@ -178,6 +179,11 @@ export function resolveContextualTrigger(entity: EntityLike): string | null {
     if (kind === 'path') return ARRAY_PATH_CONTEXTUAL_TRIGGER;
     return ARRAY_RECT_CONTEXTUAL_TRIGGER;
   }
+  // ADR-641 — a selected block (INSERT) → «Μπλοκ» tab (actions: Επεξεργασία/Διάλυση).
+  // Explicit branch (ΟΧΙ στο map): το block είναι editor-only container — δεν είναι
+  // renderable type (μόνο τα expanded μέλη του ρεντάρονται), όπως το `array` παραπάνω,
+  // άρα μένει εκτός του descriptor-domain-bound `ENTITY_CONTEXTUAL_TRIGGER` map.
+  if (entity.type === 'block') return BLOCK_CONTEXTUAL_TRIGGER;
   // 1:1 entity-type → contextual trigger (SSoT map — αντικαθιστά 23 πανομοιότυπα branches).
   const direct = ENTITY_CONTEXTUAL_TRIGGER[entity.type as EntityType];
   if (direct) return direct;
