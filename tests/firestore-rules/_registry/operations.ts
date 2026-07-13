@@ -30,6 +30,7 @@ export type Reason =
   | 'legacy_fallback'       // legacy doc with no companyId — fallback-leg test
   | 'enum_invalid'          // enum validation (channel/direction/status)
   | 'insufficient_role'     // authed + tenant OK but role below the rule's floor
+  | 'not_owner'             // authed + tenant OK, role irrelevant — private doc, only its creator may read (block_library user scope, ADR-652)
   | 'server_only';          // client write forbidden (server SDK only)
 
 /** All known operations — iteration helper for matrix loops. */

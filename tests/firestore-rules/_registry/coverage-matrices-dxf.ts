@@ -474,3 +474,83 @@ export function textTemplateMatrix(): readonly CoverageCell[] {
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
   ];
 }
+
+/**
+ * Matrix for `block_library` (ADR-652 M2/M3/M4) — the 2D DXF block content
+ * library. Tenant-scoped, but with **two twists** that no canonical pattern
+ * expresses, so this is a bespoke matrix:
+ *
+ *   1. **`user` scope is PRIVATE, even inside the tenant.** Whatever a user
+ *      imports from a third-party DXF stays theirs — the read rule requires
+ *      `scope != 'user' || createdBy == request.auth.uid`. So `same_tenant_admin`
+ *      (a colleague *with more rights*) is DENIED read/list on someone else's
+ *      user-scope block. That is the whole point of the rule, hence the
+ *      `not_owner` reason tag.
+ *   2. **`system` scope is seed-only.** Clients may never create it
+ *      (`request.resource.data.scope != 'system'`) and — the M3 hole —
+ *      may never *self-promote* into it on update. Both are exercised by the
+ *      hardening block of the suite, outside the matrix (they need a second
+ *      seeded document / a mutated payload).
+ *
+ * The seeded matrix target is a **user-scope block owned by `same_tenant_user`**
+ * (companyId = SAME_TENANT_COMPANY_ID). Reading that matrix top-to-bottom is
+ * the privacy contract:
+ *   - owner (`same_tenant_user`)  → full CRUD
+ *   - company admin              → cannot READ it, but CAN update/delete it
+ *     (admin governance over tenant data: `isCompanyAdminOfCompany` is a leg
+ *     of update/delete but NOT of read). Deliberate, and now pinned.
+ *   - super_admin                → allow all (short-circuit on every op)
+ *   - cross-tenant / anonymous   → deny everything
+ *
+ * Create is persona-aware in the suite (payload carries the caller's uid +
+ * SAME_TENANT_COMPANY_ID), so cross-tenant personas fail on the companyId leg.
+ *
+ * **`list` is not `read`.** A list rule is evaluated against the *query*, not
+ * the stored docs: every field the rule reads must be constrained by the query
+ * ("rules are not filters"). So the list cells send the **real client query** —
+ * the user scope bucket of `ScopedLibraryService`: `scope == 'user' &&
+ * createdBy == <caller> && companyId == <caller's tenant>`. Under that query a
+ * company admin is *allowed* to list — they get their own (empty) bucket, no
+ * leak. The privacy statement for list is therefore an **attack test** in the
+ * suite's hardening block: listing someone else's bucket, or the tenant's
+ * user-scope blocks without the `createdBy` constraint, is denied.
+ */
+export function blockLibraryMatrix(): readonly CoverageCell[] {
+  return [
+    // Read — super admin + the owner only. A company admin is DENIED: this is
+    // the private-import guarantee, and the only cell that states it.
+    cell('super_admin', 'read', 'allow'),
+    cell('same_tenant_user', 'read', 'allow'),
+    cell('same_tenant_admin', 'read', 'deny', 'not_owner'),
+    // List — the caller's OWN user bucket (see docblock). Admin gets an empty
+    // bucket, not someone else's blocks; cross-tenant fails on companyId.
+    cell('super_admin', 'list', 'allow'),
+    cell('same_tenant_user', 'list', 'allow'),
+    cell('same_tenant_admin', 'list', 'allow'),
+    cell('cross_tenant_admin', 'read', 'deny', 'cross_tenant'),
+    cell('cross_tenant_admin', 'list', 'deny', 'cross_tenant'),
+    cell('cross_tenant_user', 'read', 'deny', 'cross_tenant'),
+    cell('cross_tenant_user', 'list', 'deny', 'cross_tenant'),
+    cell('anonymous', 'read', 'deny', 'missing_claim'),
+    cell('anonymous', 'list', 'deny', 'missing_claim'),
+    // Create — companyId == claim && createdBy == uid && scope != 'system'.
+    cell('super_admin', 'create', 'allow'),
+    cell('same_tenant_admin', 'create', 'allow'),
+    cell('same_tenant_user', 'create', 'allow'),
+    cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
+    cell('cross_tenant_user', 'create', 'deny', 'cross_tenant'),
+    cell('anonymous', 'create', 'deny', 'missing_claim'),
+    // Update — owner OR company admin; companyId immutable; scope stays != 'system'.
+    cell('super_admin', 'update', 'allow'),
+    cell('same_tenant_admin', 'update', 'allow'),
+    cell('same_tenant_user', 'update', 'allow'),
+    cell('cross_tenant_admin', 'update', 'deny', 'cross_tenant'),
+    cell('anonymous', 'update', 'deny', 'missing_claim'),
+    // Delete — owner OR company admin; never on a `system` block (hardening block).
+    cell('super_admin', 'delete', 'allow'),
+    cell('same_tenant_admin', 'delete', 'allow'),
+    cell('same_tenant_user', 'delete', 'allow'),
+    cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
+    cell('anonymous', 'delete', 'deny', 'missing_claim'),
+  ];
+}

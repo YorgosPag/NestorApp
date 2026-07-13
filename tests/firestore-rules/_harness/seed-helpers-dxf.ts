@@ -501,3 +501,42 @@ export async function seedFloorplanOverlay(
     });
   });
 }
+
+// ---------------------------------------------------------------------------
+// Block library seeder (ADR-652 — bespoke blockLibraryMatrix)
+// ---------------------------------------------------------------------------
+
+/**
+ * Seed one `block_library` metadata document (geometry itself lives as a blob
+ * in Storage — the doc only carries metadata + provenance/license).
+ *
+ * Defaults produce the **private** case the matrix targets: `scope: 'user'`,
+ * owned by `same_tenant_user`. The suite's hardening block re-uses the same
+ * seeder with `overrides` to build the `company` and `system` variants — one
+ * seeder, three fixtures (no per-scope twin).
+ */
+export async function seedBlockLibraryItem(
+  env: RulesTestEnvironment,
+  docId: string,
+  opts?: SeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('block_library').doc(docId).set({
+      id: docId,
+      name: `Block ${docId}`,
+      scope: 'user',
+      category: 'furniture',
+      builtin: false,
+      companyId: opts?.companyId ?? SAME_TENANT_COMPANY_ID,
+      projectId: null,
+      createdBy: opts?.createdBy ?? PERSONA_CLAIMS.same_tenant_user.uid,
+      boundsMm: { minX: 0, minY: 0, maxX: 600, maxY: 600 },
+      geometryUrl: `https://storage.example/block-library/${docId}.json`,
+      provenance: { source: 'user_import' },
+      license: { type: 'unknown', redistributable: false },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...opts?.overrides,
+    });
+  });
+}

@@ -35,12 +35,26 @@ export interface AssertTarget {
    * or `resource == null` gates that mandate full valid-document payloads).
    */
   readonly createData?: Record<string, unknown>;
-  /** For list operations: optional where filter applied to the query. */
-  readonly listFilter?: {
-    readonly field: string;
-    readonly op: FirebaseFirestore.WhereFilterOp;
-    readonly value: unknown;
-  };
+  /**
+   * For list operations: the `where` filter(s) applied to the query.
+   *
+   * A list rule is evaluated against the **query**, not against the stored
+   * documents: any field the rule reads (`resource.data.x`) that the query
+   * does not constrain evaluates to `undefined` and the query is rejected —
+   * "rules are not filters". So a list test must send the *same* query the
+   * production client sends. Collections whose rule reads more than one field
+   * (e.g. `block_library`: scope + createdBy + companyId — the scope buckets
+   * of `ScopedLibraryService`) therefore need several filters, hence the
+   * array form. A single filter object stays valid for the simple case.
+   */
+  readonly listFilter?: ListFilter | readonly ListFilter[];
+}
+
+/** One `where(field, op, value)` clause of a list query. */
+export interface ListFilter {
+  readonly field: string;
+  readonly op: FirebaseFirestore.WhereFilterOp;
+  readonly value: unknown;
 }
 
 /**
@@ -63,6 +77,14 @@ export async function assertCell(
   }
 }
 
+/** Normalize the single-filter and multi-filter forms into one list. */
+function toListFilters(
+  filter: ListFilter | readonly ListFilter[] | undefined,
+): readonly ListFilter[] {
+  if (!filter) return [];
+  return Array.isArray(filter) ? filter : [filter as ListFilter];
+}
+
 function executeOperation(
   ctx: RulesTestContext,
   op: Operation,
@@ -76,8 +98,8 @@ function executeOperation(
       return docRef.get();
     case 'list': {
       let query: FirebaseFirestore.Query = db.collection(target.collection);
-      if (target.listFilter) {
-        query = query.where(target.listFilter.field, target.listFilter.op, target.listFilter.value);
+      for (const filter of toListFilters(target.listFilter)) {
+        query = query.where(filter.field, filter.op, filter.value);
       }
       return query.get();
     }

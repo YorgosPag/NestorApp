@@ -50,6 +50,7 @@ import {
   tasksMatrix,
 } from './coverage-matrices-system';
 import {
+  blockLibraryMatrix,
   cadFilesMatrix,
   fileApprovalsMatrix,
   fileAuditLogMatrix,
@@ -1027,6 +1028,20 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     rulesRange: [3944, 4007],
     matrix: textTemplateMatrix(),
   },
+  {
+    // ADR-652 (M2/M3/M4) — 2D DXF block content library (furniture / sanitary / …).
+    // Bespoke matrix: `user` scope is PRIVATE inside the tenant (only its creator
+    // reads it — not even a company admin), while `system` scope is world-readable
+    // seed-only content. The hardening block of the suite additionally pins the
+    // two rules that carry the security weight: a client may never CREATE a
+    // `system` block, and may never SELF-PROMOTE an existing block into `system`
+    // (the M3 hole — it would publish private content to every tenant).
+    collection: 'block_library',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/block-library.rules.test.ts',
+    rulesRange: [4461, 4488],
+    matrix: blockLibraryMatrix(),
+  },
 ] as const;
 
 /**
@@ -1188,7 +1203,6 @@ export const FIRESTORE_RULES_PENDING: readonly string[] = [
   'floorplan_symbols',          // ADR-415 — tenant-scoped CRUD (2D floorplan symbol library, category-driven, mirror mep_fixtures); full matrix with the BIM batch
   'bim_presets',                // lines 3680-3702 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
   'bim_materials',              // lines 3704-3723 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
-  'block_library',              // ADR-652 M2 — 2D DXF block content library; user-scope docs readable ONLY by their creator (private import), system scope read-all; full matrix with the BIM batch
   'bim_settings',               // lines 3725-3737 — tenant-scoped CRUD; full matrix in ADR-363 Phase 1.X
   // — BIM 3D Preferences (ADR-366 Phase 4.3, 2026-05-21) —
   'bim_3d_preferences',         // lines 3744-3762 — owner-only (docId == b3dpref_${auth.uid}); full matrix later
