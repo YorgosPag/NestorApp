@@ -163,7 +163,7 @@ export function LinePatternEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())}>
-      <DialogContent size="default">
+      <DialogContent size="xl">
         <DialogHeader>
           <DialogTitle>{editName ? e('editTitle') : duplicateFrom ? e('duplicateTitle') : e('title')}</DialogTitle>
           <DialogDescription>{e('description')}</DialogDescription>
@@ -184,6 +184,7 @@ export function LinePatternEditorDialog({
             onChange={setLayers}
             labels={buildLinePatternLayersLabels(e)}
             patternError={validation.patternError ? e(`errors.${validation.patternError}`) : null}
+            layout="split"
           />
         </div>
 

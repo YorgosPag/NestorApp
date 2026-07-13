@@ -460,7 +460,10 @@ offset dots (μετακίνηση μεμονωμένης ράγας)· *(optiona
   - `ui/panels/dimensions/LinePatternPreviews.tsx` — `StrokePreviewCanvas` overlay slot· `CompoundPatternPreview`
     hosts τα grips όταν δοθούν `onLayersChange` + `gripLabels` (backward-compatible).
   - `ui/panels/dimensions/LinePatternLayersEditor.tsx` — `buildLinePatternLayersLabels` +`grips` bag· wire
-    `onChange` → overlay.
+    `onChange` → overlay· **νέο `layout='split'`** (Giorgio 2026-07-13: το swatch ήταν πολύ μικρό): 2 στήλες —
+    αριστερά **μεγάλη προεπισκόπηση** (`size='lg'`: tall stacked swatch, 14 px/mm zoom) + presets, δεξιά
+    scrollable στρώματα (`max-h-[60vh]`)· ο διάλογος `size='default'→'xl'` (max-w-4xl). Extract `LayersFieldset`
+    → μηδέν duplication μεταξύ των δύο layouts.
   - i18n `el/en/dxf-viewer-panels.json` — νέο `linePatternEditor.grips.{title,spread,length,corner}` (aria).
   - Tests: `line-pattern-segments-grip-scale.test.ts` (11) + `line-pattern-grip-geometry.test.ts` (12) — 23 πράσινα.
   - **Επόμενο (Φ6-B/C, on-touch)**: per-layer offset dots (μετακίνηση μεμονωμένης ράγας) + optional rotation.
