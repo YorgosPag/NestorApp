@@ -24,6 +24,9 @@ import type { Entity, HatchEntity, DxfImageExportMarker } from '../../types/enti
 import type { Point2D } from '../../rendering/types/Types';
 import type { Pair } from './dxf-ascii-hatch-writer';
 import type { HandleAllocator } from './dxf-ascii-handle-allocator';
+// ADR-651 Φάση Ε — «γυμνό» ImageEntity μοιράζεται το ΙΔΙΟ IMAGEDEF registry/dedup με το hatch
+// image-fill (ADR-643 Φ5b)· μόνη διαφορά είναι ΠΟΙΑ entities φέρουν το `dxfImageExport` marker.
+import { isImageEntity } from '../../types/image';
 
 /** Legacy reserved OBJECTS-section handles (μόνο όταν δεν δίνεται allocator — bare/round-trip
  *  callers): `4A` = το ACAD_IMAGE_DICT dictionary, `4B…` = τα IMAGEDEF objects. Διακριτά από τα
@@ -52,18 +55,18 @@ export interface ImageDefRegistry {
 }
 
 /**
- * Σάρωσε τα entities για `dxfImageExport` markers (image-mode hatches) και χτίσε name-deduped
- * IMAGEDEF registry — δύο hatch ίδιου raster μοιράζονται ΕΝΑ IMAGEDEF (AutoCAD image defs
- * dedup ανά path). Με `allocator` (professional path) κάθε handle βγαίνει από το κοινό pool
- * ώστε το `$HANDSEED` να τα καλύπτει· χωρίς αυτόν χρησιμοποιείται το reserved block (byte-identical).
+ * Σάρωσε τα entities για `dxfImageExport` markers (image-mode hatches ΚΑΙ `ImageEntity`) και
+ * χτίσε name-deduped IMAGEDEF registry — δύο entities ίδιου raster μοιράζονται ΕΝΑ IMAGEDEF
+ * (AutoCAD image defs dedup ανά path). Με `allocator` (professional path) κάθε handle βγαίνει
+ * από το κοινό pool ώστε το `$HANDSEED` να τα καλύπτει· χωρίς αυτόν χρησιμοποιείται το reserved
+ * block (byte-identical).
  */
 export function buildImageDefRegistry(
   entities: readonly Entity[], allocator?: HandleAllocator,
 ): ImageDefRegistry {
   const byName = new Map<string, ImageDefEntry>();
   for (const e of entities) {
-    if (e.type !== 'hatch') continue;
-    const marker = (e as HatchEntity).dxfImageExport;
+    const marker = imageExportMarkerOf(e);
     if (!marker || byName.has(marker.filename)) continue;
     const handle = allocator
       ? allocator.next()
@@ -80,6 +83,12 @@ export function buildImageDefRegistry(
     dictHandle,
     handleFor: (filename) => byName.get(filename)?.handle ?? dictHandle,
   };
+}
+
+/** Οι ΜΟΝΕΣ δύο πηγές `dxfImageExport` markers: image-mode hatch (ADR-643) ή `ImageEntity` (ADR-651). */
+function imageExportMarkerOf(e: Entity): DxfImageExportMarker | undefined {
+  if (e.type === 'hatch') return (e as HatchEntity).dxfImageExport;
+  return isImageEntity(e) ? e.dxfImageExport : undefined;
 }
 
 // ─── IMAGE entity ─────────────────────────────────────────────────────────────

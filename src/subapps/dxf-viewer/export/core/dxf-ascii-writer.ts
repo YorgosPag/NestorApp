@@ -64,6 +64,9 @@ import {
 // pre-pass (`image-fill-export.ts`)· εδώ γίνεται pure σειριοποίηση. Solid-downgrade (default) ΔΕΝ
 // περνά από εδώ — ο pre-pass το μετατρέπει σε κανονικό solid hatch πριν τον writer.
 import { buildImageDefRegistry, emitImageTiles, emitImageDefBlocks } from './dxf-ascii-image-writer';
+// ADR-651 Φάση Ε — «γυμνό» ImageEntity: ίδιο IMAGE/IMAGEDEF idiom με το hatch image-fill, ΕΝΑ tile
+// (χωρίς tile-grid). Marker προ-υπολογισμένο από τον client pre-pass `image-entity-export.ts`.
+import { isImageEntity } from '../../types/image';
 // ADR-640 M2 — INSERT reference + named BLOCK definition round-trip (block instances). The heavy
 // logic (INSERT emit, dedup-by-name BLOCK section) lives in its own module (file-size SRP, N.7.1);
 // members are serialized back through THIS writer's `writeEntity` via the injected `emitBlockMember`.
@@ -390,6 +393,14 @@ export function writeDxfAscii(
     if (!explode && e.type === 'hatch') {
       const marker = (e as HatchEntity).dxfImageExport;
       if (marker) { emitImageTiles(pair, marker, imageDefs.handleFor(marker.filename), layerName, resolveAci(e, layer), s); continue; }
+    }
+    // ADR-651 Φάση Ε — ImageEntity → ΕΝΑ tiled IMAGE (κάτω-αριστερή γωνία `position`) που δείχνει στο
+    // (πιθανώς κοινό) IMAGEDEF· ΑΝΤΙ για generic writeEntity. Χωρίς marker (αποτυχία decode/fetch στο
+    // client pre-pass) → η εικόνα παραλείπεται σιωπηλά, ΔΕΝ πέφτει στο generic writer (καμία εξαίρεση).
+    if (!explode && isImageEntity(e)) {
+      const marker = e.dxfImageExport;
+      if (marker) emitImageTiles(pair, marker, imageDefs.handleFor(marker.filename), layerName, resolveAci(e, layer), s);
+      continue;
     }
     writeEntity(e, layerName, resolveAci(e, layer), s, mmScale, explode, pair, () => dimBlockIndex++, dimStyleNameById, version, emitHandles, modelSpaceHandle);
   }

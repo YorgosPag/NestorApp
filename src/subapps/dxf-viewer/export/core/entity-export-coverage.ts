@@ -54,6 +54,9 @@ export const ENTITY_EXPORT_COVERAGE: Readonly<Record<RenderableEntityType, Entit
   // ── Annotations (non-BIM) ──────────────────────────────────────────────────
   'annotation-symbol': { dxf: 'decompose', tek: 'native' }, // TEK: type-7 object ή decompose
   'scale-bar':         { dxf: 'decompose', tek: 'decompose' },
+  // ADR-651 Φάση Ε — native IMAGE/IMAGEDEF στο AutoCAD (export pre-pass, dxfImageExport
+  // marker)· ο Τέκτων δεν έχει raster-image concept → σκόπιμο drop (mirror xline/ray).
+  image:               { dxf: 'native', tek: 'drop' },
   // ADR-648 §2 — νέο εύρημα: ΔΕΝ τα πιάνει ούτε flatten ούτε annotation-expand → dropped ΚΑΙ στα δύο.
   'angle-measurement': { dxf: 'missing', tek: 'missing' },
   'opening-info-tag':  { dxf: 'missing', tek: 'missing' },

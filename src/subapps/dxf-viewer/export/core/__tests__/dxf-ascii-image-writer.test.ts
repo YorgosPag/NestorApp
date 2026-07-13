@@ -11,6 +11,7 @@
 import { describe, it, expect } from '@jest/globals';
 import { writeDxfAscii } from '../dxf-ascii-writer';
 import type { DxfImageExportMarker, Entity, HatchEntity, PolylineEntity, DxfMlineSource } from '../../../types/entities';
+import type { ImageEntity } from '../../../types/image';
 
 const LAYERS = { L: { name: 'FLOORS', colorAci: 3 } };
 
@@ -30,6 +31,33 @@ function imageHatch(id: string, marker: Partial<DxfImageExportMarker> = {}): Ent
     boundaryPaths: [[{ x: 0, y: 0 }, { x: 1200, y: 0 }, { x: 1200, y: 600 }, { x: 0, y: 600 }]],
     dxfImageExport: full,
   } as unknown as HatchEntity;
+}
+
+/** ADR-651 Φάση Ε — «γυμνό» ImageEntity με `dxfImageExport` marker (ΕΝΑ insert, χωρίς tile-grid). */
+function imageEntityWithMarker(id: string, marker: Partial<DxfImageExportMarker> = {}): Entity {
+  const full: DxfImageExportMarker = {
+    filename: 'images/photo.jpg',
+    pixelWidth: 800,
+    pixelHeight: 600,
+    tileWorldWidth: 400,
+    tileWorldHeight: 300,
+    angleDeg: 0,
+    inserts: [{ x: 0, y: 0 }],
+    ...marker,
+  };
+  return {
+    id, type: 'image', layerId: 'L',
+    position: { x: 0, y: 0 }, width: 400, height: 300, url: 'https://example.test/photo.jpg',
+    dxfImageExport: full,
+  } as unknown as ImageEntity as unknown as Entity;
+}
+
+/** ImageEntity ΧΩΡΙΣ marker (π.χ. αποτυχία decode στο client pre-pass). */
+function imageEntityNoMarker(id: string): Entity {
+  return {
+    id, type: 'image', layerId: 'L',
+    position: { x: 0, y: 0 }, width: 400, height: 300, url: 'https://example.test/photo.jpg',
+  } as unknown as ImageEntity as unknown as Entity;
 }
 
 /** Πλήθος `0 <name>` blocks. */
@@ -138,5 +166,42 @@ describe('writeDxfAscii — IMAGE / IMAGEDEF (ADR-643 Φ5b)', () => {
     expect(countOccurrences(dxf, 'HATCH')).toBe(1);
     expect(countOccurrences(dxf, 'IMAGE')).toBe(0);
     expect(countSections(dxf, 'OBJECTS')).toBe(0);
+  });
+});
+
+// ─── ADR-651 Φάση Ε — «γυμνό» ImageEntity (reuse ΤΟΥ ΙΔΙΟΥ writer) ─────────────
+
+describe('writeDxfAscii — ImageEntity → IMAGE/IMAGEDEF (ADR-651 Φάση Ε)', () => {
+  it('ImageEntity με marker → ΕΝΑ IMAGE + ΕΝΑ IMAGEDEF, ΚΑΝΕΝΑ generic entity fallback', () => {
+    const dxf = writeDxfAscii([imageEntityWithMarker('i1')], { layersById: LAYERS });
+    expect(countOccurrences(dxf, 'IMAGE')).toBe(1);
+    const defs = blocks(dxf, 'IMAGEDEF');
+    expect(defs).toHaveLength(1);
+    expect(defs[0]['1']).toBe('images/photo.jpg');
+    expect(defs[0]['10']).toBe('800');
+    expect(defs[0]['20']).toBe('600');
+  });
+
+  it('το IMAGE κληρονομεί το layer του entity (group 8)', () => {
+    const dxf = writeDxfAscii([imageEntityWithMarker('i1')], { layersById: LAYERS });
+    for (const img of blocks(dxf, 'IMAGE')) expect(img['8']).toBe('FLOORS');
+  });
+
+  it('ImageEntity ΧΩΡΙΣ marker → παραλείπεται σιωπηλά, ΚΑΝΕΝΑ IMAGE/OBJECTS, καμία εξαίρεση', () => {
+    expect(() => {
+      const dxf = writeDxfAscii([imageEntityNoMarker('i1')], { layersById: LAYERS });
+      expect(countOccurrences(dxf, 'IMAGE')).toBe(0);
+      expect(countSections(dxf, 'OBJECTS')).toBe(0);
+    }).not.toThrow();
+  });
+
+  it('ImageEntity + hatch image-mode ΙΔΙΟΥ filename → ΕΝΑ ΚΟΙΝΟ IMAGEDEF (cross-type dedup)', () => {
+    const sharedHatch = imageHatch('h1', { filename: 'images/shared.jpg' });
+    const sharedImage = imageEntityWithMarker('i1', { filename: 'images/shared.jpg', inserts: [{ x: 5, y: 5 }] });
+    const dxf = writeDxfAscii([sharedHatch, sharedImage], { layersById: LAYERS });
+    expect(countOccurrences(dxf, 'IMAGEDEF')).toBe(1); // deduped ανά filename, cross-type
+    expect(countOccurrences(dxf, 'IMAGE')).toBe(3); // 2 hatch inserts + 1 ImageEntity insert
+    const defHandle = blocks(dxf, 'IMAGEDEF')[0]['5'];
+    for (const img of blocks(dxf, 'IMAGE')) expect(img['340']).toBe(defHandle);
   });
 });

@@ -80,6 +80,18 @@ export interface TekHatchExplodeResult {
 }
 
 /**
+ * Ουδέτερο αποτέλεσμα — «καμία αποδόμηση» (hatch mode `'native'`). Κενό `explodedIds` ⇒ ο
+ * `collectTekHatches` βγάζει ΟΛΕΣ τις γραμμοσκιάσεις native, όπως πριν το Στάδιο Ε.
+ */
+export const EMPTY_TEK_HATCH_FILL: TekHatchExplodeResult = {
+  linesXml: '',
+  lineCount: 0,
+  tags: [],
+  explodedIds: new Set<string>(),
+  warnings: [],
+};
+
+/**
  * Αποδομεί κάθε μη-solid γραμμοσκίαση σε `<line>` records: το περίγραμμα κάθε
  * `boundaryPath` + τις γραμμές μοτίβου του SSoT. Το `startId` συνεχίζει την αρίθμηση `<n>`
  * μετά τα κανονικά line records (κοινός `<line>` container → μοναδικά ids).

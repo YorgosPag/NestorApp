@@ -47,8 +47,7 @@ import { isValidBounds } from '../../utils/bounds-utils';
 // (per-type gaps: blocks in world space / dimensions / rect corner-form silently contributed
 // zero → export framed only a central subset while geometry spanned 380k). Same resolver the
 // hit-test, marquee-select and viewport-culling already trust.
-import { createBoundsFromDxfScene } from '../../systems/zoom/utils/bounds';
-import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
+import { createBoundsFromEntities } from '../../systems/zoom/utils/bounds';
 import type { Point2D } from '../../rendering/types/Types';
 import { encodingService } from '../../io/encoding-service';
 import type { ResolvedExportFloor } from '../core/export-floor-scope';
@@ -234,7 +233,7 @@ export function renderDxfBlob(request: DxfExportSceneRequest, lineMode?: DxfLine
 
 /**
  * ADR-636 Στάδιο 2 Φ2.3 — the drawing extents ($EXTMIN/$EXTMAX) in OUTPUT units. Computed via the
- * CANVAS fit-to-view SSoT (`createBoundsFromDxfScene` → `resolveEntityBounds` + outlier-robust
+ * CANVAS fit-to-view SSoT (`createBoundsFromEntities` → `resolveEntityBounds` + outlier-robust
  * `computeRobustBounds`) so the file frames the SAME geometry the user sees on screen, then scaled
  * by the same factor as every coordinate. Returns `undefined` for a degenerate/empty result (SSoT
  * yields `null`) → the writer omits the extents (no bogus 0,0 zoom-extents box).
@@ -248,11 +247,9 @@ export function computeScaledExtents(
   entities: readonly Entity[],
   scale: number,
 ): { min: Point2D; max: Point2D } | undefined {
-  if (entities.length === 0) return undefined;
-  const b = createBoundsFromDxfScene(
-    { entities, layers: [], bounds: null } as unknown as DxfScene,
-    true, // forceRecalculate — no cached scene.bounds, compute from the exported entities
-  );
+  // N.0.2 (2026-07-13) — το «entities → DxfScene envelope → bounds» σκαρί ζει πλέον ΜΙΑ φορά
+  // στο bounds SSoT (`createBoundsFromEntities`)· εδώ μένει μόνο το scaling του export.
+  const b = createBoundsFromEntities(entities);
   if (!b || !isValidBounds(b)) return undefined;
   return {
     min: { x: b.min.x * scale, y: b.min.y * scale },

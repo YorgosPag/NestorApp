@@ -67,6 +67,23 @@ export type DxfImageFillMode = 'solid' | 'image';
  */
 export type TekSymbolMode = 'native' | 'geometry';
 
+/**
+ * ADR-648 Στάδιο Ε — πώς μεταφέρονται οι ΓΡΑΜΜΟΣΚΙΑΣΕΙΣ στο `.tek`:
+ *   'native'   → native `<hatch>` record με το πλησιέστερο μοτίβο της βιβλιοθήκης του Τέκτονα
+ *                (`pattern.inf`). **Ελαφρύ** αρχείο, **επεξεργάσιμο** αντικείμενο στον Τέκτονα,
+ *                αλλά **ΚΑΤΑ ΠΡΟΣΕΓΓΙΣΗ** — άλλη βιβλιοθήκη από την `acad.pat`.
+ *   'exploded' → οι ΑΚΡΙΒΕΙΣ γραμμές γεμίσματος ως `<line>` records (ίδιες με τον καμβά και το
+ *                DXF lines-mode). **Πλήρης ταύτιση** με το AutoCAD, αλλά **ΒΑΡΥ** αρχείο και
+ *                μη-επεξεργάσιμο ως ενιαίο hatch.
+ *
+ * Μετρημένο (ground-truth 2026-07-13): ένα AutoCAD `SQUARE` = 15.318 γραμμές· ως native `<hatch>`
+ * ο Τέκτων το ζωγράφισε με 43 διαγώνιες. Το `exploded` έδωσε 15.346 (~0,1% απόκλιση) αλλά ένα
+ * πραγματικό σχέδιο βγήκε **107 MB** → γι' αυτό το `native` παραμένει το default.
+ *
+ * Solid/gradient γεμίσματα μένουν ΠΑΝΤΑ native (δεν έχουν γραμμές μοτίβου να εξαχθούν).
+ */
+export type TekHatchMode = 'native' | 'exploded';
+
 // ============================================================================
 // REQUEST (built by the dialog, consumed by the service facade)
 // ============================================================================
@@ -86,6 +103,9 @@ export interface ExportRequest {
 
   /** TEK-specific — annotation symbol transfer mode (native objects vs geometry). */
   readonly tekSymbolMode?: TekSymbolMode;
+
+  /** ADR-648 Στάδιο Ε — hatch transfer mode (native pattern = ελαφρύ vs exploded = ταύτιση). */
+  readonly tekHatchMode?: TekHatchMode;
 }
 
 // ============================================================================

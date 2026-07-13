@@ -22,9 +22,9 @@ import {
   collectTekAreas,
 } from '../core/tek/dxf-to-tek';
 import { collectTekTexts } from '../core/tek/dxf-to-tek-texts';
-import { collectTekHatchFillLines } from '../core/tek/tek-hatch-explode';
+import { collectTekHatchFillLines, EMPTY_TEK_HATCH_FILL } from '../core/tek/tek-hatch-explode';
 import { injectTekEntities, buildTagVisibilityXml } from '../core/tek/tek-xml-writer';
-import type { TekSymbolMode } from '../types';
+import type { TekHatchMode, TekSymbolMode } from '../types';
 import { buildFloorFilename } from './dxf-export-adapter';
 import type { ResolvedExportFloor } from '../core/export-floor-scope';
 import type { ExportArtifact, ExportEntityScope } from '../types';
@@ -45,6 +45,12 @@ export interface TekExportOptions {
    * Default `'native'`.
    */
   readonly symbolMode?: TekSymbolMode;
+  /**
+   * ADR-648 Στάδιο Ε — πώς μεταφέρονται οι γραμμοσκιάσεις: `'native'` (μοτίβο Τέκτονα —
+   * ελαφρύ + επεξεργάσιμο, κατά προσέγγιση) ή `'exploded'` (ακριβείς γραμμές — πλήρης
+   * ταύτιση, βαρύ). Default `'native'`.
+   */
+  readonly hatchMode?: TekHatchMode;
 }
 
 export interface AssembledTek {
@@ -62,6 +68,7 @@ export function assembleTekDocument(
   entityScope: ExportEntityScope,
   drawingScale: number = DEFAULT_DRAWING_SCALE,
   symbolMode: TekSymbolMode = 'native',
+  hatchMode: TekHatchMode = 'native',
 ): AssembledTek {
   const selected = resolveExportEntities(scene.entities, entityScope);
   const f = sceneUnitsToMeters(scene.units);
@@ -88,14 +95,17 @@ export function assembleTekDocument(
   const arcs = collectTekArcs(decomposed, f);
   // ADR-608 Φ-texts — ελεύθερες ετικέτες (N/A/1/0.00 + scale-bar νούμερα) → `<text>` (type 3).
   const texts = collectTekTexts(decomposed, f);
-  // ADR-648 Στάδιο Ε — ΠΛΗΡΗΣ ΤΑΥΤΙΣΗ: οι γραμμοσκιάσεις αποδομούνται στις ΑΚΡΙΒΕΙΣ γραμμές
-  // τους (SSoT `buildHatchEntitySegments` — ίδιες με canvas + DXF lines-mode) και μπαίνουν στον
-  // `<line>` container, συνεχίζοντας την αρίθμηση `<n>` μετά τα κανονικά lines. Το native
-  // `<hatch>` του Τέκτονα δείχνει ΑΛΛΟ μοτίβο (άλλη βιβλιοθήκη) — μετρημένο: 15.318 γραμμές
-  // AutoCAD `SQUARE` → 43 διαγώνιες στον Τέκτονα.
-  const hatchFill = collectTekHatchFillLines(decomposed, f, lines.lineCount + 1);
-  // ADR-512 — fallback: όσες ΔΕΝ αποδομήθηκαν (solid/gradient, ή dense-guard) → native `<hatch>`
-  // (primitive type 6) με ταυτοποίηση μοτίβου by-name (data/tekton-hatch-catalog).
+  // ADR-648 Στάδιο Ε — «Ακριβής» mode: οι γραμμοσκιάσεις αποδομούνται στις ΑΚΡΙΒΕΙΣ γραμμές τους
+  // (SSoT `buildHatchEntitySegments` — ίδιες με canvas + DXF lines-mode) και μπαίνουν στον `<line>`
+  // container, συνεχίζοντας την αρίθμηση `<n>` μετά τα κανονικά lines. Το native `<hatch>` του
+  // Τέκτονα δείχνει ΑΛΛΟ μοτίβο (άλλη βιβλιοθήκη) — μετρημένο: 15.318 γραμμές AutoCAD `SQUARE` →
+  // 43 διαγώνιες. Τίμημα: ~1,4 KB/γραμμή → ένα πραγματικό σχέδιο βγήκε 107 MB. Γι' αυτό είναι
+  // ΕΠΙΛΟΓΗ, όχι default (`'native'`).
+  const hatchFill = hatchMode === 'exploded'
+    ? collectTekHatchFillLines(decomposed, f, lines.lineCount + 1)
+    : EMPTY_TEK_HATCH_FILL;
+  // ADR-512 — native `<hatch>` (primitive type 6, μοτίβο by-name από data/tekton-hatch-catalog):
+  // το default path, ΚΑΙ ο fallback του «Ακριβής» για ό,τι δεν αποδομείται (solid/gradient/dense).
   const hatches = collectTekHatches(decomposed, f, hatchFill.explodedIds);
   // ADR-512 Φ-areas — μετρήσεις εμβαδού (measure-area → closed polyline+measurement) → native
   // Tekton area: ΕΝΑ `<hatch>` (boundary=1) + ΕΝΑ `<text>` ετικέτα ανά περιοχή, ΟΧΙ Ν γραμμές.
@@ -132,9 +142,12 @@ export async function buildTekDocument(
   entityScope: ExportEntityScope,
   drawingScale?: number,
   symbolMode?: TekSymbolMode,
+  hatchMode?: TekHatchMode,
 ): Promise<AssembledTek> {
   const { TEK_SKELETON_TEMPLATE } = await import('../core/tek/tek-skeleton.template');
-  return assembleTekDocument(TEK_SKELETON_TEMPLATE, scene, entityScope, drawingScale, symbolMode);
+  return assembleTekDocument(
+    TEK_SKELETON_TEMPLATE, scene, entityScope, drawingScale, symbolMode, hatchMode,
+  );
 }
 
 /** Εξάγει έναν resolved όροφο σε `.tek` artifact (ένα blob). */
@@ -143,7 +156,7 @@ export async function exportFloorToTek(
   options: TekExportOptions,
 ): Promise<{ artifact: ExportArtifact; warnings: string[] }> {
   const { xml, warnings } = await buildTekDocument(
-    floor.scene, options.entityScope, options.drawingScale, options.symbolMode,
+    floor.scene, options.entityScope, options.drawingScale, options.symbolMode, options.hatchMode,
   );
   const filename = buildFloorFilename(options.baseName, floor.level.name, 'tek');
   return {

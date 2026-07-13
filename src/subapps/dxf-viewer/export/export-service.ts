@@ -29,6 +29,10 @@ import {
   type DxfExportOptions,
 } from './formats/dxf-export-adapter';
 import { resolveImageFillsForDxf } from './core/image-fill-export';
+// ADR-651 Φάση Ε — δεύτερος async pre-pass (ImageEntity, «γυμνή» εικόνα)· τρέχει ΜΕΤΑ το hatch
+// image-fill pre-pass ώστε να συνθέτονται (κάθε ένα αγγίζει μόνο το δικό του entity type — μηδέν
+// αλληλοεπικάλυψη marker).
+import { resolveImageEntitiesForDxf } from './core/image-entity-export';
 import { exportFloorToTek, type TekExportOptions } from './formats/tek-export-adapter';
 import { useDrawingScaleStore } from '../state/drawing-scale-store';
 import type { DxfExportSceneRequest } from '../types/dxf-export.types';
@@ -69,6 +73,8 @@ async function runTekExport(
     drawingScale: useDrawingScaleStore.getState().drawingScale,
     // ADR-608 — native Tekton objects vs αυτούσια γεωμετρία (default native στον adapter).
     symbolMode: request.tekSymbolMode,
+    // ADR-648 Στάδιο Ε — native μοτίβο (ελαφρύ) vs αποδομημένες γραμμές (πλήρης ταύτιση).
+    hatchMode: request.tekHatchMode,
   };
   const warnings: string[] = [];
   if (request.floorScope === 'all-single') {
@@ -154,17 +160,26 @@ async function runDxfExport(
 }
 
 /**
- * ADR-643 Φ5b — render a built DXF request, running the async image-fill pre-pass first: image
- * hatches become either a solid downgrade (avg colour) or tiled `IMAGE`+`IMAGEDEF` markers, and
- * (image mode) the raster files to bundle. Solid mode / image-free scenes → zero rasters (historic
- * single-file behaviour). Pure `renderDxfBlob` stays untouched — it serializes the stamped markers.
+ * ADR-643 Φ5b / ADR-651 Φάση Ε — render a built DXF request, running BOTH async image pre-passes
+ * first (composed sequentially — each only touches its own entity type, so neither drops the
+ * other's markers): hatch image-fills become either a solid downgrade (avg colour) or tiled
+ * `IMAGE`+`IMAGEDEF` markers; `ImageEntity` instances get a `dxfImageExport` marker (or pass
+ * through unchanged on decode/fetch failure — silently skipped by the writer). Rasters from both
+ * passes are deduped together into ONE list. Pure `renderDxfBlob` stays untouched — it serializes
+ * whatever markers were stamped here.
  */
 async function renderDxfWithImages(
   request: DxfExportSceneRequest, lineMode: DxfLineMode | undefined, mode: DxfImageFillMode,
 ): Promise<{ blob: Blob; rasters: ExportArtifact[]; warnings: string[] }> {
-  const resolved = await resolveImageFillsForDxf(request.scene.entities, mode);
-  const req2: DxfExportSceneRequest = { ...request, scene: { ...request.scene, entities: resolved.entities } };
-  return { blob: renderDxfBlob(req2, lineMode), rasters: resolved.rasters, warnings: [...resolved.warnings] };
+  const fillResolved = await resolveImageFillsForDxf(request.scene.entities, mode);
+  const imgResolved = await resolveImageEntitiesForDxf(fillResolved.entities);
+  const req2: DxfExportSceneRequest = { ...request, scene: { ...request.scene, entities: imgResolved.entities } };
+  const rasters = dedupeByFilename([...fillResolved.rasters, ...imgResolved.rasters]);
+  return {
+    blob: renderDxfBlob(req2, lineMode),
+    rasters,
+    warnings: [...fillResolved.warnings, ...imgResolved.warnings],
+  };
 }
 
 /**

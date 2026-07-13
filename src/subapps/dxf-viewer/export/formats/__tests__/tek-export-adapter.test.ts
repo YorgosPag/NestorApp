@@ -153,30 +153,41 @@ describe('assembleTekDocument', () => {
     expect(xml).not.toContain('<v0X>');        // ΟΧΙ αποδομημένες γραμμές (line records)
   });
 
-  it('ADR-648 Στάδιο Ε — γραμμοσκίαση με μοτίβο → ΑΠΟΔΟΜΗΜΕΝΕΣ <line>, ΟΧΙ native <hatch>', () => {
-    // Ο Τέκτων ζωγραφίζει το native <hatch> με ΤΗ ΔΙΚΗ ΤΟΥ βιβλιοθήκη μοτίβων (μετρημένο: ένα
-    // AutoCAD SQUARE 15.318 γραμμών γίνεται 43 διαγώνιες). Εξάγουμε τις ΑΚΡΙΒΕΙΣ γραμμές.
-    const hatch = {
-      id: 'hx', type: 'hatch', patternName: 'ANSI31', fillType: 'predefined', color: '#00ff00',
-      boundaryPaths: [[{ x: 0, y: 0 }, { x: 2000, y: 0 }, { x: 2000, y: 2000 }]],
-    } as unknown as Entity;
+  const HATCH_FIXTURE = {
+    id: 'hx', type: 'hatch', patternName: 'ANSI31', fillType: 'predefined', color: '#00ff00',
+    boundaryPaths: [[{ x: 0, y: 0 }, { x: 2000, y: 0 }, { x: 2000, y: 2000 }]],
+  } as unknown as Entity;
+
+  it('ADR-512 — DEFAULT (native): γραμμοσκίαση → native <hatch> record (type 6, ελαφρύ)', () => {
     const empty = assembleTekDocument(FAKE_TPL, scene([]), 'both').xml;
-    const withHatch = assembleTekDocument(FAKE_TPL, scene([hatch]), 'both').xml;
-    expect(empty).not.toMatch(/<v0X>/);
-    expect(withHatch).toContain('<type>4</type>');   // line records (γραμμές μοτίβου)
-    expect(withHatch).toContain('<color>00FF00</color>');
-    expect(withHatch).not.toMatch(/<type>72<\/type>/); // ΟΧΙ πλέον native ANSI31→72 μοτίβο
+    const withHatch = assembleTekDocument(FAKE_TPL, scene([HATCH_FIXTURE]), 'both').xml;
+    expect(empty).not.toMatch(/<type>6<\/type>/);
+    expect(withHatch).toContain('<type>6</type>');  // hatch primitive
+    expect(withHatch).toContain('<type>72</type>'); // ANSI31 → pattern 72 (κατά προσέγγιση)
     expect(withHatch).not.toMatch(/TEK_HATCH_RECORDS/); // marker καταναλώθηκε
   });
 
-  it('ADR-648 Στάδιο Ε — solid fill → μένει native <hatch> (type 6/22· δεν έχει γραμμές)', () => {
+  it('ADR-648 Στάδιο Ε — «exploded»: γραμμοσκίαση → ΑΚΡΙΒΕΙΣ <line>, ΟΧΙ native μοτίβο', () => {
+    // Ο Τέκτων ζωγραφίζει το native <hatch> με ΤΗ ΔΙΚΗ ΤΟΥ βιβλιοθήκη (μετρημένο: ένα AutoCAD
+    // SQUARE 15.318 γραμμών γίνεται 43 διαγώνιες). Σε «exploded» εξάγουμε τις πραγματικές γραμμές.
+    const xml = assembleTekDocument(
+      FAKE_TPL, scene([HATCH_FIXTURE]), 'both', undefined, 'native', 'exploded',
+    ).xml;
+    expect(xml).toContain('<type>4</type>');        // line records (γραμμές μοτίβου)
+    expect(xml).toContain('<color>00FF00</color>');
+    expect(xml).not.toMatch(/<type>72<\/type>/);    // ΟΧΙ native ANSI31→72 μοτίβο
+  });
+
+  it('ADR-648 Στάδιο Ε — solid fill → native <hatch> ΚΑΙ στα δύο modes (δεν έχει γραμμές)', () => {
     const solid = {
       id: 'hs', type: 'hatch', fillType: 'solid', fillColor: '#808080',
       boundaryPaths: [[{ x: 0, y: 0 }, { x: 2000, y: 0 }, { x: 2000, y: 2000 }]],
     } as unknown as Entity;
-    const xml = assembleTekDocument(FAKE_TPL, scene([solid]), 'both').xml;
-    expect(xml).toContain('<type>6</type>');   // hatch primitive
-    expect(xml).toContain('<type>22</type>');  // solid → Raster 22
+    for (const mode of ['native', 'exploded'] as const) {
+      const xml = assembleTekDocument(FAKE_TPL, scene([solid]), 'both', undefined, 'native', mode).xml;
+      expect(xml).toContain('<type>6</type>');   // hatch primitive
+      expect(xml).toContain('<type>22</type>');  // solid → Raster 22
+    }
   });
 
   it('ADR-608 geometry mode — north-arrow → γραμμές + tag (ΟΧΙ object)', () => {
