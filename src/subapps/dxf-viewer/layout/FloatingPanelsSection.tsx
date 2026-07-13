@@ -24,6 +24,10 @@ import { GuidePanel } from '../ui/panels/guide-panel';
 // Block Library M1 — «Τα Blocks μου» palette + επιλογή SSoT (palette → placement tool).
 import { BlockLibraryPanel } from '../ui/panels/block-library';
 import { setSelectedBlockName } from '../bim/block-library/block-library-selection-store';
+// ADR-654 — «Έπιπλα Κάτοψης» palette (mirror of Block Library M1 above): selection is
+// stored inside the panel itself (furniture-plan-selection-store), so it only needs a
+// post-selection callback to activate the placement tool.
+import { FurniturePlanPanel } from '../ui/panels/furniture-plan';
 // ADR-189: Guide Analysis Panel (10 services → 4 tabs)
 import { GuideAnalysisPanel } from '../ui/panels/guide-analysis-panel';
 import CoordinateCalibrationOverlay from '../ui/CoordinateCalibrationOverlay';
@@ -59,6 +63,8 @@ interface FloatingPanelsSectionProps {
   showGuidePanel: boolean;
   showGuideAnalysisPanel: boolean;
   showBlockLibraryPanel: boolean;
+  /** ADR-654 — «Έπιπλα Κάτοψης» palette visibility (mirror of showBlockLibraryPanel). */
+  showFurniturePlanPanel: boolean;
   /** ADR-652 M3 — ενεργό έργο· χωρίς αυτό δεν προσφέρεται δημοσίευση block σε scope «έργου». */
   projectId?: string;
   handleAction: (action: string) => void;
@@ -110,6 +116,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
   showGuidePanel,
   showGuideAnalysisPanel,
   showBlockLibraryPanel,
+  showFurniturePlanPanel,
   projectId,
   handleAction,
   activeTool,
@@ -224,6 +231,17 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
             setSelectedBlockName(name);
             handleToolChange('block-library');
           }}
+        />
+      )}
+
+      {/* ADR-654: FURNITURE PLAN PANEL — top-view furniture entourage palette (mirror
+          of the Block Library panel above). Selection store lives inside the panel;
+          onSelect activates the placement tool once the card resolve completes. */}
+      {showFurniturePlanPanel && (
+        <FurniturePlanPanel
+          isVisible={showFurniturePlanPanel}
+          onClose={() => handleAction('toggle-furniture-plan-panel')}
+          onSelect={() => handleToolChange('furniture-plan')}
         />
       )}
 

@@ -101,6 +101,31 @@ export const INSERT_TAB: RibbonTab = {
       ],
     },
     {
+      // ADR-654 — «Έπιπλα Κάτοψης»: opens the browsable palette of top-view furniture
+      // entourage cut-outs (action, όχι tool commandKey· η επιλογή κάρτας ενεργοποιεί
+      // το placement tool 'furniture-plan' — mirror του Block Library M1 panel above).
+      id: 'furniturePlan',
+      labelKey: 'ribbon.panels.furniturePlan',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'insert.furniture-plan',
+                labelKey: 'ribbon.commands.furniturePlan',
+                icon: 'furniture-plan',
+                commandKey: 'furniture-plan',
+                action: 'toggle-furniture-plan-panel',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       // ADR-651 Φάση Β — «Πινακίδα»: single-click placement tool (commandKey = ToolType
       // 'title-block'). Το πρότυπο λύνεται με τα στοιχεία του ενεργού έργου (zero-config
       // auto-fill) και μπαίνει στη σκηνή ως BlockEntity — καμία επιλογή πριν το κλικ.

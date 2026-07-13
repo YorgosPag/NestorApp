@@ -411,6 +411,10 @@ export function useDxfViewerState() {
       case 'toggle-block-library-panel':
         toolbarState.toggleBlockLibraryPanel();
         break;
+      // ADR-654: Toggle «Έπιπλα Κάτοψης» palette (Insert-tab button, mirror of Block Library).
+      case 'toggle-furniture-plan-panel':
+        toolbarState.toggleFurniturePlanPanel();
+        break;
       // ADR-363 R1 / ADR-577: unified Copy tool activation (C+O chord → AutoCAD COPY pattern, all entity types)
       case 'copy-selected':
         handleToolChange('copy');

@@ -25,6 +25,8 @@ export function useToolbarState() {
   const [showGuideAnalysisPanel, setShowGuideAnalysisPanel] = useState(false);
   // Block Library M1: «Τα Blocks μου» palette visibility
   const [showBlockLibraryPanel, setShowBlockLibraryPanel] = useState(false);
+  // ADR-654: «Έπιπλα Κάτοψης» palette visibility (mirror of Block Library panel)
+  const [showFurniturePlanPanel, setShowFurniturePlanPanel] = useState(false);
 
   // Tool change handler
   const handleToolChange = useCallback((
@@ -83,6 +85,8 @@ export function useToolbarState() {
   // Block Library M1: «Τα Blocks μου» palette toggle + idempotent open (mirror guide panel).
   const toggleBlockLibraryPanel = useCallback(() => setShowBlockLibraryPanel(p => !p), []);
   const openBlockLibraryPanel = useCallback(() => setShowBlockLibraryPanel(true), []);
+  // ADR-654: «Έπιπλα Κάτοψης» palette toggle (mirror of Block Library toggle).
+  const toggleFurniturePlanPanel = useCallback(() => setShowFurniturePlanPanel(p => !p), []);
   const toggleGuideAnalysisPanel = useCallback(() => setShowGuideAnalysisPanel(p => !p), []);
 
   return {
@@ -94,6 +98,7 @@ export function useToolbarState() {
     showGuidePanel,
     showGuideAnalysisPanel,
     showBlockLibraryPanel,
+    showFurniturePlanPanel,
 
     // Actions - setActiveTool removed, now managed by parent
     handleToolChange,
@@ -105,6 +110,7 @@ export function useToolbarState() {
     openGuidePanel,
     toggleGuideAnalysisPanel,
     toggleBlockLibraryPanel,
-    openBlockLibraryPanel
+    openBlockLibraryPanel,
+    toggleFurniturePlanPanel
   };
 }
