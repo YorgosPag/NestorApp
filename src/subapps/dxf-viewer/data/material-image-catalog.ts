@@ -62,6 +62,18 @@ const CATALOG: readonly MaterialImageDef[] = [
   { id: 'matimg-plaster',      textureSlug: 'plaster',    category: 'plaster',  labelKeySuffix: 'plaster' },
   { id: 'matimg-metal',        textureSlug: 'metal',      category: 'metal',    labelKeySuffix: 'metal' },
   { id: 'matimg-roof-tiles',   textureSlug: 'roof-tiles', category: 'tile',     labelKeySuffix: 'roofTiles' },
+  // ── ADR-653 Φ7 — photographic builtin enrichment (Poly Haven CC0). Each row
+  // is a façade over a new ADR-413 slug; tile size derives from TEXTURE_SET_DEFS. ─
+  { id: 'matimg-granite',         textureSlug: 'granite',         category: 'stone',    labelKeySuffix: 'granite' },
+  { id: 'matimg-asphalt',         textureSlug: 'asphalt',         category: 'concrete', labelKeySuffix: 'asphalt' },
+  { id: 'matimg-gravel',          textureSlug: 'gravel',          category: 'stone',    labelKeySuffix: 'gravel' },
+  { id: 'matimg-plywood',         textureSlug: 'plywood',         category: 'wood',     labelKeySuffix: 'plywood' },
+  { id: 'matimg-osb',             textureSlug: 'osb',             category: 'wood',     labelKeySuffix: 'osb' },
+  { id: 'matimg-laminate',        textureSlug: 'laminate',        category: 'wood',     labelKeySuffix: 'laminate' },
+  { id: 'matimg-wood-floor',      textureSlug: 'wood-floor',      category: 'wood',     labelKeySuffix: 'woodFloor' },
+  { id: 'matimg-smooth-concrete', textureSlug: 'smooth-concrete', category: 'concrete', labelKeySuffix: 'smoothConcrete' },
+  { id: 'matimg-cobblestone',     textureSlug: 'cobblestone',     category: 'masonry',  labelKeySuffix: 'cobblestone' },
+  { id: 'matimg-parquet',         textureSlug: 'parquet',         category: 'wood',     labelKeySuffix: 'parquet' },
 ];
 
 // ─── Lookup map ───────────────────────────────────────────────────────────────

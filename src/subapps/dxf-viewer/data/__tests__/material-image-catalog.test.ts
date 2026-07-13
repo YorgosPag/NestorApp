@@ -14,8 +14,8 @@ import { TEXTURE_SET_DEFS } from '../../bim/materials/bim-texture-registry';
 
 describe('Material image catalog (ADR-643 Φ2)', () => {
   describe('listMaterialImages()', () => {
-    it('returns the 8 curated starter materials', () => {
-      expect(listMaterialImages()).toHaveLength(8);
+    it('returns the 18 curated materials (8 starter + 10 ADR-653 Φ7 photographic)', () => {
+      expect(listMaterialImages()).toHaveLength(18);
     });
 
     it('every id uses the curated `matimg-` prefix (distinct from bmat_/mat_img_ generated)', () => {
@@ -60,6 +60,11 @@ describe('Material image catalog (ADR-643 Φ2)', () => {
 
     it('ceramic tile derives 600×600 mm (tile slug = 0.6 m)', () => {
       expect(getMaterialImageDefaultTileMm('matimg-ceramic-tile')).toEqual({ width: 600, height: 600 });
+    });
+
+    it('ADR-653 Φ7 granite resolves its own slug and derives 600×600 mm (0.6 m)', () => {
+      expect(getMaterialImage('matimg-granite')?.textureSlug).toBe('granite');
+      expect(getMaterialImageDefaultTileMm('matimg-granite')).toEqual({ width: 600, height: 600 });
     });
 
     it('falls back to 1000×1000 mm for unknown ids', () => {

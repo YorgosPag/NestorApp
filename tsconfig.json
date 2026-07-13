@@ -1,5 +1,14 @@
 {
   "extends": "./tsconfig.base.json",
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs",
+      "moduleResolution": "node",
+      "esModuleInterop": true
+    },
+    "transpileOnly": true,
+    "files": true
+  },
   "compilerOptions": {
     "incremental": true,
     "tsBuildInfoFile": ".next/cache/tsconfig.tsbuildinfo",

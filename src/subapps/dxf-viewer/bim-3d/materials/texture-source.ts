@@ -18,9 +18,14 @@
 
 import { ref, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
+import type { PbrTextureMapName } from '../../bim/materials/bim-texture-registry';
 
-/** PBR texture map channels. */
-export type TextureMap = 'albedo' | 'normal' | 'roughness' | 'ao' | 'displacement';
+/**
+ * PBR texture map channels. Alias of the registry union (ADR-653) — the registry
+ * owns it because it is pure data that plain-node scripts must read, while THIS
+ * module pulls in `firebase/storage`.
+ */
+export type TextureMap = PbrTextureMapName;
 
 /** Where texture files are served from. */
 export type TextureSourceMode = 'public' | 'storage';

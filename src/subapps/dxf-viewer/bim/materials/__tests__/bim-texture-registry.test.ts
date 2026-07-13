@@ -6,7 +6,12 @@
  * resolution path the 3D catalog uses, plus the null path for untextured keys.
  */
 
-import { tileSizeMForMaterialId, textureSlugForKey, TEXTURE_SET_DEFS } from '../bim-texture-registry';
+import {
+  tileSizeMForMaterialId,
+  textureSlugForKey,
+  mapsForTextureSet,
+  TEXTURE_SET_DEFS,
+} from '../bim-texture-registry';
 
 describe('tileSizeMForMaterialId', () => {
   it('resolves the roof-tile material to the roof-tiles set base size', () => {
