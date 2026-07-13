@@ -8,16 +8,23 @@
  *   - 'storage' → files in Firebase Storage `bim-texture-library/<slug>/<map>.jpg`,
  *     resolved via `getDownloadURL`. In-flight Promises are de-duplicated.
  *
- * Default mode is 'public'. Flip with `setTextureSourceMode('storage')` WITHOUT
- * touching any consumer (cache/material catalog import only `resolveTextureUrl`).
+ * Flip with `setTextureSourceMode('storage')` WITHOUT touching any consumer
+ * (cache/material catalog import only `resolveTextureUrl`).
+ *
+ * ADR-654: ο ΜΗΧΑΝΙΣΜΟΣ (mode switch + in-flight de-dup) ζει πλέον στο
+ * `createAssetSourceResolver` — τον μοιράζεται με τη βιβλιοθήκη επίπλων κάτοψης.
+ * Εδώ μένει ΜΟΝΟ η ταυτότητα της PBR βιβλιοθήκης (roots, path convention, env flag).
  *
  * Mirrors the SSoT decoupling of `bim-mesh-url-resolver.ts` (ADR-411).
  *
+ * @see ../../systems/assets/create-asset-source-resolver.ts — ο κοινός μηχανισμός
  * @see docs/centralized-systems/reference/adrs/ADR-413-pbr-textures.md
  */
 
-import { ref, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
+import {
+  createAssetSourceResolver,
+  type AssetSourceMode,
+} from '../../systems/assets/create-asset-source-resolver';
 import type { PbrTextureMapName } from '../../bim/materials/bim-texture-registry';
 
 /**
@@ -28,7 +35,7 @@ import type { PbrTextureMapName } from '../../bim/materials/bim-texture-registry
 export type TextureMap = PbrTextureMapName;
 
 /** Where texture files are served from. */
-export type TextureSourceMode = 'public' | 'storage';
+export type TextureSourceMode = AssetSourceMode;
 
 /** Root Storage folder for the CC0 PBR texture library (storage mode). */
 export const BIM_TEXTURE_LIBRARY_ROOT = 'bim-texture-library';
@@ -40,40 +47,26 @@ export const BIM_TEXTURE_PUBLIC_ROOT = '/textures';
 // Default: 'storage' in production (textures live in Firebase Storage, not in the
 // Vercel bundle — *.jpg are .gitignored). Override with NEXT_PUBLIC_BIM_TEXTURE_SOURCE.
 const _envMode = process.env.NEXT_PUBLIC_BIM_TEXTURE_SOURCE as TextureSourceMode | undefined;
-let sourceMode: TextureSourceMode =
-  _envMode ?? (process.env.NODE_ENV === 'production' ? 'storage' : 'public');
+
+const resolver = createAssetSourceResolver({
+  publicRoot: BIM_TEXTURE_PUBLIC_ROOT,
+  storageRoot: BIM_TEXTURE_LIBRARY_ROOT,
+  initialMode: _envMode ?? (process.env.NODE_ENV === 'production' ? 'storage' : 'public'),
+});
 
 /** Switch the texture source mode for ALL subsequent resolutions. */
 export function setTextureSourceMode(mode: TextureSourceMode): void {
-  sourceMode = mode;
+  resolver.setMode(mode);
 }
 
 /** Current texture source mode (read-only accessor). */
 export function getTextureSourceMode(): TextureSourceMode {
-  return sourceMode;
+  return resolver.getMode();
 }
 
 /** Relative object path for a slug + map (shared by both modes). */
 function texturePath(slug: string, map: TextureMap): string {
   return `${slug}/${map}.jpg`;
-}
-
-// ── Storage-mode in-flight de-duplication ────────────────────────────────────
-const inFlight = new Map<string, Promise<string | null>>();
-
-function resolveStorageUrl(slug: string, map: TextureMap): Promise<string | null> {
-  const path = texturePath(slug, map);
-  const existing = inFlight.get(path);
-  if (existing) return existing;
-
-  const promise = getDownloadURL(ref(storage, `${BIM_TEXTURE_LIBRARY_ROOT}/${path}`))
-    .then((url): string | null => url)
-    .catch((): string | null => {
-      inFlight.delete(path);
-      return null;
-    });
-  inFlight.set(path, promise);
-  return promise;
 }
 
 /**
@@ -82,8 +75,5 @@ function resolveStorageUrl(slug: string, map: TextureMap): Promise<string | null
  * materials. The ONLY place that maps (slug, map) → a URL.
  */
 export function resolveTextureUrl(slug: string, map: TextureMap): Promise<string | null> {
-  if (sourceMode === 'public') {
-    return Promise.resolve(`${BIM_TEXTURE_PUBLIC_ROOT}/${texturePath(slug, map)}`);
-  }
-  return resolveStorageUrl(slug, map);
+  return resolver.resolveUrl(texturePath(slug, map));
 }

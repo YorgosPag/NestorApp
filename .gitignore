@@ -192,3 +192,8 @@ firestore.rules.compiled
 
 # Generated clone-detection report (jscpd· βλ. N.18 / ADR-584)
 /report/
+
+# Παραγόμενα entourage sprites (ADR-654 M1) — ίδια σύμβαση με το public/textures του
+# ADR-413: τα binaries ζουν στο Firebase Storage (furniture-2d-library/), όχι στο repo.
+# Αναπαράγονται με: node scripts/build-furniture-plan-assets.js
+/public/furniture-2d/
