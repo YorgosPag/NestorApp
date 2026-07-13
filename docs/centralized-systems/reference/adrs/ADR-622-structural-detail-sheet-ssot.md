@@ -57,4 +57,24 @@ Big-player layering (Revit / Tekla expose a table primitive + a sheet assembler 
 ---
 
 ## Changelog
+- **2026-07-13 (ο PDF ζωγράφος έγινε κοινός — ADR-651 Φάση ΣΤ)** — Ο `DetailPrimitive[] → jsPDF` ζωγράφος
+  ήταν **ιδιωτικός** μέσα στο `render/detail-pdf-renderer.ts` (φύλλα οπλισμού). Το print engine χρειαζόταν
+  **ακριβώς** αυτόν για να τυπώσει την κορνίζα ISO 5457 + την πινακίδα σχεδίου στη ΔΙΚΗ του σελίδα, οπότε
+  εξήχθη ως **`render/detail-pdf-primitives.ts`** (`renderDetailPrimitives` / `renderDetailPrimitive` +
+  τα κοινά `applyTextStyle` / `strokeRect` / `MM_TO_PT`) και τον καλούν πλέον **δύο** καταναλωτές:
+  `detail-pdf-renderer` (δικό του έγγραφο A3) και `print/assemble/pdf-assembler` (σελίδα εκτύπωσης).
+  Καμία αλλαγή συμπεριφοράς για τα φύλλα λεπτομερειών (ίδιος κώδικας, νέο σπίτι· 99/99 detail-sheet
+  tests green). Η σύμβαση συντεταγμένων ταιριάζει εξ ορισμού: sheet-mm === jsPDF page-mm (αρχή
+  πάνω-αριστερά, +y κάτω) ⇒ μηδέν μετατροπή. Αποτέλεσμα: **preview === PDF === in-scene** ισχύει τώρα
+  και για την **εκτύπωση** — δεν υπάρχει δεύτερη μηχανή πινακίδας. Βλ. ADR-651 §5.3.
+- **2026-07-13 (τρίτο backend — sheet primitives → scene entities, ADR-651 Φάση Β)** — Το `DetailPrimitive`
+  μοντέλο (sheet-mm) είχε δύο backends (canvas preview + PDF). Η πινακίδα σχεδίου χρειάζεται ΤΟ ΙΔΙΟ layout ως
+  πραγματικά entities μέσα στο σχέδιο, οπότε προστέθηκε **`render/detail-primitives-to-entities.ts`**
+  (`detailPrimitivesToEntities`): `line`/`polyline`/`text` → `LineEntity`/`PolylineEntity`/`TextEntity`, με
+  y-flip (sheet y-κάτω → scene y-πάνω, αρχή κάτω-αριστερά = σύμβαση DXF INSERT) + `scaleFactor` (paper-mm →
+  model units, annotative). Τα `circle`/`dim`/`raster` παραλείπονται μέχρι να υπάρξει καταναλωτής (όχι
+  προληπτικός νεκρός κώδικας). **MOD** `detail-sheet-field-block.ts`: εκτέθηκαν `FIELD_BLOCK_METRICS` +
+  `fieldBlockHeightMm(rowCount)` ώστε οι εξωτερικοί καταναλωτές να διαστασιολογούν/διακοσμούν γύρω από ένα field
+  block χωρίς να ξανα-δηλώνουν τις σταθερές (καμία αλλαγή στη διάταξη — ίδιες σταθερές, μία πηγή). Αποτέλεσμα:
+  **preview === PDF === in-scene** από ΕΝΑ layout model. Βλ. ADR-651 §5.
 - **2026-07-10** — Initial. De-duplicated the tabular + 3D-capture families of `bim/structural/detail-sheet/` (jscpd cluster #13) into four SSoT modules: `detail-sheet-schedule-table` (`buildScheduleTable` + `buildReinforcementSchedule`), `detail-sheet-field-block` (`buildFieldBlock`), `detail-sheet-assemble` (`assembleDetailSheet` + `standardSheetRegions`), and the extended `render/detail-3d-capture-core` (`captureDetail3d` + `bboxDimSpecs` + `projectDims`/`projectMarks`). Column 3D capture migrated onto the core (254→~90 L). Detail-sheet clones 58→18 pairs; full-scan 3447→3414. 88/88 detail-sheet suites green.

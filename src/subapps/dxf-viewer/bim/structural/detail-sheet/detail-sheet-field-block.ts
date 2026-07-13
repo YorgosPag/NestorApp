@@ -27,6 +27,23 @@ export interface FieldRow {
   readonly value: string;
 }
 
+/**
+ * The layout metrics of a field block, exposed so other consumers can SIZE and DECORATE
+ * around it (frame, heading band, separators) without re-declaring the constants.
+ * ADR-651 Φάση Β (title block) is the first such consumer.
+ */
+export const FIELD_BLOCK_METRICS = Object.freeze({
+  topPadMm: TOP_PAD_MM,
+  sidePadMm: SIDE_PAD_MM,
+  rowHeightMm: ROW_H_MM,
+  textHeightMm: TEXT_MM,
+});
+
+/** Height (mm) a field block of `rowCount` rows occupies: heading pad + rows + bottom pad. */
+export function fieldBlockHeightMm(rowCount: number): number {
+  return TOP_PAD_MM + rowCount * ROW_H_MM + SIDE_PAD_MM;
+}
+
 /** Rounded-integer string for a millimetre dimension. */
 export function roundMm(n: number): string {
   return String(Math.round(n));

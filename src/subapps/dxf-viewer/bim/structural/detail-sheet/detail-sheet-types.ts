@@ -114,7 +114,15 @@ export interface DimPrimitive {
 export interface RasterPrimitive {
   readonly kind: 'raster';
   readonly rect: RectMm;
-  /** PNG data URL (offscreen capture); `null` while still rendering. */
+  /**
+   * Image source; `null` while still rendering.
+   *
+   * ADR-651 Φάση Ε broadened the contract: besides the original PNG **data URL**
+   * (offscreen 3D capture), this may now carry an **https URL** to a stored asset
+   * (the engineer stamp). Callers pick the form their backend needs — the Canvas and
+   * in-scene backends decode either, while the **jsPDF backend requires a data URL**
+   * (`addImage` cannot fetch a remote URL).
+   */
   readonly dataUrl: string | null;
   /**
    * Intrinsic pixel width/height of the raster. Lets the PDF backend contain-fit
