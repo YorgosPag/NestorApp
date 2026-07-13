@@ -33,8 +33,14 @@ export function generateLevels(minZ: number, maxZ: number, config: ContourConfig
   return levels;
 }
 
-/** Linear crossing point where edge (pa,za)→(pb,zb) meets plane `level`. */
-function crossEdge(pa: Point2D, za: number, pb: Point2D, zb: number, level: number): Point2D {
+/**
+ * Linear crossing point where edge (pa,za)→(pb,zb) meets plane `level`.
+ *
+ * Exported since ADR-650 M6: the volume engine splits a triangle on the ZERO line of the Δz
+ * field («daylight line») — the same linear-crossing question this contour extractor asks on
+ * an elevation field, so it asks it through the same function instead of re-deriving the lerp.
+ */
+export function crossEdge(pa: Point2D, za: number, pb: Point2D, zb: number, level: number): Point2D {
   const t = (level - za) / (zb - za);
   return { x: pa.x + (pb.x - pa.x) * t, y: pa.y + (pb.y - pa.y) * t };
 }

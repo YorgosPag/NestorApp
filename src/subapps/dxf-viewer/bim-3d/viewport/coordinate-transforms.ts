@@ -170,6 +170,28 @@ export function dxfPlanToWorld(
 }
 
 /**
+ * Zero-allocation bulk variant of {@link dxfPlanToWorld}: write ONE plan-mm vertex straight
+ * into an interleaved XYZ buffer at float offset `i` (i.e. vertex `i / 3`).
+ *
+ * Same axis convention, same constants, same file — so a BufferGeometry built vertex-by-vertex
+ * (ADR-650 M4 terrain TIN: thousands of survey points, rebuilt on every edit) can never drift
+ * from the Vector3 path the grips / ghosts / snap markers use. Without this, a bulk builder
+ * either allocates one Vector3 per vertex or re-inlines `(x, elev, -y) × 0.001` — a second
+ * copy of the convention, which is exactly how 3D silently mirrors itself against 2D.
+ */
+export function writeDxfPlanToWorld(
+  out: Float32Array,
+  i: number,
+  x_mm: number,
+  y_mm: number,
+  elev_mm: number,
+): void {
+  out[i] = x_mm * MM_TO_M;
+  out[i + 1] = elev_mm * MM_TO_M;
+  out[i + 2] = -y_mm * MM_TO_M;
+}
+
+/**
  * Convert 3D world position (m, Y-up) back to DXF plan coordinates (mm).
  */
 export function worldToDxfPlan(pos: THREE.Vector3): {

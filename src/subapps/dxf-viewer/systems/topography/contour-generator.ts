@@ -24,16 +24,30 @@ export interface ContourResult {
 }
 
 /**
+ * Contour a surface that has ALREADY been triangulated (ADR-650 M4).
+ *
+ * The app path goes through here with the memoised surface from `topo-surface.ts`, so the
+ * contours in plan and the terrain mesh in 3D are two STYLES over the SAME `TinSurface`
+ * (Civil 3D model) — they can never silently disagree.
+ */
+export function generateContoursFromSurface(
+  tin: TinSurface,
+  config: ContourConfig = DEFAULT_CONTOUR_CONFIG,
+): ContourResult {
+  const segments = generateContourSegments(tin, config);
+  const contours = chainContours(segments, config, tin.origin);
+  return { tin, contours };
+}
+
+/**
  * Generate contour lines from survey points + breaklines. Fewer than 3 distinct points
- * yields an empty contour set (with an empty TIN).
+ * yields an empty contour set (with an empty TIN). Pure entry point — triangulates on the
+ * spot (fixtures / tests); the live app uses {@link generateContoursFromSurface}.
  */
 export function generateContours(
   points: readonly TopoPoint[],
   breaklines: readonly Breakline[] = [],
   config: ContourConfig = DEFAULT_CONTOUR_CONFIG,
 ): ContourResult {
-  const tin = buildTin(points, breaklines);
-  const segments = generateContourSegments(tin, config);
-  const contours = chainContours(segments, config, tin.origin);
-  return { tin, contours };
+  return generateContoursFromSurface(buildTin(points, breaklines), config);
 }

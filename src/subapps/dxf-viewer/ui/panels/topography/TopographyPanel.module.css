@@ -65,6 +65,16 @@
   opacity: 0.5;
 }
 
+/* ADR-650 M2-Β — ενεργό tool-mode (breakline picking): εμφανές «πατημένο» κουμπί. */
+.toolActive {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+}
+
+.row .generateButton {
+  flex: 1;
+}
+
 .status {
   font-size: 11px;
   margin: 0;
@@ -72,4 +82,31 @@
 
 .statusError {
   color: #c0392b;
+}
+
+/* ADR-650 M6 — πίνακας όγκων (εκσκαφή / επίχωση / καθαρό). */
+.resultTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums; /* οι στήλες m³ να ευθυγραμμίζονται στο δεκαδικό */
+}
+
+.resultTable th,
+.resultTable td {
+  padding: 3px 6px;
+  text-align: right;
+  border-bottom: 1px solid currentColor;
+}
+
+.resultTable th {
+  text-align: left;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.resultNet th,
+.resultNet td {
+  font-weight: 700;
+  border-bottom: none;
 }

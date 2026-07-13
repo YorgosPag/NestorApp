@@ -35,6 +35,7 @@ import { FocusOutlineRenderer } from '../accessibility/FocusOutlineRenderer';
 import { initViewCube } from './scene-setup';
 import { initBackgroundModeSubscription } from './scene-manager-actions';
 import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
+import { TerrainSceneLayer } from './terrain/TerrainSceneLayer'; // ADR-650 M4 — topographic surface
 
 export interface SceneManagerConstructDeps {
   readonly container: HTMLElement;
@@ -67,6 +68,7 @@ export interface SceneManagerParts {
   readonly stairSubUnsub: () => void;
   readonly poi: ReturnType<typeof createPoi>;
   readonly gridFloor: Cinema4DGridFloor;
+  readonly terrainLayer: TerrainSceneLayer; // ADR-650 M4 — topographic surface (TIN → mesh)
   readonly animationManager: AnimationManager;
   readonly canonicalViewService: CanonicalViewService;
   readonly keyboardFocusManager: KeyboardFocusManagerApi;
@@ -122,6 +124,10 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
   // soft horizon fade (cell step + fade radii scale with the camera distance).
   const gridFloor = new Cinema4DGridFloor(scene, () => viewport.camera, () => viewport.target);
 
+  // ADR-650 M4 — topographic surface. Subscribes to the survey + display stores itself and
+  // rebuilds its mesh from the ONE derived TIN (the same one the 2D contours are cut from).
+  const terrainLayer = new TerrainSceneLayer(scene, markDirty);
+
   // Phase 4.2 — single animation manager (ADR-040 — ticked by the main RAF).
   const animationManager = createAnimationManager();
   // Phase 4.4 — instantiated once, shared by ViewCube and keyboard dispatcher.
@@ -174,7 +180,7 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
   return {
     selectionHighlighter, hoverHighlighter, faceHighlighter, faceHoverHighlighter,
     stairSubElementHighlighter, stairSubUnsub,
-    poi, gridFloor, animationManager, canonicalViewService,
+    poi, gridFloor, terrainLayer, animationManager, canonicalViewService,
     keyboardFocusManager, focusOutlineRenderer, focusUnsub, viewCube,
     envStoreUnsub, bgModeUnsub, sectionController, waypointDragHandleRenderer,
     dxfBackdrop, frameContext,

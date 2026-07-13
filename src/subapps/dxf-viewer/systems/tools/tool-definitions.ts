@@ -308,6 +308,15 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // NOT a canvas-click authoring tool: it emits MANY entities (lwpolyline + text) via
   // completeEntities, so it is a deliberate absence from TOOL_CREATES_ENTITY (multi-type).
   'topo-contours':     { id: 'topo-contours',     category: 'utility', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
+  // ADR-650 M2-Β: «Γραμμές ασυνέχειας» — canvas-click pick εργαλείο (ΟΧΙ panel-driven).
+  // category:'drawing' ⇒ isInDrawingMode=true, ώστε το mouse-up select block να ΜΗΝ τρέχει
+  // παράλληλα με τον click handler (κανένα διπλό select) — ίδιο σκεπτικό με ADR-649.
+  // allowsContinuous: μαρκάρεις πολλές γραμμές στη σειρά. Γράφει στο `TopoPointStore`
+  // (constraint), ΟΧΙ scene entity → σκόπιμη απουσία από το TOOL_CREATES_ENTITY.
+  'topo-breakline':    { id: 'topo-breakline',    category: 'drawing', requiresCanvas: true,  canInterrupt: true,  allowsContinuous: true,  preservesOverlayMode: false },
+  // ADR-650 M6 (Γ) — «Όριο οικοπέδου»: ίδιο συμβόλαιο με το topo-breakline (pick, όχι entity).
+  // allowsContinuous: μπορείς να αλλάξεις γνώμη και να δείξεις άλλο περίγραμμα χωρίς re-arm.
+  'topo-boundary':     { id: 'topo-boundary',     category: 'drawing', requiresCanvas: true,  canInterrupt: true,  allowsContinuous: true,  preservesOverlayMode: false },
 };
 
 /**

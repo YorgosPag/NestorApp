@@ -50,6 +50,19 @@ import {
 } from '../../bim/hatch/hatch-area-label-store';
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import { i18n } from '@/i18n';
+// ADR-650 M2-Β — «Γραμμές ασυνέχειας»: pick υπάρχουσας γραμμής → constraint στο CDT.
+import { pickTopEntityAt } from '../../rendering/hitTesting/pick-top-entity-at';
+import {
+  buildBreaklineFromEntity,
+  isBreaklineCandidate,
+} from '../../systems/topography/topo-breakline-pick';
+import {
+  addBreakline,
+  removeBreakline,
+  findBreaklineBySourceEntity,
+  getTopoBreaklines,
+  getTopoPoints,
+} from '../../systems/topography/TopoPointStore';
 
 // ============================================================================
 // ROTATION ENTITY SELECTION (PRIORITY 1.3)
@@ -333,6 +346,68 @@ export function handleHatchAreaLabelClick(
   completeEntity(entity, { tool: 'hatch-area-label', levelId, getScene: p.levelManager.getLevelScene, setScene });
   resetHatchAreaLabel();
   toolHintOverrideStore.setOverride(i18n.t('hatchAreaLabel.status.awaitingHatch', { ns: HATCH_AREA_LABEL_NS }));
+  return true;
+}
+
+// ============================================================================
+// TOPO BREAKLINE PICK (ADR-650 M2-Β — 1 κλικ: γραμμή → constraint, ξανά → αφαίρεση)
+// ============================================================================
+const TOPO_BREAKLINE_NS = 'dxf-viewer-shell';
+
+/** Status-prompt του εργαλείου (πάντα με το ζωντανό πλήθος constraints). */
+function setTopoBreaklineHint(key: string): void {
+  toolHintOverrideStore.setOverride(
+    i18n.t(`topoBreakline.status.${key}`, { ns: TOPO_BREAKLINE_NS, count: getTopoBreaklines().length }),
+  );
+}
+
+/**
+ * ADR-650 M2-Β — ένα κλικ πάνω σε υπάρχουσα γραμμή (line/polyline/lwpolyline) την
+ * καταχωρεί ως **breakline constraint** στο `TopoPointStore` (constrained edge στο CDT →
+ * η επιφάνεια κρατά το κοφτό σκαλί). **Toggle**: δεύτερο κλικ στην ίδια γραμμή την αφαιρεί.
+ *
+ * Το υψόμετρο το αποφασίζει ο pure πυρήνας (`buildBreaklineFromEntity`): `lwpolyline.elevation`
+ * → σταθερό z· αλλιώς **proximity** (z από το πλησιέστερο μετρημένο σημείο — Civil 3D pattern,
+ * αφού το scene είναι 2D). Χωρίς φορτωμένα σημεία μια 2D γραμμή δεν μπορεί να υψομετρηθεί →
+ * ρητό μήνυμα, ΠΟΤΕ σιωπηλή αποτυχία.
+ *
+ * Καταναλώνει πάντα το κλικ (το εργαλείο μένει ενεργό — μαρκάρεις πολλές γραμμές στη σειρά).
+ */
+export function handleTopoBreaklineClick(
+  worldPoint: Point2D,
+  p: UseCanvasClickHandlerParams,
+): boolean {
+  const ctx = resolveActiveLevelContext(p);
+  if (!ctx) return false;
+  const { entities } = ctx;
+
+  // ADR-040 XXII.A: live SSoT scale read at click time (ίδια ανοχή με το rotation pick).
+  const tolerance = TOLERANCE_CONFIG.SNAP_DEFAULT / getImmediateTransform().scale;
+  const entityId = pickTopEntityAt(worldPoint, entities, isBreaklineCandidate, tolerance);
+  if (!entityId) {
+    setTopoBreaklineHint('awaitingEntity');
+    return true;
+  }
+
+  const existing = findBreaklineBySourceEntity(entityId);
+  if (existing) {
+    removeBreakline(existing.id);
+    p.universalSelection.replaceEntitySelection([]);
+    setTopoBreaklineHint('removed');
+    return true;
+  }
+
+  const entity = entities.find((e) => e.id === entityId);
+  const built = entity ? buildBreaklineFromEntity(entity, getTopoPoints()) : null;
+  if (!built) {
+    setTopoBreaklineHint('needsPoints');
+    return true;
+  }
+
+  addBreakline(built.vertices, built.closed, entityId);
+  p.universalSelection.replaceEntitySelection([entityId]);
+  setTopoBreaklineHint(built.source === 'elevation' ? 'addedElevation' : 'addedProximity');
+  dlog('handleTopoBreaklineClick', `breakline from ${entityId} (${built.source}, ${built.vertices.length} verts)`);
   return true;
 }
 

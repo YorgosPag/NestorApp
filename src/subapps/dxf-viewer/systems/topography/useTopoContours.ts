@@ -12,8 +12,9 @@
 import { useCallback } from 'react';
 import { useLevels } from '../levels';
 import { completeEntities } from '../../hooks/drawing/completeEntity';
-import { getTopoPoints, getTopoBreaklines } from './TopoPointStore';
-import { generateContours } from './contour-generator';
+import { getTopoPoints } from './TopoPointStore';
+import { getTopoSurface } from './topo-surface';
+import { generateContoursFromSurface } from './contour-generator';
 import { buildContourEntities } from './topo-to-entities';
 import { ensureContourLayers } from './ensure-contour-layers';
 import { DEFAULT_CONTOUR_CONFIG, type ContourConfig } from './contour-config';
@@ -44,7 +45,8 @@ export function useTopoContours(): UseTopoContours {
       const points = getTopoPoints();
       if (points.length < 3) return { ...EMPTY, reason: 'too-few-points' };
 
-      const { contours } = generateContours(points, getTopoBreaklines(), config);
+      // ADR-650 M4 — contour the ONE memoised surface (same instance the 3D terrain renders).
+      const { contours } = generateContoursFromSurface(getTopoSurface(), config);
       if (contours.length === 0) return { ...EMPTY, reason: 'no-contours' };
 
       const layers = ensureContourLayers(getLevelScene, setLevelScene, levelId);

@@ -6081,5 +6081,14 @@
       "removed": "Boundary cleared — volumes cover the whole survey.",
       "notClosed": "That line is not closed — a boundary must have an inside."
     }
+  },
+  "topoBreakline": {
+    "status": {
+      "awaitingEntity": "Pick a drawing line to use as a breakline",
+      "addedElevation": "Breakline added (elevation from the line) · total: {count}",
+      "addedProximity": "Breakline added (elevation from the nearest points) · total: {count}",
+      "removed": "Breakline removed · total: {count}",
+      "needsPoints": "Load survey points first — a 2D line carries no elevation"
+    }
   }
 }

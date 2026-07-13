@@ -6,6 +6,7 @@ import { renderSceneFrame, type RenderFrameContext } from './scene-render-frame'
 import { DxfBackdropCache } from './dxf-backdrop-cache';
 import { BimSceneLayer } from './BimSceneLayer';
 import { Cinema4DGridFloor } from './grid/cinema4d-grid-floor'; // ADR-558 — Cinema-4D-style ground grid
+import type { TerrainSceneLayer } from './terrain/TerrainSceneLayer'; // ADR-650 M4 — topographic surface
 import type { PerformanceCollector } from '../performance/PerformanceCollector'; import type { IdleDetector } from '../lighting/idle-detector';
 import type { QualityModulator } from '../lighting/quality-modulator'; import type { SSAOModulator } from '../lighting/ssao-modulator';
 import type { ShadowModulator } from '../lighting/shadow-modulator';
@@ -66,6 +67,7 @@ export class ThreeJsSceneManager {
   readonly viewport: ViewportCamera;
   readonly bimLayer: BimSceneLayer;
   private readonly gridFloor: Cinema4DGridFloor; // ADR-558 — Cinema-4D-style ground grid (post-FX underlay)
+  private readonly terrainLayer: TerrainSceneLayer; // ADR-650 M4 — topographic surface (TIN → mesh)
   readonly dxfConverter: DxfToThreeConverter;
   readonly selectionHighlighter: BimSelectionHighlighter;
   // ADR-538 hover silhouette / ADR-539 per-face overlays (Cinema4D «Polygon Mode»).
@@ -171,7 +173,7 @@ export class ThreeJsSceneManager {
     this.selectionHighlighter = parts.selectionHighlighter; this.hoverHighlighter = parts.hoverHighlighter;
     this.faceHighlighter = parts.faceHighlighter; this.faceHoverHighlighter = parts.faceHoverHighlighter;
     this.stairSubElementHighlighter = parts.stairSubElementHighlighter; this.stairSubUnsub = parts.stairSubUnsub;
-    this.poi = parts.poi; this.gridFloor = parts.gridFloor;
+    this.poi = parts.poi; this.gridFloor = parts.gridFloor; this.terrainLayer = parts.terrainLayer;
     this.animationManager = parts.animationManager; this.canonicalViewService = parts.canonicalViewService;
     this.keyboardFocusManager = parts.keyboardFocusManager; this.focusOutlineRenderer = parts.focusOutlineRenderer;
     this.focusUnsub = parts.focusUnsub; this.viewCube = parts.viewCube;
@@ -472,6 +474,7 @@ export class ThreeJsSceneManager {
     this.faceHighlighter.dispose(); this.faceHoverHighlighter.dispose(); this.dxfBackdrop.dispose(); // ADR-539 + ADR-516 Phase 2 — release face overlays + backdrop cache.
     this.stairSubUnsub(); this.stairSubElementHighlighter.dispose(); // ADR-358 Q19 — drop store subs + release the sub-element overlay.
     this.gridFloor.dispose(); // ADR-558 — unregister overlay + free grid geometry/material.
+    this.terrainLayer.dispose(); // ADR-650 M4 — drop store subs + free the terrain mesh geometry.
     // ADR-040 Phase XXIII — no rafHandle: scheduler unregister happens in BimViewport3D
     // BEFORE dispose() is invoked, guaranteeing no in-flight tick can race with teardown.
     disposeSceneManagerResources({

@@ -12,10 +12,24 @@
 
 import * as React from 'react';
 import { useTranslation } from '@/i18n';
-import { setTopoPoints } from '../../../systems/topography/TopoPointStore';
+import {
+  setTopoPoints,
+  setTopoBreaklines,
+  getTopoBreaklines,
+  subscribeTopo,
+} from '../../../systems/topography/TopoPointStore';
+import { toolStateStore, useActiveTool } from '../../../stores/ToolStateStore';
 import { parseTopoPoints } from '../../../systems/topography/parse-topo-points';
 import { useTopoContours } from '../../../systems/topography/useTopoContours';
+import {
+  getTerrain3DState,
+  setTerrain3DVisible,
+  setTerrain3DStyle,
+  subscribeTerrain3D,
+} from '../../../systems/topography/terrain-3d-store';
 import { DEFAULT_CONTOUR_CONFIG } from '../../../systems/topography/contour-config';
+import { TopoImportWizard } from './TopoImportWizard';
+import { TopoCutFillSection } from './TopoCutFillSection';
 import styles from './TopographyPanel.module.css';
 
 /** Load state after a file has been parsed. */
@@ -28,10 +42,41 @@ export function TopographyPanel(): React.JSX.Element {
   const { t } = useTranslation('dxf-viewer-panels');
   const { generate } = useTopoContours();
 
+  // ADR-650 M2-Β — οι breaklines ζουν στο vanilla TopoPointStore· το panel είναι LOW-freq
+  // consumer (ADR-040: επιτρεπτό `useSyncExternalStore` — δεν είναι canvas orchestrator).
+  const breaklines = React.useSyncExternalStore(subscribeTopo, getTopoBreaklines, getTopoBreaklines);
+  const activeTool = useActiveTool();
+  const breaklineToolActive = activeTool === 'topo-breakline';
+
+  const onToggleBreaklineTool = React.useCallback(() => {
+    if (breaklineToolActive) toolStateStore.deselectTool();
+    else toolStateStore.selectTool('topo-breakline');
+  }, [breaklineToolActive]);
+
+  // ADR-650 M4 — 3D terrain display state (Civil 3D «Surface Style»: the survey is untouched,
+  // only how the derived surface is drawn). LOW-freq consumer — same contract as `breaklines`.
+  const terrain3d = React.useSyncExternalStore(subscribeTerrain3D, getTerrain3DState, getTerrain3DState);
+  const hypsometric = terrain3d.style === 'hypsometric';
+
+  const onToggleTerrain = React.useCallback(() => {
+    setTerrain3DVisible(!getTerrain3DState().visible);
+  }, []);
+
+  const onToggleHypsometric = React.useCallback(() => {
+    setTerrain3DStyle(getTerrain3DState().style === 'hypsometric' ? 'shaded' : 'hypsometric');
+  }, []);
+
   const [intervalM, setIntervalM] = React.useState(DEFAULT_CONTOUR_CONFIG.intervalMm / 1000);
   const [majorEvery, setMajorEvery] = React.useState(DEFAULT_CONTOUR_CONFIG.majorEvery);
   const [load, setLoad] = React.useState<LoadInfo | null>(null);
   const [status, setStatus] = React.useState<{ text: string; error: boolean } | null>(null);
+  const [wizardOpen, setWizardOpen] = React.useState(false);
+
+  // ADR-650 M2 — the wizard writes straight to TopoPointStore; the panel only mirrors the count.
+  const onImported = React.useCallback((count: number) => {
+    setLoad({ count, skipped: 0 });
+    setStatus(null);
+  }, []);
 
   const onFile = React.useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -70,6 +115,10 @@ export function TopographyPanel(): React.JSX.Element {
       <div className={styles.field}>
         <label className={styles.label} htmlFor="topo-file">{t('topography.loadLabel')}</label>
         <input id="topo-file" className={styles.input} type="file" accept=".csv,.txt,.xyz,.pts" onChange={onFile} />
+        {/* ADR-650 M2 — the wizard road: any column order / delimiter / unit, plus Excel and DXF. */}
+        <button type="button" className={styles.generateButton} onClick={() => setWizardOpen(true)}>
+          {t('topography.import.open')}
+        </button>
         {load && (
           <p className={styles.status}>
             {t('topography.status.loaded', { count: load.count })}
@@ -95,6 +144,30 @@ export function TopographyPanel(): React.JSX.Element {
         </div>
       </div>
 
+      {/* ADR-650 M2-Β — breaklines: μαρκάρεις υπάρχουσες γραμμές του σχεδίου ως constraints
+          (η επιφάνεια κρατά το κοφτό σκαλί αντί να το εξομαλύνει). */}
+      <section className={styles.field}>
+        <h3 className={styles.label}>{t('topography.breakline.title')}</h3>
+        <p className={styles.subtitle}>{t('topography.breakline.hint')}</p>
+        <div className={styles.row}>
+          <button
+            type="button"
+            className={`${styles.generateButton} ${breaklineToolActive ? styles.toolActive : ''}`}
+            onClick={onToggleBreaklineTool}
+            aria-pressed={breaklineToolActive}
+          >
+            {t(breaklineToolActive ? 'topography.breakline.stop' : 'topography.breakline.pick')}
+          </button>
+          <button
+            type="button" className={styles.generateButton}
+            onClick={() => setTopoBreaklines([])} disabled={breaklines.length === 0}
+          >
+            {t('topography.breakline.clear')}
+          </button>
+        </div>
+        <p className={styles.status}>{t('topography.breakline.count', { count: breaklines.length })}</p>
+      </section>
+
       <button
         type="button" className={styles.generateButton}
         onClick={onGenerate} disabled={!load || load.count < 3}
@@ -102,8 +175,42 @@ export function TopographyPanel(): React.JSX.Element {
         {t('topography.generate')}
       </button>
 
+      {/* ADR-650 M4 — η ίδια επιφάνεια που κόβει τις ισοϋψείς, ως στερεό στην 3Δ όψη.
+          Το «υψομετρικό» είναι analysis style (Civil 3D Elevation Banding): χρωματίζει τα
+          υψόμετρα, ΔΕΝ αλλάζει την τριγωνοποίηση. */}
+      <section className={styles.field}>
+        <h3 className={styles.label}>{t('topography.terrain3d.title')}</h3>
+        <p className={styles.subtitle}>{t('topography.terrain3d.hint')}</p>
+        <div className={styles.row}>
+          <button
+            type="button"
+            className={`${styles.generateButton} ${terrain3d.visible ? styles.toolActive : ''}`}
+            onClick={onToggleTerrain}
+            aria-pressed={terrain3d.visible}
+          >
+            {t(terrain3d.visible ? 'topography.terrain3d.hide' : 'topography.terrain3d.show')}
+          </button>
+          <button
+            type="button"
+            className={`${styles.generateButton} ${hypsometric ? styles.toolActive : ''}`}
+            onClick={onToggleHypsometric}
+            aria-pressed={hypsometric}
+            disabled={!terrain3d.visible}
+          >
+            {t('topography.terrain3d.hypsometric')}
+          </button>
+        </div>
+      </section>
+
+      {/* ADR-650 M6 — όγκοι εκσκαφών/επιχώσεων πάνω στην ΙΔΙΑ επιφάνεια (τρίτο style: cut/fill). */}
+      <TopoCutFillSection />
+
       {status && (
         <p className={`${styles.status} ${status.error ? styles.statusError : ''}`}>{status.text}</p>
+      )}
+
+      {wizardOpen && (
+        <TopoImportWizard onClose={() => setWizardOpen(false)} onImported={onImported} />
       )}
     </section>
   );

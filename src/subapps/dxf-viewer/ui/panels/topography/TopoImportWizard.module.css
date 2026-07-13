@@ -1,0 +1,185 @@
+/* ADR-650 Milestone 2 — Import wizard styles. No inline styles (N.3). */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 45%);
+  /* Above the floating panels (1700) — the wizard is modal. */
+  z-index: 1800;
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(760px, 92vw);
+  max-height: 86vh;
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--background, #1e1e1e);
+  color: inherit;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 45%);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: inherit;
+}
+
+.iconButton:hover {
+  background: rgb(255 255 255 / 10%);
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 180px;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.hint {
+  margin: 0;
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.summary {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.tableScroll {
+  overflow: auto;
+  max-height: 320px;
+  border-radius: 4px;
+  border: 1px solid rgb(255 255 255 / 12%);
+}
+
+.previewTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.headCell {
+  position: sticky;
+  top: 0;
+  padding: 6px;
+  text-align: left;
+  vertical-align: top;
+  background: rgb(255 255 255 / 6%);
+  min-width: 120px;
+}
+
+.headLabel {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cell {
+  padding: 4px 6px;
+  white-space: nowrap;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+  font-variant-numeric: tabular-nums;
+}
+
+.status {
+  margin: 0;
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.statusError {
+  color: #e05c4a;
+  opacity: 1;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.button,
+.primaryButton {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.primaryButton {
+  border: none;
+  background: #2f6fd0;
+  color: #fff;
+}
+
+.button:disabled,
+.primaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

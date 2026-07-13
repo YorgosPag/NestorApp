@@ -2,6 +2,8 @@
 
 **STATUS: ACTIVE**
 
+**🆕 CHECK 3.28 in-file clone — `ThreeJsSceneManager` sync signatures (2026-07-13, discovered while batch-committing ADR-650 τοπογραφία):** `jscpd --diff` βρίσκει **1 clone pair** (6 γρ. / 57 tokens) ΜΕΣΑ στο `src/subapps/dxf-viewer/bim-3d/scene/ThreeJsSceneManager.ts`: οι μέθοδοι `syncBimEntities` (γρ. 293-298) και `syncBimEntitiesMultiFloor` (γρ. 322-327) επαναλαμβάνουν την ΙΔΙΑ λίστα 5 positional params (`floors` / `buildings` / `activeBuildingId` / `buildingVisModes` / `floorVisModes`) με τα ίδια defaults. **Προϋπάρχον** — το ADR-650 άγγιξε μόνο 4 γραμμές του αρχείου (terrain layer wiring)· το jscpd το βλέπει επειδή το αρχείο μπήκε στο diff. Το σωστό fix (ένα `FloorVisibilityScope` options object αντί για 5 positional params) αλλάζει **δημόσια signatures** → χτυπά `ISceneManager` + τα mocks του + τα 3 call sites στο `bim3d-resync.ts` = **>1h, 4+ αρχεία**. Committed με `SKIP_JSCPD_DIFF=1` (justified).
+
 **🆕 CHECK 3.28 cross-file clone — polygon/footprint grip resize (2026-07-08, discovered while batch-committing ADR-602 grip field-bag files):** `jscpd --diff` found **15 clone pairs** between 4 files that all emit resize/edge grips for polygon-footprint BIM entities:
 - `src/subapps/dxf-viewer/bim/mep-underfloor/mep-underfloor-grips.ts`
 - `src/subapps/dxf-viewer/bim/roofs/roof-grips.ts`

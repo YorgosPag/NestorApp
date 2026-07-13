@@ -27,6 +27,7 @@ import { useMepSegmentTool } from '../drawing/useMepSegmentTool';
 import { useMepRiserTool } from '../drawing/useMepRiserTool';
 import { useRailingTool } from '../drawing/useRailingTool';
 import { useHatchAreaLabelTool } from '../drawing/useHatchAreaLabelTool';
+import { useTopoBreaklineTool, useTopoBoundaryTool } from '../drawing/useTopoBreaklineTool';
 import { useToolLifecycle } from './useToolLifecycle';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import { addMepFixtureToScene } from '../../bim/mep-fixtures/add-mep-fixture-to-scene';
@@ -333,6 +334,14 @@ export function useSpecialToolsPlacementTools(
   // Το κλικ το χειρίζεται το `handleHatchAreaLabelClick` πάνω στο vanilla store (ADR-040
   // event-time read), οπότε δεν επιστρέφεται tool object — μόνο activate/deactivate reset.
   useHatchAreaLabelTool(activeTool === 'hatch-area-label');
+
+  // ADR-650 M2-Β — «Γραμμές ασυνέχειας»: lifecycle-only (status hint + hover cleanup).
+  // Το κλικ το χειρίζεται το `handleTopoBreaklineClick` πάνω στο vanilla `TopoPointStore`.
+  useTopoBreaklineTool(activeTool === 'topo-breakline');
+
+  // ADR-650 M6 (Γ) — «Όριο οικοπέδου»: lifecycle-only (status hint + hover cleanup).
+  // Το κλικ το χειρίζεται το `handleTopoBoundaryClick` πάνω στο vanilla `TopoPointStore`.
+  useTopoBoundaryTool(activeTool === 'topo-boundary');
 
   return {
     mepFixtureTool,

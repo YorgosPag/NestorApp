@@ -37,6 +37,11 @@ export interface Breakline {
   readonly vertices: readonly TopoPoint[];
   /** When true, the first and last vertices are also joined by a constrained edge. */
   readonly closed?: boolean;
+  /**
+   * ADR-650 M2-Β: the scene entity this breakline was picked from (`'topo-breakline'` tool).
+   * Absent for breaklines that did not come from a drawing entity (e.g. a future file import).
+   */
+  readonly sourceEntityId?: string;
 }
 
 /** LOCAL-origin offset: subtract from world to get local; add to local to get world. */
@@ -76,6 +81,69 @@ export interface TinSurface {
    * Kept for QA/diagnostics; these produce no contour crossings (ADR-650 §5 trap).
    */
   readonly flatTriangleCount: number;
+}
+
+/**
+ * How the derived surface is SHADED in 3D (ADR-650 M4/M6) — the Civil 3D «Surface Style» axis:
+ *   - `shaded`      — one flat earth material (Revit Toposolid / ArchiCAD Mesh default).
+ *   - `hypsometric` — per-vertex colour by elevation (Civil 3D «Elevation Banding» analysis).
+ *   - `cutfill`     — per-vertex colour by Δz against the volume reference (Civil 3D «Cut/Fill
+ *                     analysis»): red where earth is removed, blue where it is added, pale on
+ *                     the zero line. M6 — needs a reference, so it reads `cut-fill-store`.
+ * The TRIANGULATION is identical in all three — only the appearance changes.
+ */
+export type TerrainSurfaceStyle = 'shaded' | 'hypsometric' | 'cutfill';
+
+// ─── ADR-650 M6 — volumes (cut / fill) ────────────────────────────────────────
+
+/**
+ * WHICH surface a definition/TIN belongs to (Civil 3D keeps a named Surface collection):
+ *   - `existing` — the surveyed ground («υπάρχον»), the one M1–M4 already build.
+ *   - `proposed` — the designed ground («μελετημένο»), imported the same way, used as the
+ *     volume reference in surface-vs-surface mode.
+ * Each id owns its own DEFINITION and therefore its own derived TIN — never a second
+ * triangulation of the SAME definition (that invariant is what `topo-surface.ts` guards).
+ */
+export type TopoSurfaceId = 'existing' | 'proposed';
+
+/** The raw definition of one surface: what the user supplied, never what we derived. */
+export interface TopoDefinition {
+  readonly points: readonly TopoPoint[];
+  readonly breaklines: readonly Breakline[];
+}
+
+/**
+ * The site boundary (Civil 3D «volume boundary»): earthworks are counted ONLY inside it.
+ * Vertices are WORLD canonical mm, implicitly closed (last → first). Picked from a closed
+ * polyline already drawn on the plan, so the οικόπεδο stays a single source of truth.
+ */
+export interface TopoBoundary {
+  readonly vertices: readonly Point2D[];
+  /** The scene entity the boundary was picked from (toggle off on a second click). */
+  readonly sourceEntityId?: string;
+}
+
+/** Against WHAT the ground is compared — the two roads the big players offer. */
+export type CutFillReferenceMode = 'datum' | 'surface';
+
+/**
+ * The earthworks answer. Volumes are canonical mm³ (ADR-462) — the m³ the user reads is a
+ * PRESENTATION conversion done once at the UI edge, never baked in here.
+ *
+ * `cut` = ground ABOVE the reference (excavate). `fill` = ground BELOW it (import earth).
+ * `net > 0` → surplus soil to haul away· `net < 0` → soil must be brought in.
+ */
+export interface CutFillResult {
+  readonly cutVolumeMm3: number;
+  readonly fillVolumeMm3: number;
+  /** cut − fill. The number the contractor actually prices (haul-away vs import). */
+  readonly netVolumeMm3: number;
+  /** PLAN areas (footprint), not slope areas — the convention Civil 3D reports. */
+  readonly cutAreaMm2: number;
+  readonly fillAreaMm2: number;
+  readonly evaluatedTriangles: number;
+  /** Triangles the reference could not answer for (outside the proposed surface) or degenerate. */
+  readonly skippedTriangles: number;
 }
 
 /** A single contour crossing segment within ONE triangle (LOCAL frame). */

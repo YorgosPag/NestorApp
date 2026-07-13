@@ -1,6 +1,6 @@
 # ADR-650 — Τοπογραφικές Αποτυπώσεις & Ισοϋψείς Γραμμές (Έρευνα Αγοράς + Αρχιτεκτονικό Blueprint)
 
-- **Status**: 🟡 IN PROGRESS — **Milestone 1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· βλ. changelog v4). Έρευνα §1–§11 & roadmap §12.1 παραμένουν το blueprint για M2–M4.
+- **Status**: 🟡 IN PROGRESS — **M1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· v4) · **M2 IMPLEMENTED** (μέρος Α import wizard· v5 — μέρος Β breakline picking· v6) · **M4 IMPLEMENTED** (3Δ όψη εδάφους: μοναδικό derived TIN → `BufferGeometry` mesh + hypsometric· v7) · **M6 IMPLEMENTED** (όγκοι cut/fill: prisms + daylight split + στάθμη/επιφάνεια/όριο + cross-check + 3Δ cut/fill style· v8, §12.4). **Εκκρεμούν**: M3 (smoothing/LOD), M5 (AI), M7 (ελληνικό export), M8. Έρευνα §1–§11 & roadmap §12.2 παραμένουν το blueprint.
 - **Date**: 2026-07-13
 - **Category**: DXF Viewer / Topography / Research
 - **Σχετικά**: ADR-635 (culling gap σε geo-referenced συντεταγμένες ±1e6), ADR-462 (canonical mm),
@@ -352,17 +352,99 @@ false-flat handling) → **d3-tricontour** contours (major/minor) → **native P
 
 | Φάση | Τίτλος | Τι περιλαμβάνει | Big-player πρακτική | Κύριο SSoT reuse | Νέες άδειες |
 |------|--------|-----------------|--------------------|--------------------|-------------|
-| **M2** | **Import Wizard** (Q9) | Column-mapping CSV/TXT/Excel (PNEZD/PENZD/…, delimiter, units, σειρά στηλών) + DXF POINT/TEXT extraction → `TopoPointStore`. Breakline picking (mark υπάρχουσες polylines ως constraints). | Civil 3D «Field to Finish» point import· CASS column reorder (§7 pain-point → κάν'το UX win) | υπάρχων DXF parser (`utils/dxf-entity-parser.ts`)· `parse-topo-points.ts` (extend)· `TopoPointStore` | — (SheetJS αν Excel = Apache-2.0 ✅) |
+| **M2** ✅ | **Import Wizard** (Q9) | Column-mapping CSV/TXT/Excel (PNEZD/PENZD/…, delimiter, units, σειρά στηλών) + DXF POINT/TEXT extraction → `TopoPointStore`. Breakline picking (mark υπάρχουσες polylines ως constraints) — **DONE, changelog v5 (μέρος Α) + v6 (μέρος Β)**. | Civil 3D «Field to Finish» point import· CASS column reorder (§7 pain-point → κάν'το UX win) | υπάρχων DXF parser (`utils/dxf-entity-parser.ts`)· `parse-topo-points.ts` (extend)· `TopoPointStore` | — (SheetJS αν Excel = Apache-2.0 ✅) |
 | **M3** | **Smoothing switch + LOD** (Q5) | Διακόπτης «ακριβείς↔όμορφες»· smoothing = **display layer πάνω** στις raw (chaikin/curveCatmullRom) + **self-intersection guard**· contour simplification (Douglas-Peucker) + LOD ανά zoom (Q3 μεγάλες εκτάσεις). Κλείδωμα στο ακριβές για νόμιμο export. | GRASS RST / d3-shape curve· Global Mapper simplify· «regularize-then-contour» | `contour-chainer` output· `core/spatial/` (LOD queries)· render pipeline | `chaikin-smooth` (MIT ✅) ή `d3-shape` (ISC ✅)· `simplify-js` (BSD ✅) |
-| **M4** | **3D όψη εδάφους** (Q8) | TIN → `BufferGeometry` mesh (Z=υψόμετρο)· «γύρνα τον λόφο»· RTIN LOD για μεγάλες εκτάσεις. **Παράγωγο του ΙΔΙΟΥ TIN** (μηδέν διπλή πηγή). | Revit Toposolid· C4D volume mesh· Martini/RTIN | `bim-3d` engine (three.js, ADR-366/645)· `TinSurface` (M1)· vertical-datum/scale SSoT | `martini` (ISC ✅) — υπάρχον `three` |
+| **M4** ✅ | **3D όψη εδάφους** (Q8) | TIN → `BufferGeometry` mesh (Z=υψόμετρο)· «γύρνα τον λόφο»· hypsometric elevation banding. **Παράγωγο του ΙΔΙΟΥ TIN** (μηδέν διπλή πηγή — επιβάλλεται από `topo-surface.ts`). **DONE, changelog v7.** RTIN LOD (martini) **ΔΕΝ** μπήκε: καμία μετρημένη ανάγκη ακόμη (§12.3) — dependency μόνο όταν αποδειχθεί. | Civil 3D Surface + Surface Style· Revit Toposolid· C4D | `bim-3d` engine (three.js, ADR-366/645)· `TinSurface` (M1)· `dxfPlanToWorld` + `MaterialCatalog3D` + `disposeObjectTree` | **καμία νέα** — υπάρχον `three` |
 | **M5** | **AI καμπανάκι + «μίλα στο σχέδιο»** (Q7 #1-2) | (α) Background QA rules engine (elevation busts, COGO closure, outliers, missing breaklines) με inline flags· (β) NL editing («interval 0.5m», «σβήσε spikes») = LLM tool-calling πάνω στο υπάρχον command SSoT. **AI-accelerant/human-certifier.** | Bentley Label-Optimizer· TBC blunder detection· SuperMap/DeepSeek NL assistant | `ai-assistant/` (`match-tool-definitions`, `dxf-openai-call`)· command SSoT· worker | ONNX-web (MIT)/Transformers.js (Apache) μόνο αν χρειαστεί client-ML |
-| **M6** | **Όγκοι cut/fill** (Q1) | Triangular-prism `V=A·(Δz₁+Δz₂+Δz₃)/3`, O(n)· cross-section/profile (triangle-walk)· cross-check μεθόδων (§7 CASS). **IN-HOUSE** (δεν υπάρχει permissive lib). | Civil 3D volumes· CASS 3-method cross-check | `TinSurface` (M1)· `polygon-utils` (area)· `bim/schedule` (BOQ output) | — (in-house) |
+| **M6** ✅ | **Όγκοι cut/fill** (Q1) | Triangular-prism πάνω στο TIN + **daylight split** + προαιρετικό **όριο οικοπέδου** + αναφορά **στάθμη Ή μελετημένη επιφάνεια** + **cross-check με κάνναβο** (§7 CASS) + 3Δ **cut/fill analysis style**. **DONE, changelog v8.** BOQ output **ΔΕΝ** μπήκε: το έδαφος δεν είναι entity → δεν υπάρχει `sourceEntityId` να κρεμαστεί γραμμή (βλ. §12.4) — μεταφέρεται σε M4b/M7. | Civil 3D Volumes Dashboard· CASS 3-method cross-check | `TinSurface` (M1)· `polygon-utils` (area/centroid/S-H clip)· `marching-triangles` (crossEdge)· `scene-units` (mm³→m³) | — (in-house, **καμία νέα**) |
 | **M7** | **Ελληνικό export → «ένα κουμπί → φάκελος»** (Q1, Q7 #3) | Πίνακας συντεταγμένων ΕΓΣΑ'87· DXF Κτηματολογίου (layer schema)· ψηφιακά υπογεγραμμένο PDF· auto tolerance-check (§10 ανοχές)· δήλωση Ν.651/1977· εντός/εκτός σχεδίου. | CASS cadastral output· ελληνικά add-ons (ΕΓΣΑ'87-dependent) | export pipeline (DXF/PDF)· `enterprise-id`· §10 constants (νέο `egsa-config`) | pdf-lib (MIT ✅)· proj4 (MIT ✅ για ΕΓΣΑ'87) |
 | **M8+** | **Point clouds / moonshots** | drone/LiDAR (AI ground-filter CSF/KPConv server), auto-breakline detection, multiplayer (CRDT), Gaussian-Splat visualization layer. | §6, §9 differentiators | worker split (client/server)· Potree | CSF (Apache ✅), Potree (BSD-2 ✅) — server-GPU για heavy ML |
 
 **Εξαρτήσεις/σειρά:** M2 (input) → M3 (display) → M4 (3D) είναι ανεξάρτητα-παράλληλα δυνατά μετά το M1.
 M5 (AI) θέλει ώριμο core. M6 (όγκοι) θέλει μόνο το TIN (M1) → μπορεί νωρίς. M7 (export) θέλει M1+M6 για
 πλήρη φάκελο. Προτεινόμενη σειρά υλοποίησης: **M2 → M4 → M6 → M3 → M5 → M7 → M8**, αλλά ο Giorgio ορίζει.
+
+---
+
+### 12.3 M4 — Η αρχιτεκτονική απόφαση: το έδαφος είναι **Surface + Style**, όχι entity (ακόμη)
+
+**Η ερώτηση:** το έδαφος είναι BIM entity (Revit **Toposolid**) ή standalone 3Δ layer;
+
+**Τι κάνουν ΠΡΑΓΜΑΤΙΚΑ οι μεγάλοι (Civil 3D — το domain του τοπογραφικού):** το `Surface` είναι
+αντικείμενο με **Definition** (σημεία + breaklines + boundaries). Η τριγωνοποίηση **δεν αποθηκεύεται** —
+είναι **derived** και ξαναχτίζεται («Rebuild Surface»). Το **τι βλέπεις** το ορίζει το **Surface Style**:
+ισοϋψείς, τρίγωνα, elevation banding, 3D faces — **όλα από την ίδια μία επιφάνεια**.
+
+**Απόφαση:** υιοθετούμε **αυτό ακριβώς** το μοντέλο, όχι μια δική μας παραλλαγή:
+
+| Civil 3D | Εδώ |
+|---|---|
+| Surface **Definition** | `TopoPointStore` (σημεία + breaklines) — **η μία πηγή αλήθειας** |
+| Derived TIN («Rebuild Surface») | **`topo-surface.ts` → `getTopoSurface()`** — memoised στο identity του store |
+| Surface **Style**: contours | `generateContoursFromSurface()` → native lwpolyline entities (M1) |
+| Surface **Style**: 3D faces / elevation banding | `tinToBufferGeometry()` → `TerrainSceneLayer` (M4) |
+
+**Το κρίσιμο εύρημα του SSoT audit:** πριν το M4 **δεν υπήρχε καθόλου κοινό derived TIN** — ο `buildTin()`
+καλούνταν **μόνο** μέσα στον `contour-generator`. Αν το 3Δ τον καλούσε ξεχωριστά, θα υπήρχαν **δύο
+τριγωνοποιήσεις** και το ανάγλυφο θα μπορούσε να διαφωνεί σιωπηλά με τις ισοϋψείς. Το `topo-surface.ts`
+είναι η διόρθωση αυτού του κενού και **επιβάλλεται από test** (`topo-surface.test.ts`: οι δύο καταναλωτές
+παίρνουν το **ίδιο instance**).
+
+**Γιατί layer και ΟΧΙ entity (προς το παρόν):** στη Revit/Civil 3D η επιφάνεια είναι element **επειδή η
+Definition της ζει πάνω στο element**. Εδώ η Definition ζει στο `TopoPointStore` — ένα entity που απλώς
+τυλίγει ένα store **δεν** είναι BIM citizen, είναι **δεύτερη πηγή αλήθειας**. Άρα το M4 δίνει το ορατό
+αποτέλεσμα ως standalone layer (ίδια πολιτειότητα με το DXF underlay / C4D grid), με τον converter
+**pure** (`TinSurface → BufferGeometry`, μηδέν εξάρτηση από entity/scene).
+
+**M4b (μελλοντικό) — προαγωγή σε Toposolid:** ΠΡΩΤΑ μεταφέρεται η Definition (points/breaklines) πάνω στο
+element, ΜΕΤΑ μπαίνει `RenderableEntityType 'terrain'` + `ENTITY_RENDER_CONTRACTS` + `BIM_3D_CONVERTER_TYPES`
+(+ persistence + 2Δ αναπαράσταση — τα contours γίνονται *style* του element αντί για baked entities).
+**Δεν απαιτεί ξαναγράψιμο γεωμετρίας** — ο `tinToBufferGeometry` μένει ως έχει.
+
+---
+
+### 12.4 M6 — Όγκοι: η αναφορά είναι **interface**, όχι mode· και γιατί το BOQ ΔΕΝ κούμπωσε
+
+**Η ερώτηση (Giorgio, 2026-07-13):** ως προς τι συγκρίνουμε; Απάντηση: **και τα τρία** — (Α) στάθμη,
+(Β) μελετημένη επιφάνεια, (Γ) εντός ορίου οικοπέδου.
+
+**Η απόφαση που τα κάνει ΕΝΑ σύστημα αντί για τρία:** ο πυρήνας δεν μαθαίνει ποτέ *τι* είναι η αναφορά.
+Ρωτά **μία** ερώτηση — «τι υψόμετρο-στόχο έχεις σε αυτό το σημείο;» (`ElevationReference.zAtMm`) — και
+η στάθμη (`datumReference`) και το μελετημένο έδαφος (`surfaceReference`, barycentric δειγματοληψία του
+2ου TIN) είναι **δύο απαντήσεις**, όχι δύο μηχανές. Τρίτη αναφορά (κεκλιμένο επίπεδο, οδικός άξονας)
+μπαίνει χωρίς **καμία** αλλαγή στον `computeCutFill`. Το όριο (Γ) είναι **ορθογώνιος** άξονας: ισχύει και
+στις δύο αναφορές.
+
+| Ρόλος | Αρχείο | Σημείωση |
+|---|---|---|
+| Πυρήνας (prism + daylight + boundary) | `systems/topography/cut-fill.ts` | pure· O(n) |
+| Γεωμετρία (plane fit, split, όγκος κομματιού) | `cut-fill-geometry.ts` | reuse `polygonArea`/`polygonAreaCentroid`/`crossEdge` |
+| Δειγματοληψία TIN (barycentric + grid index) | `tin-sampler.ts` | «z σε αυτό το σημείο», `null` εκτός |
+| 2η μέθοδος (κάνναβος) — CASS cross-check | `cut-fill-crosscheck.ts` | μηδέν κοινός κώδικας με τον πυρήνα· αλλιώς δεν είναι έλεγχος |
+| Ερώτηση + απάντηση (state) | `cut-fill-store.ts` | κάθε αλλαγή αποτύπωσης **ακυρώνει** το αποτέλεσμα (όχι stale νούμερα) |
+| Όριο (pick κλειστής polyline) | `topo-boundary-pick.ts` + `canvas-click-topo-boundary.ts` | εργαλείο `topo-boundary`, toggle (mirror M2-Β) |
+| 3Δ ανάλυση (κόκκινο/μπλε) | `TerrainSurfaceStyle` **+`cutfill`** | ο ίδιος TIN, **τρίτο style** — γι' αυτό έγινε style-driven το M4 |
+
+**Η μία σιωπηλή παγίδα (και γιατί υπάρχει test γι' αυτήν):** τρίγωνο με **ΚΑΙ** θετικά **ΚΑΙ** αρνητικά
+Δz τέμνει τη γραμμή μηδενικής διαφοράς. Χωρίς υποδιαίρεση, εκσκαφή και επίχωση **αλληλοακυρώνονται μέσα
+στο τρίγωνο**: το `net` βγαίνει σωστό, τα cut/fill **και τα δύο μικρότερα** — και κανείς δεν το προσέχει.
+Το `splitByZeroDz` κόβει το τρίγωνο εκεί· το test «DAYLIGHT LINE» απαιτεί **cut > 0 ΚΑΙ fill > 0** και
+πέφτει αν κάποιος το αφαιρέσει.
+
+**Γιατί ο όγκος ΔΕΝ μπήκε στο BOQ (ειλικρινές εύρημα του SSoT audit):** ο μηχανισμός ποσοτήτων
+(`buildBoqBaseRow`) απαιτεί `sourceEntityId` + `sourceEntityType` + Firestore scope — δηλαδή **entity**.
+Το έδαφος είναι **standalone layer, όχι entity** (§12.3). Παράλληλος BOQ μηχανισμός για το έδαφος θα ήταν
+ακριβώς το διπλότυπο που απαγορεύει ο N.12/N.18. Άρα: **ο όγκος ζει στο panel** μέχρι το **M4b** (Toposolid
+→ υπάρχει entity → μία γραμμή BOQ με τον υπάρχοντα builder) ή το **M7** (φάκελος παραδοτέων).
+
+**Ακρίβεια — τι είναι ακριβές και τι είναι προσέγγιση (100% ειλικρίνεια):**
+- (Α) στάθμη: **ακριβές** (Δz γραμμικό σε κάθε τρίγωνο· `V = A · Δz(κέντρο βάρους)` = ολοκλήρωμα).
+- (Β) επιφάνεια-vs-επιφάνεια: **γραμμικοποίηση** — το Δz δειγματοληπτείται στις κορυφές του υπάρχοντος
+  TIN. Όπου οι δύο τριγωνοποιήσεις **τέμνονται**, ο Civil 3D χτίζει *composite surface*· εμείς όχι (ακόμη).
+  Γι' αυτό ακριβώς υπάρχει το **cross-check με κάνναβο**: απόκλιση > 5% → **προειδοποίηση στον χρήστη**,
+  όχι σιωπή.
+- Τρίγωνο που η αναφορά **δεν** καλύπτει → **skipped + μετρημένο**, ποτέ αποτιμημένο ως 0 (θα εφεύρισκε
+  εκσκαφή από το πουθενά).
 
 ---
 
@@ -452,3 +534,174 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
   **ΕΠΟΜΕΝΕΣ ΦΑΣΕΙΣ** (προγραμματισμένες, ΟΧΙ εκτός scope — βλ. §12.2 roadmap): import wizard/CSV
   mapping, smoothing switch, 3D mesh, AI QA, όγκοι cut/fill, ελληνικό export. **Status: PROPOSED →
   Milestone 1 IMPLEMENTED (πυρήνας)· M2–M6 προγραμματισμένα (§12.2).**
+- **2026-07-13 (v5)** — **Milestone 2 μέρος Α: IMPORT WIZARD** (Q9· Phase 3, N.0.1). Η είσοδος έπαψε
+  να είναι μόνο `X Y Z`.
+
+  **Αρχιτεκτονική (big-player, Civil 3D «Point File Formats»): 2 ανεξάρτητα βήματα.**
+  `αρχείο → RawTable` (τι λέει το αρχείο) και `RawTable + ColumnMapping + TopoUnit → TopoPoint[]`
+  (τι σημαίνει). Γι' αυτό ένα column-mapping wizard αρκεί για **κάθε** όργανο, χωρίς parser ανά
+  κατασκευαστή. Κοινή έξοδος και των δύο δρόμων = `TopoPointStore` (μηδέν αλλαγή στον M1 πυρήνα).
+
+  Νέα (`systems/topography/`): `topo-import-types` (RawTable/ColumnMapping/TopoUnit + unit→mm) ·
+  `topo-order-presets` (**PNEZD/PENZD/PNEZ/PENZ/NEZ/ENZ/XYZ/XYZD**) · `topo-delimited-reader`
+  (auto-detect delimiter, quote-aware, header detection) · `topo-column-mapping`
+  (`applyColumnMapping` + `suggestMappingFromHeaders` EL/EN + **`mapRowToPoint` SSoT**) ·
+  `topo-excel-reader` (**υπάρχον `exceljs` MIT, dynamic import** — ΚΑΝΕΝΑ νέο dep· ADR-040 bundle) ·
+  `topo-dxf-points` (`DxfEntityParser` → POINT/TEXT). UI (`ui/panels/topography/`): `useTopoImport`
+  (όλο το state), `TopoImportWizard` (3 βήματα, reuse `WizardProgress`), `TopoColumnMapStep`
+  (preview + **Radix Select**, ADR-001), CSS module· κουμπί «Εισαγωγή σημείων…» στο `TopographyPanel`.
+
+  **ΚΡΙΣΙΜΕΣ ΑΠΟΦΑΣΕΙΣ:**
+  1. **N=Northing=Y, E=Easting=X.** Κωδικοποιείται **ΜΙΑ φορά** (`topo-order-presets`). Το `PNEZD`
+     είναι `id, Y, X, Z, code` — **όχι** `id, X, Y, Z`. Η αντιστροφή καθρεφτίζει την αποτύπωση περί
+     τις 45° και «μοιάζει σωστή» → ships. Ground-truth test το φυλάει.
+  2. **Το DXF διαβάζεται ως ΑΡΧΕΙΟ, όχι από το scene.** Το scene είναι 2D: το `PointEntity` έχει μόνο
+     `position: Point2D` — **κανένα z**. Συγκομιδή από imported entities θα έδινε σιωπηλά **επίπεδη**
+     επιφάνεια. Το υψόμετρο υπάρχει μόνο στα raw group codes → `POINT` = **30**, `TEXT` = label (1)
+     (Civil 3D «elevation from text»). Μόνο η ENTITIES section (ADR-635 Φ2 — όχι BLOCK templates).
+     Το DXF layer γίνεται feature `code` (field-to-finish).
+  3. **`parse-topo-points` (zero-config) ΔΕΝ έγινε delegate του table reader** — έχει σκόπιμα άλλο
+     συμβόλαιο (lenient split ανά γραμμή με ΑΝΑΜΕΙΚΤΟΥΣ delimiters + αρχικοί αριθμοί γραμμών· ο
+     wizard χρειάζεται ΕΝΑΝ delimiter για σταθερές στήλες στο preview). Κεντρικοποιήθηκε το
+     **πραγματικό** κοινό: `mapRowToPoint` (parse/scale/code) — μηδέν twin.
+  4. **`$INSUNITS = 0` (unitless) → μέτρα**, όχι mm. Τα όργανα εξάγουν συχνά unitless· το «1 unit = 1 mm»
+     θα συνέθλιβε ολόκληρο οικόπεδο σε τετράγωνο 1 μ.
+
+  Tests: **+26** (39 συνολικά πράσινα) — PNEZD/PENZD ground-truth + N/E swap, ελληνικά decimals
+  (`384512,345`), units m/mm/ft, delimiter/quote/header detection, POINT z από code 30, TEXT label,
+  2D POINT skip. `jscpd`: **0 clones**. **Νέα deps: ΚΑΜΙΑ.**
+
+  **ΕΚΚΡΕΜΕΙ (M2 μέρος Β):** breakline picking ως **πλήρες tool-mode** (`'topo-breakline'`, πρότυπο
+  ADR-649): pick polyline → constraint. Υψόμετρο: `lwpolyline.elevation` → σταθερό z· αλλιώς
+  **proximity breakline** (z από πλησιέστερο μετρημένο σημείο — Civil 3D pattern, γιατί το 2D scene
+  δεν έχει z). Απαιτεί κεντρικοποίηση `pickTopEntityAt` (γενίκευση του `pickTopHatchAt`, N.18).
+  → **ΟΛΟΚΛΗΡΩΘΗΚΕ στο v6.**
+
+- **2026-07-13 (v6)** — **Milestone 2 μέρος Β: BREAKLINE PICKING ως tool-mode** (Q6· Phase 3, N.0.1).
+  Οι breaklines έπαψαν να είναι «τύπος χωρίς UI»: μαρκάρεις **υπάρχουσες γραμμές του σχεδίου** και
+  γίνονται constrained edges στο CDT (η επιφάνεια κρατά το κοφτό σκαλί — ακμή δρόμου, κορυφογραμμή,
+  τάφρος — αντί να το εξομαλύνει).
+
+  **Νέο εργαλείο `'topo-breakline'`** (`category:'drawing'` ⇒ το mouse-up select block ΔΕΝ τρέχει
+  παράλληλα με τον click handler — ίδιο σκεπτικό με ADR-649· `allowsContinuous` ⇒ πολλές γραμμές στη
+  σειρά). **Σκόπιμα εκτός `TOOL_CREATES_ENTITY`**: γράφει constraint στο `TopoPointStore`, ΔΕΝ
+  δημιουργεί scene entity. **Toggle**: ξανά-κλικ στην ίδια γραμμή την αφαιρεί (`sourceEntityId` στο
+  `Breakline`). Ενεργοποίηση από το `TopographyPanel` (κουμπί «Επιλογή γραμμών» + ζωντανό πλήθος +
+  «Καθαρισμός»).
+
+  Νέα αρχεία: `rendering/hitTesting/pick-top-entity-at.ts` · `systems/topography/topo-breakline-pick.ts` ·
+  `hooks/drawing/useTopoBreaklineTool.ts`. Άγγιξε: `TopoPointStore` (+`removeBreakline`,
+  +`findBreaklineBySourceEntity`, `addBreakline(…, sourceEntityId?)`), `topo-types` (+`sourceEntityId`),
+  `canvas-click-tool-handlers` (+`handleTopoBreaklineClick`), `useCanvasClickHandler` (PRIORITY **1.73**),
+  `tool-definitions`, `ui/toolbar/types`, `useSpecialTools-placement-tools`, `TopographyPanel` (+CSS),
+  i18n el+en (`topoBreakline.status.*` shell, `topography.breakline.*` panels).
+
+  **ΚΡΙΣΙΜΕΣ ΑΠΟΦΑΣΕΙΣ:**
+  1. **Από πού παίρνει z μια breakline** (διάκριση Civil 3D — το scene είναι **2D**, `LineEntity`/
+     `PolylineEntity` ΔΕΝ έχουν z· μόνο το `LWPolylineEntity` έχει `elevation`):
+     **(α) standard** — `elevation` ορισμένο ⇒ ΟΛΕΣ οι κορυφές σε σταθερό z (και δουλεύει **χωρίς**
+     φορτωμένα σημεία). **(β) proximity** — 2D γραμμή ⇒ κάθε κορυφή παίρνει z από το **πλησιέστερο
+     μετρημένο σημείο**. Δεν είναι hack: είναι το καθιερωμένο Civil 3D pattern — η αξία της breakline
+     είναι το **constrained edge**, ακόμη κι όταν το υψόμετρό της είναι παράγωγο. Χωρίς σημεία →
+     `null` + ρητό μήνυμα (`needsPoints`), **ΠΟΤΕ σιωπηλά**. Παγίδα που καρφώθηκε σε test:
+     `elevation: 0` είναι **πραγματικό** υψόμετρο, όχι «λείπει» (falsy trap).
+  2. **Κεντρικοποίηση αντί sibling clone (N.0.2/N.18).** Το `pickTopHatchAt` (ADR-507) ήταν έτοιμο να
+     γίνει δίδυμο ως «pickTopPolylineAt». Αντ' αυτού βγήκε ο κοινός **`pickTopEntityAt(worldPoint,
+     entities, predicate, tol)`** πάνω στο `performDetailedHitTest` (world-coords topmost-pick SSoT)
+     και το `hatch-pick-at` έγινε **delegate** — ίδιο ερώτημα, ένας loop.
+
+  Tests: **+10** (59 συνολικά πράσινα στο topography + tools registry) — standard vs proximity z,
+  `elevation:0`, lwpolyline χωρίς elevation → proximity, refusals (χωρίς σημεία / <2 κορυφές /
+  μη-γραμμική οντότητα). `jscpd:diff`: **0 clones**. **Νέα deps: ΚΑΜΙΑ.**
+
+  **Status: M2 (import wizard + breaklines) IMPLEMENTED· M3–M8 προγραμματισμένα (§12.2).**
+
+- **2026-07-13 (v7)** — **Milestone 4 ΥΛΟΠΟΙΗΘΗΚΕ — 3Δ όψη εδάφους («γύρνα τον λόφο»)** (Phase 3, N.0.1).
+
+  **Το κρίσιμο εύρημα του SSoT audit (ο κώδικας διέψευσε την υπόθεση):** δεν υπήρχε **κανένα** κοινό
+  derived TIN — ο `buildTin()` καλούνταν **μόνο** μέσα στον `contour-generator`. Ένα 3Δ που θα τον
+  καλούσε ξεχωριστά θα δημιουργούσε **δεύτερη τριγωνοποίηση** → το ανάγλυφο θα μπορούσε να διαφωνεί
+  σιωπηλά με τις ισοϋψείς. Άρα το M4 **ξεκίνησε κλείνοντας αυτό το κενό**, όχι γράφοντας mesh.
+
+  **Αρχιτεκτονική = Civil 3D «Surface + Surface Style»** (τεκμηρίωση: **§12.3**). Definition
+  (`TopoPointStore`) → **ένα** derived TIN → **δύο styles**: ισοϋψείς (2Δ) **και** mesh (3Δ).
+
+  **Νέα** (`systems/topography/`): **`topo-surface.ts`** — `getTopoSurface()`, memoised στο identity του
+  store (**ο SSoT του «ποιο είναι το τρέχον TIN»**)· **`terrain-3d-store.ts`** — display state
+  (`visible`/`style`), ξεχωριστό από τη survey definition (re-style ≠ data write).
+  **Νέα** (`bim-3d/`): **`converters/tin-to-three.ts`** — pure `TinSurface → BufferGeometry` (LOCAL→WORLD +
+  plan-mm→three-world + indexed→non-indexed για **faceted** normals — smooth normals θα στρογγύλευαν τα ίδια
+  τα breaklines που το CDT κράτησε κοφτά)· **`converters/terrain-elevation-ramp.ts`** — hypsometric ramp
+  (Civil 3D «Elevation Banding», normalised στο **δικό** της εύρος)· **`scene/terrain/TerrainSceneLayer.ts`**
+  — standalone Object3D layer (ίδιο ownership pattern με `Cinema4DGridFloor`: imperative subs, dispose στο teardown).
+
+  **SSoT reuse (μηδέν νέος μηχανισμός):** `writeDxfPlanToWorld` (νέο **zero-alloc** αδελφάκι του
+  `dxfPlanToWorld` **στο ίδιο αρχείο** — η σύμβαση αξόνων/κλίμακας παραμένει σε **ένα** module, αλλιώς ένας
+  bulk builder θα την ξανα-έγραφε)· `MaterialCatalog3D.getTerrainMaterial3D()` + `MATERIAL_DEFS['elem-terrain']`
+  (**ΟΧΙ** νέο material system)· `disposeObjectTree` (ΟΧΙ νέο dispose)· `generateContoursFromSurface()`
+  (ο παλιός `generateContours` **delegate-άρει** → μηδέν διπλότυπο).
+
+  **Η μία τεκμηριωμένη απόκλιση:** το terrain material είναι **`DoubleSide`** — μοναδικό στο catalog. Κάθε
+  άλλο BIM στερεό είναι **κλειστή** εξώθηση (FrontSide, ADR-366 §B.5), αλλά ένα TIN είναι **ανοιχτή**
+  επιφάνεια: κάμερα κάτω από τον λόφο θα κοιτούσε μέσα από αυτόν. Ακριβώς ό,τι κάνουν Civil 3D 3D-faces /
+  Revit Toposolid. Το overdraw argument δεν ισχύει (μία επιφάνεια, όχι όλο το μοντέλο).
+
+  **Ρητά ΔΕΝ μπήκε:** `martini`/RTIN LOD — καμία **μετρημένη** ανάγκη· dependency μόνο όταν αποδειχθεί
+  (N.5 + οδηγία handoff «πρώτα μέτρησε»). Το έδαφος **δεν** έγινε BIM entity — βλ. **§12.3 / M4b**.
+
+  UI: «Έδαφος σε 3Δ» στο `TopographyPanel` (εμφάνιση/απόκρυψη + υψομετρικός χρωματισμός), i18n el+en.
+  Tests: **+9** πράσινα (`tin-to-three.test.ts` — ground truth σε **κεκλιμένο επίπεδο**: κάθε κορυφή
+  ξανα-προβάλλεται στην εξίσωση του επιπέδου· non-finite → `null` αντί για NaN bounds που θα **μαύριζαν όλη
+  τη σκηνή**, ADR-537· `topo-surface.test.ts` — οι δύο καταναλωτές παίρνουν το **ίδιο instance**).
+  `jscpd:diff`: **0 clones**. **Νέα deps: ΚΑΜΙΑ.**
+
+  **Status: M1 + M2 + M4 IMPLEMENTED· M3, M5–M8 προγραμματισμένα (§12.2).**
+
+- **2026-07-13 (v8)** — **M6 IMPLEMENTED — Όγκοι cut/fill (εκσκαφές / επιχώσεις).** Το παραδοτέο που
+  πληρώνει ο εργολάβος: «πόσα κυβικά σκάβω, πόσα ρίχνω;» — και **τα τρία** πεδία σύγκρισης που ζήτησε ο
+  Giorgio, ως **ΕΝΑΣ** μηχανισμός (§12.4): (Α) ως προς **στάθμη**, (Β) ως προς **μελετημένη επιφάνεια**,
+  (Γ) **εντός ορίου** οικοπέδου. Η αναφορά είναι **interface** (`ElevationReference.zAtMm`), όχι mode·
+  ο πυρήνας δεν ξέρει ποτέ αν πίσω του κρύβεται στάθμη ή δεύτερο TIN.
+
+  **Μέθοδος (Civil 3D «Volumes Dashboard»):** triangular prisms πάνω στον **ΙΔΙΟ** derived TIN
+  (`getTopoSurface()` — **κανένα** `buildTin()` από νέο consumer), με **daylight split**: τρίγωνο που
+  τέμνει τη μηδενική γραμμή **υποδιαιρείται**, αλλιώς cut/fill αλληλοακυρώνονται **σιωπηλά** (§12.4).
+  Όγκος κομματιού = `Εμβαδόν × Δz(κέντρο βάρους εμβαδού)` — **ακριβές** για γραμμικό Δz, άρα δουλεύει
+  αυτούσιο και για τα κομμάτια που αφήνει το boundary/daylight clip (μηδέν re-triangulation).
+
+  **Νέα αρχεία:** `systems/topography/` → `cut-fill.ts` (πυρήνας), `cut-fill-geometry.ts` (plane fit +
+  zero-Δz split + όγκος κομματιού), `tin-sampler.ts` (barycentric z + grid index), `cut-fill-crosscheck.ts`
+  (**2η μέθοδος: κάνναβος**, CASS §7 — απόκλιση >5% → προειδοποίηση), `cut-fill-store.ts` (ερώτηση +
+  απάντηση· κάθε αλλαγή αποτύπωσης **ακυρώνει** το αποτέλεσμα), `topo-boundary-pick.ts`·
+  `hooks/canvas/canvas-click-topo-boundary.ts`· `ui/panels/topography/TopoCutFillSection.tsx`.
+
+  **Επεκτάσεις υπαρχόντων (SSoT, μηδέν διπλότυπο):** `TopoPointStore` → **συλλογή επιφανειών**
+  (`existing`/`proposed`, Civil 3D Surfaces) + `boundary` **εκτός** των definitions (αλλιώς το pick του
+  ορίου θα ξανα-τριγωνοποιούσε)· `topo-surface.ts` → memo **ανά επιφάνεια** (η invariant «ποτέ δεύτερη
+  τριγωνοποίηση της ΙΔΙΑΣ definition» ισχύει ακέραιη)· `TerrainSurfaceStyle` **+`cutfill`** (3Δ Cut/Fill
+  analysis: κόκκινο=σκάβω, μπλε=ρίχνω, μπεζ=μηδενική γραμμή) — **αυτός ήταν ο λόγος** που το M4 έγινε
+  style-driven· `marching-triangles.crossEdge` **exported** (ίδιο linear crossing, πεδίο Δz αντί Z)·
+  `scene-units` → `volumeMm3ToM3`/`areaMm2ToM2` (παράγωγα του `mmToSceneUnits`, **όχι** inline `/1e9`)·
+  `useTopoImport(surface)` → ο **ίδιος** wizard εισάγει και το μελετημένο έδαφος (όχι δεύτερος wizard)·
+  `useTopoBreaklineTool` → κοινός πυρήνας `useTopoPickTool` (breakline + boundary· ο δίδυμος hook θα ήταν
+  ακριβώς το sibling-clone του N.18).
+
+  **Reuse αντί για νέο κώδικα (SSoT audit ΠΡΙΝ τον κώδικα):** `polygonArea`/`polygonAreaCentroid`/
+  `clipPolygonBySH` (το **τρίγωνο** ως convex clipper → **κοίλο** οικόπεδο δουλεύει)/`projectVerticesTo2D`
+  από το `polygon-utils`· `pickTopEntityAt` για το boundary pick· `crossEdge` από το marching-triangles.
+  **ΔΙΟΡΘΩΣΗ στο handoff:** το `marching-triangles` **δεν** κόβει τρίγωνο σε **υποπολύγωνα** (μόνο σε
+  τμήματα ισοϋψούς) → το half-plane split στο πεδίο Δz γράφτηκε (δεν υπήρχε), αλλά **πάνω** στον υπάρχοντα
+  linear-crossing SSoT.
+
+  **BOQ: ΔΕΝ κούμπωσε — τεκμηριωμένο, όχι παράλειψη.** `buildBoqBaseRow` απαιτεί entity (`sourceEntityId`
+  + Firestore scope)· το έδαφος είναι **layer, όχι entity** (§12.3). Παράλληλος BOQ μηχανισμός = διπλότυπο
+  (N.12/N.18) → μεταφέρεται σε **M4b/M7** (§12.4).
+
+  UI: «Όγκοι χωματουργικών» στο `TopographyPanel` (αναφορά, όριο, «Υπολογισμός όγκων», πίνακας cut/fill/net
+  σε **m³** + εμβαδά σε m², cross-check γραμμή)· ο υπολογισμός **ανάβει** αυτόματα το 3Δ cut/fill style.
+  i18n el+en. Tests: **+13** πράσινα (`cut-fill.test.ts` — κλειστοί τύποι: επίπεδο 100 m³, πυραμίδα ⅓·A·h,
+  **DAYLIGHT LINE: cut>0 ΚΑΙ fill>0** [πέφτει αν αφαιρεθεί το split], κοίλο όριο, skipped-όχι-μηδέν,
+  κενό TIN → μηδενικά όχι NaN, grid cross-check). Σύνολο topography: **66 πράσινα**. `jscpd:diff`:
+  **0 clones**. **Νέα deps: ΚΑΜΙΑ** (in-house, όπως προέβλεπε το §12.2).
+
+  **Status: M1 + M2 + M4 + M6 IMPLEMENTED· M3, M5, M7, M8 προγραμματισμένα (§12.2).**

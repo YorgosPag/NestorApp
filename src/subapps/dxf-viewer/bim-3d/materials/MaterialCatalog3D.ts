@@ -23,6 +23,7 @@ import {
   getUserMaterialSetVersion,
 } from './user-material-registry';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
+import type { TerrainSurfaceStyle } from '../../systems/topography/topo-types'; // ADR-650 M4 (types only)
 
 /** ADR-363 — prefix of `bim_materials` library document ids (enterprise id). */
 const USER_MATERIAL_ID_PREFIX = 'bmat_';
@@ -377,6 +378,39 @@ export function getElementMaterial3D(
 ): THREE.MeshStandardMaterial {
   const key = `elem-${type}`;
   return withFaceMode(withDepthPriority(resolveTexturedMaterial(key), key));
+}
+
+/**
+ * ADR-650 M4 — topographic terrain surface material.
+ *
+ * The ONE justified deviation from the `FrontSide` contract documented in `buildMat` above:
+ * every other BIM solid is a CLOSED extrusion whose inner faces are unreachable, but a TIN is
+ * an OPEN surface. A camera that drops below the hill (or inside a cut) would look straight
+ * through a back-face-culled terrain and see the void — so it renders `DoubleSide`, exactly as
+ * Civil 3D 3D-faces and a Revit Toposolid do. The cost is bounded: one surface, not the whole
+ * model, so the ADR-366 §B.5 overdraw argument does not apply.
+ *
+ * `hypsometric` reads the per-vertex elevation colours the converter baked in (Civil 3D
+ * «Elevation Banding»); its base colour is white so the vertex colours pass through
+ * unmodulated instead of being tinted by the earth base. Cached per style — the shared
+ * `shaded` singleton is never mutated into a vertex-colour material.
+ */
+export function getTerrainMaterial3D(style: TerrainSurfaceStyle): THREE.MeshStandardMaterial {
+  const cacheKey = `elem-terrain:${style}`;
+  let mat = CACHE.get(cacheKey);
+  if (!mat) {
+    mat = buildMat(MATERIAL_DEFS['elem-terrain']!);
+    mat.side = THREE.DoubleSide;
+    // Every ANALYSIS style (hypsometric elevation banding, ADR-650 M6 cut/fill) paints per-vertex
+    // colours in the converter; only `shaded` keeps the earth base colour. Testing "not shaded"
+    // rather than listing the styles means a future analysis style cannot silently render brown.
+    if (style !== 'shaded') {
+      mat.vertexColors = true;
+      mat.color.setHex(0xffffff); // white base → the vertex colours pass through unmodulated
+    }
+    CACHE.set(cacheKey, mat);
+  }
+  return withFaceMode(mat);
 }
 
 /**

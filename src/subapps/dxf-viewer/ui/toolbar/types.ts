@@ -299,7 +299,15 @@ export type ToolType =
   | 'hatch-area-label'    // HATCHAREALABEL — 2-click → TextEntity (εμβαδόν γραμμοσκίασης)
   // ADR-650 Milestone 1: Topographic contours — φόρτωση σημείων (X,Y,Z) → CDT/TIN →
   // marching-triangles → native lwpolyline/text ισοϋψείς. Panel-driven (όχι canvas click).
-  | 'topo-contours';      // TOPO — generate contour lines from survey points
+  | 'topo-contours'       // TOPO — generate contour lines from survey points
+  // ADR-650 M2 μέρος Β: «Γραμμές ασυνέχειας» — 1-κλικ pick υπάρχουσας γραμμής (line/
+  // polyline/lwpolyline) → breakline constraint στο TopoPointStore (constrained edge στο
+  // CDT). Toggle (ξανά-κλικ = αφαίρεση). ΔΕΝ δημιουργεί CAD entity → εκτός TOOL_CREATES_ENTITY.
+  | 'topo-breakline'      // TOPOBREAK — 1-click → breakline constraint (όχι entity)
+  // ADR-650 M6 (Γ): «Όριο οικοπέδου» — 1-κλικ pick ΚΛΕΙΣΤΗΣ polyline → όριο υπολογισμού
+  // όγκων cut/fill (Civil 3D volume boundary). Toggle. Γράφει στο TopoPointStore.boundary,
+  // ΔΕΝ δημιουργεί CAD entity → εκτός TOOL_CREATES_ENTITY.
+  | 'topo-boundary';      // TOPOBOUND — 1-click → volume boundary (όχι entity)
 
 
 export interface ToolDefinition {
