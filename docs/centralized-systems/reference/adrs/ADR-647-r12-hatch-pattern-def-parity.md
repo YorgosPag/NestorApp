@@ -104,8 +104,21 @@ Patterns: ANSI31(35) HEX(33) GRASS(17) NET(17) SQUARE(8) GRATE(7)
   το un-rotation ΕΠΙΒΕΒΑΙΩΘΗΚΕ εμπειρικά, ΟΧΙ αριθμητικά-από-υπόθεση.
 - **phase residual ~1e-9**: κάθε πραγματική γραμμή πέφτει ΑΚΡΙΒΩΣ στο lattice
   `kOrigin=−uy·baseX+ux·baseY + i·spacing` → το `base → pl.origin` δίνει το ΣΩΣΤΟ phase.
+- **along-line DASH-START phase** (κενό #2, ΚΛΕΙΣΤΟ): φιλτράροντας μόνο ΠΛΗΡΗ dashes (τα clipped-στο-
+  boundary έχουν αυθαίρετα άκρα), όλα ξεκινούν στο lattice `sOrigin=ux·baseX+uy·baseY (+i·dx)` με
+  **spread ~1e-9…1e-11** (HEX 3 families, SQUARE 2 families). → το `base` δίνει ΚΑΙ perpendicular ΚΑΙ
+  along-line phase. Πλήρες dash phase locked.
 - **⚠️ Διόρθωση μνήμης:** αρχικά υπέθεσα SQUARE delta=0.254 (από μνήμη acad.pat)· το ground-truth
   απέδειξε **0.127**. Το decode-first νίκησε τη μνήμη — γι' αυτό ΔΕΝ γράφουμε κώδικα από μνήμη.
+
+### Boundary bulges — scope & format (κενό #1, ΚΛΕΙΣΤΟ)
+
+Σάρωση και των 117 R12 hatches: **μόνο 7 έχουν boundary bulges (όλα GRATE), 11 τόξα** συνολικά.
+- **stride vs `hasBulge` flag: 0 mismatches** → το `1070 <hasBulge 0|1>` (πριν το `1070 1 / 1071 nVerts`)
+  προβλέπει ΑΞΙΟΠΙΣΤΑ το stride (2 vs 3)· να προτιμηθεί από την count-inference.
+- 3ο value/vertex = **standard DXF bulge** = tan(θ/4): −0.41421→**τεταρτοκύκλιο 90°**, −0.37114→81.4° ✓.
+- Υλοποίηση: όταν `hasBulge` & bulge≠0 → tessellate το τόξο με το υπάρχον SSoT
+  `geometry-bulge-utils.bulgeToPolyline` (ADR-510) — μηδέν νέα arc math (N.18). Μικρό scope, καθαρό.
 
 ### 3 κρίσιμες σημασίες (αλλιώς «γλιστράει» το μοτίβο)
 
@@ -148,16 +161,18 @@ Patterns: ANSI31(35) HEX(33) GRASS(17) NET(17) SQUARE(8) GRATE(7)
 Προσθήκη `GRATE` (acad.pat def) στο `hatch-pattern-catalog.ts` — για GRATE που δημιουργεί ο χρήστης
 μέσα στον Nestor (χωρίς πρωτότυπο). Το preserve-native της Φ1 καλύπτει το import.
 
-### Φ3 — (χαμηλή προτεραιότητα, εκτός τρέχοντος scope· τεκμηριωμένα κενά)
-- **R14 boundary bulges:** το GRATE boundary είναι stride-3 (x,y,bulge)· τα bulges πετιούνται τώρα →
-  ελαφρώς απλοποιημένο *outline* (το pattern είναι σωστό· μόνο το clip-όριο κοντά σε καμπύλες).
+### Φ2b — R14 boundary bulges (μικρό, scoped· 7 GRATE hatches)
+Όταν `hasBulge`=1 → stride-3, tessellate ανά ζεύγος vertices με `bulgeToPolyline` (SSoT). Το pattern
+γίνεται ήδη σωστό από τη Φ1· αυτό ακριβοποιεί μόνο το *outline* κοντά στα 11 τόξα. Scope & format
+κλειστά (βλ. παραπάνω) — απομένει μόνο η υλοποίηση.
+
+### Φ3 — (χαμηλή προτεραιότητα, εκτός scope· τεκμηριωμένα)
 - **multi-path polyline boundary bug:** `extractR14BoundaryPaths` σπάει στον 1ο `1071 0` → χάνει
   islands (NET έχει 2 paths). Επηρεάζει island clipping, όχι ορατότητα/μοτίβο.
 - **native HATCH EdgePath/bulge** (R2018 αρχεία με καμπύλα όρια) — κανένα τρέχον αρχείο δεν το έχει.
-- **along-line dash-START phase (`sOrigin`, stagger `dx`):** επιβεβαιώθηκε το dash *length* + το
-  *perpendicular* phase (~1e-9)· η θέση έναρξης dash *κατά μήκος* της γραμμής προκύπτει από το ίδιο
-  `base` (άρα σχεδόν βέβαια σωστή) αλλά δεν μετρήθηκε ξεχωριστά. Αφορά μόνο dashed patterns (HEX/SQUARE),
-  sub-cell· ground-truth overlay στο implementation θα το κλείσει οριστικά.
+
+> **Πλήρως άγνωστα που ΔΕΝ χρειάζεται ο parser** (τεκμηριωμένα για ειλικρίνεια): το head `1070 19`
+> και το per-pattern `fillFlag` (`1070 0|1`· GRATE=1) — δεν επηρεάζουν το render, δεν τα διαβάζουμε.
 
 ---
 
@@ -193,6 +208,8 @@ Patterns: ANSI31(35) HEX(33) GRASS(17) NET(17) SQUARE(8) GRATE(7)
   (ANSI31/SQUARE/NET/HEX/GRASS/GRATE) στο `Αδείας.Κάτοψη ισογείου.dxf`.
 - **2026-07-13 (b)** — **GROUND-TRUTH validation ΕΚΤΕΛΕΣΤΗΚΕ:** parsed pattern-def vs πραγματικές
   exploded LINEs του `*X#` block σε ANSI31/HEX/SQUARE/GRATE. angle + perpendicular spacing (un-rotation)
-  + phase (base→origin) + dash length ταιριάζουν **στα ~1e-9**. Διορθώθηκε λάθος μνήμης (SQUARE 0.254→
-  **0.127**). Το γεωμετρικό format είναι πλέον **εμπειρικά κλειδωμένο**. Απομένουν 2 μη-blocking κενά
-  (boundary bulges, along-line dash-start phase). Υλοποίηση Φ1 pending.
+  + phase (base→origin) + dash length ταιριάζουν **στα ~1e-9**. Διορθώθηκε λάθος μνήμης (SQUARE 0.254→**0.127**).
+- **2026-07-13 (c)** — **ΤΑ 2 ΕΝΑΠΟΜΕΙΝΑΝΤΑ ΚΕΝΑ ΚΛΕΙΣΤΑ:** (1) along-line **dash-start phase** locked
+  εμπειρικά (full-dash residual spread ~1e-9…1e-11, HEX+SQUARE)· (2) **boundary bulges** scoped (7/117
+  hatches, όλα GRATE, 11 τόξα· `hasBulge` flag 0 mismatches· format = DXF bulge tan(θ/4)). **Η ΕΡΕΥΝΑ
+  ΟΛΟΚΛΗΡΩΘΗΚΕ — το format είναι πλήρως εμπειρικά κλειδωμένο.** Υλοποίηση (Φ1+Φ2+Φ2b) σε ΝΕΑ συνεδρία.

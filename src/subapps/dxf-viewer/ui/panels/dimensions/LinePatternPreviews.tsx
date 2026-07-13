@@ -20,6 +20,7 @@ import {
 } from '../../../config/line-pattern-segments';
 import { buildLinetypeThumbnailFromPattern } from '../../../rendering/linetype-thumbnail';
 import { strokeStyledPolyline } from '../../../rendering/linetype/ComplexLineStroker';
+import { TEXT_SIZE_LIMITS } from '../../../config/text-rendering-config';
 import { LinePatternGripOverlay, type LinePatternGripLabels } from './LinePatternGripOverlay';
 
 /** Screen px per mm for the text preview canvas — makes a default (scale 1) glyph legible. */
@@ -49,7 +50,9 @@ function verticalHalfExtentMm(layers: readonly LinePatternLayer[]): number {
     let reach = base;
     for (const s of l.segments) {
       if (s.kind === 'symbol' || s.kind === 'text') {
-        reach = Math.max(reach, base + Math.abs(s.offsetYMm) + Math.abs(s.scale) * 0.5);
+        // A glyph's mm half-height = scale × the ISO base height (2.5mm) × ½ the unit height (glyph = 1.0).
+        const glyphHalfMm = Math.abs(s.scale) * TEXT_SIZE_LIMITS.DEFAULT_HEIGHT * 0.5;
+        reach = Math.max(reach, base + Math.abs(s.offsetYMm) + glyphHalfMm);
       }
     }
     half = Math.max(half, reach);

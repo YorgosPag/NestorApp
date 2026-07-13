@@ -446,8 +446,12 @@ offset dots (μετακίνηση μεμονωμένης ράγας)· *(optiona
   οι **πραγματικές** σιδηροδρομικές διαστάσεις ως προεπιλογή στο preset «Σιδηρόδρομος» (web-sourced):
   εύρος τροχιάς **1435 mm** (εσωτ. παρειές) + πλάτος κεφαλής ράγας **72 mm** (UIC 60) → κέντρο-προς-κέντρο
   ραγών **1507 mm** (offset **±753.5**)· απόσταση στρωτήρων **650 mm** κέντρο-κέντρο (mainline)· μήκος
-  στρωτήρα **2600 mm** (tick scale). `config/linetype-compound-presets.ts`: `RAIL_HALF_GAUGE_MM 0.75→753.5`,
-  `TIE_GAP_MM 4→TIE_SPACING_MM 650`, `TIE_SCALE 1.6→TIE_LENGTH_MM 2600`. **Preview auto-fit**
+  στρωτήρα **2600 mm**. `config/linetype-compound-presets.ts`: `RAIL_HALF_GAUGE_MM 0.75→753.5`,
+  `TIE_GAP_MM 4→TIE_SPACING_MM 650`. ⚠️ **Σημαντικό (unit fix):** το symbol `scale` είναι
+  **πολλαπλασιαστής** του ISO base height (2.5mm, `drawSymbolElement.BASE_SYMBOL_HEIGHT_MM`), ΟΧΙ absolute
+  mm — αρχικά `scale=2600` έδινε στρωτήρα 2600×2.5 = **6.5m** (ο Giorgio το μέτρησε ~6.40m). Σωστό:
+  `TIE_SCALE = 2600 / 2.5 = 1040`. Το `verticalHalfExtentMm` του preview διορθώθηκε ομοίως (glyph half =
+  `scale × 2.5 × 0.5`). **Preview auto-fit**
   (`LinePatternPreviews.tsx`): το compound swatch υπολογίζει px/mm ώστε η μπάντα (offsets + symbol reach)
   να χωρά κάθετα ΚΑΙ ≥2.2 περίοδοι οριζόντια — zoom-out από cap (7/14). Χωρίς αυτό, στα ρεαλιστικά mm
   (753 mm offset) οι ράγες θα ήταν εκτός καμβά. Μικρά patterns μένουν στο cap (αμετάβλητα).

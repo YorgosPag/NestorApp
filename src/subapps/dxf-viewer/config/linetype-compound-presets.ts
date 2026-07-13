@@ -15,6 +15,7 @@ import {
   type LinePatternLayer,
   DEFAULT_SEGMENT_LENGTH_MM,
 } from './line-pattern-segments';
+import { TEXT_SIZE_LIMITS } from './text-rendering-config';
 
 // ── Real-world standard-gauge railway dimensions (mm) — Giorgio 2026-07-13, sourced ──
 // Track gauge = 1435 mm (inner faces of the rail heads). Rail head width (UIC 60/60E1) = 72 mm, so the
@@ -26,9 +27,12 @@ const RAIL_HALF_GAUGE_MM = RAIL_CENTRE_TO_CENTRE_MM / 2; // 753.5 mm
 // sleepers; consecutive sleeper centres are this far apart along the track.
 const TIE_SPACING_MM = 650;
 
-// Sleeper length (standard-gauge concrete sleeper) = 2600 mm → the perpendicular height of the tick glyph
-// (unit-space nominal height 1.0, so `scale` = height in mm). The sleeper spans beyond both rails.
+// Sleeper length (standard-gauge concrete sleeper) = 2600 mm → the perpendicular height of the tick glyph.
+// A symbol `scale` is a MULTIPLIER of the ISO base glyph height (2.5mm, `drawSymbolElement`'s
+// BASE_SYMBOL_HEIGHT_MM = TEXT_SIZE_LIMITS.DEFAULT_HEIGHT), NOT an absolute mm — so the tick that spans
+// 2600 mm needs `scale = 2600 / 2.5`. The sleeper spans beyond both rails (2600 > 1507 gauge).
 const TIE_LENGTH_MM = 2600;
+const TIE_SCALE = TIE_LENGTH_MM / TEXT_SIZE_LIMITS.DEFAULT_HEIGHT; // 1040
 
 /** Half the road double-line separation (mm). */
 const ROAD_HALF_SEPARATION_MM = 0.5;
@@ -65,7 +69,7 @@ export const COMPOUND_PRESETS: readonly CompoundPreset[] = [
         // (the near-zero-length tick makes the gap ≈ the tie period), each 2600 mm long (spanning the rails).
         segments: [
           { kind: 'gap', lengthMm: TIE_SPACING_MM },
-          { kind: 'symbol', glyphId: 'tick', role: 'side', scale: TIE_LENGTH_MM, rotationDeg: 0, offsetXMm: 0, offsetYMm: 0 },
+          { kind: 'symbol', glyphId: 'tick', role: 'side', scale: TIE_SCALE, rotationDeg: 0, offsetXMm: 0, offsetYMm: 0 },
         ],
         offsetMm: 0,
       },
