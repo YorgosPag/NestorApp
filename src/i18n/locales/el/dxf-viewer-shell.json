@@ -4911,7 +4911,8 @@
       "posY": "Θέση Y",
       "scaleX": "Κλίμακα X",
       "scaleY": "Κλίμακα Y",
-      "rotation": "Γωνία"
+      "rotation": "Γωνία",
+      "renameAction": "Μετονομασία"
     }
   },
   "hatchAdvancedPanel": {

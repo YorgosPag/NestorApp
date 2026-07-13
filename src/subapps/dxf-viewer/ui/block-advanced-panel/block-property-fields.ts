@@ -4,8 +4,8 @@
  * `line-property-fields.ts` / `column-property-fields.ts`).
  *
  * Δηλώνει ΩΣ DATA τα groups (Γενικά / Γεωμετρία) με τα πεδία τους: `commandKey`
- * (κοινό με το `useBlockPropertyBridge`) + `labelKey` + `control` (readout/select/
- * color/numeric) + numericInput. Read/write γίνεται από το bridge (get/onComboboxChange)
+ * (κοινό με το `useBlockPropertyBridge`) + `labelKey` + `control` (rename/readout/
+ * select/color/numeric) + numericInput. Read/write γίνεται από το bridge (get/onComboboxChange)
  * — εδώ ΜΟΝΟ η δομή/κατανομή. Καθαρά data — zero React/DOM.
  *
  * Big-player split (Revit/ArchiCAD/C4D/Figma· Giorgio 2026-07-13): το contextual
@@ -40,7 +40,8 @@ export const BLOCK_PROPERTY_GROUPS: readonly EntityPropertyGroup[] = [
     id: 'general',
     titleKey: 'blockAdvancedPanel.sections.general',
     fields: [
-      field(K.name, 'blockAdvancedPanel.fields.name', 'readout'),
+      // Click-to-edit — μετονομάζει ΟΛΑ τα ομώνυμα instances (AutoCAD/Revit RENAME, βλ. bridge).
+      field(K.name, 'blockAdvancedPanel.fields.name', 'rename'),
       field(K.count, 'blockAdvancedPanel.fields.count', 'readout'),
       field(K.layer, 'blockAdvancedPanel.fields.layer', 'select'),
       field(K.color, 'blockAdvancedPanel.fields.color', 'color'),

@@ -15,7 +15,7 @@ import type { BimPropertyOption } from '../bim-properties/bim-property-types';
 import type { RibbonNumericInputConfig } from '../ribbon/types/ribbon-types';
 
 /** Control renderer για ένα πεδίο του Properties panel. */
-export type EntityPropertyControl = 'select' | 'color' | 'numeric' | 'toggle' | 'readout';
+export type EntityPropertyControl = 'select' | 'color' | 'numeric' | 'toggle' | 'readout' | 'rename';
 
 /** Ένα πεδίο ιδιότητας οντότητας (descriptor). */
 export interface EntityPropertyField {

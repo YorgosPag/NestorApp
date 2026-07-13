@@ -4911,7 +4911,8 @@
       "posY": "Position Y",
       "scaleX": "Scale X",
       "scaleY": "Scale Y",
-      "rotation": "Rotation"
+      "rotation": "Rotation",
+      "renameAction": "Rename"
     }
   },
   "hatchAdvancedPanel": {

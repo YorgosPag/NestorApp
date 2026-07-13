@@ -15,9 +15,16 @@
  */
 
 import { useCallback } from 'react';
-import type { BlockEntity } from '../../types/entities';
+import type { Entity, BlockEntity } from '../../types/entities';
+import { isBlockEntity } from '../../types/entities';
 import type { RibbonComboboxState } from '../ribbon/context/RibbonCommandContext';
-import type { SceneAdapterLevelManager } from '../../systems/entity-creation/useSceneManagerAdapter';
+import {
+  useSceneManagerAdapter,
+  type SceneAdapterLevelManager,
+} from '../../systems/entity-creation/useSceneManagerAdapter';
+import { useCommandHistory } from '../../core/commands';
+import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateEntityCommand';
+import { CompositeCommand } from '../../core/commands/CompositeCommand';
 import { useEntityPatchCommand } from '../../hooks/commands/useEntityPatchCommand';
 import { useEntityLayerField } from '../ribbon/hooks/bridge/useEntityLayerField';
 import {
@@ -40,6 +47,28 @@ export function useBlockPropertyBridge(
 ): BlockPropertyBridge {
   const patchEntity = useEntityPatchCommand(levelManager);
   const layerField = useEntityLayerField(levelManager);
+  const { execute: executeCommand } = useCommandHistory();
+  const getSceneManager = useSceneManagerAdapter(levelManager);
+
+  /**
+   * AutoCAD/Revit RENAME — μετονομάζει ΟΛΑ τα instances που μοιράζονται το τρέχον
+   * όνομα (το όνομα ΕΙΝΑΙ ο ορισμός του block) σε ΕΝΑ atomic undo step (CompositeCommand).
+   */
+  const renameAllInstances = useCallback(
+    (oldName: string, nextName: string): void => {
+      const sm = getSceneManager();
+      if (!sm) return;
+      const targets = (sm.getEntities() as unknown as Entity[]).filter(
+        (e) => isBlockEntity(e) && e.name === oldName,
+      );
+      const cmds = targets.map(
+        (e) => new UpdateEntityCommand(e.id, { name: nextName }, sm, 'Rename block'),
+      );
+      if (cmds.length === 0) return;
+      executeCommand(cmds.length === 1 ? cmds[0] : new CompositeCommand(cmds));
+    },
+    [getSceneManager, executeCommand],
+  );
 
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {
@@ -65,6 +94,12 @@ export function useBlockPropertyBridge(
     (commandKey: string, value: string): void => {
       if (!block) return;
       switch (commandKey) {
+        case K.name: {
+          const next = value.trim();
+          if (!next || next === block.name) return;
+          renameAllInstances(block.name, next);
+          return;
+        }
         case K.layer:
           layerField.apply(block, value);
           return;
@@ -112,7 +147,7 @@ export function useBlockPropertyBridge(
           return;
       }
     },
-    [block, patchEntity, layerField],
+    [block, patchEntity, layerField, renameAllInstances],
   );
 
   return { getComboboxState, onComboboxChange };

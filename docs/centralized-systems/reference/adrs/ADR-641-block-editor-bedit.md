@@ -159,12 +159,16 @@ SSoT (no parallel scene subscription left reading the world). Full feature PARTI
     με το double-click (μηδέν extraction), chained block-edit → group → join → explode → array → base στο
     `useDxfViewerRibbon.ts`. GROUP mutual-exclusivity (§7) διατηρείται (`getActiveGroupId()===null` gate).
   - **Palette (properties):** NEW `ui/block-advanced-panel/` (mirror `LinePropertiesTab`/column) — descriptor
-    `block-property-fields.ts` (Γενικά: Όνομα/Πλήθος read-only + Επίπεδο/Χρώμα/Διαφάνεια· Γεωμετρία: θέση
-    Χ/Υ + κλίμακα Χ/Υ + γωνία, editable numeric) + `useBlockPropertyBridge` (read/write μέσω του SSoT
+    `block-property-fields.ts` (Γενικά: Όνομα **editable** + Πλήθος read-only + Επίπεδο/Χρώμα/Διαφάνεια·
+    Γεωμετρία: θέση Χ/Υ + κλίμακα Χ/Υ + γωνία, editable numeric) + `useBlockPropertyBridge` (read/write μέσω του SSoT
     `useEntityPatchCommand` → `UpdateEntityCommand`, ΙΔΙΟ command με τα box grips· layer μέσω του κοινού
     `useEntityLayerField`) + `BlockAdvancedPanel`/`BlockPropertiesTab`, branch `isBlockEntity` στον
     `BimPropertiesRouter`. INSERT semantics: `block.entities` αμετάβλητα — αλλάζει ΜΟΝΟ το flat
-    `{position,scale,rotation}` transform + appearance. i18n `blockAdvancedPanel.*` + `ribbon.tabs.blockTools`/
+    `{position,scale,rotation}` transform + appearance. **Rename (Giorgio 2026-07-13, AutoCAD/Revit RENAME
+    semantics):** το «Όνομα» πεδίο μετονομάζει ΟΛΑ τα instances που μοιράζονται το όνομα (= ο ορισμός του
+    block) σε ΕΝΑ atomic undo step (`CompositeCommand` από N `UpdateEntityCommand`)· editable text control
+    (`control:'text'`) προστέθηκε στον κοινό `EntityPropertyRow` (numeric+text ενοποιήθηκαν σε ΕΝΑ
+    `DraftInputRow`/`EditableRow`, N.18). i18n `blockAdvancedPanel.*` + `ribbon.tabs.blockTools`/
     `panels.blockActions`/`commands.blockEdit` (el+en). Reuse-only· κανένα άγγιγμα στο performance-critical
     ribbon command context (ADR-040/587). @see ADR-587 §Φ3a (entity-keyed trigger SSoT), ADR-363 Φ4 (palette split).
 - **2026-07-12** — **Φ4 follow-up #6: a member drawn inside BEDIT now shows on the world canvas after
@@ -430,3 +434,15 @@ SSoT (no parallel scene subscription left reading the world). Full feature PARTI
   με τους ελλείποντες primitive τύπους — «ένα `expand()` ανά τύπο» (η προβλεπόμενη επέκταση), χωρίς
   block-expansion (perf-neutral). Regression tests: `dxf-entity-array-bounds.test.ts` (κάλυψη τύπων) +
   text-only recenter case στο `block-edit-view-transform.test.ts`. N.18 jscpd καθαρό. ΟΧΙ tsc (N.17).
+- **2026-07-13** — **Block «Όνομα» → click-to-edit rename (big-player UX).** Ο Giorgio ανέφερε ότι το
+  πεδίο «Όνομα» στο αριστερό Properties palette ήταν **always-open input με auto-save σε blur** → ένας
+  τυχαίος χαρακτήρας + blur μετονόμαζε **σιωπηλά ΟΛΑ τα αντίγραφα**. **Fix (UI affordance μόνο — το
+  rename-all `CompositeCommand` στο `useBlockPropertyBridge` έμεινε αμετάβλητο):** νέο κοινό
+  `control:'rename'` στον SSoT `EntityPropertyRow` (`InlineRenameRow`) — **read-only display by default**,
+  είσοδος σε edit ΜΟΝΟ ρητά (double-click στο label / κουμπί ✎ / **F2**), **Enter/blur = commit**,
+  **Esc = cancel/revert** μέσω του κεντρικού Escape Command Bus (ADR-364, `POPOVER_DROPDOWN`,
+  `allowWhenEditable`) ώστε το Esc να μη «σκάει» σε deselect· empty/ίδιο = no-op. Πρακτική
+  Revit/ArchiCAD/C4D/Figma + mirror του native `LayerItem`. Το προσωρινό `control:'text'` (always-open,
+  προηγ. session) **αφαιρέθηκε** ως dead control — το `EditableRow` ξαναέγινε numeric-only (το
+  `DraftInputRow` το κρατά το numeric). `block-property-fields.ts`: name `'text'`→`'rename'`. Νέο i18n
+  `blockAdvancedPanel.fields.renameAction` (el+en, N.11). N.18 jscpd καθαρό. ΟΧΙ tsc (N.17).
