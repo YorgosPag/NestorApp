@@ -16,15 +16,22 @@ import {
   DEFAULT_SEGMENT_LENGTH_MM,
 } from './line-pattern-segments';
 
-/** Half the rail gauge (mm) — a rail sits at ±this offset from the centre line. */
-const RAIL_HALF_GAUGE_MM = 0.75;
+// ── Real-world standard-gauge railway dimensions (mm) — Giorgio 2026-07-13, sourced ──
+// Track gauge = 1435 mm (inner faces of the rail heads). Rail head width (UIC 60/60E1) = 72 mm, so the
+// distance between the two rail **centre axes** = 1435 + 72 = 1507 mm. A rail sits at ±half that.
+const RAIL_CENTRE_TO_CENTRE_MM = 1507;
+const RAIL_HALF_GAUGE_MM = RAIL_CENTRE_TO_CENTRE_MM / 2; // 753.5 mm
+
+// Sleeper (crosstie) centre-to-centre spacing — mainline standard 650 mm (±25). The rails rest on the
+// sleepers; consecutive sleeper centres are this far apart along the track.
+const TIE_SPACING_MM = 650;
+
+// Sleeper length (standard-gauge concrete sleeper) = 2600 mm → the perpendicular height of the tick glyph
+// (unit-space nominal height 1.0, so `scale` = height in mm). The sleeper spans beyond both rails.
+const TIE_LENGTH_MM = 2600;
 
 /** Half the road double-line separation (mm). */
 const ROAD_HALF_SEPARATION_MM = 0.5;
-
-/** Cross-tie spacing (mm gap between consecutive ticks) + the tick glyph scale. */
-const TIE_GAP_MM = 4;
-const TIE_SCALE = 1.6;
 
 /** A continuous solid layer (one dash, no gap → drawn end-to-end) at a perpendicular offset. */
 function solidRail(offsetMm: number): LinePatternLayer {
@@ -53,11 +60,12 @@ export const COMPOUND_PRESETS: readonly CompoundPreset[] = [
       solidRail(RAIL_HALF_GAUGE_MM),
       solidRail(-RAIL_HALF_GAUGE_MM),
       {
-        // Centre line carrying perpendicular cross-ties: the vertical `tick` glyph repeated as a
-        // side symbol (Φ3) between gaps — exactly a railroad's ties.
+        // Centre line carrying perpendicular cross-ties (sleepers): the vertical `tick` glyph repeated as
+        // a side symbol (Φ3) between gaps — a railroad's ties at their real 650 mm centre-to-centre spacing
+        // (the near-zero-length tick makes the gap ≈ the tie period), each 2600 mm long (spanning the rails).
         segments: [
-          { kind: 'gap', lengthMm: TIE_GAP_MM },
-          { kind: 'symbol', glyphId: 'tick', role: 'side', scale: TIE_SCALE, rotationDeg: 0, offsetXMm: 0, offsetYMm: 0 },
+          { kind: 'gap', lengthMm: TIE_SPACING_MM },
+          { kind: 'symbol', glyphId: 'tick', role: 'side', scale: TIE_LENGTH_MM, rotationDeg: 0, offsetXMm: 0, offsetYMm: 0 },
         ],
         offsetMm: 0,
       },

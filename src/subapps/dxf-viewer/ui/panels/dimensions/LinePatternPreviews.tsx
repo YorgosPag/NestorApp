@@ -16,6 +16,7 @@ import {
   type LinePatternSegment,
   layersToComplex,
   segmentsToComplex,
+  patternTotalLengthMm,
 } from '../../../config/line-pattern-segments';
 import { buildLinetypeThumbnailFromPattern } from '../../../rendering/linetype-thumbnail';
 import { strokeStyledPolyline } from '../../../rendering/linetype/ComplexLineStroker';
@@ -24,11 +25,50 @@ import { LinePatternGripOverlay, type LinePatternGripLabels } from './LinePatter
 /** Screen px per mm for the text preview canvas — makes a default (scale 1) glyph legible. */
 const PREVIEW_PX_PER_MM = 4;
 
-/** Larger scale for the compound preview so the small (±0.75mm) rail offsets are visible. */
+/** Upper cap on the compound preview zoom (small patterns) — the auto-fit only zooms OUT from here. */
 const COMPOUND_PREVIEW_PX_PER_MM = 7;
 
-/** The large (editable) compound preview zooms in further so the band spread + grips read clearly. */
+/** The large (editable) compound preview may zoom in further (small patterns) before the auto-fit clamps. */
 const COMPOUND_PREVIEW_PX_PER_MM_LG = 14;
+
+/** Fraction of the swatch half-height the band should occupy after auto-fit. */
+const PREVIEW_V_FILL = 0.72;
+/** At least this many pattern periods span the swatch width after auto-fit. */
+const PREVIEW_MIN_PERIODS = 2.2;
+
+/**
+ * Perpendicular half-extent (mm) of a compound — the largest reach off the axis across all layers:
+ * a layer's `|offsetMm|` plus, for any embedded symbol/text, its `|offsetYMm|` + half its `scale` (the
+ * unit glyph is 1.0 tall). Lets the preview auto-fit real-world patterns (e.g. a 2600 mm railway sleeper)
+ * that would otherwise render far off-canvas at a fixed px/mm.
+ */
+function verticalHalfExtentMm(layers: readonly LinePatternLayer[]): number {
+  let half = 0;
+  for (const l of layers) {
+    const base = Math.abs(l.offsetMm);
+    let reach = base;
+    for (const s of l.segments) {
+      if (s.kind === 'symbol' || s.kind === 'text') {
+        reach = Math.max(reach, base + Math.abs(s.offsetYMm) + Math.abs(s.scale) * 0.5);
+      }
+    }
+    half = Math.max(half, reach);
+  }
+  return half;
+}
+
+/**
+ * The px/mm the compound preview should stroke at so the whole pattern fits the swatch: zoom OUT from
+ * `cap` until the band fits the height AND ≥`PREVIEW_MIN_PERIODS` fit the width. Small patterns stay at
+ * `cap` (unchanged); large real-world ones (railway at ~1.5 m gauge) shrink to fit.
+ */
+function fitPxPerMm(layers: readonly LinePatternLayer[], w: number, h: number, cap: number): number {
+  const vHalf = verticalHalfExtentMm(layers);
+  const period = layers.reduce((m, l) => Math.max(m, patternTotalLengthMm(l.segments)), 0);
+  const fitV = vHalf > 0 ? (h / 2) * PREVIEW_V_FILL / vHalf : Infinity;
+  const fitH = period > 0 ? (w * 0.9) / (period * PREVIEW_MIN_PERIODS) : Infinity;
+  return Math.max(0.001, Math.min(cap, fitV, fitH));
+}
 
 export function PatternPreview({ label, pattern }: { label: string; pattern: readonly number[] }) {
   const thumb = buildLinetypeThumbnailFromPattern(pattern, 220, 16);
@@ -149,17 +189,17 @@ export function CompoundPatternPreview({
   size?: 'sm' | 'lg';
 }) {
   const big = size === 'lg';
-  const pxPerMm = big ? COMPOUND_PREVIEW_PX_PER_MM_LG : COMPOUND_PREVIEW_PX_PER_MM;
+  const cap = big ? COMPOUND_PREVIEW_PX_PER_MM_LG : COMPOUND_PREVIEW_PX_PER_MM;
   const draw = React.useCallback(
     (ctx: CanvasRenderingContext2D, w: number, h: number) => {
       const def = layersToComplex('__preview__', layers);
       const midY = h / 2;
       strokeStyledPolyline(ctx, [{ x: 6, y: midY }, { x: w - 6, y: midY }], def, {
-        worldToScreenScale: pxPerMm,
+        worldToScreenScale: fitPxPerMm(layers, w, h, cap),
         ltscale: 1,
       });
     },
-    [layers, pxPerMm],
+    [layers, cap],
   );
   const overlay =
     onLayersChange && gripLabels ? (

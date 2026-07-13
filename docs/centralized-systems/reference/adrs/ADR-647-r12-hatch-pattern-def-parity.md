@@ -87,16 +87,25 @@ Patterns: ANSI31(35) HEX(33) GRASS(17) NET(17) SQUARE(8) GRATE(7)
 1040 0.0  1071 1  1040 <seedX>  1040 <seedY>  1040 0.0
 ```
 
-### Cross-validation με `acad.pat` (100% match)
+### GROUND-TRUTH validation (ΕΚΤΕΛΕΣΤΗΚΕ — όχι μόνο spec/μνήμη)
 
-| Pattern | families | Απόδειξη |
-|---|---|---|
-| ANSI31 | 1 | angleRad=0.7853981634 = **45°**, numDashes=0 (solid) — ακριβώς ANSI31 |
-| SQUARE | 2 | dashes 0.127/−0.127 (dash/gap), families @ 0°+90° |
-| HEX | 3 | families @ 90°/210°/150°, **ίδιο perpendicular spacing 0.027496306577** (τέλειο εξάγωνο) |
-| NET | 2 | families @ 90°+180°, spacing 0.25×… |
-| GRATE | 2 | solid 0°@0.079375 + 90°@0.3175 (πλέγμα) — **ΛΕΙΠΕΙ από catalog** |
-| GRASS | 3 | γραμμικό pattern def (στο R12· το image-fill του ADR-643 είναι άλλο path) |
+Το anonymous block `*X#` περιέχει τις **ΑΚΡΙΒΕΙΣ exploded LINEs** που ζωγράφισε το AutoCAD. Σύγκριση
+του parsed pattern-def με αυτές (γωνία / perpendicular spacing / dash length / **phase**):
+
+| Pattern | block | Parsed (angle° / perp / dash) | REAL lines (angle° / spacing / maxlen) | phase residual |
+|---|---|---|---|---|
+| ANSI31 | `*X418` | 45° / 0.03175 / solid | 45° / **0.03175** / solid | **2.9e-09** ✅ |
+| HEX | `*X416` | 90/210/150° / 0.027496 / 0.01588 | 30/90/150° / **0.02749** / **0.01588** | **≤9.1e-09** ✅ |
+| SQUARE | `*X458` | 0/90° / 0.127 / dash 0.127 | 0/90° / **0.127** / **0.127** | ✅ |
+| GRATE | `*X492` | 0/90° / 0.079375 & 0.3175 / solid | 0/90° / **0.07937 & 0.3175** / solid | **≤8.7e-11** ✅ |
+
+- **210°≡30°** (mod 180) → γωνίες ταιριάζουν.
+- **perpendicular spacing** των πραγματικών γραμμών = το un-rotated `local_delta` perp **στα ~1e-9** →
+  το un-rotation ΕΠΙΒΕΒΑΙΩΘΗΚΕ εμπειρικά, ΟΧΙ αριθμητικά-από-υπόθεση.
+- **phase residual ~1e-9**: κάθε πραγματική γραμμή πέφτει ΑΚΡΙΒΩΣ στο lattice
+  `kOrigin=−uy·baseX+ux·baseY + i·spacing` → το `base → pl.origin` δίνει το ΣΩΣΤΟ phase.
+- **⚠️ Διόρθωση μνήμης:** αρχικά υπέθεσα SQUARE delta=0.254 (από μνήμη acad.pat)· το ground-truth
+  απέδειξε **0.127**. Το decode-first νίκησε τη μνήμη — γι' αυτό ΔΕΝ γράφουμε κώδικα από μνήμη.
 
 ### 3 κρίσιμες σημασίες (αλλιώς «γλιστράει» το μοτίβο)
 
@@ -139,10 +148,16 @@ Patterns: ANSI31(35) HEX(33) GRASS(17) NET(17) SQUARE(8) GRATE(7)
 Προσθήκη `GRATE` (acad.pat def) στο `hatch-pattern-catalog.ts` — για GRATE που δημιουργεί ο χρήστης
 μέσα στον Nestor (χωρίς πρωτότυπο). Το preserve-native της Φ1 καλύπτει το import.
 
-### Φ3 — (χαμηλή προτεραιότητα, εκτός τρέχοντος scope)
-Native HATCH EdgePath/bulge + R14 boundary bulge (GRATE έχει stride-3 με bulges που πετιούνται τώρα)
-+ multi-path polyline boundary bug (`extractR14BoundaryPaths` σπάει στον 1ο `1071 0` → χάνει islands
-του NET). Δεν το χρειάζεται το κύριο αρχείο· τεκμηριώνεται εδώ ως γνωστό κενό.
+### Φ3 — (χαμηλή προτεραιότητα, εκτός τρέχοντος scope· τεκμηριωμένα κενά)
+- **R14 boundary bulges:** το GRATE boundary είναι stride-3 (x,y,bulge)· τα bulges πετιούνται τώρα →
+  ελαφρώς απλοποιημένο *outline* (το pattern είναι σωστό· μόνο το clip-όριο κοντά σε καμπύλες).
+- **multi-path polyline boundary bug:** `extractR14BoundaryPaths` σπάει στον 1ο `1071 0` → χάνει
+  islands (NET έχει 2 paths). Επηρεάζει island clipping, όχι ορατότητα/μοτίβο.
+- **native HATCH EdgePath/bulge** (R2018 αρχεία με καμπύλα όρια) — κανένα τρέχον αρχείο δεν το έχει.
+- **along-line dash-START phase (`sOrigin`, stagger `dx`):** επιβεβαιώθηκε το dash *length* + το
+  *perpendicular* phase (~1e-9)· η θέση έναρξης dash *κατά μήκος* της γραμμής προκύπτει από το ίδιο
+  `base` (άρα σχεδόν βέβαια σωστή) αλλά δεν μετρήθηκε ξεχωριστά. Αφορά μόνο dashed patterns (HEX/SQUARE),
+  sub-cell· ground-truth overlay στο implementation θα το κλείσει οριστικά.
 
 ---
 
@@ -175,5 +190,9 @@ Native HATCH EdgePath/bulge + R14 boundary bulge (GRATE έχει stride-3 με b
 ## Changelog
 
 - **2026-07-13** — ADR δημιουργήθηκε ως οδηγός υλοποίησης μετά από decode-first ανάλυση 6 R14 patterns
-  (ANSI31/SQUARE/NET/HEX/GRASS/GRATE) στο `Αδείας.Κάτοψη ισογείου.dxf`. Format κλειδώθηκε &
-  cross-validated με `acad.pat`. Υλοποίηση Φ1 pending.
+  (ANSI31/SQUARE/NET/HEX/GRASS/GRATE) στο `Αδείας.Κάτοψη ισογείου.dxf`.
+- **2026-07-13 (b)** — **GROUND-TRUTH validation ΕΚΤΕΛΕΣΤΗΚΕ:** parsed pattern-def vs πραγματικές
+  exploded LINEs του `*X#` block σε ANSI31/HEX/SQUARE/GRATE. angle + perpendicular spacing (un-rotation)
+  + phase (base→origin) + dash length ταιριάζουν **στα ~1e-9**. Διορθώθηκε λάθος μνήμης (SQUARE 0.254→
+  **0.127**). Το γεωμετρικό format είναι πλέον **εμπειρικά κλειδωμένο**. Απομένουν 2 μη-blocking κενά
+  (boundary bulges, along-line dash-start phase). Υλοποίηση Φ1 pending.

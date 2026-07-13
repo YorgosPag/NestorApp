@@ -442,6 +442,17 @@ offset dots (μετακίνηση μεμονωμένης ράγας)· *(optiona
 
 ## 10. Changelog
 
+- **2026-07-13 (Railway preset — πραγματικές διαστάσεις + preview auto-fit)** — Ο Giorgio ζήτησε να μπουν
+  οι **πραγματικές** σιδηροδρομικές διαστάσεις ως προεπιλογή στο preset «Σιδηρόδρομος» (web-sourced):
+  εύρος τροχιάς **1435 mm** (εσωτ. παρειές) + πλάτος κεφαλής ράγας **72 mm** (UIC 60) → κέντρο-προς-κέντρο
+  ραγών **1507 mm** (offset **±753.5**)· απόσταση στρωτήρων **650 mm** κέντρο-κέντρο (mainline)· μήκος
+  στρωτήρα **2600 mm** (tick scale). `config/linetype-compound-presets.ts`: `RAIL_HALF_GAUGE_MM 0.75→753.5`,
+  `TIE_GAP_MM 4→TIE_SPACING_MM 650`, `TIE_SCALE 1.6→TIE_LENGTH_MM 2600`. **Preview auto-fit**
+  (`LinePatternPreviews.tsx`): το compound swatch υπολογίζει px/mm ώστε η μπάντα (offsets + symbol reach)
+  να χωρά κάθετα ΚΑΙ ≥2.2 περίοδοι οριζόντια — zoom-out από cap (7/14). Χωρίς αυτό, στα ρεαλιστικά mm
+  (753 mm offset) οι ράγες θα ήταν εκτός καμβά. Μικρά patterns μένουν στο cap (αμετάβλητα).
+  Πηγές: Wikipedia Standard-gauge· ArcelorMittal 60E1· RailOne concrete sleepers.
+
 - **2026-07-13 (Φ6-A UX fix — spread = κατοπτρικό γύρω από τον άξονα· 2 iterations)** — Ο Giorgio: οι πάνω/
   κάτω λαβές σε ασύμμετρο compound (1.8/−1.1) δεν κρατούσαν τις ράγες ισαπέχουσες, και μετά κινούνταν με
   **διαφορετικό βήμα**. Αιτία iter-1: pivot στο *band centre* (0.35) αντί στον άξονα. Iter-2 (`offset ×
