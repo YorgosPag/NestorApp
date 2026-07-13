@@ -141,7 +141,52 @@
     "entityCreated": "{count, plural, one {# entity} other {# entities}} created",
     "error": "Error during execution",
     "toggleOpen": "Open AI assistant",
-    "toggleClose": "Close AI assistant"
+    "toggleClose": "Close AI assistant",
+    "topo": {
+      "contoursGenerated": "Generated {contours} contours ({entities} entities).",
+      "contoursFailed": {
+        "no-level": "No active level for contours.",
+        "too-few-points": "At least 3 survey points are needed for contours.",
+        "no-contours": "No contours resulted from these settings.",
+        "no-layers": "Could not create the contour layers."
+      },
+      "contourStyle": {
+        "exact": "Contours are now exact.",
+        "smooth": "Contours are now smoothed (pretty)."
+      },
+      "terrain": {
+        "shown": "Showed the 3D terrain.",
+        "hidden": "Hid the 3D terrain."
+      },
+      "terrainStyle": {
+        "shaded": "Terrain style: shaded.",
+        "hypsometric": "Terrain style: elevation banding.",
+        "cutfill": "Terrain style: cut/fill analysis."
+      },
+      "qa": {
+        "notEnoughData": "Too few points for a quality check.",
+        "clean": "Quality check: no issues found.",
+        "found": "Quality check: {high} high, {medium} medium, {low} low findings."
+      },
+      "cutfill": {
+        "referenceDatum": "Volume reference: level +{level} m.",
+        "referenceSurface": "Volume reference: designed surface.",
+        "done": "Computed the cut/fill volumes — see the table in the Topography panel.",
+        "error": {
+          "no-surface": "No ground surface to compute volumes from.",
+          "no-proposed-surface": "No designed surface has been imported."
+        }
+      },
+      "spikes": {
+        "none": "No spikes found to delete.",
+        "confirmTitle": "Confirm deletion",
+        "confirmPrompt": "Delete {count, plural, one {# spike point} other {# spike points}}?",
+        "confirmButton": "Delete spikes",
+        "cancelButton": "Cancel",
+        "cancelled": "Cancelled — no points were changed.",
+        "removed": "Deleted {count, plural, one {# spike point} other {# spike points}}."
+      }
+    }
   },
   "moveTool": {
     "selectEntity": "Select entity to move",

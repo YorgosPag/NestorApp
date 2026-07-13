@@ -4595,6 +4595,8 @@
       "titleBlockTooltip": "Place a drawing title block, auto-filled from the active project",
       "titleBlockStamp": "Stamp…",
       "titleBlockStampTooltip": "Upload the engineer stamp/signature — placed automatically on every title block",
+      "aiTitleBlock": "AI Title Block…",
+      "aiTitleBlockTooltip": "Generate a title block with AI — from a photo of an existing title block or from a description",
       "toggleGuides": "Show/Hide Guides",
       "guideAnalysis": "Guide Analysis",
       "displayGrid": "Grid",
@@ -6141,6 +6143,63 @@
       "size": "File too large (2MB limit).",
       "failed": "Upload failed. Please try again.",
       "removeFailed": "Removal failed. Please try again.",
+      "notReady": "No active user/company available."
+    }
+  },
+  "aiTitleBlock": {
+    "title": "AI Title Block",
+    "description": "AI recreates an editable title block — from a photo of an existing one or from a description. The result is redrawn cleanly in our style and you can save it or place it.",
+    "tab": {
+      "image": "From image",
+      "text": "From description"
+    },
+    "image": {
+      "label": "Title block photo or screenshot",
+      "hint": "PNG, JPG or WebP up to 5MB. AI keeps which fields exist and redraws them cleanly.",
+      "pick": "Choose image",
+      "replace": "Change image",
+      "selected": "Selected image",
+      "analyze": "Analyze with AI",
+      "analyzing": "Analyzing…"
+    },
+    "text": {
+      "label": "Title block description",
+      "placeholder": "e.g. A2 building-permit title block with engineer details, TEE reg. no. and a stamp cell",
+      "hint": "Describe the fields you want; AI produces a TEE-compliant title block.",
+      "generate": "Generate with AI",
+      "generating": "Generating…"
+    },
+    "preview": {
+      "title": "Title block preview",
+      "empty": "Generate a title block from an image or description to preview it.",
+      "heading": "Heading",
+      "fields": "{count, plural, one {# field} other {# fields}}",
+      "stampBox": "Includes a stamp cell",
+      "dropped": "Ignored {count, plural, one {# unknown field} other {# unknown fields}} that do not map to known data."
+    },
+    "name": {
+      "label": "Template name",
+      "placeholder": "e.g. Permit Title Block — Project X"
+    },
+    "insert": "Insert into scene",
+    "save": "Save template",
+    "saving": "Saving…",
+    "saved": "Template saved.",
+    "compliance": {
+      "title": "AI compliance check",
+      "checking": "Checking…",
+      "recheck": "Re-check",
+      "ok": "AI found no submission gaps.",
+      "intro": "Possible gaps before submission (a warning, not a block):"
+    },
+    "errors": {
+      "analyzeFailed": "Image analysis failed. Try again or use a ready-made template.",
+      "generateFailed": "Generation failed. Try again or use a ready-made template.",
+      "saveFailed": "Save failed. Please try again.",
+      "noResult": "AI returned no title block. Try a clearer image or description.",
+      "imageTooLarge": "Image too large (5MB limit).",
+      "imageFormat": "Unsupported format. Use PNG, JPG or WebP.",
+      "emptyPrompt": "Enter a short description of the title block.",
       "notReady": "No active user/company available."
     }
   },
