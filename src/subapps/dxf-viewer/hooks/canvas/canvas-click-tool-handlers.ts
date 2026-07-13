@@ -39,6 +39,18 @@ import type { AnnotationSymbolEntity } from '../../types/annotation-symbol';
 import { useAnnotationSymbolSelectionStore } from '../../state/annotation-symbol-selection-store';
 import { getAnnotationSymbol } from '../../config/annotation-symbol-catalog';
 import type { ToolType } from '../../ui/toolbar/types';
+// ADR-649 — «Ετικέτα Εμβαδού Γραμμοσκίασης» (2 κλικ: pick hatch → place label).
+import { isHatchEntity, type Entity } from '../../types/entities';
+import { pickTopHatchAt } from '../../bim/hatch/hatch-pick-at';
+import { buildHatchAreaLabelEntity } from '../../bim/hatch/hatch-area-label';
+import {
+  getHatchAreaLabelState,
+  armHatchAreaLabelPlacement,
+  resetHatchAreaLabel,
+} from '../../bim/hatch/hatch-area-label-store';
+import { useDrawingScaleStore } from '../../state/drawing-scale-store';
+import { toolHintOverrideStore } from '../toolHintOverrideStore';
+import { i18n } from '@/i18n';
 
 // ============================================================================
 // ROTATION ENTITY SELECTION (PRIORITY 1.3)
@@ -136,6 +148,23 @@ function pickRegionInteriorPoint(polygon: Point2D[] | undefined, fallback: Point
 }
 
 /**
+ * SSoT for the «resolve active level» preamble every commit-style click handler shares:
+ * grab the current level id + scene setter, bail if either is missing, and expose the
+ * current scene + its entities. ADR-583 (N.18): three handlers (hatch pick-point,
+ * annotation symbol, hatch area label) previously copy-pasted this block — one place now.
+ * Returns `null` when there is no active level to draw into (caller returns `false`).
+ */
+function resolveActiveLevelContext(p: UseCanvasClickHandlerParams) {
+  const levelId = p.levelManager.currentLevelId;
+  const setScene = p.levelManager.setLevelScene;
+  if (!levelId || !setScene) return null;
+
+  const scene = p.levelManager.getLevelScene(levelId);
+  const entities = scene?.entities ?? [];
+  return { levelId, setScene, scene, entities };
+}
+
+/**
  * Τρόπος Β: ΕΝΑ κλικ ΜΕΣΑ σε κλειστή περιοχή → ανίχνευση ορίου (+ νησιά) μέσω
  * `auto-area-hit` SSoT → `HatchEntity` → `completeEntity` (ίδιο pipeline με τον
  * Τρόπο Α: undo + auto-send-to-back + `drawing:complete` → persistence).
@@ -147,12 +176,9 @@ export function handleHatchPickPointClick(
   worldPoint: Point2D,
   p: UseCanvasClickHandlerParams,
 ): boolean {
-  const levelId = p.levelManager.currentLevelId;
-  const setScene = p.levelManager.setLevelScene;
-  if (!levelId || !setScene) return false;
-
-  const scene = p.levelManager.getLevelScene(levelId);
-  const entities = scene?.entities ?? [];
+  const ctx = resolveActiveLevelContext(p);
+  if (!ctx) return false;
+  const { levelId, setScene, entities } = ctx;
   // ADR-040 XXII.A: live SSoT scale read at click time.
   const scale = getImmediateTransform().scale;
   // ADR-507 Φ3 — preview ≡ commit (WYSIWYG): γέμισε ΑΚΡΙΒΩΣ την περιοχή που δείχνει το
@@ -225,9 +251,9 @@ export function handleAnnotationSymbolClick(
   activeTool: ToolType,
   p: UseCanvasClickHandlerParams,
 ): boolean {
-  const levelId = p.levelManager.currentLevelId;
-  const setScene = p.levelManager.setLevelScene;
-  if (!levelId || !setScene) return false;
+  const ctx = resolveActiveLevelContext(p);
+  if (!ctx) return false;
+  const { levelId, setScene } = ctx;
 
   const { symbolId, sizeMm, rotationDeg } = useAnnotationSymbolSelectionStore.getState();
   // The variant IS the source of truth for its family — derive `kind` from the
@@ -251,6 +277,64 @@ export function handleAnnotationSymbolClick(
     setScene,
   });
   dlog('handleAnnotationSymbolClick', `placed ${symbolId} @ (${worldPoint.x.toFixed(1)}, ${worldPoint.y.toFixed(1)})`);
+  return true;
+}
+
+// ============================================================================
+// HATCH AREA LABEL (ADR-649 — 2 κλικ: pick hatch → place area label)
+// ============================================================================
+const HATCH_AREA_LABEL_NS = 'dxf-viewer-shell';
+
+/**
+ * ΦΑΣΗ 1: διάλεξε τη γραμμοσκίαση κάτω από το κλικ (even-odd `pickTopHatchAt`
+ * SSoT), κλείδωσέ την στην FSM + highlight την, και προχώρα σε αναμονή
+ * τοποθέτησης. Καμία γραμμοσκίαση → κατανάλωσε το κλικ, μείνε στη φάση 1
+ * (forgiving — ξαναδοκιμάζεις).
+ */
+function armHatchAreaLabelFromClick(
+  worldPoint: Point2D,
+  entities: readonly Entity[],
+  p: UseCanvasClickHandlerParams,
+): boolean {
+  const hatchId = pickTopHatchAt(worldPoint, entities);
+  if (!hatchId) return true;
+  armHatchAreaLabelPlacement(hatchId);
+  p.universalSelection.replaceEntitySelection([hatchId]);
+  toolHintOverrideStore.setOverride(i18n.t('hatchAreaLabel.status.awaitingPlacement', { ns: HATCH_AREA_LABEL_NS }));
+  return true;
+}
+
+/**
+ * ADR-649 — 2-κλικ dispatcher. ΦΑΣΗ 1 → pick γραμμοσκίασης· ΦΑΣΗ 2 → χτίσε το
+ * `TextEntity` εμβαδού και commit μέσω `completeEntity` (undo + persistence +
+ * `drawing:complete`). Θέση: centroid όταν το 2ο κλικ πέφτει ΜΕΣΑ στην ίδια
+ * γραμμοσκίαση, αλλιώς στο σημείο του κλικ (`resolveHatchLabelAnchor`). Μετά το
+ * commit επανέρχεται στη φάση 1 (συνεχής χρήση, AutoCAD-style).
+ */
+export function handleHatchAreaLabelClick(
+  worldPoint: Point2D,
+  p: UseCanvasClickHandlerParams,
+): boolean {
+  const ctx = resolveActiveLevelContext(p);
+  if (!ctx) return false;
+  const { levelId, setScene, scene, entities } = ctx;
+  const st = getHatchAreaLabelState();
+
+  if (st.phase === 'awaitingHatch' || !st.hatchId) {
+    return armHatchAreaLabelFromClick(worldPoint, entities, p);
+  }
+
+  const hatch = entities.find((e) => e.id === st.hatchId);
+  if (!scene || !hatch || !isHatchEntity(hatch)) {
+    resetHatchAreaLabel();
+    toolHintOverrideStore.setOverride(i18n.t('hatchAreaLabel.status.awaitingHatch', { ns: HATCH_AREA_LABEL_NS }));
+    return true;
+  }
+  const drawingScale = useDrawingScaleStore.getState().drawingScale;
+  const entity = buildHatchAreaLabelEntity(hatch, worldPoint, resolveSceneUnits(scene), drawingScale);
+  completeEntity(entity, { tool: 'hatch-area-label', levelId, getScene: p.levelManager.getLevelScene, setScene });
+  resetHatchAreaLabel();
+  toolHintOverrideStore.setOverride(i18n.t('hatchAreaLabel.status.awaitingHatch', { ns: HATCH_AREA_LABEL_NS }));
   return true;
 }
 

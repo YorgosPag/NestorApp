@@ -290,7 +290,11 @@ export type ToolType =
   // NOT an annotation-symbol kind. SINGLE-CLICK generic accumulator tool (mirror
   // 'annotation-symbol' click-count, scale-bar's ribbon/options/builder plumbing):
   // 1 click = box centre, default 120×80 (3:2) size, 3 empty cells (edited later).
-  | 'opening-info-tag';   // OPENINGTAG — 1-click → OpeningInfoTagEntity
+  | 'opening-info-tag'    // OPENINGTAG — 1-click → OpeningInfoTagEntity
+  // ADR-649: «Ετικέτα Εμβαδού Γραμμοσκίασης» — 2-κλικ placement/creation tool (pick
+  // hatch → place TextEntity με το εμβαδόν). Persists ως κανονικό text (select/move/
+  // delete/undo). ΔΕΝ είναι measurement readout — δεν μπαίνει στο MeasurementTool union.
+  | 'hatch-area-label';   // HATCHAREALABEL — 2-click → TextEntity (εμβαδόν γραμμοσκίασης)
 
 
 export interface ToolDefinition {

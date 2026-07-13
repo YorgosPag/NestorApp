@@ -25,6 +25,7 @@ import { useMepWaterHeaterTool } from '../drawing/useMepWaterHeaterTool';
 import { useMepSegmentTool } from '../drawing/useMepSegmentTool';
 import { useMepRiserTool } from '../drawing/useMepRiserTool';
 import { useRailingTool } from '../drawing/useRailingTool';
+import { useHatchAreaLabelTool } from '../drawing/useHatchAreaLabelTool';
 import { useToolLifecycle } from './useToolLifecycle';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import { addMepFixtureToScene } from '../../bim/mep-fixtures/add-mep-fixture-to-scene';
@@ -314,6 +315,11 @@ export function useSpecialToolsPlacementTools(
     },
   });
   useToolLifecycle(activeTool === 'mep-drain-riser', mepRiserTool.activate, mepRiserTool.deactivate);
+
+  // ADR-649 — «Ετικέτα Εμβαδού Γραμμοσκίασης»: lifecycle-only (reset FSM + status hint).
+  // Το κλικ το χειρίζεται το `handleHatchAreaLabelClick` πάνω στο vanilla store (ADR-040
+  // event-time read), οπότε δεν επιστρέφεται tool object — μόνο activate/deactivate reset.
+  useHatchAreaLabelTool(activeTool === 'hatch-area-label');
 
   return {
     mepFixtureTool,

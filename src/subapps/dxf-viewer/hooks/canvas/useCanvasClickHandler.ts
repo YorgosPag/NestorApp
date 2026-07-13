@@ -31,7 +31,7 @@ import {
   handleLineParallelPick,
 } from './entity-pick-handlers';
 import type { EntityPickContext } from './entity-pick-handlers';
-import { handleRotationEntitySelection, handleAutoAreaClick, handleHatchPickPointClick, handleOverlayDrawClick, handleAnnotationSymbolClick } from './canvas-click-tool-handlers';
+import { handleRotationEntitySelection, handleAutoAreaClick, handleHatchPickPointClick, handleOverlayDrawClick, handleAnnotationSymbolClick, handleHatchAreaLabelClick } from './canvas-click-tool-handlers';
 import { isAnnotationSymbolTool } from '../../config/annotation-kind-registry';
 // ADR-581 — Match Properties σταγονόμετρο/σύριγγα (Alt pick / Ctrl+Alt inject / πινέλο).
 import { handleMatchBrushClick } from './match-click-handlers';
@@ -282,6 +282,12 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // PRIORITY 1.7: Auto area measurement — point-in-polygon click
     if (activeTool === 'auto-measure-area') {
       handleAutoAreaClick(worldPoint, params);
+      return;
+    }
+    // PRIORITY 1.72: ADR-649 — «Ετικέτα Εμβαδού Γραμμοσκίασης» (2 κλικ: pick hatch →
+    // place area label). Καταναλώνει το κλικ (FSM store αποφασίζει φάση 1 vs 2).
+    if (activeTool === 'hatch-area-label') {
+      handleHatchAreaLabelClick(worldPoint, params);
       return;
     }
     // PRIORITY 1.75: ADR-507 Φ3 — Hatch pick-point (Τρόπος Β). ΕΝΑ κλικ μέσα σε

@@ -62,6 +62,20 @@ export const ANNOTATE_MEASURE_PANEL: RibbonPanelDef = {
             },
           ],
         },
+        // ADR-649 — «Ετικέτα Εμβαδού Γραμμοσκίασης»: 2-κλικ (pick hatch → place label).
+        // Απλό tool-change κουμπί (commandKey = ToolType, χωρίς action → onToolChange).
+        {
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'measure.hatchAreaLabel',
+            labelKey: 'ribbon.commands.hatchAreaLabel',
+            icon: 'measure-area',
+            commandKey: 'hatch-area-label',
+            tooltipKey: 'ribbon.tooltips.hatchAreaLabel',
+            shortcut: 'HA',
+          },
+        },
         {
           type: 'split',
           size: 'large',
