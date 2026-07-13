@@ -1,18 +1,23 @@
 'use client';
 /**
- * ADR-650 Milestone 2 — Import-wizard orchestration (all state, zero markup).
+ * ADR-650 Milestone 2 (+ M8α) — Import-wizard orchestration (all state, zero markup).
  *
  * The wizard component stays a pure renderer: every decision — which reader a file needs,
  * whether the mapping step applies, how many points the current mapping would yield — is
  * resolved here, on top of the pure `systems/topography` modules.
  *
- * Two roads (Q9), one destination (`TopoPointStore`):
+ * Four roads (Q9), one destination (`TopoPointStore`):
  *
- *   CSV / TXT / XYZ / XLSX →  RawTable  →  [mapping + unit]  →  TopoPoint[]  ─┐
- *   DXF                    →  POINT / TEXT extraction        →  TopoPoint[]  ─┴→ setTopoPoints
+ *   CSV / TXT / XLSX        →  RawTable  →  [mapping + unit]  →  TopoPoint[]  ─┐
+ *   DXF                     →  POINT / TEXT extraction        →  TopoPoint[]  ─┤
+ *   LAS / LAZ / XYZ / PTS   →  bare-earth filter (CSF)         →  TopoPoint[]  ─┴→ setTopoPoints
+ *                              (see `cloud` step, M8α)
  *
- * The DXF road carries its own coordinates and needs no column mapping, so it SKIPS the
- * mapping step — same as Civil 3D, which only shows the format dialog for point files.
+ * The DXF road carries its own coordinates and needs no column mapping, same as Civil 3D, which
+ * only shows the format dialog for point files. The point-cloud road ALSO skips mapping — a
+ * bulk cloud carries raw XYZ (+ optional ASPRS classification), never a described column order —
+ * but unlike DXF it needs an extra step: `'cloud'`, where the engineer reviews the bare-earth
+ * filter (source classification or CSF) and the decimated preview BEFORE it reaches `confirm`.
  */
 
 import * as React from 'react';
@@ -22,13 +27,25 @@ import { readExcelToTable } from '../../../systems/topography/topo-excel-reader'
 import { extractTopoPointsFromDxf } from '../../../systems/topography/topo-dxf-points';
 import { applyColumnMapping, isMappingComplete, suggestMappingFromHeaders } from '../../../systems/topography/topo-column-mapping';
 import { getOrderPresetMapping } from '../../../systems/topography/topo-order-presets';
+import { isPointCloudFile, importPointCloud } from '../../../io/pointcloud-import';
+import { CSF_DEFAULTS, VOXEL_DEFAULTS, READ_DEFAULTS } from '../../../systems/topography/pointcloud/pointcloud-defaults';
 import type { ColumnMapping, ColumnRole, RawTable, TopoUnit } from '../../../systems/topography/topo-import-types';
 import type { TopoPoint, TopoSurfaceId } from '../../../systems/topography/topo-types';
+import type {
+  CsfOptions,
+  PointCloudImportProgress,
+  PointCloudPipelineResult,
+  VoxelDecimateOptions,
+} from '../../../systems/topography/pointcloud/pointcloud-types';
 
-export type TopoImportStep = 'source' | 'mapping' | 'confirm';
+export type TopoImportStep = 'source' | 'mapping' | 'cloud' | 'confirm';
+
+/** i18n key used when a cloud filter rejects with something other than an `Error`. */
+const CLOUD_ERROR_FALLBACK_KEY = 'topography.pointcloud.error.unknown';
 
 /** File extension → which reader handles it. */
-function readerFor(fileName: string): 'delimited' | 'excel' | 'dxf' {
+function readerFor(fileName: string): 'delimited' | 'excel' | 'dxf' | 'pointcloud' {
+  if (isPointCloudFile(fileName)) return 'pointcloud';
   const ext = fileName.slice(fileName.lastIndexOf('.')).toLowerCase();
   if (ext === '.xlsx' || ext === '.xlsm') return 'excel';
   if (ext === '.dxf') return 'dxf';
@@ -41,9 +58,9 @@ export interface UseTopoImport {
   readonly table: RawTable | null;
   readonly mapping: ColumnMapping;
   readonly unit: TopoUnit;
-  /** Points the CURRENT mapping/unit would import (live preview — recomputed as roles change). */
+  /** Points the CURRENT mapping/unit (or cloud filter result) would import — live preview. */
   readonly points: readonly TopoPoint[];
-  /** Rows that would be dropped (unparseable X/Y/Z). */
+  /** Rows that would be dropped (unparseable X/Y/Z). Always 0 on the cloud road. */
   readonly skippedCount: number;
   readonly error: string | null;
   readonly busy: boolean;
@@ -57,6 +74,19 @@ export interface UseTopoImport {
   /** Commit the previewed points into the store (replaces the current set). */
   readonly commit: () => number;
   readonly reset: () => void;
+
+  // ─── Point-cloud road (ADR-650 M8α) ─────────────────────────────────────────
+  readonly csf: CsfOptions;
+  readonly decimate: VoxelDecimateOptions;
+  readonly forceCsf: boolean;
+  readonly cloudResult: PointCloudPipelineResult | null;
+  readonly cloudProgress: PointCloudImportProgress | null;
+  readonly cloudError: string | null;
+  readonly updateCsf: (patch: Partial<CsfOptions>) => void;
+  readonly updateDecimate: (patch: Partial<VoxelDecimateOptions>) => void;
+  readonly setForceCsf: (value: boolean) => void;
+  /** Run the bare-earth filter over the loaded file with the current csf/decimate/unit options. */
+  readonly runCloudFilter: () => Promise<void>;
 }
 
 /**
@@ -75,6 +105,14 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
 
+  const [cloudFile, setCloudFile] = React.useState<File | null>(null);
+  const [csf, setCsf] = React.useState<CsfOptions>(CSF_DEFAULTS);
+  const [decimate, setDecimate] = React.useState<VoxelDecimateOptions>(VOXEL_DEFAULTS);
+  const [forceCsf, setForceCsf] = React.useState(false);
+  const [cloudResult, setCloudResult] = React.useState<PointCloudPipelineResult | null>(null);
+  const [cloudProgress, setCloudProgress] = React.useState<PointCloudImportProgress | null>(null);
+  const [cloudError, setCloudError] = React.useState<string | null>(null);
+
   const reset = React.useCallback(() => {
     setStep('source');
     setFileName(null);
@@ -84,6 +122,13 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
     setUnit('m');
     setError(null);
     setBusy(false);
+    setCloudFile(null);
+    setCsf(CSF_DEFAULTS);
+    setDecimate(VOXEL_DEFAULTS);
+    setForceCsf(false);
+    setCloudResult(null);
+    setCloudProgress(null);
+    setCloudError(null);
   }, []);
 
   const loadFile = React.useCallback(async (file: File) => {
@@ -98,6 +143,18 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
         setDxfPoints(extractTopoPointsFromDxf(await file.text()).points);
         setTable(null);
         setStep('confirm');
+        return;
+      }
+
+      if (kind === 'pointcloud') {
+        // Bulk buffer, own coordinates, no described column order → the `cloud` step, not mapping.
+        setDxfPoints(null);
+        setTable(null);
+        setCloudFile(file);
+        setCloudResult(null);
+        setCloudProgress(null);
+        setCloudError(null);
+        setStep('cloud');
         return;
       }
 
@@ -126,21 +183,56 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
     setMapping((prev) => padMapping(preset, prev.length));
   }, []);
 
+  const updateCsf = React.useCallback((patch: Partial<CsfOptions>) => {
+    setCsf((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  const updateDecimate = React.useCallback((patch: Partial<VoxelDecimateOptions>) => {
+    setDecimate((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  const runCloudFilter = React.useCallback(async () => {
+    if (!cloudFile) return;
+    setBusy(true);
+    setCloudError(null);
+    setCloudProgress(null);
+    try {
+      const result = await importPointCloud(
+        cloudFile,
+        { read: { unit, maxPointsInMemory: READ_DEFAULTS.maxPointsInMemory }, csf, decimate, forceCsf },
+        setCloudProgress,
+      );
+      setCloudResult(result);
+    } catch (err) {
+      setCloudError(err instanceof Error ? err.message : CLOUD_ERROR_FALLBACK_KEY);
+    } finally {
+      setBusy(false);
+    }
+  }, [cloudFile, unit, csf, decimate, forceCsf]);
+
   // Live preview — the surveyor sees the point count react to every dropdown change.
   const mapped = React.useMemo(() => {
+    if (cloudResult) return { points: cloudResult.points, skipped: [] as readonly number[] };
     if (dxfPoints) return { points: dxfPoints, skipped: [] as readonly number[] };
     if (!table) return { points: [] as readonly TopoPoint[], skipped: [] as readonly number[] };
     return applyColumnMapping(table, mapping, unit);
-  }, [dxfPoints, table, mapping, unit]);
+  }, [cloudResult, dxfPoints, table, mapping, unit]);
 
   const canProceed = step === 'mapping'
     ? isMappingComplete(mapping) && mapped.points.length > 0
-    : mapped.points.length > 0;
+    : step === 'cloud'
+      ? cloudResult !== null && cloudResult.points.length > 0
+      : mapped.points.length > 0;
 
-  const next = React.useCallback(() => setStep((s) => (s === 'mapping' ? 'confirm' : s)), []);
+  const next = React.useCallback(() => setStep((s) => (s === 'mapping' || s === 'cloud' ? 'confirm' : s)), []);
   const back = React.useCallback(() => {
-    setStep((s) => (s === 'confirm' && !dxfPoints ? 'mapping' : 'source'));
-  }, [dxfPoints]);
+    setStep((s) => {
+      if (s !== 'confirm') return 'source';
+      if (dxfPoints) return 'source';
+      if (cloudResult) return 'cloud';
+      return 'mapping';
+    });
+  }, [dxfPoints, cloudResult]);
 
   const commit = React.useCallback(() => {
     setTopoPoints(mapped.points, surface);
@@ -153,6 +245,8 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
     skippedCount: mapped.skipped.length,
     error, busy, canProceed,
     loadFile, setRole, applyPreset, setUnit, back, next, commit, reset,
+    csf, decimate, forceCsf, cloudResult, cloudProgress, cloudError,
+    updateCsf, updateDecimate, setForceCsf, runCloudFilter,
   };
 }
 

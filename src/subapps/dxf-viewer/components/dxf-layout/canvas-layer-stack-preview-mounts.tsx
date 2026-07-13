@@ -35,6 +35,8 @@ import { ProposalDispatchCanvas } from './proposal-overlays/ProposalDispatchCanv
 // follow a dragged guide frame-for-frame on a dedicated canvas).
 import { GuideFollowGhostPreviewMount } from './GuideFollowGhostOverlay';
 import { ClashOverlayMount } from './canvas-layer-stack-clash-overlay';
+// ADR-650 M5α — topography QA «καμπανάκι» markers (sibling of ClashOverlayMount, same shared layer).
+import { TopoQaOverlayMount } from './canvas-layer-stack-topo-qa-overlay';
 import { SlabOpeningGhostPreviewMount, type SlabOpeningGhostPreviewMountProps } from './canvas-layer-stack-slab-opening-ghost';
 import { OpeningGhostPreviewMount, type OpeningGhostPreviewMountProps } from './canvas-layer-stack-opening-ghost';
 import { OpeningTagDragMount } from './canvas-layer-stack-opening-tag-drag';
@@ -307,6 +309,8 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       <GuideFollowGhostPreviewMount transform={transform} viewport={viewport} levelManager={levelManager} />
       {/* ADR-435 Slice 1 — clash-detection report overlay (low-freq store, inert while idle). */}
       <ClashOverlayMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      {/* ADR-650 M5α — topography QA markers (low-freq report store, inert until «Έλεγχος ποιότητας»). */}
+      <TopoQaOverlayMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       <SlabOpeningGhostPreviewMount {...slabOpeningGhost} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       <OpeningGhostPreviewMount {...openingGhost} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       <GripDimAnnotationMount dragPreview={gripDragPreview} levelManager={levelManager} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />

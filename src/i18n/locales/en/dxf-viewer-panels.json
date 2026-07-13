@@ -991,7 +991,7 @@
       "next": "Next",
       "import": "Import",
       "reading": "Reading file…",
-      "sourceHint": "Pick a point file (CSV, TXT, XYZ), an Excel sheet, or a DXF drawing with points/elevations.",
+      "sourceHint": "Pick a point file (CSV, TXT, XYZ), an Excel sheet, a DXF drawing with points/elevations, or a point cloud (LAS, LAZ) from a drone/LiDAR survey.",
       "confirmHint": "These points will replace the ones currently loaded.",
       "confirmCount": "{count, plural, one {# point ready to import} other {# points ready to import}}",
       "previewCount": "{count, plural, one {# point} other {# points}}",
@@ -1025,6 +1025,74 @@
       },
       "error": {
         "read": "Could not read the file."
+      }
+    },
+    "pointcloud": {
+      "forceCsf": "Re-run CSF classification even if the file already carries one",
+      "run": "Filter",
+      "stage": {
+        "reading": "Reading file… {percent}%",
+        "classifying": "Classifying bare earth… {percent}%",
+        "decimating": "Decimating points… {percent}%"
+      },
+      "csf": {
+        "title": "Bare-earth filter (CSF)",
+        "hint": "Applied only when the file carries no classification already, or when forced below.",
+        "clothResolution": "Cloth resolution (mm)",
+        "classThreshold": "Classification threshold (mm)",
+        "rigidness": "Terrain rigidness",
+        "rigidnessValue": {
+          "1": "1 — Steep relief",
+          "2": "2 — Regular relief",
+          "3": "3 — Flat terrain"
+        },
+        "slopeSmoothing": "Smooth steep slopes"
+      },
+      "decimate": {
+        "title": "Output point density",
+        "cellSize": "Point spacing (mm)",
+        "representative": "Cell representative point",
+        "representativeValue": {
+          "lowest": "Lowest",
+          "mean": "Mean"
+        }
+      },
+      "method": {
+        "source-classification": "source classification",
+        "csf": "CSF filter"
+      },
+      "result": {
+        "method": "Method: {method}",
+        "ground": "Ground points",
+        "nonGround": "Non-ground points",
+        "total": "Total points",
+        "sourceClassified": "The file already carried a classification — it was honoured as-is.",
+        "previewLabel": "Visual preview (top-down)"
+      },
+      "error": {
+        "notLas": "Not a valid LAS file — check whether this is an AutoCAD Layer State (.las) file instead.",
+        "lasTruncated": "The LAS file is incomplete or corrupted.",
+        "lazUnsupported": "The file is compressed LAZ and cannot be read as uncompressed LAS.",
+        "lazRuntimeUnavailable": "LAZ decompression could not be loaded in this browser.",
+        "lazDecodeFailed": "LAZ decompression failed — the file may be corrupt.",
+        "unsupportedPdrf": "Unsupported LAS point data record format.",
+        "noPoints": "The file contains no points.",
+        "clothTooFine": "The cloth resolution is too fine for the cloud's extent — increase it.",
+        "invalidClothResolution": "Invalid cloth resolution — it must be a positive number.",
+        "invalidCellSize": "Invalid point spacing — it must be a positive number.",
+        "unsupportedFormat": "Unsupported point-cloud file format.",
+        "workerUnavailable": "Could not start point-cloud processing.",
+        "workerCrashed": "Point-cloud processing stopped unexpectedly.",
+        "timeout": "Point-cloud processing timed out.",
+        "unexpected": "Unexpected error while processing the point cloud.",
+        "unknown": "Point-cloud filtering failed."
+      },
+      "warn": {
+        "strideSampled": "The file was too large — a sampled subset of points was kept.",
+        "skippedLines": "Some lines in the file were skipped (invalid coordinates).",
+        "truncatedPointData": "The LAS point data looked incomplete — what was available was read.",
+        "recordLengthMismatch": "The LAS record length differs from what its format expects.",
+        "headerBoundsInvalid": "The LAS header bounds were invalid — recomputed from the points themselves."
       }
     },
     "cutfill": {

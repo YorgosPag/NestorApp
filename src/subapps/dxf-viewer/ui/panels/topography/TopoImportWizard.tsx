@@ -1,10 +1,14 @@
 'use client';
 /**
- * ADR-650 Milestone 2 — «Εισαγωγή σημείων» wizard (Q9).
+ * ADR-650 Milestone 2 (+ M8α) — «Εισαγωγή σημείων» wizard (Q9).
  *
- * Three steps — source → mapping → confirm — with the mapping step skipped for DXF, which
- * already carries world coordinates (see `useTopoImport`). All state lives in that hook;
- * this file is markup + wiring only.
+ * Three VISIBLE steps — source → [mapping | cloud] → confirm — with the middle step being
+ * whichever road the file took: `mapping` for CSV/TXT/XLSX, `cloud` for LAS/LAZ/XYZ/PTS bulk
+ * clouds (ADR-650 M8α), or SKIPPED entirely for DXF, which already carries world coordinates
+ * (see `useTopoImport`). `mapping` and `cloud` are mutually exclusive per session — a wizard
+ * instance only ever takes ONE road — so both occupy stepper slot 2 without a 4th dot ever
+ * appearing; the engineer always sees "step 2 of 3", never a road-dependent step count.
+ * All state lives in the hook; this file is markup + wiring only.
  *
  * Reuses the existing generic `WizardProgress` stepper. It does NOT reuse `ui/ImportWizard`:
  * that shell is bound to `useLevels` (level/units/calibration steps) and predates N.3/N.11
@@ -18,15 +22,21 @@ import { useTranslation } from '@/i18n';
 import { X } from 'lucide-react';
 import { WizardProgress } from '../../components/WizardProgress';
 import { TopoColumnMapStep } from './TopoColumnMapStep';
+import { TopoCloudStep } from './TopoCloudStep';
 import { useTopoImport } from './useTopoImport';
 import type { TopoSurfaceId } from '../../../systems/topography/topo-types';
 import styles from './TopoImportWizard.module.css';
 
-/** Everything a surveyor might drop on us: point files, spreadsheets, or a drawing. */
-const ACCEPT = '.csv,.txt,.xyz,.pts,.dat,.xlsx,.xlsm,.dxf';
+/**
+ * Everything a surveyor might drop on us: point files, spreadsheets, a drawing, or a bulk cloud.
+ * `.xyz`/`.pts` were already accepted for the delimited road — `isPointCloudFile` (M8α) now
+ * claims them for the cloud road instead (see `useTopoImport.readerFor`), so a huge `.xyz` drop
+ * gets bare-earth filtering rather than a doomed 30M-row mapping-step table.
+ */
+const ACCEPT = '.csv,.txt,.xyz,.pts,.dat,.xlsx,.xlsm,.dxf,.las,.laz';
 
 const TOTAL_STEPS = 3;
-const STEP_NUMBER = { source: 1, mapping: 2, confirm: 3 } as const;
+const STEP_NUMBER = { source: 1, mapping: 2, cloud: 2, confirm: 3 } as const;
 
 interface Props {
   readonly onClose: () => void;
@@ -80,6 +90,8 @@ export function TopoImportWizard({ onClose, onImported, surface = 'existing' }: 
           )}
 
           {step === 'mapping' && <TopoColumnMapStep wizard={wizard} />}
+
+          {step === 'cloud' && <TopoCloudStep wizard={wizard} />}
 
           {step === 'confirm' && (
             <section className={styles.step}>

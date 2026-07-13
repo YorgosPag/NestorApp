@@ -1,6 +1,6 @@
 # ADR-650 — Τοπογραφικές Αποτυπώσεις & Ισοϋψείς Γραμμές (Έρευνα Αγοράς + Αρχιτεκτονικό Blueprint)
 
-- **Status**: 🟡 IN PROGRESS — **M1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· v4) · **M2 IMPLEMENTED** (μέρος Α import wizard· v5 — μέρος Β breakline picking· v6) · **M4 IMPLEMENTED** (3Δ όψη εδάφους: μοναδικό derived TIN → `BufferGeometry` mesh + hypsometric· v7) · **M6 IMPLEMENTED** (όγκοι cut/fill: prisms + daylight split + στάθμη/επιφάνεια/όριο + cross-check + 3Δ cut/fill style· v8, §12.4) · **M7 IMPLEMENTED** (ελληνικό export «ένα κουμπί → φάκελος»: πίνακες στο σχέδιο + ZIP με DXF/PDF/CSV/XLSX + auto tolerance-check §10· v9, §12.5) · **M3 IMPLEMENTED** (ισοϋψείς ακριβείς↔όμορφες + LOD· v10) · **M5α IMPLEMENTED** (AI «καμπανάκι» = deterministic QA rules engine + inline flags, χωρίς LLM· v11) · **M5β IMPLEMENTED** («μίλα στο σχέδιο» = NL editing με LLM tool-calling πάνω στα υπάρχοντα topo commands· 8 tools + destructive spike-removal με confirm· v12 — **M5 ΠΛΗΡΕΣ**). **Εκκρεμεί**: M8. Έρευνα §1–§11 & roadmap §12.2 παραμένουν το blueprint.
+- **Status**: 🟡 IN PROGRESS — **M1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· v4) · **M2 IMPLEMENTED** (μέρος Α import wizard· v5 — μέρος Β breakline picking· v6) · **M4 IMPLEMENTED** (3Δ όψη εδάφους: μοναδικό derived TIN → `BufferGeometry` mesh + hypsometric· v7) · **M6 IMPLEMENTED** (όγκοι cut/fill: prisms + daylight split + στάθμη/επιφάνεια/όριο + cross-check + 3Δ cut/fill style· v8, §12.4) · **M7 IMPLEMENTED** (ελληνικό export «ένα κουμπί → φάκελος»: πίνακες στο σχέδιο + ZIP με DXF/PDF/CSV/XLSX + auto tolerance-check §10· v9, §12.5) · **M3 IMPLEMENTED** (ισοϋψείς ακριβείς↔όμορφες + LOD· v10) · **M5α IMPLEMENTED** (AI «καμπανάκι» = deterministic QA rules engine + inline flags, χωρίς LLM· v11) · **M5β IMPLEMENTED** («μίλα στο σχέδιο» = NL editing με LLM tool-calling πάνω στα υπάρχοντα topo commands· 8 tools + destructive spike-removal με confirm· v12 — **M5 ΠΛΗΡΕΣ**) · **M8α IMPLEMENTED** (point-cloud ingestion: LAS + bulk ASCII → in-house CSF bare-earth filter → voxel decimation → ΥΠΑΡΧΟΝ `TopoPointStore`· μηδέν νέα dependency· v13) · **M8β/Α IMPLEMENTED** (**LAZ decode** — ο δρόμος των drones: `laz-perf` **Apache-2.0** (επαληθευμένο, εγκεκριμένο) → ασυμπίεστα records → **ο ΙΔΙΟΣ** `decodeLasRecords` του LAS· lazy WASM πίσω από dynamic import· v14). **Εκκρεμεί**: M8β/Β (3Δ cloud layer), M8β/Γ (auto-breaklines), M8β/Δ (id-aware ASCII), multiplayer, Gaussian-Splat. Έρευνα §1–§11 & roadmap §12.2 παραμένουν το blueprint.
 - **Date**: 2026-07-13
 - **Category**: DXF Viewer / Topography / Research
 - **Σχετικά**: ADR-635 (culling gap σε geo-referenced συντεταγμένες ±1e6), ADR-462 (canonical mm),
@@ -359,7 +359,9 @@ false-flat handling) → **d3-tricontour** contours (major/minor) → **native P
 | **M5β** ✅ | **«Μίλα στο σχέδιο» (NL editing)** (Q7 #2) | NL editing («interval 0.5m», «σβήσε spikes») = **LLM tool-calling** πάνω στο υπάρχον command SSoT (`useTopoContours`/`contour-display-store`/`terrain-3d-store`/`cut-fill-store`/`runTopoQa`/`TopoPointStore`) — **8 topo tools** + executor στο ΥΠΑΡΧΟΝ `ai-assistant/` chat (ό,τι κάνει το `grid-tool-definitions`). Το LLM **ΔΕΝ** γράφει γεωμετρία· καλεί τα ίδια commands. Destructive «σβήσε spikes» = reuse M5α detector + **ρητό confirm** (human-certifier). **DONE, changelog v12.** | SuperMap/Autodesk AI assistant· Speckle NL-CAD | `ai-assistant/` (`grid/match-tool-definitions`, `dxf-openai-call`, `useDxfAiChat`)· command SSoT· M5α `runTopoQa` | **καμία νέα** — υπάρχον gpt-4o-mini |
 | **M6** ✅ | **Όγκοι cut/fill** (Q1) | Triangular-prism πάνω στο TIN + **daylight split** + προαιρετικό **όριο οικοπέδου** + αναφορά **στάθμη Ή μελετημένη επιφάνεια** + **cross-check με κάνναβο** (§7 CASS) + 3Δ **cut/fill analysis style**. **DONE, changelog v8.** BOQ output **ΔΕΝ** μπήκε: το έδαφος δεν είναι entity → δεν υπάρχει `sourceEntityId` να κρεμαστεί γραμμή (βλ. §12.4) — μεταφέρεται σε M4b/M7. | Civil 3D Volumes Dashboard· CASS 3-method cross-check | `TinSurface` (M1)· `polygon-utils` (area/centroid/S-H clip)· `marching-triangles` (crossEdge)· `scene-units` (mm³→m³) | — (in-house, **καμία νέα**) |
 | **M7** ✅ | **Ελληνικό export → «ένα κουμπί → φάκελος»** (Q1, Q7 #3) | Πίνακας συντεταγμένων ΕΓΣΑ'87 + εμβαδομέτρηση οικοπέδου + πίνακας όγκων + **auto tolerance-check** (§10) — **ΚΑΙ** ως entities μέσα στο σχέδιο **ΚΑΙ** ως ZIP (DXF+PDF+CSV+XLSX). **DONE, changelog v9** (§12.5). **ΔΕΝ** μπήκαν: proj4/pdf-lib (**καμία μετρημένη ανάγκη** — βλ. §12.5), ψηφιακή υπογραφή (eIDAS — ο μηχανικός, εκτός εφαρμογής), DXF layer schema Κτηματολογίου (**open gap §10** — λείπει το primary source). | CASS cadastral output· Civil 3D «coordinate table in drawing + report files» | `bim/schedule` exporters (CSV/XLSX/PDF)· `buildScheduleTable`+`detailPrimitivesToEntities` (ADR-622)· `zip-pack` (ADR-505)· DXF export (ADR-648)· `polygon-utils`· `scene-units` | **καμία νέα** |
-| **M8+** | **Point clouds / moonshots** | drone/LiDAR (AI ground-filter CSF/KPConv server), auto-breakline detection, multiplayer (CRDT), Gaussian-Splat visualization layer. | §6, §9 differentiators | worker split (client/server)· Potree | CSF (Apache ✅), Potree (BSD-2 ✅) — server-GPU για heavy ML |
+| **M8α** ✅ | **Point-cloud ingestion + bare-earth** | Point cloud (LAS 1.0–1.4 / bulk ASCII XYZ) → **CSF ground filter (in-house, Zhang 2016)** → voxel decimation → **ΥΠΑΡΧΟΝ `TopoPointStore`** → `getTopoSurface()` δίνει ισοϋψείς/3Δ/QA/όγκους δωρεάν. **4ος δρόμος του υπάρχοντος `TopoImportWizard`, ΟΧΙ δεύτερο pipeline.** Τιμά την ταξινόμηση της πηγής (ASPRS class 2), preview πριν την έγκριση (human-certifier). **DONE, changelog v13.** | Autodesk ReCap / Civil 3D «Point Cloud to Surface»· CloudCompare CSF plugin· PDAL `filters.csf` | `TopoImportWizard`/`useTopoImport` (extend)· `TopoPointStore`· `io/dxf-import` worker pattern (ADR-639)· `topo-local-origin` | **καμία νέα** (CSF in-house· LAZ decode ΔΕΝ μπήκε — θα ήθελε `laz-perf`) |
+| **M8β/Α** ✅ | **LAZ decode** (ο δρόμος των drones) | `.laz` (DJI Terra / Pix4D / Terrasolid — **κανένα drone δεν βγάζει `.las`**) → **laz-perf WASM** → ασυμπίεστα LAS records → **ο ΙΔΙΟΣ** `decodeLasRecords` που ήδη διαβάζει το `.las`. **Μηδέν δεύτερος reader/pipeline.** Stride κατά την αποσυμπίεση (τα LAZ chunks δεν παραλείπονται)· lazy WASM singleton πίσω από dynamic import (τα 214 KB δεν χρεώνονται σε όποιον δεν ανοίγει `.laz`). **DONE, changelog v14.** | LAStools/laszip· CloudCompare· potree/copc.js (ίδιο laz-perf) | `las-reader.ts` (εξήγαγε τον decoder)· `pointcloud-read` dispatcher· `pointcloud.worker` | **`laz-perf@0.0.7` — Apache-2.0 ✅** (επαληθευμένο σε 3 επίπεδα· **ΟΧΙ** το LGPL LASzip)· `@types/emscripten` (MIT, dev) |
+| **M8β/Β…Δ +** | **Point clouds / moonshots** | 3Δ point-cloud layer (three.js `Points`)· auto-breakline detection· id-aware ASCII· closed-loop drone→CAD· multiplayer (CRDT)· Gaussian-Splat visualization layer (**ΠΟΤΕ** ως γεωμετρία μέτρησης, §6)· server-GPU KPConv· COPC/EPT octree streaming. | §6, §9 differentiators | worker split (client/server)· Potree· `bim-3d` engine (ADR-366/645) | Potree (BSD-2 ✅) — server-GPU για heavy ML |
 
 **Εξαρτήσεις/σειρά:** M2 (input) → M3 (display) → M4 (3D) είναι ανεξάρτητα-παράλληλα δυνατά μετά το M1.
 M5 (AI) θέλει ώριμο core. M6 (όγκοι) θέλει μόνο το TIN (M1) → μπορεί νωρίς. M7 (export) θέλει M1+M6 για
@@ -952,3 +954,192 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
   επιφάνειες ελέγχου, όπως command-line vs slider). M5α open items (3Δ markers, auto-clear, tuning) παραμένουν.
 
   **Status: M1 + M2 + M3 + M4 + M5 (α+β) + M6 + M7 IMPLEMENTED· M8 προγραμματισμένο (§12.2).**
+
+- **2026-07-14 (v13)** — **Milestone 8α ΥΛΟΠΟΙΗΘΗΚΕ: point-cloud ingestion + bare-earth ground filter**
+  (§12.2 γραμμή M8 — το **πρώτο** κομμάτι· §6 AI/ML + άδειες· §9 differentiators #1/#2).
+
+  **Η καρδιά:** το point cloud **ΔΕΝ** φτιάχνει δεύτερο pipeline. Μπαίνει ως **4ος δρόμος εισαγωγής** στον
+  ΥΠΑΡΧΟΝΤΑ `TopoImportWizard` και το φιλτραρισμένο έδαφος καταλήγει στο ΥΠΑΡΧΟΝ `TopoPointStore` μέσω του
+  ΙΔΙΟΥ `setTopoPoints()`. Από εκεί `getTopoSurface()` → **ισοϋψείς / 3Δ / QA / όγκοι / ελληνικό export
+  δουλεύουν ΔΩΡΕΑΝ** (M1–M7 αμετάβλητα — μηδέν γραμμή άλλαξε σε αυτά).
+
+  ```
+  PointCloudData  →  GroundClassifyResult  →  voxel decimate  →  TopoPoint[]  →  TopoPointStore
+  (εκατομμύρια)      (ποιοι δείκτες=έδαφος)  (χιλιάδες)          (υπάρχον SSoT)   → getTopoSurface()
+  ```
+
+  **Big-player πρακτική (§8):** Autodesk ReCap / Civil 3D «Point Cloud to Surface», Trimble RealWorks,
+  CloudCompare. Δύο συμπεριφορές που η αφελής υλοποίηση χάνει και εδώ μπήκαν:
+  1. **Τιμούμε την ταξινόμηση της πηγής.** Clouds από DJI Terra / Pix4D / Terrasolid έρχονται ΗΔΗ
+     ταξινομημένα (ASPRS class 2 = Ground). Το ReCap/Civil 3D **δεν** ξανατρέχουν φίλτρο πάνω τους — είναι
+     πιο αργό ΚΑΙ χειρότερο (ο vendor είχε τα raw returns, εμείς μόνο XYZ). `method:'source-classification'`,
+     με ρητό override («ξανα-φιλτράρισμα με CSF») για τον μηχανικό.
+  2. **Ο μηχανικός βλέπει τι κόπηκε ΠΡΙΝ εγκρίνει** — top-down scatter preview (έδαφος vs μη-έδαφος) στον
+     wizard. **AI-accelerant / human-certifier (§9)**, ποτέ αυτόνομη πιστοποίηση.
+
+  **Ground filter = CSF (Cloth Simulation Filter), Zhang et al. 2016 — υλοποιημένο IN-HOUSE.**
+  Ο industry default (CloudCompare plugin, PDAL `filters.csf`). **ΜΗΔΕΝ νέα dependency** — τα ίδια τέσσερα
+  knobs με το CloudCompare (cloth resolution / class threshold / rigidness 1-3 / slope smoothing), ίδια
+  σημασία, ώστε μηχανικός που ξέρει CloudCompare να αναγνωρίζει το δικό μας.
+
+  **Νέα modules** (`systems/topography/pointcloud/`):
+  | Αρχείο | Ρόλος |
+  |---|---|
+  | `pointcloud-types.ts` | Domain types — **SoA typed arrays** (30M σημεία ως objects ≈ 3 GB heap → η καρτέλα πεθαίνει· ως typed arrays = 360 MB, ό,τι κάνουν Potree/PDAL/laz-perf) |
+  | `asprs-las-spec.ts` | ASPRS LAS 1.0–1.4 spec (header offsets, PDRF 0–10, classification codes, class colours) |
+  | `pointcloud-defaults.ts` | **SSoT κάθε tunable** (CSF/voxel/preview/worker thresholds) — μηδέν inline magic number |
+  | `pointcloud-read.ts` | Dispatcher (magic-first) **+ ο κοινός κορμός** των δύο readers (N.18 — αλλιώς sibling clones) |
+  | `las-reader.ts` | LAS binary parser, PDRF 0–10 (classification byte: offset 15 σε PDRF 0-5, 16 σε 6-10) |
+  | `ascii-xyz-reader.ts` | BULK ASCII (streaming line-scan χωρίς `split()`, 2 περάσματα) — ο υπάρχων `parse-topo-points.ts` μένει ο δρόμος για ΜΙΚΡΑ αρχεία |
+  | `csf-cloth.ts` + `csf-grid.ts` | CSF: Verlet βαρύτητα → ελατήρια → σύγκρουση· height map (IHV) με raster + BFS fill + bilinear sampling |
+  | `classify-ground.ts` | Dispatcher: `source-classification` vs `csf` |
+  | `voxel-decimate.ts` | Voxel buckets (integer keys)· `lowest` = συντηρητικός DTM αντιπρόσωπος (ο θόρυβος μετά το φίλτρο είναι σχεδόν πάντα ΠΑΝΩ από την επιφάνεια) → `TopoPoint[]` σε WORLD mm |
+  | `pointcloud-preview.ts` | Display-only cloud (≤`PREVIEW_MAX_POINTS`) — **ΠΟΤΕ** δεν φτάνει στο TIN, ποτέ δεν μετριέται (§6) |
+  | `pointcloud-pipeline.ts` | read → classify → decimate → preview (τρέχει ΚΑΙ σε worker ΚΑΙ σε main thread) |
+  | `workers/pointcloud.worker.ts` | Worker (transferred ArrayBuffer· dynamic import του pipeline — ADR-639 pattern) |
+  | `io/pointcloud-import.ts` | Worker routing SSoT (liveness probe + timeout + **main-thread fallback**), mirror του `io/dxf-import.ts` |
+  | `ui/panels/topography/TopoCloudStep.tsx` + `topo-cloud-preview-canvas.ts` | Το βήμα «γυμνό έδαφος» + canvas scatter |
+
+  **Ακρίβεια (γιατί LOCAL origin + Float32):** ΕΓΣΑ'87 easting σε canonical mm ≈ 3e8..9e8. Το Float32 έχει
+  24-bit mantissa → raw world mm στα 9e8 κουβαλά **~64 mm σφάλμα** — χειρότερο από την ανοχή που υποτίθεται
+  ότι διαφυλάσσει. Αποθηκεύουμε **LOCAL mm** (world − origin· ≤0.25 mm σφάλμα σε site 2 km). Ίδιο κόλπο,
+  ίδιος λόγος με το `TinSurface.origin`. Ο `las-reader` **δεν εμπιστεύεται τυφλά τα bounds του header**
+  (όργανα γράφουν μηδενικά bounds → origin 0 → επιστροφή στο σφάλμα των 64 mm): sanity check + rescan.
+
+  **Κλίμακα:** `maxPointsInMemory` (30M) με **stride-sampling ΚΑΤΑ ΤΟ PARSE** (ποτέ allocate-then-discard).
+  Το `cdt2d` δεν κλιμακώνει σε εκατομμύρια → στο TIN φτάνει ΜΟΝΟ το αραιωμένο ground set (0.5 m spacing σε
+  1 στρέμμα ≈ 40k σημεία).
+
+  **Άδειες (N.5 / §6):** **ΚΑΜΙΑ νέα dependency.** Το CSF γράφτηκε in-house (το paper είναι δημόσιο· η
+  reference υλοποίηση Apache-2.0 δεν χρησιμοποιήθηκε ως κώδικας). ASPRS LAS spec = δημόσιο, royalty-free.
+  Δεν μπήκε τίποτα CC-BY-NC (RandLA-Net, Depth-Anything V2 Base/Large — **παραμένουν απαγορευμένα**).
+
+  **Tests:** 5 suites / 59 tests στο `pointcloud/` (συνθετικά LAS buffers in-memory, analytic terrain για CSF:
+  κεκλιμένο επίπεδο + δέντρα/κτίρια + τοίχος αντιστήριξης, ντετερμινισμός, world re-projection). Σύνολο
+  topography: **17 suites / 153 tests PASS**, μηδέν regression. jscpd (N.18): **μηδέν clones** — ούτε μεταξύ
+  των readers, ούτε έναντι του `io/dxf-import.ts`.
+
+  **🔴 ΤΙ ΔΕΝ ΜΠΗΚΕ (τίμια):**
+  - **LAZ (συμπιεσμένο) ΔΕΝ αποσυμπιέζεται** → καθαρό `throw` (`error.lazUnsupported`). Θα απαιτούσε
+    `laz-perf`/`copc.js` (+ license check + έγκριση Giorgio). Το LAS (ασυμπίεστο) δουλεύει πλήρως.
+  - **3Δ point-cloud layer** (three.js `Points`): το preview data παράγεται και ζωγραφίζεται ως **2D top-down
+    scatter** στον wizard. Το πλήρες 3Δ layer = M8β.
+  - **ASCII**: X/Y/Z = τα 3 πρώτα **αριθμητικά** πεδία. Αρχείο με αριθμητική στήλη id ΠΡΩΤΑ (`1 384512.3 …`)
+    θα διαβάσει το id ως X. Το id-aware mode = M8β (ο υπάρχων column-mapping δρόμος καλύπτει τα μικρά αρχεία).
+  - **Γνωστοί περιορισμοί του CSF μας** (τίμιοι, μετρημένοι): (α) το relaxation είναι **Jacobi**, όχι
+    in-place Gauss-Seidel — το in-place sweep κάνει το ύφασμα άκαμπτη πλάκα που γεφυρώνει ολόκληρο σκαλοπάτι
+    (έχανε 47% του εδάφους στο test του τοίχου αντιστήριξης)· με Jacobi η επιρροή διαδίδεται 1 κελί/pass και
+    το `rigidness` γίνεται πραγματικό knob. (β) Σε σκαλοπάτι 2 m χάνονται τα σημεία μέσα σε **±1 κελί
+    υφάσματος** από τη ρωγμή — το ύφασμα «κρέμεται» πάνω από τον γκρεμό· **γνωστή, αποδεκτή συμπεριφορά του
+    CSF** (το ίδιο κάνει το CloudCompare)· το test επιβεβαιώνει ότι ΟΛΑ τα χαμένα σημεία είναι εντός 1 m από
+    τη ρωγμή. (γ) IHV = πλησιέστερο σημείο (raster + BFS fill), όχι k-d tree. (δ) 4-connected γείτονες → λίγο
+    πιο «μαλακό» ύφασμα από το reference στην ίδια τιμή rigidness.
+  - **Υπόλοιπο M8** (επόμενα sessions): auto-breakline detection (#3), full closed-loop drone→CAD (#1),
+    multiplayer/CRDT (#7), Gaussian-Splat visualization (#8 — **ΠΟΤΕ** ως γεωμετρία μέτρησης, §6),
+    DEM super-resolution, server-GPU KPConv.
+
+  **Status: M1 + M2 + M3 + M4 + M5 (α+β) + M6 + M7 + M8α IMPLEMENTED· υπόλοιπο M8 προγραμματισμένο (§12.2).**
+
+---
+
+- **2026-07-14 (v14)** — **Milestone 8β/Α ΥΛΟΠΟΙΗΘΗΚΕ: LAZ decode** (το «μισό» του M8α έκλεισε)
+
+  **Το πρόβλημα που λύνει.** Τα drones **δεν βγάζουν `.las`**. DJI Terra, Pix4D, Terrasolid — όλα εξάγουν
+  **`.laz`** (συμπιεσμένο, ~7:1). Το M8α το απέρριπτε τίμια (`error.lazUnsupported`), που σήμαινε ότι ο
+  μηχανικός έπρεπε να μετατρέψει **κάθε** αρχείο μόνος του (LAStools/CloudCompare) πριν καν το ρίξει στην
+  εφαρμογή. Η ροή «drone → CAD» ήταν σπασμένη στο πρώτο βήμα. **Δεν είναι πια.**
+
+  **Η μία γραμμή που είναι όλη η αρχιτεκτονική:**
+
+  ```
+  .laz bytes → laz-perf (WASM) → ΑΣΥΜΠΙΕΣΤΑ LAS records → decodeLasRecords → PointCloudData
+                                                           ^^^^^^^^^^^^^^^^ ο ΙΔΙΟΣ decoder με το .las
+  ```
+
+  Ένα LAZ **ΕΙΝΑΙ** ένα LAS του οποίου τα point records πέρασαν από arithmetic coder: ίδιο header, ίδιο PDRF,
+  ίδια 12 bytes int32 XYZ, ίδιο classification byte. Άρα μόλις αποσυμπιεστούν τα chunks **δεν μένει τίποτα
+  LAZ-specific**. Ο `laz-reader.ts` **δεν ξαναγράφει** ούτε τον κανόνα του origin, ούτε των bounds, ούτε τη
+  legacy class mask, ούτε το hot loop — τα παραδίδει στον **έναν** decoder που εξήχθη από τον `las-reader.ts`
+  (`decodeLasRecords`, νέα εξαγωγή· N.18 — δεύτερο αντίγραφο του loop = ακριβώς ο sibling clone που πιάνει το
+  jscpd ratchet). **Μηδέν δεύτερο pipeline, μηδέν δεύτερος wizard, μηδέν δεύτερο ceiling πλην του παρακάτω.**
+
+  **📦 Η ΝΕΑ ΕΞΑΡΤΗΣΗ (N.5 / ADR-034 App. C) — εγκεκριμένη από τον Giorgio 2026-07-14:**
+
+  | Πακέτο | Άδεια | Επαλήθευση | Μέγεθος | Deps |
+  |---|---|---|---|---|
+  | **`laz-perf@0.0.7`** (Hobu Inc. — οι δημιουργοί του PDAL/Entwine) | **Apache-2.0** ✅ | **Τρία επίπεδα**: `package.json` · το `COPYING` του repo (πλήρες κείμενο Apache-2.0, **0 αναφορές LGPL** σε 202 γραμμές) · τα headers των C++ sources (`lazperf.hpp`, `las.hpp`, `decoder.hpp` → «*terms of the Apache Public License 2.0*») | 214 KB `.wasm` + 87 KB JS glue | **καμία** |
+  | `@types/emscripten` (dev) | MIT ✅ | DefinitelyTyped | — | — |
+
+  🚨 **Η ιστορική ανησυχία ήταν σωστή και ελέγχθηκε:** το **LASzip** του Isenburg είναι **LGPL**. Το `laz-perf`
+  είναι **ανεξάρτητη re-implementation** του Hobu που ο ίδιος ο Isenburg αδειοδότησε **Apache-2.0** — δεν είναι
+  dual-license, είναι **σκέτο Apache-2.0**. Είναι ό,τι χρησιμοποιούν potree, copc.js, deck.gl.
+  **Απορρίφθηκαν:** `copc` (MIT, αλλά **εξαρτάται από laz-perf** → περιτύλιγμα, όχι εναλλακτική)· `las-js`
+  (MIT, αλλά **δεν αποσυμπιέζει LAZ** καθόλου)· in-house LAZ decoder (arithmetic coding + chunked layout =
+  εβδομάδες, με μόνιμη ευθύνη ορθότητας, για format με ΜΙΑ κανονική υλοποίηση).
+
+  **Νέα modules:**
+
+  | Module | Ρόλος |
+  |---|---|
+  | `pointcloud/laz-reader.ts` | Αποσυμπίεση → records → **υπάρχον** `decodeLasRecords`. Stride **κατά την αποσυμπίεση** (βλ. κάτω). Ελευθερώνει κάθε WASM allocation σε `finally`. |
+  | `pointcloud/laz-runtime.ts` | Lazy **singleton** του WASM module (instantiate μία φορά, μοιραζόμενο in-flight promise)· καθαρίζει το promise σε αποτυχία ώστε το retry να μη δηλητηριάζεται· `LazPerfFactory` = test seam. |
+  | `pointcloud/laz-wasm-url.ts` | Μόνο browser/Worker: `new URL('laz-perf/lib/laz-perf.wasm', import.meta.url)` (webpack asset module). Προσεγγίζεται με **dynamic** import ώστε το jest να μη σπάει στο `import.meta`. |
+
+  **Τροποποιήσεις:**
+  - `las-reader.ts` → εξήγαγε `decodeLasRecords` (+ `LasRecordSource`, `assertSupportedPdrf`,
+    `resolveRecordLength`). Το `readLasPointCloud` έγινε **thin wrapper** από πάνω του. **Μηδέν αλλαγή
+    συμπεριφοράς** (τα 153 tests του M8α το επιβεβαιώνουν).
+  - `pointcloud-read.ts` → `readPointCloud` **έγινε `async`** και δρομολογεί `.laz` → `readLazPointCloud` με
+    **dynamic import** (τα 214 KB WASM **δεν** κατεβαίνουν ποτέ για μηχανικό που ανοίγει μόνο `.las`/`.xyz`).
+    Νέα keys: `error.lazRuntimeUnavailable`, `error.lazDecodeFailed` (el+en).
+  - `pointcloud-pipeline.ts` → `async` (μόνο επειδή το **read** είναι· CSF/decimate/preview μένουν sync).
+    `pointcloud.worker.ts` + `io/pointcloud-import.ts` → `await`. **Καμία αλλαγή στο routing/ceilings.**
+  - `topography/index.ts` → τα `laz-*` modules **ΔΕΝ** εξάγονται από το barrel — ένα static re-export θα
+    ακύρωνε το lazy loading και θα χρέωνε το WASM σε όλους.
+
+  **⚠️ Το ένα πράγμα που το LAZ πληρώνει και το LAS όχι** (`LAZ_MAX_POINTS_IN_MEMORY = 12M`, νέο στο
+  `pointcloud-defaults.ts`): ένα `.las` αποκωδικοποιείται **in place**, πάνω στα ίδια τα bytes του αρχείου. Ένα
+  `.laz` **δεν μπορεί** — τα records υπάρχουν μόνο αφού τα παράγει ο decoder, άρα πρέπει να υλοποιηθούν σε ένα
+  προσωρινό buffer (~34 B/σημείο, ελευθερώνεται μόλις χτιστούν τα SoA arrays). 12M × 34 B ≈ 400 MB + ~160 MB
+  SoA = κορυφή που αντέχει ένα tab· τα 30M του LAS **δεν** θα την άντεχαν. Πάνω από αυτό → **stride-sampling
+  κατά την αποσυμπίεση** + `warn.strideSampled`. Δεν κοστίζει τίποτα πραγματικό: η μετρημένη γεωμετρία είναι το
+  **αραιωμένο ground set** (voxel 0.5 m → δεκάδες χιλιάδες σημεία), όχι το ωμό νέφος.
+
+  **⚠️ Γιατί το stride γίνεται στον LAZ reader και όχι στον decoder:** τα LAZ chunks **δεν παραλείπονται** —
+  δεν υπάρχει random access σε arithmetic-coded stream. Κάθε σημείο **αποσυμπιέζεται**· το sampling αποφασίζει
+  μόνο ποια **κρατάμε**. Ο decoder καλείται μετά με `stride: 1`.
+
+  **Tests: 19 suites / 167 tests PASS** στο `systems/topography` (από 17/153 — **+2 suites, +14 tests**, μηδέν
+  regression). jscpd (N.18): **μηδέν clones** στα 9 αρχεία που άγγιξα.
+  - `laz-reader.test.ts` — **ground truth: ένα `.laz` πρέπει να δώσει το ΙΔΙΟ cloud με το `.las` δίδυμό του.**
+    Κάθε test χτίζει **ένα** in-memory LAS και το διαβάζει **δύο φορές**: με τον πραγματικό LAS reader, και με
+    τον LAZ reader πάνω σε **fake laz-perf** που επιστρέφει ακριβώς αυτά τα records. Συγκρίνει x/y/z,
+    classification, origin, bounds, histogram — οποιαδήποτε απόκλιση = fail. Καλύπτει: PDRF 1 & 6, LOCAL/WORLD
+    frame, junk header bounds → bounds scan, stride κατά την αποσυμπίεση, **heap hygiene** (μηδέν live
+    allocation ακόμα και όταν ο decode πετάει), progress, και τα 4 error keys.
+    *Γιατί fake και όχι πραγματικό `.laz` blob:* το laz-perf έχει **decoder μόνο, όχι encoder** → ένα πραγματικό
+    fixture θα ήταν checked-in binary blob άγνωστης προέλευσης, και θα τεστάριζε το **laz-perf** (δουλειά του
+    Hobu, ήδη σκληραγωγημένη από potree/PDAL), όχι **τον δικό μας** seam (heap in, records out, stride, cleanup,
+    error keys) — που είναι ακριβώς ό,τι τεστάρει το fake.
+  - `laz-routing.test.ts` — ο dispatcher στέλνει `.laz` στον LAZ reader (M8α το απέρριπτε), και **δεν αγγίζει
+    ποτέ** το module για `.las`/`.xyz` (το WASM μένει πίσω από το dynamic import).
+  - `pointcloud-fixtures.ts` — ο `buildLas` builder **μετακινήθηκε εδώ** από το `las-reader.test.ts` ώστε το LAZ
+    suite να μην τον κλωνοποιήσει (N.18).
+
+  **🔴 ΤΙ ΔΕΝ ΜΠΗΚΕ (τίμια):**
+  - **COPC / EPT** (cloud-optimized point cloud, octree streaming): ο `LASZip` reader φορτώνει **ολόκληρο** το
+    αρχείο στο WASM heap. Για τα μεγέθη που στοχεύουμε (≤250 MB) δουλεύει· για terabyte-scale streaming θα
+    ήθελε τον `ChunkDecoder` + octree index. Δεν χρειάζεται σήμερα.
+  - **3Δ point-cloud layer** (M8β/Β) — ακόμα 2D top-down scatter στον wizard.
+  - **Auto-breakline detection** (M8β/Γ) — αμετάβλητο.
+  - **id-aware ASCII** (M8β/Δ) — αμετάβλητο.
+  - Οι **γνωστοί περιορισμοί του CSF** (v13) ισχύουν αυτούσιοι — το LAZ αλλάζει μόνο **από πού** έρχονται τα
+    σημεία, τίποτα κατάντη.
+
+  ✅ **Google-level: ΝΑΙ** — ο decoder είναι ένας (SSoT· το LAZ path αποδεδειγμένα ισοδύναμο με το LAS μέσω
+  test), το WASM instantiate-άρεται μία φορά και μόνο αν χρειαστεί, κάθε allocation ελευθερώνεται σε `finally`,
+  κάθε αποτυχία φέρνει i18n key (ποτέ raw μήνυμα), και το κόστος bundle το πληρώνει **μόνο** όποιος ανοίγει
+  `.laz`.
+
+  **Status: M1 + M2 + M3 + M4 + M5 (α+β) + M6 + M7 + M8α + M8β/Α IMPLEMENTED· M8β/Β (3Δ layer), M8β/Γ
+  (auto-breaklines), M8β/Δ (μικρά) προγραμματισμένα (§12.2).**
