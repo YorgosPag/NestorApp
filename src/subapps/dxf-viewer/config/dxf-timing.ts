@@ -219,6 +219,14 @@ export const DXF_TIMING = {
      *  ADR-639 Στάδιο 1. Abandons a worker that loaded but wedged mid-parse; the main-thread
      *  fallback finishes the job. Generous but bounded (a healthy 215k-entity parse fits). */
     IMPORT_WORKER_PARSE_TIMEOUT: 90000,
+    /** Point-cloud import Worker readiness probe — ADR-650 M8α. Same liveness contract as the DXF
+     *  import worker, but a shorter window: this worker's module is small (no laz-perf until a .laz
+     *  actually arrives), so a cold compile settles fast. */
+    POINTCLOUD_WORKER_READY_PROBE: 3000,
+    /** Point-cloud import Worker parse ceiling — ADR-650 M8α. Deliberately far above
+     *  `IMPORT_WORKER_PARSE_TIMEOUT`: a 250 MB LAZ decode followed by CSF over 30M points can
+     *  legitimately run for minutes without being wedged. */
+    POINTCLOUD_WORKER_PARSE_TIMEOUT: 300000,
     /** Image-fill EXPORT per-op ceiling (URL resolve / decode / raster fetch) — ADR-643 Φ5b /
      *  ADR-644 export-blocker. A deleted material (404) with `crossOrigin='anonymous'` can make
      *  `img.decode()` never settle (Chromium gotcha) and freeze the whole export; this bounds each
