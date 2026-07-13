@@ -185,3 +185,10 @@ firestore.rules.compiled
 .claude-rules/fleet/.mutex/
 .claude-rules/fleet/*.tmp
 .claude-rules/fleet/fleet-board.md
+
+# Local scratch — πηγαία TIFF σκίτσα επίπλων (316MB· input στο scripts/build-furniture-plan-assets.js)
+# SSoT για το runtime = τα παραγόμενα public/furniture-2d/*.webp
+/images/
+
+# Generated clone-detection report (jscpd· βλ. N.18 / ADR-584)
+/report/
