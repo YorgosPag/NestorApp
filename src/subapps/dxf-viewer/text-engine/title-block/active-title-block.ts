@@ -1,0 +1,151 @@
+/**
+ * ADR-651 Φάσεις Β+Γ — η πινακίδα «του ΤΩΡΑ»: ποιο πρότυπο, ποιο φύλλο, ποια δεδομένα,
+ * ποια κλίμακα.
+ *
+ * Event-time σύνθεση (ADR-040: getters, όχι snapshots) — τρέχει στο κλικ **και** στο ghost:
+ *  - **πρότυπο**: το preset του ribbon (`title-block-options-store`) στη γλώσσα του χρήστη —
+ *    βιβλιοθήκη «Τυπική / Άδεια δόμησης / Απλή / Λεπτομέρεια» (Απόφαση #3, EL+EN Απόφαση #8).
+ *  - **φύλλο**: μέγεθος + προσανατολισμός + κορνίζα από το ίδιο store (Φάση Γ· ISO 5457
+ *    reflow A4↔A0 — καμία σταθερή διάσταση πουθενά).
+ *  - **δεδομένα**: Firestore-derived scope από το cache (`placeholder-scope-client`) + τα
+ *    facts που ΑΝΗΚΟΥΝ στο σχέδιο (ενεργή κλίμακα) — ο διαχωρισμός που ήδη δηλώνει ο
+ *    `scope-builder` (Firestore vs caller-supplied).
+ *  - **μέγεθος**: annotative — paper-mm × ενεργός συντελεστής κλίμακας (1:50 ⇒ ×50), ώστε
+ *    η πινακίδα να έχει σωστό ΤΥΠΩΜΕΝΟ μέγεθος πάνω σε σχέδιο κτιρίου (AutoCAD behaviour).
+ *
+ * Zero-config auto-fill (Απόφαση #4): ο χρήστης δεν πληκτρολογεί τίποτα — αν λείπει scope
+ * (π.χ. χωρίς ενεργό έργο), τα πεδία μένουν κενά και η πινακίδα μπαίνει ούτως ή άλλως.
+ */
+
+import { getActiveScaleFactor, getActiveScaleName } from '../../systems/viewport/ViewportStore';
+import type { InSessionBlockDef } from '../../bim/block-library/block-library-types';
+import {
+  getActiveTitleBlockPaper,
+  useTitleBlockOptionsStore,
+} from '../../state/title-block-options-store';
+import {
+  getPlaceholderScopeSources,
+  loadPlaceholderScope,
+} from '../templates/resolver/placeholder-scope-client';
+import type { PlaceholderScope } from '../templates/resolver/scope.types';
+import type { TextTemplate } from '../templates/template.types';
+import type { TitleBlockSheetOptions } from './print-sheet';
+import { getStampImage, loadStampImage } from './stamp-image-client';
+import { validateTitleBlock, type TitleBlockIssue } from './title-block-compliance';
+import { buildTitleBlockDef } from './title-block-def';
+import type { TitleBlockLayoutOptions, TitleBlockStampImage } from './title-block-layout';
+import { titleBlockPreset, type TitleBlockLocale } from './title-block-presets';
+
+/** Το ενεργό preset στη ζητούμενη γλώσσα (Απόφαση #8: ελληνικά default, κουμπί → αγγλικά). */
+export function titleBlockTemplateForLocale(locale: TitleBlockLocale): TextTemplate {
+  const { presetId } = useTitleBlockOptionsStore.getState();
+  return titleBlockPreset(presetId).templates[locale];
+}
+
+/** Ό,τι δεν προκύπτει από το ενεργό σχέδιο και το ξέρει καλύτερα ο καλών. */
+export interface TitleBlockScopeOverrides {
+  /**
+   * Η κλίμακα που γράφεται στην πινακίδα. Στην **εκτύπωση** (Φάση ΣΤ) είναι η κλίμακα που
+   * ΤΥΠΩΝΕΤΑΙ (1:N του διαλόγου), όχι η κλίμακα της οθόνης — αλλιώς το τυπωμένο σχέδιο θα
+   * δήλωνε κλίμακα που δεν έχει.
+   */
+  readonly scaleName?: string;
+}
+
+/** Firestore scope (cached) + τα drawing facts που ζουν στο ενεργό σχέδιο. */
+export function buildActiveTitleBlockScope(
+  locale: TitleBlockLocale,
+  overrides?: TitleBlockScopeOverrides,
+): PlaceholderScope {
+  return {
+    ...getPlaceholderScopeSources(),
+    drawing: { scale: overrides?.scaleName ?? getActiveScaleName() },
+    formatting: { locale },
+  };
+}
+
+/**
+ * ADR-651 Φάση Ε — σε ποια μορφή θέλει την εικόνα σφραγίδας το backend του καλούντος:
+ *  - `'url'` → in-scene `ImageEntity` (το σχέδιο κρατά **αναφορά**, όχι pixels),
+ *  - `'data-url'` → PDF (ο jsPDF `addImage` δεν δέχεται remote URL).
+ */
+export type StampImageForm = 'url' | 'data-url';
+
+/**
+ * Η **προ-φόρτωση** όλων όσων χρειάζεται η πινακίδα, σε ΕΝΑ σημείο (N.7.2 #7: ένας ιδιοκτήτης
+ * του lifecycle): στοιχεία έργου/μελετητή **και** η εικόνα σφραγίδας. Καλείται όταν οπλίζεται
+ * το εργαλείο και όταν ανοίγει ο διάλογος εκτύπωσης ⇒ το μονοπάτι σχεδίασης μένει **σύγχρονο**
+ * (μηδέν `await` στο κλικ/ghost/PDF — ADR-040). Idempotent· αποτυχία ⇒ κενά πεδία/κενή σφραγίδα.
+ */
+export async function loadTitleBlockAssets(projectId?: string): Promise<void> {
+  const sources = await loadPlaceholderScope(projectId);
+  await loadStampImage(sources.user?.stampImageUrl);
+}
+
+/** Η σφραγίδα του ενεργού μηχανικού, στη μορφή που ζητά ο καλών (event-time read). */
+export function buildActiveStampImage(form: StampImageForm): TitleBlockStampImage | null {
+  const image = getStampImage(getPlaceholderScopeSources().user?.stampImageUrl);
+  if (!image) return null;
+  return {
+    src: form === 'data-url' ? image.dataUrl : image.url,
+    widthPx: image.widthPx,
+    heightPx: image.heightPx,
+  };
+}
+
+/** Οι γεωμετρικές επιλογές του ενεργού preset **χωρίς** το χαρτί (event-time read). */
+export function buildActiveTitleBlockSheetOptions(
+  locale: TitleBlockLocale,
+  stampForm: StampImageForm = 'url',
+): TitleBlockSheetOptions {
+  const { presetId, withFrame } = useTitleBlockOptionsStore.getState();
+  const preset = titleBlockPreset(presetId);
+  return {
+    withFrame,
+    withStampBox: preset.withStampBox,
+    stampLabel: preset.stampLabel[locale],
+    stampImage: buildActiveStampImage(stampForm),
+  };
+}
+
+/** Το ενεργό φύλλο + οι γεωμετρικές επιλογές του preset (Φάση Γ — event-time read). */
+export function buildActiveTitleBlockLayoutOptions(
+  locale: TitleBlockLocale,
+): TitleBlockLayoutOptions {
+  return {
+    ...buildActiveTitleBlockSheetOptions(locale),
+    paper: getActiveTitleBlockPaper(),
+  };
+}
+
+/**
+ * ADR-651 Φάση Ε (Απόφαση #4) — τι λείπει από την **ενεργή** πινακίδα για να είναι
+ * καταθέσιμη. Ίδιο preset, ίδιο scope, ίδια κλίμακα με αυτά που θα τυπωθούν ⇒ η
+ * προειδοποίηση λέει την αλήθεια για το ΣΥΓΚΕΚΡΙΜΕΝΟ φύλλο (π.χ. «fit-to-page» ⇒ η
+ * κλίμακα γράφεται `—` ⇒ **λείπει κλίμακα**, και ο μηχανικός το μαθαίνει ΠΡΙΝ καταθέσει).
+ */
+export function validateActiveTitleBlock(
+  locale: TitleBlockLocale,
+  overrides?: TitleBlockScopeOverrides,
+): readonly TitleBlockIssue[] {
+  const { presetId } = useTitleBlockOptionsStore.getState();
+  const preset = titleBlockPreset(presetId);
+  return validateTitleBlock({
+    template: preset.templates[locale],
+    scope: buildActiveTitleBlockScope(locale, overrides),
+    withStampBox: preset.withStampBox,
+    stampImageUrl: getPlaceholderScopeSources().user?.stampImageUrl,
+  });
+}
+
+/** Ο block-local ορισμός της πινακίδας για το τρέχον preset/φύλλο/γλώσσα/κλίμακα/έργο. */
+export function buildActiveTitleBlockDef(locale: TitleBlockLocale): InSessionBlockDef {
+  return buildTitleBlockDef(
+    titleBlockTemplateForLocale(locale),
+    buildActiveTitleBlockScope(locale),
+    {
+      scaleFactor: getActiveScaleFactor(),
+      layout: buildActiveTitleBlockLayoutOptions(locale),
+    },
+  );
+}
