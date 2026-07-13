@@ -87,6 +87,14 @@ export const SNAP_COLORS: Record<ExtendedSnapType, string> = {
   // ── Selected-object grips (ADR-580) — grip/vertex-class point → NODE colour ──
   [ExtendedSnapType.SELECTED_GRIP]:  SNAP_MARKER_COLORS.NODE,
 
+  // ── Complex-linetype pattern geometry (ADR-642 §6.8) — railway rails + sleepers.
+  // A rail/sleeper end/mid/intersection is the SAME KIND of point as the geometric
+  // endpoint/midpoint/intersection → shares the SAME colour (Revit/AutoCAD convention);
+  // the ■/△/✕ glyph already differentiates them from the underlying axis snaps.
+  [ExtendedSnapType.COMPLEX_ENDPOINT]:     SNAP_MARKER_COLORS.ENDPOINT,
+  [ExtendedSnapType.COMPLEX_MIDPOINT]:     SNAP_MARKER_COLORS.MIDPOINT,
+  [ExtendedSnapType.COMPLEX_INTERSECTION]: SNAP_MARKER_COLORS.INTERSECTION,
+
   // ── Auto / fallback ───────────────────────────────────────────────────────────
   [ExtendedSnapType.AUTO]:          SNAP_MARKER_COLORS.BASE,
 };

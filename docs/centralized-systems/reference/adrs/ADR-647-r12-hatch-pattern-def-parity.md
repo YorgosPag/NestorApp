@@ -1,6 +1,6 @@
 # ADR-647 — R12 Associative-Hatch: πλήρης πιστότητα μοτίβου (R14_HATCH_DATA pattern-def)
 
-**Status:** Proposed — **έρευνα ΟΛΟΚΛΗΡΩΜΕΝΗ** (format εμπειρικά κλειδωμένο vs ground-truth)· υλοποίηση pending (νέα συνεδρία)
+**Status:** Accepted — **υλοποιημένο** (Φ1 + Φ2 + Φ2b· format εμπειρικά κλειδωμένο vs ground-truth)
 **Date:** 2026-07-13
 **Domain:** dxf-viewer / import parser / hatch SSoT
 **Related:** ADR-635 (R12 associative-hatch INSERT → HATCH), ADR-507 (hatch system + inlinePattern SSoT),
@@ -214,3 +214,37 @@ Patterns: ANSI31(35) HEX(33) GRASS(17) NET(17) SQUARE(8) GRATE(7)
   εμπειρικά (full-dash residual spread ~1e-9…1e-11, HEX+SQUARE)· (2) **boundary bulges** scoped (7/117
   hatches, όλα GRATE, 11 τόξα· `hasBulge` flag 0 mismatches· format = DXF bulge tan(θ/4)). **Η ΕΡΕΥΝΑ
   ΟΛΟΚΛΗΡΩΘΗΚΕ — το format είναι πλήρως εμπειρικά κλειδωμένο.** Υλοποίηση (Φ1+Φ2+Φ2b) σε ΝΕΑ συνεδρία.
+- **2026-07-13 (d)** — **ΥΛΟΠΟΙΗΣΗ (Φ1+Φ2+Φ2b).** Status → Accepted.
+  - **Φ1** — SSoT helper `makeInlinePattern(patternName, lines)` εξήχθη στο `dxf-hatch-converter.ts`·
+    ο native `convertHatch` refactor-άρησε να το καλεί (μηδέν sibling clone, N.18 καθαρό). Νέο
+    `parseR14PatternLines(pairs)` στο `dxf-hatch-xdata-converter.ts`: fingerprint
+    (`findR14PatternDefStart`, double-`1070` signature scan από το boundary start) → families με
+    rad→deg + world-delta un-rotation (`localDx=dWx·c+dWy·s`, `localDy=−dWx·s+dWy·c`) + dashes· defensive
+    stop σε `1002`/end-of-pairs. Wire στο `tryConvertInsertHatch` (περνά `inlinePattern`).
+  - **Φ1 βήμα 4** — `transformInlinePattern` (νέο SSoT στο `dxf-hatch-converter.ts`) mirror-άρει
+    ΑΚΡΙΒΩΣ το `applyBlockTransformGeometry` (`placement + R·S·(p−base)`)· κλήση στο `transformInsertHatch`
+    (`dxf-block-expander.ts`). No-op για identity INSERT (κύριο αρχείο), σωστό για non-zero base.
+  - **Φ2** — `GRATE` στον `hatch-pattern-catalog.ts` (0° @ .0625″, 90° @ .25″, solid· suggested 5 →
+    invariant ≥30 mm) + i18n key `grate` (el «Σχάρα» / en «Grate»).
+  - **Φ2b** — bulge tessellation στο polyline branch του `extractR14BoundaryPaths`: stride-3 3ο col =
+    DXF bulge → `hasAnyBulge`/`expandPolyline` (SSoT `bulgeToPolyline`, ADR-510· closed loop), μηδέν νέα
+    arc math. Straight-only paths μένουν byte-identical (no regression).
+  - **Tests** — `dxf-hatch-xdata-converter.test.ts`: R14 pattern-def fixtures (ANSI31 solid @45° un-rotation,
+    SQUARE 2-fam dashes, HEX 3-fam, truncated-tail defensive stop) + bulge tessellation (quarter-arc + zero-bulge
+    no-regression). **359/359 hatch jest πράσινα (39 suites)· N.18 jscpd:diff καθαρό.** ΟΧΙ tsc (N.17).
+  - **Εκκρεμεί** (Giorgio): AutoCAD F2 τελικός έλεγχος στο `Αδείας.Κάτοψη ισογείου.dxf` (re-import 117/117
+    ορατά + GRATE) + ezdxf round-trip. Φ3 (multi-path NET islands / native EdgePath) εκτός scope, τεκμηριωμένα.
+- **2026-07-13 (e)** — **🐛 DENSE-HATCH FIX (canonical-mm × inlinePattern).** Ο Giorgio ανέφερε ότι το
+  AutoCAD, ανοίγοντας το εξαγόμενο DXF, βγάζει «Large, Dense Hatch Patterns». Ground-truth από τα ίδια τα
+  αρχεία: source GRASS @90° deltaW=[-0.0898,+0.0898] → un-rotate → spacing **0.0898**· το εξαγόμενο έδειχνε
+  spacing **0.00009** = source **÷1000**. Root cause: το `inlinePattern` (absolute world geometry) **ΔΕΝ**
+  περνούσε από το ADR-462 canonical-mm import scale (`scaleEntity`), ενώ το `boundaryPaths` **ναι** → σκηνή με
+  boundary σε mm (×mmFactor) αλλά pattern σε source units → region 13000-23000 / spacing 0.09 = ~255.000
+  γραμμές → dense. **Fix (SSoT):** νέο `transformInlinePattern` στο `hatch-pattern-catalog.ts` (leaf· affine
+  `placement + R·S·(p−base)`) που καλείται από ΚΑΙ ΤΑ 3 per-entity transforms: `scaleHatch`
+  (canonical-mm + user-scale), rotate-handler (`rotation-math.ts`), move-handler (`move-entity-geometry.ts`).
+  Έτσι το pattern ριδάρει ΠΑΝΤΑ ό,τι και το boundary (scale/rotate/move/block-placement). Το Φ1-βήμα-4
+  special-case στο `dxf-block-expander.ts` **αφαιρέθηκε** (γίνεται περιττό: `applyBlockTransformGeometry`
+  συνθέτει scale∘rotate∘translate που πλέον χειρίζονται όλα το inlinePattern — N.18 dedup). Regression test
+  στο `scale-entity-extra-types.test.ts` (inlinePattern ×1000). **486/486 hatch+transform jest πράσινα**
+  (1 pre-existing fail = `floorplan-symbol` move-coverage drift, commit 196f8489, άσχετο). N.18 jscpd καθαρό.

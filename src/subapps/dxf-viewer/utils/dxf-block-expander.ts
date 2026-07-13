@@ -163,6 +163,9 @@ export function transformInsertHatch(
   const sx = numOr(insert.data['41'], 1);
   const sy = numOr(insert.data['42'], 1);
   const angle = numOr(insert.data['50'], 0);
+  // ADR-647 Φ1 βήμα 4 — the boundary AND the `inlinePattern` (both block-LOCAL, from R14_HATCH_DATA)
+  // ride this ONE transform: `applyBlockTransformGeometry` composes scaleEntity∘rotateEntity∘translate,
+  // each of which now transforms `inlinePattern` too (SSoT). No per-caller pattern math here.
   return applyBlockTransformGeometry(hatch, def.base, sx, sy, angle, placement);
 }
 

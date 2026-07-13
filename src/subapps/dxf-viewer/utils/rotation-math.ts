@@ -18,6 +18,8 @@ import type { Entity } from '../types/entities';
 import type { EntityType } from '../types/base-entity';
 // 🏢 ADR-067: Centralized angle conversion
 import { degToRad, normalizeAngleDeg } from '../rendering/entities/shared/geometry-utils';
+// ADR-647 — rotate an imported hatch's preserved pattern def WITH its boundary (SSoT).
+import { transformInlinePattern } from '../data/hatch-pattern-catalog';
 
 /**
  * Rotate a point around a pivot by a given angle.
@@ -194,6 +196,8 @@ const ROTATE_HANDLERS: Partial<Record<EntityType, RotateHandler>> = {
       ...(e.seedPoints ? { seedPoints: e.seedPoints.map((v) => rotatePoint(v, pivot, angleDeg)) } : {}),
       ...(e.patternOrigin ? { patternOrigin: rotatePoint(e.patternOrigin, pivot, angleDeg) } : {}),
       ...(e.patternAngle !== undefined ? { patternAngle: normalizeAngleDeg(e.patternAngle + angleDeg) } : {}),
+      // ADR-647 — rotate the preserved inlinePattern about the SAME pivot (rotate-only: no scale/translate).
+      ...(e.inlinePattern ? { inlinePattern: transformInlinePattern(e.inlinePattern, pivot, 1, 1, angleDeg, pivot) } : {}),
       ...(e.gradient
         ? { gradient: { ...e.gradient, angleDeg: normalizeAngleDeg((e.gradient.angleDeg ?? 0) + angleDeg) } }
         : {}),

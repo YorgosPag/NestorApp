@@ -1235,6 +1235,9 @@
       "ortho": "Ορθογώνιος",
       "guide": "Οδηγός",
       "constructionPoint": "Σημείο",
+      "complex_endpoint": "Άκρο μοτίβου",
+      "complex_midpoint": "Μέσο μοτίβου",
+      "complex_intersection": "Τομή μοτίβου",
       "bim": {
         "wallAxis": "Επί άξονα τοίχου",
         "slabEdge": "Επί ακμής πλάκας",
@@ -3856,6 +3859,7 @@
           "net": "Δίχτυ",
           "square": "Τετράγωνα",
           "hex": "Εξάγωνα",
+          "grate": "Σχάρα",
           "honey": "Κηρήθρα",
           "gostGlass": "Γυαλί (GOST)"
         }

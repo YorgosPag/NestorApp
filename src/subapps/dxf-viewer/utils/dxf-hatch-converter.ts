@@ -115,6 +115,25 @@ export function buildHatchSceneEntity(input: HatchAssemblyInput): AnySceneEntity
 const INLINE_PATTERN_LABEL_KEY = 'ribbon.commands.hatchEditor.patterns.imported';
 
 /**
+ * Wrap parsed inline pattern-definition lines into a `HatchPattern` (SSoT for BOTH hatch importers,
+ * ADR-647 Φ1): the native `convertHatch` (group `78`/`43-49`) AND the R12 `tryConvertInsertHatch`
+ * (`R14_HATCH_DATA` pattern-def). Keeping this ONE wrapper means the two paths can never drift into
+ * sibling clones (N.18). Returns `undefined` for an empty line set so callers can spread it away.
+ */
+export function makeInlinePattern(
+  patternName: string | undefined,
+  lines: readonly PatternLine[],
+): HatchPattern | undefined {
+  if (!lines.length) return undefined;
+  return {
+    name: patternName ?? 'IMPORTED',
+    labelKey: INLINE_PATTERN_LABEL_KEY,
+    category: 'special',
+    lines,
+  };
+}
+
+/**
  * Διαβάζει τις inline pattern definition lines ενός HATCH (group `78` = πλήθος, ανά
  * γραμμή `53` γωνία / `43,44` origin / `45,46` delta / `79` πλήθος dash / `49×` dash)
  * → `PatternLine[]`. Οι τιμές μένουν **απόλυτες** (όπως γράφτηκαν, σε world mm) ώστε
@@ -293,18 +312,9 @@ export function convertHatch(
   // Έτσι AutoCAD→Nestor→AutoCAD αποδίδει πανομοιότυπη γραμμοσκίαση, ανεξάρτητα από το αν το όνομα
   // (SQUARE/HEX/ANSI31/…) τυχαίνει να υπάρχει στον catalog με ίδιο ή διαφορετικό ορισμό.
   const isPredefined = !gradient && !solid && patternTypeCode !== 0;
-  let inlinePattern: HatchPattern | undefined;
-  if (isPredefined && idx78 >= 0) {
-    const lines = parseInlinePatternLines(pairs, idx78);
-    if (lines.length > 0) {
-      inlinePattern = {
-        name: patternName ?? 'IMPORTED',
-        labelKey: INLINE_PATTERN_LABEL_KEY,
-        category: 'special',
-        lines,
-      };
-    }
-  }
+  const inlinePattern: HatchPattern | undefined = isPredefined && idx78 >= 0
+    ? makeInlinePattern(patternName, parseInlinePatternLines(pairs, idx78))
+    : undefined;
 
   return buildHatchSceneEntity({
     id: `hatch_${index}`,

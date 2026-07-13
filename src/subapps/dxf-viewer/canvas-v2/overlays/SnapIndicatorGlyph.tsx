@@ -39,9 +39,107 @@ import { resolveBimSnapLabelText } from '../../snapping/snap-description-keys';
 import { snapLabelTop } from '../preview-canvas/overlay-label-layout';
 
 /**
+ * 🎯 SNAP GLYPH MARK PRIMITIVES — SSoT for the SVG shapes every snap glyph is built from.
+ *
+ * ADR-583 (N.18): the per-type `<svg>` blocks below previously copy-pasted the SAME
+ * rect/circle/diamond/triangle/cross/dot geometry across ~20 cases; jscpd flagged them as
+ * structural self-clones. Each primitive now lives ONCE and every case composes them — a
+ * glyph is just "which marks, in which order". The primitives take a single `MarkGeom`
+ * (size/half/color/strokeWidth) so the switch stays declarative.
+ */
+interface MarkGeom {
+  size: number;
+  half: number;
+  color: string;
+  strokeWidth: number;
+}
+
+/** The SVG frame every glyph draws into (square viewBox at the per-type size). */
+function GlyphSvg({ size, children }: { size: number; children: React.ReactNode }) {
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {children}
+    </svg>
+  );
+}
+
+/** ■ inset outline square (endpoint / text / dim-def / grip family). */
+function SquareMark({ size, color, strokeWidth }: MarkGeom) {
+  return (
+    <rect
+      x={strokeWidth / 2}
+      y={strokeWidth / 2}
+      width={size - strokeWidth}
+      height={size - strokeWidth}
+      fill="none"
+      stroke={color}
+      strokeWidth={strokeWidth}
+    />
+  );
+}
+
+/** ○ outline circle centred in the box (center / node / rotation-pivot family). */
+function CircleOutlineMark({ half, color, strokeWidth }: MarkGeom) {
+  return (
+    <circle cx={half} cy={half} r={half - strokeWidth} fill="none" stroke={color} strokeWidth={strokeWidth} />
+  );
+}
+
+/** • filled centre dot — 🏢 ADR-137 centralized node-dot radius (node / connector / dim-def / grips). */
+function CenterDotMark({ half, color }: MarkGeom) {
+  return <circle cx={half} cy={half} r={getNodeDotRadius()} fill={color} />;
+}
+
+/** △ outline triangle (midpoint family). */
+function TriangleMark({ size, half, color, strokeWidth }: MarkGeom) {
+  return (
+    <polygon
+      points={`${half},${strokeWidth} ${size - strokeWidth},${size - strokeWidth} ${strokeWidth},${size - strokeWidth}`}
+      fill="none"
+      stroke={color}
+      strokeWidth={strokeWidth}
+    />
+  );
+}
+
+/** ◇ outline diamond — `miter` matches the connector/rotation-grip crisp corners (quadrant/construction/mep/rotation). */
+function DiamondMark({ size, half, color, strokeWidth, miter = false }: MarkGeom & { miter?: boolean }) {
+  return (
+    <polygon
+      points={`${half},${strokeWidth} ${size - strokeWidth},${half} ${half},${size - strokeWidth} ${strokeWidth},${half}`}
+      fill="none"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      {...(miter ? { strokeLinejoin: 'miter' as const } : {})}
+    />
+  );
+}
+
+/** ✕ two diagonal strokes (intersection / fallback). */
+function CrossMark({ size, color, strokeWidth }: MarkGeom) {
+  return (
+    <>
+      <line x1={strokeWidth} y1={strokeWidth} x2={size - strokeWidth} y2={size - strokeWidth} stroke={color} strokeWidth={strokeWidth} />
+      <line x1={size - strokeWidth} y1={strokeWidth} x2={strokeWidth} y2={size - strokeWidth} stroke={color} strokeWidth={strokeWidth} />
+    </>
+  );
+}
+
+/** ─ horizontal stroke through the box centre (tangent / nearest / dim-line). */
+function HCenterLineMark({ size, half, color, strokeWidth }: MarkGeom) {
+  return <line x1={strokeWidth} y1={half} x2={size - strokeWidth} y2={half} stroke={color} strokeWidth={strokeWidth} />;
+}
+
+/** │ vertical stroke through the box centre (nearest / guide tick). */
+function VCenterLineMark({ size, half, color, strokeWidth }: MarkGeom) {
+  return <line x1={half} y1={strokeWidth} x2={half} y2={size - strokeWidth} stroke={color} strokeWidth={strokeWidth} />;
+}
+
+/**
  * 🎯 ENTERPRISE: Renders industry-standard snap shape based on type.
  * Each snap type has a unique geometric symbol for instant recognition
- * (AutoCAD/MicroStation snap marker conventions, ADR-137).
+ * (AutoCAD/MicroStation snap marker conventions, ADR-137). Composed from the
+ * mark primitives above so there is ONE copy of each shape (ADR-583 / N.18).
  */
 export function SnapShape({ type, color }: { type: string; color: string }) {
   // 🏢 ADR-133: Centralized SVG stroke width
@@ -49,6 +147,7 @@ export function SnapShape({ type, color }: { type: string; color: string }) {
   // Per-type box size (dimension glyphs are bumped; all others fall back to base).
   const size = getSnapIconSize(type);
   const half = getSnapIconHalf(size);
+  const g: MarkGeom = { size, half, color, strokeWidth };
 
   switch (type.toLowerCase()) {
     // ■ ENDPOINT: Square - AutoCAD/MicroStation standard.
@@ -57,138 +156,94 @@ export function SnapShape({ type, color }: { type: string; color: string }) {
     // σημασιολογία («Γωνία κολώνας») ζει στην ετικέτα (`bimLabel`) — ΟΧΙ σε ξεχωριστό σχήμα.
     case 'endpoint':
     case 'bim_corner':
-      return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <rect
-            x={strokeWidth / 2}
-            y={strokeWidth / 2}
-            width={size - strokeWidth}
-            height={size - strokeWidth}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-          />
-        </svg>
-      );
+    // ADR-642 §6.8: a railway rail/sleeper endpoint is an endpoint-class point → ΙΔΙΟ ■.
+    case 'complex_endpoint':
+      return <GlyphSvg size={size}><SquareMark {...g} /></GlyphSvg>;
 
     // △ MIDPOINT: Triangle - AutoCAD/MicroStation standard.
     // ADR-597 §unified-glyph: `bim_midpoint` = midpoint-class σημείο → ΙΔΙΟ △ (outline).
     case 'midpoint':
     case 'bim_midpoint':
-      return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <polygon
-            points={`${half},${strokeWidth} ${size - strokeWidth},${size - strokeWidth} ${strokeWidth},${size - strokeWidth}`}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-          />
-        </svg>
-      );
+    // ADR-642 §6.8: a railway rail/sleeper midpoint is a midpoint-class point → ΙΔΙΟ △.
+    case 'complex_midpoint':
+      return <GlyphSvg size={size}><TriangleMark {...g} /></GlyphSvg>;
 
     // ○ CENTER: Circle - AutoCAD/MicroStation standard.
     // ADR-597 §unified-glyph: `bim_center` = center-class σημείο → ΙΔΙΟ ○.
     case 'center':
     case 'bim_center':
-      return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <circle
-            cx={half}
-            cy={half}
-            r={half - strokeWidth}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-          />
-        </svg>
-      );
+      return <GlyphSvg size={size}><CircleOutlineMark {...g} /></GlyphSvg>;
 
     // ✕ INTERSECTION: X shape - AutoCAD/MicroStation standard
+    // ADR-642 §6.8: a rail × sleeper intersection is an intersection-class point → ΙΔΙΟ ✕.
     case 'intersection':
-      return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <line x1={strokeWidth} y1={strokeWidth} x2={size - strokeWidth} y2={size - strokeWidth} stroke={color} strokeWidth={strokeWidth} />
-          <line x1={size - strokeWidth} y1={strokeWidth} x2={strokeWidth} y2={size - strokeWidth} stroke={color} strokeWidth={strokeWidth} />
-        </svg>
-      );
+    case 'complex_intersection':
+      return <GlyphSvg size={size}><CrossMark {...g} /></GlyphSvg>;
 
     // ⊥ PERPENDICULAR: Right angle symbol - AutoCAD standard
-    case 'perpendicular':
+    case 'perpendicular': {
       // 🏢 ADR-137: Using centralized quarter calculation
       const quarter = getSnapIconQuarter(size);
       return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <GlyphSvg size={size}>
           <polyline
             points={`${half - quarter},${strokeWidth} ${half - quarter},${half - quarter} ${strokeWidth},${half - quarter}`}
             fill="none"
             stroke={color}
             strokeWidth={strokeWidth}
           />
-        </svg>
+        </GlyphSvg>
       );
+    }
 
     // ║ PARALLEL: Two parallel lines - AutoCAD standard
-    case 'parallel':
+    case 'parallel': {
       // 🏢 ADR-137: Using centralized quarter calculation (same as perpendicular)
       const lineOffset = getSnapIconQuarter(size);
       return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <GlyphSvg size={size}>
           <line x1={strokeWidth} y1={half - lineOffset} x2={size - strokeWidth} y2={half - lineOffset} stroke={color} strokeWidth={strokeWidth} />
           <line x1={strokeWidth} y1={half + lineOffset} x2={size - strokeWidth} y2={half + lineOffset} stroke={color} strokeWidth={strokeWidth} />
-        </svg>
+        </GlyphSvg>
       );
+    }
 
     // ◯─ TANGENT: Circle with tangent line - AutoCAD standard
     case 'tangent':
       return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <GlyphSvg size={size}>
           {/* 🏢 ADR-137: Using centralized tangent circle radius (UNIFIED: was 0.5 vs 0.6) */}
           <circle cx={half} cy={half} r={getTangentCircleRadius(half)} fill="none" stroke={color} strokeWidth={strokeWidth} />
-          <line x1={strokeWidth} y1={half} x2={size - strokeWidth} y2={half} stroke={color} strokeWidth={strokeWidth} />
-        </svg>
+          <HCenterLineMark {...g} />
+        </GlyphSvg>
       );
 
     // ◇ QUADRANT: Diamond - AutoCAD/MicroStation standard
     case 'quadrant':
-      return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <polygon
-            points={`${half},${strokeWidth} ${size - strokeWidth},${half} ${half},${size - strokeWidth} ${strokeWidth},${half}`}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-          />
-        </svg>
-      );
+      return <GlyphSvg size={size}><DiamondMark {...g} /></GlyphSvg>;
 
     // + NEAREST: Plus sign - AutoCAD standard
     case 'nearest':
     case 'near':
       return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <line x1={half} y1={strokeWidth} x2={half} y2={size - strokeWidth} stroke={color} strokeWidth={strokeWidth} />
-          <line x1={strokeWidth} y1={half} x2={size - strokeWidth} y2={half} stroke={color} strokeWidth={strokeWidth} />
-        </svg>
+        <GlyphSvg size={size}>
+          <VCenterLineMark {...g} />
+          <HCenterLineMark {...g} />
+        </GlyphSvg>
       );
 
     // ↗ EXTENSION: Arrow extension line
     case 'extension':
       return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <GlyphSvg size={size}>
           <line x1={strokeWidth} y1={size - strokeWidth} x2={size - strokeWidth} y2={strokeWidth} stroke={color} strokeWidth={strokeWidth} strokeDasharray="2,2" />
-        </svg>
+        </GlyphSvg>
       );
 
     // ⊙ NODE/INSERTION: Circle with center dot
     case 'node':
     case 'insertion':
-      return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <circle cx={half} cy={half} r={half - strokeWidth} fill="none" stroke={color} strokeWidth={strokeWidth} />
-          {/* 🏢 ADR-137: Using centralized node dot radius */}
-          <circle cx={half} cy={half} r={getNodeDotRadius()} fill={color} />
-        </svg>
-      );
+      return <GlyphSvg size={size}><CircleOutlineMark {...g} /><CenterDotMark {...g} /></GlyphSvg>;
 
     // ⊕/┘/▲ BIM_CENTER / BIM_CORNER / BIM_MIDPOINT — ADR-597 §unified-glyph (2026-07-05):
     // ΔΕΝ έχουν πλέον ξεχωριστό σχήμα. Μια BIM γωνία/μέσο/κέντρο είναι το ΙΔΙΟ ΕΙΔΟΣ σημείου
@@ -202,45 +257,26 @@ export function SnapShape({ type, color }: { type: string; color: string }) {
     // Distinct from ⊕ column centre (circle+cross) and ■ endpoint; mirrors the
     // Revit/MEP "Connector" marker convention.
     case 'bim_mep_connector':
-      return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <polygon
-            points={`${half},${strokeWidth} ${size - strokeWidth},${half} ${half},${size - strokeWidth} ${strokeWidth},${half}`}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-            strokeLinejoin="miter"
-          />
-          <circle cx={half} cy={half} r={getNodeDotRadius()} fill={color} />
-        </svg>
-      );
+      return <GlyphSvg size={size}><DiamondMark {...g} miter /><CenterDotMark {...g} /></GlyphSvg>;
 
     // ═ GUIDE: Horizontal double-line with center tick — ADR-189
     case 'guide':
       return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <GlyphSvg size={size}>
           {/* Two horizontal parallel lines (guide symbol) */}
           <line x1={strokeWidth} y1={half - 3} x2={size - strokeWidth} y2={half - 3} stroke={color} strokeWidth={strokeWidth} />
           <line x1={strokeWidth} y1={half + 3} x2={size - strokeWidth} y2={half + 3} stroke={color} strokeWidth={strokeWidth} />
           {/* Center vertical tick mark */}
-          <line x1={half} y1={strokeWidth} x2={half} y2={size - strokeWidth} stroke={color} strokeWidth={strokeWidth} />
-        </svg>
+          <VCenterLineMark {...g} />
+        </GlyphSvg>
       );
 
     // ▣ TEXT: Nested square (outer + inner) — ADR-378 Phase 3 TEXT/MTEXT 8-point snap
     // Industry convention: text snap rendered as concentric rectangles (Revit/AutoCAD distinct from generic endpoint).
     case 'text':
       return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <rect
-            x={strokeWidth / 2}
-            y={strokeWidth / 2}
-            width={size - strokeWidth}
-            height={size - strokeWidth}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-          />
+        <GlyphSvg size={size}>
+          <SquareMark {...g} />
           <rect
             x={size * 0.3}
             y={size * 0.3}
@@ -250,7 +286,7 @@ export function SnapShape({ type, color }: { type: string; color: string }) {
             stroke={color}
             strokeWidth={strokeWidth}
           />
-        </svg>
+        </GlyphSvg>
       );
 
     // ⊢────⊣ DIM_LINE: dimension line with witness end-ticks — ADR-362 / ADR-378 Step 3.
@@ -259,11 +295,11 @@ export function SnapShape({ type, color }: { type: string; color: string }) {
     case 'dim_line': {
       const dimTick = getSnapIconQuarter(size); // half-height of each end tick
       return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <line x1={strokeWidth} y1={half} x2={size - strokeWidth} y2={half} stroke={color} strokeWidth={strokeWidth} />
+        <GlyphSvg size={size}>
+          <HCenterLineMark {...g} />
           <line x1={strokeWidth} y1={half - dimTick} x2={strokeWidth} y2={half + dimTick} stroke={color} strokeWidth={strokeWidth} />
           <line x1={size - strokeWidth} y1={half - dimTick} x2={size - strokeWidth} y2={half + dimTick} stroke={color} strokeWidth={strokeWidth} />
-        </svg>
+        </GlyphSvg>
       );
     }
 
@@ -272,88 +308,30 @@ export function SnapShape({ type, color }: { type: string; color: string }) {
     // (adds the dot) and ⊙ node/insertion (square vs circle); the fuchsia/orange DIM colour
     // + "Dimension Def Point" label complete the disambiguation.
     case 'dim_def_point':
-      return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <rect
-            x={strokeWidth / 2}
-            y={strokeWidth / 2}
-            width={size - strokeWidth}
-            height={size - strokeWidth}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-          />
-          <circle cx={half} cy={half} r={getNodeDotRadius()} fill={color} />
-        </svg>
-      );
+      return <GlyphSvg size={size}><SquareMark {...g} /><CenterDotMark {...g} /></GlyphSvg>;
 
     // ✦ CONSTRUCTION_POINT: Diamond with center dot — ADR-189
     case 'construction_point':
-      return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          {/* Diamond outline */}
-          <polygon
-            points={`${half},${strokeWidth} ${size - strokeWidth},${half} ${half},${size - strokeWidth} ${strokeWidth},${half}`}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-          />
-          {/* Center dot */}
-          <circle cx={half} cy={half} r={getNodeDotRadius()} fill={color} />
-        </svg>
-      );
+      return <GlyphSvg size={size}><DiamondMark {...g} /><CenterDotMark {...g} /></GlyphSvg>;
 
     // ⊙ ROTATION_PIVOT: Circle + center dot — ADR-397 rotation centre snap.
     // Echoes the on-canvas pivot ⊙ marker so the snap reads as "the rotation centre".
     case 'rotation_pivot':
-      return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <circle cx={half} cy={half} r={half - strokeWidth} fill="none" stroke={color} strokeWidth={strokeWidth} />
-          <circle cx={half} cy={half} r={getNodeDotRadius()} fill={color} />
-        </svg>
-      );
+      return <GlyphSvg size={size}><CircleOutlineMark {...g} /><CenterDotMark {...g} /></GlyphSvg>;
 
     // ◇ ROTATION_GRIP: Diamond — ADR-397 rotating entity grip snap.
     case 'rotation_grip':
-      return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <polygon
-            points={`${half},${strokeWidth} ${size - strokeWidth},${half} ${half},${size - strokeWidth} ${strokeWidth},${half}`}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-            strokeLinejoin="miter"
-          />
-        </svg>
-      );
+      return <GlyphSvg size={size}><DiamondMark {...g} miter /></GlyphSvg>;
 
     // ▪ SELECTED_GRIP: Square + centre dot — ADR-580 selected-object grip snap.
     // Reads as "the grip you are aiming for": the ■ grip square (echoes the on-canvas grip
     // handle) with a filled centre so it disambiguates from a plain ■ endpoint underneath it.
     case 'selected_grip':
-      return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <rect
-            x={strokeWidth / 2}
-            y={strokeWidth / 2}
-            width={size - strokeWidth}
-            height={size - strokeWidth}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-          />
-          <circle cx={half} cy={half} r={getNodeDotRadius()} fill={color} />
-        </svg>
-      );
+      return <GlyphSvg size={size}><SquareMark {...g} /><CenterDotMark {...g} /></GlyphSvg>;
 
     // Default: X shape (intersection style) - fallback
     default:
-      return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <line x1={strokeWidth} y1={strokeWidth} x2={size - strokeWidth} y2={size - strokeWidth} stroke={color} strokeWidth={strokeWidth} />
-          <line x1={size - strokeWidth} y1={strokeWidth} x2={strokeWidth} y2={size - strokeWidth} stroke={color} strokeWidth={strokeWidth} />
-        </svg>
-      );
+      return <GlyphSvg size={size}><CrossMark {...g} /></GlyphSvg>;
   }
 }
 

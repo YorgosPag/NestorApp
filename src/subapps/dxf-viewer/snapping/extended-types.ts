@@ -57,6 +57,11 @@ export enum ExtendedSnapType {
   ROTATION_PIVOT     = 'rotation_pivot',      // ADR-397: rotation centre ⊙ snap (active only during a rotation op)
   ROTATION_GRIP      = 'rotation_grip',       // ADR-397: rotating entity's grips snap (active only during a rotation op)
   SELECTED_GRIP      = 'selected_grip',       // ADR-580: SELECTED objects' grips snap — precedence over underlying entities (always-on when OSNAP)
+  // ADR-642 §6.8: snap to the RENDERED complex-linetype pattern geometry (railway rails +
+  // sleepers). ONE engine class × 3 types so the marker glyph differs (■ end / △ mid / ✕ x).
+  COMPLEX_ENDPOINT     = 'complex_endpoint',
+  COMPLEX_MIDPOINT     = 'complex_midpoint',
+  COMPLEX_INTERSECTION = 'complex_intersection',
   AUTO = 'auto'
 }
 
@@ -205,6 +210,9 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.ROTATION_PIVOT,      // ADR-397: rotation centre snap (contextual — store empty when idle)
     ExtendedSnapType.ROTATION_GRIP,       // ADR-397: rotating entity grips snap (contextual)
     ExtendedSnapType.SELECTED_GRIP,       // ADR-580: selected objects' grips snap (contextual — AllGripsStore empty when nothing selected)
+    ExtendedSnapType.COMPLEX_ENDPOINT,     // ADR-642 §6.8: railway rail/sleeper endpoints
+    ExtendedSnapType.COMPLEX_MIDPOINT,     // ADR-642 §6.8: railway rail/sleeper midpoints
+    ExtendedSnapType.COMPLEX_INTERSECTION, // ADR-642 §6.8: rail × sleeper intersections
   ]),
   showSnapMarkers: true,
   showSnapTooltips: true,
@@ -228,7 +236,12 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     ExtendedSnapType.INTERSECTION,
     ExtendedSnapType.ENDPOINT,
     ExtendedSnapType.ROTATION_GRIP,       // ADR-397: rotating entity grips — endpoint tier
+    // ADR-642 §6.8: pattern-geometry snaps sit at the geometric endpoint/intersection tier
+    // (their virtual rail/sleeper points read as ordinary end/mid/intersection targets).
+    ExtendedSnapType.COMPLEX_INTERSECTION,
+    ExtendedSnapType.COMPLEX_ENDPOINT,
     ExtendedSnapType.MIDPOINT,
+    ExtendedSnapType.COMPLEX_MIDPOINT,
     ExtendedSnapType.INSERTION,           // ADR-378 §5: priority 2 — before TEXT (also 2)
     ExtendedSnapType.TEXT,                // ADR-378 Phase 3: text 8-point snap — priority 2 (after INSERTION)
     ExtendedSnapType.CENTER,
@@ -277,6 +290,9 @@ export const DEFAULT_PRO_SNAP_SETTINGS: ProSnapSettings = {
     [ExtendedSnapType.ROTATION_PIVOT]:      12, // ADR-397: rotation centre — wide grab (easy magnetism to ⊙)
     [ExtendedSnapType.ROTATION_GRIP]:       10, // ADR-397: rotating entity grips — AutoCAD APERTURE default
     [ExtendedSnapType.SELECTED_GRIP]:       12, // ADR-580: selected objects' grips — slightly wider grab (magnetise onto the grip you aim for)
+    [ExtendedSnapType.COMPLEX_ENDPOINT]:     10, // ADR-642 §6.8: rail/sleeper endpoint — AutoCAD APERTURE default
+    [ExtendedSnapType.COMPLEX_MIDPOINT]:     10, // ADR-642 §6.8: rail/sleeper midpoint
+    [ExtendedSnapType.COMPLEX_INTERSECTION]: 10, // ADR-642 §6.8: rail × sleeper intersection
   }
 };
 

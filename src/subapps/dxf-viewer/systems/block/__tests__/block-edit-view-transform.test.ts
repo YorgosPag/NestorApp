@@ -46,6 +46,20 @@ describe('computeBlockEditViewTransform', () => {
     expect(t.cx).toBe(0);
     expect(t.cy).toBe(0);
   });
+
+  // ADR-641 world-coords fix (Giorgio 2026-07-13) — a block whose members are text/ellipse/etc used to
+  // yield empty bounds (those types were excluded from `computeEntityArrayBounds`), so the recenter
+  // centre collapsed to (0,0) → members were NOT recentred and rendered at raw world coords, off-screen.
+  it('recentres a block whose extent is TEXT-only (was (0,0) → world-coords disappearance)', () => {
+    const textMember = { id: 't1', type: 'text', layerId: '0', position: { x: 18170, y: 3505 } } as unknown as BlockEntity['entities'][number];
+    const t = computeBlockEditViewTransform(block(1, 1, [textMember]));
+    expect(t.cx).toBeCloseTo(18170, 6); // NOT 0 — the text anchors the recenter
+    expect(t.cy).toBeCloseTo(3505, 6);
+    // The text now maps to the view origin instead of staying at raw world coords.
+    const view = viewFromDef(textMember as never, t) as unknown as { position: { x: number; y: number } };
+    expect(view.position.x).toBeCloseTo(0, 6);
+    expect(view.position.y).toBeCloseTo(0, 6);
+  });
 });
 
 describe('viewFromDef / defFromView', () => {

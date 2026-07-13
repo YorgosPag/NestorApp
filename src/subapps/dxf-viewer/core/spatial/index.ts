@@ -38,7 +38,8 @@ export type {
   SpatialQueryOptions,
   SpatialQueryResult,
   SpatialIndexConfig,
-  SpatialIndexStats
+  SpatialIndexStats,
+  SnapIndexSlot
 } from './ISpatialIndex';
 
 export { SpatialIndexType } from './ISpatialIndex';

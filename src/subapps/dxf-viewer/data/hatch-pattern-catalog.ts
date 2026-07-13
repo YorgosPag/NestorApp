@@ -32,6 +32,9 @@
  * @see bim/geometry/shared/hatch-pattern-geometry.ts (buildPredefinedHatchLines — consumer)
  */
 
+import type { Point2D } from '../rendering/types/Types';
+import { degToRad } from '../rendering/entities/shared/geometry-angle-utils';
+
 /** Μία γραμμή ορισμού μοτίβου (PAT pattern definition line). Όλα σε mm / μοίρες. */
 export interface PatternLine {
   /** Γωνία οικογένειας γραμμών (μοίρες, CCW από +X). */
@@ -339,6 +342,17 @@ export const HATCH_PATTERN_CATALOG: Readonly<Record<string, HatchPattern>> = {
       line(60, [0.125 * INCH, 0], [0, 0.216506351 * INCH], [-0.125 * INCH, 0.125 * INCH, -0.125 * INCH, 0.125 * INCH]),
     ],
   },
+  GRATE: {
+    // ADR-647 Φ2 — σχάρα/πλέγμα (acad.pat `*GRATE`): δύο κάθετες συμπαγείς οικογένειες,
+    // πυκνή οριζόντια (0° @ .0625″ = 1.5875 mm) + αραιή κάθετη (90° @ .25″ = 6.35 mm). Έλειπε
+    // από τον catalog → οι 7 GRATE hatches του κύριου αρχείου έβγαιναν αόρατες σε catalog-MISS
+    // (belt-and-suspenders: το import προτιμά ήδη το preserve-native inlinePattern της Φ1). × INCH.
+    name: 'GRATE', labelKey: 'ribbon.commands.hatchEditor.patterns.grate', category: 'special',
+    lines: [
+      line(0, [0, 0], [0, 0.0625 * INCH]),
+      line(90, [0, 0], [0, 0.25 * INCH]),
+    ],
+  },
   HONEY: {
     // Κηρήθρα (honeycomb approximation): τρεις οικογένειες 60°.
     name: 'HONEY', labelKey: 'ribbon.commands.hatchEditor.patterns.honey', category: 'special',
@@ -380,6 +394,8 @@ const SUGGESTED_SCALES: Readonly<Record<string, number>> = {
   // Η import fidelity ΔΕΝ εξαρτάται από αυτό: το idempotency αποθηκεύει fileScale/suggested,
   // οπότε effective = fileScale στο re-import (γι' αυτό ο χρήστης κάνει ΦΡΕΣΚΙΑ εισαγωγή).
   SQUARE: 5, HEX: 6,
+  // ADR-647 Φ2 — GRATE max delta-y = .25″ = 6.35 → × 5 = 31.75 mm (≥30 invariant του catalog test).
+  GRATE: 5,
 };
 
 /** Επιστρέφει το μοτίβο με το δοθέν όνομα (case-insensitive), ή `undefined`. */
@@ -407,6 +423,46 @@ export function resolveEffectiveHatchScale(name: string | undefined, userScale: 
 /** Λίστα όλων των μοτίβων (σταθερή σειρά εισαγωγής) — για το UI dropdown. */
 export function listHatchPatterns(): readonly HatchPattern[] {
   return Object.values(HATCH_PATTERN_CATALOG);
+}
+
+/**
+ * Affine-transform ενός `inlinePattern` (ADR-647 Φ1) — SSoT που καλείται από ΚΑΘΕ per-entity
+ * transform ώστε ο ΠΡΩΤΟΤΥΠΟΣ ορισμός μοτίβου (absolute world-unit lines) να ριδάρει ΑΚΡΙΒΩΣ τον
+ * ίδιο μετασχηματισμό με το `boundaryPaths`:
+ *   - **canonical-mm import** (`scaleEntity`, base=0, sx=sy=mmFactor): αλλιώς το boundary γίνεται mm
+ *     αλλά το pattern μένει σε source units → «very large, dense hatch» στο AutoCAD (Giorgio 2026-07-13).
+ *   - **block placement** (`applyBlockTransformGeometry` = scale∘rotate∘translate).
+ *   - **user grips** (Scale / Rotate / Move).
+ *
+ * `p_world = placement + Rot(angleDeg)·Scale(sx,sy)·(p − base)`:
+ *   - `origin` → world POINT transform (scale περί base → rotate περί base → translate).
+ *   - `angle`  → `+ angleDeg` (η οικογένεια γραμμών στρέφεται μαζί).
+ *   - `delta` (line-local `[along, perp]`) + `dashes` (world μήκη) → `× |sx|` (uniform· sx=sy σε κάθε
+ *     πραγματικό hatch scale — non-uniform projection είναι ill-defined για hatch, όπως στο AutoCAD).
+ */
+export function transformInlinePattern(
+  pattern: HatchPattern,
+  base: Point2D,
+  sx: number,
+  sy: number,
+  angleDeg: number,
+  placement: Point2D,
+): HatchPattern {
+  const rad = degToRad(angleDeg);
+  const c = Math.cos(rad);
+  const s = Math.sin(rad);
+  const scale = Math.abs(sx);
+  const lines: PatternLine[] = pattern.lines.map((pl) => {
+    const ax = (pl.origin[0] - base.x) * sx;
+    const ay = (pl.origin[1] - base.y) * sy;
+    return {
+      angle: pl.angle + angleDeg,
+      origin: [placement.x + ax * c - ay * s, placement.y + ax * s + ay * c],
+      delta: [pl.delta[0] * scale, pl.delta[1] * scale],
+      dashes: pl.dashes.map((d) => d * scale),
+    };
+  });
+  return { ...pattern, lines };
 }
 
 /** Το προεπιλεγμένο όνομα μοτίβου όταν ο χρήστης διαλέξει «Predefined». */

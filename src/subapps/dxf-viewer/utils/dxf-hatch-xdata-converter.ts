@@ -32,7 +32,10 @@
 import type { AnySceneEntity } from '../types/scene';
 import type { Point2D } from '../rendering/types/Types';
 import type { EntityData } from './dxf-converter-helpers';
-import { buildHatchSceneEntity } from './dxf-hatch-converter';
+import { buildHatchSceneEntity, makeInlinePattern } from './dxf-hatch-converter';
+import type { PatternLine } from '../data/hatch-pattern-catalog';
+import { radToDeg } from '../rendering/entities/shared/geometry-angle-utils';
+import { hasAnyBulge, expandPolyline } from '../rendering/entities/shared/geometry-bulge-utils';
 
 type DxfPairs = ReadonlyArray<readonly [string, string]>;
 
@@ -148,13 +151,23 @@ function extractR14BoundaryPaths(pairs: DxfPairs): Point2D[][] | null {
         while (i + count < pairs.length && pairs[i + count][0] === '1040') count += 1;
         const stride = n > 0 && count === n * 3 ? 3 : 2;
         const verts: Point2D[] = [];
+        // ADR-647 Φ2b — at stride 3 the 3rd scalar/vertex is a standard DXF bulge = tan(θ/4)
+        // (GRATE hatches: 7/117, 11 arcs). `count === n*3` reliably signals the bulge column
+        // (the ADR's `hasBulge` flag showed 0 mismatches vs this inference on the full 117-hatch scan).
+        const bulges: number[] = [];
         for (let k = 0; k < n && i + 1 < pairs.length; k += 1) {
           if (pairs[i][0] === '1040' && pairs[i + 1][0] === '1040') {
             verts.push({ x: +pairs[i][1], y: +pairs[i + 1][1] });
+            bulges.push(stride === 3 ? +pairs[i + 2][1] : 0);
             i += stride;
           } else break;
         }
-        if (verts.length >= 3) paths.push(verts);
+        if (verts.length >= 3) {
+          // Tessellate arcs ONLY when a real bulge is present (SSoT `bulgeToPolyline` via
+          // `expandPolyline`, closed loop — ADR-510, zero new arc math). A straight-only path keeps
+          // its raw vertices (unchanged) so island/edge boundaries stay byte-identical.
+          paths.push(hasAnyBulge(bulges) ? expandPolyline(verts, bulges, true) : verts);
+        }
         continue;
       }
       i += 1; // structural 1071 (numPaths / flag)
@@ -195,6 +208,95 @@ function extractR14BoundaryPaths(pairs: DxfPairs): Point2D[][] | null {
 }
 
 /**
+ * Locate the pattern-definition fingerprint inside `R14_HATCH_DATA` and return the index of the
+ * `numFamilies` value (families start at the next pair), or -1. The section opens — right after the
+ * boundary terminator `1071 0` — with the distinctive signature (ADR-647 §Locked spec):
+ *
+ *   1070 <fillFlag 0|1>  1070 1  1040 <angleRad>  1040 <scale>  1070 0  1070 <numFamilies 1..8>
+ *
+ * The double `1070 … / 1070 1` never occurs in the boundary (each `1070 1` line-edge flag is
+ * followed by four `1040`), so scanning from the R14 boundary start is unambiguous.
+ */
+function findR14PatternDefStart(pairs: DxfPairs): number {
+  const from = findR14BoundaryStart(pairs);
+  if (from < 0) return -1;
+  for (let i = from; i + 5 < pairs.length; i += 1) {
+    if (pairs[i][0] === '1070' && (pairs[i][1].trim() === '0' || pairs[i][1].trim() === '1')
+      && pairs[i + 1][0] === '1070' && pairs[i + 1][1].trim() === '1'
+      && pairs[i + 2][0] === '1040'
+      && pairs[i + 3][0] === '1040'
+      && pairs[i + 4][0] === '1070' && pairs[i + 4][1].trim() === '0'
+      && pairs[i + 5][0] === '1070') {
+      const nf = parseInt(pairs[i + 5][1], 10) || 0;
+      if (nf >= 1 && nf <= 8) return i + 5;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Parse the `R14_HATCH_DATA` **pattern definition** into `PatternLine[]` (ADR-647 Φ1) — the SAME
+ * shape the native HATCH path (`parseInlinePatternLines`) produces, so the R12 associative-hatch
+ * renders/exports 1:1 with AutoCAD (preserve-native, catalog-independent) instead of falling back
+ * to a possibly-divergent catalog def.
+ *
+ * Per family: `1040 angleRad, 1040 baseX, 1040 baseY, 1040 deltaWx, 1040 deltaWy, 1070 numDashes,
+ * numDashes × 1040 dash`. Conversions are EMPIRICALLY LOCKED against the exploded `*X#` LINEs
+ * (residuals ~1e-9, ADR-647 ground-truth):
+ *   - `angle`  = `radToDeg(angleRad)` (already the final baked line angle).
+ *   - `origin` = `[baseX, baseY]` (world phase — gives both perpendicular AND along-line dash phase).
+ *   - `delta`  = the WORLD offset vector un-rotated by −angle into line-local `[along, perp]`, which
+ *                is what the renderer (`buildPatternLineSegments`) expects on `PatternLine.delta`.
+ *   - `dashes` = as-is (`>0` line, `<0` gap; empty ⇒ solid).
+ *
+ * Defensive: a family truncated by `1002`/end-of-pairs is dropped (the unit-test fixtures carry a
+ * truncated tail), returning only the fully-read families.
+ */
+function parseR14PatternLines(pairs: DxfPairs): PatternLine[] {
+  const nfIdx = findR14PatternDefStart(pairs);
+  if (nfIdx < 0) return [];
+  const numFamilies = parseInt(pairs[nfIdx][1], 10) || 0;
+
+  const lines: PatternLine[] = [];
+  let i = nfIdx + 1;
+  const num = (code: string): number | null => {
+    const p = pairs[i];
+    if (!p || p[0] !== code) return null; // wrong code / end-of-pairs / `1002` closer ⇒ stop family
+    i += 1;
+    return parseFloat(p[1]);
+  };
+
+  for (let fam = 0; fam < numFamilies; fam += 1) {
+    const angleRad = num('1040');
+    const baseX = num('1040');
+    const baseY = num('1040');
+    const deltaWx = num('1040');
+    const deltaWy = num('1040');
+    const nDashRaw = num('1070');
+    if (angleRad === null || baseX === null || baseY === null
+      || deltaWx === null || deltaWy === null || nDashRaw === null) break;
+
+    const nDash = Math.max(0, Math.trunc(nDashRaw));
+    const dashes: number[] = [];
+    let dashOk = true;
+    for (let d = 0; d < nDash; d += 1) {
+      const dv = num('1040');
+      if (dv === null) { dashOk = false; break; }
+      dashes.push(dv);
+    }
+    if (!dashOk) break;
+
+    // Un-rotate the world-delta into line-local [along-stagger, perpendicular-spacing] (ADR-647 §3.2).
+    const c = Math.cos(angleRad);
+    const s = Math.sin(angleRad);
+    const localDx = deltaWx * c + deltaWy * s;
+    const localDy = -deltaWx * s + deltaWy * c;
+    lines.push({ angle: radToDeg(angleRad), origin: [baseX, baseY], delta: [localDx, localDy], dashes });
+  }
+  return lines;
+}
+
+/**
  * If `insert` is an R12 associative-hatch reference (carries `ACAD/HATCH` XDATA with a usable
  * line-edge boundary), reconstruct it as a single `type:'hatch'` scene entity and return it —
  * so the caller can SKIP exploding the referenced `*X#` block into loose lines. Returns `null`
@@ -213,6 +315,11 @@ export function tryConvertInsertHatch(insert: EntityData, index: number): AnySce
   const boundaryPaths = extractR14BoundaryPaths(pairs);
   if (!boundaryPaths || boundaryPaths.length === 0) return null;
 
+  // ADR-647 Φ1 — preserve the ORIGINAL pattern definition (R14_HATCH_DATA) as an inlinePattern, so
+  // the render + export reproduce it 1:1 with AutoCAD instead of leaning on a (possibly divergent)
+  // catalog def. Symmetric with the native `convertHatch` path (shared `makeInlinePattern` SSoT).
+  const inlinePattern = makeInlinePattern(head.patternName, parseR14PatternLines(pairs));
+
   return buildHatchSceneEntity({
     id: `hatch_insert_${index}`,
     layer: insert.layer,
@@ -224,5 +331,6 @@ export function tryConvertInsertHatch(insert: EntityData, index: number): AnySce
     angle: head.angle,
     scale: head.scale,
     color: undefined, // BYLAYER — resolved in processSceneEntity
+    inlinePattern,
   });
 }

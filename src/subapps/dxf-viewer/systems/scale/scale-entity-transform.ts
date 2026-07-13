@@ -21,6 +21,9 @@ import { scaleTextNodeRunHeights } from '../../utils/text-node-utils';
 import { arcVisibleCcwRange } from '../../rendering/entities/shared/geometry-arc-utils';
 import { degToRad } from '../../rendering/entities/shared/geometry-angle-utils';
 import { rectangleEntityVertices } from '../../rendering/entities/shared/geometry-utils';
+// ADR-647 — an imported hatch's preserved pattern def (inlinePattern) is absolute world geometry, so
+// it MUST scale with the boundary (canonical-mm import ×mmFactor); else it renders/exports 1000× dense.
+import { transformInlinePattern } from '../../data/hatch-pattern-catalog';
 
 const TWO_PI = Math.PI * 2;
 const norm2pi = (x: number): number => ((x % TWO_PI) + TWO_PI) % TWO_PI;
@@ -214,9 +217,12 @@ function scaleDimension(e: Entity & { type: 'dimension' }, base: Point2D, sx: nu
 }
 
 function scaleHatch(e: Entity & { type: 'hatch' }, base: Point2D, sx: number, sy: number) {
+  const inlinePattern = (e as { inlinePattern?: Parameters<typeof transformInlinePattern>[0] }).inlinePattern;
   return {
     boundaryPaths: e.boundaryPaths.map(path => scalePoints(path, base, sx, sy)),
     patternScale: (e.patternScale ?? 1) * Math.abs(sx),
+    // Scale-only: base→base, angle 0 ⇒ origin scales about base, delta/dashes × |sx| (ADR-647).
+    ...(inlinePattern ? { inlinePattern: transformInlinePattern(inlinePattern, base, sx, sy, 0, base) } : {}),
   };
 }
 

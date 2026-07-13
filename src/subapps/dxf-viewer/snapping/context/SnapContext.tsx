@@ -142,6 +142,13 @@ export const SnapProvider: React.FC<SnapProviderProps> = ({ children }) => {
       // ADR-597: BIM characteristic-point snaps are always-on structural snaps (same
       // pattern) — force-enabled so they never depend on a stored per-mode preference.
       for (const t of ALWAYS_ON_BIM_SNAPS) modes.add(t);
+      // ADR-642 §6.8: complex-linetype pattern-geometry snaps (railway rails + sleepers) are
+      // always-on like the structural snaps — CONTEXTUAL (their engines index nothing unless a
+      // complex-linetype entity exists → zero cost otherwise), force-enabled with the global
+      // OSNAP toggle so they work for every user without a stored per-mode preference.
+      modes.add(ExtendedSnapType.COMPLEX_ENDPOINT);
+      modes.add(ExtendedSnapType.COMPLEX_MIDPOINT);
+      modes.add(ExtendedSnapType.COMPLEX_INTERSECTION);
     }
     return modes;
   }, [snapState, snapEnabled]);

@@ -72,6 +72,28 @@ describe('scaleEntity — ADR-646 Φ2 geometric additions (uniform ×2)', () => 
     expect(r.hiddenSources[0].start.x).toBe(2); // recursive line scale
   });
 
+  // ADR-647 — an imported R12 hatch preserves its AutoCAD pattern def as `inlinePattern` (absolute
+  // world-unit lines). It MUST scale with the boundary or the canonical-mm import (×mmFactor) leaves
+  // the pattern in source units → «very large, dense hatch» in AutoCAD (Giorgio 2026-07-13).
+  it('hatch: inlinePattern (origin/delta/dashes) scales WITH the boundary (dense-hatch fix)', () => {
+    const r = scaleEntity(
+      asEntity({
+        type: 'hatch', fillType: 'predefined', boundaryPaths: [[{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }]],
+        inlinePattern: {
+          name: 'GRASS', labelKey: 'k', category: 'special',
+          lines: [{ angle: 90, origin: [2, 3], delta: [0.09, 0.09], dashes: [0.024, -0.15] }],
+        },
+      }),
+      BASE, 1000, 1000, // canonical-mm meters→mm factor
+    ) as { boundaryPaths: Array<Array<{ x: number }>>; inlinePattern: { lines: Array<{ origin: number[]; delta: number[]; dashes: number[] }> } };
+    expect(r.boundaryPaths[0][1].x).toBe(10000);          // boundary ×1000
+    const l = r.inlinePattern.lines[0];
+    expect(l.origin).toEqual([2000, 3000]);                // origin scales as a point
+    expect(l.delta[0]).toBeCloseTo(90, 6);                 // delta ×1000 (was the bug: stayed 0.09)
+    expect(l.delta[1]).toBeCloseTo(90, 6);
+    expect(l.dashes).toEqual([24, -150]);                  // dashes ×1000
+  });
+
   it('non-uniform: opening-info-tag width uses |sx|; array rect spacings split by axis', () => {
     const tag = scaleEntity(asEntity({ type: 'opening-info-tag', position: { x: 1, y: 1 }, widthMm: 100 }), BASE, 3, 5) as { widthMm: number };
     expect(tag.widthMm).toBe(300); // |sx| = 3

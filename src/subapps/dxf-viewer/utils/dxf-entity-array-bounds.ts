@@ -47,6 +47,32 @@ export function computeEntityArrayBounds(
         // `getEntityBBox` hatch case (dxf-viewport-culling.ts).
         entity.boundaryPaths?.forEach(ring => ring.forEach(v => expand(v.x, v.y)));
         break;
+      // ADR-641 — text/point/ellipse/rectangle/spline were SILENTLY EXCLUDED from the bounds box,
+      // so a block whose extent is defined by these types produced empty bounds → the Block Editor's
+      // recenter centre `C` (computeBlockEditViewTransform) fell back to (0,0) → members were NOT
+      // recentred and rendered at their raw WORLD coordinates, off-screen («η οντότητα εξαφανίζεται»,
+      // Giorgio 2026-07-13). Each type contributes its geometry so the box covers ALL members.
+      case 'ellipse': {
+        // Rotation-agnostic circular envelope (major-axis radius) — never under-covers the ellipse.
+        const r = Math.max(Math.abs(entity.majorAxis), Math.abs(entity.minorAxis));
+        expand(entity.center.x - r, entity.center.y - r);
+        expand(entity.center.x + r, entity.center.y + r);
+        break;
+      }
+      case 'rectangle':
+      case 'rect':
+        expand(entity.x, entity.y);
+        expand(entity.x + entity.width, entity.y + entity.height);
+        break;
+      case 'spline':
+        entity.controlPoints.forEach(v => expand(v.x, v.y));
+        break;
+      case 'text':
+      case 'mtext':
+      case 'point':
+        // Position-anchored: the insertion point locates the member (enough for recenter + fit).
+        expand(entity.position.x, entity.position.y);
+        break;
     }
   });
 

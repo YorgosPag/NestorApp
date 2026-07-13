@@ -394,3 +394,15 @@ SSoT (no parallel scene subscription left reading the world). Full feature PARTI
   (synthetic block-local `SceneModel` from `block.entities`, identity placement, bounds via the
   `DxfSceneBuilder.calculateBounds` SSoT). Design captured from a 5-agent read-only orchestrator
   fan-out. New tests: `ActiveBlockEditStore.test.ts`, `block-edit-scene.test.ts`. jscpd clean.
+- **2026-07-13** — **🐛 WORLD-COORDS FIX (recenter `C` empty-bounds).** Ο Giorgio ανέφερε ότι σε BEDIT η
+  περιστροφή μιας οντότητας την **εξαφανίζει** («το πρόβλημα είναι οι συντεταγμένες κόσμου»). Root cause
+  (E2E repro με τον πραγματικό `RotateEntityCommand` + `LevelSceneManagerAdapter`): το view round-trip
+  (view→rotate→def→render) είναι **σωστό** για κάθε τύπο· το bug ήταν στο recenter `C` του
+  `computeBlockEditViewTransform`. Το `computeEntityArrayBounds` κάλυπτε ΜΟΝΟ line/polyline/circle/arc/
+  hatch → για μπλοκ του οποίου το extent ορίζεται από **text/mtext/ellipse/rectangle/spline/point** τα
+  bounds έβγαιναν κενά (Infinity) → `cx/cy` fallback σε **(0,0)** → οι οντότητες ΔΕΝ recenter-άρονταν και
+  αποδίδονταν στις raw **world coords** (~1.7e4), εκτός οθόνης. **Fix:** επέκταση του `computeEntityArrayBounds`
+  (SSoT· τροφοδοτεί ΚΑΙ το recenter `C` ΚΑΙ το viewport auto-fit μέσω `DxfSceneBuilder.calculateBounds`)
+  με τους ελλείποντες primitive τύπους — «ένα `expand()` ανά τύπο» (η προβλεπόμενη επέκταση), χωρίς
+  block-expansion (perf-neutral). Regression tests: `dxf-entity-array-bounds.test.ts` (κάλυψη τύπων) +
+  text-only recenter case στο `block-edit-view-transform.test.ts`. N.18 jscpd καθαρό. ΟΧΙ tsc (N.17).

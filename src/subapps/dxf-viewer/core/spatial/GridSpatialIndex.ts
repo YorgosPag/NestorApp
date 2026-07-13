@@ -6,10 +6,13 @@
  * - Uniform grid spatial partitioning
  * - Optimized για snapping operations
  * - O(1) cell access για real-time performance
+ *
+ * The query algebra (queryNear/queryBounds/querySnap/querySelection/hitTest/update/
+ * stats) lives in `BaseSpatialIndex`; this class only owns the uniform-grid storage
+ * and exposes candidates via `getCandidates`. ADR-583 (N.18) — no twin logic.
  */
 
 import type {
-  ISpatialIndex,
   SpatialItem,
   SpatialBounds,
   SpatialQueryOptions,
@@ -20,6 +23,7 @@ import type {
 import { SpatialIndexType } from './ISpatialIndex';
 import type { Point2D } from '../../rendering/types/Types';
 import { SpatialUtils } from './SpatialUtils';
+import { BaseSpatialIndex } from './BaseSpatialIndex';
 // 🏢 ADR-071: Centralized clamp function
 import { clamp } from '../../rendering/entities/shared/geometry-utils';
 
@@ -36,13 +40,8 @@ interface GridCell {
  * 🏢 GRID SPATIAL INDEX
  * High-performance uniform grid για fast spatial queries
  */
-export class GridSpatialIndex implements ISpatialIndex {
-  readonly indexType = SpatialIndexType.GRID;
-  readonly bounds: SpatialBounds;
-
+export class GridSpatialIndex extends BaseSpatialIndex {
   private grid: Map<string, GridCell> = new Map();
-  private _itemCount: number = 0;
-  private stats: SpatialIndexStats;
 
   private readonly cols: number;
   private readonly rows: number;
@@ -51,22 +50,11 @@ export class GridSpatialIndex implements ISpatialIndex {
     bounds: SpatialBounds,
     private cellSize: number = 100
   ) {
-    this.bounds = SpatialUtils.sanitizeBounds(bounds);
+    super(bounds, SpatialIndexType.GRID);
 
     // Calculate grid dimensions
     this.cols = Math.ceil((this.bounds.maxX - this.bounds.minX) / this.cellSize);
     this.rows = Math.ceil((this.bounds.maxY - this.bounds.minY) / this.cellSize);
-
-    this.stats = {
-      itemCount: 0,
-      queryTime: 0,
-      indexType: this.indexType,
-      memoryUsage: 0
-    };
-  }
-
-  get itemCount(): number {
-    return this._itemCount;
   }
 
   // ========================================
@@ -95,8 +83,7 @@ export class GridSpatialIndex implements ISpatialIndex {
       }
     }
 
-    this._itemCount++;
-    this.stats.itemCount = this._itemCount;
+    this.bumpItemCount(1);
   }
 
   remove(itemId: string): boolean {
@@ -118,94 +105,26 @@ export class GridSpatialIndex implements ISpatialIndex {
     }
 
     if (removed) {
-      this._itemCount--;
-      this.stats.itemCount = this._itemCount;
+      this.bumpItemCount(-1);
     }
 
     return removed;
   }
 
-  update(item: SpatialItem): boolean {
-    const removed = this.remove(item.id);
-    if (removed) {
-      this.insert(item);
-      return true;
-    }
-    return false;
-  }
-
   clear(): void {
     this.grid.clear();
-    this._itemCount = 0;
-    this.stats.itemCount = 0;
+    this.resetItemCount();
   }
 
   // ========================================
-  // QUERY OPERATIONS
+  // QUERY OVERRIDES (grid-specific)
   // ========================================
 
-  queryNear(center: Point2D, radius: number, options?: SpatialQueryOptions): SpatialQueryResult[] {
-    const startTime = performance.now();
-
-    const queryBounds = SpatialUtils.expandBounds(
-      { minX: center.x, minY: center.y, maxX: center.x, maxY: center.y },
-      radius
-    );
-
-    const candidates = this.getItemsInBounds(queryBounds);
-    const results: SpatialQueryResult[] = [];
-
-    for (const item of candidates) {
-      const distance = SpatialUtils.distanceToPoint(center, item.bounds);
-      if (distance <= radius) {
-        results.push({
-          item,
-          distance,
-          data: item.data
-        });
-      }
-    }
-
-    // Sort by distance
-    results.sort((a, b) => a.distance - b.distance);
-
-    // Apply limits
-    const maxResults = options?.maxResults || results.length;
-    const finalResults = results.slice(0, maxResults);
-
-    this.stats.queryTime = performance.now() - startTime;
-    return finalResults;
-  }
-
-  queryBounds(bounds: SpatialBounds, options?: SpatialQueryOptions): SpatialQueryResult[] {
-    const startTime = performance.now();
-
-    const candidates = this.getItemsInBounds(bounds);
-    const results: SpatialQueryResult[] = [];
-
-    for (const item of candidates) {
-      const center = SpatialUtils.boundsCenter(item.bounds);
-      const distance = SpatialUtils.distanceToPoint(center, bounds);
-
-      results.push({
-        item,
-        distance,
-        data: item.data
-      });
-    }
-
-    // Sort by distance
-    results.sort((a, b) => a.distance - b.distance);
-
-    const maxResults = options?.maxResults || results.length;
-    const finalResults = results.slice(0, maxResults);
-
-    this.stats.queryTime = performance.now() - startTime;
-    return finalResults;
-  }
-
+  /**
+   * Grid override: start with a small radius and expand progressively — cheaper than
+   * the base `Number.MAX_VALUE` scan because the grid can answer small windows in O(1).
+   */
   queryClosest(point: Point2D, options?: SpatialQueryOptions): SpatialQueryResult | null {
-    // Start με small radius και expand progressively
     let radius = this.cellSize;
     const maxRadius = Math.max(
       this.bounds.maxX - this.bounds.minX,
@@ -221,54 +140,6 @@ export class GridSpatialIndex implements ISpatialIndex {
     }
 
     return null;
-  }
-
-  hitTest(point: Point2D, tolerance: number = 0): SpatialQueryResult | null {
-    const results = this.queryNear(point, tolerance, { maxResults: 1 });
-    return results.length > 0 ? results[0] : null;
-  }
-
-  // ========================================
-  // SPECIALIZED QUERIES
-  // ========================================
-
-  querySnap(point: Point2D, tolerance: number, snapType: 'endpoint' | 'midpoint' | 'center' | 'dim_def_point' | 'dim_line'): SpatialQueryResult[] {
-    // `tolerance` is the snap APERTURE — a fixed SCREEN-space pickbox (px) already
-    // converted to world units by the caller (`worldRadiusForType`). This is the
-    // AutoCAD/Revit/Figma model: the reach is constant on screen at every zoom.
-    // Honour it directly. `queryNear` scans exactly the grid cells the radius
-    // covers, so it is correct for ANY radius — the earlier `min(tolerance,
-    // cellSize/2)` clamp only shrank the reach BELOW the intended aperture, which
-    // silently killed snapping when zoomed out on large geometry (e.g. a 155 m
-    // dimension: the aperture became a sub-pixel world distance → no attract, and
-    // far points appeared/vanished with zoom). ADR-362/378 fix — 2026-07-07.
-    // `snapType` filtering is done per-engine upstream (each engine indexes only
-    // its own point kind), so no post-filter is needed here.
-    return this.queryNear(point, tolerance);
-  }
-
-  querySelection(bounds: SpatialBounds, selectionType: 'window' | 'crossing'): SpatialQueryResult[] {
-    const candidates = this.getItemsInBounds(bounds);
-
-    if (selectionType === 'window') {
-      // Window selection - item must be completely inside
-      return candidates
-        .filter(item => SpatialUtils.boundsContains(bounds, item.bounds))
-        .map(item => ({
-          item,
-          distance: 0,
-          data: item.data
-        }));
-    } else {
-      // Crossing selection - item must intersect
-      return candidates
-        .filter(item => SpatialUtils.boundsIntersect(bounds, item.bounds))
-        .map(item => ({
-          item,
-          distance: 0,
-          data: item.data
-        }));
-    }
   }
 
   // ========================================
@@ -307,6 +178,26 @@ export class GridSpatialIndex implements ISpatialIndex {
   // PRIVATE IMPLEMENTATION
   // ========================================
 
+  /** Base hook: every item whose bounds intersect the query window (deduped across cells). */
+  protected getCandidates(bounds: SpatialBounds): SpatialItem[] {
+    const cells = this.getItemCells(bounds);
+    const itemMap = new Map<string, SpatialItem>();
+
+    for (const cellKey of cells) {
+      const cell = this.grid.get(cellKey);
+      if (cell) {
+        for (const item of cell.items) {
+          // Only add if bounds actually intersect
+          if (SpatialUtils.boundsIntersect(item.bounds, bounds)) {
+            itemMap.set(item.id, item);
+          }
+        }
+      }
+    }
+
+    return Array.from(itemMap.values());
+  }
+
   private getItemCells(bounds: SpatialBounds): string[] {
     const cells: string[] = [];
 
@@ -328,25 +219,6 @@ export class GridSpatialIndex implements ISpatialIndex {
     }
 
     return cells;
-  }
-
-  private getItemsInBounds(bounds: SpatialBounds): SpatialItem[] {
-    const cells = this.getItemCells(bounds);
-    const itemMap = new Map<string, SpatialItem>();
-
-    for (const cellKey of cells) {
-      const cell = this.grid.get(cellKey);
-      if (cell) {
-        for (const item of cell.items) {
-          // Only add if bounds actually intersect
-          if (SpatialUtils.boundsIntersect(item.bounds, bounds)) {
-            itemMap.set(item.id, item);
-          }
-        }
-      }
-    }
-
-    return Array.from(itemMap.values());
   }
 
   private getCellKey(col: number, row: number): string {

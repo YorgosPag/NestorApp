@@ -32,6 +32,8 @@ import { startAxisCutDrag, endAxisCutDrag } from '../axis-cut/axis-cut-drag-stor
 // Body-drag (grab entity body → move; Ctrl+drag → copy).
 import { EntityBodyDragStore } from '../drag/EntityBodyDragStore';
 import { resolveBodyDragTarget } from '../drag/body-drag-target';
+// ADR-642 §6.8 — Alt+press on a complex-linetype pattern snap (railway rail/sleeper) → whole-entity move.
+import { tryArmComplexSnapAltMove } from '../drag/complex-snap-alt-move';
 import { getHoveredEntity } from '../hover/HoverStore';
 import { SelectedEntitiesStore } from '../selection/SelectedEntitiesStore';
 import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
@@ -207,6 +209,24 @@ export function useCentralizedMouseHandlers(
 
     // Grip drag-release (skip during drawing mode)
     if (e.button === 0 && !isToolInteractive && onGripMouseDown && onGripMouseDown(worldPos)) {
+      return;
+    }
+
+    // ADR-642 §6.8 — Alt+press on an active complex-linetype pattern snap (railway rail /
+    // sleeper endpoint / midpoint / intersection) → whole-entity move of the underlying line
+    // from that PRECISE snap point as base (AutoCAD move-from-characteristic-point). Runs AFTER
+    // the grip check (a real grip under the cursor still wins its own Alt-move) and BEFORE
+    // body-drag/lasso, reusing the body-drag pipeline (ghost + commit) with the snap as anchor.
+    if (
+      e.button === 0 &&
+      !isToolInteractive &&
+      activeTool === 'select' &&
+      e.altKey &&
+      tryArmComplexSnapAltMove(e.ctrlKey || e.metaKey)
+    ) {
+      lassoDownRef.current = { pos: null, buttonHeld: false };
+      e.preventDefault();
+      e.stopPropagation();
       return;
     }
 

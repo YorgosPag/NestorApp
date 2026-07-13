@@ -56,6 +56,11 @@ const SNAP_MODE_KEYS: Record<ExtendedSnapType, string> = {
   [ExtendedSnapType.ROTATION_GRIP]: 'rotationGrip',
   // ADR-580: selected-object grips snap — contextual/always-on (not a toolbar toggle), keyed for type completeness.
   [ExtendedSnapType.SELECTED_GRIP]: 'selectedGrip',
+  // ADR-642 §6.8: complex-linetype pattern-geometry snaps (railway rails + sleepers) — keyed
+  // for type completeness (label keys exist under snapModes.labels.complex_*).
+  [ExtendedSnapType.COMPLEX_ENDPOINT]: 'complex_endpoint',
+  [ExtendedSnapType.COMPLEX_MIDPOINT]: 'complex_midpoint',
+  [ExtendedSnapType.COMPLEX_INTERSECTION]: 'complex_intersection',
 };
 
 // 🏢 ENTERPRISE: Get translated snap label
@@ -200,6 +205,25 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
     [enabledModes],
   );
 
+  // SSoT for a SnapButton row — CORE / ADVANCED / BIM groups all render the SAME button
+  // (enabled = membership in `enabledModes`, onClick = toggle). ADR-583 (N.18): one place,
+  // no per-group copy-paste. `compactBtn` differs only between the core row (follows the
+  // toolbar `compact` prop) and the advanced/BIM rows (always compact).
+  const renderSnapButtons = useCallback(
+    (modes: ExtendedSnapType[], compactBtn: boolean) =>
+      modes.map(mode => (
+        <SnapButton
+          key={mode}
+          mode={mode}
+          enabled={enabledModes?.has(mode) || false}
+          onClick={() => handleModeToggle(mode)}
+          compact={compactBtn}
+          t={t}
+        />
+      )),
+    [enabledModes, handleModeToggle, t],
+  );
+
   return (
     <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM} ${PANEL_LAYOUT.SPACING.SM} ${colors.bg.primary} ${quick.card} ${className}`}>
       {/* Master SNAP toggle — shown only when caller passes snapEnabled/onToggleSnap (e.g. CadDock panel) */}
@@ -227,16 +251,7 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
 
       {/* 🏢 ENTERPRISE: Core snap modes */}
       <div className={`flex ${PANEL_LAYOUT.GAP.XS}`}>
-        {CORE_MODES.map(mode => (
-          <SnapButton
-            key={mode}
-            mode={mode}
-            enabled={enabledModes?.has(mode) || false}
-            onClick={() => handleModeToggle(mode)}
-            compact={compact}
-            t={t}
-          />
-        ))}
+        {renderSnapButtons(CORE_MODES, compact)}
       </div>
 
       {/* 🏢 ENTERPRISE: Advanced modes toggle */}
@@ -307,28 +322,10 @@ export const ProSnapToolbar: React.FC<ProSnapToolbarProps> = ({
       {/* 🏢 ENTERPRISE: Advanced modes panel */}
       {showAdvanced && (
         <div className={`flex ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.MARGIN.LEFT_XS} ${PANEL_LAYOUT.INPUT.PADDING_X} ${quick.separatorV}`}>
-          {ADVANCED_MODES.map(mode => (
-            <SnapButton
-              key={mode}
-              mode={mode}
-              enabled={enabledModes?.has(mode) || false}
-              onClick={() => handleModeToggle(mode)}
-              compact
-              t={t}
-            />
-          ))}
+          {renderSnapButtons(ADVANCED_MODES, true)}
           {/* ADR-363 + ADR-597: BIM structural corner snaps — separator + BIM group */}
           <div className={`w-px ${PANEL_LAYOUT.HEIGHT.LG} ${colors.bg.muted}`} />
-          {BIM_MODES.map(mode => (
-            <SnapButton
-              key={mode}
-              mode={mode}
-              enabled={enabledModes?.has(mode) || false}
-              onClick={() => handleModeToggle(mode)}
-              compact
-              t={t}
-            />
-          ))}
+          {renderSnapButtons(BIM_MODES, true)}
         </div>
       )}
     </div>

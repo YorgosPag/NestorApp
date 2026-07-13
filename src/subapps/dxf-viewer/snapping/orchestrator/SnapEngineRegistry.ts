@@ -55,6 +55,8 @@ import { TextSnapEngine } from '../engines/TextSnapEngine';
 import { RotationPivotSnapEngine, RotationGripSnapEngine } from '../engines/RotationPointSnapEngine';
 // ADR-580: selected objects' grips snap (contextual — reads AllGripsStore; precedence over underlying entities)
 import { SelectedGripSnapEngine } from '../engines/SelectedGripSnapEngine';
+// ADR-642 §6.8: complex-linetype pattern-geometry snap (railway rails + sleepers) — ONE class × 3 types
+import { ComplexLinetypeSnapEngine } from '../engines/ComplexLinetypeSnapEngine';
 
 interface Viewport {
   worldPerPixelAt(p: Point2D): number;
@@ -125,6 +127,20 @@ export class SnapEngineRegistry {
     // ADR-580: selected objects' grips (priority -3 — precedence over underlying entities).
     // Contextual: reads AllGripsStore, empty when nothing selected → zero cost.
     this.engines.set(ExtendedSnapType.SELECTED_GRIP, new SelectedGripSnapEngine());
+    // ADR-642 §6.8: ONE ComplexLinetypeSnapEngine class instantiated per point category
+    // (endpoint/midpoint/intersection) so the railway rail/sleeper snaps get the ■/△/✕ glyph.
+    this.engines.set(
+      ExtendedSnapType.COMPLEX_ENDPOINT,
+      new ComplexLinetypeSnapEngine(ExtendedSnapType.COMPLEX_ENDPOINT, 'endpoint', SNAP_ENGINE_PRIORITIES.COMPLEX_ENDPOINT),
+    );
+    this.engines.set(
+      ExtendedSnapType.COMPLEX_MIDPOINT,
+      new ComplexLinetypeSnapEngine(ExtendedSnapType.COMPLEX_MIDPOINT, 'midpoint', SNAP_ENGINE_PRIORITIES.COMPLEX_MIDPOINT),
+    );
+    this.engines.set(
+      ExtendedSnapType.COMPLEX_INTERSECTION,
+      new ComplexLinetypeSnapEngine(ExtendedSnapType.COMPLEX_INTERSECTION, 'intersection', SNAP_ENGINE_PRIORITIES.COMPLEX_INTERSECTION),
+    );
   }
 
   initializeEnginesWithEntities(entities: Entity[], settings: ProSnapSettings): void {

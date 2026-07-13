@@ -63,6 +63,48 @@ const polylinePath = (
 const insertWith = (pairs: Pair[], layer = 'HATCHLAYER'): EntityData =>
   ({ type: 'INSERT', layer, data: { '2': '*X6' }, pairs });
 
+/** One R14 pattern-def family before world-delta encoding: line-local delta + final angle. */
+interface FamilySpec {
+  /** Final baked line angle (radians). */
+  readonly angleRad: number;
+  /** World phase base point. */
+  readonly base: readonly [number, number];
+  /** Line-LOCAL delta `[along-stagger, perpendicular-spacing]` — encoded to world below. */
+  readonly localDelta: readonly [number, number];
+  /** Dash pattern (`>0` line, `<0` gap; empty ⇒ solid). */
+  readonly dashes: readonly number[];
+}
+
+/**
+ * ADR-647 Φ1 — the pattern-definition section that follows the `1071 0` boundary terminator, with
+ * COMPLETE families (unlike the truncated `patternTail` above). Each family's line-local delta is
+ * rotated into a WORLD delta (`world = R(angle)·local`) so the parser's inverse un-rotation is what
+ * is under test. Closes with the trailer + `1002 }`.
+ */
+const patternDefTail = (families: readonly FamilySpec[]): Array<[string, string | number]> => {
+  const out: Array<[string, string | number]> = [
+    ['1071', 0],            // boundary terminator
+    ['1070', 0], ['1070', 1],
+    ['1040', 0.0], ['1040', 0.005],
+    ['1070', 0], ['1070', families.length],
+  ];
+  for (const f of families) {
+    const c = Math.cos(f.angleRad);
+    const s = Math.sin(f.angleRad);
+    const wx = c * f.localDelta[0] - s * f.localDelta[1];
+    const wy = s * f.localDelta[0] + c * f.localDelta[1];
+    out.push(['1040', f.angleRad], ['1040', f.base[0]], ['1040', f.base[1]], ['1040', wx], ['1040', wy]);
+    out.push(['1070', f.dashes.length]);
+    for (const d of f.dashes) out.push(['1040', d]);
+  }
+  out.push(['1040', 0.0], ['1071', 1], ['1040', 0.0], ['1040', 0.0], ['1040', 0.0], ['1002', '}']);
+  return out;
+};
+
+interface InlineLine { angle: number; origin: [number, number]; delta: [number, number]; dashes: number[]; }
+const inlineLinesOf = (hatch: AnySceneEntity | null): InlineLine[] =>
+  (hatch as unknown as { inlinePattern?: { lines: InlineLine[] } })?.inlinePattern?.lines ?? [];
+
 describe('tryConvertInsertHatch', () => {
   it('reconstructs a hatch entity from ACAD/HATCH XDATA + line-edge boundary', () => {
     const pairs = P(...xdataHead('GRASS', 0.005, 0), ...squareEdges(), ...patternTail);
@@ -140,6 +182,95 @@ describe('tryConvertInsertHatch', () => {
     const head = xdataHead('GRASS', 1, 0).filter(([c]) => c !== '1000' || true); // keep head
     const pairs = P(...head, ...patternTail); // no boundary edges at all
     expect(tryConvertInsertHatch(insertWith(pairs), 0)).toBeNull();
+  });
+});
+
+// ADR-647 Φ1 — the R12 converter now reads the FULL R14_HATCH_DATA pattern definition into an
+// `inlinePattern`, so the hatch renders/exports 1:1 with AutoCAD (preserve-native) instead of
+// leaning on a possibly-divergent catalog def. Conversions (rad→deg, world-delta un-rotation,
+// dashes) are empirically locked vs the exploded `*X#` LINEs (ADR-647 ground-truth, residuals ~1e-9).
+describe('tryConvertInsertHatch — R14 pattern-def → inlinePattern (ADR-647 Φ1)', () => {
+  it('parses a solid single-family pattern (ANSI31 @45°) with un-rotated line-local delta', () => {
+    const spacing = 0.03175;
+    const family: FamilySpec = {
+      angleRad: Math.PI / 4, base: [0, 0], localDelta: [0, spacing], dashes: [],
+    };
+    const pairs = P(...xdataHead('ANSI31', 0.005, 0), ...squareEdges(), ...patternDefTail([family]));
+    const lines = inlineLinesOf(tryConvertInsertHatch(insertWith(pairs), 1));
+
+    expect(lines).toHaveLength(1);
+    expect(lines[0].angle).toBeCloseTo(45, 6);            // rad→deg
+    expect(lines[0].delta[0]).toBeCloseTo(0, 9);          // along-stagger
+    expect(lines[0].delta[1]).toBeCloseTo(spacing, 9);    // perpendicular spacing (un-rotation)
+    expect(lines[0].dashes).toEqual([]);                  // solid
+    expect(lines[0].origin).toEqual([0, 0]);
+  });
+
+  it('parses a two-family dashed pattern (SQUARE 0/90°) preserving dashes + phase', () => {
+    const spacing = 0.127;
+    const families: FamilySpec[] = [
+      { angleRad: 0, base: [0, 0], localDelta: [0, spacing], dashes: [0.127, -0.127] },
+      { angleRad: Math.PI / 2, base: [0, spacing / 2], localDelta: [0, spacing], dashes: [0.127, -0.127] },
+    ];
+    const pairs = P(...xdataHead('SQUARE', 0.005, 0), ...squareEdges(), ...patternDefTail(families));
+    const lines = inlineLinesOf(tryConvertInsertHatch(insertWith(pairs), 2));
+
+    expect(lines).toHaveLength(2);
+    expect(lines.map((l) => Math.round(l.angle)).sort((a, b) => a - b)).toEqual([0, 90]);
+    for (const l of lines) {
+      expect(l.delta[1]).toBeCloseTo(spacing, 9);
+      expect(l.dashes).toHaveLength(2);
+      expect(l.dashes[0]).toBeCloseTo(0.127, 9);
+      expect(l.dashes[1]).toBeCloseTo(-0.127, 9);
+    }
+  });
+
+  it('parses a three-family pattern (HEX) — all families read', () => {
+    const spacing = 0.027496;
+    const mk = (deg: number): FamilySpec => ({
+      angleRad: (deg * Math.PI) / 180, base: [0, 0], localDelta: [0, spacing], dashes: [0.01588, -0.01588],
+    });
+    const pairs = P(...xdataHead('HEX', 0.005, 0), ...squareEdges(), ...patternDefTail([mk(30), mk(90), mk(150)]));
+    const lines = inlineLinesOf(tryConvertInsertHatch(insertWith(pairs), 3));
+
+    expect(lines).toHaveLength(3);
+    for (const l of lines) expect(l.delta[1]).toBeCloseTo(spacing, 9);
+  });
+
+  it('leaves inlinePattern undefined for a truncated pattern-def tail (defensive stop)', () => {
+    // The legacy `patternTail` claims numFamilies=3 but supplies one lone 1040 then `1002 }`.
+    const pairs = P(...xdataHead('GRASS', 0.005, 0), ...squareEdges(), ...patternTail);
+    expect(inlineLinesOf(tryConvertInsertHatch(insertWith(pairs), 4))).toEqual([]);
+  });
+});
+
+// ADR-647 Φ2b — R14 boundary bulges (7/117 GRATE hatches, 11 arcs). A stride-3 polyline vertex
+// carries a standard DXF bulge = tan(θ/4); a non-zero bulge tessellates the arc via the shared
+// `bulgeToPolyline` SSoT (ADR-510), while an all-straight path keeps its raw vertices unchanged.
+describe('extractR14BoundaryPaths — bulge tessellation (ADR-647 Φ2b)', () => {
+  it('tessellates a boundary arc when a vertex carries a non-zero bulge', () => {
+    // A closed loop where the segment (10,0)→(10,10) bulges out to a quarter arc (bulge = tan(90°/4)).
+    const verts = [[0, 0, 0], [10, 0, 0.41421356], [10, 10, 0], [0, 10, 0]] as const;
+    const pairs = P(...xdataHead('GRATE', 1, 0), ...polylinePath(verts, 3), ...patternTail);
+    const h = tryConvertInsertHatch(insertWith(pairs), 5) as unknown as {
+      boundaryPaths: Array<Array<{ x: number; y: number }>>;
+    };
+    const path = h.boundaryPaths[0];
+    // Arc tessellation adds intermediate points → many more than the 4 raw corners.
+    expect(path.length).toBeGreaterThan(4);
+    // The arc bulges to the RIGHT of the chord (x > 10 somewhere along (10,0)→(10,10)).
+    expect(Math.max(...path.map((p) => p.x))).toBeGreaterThan(10);
+  });
+
+  it('keeps raw vertices for an all-straight (zero-bulge) stride-3 boundary (no regression)', () => {
+    const verts = [[0, 0, 0], [10, 0, 0], [10, 10, 0], [0, 10, 0]] as const;
+    const pairs = P(...xdataHead('GRATE', 1, 0), ...polylinePath(verts, 3), ...patternTail);
+    const h = tryConvertInsertHatch(insertWith(pairs), 6) as unknown as {
+      boundaryPaths: Array<Array<{ x: number; y: number }>>;
+    };
+    expect(h.boundaryPaths[0]).toEqual([
+      { x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 },
+    ]);
   });
 });
 

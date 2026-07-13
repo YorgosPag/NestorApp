@@ -518,6 +518,12 @@ export const SNAP_ENGINE_PRIORITIES = {
    *  unselected entity lying under it (grab-the-grip precedence). Below ROTATION_PIVOT (-2.5) is
    *  fine — rotation is a distinct contextual op (its store is empty outside a rotation). */
   SELECTED_GRIP: -3,
+  /** ADR-642 §6.8: railway rail/sleeper endpoint — endpoint tier (exact rendered-pattern point) */
+  COMPLEX_ENDPOINT: 0,
+  /** ADR-642 §6.8: railway rail/sleeper midpoint — midpoint tier */
+  COMPLEX_MIDPOINT: 1,
+  /** ADR-642 §6.8: rail × sleeper intersection — intersection tier */
+  COMPLEX_INTERSECTION: 0,
 } as const;
 
 // ===== SNAP UI OFFSETS =====

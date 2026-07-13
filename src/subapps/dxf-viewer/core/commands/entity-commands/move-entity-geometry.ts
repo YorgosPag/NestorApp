@@ -30,6 +30,8 @@ import {
 import { calculateBimMovedGeometry } from '../../../bim/utils/bim-move-geometry';
 // SSoT — canonical point translation (ADR-577 consolidation).
 import { translatePoint } from '../../../rendering/entities/shared/geometry-vector-utils';
+// ADR-647 — translate an imported hatch's preserved pattern def WITH its boundary (SSoT).
+import { transformInlinePattern } from '../../../data/hatch-pattern-catalog';
 
 /**
  * Calculate geometry updates for an entity based on delta.
@@ -97,10 +99,20 @@ export function calculateMovedGeometry(entity: SceneEntity, delta: Point3D): Par
   // this SSoT per member — carries the fill with its frame. Without this a hatch inside a
   // moved group stayed put while its boundary lines moved (Giorgio 2026-07-07).
   if (isHatchEntity(e)) {
-    const patch: { boundaryPaths: Point2D[][]; seedPoints?: Point2D[] } = {
+    const patch: {
+      boundaryPaths: Point2D[][];
+      seedPoints?: Point2D[];
+      inlinePattern?: ReturnType<typeof transformInlinePattern>;
+    } = {
       boundaryPaths: e.boundaryPaths.map(path => path.map(p => translatePoint(p, delta))),
     };
     if (e.seedPoints) patch.seedPoints = e.seedPoints.map(p => translatePoint(p, delta));
+    // ADR-647 — translate-only: base=origin, angle 0 ⇒ pattern origin shifts by delta, delta/dashes unchanged.
+    if (e.inlinePattern) {
+      patch.inlinePattern = transformInlinePattern(
+        e.inlinePattern, { x: 0, y: 0 }, 1, 1, 0, { x: delta.x, y: delta.y },
+      );
+    }
     return patch as Partial<SceneEntity>;
   }
 

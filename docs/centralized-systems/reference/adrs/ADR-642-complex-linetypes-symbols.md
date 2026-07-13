@@ -397,6 +397,60 @@ offset dots (μετακίνηση μεμονωμένης ράγας)· *(optiona
 Κάθε υπο-φάση αυτόνομα shippable, jest-tested (N.17), ADR changelog (N.0.1 Phase 3). **N.8**: ~1 domain
 (linetype editor UI), Φ6-A ≈ 3-4 αρχεία → Plan Mode· Φ6-B/C on-touch. **Προϋπόθεση:** έγκριση Giorgio πριν κώδικα.
 
+### 6.8 Complex-linetype OSNAP (Φ6-OSNAP — snap στα rendered στοιχεία του μοτίβου· railway rails + sleepers) ✅ DONE
+
+**Ανάγκη (Giorgio 2026-07-13):** hover σε γραμμή railway → σημάδια **έλξης (OSNAP)** όχι μόνο στη γραμμή-άξονα
+αλλά στα **αποδιδόμενα στοιχεία του μοτίβου** — endpoint/midpoint των 2 ραγών (±753.5) και κάθε στρωτήρα, +
+**intersection** ράγας×στρωτήρα. «Έλξη» = snap (object snap), ΟΧΙ grip/λαβή (το §6.7 grip editor είναι άλλο πράγμα).
+
+**Συνειδητή απόκλιση από standard CAD:** AutoCAD/Revit **ΔΕΝ** κάνουν snap σε linetype-generated geometry
+(το μοτίβο είναι «διακοσμητικό»). Ο Giorgio το ζήτησε ρητά ως enterprise υπερ-δυνατότητα — τεκμηριώνεται εδώ.
+
+**Αρχιτεκτονική (mirror `DimLineSnapEngine`/`BimCharacteristicSnapEngine` — modular snap engine, world-mm):**
+
+1. **Pure sampler** `snapping/engines/complex-linetype-snap-geometry.ts` — `sampleComplexLinetypeSnapGeometry(def, axis, closed)`
+   → `{ endpoints, midpoints, intersections }`. Canvas-free, μηδέν state:
+   - **Rails**: κάθε layer με ορατή γραμμή (dash/dot) σε `offsetMm` → `offsetPolyline(axis, offsetMm)` (**ο ΙΔΙΟΣ**
+     parallel-offset που ζωγραφίζει ο stroker) → τα 2 άκρα + μέσο.
+   - **Sleepers**: κάθε `symbol` slot κατά μήκος του cycle → κάθετο tick ύψους `scale × 2.5mm` (ο πολλαπλασιαστής
+     του §changelog railway· tick glyph `line(0,-0.5,0,0.5)` = centered) → τα 2 άκρα + μέσο (στον άξονα).
+   - **Intersections**: κάθε sleeper × κάθε rail segment (reuse `GeometricCalculations.getLineIntersection`,
+     segment×segment).
+   - **Selection frame / bounding box** (Giorgio 2026-07-13): οι **4 γωνίες** του πλαισίου (endpoint-class ■) +
+     τα **μέσα δυτικής & ανατολικής πλευράς** (midpoint-class △ = τα άκρα του άξονα). Το πλαίσιο = OBB
+     ευθυγραμμισμένο με τον άξονα (chord start→end), half-width = `patternHalfExtentMm` = max(rail `|offsetMm|`,
+     symbol half-height) → οι στρωτήρες (±1300) το ορίζουν, όχι οι ράγες (±753.5). NOT `bandHalfExtentMm`
+     (offsets-only, στο editor `LinePatternLayer`). Τα σημεία τροφοδοτούν τα ΙΔΙΑ COMPLEX_ENDPOINT/MIDPOINT
+     types → ίδια ■/△ glyphs + το Alt-move δουλεύει και σε αυτά.
+   - **Perf**: `MAX_SLEEPERS_PER_LINE` cap (documented, όχι silent) για πολύ μακριές γραμμές.
+2. **SSoT cycle-walk (N.18):** η θέση των ticks προκύπτει από τη **ΜΟΝΑΔΙΚΗ** `walkCyclePlacements`
+   (`complex-stroke-geometry.ts`) που καταναλώνει **ΚΑΙ** ο `ComplexLineStroker.walkPath` (ζωγραφίζει) **ΚΑΙ** ο
+   sampler (διαβάζει τα symbol placements) — ο stroker refactor-αρίστηκε να τη χρησιμοποιεί → μηδέν clone (jscpd clean).
+3. **Engine** `ComplexLinetypeSnapEngine` — ΜΙΑ κλάση × **3 τύποι** (ώστε το marker glyph να διαφέρει, Giorgio):
+   `COMPLEX_ENDPOINT` (■), `COMPLEX_MIDPOINT` (△), `COMPLEX_INTERSECTION` (✕) — reuse των υπαρχόντων glyph cases
+   (`SnapIndicatorGlyph` aliases) + χρωμάτων (ίδιο ΕΙΔΟΣ σημείου → ίδιο χρώμα endpoint/mid/intersection). Το `complex`
+   def resolve-άρεται από `resolveLinetypeDef(entity.linetypeName)` (ο ΙΔΙΟΣ name→def SSoT με τον renderer).
+4. **Runtime gating:** always-on (force-enabled με τον OSNAP master, όπως τα δομικά BIM/rotation snaps) — contextual:
+   ο engine indexes τίποτα για μη-complex entities → μηδέν κόστος. Persistence-migration-safe (δεν διαβάζεται από blob).
+5. **SnapIndexSlot SSoT:** το `querySnap` snap-slot union κεντρικοποιήθηκε σε `SnapIndexSlot` (`ISpatialIndex.ts`,
+   Boy-Scout N.0.2 — έκλεισε drift όπου το `GridSpatialIndex` είχε λιγότερα slots) + 3 `complex_*` slots.
+6. **Alt-move από pattern snap (interaction):** **Alt+press** πάνω σε ενεργό complex-snap (ράγα/στρωτήρα) →
+   **ολική μετακίνηση** της υποκείμενης γραμμής με **base point το ίδιο το snap σημείο** (AutoCAD «move-from-
+   characteristic-point»· Ctrl = copy-at-destination). ZERO νέα move μηχανή (N.18): ο helper `complex-snap-alt-move.ts`
+   (`tryArmComplexSnapAltMove`) διαβάζει το `getFullSnapResult()`, gate σε `complex_*` type + `entityId`, και **arm-άρει
+   το ΥΠΑΡΧΟΝ `EntityBodyDragStore`** με anchor = snap point → όλο το body-drag pipeline (live ghost
+   `useEntityBodyDragPreview` + commit `entity-body-drag:commit` + ESC/blur cancel) δουλεύει αμετάβλητο. Το branch
+   μπαίνει στο `useCentralizedMouseHandlers.handleMouseDown` **μετά** το grip check (πραγματικό grip κάτω από τον
+   κέρσορα κρατά το δικό του Alt-move) και **πριν** το body-drag/lasso, μόνο σε `select` tool. Δεν συγκρούεται με
+   §6.7.1 (locked): μετακινεί την οντότητα, ΔΕΝ επεξεργάζεται το style/pattern (κανένα mass-edit).
+
+**Αρχεία:** sampler + engine (NEW)· `complex-stroke-geometry.ts` (+`walkCyclePlacements`/`posMod`)· `ComplexLineStroker.ts`
+(refactor walkPath)· `SnapEngineRegistry` (×3 wiring)· `extended-types` (enum+default+priority+tol)· `tolerance-config`·
+`snap-visual-config` (χρώματα)· `SnapIndicatorGlyph` (glyph aliases)· `SnapContext` (force-enable)· `ProSnapToolbar`·
+4 `core/spatial` (SnapIndexSlot)· i18n el/en. Tests: `complex-linetype-snap-geometry.test` (10) + `ComplexLinetypeSnapEngine.test` (5).
+
+**N.8:** ~7 code αρχεία / 2 domains (linetype-rendering + snapping)· Plan Mode + έγκριση Giorgio (marker style = διακριτά ανά τύπο).
+
 ## 7. Phased roadmap
 
 | Φάση | Περιεχόμενο | Μηχανισμοί | Ρίσκο |
@@ -414,6 +468,7 @@ offset dots (μετακίνηση μεμονωμένης ράγας)· *(optiona
 | **Duplicate & edit** ✅ | **Διπλότυπο read-only τύπου (ISO/built-in/imported)** (Revit/ArchiCAD «Duplicate»): κουμπί «⧉ Διπλότυπο» → διάλογος seeded από τον source με **editable** pre-suggested unique name (`suggestCopyName`) → `registerUserLinetype` νέου τύπου → **assign** στη γραμμή. **Ribbon parity**: `LineEditLinePatternWidget` δίπλα στο «Νέος τύπος» (contextual — edit vs duplicate ανά origin του τρέχοντος τύπου· κρύβεται σε solid/ByLayer)· reuse του γενικευμένου `LinePatternLauncherButton` (μηδέν clone) | #9 | Μεσαίο — **DONE** |
 | **Φ6-A** ✅ | **Graphical grip editor — 8-handle bounding box** (§6.7) στο editor preview swatch: πάνω/κάτω = spread στρωμάτων (`scaleLayerSpread` γύρω από band centre)· αριστ/δεξ = κλίμακα μήκους (`scalePatternLength`, text/symbol ανέγγιχτα)· γωνίες = 2-άξονα (Shift = aspect-lock)· snap 0.5mm (Alt = free)· min-guard 0.05mm· reversible (`setLayers`, commit στο Save)· direct manipulation του `ComplexLinetypeDef` (μηδέν νέο data) | drag-authoring για #9/#1 | Μεσαίο (grip overlay + mapping) — **DONE** |
 | **Φ6-B/C** 📋 | **Per-layer offset dots** (μετακίνηση μεμονωμένης ράγας) + *(optional)* rotation / per-symbol scale grip — direct manipulation του `layers[i].offsetMm` | drag-authoring | Μεσαίο — **PROPOSED, on-touch** |
+| **Φ6-OSNAP** ✅ | **Complex-linetype OSNAP** (§6.8) — snap στα rendered rails/sleepers: `ComplexLinetypeSnapEngine` (1 κλάση × 3 τύποι COMPLEX_ENDPOINT/MIDPOINT/INTERSECTION → ■/△/✕) + pure `sampleComplexLinetypeSnapGeometry` sampler (reuse `walkCyclePlacements` SSoT + `offsetPolyline` + `getLineIntersection`)· always-on/contextual· beyond-standard (documented) | snap σε #9 pattern geometry | Μεσαίο — **DONE** |
 | — | *Εκτός scope προς το παρόν:* Art-brush stretch, raster line styles, `.shx` shape import | — | — |
 
 Κάθε φάση: αυτόνομα shippable, με tests (jest — όχι tsc, N.17), και ADR changelog update (N.0.1 Phase 3).
@@ -441,6 +496,50 @@ offset dots (μετακίνηση μεμονωμένης ράγας)· *(optiona
 4. **Προτεραιότητα φάσεων**: ✅ **Φ1 πρώτα** (geometry θεμέλιο· το text της Φ2 πατά πάνω του).
 
 ## 10. Changelog
+
+- **2026-07-13 (Φ6-OSNAP επέκταση — bounding-box / selection-frame snaps)** — Ο Giorgio (screenshot): «θεωρώντας
+  τη railway ως πλαίσιο, θέλω έλξεις στις 4 γωνίες + στα μέσα δυτικής & ανατολικής πλευράς». Προστέθηκαν στον
+  sampler (§6.8 σημείο 1): νέο `patternHalfExtentMm(def)` = max(rail `|offsetMm|`, symbol half = `scale×2.5/2`) →
+  half-width του OBB (οι στρωτήρες ±1300 το ορίζουν)· `boundingBoxSnaps(axis, half)` → 4 corners (endpoint ■) +
+  west/east side-mids (midpoint △, = άκρα άξονα), OBB ευθυγραμμισμένο με το chord start→end. Τροφοδοτούν τα ΙΔΙΑ
+  COMPLEX_ENDPOINT/MIDPOINT engines (μηδέν engine change· ίδια glyphs· Alt-move δουλεύει και εδώ). **ΟΧΙ**
+  `bandHalfExtentMm` (offsets-only, editor `LinePatternLayer`, αγνοεί symbol reach). **Tests:** +3 στο
+  `complex-linetype-snap-geometry.test` (4 corners ±1300, 2 side-mids, `patternHalfExtentMm`=1300)· sleeper-mid
+  φίλτρα ενημερώθηκαν να εξαιρούν τα side-mids (y≈0 στα άκρα). 18/18 GREEN. **N.17:** όχι tsc. 🔴 Commit: ο Giorgio.
+
+- **2026-07-13 (Φ6-OSNAP επέκταση — Alt-move από pattern snap)** — Ο Giorgio: «Alt+κλικ σε μια έλξη-snap του
+  σιδηροδρόμου → να μετακινείται η γραμμή». Υλοποιήθηκε ως **§6.8 σημείο 6**: **Alt+press** πάνω σε complex-snap
+  (ράγα/στρωτήρα) → ολική μετακίνηση της γραμμής με **base point το snap σημείο** (AutoCAD move-from-point· Ctrl =
+  copy). **ZERO νέα move μηχανή (N.18):** νέος helper `systems/drag/complex-snap-alt-move.ts`
+  (`tryArmComplexSnapAltMove` + `isComplexSnapMode`) διαβάζει `getFullSnapResult()`, gate σε `complex_*`+`entityId`,
+  και **arm-άρει το ΥΠΑΡΧΟΝ `EntityBodyDragStore`** με anchor = snap point → όλο το body-drag pipeline (ghost
+  `useEntityBodyDragPreview` + commit `entity-body-drag:commit` + ESC/blur) δουλεύει αμετάβλητο (το commit δέχεται
+  arbitrary entityIds, base = `session.anchor`). Branch στο `useCentralizedMouseHandlers.handleMouseDown` **μετά** το
+  grip check (real grip κρατά το δικό του Alt-move) / **πριν** body-drag, μόνο `select` tool. Δεν συγκρούεται με
+  §6.7.1 (μετακίνηση οντότητας, ΟΧΙ style edit). **Tests:** `complex-snap-alt-move.test` (6) — arm/anchor/copy/no-op
+  για non-complex / entity-less / absent snap. 78/78 drag+cursor regression GREEN. **N.17:** όχι tsc. 🔴 Commit: ο Giorgio.
+
+- **2026-07-13 (Φ6-OSNAP IMPLEMENTED — complex-linetype OSNAP· railway rails + sleepers)** — Υλοποίηση του
+  **§6.8**: hover σε railway → σημάδια έλξης στα **rendered** στοιχεία του μοτίβου (endpoint/midpoint των 2
+  ραγών ±753.5 + κάθε στρωτήρα ύψους 2600· intersection ράγας×στρωτήρα). **Marker style = διακριτά ανά τύπο**
+  (απόφαση Giorgio): ΜΙΑ κλάση `ComplexLinetypeSnapEngine` × **3 νέους snap types** — `COMPLEX_ENDPOINT` (■),
+  `COMPLEX_MIDPOINT` (△), `COMPLEX_INTERSECTION` (✕), mirror του `BimCharacteristicSnapEngine` pattern (glyph
+  aliases + ίδιο χρώμα-ανά-είδος-σημείου). **Pure sampler** `complex-linetype-snap-geometry.ts`
+  (`sampleComplexLinetypeSnapGeometry`) σε **world-mm**: rails = `offsetPolyline(axis, offsetMm)` (ο ΙΔΙΟΣ
+  offset του stroker)· sleepers = symbol slots × κάθετο tick `scale×2.5mm`· intersections =
+  `getLineIntersection` (segment×segment). **SSoT cycle-walk (N.18):** εξήχθη η `walkCyclePlacements` στο
+  `complex-stroke-geometry.ts` και ο `ComplexLineStroker.walkPath` **refactor-αρίστηκε** να τη χρησιμοποιεί →
+  sampler & stroker μοιράζονται τη ΜΙΑ walk (jscpd:diff clean, μηδέν clone· 36 stroker tests αμετάβλητα).
+  **Def resolution** μέσω `resolveLinetypeDef(entity.linetypeName)?.complex` (ο ΙΔΙΟΣ name→def SSoT με τον
+  renderer). **Always-on/contextual** gating (force-enabled με OSNAP master όπως BIM/rotation· μηδέν κόστος
+  χωρίς complex entity· persistence-migration-safe). **Boy-Scout (N.0.2):** το `querySnap` snap-slot union
+  κεντρικοποιήθηκε σε `SnapIndexSlot` (`ISpatialIndex.ts`· έκλεισε drift — `GridSpatialIndex` είχε λιγότερα
+  slots) + 3 `complex_*` slots. **Συνειδητή απόκλιση:** standard CAD δεν κάνει snap σε linetype geometry
+  (τεκμηριωμένο). Αρχεία: sampler+engine NEW· `complex-stroke-geometry`/`ComplexLineStroker`· `SnapEngineRegistry`
+  (×3)· `extended-types`/`tolerance-config`/`snap-visual-config`/`SnapIndicatorGlyph`/`SnapContext`/`ProSnapToolbar`·
+  4 `core/spatial`· i18n el/en. **Tests:** `complex-linetype-snap-geometry.test` (10: ±753.5 rails, 15 στρωτήρες
+  @650, ύψος ±1300, intersections, cap) + `ComplexLinetypeSnapEngine.test` (5: 3 τύποι candidates, styled-only,
+  exclude). 223/223 snapping+spatial GREEN. **N.17:** όχι tsc. 🔴 Commit: ο Giorgio.
 
 - **2026-07-13 (Railway preset — πραγματικές διαστάσεις + preview auto-fit)** — Ο Giorgio ζήτησε να μπουν
   οι **πραγματικές** σιδηροδρομικές διαστάσεις ως προεπιλογή στο preset «Σιδηρόδρομος» (web-sourced):

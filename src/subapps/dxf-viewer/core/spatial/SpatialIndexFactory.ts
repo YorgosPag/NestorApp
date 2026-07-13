@@ -29,7 +29,8 @@ import type {
   SpatialQueryResult,
   SpatialQueryOptions,
   SpatialItem,
-  SpatialDebugInfo
+  SpatialDebugInfo,
+  SnapIndexSlot
 } from './ISpatialIndex';
 import type { Point2D } from '../../rendering/types/Types';
 import { SpatialIndexType } from './ISpatialIndex';
@@ -252,7 +253,7 @@ class PlaceholderSpatialIndex implements ISpatialIndex {
     return null;
   }
 
-  querySnap(_point: Point2D, _tolerance: number, _snapType: 'endpoint' | 'midpoint' | 'center' | 'dim_def_point' | 'dim_line' | 'column_center' | 'bim_corner' | 'bim_midpoint' | 'bim_center' | 'mep_connector'): SpatialQueryResult[] {
+  querySnap(_point: Point2D, _tolerance: number, _snapType: SnapIndexSlot): SpatialQueryResult[] {
     dwarn('SpatialIndex', '🚧 PlaceholderSpatialIndex.querySnap() - not implemented');
     return [];
   }

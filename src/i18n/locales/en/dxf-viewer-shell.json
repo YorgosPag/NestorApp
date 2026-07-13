@@ -1235,6 +1235,9 @@
       "ortho": "Ortho",
       "guide": "Guide",
       "constructionPoint": "Point",
+      "complex_endpoint": "Pattern endpoint",
+      "complex_midpoint": "Pattern midpoint",
+      "complex_intersection": "Pattern intersection",
       "bim": {
         "wallAxis": "On wall axis",
         "slabEdge": "On slab edge",
@@ -3856,6 +3859,7 @@
           "net": "Net",
           "square": "Squares",
           "hex": "Hexagons",
+          "grate": "Grate",
           "honey": "Honeycomb",
           "gostGlass": "Glass (GOST)"
         }

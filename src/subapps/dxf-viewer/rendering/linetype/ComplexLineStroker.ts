@@ -45,6 +45,7 @@ import {
   pointAt,
   polylineVertices,
   sampleSubpath,
+  walkCyclePlacements,
   type Point,
   type PolylineVertex,
   type Seg,
@@ -145,12 +146,11 @@ function buildCycle(layer: StrokeLayer, mmToPx: number, baseWidthPx: number): Cy
   return cycle;
 }
 
-/** Θετικό modulo (για shift φάσης με αρνητικό phase). */
-function posMod(v: number, m: number): number {
-  return m > 0 ? ((v % m) + m) % m : 0;
-}
-
-/** Arc-length walk πάνω σε ένα σύνολο τμημάτων, τοποθετώντας τον κύκλο στοιχείων. */
+/**
+ * Arc-length walk πάνω σε ένα σύνολο τμημάτων, τοποθετώντας τον κύκλο στοιχείων. Η σειρά/
+ * θέση των slots προκύπτει από τη ΜΟΝΑΔΙΚΗ `walkCyclePlacements` (SSoT κοινή με τον snap
+ * sampler, N.18)· εδώ μένει μόνο η ζωγραφική ανά είδος στοιχείου.
+ */
 function walkPath(
   ctx: CanvasRenderingContext2D,
   segs: readonly Seg[],
@@ -162,11 +162,9 @@ function walkPath(
   const cum = cumulativeLengths(segs);
   const total = cum[cum.length - 1];
   if (total <= 0 || cycleLenPx <= 0) return;
-  const maxMarks = Math.ceil((total / cycleLenPx + 2) * cycle.length) + 8;
-  let dist = -posMod(phasePx, cycleLenPx);
-  let i = 0;
-  for (let guard = 0; dist < total && guard < maxMarks; guard++, i++) {
-    const el = cycle[i % cycle.length];
+  const placements = walkCyclePlacements(total, cycle.map((e) => e.lengthPx), cycleLenPx, phasePx);
+  for (const { index, dist } of placements) {
+    const el = cycle[index];
     if (el.kind === 'dot') {
       if (dist >= 0 && dist <= total) drawDot(ctx, pointAt(segs, cum, dist), el.widthPx, el.cap);
       continue;
@@ -185,11 +183,9 @@ function walkPath(
       }
       continue;
     }
-    const start = dist;
-    dist += el.lengthPx;
     if (el.kind === 'gap') continue;
-    const ds = Math.max(start, 0);
-    const de = Math.min(dist, total);
+    const ds = Math.max(dist, 0);
+    const de = Math.min(dist + el.lengthPx, total);
     if (de <= ds) continue;
     const sp = sampleSubpath(segs, cum, ds, de);
     if (el.widthProfile) fillTaperedDash(ctx, sp, el.widthPx, el.widthProfile);

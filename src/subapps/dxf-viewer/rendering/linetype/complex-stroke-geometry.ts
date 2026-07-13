@@ -182,6 +182,49 @@ export function polylineVertices(points: readonly Point[], closed = false): Poly
   return out;
 }
 
+/** Θετικό modulo (για shift φάσης με αρνητικό phase). SSoT — stroker & snap sampler. */
+export function posMod(v: number, m: number): number {
+  return m > 0 ? ((v % m) + m) % m : 0;
+}
+
+/** Μία τοποθέτηση ενός στοιχείου του κύκλου κατά μήκος του path: ποιο στοιχείο + arc-length έναρξης. */
+export interface CyclePlacement {
+  /** Δείκτης στον κύκλο στοιχείων (`i % cycle.length`). */
+  readonly index: number;
+  /** Arc-length όπου ξεκινά το στοιχείο (πριν το clamp στα [0,total]). */
+  readonly dist: number;
+}
+
+/**
+ * Διασχίζει τον κύκλο μηκών στοιχείων κατά μήκος συνολικού arc-length `totalLen`,
+ * επιστρέφοντας κάθε εμφάνιση στοιχείου με σειρά + την arc-length στην έναρξή του.
+ * Τα μηδενικού μήκους στοιχεία (dot/text/symbol → length 0) καταλαμβάνουν slot χωρίς
+ * να προωθούν τον κέρσορα (ο ίδιος ομοιόμορφος `dist += length`, με 0 για αυτά).
+ *
+ * ΜΟΝΑΔΙΚΗ SSoT walk (ADR-642 §6.4): την καταναλώνει ΚΑΙ ο `ComplexLineStroker.walkPath`
+ * (ζωγραφίζει κάθε placement) ΚΑΙ ο `complex-linetype-snap-geometry` sampler (διαβάζει τα
+ * symbol placements για τους στρωτήρες) — μηδέν clone (N.18).
+ */
+export function walkCyclePlacements(
+  totalLen: number,
+  cycleElementLengths: readonly number[],
+  cycleLen: number,
+  phase: number,
+): CyclePlacement[] {
+  const out: CyclePlacement[] = [];
+  const n = cycleElementLengths.length;
+  if (totalLen <= 0 || cycleLen <= 0 || n === 0) return out;
+  // Ίδιο άνω όριο ασφαλείας με τον stroker (αποτρέπει runaway σε degenerate cycle).
+  const maxMarks = Math.ceil((totalLen / cycleLen + 2) * n) + 8;
+  let dist = -posMod(phase, cycleLen);
+  for (let guard = 0, i = 0; dist < totalLen && guard < maxMarks; guard++, i++) {
+    const index = i % n;
+    out.push({ index, dist });
+    dist += cycleElementLengths[index];
+  }
+  return out;
+}
+
 /**
  * Parallel offset της polyline κατά `distPx` (προσημασμένο — κάθετο +90°). Ανά κορυφή
  * miter join (μέσος όρος γειτονικών normals). Χρησιμοποιείται από τα compound layers

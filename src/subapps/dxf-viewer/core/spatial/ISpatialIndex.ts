@@ -15,6 +15,32 @@ import type { Point2D } from '../../rendering/types/Types';
 // ========================================
 
 /**
+ * 🎯 SSoT — the snap-index slot labels a `querySnap` may target. ONE definition,
+ * referenced by ISpatialIndex + every implementation (Grid/QuadTree/Placeholder) so
+ * the union cannot drift (it previously did — GridSpatialIndex was missing the
+ * bim/column/mep slots). A slot is just the point-category bucket a snap engine indexes
+ * under (each engine owns its own index instance; the label keeps insert/query aligned).
+ *
+ * `complex_*` (ADR-642 §6.8): the rendered complex-linetype pattern geometry —
+ * rail/sleeper endpoints (`complex_endpoint`), midpoints (`complex_midpoint`) and
+ * rail×sleeper intersections (`complex_intersection`).
+ */
+export type SnapIndexSlot =
+  | 'endpoint'
+  | 'midpoint'
+  | 'center'
+  | 'dim_def_point'
+  | 'dim_line'
+  | 'column_center'
+  | 'bim_corner'
+  | 'bim_midpoint'
+  | 'bim_center'
+  | 'mep_connector'
+  | 'complex_endpoint'
+  | 'complex_midpoint'
+  | 'complex_intersection';
+
+/**
  * Base spatial indexable item
  *
  * @see docs/CENTRALIZED_SYSTEMS.md - Spatial Indexing Systems
@@ -169,7 +195,7 @@ export interface ISpatialIndex {
   /**
    * Find items for snapping operations
    */
-  querySnap(point: Point2D, tolerance: number, snapType: 'endpoint' | 'midpoint' | 'center' | 'dim_def_point' | 'dim_line' | 'column_center' | 'bim_corner' | 'bim_midpoint' | 'bim_center' | 'mep_connector'): SpatialQueryResult[];
+  querySnap(point: Point2D, tolerance: number, snapType: SnapIndexSlot): SpatialQueryResult[];
 
   /**
    * Find items for selection operations
