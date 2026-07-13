@@ -33,6 +33,7 @@ import { hitTestOpeningInfoTag } from '../../bim/opening-info-tag/opening-info-t
 import type { HitTestResult, SnapResult } from './hit-tester-types';
 import { pointToLineDistance, clamp } from '../entities/shared/geometry-utils';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
+import { imageEntityRectVertices, type ImageRectShape } from '../entities/shared/image-rect-vertices';
 import { calculateDistance } from '../entities/shared/geometry-rendering-utils';
 import { pointToArcDistance } from '../../utils/angle-entity-math';
 import { pointToInfiniteLineDistance } from '../utils/point-to-line-distance';
@@ -103,8 +104,17 @@ export function performDetailedHitTest(
       return isOpeningInfoTagEntity(entity)
         ? (hitTestOpeningInfoTag(entity, point, tolerance) ? { hitType: 'entity', hitPoint: point } : null)
         : null;
+    // ADR-651 Φάση Ε — standalone raster image: rotation-aware point-in-rect (fill hit-test,
+    // SSoT shared with ImageRenderer.hitTest — click anywhere inside the picture selects it).
+    case 'image': return hitTestImage(entity, point);
     default: return { hitType: 'entity', hitPoint: point };
   }
+}
+
+function hitTestImage(entity: Entity, point: Point2D): Partial<HitTestResult> | null {
+  const vertices = imageEntityRectVertices(entity as unknown as ImageRectShape);
+  if (!vertices) return null;
+  return isPointInPolygon(point, vertices) ? { hitType: 'entity', hitPoint: point } : null;
 }
 
 function hitTestAnnotationSymbol(

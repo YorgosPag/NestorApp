@@ -46,6 +46,9 @@ export const DXF_RENDERABLE_TYPES = [
   // ADR-612 — opening info tag: dedicated non-BIM annotation (sibling of scale-bar),
   // 2D canvas only (no per-type 3D mesh).
   'opening-info-tag',
+  // ADR-651 Φάση Ε — standalone raster image (rectangle + rotation), 2D canvas only
+  // (no per-type 3D mesh).
+  'image',
 ] as const;
 
 /** BIM (parametric model) renderable types — 2D κάτοψη ± 3D solid. */

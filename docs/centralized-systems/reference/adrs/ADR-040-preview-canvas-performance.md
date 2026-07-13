@@ -72,6 +72,18 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-13 — Πινακίδα σχεδίου: click-routing του «title-block» placement tool (ADR-651 Φάση Β)
+**Τι:** wiring του single-click «title-block» tool στο ίδιο dispatch pipeline. **MOD**
+`hooks/canvas/canvas-click-tool-types.ts` (`TitleBlockToolLike` = **alias** του `BlockLibraryToolLike` — ίδιο
+routing συμβόλαιο, όχι δίδυμο interface) + `canvas-click-types.ts` (προαιρετικό `titleBlockTool?`) +
+`canvas-click-bim-dispatch.ts` (PRIORITY 4.915c: `activeTool === 'title-block'` → `onCanvasClick(worldPoint)`,
+RAW free-point placement) + `CanvasSection.tsx` (destructure `titleBlockTool` + pass-through στο dispatch params).
+**Συμμόρφωση ADR-040:** καμία νέα `useSyncExternalStore` σε orchestrator/shell (CHECK 6C ασφαλές)· το tool είναι
+click-time consumer — το scope διαβάζεται με **getter** από module singleton (`placeholder-scope-client`, μηδέν
+React state) και το ghost/footprint παραμένει pure projection· μηδέν άγγιγμα σε bitmap cache key / high-freq
+stores / micro-leaf hot-path. Το `ViewportStore` απέκτησε **derived** getter `getActiveScaleFactor()`
+(`modelHeight/paperHeight`) — getter, καμία νέα συνδρομή. CHECK 6B touch → co-staged ADR-040 + ADR-651.
+
 ### 2026-07-13 — Block Library M1: click-routing του νέου placement tool (ADR-652)
 **Τι:** wiring του single-click «block-library» placement tool στο υπάρχον click-dispatch pipeline. **MOD**
 `hooks/canvas/canvas-click-tool-types.ts` (νέο `BlockLibraryToolLike` interface) + `hooks/canvas/canvas-click-types.ts`
@@ -4132,3 +4144,13 @@ geometry-ellipse-utils.ts` (`ellipsePointAt`/`tessellateEllipseArc`) και τα
 path (μηδέν regression)· **μηδέν** νέα `useSyncExternalStore`/subscription· ο sampler είναι pure (δεν
 διαβάζει hover/selection) → cacheable στο normal-state bitmap (rule 3 τηρείται· δεν αγγίζει το cache key).
 Co-staged με ADR-646/ADR-348 changelog. jscpd:diff clean. ΟΧΙ tsc (N.17). 🔴 commit (Giorgio).
+
+### 2026-07-13: ADR-650 M5α — TopoQaOverlayMount (topography QA markers, sibling of ClashOverlayMount)
+Νέο **low-freq** 2D marker overlay για τα «καμπανάκια» ποιότητας τοπογραφίας
+(`canvas-layer-stack-topo-qa-overlay.tsx`), προστέθηκε στο `canvas-layer-stack-preview-mounts.tsx` δίπλα
+στο `ClashOverlayMount`. **Γιατί ADR-040-safe:** ίδιο ακριβώς pattern με το clash overlay (ADR-435) —
+driven από vanilla `topo-qa-store` (createExternalStore, `equals: Object.is`) που γράφεται **μόνο** σε
+«Run QA»/Clear (μηδέν per-frame write)· projection μέσω `getImmediateTransform()` at call-time + reproject
+στο `subscribeImmediateTransformFrame` (zero-lag pan/zoom, όχι prop transform)· **μηδέν** `useSyncExternalStore`
+σε CanvasSection/Shell (CHECK 6C τηρείται). Reuse `ClashMarkerLayer`+`ClashMarkerGlyph` (ένα ⊙ SSoT). Inert
+όσο δεν υπάρχει report· κρύβεται σε 3D. Co-staged με ADR-650 changelog v11. jscpd:diff clean. ΟΧΙ tsc (N.17).

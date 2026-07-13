@@ -198,6 +198,15 @@ export function buildEntityModelFromDxf(
         topText: entity.topText, bottomLeftText: entity.bottomLeftText,
         bottomRightText: entity.bottomRightText,
       } as unknown as Entity;
+    case 'image':
+      // ADR-651 Φάση Ε — lightweight non-BIM raster image (sibling of scale-bar/opening-info-tag).
+      // Flat params forwarded (position/width/height/url/rotation); ImageRenderer reads them +
+      // the shared HatchImageCache (identity resolveSrc).
+      return {
+        ...base, type: 'image',
+        position: entity.position, width: entity.width, height: entity.height,
+        url: entity.url, rotation: entity.rotation,
+      } as unknown as Entity;
     case 'xline':
       return { ...base, type: 'xline', basePoint: entity.xlineEntity.basePoint, direction: entity.xlineEntity.direction } as unknown as Entity;
     case 'ray':
@@ -260,7 +269,7 @@ export const TO_ENTITY_MODEL_SUPPORTED_TYPES = [
   'electrical-panel', 'railing', 'furniture', 'roof', 'floor-finish', 'thermal-space',
   'wall-covering', 'space-separator', 'mep-segment', 'mep-fitting', 'floorplan-symbol',
   'annotation-symbol', 'scale-bar', 'opening-info-tag', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater',
-  'mep-underfloor', 'xline', 'ray', 'hatch',
+  'mep-underfloor', 'xline', 'ray', 'hatch', 'image',
 ] as const;
 
 // Bridge 1 — every listed token IS a real `DxfEntityUnion` discriminant (typo/stale ⇒ tsc breaks).

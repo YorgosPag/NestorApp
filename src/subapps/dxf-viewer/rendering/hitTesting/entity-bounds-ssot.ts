@@ -32,6 +32,7 @@ import type { DimensionEntity } from '../../types/dimension';
 // SAME helpers Twin B used — reuse, never re-implement (SSoT / N.18).
 import { calculateVerticesBounds } from '../../utils/geometry/GeometryUtils';
 import { createRectangleVertices } from '../entities/shared/geometry-utils';
+import { imageEntityRectVertices, type ImageRectShape } from '../entities/shared/image-rect-vertices';
 import { calculateBimEntity2DBounds } from '../../bim/utils/bim-bounds';
 import { BoundsCalculator } from './Bounds';
 import { getDimensionWorldBounds } from '../../systems/dimensions/dimension-cull-bounds';
@@ -192,6 +193,16 @@ function openingInfoTagBounds(entity: Entity): BoundingBox2D | null {
 }
 
 /**
+ * ADR-651 Φάση Ε — standalone raster image: rotation-aware rectangle bbox, SAME
+ * `createRectangleVertices` SSoT the renderer/hit-test use (rotation about `position`).
+ */
+function imageBounds(entity: Entity): BoundingBox2D | null {
+  const vertices = imageEntityRectVertices(entity as unknown as ImageRectShape);
+  if (!vertices) return null;
+  return box2D(calculateVerticesBounds(vertices));
+}
+
+/**
  * Per-type bounds provider registry — ONE canonical dispatch table for the whole
  * bounds/hit-test layer. Keyed by `EntityType`; a missing key ⇒ genuinely
  * unbounded (resolver returns `null`, no console noise).
@@ -221,6 +232,8 @@ export const ENTITY_BOUNDS_PROVIDERS: Partial<Record<EntityType, (entity: Entity
   'scale-bar': scaleBarBounds,
   // ── ADR-612 — opening info tag: rotation-aware world-mm box AABB (marquee-selectable) ──
   'opening-info-tag': openingInfoTagBounds,
+  // ── ADR-651 Φάση Ε — standalone raster image: rotation-aware rectangle bbox ──
+  image: imageBounds,
   // ── BIM parametric (via calculateBimEntity2DBounds) ──
   wall: bimBounds,
   opening: bimBounds,

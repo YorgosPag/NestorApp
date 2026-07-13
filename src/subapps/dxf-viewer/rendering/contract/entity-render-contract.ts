@@ -100,6 +100,8 @@ export const ENTITY_RENDER_CONTRACTS: Readonly<
   'scale-bar': dxf('scale-bar'),
   // ADR-612 — opening info tag: dedicated non-BIM annotation, 2D canvas only.
   'opening-info-tag': dxf('opening-info-tag'),
+  // ADR-651 Φάση Ε — standalone raster image, 2D canvas only (no per-type 3D mesh).
+  image: dxf('image'),
 
   // ── BIM — bespoke 3D (cross-entity host context) ──
   wall: bespoke('wall', true), // 3D placement ghost: WallPlacementGhost

@@ -24,6 +24,8 @@ import { hasAnyWidth, resolveSegmentWidth, buildSegmentWidthBand } from './share
 import { drawVerticesPath } from './shared/geometry-rendering-utils';
 // ADR-642 Φ2-B — full-canvas complex-linetype routing (embedded `──GAS──` text) SSoT seam.
 import { strokeStyledEntityPolyline, type ComplexRoutableEntity } from './shared/complex-line-routing';
+// 🏢 ADR-650 M3 — non-destructive smooth (fitted-curve) DISPLAY SSoT (raw vertices untouched).
+import { getSmoothedDisplayPath, lodToleranceForScale } from './shared/geometry-smooth-display';
 
 export class PolylineRenderer extends BaseEntityRenderer {
 
@@ -87,6 +89,27 @@ export class PolylineRenderer extends BaseEntityRenderer {
       // (text follows the tessellated arc path); else native stroke (zero regression).
       if (!strokeStyledEntityPolyline(this.ctx, screenPath, entity as ComplexRoutableEntity, this.transform.scale)) {
         this.drawPath(screenPath, false);
+        this.ctx.stroke();
+      }
+      return;
+    }
+
+    // 🏢 ADR-650 M3 — non-destructive smooth (fitted-curve) DISPLAY. The control
+    // vertices (entity.vertices) stay EXACT — we only stroke the cached Catmull-Rom
+    // curve through them (AutoCAD spline-fit / Civil 3D contour smoothing). Priority
+    // is below width/bulge (those keep their own exact geometry, handled above).
+    const smooth = entity as unknown as { smoothDisplay?: boolean };
+    if (smooth.smoothDisplay === true) {
+      const tol = lodToleranceForScale(this.transform.scale);
+      const worldPath = getSmoothedDisplayPath(entity.id, vertices, closed, tol);
+      const smoothScreen = worldPath.map(v => this.worldToScreen(v));
+      const isOverlayEntity = ('isOverlayPreview' in entity && entity.isOverlayPreview === true);
+      if (isOverlayEntity && closed && this.ctx.fillStyle !== UI_COLORS.TRANSPARENT) {
+        this.drawPath(smoothScreen, false); // curve already carries its closing vertex
+        this.ctx.fill();
+      }
+      if (!strokeStyledEntityPolyline(this.ctx, smoothScreen, entity as ComplexRoutableEntity, this.transform.scale)) {
+        this.drawPath(smoothScreen, false);
         this.ctx.stroke();
       }
       return;

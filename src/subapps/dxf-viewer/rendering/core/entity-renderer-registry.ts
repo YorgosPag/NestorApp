@@ -33,6 +33,8 @@ import { ScaleBarRenderer } from '../entities/ScaleBarRenderer';
 // ADR-612 — opening info tag leaf (dedicated non-BIM annotation; world-mm box, sibling of scale-bar).
 import { OpeningInfoTagRenderer } from '../entities/OpeningInfoTagRenderer';
 import { LeaderRenderer } from '../entities/LeaderRenderer';
+// ADR-651 Φάση Ε — standalone raster image leaf (non-BIM, rectangle + rotation + contain-fit).
+import { ImageRenderer } from '../entities/ImageRenderer';
 // ADR-363 Phase 1B — parametric wall leaf (2D plan view).
 import { WallRenderer } from '../../bim/renderers/WallRenderer';
 // ADR-363 Phase 2 — opening leaf (door/window/sliding-door/french-door/fixed).
@@ -160,6 +162,8 @@ export function createEntityRenderers(
   // ADR-612 — opening info tag renderer (world-mm box, 3 editable numeral cells).
   const openingInfoTagRenderer = new OpeningInfoTagRenderer(ctx);
   const leaderRenderer = new LeaderRenderer(ctx); // ADR-635 — leader callout path + tip arrowhead
+  // ADR-651 Φάση Ε — raster image renderer (contain-fit εικόνας μέσα σε rotated ορθογώνιο).
+  const imageRenderer = new ImageRenderer(ctx);
 
   // Register renderers by entity type
   renderers.set('line', lineRenderer);
@@ -208,6 +212,7 @@ export function createEntityRenderers(
   renderers.set('scale-bar', scaleBarRenderer);
   renderers.set('opening-info-tag', openingInfoTagRenderer);
   renderers.set('leader', leaderRenderer);
+  renderers.set('image', imageRenderer);
 
   return renderers;
 }
