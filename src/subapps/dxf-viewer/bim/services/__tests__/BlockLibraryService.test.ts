@@ -438,3 +438,131 @@ describe('BlockLibraryService.promoteBlock', () => {
     ).rejects.toThrow(BLOCK_LIBRARY_ERRORS.NOT_FOUND);
   });
 });
+
+// ---------------------------------------------------------------------------
+// M4 — thumbnail στο save + updateBlock (metadata edit)
+// ---------------------------------------------------------------------------
+
+describe('BlockLibraryService — M4 thumbnail', () => {
+  it('γράφει διανυσματικό thumbnail στο doc (μηδέν raster, μηδέν δεύτερο Storage object)', async () => {
+    const item = await makeService().saveBlock(saveInput());
+    const data = store.get(item.id)!.data as { thumbnail?: { v: number; d: string } };
+
+    expect(data.thumbnail).toBeDefined();
+    expect(data.thumbnail!.v).toBe(1);
+    expect(data.thumbnail!.d.startsWith('M')).toBe(true);
+    // Το preview ζει ΜΕΣΑ στο doc — στο Storage ανέβηκε ΜΟΝΟ το geometry blob.
+    expect(uploaded.size).toBe(1);
+  });
+
+  it('block χωρίς γραμμική γεωμετρία (μόνο κείμενο) → κανένα πεδίο thumbnail (fallback bounds)', async () => {
+    const textOnly = {
+      id: 'txt',
+      type: 'text',
+      layerId: '0',
+      position: { x: 0, y: 0 },
+      text: 'A',
+      height: 10,
+      visible: true,
+    } as unknown as Entity;
+
+    const item = await makeService().saveBlock(saveInput({ localMembers: [textOnly] }));
+    expect(store.get(item.id)!.data.thumbnail).toBeUndefined();
+  });
+});
+
+describe('BlockLibraryService.updateBlock', () => {
+  it('μετονομάζει + αλλάζει κατηγορία ΧΩΡΙΣ να αγγίξει γεωμετρία/scope/id', async () => {
+    seedDoc({ id: 'blklib_u1', name: 'CHAIR-01', category: 'other' } as never);
+
+    await makeService().updateBlock({
+      blockId: 'blklib_u1',
+      name: 'Καρέκλα γραφείου',
+      category: 'furniture',
+      license: { type: 'unknown', redistributable: false },
+    });
+
+    const doc = store.get('blklib_u1')!.data;
+    expect(doc.name).toBe('Καρέκλα γραφείου');
+    expect(doc.category).toBe('furniture');
+    // Ίδιο doc, ίδιο blob, ίδιο scope — η επεξεργασία ΔΕΝ είναι δημοσίευση.
+    expect(doc.scope).toBe('user');
+    expect(doc.geometryUrl).toBe('https://storage.test/seed.json');
+    expect(store.size).toBe(1);
+  });
+
+  it('κόβει κενά και απορρίπτει κενό όνομα', async () => {
+    seedDoc({ id: 'blklib_u2' } as never);
+
+    await expect(
+      makeService().updateBlock({
+        blockId: 'blklib_u2',
+        name: '   ',
+        category: 'furniture',
+        license: { type: 'unknown', redistributable: false },
+      }),
+    ).rejects.toThrow(BLOCK_LIBRARY_ERRORS.NAME_REQUIRED);
+
+    await makeService().updateBlock({
+      blockId: 'blklib_u2',
+      name: '  ΝΙΠΤΗΡΑΣ  ',
+      category: 'sanitary',
+      license: { type: 'unknown', redistributable: false },
+    });
+    expect(store.get('blklib_u2')!.data.name).toBe('ΝΙΠΤΗΡΑΣ');
+  });
+
+  it('⚖️ ΙΔΙΟ gate: δημοσιευμένο block ΔΕΝ υποβαθμίζει την άδειά του σε μη-αναδιανεμήσιμη', async () => {
+    seedDoc({
+      id: 'blklib_u3',
+      scope: 'company',
+      license: { type: 'cc0', redistributable: true },
+    } as never);
+
+    await expect(
+      makeService().updateBlock({
+        blockId: 'blklib_u3',
+        name: 'X',
+        category: 'furniture',
+        license: { type: 'proprietary', redistributable: false },
+      }),
+    ).rejects.toThrow(BLOCK_LIBRARY_ERRORS.SHARED_SCOPE_REQUIRES_REDISTRIBUTABLE);
+
+    // Τίποτα δεν γράφτηκε.
+    expect(store.get('blklib_u3')!.data.license).toEqual({ type: 'cc0', redistributable: true });
+  });
+
+  it('ιδιωτικό block: η άδεια μπορεί να μείνει μη-αναδιανεμήσιμη (δεν το μοιράζεται κανείς)', async () => {
+    seedDoc({ id: 'blklib_u4', scope: 'user' } as never);
+
+    await makeService().updateBlock({
+      blockId: 'blklib_u4',
+      name: 'Ξένο block',
+      category: 'other',
+      license: { type: 'proprietary', redistributable: false },
+    });
+
+    expect(store.get('blklib_u4')!.data.license).toEqual({
+      type: 'proprietary',
+      redistributable: false,
+    });
+  });
+
+  it('rejects update σε builtin (έτοιμη βιβλιοθήκη = read-only) και σε άγνωστο id', async () => {
+    seedDoc({ id: 'blklib_sys_y', scope: 'system', builtin: true } as never);
+
+    const values = {
+      name: 'X',
+      category: 'furniture' as const,
+      license: { type: 'cc0' as const, redistributable: true },
+    };
+
+    await expect(
+      makeService().updateBlock({ blockId: 'blklib_sys_y', ...values }),
+    ).rejects.toThrow(BLOCK_LIBRARY_ERRORS.BUILTIN_NOT_MUTABLE);
+
+    await expect(
+      makeService().updateBlock({ blockId: 'blklib_ghost', ...values }),
+    ).rejects.toThrow(BLOCK_LIBRARY_ERRORS.NOT_FOUND);
+  });
+});

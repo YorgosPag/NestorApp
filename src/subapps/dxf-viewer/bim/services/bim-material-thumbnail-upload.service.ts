@@ -9,16 +9,22 @@
  * persisted on the `bim_materials/{materialId}` doc as `thumbnailUrl`, which wins
  * over the Phase-1 PBR albedo swatch everywhere a `BimMaterial` doc is rendered.
  *
- * Mirrors the upload pattern of `bim-3d/lighting/hdri-upload.service.ts`
- * (validate → buildPath → uploadBytes → getDownloadURL, typed error codes).
+ * ADR-651 Φάση Ε (N.0.2 Boy-Scout): ο πυρήνας «validate → uploadBytes → getDownloadURL»
+ * **βγήκε** στο `@/services/upload/image-asset-upload` (SSoT) όταν απέκτησε τέταρτο
+ * καταναλωτή (σφραγίδα μηχανικού). Εδώ μένει ΜΟΝΟ ό,τι είναι material-specific: το path,
+ * το όριο μεγέθους και ο τύπος σφάλματος που ήδη καταναλώνει το UI.
  *
+ * @see @/services/upload/image-asset-upload — ο κοινός uploader (SSoT)
  * @see ./MaterialLibraryService.ts — persists the returned URL on the doc
  * @see @/services/upload/utils/storage-path — buildBimMaterialThumbnailPath SSoT
- * @see ../../../bim-3d/lighting/hdri-upload.service.ts — the mirrored template
  */
 
-import { ref as makeStorageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
+import {
+  deleteImageAssetByUrl,
+  ImageAssetUploadError,
+  uploadImageAsset,
+  validateImageAssetFile,
+} from '@/services/upload/image-asset-upload';
 import {
   buildBimMaterialThumbnailPath,
   type BimMaterialThumbnailExt,
@@ -55,33 +61,24 @@ export class MaterialThumbnailUploadError extends Error {
   }
 }
 
-function detectExtension(file: File): BimMaterialThumbnailExt | null {
-  const lower = file.name.toLowerCase();
-  if (lower.endsWith('.png')) return 'png';
-  if (lower.endsWith('.jpg')) return 'jpg';
-  if (lower.endsWith('.jpeg')) return 'jpeg';
-  if (lower.endsWith('.webp')) return 'webp';
-  return null;
-}
-
-function contentTypeFor(ext: BimMaterialThumbnailExt): string {
-  switch (ext) {
-    case 'png':
-      return 'image/png';
-    case 'webp':
-      return 'image/webp';
-    case 'jpg':
-    case 'jpeg':
-      return 'image/jpeg';
+/** Τα codes του κοινού uploader ταυτίζονται· ξαναπετιούνται ως material-specific σφάλμα. */
+function asMaterialError(err: unknown): MaterialThumbnailUploadError {
+  if (err instanceof ImageAssetUploadError) {
+    return new MaterialThumbnailUploadError(err.code, err.message);
   }
+  return new MaterialThumbnailUploadError(
+    'upload-failed',
+    err instanceof Error ? err.message : String(err),
+  );
 }
 
 /** Validates extension + size. Throws a typed error; returns the resolved ext. */
 export function validateMaterialThumbnailFile(file: File): BimMaterialThumbnailExt {
-  const ext = detectExtension(file);
-  if (!ext) throw new MaterialThumbnailUploadError('format');
-  if (file.size > MATERIAL_THUMBNAIL_MAX_BYTES) throw new MaterialThumbnailUploadError('size');
-  return ext;
+  try {
+    return validateImageAssetFile(file, MATERIAL_THUMBNAIL_MAX_BYTES);
+  } catch (err) {
+    throw asMaterialError(err);
+  }
 }
 
 export async function uploadMaterialThumbnail(
@@ -93,31 +90,23 @@ export async function uploadMaterialThumbnail(
 
   const ext = validateMaterialThumbnailFile(file);
   const storagePath = buildBimMaterialThumbnailPath({ companyId, materialId, ext });
-  const fileRef = makeStorageRef(storage, storagePath);
 
   try {
-    await uploadBytes(fileRef, file, { contentType: contentTypeFor(ext) });
-    const downloadUrl = await getDownloadURL(fileRef);
+    const downloadUrl = await uploadImageAsset({ file, storagePath, ext });
     return { storagePath, downloadUrl, ext };
   } catch (err) {
-    throw new MaterialThumbnailUploadError(
-      'upload-failed',
-      err instanceof Error ? err.message : String(err),
-    );
+    throw asMaterialError(err);
   }
 }
 
 /**
- * Deletes the Storage object behind a material thumbnail **download URL**. The
- * Firebase modular `ref(storage, url)` accepts an `https://` download URL to the
- * same bucket, so we delete by the URL the doc already carries (no extension
- * guessing). No-op on a falsy URL. Missing-object errors are swallowed by the
- * caller (best-effort cleanup — the Firestore doc is the source of truth for
- * existence; an orphan blob must never block the delete UX).
+ * Deletes the Storage object behind a material thumbnail **download URL**. No-op on a
+ * falsy URL. Missing-object errors are swallowed by the caller (best-effort cleanup —
+ * the Firestore doc is the source of truth for existence; an orphan blob must never
+ * block the delete UX).
  *
  * @see ./hatch-image-delete.service.ts — the orchestrator (doc delete → this)
  */
 export async function deleteMaterialThumbnailByUrl(url: string): Promise<void> {
-  if (!url) return;
-  await deleteObject(makeStorageRef(storage, url));
+  await deleteImageAssetByUrl(url);
 }

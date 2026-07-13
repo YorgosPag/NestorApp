@@ -35,6 +35,15 @@ export function upsertSessionBlockDef(def: InSessionBlockDef): void {
   store.upsert(def);
 }
 
+/**
+ * Αφαιρεί έναν ορισμό. Χρειάζεται στη **μετονομασία** (M4): το κλειδί του registry είναι το
+ * ΟΝΟΜΑ, οπότε μετά από rename ο ορισμός με το ΠΑΛΙΟ όνομα είναι φάντασμα — αν μείνει, το
+ * palette θα τον ξαναδείξει ως «μη αποθηκευμένο» session block. `true` ⇒ υπήρχε.
+ */
+export function removeSessionBlockDef(name: string): boolean {
+  return store.remove(name);
+}
+
 /** Ορισμός με το δοσμένο όνομα, ή `null` αν άγνωστο. */
 export function getSessionBlockDef(name: string): InSessionBlockDef | null {
   return store.get(name);

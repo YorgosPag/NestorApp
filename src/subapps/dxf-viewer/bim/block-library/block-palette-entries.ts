@@ -21,8 +21,10 @@ import type {
   BlockCategory,
   BlockLibraryItem,
   BlockLibraryScope,
+  BlockThumbnailVector,
   InSessionBlockDef,
 } from './block-library-types';
+import { getBlockThumbnail } from './block-thumbnail';
 
 /**
  * Το «σε ποια βιβλιοθήκη ανήκει» μιας κάρτας — τα 4 scopes της μόνιμης βιβλιοθήκης ΣΥΝ
@@ -43,6 +45,13 @@ export interface BlockPaletteEntry {
   readonly category: BlockCategory | null;
   /** i18n key ετικέτας (seeded περιεχόμενο)· `undefined` ⇒ δείξε το raw όνομα. */
   readonly labelKey?: string;
+  /**
+   * M4 — διανυσματικό preview της κάρτας. **Μία αναπαράσταση για τις δύο πηγές**: το session
+   * block το χτίζει ζωντανά από τη γεωμετρία που έχει ήδη στη μνήμη, το cloud block το φέρνει
+   * έτοιμο μέσα στο doc (μηδέν geometry download για μια κάρτα). `null` ⇒ η κάρτα πέφτει στο
+   * ορθογώνιο αποτύπωμα των `boundsMm`.
+   */
+  readonly thumbnail: BlockThumbnailVector | null;
   /** Cloud metadata (άδεια/προέλευση/κατηγορία) — `null` για session-only. */
   readonly item: BlockLibraryItem | null;
   /** Δεν είναι ακόμα στη βιβλιοθήκη → προσφέρουμε «Αποθήκευση». */
@@ -57,6 +66,8 @@ function sessionEntry(def: InSessionBlockDef): BlockPaletteEntry {
     source: 'session',
     scope: 'session',
     category: null,
+    // Η γεωμετρία είναι ΗΔΗ στη μνήμη → το preview χτίζεται επιτόπου (identity-cached).
+    thumbnail: getBlockThumbnail(def.localMembers),
     item: null,
     canSave: true,
   };
@@ -71,6 +82,8 @@ function cloudEntry(item: BlockLibraryItem): BlockPaletteEntry {
     scope: item.scope,
     category: item.category,
     labelKey: item.labelKey,
+    // Προϋπολογισμένο τη στιγμή της εγγραφής (save/seed) — μηδέν geometry download.
+    thumbnail: item.thumbnail ?? null,
     item,
     canSave: false,
   };
@@ -120,4 +133,44 @@ export function canPromoteBlockEntry(
   userId: string | undefined,
 ): boolean {
   return canDeleteBlockEntry(entry, userId) && entry.scope === 'user';
+}
+
+/**
+ * Μπορώ να ΕΠΕΞΕΡΓΑΣΤΩ το metadata αυτής της κάρτας; (M4 — μετονομασία/κατηγορία/άδεια)
+ *
+ * Ίδιο δικαίωμα με τη διαγραφή: δικό μου, μη-builtin, cloud. Ισχύει και για ΗΔΗ δημοσιευμένα
+ * blocks (εταιρείας/έργου) — μια διόρθωση ονόματος/κατηγορίας δεν είναι λόγος να τα
+ * ξεδημοσιεύσεις. Το session block ΔΕΝ έχει ακόμα metadata να επεξεργαστείς: πρώτα αποθήκευση.
+ */
+export function canEditBlockEntry(
+  entry: BlockPaletteEntry,
+  userId: string | undefined,
+): boolean {
+  return canDeleteBlockEntry(entry, userId);
+}
+
+/** Κανονικοποίηση ονόματος για σύγκριση ταυτότητας (case/space-insensitive — AutoCAD-like). */
+function normalizeBlockName(name: string): string {
+  return name.trim().toLocaleLowerCase();
+}
+
+/**
+ * Είναι το `name` ΗΔΗ πιασμένο από άλλη κάρτα; (M4 — φύλακας μετονομασίας)
+ *
+ * ΓΙΑΤΙ ΕΙΝΑΙ ΚΡΙΣΙΜΟ: το όνομα είναι το κλειδί ταυτότητας του ορισμού — το registry
+ * (`block-library-registry`), το lazy hydration (`hydrateCloudBlockDef`) και ο dedup του
+ * palette κλειδώνουν ΟΛΑ πάνω σε αυτό. Δύο αντικείμενα με το ίδιο όνομα ⇒ το tool θα
+ * τοποθετούσε τη γεωμετρία του ΕΝΟΣ κάτω από την κάρτα του ΑΛΛΟΥ (last-wins). Ελέγχονται
+ * ΚΑΙ τα session blocks: μια μετονομασία που «πατάει» εισαγόμενο block έχει το ίδιο πρόβλημα.
+ */
+export function isBlockNameTaken(
+  entries: readonly BlockPaletteEntry[],
+  name: string,
+  exceptKey: string,
+): boolean {
+  const target = normalizeBlockName(name);
+  if (!target) return false;
+  return entries.some(
+    (entry) => entry.key !== exceptKey && normalizeBlockName(entry.name) === target,
+  );
 }

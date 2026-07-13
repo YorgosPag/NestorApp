@@ -95,6 +95,23 @@ export interface BlockLicense {
 }
 
 /**
+ * Διανυσματικό preview καρτέλας (M4) — προϋπολογισμένο, αποθηκευμένο ΜΕΣΑ στο metadata doc.
+ *
+ * `d` = SVG path σε τετράγωνο viewBox `0..BLOCK_THUMBNAIL_VIEWBOX` (aspect-fit, Y ήδη
+ * αναστραμμένο για SVG). Ζωγραφίζεται με `currentColor` — μηδέν ψημένο χρώμα/ανάλυση.
+ * Είναι **παράγωγο** της γεωμετρίας (regenerable), ΟΧΙ δεύτερη πηγή αλήθειας: καμία
+ * τοποθέτηση δεν το διαβάζει.
+ *
+ * @see ./block-thumbnail.ts — ο builder + η δικαιολόγηση της απόκλισης από το raster
+ */
+export interface BlockThumbnailVector {
+  /** Έκδοση σχήματος (`BLOCK_THUMBNAIL_VERSION`) — άγνωστη έκδοση ⇒ αγνόησέ το. */
+  readonly v: number;
+  /** Το SVG path (`M…L…Z`). */
+  readonly d: string;
+}
+
+/**
  * Μόνιμη εγγραφή βιβλιοθήκης (Firestore `block_library`). Η ΓΕΩΜΕΤΡΙΑ δεν είναι inline:
  * ζει ως blob στο Storage (`geometryUrl`) — Firestore doc κρατά μόνο metadata (ADR-040 +
  * όριο 1MB/doc). `id` = enterprise id `blklib_*`.
@@ -115,7 +132,12 @@ export interface BlockLibraryItem {
   readonly boundsMm: BlockBoundsMm;
   /** Storage blob με τα serialized BLOCK-LOCAL members. */
   readonly geometryUrl: string;
-  readonly thumbnailUrl?: string;
+  /**
+   * M4 — διανυσματικό preview inline στο doc (ΟΧΙ raster URL: βλ. `block-thumbnail.ts` για
+   * τη ρητή απόκλιση από Revit/ArchiCAD). `undefined` σε doc γραμμένο πριν το M4 ⇒ η κάρτα
+   * πέφτει στο footprint των `boundsMm`.
+   */
+  readonly thumbnail?: BlockThumbnailVector;
 
   readonly provenance: BlockProvenance;
   readonly license: BlockLicense;
@@ -159,6 +181,24 @@ export interface PromoteBlockLibraryItemInput {
   readonly license?: BlockLicense;
 }
 
+/**
+ * Είσοδος για «Επεξεργασία» (M4): διορθώνει το **metadata** ενός ΗΔΗ αποθηκευμένου block —
+ * μετονομασία / αλλαγή κατηγορίας / διόρθωση άδειας — **χωρίς** δημοσίευση και **χωρίς** να
+ * αγγίξει τη γεωμετρία (ίδιο blob, ίδιο `geometryUrl`, ίδιο id).
+ *
+ * Το `scope` ΔΕΝ είναι εδώ επίτηδες: η αλλαγή ορατότητας είναι ξεχωριστή, ρητή ενέργεια
+ * (`promoteBlock`) που περνά από το νομικό gate — δεν γίνεται πλαγίως μέσα από μια φόρμα
+ * μετονομασίας. Το gate ωστόσο ΞΑΝΑΤΡΕΧΕΙ και εδώ πάνω στο ΤΡΕΧΟΝ scope: ήδη δημοσιευμένο
+ * block δεν επιτρέπεται να «υποβαθμίσει» την άδειά του σε μη-αναδιανεμήσιμη και να μείνει
+ * κοινόχρηστο.
+ */
+export interface UpdateBlockLibraryItemInput {
+  readonly blockId: string;
+  readonly name: string;
+  readonly category: BlockCategory;
+  readonly license: BlockLicense;
+}
+
 /** Typed error codes της βιβλιοθήκης block (mirror `BIM_MATERIAL_ERRORS`). */
 export const BLOCK_LIBRARY_ERRORS = {
   NAME_REQUIRED: 'BLOCK_LIBRARY_NAME_REQUIRED',
@@ -168,6 +208,12 @@ export const BLOCK_LIBRARY_ERRORS = {
   /** Νομικό GATE: κοινόχρηστο scope απαιτεί `license.redistributable === true`. */
   SHARED_SCOPE_REQUIRES_REDISTRIBUTABLE: 'BLOCK_LIBRARY_SHARED_SCOPE_REQUIRES_REDISTRIBUTABLE',
   BUILTIN_NOT_MUTABLE: 'BLOCK_LIBRARY_BUILTIN_NOT_MUTABLE',
+  /**
+   * M4: το όνομα είναι το ΚΛΕΙΔΙ ΤΑΥΤΟΤΗΤΑΣ του ορισμού (registry + palette dedup, πρακτική
+   * AutoCAD «ένας ορισμός ανά όνομα»). Δύο κάρτες με ίδιο όνομα ⇒ το hydration θα τοποθετούσε
+   * τη ΛΑΘΟΣ γεωμετρία. Άρα η μετονομασία μπλοκάρεται πριν καν φύγει το αίτημα.
+   */
+  NAME_TAKEN: 'BLOCK_LIBRARY_NAME_TAKEN',
   NOT_FOUND: 'BLOCK_LIBRARY_NOT_FOUND',
   GEOMETRY_FETCH_FAILED: 'BLOCK_LIBRARY_GEOMETRY_FETCH_FAILED',
 } as const;
@@ -176,14 +222,25 @@ export type BlockLibraryErrorCode =
   (typeof BLOCK_LIBRARY_ERRORS)[keyof typeof BLOCK_LIBRARY_ERRORS];
 
 /**
- * User-tunable placement overrides του Block Library tool (Milestone 1). Mirror του
- * `FurnitureParamOverrides` (ADR-410): το ribbon contextual tab γράφει `scale`/`rotation`.
- * Το ΠΟΙΟ block τοποθετείται ΔΕΝ ζει εδώ — ζει στο `block-library-selection-store` (SSoT,
- * palette → tool), και διαβάζεται σε event-time. Data-only.
+ * User-tunable placement overrides του Block Library tool (M1 → M5). Mirror του
+ * `FurnitureParamOverrides` (ADR-410): το ribbon contextual tab γράφει το transform της
+ * επόμενης τοποθέτησης. Το ΠΟΙΟ block τοποθετείται ΔΕΝ ζει εδώ — ζει στο
+ * `block-library-selection-store` (SSoT, palette → tool), και διαβάζεται σε event-time.
+ * Data-only.
+ *
+ * **M5 (AutoCAD INSERT-faithful)** — αντικατέστησε το ενιαίο ομοιόμορφο `scale` με
+ * ξεχωριστά `scaleX`/`scaleY` (**αρνητικό = καθρέφτισμα/mirror στον άξονα**, ίδιο μοντέλο
+ * με το `mirror-math.ts` όπου mirror ενός block = αρνητικό scale) + `uniform` lock toggle
+ * (AutoCAD «Uniform Scale», default ON: το bridge γράφει και τους δύο άξονες μαζί ώστε να
+ * διατηρείται η προ-M5 εμπειρία «ένα νούμερο οδηγεί και τα δύο»).
  */
 export interface BlockLibraryParamOverrides {
-  /** Ομοιόμορφη κλίμακα τοποθέτησης· default `1`. */
-  readonly scale?: number;
+  /** Κλίμακα στον άξονα X· default `1`. Αρνητικό = καθρέφτισμα (mirror) στον X. */
+  readonly scaleX?: number;
+  /** Κλίμακα στον άξονα Y· default `1`. Αρνητικό = καθρέφτισμα (mirror) στον Y. */
+  readonly scaleY?: number;
   /** Γωνία τοποθέτησης σε μοίρες· default `0`. */
   readonly rotation?: number;
+  /** «Ομοιόμορφη κλίμακα» lock (AutoCAD INSERT «Uniform Scale»)· default `true` (ON). */
+  readonly uniform?: boolean;
 }

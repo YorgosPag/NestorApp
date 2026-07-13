@@ -37,8 +37,10 @@ import {
   type BlockLibraryItem,
   type PromoteBlockLibraryItemInput,
   type SaveBlockLibraryItemInput,
+  type UpdateBlockLibraryItemInput,
 } from '../block-library/block-library-types';
 import { assertBlockScopeAllowed } from '../block-library/block-scope-guard';
+import { buildBlockThumbnail } from '../block-library/block-thumbnail';
 import { uploadBlockGeometry } from '../block-library/block-geometry-storage';
 import {
   ScopedLibraryService,
@@ -124,12 +126,18 @@ export class BlockLibraryService {
       { name: input.name.trim(), boundsMm: input.boundsMm, localMembers: input.localMembers },
     );
 
+    // M4 — το preview υπολογίζεται ΜΙΑ φορά, τη στιγμή της εγγραφής (Revit/ArchiCAD lifecycle:
+    // preview μέσα στον κατάλογο), ώστε το palette να μη χρειάζεται ΠΟΤΕ τη γεωμετρία για μια
+    // κάρτα. Block χωρίς γραμμική γεωμετρία (π.χ. μόνο κείμενο) → κανένα πεδίο (fallback bounds).
+    const { thumbnail } = buildBlockThumbnail(input.localMembers);
+
     const created = await this.library.create(id, {
       scope: input.scope,
       name: input.name.trim(),
       category: input.category,
       boundsMm: input.boundsMm,
       geometryUrl: downloadUrl,
+      ...(thumbnail ? { thumbnail } : {}),
       // Οι φωλιασμένοι χάρτες καθαρίζονται βαθιά — το Firestore απορρίπτει `undefined`
       // (τα optional πεδία άδειας/προέλευσης μένουν απλώς εκτός εγγράφου).
       provenance: stripUndefinedDeep(input.provenance),
@@ -166,6 +174,43 @@ export class BlockLibraryService {
       scope: input.scope,
       projectId: input.scope === 'project' ? (this.config.projectId ?? null) : null,
       license: stripUndefinedDeep(license),
+    });
+  }
+
+  /**
+   * «Επεξεργασία» metadata ενός ΗΔΗ αποθηκευμένου block (ADR-652 M4): μετονομασία, αλλαγή
+   * κατηγορίας, διόρθωση άδειας — **χωρίς** να αγγίξει γεωμετρία, scope ή ιδιοκτησία.
+   *
+   * Πρακτική μεγάλων παικτών: Revit «Family Properties» / ArchiCAD «Object Settings» —
+   * το metadata ενός αντικειμένου διορθώνεται επί τόπου, ΧΩΡΙΣ να ξαναχτιστεί το αρχείο του
+   * (το `.rfa`/`.gsm` μένει ως έχει). Εδώ: ίδιο doc, ίδιο `geometryUrl`, ίδιο blob, ίδιο id.
+   *
+   * ⚖️ Το νομικό gate ΞΑΝΑΤΡΕΧΕΙ πάνω στο **τρέχον scope** με τη **νέα άδεια**: ένα ήδη
+   * δημοσιευμένο block δεν επιτρέπεται να «υποβαθμίσει» την άδειά του σε μη-αναδιανεμήσιμη
+   * και να παραμείνει κοινόχρηστο — αλλιώς η επεξεργασία θα ήταν πίσω πόρτα του gate
+   * (ΑΚΡΙΒΩΣ ο λόγος που ο έλεγχος ζει στον κοινό `block-scope-guard`).
+   *
+   * Το `thumbnail` ΔΕΝ ξαναϋπολογίζεται: η γεωμετρία δεν άλλαξε.
+   */
+  async updateBlock(input: UpdateBlockLibraryItemInput): Promise<void> {
+    const name = input.name.trim();
+    if (!name) {
+      throw new Error(BLOCK_LIBRARY_ERRORS.NAME_REQUIRED);
+    }
+
+    // Υπάρχει + δεν είναι builtin (seeded content = read-only) — ο πυρήνας το φυλά.
+    const current = await this.library.requireMutable(input.blockId);
+
+    assertBlockScopeAllowed({
+      scope: current.scope,
+      license: input.license,
+      hasProjectId: Boolean(this.config.projectId),
+    });
+
+    await this.library.patch(input.blockId, {
+      name,
+      category: input.category,
+      license: stripUndefinedDeep(input.license),
     });
   }
 
