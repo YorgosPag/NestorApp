@@ -212,7 +212,10 @@ export function useScaleTool(props: UseScaleToolProps): UseScaleToolReturn {
     if (s.phase === 'base_point') {
       ScaleToolStore.setBasePoint(worldPoint);
       ScaleToolStore.setDragRefPoint(null); // fresh drag reference (captured by the preview)
-      ScaleToolStore.setPhase('scale_input', 'direct');
+      // Honour a non-uniform mode armed from the ribbon tab before the base-point
+      // pick (ADR-646 Φ4 #6): go straight to the X sub-phase so the tool collects
+      // X then Y instead of a single live factor.
+      ScaleToolStore.setPhase('scale_input', s.nonUniformMode ? 'direct_x' : 'direct');
       return;
     }
 
@@ -249,6 +252,16 @@ export function useScaleTool(props: UseScaleToolProps): UseScaleToolReturn {
 
     return dispatchScaleKey(key, s, executeScale);
   }, [isActive, handleScaleEscape, executeScale]);
+
+  // ── Ribbon factor commit-sink (ADR-646 Φ4 #6) ──────────────────────────────
+  // Register `executeScale` so the contextual «Κλιμάκωση» tab's factor field can
+  // commit the SAME uniform scale as typed-Enter (the store has no scene-manager
+  // access). Cleared on deactivate so a stale executor never fires post-teardown.
+  useEffect(() => {
+    if (!isActive) return;
+    ScaleToolStore.setCommitSink(executeScale);
+    return () => ScaleToolStore.setCommitSink(null);
+  }, [isActive, executeScale]);
 
   // ── Prompt sync ───────────────────────────────────────────────────────────
 

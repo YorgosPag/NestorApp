@@ -20,6 +20,11 @@ export const LINE_TOOL_RIBBON_KEYS = Object.freeze({
   // key on save. The bridge early-returns for it (no read/write) so it never
   // reaches the color fallthrough. Kept here for guard reachability + discoverability.
   newLineType: 'lineToolStyle.newLineType',
+  // ADR-642 Edit-in-place / Duplicate — «✎ Επεξεργασία / ⧉ Διπλότυπο» launcher for the CURRENT
+  // linetype. Widget-only key (mirror `newLineType`): the `LineEditLinePatternWidget` reads the live
+  // linetype value + self-dispatches the `linetype` key on a duplicate save; edit-in-place needs no
+  // dispatch (same name). Kept here for guard reachability + discoverability.
+  editLineType: 'lineToolStyle.editLineType',
   // ADR-510 Φ3d — polyline width (edge-to-edge, model-space; DXF grp 40/41).
   width: 'lineToolStyle.width',
   // ── ADR-510 Φ4 — AutoCAD «General» additions (selected entity) ──────────────

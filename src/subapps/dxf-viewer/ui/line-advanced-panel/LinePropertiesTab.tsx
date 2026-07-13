@@ -56,7 +56,7 @@ import {
   LinePatternSegmentsEditor,
   buildLinePatternSegmentsLabels,
 } from '../panels/dimensions/LinePatternSegmentsEditor';
-import { CompoundPatternPreview } from '../panels/dimensions/LinePatternPreviews';
+import { CompoundPatternPreview, PatternPreview } from '../panels/dimensions/LinePatternPreviews';
 import { LinePatternEditorDialog } from '../panels/dimensions/LinePatternEditorDialog';
 import { Button } from '@/components/ui/button';
 // ADR-510 Φ2E #5 — full per-object fields (Γενικά/Γεωμετρία) via the shared bridge.
@@ -143,6 +143,11 @@ export function LinePropertiesTab({
     return complex && !isSimpleExpressible(complex) ? complexToLayers(complex) : null;
   }, [linetypeDef]);
 
+  // ADR-642 Edit-in-place — a user-created NAMED type (simple or compound) is edited in place via the
+  // dialog (Revit/AutoCAD/Figma parity: change the type once → every line of that type updates). ISO /
+  // built-in types are read-only, so they keep the inline COW editor (authors a per-line owned copy).
+  const isUserCreated = linetypeDef?.origin === 'user-created';
+
   const applyPattern = React.useCallback(
     (next: LinePatternSegment[]) => {
       if (!entity) return;
@@ -155,6 +160,15 @@ export function LinePropertiesTab({
       if (entity.linetypeName !== targetName) {
         patchEntity(entity.id, { linetypeName: targetName }, 'Edit line pattern');
       }
+    },
+    [entity, patchEntity],
+  );
+
+  // ADR-642 Duplicate & edit — a read-only ISO/built-in/imported type is duplicated into a NEW named
+  // user type; the selected line then switches to the copy (Revit «Duplicate» → the object adopts it).
+  const assignLinetype = React.useCallback(
+    (linetypeName: string) => {
+      if (entity) patchEntity(entity.id, { linetypeName }, 'Duplicate line pattern');
     },
     [entity, patchEntity],
   );
@@ -180,6 +194,15 @@ export function LinePropertiesTab({
       )
     : [];
 
+  // ONE affordance per type, shared button SSoT + single `editorOpen` state: user-created → «Edit»
+  // (in place, all lines); any other resolvable type (ISO/built-in/imported) → «Duplicate & edit»
+  // (new named copy, assigned to this line); solid/ByLayer (no def) → none.
+  const typeActionButton = isUserCreated ? (
+    <EditLinetypeButton label={e('edit')} onClick={() => setEditorOpen(true)} />
+  ) : linetypeDef ? (
+    <EditLinetypeButton label={e('duplicate')} onClick={() => setEditorOpen(true)} />
+  ) : null;
+
   return (
     <section aria-label={e('inlineTab.title')} className="flex flex-col gap-3 p-2">
       {generalGroup && (
@@ -191,26 +214,22 @@ export function LinePropertiesTab({
         />
       )}
 
-      {/* «Τμήματα Μοτίβου» — selection-only (per-line COW edit); hidden in draft. A compound /
-          symbol / text type can't be flattened to a segment list → accurate preview + hint. */}
+      {/* «Τμήματα Μοτίβου» — selection-only; hidden in draft. A user-created named type (simple OR
+          compound) is edited in place via the dialog → every line of that type updates (big-player
+          practice). ISO / built-in types stay on the inline COW editor (author a per-line copy). */}
       {entity && (
         <div className="flex flex-col gap-1">
           {compoundLayers ? (
             <>
               <CompoundPatternPreview label={e('previewLabel')} layers={compoundLayers} />
               <p className="px-1 text-xs text-muted-foreground">{e('inlineTab.compoundHint')}</p>
-              {/* User-created compound → edit in place (Revit/AutoCAD parity); imported/ISO stays
-                  read-only (a «Duplicate & edit» is the fast-follow). */}
-              {linetypeDef?.origin === 'user-created' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="self-start"
-                  onClick={() => setEditorOpen(true)}
-                >
-                  {e('edit')}
-                </Button>
-              )}
+              {typeActionButton}
+            </>
+          ) : isUserCreated ? (
+            <>
+              <PatternPreview label={e('previewLabel')} pattern={linetypeDef?.pattern ?? []} />
+              <p className="px-1 text-xs text-muted-foreground">{e('inlineTab.editHint')}</p>
+              {typeActionButton}
             </>
           ) : (
             <>
@@ -224,6 +243,7 @@ export function LinePropertiesTab({
               {segments.length === 0 && (
                 <p className="px-1 text-xs text-muted-foreground">{e('inlineTab.hint')}</p>
               )}
+              {typeActionButton}
             </>
           )}
         </div>
@@ -239,14 +259,26 @@ export function LinePropertiesTab({
         />
       ))}
 
-      {/* Edit-in-place dialog — only for a user-created named type (the button gate matches). */}
-      {linetypeDef?.origin === 'user-created' && (
+      {/* One dialog, one open state: user-created → edit in place; any other resolvable type →
+          duplicate & edit (new named copy assigned to this line). Gate matches `typeActionButton`. */}
+      {linetypeDef && (
         <LinePatternEditorDialog
           open={editorOpen}
           onOpenChange={setEditorOpen}
-          editName={linetypeDef.name}
+          {...(isUserCreated
+            ? { editName: linetypeDef.name }
+            : { duplicateFrom: linetypeDef.name, onCreated: assignLinetype })}
         />
       )}
     </section>
+  );
+}
+
+/** «✎ Επεξεργασία» affordance — one SSoT for the simple + compound user-created branches (no clone). */
+function EditLinetypeButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <Button variant="outline" size="sm" className="self-start" onClick={onClick}>
+      {label}
+    </Button>
   );
 }

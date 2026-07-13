@@ -39,6 +39,7 @@ import {
   buildLinePatternSegmentsLabels,
 } from './LinePatternSegmentsEditor';
 import { CompoundPatternPreview } from './LinePatternPreviews';
+import type { LinePatternGripLabels } from './LinePatternGripOverlay';
 
 /** Perpendicular offset (mm) a freshly-added layer starts at (below the previous one). */
 const NEW_LAYER_OFFSET_STEP_MM = 1;
@@ -55,6 +56,8 @@ export interface LinePatternLayersLabels {
   readonly layerName: (index: number) => string;
   readonly presetsLabel: string;
   readonly presetName: (id: string) => string;
+  /** ADR-642 Φ6-A — aria labels for the 8-handle grip editor on the preview swatch. */
+  readonly grips: LinePatternGripLabels;
 }
 
 /**
@@ -75,6 +78,12 @@ export function buildLinePatternLayersLabels(
     layerName: (i) => `${e('compound.layer')} ${i + 1}`,
     presetsLabel: e('compound.presets'),
     presetName: (id) => e(`compound.presetNames.${id}`),
+    grips: {
+      title: e('grips.title'),
+      spread: e('grips.spread'),
+      length: e('grips.length'),
+      corner: e('grips.corner'),
+    },
   };
 }
 
@@ -84,6 +93,11 @@ export interface LinePatternLayersEditorProps {
   readonly labels: LinePatternLayersLabels;
   /** i18n'd validation message shown under the list (host resolves the code). */
   readonly patternError?: string | null;
+  /**
+   * `'split'` → two columns (big preview + presets on the left, scrollable layers on the right) for the
+   * roomy dialog· `'stacked'` (default) → the compact single-column flow for a narrow host.
+   */
+  readonly layout?: 'stacked' | 'split';
 }
 
 export function LinePatternLayersEditor({
@@ -91,6 +105,7 @@ export function LinePatternLayersEditor({
   onChange,
   labels,
   patternError,
+  layout = 'stacked',
 }: LinePatternLayersEditorProps): React.ReactElement {
   const patchLayer = (index: number, patch: Partial<LinePatternLayer>) =>
     onChange(layers.map((l, i) => (i === index ? { ...l, ...patch } : l)));
@@ -107,45 +122,93 @@ export function LinePatternLayersEditor({
     if (preset) onChange(preset.build());
   };
 
+  const split = layout === 'split';
+  // Built once, arranged per layout → no duplicated JSX across the two column shapes (N.18).
+  const preview = (
+    <CompoundPatternPreview
+      label={labels.previewLabel}
+      layers={layers}
+      onLayersChange={onChange}
+      gripLabels={labels.grips}
+      size={split ? 'lg' : 'sm'}
+    />
+  );
+  const presets = <PresetBar label={labels.presetsLabel} presetName={labels.presetName} onApply={applyPreset} />;
+  const layersList = (
+    <LayersFieldset
+      layers={layers}
+      labels={labels}
+      patternError={patternError}
+      onPatch={patchLayer}
+      onAdd={addLayer}
+      onRemove={removeLayer}
+    />
+  );
+
+  if (split) {
+    return (
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <aside className="flex flex-col gap-3">
+          {preview}
+          {presets}
+        </aside>
+        <section className="flex max-h-[60vh] flex-col gap-2 overflow-y-auto pr-1">{layersList}</section>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-3">
-      <CompoundPatternPreview label={labels.previewLabel} layers={layers} />
-
-      <PresetBar label={labels.presetsLabel} presetName={labels.presetName} onApply={applyPreset} />
-
-      <fieldset className="flex flex-col gap-2 border-0 p-0 m-0">
-        <legend className="text-xs font-medium mb-1">{labels.layersLabel}</legend>
-        {layers.map((layer, i) => (
-          <LayerCard
-            key={i}
-            index={i}
-            layer={layer}
-            labels={labels}
-            canRemove={layers.length > 1}
-            canCenter={layers.length > 1}
-            onOffset={(v) => patchLayer(i, { offsetMm: v })}
-            onCenter={() => patchLayer(i, { offsetMm: centerOffsetForLayer(layers, i) })}
-            onSegments={(segments) => patchLayer(i, { segments })}
-            onRemove={() => removeLayer(i)}
-          />
-        ))}
-        <div className="flex items-center gap-2 mt-1">
-          <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addLayer}>
-            <PlusIcon />
-            {labels.addLayer}
-          </Button>
-        </div>
-        {patternError && (
-          <p className="text-xs text-destructive mt-1" role="alert">
-            {patternError}
-          </p>
-        )}
-      </fieldset>
+      {preview}
+      {presets}
+      {layersList}
     </div>
   );
 }
 
 // ── Subcomponents ──────────────────────────────────────────────────────────────
+
+/** The «Στρώματα» list — one `LayerCard` per compound layer + an «add layer» bar + the validation note. */
+function LayersFieldset({
+  layers, labels, patternError, onPatch, onAdd, onRemove,
+}: {
+  layers: readonly LinePatternLayer[];
+  labels: LinePatternLayersLabels;
+  patternError?: string | null;
+  onPatch: (index: number, patch: Partial<LinePatternLayer>) => void;
+  onAdd: () => void;
+  onRemove: (index: number) => void;
+}) {
+  return (
+    <fieldset className="flex flex-col gap-2 border-0 p-0 m-0">
+      <legend className="text-xs font-medium mb-1">{labels.layersLabel}</legend>
+      {layers.map((layer, i) => (
+        <LayerCard
+          key={i}
+          index={i}
+          layer={layer}
+          labels={labels}
+          canRemove={layers.length > 1}
+          canCenter={layers.length > 1}
+          onOffset={(v) => onPatch(i, { offsetMm: v })}
+          onCenter={() => onPatch(i, { offsetMm: centerOffsetForLayer(layers, i) })}
+          onSegments={(segments) => onPatch(i, { segments })}
+          onRemove={() => onRemove(i)}
+        />
+      ))}
+      <div className="flex items-center gap-2 mt-1">
+        <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={onAdd}>
+          <PlusIcon />
+          {labels.addLayer}
+        </Button>
+      </div>
+      {patternError && (
+        <p className="text-xs text-destructive mt-1" role="alert">
+          {patternError}
+        </p>
+      )}
+    </fieldset>
+  );
+}
 
 function PlusIcon() {
   const iconSizes = useIconSizes();

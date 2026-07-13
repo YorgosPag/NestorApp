@@ -77,4 +77,41 @@ describe('LinePatternEditorDialog — edit in place', () => {
     expect(saved?.complex).toBeDefined();
     expect(saved?.complex?.layers[0].elements.some((el) => el.kind === 'symbol')).toBe(true);
   });
+
+  it('pre-loads a SIMPLE user-created type and re-saves it in place (no complex)', () => {
+    registerUserLinetype('MyDash', [5, -2], '▬ ▬');
+
+    render(
+      <LinePatternEditorDialog open onOpenChange={() => {}} editName="MyDash" />,
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'panels.dimensions.linePatternEditor.save',
+      }),
+    );
+
+    const saved = resolveLinetype('MyDash');
+    expect(saved?.pattern).toEqual([5, -2]);
+    expect(saved?.complex).toBeUndefined();
+  });
+
+  it('duplicates a read-only ISO type into a NEW named user type and assigns it', () => {
+    // `Dashed` is a built-in ISO type (read-only); duplicate seeds from it under a suggested free name.
+    const onCreated = jest.fn();
+    render(
+      <LinePatternEditorDialog open onOpenChange={() => {}} duplicateFrom="Dashed" onCreated={onCreated} />,
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'panels.dimensions.linePatternEditor.save',
+      }),
+    );
+
+    // A new user-created copy exists (suggested name = «Dashed 2»); the ISO original is untouched.
+    const copy = resolveLinetype('Dashed 2');
+    expect(copy?.origin).toBe('user-created');
+    expect(onCreated).toHaveBeenCalledWith('Dashed 2');
+  });
 });

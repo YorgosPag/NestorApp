@@ -147,18 +147,27 @@ function buildClippedSet(
  * `+origin` — έτσι οι γραμμές «κουμπώνουν» στο origin (default world 0 = συμβατό με
  * beam/floor-finish hatch). Επιστρέφει κενό για κενά όρια ή `spacing ≤ 0`.
  */
+/**
+ * SSoT boilerplate των δύο hatch-line builders: κράτα τα usable paths (≥3 κορυφές) και μετατόπισέ τα
+ * κατά `-origin` (phase). Κενό → `[]`. Εξήχθη ώστε `buildHatchLines` + `buildPredefinedHatchLines` να
+ * μη διπλασιάζουν το ίδιο filter+shift (N.0.2 Boy Scout / N.18).
+ */
+function usableShiftedPaths(
+  boundaryPaths: ReadonlyArray<ReadonlyArray<HatchPoint2D>>, origin: { x: number; y: number },
+): Point3D[][] {
+  return boundaryPaths
+    .filter((p) => p.length >= 3)
+    .map((path) => path.map((v) => ({ x: v.x - origin.x, y: v.y - origin.y, z: 0 })));
+}
+
 export function buildHatchLines(
   boundaryPaths: ReadonlyArray<ReadonlyArray<HatchPoint2D>>,
   opts: BuildHatchLinesOptions,
 ): HatchLineSegment[] {
   const { spacingMm, angleDeg = 0, origin = { x: 0, y: 0 }, double = false, islandStyle = 'normal' } = opts;
   if (spacingMm <= 0) return [];
-  const usable = boundaryPaths.filter((p) => p.length >= 3);
-  if (!usable.length) return [];
-
-  const shifted: Point3D[][] = usable.map((path) =>
-    path.map((v) => ({ x: v.x - origin.x, y: v.y - origin.y, z: 0 })),
-  );
+  const shifted = usableShiftedPaths(boundaryPaths, origin);
+  if (!shifted.length) return [];
 
   const segments = buildClippedSet(shifted, spacingMm, angleDeg, islandStyle);
   if (double) segments.push(...buildClippedSet(shifted, spacingMm, angleDeg + 90, islandStyle));
@@ -292,13 +301,9 @@ export function buildPredefinedHatchLines(
 ): HatchLineSegment[] {
   const { scale = 1, angleDeg = 0, origin = { x: 0, y: 0 }, islandStyle = 'normal' } = opts;
   if (scale <= 0) return [];
-  const usable = boundaryPaths.filter((p) => p.length >= 3);
-  if (!usable.length) return [];
-
-  // Phase origin: μετατόπισε τα όρια κατά -origin, χτίσε, ξανα-μετατόπισε (mirror buildHatchLines).
-  const shifted: Point3D[][] = usable.map((path) =>
-    path.map((v) => ({ x: v.x - origin.x, y: v.y - origin.y, z: 0 })),
-  );
+  // Phase origin: μετατόπισε τα όρια κατά -origin (SSoT helper, mirror buildHatchLines).
+  const shifted = usableShiftedPaths(boundaryPaths, origin);
+  if (!shifted.length) return [];
   const bbox = polygonBbox(shifted.flat());
 
   const out: HatchLineSegment[] = [];
@@ -347,22 +352,24 @@ export function buildHatchEntitySegments(
   const islandStyle = hatch.islandStyle ?? 'normal';
 
   if (hatch.fillType === 'predefined') {
+    // ADR-644 (#7d) — PREFER the preserved ORIGINAL definition (inlinePattern) over the catalog, so
+    // an imported hatch renders 1:1 with its source AutoCAD (και εξάγεται πανομοιότυπα). Οι inline
+    // γραμμές είναι ΑΠΟΛΥΤΕΣ (43-49 σε scene units, 53 = τελική γωνία) → scale=1, angleDeg=0. Το
+    // catalog είναι ΜΟΝΟ για hatches που δημιουργεί ο χρήστης μέσα στον Nestor (χωρίς πρωτότυπο).
+    if (hatch.inlinePattern && hatch.inlinePattern.lines.length) {
+      return buildPredefinedHatchLines(paths, hatch.inlinePattern, {
+        scale: 1,
+        angleDeg: 0,
+        origin: hatch.patternOrigin,
+        islandStyle,
+      });
+    }
     const pattern = getHatchPattern(hatch.patternName);
     if (pattern) {
       return buildPredefinedHatchLines(paths, pattern, {
         // effective = suggested(ανά μοτίβο) × user multiplier — ορατή πυκνότητα by default.
         scale: resolveEffectiveHatchScale(hatch.patternName, hatch.patternScale),
         angleDeg: hatch.patternAngle ?? 0,
-        origin: hatch.patternOrigin,
-        islandStyle,
-      });
-    }
-    // Inline (imported) μοτίβο εκτός catalog (ADR-507 Φ6): οι γραμμές είναι ΑΠΟΛΥΤΕΣ
-    // (43-49 σε world mm, 53 = τελική γωνία) → render 1:1 (scale=1, angleDeg=0).
-    if (hatch.inlinePattern && hatch.inlinePattern.lines.length) {
-      return buildPredefinedHatchLines(paths, hatch.inlinePattern, {
-        scale: 1,
-        angleDeg: 0,
         origin: hatch.patternOrigin,
         islandStyle,
       });

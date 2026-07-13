@@ -1428,6 +1428,7 @@
       "dimensions": "Διαστάσεις",
       "lineToolStyle": "Στυλ Γραμμής",
       "xlineMode": "Γραμμή Κατασκευής",
+      "scaleTool": "Κλιμάκωση",
       "analyze": "Ανάλυση",
       "furnitureProperties": "Ιδιότητες Επίπλου",
       "floorplanSymbolProperties": "Ιδιότητες Συμβόλου",
@@ -1703,6 +1704,8 @@
       "lineFilletOptions": "Επιλογές Συναρμογής",
       "lineChamferOptions": "Επιλογές Λοξοτομής",
       "xlineMode": "Λειτουργία",
+      "scaleToolOptions": "Επιλογές",
+      "scaleToolFactor": "Συντελεστής",
       "bimSchedule": "Πίνακας BIM",
       "thermalEnvelope": "Θερμοπρόσοψη",
       "furnitureCatalog": "Κατάλογος",
@@ -1796,6 +1799,8 @@
       "dimLineTypeScale": "Πυκνότητα",
       "dimNewLineType": "Νέος τύπος",
       "lineNewLineType": "Νέος τύπος",
+      "lineEditLineType": "Επεξεργασία",
+      "lineDuplicateLineType": "Διπλότυπο",
       "currentLayerPicker": "Τρέχον Επίπεδο",
       "line": "Γραμμή",
       "lineVariants": {
@@ -2520,6 +2525,12 @@
         "pathAlignItems": "Στοίχιση",
         "pathReversed": "Αντίστροφα",
         "pathPickPath": "Επιλογή Διαδρομής"
+      },
+      "scaleTool": {
+        "copy": "Αντιγραφή",
+        "nonUniform": "Ανομοιόμορφη",
+        "reference": "Αναφορά",
+        "factor": "Συντελεστής"
       },
       "stairEditor": {
         "structureType": {

@@ -19,12 +19,16 @@ import {
 } from '../../../config/line-pattern-segments';
 import { buildLinetypeThumbnailFromPattern } from '../../../rendering/linetype-thumbnail';
 import { strokeStyledPolyline } from '../../../rendering/linetype/ComplexLineStroker';
+import { LinePatternGripOverlay, type LinePatternGripLabels } from './LinePatternGripOverlay';
 
 /** Screen px per mm for the text preview canvas — makes a default (scale 1) glyph legible. */
 const PREVIEW_PX_PER_MM = 4;
 
 /** Larger scale for the compound preview so the small (±0.75mm) rail offsets are visible. */
 const COMPOUND_PREVIEW_PX_PER_MM = 7;
+
+/** The large (editable) compound preview zooms in further so the band spread + grips read clearly. */
+const COMPOUND_PREVIEW_PX_PER_MM_LG = 14;
 
 export function PatternPreview({ label, pattern }: { label: string; pattern: readonly number[] }) {
   const thumb = buildLinetypeThumbnailFromPattern(pattern, 220, 16);
@@ -57,11 +61,15 @@ export function PatternPreview({ label, pattern }: { label: string; pattern: rea
  * the compound preview: they differ only in the `def` they build and the vertical room they need.
  */
 function StrokePreviewCanvas({
-  label, heightClass, draw,
+  label, heightClass, draw, overlay, stacked = false,
 }: {
   label: string;
   heightClass: string;
   draw: (ctx: CanvasRenderingContext2D, w: number, h: number) => void;
+  /** ADR-642 Φ6-A — an absolutely-positioned grip overlay drawn over the canvas (editable swatch). */
+  overlay?: React.ReactNode;
+  /** `true` → label stacked above a full-width swatch (large preview); `false` → inline label (compact). */
+  stacked?: boolean;
 }) {
   const ref = React.useRef<HTMLCanvasElement>(null);
 
@@ -82,10 +90,25 @@ function StrokePreviewCanvas({
     draw(ctx, w, h);
   }, [draw]);
 
+  const swatch = (
+    <div className={`relative w-full ${heightClass}`}>
+      <canvas ref={ref} className="h-full w-full rounded-sm border border-border" aria-hidden="true" />
+      {overlay}
+    </div>
+  );
+
+  if (stacked) {
+    return (
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-muted-foreground">{label}</span>
+        {swatch}
+      </div>
+    );
+  }
   return (
     <div className="flex items-center gap-2">
       <span className="text-xs text-muted-foreground w-36 shrink-0">{label}</span>
-      <canvas ref={ref} className={`${heightClass} w-full rounded-sm border border-border`} aria-hidden="true" />
+      {swatch}
     </div>
   );
 }
@@ -114,17 +137,41 @@ export function TextPatternPreview({ label, segments }: { label: string; segment
  * `layersToComplex` def through the SAME `strokeStyledPolyline` SSoT, so the parallel rails +
  * ties render exactly as on canvas. A larger scale + taller canvas makes the small offsets legible.
  */
-export function CompoundPatternPreview({ label, layers }: { label: string; layers: readonly LinePatternLayer[] }) {
+export function CompoundPatternPreview({
+  label, layers, onLayersChange, gripLabels, size = 'sm',
+}: {
+  label: string;
+  layers: readonly LinePatternLayer[];
+  /** ADR-642 Φ6-A — when provided (with `gripLabels`), the swatch hosts the 8-handle grip editor. */
+  onLayersChange?: (layers: LinePatternLayer[]) => void;
+  gripLabels?: LinePatternGripLabels;
+  /** `'lg'` → a tall, full-width, zoomed-in editable swatch (dialog); `'sm'` → the compact inline strip. */
+  size?: 'sm' | 'lg';
+}) {
+  const big = size === 'lg';
+  const pxPerMm = big ? COMPOUND_PREVIEW_PX_PER_MM_LG : COMPOUND_PREVIEW_PX_PER_MM;
   const draw = React.useCallback(
     (ctx: CanvasRenderingContext2D, w: number, h: number) => {
       const def = layersToComplex('__preview__', layers);
       const midY = h / 2;
       strokeStyledPolyline(ctx, [{ x: 6, y: midY }, { x: w - 6, y: midY }], def, {
-        worldToScreenScale: COMPOUND_PREVIEW_PX_PER_MM,
+        worldToScreenScale: pxPerMm,
         ltscale: 1,
       });
     },
-    [layers],
+    [layers, pxPerMm],
   );
-  return <StrokePreviewCanvas label={label} heightClass="h-12" draw={draw} />;
+  const overlay =
+    onLayersChange && gripLabels ? (
+      <LinePatternGripOverlay layers={layers} onLayersChange={onLayersChange} labels={gripLabels} />
+    ) : undefined;
+  return (
+    <StrokePreviewCanvas
+      label={label}
+      heightClass={big ? 'h-44' : 'h-12'}
+      stacked={big}
+      draw={draw}
+      overlay={overlay}
+    />
+  );
 }

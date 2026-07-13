@@ -316,6 +316,19 @@ export const CONTEXTUAL_LINE_TOOL_TAB: RibbonTab = {
                 commandKey: LINE_TOOL_RIBBON_KEYS.newLineType,
               },
             },
+            // ADR-642 — «✎ Επεξεργασία / ⧉ Διπλότυπο» for the current linetype (contextual: the
+            // widget self-selects edit-in-place vs duplicate by the current type's origin, and
+            // renders nothing for solid/ByLayer). Mirror του «Νέος τύπος», reuse του launcher.
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'line-edit-line-pattern',
+              command: {
+                id: 'lineToolStyle.editLineType',
+                labelKey: 'ribbon.commands.lineEditLineType',
+                commandKey: LINE_TOOL_RIBBON_KEYS.editLineType,
+              },
+            },
           ],
         },
       ],

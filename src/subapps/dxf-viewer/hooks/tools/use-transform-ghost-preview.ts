@@ -21,9 +21,10 @@
  * @see hooks/tools/use-ghost-overlay — subscribe + toScreen harness-consumption layer
  */
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { AnySceneEntity } from '../../types/entities';
+import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 import { useBimPreviewRenderer } from './useBimPreviewRenderer';
 import { useLevelLayersById } from './useLevelLayersById';
@@ -32,9 +33,47 @@ import { useGhostOverlay, type GhostOverlayStore } from './use-ghost-overlay';
 // ADR-641 — the harness owns the BEDIT-aware entity getter so every base-point transform preview
 // resolves a member in the editor's VIEW frame automatically (no per-tool getEntity boilerplate).
 import { useBeditAwareEntityGetter } from './use-bedit-aware-entity-getter';
+// ADR-646 Φ6 — O(1)/frame matrix ghost: render the selection ONCE, blit under one affine per frame.
+import {
+  TransformGhostMatrixCache, runMatrixGhost, type MatrixGhostConfig,
+} from './transform-ghost-matrix-cache';
 
 const BASE_POINT_COLOR = '#FF4444';
 const RUBBER_BAND_COLOR = '#FFD700';
+
+/**
+ * Paint the identical manipulator chrome every base-point transform shares: a red base crosshair, a
+ * dashed-gold rubber-band from base to cursor, and a gold monospace value tooltip. Screen-space inputs.
+ */
+function paintBasePointChrome(
+  ctx: CanvasRenderingContext2D, basePt: Point2D, cursorPt: Point2D, label: string,
+): void {
+  ctx.save();
+  ctx.strokeStyle = BASE_POINT_COLOR;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(basePt.x - 8, basePt.y); ctx.lineTo(basePt.x + 8, basePt.y);
+  ctx.moveTo(basePt.x, basePt.y - 8); ctx.lineTo(basePt.x, basePt.y + 8);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle = RUBBER_BAND_COLOR;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(basePt.x, basePt.y);
+  ctx.lineTo(cursorPt.x, cursorPt.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  ctx.save();
+  ctx.font = '12px monospace';
+  ctx.fillStyle = RUBBER_BAND_COLOR;
+  ctx.fillText(label, cursorPt.x + 12, cursorPt.y - 8);
+  ctx.restore();
+}
 
 /** The REAL-entity preview renderer bound to the frame's ctx (ADR-550). */
 type BimPreviewContext = ReturnType<ReturnType<typeof useBimPreviewRenderer>>;
@@ -71,6 +110,13 @@ export interface TransformGhostConfig<S extends { phase: string }> {
   readonly buildTooltip: (state: S, cursor: Point2D, basePoint: Point2D) => string;
   /** Paint the live WYSIWYG copies. The renderer ctx is already saved/restored by the primitive. */
   readonly renderCopies: (frame: TransformGhostFrame<S>) => void;
+  /**
+   * ADR-646 Φ6 — opt-in O(1)/frame matrix ghost. When supplied AND the selection is rasterable, the
+   * primitive renders the selection ONCE and blits it under a single affine per frame (independent of
+   * entity count). Omit it (or return `null` from `getWorldAffine`) to stay on `renderCopies` — the
+   * correct choice for per-vertex tools (stretch) and the automatic fallback for oversize selections.
+   */
+  readonly matrixGhost?: MatrixGhostConfig<S>;
 }
 
 export function useTransformGhostPreview<S extends { phase: string }>(
@@ -78,7 +124,7 @@ export function useTransformGhostPreview<S extends { phase: string }>(
 ): void {
   const {
     store, levelManager, transform, getCanvas, getViewportElement,
-    isActivePhase, isDrawPhase, getBasePoint, buildTooltip, renderCopies,
+    isActivePhase, isDrawPhase, getBasePoint, buildTooltip, renderCopies, matrixGhost,
   } = config;
 
   // ADR-550 — lazy real-entity renderer + level layer-table getter (shared SSoT hooks).
@@ -86,6 +132,9 @@ export function useTransformGhostPreview<S extends { phase: string }>(
   const layersById = useLevelLayersById(levelManager);
   // ADR-641 — BEDIT-aware entity getter handed to every renderCopies (members resolve in VIEW space).
   const getEntity = useBeditAwareEntityGetter(levelManager);
+  // ADR-646 Φ6 — one offscreen ghost raster reused across the whole drag (mirrors ADR-516 backdrop).
+  const matrixCacheRef = useRef<TransformGhostMatrixCache | null>(null);
+  useEffect(() => () => { matrixCacheRef.current?.dispose(); matrixCacheRef.current = null; }, []);
 
   const draw = useCallback(
     (frame: GhostDrawFrame, s: S, toScreen: (p: Point2D) => Point2D) => {
@@ -94,49 +143,37 @@ export function useTransformGhostPreview<S extends { phase: string }>(
       const basePoint = getBasePoint(s);
       if (!basePoint) return;
 
-      const basePt = toScreen(basePoint);
-      const cursorPt = toScreen(effectiveCursor);
+      // Base crosshair + rubber-band + value tooltip (identical across every base-point transform).
+      paintBasePointChrome(
+        ctx, toScreen(basePoint), toScreen(effectiveCursor),
+        buildTooltip(s, effectiveCursor, basePoint),
+      );
 
-      // Base-point crosshair (red).
-      ctx.save();
-      ctx.strokeStyle = BASE_POINT_COLOR;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(basePt.x - 8, basePt.y); ctx.lineTo(basePt.x + 8, basePt.y);
-      ctx.moveTo(basePt.x, basePt.y - 8); ctx.lineTo(basePt.x, basePt.y + 8);
-      ctx.stroke();
-      ctx.restore();
+      const layers = layersById();
 
-      // Rubber-band line (dashed gold).
-      ctx.save();
-      ctx.strokeStyle = RUBBER_BAND_COLOR;
-      ctx.lineWidth = 1;
-      ctx.setLineDash([6, 4]);
-      ctx.beginPath();
-      ctx.moveTo(basePt.x, basePt.y);
-      ctx.lineTo(cursorPt.x, cursorPt.y);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
-
-      // Value tooltip (gold monospace).
-      ctx.save();
-      ctx.font = '12px monospace';
-      ctx.fillStyle = RUBBER_BAND_COLOR;
-      ctx.fillText(buildTooltip(s, effectiveCursor, basePoint), cursorPt.x + 12, cursorPt.y - 8);
-      ctx.restore();
+      // ADR-646 Φ6 — matrix ghost: render the selection ONCE + blit under one affine (O(1)/frame). For
+      // affine tools (scale/move/rotate) this replaces the O(N)-per-frame real render that froze huge
+      // selections. Returns false for per-vertex tools / oversize selections → the renderCopies fallback.
+      if (matrixGhost) {
+        const cache = (matrixCacheRef.current ??= new TransformGhostMatrixCache());
+        const handled = runMatrixGhost(cache, {
+          ctx, state: s, cursor: effectiveCursor, basePoint,
+          current: frame.transform, viewport: frame.viewport,
+          getEntity: getEntity as (id: string) => DxfEntityUnion | null, layers, config: matrixGhost,
+        });
+        if (handled) return;
+      }
 
       // Live WYSIWYG copies (full fidelity) — caller-owned transform per entity.
       ctx.save();
       const bimPreview = getBimPreview(ctx);
-      const layers = layersById();
       renderCopies({
         ctx, state: s, cursor: effectiveCursor, basePoint,
         transform: frame.transform, viewport: frame.viewport, bimPreview, layers, getEntity,
       });
       ctx.restore();
     },
-    [isDrawPhase, getBasePoint, buildTooltip, renderCopies, getBimPreview, layersById, getEntity],
+    [isDrawPhase, getBasePoint, buildTooltip, renderCopies, matrixGhost, getBimPreview, layersById, getEntity],
   );
 
   useGhostOverlay<S>({

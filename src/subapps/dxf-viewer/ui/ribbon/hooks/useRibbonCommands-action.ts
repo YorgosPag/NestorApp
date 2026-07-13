@@ -28,6 +28,7 @@ import { isMepWaterHeaterActionKey } from './bridge/mep-water-heater-command-key
 import { isMepUnderfloorActionKey } from './bridge/mep-underfloor-command-keys';
 import { isMepSegmentActionKey } from './bridge/mep-segment-command-keys';
 import { isFurnitureActionKey } from './bridge/furniture-command-keys';
+import { isScaleToolActionKey } from './bridge/scale-tool-command-keys';
 import { isStairActionKey } from './bridge/stair-command-keys';
 import { isWallActionKey } from './bridge/wall-command-keys';
 import { isOpeningActionKey } from './bridge/opening-command-keys';
@@ -87,6 +88,7 @@ export type RibbonActionBridges = Pick<
   | 'mepUnderfloorBridge'
   | 'mepSegmentBridge'
   | 'furnitureBridge'
+  | 'scaleToolBridge'
   | 'wrappedHandleAction'
 >;
 
@@ -243,6 +245,11 @@ export function routeRibbonAction(
   }
   if (isFurnitureActionKey(action)) {
     bridges.furnitureBridge.onAction(action);
+    return;
+  }
+  // ADR-646 Φ4 #6 — scale tool «Αναφορά» (reference-pick) action.
+  if (isScaleToolActionKey(action)) {
+    bridges.scaleToolBridge.onAction(action);
     return;
   }
   bridges.wrappedHandleAction(action, data);

@@ -111,6 +111,26 @@ imported `ACAD_ISO*`) → built-in catalog → minimal CONTINUOUS stand-in. Το
   pre-existing ADR-642 concern· σπάνιο σε κατόψεις· εκτός Φάσης A.
 
 ## 6. Changelog
+- **2026-07-13 — #7d 100% round-trip hatch fidelity: preserve+prefer τον ΠΡΩΤΟΤΥΠΟ ορισμό (UNCOMMITTED):**
+  Ο Giorgio ρώτησε (σωστά): «να μη μαντεύουμε — AutoCAD→Nestor→AutoCAD να συμφωνούν 100%». Λύση (χωρίς
+  catalog-guessing): ο μηχανισμός `inlinePattern` (ADR-507 Φ6) διατηρεί τον ΑΚΡΙΒΗ ορισμό (43-49) του
+  πρωτότυπου· τον έκανα **always-on + preferred**:
+  - **Import** (`dxf-hatch-converter`): κρατά inlinePattern ΓΙΑ ΚΑΘΕ predefined με ρητό ορισμό (όχι μόνο
+    catalog-miss).
+  - **Render** (`hatch-pattern-geometry`): προτιμά inlinePattern έναντι catalog → 1:1 με το πρωτότυπο.
+  - **Export** (`dxf-ascii-hatch-writer`): επανεκπέμπει το inlinePattern ΑΥΤΟΥΣΙΟ (×s όπως το boundary).
+  Το catalog πλέον ΜΟΝΟ για hatches που δημιουργεί ο χρήστης στον Nestor. Round-trip test (write→read
+  verbatim, SQUARE με πρωτότυπο def) PASS. 163/163 hatch/geometry, jscpd clean (εξήχθη προϋπάρχον clone
+  `usableShiftedPaths`). (Άσχετο pre-existing fail: `dxf-attrib-attdef` — block-expander ADR-635, άλλου agent.)
+- **2026-07-13 — #7c Λάθος catalog def SQUARE → checkerboard/κουκκίδες (fidelity, UNCOMMITTED):** Το
+  αρχείο ανοίγει με ελληνικά+hatches, αλλά τα μοτίβα ≠ canvas. Διάγνωση από πραγματικά .txt (Giorgio):
+  το SQUARE στον `hatch-pattern-catalog.ts` είχε **λάθος** def — dash `.25"` (= πλήρες spacing) ΧΩΡΙΣ
+  phase (το σχόλιο μάλιστα mis-state-άρε το acad.pat) → το AutoCAD το απέδιδε ως checkerboard/κουκκίδες.
+  Fix: το ΑΚΡΙΒΕΣ acad.pat «Small aligned squares» — dash `.125"` (= ΜΙΣΟ spacing) + phase `.125"`
+  στην οριζόντια γραμμή (συνεχή τετράγωνα). Αγγίζει τον catalog (canvas+export SSoT). 554/554 tests
+  (catalog test ενημερώθηκε). ⚠️ Εκκρεμεί επιβεβαίωση Giorgio ότι το SQUARE δείχνει καθαρά τετράγωνα
+  ΚΑΙ στο AutoCAD ΚΑΙ στον canvas· αν ναι → ίδια acad.pat διόρθωση σε HEX/GRASS/NET/GRATE (πιθανά κι
+  αυτά λάθος). ADR-635 Φ C.10 catalog.
 - **2026-07-13 — #7b Hatch pattern angle: rotate base/offset (fidelity, UNCOMMITTED):** Το αρχείο ανοίγει,
   ελληνικά ✅, hatches ορατά ✅, αλλά τα μοτίβα διαφέρουν από τον canvas. Root (μερικό): το AutoCAD BAKES
   τη γωνία μοτίβου στο definition — 53 = pl.angle + patternAngle **ΚΑΙ** base(43/44)+offset(45/46)

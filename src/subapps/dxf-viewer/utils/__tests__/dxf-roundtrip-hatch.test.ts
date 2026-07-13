@@ -215,4 +215,27 @@ describe('convertHatch — predefined scale idempotency + inline pattern (ADR-50
     // Κρίσιμο: ΔΕΝ μένει αόρατη — ο geometry resolver βγάζει segments.
     expect(buildHatchEntitySegments(r).length).toBeGreaterThan(0);
   });
+
+  // ADR-644 (#7d) — 100% round-trip: ένα CATALOG name (SQUARE) με ΠΡΩΤΟΤΥΠΟ ορισμό (inlinePattern) ΔΕΝ
+  // πέφτει στο catalog — ο ΑΚΡΙΒΗΣ ορισμός διατηρείται στο import, εξάγεται αυτούσιος, ξανα-διαβάζεται ίδιος.
+  it('#7d — catalog-name hatch με inlinePattern → ο ΠΡΩΤΟΤΥΠΟΣ ορισμός round-trips verbatim (όχι catalog)', () => {
+    const original = [
+      { angle: 90, origin: [0, 0] as [number, number], delta: [0, 6.35] as [number, number], dashes: [3.175, -3.175] },
+      { angle: 0, origin: [0, 3.175] as [number, number], delta: [0, 6.35] as [number, number], dashes: [3.175, -3.175] },
+    ];
+    const hatch = {
+      id: 'h', type: 'hatch', layerId: 'L', fillType: 'predefined', patternName: 'SQUARE',
+      patternScale: 1, patternAngle: 0, islandStyle: 'normal', boundaryPaths: [SQUARE],
+      inlinePattern: { name: 'SQUARE', labelKey: '', category: 'special', lines: original },
+    } as unknown as Entity;
+    const r = roundtrip(hatch) as HatchEntity | null; // scale=1 → verbatim
+    expect(r).not.toBeNull();
+    expect(r!.inlinePattern).toBeDefined();
+    expect(r!.inlinePattern!.lines).toHaveLength(2);
+    const v = r!.inlinePattern!.lines.find((l) => l.angle === 90)!;
+    expect(v.delta).toEqual([0, 6.35]);
+    expect(v.dashes).toEqual([3.175, -3.175]);   // dash = ΜΙΣΟ spacing (acad squares) — verbatim
+    const h = r!.inlinePattern!.lines.find((l) => l.angle === 0)!;
+    expect(h.origin[1]).toBeCloseTo(3.175);       // phase offset preserved (κλείνει τα τετράγωνα)
+  });
 });

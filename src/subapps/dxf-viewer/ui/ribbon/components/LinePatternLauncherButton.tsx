@@ -15,28 +15,39 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Pencil, Copy } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
 import { LinePatternEditorDialog } from '../../panels/dimensions/LinePatternEditorDialog';
 
+/** Icon by dialog mode — «Νέος» (Plus) / «Επεξεργασία» (Pencil) / «Διπλότυπο» (Copy). */
+const MODE_ICONS = { new: Plus, edit: Pencil, duplicate: Copy } as const;
+
 interface LinePatternLauncherButtonProps {
   /** i18n key (namespace `dxf-viewer-shell`) for the button label + aria-label. */
   readonly labelKey: string;
-  /** Called with the new linetype name after a successful registration. */
+  /** Called with the linetype name after a successful create/duplicate (unused for edit-in-place). */
   readonly onCreated?: (name: string) => void;
+  /** ADR-642 Edit-in-place — edit this existing user-created type in place (name locked → upsert). */
+  readonly editName?: string;
+  /** ADR-642 Duplicate — seed from this read-only source type into a new named user copy. */
+  readonly duplicateFrom?: string;
 }
 
 export const LinePatternLauncherButton: React.FC<LinePatternLauncherButtonProps> = ({
   labelKey,
   onCreated,
+  editName,
+  duplicateFrom,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
   const colors = useSemanticColors();
   const [open, setOpen] = useState(false);
   const openDialog = useCallback(() => setOpen(true), []);
+
+  const Icon = MODE_ICONS[editName ? 'edit' : duplicateFrom ? 'duplicate' : 'new'];
 
   return (
     <span className="dxf-ribbon-combobox-row">
@@ -46,10 +57,16 @@ export const LinePatternLauncherButton: React.FC<LinePatternLauncherButtonProps>
         aria-label={t(labelKey)}
         className={`flex items-center gap-1 ${PANEL_LAYOUT.SPACING.COMPACT} ${colors.bg.backgroundSecondary} ${colors.text.secondary} ${PANEL_LAYOUT.TYPOGRAPHY.XS} rounded ${HOVER_BACKGROUND_EFFECTS.MUTED} ${PANEL_LAYOUT.TRANSITION.COLORS} select-none`}
       >
-        <Plus className="w-3 h-3 opacity-80" />
+        <Icon className="w-3 h-3 opacity-80" />
         <span>{t(labelKey)}</span>
       </button>
-      <LinePatternEditorDialog open={open} onOpenChange={setOpen} onCreated={onCreated} />
+      <LinePatternEditorDialog
+        open={open}
+        onOpenChange={setOpen}
+        onCreated={onCreated}
+        editName={editName}
+        duplicateFrom={duplicateFrom}
+      />
     </span>
   );
 };

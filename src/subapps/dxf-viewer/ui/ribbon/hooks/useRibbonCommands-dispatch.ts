@@ -59,6 +59,7 @@ import { isArrayRibbonKey, isArrayRibbonStringKey } from './bridge/array-command
 import { isLineToolRibbonKey, isLineToolPanelVisibilityKey } from './bridge/line-tool-command-keys';
 import { isDimRibbonKey } from './bridge/dim-command-keys';
 import { isXlineRibbonKey } from './bridge/xline-command-keys';
+import { isScaleToolRibbonKey } from './bridge/scale-tool-command-keys';
 // Badge / panel-visibility guards (own key-sets, live in bridge hook files).
 import { isStairBadgeKey, isStairPanelVisibilityKey } from '../../../bim/hooks/use-ribbon-stair-bridge';
 import { isWallBadgeKey } from './useRibbonWallBridge';
@@ -140,6 +141,7 @@ export interface ComboboxRouteDeps {
   readonly lineToolBridge: ComboboxCapable;
   readonly dimBridge: ComboboxCapable;
   readonly xlineModeBridge: ComboboxCapable;
+  readonly scaleToolBridge: ComboboxCapable;
 }
 
 /** Bridges consumed by the badge routes. */
@@ -258,6 +260,7 @@ export function buildComboboxRoutes(d: ComboboxRouteDeps): readonly ComboboxRout
     { ...both(isLineToolRibbonKey), ...boundCombobox(d.lineToolBridge) },
     { ...both(isDimRibbonKey), ...boundCombobox(d.dimBridge) },
     { ...both(isXlineRibbonKey), ...boundCombobox(d.xlineModeBridge) },
+    { ...both(isScaleToolRibbonKey), ...boundCombobox(d.scaleToolBridge) },
   ];
 }
 

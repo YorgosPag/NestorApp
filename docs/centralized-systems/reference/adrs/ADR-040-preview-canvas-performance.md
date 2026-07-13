@@ -72,6 +72,35 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-13 — ✅ Matrix ghost: transform preview O(1)/frame (ADR-646 Φάση 6· ΟΡΙΣΤΙΚΟ fix για το scale-freeze)
+**Τι:** το Φ.5 LOD (παρακάτω) ανακούφισε αλλά ΠΑΛΙ πάγωνε σε ακραία κλίμακα. **Definitive fix** — το 2D preview
+ισοδύναμο του **bitmap-under-matrix** που αυτό το ADR εφαρμόζει στον κύριο καμβά (pan/zoom = matrix + blit cached
+bitmap, ΟΧΙ re-render) και του **ADR-516 `DxfBackdropCache`** (render underlay ΜΙΑ φορά, blit ανά drag frame):
+render το ghost της επιλογής **ΜΙΑ φορά** σε offscreen raster στην αρχή του drag, μετά **ΕΝΑΣ** composed affine
+(`ctx.transform` + `drawImage`) ανά frame → **O(1)/frame**, ανεξάρτητο πλήθους οντοτήτων. Ο matrix ξαναϋπολογίζεται
+από το **live** `getImmediateTransform()` (ίδιο SSoT με τον κύριο καμβά) → world-locked σε wheel-zoom/pan mid-drag,
+μηδέν React-prop lag. **Συμμόρφωση ADR-040:** **κανένα δεύτερο rAF loop** (reuse του ghost-overlay harness ADR-398/625),
+καμία νέα `useSyncExternalStore` σε orchestrator, ο offscreen δεν αγγίζει το bitmap cache / micro-leaf path. **NEW**
+`hooks/tools/transform-ghost-matrix.ts` (pure affine SSoT· 11 jest) + `transform-ghost-matrix-cache.ts`
+(`TransformGhostMatrixCache` — arm/capture/blit mirror του `DxfBackdropCache`). **MOD** `use-transform-ghost-preview.ts`
+(opt-in `matrixGhost`) + `useScalePreview.ts`. Φ.5 LOD = fallback για oversize raster. Commit αμετάβλητο. Πλήρες
+detail: **ADR-646 #8 + §Changelog**· transform-ghost SSoT: **ADR-625**. 52 jest πράσινα· jscpd:diff καθαρό. ΟΧΙ tsc
+(N.17). 🔴 browser-verify (scale χιλιάδων: drag responsive, ghost σωστός, commit ψήνει όλες) + commit (Giorgio).
+
+### 2026-07-13 — ✅ Scale drag-preview LOD/cap (ADR-646 Φάση 5· freeze σε scale πολλών οντοτήτων)
+**Τι:** το live scale ghost (`hooks/tools/useScalePreview.ts`) έκανε full `scaleEntity` + `drawRealEntityPreview`
+(model build + style resolve + composite) για **ΚΑΘΕ** επιλεγμένη οντότητα ανά **frame** του drag → O(N) βαριά
+renders/frame → main-thread freeze σε επιλογές χιλιάδων. **Ακριβώς η O(N)-ανά-frame παγίδα που αυτό το ADR
+απαγορεύει** στον κύριο καμβά — το preview παραβίαζε τον κανόνα. **FIX (interim, AutoCAD «simplified drag
+preview»):** νέο pure SSoT `systems/scale/scale-preview-lod.ts`· πάνω από cap=400 → stride-sampled 400
+full-fidelity + ΕΝΑ scaled union-bbox (gold closed polyline μέσω του ΙΔΙΟΥ real-preview path)· union bbox
+**cached ανά drag** (`useRef` keyed by selection identity) → O(1) scaling/frame, O(cap) renders/frame. Commit
+αμετάβλητο (ψήνει τα πάντα). Καμία αλλαγή σε bitmap cache / micro-leaf subscription (η αλλαγή ζει στο preview
+hook· καμία νέα `useSyncExternalStore` σε orchestrator). **Definitive fix εκκρεμεί = matrix ghost** (O(1)/frame,
+cached ghost + single affine) στο shared `use-transform-ghost-preview.ts` (ADR-646 Φ.6). Πλήρες detail:
+**ADR-646 #8 + §Changelog**. ΟΧΙ tsc (N.17)· jest 23 suites/179 GREEN· jscpd:diff καθαρό. 🔴 browser-verify (scale
+χιλιάδων οντοτήτων: responsive, sample+box ghost· commit ψήνει όλες) + commit (Giorgio).
+
 ### 2026-07-13 — ✅ 3D DXF overlay = view-dependent frustum culling + screen-size text LOD (ADR-645 Φάση C)
 **Τι:** στο multi-floor «Όλοι οι όροφοι» ό,τι είναι εκτός frustum ή projectάρεται πολύ μικρό δεν σχεδιάζεται
 (Revit/Navisworks declutter), χωρίς να σπάσει το Φ.A/B streaming. **Συμμόρφωση ADR-040 (κανένα δεύτερο rAF,

@@ -1,6 +1,6 @@
 # ADR-646: Scale Tool — Ανάλυση Κενών & Χάρτης Ολοκλήρωσης
 
-**Status:** 🟡 IN PROGRESS (Φάσεις 1+2+3 ✅ IMPLEMENTED 2026-07-13· Φάση 4 εκκρεμεί)
+**Status:** 🟢 IMPLEMENTED (Φάσεις 1+2+3 ✅ 2026-07-13· **Φάση 4 UI (#6+#7) ✅ 2026-07-13**· **Φάση 5 (perf LOD) ✅ 2026-07-13**· **Φάση 6 (perf definitive — matrix ghost) ✅ 2026-07-13**)
 **Date:** 2026-07-12
 **Domain:** DXF Viewer — Modify Tools
 **Base:** [ADR-348](ADR-348-scale-command.md) (Scale Command)· σχετικά: ADR-418 (view-scale), ADR-625 (transform ghost preview SSoT)
@@ -116,15 +116,51 @@
   κορυφή. Uniform (οποιοδήποτε rotation) Ή axis-aligned rect → μένει rect (η ομοιόμορφη κλίμακα δεν
   παραμορφώνει το ορθογώνιο).
 
-### 🟡 #6 — Καμία οπτική βοήθεια UI
-- Μόνο command-line στιλ (πληκτρολόγηση + `tool-hints`). Δεν υπάρχει on-screen numeric box, presets
-  (×2 / ×0.5), ούτε ένδειξη ότι υπάρχουν τα `C`/`R`/`N`. Ο χρήστης δεν τα ανακαλύπτει.
-- **Fix sketch:** contextual ribbon tab ή status-bar options (mirror άλλων modify tools) με κουμπιά
-  Copy/Reference/Non-uniform + πεδίο συντελεστή.
+### 🟡 #6 — Καμία οπτική βοήθεια UI — ✅ ΔΙΟΡΘΩΘΗΚΕ (2026-07-13, Φάση 4, contextual ribbon tab)
+- **Σύμπτωμα:** μόνο command-line στιλ (πληκτρολόγηση + `tool-hints`). Δεν υπήρχε on-screen numeric box,
+  presets (×2 / ×0.5), ούτε ένδειξη ότι υπάρχουν τα `C`/`R`/`N`. Ο χρήστης δεν τα ανακάλυπτε.
+- **Απόφαση (SSoT):** contextual **ribbon tab** (mirror `xline`/`array` — το `StatusBar.tsx` είναι legacy
+  hardcoded-strings/div-soup, ΟΧΙ το σωστό surface). Το scale είναι modal operation → **κατέχει** το ribbon
+  context όσο είναι ενεργό (mirror του animation tool: early priority πριν το selection resolution, αλλιώς
+  η επιλογή — π.χ. γραμμή → «Στυλ Γραμμής» — θα σκίαζε το scale tab).
+- **Υλοποίηση:** NEW `ui/ribbon/data/contextual-scale-tool-tab.ts` (Copy toggle / Non-uniform toggle /
+  Reference action + editable numeric factor combobox με presets), `hooks/bridge/scale-tool-command-keys.ts`,
+  `hooks/useRibbonScaleToolBridge.ts` (self-contained, subscribe `ScaleToolStore`). Το factor field κάνει
+  **full commit** μέσω hook-registered **commit-sink** (`ScaleToolStore.setCommitSink`/`commitUniformScale`
+  ← `executeScale`) → ίδιο μονοπάτι με typed-Enter. Toggles/action = pure store writes (mirror keyboard
+  `C`/`N`/`R`, incl. sub-phase transitions· pre-start non-uniform armed → τιμάται στο base-point pick).
+  Wiring: trigger barrel + `RIBBON_CONTEXTUAL_TABS` + `useActiveContextualTrigger` early return +
+  dispatch/toggle/action route tables + `useDxfViewerRibbon` instantiation. i18n el+en. +8 bridge tests.
 
-### 🟢 #7 — Dead code (minor)
-- `systems/scale/scale-reference-calc.ts` `computeNonUniformRef` **δεν χρησιμοποιείται** (ο tool καλεί
-  `computeUniformRef` ×2 ανά άξονα). Είτε κατανάλωσέ το είτε αφαίρεσέ το (dead-code ratchet).
+### 🟢 #7 — Dead code (minor) — ✅ ΔΙΟΡΘΩΘΗΚΕ (2026-07-13, Φάση 4, removed)
+- `systems/scale/scale-reference-calc.ts` `computeNonUniformRef` **αφαιρέθηκε** (grep = 0 call sites). Το FSM
+  συλλέγει κάθε άξονα διαδοχικά (`ref_*_x` → `confirmRefNewX`, μετά `ref_*_y` → `confirmRefNewY`) καλώντας
+  `computeUniformRef` ×2 → ένα combined 6-point variant δεν θα προσεγγιζόταν ποτέ. Doc-comment στη θέση του.
+
+### 🔴 #8 — Freeze σε scale ΠΟΛΛΩΝ οντοτήτων (perf) — ✅ ΜΕΡΙΚΩΣ ΔΙΟΡΘΩΘΗΚΕ (2026-07-13, LOD/cap· matrix-ghost εκκρεμεί)
+- **Σύμπτωμα (Giorgio 2026-07-13):** επιλογή πολλών οντοτήτων → κλιμάκωση → **ο browser κολλάει** κατά το drag.
+- **Ρίζα (CODE=SoT):** `hooks/tools/useScalePreview.ts` `renderCopies` — ανά **frame** του drag κάνει
+  **full `scaleEntity` + `drawRealEntityPreview` (model build + style resolve + composite) για ΚΑΘΕ**
+  επιλεγμένη οντότητα. Κόστος = O(N) βαριά renders/frame → main thread block (η ίδια O(N)-ανά-frame παγίδα
+  που το ADR-040 απαγορεύει στον κύριο καμβά· το scale ghost παραβίαζε τον δικό του κανόνα). Το **commit**
+  είναι O(N) μία φορά (ανεκτό) — ο ένοχος είναι το preview.
+- **Προσδοκία (μεγάλοι):** κανείς δεν ξαναϋπολογίζει vertices ανά frame. Figma/Illustrator/PowerPoint →
+  **ΕΝΑΣ affine matrix** πάνω σε cached ghost (O(1)/frame), bake στο release. AutoCAD/BricsCAD → **απλοποιημένο
+  drag preview** για τεράστιες επιλογές (sample + extent), regen στο commit.
+- **Υλοποίηση Φάση 5 (interim, low-risk — «και τα δύο σταδιακά», Giorgio):** νέο pure SSoT
+  `systems/scale/scale-preview-lod.ts`. Πάνω από `SCALE_PREVIEW_FULL_FIDELITY_MAX`=400 το preview
+  γίνεται **stride-sampled subset (400) full-fidelity + ΕΝΑ scaled union-bbox** (χρυσό closed polyline
+  μέσω του ΙΔΙΟΥ real-preview path — μηδέν νέα world→screen math). Το union bbox υπολογίζεται στην
+  **unscaled** επιλογή, **cached ανά drag** (`useRef` keyed by selection identity) → μόνο O(1) scaling/frame.
+  Cost: O(cap)/frame αντί O(N). Commit αμετάβλητο (ψήνει τα πάντα). +9 tests, jscpd clean.
+- **Φάση 6 (definitive) ✅ IMPLEMENTED 2026-07-13:** ο πραγματικός big-player fix = **matrix ghost**.
+  Render το ghost της επιλογής **ΜΙΑ φορά** σε offscreen raster στην αρχή του drag, μετά **ΕΝΑΣ** composed
+  affine matrix (`ctx.transform` + `drawImage`) ανά frame → **O(1)/frame**, ανεξάρτητο πλήθους. Ο matrix
+  ξαναϋπολογίζεται από το **live** `getImmediateTransform()` → world-locked σε wheel-zoom/pan mid-drag·
+  non-uniform (sx≠sy) → circle→ellipse δωρεάν. Opt-in `matrixGhost` capability στο **shared skeleton**
+  `use-transform-ghost-preview.ts` (έτοιμο για move/rotate). Το Φ.5 LOD μένει **fallback** για oversize
+  raster (bbox > cap). Bake αμετάβλητο (commit ψήνει τα πάντα). Reuse: `computeUnionBBox` (Φ.5),
+  `drawRealEntityPreview` (one-time capture), `BimPreviewRenderer`· μίμηση `DxfBackdropCache` (ADR-516).
 
 ---
 
@@ -140,8 +176,17 @@ Skip-with-message για parametric BIM + πραγματικό scale για τα
 **Φάση 3 — Γεωμετρική ορθότητα (#4, #5). ✅ IMPLEMENTED 2026-07-13.** Arc→**true elliptical arc** σε
 non-uniform (νέος render SSoT για μερική έλλειψη)· rotated rectangle → parallelogram polyline bake.
 
-**Φάση 4 — UI affordance (#6) + καθαρισμός (#7).** Contextual controls για C/R/N + συντελεστή·
-κατανάλωση/αφαίρεση `computeNonUniformRef`.
+**Φάση 4 — UI affordance (#6) + καθαρισμός (#7). ✅ IMPLEMENTED 2026-07-13.** Contextual **ribbon tab**
+«Κλιμάκωση» (Copy/Non-uniform toggles + Reference action + editable factor combobox, full-commit μέσω
+commit-sink)· `computeNonUniformRef` αφαιρέθηκε. *(3 new + ~11 wiring αρχεία, 1 domain· ribbon SSoT.)*
+
+**Φάση 5 — Perf LOD/cap (#8). ✅ IMPLEMENTED 2026-07-13.** Bounded drag preview (sample + extent box)
+πάνω από το cap· `scale-preview-lod.ts` SSoT. *(1 new + 1 mod + 1 test· χαμηλό ρίσκο.)*
+
+**Φάση 6 — Perf definitive: matrix ghost (#8). ✅ IMPLEMENTED 2026-07-13.** Cached offscreen ghost +
+single composed affine (O(1)/frame) στο shared `use-transform-ghost-preview.ts` (opt-in `matrixGhost`)·
+νέα SSoT `transform-ghost-matrix.ts` (pure) + `transform-ghost-matrix-cache.ts` (DOM cache class). Wired
+για SCALE· έτοιμο για move/rotate. *(2 new + 2 mod + 1 test· perf-critical, ADR-040/625· Plan Mode.)*
 
 *(Κάθε φάση ξεχωριστή συνεδρία ≤70% context· ADR-driven, ADR-348 + αυτό το ADR ενημερώνονται ίδιο commit.)*
 
@@ -158,6 +203,50 @@ non-uniform (νέος render SSoT για μερική έλλειψη)· rotated 
 
 ## Changelog
 
+- **2026-07-13** — **Φάση 6 IMPLEMENTED (#8 perf — ΟΡΙΣΤΙΚΟ fix για freeze σε scale χιλιάδων οντοτήτων).**
+  Το Φ.5 LOD ανακούφισε αλλά ΠΑΛΙ κολλούσε σε ακραία κλίμακα (Giorgio). Definitive big-player fix
+  (**Figma/Illustrator/AutoCAD/Revit/C4D**): render το ghost της επιλογής **ΜΙΑ φορά** σε offscreen raster
+  στην αρχή του drag, μετά **ΕΝΑΣ** composed affine matrix (`ctx.transform` + `drawImage`) ανά frame →
+  **O(1)/frame**. Ο matrix = `compose(worldToScreen(live) ∘ scaleAboutBase(world) ∘ offscreenPx→world)`·
+  όλα affine αφού `CoordinateTransforms.worldToScreen` είναι affine → world-locked σε wheel-zoom/pan
+  mid-drag (live `getImmediateTransform()`), non-uniform → circle→ellipse δωρεάν. **NEW** `hooks/tools/
+  transform-ghost-matrix.ts` (pure affine SSoT: `composeAffine`/`scaleAboutBaseWorldAffine`/
+  `worldToScreenAffine`/`offscreenToWorldAffine`/`captureRectFromBBox`/`buildCaptureTransform`· 11 jest,
+  incl. world-lock invariant) + `transform-ghost-matrix-cache.ts` (DOM `TransformGhostMatrixCache` class —
+  mirrors ADR-516 `DxfBackdropCache` arm/capture/blit — + `MatrixGhostConfig` opt-in + `runMatrixGhost`).
+  **MOD** `use-transform-ghost-preview.ts` (opt-in `matrixGhost` capability: render-once ref + blit,
+  fallback σε `renderCopies` όταν λείπει/oversize) + `useScalePreview.ts` (`getWorldAffine =
+  scaleAboutBaseWorldAffine(base, live, live)`· `captureDragRef` extracted SSoT — shared με το LOD
+  fallback, μηδέν clone). **Reuse:** `computeUnionBBox` (Φ.5), `drawRealEntityPreview` (one-time capture),
+  `BimPreviewRenderer`, το ΕΝΑ rAF harness (ADR-398/625 — **κανένα** δεύτερο loop). **Φ.5 LOD** = fallback
+  για oversize raster (bbox × scale0 > `MATRIX_GHOST_MAX_CSS`=4096 CSS px). Honest tradeoff: το raster
+  κόβεται στο drag-start zoom → ήπιο blur + lineweight scale στο ghost σε ακραίο zoom-in (crisp στο commit·
+  Figma/Revit-grade). 52 jest πράσινα, jscpd:diff clean. ΟΧΙ tsc (N.17). _(Shared tree: surgical edits μόνο.)_
+- **2026-07-13** — **Φάση 4 IMPLEMENTED (#6 UI affordance + #7 dead-code).** Contextual **ribbon tab**
+  «Κλιμάκωση» (SSoT surface, mirror `xline`/`array`· το `StatusBar.tsx` legacy = απορρίφθηκε). **NEW**
+  `ui/ribbon/data/contextual-scale-tool-tab.ts` (Copy/Non-uniform toggles + Reference action + editable
+  numeric factor combobox με ×2/×0.5/×-1 presets), `ui/ribbon/hooks/bridge/scale-tool-command-keys.ts`,
+  `ui/ribbon/hooks/useRibbonScaleToolBridge.ts` (self-contained, subscribe `ScaleToolStore`). Το factor
+  field κάνει **full commit** μέσω hook-registered **commit-sink** (`ScaleToolStore.setCommitSink`/
+  `commitUniformScale` ← `executeScale` στο `useScaleTool`, module-level εκτός reactive state → μηδέν
+  render churn ADR-040) → ίδιο μονοπάτι με typed-Enter. Toggles/action = pure store writes (mirror keyboard
+  `C`/`N`/`R` + sub-phase transitions· pre-start non-uniform armed → τιμάται στο base-point pick του
+  `handleScaleClick`). Το scale είναι **modal** → early-priority return στο `useActiveContextualTrigger`
+  (mirror animation· αλλιώς η επιλογή-στόχος σκίαζε το tab). Wiring: `contextual-triggers` barrel +
+  `RIBBON_CONTEXTUAL_TABS` + dispatch/toggle/action route tables (`useRibbonCommands*`) + `useDxfViewerRibbon`
+  instantiation. i18n el+en (tab/panels/commands). **#7:** `computeNonUniformRef` αφαιρέθηκε (grep 0 call
+  sites· FSM = per-axis `computeUniformRef` ×2). +8 bridge tests· dispatch coverage 32→33 routes· jscpd:diff
+  clean. ΟΧΙ tsc (N.17). _(Shared tree: co-authored ADR-646 με τον Φ5/Φ6 agent — surgical edits μόνο.)_
+- **2026-07-13** — **Φάση 5 IMPLEMENTED (#8 perf — freeze σε scale πολλών οντοτήτων).** Root cause (CODE=SoT):
+  `useScalePreview.renderCopies` έκανε full `scaleEntity` + `drawRealEntityPreview` για ΚΑΘΕ επιλεγμένη
+  οντότητα ανά **frame** → O(N) βαριά renders/frame → main-thread freeze (η O(N)-ανά-frame παγίδα του ADR-040).
+  Απόφαση Giorgio: «και τα δύο σταδιακά» → interim LOD/cap τώρα, matrix-ghost (Φ.6) μετά. **NEW** pure SSoT
+  `systems/scale/scale-preview-lod.ts` (`resolveScalePreviewLod`/`sampleIds`/`computeUnionBBox`/
+  `scaleBBoxAboutBase`/`buildExtentBoxEntity`). Πάνω από cap=400 → stride-sampled 400 full-fidelity + ΕΝΑ
+  scaled union-bbox (gold closed polyline μέσω του ίδιου real-preview path)· union bbox cached ανά drag
+  (`useRef` keyed by selection identity) → O(1) scaling/frame. Commit αμετάβλητο. +1 test (9 tests, 23
+  suites/179 GREEN)· jscpd:diff clean. Co-staged ADR-040 (`useScalePreview` = preview-canvas file, CHECK 6D).
+  **Εκκρεμεί Φ.6:** matrix ghost στο shared skeleton (definitive, O(1)/frame, move/rotate/scale). ΟΧΙ tsc (N.17).
 - **2026-07-13** — **Φάση 3 IMPLEMENTED (#4 arc→true elliptical arc, #5 rotated rect→parallelogram).**
   Απόφαση Giorgio: «όπως οι μεγάλοι — Revit/ArchiCAD/Cinema4D/Figma-level, full enterprise· τα tokens/χρόνος
   δεν με προβληματίζουν» → **πραγματικό elliptical arc**, όχι polyline bake. Grep audit (CODE=SoT) αποκάλυψε

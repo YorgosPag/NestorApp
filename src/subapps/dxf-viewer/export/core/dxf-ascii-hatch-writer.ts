@@ -143,6 +143,24 @@ export function emitHatch(
  * να ταιριάζει με την οθόνη. Άγνωστο pattern → fallback σε μία γραμμή (valid hatch).
  */
 function emitPredefinedPattern(e: HatchEntity, pair: Pair, s: number): void {
+  // ADR-644 (#7d) — 100% round-trip: αν διατηρήθηκε ο ΠΡΩΤΟΤΥΠΟΣ ορισμός (inlinePattern, από import),
+  // εκπέμπεται ΑΥΤΟΥΣΙΟΣ (absolute lines: 53 = τελική γωνία → 52=0· χωρίς catalog scale). Μόνο ×s
+  // (scene→output) όπως το boundary → AutoCAD→Nestor→AutoCAD πανομοιότυπη γραμμοσκίαση.
+  const inline = e.inlinePattern;
+  if (inline && inline.lines.length) {
+    pair(52, 0);                                  // pattern angle (baked into each 53)
+    pair(41, 1);                                  // pattern scale (geometry is absolute)
+    pair(77, e.doubleCrossHatch ? 1 : 0);
+    pair(78, inline.lines.length);
+    for (const pl of inline.lines) {
+      pair(53, pl.angle);                         // final line angle (verbatim)
+      pair(43, pl.origin[0] * s); pair(44, pl.origin[1] * s); // base point (× s, like boundary)
+      pair(45, pl.delta[0] * s); pair(46, pl.delta[1] * s);   // offset (× s)
+      pair(79, pl.dashes.length);
+      for (const d of pl.dashes) pair(49, d * s); // dash lengths (× s)
+    }
+    return;
+  }
   const angle = e.patternAngle ?? 0;
   // ADR-644 (#7) — WYSIWYG με τον canvas: ο canvas κτίζει τις γραμμές μοτίβου σε SCENE units
   // (`pattern.delta × scale`, ίδιες μονάδες με το scene-unit boundary). Το export κλιμακώνει ΚΑΙ το

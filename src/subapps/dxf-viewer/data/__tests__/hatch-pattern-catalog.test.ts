@@ -118,14 +118,18 @@ describe('hatch-pattern-catalog — acad.pat parity (ADR-635 Φ C.10)', () => {
     expect(diag.dashes[1]).toBeCloseTo(-1.8125 * INCH);
   });
 
-  it('SQUARE υπάρχει = 0/90 grid με τετράγωνα dashes (πριν: catalog MISS → κανένα pattern)', () => {
+  it('SQUARE = ΑΚΡΙΒΕΣ acad.pat 0/90 grid (dash = ΜΙΣΟ spacing + phase → συνεχή τετράγωνα, ADR-644 #7c)', () => {
     const sq = getHatchPattern('SQUARE');
     expect(sq).toBeDefined();
     expect(sq!.lines.map((l) => l.angle).sort((a, b) => a - b)).toEqual([0, 90]);
     for (const l of sq!.lines) {
-      expect(l.delta[1]).toBeCloseTo(0.25 * INCH);
-      expect(l.dashes).toEqual([0.25 * INCH, -0.25 * INCH]);
+      expect(l.delta[1]).toBeCloseTo(0.25 * INCH);            // κάθετη απόσταση = .25"
+      // acad.pat: dash = .125" = ΜΙΣΟ του spacing (το παλιό .25" έβγαζε checkerboard/κουκκίδες).
+      expect(l.dashes).toEqual([0.125 * INCH, -0.125 * INCH]);
     }
+    // η οριζόντια (0°) γραμμή έχει phase offset .125" ώστε οι ακμές να κλείνουν τα τετράγωνα.
+    const horiz = sq!.lines.find((l) => l.angle === 0)!;
+    expect(horiz.origin[1]).toBeCloseTo(0.125 * INCH);
   });
 
   it('HEX υπάρχει = 0/60/120 οικογένειες (πριν: catalog MISS → κανένα pattern)', () => {

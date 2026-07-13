@@ -23,6 +23,9 @@ jest.mock('../../../systems/corner/corner-math', () => ({ resolveSharedPolylineC
 jest.mock('../useBimPreviewRenderer', () => ({ useBimPreviewRenderer: () => () => ({}) }));
 jest.mock('../useLevelLayersById', () => ({ useLevelLayersById: () => () => ({}) }));
 jest.mock('../../../rendering/ghost/draw-real-entity-preview', () => ({ drawRealEntityPreview: jest.fn() }));
+// ADR-646 Φ6 — the matrix-ghost cache imports the real-entity renderer class directly (offscreen
+// capture); stub it too so the module-load smoke stays off the firebase chain.
+jest.mock('../../../canvas-v2/preview-canvas/bim-preview-render', () => ({ BimPreviewRenderer: class { render(): void {} } }));
 
 import { useCanvasGhostPreview } from '../useCanvasGhostPreview';
 import { tracePolyline } from '../overlay-draw-primitives';

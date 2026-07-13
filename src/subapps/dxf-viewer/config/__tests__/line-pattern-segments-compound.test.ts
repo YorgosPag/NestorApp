@@ -17,6 +17,7 @@ import {
   describeLayers,
   validateLinePatternLayers,
   centerOffsetForLayer,
+  suggestCopyName,
 } from '../line-pattern-segments';
 import { COMPOUND_PRESETS, listCompoundPresets } from '../linetype-compound-presets';
 
@@ -138,5 +139,16 @@ describe('compound presets', () => {
     const b = listCompoundPresets()[0].build();
     expect(a).not.toBe(b);
     expect(a).toEqual(b);
+  });
+});
+
+describe('suggestCopyName (Duplicate & edit)', () => {
+  it('appends the smallest free numeric suffix', () => {
+    expect(suggestCopyName('Dashed', ['ByLayer', 'Dashed'])).toBe('Dashed 2');
+    expect(suggestCopyName('Dashed', ['Dashed', 'Dashed 2'])).toBe('Dashed 3');
+  });
+
+  it('returns the base itself when it is free', () => {
+    expect(suggestCopyName('MyType', ['ByLayer', 'Other'])).toBe('MyType');
   });
 });

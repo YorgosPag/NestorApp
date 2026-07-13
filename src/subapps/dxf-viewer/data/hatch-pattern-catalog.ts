@@ -318,11 +318,14 @@ export const HATCH_PATTERN_CATALOG: Readonly<Record<string, HatchPattern>> = {
   // (μόνο outline). Ακριβή acad.pat conversions (× INCH), ώστε canvas + DXF-export να τα
   // αποδίδουν 1:1 με την AutoCAD.
   SQUARE: {
-    // acad.pat: `0/90, 0,0, 0,.25, .25,-.25` → μικρά ευθυγραμμισμένα τετράγωνα.
+    // ADR-644 (#7c) — ΑΚΡΙΒΕΣ acad.pat: `*SQUARE, 90, 0,0, 0,.25, .125,-.125` + `0, 0,.125, 0,.25,
+    // .125,-.125`. Το ΠΑΛΙΟ (λάθος) `.25,-.25` (dash = πλήρες spacing, ΧΩΡΙΣ phase) παρήγαγε
+    // checkerboard → κουκκίδες στο AutoCAD. Το σωστό dash = ΜΙΣΟ spacing (.125) + phase .125 στην
+    // οριζόντια γραμμή κλείνει τα τετράγωνα (συνεχή περιγράμματα, όχι checkerboard).
     name: 'SQUARE', labelKey: 'ribbon.commands.hatchEditor.patterns.square', category: 'special',
     lines: [
-      line(0, [0, 0], [0, 0.25 * INCH], [0.25 * INCH, -0.25 * INCH]),
-      line(90, [0, 0], [0, 0.25 * INCH], [0.25 * INCH, -0.25 * INCH]),
+      line(90, [0, 0], [0, 0.25 * INCH], [0.125 * INCH, -0.125 * INCH]),
+      line(0, [0, 0.125 * INCH], [0, 0.25 * INCH], [0.125 * INCH, -0.125 * INCH]),
     ],
   },
   HEX: {

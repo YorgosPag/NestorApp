@@ -67,6 +67,16 @@ function _patch(partial: Partial<ScaleToolState>): void {
   store.set({ ...store.get(), ...partial });
 }
 
+// ── Commit sink (ADR-646 Φ4 #6) ─────────────────────────────────────────────────
+// The ribbon «Συντελεστής» field commits a uniform scale, but the actual executor
+// (`executeScale`) lives in the `useScaleTool` hook — it needs the scene-manager +
+// command history the store has no access to. The hook registers its executor here
+// on activate (clears it on deactivate); the ribbon bridge invokes it via
+// `commitUniformScale`. Kept OUTSIDE the reactive `store` state so registering the
+// sink never notifies the ADR-040 leaf subscribers (zero render churn).
+type ScaleCommitSink = (sx: number, sy: number) => void;
+let commitSink: ScaleCommitSink | null = null;
+
 export const ScaleToolStore = {
   getState(): ScaleToolState {
     return store.get();
@@ -127,6 +137,21 @@ export const ScaleToolStore = {
 
   clearBuffer(): void {
     _patch({ numericBuffer: '' });
+  },
+
+  // ADR-646 Φ4 #6 — the hook registers/clears its `executeScale` executor here so
+  // the ribbon «Συντελεστής» field can trigger the SAME commit path as typed-Enter.
+  setCommitSink(sink: ScaleCommitSink | null): void {
+    commitSink = sink;
+  },
+
+  /**
+   * Ribbon «Συντελεστής» → uniform scale via the hook-registered executor. No-op
+   * (harmless) if the tool is inactive or no base point has been picked yet — the
+   * executor itself guards `!basePoint` and `factor === 0` (ADR-646 Φ4 #6).
+   */
+  commitUniformScale(factor: number): void {
+    commitSink?.(factor, factor);
   },
 
   reset(): void {

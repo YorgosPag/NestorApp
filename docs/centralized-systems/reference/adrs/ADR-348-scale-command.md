@@ -268,7 +268,10 @@ Non-uniform + Reference combination (enterprise mode — CONFIRMED Option A):
 - Two independent reference lines: one for X axis, one for Y axis
 - system computes: sx = new_x / ref_length_x, sy = new_y / ref_length_y
 - Reference lines for X and Y are independent — user picks 2 points per axis
-- SSoT: `scale-reference-calc.ts` handles both `computeUniformRef(p1,p2,newLen)` and `computeNonUniformRef(p1x,p2x,p1y,p2y,newLenX,newLenY)`
+- SSoT: `scale-reference-calc.ts` `computeUniformRef(p1,p2,newLen)` — called ONCE PER AXIS. The FSM
+  collects each axis sequentially (`ref_*_x → confirmRefNewX`, then the y triple → `confirmRefNewY`),
+  so non-uniform reference is just two independent `computeUniformRef` calls; a combined 6-point helper
+  is unnecessary (ADR-646 #7 removed the dead `computeNonUniformRef`).
 
 ### Scale Tool Store
 
@@ -439,3 +442,4 @@ useEffect(() => {
 | 2026-07-13 | 1.3 | **Interactive scaling (ADR-646 Φάση 1)** — click πλέον κλειδώνει τον συντελεστή. `computeLiveScale` έγινε shared SSoT στο `scale-reference-calc.ts` (λόγος ως προς `ScaleToolStore.dragRefPoint` = πρώτο cursor sample, αντί hardcoded `dist/100`)· `handleScaleClick` case `direct` → commit· cases `ref_new_x/y` → νέο μήκος με pick (`dist(base,pt)`) μέσω shared `confirmRefNewX/Y`. Βλ. **ADR-646** για πλήρη ανάλυση. |
 | 2026-07-13 | 1.4 | **Unsupported-entity handling + geometric coverage (ADR-646 Φάση 2, υβριδικά).** `isScalableEntityType()` SSoT gate· parametric BIM + `stair` → skip-with-message (`partitionSelection` στο `useScaleTool.ts`, νέα i18n keys). Νέα scale transforms για xline/ray/angle-measurement/center-mark/centerline/annotation-symbol/scale-bar/opening-info-tag/array (πρώην silent `default:{}`). Βλ. **ADR-646 #3** για fidelity boundaries. |
 | 2026-07-13 | 1.5 | **Γεωμετρική ορθότητα (ADR-646 Φάση 3, #4+#5) — full enterprise.** `scaleArc` non-uniform → **true elliptical arc** (`EllipseEntity` + `startParam/endParam`, όπως AutoCAD): νέο SSoT `nonUniformEllipseAxes` (κοινό circle+arc) + `circleAngleToEllipseParam` (swap/mirror-safe param map από την visible CCW range). `scaleRectangle` rotated+non-uniform → **parallelogram** closed polyline (reuse `rectangleEntityVertices`). Επεκτάθηκε το rendering ώστε να ζωγραφίζει **μερική** έλλειψη: νέο `geometry-ellipse-utils.ts` SSoT sampler, `EllipseRenderer` + `validateEllipseEntity` τιμούν πλέον `startParam/endParam`. +7 tests. Βλ. **ADR-646 #4/#5**. |
+| 2026-07-13 | 1.6 | **UI affordance + dead-code (ADR-646 Φάση 4, #6+#7).** Νέο contextual **ribbon tab** «Κλιμάκωση» (SSoT surface, mirror `xline`/`array`): Copy/Non-uniform toggles + Reference action + editable numeric factor combobox (`contextual-scale-tool-tab.ts` + `scale-tool-command-keys.ts` + `useRibbonScaleToolBridge.ts`). Το factor field κάνει full commit μέσω hook-registered **commit-sink** στο `ScaleToolStore` (`setCommitSink`/`commitUniformScale` ← `executeScale`)· toggles/action = pure store writes (mirror keyboard C/N/R). Το scale (modal) κατέχει το ribbon context με early-priority στο `useActiveContextualTrigger` (mirror animation). i18n el+en. **#7:** `computeNonUniformRef` αφαιρέθηκε (dead, 0 call sites· FSM = `computeUniformRef` ×2 per-axis). +8 bridge tests. Βλ. **ADR-646 #6/#7**. |

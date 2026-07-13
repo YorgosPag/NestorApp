@@ -334,6 +334,7 @@
           "title": "Line Properties",
           "emptyState": "Select a line to view and edit its pattern segments.",
           "hint": "Add segments (Dash / Gap / Dot) to define a pattern for this line.",
+          "editHint": "Editing updates every line of this type.",
           "compoundHint": "Complex line type (multi-layer or with symbols/text) — edit it from the line-type dialog.",
           "sections": {
             "general": "General",
@@ -344,6 +345,8 @@
         "title": "New line type",
         "editTitle": "Edit line type",
         "edit": "Edit",
+        "duplicateTitle": "Duplicate line type",
+        "duplicate": "Duplicate & edit",
         "description": "Define explicit lengths for dashes, gaps and dots. The pattern is saved and selectable by name on any dimension.",
         "nameLabel": "Name",
         "namePlaceholder": "e.g. Dashed 5-2",
@@ -413,6 +416,12 @@
             "road": "Road (double line)",
             "railway": "Railway"
           }
+        },
+        "grips": {
+          "title": "Pattern edit handles",
+          "spread": "Layer spread (vertical)",
+          "length": "Pattern length scale (horizontal)",
+          "corner": "Scale on both axes"
         },
         "cancel": "Cancel",
         "save": "Save",

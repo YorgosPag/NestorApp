@@ -22,7 +22,10 @@ import {
 import { hexToTrueColor } from '../../../utils/dxf-true-color';
 import { findClosestAci } from '../../../settings/standards/aci';
 import type { Point2D } from '../../../rendering/types/Types';
-import { LINE_TOOL_RIBBON_KEYS } from './bridge/line-tool-command-keys';
+import {
+  LINE_TOOL_RIBBON_KEYS,
+  LINE_TOOL_PANEL_VISIBILITY_KEYS,
+} from './bridge/line-tool-command-keys';
 
 export const BYLAYER = 'ByLayer';
 // Transparency helpers κεντρικοποιήθηκαν στο `ribbon-entity-bridge-shared` (κοινά με το
@@ -162,4 +165,30 @@ const LINE_GEOMETRY_KEYS: ReadonlySet<string> = new Set([
 ]);
 export function isLineGeometryKey(key: string): boolean {
   return LINE_GEOMETRY_KEYS.has(key);
+}
+
+/**
+ * ADR-510 Φ4/Φ4g — pure panel-visibility resolver for the Line-Tool tab.
+ * The Geometry panel is line-only; the fillet/chamfer option panels are
+ * active-tool-only (Revit «Options Bar»); «Πλάτος» is polyline-only (or
+ * draw-defaults). Extracted from the bridge hook for the N.7.1 size budget.
+ */
+export function resolveLinePanelVisibility(
+  visibilityKey: string,
+  selected: AnySceneEntity | null,
+  activeTool: string,
+): boolean {
+  if (visibilityKey === LINE_TOOL_PANEL_VISIBILITY_KEYS.geometry) {
+    return asLine(selected) !== null;
+  }
+  if (visibilityKey === LINE_TOOL_PANEL_VISIBILITY_KEYS.filletOptions) {
+    return activeTool === 'fillet';
+  }
+  if (visibilityKey === LINE_TOOL_PANEL_VISIBILITY_KEYS.chamferOptions) {
+    return activeTool === 'chamfer';
+  }
+  if (visibilityKey === LINE_TOOL_PANEL_VISIBILITY_KEYS.widthApplicable) {
+    return selected === null || isPolylineLike(selected.type);
+  }
+  return true;
 }

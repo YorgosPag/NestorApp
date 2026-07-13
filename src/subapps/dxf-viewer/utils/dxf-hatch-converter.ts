@@ -286,13 +286,15 @@ export function convertHatch(
     };
   }
 
-  // ── Inline pattern (ADR-507 Φ6) — catalog MISS only ─────────────────────────
-  // Για άγνωστο όνομα (third-party DXF εκτός catalog) διάβασε τις inline γραμμές → render
-  // 1:1 ώστε να ΜΗΝ μένει αόρατη η γραμμοσκίαση. Η scale idempotency για catalog-hit ζει
-  // πλέον στον shared `buildHatchSceneEntity` (SSoT — no twin).
+  // ── Inline pattern (ADR-507 Φ6 → ADR-644 #7d) — ALWAYS preserve the ORIGINAL definition ─────────
+  // 100% round-trip fidelity (Giorgio): ό,τι μοτίβο έχει ρητό ορισμό (43-49) στο πρωτότυπο DXF
+  // ΔΙΑΤΗΡΕΙΤΑΙ ΑΥΤΟΥΣΙΟ — ΟΧΙ μόνο για catalog-miss. Ο render + ο export το προτιμούν έναντι του
+  // catalog (το catalog είναι πλέον ΜΟΝΟ για hatches που δημιουργεί ο χρήστης μέσα στον Nestor).
+  // Έτσι AutoCAD→Nestor→AutoCAD αποδίδει πανομοιότυπη γραμμοσκίαση, ανεξάρτητα από το αν το όνομα
+  // (SQUARE/HEX/ANSI31/…) τυχαίνει να υπάρχει στον catalog με ίδιο ή διαφορετικό ορισμό.
   const isPredefined = !gradient && !solid && patternTypeCode !== 0;
   let inlinePattern: HatchPattern | undefined;
-  if (isPredefined && !getHatchPattern(patternName) && idx78 >= 0) {
+  if (isPredefined && idx78 >= 0) {
     const lines = parseInlinePatternLines(pairs, idx78);
     if (lines.length > 0) {
       inlinePattern = {

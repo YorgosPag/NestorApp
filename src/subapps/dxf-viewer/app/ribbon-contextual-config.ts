@@ -17,6 +17,7 @@ import { CONTEXTUAL_SLAB_OPENING_TAB } from '../ui/ribbon/data/contextual-slab-o
 import { DIMENSION_CONTEXTUAL_TAB, DIMENSION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-dimension-tab';
 import { CONTEXTUAL_LINE_TOOL_TAB } from '../ui/ribbon/data/contextual-line-tool-tab';
 import { CONTEXTUAL_XLINE_MODE_TAB } from '../ui/ribbon/data/contextual-xline-mode-tab';
+import { CONTEXTUAL_SCALE_TOOL_TAB, SCALE_TOOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-scale-tool-tab';
 import { CONTEXTUAL_MULTI_SELECTION_TAB, MULTI_SELECTION_CONTEXTUAL_TRIGGER, CONTEXTUAL_TRIGGER_SEPARATOR } from '../ui/ribbon/data/contextual-multi-selection-tab';
 import { CONTEXTUAL_MEP_CIRCUIT_TAB, MEP_CIRCUIT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-circuit-tab';
 import { CONTEXTUAL_MEP_PIPE_NETWORK_TAB, MEP_PIPE_NETWORK_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-pipe-network-tab';
@@ -84,6 +85,7 @@ export const RIBBON_CONTEXTUAL_TABS = [
   DIMENSION_CONTEXTUAL_TAB,
   CONTEXTUAL_LINE_TOOL_TAB,
   CONTEXTUAL_XLINE_MODE_TAB,
+  CONTEXTUAL_SCALE_TOOL_TAB,
   CONTEXTUAL_MULTI_SELECTION_TAB,
   CONTEXTUAL_MEP_CIRCUIT_TAB,
   CONTEXTUAL_MEP_PIPE_NETWORK_TAB,
@@ -152,6 +154,12 @@ export function useActiveContextualTrigger({
   const lastNonModifyTriggerRef = React.useRef<string | null>(null);
   const trigger = React.useMemo<string | null>(() => {
     if (animationToolActive) return ANIMATION_CONTEXTUAL_TRIGGER;
+    // ADR-646 Φ4 #6 — the modal Scale operation OWNS the ribbon context while active
+    // (mirror the animation tool): its C/R/N options must take priority over the
+    // selected entity's own tab, which would otherwise shadow it — the selection IS
+    // the scale target (e.g. a line → «Στυλ Γραμμής»). Resolved from `activeTool`
+    // directly (no store), so it stays a pure early return above the selection rules.
+    if (activeTool === 'scale') return SCALE_TOOL_CONTEXTUAL_TRIGGER;
     // Wire-selected circuit (no competing entity selection) → «Κύκλωμα» tab.
     if (!primarySelectedId && activeSystemId && mepSystems.some((s) => s.id === activeSystemId)) {
       return MEP_CIRCUIT_CONTEXTUAL_TRIGGER;

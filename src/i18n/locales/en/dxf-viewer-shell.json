@@ -1428,6 +1428,7 @@
       "dimensions": "Dimensions",
       "lineToolStyle": "Line Style",
       "xlineMode": "Construction Line",
+      "scaleTool": "Scale",
       "analyze": "Analyze",
       "furnitureProperties": "Furniture Properties",
       "floorplanSymbolProperties": "Symbol Properties",
@@ -1703,6 +1704,8 @@
       "lineFilletOptions": "Fillet Options",
       "lineChamferOptions": "Chamfer Options",
       "xlineMode": "Mode",
+      "scaleToolOptions": "Options",
+      "scaleToolFactor": "Factor",
       "bimSchedule": "BIM Schedule",
       "thermalEnvelope": "Thermal Envelope",
       "furnitureCatalog": "Catalog",
@@ -1796,6 +1799,8 @@
       "dimLineTypeScale": "Density",
       "dimNewLineType": "New type",
       "lineNewLineType": "New type",
+      "lineEditLineType": "Edit",
+      "lineDuplicateLineType": "Duplicate",
       "currentLayerPicker": "Current Layer",
       "line": "Line",
       "lineVariants": {
@@ -2520,6 +2525,12 @@
         "pathAlignItems": "Align",
         "pathReversed": "Reversed",
         "pathPickPath": "Pick Path"
+      },
+      "scaleTool": {
+        "copy": "Copy",
+        "nonUniform": "Non-uniform",
+        "reference": "Reference",
+        "factor": "Factor"
       },
       "stairEditor": {
         "structureType": {

@@ -170,6 +170,23 @@ export function hasComplexSegments(segments: readonly LinePatternSegment[]): boo
 /** Reserved names the user may not reuse for a custom pattern (AutoCAD sentinels). */
 export const RESERVED_LINETYPE_NAMES: readonly string[] = ['ByLayer', 'ByBlock'];
 
+/**
+ * Suggest a free, unique NAME for a «Duplicate & edit» of `base` — the Revit/ArchiCAD «Duplicate»
+ * default (a named copy the user can keep or rename). Appends the smallest numeric suffix that is not
+ * already taken (`Dashed` → `Dashed 2` → `Dashed 3` …). A locale-neutral numeric suffix (not an English
+ * «copy» word) keeps it a pure technical identifier — linetype names are not i18n prose (N.11 exempt).
+ */
+export function suggestCopyName(base: string, existingNames: readonly string[]): string {
+  const taken = new Set(existingNames);
+  const trimmed = base.trim();
+  if (trimmed.length > 0 && !taken.has(trimmed)) return trimmed;
+  for (let i = 2; i < 1000; i++) {
+    const candidate = `${trimmed} ${i}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+  return `${trimmed} ${1000}`;
+}
+
 /** Validation failure codes — the UI maps these to i18n keys (no hardcoded text). */
 export type LinePatternErrorCode =
   | 'name.empty'
@@ -432,6 +449,13 @@ export function isCompound(layers: readonly LinePatternLayer[]): boolean {
 }
 
 /**
+ * Minimum authored dimension (mm) any grip-driven scale is allowed to reach — ADR-642 §6.7.3 min-guard.
+ * Keeps `offsetMm` band half-extent / geometry `lengthMm` from collapsing to zero or flipping sign under
+ * a drag. SSoT shared by `scaleLayerSpread`/`scalePatternLength` and the grip overlay's factor mapping.
+ */
+export const LINE_PATTERN_MIN_MM = 0.05;
+
+/**
  * The offset (mm) that centres layer `index` between the OTHER layers — the midpoint of their min &
  * max offsets (the geometric centre of the compound's span). Exactly what a cross-tie layer wants:
  * sit halfway between the outer rails, whatever their offsets (e.g. rails at 0 and +1.5 → tie +0.75),
@@ -451,6 +475,78 @@ export function centerOffsetForLayer(
   });
   if (min === Infinity) return layers[index]?.offsetMm ?? 0; // no other layers
   return (min + max) / 2;
+}
+
+// ── Grip-editor scale helpers (ADR-642 Φ6-A, §6.7) — pure model math, jest-testable ──
+
+/** The centre offset (mm) of the whole band — midpoint of ALL layers' min & max offsets (0 when empty). */
+export function bandCenterOffset(layers: readonly LinePatternLayer[]): number {
+  if (layers.length === 0) return 0;
+  let min = Infinity;
+  let max = -Infinity;
+  for (const l of layers) {
+    if (l.offsetMm < min) min = l.offsetMm;
+    if (l.offsetMm > max) max = l.offsetMm;
+  }
+  return (min + max) / 2;
+}
+
+/** Half-extent (mm) of the band = the largest `|offset − band centre|` (0 = single/centred, nothing to spread). */
+export function bandHalfExtentMm(layers: readonly LinePatternLayer[]): number {
+  const center = bandCenterOffset(layers);
+  return layers.reduce((m, l) => Math.max(m, Math.abs(l.offsetMm - center)), 0);
+}
+
+/** Total authored length (mm) of a segment list = Σ dash + gap lengths (base for the length-scale grip). */
+export function patternTotalLengthMm(segments: readonly LinePatternSegment[]): number {
+  return segments.reduce(
+    (sum, s) => (s.kind === 'dash' || s.kind === 'gap' ? sum + Math.abs(s.lengthMm) : sum),
+    0,
+  );
+}
+
+/**
+ * Uniformly scale the band spread (ADR-642 §6.7.2 top/bottom grip): every `offsetMm` moves to
+ * `centre + (offset − centre) × factor`, so the band opens/closes around its geometric centre
+ * (`bandCenterOffset`) — an asymmetric compound stays coherent. Min-guard (§6.7.3): `factor` is
+ * clamped ≥ 0 (no sign flip) and ≥ `MIN_MM / halfExtent` (the band never collapses below ε). With no
+ * spread to scale (single/centred layers → halfExtent 0) it is a no-op — a scale cannot create a band.
+ */
+export function scaleLayerSpread(
+  layers: readonly LinePatternLayer[],
+  factor: number,
+): LinePatternLayer[] {
+  const halfExtent = bandHalfExtentMm(layers);
+  if (halfExtent <= 0 || !Number.isFinite(factor)) return layers.map((l) => ({ ...l }));
+  const safe = Math.max(factor, LINE_PATTERN_MIN_MM / halfExtent, 0);
+  const center = bandCenterOffset(layers);
+  return layers.map((l) => ({ ...l, offsetMm: center + (l.offsetMm - center) * safe }));
+}
+
+/**
+ * Uniformly scale the pattern length along the path (ADR-642 §6.7.2 left/right grip): every geometry
+ * `dash`/`gap` length is multiplied by `factor`; `dot` (zero-length) and `text`/`symbol` slots are left
+ * untouched (they carry no path length). Min-guard (§6.7.3): `factor` is clamped so the SMALLEST dash/gap
+ * stays ≥ ε (ratios preserved, no collapse/inversion). With no dash/gap to scale it is a no-op.
+ */
+export function scalePatternLength(
+  layers: readonly LinePatternLayer[],
+  factor: number,
+): LinePatternLayer[] {
+  let minLen = Infinity;
+  for (const l of layers) {
+    for (const s of l.segments) {
+      if (s.kind === 'dash' || s.kind === 'gap') minLen = Math.min(minLen, Math.abs(s.lengthMm));
+    }
+  }
+  if (minLen === Infinity || !Number.isFinite(factor)) return layers.map((l) => ({ ...l }));
+  const safe = Math.max(factor, LINE_PATTERN_MIN_MM / minLen, 0);
+  return layers.map((l) => ({
+    ...l,
+    segments: l.segments.map((s) =>
+      s.kind === 'dash' || s.kind === 'gap' ? { ...s, lengthMm: Math.abs(s.lengthMm) * safe } : s,
+    ),
+  }));
 }
 
 /**

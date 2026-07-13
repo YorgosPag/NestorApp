@@ -39,6 +39,7 @@ import {
   isCompound,
   describeLayers,
   validateLinePatternLayers,
+  suggestCopyName,
 } from '../../../config/line-pattern-segments';
 import {
   listSelectableLinetypeNames,
@@ -80,6 +81,13 @@ interface LinePatternEditorDialogProps {
    * edited in place and every line that references it updates (same-name upsert).
    */
   editName?: string;
+  /**
+   * ADR-642 Duplicate & edit — when set (and `editName` is not), the dialog seeds its
+   * layers from this SOURCE type (an ISO/built-in/imported read-only type) but with an
+   * EDITABLE, pre-suggested new name → `save()` REGISTERS a new user-created type
+   * (Revit/ArchiCAD «Duplicate»). The caller's `onCreated` then assigns it to the line.
+   */
+  duplicateFrom?: string;
 }
 
 export function LinePatternEditorDialog({
@@ -87,6 +95,7 @@ export function LinePatternEditorDialog({
   onOpenChange,
   onCreated,
   editName,
+  duplicateFrom,
 }: LinePatternEditorDialogProps) {
   const { t } = useTranslation('dxf-viewer-panels');
   const e = (key: string) => t(`panels.dimensions.linePatternEditor.${key}`);
@@ -94,24 +103,26 @@ export function LinePatternEditorDialog({
   const [name, setName] = React.useState('');
   const [layers, setLayers] = React.useState<LinePatternLayer[]>(initialLayers);
 
-  // Pre-load / reset on every open: edit mode seeds the existing def's layers (compound →
-  // `complexToLayers`, simple → the geometry fallback via `singleLayer`); create mode starts fresh.
+  // Pre-load / reset on every open. Edit AND duplicate seed the SOURCE def's layers (compound →
+  // `complexToLayers`, simple → the geometry fallback via `singleLayer`); edit locks the name to the
+  // source, duplicate pre-fills a free unique copy name (editable); plain create starts fresh.
   React.useEffect(() => {
     if (!open) return;
-    if (editName) {
-      const def = resolveLinetypeDef(editName);
+    const source = editName ?? duplicateFrom;
+    if (source) {
+      const def = resolveLinetypeDef(source);
       const complex = def?.complex;
-      setName(editName);
       setLayers(
         complex && !isSimpleExpressible(complex)
           ? complexToLayers(complex)
           : singleLayer(dashPatternToSegments(def?.pattern ?? [])),
       );
+      setName(editName ?? suggestCopyName(source, listSelectableLinetypeNames()));
     } else {
       setName('');
       setLayers(initialLayers());
     }
-  }, [open, editName]);
+  }, [open, editName, duplicateFrom]);
 
   // Geometry-only fallback pattern = the base (first) layer — what a simple picker/renderer reads.
   const pattern = React.useMemo(
@@ -119,6 +130,7 @@ export function LinePatternEditorDialog({
     [layers],
   );
   // Edit mode: exclude the edited name from the taken-names set (an in-place edit keeps its own name).
+  // Duplicate mode: the new name MUST be unique, so nothing is excluded (`editName` is undefined).
   const existingNames = listSelectableLinetypeNames().filter((n) => n !== editName);
   const validation = validateLinePatternLayers(name, layers, existingNames);
 
@@ -153,7 +165,7 @@ export function LinePatternEditorDialog({
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())}>
       <DialogContent size="default">
         <DialogHeader>
-          <DialogTitle>{editName ? e('editTitle') : e('title')}</DialogTitle>
+          <DialogTitle>{editName ? e('editTitle') : duplicateFrom ? e('duplicateTitle') : e('title')}</DialogTitle>
           <DialogDescription>{e('description')}</DialogDescription>
         </DialogHeader>
 

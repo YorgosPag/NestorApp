@@ -77,16 +77,28 @@ describe('ADR-510 Φ4g — CONTEXTUAL_LINE_TOOL_TAB modify reorg', () => {
     expect(panelById('line-width')).toBeUndefined();
   });
 
-  it('slims «Εμφάνιση Γραμμής» to linetype + lineweight + «＋ Νέος τύπος» (scale moved to palette)', () => {
+  it('slims «Εμφάνιση Γραμμής» to linetype + lineweight + «＋ Νέος τύπος» + «✎ Επεξεργασία» (scale moved to palette)', () => {
     const appearanceKeys = buttonsOf('line-appearance').map((b) => b.command.commandKey);
     // ADR-510 Φ2E #5 — «Κλίμακα» (linetypeScale) + «Πλάτος» (width) are palette-only now.
     expect(appearanceKeys).not.toContain('lineToolStyle.linetypeScale');
     expect(appearanceKeys).not.toContain('lineToolStyle.width');
+    // ADR-642 — «✎ Επεξεργασία / ⧉ Διπλότυπο» launcher sits next to «Νέος τύπος».
     expect(appearanceKeys).toEqual([
       'lineToolStyle.linetype',
       'lineToolStyle.lineweight',
       'lineToolStyle.newLineType',
+      'lineToolStyle.editLineType',
     ]);
+  });
+
+  // ADR-642 — the edit/duplicate launcher is a `line-edit-line-pattern` widget next to «Νέος τύπος».
+  it('hosts the «✎ Επεξεργασία / ⧉ Διπλότυπο» launcher as a line-edit-line-pattern widget', () => {
+    const widget = buttonsOf('line-appearance').find(
+      (b) => b.command.id === 'lineToolStyle.editLineType',
+    );
+    expect(widget?.type).toBe('widget');
+    expect((widget as { widgetId?: string }).widgetId).toBe('line-edit-line-pattern');
+    expect(widget?.command.labelKey).toBe('ribbon.commands.lineEditLineType');
   });
 
   it('slims «Γενικά» to quick appearance only (transparency moved to palette)', () => {

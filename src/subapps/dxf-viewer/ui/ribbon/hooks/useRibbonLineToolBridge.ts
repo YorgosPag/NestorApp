@@ -77,7 +77,6 @@ import { useEntityPatchCommand } from '../../../hooks/commands/useEntityPatchCom
 import type { RibbonComboboxState } from '../context/RibbonCommandContext';
 import {
   LINE_TOOL_RIBBON_KEYS,
-  LINE_TOOL_PANEL_VISIBILITY_KEYS,
   isLineToolRibbonKey,
 } from './bridge/line-tool-command-keys';
 // ADR-510 Φ4e — FILLET radius field routes to the FilletToolStore (tool state, not
@@ -106,6 +105,7 @@ import {
   toDisp,
   fromDisp,
   isLineGeometryKey,
+  resolveLinePanelVisibility,
   type WidthCapableEntity,
 } from './useRibbonLineToolBridge.helpers';
 import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
@@ -204,9 +204,14 @@ export function useRibbonLineToolBridge(
     (commandKey: string): RibbonComboboxState | null => {
       if (!isLineToolRibbonKey(commandKey)) return null;
 
-      // ADR-510 Φ2E #3 — «Νέος τύπος» is a widget launcher, not a combobox: it has
-      // no value to read (and must NOT fall through to the color state below).
-      if (commandKey === LINE_TOOL_RIBBON_KEYS.newLineType) return null;
+      // ADR-510 Φ2E #3 / ADR-642 — «Νέος τύπος» + «Επεξεργασία/Διπλότυπο» are widget launchers,
+      // not comboboxes: no value to read (and must NOT fall through to the color state below).
+      if (
+        commandKey === LINE_TOOL_RIBBON_KEYS.newLineType ||
+        commandKey === LINE_TOOL_RIBBON_KEYS.editLineType
+      ) {
+        return null;
+      }
 
       // ADR-510 Φ4e — FILLET radius: tool state, independent of any selection.
       if (commandKey === LINE_TOOL_RIBBON_KEYS.filletRadius) {
@@ -302,9 +307,14 @@ export function useRibbonLineToolBridge(
     (commandKey: string, value: string): void => {
       if (!isLineToolRibbonKey(commandKey)) return;
 
-      // ADR-510 Φ2E #3 — «Νέος τύπος» launcher fires no combobox write of its own
-      // (it re-dispatches the `linetype` key on save); ignore it here defensively.
-      if (commandKey === LINE_TOOL_RIBBON_KEYS.newLineType) return;
+      // ADR-510 Φ2E #3 / ADR-642 — «Νέος τύπος» + «Επεξεργασία/Διπλότυπο» launchers fire no combobox
+      // write of their own (they re-dispatch the `linetype` key on save); ignore them here defensively.
+      if (
+        commandKey === LINE_TOOL_RIBBON_KEYS.newLineType ||
+        commandKey === LINE_TOOL_RIBBON_KEYS.editLineType
+      ) {
+        return;
+      }
 
       // ADR-510 Φ4e — FILLET radius: drive the FilletToolStore (mirrors keyboard entry).
       if (commandKey === LINE_TOOL_RIBBON_KEYS.filletRadius) {
@@ -461,29 +471,11 @@ export function useRibbonLineToolBridge(
     [resolveSelected, patchEntity, changeCurrentLayer],
   );
 
-  // ADR-510 Φ4 — the Geometry panel is line-only; other primitives hide it.
-  // ADR-510 Φ4g — the fillet/chamfer option panels are active-tool-only (Options Bar).
+  // ADR-510 Φ4/Φ4g — panel visibility (Geometry = line-only, fillet/chamfer =
+  // active-tool-only, «Πλάτος» = polyline/draw-defaults) via the pure SSoT resolver.
   const getPanelVisibility = useCallback(
-    (visibilityKey: string): boolean => {
-      if (visibilityKey === LINE_TOOL_PANEL_VISIBILITY_KEYS.geometry) {
-        return asLine(resolveSelected()) !== null;
-      }
-      if (visibilityKey === LINE_TOOL_PANEL_VISIBILITY_KEYS.filletOptions) {
-        return activeTool === 'fillet';
-      }
-      if (visibilityKey === LINE_TOOL_PANEL_VISIBILITY_KEYS.chamferOptions) {
-        return activeTool === 'chamfer';
-      }
-      if (visibilityKey === LINE_TOOL_PANEL_VISIBILITY_KEYS.widthApplicable) {
-        // ADR-510 Φ3d — «Πλάτος» is polyline-only. Show it in draw-defaults mode (no
-        // selection → sets the NEXT polyline's default width) or when a width-capable
-        // polyline is selected; HIDE it for a selected plain LINE (or any non-polyline
-        // primitive), where the field is meaningless and the write silently skips.
-        const sel = resolveSelected();
-        return sel === null || isPolylineLike(sel.type);
-      }
-      return true;
-    },
+    (visibilityKey: string): boolean =>
+      resolveLinePanelVisibility(visibilityKey, resolveSelected(), activeTool),
     [resolveSelected, activeTool],
   );
 
