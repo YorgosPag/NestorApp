@@ -58,6 +58,17 @@ export interface PlaceholderMetadata {
   readonly source: PlaceholderSource;
   /** Example value rendered in the management UI preview. */
   readonly sample: string;
+  /**
+   * ADR-651 Φάση Ε (Απόφαση #4) — **de-facto υποχρεωτικό** πεδίο πινακίδας για κατάθεση
+   * άδειας δόμησης στην Ελλάδα (ΤΕΕ / πολεοδομία· §2 του ADR-651): μελετητής, ειδικότητα,
+   * **Α.Μ. ΤΕΕ**, εργοδότης, θέση έργου, τίτλος/είδος σχεδίου, κλίμακα.
+   *
+   * Ζει **εδώ** και όχι σε χειρόγραφη λίστα, ώστε ο έλεγχος πληρότητας να παράγεται από το
+   * ΙΔΙΟ registry που ορίζει τα πεδία (νέο placeholder ⇒ μία απόφαση, ένα σημείο). Είναι
+   * ιδιότητα του **πεδίου**, όχι του UI: το `date.today` λ.χ. δεν σημειώνεται ποτέ, γιατί
+   * γεμίζει πάντα μόνο του.
+   */
+  readonly permitRequired?: true;
 }
 
 /**
@@ -78,6 +89,7 @@ export const PLACEHOLDER_REGISTRY: Readonly<Record<PlaceholderPath, PlaceholderM
     labelI18nKey: 'textTemplates:placeholders.project.name',
     source: 'project',
     sample: 'Πολυκατοικία Αθηνών',
+    permitRequired: true,
   },
   'project.code': {
     labelI18nKey: 'textTemplates:placeholders.project.code',
@@ -93,22 +105,26 @@ export const PLACEHOLDER_REGISTRY: Readonly<Record<PlaceholderPath, PlaceholderM
     labelI18nKey: 'textTemplates:placeholders.project.location',
     source: 'project',
     sample: 'Λ. Κηφισίας 12, Αθήνα',
+    permitRequired: true,
   },
   'project.client': {
     labelI18nKey: 'textTemplates:placeholders.project.client',
     source: 'project',
     sample: 'Οικοδομική Α.Ε.',
+    permitRequired: true,
   },
   // ── drawing ─────────────────────────────────────────────────────────────
   'drawing.title': {
     labelI18nKey: 'textTemplates:placeholders.drawing.title',
     source: 'drawing',
     sample: 'Κάτοψη Ισογείου',
+    permitRequired: true,
   },
   'drawing.scale': {
     labelI18nKey: 'textTemplates:placeholders.drawing.scale',
     source: 'drawing',
     sample: '1:50',
+    permitRequired: true,
   },
   'drawing.sheetNumber': {
     labelI18nKey: 'textTemplates:placeholders.drawing.sheetNumber',
@@ -125,6 +141,7 @@ export const PLACEHOLDER_REGISTRY: Readonly<Record<PlaceholderPath, PlaceholderM
     labelI18nKey: 'textTemplates:placeholders.user.fullName',
     source: 'user',
     sample: 'Γιώργος Παγώνης',
+    permitRequired: true,
   },
   'user.checkerName': {
     labelI18nKey: 'textTemplates:placeholders.user.checkerName',
@@ -135,11 +152,13 @@ export const PLACEHOLDER_REGISTRY: Readonly<Record<PlaceholderPath, PlaceholderM
     labelI18nKey: 'textTemplates:placeholders.user.title',
     source: 'user',
     sample: 'Αρχιτέκτων Μηχανικός',
+    permitRequired: true,
   },
   'user.licenseNumber': {
     labelI18nKey: 'textTemplates:placeholders.user.licenseNumber',
     source: 'user',
     sample: 'ΤΕΕ 12345',
+    permitRequired: true,
   },
   // ── revision ────────────────────────────────────────────────────────────
   'revision.number': {

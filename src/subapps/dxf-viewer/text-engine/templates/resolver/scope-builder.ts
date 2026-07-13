@@ -100,8 +100,12 @@ function pickUser(data: Record<string, unknown> | undefined): PlaceholderScopeUs
     fullName: composeFullName(data),
     title: stringField(data.title) ?? stringField(data.jobTitle),
     licenseNumber: stringField(data.licenseNumber) ?? stringField(data.teeId),
+    // ADR-651 Φάση Ε — η σφραγίδα ταξιδεύει στο ΙΔΙΟ scope (εικόνα, όχι placeholder).
+    stampImageUrl: stringField(data.stampImageUrl),
   };
-  return user.fullName || user.title || user.licenseNumber ? user : undefined;
+  return user.fullName || user.title || user.licenseNumber || user.stampImageUrl
+    ? user
+    : undefined;
 }
 
 function pickChecker(data: Record<string, unknown> | undefined): string | undefined {

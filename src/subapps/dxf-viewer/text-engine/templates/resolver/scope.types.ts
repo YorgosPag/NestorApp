@@ -47,6 +47,17 @@ export interface PlaceholderScopeUser {
   readonly checkerName?: string;
   readonly title?: string;
   readonly licenseNumber?: string;
+  /**
+   * ADR-651 Φάση Ε — download URL της σφραγίδας/υπογραφής του μηχανικού
+   * (`users/{userId}.stampImageUrl`, Firebase Storage, company-scoped).
+   *
+   * ⚠️ **ΔΕΝ είναι placeholder**: δεν υπάρχει `{{user.stampImageUrl}}` στο
+   * `PLACEHOLDER_REGISTRY` και δεν πρέπει να υπάρξει ποτέ — το registry είναι SSoT για
+   * **υποκατάσταση ΚΕΙΜΕΝΟΥ**, ενώ αυτό είναι **εικόνα** (θα τύπωνε το URL μέσα στην
+   * πινακίδα). Ταξιδεύει όμως στο **ίδιο** scope, από τον **ίδιο** builder/route, ώστε να
+   * μην ανοίξει δεύτερο data path για τα ίδια δεδομένα (§5.1).
+   */
+  readonly stampImageUrl?: string;
 }
 
 /** Optional revision facts — from the drawing's revision-history record. */
@@ -88,6 +99,18 @@ export interface PlaceholderScope {
   readonly revision?: PlaceholderScopeRevision;
   readonly formatting?: PlaceholderScopeFormatting;
 }
+
+/**
+ * ADR-651 Φάση Β — the Firestore-derived slice of the scope: the ONLY part the
+ * server owns (`scope-builder.ts`, admin SDK, tenant-guarded). It is also the wire
+ * contract of `POST /api/dxf/text-templates/placeholder-scope`.
+ *
+ * The remaining slots (`drawing` / `revision` / `formatting`) are client-owned —
+ * they come from the active DXF document, not Firestore — so the client merges them
+ * on top before calling the resolver. Excluding them keeps the payload JSON-safe
+ * (`revision.date` is a `Date`, which does not survive a round-trip as-is).
+ */
+export type PlaceholderScopeSources = Pick<PlaceholderScope, 'company' | 'project' | 'user'>;
 
 /** Empty scope — convenience for tests and stub call sites. */
 export const EMPTY_PLACEHOLDER_SCOPE: PlaceholderScope = Object.freeze({});
