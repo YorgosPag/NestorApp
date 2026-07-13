@@ -6,14 +6,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 // 🏢 ADR-067: Centralized angle conversion + TAU constant
 import { degToRad, TAU } from '../../rendering/entities/shared/geometry-utils';
-// 🏢 ADR-102: Centralized Entity Type Guards
-import {
-  isLineEntity,
-  isPolylineEntity,
-  isLWPolylineEntity,
-  isArcEntity,
-  type Entity,
-} from '../../types/entities';
+import { type Entity } from '../../types/entities';
 // 🏢 ADR-074: Centralized Point On Circle
 // 🏢 ADR-065: Centralized Distance Calculation
 import { pointOnCircle, calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
@@ -22,6 +15,8 @@ import { calculateBoundingBox } from '../../rendering/entities/shared/geometry-u
 // 🏢 ADR-079: Centralized Geometric Precision Constants
 // 🏢 ADR-166: Centralized GAP_TOLERANCE & ARC_TESSELLATION
 import { GEOMETRY_PRECISION, ENTITY_LIMITS, ARC_TESSELLATION } from '../../config/tolerance-config';
+// 🏢 ADR-652 M4: ουδέτερος SSoT «Entity → πολυγραμμές (σημεία)» — μηδέν δικά μας curve math
+import { entityToPolylines, type EntityPolyline } from '../../rendering/entities/shared/entity-polylines';
 
 export const GEOMETRY_CONSTANTS = {
   // 🏢 ADR-079: Using centralized precision constants
@@ -132,48 +127,34 @@ interface GeometryEntity {
 }
 
 /**
- * Convert entity to segments based on type
+ * Πολυγραμμές (SSoT σχήματος) → ευθύγραμμα τμήματα. Κλειστή πολυγραμμή ⇒ +τμήμα
+ * κλεισίματος (τελευταία→πρώτη κορυφή). Καθαρή μετατροπή, καμία γεωμετρία τύπου.
  */
-export function entityToSegments(entity: GeometryEntity): Segment[] {
-  // 🏢 ADR-102: Use centralized type guards (cast GeometryEntity to Entity for compatibility)
-  const e = entity as unknown as Entity;
-
-  if (isLineEntity(e)) {
-    // Type guard: Ensure start and end exist on line entity
-    if (!entity.start || !entity.end) return [];
-    return [{ start: entity.start, end: entity.end }];
-  }
-
-  if (isPolylineEntity(e) || isLWPolylineEntity(e)) {
-    const vs = entity.vertices || [];
-    const segs: Segment[] = [];
-
-    for (let i = 0; i < vs.length - 1; i++) {
-      segs.push({ start: vs[i], end: vs[i + 1] });
+function polylinesToSegments(polylines: readonly EntityPolyline[]): Segment[] {
+  const segments: Segment[] = [];
+  for (const pl of polylines) {
+    const pts = pl.points;
+    for (let i = 0; i < pts.length - 1; i++) {
+      segments.push({ start: pts[i], end: pts[i + 1] });
     }
-
-    if (entity.closed && vs.length > 2) {
-      segs.push({ start: vs[vs.length - 1], end: vs[0] });
+    if (pl.closed && pts.length > 2) {
+      segments.push({ start: pts[pts.length - 1], end: pts[0] });
     }
-
-    return segs;
   }
-
-  if (isArcEntity(e)) {
-    // Type guard: Ensure required arc properties exist
-    if (!entity.center || typeof entity.radius !== 'number') return [];
-    const vertices = arcToPolyline(entity as Arc);
-    const segs: Segment[] = [];
-    
-    for (let i = 0; i < vertices.length - 1; i++) {
-      segs.push({ start: vertices[i], end: vertices[i + 1] });
-    }
-    
-    return segs;
-  }
-  
-  return [];
+  return segments;
 }
+
+/**
+ * Convert entity to segments based on type.
+ *
+ * 🏢 ADR-652 M4 — thin adapter: η γεωμετρία «entity → σχήμα» ζει ΜΙΑ φορά στον
+ * ουδέτερο SSoT `entityToPolylines` (line / polyline+bulges / arc / circle / ellipse /
+ * spline / rectangle / block — μηδέν δικά μας curve math). Εδώ μένει ΜΟΝΟ η μετατροπή
+ * «πολυγραμμή → Segment[]» — κανένας δεύτερος per-type flattener. (Πριν: μερικός switch
+ * line/polyline/arc που αγνοούσε bulge/circle/ellipse/spline/block.)
+ */
+export const entityToSegments = (entity: GeometryEntity): Segment[] =>
+  polylinesToSegments(entityToPolylines(entity as unknown as Entity));
 
 /**
  * Check if two connected line segments are collinear (same direction / straight line)

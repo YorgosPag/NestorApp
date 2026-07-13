@@ -55,6 +55,16 @@ const mockGetDocs = jest.fn(async (q: MockQuery) => {
   };
 });
 
+// ADR-652 M2: ο service συνθέτει πλέον τον ScopedLibraryService → τραβά το
+// firestore-query.service → auth-context → firebase/auth (fetch σε Node). Mock όπως
+// στο MaterialLibraryService.test.ts ώστε το module graph να φορτώνει καθαρά.
+jest.mock('firebase/auth', () => ({
+  __esModule: true,
+  getAuth: () => ({ currentUser: null }),
+  onAuthStateChanged: (_a: unknown, cb: (u: null) => void) => { cb(null); return () => {}; },
+  signInAnonymously: jest.fn(),
+}));
+
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn((_db: unknown, ..._segments: string[]) => ({ __collection: true })),
   doc: jest.fn((_db: unknown, ..._segments: string[]) => ({

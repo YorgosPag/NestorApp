@@ -29,14 +29,9 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDocs,
-  query,
   serverTimestamp,
   setDoc,
   updateDoc,
-  where,
-  type DocumentData,
-  type QueryDocumentSnapshot,
 } from 'firebase/firestore';
 
 import type { ZodError } from 'zod';
@@ -44,6 +39,10 @@ import type { ZodError } from 'zod';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateBimFamilyTypeId } from '@/services/enterprise-id.service';
+import {
+  ScopedLibraryService,
+  createSubcollectionScopedLibrary,
+} from '../services/scoped-library-service';
 import {
   BimFamilyTypeSchema,
   WallTypeParamsSchema,
@@ -58,7 +57,6 @@ import type {
   BimFamilyTypeOrigin,
   BimTypeParamsByCategory,
 } from '../types/bim-family-type';
-import { DXF_TIMING } from '../../config/dxf-timing';
 
 // ============================================================================
 // CONFIG
@@ -87,16 +85,6 @@ export interface UpdateTypeInput {
   readonly typeParams?: BimTypeParamsByCategory[keyof BimTypeParamsByCategory];
   /** Required when `typeParams` is present — used to select the Zod schema. */
   readonly category?: keyof BimTypeParamsByCategory;
-}
-
-const CACHE_TTL_MS = DXF_TIMING.lifecycle.CACHE_TTL; // ADR-516
-
-// ============================================================================
-// CONVERTERS
-// ============================================================================
-
-function snapshotToType(snap: QueryDocumentSnapshot<DocumentData>): BimFamilyType {
-  return snap.data() as BimFamilyType;
 }
 
 // ============================================================================
@@ -179,12 +167,27 @@ function stampTenantAndScope<C extends keyof BimTypeParamsByCategory>(
 // ============================================================================
 
 export class BimFamilyTypeService {
-  private cache: {
-    readonly types: readonly BimFamilyType[];
-    readonly ts: number;
-  } | null = null;
+  /**
+   * Ο κοινός SSoT βιβλιοθηκών (ADR-652 M2) οδηγεί το ΔΙΑΒΑΣΜΑ (3-scope merge + 5min
+   * cache + tenant isolation). Οι ΕΓΓΡΑΦΕΣ μένουν domain-specific εδώ (Zod validation,
+   * category schema, stampTenantAndScope, undo restore) — δεν ταιριάζουν στο γενικό
+   * `create/patch` του πυρήνα. Subcollection topology μέσω `collectionRefFactory`.
+   */
+  private readonly library: ScopedLibraryService<BimFamilyType>;
 
-  constructor(private readonly config: BimFamilyTypeServiceConfig) {}
+  constructor(private readonly config: BimFamilyTypeServiceConfig) {
+    // Subcollection COMPANIES/{companyId}/bim_family_types — ΑΚΡΙΒΩΣ οι ίδιες queries με
+    // πριν (3-scope, companyId σε κάθε bucket) μέσω του κοινού συνθέτη· μηδέν rules/index risk.
+    this.library = createSubcollectionScopedLibrary<BimFamilyType>({
+      collectionKey: 'BIM_FAMILY_TYPES',
+      context: config,
+      collectionRefFactory: () => this.collectionRef(),
+      errors: {
+        notFound: 'BIM_FAMILY_TYPE_NOT_FOUND',
+        builtinNotMutable: 'BIM_FAMILY_TYPE_BUILTIN_NOT_MUTABLE',
+      },
+    });
+  }
 
   private collectionRef() {
     return collection(
@@ -205,40 +208,6 @@ export class BimFamilyTypeService {
     );
   }
 
-  // ── Fetch helpers (one per scope) ──────────────────────────────────────────
-
-  private async fetchUserScope(): Promise<readonly BimFamilyType[]> {
-    const q = query(
-      this.collectionRef(),
-      where('companyId', '==', this.config.companyId),
-      where('scope', '==', 'user'),
-      where('ownerId', '==', this.config.userId),
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(snapshotToType);
-  }
-
-  private async fetchCompanyScope(): Promise<readonly BimFamilyType[]> {
-    const q = query(
-      this.collectionRef(),
-      where('companyId', '==', this.config.companyId),
-      where('scope', '==', 'company'),
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(snapshotToType);
-  }
-
-  private async fetchProjectScope(projectId: string): Promise<readonly BimFamilyType[]> {
-    const q = query(
-      this.collectionRef(),
-      where('companyId', '==', this.config.companyId),
-      where('scope', '==', 'project'),
-      where('projectId', '==', projectId),
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(snapshotToType);
-  }
-
   // ── Public API ─────────────────────────────────────────────────────────────
 
   /**
@@ -254,26 +223,10 @@ export class BimFamilyTypeService {
   async listTypes(
     category?: keyof BimTypeParamsByCategory,
   ): Promise<readonly BimFamilyType[]> {
-    const now = Date.now();
-    if (this.cache && now - this.cache.ts < CACHE_TTL_MS) {
-      return category
-        ? this.cache.types.filter((t) => t.category === category)
-        : this.cache.types;
-    }
-
-    const buckets = await Promise.all([
-      this.fetchUserScope(),
-      this.fetchCompanyScope(),
-      this.config.projectId
-        ? this.fetchProjectScope(this.config.projectId)
-        : Promise.resolve([]),
-    ]);
-
-    const merged: BimFamilyType[] = [];
-    for (const bucket of buckets) merged.push(...bucket);
-
-    this.cache = { types: merged, ts: now };
-
+    // 3-scope merge + 5min cache + tenant isolation ζουν στον κοινό ScopedLibraryService.
+    // Το `category` filter μένει in-memory (μικρό dataset· αποφεύγει 4ο round-trip) — ΙΔΙΑ
+    // συμπεριφορά με πριν (φιλτράρισμα ΜΕΤΑ το merge).
+    const merged = await this.library.list();
     return category ? merged.filter((t) => t.category === category) : merged;
   }
 
@@ -397,12 +350,13 @@ export class BimFamilyTypeService {
   }
 
   /**
-   * Invalidates the in-memory 5-min cache. Called automatically on every
-   * write (saveType / updateType / deleteType). Can also be called externally
-   * when an external mutation is known to have occurred.
+   * Invalidates the shared 5-min read cache (owned by the ScopedLibraryService).
+   * Called automatically on every write (saveType / updateType / deleteType /
+   * restoreType / createTypeWithId). Can also be called externally when an
+   * external mutation is known to have occurred.
    */
   invalidateCache(): void {
-    this.cache = null;
+    this.library.invalidateCache();
   }
 }
 

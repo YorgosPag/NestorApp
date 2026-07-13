@@ -1,9 +1,9 @@
 {
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet pattern)",
-    "generated": "2026-07-13T19:19:57Z",
-    "totalViolations": 135,
-    "totalFiles": 90,
+    "generated": "2026-07-14T00:00:00Z",
+    "totalViolations": 128,
+    "totalFiles": 87,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "registry": ".ssot-registry.json"
   },
@@ -49,8 +49,6 @@
     "src/services/user/EnterpriseUserPreferencesService.ts": 1,
     "src/subapps/accounting/services/external/openai-document-analyzer.ts": 1,
     "src/subapps/dxf-viewer/bim/config/bim-to-atoe-mapping.ts": 2,
-    "src/subapps/dxf-viewer/bim/family-types/bim-family-type-service.ts": 3,
-    "src/subapps/dxf-viewer/bim/stairs/stair-presets-service.ts": 3,
     "src/subapps/dxf-viewer/bim-3d/comments/bim-comments.service.ts": 1,
     "src/subapps/dxf-viewer/bim-3d/comments/CommentAttachmentLightbox.tsx": 2,
     "src/subapps/dxf-viewer/bim-3d/comments/CommentMentionsPicker.tsx": 2,
@@ -90,7 +88,6 @@
     "src/subapps/dxf-viewer/ui/text-toolbar/TextEditorOverlay.tsx": 2,
     "src/subapps/dxf-viewer/ui/toolbar/ToolButton.tsx": 2,
     "src/subapps/dxf-viewer/ui/toolbar/ZoomControls.tsx": 2,
-    "src/subapps/dxf-viewer/utils/geometry/GeometryUtils.ts": 1,
     "src/subapps/geo-canvas/floor-plan-system/components/ControlPointsList.tsx": 2,
     "src/subapps/geo-canvas/floor-plan-system/parsers/vector/DxfParser.ts": 3,
     "src/subapps/geo-canvas/services/geo-transform/DxfGeoTransform.ts": 2,

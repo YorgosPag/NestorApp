@@ -23,25 +23,23 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDocs,
-  query,
   serverTimestamp,
   setDoc,
-  where,
-  type DocumentData,
-  type QueryDocumentSnapshot,
 } from 'firebase/firestore';
 
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateStairPresetId } from '@/services/enterprise-id.service';
+import {
+  ScopedLibraryService,
+  createSubcollectionScopedLibrary,
+} from '../services/scoped-library-service';
 import type {
   StairKind,
   StairParams,
   StairPresetDoc,
   StairPresetScope,
 } from '../../bim/types/stair-types';
-import { DXF_TIMING } from '../../config/dxf-timing';
 
 // ============================================================================
 // CONFIG
@@ -60,25 +58,31 @@ export interface SavePresetInput {
   readonly params: Omit<StairParams, 'basePoint' | 'direction'>;
 }
 
-const CACHE_TTL_MS = DXF_TIMING.lifecycle.CACHE_TTL; // ADR-516
-
-// ============================================================================
-// CONVERTERS
-// ============================================================================
-
-function snapshotToPreset(snap: QueryDocumentSnapshot<DocumentData>): StairPresetDoc {
-  const data = snap.data();
-  return data as StairPresetDoc;
-}
-
 // ============================================================================
 // SERVICE
 // ============================================================================
 
 export class StairPresetsService {
-  private cache: { readonly presets: readonly StairPresetDoc[]; readonly ts: number } | null = null;
+  /**
+   * Ο κοινός SSoT βιβλιοθηκών (ADR-652 M2) οδηγεί το ΔΙΑΒΑΣΜΑ (3-scope merge + 5min
+   * cache + tenant isolation). Οι ΕΓΓΡΑΦΕΣ (savePreset / deletePreset) μένουν
+   * domain-specific εδώ. Subcollection topology μέσω `collectionRefFactory`.
+   */
+  private readonly library: ScopedLibraryService<StairPresetDoc>;
 
-  constructor(private readonly config: StairPresetsServiceConfig) {}
+  constructor(private readonly config: StairPresetsServiceConfig) {
+    // Subcollection COMPANIES/{companyId}/stair_presets — ΑΚΡΙΒΩΣ οι ίδιες queries με πριν
+    // (3-scope, companyId σε κάθε bucket) μέσω του κοινού συνθέτη· μηδέν rules/index risk.
+    this.library = createSubcollectionScopedLibrary<StairPresetDoc>({
+      collectionKey: 'STAIR_PRESETS',
+      context: config,
+      collectionRefFactory: () => this.collectionRef(),
+      errors: {
+        notFound: 'STAIR_PRESET_NOT_FOUND',
+        builtinNotMutable: 'STAIR_PRESET_BUILTIN_NOT_MUTABLE',
+      },
+    });
+  }
 
   private collectionRef() {
     return collection(db, COLLECTIONS.COMPANIES, this.config.companyId, COLLECTIONS.STAIR_PRESETS);
@@ -93,55 +97,8 @@ export class StairPresetsService {
    * company-scope + project-scope matching `config.projectId` (if provided).
    * Firestore rules enforce tenant isolation; this method narrows by scope.
    */
-  async listPresets(): Promise<readonly StairPresetDoc[]> {
-    const now = Date.now();
-    if (this.cache && now - this.cache.ts < CACHE_TTL_MS) {
-      return this.cache.presets;
-    }
-
-    const buckets = await Promise.all([
-      this.fetchUserScope(),
-      this.fetchCompanyScope(),
-      this.config.projectId ? this.fetchProjectScope(this.config.projectId) : Promise.resolve([]),
-    ]);
-
-    const merged: StairPresetDoc[] = [];
-    for (const bucket of buckets) merged.push(...bucket);
-
-    this.cache = { presets: merged, ts: now };
-    return merged;
-  }
-
-  private async fetchUserScope(): Promise<readonly StairPresetDoc[]> {
-    const q = query(
-      this.collectionRef(),
-      where('companyId', '==', this.config.companyId),
-      where('scope', '==', 'user'),
-      where('ownerId', '==', this.config.userId),
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(snapshotToPreset);
-  }
-
-  private async fetchCompanyScope(): Promise<readonly StairPresetDoc[]> {
-    const q = query(
-      this.collectionRef(),
-      where('companyId', '==', this.config.companyId),
-      where('scope', '==', 'company'),
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(snapshotToPreset);
-  }
-
-  private async fetchProjectScope(projectId: string): Promise<readonly StairPresetDoc[]> {
-    const q = query(
-      this.collectionRef(),
-      where('companyId', '==', this.config.companyId),
-      where('scope', '==', 'project'),
-      where('projectId', '==', projectId),
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(snapshotToPreset);
+  listPresets(): Promise<readonly StairPresetDoc[]> {
+    return this.library.list();
   }
 
   async savePreset(input: SavePresetInput): Promise<StairPresetDoc> {
@@ -186,7 +143,7 @@ export class StairPresetsService {
   }
 
   invalidateCache(): void {
-    this.cache = null;
+    this.library.invalidateCache();
   }
 }
 

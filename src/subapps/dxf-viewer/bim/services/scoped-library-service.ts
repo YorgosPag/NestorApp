@@ -39,6 +39,7 @@ import {
   serverTimestamp,
   setDoc,
   where,
+  type CollectionReference,
   type DocumentData,
   type QueryConstraint,
   type Unsubscribe,
@@ -86,6 +87,15 @@ export interface ScopedLibraryConfig {
   readonly userId: string;
   readonly buckets: readonly ScopedLibraryBucket[];
   readonly errors: ScopedLibraryErrors;
+  /**
+   * Τοπολογία collection. Default (top-level): `collection(db, COLLECTIONS[collectionKey])`
+   * — το μοντέλο των `block_library` / `bim_materials` (companyId ως ΠΕΔΙΟ). Δώσε factory
+   * όταν η βιβλιοθήκη ζει σε SUBcollection, π.χ. `COMPANIES/{companyId}/bim_family_types`
+   * (family-types / stair-presets). Η factory καθορίζει ΑΠΟΚΛΕΙΣΤΙΚΑ το path· οι buckets
+   * (scope/tenant constraints) μένουν ίδιοι. ⚠️ Ο `subscribe()` (firestoreQueryService,
+   * top-level tenant injection) ΔΕΝ υποστηρίζει subcollection topology — δες τον guard εκεί.
+   */
+  readonly collectionRefFactory?: () => CollectionReference<DocumentData>;
 }
 
 const CACHE_TTL_MS = DXF_TIMING.lifecycle.CACHE_TTL; // ADR-516
@@ -113,11 +123,18 @@ export function projectScopeBucket(projectId: string): ScopedLibraryBucket {
   };
 }
 
-/** «Τα δικά ΜΟΥ» — ιδιωτικό περιεχόμενο ενός χρήστη μέσα στην εταιρεία του. */
-export function userScopeBucket(userId: string): ScopedLibraryBucket {
+/**
+ * «Τα δικά ΜΟΥ» — ιδιωτικό περιεχόμενο ενός χρήστη μέσα στην εταιρεία του.
+ *
+ * `ownerField` = το πεδίο ιδιοκτησίας του doc. Default `createdBy` (block/material
+ * library). Οι subcollection βιβλιοθήκες family-types / stair-presets κρατούν την
+ * ιδιοκτησία σε `ownerId` — περνούν `'ownerId'` ώστε η εκπεμπόμενη query να μένει
+ * ΑΚΡΙΒΩΣ η ίδια (καμία αλλαγή σε rules/indexes).
+ */
+export function userScopeBucket(userId: string, ownerField = 'createdBy'): ScopedLibraryBucket {
   return {
     key: 'user',
-    constraints: [where('scope', '==', 'user'), where('createdBy', '==', userId)],
+    constraints: [where('scope', '==', 'user'), where(ownerField, '==', userId)],
     tenantScoped: true,
   };
 }
@@ -154,8 +171,19 @@ export class ScopedLibraryService<T extends ScopedLibraryDoc> {
     return COLLECTIONS[this.config.collectionKey];
   }
 
+  /**
+   * Το collection στο οποίο ζει η βιβλιοθήκη. Default = top-level
+   * `collection(db, collectionName)`. Αν δοθεί `collectionRefFactory` (subcollection
+   * topology, π.χ. `COMPANIES/{companyId}/…`), το path έρχεται ΑΠΟΚΛΕΙΣΤΙΚΑ από εκεί.
+   */
+  private collectionRef(): CollectionReference<DocumentData> {
+    return this.config.collectionRefFactory
+      ? this.config.collectionRefFactory()
+      : collection(db, this.collectionName);
+  }
+
   private docRef(id: string) {
-    return doc(db, this.collectionName, id);
+    return doc(this.collectionRef(), id);
   }
 
   /** Το ενωμένο σύνολο των scopes που βλέπει ο actor (cached, TTL 5min). */
@@ -179,7 +207,7 @@ export class ScopedLibraryService<T extends ScopedLibraryDoc> {
       // Tenant isolation — companyId σε ΚΑΘΕ tenant-scoped query (CHECK 3.10).
       constraints.push(where('companyId', '==', this.config.companyId));
     }
-    const snap = await getDocs(query(collection(db, this.collectionName), ...constraints));
+    const snap = await getDocs(query(this.collectionRef(), ...constraints));
     return snap.docs.map((d) => d.data() as unknown as T);
   }
 
@@ -191,6 +219,14 @@ export class ScopedLibraryService<T extends ScopedLibraryDoc> {
     cb: (docs: readonly T[]) => void,
     onError: (error: Error) => void = () => {},
   ): Unsubscribe {
+    // Ο live merge περνά από τον `firestoreQueryService` (top-level tenant injection).
+    // Subcollection topology (collectionRefFactory) δεν εκφράζεται από αυτόν → fail loud
+    // αντί για σιωπηλά λάθος collection. Οι subcollection καταναλωτές (family/stair)
+    // χρησιμοποιούν ΜΟΝΟ `list()` (getDocs-based, topology-aware).
+    if (this.config.collectionRefFactory) {
+      throw new Error('SCOPED_LIBRARY_SUBSCRIBE_UNSUPPORTED_FOR_SUBCOLLECTION');
+    }
+
     const byBucket = new Map<string, readonly T[]>();
     let lastKey = '__INITIAL__';
 
@@ -290,4 +326,51 @@ export class ScopedLibraryService<T extends ScopedLibraryDoc> {
   invalidateCache(): void {
     this.cache = null;
   }
+}
+
+// ============================================================================
+// SUBCOLLECTION 3-SCOPE PRESET — ο ΚΟΙΝΟΣ συνθέτης για family-types & stair-presets
+// ============================================================================
+
+/** Το scope context ενός subcollection service (companyId/userId/projectId). */
+export interface ScopedSubcollectionContext {
+  readonly companyId: string;
+  readonly userId: string;
+  readonly projectId?: string;
+}
+
+export interface SubcollectionScopedLibraryParams {
+  readonly collectionKey: CollectionKey;
+  readonly context: ScopedSubcollectionContext;
+  readonly collectionRefFactory: () => CollectionReference<DocumentData>;
+  readonly errors: ScopedLibraryErrors;
+  /** Πεδίο ιδιοκτησίας του user scope. Default `ownerId` (family/stair convention). */
+  readonly ownerField?: string;
+}
+
+/**
+ * Χτίζει έναν `ScopedLibraryService` για την ΤΥΠΙΚΗ subcollection βιβλιοθήκη 3 scopes
+ * (δικά μου [ownerField] + εταιρείας + optional έργου), σε path `COMPANIES/{companyId}/…`.
+ *
+ * ΓΙΑΤΙ ΕΔΩ (N.18): family-types και stair-presets είναι **δίδυμα** — ίδιο 3-scope μοντέλο
+ * σε subcollection. Αντί για δύο πανομοιότυπα constructor bodies (sibling clone), και τα
+ * δύο καλούν ΑΥΤΟΝ τον συνθέτη· η σημασιολογία των buckets ζει ΜΙΑ φορά (στα factories).
+ */
+export function createSubcollectionScopedLibrary<T extends ScopedLibraryDoc>(
+  params: SubcollectionScopedLibraryParams,
+): ScopedLibraryService<T> {
+  const { context } = params;
+  return new ScopedLibraryService<T>({
+    collectionKey: params.collectionKey,
+    companyId: context.companyId,
+    userId: context.userId,
+    collectionRefFactory: params.collectionRefFactory,
+    // 3-scope: δικά μου + εταιρείας + (optional) έργου. companyId σε κάθε tenant bucket.
+    buckets: [
+      userScopeBucket(context.userId, params.ownerField ?? 'ownerId'),
+      companyScopeBucket(),
+      ...optionalProjectScopeBucket(context.projectId),
+    ],
+    errors: params.errors,
+  });
 }
