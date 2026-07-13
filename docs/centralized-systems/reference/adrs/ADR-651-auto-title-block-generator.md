@@ -1,10 +1,11 @@
 # ADR-651 — Σύστημα Αυτόματης Δημιουργίας Πινακίδων Σχεδίου (Auto Title Block Generator) — Έρευνα Αγοράς + Αρχιτεκτονικό Blueprint
 
-- **Status**: ✅ **ΟΛΟΚΛΗΡΩΜΕΝΟ (Φάσεις Α–Ζ)** — Α (data wiring) + Β (in-scene insert) + Γ (κορνίζα
+- **Status**: ✅ **ΟΛΟΚΛΗΡΩΜΕΝΟ (Φάσεις Α–Η)** — Α (data wiring) + Β (in-scene insert) + Γ (κορνίζα
   ISO 5457, parametric reflow, βιβλιοθήκη presets) + **Δ (AI ναυαρχίδα: Εικόνα→Πινακίδα ·
   Φυσική-γλώσσα→Πινακίδα · AI compliance validation)** + Ε (σφραγίδα-εικόνα + rule-based έλεγχος
   πληρότητας + νέο `ImageEntity`) + ΣΤ (εκτύπωση/εξαγωγή — WYSIWYG: οθόνη === PDF === DXF) +
-  Ζ (multi-sheet sets + auto-numbering — πολυσέλιδο PDF σετ αδείας) **ΥΛΟΠΟΙΗΜΕΝΕΣ** (2026-07-14)
+  Ζ (multi-sheet sets + auto-numbering — πολυσέλιδο PDF σετ αδείας) +
+  **Η (πίνακας αναθεωρήσεων + AI auto-changelog — Απόφαση #9)** **ΥΛΟΠΟΙΗΜΕΝΕΣ** (2026-07-14)
 - **Date**: 2026-07-14
 - **Category**: DXF Viewer / Documentation / Sheets & Title Blocks / Research
 - **Σχετικά**: ADR-344 (Enterprise Text Engine — placeholders/templates/resolver, το θεμέλιο),
@@ -553,6 +554,14 @@ worksheets χωρίς διπλή καταχώρηση).
   σετ» στον υπάρχοντα διάλογο εκτύπωσης (2Δ, ≥2 φύλλα). *Εκτός φάσης*: AI batch-δημιουργία (Φάση Δ,
   §8 #4), native paperspace LAYOUT/VPORT records (DEFERRED, ADR-453), revision/issue table
   (Απόφαση #9). Το DXF-σετ καλύπτεται ήδη από το `all-zip` (ADR-505).
+- **Φάση Η — Πίνακας αναθεωρήσεων + AI auto-changelog** — **✅ ΥΛΟΠΟΙΗΘΗΚΕ 2026-07-14** (βλ.
+  changelog): **κλείνει το κενό #8** (§4.2) και την **Απόφαση #9**. Το σύστημα κρατά **μόνο του** την
+  ιστορία εκδόσεων του έργου (ντετερμινιστικός αριθμός + ημερομηνία + συντάκτης) και **προτείνει με AI
+  τι άλλαξε** συγκρίνοντας τη νέα με την προηγούμενη έκδοση — ο χρήστης **εγκρίνει/διορθώνει**.
+  Αρχιτεκτονική: **§5.7** (persisted ανά έργο = Revit· idempotent με ντετερμινιστικό doc id· ο κώδικας
+  μετράει, το AI διατυπώνει· τα `revision.*` γεμίζουν μέσω του **υπάρχοντος** καναλιού overrides ⇒
+  πινακίδα + πίνακας αναθεωρήσεων στα 3 backends δωρεάν). *Εκτός φάσης*: AI batch-δημιουργία σετ
+  (§8 #4), native paperspace LAYOUT/VPORT (DEFERRED), mapping `accounting_settings` (§9).
 
 ---
 
@@ -583,7 +592,10 @@ worksheets χωρίς διπλή καταχώρηση).
 5. **AI compliance validation** — ✅ **ΠΑΡΑΔΟΘΗΚΕ (Φάση Δ)**: semantic έλεγχος πάνω από τον
    rule-based της Φάσης Ε (ο rule-based τρέχει πρώτος και δίνεται ως context, ώστε το AI να μην τον
    επαναλαμβάνει). Προειδοποίηση, ποτέ φραγή.
-6. **Auto-changelog revision** — diff μοντέλου vs προηγούμενη έκδοση → auto περιγραφή αλλαγής.
+6. **Auto-changelog revision** — ✅ **ΠΑΡΑΔΟΘΗΚΕ (Φάση Η, 2026-07-14)**: diff του **μοντέλου** vs η
+   προηγούμενη έκδοση (τον μετράει ο **κώδικας**, ντετερμινιστικά) → το AI **προτείνει** την περιγραφή
+   αλλαγής· ο χρήστης εγκρίνει/διορθώνει (ποτέ αυτόματη εγγραφή). **Κανείς ανταγωνιστής δεν το κάνει** —
+   Revit/Vectorworks/ArchiCAD κρατούν τον πίνακα, αλλά την περιγραφή τη γράφει πάντα ο μηχανικός. §5.7.
 7. **Auto-localization EL↔EN** πινακίδας με ένα κλικ (όρους/μονάδες/format ημερομηνίας).
 8. **QR/version fingerprint** που συνδέει το τυπωμένο σχέδιο με το ζωντανό cloud μοντέλο.
 9. **Έξυπνη πρόταση κλίμακας/χαρτιού** βάσει bbox αντικειμένου + κανόνων ISO 5457.
@@ -686,7 +698,13 @@ worksheets χωρίς διπλή καταχώρηση).
    (auto-localization) σε άμεσα διαθέσιμο. Χρειάζεται: EN labels για τα νέα πεδία (ΘΕΣΗ→Location,
    ΕΡΓΟΔΟΤΗΣ→Client) στα locale JSONs.
 
-9. **Αναθεωρήσεις → ΑΥΤΟΜΑΤΟ ΙΣΤΟΡΙΚΟ + AI ΠΡΟΤΑΣΗ ΑΛΛΑΓΗΣ** *(2026-07-13)*: Το σύστημα κρατά
+9. ✅ **ΕΠΙΛΥΘΗΚΕ (Φάση Η, 2026-07-14 — βλ. §5.7)** — **Αναθεωρήσεις → ΑΥΤΟΜΑΤΟ ΙΣΤΟΡΙΚΟ + AI ΠΡΟΤΑΣΗ
+   ΑΛΛΑΓΗΣ** *(2026-07-13)*. **Συμπληρωματική απόφαση Giorgio (2026-07-14): επίπεδο = ΑΝΑ ΕΡΓΟ**
+   (τρόπος Revit — μία λίστα αναθεωρήσεων· η «1η Αναθεώρηση» τυπώνεται στην πινακίδα ΟΛΩΝ των φύλλων
+   του σετ αδείας, ακόμη κι αν άλλαξε μόνο μία κάτοψη· το AI λέει τι άλλαξε **ανά φύλλο**). Το
+   `entity_audit_trail` (ADR-195) **απορρίφθηκε** ως πηγή: είναι audit **πεδίων BIM οντοτήτων**, όχι
+   εκδόσεων σχεδίου (λάθος επίπεδο) — αντ' αυτού το ίδιο το revision record είναι append-only ιστορικό.
+   Αρχικό κείμενο: Το σύστημα κρατά
    **μόνο του** τον πίνακα αναθεωρήσεων (αριθμός 1η/2η/3η + ημερομηνία) και, επιπλέον, **προτείνει
    μόνο του τι άλλαξε** συγκρίνοντας τη νέα με την προηγούμενη έκδοση (ο χρήστης εγκρίνει/διορθώνει).
    → Προωθεί το §8 στοιχείο #6 (auto-changelog revision via model diff) σε **core** (μπαίνει στη
@@ -743,6 +761,57 @@ worksheets χωρίς διπλή καταχώρηση).
 
 ## Changelog
 
+- **2026-07-14 (Φάση Η — Πίνακας αναθεωρήσεων + AI auto-changelog, ΥΛΟΠΟΙΗΣΗ)**: **κλείνει την
+  Απόφαση #9** (κενό #8, §4.2) — το τελευταίο core κενό του ADR. Το σύστημα κρατά **μόνο του** την
+  ιστορία εκδόσεων και **προτείνει μόνο του τι άλλαξε**. Αρχιτεκτονική: **§5.7**.
+  - **Phase 1 recognition — ο κώδικας επιβεβαίωσε το κενό**: `revision.number/date/author/description`
+    **υπήρχαν ήδη** στο `PLACEHOLDER_REGISTRY`, τα διάβαζε ο `readRevision` του resolver, υπήρχε
+    `PlaceholderScopeRevision` **και** έτοιμο δίγλωσσο `defaults/revision.ts` — **κανείς δεν τα
+    γέμιζε**. Ίδιο μοτίβο με το `drawing.sheetNumber` πριν τη Φάση Ζ ⇒ **μηδέν νέα placeholders**,
+    μόνο **παραγωγός**. Το `entity_audit_trail` (ADR-195) **απορρίφθηκε** ως πηγή του diff (καλύπτει
+    μόνο BIM οντότητες, σε επίπεδο **πεδίου** — λάθος επίπεδο· και είναι ratchet-protected).
+  - **Μοντέλο (καθαρό, ντετερμινιστικό)** — **NEW** `text-engine/title-block/revisions/`:
+    `revision.types.ts` · `revision-numbering.ts` (μοτίβο `sheet-numbering.ts`: max+1 ⇒ ο αριθμός·
+    `formatRevisionNumber` → «1η/2η/3η» EL, «1/2/3» EN — Απόφαση #8) · `revision-snapshot.ts`
+    (αποτύπωμα σετ: **υπογραφή ανά οντότητα** `idHash:contentHash:type` + `countsByType`· canonical
+    JSON με ταξινομημένα κλειδιά ⇒ μηδέν ψεύτικες «τροποποιήσεις»· `MAX_SIGNATURES` 12.000 ⇒ coarse
+    mode **δηλωμένο**, ποτέ σιωπηλή περικοπή) · `revision-diff.ts` (**προστέθηκε/αφαιρέθηκε/
+    τροποποιήθηκε** ανά τύπο + νέα/αφαιρεμένα φύλλα + `baseline`).
+  - **Persistence (νέο collection, append-only)** — **NEW** `drawing_revisions` (+ `DRAWING_REVISIONS`
+    στο `firestore-collections.ts`) & **NEW** prefix `drev` + `generateDrawingRevisionId` +
+    **`generateDeterministicDrawingRevisionId`** (ADR-632 Φ5 μοτίβο). **NEW**
+    `drawing-revision.service.ts` (server-only, admin SDK, `setDoc` — N.6): **idempotency ΔΟΜΙΚΗ** —
+    doc id = ντετερμινιστικό ανά `(projectId, digest)` ⇒ δύο κλικ «Νέα αναθεώρηση» ⇒ **ΕΝΑ** doc
+    (`created: false`). Ο **αριθμός** παράγεται server-side (πηγή αλήθειας της ιστορίας)· query
+    `companyId + projectId` **χωρίς** composite index (ταξινόμηση στη μνήμη).
+  - **Παραγωγός (μηδέν δεύτερο data path)** — **MOD** `active-title-block.ts`:
+    `TitleBlockScopeOverrides.revision` + το `buildActiveTitleBlockScope` γεμίζει τα `{{revision.*}}`
+    από την **τρέχουσα** αναθεώρηση· **MOD** `loadTitleBlockAssets` την προ-φορτώνει στο **ίδιο**
+    σημείο (ένας ιδιοκτήτης lifecycle) ⇒ **NEW** `revision-client.ts` (module singleton cache,
+    ADR-040 getters — μηδέν `await` στο κλικ/ghost/PDF). ⇒ **πινακίδα + πίνακας αναθεωρήσεων γεμίζουν
+    στα 3 backends δωρεάν** (§7 must-have #4). **MOD** `resolver.ts` (εξήχθη `toShortDate` — η
+    ημερομηνία στον διάλογο === η ημερομηνία που τυπώνεται) · **MOD** `sheet-set.ts` (εξήχθη
+    `sheetTitleForLevel` — το φύλλο λέγεται το ΙΔΙΟ σε PDF και πίνακα αναθεωρήσεων, N.18).
+  - **AI auto-changelog (§8 #6)** — **NEW** `ai/ai-revision-changelog-schema.ts` (Zod) +
+    `ai/ai-revision-changelog.ts` (server-only): **ο κώδικας μετράει, το AI διατυπώνει** — στο μοντέλο
+    δίνεται ο **έτοιμος** diff, ποτέ το σχέδιο ⇒ κανένα «το LLM μέτρησε λάθος τους τοίχους».
+    `getOpenAIProvider` + `generateObject` + `recordUsage` (κανάλι `dxf-title-block-ai`) — **καμία**
+    αλλαγή στο `src/services/ai-pipeline/` (N.10 δεν ενεργοποιείται). **Graceful `null`**.
+  - **Routes (server-only)** — **NEW** `api/dxf/revisions/route.ts` (GET ιστορία / POST καταχώρηση·
+    το GET **δεν** στέλνει snapshots — ~260KB που ο client δεν χρειάζεται· ο συντάκτης λύνεται από τον
+    **ίδιο** `buildPlaceholderScope` που γεμίζει την πινακίδα) + **NEW**
+    `api/dxf/text-templates/ai/revision-changelog/route.ts` (reuse του **κοινού** `_ai-route-helpers`
+    της Φάσης Δ· επιστρέφει **diff + πρόταση**) + **NEW** `_revision-route-helpers.ts` (το `jscpd:diff`
+    έπιασε δίδυμο wire parsing στα δύο routes ⇒ **εξήχθη SSoT**, N.18).
+  - **UI (κανένα νέο σύστημα)** — **NEW** `RevisionsDialog.tsx` (ιστορικό + ντετερμινιστικός diff +
+    AI πρόταση + **έγκριση/διόρθωση** πριν την καταχώρηση) + `useRevisions.ts` + **NEW**
+    `app/RevisionsHost.tsx` (event-gated, mirror `AiTitleBlockHost`). **MOD** κουμπί «Αναθεωρήσεις…»
+    στο **υπάρχον** contextual tab «Πινακίδα Σχεδίου» (`open-revisions-dialog` → EventBus
+    `dxf:revisions-dialog-requested`) · `RibbonButtonIcon` (`revisions`) · lazy + `DxfViewerDialogs` ·
+    i18n `{el,en}/dxf-viewer-shell.json` (`revisions.*` + `ribbon.commands.titleBlockRevisions*`).
+  - **Tests**: `revisions/__tests__/revision-snapshot-diff.test.ts` (10 — σταθερό digest ανεξάρτητα
+    σειράς = idempotency· αλλαγή σχεδίου ⇒ αλλαγή digest· selection ≠ αλλαγή· added/removed/**modified**
+    διακριτά· νέο/αφαιρεμένο φύλλο). Σύνολο text-engine: **519/519 πράσινα**. `jscpd:diff` **καθαρό**.
 - **2026-07-14 (Φάση Δ — AI ναυαρχίδα: Εικόνα→Πινακίδα · Φυσική-γλώσσα→Πινακίδα · AI compliance,
   ΥΛΟΠΟΙΗΣΗ)**: **κλείνει το κενό #7** (§4.2) — το **τελευταίο** του ADR. Ο μηχανικός **φωτογραφίζει**
   υπάρχουσα πινακίδα ή **την περιγράφει**, και το AI παράγει **επεξεργάσιμο πρότυπο** που ζωγραφίζεται

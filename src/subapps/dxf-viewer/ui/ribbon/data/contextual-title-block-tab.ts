@@ -158,6 +158,19 @@ export const CONTEXTUAL_TITLE_BLOCK_TAB: RibbonTab = {
                 action: 'open-stamp-dialog',
               },
             },
+            {
+              // ADR-651 Φάση Η — πίνακας αναθεωρήσεων + AI πρόταση «τι άλλαξε» (Απόφαση #9).
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'titleBlock.revisions',
+                labelKey: 'ribbon.commands.titleBlockRevisions',
+                tooltipKey: 'ribbon.commands.titleBlockRevisionsTooltip',
+                icon: 'revisions',
+                commandKey: 'open-revisions-dialog',
+                action: 'open-revisions-dialog',
+              },
+            },
           ],
         },
       ],

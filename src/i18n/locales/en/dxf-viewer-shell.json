@@ -1256,6 +1256,12 @@
     "titleBlock": {
       "statusPosition": "Click to place the drawing title block",
       "errorNoTemplate": "No title block template found"
+    },
+    "furniturePlan": {
+      "label": "Furniture",
+      "statusPosition": "Click to place the furniture",
+      "errorNoSelection": "No furniture selected",
+      "errorUnknownItem": "Unknown furniture item"
     }
   },
   "blockLibrary": {
@@ -1339,6 +1345,48 @@
       "action": "Delete",
       "title": "Delete block",
       "description": "“{name}” will be permanently deleted from the library (along with its geometry). Blocks already placed in the drawing are unaffected."
+    }
+  },
+  "furniturePlan": {
+    "title": "Plan Furniture",
+    "hint": "Pick a furniture item and click on the canvas to place it.",
+    "empty": "No plan furniture found.",
+    "noMatch": "No furniture matches the filter.",
+    "allCategories": "All",
+    "categories": {
+      "sofa3": "3-seat sofa",
+      "sofa2": "2-seat sofa",
+      "armchair": "Armchair",
+      "recliner": "Recliner",
+      "chair": "Chair",
+      "officeChair": "Office chair",
+      "bedDouble": "Double bed",
+      "bedSingle": "Single bed",
+      "rug": "Rug"
+    },
+    "items": {
+      "sofa3Striped": "3-seat striped",
+      "sofa2Striped": "2-seat striped",
+      "armchairStriped": "Striped armchair",
+      "sofa3StripedBlue": "3-seat striped blue",
+      "sofa2StripedBlue": "2-seat striped blue",
+      "armchairStripedBlue": "Striped blue armchair",
+      "armchairPlaid": "Plaid armchair",
+      "sofa3Classic": "3-seat classic",
+      "sofa2Classic": "2-seat classic",
+      "armchairClassic": "Classic armchair",
+      "sofa3Modern": "3-seat modern",
+      "sofa2Modern": "2-seat modern",
+      "armchairModern": "Modern armchair",
+      "bedDoubleOrange": "Orange double bed",
+      "chairUpholstered": "Upholstered chair",
+      "reclinerLeather": "Leather recliner",
+      "rugCircles": "Circles rug",
+      "rugWaves": "Waves rug",
+      "rugRetro": "Retro rug"
+    },
+    "errors": {
+      "resolveFailed": "Could not load the furniture item."
     }
   },
   "snapModes": {
@@ -1794,6 +1842,7 @@
       "dxfFiles": "DXF Files",
       "annotationSymbols": "Symbols",
       "blockLibrary": "Blocks",
+      "furniturePlan": "Furniture",
       "titleBlock": "Title Block",
       "background": "Background",
       "exportPanel": "Export",
@@ -4591,12 +4640,15 @@
       },
       "openGuidePanel": "Guide Panel",
       "blockLibrary": "Blocks",
+      "furniturePlan": "Furniture",
       "titleBlock": "Title Block",
       "titleBlockTooltip": "Place a drawing title block, auto-filled from the active project",
       "titleBlockStamp": "Stamp…",
       "titleBlockStampTooltip": "Upload the engineer stamp/signature — placed automatically on every title block",
       "aiTitleBlock": "AI Title Block…",
       "aiTitleBlockTooltip": "Generate a title block with AI — from a photo of an existing title block or from a description",
+      "titleBlockRevisions": "Revisions…",
+      "titleBlockRevisionsTooltip": "Project revision table — automatic number & date, with an AI suggestion of what changed",
       "toggleGuides": "Show/Hide Guides",
       "guideAnalysis": "Guide Analysis",
       "displayGrid": "Grid",
@@ -6144,6 +6196,52 @@
       "failed": "Upload failed. Please try again.",
       "removeFailed": "Removal failed. Please try again.",
       "notReady": "No active user/company available."
+    }
+  },
+  "revisions": {
+    "title": "Drawing Revisions",
+    "description": "The system keeps the project revision table on its own (number + date) and uses AI to suggest what changed since the previous issue. You approve or correct it.",
+    "history": {
+      "title": "Revision history",
+      "empty": "No revisions yet. The first entry is the initial issue.",
+      "number": "No.",
+      "date": "Date",
+      "description": "Description",
+      "author": "Author"
+    },
+    "next": {
+      "title": "New revision: {number}",
+      "sheets": "{count, plural, one {# sheet} other {# sheets}}"
+    },
+    "analyze": {
+      "action": "What changed? (AI)",
+      "running": "Comparing with the previous issue…",
+      "hint": "The comparison is computed by the system (exact counts); the AI only writes the description."
+    },
+    "diff": {
+      "title": "Changes since the previous issue",
+      "baseline": "There is no previous issue — this is the initial version.",
+      "noChanges": "No changes detected since the previous issue.",
+      "newSheet": "New sheet",
+      "coarse": "Coarse comparison",
+      "added": "Added",
+      "removed": "Removed",
+      "modified": "Modified",
+      "removedSheets": "Sheets removed"
+    },
+    "form": {
+      "description": "Revision description",
+      "placeholder": "e.g. Ground floor plan revised following planning-authority comments.",
+      "hint": "Number and date are filled in automatically. The description is recorded exactly as you approve it."
+    },
+    "submit": "Record revision",
+    "submitting": "Recording…",
+    "close": "Close",
+    "errors": {
+      "noProject": "No active project — revisions are kept per project.",
+      "analyzeFailed": "The comparison failed. You can still write the description yourself.",
+      "aiUnavailable": "The AI did not respond. The changes are listed above — write the description yourself.",
+      "submitFailed": "Recording failed. Please try again."
     }
   },
   "aiTitleBlock": {
