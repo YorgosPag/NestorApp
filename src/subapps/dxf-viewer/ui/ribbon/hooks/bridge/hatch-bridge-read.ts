@@ -81,6 +81,22 @@ export function readHatchComboboxState(
     if (commandKey === HATCH_RIBBON_KEYS.stringParams.groutColor) {
       return { value: hatch?.imageFill?.grout?.color ?? defaults.groutColor, options: [] };
     }
+    if (commandKey === HATCH_RIBBON_KEYS.stringParams.tintColorA) {
+      return { value: hatch?.imageFill?.tint?.colorA ?? defaults.tintColorA, options: [] };
+    }
+    if (commandKey === HATCH_RIBBON_KEYS.stringParams.tintColorB) {
+      return { value: hatch?.imageFill?.tint?.colorB ?? defaults.tintColorB, options: [] };
+    }
+    // ADR-653 Φ9 — procedural χρώματα/αρμός (colors[0]/[1] + jointColor).
+    if (commandKey === HATCH_RIBBON_KEYS.stringParams.procColorA) {
+      return { value: hatch?.imageFill?.procedural?.colors[0] ?? defaults.procColorA, options: [] };
+    }
+    if (commandKey === HATCH_RIBBON_KEYS.stringParams.procColorB) {
+      return { value: hatch?.imageFill?.procedural?.colors[1] ?? defaults.procColorB, options: [] };
+    }
+    if (commandKey === HATCH_RIBBON_KEYS.stringParams.procJointColor) {
+      return { value: hatch?.imageFill?.procedural?.jointColor ?? defaults.procJointColor, options: [] };
+    }
     return { value: hatch?.islandStyle ?? defaults.islandStyle, options: [] };
   }
   if (isHatchRibbonNumberKey(commandKey)) {
@@ -120,6 +136,15 @@ export function readHatchComboboxState(
     }
     if (commandKey === HATCH_RIBBON_KEYS.params.groutWidth) {
       return { value: String(hatch?.imageFill?.grout?.widthMm ?? defaults.groutWidthMm), options: [] };
+    }
+    // Ένταση duotone: domain 0..1 → UI σε % (0..100). Στρογγυλοποίηση για καθαρό readout.
+    if (commandKey === HATCH_RIBBON_KEYS.params.tintStrength) {
+      const strength = hatch?.imageFill?.tint?.strength ?? defaults.tintStrength;
+      return { value: String(Math.round(strength * 100)), options: [] };
+    }
+    // Αρμός procedural (mm).
+    if (commandKey === HATCH_RIBBON_KEYS.params.procJointMm) {
+      return { value: String(hatch?.imageFill?.procedural?.jointMm ?? defaults.procJointMm), options: [] };
     }
     // «Απόσταση»: στο «έτοιμο μοτίβο» δείχνει την ΠΡΑΓΜΑΤΙΚΗ world απόσταση γραμμών
     // (min-spacing), που προκύπτει από το patternScale· αλλιώς το lineSpacing (mm).

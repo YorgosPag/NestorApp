@@ -65,6 +65,8 @@ const ANGLE_INPUT: RibbonNumericInputConfig = { editable: true, min: 0, max: 360
 const TILE_INPUT: RibbonNumericInputConfig = { editable: true, min: 1 };
 // ADR-643 Φ5 — πραγματικό πλάτος αρμού (mm)· ≥0.1 mm.
 const GROUT_WIDTH_INPUT: RibbonNumericInputConfig = { editable: true, min: 0.1 };
+// ADR-653 Φ8 — ένταση duotone (%)· 0..100 ακέραιο.
+const TINT_STRENGTH_INPUT: RibbonNumericInputConfig = { editable: true, min: 0, max: 100, allowDecimal: false };
 const SPACING_INPUT: RibbonNumericInputConfig = { editable: true, min: 1 };
 const TRANSPARENCY_INPUT: RibbonNumericInputConfig = { editable: true, min: 0, max: 90, allowDecimal: false };
 const SHIFT_INPUT: RibbonNumericInputConfig = { editable: true, min: 0, max: 1 };
@@ -145,6 +147,32 @@ export const HATCH_PROPERTY_GROUPS: readonly EntityPropertyGroup[] = [
       H(K.toggles.grout, lbl('grout'), 'toggle'),
       H(K.stringParams.groutColor, lbl('groutColor'), 'color'),
       H(K.params.groutWidth, lbl('groutWidth'), 'numeric', { numericInput: GROUT_WIDTH_INPUT }),
+    ],
+  },
+  {
+    // ADR-653 Φ8 — χρωματισμός (duotone tint): ορατό όταν fillType='image' ΚΑΙ ΟΧΙ procedural
+    // (τα procedural υλικά ορίζουν χρώματα απευθείας → tint άσχετο). «καφέ σκακιέρα → άσπρη/μαύρη».
+    id: 'imageTint',
+    titleKey: 'hatchAdvancedPanel.sections.imageTint.title',
+    visibilityKey: K.visibility.imageTint,
+    fields: [
+      H(K.toggles.tint, lbl('tint'), 'toggle'),
+      H(K.stringParams.tintColorA, lbl('tintColorA'), 'color'),
+      H(K.stringParams.tintColorB, lbl('tintColorB'), 'color'),
+      H(K.params.tintStrength, lbl('tintStrength'), 'numeric', { numericInput: TINT_STRENGTH_INPUT }),
+    ],
+  },
+  {
+    // ADR-653 Φ9 — διαδικαστικό υλικό (χρώματα/αρμός): ορατό μόνο όταν το υλικό είναι procedural
+    // (assetId `proc:*`). Η γεννήτρια επιλέγεται από τον picker· εδώ ρυθμίζονται τα χρώματα.
+    id: 'procedural',
+    titleKey: 'hatchAdvancedPanel.sections.procedural.title',
+    visibilityKey: K.visibility.procedural,
+    fields: [
+      H(K.stringParams.procColorA, lbl('procColorA'), 'color'),
+      H(K.stringParams.procColorB, lbl('procColorB'), 'color'),
+      H(K.params.procJointMm, lbl('procJointMm'), 'numeric', { numericInput: GROUT_WIDTH_INPUT }),
+      H(K.stringParams.procJointColor, lbl('procJointColor'), 'color'),
     ],
   },
   {

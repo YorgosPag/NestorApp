@@ -29,6 +29,16 @@ import {
   materialImageLabelKey,
   type MaterialImageDef,
 } from '../../data/material-image-catalog';
+// ADR-653 Φ9 — procedural υλικά (ζωγραφισμένα από γεννήτριες, μηδέν αρχείο εικόνας).
+import {
+  listProceduralMaterials,
+  proceduralMaterialLabelKey,
+  proceduralAssetId,
+  defaultProceduralParams,
+  proceduralDefaultTileMm,
+  type ProceduralMaterialDef,
+} from '../../data/procedural-material-catalog';
+import { renderProceduralTile } from '../../rendering/entities/shared/procedural-tile-render';
 import { useMaterialThumbnailUrl } from '../../bim/materials/material-thumbnail-resolver';
 import { useHatchImageUploads, type HatchImageUploadEntry } from './hooks/useHatchImageUploads';
 
@@ -131,6 +141,36 @@ function BuiltinSwatch({
   );
 }
 
+/**
+ * Procedural swatch (ADR-653 Φ9) — ζωγραφίζει το preview της γεννήτριας με τα default
+ * χρώματα (μηδέν αρχείο εικόνας) και το δίνει ως data URL στο κοινό `SwatchButton`.
+ * Επιλογή → γράφει `assetId = proc:<generator>` (ο build υιοθετεί default params + tile).
+ */
+function ProceduralSwatch({
+  def,
+  selected,
+  onSelect,
+}: {
+  readonly def: ProceduralMaterialDef;
+  readonly selected: boolean;
+  readonly onSelect: (assetId: string) => void;
+}): React.ReactElement {
+  const { t } = useTranslation('dxf-viewer-shell');
+  const url = React.useMemo<string | null>(() => {
+    const tile = proceduralDefaultTileMm(def.generator);
+    const canvas = renderProceduralTile(defaultProceduralParams(def.generator), tile.width, tile.height);
+    return canvas ? canvas.toDataURL() : null;
+  }, [def.generator]);
+  return (
+    <SwatchButton
+      url={url}
+      label={t(proceduralMaterialLabelKey(def))}
+      selected={selected}
+      onSelect={() => onSelect(proceduralAssetId(def.generator))}
+    />
+  );
+}
+
 /** «Ανέβασμα φωτο» control + inline uploading/error state (Φ4). */
 function UploadControl({
   uploading,
@@ -198,6 +238,22 @@ export function MaterialImagePicker({
         {listMaterialImages().map((def) => (
           <li key={def.id}>
             <BuiltinSwatch def={def} selected={def.id === selectedAssetId} onSelect={onSelect} />
+          </li>
+        ))}
+      </ul>
+
+      {/* ADR-653 Φ9 — διαδικαστικά υλικά (σκακιέρα/πλακίδιο/τούβλο/ρίγες), ζωγραφισμένα σε κώδικα. */}
+      <h5 className="text-[11px] font-medium text-muted-foreground">
+        {t('proceduralMaterials.sectionTitle')}
+      </h5>
+      <ul className="grid grid-cols-4 gap-1">
+        {listProceduralMaterials().map((def) => (
+          <li key={def.generator}>
+            <ProceduralSwatch
+              def={def}
+              selected={proceduralAssetId(def.generator) === selectedAssetId}
+              onSelect={onSelect}
+            />
           </li>
         ))}
       </ul>

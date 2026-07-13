@@ -81,6 +81,24 @@ export interface HatchDrawDefaults {
   readonly groutColor: string;
   /** Πραγματικό πλάτος αρμού (mm). */
   readonly groutWidthMm: number;
+  // ── ADR-653 Φ8 — χρωματισμός (duotone tint) της εικόνας ──
+  /** Ενεργός χρωματισμός (duotone recolor). */
+  readonly tintEnabled: boolean;
+  /** Σκούρο άκρο ράμπας duotone (hex). */
+  readonly tintColorA: string;
+  /** Φωτεινό άκρο ράμπας duotone (hex). */
+  readonly tintColorB: string;
+  /** Ένταση duotone 0..1 (0 = ανέγγιχτη φωτο, 1 = πλήρες duotone). */
+  readonly tintStrength: number;
+  // ── ADR-653 Φ9 — διαδικαστικό υλικό (χρώματα/αρμός· ενεργά όταν imageAssetId=`proc:*`) ──
+  /** 1ο χρώμα διαδικαστικού υλικού (hex). */
+  readonly procColorA: string;
+  /** 2ο χρώμα διαδικαστικού υλικού (hex) — checker/stripes. */
+  readonly procColorB: string;
+  /** Πάχος αρμού διαδικαστικού υλικού (mm) — grid/brick. */
+  readonly procJointMm: number;
+  /** Χρώμα αρμού διαδικαστικού υλικού (hex) — grid/brick. */
+  readonly procJointColor: string;
 }
 
 // ADR-643 Φ3 — πρώτο catalog υλικό ως default· tile size DERIVED (SSoT, μηδέν διπλότυπη διάσταση).
@@ -116,6 +134,18 @@ export const DEFAULT_HATCH_DRAW_DEFAULTS: HatchDrawDefaults = {
   groutEnabled: false,
   groutColor: '#ffffff',
   groutWidthMm: 5,
+  // Tint defaults (ADR-653 Φ8) — απενεργοποιημένος· μαύρο→λευκό ράμπα, πλήρης ένταση
+  // (ώστε το πρώτο toggle να δίνει αμέσως καθαρό ασπρόμαυρο αποτέλεσμα).
+  tintEnabled: false,
+  tintColorA: '#000000',
+  tintColorB: '#ffffff',
+  tintStrength: 1,
+  // Procedural defaults (ADR-653 Φ9) — αδρανή μέχρι να επιλεγεί procedural υλικό· τότε ο
+  // build τα ξεκινά από το catalog default της γεννήτριας (checker ασπρόμαυρη κ.λπ.).
+  procColorA: '#1a1a1a',
+  procColorB: '#f5f5f5',
+  procJointMm: 8,
+  procJointColor: '#9a9488',
 };
 
 // Plain single-state store (always-notify· ο caller στέλνει partial patch → πάντα νέο object).

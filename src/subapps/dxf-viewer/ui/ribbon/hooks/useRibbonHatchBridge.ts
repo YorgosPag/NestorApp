@@ -63,10 +63,18 @@ import {
   withImageFillPatch,
   type ImageFieldPatch,
 } from '../../../bim/hatch/hatch-image-build';
+// ADR-653 Φ9 — procedural υλικό (assetId `proc:*`) → panel visibility διάκριση.
+import { isProceduralAssetId } from '../../../data/procedural-material-catalog';
 // ADR-507/510 Φ4 — κοινό «Επίπεδο» field wiring (ίδιο SSoT με το line bridge).
 import { useEntityLayerField } from './bridge/useEntityLayerField';
 // ADR-643 Φ3 — read-side SSoT (εξήχθη· single-responsibility + όριο 500 γρ.).
 import { readHatchComboboxState } from './bridge/hatch-bridge-read';
+// ADR-653 — no-selection write-side mappers + image string-field map (εξήχθησαν· όριο 500 γρ.).
+import {
+  gradientDefaultPatch,
+  imageDefaultPatch,
+  IMAGE_STRING_FIELDS,
+} from './bridge/hatch-bridge-default-patch';
 import {
   HATCH_RIBBON_KEYS,
   isHatchRibbonNumberKey,
@@ -101,39 +109,6 @@ export interface UseRibbonHatchBridgeProps {
 export type RibbonHatchBridge = RibbonEntityBridgeCore;
 
 const NULL_TOGGLE: RibbonToggleState = false;
-
-/** Map ενός gradient field patch → το αντίστοιχο flat draw-default πεδίο (no-selection mode). */
-function gradientDefaultPatch(patch: GradientFieldPatch): Partial<HatchDrawDefaults> {
-  switch (patch.field) {
-    case 'type': return { gradientType: patch.value };
-    case 'color1': return { gradientColor1: patch.value };
-    case 'color2': return { gradientColor2: patch.value };
-    case 'singleColor': return { gradientSingleColor: patch.value };
-    case 'angleDeg': return { gradientAngle: patch.value };
-    case 'shift': return { gradientShift: patch.value };
-  }
-}
-
-/**
- * Map ενός image-fill patch → flat draw-default πεδία (no-selection mode). Στην αλλαγή
- * υλικού υιοθετούμε ΚΑΙ το πραγματικό default tile size του υλικού (μέσω του build SSoT),
- * ώστε το draft preview να δείχνει το σωστό μέγεθος (ίδια συμπεριφορά με selected).
- */
-function imageDefaultPatch(
-  d: HatchDrawDefaults,
-  patch: ImageFieldPatch,
-): Partial<HatchDrawDefaults> {
-  const next = withImageFillPatch(buildImageFillFromDefaults(d), d, patch);
-  return {
-    imageAssetId: next.assetId,
-    imageTileWidth: next.tileWidth,
-    imageTileHeight: next.tileHeight,
-    imageAngle: next.angle,
-    groutEnabled: !!next.grout,
-    groutColor: next.grout?.color ?? d.groutColor,
-    groutWidthMm: next.grout?.widthMm ?? d.groutWidthMm,
-  };
-}
 
 export function useRibbonHatchBridge(
   props: UseRibbonHatchBridgeProps,
@@ -275,12 +250,10 @@ export function useRibbonHatchBridge(
           applyGradientChange(hatch, { field: 'color2', value });
           return;
         }
-        if (commandKey === HATCH_RIBBON_KEYS.stringParams.imageAsset) {
-          applyImageChange(hatch, { field: 'assetId', value });
-          return;
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.stringParams.groutColor) {
-          applyImageChange(hatch, { field: 'groutColor', value });
+        // Image asset/χρώματα (asset/grout/tint/procedural) — ίδιο μονοπάτι, table-driven.
+        const imageStringField = IMAGE_STRING_FIELDS[commandKey];
+        if (imageStringField) {
+          applyImageChange(hatch, { field: imageStringField, value } as ImageFieldPatch);
           return;
         }
         // islandStyle
@@ -332,6 +305,18 @@ export function useRibbonHatchBridge(
         if (commandKey === HATCH_RIBBON_KEYS.params.groutWidth) {
           if (numeric <= 0) return;
           applyImageChange(hatch, { field: 'groutWidth', value: numeric });
+          return;
+        }
+        // Ένταση duotone: UI σε % (0..100· 0 ΕΓΚΥΡΟ → πριν τον generic >0 έλεγχο)· domain 0..1.
+        if (commandKey === HATCH_RIBBON_KEYS.params.tintStrength) {
+          if (numeric < 0) return;
+          applyImageChange(hatch, { field: 'tintStrength', value: Math.min(numeric, 100) / 100 });
+          return;
+        }
+        // Αρμός procedural (mm): 0 ΕΓΚΥΡΟ (χωρίς αρμό) → πριν τον generic >0 έλεγχο.
+        if (commandKey === HATCH_RIBBON_KEYS.params.procJointMm) {
+          if (numeric < 0) return;
+          applyImageChange(hatch, { field: 'procJointMm', value: numeric });
           return;
         }
         if (commandKey === HATCH_RIBBON_KEYS.params.lineAngle) {
@@ -414,6 +399,10 @@ export function useRibbonHatchBridge(
         applyImageChange(hatch, { field: 'groutEnabled', value: nextValue });
         return;
       }
+      if (commandKey === HATCH_RIBBON_KEYS.toggles.tint) {
+        applyImageChange(hatch, { field: 'tintEnabled', value: nextValue });
+        return;
+      }
       if (hatch) patchHatch(hatch, { doubleCrossHatch: nextValue || undefined });
       else setHatchDrawDefaults({ doubleCrossHatch: nextValue });
     },
@@ -444,6 +433,9 @@ export function useRibbonHatchBridge(
       }
       if (commandKey === HATCH_RIBBON_KEYS.toggles.grout) {
         return hatch ? !!hatch.imageFill?.grout : defaults.groutEnabled;
+      }
+      if (commandKey === HATCH_RIBBON_KEYS.toggles.tint) {
+        return hatch ? !!hatch.imageFill?.tint : defaults.tintEnabled;
       }
       return hatch ? (hatch.doubleCrossHatch ?? false) : defaults.doubleCrossHatch;
     },
@@ -479,7 +471,13 @@ export function useRibbonHatchBridge(
       if (!isHatchRibbonVisibilityKey(visibilityKey)) return true;
       const hatch = resolveHatch();
       const fillType = hatch?.fillType ?? defaults.fillType;
-      if (visibilityKey === HATCH_RIBBON_KEYS.visibility.image) return fillType === 'image';
+      const isImage = fillType === 'image';
+      // ADR-653 Φ9 — procedural διακρίνεται από το assetId (`proc:*`).
+      const isProc = isImage && isProceduralAssetId(hatch?.imageFill?.assetId ?? defaults.imageAssetId);
+      if (visibilityKey === HATCH_RIBBON_KEYS.visibility.image) return isImage;
+      // «Χρωματισμός» (duotone) μόνο σε raster υλικά· «Διαδικαστικό» μόνο σε procedural.
+      if (visibilityKey === HATCH_RIBBON_KEYS.visibility.imageTint) return isImage && !isProc;
+      if (visibilityKey === HATCH_RIBBON_KEYS.visibility.procedural) return isProc;
       return fillType === 'gradient';
     },
     [resolveHatch, defaults],

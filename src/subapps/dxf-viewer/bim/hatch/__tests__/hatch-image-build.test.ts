@@ -7,6 +7,7 @@
 import { buildImageFillFromDefaults, withImageFillPatch } from '../hatch-image-build';
 import { DEFAULT_HATCH_DRAW_DEFAULTS } from '../hatch-draw-defaults-store';
 import { getMaterialImageDefaultTileMm } from '../../../data/material-image-catalog';
+import { proceduralAssetId, proceduralDefaultTileMm } from '../../../data/procedural-material-catalog';
 
 const D = DEFAULT_HATCH_DRAW_DEFAULTS;
 
@@ -80,6 +81,99 @@ describe('hatch-image-build (ADR-643 Φ3)', () => {
       const withGrout = { ...base, grout: { color: '#abcdef', widthMm: 5 } };
       const next = withImageFillPatch(withGrout, D, { field: 'groutWidth', value: 12 });
       expect(next.grout).toEqual({ color: '#abcdef', widthMm: 12 });
+    });
+  });
+
+  describe('tint / duotone (ADR-653 Φ8)', () => {
+    const base = { assetId: 'matimg-ceramic-tile', tileWidth: 600, tileHeight: 600, angle: 0 };
+
+    it('omits tint from defaults when disabled', () => {
+      expect(buildImageFillFromDefaults(D).tint).toBeUndefined();
+    });
+
+    it('includes tint from defaults when enabled', () => {
+      const enabled = { ...D, tintEnabled: true, tintColorA: '#111', tintColorB: '#eee', tintStrength: 0.5 };
+      expect(buildImageFillFromDefaults(enabled).tint).toEqual({ colorA: '#111', colorB: '#eee', strength: 0.5 });
+    });
+
+    it('enabling tint creates it from the default colours/strength', () => {
+      const next = withImageFillPatch(base, D, { field: 'tintEnabled', value: true });
+      expect(next.tint).toEqual({ colorA: D.tintColorA, colorB: D.tintColorB, strength: D.tintStrength });
+    });
+
+    it('disabling tint removes the object', () => {
+      const withTint = { ...base, tint: { colorA: '#000', colorB: '#fff', strength: 1 } };
+      const next = withImageFillPatch(withTint, D, { field: 'tintEnabled', value: false });
+      expect(next.tint).toBeUndefined();
+    });
+
+    it('setting colour A enables tint and keeps the default B/strength', () => {
+      const next = withImageFillPatch(base, D, { field: 'tintColorA', value: '#123456' });
+      expect(next.tint).toEqual({ colorA: '#123456', colorB: D.tintColorB, strength: D.tintStrength });
+    });
+
+    it('setting strength preserves the existing colours', () => {
+      const withTint = { ...base, tint: { colorA: '#000000', colorB: '#ffffff', strength: 1 } };
+      const next = withImageFillPatch(withTint, D, { field: 'tintStrength', value: 0.25 });
+      expect(next.tint).toEqual({ colorA: '#000000', colorB: '#ffffff', strength: 0.25 });
+    });
+
+    it('tint and grout coexist independently', () => {
+      const withBoth = withImageFillPatch(
+        withImageFillPatch(base, D, { field: 'groutEnabled', value: true }),
+        D, { field: 'tintEnabled', value: true },
+      );
+      expect(withBoth.grout).toBeDefined();
+      expect(withBoth.tint).toBeDefined();
+    });
+  });
+
+  describe('procedural (ADR-653 Φ9)', () => {
+    const rasterBase = { assetId: 'matimg-ceramic-tile', tileWidth: 600, tileHeight: 600, angle: 0 };
+    const checkerId = proceduralAssetId('checker');
+
+    it('selecting a procedural material sets params + adopts its tile size + clears tint', () => {
+      const withTint = { ...rasterBase, tint: { colorA: '#000', colorB: '#fff', strength: 1 } };
+      const next = withImageFillPatch(withTint, D, { field: 'assetId', value: checkerId });
+      expect(next.assetId).toBe(checkerId);
+      expect(next.procedural?.generator).toBe('checker');
+      expect(next.procedural?.colors.length).toBeGreaterThanOrEqual(2);
+      expect(next.tint).toBeUndefined(); // procedural ορίζει χρώματα → tint άσχετο
+      const tile = proceduralDefaultTileMm('checker');
+      expect(next.tileWidth).toBe(tile.width);
+      expect(next.tileHeight).toBe(tile.height);
+    });
+
+    it('switching from procedural back to a raster material clears the procedural params', () => {
+      const proc = withImageFillPatch(rasterBase, D, { field: 'assetId', value: checkerId });
+      const back = withImageFillPatch(proc, D, { field: 'assetId', value: 'matimg-wood' });
+      expect(back.procedural).toBeUndefined();
+      expect(back.assetId).toBe('matimg-wood');
+    });
+
+    it('patches procedural colour 1 / colour 2 immutably', () => {
+      const proc = withImageFillPatch(rasterBase, D, { field: 'assetId', value: checkerId });
+      const a = withImageFillPatch(proc, D, { field: 'procColorA', value: '#112233' });
+      expect(a.procedural?.colors[0]).toBe('#112233');
+      const b = withImageFillPatch(a, D, { field: 'procColorB', value: '#445566' });
+      expect(b.procedural?.colors[1]).toBe('#445566');
+      expect(b.procedural?.colors[0]).toBe('#112233'); // colour 1 preserved
+    });
+
+    it('patches procedural joint width/colour', () => {
+      const proc = withImageFillPatch(rasterBase, D, { field: 'assetId', value: proceduralAssetId('grid-tile') });
+      const j = withImageFillPatch(proc, D, { field: 'procJointMm', value: 15 });
+      expect(j.procedural?.jointMm).toBe(15);
+      const jc = withImageFillPatch(j, D, { field: 'procJointColor', value: '#777777' });
+      expect(jc.procedural?.jointColor).toBe('#777777');
+    });
+
+    it('buildImageFillFromDefaults includes procedural when the default asset is proc:*', () => {
+      const procDefaults = { ...D, imageAssetId: checkerId, procColorA: '#101010', procColorB: '#efefef' };
+      const fill = buildImageFillFromDefaults(procDefaults);
+      expect(fill.procedural?.generator).toBe('checker');
+      expect(fill.procedural?.colors).toEqual(['#101010', '#efefef']);
+      expect(fill.tint).toBeUndefined();
     });
   });
 });
