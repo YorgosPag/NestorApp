@@ -442,13 +442,14 @@ offset dots (μετακίνηση μεμονωμένης ράγας)· *(optiona
 
 ## 10. Changelog
 
-- **2026-07-13 (Φ6-A UX fix — spread pivot: band-centre → άξονας 0)** — Ο Giorgio παρατήρησε ότι σε
-  ασύμμετρο compound (ράγες 1.8/−1.1) το drag των πάνω/κάτω λαβών δεν κρατούσε τις οριζόντιες ράγες
-  ισαπέχουσες από τη μεσαία γραμμή. Αιτία: το `scaleLayerSpread` κλιμάκωνε γύρω από το **band centre**
-  (0.35 εδώ) αντί για τον **άξονα (0)** = το οπτικό μέσο του swatch. Fix: `scaleLayerSpread` → `offset ×
-  factor` (pivot στο 0)· `bandHalfExtentMm` → `max|offset|` (από τον άξονα)· `bandCenterOffset` αφαιρέθηκε
-  (dead). Συμμετρικό compound (±d) μένει συμμετρικό· layer στον άξονα μένει στη μέση. §6.7.3 αναθεωρημένο.
-  (`config/line-pattern-segments.ts` + test).
+- **2026-07-13 (Φ6-A UX fix — spread = κατοπτρικό γύρω από τον άξονα· 2 iterations)** — Ο Giorgio: οι πάνω/
+  κάτω λαβές σε ασύμμετρο compound (1.8/−1.1) δεν κρατούσαν τις ράγες ισαπέχουσες, και μετά κινούνταν με
+  **διαφορετικό βήμα**. Αιτία iter-1: pivot στο *band centre* (0.35) αντί στον άξονα. Iter-2 (`offset ×
+  factor`): συμμετρικά ok αλλά ασύμμετρες ράγες → διαφορετικό βήμα (multiplicative). **Τελικό = κατοπτρικό**:
+  `scaleLayerSpread` οδηγεί κάθε πλευρά στο ΙΔΙΟ half-height `H = halfExtent × factor` (εξωτερική ράγα κάθε
+  πλευράς → `±H`, εσωτερικές κρατούν αναλογία στην πλευρά τους, on-axis μένει στη μέση). Πάντα ισαπέχουν,
+  ίδιο βήμα, μη-καταστροφικό για multi-rail· `bandHalfExtentMm` → `max|offset|`· `bandCenterOffset`
+  αφαιρέθηκε (dead). §6.7.3 αναθεωρημένο. (`config/line-pattern-segments.ts` + 2 νέα mirror tests).
 
 - **2026-07-13 (Φ6-A IMPLEMENTED — γραφικός grip editor, 8-handle bounding box)** — Υλοποίηση του §6.7
   spec (Φ6-A). Στο preview swatch του διαλόγου τύπων γραμμής μπαίνει **8-handle bounding box** (4 γωνίες +
