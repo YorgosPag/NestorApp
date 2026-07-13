@@ -17,6 +17,7 @@ import { useEffect } from 'react';
 import { useMepFixtureTool } from '../drawing/useMepFixtureTool';
 import { useFurnitureTool } from '../drawing/useFurnitureTool';
 import { useBlockLibraryTool } from '../drawing/useBlockLibraryTool';
+import { useTitleBlockTool } from '../drawing/useTitleBlockTool';
 import { useFloorplanSymbolTool } from '../drawing/useFloorplanSymbolTool';
 import { useElectricalPanelTool } from '../drawing/useElectricalPanelTool';
 import { useMepManifoldTool } from '../drawing/useMepManifoldTool';
@@ -33,6 +34,7 @@ import { resolveSceneUnits } from '../../utils/scene-units';
 import { addMepFixtureToScene } from '../../bim/mep-fixtures/add-mep-fixture-to-scene';
 import { addFurnitureToScene } from '../../bim/furniture/add-furniture-to-scene';
 import { addBlockToScene } from '../../bim/block-library/add-block-to-scene';
+import { useProjectHierarchyOptional } from '../../contexts/ProjectHierarchyContext';
 import { addFloorplanSymbolToScene } from '../../bim/floorplan-symbols/add-floorplan-symbol-to-scene';
 import { addElectricalPanelToScene } from '../../bim/electrical-panels/add-electrical-panel-to-scene';
 import { addMepManifoldToScene } from '../../bim/mep-manifolds/add-mep-manifold-to-scene';
@@ -64,6 +66,7 @@ export interface PlacementToolsReturn {
   mepFixtureTool: ReturnType<typeof useMepFixtureTool>; // ADR-406
   furnitureTool: ReturnType<typeof useFurnitureTool>; // ADR-410
   blockLibraryTool: ReturnType<typeof useBlockLibraryTool>; // Block Library M1
+  titleBlockTool: ReturnType<typeof useTitleBlockTool>; // ADR-651 Φάση Β
 
   floorplanSymbolTool: ReturnType<typeof useFloorplanSymbolTool>; // ADR-415
   electricalPanelTool: ReturnType<typeof useElectricalPanelTool>; // ADR-408 Φ3
@@ -179,6 +182,24 @@ export function useSpecialToolsPlacementTools(
     onBlockCreated: (block) => addBlockToScene(block, levelManager),
   });
   useToolLifecycle(activeTool === 'block-library', blockLibraryTool.activate, blockLibraryTool.deactivate);
+
+  // ADR-651 Φάση Β — ΠΙΝΑΚΙΔΑ: single-click τοποθέτηση του λυμένου title-block ως BlockEntity
+  // (ίδιο undoable append+broadcast με το block library). Το ενεργό έργο τροφοδοτεί το
+  // zero-config auto-fill· εκτός ProjectHierarchyProvider (ADR-371 read-only preview) το tool
+  // δουλεύει κανονικά με κενά πεδία έργου.
+  const titleBlockProjectId = useProjectHierarchyOptional()?.selectedProject?.id;
+  const titleBlockTool = useTitleBlockTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    projectId: titleBlockProjectId,
+    onTitleBlockCreated: (block) => addBlockToScene(block, levelManager),
+    // ADR-651 Φάση Γ — έξυπνη πρόταση χαρτιού: το bbox του ενεργού σχεδίου (bounds SSoT)
+    // ÷ την ενεργή κλίμακα δίνει το προτεινόμενο φύλλο στο όπλισμα του εργαλείου.
+    getDrawingEntities: () => {
+      const lid = levelManager.currentLevelId;
+      return lid ? levelManager.getLevelScene(lid)?.entities ?? [] : [];
+    },
+  });
+  useToolLifecycle(activeTool === 'title-block', titleBlockTool.activate, titleBlockTool.deactivate);
 
   // ADR-415 — FLOORPLAN SYMBOL TOOL: single-click placement; entity appended+broadcast.
   const floorplanSymbolTool = useFloorplanSymbolTool({
@@ -347,6 +368,7 @@ export function useSpecialToolsPlacementTools(
     mepFixtureTool,
     furnitureTool,
     blockLibraryTool,
+    titleBlockTool,
     floorplanSymbolTool,
     electricalPanelTool,
     mepManifoldTool,

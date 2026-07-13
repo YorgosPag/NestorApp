@@ -46,6 +46,7 @@ export function dispatchBimToolClick(
     openingTool,
     selfOpeningTool,
     blockLibraryTool,
+    titleBlockTool,
     universalSelection,
   } = params;
 
@@ -209,6 +210,12 @@ export function dispatchBimToolClick(
   // worldPoint· free-point placement, no existing-geometry hit-test, mirror furniture).
   if (activeTool === 'block-library' && blockLibraryTool?.isActive) {
     blockLibraryTool.onCanvasClick(worldPoint);
+    return true;
+  }
+  // PRIORITY 4.915c: ADR-651 Φάση Β — πινακίδα σχεδίου με ένα κλικ (RAW worldPoint· free-point
+  // placement, ίδιο μονοπάτι με το block library — παράγει BlockEntity).
+  if (activeTool === 'title-block' && titleBlockTool?.isActive) {
+    titleBlockTool.onCanvasClick(worldPoint);
     return true;
   }
   // PRIORITIES 4.92–4.93: MEP fixture / riser / furniture / floorplan-symbol /

@@ -44,6 +44,7 @@ import type {
   MepBoilerToolLike,
   FurnitureToolLike,
   BlockLibraryToolLike,
+  TitleBlockToolLike,
   FloorplanSymbolToolLike,
   RailingToolLike,
   SlabOpeningToolLike,
@@ -122,6 +123,8 @@ export interface UseCanvasClickHandlerParams {
   furnitureTool?: FurnitureToolLike;
   /** Block Library M1 — block re-placement tool click pipeline (single-click). */
   blockLibraryTool?: BlockLibraryToolLike;
+  /** ADR-651 Φάση Β — title-block tool click pipeline (single-click placement). */
+  titleBlockTool?: TitleBlockToolLike;
   /** ADR-415 — Floorplan-symbol tool click pipeline (single-click placement). */
   floorplanSymbolTool?: FloorplanSymbolToolLike;
   /** ADR-407 — Railing tool click pipeline (2-click straight guardrail). */

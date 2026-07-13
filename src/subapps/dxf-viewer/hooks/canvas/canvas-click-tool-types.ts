@@ -167,6 +167,13 @@ export interface BlockLibraryToolLike {
   onCanvasClick: (point: Point2D) => boolean;
 }
 
+/**
+ * ADR-651 Φάση Β — η πινακίδα σχεδίου δρομολογείται ΑΚΡΙΒΩΣ όπως ένα block (single-click,
+ * παράγει `BlockEntity`), οπότε μοιράζεται το ίδιο routing συμβόλαιο — alias, όχι δίδυμο
+ * interface (N.18).
+ */
+export type TitleBlockToolLike = BlockLibraryToolLike;
+
 /** ADR-415 — Minimal floorplan-symbol tool interface for click routing. */
 export interface FloorplanSymbolToolLike {
   readonly isActive: boolean;

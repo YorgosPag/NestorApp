@@ -51,6 +51,7 @@ import {
   THERMAL_SPACE_CONTEXTUAL_TRIGGER,
   FURNITURE_CONTEXTUAL_TRIGGER,
   BLOCK_LIBRARY_CONTEXTUAL_TRIGGER,
+  TITLE_BLOCK_CONTEXTUAL_TRIGGER,
   FLOORPLAN_SYMBOL_CONTEXTUAL_TRIGGER,
   ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER,
   SCALE_BAR_CONTEXTUAL_TRIGGER,
@@ -95,6 +96,9 @@ export const TOOL_ACTIVE_TRIGGER: ReadonlyMap<string, string> = new Map<string, 
   // ADR-652 M1.5 — Block Library tool active → «Τοποθέτηση Block» (rotation/scale του επόμενου
   // κλικ). ΧΩΡΙΣ picker: το «ποιο block» το κατέχει το palette «Τα Blocks μου», όχι το ribbon.
   ['block-library', BLOCK_LIBRARY_CONTEXTUAL_TRIGGER],
+  // ADR-651 Φάση Γ — εργαλείο «Πινακίδα» ενεργό → «Πινακίδα Σχεδίου» (preset / μέγεθος
+  // χαρτιού / προσανατολισμός / κορνίζα ISO 5457 + transform του επόμενου κλικ).
+  ['title-block', TITLE_BLOCK_CONTEXTUAL_TRIGGER],
   // ADR-583 Φ1 — every annotation-symbol placement tool (north arrow + future kinds)
   // opens the SAME contextual tab, derived from the kind registry (no per-kind line).
   ...ANNOTATION_KIND_CONFIGS.map((c) => [c.toolId, ANNOTATION_SYMBOL_CONTEXTUAL_TRIGGER] as [string, string]),

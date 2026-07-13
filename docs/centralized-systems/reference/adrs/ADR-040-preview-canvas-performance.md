@@ -4154,3 +4154,15 @@ driven από vanilla `topo-qa-store` (createExternalStore, `equals: Object.is`)
 στο `subscribeImmediateTransformFrame` (zero-lag pan/zoom, όχι prop transform)· **μηδέν** `useSyncExternalStore`
 σε CanvasSection/Shell (CHECK 6C τηρείται). Reuse `ClashMarkerLayer`+`ClashMarkerGlyph` (ένα ⊙ SSoT). Inert
 όσο δεν υπάρχει report· κρύβεται σε 3D. Co-staged με ADR-650 changelog v11. jscpd:diff clean. ΟΧΙ tsc (N.17).
+
+### 2026-07-14: ADR-651 Φάση Β — `titleBlockTool` στο click-routing (CHECK 6B stage, μηδέν αρχιτεκτονική αλλαγή)
+
+Το εργαλείο «Πινακίδα Σχεδίου» μπαίνει στο υπάρχον single-click placement μονοπάτι, **χωρίς** νέο
+συμβόλαιο: `TitleBlockToolLike = BlockLibraryToolLike` (alias, όχι δίδυμο interface — N.18), νέο
+optional `titleBlockTool?` param στο `UseCanvasClickHandlerParams`, και ένα `if` στο
+`dispatchBimToolClick` (PRIORITY 4.915c) που καλεί `titleBlockTool.onCanvasClick(worldPoint)` με RAW
+worldPoint — ακριβώς ό,τι κάνει το block library (παράγει `BlockEntity`).
+
+**Καμία επίδραση στο micro-leaf pattern**: το `canvas-click-types.ts` είναι μόνο types (zero runtime),
+μηδέν νέο `useSyncExternalStore`, μηδέν νέος subscriber σε high-freq store, μηδέν αλλαγή στο
+bitmap-cache key. Το commit αγγίζει το αρχείο μόνο για το type του νέου tool → CHECK 6B stage.
