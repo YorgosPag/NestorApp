@@ -10,10 +10,11 @@
  *   5. On failure, restores the original snapshot and surfaces the error.
  *
  * `duplicate` is a thin wrapper over `create` that copies the source's
- * `content` / `category` and appends `" (copy)"` to its name. The server
- * decides the final unique name (see "Duplicate naming" in the route);
- * for the optimistic UI we use a placeholder name so the row appears
- * immediately.
+ * `content` / `category` and appends `" (copy)"` to its name.
+ *
+ * ⚠️ ADR-651 Φάση Θ: το **σύρμα** (fetch + error mapping) δεν ζει πια εδώ — μετακόμισε στον
+ * κοινό `text-template-api.ts`, τον οποίο μοιράζεται με τη **βιβλιοθήκη πινακίδας** (N.18:
+ * ένα σετ HTTP wrappers, όχι δύο). Εδώ μένει ΜΟΝΟ η optimistic σημασιολογία του manager.
  */
 'use client';
 
@@ -23,8 +24,15 @@ import type {
   TextTemplate,
   TextTemplateCategory,
 } from '@/subapps/dxf-viewer/text-engine/templates';
-import { deserializeUserTemplate } from './template-cache';
-import type { SerializedUserTextTemplate } from '../shared/serialized-template.types';
+import {
+  TextTemplateApiError,
+  apiCreateTextTemplate,
+  apiDeleteTextTemplate,
+  apiUpdateTextTemplate,
+} from '@/subapps/dxf-viewer/text-engine/templates/text-template-api';
+
+/** Το σφάλμα του manager ΕΙΝΑΙ το σφάλμα του api client — ένας τύπος, ένα `instanceof`. */
+export { TextTemplateApiError as TemplateMutationError };
 
 export interface CreateTemplateInput {
   readonly name: string;
@@ -36,34 +44,6 @@ export interface UpdateTemplatePatch {
   readonly name?: string;
   readonly category?: TextTemplateCategory;
   readonly content?: DxfTextNode;
-}
-
-interface MutateResponse {
-  readonly success: boolean;
-  readonly template?: SerializedUserTextTemplate;
-  readonly error?: string;
-  readonly details?: readonly string[];
-  readonly code?: string;
-}
-
-interface MutationFailure {
-  readonly status: number;
-  readonly message: string;
-  readonly code?: string;
-  readonly details?: readonly string[];
-}
-
-export class TemplateMutationError extends Error {
-  readonly status: number;
-  readonly code?: string;
-  readonly details?: readonly string[];
-  constructor(failure: MutationFailure) {
-    super(failure.message);
-    this.name = 'TemplateMutationError';
-    this.status = failure.status;
-    this.code = failure.code;
-    this.details = failure.details;
-  }
 }
 
 interface UseMutationsArgs {
@@ -84,20 +64,19 @@ function optimisticId(): string {
   return `${OPTIMISTIC_PREFIX}${Math.random().toString(36).slice(2, 11)}`;
 }
 
-async function parseMutateResponse(res: Response): Promise<MutateResponse> {
-  try {
-    return (await res.json()) as MutateResponse;
-  } catch {
-    return { success: false, error: `HTTP ${res.status}` };
-  }
-}
-
-function failureFromResponse(res: Response, body: MutateResponse): MutationFailure {
+/** Η προσωρινή γραμμή που βλέπει ο χρήστης όσο ταξιδεύει το POST. */
+function optimisticTemplate(input: CreateTemplateInput): TextTemplate {
+  const now = new Date();
   return {
-    status: res.status,
-    message: body.error ?? `Request failed with status ${res.status}`,
-    code: body.code,
-    details: body.details,
+    id: optimisticId(),
+    companyId: '__pending__',
+    name: input.name,
+    category: input.category,
+    content: input.content,
+    placeholders: [],
+    isDefault: false,
+    createdAt: now,
+    updatedAt: now,
   };
 }
 
@@ -107,31 +86,9 @@ export function useTextTemplateMutations(
   const createTemplate = useCallback(
     async (input: CreateTemplateInput): Promise<TextTemplate> => {
       const snapshot = userTemplates;
-      const tempId = optimisticId();
-      const optimistic: TextTemplate = {
-        id: tempId,
-        companyId: '__pending__',
-        name: input.name,
-        category: input.category,
-        content: input.content,
-        placeholders: [],
-        isDefault: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      setUserTemplates([...snapshot, optimistic]);
+      setUserTemplates([...snapshot, optimisticTemplate(input)]);
       try {
-        const res = await fetch('/api/dxf/text-templates', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(input),
-        });
-        const body = await parseMutateResponse(res);
-        if (!res.ok || !body.success || !body.template) {
-          throw new TemplateMutationError(failureFromResponse(res, body));
-        }
-        const persisted = deserializeUserTemplate(body.template);
+        const persisted = await apiCreateTextTemplate(input);
         setUserTemplates(snapshot.concat(persisted));
         return persisted;
       } catch (err) {
@@ -147,34 +104,20 @@ export function useTextTemplateMutations(
       const snapshot = userTemplates;
       const idx = snapshot.findIndex((t) => t.id === id);
       if (idx < 0) {
-        throw new TemplateMutationError({
-          status: 404,
-          message: `Template ${id} not found in local list`,
-        });
+        throw new TextTemplateApiError(404, `Template ${id} not found in local list`);
       }
       const existing = snapshot[idx];
-      const optimistic: TextTemplate = {
+      const next = snapshot.slice();
+      next[idx] = {
         ...existing,
         name: patch.name ?? existing.name,
         category: patch.category ?? existing.category,
         content: patch.content ?? existing.content,
         updatedAt: new Date(),
       };
-      const next = snapshot.slice();
-      next[idx] = optimistic;
       setUserTemplates(next);
       try {
-        const res = await fetch(`/api/dxf/text-templates/${encodeURIComponent(id)}`, {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(patch),
-        });
-        const body = await parseMutateResponse(res);
-        if (!res.ok || !body.success || !body.template) {
-          throw new TemplateMutationError(failureFromResponse(res, body));
-        }
-        const persisted = deserializeUserTemplate(body.template);
+        const persisted = await apiUpdateTextTemplate(id, patch);
         const reconciled = snapshot.slice();
         reconciled[idx] = persisted;
         setUserTemplates(reconciled);
@@ -192,14 +135,7 @@ export function useTextTemplateMutations(
       const snapshot = userTemplates;
       setUserTemplates(snapshot.filter((t) => t.id !== id));
       try {
-        const res = await fetch(`/api/dxf/text-templates/${encodeURIComponent(id)}`, {
-          method: 'DELETE',
-          credentials: 'include',
-        });
-        const body = await parseMutateResponse(res);
-        if (!res.ok || !body.success) {
-          throw new TemplateMutationError(failureFromResponse(res, body));
-        }
+        await apiDeleteTextTemplate(id);
       } catch (err) {
         setUserTemplates(snapshot);
         throw err;

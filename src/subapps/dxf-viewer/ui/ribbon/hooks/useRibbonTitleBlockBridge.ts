@@ -17,11 +17,17 @@
  * υπόλοιπους bridges στο `useRibbonCommands`.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 
 import { useTitleBlockOptionsStore } from '../../../state/title-block-options-store';
 import type { PaperOrientation, PaperSize } from '../../../print/config/paper-types';
-import { isTitleBlockPresetId } from '../../../text-engine/title-block/title-block-presets';
+import {
+  getTitleBlockLibraryVersion,
+  listTitleBlockLibrary,
+  subscribeTitleBlockLibrary,
+} from '../../../text-engine/title-block/title-block-library-store';
+import { TITLE_BLOCK_PRESET_OPTIONS } from '../data/contextual-title-block-tab';
+import type { RibbonComboboxOption } from '../types/ribbon-types';
 import type { RibbonComboboxState } from '../context/RibbonCommandContext';
 import {
   TITLE_BLOCK_RIBBON_KEYS,
@@ -59,11 +65,37 @@ export function useRibbonTitleBlockBridge(): RibbonTitleBlockBridge {
   // Συνδρομή στο tool handle ώστε το ribbon να δείχνει τα τρέχοντα rotation/scale.
   const toolHandle = titleBlockToolBridgeStore.use();
 
+  // ADR-651 Φάση Θ — η βιβλιοθήκη γραφείου/έργου/μου. Low-freq store (αλλάζει μόνο όταν
+  // κάποιος σώζει πρότυπο) ⇒ επιτρεπτό `useSyncExternalStore` σε ribbon hook (ADR-040).
+  const libraryVersion = useSyncExternalStore(
+    subscribeTitleBlockLibrary,
+    getTitleBlockLibraryVersion,
+    getTitleBlockLibraryVersion,
+  );
+
+  /**
+   * ΕΝΑ ενωμένο dropdown: built-in presets **και** αποθηκευμένα πρότυπα (Revit content
+   * library — system content δίπλα σε office content). Το όνομα ενός αποθηκευμένου προτύπου
+   * είναι **περιεχόμενο χρήστη**, όχι i18n key ⇒ `isLiteralLabel: true`.
+   */
+  const presetOptions = useMemo<readonly RibbonComboboxOption[]>(
+    () => [
+      ...TITLE_BLOCK_PRESET_OPTIONS,
+      ...listTitleBlockLibrary().map((template) => ({
+        value: template.id,
+        labelKey: template.name,
+        isLiteralLabel: true,
+      })),
+    ],
+    // Το version του store είναι το gate: νέο snapshot ⇒ νέα λίστα options.
+    [libraryVersion],
+  );
+
   const getComboboxState = useCallback(
     (commandKey: string): RibbonComboboxState | null => {
       switch (commandKey) {
         case TITLE_BLOCK_RIBBON_KEYS.stringParams.preset:
-          return { value: presetId, options: [] };
+          return { value: presetId, options: presetOptions };
         case TITLE_BLOCK_RIBBON_KEYS.stringParams.paperSize:
           return { value: paperSize, options: [] };
         case TITLE_BLOCK_RIBBON_KEYS.stringParams.orientation:
@@ -78,14 +110,17 @@ export function useRibbonTitleBlockBridge(): RibbonTitleBlockBridge {
         toolHandle, commandKey, NUMBER_KEY_TO_OVERRIDE, NUMBER_KEY_DEFAULT,
       );
     },
-    [presetId, paperSize, orientation, withFrame, toolHandle],
+    [presetId, presetOptions, paperSize, orientation, withFrame, toolHandle],
   );
 
   const onComboboxChange = useCallback((commandKey: string, value: string): void => {
     const store = useTitleBlockOptionsStore.getState();
     switch (commandKey) {
       case TITLE_BLOCK_RIBBON_KEYS.stringParams.preset:
-        if (isTitleBlockPresetId(value)) store.setPreset(value);
+        // ADR-651 Φάση Θ — η τιμή είναι είτε built-in preset id είτε enterprise id
+        // αποθηκευμένου προτύπου. Δεν φιλτράρουμε: ο `active-title-block` ρωτά βιβλιοθήκη
+        // ΚΑΙ presets, και άγνωστο id πέφτει στο default (ποτέ crash σε διαγραμμένο πρότυπο).
+        store.setPreset(value);
         return;
       case TITLE_BLOCK_RIBBON_KEYS.stringParams.paperSize:
         store.setPaperSize(value as PaperSize);

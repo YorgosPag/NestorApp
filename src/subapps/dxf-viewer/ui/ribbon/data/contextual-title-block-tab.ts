@@ -25,12 +25,21 @@ export const TITLE_BLOCK_CONTEXTUAL_TRIGGER = 'title-block-tool-active';
 
 const CMD = 'ribbon.commands.titleBlockEditor';
 
-/** Options από το registry — προσθέτεις preset ⇒ εμφανίζεται μόνο του στο ribbon. */
-const PRESET_OPTIONS: readonly RibbonComboboxOption[] = TITLE_BLOCK_PRESETS.map((preset) => ({
-  value: preset.id,
-  labelKey: preset.labelKey,
-  isLiteralLabel: false,
-}));
+/**
+ * Options από το registry — προσθέτεις preset ⇒ εμφανίζεται μόνο του στο ribbon.
+ *
+ * ADR-651 Φάση Θ: εξάγεται, γιατί το `useRibbonTitleBlockBridge` χτίζει πάνω σε ΑΥΤΗ τη λίστα
+ * το **ενωμένο** dropdown (built-ins + αποθηκευμένα πρότυπα βιβλιοθήκης). Μία πηγή για τα
+ * built-in options, δύο καταναλωτές (N.18) — εδώ είναι το στατικό fallback της δήλωσης, εκεί
+ * το δυναμικό υπερσύνολο.
+ */
+export const TITLE_BLOCK_PRESET_OPTIONS: readonly RibbonComboboxOption[] = TITLE_BLOCK_PRESETS.map(
+  (preset) => ({
+    value: preset.id,
+    labelKey: preset.labelKey,
+    isLiteralLabel: false,
+  }),
+);
 
 /** A4…A0 από το **paper SSoT** — η ετικέτα ΕΙΝΑΙ το μέγεθος (δεν μεταφράζεται το «A3»). */
 const PAPER_SIZE_OPTIONS: readonly RibbonComboboxOption[] = PAPER_SIZE_ORDER.map((size) => ({
@@ -74,7 +83,21 @@ export const CONTEXTUAL_TITLE_BLOCK_TAB: RibbonTab = {
                 labelKey: `${CMD}.preset`,
                 commandKey: TITLE_BLOCK_RIBBON_KEYS.stringParams.preset,
                 comboboxWidthPx: 160,
-                options: PRESET_OPTIONS,
+                options: TITLE_BLOCK_PRESET_OPTIONS,
+              },
+            },
+            {
+              // ADR-651 Φάση Θ — βιβλιοθήκη προτύπων: αποθήκευση στο γραφείο, δημοσίευση,
+              // απόσπαση παραλλαγής έργου, ενημέρωση από τον γονιό.
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'titleBlock.library',
+                labelKey: 'ribbon.commands.titleBlockLibrary',
+                tooltipKey: 'ribbon.commands.titleBlockLibraryTooltip',
+                icon: 'title-block-library',
+                commandKey: 'open-title-block-library-dialog',
+                action: 'open-title-block-library-dialog',
               },
             },
             {

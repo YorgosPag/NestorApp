@@ -19,8 +19,8 @@ import {
   BUILT_IN_TEXT_TEMPLATES,
   type TextTemplate,
 } from '@/subapps/dxf-viewer/text-engine/templates';
-import type { SerializedUserTextTemplate } from '../shared/serialized-template.types';
-import { deserializeUserTemplate, getCachedUserTemplates, setCachedUserTemplates } from './template-cache';
+import { apiListTextTemplates } from '@/subapps/dxf-viewer/text-engine/templates/text-template-api';
+import { getCachedUserTemplates, setCachedUserTemplates } from './template-cache';
 
 interface UseTextTemplatesResult {
   readonly builtIn: readonly TextTemplate[];
@@ -31,12 +31,6 @@ interface UseTextTemplatesResult {
   readonly refresh: () => Promise<void>;
   /** Replace the in-memory user list (used by optimistic mutations). */
   readonly setUserTemplatesLocal: (next: readonly TextTemplate[]) => void;
-}
-
-interface ListResponse {
-  readonly success: boolean;
-  readonly templates?: readonly SerializedUserTextTemplate[];
-  readonly error?: string;
 }
 
 export function useTextTemplates(companyId: string | null): UseTextTemplatesResult {
@@ -50,16 +44,7 @@ export function useTextTemplates(companyId: string | null): UseTextTemplatesResu
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/dxf/text-templates', {
-        method: 'GET',
-        credentials: 'include',
-        headers: { Accept: 'application/json' },
-      });
-      const data = (await res.json()) as ListResponse;
-      if (!res.ok || !data.success || !data.templates) {
-        throw new Error(data.error ?? `Failed to list templates (HTTP ${res.status})`);
-      }
-      const list = data.templates.map(deserializeUserTemplate);
+      const list = await apiListTextTemplates();
       setCachedUserTemplates(tenantId, list);
       setUser(list);
     } catch (err) {

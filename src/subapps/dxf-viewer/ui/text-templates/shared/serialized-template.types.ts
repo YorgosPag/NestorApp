@@ -1,27 +1,9 @@
 /**
  * ADR-344 Phase 7.D — Wire shape for user text templates.
  *
- * Mirrors `_helpers.ts#SerializedUserTextTemplate` in the API route. Kept
- * here as a separate module so client code can import it without pulling
- * in the `server-only` service.
+ * ⚠️ ADR-651 Φάση Θ: ο **κανονικός** ορισμός μετακόμισε στο
+ * `text-engine/templates/text-template-api.ts` (τον χρειάζονται και ο manager και η
+ * βιβλιοθήκη πινακίδας — ένας τύπος, μία πηγή· N.18). Εδώ μένει μόνο ένα re-export ώστε
+ * να μη σπάσουν οι υπάρχοντες importers.
  */
-import type {
-  TextTemplateCategory,
-} from '@/subapps/dxf-viewer/text-engine/templates';
-import type { DxfTextNode } from '@/subapps/dxf-viewer/text-engine/types/text-ast.types';
-
-export interface SerializedUserTextTemplate {
-  readonly id: string;
-  readonly companyId: string;
-  readonly name: string;
-  readonly category: TextTemplateCategory;
-  readonly content: DxfTextNode;
-  readonly placeholders: readonly string[];
-  readonly isDefault: false;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  readonly createdBy: string;
-  readonly createdByName: string | null;
-  readonly updatedBy: string;
-  readonly updatedByName: string | null;
-}
+export type { SerializedUserTextTemplate } from '@/subapps/dxf-viewer/text-engine/templates/text-template-api';

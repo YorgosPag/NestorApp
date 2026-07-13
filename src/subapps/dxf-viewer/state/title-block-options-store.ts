@@ -39,8 +39,19 @@ export interface TitleBlockAiOverride {
   readonly stampLabel: string;
 }
 
+/**
+ * ADR-651 Φάση Θ — η ταυτότητα του ενεργού προτύπου: είτε **built-in preset**
+ * (`TitleBlockPresetId`) είτε **αποθηκευμένο πρότυπο βιβλιοθήκης** (enterprise id
+ * `tpl_text_*` — γραφείου/έργου/μου). Ένα πεδίο, δύο βαθμίδες — γιατί ο χρήστης βλέπει ΕΝΑ
+ * ενωμένο dropdown (Revit content library: system content + office content δίπλα-δίπλα).
+ *
+ * Ο `active-title-block.ts` ρωτά **πρώτα** τη βιβλιοθήκη και μετά τα presets· άγνωστο id
+ * (διαγραμμένο πρότυπο) πέφτει στο default preset — ποτέ crash.
+ */
+export type TitleBlockTemplateId = TitleBlockPresetId | string;
+
 interface TitleBlockOptionsState {
-  readonly presetId: TitleBlockPresetId;
+  readonly presetId: TitleBlockTemplateId;
   readonly paperSize: PaperSize;
   readonly orientation: PaperOrientation;
   /** Πλήρης κορνίζα φύλλου ISO 5457 (πρακτική μεγάλων: border + πινακίδα = ΕΝΑ αντικείμενο). */
@@ -49,7 +60,7 @@ interface TitleBlockOptionsState {
   readonly paperAutoSuggest: boolean;
   /** ADR-651 Φάση Δ — AI πινακίδα που υπερισχύει του preset (ή `null`). */
   readonly aiOverride: TitleBlockAiOverride | null;
-  setPreset(presetId: TitleBlockPresetId): void;
+  setPreset(presetId: TitleBlockTemplateId): void;
   /** Ορίζει/καθαρίζει την AI πινακίδα (η επιλογή preset από τον χρήστη την καθαρίζει). */
   setAiOverride(aiOverride: TitleBlockAiOverride | null): void;
   setPaperSize(paperSize: PaperSize): void;

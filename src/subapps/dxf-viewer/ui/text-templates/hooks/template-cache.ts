@@ -1,6 +1,5 @@
 /**
- * ADR-344 Phase 7.D — In-memory cache + wire deserializer for user
- * text-templates.
+ * ADR-344 Phase 7.D — In-memory cache for user text-templates (manager UI).
  *
  * The cache is intentionally module-scope, not React-state: it survives
  * unmounts so closing/reopening the manager dialog reuses the previous
@@ -9,9 +8,14 @@
  *
  * Multi-tenant safety: keyed by `companyId`. If a user switches tenant
  * (rare) the new tenant simply gets a fresh fetch.
+ *
+ * ⚠️ ADR-651 Φάση Θ: ο **deserializer** μετακόμισε στο
+ * `text-engine/templates/text-template-api.ts` (τον μοιράζονται manager + βιβλιοθήκη
+ * πινακίδας — N.18). Εδώ μένει μόνο το cache· ο deserializer επανεξάγεται για back-compat.
  */
 import type { TextTemplate } from '@/subapps/dxf-viewer/text-engine/templates';
-import type { SerializedUserTextTemplate } from '../shared/serialized-template.types';
+
+export { deserializeUserTemplate } from '@/subapps/dxf-viewer/text-engine/templates/text-template-api';
 
 const cache = new Map<string, readonly TextTemplate[]>();
 
@@ -25,24 +29,4 @@ export function setCachedUserTemplates(companyId: string, list: readonly TextTem
 
 export function clearCachedUserTemplates(companyId: string): void {
   cache.delete(companyId);
-}
-
-/**
- * Convert wire payload to canonical {@link TextTemplate} so the UI sees
- * the same shape for built-ins and user docs. Dates come back as ISO
- * strings; we parse to `Date` so callers can format them with the
- * existing centralized formatters.
- */
-export function deserializeUserTemplate(wire: SerializedUserTextTemplate): TextTemplate {
-  return {
-    id: wire.id,
-    companyId: wire.companyId,
-    name: wire.name,
-    category: wire.category,
-    content: wire.content,
-    placeholders: wire.placeholders,
-    isDefault: false,
-    createdAt: new Date(wire.createdAt),
-    updatedAt: new Date(wire.updatedAt),
-  };
 }

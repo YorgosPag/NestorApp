@@ -29,30 +29,72 @@ import {
 } from '../templates/resolver/placeholder-scope-client';
 import type { PlaceholderScope, PlaceholderScopeRevision } from '../templates/resolver/scope.types';
 import { getActiveRevisionFacts, loadProjectRevisions } from './revisions/revision-client';
-import type { TextTemplate } from '../templates/template.types';
+import type { TextTemplate, TextTemplateTitleBlockMeta } from '../templates/template.types';
 import type { TitleBlockSheetOptions } from './print-sheet';
 import { getStampImage, loadStampImage } from './stamp-image-client';
+import { getTitleBlockLibraryTemplate } from './title-block-library-store';
 import { validateTitleBlock, type TitleBlockIssue } from './title-block-compliance';
 import { buildTitleBlockDef } from './title-block-def';
 import type { TitleBlockLayoutOptions, TitleBlockStampImage } from './title-block-layout';
 import { titleBlockPreset, type TitleBlockLocale } from './title-block-presets';
 
 /**
- * Το ενεργό πρότυπο στη ζητούμενη γλώσσα. Η **AI πινακίδα** (Φάση Δ) υπερισχύει του preset
- * (φέρει ήδη μία γλώσσα)· αλλιώς το επιλεγμένο preset (Απόφαση #8: ελληνικά default, κουμπί → EN).
+ * ADR-651 Φάση Θ — το ενεργό πρότυπο, **από όποια βαθμίδα κι αν προέρχεται**. Τρεις πηγές, μία
+ * απάντηση (σειρά προτεραιότητας):
+ *
+ *  1. **AI πινακίδα** (Φάση Δ) — εφήμερη, υπερισχύει ρητά όσο είναι οπλισμένη,
+ *  2. **αποθηκευμένο πρότυπο βιβλιοθήκης** (Φάση Θ) — γραφείου/έργου/μου· το `presetId` του
+ *     store κρατά τότε το **enterprise id** (`tpl_text_*`). Επειδή τα φύλλα **δείχνουν** στο
+ *     ίδιο έγγραφο, μια αλλαγή στο master του γραφείου φτάνει εδώ ζωντανά — αυτό είναι το
+ *     «αλλάζω το master → ενημερώνονται όλα τα φύλλα» (must-have #1),
+ *  3. **built-in preset** (Φάση Γ) — και ως fallback σε άγνωστο/διαγραμμένο id (ποτέ crash).
  */
 export function titleBlockTemplateForLocale(locale: TitleBlockLocale): TextTemplate {
   const { presetId, aiOverride } = useTitleBlockOptionsStore.getState();
   if (aiOverride) return aiOverride.template;
+  const saved = getTitleBlockLibraryTemplate(presetId);
+  if (saved) return saved;
   return titleBlockPreset(presetId).templates[locale];
 }
 
-/** Το κελί σφραγίδας του ενεργού (AI override ή preset) — SSoT για layout ΚΑΙ έλεγχο πληρότητας. */
+/**
+ * Το κελί σφραγίδας του ενεργού προτύπου — SSoT για layout ΚΑΙ έλεγχο πληρότητας.
+ *
+ * Ένα αποθηκευμένο πρότυπο κουβαλά το δικό του `titleBlock` metadata (σφραγίστηκε τη στιγμή
+ * που σώθηκε) ⇒ τυπώνεται **ακριβώς όπως το είδε** ο χρήστης όταν το αποθήκευσε. Αν λείπει
+ * (πρότυπο σωσμένο χωρίς κελί), ισχύει «χωρίς σφραγίδα» — ποτέ σιωπηλά τα meta άλλου preset.
+ */
 function activeStampMeta(locale: TitleBlockLocale): { withStampBox: boolean; stampLabel: string } {
   const { presetId, aiOverride } = useTitleBlockOptionsStore.getState();
   if (aiOverride) return { withStampBox: aiOverride.withStampBox, stampLabel: aiOverride.stampLabel };
+  const saved = getTitleBlockLibraryTemplate(presetId);
+  if (saved) {
+    return {
+      withStampBox: saved.titleBlock?.withStampBox ?? false,
+      stampLabel: saved.titleBlock?.stampLabel ?? '',
+    };
+  }
   const preset = titleBlockPreset(presetId);
   return { withStampBox: preset.withStampBox, stampLabel: preset.stampLabel[locale] };
+}
+
+/**
+ * ADR-651 Φάση Θ — ό,τι χρειάζεται για να **αποθηκευτεί η ενεργή πινακίδα** ως πρότυπο
+ * βιβλιοθήκης: το περιεχόμενό της και το κελί σφραγίδας της, **ακριβώς όπως τα βλέπει τώρα**
+ * ο χρήστης (preset, AI πινακίδα ή ήδη αποθηκευμένο πρότυπο — μία απάντηση για τα τρία).
+ *
+ * Εκτίθεται εδώ και όχι στο UI, ώστε ο διάλογος να μη μαντεύει ποτέ ποια είναι «η ενεργή
+ * πινακίδα»: το ερώτημα έχει **έναν** ιδιοκτήτη (N.7.2 #7).
+ */
+export function buildActiveTitleBlockSaveContent(locale: TitleBlockLocale): {
+  readonly content: TextTemplate['content'];
+  readonly titleBlock: TextTemplateTitleBlockMeta;
+} {
+  const stamp = activeStampMeta(locale);
+  return {
+    content: titleBlockTemplateForLocale(locale).content,
+    titleBlock: { withStampBox: stamp.withStampBox, stampLabel: stamp.stampLabel },
+  };
 }
 
 /** Ό,τι δεν προκύπτει από το ενεργό σχέδιο και το ξέρει καλύτερα ο καλών. */

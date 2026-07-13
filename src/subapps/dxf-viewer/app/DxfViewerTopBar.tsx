@@ -63,6 +63,7 @@ import { StairPersistenceHost } from './StairPersistenceHost';
 import { SlabOpeningStackHost } from './SlabOpeningStackHost';
 import { UserMaterialRegistryHost } from './UserMaterialRegistryHost';
 import { BlockLibraryRegistryHost } from './BlockLibraryRegistryHost';
+import { TitleBlockLibraryHost } from './TitleBlockLibraryHost';
 import { PsetEditorHost } from './PsetEditorHost';
 import { IfcExportHost } from './IfcExportHost';
 import { useFloorMetadata } from '../hooks/data/useFloorMetadata';
@@ -397,6 +398,11 @@ export function DxfViewerTopBar({
       />
       {/* ADR-652 M2 — τροφοδοτεί το palette «Τα Blocks μου» με τη μόνιμη βιβλιοθήκη. */}
       <BlockLibraryRegistryHost
+        projectId={projectId}
+      />
+      {/* ADR-651 Φάση Θ — ζωντανή σύνδεση με τα πρότυπα πινακίδας του γραφείου: αλλαγή στο
+          master φτάνει σε ΚΑΘΕ ανοιχτό έργο, χωρίς refresh (ArchiCAD Master Layout). */}
+      <TitleBlockLibraryHost
         projectId={projectId}
       />
       <PsetEditorHost levelManager={levelManager} />
