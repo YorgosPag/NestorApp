@@ -16,7 +16,11 @@
  */
 
 import { z } from 'zod';
-import type { TextTemplateCategory } from './template.types';
+import {
+  WRITABLE_TEXT_TEMPLATE_SCOPES,
+  type TextTemplateCategory,
+  type WritableTextTemplateScope,
+} from './template.types';
 
 // ── Reusable scalar shapes ────────────────────────────────────────────────────
 
@@ -38,6 +42,25 @@ const justificationSchema = z.enum([
   'ML', 'MC', 'MR',
   'BL', 'BC', 'BR',
 ]);
+
+/**
+ * ADR-651 Φάση Θ — το scope που δηλώνει ο client. `system` **δεν** είναι επιλέξιμο (seed-only)
+ * και ο τύπος το εγγυάται: η enum χτίζεται από το ΙΔΙΟ registry με τον server guard (μία πηγή).
+ */
+const writableScopeSchema: z.ZodType<WritableTextTemplateScope> = z.enum(
+  WRITABLE_TEXT_TEMPLATE_SCOPES,
+);
+
+/** Χρονοσήμανση σε ms (το `updatedAt` του γονιού στον τελευταίο συγχρονισμό). */
+const epochMillis = z.number().int().nonnegative();
+
+/** Το κελί σφραγίδας ενός αποθηκευμένου προτύπου πινακίδας (ό,τι κρατά και ένα preset). */
+const titleBlockMetaSchema = z
+  .object({
+    withStampBox: z.boolean(),
+    stampLabel: z.string(),
+  })
+  .strict();
 
 const isFiniteNumber = (n: number) => Number.isFinite(n);
 
@@ -84,8 +107,19 @@ export const createTextTemplateInputSchema = z
     ),
     category: categorySchema,
     content: dxfTextNodeSchema,
+    scope: writableScopeSchema.optional(),
+    projectId: nonEmptyString.optional(),
+    parentId: nonEmptyString.optional(),
+    parentSyncedAt: epochMillis.optional(),
+    titleBlock: titleBlockMetaSchema.optional(),
   })
-  .strict();
+  .strict()
+  // Ένα `project`-scoped πρότυπο ΧΩΡΙΣ έργο θα ήταν αόρατο για πάντα (το bucket φιλτράρει
+  // `projectId ==`) — fail loud στο boundary, όχι σιωπηλό ορφανό doc.
+  .refine((input) => input.scope !== 'project' || Boolean(input.projectId), {
+    message: 'scope "project" requires a projectId',
+    path: ['projectId'],
+  });
 
 /**
  * Validation schema for `updateTextTemplate` patches. At least one field
@@ -101,12 +135,19 @@ export const updateTextTemplateInputSchema = z
       .optional(),
     category: categorySchema.optional(),
     content: dxfTextNodeSchema.optional(),
+    scope: writableScopeSchema.optional(),
+    projectId: nonEmptyString.optional(),
+    parentSyncedAt: epochMillis.optional(),
+    titleBlock: titleBlockMetaSchema.optional(),
   })
   .strict()
-  .refine(
-    (patch) => patch.name !== undefined || patch.category !== undefined || patch.content !== undefined,
-    { message: 'update patch must contain at least one field' },
-  );
+  .refine((patch) => Object.values(patch).some((value) => value !== undefined), {
+    message: 'update patch must contain at least one field',
+  })
+  .refine((patch) => patch.scope !== 'project' || Boolean(patch.projectId), {
+    message: 'scope "project" requires a projectId',
+    path: ['projectId'],
+  });
 
 /** Flat string list of failures — easier to surface in audit / UI than ZodError. */
 export function collectIssues(error: z.ZodError): string[] {

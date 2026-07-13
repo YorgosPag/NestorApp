@@ -29,6 +29,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import type { AuditFieldChange } from '@/types/audit-trail';
 import type { DxfTextNode } from '../types/text-ast.types';
 import { extractPlaceholders } from './extract-placeholders';
+import { DEFAULT_TEXT_TEMPLATE_SCOPE } from './template.types';
 import {
   TextTemplateCrossTenantError,
   TextTemplateNotFoundError,
@@ -82,8 +83,27 @@ function buildCreationChanges(doc: UserTextTemplateDoc): AuditFieldChange[] {
   return [
     fieldChange('name', null, doc.name, 'Όνομα'),
     fieldChange('category', null, doc.category, 'Κατηγορία'),
+    fieldChange('scope', null, doc.scope, 'Εμβέλεια'),
     fieldChange('placeholders', null, doc.placeholders.length, 'Πλήθος placeholders'),
   ];
+}
+
+/**
+ * ADR-651 Φάση Θ — τα scope πεδία ενός εγγράφου, ντετερμινιστικά από το input.
+ *
+ * `projectId` γεμίζει ΜΟΝΟ σε `scope === 'project'`: ένα company-scoped πρότυπο που κουβαλούσε
+ * projectId θα ήταν αντιφατικό (ζει σε όλα τα έργα). `null` — ποτέ `undefined` (Firestore).
+ */
+function buildScopeFields(
+  input: Pick<CreateTextTemplateInput, 'scope' | 'projectId' | 'parentId' | 'parentSyncedAt'>,
+): Pick<UserTextTemplateDoc, 'scope' | 'projectId' | 'parentId' | 'parentSyncedAt'> {
+  const scope = input.scope ?? DEFAULT_TEXT_TEMPLATE_SCOPE;
+  return {
+    scope,
+    projectId: scope === 'project' ? (input.projectId ?? null) : null,
+    parentId: input.parentId ?? null,
+    parentSyncedAt: input.parentId ? (input.parentSyncedAt ?? null) : null,
+  };
 }
 
 /**
@@ -96,7 +116,13 @@ function buildCreationChanges(doc: UserTextTemplateDoc): AuditFieldChange[] {
  */
 function buildUpdateChanges(
   before: UserTextTemplateDoc,
-  after: { name: string; category: string; content: DxfTextNode; placeholders: readonly string[] },
+  after: {
+    name: string;
+    category: string;
+    scope: string;
+    content: DxfTextNode;
+    placeholders: readonly string[];
+  },
 ): AuditFieldChange[] {
   const changes: AuditFieldChange[] = [];
   if (before.name !== after.name) {
@@ -104,6 +130,11 @@ function buildUpdateChanges(
   }
   if (before.category !== after.category) {
     changes.push(fieldChange('category', before.category, after.category, 'Κατηγορία'));
+  }
+  // ADR-651 Φάση Θ — η «δημοσίευση» στη βιβλιοθήκη γραφείου είναι η πιο βαριά ενέργεια που
+  // μπορεί να κάνει ο χρήστης (το πρότυπο γίνεται ορατό σε ΟΛΑ τα έργα): μπαίνει στο audit.
+  if (before.scope !== after.scope) {
+    changes.push(fieldChange('scope', before.scope, after.scope, 'Εμβέλεια'));
   }
   if (before.content !== after.content) {
     changes.push(
@@ -221,6 +252,9 @@ export async function createTextTemplate(
     content: input.content,
     placeholders,
     isDefault: false,
+    ...buildScopeFields(input),
+    // Firestore απορρίπτει `undefined` ⇒ το πεδίο απλώς μένει εκτός εγγράφου όταν λείπει.
+    ...(input.titleBlock ? { titleBlock: input.titleBlock } : {}),
     createdAt: now,
     updatedAt: now,
     createdBy: actor.userId,
@@ -269,6 +303,17 @@ export async function updateTextTemplate(
     writePayload.content = patch.content;
     writePayload.placeholders = nextPlaceholders;
   }
+  if (patch.titleBlock !== undefined) writePayload.titleBlock = patch.titleBlock;
+  // Ρητό «Ενημέρωση από τον γονιό»: το παιδί σφραγίζει ΠΟΙΑ έκδοση του γονιού τράβηξε.
+  if (patch.parentSyncedAt !== undefined) writePayload.parentSyncedAt = patch.parentSyncedAt;
+  if (patch.scope !== undefined) {
+    // «Δημοσίευση» (ADR-652 M3 semantics): αλλάζει το scope του ΙΔΙΟΥ doc — κανένα δεύτερο
+    // αντίγραφο, ίδιο id ⇒ όποιο φύλλο το δείχνει, συνεχίζει να το δείχνει. Το `parentId`
+    // ΔΕΝ ακουμπιέται: η προέλευση μιας απόσπασης είναι **αμετάβλητη** ιστορία.
+    const { scope, projectId } = buildScopeFields({ scope: patch.scope, projectId: patch.projectId });
+    writePayload.scope = scope;
+    writePayload.projectId = projectId;
+  }
 
   await templateCollection().doc(templateId).update(writePayload);
   const after = (await templateCollection().doc(templateId).get()).data() as UserTextTemplateDoc;
@@ -276,6 +321,7 @@ export async function updateTextTemplate(
   const changes = buildUpdateChanges(before, {
     name: after.name,
     category: after.category,
+    scope: after.scope,
     content: nextContent,
     placeholders: nextPlaceholders,
   });

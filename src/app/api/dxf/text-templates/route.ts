@@ -59,6 +59,21 @@ interface CreateBody {
   readonly name?: unknown;
   readonly category?: unknown;
   readonly content?: unknown;
+  /** ADR-651 Φάση Θ — βιβλιοθήκη γραφείου/έργου/μου. Zod απορρίπτει το `system` (seed-only). */
+  readonly scope?: unknown;
+  readonly projectId?: unknown;
+  readonly parentId?: unknown;
+  readonly parentSyncedAt?: unknown;
+  readonly titleBlock?: unknown;
+}
+
+/** Περνά το πεδίο μόνο αν υπάρχει — ο Zod schema του service είναι `.strict()`. */
+function optionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function optionalNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
 export async function POST(request: NextRequest) {
@@ -67,11 +82,22 @@ export async function POST(request: NextRequest) {
       async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
         try {
           const body = (await req.json()) as CreateBody;
+          const scope = optionalString(body.scope) as CreateTextTemplateInput['scope'];
+          const projectId = optionalString(body.projectId);
+          const parentId = optionalString(body.parentId);
+          const parentSyncedAt = optionalNumber(body.parentSyncedAt);
           const input: CreateTextTemplateInput = {
             companyId: ctx.companyId,
             name: typeof body.name === 'string' ? body.name : '',
             category: body.category as CreateTextTemplateInput['category'],
             content: body.content as CreateTextTemplateInput['content'],
+            ...(scope ? { scope } : {}),
+            ...(projectId ? { projectId } : {}),
+            ...(parentId ? { parentId } : {}),
+            ...(parentSyncedAt !== undefined ? { parentSyncedAt } : {}),
+            ...(body.titleBlock !== undefined
+              ? { titleBlock: body.titleBlock as CreateTextTemplateInput['titleBlock'] }
+              : {}),
           };
           const created = await createTextTemplate(input, actorFromContext(ctx));
           return NextResponse.json(

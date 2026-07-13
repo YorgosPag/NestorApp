@@ -58,6 +58,11 @@ interface PatchBody {
   readonly name?: unknown;
   readonly category?: unknown;
   readonly content?: unknown;
+  /** ADR-651 Φάση Θ — «δημοσίευση» σε άλλο scope: ίδιο doc, ΟΧΙ αντίγραφο (ADR-652 M3). */
+  readonly scope?: unknown;
+  readonly projectId?: unknown;
+  readonly parentSyncedAt?: unknown;
+  readonly titleBlock?: unknown;
 }
 
 export async function PATCH(request: NextRequest, segmentData: SegmentData) {
@@ -74,6 +79,16 @@ export async function PATCH(request: NextRequest, segmentData: SegmentData) {
               : {}),
             ...(body.content !== undefined
               ? { content: body.content as UpdateTextTemplateInput['content'] }
+              : {}),
+            ...(typeof body.scope === 'string'
+              ? { scope: body.scope as UpdateTextTemplateInput['scope'] }
+              : {}),
+            ...(typeof body.projectId === 'string' ? { projectId: body.projectId } : {}),
+            ...(typeof body.parentSyncedAt === 'number' && Number.isFinite(body.parentSyncedAt)
+              ? { parentSyncedAt: body.parentSyncedAt }
+              : {}),
+            ...(body.titleBlock !== undefined
+              ? { titleBlock: body.titleBlock as UpdateTextTemplateInput['titleBlock'] }
               : {}),
           };
           const updated = await updateTextTemplate(

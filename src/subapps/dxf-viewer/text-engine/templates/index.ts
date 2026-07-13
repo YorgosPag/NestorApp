@@ -18,9 +18,17 @@ export type {
   TextTemplate,
   TextTemplateCategory,
   TextTemplateLocale,
+  TextTemplateScope,
+  TextTemplateTitleBlockMeta,
+  WritableTextTemplateScope,
   BuiltInTextTemplate,
 } from './template.types';
-export { TextTemplatePlaceholderMismatchError } from './template.types';
+export {
+  TextTemplatePlaceholderMismatchError,
+  textTemplateScope,
+  WRITABLE_TEXT_TEMPLATE_SCOPES,
+  DEFAULT_TEXT_TEMPLATE_SCOPE,
+} from './template.types';
 
 export { extractPlaceholders, extractPlaceholdersFromString } from './extract-placeholders';
 

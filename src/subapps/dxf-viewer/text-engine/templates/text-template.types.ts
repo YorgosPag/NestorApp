@@ -18,29 +18,19 @@
 
 import { Timestamp } from 'firebase-admin/firestore';
 import type { DxfTextNode } from '../types/text-ast.types';
-import type { TextTemplateCategory } from './template.types';
+import type {
+  TextTemplateCategory,
+  TextTemplateTitleBlockMeta,
+  UserTextTemplateFields,
+  WritableTextTemplateScope,
+} from './template.types';
 
 /**
- * Persisted text-template document. Field order matches the write order in
- * `text-template.service.ts` so a code reader sees the same shape both
- * in-flight and at rest.
+ * Persisted text-template document — το κοινό σχήμα {@link UserTextTemplateFields} με τον
+ * χρόνο σε admin-SDK `Timestamp`. Η wire όψη (`SerializedUserTextTemplate`, ISO strings)
+ * είναι το ίδιο σχήμα με `string` — μία λίστα πεδίων, δύο κόσμοι (N.18).
  */
-export interface UserTextTemplateDoc {
-  readonly id: string;
-  readonly companyId: string;
-  readonly name: string;
-  readonly category: TextTemplateCategory;
-  readonly content: DxfTextNode;
-  readonly placeholders: readonly string[];
-  readonly isDefault: false;
-
-  readonly createdAt: Timestamp;
-  readonly updatedAt: Timestamp;
-  readonly createdBy: string;
-  readonly createdByName: string | null;
-  readonly updatedBy: string;
-  readonly updatedByName: string | null;
-}
+export type UserTextTemplateDoc = UserTextTemplateFields<Timestamp>;
 
 /**
  * Input payload for `createTextTemplate` — same shape as the persisted doc
@@ -54,6 +44,15 @@ export interface CreateTextTemplateInput {
   readonly name: string;
   readonly category: TextTemplateCategory;
   readonly content: DxfTextNode;
+  /** ADR-651 Φάση Θ — default {@link DEFAULT_TEXT_TEMPLATE_SCOPE} (βιβλιοθήκη γραφείου). */
+  readonly scope?: WritableTextTemplateScope;
+  /** Υποχρεωτικό όταν `scope === 'project'` (αλλιώς αγνοείται). */
+  readonly projectId?: string;
+  /** Η προέλευση, όταν το πρότυπο **αποσπάται** από γονιό (must-have #1). */
+  readonly parentId?: string;
+  /** Το `updatedAt` του γονιού τη στιγμή της απόσπασης (ms). */
+  readonly parentSyncedAt?: number;
+  readonly titleBlock?: TextTemplateTitleBlockMeta;
 }
 
 /**
@@ -65,6 +64,12 @@ export interface UpdateTextTemplateInput {
   readonly name?: string;
   readonly category?: TextTemplateCategory;
   readonly content?: DxfTextNode;
+  /** «Δημοσίευση» σε άλλο scope (π.χ. δικά μου → γραφείου) — ίδιο doc, ΟΧΙ αντίγραφο. */
+  readonly scope?: WritableTextTemplateScope;
+  readonly projectId?: string;
+  /** Ανανεώνεται στο ρητό «Ενημέρωση από τον γονιό» (pull) — μαζί με το `content`. */
+  readonly parentSyncedAt?: number;
+  readonly titleBlock?: TextTemplateTitleBlockMeta;
 }
 
 /** Identity for audit attribution. The service never invents this. */

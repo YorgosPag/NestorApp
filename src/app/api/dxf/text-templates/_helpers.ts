@@ -32,6 +32,12 @@ export interface SerializedUserTextTemplate {
   readonly content: UserTextTemplateDoc['content'];
   readonly placeholders: readonly string[];
   readonly isDefault: false;
+  /** ADR-651 Φάση Θ — βιβλιοθήκη γραφείου/έργου/μου + προέλευση απόσπασης. */
+  readonly scope: UserTextTemplateDoc['scope'];
+  readonly projectId: string | null;
+  readonly parentId: string | null;
+  readonly parentSyncedAt: number | null;
+  readonly titleBlock?: UserTextTemplateDoc['titleBlock'];
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly createdBy: string;
@@ -56,6 +62,15 @@ export function serializeTemplate(doc: UserTextTemplateDoc): SerializedUserTextT
     content: doc.content,
     placeholders: doc.placeholders,
     isDefault: doc.isDefault,
+    // Τα legacy έγγραφα (γραμμένα πριν τη Φάση Θ) δεν φέρουν scope — τα βλέπουμε ως πρότυπα
+    // **γραφείου**, το ίδιο default με μια νέα εγγραφή. Άμυνα, όχι μετανάστευση: το
+    // `text_templates` ήταν άδειο στη Φάση Θ (επαληθευμένο), αλλά ο serializer δεν δικαιούται
+    // να επιστρέψει `undefined` σε πεδίο που ο client θεωρεί δεδομένο.
+    scope: doc.scope ?? 'company',
+    projectId: doc.projectId ?? null,
+    parentId: doc.parentId ?? null,
+    parentSyncedAt: doc.parentSyncedAt ?? null,
+    ...(doc.titleBlock ? { titleBlock: doc.titleBlock } : {}),
     createdAt: doc.createdAt.toDate().toISOString(),
     updatedAt: doc.updatedAt.toDate().toISOString(),
     createdBy: doc.createdBy,
