@@ -101,6 +101,19 @@ export function getActiveScale(): AnnotationScale | null {
   return scaleListStore.get().find((s) => s.name === activeScaleStore.get()) ?? null;
 }
 
+/**
+ * ADR-651 Φάση Β — the active scale as a plain **paper-mm → model-units multiplier**
+ * (1:50 ⇒ 50). DERIVED from the active entry (`modelHeight / paperHeight`), so the
+ * factor can never drift from the scale catalog. Falls back to `1` (1:1) when no
+ * active entry exists or the entry is degenerate — annotative sizing must never
+ * produce a 0/NaN-scaled entity.
+ */
+export function getActiveScaleFactor(): number {
+  const scale = getActiveScale();
+  if (!scale || scale.paperHeight <= 0 || scale.modelHeight <= 0) return 1;
+  return scale.modelHeight / scale.paperHeight;
+}
+
 // ─── Subscribe APIs (useSyncExternalStore-compatible) ────────────────────────
 
 export function subscribeActiveScale(cb: ViewportListener): () => void {
@@ -121,6 +134,7 @@ export const ViewportStore = {
   getActiveScaleName,
   getScaleList,
   getActiveScale,
+  getActiveScaleFactor,
   setActiveScale,
   setScaleList,
   subscribeActiveScale,

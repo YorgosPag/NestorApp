@@ -1026,6 +1026,125 @@
       "error": {
         "read": "Could not read the file."
       }
+    },
+    "cutfill": {
+      "title": "Earthworks volumes (cut / fill)",
+      "hint": "How much soil must be dug out or filled in — against a design level or a designed surface.",
+      "modeDatum": "Against a level",
+      "modeSurface": "Against a surface",
+      "datumLabel": "Design level (m)",
+      "importProposed": "Import designed surface…",
+      "proposedLoaded": "{count, plural, one {# designed-surface point} other {# designed-surface points}}",
+      "proposedMissing": "No designed surface loaded yet.",
+      "boundaryPick": "Pick site boundary",
+      "boundaryStop": "Finish boundary pick",
+      "boundarySet": "{count, plural, one {Boundary: # vertex} other {Boundary: # vertices}}",
+      "boundaryNone": "No boundary — computed over the whole survey.",
+      "compute": "Compute volumes",
+      "cut": "Cut",
+      "fill": "Fill",
+      "volumeValue": "{value} m³",
+      "areaValue": "{value} m²",
+      "netSurplus": "Net surplus",
+      "netDeficit": "Net deficit",
+      "skipped": "{count, plural, one {# triangle skipped} other {# triangles skipped}}",
+      "crossCheckOk": "Method cross-check: {value}% divergence.",
+      "crossCheckWarn": "Warning — the two methods diverge by {value}%.",
+      "analysisHint": "Show the 3D terrain to see where cut and fill occur.",
+      "error": {
+        "no-surface": "No ground surface — load survey points first.",
+        "no-proposed-surface": "No designed surface loaded to compare against."
+      }
+    },
+    "qa": {
+      "title": "Quality check (alarm bell)",
+      "hint": "Automatic checks on the data — suspect elevations, duplicate points, boundaries, breaklines. You decide.",
+      "run": "Quality check",
+      "clear": "Clear",
+      "focusHint": "Zoom to location",
+      "notEnoughData": "Fewer than 3 points — no surface to check.",
+      "allClear": "No findings — the survey passed the checks.",
+      "countHigh": "{count, plural, one {# high} other {# high}}",
+      "countMedium": "{count, plural, one {# medium} other {# medium}}",
+      "countLow": "{count, plural, one {# low} other {# low}}",
+      "dropped": "{count, plural, one {# more finding not shown (report cap)} other {# more findings not shown (report cap)}}",
+      "flag": {
+        "elevationBust": "Suspect node elevation: Z={elevation}m while neighbours ~{expected}m (deviation {deviation}m).",
+        "duplicatePoint": "Duplicate points #{a} and #{b} at the same spot with incompatible elevation (Δ {deviation}m).",
+        "selfIntersectionBoundary": "The boundary crosses itself — invalid loop.",
+        "selfIntersectionBreakline": "Closed breakline #{ring} crosses itself.",
+        "degenerateBoundary": "The boundary is degenerate (area {area}m²) — likely a pick mistake.",
+        "degenerateBreakline": "Closed breakline #{ring} is degenerate (area {area}m²).",
+        "missingBreakline": "Steep {angle}° fold with no constraint — a ridge/ditch breakline may be missing."
+      }
+    },
+    "deliverables": {
+      "title": "Export deliverables folder",
+      "hint": "One button for the Greek survey deliverable: tables, diagram and tolerance check.",
+      "declaredArea": "Declared title area (m²)",
+      "declaredPerimeter": "Declared title perimeter (m)",
+      "zoneInPlan": "Inside plan",
+      "zoneOutOfPlan": "Outside plan",
+      "projectName": "Project name",
+      "defaultProjectName": "Survey drawing",
+      "scaleLabel": "Scale (1:)",
+      "export": "Export folder",
+      "exporting": "Exporting…",
+      "done": "Folder “{file}” created ({tables, plural, one {# table} other {# tables}} in the drawing).",
+      "coordinatesFileOnly": "The coordinate table was too large for the drawing — kept in the files only.",
+      "documentLabel": "Survey drawing",
+      "error": {
+        "no-level": "No active level.",
+        "no-points": "No survey points."
+      },
+      "warn": {
+        "no-points": "No points — coordinate table was not produced.",
+        "no-boundary": "No boundary set — no area measurement or tolerance check.",
+        "no-volumes": "No volumes computed — earthworks table was not included."
+      },
+      "verdict": {
+        "pass": "Tolerance check: passes (§10).",
+        "fail": "Tolerance check: does not pass (§10).",
+        "not-declared": "Tolerance check: no title values declared."
+      },
+      "check": {
+        "area": "Area",
+        "perimeter": "Perimeter"
+      },
+      "status": {
+        "pass": "Pass",
+        "fail": "Fail",
+        "not-declared": "Not declared"
+      },
+      "section": {
+        "coordinates": "Coordinate table (GGRS'87)",
+        "plot": "Area-measurement diagram",
+        "volumes": "Earthworks volumes",
+        "tolerance": "Tolerance check (§10)"
+      },
+      "volume": {
+        "cut": "Cut",
+        "fill": "Fill",
+        "net": "Net"
+      },
+      "col": {
+        "index": "No.",
+        "x": "X",
+        "y": "Y",
+        "z": "Z",
+        "code": "Code",
+        "vertex": "Vertex",
+        "side": "Side",
+        "sideLength": "Length",
+        "item": "Item",
+        "volume": "Volume (m³)",
+        "area": "Area (m²)",
+        "check": "Check",
+        "measured": "Measured",
+        "declared": "Declared",
+        "allowed": "Tolerance",
+        "result": "Result"
+      }
     }
   }
 }

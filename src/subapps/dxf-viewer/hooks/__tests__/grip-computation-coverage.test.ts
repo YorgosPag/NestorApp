@@ -76,8 +76,9 @@ describe('Grip-producer capability coverage — ζωντανό seam ↔ descript
     expect(asSorted(noProducer)).toEqual(
       asSorted([
         // normalized/off-path DXF — mtext→text, lwpolyline→polyline· rect/rectangle/
-        // ellipse/spline/point έχουν renderer αλλά ΟΧΙ per-type grip producer.
-        'lwpolyline', 'ellipse', 'mtext', 'spline', 'rectangle', 'rect', 'point',
+        // ellipse/spline/point/image έχουν renderer αλλά ΟΧΙ per-type grip producer (ADR-651
+        // Φάση Ε — image grips ρέουν από το ίδιο ImageRenderer.getGrips() path με rect/point/ellipse).
+        'lwpolyline', 'ellipse', 'mtext', 'spline', 'rectangle', 'rect', 'point', 'image',
         // renderable BIM ΧΩΡΙΣ interactive grips
         'railing', 'wall-covering', 'thermal-space', 'space-separator', 'mep-fitting',
       ]),

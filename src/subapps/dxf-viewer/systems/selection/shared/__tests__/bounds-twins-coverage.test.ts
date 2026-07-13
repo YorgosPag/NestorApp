@@ -66,10 +66,12 @@ const BBOX = { geometry: { bbox: { min: { x: 1, y: 2 }, max: { x: 3, y: 4 } } } 
  * A-default → EMPTY (arc/dimension/angle-measurement + 7 BIM) απέκτησαν bounds (βλ. `A_FIXED_IN_SLICE2`).
  */
 const A_HANDLED = [
-  // DXF (20 — ΟΛΑ, incl. arc/dimension/angle-measurement που ήταν EMPTY πριν τη Φ9 Slice 2)
+  // DXF (21 — ΟΛΑ, incl. arc/dimension/angle-measurement που ήταν EMPTY πριν τη Φ9 Slice 2)
   'line', 'polyline', 'lwpolyline', 'circle', 'arc', 'ellipse', 'rectangle', 'rect', 'point',
   'annotation-symbol', 'scale-bar', 'opening-info-tag', 'text', 'mtext', 'spline', 'hatch', 'xline', 'ray',
   'dimension', 'angle-measurement',
+  // ADR-651 Φάση Ε — standalone image: resolver provider (rotation-aware rectangle bbox).
+  'image',
   // BIM via resolver `calculateBimEntity2DBounds` (24 — incl. railing/wall-covering/thermal-space/
   // space-separator/mep-boiler/mep-water-heater/mep-underfloor, Φ9 Slice 2 GAIN)
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair', 'roof',
@@ -94,10 +96,12 @@ const A_FIXED_IN_SLICE2 = [
 // ─── Twin B `calculateEntityBounds` — {min,max} | null (Φ9 Slice 1: adapter πάνω στο resolveEntityBounds) ─
 /** Renderable types με ρητό non-null bounds στο `calculateEntityBounds` (= ΟΛΑ μετά τη Φ9 Slice 1). */
 const B_HANDLED = [
-  // DXF (20 — ΟΛΑ, incl. annotation-symbol που ήταν null πριν τη Φ9 Slice 1)
+  // DXF (21 — ΟΛΑ, incl. annotation-symbol που ήταν null πριν τη Φ9 Slice 1)
   'line', 'polyline', 'lwpolyline', 'circle', 'arc', 'ellipse', 'text', 'mtext', 'spline',
   'rectangle', 'rect', 'point', 'dimension', 'angle-measurement', 'hatch', 'xline', 'ray',
   'annotation-symbol', 'scale-bar', 'opening-info-tag',
+  // ADR-651 Φάση Ε — standalone image: resolver provider (rotation-aware rectangle bbox).
+  'image',
   // BIM via calculateBimEntity2DBounds (24 — incl. railing/thermal-space/space-separator, Φ9 routing fix)
   'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair', 'roof',
   'floor-finish', 'wall-covering', 'furniture', 'mep-fixture', 'electrical-panel', 'mep-manifold',

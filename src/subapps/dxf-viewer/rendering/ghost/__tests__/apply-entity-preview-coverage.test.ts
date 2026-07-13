@@ -90,8 +90,10 @@ const supportedSet = new Set<string>(PREVIEW_GHOST_SUPPORTED_TYPES);
 
 // ─── Partition B — renderable types ΧΩΡΙΣ ρητό branch → generic movesEntity / classic ──
 const PREVIEW_GHOST_OFF_PATH_TYPES = [
-  // DXF (11) — asymmetry β (circle/point/ellipse …) + ε (lwpolyline normalized, όχι branch)
-  'circle', 'ellipse', 'spline', 'rectangle', 'rect', 'point',
+  // DXF (12) — asymmetry β (circle/point/ellipse …) + ε (lwpolyline normalized, όχι branch).
+  // ADR-651 Φάση Ε — image: κανένα ρητό ghost branch (whole-entity move ΗΔΗ δουλεύει μέσω του
+  // `movesEntity` → `calculateMovedGeometry` fall-through· per-corner resize preview = follow-up).
+  'circle', 'ellipse', 'spline', 'rectangle', 'rect', 'point', 'image',
   'dimension', 'angle-measurement', 'xline', 'ray', 'lwpolyline',
   // BIM (9) — μη-box, μη-footprint parametric → BIM-whole-entity move / classic
   'railing', 'wall-covering', 'thermal-space', 'space-separator',
