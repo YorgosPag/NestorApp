@@ -17,6 +17,7 @@ import { getTopoSurface } from './topo-surface';
 import { generateContoursFromSurface } from './contour-generator';
 import { buildContourEntities } from './topo-to-entities';
 import { ensureContourLayers } from './ensure-contour-layers';
+import { getContourDisplayStyle } from './contour-display-store';
 import { DEFAULT_CONTOUR_CONFIG, type ContourConfig } from './contour-config';
 import type { Entity } from '../../types/entities';
 
@@ -52,7 +53,10 @@ export function useTopoContours(): UseTopoContours {
       const layers = ensureContourLayers(getLevelScene, setLevelScene, levelId);
       if (!layers) return { ...EMPTY, reason: 'no-layers' };
 
-      const entities = buildContourEntities(contours, config, layers);
+      // ADR-650 M3 — new contours inherit the current display style (exact/smooth);
+      // their vertices are the EXACT surveyed crossings either way.
+      const smoothDisplay = getContourDisplayStyle() === 'smooth';
+      const entities = buildContourEntities(contours, config, layers, smoothDisplay);
       completeEntities(entities as Entity[], {
         tool: 'topo-contours',
         levelId,

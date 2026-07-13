@@ -36,6 +36,19 @@ export const DEFAULT_CONTOUR_CONFIG: ContourConfig = {
   labelDecimals: 2,
 };
 
+/**
+ * ADR-650 M3 — display style of the SAME contours (non-destructive; the raw
+ * `ContourLine` geometry and the contour entities' `vertices` are identical in
+ * both). `exact` = straight chords through the surveyed crossings (the legal /
+ * Κτηματολόγιο default). `smooth` = a fitted Catmull-Rom curve DISPLAYED through
+ * those same vertices (Civil 3D «Contour Smoothing»). Export always reads the
+ * exact vertices, so smoothing never reaches a legal deliverable.
+ */
+export type ContourDisplayStyle = 'exact' | 'smooth';
+
+/** Default contour display style — EXACT (smoothing is an opt-in presentation choice). */
+export const DEFAULT_CONTOUR_DISPLAY_STYLE: ContourDisplayStyle = 'exact';
+
 /** DXF layer name for MINOR (intermediate) contours — structural id, not UI copy. */
 export const TOPO_MINOR_LAYER_NAME = 'TOPO-CONTOUR-MINOR' as const;
 /** DXF layer name for MAJOR (index) contours. */

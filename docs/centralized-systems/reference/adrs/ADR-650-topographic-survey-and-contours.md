@@ -1,6 +1,6 @@
 # ADR-650 — Τοπογραφικές Αποτυπώσεις & Ισοϋψείς Γραμμές (Έρευνα Αγοράς + Αρχιτεκτονικό Blueprint)
 
-- **Status**: 🟡 IN PROGRESS — **M1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· v4) · **M2 IMPLEMENTED** (μέρος Α import wizard· v5 — μέρος Β breakline picking· v6) · **M4 IMPLEMENTED** (3Δ όψη εδάφους: μοναδικό derived TIN → `BufferGeometry` mesh + hypsometric· v7) · **M6 IMPLEMENTED** (όγκοι cut/fill: prisms + daylight split + στάθμη/επιφάνεια/όριο + cross-check + 3Δ cut/fill style· v8, §12.4). **Εκκρεμούν**: M3 (smoothing/LOD), M5 (AI), M7 (ελληνικό export), M8. Έρευνα §1–§11 & roadmap §12.2 παραμένουν το blueprint.
+- **Status**: 🟡 IN PROGRESS — **M1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· v4) · **M2 IMPLEMENTED** (μέρος Α import wizard· v5 — μέρος Β breakline picking· v6) · **M4 IMPLEMENTED** (3Δ όψη εδάφους: μοναδικό derived TIN → `BufferGeometry` mesh + hypsometric· v7) · **M6 IMPLEMENTED** (όγκοι cut/fill: prisms + daylight split + στάθμη/επιφάνεια/όριο + cross-check + 3Δ cut/fill style· v8, §12.4) · **M7 IMPLEMENTED** (ελληνικό export «ένα κουμπί → φάκελος»: πίνακες στο σχέδιο + ZIP με DXF/PDF/CSV/XLSX + auto tolerance-check §10· v9, §12.5). **Εκκρεμούν**: M3 (smoothing/LOD), M5 (AI), M8. Έρευνα §1–§11 & roadmap §12.2 παραμένουν το blueprint.
 - **Date**: 2026-07-13
 - **Category**: DXF Viewer / Topography / Research
 - **Σχετικά**: ADR-635 (culling gap σε geo-referenced συντεταγμένες ±1e6), ADR-462 (canonical mm),
@@ -353,11 +353,11 @@ false-flat handling) → **d3-tricontour** contours (major/minor) → **native P
 | Φάση | Τίτλος | Τι περιλαμβάνει | Big-player πρακτική | Κύριο SSoT reuse | Νέες άδειες |
 |------|--------|-----------------|--------------------|--------------------|-------------|
 | **M2** ✅ | **Import Wizard** (Q9) | Column-mapping CSV/TXT/Excel (PNEZD/PENZD/…, delimiter, units, σειρά στηλών) + DXF POINT/TEXT extraction → `TopoPointStore`. Breakline picking (mark υπάρχουσες polylines ως constraints) — **DONE, changelog v5 (μέρος Α) + v6 (μέρος Β)**. | Civil 3D «Field to Finish» point import· CASS column reorder (§7 pain-point → κάν'το UX win) | υπάρχων DXF parser (`utils/dxf-entity-parser.ts`)· `parse-topo-points.ts` (extend)· `TopoPointStore` | — (SheetJS αν Excel = Apache-2.0 ✅) |
-| **M3** | **Smoothing switch + LOD** (Q5) | Διακόπτης «ακριβείς↔όμορφες»· smoothing = **display layer πάνω** στις raw (chaikin/curveCatmullRom) + **self-intersection guard**· contour simplification (Douglas-Peucker) + LOD ανά zoom (Q3 μεγάλες εκτάσεις). Κλείδωμα στο ακριβές για νόμιμο export. | GRASS RST / d3-shape curve· Global Mapper simplify· «regularize-then-contour» | `contour-chainer` output· `core/spatial/` (LOD queries)· render pipeline | `chaikin-smooth` (MIT ✅) ή `d3-shape` (ISC ✅)· `simplify-js` (BSD ✅) |
+| **M3** ✅ | **Smoothing switch + LOD** (Q5) | Διακόπτης «ακριβείς↔όμορφες»· smoothing = **non-destructive render-time στυλ** (AutoCAD spline-fit / Civil 3D «Contour Smoothing»): γενικό πεδίο `BaseEntity.smoothDisplay` — ο `PolylineRenderer` ζωγραφίζει cached Catmull-Rom καμπύλη, οι `vertices` (control) μένουν **ΑΚΡΙΒΕΙΣ** → export/Κτηματολόγιο κλειδωμένο δωρεάν. **Self-intersection guard** (windowed· raw fallback ανά span) + **Douglas-Peucker LOD ανά zoom** (bucketed cache → 0 per-frame smoothing, ADR-040). **DONE, changelog v10.** | Civil 3D «Surface Style · Contour Smoothing»· AutoCAD PEDIT spline-fit polyline | `catmullRom`/`tessellateSplinePoints` (`geometry-spline-utils`)· `segmentsIntersect` (`GeometryUtils`)· `simplifyPolyline` RDP (`geometry-polyline-utils`)· `EntityIdsBatchPatchCommand`· `terrain-3d-store` pattern | **καμία νέα** (και οι 3 αλγόριθμοι in-house) |
 | **M4** ✅ | **3D όψη εδάφους** (Q8) | TIN → `BufferGeometry` mesh (Z=υψόμετρο)· «γύρνα τον λόφο»· hypsometric elevation banding. **Παράγωγο του ΙΔΙΟΥ TIN** (μηδέν διπλή πηγή — επιβάλλεται από `topo-surface.ts`). **DONE, changelog v7.** RTIN LOD (martini) **ΔΕΝ** μπήκε: καμία μετρημένη ανάγκη ακόμη (§12.3) — dependency μόνο όταν αποδειχθεί. | Civil 3D Surface + Surface Style· Revit Toposolid· C4D | `bim-3d` engine (three.js, ADR-366/645)· `TinSurface` (M1)· `dxfPlanToWorld` + `MaterialCatalog3D` + `disposeObjectTree` | **καμία νέα** — υπάρχον `three` |
 | **M5** | **AI καμπανάκι + «μίλα στο σχέδιο»** (Q7 #1-2) | (α) Background QA rules engine (elevation busts, COGO closure, outliers, missing breaklines) με inline flags· (β) NL editing («interval 0.5m», «σβήσε spikes») = LLM tool-calling πάνω στο υπάρχον command SSoT. **AI-accelerant/human-certifier.** | Bentley Label-Optimizer· TBC blunder detection· SuperMap/DeepSeek NL assistant | `ai-assistant/` (`match-tool-definitions`, `dxf-openai-call`)· command SSoT· worker | ONNX-web (MIT)/Transformers.js (Apache) μόνο αν χρειαστεί client-ML |
 | **M6** ✅ | **Όγκοι cut/fill** (Q1) | Triangular-prism πάνω στο TIN + **daylight split** + προαιρετικό **όριο οικοπέδου** + αναφορά **στάθμη Ή μελετημένη επιφάνεια** + **cross-check με κάνναβο** (§7 CASS) + 3Δ **cut/fill analysis style**. **DONE, changelog v8.** BOQ output **ΔΕΝ** μπήκε: το έδαφος δεν είναι entity → δεν υπάρχει `sourceEntityId` να κρεμαστεί γραμμή (βλ. §12.4) — μεταφέρεται σε M4b/M7. | Civil 3D Volumes Dashboard· CASS 3-method cross-check | `TinSurface` (M1)· `polygon-utils` (area/centroid/S-H clip)· `marching-triangles` (crossEdge)· `scene-units` (mm³→m³) | — (in-house, **καμία νέα**) |
-| **M7** | **Ελληνικό export → «ένα κουμπί → φάκελος»** (Q1, Q7 #3) | Πίνακας συντεταγμένων ΕΓΣΑ'87· DXF Κτηματολογίου (layer schema)· ψηφιακά υπογεγραμμένο PDF· auto tolerance-check (§10 ανοχές)· δήλωση Ν.651/1977· εντός/εκτός σχεδίου. | CASS cadastral output· ελληνικά add-ons (ΕΓΣΑ'87-dependent) | export pipeline (DXF/PDF)· `enterprise-id`· §10 constants (νέο `egsa-config`) | pdf-lib (MIT ✅)· proj4 (MIT ✅ για ΕΓΣΑ'87) |
+| **M7** ✅ | **Ελληνικό export → «ένα κουμπί → φάκελος»** (Q1, Q7 #3) | Πίνακας συντεταγμένων ΕΓΣΑ'87 + εμβαδομέτρηση οικοπέδου + πίνακας όγκων + **auto tolerance-check** (§10) — **ΚΑΙ** ως entities μέσα στο σχέδιο **ΚΑΙ** ως ZIP (DXF+PDF+CSV+XLSX). **DONE, changelog v9** (§12.5). **ΔΕΝ** μπήκαν: proj4/pdf-lib (**καμία μετρημένη ανάγκη** — βλ. §12.5), ψηφιακή υπογραφή (eIDAS — ο μηχανικός, εκτός εφαρμογής), DXF layer schema Κτηματολογίου (**open gap §10** — λείπει το primary source). | CASS cadastral output· Civil 3D «coordinate table in drawing + report files» | `bim/schedule` exporters (CSV/XLSX/PDF)· `buildScheduleTable`+`detailPrimitivesToEntities` (ADR-622)· `zip-pack` (ADR-505)· DXF export (ADR-648)· `polygon-utils`· `scene-units` | **καμία νέα** |
 | **M8+** | **Point clouds / moonshots** | drone/LiDAR (AI ground-filter CSF/KPConv server), auto-breakline detection, multiplayer (CRDT), Gaussian-Splat visualization layer. | §6, §9 differentiators | worker split (client/server)· Potree | CSF (Apache ✅), Potree (BSD-2 ✅) — server-GPU για heavy ML |
 
 **Εξαρτήσεις/σειρά:** M2 (input) → M3 (display) → M4 (3D) είναι ανεξάρτητα-παράλληλα δυνατά μετά το M1.
@@ -445,6 +445,70 @@ element, ΜΕΤΑ μπαίνει `RenderableEntityType 'terrain'` + `ENTITY_REND
   όχι σιωπή.
 - Τρίγωνο που η αναφορά **δεν** καλύπτει → **skipped + μετρημένο**, ποτέ αποτιμημένο ως 0 (θα εφεύρισκε
   εκσκαφή από το πουθενά).
+
+---
+
+### 12.5 M7 — «Ένα κουμπί → φάκελος»: η απόφαση, και γιατί **καμία νέα εξάρτηση**
+
+**Η ερώτηση στον Giorgio (2026-07-13):** τι παράγει το κουμπί; (Α) πίνακες **μέσα** στο σχέδιο ·
+(Β) **αρχεία** έξω · (Γ) **και τα δύο σε ZIP**. → **Απόφαση Giorgio: (Γ).**
+
+**Το εύρημα του SSoT audit που άλλαξε τη σύσταση του handoff:** ο φόβος ήταν ότι το (Β)/(Γ) απαιτεί
+νέο PDF writer (pdf-lib) και proj4. **Ο κώδικας είπε το αντίθετο** (ο κώδικας = πηγή αλήθειας):
+
+| Ανάγκη M7 | Τι ΥΠΗΡΧΕ ήδη | Νέα εξάρτηση |
+|---|---|---|
+| Πίνακας ως γεωμετρία στο σχέδιο | `buildScheduleTable` → `DetailPrimitive[]` (ADR-622) → `detailPrimitivesToEntities` → `BlockEntity` (ίδια αλυσίδα με την πινακίδα ADR-651) | — |
+| CSV | `bim/schedule/exporters/csv-exporter` (RFC-4180 + UTF-8 BOM) | — |
+| XLSX | `xlsx-exporter` (`exceljs` ήδη στο package.json) | — |
+| PDF | `pdf-exporter` (`jsPDF` + `jspdf-autotable` + ελληνική γραμματοσειρά) | — |
+| ZIP | `export/core/zip-pack` (zero-dependency STORED writer, ADR-505 §D) | — |
+| DXF | `buildDxfExportRequest` + `renderDxfBlob` (ADR-648) | — |
+| **ΕΓΣΑ'87** | **τίποτα — και δεν χρειάζεται**: τα σημεία εισάγονται **native σε ΕΓΣΑ'87** (world mm). Ο πίνακας συντεταγμένων είναι αλλαγή **ΜΟΝΑΔΑΣ** (mm→m), **όχι** μετασχηματισμός προβολής. Το proj4 θα χρειαστεί μόνο αν ζητηθεί ΕΓΣΑ'87↔HTRS07 (§10) — **τότε**, με μετρημένη ανάγκη (N.5). | — |
+
+**Η αρχιτεκτονική συνέπεια (γιατί το (Γ) δεν κόστισε διπλά):** ο πυρήνας είναι **καθαρός**:
+`buildSurveyDeliverables(input) → { sections, plot, checks, verdict, warnings }` — παράγει τους πίνακες
+ως **δεδομένα** (`ExportableTable`), χωρίς store/σκηνή/I/O. Οι δύο έξοδοι είναι απλώς **δύο backends**
+πάνω στο ίδιο αποτέλεσμα (ακριβώς το μοτίβο preview===PDF===in-scene του ADR-622). Άρα «και τα δύο»
+δεν σήμαινε δύο υλοποιήσεις — σήμαινε **έναν πυρήνα, δύο καταναλωτές**.
+
+**Η γενίκευση που το επέτρεψε (χωρίς διπλότυπο):** οι τρεις exporters διάβαζαν πάντα **μόνο**
+`columns` + `rows[].cells` — ποτέ το `entityId`/`entityType` του `ScheduleRow`. Οπότε αντί να
+σφυρηλατηθούν ψεύτικα entity ids (τα σημεία αποτύπωσης **δεν είναι** BIM entities) ή να γραφτεί
+δεύτερος CSV/PDF/XLSX writer, ο τύπος **διευρύνθηκε** σε `ExportableTable` (structural supertype —
+το `Schedule` τον ικανοποιεί ⇒ **μηδέν αλλαγή σε υπάρχοντες callers**). Μία μηχανή πινάκων, δύο
+παραγωγοί. Προστέθηκαν `tablesToPdfBlob` (ένα PDF, πολλοί πίνακες) + `tablesToXlsxBlob` (ένα φύλλο
+ανά πίνακα)· το `scheduleToPdfBlob` έγινε λεπτό wrapper με **αμετάβλητο layout**.
+
+**Οι ανοχές (§10) — τι κωδικοποιήθηκε και τι ΟΧΙ:**
+- **Εμβαδόν**: ±5% εντός σχεδίου / ±10% εκτός (Ν.4495/2017 Αρ.42§10).
+- **Περίμετρος**: 2% **ΚΑΙ** ≤40cm (Αρ.39§2) ⇒ ο **αυστηρότερος** όρος: `min(2%·L, 0.40m)`. Αυτή είναι
+  η ανάγνωση του νόμου («έως 2% **και όχι μεγαλύτερες** των…»), όχι επιλογή μας — και είναι test-covered.
+- **Χωρίς δηλωμένη τιμή τίτλου ⇒ `not-declared`**, ποτέ ψεύτικο «πέρασε» (AI-accelerant/human-certifier, §9).
+- **ΔΕΝ** κωδικοποιήθηκε η ανοχή **κτιρίου** (2%/≤20cm): το τοπογραφικό subsystem δεν γνωρίζει περίγραμμα
+  κτιρίου — μπαίνει όταν υπάρξει καταναλωτής, όχι προληπτικά.
+
+**Το όριο που τηρήθηκε ρητά (μη-σιωπηλό):** ο πίνακας συντεταγμένων **δεν** μπαίνει στο σχέδιο όταν τα
+σημεία ξεπερνούν τις `MAX_IN_SCENE_COORDINATE_ROWS` (60) — 3.000 γραμμές κειμένου δεν είναι σχέδιο. Αυτή
+είναι και η πρακτική των μεγάλων (στο διάγραμμα μπαίνει ο πίνακας **κορυφών οικοπέδου**· η πλήρης λίστα
+σημείων είναι **αρχείο**). Η παράλειψη επιστρέφεται ως `droppedCoordinates` και **λέγεται στον χρήστη**.
+
+**Race condition (N.7.2 #2):** το DXF του φακέλου χτίζεται από σκηνή που **ρητά** περιλαμβάνει το block
+των πινάκων (`[...scene.entities, block]`) — δεν ξαναδιαβάζεται η σκηνή μετά το commit ελπίζοντας ότι το
+React state πρόλαβε. Το παραδοτέο DXF και η οθόνη λένε πάντα το ίδιο.
+
+**Boy-scout (N.0.2/N.18):** το `buildTitleBlockDef` (ADR-651) και το M7 έκαναν **τον ίδιο** μετασχηματισμό
+`DetailPrimitive[] → InSessionBlockDef` ⇒ εξήχθη το κοινό `bim/block-library/sheet-block-def.ts`
+(`buildSheetBlockDef`) και **τα δύο** το καλούν. Επίσης προστέθηκε `lengthMmToM` στο units SSoT
+(`scene-units.ts`), δίπλα στα `areaMm2ToM2`/`volumeMm3ToM3` — μία πηγή για το «τι αξίζει ένα χιλιοστό».
+
+**Ανοιχτά (δεν μαντεύτηκαν):**
+- **DXF layer schema Κτηματολογίου** — παραμένει **open gap του §10** (λείπει το byte-exact «Τεχνικές
+  Προδιαγραφές Ψηφιακών Αρχείων Διαγραμμάτων v03»). Οι πίνακες μπαίνουν στο **ενεργό layer**· καμία
+  ονοματοδοσία layer δεν εφευρέθηκε.
+- **Ψηφιακή υπογραφή PDF** (eIDAS + portal ΤΕΕ): γίνεται από τον μηχανικό, **εκτός** εφαρμογής — και ο
+  κώδικας δεν προσποιείται ότι την κάνει.
+- **Δήλωση Ν.651/1977** (auto-generated κείμενο δήλωσης): δεν υλοποιήθηκε — θέλει το ακριβές πρότυπο κειμένου.
 
 ---
 
@@ -705,3 +769,89 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
   **0 clones**. **Νέα deps: ΚΑΜΙΑ** (in-house, όπως προέβλεπε το §12.2).
 
   **Status: M1 + M2 + M4 + M6 IMPLEMENTED· M3, M5, M7, M8 προγραμματισμένα (§12.2).**
+
+- **2026-07-13 (v9)** — **Milestone 7 ΥΛΟΠΟΙΗΘΗΚΕ: ΕΛΛΗΝΙΚΟ EXPORT — «ένα κουμπί → φάκελος»** (Q1, Q7 #3·
+  Phase 3, N.0.1). **Απόφαση Giorgio: (Γ) — ΚΑΙ πίνακες μέσα στο σχέδιο ΚΑΙ αρχεία σε ZIP** (§12.5).
+
+  **Νέος καθαρός πυρήνας** `systems/topography/deliverables/`:
+  - `greek-survey-rules.ts` — οι ανοχές του **§10** κωδικοποιημένες (Ν.4495/2017 Αρ.39§2 & Αρ.42§10):
+    εμβαδόν **±5% εντός / ±10% εκτός** σχεδίου· περίμετρος **min(2%·L, 40cm)** — ο **αυστηρότερος** όρος,
+    όπως τον γράφει ο νόμος. Χωρίς δηλωμένη τιμή τίτλου ⇒ **`not-declared`**, ποτέ ψεύτικο «πέρασε».
+  - `survey-tables.ts` — 4 πίνακες ως **δεδομένα** (`ExportableTable`): συντεταγμένες ΕΓΣΑ'87 (Α/Α·Χ·Υ·Ζ·κωδ),
+    κορυφές/πλευρές/μήκη οικοπέδου + **εμβαδόν & περίμετρος** (μέσω `polygonArea`/`polygonPerimeter` SSoT·
+    Ζ κορυφών **δειγματοληπτείται** από τη ΜΙΑ επιφάνεια — `getTopoSurface` → `createTinSampler`· εκτός
+    αποτύπωσης ⇒ **κενό, ποτέ 0**), όγκοι cut/fill/net (M6), έλεγχος ανοχών.
+  - `build-survey-deliverables.ts` — **pure** orchestrator· ό,τι λείπει επιστρέφεται ως `warnings`
+    (`no-boundary`/`no-volumes`), δεν σιωπά.
+  - `survey-sheet.ts` — οι ίδιοι πίνακες ως **γεωμετρία** μέσω του ΥΠΑΡΧΟΝΤΟΣ `buildScheduleTable`
+    (ADR-622). Ο πίνακας συντεταγμένων **κόβεται από το σχέδιο** πάνω από 60 γραμμές (πρακτική Civil 3D:
+    στο διάγραμμα οι **κορυφές οικοπέδου**, η πλήρης λίστα σημείων = **αρχείο**) — **μη-σιωπηλά**.
+  - `survey-folder.ts` — ZIP μέσω `createStoredZip` (ADR-505): CSV ανά πίνακα + **ένα** multi-table PDF +
+    **ένα** multi-sheet XLSX + το **DXF** (ADR-648).
+  - `useSurveyExport.ts` — ο μόνος impure κρίκος. Το DXF χτίζεται από σκηνή που **ρητά** περιέχει το block
+    των πινάκων ⇒ **μηδέν race** (N.7.2 #2).
+
+  **SSoT (μηδέν διπλότυπο, ΚΑΜΙΑ νέα εξάρτηση):** οι 3 exporters (`csv`/`xlsx`/`pdf`) **διευρύνθηκαν** από
+  `Schedule` σε **`ExportableTable`** (structural supertype — το `Schedule` τον ικανοποιεί ⇒ **μηδέν αλλαγή
+  σε υπάρχοντες callers**), αντί για fake entity ids ή δεύτερο writer. Νέα: `tablesToPdfBlob` /
+  `tablesToXlsxBlob`· το `scheduleToPdfBlob` έγινε wrapper με **αμετάβλητο layout**. **proj4 ΔΕΝ μπήκε:**
+  τα σημεία είναι **ήδη native ΕΓΣΑ'87** — ο πίνακας είναι αλλαγή **μονάδας**, όχι προβολής (§12.5).
+
+  **Boy-scout (N.0.2/N.18):** νέο `bim/block-library/sheet-block-def.ts` (`buildSheetBlockDef`) — κοινό SSoT
+  για `DetailPrimitive[] → InSessionBlockDef`· το `buildTitleBlockDef` (ADR-651) **δείχνει τώρα σε αυτό**.
+  Νέο `lengthMmToM` στο `scene-units.ts` (units SSoT, δίπλα στα `areaMm2ToM2`/`volumeMm3ToM3`).
+
+  **Bugfix (M6, βρέθηκε εδώ):** τα κλειδιά **`topography.cutfill.*` ΕΛΕΙΠΑΝ ΕΝΤΕΛΩΣ** και από τα δύο locales
+  — το panel των όγκων εμφάνιζε σκέτα keys. Προστέθηκαν el+en (μαζί με τα `topography.deliverables.*`).
+
+  UI: «Εξαγωγή φακέλου» στο `TopographyPanel` — ρωτά **μόνο** ό,τι δεν προκύπτει από τα δεδομένα (εμβαδόν/
+  περίμετρος **τίτλου**, **εντός/εκτός σχεδίου**, κλίμακα, όνομα έργου) και δείχνει την **ετυμηγορία** §10
+  με τα νούμερα. Tests: **+13** πράσινα (`survey-deliverables.test.ts` — ανοχές: το 2%/40cm cap αποδεικνύεται
+  ότι είναι ο **αυστηρότερος** όρος σε μικρό ΚΑΙ μεγάλο οικόπεδο· εμβαδομέτρηση 20m→400m²/80m· raw-mm cells·
+  warnings· 60-row cap). `jscpd:diff`: **0 clones**.
+
+  **Εκκρεμή (ρητά ΟΧΙ μαντεμένα):** DXF **layer schema Κτηματολογίου** (open gap §10 — λείπει το primary
+  source)· **ψηφιακή υπογραφή** PDF (eIDAS — ο μηχανικός, εκτός εφαρμογής)· **δήλωση Ν.651/1977** (θέλει το
+  ακριβές πρότυπο κειμένου).
+
+  **Status: M1 + M2 + M4 + M6 + M7 IMPLEMENTED· M3, M5, M8 προγραμματισμένα (§12.2).**
+
+- **2026-07-13 (v10)** — **Milestone 3 ΥΛΟΠΟΙΗΘΗΚΕ: Διακόπτης «ακριβείς ↔ όμορφες» ισοϋψείς + LOD** (Q5).
+  **Αρχιτεκτονική (όπως οι μεγάλοι — Giorgio):** το «όμορφο» είναι **non-destructive render-time στυλ**, όχι
+  δεύτερα entities. Πρότυπο = AutoCAD spline-fit polyline + Civil 3D «Surface Style · Contour Smoothing»: το
+  polyline κρατά **πάντα** τις control κορυφές, ζωγραφίζεται ως fitted καμπύλη. Γενικό πεδίο
+  `BaseEntity.smoothDisplay?: boolean` (display hint, όχι topo-specific)· ο `PolylineRenderer` — κάτω από
+  width/bulge priority — ζωγραφίζει την cached Catmull-Rom καμπύλη αντί για ευθείες χορδές. Αφού οι `vertices`
+  μένουν **ΑΚΡΙΒΕΙΣ**, hit-test/grips/DXF export/**Κτηματολόγιο** παίρνουν την ακριβή γεωμετρία **δωρεάν**
+  (το M7 `buildSurveyDeliverables` άλλωστε δεν διαβάζει καν contour entities — διπλά κλειδωμένο).
+
+  **SSoT reuse — ΚΑΜΙΑ νέα εξάρτηση, κανένα νέο math (§8 + N.18):** `catmullRom`/`tessellateSplinePoints`
+  (`geometry-spline-utils`), `segmentsIntersect` (`GeometryUtils`), `simplifyPolyline` RDP
+  (`geometry-polyline-utils`). Νέο pure `rendering/entities/shared/geometry-smooth-display.ts` που **συνθέτει**
+  μόνο τους τρεις.
+
+  **Self-intersection guard (§8 pitfall #1):** provisional smoothed → **windowed** segment-crossing scan
+  (endpoint-sharing pairs εξαιρούνται· closed=wrap), και τα εμπλεκόμενα **spans** πέφτουν σε RAW χορδή· η
+  υπόλοιπη γραμμή μένει καμπύλη (τοπικό fallback, όχι whole-line). Πιάνει και τα «forward folds». **Cross-contour
+  (γειτονική ισοϋψής) intersection ΔΕΝ γίνεται εδώ** (ένας per-entity renderer δεν έχει το context των γειτόνων —
+  όπως και το Civil 3D· documented honesty)· moderate smoothing + self-guard καλύπτει τα ορατά artefacts.
+
+  **LOD ανά zoom (Q3):** `lodToleranceForScale(scale)` → RDP tolerance **bucketed σε δυνάμεις του 2**· render
+  cache per-entity keyed by (control-array-ref, closed, tolerance-bucket) → **0 per-frame smoothing** στο hot
+  path (ADR-040-safe· ο guard τρέχει μόνο σε πραγματική αλλαγή/αλλαγή bucket).
+
+  **Διακόπτης (undo-able, instant):** vanilla `contour-display-store` (2Δ αδελφός του `terrain-3d-store`) +
+  `SetContourDisplayStyleCommand` (leaf του `EntityIdsBatchPatchCommand` SSoT — **ένα** undo step για όλες τις
+  ισοϋψείς, `persistSignal`)· `useContourDisplay` δένει levels+scene-adapter+command. Νέες ισοϋψείς κληρονομούν
+  το τρέχον στυλ (`useTopoContours`). UI: `topography.contourStyle.*` (el+en) με ρητή ένδειξη «το νόμιμο export
+  βγαίνει πάντα ακριβές».
+
+  **Files:** +`geometry-smooth-display.ts` (+test 12 πράσινα)· +`contour-display-store.ts`· +`contour-entity-ids.ts`·
+  +`useContourDisplay.ts`· +`SetContourDisplayStyleCommand.ts`· `base-entity.ts`· `PolylineRenderer.ts` (CHECK 6D:
+  ADR staged)· `contour-config.ts`· `topo-to-entities.ts`· `useTopoContours.ts`· `TopographyPanel.tsx`· i18n el+en.
+  Tests: **79** topography + **12** smooth-display πράσινα. `jscpd:diff`: **0 clones**.
+
+  **Εκκρεμή (ρητά ΟΧΙ μαντεμένα):** cross-contour (neighbour) intersection guard (θέλει generation-time pass πάνω
+  σε ΟΛΟ το contour set, ή topo overlay renderer με το σύνολο)· user-facing LOD/segment tuning (τώρα σταθερά).
+
+  **Status: M1 + M2 + M3 + M4 + M6 + M7 IMPLEMENTED· M5, M8 προγραμματισμένα (§12.2).**

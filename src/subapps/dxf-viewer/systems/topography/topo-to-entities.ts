@@ -39,7 +39,7 @@ export function formatElevationLabel(levelMm: number, decimals: number): string 
 }
 
 /** Build the lwpolyline entity for one contour line. */
-function toPolylineEntity(line: ContourLine, layers: ContourLayerIds): LWPolylineEntity {
+function toPolylineEntity(line: ContourLine, layers: ContourLayerIds, smoothDisplay: boolean): LWPolylineEntity {
   return {
     id: generateEntityId(),
     type: 'lwpolyline',
@@ -48,6 +48,8 @@ function toPolylineEntity(line: ContourLine, layers: ContourLayerIds): LWPolylin
     vertices: toPolylineVertices(line),
     closed: line.closed,
     elevation: line.level,
+    // ADR-650 M3 — inherit the current display style; vertices above stay EXACT.
+    smoothDisplay,
   };
 }
 
@@ -75,11 +77,12 @@ export function buildContourEntities(
   contours: readonly ContourLine[],
   config: ContourConfig,
   layers: ContourLayerIds,
+  smoothDisplay = false,
 ): (LWPolylineEntity | TextEntity)[] {
   const entities: (LWPolylineEntity | TextEntity)[] = [];
   for (const line of contours) {
     if (line.vertices.length < 2) continue;
-    entities.push(toPolylineEntity(line, layers));
+    entities.push(toPolylineEntity(line, layers, smoothDisplay));
     if (config.labelMajors && line.isMajor && line.vertices.length >= 2) {
       entities.push(toLabelEntity(line, layers, config));
     }
