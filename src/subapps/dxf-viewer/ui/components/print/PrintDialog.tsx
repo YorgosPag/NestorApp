@@ -32,6 +32,7 @@ import type { PrintRequest } from '../../../print/config/paper-types';
 import { usePrintDialogState } from './usePrintDialogState';
 import { PrintPaperControls } from './PrintPaperControls';
 import { PrintOutputControls } from './PrintOutputControls';
+import { PrintComplianceHint } from './PrintComplianceHint';
 
 const logger = createModuleLogger('DXF_PRINT_DIALOG');
 
@@ -40,7 +41,17 @@ export interface PrintDialogProps {
   readonly onOpenChange: (next: boolean) => void;
   /** True when a 3D scene is mounted (enables the 3D source option). */
   readonly canPrint3d: boolean;
-  /** Executes the print job (PrintHost → runPrint). */
+  /**
+   * ADR-651 Απόφαση #10β — το ενεργό σχέδιο δεν έχει πινακίδα: ο διάλογος το λέει και την
+   * προσθέτει στο τυπωμένο φύλλο (το checkbox είναι ήδη επιλεγμένο).
+   */
+  readonly titleBlockMissing?: boolean;
+  /**
+   * ADR-651 Φάση Ζ — πόσα φύλλα (όροφοι με scene) έχει το έργο· ≥2 ⇒ ο διάλογος προσφέρει
+   * «εκτύπωση όλου του σετ» (πολυσέλιδο PDF, αυτόματη αρίθμηση).
+   */
+  readonly sheetCount?: number;
+  /** Executes the print job (PrintHost → runPrint / runPrintSet). */
   readonly onSubmit: (request: PrintRequest) => Promise<void>;
 }
 
@@ -48,6 +59,8 @@ export function PrintDialog({
   open,
   onOpenChange,
   canPrint3d,
+  titleBlockMissing = false,
+  sheetCount = 1,
   onSubmit,
 }: PrintDialogProps): React.JSX.Element {
   const { t } = useTranslation('dxf-viewer-shell');
@@ -102,8 +115,19 @@ export function PrintDialog({
             onTargetChange={state.setTarget}
             includeTitleBlock={state.includeTitleBlock}
             onIncludeTitleBlockChange={state.setIncludeTitleBlock}
+            titleBlockMissing={titleBlockMissing}
+            wholeSet={state.wholeSet}
+            onWholeSetChange={state.setWholeSet}
+            sheetCount={sheetCount}
           />
         </div>
+
+        {/* ADR-651 Φάση Ε (Απόφαση #4) — τι λείπει για κατάθεση· προειδοποίηση, όχι φράγμα. */}
+        <PrintComplianceHint
+          includeTitleBlock={state.includeTitleBlock}
+          fitMode={state.fitMode}
+          scaleDenominator={state.scaleDenominator}
+        />
 
         {hasError && (
           <p role="alert" className="text-sm text-destructive">

@@ -47,6 +47,13 @@ interface PrintOutputControlsProps {
   onTargetChange: (t: OutputTarget) => void;
   includeTitleBlock: boolean;
   onIncludeTitleBlockChange: (v: boolean) => void;
+  /** ADR-651 Απόφαση #10β — το σχέδιο δεν έχει πινακίδα· η εκτύπωση την προτείνει. */
+  titleBlockMissing?: boolean;
+  /** ADR-651 Φάση Ζ — τύπωσε όλο το σετ φύλλων (ένα ανά όροφο). */
+  wholeSet: boolean;
+  onWholeSetChange: (v: boolean) => void;
+  /** Πόσα φύλλα (όροφοι με scene) έχει το σετ· <2 ⇒ η επιλογή δεν εμφανίζεται. */
+  sheetCount: number;
 }
 
 export function PrintOutputControls(props: PrintOutputControlsProps): React.JSX.Element {
@@ -58,9 +65,13 @@ export function PrintOutputControls(props: PrintOutputControlsProps): React.JSX.
     outputMode, onOutputModeChange,
     target, onTargetChange,
     includeTitleBlock, onIncludeTitleBlockChange,
+    titleBlockMissing = false,
+    wholeSet, onWholeSetChange, sheetCount,
   } = props;
 
   const is3d = source === '3d';
+  // ADR-651 Φάση Ζ — το σετ έχει νόημα μόνο σε 2Δ και με ≥2 φύλλα (αλλιώς = single print).
+  const canPrintSet = !is3d && sheetCount >= 2;
 
   return (
     <section className="space-y-3">
@@ -172,15 +183,38 @@ export function PrintOutputControls(props: PrintOutputControlsProps): React.JSX.
         ]}
       />
 
-      <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
-        <input
-          type="checkbox"
-          checked={includeTitleBlock}
-          onChange={(e) => onIncludeTitleBlockChange(e.target.checked)}
-          className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
-        />
-        {t('print.titleBlock.label')}
-      </label>
+      <div className="space-y-1">
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
+          <input
+            type="checkbox"
+            checked={includeTitleBlock}
+            onChange={(e) => onIncludeTitleBlockChange(e.target.checked)}
+            className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
+          />
+          {t('print.titleBlock.label')}
+        </label>
+        {titleBlockMissing && includeTitleBlock && (
+          <p className="text-xs text-muted-foreground">{t('print.titleBlock.missingHint')}</p>
+        )}
+      </div>
+
+      {/* ADR-651 Φάση Ζ — τύπωσε όλο το σετ φύλλων (ένα πολυσέλιδο PDF, ένα φύλλο/όροφο). */}
+      {canPrintSet && (
+        <div className="space-y-1">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={wholeSet}
+              onChange={(e) => onWholeSetChange(e.target.checked)}
+              className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
+            />
+            {t('print.sheetSet.label', { count: sheetCount })}
+          </label>
+          {wholeSet && (
+            <p className="text-xs text-muted-foreground">{t('print.sheetSet.hint')}</p>
+          )}
+        </div>
+      )}
 
       <p className="text-xs text-muted-foreground">{t('print.plotterNote')}</p>
     </section>
