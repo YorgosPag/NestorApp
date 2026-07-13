@@ -77,6 +77,19 @@ export const CONTEXTUAL_TITLE_BLOCK_TAB: RibbonTab = {
                 options: PRESET_OPTIONS,
               },
             },
+            {
+              // ADR-651 Φάση Δ — δημιουργία πινακίδας με AI (εικόνα ή περιγραφή → πρότυπο).
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'titleBlock.ai',
+                labelKey: 'ribbon.commands.aiTitleBlock',
+                tooltipKey: 'ribbon.commands.aiTitleBlockTooltip',
+                icon: 'ai-title-block',
+                commandKey: 'open-ai-title-block-dialog',
+                action: 'open-ai-title-block-dialog',
+              },
+            },
           ],
         },
       ],

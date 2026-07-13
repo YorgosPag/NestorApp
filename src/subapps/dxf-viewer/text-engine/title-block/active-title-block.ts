@@ -36,10 +36,22 @@ import { buildTitleBlockDef } from './title-block-def';
 import type { TitleBlockLayoutOptions, TitleBlockStampImage } from './title-block-layout';
 import { titleBlockPreset, type TitleBlockLocale } from './title-block-presets';
 
-/** Το ενεργό preset στη ζητούμενη γλώσσα (Απόφαση #8: ελληνικά default, κουμπί → αγγλικά). */
+/**
+ * Το ενεργό πρότυπο στη ζητούμενη γλώσσα. Η **AI πινακίδα** (Φάση Δ) υπερισχύει του preset
+ * (φέρει ήδη μία γλώσσα)· αλλιώς το επιλεγμένο preset (Απόφαση #8: ελληνικά default, κουμπί → EN).
+ */
 export function titleBlockTemplateForLocale(locale: TitleBlockLocale): TextTemplate {
-  const { presetId } = useTitleBlockOptionsStore.getState();
+  const { presetId, aiOverride } = useTitleBlockOptionsStore.getState();
+  if (aiOverride) return aiOverride.template;
   return titleBlockPreset(presetId).templates[locale];
+}
+
+/** Το κελί σφραγίδας του ενεργού (AI override ή preset) — SSoT για layout ΚΑΙ έλεγχο πληρότητας. */
+function activeStampMeta(locale: TitleBlockLocale): { withStampBox: boolean; stampLabel: string } {
+  const { presetId, aiOverride } = useTitleBlockOptionsStore.getState();
+  if (aiOverride) return { withStampBox: aiOverride.withStampBox, stampLabel: aiOverride.stampLabel };
+  const preset = titleBlockPreset(presetId);
+  return { withStampBox: preset.withStampBox, stampLabel: preset.stampLabel[locale] };
 }
 
 /** Ό,τι δεν προκύπτει από το ενεργό σχέδιο και το ξέρει καλύτερα ο καλών. */
@@ -50,6 +62,17 @@ export interface TitleBlockScopeOverrides {
    * δήλωνε κλίμακα που δεν έχει.
    */
   readonly scaleName?: string;
+  /**
+   * ADR-651 Φάση Ζ — ο τίτλος του φύλλου (όνομα ορόφου) όταν τυπώνεται **σετ φύλλων**: κάθε
+   * φύλλο του σετ έχει διαφορετικό `{{drawing.title}}`, ίδια κατά τα άλλα πινακίδα.
+   */
+  readonly title?: string;
+  /**
+   * ADR-651 Φάση Ζ — ο αυτόματος αριθμός φύλλου (Α-1, Α-2…) στο σετ, στο
+   * `{{drawing.sheetNumber}}`. Παράγεται ντετερμινιστικά από τη θέση στο σετ
+   * (`sheet-numbering.ts`) — καμία χειρόγραφη αρίθμηση.
+   */
+  readonly sheetNumber?: string;
 }
 
 /** Firestore scope (cached) + τα drawing facts που ζουν στο ενεργό σχέδιο. */
@@ -59,7 +82,11 @@ export function buildActiveTitleBlockScope(
 ): PlaceholderScope {
   return {
     ...getPlaceholderScopeSources(),
-    drawing: { scale: overrides?.scaleName ?? getActiveScaleName() },
+    drawing: {
+      scale: overrides?.scaleName ?? getActiveScaleName(),
+      title: overrides?.title,
+      sheetNumber: overrides?.sheetNumber,
+    },
     formatting: { locale },
   };
 }
@@ -98,12 +125,12 @@ export function buildActiveTitleBlockSheetOptions(
   locale: TitleBlockLocale,
   stampForm: StampImageForm = 'url',
 ): TitleBlockSheetOptions {
-  const { presetId, withFrame } = useTitleBlockOptionsStore.getState();
-  const preset = titleBlockPreset(presetId);
+  const { withFrame } = useTitleBlockOptionsStore.getState();
+  const stamp = activeStampMeta(locale);
   return {
     withFrame,
-    withStampBox: preset.withStampBox,
-    stampLabel: preset.stampLabel[locale],
+    withStampBox: stamp.withStampBox,
+    stampLabel: stamp.stampLabel,
     stampImage: buildActiveStampImage(stampForm),
   };
 }
@@ -128,12 +155,10 @@ export function validateActiveTitleBlock(
   locale: TitleBlockLocale,
   overrides?: TitleBlockScopeOverrides,
 ): readonly TitleBlockIssue[] {
-  const { presetId } = useTitleBlockOptionsStore.getState();
-  const preset = titleBlockPreset(presetId);
   return validateTitleBlock({
-    template: preset.templates[locale],
+    template: titleBlockTemplateForLocale(locale),
     scope: buildActiveTitleBlockScope(locale, overrides),
-    withStampBox: preset.withStampBox,
+    withStampBox: activeStampMeta(locale).withStampBox,
     stampImageUrl: getPlaceholderScopeSources().user?.stampImageUrl,
   });
 }

@@ -18,6 +18,7 @@
 
 import { create } from 'zustand';
 import type { PaperOrientation, PaperSize, PaperSpec } from '../print/config/paper-types';
+import type { TextTemplate } from '../text-engine/templates/template.types';
 import {
   DEFAULT_TITLE_BLOCK_PRESET_ID,
   type TitleBlockPresetId,
@@ -25,6 +26,18 @@ import {
 
 /** Αρχικό φύλλο πριν τρέξει οποιαδήποτε πρόταση (τυπικό τεχνικό φύλλο, όπως το detail sheet). */
 export const DEFAULT_TITLE_BLOCK_PAPER: PaperSpec = { size: 'A3', orientation: 'landscape' };
+
+/**
+ * ADR-651 Φάση Δ — AI-generated πινακίδα που **αντικαθιστά** το preset για την επόμενη
+ * τοποθέτηση. Κρατά και το `withStampBox`/`stampLabel` του (η AI πινακίδα δεν είναι preset,
+ * φέρνει τα δικά της). `null` ⇒ ισχύει το επιλεγμένο preset.
+ */
+export interface TitleBlockAiOverride {
+  readonly template: TextTemplate;
+  readonly withStampBox: boolean;
+  /** Κείμενο κελιού σφραγίδας (περιεχόμενο σχεδίου, γλώσσα προτύπου) όταν `withStampBox`. */
+  readonly stampLabel: string;
+}
 
 interface TitleBlockOptionsState {
   readonly presetId: TitleBlockPresetId;
@@ -34,7 +47,11 @@ interface TitleBlockOptionsState {
   readonly withFrame: boolean;
   /** Όσο είναι `true`, το χαρτί ακολουθεί την αυτόματη πρόταση· ο χρήστης το «κλειδώνει». */
   readonly paperAutoSuggest: boolean;
+  /** ADR-651 Φάση Δ — AI πινακίδα που υπερισχύει του preset (ή `null`). */
+  readonly aiOverride: TitleBlockAiOverride | null;
   setPreset(presetId: TitleBlockPresetId): void;
+  /** Ορίζει/καθαρίζει την AI πινακίδα (η επιλογή preset από τον χρήστη την καθαρίζει). */
+  setAiOverride(aiOverride: TitleBlockAiOverride | null): void;
   setPaperSize(paperSize: PaperSize): void;
   setOrientation(orientation: PaperOrientation): void;
   setWithFrame(withFrame: boolean): void;
@@ -50,7 +67,10 @@ export const useTitleBlockOptionsStore = create<TitleBlockOptionsState>((set, ge
   orientation: DEFAULT_TITLE_BLOCK_PAPER.orientation,
   withFrame: true,
   paperAutoSuggest: true,
-  setPreset: (presetId) => set({ presetId }),
+  aiOverride: null,
+  // Ρητή επιλογή preset ⇒ καθαρίζει τυχόν AI πινακίδα (ο χρήστης γύρισε σε έτοιμο πρότυπο).
+  setPreset: (presetId) => set({ presetId, aiOverride: null }),
+  setAiOverride: (aiOverride) => set({ aiOverride }),
   // Ρητή επιλογή χρήστη ⇒ σταματά η αυτόματη πρόταση (default έξυπνο, όχι κλειδωμένο).
   setPaperSize: (paperSize) => set({ paperSize, paperAutoSuggest: false }),
   setOrientation: (orientation) => set({ orientation, paperAutoSuggest: false }),

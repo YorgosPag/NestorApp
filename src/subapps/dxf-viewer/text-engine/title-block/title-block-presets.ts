@@ -59,10 +59,17 @@ export interface TitleBlockPreset {
 
 const CMD = 'ribbon.commands.titleBlockEditor.presetOptions';
 
-const STAMP_LABEL: Readonly<Record<TitleBlockLocale, string>> = {
+/**
+ * Το κείμενο του κελιού σφραγίδας ανά γλώσσα προτύπου — **περιεχόμενο σχεδίου**, όχι UI label
+ * (τυπώνεται μέσα στην πινακίδα). Εκτίθεται ώστε και η AI πινακίδα (Φάση Δ) με κελί σφραγίδας
+ * να χρησιμοποιεί το ΙΔΙΟ κείμενο (N.18: μία πηγή).
+ */
+export const TITLE_BLOCK_STAMP_LABEL: Readonly<Record<TitleBlockLocale, string>> = {
   el: 'ΣΦΡΑΓΙΔΑ / ΥΠΟΓΡΑΦΗ',
   en: 'STAMP / SIGNATURE',
 };
+
+const STAMP_LABEL = TITLE_BLOCK_STAMP_LABEL;
 
 const NO_STAMP_LABEL: Readonly<Record<TitleBlockLocale, string>> = { el: '', en: '' };
 
