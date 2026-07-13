@@ -45,6 +45,7 @@ import type {
   FurnitureToolLike,
   BlockLibraryToolLike,
   TitleBlockToolLike,
+  FurniturePlanToolLike,
   FloorplanSymbolToolLike,
   RailingToolLike,
   SlabOpeningToolLike,
@@ -125,6 +126,8 @@ export interface UseCanvasClickHandlerParams {
   blockLibraryTool?: BlockLibraryToolLike;
   /** ADR-651 Φάση Β — title-block tool click pipeline (single-click placement). */
   titleBlockTool?: TitleBlockToolLike;
+  /** ADR-654 — furniture-plan (entourage) tool click pipeline (single-click placement). */
+  furniturePlanTool?: FurniturePlanToolLike;
   /** ADR-415 — Floorplan-symbol tool click pipeline (single-click placement). */
   floorplanSymbolTool?: FloorplanSymbolToolLike;
   /** ADR-407 — Railing tool click pipeline (2-click straight guardrail). */

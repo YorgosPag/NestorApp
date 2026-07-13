@@ -244,6 +244,8 @@ export type ToolType =
   | 'block-library'
   // ADR-651 Φάση Β: single-click τοποθέτηση πινακίδας σχεδίου (resolved title-block ως BLOCK)
   | 'title-block'
+  // ADR-654: single-click placement of a floorplan-entourage furniture image (ImageEntity)
+  | 'furniture-plan'
   // ADR-415: pure-vector 2D floorplan symbol drawing tool (single-click placement)
   | 'floorplan-symbol'
   // ADR-408 Φ8: linear MEP segment tools (duct/pipe, 2-click; one entity, two tools like Revit)

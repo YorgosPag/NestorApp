@@ -167,6 +167,12 @@ export interface BlockLibraryToolLike {
   onCanvasClick: (point: Point2D) => boolean;
 }
 
+/** ADR-654 — Minimal furniture-plan tool interface for click routing (single-click). */
+export interface FurniturePlanToolLike {
+  readonly isActive: boolean;
+  onCanvasClick: (point: Point2D) => boolean;
+}
+
 /**
  * ADR-651 Φάση Β — η πινακίδα σχεδίου δρομολογείται ΑΚΡΙΒΩΣ όπως ένα block (single-click,
  * παράγει `BlockEntity`), οπότε μοιράζεται το ίδιο routing συμβόλαιο — alias, όχι δίδυμο

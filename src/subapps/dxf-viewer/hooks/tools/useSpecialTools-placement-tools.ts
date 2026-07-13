@@ -18,6 +18,7 @@ import { useMepFixtureTool } from '../drawing/useMepFixtureTool';
 import { useFurnitureTool } from '../drawing/useFurnitureTool';
 import { useBlockLibraryTool } from '../drawing/useBlockLibraryTool';
 import { useTitleBlockTool } from '../drawing/useTitleBlockTool';
+import { useFurniturePlanTool } from '../drawing/useFurniturePlanTool';
 import { useFloorplanSymbolTool } from '../drawing/useFloorplanSymbolTool';
 import { useElectricalPanelTool } from '../drawing/useElectricalPanelTool';
 import { useMepManifoldTool } from '../drawing/useMepManifoldTool';
@@ -34,6 +35,7 @@ import { resolveSceneUnits } from '../../utils/scene-units';
 import { addMepFixtureToScene } from '../../bim/mep-fixtures/add-mep-fixture-to-scene';
 import { addFurnitureToScene } from '../../bim/furniture/add-furniture-to-scene';
 import { addBlockToScene } from '../../bim/block-library/add-block-to-scene';
+import { addFurniturePlanToScene } from '../../bim/furniture-plan/add-furniture-plan-to-scene';
 import { useProjectHierarchyOptional } from '../../contexts/ProjectHierarchyContext';
 import { addFloorplanSymbolToScene } from '../../bim/floorplan-symbols/add-floorplan-symbol-to-scene';
 import { addElectricalPanelToScene } from '../../bim/electrical-panels/add-electrical-panel-to-scene';
@@ -67,6 +69,7 @@ export interface PlacementToolsReturn {
   furnitureTool: ReturnType<typeof useFurnitureTool>; // ADR-410
   blockLibraryTool: ReturnType<typeof useBlockLibraryTool>; // Block Library M1
   titleBlockTool: ReturnType<typeof useTitleBlockTool>; // ADR-651 Φάση Β
+  furniturePlanTool: ReturnType<typeof useFurniturePlanTool>; // ADR-654
 
   floorplanSymbolTool: ReturnType<typeof useFloorplanSymbolTool>; // ADR-415
   electricalPanelTool: ReturnType<typeof useElectricalPanelTool>; // ADR-408 Φ3
@@ -200,6 +203,19 @@ export function useSpecialToolsPlacementTools(
     },
   });
   useToolLifecycle(activeTool === 'title-block', titleBlockTool.activate, titleBlockTool.deactivate);
+
+  // ADR-654 — «Έπιπλα κάτοψης» (entourage): single-click τοποθέτηση ImageEntity. Το «ποιο
+  // έπιπλο» το ορίζει η παλέτα στο furniture-plan-selection-store· εδώ μόνο activate/commit
+  // (undoable append+broadcast μέσω addFurniturePlanToScene, όπως block library/furniture).
+  const furniturePlanTool = useFurniturePlanTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onFurnitureCreated: (entity) => addFurniturePlanToScene(entity, levelManager),
+    getSceneUnits: () => {
+      const lid = levelManager.currentLevelId;
+      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
+    },
+  });
+  useToolLifecycle(activeTool === 'furniture-plan', furniturePlanTool.activate, furniturePlanTool.deactivate);
 
   // ADR-415 — FLOORPLAN SYMBOL TOOL: single-click placement; entity appended+broadcast.
   const floorplanSymbolTool = useFloorplanSymbolTool({
@@ -369,6 +385,7 @@ export function useSpecialToolsPlacementTools(
     furnitureTool,
     blockLibraryTool,
     titleBlockTool,
+    furniturePlanTool,
     floorplanSymbolTool,
     electricalPanelTool,
     mepManifoldTool,

@@ -47,6 +47,7 @@ export function dispatchBimToolClick(
     selfOpeningTool,
     blockLibraryTool,
     titleBlockTool,
+    furniturePlanTool,
     universalSelection,
   } = params;
 
@@ -216,6 +217,12 @@ export function dispatchBimToolClick(
   // placement, ίδιο μονοπάτι με το block library — παράγει BlockEntity).
   if (activeTool === 'title-block' && titleBlockTool?.isActive) {
     titleBlockTool.onCanvasClick(worldPoint);
+    return true;
+  }
+  // PRIORITY 4.915d: ADR-654 — «Έπιπλα κάτοψης» (entourage) με ένα κλικ (RAW worldPoint·
+  // free-point placement, ίδιο μονοπάτι με το block library — παράγει ImageEntity).
+  if (activeTool === 'furniture-plan' && furniturePlanTool?.isActive) {
+    furniturePlanTool.onCanvasClick(worldPoint);
     return true;
   }
   // PRIORITIES 4.92–4.93: MEP fixture / riser / furniture / floorplan-symbol /
