@@ -5,5 +5,5 @@
  */
 
 export * from './config/paper-types';
-export { runPrint, type PrintDeps } from './print-service';
+export { runPrint, runPrintSet, type PrintDeps } from './print-service';
 export { buildPrintFilename } from './print-filename';

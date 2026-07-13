@@ -136,6 +136,21 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
     EventBus.emit('dxf:export-dialog-requested', {});
     return true;
   }
+  // ADR-651 Φάση Ε: Open engineer-stamp dialog (StampHost listens)
+  if (action === 'open-stamp-dialog') {
+    EventBus.emit('dxf:stamp-dialog-requested', {});
+    return true;
+  }
+  // ADR-651 Φάση Δ: Open AI title-block dialog (AiTitleBlockHost listens)
+  if (action === 'open-ai-title-block-dialog') {
+    EventBus.emit('dxf:ai-title-block-dialog-requested', {});
+    return true;
+  }
+  // ADR-651 Φάση Η: Open revisions dialog (RevisionsHost listens)
+  if (action === 'open-revisions-dialog') {
+    EventBus.emit('dxf:revisions-dialog-requested', {});
+    return true;
+  }
   // ADR-459 Φ4d: «Αυτόματος Οπλισμός» — auto-apply code-suggested reinforcement.
   // Scope = τρέχουσα επιλογή (κενή → όλος ο οργανισμός ορόφου· το αποφασίζει ο
   // useStructuralAutoReinforce hook που εκτελεί το undoable command).

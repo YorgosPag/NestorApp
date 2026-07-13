@@ -32,7 +32,7 @@ import {
   DxfImportModal, SimpleProjectDialog, FloorplanImportWizard, ConstructionLayerScaffoldDialog,
   DxfFindReplaceHost, DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost,
   OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, AdminLayerManagerDialogHost,
-  DxfAiChatPanel, ColumnPerimeterConfirmDialog, GapCloseConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, PrintHost, ExportHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
+  DxfAiChatPanel, ColumnPerimeterConfirmDialog, GapCloseConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, PrintHost, ExportHost, StampHost, AiTitleBlockHost, RevisionsHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
   SlabDetailHost, FloorManagementDialogHost, MatchPropertiesDialogHost,
 } from './dxf-viewer-lazy-components';
 
@@ -227,6 +227,12 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       <React.Suspense fallback={hiddenFallback}><PrintHost /></React.Suspense>
       {/* ADR-505 — Export («Εξαγωγή») dialog (opened via Analyze → Εξαγωγή). */}
       <React.Suspense fallback={hiddenFallback}><ExportHost projectId={projectId} buildingId={buildingId ?? undefined} /></React.Suspense>
+      {/* ADR-651 Φάση Ε — engineer-stamp dialog (opened via «Πινακίδα Σχεδίου» → «Σφραγίδα…»). */}
+      <React.Suspense fallback={hiddenFallback}><StampHost /></React.Suspense>
+
+      <React.Suspense fallback={hiddenFallback}><AiTitleBlockHost projectId={projectId} /></React.Suspense>
+      {/* ADR-651 Φάση Η — revisions dialog (opened via «Πινακίδα Σχεδίου» → «Αναθεωρήσεις…»). */}
+      <React.Suspense fallback={hiddenFallback}><RevisionsHost projectId={projectId} /></React.Suspense>
       {/* ADR-457 — Column Reinforcement Detail Sheet (opened via column contextual tab). */}
       <React.Suspense fallback={hiddenFallback}><ColumnDetailHost levelManager={levelManager} /></React.Suspense>
       {/* ADR-463 — Footing Reinforcement Detail Sheet (opened via foundation contextual tab). */}

@@ -26,7 +26,6 @@ import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { dxfSubEntityPayload } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Point2D } from '../../rendering/types/Types';
 // rotated-rectangle entity-level SSoT (corner1/corner2 ή x/y/w/h + rotation, pivot=corner1).
-import { rectangleEntityVertices } from '../../rendering/entities/shared/geometry-utils';
 import type { HatchEntity } from '../../types/entities';
 import { isSlabEntity, isSlabOpeningEntity, isOpeningEntity, isWallEntity, isBeamEntity, isColumnEntity, isFoundationEntity, isMepFixtureEntity, isElectricalPanelEntity, isRailingEntity, isFurnitureEntity, isMepSegmentEntity, isMepFittingEntity, isFloorplanSymbolEntity, isAnnotationSymbolEntity, isScaleBarEntity, isOpeningInfoTagEntity, isMepManifoldEntity, isMepRadiatorEntity, isMepBoilerEntity, isMepWaterHeaterEntity, isMepUnderfloorEntity, isRoofEntity, isFloorFinishEntity, isThermalSpaceEntity, isSpaceSeparatorEntity, isXLineEntity, isRayEntity, isHatchEntity } from '../../types/entities';
 // ADR-583 — annotation symbol (North arrow) lightweight entity for DXF render pipeline.
@@ -34,6 +33,9 @@ import type { AnnotationSymbolEntity } from '../../types/annotation-symbol';
 import type { ScaleBarEntity } from '../../types/scale-bar';
 // ADR-612 — opening info tag lightweight entity for DXF render pipeline.
 import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
+// ADR-651 Φάση Ε — standalone raster image lightweight entity for DXF render pipeline.
+import type { ImageEntity } from '../../types/image';
+import { isImageEntity } from '../../types/image';
 import type { XLineEntity, RayEntity } from '../../types/entities';
 // ADR-363 Phase 1B — wall wrapper for DXF render pipeline.
 import type { WallEntity } from '../../bim/types/wall-types';
@@ -70,6 +72,8 @@ import type { EntityType } from '../../types/base-entity';
 import { convertTextEntity } from './dxf-text-entity-converter';
 import { dwarn } from '../../debug';
 import type { SceneEntity, DxfBaseFields } from './dxf-scene-entity-converter';
+// N.7.1 — pure geometry projections shared by the handler arms (extracted at the 500-line limit).
+import { rectangleToVertices, toPolylineUnion } from './dxf-scene-entity-projections';
 
 /**
  * Per-type SceneModel→`DxfEntityUnion` projection. `entity` is the scene entity,
@@ -77,39 +81,6 @@ import type { SceneEntity, DxfBaseFields } from './dxf-scene-entity-converter';
  * type-guard rejects the entity shape (matches the previous per-case null returns).
  */
 export type ToDxfHandler = (entity: SceneEntity, base: DxfBaseFields) => DxfEntityUnion | null;
-
-function rectangleToVertices(e: {
-  corner1?: Point2D; corner2?: Point2D;
-  x?: number; y?: number; width?: number; height?: number;
-  rotation?: number;
-}): Point2D[] | null {
-  // rotated-rectangle (ADR-620): το committed ορθογώνιο μετατρέπεται σε polyline για τον κύριο καμβά
-  // — ΠΡΕΠΕΙ να σέβεται το `rotation` (pivot=corner1), αλλιώς η πληκτρολογημένη γωνία κλίσης χάνεται.
-  // Entity-level SSoT (χειρίζεται corner1/corner2 ΚΑΙ x/y/w/h + rotation) — ΟΧΙ 4ο axis-aligned duplicate.
-  const hasCorners = !!(e.corner1 && e.corner2);
-  const hasXywh = e.x !== undefined && e.y !== undefined && e.width !== undefined && e.height !== undefined;
-  if (!hasCorners && !hasXywh) return null; // πραγματικά κενή γεωμετρία → warn + skip (όπως πριν)
-  return rectangleEntityVertices(e);
-}
-
-/**
- * ADR-510 Φ3b/Φ3c — κοινό polyline projection (SSoT polyline/lwpolyline): base +
- * vertices + closed, με optional per-segment bulge/width parallel arrays
- * (index-aligned) όταν υπάρχουν· absent ⇒ all-straight (back-compat).
- */
-function toPolylineUnion(
-  base: DxfBaseFields,
-  vertices: Point2D[],
-  closed: boolean,
-  arrays: { bulges?: number[]; startWidths?: number[]; endWidths?: number[] },
-): DxfEntityUnion {
-  return {
-    ...base, type: 'polyline' as const, vertices, closed,
-    ...(arrays.bulges ? { bulges: arrays.bulges } : {}),
-    ...(arrays.startWidths ? { startWidths: arrays.startWidths } : {}),
-    ...(arrays.endWidths ? { endWidths: arrays.endWidths } : {}),
-  } as DxfEntityUnion;
-}
 
 // ADR-557 — TEXT/MTEXT share one arm (projection lives in the sibling converter, SRP).
 const convertTextArm: ToDxfHandler = (entity, base) => convertTextEntity(entity, base);
@@ -471,6 +442,19 @@ export const TO_DXF_HANDLERS: Partial<Record<EntityType, ToDxfHandler>> = {
     return isXLineEntity(entity)
       ? { ...base, type: 'xline' as const, xlineEntity: entity as XLineEntity } as DxfEntityUnion
       : null;
+  },
+  image: (entity, base) => {
+    // ADR-651 Φάση Ε — lightweight non-BIM raster image (sibling of scale-bar/opening-info-tag).
+    // Flat params spread at top level; ImageRenderer reads them + the shared HatchImageCache.
+    // Without this case the freshly-placed image would fall to `default` → null → invisible +
+    // un-grippable (the same drop trap as the BIM entities above).
+    if (!isImageEntity(entity)) return null;
+    const img = entity as ImageEntity;
+    return {
+      ...base, type: 'image' as const,
+      position: img.position, width: img.width, height: img.height, url: img.url,
+      ...(img.rotation !== undefined ? { rotation: img.rotation } : {}),
+    } as DxfEntityUnion;
   },
   ray: (entity, base) => {
     // ADR-359 Phase 11 — wrap RayEntity for grip computation pipeline.

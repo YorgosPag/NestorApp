@@ -90,6 +90,12 @@ export interface PrintRequest {
   fitMode: FitMode;
   target: OutputTarget;
   includeTitleBlock: boolean;
+  /**
+   * ADR-651 Φάση Ζ — τυπώνει **όλο το σετ φύλλων** (ένα φύλλο ανά όροφο, πολυσέλιδο PDF,
+   * αυτόματη αρίθμηση Α-1/Α-2…) αντί για μόνο το ενεργό σχέδιο. 2Δ μόνο (τα levels είναι
+   * 2Δ κατόψεις)· ο host το αγνοεί για 3Δ.
+   */
+  wholeSet?: boolean;
   /** Real-world denominator N for `drawing-scale` mode (e.g. 100 → 1:100). */
   scaleDenominator?: number;
   /**

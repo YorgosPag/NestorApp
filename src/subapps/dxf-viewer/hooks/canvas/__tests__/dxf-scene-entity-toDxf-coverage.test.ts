@@ -55,7 +55,7 @@ describe('toDxf capability coverage — ζωντανό seam ↔ descriptor domai
         // DXF primitives (17)
         'line', 'polyline', 'lwpolyline', 'circle', 'arc', 'text', 'mtext', 'rectangle',
         'dimension', 'angle-measurement', 'hatch', 'xline', 'ray', 'annotation-symbol', 'scale-bar',
-        'opening-info-tag', 'image',
+        'opening-info-tag', 'image', 'floorplan-symbol',
         // BIM (23 — όλα εκτός wall-covering)
         'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair',
         'railing', 'roof', 'floor-finish', 'thermal-space', 'space-separator', 'furniture',
@@ -77,9 +77,12 @@ describe('toDxf capability coverage — ζωντανό seam ↔ descriptor domai
     );
   });
 
-  it('ο ΜΟΝΟΣ non-renderable handler είναι το "floorplan-symbol" (editor-only, ADR-583/Φ2b asymmetry)', () => {
+  it('ΚΑΝΕΝΑΣ non-renderable handler — η ADR-583/Φ2b asymmetry έκλεισε', () => {
+    // Το `floorplan-symbol` είχε handler αλλά ΕΛΕΙΠΕ από το `RENDERABLE_ENTITY_TYPES` (editor-only
+    // asymmetry). Μπήκε στο descriptor domain (commit 7940558f) → κάθε handler έχει πλέον renderer.
+    // Νέος handler χωρίς descriptor entry → ξανα-σπάει εδώ = συνειδητή απόφαση, όχι σιωπηλό drift.
     const nonRenderable = TO_DXF_SUPPORTED_TYPES.filter((t) => !renderableSet.has(t));
-    expect(nonRenderable).toEqual(['floorplan-symbol']);
+    expect(nonRenderable).toEqual([]);
   });
 
   it('τύπος χωρίς handler → convertEntity επιστρέφει null (warn+null default, per-site)', () => {

@@ -40,6 +40,9 @@ export interface PrintDialogState {
   setTarget: (t: OutputTarget) => void;
   includeTitleBlock: boolean;
   setIncludeTitleBlock: (v: boolean) => void;
+  /** ADR-651 Φάση Ζ — τυπώνει όλο το σετ φύλλων (ένα ανά όροφο). 2Δ μόνο. */
+  wholeSet: boolean;
+  setWholeSet: (v: boolean) => void;
   buildRequest: () => PrintRequest;
 }
 
@@ -55,6 +58,8 @@ export function usePrintDialogState(canPrint3d: boolean): PrintDialogState {
   const [outputMode, setOutputMode] = React.useState<PrintOutputMode>('vector');
   const [target, setTarget] = React.useState<OutputTarget>('save-pdf');
   const [includeTitleBlock, setIncludeTitleBlock] = React.useState<boolean>(true);
+  // ADR-651 Φάση Ζ — default off: ο χρήστης επιλέγει ρητά «όλο το σετ» (2Δ μόνο).
+  const [wholeSet, setWholeSet] = React.useState<boolean>(false);
 
   // 3D has no real-world 1:N → coerce fit mode + source back to valid combos.
   const effectiveSource: PrintSource = source === '3d' && !canPrint3d ? '2d' : source;
@@ -75,8 +80,10 @@ export function usePrintDialogState(canPrint3d: boolean): PrintDialogState {
       plotStyle: src === '2d' ? plotStyle : undefined,
       // ADR-604 — output encoding applies to 2D only (3D is always raster).
       outputMode: src === '2d' ? outputMode : undefined,
+      // ADR-651 Φάση Ζ — σετ φύλλων 2Δ μόνο (τα levels είναι 2Δ κατόψεις).
+      wholeSet: src === '2d' ? wholeSet : undefined,
     };
-  }, [source, canPrint3d, fitMode, size, orientation, target, scaleDenominator, plotStyle, outputMode, includeTitleBlock]);
+  }, [source, canPrint3d, fitMode, size, orientation, target, scaleDenominator, plotStyle, outputMode, includeTitleBlock, wholeSet]);
 
   return {
     source: effectiveSource,
@@ -97,6 +104,8 @@ export function usePrintDialogState(canPrint3d: boolean): PrintDialogState {
     setTarget,
     includeTitleBlock,
     setIncludeTitleBlock,
+    wholeSet,
+    setWholeSet,
     buildRequest,
   };
 }

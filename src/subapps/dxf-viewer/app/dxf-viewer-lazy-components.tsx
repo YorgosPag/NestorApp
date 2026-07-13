@@ -28,6 +28,11 @@ export const BimScheduleHost = React.lazy(() => import('./BimScheduleHost').then
 export const PrintHost = React.lazy(() => import('./PrintHost').then(mod => ({ default: mod.PrintHost })));
 // ADR-505 — Export («Εξαγωγή») dialog host (DXF/IFC/PDF, scope-filtered, multi-floor)
 export const ExportHost = React.lazy(() => import('./ExportHost').then(mod => ({ default: mod.ExportHost })));
+// ADR-651 Φάση Ε — διάλογος σφραγίδας μηχανικού (ανοίγει από το «Πινακίδα Σχεδίου» tab).
+export const StampHost = React.lazy(() => import('./StampHost').then(mod => ({ default: mod.StampHost })));
+// ADR-651 Φάση Δ — διάλογος «AI Πινακίδα» (ανοίγει από το «Πινακίδα Σχεδίου» tab).
+export const AiTitleBlockHost = React.lazy(() => import('./AiTitleBlockHost').then(mod => ({ default: mod.AiTitleBlockHost })));
+export const RevisionsHost = React.lazy(() => import('./RevisionsHost').then(mod => ({ default: mod.RevisionsHost })));
 // ADR-457 — Column Reinforcement Detail Sheet («Λεπτομέρεια Οπλισμού») dialog host
 export const ColumnDetailHost = React.lazy(() => import('../ui/components/column-detail/ColumnDetailHost').then(mod => ({ default: mod.ColumnDetailHost })));
 // ADR-463 — Footing Reinforcement Detail Sheet («Λεπτομέρεια Οπλισμού») dialog host
