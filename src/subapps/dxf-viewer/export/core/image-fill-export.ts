@@ -30,8 +30,15 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ExportArtifact, DxfImageFillMode } from '../types';
 import { averageImageColor, resolveImageFillOrigin } from '../../rendering/entities/shared/hatch-image-paint';
 import { resolveMaterialImageSrc } from '../../rendering/entities/shared/material-image-resolver';
+// ADR-653 Φ8 — duotone tint + variant key (ίδιος επαναχρωματισμός με την οθόνη → export ταιριάζει).
+import { applyDuotoneTint } from '../../rendering/entities/shared/hatch-image-tint';
+import { imageFillVariantKey } from '../../rendering/entities/shared/hatch-image-variant-key';
+// ADR-653 Φ9 — procedural tile (ίδια γεννήτρια με την οθόνη → πιστό export).
+import { renderProceduralTile } from '../../rendering/entities/shared/procedural-tile-render';
 import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
-import { DXF_TIMING } from '../../config/dxf-timing';
+// ADR-651 Φάση Ε (N.12/N.18) — decode/fetch-with-timeout είναι κοινό με το `image-entity-export.ts`
+// pre-pass (ImageEntity)· εξήχθη σε shared module ώστε να μην κλωνοποιηθεί (tile-grid/PIP παραμένουν εδώ).
+import { IMAGE_OP_TIMEOUT_MS, withTimeout, decodeImageWithTimeout, fetchRasterWithTimeout, canvasToRasterArtifact } from './image-export-shared';
 
 /** Μέγιστα `IMAGE` entities ανά hatch (safety)· πάνω από αυτό → solid fallback + warning. */
 export const IMAGE_TILE_CAP = 400;
@@ -39,28 +46,6 @@ export const IMAGE_TILE_CAP = 400;
 const IMAGE_GRID_SCAN_CAP = 4000;
 /** Fallback συμπαγές χρώμα όταν λείπει άλλη πληροφορία (ουδέτερο γκρι). */
 const DEFAULT_SOLID_HEX = '#808080';
-/**
- * ADR-643 Φ5b hardening (ADR-644 export-blocker) — μέγιστος χρόνος ανά image op (URL resolve / decode /
- * raster fetch). Ένα ΔΙΑΓΡΑΜΜΕΝΟ υλικό (404) με `crossOrigin='anonymous'` μπορεί να κάνει το
- * `img.decode()` να **μην settle-άρει ποτέ** (γνωστό Chromium gotcha) → πάγωμα ΟΛΟΥ του export. Ο
- * timeout εγγυάται ότι μια εικόνα που λείπει πέφτει στο υπάρχον solid fallback αντί να κολλήσει.
- * SSoT: DXF_TIMING.lifecycle.IMAGE_OP_TIMEOUT (config/dxf-timing.ts, ADR-516 CATEGORY 5).
- */
-const IMAGE_OP_TIMEOUT_MS = DXF_TIMING.lifecycle.IMAGE_OP_TIMEOUT;
-
-/**
- * Reject `p` αν δεν settle-άρει εντός `ms`. Το dangling promise (π.χ. ένα `img.decode()` που κρέμεται)
- * αφήνεται — αβλαβές· η επιστροφή απλώς οδηγεί στο solid fallback του καλούντος (try/catch → null).
- */
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('image-fill: op timed out')), ms);
-    p.then(
-      (v) => { clearTimeout(timer); resolve(v); },
-      (e) => { clearTimeout(timer); reject(e); },
-    );
-  });
-}
 
 /** Διαγνωστικοί κωδικοί (ASCII, μη user-facing — δεν περνούν από i18n· surface μόνο για logs). */
 export type ImageFillExportWarning =
@@ -175,9 +160,11 @@ export async function resolveImageFillsForDxf(
     const fill = hatch.imageFill as HatchImageFill;
     const fallbackHex = hatch.color ?? hatch.fillColor ?? DEFAULT_SOLID_HEX;
 
-    const decoded = await decodeImageForExport(fill.assetId);
-    if (!decoded) { out.push(downgradeToSolid(hatch, fallbackHex)); warnings.push('image-fill:decode-failed'); continue; }
-    const avgHex = averageImageColorHex(decoded.img) ?? fallbackHex;
+    // ADR-653 — resolve την πηγή εικόνας: procedural (Φ9, γεννημένο canvas) / raster+tint (Φ8) /
+    // σκέτο raster (ADR-643). `producedCanvas` ≠ null ⇒ encode το canvas· αλλιώς fetch τα αρχικά bytes.
+    const prepared = await prepareExportSource(fill);
+    if (!prepared) { out.push(downgradeToSolid(hatch, fallbackHex)); warnings.push('image-fill:decode-failed'); continue; }
+    const avgHex = averageImageColorHex(prepared.source) ?? fallbackHex;
     if (mode === 'solid') { out.push(downgradeToSolid(hatch, avgHex)); continue; }
 
     const grid = buildImageTilePlacements(hatch.boundaryPaths, fill);
@@ -186,15 +173,19 @@ export async function resolveImageFillsForDxf(
       if (grid.overflow) warnings.push('image-fill:tile-overflow');
       continue;
     }
-    const raster = await fetchRasterForExport(decoded.src, fill.assetId);
+    // Παραγόμενο canvas (procedural/tinted) → encode με variant-keyed filename (μηδέν σύγκρουση
+    // με άλλες εκδοχές)· αλλιώς fetch τα raw bytes της αρχικής φωτο (ADR-643 μονοπάτι).
+    const raster = prepared.producedCanvas
+      ? await canvasToRasterArtifact(prepared.producedCanvas, imageFillVariantKey(fill))
+      : await fetchRasterForExport(prepared.originalSrc ?? fill.assetId, fill.assetId);
     if (!raster) { out.push(downgradeToSolid(hatch, avgHex)); warnings.push('image-fill:raster-fetch-failed'); continue; }
     if (!rasters.has(raster.filename)) rasters.set(raster.filename, raster.artifact);
     out.push({
       ...hatch,
       dxfImageExport: {
         filename: raster.filename,
-        pixelWidth: decoded.img.naturalWidth,
-        pixelHeight: decoded.img.naturalHeight,
+        pixelWidth: prepared.pixelW,
+        pixelHeight: prepared.pixelH,
         tileWorldWidth: fill.tileWidth,
         tileWorldHeight: fill.tileHeight || fill.tileWidth,
         angleDeg: fill.angle ?? 0,
@@ -204,6 +195,40 @@ export async function resolveImageFillsForDxf(
   }
 
   return { entities: out, rasters: [...rasters.values()], warnings };
+}
+
+/** Ανάλυση πηγής εικόνας για export: source + intrinsic dims + πώς παίρνουμε το raster. */
+interface PreparedExportSource {
+  readonly source: CanvasImageSource;
+  readonly pixelW: number;
+  readonly pixelH: number;
+  /** ≠ null ⇒ encode ΑΥΤΟ το canvas (procedural/tinted)· null ⇒ fetch τα αρχικά bytes. */
+  readonly producedCanvas: HTMLCanvasElement | null;
+  /** URL της αρχικής φωτο (μόνο raster path)· `null` για procedural. */
+  readonly originalSrc: string | null;
+}
+
+/**
+ * ADR-653 — resolve την πηγή για export: procedural (Φ9, γεννημένο canvas· μηδέν URL/decode),
+ * raster+tint (Φ8, duotone canvas) ή σκέτο raster (ADR-643). `null` σε αποτυχία decode/γέννησης
+ * (ο caller πέφτει σε solid). Ίδιες γεννήτριες/tint με την οθόνη → πιστό export.
+ */
+async function prepareExportSource(fill: HatchImageFill): Promise<PreparedExportSource | null> {
+  if (fill.procedural) {
+    const canvas = renderProceduralTile(fill.procedural, fill.tileWidth, fill.tileHeight || fill.tileWidth);
+    if (!canvas) return null;
+    return { source: canvas, pixelW: canvas.width, pixelH: canvas.height, producedCanvas: canvas, originalSrc: null };
+  }
+  const decoded = await decodeImageForExport(fill.assetId);
+  if (!decoded) return null;
+  const tinted = fill.tint ? applyDuotoneTint(decoded.img, fill.tint) : null;
+  return {
+    source: tinted ?? decoded.img,
+    pixelW: decoded.img.naturalWidth,
+    pixelH: decoded.img.naturalHeight,
+    producedCanvas: tinted,
+    originalSrc: decoded.src,
+  };
 }
 
 /** Narrow σε image-fill hatch (fillType==='image' + imageFill)· αλλιώς `null`. */
@@ -227,54 +252,24 @@ function averageImageColorHex(img: CanvasImageSource): string | null {
   return `#${toHex(m[1])}${toHex(m[2])}${toHex(m[3])}`;
 }
 
-/** One-shot decode για export (crossOrigin ώστε το `averageImageColor`/canvas να μη taint-άρει). `null` σε αποτυχία. */
+/**
+ * One-shot decode για export: πρώτα resolve assetId→URL (asset catalog, hatch-specific), μετά
+ * κοινό decode-with-timeout (`image-export-shared`). `null` σε αποτυχία resolve/decode.
+ */
 async function decodeImageForExport(assetId: string): Promise<{ img: HTMLImageElement; src: string } | null> {
   try {
-    // ADR-644 export-blocker — timeout κάθε async op· διαγραμμένο υλικό → solid fallback, όχι πάγωμα.
+    // ADR-644 export-blocker — timeout στο resolve· διαγραμμένο υλικό → solid fallback, όχι πάγωμα.
     const src = (await withTimeout(resolveMaterialImageSrc(assetId), IMAGE_OP_TIMEOUT_MS)) ?? assetId;
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.decoding = 'async';
-    img.src = src;
-    await withTimeout(img.decode(), IMAGE_OP_TIMEOUT_MS);
-    return { img, src };
+    const img = await decodeImageWithTimeout(src);
+    return img ? { img, src } : null;
   } catch {
     return null;
   }
 }
 
-/** Κατέβασμα raster bytes για bundling. filename = `images/<assetId>.<ext>` (relative στο zip). `null` σε αποτυχία. */
+/** Κατέβασμα raster bytes για bundling (κοινό helper — `image-export-shared`). `null` σε αποτυχία. */
 async function fetchRasterForExport(
   src: string, assetId: string,
 ): Promise<{ filename: string; artifact: ExportArtifact } | null> {
-  try {
-    // ADR-644 export-blocker — timeout ώστε ένα stalled/missing raster να μην παγώνει το export.
-    const res = await withTimeout(fetch(src), IMAGE_OP_TIMEOUT_MS);
-    if (!res.ok) return null;
-    const blob = await withTimeout(res.blob(), IMAGE_OP_TIMEOUT_MS);
-    const ext = extFromMime(blob.type) ?? extFromUrl(src) ?? 'png';
-    const filename = `images/${sanitizeAssetId(assetId)}.${ext}`;
-    return { filename, artifact: { filename, blob } };
-  } catch {
-    return null;
-  }
-}
-
-/** Filesystem-safe asset id για όνομα αρχείου μέσα στο zip. */
-function sanitizeAssetId(assetId: string): string {
-  return assetId.replace(/[^\p{L}\p{N}_-]+/gu, '_').replace(/^_+|_+$/g, '') || 'image';
-}
-
-/** Επέκταση αρχείου από MIME type (`image/jpeg` → `jpg`). `null` για άγνωστο. */
-function extFromMime(mime: string): string | null {
-  if (mime === 'image/jpeg') return 'jpg';
-  if (mime === 'image/png') return 'png';
-  if (mime === 'image/webp') return 'webp';
-  return null;
-}
-
-/** Επέκταση από το URL path (`…/albedo.jpg?token` → `jpg`). `null` αν δεν υπάρχει. */
-function extFromUrl(src: string): string | null {
-  const m = /\.(jpe?g|png|webp)(?:$|[?#])/i.exec(src);
-  return m ? m[1].toLowerCase().replace('jpeg', 'jpg') : null;
+  return fetchRasterWithTimeout(src, assetId);
 }

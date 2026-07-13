@@ -115,7 +115,21 @@ minimal-parser Τέκτονα (ίδιο pattern με το υπάρχον `arc` e
 **Το boundary μας ήταν ήδη τέλειο** (ο Τέκτων επέστρεψε τις 8 ακμές ταυτόσημες). Το **μοτίβο** ήταν
 τελείως άλλο σχέδιο — όχι άλλη πυκνότητα: 15.318 τετραγωνάκια → 43 διαγώνιες.
 
-### 7.2 Απόφαση: αποδόμηση σε `<line>` (Επιλογή Β), native = fallback
+### 7.2 Απόφαση: **διακόπτης** στο Export dialog (Επιλογή Γ)
+
+Πρώτη υλοποίηση έκανε την αποδόμηση **πάντα** — ο Giorgio εξήγαγε πραγματικό σχέδιο και βγήκε
+**107 MB**. Απόφαση: `TekHatchMode` (mirror του υπάρχοντος `TekSymbolMode`), **default `native`**.
+
+| Mode | Αρχείο | Εμφάνιση | Επεξεργάσιμο; |
+|---|---|---|---|
+| **`native`** (default) | **Ελαφρύ** | Μοτίβο βιβλιοθήκης Τέκτονα — **κατά προσέγγιση** | ✅ ενιαίο hatch |
+| **`exploded`** | **Βαρύ** (~1,4 KB/γραμμή) | **Πλήρης ταύτιση** με AutoCAD (~0,1%) | ❌ σκέτες γραμμές |
+
+Touch points (ίδιο μονοπάτι με το `symbolMode`): `export/types.ts` → `export-service.ts` →
+`tek-export-adapter.ts` → `useExportDialogState.ts` → `ExportDialog.tsx` + i18n (el/en).
+i18n: `export.tekHatchMode` / `export.tekHatchModes.{native,exploded}`.
+
+### 7.3 Ο μηχανισμός αποδόμησης (`exploded`)
 
 Η βαθμονόμηση του native mapping (Επιλογή Α) **απορρίφθηκε**: ο Τέκτων δεν *έχει* το `SQUARE` στη
 βιβλιοθήκη του (`pattern.inf` ≠ `acad.pat`) — καμία ρύθμιση scale/rotation δεν γεφυρώνει αυτό.
@@ -131,7 +145,7 @@ minimal-parser Τέκτονα (ίδιο pattern με το υπάρχον `arc` e
 `collectTekHatches(entities, f, skipIds)` = **fallback**: native `<hatch>` μόνο για solid/gradient
 (δεν έχουν γραμμές) και για ό,τι κόβει ο dense guard. Το `skipIds` αποτρέπει διπλό γέμισμα.
 
-### 7.3 Dense guard — ΠΡΙΝ τον υπολογισμό, όχι μετά (ADR-647)
+### 7.4 Dense guard — ΠΡΙΝ τον υπολογισμό, όχι μετά (ADR-647)
 
 `estimateHatchFillLines()` = bbox-εμβαδόν ÷ βήμα² (reuse `hatchMinWorldSpacing` + `polygonBbox`).
 Όρια: **40.000** ανά γραμμοσκίαση / **120.000** συνολικά → warning + fallback σε native.
@@ -141,7 +155,7 @@ minimal-parser Τέκτονα (ίδιο pattern με το υπάρχον `arc` e
 > με βήμα 0.127 χρειάστηκε **164 s** και μετά **έσκασε με OOM στα 4 GB**. Regression lock: το
 > dense-guard test τρέχει με `timeout 5s`.
 
-### 7.4 🐛 Bug που αποκαλύφθηκε στο SSoT (διορθώθηκε)
+### 7.5 🐛 Bug που αποκαλύφθηκε στο SSoT (διορθώθηκε)
 
 `hatchMinWorldSpacing()` ρωτούσε **πρώτα το catalog** και μόνο μετά το `inlinePattern` — αντίστροφη
 σειρά από το `buildHatchEntitySegments` (inlinePattern-first, ADR-644 #7d). Άρα μετρούσε την
@@ -177,6 +191,10 @@ old-style POLYLINE / native HATCH / INSERT-blocks — γι' αυτό ένα Auto
   (ίδιες γραμμές με canvas + DXF lines-mode· μηδέν νέα pattern math). **Απόκλιση από AutoCAD ~0,1%**
   (15.346 vs 15.318). Native `<hatch>` = fallback (solid/gradient/dense) μέσω `skipIds`.
   Pre-flight dense guard (`estimateHatchFillLines`, 40k/120k) — ο post-hoc έλεγχος έσκαγε με OOM.
-  🐛 FIX στο SSoT: `hatchMinWorldSpacing` ρωτούσε catalog πριν το `inlinePattern` (§7.4) — χτυπούσε
-  και τον density-LOD του `HatchRenderer`. 425 export-tests πράσινα, jscpd καθαρό.
-  **ΕΚΚΡΕΜΕΙ:** επαλήθευση στον πραγματικό Τέκτονα (άνοιγμα ~24 MB `.tek` με 15k `<line>` records).
+  🐛 FIX στο SSoT: `hatchMinWorldSpacing` ρωτούσε catalog πριν το `inlinePattern` (§7.5) — χτυπούσε
+  και τον density-LOD του `HatchRenderer`. jscpd καθαρό.
+- **2026-07-13** — Στάδιο Ε **επιλογή Γ (διακόπτης)**: η «πάντα-αποδόμηση» έβγαλε **107 MB** σε
+  πραγματικό σχέδιο (Giorgio). Νέο `TekHatchMode` (`native` default = ελαφρύ/επεξεργάσιμο/κατά
+  προσέγγιση· `exploded` = πλήρης ταύτιση/βαρύ), mirror του `TekSymbolMode` σε ΟΛΟ το μονοπάτι
+  (types → service → adapter → dialog state → dialog UI → i18n el/en). Solid/gradient → native
+  πάντα. **429 export-tests πράσινα**, jscpd καθαρό.
