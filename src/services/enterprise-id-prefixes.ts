@@ -213,6 +213,7 @@ export const ENTERPRISE_ID_PREFIXES = {
 
   // DXF Text Engine (ADR-344)
   TEXT_TEMPLATE: 'tpl_text',   // text_templates collection — hybrid title block / stamp templates
+  DRAWING_REVISION: 'drev',    // drawing_revisions collection — project-level drawing revision (ADR-651 Φάση Η)
   COMPANY_FONT: 'fnt',         // company_fonts collection — uploaded TTF/OTF/SHX fonts per company
   DICT_ENTRY: 'dict',          // text_custom_dictionary collection — per-company spell-check terms
 

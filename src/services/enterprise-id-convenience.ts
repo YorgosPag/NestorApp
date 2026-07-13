@@ -210,6 +210,10 @@ export const generateOrgMemberId = () => enterpriseIdService.generateOrgMemberId
 
 // DXF Text Engine (ADR-344)
 export const generateTextTemplateId = () => enterpriseIdService.generateTextTemplateId();
+export const generateDrawingRevisionId = () => enterpriseIdService.generateDrawingRevisionId();
+/** ADR-651 Φάση Η — idempotent αναθεώρηση: ίδιο (έργο, αποτύπωμα) ⇒ ίδιο doc id ⇒ καμία διπλή εγγραφή. */
+export const generateDeterministicDrawingRevisionId = (seed: string) =>
+  enterpriseIdService.generateDeterministicDrawingRevisionId(seed);
 export const generateCompanyFontId = () => enterpriseIdService.generateCompanyFontId();
 export const generateDictEntryId = () => enterpriseIdService.generateDictEntryId();
 

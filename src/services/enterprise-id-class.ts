@@ -294,6 +294,9 @@ export class EnterpriseIdService {
 
   // DXF Text Engine (ADR-344)
   generateTextTemplateId(): string { return this.generateId(P.TEXT_TEMPLATE).id; }
+  generateDrawingRevisionId(): string { return this.generateId(P.DRAWING_REVISION).id; }
+  /** ADR-651 Φάση Η — σταθερό id ανά (έργο, αποτύπωμα σχεδίου): δύο κλικ «Νέα αναθεώρηση» ⇒ ΕΝΑ doc. */
+  generateDeterministicDrawingRevisionId(seed: string): string { return this.generateDeterministicId(P.DRAWING_REVISION, seed); }
   generateCompanyFontId(): string { return this.generateId(P.COMPANY_FONT).id; }
   generateDictEntryId(): string { return this.generateId(P.DICT_ENTRY).id; }
 
