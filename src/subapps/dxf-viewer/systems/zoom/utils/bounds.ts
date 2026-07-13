@@ -124,6 +124,24 @@ export function createBoundsFromDxfScene(
 }
 
 /**
+ * 🏢 CANONICAL: bounds από **σκέτη λίστα οντοτήτων** (χωρίς `SceneModel` envelope).
+ *
+ * Οι καλούντες που κρατούν μόνο entities (DXF export extents, ADR-651 πρόταση χαρτιού)
+ * έφτιαχναν ο καθένας το ίδιο `{ entities, layers: [], bounds: null } as DxfScene` σκαρί
+ * για να καλέσουν το {@link createBoundsFromDxfScene} (N.0.2 — duplicate εντοπίστηκε
+ * 2026-07-13). Ένας τόπος πλέον: ίδιο outlier-robust αποτέλεσμα, μηδέν αντίγραφα του cast.
+ */
+export function createBoundsFromEntities(
+  entities: readonly Entity[],
+): { min: Point2D; max: Point2D } | null {
+  if (entities.length === 0) return null;
+  return createBoundsFromDxfScene(
+    { entities, layers: [], bounds: null } as unknown as DxfScene,
+    true, // forceRecalculate — δεν υπάρχει cached scene.bounds σε σκέτη λίστα
+  );
+}
+
+/**
  * Δημιουργία bounds από color layers
  */
 export function createBoundsFromLayers(layers: ColorLayer[]): { min: Point2D; max: Point2D } | null {

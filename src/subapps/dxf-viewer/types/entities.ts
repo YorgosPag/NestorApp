@@ -613,6 +613,11 @@ export {
   DEFAULT_SCALE_BAR_LABEL_PLACEMENT,
 } from './scale-bar';
 
+// ADR-651 Φάση Ε: standalone raster Image entity (sibling of scale-bar/annotation-symbol).
+import type { ImageEntity } from './image';
+export type { ImageEntity } from './image';
+export { isImageEntity } from './image';
+
 // ADR-612 Φ1: standalone Opening Info Tag (πινακίδα ανοίγματος — 3 editable numeric cells).
 import type { OpeningInfoTagEntity } from './opening-info-tag';
 export type {
@@ -685,6 +690,60 @@ export interface HatchImageFill {
   origin?: Point2D;
   /** Προαιρετικές γραμμές αρμών (grout) πάνω από την εικόνα (Φ5, ΟΧΙ Φ1). */
   grout?: { color: string; widthMm: number };
+  /**
+   * ADR-653 Φ8 — χρωματικός επαναχρωματισμός (duotone tint) του raster υλικού (μοντέλο
+   * Revit «tint»): η φωτεινότητα κάθε pixel χαρτογραφείται σε ράμπα `colorA→colorB`,
+   * ανακατεμένο με το πρωτότυπο κατά `strength`. Απόν → ανέγγιχτη φωτο (backward compatible).
+   * Επιτρέπει «καφέ σκακιέρα → άσπρη/μαύρη» χωρίς νέο asset (η υφή/φθορές επιβιώνουν).
+   */
+  tint?: HatchImageTint;
+  /**
+   * ADR-653 Φ9 — παράμετροι **διαδικαστικού** (procedural) υλικού. Παρόν ⇔ ο `assetId`
+   * ξεκινά με `proc:` → το tile ΖΩΓΡΑΦΙΖΕΤΑΙ από αυτές τις παραμέτρους (γεννήτρια + χρώματα
+   * + αρμός) αντί να φορτωθεί raster. Πλήρως επεξεργάσιμα χρώματα, μηδέν αρχείο εικόνας,
+   * τέλεια ευκρίνεια. Το `tint` αγνοείται όταν procedural (τα χρώματα ορίζονται εδώ).
+   */
+  procedural?: HatchProceduralParams;
+}
+
+/** ADR-653 Φ9 — αναγνωριστικά διαθέσιμων γεννητριών διαδικαστικού tile. */
+export type ProceduralGeneratorId =
+  | 'checker'
+  | 'grid-tile'
+  | 'running-bond'
+  | 'stripes'
+  | 'herringbone'
+  | 'basketweave'
+  | 'hexagon';
+
+/**
+ * ADR-653 Φ9 — παράμετροι διαδικαστικού υλικού. Ενιαίο σχήμα (μέχρι 2 χρώματα + αρμός)·
+ * κάθε γεννήτρια ερμηνεύει όσα χρειάζεται (checker/stripes → colors[0],colors[1]·
+ * grid-tile/running-bond → colors[0]=πλακίδιο/τούβλο + αρμός). Flat → Firestore-legal.
+ */
+export interface HatchProceduralParams {
+  /** Ποια γεννήτρια ζωγραφίζει το tile. */
+  generator: ProceduralGeneratorId;
+  /** 1–2 χρώματα (hex)· η γεννήτρια ερμηνεύει πόσα χρησιμοποιεί. */
+  colors: readonly string[];
+  /** Πάχος αρμού σε μονάδες σχεδίου (mm)· 0/απόν = χωρίς αρμό. */
+  jointMm?: number;
+  /** Χρώμα αρμού (hex)· default από τη γεννήτρια. */
+  jointColor?: string;
+}
+
+/**
+ * ADR-653 Φ8 — duotone επαναχρωματισμός εικόνας υλικού. Φωτεινότητα pixel (0..1) →
+ * γραμμική ράμπα `colorA` (σκούρο άκρο) → `colorB` (φωτεινό άκρο), μετά mix με το
+ * πρωτότυπο κατά `strength` (0 = ανέγγιχτη φωτο, 1 = πλήρες duotone).
+ */
+export interface HatchImageTint {
+  /** Σκούρο άκρο της ράμπας (hex, π.χ. #000000). */
+  colorA: string;
+  /** Φωτεινό άκρο της ράμπας (hex, π.χ. #FFFFFF). */
+  colorB: string;
+  /** Ένταση εφαρμογής 0..1 (0 = ανέγγιχτη, 1 = πλήρες duotone). */
+  strength: number;
 }
 
 // ✅ ENTERPRISE: AutoCAD Hatch Entity (fill pattern)
@@ -869,6 +928,7 @@ export type Entity = (
   | AnnotationSymbolEntity   // ADR-583: standalone annotation symbol (North arrow first)
   | ScaleBarEntity           // ADR-583 Φ2: standalone graphic scale-bar
   | OpeningInfoTagEntity     // ADR-612: standalone opening info tag (3 editable numeric cells)
+  | ImageEntity              // ADR-651 Φάση Ε: standalone raster image (rectangle + rotation)
   // ADR-363 BIM Drawing Mode (Phase 0 — renderers/tools Phase 1+):
   | WallEntity
   | OpeningEntity

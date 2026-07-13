@@ -56,7 +56,7 @@ const MOVE_GOLDEN = [
   // CAD movers (16)
   'line', 'polyline', 'lwpolyline', 'circle', 'arc', 'ellipse', 'text', 'mtext',
   'rectangle', 'rect', 'point', 'angle-measurement', 'hatch', 'annotation-symbol', 'scale-bar',
-  'opening-info-tag',
+  'opening-info-tag', 'image',
   // BIM movers — έχουν `case` στο `calculateBimMovedGeometry` switch (19)
   'wall', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair', 'roof',
   'floor-finish', 'space-separator', 'furniture', 'mep-fixture', 'electrical-panel',

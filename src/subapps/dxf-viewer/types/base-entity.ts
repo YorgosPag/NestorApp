@@ -91,7 +91,9 @@ export type EntityType =
   // ADR-583 Φ2 — non-BIM graphic scale-bar (dedicated sibling of dimension/center-mark).
   | 'scale-bar'
   // ADR-612 — non-BIM opening info tag (πινακίδα ανοίγματος: 3 editable numeric cells).
-  | 'opening-info-tag';
+  | 'opening-info-tag'
+  // ADR-651 Φάση Ε — non-BIM raster image (εικόνα σε ορθογώνιο πλαίσιο).
+  | 'image';
 
 export interface BaseEntity {
   id: string;
@@ -153,6 +155,18 @@ export interface BaseEntity {
 
   breakAtCenter?: boolean;
   showEdgeDistances?: boolean;
+
+  /**
+   * ADR-650 M3 — non-destructive «fitted curve» DISPLAY of a polyline, the
+   * AutoCAD spline-fit-polyline / Civil 3D Surface-Style «Contour Smoothing»
+   * model. When true, a (lw)polyline is STROKED as a Catmull-Rom curve through
+   * its vertices instead of straight chords; `vertices` (the control points) are
+   * NEVER mutated, so hit-test, grips, DXF export and any legal/Κτηματολόγιο
+   * output keep the EXACT surveyed geometry. Absent/false ⇒ exact chords (the
+   * default, and what topographic contours use for legal deliverables).
+   * Applied only to polyline/lwpolyline at stroke time; ignored elsewhere.
+   */
+  smoothDisplay?: boolean;
 
   /**
    * ADR-570 Φ1 — ByStyle pointer to a named `LineStyle`

@@ -93,6 +93,35 @@ export function realDistanceToModelMm(distance: number, units: SceneUnits): numb
 }
 
 /**
+ * Canonical-mm LENGTH → metres (ADR-650 M7). Same conversion table as the area/volume
+ * helpers below, to the first power — so a coordinate table, a side length and an
+ * earthworks volume all trace back to ONE definition of «what a millimetre is worth».
+ */
+export function lengthMmToM(lengthMm: number): number {
+  return lengthMm * mmToSceneUnits('m');
+}
+
+/**
+ * Canonical-mm AREA → square metres (ADR-650 M6). Derived from the `mmToSceneUnits` table
+ * (`0.001² = 1e-6`), never an inlined magic constant — one conversion table, squared.
+ */
+export function areaMm2ToM2(areaMm2: number): number {
+  const perMm = mmToSceneUnits('m');
+  return areaMm2 * perMm * perMm;
+}
+
+/**
+ * Canonical-mm VOLUME → cubic metres (ADR-650 M6 earthworks). Same table, cubed
+ * (`0.001³ = 1e-9`). The topography core computes in canonical mm (ADR-462) because that is
+ * what the survey and the scene share; m³ is a PRESENTATION unit and the conversion belongs
+ * at the UI edge — this is that edge, in one place, instead of an inline `/ 1e9` per caller.
+ */
+export function volumeMm3ToM3(volumeMm3: number): number {
+  const perMm = mmToSceneUnits('m');
+  return volumeMm3 * perMm * perMm * perMm;
+}
+
+/**
  * Bounds-diagonal heuristic used as a fallback when the DXF carries no
  * explicit unit information (`$INSUNITS = 0`). A typical building floorplan
  * has a footprint diagonal of:

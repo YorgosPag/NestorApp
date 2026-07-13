@@ -297,6 +297,18 @@ function scaleOpeningInfoTag(e: Entity & { type: 'opening-info-tag' }, base: Poi
   return { position: scalePoint(e.position, base, sx, sy), widthMm: e.widthMm * Math.abs(sx) };
 }
 
+// ADR-651 Φάση Ε — standalone raster image: position + width/height are all WORLD units
+// (NOT annotative, unlike scale-bar/annotation-symbol) → scale like any length. Rotation-aware
+// non-uniform shear (mirror `scaleRectangle`'s polyline conversion) is a follow-up refinement,
+// not part of this plumbing slice — position/size still scale correctly meanwhile.
+function scaleImage(e: Entity & { type: 'image' }, base: Point2D, sx: number, sy: number) {
+  return {
+    position: scalePoint(e.position, base, sx, sy),
+    width: e.width * Math.abs(sx),
+    height: e.height * Math.abs(sy),
+  };
+}
+
 // ARRAY (ADR-353): scale the source copies (recursive SSoT, like GROUP) AND the spacing params so
 // the whole associative pattern scales; the array regenerates its items from these downstream.
 function scaleArrayParams(params: ArrayParams, base: Point2D, sx: number, sy: number): ArrayParams {
@@ -329,7 +341,7 @@ const SCALABLE_ENTITY_TYPES: ReadonlySet<string> = new Set([
   'line', 'arc', 'circle', 'ellipse', 'polyline', 'lwpolyline', 'spline', 'text', 'mtext',
   'point', 'leader', 'dimension', 'hatch', 'rectangle', 'rect', 'block', 'group',
   'xline', 'ray', 'array', 'angle-measurement', 'center-mark', 'centerline',
-  'annotation-symbol', 'scale-bar', 'opening-info-tag',
+  'annotation-symbol', 'scale-bar', 'opening-info-tag', 'image',
 ]);
 
 /** Whether the scale transform produces a real geometry change for `type` (ADR-646 #3). */
@@ -403,6 +415,8 @@ export function scaleEntity(
       return scaleScaleBar(entity, base, sx, sy) as Partial<SceneEntity>;
     case 'opening-info-tag':
       return scaleOpeningInfoTag(entity, base, sx, sy) as Partial<SceneEntity>;
+    case 'image':
+      return scaleImage(entity, base, sx, sy) as Partial<SceneEntity>;
     case 'array':
       return scaleArray(entity, base, sx, sy) as Partial<SceneEntity>;
     case 'block': {

@@ -162,6 +162,9 @@ const ROTATE_HANDLERS: Partial<Record<EntityType, RotateHandler>> = {
   // ADR-640 — BLOCK instance (DXF INSERT): point-insertion rotation (INSERT semantics — the
   // block definition is immutable; local members are NOT recursed, unlike the identity GROUP).
   block: rotatePointInsertionLike,
+  // ADR-651 Φάση Ε — standalone raster image: point-insertion rotation about `position`
+  // (1:1 annotation-symbol/block — width/height are unaffected by pure rotation).
+  image: rotatePointInsertionLike,
   'angle-measurement': (entity, pivot, angleDeg) => {
     const e = entity as Extract<Entity, { type: 'angle-measurement' }>;
     // Angle between arms is invariant under rotation — keep original angle value

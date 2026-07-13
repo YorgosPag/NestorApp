@@ -48,6 +48,8 @@ describe('Rotate capability coverage — ζωντανό seam ↔ descriptor doma
         'ellipse', 'text', 'mtext', 'spline', 'angle-measurement', 'annotation-symbol',
         // ADR-627 — hatch περιστρέφει τα boundaryPaths (parity με το περίγραμμα εμβαδού).
         'hatch',
+        // ADR-651 Φάση Ε — image: point-insertion rotation about `position` (1:1 annotation-symbol).
+        'image',
       ]),
     );
   });

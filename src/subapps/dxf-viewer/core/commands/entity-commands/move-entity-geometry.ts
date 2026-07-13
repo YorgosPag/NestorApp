@@ -161,6 +161,12 @@ export function calculateMovedGeometry(entity: SceneEntity, delta: Point3D): Par
     return { position: translatePoint((e as unknown as { position: Point2D }).position, delta) };
   }
 
+  // ADR-651 Φάση Ε — standalone raster image (position = bottom-left corner). Rigid translate
+  // of the corner (mirror scale-bar/opening-info-tag); width/height/rotation are unaffected.
+  if (entity.type === 'image' && 'position' in e) {
+    return { position: translatePoint((e as unknown as { position: Point2D }).position, delta) };
+  }
+
   // ADR-575 — GROUP container: moving the group moves every member. Recurse the
   // SAME geometry SSoT per member (handles nested groups too), so the container
   // never needs to know each primitive's geometry shape.
