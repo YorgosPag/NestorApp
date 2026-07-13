@@ -99,6 +99,34 @@ export interface Schedule {
   readonly generatedAt: number;
 }
 
+/**
+ * The MINIMUM shape the three exporters (CSV / xlsx / PDF) actually consume: a column
+ * schema plus rows of cells. `Schedule` satisfies it structurally, so every existing
+ * caller keeps working unchanged.
+ *
+ * ADR-650 M7 — the Greek survey deliverables (coordinate table, plot metes-and-bounds,
+ * earthworks volumes, tolerance check) are tables too, but their rows are NOT BIM
+ * entities: there is no `entityId`/`entityType` to give them. Rather than fabricate fake
+ * entity ids to squeeze them through the `Schedule` type — or fork a second CSV/xlsx/PDF
+ * writer — the exporters were widened to this supertype. One table-export engine, two
+ * producers.
+ */
+export interface ExportableTableRow {
+  readonly cells: Readonly<Record<string, ScheduleCellValue>>;
+}
+
+export interface ExportableTable {
+  readonly columns: readonly ScheduleColumnDef[];
+  readonly rows: readonly ExportableTableRow[];
+}
+
+/** A titled table — the unit of a multi-table PDF / multi-sheet workbook (ADR-650 M7). */
+export interface ExportableTableSection {
+  /** Already-localised heading (PDF section title / xlsx worksheet name). */
+  readonly title: string;
+  readonly table: ExportableTable;
+}
+
 // ─── Filter criteria (4 composable axes) ─────────────────────────────────────
 
 /**
@@ -141,6 +169,12 @@ export interface ScheduleExportOptions {
    * Reserved για future hebrew/arabic support; Greek is LTR.
    */
   readonly rtl?: boolean;
+  /**
+   * PDF page-footer prefix. Defaults to `'BIM Schedule'` (the original behaviour); the
+   * survey deliverables (ADR-650 M7) pass their own so a topographic diagram does not
+   * carry a BIM footer.
+   */
+  readonly footerLabel?: string;
 }
 
 // ─── Lookup adapters (decouple from Firestore + locale layers) ───────────────

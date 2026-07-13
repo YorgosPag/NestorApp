@@ -8,7 +8,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §6 Phase 8
  */
 
-import type { Schedule, ScheduleExportFormat, ScheduleExportOptions } from '../types';
+import type { ExportableTable, ScheduleExportFormat, ScheduleExportOptions } from '../types';
 import { downloadScheduleAsCsv, scheduleToCsv } from './csv-exporter';
 import type { HeaderTranslator } from './csv-exporter';
 import { downloadScheduleAsPdf, scheduleToPdfBlob } from './pdf-exporter';
@@ -17,8 +17,8 @@ import { downloadScheduleAsXlsx, scheduleToXlsxBlob } from './xlsx-exporter';
 // Re-exports — format-specific entry points (preferred when format known
 // at call site; the dispatcher below is for runtime-switched format).
 export { downloadScheduleAsCsv, scheduleToCsv } from './csv-exporter';
-export { downloadScheduleAsXlsx, scheduleToXlsxBlob } from './xlsx-exporter';
-export { downloadScheduleAsPdf, scheduleToPdfBlob } from './pdf-exporter';
+export { downloadScheduleAsXlsx, scheduleToXlsxBlob, tablesToXlsxBlob } from './xlsx-exporter';
+export { downloadScheduleAsPdf, scheduleToPdfBlob, tablesToPdfBlob } from './pdf-exporter';
 export type { HeaderTranslator } from './csv-exporter';
 export { formatCellForDisplay, formatCellForXlsx, xlsxNumFmtFor } from './value-formatters';
 
@@ -28,7 +28,7 @@ export { formatCellForDisplay, formatCellForXlsx, xlsxNumFmtFor } from './value-
  * download with a single call.
  */
 export async function downloadSchedule(
-  schedule: Schedule,
+  schedule: ExportableTable,
   format: ScheduleExportFormat,
   options: ScheduleExportOptions,
   translateHeader: HeaderTranslator,

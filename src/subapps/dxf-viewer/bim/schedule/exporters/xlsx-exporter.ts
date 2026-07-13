@@ -23,12 +23,21 @@
 import type ExcelJS from 'exceljs';
 import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import type {
-  Schedule,
+  ExportableTable,
+  ExportableTableSection,
   ScheduleColumnDef,
   ScheduleExportOptions,
 } from '../types';
 import type { HeaderTranslator } from './csv-exporter';
 import { formatCellForXlsx, xlsxNumFmtFor } from './value-formatters';
+
+/** Excel forbids `[]:*?/\` in sheet names and caps them at 31 chars. */
+const SHEET_NAME_MAX = 31;
+
+function safeSheetName(name: string, fallback: string): string {
+  const cleaned = name.replace(/[[\]:*?/\\]/g, ' ').trim().slice(0, SHEET_NAME_MAX);
+  return cleaned.length > 0 ? cleaned : fallback;
+}
 
 // ─── Style constants ─────────────────────────────────────────────────────────
 
@@ -71,21 +80,19 @@ function alignmentFor(col: ScheduleColumnDef): Partial<ExcelJS.Alignment> {
 
 // ─── Workbook build ──────────────────────────────────────────────────────────
 
-async function buildWorkbook(
-  schedule: Schedule,
-  options: ScheduleExportOptions,
+/** Write ONE table into ONE worksheet: title row, blank spacer, header row, data rows. */
+function writeSheet(
+  workbook: ExcelJS.Workbook,
+  sheetName: string,
+  title: string,
+  schedule: ExportableTable,
   translateHeader: HeaderTranslator,
-): Promise<ExcelJS.Workbook> {
-  const ExcelJSLib = (await import('exceljs')).default;
-  const workbook = new ExcelJSLib.Workbook();
-  workbook.creator = 'Nestor Pagonis · BIM Schedule';
-  workbook.created = new Date();
-
-  const sheet = workbook.addWorksheet('Πίνακας');
+): void {
+  const sheet = workbook.addWorksheet(sheetName);
 
   // Row 1: title
   const titleCell = sheet.getCell('A1');
-  titleCell.value = options.title;
+  titleCell.value = title;
   titleCell.font = TITLE_FONT;
   sheet.mergeCells(1, 1, 1, Math.max(schedule.columns.length, 1));
 
@@ -127,33 +134,66 @@ async function buildWorkbook(
       to: { row: HEADER_ROW_INDEX + schedule.rows.length, column: schedule.columns.length },
     };
   }
+}
 
+async function newWorkbook(): Promise<ExcelJS.Workbook> {
+  const ExcelJSLib = (await import('exceljs')).default;
+  const workbook = new ExcelJSLib.Workbook();
+  workbook.creator = 'Nestor Pagonis · BIM Schedule';
+  workbook.created = new Date();
   return workbook;
 }
 
-// ─── Public API ──────────────────────────────────────────────────────────────
-
-/**
- * Generate an xlsx Blob από schedule. Pure helper used by both download
- * trigger + tests (tests can assert blob.size > 0 without DOM).
- */
-export async function scheduleToXlsxBlob(
-  schedule: Schedule,
-  options: ScheduleExportOptions,
-  translateHeader: HeaderTranslator,
-): Promise<Blob> {
-  const workbook = await buildWorkbook(schedule, options, translateHeader);
+async function workbookToBlob(workbook: ExcelJS.Workbook): Promise<Blob> {
   const buffer = await workbook.xlsx.writeBuffer();
   return new Blob([buffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
 }
 
+// ─── Public API ──────────────────────────────────────────────────────────────
+
+/**
+ * Generate ONE workbook holding several titled tables, one worksheet each (ADR-650 M7 —
+ * the survey folder ships a single .xlsx with «Συντεταγμένες» / «Οικόπεδο» / «Όγκοι» tabs
+ * rather than one file per table).
+ */
+export async function tablesToXlsxBlob(
+  sections: readonly ExportableTableSection[],
+  translateHeader: HeaderTranslator,
+): Promise<Blob> {
+  const workbook = await newWorkbook();
+  sections.forEach((section, i) => {
+    writeSheet(
+      workbook,
+      safeSheetName(section.title, `${i + 1}`),
+      section.title,
+      section.table,
+      translateHeader,
+    );
+  });
+  return workbookToBlob(workbook);
+}
+
+/**
+ * Generate an xlsx Blob από schedule. Pure helper used by both download
+ * trigger + tests (tests can assert blob.size > 0 without DOM).
+ */
+export async function scheduleToXlsxBlob(
+  schedule: ExportableTable,
+  options: ScheduleExportOptions,
+  translateHeader: HeaderTranslator,
+): Promise<Blob> {
+  const workbook = await newWorkbook();
+  writeSheet(workbook, 'Πίνακας', options.title, schedule, translateHeader);
+  return workbookToBlob(workbook);
+}
+
 /**
  * Trigger browser download as .xlsx. Filename gets `.xlsx` extension.
  */
 export async function downloadScheduleAsXlsx(
-  schedule: Schedule,
+  schedule: ExportableTable,
   options: ScheduleExportOptions,
   translateHeader: HeaderTranslator,
 ): Promise<void> {

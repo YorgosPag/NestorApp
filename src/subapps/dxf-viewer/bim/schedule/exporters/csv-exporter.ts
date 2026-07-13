@@ -23,7 +23,7 @@
 import { nowISO } from '@/lib/date-local';
 import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import type {
-  Schedule,
+  ExportableTable,
   ScheduleExportOptions,
 } from '../types';
 import { formatCellForDisplay } from './value-formatters';
@@ -53,7 +53,7 @@ export type HeaderTranslator = (i18nKey: string) => string;
  * Pure function — no side effects. Used by tests + the download wrapper.
  */
 export function scheduleToCsv(
-  schedule: Schedule,
+  schedule: ExportableTable,
   options: ScheduleExportOptions,
   translateHeader: HeaderTranslator,
 ): string {
@@ -85,7 +85,7 @@ export function scheduleToCsv(
  * Filename gets `.csv` extension appended (caller passes sans extension).
  */
 export function downloadScheduleAsCsv(
-  schedule: Schedule,
+  schedule: ExportableTable,
   options: ScheduleExportOptions,
   translateHeader: HeaderTranslator,
 ): void {
