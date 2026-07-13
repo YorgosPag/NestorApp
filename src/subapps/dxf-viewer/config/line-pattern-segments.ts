@@ -479,22 +479,13 @@ export function centerOffsetForLayer(
 
 // ── Grip-editor scale helpers (ADR-642 Φ6-A, §6.7) — pure model math, jest-testable ──
 
-/** The centre offset (mm) of the whole band — midpoint of ALL layers' min & max offsets (0 when empty). */
-export function bandCenterOffset(layers: readonly LinePatternLayer[]): number {
-  if (layers.length === 0) return 0;
-  let min = Infinity;
-  let max = -Infinity;
-  for (const l of layers) {
-    if (l.offsetMm < min) min = l.offsetMm;
-    if (l.offsetMm > max) max = l.offsetMm;
-  }
-  return (min + max) / 2;
-}
-
-/** Half-extent (mm) of the band = the largest `|offset − band centre|` (0 = single/centred, nothing to spread). */
+/**
+ * Half-extent (mm) of the band = the largest `|offset|` from the line axis (0 = single/centred, nothing
+ * to spread). The axis IS the visual middle of the preview swatch, so this is the lever the top/bottom
+ * grips scale against (ADR-642 §6.7.3, revised 2026-07-13 — see `scaleLayerSpread`).
+ */
 export function bandHalfExtentMm(layers: readonly LinePatternLayer[]): number {
-  const center = bandCenterOffset(layers);
-  return layers.reduce((m, l) => Math.max(m, Math.abs(l.offsetMm - center)), 0);
+  return layers.reduce((m, l) => Math.max(m, Math.abs(l.offsetMm)), 0);
 }
 
 /** Total authored length (mm) of a segment list = Σ dash + gap lengths (base for the length-scale grip). */
@@ -506,11 +497,15 @@ export function patternTotalLengthMm(segments: readonly LinePatternSegment[]): n
 }
 
 /**
- * Uniformly scale the band spread (ADR-642 §6.7.2 top/bottom grip): every `offsetMm` moves to
- * `centre + (offset − centre) × factor`, so the band opens/closes around its geometric centre
- * (`bandCenterOffset`) — an asymmetric compound stays coherent. Min-guard (§6.7.3): `factor` is
- * clamped ≥ 0 (no sign flip) and ≥ `MIN_MM / halfExtent` (the band never collapses below ε). With no
- * spread to scale (single/centred layers → halfExtent 0) it is a no-op — a scale cannot create a band.
+ * Mirror-scale the band spread (ADR-642 §6.7.2 top/bottom grip — «κατοπτρικό», Giorgio 2026-07-13):
+ * the band opens/closes **symmetrically around the line axis (0)** = the visual middle of the preview
+ * swatch. Each SIDE's outermost `|offset|` is driven to the SAME half-height `H` (= `halfExtent × factor`),
+ * so the extreme rails always land equidistant from the middle line (`+H` / `−H`); interior rails on a
+ * side keep their proportion within that side (multi-rail stays intact), and an on-axis layer (offset 0,
+ * e.g. a railway's ties) stays on the middle. This is why dragging keeps the rails equidistant with a
+ * single step — the earlier per-layer `offset × factor` moved rails at different distances by different
+ * amounts. Min-guard (§6.7.3): `factor` clamped ≥ 0 (no sign flip) and ≥ `MIN_MM / halfExtent` (never
+ * collapses below ε). No spread to scale (single/centred layers → halfExtent 0) → no-op.
  */
 export function scaleLayerSpread(
   layers: readonly LinePatternLayer[],
@@ -518,9 +513,18 @@ export function scaleLayerSpread(
 ): LinePatternLayer[] {
   const halfExtent = bandHalfExtentMm(layers);
   if (halfExtent <= 0 || !Number.isFinite(factor)) return layers.map((l) => ({ ...l }));
-  const safe = Math.max(factor, LINE_PATTERN_MIN_MM / halfExtent, 0);
-  const center = bandCenterOffset(layers);
-  return layers.map((l) => ({ ...l, offsetMm: center + (l.offsetMm - center) * safe }));
+  const targetHalf = halfExtent * Math.max(factor, LINE_PATTERN_MIN_MM / halfExtent, 0);
+  let topMax = 0;
+  let botMax = 0;
+  for (const l of layers) {
+    if (l.offsetMm > topMax) topMax = l.offsetMm;
+    if (-l.offsetMm > botMax) botMax = -l.offsetMm;
+  }
+  return layers.map((l) => {
+    if (l.offsetMm > 0 && topMax > 0) return { ...l, offsetMm: (l.offsetMm / topMax) * targetHalf };
+    if (l.offsetMm < 0 && botMax > 0) return { ...l, offsetMm: (l.offsetMm / botMax) * targetHalf };
+    return { ...l };
+  });
 }
 
 /**

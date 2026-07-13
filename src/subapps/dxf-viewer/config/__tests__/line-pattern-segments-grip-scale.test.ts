@@ -9,7 +9,6 @@ import { describe, it, expect } from '@jest/globals';
 import {
   type LinePatternLayer,
   LINE_PATTERN_MIN_MM,
-  bandCenterOffset,
   bandHalfExtentMm,
   patternTotalLengthMm,
   scaleLayerSpread,
@@ -21,22 +20,16 @@ const railway: LinePatternLayer[] = [
   { segments: [{ kind: 'dash', lengthMm: 4 }, { kind: 'gap', lengthMm: 2 }], offsetMm: -1 },
 ];
 
-// Asymmetric band: rails at 0 and +1.5 → centre +0.75, half-extent 0.75.
+// Asymmetric band: one rail on the axis (0), one at +1.5 → half-extent 1.5 (from the axis).
 const asymmetric: LinePatternLayer[] = [
   { segments: [{ kind: 'dash', lengthMm: 4 }], offsetMm: 0 },
   { segments: [{ kind: 'dash', lengthMm: 4 }], offsetMm: 1.5 },
 ];
 
 describe('band geometry helpers', () => {
-  it('bandCenterOffset = midpoint of min & max offsets', () => {
-    expect(bandCenterOffset(railway)).toBe(0);
-    expect(bandCenterOffset(asymmetric)).toBe(0.75);
-    expect(bandCenterOffset([])).toBe(0);
-  });
-
-  it('bandHalfExtentMm = largest |offset − centre|', () => {
+  it('bandHalfExtentMm = largest |offset| from the axis (0)', () => {
     expect(bandHalfExtentMm(railway)).toBe(1);
-    expect(bandHalfExtentMm(asymmetric)).toBe(0.75);
+    expect(bandHalfExtentMm(asymmetric)).toBe(1.5);
     expect(bandHalfExtentMm([{ segments: [], offsetMm: 0 }])).toBe(0);
   });
 
@@ -53,15 +46,37 @@ describe('band geometry helpers', () => {
 });
 
 describe('scaleLayerSpread', () => {
-  it('scales a symmetric band around centre 0', () => {
+  it('scales a symmetric band around the axis (0) → stays symmetric', () => {
     const out = scaleLayerSpread(railway, 2);
     expect(out.map((l) => l.offsetMm)).toEqual([2, -2]);
   });
 
-  it('scales an asymmetric band around its centre (not around 0)', () => {
+  it('scales around the axis (0) — an on-axis layer stays on the middle line', () => {
     const out = scaleLayerSpread(asymmetric, 2);
-    // centre 0.75 → 0 becomes 0.75 + (−0.75)*2 = −0.75 ; 1.5 becomes 0.75 + 0.75*2 = 2.25
-    expect(out.map((l) => l.offsetMm)).toEqual([-0.75, 2.25]);
+    // one-sided band: 0 → 0 (stays on the middle) ; 1.5 → 3
+    expect(out.map((l) => l.offsetMm)).toEqual([0, 3]);
+  });
+
+  it('mirror: an asymmetric two-sided band lands equidistant (±H) — same step', () => {
+    const twoSided: LinePatternLayer[] = [
+      { segments: [{ kind: 'dash', lengthMm: 4 }], offsetMm: 2 },
+      { segments: [{ kind: 'dash', lengthMm: 4 }], offsetMm: -1 },
+    ];
+    // halfExtent 2, factor 1.5 → H 3 → each side's outermost → ±3 (equidistant)
+    expect(scaleLayerSpread(twoSided, 1.5).map((l) => l.offsetMm)).toEqual([3, -3]);
+  });
+
+  it('mirror: interior rails keep their proportion within their side, extremes hit ±H', () => {
+    const multiRail: LinePatternLayer[] = [
+      { segments: [], offsetMm: 2 },
+      { segments: [], offsetMm: 1 },
+      { segments: [], offsetMm: -1 },
+      { segments: [], offsetMm: -2 },
+    ];
+    // halfExtent 2 → H 2 (factor 1): extremes ±2, interior ±1 (proportion kept), symmetric
+    expect(scaleLayerSpread(multiRail, 1).map((l) => l.offsetMm)).toEqual([2, 1, -1, -2]);
+    // factor 1.5 → H 3: extremes ±3, interior ±1.5
+    expect(scaleLayerSpread(multiRail, 1.5).map((l) => l.offsetMm)).toEqual([3, 1.5, -1.5, -3]);
   });
 
   it('min-guards: no sign inversion or collapse below ε', () => {

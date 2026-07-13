@@ -629,6 +629,7 @@
 | **ADR-644** | DXF AutoCAD R2018 structural compliance — handles/$HANDSEED + APPID + subclass markers + πλήρες LTYPE (το export ΑΝΟΙΓΕΙ στο AutoCAD) | 🟢 IMPLEMENTED (Φάση A) | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-644-dxf-autocad-r2018-compliance.md) |
 | **ADR-645** | 3D Incremental Scene Streaming — μεγάλα DXF στον 3Δ χωρίς freeze (streaming build + glyph atlas + culling/LOD· ο 3Δ αντίστοιχος του ADR-639) | 🔵 PROPOSED | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-645-3d-incremental-scene-streaming.md) |
 | **ADR-646** | Scale Tool — Ανάλυση Κενών & Χάρτης Ολοκλήρωσης (click-to-scale/reference-pick missing· BIM no-op· arc/rect gaps· πάνω στο ADR-348) | 🔍 PROPOSED | 2026-07-12 | Uncategorized | [📄](./adrs/ADR-646-scale-tool-gap-analysis.md) |
+| **ADR-647** | R12 Associative-Hatch πλήρης πιστότητα μοτίβου — `parseR14PatternLines` → `inlinePattern` (GRATE αόρατο + catalog-mismatch· decode-first R14_HATCH_DATA spec) | 🔵 PROPOSED | 2026-07-13 | Uncategorized | [📄](./adrs/ADR-647-r12-hatch-pattern-def-parity.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1233,6 +1234,7 @@
 | **ADR-640** | Block subsystem — DXF INSERT as a first-class, round-trippable Block instance | 🟢 IMPLEMENTED (M1) | [View](./adrs/ADR-640-block-instance-subsystem.md) |
 | **ADR-645** | 3D Incremental Scene Streaming — μεγάλα DXF στον 3Δ χωρίς freeze (streaming build + glyph atlas + culling/LOD) | 🔵 PROPOSED | [View](./adrs/ADR-645-3d-incremental-scene-streaming.md) |
 | **ADR-646** | Scale Tool — Ανάλυση Κενών & Χάρτης Ολοκλήρωσης | 🔍 PROPOSED | [View](./adrs/ADR-646-scale-tool-gap-analysis.md) |
+| **ADR-647** | R12 Associative-Hatch πλήρης πιστότητα μοτίβου (R14_HATCH_DATA pattern-def → inlinePattern) | 🔵 PROPOSED | [View](./adrs/ADR-647-r12-hatch-pattern-def-parity.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
