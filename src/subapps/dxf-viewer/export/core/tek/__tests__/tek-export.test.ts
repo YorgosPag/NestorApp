@@ -19,7 +19,8 @@ import {
   buildObjectRecordXml, buildSymbolObjectXMatrix, buildTextRecordXml, buildHatchRecordXml,
 } from '../tek-xml-writer';
 import { collectTekWalls, collectTekPlanes, collectTekRoofs } from '../bim-to-tek';
-import { collectTekTexts, collectTekHatches } from '../dxf-to-tek';
+import { collectTekHatches } from '../dxf-to-tek';
+import { collectTekTexts } from '../dxf-to-tek-texts';
 import type { TekOpening, TekPlane, TekRoof, TekRoofPoint } from '../tek-types';
 import type { Entity } from '../../../../types/entities';
 

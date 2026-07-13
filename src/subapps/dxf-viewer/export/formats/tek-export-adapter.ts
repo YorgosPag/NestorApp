@@ -18,9 +18,11 @@ import { resolveExportEntities } from '../core/export-entity-scope';
 import { expandAnnotationsToPrimitives } from '../core/annotation-to-primitives';
 import { collectTekWalls, collectTekPlanes, collectTekRoofs, collectTekStairs } from '../core/tek/bim-to-tek';
 import {
-  collectTekLines, collectTekArcs, collectTekObjects, collectTekTexts, collectTekHatches,
+  collectTekLines, collectTekArcs, collectTekObjects, collectTekHatches,
   collectTekAreas,
 } from '../core/tek/dxf-to-tek';
+import { collectTekTexts } from '../core/tek/dxf-to-tek-texts';
+import { collectTekHatchFillLines } from '../core/tek/tek-hatch-explode';
 import { injectTekEntities, buildTagVisibilityXml } from '../core/tek/tek-xml-writer';
 import type { TekSymbolMode } from '../types';
 import { buildFloorFilename } from './dxf-export-adapter';
@@ -86,29 +88,41 @@ export function assembleTekDocument(
   const arcs = collectTekArcs(decomposed, f);
   // ADR-608 Φ-texts — ελεύθερες ετικέτες (N/A/1/0.00 + scale-bar νούμερα) → `<text>` (type 3).
   const texts = collectTekTexts(decomposed, f);
-  // ADR-512 — γραμμοσκιάσεις (user-drawn + solid-fills συμβόλων) → `<hatch>` (primitive type 6),
-  // με native ταυτοποίηση μοτίβου (data/tekton-hatch-catalog). Χωρίς αυτό έπεφταν σιωπηλά.
-  const hatches = collectTekHatches(decomposed, f);
+  // ADR-648 Στάδιο Ε — ΠΛΗΡΗΣ ΤΑΥΤΙΣΗ: οι γραμμοσκιάσεις αποδομούνται στις ΑΚΡΙΒΕΙΣ γραμμές
+  // τους (SSoT `buildHatchEntitySegments` — ίδιες με canvas + DXF lines-mode) και μπαίνουν στον
+  // `<line>` container, συνεχίζοντας την αρίθμηση `<n>` μετά τα κανονικά lines. Το native
+  // `<hatch>` του Τέκτονα δείχνει ΑΛΛΟ μοτίβο (άλλη βιβλιοθήκη) — μετρημένο: 15.318 γραμμές
+  // AutoCAD `SQUARE` → 43 διαγώνιες στον Τέκτονα.
+  const hatchFill = collectTekHatchFillLines(decomposed, f, lines.lineCount + 1);
+  // ADR-512 — fallback: όσες ΔΕΝ αποδομήθηκαν (solid/gradient, ή dense-guard) → native `<hatch>`
+  // (primitive type 6) με ταυτοποίηση μοτίβου by-name (data/tekton-hatch-catalog).
+  const hatches = collectTekHatches(decomposed, f, hatchFill.explodedIds);
   // ADR-512 Φ-areas — μετρήσεις εμβαδού (measure-area → closed polyline+measurement) → native
   // Tekton area: ΕΝΑ `<hatch>` (boundary=1) + ΕΝΑ `<text>` ετικέτα ανά περιοχή, ΟΧΙ Ν γραμμές.
   // Οι ετικέτες `<n>` συνεχίζουν μετά τα user texts (κοινός `<text>` container → μοναδικά ids).
   const areas = collectTekAreas(decomposed, f, texts.textCount + 1);
   const mergedHatchesXml = [hatches.hatchesXml, areas.hatchesXml].filter(Boolean).join('\n');
   const mergedTextsXml = [texts.textsXml, areas.labelsXml].filter(Boolean).join('\n');
+  // Στάδιο Ε — οι γραμμές γεμίσματος ζουν στον ΙΔΙΟ `<line>` container με τα primitives.
+  const mergedLinesXml = [lines.linesXml, hatchFill.linesXml].filter(Boolean).join('\n');
   // Σκάλες → native `<stair>` (type 21, ADR-526 Φ3). Ίδιο scene→μέτρα convention.
   const { stairsXml } = collectTekStairs(selected, f);
   // ADR-608 — τα αποδομημένα σύμβολα (geometry path) έχουν κοινό `groupId` → κοινό tag στα
   // line/arc/text/hatch τους. Ένωση distinct tags → `<tag_visibility>` registry (ομαδοποίηση +Tags).
   const tagVisibilityXml = buildTagVisibilityXml(
-    [...new Set([...lines.tags, ...arcs.tags, ...texts.tags, ...hatches.tags, ...areas.tags])],
+    [...new Set([
+      ...lines.tags, ...arcs.tags, ...texts.tags, ...hatches.tags, ...areas.tags,
+      ...hatchFill.tags,
+    ])],
   );
   return {
     xml: injectTekEntities(
       template, wallsXml, objects.objectsXml, planesXml, autoroofsXml,
-      lines.linesXml, arcs.arcsXml, stairsXml, tagVisibilityXml, mergedTextsXml,
+      mergedLinesXml, arcs.arcsXml, stairsXml, tagVisibilityXml, mergedTextsXml,
       mergedHatchesXml,
     ),
-    warnings,
+    // Στάδιο Ε — dense-guard παραλείψεις (γραμμοσκιάσεις που έμειναν native) στα warnings.
+    warnings: [...warnings, ...hatchFill.warnings],
   };
 }
 

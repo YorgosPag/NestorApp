@@ -99,7 +99,59 @@ minimal-parser Τέκτονα (ίδιο pattern με το υπάρχον `arc` e
 `rotate-entity-coverage`): νέος renderable τύπος → σπάει το test → συνειδητή απόφαση ανά format,
 ποτέ ξανά σιωπηλή απώλεια.
 
-## 7. Επόμενα (TEK coverage gaps — §6 backlog)
+## 7. Στάδιο Ε — Πλήρης ταύτιση γραμμοσκιάσεων (DONE)
+
+### 7.1 Ground-truth (δείγματα Giorgio, `Desktop/KADOS/ΓΡΑΜΜΟΣΚΙΑΣΕΙΣ/`)
+
+Μία γραμμοσκίαση AutoCAD (`SQUARE`), το ίδιο σχέδιο σε 4 μορφές:
+
+| Αρχείο | Μέτρηση |
+|---|---|
+| `ORIGINAL_AUTOCAD_EXPLODED.dxf` | **15.318 LINEs** ← ground truth: έτσι το ζωγραφίζει το AutoCAD |
+| `EXPORTED_NESTOR.dxf` | 1 native `HATCH`, `78=2` γραμμές μοτίβου (53=0 & 53=90, delta 0.127, dashes ±0.127) — ο πρωτότυπος ορισμός **διατηρημένος** (`inlinePattern`, ADR-644 #7d) ✅ |
+| `EXPORTED_NESTOR.tek` | 1 native `<hatch>`: `<type>72`, `scaleX 0.15`, `rotation 0` |
+| `EXPORTED_TEKTON.tek/.dxf` (re-save από τον Τέκτονα, `savecount=1`) | **43 διαγώνιες γραμμές** ❌ |
+
+**Το boundary μας ήταν ήδη τέλειο** (ο Τέκτων επέστρεψε τις 8 ακμές ταυτόσημες). Το **μοτίβο** ήταν
+τελείως άλλο σχέδιο — όχι άλλη πυκνότητα: 15.318 τετραγωνάκια → 43 διαγώνιες.
+
+### 7.2 Απόφαση: αποδόμηση σε `<line>` (Επιλογή Β), native = fallback
+
+Η βαθμονόμηση του native mapping (Επιλογή Α) **απορρίφθηκε**: ο Τέκτων δεν *έχει* το `SQUARE` στη
+βιβλιοθήκη του (`pattern.inf` ≠ `acad.pat`) — καμία ρύθμιση scale/rotation δεν γεφυρώνει αυτό.
+
+**NEW** `export/core/tek/tek-hatch-explode.ts` → `collectTekHatchFillLines()`: περίγραμμα + γραμμές
+μοτίβου ως `<line>` records. **FULL SSoT** — ίδια κλήση στο ίδιο `buildHatchEntitySegments()` που
+τρέφει ήδη τον canvas renderer ΚΑΙ το DXF lines-mode (`emitHatch`, explode=true). Μηδέν pattern math.
+Το ακριβές AutoCAD μοτίβο επιβιώνει μέσω του `inlinePattern` — **κανένα name-mapping**.
+
+**Αποτέλεσμα (μετρημένο):** 15.346 γραμμές vs 15.318 του AutoCAD → **απόκλιση ~0,1%** (οι 8 = το
+περίγραμμα). Χρόνος 420 ms, XML 21,3 MB.
+
+`collectTekHatches(entities, f, skipIds)` = **fallback**: native `<hatch>` μόνο για solid/gradient
+(δεν έχουν γραμμές) και για ό,τι κόβει ο dense guard. Το `skipIds` αποτρέπει διπλό γέμισμα.
+
+### 7.3 Dense guard — ΠΡΙΝ τον υπολογισμό, όχι μετά (ADR-647)
+
+`estimateHatchFillLines()` = bbox-εμβαδόν ÷ βήμα² (reuse `hatchMinWorldSpacing` + `polygonBbox`).
+Όρια: **40.000** ανά γραμμοσκίαση / **120.000** συνολικά → warning + fallback σε native.
+
+> ⚠️ **Ο έλεγχος ΠΡΕΠΕΙ να είναι pre-flight.** Πρώτη υλοποίηση μετρούσε *μετά* το
+> `buildHatchEntitySegments` → προστάτευε το αρχείο ενώ το UI είχε ήδη παγώσει: ένα 400×400 boundary
+> με βήμα 0.127 χρειάστηκε **164 s** και μετά **έσκασε με OOM στα 4 GB**. Regression lock: το
+> dense-guard test τρέχει με `timeout 5s`.
+
+### 7.4 🐛 Bug που αποκαλύφθηκε στο SSoT (διορθώθηκε)
+
+`hatchMinWorldSpacing()` ρωτούσε **πρώτα το catalog** και μόνο μετά το `inlinePattern` — αντίστροφη
+σειρά από το `buildHatchEntitySegments` (inlinePattern-first, ADR-644 #7d). Άρα μετρούσε την
+πυκνότητα **άλλου μοτίβου** από αυτό που τελικά χτίζεται. Συνέπειες:
+- **(α)** ο density-LOD του `HatchRenderer` έκρινε με λάθος πυκνότητα κάθε *imported* hatch·
+- **(β)** ο dense guard υποεκτιμούσε → ο builder έσκαγε (το OOM του §7.3).
+
+**FIX** (`hatch-pattern-geometry.ts`): `inlinePattern` πρώτα, catalog μετά — ίδια σειρά με τον builder.
+
+## 8. Επόμενα (TEK coverage gaps — §6 backlog)
 
 Μετά τη διόρθωση του hang, τα εναπομείναντα TEK `missing` (coverage guard §6):
 mtext→`<text>`, point, ellipse/spline→tessellated `<line>`/`<arc>`, dimension, block-expand,
@@ -111,7 +163,7 @@ old-style POLYLINE / native HATCH / INSERT-blocks — γι' αυτό ένα Auto
 οντότητες στον Τέκτονα. Ο σωστός Tekton target είναι το `.tek` (τώρα που δεν κολλάει). Follow-up αν
 χρειαστεί DXF-for-Tekton: `lines` mode + in-place explode των blocks.
 
-## 8. Changelog
+## 9. Changelog
 
 - **2026-07-13** — Στάδιο Α (golden lock) + Στάδιο Β (DXF ellipse/spline/xline/ray native +
   tessellated, ezdxf-verified, μηδέν regression) + Στάδιο Δ (coverage guard).
@@ -119,3 +171,12 @@ old-style POLYLINE / native HATCH / INSERT-blocks — γι' αυτό ένα Auto
   ένοχος τα `<text>` records με XML entities (`&apos;`/`&amp;`) που ο parser του Τέκτονα δεν
   αποκωδικοποιεί. Νέος `escapeTektonText` (tek-content-escape.ts) + 5 call-sites στο tek-xml-writer.
   Confirm στον πραγματικό Τέκτονα (Giorgio). 128 tek-tests πράσινα, jscpd καθαρό.
+- **2026-07-13** — **Στάδιο Ε (γραμμοσκιάσεις)**: ground-truth 4 αρχείων (§7.1) απέδειξε ότι το
+  native `<hatch>` δίνει **43 διαγώνιες αντί για 15.318 τετραγωνάκια**. NEW `tek-hatch-explode.ts`
+  (`collectTekHatchFillLines`) → αποδόμηση σε `<line>` μέσω του SSoT `buildHatchEntitySegments`
+  (ίδιες γραμμές με canvas + DXF lines-mode· μηδέν νέα pattern math). **Απόκλιση από AutoCAD ~0,1%**
+  (15.346 vs 15.318). Native `<hatch>` = fallback (solid/gradient/dense) μέσω `skipIds`.
+  Pre-flight dense guard (`estimateHatchFillLines`, 40k/120k) — ο post-hoc έλεγχος έσκαγε με OOM.
+  🐛 FIX στο SSoT: `hatchMinWorldSpacing` ρωτούσε catalog πριν το `inlinePattern` (§7.4) — χτυπούσε
+  και τον density-LOD του `HatchRenderer`. 425 export-tests πράσινα, jscpd καθαρό.
+  **ΕΚΚΡΕΜΕΙ:** επαλήθευση στον πραγματικό Τέκτονα (άνοιγμα ~24 MB `.tek` με 15k `<line>` records).

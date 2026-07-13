@@ -399,21 +399,26 @@ export function hatchMinWorldSpacing(
 ): number {
   if (isSolidHatch(hatch)) return 0;
   if (hatch.fillType === 'predefined') {
+    // ⚠️ Η ΣΕΙΡΑ ΠΡΕΠΕΙ ΝΑ ΕΙΝΑΙ ΙΔΙΑ με το `buildHatchEntitySegments` (inlinePattern ΠΡΙΝ το
+    // catalog, ADR-644 #7d) — αλλιώς αυτή η συνάρτηση μετρά την πυκνότητα ΑΛΛΟΥ μοτίβου από
+    // αυτό που τελικά χτίζεται. Συνέπειες της παλιάς (catalog-first) σειράς: (α) ο density-LOD
+    // του HatchRenderer έκρινε με λάθος πυκνότητα τα imported hatches· (β) ο dense guard του
+    // TEK export (ADR-648 Στάδιο Ε) υποεκτιμούσε → ο builder έσκαγε με OOM (4GB).
+    // Inline μοτίβο: οι delta είναι ήδη απόλυτες (scale=1) → καμία × effective.
+    if (hatch.inlinePattern && hatch.inlinePattern.lines.length) {
+      let min = Number.POSITIVE_INFINITY;
+      for (const l of hatch.inlinePattern.lines) {
+        const dy = Math.abs(l.delta[1]);
+        if (dy > EPS && dy < min) min = dy;
+      }
+      return Number.isFinite(min) ? min : 0;
+    }
     const pattern = getHatchPattern(hatch.patternName);
     if (pattern && pattern.lines.length) {
       const eff = resolveEffectiveHatchScale(hatch.patternName, hatch.patternScale);
       let min = Number.POSITIVE_INFINITY;
       for (const l of pattern.lines) {
         const dy = Math.abs(l.delta[1]) * eff;
-        if (dy > EPS && dy < min) min = dy;
-      }
-      return Number.isFinite(min) ? min : 0;
-    }
-    // Inline μοτίβο: οι delta είναι ήδη απόλυτες (scale=1) → καμία × effective.
-    if (hatch.inlinePattern && hatch.inlinePattern.lines.length) {
-      let min = Number.POSITIVE_INFINITY;
-      for (const l of hatch.inlinePattern.lines) {
-        const dy = Math.abs(l.delta[1]);
         if (dy > EPS && dy < min) min = dy;
       }
       return Number.isFinite(min) ? min : 0;
