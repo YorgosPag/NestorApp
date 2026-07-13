@@ -1,6 +1,6 @@
 # ADR-647 — R12 Associative-Hatch: πλήρης πιστότητα μοτίβου (R14_HATCH_DATA pattern-def)
 
-**Status:** Proposed (οδηγός υλοποίησης — Φ1 pending)
+**Status:** Proposed — **έρευνα ΟΛΟΚΛΗΡΩΜΕΝΗ** (format εμπειρικά κλειδωμένο vs ground-truth)· υλοποίηση pending (νέα συνεδρία)
 **Date:** 2026-07-13
 **Domain:** dxf-viewer / import parser / hatch SSoT
 **Related:** ADR-635 (R12 associative-hatch INSERT → HATCH), ADR-507 (hatch system + inlinePattern SSoT),
@@ -182,6 +182,7 @@ Patterns: ANSI31(35) HEX(33) GRASS(17) NET(17) SQUARE(8) GRATE(7)
 - `utils/dxf-hatch-xdata-converter.ts` — **νέο** `parseR14PatternLines` + wiring στο `tryConvertInsertHatch`.
 - `utils/dxf-block-expander.ts` — `inlinePattern` transform στο `transformInsertHatch` (non-identity INSERT).
 - `data/hatch-pattern-catalog.ts` — προσθήκη `GRATE` (Φ2).
+- `utils/dxf-hatch-xdata-converter.ts` — boundary bulge tessellation (Φ2b· `bulgeToPolyline` SSoT, `hasBulge` flag).
 - `utils/__tests__/dxf-hatch-xdata-converter.test.ts` — R14 pattern-def fixtures (ANSI31 solid, SQUARE
   dash/gap, HEX 3-family spacing), assert `inlinePattern.lines` (angle°, un-rotated delta, dashes).
 
