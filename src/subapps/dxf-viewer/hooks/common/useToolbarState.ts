@@ -23,6 +23,8 @@ export function useToolbarState() {
   const [showGuidePanel, setShowGuidePanel] = useState(false);
   // ADR-189: Guide Analysis Panel visibility
   const [showGuideAnalysisPanel, setShowGuideAnalysisPanel] = useState(false);
+  // Block Library M1: «Τα Blocks μου» palette visibility
+  const [showBlockLibraryPanel, setShowBlockLibraryPanel] = useState(false);
 
   // Tool change handler
   const handleToolChange = useCallback((
@@ -78,6 +80,9 @@ export function useToolbarState() {
   const toggleGuidePanel = useCallback(() => setShowGuidePanel(p => !p), []);
   // ADR-189: Open only (idempotent — won't close if already open)
   const openGuidePanel = useCallback(() => setShowGuidePanel(true), []);
+  // Block Library M1: «Τα Blocks μου» palette toggle + idempotent open (mirror guide panel).
+  const toggleBlockLibraryPanel = useCallback(() => setShowBlockLibraryPanel(p => !p), []);
+  const openBlockLibraryPanel = useCallback(() => setShowBlockLibraryPanel(true), []);
   const toggleGuideAnalysisPanel = useCallback(() => setShowGuideAnalysisPanel(p => !p), []);
 
   return {
@@ -88,6 +93,7 @@ export function useToolbarState() {
     showCursorSettings,
     showGuidePanel,
     showGuideAnalysisPanel,
+    showBlockLibraryPanel,
 
     // Actions - setActiveTool removed, now managed by parent
     handleToolChange,
@@ -97,6 +103,8 @@ export function useToolbarState() {
     toggleCursorSettings,
     toggleGuidePanel,
     openGuidePanel,
-    toggleGuideAnalysisPanel
+    toggleGuideAnalysisPanel,
+    toggleBlockLibraryPanel,
+    openBlockLibraryPanel
   };
 }

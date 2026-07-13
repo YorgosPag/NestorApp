@@ -108,3 +108,16 @@ export const DEFAULT_USER_IMPORT_LICENSE: BlockLicense = {
   type: 'unknown',
   redistributable: false,
 };
+
+/**
+ * User-tunable placement overrides του Block Library tool (Milestone 1). Mirror του
+ * `FurnitureParamOverrides` (ADR-410): το ribbon contextual tab γράφει `scale`/`rotation`.
+ * Το ΠΟΙΟ block τοποθετείται ΔΕΝ ζει εδώ — ζει στο `block-library-selection-store` (SSoT,
+ * palette → tool), και διαβάζεται σε event-time. Data-only.
+ */
+export interface BlockLibraryParamOverrides {
+  /** Ομοιόμορφη κλίμακα τοποθέτησης· default `1`. */
+  readonly scale?: number;
+  /** Γωνία τοποθέτησης σε μοίρες· default `0`. */
+  readonly rotation?: number;
+}

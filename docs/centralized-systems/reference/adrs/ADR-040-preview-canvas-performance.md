@@ -72,6 +72,16 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-13 — Block Library M1: click-routing του νέου placement tool (ADR-652)
+**Τι:** wiring του single-click «block-library» placement tool στο υπάρχον click-dispatch pipeline. **MOD**
+`hooks/canvas/canvas-click-tool-types.ts` (νέο `BlockLibraryToolLike` interface) + `hooks/canvas/canvas-click-types.ts`
+(προαιρετικό `blockLibraryTool?` param στο `UseCanvasClickHandlerParams`) + `hooks/canvas/canvas-click-bim-dispatch.ts`
+(PRIORITY 4.915b: `activeTool === 'block-library'` → `onCanvasClick(worldPoint)`, RAW free-point placement, mirror
+furniture) + `CanvasSection.tsx` (destructure `blockLibraryTool` από `useSpecialTools` + pass-through στο dispatch
+params object). **Συμμόρφωση ADR-040:** καμία νέα `useSyncExternalStore` σε orchestrator/shell (CHECK 6C ασφαλές)· το
+tool είναι click-time consumer (getter-based, όπως όλα τα placement tools)· μηδέν άγγιγμα σε bitmap cache key /
+high-freq stores / micro-leaf hot-path. CHECK 6B touch → co-staged ADR-040 + ADR-652. Πλήρες detail: **ADR-652 §M1**.
+
 ### 2026-07-13 — ✅ Matrix ghost: transform preview O(1)/frame (ADR-646 Φάση 6· ΟΡΙΣΤΙΚΟ fix για το scale-freeze)
 **Τι:** το Φ.5 LOD (παρακάτω) ανακούφισε αλλά ΠΑΛΙ πάγωνε σε ακραία κλίμακα. **Definitive fix** — το 2D preview
 ισοδύναμο του **bitmap-under-matrix** που αυτό το ADR εφαρμόζει στον κύριο καμβά (pan/zoom = matrix + blit cached

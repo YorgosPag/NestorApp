@@ -1239,7 +1239,16 @@
     },
     "floorplanSymbol": {
       "statusPosition": "Click to place the sanitary fixture (WC)"
+    },
+    "blockLibrary": {
+      "statusPosition": "Click to place block",
+      "errorNoSelection": "Select a block from «My Blocks»"
     }
+  },
+  "blockLibrary": {
+    "title": "My Blocks",
+    "hint": "Pick a block and click on the canvas to place it.",
+    "empty": "No blocks in this session. Import a DXF that contains blocks."
   },
   "snapModes": {
     "labels": {
@@ -1691,6 +1700,7 @@
       "display": "Display",
       "dxfFiles": "DXF Files",
       "annotationSymbols": "Symbols",
+      "blockLibrary": "Blocks",
       "background": "Background",
       "exportPanel": "Export",
       "cursor": "Cursor",
@@ -4473,6 +4483,7 @@
         }
       },
       "openGuidePanel": "Guide Panel",
+      "blockLibrary": "Blocks",
       "toggleGuides": "Show/Hide Guides",
       "guideAnalysis": "Guide Analysis",
       "displayGrid": "Grid",

@@ -39,22 +39,53 @@ function cloneLocalMembers(members: readonly Entity[]): Entity[] {
 }
 
 /**
- * Χτίζει ένα {@link BlockEntity} από έναν in-session ορισμό + placement params.
- * Δεν αγγίζει τη σκηνή — ο καλών κάνει το commit.
+ * Το ΚΟΙΝΟ shape ενός {@link BlockEntity} από def + placement — byte-συμβατό με
+ * `createBlockInstance` (base baked στο origin + placement transform). Ο μόνος διαφοροποιητής
+ * μεταξύ commit και ghost είναι τα `entities` (κλωνοποιημένα vs raw) και το `id`, ώστε να
+ * υπάρχει ΜΙΑ πηγή για τη δομή (όχι sibling clone — N.18).
  */
-export function buildBlockEntityFromDef(
+function assembleBlockEntity(
   def: InSessionBlockDef,
   params: BlockPlacementParams,
+  entities: readonly Entity[],
+  id: string,
 ): BlockEntity {
   return {
-    id: generateEntityId(),
+    id,
     type: 'block',
     name: def.name,
     layerId: params.layerId ?? '0',
     position: { x: params.position.x, y: params.position.y },
     scale: params.scale ? { x: params.scale.x, y: params.scale.y } : { x: 1, y: 1 },
     rotation: params.rotation ?? 0,
-    entities: cloneLocalMembers(def.localMembers),
+    entities: entities as Entity[],
     visible: true,
   } as BlockEntity;
+}
+
+/**
+ * Χτίζει ένα {@link BlockEntity} από έναν in-session ορισμό + placement params.
+ * Δεν αγγίζει τη σκηνή — ο καλών κάνει το commit. Τα members ΚΛΩΝΟΠΟΙΟΥΝΤΑΙ με φρέσκα ids
+ * (ανεξάρτητο instance ανά τοποθέτηση).
+ */
+export function buildBlockEntityFromDef(
+  def: InSessionBlockDef,
+  params: BlockPlacementParams,
+): BlockEntity {
+  return assembleBlockEntity(def, params, cloneLocalMembers(def.localMembers), generateEntityId());
+}
+
+/** Σταθερό id για το transient ghost — δεν μπαίνει ποτέ στη σκηνή. */
+const GHOST_BLOCK_ID = 'block-library-ghost';
+
+/**
+ * ADR-040 — TRANSIENT ghost για το footprint preview: ίδιο placement transform με το commit,
+ * αλλά ΧΩΡΙΣ clone/id-gen (τρέχει ανά cursor move). Τα raw `def.localMembers` περνούν by-ref·
+ * ο consumer (`getEntityBounds`/render) δεν τα μεταλλάσσει (επιστρέφει transformed αντίγραφα).
+ */
+export function buildGhostBlockEntity(
+  def: InSessionBlockDef,
+  params: BlockPlacementParams,
+): BlockEntity {
+  return assembleBlockEntity(def, params, def.localMembers, GHOST_BLOCK_ID);
 }

@@ -143,7 +143,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
   const {
     activeTool, handleToolChange, handleAction, showGrid, toggleGrid,
     canUndo, canRedo, snapEnabled, showLayers, showCalibration,
-    showCursorSettings, showGuidePanel, showGuideAnalysisPanel,
+    showCursorSettings, showGuidePanel, showGuideAnalysisPanel, showBlockLibraryPanel,
     handleFileImport, currentScene,
     handleSceneChange, handleCalibrationToggle,
     drawingState, onMeasurementPoint, onMeasurementHover, onMeasurementCancel,
@@ -433,6 +433,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           showCalibration={showCalibration}
           showGuidePanel={showGuidePanel}
           showGuideAnalysisPanel={showGuideAnalysisPanel}
+          showBlockLibraryPanel={showBlockLibraryPanel}
           handleAction={wrappedHandleAction}
           activeTool={activeTool}
           overlayMode={overlayMode}

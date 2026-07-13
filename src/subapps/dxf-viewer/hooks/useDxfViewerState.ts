@@ -407,6 +407,10 @@ export function useDxfViewerState() {
       case 'toggle-guide-analysis-panel':
         toolbarState.toggleGuideAnalysisPanel();
         break;
+      // Block Library M1: Toggle «Τα Blocks μου» palette (Insert-tab button).
+      case 'toggle-block-library-panel':
+        toolbarState.toggleBlockLibraryPanel();
+        break;
       // ADR-363 R1 / ADR-577: unified Copy tool activation (C+O chord → AutoCAD COPY pattern, all entity types)
       case 'copy-selected':
         handleToolChange('copy');

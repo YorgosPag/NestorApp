@@ -43,6 +43,7 @@ import type {
   MepRadiatorToolLike,
   MepBoilerToolLike,
   FurnitureToolLike,
+  BlockLibraryToolLike,
   FloorplanSymbolToolLike,
   RailingToolLike,
   SlabOpeningToolLike,
@@ -119,6 +120,8 @@ export interface UseCanvasClickHandlerParams {
   mepRiserTool?: { readonly isActive: boolean; onCanvasClick(point: Readonly<Point2D>): boolean };
   /** ADR-410 — Furniture tool click pipeline (single-click placement). */
   furnitureTool?: FurnitureToolLike;
+  /** Block Library M1 — block re-placement tool click pipeline (single-click). */
+  blockLibraryTool?: BlockLibraryToolLike;
   /** ADR-415 — Floorplan-symbol tool click pipeline (single-click placement). */
   floorplanSymbolTool?: FloorplanSymbolToolLike;
   /** ADR-407 — Railing tool click pipeline (2-click straight guardrail). */

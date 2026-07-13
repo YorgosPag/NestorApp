@@ -45,6 +45,7 @@ export function dispatchBimToolClick(
     slabOpeningTool,
     openingTool,
     selfOpeningTool,
+    blockLibraryTool,
     universalSelection,
   } = params;
 
@@ -202,6 +203,12 @@ export function dispatchBimToolClick(
   // RAW worldPoint (hit-tests existing geometry — ORTHO/POLAR must NOT shift the pick).
   if (activeTool === 'beam-between-members' && beamBetweenMembersTool?.isActive) {
     beamBetweenMembersTool.onCanvasClick(worldPoint);
+    return true;
+  }
+  // PRIORITY 4.915b: Block Library M1 — re-place a session block with one click (RAW
+  // worldPoint· free-point placement, no existing-geometry hit-test, mirror furniture).
+  if (activeTool === 'block-library' && blockLibraryTool?.isActive) {
+    blockLibraryTool.onCanvasClick(worldPoint);
     return true;
   }
   // PRIORITIES 4.92–4.93: MEP fixture / riser / furniture / floorplan-symbol /

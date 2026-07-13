@@ -633,6 +633,8 @@
 | **ADR-648** | Πλήρης κάλυψη οντοτήτων στην εξαγωγή DXF & Τέκτονας (.tek) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-648-dxf-tek-export-entity-coverage.md) |
 | **ADR-649** | Εργαλείο «Ετικέτα Εμβαδού Γραμμοσκίασης» (Hatch Area Label) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-649-hatch-area-label-tool.md) |
 | **ADR-650** | Τοπογραφικές Αποτυπώσεις & Ισοϋψείς Γραμμές (Έρευνα Αγοράς + Αρχιτεκτονικό Blueprint) | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-650-topographic-survey-and-contours.md) |
+| **ADR-651** | Σύστημα Αυτόματης Δημιουργίας Πινακίδων Σχεδίου (Auto Title Block Generator — Έρευνα Αγοράς + Blueprint) | 🔵 PROPOSED | 2026-07-13 | DXF Viewer / Sheets | [📄](./adrs/ADR-651-auto-title-block-generator.md) |
+| **ADR-652** | Block Library (βιβλιοθήκη DXF blocks: έπιπλα/είδη υγιεινής) — M1: τοποθέτηση + in-session «Τα Blocks μου» | 🔵 PROPOSED | 2026-07-13 | DXF Viewer / Content Library | [📄](./adrs/ADR-652-block-library.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
@@ -1245,6 +1247,8 @@
 | **ADR-648** | Πλήρης κάλυψη οντοτήτων στην εξαγωγή DXF & Τέκτονας (.tek) | ✅ APPROVED | [View](./adrs/ADR-648-dxf-tek-export-entity-coverage.md) |
 | **ADR-649** | Εργαλείο «Ετικέτα Εμβαδού Γραμμοσκίασης» (Hatch Area Label) | ✅ APPROVED | [View](./adrs/ADR-649-hatch-area-label-tool.md) |
 | **ADR-650** | Τοπογραφικές Αποτυπώσεις & Ισοϋψείς Γραμμές (Έρευνα Αγοράς + Αρχιτεκτονικό Blueprint) | ✅ APPROVED | [View](./adrs/ADR-650-topographic-survey-and-contours.md) |
+| **ADR-651** | Σύστημα Αυτόματης Δημιουργίας Πινακίδων Σχεδίου (Auto Title Block Generator — Έρευνα + Blueprint) | 🔵 PROPOSED | [View](./adrs/ADR-651-auto-title-block-generator.md) |
+| **ADR-652** | Block Library — M1: τοποθέτηση + in-session «Τα Blocks μου» | 🔵 PROPOSED | [View](./adrs/ADR-652-block-library.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---

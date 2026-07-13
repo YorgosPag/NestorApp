@@ -225,6 +225,7 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'import-wizard': return <Wand2 width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'export-dxf': return <Download width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'export-ifc': return <Boxes width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'block-library': return <Boxes width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'cursor-settings': return <Crosshair width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'run-tests': return <FlaskConical width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'toggle-perf': return <Activity width={sizePx[size]} height={sizePx[size]} className={className} />;

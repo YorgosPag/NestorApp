@@ -77,6 +77,30 @@ export const INSERT_TAB: RibbonTab = {
       ],
     },
     {
+      // Block Library M1 — «Τα Blocks μου»: opens the browsable palette of session/imported
+      // DXF blocks (action, όχι tool commandKey· η επιλογή κάρτας ενεργοποιεί το placement tool).
+      id: 'blockLibrary',
+      labelKey: 'ribbon.panels.blockLibrary',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'insert.block-library',
+                labelKey: 'ribbon.commands.blockLibrary',
+                icon: 'block-library',
+                commandKey: 'block-library',
+                action: 'toggle-block-library-panel',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
       // ADR-583 — Annotation symbol library (North arrow first). Single-click
       // placement tool (commandKey = ToolType 'north-arrow').
       id: 'annotationSymbols',

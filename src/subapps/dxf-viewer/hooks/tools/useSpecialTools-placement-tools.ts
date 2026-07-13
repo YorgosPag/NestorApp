@@ -16,6 +16,7 @@
 import { useEffect } from 'react';
 import { useMepFixtureTool } from '../drawing/useMepFixtureTool';
 import { useFurnitureTool } from '../drawing/useFurnitureTool';
+import { useBlockLibraryTool } from '../drawing/useBlockLibraryTool';
 import { useFloorplanSymbolTool } from '../drawing/useFloorplanSymbolTool';
 import { useElectricalPanelTool } from '../drawing/useElectricalPanelTool';
 import { useMepManifoldTool } from '../drawing/useMepManifoldTool';
@@ -30,6 +31,7 @@ import { useToolLifecycle } from './useToolLifecycle';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import { addMepFixtureToScene } from '../../bim/mep-fixtures/add-mep-fixture-to-scene';
 import { addFurnitureToScene } from '../../bim/furniture/add-furniture-to-scene';
+import { addBlockToScene } from '../../bim/block-library/add-block-to-scene';
 import { addFloorplanSymbolToScene } from '../../bim/floorplan-symbols/add-floorplan-symbol-to-scene';
 import { addElectricalPanelToScene } from '../../bim/electrical-panels/add-electrical-panel-to-scene';
 import { addMepManifoldToScene } from '../../bim/mep-manifolds/add-mep-manifold-to-scene';
@@ -60,6 +62,8 @@ export interface UseSpecialToolsPlacementProps {
 export interface PlacementToolsReturn {
   mepFixtureTool: ReturnType<typeof useMepFixtureTool>; // ADR-406
   furnitureTool: ReturnType<typeof useFurnitureTool>; // ADR-410
+  blockLibraryTool: ReturnType<typeof useBlockLibraryTool>; // Block Library M1
+
   floorplanSymbolTool: ReturnType<typeof useFloorplanSymbolTool>; // ADR-415
   electricalPanelTool: ReturnType<typeof useElectricalPanelTool>; // ADR-408 Φ3
   mepManifoldTool: ReturnType<typeof useMepManifoldTool>; // ADR-408 Φ12
@@ -165,6 +169,15 @@ export function useSpecialToolsPlacementTools(
     },
   });
   useToolLifecycle(activeTool === 'furniture', furnitureTool.activate, furnitureTool.deactivate);
+
+  // Block Library M1 — single-click ΕΠΑΝΑτοποθέτηση ενός imported/session block. Το «ποιο block»
+  // το ορίζει το palette («Τα Blocks μου») στο block-library-selection-store· εδώ μόνο activate/
+  // commit (undoable append+broadcast μέσω addBlockToScene, όπως furniture/mep-fixture).
+  const blockLibraryTool = useBlockLibraryTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onBlockCreated: (block) => addBlockToScene(block, levelManager),
+  });
+  useToolLifecycle(activeTool === 'block-library', blockLibraryTool.activate, blockLibraryTool.deactivate);
 
   // ADR-415 — FLOORPLAN SYMBOL TOOL: single-click placement; entity appended+broadcast.
   const floorplanSymbolTool = useFloorplanSymbolTool({
@@ -324,6 +337,7 @@ export function useSpecialToolsPlacementTools(
   return {
     mepFixtureTool,
     furnitureTool,
+    blockLibraryTool,
     floorplanSymbolTool,
     electricalPanelTool,
     mepManifoldTool,

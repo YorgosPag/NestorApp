@@ -252,6 +252,7 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // useCanvasClickHandler καταναλώνει το κλικ (βάφει όψη σοβά) → μένει armed (πολλές όψεις).
   'finish-paint': { id: 'finish-paint', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   'furniture': { id: 'furniture', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-410 — single-click mesh-based CC0 furniture (chair first)
+  'block-library': { id: 'block-library', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-652 — single-click re-placement of a session/imported DXF block ('block' entity already renders via ADR-640)
   'floorplan-symbol': { id: 'floorplan-symbol', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-415 — single-click pure-vector 2D floorplan symbol (WC/sanitary first)
   'mep-duct': { id: 'mep-duct', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-408 Φ8 — 2-click linear duct run, continuous chain
   'mep-pipe': { id: 'mep-pipe', category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false }, // ADR-408 Φ8 — 2-click linear pipe run, continuous chain

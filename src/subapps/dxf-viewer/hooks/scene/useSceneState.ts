@@ -13,6 +13,8 @@ import { useLevels, useCurrentLevelScene } from '../../systems/levels';
 import { markFreshImportFit } from '../../systems/zoom/viewport-fit-intent';
 // ADR-635 Φ C.8 — imported per-entity (BIM/stair/hatch) first-save emitter (SSoT, shared .tek+DXF)
 import { emitImportedEntityCreateEvents } from '../../systems/levels/emit-imported-entity-create-events';
+// Block Library M1 — μετά το import, «κράτα» τα named blocks στο in-session registry («Τα Blocks μου»).
+import { captureSessionBlocksFromScene } from '../../bim/block-library/capture-session-blocks';
 import type { DxfSaveContext } from '../../services/dxf-firestore.service';
 // ✅ ΦΑΣΗ 7: useDxfImport μεταφέρθηκε στο hooks/ folder
 import { useDxfImport } from '../useDxfImport';
@@ -191,6 +193,8 @@ export function useSceneState() {
         // LoadedSceneBim) αφαιρεί τα per-entity entities από το scene (ο τοίχος/η γραμμοσκίαση
         // «εμφανίζεται & εξαφανίζεται»). SSoT emitter — ίδιος για .tek ΚΑΙ DXF import (N.18).
         emitImportedEntityCreateEvents(result.scene.entities);
+        // Block Library M1 — «κράτα» τα named blocks της σκηνής στο in-session registry.
+        captureSessionBlocksFromScene(result.scene.entities);
         // 🛡️ ADR-526 Φ5a — persist the level↔FileRecord link now (shared helper, N.18).
         linkSceneFileToLevel();
         // Giorgio 2026-07-11 — signal the SINGLE `useViewportAutoFit` controller (ADR-399)
@@ -209,6 +213,8 @@ export function useSceneState() {
         // AutoCAD γραμμοσκιάσεις ζωγραφίζονται μία φορά αλλά το `reconcileLoadedSceneBim` τις πετά
         // στο πρώτο reload (καμία `floorplan_hatches` doc) → «hatches χάνονται μετά την εισαγωγή».
         emitImportedEntityCreateEvents(scene.entities);
+        // Block Library M1 — «κράτα» τα named blocks του DXF στο in-session registry («Τα Blocks μου»).
+        captureSessionBlocksFromScene(scene.entities);
         // 🛡️ ROOT-CAUSE FIX (incident 2026-06-08 — "hard refresh → χάνεται το σχέδιο"):
         // Link the level to the canonical wizard FileRecord id DETERMINISTICALLY, NOW —
         // instead of relying on the 2s debounced auto-save round-trip. The auto-save

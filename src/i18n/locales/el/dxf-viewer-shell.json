@@ -1239,7 +1239,16 @@
     },
     "floorplanSymbol": {
       "statusPosition": "Κάνε κλικ για τοποθέτηση είδους υγιεινής (WC)"
+    },
+    "blockLibrary": {
+      "statusPosition": "Κάνε κλικ για τοποθέτηση block",
+      "errorNoSelection": "Επίλεξε ένα block από το «Τα Blocks μου»"
     }
+  },
+  "blockLibrary": {
+    "title": "Τα Blocks μου",
+    "hint": "Επίλεξε ένα block και κάνε κλικ στον καμβά για τοποθέτηση.",
+    "empty": "Δεν υπάρχουν blocks σε αυτή τη συνεδρία. Εισήγαγε ένα DXF με blocks."
   },
   "snapModes": {
     "labels": {
@@ -1691,6 +1700,7 @@
       "display": "Εμφάνιση",
       "dxfFiles": "Αρχεία DXF",
       "annotationSymbols": "Σύμβολα",
+      "blockLibrary": "Blocks",
       "background": "Υπόβαθρο",
       "exportPanel": "Εξαγωγή",
       "cursor": "Δρομέας",
@@ -4473,6 +4483,7 @@
         }
       },
       "openGuidePanel": "Πίνακας Οδηγών",
+      "blockLibrary": "Blocks",
       "toggleGuides": "Εμφάνιση/Απόκρυψη Οδηγών",
       "guideAnalysis": "Ανάλυση Οδηγών",
       "displayGrid": "Πλέγμα",

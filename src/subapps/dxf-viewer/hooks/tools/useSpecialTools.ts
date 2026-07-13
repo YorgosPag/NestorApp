@@ -375,6 +375,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
   const {
     mepFixtureTool,
     furnitureTool,
+    blockLibraryTool,
     floorplanSymbolTool,
     electricalPanelTool,
     mepManifoldTool,
@@ -462,6 +463,7 @@ export function useSpecialTools(props: UseSpecialToolsProps): UseSpecialToolsRet
     foundationTool,
     mepFixtureTool,
     furnitureTool,
+    blockLibraryTool,
     floorplanSymbolTool,
     electricalPanelTool,
     mepManifoldTool,

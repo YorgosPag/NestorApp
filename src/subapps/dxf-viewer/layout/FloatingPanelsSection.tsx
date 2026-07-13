@@ -21,6 +21,9 @@ import type { FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import CursorSettingsPanel from '../ui/CursorSettingsPanel';
 // ADR-189 §4.13: Guide Panel
 import { GuidePanel } from '../ui/panels/guide-panel';
+// Block Library M1 — «Τα Blocks μου» palette + επιλογή SSoT (palette → placement tool).
+import { BlockLibraryPanel } from '../ui/panels/block-library';
+import { setSelectedBlockName } from '../bim/block-library/block-library-selection-store';
 // ADR-189: Guide Analysis Panel (10 services → 4 tabs)
 import { GuideAnalysisPanel } from '../ui/panels/guide-analysis-panel';
 import CoordinateCalibrationOverlay from '../ui/CoordinateCalibrationOverlay';
@@ -55,6 +58,7 @@ interface FloatingPanelsSectionProps {
   showCalibration: boolean;
   showGuidePanel: boolean;
   showGuideAnalysisPanel: boolean;
+  showBlockLibraryPanel: boolean;
   handleAction: (action: string) => void;
 
   // Overlay Toolbar
@@ -103,6 +107,7 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
   showCalibration,
   showGuidePanel,
   showGuideAnalysisPanel,
+  showBlockLibraryPanel,
   handleAction,
   activeTool,
   overlayMode,
@@ -201,6 +206,19 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
         <GuidePanel
           isVisible={showGuidePanel}
           onClose={() => handleAction('toggle-guide-panel')}
+        />
+      )}
+
+      {/* Block Library M1: «Τα Blocks μου» palette. Επιλογή κάρτας → set selection +
+          activate placement tool· η επόμενη κλικ στον καμβά τοποθετεί το block. */}
+      {showBlockLibraryPanel && (
+        <BlockLibraryPanel
+          isVisible={showBlockLibraryPanel}
+          onClose={() => handleAction('toggle-block-library-panel')}
+          onSelectBlock={(name) => {
+            setSelectedBlockName(name);
+            handleToolChange('block-library');
+          }}
         />
       )}
 
