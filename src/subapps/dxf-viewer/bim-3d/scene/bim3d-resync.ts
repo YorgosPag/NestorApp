@@ -25,6 +25,22 @@ import {
 import { getMultiFloorStack } from './multi-floor-3d-source';
 import { useActiveStoreyStore } from '../../systems/levels/active-storey-store';
 import type { ThreeJsSceneManager } from './ThreeJsSceneManager';
+import { EMPTY_FLOOR_VIS_SCOPE, type FloorVisibilityScope } from './scene-manager-actions';
+import type { FloorVisMode } from '../utils/floor-visibility-state';
+
+/** Map the live entities-store snapshot + floor modes → the shared {@link FloorVisibilityScope}. */
+function buildFloorVisibilityScope(
+  s: ReturnType<typeof useBim3DEntitiesStore.getState>,
+  floorModes: ReadonlyMap<string, FloorVisMode>,
+): FloorVisibilityScope {
+  return {
+    floors: s.floors,
+    buildings: s.buildings,
+    activeBuildingId: s.activeBuildingId,
+    buildingVisModes: s.buildingVisibilityModes,
+    floorVisModes: floorModes,
+  };
+}
 
 export interface ResyncBimSceneOpts {
   /** ADR-371 read-only Properties pipeline — entities come from a prop, not the store. */
@@ -50,11 +66,7 @@ export function resyncBimScene(
   if (vm.floor3DScope === 'all' && !opts.externalEntitiesMode) {
     manager.syncBimEntitiesMultiFloor(
       getMultiFloorStack(),
-      s.floors,
-      s.buildings,
-      s.activeBuildingId,
-      s.buildingVisibilityModes,
-      floorModes,
+      buildFloorVisibilityScope(s, floorModes),
     );
     // Defense-in-depth: ghost/hide styling for already-built per-floor meshes.
     manager.applyFloorVisibility(floorModes);
@@ -64,7 +76,8 @@ export function resyncBimScene(
   if (opts.externalEntitiesMode) {
     manager.syncBimEntities(
       opts.bimEntities ?? EMPTY_BIM_ENTITIES,
-      0, undefined, [], [], null, new Map(), floorModes,
+      0, undefined,
+      { ...EMPTY_FLOOR_VIS_SCOPE, floorVisModes: floorModes },
     );
     return;
   }
@@ -80,11 +93,7 @@ export function resyncBimScene(
       furnitures: s.furnitures, roofs: s.roofs, floorFinishes: s.floorFinishes, underfloors: s.underfloors, mepSegments: s.mepSegments, mepFittings: s.mepFittings },
     storey?.floorElevationMm ?? 0,
     s.activeLevelId ?? undefined,
-    s.floors,
-    s.buildings,
-    s.activeBuildingId,
-    s.buildingVisibilityModes,
-    floorModes,
+    buildFloorVisibilityScope(s, floorModes),
     storey?.nextFloorElevationMm ?? undefined,
   );
 }

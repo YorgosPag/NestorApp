@@ -37,30 +37,77 @@ export interface SyncBimEntitiesDeps {
   readonly sectionController: SectionSceneController;
 }
 
-export interface SyncBimEntitiesArgs {
-  readonly entities: Bim3DEntities;
-  readonly floorElevationMm: number;
-  /** ADR-448 Phase 1b — datum-relative FFL of the storey ceiling (next floor up). */
-  readonly nextFloorElevationMm: number | undefined;
-  readonly activeLevelId: string | undefined;
+/**
+ * ADR-399 Phase B / ADR-382 Phase C — the floor/building visibility bundle that
+ * travels together through every BIM scene-sync path. Extracted as ONE named
+ * options object (big-player option-bag convention: Three.js `set(options)`,
+ * Revit API option bags, Figma plugin params) so both public `ThreeJsSceneManager`
+ * wrappers, both Args below, and all three `bim3d-resync` call sites compose it
+ * instead of unrolling the same 5 params with the same defaults (CHECK 3.28
+ * clone, ADR-584). Flat by design — the sync internals read `args.floors`/
+ * `args.buildingVisModes`/… directly, so this intersects into the Args unchanged.
+ */
+export type FloorVisibilityScope = {
   readonly floors: readonly FloorRef[];
   readonly buildings: readonly BuildingRef[];
   readonly activeBuildingId: string | null;
   readonly buildingVisModes: ReadonlyMap<string, BuildingVisMode>;
   /** ADR-382 Phase C — per-level visibility modes for pre-mesh hide filter. */
   readonly floorVisModes: ReadonlyMap<string, FloorVisMode>;
-}
+};
 
-export function syncBimEntitiesIntoScene(
+/** The empty-scope default (no floors/buildings, all-default visibility) shared by every wrapper's default param. */
+export const EMPTY_FLOOR_VIS_SCOPE: FloorVisibilityScope = {
+  floors: [],
+  buildings: [],
+  activeBuildingId: null,
+  buildingVisModes: new Map(),
+  floorVisModes: new Map(),
+};
+
+export type SyncBimEntitiesArgs = {
+  readonly entities: Bim3DEntities;
+  readonly floorElevationMm: number;
+  /** ADR-448 Phase 1b — datum-relative FFL of the storey ceiling (next floor up). */
+  readonly nextFloorElevationMm: number | undefined;
+  readonly activeLevelId: string | undefined;
+} & FloorVisibilityScope;
+
+/**
+ * The highlighter/focus/BVH/selection/section bookkeeping that wraps EVERY BIM mesh
+ * rebuild — identical for the single-floor and the multi-floor variant, which differ
+ * ONLY in the `BimSceneLayer` call they make. `buildGeometry` is that one difference.
+ *
+ * Order matters: the selection snapshot is taken BEFORE the highlighters are cleared
+ * (the rebuild drops the meshes they point at) and re-applied AFTER the new meshes
+ * exist. Extracted as the single owner of this sequence (CHECK 3.28 clone, ADR-584).
+ */
+function rebuildBimMeshes(
   deps: SyncBimEntitiesDeps,
-  args: SyncBimEntitiesArgs,
+  scope: FloorVisibilityScope,
+  buildGeometry: () => void,
 ): void {
   const selectedIds = useSelection3DStore.getState().selectedBimIds;
   deps.selectionHighlighter.onClear();
   deps.hoverHighlighter.onClear(); // ADR-538 — drop stale hovered mesh ref before rebuild
   // Phase 4.5: stale bimId refs die on rebuild — clear focus before new traversal.
   deps.keyboardFocusManager.clear();
-  deps.bimLayer.sync(
+  buildGeometry();
+  // ADR-040 Φ-3D-pointer — fresh meshes need BVH trees; re-arm the per-pick walk.
+  markBvhDirty(deps.bimLayer.group);
+  if (scope.buildingVisModes.size > 0) applyBuildingVisibility(deps.bimLayer.group, scope.buildingVisModes);
+  // ADR-402 Phase C — re-apply the highlight for the whole multi-selection.
+  if (selectedIds.length > 0) deps.selectionHighlighter.onSelect(new Set(selectedIds));
+  deps.pathTracerRenderer.invalidateScene();
+  deps.sectionController.ensureInit();
+  deps.sectionController.applyState();
+}
+
+export function syncBimEntitiesIntoScene(
+  deps: SyncBimEntitiesDeps,
+  args: SyncBimEntitiesArgs,
+): void {
+  rebuildBimMeshes(deps, args, () => deps.bimLayer.sync(
     args.entities,
     args.floorElevationMm,
     args.activeLevelId,
@@ -70,26 +117,13 @@ export function syncBimEntitiesIntoScene(
     args.buildingVisModes,
     args.floorVisModes,
     args.nextFloorElevationMm,
-  );
-  // ADR-040 Φ-3D-pointer — fresh meshes need BVH trees; re-arm the per-pick walk.
-  markBvhDirty(deps.bimLayer.group);
-  if (args.buildingVisModes.size > 0) applyBuildingVisibility(deps.bimLayer.group, args.buildingVisModes);
-  // ADR-402 Phase C — re-apply the highlight for the whole multi-selection.
-  if (selectedIds.length > 0) deps.selectionHighlighter.onSelect(new Set(selectedIds));
-  deps.pathTracerRenderer.invalidateScene();
-  deps.sectionController.ensureInit();
-  deps.sectionController.applyState();
+  ));
 }
 
-export interface SyncMultiFloorBimEntitiesArgs {
+export type SyncMultiFloorBimEntitiesArgs = {
   /** Per-floor entity bundles + elevations (ADR-399 Phase B "all floors"). */
   readonly stack: readonly FloorStackEntry[];
-  readonly floors: readonly FloorRef[];
-  readonly buildings: readonly BuildingRef[];
-  readonly activeBuildingId: string | null;
-  readonly buildingVisModes: ReadonlyMap<string, BuildingVisMode>;
-  readonly floorVisModes: ReadonlyMap<string, FloorVisMode>;
-}
+} & FloorVisibilityScope;
 
 /**
  * ADR-399 Phase B — multi-floor variant of {@link syncBimEntitiesIntoScene}.
@@ -100,26 +134,14 @@ export function syncMultiFloorBimEntitiesIntoScene(
   deps: SyncBimEntitiesDeps,
   args: SyncMultiFloorBimEntitiesArgs,
 ): void {
-  const selectedIds = useSelection3DStore.getState().selectedBimIds;
-  deps.selectionHighlighter.onClear();
-  deps.hoverHighlighter.onClear(); // ADR-538 — drop stale hovered mesh ref before rebuild
-  deps.keyboardFocusManager.clear();
-  deps.bimLayer.syncMultiFloor(
+  rebuildBimMeshes(deps, args, () => deps.bimLayer.syncMultiFloor(
     args.stack,
     args.floors,
     args.buildings,
     args.activeBuildingId,
     args.buildingVisModes,
     args.floorVisModes,
-  );
-  // ADR-040 Φ-3D-pointer — fresh meshes need BVH trees; re-arm the per-pick walk.
-  markBvhDirty(deps.bimLayer.group);
-  if (args.buildingVisModes.size > 0) applyBuildingVisibility(deps.bimLayer.group, args.buildingVisModes);
-  // ADR-402 Phase C — re-apply the highlight for the whole multi-selection.
-  if (selectedIds.length > 0) deps.selectionHighlighter.onSelect(new Set(selectedIds));
-  deps.pathTracerRenderer.invalidateScene();
-  deps.sectionController.ensureInit();
-  deps.sectionController.applyState();
+  ));
 }
 
 export interface SyncDxfOverlayDeps {
@@ -129,13 +151,16 @@ export interface SyncDxfOverlayDeps {
   readonly viewport: ViewportCamera;
 }
 
-export function syncDxfOverlayIntoScene(
+/**
+ * Post-convert bookkeeping shared by both DXF-overlay syncs (single-floor + stacked):
+ * invalidate the path-tracer, frame the first loaded plan, re-arm the section planes.
+ * The two callers differ ONLY in which converter call they make first (CHECK 3.28, ADR-584).
+ */
+function finalizeDxfOverlaySync(
   deps: SyncDxfOverlayDeps,
-  dxfScene: DxfScene | null,
   fitDone: boolean,
   onFitApplied: () => void,
 ): void {
-  deps.dxfConverter.sync(dxfScene);
   deps.pathTracerRenderer.invalidateScene();
   applyDxfOverlayFraming({
     viewport: deps.viewport,
@@ -145,6 +170,16 @@ export function syncDxfOverlayIntoScene(
   });
   deps.sectionController.ensureInit();
   deps.sectionController.applyState();
+}
+
+export function syncDxfOverlayIntoScene(
+  deps: SyncDxfOverlayDeps,
+  dxfScene: DxfScene | null,
+  fitDone: boolean,
+  onFitApplied: () => void,
+): void {
+  deps.dxfConverter.sync(dxfScene);
+  finalizeDxfOverlaySync(deps, fitDone, onFitApplied);
 }
 
 /**
@@ -159,15 +194,7 @@ export function syncDxfOverlayMultiFloorIntoScene(
   onFitApplied: () => void,
 ): void {
   deps.dxfConverter.syncMultiFloor(entries);
-  deps.pathTracerRenderer.invalidateScene();
-  applyDxfOverlayFraming({
-    viewport: deps.viewport,
-    bounds: deps.dxfConverter.getBounds(),
-    fitDone,
-    onFitApplied,
-  });
-  deps.sectionController.ensureInit();
-  deps.sectionController.applyState();
+  finalizeDxfOverlaySync(deps, fitDone, onFitApplied);
 }
 
 export interface OrbitPivotDeps {

@@ -23,7 +23,6 @@ import { useSelection3DStore } from '../stores/Selection3DStore';
 import type { FloorVisMode } from '../utils/floor-visibility-state';
 import type { BuildingVisMode } from '../utils/building-visibility-state';
 import type { Bim3DEntities } from '../stores/Bim3DEntitiesStore';
-import type { BuildingRef, FloorRef } from '../../bim/utils/bim-floor-utils';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewportCamera } from '../viewport/viewport-types';
 import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
@@ -52,7 +51,9 @@ import {
   setBimOrbitPivot,
   applyBimSelection,
   loadHdriIntoStore,
+  EMPTY_FLOOR_VIS_SCOPE,
   type SyncDxfOverlayDeps,
+  type FloorVisibilityScope,
 } from './scene-manager-actions';
 import { syncBimEntities as runSyncBimEntities, syncBimEntitiesMultiFloor as runSyncBimEntitiesMultiFloor, syncDxfOverlay as runSyncDxfOverlay, syncDxfOverlayMultiFloor as runSyncDxfOverlayMultiFloor, applyFloorVisibility as applyFloorVisibilitySync, applyBuildingVisibility as applyBuildingVisibilitySync, buildBimSyncDeps, buildSceneSyncSideEffects, buildSyncDxfOverlayDeps, type SceneSyncSideEffects, type DxfOverlayFitState } from './scene-manager-sync';
 import type { FloorStackEntry } from './multi-floor-3d-source';
@@ -291,17 +292,13 @@ export class ThreeJsSceneManager {
     entities: Bim3DEntities,
     floorElevationMm = 0,
     activeLevelId?: string,
-    floors: readonly FloorRef[] = [],
-    buildings: readonly BuildingRef[] = [],
-    activeBuildingId: string | null = null,
-    buildingVisModes: ReadonlyMap<string, BuildingVisMode> = new Map(),
-    floorVisModes: ReadonlyMap<string, FloorVisMode> = new Map(),
+    scope: FloorVisibilityScope = EMPTY_FLOOR_VIS_SCOPE,
     nextFloorElevationMm: number | undefined = undefined,
   ): void {
     if (this.disposed) return;
     runSyncBimEntities(
       this.bimSyncDeps(),
-      { entities, floorElevationMm, nextFloorElevationMm, activeLevelId, floors, buildings, activeBuildingId, buildingVisModes, floorVisModes },
+      { entities, floorElevationMm, nextFloorElevationMm, activeLevelId, ...scope },
       this.syncSideEffects(),
     );
     this.ensureInitialCameraFit();
@@ -320,16 +317,12 @@ export class ThreeJsSceneManager {
   /** ADR-399 Phase B — build the whole building stacked by elevation ("Όλοι οι όροφοι"). */
   syncBimEntitiesMultiFloor(
     stack: readonly FloorStackEntry[],
-    floors: readonly FloorRef[] = [],
-    buildings: readonly BuildingRef[] = [],
-    activeBuildingId: string | null = null,
-    buildingVisModes: ReadonlyMap<string, BuildingVisMode> = new Map(),
-    floorVisModes: ReadonlyMap<string, FloorVisMode> = new Map(),
+    scope: FloorVisibilityScope = EMPTY_FLOOR_VIS_SCOPE,
   ): void {
     if (this.disposed) return;
     runSyncBimEntitiesMultiFloor(
       this.bimSyncDeps(),
-      { stack, floors, buildings, activeBuildingId, buildingVisModes, floorVisModes },
+      { stack, ...scope },
       this.syncSideEffects(),
     );
     this.ensureInitialCameraFit();
