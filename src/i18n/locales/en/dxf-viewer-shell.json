@@ -54,6 +54,32 @@
     "areaPrefix": "A",
     "perimeterPrefix": "P"
   },
+  "hatchAreaLabel": {
+    "areaPrefix": "Area",
+    "status": {
+      "awaitingHatch": "Pick a hatch",
+      "awaitingPlacement": "Place the label"
+    },
+    "materials": {
+      "grass": "of grass",
+      "earth": "of earth",
+      "gravel": "of gravel",
+      "mudst": "of mudstone",
+      "arConc": "of concrete",
+      "arSand": "of sand",
+      "brick": "of brick",
+      "arBrstd": "of masonry",
+      "arB816": "of masonry",
+      "arB88": "of masonry",
+      "arHbone": "of masonry",
+      "brstone": "of masonry",
+      "wood": "of wood",
+      "steel": "of steel",
+      "cross": "of metal",
+      "cork": "of cork",
+      "insul": "of insulation"
+    }
+  },
   "centerMeasureLabel": {
     "radiusPrefix": "R",
     "lengthPrefix": "L",
@@ -3944,6 +3970,7 @@
         "continuous": "Continuous Distance"
       },
       "measureArea": "Area",
+      "hatchAreaLabel": "Area Label",
       "measureAreaVariants": {
         "manual": "Measure Area (Polygon)",
         "auto": "Auto Area Detection"
@@ -4658,6 +4685,7 @@
     },
     "tooltips": {
       "bimSchedule": "Open BIM Schedule — export structural elements",
+      "hatchAreaLabel": "Hatch area label — click a hatch, then click to place the text",
       "thermalEnvelope": "Apply a unified external thermal envelope (ETICS) to the floor",
       "print": "Print the drawing to PDF, printer or plotter (from 2D or 3D)",
       "export": "Export DXF & BIM entities to a file (DXF / IFC / PDF) — DXF only, BIM only or both, per floor or all together",

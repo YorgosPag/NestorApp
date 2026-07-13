@@ -7,6 +7,9 @@
  */
 
 import { escapeXml } from '@/lib/xml/escape-xml';
+// ADR-648 Στάδιο Γ — ΟΛΟ το user-content (`<s>`, tags, ονόματα) περνά από τον Tekton-safe encoder,
+// ΟΧΙ το generic escapeXml: ο Τέκτων δεν αποκωδικοποιεί XML entities → `&apos;`/`&amp;` = hang.
+import { escapeTektonText } from './tek-content-escape';
 import {
   WALL_RECORD_TEMPLATE,
   OPEN_RECORD_TEMPLATE,
@@ -68,7 +71,7 @@ const EMPTY_TAG_VISIBILITY = '<tag_visibility>\n</tag_visibility>';
  */
 function injectTag(recordXml: string, tag?: string): string {
   if (!tag) return recordXml;
-  return recordXml.replace(EMPTY_TAGLIST, `<taglist>\n<s>${escapeXml(tag)}</s></taglist>`);
+  return recordXml.replace(EMPTY_TAGLIST, `<taglist>\n<s>${escapeTektonText(tag)}</s></taglist>`);
 }
 
 /**
@@ -79,7 +82,7 @@ function injectTag(recordXml: string, tag?: string): string {
 export function buildTagVisibilityXml(tags: readonly string[]): string {
   if (tags.length === 0) return '';
   const rows = tags
-    .map((t) => `<tag>\n<name>${escapeXml(t)}</name><visible>1</visible></tag>`)
+    .map((t) => `<tag>\n<name>${escapeTektonText(t)}</name><visible>1</visible></tag>`)
     .join('\n');
   return `<tag_visibility>\n${rows}\n</tag_visibility>`;
 }
@@ -99,7 +102,7 @@ export function xmatrixXml(m: TekXMatrix): string {
 export function buildWallRecordXml(w: TekWall): string {
   return WALL_RECORD_TEMPLATE
     .replace('{{ID}}', String(w.id))
-    .replace('{{NAME}}', escapeXml(w.name))
+    .replace('{{NAME}}', escapeTektonText(w.name))
     .replace('{{HEIGHT}}', tekNum(w.heightM))
     .replace('{{ELEVATION}}', tekNum(w.elevationM))
     .replace('{{COLOR}}', colorHex6(w.colorHex))
@@ -110,7 +113,7 @@ export function buildWallRecordXml(w: TekWall): string {
 /** Γεμίζει το parameterized opening record template με τις τιμές ενός κουφώματος. */
 export function buildOpenRecordXml(o: TekOpening): string {
   return OPEN_RECORD_TEMPLATE
-    .replace('{{NAME}}', escapeXml(o.name))
+    .replace('{{NAME}}', escapeTektonText(o.name))
     .replace('{{ELEVATION}}', tekNum(o.sillM))
     .replace('{{TOP}}', tekNum(o.headM))
     .replace('{{SIDE}}', String(o.side))
@@ -246,7 +249,7 @@ export function buildSymbolObjectXMatrix(
 export function buildTextRecordXml(t: TekText): string {
   const xml = TEXT_RECORD_TEMPLATE
     .replace('{{N}}', String(t.id))
-    .replace('{{S}}', escapeXml(t.content))
+    .replace('{{S}}', escapeTektonText(t.content))
     .replace('{{COLOR}}', colorHex6(t.colorHex))
     .replace('{{HALLIGN}}', String(t.hAlign))
     .replace('{{VALLIGN}}', String(t.vAlign))

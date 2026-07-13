@@ -54,6 +54,32 @@
     "areaPrefix": "Ε",
     "perimeterPrefix": "Περ"
   },
+  "hatchAreaLabel": {
+    "areaPrefix": "Εμβαδόν",
+    "status": {
+      "awaitingHatch": "Επίλεξε γραμμοσκίαση",
+      "awaitingPlacement": "Τοποθέτησε την ετικέτα"
+    },
+    "materials": {
+      "grass": "γρασιδιού",
+      "earth": "χώματος",
+      "gravel": "χαλικιού",
+      "mudst": "λάσπης",
+      "arConc": "σκυροδέματος",
+      "arSand": "άμμου",
+      "brick": "τούβλου",
+      "arBrstd": "τοιχοποιίας",
+      "arB816": "τοιχοποιίας",
+      "arB88": "τοιχοποιίας",
+      "arHbone": "τοιχοποιίας",
+      "brstone": "τοιχοποιίας",
+      "wood": "ξύλου",
+      "steel": "χάλυβα",
+      "cross": "μετάλλου",
+      "cork": "φελλού",
+      "insul": "θερμομόνωσης"
+    }
+  },
   "centerMeasureLabel": {
     "radiusPrefix": "R",
     "lengthPrefix": "L",
@@ -3944,6 +3970,7 @@
         "continuous": "Συνεχόμενη Μέτρηση"
       },
       "measureArea": "Εμβαδό",
+      "hatchAreaLabel": "Ετικέτα Εμβαδού",
       "measureAreaVariants": {
         "manual": "Μέτρηση Εμβαδού Πολυγώνου",
         "auto": "Αυτόματη Εμβαδομέτρηση"
@@ -4658,6 +4685,7 @@
     },
     "tooltips": {
       "bimSchedule": "Άνοιγμα Πίνακα BIM — εξαγωγή δομικών στοιχείων",
+      "hatchAreaLabel": "Ετικέτα εμβαδού γραμμοσκίασης — κλικ στη γραμμοσκίαση, μετά κλικ για τοποθέτηση του κειμένου",
       "thermalEnvelope": "Εφαρμογή ενιαίας εξωτερικής θερμοπρόσοψης (ETICS) στον όροφο",
       "print": "Εκτύπωση σχεδίου σε PDF, εκτυπωτή ή plotter (από 2Δ ή 3Δ)",
       "export": "Εξαγωγή οντοτήτων DXF & BIM σε αρχείο (DXF / IFC / PDF) — μόνο DXF, μόνο BIM ή και τα δύο, ανά όροφο ή όλοι μαζί",

@@ -171,9 +171,11 @@ describe('ADR-608 — grouping tags (<taglist> + registry ονόματα)', () =
     expect(r.tags).toEqual(['ann_a', 'ann_b']);
   });
 
-  it('tag XML-escaped (& < >) στο <s>', () => {
+  it('tag Tekton-safe (& < > → + ( ) — ΟΧΙ XML entities) στο <s> (ADR-648)', () => {
     const r = collectTekLines([withGroup(line({ x: 0, y: 0 }, { x: 1, y: 0 }), 'a&<b>')], F);
-    expect(r.linesXml).toContain('<s>a&amp;&lt;b&gt;</s>');
+    // Ο Τέκτων δεν αποκωδικοποιεί entities → substitution, ΟΧΙ &amp;/&lt;/&gt;.
+    expect(r.linesXml).toContain('<s>a+(b)</s>');
+    expect(r.linesXml).not.toContain('&amp;');
   });
 });
 

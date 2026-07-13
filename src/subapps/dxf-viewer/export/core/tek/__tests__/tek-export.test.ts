@@ -159,10 +159,11 @@ describe('buildTagVisibilityXml (ADR-608 tag registry)', () => {
     expect(buildTagVisibilityXml(['ann_1']))
       .toBe('<tag_visibility>\n<tag>\n<name>ann_1</name><visible>1</visible></tag>\n</tag_visibility>');
   });
-  it('πολλά tags → μία <tag> σειρά ανά όνομα, XML-escaped', () => {
+  it('πολλά tags → μία <tag> σειρά ανά όνομα, Tekton-safe (& → +, ΟΧΙ &amp;) — ADR-648', () => {
     const xml = buildTagVisibilityXml(['a', 'b&c']);
     expect((xml.match(/<tag>/g) ?? []).length).toBe(2);
-    expect(xml).toContain('<name>b&amp;c</name>');
+    expect(xml).toContain('<name>b+c</name>');
+    expect(xml).not.toContain('&amp;');
   });
 });
 
@@ -204,7 +205,8 @@ describe('buildOpenRecordXml / buildOpenXml', () => {
   it('γεμίζει όλα τα placeholders (κανένα {{…}} leftover) + escape name', () => {
     const xml = buildOpenRecordXml({ ...op, name: '<a&b>' });
     expect(xml).not.toMatch(/\{\{/);
-    expect(xml).toContain('<name>&lt;a&amp;b&gt;</name>');
+    // ADR-648 — Tekton-safe: `<a&b>` → `(a+b)` (ΟΧΙ &lt;a&amp;b&gt; που κολλάει τον Τέκτονα).
+    expect(xml).toContain('<name>(a+b)</name>');
     expect(xml).toContain('<elevation>0</elevation>');
     expect(xml).toContain('<top>2.2</top>');
     expect(xml).toContain('<style>1</style>');
@@ -679,12 +681,13 @@ describe('ADR-608 Φ-texts — type-3 <text> (ελεύθερη ετικέτα)',
     expect(xml).toContain('<ptsize>14</ptsize>');
     expect(xml).toContain('<x20>6</x20><x21>-8</x21>');
   });
-  it('buildTextRecordXml: XML-escape του περιεχομένου + grouping tag στο <taglist>', () => {
+  it('buildTextRecordXml: Tekton-safe περιεχόμενο (& → +, ΟΧΙ &amp;) + grouping tag (ADR-648)', () => {
     const xml = buildTextRecordXml({
       id: 1, content: 'Ε = 7 & 8', hAlign: 0, vAlign: 2, ptSize: 10,
       xmatrix: { x00: 1, x01: 0, x10: 0, x11: 1, x20: 0, x21: 0 }, colorHex: 'FFFFFF', tag: 'ann_9',
     });
-    expect(xml).toContain('<s>Ε = 7 &amp; 8</s>');
+    expect(xml).toContain('<s>Ε = 7 + 8</s>');
+    expect(xml).not.toContain('&amp;');
     expect(xml).toContain('<taglist>\n<s>ann_9</s></taglist>');
   });
 
