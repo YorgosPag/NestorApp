@@ -1297,7 +1297,16 @@
       "saving": "Saving…",
       "cancel": "Cancel"
     },
+    "edit": {
+      "action": "Edit",
+      "title": "Edit block",
+      "description": "Update the block's metadata.",
+      "sharedLicenseLocked": "The licence is locked for shared blocks and cannot be changed here.",
+      "confirm": "Save",
+      "saving": "Saving…"
+    },
     "errors": {
+      "nameTaken": "A block with this name already exists.",
       "geometryFetchFailed": "Could not load the block geometry.",
       "saveFailed": "Saving to the library failed.",
       "promoteFailed": "Publishing failed.",
@@ -4738,7 +4747,9 @@
       },
       "blockLibraryEditor": {
         "rotation": "Rotation",
-        "scale": "Scale"
+        "scaleX": "Scale X",
+        "scaleY": "Scale Y",
+        "uniform": "Uniform"
       },
       "titleBlockEditor": {
         "preset": "Template",

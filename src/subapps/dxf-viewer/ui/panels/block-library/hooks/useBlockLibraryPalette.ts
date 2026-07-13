@@ -27,6 +27,7 @@ import {
   listSessionBlockDefs,
   subscribeSessionBlockDefs,
   getSessionBlockDef,
+  removeSessionBlockDef,
 } from '../../../../bim/block-library/block-library-registry';
 import {
   listCloudBlockItems,
@@ -57,6 +58,13 @@ export interface BlockPromoteFormValues {
   readonly license: BlockLicense;
 }
 
+/** Ό,τι διορθώνει ο χρήστης στη φόρμα «Επεξεργασία» (M4) — metadata μόνο, ΟΧΙ scope/γεωμετρία. */
+export interface BlockEditFormValues {
+  readonly name: string;
+  readonly category: BlockCategory;
+  readonly license: BlockLicense;
+}
+
 export interface UseBlockLibraryPaletteResult {
   readonly entries: readonly BlockPaletteEntry[];
   /** Κλειδί κάρτας που «δουλεύει» (κατέβασμα/αποθήκευση/δημοσίευση/διαγραφή). */
@@ -70,6 +78,11 @@ export interface UseBlockLibraryPaletteResult {
   readonly promoteEntry: (
     entry: BlockPaletteEntry,
     values: BlockPromoteFormValues,
+  ) => Promise<boolean>;
+  /** M4 — διόρθωση metadata (όνομα/κατηγορία/άδεια)· γεωμετρία και scope μένουν ως έχουν. */
+  readonly updateEntry: (
+    entry: BlockPaletteEntry,
+    values: BlockEditFormValues,
   ) => Promise<boolean>;
   /** M3 — διαγραφή (doc + geometry blob). */
   readonly deleteEntry: (entry: BlockPaletteEntry) => Promise<boolean>;
@@ -202,6 +215,36 @@ export function useBlockLibraryPalette(projectId?: string): UseBlockLibraryPalet
     [runEntryAction],
   );
 
+  const updateEntry = useCallback(
+    async (entry: BlockPaletteEntry, values: BlockEditFormValues): Promise<boolean> => {
+      const item = entry.item;
+      if (!item) {
+        setError('updateFailed');
+        return false;
+      }
+
+      const ok = await runEntryAction(entry, 'updateFailed', (svc) =>
+        svc.updateBlock({
+          blockId: item.id,
+          name: values.name,
+          category: values.category,
+          license: values.license,
+        }),
+      );
+
+      // ΜΕΤΟΝΟΜΑΣΙΑ: το registry κλειδώνει στο ΟΝΟΜΑ (`hydrateCloudBlockDef` → upsert ανά όνομα).
+      // Αν είχε ήδη γίνει hydration, ο ορισμός με το ΠΑΛΙΟ όνομα μένει φάντασμα — και επειδή ο
+      // dedup του palette βασίζεται κι αυτός στο όνομα, θα ξαναεμφανιζόταν ως «μη αποθηκευμένο»
+      // session block (με κουμπί 💾). Τον αφαιρούμε· η νέα ταυτότητα θα κάνει hydration στο
+      // επόμενο κλικ (idempotent, ίδιο blob).
+      if (ok && values.name.trim() !== item.name) {
+        removeSessionBlockDef(item.name);
+      }
+      return ok;
+    },
+    [runEntryAction],
+  );
+
   const deleteEntry = useCallback(
     async (entry: BlockPaletteEntry): Promise<boolean> => {
       const item = entry.item;
@@ -222,6 +265,7 @@ export function useBlockLibraryPalette(projectId?: string): UseBlockLibraryPalet
     selectEntry,
     saveEntry,
     promoteEntry,
+    updateEntry,
     deleteEntry,
     canSaveToLibrary: service !== null,
     userId,

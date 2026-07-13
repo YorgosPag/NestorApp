@@ -15,37 +15,12 @@
  */
 
 import React from 'react';
-import { Cloud, Loader2, Save, Share2, Trash2 } from 'lucide-react';
+import { Cloud, Loader2, Pencil, Save, Share2, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n';
 import type { BlockPaletteEntry } from '../../../bim/block-library/block-palette-entries';
 import type { BlockBoundsMm } from '../../../bim/block-library/block-library-types';
-
-/** Aspect-correct ορθογώνιο από τα bounds — το «αποτύπωμα» του block. */
-const FootprintThumb: React.FC<{ bounds: BlockBoundsMm | null }> = ({ bounds }) => {
-  if (!bounds) return <span className="text-xs text-muted-foreground">—</span>;
-  const w = Math.max(bounds.maxX - bounds.minX, 1e-6);
-  const h = Math.max(bounds.maxY - bounds.minY, 1e-6);
-  return (
-    <svg
-      viewBox={`0 0 ${w} ${h}`}
-      className="h-full w-full text-muted-foreground"
-      preserveAspectRatio="xMidYMid meet"
-      aria-hidden="true"
-    >
-      <rect
-        x={0}
-        y={0}
-        width={w}
-        height={h}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.5}
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
-  );
-};
+import { BlockThumbnailPreview } from './BlockThumbnailPreview';
 
 function formatDimensions(bounds: BlockBoundsMm | null): string {
   if (!bounds) return '';
@@ -62,10 +37,12 @@ export interface BlockLibraryCardProps {
   readonly isBusy: boolean;
   readonly canSaveToLibrary: boolean;
   readonly canPromote: boolean;
+  readonly canEdit: boolean;
   readonly canDelete: boolean;
   readonly onSelect: (entry: BlockPaletteEntry) => void;
   readonly onSave: (entry: BlockPaletteEntry) => void;
   readonly onPromote: (entry: BlockPaletteEntry) => void;
+  readonly onEdit: (entry: BlockPaletteEntry) => void;
   readonly onDelete: (entry: BlockPaletteEntry) => void;
 }
 
@@ -103,10 +80,12 @@ export const BlockLibraryCard: React.FC<BlockLibraryCardProps> = ({
   isBusy,
   canSaveToLibrary,
   canPromote,
+  canEdit,
   canDelete,
   onSelect,
   onSave,
   onPromote,
+  onEdit,
   onDelete,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
@@ -131,7 +110,7 @@ export const BlockLibraryCard: React.FC<BlockLibraryCardProps> = ({
               {isBusy ? (
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               ) : (
-                <FootprintThumb bounds={entry.boundsMm} />
+                <BlockThumbnailPreview thumbnail={entry.thumbnail} bounds={entry.boundsMm} />
               )}
             </span>
             <span className="truncate text-xs font-medium">{displayName}</span>
@@ -181,6 +160,16 @@ export const BlockLibraryCard: React.FC<BlockLibraryCardProps> = ({
             onClick={() => onPromote(entry)}
           >
             <Share2 className="h-3 w-3" aria-hidden="true" />
+          </CardAction>
+        )}
+
+        {canEdit && (
+          <CardAction
+            label={t('blockLibrary.edit.action')}
+            disabled={isBusy}
+            onClick={() => onEdit(entry)}
+          >
+            <Pencil className="h-3 w-3" aria-hidden="true" />
           </CardAction>
         )}
 

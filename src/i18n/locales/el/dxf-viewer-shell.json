@@ -1297,7 +1297,16 @@
       "saving": "Αποθήκευση…",
       "cancel": "Άκυρο"
     },
+    "edit": {
+      "action": "Επεξεργασία",
+      "title": "Επεξεργασία block",
+      "description": "Ενημέρωσε τα μεταδεδομένα του block.",
+      "sharedLicenseLocked": "Η άδεια είναι κλειδωμένη για κοινόχρηστα block και δεν αλλάζει εδώ.",
+      "confirm": "Αποθήκευση",
+      "saving": "Αποθήκευση…"
+    },
     "errors": {
+      "nameTaken": "Υπάρχει ήδη block με αυτό το όνομα.",
       "geometryFetchFailed": "Δεν ήταν δυνατή η φόρτωση της γεωμετρίας του block.",
       "saveFailed": "Η αποθήκευση στη βιβλιοθήκη απέτυχε.",
       "promoteFailed": "Η δημοσίευση απέτυχε.",
@@ -4738,7 +4747,9 @@
       },
       "blockLibraryEditor": {
         "rotation": "Περιστροφή",
-        "scale": "Κλίμακα"
+        "scaleX": "Κλίμακα X",
+        "scaleY": "Κλίμακα Y",
+        "uniform": "Ομοιόμορφη"
       },
       "titleBlockEditor": {
         "preset": "Πρότυπο",

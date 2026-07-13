@@ -29,7 +29,9 @@ import { useTranslation } from '@/i18n';
 import { useSelectedBlockName } from '../../../bim/block-library/block-library-selection-store';
 import {
   canDeleteBlockEntry,
+  canEditBlockEntry,
   canPromoteBlockEntry,
+  isBlockNameTaken,
   type BlockPaletteEntry,
 } from '../../../bim/block-library/block-palette-entries';
 import { BLOCK_CATEGORIES } from '../../../bim/block-library/block-library-types';
@@ -42,8 +44,10 @@ import {
 import { BlockLibraryCard } from './BlockLibraryCard';
 import { BlockSaveToLibraryDialog } from './BlockSaveToLibraryDialog';
 import { BlockPromoteDialog } from './BlockPromoteDialog';
+import { BlockEditDialog } from './BlockEditDialog';
 import {
   useBlockLibraryPalette,
+  type BlockEditFormValues,
   type BlockPromoteFormValues,
   type BlockSaveFormValues,
 } from './hooks/useBlockLibraryPalette';
@@ -73,6 +77,7 @@ export const BlockLibraryPanel: React.FC<BlockLibraryPanelProps> = ({
     selectEntry,
     saveEntry,
     promoteEntry,
+    updateEntry,
     deleteEntry,
     canSaveToLibrary,
     userId,
@@ -83,7 +88,17 @@ export const BlockLibraryPanel: React.FC<BlockLibraryPanelProps> = ({
   const [filter, setFilter] = useState<LibraryFilterState>(EMPTY_LIBRARY_FILTER);
   const [saveTarget, setSaveTarget] = useState<BlockPaletteEntry | null>(null);
   const [promoteTarget, setPromoteTarget] = useState<BlockPaletteEntry | null>(null);
+  const [editTarget, setEditTarget] = useState<BlockPaletteEntry | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<BlockPaletteEntry | null>(null);
+
+  /**
+   * Ο έλεγχος μοναδικότητας ονόματος τρέχει πάνω στη ΓΕΜΑΤΗ λίστα (`entries`), ΟΧΙ στη
+   * φιλτραρισμένη: ένα φίλτρο δεν εξαφανίζει τη σύγκρουση ταυτότητας — απλώς την κρύβει.
+   */
+  const makeNameTakenCheck = useCallback(
+    (exceptKey: string) => (name: string) => isBlockNameTaken(entries, name, exceptKey),
+    [entries],
+  );
 
   /** Seeded blocks έχουν i18n ετικέτα (ADR-415 catalog keys)· ξένα blocks το raw όνομά τους. */
   const displayNameOf = useCallback(
@@ -144,6 +159,14 @@ export const BlockLibraryPanel: React.FC<BlockLibraryPanelProps> = ({
     [promoteTarget, promoteEntry],
   );
 
+  const handleEdit = useCallback(
+    async (values: BlockEditFormValues) => {
+      if (!editTarget) return;
+      if (await updateEntry(editTarget, values)) setEditTarget(null);
+    },
+    [editTarget, updateEntry],
+  );
+
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
     if (await deleteEntry(deleteTarget)) setDeleteTarget(null);
@@ -199,10 +222,12 @@ export const BlockLibraryPanel: React.FC<BlockLibraryPanelProps> = ({
                   isBusy={busyKey === entry.key}
                   canSaveToLibrary={canSaveToLibrary}
                   canPromote={canPromoteBlockEntry(entry, userId)}
+                  canEdit={canEditBlockEntry(entry, userId)}
                   canDelete={canDeleteBlockEntry(entry, userId)}
                   onSelect={handleSelect}
                   onSave={setSaveTarget}
                   onPromote={setPromoteTarget}
+                  onEdit={setEditTarget}
                   onDelete={setDeleteTarget}
                 />
               </li>
@@ -215,8 +240,18 @@ export const BlockLibraryPanel: React.FC<BlockLibraryPanelProps> = ({
         open={saveTarget !== null}
         blockName={saveTarget?.name ?? ''}
         saving={saveTarget !== null && busyKey === saveTarget.key}
+        isNameTaken={makeNameTakenCheck(saveTarget?.key ?? '')}
         onSave={handleSave}
         onCancel={() => setSaveTarget(null)}
+      />
+
+      <BlockEditDialog
+        open={editTarget !== null}
+        item={editTarget?.item ?? null}
+        saving={editTarget !== null && busyKey === editTarget.key}
+        isNameTaken={makeNameTakenCheck(editTarget?.key ?? '')}
+        onSubmit={handleEdit}
+        onCancel={() => setEditTarget(null)}
       />
 
       <BlockPromoteDialog

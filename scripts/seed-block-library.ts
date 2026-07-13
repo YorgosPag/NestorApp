@@ -37,6 +37,7 @@ import {
 import { buildSystemBlockMembers } from '../src/subapps/dxf-viewer/bim/block-library/system-block-geometry';
 import { computeBlockLocalBoundsMm } from '../src/subapps/dxf-viewer/bim/block-library/block-local-bounds';
 import { serializeBlockGeometry } from '../src/subapps/dxf-viewer/bim/block-library/block-geometry-blob';
+import { buildBlockThumbnail } from '../src/subapps/dxf-viewer/bim/block-library/block-thumbnail';
 import { buildBlockLibraryGeometryPath } from '../src/services/upload/utils/storage-path';
 
 // ============================================================================
@@ -121,7 +122,11 @@ async function seed(): Promise<void> {
       serializeBlockGeometry({ name: entry.name, boundsMm, localMembers }),
     );
 
-    // 2) metadata doc
+    // 2) metadata doc — ΜΕ το preview μέσα (ADR-652 M4). ΓΙ' ΑΥΤΟ το thumbnail είναι
+    // διανυσματικό και όχι PNG: εδώ είμαστε σε Node (Admin SDK) — δεν υπάρχει DOM canvas.
+    // Ο builder είναι καθαρά μαθηματικά ⇒ ΙΔΙΟΣ κώδικας με τον browser (μία υλοποίηση).
+    const { thumbnail } = buildBlockThumbnail(localMembers);
+
     const ref = db.collection(COLLECTION).doc(entry.id);
     const snap = await ref.get();
 
@@ -136,6 +141,7 @@ async function seed(): Promise<void> {
       category: entry.category,
       boundsMm,
       geometryUrl,
+      ...(thumbnail ? { thumbnail } : {}),
       provenance: { ...SYSTEM_BLOCK_PROVENANCE, importedAt: SEED_IMPORTED_AT },
       license: SYSTEM_BLOCK_LICENSE,
       createdBy: SEED_USER_ID,
