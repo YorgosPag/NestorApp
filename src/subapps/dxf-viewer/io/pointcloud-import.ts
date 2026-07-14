@@ -41,12 +41,36 @@ const IMPORT_MSG = {
   ERROR_TIMEOUT: 'topography.pointcloud.error.timeout',
 } as const;
 
-const POINTCLOUD_EXTENSIONS: readonly string[] = ['.las', '.laz', '.xyz', '.pts'];
+/** Binary clouds — their columns live in a header; nothing to map. */
+const BINARY_POINTCLOUD_EXTENSIONS: readonly string[] = ['.las', '.laz'];
+/** Text clouds — a table of untyped columns, hence the M8β/Δ mapping step. */
+const ASCII_POINTCLOUD_EXTENSIONS: readonly string[] = ['.xyz', '.pts'];
+
+const POINTCLOUD_EXTENSIONS: readonly string[] = [
+  ...BINARY_POINTCLOUD_EXTENSIONS,
+  ...ASCII_POINTCLOUD_EXTENSIONS,
+];
+
+function hasExtension(fileName: string, extensions: readonly string[]): boolean {
+  const lower = fileName.toLowerCase();
+  return extensions.some((ext) => lower.endsWith(ext));
+}
 
 /** Whether `fileName` looks like a point cloud — the wizard's dispatch gate to this whole road. */
 export function isPointCloudFile(fileName: string): boolean {
-  const lower = fileName.toLowerCase();
-  return POINTCLOUD_EXTENSIONS.some((ext) => lower.endsWith(ext));
+  return hasExtension(fileName, POINTCLOUD_EXTENSIONS);
+}
+
+/**
+ * Whether the cloud is TEXT, i.e. whether the wizard must show the column-mapping grid (M8β/Δ).
+ *
+ * By extension, deliberately: this only decides what the wizard RENDERS, and it must decide it
+ * before a single byte is read. The authoritative, magic-first `detectPointCloudFormat` still runs
+ * inside the reader — a `.xyz` that is secretly LAS fails honestly there, and importing it here
+ * would drag both binary readers into the main bundle for nothing.
+ */
+export function isAsciiPointCloudFile(fileName: string): boolean {
+  return hasExtension(fileName, ASCII_POINTCLOUD_EXTENSIONS);
 }
 
 /**

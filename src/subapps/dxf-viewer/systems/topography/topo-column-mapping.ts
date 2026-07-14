@@ -34,6 +34,26 @@ export function isMappingComplete(mapping: ColumnMapping): boolean {
   return REQUIRED.every((role) => mapping.filter((m) => m === role).length === 1);
 }
 
+/** The three column INDICES a bulk reader needs, resolved once instead of per line. */
+export interface XyzColumns {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
+/**
+ * `ColumnMapping` → the X/Y/Z column indices, or `null` when the mapping is absent/incomplete.
+ *
+ * ADR-650 M8β/Δ: the bulk cloud reader (`ascii-xyz-reader`) walks millions of lines and cannot
+ * afford `mapping.indexOf(role)` per line, so it resolves the three indices ONCE through here —
+ * the same mapping the wizard's table road interprets with `mapRowToPoint`. One mapping vocabulary,
+ * two access patterns; never two vocabularies.
+ */
+export function resolveXyzColumns(mapping: ColumnMapping | undefined): XyzColumns | null {
+  if (!mapping || !isMappingComplete(mapping)) return null;
+  return { x: mapping.indexOf('x'), y: mapping.indexOf('y'), z: mapping.indexOf('z') };
+}
+
 /**
  * Best-effort role guess from header labels (the wizard pre-fills the dropdowns with it).
  * A label that matches nothing — or a role already taken — stays `ignore`, so the surveyor

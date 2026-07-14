@@ -31,7 +31,7 @@
  */
 
 import type { LocalOrigin, TopoBounds } from '../topo-types';
-import type { TopoUnit } from '../topo-import-types';
+import type { ColumnMapping, TopoUnit } from '../topo-import-types';
 
 // ─── The bulk buffer ──────────────────────────────────────────────────────────
 
@@ -122,6 +122,25 @@ export interface PointCloudReadOptions {
    * (never allocates the full buffer). Guards the tab against a 500M-point survey drop.
    */
   readonly maxPointsInMemory: number;
+  /**
+   * ADR-650 M8β/Δ — the engineer-certified column order of an ASCII cloud (`PENZD`, `PNEZD`, …),
+   * the SAME `ColumnMapping` vocabulary the CSV/TXT road uses (`topo-import-types`). Only the
+   * ASCII reader consults it; LAS/LAZ carry their columns in a binary header and ignore it.
+   *
+   * ABSENT (the default) → the reader keeps its historical «first three numeric fields» behaviour,
+   * which is right for the bare `x y z` dump a scanner emits. PRESENT → X/Y/Z are read from the
+   * declared columns, so a leading point-number column is a `pointId` and not an X.
+   *
+   * A plain `readonly string[]` — it crosses to the Worker by structured clone untouched.
+   */
+  readonly mapping?: ColumnMapping;
+  /**
+   * ADR-650 M8β/Δ — the ASCII cloud's field separator, as detected by the wizard (`detectDelimiter`,
+   * the M2 SSoT). It travels WITH the mapping because it is what makes the mapping's column indices
+   * mean anything: a Greek export (`1;345678,123;…`) split leniently tears its decimal commas into
+   * extra fields and every index shifts. Absent → the historical lenient split.
+   */
+  readonly delimiter?: string;
 }
 
 // ─── Ground classification (bare-earth) ───────────────────────────────────────

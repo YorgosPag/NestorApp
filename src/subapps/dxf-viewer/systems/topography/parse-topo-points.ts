@@ -18,21 +18,12 @@
  */
 
 import { mapRowToPoint } from './topo-column-mapping';
+import { isTopoCommentLine, splitTopoFields } from './topo-text-lines';
 import type { ColumnMapping } from './topo-import-types';
 import type { TopoPoint } from './topo-types';
 
 /** The fixed field order of the zero-config format: `X Y Z [code]`. */
 const XYZ_CODE_MAPPING: ColumnMapping = ['x', 'y', 'z', 'code'];
-
-/** Split a data line into fields on comma / semicolon / whitespace. */
-function splitFields(line: string): string[] {
-  return line.trim().split(/[\s,;]+/).filter((f) => f.length > 0);
-}
-
-function isComment(line: string): boolean {
-  const t = line.trim();
-  return t.length === 0 || t.startsWith('#') || t.startsWith('//');
-}
 
 export interface ParseTopoResult {
   readonly points: TopoPoint[];
@@ -50,8 +41,8 @@ export function parseTopoPoints(text: string, unitScaleToMm = 1000): ParseTopoRe
   const lines = text.split(/\r?\n/);
 
   for (let i = 0; i < lines.length; i++) {
-    if (isComment(lines[i])) continue;
-    const point = mapRowToPoint(splitFields(lines[i]), XYZ_CODE_MAPPING, unitScaleToMm);
+    if (isTopoCommentLine(lines[i])) continue;
+    const point = mapRowToPoint(splitTopoFields(lines[i]), XYZ_CODE_MAPPING, unitScaleToMm);
     if (point) points.push(point);
     else skipped.push(i + 1);
   }

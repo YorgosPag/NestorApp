@@ -47,6 +47,18 @@ export const READ_DEFAULTS: Omit<PointCloudReadOptions, 'unit'> = {
 };
 
 /**
+ * ADR-650 M8β/Δ — how much of an ASCII cloud the wizard reads to PROPOSE a column mapping.
+ *
+ * 64 KB is the head slice pulled off the `File` (never the whole 250 MB — the sniff happens before
+ * the engineer has even pressed «filter»), and 50 data rows is what the sniffer reasons over. Fifty
+ * rows is enough for the two signals that matter — «is this column a strictly increasing integer»
+ * (a point id) and «is this column orders of magnitude smaller» (an elevation) — while staying
+ * small enough that the grid preview and the sniff read the exact same rows.
+ */
+export const ASCII_SNIFF_BYTES = 64 * 1024;
+export const ASCII_SNIFF_ROWS = 50;
+
+/**
  * ADR-650 M8β — the LAZ ceiling, and why it is LOWER than the LAS one.
  *
  * A `.las` decodes IN PLACE: the reader walks the file's own bytes and writes straight into the

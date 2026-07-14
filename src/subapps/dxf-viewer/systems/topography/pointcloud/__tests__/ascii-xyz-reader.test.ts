@@ -8,7 +8,8 @@
 
 import { readAsciiXyzPointCloud } from '../ascii-xyz-reader';
 import { POINTCLOUD_MSG } from '../pointcloud-read';
-import type { PointCloudReadOptions } from '../pointcloud-types';
+import type { PointCloudReadOptions, PointCloudReadResult } from '../pointcloud-types';
+import type { ColumnMapping } from '../../topo-import-types';
 
 const OPTS: PointCloudReadOptions = { unit: 'm', maxPointsInMemory: 1_000_000 };
 
@@ -102,6 +103,75 @@ describe('readAsciiXyzPointCloud — parsing', () => {
     expect(data.classification).toBeNull();
     expect(stats.hasSourceClassification).toBe(false);
     expect(stats.classHistogram).toBeNull();
+  });
+});
+
+// ─── ADR-650 M8β/Δ — the declared column mapping ────────────────────────────────
+
+/** id, Easting(X), Northing(Y), Z, code — the id-first export that used to be read as X=id. */
+const PENZD = [
+  `1 ${P1.x} ${P1.y} ${P1.z} EDGE`,
+  `2 ${P2.x} ${P2.y} ${P2.z} EDGE`,
+  `3 ${P3.x} ${P3.y} ${P3.z} KERB`,
+].join('\n');
+
+const PENZD_MAPPING: ColumnMapping = ['pointId', 'x', 'y', 'z', 'code'];
+
+/** WORLD mm of stored point `i` (x/y are LOCAL in the buffer, z is already WORLD). */
+function worldOf(result: PointCloudReadResult, i: number) {
+  const { data } = result;
+  return { x: data.x[i] + data.origin.x, y: data.y[i] + data.origin.y, z: data.z[i] };
+}
+
+describe('readAsciiXyzPointCloud — declared column mapping (M8β/Δ)', () => {
+  it('reads a PENZD cloud as a survey — the leading point number is an id, not an X', () => {
+    const result = readAsciiXyzPointCloud(PENZD, { ...OPTS, mapping: PENZD_MAPPING });
+
+    expect(result.data.count).toBe(3);
+    const first = worldOf(result, 0);
+    expect(first.x).toBeCloseTo(P1.x * MM, 1);
+    expect(first.y).toBeCloseTo(P1.y * MM, 1);
+    expect(first.z).toBeCloseTo(P1.z * MM, 1);
+  });
+
+  it('keeps the mapped cloud inside a site-sized extent (no kilometre-tall monster)', () => {
+    const { stats } = readAsciiXyzPointCloud(PENZD, { ...OPTS, mapping: PENZD_MAPPING });
+
+    expect(stats.boundsWorldMm.maxZ - stats.boundsWorldMm.minZ).toBeLessThan(10_000); // 5.25 m of relief
+  });
+
+  it('honours N=Northing=Y in a PNEZD cloud (never mirrored about the 45° line)', () => {
+    const text = `1 ${P1.y} ${P1.x} ${P1.z} EDGE\n2 ${P2.y} ${P2.x} ${P2.z} EDGE`;
+
+    const result = readAsciiXyzPointCloud(text, { ...OPTS, mapping: ['pointId', 'y', 'x', 'z', 'code'] });
+
+    expect(worldOf(result, 0).x).toBeCloseTo(P1.x * MM, 1);
+    expect(worldOf(result, 0).y).toBeCloseTo(P1.y * MM, 1);
+  });
+
+  it('reads a Greek-locale export when the delimiter is declared (comma = DECIMAL, not separator)', () => {
+    const text = '1;384512,345;4201234,567;12,5;EDGE\n2;384520,0;4201240,0;15,25;EDGE';
+
+    const result = readAsciiXyzPointCloud(text, { ...OPTS, mapping: PENZD_MAPPING, delimiter: ';' });
+
+    expect(result.data.count).toBe(2);
+    expect(worldOf(result, 0).x).toBeCloseTo(P1.x * MM, 1);
+    expect(worldOf(result, 0).z).toBeCloseTo(P1.z * MM, 1);
+  });
+
+  it('falls back to the historical read when the mapping is incomplete', () => {
+    const text = `${P1.x} ${P1.y} ${P1.z}`;
+
+    const result = readAsciiXyzPointCloud(text, { ...OPTS, mapping: ['x', 'y', 'ignore'] });
+
+    expect(worldOf(result, 0).z).toBeCloseTo(P1.z * MM, 1); // Z still came from the third field
+  });
+
+  it('DOCUMENTS the trap: an UN-mapped PENZD file reads the point number as X', () => {
+    const result = readAsciiXyzPointCloud(PENZD, OPTS);
+
+    expect(worldOf(result, 0).x).toBeCloseTo(1 * MM, 1); // «1» — the point id. This is the bug M8β/Δ removes.
+    expect(worldOf(result, 0).y).toBeCloseTo(P1.x * MM, 1);
   });
 });
 
