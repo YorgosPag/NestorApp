@@ -6,6 +6,12 @@ import { z } from 'zod';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
 import type { ProjectStatus } from '@/types/project';
 import { projectAddressesSchema } from '@/types/project/address-schemas';
+// ADR-369 / ADR-650 M10 — 3-tier Revit reference (survey / base point / north).
+import {
+  ProjectSurveyPointSchema,
+  ProjectBasePointSchema,
+  ProjectNorthRotationSchema,
+} from '@/types/project-elevation.schemas';
 
 export const ProjectUpdateSchema = z.object({
   name: z.string().max(500).optional(),
@@ -24,6 +30,10 @@ export const ProjectUpdateSchema = z.object({
   totalArea: z.number().min(0).max(999_999_999).optional(),
   startDate: z.string().max(30).nullable().optional(),
   completionDate: z.string().max(30).nullable().optional(),
+  // ADR-369 / ADR-650 M10 — geo-referencing (Revit Shared Coordinates).
+  surveyPoint: ProjectSurveyPointSchema.optional(),
+  basePoint: ProjectBasePointSchema.optional(),
+  northRotation: ProjectNorthRotationSchema.optional(),
   _v: z.number().int().optional(),
 }).passthrough();
 

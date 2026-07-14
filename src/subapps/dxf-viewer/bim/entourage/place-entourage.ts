@@ -95,6 +95,11 @@ export function createEntouragePlacer(config: EntouragePlacerConfig): EntourageP
       },
       width: size.width,
       height: size.height,
+      // ADR-654 — «store native size»: το catalog μέγεθος τη στιγμή της τοποθέτησης είναι το
+      // SSoT για το κουμπί «Επαναφορά Διαστάσεων» (Δρόμος A). Ίσο με width/height στην αρχή,
+      // αλλά ΔΕΝ αλλάζει ποτέ από resize/scale → επαναφέρει πάντα το εργοστασιακό μέγεθος.
+      intrinsicWidth: size.width,
+      intrinsicHeight: size.height,
       url: params.url,
       rotation: params.rotation ?? 0,
       visible: true,

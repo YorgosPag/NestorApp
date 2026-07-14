@@ -39,6 +39,7 @@ import { ColumnPersistenceHost } from './ColumnPersistenceHost';
 import { FoundationPersistenceHost } from './FoundationPersistenceHost';
 import { GridGuidePersistenceHost } from './GridGuidePersistenceHost';
 import { TopoPersistenceHost } from './TopoPersistenceHost';
+import { GeoReferenceHost } from './GeoReferenceHost';
 import { HostingReconcilerHost } from './HostingReconcilerHost';
 import { MepFixturePersistenceHost } from './MepFixturePersistenceHost';
 import { FurniturePersistenceHost } from './FurniturePersistenceHost';
@@ -234,6 +235,8 @@ export function DxfViewerTopBar({
         floorplanId={levelManager.fileRecordId ?? undefined}
         floorId={floorId}
       />
+      {/* ADR-650 M10 — geo-referencing: υδατώνει το project transform (ΕΓΣΑ↔local) από το Project doc. */}
+      <GeoReferenceHost projectId={projectId} />
       <HostingReconcilerHost levelManager={levelManager} />
       <BeamPersistenceHost
         primarySelectedId={primarySelectedId}

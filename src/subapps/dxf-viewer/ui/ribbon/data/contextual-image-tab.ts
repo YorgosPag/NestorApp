@@ -18,8 +18,8 @@
 import type { RibbonTab } from '../types/ribbon-types';
 // SSoT leading «Επιλογή» panel (Revit «Modify | …» opens with Select).
 import { buildSelectPanel } from './contextual-select-panel';
-// SSoT LARGE button factory (Revit «Modify» flat buttons· generic tool commands).
-import { toolBtn } from './ribbon-large-button-helpers';
+// SSoT LARGE button factory (Revit «Modify» flat buttons· generic tool commands + actions).
+import { toolBtn, actionBtn } from './ribbon-large-button-helpers';
 
 export const IMAGE_CONTEXTUAL_TRIGGER = 'image-selected';
 
@@ -42,6 +42,10 @@ export const CONTEXTUAL_IMAGE_TAB: RibbonTab = {
             toolBtn('imageTools.move', 'ribbon.commands.move', 'move', 'move', 'M'),
             toolBtn('imageTools.rotate', 'ribbon.commands.rotate', 'rotate', 'rotate', 'RO'),
             toolBtn('imageTools.mirror', 'ribbon.commands.mirror', 'mirror', 'mirror', 'MI'),
+            // ADR-654 — «Επαναφορά Διαστάσεων» (PowerPoint «Reset Size»): επαναφέρει το
+            // εργοστασιακό μέγεθος/αναλογία μιας παραμορφωμένης εικόνας (action interceptor,
+            // δες `useImageResetSizeRibbonAction`). ΟΧΙ tool — undoable command σε ένα κλικ.
+            actionBtn('imageTools.resetSize', 'ribbon.commands.imageResetSize', 'image-reset-size', 'image-reset-size', 'image-reset-size'),
             toolBtn('imageTools.copy', 'ribbon.commands.copy', 'copy', 'copy', 'CO'),
             toolBtn('imageTools.delete', 'ribbon.commands.delete', 'delete', 'delete', 'DEL'),
           ],

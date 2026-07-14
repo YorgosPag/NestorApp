@@ -31,6 +31,16 @@ export interface ImageEntity extends BaseEntity {
   url: string;
   /** Γωνία περιστροφής σε μοίρες (CCW γύρω από το `position`). */
   rotation?: number;
+  /**
+   * ADR-654 — αρχικό («intrinsic») πλάτος/ύψος σε ΜΟΝΑΔΕΣ ΣΧΕΔΙΟΥ, όπως το έδωσε ο catalog
+   * τη στιγμή της τοποθέτησης (`place-entourage.ts`). SSoT για το κουμπί «Επαναφορά Διαστάσεων»
+   * (Δρόμος A — «store native size», PowerPoint «Reset Size»): το reset πατά `width`/`height`
+   * πίσω σε αυτά, κρατώντας σταθερό το κέντρο. Προαιρετικά — legacy/μη-entourage εικόνες
+   * (detail-sheet, AI title-block) δεν τα έχουν → το reset πέφτει σε aspect-only fallback από
+   * το decoded pixel μέγεθος. ΠΟΤΕ δεν αλλάζουν από resize/scale (μένουν το «εργοστασιακό» μέγεθος).
+   */
+  intrinsicWidth?: number;
+  intrinsicHeight?: number;
   /** ADR-643 Φ5b marker για πιστή DXF εξαγωγή ως IMAGE/IMAGEDEF (τον γεμίζει ο export pre-pass). */
   dxfImageExport?: DxfImageExportMarker;
 }

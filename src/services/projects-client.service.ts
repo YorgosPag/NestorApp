@@ -18,6 +18,7 @@ import type { Project, ProjectStatus } from '@/types/project';
 import type { LandownerEntry } from '@/types/ownership-table';
 import type { ProjectAddress } from '@/types/project/addresses';
 import type { ProjectBuildingCodePhase2 } from '@/types/project-building-code';
+import type { ProjectSurveyPoint, ProjectBasePoint } from '@/types/project-elevation.schemas';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService, type ProjectUpdatedPayload } from '@/services/realtime';
 // 🏢 ENTERPRISE: Centralized API client (Fortune-500 pattern)
@@ -29,32 +30,30 @@ import { getErrorMessage } from '@/lib/error-utils';
 const logger = createModuleLogger('ProjectsClientService');
 
 /**
- * 🏢 ENTERPRISE: Project create payload type
- * Type-safe data for project creation
+ * 🏢 ENTERPRISE: Shared project payload fields (SSoT).
  *
- * 🏢 ADR-167: Multi-address support
- * - Legacy fields (address, city) maintained for backward compatibility
- * - New addresses[] array for multi-address projects
+ * The GeneralProjectTab form block that BOTH {@link ProjectCreatePayload} and
+ * {@link ProjectUpdatePayload} carry — permits, classification, timeline,
+ * financials, addresses, ownership. Extracted per ADR-583 / CHECK 3.28 (jscpd):
+ * the two payloads legitimately mirror each other, so a single base keeps them
+ * from drifting. A field added to only one path used to be silently dropped on
+ * the other (surfacing as missing "Άδειες" fields + audit-trail gaps).
+ *
+ * 🏢 ADR-167: Multi-address — legacy `address`/`city` kept for back-compat, new
+ * `addresses[]` for multi-address projects.
  */
-export interface ProjectCreatePayload {
-  name: string;
+export interface ProjectPayloadSharedFields {
   title?: string;
   description?: string;
   status?: ProjectStatus;
-  companyId: string;
-  company?: string;
-  /** 🏢 ADR-232: Business entity link (separate from tenant companyId) */
-  linkedCompanyId?: string | null;
   // Legacy fields (auto-synced from primary address)
   address?: string;
   city?: string;
   // 🏢 ENTERPRISE: Multi-address support (ADR-167)
   addresses?: ProjectAddress[];
-  // 🏢 Extended project fields — must mirror ProjectUpdatePayload so the
-  // create path can persist the full GeneralProjectTab form (permits card,
-  // classification, timeline, financials). Previously omitted → user input
-  // silently dropped on first save, surfacing as missing fields in the UI
-  // container "Άδειες" and missing entries in the audit trail.
+  /** 🏢 ADR-232: Business entity link (separate from tenant companyId) */
+  linkedCompanyId?: string | null;
+  // Extended project fields (permits card, classification, timeline, financials)
   buildingBlock?: string;
   protocolNumber?: string;
   licenseNumber?: string;
@@ -81,55 +80,33 @@ export interface ProjectCreatePayload {
 }
 
 /**
- * 🏢 ENTERPRISE: Project update payload type
- * Type-safe updates for project modifications
- *
- * 🏢 ADR-167: Multi-address support
- * - Legacy fields (address, city) maintained for backward compatibility
- * - New addresses[] array for multi-address projects
+ * 🏢 ENTERPRISE: Project create payload type
+ * Type-safe data for project creation. Adds the create-only required identity
+ * fields on top of the shared {@link ProjectPayloadSharedFields} block.
  */
-export interface ProjectUpdatePayload {
+export interface ProjectCreatePayload extends ProjectPayloadSharedFields {
+  name: string;
+  companyId: string;
+  company?: string;
+}
+
+/**
+ * 🏢 ENTERPRISE: Project update payload type
+ * Type-safe updates for project modifications. Extends the shared field block
+ * with an optional `name` plus update-only overrides.
+ */
+export interface ProjectUpdatePayload extends ProjectPayloadSharedFields {
   name?: string;
-  title?: string;
-  description?: string;
-  status?: ProjectStatus;
-  // Legacy fields (auto-synced from primary address)
-  address?: string;
-  city?: string;
-  // 🏢 ENTERPRISE: Multi-address support (ADR-167)
-  addresses?: ProjectAddress[];
-  /** 🏢 ADR-232: Business entity link (separate from tenant companyId) */
-  linkedCompanyId?: string | null;
-  // Extended project fields
-  buildingBlock?: string;
-  protocolNumber?: string;
-  licenseNumber?: string;
-  issuingAuthority?: string;
-  issueDate?: string;
-  client?: string;
-  location?: string;
-  type?: string;
-  priority?: string;
-  riskLevel?: string;
-  complexity?: string;
-  budget?: number;
-  totalValue?: number;
-  totalArea?: number;
-  duration?: number;
-  startDate?: string | null;
-  completionDate?: string | null;
   // 🏢 SPEC-256A: Optimistic versioning
   _v?: number;
-  /** ADR-244: Οικοπεδούχοι — SSoT */
-  landowners?: LandownerEntry[] | null;
-  /** ADR-244: Ποσοστό αντιπαροχής (%) */
-  bartexPercentage?: number | null;
-  /** ADR-244: Denormalized contact IDs for queries */
-  landownerContactIds?: string[] | null;
   /** ADR-186 §8b: Phase 2 ΝΟΚ building-code form data */
   buildingCode?: ProjectBuildingCodePhase2 | null;
   /** ADR-376 Phase C.2 — Per-project Opening Tag Style override (DXF Viewer BIM). */
   openingTagStyle?: import('@/subapps/dxf-viewer/bim/services/opening-tag-style-service').OpeningTagStyle | null;
+  /** ADR-369 / ADR-650 M10 — geo-referencing (Revit Shared Coordinates). */
+  surveyPoint?: ProjectSurveyPoint;
+  basePoint?: ProjectBasePoint;
+  northRotation?: number;
 }
 
 /**
