@@ -28,6 +28,21 @@
 
 import type { RibbonTab } from '../types/ribbon-types';
 import { ARRAY_RIBBON_KEYS } from '../hooks/bridge/array-command-keys';
+import {
+  COUNT_OPTIONS,
+  ANGLE_OPTIONS,
+  SPACING_OPTIONS,
+  FILL_ANGLE_OPTIONS,
+  START_ANGLE_OPTIONS,
+  RADIUS_OPTIONS,
+  METHOD_OPTIONS,
+  ALIGN_OFFSET_OPTIONS,
+  ROTATION_JITTER_OPTIONS,
+  SCALE_JITTER_OPTIONS,
+  OFFSET_JITTER_OPTIONS,
+  SEED_OPTIONS,
+  DISTRIBUTION_OPTIONS,
+} from './contextual-array-tab-options';
 
 export const ARRAY_RECT_CONTEXTUAL_TRIGGER = 'array-rect-selected';
 export const ARRAY_POLAR_CONTEXTUAL_TRIGGER = 'array-polar-selected';
@@ -35,64 +50,6 @@ export const ARRAY_PATH_CONTEXTUAL_TRIGGER = 'array-path-selected';
 
 /** @deprecated Phase A alias — use {@link ARRAY_RECT_CONTEXTUAL_TRIGGER}. */
 export const ARRAY_CONTEXTUAL_TRIGGER = ARRAY_RECT_CONTEXTUAL_TRIGGER;
-
-const COUNT_OPTIONS = [
-  { value: '1', labelKey: '1', isLiteralLabel: true },
-  { value: '2', labelKey: '2', isLiteralLabel: true },
-  { value: '3', labelKey: '3', isLiteralLabel: true },
-  { value: '4', labelKey: '4', isLiteralLabel: true },
-  { value: '5', labelKey: '5', isLiteralLabel: true },
-  { value: '6', labelKey: '6', isLiteralLabel: true },
-  { value: '8', labelKey: '8', isLiteralLabel: true },
-  { value: '10', labelKey: '10', isLiteralLabel: true },
-  { value: '12', labelKey: '12', isLiteralLabel: true },
-  { value: '20', labelKey: '20', isLiteralLabel: true },
-] as const;
-
-const ANGLE_OPTIONS = [
-  { value: '0', labelKey: '0°', isLiteralLabel: true },
-  { value: '15', labelKey: '15°', isLiteralLabel: true },
-  { value: '30', labelKey: '30°', isLiteralLabel: true },
-  { value: '45', labelKey: '45°', isLiteralLabel: true },
-  { value: '60', labelKey: '60°', isLiteralLabel: true },
-  { value: '90', labelKey: '90°', isLiteralLabel: true },
-] as const;
-
-const SPACING_OPTIONS = [
-  { value: '5', labelKey: '5', isLiteralLabel: true },
-  { value: '10', labelKey: '10', isLiteralLabel: true },
-  { value: '25', labelKey: '25', isLiteralLabel: true },
-  { value: '50', labelKey: '50', isLiteralLabel: true },
-  { value: '100', labelKey: '100', isLiteralLabel: true },
-  { value: '250', labelKey: '250', isLiteralLabel: true },
-] as const;
-
-const FILL_ANGLE_OPTIONS = [
-  { value: '360', labelKey: '360°', isLiteralLabel: true },
-  { value: '270', labelKey: '270°', isLiteralLabel: true },
-  { value: '180', labelKey: '180°', isLiteralLabel: true },
-  { value: '90', labelKey: '90°', isLiteralLabel: true },
-  { value: '-90', labelKey: '-90°', isLiteralLabel: true },
-  { value: '-180', labelKey: '-180°', isLiteralLabel: true },
-  { value: '-360', labelKey: '-360°', isLiteralLabel: true },
-] as const;
-
-const START_ANGLE_OPTIONS = [
-  { value: '0', labelKey: '0°', isLiteralLabel: true },
-  { value: '45', labelKey: '45°', isLiteralLabel: true },
-  { value: '90', labelKey: '90°', isLiteralLabel: true },
-  { value: '180', labelKey: '180°', isLiteralLabel: true },
-  { value: '270', labelKey: '270°', isLiteralLabel: true },
-] as const;
-
-const RADIUS_OPTIONS = [
-  { value: '0', labelKey: 'auto', isLiteralLabel: true },
-  { value: '50', labelKey: '50', isLiteralLabel: true },
-  { value: '100', labelKey: '100', isLiteralLabel: true },
-  { value: '250', labelKey: '250', isLiteralLabel: true },
-  { value: '500', labelKey: '500', isLiteralLabel: true },
-  { value: '1000', labelKey: '1000', isLiteralLabel: true },
-] as const;
 
 export const CONTEXTUAL_ARRAY_RECT_TAB: RibbonTab = {
   id: 'array-editor-rect',
@@ -281,11 +238,6 @@ export const CONTEXTUAL_ARRAY_POLAR_TAB: RibbonTab = {
   ],
 };
 
-const METHOD_OPTIONS = [
-  { value: 'divide', labelKey: 'Divide', isLiteralLabel: true },
-  { value: 'measure', labelKey: 'Measure', isLiteralLabel: true },
-] as const;
-
 export const CONTEXTUAL_ARRAY_PATH_TAB: RibbonTab = {
   id: 'array-editor-path',
   labelKey: 'ribbon.tabs.arrayEditor',
@@ -354,6 +306,17 @@ export const CONTEXTUAL_ARRAY_PATH_TAB: RibbonTab = {
               },
             },
             {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'array.pathAlignOffset',
+                labelKey: 'ribbon.commands.arrayEditor.alignOffset',
+                commandKey: ARRAY_RIBBON_KEYS.params.pathAlignOffset,
+                comboboxWidthPx: 90,
+                options: ALIGN_OFFSET_OPTIONS,
+              },
+            },
+            {
               type: 'toggle',
               size: 'small',
               command: {
@@ -372,6 +335,72 @@ export const CONTEXTUAL_ARRAY_PATH_TAB: RibbonTab = {
                 icon: 'select',
                 commandKey: ARRAY_RIBBON_KEYS.actions.pathPickPath,
                 action: ARRAY_RIBBON_KEYS.actions.pathPickPath,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'array-path-scatter',
+      labelKey: 'ribbon.panels.arrayScatter',
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'array.pathRotationJitter',
+                labelKey: 'ribbon.commands.arrayEditor.rotationJitter',
+                commandKey: ARRAY_RIBBON_KEYS.params.pathRotationJitter,
+                comboboxWidthPx: 90,
+                options: ROTATION_JITTER_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'array.pathScaleJitter',
+                labelKey: 'ribbon.commands.arrayEditor.scaleJitter',
+                commandKey: ARRAY_RIBBON_KEYS.params.pathScaleJitter,
+                comboboxWidthPx: 90,
+                options: SCALE_JITTER_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'array.pathOffsetJitter',
+                labelKey: 'ribbon.commands.arrayEditor.offsetJitter',
+                commandKey: ARRAY_RIBBON_KEYS.params.pathOffsetJitter,
+                comboboxWidthPx: 90,
+                options: OFFSET_JITTER_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'array.pathDistribution',
+                labelKey: 'ribbon.commands.arrayEditor.distribution',
+                commandKey: ARRAY_RIBBON_KEYS.stringParams.pathDistribution,
+                comboboxWidthPx: 110,
+                options: DISTRIBUTION_OPTIONS,
+              },
+            },
+            {
+              type: 'combobox',
+              size: 'small',
+              command: {
+                id: 'array.pathSeed',
+                labelKey: 'ribbon.commands.arrayEditor.seed',
+                commandKey: ARRAY_RIBBON_KEYS.params.pathSeed,
+                comboboxWidthPx: 80,
+                options: SEED_OPTIONS,
               },
             },
           ],
