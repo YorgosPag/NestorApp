@@ -42,9 +42,11 @@ export const CONTEXTUAL_IMAGE_TAB: RibbonTab = {
             toolBtn('imageTools.move', 'ribbon.commands.move', 'move', 'move', 'M'),
             toolBtn('imageTools.rotate', 'ribbon.commands.rotate', 'rotate', 'rotate', 'RO'),
             toolBtn('imageTools.mirror', 'ribbon.commands.mirror', 'mirror', 'mirror', 'MI'),
-            // ADR-654 — «Επαναφορά Διαστάσεων» (PowerPoint «Reset Size»): επαναφέρει το
-            // εργοστασιακό μέγεθος/αναλογία μιας παραμορφωμένης εικόνας (action interceptor,
-            // δες `useImageResetSizeRibbonAction`). ΟΧΙ tool — undoable command σε ένα κλικ.
+            // ADR-654 — δύο ενέργειες διαστάσεων (action interceptor `useImageDimensionRibbonAction`,
+            // ΟΧΙ tools — undoable commands σε ένα κλικ):
+            //   «Κλείδωμα Αναλογιών» (ArchiCAD «fit to proportions») = un-deform κρατώντας την κλίμακα.
+            //   «Επαναφορά Διαστάσεων» (PowerPoint «Reset Size») = απόλυτο αρχικό μέγεθος τοποθέτησης.
+            actionBtn('imageTools.lockAspect', 'ribbon.commands.imageLockAspect', 'image-lock-aspect', 'image-lock-aspect', 'image-lock-aspect'),
             actionBtn('imageTools.resetSize', 'ribbon.commands.imageResetSize', 'image-reset-size', 'image-reset-size', 'image-reset-size'),
             toolBtn('imageTools.copy', 'ribbon.commands.copy', 'copy', 'copy', 'CO'),
             toolBtn('imageTools.delete', 'ribbon.commands.delete', 'delete', 'delete', 'DEL'),

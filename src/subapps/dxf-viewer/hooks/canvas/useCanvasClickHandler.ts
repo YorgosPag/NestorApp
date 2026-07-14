@@ -33,6 +33,7 @@ import {
 import type { EntityPickContext } from './entity-pick-handlers';
 import { handleRotationEntitySelection, handleAutoAreaClick, handleHatchPickPointClick, handleOverlayDrawClick, handleAnnotationSymbolClick, handleHatchAreaLabelClick, handleTopoBreaklineClick } from './canvas-click-tool-handlers';
 import { handleTopoBoundaryClick } from './canvas-click-topo-boundary'; // ADR-650 M6 (Γ)
+import { handleGeoRefAnchorClick } from './canvas-click-geo-ref'; // ADR-650 M10
 import { isAnnotationSymbolTool } from '../../config/annotation-kind-registry';
 // ADR-581 — Match Properties σταγονόμετρο/σύριγγα (Alt pick / Ctrl+Alt inject / πινέλο).
 import { handleMatchBrushClick } from './match-click-handlers';
@@ -303,6 +304,13 @@ export function useCanvasClickHandler(params: UseCanvasClickHandlerParams): UseC
     // breakline picking).
     if (activeTool === 'topo-boundary') {
       handleTopoBoundaryClick(worldPoint, params);
+      return;
+    }
+    // PRIORITY 1.745: ADR-650 M10 — «Κοινό σημείο γεωαναφοράς». ΕΝΑ κλικ σε γνωστό σημείο
+    // → capture τοπικής συντεταγμένης στο geo-ref pick store (το panel ζητά μετά την ΕΓΣΑ).
+    // Καταναλώνει το κλικ (ίδιο συμβόλαιο με topo-boundary/breakline picking).
+    if (activeTool === 'geo-ref-anchor') {
+      handleGeoRefAnchorClick(worldPoint, params);
       return;
     }
     // PRIORITY 1.75: ADR-507 Φ3 — Hatch pick-point (Τρόπος Β). ΕΝΑ κλικ μέσα σε

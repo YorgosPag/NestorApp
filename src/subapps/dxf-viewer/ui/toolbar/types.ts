@@ -323,7 +323,11 @@ export type ToolType =
   // ADR-650 M6 (Γ): «Όριο οικοπέδου» — 1-κλικ pick ΚΛΕΙΣΤΗΣ polyline → όριο υπολογισμού
   // όγκων cut/fill (Civil 3D volume boundary). Toggle. Γράφει στο TopoPointStore.boundary,
   // ΔΕΝ δημιουργεί CAD entity → εκτός TOOL_CREATES_ENTITY.
-  | 'topo-boundary';      // TOPOBOUND — 1-click → volume boundary (όχι entity)
+  | 'topo-boundary'       // TOPOBOUND — 1-click → volume boundary (όχι entity)
+  // ADR-650 M10: «Κοινό σημείο γεωαναφοράς» — 1-κλικ σε γνωστό σημείο → capture τοπικής
+  // συντεταγμένης (Revit «Specify Coordinates at Point»). Γράφει στο geo-ref pick store,
+  // ΔΕΝ δημιουργεί CAD entity → εκτός TOOL_CREATES_ENTITY.
+  | 'geo-ref-anchor';     // GEOREF — 1-click → capture local point for geo-referencing
 
 
 export interface ToolDefinition {

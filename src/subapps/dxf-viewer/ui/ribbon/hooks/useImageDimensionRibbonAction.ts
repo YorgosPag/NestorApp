@@ -1,23 +1,24 @@
 'use client';
 
 /**
- * ADR-654 — Action interceptor για το «Επαναφορά Διαστάσεων» (`image-reset-size`) κουμπί του
- * contextual tab «Εικόνα». Mirror του `useExplodeRibbonAction`: πιάνει το ένα action, resolve
- * τις επιλεγμένες εικόνες, και τις επαναφέρει στο εργοστασιακό τους μέγεθος/αναλογία με ΕΝΑ
- * undoable βήμα (πολλές = `CompositeCommand`, atomic undo). Κάθε άλλο action πέφτει στο fallback.
+ * ADR-654 — Action interceptor για τις ΔΥΟ ενέργειες διαστάσεων του contextual tab «Εικόνα»:
+ * «Επαναφορά Διαστάσεων» (`image-reset-size`) + «Κλείδωμα Αναλογιών» (`image-lock-aspect`).
+ * Mirror του `useExplodeRibbonAction`: πιάνει τα δύο actions, resolve τις επιλεγμένες εικόνες, και
+ * τις πατά με ΕΝΑ undoable βήμα (πολλές = `CompositeCommand`, atomic undo). Κάθε άλλο action → fallback.
  *
- * Big-player (PowerPoint «Reset Size» / ArchiCAD «fit to original proportions»): ο χρήστης μπορεί
- * αθελά του να παραμορφώσει ένα entourage sprite με τις μεσοπλευρικές λαβές· αυτό το «ξεκουμπώνει».
- * Η math ζει ΟΛΗ στο pure `resetImageDimensions` (κέντρο σταθερό, rotation ανέγγιχτη) — εδώ μόνο
- * το wiring: selection → (decode fallback αν χρειαστεί) → `UpdateEntityCommand`.
+ * Big-player (Giorgio 2026-07-15): ΔΥΟ ξεχωριστά κουμπιά — «Επαναφορά Διαστάσεων» επαναφέρει το
+ * ΑΠΟΛΥΤΟ αρχικό μέγεθος (PowerPoint «Reset Size»)· «Κλείδωμα Αναλογιών» κάνει un-deform κρατώντας
+ * την κλίμακα (ArchiCAD «fit to proportions»). ΕΝΑΣ interceptor για τα δύο — ίδιο pipeline, αλλάζει
+ * μόνο η pure patch fn (N.18: μηδέν δίδυμος hook).
  *
- * Δρόμος A (νέες εικόνες): έχουν `intrinsicWidth/Height` → σύγχρονο, μηδέν decode. Δρόμος C fallback
- * (legacy/μη-entourage): async decode του `url` (SSoT `decodeImageWithTimeout`, ήδη σε browser cache)
- * → pixel-aspect → un-deform. Ο handler είναι async· το ribbon action callback το τρέχει fire-and-forget.
+ * Η math ζει ΟΛΗ στο pure `reset-image-dimensions.ts` (κέντρο σταθερό, rotation ανέγγιχτη) — εδώ
+ * μόνο το wiring: selection → (decode fallback αν χρειαστεί) → `UpdateEntityCommand`. Εικόνες με
+ * `intrinsicWidth/Height` = σύγχρονο, μηδέν decode· legacy = async decode του `url` (SSoT
+ * `decodeImageWithTimeout`, ήδη σε browser cache). Ο handler είναι async· fire-and-forget από το callback.
  *
- * @see ../../../bim/image/reset-image-dimensions.ts — pure geometry SSoT (A + C fallback)
+ * @see ../../../bim/image/reset-image-dimensions.ts — pure geometry SSoT (και οι δύο ενέργειες)
  * @see ./useExplodeRibbonAction.ts — the interceptor pattern this mirrors
- * @see ../data/contextual-image-tab.ts — το κουμπί (action:'image-reset-size')
+ * @see ../data/contextual-image-tab.ts — τα δύο κουμπιά (actions image-reset-size / image-lock-aspect)
  */
 
 import React from 'react';
@@ -28,9 +29,11 @@ import { CompositeCommand } from '../../../core/commands/CompositeCommand';
 import type { ICommand } from '../../../core/commands/interfaces';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
 import {
-  resetImageDimensions,
+  resetImageToOriginalSize,
+  lockImageAspect,
   hasStoredIntrinsicSize,
   type DecodedPixelSize,
+  type ImageResetPatch,
 } from '../../../bim/image/reset-image-dimensions';
 import { imageIntrinsicSize } from '../../../rendering/entities/shared/image-intrinsic-size';
 import { decodeImageWithTimeout } from '../../../export/core/image-export-shared';
@@ -38,22 +41,31 @@ import { isImageEntity, type ImageEntity } from '../../../types/image';
 import type { LevelSceneWriter } from '../../../systems/levels/level-scene-accessor';
 import type { useUniversalSelection } from '../../../systems/selection';
 
-/** Το action key του κουμπιού (SSoT — ίδιο string στο `contextual-image-tab.ts`). */
+/** Action keys (SSoT — ίδια strings στο `contextual-image-tab.ts`). */
 export const IMAGE_RESET_SIZE_ACTION = 'image-reset-size';
+export const IMAGE_LOCK_ASPECT_ACTION = 'image-lock-aspect';
+
+/** Ανά action: η pure patch fn + το label του undoable command. */
+const HANDLERS: Readonly<
+  Record<string, { readonly patch: (e: ImageEntity, d?: DecodedPixelSize | null) => ImageResetPatch | null; readonly label: string }>
+> = {
+  [IMAGE_RESET_SIZE_ACTION]: { patch: resetImageToOriginalSize, label: 'Reset image size' },
+  [IMAGE_LOCK_ASPECT_ACTION]: { patch: lockImageAspect, label: 'Lock image aspect' },
+};
 
 type UniversalSelectionLike = Pick<
   ReturnType<typeof useUniversalSelection>,
   'getSelectedEntityIds'
 >;
 
-export interface UseImageResetSizeRibbonActionProps {
+export interface UseImageDimensionRibbonActionProps {
   readonly levelManager: LevelSceneWriter;
   readonly universalSelection: UniversalSelectionLike;
-  /** Fall-through for non-reset actions. */
+  /** Fall-through for non-image-dimension actions. */
   readonly fallback: (action: string, data?: RibbonActionPayload) => void;
 }
 
-/** Decode του `url` → pixel μέγεθος (naturalWidth/Height) για τον aspect fallback· `null` σε αποτυχία. */
+/** Decode του `url` → pixel μέγεθος (naturalWidth/Height) για τον aspect υπολογισμό· `null` σε αποτυχία. */
 async function decodeToPixelSize(url: string): Promise<DecodedPixelSize | null> {
   const img = await decodeImageWithTimeout(url);
   if (!img) return null;
@@ -61,15 +73,16 @@ async function decodeToPixelSize(url: string): Promise<DecodedPixelSize | null> 
   return { w, h };
 }
 
-export function useImageResetSizeRibbonAction(
-  props: UseImageResetSizeRibbonActionProps,
+export function useImageDimensionRibbonAction(
+  props: UseImageDimensionRibbonActionProps,
 ): (action: string, data?: RibbonActionPayload) => void {
   const { levelManager, universalSelection, fallback } = props;
   const { execute: executeCommand } = useCommandHistory();
 
   return React.useCallback(
     (action: string, data?: RibbonActionPayload) => {
-      if (action !== IMAGE_RESET_SIZE_ACTION) {
+      const handler = HANDLERS[action];
+      if (!handler) {
         fallback(action, data);
         return;
       }
@@ -78,7 +91,7 @@ export function useImageResetSizeRibbonAction(
       const scene = levelId ? levelManager.getLevelScene(levelId) : null;
       if (!levelId || !scene) return;
 
-      // Οι επιλεγμένες εικόνες (μόνο `type:'image'` — το κουμπί ζει σε per-image contextual tab).
+      // Οι επιλεγμένες εικόνες (μόνο `type:'image'` — τα κουμπιά ζουν σε per-image contextual tab).
       const selectedIds = new Set(universalSelection.getSelectedEntityIds());
       const images = scene.entities.filter(
         (e): e is ImageEntity => selectedIds.has(e.id) && isImageEntity(e),
@@ -86,11 +99,11 @@ export function useImageResetSizeRibbonAction(
       if (images.length === 0) return;
 
       void (async () => {
-        // Δρόμος C fallback: decode ΜΟΝΟ όσες εικόνες δεν κρατούν intrinsic (Δρόμος A → μηδέν δίκτυο).
+        // decode ΜΟΝΟ όσες εικόνες δεν κρατούν intrinsic (intrinsic → μηδέν δίκτυο).
         const patches = await Promise.all(
           images.map(async (image) => {
             const decoded = hasStoredIntrinsicSize(image) ? null : await decodeToPixelSize(image.url);
-            const patch = resetImageDimensions(image, decoded);
+            const patch = handler.patch(image, decoded);
             return patch ? { id: image.id, patch } : null;
           }),
         );
@@ -102,8 +115,8 @@ export function useImageResetSizeRibbonAction(
           levelId,
         );
         for (const entry of patches) {
-          if (!entry) continue; // παραμορφωμένη ⇒ null (no-op ή αποτυχία decode): παράλειψη.
-          commands.push(new UpdateEntityCommand(entry.id, entry.patch, sm, 'Reset image size'));
+          if (!entry) continue; // null = no-op (ήδη σωστό) ή αποτυχία decode: παράλειψη.
+          commands.push(new UpdateEntityCommand(entry.id, entry.patch, sm, handler.label));
         }
         if (commands.length === 0) return; // όλες ήδη στο σωστό μέγεθος → τίποτα να αναιρέσει.
 

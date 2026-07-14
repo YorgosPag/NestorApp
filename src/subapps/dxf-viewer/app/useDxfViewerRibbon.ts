@@ -39,8 +39,8 @@ import { useJoinRibbonAction } from '../ui/ribbon/hooks/useJoinRibbonAction';
 import { useGroupRibbonAction } from '../ui/ribbon/hooks/useGroupRibbonAction';
 // ADR-641 — «Επεξεργασία Μπλοκ» (BEDIT) action interceptor for the contextual block tab.
 import { useBlockEditRibbonAction } from '../ui/ribbon/hooks/useBlockEditRibbonAction';
-// ADR-654 — «Επαναφορά Διαστάσεων» εικόνας action interceptor (contextual image tab).
-import { useImageResetSizeRibbonAction } from '../ui/ribbon/hooks/useImageResetSizeRibbonAction';
+// ADR-654 — διαστάσεις εικόνας action interceptor (Επαναφορά Διαστάσεων + Κλείδωμα Αναλογιών).
+import { useImageDimensionRibbonAction } from '../ui/ribbon/hooks/useImageDimensionRibbonAction';
 // 📐 ADR-358 Phase 7a / ADR-363: BIM contextual bridges aggregated
 import { useDxfBimBridges } from './useDxfBimBridges';
 import { useRibbonLineToolBridge } from '../ui/ribbon/hooks/useRibbonLineToolBridge';
@@ -122,10 +122,10 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
     levelManager, universalSelection,
     fallback: groupActionInterceptor,
   });
-  // ADR-654 — «Επαναφορά Διαστάσεων» εικόνας wraps BEDIT (chain: image-reset-size → block-edit
-  // → group → join → explode → array → base). Επαναφέρει το εργοστασιακό μέγεθος/αναλογία των
-  // επιλεγμένων εικόνων (undoable, atomic) — κάθε άλλο action πέφτει στο wrapped fallback.
-  const imageResetSizeActionInterceptor = useImageResetSizeRibbonAction({
+  // ADR-654 — διαστάσεις εικόνας wraps BEDIT (chain: image-dimension → block-edit → group → join
+  // → explode → array → base). Δύο ενέργειες: «Επαναφορά Διαστάσεων» (απόλυτο αρχικό μέγεθος) +
+  // «Κλείδωμα Αναλογιών» (un-deform) στις επιλεγμένες εικόνες (undoable, atomic) — αλλιώς fallback.
+  const imageDimensionActionInterceptor = useImageDimensionRibbonAction({
     levelManager, universalSelection,
     fallback: blockEditActionInterceptor,
   });
@@ -154,7 +154,7 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
 
   const ribbonCommands = useRibbonCommands({
     activeTool, handleToolChange, handleRibbonComingSoon,
-    wrappedHandleAction: imageResetSizeActionInterceptor,
+    wrappedHandleAction: imageDimensionActionInterceptor,
     closeContextualTab,
     canUndo, canRedo,
     textEditorBridge, arrayBridge, stairBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge,

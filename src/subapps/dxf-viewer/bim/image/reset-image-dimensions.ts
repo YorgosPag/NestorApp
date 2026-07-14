@@ -1,20 +1,22 @@
 /**
- * ADR-654 — «Επαναφορά Διαστάσεων» εικόνας (pure geometry SSoT).
+ * ADR-654 — Διαστάσεις εικόνας: «Επαναφορά Διαστάσεων» + «Κλείδωμα Αναλογιών» (pure geometry SSoT).
  *
- * Ο ΜΟΝΟΣ υπολογισμός πίσω από το κουμπί «Επαναφορά Διαστάσεων» του contextual tab «Εικόνα»
- * (PowerPoint «Reset Size» / ArchiCAD «fit to original proportions»). Ο χρήστης μπορεί αθελά
- * του να παραμορφώσει ένα entourage sprite με τις μεσοπλευρικές λαβές (μη-ομοιόμορφο stretch,
- * `image-grips.ts` `applyRectEdgeDrag`) → σπάει ο λόγος πλευρών. Αυτό το επαναφέρει.
+ * Ο χρήστης μπορεί αθελά του να παραμορφώσει ένα entourage sprite με τις μεσοπλευρικές λαβές
+ * (μη-ομοιόμορφο stretch, `image-grips.ts` `applyRectEdgeDrag`) → σπάει ο λόγος πλευρών. Δύο
+ * ΞΕΧΩΡΙΣΤΕΣ ενέργειες (Giorgio 2026-07-15), όπως στους μεγάλους (PowerPoint/ArchiCAD):
  *
- * Δύο δρόμοι, με σαφή προτεραιότητα (Giorgio 2026-07-15 — «πλήρης επαναφορά μεγέθους»):
- *   - **A (native size)** — αν η εικόνα κρατά `intrinsicWidth`/`intrinsicHeight` (τα γεμίζει το
- *     `place-entourage.ts` στην τοποθέτηση), επαναφέρει το ΑΠΟΛΥΤΟ εργοστασιακό μέγεθος.
- *   - **C (aspect-only fallback)** — legacy/μη-entourage εικόνες χωρίς intrinsic: κρατά τη
- *     ΦΥΣΙΚΑ ΜΕΓΑΛΥΤΕΡΗ τρέχουσα πλευρά και ξαναϋπολογίζει την άλλη από το decoded pixel-aspect
- *     ⇒ un-deform χωρίς επαναφορά απόλυτου μεγέθους.
+ *   - **Επαναφορά Διαστάσεων** (`resetImageToOriginalSize`) — επαναφέρει το **ΑΠΟΛΥΤΟ αρχικό
+ *     μέγεθος**, όπως τη στιγμή της πρώτης τοποθέτησης (PowerPoint «Reset Size»). Πηγή = τα
+ *     αποθηκευμένα `intrinsicWidth`/`intrinsicHeight` (τα γεμίζει το `place-entourage.ts`). Για
+ *     legacy/μη-entourage χωρίς intrinsic → fallback στον aspect-only υπολογισμό από decoded pixels.
  *
- * Και στους δύο δρόμους το **κέντρο του κουτιού μένει σταθερό** (big-player: το αντικείμενο δεν
- * «πηδάει») και η **περιστροφή μένει ανέγγιχτη**. Καθαρή γεωμετρία — μηδέν DOM/store/decode εδώ
+ *   - **Κλείδωμα Αναλογιών** (`lockImageAspect`) — **un-deform** ΧΩΡΙΣ αλλαγή κλίμακας: κρατά τη
+ *     ΦΥΣΙΚΑ ΜΕΓΑΛΥΤΕΡΗ τρέχουσα πλευρά και διορθώνει την άλλη ώστε ο λόγος πλευρών να ταιριάξει
+ *     με τον «αληθινό» (intrinsic αν υπάρχει, αλλιώς decoded pixel-aspect) — ArchiCAD «fit to
+ *     original proportions». Ο χρήστης κρατά όποιο μέγεθος διάλεξε, φεύγει μόνο η παραμόρφωση.
+ *
+ * Και στις δύο: **σταθερό κέντρο** (το αντικείμενο δεν «πηδάει»), **ανέγγιχτη περιστροφή**,
+ * **idempotent** (ήδη-σωστό → μηδενικό patch). Καθαρή γεωμετρία — μηδέν DOM/store/decode εδώ
  * (το decode το κάνει ο caller και περνά το pixel μέγεθος), ώστε να είναι testable ως math.
  *
  * ΜΗΔΕΝ νέα γεωμετρία: το κέντρο/γωνία διαβάζονται από το ΚΟΙΝΟ `RectFrame` (`imageRectFrame` +
@@ -22,7 +24,7 @@
  *
  * @see ./image-grips.ts — imageRectFrame (rotation-aware center/corner reader)
  * @see ../grips/rect-frame.ts — rectCornerWorld (bottom-left = position, y-up)
- * @see ../entourage/place-entourage.ts — γεμίζει τα intrinsic πεδία (Δρόμος A)
+ * @see ../entourage/place-entourage.ts — γεμίζει τα intrinsic πεδία (πηγή του αρχικού μεγέθους)
  * @see docs/centralized-systems/reference/adrs/ADR-654-furniture-plan-entourage.md
  */
 
@@ -30,14 +32,16 @@ import type { ImageEntity } from '../../types/image';
 import { imageRectFrame } from './image-grips';
 import { rectCornerWorld, type RectFrame } from '../grips/rect-frame';
 
-/** Decoded pixel μέγεθος της εικόνας (naturalWidth/Height) — για τον aspect fallback (Δρόμος C). */
+/** Decoded pixel μέγεθος της εικόνας (naturalWidth/Height) — για τον aspect υπολογισμό. */
 export interface DecodedPixelSize {
   readonly w: number;
   readonly h: number;
 }
 
-/** Το reset patch: νέα κάτω-αριστερή γωνία + διαστάσεις (ό,τι πατά το `UpdateEntityCommand`). */
+/** Το patch: νέα κάτω-αριστερή γωνία + διαστάσεις (ό,τι πατά το `UpdateEntityCommand`). */
 export type ImageResetPatch = Pick<ImageEntity, 'position' | 'width' | 'height'>;
+
+type SizedImage = Pick<ImageEntity, 'width' | 'height' | 'intrinsicWidth' | 'intrinsicHeight'>;
 
 /** Θετικός, πεπερασμένος αριθμός (φιλτράρει `0`/`NaN`/`Infinity`/undefined). */
 function isPositiveFinite(value: number | undefined): value is number {
@@ -50,54 +54,67 @@ function approxEqual(a: number, b: number): boolean {
 }
 
 /**
- * Έχει η εικόνα αποθηκευμένο έγκυρο εργοστασιακό μέγεθος (Δρόμος A); Ο caller το χρησιμοποιεί ως
- * **decode-gate**: μόνο εικόνες ΧΩΡΙΣ intrinsic χρειάζονται async decode για τον aspect fallback.
+ * Έχει η εικόνα αποθηκευμένο έγκυρο εργοστασιακό μέγεθος; Ο caller το χρησιμοποιεί ως **decode-gate**:
+ * μόνο εικόνες ΧΩΡΙΣ intrinsic χρειάζονται async decode για να προκύψει ο λόγος πλευρών.
  */
-export function hasStoredIntrinsicSize(
-  entity: Pick<ImageEntity, 'intrinsicWidth' | 'intrinsicHeight'>,
-): boolean {
+export function hasStoredIntrinsicSize(entity: SizedImage): boolean {
   return isPositiveFinite(entity.intrinsicWidth) && isPositiveFinite(entity.intrinsicHeight);
 }
 
-/**
- * Το μέγεθος-στόχος της επαναφοράς (μονάδες σχεδίου), ή `null` όταν δεν μπορεί να προσδιοριστεί
- * (ούτε intrinsic, ούτε έγκυρο decoded pixel μέγεθος). Καθαρή συνάρτηση — Δρόμος A προηγείται.
- */
-export function resolveImageResetSize(
-  entity: Pick<ImageEntity, 'width' | 'height' | 'intrinsicWidth' | 'intrinsicHeight'>,
-  decoded?: DecodedPixelSize | null,
-): { width: number; height: number } | null {
-  // Δρόμος A — αποθηκευμένο απόλυτο εργοστασιακό μέγεθος (PowerPoint «Reset Size»).
-  if (isPositiveFinite(entity.intrinsicWidth) && isPositiveFinite(entity.intrinsicHeight)) {
-    return { width: entity.intrinsicWidth, height: entity.intrinsicHeight };
-  }
-  // Δρόμος C — aspect-only από decoded pixels: κράτα τη μεγαλύτερη τρέχουσα πλευρά, διόρθωσε την
-  // άλλη ώστε ο λόγος πλευρών να ταιριάξει με το pixel-aspect (ArchiCAD «fit to proportions»).
-  if (decoded && isPositiveFinite(decoded.w) && isPositiveFinite(decoded.h)) {
-    const pixelAspect = decoded.w / decoded.h;
-    return entity.width >= entity.height
-      ? { width: entity.width, height: entity.width / pixelAspect }
-      : { width: entity.height * pixelAspect, height: entity.height };
-  }
+/** Ο «αληθινός» λόγος πλευρών: intrinsic αν υπάρχει, αλλιώς decoded pixel-aspect· `null` αν κανένα. */
+function trueAspect(entity: SizedImage, decoded?: DecodedPixelSize | null): number | null {
+  if (hasStoredIntrinsicSize(entity)) return entity.intrinsicWidth! / entity.intrinsicHeight!;
+  if (decoded && isPositiveFinite(decoded.w) && isPositiveFinite(decoded.h)) return decoded.w / decoded.h;
   return null;
 }
 
+/** Κράτα τη μεγαλύτερη τρέχουσα πλευρά, διόρθωσε την άλλη ώστε ο λόγος πλευρών = `aspect`. */
+function keepLargerSide(entity: SizedImage, aspect: number): { width: number; height: number } {
+  return entity.width >= entity.height
+    ? { width: entity.width, height: entity.width / aspect }
+    : { width: entity.height * aspect, height: entity.height };
+}
+
 /**
- * Το reset patch μιας εικόνας — νέο μέγεθος (Δρόμος A ή C) με ΣΤΑΘΕΡΟ κέντρο & ΑΝΕΓΓΙΧΤΗ
- * περιστροφή. `null` όταν (α) δεν προσδιορίζεται μέγεθος-στόχος ή (β) η εικόνα είναι ήδη στο
- * σωστό μέγεθος (μηδενικό patch → ο caller την παραλείπει).
+ * ΑΠΟΛΥΤΟ αρχικό μέγεθος (μονάδες σχεδίου) για την «Επαναφορά Διαστάσεων», ή `null` όταν δεν
+ * προσδιορίζεται. Intrinsic → απόλυτο μέγεθος· αλλιώς aspect-only fallback από decoded pixels.
  */
-export function resetImageDimensions(
-  entity: ImageEntity,
+export function resolveResetToOriginalSize(
+  entity: SizedImage,
   decoded?: DecodedPixelSize | null,
+): { width: number; height: number } | null {
+  if (hasStoredIntrinsicSize(entity)) {
+    return { width: entity.intrinsicWidth!, height: entity.intrinsicHeight! };
+  }
+  const aspect = trueAspect(entity, decoded);
+  return aspect != null ? keepLargerSide(entity, aspect) : null;
+}
+
+/**
+ * Μέγεθος μετά το «Κλείδωμα Αναλογιών» (un-deform ΧΩΡΙΣ αλλαγή κλίμακας), ή `null` όταν δεν
+ * προσδιορίζεται λόγος πλευρών. Πάντα κρατά τη μεγαλύτερη πλευρά, διορθώνει μόνο την αναλογία.
+ */
+export function resolveLockAspect(
+  entity: SizedImage,
+  decoded?: DecodedPixelSize | null,
+): { width: number; height: number } | null {
+  const aspect = trueAspect(entity, decoded);
+  return aspect != null ? keepLargerSide(entity, aspect) : null;
+}
+
+/**
+ * Κοινό: μέγεθος-στόχος → patch με ΣΤΑΘΕΡΟ κέντρο & ΑΝΕΓΓΙΧΤΗ περιστροφή. `null` όταν δεν υπάρχει
+ * στόχος ή η εικόνα είναι ήδη εκεί (μηδενικό patch → ο caller την παραλείπει, idempotent).
+ */
+function buildResizePatch(
+  entity: ImageEntity,
+  target: { width: number; height: number } | null,
 ): ImageResetPatch | null {
-  const target = resolveImageResetSize(entity, decoded);
   if (!target) return null;
-  // Ήδη στο σωστό μέγεθος → no-op (idempotent: δεύτερο κλικ δεν κάνει τίποτα).
   if (approxEqual(entity.width, target.width) && approxEqual(entity.height, target.height)) {
     return null;
   }
-  // Κέντρο σταθερό: κράτα το ΙΔΙΟ center/rotation του τρέχοντος frame, άλλαξε μόνο τις ημι-διαστάσεις.
+  // Κέντρο σταθερό: ίδιο center/rotation του τρέχοντος frame, αλλάζουν μόνο οι ημι-διαστάσεις.
   const current = imageRectFrame(entity);
   const resized: RectFrame = {
     center: current.center,
@@ -111,4 +128,20 @@ export function resetImageDimensions(
     width: target.width,
     height: target.height,
   };
+}
+
+/** «Επαναφορά Διαστάσεων»: patch προς το ΑΠΟΛΥΤΟ αρχικό μέγεθος (κέντρο σταθερό). `null` = no-op. */
+export function resetImageToOriginalSize(
+  entity: ImageEntity,
+  decoded?: DecodedPixelSize | null,
+): ImageResetPatch | null {
+  return buildResizePatch(entity, resolveResetToOriginalSize(entity, decoded));
+}
+
+/** «Κλείδωμα Αναλογιών»: patch που κάνει un-deform κρατώντας την κλίμακα (κέντρο σταθερό). `null` = no-op. */
+export function lockImageAspect(
+  entity: ImageEntity,
+  decoded?: DecodedPixelSize | null,
+): ImageResetPatch | null {
+  return buildResizePatch(entity, resolveLockAspect(entity, decoded));
 }

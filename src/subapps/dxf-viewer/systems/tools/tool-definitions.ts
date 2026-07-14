@@ -328,6 +328,9 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // ADR-650 M6 (Γ) — «Όριο οικοπέδου»: ίδιο συμβόλαιο με το topo-breakline (pick, όχι entity).
   // allowsContinuous: μπορείς να αλλάξεις γνώμη και να δείξεις άλλο περίγραμμα χωρίς re-arm.
   'topo-boundary':     { id: 'topo-boundary',     category: 'drawing', requiresCanvas: true,  canInterrupt: true,  allowsContinuous: true,  preservesOverlayMode: false },
+  // ADR-650 M10 — «Κοινό σημείο γεωαναφοράς»: ίδιο συμβόλαιο με topo-boundary (pick, όχι
+  // entity). allowsContinuous: πιάνεις 1ο και 2ο σημείο στη σειρά χωρίς re-arm εργαλείου.
+  'geo-ref-anchor':    { id: 'geo-ref-anchor',    category: 'drawing', requiresCanvas: true,  canInterrupt: true,  allowsContinuous: true,  preservesOverlayMode: false },
 };
 
 /**

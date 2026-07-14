@@ -63,6 +63,12 @@
       "needsPoints": "Load survey points first — a 2D line carries no elevation"
     }
   },
+  "geoRef": {
+    "status": {
+      "armSlot": "Press “Pick on the plan” in the Geo-referencing panel first",
+      "captured": "Point captured — enter its ΕΓΣΑ coordinate in the panel"
+    }
+  },
   "hatchAreaLabel": {
     "areaPrefix": "Area",
     "status": {
@@ -2627,6 +2633,8 @@
       "copy": "Copy",
       "rotate": "Rotate",
       "mirror": "Mirror",
+      "imageLockAspect": "Lock Proportions",
+      "imageResetSize": "Reset Size",
       "scale": "Scale",
       "stretch": "Stretch",
       "mstretch": "Multi-Stretch",

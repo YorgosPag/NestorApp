@@ -3687,55 +3687,13 @@ service cloud.firestore {
     //
     // 📘 ADR-358 §6.1 (schema), §6.8 (soft-lock G24), §7.2 row 8
     // =========================================================================
+    // ADR-657 PRESENTATION tier — read client-side on /properties (ADR-370). Phase 2 flips read → authoring.
+    // Write is authoring: internal-user-of-company only, no ownership grant.
     match /floorplan_stairs/{stairId} {
-
-      // 📖 READ — Tenant-scoped
-      allow read: if isAuthenticated()
-                  && (
-                       isSuperAdminOnly()
-                       || belongsToCompany(resource.data.companyId)
-                     );
-
-      // ✍️ CREATE — Tenant member + required fields + ownership
-      allow create: if isAuthenticated()
-                    && (
-                         isSuperAdminOnly()
-                         || (
-                              request.resource.data.companyId == getUserCompanyId()
-                              && request.resource.data.createdBy == request.auth.uid
-                              && request.resource.data.keys().hasAll(
-                                   ['companyId', 'projectId', 'floorplanId', 'kind', 'params']
-                                 )
-                            )
-                       );
-
-      // 📝 UPDATE — Creator OR company_admin, with immutable fields + soft-lock anti-spoof
-      allow update: if isAuthenticated()
-                    && (
-                         isSuperAdminOnly()
-                         || (
-                              (resource.data.createdBy == request.auth.uid
-                               || isCompanyAdminOfCompany(resource.data.companyId))
-                              // Immutable identity
-                              && request.resource.data.companyId == resource.data.companyId
-                              && request.resource.data.projectId == resource.data.projectId
-                              && request.resource.data.floorplanId == resource.data.floorplanId
-                              // Immutable audit origin
-                              && request.resource.data.createdBy == resource.data.createdBy
-                              && request.resource.data.createdAt == resource.data.createdAt
-                              // G24 soft-lock anti-spoof: editingBy.userId may only be the caller
-                              && (!request.resource.data.keys().hasAny(['editingBy'])
-                                  || request.resource.data.editingBy.userId == request.auth.uid)
-                            )
-                       );
-
-      // 🗑️ DELETE — Creator OR company_admin
-      allow delete: if isAuthenticated()
-                    && (
-                         isSuperAdminOnly()
-                         || resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                       );
+      allow read:   if isAuthenticated() && canReadBimPresentation(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // =========================================================================
@@ -3744,76 +3702,28 @@ service cloud.firestore {
     // creator + company_admin writes, immutable identity fields, soft-lock anti-spoof.
     // =========================================================================
 
+    // ADR-657 PRESENTATION tier — read client-side on /properties (ADR-370). Phase 2 flips read → authoring.
     match /floorplan_walls/{wallId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      allow read:   if isAuthenticated() && canReadBimPresentation(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
+    // ADR-657 PRESENTATION tier — read client-side on /properties (ADR-370). Phase 2 flips read → authoring.
     match /floorplan_openings/{openingId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      allow read:   if isAuthenticated() && canReadBimPresentation(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
+    // ADR-657 PRESENTATION tier — read client-side on /properties (ADR-370). Phase 2 flips read → authoring.
     match /floorplan_slabs/{slabId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      allow read:   if isAuthenticated() && canReadBimPresentation(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-417 — BIM Roof (Στέγη). Top-level `floorplan_roofs/{roofId}`,
@@ -3821,150 +3731,56 @@ service cloud.firestore {
     // params doc shape: companyId/projectId/floorplanId/kind/params/createdBy).
     // FIX 2026-06-22: το collection έλειπε εντελώς → default-deny απέρριπτε ΟΛΑ
     // τα roof writes → οι στέγες χάνονταν σε reload (μόνο η στέγη, όχι slab/column).
+    // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
     match /floorplan_roofs/{roofId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
+    // ADR-657 PRESENTATION tier — read client-side on /properties (ADR-370). Phase 2 flips read → authoring.
     match /floorplan_slab_openings/{slabOpeningId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      allow read:   if isAuthenticated() && canReadBimPresentation(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
+    // ADR-657 PRESENTATION tier — read client-side on /properties (ADR-370). Phase 2 flips read → authoring.
     match /floorplan_columns/{columnId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      allow read:   if isAuthenticated() && canReadBimPresentation(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
+    // ADR-657 PRESENTATION tier — read client-side on /properties (ADR-370). Phase 2 flips read → authoring.
     match /floorplan_beams/{beamId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      allow read:   if isAuthenticated() && canReadBimPresentation(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-436 — substructure footings (pad/strip/tie-beam, IfcFooting). Mirror of
     // floorplan_columns / floorplan_beams (company-scoped, owner/admin writes).
     match /floorplan_foundations/{foundationId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-441/189 — per-floor construction grid (axes + groups, 1 doc/floor).
     // Mirror of floorplan_foundations (company-scoped, owner/admin writes).
     match /floorplan_grid_guides/{gridId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'guides'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'guides']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-650 — per-floor topographic surface DEFINITION (survey + settings, 1 doc/floor).
@@ -3972,479 +3788,189 @@ service cloud.firestore {
     // payload is either inline (`surfaces`) or offloaded to Storage (`pointsStoragePath`),
     // so create requires only the scope keys — not a specific data field.
     match /floorplan_topo_surfaces/{topoId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-406 — point-based MEP fixtures (light fixtures first). Mirror of
     // floorplan_columns / floorplan_beams (company-scoped, owner/admin writes).
     match /floorplan_mep_fixtures/{fixtureId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-407 — path-based railings (guardrails). Mirror of
     // floorplan_mep_fixtures (company-scoped, owner/admin writes).
     match /floorplan_railings/{railingId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-410 — mesh-based CC0 furniture (chair first). Mirror of
     // floorplan_mep_fixtures (company-scoped, owner/admin writes).
     match /floorplan_furniture/{furnitureId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-415 — pure-vector 2D floorplan symbols (WC/sanitary first). Mirror of
     // floorplan_furniture (company-scoped, owner/admin writes). Create requires
     // the category-driven `category` field alongside kind/params.
     match /floorplan_symbols/{symbolId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'category', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'category', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-408 Φ3 — point-based electrical panels (circuit sources). Mirror of
     // floorplan_mep_fixtures (company-scoped, owner/admin writes).
     match /floorplan_electrical_panels/{panelId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-408 Φ12 — point-based plumbing manifolds (συλλέκτης, pipe-network
     // sources). Mirror of floorplan_electrical_panels (company-scoped, owner/admin writes).
     match /floorplan_mep_manifolds/{manifoldId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-408 Εύρος Β — point-based heating radiators (καλοριφέρ, hydronic
     // terminals). Mirror of floorplan_mep_manifolds (company-scoped, owner/admin writes).
     match /floorplan_mep_radiators/{radiatorId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-408 Εύρος Β #2 — point-based heating boilers (λέβητας, hydronic
     // source). Mirror of floorplan_mep_radiators (company-scoped, owner/admin writes).
     match /floorplan_mep_boilers/{boilerId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-408 / water-heater — point-based domestic hot-water heaters (IfcWaterHeater,
     // DHW source). Mirror of floorplan_mep_boilers (company-scoped, owner/admin writes).
     match /floorplan_mep_water_heaters/{waterHeaterId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-408 Εύρος Β #3 — area-based underfloor radiant heating loops (ενδοδαπέδια,
     // hydronic terminal). Mirror of floorplan_mep_boilers (company-scoped, owner/admin writes).
     match /floorplan_mep_underfloors/{underfloorId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-408 Φ8 — linear MEP segments (duct/pipe runs). Mirror of
     // floorplan_electrical_panels (company-scoped, owner/admin writes).
     match /floorplan_mep_segments/{segmentId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-408 Φ11 — auto pipe fittings (junction elements). Mirror of
     // floorplan_mep_segments (company-scoped, owner/admin writes).
     match /floorplan_mep_fittings/{fittingId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'kind', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt
-                            && (!request.resource.data.keys().hasAny(['editingBy'])
-                                || request.resource.data.editingBy.userId == request.auth.uid)));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'kind', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-408 — logical MEP systems (electrical circuits; geometry-less). Mirror
     // of floorplan_mep_fixtures (company-scoped, owner/admin writes). `kind` is
     // N/A for a system; the create allowlist requires params instead.
     match /floorplan_mep_systems/{systemId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     match /floorplan_floor_finishes/{floorFinishId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-511 — wall finish per room/face (IfcCovering CLADDING/INTERIOR). Mirrors
     // floor-finish rules; payload = `params` (hostWallId + faceSide + span + layers).
     match /floorplan_wall_coverings/{wallCoveringId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-507 — flat DXF hatch fills (Revit Filled-Region). Mirrors floor-finish
     // rules; validated payload is `data` (boundaryPaths + fill fields), NOT `params`.
     match /floorplan_hatches/{hatchId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'data'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'data']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-422 — analytical thermal spaces per room (IfcSpace). Mirrors floor-finish rules.
     match /floorplan_thermal_spaces/{thermalSpaceId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     // ADR-437 — space separators per floorplan (IfcVirtualElement). Mirrors thermal-space rules.
     match /floorplan_space_separators/{spaceSeparatorId} {
-      allow read: if isAuthenticated()
-                  && (isSuperAdminOnly() || belongsToCompany(resource.data.companyId));
-      allow create: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || (request.resource.data.companyId == getUserCompanyId()
-                            && request.resource.data.createdBy == request.auth.uid
-                            && request.resource.data.keys().hasAll(['companyId', 'projectId', 'floorplanId', 'params'])));
-      allow update: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || ((resource.data.createdBy == request.auth.uid || isCompanyAdminOfCompany(resource.data.companyId))
-                            && request.resource.data.companyId == resource.data.companyId
-                            && request.resource.data.projectId == resource.data.projectId
-                            && request.resource.data.floorplanId == resource.data.floorplanId
-                            && request.resource.data.createdBy == resource.data.createdBy
-                            && request.resource.data.createdAt == resource.data.createdAt));
-      allow delete: if isAuthenticated()
-                    && (isSuperAdminOnly()
-                        || resource.data.createdBy == request.auth.uid
-                        || isCompanyAdminOfCompany(resource.data.companyId));
+      // ADR-657 AUTHORING tier — editor-only (/dxf/viewer). external_user denied.
+      allow read:   if isAuthenticated() && canReadBimAuthoring(resource.data.companyId);
+      allow create: if isAuthenticated() && canCreateBimEntity(['companyId', 'projectId', 'floorplanId', 'params']);
+      allow update: if isAuthenticated() && canUpdateBimEntity();
+      allow delete: if isAuthenticated() && canDeleteBimEntity();
     }
 
     match /bim_presets/{presetId} {
@@ -5158,6 +4684,98 @@ service cloud.firestore {
     function isInternalUserOfCompany(companyId) {
       return isSuperAdminOnly() ||
              (isInternalUser() && belongsToCompany(companyId));
+    }
+
+    // =========================================================================
+    // 🏛️ ADR-657 — BIM AUTHORING vs PRESENTATION RBAC (TIER SSoT HELPERS)
+    // =========================================================================
+    // 📅 Added: 2026-07-15 (ADR-657)
+    // Tier SSoT (which collection → which tier + requiredKeys):
+    //   tests/firestore-rules/_registry/bim-tiers.ts
+    //
+    // Root bug (pre-ADR-657): 34/36 BIM blocks gated read+create on
+    // belongsToCompany() ALONE — tenant, never role. `external_user` (the DEFAULT
+    // role of every self-registration, ZERO floorplan permissions in
+    // src/lib/auth/roles.ts) could read + create all company BIM geometry. Writes
+    // also granted on ownership (`createdBy == uid ||`), bypassing the role gate.
+    //
+    // Two tiers — the ONLY difference is the `allow read` line:
+    //   AUTHORING     read + write require isInternalUserOfCompany(). Reachable
+    //                 only inside /dxf/viewer (AdminGuard). external_user DENIED.
+    //   PRESENTATION  read stays tenant-wide (any role, incl. external_user, which
+    //                 reads these client-side on /properties, ADR-370); write
+    //                 requires isInternalUserOfCompany(). Phase 2 flips read →
+    //                 AUTHORING once those hooks move behind a server route.
+    // =========================================================================
+
+    // AUTHORING read — editor-only, external_user denied.
+    function canReadBimAuthoring(cid) {
+      return isInternalUserOfCompany(cid);
+    }
+
+    // PRESENTATION read — tenant-wide (UNCHANGED behaviour; Phase 2 flips this).
+    function canReadBimPresentation(cid) {
+      return isSuperAdminOnly() || belongsToCompany(cid);
+    }
+
+    // Greppable-intent alias: both tiers write-gate on internal-user-of-company.
+    function isBimWriter(cid) {
+      return isInternalUserOfCompany(cid);
+    }
+
+    // CREATE — internal-user-of-company + companyId/createdBy match caller +
+    // per-collection scope keys (requiredKeys from bim-tiers.ts).
+    function canCreateBimEntity(requiredKeys) {
+      return isSuperAdminOnly()
+             || ( isInternalUser()
+                  && request.resource.data.companyId == getUserCompanyId()
+                  && request.resource.data.createdBy == request.auth.uid
+                  && request.resource.data.keys().hasAll(requiredKeys) );
+    }
+
+    // Immutable identity + audit origin (UNIFORM across all 29 entity blocks).
+    function bimImmutablesUnchanged() {
+      return request.resource.data.companyId == resource.data.companyId
+             && request.resource.data.projectId == resource.data.projectId
+             && request.resource.data.floorplanId == resource.data.floorplanId
+             && request.resource.data.createdBy == resource.data.createdBy
+             && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    // G24 soft-lock anti-spoof (ADR-358 §6.8): editingBy.userId may only be self.
+    function bimSoftLockValid() {
+      return !request.resource.data.keys().hasAny(['editingBy'])
+             || request.resource.data.editingBy.userId == request.auth.uid;
+    }
+
+    // UPDATE — internal-user-of-company + immutables + soft-lock. NO ownership grant.
+    function canUpdateBimEntity() {
+      return isSuperAdminOnly()
+             || ( isBimWriter(resource.data.companyId) && bimImmutablesUnchanged() && bimSoftLockValid() );
+    }
+
+    // DELETE — internal-user-of-company. NO ownership grant.
+    function canDeleteBimEntity() {
+      return isBimWriter(resource.data.companyId);
+    }
+
+    // Legacy containers (floorplans + project_/building_/floor_/unit_floorplans) —
+    // NO createdBy scope-key contract (predate it). Read tolerates docs missing
+    // companyId (falls back to creator-only); create/write require internal user.
+    function canReadLegacyFloorplan() {
+      return isSuperAdminOnly()
+             || (resource.data.keys().hasAny(['companyId']) && belongsToCompany(resource.data.companyId))
+             || (!resource.data.keys().hasAny(['companyId']) && resource.data.createdBy == request.auth.uid);
+    }
+    function canCreateLegacyFloorplan() {
+      return isSuperAdminOnly()
+             || (isInternalUser() && request.resource.data.companyId == getUserCompanyId());
+    }
+    function canWriteLegacyFloorplan() {
+      return isSuperAdminOnly()
+             || ( isBimWriter(resource.data.companyId)
+                  && ( !resource.data.keys().hasAny(['companyId'])
+                       || request.resource.data.companyId == resource.data.companyId ) );
     }
 
     // =========================================================================

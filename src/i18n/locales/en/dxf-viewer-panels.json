@@ -1009,6 +1009,33 @@
       "clear": "Clear",
       "count": "{count, plural, =0 {No breaklines} one {# breakline} other {# breaklines}}"
     },
+    "geoRef": {
+      "title": "Geo-referencing (snap onto terrain)",
+      "hint": "Snap the plan onto the survey (real ΕΓΣΑ'87 coordinates) so the building sits on the ground on every floor.",
+      "autoAlign": "Auto-align",
+      "autoAlignHint": "Quick estimate: matches the building center to the terrain center. Refine it with a common point.",
+      "point1": "Point 1 (translation)",
+      "point2": "Point 2 (rotation — optional)",
+      "pick": "Pick on the plan",
+      "picking": "Click on the plan…",
+      "picked": "Local: {x} , {y} m",
+      "notPicked": "— not picked —",
+      "egsaX": "ΕΓΣΑ X (m)",
+      "egsaY": "ΕΓΣΑ Y (m)",
+      "apply": "Apply",
+      "clear": "Clear geo-reference",
+      "active": "Active: origin {x} , {y} m · rotation {rot}°",
+      "inactive": "Not geo-referenced",
+      "scaleWarn": "Warning: the two points are not the same distance apart (ratio {ratio}). Check units.",
+      "status": {
+        "autoDone": "Auto-align done.",
+        "autoNoData": "Both plan and survey points are required.",
+        "applied": "Geo-reference applied.",
+        "needPoint": "Pick a point and enter its ΕΓΣΑ coordinate.",
+        "cleared": "Geo-reference cleared.",
+        "saveError": "Failed to save the geo-reference."
+      }
+    },
     "terrain3d": {
       "title": "Terrain in 3D",
       "hint": "The same surface the contours are cut from, as solid relief in the 3D view.",

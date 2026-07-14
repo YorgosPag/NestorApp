@@ -9,18 +9,29 @@
  * declares the correct `COVERAGE` export and iterates the matrix.
  *
  * How it works:
- *   1. Parse storage.rules → extract every top-level inner match block path
- *      (children of `match /b/{bucket}/o { ... }`).
+ *   1. Parse storage.rules → extract every inner match block as
+ *      { pathId, matchPath, lineStart, lineEnd } via the shared identity-based
+ *      parser (children of `match /b/{bucket}/o { ... }`).
  *   2. Parse coverage-manifest.ts via TypeScript AST → extract
  *      STORAGE_RULES_COVERAGE (pathId, pattern, testFile, rulesRange) and
- *      STORAGE_RULES_PENDING (string array).
- *   3. Validation A — every storage.rules match block must appear in one
- *      of the two lists (by rulesRange overlap or pathId convention).
+ *      STORAGE_RULES_PENDING (exact match-path string array).
+ *   3. Validation A — every storage.rules match block must be accounted for
+ *      by IDENTITY: its `@pathId` appears in STORAGE_RULES_COVERAGE, or its
+ *      full matchPath appears (exactly) in STORAGE_RULES_PENDING. Line numbers
+ *      are irrelevant — inserting a line above a block cannot unmoor it.
  *   4. Validation B — every coverage entry must have an existing test file.
  *   5. Validation C — each test file must export `COVERAGE` referencing the
  *      correct pathId (regex scan of the test file source).
  *   6. Validation D — each test file must contain `for (const cell of COVERAGE.matrix)`
  *      so the matrix is iterated rather than hand-copied (drift prevention).
+ *   7. Validation E (ratchet) — an inner match block with NO `@pathId`
+ *      annotation is a violation: a new storage path cannot ship without an
+ *      identity.
+ *   8. Validation F — a duplicate `@pathId` across blocks is a violation.
+ *
+ * `rulesRange` in the manifest is now DOCUMENTATION ONLY. It is no longer read
+ * by Validation A; a non-blocking `--verbose` warning is emitted if a range no
+ * longer contains its block's parsed start line.
  *
  * CLI:
  *   node scripts/check-storage-rules-test-coverage.js                # staged files
@@ -32,9 +43,10 @@
  *   0 — no violations
  *   1 — one or more violations (commit blocked)
  *
- * See ADR-301 §3.4.
+ * See ADR-301 §3.4 and ADR-657 §B (line-shift-proof refactor).
  *
  * @since 2026-04-14 (ADR-301 Phase A)
+ * @since 2026-07-15 (ADR-657 — identity-based Validation A + E/F ratchet)
  */
 
 'use strict';
@@ -42,6 +54,10 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('typescript');
+const {
+  parseStorageRules,
+  findDuplicatePathIds,
+} = require('./_shared/storage-rules-parser');
 
 // ---------------------------------------------------------------------------
 // Paths
@@ -85,36 +101,22 @@ function log(msg) {
 }
 
 // ---------------------------------------------------------------------------
-// Storage rules parser — extract top-level inner match paths
+// Storage rules parser — delegated to the shared identity-based parser
 // ---------------------------------------------------------------------------
 
 /**
- * Parse storage.rules and extract every inner-level match path pattern.
- * The outer `match /b/{bucket}/o { }` is the service wrapper and is skipped.
+ * Parse storage.rules into inner-level match blocks, each carrying its
+ * `// @pathId:` identity, full match path, and line span. The outer
+ * `match /b/{bucket}/o { }` service wrapper is skipped by the shared parser.
  *
- * @returns {string[]} List of match path strings, e.g.
- *   '/companies/{companyId}/projects/{projectId}/...'
+ * @returns {import('./_shared/storage-rules-parser').StorageRuleBlock[]}
  */
-function parseStorageRulesMatchPaths() {
+function parseStorageRulesBlocks() {
   if (!fs.existsSync(STORAGE_RULES_FILE)) {
     throw new Error(`storage.rules not found at: ${STORAGE_RULES_FILE}`);
   }
-
   const source = fs.readFileSync(STORAGE_RULES_FILE, 'utf8');
-  const lines = source.split('\n');
-  const matchPaths = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    // Match lines that start a block: `match /path/... {`
-    // Skip the outer bucket wrapper: `match /b/{bucket}/o {`
-    const m = line.match(/^\s*match\s+(\/[^\s{]+)\s*\{/);
-    if (m && !m[1].startsWith('/b/')) {
-      matchPaths.push({ path: m[1], line: i + 1 });
-    }
-  }
-
-  return matchPaths;
+  return parseStorageRules(source);
 }
 
 // ---------------------------------------------------------------------------
@@ -261,9 +263,9 @@ function main() {
   const violations = [];
 
   // --- parse sources ---
-  let matchPaths;
+  let blocks;
   try {
-    matchPaths = parseStorageRulesMatchPaths();
+    blocks = parseStorageRulesBlocks();
   } catch (e) {
     violations.push(`storage.rules parse error: ${e.message}`);
     printReport(violations);
@@ -283,7 +285,7 @@ function main() {
 
   if (VERBOSE) {
     log(`${C.cyan}CHECK 3.19 — Storage Rules Coverage${C.reset}`);
-    log(`  storage.rules match blocks : ${matchPaths.length}`);
+    log(`  storage.rules match blocks : ${blocks.length}`);
     log(`  coverage entries           : ${coverage.length}`);
     log(`  pending entries            : ${pending.length}`);
   }
@@ -318,19 +320,39 @@ function main() {
     }
   }
 
-  // Validation A — every match block in storage.rules is accounted for
-  // We use a simple heuristic: for each match path, check if any coverage
-  // entry's rulesRange contains the line number, or if it appears in pending.
-  for (const { path: matchPath, line } of matchPaths) {
-    const inCoverage = coverage.some(
-      (e) => e.rulesRange[0] <= line && line <= e.rulesRange[1],
+  // Validation E (ratchet) — an inner match block with NO `@pathId` annotation
+  // cannot ship: a new storage path must carry a stable identity.
+  for (const block of blocks) {
+    if (!block.pathId) {
+      violations.push(
+        `[E] storage.rules match block at line ${block.lineStart} (${block.matchPath}) ` +
+          `has no \`// @pathId:\` annotation — every inner match block needs a stable identity.`,
+      );
+    }
+  }
+
+  // Validation F — a duplicate `@pathId` across blocks breaks identity mapping.
+  for (const dupId of findDuplicatePathIds(blocks)) {
+    violations.push(
+      `[F] Duplicate \`@pathId\` '${dupId}' — a pathId must identify exactly one match block.`,
     );
-    const inPending = pending.some((p) => matchPath.includes(p) || p.includes(matchPath));
+  }
+
+  // Validation A — every match block in storage.rules is accounted for BY
+  // IDENTITY: its `@pathId` appears in STORAGE_RULES_COVERAGE, or its full
+  // matchPath appears (exactly) in STORAGE_RULES_PENDING. Line numbers are
+  // irrelevant, so inserting a line above a block cannot unmoor it. Blocks with
+  // a null pathId are skipped here — Validation E already flags them.
+  for (const block of blocks) {
+    if (!block.pathId) continue;
+    const inCoverage = coverage.some((e) => e.pathId === block.pathId);
+    const inPending = pending.some((p) => p === block.matchPath);
 
     if (!inCoverage && !inPending) {
       violations.push(
-        `[A] storage.rules match block at line ${line} (${matchPath}) is not covered ` +
-          `by any STORAGE_RULES_COVERAGE entry (rulesRange) or STORAGE_RULES_PENDING entry.`,
+        `[A] storage.rules match block '${block.pathId}' (${block.matchPath}, line ` +
+          `${block.lineStart}) is not covered by any STORAGE_RULES_COVERAGE entry ` +
+          `(by pathId) or STORAGE_RULES_PENDING entry (by exact matchPath).`,
       );
     }
   }

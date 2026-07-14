@@ -59,6 +59,14 @@ service firebase.storage {
       return isAuthenticated() && request.auth.token.globalRole == 'super_admin';
     }
 
+    // ADR-657 — authoring tier. Mirrors firestore isInternalUserOfCompany().
+    // Only internal roles of the owning company (or super_admin) may touch
+    // authoring geometry — external_user (the default self-registration role)
+    // is fully denied, even with a valid companyId claim.
+    function isInternalUserOfCompany(companyId) {
+      return isSuperAdmin() || (isInternalUser() && belongsToCompany(companyId));
+    }
+
     // Validate file size (max 50MB)
     function isValidFileSize() {
       return request.resource.size < 50 * 1024 * 1024;
@@ -169,6 +177,7 @@ service firebase.storage {
     // Authorization: User must belong to company OR be super_admin
     // =========================================================================
 
+    // @pathId: canonical_with_project
     match /companies/{companyId}/projects/{projectId}/entities/{entityType}/{entityId}/domains/{domain}/categories/{category}/files/{fileName} {
 
       // 📖 READ: Company-scoped access with project isolation
@@ -209,6 +218,7 @@ service firebase.storage {
     // For files not associated with a specific project
     // =========================================================================
 
+    // @pathId: canonical_no_project
     match /companies/{companyId}/entities/{entityType}/{entityId}/domains/{domain}/categories/{category}/files/{fileName} {
 
       // 📖 READ: Company-scoped access
@@ -239,6 +249,7 @@ service firebase.storage {
     // Reads: authenticated PMs in the owning company; super_admin globally.
     // =========================================================================
 
+    // @pathId: quote_attachments
     match /companies/{companyId}/quotes/{quoteId}/{fileName} {
       allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
       allow write: if false;
@@ -257,6 +268,7 @@ service firebase.storage {
     // if storage growth becomes a concern.
     // =========================================================================
 
+    // @pathId: bim_animation_renders
     match /companies/{companyId}/bim_animations/{animationId}/renders/{fileName} {
       allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
       allow write: if (belongsToCompany(companyId) || isSuperAdmin())
@@ -276,6 +288,7 @@ service firebase.storage {
     // 50 MB cap covers 8K resolution HDRIs.
     // =========================================================================
 
+    // @pathId: bim_environments
     match /companies/{companyId}/bim_environments/{fileName} {
       allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
       allow write: if (belongsToCompany(companyId) || isSuperAdmin())
@@ -296,6 +309,7 @@ service firebase.storage {
     // the client soft-caps at 2 MB.
     // =========================================================================
 
+    // @pathId: bim_material_thumbnails
     match /companies/{companyId}/bim-material-thumbnails/{fileName} {
       allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
       allow write: if (belongsToCompany(companyId) || isSuperAdmin())
@@ -316,6 +330,7 @@ service firebase.storage {
     // — μια σφραγίδα είναι μικρή εικόνα· ο client εφαρμόζει το ίδιο όριο.
     // =========================================================================
 
+    // @pathId: engineer_stamps
     match /companies/{companyId}/engineer-stamps/{fileName} {
       allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
       allow write: if (belongsToCompany(companyId) || isSuperAdmin())
@@ -335,6 +350,7 @@ service firebase.storage {
     // material thumbnails). 5 MB cap — ένα vector block είναι δεκάδες KB.
     // =========================================================================
 
+    // @pathId: block_library
     match /companies/{companyId}/block-library/{fileName} {
       allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
       allow write: if (belongsToCompany(companyId) || isSuperAdmin())
@@ -354,6 +370,7 @@ service firebase.storage {
     // παρακάμπτει τους κανόνες) — από client, ποτέ: read-only content.
     // =========================================================================
 
+    // @pathId: system_block_library
     match /system/block-library/{fileName} {
       allow read: if isAuthenticated();
       allow write, delete: if isSuperAdmin();
@@ -372,6 +389,7 @@ service firebase.storage {
     // client soft-caps at 8 MB.
     // =========================================================================
 
+    // @pathId: bim_material_textures
     match /companies/{companyId}/bim-material-textures/{materialId}/{fileName} {
       allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
       allow write: if (belongsToCompany(companyId) || isSuperAdmin())
@@ -390,13 +408,19 @@ service firebase.storage {
     // blob). Το metadata + το `pointsStoragePath` ζουν στο Firestore
     // floorplan_topo_surfaces doc. Company-scoped (tenant isolation). 100 MB cap —
     // ένα decimated survey/cloud είναι έως δεκάδες MB.
+    //
+    // 🔐 ADR-657 — AUTHORING TIER: όλα τα σκέλη (read/write/delete) απαιτούν
+    // isInternalUserOfCompany(companyId). Η τοπογραφική επιφάνεια είναι authoring
+    // geometry — διαβάζεται/γράφεται ΜΟΝΟ μέσα στο /dxf/viewer (AdminGuard). Ο
+    // external_user (default self-registration role) απαγορεύεται πλήρως.
     // =========================================================================
+    // @pathId: topo_surfaces
     match /topo-surfaces/{companyId}/{topoFile=**} {
-      allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
-      allow write: if (belongsToCompany(companyId) || isSuperAdmin())
+      allow read: if isInternalUserOfCompany(companyId);
+      allow write: if isInternalUserOfCompany(companyId)
                    && request.resource.size < 100 * 1024 * 1024
                    && request.resource.contentType == 'application/json';
-      allow delete: if (belongsToCompany(companyId) || isSuperAdmin());
+      allow delete: if isInternalUserOfCompany(companyId);
     }
 
     // =========================================================================
@@ -406,6 +430,7 @@ service firebase.storage {
     // Ownership-based access for CAD files
     // =========================================================================
 
+    // @pathId: cad
     match /cad/{userId}/{fileId}/{fileName} {
 
       // 📖 READ: Owner or super_admin
@@ -426,6 +451,7 @@ service firebase.storage {
     // Short-lived uploads that will be moved to canonical path
     // =========================================================================
 
+    // @pathId: temp
     match /temp/{userId}/{fileName} {
 
       // Only owner can access their temp files
@@ -449,6 +475,7 @@ service firebase.storage {
     // (ADR-410 picker previews), not just the top-level `.glb` meshes.
     // LEGACY path — superseded by the unified `bim-mesh-library/` tree (ADR-411);
     // kept so any pre-migration furniture asset URL still resolves.
+    // @pathId: furniture_library
     match /furniture-library/{assetFile=**} {
 
       // 📖 READ: any authenticated user (shared catalog)
@@ -469,6 +496,7 @@ service firebase.storage {
     // host + redistribute in-app. Recursive (`=**`) so it covers every category +
     // its `thumbnails/` subfolder.
     // =========================================================================
+    // @pathId: bim_mesh_library
     match /bim-mesh-library/{assetFile=**} {
 
       // 📖 READ: any authenticated user (shared catalog)
@@ -487,6 +515,7 @@ service firebase.storage {
     // library) of CC0 (Poly Haven) PBR texture sets, used by the 3D realistic
     // material catalog. Recursive (`=**`) so it covers every slug folder + maps.
     // =========================================================================
+    // @pathId: bim_texture_library
     match /bim-texture-library/{assetFile=**} {
 
       // 📖 READ: any authenticated user (shared catalog)
@@ -511,6 +540,7 @@ service firebase.storage {
     // rules) μέσα από το /api/asset-packs proxy, ΑΦΟΥ περάσει η πύλη εξουσιοδότησης.
     // Ίδιο δοκιμασμένο μοτίβο με το `companies/{companyId}/quotes/` (allow write: if false).
     // =========================================================================
+    // @pathId: asset_packs
     match /asset-packs/{assetFile=**} {
 
       // 📖 READ: ΚΑΝΕΙΣ. Μόνο ο authenticated proxy (Admin SDK).

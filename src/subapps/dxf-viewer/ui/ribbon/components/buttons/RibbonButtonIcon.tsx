@@ -232,6 +232,25 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'people-plan': return <Users width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'vehicles-plan': return <Car width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'plants-plan': return <Trees width={sizePx[size]} height={sizePx[size]} className={className} />;
+    // ADR-654 — «Επαναφορά Διαστάσεων» εικόνας (PowerPoint «Reset Size»): πλαίσιο + διαγώνιο
+    // δικέφαλο βέλος = «ξανά στο σωστό μέγεθος/αναλογία» (resize-to-fit metaphor).
+    case 'image-reset-size': return inlineSvg(size, (
+      <>
+        <rect x="3" y="4" width="18" height="16" rx="1" />
+        <path d="M8 16 L16 8" />
+        <path d="M16 8 L16 11.5 M16 8 L12.5 8" />
+        <path d="M8 16 L8 12.5 M8 16 L11.5 16" />
+      </>
+    ));
+    // ADR-654 — «Κλείδωμα Αναλογιών» εικόνας (ArchiCAD «fit to proportions»): πλαίσιο + λουκέτο =
+    // «κλειδωμένος λόγος πλευρών» (constrain-proportions metaphor).
+    case 'image-lock-aspect': return inlineSvg(size, (
+      <>
+        <rect x="3" y="3.5" width="18" height="17" rx="1" />
+        <rect x="8.5" y="12" width="7" height="5.5" rx="0.8" />
+        <path d="M9.75 12 V10 a2.25 2.25 0 0 1 4.5 0 V12" />
+      </>
+    ));
     // ADR-651 Φάση Β — πινακίδα σχεδίου (κορνίζα με πεδία).
     case 'title-block': return <Frame width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-651 Φάση Ε — σφραγίδα/υπογραφή μηχανικού.
