@@ -1367,3 +1367,79 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
 
   **Status: M1 + M2 + M3 + M4 + M5 (α+β) + M6 + M7 + M8α + M8β (Α+Β+Γ+Δ) IMPLEMENTED·
   moonshots (multiplayer, Gaussian-Splat, COPC streaming) προγραμματισμένα (§12.2).**
+
+- **2026-07-14 (v18)** — **M8β/Ε ΥΛΟΠΟΙΗΘΗΚΕ — unit-aware binary cloud** (Phase 3, N.0.1). Το
+  τελευταίο μέλος της ίδιας οικογένειας σιωπηλών λαθών με το M8β/Δ: εκεί ήταν η **λάθος στήλη**, εδώ
+  η **λάθος μονάδα** — ίδιο είδος bug (δεν σκάει, δεν προειδοποιεί, βγάζει έγκυρη όψη λάθους
+  εργοταξίου, απλώς σε **λάθος κλίμακα**).
+
+  **ΤΟ BUG:** το LAS/LAZ **δεν** δηλώνει μονάδα στο public header (ζει σε προαιρετικό CRS VLR που τα
+  μισά όργανα παραλείπουν) — το λέει ρητά το σχόλιο του `LasHeader`: «Like Civil 3D, **we ask the
+  user instead**: the wizard's existing `TopoUnit` dropdown supplies the scale». **Μόνο που ο
+  dropdown δεν εμφανιζόταν ποτέ στον δρόμο του νέφους.** Μετά το M8β/Δ ζει μέσα στο grid στηλών →
+  φαίνεται **μόνο** για `.xyz`/`.pts`. Ένα **LAS/LAZ σε πόδια ή mm** διαβαζόταν σιωπηλά ως **μέτρα**:
+  ένα drone export σε US survey feet → νέφος ×0,3048 λάθος → το CSF «βρίσκει έδαφος» → όγκοι cut/fill
+  λάθος **κατά 3×**. Ο κώδικας υποσχόταν κάτι που **δεν έκανε**.
+
+  **Η ΑΠΟΦΑΣΗ (τι κάνουν οι μεγάλοι):** Civil 3D / ReCap **ρωτούν** μονάδα (ή τη διαβάζουν από CRS
+  metadata)· PDAL / CloudCompare **αρνούνται να μαντέψουν** (ρητό scale/SRS). Ομόφωνο: **ορατός
+  dropdown για ΚΑΘΕ μορφή, ποτέ σιωπηλή υπόθεση.** Και **κρίσιμη απόφαση σχεδιασμού: δεν κάνουμε
+  σιωπηλή αυτόματη πρόταση.** Το `m` και το `ft` διαφέρουν μόλις ×3.28 — και τα δύο δίνουν «λογικό»
+  εργοτάξιο, οπότε μια αυτόματη επιλογή `ft` όταν είναι `m` θα **ΞΑΝΑΕΦΕΡΝΕ** το ίδιο 3× σιωπηλό λάθος
+  που σκοτώνουμε. Αντ' αυτού δείχνουμε το **span κάτω από κάθε μονάδα** — η deterministic «πρόταση»
+  είναι να παρουσιάσουμε τα στοιχεία, όχι να μαντέψουμε (ίδια φιλοσοφία με τον sniffer στηλών, αλλά
+  εδώ η αμφισημία m/ft απαιτεί ανθρώπινη κρίση, όχι single pick).
+
+  **SSoT — τι ΔΕΝ ξαναγράφτηκε:** `TopoUnit` + `TOPO_UNIT_SCALE_TO_MM` (M2, m/mm/ft), το `LasHeader`
+  min/max + `readLasHeader` (M8α), το `PointCloudReadOptions.unit` (ταξίδευε **ήδη** σωστά στον
+  reader — το μόνο που έλειπε ήταν ο ανθρώπινος έλεγχος πάνω του), τα warnings ως i18n **keys**
+  (`POINTCLOUD_MSG`). **Κανένα δεύτερο dropdown, κανένας δεύτερος πίνακας κλίμακας.**
+
+  **Τι γράφτηκε:**
+  - `TopoUnitSelect.tsx` (**νέο, extraction**) — ο dropdown μονάδας εξήχθη από το `TopoColumnMapTable`
+    σε ένα κοινό component· **ένα widget, μία `UNITS` λίστα**, χρησιμοποιείται και από το grid (ASCII)
+    και από το binary βήμα (αντί για sibling clone, N.18).
+  - `cloud-unit-span.ts` (**νέο, pure, deterministic**) — `cloudSourceExtentFromBuffer` (parse μόνο
+    το header ενός head-slice· το `.laz` header είναι **ασυμπίεστο** → μηδέν WASM) + `unitSpanReadouts`
+    (τι μετρά το εργοτάξιο σε m/mm/ft, σε μέτρα). Δεν το εισάγει το `pointcloud-read` → **κανένας νέος
+    κύκλος** στο load-time.
+  - `CLOUD_HEADER_PROBE_BYTES` (512) + `SPAN_SANITY_MAX_HORIZONTAL_MM` (50 km) / `_VERTICAL_MM` (5 km)
+    στο `pointcloud-defaults` (SSoT — μηδέν inline literals).
+  - `readPointCloudSourceExtent(file)` στο `io/pointcloud-import` (dynamic import του span module,
+    ίδιο μοτίβο «heavy readers behind dynamic import»).
+  - `useTopoImport`: νέο state `cloudSourceExtent` (διαβάζεται στο `loadFile` **μόνο** για binary)·
+    το `changeUnit` **ήδη** ακύρωνε το αποτέλεσμα στο βήμα νέφους (`invalidateCloudResult`, M8β/Δ) —
+    χρησιμοποιήθηκε, δεν ξαναγράφτηκε.
+  - `TopoCloudStep`: νέο `CloudUnitFieldset` (dropdown + `CloudSpanReadout`) που εμφανίζεται **μόνο**
+    για binary (`cloudSample` κενό)· το ASCII κρατά τον dropdown στο grid (με ορατές γραμμές).
+  - **Belt-and-suspenders:** `isCloudSpanImplausible` στο `buildReadResult` (SSoT — **μία** φορά,
+    καλύπτει LAS/LAZ/ASCII μαζί) → `WARN_SPAN_IMPLAUSIBLE` όταν span > 50 km ή ύψος > 5 km. Πιάνει ό,τι
+    ξεφύγει και από στήλη **και** από μονάδα.
+
+  **Tests:** `cloud-unit-span.test.ts` (**νέο**, 12 tests): source extent από header (LAS **και**
+  compressed `.laz` twin)· null σε ASCII/truncated/Layer-State· readouts (m pass-through· mm καταρρέει
+  σε <1 μ.· ft ×0.3048 — «ακόμα λογικό, γι' αυτό δεν auto-pick»)· `isCloudSpanImplausible` στα σωστά
+  κατώφλια· ο reader **σιωπά** σε λογικό μέτρο-νέφος αλλά **προειδοποιεί** σε mm-διαβασμένο-ως-μέτρα
+  (200 km span). **23 suites / 213 tests PASS** (από 22/201 — τίποτα δεν έσπασε). `jscpd:diff` καθαρό
+  (7 αρχεία).
+
+  **ΔΕΝ μπήκαν — και γιατί:**
+  - **Ανάγνωση CRS/WKT VLR για αυτόματη μονάδα**: το LAS **μπορεί** να κουβαλά μονάδα σε GeoKey/WKT
+    VLR — αλλά τα μισά instruments το παραλείπουν, και το parsing του (GeoTIFF keys / OGC WKT) είναι
+    ολόκληρο subsystem. Όταν υπάρχει, θα ήταν καλή **προεπιλογή** του dropdown (όχι αντικατάστασή του —
+    ο μηχανικός πάντα βλέπει & πιστοποιεί). Ξεχωριστή απόφαση/scope.
+  - **US survey foot ως ξεχωριστή μονάδα**: το `TOPO_UNIT_SCALE_TO_MM` έχει **ένα** `ft` (304.8 mm =
+    international foot). Το US survey foot (304.80061 mm) διαφέρει ~2 ppm — αμελητέο για span sanity,
+    αλλά **όχι** για ΕΓΣΑ'87 easting· αν χρειαστεί, είναι νέα τιμή στο **υπάρχον** SSoT table (M2),
+    όχι νέος μηχανισμός.
+  - **Αυτόματη σιωπηλή πρόταση μονάδας**: σκόπιμα **όχι** (βλ. «Η ΑΠΟΦΑΣΗ» πάνω — m/ft αμφίσημα).
+  - **`.pts` header line ως έλεγχος πλήθους**: παραμένει preamble που αγνοείται (όπως στο M8β/Δ) —
+    δεν φούσκωσε το scope.
+
+  ✅ **Google-level: ΝΑΙ** — ένας dropdown μονάδας (extraction, όχι clone), ένα scale table (M2),
+  ένα span-sanity check (SSoT στο `buildReadResult`, όλες οι μορφές), deterministic **ορατή απόδειξη**
+  αντί για σιωπηλή μαντεψιά, και **zero regression by construction**: default `m` αμετάβλητο· το `unit`
+  ταξίδευε ήδη σωστά — άλλαξε **μόνο** ότι έγινε ορατό & επεξεργάσιμο για κάθε μορφή.
+
+  **Status: M1 + M2 + M3 + M4 + M5 (α+β) + M6 + M7 + M8α + M8β (Α+Β+Γ+Δ+Ε) IMPLEMENTED — M8 ΠΛΗΡΕΣ·
+  moonshots (multiplayer, Gaussian-Splat, COPC streaming) προγραμματισμένα (§12.2).**
