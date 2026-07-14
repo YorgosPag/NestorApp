@@ -18,11 +18,11 @@ import { useTranslation } from '@/i18n';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TOPO_ORDER_PRESETS } from '../../../systems/topography/topo-order-presets';
 import type { ColumnMapping, ColumnRole, TopoUnit } from '../../../systems/topography/topo-import-types';
+import { TopoUnitSelect } from './TopoUnitSelect';
 import styles from './TopoImportWizard.module.css';
 
 /** Roles offered per column, in the order a surveyor thinks about them. */
 const ROLES: readonly ColumnRole[] = ['x', 'y', 'z', 'code', 'pointId', 'ignore'];
-const UNITS: readonly TopoUnit[] = ['m', 'mm', 'ft'];
 
 /** How many data rows the preview shows — enough to recognise the file, never enough to scroll away. */
 const PREVIEW_ROWS = 8;
@@ -62,17 +62,7 @@ export function TopoColumnMapTable(props: Props): React.JSX.Element {
           </Select>
         </label>
 
-        <label className={styles.field}>
-          <span className={styles.label}>{t('topography.import.unitLabel')}</span>
-          <Select value={unit} onValueChange={(v) => onUnit(v as TopoUnit)} disabled={disabled}>
-            <SelectTrigger size="sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {UNITS.map((u) => (
-                <SelectItem key={u} value={u}>{t(`topography.import.unit.${u}`)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </label>
+        <TopoUnitSelect unit={unit} disabled={disabled} onUnit={onUnit} />
       </div>
 
       <div className={styles.tableScroll}>

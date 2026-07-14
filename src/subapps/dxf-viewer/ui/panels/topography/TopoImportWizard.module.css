@@ -225,6 +225,47 @@
   color: #e0b24a;
 }
 
+.spanReadout {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.spanList {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.spanRow,
+.spanRowSelected {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.spanRow {
+  background: rgb(255 255 255 / 4%);
+}
+
+.spanRowSelected {
+  background: rgb(47 111 208 / 22%);
+  font-weight: 600;
+}
+
+.spanRow dt,
+.spanRow dd,
+.spanRowSelected dt,
+.spanRowSelected dd {
+  margin: 0;
+}
+
 .canvasWrap {
   display: flex;
   justify-content: center;

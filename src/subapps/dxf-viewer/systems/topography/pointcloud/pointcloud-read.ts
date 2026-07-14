@@ -26,6 +26,7 @@
 import type { LocalOrigin, TopoBounds } from '../topo-types';
 import { computeLocalOrigin } from '../topo-local-origin';
 import { LAS_HEADER_OFFSETS, LAS_SIGNATURE, LAZ_COMPRESSION_MASK } from './asprs-las-spec';
+import { SPAN_SANITY_MAX_HORIZONTAL_MM, SPAN_SANITY_MAX_VERTICAL_MM } from './pointcloud-defaults';
 import type {
   PointCloudData,
   PointCloudFormat,
@@ -51,6 +52,7 @@ export const POINTCLOUD_MSG = {
   WARN_TRUNCATED_POINT_DATA: 'topography.pointcloud.warn.truncatedPointData',
   WARN_RECORD_LENGTH_MISMATCH: 'topography.pointcloud.warn.recordLengthMismatch',
   WARN_HEADER_BOUNDS_INVALID: 'topography.pointcloud.warn.headerBoundsInvalid',
+  WARN_SPAN_IMPLAUSIBLE: 'topography.pointcloud.warn.spanImplausible',
 } as const;
 
 // ─── Format detection ─────────────────────────────────────────────────────────
@@ -211,12 +213,27 @@ export interface ReadResultParts {
 }
 
 /**
+ * Belt-and-suspenders (ADR-650 M8β/Ε): a WORLD extent no survey site reaches. A cloud that reads
+ * this big has been scaled by the wrong unit (feet or mm interpreted as metres) or read from the
+ * wrong columns — the two silent-wrong-scale failures M8β/Δ+Ε exist to surface. Format-agnostic:
+ * every reader lands its bounds here, so LAS, LAZ and ASCII are all covered by this one check.
+ */
+export function isCloudSpanImplausible(bounds: TopoBounds): boolean {
+  const horizontal = Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
+  const vertical = bounds.maxZ - bounds.minZ;
+  return horizontal > SPAN_SANITY_MAX_HORIZONTAL_MM || vertical > SPAN_SANITY_MAX_VERTICAL_MM;
+}
+
+/**
  * Assemble the immutable `PointCloudReadResult` both readers return.
  *
  * `stats.totalPoints` is the number of points actually HELD (`data.count`), not the source's
  * point count: when the cloud was stride-sampled the two differ, and every downstream consumer
  * (CSF, decimation, preview) indexes into what is held. The `warn.strideSampled` warning is what
  * tells the engineer the source was bigger.
+ *
+ * The span sanity check runs HERE (not per reader) so the one warning covers every format — a
+ * 3× feet-as-metres cloud is caught whether it arrived as `.las`, `.laz` or `.xyz`.
  */
 export function buildReadResult(parts: ReadResultParts): PointCloudReadResult {
   const data: PointCloudData = {
@@ -228,6 +245,9 @@ export function buildReadResult(parts: ReadResultParts): PointCloudReadResult {
     origin: parts.origin,
     bounds: parts.bounds,
   };
+  const warnings = isCloudSpanImplausible(parts.bounds)
+    ? [...parts.warnings, POINTCLOUD_MSG.WARN_SPAN_IMPLAUSIBLE]
+    : parts.warnings;
   return {
     data,
     format: parts.format,
@@ -237,6 +257,6 @@ export function buildReadResult(parts: ReadResultParts): PointCloudReadResult {
       hasSourceClassification: parts.classification !== null,
       classHistogram: parts.classification !== null ? parts.classHistogram : null,
     },
-    warnings: parts.warnings,
+    warnings,
   };
 }

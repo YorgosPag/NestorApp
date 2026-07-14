@@ -30,7 +30,12 @@ import { applyColumnMapping, isMappingComplete, suggestMappingFromHeaders } from
 import { suggestMappingFromRows } from '../../../systems/topography/topo-column-sniffer';
 import { fieldSplitterFor, sampleTopoLines } from '../../../systems/topography/topo-text-lines';
 import { getOrderPresetMapping } from '../../../systems/topography/topo-order-presets';
-import { isAsciiPointCloudFile, isPointCloudFile, importPointCloud } from '../../../io/pointcloud-import';
+import {
+  isAsciiPointCloudFile,
+  isPointCloudFile,
+  importPointCloud,
+  readPointCloudSourceExtent,
+} from '../../../io/pointcloud-import';
 import type { PointCloudImportProgress } from '../../../io/pointcloud-import';
 import {
   ASCII_SNIFF_BYTES,
@@ -42,6 +47,7 @@ import {
 import type { ColumnMapping, ColumnRole, RawTable, TopoUnit } from '../../../systems/topography/topo-import-types';
 import type { TopoPoint, TopoSurfaceId } from '../../../systems/topography/topo-types';
 import type {
+  CloudSourceExtent,
   CsfOptions,
   PointCloudPipelineResult,
   PointCloudReadOptions,
@@ -96,6 +102,12 @@ export interface UseTopoImport {
   readonly cloudSample: readonly (readonly string[])[];
   /** The engineer-certified column order of the ASCII cloud (sniffed proposal, editable). */
   readonly cloudMapping: ColumnMapping;
+  /**
+   * ADR-650 M8β/Ε — the raw site extent of a BINARY cloud (LAS/LAZ), off its header. `null` for an
+   * ASCII cloud (rows are visible) or an unreadable header. Feeds the wizard's unit-span readout so
+   * the engineer can SEE which unit yields a sane site before running the filter.
+   */
+  readonly cloudSourceExtent: CloudSourceExtent | null;
   readonly cloudResult: PointCloudPipelineResult | null;
   readonly cloudProgress: PointCloudImportProgress | null;
   readonly cloudError: string | null;
@@ -125,6 +137,7 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
   const [cloudFile, setCloudFile] = React.useState<File | null>(null);
   const [cloudSample, setCloudSample] = React.useState<readonly (readonly string[])[]>([]);
   const [cloudMapping, setCloudMapping] = React.useState<ColumnMapping>([]);
+  const [cloudSourceExtent, setCloudSourceExtent] = React.useState<CloudSourceExtent | null>(null);
   const [cloudDelimiter, setCloudDelimiter] = React.useState<string | undefined>(undefined);
   const [csf, setCsf] = React.useState<CsfOptions>(CSF_DEFAULTS);
   const [decimate, setDecimate] = React.useState<VoxelDecimateOptions>(VOXEL_DEFAULTS);
@@ -145,6 +158,7 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
     setCloudFile(null);
     setCloudSample([]);
     setCloudMapping([]);
+    setCloudSourceExtent(null);
     setCloudDelimiter(undefined);
     setCsf(CSF_DEFAULTS);
     setDecimate(VOXEL_DEFAULTS);
@@ -174,14 +188,20 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
         // (M8β/Δ): sniff a proposal off its head slice so the engineer certifies the column order
         // instead of the reader guessing «the first three numbers». A LAS/LAZ carries its columns
         // in a binary header — `sample` stays empty and the grid is not shown.
+        // ASCII → sniff the columns (the raw rows double as the visible extent readout, M8β/Δ).
+        // Binary → no columns to map, so instead read the header's extent (M8β/Ε): a LAS/LAZ never
+        // declares its unit, so the wizard must let the engineer pick it AND show what each unit
+        // would make the site measure. Both are cheap head-slice reads, done before any filtering.
         const sniff = isAsciiPointCloudFile(file.name)
           ? sniffAsciiCloud(await file.slice(0, ASCII_SNIFF_BYTES).text())
           : null;
+        const extent = sniff ? null : await readPointCloudSourceExtent(file);
         setDxfPoints(null);
         setTable(null);
         setCloudFile(file);
         setCloudSample(sniff?.rows ?? []);
         setCloudMapping(sniff ? initialCloudMapping(sniff.rows) : []);
+        setCloudSourceExtent(extent);
         setCloudDelimiter(sniff?.delimiter);
         setCloudResult(null);
         setCloudProgress(null);
@@ -317,7 +337,8 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
     skippedCount: mapped.skipped.length,
     error, busy, canProceed,
     loadFile, setRole, applyPreset, setUnit: changeUnit, back, next, commit, reset,
-    csf, decimate, forceCsf, cloudSample, cloudMapping, cloudResult, cloudProgress, cloudError,
+    csf, decimate, forceCsf, cloudSample, cloudMapping, cloudSourceExtent,
+    cloudResult, cloudProgress, cloudError,
     updateCsf, updateDecimate, setForceCsf: changeForceCsf, runCloudFilter,
   };
 }

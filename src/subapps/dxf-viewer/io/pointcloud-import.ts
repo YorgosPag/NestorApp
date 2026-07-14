@@ -15,12 +15,14 @@
 
 import type { PointCloudPipelineOptions } from '../systems/topography/pointcloud/pointcloud-pipeline';
 import type {
+  CloudSourceExtent,
   PointCloudPipelineResult,
   PointCloudStageKey,
   PointCloudWorkerRequest,
   PointCloudWorkerResponse,
 } from '../systems/topography/pointcloud/pointcloud-types';
 import {
+  CLOUD_HEADER_PROBE_BYTES,
   POINTCLOUD_WORKER_MIN_BYTES,
   POINTCLOUD_WORKER_READY_PROBE_MS,
   POINTCLOUD_WORKER_TIMEOUT_MS,
@@ -71,6 +73,26 @@ export function isPointCloudFile(fileName: string): boolean {
  */
 export function isAsciiPointCloudFile(fileName: string): boolean {
   return hasExtension(fileName, ASCII_POINTCLOUD_EXTENSIONS);
+}
+
+/**
+ * ADR-650 M8β/Ε — the site extent of a BINARY cloud, straight off its public header, before any
+ * filtering. `null` for an ASCII cloud (its raw rows are already visible in the mapping grid — they
+ * ARE the extent readout) and for any file whose header will not parse. The head slice is tiny
+ * (`CLOUD_HEADER_PROBE_BYTES`) and a `.laz` header is uncompressed, so this costs nothing and needs
+ * no WASM. The wizard turns this into the unit readout that makes the engineer's choice verifiable.
+ */
+export async function readPointCloudSourceExtent(file: File): Promise<CloudSourceExtent | null> {
+  if (!isPointCloudFile(file.name) || isAsciiPointCloudFile(file.name)) return null;
+  try {
+    const head = await file.slice(0, CLOUD_HEADER_PROBE_BYTES).arrayBuffer();
+    const { cloudSourceExtentFromBuffer } = await import(
+      '../systems/topography/pointcloud/cloud-unit-span'
+    );
+    return cloudSourceExtentFromBuffer(head);
+  } catch {
+    return null;
+  }
 }
 
 /**

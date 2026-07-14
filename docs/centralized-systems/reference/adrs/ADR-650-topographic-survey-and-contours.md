@@ -1,6 +1,6 @@
 # ADR-650 — Τοπογραφικές Αποτυπώσεις & Ισοϋψείς Γραμμές (Έρευνα Αγοράς + Αρχιτεκτονικό Blueprint)
 
-- **Status**: 🟡 IN PROGRESS — **M1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· v4) · **M2 IMPLEMENTED** (μέρος Α import wizard· v5 — μέρος Β breakline picking· v6) · **M4 IMPLEMENTED** (3Δ όψη εδάφους: μοναδικό derived TIN → `BufferGeometry` mesh + hypsometric· v7) · **M6 IMPLEMENTED** (όγκοι cut/fill: prisms + daylight split + στάθμη/επιφάνεια/όριο + cross-check + 3Δ cut/fill style· v8, §12.4) · **M7 IMPLEMENTED** (ελληνικό export «ένα κουμπί → φάκελος»: πίνακες στο σχέδιο + ZIP με DXF/PDF/CSV/XLSX + auto tolerance-check §10· v9, §12.5) · **M3 IMPLEMENTED** (ισοϋψείς ακριβείς↔όμορφες + LOD· v10) · **M5α IMPLEMENTED** (AI «καμπανάκι» = deterministic QA rules engine + inline flags, χωρίς LLM· v11) · **M5β IMPLEMENTED** («μίλα στο σχέδιο» = NL editing με LLM tool-calling πάνω στα υπάρχοντα topo commands· 8 tools + destructive spike-removal με confirm· v12 — **M5 ΠΛΗΡΕΣ**) · **M8α IMPLEMENTED** (point-cloud ingestion: LAS + bulk ASCII → in-house CSF bare-earth filter → voxel decimation → ΥΠΑΡΧΟΝ `TopoPointStore`· μηδέν νέα dependency· v13) · **M8β/Α IMPLEMENTED** (**LAZ decode** — ο δρόμος των drones: `laz-perf` **Apache-2.0** (επαληθευμένο, εγκεκριμένο) → ασυμπίεστα records → **ο ΙΔΙΟΣ** `decodeLasRecords` του LAS· lazy WASM πίσω από dynamic import· v14) · **M8β/Γ IMPLEMENTED** (**auto-breakline detection** — differentiator §9 #3: ο ΥΠΑΡΧΩΝ M5α ανιχνευτής dihedral fold εξήχθη σε SSoT· το νέο είναι το **chaining** ακμών σε ordered πολυγραμμές με **stop-at-junction** + φίλτρα θορύβου· preview στον καμβά + **ρητό confirm** πριν το `addBreakline` — καμία αυτόματη εγγραφή· deterministic, μηδέν LLM· v15) · **M8β/Β IMPLEMENTED** (**3Δ point-cloud layer** — το νέφος ζει ως `THREE.Points` πάνω από το έδαφος αντί να πεθαίνει με τον wizard· ο builder υπήρχε ήδη από το M8α, γράφτηκε **μόνο ο καταναλωτής**· κοινό `writeDxfPlanToWorld` με το TIN· **§6 επιβεβλημένο στον κώδικα**: `raycast = () => {}` → ΟΨΗ, ποτέ γεωμετρία μέτρησης· 48 MB μετρημένα + ρητό «Αφαίρεση νέφους»· καμία νέα dependency· v16). **Εκκρεμεί**: M8β/Δ (id-aware ASCII), multiplayer, Gaussian-Splat. Έρευνα §1–§11 & roadmap §12.2 παραμένουν το blueprint.
+- **Status**: 🟡 IN PROGRESS — **M1 IMPLEMENTED** (πυρήνας σημεία→CDT/TIN→ισοϋψείς· v4) · **M2 IMPLEMENTED** (μέρος Α import wizard· v5 — μέρος Β breakline picking· v6) · **M4 IMPLEMENTED** (3Δ όψη εδάφους: μοναδικό derived TIN → `BufferGeometry` mesh + hypsometric· v7) · **M6 IMPLEMENTED** (όγκοι cut/fill: prisms + daylight split + στάθμη/επιφάνεια/όριο + cross-check + 3Δ cut/fill style· v8, §12.4) · **M7 IMPLEMENTED** (ελληνικό export «ένα κουμπί → φάκελος»: πίνακες στο σχέδιο + ZIP με DXF/PDF/CSV/XLSX + auto tolerance-check §10· v9, §12.5) · **M3 IMPLEMENTED** (ισοϋψείς ακριβείς↔όμορφες + LOD· v10) · **M5α IMPLEMENTED** (AI «καμπανάκι» = deterministic QA rules engine + inline flags, χωρίς LLM· v11) · **M5β IMPLEMENTED** («μίλα στο σχέδιο» = NL editing με LLM tool-calling πάνω στα υπάρχοντα topo commands· 8 tools + destructive spike-removal με confirm· v12 — **M5 ΠΛΗΡΕΣ**) · **M8α IMPLEMENTED** (point-cloud ingestion: LAS + bulk ASCII → in-house CSF bare-earth filter → voxel decimation → ΥΠΑΡΧΟΝ `TopoPointStore`· μηδέν νέα dependency· v13) · **M8β/Α IMPLEMENTED** (**LAZ decode** — ο δρόμος των drones: `laz-perf` **Apache-2.0** (επαληθευμένο, εγκεκριμένο) → ασυμπίεστα records → **ο ΙΔΙΟΣ** `decodeLasRecords` του LAS· lazy WASM πίσω από dynamic import· v14) · **M8β/Γ IMPLEMENTED** (**auto-breakline detection** — differentiator §9 #3: ο ΥΠΑΡΧΩΝ M5α ανιχνευτής dihedral fold εξήχθη σε SSoT· το νέο είναι το **chaining** ακμών σε ordered πολυγραμμές με **stop-at-junction** + φίλτρα θορύβου· preview στον καμβά + **ρητό confirm** πριν το `addBreakline` — καμία αυτόματη εγγραφή· deterministic, μηδέν LLM· v15) · **M8β/Β IMPLEMENTED** (**3Δ point-cloud layer** — το νέφος ζει ως `THREE.Points` πάνω από το έδαφος αντί να πεθαίνει με τον wizard· ο builder υπήρχε ήδη από το M8α, γράφτηκε **μόνο ο καταναλωτής**· κοινό `writeDxfPlanToWorld` με το TIN· **§6 επιβεβλημένο στον κώδικα**: `raycast = () => {}` → ΟΨΗ, ποτέ γεωμετρία μέτρησης· 48 MB μετρημένα + ρητό «Αφαίρεση νέφους»· καμία νέα dependency· v16) · **M8β/Δ IMPLEMENTED** (**id-aware ASCII cloud** — ο reader του νέφους μαθαίνει το `ColumnMapping` που ο δρόμος CSV ήδη ήξερε (M2)· **deterministic sniffer** προτείνει τις στήλες από τα δεδομένα, ο μηχανικός τις πιστοποιεί σε grid **πριν** το φίλτρο· ένα PENZD αρχείο δεν διαβάζεται πια με X = id σημείου· **χωρίς mapping ⇒ σημερινή συμπεριφορά**· καμία νέα dependency· v17) · **M8β/Ε IMPLEMENTED** (**unit-aware binary cloud** — το LAS/LAZ **δεν** δηλώνει μονάδα στο header· ο dropdown μονάδας γίνεται ορατός & επεξεργάσιμος **για ΚΑΘΕ** μορφή νέφους (όχι μόνο ASCII, όπως μετά το M8β/Δ), με **readout έκτασης** ανά μονάδα ώστε η επιλογή να επαληθεύεται με τα μάτια — **καμία σιωπηλή μαντεψιά** (m/ft διαφέρουν ×3.28, όπως PDAL/CloudCompare)· + belt-and-suspenders sanity warning για εξωπραγματικό span σε **όλες** τις μορφές· default `m` αμετάβλητο· καμία νέα dependency· v18). **Εκκρεμεί**: multiplayer, Gaussian-Splat, COPC streaming. Έρευνα §1–§11 & roadmap §12.2 παραμένουν το blueprint.
 - **Date**: 2026-07-13
 - **Category**: DXF Viewer / Topography / Research
 - **Σχετικά**: ADR-635 (culling gap σε geo-referenced συντεταγμένες ±1e6), ADR-462 (canonical mm),
@@ -363,7 +363,9 @@ false-flat handling) → **d3-tricontour** contours (major/minor) → **native P
 | **M8β/Α** ✅ | **LAZ decode** (ο δρόμος των drones) | `.laz` (DJI Terra / Pix4D / Terrasolid — **κανένα drone δεν βγάζει `.las`**) → **laz-perf WASM** → ασυμπίεστα LAS records → **ο ΙΔΙΟΣ** `decodeLasRecords` που ήδη διαβάζει το `.las`. **Μηδέν δεύτερος reader/pipeline.** Stride κατά την αποσυμπίεση (τα LAZ chunks δεν παραλείπονται)· lazy WASM singleton πίσω από dynamic import (τα 214 KB δεν χρεώνονται σε όποιον δεν ανοίγει `.laz`). **DONE, changelog v14.** | LAStools/laszip· CloudCompare· potree/copc.js (ίδιο laz-perf) | `las-reader.ts` (εξήγαγε τον decoder)· `pointcloud-read` dispatcher· `pointcloud.worker` | **`laz-perf@0.0.7` — Apache-2.0 ✅** (επαληθευμένο σε 3 επίπεδα· **ΟΧΙ** το LGPL LASzip)· `@types/emscripten` (MIT, dev) |
 | **M8β/Γ** ✅ | **Auto-breakline detection** (§9 #3) | Το σύστημα διαβάζει την **ΙΔΙΑ** επιφάνεια και **προτείνει** τις γραμμές ασυνέχειας που λείπουν. Ο ανιχνευτής **υπήρχε ήδη** (M5α dihedral fold) → εξήχθη σε SSoT (`detect-feature-edges`) που **καλούν και οι δύο**. Το νέο = **chaining**: ακμές → ordered πολυγραμμές, **stop-at-junction** (3 σπασίματα = 3 γραμμές, όχι μαντεψιά) + φίλτρα θορύβου (≥3 ακμές, ≥5 μ). **Preview στον καμβά + ρητό confirm** → `addBreakline`· **καμία αυτόματη εγγραφή** (§9 human-certifier). Deterministic, **μηδέν LLM**. **DONE, changelog v15.** RDP simplification **ΔΕΝ** μπήκε (ο υπάρχων `simplifyPolyline` είναι 2Δ → θα πετούσε το Ζ). | Civil 3D «Extract feature lines from surface»· CloudCompare/PDAL ridge-valley extraction (**πάντα** ανθρώπινη έγκριση) | `check-missing-breaklines` (M5α — εξαγωγή του fold)· `topo-qa-topology`· **`contour-chainer` (M1) → γενικεύτηκε σε `graph-chain` SSoT**· `calculatePolylineLength`· `TopoPointStore.addBreakline`· `RegionPerimeterPreviewOverlay` pattern | **καμία νέα** (in-house, μηδέν LLM) |
 | **M8β/Β** ✅ | **3Δ point-cloud layer** | Το νέφος ζει ως **`THREE.Points` layer** στην 3Δ όψη (καφέ έδαφος / γκρι απόρριψη) αντί να πεθαίνει με τον wizard. Ο builder **υπήρχε ήδη** (M8α `buildCloudPreview` — interleaved θέσεις + ASPRS χρώματα, ήδη stride-sampled): γράφτηκε **μόνο ο καταναλωτής** (store που επιβιώνει του React + pure converter + scene layer + panel toggle). Τα plan→three-world μαθηματικά **δεν** αντιγράφηκαν — καλείται το υπάρχον `writeDxfPlanToWorld`. **§6 επιβεβλημένο στον κώδικα:** `raycast = () => {}` → ποτέ pickable/snappable. **DONE, changelog v16.** Potree/COPC/EDL **ΔΕΝ** μπήκαν: καμία μετρημένη ανάγκη (2M σημεία = ένα draw call). | Autodesk ReCap· CloudCompare· Potree (ίδιο 1-draw-call `Points` για αυτό το μέγεθος) | `buildCloudPreview` + `PointCloudPreview` (M8α)· `writeDxfPlanToWorld`· `TerrainSceneLayer` (owner pattern)· `terrain-3d-store` (store pattern)· `disposeObjectTree` | **καμία νέα** — υπάρχον `three` |
-| **M8β/Δ +** | **Moonshots** | id-aware ASCII· closed-loop drone→CAD· multiplayer (CRDT)· Gaussian-Splat visualization layer (**ΠΟΤΕ** ως γεωμετρία μέτρησης, §6)· server-GPU KPConv· COPC/EPT octree streaming. | §6, §9 differentiators | worker split (client/server)· Potree· `bim-3d` engine (ADR-366/645) | Potree (BSD-2 ✅) — server-GPU για heavy ML |
+| **M8β/Δ** ✅ | **id-aware ASCII cloud** (το νέφος που κουβαλά στήλες) | Ο bulk ASCII reader έπαιρνε **τα πρώτα τρία αριθμητικά πεδία** ως X/Y/Z → ένα **PENZD/PNEZD** αρχείο (id πρώτο — το default των ελληνικών exports) διαβαζόταν με **X = id σημείου**: κανένα σφάλμα, καμία προειδοποίηση, νέφος-τέρας και ισοϋψείς από σκουπίδια. Λύση: ο reader δέχεται **προαιρετικό `ColumnMapping`** — **το ΙΔΙΟ** που ήδη ξέρει ο δρόμος CSV (M2: `ColumnRole`, `TOPO_ORDER_PRESETS`, `isMappingComplete`) — και **deterministic sniffer** (μηδέν LLM) **ΠΡΟΤΕΙΝΕΙ** ανάθεση από τα ίδια τα δεδομένα· ο μηχανικός τη βλέπει σε **grid με τις πραγματικές γραμμές** και την **πιστοποιεί πριν** το φίλτρο. **Χωρίς mapping ⇒ σημερινή συμπεριφορά** (μηδέν regression στα σκέτα `x y z` dumps). **DONE, changelog v17.** | CloudCompare «Open ASCII file» dialog (μαντεύει, δεν επιβάλλει)· PDAL `readers.text` (απαιτεί ρητό `order=`)· Civil 3D / CASS point-file **formats** από κατάλογο | `ColumnMapping`/`ColumnRole` + `TOPO_ORDER_PRESETS` + `isMappingComplete` (M2)· `detectDelimiter` (M2)· `parseLocaleNumber`· `PointCloudReadOptions` (ταξιδεύει ήδη στον worker) | **καμία νέα** (in-house, deterministic) |
+| **M8β/Ε** ✅ | **unit-aware binary cloud** (η μονάδα που κανείς δεν ρώτησε) | Το LAS/LAZ **δεν** δηλώνει μονάδα στο header (ζει σε προαιρετικό CRS VLR)· ο κώδικας υποσχόταν «ρωτάμε τον χρήστη» (`LasHeader` doc) αλλά ο dropdown μονάδας φαινόταν **μόνο** στον δρόμο ASCII (μέσα στο grid, M8β/Δ) → ένα binary νέφος σε **πόδια/mm** διαβαζόταν σιωπηλά ως **μέτρα** (CSF «βρίσκει έδαφος», cut/fill λάθος ×3). Λύση: ο **ΥΠΑΡΧΩΝ** `TopoUnit` dropdown εξήχθη σε κοινό `TopoUnitSelect` (**όχι** δεύτερο dropdown/πίνακα κλίμακας) και εμφανίζεται **για ΚΑΘΕ** μορφή· για binary συνοδεύεται από **readout έκτασης** ανά μονάδα (από το `LasHeader.min/max`, χωρίς αποσυμπίεση) ώστε ο μηχανικός να δει «200 μ. ή 61 πόδια;» και να **πιστοποιήσει**. **Καμία σιωπηλή πρόταση** (m/ft ×3.28 → αμφίσημα, μια λάθος αυτόματη επιλογή θα ΗΤΑΝ το bug). + **sanity warning** για εξωπραγματικό span (>50 km ή >5 km ύψος) σε **όλες** τις μορφές (πιάνει και λάθος στήλη). **Default `m` αμετάβλητο.** **DONE, changelog v18.** | Civil 3D / ReCap point-cloud import (ρωτά μονάδα ή διαβάζει CRS)· PDAL / CloudCompare (αρνούνται να μαντέψουν — ρητό scale/SRS) | `TopoUnit` + `TOPO_UNIT_SCALE_TO_MM` (M2)· `LasHeader.min/max` + `readLasHeader` (M8α)· `PointCloudReadOptions.unit` (ταξιδεύει ήδη)· `POINTCLOUD_MSG` warnings ως keys | **καμία νέα** (in-house, deterministic) |
+| **M8 moonshots +** | **Moonshots** | closed-loop drone→CAD· multiplayer (CRDT)· Gaussian-Splat visualization layer (**ΠΟΤΕ** ως γεωμετρία μέτρησης, §6)· server-GPU KPConv· COPC/EPT octree streaming. | §6, §9 differentiators | worker split (client/server)· Potree· `bim-3d` engine (ADR-366/645) | Potree (BSD-2 ✅) — server-GPU για heavy ML |
 
 **Εξαρτήσεις/σειρά:** M2 (input) → M3 (display) → M4 (3D) είναι ανεξάρτητα-παράλληλα δυνατά μετά το M1.
 M5 (AI) θέλει ώριμο core. M6 (όγκοι) θέλει μόνο το TIN (M1) → μπορεί νωρίς. M7 (export) θέλει M1+M6 για
@@ -1285,3 +1287,83 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
 
   **Status: M1 + M2 + M3 + M4 + M5 (α+β) + M6 + M7 + M8α + M8β/Α + M8β/Β + M8β/Γ IMPLEMENTED·
   M8β/Δ (id-aware ASCII) + moonshots προγραμματισμένα (§12.2).**
+
+- **2026-07-14 (v17)** — **M8β/Δ ΥΛΟΠΟΙΗΘΗΚΕ — id-aware ASCII cloud** (Phase 3, N.0.1). Το νέφος
+  σταματά να μαντεύει τις στήλες του και αρχίζει να **ρωτά**.
+
+  **ΤΟ BUG (και ήταν bug, όχι «feature που λείπει»):** ο bulk reader (`ascii-xyz-reader.parseXyz`)
+  έπαιρνε **τα πρώτα τρία αριθμητικά πεδία** κάθε γραμμής ως X/Y/Z. Σωστό για σκέτο `x y z` dump
+  σαρωτή· **σιωπηλά καταστροφικό** για ό,τι κουβαλά **id πρώτο** — δηλαδή για το **PENZD/PNEZD**, το
+  de-facto default των ελληνικών/Civil 3D exports:
+
+  ```
+  1  345678.123  4201234.456  125.30  EDGE     ← X=1, Y=345678, Z=4201234 (!)
+  ```
+
+  Δεν έσκαγε, δεν προειδοποιούσε: έβγαζε νέφος **χιλιομέτρων** ύψος, το CSF «έβρισκε έδαφος» μέσα
+  του, και ο μηχανικός έπαιρνε ισοϋψείς από σκουπίδια. **Μια λάθος στήλη δεν παράγει ΣΦΑΛΜΑ — παράγει
+  έγκυρη όψη ΛΑΘΟΥΣ εργοταξίου.** Γι' αυτό η στήλη είναι **ανθρώπινη έγκριση**, όχι μαντεψιά.
+
+  **Η ΑΠΟΦΑΣΗ (τι κάνουν οι μεγάλοι):** CloudCompare ανοίγει **πάντα** το «Open ASCII file» dialog
+  (μαντεύει προεπιλογή, **δεν** την επιβάλλει)· το PDAL (`readers.text`) **αρνείται** να μαντέψει
+  χωρίς `order=`· το Civil 3D/CASS διαλέγει point-file **format** από κατάλογο. Ομόφωνο μοτίβο:
+  **πρότεινε, μη μαντέψεις σιωπηλά.** Άρα: **deterministic sniffer** (μηδέν LLM, ίδια πειθαρχία με
+  M5α/M8β/Γ) → **ορατό, επεξεργάσιμο mapping πριν το φίλτρο** (§9 «AI-accelerant / human-certifier»).
+
+  **SSoT — τι ΔΕΝ ξαναγράφτηκε (το mapping υπήρχε ήδη από το M2):** `ColumnRole`/`ColumnMapping`,
+  `TOPO_ORDER_PRESETS` (PNEZD/PENZD/PNEZ/PENZ/NEZ/ENZ/XYZ/XYZD — με το **N=Northing=Y** κλειδωμένο),
+  `isMappingComplete`, `detectDelimiter`, `parseLocaleNumber`. **Κανένα δεύτερο `ColumnRole`, κανένα
+  δεύτερο preset, κανένα δεύτερο mapping UI.**
+
+  **Τι γράφτηκε:**
+  - `topo-text-lines.ts` (**νέο, lexing SSoT**) — «τι είναι σχόλιο» + «πώς σπάει μια γραμμή σε πεδία»
+    + locale-tolerant `parseTopoField` + streaming `forEachTopoLine`/`sampleTopoLines`. Υπήρχε
+    **δύο φορές** (`parse-topo-points` + `ascii-xyz-reader`, ο καθένας με δικό του αντίγραφο) — N.0.2
+    boy-scout: ενοποιήθηκε. ⚠️ **Μοιράζονται το LEXING, ΟΧΙ τον parser**: ο ένας βγάζει `TopoPoint[]`
+    objects, ο άλλος SoA `Float32Array` (30M objects ≈ 3 GB heap → πεθαίνει το tab).
+  - `topo-column-sniffer.ts` (**νέο, pure**) — 4 σήματα με τη σειρά: (1) `pointId` = **η πρώτη**
+    αριθμητική στήλη, all-integer + γνησίως αύξουσα, **μόνο αν** μένουν 3 στήλες συντεταγμένων
+    (αλλιώς ένα `1 2 3` dump θα έχανε το X του)· (2) `code` = η πρώτη καθαρά μη-αριθμητική· (3) `z` =
+    αυτή που είναι **τάξεις μεγέθους μικρότερη** (υψόμετρο ~10²  vs ΕΓΣΑ easting ~10⁵)· (4) `x`/`y` =
+    σειρά αρχείου, **εκτός** αν η πρώτη «καπελώνει» τη δεύτερη ≥4× → τότε είναι **Northing** (PNEZD/NEZ).
+    **Λόγοι, όχι απόλυτα** — το ίδιο αρχείο σε mm περνά από τους ίδιους κανόνες.
+  - `PointCloudReadOptions.mapping?` + `.delimiter?` → ταξιδεύουν **αυτούσια** στον worker (ήδη
+    structured-cloneable· καμία αλλαγή στο worker protocol).
+  - `TopoColumnMapTable.tsx` (**νέο**) — το grid στηλών εξήχθη από το `TopoColumnMapStep` και το
+    μοιράζονται **και οι δύο** δρόμοι (CSV + ASCII νέφος). Δύο grids = sibling clone που θα αποκλίνει.
+  - `TopoCloudStep` → νέο fieldset «Στήλες αρχείου» (μόνο για `.xyz`/`.pts`· το LAS/LAZ δηλώνει τις
+    στήλες του στο binary header). Κάθε αλλαγή παραμέτρου **ακυρώνει** το προηγούμενο αποτέλεσμα —
+    δεν εγκρίνεις φίλτρο που δεν έτρεξες.
+
+  🐛 **ΔΕΥΤΕΡΟ BUG, ΙΔΙΑΣ ΟΙΚΟΓΕΝΕΙΑΣ, ΠΙΑΣΤΗΚΕ ΑΠΟ ΤΑ TESTS:** ο lexer έκοβε **και στο κόμμα**, άρα
+  ένα ελληνικό export (`1;345678,123;4201234,456;125,30;EDGE`) γινόταν **8 πεδία αντί για 5** → κάθε
+  δείκτης στήλης μετατοπιζόταν → σκουπίδια, πάλι σιωπηλά. Λύση: ο wizard ανιχνεύει το διαχωριστικό με
+  το **υπάρχον** `detectDelimiter` (M2) και το στέλνει μαζί με το mapping· με `;`/tab/κενό το κόμμα
+  μένει **υποδιαστολή** (`fieldSplitterFor`). Το grid που πιστοποιεί ο μηχανικός σπάει **ακριβώς όπως**
+  θα σπάσει ο reader.
+
+  **Tests:** `topo-column-sniffer.test.ts` (PENZD/PNEZD/ελληνικό locale· σκέτο `x y z` αμετάβλητο·
+  δεν κλέβει X για pointId σε 3 στήλες· αγνοεί intensity/RGB· καμία πρόταση όταν λείπουν 3 αριθμητικές)
+  + 6 νέα cases στο `ascii-xyz-reader.test.ts` (mapped PENZD = αποτύπωση· N=Y στο PNEZD· ελληνικό `;`·
+  ελλιπές mapping → fallback· **case που ΤΕΚΜΗΡΙΩΝΕΙ την παλιά παγίδα**: un-mapped PENZD → X = id).
+  **22 suites / 201 tests PASS** (από 22/190 — τίποτα δεν έσπασε). `jscpd:diff` καθαρό (12 αρχεία).
+
+  **ΔΕΝ μπήκαν — και γιατί:**
+  - **Χρωματισμός νέφους από intensity/RGB στήλες**: ο sniffer τις αναγνωρίζει ως `ignore`, αλλά το
+    `PointCloudPreview` κουβαλά **ταξινόμηση**, όχι RGB — θέλει αλλαγή στο SoA buffer (M8α), όχι στο
+    mapping. Ο χρωματισμός **της απόφασης** (τι κράτησε το φίλτρο) είναι αυτό που ζητά το §9.
+  - **`.pts` / `.ptx` headers** (γραμμή-πλήθος + 4×4 πίνακας σάρωσης): άλλο πρόβλημα (metadata, όχι
+    στήλες). Σήμερα ένα `.pts` διαβάζεται ως ASCII — το header line γίνεται preamble και αγνοείται.
+  - **Μονάδα για LAS/LAZ από VLR/CRS**: το LAS **δεν** δηλώνει μονάδα στο header (ζει σε προαιρετικό
+    CRS VLR). Όπως το Civil 3D, ρωτάμε τον χρήστη — αλλά ο dropdown μονάδας φαίνεται πλέον **μόνο**
+    στον δρόμο ASCII (μαζί με το grid). Για binary νέφος ισχύει το default `m`.
+  - **Persist του mapping ανά αρχείο/εταιρεία** («θυμήσου ότι τα δικά μου exports είναι PENZD»): θα
+    ήταν χρήσιμο, αλλά είναι **προτίμηση χρήστη** — άλλο ADR, άλλο store.
+
+  ✅ **Google-level: ΝΑΙ** — ένα λεξιλόγιο στηλών (M2, κοινό), ένα lexing SSoT (αντί για δύο
+  αντίγραφα), ένα grid UI (αντί για δύο), deterministic πρόταση + **ανθρώπινη πιστοποίηση πριν** την
+  πράξη, και **zero regression by construction**: χωρίς mapping ο reader τρέχει τον ίδιο κώδικα που
+  έτρεχε πάντα.
+
+  **Status: M1 + M2 + M3 + M4 + M5 (α+β) + M6 + M7 + M8α + M8β (Α+Β+Γ+Δ) IMPLEMENTED·
+  moonshots (multiplayer, Gaussian-Splat, COPC streaming) προγραμματισμένα (§12.2).**

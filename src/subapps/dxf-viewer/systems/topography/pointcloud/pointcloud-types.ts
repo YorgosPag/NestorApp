@@ -96,6 +96,31 @@ export interface LasVec3 {
   readonly z: number;
 }
 
+/**
+ * ADR-650 M8β/Ε — the raw planimetric+vertical extent of a binary cloud, in the file's OWN source
+ * units (unit-agnostic: `max − min` per axis, straight off the LAS/LAZ public header). It is the
+ * seed for the wizard's unit readout — a LAS header does not state its unit (§ `LasHeader` doc),
+ * so the engineer picks it, and this is the evidence that makes the pick verifiable.
+ */
+export interface CloudSourceExtent {
+  readonly dx: number;
+  readonly dy: number;
+  readonly dz: number;
+}
+
+/**
+ * ADR-650 M8β/Ε — one row of the wizard's "what would the site measure under this unit" readout.
+ * All three fields are METRES (the unit a surveyor reasons about a site extent in), so the engineer
+ * reads down the three candidates and recognises the sane one — «200 × 180 m» is a plot, «0.2 m» is
+ * not, «61 m» might be a small plot in feet. Deterministic, zero LLM.
+ */
+export interface UnitSpanReadout {
+  readonly unit: TopoUnit;
+  readonly widthMeters: number;
+  readonly depthMeters: number;
+  readonly heightMeters: number;
+}
+
 /** What every point-cloud reader returns. `warnings` are user-facing i18n KEYS, never text. */
 export interface PointCloudReadResult {
   readonly data: PointCloudData;

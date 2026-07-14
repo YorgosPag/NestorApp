@@ -18,9 +18,16 @@ import { useTranslation } from '@/i18n';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PREVIEW_POINT_SIZE_PX } from '../../../systems/topography/pointcloud/pointcloud-defaults';
 import { isMappingComplete } from '../../../systems/topography/topo-column-mapping';
-import type { CsfRigidness, VoxelRepresentative } from '../../../systems/topography/pointcloud/pointcloud-types';
+import { unitSpanReadouts } from '../../../systems/topography/pointcloud/cloud-unit-span';
+import type {
+  CloudSourceExtent,
+  CsfRigidness,
+  VoxelRepresentative,
+} from '../../../systems/topography/pointcloud/pointcloud-types';
+import type { TopoUnit } from '../../../systems/topography/topo-import-types';
 import type { UseTopoImport } from './useTopoImport';
 import { TopoColumnMapTable } from './TopoColumnMapTable';
+import { TopoUnitSelect } from './TopoUnitSelect';
 import { drawCloudPreview } from './topo-cloud-preview-canvas';
 import styles from './TopoImportWizard.module.css';
 
@@ -38,6 +45,7 @@ export function TopoCloudStep({ wizard }: Props): React.JSX.Element {
   return (
     <section className={styles.step}>
       <CloudColumnsFieldset wizard={wizard} />
+      <CloudUnitFieldset wizard={wizard} />
       <CsfParamsFieldset wizard={wizard} />
       <DecimateParamsFieldset wizard={wizard} />
 
@@ -115,6 +123,84 @@ function CloudColumnsFieldset({ wizard }: Props): React.JSX.Element | null {
       )}
     </fieldset>
   );
+}
+
+// ─── Unit (ADR-650 M8β/Ε — the unit a binary cloud never declared) ─────────────
+
+/**
+ * The source-unit control for a BINARY cloud, and the reason THIS milestone exists.
+ *
+ * A LAS/LAZ header states no unit (§ `LasHeader` doc), so — like Civil 3D — we ask. But an ASCII
+ * cloud already asks: its unit dropdown lives in the column grid above, alongside the raw rows that
+ * let the engineer see the scale. A binary cloud had neither — the dropdown never rendered, the unit
+ * stayed silently `m`, and a file in feet became a site read ×3.28 too small: CSF «finds ground»,
+ * cut/fill off by 3×, no error anywhere. So for a binary cloud (`cloudSample` empty) we mount the
+ * same dropdown here, and — since there are no visible rows — make the choice verifiable with a
+ * readout of what the site would MEASURE under each unit. The engineer reads «200 m or 61 ft?» and
+ * certifies. We never auto-pick: m and ft differ by only ×3.28, so a wrong guess would BE the bug.
+ */
+function CloudUnitFieldset({ wizard }: Props): React.JSX.Element | null {
+  const { t } = useTranslation('dxf-viewer-panels');
+  const { cloudSample, cloudSourceExtent, unit, busy } = wizard;
+
+  // ASCII clouds carry their unit dropdown in the column grid (with visible rows). This fieldset is
+  // the binary road only — the one place that otherwise had no unit control at all.
+  if (cloudSample.length > 0) return null;
+
+  return (
+    <fieldset className={styles.cloudGrid}>
+      <legend className={styles.sectionTitle}>{t('topography.pointcloud.unit.title')}</legend>
+      <p className={styles.hint}>{t('topography.pointcloud.unit.hint')}</p>
+
+      <TopoUnitSelect unit={unit} disabled={busy} onUnit={wizard.setUnit} />
+
+      {cloudSourceExtent && <CloudSpanReadout extent={cloudSourceExtent} selected={unit} />}
+    </fieldset>
+  );
+}
+
+interface SpanReadoutProps {
+  readonly extent: CloudSourceExtent;
+  readonly selected: TopoUnit;
+}
+
+/**
+ * The eye-verifiable evidence behind the unit choice: what the site would measure read as metres,
+ * as millimetres, as feet. The selected row is highlighted; the engineer picks the one whose extent
+ * is a plausible site. Deterministic (`unitSpanReadouts`), zero LLM.
+ */
+function CloudSpanReadout({ extent, selected }: SpanReadoutProps): React.JSX.Element {
+  const { t } = useTranslation('dxf-viewer-panels');
+  const readouts = unitSpanReadouts(extent);
+
+  return (
+    <div className={styles.spanReadout}>
+      <p className={styles.label}>{t('topography.pointcloud.unit.spanTitle')}</p>
+      <dl className={styles.spanList}>
+        {readouts.map((r) => (
+          <div
+            key={r.unit}
+            className={r.unit === selected ? styles.spanRowSelected : styles.spanRow}
+          >
+            <dt>{t(`topography.import.unit.${r.unit}`)}</dt>
+            <dd>
+              {t('topography.pointcloud.unit.extent', {
+                width: formatMeters(r.widthMeters),
+                depth: formatMeters(r.depthMeters),
+                height: formatMeters(r.heightMeters),
+              })}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+/** Metres, at a precision that reads: coarse for a site-sized number, finer for a sub-metre one. */
+function formatMeters(meters: number): string {
+  const digits = meters >= 100 ? 0 : meters >= 1 ? 1 : 3;
+  return meters.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: digits });
 }
 
 // ─── CSF parameters ─────────────────────────────────────────────────────────────

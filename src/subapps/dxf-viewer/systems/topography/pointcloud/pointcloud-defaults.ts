@@ -92,6 +92,25 @@ export const PREVIEW_POINT_SIZE_PX = 1.5;
 export const CSF_MAX_CLOTH_PARTICLES = 4_000_000;
 
 /**
+ * ADR-650 M8β/Ε — bytes pulled off a binary cloud to parse just its PUBLIC HEADER (never the point
+ * data). The largest header we read is LAS 1.4 (375 B, plus the uint64 point-count at offset 247);
+ * 512 B clears it with slack. This is what lets the wizard show the site's extent — and PROPOSE a
+ * unit reading — before the engineer has pressed «filter» (the header of a `.laz` is uncompressed).
+ */
+export const CLOUD_HEADER_PROBE_BYTES = 512;
+
+/**
+ * ADR-650 M8β/Ε — belt-and-suspenders ceilings on a READ cloud's WORLD extent (canonical mm). No
+ * survey a topographer imports here is 50 km across or 5 km tall; a cloud that reads that big
+ * betrays a wrong UNIT (feet or mm read as metres — the exact 3×/1000× silent scale error this
+ * milestone removes) or a wrong COLUMN (M8β/Δ). Either way the reader appends `warn.spanImplausible`
+ * so the engineer is told BEFORE the filter result is approved. Catches what slips past both the
+ * column grid and the unit readout.
+ */
+export const SPAN_SANITY_MAX_HORIZONTAL_MM = 50_000_000; // 50 km
+export const SPAN_SANITY_MAX_VERTICAL_MM = 5_000_000; // 5 km
+
+/**
  * Below this many points, skip the worker entirely and run on the main thread — spawning a
  * worker and transferring the buffer costs more than the parse itself. Mirrors the DXF import
  * threshold pattern (`DXF_IMPORT_THRESHOLDS.WORKER_PARSE_MIN_BYTES`).
