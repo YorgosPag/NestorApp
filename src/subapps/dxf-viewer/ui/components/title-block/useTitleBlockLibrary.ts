@@ -24,10 +24,12 @@ import { createTextTemplateLibraryService } from '../../../text-engine/templates
 import {
   findParentTemplate,
   isParentUpdateAvailable,
+  type TemplateVariantOverrides,
 } from '../../../text-engine/templates/template-inheritance';
-import type {
-  TextTemplate,
-  WritableTextTemplateScope,
+import {
+  textTemplateScope,
+  type TextTemplate,
+  type WritableTextTemplateScope,
 } from '../../../text-engine/templates/template.types';
 import { buildActiveTitleBlockSaveContent } from '../../../text-engine/title-block/active-title-block';
 import {
@@ -35,7 +37,10 @@ import {
   listTitleBlockLibrary,
   subscribeTitleBlockLibrary,
 } from '../../../text-engine/title-block/title-block-library-store';
-import { toTitleBlockLocale } from '../../../text-engine/title-block/title-block-presets';
+import {
+  toTitleBlockLocale,
+  type TitleBlockLocale,
+} from '../../../text-engine/title-block/title-block-presets';
 import { useTitleBlockOptionsStore } from '../../../state/title-block-options-store';
 
 /** Μια γραμμή της βιβλιοθήκης, μαζί με ό,τι χρειάζεται το UI για να αποφασίσει τι δείχνει. */
@@ -58,7 +63,18 @@ export interface UseTitleBlockLibraryResult {
   readonly saveActive: (name: string, scope: WritableTextTemplateScope) => Promise<void>;
   readonly publishToCompany: (template: TextTemplate) => Promise<void>;
   readonly detachToProject: (template: TextTemplate, name: string) => Promise<void>;
-  readonly pull: (row: TitleBlockLibraryRow) => Promise<void>;
+  /**
+   * Ρητό «Ενημέρωση από τον γονιό». Σε **γλωσσική** παραλλαγή ο καλών περνά το ξανα-μεταφρασμένο
+   * περιεχόμενο, αλλιώς ο γονιός θα έγραφε ελληνικά πάνω στην αγγλική πινακίδα (Φάση Κ).
+   */
+  readonly pull: (row: TitleBlockLibraryRow, overrides?: TemplateVariantOverrides) => Promise<void>;
+  /** ADR-651 Φάση Κ — δημιουργεί τη γλωσσική παραλλαγή (απόσπαση με μεταφρασμένο περιεχόμενο). */
+  readonly createVariant: (
+    parent: TextTemplate,
+    name: string,
+    from: TitleBlockLocale,
+    overrides: TemplateVariantOverrides,
+  ) => Promise<void>;
   readonly remove: (template: TextTemplate) => Promise<void>;
   /** Κάνει ένα πρότυπο **ενεργό** για την επόμενη τοποθέτηση (ίδιο κανάλι με το ribbon). */
   readonly activate: (template: TextTemplate) => void;
@@ -146,12 +162,41 @@ export function useTitleBlockLibrary(projectId?: string): UseTitleBlockLibraryRe
   );
 
   const pull = React.useCallback(
-    async (row: TitleBlockLibraryRow): Promise<void> => {
+    async (row: TitleBlockLibraryRow, overrides: TemplateVariantOverrides = {}): Promise<void> => {
       const parent = row.parent;
       if (!service || !parent) return;
-      await run(() => service.pullFromParent(row.template, parent));
+      await run(() => service.pullFromParent(row.template, parent, overrides));
     },
     [service, run],
+  );
+
+  /**
+   * ADR-651 Φάση Κ — η **γλωσσική παραλλαγή**: ίδια δομή, ίδια γεωμετρία, μεταφρασμένες
+   * ετικέτες. Είναι απόσπαση (`detach`) με μεταφρασμένο περιεχόμενο ⇒ **μηδέν** νέο data path.
+   *
+   * Σφραγίζει και τη γλώσσα του **γονιού** όταν λείπει (πρότυπο προγενέστερο της Φάσης Κ):
+   * αλλιώς η επιστροφή προς τα ελληνικά δεν θα τον ξανάβρισκε ποτέ.
+   */
+  const createVariant = React.useCallback(
+    async (
+      parent: TextTemplate,
+      name: string,
+      from: TitleBlockLocale,
+      overrides: TemplateVariantOverrides,
+    ): Promise<void> => {
+      if (!service) return;
+      const scope = variantScope(parent);
+      await run(async () => {
+        if (!parent.locale) await service.setLocale(parent.id, from);
+        await service.detach(parent, {
+          scope,
+          ...(scope === 'project' && projectId ? { projectId } : {}),
+          name: name.trim(),
+          ...overrides,
+        });
+      });
+    },
+    [service, run, projectId],
   );
 
   const remove = React.useCallback(
@@ -176,9 +221,19 @@ export function useTitleBlockLibrary(projectId?: string): UseTitleBlockLibraryRe
     publishToCompany,
     detachToProject,
     pull,
+    createVariant,
     remove,
     activate,
   };
+}
+
+/**
+ * Πού ζει η παραλλαγή: **εκεί που ζει ο γονιός** (η αγγλική πινακίδα του γραφείου είναι κι αυτή
+ * πρότυπο γραφείου). Το `system` δεν είναι εγγράψιμο ⇒ πέφτει στη βιβλιοθήκη του γραφείου.
+ */
+function variantScope(parent: TextTemplate): WritableTextTemplateScope {
+  const scope = textTemplateScope(parent);
+  return scope === 'system' ? 'company' : scope;
 }
 
 /** Low-freq store gate (η βιβλιοθήκη αλλάζει μόνο όταν κάποιος σώζει πρότυπο). */

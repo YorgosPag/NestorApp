@@ -42,10 +42,25 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { TemplateVariantOverrides } from '../../../text-engine/templates/template-inheritance';
 import {
   WRITABLE_TEXT_TEMPLATE_SCOPES,
+  type TextTemplate,
   type WritableTextTemplateScope,
 } from '../../../text-engine/templates/template.types';
+import {
+  hasTitleBlockVariant,
+  titleBlockTemplateLocale,
+} from '../../../text-engine/title-block/localization/title-block-variant';
+import {
+  toTitleBlockLocale,
+  type TitleBlockLocale,
+} from '../../../text-engine/title-block/title-block-presets';
+import {
+  TitleBlockLocalizeDialog,
+  type TitleBlockLocalizeRequest,
+} from './TitleBlockLocalizeDialog';
+import { sourceLocaleOf } from './useTitleBlockLocalize';
 import { useTitleBlockLibrary, type TitleBlockLibraryRow } from './useTitleBlockLibrary';
 
 export interface TitleBlockLibraryDialogProps {
@@ -57,12 +72,48 @@ export interface TitleBlockLibraryDialogProps {
 interface RowProps {
   readonly row: TitleBlockLibraryRow;
   readonly library: ReturnType<typeof useTitleBlockLibrary>;
+  readonly onLocalize: (request: TitleBlockLocalizeRequest) => void;
+}
+
+/**
+ * ADR-651 Φάση Κ — η γλώσσα-στόχος μιας παραλλαγής: **η αντίθετη** από τη γλώσσα του προτύπου.
+ * Πρότυπο χωρίς δηλωμένη γλώσσα (γραμμένο πριν τη Φάση Κ) θεωρείται στη γλώσσα του χρήστη.
+ */
+function useVariantTarget(template: TextTemplate): TitleBlockLocale {
+  const { i18n } = useTranslation('dxf-viewer-shell');
+  const source = titleBlockTemplateLocale(template) ?? toTitleBlockLocale(i18n.language);
+  return source === 'el' ? 'en' : 'el';
 }
 
 /** Μία γραμμή προτύπου: ταυτότητα (εμβέλεια/προέλευση) αριστερά, ενέργειες δεξιά. */
-function TemplateRow({ row, library }: RowProps): React.JSX.Element {
+function TemplateRow({ row, library, onLocalize }: RowProps): React.JSX.Element {
   const { t } = useTranslation('dxf-viewer-shell');
   const { template, parent, updateAvailable, isActive } = row;
+
+  const target = useVariantTarget(template);
+  const templates = React.useMemo(
+    () => library.rows.map((candidate) => candidate.template),
+    [library.rows],
+  );
+  const hasVariant = hasTitleBlockVariant(templates, template, target);
+
+  /**
+   * Η **γλωσσική** παραλλαγή δεν τραβά τον γονιό αυτούσιο: θα έγραφε ελληνικά πάνω στα αγγλικά.
+   * Περνά από τον ίδιο διάλογο — ξανα-μετάφραση, προεπισκόπηση, έγκριση.
+   */
+  const isLanguageVariant =
+    parent !== null &&
+    titleBlockTemplateLocale(template) !== null &&
+    titleBlockTemplateLocale(template) !== titleBlockTemplateLocale(parent);
+
+  const pull = (): void => {
+    const childLocale = titleBlockTemplateLocale(template);
+    if (isLanguageVariant && parent && childLocale) {
+      onLocalize({ mode: 'update', source: parent, target: childLocale, row });
+      return;
+    }
+    void library.pull(row);
+  };
 
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 border-t border-border py-2">
@@ -86,17 +137,23 @@ function TemplateRow({ row, library }: RowProps): React.JSX.Element {
 
       <div className="flex flex-wrap items-center gap-2">
         {updateAvailable && (
-          <Button
-            size="sm"
-            onClick={() => void library.pull(row)}
-            disabled={library.busy}
-          >
+          <Button size="sm" onClick={pull} disabled={library.busy}>
             {t('titleBlockLibrary.actions.pull')}
           </Button>
         )}
         {!isActive && (
           <Button size="sm" variant="outline" onClick={() => library.activate(template)}>
             {t('titleBlockLibrary.actions.use')}
+          </Button>
+        )}
+        {!hasVariant && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onLocalize({ mode: 'create', source: template, target })}
+            disabled={library.busy || !library.canWrite}
+          >
+            {t(`titleBlockLibrary.actions.localize.${target}`)}
           </Button>
         )}
         {template.scope !== 'company' && (
@@ -209,6 +266,34 @@ export function TitleBlockLibraryDialog({
 }: TitleBlockLibraryDialogProps): React.JSX.Element {
   const { t } = useTranslation('dxf-viewer-shell');
   const library = useTitleBlockLibrary(projectId);
+  const [localizeRequest, setLocalizeRequest] = React.useState<TitleBlockLocalizeRequest | null>(
+    null,
+  );
+
+  /**
+   * Η έγκριση της μεταγλώττισης — **μία** διαδρομή εγγραφής, δύο ρόλοι: νέα παραλλαγή
+   * (απόσπαση με μεταφρασμένο περιεχόμενο) ή ενημέρωση υπάρχουσας από τον γονιό της
+   * (pull με ξανα-μεταφρασμένο περιεχόμενο). Μηδέν νέο data path (N.18).
+   */
+  const confirmLocalize = React.useCallback(
+    async (
+      request: TitleBlockLocalizeRequest,
+      name: string,
+      overrides: TemplateVariantOverrides,
+    ): Promise<void> => {
+      if (request.mode === 'update' && request.row) {
+        await library.pull(request.row, overrides);
+        return;
+      }
+      await library.createVariant(
+        request.source,
+        name,
+        sourceLocaleOf(request.source, request.target),
+        overrides,
+      );
+    },
+    [library],
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -235,7 +320,12 @@ export function TitleBlockLibraryDialog({
           ) : (
             <ul className="flex flex-col">
               {library.rows.map((row) => (
-                <TemplateRow key={row.template.id} row={row} library={library} />
+                <TemplateRow
+                  key={row.template.id}
+                  row={row}
+                  library={library}
+                  onLocalize={setLocalizeRequest}
+                />
               ))}
             </ul>
           )}
@@ -246,6 +336,13 @@ export function TitleBlockLibraryDialog({
             {t('titleBlockLibrary.close')}
           </Button>
         </DialogFooter>
+
+        <TitleBlockLocalizeDialog
+          request={localizeRequest}
+          onClose={() => setLocalizeRequest(null)}
+          onConfirm={confirmLocalize}
+          library={library}
+        />
       </DialogContent>
     </Dialog>
   );
