@@ -225,14 +225,17 @@ export function buildTitleBlockLayout(
     paper: options.paper,
     rowCount: rows.length,
     withStampBox: options.withStampBox,
+    withQr: options.withQr,
   });
   const origin: TitleBlockOrigin = options.origin ?? (options.withFrame ? 'sheet' : 'title-block');
-  const { titleBlock, fields, stamp } = anchorMetrics(metrics, origin);
+  const { titleBlock, fields, stamp, qr } = anchorMetrics(metrics, origin);
 
   const primitives: DetailPrimitive[] = [];
   if (options.withFrame) primitives.push(...buildSheetFramePrimitives(metrics));
   primitives.push(rectOutline(titleBlock, FRAME_STROKE));
-  if (stamp) primitives.push(...stampPrimitives(stamp, options.stampLabel, options.stampImage));
+  if (stamp) primitives.push(...cellImagePrimitives(stamp, options.stampLabel, options.stampImage));
+  // ADR-651 Φάση Λ — το QR ζωγραφίζεται με τον ΙΔΙΟ ζωγράφο κελιού, χωρίς υπότιτλο.
+  if (qr) primitives.push(...cellImagePrimitives(qr, '', options.qrImage));
   if (content.heading) {
     primitives.push(headingDividerPrimitive(fields), headingPrimitive(fields, content.heading));
   }
