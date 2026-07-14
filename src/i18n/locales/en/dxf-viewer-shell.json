@@ -1699,6 +1699,7 @@
       "arraySpacing": "Spacing",
       "arrayOptions": "Options",
       "arrayActions": "Actions",
+      "arrayScatter": "Scatter",
       "stairFloor": "Floor Level",
       "stairVariant": "Type",
       "stairStructure": "Structure",
@@ -2768,7 +2769,13 @@
         "pathSpacing": "Spacing",
         "pathAlignItems": "Align",
         "pathReversed": "Reversed",
-        "pathPickPath": "Pick Path"
+        "pathPickPath": "Pick Path",
+        "alignOffset": "Align Offset",
+        "rotationJitter": "Rotation Jitter",
+        "scaleJitter": "Scale Jitter",
+        "offsetJitter": "Offset Jitter",
+        "seed": "Seed",
+        "distribution": "Distribution"
       },
       "scaleTool": {
         "copy": "Copy",

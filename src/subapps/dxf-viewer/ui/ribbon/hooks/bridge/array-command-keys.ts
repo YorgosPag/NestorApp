@@ -25,10 +25,18 @@ export const ARRAY_RIBBON_KEYS = {
     // Path (Phase C) — numeric
     pathCount: 'array.params.pathCount',
     pathSpacing: 'array.params.pathSpacing',
+    // Path (M2) — "magical" scatter/align numerics (ADR-353 M1 params)
+    pathAlignOffset: 'array.params.pathAlignOffset',
+    pathRotationJitter: 'array.params.pathRotationJitter',
+    pathScaleJitter: 'array.params.pathScaleJitter',
+    pathOffsetJitter: 'array.params.pathOffsetJitter',
+    pathSeed: 'array.params.pathSeed',
   },
   stringParams: {
     // Path (Phase C) — string-valued
     pathMethod: 'array.params.pathMethod',
+    // Path (M2) — source distribution mode (group/sequential/random)
+    pathDistribution: 'array.params.pathDistribution',
   },
   toggles: {
     // Polar (Phase B)
@@ -56,7 +64,12 @@ export type ArrayRibbonComboKey =
   | typeof ARRAY_RIBBON_KEYS.params.polarStartAngle
   | typeof ARRAY_RIBBON_KEYS.params.polarRadius
   | typeof ARRAY_RIBBON_KEYS.params.pathCount
-  | typeof ARRAY_RIBBON_KEYS.params.pathSpacing;
+  | typeof ARRAY_RIBBON_KEYS.params.pathSpacing
+  | typeof ARRAY_RIBBON_KEYS.params.pathAlignOffset
+  | typeof ARRAY_RIBBON_KEYS.params.pathRotationJitter
+  | typeof ARRAY_RIBBON_KEYS.params.pathScaleJitter
+  | typeof ARRAY_RIBBON_KEYS.params.pathOffsetJitter
+  | typeof ARRAY_RIBBON_KEYS.params.pathSeed;
 
 export type ArrayRibbonToggleKey =
   | typeof ARRAY_RIBBON_KEYS.toggles.polarRotateItems
@@ -64,7 +77,8 @@ export type ArrayRibbonToggleKey =
   | typeof ARRAY_RIBBON_KEYS.toggles.pathReversed;
 
 export type ArrayRibbonStringComboKey =
-  | typeof ARRAY_RIBBON_KEYS.stringParams.pathMethod;
+  | typeof ARRAY_RIBBON_KEYS.stringParams.pathMethod
+  | typeof ARRAY_RIBBON_KEYS.stringParams.pathDistribution;
 
 /** @deprecated Phase A alias — use {@link ArrayRibbonComboKey}. */
 export type ArrayRibbonKey = ArrayRibbonComboKey;
@@ -81,10 +95,16 @@ export const isArrayRibbonKey = makeKeySetGuard<ArrayRibbonComboKey>([
   ARRAY_RIBBON_KEYS.params.polarRadius,
   ARRAY_RIBBON_KEYS.params.pathCount,
   ARRAY_RIBBON_KEYS.params.pathSpacing,
+  ARRAY_RIBBON_KEYS.params.pathAlignOffset,
+  ARRAY_RIBBON_KEYS.params.pathRotationJitter,
+  ARRAY_RIBBON_KEYS.params.pathScaleJitter,
+  ARRAY_RIBBON_KEYS.params.pathOffsetJitter,
+  ARRAY_RIBBON_KEYS.params.pathSeed,
 ]);
 
 export const isArrayRibbonStringKey = makeKeySetGuard<ArrayRibbonStringComboKey>([
   ARRAY_RIBBON_KEYS.stringParams.pathMethod,
+  ARRAY_RIBBON_KEYS.stringParams.pathDistribution,
 ]);
 
 export const isArrayRibbonToggleKey = makeKeySetGuard<ArrayRibbonToggleKey>([

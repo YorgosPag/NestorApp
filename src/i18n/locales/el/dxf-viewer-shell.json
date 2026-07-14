@@ -1699,6 +1699,7 @@
       "arraySpacing": "Αποστάσεις",
       "arrayOptions": "Επιλογές",
       "arrayActions": "Ενέργειες",
+      "arrayScatter": "Διασπορά",
       "stairFloor": "Στάθμη",
       "stairVariant": "Τύπος",
       "stairStructure": "Δομή",
@@ -2768,7 +2769,13 @@
         "pathSpacing": "Απόσταση",
         "pathAlignItems": "Στοίχιση",
         "pathReversed": "Αντίστροφα",
-        "pathPickPath": "Επιλογή Διαδρομής"
+        "pathPickPath": "Επιλογή Διαδρομής",
+        "alignOffset": "Γωνία Στοίχισης",
+        "rotationJitter": "Διακύμανση Περιστροφής",
+        "scaleJitter": "Διακύμανση Κλίμακας",
+        "offsetJitter": "Διακύμανση Μετατόπισης",
+        "seed": "Σπόρος",
+        "distribution": "Κατανομή"
       },
       "scaleTool": {
         "copy": "Αντιγραφή",

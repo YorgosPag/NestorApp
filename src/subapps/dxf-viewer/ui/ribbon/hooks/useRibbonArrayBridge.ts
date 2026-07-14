@@ -249,6 +249,13 @@ function readPathField(key: ArrayRibbonComboKey, p: PathParams): string | null {
   switch (key) {
     case ARRAY_RIBBON_KEYS.params.pathCount:   return String(p.count);
     case ARRAY_RIBBON_KEYS.params.pathSpacing: return p.spacing !== undefined ? formatNumeric(p.spacing) : '';
+    // M2 — "magical" scatter/align numerics. undefined == 0 in the M1 math (all `?? 0`),
+    // so display the effective 0 default rather than a blank combobox.
+    case ARRAY_RIBBON_KEYS.params.pathAlignOffset:    return formatNumeric(p.alignOffsetDeg ?? 0);
+    case ARRAY_RIBBON_KEYS.params.pathRotationJitter: return formatNumeric(p.rotationJitterDeg ?? 0);
+    case ARRAY_RIBBON_KEYS.params.pathScaleJitter:    return formatNumeric(p.scaleJitterPct ?? 0);
+    case ARRAY_RIBBON_KEYS.params.pathOffsetJitter:   return formatNumeric(p.offsetJitter ?? 0);
+    case ARRAY_RIBBON_KEYS.params.pathSeed:           return String(p.seed ?? 0);
     default: return null;
   }
 }
@@ -268,6 +275,31 @@ function patchPathParam(
       if (numeric <= 0) return null;
       if (numeric === prev.spacing) return null;
       return { ...prev, spacing: numeric };
+    }
+    case ARRAY_RIBBON_KEYS.params.pathAlignOffset: {
+      // Any angle (incl. negative, e.g. -90 "across the row"). 0 = pure tangent.
+      if (numeric === (prev.alignOffsetDeg ?? 0)) return null;
+      return { ...prev, alignOffsetDeg: numeric };
+    }
+    case ARRAY_RIBBON_KEYS.params.pathRotationJitter: {
+      const v = Math.max(0, numeric);
+      if (v === (prev.rotationJitterDeg ?? 0)) return null;
+      return { ...prev, rotationJitterDeg: v };
+    }
+    case ARRAY_RIBBON_KEYS.params.pathScaleJitter: {
+      const v = Math.max(0, numeric);
+      if (v === (prev.scaleJitterPct ?? 0)) return null;
+      return { ...prev, scaleJitterPct: v };
+    }
+    case ARRAY_RIBBON_KEYS.params.pathOffsetJitter: {
+      const v = Math.max(0, numeric);
+      if (v === (prev.offsetJitter ?? 0)) return null;
+      return { ...prev, offsetJitter: v };
+    }
+    case ARRAY_RIBBON_KEYS.params.pathSeed: {
+      const v = Math.max(0, Math.round(numeric));
+      if (v === (prev.seed ?? 0)) return null;
+      return { ...prev, seed: v };
     }
     default: return null;
   }
@@ -304,7 +336,9 @@ function readPathStringField(
   p: PathParams,
 ): string | null {
   switch (key) {
-    case ARRAY_RIBBON_KEYS.stringParams.pathMethod: return p.method;
+    case ARRAY_RIBBON_KEYS.stringParams.pathMethod:       return p.method;
+    // undefined == 'group' in the M1 expander default (resolveDistribution).
+    case ARRAY_RIBBON_KEYS.stringParams.pathDistribution: return p.sourceDistribution ?? 'group';
     default: return null;
   }
 }
@@ -319,6 +353,11 @@ function patchPathStringParam(
       if (value !== 'divide' && value !== 'measure') return null;
       if (value === prev.method) return null;
       return { ...prev, method: value };
+    }
+    case ARRAY_RIBBON_KEYS.stringParams.pathDistribution: {
+      if (value !== 'group' && value !== 'sequential' && value !== 'random') return null;
+      if (value === (prev.sourceDistribution ?? 'group')) return null;
+      return { ...prev, sourceDistribution: value };
     }
     default: return null;
   }
