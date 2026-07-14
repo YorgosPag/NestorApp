@@ -20,6 +20,7 @@ const logger = createModuleLogger('AiTitleBlockClient');
 const FROM_IMAGE_ENDPOINT = '/api/dxf/text-templates/ai/from-image';
 const FROM_TEXT_ENDPOINT = '/api/dxf/text-templates/ai/from-text';
 const VALIDATE_ENDPOINT = '/api/dxf/text-templates/ai/validate';
+const TRANSLATE_ENDPOINT = '/api/dxf/text-templates/ai/translate';
 
 interface GenerateResponse {
   readonly success?: boolean;
@@ -66,6 +67,32 @@ export async function requestTitleBlockFromText(
   } catch (error) {
     logger.warn('AI title-block from text request failed', { error: getErrorMessage(error) });
     return null;
+  }
+}
+
+interface TranslateResponse {
+  readonly success?: boolean;
+  readonly translations?: Readonly<Record<string, string>>;
+}
+
+/**
+ * ADR-651 Φάση Κ — προτάσεις μετάφρασης για τις ετικέτες που **δεν ήξερε το λεξικό**.
+ *
+ * Αποτυχία ⇒ κενός χάρτης: ο διάλογος δείχνει τους όρους αμετάφραστους και ο χρήστης τους
+ * γράφει μόνος του. Η μεταγλώττιση δεν εξαρτάται ΠΟΤΕ από το AI.
+ */
+export async function requestTermTranslations(
+  terms: readonly string[],
+  from: TitleBlockLocale,
+  to: TitleBlockLocale,
+): Promise<Readonly<Record<string, string>>> {
+  if (terms.length === 0 || from === to) return {};
+  try {
+    const payload = await postJson<TranslateResponse>(TRANSLATE_ENDPOINT, { terms, from, to });
+    return payload?.translations ?? {};
+  } catch (error) {
+    logger.warn('AI title-block term translation failed', { error: getErrorMessage(error) });
+    return {};
   }
 }
 

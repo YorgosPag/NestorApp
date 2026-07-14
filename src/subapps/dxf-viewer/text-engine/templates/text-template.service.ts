@@ -252,6 +252,9 @@ export async function createTextTemplate(
     content: input.content,
     placeholders,
     isDefault: false,
+    // ADR-651 Φάση Κ — η γλώσσα του περιεχομένου. `null` όταν ο καλών δεν τη δηλώνει (Firestore
+    // απορρίπτει `undefined`): έτσι γεννιόταν κάθε πρότυπο πριν τη Φάση Κ.
+    locale: input.locale ?? null,
     ...buildScopeFields(input),
     // Firestore απορρίπτει `undefined` ⇒ το πεδίο απλώς μένει εκτός εγγράφου όταν λείπει.
     ...(input.titleBlock ? { titleBlock: input.titleBlock } : {}),
@@ -304,6 +307,8 @@ export async function updateTextTemplate(
     writePayload.placeholders = nextPlaceholders;
   }
   if (patch.titleBlock !== undefined) writePayload.titleBlock = patch.titleBlock;
+  // ADR-651 Φάση Κ — ένα πρότυπο προγενέστερο της Φάσης Κ δηλώνει (μία φορά) τη γλώσσα του.
+  if (patch.locale !== undefined) writePayload.locale = patch.locale;
   // Ρητό «Ενημέρωση από τον γονιό»: το παιδί σφραγίζει ΠΟΙΑ έκδοση του γονιού τράβηξε.
   if (patch.parentSyncedAt !== undefined) writePayload.parentSyncedAt = patch.parentSyncedAt;
   if (patch.scope !== undefined) {

@@ -48,10 +48,12 @@ import {
   buildPullPayload,
   canDetachFrom,
   type DetachOptions,
+  type TemplateVariantOverrides,
 } from './template-inheritance';
 import type {
   TextTemplate,
   TextTemplateCategory,
+  TextTemplateLocale,
   TextTemplateScope,
   TextTemplateTitleBlockMeta,
   WritableTextTemplateScope,
@@ -80,6 +82,8 @@ export interface TextTemplateLibraryDoc extends ScopedLibraryDoc {
   readonly category: TextTemplateCategory;
   readonly content: DxfTextNode;
   readonly placeholders: readonly string[];
+  /** ADR-651 Φάση Κ — η γλώσσα του περιεχομένου· `null`/απόν σε πρότυπα πριν τη Φάση Κ. */
+  readonly locale?: TextTemplateLocale | null;
   readonly scope: TextTemplateScope;
   readonly projectId: string | null;
   readonly parentId: string | null;
@@ -108,6 +112,7 @@ export function toTextTemplate(doc: TextTemplateLibraryDoc): TextTemplate {
     content: doc.content,
     placeholders: doc.placeholders ?? [],
     isDefault: false,
+    ...(doc.locale ? { locale: doc.locale } : {}),
     scope: doc.scope,
     projectId: doc.projectId,
     parentId: doc.parentId,
@@ -218,12 +223,32 @@ export class TextTemplateLibraryService {
   /**
    * Ρητό **«Ενημέρωση από τον γονιό»**: το παιδί τραβά το περιεχόμενο του master και
    * ξανασφραγίζει τη στιγμή συγχρονισμού. Idempotent — δεύτερη κλήση γράφει τα ΙΔΙΑ.
+   *
+   * ADR-651 Φάση Κ — σε **γλωσσική** παραλλαγή ο καλών περνά το ξανα-μεταφρασμένο περιεχόμενο
+   * στα `overrides`: το παιδί παίρνει τις αλλαγές του γονιού **στη δική του γλώσσα**, αντί να
+   * δεχτεί ελληνικά πάνω στην αγγλική του πινακίδα.
    */
-  async pullFromParent(child: TextTemplate, parent: TextTemplate): Promise<TextTemplate> {
+  async pullFromParent(
+    child: TextTemplate,
+    parent: TextTemplate,
+    overrides: TemplateVariantOverrides = {},
+  ): Promise<TextTemplate> {
     if (child.parentId !== parent.id) {
       throw new Error(TEXT_TEMPLATE_LIBRARY_ERRORS.NOT_FOUND);
     }
-    const updated = await apiUpdateTextTemplate(child.id, buildPullPayload(parent));
+    const updated = await apiUpdateTextTemplate(child.id, buildPullPayload(parent, overrides));
+    this.library.invalidateCache();
+    return updated;
+  }
+
+  /**
+   * ADR-651 Φάση Κ — δηλώνει (μία φορά) τη γλώσσα ενός προτύπου γραμμένου **πριν** υπάρξει το
+   * πεδίο. Χωρίς αυτό, ο δρόμος της επιστροφής χάνεται: η αγγλική παραλλαγή ξέρει ότι είναι
+   * αγγλική, αλλά ο ελληνικός της γονιός δεν ξέρει ότι είναι ελληνικός ⇒ η εναλλαγή προς τα
+   * ελληνικά δεν θα τον έβρισκε ποτέ.
+   */
+  async setLocale(templateId: string, locale: TextTemplateLocale): Promise<TextTemplate> {
+    const updated = await apiUpdateTextTemplate(templateId, { locale });
     this.library.invalidateCache();
     return updated;
   }

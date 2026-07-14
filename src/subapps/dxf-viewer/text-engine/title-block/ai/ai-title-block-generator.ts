@@ -17,6 +17,7 @@
 import 'server-only';
 
 import { generateObject } from 'ai';
+import type { z } from 'zod';
 import { AI_ANALYSIS_DEFAULTS } from '@/config/ai-analysis-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getOpenAIProvider } from '@/services/ai/openai-provider';
@@ -96,20 +97,33 @@ const IMAGE_INSTRUCTION =
 const TEXT_INSTRUCTION = (prompt: string): string =>
   `Design a title block for this request: "${prompt}". Map each field to a known placeholder path where it is live data.`;
 
-/** Κοινή εκτέλεση `generateObject` + usage + graceful null. */
-async function runGenerate(
-  userId: string,
-  model: string,
-  system: string,
-  input: { readonly prompt: string } | { readonly imageDataUrl: string; readonly text: string },
-): Promise<AiTitleBlock | null> {
+/** Ό,τι στέλνουμε στο μοντέλο: σκέτη περιγραφή, ή κείμενο + εικόνα (vision). */
+export type AiTitleBlockInput =
+  | { readonly prompt: string }
+  | { readonly imageDataUrl: string; readonly text: string };
+
+/**
+ * Η **μία** εκτέλεση AI της πινακίδας: provider SSoT → `generateObject` → usage → graceful null.
+ *
+ * Γενική ως προς το σχήμα, ώστε κάθε νέα AI ροή της πινακίδας (Φάση Κ: **μετάφραση όρων**) να
+ * κληρονομεί αυτούσια το κέλυφος — μηδέν δεύτερο try/catch, μηδέν δεύτερο usage tracking, μηδέν
+ * δεύτερος provider (N.18). Αποτυχία ⇒ `null`: ο καλών πέφτει πάντα σε μη-AI διαδρομή.
+ */
+export async function runTitleBlockAi<T>(args: {
+  readonly userId: string;
+  readonly model: string;
+  readonly system: string;
+  readonly schema: z.ZodType<T>;
+  readonly input: AiTitleBlockInput;
+}): Promise<T | null> {
+  const { userId, model, system, schema, input } = args;
   try {
     const provider = getOpenAIProvider();
     const result =
       'imageDataUrl' in input
         ? await generateObject({
             model: provider(model),
-            schema: aiTitleBlockSchema,
+            schema,
             system,
             messages: [
               {
@@ -124,7 +138,7 @@ async function runGenerate(
           })
         : await generateObject({
             model: provider(model),
-            schema: aiTitleBlockSchema,
+            schema,
             system,
             prompt: input.prompt,
             maxRetries: 2,
@@ -136,6 +150,16 @@ async function runGenerate(
     logger.warn('AI title-block generation failed', { userId, err });
     return null;
   }
+}
+
+/** Οι δύο ροές παραγωγής πινακίδας μοιράζονται σχήμα + system prompt. */
+function runGenerate(
+  userId: string,
+  model: string,
+  system: string,
+  input: AiTitleBlockInput,
+): Promise<AiTitleBlock | null> {
+  return runTitleBlockAi({ userId, model, system, schema: aiTitleBlockSchema, input });
 }
 
 /** Εικόνα → πινακίδα: το vision μοντέλο αναδημιουργεί τη δομή ως structured template. */

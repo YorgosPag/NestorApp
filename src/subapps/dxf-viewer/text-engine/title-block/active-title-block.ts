@@ -32,7 +32,11 @@ import { getActiveRevisionFacts, loadProjectRevisions } from './revisions/revisi
 import type { TextTemplate, TextTemplateTitleBlockMeta } from '../templates/template.types';
 import type { TitleBlockSheetOptions } from './print-sheet';
 import { getStampImage, loadStampImage } from './stamp-image-client';
-import { getTitleBlockLibraryTemplate } from './title-block-library-store';
+import { findTitleBlockVariant } from './localization/title-block-variant';
+import {
+  getTitleBlockLibraryTemplate,
+  listTitleBlockLibrary,
+} from './title-block-library-store';
 import { validateTitleBlock, type TitleBlockIssue } from './title-block-compliance';
 import { buildTitleBlockDef } from './title-block-def';
 import type { TitleBlockLayoutOptions, TitleBlockStampImage } from './title-block-layout';
@@ -50,32 +54,62 @@ import { titleBlockPreset, type TitleBlockLocale } from './title-block-presets';
  *  3. **built-in preset** (Φάση Γ) — και ως fallback σε άγνωστο/διαγραμμένο id (ποτέ crash).
  */
 export function titleBlockTemplateForLocale(locale: TitleBlockLocale): TextTemplate {
-  const { presetId, aiOverride } = useTitleBlockOptionsStore.getState();
-  if (aiOverride) return aiOverride.template;
-  const saved = getTitleBlockLibraryTemplate(presetId);
-  if (saved) return saved;
-  return titleBlockPreset(presetId).templates[locale];
+  return resolveActiveTitleBlock(locale).template;
+}
+
+/** Η ενεργή πινακίδα: το πρότυπο ΚΑΙ το κελί σφραγίδας του — πάντα από την ίδια βαθμίδα. */
+interface ActiveTitleBlock {
+  readonly template: TextTemplate;
+  readonly withStampBox: boolean;
+  readonly stampLabel: string;
 }
 
 /**
- * Το κελί σφραγίδας του ενεργού προτύπου — SSoT για layout ΚΑΙ έλεγχο πληρότητας.
+ * Η **μία** ανάγνωση της ενεργής πινακίδας (πρότυπο + σφραγίδα μαζί).
  *
- * Ένα αποθηκευμένο πρότυπο κουβαλά το δικό του `titleBlock` metadata (σφραγίστηκε τη στιγμή
- * που σώθηκε) ⇒ τυπώνεται **ακριβώς όπως το είδε** ο χρήστης όταν το αποθήκευσε. Αν λείπει
- * (πρότυπο σωσμένο χωρίς κελί), ισχύει «χωρίς σφραγίδα» — ποτέ σιωπηλά τα meta άλλου preset.
+ * ⚠️ Πρότυπο και κελί σφραγίδας λύνονταν χωριστά — δύο παράλληλες αναζητήσεις στις ίδιες τρεις
+ * βαθμίδες. Με τη γλωσσική παραλλαγή (Φάση Κ) αυτό θα έσπαγε σιωπηλά: η πινακίδα θα τύπωνε
+ * αγγλικό κείμενο με **ελληνική** σφραγίδα. Μία απάντηση, ένας ιδιοκτήτης (N.7.2 #5).
+ *
+ * ADR-651 Φάση Κ — για ένα **αποθηκευμένο** πρότυπο η γλώσσα δεν αλλάζει το περιεχόμενο
+ * επιτόπου: ψάχνει τη γλωσσική **παραλλαγή** που έφτιαξε και ενέκρινε ο χρήστης. Δεν υπάρχει
+ * παραλλαγή ⇒ μένει το πρότυπο ως έχει (**ποτέ** σιωπηλή μηχανική μετάφραση σε σχέδιο).
  */
-function activeStampMeta(locale: TitleBlockLocale): { withStampBox: boolean; stampLabel: string } {
+function resolveActiveTitleBlock(locale: TitleBlockLocale): ActiveTitleBlock {
   const { presetId, aiOverride } = useTitleBlockOptionsStore.getState();
-  if (aiOverride) return { withStampBox: aiOverride.withStampBox, stampLabel: aiOverride.stampLabel };
-  const saved = getTitleBlockLibraryTemplate(presetId);
-  if (saved) {
+  if (aiOverride) {
     return {
-      withStampBox: saved.titleBlock?.withStampBox ?? false,
-      stampLabel: saved.titleBlock?.stampLabel ?? '',
+      template: aiOverride.template,
+      withStampBox: aiOverride.withStampBox,
+      stampLabel: aiOverride.stampLabel,
     };
   }
+
+  const saved = getTitleBlockLibraryTemplate(presetId);
+  if (saved) {
+    // Ένα αποθηκευμένο πρότυπο κουβαλά το δικό του `titleBlock` metadata (σφραγίστηκε τη στιγμή
+    // που σώθηκε) ⇒ τυπώνεται **ακριβώς όπως το είδε** ο χρήστης. Αν λείπει (σωσμένο χωρίς
+    // κελί), ισχύει «χωρίς σφραγίδα» — ποτέ σιωπηλά τα meta άλλου preset.
+    const active = findTitleBlockVariant(listTitleBlockLibrary(), saved, locale) ?? saved;
+    return {
+      template: active,
+      withStampBox: active.titleBlock?.withStampBox ?? false,
+      stampLabel: active.titleBlock?.stampLabel ?? '',
+    };
+  }
+
   const preset = titleBlockPreset(presetId);
-  return { withStampBox: preset.withStampBox, stampLabel: preset.stampLabel[locale] };
+  return {
+    template: preset.templates[locale],
+    withStampBox: preset.withStampBox,
+    stampLabel: preset.stampLabel[locale],
+  };
+}
+
+/** Το κελί σφραγίδας της ενεργής πινακίδας — SSoT για layout ΚΑΙ έλεγχο πληρότητας. */
+function activeStampMeta(locale: TitleBlockLocale): { withStampBox: boolean; stampLabel: string } {
+  const { withStampBox, stampLabel } = resolveActiveTitleBlock(locale);
+  return { withStampBox, stampLabel };
 }
 
 /**

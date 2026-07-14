@@ -29,6 +29,13 @@ export interface AiFromTextBody {
   readonly locale?: unknown;
 }
 
+/** ADR-651 Φάση Κ — οι ετικέτες που δεν ήξερε το λεξικό, μαζί με την κατεύθυνση μετάφρασης. */
+export interface AiTranslateBody {
+  readonly terms?: unknown;
+  readonly from?: unknown;
+  readonly to?: unknown;
+}
+
 export interface AiValidateBody {
   readonly content?: unknown;
   readonly locale?: unknown;

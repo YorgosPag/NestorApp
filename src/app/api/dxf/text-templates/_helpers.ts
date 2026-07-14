@@ -54,6 +54,9 @@ export function serializeTemplate(doc: UserTextTemplateDoc): SerializedUserTextT
     // **γραφείου**, το ίδιο default με μια νέα εγγραφή. Άμυνα, όχι μετανάστευση: το
     // `text_templates` ήταν άδειο στη Φάση Θ (επαληθευμένο), αλλά ο serializer δεν δικαιούται
     // να επιστρέψει `undefined` σε πεδίο που ο client θεωρεί δεδομένο.
+    // ADR-651 Φάση Κ — ίδια άμυνα: πρότυπο γραμμένο πριν το πεδίο ⇒ γλώσσα άγνωστη (`null`),
+    // ποτέ `undefined` σε πεδίο που ο client θεωρεί δεδομένο.
+    locale: doc.locale ?? null,
     scope: doc.scope ?? 'company',
     projectId: doc.projectId ?? null,
     parentId: doc.parentId ?? null,

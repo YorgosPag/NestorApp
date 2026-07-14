@@ -19,6 +19,7 @@ import { z } from 'zod';
 import {
   WRITABLE_TEXT_TEMPLATE_SCOPES,
   type TextTemplateCategory,
+  type TextTemplateLocale,
   type WritableTextTemplateScope,
 } from './template.types';
 
@@ -53,6 +54,12 @@ const writableScopeSchema: z.ZodType<WritableTextTemplateScope> = z.enum(
 
 /** Χρονοσήμανση σε ms (το `updatedAt` του γονιού στον τελευταίο συγχρονισμό). */
 const epochMillis = z.number().int().nonnegative();
+
+/**
+ * ADR-651 Φάση Κ — η γλώσσα του **περιεχομένου** (όχι του UI): μια αγγλική παραλλαγή πρέπει να
+ * ξέρει ότι είναι αγγλική, αλλιώς το pull θα της περνούσε ελληνικά από πάνω.
+ */
+const localeSchema: z.ZodType<TextTemplateLocale> = z.enum(['el', 'en', 'multi']);
 
 /** Το κελί σφραγίδας ενός αποθηκευμένου προτύπου πινακίδας (ό,τι κρατά και ένα preset). */
 const titleBlockMetaSchema = z
@@ -107,6 +114,7 @@ export const createTextTemplateInputSchema = z
     ),
     category: categorySchema,
     content: dxfTextNodeSchema,
+    locale: localeSchema.optional(),
     scope: writableScopeSchema.optional(),
     projectId: nonEmptyString.optional(),
     parentId: nonEmptyString.optional(),
@@ -135,6 +143,10 @@ export const updateTextTemplateInputSchema = z
       .optional(),
     category: categorySchema.optional(),
     content: dxfTextNodeSchema.optional(),
+    // Επιτρέπεται στο patch ώστε ένα πρότυπο **προγενέστερο** της Φάσης Κ (locale `null`) να
+    // δηλώσει τη γλώσσα του τη στιγμή που ο χρήστης του φτιάχνει παραλλαγή — αλλιώς το επόμενο
+    // pull δεν θα ήξερε προς ποια κατεύθυνση να ξανα-μεταφράσει.
+    locale: localeSchema.optional(),
     scope: writableScopeSchema.optional(),
     projectId: nonEmptyString.optional(),
     parentSyncedAt: epochMillis.optional(),

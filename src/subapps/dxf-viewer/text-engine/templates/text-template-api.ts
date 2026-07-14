@@ -18,13 +18,11 @@
  * @see ./text-template-library.service.ts — reads μέσω ScopedLibraryService, writes από εδώ
  */
 
-import type { DxfTextNode } from '../types/text-ast.types';
 import type {
   SerializedUserTextTemplate,
   TextTemplate,
-  TextTemplateCategory,
-  TextTemplateTitleBlockMeta,
-  WritableTextTemplateScope,
+  TextTemplateCreateFields,
+  TextTemplateUpdateFields,
 } from './template.types';
 
 const ENDPOINT = '/api/dxf/text-templates';
@@ -50,6 +48,9 @@ export function deserializeUserTemplate(wire: SerializedUserTextTemplate): TextT
     content: wire.content,
     placeholders: wire.placeholders,
     isDefault: false,
+    // Το `TextTemplate.locale` είναι προαιρετικό (τα built-ins το έχουν πάντα)· `null` από το
+    // Firestore σημαίνει «άγνωστη γλώσσα» ⇒ το πεδίο απλώς λείπει, δεν γίνεται `null`.
+    ...(wire.locale ? { locale: wire.locale } : {}),
     scope: wire.scope,
     projectId: wire.projectId,
     parentId: wire.parentId,
@@ -115,31 +116,13 @@ async function request(path: string, init?: RequestInit): Promise<ApiEnvelope> {
 }
 
 // ─── Payloads ────────────────────────────────────────────────────────────────
+// Ο client payload ΕΙΝΑΙ το SSoT field-list (N.18): ο server input το επεκτείνει μόνο με το
+// server-provided `companyId`. Δύο πανομοιότυπα interfaces ήταν sibling clone — μία διόρθωση
+// (π.χ. το `locale` της Φάσης Κ) ξεχνιόταν στο άλλο.
 
-export interface CreateTextTemplatePayload {
-  readonly name: string;
-  readonly category: TextTemplateCategory;
-  readonly content: DxfTextNode;
-  /** Πού ζει (default: βιβλιοθήκη γραφείου). `system` δεν είναι επιλέξιμο. */
-  readonly scope?: WritableTextTemplateScope;
-  readonly projectId?: string;
-  /** Η προέλευση, όταν το πρότυπο **αποσπάται** από γονιό (ADR-651 must-have #1). */
-  readonly parentId?: string;
-  /** Το `updatedAt` του γονιού τη στιγμή της απόσπασης (ms). */
-  readonly parentSyncedAt?: number;
-  readonly titleBlock?: TextTemplateTitleBlockMeta;
-}
+export type CreateTextTemplatePayload = TextTemplateCreateFields;
 
-export interface UpdateTextTemplatePayload {
-  readonly name?: string;
-  readonly category?: TextTemplateCategory;
-  readonly content?: DxfTextNode;
-  readonly scope?: WritableTextTemplateScope;
-  readonly projectId?: string;
-  /** Ανανεώνεται στο ρητό «Ενημέρωση από τον γονιό» (pull). */
-  readonly parentSyncedAt?: number;
-  readonly titleBlock?: TextTemplateTitleBlockMeta;
-}
+export type UpdateTextTemplatePayload = TextTemplateUpdateFields;
 
 // ─── Operations ──────────────────────────────────────────────────────────────
 

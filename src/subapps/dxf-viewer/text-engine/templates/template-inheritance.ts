@@ -34,6 +34,7 @@
 
 import type {
   TextTemplate,
+  TextTemplateLocale,
   TextTemplateTitleBlockMeta,
   WritableTextTemplateScope,
 } from './template.types';
@@ -77,7 +78,24 @@ export function canDetachFrom(parent: TextTemplate, childId?: string): boolean {
 
 // ─── Payload builders (τι ακριβώς γράφεται) ──────────────────────────────────
 
-export interface DetachOptions {
+/**
+ * ADR-651 Φάση Κ — ό,τι η παραλλαγή **δεν** κληρονομεί αυτούσιο από τον γονιό.
+ *
+ * Η γλωσσική παραλλαγή (§8 #7) είναι απόσπαση με **μεταφρασμένο** περιεχόμενο: ίδια δομή, ίδια
+ * γεωμετρία, άλλες λέξεις. Το `template-inheritance` **δεν ξέρει από πινακίδες ή γλώσσες** — ο
+ * καλών δίνει έτοιμο το περιεχόμενο, εδώ απλώς σφραγίζεται η προέλευση (μία μηχανή απόσπασης
+ * για όλες τις παραλλαγές — N.18, καμία δεύτερη διαδρομή εγγραφής).
+ */
+export interface TemplateVariantOverrides {
+  /** Το περιεχόμενο της παραλλαγής· απόν ⇒ αυτούσιο αντίγραφο του γονιού. */
+  readonly content?: TextTemplate['content'];
+  /** Η γλώσσα της παραλλαγής — χωρίς αυτήν το pull θα ξανα-περνούσε τον γονιό από πάνω της. */
+  readonly locale?: TextTemplateLocale;
+  /** Το κελί σφραγίδας της παραλλαγής (το κείμενό του είναι κι αυτό μεταφράσιμο). */
+  readonly titleBlock?: TextTemplateTitleBlockMeta;
+}
+
+export interface DetachOptions extends TemplateVariantOverrides {
   /** Πού θα ζήσει η παραλλαγή (τυπικά `project`: αφορά ΜΟΝΟ αυτό το έργο). */
   readonly scope: WritableTextTemplateScope;
   readonly projectId?: string;
@@ -89,6 +107,7 @@ export interface DetachPayload {
   readonly name: string;
   readonly category: TextTemplate['category'];
   readonly content: TextTemplate['content'];
+  readonly locale?: TextTemplateLocale;
   readonly scope: WritableTextTemplateScope;
   readonly projectId?: string;
   readonly parentId: string;
@@ -97,20 +116,23 @@ export interface DetachPayload {
 }
 
 /**
- * Η **απόσπαση**: πλήρες αντίγραφο του γονιού + η προέλευσή του. Σφραγίζει το `parentSyncedAt`
- * στην **τρέχουσα** έκδοση του γονιού ⇒ το παιδί γεννιέται «ενήμερο» και δεν δείχνει ψεύτικη
- * ειδοποίηση ενημέρωσης την ίδια στιγμή που φτιάχτηκε (N.7.2 #3: idempotent, μηδέν θόρυβος).
+ * Η **απόσπαση**: πλήρες αντίγραφο του γονιού (ή η παραλλαγή που έδωσε ο καλών) + η προέλευσή
+ * του. Σφραγίζει το `parentSyncedAt` στην **τρέχουσα** έκδοση του γονιού ⇒ το παιδί γεννιέται
+ * «ενήμερο» και δεν δείχνει ψεύτικη ειδοποίηση ενημέρωσης την ίδια στιγμή που φτιάχτηκε
+ * (N.7.2 #3: idempotent, μηδέν θόρυβος).
  */
 export function buildDetachPayload(parent: TextTemplate, options: DetachOptions): DetachPayload {
+  const titleBlock = options.titleBlock ?? parent.titleBlock;
   return {
     name: options.name,
     category: parent.category,
-    content: parent.content,
+    content: options.content ?? parent.content,
+    ...(options.locale ? { locale: options.locale } : {}),
     scope: options.scope,
     ...(options.projectId ? { projectId: options.projectId } : {}),
     parentId: parent.id,
     parentSyncedAt: templateUpdatedAtMs(parent),
-    ...(parent.titleBlock ? { titleBlock: parent.titleBlock } : {}),
+    ...(titleBlock ? { titleBlock } : {}),
   };
 }
 
@@ -122,13 +144,22 @@ export interface PullPayload {
 
 /**
  * Το ρητό **«Ενημέρωση από τον γονιό»** (pull): το παιδί παίρνει το περιεχόμενο του γονιού και
- * ξανασφραγίζει τη στιγμή συγχρονισμού. Το **όνομα** και το **scope** του παιδιού ΔΕΝ
- * αγγίζονται — είναι δικά του (το έργο δεν χάνει την ταυτότητα της παραλλαγής του).
+ * ξανασφραγίζει τη στιγμή συγχρονισμού. Το **όνομα**, το **scope** και η **γλώσσα** του παιδιού
+ * ΔΕΝ αγγίζονται — είναι δικά του (το έργο δεν χάνει την ταυτότητα της παραλλαγής του).
+ *
+ * ⚠️ ADR-651 Φάση Κ — **γλωσσική** παραλλαγή: αντιγραφή του γονιού αυτούσια θα έγραφε ελληνικά
+ * πάνω στην αγγλική πινακίδα και θα **κατέστρεφε τη μετάφραση**. Γι' αυτό ο καλών περνά εδώ το
+ * **ξανα-μεταφρασμένο** περιεχόμενο (`overrides.content`): το παιδί παίρνει τις αλλαγές του
+ * γονιού **στη δική του γλώσσα**. Χωρίς override ⇒ η κλασική αυτούσια αντιγραφή.
  */
-export function buildPullPayload(parent: TextTemplate): PullPayload {
+export function buildPullPayload(
+  parent: TextTemplate,
+  overrides: TemplateVariantOverrides = {},
+): PullPayload {
+  const titleBlock = overrides.titleBlock ?? parent.titleBlock;
   return {
-    content: parent.content,
+    content: overrides.content ?? parent.content,
     parentSyncedAt: templateUpdatedAtMs(parent),
-    ...(parent.titleBlock ? { titleBlock: parent.titleBlock } : {}),
+    ...(titleBlock ? { titleBlock } : {}),
   };
 }

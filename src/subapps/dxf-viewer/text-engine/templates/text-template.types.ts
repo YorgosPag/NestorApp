@@ -17,12 +17,10 @@
  */
 
 import { Timestamp } from 'firebase-admin/firestore';
-import type { DxfTextNode } from '../types/text-ast.types';
 import type {
-  TextTemplateCategory,
-  TextTemplateTitleBlockMeta,
+  TextTemplateCreateFields,
+  TextTemplateUpdateFields,
   UserTextTemplateFields,
-  WritableTextTemplateScope,
 } from './template.types';
 
 /**
@@ -33,44 +31,21 @@ import type {
 export type UserTextTemplateDoc = UserTextTemplateFields<Timestamp>;
 
 /**
- * Input payload for `createTextTemplate` — same shape as the persisted doc
- * minus the server-controlled fields (`id`, timestamps, audit fields,
- * `isDefault`). `placeholders` is also server-derived (extracted from
- * `content` via Phase 7.A `extractPlaceholders`) so callers cannot drift
- * the declared list out of sync with the actual placeholder tokens.
+ * Input payload for `createTextTemplate` — τα user-provided πεδία
+ * ({@link TextTemplateCreateFields}, ο SSoT) + το server-provided `companyId`.
+ * `placeholders` είναι επίσης server-derived (εξάγεται από το `content` μέσω του Phase 7.A
+ * `extractPlaceholders`) ώστε ο caller να μη μπορεί να αποκλίνει τη δηλωμένη λίστα.
  */
-export interface CreateTextTemplateInput {
+export interface CreateTextTemplateInput extends TextTemplateCreateFields {
   readonly companyId: string;
-  readonly name: string;
-  readonly category: TextTemplateCategory;
-  readonly content: DxfTextNode;
-  /** ADR-651 Φάση Θ — default {@link DEFAULT_TEXT_TEMPLATE_SCOPE} (βιβλιοθήκη γραφείου). */
-  readonly scope?: WritableTextTemplateScope;
-  /** Υποχρεωτικό όταν `scope === 'project'` (αλλιώς αγνοείται). */
-  readonly projectId?: string;
-  /** Η προέλευση, όταν το πρότυπο **αποσπάται** από γονιό (must-have #1). */
-  readonly parentId?: string;
-  /** Το `updatedAt` του γονιού τη στιγμή της απόσπασης (ms). */
-  readonly parentSyncedAt?: number;
-  readonly titleBlock?: TextTemplateTitleBlockMeta;
 }
 
 /**
- * Patch payload for `updateTextTemplate`. All fields optional except the
- * scope locators (`companyId` + `templateId` are passed as separate args).
- * `placeholders` is again server-derived when `content` is patched.
+ * Patch payload for `updateTextTemplate` — ίδια πηγή με τον client payload
+ * ({@link TextTemplateUpdateFields}). Οι scope locators (`companyId` + `templateId`) περνούν
+ * ως χωριστά args. `placeholders` server-derived όταν αλλάζει το `content`.
  */
-export interface UpdateTextTemplateInput {
-  readonly name?: string;
-  readonly category?: TextTemplateCategory;
-  readonly content?: DxfTextNode;
-  /** «Δημοσίευση» σε άλλο scope (π.χ. δικά μου → γραφείου) — ίδιο doc, ΟΧΙ αντίγραφο. */
-  readonly scope?: WritableTextTemplateScope;
-  readonly projectId?: string;
-  /** Ανανεώνεται στο ρητό «Ενημέρωση από τον γονιό» (pull) — μαζί με το `content`. */
-  readonly parentSyncedAt?: number;
-  readonly titleBlock?: TextTemplateTitleBlockMeta;
-}
+export type UpdateTextTemplateInput = TextTemplateUpdateFields;
 
 /** Identity for audit attribution. The service never invents this. */
 export interface TextTemplateActor {

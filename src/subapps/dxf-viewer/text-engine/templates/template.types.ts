@@ -79,6 +79,14 @@ export interface UserTextTemplateFields<TTime> {
   /** Πάντα `false`: τα built-in ζουν σε TypeScript, δεν κάνουν round-trip από το Firestore. */
   readonly isDefault: false;
 
+  /**
+   * ADR-651 Φάση Κ (§8 #7) — η **γλώσσα του περιεχομένου**. Μέχρι τη Φάση Κ ζούσε μόνο στα
+   * built-ins (TS constants)· τώρα ταξιδεύει και στο Firestore, γιατί μια **αγγλική παραλλαγή**
+   * πρέπει να ξέρει ότι είναι αγγλική: αλλιώς (α) το «Ενημέρωση από τον γονιό» θα αντέγραφε τα
+   * ελληνικά πάνω της και θα **κατέστρεφε τη μετάφραση**, και (β) καμία εναλλαγή γλώσσας δεν θα
+   * μπορούσε να τη βρει. `null` = άγνωστη/αδιάφορη (κάθε πρότυπο πριν τη Φάση Κ).
+   */
+  readonly locale: TextTemplateLocale | null;
   /** Πού ζει (γραφείο / έργο / δικά μου). Ποτέ `system` από client write. */
   readonly scope: TextTemplateScope;
   /** Το έργο-ιδιοκτήτης όταν `scope === 'project'`· αλλιώς `null` (Firestore: ποτέ undefined). */
@@ -121,6 +129,52 @@ export type TextTemplateCategory =
  * The UI uses it to show flag chips and to auto-select on first insertion.
  */
 export type TextTemplateLocale = 'el' | 'en' | 'multi';
+
+/**
+ * Τα πεδία που δίνει ο **χρήστης** όταν φτιάχνει ένα πρότυπο — χωρίς τα server-controlled
+ * (`id`, timestamps, audit, `companyId`, `isDefault`, `placeholders` — αυτό εξάγεται από το
+ * `content`). ΕΝΑ σχήμα (N.18): ο client payload (`CreateTextTemplatePayload`) το χρησιμοποιεί
+ * αυτούσιο, ο server input (`CreateTextTemplateInput`) το επεκτείνει με `companyId`. Δύο
+ * πανομοιότυπα interface field-lists ήταν sibling clone — μία διόρθωση αλλού ξεχνιόταν στο άλλο.
+ *
+ * Client-safe: ζει εδώ (και όχι στο server `text-template.types.ts` που τραβά admin `Timestamp`)
+ * ώστε να το εισάγει ΚΑΙ ο `'use client'` HTTP client.
+ */
+export interface TextTemplateCreateFields {
+  readonly name: string;
+  readonly category: TextTemplateCategory;
+  readonly content: DxfTextNode;
+  /** ADR-651 Φάση Κ — η γλώσσα του **περιεχομένου** (μια αγγλική παραλλαγή ξέρει ότι είναι EN). */
+  readonly locale?: TextTemplateLocale;
+  /** ADR-651 Φάση Θ — default {@link DEFAULT_TEXT_TEMPLATE_SCOPE} (βιβλιοθήκη γραφείου). `system` δεν είναι επιλέξιμο. */
+  readonly scope?: WritableTextTemplateScope;
+  /** Υποχρεωτικό όταν `scope === 'project'` (αλλιώς αγνοείται). */
+  readonly projectId?: string;
+  /** Η προέλευση, όταν το πρότυπο **αποσπάται** από γονιό (ADR-651 must-have #1). */
+  readonly parentId?: string;
+  /** Το `updatedAt` του γονιού τη στιγμή της απόσπασης (ms). */
+  readonly parentSyncedAt?: number;
+  readonly titleBlock?: TextTemplateTitleBlockMeta;
+}
+
+/**
+ * Τα πεδία ενός **patch** προτύπου — όλα προαιρετικά. Ίδια πηγή αλήθειας με το
+ * {@link TextTemplateCreateFields}: ο server input και ο client payload το συνθέτουν.
+ * `placeholders` παραμένει server-derived όταν αλλάζει το `content`.
+ */
+export interface TextTemplateUpdateFields {
+  readonly name?: string;
+  readonly category?: TextTemplateCategory;
+  readonly content?: DxfTextNode;
+  /** ADR-651 Φάση Κ — δηλώνει (μία φορά) τη γλώσσα προτύπου γραμμένου πριν υπάρξει το πεδίο. */
+  readonly locale?: TextTemplateLocale;
+  /** «Δημοσίευση» σε άλλο scope (π.χ. δικά μου → γραφείου) — ίδιο doc, ΟΧΙ αντίγραφο. */
+  readonly scope?: WritableTextTemplateScope;
+  readonly projectId?: string;
+  /** Ανανεώνεται στο ρητό «Ενημέρωση από τον γονιό» (pull) — μαζί με το `content`. */
+  readonly parentSyncedAt?: number;
+  readonly titleBlock?: TextTemplateTitleBlockMeta;
+}
 
 /**
  * Canonical template document — same shape for built-ins and Firestore docs.
