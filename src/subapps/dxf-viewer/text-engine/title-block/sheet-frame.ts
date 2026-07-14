@@ -55,6 +55,8 @@ export const ISO_5457 = Object.freeze({
   stampWidthMm: 45,
   /** Ελάχιστο ύψος πινακίδας όταν υπάρχει κελί σφραγίδας (να χωράει σφραγίδα/υπογραφή). */
   stampMinHeightMm: 42,
+  /** Πλάτος κελιού QR (δεξιά μέσα στην πινακίδα — συμμετρικά με τη σφραγίδα, ADR-651 Φάση Λ). */
+  qrCellWidthMm: 22,
   /** Ανώτατο ποσοστό του ύψους της κορνίζας που επιτρέπεται να πιάσει η πινακίδα. */
   titleBlockMaxHeightFraction: 0.6,
 });
@@ -81,7 +83,9 @@ export interface SheetFrameMetrics {
   readonly titleBlock: RectMm;
   /** Κελί σφραγίδας (αριστερό τμήμα της πινακίδας)· `null` όταν το preset δεν το θέλει. */
   readonly stamp: RectMm | null;
-  /** Η ζώνη που παίρνουν κεφαλίδα + γραμμές πεδίων (πινακίδα μείον σφραγίδα). */
+  /** Κελί QR (δεξιό τμήμα της πινακίδας)· `null` όταν ο χρήστης δεν το θέλει (ADR-651 Φάση Λ). */
+  readonly qr: RectMm | null;
+  /** Η ζώνη που παίρνουν κεφαλίδα + γραμμές πεδίων (πινακίδα μείον σφραγίδα μείον QR). */
   readonly fields: RectMm;
 }
 
@@ -90,6 +94,8 @@ export interface SheetFrameInput {
   /** Πλήθος γραμμών πεδίων — ορίζει το φυσικό ύψος της πινακίδας (ADR-622 SSoT). */
   readonly rowCount: number;
   readonly withStampBox: boolean;
+  /** ADR-651 Φάση Λ — κελί QR δεξιά μέσα στην πινακίδα (off ⇒ πανομοιότυπη γεωμετρία με πριν). */
+  readonly withQr?: boolean;
 }
 
 /** Ύψος πινακίδας: φυσικό ύψος γραμμών, με τα ελάχιστα του προτύπου, φραγμένο στην κορνίζα. */
@@ -134,10 +140,18 @@ export function computeSheetFrameMetrics(input: SheetFrameInput): SheetFrameMetr
   const stamp: RectMm | null = input.withStampBox
     ? { x: titleBlock.x, y: titleBlock.y, w: stampWidthMm, h: titleBlock.h }
     : null;
+
+  // ADR-651 Φάση Λ — το κελί QR σκάβεται από τη ΔΕΞΙΑ ακμή (η σφραγίδα από την αριστερή), ώστε
+  // οι γραμμές πεδίων να μένουν στο κέντρο. Off ⇒ μηδέν πλάτος ⇒ πανομοιότυπη γεωμετρία με πριν.
+  const qrWidthMm = input.withQr ? Math.min(ISO_5457.qrCellWidthMm, titleBlock.w * 0.25) : 0;
+  const qr: RectMm | null = input.withQr
+    ? { x: titleBlock.x + titleBlock.w - qrWidthMm, y: titleBlock.y, w: qrWidthMm, h: titleBlock.h }
+    : null;
+
   const fields: RectMm = {
     x: titleBlock.x + stampWidthMm,
     y: titleBlock.y,
-    w: titleBlock.w - stampWidthMm,
+    w: titleBlock.w - stampWidthMm - qrWidthMm,
     h: titleBlock.h,
   };
 
@@ -147,6 +161,7 @@ export function computeSheetFrameMetrics(input: SheetFrameInput): SheetFrameMetr
     frame,
     titleBlock,
     stamp,
+    qr,
     fields,
   };
 }
