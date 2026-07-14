@@ -17,8 +17,10 @@ import * as React from 'react';
 import { useTranslation } from '@/i18n';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PREVIEW_POINT_SIZE_PX } from '../../../systems/topography/pointcloud/pointcloud-defaults';
+import { isMappingComplete } from '../../../systems/topography/topo-column-mapping';
 import type { CsfRigidness, VoxelRepresentative } from '../../../systems/topography/pointcloud/pointcloud-types';
 import type { UseTopoImport } from './useTopoImport';
+import { TopoColumnMapTable } from './TopoColumnMapTable';
 import { drawCloudPreview } from './topo-cloud-preview-canvas';
 import styles from './TopoImportWizard.module.css';
 
@@ -35,6 +37,7 @@ export function TopoCloudStep({ wizard }: Props): React.JSX.Element {
 
   return (
     <section className={styles.step}>
+      <CloudColumnsFieldset wizard={wizard} />
       <CsfParamsFieldset wizard={wizard} />
       <DecimateParamsFieldset wizard={wizard} />
 
@@ -66,6 +69,51 @@ export function TopoCloudStep({ wizard }: Props): React.JSX.Element {
 
       {cloudResult && <CloudResultPanel result={cloudResult} csf={csf} decimate={decimate} />}
     </section>
+  );
+}
+
+// ─── Columns (ADR-650 M8β/Δ — the id-aware cloud) ──────────────────────────────
+
+/**
+ * The column grid for an ASCII cloud, and the reason this milestone exists.
+ *
+ * A `.xyz`/`.pts` file is a TABLE of untyped columns, and the de-facto Greek/Civil 3D export puts
+ * the POINT NUMBER first (`1 345678.123 4201234.456 125.30 EDGE`). Read as «the first three
+ * numbers», that file yields X=1, Y=345678, Z=4201234 — no error, no warning, a cloud kilometres
+ * tall and contours drawn from garbage. A wrong column produces a plausible view of the WRONG
+ * site, which is why every serious tool (CloudCompare's ASCII dialog, PDAL's `readers.text`,
+ * Civil 3D's Point File Format) makes a human confirm the columns instead of guessing silently.
+ *
+ * So: the sniffer PROPOSES from the data, the engineer SEES the proposal against the real rows and
+ * certifies (or fixes) it — before the filter runs. LAS/LAZ never reach here (`cloudSample` is
+ * empty: a binary header already declares its columns).
+ */
+function CloudColumnsFieldset({ wizard }: Props): React.JSX.Element | null {
+  const { t } = useTranslation('dxf-viewer-panels');
+  const { cloudSample, cloudMapping, unit, busy } = wizard;
+
+  if (cloudSample.length === 0) return null;
+
+  return (
+    <fieldset className={styles.cloudGrid}>
+      <legend className={styles.sectionTitle}>{t('topography.pointcloud.columns.title')}</legend>
+      <p className={styles.hint}>{t('topography.pointcloud.columns.hint')}</p>
+
+      <TopoColumnMapTable
+        headers={[]}
+        rows={cloudSample}
+        mapping={cloudMapping}
+        unit={unit}
+        disabled={busy}
+        onRole={wizard.setRole}
+        onPreset={wizard.applyPreset}
+        onUnit={wizard.setUnit}
+      />
+
+      {!isMappingComplete(cloudMapping) && (
+        <p className={styles.hint}>{t('topography.pointcloud.columns.incomplete')}</p>
+      )}
+    </fieldset>
   );
 }
 

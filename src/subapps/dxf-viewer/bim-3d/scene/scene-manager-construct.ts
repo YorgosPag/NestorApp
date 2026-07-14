@@ -36,6 +36,7 @@ import { initViewCube } from './scene-setup';
 import { initBackgroundModeSubscription } from './scene-manager-actions';
 import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
 import { TerrainSceneLayer } from './terrain/TerrainSceneLayer'; // ADR-650 M4 — topographic surface
+import { PointCloudSceneLayer } from './terrain/PointCloudSceneLayer'; // ADR-650 M8β/Β — point cloud (display-only)
 
 export interface SceneManagerConstructDeps {
   readonly container: HTMLElement;
@@ -69,6 +70,7 @@ export interface SceneManagerParts {
   readonly poi: ReturnType<typeof createPoi>;
   readonly gridFloor: Cinema4DGridFloor;
   readonly terrainLayer: TerrainSceneLayer; // ADR-650 M4 — topographic surface (TIN → mesh)
+  readonly pointCloudLayer: PointCloudSceneLayer; // ADR-650 M8β/Β — display-only cloud (never geometry)
   readonly animationManager: AnimationManager;
   readonly canonicalViewService: CanonicalViewService;
   readonly keyboardFocusManager: KeyboardFocusManagerApi;
@@ -128,6 +130,11 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
   // rebuilds its mesh from the ONE derived TIN (the same one the 2D contours are cut from).
   const terrainLayer = new TerrainSceneLayer(scene, markDirty);
 
+  // ADR-650 M8β/Β — το νέφος σημείων του τελευταίου import. Ξεχωριστό layer από το έδαφος: το
+  // έδαφος είναι η ΜΕΤΡΗΜΕΝΗ επιφάνεια, το νέφος είναι display-only τεκμήριο (§6) — μπαίνουν και
+  // βγαίνουν ανεξάρτητα, και το νέφος δεν συμμετέχει ποτέ σε raycast/snap.
+  const pointCloudLayer = new PointCloudSceneLayer(scene, markDirty);
+
   // Phase 4.2 — single animation manager (ADR-040 — ticked by the main RAF).
   const animationManager = createAnimationManager();
   // Phase 4.4 — instantiated once, shared by ViewCube and keyboard dispatcher.
@@ -180,7 +187,7 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
   return {
     selectionHighlighter, hoverHighlighter, faceHighlighter, faceHoverHighlighter,
     stairSubElementHighlighter, stairSubUnsub,
-    poi, gridFloor, terrainLayer, animationManager, canonicalViewService,
+    poi, gridFloor, terrainLayer, pointCloudLayer, animationManager, canonicalViewService,
     keyboardFocusManager, focusOutlineRenderer, focusUnsub, viewCube,
     envStoreUnsub, bgModeUnsub, sectionController, waypointDragHandleRenderer,
     dxfBackdrop, frameContext,

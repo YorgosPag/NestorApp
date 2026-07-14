@@ -1043,6 +1043,11 @@
         "classifying": "Classifying bare earth… {percent}%",
         "decimating": "Decimating points… {percent}%"
       },
+      "columns": {
+        "title": "File columns",
+        "hint": "Proposed from the file's own data — check it before filtering. A wrong column raises no error: it produces a plausible-looking cloud of the wrong site.",
+        "incomplete": "Without a complete X/Y/Z assignment the reader takes the first three numeric fields of each line."
+      },
       "csf": {
         "title": "Bare-earth filter (CSF)",
         "hint": "Applied only when the file carries no classification already, or when forced below.",

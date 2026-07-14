@@ -23,19 +23,28 @@
 import * as React from 'react';
 import { setTopoPoints } from '../../../systems/topography/TopoPointStore';
 import { setPointCloud3D } from '../../../systems/topography/pointcloud-3d-store';
-import { readDelimitedText } from '../../../systems/topography/topo-delimited-reader';
+import { detectDelimiter, readDelimitedText } from '../../../systems/topography/topo-delimited-reader';
 import { readExcelToTable } from '../../../systems/topography/topo-excel-reader';
 import { extractTopoPointsFromDxf } from '../../../systems/topography/topo-dxf-points';
 import { applyColumnMapping, isMappingComplete, suggestMappingFromHeaders } from '../../../systems/topography/topo-column-mapping';
+import { suggestMappingFromRows } from '../../../systems/topography/topo-column-sniffer';
+import { fieldSplitterFor, sampleTopoLines } from '../../../systems/topography/topo-text-lines';
 import { getOrderPresetMapping } from '../../../systems/topography/topo-order-presets';
-import { isPointCloudFile, importPointCloud } from '../../../io/pointcloud-import';
-import { CSF_DEFAULTS, VOXEL_DEFAULTS, READ_DEFAULTS } from '../../../systems/topography/pointcloud/pointcloud-defaults';
+import { isAsciiPointCloudFile, isPointCloudFile, importPointCloud } from '../../../io/pointcloud-import';
+import type { PointCloudImportProgress } from '../../../io/pointcloud-import';
+import {
+  ASCII_SNIFF_BYTES,
+  ASCII_SNIFF_ROWS,
+  CSF_DEFAULTS,
+  VOXEL_DEFAULTS,
+  READ_DEFAULTS,
+} from '../../../systems/topography/pointcloud/pointcloud-defaults';
 import type { ColumnMapping, ColumnRole, RawTable, TopoUnit } from '../../../systems/topography/topo-import-types';
 import type { TopoPoint, TopoSurfaceId } from '../../../systems/topography/topo-types';
 import type {
   CsfOptions,
-  PointCloudImportProgress,
   PointCloudPipelineResult,
+  PointCloudReadOptions,
   VoxelDecimateOptions,
 } from '../../../systems/topography/pointcloud/pointcloud-types';
 
@@ -80,6 +89,13 @@ export interface UseTopoImport {
   readonly csf: CsfOptions;
   readonly decimate: VoxelDecimateOptions;
   readonly forceCsf: boolean;
+  /**
+   * ADR-650 M8β/Δ — the first rows of an ASCII cloud, as the wizard shows them. Empty for a
+   * LAS/LAZ file (binary: its columns are declared in the header, there is nothing to map).
+   */
+  readonly cloudSample: readonly (readonly string[])[];
+  /** The engineer-certified column order of the ASCII cloud (sniffed proposal, editable). */
+  readonly cloudMapping: ColumnMapping;
   readonly cloudResult: PointCloudPipelineResult | null;
   readonly cloudProgress: PointCloudImportProgress | null;
   readonly cloudError: string | null;
@@ -107,6 +123,9 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
   const [busy, setBusy] = React.useState(false);
 
   const [cloudFile, setCloudFile] = React.useState<File | null>(null);
+  const [cloudSample, setCloudSample] = React.useState<readonly (readonly string[])[]>([]);
+  const [cloudMapping, setCloudMapping] = React.useState<ColumnMapping>([]);
+  const [cloudDelimiter, setCloudDelimiter] = React.useState<string | undefined>(undefined);
   const [csf, setCsf] = React.useState<CsfOptions>(CSF_DEFAULTS);
   const [decimate, setDecimate] = React.useState<VoxelDecimateOptions>(VOXEL_DEFAULTS);
   const [forceCsf, setForceCsf] = React.useState(false);
@@ -124,6 +143,9 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
     setError(null);
     setBusy(false);
     setCloudFile(null);
+    setCloudSample([]);
+    setCloudMapping([]);
+    setCloudDelimiter(undefined);
     setCsf(CSF_DEFAULTS);
     setDecimate(VOXEL_DEFAULTS);
     setForceCsf(false);
@@ -148,10 +170,19 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
       }
 
       if (kind === 'pointcloud') {
-        // Bulk buffer, own coordinates, no described column order → the `cloud` step, not mapping.
+        // Bulk buffer → the `cloud` step. An ASCII cloud IS a table of untyped columns, though
+        // (M8β/Δ): sniff a proposal off its head slice so the engineer certifies the column order
+        // instead of the reader guessing «the first three numbers». A LAS/LAZ carries its columns
+        // in a binary header — `sample` stays empty and the grid is not shown.
+        const sniff = isAsciiPointCloudFile(file.name)
+          ? sniffAsciiCloud(await file.slice(0, ASCII_SNIFF_BYTES).text())
+          : null;
         setDxfPoints(null);
         setTable(null);
         setCloudFile(file);
+        setCloudSample(sniff?.rows ?? []);
+        setCloudMapping(sniff ? initialCloudMapping(sniff.rows) : []);
+        setCloudDelimiter(sniff?.delimiter);
         setCloudResult(null);
         setCloudProgress(null);
         setCloudError(null);
@@ -174,23 +205,58 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
     }
   }, []);
 
-  const setRole = React.useCallback((columnIndex: number, role: ColumnRole) => {
-    setMapping((prev) => assignRole(prev, columnIndex, role));
+  /**
+   * A cloud result describes the parameters it was RUN with. The moment any of them changes — a
+   * column role, the unit, a CSF knob — the result on screen no longer describes what would be
+   * committed, so it is dropped and the engineer must re-run. Approving a filter you did not run
+   * is exactly the silent-wrong-site failure this milestone exists to remove.
+   */
+  const invalidateCloudResult = React.useCallback(() => {
+    setCloudResult(null);
+    setCloudProgress(null);
   }, []);
+
+  const setRole = React.useCallback((columnIndex: number, role: ColumnRole) => {
+    const next = (prev: ColumnMapping) => assignRole(prev, columnIndex, role);
+    if (step === 'cloud') {
+      setCloudMapping(next);
+      invalidateCloudResult();
+      return;
+    }
+    setMapping(next);
+  }, [step, invalidateCloudResult]);
 
   const applyPreset = React.useCallback((presetId: string) => {
     const preset = getOrderPresetMapping(presetId);
     if (!preset) return;
-    setMapping((prev) => padMapping(preset, prev.length));
-  }, []);
+    const next = (prev: ColumnMapping) => padMapping(preset, prev.length);
+    if (step === 'cloud') {
+      setCloudMapping(next);
+      invalidateCloudResult();
+      return;
+    }
+    setMapping(next);
+  }, [step, invalidateCloudResult]);
+
+  const changeUnit = React.useCallback((next: TopoUnit) => {
+    setUnit(next);
+    if (step === 'cloud') invalidateCloudResult();
+  }, [step, invalidateCloudResult]);
 
   const updateCsf = React.useCallback((patch: Partial<CsfOptions>) => {
     setCsf((prev) => ({ ...prev, ...patch }));
-  }, []);
+    invalidateCloudResult();
+  }, [invalidateCloudResult]);
 
   const updateDecimate = React.useCallback((patch: Partial<VoxelDecimateOptions>) => {
     setDecimate((prev) => ({ ...prev, ...patch }));
-  }, []);
+    invalidateCloudResult();
+  }, [invalidateCloudResult]);
+
+  const changeForceCsf = React.useCallback((value: boolean) => {
+    setForceCsf(value);
+    invalidateCloudResult();
+  }, [invalidateCloudResult]);
 
   const runCloudFilter = React.useCallback(async () => {
     if (!cloudFile) return;
@@ -200,7 +266,7 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
     try {
       const result = await importPointCloud(
         cloudFile,
-        { read: { unit, maxPointsInMemory: READ_DEFAULTS.maxPointsInMemory }, csf, decimate, forceCsf },
+        { read: buildReadOptions(unit, cloudMapping, cloudDelimiter), csf, decimate, forceCsf },
         setCloudProgress,
       );
       setCloudResult(result);
@@ -209,7 +275,7 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
     } finally {
       setBusy(false);
     }
-  }, [cloudFile, unit, csf, decimate, forceCsf]);
+  }, [cloudFile, unit, cloudMapping, cloudDelimiter, csf, decimate, forceCsf]);
 
   // Live preview — the surveyor sees the point count react to every dropdown change.
   const mapped = React.useMemo(() => {
@@ -250,13 +316,62 @@ export function useTopoImport(surface: TopoSurfaceId = 'existing'): UseTopoImpor
     points: mapped.points,
     skippedCount: mapped.skipped.length,
     error, busy, canProceed,
-    loadFile, setRole, applyPreset, setUnit, back, next, commit, reset,
-    csf, decimate, forceCsf, cloudResult, cloudProgress, cloudError,
-    updateCsf, updateDecimate, setForceCsf, runCloudFilter,
+    loadFile, setRole, applyPreset, setUnit: changeUnit, back, next, commit, reset,
+    csf, decimate, forceCsf, cloudSample, cloudMapping, cloudResult, cloudProgress, cloudError,
+    updateCsf, updateDecimate, setForceCsf: changeForceCsf, runCloudFilter,
   };
 }
 
 // ─── Pure mapping helpers ──────────────────────────────────────────────────────
+
+interface AsciiCloudSniff {
+  readonly rows: readonly (readonly string[])[];
+  readonly delimiter: string;
+}
+
+/**
+ * Read the head of an ASCII cloud the way the READER will read it: detect the file's delimiter with
+ * the M2 SSoT (`detectDelimiter`), then split the sample rows with it. The grid the engineer certifies
+ * and the fields the reader consumes must come out of the same split — otherwise the column indices
+ * he approves point somewhere else in the worker.
+ */
+function sniffAsciiCloud(head: string): AsciiCloudSniff {
+  const lines = sampleTopoLines(head, ASCII_SNIFF_ROWS);
+  const delimiter = detectDelimiter(lines);
+  const split = fieldSplitterFor(delimiter);
+  return { rows: lines.map(split), delimiter };
+}
+
+/**
+ * The column order the wizard PROPOSES for an ASCII cloud. The sniffer reads the data (there is no
+ * header row to read); when it cannot see three coordinate columns it proposes nothing, the grid
+ * opens fully unmapped, and — since an incomplete mapping is never sent to the reader — the file is
+ * read exactly as it was before this milestone («the first three numeric fields»).
+ */
+function initialCloudMapping(sample: readonly (readonly string[])[]): ColumnMapping {
+  if (sample.length === 0) return [];
+  const width = Math.max(...sample.map((r) => r.length), 0);
+  return suggestMappingFromRows(sample) ?? Array.from({ length: width }, () => 'ignore' as ColumnRole);
+}
+
+/**
+ * Read options for the cloud pipeline. The mapping is sent ONLY when it is complete (X, Y and Z all
+ * claimed): a half-set mapping must not half-apply — it falls back to the historical behaviour,
+ * whole. The delimiter travels with it (it is what gives the column indices their meaning) and is
+ * `undefined` for a binary cloud, which never consults either.
+ */
+function buildReadOptions(
+  unit: TopoUnit,
+  mapping: ColumnMapping,
+  delimiter: string | undefined,
+): PointCloudReadOptions {
+  return {
+    unit,
+    maxPointsInMemory: READ_DEFAULTS.maxPointsInMemory,
+    ...(delimiter === undefined ? {} : { delimiter }),
+    ...(isMappingComplete(mapping) ? { mapping } : {}),
+  };
+}
 
 /** Header labels give a first guess; a header-less file starts fully unmapped. */
 function initialMapping(table: RawTable): ColumnMapping {
