@@ -1,20 +1,24 @@
 /**
- * ADR-654 M6 — τοποθέτηση entourage (άνθρωποι/οχήματα): οι δύο μετατροπές, κλειδωμένες με tests.
+ * ADR-654 M6/M7 — τοποθέτηση entourage (άνθρωποι/οχήματα/φυτά/έπιπλα): οι δύο μετατροπές,
+ * κλειδωμένες με tests.
  *
  * 1. mm → scene units (η σκηνή μπορεί σε mm/cm/m — $INSUNITS)
  * 2. κλικ = ΚΕΝΤΡΟ → `ImageEntity.position` = ΚΑΤΩ-ΑΡΙΣΤΕΡΗ γωνία (σύμβαση DXF INSERT)
  *
- * Επαληθεύει ότι το ΚΟΙΝΟ factory (`createEntouragePlacer`) δουλεύει σωστά και για τις δύο
- * οικογένειες μέσω των module singletons — μία μηχανή, δύο instances (N.18).
+ * Επαληθεύει ότι το ΚΟΙΝΟ factory (`createEntouragePlacer`) δουλεύει σωστά για ΟΛΕΣ τις
+ * οικογένειες μέσω των module singletons — μία μηχανή, N instances (N.18). Τα furniture cases
+ * (Φάση Γ) κλειδώνουν το «μεγάλη πλευρά, ΟΧΙ πλάτος» + layer FURNITURE-2D (μηδέν regression).
  */
 
 import {
   peoplePlanPlacer,
   vehiclesPlanPlacer,
   plantsPlanPlacer,
+  furniturePlanPlacer,
   PEOPLE_PLAN_LAYER_ID,
   VEHICLES_PLAN_LAYER_ID,
   PLANTS_PLAN_LAYER_ID,
+  FURNITURE_PLAN_LAYER_ID,
 } from '../entourage-placers';
 
 // ppl-obj-001-1: category 'person' (650mm), aspect 0.4973 (<1 → μεγάλη πλευρά = ύψος)
@@ -23,6 +27,10 @@ const PERSON = 'ppl-obj-001-1';
 const CAR = 'veh-obj-010-1';
 // pl-obj-001-1: category 'tree' (6000mm), aspect 0.9987 (~τετράγωνο)
 const TREE = 'pl-obj-001-1';
+// furn-obj-001-1: category 'sofa3' (2100mm), aspect 2.4363 (>1 → landscape, μεγάλη πλευρά = πλάτος)
+const SOFA3 = 'furn-obj-001-1';
+// furn-obj-001-2: category 'sofa2' (1500mm), aspect 0.571 (<1 → portrait· ο διθέσιος ΔΕΝ γίνεται τέρας)
+const SOFA2_PORTRAIT = 'furn-obj-001-2';
 const URL = 'https://example.test/sprite.webp';
 
 describe('peoplePlanPlacer.resolveSceneSize — μεγάλη πλευρά = ύψος (aspect < 1)', () => {
@@ -59,6 +67,35 @@ describe('plantsPlanPlacer.resolveSceneSize — μεγάλη πλευρά = μή
   it('τα φυτά προσγειώνονται στο δικό τους layer', () => {
     const entity = plantsPlanPlacer.buildEntity({ position: { x: 0, y: 0 }, itemId: TREE, url: URL })!;
     expect(entity.layerId).toBe(PLANTS_PLAN_LAYER_ID);
+  });
+});
+
+describe('furniturePlanPlacer.resolveSceneSize — «μεγάλη πλευρά», ΟΧΙ «πλάτος» (Φάση Γ)', () => {
+  it('LANDSCAPE (aspect > 1): το μήκος πάει στο ΠΛΑΤΟΣ — sofa3 2100 × 2100/aspect', () => {
+    const size = furniturePlanPlacer.resolveSceneSize(SOFA3, 'mm')!;
+    expect(size.width).toBeCloseTo(2100, 0);
+    expect(size.height).toBeCloseTo(2100 / 2.4363, 0);
+    expect(size.width).toBeGreaterThan(size.height);
+  });
+
+  it('PORTRAIT (aspect < 1): το μήκος πάει στο ΥΨΟΣ — ο διθέσιος 1500 ΔΕΝ γίνεται 2.6m βαθύς', () => {
+    const size = furniturePlanPlacer.resolveSceneSize(SOFA2_PORTRAIT, 'mm')!;
+    expect(size.height).toBeCloseTo(1500, 0);
+    expect(size.width).toBeCloseTo(1500 * 0.571, 0);
+    expect(size.width).toBeLessThan(1000); // ρεαλιστικό βάθος καναπέ
+  });
+
+  it('σκηνή σε ΜΕΤΡΑ: ο καναπές είναι 2.1 μονάδες, ΟΧΙ 2100', () => {
+    expect(furniturePlanPlacer.resolveSceneSize(SOFA3, 'm')!.width).toBeCloseTo(2.1, 3);
+  });
+
+  it('τα έπιπλα προσγειώνονται στο δικό τους layer (FURNITURE-2D — ανοιγοκλείνει με ένα κλικ)', () => {
+    const entity = furniturePlanPlacer.buildEntity({ position: { x: 0, y: 0 }, itemId: SOFA3, url: URL })!;
+    expect(entity.layerId).toBe(FURNITURE_PLAN_LAYER_ID);
+  });
+
+  it('άγνωστο id → null', () => {
+    expect(furniturePlanPlacer.resolveSceneSize('furn-άγνωστο', 'mm')).toBeNull();
   });
 });
 

@@ -62,6 +62,23 @@ const PACKS = {
     categories: ['tree', 'largeTree', 'shrub', 'hedge', 'palm', 'flower', 'grass'],
     facets: [], // τα φυτά έχουν μόνο category (top-view δεν δίνει αξιόπιστο δεύτερο facet)
   },
+  furniture: {
+    manifest: 'public/furniture-2d/manifest.json',
+    classification: 'scripts/entourage-classification/furniture-plan.classification.json',
+    out: 'src/subapps/dxf-viewer/data/furniture-plan-catalog.data.ts',
+    typeImport: 'FurniturePlanDef',
+    typeModule: './furniture-plan-catalog',
+    constName: 'FURNITURE_PLAN_CATALOG_DATA',
+    categories: [
+      'sofa3', 'sofa2', 'sofaCorner', 'armchair', 'recliner', 'chair', 'officeChair',
+      'stool', 'bench', 'pouf', 'bedDouble', 'bedSingle', 'washbasin', 'coffeeTable', 'rug',
+    ],
+    // kind ΠΡΩΤΟ (top-level φίλτρο «Μεμονωμένα ⇄ Συνθέσεις»), μετά style.
+    facets: [
+      { key: 'kind', values: ['individual', 'composition'] },
+      { key: 'style', values: ['solid', 'floral', 'leather', 'striped', 'retro', 'modern', 'plaid', 'checkered', 'classic', 'velvet'] },
+    ],
+  },
 };
 
 const loadJson = (p) => JSON.parse(fs.readFileSync(path.join(REPO_ROOT, p), 'utf8'));

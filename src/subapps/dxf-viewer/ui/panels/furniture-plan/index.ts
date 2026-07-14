@@ -1,1 +1,0 @@
-export { FurniturePlanPanel } from './FurniturePlanPanel';

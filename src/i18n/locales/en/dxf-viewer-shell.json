@@ -1371,8 +1371,14 @@
     "empty": "No plan furniture found.",
     "noMatch": "No furniture matches the filter.",
     "allCategories": "All",
-    "allStyles": "All",
+    "kind": {
+      "individual": "Individual",
+      "composition": "Set"
+    },
+    "kindFilterLabel": "Type",
+    "kindFilterAll": "All",
     "styleFilterLabel": "Style",
+    "styleFilterAll": "All",
     "categories": {
       "sofa3": "3-seat sofa",
       "sofa2": "2-seat sofa",
@@ -1390,7 +1396,7 @@
       "coffeeTable": "Coffee table",
       "rug": "Rug"
     },
-    "styles": {
+    "style": {
       "solid": "Solid",
       "floral": "Floral",
       "leather": "Leather",

@@ -11,23 +11,27 @@
  */
 
 import React from 'react';
-import { Users, Car, Trees } from 'lucide-react';
+import { Users, Car, Trees, Armchair } from 'lucide-react';
 import type { EntouragePackDescriptor } from './entourage-pack-descriptor';
 import { listPeoplePlanDefs } from '../../../data/people-plan-catalog';
 import { listVehiclePlanDefs } from '../../../data/vehicles-plan-catalog';
 import { listPlantsPlanDefs } from '../../../data/plants-plan-catalog';
+import { listFurniturePlanDefs } from '../../../data/furniture-plan-catalog';
 import {
   PEOPLE_PLAN_PACK_ID,
   VEHICLES_PLAN_PACK_ID,
   PLANTS_PLAN_PACK_ID,
+  FURNITURE_PLAN_PACK_ID,
   resolvePeoplePlanUrl,
   resolveVehiclesPlanUrl,
   resolvePlantsPlanUrl,
+  resolveFurniturePlanUrl,
 } from '../../../data/entourage-plan-sources';
 import {
   peoplePlanSelection,
   vehiclesPlanSelection,
   plantsPlanSelection,
+  furniturePlanSelection,
 } from '../../../bim/entourage/entourage-selection-stores';
 
 /** Descriptor «Άνθρωποι Κάτοψης» (μόνο category, 0 facets). */
@@ -61,4 +65,15 @@ export const PLANTS_PALETTE_DESCRIPTOR: EntouragePackDescriptor = {
   list: listPlantsPlanDefs,
   resolveUrl: resolvePlantsPlanUrl,
   selection: plantsPlanSelection,
+};
+
+/** Descriptor «Έπιπλα Κάτοψης» (category + facets `kind` → `style`· kind ΠΡΩΤΟ). */
+export const FURNITURE_PALETTE_DESCRIPTOR: EntouragePackDescriptor = {
+  packId: FURNITURE_PLAN_PACK_ID,
+  i18nPrefix: 'furniturePlan',
+  facetKeys: ['kind', 'style'],
+  icon: <Armchair />,
+  list: listFurniturePlanDefs,
+  resolveUrl: resolveFurniturePlanUrl,
+  selection: furniturePlanSelection,
 };

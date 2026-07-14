@@ -1,0 +1,2276 @@
+[
+  {
+    "id": "furn-obj-001-1",
+    "category": "sofa3",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-001-2",
+    "category": "sofa2",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-001-3",
+    "category": "armchair",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-002-1",
+    "category": "sofa3",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-002-2",
+    "category": "sofa2",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-002-3",
+    "category": "armchair",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-003-1",
+    "category": "sofa3",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-003-2",
+    "category": "sofa2",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-003-3",
+    "category": "armchair",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-004-1",
+    "category": "sofa3",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-004-2",
+    "category": "sofa2",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-004-3",
+    "category": "armchair",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-005-1",
+    "category": "sofa3",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-005-2",
+    "category": "sofa2",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-005-3",
+    "category": "armchair",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-006-1",
+    "category": "sofa3",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-006-2",
+    "category": "sofa2",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-006-3",
+    "category": "armchair",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-007-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-007-2",
+    "category": "sofa2",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-007-3",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-008-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-008-2",
+    "category": "sofa2",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-008-3",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-009-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-009-2",
+    "category": "sofa2",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-009-3",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-010-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-010-2",
+    "category": "sofa2",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-010-3",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-011-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-011-2",
+    "category": "sofa2",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-011-3",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-012-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-012-2",
+    "category": "sofa2",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-012-3",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-013-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-013-2",
+    "category": "sofa2",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-013-3",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-014-1",
+    "category": "sofa3",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-014-2",
+    "category": "sofa2",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-014-3",
+    "category": "armchair",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-015-1",
+    "category": "armchair",
+    "style": "plaid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-016-1",
+    "category": "armchair",
+    "style": "plaid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-017-1",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-018-1",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-019-1",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-020-1",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-021-1",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-022-1",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-023-1",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-024-1",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-025-1",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-026-1",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-027-1",
+    "category": "sofa3",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-027-2",
+    "category": "armchair",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-027-3",
+    "category": "armchair",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-028-1",
+    "category": "sofa3",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-028-2",
+    "category": "armchair",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-028-3",
+    "category": "pouf",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-029-1",
+    "category": "sofa3",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-029-2",
+    "category": "armchair",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-029-3",
+    "category": "pouf",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-030-1",
+    "category": "sofa3",
+    "style": "plaid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-030-2",
+    "category": "sofaCorner",
+    "style": "checkered",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-030-3",
+    "category": "sofaCorner",
+    "style": "checkered",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-031-1",
+    "category": "sofa3",
+    "style": "plaid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-031-2",
+    "category": "sofaCorner",
+    "style": "plaid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-031-3",
+    "category": "sofaCorner",
+    "style": "plaid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-032-1",
+    "category": "sofa3",
+    "style": "plaid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-032-2",
+    "category": "sofaCorner",
+    "style": "plaid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-032-3",
+    "category": "sofaCorner",
+    "style": "plaid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-033-1",
+    "category": "sofa3",
+    "style": "plaid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-033-2",
+    "category": "sofaCorner",
+    "style": "plaid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-033-3",
+    "category": "sofaCorner",
+    "style": "plaid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-034-1",
+    "category": "sofa3",
+    "style": "plaid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-034-2",
+    "category": "sofaCorner",
+    "style": "plaid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-034-3",
+    "category": "sofaCorner",
+    "style": "plaid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-035-1",
+    "category": "sofa3",
+    "style": "plaid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-035-2",
+    "category": "sofaCorner",
+    "style": "plaid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-035-3",
+    "category": "sofaCorner",
+    "style": "plaid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-036-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-036-2",
+    "category": "sofaCorner",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-036-3",
+    "category": "sofaCorner",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-037-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-037-2",
+    "category": "sofa2",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-037-3",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-038-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-038-2",
+    "category": "sofa2",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-038-3",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-039-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-039-2",
+    "category": "sofa2",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-039-3",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-040-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-040-2",
+    "category": "sofa2",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-040-3",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-041-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-041-2",
+    "category": "sofa2",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-041-3",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-042-1",
+    "category": "sofa3",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-042-2",
+    "category": "sofa2",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-042-3",
+    "category": "armchair",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-043-1",
+    "category": "sofa3",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-043-2",
+    "category": "sofa2",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-043-3",
+    "category": "armchair",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-044-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-044-2",
+    "category": "sofa2",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-044-3",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-045-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-045-2",
+    "category": "sofa2",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-045-3",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-046-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-046-2",
+    "category": "sofa2",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-046-3",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-047-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-047-2",
+    "category": "sofa2",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-047-3",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-048-1",
+    "category": "sofa3",
+    "style": "checkered",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-048-2",
+    "category": "sofa2",
+    "style": "checkered",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-048-3",
+    "category": "armchair",
+    "style": "checkered",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-049-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-049-2",
+    "category": "sofa2",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-049-3",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-050-1",
+    "category": "sofa3",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-050-2",
+    "category": "sofa2",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-050-3",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-051-1",
+    "category": "sofa3",
+    "style": "checkered",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-051-2",
+    "category": "sofa2",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-051-3",
+    "category": "armchair",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-052-1",
+    "category": "sofa3",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-052-2",
+    "category": "sofa2",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-052-3",
+    "category": "armchair",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-053-1",
+    "category": "sofa3",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-053-2",
+    "category": "sofa2",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-053-3",
+    "category": "armchair",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-054-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-054-2",
+    "category": "sofa2",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-054-3",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-055-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-055-2",
+    "category": "sofa2",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-055-3",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-056-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-056-2",
+    "category": "sofa2",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-056-3",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-057-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-057-2",
+    "category": "sofa2",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-057-3",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-058-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-058-2",
+    "category": "sofa2",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-058-3",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-059-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-059-2",
+    "category": "sofa2",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-059-3",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-060-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-060-2",
+    "category": "sofa2",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-060-3",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-061-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-061-2",
+    "category": "sofa2",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-061-3",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-062-1",
+    "category": "sofa3",
+    "style": "checkered",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-063-1",
+    "category": "sofa3",
+    "style": "checkered",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-064-1",
+    "category": "sofa3",
+    "style": "checkered",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-065-1",
+    "category": "sofa3",
+    "style": "checkered",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-066-1",
+    "category": "sofa3",
+    "style": "checkered",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-067-1",
+    "category": "sofa3",
+    "style": "checkered",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-068-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-068-2",
+    "category": "sofa2",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-068-3",
+    "category": "sofaCorner",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-069-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-069-2",
+    "category": "sofa2",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-069-3",
+    "category": "sofa2",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-070-1",
+    "category": "sofa3",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-070-2",
+    "category": "sofa2",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-070-3",
+    "category": "sofaCorner",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-071-1",
+    "category": "sofa3",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-071-2",
+    "category": "sofa2",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-071-3",
+    "category": "sofaCorner",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-072-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-072-2",
+    "category": "sofa2",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-072-3",
+    "category": "sofaCorner",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-073-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-073-2",
+    "category": "sofa2",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-073-3",
+    "category": "sofaCorner",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-074-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-074-2",
+    "category": "sofa2",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-074-3",
+    "category": "sofaCorner",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-075-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-075-2",
+    "category": "sofa2",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-075-3",
+    "category": "sofaCorner",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-076-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-076-2",
+    "category": "sofa2",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-076-3",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-077-1",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-078-1",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-079-1",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-079-1-1",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-080-1",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-081-1",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-082-1",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-083-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-084-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-085-1",
+    "category": "armchair",
+    "style": "velvet",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-086-1",
+    "category": "armchair",
+    "style": "velvet",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-087-1",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-088-1",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-089-1",
+    "category": "sofaCorner",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-090-1",
+    "category": "sofaCorner",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-091-1",
+    "category": "sofaCorner",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-092-1",
+    "category": "sofaCorner",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-093-1",
+    "category": "sofaCorner",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-094-1",
+    "category": "sofaCorner",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-095-1",
+    "category": "sofaCorner",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-096-1",
+    "category": "sofaCorner",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-097-1",
+    "category": "sofaCorner",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-098-1",
+    "category": "sofaCorner",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-099-1",
+    "category": "sofaCorner",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-100-1",
+    "category": "sofaCorner",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-101-1",
+    "category": "sofaCorner",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-102-1",
+    "category": "sofaCorner",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-103-1",
+    "category": "sofaCorner",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-104-1",
+    "category": "sofa3",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-105-1",
+    "category": "sofa3",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-106-1",
+    "category": "sofa3",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-107-1",
+    "category": "sofa3",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-108-1",
+    "category": "sofa3",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-109-1",
+    "category": "sofa3",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-110-1",
+    "category": "sofa3",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-111-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-112-1",
+    "category": "sofa3",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-112-2",
+    "category": "sofa2",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-112-3",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-113-1",
+    "category": "sofa3",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-113-2",
+    "category": "sofa2",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-113-3",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-114-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-114-2",
+    "category": "sofa2",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-114-3",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-115-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-115-2",
+    "category": "sofa2",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-115-3",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-116-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-116-2",
+    "category": "sofa2",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-116-3",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-117-1",
+    "category": "sofa3",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-117-2",
+    "category": "sofa2",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-117-3",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-118-1",
+    "category": "bedDouble",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-119-1",
+    "category": "bedDouble",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-120-1",
+    "category": "bedDouble",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-121-1",
+    "category": "bedDouble",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-122-1",
+    "category": "bedDouble",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-123-1",
+    "category": "bedDouble",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-124-1",
+    "category": "bedDouble",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-125-1",
+    "category": "bedDouble",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-126-1",
+    "category": "bedDouble",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-127-1",
+    "category": "bedDouble",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-128-1",
+    "category": "bedDouble",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-129-1",
+    "category": "bedDouble",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-130-1",
+    "category": "bedDouble",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-131-1",
+    "category": "bedDouble",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-132-1",
+    "category": "bedDouble",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-133-1",
+    "category": "bedDouble",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-134-1",
+    "category": "bedDouble",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-135-1",
+    "category": "bedDouble",
+    "style": "checkered",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-136-1",
+    "category": "bedDouble",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-137-1",
+    "category": "bedSingle",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-138-1",
+    "category": "bedSingle",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-139-1",
+    "category": "bedSingle",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-140-1",
+    "category": "bedSingle",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-141-1",
+    "category": "bedSingle",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-142-1",
+    "category": "bedSingle",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-143-1",
+    "category": "bedSingle",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-144-1",
+    "category": "bedSingle",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-145-1",
+    "category": "bedSingle",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-146-1",
+    "category": "bedSingle",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-147-1",
+    "category": "bedSingle",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-148-1",
+    "category": "bedSingle",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-149-1",
+    "category": "bedSingle",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-150-1",
+    "category": "bedSingle",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-151-1",
+    "category": "bedSingle",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-152-1",
+    "category": "bedSingle",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-160-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-161-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-162-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-163-1",
+    "category": "chair",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-164-1",
+    "category": "chair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-165-1",
+    "category": "armchair",
+    "style": "velvet",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-166-1",
+    "category": "recliner",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-167-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-168-1",
+    "category": "armchair",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-169-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-170-1",
+    "category": "chair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-171-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-172-1",
+    "category": "chair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-173-1",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-174-1",
+    "category": "recliner",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-175-1",
+    "category": "recliner",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-176-1",
+    "category": "recliner",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-177-1",
+    "category": "chair",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-178-1",
+    "category": "chair",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-179-1",
+    "category": "stool",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-180-1",
+    "category": "chair",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-181-1",
+    "category": "chair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-182-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-183-1",
+    "category": "chair",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-184-1",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-185-1",
+    "category": "armchair",
+    "style": "classic",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-186-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-187-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-188-1",
+    "category": "armchair",
+    "style": "classic",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-188-2",
+    "category": "pouf",
+    "style": "classic",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-189-1",
+    "category": "chair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-190-1",
+    "category": "chair",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-191-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-192-1",
+    "category": "pouf",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-193-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-194-1",
+    "category": "washbasin",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-195-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-196-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-197-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-198-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-199-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-200-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-201-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-202-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-203-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-204-1",
+    "category": "chair",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-205-1",
+    "category": "chair",
+    "style": "striped",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-206-1",
+    "category": "chair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-207-1",
+    "category": "chair",
+    "style": "checkered",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-208-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-209-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-210-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-211-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-212-1",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-213-1",
+    "category": "armchair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-214-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-215-1",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-216-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-217-1",
+    "category": "bench",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-218-1",
+    "category": "coffeeTable",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-219-1",
+    "category": "armchair",
+    "style": "leather",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-220-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-221-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-222-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-223-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-224-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-225-1",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-226-1",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-227-1",
+    "category": "armchair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-228-1",
+    "category": "chair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-229-1",
+    "category": "chair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-230-1",
+    "category": "chair",
+    "style": "floral",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-231-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-232-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-233-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-234-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-235-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-obj-236-1",
+    "category": "chair",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-001-1",
+    "category": "rug",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-002-1",
+    "category": "rug",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-003-1",
+    "category": "rug",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-004-1",
+    "category": "rug",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-005-1",
+    "category": "rug",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-006-1",
+    "category": "rug",
+    "style": "solid",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-007-1",
+    "category": "rug",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-008-1",
+    "category": "rug",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-009-1",
+    "category": "rug",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-010-1",
+    "category": "rug",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-011-1",
+    "category": "rug",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-012-1",
+    "category": "rug",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-013-1",
+    "category": "rug",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-014-1",
+    "category": "rug",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-015-1",
+    "category": "rug",
+    "style": "retro",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-016-1",
+    "category": "rug",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-017-1",
+    "category": "rug",
+    "style": "modern",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-018-1",
+    "category": "rug",
+    "style": "classic",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-019-1",
+    "category": "rug",
+    "style": "classic",
+    "kind": "individual"
+  },
+  {
+    "id": "furn-rug-020-1",
+    "category": "rug",
+    "style": "modern",
+    "kind": "individual"
+  }
+]

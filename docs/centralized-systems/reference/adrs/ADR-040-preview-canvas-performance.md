@@ -72,6 +72,15 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-14 — Ενοποίηση: `FurniturePlanToolLike` **διαγράφεται** → ένα `EntouragePlacementToolLike` (ADR-654 M7)
+**Τι:** το furniture-plan ήταν το αρχικό (και πλέον **δίδυμο**) routing interface· τώρα όλα τα entourage packs
+(furniture / people / vehicles / plants) περνούν από **ΕΝΑ** συμβόλαιο. **MOD** `canvas-click-tool-types.ts`
+(**DEL** `FurniturePlanToolLike` — N.18 de-duplication, όχι νέο interface ανά pack) + `canvas-click-types.ts`
+(`furniturePlanTool?` δείχνει πλέον στο `EntouragePlacementToolLike`).
+**Συμμόρφωση ADR-040:** αλλαγή **μόνο σε τύπους** — μηδέν αλλαγή runtime διαδρομής, μηδέν νέα
+`useSyncExternalStore` σε orchestrator/shell (CHECK 6C ασφαλές), μηδέν άγγιγμα σε bitmap cache key / high-freq
+stores / micro-leaf hot-path. CHECK 6B touch → co-staged ADR-040 + ADR-654.
+
 ### 2026-07-14 — Entourage pack «plants-plan»: click-routing μέσω του ΙΔΙΟΥ συμβολαίου (ADR-654 M6)
 **Τι:** τρίτο entourage pack (φυτά) στο **ίδιο** single-click dispatch pipeline — καμία νέα διαδρομή. **MOD**
 `canvas-click-types.ts` (προαιρετικό `plantsPlanTool?: EntouragePlacementToolLike` — επαναχρησιμοποίηση του

@@ -45,7 +45,6 @@ import type {
   FurnitureToolLike,
   BlockLibraryToolLike,
   TitleBlockToolLike,
-  FurniturePlanToolLike,
   EntouragePlacementToolLike,
   FloorplanSymbolToolLike,
   RailingToolLike,
@@ -127,8 +126,8 @@ export interface UseCanvasClickHandlerParams {
   blockLibraryTool?: BlockLibraryToolLike;
   /** ADR-651 Φάση Β — title-block tool click pipeline (single-click placement). */
   titleBlockTool?: TitleBlockToolLike;
-  /** ADR-654 — furniture-plan (entourage) tool click pipeline (single-click placement). */
-  furniturePlanTool?: FurniturePlanToolLike;
+  /** ADR-654 M7 Φάση Γ — furniture-plan (entourage) tool click pipeline (single-click placement). */
+  furniturePlanTool?: EntouragePlacementToolLike;
   /** ADR-654 M6 — people-plan (entourage) tool click pipeline (single-click placement). */
   peoplePlanTool?: EntouragePlacementToolLike;
   /** ADR-654 M6 — vehicles-plan (entourage) tool click pipeline (single-click placement). */

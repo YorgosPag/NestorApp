@@ -12,11 +12,13 @@ import {
   peoplePlanSelection,
   vehiclesPlanSelection,
   plantsPlanSelection,
+  furniturePlanSelection,
 } from '../../bim/entourage/entourage-selection-stores';
 import {
   peoplePlanPlacer,
   vehiclesPlanPlacer,
   plantsPlanPlacer,
+  furniturePlanPlacer,
 } from '../../bim/entourage/entourage-placers';
 
 /** Single-click τοποθέτηση ανθρώπου κάτοψης (ImageEntity). */
@@ -44,4 +46,13 @@ export const usePlantsPlanTool = createEntourageTool({
   statusPositionKey: 'tools.plantsPlan.statusPosition',
   errorNoSelectionKey: 'tools.plantsPlan.errorNoSelection',
   errorUnknownItemKey: 'tools.plantsPlan.errorUnknownItem',
+});
+
+/** Single-click τοποθέτηση επίπλου κάτοψης (ImageEntity). */
+export const useFurniturePlanTool = createEntourageTool({
+  selection: furniturePlanSelection,
+  placer: furniturePlanPlacer,
+  statusPositionKey: 'tools.furniturePlan.statusPosition',
+  errorNoSelectionKey: 'tools.furniturePlan.errorNoSelection',
+  errorUnknownItemKey: 'tools.furniturePlan.errorUnknownItem',
 });

@@ -17,3 +17,6 @@ export const vehiclesPlanSelection = createEntourageSelectionStore();
 
 /** «Ποιο φυτό τοποθετείται» SSoT. */
 export const plantsPlanSelection = createEntourageSelectionStore();
+
+/** «Ποιο έπιπλο τοποθετείται» SSoT. */
+export const furniturePlanSelection = createEntourageSelectionStore();

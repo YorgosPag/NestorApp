@@ -167,15 +167,10 @@ export interface BlockLibraryToolLike {
   onCanvasClick: (point: Point2D) => boolean;
 }
 
-/** ADR-654 — Minimal furniture-plan tool interface for click routing (single-click). */
-export interface FurniturePlanToolLike {
-  readonly isActive: boolean;
-  onCanvasClick: (point: Point2D) => boolean;
-}
-
 /**
- * ADR-654 M6 — Minimal entourage placement tool interface for click routing (single-click).
- * Shared by people-plan + vehicles-plan (ίδιο συμβόλαιο· ένα interface, δύο tools — N.18).
+ * ADR-654 M6/M7 — Minimal entourage placement tool interface for click routing (single-click).
+ * Shared by people-plan + vehicles-plan + plants-plan + furniture-plan (ίδιο συμβόλαιο· ένα
+ * interface, N tools — N.18).
  */
 export interface EntouragePlacementToolLike {
   readonly isActive: boolean;

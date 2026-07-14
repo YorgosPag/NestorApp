@@ -1371,8 +1371,14 @@
     "empty": "Δεν βρέθηκαν έπιπλα κάτοψης.",
     "noMatch": "Κανένα έπιπλο δεν ταιριάζει με το φίλτρο.",
     "allCategories": "Όλα",
-    "allStyles": "Όλα",
+    "kind": {
+      "individual": "Μεμονωμένο",
+      "composition": "Σύνθεση"
+    },
+    "kindFilterLabel": "Τύπος",
+    "kindFilterAll": "Όλα",
     "styleFilterLabel": "Στυλ",
+    "styleFilterAll": "Όλα",
     "categories": {
       "sofa3": "Τριθέσιος καναπές",
       "sofa2": "Διθέσιος καναπές",
@@ -1390,7 +1396,7 @@
       "coffeeTable": "Τραπεζάκι σαλονιού",
       "rug": "Χαλί"
     },
-    "styles": {
+    "style": {
       "solid": "Μονόχρωμο",
       "floral": "Φλοράλ",
       "leather": "Δέρμα",

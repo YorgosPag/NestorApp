@@ -24,16 +24,14 @@ import { GuidePanel } from '../ui/panels/guide-panel';
 // Block Library M1 — «Τα Blocks μου» palette + επιλογή SSoT (palette → placement tool).
 import { BlockLibraryPanel } from '../ui/panels/block-library';
 import { setSelectedBlockName } from '../bim/block-library/block-library-selection-store';
-// ADR-654 — «Έπιπλα Κάτοψης» palette (mirror of Block Library M1 above): selection is
-// stored inside the panel itself (furniture-plan-selection-store), so it only needs a
-// post-selection callback to activate the placement tool.
-import { FurniturePlanPanel } from '../ui/panels/furniture-plan';
-// ADR-654 M6 — generic entourage palette (People + Vehicles), οδηγούμενη από descriptors.
+// ADR-654 M6/M7 — generic entourage palette (People + Vehicles + Plants + Furniture),
+// οδηγούμενη από per-family descriptors (selection store ζει μέσα στον descriptor).
 import {
   EntouragePalette,
   PEOPLE_PALETTE_DESCRIPTOR,
   VEHICLES_PALETTE_DESCRIPTOR,
   PLANTS_PALETTE_DESCRIPTOR,
+  FURNITURE_PALETTE_DESCRIPTOR,
 } from '../ui/panels/entourage';
 // ADR-189: Guide Analysis Panel (10 services → 4 tabs)
 import { GuideAnalysisPanel } from '../ui/panels/guide-analysis-panel';
@@ -248,11 +246,12 @@ export const FloatingPanelsSection = React.memo<FloatingPanelsSectionProps>(({
         />
       )}
 
-      {/* ADR-654: FURNITURE PLAN PANEL — top-view furniture entourage palette (mirror
-          of the Block Library panel above). Selection store lives inside the panel;
-          onSelect activates the placement tool once the card resolve completes. */}
+      {/* ADR-654 M7 Φάση Γ: FURNITURE PLAN — top-view furniture entourage palette, πλέον
+          στη ΜΙΑ generic μηχανή (per-family descriptor· facets kind → style). Selection store
+          ζει στον descriptor· onSelect ενεργοποιεί το placement tool. */}
       {showFurniturePlanPanel && (
-        <FurniturePlanPanel
+        <EntouragePalette
+          descriptor={FURNITURE_PALETTE_DESCRIPTOR}
           isVisible={showFurniturePlanPanel}
           onClose={() => handleAction('toggle-furniture-plan-panel')}
           onSelect={() => handleToolChange('furniture-plan')}
