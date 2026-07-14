@@ -15,7 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { PaperOrientation, PaperSize } from '../../../print/config/paper-types';
+import { Button } from '@/components/ui/button';
+import type { PaperOrientation, PaperSize, PaperSpec } from '../../../print/config/paper-types';
 import { PAPER_SIZE_ORDER } from '../../../print/config/paper-constants';
 import { PrintRadioGroup } from './PrintRadioGroup';
 
@@ -24,6 +25,14 @@ interface PrintPaperControlsProps {
   onSizeChange: (s: PaperSize) => void;
   orientation: PaperOrientation;
   onOrientationChange: (o: PaperOrientation) => void;
+  /**
+   * ADR-651 §8 #9 — το μικρότερο φύλλο που **χωράει** το σχέδιο στην επιλεγμένη κλίμακα
+   * (`suggestPaperSpec`). `null` ⇒ καμία πρόταση (fit-to-page ή κενό σχέδιο), ή η πρόταση
+   * ταυτίζεται με την τρέχουσα επιλογή.
+   */
+  suggestion?: PaperSpec | null;
+  /** Εφαρμόζει την πρόταση (μέγεθος + προσανατολισμός). **Πρόταση, όχι κλείδωμα** (Giorgio). */
+  onApplySuggestion?: () => void;
 }
 
 export function PrintPaperControls({
@@ -31,6 +40,8 @@ export function PrintPaperControls({
   onSizeChange,
   orientation,
   onOrientationChange,
+  suggestion = null,
+  onApplySuggestion,
 }: PrintPaperControlsProps): React.JSX.Element {
   const { t } = useTranslation('dxf-viewer-shell');
 
@@ -64,6 +75,20 @@ export function PrintPaperControls({
           { value: 'landscape', label: t('print.orientation.landscape') },
         ]}
       />
+
+      {/* ADR-651 §8 #9 — «ποιο φύλλο χρειάζεται αυτό το σχέδιο;»: το μικρότερο που το χωράει
+          στην επιλεγμένη κλίμακα. Πρόταση με κουμπί, ΠΟΤΕ σιωπηλή αλλαγή της επιλογής του χρήστη. */}
+      {suggestion && onApplySuggestion && (
+        <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {t('print.paperSuggestion.label', {
+            size: suggestion.size,
+            orientation: t(`print.orientation.${suggestion.orientation}`),
+          })}
+          <Button variant="outline" size="sm" onClick={onApplySuggestion}>
+            {t('print.paperSuggestion.apply')}
+          </Button>
+        </p>
+      )}
     </section>
   );
 }

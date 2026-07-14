@@ -19,12 +19,39 @@
 
 import { PAPER_SIZE_ORDER } from '../../print/config/paper-constants';
 import type { PaperOrientation, PaperSize, PaperSpec } from '../../print/config/paper-types';
+import { createBoundsFromEntities } from '../../systems/zoom/utils/bounds';
+import type { Entity } from '../../types/entities';
+import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { computeSheetFrameMetrics, usableAreaRects } from './sheet-frame';
 
 /** Το μέγεθος του σχεδίου σε **μονάδες μοντέλου** (canonical mm, ADR-462). */
 export interface DrawingExtentMm {
   readonly widthMm: number;
   readonly heightMm: number;
+}
+
+/**
+ * ADR-651 §8 #9 — το bbox ενός σχεδίου σε **mm**, από τις οντότητές του.
+ *
+ * Δεύτερος καταναλωτής της πρότασης χαρτιού (ο διάλογος εκτύπωσης) ⇒ η μετατροπή μονάδων
+ * πρέπει να ζει **εδώ**, όχι στο UI: το scene μπορεί να είναι σε μέτρα (ελληνικά DXF, ADR-368)
+ * ενώ ο `suggestPaperSpec` μιλά **πάντα** mm. Ίδια αριθμητική με το print pipeline
+ * (`mmPerSceneUnit = 1 / mmToSceneUnits(units)`, `capture-2d.ts`) ⇒ η πρόταση αφορά **αυτό** που
+ * θα τυπωθεί. Κενό σχέδιο (κανένα bbox) ⇒ `null` = «καμία πρόταση» (ποτέ ψεύτικο A0).
+ *
+ * @param units Οι μονάδες του scene (`resolveSceneUnits` / `userDrawingUnits` SSoT).
+ */
+export function drawingExtentMmOf(
+  entities: readonly Entity[],
+  units: SceneUnits,
+): DrawingExtentMm | null {
+  const bounds = createBoundsFromEntities(entities);
+  if (!bounds) return null;
+  const mmPerSceneUnit = 1 / mmToSceneUnits(units);
+  return {
+    widthMm: (bounds.max.x - bounds.min.x) * mmPerSceneUnit,
+    heightMm: (bounds.max.y - bounds.min.y) * mmPerSceneUnit,
+  };
 }
 
 /** Το μεγαλύτερο φύλλο — η ασφαλής απάντηση όταν τίποτα δεν χωράει (ποτέ «καμία πρόταση»). */
