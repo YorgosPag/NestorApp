@@ -157,6 +157,31 @@ export type OpeningInfoTagGripKind =
   | 'opening-info-tag-size';
 
 /**
+ * ADR-654 — Raster image grip kind (standalone `ImageEntity`: entourage sprite,
+ * furniture-plan sprite, σφραγίδα πινακίδας — ΟΧΙ BIM params entity). Corner-anchored
+ * ορθογώνιο (`position` = κάτω-αριστερή γωνία) με πλήρη ιθαγένεια καμβά, μοτίβο Revit
+ * «Image» / Figma frame:
+ *   - `image-move`     → κεντρικό grip στο ΚΕΝΤΡΟ του κουτιού· 4-arrow MOVE glyph +
+ *                        whole-entity translate (`movesEntity` → μεταφορά του `position`).
+ *   - `image-rotation` → λαβή περιστροφής στο μέσο της ΠΑΝΩ ακμής· γράφει ΜΟΝΟ το
+ *                        `rotation` (ΜΟΙΡΕΣ — σύμβαση DXF INSERT, όχι `angleRad`) μέσω του
+ *                        shared swept-angle SSoT (`rotateEntityGripDragDeg`).
+ *   - `image-corner-*` → 4 γωνιακές λαβές (ne/nw/sw/se): 2-DOF resize με την ΑΝΤΙΘΕΤΗ γωνία
+ *                        σταθερή (κοινός `rect-grip-engine`, ίδια σημασιολογία με
+ *                        τοίχο/κολόνα/block) → patch `{position, width, height}`. Render
+ *                        default 'square' glyph.
+ * Και τα έξι δρομολογούνται στο `commitImageGripDrag` (PARAMETRIC_COMMIT_HANDLERS, key
+ * `gripKind.on === 'image'`) μέσω του shared `applyImageGripDrag`.
+ */
+export type ImageGripKind =
+  | 'image-move'
+  | 'image-rotation'
+  | 'image-corner-ne'
+  | 'image-corner-nw'
+  | 'image-corner-sw'
+  | 'image-corner-se';
+
+/**
  * ADR-575 §8 — GROUP gizmo grip kind (composite `type:'group'` container, ΟΧΙ
  * BIM params entity). Το επιλεγμένο group εμφανίζει ΕΝΑ κοινό βελάκι στο κέντρο του
  * bounding box (Revit / Cinema 4D gizmo), αντί per-member λαβές:

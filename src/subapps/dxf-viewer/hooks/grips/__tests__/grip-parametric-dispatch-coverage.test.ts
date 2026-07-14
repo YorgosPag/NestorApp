@@ -45,14 +45,14 @@ const NON_PARAMETRIC_KINDS = [
 ] as const;
 
 describe('Parametric-commit dispatch coverage — ζωντανό seam ↔ grip discriminator domain (ADR-587 Φ7)', () => {
-  it('τα SUPPORTED_KINDS ταυτίζονται με τα keys του HANDLERS (26 params-driven kinds)', () => {
+  it('τα SUPPORTED_KINDS ταυτίζονται με τα keys του HANDLERS (27 params-driven kinds)', () => {
     expect(asSorted(PARAMETRIC_COMMIT_SUPPORTED_KINDS)).toEqual(
       asSorted(Object.keys(PARAMETRIC_COMMIT_HANDLERS)),
     );
-    expect(PARAMETRIC_COMMIT_SUPPORTED_KINDS).toHaveLength(26);
+    expect(PARAMETRIC_COMMIT_SUPPORTED_KINDS).toHaveLength(27);
   });
 
-  it('grip kinds με parametric commit = καρφωμένο golden set (26)', () => {
+  it('grip kinds με parametric commit = καρφωμένο golden set (27)', () => {
     expect(asSorted(PARAMETRIC_COMMIT_SUPPORTED_KINDS)).toEqual(
       asSorted([
         'stair', 'dimension', 'wall', 'opening', 'slab', 'slab-opening', 'roof',
@@ -60,6 +60,8 @@ describe('Parametric-commit dispatch coverage — ζωντανό seam ↔ grip d
         'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater',
         'mep-segment', 'furniture', 'floorplan-symbol', 'floor-finish', 'hatch',
         'mep-underfloor', 'xline', 'ray', 'scale-bar', 'opening-info-tag',
+        // ADR-654 — raster image (move / rotation / 4 corner resize· flat params, χωρίς geometry cache).
+        'image',
       ]),
     );
   });
@@ -69,10 +71,10 @@ describe('Parametric-commit dispatch coverage — ζωντανό seam ↔ grip d
     expect(asSorted(noParametric)).toEqual(asSorted([...NON_PARAMETRIC_KINDS]));
   });
 
-  it('golden ∪ complement === GRIP_KIND_ENTITIES (domain closure, 26 + 8 = 34)', () => {
+  it('golden ∪ complement === GRIP_KIND_ENTITIES (domain closure, 27 + 8 = 35)', () => {
     const union = [...PARAMETRIC_COMMIT_SUPPORTED_KINDS, ...NON_PARAMETRIC_KINDS];
     expect(asSorted(union)).toEqual(asSorted([...GRIP_KIND_ENTITIES]));
-    expect(GRIP_KIND_ENTITIES).toHaveLength(34);
+    expect(GRIP_KIND_ENTITIES).toHaveLength(35);
   });
 
   it('κανένα supported kind δεν είναι εκτός domain (seam ⊆ discriminator)', () => {

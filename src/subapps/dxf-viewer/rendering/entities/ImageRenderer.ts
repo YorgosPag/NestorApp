@@ -34,8 +34,8 @@ import type { Entity } from '../../types/entities';
 import type { ImageEntity } from '../../types/image';
 import { isImageEntity } from '../../types/image';
 import { createRectangleVertices } from './shared/geometry-utils';
-import { createVertexGrip } from './shared/grip-utils';
-import { createEdgeGrips } from './shared/line-utils';
+// ADR-654 — ΕΝΑ grip SSoT για render + interaction (move / rotation / 4 γωνιακές).
+import { getImageGrips } from '../../bim/image/image-grips';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { HatchImageCache } from './shared/hatch-image-cache';
 import { imageIntrinsicSize } from './shared/image-intrinsic-size';
@@ -122,13 +122,15 @@ export class ImageRenderer extends BaseEntityRenderer {
     this.ctx.restore();
   }
 
+  /**
+   * ADR-654 — οι λαβές που ΖΩΓΡΑΦΙΖΟΝΤΑΙ είναι ΑΚΡΙΒΩΣ αυτές που ΠΙΑΝΟΝΤΑΙ: ένα SSoT
+   * (`getImageGrips`), κοινό με το `GRIP_PRODUCERS['image']` του interaction registry.
+   * Πριν: εδώ ζωγραφίζονταν 8 άτυπες (4 corner + 4 edge) λαβές χωρίς `gripKind`, ενώ το
+   * registry δεν είχε producer → `[]` → οι λαβές φαίνονταν αλλά ΔΕΝ μετακινούσαν την εικόνα.
+   */
   getGrips(entity: EntityModel): GripInfo[] {
     if (!isImageEntity(entity as Entity)) return [];
-    const e = entity as unknown as ImageEntity;
-    const corners = imageEntityVertices(e);
-    const grips: GripInfo[] = corners.map((c, i) => createVertexGrip(entity.id, c, i));
-    grips.push(...createEdgeGrips(entity.id, corners, true, corners.length));
-    return grips;
+    return getImageGrips(entity as unknown as ImageEntity);
   }
 
   /** Fill hit-test (point-in-polygon) — κλικ οπουδήποτε μέσα στην εικόνα την επιλέγει (mirror hatch). */

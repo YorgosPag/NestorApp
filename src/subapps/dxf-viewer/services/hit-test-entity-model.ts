@@ -412,6 +412,24 @@ export function convertDxfEntityToEntityModel(entity: DxfEntityUnion): EntityMod
         topText: o.topText, bottomLeftText: o.bottomLeftText, bottomRightText: o.bottomRightText,
       } as unknown as EntityModel;
     }
+    // ADR-654 — standalone raster image (entourage / furniture-plan sprite): flat
+    // passthrough (mirror opening-info-tag). Without this case it fell to `default`,
+    // which STRIPS position/width/height/rotation → `calculateImageBounds` read
+    // undefined.position → the sprite never entered the spatial index → hover-highlight
+    // + click-selection silently failed (it stayed only MARQUEE-selectable, since the
+    // marquee reads the raw scene entity through the Twin-B bounds SSoT).
+    case 'image': {
+      type ImageLike = {
+        position?: { x: number; y: number }; width?: number; height?: number;
+        url?: string; rotation?: number;
+      };
+      const img = entity as unknown as ImageLike;
+      return {
+        ...baseModel, type: 'image',
+        position: img.position, width: img.width, height: img.height,
+        url: img.url, rotation: img.rotation,
+      } as unknown as EntityModel;
+    }
     default: {
       return { ...baseModel } as unknown as EntityModel;
     }

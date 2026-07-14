@@ -68,6 +68,9 @@ import { getScaleBarGrips } from '../bim/scale-bar/scale-bar-grips';
 import type { ScaleBarEntity } from '../types/scale-bar';
 import { getOpeningInfoTagGrips } from '../bim/opening-info-tag/opening-info-tag-grips';
 import type { OpeningInfoTagEntity } from '../types/opening-info-tag';
+// ADR-654 — raster image (entourage / furniture-plan sprite): move + rotation + 4 corner resize.
+import { getImageGrips } from '../bim/image/image-grips';
+import type { ImageEntity } from '../types/image';
 import { getMepSegmentGrips } from '../bim/mep-segments/mep-segment-grips';
 import { getRoofGrips } from '../bim/roofs/roof-grips';
 import { getFloorFinishGrips } from '../bim/floor-finishes/floor-finish-grips';
@@ -383,6 +386,11 @@ export const GRIP_PRODUCERS: Partial<Record<DxfEntityUnion['type'], (e: DxfEntit
 
   // ADR-507 — hatch boundary + edge-midpoint + optional gradient grips.
   hatch: (e) => buildHatchGrips(e as HatchDxf),
+
+  // ADR-654 — raster image: MOVE (κέντρο) + ROTATION (μέσο πάνω ακμής) + 4 γωνιακές SIZE.
+  // Το ΙΔΙΟ `getImageGrips` SSoT ζωγραφίζει ο `ImageRenderer.getGrips` → render ≡ interaction.
+  // (Πριν: κανένας producer → `[]` → οι λαβές φαίνονταν αλλά δεν έπιαναν ποτέ.)
+  image: (e) => getImageGrips(e as unknown as ImageEntity),
 };
 
 /**

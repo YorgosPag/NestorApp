@@ -83,8 +83,8 @@ describe('computeDxfEntityGrips — hatch gradient origin grip (ADR-507 Φ5 A3)'
     expect(angle).toBeDefined();
     expect(angle?.position.x).toBeCloseTo(500 + 0.5 * Math.hypot(1000, 1000), 3);
     expect(angle?.position.y).toBeCloseTo(500, 3);
-    // 4 vertex + 4 edge-midpoint (ADR-507 add/remove vertex) + origin + angle.
-    expect(grips).toHaveLength(10);
+    // 4 vertex + 4 edge-midpoint (ADR-507) + origin + angle + ADR-627 whole-hatch move/rotation.
+    expect(grips).toHaveLength(12);
   });
 
   it('does NOT emit gradient grips for a non-gradient (solid) hatch', () => {
@@ -94,8 +94,10 @@ describe('computeDxfEntityGrips — hatch gradient origin grip (ADR-507 Φ5 A3)'
     const grips = computeDxfEntityGrips(hatch);
     expect(grips.find((g) => gripKindOf(g, 'hatch') === 'hatch-gradient-origin')).toBeUndefined();
     expect(grips.find((g) => gripKindOf(g, 'hatch') === 'hatch-gradient-angle')).toBeUndefined();
-    // ADR-507 (Giorgio 2026-07-07) — 4 vertex + 4 edge-midpoint grips (add/remove vertex).
-    expect(grips).toHaveLength(8);
+    // ADR-507 — 4 vertex + 4 edge-midpoint (add/remove vertex) + ADR-627 σταυρός μετακίνησης +
+    // σημάδι περιστροφής όλου του hatch (area/polyline parity). Το golden είχε μείνει στα 8 (stale).
+    expect(grips).toHaveLength(10);
+    expect(grips.filter((g) => ['hatch-move', 'hatch-rotation'].includes(gripKindOf(g, 'hatch') ?? ''))).toHaveLength(2);
     expect(grips.filter((g) => gripKindOf(g, 'hatch')?.startsWith('hatch-edge-midpoint-'))).toHaveLength(4);
   });
 });

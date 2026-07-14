@@ -66,11 +66,14 @@ const asSorted = (xs: readonly string[]): string[] => [...xs].sort();
 const renderableSet = new Set<string>(RENDERABLE_ENTITY_TYPES);
 
 // ─── Partition A — renderable types με ρητό parametric ghost branch ───────────────────
-/** `apply-entity-preview.ts` renderable branches (16). */
+/** `apply-entity-preview.ts` renderable branches (17). */
 const PREVIEW_GHOST_MAIN_TYPES = [
   'wall', 'slab', 'slab-opening', 'roof', 'floor-finish', 'hatch',
   'text', 'mtext', 'line', 'arc', 'polyline', 'annotation-symbol', 'scale-bar',
   'opening-info-tag', 'stair', 'opening',
+  // ADR-654 — raster image: ρητό ghost branch (apply-parametric-annotation-preview) ώστε το
+  // live preview της περιστροφής/κλιμάκωσης να τρέχει τον ΙΔΙΟ transform με το commit.
+  'image',
 ] as const;
 /** `apply-parametric-box-preview.ts` branches (8) — box-like BIM (asymmetry α). */
 const PREVIEW_GHOST_BOX_TYPES = [
@@ -90,14 +93,14 @@ const supportedSet = new Set<string>(PREVIEW_GHOST_SUPPORTED_TYPES);
 
 // ─── Partition B — renderable types ΧΩΡΙΣ ρητό branch → generic movesEntity / classic ──
 const PREVIEW_GHOST_OFF_PATH_TYPES = [
-  // DXF (12) — asymmetry β (circle/point/ellipse …) + ε (lwpolyline normalized, όχι branch).
-  // ADR-651 Φάση Ε — image: κανένα ρητό ghost branch (whole-entity move ΗΔΗ δουλεύει μέσω του
-  // `movesEntity` → `calculateMovedGeometry` fall-through· per-corner resize preview = follow-up).
-  'circle', 'ellipse', 'spline', 'rectangle', 'rect', 'point', 'image',
+  // DXF (11) — asymmetry β (circle/point/ellipse …) + ε (lwpolyline normalized, όχι branch).
+  'circle', 'ellipse', 'spline', 'rectangle', 'rect', 'point',
   'dimension', 'angle-measurement', 'xline', 'ray', 'lwpolyline',
-  // BIM (9) — μη-box, μη-footprint parametric → BIM-whole-entity move / classic
+  // BIM (10) — μη-box, μη-footprint parametric → BIM-whole-entity move / classic.
+  // Το `floorplan-symbol` έγινε renderable (ADR-415/635 ghost) χωρίς ρητό branch εδώ → off-path.
   'railing', 'wall-covering', 'thermal-space', 'space-separator',
   'mep-radiator', 'mep-boiler', 'mep-water-heater', 'mep-fitting', 'mep-underfloor',
+  'floorplan-symbol',
 ] as const;
 
 const mk = (type: string, extra: Record<string, unknown> = {}): DxfEntityUnion =>

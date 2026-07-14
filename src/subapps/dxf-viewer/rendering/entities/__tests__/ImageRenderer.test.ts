@@ -158,10 +158,17 @@ describe('ImageRenderer — render smoke', () => {
 });
 
 describe('ImageRenderer — getGrips', () => {
-  it('returns 4 corner + 4 edge grips (8 total), rotation-aware', () => {
+  // ADR-654 — ο renderer ζωγραφίζει ΑΚΡΙΒΩΣ τις λαβές που πιάνει το interaction registry
+  // (κοινό `getImageGrips` SSoT): MOVE (κέντρο) + ROTATION (μέσο πάνω ακμής) + 4 γωνιακές.
+  it('returns the SAME 6 tagged grips as the interaction registry (move + rotation + 4 corners)', () => {
     const { renderer } = makeRenderer();
     const grips = renderer.getGrips(makeImage({ rotation: 30 }));
-    expect(grips).toHaveLength(8);
+    expect(grips).toHaveLength(6);
+    expect(grips.map((g) => g.gripKind?.kind)).toEqual([
+      'image-move', 'image-rotation',
+      'image-corner-ne', 'image-corner-nw', 'image-corner-sw', 'image-corner-se',
+    ]);
+    expect(grips[0].movesEntity).toBe(true);
   });
 
   it('returns [] for non-image entities', () => {

@@ -53,11 +53,12 @@ describe('toEntityModel capability coverage — ζωντανό seam ↔ descript
         // DXF primitives με variant (14)
         'line', 'polyline', 'circle', 'arc', 'text', 'dimension', 'angle-measurement',
         'hatch', 'xline', 'ray', 'annotation-symbol', 'scale-bar', 'opening-info-tag', 'image',
-        // BIM (24 — όλα)
+        // BIM (25 — όλα· το floorplan-symbol μπήκε στο RENDERABLE_ENTITY_TYPES, ADR-415/635)
         'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair',
         'railing', 'roof', 'floor-finish', 'wall-covering', 'thermal-space', 'space-separator',
         'furniture', 'mep-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator',
         'mep-boiler', 'mep-water-heater', 'mep-segment', 'mep-fitting', 'mep-underfloor',
+        'floorplan-symbol',
       ]),
     );
   });
@@ -74,9 +75,9 @@ describe('toEntityModel capability coverage — ζωντανό seam ↔ descript
     );
   });
 
-  it('ο ΜΟΝΟΣ non-renderable variant είναι το "floorplan-symbol" (entity-model path, ADR-583/Φ2b)', () => {
+  it('κάθε entity-model variant είναι renderable (η ADR-583/Φ2b ασυμμετρία έκλεισε)', () => {
     const nonRenderable = TO_ENTITY_MODEL_SUPPORTED_TYPES.filter((t) => !renderableSet.has(t));
-    expect(nonRenderable).toEqual(['floorplan-symbol']);
+    expect(nonRenderable).toEqual([]);
   });
 
   it('line variant → EntityModel με σωστό type + geometry (start/end προωθούνται)', () => {

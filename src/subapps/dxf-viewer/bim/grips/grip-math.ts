@@ -186,3 +186,28 @@ export function rotateEntityGripDrag(
   return { angleRad: entity.angleRad + (newAngle - initAngle) };
 }
 
+/**
+ * ADR-654 — ΤΟ ΙΔΙΟ rotation-grip transform για entities που κρατούν τη γωνία σε **μοίρες**
+ * (`rotation`, σύμβαση DXF/INSERT — π.χ. `ImageEntity`) αντί σε radians (`angleRad`, annotation
+ * family). Καθαρός adapter πάνω από το {@link rotateEntityGripDrag}: ΜΗΔΕΝ δεύτερη υλοποίηση
+ * του swept-angle/orbit math (N.18) — μία μετατροπή μονάδων μπρος-πίσω. Το `position` επιστρέφεται
+ * μόνο στη hot-grip τροχιά (orbit γύρω από επιλεγμένο κέντρο), όπως και στην radian εκδοχή.
+ */
+export function rotateEntityGripDragDeg(
+  entity: { readonly position: Point2D; readonly rotationDeg: number },
+  gripWorldPos: Point2D,
+  delta: Point2D,
+  rotate?: { readonly pivot: Point2D; readonly anchor: Point2D },
+): { position?: Point2D; rotationDeg?: number } {
+  const patch = rotateEntityGripDrag(
+    { position: entity.position, angleRad: (entity.rotationDeg * Math.PI) / 180 },
+    gripWorldPos,
+    delta,
+    rotate,
+  );
+  return {
+    ...(patch.position ? { position: patch.position } : {}),
+    ...(patch.angleRad !== undefined ? { rotationDeg: (patch.angleRad * 180) / Math.PI } : {}),
+  };
+}
+

@@ -38,6 +38,10 @@ import { subscribeLinetypeRegistry } from '../../stores/LinetypeRegistry';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 // ADR-530 — preload CAD glyph fonts + rebuild the bitmap layer once they land.
 import { preloadCadSubstituteFonts, subscribeFontReady } from '../../text-engine/fonts';
+// ADR-654 — μια raster εικόνα (entourage sprite / hatch image-fill) φτάνει ΑΣΥΓΧΡΟΝΑ,
+// αφού ο cache έχει ήδη χτιστεί με το placeholder. Δεν είναι μέρος του cache key (one-time
+// event, ίδιο συμβόλαιο με τα CAD fonts) → invalidate ώστε να ξαναχτιστεί το entity layer.
+import { subscribeImageAssetReady } from '../../rendering/entities/shared/hatch-image-cache';
 
 /**
  * Register the DxfCanvas bitmap-cache dirty/invalidate store subscriptions. `bitmapCacheRef`
@@ -93,6 +97,17 @@ export function useDxfCanvasCacheInvalidation(
     });
     void preloadCadSubstituteFonts();
     return unsubscribe;
+  }, [bitmapCacheRef, isDirtyRef]);
+
+  // ADR-654 — invalidate όταν προσγειώνεται decoded raster εικόνα (entourage sprite /
+  // furniture-plan sprite / hatch image-fill). Το πρώτο paint είναι ΠΑΝΤΑ placeholder
+  // (async `img.decode()`), και το `markAllCanvasDirty` του cache ΜΟΝΟ του δεν αρκεί: το
+  // key δεν άλλαξε → cache HIT → blit του stale bitmap. Ίδιο συμβόλαιο με το subscribeFontReady.
+  useEffect(() => {
+    return subscribeImageAssetReady(() => {
+      bitmapCacheRef.current?.invalidate();
+      isDirtyRef.current = true;
+    });
   }, [bitmapCacheRef, isDirtyRef]);
 
   // ADR-510 Φ2G — mark dirty when the global "Show Lineweight" (LWDISPLAY) toggle

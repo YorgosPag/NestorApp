@@ -75,6 +75,9 @@ const SEAM_B_PARAMETRIC = [
   'foundation', 'mep-fixture', 'electrical-panel', 'mep-radiator', 'mep-boiler',
   'mep-water-heater', 'mep-segment', 'furniture', 'floorplan-symbol', 'floor-finish',
   'hatch', 'mep-underfloor', 'xline', 'ray', 'scale-bar', 'opening-info-tag',
+  // ADR-654 — raster image: όλες οι λαβές (move/rotation/corner) περνούν από το Seam-B
+  // parametric dispatch (`commitImageGripDrag`), κανένα Seam-C action gate.
+  'image',
 ] as const;
 
 /**
@@ -161,11 +164,11 @@ const domainSet = new Set<string>(GRIP_KIND_ENTITIES);
 
 describe('Mode-aware grip-commit routing coverage — Seam C ↔ grip discriminator domain (ADR-587 Φ7)', () => {
   // ── Domain closure & disjointness ─────────────────────────────────────────
-  it('(A)∪(B)∪(C) === GRIP_KIND_ENTITIES (domain closure, 9 + 24 + 1 = 34)', () => {
+  it('(A)∪(B)∪(C) === GRIP_KIND_ENTITIES (domain closure, 9 + 25 + 1 = 35)', () => {
     const union = [...SEAM_C_GATED, ...SEAM_B_PARAMETRIC, ...GENERIC_DISPATCH_ONLY];
     expect(asSorted(union)).toEqual(asSorted([...GRIP_KIND_ENTITIES]));
-    expect(GRIP_KIND_ENTITIES).toHaveLength(34);
-    expect(union).toHaveLength(34); // καμία επικάλυψη → κάθε entity σε ΑΚΡΙΒΩΣ 1 partition
+    expect(GRIP_KIND_ENTITIES).toHaveLength(35);
+    expect(union).toHaveLength(35); // καμία επικάλυψη → κάθε entity σε ΑΚΡΙΒΩΣ 1 partition
   });
 
   it('οι 3 partitions είναι pairwise disjoint', () => {
@@ -193,8 +196,8 @@ describe('Mode-aware grip-commit routing coverage — Seam C ↔ grip discrimina
     expect(SEAM_C_GATED).toHaveLength(9);
   });
 
-  it('(B) SEAM_B_PARAMETRIC = 24 (οι 26 Seam-B ΜΕΙΟΝ opening + mep-manifold)', () => {
-    expect(SEAM_B_PARAMETRIC).toHaveLength(24);
+  it('(B) SEAM_B_PARAMETRIC = 25 (οι 27 Seam-B ΜΕΙΟΝ opening + mep-manifold)', () => {
+    expect(SEAM_B_PARAMETRIC).toHaveLength(25);
     // opening + mep-manifold ΔΕΝ ανήκουν εδώ — ανεβαίνουν στο (A) λόγω action gates
     expect(SEAM_B_PARAMETRIC).not.toContain('opening');
     expect(SEAM_B_PARAMETRIC).not.toContain('mep-manifold');

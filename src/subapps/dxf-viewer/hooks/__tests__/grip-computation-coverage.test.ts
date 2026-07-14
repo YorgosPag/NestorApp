@@ -60,13 +60,18 @@ describe('Grip-producer capability coverage — ζωντανό seam ↔ descript
     const withProducer = RENDERABLE_ENTITY_TYPES.filter((t) => supportedSet.has(t));
     expect(asSorted(withProducer)).toEqual(
       asSorted([
-        // DXF primitives (13)
+        // DXF primitives (14)
         'line', 'polyline', 'circle', 'arc', 'text', 'dimension', 'angle-measurement',
         'hatch', 'xline', 'ray', 'annotation-symbol', 'scale-bar', 'opening-info-tag',
-        // BIM (19 — όλα εκτός railing/wall-covering/thermal-space/space-separator/mep-fitting)
+        // ADR-654 — raster image (entourage / furniture-plan sprite): move + rotation + 4 corners.
+        'image',
+        // BIM (20 — όλα εκτός railing/wall-covering/thermal-space/space-separator/mep-fitting).
+        // Το `floorplan-symbol` ΔΕΝ είναι πια editor-only: μπήκε στο RENDERABLE_ENTITY_TYPES
+        // (ADR-415/635 ghost preview) — code=truth, η λίστα ήταν stale.
         'wall', 'opening', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair',
         'roof', 'floor-finish', 'furniture', 'mep-fixture', 'electrical-panel', 'mep-manifold',
         'mep-radiator', 'mep-boiler', 'mep-water-heater', 'mep-segment', 'mep-underfloor',
+        'floorplan-symbol',
       ]),
     );
   });
@@ -76,18 +81,20 @@ describe('Grip-producer capability coverage — ζωντανό seam ↔ descript
     expect(asSorted(noProducer)).toEqual(
       asSorted([
         // normalized/off-path DXF — mtext→text, lwpolyline→polyline· rect/rectangle/
-        // ellipse/spline/point/image έχουν renderer αλλά ΟΧΙ per-type grip producer (ADR-651
-        // Φάση Ε — image grips ρέουν από το ίδιο ImageRenderer.getGrips() path με rect/point/ellipse).
-        'lwpolyline', 'ellipse', 'mtext', 'spline', 'rectangle', 'rect', 'point', 'image',
+        // ellipse/spline/point έχουν renderer αλλά ΟΧΙ per-type grip producer.
+        // (ADR-654: το `image` ΕΦΥΓΕ από εδώ — το «τα grips ρέουν από το ImageRenderer.getGrips()»
+        // ήταν ΛΑΘΟΣ· ο renderer ζωγραφίζει, το registry πιάνει — χωρίς producer η εικόνα
+        // εμφάνιζε λαβές που δεν την μετακινούσαν ποτέ.)
+        'lwpolyline', 'ellipse', 'mtext', 'spline', 'rectangle', 'rect', 'point',
         // renderable BIM ΧΩΡΙΣ interactive grips
         'railing', 'wall-covering', 'thermal-space', 'space-separator', 'mep-fitting',
       ]),
     );
   });
 
-  it('ο ΜΟΝΟΣ non-renderable producer είναι το "floorplan-symbol" (editor-only, ADR-415 asymmetry)', () => {
+  it('κάθε grip producer είναι renderable (η ADR-415 ασυμμετρία έκλεισε — floorplan-symbol renderable)', () => {
     const nonRenderable = GRIP_PRODUCER_SUPPORTED_TYPES.filter((t) => !renderableSet.has(t));
-    expect(nonRenderable).toEqual(['floorplan-symbol']);
+    expect(nonRenderable).toEqual([]);
   });
 
   it('όλοι οι BIM_RENDERABLE_TYPES χωρίς producer είναι ρητά grip-less (completeness anchor)', () => {

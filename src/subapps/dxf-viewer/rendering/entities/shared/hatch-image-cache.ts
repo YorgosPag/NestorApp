@@ -44,8 +44,37 @@ import { resolveMaterialImageSrc } from './material-image-resolver';
 import { getUserMaterialImageVersion } from './user-material-image-store';
 import { applyDuotoneTint } from './hatch-image-tint';
 import { renderProceduralTile } from './procedural-tile-render';
+import { createExternalStore } from '../../../stores/createExternalStore';
 
 type ImageState = 'loading' | 'ready' | 'error';
+
+// ─── Asset-ready signal (ADR-654) ─────────────────────────────────────────────
+//
+// ADR-040 Φάση D: το entity layer σερβίρεται από τον `DxfBitmapCache`, που ξαναχτίζει
+// ΜΟΝΟ όταν αλλάξει το cache key (scene ref / transform / viewport / DPR / settings).
+// Μια εικόνα που φτάνει ασύγχρονα ΔΕΝ αλλάζει τίποτα από αυτά: το `markAllCanvasDirty`
+// του `onLoad` προκαλεί μεν frame, αλλά ο cache είναι HIT → γίνεται blit το ΠΑΛΙΟ bitmap
+// (με το placeholder) → το sprite «θέλει ανανέωση» για να φανεί. Το decode είναι
+// one-time event (ακριβώς όπως τα CAD fonts, ADR-530) → ένα version bump + ένα
+// `bitmapCache.invalidate()` στον subscriber είναι ADR-040-συμβατό (ΟΧΙ per-frame).
+//
+// SSoT: ΕΝΑ σήμα για ΚΑΘΕ decoded εικόνα — hatch image-fill ΚΑΙ standalone ImageEntity.
+const imageAssetReadyStore = createExternalStore<number>(0);
+
+/** Καλείται μετά από κάθε επιτυχές decode — «μια εικόνα προσγειώθηκε». */
+function bumpImageAssetReady(): void {
+  imageAssetReadyStore.set(imageAssetReadyStore.get() + 1);
+}
+
+/** Subscribe στο «μια εικόνα προσγειώθηκε» σήμα (→ invalidate bitmap cache + redraw). */
+export function subscribeImageAssetReady(listener: () => void): () => void {
+  return imageAssetReadyStore.subscribe(listener);
+}
+
+/** Μονοτονικός μετρητής — αυξάνει σε κάθε νέα decoded εικόνα. */
+export function getImageAssetReadyVersion(): number {
+  return imageAssetReadyStore.get();
+}
 
 interface CacheEntry {
   img: CanvasImageSource | null;
@@ -138,6 +167,9 @@ export class HatchImageCache {
       const final = tint ? applyDuotoneTint(img, tint) ?? img : img;
       this.entries.set(key, { img: final, state: 'ready' });
       this.onLoad();
+      // ADR-654 — το `onLoad` (markAllCanvasDirty) ζητά ΝΕΟ frame· αυτό εδώ ακυρώνει το
+      // (stale) bitmap του entity layer, αλλιώς το frame ξανα-blit-άρει το placeholder.
+      bumpImageAssetReady();
     } catch {
       this.entries.set(key, { img: null, state: 'error' });
     }

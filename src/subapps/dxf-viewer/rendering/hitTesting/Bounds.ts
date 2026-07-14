@@ -15,6 +15,7 @@ import {
   calculateAnnotationSymbolBounds,
   calculateScaleBarBounds,
   calculateOpeningInfoTagBounds,
+  calculateImageBounds,
 } from './bounds-annotation';
 import type {
   EntityWithLine,
@@ -90,6 +91,11 @@ export class BoundsCalculator {
       // half-thickness term (unlike scale-bar) — the whole box is world-space.
       case 'opening-info-tag':
         return calculateOpeningInfoTagBounds(entity, tolerance);
+      // ADR-654 — standalone raster image (entourage / furniture-plan sprite): το AABB των
+      // 4 rotated κορυφών. Χωρίς αυτό το `default` γύριζε null → εκτός spatial index →
+      // ούτε hover ούτε click (mirror scale-bar / opening-info-tag).
+      case 'image':
+        return calculateImageBounds(entity, tolerance);
       case 'angle-measurement':
         return this.calculateAngleMeasurementBounds(entity, tolerance);
       case 'stair':

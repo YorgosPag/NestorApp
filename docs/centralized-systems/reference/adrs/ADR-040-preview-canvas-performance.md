@@ -72,6 +72,20 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-14 — 🐞 Stale bitmap σε async image decode → `subscribeImageAssetReady` (ADR-654)
+**Σύμπτωμα:** ένα entourage sprite / hatch image-fill έμενε **placeholder** μέχρι ο χρήστης να πειράξει
+zoom/pan («θέλει ανανέωση για να φανεί»). **Ρίζα — ακριβώς το συμβόλαιο αυτού του ADR:** το entity layer
+σερβίρεται από τον `DxfBitmapCache`, που ξαναχτίζει **μόνο** όταν αλλάξει το cache key (scene ref / transform /
+viewport / DPR / settings). Το async `img.decode()` **δεν αλλάζει κανένα** από αυτά: το `markAllCanvasDirty` του
+`onLoad` ζητούσε μεν νέο frame, αλλά ο cache ήταν **HIT** → ξανα-blit του **stale** bitmap με το placeholder.
+**FIX:** το decode είναι **one-time event** — ίδιο ακριβώς συμβόλαιο με τα CAD fonts (ADR-530
+`subscribeFontReady`). **NEW** `subscribeImageAssetReady()` στο `hatch-image-cache.ts` (version-bump external
+store· **ΕΝΑ** σήμα για ΚΑΘΕ decoded εικόνα — hatch image-fill **και** standalone `ImageEntity`, όχι δίδυμο ανά
+καταναλωτή) + **MOD** `useDxfCanvasCacheInvalidation.ts` (subscriber → `bitmapCache.invalidate()` + dirty).
+**Συμμόρφωση ADR-040:** η εικόνα **ΔΕΝ** μπαίνει στο cache key (θα ήταν per-frame rebuild — ο κανόνας #3)· το
+invalidate είναι **one-shot ανά decode**, όχι per-frame. Καμία νέα `useSyncExternalStore` σε orchestrator/shell.
+Regression test: `__tests__/dxf-bitmap-cache-image-ready-invalidation.test.ts`.
+
 ### 2026-07-14 — Ενοποίηση: `FurniturePlanToolLike` **διαγράφεται** → ένα `EntouragePlacementToolLike` (ADR-654 M7)
 **Τι:** το furniture-plan ήταν το αρχικό (και πλέον **δίδυμο**) routing interface· τώρα όλα τα entourage packs
 (furniture / people / vehicles / plants) περνούν από **ΕΝΑ** συμβόλαιο. **MOD** `canvas-click-tool-types.ts`

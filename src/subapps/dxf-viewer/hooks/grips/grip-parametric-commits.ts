@@ -86,6 +86,10 @@ export { commitScaleBarGripDrag } from './grip-scale-bar-commit';
 // grip-opening-info-tag-commit.ts (N.7.1 file-size split). Re-exported so the commit API stays one import.
 export { commitOpeningInfoTagGripDrag } from './grip-opening-info-tag-commit';
 
+// ADR-654 — raster image grip commit (move / rotation / corner resize) lives in
+// grip-image-commit.ts (N.7.1 file-size split). Re-exported so the commit API stays one import.
+export { commitImageGripDrag } from './grip-image-commit';
+
 // ADR-583 Φ3 — annotation-symbol corner UNIFORM-resize commit lives in
 // grip-annotation-symbol-commit.ts (N.7.1 file-size split). Re-exported so the commit API stays one import.
 export { commitAnnotationSymbolResizeGripDrag } from './grip-annotation-symbol-commit';

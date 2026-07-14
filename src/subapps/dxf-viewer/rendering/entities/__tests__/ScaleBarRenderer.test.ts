@@ -144,11 +144,16 @@ describe('ScaleBarRenderer — render smoke (all 4 styles)', () => {
 });
 
 describe('ScaleBarRenderer — getGrips', () => {
-  it('returns 3 grips (move + rotation + length) all tagged scale-bar', () => {
+  // ADR-583 Φ2.4 («έξυπνες λαβές», Giorgio 2026-07-09) — η μπάρα απέκτησε ΠΕΝΤΕ λαβές: move +
+  // rotation + ΔΥΟ συμμετρικά length άκρα + height. Το golden είχε μείνει στις 3 (stale).
+  it('returns 5 grips: move + rotation (glyphs) + 2 length ends + height (squares)', () => {
     const { renderer } = makeRenderer();
     const bar = makeBar();
     const grips = renderer.getGrips(bar);
-    expect(grips).toHaveLength(3);
+    expect(grips).toHaveLength(5);
+    expect(grips.map((g) => g.shape)).toEqual([
+      'move', 'rotation', 'square', 'square', 'square',
+    ]);
   });
 
   it('returns [] for non-scale-bar entities', () => {

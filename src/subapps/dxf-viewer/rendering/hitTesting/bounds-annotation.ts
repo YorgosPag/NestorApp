@@ -20,6 +20,10 @@ import type { ScaleBarEntity } from '../../types/scale-bar';
 // ADR-612 — opening info tag broad-phase bbox SSoT (sibling of scale-bar, world-mm — no annotative term).
 import { calculateOpeningInfoTagBounds as computeOpeningInfoTagBoundsBox } from '../../bim/opening-info-tag/opening-info-tag-hit';
 import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
+// ADR-651 Φάση Ε / ADR-654 — rotation-aware ορθογώνιο εικόνας: το ΙΔΙΟ vertex SSoT που
+// χρησιμοποιούν ο renderer (`ImageRenderer`) και το narrow-phase hit-test.
+import { imageEntityRectVertices, type ImageRectShape } from '../entities/shared/image-rect-vertices';
+import { calculateVerticesBounds } from '../../utils/geometry/GeometryUtils';
 
 /**
  * ADR-583 — annotation symbol (North arrow) spatial bounds. The paper `sizeMm`
@@ -69,4 +73,26 @@ export function calculateOpeningInfoTagBounds(entity: EntityModel, tolerance: nu
   const e = entity as unknown as OpeningInfoTagEntity;
   const bbox = computeOpeningInfoTagBoundsBox(e, tolerance);
   return createBoundingBox(bbox.minX, bbox.minY, bbox.maxX, bbox.maxY);
+}
+
+/**
+ * ADR-654 — standalone raster image (entourage / furniture-plan sprite) spatial bounds:
+ * το AABB των 4 ΠΕΡΙΣΤΡΑΜΜΕΝΩΝ κορυφών του ορθογωνίου (`imageEntityRectVertices`, το ΙΔΙΟ
+ * SSoT που ζωγραφίζει ο `ImageRenderer` και ελέγχει το narrow-phase `hitTestImage`), padded
+ * με το `tolerance`. Χωρίς αυτό το entity έπεφτε στο `default` του `BoundsCalculator` →
+ * `null` → ΠΟΤΕ δεν έμπαινε στο spatial index → μηδέν hover-highlight, μηδέν click-selection
+ * (marquee δούλευε, γιατί περνά από άλλο bounds SSoT — η ασυμμετρία που έκρυβε το bug).
+ * `null` όταν λείπουν position/width/height (partially-serialized entity → graceful drop).
+ */
+export function calculateImageBounds(entity: EntityModel, tolerance: number): BoundingBox | null {
+  const vertices = imageEntityRectVertices(entity as unknown as ImageRectShape);
+  if (!vertices) return null;
+  const b = calculateVerticesBounds(vertices);
+  if (!b) return null;
+  return createBoundingBox(
+    b.min.x - tolerance,
+    b.min.y - tolerance,
+    b.max.x + tolerance,
+    b.max.y + tolerance,
+  );
 }

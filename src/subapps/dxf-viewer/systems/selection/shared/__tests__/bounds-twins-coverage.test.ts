@@ -78,6 +78,10 @@ const A_HANDLED = [
   'floor-finish', 'furniture', 'mep-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator',
   'mep-segment', 'mep-fitting', 'railing', 'wall-covering', 'thermal-space', 'space-separator',
   'mep-boiler', 'mep-water-heater', 'mep-underfloor',
+  // ADR-415/635 — το floorplan-symbol μπήκε στο RENDERABLE_ENTITY_TYPES (ghost preview)· ο resolver
+  // το δρομολογούσε ΗΔΗ (`ENTITY_BOUNDS_PROVIDERS['floorplan-symbol'] = bimBounds`), απλώς έλειπε
+  // από αυτή τη golden λίστα → το exhaustive assertion ήταν κόκκινο (code=truth, ADR-654 sweep).
+  'floorplan-symbol',
 ] as const;
 /**
  * Renderable types που πέφτουν στο A-default → `EMPTY_SPATIAL_BOUNDS`. **ΚΕΝΟ μετά τη Φ9 Slice 2** —
@@ -107,6 +111,8 @@ const B_HANDLED = [
   'floor-finish', 'wall-covering', 'furniture', 'mep-fixture', 'electrical-panel', 'mep-manifold',
   'mep-radiator', 'mep-boiler', 'mep-water-heater', 'mep-segment', 'mep-fitting', 'mep-underfloor',
   'railing', 'thermal-space', 'space-separator',
+  // ADR-415/635 — βλ. `A_HANDLED`: renderable πλέον, provider υπήρχε ήδη· λίστα stale.
+  'floorplan-symbol',
 ] as const;
 /**
  * Renderable types που πέφτουν στο B → `null`. **ΚΕΝΟ μετά τη Φ9 Slice 1** — κάθε renderable type έχει

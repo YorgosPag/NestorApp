@@ -121,6 +121,10 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   // (`opening-info-tag-size`) renders the default 'square'.
   'opening-info-tag-move': 'move',
   'opening-info-tag-rotation': 'rotation',
+  // Raster image (ADR-654) — entourage / furniture-plan sprite: centre move cross + rotation
+  // handle (μέσο πάνω ακμής)· οι 4 γωνιακές λαβές (`image-corner-*`) render το default 'square'.
+  'image-move': 'move',
+  'image-rotation': 'rotation',
   // Hatch (ADR-627) — whole-hatch move cross + rotation handle on the outer boundary ring
   // (area/polyline parity); the boundary vertex / edge-midpoint / gradient grips render 'square'.
   'hatch-move': 'move',
