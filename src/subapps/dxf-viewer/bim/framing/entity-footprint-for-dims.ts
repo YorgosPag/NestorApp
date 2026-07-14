@@ -29,6 +29,8 @@ import { textBoxCornersWorld } from '../text/text-box';
 import { getEntityBounds, type BoundsEntity } from '../../systems/zoom/utils/bounds-entity';
 import { arcToPolyline } from '../../utils/geometry/GeometryUtils';
 import { isFinitePoint } from '../../config/geometry-constants';
+// ADR-654 §move-clearance — raster image rotation-aware footprint via το ΚΟΙΝΟ vertex SSoT (μηδέν clone).
+import { imageEntityRectVertices, type ImageRectShape } from '../../rendering/entities/shared/image-rect-vertices';
 
 /** Δείγματα της σαρωμένης καμπύλης τόξου ως footprint (πυκνά αρκετά για ομαλό perp clearance). */
 const ARC_FOOTPRINT_SEGMENTS = 24;
@@ -86,6 +88,15 @@ export function resolveEntityFootprintForDims(entity: Entity): ReadonlyArray<Poi
   // Μηδέν νέα γεωμετρία — reuse του `computeOpeningInfoTagGeometry`.
   if (isOpeningInfoTagEntity(entity)) {
     return computeOpeningInfoTagGeometry(entity).worldCorners;
+  }
+  // ADR-654 §move-clearance (Giorgio 2026-07-14 «όπως ο τοίχος») — raster image / entourage: το ΠΡΑΓΜΑΤΙΚΟ
+  // (rotation-aware) footprint του sprite = οι 4 world γωνίες του ΚΟΙΝΟΥ `imageEntityRectVertices` SSoT
+  // (parity opening-info-tag/text visual box). Το generic `getEntityBounds` δεν γνωρίζει 'image' (θα έδινε
+  // undefined) — εδώ δίνουμε το σωστό περιστρεφόμενο ορθογώνιο, ώστε μια κινούμενη εικόνα να δείχνει κυανές
+  // clearance dims προς τους γείτονες. Μηδέν νέα γεωμετρία.
+  if (entity.type === 'image') {
+    const corners = imageEntityRectVertices(entity as unknown as ImageRectShape);
+    if (corners && corners.length >= 3) return corners;
   }
   // Γενικό fallback (Giorgio: «οποιαδήποτε οντότητα BIM ή DXF»): axis-aligned bounding box ως footprint
   // — γραμμή/πολυγραμμή/ορθογώνιο/κύκλος/τόξο + λοιπά. Προσέγγιση αρκετή για clearance dims (bbox παρειές).

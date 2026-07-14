@@ -1644,6 +1644,7 @@
       "dimensions": "Dimensions",
       "lineToolStyle": "Line Style",
       "blockTools": "Block",
+      "imageTools": "Image",
       "xlineMode": "Construction Line",
       "scaleTool": "Scale",
       "analyze": "Analyze",
@@ -1924,6 +1925,7 @@
       "linePolyline": "Polyline",
       "lineDraw": "Line",
       "blockActions": "Block",
+      "imageActions": "Image",
       "lineModify": "Modify",
       "lineFilletOptions": "Fillet Options",
       "lineChamferOptions": "Chamfer Options",
@@ -5181,6 +5183,23 @@
       "scaleY": "Scale Y",
       "rotation": "Rotation",
       "renameAction": "Rename"
+    }
+  },
+  "imageAdvancedPanel": {
+    "title": "Image Properties",
+    "emptyState": "Select an image to see its properties.",
+    "sections": {
+      "general": "General",
+      "geometry": "Geometry"
+    },
+    "fields": {
+      "source": "Source",
+      "layer": "Layer",
+      "posX": "Position X",
+      "posY": "Position Y",
+      "width": "Width",
+      "height": "Height",
+      "rotation": "Rotation"
     }
   },
   "hatchAdvancedPanel": {

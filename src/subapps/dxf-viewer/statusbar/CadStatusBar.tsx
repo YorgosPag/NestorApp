@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChevronUp, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { matchesShortcut, getShortcutDisplayLabel } from '../config/keyboard-shortcuts';
+import { toggleTopoGridVisible } from '../systems/topography/topo-grid-store';
 import { useCadToggles } from '../hooks/common/useCadToggles';
 import type { CadToggle } from '../hooks/common/useCadToggles';
 import { cadToggleState } from '../systems/constraints/cad-toggle-state';
@@ -50,6 +51,8 @@ export default function CadStatusBar() {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') return;
+      // ADR-656 M11 — Shift+F7 flips the ΕΓΣΑ87 graticule (checked before F7 so the modifier wins).
+      if (matchesShortcut(e, 'topoGridDisplay')) { e.preventDefault(); toggleTopoGridVisible(); return; }
       if (matchesShortcut(e, 'gridDisplay'))   { e.preventDefault(); grid.toggle();     return; }
       if (matchesShortcut(e, 'orthoMode'))     { e.preventDefault(); ortho.toggle();    return; }
       if (matchesShortcut(e, 'gridSnap'))      { e.preventDefault(); snap.toggle();     return; }
@@ -204,6 +207,47 @@ function CadToggleRow({ id, label, fkey, description, toggle }: {
   );
 }
 
+/**
+ * A `CadToggleRow` plus the little chevron button that opens its settings popover.
+ *
+ * Polar and Osnap both need exactly this shell — same wrapper, same trigger button, same
+ * chevron — and differ only in the popover's label and what goes inside it. Keeping the
+ * shell here means the trigger's affordance stays identical across the status bar instead
+ * of drifting between two hand-maintained copies.
+ */
+function CadToggleWithPopover({
+  id, label, fkey, description, toggle, popoverLabel, contentClassName, children,
+}: {
+  id: string;
+  label: string;
+  fkey: string;
+  description: string;
+  toggle: CadToggle;
+  /** Accessible name of the settings trigger — the caller resolves it via `t()`. */
+  popoverLabel: string;
+  contentClassName: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-0.5 shrink-0">
+      <CadToggleRow id={id} label={label} fkey={fkey} description={description} toggle={toggle} />
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            className="flex items-center justify-center h-4 w-4 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            aria-label={popoverLabel}
+          >
+            <ChevronUp className="h-3 w-3" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side="top" align="center" className={contentClassName}>
+          {children}
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 // ADR-357 — increment-angle presets for the shared status-bar editable combobox.
 // Editable: any 0–360° value can be typed in; these are just the quick picks.
 const POLAR_INCREMENT_PRESETS: readonly StatusBarComboboxPreset[] = [
@@ -245,38 +289,12 @@ function PolarToggleWithPopover({ id, label, fkey, description, toggle }: {
   };
 
   return (
-    <div className="flex items-center gap-0.5 shrink-0">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex items-center gap-1.5">
-            <label htmlFor={id} className="flex items-center gap-1 cursor-pointer select-none">
-              <span className={`text-xs leading-none font-semibold ${toggle.on ? 'text-[hsl(var(--text-success))]' : 'text-muted-foreground'}`}>{label}</span>
-              {fkey && (
-                <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded border border-border leading-none py-0.5">
-                  {fkey}
-                </span>
-              )}
-            </label>
-            <Switch
-              id={id}
-              checked={toggle.on}
-              onCheckedChange={() => toggle.toggle()}
-              className="scale-75 origin-left data-[state=checked]:bg-[hsl(var(--text-success))]"
-            />
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="top">{`${description} (${fkey})`}</TooltipContent>
-      </Tooltip>
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            className="flex items-center justify-center h-4 w-4 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            aria-label={t('cadDock.statusBar.polarSettingsTitle')}
-          >
-            <ChevronUp className="h-3 w-3" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent side="top" align="center" className="z-[1800] w-56 p-3 space-y-3">
+    <CadToggleWithPopover
+      id={id} label={label} fkey={fkey} description={description} toggle={toggle}
+      popoverLabel={t('cadDock.statusBar.polarSettingsTitle')}
+      contentClassName="z-[1800] w-56 p-3 space-y-3"
+    >
+      <>
           <p className="text-xs font-semibold">{t('cadDock.statusBar.polarSettingsTitle')}</p>
           <div className="space-y-1">
             <p className="text-[10px] text-muted-foreground">{t('cadDock.statusBar.polarIncrement')}</p>
@@ -327,9 +345,8 @@ function PolarToggleWithPopover({ id, label, fkey, description, toggle }: {
               </div>
             )}
           </div>
-        </PopoverContent>
-      </Popover>
-    </div>
+      </>
+    </CadToggleWithPopover>
   );
 }
 
@@ -363,27 +380,7 @@ function SnapToggleWithStep({ id, label, fkey, description, toggle, step, onStep
 
   return (
     <div className="flex items-center gap-1.5 shrink-0">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex items-center gap-1.5">
-            <label htmlFor={id} className="flex items-center gap-1 cursor-pointer select-none">
-              <span className={`text-xs leading-none font-semibold ${toggle.on ? 'text-[hsl(var(--text-success))]' : 'text-muted-foreground'}`}>{label}</span>
-              {fkey && (
-                <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded border border-border leading-none py-0.5">
-                  {fkey}
-                </span>
-              )}
-            </label>
-            <Switch
-              id={id}
-              checked={toggle.on}
-              onCheckedChange={() => toggle.toggle()}
-              className="scale-75 origin-left data-[state=checked]:bg-[hsl(var(--text-success))]"
-            />
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="top">{`${description} (${fkey})`}</TooltipContent>
-      </Tooltip>
+      <CadToggleRow id={id} label={label} fkey={fkey} description={description} toggle={toggle} />
       {toggle.on && (
         <StatusBarEditableCombobox
           id={`${id}-step`}
@@ -447,51 +444,20 @@ function OsnapToggleWithPopover({ id, label, fkey, description, toggle, enabledM
   listeningDimOn: boolean;
   onToggleListeningDim: () => void;
 }) {
+  const { t } = useTranslation('dxf-viewer-panels');
   return (
-    <div className="flex items-center gap-0.5 shrink-0">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex items-center gap-1.5">
-            <label
-              htmlFor={id}
-              className="flex items-center gap-1 cursor-pointer select-none"
-            >
-              <span className={`text-xs leading-none font-semibold ${toggle.on ? 'text-[hsl(var(--text-success))]' : 'text-muted-foreground'}`}>{label}</span>
-              {fkey && (
-                <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded border border-border leading-none py-0.5">
-                  {fkey}
-                </span>
-              )}
-            </label>
-            <Switch
-              id={id}
-              checked={toggle.on}
-              onCheckedChange={() => toggle.toggle()}
-              className="scale-75 origin-left data-[state=checked]:bg-[hsl(var(--text-success))]"
-            />
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="top">{`${description} (${fkey})`}</TooltipContent>
-      </Tooltip>
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            className="flex items-center justify-center h-4 w-4 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            aria-label="Snap types"
-          >
-            <ChevronUp className="h-3 w-3" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent side="top" align="center" className="z-[1800] w-auto p-2">
-          <ProSnapToolbar
-            enabledModes={enabledModes}
-            onToggleMode={onToggleMode}
-            listeningDimOn={listeningDimOn}
-            onToggleListeningDim={onToggleListeningDim}
-            compact
-          />
-        </PopoverContent>
-      </Popover>
-    </div>
+    <CadToggleWithPopover
+      id={id} label={label} fkey={fkey} description={description} toggle={toggle}
+      popoverLabel={t('cadDock.statusBar.osnapSettingsTitle')}
+      contentClassName="z-[1800] w-auto p-2"
+    >
+      <ProSnapToolbar
+        enabledModes={enabledModes}
+        onToggleMode={onToggleMode}
+        listeningDimOn={listeningDimOn}
+        onToggleListeningDim={onToggleListeningDim}
+        compact
+      />
+    </CadToggleWithPopover>
   );
 }

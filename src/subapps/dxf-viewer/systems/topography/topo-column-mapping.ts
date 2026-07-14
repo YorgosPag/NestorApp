@@ -104,11 +104,15 @@ export function mapRowToPoint(row: readonly string[], mapping: ColumnMapping, sc
   if (x === null || y === null || z === null) return null;
 
   const code = (cellFor(row, mapping, 'code') ?? '').trim();
+  // ADR-656 M10 — carry the surveyor's point number/name through (verbatim, no scaling): it
+  // is an identifier, not a measurement. Was recognised by HEADER_HINTS but dropped until now.
+  const pointNumber = (cellFor(row, mapping, 'pointId') ?? '').trim();
   return {
     x: x * scale,
     y: y * scale,
     z: z * scale,
     ...(code ? { code } : {}),
+    ...(pointNumber ? { pointNumber } : {}),
   };
 }
 

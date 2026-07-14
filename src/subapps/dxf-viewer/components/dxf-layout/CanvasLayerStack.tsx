@@ -11,6 +11,7 @@ import { resolveSceneUnits } from '../../utils/scene-units';
 import { FloorplanBackgroundCanvas } from '../../floorplan-background';
 // 🏢 Grid as the BOTTOM-MOST layer (beneath the floorplan κάτοψη). ADR-040 (2026-06-05).
 import { GridUnderlayCanvas } from './GridUnderlayCanvas';
+import { TopoGridUnderlayLeaf } from './TopoGridUnderlayLeaf';
 import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config';
@@ -370,6 +371,15 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
               className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['10']}`}
             />
           )}
+          {/* ADR-656 M11 — live ΕΓΣΑ87 coordinate graticule (z20: above entities, below snap/rulers).
+              Self-subscribing ADR-040 micro-leaf owns the low-freq visibility flag; the Shell stays
+              subscription-free (CHECK 6C) and only threads the transform/viewport it already holds.
+              SEPARATE from the F7 drawing-aid grid (GridUnderlayCanvas z0). */}
+          <TopoGridUnderlayLeaf
+            transform={transform}
+            viewport={viewport}
+            className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['20']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
+          />
           <PreviewCanvas
             ref={previewCanvasRef as React.RefObject<PreviewCanvasHandle>}
             transform={transform}

@@ -155,6 +155,24 @@ describe('collectAmbientAlignmentAnchors (ADR-357 ambient)', () => {
     expect(anchors).toEqual([]);
   });
 
+  // ADR-654 — a raster image / entourage sprite emits alignment anchors from its rotated corners, so
+  // dragging any entity near it lights the SAME H/V traces (Giorgio 2026-07-14).
+  it('emits anchors for a raster image corner aligned with the cursor column', () => {
+    // 100×50 image at (300,0) → a corner sits on x=300; cursor at (300,-100) shares that column.
+    const image = { id: 'img_1', type: 'image', position: { x: 300, y: 0 }, width: 100, height: 50, rotation: 0, url: 'x' } as unknown as Entity;
+    const anchors = collectAmbientAlignmentAnchors({ x: 300, y: -100 }, [image], CFG());
+    expect(anchors.length).toBeGreaterThan(0);
+    for (const a of anchors) {
+      expect(a.sourceSnapType).toBe(AMBIENT_SOURCE_TYPE);
+      expect(Math.abs(a.x - 300)).toBeLessThan(1);
+    }
+  });
+
+  it('returns [] for an image missing width/height (no vertices)', () => {
+    const bad = { id: 'img_2', type: 'image', position: { x: 0, y: 0 } } as unknown as Entity;
+    expect(collectAmbientAlignmentAnchors({ x: 0, y: 0 }, [bad], CFG())).toEqual([]);
+  });
+
   it('honors the maxMembers cap (nearest-N)', () => {
     // 10 columns along y=0 at x=100..1000 — all share the cursor row.
     const cols: Entity[] = [];

@@ -82,6 +82,18 @@ describe('resolveGripAlignmentAnchors', () => {
   it('non-line / non-polyline reshape → null (caller resolves BIM footprint itself)', () => {
     expect(resolveGripAlignmentAnchors({ type: 'circle' }, role({ gripIndex: 1 }))).toBeNull();
   });
+
+  // ADR-654 — image corner/edge RESIZE: the dragged handle (anchorPos) aligns to neighbour anchors.
+  it('image resize grip → the dragged handle anchor (smart-guide alignment)', () => {
+    const anchorPos = { x: 42, y: 7 };
+    expect(resolveGripAlignmentAnchors({ type: 'image' }, role({ anchorPos })))
+      .toEqual([anchorPos]);
+  });
+
+  it('image rotation handle → no traces (isRotation excludes it)', () => {
+    expect(resolveGripAlignmentAnchors({ type: 'image' }, role({ isRotation: true, anchorPos: { x: 1, y: 2 } })))
+      .toBeNull();
+  });
 });
 
 describe('resolvePolylineHudSegments', () => {

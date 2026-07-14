@@ -313,6 +313,12 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // NOT a canvas-click authoring tool: it emits MANY entities (lwpolyline + text) via
   // completeEntities, so it is a deliberate absence from TOOL_CREATES_ENTITY (multi-type).
   'topo-contours':     { id: 'topo-contours',     category: 'utility', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
+  // ADR-656 M10 — Labels σημείων. Ίδιο συμβόλαιο με το topo-contours: panel-driven, εκπέμπει
+  // ΠΟΛΛΑ entities (text + point) via completeEntities → σκόπιμη απουσία από TOOL_CREATES_ENTITY.
+  'topo-point-labels': { id: 'topo-point-labels', category: 'utility', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
+  // ADR-656 M11 — Κάναβος ΕΓΣΑ87 (bake). Ίδιο συμβόλαιο με topo-contours/labels: panel-driven,
+  // εκπέμπει ΠΟΛΛΑ entities (line + text) via completeEntities → σκόπιμη απουσία από TOOL_CREATES_ENTITY.
+  'topo-grid':         { id: 'topo-grid',         category: 'utility', requiresCanvas: false, canInterrupt: false, allowsContinuous: false, preservesOverlayMode: false },
   // ADR-650 M2-Β: «Γραμμές ασυνέχειας» — canvas-click pick εργαλείο (ΟΧΙ panel-driven).
   // category:'drawing' ⇒ isInDrawingMode=true, ώστε το mouse-up select block να ΜΗΝ τρέχει
   // παράλληλα με τον click handler (κανένα διπλό select) — ίδιο σκεπτικό με ADR-649.

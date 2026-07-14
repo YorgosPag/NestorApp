@@ -18,7 +18,7 @@
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { isWallEntity, isStairEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity, isSlabOpeningEntity, isHatchEntity, isBlockEntity } from '../../types/entities';
+import { isWallEntity, isStairEntity, isColumnEntity, isBeamEntity, isFoundationEntity, isSlabEntity, isSlabOpeningEntity, isHatchEntity, isBlockEntity, isImageEntity } from '../../types/entities';
 import { isWallDrawingTool } from '../../systems/tools/region-tool-ids';
 import { useResolvedSelectedEntity } from '../../hooks/selection/useResolvedSelectedEntity';
 import { StairPropertiesTab } from '../stair-advanced-panel/StairPropertiesTab';
@@ -37,6 +37,8 @@ import { LinePropertiesTab } from '../line-advanced-panel/LinePropertiesTab';
 import { HatchPropertiesTab } from '../hatch-advanced-panel/HatchPropertiesTab';
 // ADR-641 (single-click selection surface) — selected block → object inspector.
 import { BlockPropertiesTab } from '../block-advanced-panel/BlockPropertiesTab';
+// ADR-654 — selected entourage image (έπιπλο/άνθρωπος/όχημα/φυτό) → object inspector.
+import { ImagePropertiesTab } from '../image-advanced-panel/ImagePropertiesTab';
 import type { SceneModel } from '../../types/scene';
 
 export interface BimPropertiesRouterProps {
@@ -132,6 +134,12 @@ export function BimPropertiesRouter(
   // εμφάνιση + INSERT transform). After all BIM branches, before the empty state.
   if (selected && isBlockEntity(selected)) {
     return <BlockPropertiesTab {...props} />;
+  }
+
+  // ADR-654 — a selected entourage image (έπιπλο/άνθρωπος/όχημα/φυτό) gets its object
+  // inspector (πηγή/επίπεδο + γεωμετρία). Non-BIM standalone raster, mirror του block.
+  if (selected && isImageEntity(selected)) {
+    return <ImagePropertiesTab {...props} />;
   }
 
   // No BIM selection — render the stair tab's empty state (legacy path).

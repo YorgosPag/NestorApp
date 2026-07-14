@@ -310,6 +310,12 @@ export type ToolType =
   // ADR-650 Milestone 1: Topographic contours — φόρτωση σημείων (X,Y,Z) → CDT/TIN →
   // marching-triangles → native lwpolyline/text ισοϋψείς. Panel-driven (όχι canvas click).
   | 'topo-contours'       // TOPO — generate contour lines from survey points
+  // ADR-656 M10: Labels σημείων αποτύπωσης — spot Ζ / αρ.·κωδικός / Χ,Υ κορυφών ορίου →
+  // native text/point entities via completeEntities. Panel-driven (όχι canvas click), multi-type.
+  | 'topo-point-labels'   // TOPOLABELS — generate survey-point labels (spot Z / id / boundary X,Y)
+  // ADR-656 M11: Κάναβος συντεταγμένων ΕΓΣΑ87 — «Bake to drawing» των round crosses + περιμετρικής
+  // αρίθμησης → native line/text entities via completeEntities. Panel-driven (όχι canvas click).
+  | 'topo-grid'           // TOPOGRID — bake ΕΓΣΑ87 coordinate grid (crosses + Easting/Northing)
   // ADR-650 M2 μέρος Β: «Γραμμές ασυνέχειας» — 1-κλικ pick υπάρχουσας γραμμής (line/
   // polyline/lwpolyline) → breakline constraint στο TopoPointStore (constrained edge στο
   // CDT). Toggle (ξανά-κλικ = αφαίρεση). ΔΕΝ δημιουργεί CAD entity → εκτός TOOL_CREATES_ENTITY.

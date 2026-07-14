@@ -193,7 +193,9 @@ export async function handleUpdateDxfLevel(
     if (owned.response) {
       return owned.response as NextResponse<DxfLevelUpdateResponse>;
     }
-    const levelRef = owned.ref;
+    // withVersionCheck operates by (db, collection, docId); the ownership check
+    // above is what `loadOwnedLevelRef` is for (its `ref` is not needed here).
+    const db = getAdminFirestore();
 
     const updates: Record<string, unknown> = {};
     if (body.name !== undefined) updates.name = body.name;

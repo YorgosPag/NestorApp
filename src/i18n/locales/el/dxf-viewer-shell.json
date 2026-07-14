@@ -1644,6 +1644,7 @@
       "dimensions": "Διαστάσεις",
       "lineToolStyle": "Στυλ Γραμμής",
       "blockTools": "Μπλοκ",
+      "imageTools": "Εικόνα",
       "xlineMode": "Γραμμή Κατασκευής",
       "scaleTool": "Κλιμάκωση",
       "analyze": "Ανάλυση",
@@ -1924,6 +1925,7 @@
       "linePolyline": "Πολυγραμμή",
       "lineDraw": "Γραμμή",
       "blockActions": "Μπλοκ",
+      "imageActions": "Εικόνα",
       "lineModify": "Τροποποίηση",
       "lineFilletOptions": "Επιλογές Συναρμογής",
       "lineChamferOptions": "Επιλογές Λοξοτομής",
@@ -5181,6 +5183,23 @@
       "scaleY": "Κλίμακα Y",
       "rotation": "Γωνία",
       "renameAction": "Μετονομασία"
+    }
+  },
+  "imageAdvancedPanel": {
+    "title": "Ιδιότητες Εικόνας",
+    "emptyState": "Επίλεξε μια εικόνα για να δεις τις ιδιότητες.",
+    "sections": {
+      "general": "Γενικά",
+      "geometry": "Γεωμετρία"
+    },
+    "fields": {
+      "source": "Πηγή",
+      "layer": "Επίπεδο",
+      "posX": "Θέση X",
+      "posY": "Θέση Y",
+      "width": "Πλάτος",
+      "height": "Ύψος",
+      "rotation": "Γωνία"
     }
   },
   "hatchAdvancedPanel": {

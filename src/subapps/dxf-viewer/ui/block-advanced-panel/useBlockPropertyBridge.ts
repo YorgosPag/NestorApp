@@ -32,6 +32,7 @@ import {
   clampTransparency,
 } from '../ribbon/hooks/ribbon-entity-bridge-shared';
 import { toDisp, fromDisp } from '../ribbon/hooks/useRibbonLineToolBridge.helpers';
+import { formatAngleValue } from '../../config/units';
 import { hexToTrueColor } from '../../utils/dxf-true-color';
 import { findClosestAci } from '../../settings/standards/aci';
 import { BLOCK_PROPERTY_KEYS as K } from '../ribbon/hooks/bridge/block-command-keys';
@@ -83,7 +84,7 @@ export function useBlockPropertyBridge(
         case K.posY: return { value: toDisp(block.position.y), options: [] };
         case K.scaleX: return { value: String(block.scale.x), options: [] };
         case K.scaleY: return { value: String(block.scale.y), options: [] };
-        case K.rotation: return { value: String(block.rotation), options: [] };
+        case K.rotation: return { value: formatAngleValue(block.rotation), options: [] };
         default: return null;
       }
     },

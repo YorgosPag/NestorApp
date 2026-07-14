@@ -4,24 +4,31 @@
  * ADR-650 — Topographic surface-definition Firestore persistence React adapter.
  *
  * Bridges `TopoSurfaceFirestoreService` to the five topo stores (survey / contour
- * config / contour display / 3D / cut-fill). Single-doc-per-floor model, mirror of
- * `useGridGuidePersistence` (ADR-441):
- *   - **Load**: subscribe → hydrate (apply state to stores → REGENERATE contours/TIN).
+ * config / contour display / 3D / cut-fill). SITE-level (one terrain per project)
+ * model — the terrain is an `IfcSite` object visible on every storey, NOT per-floor:
+ *   - **Load**: subscribe on `projectId` → hydrate (apply state to stores →
+ *     REGENERATE contours onto the active level).
  *   - **Save**: any topo store change → debounced `setDoc`/`updateDoc`.
- *   - **Per-floor scope**: on floor change → reset stores → new subscription loads that
- *     floor's survey (Revit: every storey its own ground).
+ *   - **Show on every storey**: the subscription does NOT re-key per floor (the survey
+ *     stays loaded). A separate level-change effect re-regenerates the contours onto the
+ *     newly-active level's scene so the terrain appears on foundation, ground floor and
+ *     every other level (Revit Toposurface / Civil 3D surface: one site object, shown
+ *     everywhere).
+ *
+ * `floorId`/`floorplanId` are still stamped on the doc, but only as provenance (which
+ * storey/file the survey was captured on), never the scope key.
  *
  * Anti-echo: the signature of the last save is compared to the incoming doc so our own
  * write returning does NOT re-apply + re-regenerate (loop guard).
  *
  * @see ../../systems/topography/persistence/topo-firestore-service.ts
  * @see ../../systems/topography/persistence/regenerate-topo.ts
+ * @see ../../bim/persistence/bim-floor-scope.ts — buildProjectScopeConstraints
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DXF_TIMING } from '../../config/dxf-timing';
 import { useLevels } from '../../systems/levels';
-import { resolveBimPersistenceScope } from '../../bim/persistence/bim-floor-scope';
 import {
   createTopoSurfaceFirestoreService,
   TopoSurfaceFirestoreService,
@@ -42,9 +49,11 @@ export type TopoSaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 export interface UseTopoPersistenceParams {
   readonly companyId: string | null;
+  /** ADR-650 — SITE-level scope key (one terrain per project). */
   readonly projectId: string | null | undefined;
+  /** Provenance only — the source DXF FileRecord id the survey was captured on. */
   readonly floorplanId: string | null | undefined;
-  /** ADR-420 — stable building-storey scope key. */
+  /** Provenance only — the building-storey (`flr_*`) the survey was captured on. */
   readonly floorId: string | null | undefined;
   readonly userId: string | null;
 }
@@ -68,7 +77,7 @@ const EMPTY_TOPO_STATE: TopoPersistedState = {
 
 export function useTopoPersistence(params: UseTopoPersistenceParams): UseTopoPersistenceResult {
   const { companyId, projectId, floorplanId, floorId, userId } = params;
-  const { currentLevelId, getLevelScene, setLevelScene } = useLevels();
+  const { currentLevelId, sceneLoading, getLevelScene, setLevelScene } = useLevels();
 
   const [saveState, setSaveState] = useState<TopoSaveState>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -86,10 +95,18 @@ export function useTopoPersistence(params: UseTopoPersistenceParams): UseTopoPer
   const levelIdRef = useRef(levelId);
   levelIdRef.current = levelId;
 
+  // Provenance stamped on the doc at CREATE only (never the scope key). Mirror the
+  // durable floorId into the file slot for a storey with no DXF file yet (rules
+  // require floorplanId). Kept in a ref so it never re-instantiates the service.
+  const provenanceRef = useRef<{ floorplanId: string; floorId?: string } | null>(null);
+  const provFile = floorplanId || floorId || null;
+  provenanceRef.current = provFile
+    ? { floorplanId: provFile, ...(floorId ? { floorId } : {}) }
+    : null;
+
+  // SITE-level scope: one terrain per project → the key does NOT change per floor.
   const scopeKey =
-    companyId && projectId && (floorId || floorplanId) && userId
-      ? `${companyId}|${projectId}|${floorId ?? floorplanId}`
-      : null;
+    companyId && projectId && userId ? `${companyId}|${projectId}` : null;
 
   /** Silent scene write (no autosave, no undo) for the regenerated products. */
   const commitScene = useCallback(
@@ -98,23 +115,16 @@ export function useTopoPersistence(params: UseTopoPersistenceParams): UseTopoPer
     [setLevelScene],
   );
 
-  // Instantiate service when scope ready.
+  // Instantiate service when the SITE scope (company/project/user) is ready.
   useEffect(() => {
-    const scope = resolveBimPersistenceScope({ companyId, projectId, userId, floorId, floorplanId });
-    if (!scope) {
+    if (!companyId || !projectId || !userId) {
       serviceRef.current = null;
       setServiceReady(false);
       return;
     }
-    serviceRef.current = createTopoSurfaceFirestoreService({
-      companyId: scope.companyId,
-      projectId: scope.projectId,
-      floorplanId: scope.floorplanId,
-      floorId: scope.floorId,
-      userId: scope.userId,
-    });
+    serviceRef.current = createTopoSurfaceFirestoreService({ companyId, projectId, userId });
     setServiceReady(true);
-  }, [companyId, projectId, floorplanId, floorId, userId]);
+  }, [companyId, projectId, userId]);
 
   // Restore a state into the stores (echo-guarded) then rebuild the derived contours.
   const applyAndRegenerate = useCallback((state: TopoPersistedState, docId: string | null, version: number, sig: string) => {
@@ -144,7 +154,8 @@ export function useTopoPersistence(params: UseTopoPersistenceParams): UseTopoPer
     applyAndRegenerate(state, doc.id, doc.version, incomingSig);
   }, [applyAndRegenerate]);
 
-  // Subscribe + per-floor reset (+ flush-on-ready for a survey imported pre-scope).
+  // Subscribe + per-project reset (+ flush-on-ready for a survey imported pre-scope).
+  // Re-runs only when the SITE scope (project) changes — never on a floor switch.
   useEffect(() => {
     const svc = serviceRef.current;
     if (!svc || !scopeKey) return;
@@ -153,7 +164,7 @@ export function useTopoPersistence(params: UseTopoPersistenceParams): UseTopoPer
     const pending = collectTopoState();
     const hasPending = !isEmptyTopoState(pending);
 
-    // Per-floor reset — start from a clean survey for the new storey.
+    // Per-project reset — start from a clean survey for the new project/site.
     applyAndRegenerate(EMPTY_TOPO_STATE, null, 0, topoStateSignature(EMPTY_TOPO_STATE));
 
     let settled = false;
@@ -175,6 +186,17 @@ export function useTopoPersistence(params: UseTopoPersistenceParams): UseTopoPer
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scopeKey, serviceReady, hydrate, applyAndRegenerate]);
 
+  // Show the SITE terrain on EVERY storey: when the active level changes (and its
+  // scene has finished loading), rebuild the contours onto that level's scene from
+  // the already-loaded project survey. Idempotent (regenerate clears stale contours
+  // first) and silent (`system-reconcile` → no autosave/undo, no topo-store mutation
+  // → no save echo). The write touches neither `levelId` nor `sceneLoading`, so it
+  // never re-triggers this effect (no loop).
+  useEffect(() => {
+    if (!scopeKey || sceneLoading) return;
+    regenerateTopoContours({ getScene: getLevelScene, commitScene, levelId });
+  }, [levelId, sceneLoading, scopeKey, getLevelScene, commitScene]);
+
   // Persist current store state (debounced caller).
   const doSave = useCallback(async () => {
     const svc = serviceRef.current;
@@ -190,7 +212,11 @@ export function useTopoPersistence(params: UseTopoPersistenceParams): UseTopoPer
       if (docIdRef.current) {
         await svc.updateTopo(docIdRef.current, { state, version: nextVersion });
       } else {
-        docIdRef.current = await svc.createTopo({ state, version: nextVersion });
+        docIdRef.current = await svc.createTopo({
+          state,
+          version: nextVersion,
+          provenance: provenanceRef.current ?? undefined,
+        });
       }
       versionRef.current = nextVersion;
       lastSavedSigRef.current = sig;

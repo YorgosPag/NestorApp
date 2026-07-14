@@ -13,11 +13,15 @@
  * as the DXF scene blob lives in Storage, not Firestore.
  *
  * Subscribe → `firestoreQueryService.subscribe('FLOORPLAN_TOPO_SURFACES', …)` with
- * `(projectId, floorId||floorplanId)` constraints (ADR-420). Tenant `companyId`
- * auto-applied (CHECK 3.10). Returns 0 or 1 doc per scope.
+ * a SITE-level `projectId`-only constraint (ADR-650): the terrain is one
+ * `IfcSite` object per project, visible on every storey — NOT per-floor. Tenant
+ * `companyId` auto-applied (CHECK 3.10). Returns 0 or 1 doc per project.
+ * `floorId`/`floorplanId` are written as provenance only (which storey/file the
+ * survey was captured on), never the scope key.
  *
  * @see ./topo-persistence-types.ts
  * @see ../../guides/guide-firestore-service.ts
+ * @see ../../../bim/persistence/bim-floor-scope.ts — buildProjectScopeConstraints
  */
 
 import {
@@ -35,21 +39,26 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateTopoSurfaceId } from '@/services/enterprise-id-convenience';
 import { firestoreQueryService } from '@/services/firestore';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
-import {
-  buildBimScopeConstraints,
-  bimScopeWriteFields,
-  resolveBimScope,
-} from '../../../bim/persistence/bim-floor-scope';
+import { buildProjectScopeConstraints } from '../../../bim/persistence/bim-floor-scope';
 import type { TopoPersistedState, TopoSurfaceDoc, TopoSurfacesDefinition } from './topo-persistence-types';
 import { TOPO_INLINE_MAX_BYTES, topoDefinitionByteSize, topoSettingsDocFields } from './topo-persistence-types';
 
+/** ADR-650 — SITE-level scope (one terrain per project). See buildProjectScopeConstraints. */
 export interface TopoSurfaceServiceConfig {
   readonly companyId: string;
   readonly projectId: string;
-  readonly floorplanId: string;
-  /** ADR-420 — stable building-storey scope key. */
-  readonly floorId?: string;
   readonly userId: string;
+}
+
+/**
+ * ADR-650 — provenance stamped on the topo doc at CREATE (which storey/file the
+ * survey was captured on). Immutable afterwards; never the scope key. The rules
+ * require `floorplanId` on create, so it is always present (the hook mirrors the
+ * durable `floorId` into it when the storey has no DXF file yet).
+ */
+export interface TopoProvenance {
+  readonly floorplanId: string;
+  readonly floorId?: string;
 }
 
 export interface TopoSaveInput {
@@ -57,6 +66,8 @@ export interface TopoSaveInput {
   readonly id?: string;
   readonly state: TopoPersistedState;
   readonly version: number;
+  /** CREATE-only provenance (see {@link TopoProvenance}). Ignored on update. */
+  readonly provenance?: TopoProvenance;
 }
 
 export class TopoSurfaceFirestoreService {
@@ -66,13 +77,12 @@ export class TopoSurfaceFirestoreService {
     return doc(db, COLLECTIONS.FLOORPLAN_TOPO_SURFACES, docId);
   }
 
-  /** Storage path of the offloaded survey blob — company + floor-scope keyed (tenant-isolated). */
+  /** Storage path of the offloaded survey blob — company + project-scope keyed (tenant-isolated). */
   private blobPath(docId: string): string {
-    const scope = resolveBimScope(this.config);
-    return `topo-surfaces/${this.config.companyId}/${scope.value}/${docId}.json`;
+    return `topo-surfaces/${this.config.companyId}/${this.config.projectId}/${docId}.json`;
   }
 
-  /** Real-time subscription scoped to `(projectId, floorId||floorplanId)`. 0 or 1 doc. */
+  /** Real-time subscription scoped to `projectId` (SITE-level, ADR-650). 0 or 1 doc. */
   subscribeTopo(
     onChange: (docs: readonly TopoSurfaceDoc[]) => void,
     onError: (err: Error) => void,
@@ -81,7 +91,7 @@ export class TopoSurfaceFirestoreService {
       'FLOORPLAN_TOPO_SURFACES',
       (result) => onChange(result.documents),
       onError,
-      { constraints: buildBimScopeConstraints(this.config) },
+      { constraints: buildProjectScopeConstraints(this.config.projectId) },
     );
   }
 
@@ -113,11 +123,18 @@ export class TopoSurfaceFirestoreService {
   async createTopo(input: TopoSaveInput): Promise<string> {
     const id = input.id ?? generateTopoSurfaceId();
     const definition = await this.buildDefinitionFields(id, input.state.surfaces);
+    // Provenance (immutable): the storey/file the survey was captured on. Rules
+    // require `floorplanId`; fall back to projectId so the doc stays creatable
+    // even for a file-less storey (should not happen — the hook mirrors floorId).
+    const provenance = {
+      floorplanId: input.provenance?.floorplanId ?? this.config.projectId,
+      ...(input.provenance?.floorId ? { floorId: input.provenance.floorId } : {}),
+    };
     await setDoc(this.docRef(id), stripUndefinedDeep({
       id,
       companyId: this.config.companyId,
       projectId: this.config.projectId,
-      ...bimScopeWriteFields(this.config),
+      ...provenance,
       ...definition,
       ...topoSettingsDocFields(input.state),
       version: input.version,

@@ -174,6 +174,26 @@ describe('resolveMoveGlyphFrame (ADR-397)', () => {
     expect(f.axisX.x).toBeCloseTo(0, 6);
     expect(f.axisX.y).toBeCloseTo(1, 6);
   });
+
+  // ADR-654 — raster image / entourage: params-less, orients from its TOP-LEVEL `rotation` (deg),
+  // exactly like text. Feeds the MOVE-cross rotation AND the rotation-reference axis (coaxial sides).
+  it('image at rotation 90° → axisX points +Y (world CCW), like a box entity', () => {
+    const img = { id: 'IMG1', type: 'image', rotation: 90, position: { x: 0, y: 0 }, width: 100, height: 50 } as unknown as Entity;
+    const f = resolveMoveGlyphFrame(img)!;
+    expect(f).not.toBeNull();
+    expect(f.axisX.x).toBeCloseTo(0, 6);
+    expect(f.axisX.y).toBeCloseTo(1, 6);
+    expect(f.axisY.x).toBeCloseTo(-1, 6);
+    expect(f.axisY.y).toBeCloseTo(0, 6);
+  });
+
+  it('image with missing/NaN rotation → identity frame (0°), never null', () => {
+    const img = { id: 'IMG2', type: 'image', position: { x: 0, y: 0 }, width: 100, height: 50 } as unknown as Entity;
+    const f = resolveMoveGlyphFrame(img)!;
+    expect(f).not.toBeNull();
+    expect(f.axisX.x).toBeCloseTo(1, 6);
+    expect(f.axisX.y).toBeCloseTo(0, 6);
+  });
 });
 
 describe('withMoveGlyphRotation (ADR-397)', () => {

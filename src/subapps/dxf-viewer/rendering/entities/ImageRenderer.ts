@@ -16,11 +16,14 @@
  *  - `createRectangleVertices` (ADR-587 Φ9) — το ΙΔΙΟ rotated-rectangle vertex SSoT που
  *    χρησιμοποιεί το `RectangleEntity` (rotation γύρω από corner1 = `position`).
  *
- * Contain-fit (CSS `object-fit: contain`): η εικόνα τοποθετείται ΚΕΝΤΡΑΡΙΣΜΕΝΗ μέσα στο
- * ορθογώνιο, διατηρώντας το aspect ratio — ΠΟΤΕ distortion/stretch. Η rotation εφαρμόζεται
- * μέσω `ctx.transform()` (COMPOSE, όχι `setTransform` — σέβεται οποιοδήποτε ambient DPR
- * scale ήδη ενεργό στο context) πάνω σε 3 screen-γωνίες (bottom-left/bottom-right/top-left),
- * ήδη rotated στο WORLD frame από το `createRectangleVertices`.
+ * Fill (big-player parity — Figma/Illustrator/C4D): η εικόνα ΓΕΜΙΖΕΙ ολόκληρο το ορθογώνιο
+ * `width × height` ⇒ ορατό sprite ≡ πλαίσιο ≡ λαβές ≡ bounds ≡ hit-test ΠΑΝΤΑ (μηδέν
+ * letterbox με λαβές «στον αέρα»). Μη-ομοιόμορφη μεσοπλευρική λαβή (E/W/S) τεντώνει την εικόνα
+ * — εσκεμμένο· η ΤΟΠΟΘΕΤΗΣΗ δεν παραμορφώνει γιατί το catalog `width/height` φέρει ήδη το
+ * pixel-aspect (`getSizeMm ← def.aspect = wPx/hPx`, ADR-654). Η rotation εφαρμόζεται μέσω
+ * `ctx.transform()` (COMPOSE, όχι `setTransform` — σέβεται οποιοδήποτε ambient DPR scale ήδη
+ * ενεργό στο context) πάνω σε 3 screen-γωνίες (bottom-left/bottom-right/top-left), ήδη rotated
+ * στο WORLD frame από το `createRectangleVertices`.
  *
  * @see types/image.ts — ImageEntity contract
  * @see rendering/entities/shared/hatch-image-cache.ts — HatchImageCache (reused SSoT)
@@ -72,7 +75,7 @@ export class ImageRenderer extends BaseEntityRenderer {
     this.renderWithPhases(entity, options, () => this.drawImage(e));
   }
 
-  /** Ζωγραφίζει την εικόνα contain-fit μέσα στο (περιστρεφόμενο) ορθογώνιο. */
+  /** Ζωγραφίζει την εικόνα fill (γεμίζει το πλαίσιο) μέσα στο (περιστρεφόμενο) ορθογώνιο. */
   private drawImage(e: ImageEntity): void {
     const corners = imageEntityVertices(e);
     const img = this.imageCache.resolve(e.url);
@@ -80,6 +83,8 @@ export class ImageRenderer extends BaseEntityRenderer {
       this.drawPlaceholder(corners);
       return;
     }
+    // `imageIntrinsicSize` παραμένει ΜΟΝΟ ως validity guard (broken/μη-decoded image → naturalW/H = 0
+    // → placeholder). Το fill ΔΕΝ χρειάζεται iw/ih για κλίμακα — γεμίζει πάντα το πλαίσιο (βλ. κάτω).
     const { w: iw, h: ih } = imageIntrinsicSize(img);
     if (iw <= 0 || ih <= 0 || e.width <= 0 || e.height <= 0) {
       this.drawPlaceholder(corners);
@@ -95,19 +100,15 @@ export class ImageRenderer extends BaseEntityRenderer {
     const eu = { x: (p1.x - p0.x) / e.width, y: (p1.y - p0.y) / e.width };
     const ev = { x: (p3.x - p0.x) / e.height, y: (p3.y - p0.y) / e.height };
 
-    // Contain-fit (CSS object-fit:contain) μέσα στο [width × height] πλαίσιο, σε WORLD μονάδες.
-    const fitScale = Math.min(e.width / iw, e.height / ih);
-    const fitW = iw * fitScale;
-    const fitH = ih * fitScale;
-    const dx = (e.width - fitW) / 2;
-    const dy = (e.height - fitH) / 2;
-
     this.ctx.save();
     // COMPOSE (ΟΧΙ setTransform) — σέβεται οποιοδήποτε ambient DPR/scale ήδη ενεργό. Το τοπικό
     // frame (local x,y σε WORLD μονάδες) αγκυρώνεται στο p3 (πάνω-αριστερά) γιατί το drawImage
     // τοπικό y αυξάνει ΠΡΟΣ ΤΑ ΚΑΤΩ ενώ το `height`-axis (ev) δείχνει ΠΡΟΣ ΤΑ ΠΑΝΩ (y-up SSoT).
+    // FILL (big-player parity) — η εικόνα καλύπτει ΟΛΟΚΛΗΡΟ το [width × height] πλαίσιο (top-left
+    // στο local 0,0), χωρίς fitScale/centering ⇒ ορατό sprite ≡ πλαίσιο ≡ λαβές ΠΑΝΤΑ. Μη-ομοιόμορφη
+    // λαβή → η εικόνα τεντώνει και ΑΚΟΛΟΥΘΕΙ τις λαβές (Figma parity).
     this.ctx.transform(eu.x, eu.y, -ev.x, -ev.y, p3.x, p3.y);
-    this.ctx.drawImage(img, dx, dy, fitW, fitH);
+    this.ctx.drawImage(img, 0, 0, e.width, e.height);
     this.ctx.restore();
   }
 

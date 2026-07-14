@@ -693,6 +693,7 @@
       "dirArcDesc": "Coloured rotation-direction arc while drawing a line (green/red)",
       "listeningDimDesc": "Show cyan distances to neighbouring elements on the line ghost",
       "polarSettingsTitle": "Polar Settings",
+      "osnapSettingsTitle": "Snap types",
       "polarIncrement": "Increment Angle",
       "polarAdditional": "Additional Angles",
       "polarAddAngle": "Add",
@@ -954,6 +955,39 @@
       "exact": "Exact",
       "smooth": "Smooth",
       "exportNote": "Legal export (Cadastre) always uses the exact contours."
+    },
+    "pointLabels": {
+      "title": "Point labels",
+      "hint": "Selective label per point type: elevation on every point, X,Y only on boundary vertices — never on all points.",
+      "elevation": "Elevations Z",
+      "numberCode": "Number / Code",
+      "boundaryXy": "Boundary vertex X,Y",
+      "boundaryHint": "No boundary set — pick a site boundary for vertex X,Y.",
+      "generate": "Generate labels",
+      "status": {
+        "generated": "{count, plural, one {# label created} other {# labels created}}."
+      },
+      "error": {
+        "no-points": "No survey points.",
+        "nothing-selected": "Select at least one label type.",
+        "no-layers": "Could not create label layers."
+      }
+    },
+    "grid": {
+      "title": "ΕΓΣΑ87 coordinate grid",
+      "hint": "Geodetic coordinate grid: crosses at round ΕΓΣΑ87 values + perimeter Easting/Northing numbering. Separate from the drawing-aid GRID (F7).",
+      "show": "Show grid (Shift+F7)",
+      "stepLabel": "Bake step",
+      "stepMeters": "{m} m",
+      "bake": "Bake to drawing",
+      "status": {
+        "baked": "{count, plural, one {# grid entity created} other {# grid entities created}}."
+      },
+      "error": {
+        "no-points": "No survey points.",
+        "no-layers": "Could not create the grid layer.",
+        "empty-grid": "Step too large for the extent — no grid produced."
+      }
     },
     "status": {
       "readError": "Could not read the file.",

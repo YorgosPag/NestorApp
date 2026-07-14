@@ -113,3 +113,21 @@ export function formatDisplayValue(mm: number, unit: DisplayUnit, precision?: nu
   const p = precision ?? DEFAULT_DISPLAY_PRECISION[unit];
   return value.toFixed(p);
 }
+
+/**
+ * Default decimal places for EDITABLE angle inputs (degrees) — AutoCAD AUPREC-style,
+ * Revit/ArchiCAD/Figma-grade (2 decimals). Angles are unit-agnostic (always degrees),
+ * so unlike length this is a single number, not a per-DisplayUnit map.
+ */
+export const DEFAULT_ANGLE_PRECISION = 2;
+
+/**
+ * Format a degree value for an EDITABLE angle input (dot separator, parseable so
+ * `parseFloat` round-trips — mirror του {@link formatDisplayValue} για γωνίες). Rounds to
+ * `DEFAULT_ANGLE_PRECISION` and snaps sub-precision magnitudes to 0 (never emits "-0.00").
+ * `formatAngleValue(-0.7050491969792) → "-0.71"`
+ */
+export function formatAngleValue(deg: number, precision: number = DEFAULT_ANGLE_PRECISION): string {
+  const snapped = Math.abs(deg) < Math.pow(10, -precision) ? 0 : deg;
+  return snapped.toFixed(precision);
+}

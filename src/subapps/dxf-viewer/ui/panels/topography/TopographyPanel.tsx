@@ -35,6 +35,8 @@ import {
 } from '../../../systems/topography/contour-config-store';
 import { useContourDisplay } from '../../../systems/topography/useContourDisplay';
 import { TopoImportWizard } from './TopoImportWizard';
+import { TopoPointLabelsSection } from './TopoPointLabelsSection';
+import { TopoGridSection } from './TopoGridSection';
 import { TopoCutFillSection } from './TopoCutFillSection';
 import { TopoDeliverablesSection } from './TopoDeliverablesSection';
 import { TopoQaSection } from './TopoQaSection';
@@ -215,6 +217,15 @@ export function TopographyPanel(): React.JSX.Element {
         </div>
         <p className={styles.status}>{t('topography.contourStyle.exportNote')}</p>
       </section>
+
+      {/* ADR-656 M10 — «Ετικέτες σημείων»: spot Ζ / αρ.·κωδικός / Χ,Υ ΜΟΝΟ στις κορυφές ορίου.
+          Επιλεκτικό label ανά τύπο σημείου (Civil 3D COGO point-label style)· ποτέ X,Y στα σημεία. */}
+      <TopoPointLabelsSection />
+
+      {/* ADR-656 M11 — «Κάναβος ΕΓΣΑ87»: live graticule toggle + «Αποτύπωση στο σχέδιο» (bake).
+          Ξεχωριστός από το βοηθητικό F7 grid — γεωδαιτικός κάναβος συντεταγμένων (crosses στις
+          στρογγυλές τιμές + περιμετρική αρίθμηση Easting/Northing). */}
+      <TopoGridSection />
 
       {/* ADR-650 M4 — η ίδια επιφάνεια που κόβει τις ισοϋψείς, ως στερεό στην 3Δ όψη.
           Το «υψομετρικό» είναι analysis style (Civil 3D Elevation Banding): χρωματίζει τα

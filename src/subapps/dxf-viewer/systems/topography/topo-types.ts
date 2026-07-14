@@ -25,6 +25,14 @@ export interface TopoPoint {
   readonly z: number;
   /** Optional feature code (e.g. `EDGE`, `TREE`) — carried through, unused in Milestone 1. */
   readonly code?: string;
+  /**
+   * ADR-656 M10 — the surveyor's point number/name, VERBATIM (e.g. `101`, `S12`, `ΣΤ3`).
+   * Kept as a string for zero-loss (Civil 3D «Point Number» is integer, «Point Name» is
+   * alphanumeric — the raw column carries either). Populated only from the wizard/CSV road
+   * where a `pointId` column genuinely exists; DXF POINT/TEXT carry no such group code, so
+   * that road leaves it undefined rather than inventing one.
+   */
+  readonly pointNumber?: string;
 }
 
 /**

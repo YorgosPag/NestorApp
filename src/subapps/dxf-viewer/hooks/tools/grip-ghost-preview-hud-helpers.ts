@@ -34,6 +34,8 @@ import { getBimCharacteristicPointsOfCategory } from '../../bim/utils/bim-charac
 // ADR-612 §resize-hud — opening-info-tag box edges via its own geometry SSoT (μηδέν νέα γεωμετρία).
 import { computeOpeningInfoTagGeometry } from '../../bim/opening-info-tag/opening-info-tag-geometry';
 import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
+// ADR-654 §resize-hud — raster image box edges via το ΚΟΙΝΟ rotation-aware vertex SSoT (μηδέν clone).
+import { imageEntityRectVertices, type ImageRectShape } from '../../rendering/entities/shared/image-rect-vertices';
 import { buildWallHudSpecLabel } from '../drawing/wall-hud-spec-label';
 import { buildColumnHudSpecLabel } from '../drawing/column-hud-spec-label';
 import { gripKindOf } from '../grip-kinds';
@@ -119,6 +121,21 @@ export function drawMemberGripHud(
     const c = computeOpeningInfoTagGeometry(transformed as unknown as OpeningInfoTagEntity).worldCorners;
     for (let i = 0; i < c.length; i++) {
       paintWallHud(ctx, buildSegmentHudMeta(c[i], c[(i + 1) % c.length], sceneUnits), '', t, vp);
+    }
+    return;
+  }
+  // ADR-654 §resize-hud (Giorgio 2026-07-14 «όπως ο τοίχος») — raster image / entourage sprite: λευκές
+  // περιμετρικές ενδείξεις (μήκος + ∠γωνία) στις 4 ακμές του κουτιού κατά το resize (γωνίες + μεσοπλευρικές),
+  // ΙΔΙΟ SSoT με polygon/wall/line/opening-info-tag (`buildSegmentHudMeta`+`paintWallHud`, `specLabel=''` —
+  // sprite χωρίς BIM ταυτότητα). Move/rotation εξαιρούνται (`!movesEntity`/`!rotatePivot` — δικό τους overlay:
+  // clearance / rotation arc). Οι 4 γωνίες από το ΚΟΙΝΟ rotation-aware `imageEntityRectVertices` του ghost
+  // `transformed` (ΗΔΗ ενημερωμένο από `applyImageGripDrag`) → WYSIWYG μήκος/γωνία.
+  if (type === 'image' && !dp.movesEntity && !dp.rotatePivot) {
+    const c = imageEntityRectVertices(transformed as unknown as ImageRectShape);
+    if (c) {
+      for (let i = 0; i < c.length; i++) {
+        paintWallHud(ctx, buildSegmentHudMeta(c[i], c[(i + 1) % c.length], sceneUnits), '', t, vp);
+      }
     }
     return;
   }

@@ -21,7 +21,7 @@ import {
   registerLinetype,
   __resetLinetypeRegistryForTesting,
 } from '../../../../stores/LinetypeRegistry';
-import { toDisplay, fromDisplay } from '../../../../config/units';
+import { toDisplay, fromDisplay, formatDisplayValue } from '../../../../config/units';
 import { displayUnitState } from '../../../../config/display-unit-state';
 // ADR-510 Φ4g — active-tool SSoT drives the contextual fillet/chamfer option panels.
 import { toolStateStore } from '../../../../stores/ToolStateStore';
@@ -463,7 +463,8 @@ describe('useRibbonLineToolBridge — Φ4 General (layer + transparency)', () =>
 
 describe('useRibbonLineToolBridge — Φ4 Geometry (selected line)', () => {
   const unit = displayUnitState.getUnit();
-  const disp = (mm: number) => String(toDisplay(mm, unit).value);
+  // ADR-654 — `toDisp` πλέον στρογγυλοποιεί μέσω του SSoT `formatDisplayValue` (LUPREC-style).
+  const disp = (mm: number) => formatDisplayValue(mm, unit);
 
   it('reads length (display unit) and angle (degrees) from the endpoints', () => {
     const r = renderLine();

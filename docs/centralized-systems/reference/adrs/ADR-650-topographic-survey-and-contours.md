@@ -1482,3 +1482,90 @@ technologismiki (Ν.4495/2017), xyz.gr/geodimetro.gr/greenbuilding.gr/cityengine
 
   **Status: M1 + M2 + M3 + M4 + M5 (α+β) + M6 + M7 + M8α + M8β (Α+Β+Γ+Δ+Ε) IMPLEMENTED — M8 ΠΛΗΡΕΣ·
   moonshots (multiplayer, Gaussian-Splat, COPC streaming) προγραμματισμένα (§12.2).**
+
+- **2026-07-14 (v20)** — **M9 ΥΛΟΠΟΙΗΘΗΚΕ — PERSISTENCE (οι ισοϋψείς επιβιώνουν το reload)**
+  (Phase 2+3, N.0.1). Ο Giorgio το επιβεβαίωσε ζωντανά: οι ισοϋψείς εμφανίζονταν μέσα στη συνεδρία
+  αλλά **εξαφανίζονταν μετά από page refresh**.
+
+  **ΤΟ BUG (προϋπάρχον κενό — ΟΧΙ regression):** ο τοπογραφικός όροφος προέρχεται από import
+  **σημείων** (CSV/txt), όχι DXF → δεν έχει save target → `currentFileName === null` → το autosave gate
+  (`useAutoSaveSceneManager.ts`) κόβεται → το `.scene.json` snapshot **δεν γράφεται ποτέ**. Επιπλέον το
+  `TopoPointStore` ήταν ρητά session-only. Το write-origin (`local-edit`) και ο reconcile ΗΤΑΝ σωστά —
+  οι ισοϋψείς (`lwpolyline`/`text`) είναι dumb-DXF που θα επιβίωναν αν γραφόταν snapshot. Το topo
+  persistence απλώς **δεν είχε χτιστεί** (M1–M8 δεν το περιλάμβαναν).
+
+  **Η ΑΠΟΦΑΣΗ (big players):** Civil 3D «Surface Definition» / Revit Toposurface / ArchiCAD Mesh — το
+  **SSoT είναι ο ΟΡΙΣΜΟΣ** (survey points/breaklines/boundary + ρυθμίσεις)· οι ισοϋψείς/TIN/3D είναι
+  **παράγωγα** που **ξαναπαράγονται** στο load, ΠΟΤΕ αποθηκευμένη «ψημένη» γεωμετρία. Full enterprise +
+  full SSoT· persist **τα πάντα**.
+
+  **ΥΛΟΠΟΙΗΣΗ — καθρέφτης του single-doc-per-floor grid-guide (ADR-441), ΟΧΙ per-entity:**
+  - **`floorplan_topo_surfaces`** (ΕΝΑ doc/floor, floor-scoped μέσω ADR-420 `resolveBimPersistenceScope`/
+    `buildBimScopeConstraints`/`bimScopeWriteFields`)· enterprise-id `TOPO_SURFACE:'topo'` (N.6).
+  - **Inline + Storage offload:** μικρό survey → inline στο doc· payload > `TOPO_INLINE_MAX_BYTES` (700KB,
+    point cloud M8) → **Storage blob** `topo-surfaces/{companyId}/{scope}/{docId}.json` (mirror του
+    `.scene.json`)· το doc κρατά `pointsStoragePath`. `stripUndefinedDeep` πριν κάθε write (Firestore
+    undefined trap).
+  - **Full SSoT:** νέο `contour-config-store` (το interval/index ήταν component-local στο panel) ώστε ΟΛΟ
+    το contour config + display style + terrain-3D + cut-fill να persist-άρεται & regenerate-άρεται.
+  - **`useTopoPersistence`** (mirror `useGridGuidePersistence`): scope resolve → subscribe → **hydrate**
+    (restore 5 stores → **silent regenerate** ισοϋψών) · store-subscribe → debounced save · **anti-echo**
+    stable-signature guard · per-floor reset · defer/flush race (ADR-635 Φ C.15). Mount: **`TopoPersistenceHost`**
+    δίπλα στο `GridGuidePersistenceHost` στο `DxfViewerTopBar`.
+  - **`regenerateTopoContours` (silent + idempotent):** στο load καθαρίζει τα υπάρχοντα TOPO-CONTOUR-*
+    entities → ξαναχτίζει ισοϋψείς/labels/layers με origin `system-reconcile` (κανένα undo, κανένα
+    autosave-loop). Το κουμπί «Δημιουργία» μένει `local-edit`+undoable αμετάβλητο.
+  - **Rules:** `firestore.rules` (`floorplan_topo_surfaces`, default-deny, tenant isolation) + `storage.rules`
+    (`topo-surfaces/{companyId}/**`, 100MB cap, application/json).
+
+  **SSoT — τι ΔΕΝ ξαναγράφτηκε:** ο scope resolver, ο sanitizer, ο `firestoreQueryService`, ο curve
+  builder, ο contour generator — όλα import-άρονται. Καμία αλλαγή στο ADR-040 bitmap cache.
+
+  **Tests:** `topo-persistence-types.test.ts` (serializer round-trip / inline-threshold / defaults /
+  offload merge) + `regenerate-topo.test.ts` (idempotent cleanup + no accumulation). **26 suites / 229
+  tests PASS** (topography). `jscpd:diff` καθαρό (mirror-not-clone).
+
+  **ΕΚΚΡΕΜΕΙ (ζωντανός έλεγχος):** browser reload του reported σεναρίου (survey → ισοϋψείς → refresh →
+  επιβίωση) + point-cloud offload· Firestore rules deploy (ο Giorgio).
+
+  **Status: M1 + M2 + M3 + M4 + M5 (α+β) + M6 + M7 + M8 (ΠΛΗΡΕΣ) + M9 (persistence) IMPLEMENTED·
+  moonshots (multiplayer, Gaussian-Splat, COPC streaming) προγραμματισμένα (§12.2).**
+- **2026-07-14 (v21)** — **M9 SCOPE FIX — η τοπογραφία έγινε SITE-level (φαίνεται σε ΚΑΘΕ όροφο)**
+  (Phase 1–3, N.0.1). Ο Giorgio το επιβεβαίωσε ζωντανά: μετά το v20 οι ισοϋψείς εμφανίζονταν **μόνο
+  στον όροφο που έγινε το import** (θεμελίωση) και **όχι** στο ισόγειο/άλλους ορόφους.
+
+  **ΑΙΤΙΑ (σχεδιαστική, ΟΧΙ bug):** το v20 persistence ήταν **`floorId`-scoped** (ADR-420, ανά
+  building-storey). Το import έγινε στη θεμελίωση → το doc σώθηκε με το `floorId` της θεμελίωσης →
+  hydrate/regenerate ΜΟΝΟ εκεί. Λάθος μοντέλο για τοπογραφία.
+
+  **Η ΑΠΟΦΑΣΗ (big players, εντολή Giorgio· SSoT audit ΠΡΙΝ κώδικα):** οι κορυφαίοι θεωρούν το έδαφος
+  **site-level**: IFC `IfcSite` (κάτω από `IfcProject`, πάνω από `IfcBuilding[]`/`IfcBuildingStorey`),
+  Revit Toposurface / Civil 3D Surface = ΕΝΑ site object ορατό σε όλα τα levels. **Κρίσιμο:** η ίδια η
+  εφαρμογή ΗΔΗ μοντελοποιεί **1 project = 1 `IfcSite`** (`ifc-spatial-hierarchy.ts` → `buildSite(project)`,
+  ένα site ανά project· το survey point ζει στο `project.surveyPoint`). Άρα **topo scope = `projectId`**
+  (το project ΕΙΝΑΙ το site) — καλύπτει «μεγάλο οικόπεδο με πολλά κτίρια» (ένα κοινό έδαφος), υψομετρικές
+  διαφορές, υπόγεια/ισόγεια. `buildingId` θα ανάγκαζε re-import ανά κτίριο (anti-IFC).
+
+  **ΥΛΟΠΟΙΗΣΗ (4 σημεία, extend όχι duplicate):**
+  - **`bim-floor-scope.ts` (ADR-420):** νέα `buildProjectScopeConstraints(projectId)` → `[where('projectId')]`
+    (SITE-level, δίπλα στο per-storey `buildBimScopeConstraints`). Δες ADR-420 changelog.
+  - **`topo-firestore-service.ts`:** config → project-only (`companyId/projectId/userId`)· `subscribeTopo`
+    → `buildProjectScopeConstraints` (ΟΧΙ floor)· `blobPath` → `topo-surfaces/{companyId}/{projectId}/…`·
+    `floorId`/`floorplanId` → **provenance** στο create input (νέο `TopoProvenance`), ΟΧΙ scope key.
+  - **`useTopoPersistence.ts`:** `scopeKey = company|project` (ΔΕΝ re-keys ανά όροφο → survey μένει φορτωμένο)·
+    project-only gate· `provenanceRef`· **νέο effect** που σε κάθε αλλαγή ορόφου (μόλις `sceneLoading===false`)
+    **ξαναχτίζει τις ισοϋψείς στο scene του νέου level** από το ήδη-φορτωμένο project survey (idempotent +
+    `system-reconcile` silent → κανένα loop/echo). Έτσι το έδαφος φαίνεται σε foundation **και** ισόγειο **και**
+    παντού.
+  - **`TopoPersistenceHost`:** doc-only (props ίδια — `floorId`/`floorplanId` πλέον provenance).
+
+  **Rules/Migration:** `firestore.rules` **αμετάβλητα** (το `floorplanId` γράφεται ακόμα ως provenance στο
+  create → `hasAll` ✓· update δεν το αγγίζει → immutable ✓). Το ΗΔΗ σωσμένο doc έχει `projectId` → η
+  project-query το πιάνει σε κάθε όροφο **χωρίς migration**.
+
+  **Tests:** topography suite **PASS** (persistence: `topo-persistence-types` + `regenerate-topo` πράσινα·
+  1 fail = `topo-grid-model.test.ts`, untracked WIP άλλου agent, άσχετο). `jscpd:diff` καθαρό (4 αρχεία).
+
+  **ΕΚΚΡΕΜΕΙ (ζωντανός έλεγχος Giorgio):** θεμελίωση + ισόγειο + άλλοι όροφοι → ισοϋψείς παντού· refresh → επιβίωση.
+
+  **Status: M9 SITE-scoped — IMPLEMENTED.**

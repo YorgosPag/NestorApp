@@ -212,6 +212,30 @@ describe('resolveRotateReferenceAnchor — annotation symbol (axis = glyph rotat
   });
 });
 
+describe('resolveRotateReferenceAnchor — raster image / entourage (axis = rotation deg, ADR-654)', () => {
+  // Params-less flat sprite: orientation in top-level `rotation` (deg); body centre from imageRectFrame
+  // (position = κάτω-αριστερή γωνία → +R(θ)·(w/2,h/2)). Wall-parity: axis coaxial with a side, toward body.
+  const image = (rotation: number, position = { x: 0, y: 0 }, width = 100, height = 50) =>
+    ({ id: 'IMG1', type: 'image', position, width, height, rotation, url: 'x' } as unknown as Entity);
+
+  it('unrotated image → horizontal reference axis, pointing from the pivot toward the body', () => {
+    // 100×50 at (0,0) → centre (50,25). Pivot to the EAST → axis runs back toward the body (−X).
+    const anchor = resolveRotateReferenceAnchor(image(0), { x: 200, y: 25 })!;
+    expect(anchor).not.toBeNull();
+    near(anchor.x - 200, -1);
+    near(anchor.y - 25, 0);
+  });
+
+  it('rotated image → reference axis follows the sprite rotation exactly (coaxial with the sides)', () => {
+    const rad = (90 * Math.PI) / 180;
+    const anchor = resolveRotateReferenceAnchor(image(90), { x: 100, y: 100 })!;
+    const dir = { x: anchor.x - 100, y: anchor.y - 100 };
+    // Collinear with the rotated local ±X (cos90, sin90) = vertical: cross ≈ 0, unit step.
+    near(dir.x * Math.sin(rad) - dir.y * Math.cos(rad), 0);
+    near(Math.hypot(dir.x, dir.y), 1);
+  });
+});
+
 describe('resolveRotateReferenceAnchor — graphic scale-bar (axis = angleRad, ADR-583 Φ3)', () => {
   // DERIVED geometry.bbox uses the FLAT {minX,minY,maxX,maxY} shape — entityCentre must read it
   // without throwing (the generic {min,max} path would crash on `bbox.min.x`).

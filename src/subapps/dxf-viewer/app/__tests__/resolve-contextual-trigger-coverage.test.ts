@@ -72,6 +72,9 @@ const NO_SELECTION_TAB_TYPES = [
   'railing',
   'space-separator',
   'furniture',
+  // ADR-415 — το 2D floorplan symbol (WC/κουζίνα/έπιπλα κάτοψης) τοποθετείται & επεξεργάζεται
+  // μέσω tool-active tab· στην ΕΠΙΛΟΓΗ δεν έχει per-selection editor tab → null (όπως furniture).
+  'floorplan-symbol',
   'mep-fitting',
   // ADR-612 — η πινακίδα ανοίγματος επεξεργάζεται μέσω double-click editor overlay
   // (`OpeningInfoTagEditorOverlay`) + grips, ΟΧΙ per-selection ribbon tab → null στην επιλογή.

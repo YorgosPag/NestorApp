@@ -3,10 +3,11 @@
 /**
  * ADR-650 — Always-on host for topographic surface-definition persistence (renders `null`).
  *
- * Mounted in `DxfViewerTopBar`. Wires `useTopoPersistence` with auth + floor scope. The
+ * Mounted in `DxfViewerTopBar`. Wires `useTopoPersistence` with auth + SITE scope. The
  * surveyed DEFINITION (points/breaklines/boundary + contour/3D/cut-fill settings) persists
- * per-floor in `floorplan_topo_surfaces`; the contours/TIN are regenerated on load. Zero
- * high-frequency subscriptions (CHECK 6B/6C).
+ * once per project (SITE-level, `floorplan_topo_surfaces`); the contours are regenerated on
+ * load and onto EVERY storey (IfcSite terrain, visible on all levels). `floorId`/`floorplanId`
+ * are passed as provenance only. Zero high-frequency subscriptions (CHECK 6B/6C).
  *
  * @see ../hooks/data/useTopoPersistence.ts
  */

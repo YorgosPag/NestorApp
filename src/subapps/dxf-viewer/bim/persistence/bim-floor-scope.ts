@@ -96,6 +96,30 @@ export function bimScopeWriteFields(cfg: BimScopeConfig): Record<string, string>
   };
 }
 
+/**
+ * ADR-650 — SITE-level (project-wide) scope constraints.
+ *
+ * Unlike per-storey BIM entities (`buildBimScopeConstraints` → `projectId` +
+ * `floorId`), some artefacts belong to the whole **site**, not a single storey:
+ * the topographic survey (terrain) is the canonical case. In IFC the ground is
+ * an `IfcSite` object owning every `IfcBuilding`/`IfcBuildingStorey`; Revit's
+ * Toposurface and Civil 3D surfaces are likewise one site object visible on
+ * every level. This app models **one `IfcSite` per project**
+ * (`ifc-spatial-hierarchy.ts` builds a single site from the `Project`, with the
+ * survey point living on the project) — so the site scope key is `projectId`.
+ *
+ * The subscription therefore keys on `projectId` ALONE (no floor constraint):
+ * one doc per project, hydrated on every storey so the terrain shows everywhere.
+ * `floorId`/`floorplanId` are still written on the doc, but only as provenance
+ * (which storey/file the survey was captured on), never as the scope key.
+ *
+ * Tenant `companyId` is auto-applied upstream by `firestoreQueryService`
+ * (ADR-355) — do NOT add it here.
+ */
+export function buildProjectScopeConstraints(projectId: string): QueryConstraint[] {
+  return [where('projectId', '==', projectId)];
+}
+
 // ============================================================================
 // PERSISTENCE-READY GATE (ADR-420 SSoT — incident 2026-06-16)
 // ============================================================================

@@ -17,6 +17,7 @@ import { CONTEXTUAL_SLAB_OPENING_TAB } from '../ui/ribbon/data/contextual-slab-o
 import { DIMENSION_CONTEXTUAL_TAB, DIMENSION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-dimension-tab';
 import { CONTEXTUAL_LINE_TOOL_TAB } from '../ui/ribbon/data/contextual-line-tool-tab';
 import { CONTEXTUAL_BLOCK_TAB } from '../ui/ribbon/data/contextual-block-tab';
+import { CONTEXTUAL_IMAGE_TAB } from '../ui/ribbon/data/contextual-image-tab';
 import { CONTEXTUAL_XLINE_MODE_TAB } from '../ui/ribbon/data/contextual-xline-mode-tab';
 import { CONTEXTUAL_SCALE_TOOL_TAB, SCALE_TOOL_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-scale-tool-tab';
 import { CONTEXTUAL_MULTI_SELECTION_TAB, MULTI_SELECTION_CONTEXTUAL_TRIGGER, CONTEXTUAL_TRIGGER_SEPARATOR } from '../ui/ribbon/data/contextual-multi-selection-tab';
@@ -90,6 +91,7 @@ const RAW_RIBBON_CONTEXTUAL_TABS = [
   DIMENSION_CONTEXTUAL_TAB,
   CONTEXTUAL_LINE_TOOL_TAB,
   CONTEXTUAL_BLOCK_TAB,
+  CONTEXTUAL_IMAGE_TAB,
   CONTEXTUAL_XLINE_MODE_TAB,
   CONTEXTUAL_SCALE_TOOL_TAB,
   CONTEXTUAL_MULTI_SELECTION_TAB,

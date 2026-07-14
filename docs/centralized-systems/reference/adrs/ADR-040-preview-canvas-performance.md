@@ -72,6 +72,19 @@ Mouse Event → DxfCanvas.onMouseMove
 
 ## Changelog
 
+### 2026-07-14 — ➕ ADR-656 M11: TopoGridUnderlayLeaf (ΕΓΣΑ87 graticule micro-leaf, z20)
+**Τι:** νέο micro-leaf `TopoGridUnderlayLeaf` + presentational `TopoGridUnderlayCanvas` για τον **ζωντανό
+κάναβο συντεταγμένων ΕΓΣΑ87** (crosses στις στρογγυλές τιμές + περιμετρική αρίθμηση Easting/Northing στις
+άκρες του frame). **Ξεχωριστός** από το F7 drawing-aid grid (`GridUnderlayCanvas` z0). **Συμμόρφωση ADR-040:**
+το leaf δέχεται `transform`+`viewport` ως **props** από το `CanvasLayerStack` (ήδη τα κρατά για το sibling
+`GridUnderlayCanvas`) και self-subscribes **μόνο** στο low-freq `topo-grid-store` (visibility toggle) — **καμία**
+νέα `useSyncExternalStore` σε CanvasSection/CanvasLayerStack (**CHECK 6C ασφαλές**). Effect-based repaint (no RAF),
+DPR-aware backing store via `CanvasUtils.sizeCanvasToViewport` — ίδιο συμβόλαιο με το `GridUnderlayCanvas`.
+Mount στο `CanvasLayerStack.tsx` σε **z-20** (`PANEL_LAYOUT.Z_INDEX['20']`, pointer-events-none): πάνω από τον
+DxfCanvas (z10) ώστε το graticule να φαίνεται πάνω στην κάτοψη/entities, κάτω από snap/rulers (z30) → **CHECK 6B
+touch, co-staged ADR-040 + ADR-656**. Ο export δρόμος («Bake to drawing») είναι εκτός hot-path (entities via
+`completeEntities`, ADR-057). Λεπτομέρειες: ADR-656 §4-M11 + §Changelog v4. 🟡 UNCOMMITTED.
+
 ### 2026-07-14 — 🐞 Stale bitmap σε async image decode → `subscribeImageAssetReady` (ADR-654)
 **Σύμπτωμα:** ένα entourage sprite / hatch image-fill έμενε **placeholder** μέχρι ο χρήστης να πειράξει
 zoom/pan («θέλει ανανέωση για να φανεί»). **Ρίζα — ακριβώς το συμβόλαιο αυτού του ADR:** το entity layer

@@ -1,8 +1,8 @@
 # ADR-656 — Ελληνικό Τοπογραφικό: Παρουσίαση & Compliance (Ισοϋψείς · Labels Σημείων · Κάναβος ΕΓΣΑ87)
 
-- **Status**: 🟢 M9 DONE · 🔴 M10/M11 NOT STARTED — blueprint (έρευνα αγοράς + ελληνικές προδιαγραφές +
-  αρχιτεκτονικό σχέδιο) ολοκληρωμένο· M9 (πάχος ισοϋψών) υλοποιήθηκε (βλ. Changelog v2). M10 (labels σημείων) →
-  Plan Mode, M11 (κάναβος ΕΓΣΑ87) → Orchestrator — επόμενα sessions.
+- **Status**: 🟢 M9 DONE · 🟢 M10 DONE · 🟢 M11 DONE — και τα τρία presentation milestones υλοποιήθηκαν
+  (M9 πάχος ισοϋψών Changelog v2· M10 labels σημείων Changelog v3· M11 κάναβος ΕΓΣΑ87 Changelog v4). Ο ADR-656
+  είναι πλήρης· μελλοντικά μόνο τα title-block στοιχεία (κλίμακα-bar / βέλος Βορρά / υπόμνημα) σε συνέργεια ADR-651.
 - **Date**: 2026-07-14
 - **Category**: DXF Viewer / Topography / Presentation & Compliance
 - **Σχετικά**:
@@ -209,6 +209,75 @@
 ---
 
 ## Changelog
+- **v4** (2026-07-14): **M11 ΥΛΟΠΟΙΗΘΗΚΕ** — κάναβος συντεταγμένων ΕΓΣΑ87 (TOPO-GRID) ως **ΕΝΑ pure model +
+  δύο καταναλωτές** (οθόνη + export), χωρίς διπλή αλήθεια. Big-player (Civil 3D «Coordinate Grid» / ΤΕΕ-ΕΓΣΑ87):
+  crosses στις **στρογγυλές** τιμές (adaptive 50/100/200/500/1000 m) + περιμετρική αρίθμηση Easting/Northing.
+  **Ξεχωριστός** από το βοηθητικό F7 grid (δικό του store/toggle/shortcut). Αποφάσεις Giorgio: **οθόνη = ζωντανό
+  toggle (σαν F7)** + κουμπί **«Αποτύπωση στο σχέδιο»** για το legal export· **adaptive βήμα οθόνης + σταθερό
+  επιλέξιμο βήμα export** (default 100 m).
+  - **Νέα (pure/SSoT):** `topo-grid-config.ts` (layer `TOPO-GRID`, χρώματα, text height, **step ladder σε mm** =
+    survey subset του `RulerRenderer.ADAPTIVE_INTERVALS`, `GridDisplayOptions`)· `topo-grid-model.ts`
+    (`pickSurveyGridStepMm` 1-2-5 adaptive + `buildTopoGrid(rect, step) → {eastings, northings, crosses,
+    perimeterLabels}`, ΕΝΑΣ SSoT, pure)· `topo-grid-entities.ts` (`buildTopoGridEntities` → `line`+`text`,
+    πρότυπο `buildContourEntities`)· `ensure-grid-layers.ts` (idempotent mint, πρότυπο M9/M10)· `topo-grid-store.ts`
+    (`createExternalStore`, ξεχωριστό από `globalGridStore`)· `useTopoGrid.ts` (bake hook → `completeEntities`,
+    πρότυπο `useTopoPointLabels`).
+  - **Νέα (canvas, ADR-040):** `TopoGridUnderlayCanvas.tsx` (clone `GridUnderlayCanvas`: crosses via
+    `worldToScreen`, screen-space edge numbering via `RulerRenderer`-style· rect = `screenToWorld(corners)`)·
+    `TopoGridUnderlayLeaf.tsx` (micro-leaf: self-subscribes **μόνο** low-freq visibility· CHECK 6C ασφαλές).
+  - **Τροποποιήσεις:** `CanvasLayerStack.tsx` (mount leaf σε **z-20**, πάνω από entities/κάτω από snap-rulers →
+    CHECK 6B, co-staged ADR-040)· `ui/toolbar/types.ts` + `systems/tools/tool-definitions.ts` (registration
+    `topo-grid`, ίδιο συμβόλαιο panel-driven multi-type, εκτός `TOOL_CREATES_ENTITY`)· `config/keyboard-shortcuts.ts`
+    (**Shift+F7** `topoGridDisplay`, sibling του F7 — ΟΧΙ override)· `statusbar/CadStatusBar.tsx` (keydown wiring →
+    `toggleTopoGridVisible`)· `TopographyPanel.tsx` (mount `TopoGridSection`)· i18n `el/en dxf-viewer-panels.json`
+    (`topography.grid.*`).
+  - **Frame (ADR-462):** world mm = ΕΓΣΑ87 mm → grid origin = world origin (identity)· τα labels formatτάρονται σε
+    μέτρα μέσω `lengthMmToM`/`realDistanceToModelMm` (SSoT scene-units, κανένα inline `/1000`).
+  - **Export edges vs screen edges:** entities → Eastings κάτω / Northings αριστερά (πλοτ. φύλλο)· οθόνη → Eastings
+    πάνω / Northings δεξιά (καθαρά από τους bottom/left rulers). Τεκμηριωμένη, σκόπιμη διαφορά.
+  - **Idempotent:** `ensureGridLayer` reconcile· interactive bake = add-only (ίδιο συμβόλαιο με `useTopoContours`/
+    `useTopoPointLabels`)· defensive `MAX_LINES_PER_AXIS`.
+  - **Tests:** `__tests__/topo-grid-model.test.ts` (7 — ladder pick· round-line inclusion· crosses count·
+    perimeter anchors· degenerate rect) + `topo-grid-entities.test.ts` (5 — cross→2 lines· label→text· generated
+    id· metre format· empty) + `ensure-grid-layers.test.ts` (4 — mint· reuse· idempotency· null scene). ✅ 16/16.
+    **N.18 jscpd:diff καθαρό.**
+  - **Απόκλιση από blueprint §4-M11:** ο export ΔΕΝ περνά από `build-survey-deliverables` (αυτό παράγει **πίνακες**,
+    όχι geometry)· ρέει σαν M9/M10 μέσω `completeEntities` → η geometry εξάγεται με το σχέδιο (ADR-057) — πιο SSoT.
+  - **Future (τεκμηρίωση, όχι υλοποίηση):** κλίμακα-bar / βέλος Βορρά / υπόμνημα (title-block ADR-651)· 4-edge
+    numbering· status-bar chip· user-defined arbitrary export step.
+  - **N.7.2:** ✅ Proactive (grid στο toggle/bake moment) · χωρίς race (pure model + `completeEntities`) · idempotent
+    layer mint · SSoT (ένα `topo-grid-model`, δύο καταναλωτές) · await bake · lifecycle στο hook/leaf.
+    **✅ Google-level: YES** — ένα pure model, μηδέν διπλή αλήθεια, ADR-040-clean screen leaf, legal export geometry.
+- **v3** (2026-07-14): **M10 ΥΛΟΠΟΙΗΘΗΚΕ** — labels σημείων αποτύπωσης μέσω του υπάρχοντος
+  `TextEntity`/`PointEntity` → `completeEntities` pipeline (ADR-057, κανένας νέος μηχανισμός, καμία νέα canvas
+  layer). Επιλεκτικότητα big-player (Civil 3D COGO point-label style): **default = μόνο Ζ** (κουκίδα `point`
+  node + δεκαδικό σε μέτρα), προαιρετικά αρ./κωδικός, **Χ,Υ ΜΟΝΟ στις κορυφές ορίου** — ποτέ στα σημεία εδάφους.
+  Αλλαγές:
+  - **Νέα:** `topo-point-label-config.ts` (layer names `TOPO-POINT-ELEV`/`-CODE`/`-NUM` + `TOPO-BOUNDARY-XY`,
+    χρώματα, text height/offset, `PointLabelOptions` + `DEFAULT_POINT_LABEL_OPTS` = μόνο Ζ)· `topo-point-labels.ts`
+    (pure builder `buildSurveyPointLabelEntities` — πρότυπο `toLabelEntity`)· `ensure-point-label-layers.ts`
+    (idempotent mint — πρότυπο M9 `ensure-contour-layers`)· `topo-point-label-store.ts` (`createExternalStore`
+    3 toggles — πρότυπο `contour-display-store`)· `useTopoPointLabels.ts` (commit hook — πρότυπο `useTopoContours`)·
+    `ui/panels/topography/TopoPointLabelsSection.tsx` (3 toggle buttons + Generate).
+  - **Τροποποιήσεις:** `topo-types.ts` (+`pointNumber?: string` verbatim survey id)· `topo-column-mapping.ts`
+    (`mapRowToPoint` διαδίδει το ήδη-αναγνωρισμένο `pointId` cell → `pointNumber`, πριν απορριπτόταν)·
+    `ui/toolbar/types.ts` + `systems/tools/tool-definitions.ts` (registration `topo-point-labels`, ίδιο συμβόλαιο
+    με `topo-contours`: panel-driven, multi-type, εκτός `TOOL_CREATES_ENTITY`)· `TopographyPanel.tsx` (mount)·
+    i18n `el/en dxf-viewer-panels.json` (`topography.pointLabels.*`).
+  - **Boundary Ζ:** δειγματοληψία από τη ΜΙΑ παράγωγη επιφάνεια (`createTinSampler(getTopoSurface())` →
+    `zAtMm`) — ίδιο primitive με `buildPlotMeasurements`, χωρίς νέο μηχανισμό· `null` έξω από επιφάνεια → το Ζ
+    παραλείπεται (ποτέ ψευδο-μηδέν).
+  - **Απόκλιση από blueprint §4-M10:** το `topo-dxf-points.ts pointFromEntity` **ΔΕΝ** πειράχτηκε — τα DXF
+    POINT/TEXT δεν φέρουν group code αριθμού σημείου, άρα το `pointNumber` έρχεται μόνο από τον wizard/CSV όπου
+    υπάρχει πραγματικά (ground-truth· καμία εφεύρεση).
+  - **Idempotency:** interactive Generate = add-only (ίδιο συμβόλαιο με `useTopoContours.generate`). Το silent
+    regenerate-on-load (πρότυπο `regenerate-topo.ts`) = future parity, εκτός M10.
+  - **Tests:** `__tests__/topo-point-labels.test.ts` (6 — μόνο-Ζ default· boundary-XY μόνο σε κορυφές· ποτέ X,Y
+    σε σημείο· Ζ-omit εκτός επιφάνειας· number/code gating) + `__tests__/ensure-point-label-layers.test.ts`
+    (4 — mint· reuse· idempotency· null scene). ✅ 10/10 pass. **N.18 jscpd:diff καθαρό** (0 new clones / 6 files).
+  - **N.7.2:** ✅ Proactive (labels στο generate moment) · χωρίς race (pure builders + `completeEntities`) ·
+    idempotent layer mint · SSoT (ένα `TextEntity`/`completeEntity`, κανένα διπλότυπο) · await commit · lifecycle
+    στο hook. **✅ Google-level: YES** — πλήρες reuse pipeline, επιλεκτικότητα big-player, zero νέα canvas layer.
 - **v2** (2026-07-14): **M9 ΥΛΟΠΟΙΗΘΗΚΕ** — πάχος κύριων ισοϋψών μέσω του υπάρχοντος ByLayer cascade (κανένας
   νέος μηχανισμός). Αλλαγές:
   - `contour-config.ts`: νέες σταθερές `TOPO_MAJOR_LINEWEIGHT_MM = 0.5` / `TOPO_MINOR_LINEWEIGHT_MM = 0.18`

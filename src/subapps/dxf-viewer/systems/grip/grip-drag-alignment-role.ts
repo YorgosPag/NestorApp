@@ -146,6 +146,13 @@ export function resolveGripAlignmentAnchors(
     if (!ring) return null;
     return getPolylineGripAlignmentAnchors(vertexIdx, ring, true);
   }
+  // ADR-654 — raster image / entourage corner/edge RESIZE: the DRAGGED handle (`anchorPos`) aligns to
+  // neighbour anchors (Figma/Revit smart guides during resize), exactly like a polyline STRAIGHT edge-slide
+  // returns its base point (branch 3). The MOVE grip is handled by branch (1); the rotation handle → no
+  // traces (`isRotation`). Gated to 'image' so no other type is affected (zero regression).
+  if (entity.type === 'image' && !role.isRotation && role.anchorPos) {
+    return [role.anchorPos];
+  }
   return null;
 }
 

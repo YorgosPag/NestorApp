@@ -71,6 +71,21 @@ describe('resolveEntityFootprintForDims', () => {
     expect(resolveEntityFootprintForDims({ id: 't2', type: 'text' } as unknown as Entity)).toBeUndefined();
     expect(resolveEntityFootprintForDims({ id: 'm2', type: 'mtext' } as unknown as Entity)).toBeUndefined();
   });
+
+  // ADR-654 — raster image / entourage: rotation-aware 4-γωνο footprint (όχι AABB fallback που ΔΕΝ
+  // γνωρίζει 'image'), ώστε η κινούμενη εικόνα να δείχνει κυανές clearance dims προς τους γείτονες.
+  it('IMAGE → 4 world γωνίες του περιστρεφόμενου ορθογωνίου', () => {
+    const img = { id: 'img1', type: 'image', position: { x: 10, y: 20 }, width: 100, height: 50, rotation: 0, url: 'x' };
+    const fp = resolveEntityFootprintForDims(img as unknown as Entity);
+    expect(fp).toHaveLength(4);
+    // Κάτω-αριστερά (10,20) + κάτω-δεξιά (110,20) → η βάση του κουτιού (createRectangleVertices order).
+    expect(fp!.some((p) => Math.abs(p.x - 10) < 1e-6 && Math.abs(p.y - 20) < 1e-6)).toBe(true);
+    expect(fp!.some((p) => Math.abs(p.x - 110) < 1e-6 && Math.abs(p.y - 70) < 1e-6)).toBe(true);
+  });
+
+  it('IMAGE χωρίς width/height → undefined (fall-through)', () => {
+    expect(resolveEntityFootprintForDims({ id: 'img2', type: 'image', position: { x: 0, y: 0 } } as unknown as Entity)).toBeUndefined();
+  });
 });
 
 describe('resolveMoveClearanceDims (full path: footprint → collect → resolve)', () => {

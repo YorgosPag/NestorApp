@@ -129,24 +129,25 @@ describe('ImageRenderer — render smoke', () => {
     expect(countCalls(mock, 'drawImage')).toBe(0);
   });
 
-  it('draws the resolved image contain-fit once resolved', () => {
+  it('draws the resolved image FILL (covers the whole box) once resolved', () => {
     mockResolvedImage = { width: 200, height: 100 }; // 2:1 aspect, same as the 100x50 box
     const { renderer, mock } = makeRenderer();
     expect(() => renderer.render(makeImage())).not.toThrow();
     expect(countCalls(mock, 'drawImage')).toBe(1);
     expect(countCalls(mock, 'transform')).toBeGreaterThanOrEqual(1);
     const call = mock.calls.find((c) => c.fn === 'drawImage');
-    // Contain-fit: aspect matches the box exactly → full width/height, zero offset.
+    // Fill: the sprite fills the entire width×height frame, top-left at local (0,0), zero letterbox.
     expect(call?.args).toEqual([mockResolvedImage, 0, 0, 100, 50]);
   });
 
-  it('centers a mismatched-aspect image inside the box (contain-fit letterbox)', () => {
+  it('STRETCHES a mismatched-aspect image to fill the box (fill, no letterbox)', () => {
     mockResolvedImage = { width: 100, height: 100 }; // square image in a 100×50 box
     const { renderer, mock } = makeRenderer();
     renderer.render(makeImage());
     const call = mock.calls.find((c) => c.fn === 'drawImage');
-    // fitScale = min(100/100, 50/100) = 0.5 → fitW=50, fitH=50 → centred: dx=25, dy=0.
-    expect(call?.args).toEqual([mockResolvedImage, 25, 0, 50, 50]);
+    // Fill (big-player parity): the square is stretched to cover the full 100×50 frame — the
+    // visible sprite ALWAYS coincides with the frame/grips (a non-uniform edge handle stretches it).
+    expect(call?.args).toEqual([mockResolvedImage, 0, 0, 100, 50]);
   });
 
   it('ignores non-image entities (type guard short-circuits)', () => {

@@ -36,6 +36,8 @@ import { rotateVector } from './grip-math';
 import { rectOrPolylineVertices, asOrientedRect, longestPolylineSegment, polylineBboxCenter } from '../../systems/polyline/rectangle-detect';
 // ADR-627 — hatch boundary bbox SSoT (centre + extent) for the hatch reference-axis body flip.
 import { hatchBounds, hatchBoundsCenter } from '../hatch/hatch-grips';
+// ADR-654 — image centre (rotated-rect) SSoT for the image reference-axis body flip.
+import { imageRectFrame, type ImageBoxShape } from '../image/image-grips';
 
 /**
  * World-unit threshold separating a pivot that sits OFF the axis of symmetry (so the
@@ -100,6 +102,13 @@ function entityCentre(entity: Entity): Point2D | null {
   const sym = entity as { type?: string; position?: { x: number; y: number } };
   if (sym.type === 'annotation-symbol' && sym.position) {
     return { x: sym.position.x, y: sym.position.y };
+  }
+  // ADR-654 — raster image / entourage: no `geometry.bbox` and no `params`. Its body centre is the
+  // rotated rectangle centre (`position` = κάτω-αριστερή γωνία → +R(θ)·(w/2,h/2)), via the ΙΔΙΟ
+  // `imageRectFrame` SSoT the grips use (μηδέν clone). Feeds the «toward the body» flip so the dashed
+  // rotation-reference axis points toward the sprite exactly like the wall's 9-grip rule.
+  if (sym.type === 'image') {
+    return imageRectFrame(entity as unknown as ImageBoxShape).center;
   }
   // Plain DXF line: top-level start/end midpoint.
   const ln = entity as { type?: string; start?: { x: number; y: number }; end?: { x: number; y: number } };

@@ -11,7 +11,7 @@
 
 import type { AnySceneEntity } from '../../../types/entities';
 import { LINEWEIGHT_SPECIAL } from '../../../config/lineweight-iso-catalog';
-import { toDisplay, fromDisplay } from '../../../config/units';
+import { toDisplay, fromDisplay, formatDisplayValue } from '../../../config/units';
 import { displayUnitState } from '../../../config/display-unit-state';
 import type { RibbonComboboxOption } from '../types/ribbon-types';
 import {
@@ -146,9 +146,14 @@ export function asLine(entity: AnySceneEntity | null): { start: Point2D; end: Po
   return { start: l.start, end: l.end };
 }
 
-/** mm → active display unit, as a combobox string. */
+/**
+ * mm → active display unit, as a combobox string, ROUNDED to the unit's display precision
+ * (SSoT `formatDisplayValue` → `DEFAULT_DISPLAY_PRECISION`, AutoCAD LUPREC-style). Big-player
+ * parity (Revit/ArchiCAD/Figma): editable readouts never show float noise like `637.08313078260`.
+ * Dot-separated & parseable so {@link fromDisp} round-trips (rounded === rounded ⇒ no phantom write).
+ */
 export function toDisp(mm: number): string {
-  return String(toDisplay(mm, displayUnitState.getUnit()).value);
+  return formatDisplayValue(mm, displayUnitState.getUnit());
 }
 
 /** Display-unit string → mm (inverse of {@link toDisp}). NaN on invalid input. */

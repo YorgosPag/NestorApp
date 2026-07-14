@@ -44,6 +44,8 @@ import {
 // geometry SSoT (the SAME extractor the Endpoint/Midpoint snap engines consume),
 // so a drawn line participates in alignment with zero duplicate geometry.
 import { GeometricCalculations } from '../../snapping/shared/GeometricCalculations';
+// ADR-654 — raster image rotated corners via το ΚΟΙΝΟ vertex SSoT (image-as-alignment-source).
+import { imageEntityRectVertices, type ImageRectShape } from '../../rendering/entities/shared/image-rect-vertices';
 
 /** `sourceSnapType` tag identifying anchors produced by the ambient source. */
 export const AMBIENT_SOURCE_TYPE = 'ambient-member';
@@ -176,6 +178,17 @@ function ambientPointsForEntity(e: Entity): Point2D[] {
   if (e.type === 'text' || e.type === 'mtext') {
     const p = (e as { position?: Point2D }).position;
     return p ? [{ x: p.x, y: p.y }] : [];
+  }
+  // ADR-654 — raster image / entourage participates as an alignment SOURCE via its 4 ROTATED corners
+  // (+ centroid), so dragging ANY entity near a sprite lights the SAME cyan H/V traces a wall/line/text
+  // does (Giorgio 2026-07-14 «λευκά ίχνη ευθυγράμμισης»). Cheap pure rotation math (no font metrics) →
+  // safe per-frame over all entities (ADR-040), via the ΚΟΙΝΟ `imageEntityRectVertices` SSoT.
+  if (e.type === 'image') {
+    const verts = imageEntityRectVertices(e as unknown as ImageRectShape);
+    if (!verts) return [];
+    const cx = (verts[0].x + verts[1].x + verts[2].x + verts[3].x) / 4;
+    const cy = (verts[0].y + verts[1].y + verts[2].y + verts[3].y) / 4;
+    return [...verts, { x: cx, y: cy }];
   }
   return [];
 }

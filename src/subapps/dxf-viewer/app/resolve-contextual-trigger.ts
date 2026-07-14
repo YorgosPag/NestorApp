@@ -43,6 +43,7 @@ import {
   DIMENSION_CONTEXTUAL_TRIGGER,
   LINE_TOOL_CONTEXTUAL_TRIGGER,
   BLOCK_CONTEXTUAL_TRIGGER,
+  IMAGE_CONTEXTUAL_TRIGGER,
   MEP_FIXTURE_CONTEXTUAL_TRIGGER,
   MEP_FLOOR_DRAIN_CONTEXTUAL_TRIGGER,
   MEP_SANITARY_FIXTURE_CONTEXTUAL_TRIGGER,
@@ -125,6 +126,9 @@ export const ENTITY_CONTEXTUAL_TRIGGER: Partial<Record<EntityType, string>> = {
   'wall-covering': WALL_COVERING_CONTEXTUAL_TRIGGER,
   // ADR-507 S2 — γραμμοσκίαση (hatch) → «Γραμμοσκίαση» tab.
   hatch: HATCH_CONTEXTUAL_TRIGGER,
+  // ADR-654 — entourage raster image (έπιπλο/άνθρωπος/όχημα/φυτό) → «Εικόνα» tab
+  // (ενέργειες)· ΟΛΕΣ οι ιδιότητες στο αριστερό Properties palette (ImagePropertiesTab).
+  image: IMAGE_CONTEXTUAL_TRIGGER,
   // ADR-422 — thermal-space (IfcSpace) → «Ιδιότητες Θερμικού Χώρου».
   'thermal-space': THERMAL_SPACE_CONTEXTUAL_TRIGGER,
   // ADR-408 Φ8 — σωλήνας / αεραγωγός (MEP segment, one tab for both domains).

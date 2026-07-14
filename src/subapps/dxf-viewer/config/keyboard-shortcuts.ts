@@ -563,6 +563,15 @@ export const DXF_FUNCTION_SHORTCUTS: Record<string, ShortcutDefinition> = {
     action: 'snap:grid-display',
     category: 'snap',
   },
+  // Shift+F7 — ΕΓΣΑ87 coordinate graticule toggle (ADR-656 M11). Sibling of F7, NOT an override:
+  // F7 is the drawing-aid grid, this is the survey coordinate grid (separate store/leaf).
+  topoGridDisplay: {
+    key: 'F7',
+    modifier: 'shift',
+    descriptionKey: 'shortcuts.snap.topoGridDisplay',
+    action: 'topo:grid-display',
+    category: 'snap',
+  },
   // F8 - Ortho Mode (AutoCAD standard)
   orthoMode: {
     key: 'F8',

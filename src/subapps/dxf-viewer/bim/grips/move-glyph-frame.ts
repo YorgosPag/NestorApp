@@ -128,8 +128,14 @@ export function resolveMoveGlyphFrame(entity: Entity): MoveGlyphFrame | null {
   // a picked centre draws its ghost reference axis COAXIAL with the symbol's faces (its local
   // ±X), never the arbitrary first-move baseline (Giorgio 2026-07-09: «ο άξονας-φάντασμα πάντα
   // στοιχισμένος οριζόντια/κάθετα με τις παρειές, να μην αποκλίνει»).
+  // ADR-654 — raster image / entourage sprite joins this branch: it too is params-less with its
+  // planar orientation in the TOP-LEVEL `rotation` (DEGREES, world CCW). The SAME frame (a) rotates
+  // the 4-arrow MOVE cross with the sprite, (b) drives the per-arm directional move-by-value, AND
+  // (c) seeds `resolveRotateReferenceAnchor` so the dashed rotation-reference axis is COAXIAL with the
+  // image's sides (Giorgio 2026-07-14: «η διακεκομμένη γραμμή αρχής περιστροφής να ταυτίζεται με τις
+  // πλευρές, όπως ο τοίχος»). Identical field + math to text ⇒ one branch, zero clone (N.18).
   const txt = entity as { type?: string; rotation?: number };
-  if (txt.type === 'text' || txt.type === 'mtext' || txt.type === 'annotation-symbol') {
+  if (txt.type === 'text' || txt.type === 'mtext' || txt.type === 'annotation-symbol' || txt.type === 'image') {
     const rot = typeof txt.rotation === 'number' && Number.isFinite(txt.rotation) ? txt.rotation : 0;
     return fromAngleRad(rot * DEG_TO_RAD);
   }
