@@ -22,29 +22,17 @@ import {
   type TextTemplateActor,
   type UserTextTemplateDoc,
 } from '@/subapps/dxf-viewer/text-engine/templates/text-template.types';
+import type { SerializedUserTextTemplate } from '@/subapps/dxf-viewer/text-engine/templates/template.types';
 
-/** JSON-safe projection of `UserTextTemplateDoc` for wire transport. */
-export interface SerializedUserTextTemplate {
-  readonly id: string;
-  readonly companyId: string;
-  readonly name: string;
-  readonly category: UserTextTemplateDoc['category'];
-  readonly content: UserTextTemplateDoc['content'];
-  readonly placeholders: readonly string[];
-  readonly isDefault: false;
-  /** ADR-651 Φάση Θ — βιβλιοθήκη γραφείου/έργου/μου + προέλευση απόσπασης. */
-  readonly scope: UserTextTemplateDoc['scope'];
-  readonly projectId: string | null;
-  readonly parentId: string | null;
-  readonly parentSyncedAt: number | null;
-  readonly titleBlock?: UserTextTemplateDoc['titleBlock'];
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  readonly createdBy: string;
-  readonly createdByName: string | null;
-  readonly updatedBy: string;
-  readonly updatedByName: string | null;
-}
+/**
+ * JSON-safe projection of `UserTextTemplateDoc`.
+ *
+ * ⚠️ ADR-651 Φάση Θ: **δεν** δηλώνεται πια εδώ. Είναι το ΙΔΙΟ σχήμα πεδίων με το έγγραφο, με
+ * τον χρόνο σε ISO strings — και ζει στο ουδέτερο `template.types.ts` ως
+ * `UserTextTemplateFields<string>`. Τρεις πανομοιότυπες λίστες πεδίων (doc / wire / route)
+ * ξέφευγαν σιωπηλά η μία από την άλλη σε κάθε νέο πεδίο· τώρα είναι μία (N.18).
+ */
+export type { SerializedUserTextTemplate };
 
 export function actorFromContext(ctx: AuthContext): TextTemplateActor {
   return {

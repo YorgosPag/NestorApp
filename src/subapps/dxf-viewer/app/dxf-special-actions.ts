@@ -151,6 +151,11 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
     EventBus.emit('dxf:revisions-dialog-requested', {});
     return true;
   }
+  // ADR-651 Φάση Θ: Open title-block library dialog (TitleBlockLibraryDialogHost listens)
+  if (action === 'open-title-block-library-dialog') {
+    EventBus.emit('dxf:title-block-library-dialog-requested', {});
+    return true;
+  }
   // ADR-459 Φ4d: «Αυτόματος Οπλισμός» — auto-apply code-suggested reinforcement.
   // Scope = τρέχουσα επιλογή (κενή → όλος ο οργανισμός ορόφου· το αποφασίζει ο
   // useStructuralAutoReinforce hook που εκτελεί το undoable command).

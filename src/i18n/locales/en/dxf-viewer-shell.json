@@ -1385,9 +1385,8 @@
       "rugWaves": "Waves rug",
       "rugRetro": "Retro rug"
     },
-    "errors": {
-      "resolveFailed": "Could not load the furniture item."
-    }
+    "loading": "Checking permissions…",
+    "locked": "The furniture library is not available on your account."
   },
   "snapModes": {
     "labels": {
@@ -4888,7 +4887,9 @@
         "attachTooltip": "Attach the selected columns to the selected footing (select 1 footing + columns)",
         "detach": "Detach footing",
         "detachTooltip": "Detach the selected columns (or all columns of the selected footing) from the footing"
-      }
+      },
+      "titleBlockLibrary": "Library",
+      "titleBlockLibraryTooltip": "Office/project title-block templates — save, publish, variants"
     },
     "tooltips": {
       "bimSchedule": "Open BIM Schedule — export structural elements",
@@ -6131,6 +6132,10 @@
       "portrait": "Portrait",
       "landscape": "Landscape"
     },
+    "paperSuggestion": {
+      "label": "Suggested sheet for this scale: {size} {orientation}",
+      "apply": "Apply"
+    },
     "fitMode": {
       "label": "Fit",
       "fitToPage": "Fit to page",
@@ -6177,6 +6182,21 @@
     "sheetSet": {
       "label": "Whole sheet set ({count, plural, one {# sheet} other {# sheets}})",
       "hint": "One multi-page PDF: one sheet per floor, auto-numbered (A-1, A-2…) with a consistent title block on all."
+    },
+    "sheets": {
+      "title": "Sheets in the set",
+      "hint": "Leave a field empty for the automatic value. Anything shared (template, project data, stamp) is changed once and updates every sheet.",
+      "sheet": "Sheet (floor)",
+      "number": "Number",
+      "sheetTitle": "Sheet title",
+      "selectAll": "Select all sheets",
+      "selectRow": "Select sheet {name}",
+      "numberFor": "Sheet number — {name}",
+      "titleFor": "Sheet title — {name}",
+      "prefix": "Prefix",
+      "start": "Start at",
+      "renumber": "Renumber ({count, plural, one {# sheet} other {# sheets}})",
+      "autoNumber": "Automatic numbering"
     }
   },
   "titleBlockStamp": {
@@ -6355,5 +6375,43 @@
     "cancel": "Cancel",
     "exporting": "Exporting…",
     "error": "Export failed. Please try again."
+  },
+  "titleBlockLibrary": {
+    "title": "Title Block Template Library",
+    "description": "Save your title block as an office template and reuse it in every project. Fix it once — every drawing that uses it updates.",
+    "close": "Close",
+    "active": "Active",
+    "updateAvailable": "Update available",
+    "detachedFrom": "Variant of: {name}",
+    "detachedName": "{name} — project variant",
+    "scope": {
+      "company": "Office",
+      "project": "This project",
+      "user": "Mine"
+    },
+    "save": {
+      "title": "Save the current title block",
+      "name": "Template name",
+      "placeholder": "e.g. Office title block A4",
+      "scope": "Where it lives",
+      "action": "Save",
+      "hint": "An «Office» template appears in every project. Changes to it reach all drawings that use it automatically."
+    },
+    "list": {
+      "title": "Saved templates",
+      "empty": "You have not saved a title block template yet."
+    },
+    "actions": {
+      "use": "Use",
+      "publish": "Publish to office",
+      "detach": "Detach into this project",
+      "pull": "Update from parent",
+      "delete": "Delete"
+    }
+  },
+  "assetPacks": {
+    "furniturePlan2d": {
+      "title": "2D Plan Furniture"
+    }
   }
 }

@@ -33,6 +33,8 @@ export const StampHost = React.lazy(() => import('./StampHost').then(mod => ({ d
 // ADR-651 Φάση Δ — διάλογος «AI Πινακίδα» (ανοίγει από το «Πινακίδα Σχεδίου» tab).
 export const AiTitleBlockHost = React.lazy(() => import('./AiTitleBlockHost').then(mod => ({ default: mod.AiTitleBlockHost })));
 export const RevisionsHost = React.lazy(() => import('./RevisionsHost').then(mod => ({ default: mod.RevisionsHost })));
+// ADR-651 Φάση Θ — διάλογος «Βιβλιοθήκη Προτύπων Πινακίδας» (γραφείου / έργου / δικά μου).
+export const TitleBlockLibraryDialogHost = React.lazy(() => import('./TitleBlockLibraryDialogHost').then(mod => ({ default: mod.TitleBlockLibraryDialogHost })));
 // ADR-457 — Column Reinforcement Detail Sheet («Λεπτομέρεια Οπλισμού») dialog host
 export const ColumnDetailHost = React.lazy(() => import('../ui/components/column-detail/ColumnDetailHost').then(mod => ({ default: mod.ColumnDetailHost })));
 // ADR-463 — Footing Reinforcement Detail Sheet («Λεπτομέρεια Οπλισμού») dialog host
