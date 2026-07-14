@@ -478,5 +478,29 @@ service firebase.storage {
       allow delete: if isSuperAdmin();
     }
 
+    // =========================================================================
+    // 🔒 ASSET PACKS (ADR-655 — gated content libraries)
+    // =========================================================================
+    // Path: /asset-packs/<packId>/<version>/<assetId>.webp
+    //
+    // ⚠️ ΔΙΑΦΕΡΕΙ ΘΕΜΕΛΙΩΔΩΣ από τις παραπάνω βιβλιοθήκες: αυτές είναι CC0/δωρεάν και τις
+    // διαβάζει κάθε συνδεδεμένος. Τα asset packs είναι **αδειοδοτημένο περιεχόμενο** που
+    // διανέμεται υπό όρους (per-company entitlement + RBAC + kill switch).
+    //
+    // Γι' αυτό: ΚΑΝΕΝΑΣ client δεν διαβάζει απευθείας — ούτε με το σωστό URL, ούτε
+    // συνδεδεμένος. Η ΜΟΝΗ ανάγνωση γίνεται server-side με Admin SDK (που παρακάμπτει τους
+    // rules) μέσα από το /api/asset-packs proxy, ΑΦΟΥ περάσει η πύλη εξουσιοδότησης.
+    // Ίδιο δοκιμασμένο μοτίβο με το `companies/{companyId}/quotes/` (allow write: if false).
+    // =========================================================================
+    match /asset-packs/{assetFile=**} {
+
+      // 📖 READ: ΚΑΝΕΙΣ. Μόνο ο authenticated proxy (Admin SDK).
+      allow read: if false;
+
+      // ✍️ WRITE / 🗑️ DELETE: super_admin only (curation via upload script)
+      allow write: if isSuperAdmin() && isValidFileSize();
+      allow delete: if isSuperAdmin();
+    }
+
   }
 }

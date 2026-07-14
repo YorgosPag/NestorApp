@@ -32,6 +32,7 @@ import type { z } from 'zod';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache, WithAuthOptions } from '@/lib/auth';
 import {
+  withAssetRateLimit,
   withHighRateLimit,
   withStandardRateLimit,
   withSensitiveRateLimit,
@@ -51,6 +52,7 @@ const logger = createModuleLogger('API_ROUTE');
 // =============================================================================
 
 export type RateLimitTier =
+  | 'asset'
   | 'high'
   | 'standard'
   | 'sensitive'
@@ -62,6 +64,7 @@ const RATE_LIMIT_WRAPPERS: Record<
   RateLimitTier,
   <C>(handler: (req: NextRequest, ctx?: C) => Promise<Response> | Response) => (req: NextRequest, ctx?: C) => Promise<Response> | Response
 > = {
+  asset: withAssetRateLimit,
   high: withHighRateLimit,
   standard: withStandardRateLimit,
   sensitive: withSensitiveRateLimit,

@@ -49,7 +49,14 @@ export type StoragePathPattern =
   | 'company_scoped_with_project'
   | 'company_scoped_no_project'
   | 'owner_based'
-  | 'owner_based_no_superadmin';
+  | 'owner_based_no_superadmin'
+  /**
+   * `server_only_read_superadmin_curation` (ADR-655 asset packs) — αδειοδοτημένο περιεχόμενο:
+   * ΚΑΝΕΝΑΣ client δεν διαβάζει (`allow read: if false`), ούτε ο super_admin· η ανάγνωση γίνεται
+   * μόνο server-side (Admin SDK) μέσα από την πύλη εξουσιοδότησης. Γράψιμο/σβήσιμο = curation,
+   * μόνο super_admin.
+   */
+  | 'server_only_read_superadmin_curation';
 
 /** One (persona × operation) cell of a path's coverage matrix. */
 export interface StorageCoverageCell {
@@ -215,6 +222,42 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
       cell('same_tenant_admin', 'delete', 'deny',  'not_owner'),
       // unauthenticated
       cell('anonymous',         'read',   'deny',  'missing_claim'),
+      cell('anonymous',         'write',  'deny',  'missing_claim'),
+      cell('anonymous',         'delete', 'deny',  'missing_claim'),
+    ] as const,
+  },
+
+  // -------------------------------------------------------------------------
+  // Path 5: Asset packs — ADR-655 gated content libraries
+  // storage.rules lines 495-503
+  //
+  // Το συμβόλαιο που φυλάει αυτό το suite: **καμία διαδρομή ανάγνωσης από client**.
+  // Αν κάποιος «χαλαρώσει» το `allow read: if false` (π.χ. σε `isAuthenticated()`),
+  // η πύλη εξουσιοδότησης (entitlement + RBAC + kill switch) παρακάμπτεται με σκέτο URL
+  // — και το τεστ κοκκινίζει. Γι' αυτό ελέγχουμε deny ΚΑΙ για τον super_admin στο read.
+  // -------------------------------------------------------------------------
+  {
+    pathId: 'asset_packs',
+    pattern: 'server_only_read_superadmin_curation',
+    rulesRange: [495, 503],
+    testFile: 'tests/storage-rules/suites/asset-packs.storage.test.ts',
+    matrix: [
+      // super_admin: curation write/delete allowed — read STILL denied (server-only proxy).
+      cell('super_admin',       'read',   'deny',  'server_only'),
+      cell('super_admin',       'write',  'allow'),
+      cell('super_admin',       'delete', 'allow'),
+      // κάθε άλλος client: τίποτα, ούτε καν με το σωστό URL.
+      cell('same_tenant_admin', 'read',   'deny',  'server_only'),
+      cell('same_tenant_admin', 'write',  'deny',  'super_admin_only'),
+      cell('same_tenant_admin', 'delete', 'deny',  'super_admin_only'),
+      cell('same_tenant_user',  'read',   'deny',  'server_only'),
+      cell('same_tenant_user',  'write',  'deny',  'super_admin_only'),
+      cell('same_tenant_user',  'delete', 'deny',  'super_admin_only'),
+      cell('cross_tenant_user', 'read',   'deny',  'server_only'),
+      cell('cross_tenant_user', 'write',  'deny',  'super_admin_only'),
+      cell('cross_tenant_user', 'delete', 'deny',  'super_admin_only'),
+      // unauthenticated
+      cell('anonymous',         'read',   'deny',  'server_only'),
       cell('anonymous',         'write',  'deny',  'missing_claim'),
       cell('anonymous',         'delete', 'deny',  'missing_claim'),
     ] as const,

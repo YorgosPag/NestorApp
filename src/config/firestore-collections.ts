@@ -469,6 +469,10 @@ export const COLLECTIONS = {
   // 💰 ISO 19650 COST LOGS — ADR-373 P2.5 (per-file AI enrichment cost tracking, server-only)
   /** Per-file AI enrichment cost records. Queried by super_admin cost dashboard. Admin SDK only — client access forbidden. */
   ISO19650_COST_LOG: 'iso19650_cost_log',
+
+  // 📦 ASSET PACKS — ADR-655 (gated content libraries)
+  /** Ο διακόπτης διανομής ανά πακέτο: doc id = packId (φυσικό κλειδί config, όχι entity). Schema: { status: 'public'|'entitled'|'disabled' }. Admin SDK only — ο client δεν το διαβάζει ποτέ. */
+  ASSET_PACK_CONFIG: 'asset_pack_config',
 } as const;
 
 // ============================================================================

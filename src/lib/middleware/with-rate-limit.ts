@@ -262,6 +262,14 @@ export function withHighRateLimit<C = unknown>(handler: ApiHandler<C>): ApiHandl
 }
 
 /**
+ * Rate limiter for immutable binary asset proxies (ADR-655).
+ * Limit: 600 requests/minute
+ */
+export function withAssetRateLimit<C = unknown>(handler: ApiHandler<C>): ApiHandler<C> {
+  return withRateLimit(handler, { category: 'ASSET' });
+}
+
+/**
  * Rate limiter for standard CRUD endpoints.
  * Limit: 60 requests/minute
  */

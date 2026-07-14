@@ -128,6 +128,9 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "bim_animations:animations:read",
       "bim_animations:animations:update",
       "bim_animations:animations:delete",
+      // ADR-655 — χρήση πακέτων περιεχομένου. Το ΑΝ η εταιρεία τα έχει αποκτήσει κρίνεται
+      // ξεχωριστά (companies/{id}.assetPackEntitlements) — αυτό εδώ είναι μόνο ο ρόλος.
+      "asset_packs:packs:use",
     ],
     level: 1,
     isProjectRole: false,
@@ -142,6 +145,7 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "buildings:buildings:view",
       "properties:properties:view",
       "notifications:notifications:view",
+      "asset_packs:packs:use", // ADR-655
     ],
     level: 2,
     isProjectRole: false,

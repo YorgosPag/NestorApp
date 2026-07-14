@@ -68,6 +68,14 @@ export const RATE_LIMIT_WINDOW = {
  * @enterprise Adjust based on production monitoring
  */
 export const RATE_LIMIT_CATEGORIES = {
+  /**
+   * Immutable binary assets served through an authenticated proxy (ADR-655 asset packs).
+   * Distinct traffic class: a content palette legitimately fetches hundreds of sprites on a
+   * cold cache, so a CRUD-sized cap (100/min) would be a self-inflicted DoS. Responses are
+   * `immutable` + versioned ⇒ each asset is fetched once per browser, ever. The cap stays
+   * bounded so a scripted scrape of a whole pack still throttles.
+   */
+  ASSET: 600,
   /** High-frequency endpoints (list, search) */
   HIGH: 100,
   /** Standard CRUD operations */

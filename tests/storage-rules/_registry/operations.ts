@@ -29,11 +29,13 @@ export type Outcome = 'allow' | 'deny';
  * denies but for the wrong reason is a silent contract break.
  */
 export type StorageReason =
-  | 'missing_claim'   // unauthenticated or no companyId claim
-  | 'cross_tenant'    // authed but wrong companyId custom claim
-  | 'not_owner'       // authed but uid does not match path userId
-  | 'file_too_large'  // file exceeds 50 MB (isValidFileSize gate)
-  | 'invalid_type';   // contentType rejected by isAllowedContentType
+  | 'missing_claim'    // unauthenticated or no companyId claim
+  | 'cross_tenant'     // authed but wrong companyId custom claim
+  | 'not_owner'        // authed but uid does not match path userId
+  | 'file_too_large'   // file exceeds 50 MB (isValidFileSize gate)
+  | 'invalid_type'     // contentType rejected by isAllowedContentType
+  | 'server_only'      // ADR-655: no client may read — Admin SDK proxy only (`allow read: if false`)
+  | 'super_admin_only'; // ADR-655: curation write/delete reserved to super_admin
 
 /** All known operations — iteration helper. */
 export const ALL_STORAGE_OPERATIONS: readonly StorageOperation[] = [
