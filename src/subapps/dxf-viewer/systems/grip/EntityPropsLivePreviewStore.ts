@@ -9,11 +9,14 @@
  * changed (position / width / height / rotation …), computed via the entity's OWN grip-drag SSoT
  * (`applyImageGripDrag` for image), so the panel never re-derives math and can never diverge.
  *
- * Lifecycle: the sync leaf sets a `{ entityId, patch }` per frame (redundant-write guarded on its
- * side) and clears to `null` on release, so the panel reconciles to the committed scene. This is a
+ * Lifecycle: the writer is the per-frame ghost draw loop (`useGripGhostPreview`, driven by the
+ * high-freq `effectiveCursor` — the SAME 60fps signal the on-canvas ghost uses, NOT the laggy React
+ * `dragPreview` state), which publishes the live `transformed` geometry· `useImagePropsGripSync`
+ * clears to `null` on release / non-image so the panel reconciles to the committed scene. This is a
  * PREVIEW channel only — it never triggers a command / undo entry (the drag commits once, on mouseup).
  *
- * @see hooks/grips/useImagePropsGripSync.ts — the image producer (writer)
+ * @see hooks/tools/useGripGhostPreview.ts — the per-frame writer (publishes the live image geometry)
+ * @see hooks/grips/useImagePropsGripSync.ts — the release/non-image clear guard
  * @see ui/image-advanced-panel/ImageAdvancedPanel.tsx — the panel consumer (reader)
  */
 
@@ -26,10 +29,23 @@ export interface EntityPropsLivePreview {
 }
 
 /**
+ * True when two live-preview snapshots carry the SAME entity + geometry — the per-frame redundant
+ * write guard. The RAF draw loop calls `set` every frame (even on a static hold); without this the
+ * panel would re-render at 60fps for no change. Patch is tiny (position/w/h/rotation) → value-compare
+ * via `JSON.stringify` (stable key order, same construction site).
+ */
+function sameLivePreview(a: EntityPropsLivePreview | null, b: EntityPropsLivePreview | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return a.entityId === b.entityId && JSON.stringify(a.patch) === JSON.stringify(b.patch);
+}
+
+/**
  * The pub/sub cell itself is the shared `createExternalStore` SSoT (ADR-294) — this module
  * only owns the domain: what the value MEANS and how it is merged. No hand-rolled listener set.
+ * `equals` suppresses the 60fps no-change re-render (the RAF writer sets every frame).
  */
-const store = createExternalStore<EntityPropsLivePreview | null>(null);
+const store = createExternalStore<EntityPropsLivePreview | null>(null, { equals: sameLivePreview });
 
 /** Read (useSyncExternalStore getSnapshot) — the live patch, or `null` when no drag is active. */
 export const getEntityPropsLivePreview = store.get;

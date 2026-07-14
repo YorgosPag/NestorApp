@@ -32,6 +32,9 @@ import {
 } from './grip-ghost-preview-draw-helpers';
 import { useBimPreviewRenderer } from './useBimPreviewRenderer';
 import { useLevelLayersById } from './useLevelLayersById';
+// ADR-654 — live «Ιδιότητες» panel channel writer (SSoT, shared with useGripGhostPreview): so a
+// BODY-drag move of an entourage image updates the left inspector frame-for-frame, like grips do.
+import { publishImageLivePreview } from './publish-image-live-preview';
 // ORTHO (F8) axis-lock — shared SSoT with the Move ghost (no-op when OFF).
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 // ADR-363 — F9/Q SNAP-MODE step layer (parity with the grip-move path). `isGripStepActive` gates
@@ -154,6 +157,9 @@ export function useEntityBodyDragPreview(props: UseEntityBodyDragPreviewProps): 
       if (!entity) continue;
       const preview = makeTranslationPreview(id, delta);
       const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview);
+      // ADR-654 — entourage image body-drag → publish its live geometry to the panel channel (same
+      // per-frame effectiveCursor signal· no-op for non-image). `useImagePropsGripSync` clears on release.
+      publishImageLivePreview(transformed);
       // Draw the member body ghost with its LIVE wall join-miter (SHARED SSoT with grip-resize).
       const { ghost, neighbours } = drawMemberBodyGhostWithJoinMiter(
         bimPreview, transformed, sceneEntities, sceneUnits, layers, t, viewport,

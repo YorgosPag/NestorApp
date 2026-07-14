@@ -50,6 +50,9 @@ import {
 } from '../../rendering/ghost';
 import { useBimPreviewRenderer } from './useBimPreviewRenderer';
 import { useLevelLayersById } from './useLevelLayersById';
+// ADR-654 — live «Ιδιότητες» panel channel: this RAF draw loop is a 60fps writer (same
+// effectiveCursor signal as the ghost), so the entourage image inspector tracks the drag.
+import { publishImageLivePreview } from './publish-image-live-preview';
 // ADR-397 — the rotation-centre ⊙ marker is the SAME SSoT glyph the toolbar Rotate
 // tool draws (useRotationPreview), so both rotation flows look identical.
 import { drawRotationPivotMarker } from '../../rendering/ui/rotation-pivot-marker';
@@ -252,6 +255,12 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     }
 
     const transformed = applyEntityPreview(entity as unknown as DxfEntityUnion, preview, previewCtx);
+
+    // ADR-654 — publish the LIVE image geometry to the panel channel from THIS per-frame draw
+    // (driven by `effectiveCursor` → zero React-state lag), so the left «Ιδιότητες» inspector of a
+    // dragged entourage tracks the grip drag frame-for-frame (preview ≡ commit). SSoT writer shared
+    // with the body-drag loop· no-op for non-image. Store `equals` drops the 60fps no-change writes.
+    publishImageLivePreview(transformed);
 
     // ── ADR-575 §8 — GROUP gizmo live ghost (whole-group move / rotate) ──────────
     // `applyEntityPreview` returns a transformed `type:'group'` CONTAINER (every member
