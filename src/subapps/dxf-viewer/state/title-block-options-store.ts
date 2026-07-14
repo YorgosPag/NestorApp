@@ -56,6 +56,11 @@ interface TitleBlockOptionsState {
   readonly orientation: PaperOrientation;
   /** Πλήρης κορνίζα φύλλου ISO 5457 (πρακτική μεγάλων: border + πινακίδα = ΕΝΑ αντικείμενο). */
   readonly withFrame: boolean;
+  /**
+   * ADR-651 Φάση Λ — κελί QR (σύνδεσμος έργου + αποτύπωμα έκδοσης) δεξιά στην πινακίδα. Off by
+   * default: μόνο όποιος το ζητά ρητά αλλάζει την πινακίδα του (§8 #8, Δρόμος Γ = Autodesk ACC).
+   */
+  readonly withQr: boolean;
   /** Όσο είναι `true`, το χαρτί ακολουθεί την αυτόματη πρόταση· ο χρήστης το «κλειδώνει». */
   readonly paperAutoSuggest: boolean;
   /** ADR-651 Φάση Δ — AI πινακίδα που υπερισχύει του preset (ή `null`). */
@@ -66,6 +71,8 @@ interface TitleBlockOptionsState {
   setPaperSize(paperSize: PaperSize): void;
   setOrientation(orientation: PaperOrientation): void;
   setWithFrame(withFrame: boolean): void;
+  /** ADR-651 Φάση Λ — ενεργοποιεί/απενεργοποιεί το κελί QR στην επόμενη τοποθέτηση/εκτύπωση. */
+  setWithQr(withQr: boolean): void;
   /** Επαναφέρει τον αυτόματο τρόπο (το επόμενο όπλισμα ξαναπροτείνει χαρτί). */
   setPaperAutoSuggest(paperAutoSuggest: boolean): void;
   /** Εφαρμόζει την πρόταση — no-op αν ο χρήστης έχει διαλέξει χαρτί ή αν δεν άλλαξε τίποτα. */
@@ -77,6 +84,7 @@ export const useTitleBlockOptionsStore = create<TitleBlockOptionsState>((set, ge
   paperSize: DEFAULT_TITLE_BLOCK_PAPER.size,
   orientation: DEFAULT_TITLE_BLOCK_PAPER.orientation,
   withFrame: true,
+  withQr: false,
   paperAutoSuggest: true,
   aiOverride: null,
   // Ρητή επιλογή preset ⇒ καθαρίζει τυχόν AI πινακίδα (ο χρήστης γύρισε σε έτοιμο πρότυπο).
@@ -86,6 +94,7 @@ export const useTitleBlockOptionsStore = create<TitleBlockOptionsState>((set, ge
   setPaperSize: (paperSize) => set({ paperSize, paperAutoSuggest: false }),
   setOrientation: (orientation) => set({ orientation, paperAutoSuggest: false }),
   setWithFrame: (withFrame) => set({ withFrame }),
+  setWithQr: (withQr) => set({ withQr }),
   setPaperAutoSuggest: (paperAutoSuggest) => set({ paperAutoSuggest }),
   applySuggestedPaper: (spec) => {
     const s = get();
